@@ -61,8 +61,9 @@ def SurrogateEscapeHandlersRoundTrip : Prop :=
 
 theorem surrogateEscapeHandlersRoundTrip_proven : SurrogateEscapeHandlersRoundTrip := by
   intro H capi d e b s pos hH hv hD hdo hd hE heo hst hen
+  rw [callBuiltin_ok] at hd ⊢
   have hDE := hH.dec_not_enc hD
-  simp only [callBuiltin, surrogateEscapeErrors, hDE, Bool.false_eq_true, if_false, hD, if_true,
+  simp only [callRaw, surrogateEscapeErrors, hDE, Bool.false_eq_true, if_false, hD, if_true,
     surrogateEscapeDecode, getParams_bytes d b hdo, ok_bind] at hd
   rw [escConsume_eq] at hd
   split at hd
@@ -75,7 +76,7 @@ theorem surrogateEscapeHandlersRoundTrip_proven : SurrogateEscapeHandlersRoundTr
         (b.drop (stOf d b.length))).length := by rw [← hs]; simp
     have hst0 := stOf_zero e s.length hst
     have hen0 := enOf_full e s.length hen
-    simp only [callBuiltin, surrogateEscapeErrors, hE, if_true, surrogateEscapeEncode,
+    simp only [callRaw, surrogateEscapeErrors, hE, if_true, surrogateEscapeEncode,
       getParams_str e s heo, ok_bind, hst0, hen0]
     rw [escWrite_eq]
     have hall : (slice s 0 s.length).all (fun c => decide (0xdc80 ≤ c) && decide (c ≤ 0xdcff)) = true := by
@@ -158,8 +159,9 @@ def SurrogatePassHandlersRoundTrip : Prop :=
 
 theorem surrogatePassHandlersRoundTrip_proven : SurrogatePassHandlersRoundTrip := by
   intro H capi e d c pre post out pos hH hs hE heo hst hen he hD hdU henc hdo hds hpv
+  rw [callBuiltin_ok] at he ⊢
   have hDE := hH.dec_not_enc hD
-  simp only [callBuiltin, surrogatePassErrors, hE, if_true, surrogatePassEncode] at he
+  simp only [callRaw, surrogatePassErrors, hE, if_true, surrogatePassEncode] at he
   cases hc : encCodeOf H e "UnicodeEncodeError" with
   | error x => rw [hc] at he; cases he
   | ok code =>
@@ -191,7 +193,7 @@ theorem surrogatePassHandlersRoundTrip_proven : SurrogatePassHandlersRoundTrip :
         Except.ok.injEq, Prod.mk.injEq, Rep.bytes.injEq] at he
       obtain ⟨hout, _⟩ := he
       subst hout
-      simp only [callBuiltin, surrogatePassErrors, hDE, Bool.false_eq_true, if_false, hD, if_true,
+      simp only [callRaw, surrogatePassErrors, hDE, Bool.false_eq_true, if_false, hD, if_true,
         surrogatePassDecode, hcode, hc, ok_bind, hu]
       have hlen : (pre ++ passBytes code c ++ post).length =
           pre.length + code.bytelength + post.length := by
@@ -273,7 +275,8 @@ def BackslashReplaceUnicodeEscape : Prop :=
 
 theorem backslashReplaceUnicodeEscape_proven : BackslashReplaceUnicodeEscape := by
   intro H capi e r pos names final hH hr l hl
-  simp only [callBuiltin, backslashReplaceErrors] at hr
+  rw [callBuiltin_ok] at hr
+  simp only [callRaw, backslashReplaceErrors] at hr
   have enc : ∀ s, e.object = .str s → Str.Valid s →
       Body.result <$> backslashEncode e = .ok (.str r, pos) →
       unicodeEscapeDecode r .strict names final = .ok (slice s (stOf e s.length) pos, r.length) := by

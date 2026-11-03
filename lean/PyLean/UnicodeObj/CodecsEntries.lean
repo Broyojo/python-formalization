@@ -42,11 +42,11 @@ def codecsEntries : List Entry := [
     statement := "Each of the eight standard error handlers, called directly on an exception object of an ordinary class below UnicodeEncodeError (UnicodeDecodeError, UnicodeTranslateError) with any start and end, gives what the codec-loop model of the same handler gives for start clipped to [0, max(0, len-1)] and end clipped to [min(1, len), len], cut only by the guards against a replacement longer than PY_SSIZE_T_MAX."
     source := "invariant: a handler called by a codec and the same handler called directly are one function; codecs.rst error handler table"
     status := .proven, prop := ``HandlersAgree, thm := some ``handlersAgree_proven
-    notes := "The codec-loop model (CodecHandlers.lean) is difftested through real encode and decode calls; this one through codecs.lookup_error(name)(exc) with mutated attributes (codecs_handler). The class test is PyObject_TypeCheck on tp_mro and the exception flag is a separate oracle; HierOk asks only that builtin classes keep their MROs and flag and that no MRO lists two of the three layouts (mro_check), so the MRO need not be transitive. Scope limit (Ordinary): the class's MRO keeps UnicodeError and it has the flag, which only a custom mro() breaks; unicodeobj-codecs-odd-classes says what happens then. builtinHier_ok shows HierOk is satisfiable. The encoding name only reaches surrogatepass, whose code is a hypothesis here." },
+    notes := "The codec-loop model (CodecHandlers.lean) is difftested through real encode and decode calls; this one through codecs.lookup_error(name)(exc) with mutated attributes (codecs_handler). The class test is PyObject_TypeCheck on tp_mro and the exception flag is a separate oracle; HierOk asks only that builtin classes keep their MROs and flag and that no MRO lists two of the three layouts (mro_check), so the MRO need not be transitive. Scope limit (Ordinary): the class's MRO keeps UnicodeError, it has the flag (only a custom mro() breaks these; unicodeobj-codecs-odd-classes says what happens then), and issubclass(cls, cls) is true without raising, i.e. no metaclass __subclasscheck__ that raises or answers False (unicodeobj-codecs-encode-agree-all records that case). builtinHier_ok shows HierOk is satisfiable. The encoding name only reaches surrogatepass, whose code is a hypothesis here." },
   { id := "unicodeobj-codecs-handlers-safe", pyFile := "Python/codecs.c"
     pyFns := ["PyCodec_StrictErrors", "wrong_exception_type"] ++ handlerBodies ++ handlerWrappers ++
       handlerAccessors
-    statement := "For every object handed to a standard handler, whatever its class and attributes, provided an encode or decode error has the exception flag, the handler raises only its argument (and only when its class has the flag), a TypeError, the failure to load unicodedata's C API, or the UTF-8 encoder's error on the encoding attribute; a position it returns lies in [0, len(object)] and past the clipped start whenever the clipped range is not empty."
+    statement := "For every object handed to a standard handler, whatever its class and attributes, provided an encode or decode error has the exception flag, the handler raises only its argument (when its class has the flag and issubclass(cls, cls) holds), the normalized type(exc)(exc) (when that issubclass is false), what a metaclass __subclasscheck__ raised, a TypeError, the failure to load unicodedata's C API, or the UTF-8 encoder's error on the encoding attribute; a position it returns lies in [0, len(object)] and past the clipped start whenever the clipped range is not empty."
     source := "invariant: no internal error, results in range, codec loops make progress"
     status := .proven, prop := ``HandlersSafe, thm := some ``handlersSafe_proven
     notes := "namereplace needs names under 256 bytes (NAME_MAXLEN, the buffer of codecs.c:1091) for the progress half. Scope limit (FlagOk): without the flag, the surrogate handlers' re-raise is a SystemError; see unicodeobj-codecs-handlers-safe-all." },
@@ -57,6 +57,13 @@ def codecsEntries : List Entry := [
     status := .refuted, prop := ``HandlersSafeAll, thm := some ``handlersSafeAll_refuted
     bug := some "unicodeobj-codecs-surrogate-handlers-systemerror"
     notes := "A subclass of a class whose metaclass mro() is [cls, UnicodeEncodeError, object] has no Py_TPFLAGS_BASE_EXC_SUBCLASS; PyErr_SetObject(PyExceptionInstance_Class(exc), exc) then raises SystemError (oddExc_systemError)." },
+  { id := "unicodeobj-codecs-encode-agree-all", pyFile := "Python/codecs.c"
+    pyFns := ["PyCodec_StrictErrors", "strict_errors"]
+    statement := "For a class below UnicodeEncodeError whose MRO keeps UnicodeError and that has the exception flag, strict re-raises its argument, as the codec-loop model says, whatever the class's metaclass."
+    source := "scope record for unicodeobj-codecs-handlers-agree"
+    status := .refuted, prop := ``EncodeAgreeAll, thm := some ``encodeAgreeAll_refuted
+    bug := some "unicodeobj-codecs-reraise-subclasscheck"
+    notes := "_PyErr_SetObject asks issubclass(type(exc), type(exc)) first (errors.c:166-171): a metaclass __subclasscheck__ that raises makes strict raise its RuntimeError (checkExc_strict); one that answers False normalizes to type(exc)(exc). Language semantics, as for raise; the record is a scope note, not a bug." },
   { id := "unicodeobj-codecs-odd-classes", pyFile := "Python/codecs.c"
     pyFns := ["PyCodec_StrictErrors", "strict_errors", "_PyCodec_SurrogatePassUnicodeEncodeError",
       "_PyCodec_SurrogatePassUnicodeDecodeError", "PyCodec_SurrogatePassErrors", "surrogatepass_errors",
@@ -139,6 +146,11 @@ def codecsEntries : List Entry := [
     statement := "codecs.encode/decode call the codec's first/second item with (obj,), or (obj, errors) when errors is given, and return the first item of the 2-tuple it answers, a TypeError for any other answer, the coder's exception with the note \"encoding with '<name>' codec failed\"; the text paths (str.encode, bytes.decode) do exactly the same for a plain tuple, for a codec without _is_text_encoding and for one whose _is_text_encoding is true; they raise the LookupError that points to codecs.encode()/decode() when it is false, and the error of reading it or of PyObject_IsTrue on it."
     source := "codecs.rst: Codec.encode/decode return (output object, length consumed); invariant: the generic and text paths agree on text encodings"
     status := .proven, prop := ``CodecPaths, thm := some ``codecPaths_proven },
+  { id := "unicodeobj-codecs-lookup-text-no-command", pyFile := "Python/codecs.c"
+    pyFns := ["_PyCodec_LookupTextEncoding"]
+    statement := "_PyCodec_LookupTextEncoding(encoding, NULL), as io.TextIOWrapper calls it, passes every lookup error through, returns a plain tuple and a codec without _is_text_encoding or with a true one, raises LookupError(\"'<encoding>' is not a text encoding\") (name cut to 400 bytes) for a false one, and passes through the error of reading the attribute or testing it."
+    source := "invariant: TextIOWrapper refuses non-text codecs (textio.c:1261); smoke-tested with io.TextIOWrapper on 3.15.2"
+    status := .proven, prop := ``LookupTextNoCommand, thm := some ``lookupTextNoCommand_proven },
   { id := "unicodeobj-codecs-register-doc", pyFile := "Python/codecs.c"
     pyFns := ["PyCodec_Register", "PyCodec_Unregister", "_codecs_register", "_codecs_unregister"]
     statement := "codecs.register refuses a non-callable and otherwise appends to the search path, leaving the cache; codecs.unregister removes the first registration of that very object and clears the cache, or changes nothing when it is not registered; both return None."

@@ -2770,6 +2770,40 @@ class MroDec(UnicodeDecodeError, metaclass=MroDropDec):
     pass
 
 
+class CheckRaises(type):
+    """A metaclass `__subclasscheck__` that raises: `_PyErr_SetObject` asks it before raising."""
+    def __subclasscheck__(cls, sub):
+        raise RuntimeError("subclasscheck")
+
+
+class CheckFalse(type):
+    def __subclasscheck__(cls, sub):
+        return False
+
+
+class CheckTrue(type):
+    def __subclasscheck__(cls, sub):
+        return True
+
+
+ChkRaiseEnc = CheckRaises("ChkRaiseEnc", (UnicodeEncodeError,), {})
+ChkRaiseDec = CheckRaises("ChkRaiseDec", (UnicodeDecodeError,), {})
+ChkFalseEnc = CheckFalse("ChkFalseEnc", (UnicodeEncodeError,), {})
+ChkFalseDec = CheckFalse("ChkFalseDec", (UnicodeDecodeError,), {})
+ChkTrueEnc = CheckTrue("ChkTrueEnc", (UnicodeEncodeError,), {})
+ChkTrueDec = CheckTrue("ChkTrueDec", (UnicodeDecodeError,), {})
+
+
+def ch_subcheck(cls):
+    """What `issubclass(cls, cls)` does, as the model's oracle sees it."""
+    m = type(cls)
+    if m is CheckRaises:
+        return {"t": "raise"}
+    if m is CheckFalse:
+        return {"t": "false"}
+    return {"t": "true"}
+
+
 def fqn(t):
     """`PyType_GetFullyQualifiedName`, which `%T` prints: no module for builtins and __main__."""
     return t.__qualname__ if t.__module__ in ("builtins", "__main__") else f"{t.__module__}.{t.__qualname__}"
@@ -2780,6 +2814,8 @@ CH_KINDS = {
     "subenc": SubEnc, "subdec": SubDec, "subtr": SubTr,
     "uerr": UnicodeError, "value": ValueError, "subval": SubVal, "int": int, "strobj": str,
     "mroenc": MroEnc, "mroencsub": MroEncSub, "mrodec": MroDec,
+    "chkraiseenc": ChkRaiseEnc, "chkraisedec": ChkRaiseDec, "chkfalseenc": ChkFalseEnc,
+    "chkfalsedec": ChkFalseDec, "chktrueenc": ChkTrueEnc, "chktruedec": ChkTrueDec,
 }
 CH_HANDLERS = ["strict", "ignore", "replace", "xmlcharrefreplace", "backslashreplace", "namereplace",
                "surrogatepass", "surrogateescape"]
@@ -2851,12 +2887,12 @@ def ch_pos(rng, n):
 
 @gen("codecs", 10)
 def gen_codecs_handler(rng):
-    kind = rng.choices(list(CH_KINDS), weights=[6, 6, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1])[0]
+    kind = rng.choices(list(CH_KINDS), weights=[6, 6, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])[0]
     cls = CH_KINDS[kind]
     obj_type = "bytes" if issubclass(cls, UnicodeDecodeError) else "str"
     c = {"mod": "unicodeobj", "fn": "codecs_handler", "h": rng.choice(CH_HANDLERS), "kind": kind,
          "cls": fqn(cls), "tp": fqn(cls), "mro": [fqn(t) for t in cls.__mro__],
-         "flag": bool(cls.__flags__ & (1 << 30)), "repr": repr(cls)}
+         "flag": bool(cls.__flags__ & (1 << 30)), "repr": repr(cls), "subcheck": ch_subcheck(cls)}
     if obj_type == "str" and rng.random() < 0.5:
         enc = {"k": "str", "v": ch_rand_enc(rng)}
     else:
@@ -2939,6 +2975,8 @@ def run_codecs_handler(c):
         x = sys.exc_info()[1]
         if x is e:
             return {"raised": "self"}
+        if any("Normalization failed" in n for n in getattr(x, "__notes__", [])):
+            return {"raised": "normalize"}
         return {"raised": type(x).__name__, "msg": str(x)}
     if isinstance(rep, str):
         return {"rep": ["str", cps_of(rep)], "pos": pos}

@@ -645,3 +645,54 @@ theorem cApiMatchesLibAll_refuted : ¬ CApiMatchesLibAll := by
   cases this
 
 end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-! ## The text-encoding test without an alternate command -/
+
+/-- **`_PyCodec_LookupTextEncoding(encoding, NULL)`**, as `io.TextIOWrapper` calls it
+(Modules/_io/textio.c:1261): every lookup error passes through; a plain tuple and a codec
+without `_is_text_encoding` or with a true one are returned; a false one raises
+`LookupError("'<encoding>' is not a text encoding")` (codecs.c:542-546), with the name cut to 400
+bytes and no hint at an alternate command; an error reading the attribute or testing its truth
+passes through. -/
+def LookupTextNoCommand : Prop :=
+  ∀ (W : World) (st : Reg) (enc : List Nat),
+    match pyCodecLookup W st enc with
+    | (st1, .error e) => lookupTextEncoding W st enc none = (st1, .error e)
+    | (st1, .ok codec) =>
+      (isExactTuple codec = true → lookupTextEncoding W st enc none = (st1, .ok codec)) ∧
+      (isExactTuple codec = false →
+        match W.getattr codec "_is_text_encoding" with
+        | .error e => lookupTextEncoding W st enc none = (st1, .error e)
+        | .ok none => lookupTextEncoding W st enc none = (st1, .ok codec)
+        | .ok (some a) =>
+          match W.truth a with
+          | .ok true => lookupTextEncoding W st enc none = (st1, .ok codec)
+          | .ok false => lookupTextEncoding W st enc none =
+              (st1, .error (lookupErr s!"'{toLeanString (trunc400 ((utf8Decode enc .strict).toOption.getD []))}' is not a text encoding"))
+          | .error e => lookupTextEncoding W st enc none = (st1, .error e))
+
+theorem lookupTextNoCommand_proven : LookupTextNoCommand := by
+  intro W st enc
+  have hlt := lookupText_cases W st enc none
+  rcases hl : pyCodecLookup W st enc with ⟨st1, r⟩
+  rw [hl] at hlt
+  cases r with
+  | error e => exact hlt
+  | ok codec =>
+    simp only at hlt
+    refine ⟨fun hx => by rw [hlt, isTextCodec_exact W codec hx], fun hx => ?_⟩
+    have ht := isTextCodec_other W codec hx
+    rcases hg : W.getattr codec "_is_text_encoding" with e | _ | a
+    · rw [hg] at ht; simp only at ht; rw [hlt, ht]
+    · rw [hg] at ht; simp only at ht; rw [hlt, ht]
+    · rw [hg] at ht; simp only at ht
+      simp only
+      rcases htr : W.truth a with e | b
+      · rw [htr] at ht; rw [hlt, ht]
+      · rw [htr] at ht; cases b <;> (rw [hlt, ht])
+
+end PyLean.UnicodeObj.Codecs

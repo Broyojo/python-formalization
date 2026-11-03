@@ -14,11 +14,11 @@ open PyLean PyLean.UnicodeObj
 
 /-- The builtin classes with their static MROs, every other class unrelated to them and given
 the exception flag. -/
-def builtinHier : Hier := ⟨builtinSub, fun _ => true⟩
+def builtinHier : Hier := ⟨builtinSub, fun _ => true, fun _ => .ok true⟩
 
 /-- `HierOk` can be met: it is no vacuous hypothesis. -/
 theorem builtinHier_ok : HierOk builtinHier := by
-  refine ⟨fun c _ b => rfl, fun c _ => rfl, ?_, ?_, ?_⟩
+  refine ⟨fun c _ b => rfl, fun c _ => rfl, fun c _ => rfl, ?_, ?_, ?_⟩
   all_goals
     intro c ⟨h1, h2⟩
     first
@@ -61,9 +61,9 @@ def HandlersTotal : Prop :=
 
 theorem handlersTotal_proven : HandlersTotal := by
   intro H capi h e hH
-  have d1 := hH.2.2.1 e.cls
-  have d2 := hH.2.2.2.1 e.cls
-  have d3 := hH.2.2.2.2 e.cls
+  have d1 := hH.2.2.2.1 e.cls
+  have d2 := hH.2.2.2.2.1 e.cls
+  have d3 := hH.2.2.2.2.2 e.cls
   constructor
   · intro hm
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hm
@@ -73,14 +73,14 @@ theorem handlersTotal_proven : HandlersTotal := by
       (try simp_all) <;>
       cases ho : e.object <;> cases hcap : capi <;>
       rcases hm with rfl | rfl | rfl | rfl | rfl <;>
-      simp_all [callBuiltin, ignoreErrors, ignoreError, replaceErrors, replaceEncode, replaceDecode,
+      simp_all [callBuiltin, callRaw, setObjectStep, ignoreErrors, ignoreError, replaceErrors, replaceEncode, replaceDecode,
         replaceTranslate, decodeGetEnd, checkType, backslashReplaceErrors, backslashEncode,
         backslashDecode, xmlCharRefReplaceErrors, nameReplaceErrors, getParams, asAttr, wrongType,
         raiseT, bind, Except.bind, pure, Except.pure, Functor.map, Except.map, takes, objFits,
         Hier.isEnc, Hier.isDec, Hier.isTr, Body.result]
   · intro hs ht
     cases h <;> simp only [takes, Bool.or_eq_false_iff] at ht <;> (try exact absurd rfl hs) <;>
-      simp_all [callBuiltin, ignoreErrors, replaceErrors, backslashReplaceErrors,
+      simp_all [callBuiltin, callRaw, setObjectStep, ignoreErrors, replaceErrors, backslashReplaceErrors,
         xmlCharRefReplaceErrors, nameReplaceErrors, surrogatePassErrors, surrogateEscapeErrors,
         Functor.map, Except.map, wrongType, raiseT, Hier.isEnc, Hier.isDec, Hier.isTr]
 

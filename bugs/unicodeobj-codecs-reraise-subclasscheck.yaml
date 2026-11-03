@@ -1,0 +1,62 @@
+id: unicodeobj-codecs-reraise-subclasscheck
+title: "strict and the surrogate handlers raise what a metaclass __subclasscheck__ raises (scope record, not a bug)"
+priority: P5
+kind: scope-record
+module: unicodeobject
+files: [Python/codecs.c, Python/errors.c]
+functions: ["PyCodec_StrictErrors", "strict_errors"]
+summary: |
+  This record exists because the Lean entry `unicodeobj-codecs-encode-agree-all` is a refutation.
+  It documents the scope limit of `Ordinary` in the handler theorems; it is not a defect report.
+
+  `strict` and every re-raise of `surrogatepass`/`surrogateescape` call
+  `PyErr_SetObject(PyExceptionInstance_Class(exc), exc)`. `_PyErr_SetObject` first asks
+  `PyObject_IsSubclass(type(exc), type(exc))` (Python/errors.c:166-171), which for a class with a
+  metaclass runs the metaclass's `__subclasscheck__`:
+  * if it raises, that exception is what the handler raises;
+  * if it returns False, the exception is normalized to `type(exc)(exc)`; for a Unicode*Error
+    class that fails with `TypeError: function takes exactly 5 arguments (1 given)` and the note
+    "Normalization failed: type=E args=..." (errors.c:174-197);
+  * if it returns True, the argument itself is raised.
+  Python's own `raise exc` behaves the same way, so this is language semantics.
+likelihood: |
+  Very low; needs a metaclass overriding __subclasscheck__ on a UnicodeError subclass.
+maybe_intended: |
+  Yes: consistent with `raise`. Not to be filed.
+reproducer: |
+  import codecs
+  class M(type):
+      def __subclasscheck__(cls, sub):
+          raise RuntimeError('subclasscheck')
+  class E(UnicodeEncodeError, metaclass=M):
+      pass
+  e = E('ascii', '\xff', 0, 1, 'r')
+  try:
+      codecs.strict_errors(e)
+      result = 'no error'
+  except RuntimeError as x:
+      result = 'RuntimeError: %s' % x
+  except BaseException as x:
+      result = type(x).__name__
+  print(result)
+  if result == 'RuntimeError: subclasscheck':
+      print('REPRODUCED unicodeobj-codecs-reraise-subclasscheck')
+expected: |
+  (Within the theorems' scope) the argument itself is re-raised.
+observed: |
+  RuntimeError: subclasscheck, the metaclass's exception.
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  Nothing; recorded to put the scope limit of the handler theorems on record.
+cause: |
+  Python/errors.c:166-197: normalization in `_PyErr_SetObject`.
+possible_fix: |
+  None needed.
+lean: |
+  Refuted by encodeAgreeAll_refuted (lean/PyLean/UnicodeObj/CodecsErrNames.lean). The model mirrors
+  the step as `setObjectStep` (oracle `Hier.subcheck`); HandlersSafe allows the metaclass's error and
+  the normalized exception, and HandlersAgree assumes `subcheck = ok true` (Ordinary).
+duplicates:
+  issues: []
+  queries: ["__subclasscheck__ raise PyErr_SetObject normalization", "strict_errors metaclass"]
+  bugforge: "not applicable (not a bug)"

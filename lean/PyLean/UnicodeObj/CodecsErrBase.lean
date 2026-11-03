@@ -14,6 +14,9 @@ open PyLean PyLean.UnicodeObj
 theorem HierOk.builtin {H : Hier} (hH : HierOk H) {c : String} (hc : c ∈ builtinClasses) (b : String) :
     H.sub c b = builtinSub c b := hH.1 c hc b
 
+theorem HierOk.subcheck {H : Hier} (hH : HierOk H) {c : String} (hc : c ∈ builtinClasses) :
+    H.subcheck c = .ok true := hH.2.2.1 c hc
+
 theorem HierOk.flag {H : Hier} (hH : HierOk H) {c : String} (hc : c ∈ builtinClasses) :
     H.excFlag c = true := hH.2.1 c hc
 
@@ -21,37 +24,37 @@ theorem HierOk.enc_not_dec {H : Hier} (hH : HierOk H) {c : String} (h : H.isEnc 
     H.isDec c = false := by
   cases hd : H.isDec c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.1 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.2.1 c)
 
 theorem HierOk.enc_not_tr {H : Hier} (hH : HierOk H) {c : String} (h : H.isEnc c = true) :
     H.isTr c = false := by
   cases hd : H.isTr c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.2.1 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2.1 c)
 
 theorem HierOk.dec_not_enc {H : Hier} (hH : HierOk H) {c : String} (h : H.isDec c = true) :
     H.isEnc c = false := by
   cases hd : H.isEnc c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.1 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.2.1 c)
 
 theorem HierOk.dec_not_tr {H : Hier} (hH : HierOk H) {c : String} (h : H.isDec c = true) :
     H.isTr c = false := by
   cases hd : H.isTr c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2.2 c)
 
 theorem HierOk.tr_not_enc {H : Hier} (hH : HierOk H) {c : String} (h : H.isTr c = true) :
     H.isEnc c = false := by
   cases hd : H.isEnc c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.2.1 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2.1 c)
 
 theorem HierOk.tr_not_dec {H : Hier} (hH : HierOk H) {c : String} (h : H.isTr c = true) :
     H.isDec c = false := by
   cases hd : H.isDec c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2.2 c)
 
 /-! ## Clamping -/
 
@@ -222,5 +225,34 @@ theorem bailOn_reraise {α : Type} (H : Hier) (e : ExcObj) :
     bailOn H e (.error .reraise : HPy α) = bail H e := rfl
 
 theorem bailOn_ok {α : Type} (H : Hier) (e : ExcObj) (x : α) : bailOn H e (.ok x) = .ok x := rfl
+
+end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+theorem setObjectStep_ord {α : Type} {H : Hier} {e : ExcObj} (h : H.subcheck e.cls = .ok true)
+    (r : HPy α) : setObjectStep H e r = r := by
+  cases r with
+  | ok _ => rfl
+  | error x => cases x <;> simp [setObjectStep, h]
+
+theorem callBuiltin_ord {H : Hier} {e : ExcObj} (h : H.subcheck e.cls = .ok true) (capi) (hd) :
+    callBuiltin H capi hd e = callRaw H capi hd e := setObjectStep_ord h _
+
+theorem setObjectStep_ok {α : Type} (H : Hier) (e : ExcObj) (r : HPy α) (v : α) :
+    setObjectStep H e r = .ok v ↔ r = .ok v := by
+  cases r with
+  | ok _ => rfl
+  | error x =>
+    cases x <;> simp only [setObjectStep, reduceCtorEq, iff_false]
+    rcases H.subcheck e.cls with _ | b
+    · simp
+    · cases b <;> simp
+
+theorem callBuiltin_ok (H : Hier) (capi) (hd) (e : ExcObj) (v : Rep × Nat) :
+    callBuiltin H capi hd e = .ok v ↔ callRaw H capi hd e = .ok v := setObjectStep_ok H e _ v
+
+theorem setObjectStep_exc {α : Type} (H : Hier) (e : ExcObj) (x : PyExc) :
+    setObjectStep H e (.error (.exc x) : HPy α) = .error (.exc x) := rfl
 
 end PyLean.UnicodeObj.Codecs

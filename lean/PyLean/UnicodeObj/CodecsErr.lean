@@ -44,6 +44,11 @@ open PyLean PyLean.UnicodeObj
 structure Hier where
   sub : String → String → Bool
   excFlag : String → Bool
+  /-- `PyObject_IsSubclass(cls, cls)`, which `_PyErr_SetObject` asks before it raises an
+  instance of `cls` (Python/errors.c:166-171). For a class whose metaclass is exactly `type` it is
+  true at once (Objects/abstract.c, `object_issubclass`); otherwise it calls the metaclass's
+  `__subclasscheck__`, Python code that can answer anything or raise. -/
+  subcheck : String → Py Bool
 
 /-- The builtin bases on the way from the three error classes, and from `IndexError`, to
 `BaseException`, Objects/exceptions.c (`SimpleExtendsException(PyExc_ValueError, UnicodeError,
@@ -88,13 +93,16 @@ independent of its MRO. -/
 def HierOk (H : Hier) : Prop :=
   (∀ c ∈ builtinClasses, ∀ b, H.sub c b = builtinSub c b) ∧
   (∀ c ∈ builtinClasses, H.excFlag c = true) ∧
+  (∀ c ∈ builtinClasses, H.subcheck c = .ok true) ∧
   (∀ c, ¬ (H.sub c "UnicodeEncodeError" = true ∧ H.sub c "UnicodeDecodeError" = true)) ∧
   (∀ c, ¬ (H.sub c "UnicodeEncodeError" = true ∧ H.sub c "UnicodeTranslateError" = true)) ∧
   (∀ c, ¬ (H.sub c "UnicodeDecodeError" = true ∧ H.sub c "UnicodeTranslateError" = true))
 
-/-- The scope of theorems that need an ordinary class: its MRO keeps `UnicodeError` and it
-has the exception flag. Every class without a custom `mro()` is such. -/
-def Ordinary (H : Hier) (c : String) : Prop := H.sub c "UnicodeError" = true ∧ H.excFlag c = true
+/-- The scope of theorems that need an ordinary class: its MRO keeps `UnicodeError`, it has the
+exception flag, and `issubclass(cls, cls)` is true without raising. Every class without a custom
+`mro()` and without a metaclass `__subclasscheck__` is such. -/
+def Ordinary (H : Hier) (c : String) : Prop :=
+  H.sub c "UnicodeError" = true ∧ H.excFlag c = true ∧ H.subcheck c = .ok true
 
 /-- `_PyIsUnicodeEncodeError`, codecs.c:673-674. -/
 def Hier.isEnc (H : Hier) (c : String) : Bool := H.sub c "UnicodeEncodeError"
@@ -133,6 +141,10 @@ exc)`, which raises the handler's argument itself. -/
 inductive HErr where
   | exc (e : PyExc)
   | reraise
+  /-- `_PyErr_SetObject` found `issubclass(type(exc), type(exc))` false and raised what
+  `type(exc)(exc)` gives, or that call's own exception with a normalization note
+  (errors.c:174-197). The model does not run that call. -/
+  | normalize
   deriving Repr, DecidableEq
 
 abbrev HPy (α : Type) := Except HErr α
@@ -591,10 +603,10 @@ def surrogateEscapeErrors (H : Hier) (e : ExcObj) : HPy Body :=
 
 /-! ## The registered functions, codecs.c:1506-1561 and :1565-1651 -/
 
-/-- What `codecs.lookup_error(name)(exc)` runs for a builtin name: the `*_errors` wrappers
-(codecs.c:1508-1561), registered under these names by `_PyCodec_InitRegistry`
-(:1567-1651), each returning `Py_BuildValue("(Nn)", res, pos)`. -/
-def callBuiltin (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj) :
+/-- The handlers up to the call of `PyErr_SetObject(PyExceptionInstance_Class(exc), exc)`, whose
+flag check is in `bail` and `strictErrors`: `.reraise` stands for that call with a class that
+has the flag. -/
+def callRaw (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj) :
     HPy (Rep × Nat) :=
   match h with
   | .strict => strictErrors H e
@@ -605,6 +617,25 @@ def callBuiltin (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHa
   | .namereplace => Body.result <$> nameReplaceErrors H capi e
   | .surrogatepass => Body.result <$> surrogatePassErrors H e
   | .surrogateescape => Body.result <$> surrogateEscapeErrors H e
+
+/-- The rest of `_PyErr_SetObject` (Python/errors.c:165-197) after its flag check: it asks
+`PyObject_IsSubclass(type(exc), type(exc))`; an error there is what is raised, false means the
+exception is normalized to `type(exc)(exc)`, true raises the argument itself. Every handler
+returns at once after calling `PyErr_SetObject`, so the step is taken here, on the way out. -/
+def setObjectStep {α : Type} (H : Hier) (e : ExcObj) : HPy α → HPy α
+  | .error .reraise =>
+    match H.subcheck e.cls with
+    | .error x => .error (.exc x)
+    | .ok true => .error .reraise
+    | .ok false => .error .normalize
+  | r => r
+
+/-- What `codecs.lookup_error(name)(exc)` runs for a builtin name: the `*_errors` wrappers
+(codecs.c:1508-1561), registered under these names by `_PyCodec_InitRegistry`
+(:1567-1651), each returning `Py_BuildValue("(Nn)", res, pos)`. -/
+def callBuiltin (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj) :
+    HPy (Rep × Nat) :=
+  setObjectStep H e (callRaw H capi h e)
 
 /-- The bodies that allocate a buffer and fill it: everything but `strict`. -/
 def bodyOf (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj) :

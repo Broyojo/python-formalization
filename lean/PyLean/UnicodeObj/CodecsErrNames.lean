@@ -69,7 +69,8 @@ theorem nameReplace_alias (u : Ucd) (hu : UcdOk u) :
   have hE : builtinHier.isEnc aliasExc.cls = true := by decide
   have hs : stOf aliasExc 1 = 0 := by decide
   have he : enOf aliasExc 1 = 1 := by decide
-  simp only [callBuiltin, nameReplaceErrors, hE, Bool.not_true, Bool.false_eq_true,
+  rw [callBuiltin_ok]
+  simp only [callRaw, nameReplaceErrors, hE, Bool.not_true, Bool.false_eq_true,
     if_false, capiOf, getParams_str aliasExc [0xF0000] rfl, pure, Except.pure, bind, Except.bind,
     Functor.map, Except.map, Body.result, List.length_singleton, hs, he, slice, List.drop_zero,
     Nat.sub_zero, List.take_one, List.head?_cons, Option.toList_some, nameSizeLoop, nameSize, hn]
@@ -93,5 +94,66 @@ theorem nameReplaceWritesNames_refuted : ¬ NameReplaceWritesNames := by
     hname] at this
   revert this
   decide
+
+end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-! ## A metaclass `__subclasscheck__` in the re-raise -/
+
+/-- **`HandlersAgree` without the `__subclasscheck__` part of its scope.** For a class whose MRO
+keeps `UnicodeError` and that has the exception flag, `strict` re-raises its argument as the
+codec loop's `bad` exception. False when a metaclass `__subclasscheck__` raises:
+`_PyErr_SetObject` asks `issubclass(type(exc), type(exc))` before raising (errors.c:166-171), and
+its error is what `strict` (and every re-raise of the surrogate handlers) raises. Python's own
+`raise exc` does the same, so this records the scope limit of `Ordinary`; it is no bug. -/
+def EncodeAgreeAll : Prop :=
+  ∀ (H : Hier) (getname : Nat → Option Str) (e : ExcObj) (s : Str),
+    HierOk H → H.isEnc e.cls = true → H.sub e.cls "UnicodeError" = true → H.excFlag e.cls = true →
+    e.object = .str s → Str.Valid s →
+    lowerEnc (encodeError "" s (stOf e s.length) (enOf e s.length) "") (callBuiltin H (.ok getname) .strict e) =
+      encodeHandlerCall .strict getname "" .unknown s (stOf e s.length) (enOf e s.length) ""
+
+/-- `class M(type): def __subclasscheck__(c, s): raise RuntimeError('subclasscheck')`,
+`class E(UnicodeEncodeError, metaclass=M)`: an ordinary MRO and the flag. -/
+def checkHier : Hier :=
+  { sub := fun c b => if c = "E" then (b == "E" || builtinSub "UnicodeEncodeError" b) else builtinSub c b
+    excFlag := fun _ => true
+    subcheck := fun c => if c = "E" then .error (.named "RuntimeError" "subclasscheck") else .ok true }
+
+theorem checkHier_ok : HierOk checkHier := by
+  have nb : ∀ c ∈ builtinClasses, c ≠ "E" := by
+    intro c hc; simp [builtinClasses] at hc; rcases hc with h | h | h | h | h | h | h | h | h <;>
+      subst h <;> decide
+  refine ⟨fun c hc b => by simp [checkHier, nb c hc], fun c _ => rfl,
+    fun c hc => by simp [checkHier, nb c hc], ?_, ?_, ?_⟩
+  all_goals
+    intro c ⟨h1, h2⟩
+    by_cases hE : c = "E"
+    · subst hE; revert h2; decide
+    · simp only [checkHier, hE, if_false] at h1 h2
+      first
+        | (have := builtinSub_enc c h1; subst this; revert h2; decide)
+        | (have := builtinSub_dec c h1; subst this; revert h2; decide)
+
+def checkExc : ExcObj :=
+  { cls := "E", tpName := "E", clsRepr := "<class '__main__.E'>", encoding := .null,
+    object := .str [0xff], start := 0, stop := 1 }
+
+theorem checkExc_strict :
+    callBuiltin checkHier (.ok fun _ => none) .strict checkExc =
+      .error (.exc (.named "RuntimeError" "subclasscheck")) := by rfl
+
+theorem encodeAgreeAll_refuted : ¬ EncodeAgreeAll := by
+  intro h
+  have := h checkHier (fun _ => none) checkExc [0xff] checkHier_ok (by decide) (by decide) rfl rfl
+    (by intro x hx; simp at hx; subst hx; decide)
+  rw [checkExc_strict] at this
+  simp only [lowerEnc, encodeHandlerCall, Except.error.injEq] at this
+  have hc := congrArg PyExc.className this
+  unfold encodeError at hc
+  split at hc <;> simp [PyExc.className] at hc
 
 end PyLean.UnicodeObj.Codecs
