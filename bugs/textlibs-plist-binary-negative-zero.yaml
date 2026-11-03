@@ -1,0 +1,52 @@
+id: textlibs-plist-binary-negative-zero
+title: "plistlib: the binary writer turns -0.0 into 0.0 when 0.0 was written first"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Lib/plistlib.py]
+functions: ["_BinaryPlistWriter._flatten", "_BinaryPlistWriter._getrefnum"]
+summary: |
+  _flatten shares scalar objects by value: it looks up (type(value), value) in self._objtable
+  (Lib/plistlib.py:717-719, :727-728), and _getrefnum resolves references the same way (:752-754).
+  0.0 == -0.0 and they hash alike, so in [0.0, -0.0] the second float is written as a reference to
+  the first, and loads(dumps([0.0, -0.0], fmt=FMT_BINARY)) is [0.0, 0.0]. A lone -0.0 survives, and
+  the XML writer (repr) keeps both signs, so the two formats disagree. Every other float keeps its
+  bits (equal floats have equal bits, and NaNs are only shared when they are the same object).
+likelihood: |
+  Low: the value compares equal, and only the sign of zero is lost (visible to math.copysign,
+  atan2, 1/x).
+maybe_intended: |
+  Possibly: the sharing is meant to save space for equal values, and Python equality says they are
+  equal. The same mechanism conflates fold-distinct aware datetimes (gh-158735/gh-158736, closed
+  without discussion as part of a bulk report).
+reproducer: |
+  import math, plistlib
+  value = [0.0, -0.0]
+  b = plistlib.loads(plistlib.dumps(value, fmt=plistlib.FMT_BINARY))
+  x = plistlib.loads(plistlib.dumps(value, fmt=plistlib.FMT_XML))
+  signs = lambda l: [math.copysign(1.0, v) for v in l]
+  print("binary:", b, signs(b))
+  print("xml:   ", x, signs(x))
+  print("lone -0.0 binary:", math.copysign(1.0, plistlib.loads(plistlib.dumps(-0.0, fmt=plistlib.FMT_BINARY))))
+  if signs(b) == [1.0, 1.0] and signs(x) == [1.0, -1.0]:
+      print("REPRODUCED textlibs-plist-binary-negative-zero")
+expected: |
+  [0.0, -0.0], as the XML format gives.
+observed: |
+  python3 3.15.2: binary [0.0, 0.0] (signs [1.0, 1.0]); XML [0.0, -0.0]; a lone -0.0 keeps its sign.
+  REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Invariant: the binary format stores IEEE doubles exactly, and the XML twin preserves the sign.
+cause: |
+  Lib/plistlib.py:717-719 and :752-754 key the scalar table on value equality; for floats equality
+  identifies 0.0 and -0.0.
+possible_fix: |
+  Key floats by their bit pattern (e.g. (float, struct.pack('>d', value))) or skip the sharing for
+  floats equal to zero.
+duplicates: |
+  Same root cause as gh-158735 and gh-158736 (closed, bulk report; aware datetimes), not the same
+  value. Queries: gh search issues --repo python/cpython plistlib zero; plistlib -0.0; plistlib float;
+  plistlib binary; plistlib dedup. Bugforge list: plistlib-20261003-073911-c2/c3/c4 are the
+  datetime variants.
+lean: lean/PyLean/TextLibs/PlistRefute.lean (BinaryFloatBits, binaryFloatBits_refuted)
