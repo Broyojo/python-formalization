@@ -1,4 +1,4 @@
-import PyLean.Datetime.ZoneCacheErrProps
+import PyLean.Datetime.ZoneCacheEqProps
 
 /-!
 # A subclass's weak cache: both twins use `Sub._weak_cache` (CPython 3.15.2)
@@ -119,7 +119,11 @@ theorem sub_clearKeys (err : Option PyExc) : ∀ (ks : List K) (ps W : List (K �
     intro ps W n cw
     obtain ⟨⟨v1, W1⟩, hw⟩ := dictPop_ok o hE hH W k
     obtain ⟨⟨v2, ps1⟩, hp⟩ := dictPop_ok o hE hH ps k
-    have hwp : wvdPop o W k = .ok W1 := by simp [wvdPop, hw]
+    have hwp : ∃ W1', wvdPop o W k = .ok W1' := by
+      cases W with
+      | nil => exact ⟨[], rfl⟩
+      | cons a W => exact ⟨W1, by simp only [wvdPop, hw]⟩
+    obtain ⟨W1, hwp⟩ := hwp
     have hc : clearKeysC o W err ⟨false, [], cw, [], n, []⟩ (k :: ks) =
         clearKeysC o W1 err ⟨false, [], cw, [], n, []⟩ ks := by
       simp [clearKeysC, ejectC, hwp]
@@ -188,5 +192,121 @@ theorem subCacheTwins_proven : SubCacheTwins := by
     Except.ok.injEq] at hp hc
   subst hp; subst hc
   exact sub_run o hE hH ops [] [] 0 hall
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-! ### `clear_cache(only_keys=...)` stops at the first failing key -/
+
+section stop
+
+variable {K : Type} [DecidableEq K]
+
+theorem findStrongC_ok (o : KeyOps K) (k : K) (hk : ∀ b, ∃ r, o.eq k b = .ok r) :
+    ∀ l : List (K × Inst K), ∃ r, findStrongC o k l = .ok r ∧
+      (r = none ∨ ∃ nd ∈ l, richEqBool o k nd.1 = .ok true ∧ r = some nd) := by
+  intro l
+  induction l with
+  | nil => exact ⟨none, rfl, .inl rfl⟩
+  | cons nd l ih =>
+    obtain ⟨r, hr, hr'⟩ := ih
+    have hrb : ∃ b, richEqBool o k nd.1 = .ok b := by
+      unfold richEqBool
+      split
+      · exact ⟨true, rfl⟩
+      · exact hk nd.1
+    obtain ⟨b, hb⟩ := hrb
+    cases b with
+    | true => exact ⟨some nd, by simp [findStrongC, hb], .inr ⟨nd, List.mem_cons_self, hb, rfl⟩⟩
+    | false =>
+      refine ⟨r, by simp [findStrongC, hb, hr], ?_⟩
+      rcases hr' with h | ⟨x, hx, h1, h2⟩
+      · exact .inl h
+      · exact .inr ⟨x, List.mem_cons_of_mem _ hx, h1, h2⟩
+
+theorem wvdPop_hash_err (o : KeyOps K) (k : K) (e : PyExc) (he : o.hash k = .error e)
+    (W : List (K × Inst K)) (hW : W ≠ []) : wvdPop o W k = .error e := by
+  cases W with
+  | nil => exact absurd rfl hW
+  | cons a W => simp [wvdPop, dictPop, dictFind, he]
+
+end stop
+
+/-- `clear_cache(only_keys=[k, *rest])` on the base class, while the weak cache holds a zone
+for a key not equal to `k`, with a first key whose `__hash__` raises (and whose `__eq__` does
+not): both twins raise that exception and process no later key, whatever `rest` and the
+iterator do. (That zone survives C's eject of `k`'s node, so the weak cache is not empty when
+C's `dict.pop` runs; on an empty one `pop` never hashes the key and C carries on:
+`cacheErrTwins_refuted_empty`.) Python changes nothing (its weak-cache `pop` hashes
+first); C has already ejected the strong node equal to `k`, if any (`eject_from_strong_cache`
+compares without hashing), then the weak `pop` fails and the loop breaks (:552-553), so
+every other entry, the later keys' included, stays cached. -/
+def ClearKeysStop : Prop :=
+  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (k : K) (e : PyExc), o.hash k = .error e →
+    (∀ b, ∃ r, o.eq k b = .ok r) →
+    ∀ (ps cs W : List (K × Inst K)) (n : Nat) (rest : List K) (err : Option PyExc),
+      (∃ w ∈ W, richEqBool o k w.1 = .ok false) →
+      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W n, .error e) ∧
+      (clearErrC o (mkZ cs W n) (some (k :: rest, err))).2 = .error e ∧
+      ((clearErrC o (mkZ cs W n) (some (k :: rest, err))).1 = mkZ cs W n ∨
+        ∃ nd ∈ cs, richEqBool o k nd.1 = .ok true ∧
+          (clearErrC o (mkZ cs W n) (some (k :: rest, err))).1 = mkZ (cs.erase nd) W n)
+
+theorem clearKeysStop_proven : ClearKeysStop := by
+  intro K _ o k e he hk ps cs W n rest err hW
+  have hW' : W ≠ [] := by
+    obtain ⟨w, hw, -⟩ := hW
+    intro h; rw [h] at hw; simp at hw
+  have hpop := wvdPop_hash_err o k e he W hW'
+  refine ⟨?_, ?_⟩
+  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hpop]
+  · obtain ⟨r, hr, hr'⟩ := findStrongC_ok o k hk cs
+    have hc : clearErrC o (mkZ cs W n) (some (k :: rest, err)) =
+        clearKeysC o W err (mkZ cs W n) (k :: rest) := by
+      simp [clearErrC, getWeakC, mkZ]
+    rw [hc]
+    rcases hr' with h | ⟨nd, hnd, h1, h2⟩
+    · subst h
+      have hej : ejectC o (mkZ cs W n) k = .ok cs := by simp [ejectC, mkZ, hr]
+      simp only [clearKeysC, hej, hpop]
+      exact ⟨trivial, .inl rfl⟩
+    · subst h2
+      have hej : ejectC o (mkZ cs W n) k = .ok (cs.erase nd) := by simp [ejectC, mkZ, hr]
+      simp only [clearKeysC, hej, hpop]
+      exact ⟨trivial, .inr ⟨nd, hnd, h1, rfl⟩⟩
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- Each failure inside the `only_keys` loop stops it with that exception and the state at
+that point, whatever keys follow: C's failed eject (`break` at :542-544) and failed weak
+`pop` (`break` at :552-553), Python's failed weak `pop` and failed strong `pop` (the
+exception leaves the `for` loop, _zoneinfo.py:97-99). -/
+def ClearKeysBreaks : Prop :=
+  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (k : K) (rest : List K) (err : Option PyExc)
+    (x : PyExc) (ps cs W : List (K × Inst K)) (n : Nat),
+    (findStrongC o k cs = .error x →
+      clearErrC o (mkZ cs W n) (some (k :: rest, err)) = (mkZ cs W n, .error x)) ∧
+    (∀ s, ejectC o (mkZ cs W n) k = .ok s → wvdPop o W k = .error x →
+      clearErrC o (mkZ cs W n) (some (k :: rest, err)) = (mkZ s W n, .error x)) ∧
+    (wvdPop o W k = .error x →
+      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W n, .error x)) ∧
+    (∀ W', wvdPop o W k = .ok W' → dictPop o ps k = .error x →
+      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W' n, .error x))
+
+theorem clearKeysBreaks_proven : ClearKeysBreaks := by
+  intro K _ o k rest err x ps cs W n
+  refine ⟨fun h => ?_, fun s hs hp => ?_, fun hp => ?_, fun W' hp hd => ?_⟩
+  · have hej : ejectC o (mkZ cs W n) k = .error x := by simp [ejectC, mkZ, h]
+    simp only [clearErrC, getWeakC, mkZ, ite_true, Option.getD_some, clearKeysC]
+    simp only [mkZ] at hej
+    simp [hej]
+  · simp only [clearErrC, getWeakC, mkZ, ite_true, Option.getD_some, clearKeysC]
+    simp only [mkZ] at hs
+    simp [hs, hp]
+  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hp]
+  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hp, setWeakPy, hd]
 
 end PyLean.Datetime.Zone

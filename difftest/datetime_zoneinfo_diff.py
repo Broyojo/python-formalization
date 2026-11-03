@@ -310,7 +310,11 @@ def gen_case(rng):
 
 def gen_cerr(rng):
     nkeys = 10
-    kinds = [rng.choice([0, 0, 0, 1, 2]) if rng.random() < 0.6 else 0 for _ in range(nkeys)]
+    # hold: the harness keeps every instance it gets referenced, so a C eject cannot collect a zone
+    # (and remove its weak entry) inside clear_cache; unhashable keys (kind 3) only then
+    hold = rng.random() < 0.5
+    kinds = [rng.choice([0, 0, 0, 1, 2, 3] if hold else [0, 0, 0, 1, 2]) if rng.random() < 0.6 else 0
+             for _ in range(nkeys)]
     # separate str objects with equal text compare equal
     texts = [i if rng.random() < 0.6 else rng.randrange(nkeys) for i in range(nkeys)]
     sub = rng.random() < 0.4
@@ -322,12 +326,12 @@ def gen_cerr(rng):
         elif r < 0.77:
             ops.append(["clear"])
         elif r < 0.95 or not sub:
-            ops.append(["keys", [rng.randrange(nkeys) for _ in range(rng.randint(0, 3))],
+            ops.append(["keys", [rng.randrange(nkeys) for _ in range(rng.randint(0, 4))],
                         rng.random() < 0.3])
         else:
             ops.append(["del"])
     return {"mod": "datetime", "fn": rng.choice(["zi_cerr_c", "zi_cerr_py"]), "ops": ops,
-            "kinds": kinds, "texts": texts, "loads": LOADABLE, "sub": sub}
+            "kinds": kinds, "texts": texts, "loads": LOADABLE, "sub": sub, "hold": hold}
 
 
 # ---- running CPython --------------------------------------------------------
@@ -422,9 +426,13 @@ class SameHashKey(RaiseKey):
         return 0
 
 
+class NoHashKey(str):
+    __hash__ = None
+
+
 def run_cerr(case, Z):
     Z.clear_cache()
-    keys = [(str, RaiseKey, SameHashKey)[kd]("".join(["k", str(t)]))
+    keys = [(str, RaiseKey, SameHashKey, NoHashKey)[kd]("".join(["k", str(t)]))
             for kd, t in zip(case["kinds"], case["texts"])]
     assert len({id(k) for k in keys}) == len(keys)
     index = {id(k): i for i, k in enumerate(keys)}
@@ -435,6 +443,7 @@ def run_cerr(case, Z):
     else:
         cls = Z
     seen = []  # weakrefs, numbered by first appearance
+    held = []
 
     def canon(inst):
         for n, r in enumerate(seen):
@@ -448,6 +457,8 @@ def run_cerr(case, Z):
         try:
             if op[0] == "get":
                 inst = cls(keys[op[1]])
+                if case["hold"]:
+                    held.append(inst)
                 outs.append({"ok": [index[id(inst.key)], canon(inst)]})
                 del inst
             elif op[0] == "clear":

@@ -82,13 +82,18 @@ def getOps (j : Json) : Except String (List (CacheOp Nat)) := do
 
 /-- Key behaviour for `zi_cerr_*`: key `k` has text `texts[k]` (separate objects may share a
 text, and then compare equal); kind 0 a plain `str`, 1 a `str` subclass whose `__eq__`
-raises `RuntimeError`, 2 the same with `__hash__` returning 0. A comparison involving a kind 1
+raises `RuntimeError`, 2 the same with `__hash__` returning 0, 3 a `str` subclass with
+`__hash__ = None` (`str`'s own comparison). A comparison involving a kind 1
 or 2 key raises (its `__eq__`, or its reflected one, runs first). -/
 def cerrOps (kinds texts loads : List Int) : KeyOps Nat :=
   let kind (k : Nat) : Int := kinds.getD k 0
   let text (k : Nat) : Int := texts.getD k k
-  ⟨fun k => .ok (if kind k = 2 then 0 else text k + 1),
-   fun a b => if kind a ≠ 0 ∨ kind b ≠ 0 then .error (.named "RuntimeError" "eq")
+  ⟨fun k => if kind k = 3 then .error (.typeError "~unhashable type")
+     else .ok (if kind k = 2 then 0 else text k + 1),
+   fun a b =>
+     -- a subclass's reflected `__eq__` runs first only against a plain `str` on the left
+     if kind a = 1 ∨ kind a = 2 ∨ (kind a = 0 ∧ (kind b = 1 ∨ kind b = 2)) then
+       .error (.named "RuntimeError" "eq")
      else .ok (decide (text a = text b)),
    fun k => loads.contains (text k)⟩
 
@@ -109,8 +114,8 @@ def getErrOps (j : Json) : Except String (List (ZOp Nat)) := do
     | t => throw s!"bad op {t}"
 
 /-- Refcounting frees an instance as soon as no strong entry holds it: its weak entries go. -/
-def sweepZ (c : ZCls Nat) : ZCls Nat :=
-  let held (p : Nat × Inst Nat) : Bool := c.strong.any (·.2 = p.2)
+def sweepZ (c : ZCls Nat) (extra : List (Inst Nat)) : ZCls Nat :=
+  let held (p : Nat × Inst Nat) : Bool := c.strong.any (·.2 = p.2) || extra.contains p.2
   { c with weak := c.weak.map (·.filter held), baseWeak := c.baseWeak.filter held }
 
 /-- Instances are reported by order of first appearance (results, then strong values), as
@@ -120,6 +125,8 @@ def runCerr (fn : String) (j : Json) : Except String Json := do
   let texts ← intList j "texts"
   let loads ← intList j "loads"
   let sub ← (← field j "sub").getBool?
+  -- `hold`: the harness keeps every instance it was returned referenced
+  let hold ← (← field j "hold").getBool?
   let ops ← getErrOps j
   let o := cerrOps kinds texts loads
   let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0, []⟩
@@ -127,7 +134,11 @@ def runCerr (fn : String) (j : Json) : Except String Json := do
   let step := if isPy then stepErrPy o else stepErrC o
   let (c, outs) := ops.foldl (fun (c, acc) op =>
     let (c', r) := step c op
-    (sweepZ c', acc ++ [r])) (c0, ([] : List (Py (Option (Inst Nat)))))
+    let acc := acc ++ [r]
+    let kept : List (Inst Nat) := if hold then
+        acc.filterMap fun r => match r with | .ok (some i) => some i | _ => none
+      else []
+    (sweepZ c' kept, acc)) (c0, ([] : List (Py (Option (Inst Nat)))))
   let seen : List (Inst Nat) := outs.filterMap fun r => match r with | .ok (some i) => some i | _ => none
   let order := (seen ++ c.strong.map (·.2)).eraseDups
   let canon (i : Inst Nat) : Nat := order.idxOf i
@@ -136,7 +147,8 @@ def runCerr (fn : String) (j : Json) : Except String Json := do
     | .ok (some i) => Json.mkObj [("ok", Json.arr #[toJson i.1, toJson (canon i)])]
     | .ok none => Json.mkObj [("ok", Json.null)]
     | .error e => Json.mkObj [("exc", toJson e.className)]
-  let alive := (c.strong.map fun p => canon p.2).eraseDups.mergeSort (· ≤ ·)
+  let alive := ((if hold then seen else []) ++ c.strong.map (·.2)).map canon
+    |>.eraseDups.mergeSort (· ≤ ·)
   let strong := if isPy then toJson (c.strong.map fun p => [p.1, canon p.2]) else Json.null
   return Json.mkObj [("ok", Json.arr #[Json.arr (outs.map enc).toArray, toJson alive, strong])]
 
