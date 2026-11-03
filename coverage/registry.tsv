@@ -2207,6 +2207,15 @@ textlibs-toml-arrays-inline-tables	proven	Lib/tomllib/_parser.py	parse_array,par
 textlibs-toml-document	proven	Lib/tomllib/_parser.py	loads,key_value_rule,parse_key_value_pair
 textlibs-toml-multiline-basic	proven	Lib/tomllib/_parser.py	parse_multiline_str,parse_basic_str_escape_multiline,parse_basic_str,parse_basic_str_escape
 textlibs-toml-dotted-then-header	proven	Lib/tomllib/_parser.py	Flags.add_pending,Flags.finalize_pending,key_value_rule
+textlibs-email-unstructured	proven	Lib/email/_header_value_parser.py	get_unstructured,get_fws,TokenList.__str__,TokenList.value,WhiteSpaceTerminal.value,ValueTerminal.value
+textlibs-email-msgid-no-fold-literal-space	refuted	Lib/email/_header_value_parser.py	parse_message_id,parse_message_ids,get_msg_id,get_no_fold_literal,get_dtext,_get_ptext_to_endchars
+textlibs-email-param-extended-marker-at-end	refuted	Lib/email/_header_value_parser.py	parse_content_type_header,parse_content_disposition_header,parse_mime_parameters,get_parameter
+textlibs-email-section-nondecimal-digit	refuted	Lib/email/_header_value_parser.py	get_section
+textlibs-email-mime-version-nondecimal-digit	refuted	Lib/email/_header_value_parser.py	parse_mime_version
+textlibs-email-display-name-only-cfws	refuted	Lib/email/_header_value_parser.py	DisplayName.display_name,DisplayName.value,get_display_name,get_phrase
+textlibs-email-quoted-string-reparse	refuted	Lib/email/_header_value_parser.py	get_quoted_string,get_bare_quoted_string,BareQuotedString.__str__,quote_string,make_quoted_pairs
+textlibs-email-quoting-round-trip	proven	Lib/email/_header_value_parser.py	make_quoted_pairs,make_parenthesis_pairs,quote_string,get_bare_quoted_string,get_qcontent,_get_ptext_to_endchars,get_comment,get_qp_ctext,get_fws,BareQuotedString.__str__,BareQuotedString.value,Comment.__str__,Comment.quote,Comment.content
+textlibs-email-ptext-had-qp	refuted	Lib/email/_header_value_parser.py	_get_ptext_to_endchars,get_dtext
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
