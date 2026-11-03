@@ -2704,6 +2704,234 @@ def me_width_value(a):
 # ==== end str method slice ====
 
 
+# ==== Python/codecs.c and Modules/_codecsmodule.c (fn names codecs_*) ====
+
+def _ucn_getname():
+    """`ucnhash_capi->getname(c, buf, 256, with_alias_and_seq)`, the function namereplace
+    calls, reached through the capsule unicodedata exports."""
+    import ctypes
+    get_ptr = ctypes.pythonapi.PyCapsule_GetPointer
+    get_ptr.restype = ctypes.c_void_p
+    get_ptr.argtypes = [ctypes.py_object, ctypes.c_char_p]
+    ptr = get_ptr(unicodedata._ucnhash_CAPI, b"unicodedata._ucnhash_CAPI")
+    proto = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_int, ctypes.c_int)
+    fn = proto(ctypes.c_void_p.from_address(ptr).value)
+    buf = ctypes.create_string_buffer(256)
+
+    def getname(c, flag=1):
+        return buf.value.decode("ascii") if fn(c, buf, 256, flag) else None
+    return getname
+
+
+CAPI_GETNAME = _ucn_getname()
+
+
+def capi_names(cps):
+    return [[c, None if CAPI_GETNAME(c) is None else cps_of(CAPI_GETNAME(c))] for c in sorted(set(cps))]
+
+
+class SubEnc(UnicodeEncodeError):
+    pass
+
+
+class SubDec(UnicodeDecodeError):
+    pass
+
+
+class SubTr(UnicodeTranslateError):
+    pass
+
+
+class SubVal(ValueError):
+    pass
+
+
+def fqn(t):
+    """`PyType_GetFullyQualifiedName`, which `%T` prints: no module for builtins and __main__."""
+    return t.__qualname__ if t.__module__ in ("builtins", "__main__") else f"{t.__module__}.{t.__qualname__}"
+
+
+CH_KINDS = {
+    "enc": UnicodeEncodeError, "dec": UnicodeDecodeError, "tr": UnicodeTranslateError,
+    "subenc": SubEnc, "subdec": SubDec, "subtr": SubTr,
+    "uerr": UnicodeError, "value": ValueError, "subval": SubVal, "int": int, "strobj": str,
+}
+CH_HANDLERS = ["strict", "ignore", "replace", "xmlcharrefreplace", "backslashreplace", "namereplace",
+               "surrogatepass", "surrogateescape"]
+CH_CHARS = [0x0, 0x9, 0x26, 0x41, 0x5c, 0x7a, 0x7f, 0x80, 0xe9, 0xff, 0x100, 0x3400, 0x4e00, 0xac00,
+            0x20ac, 0xd7ff, 0xd800, 0xdbff, 0xdc00, 0xdc7f, 0xdc80, 0xdcff, 0xdd00, 0xdfff, 0xe000,
+            0xfffd, 0xffff, 0x10000, 0x1f600, 0xe0100, 0xf0000, 0xf0001, 0xf00ff, 0xf01d8, 0xf0200,
+            0xf0300, 0xf03a0, 0x10ffff, 9999, 99999, 999999]
+CH_BYTES = [0x00, 0x41, 0x5c, 0x7f, 0x80, 0x9f, 0xa0, 0xb0, 0xbf, 0xc0, 0xd8, 0xdc, 0xdf, 0xe0, 0xed,
+            0xef, 0xff]
+CH_SURR = [0xd800, 0xdbff, 0xdc00, 0xdc80, 0xdcff, 0xdfff]
+CH_ENCODINGS = ["utf-8", "UTF8", "utf_8", "utf8", "Utf-8", "cp65001", "CP65001", "utf-16", "utf-16-le",
+                "UTF-16BE", "utf_16_le", "utf16le", "utf16-be", "utf-16-", "utf-16-l", "utf-16-lex",
+                "utf-16-xe", "utf-32", "utf-32-be", "utf32LE", "utf_32-le", "utf-32-", "utf", "u", "",
+                "utf-8\x00junk", "utf-16\x00be", "utf-8-sig", "utf-7", "ascii", "latin-1", "utf-\ud800",
+                "\ud800", "utf-16-\xe9e", "\xfctf-8", "utf--8", "utf-1", "utf-3", "utf-16-be\x00",
+                "utf-32le", "utf-32_BE"]
+
+
+def ch_rand_enc(rng):
+    if rng.random() < 0.8:
+        return cps_of(rng.choice(CH_ENCODINGS))
+    return cps_of("".join(rng.choice("utfUTF-_81632lebLEB\x00\xe9") for _ in range(rng.randint(0, 9))))
+
+
+def ch_surr_bytes(rng):
+    """A surrogate as one of the five encodings writes it, or a near miss."""
+    c = rng.choice(CH_SURR + [0xd7ff, 0xe000, 0x41])
+    form = rng.choice(["utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+    b = list(chr(c).encode(form, "surrogatepass"))
+    if rng.random() < 0.15 and b:
+        b[rng.randrange(len(b))] ^= rng.choice([0x01, 0x40, 0x80])
+    return b
+
+
+def ch_str(rng):
+    pool = rng.sample(CH_CHARS, rng.choice([1, 2, 4, len(CH_CHARS)]))
+    return [rng.choice(pool) for _ in range(rng.randint(0, 7))]
+
+
+def ch_bytes(rng):
+    out = []
+    for _ in range(rng.randint(0, 4)):
+        out += ch_surr_bytes(rng) if rng.random() < 0.4 else [rng.choice(CH_BYTES)]
+    return out
+
+
+def ch_slot(rng, want):
+    r = rng.random()
+    if r < 0.82:
+        k = want
+    elif r < 0.9:
+        k = "bytes" if want == "str" else "str"
+    else:
+        k = rng.choice(["null", "none", "int"])
+    if k == "str":
+        return {"k": "str", "v": ch_str(rng)}
+    if k == "bytes":
+        return {"k": "bytes", "v": ch_bytes(rng)}
+    return {"k": k}
+
+
+def ch_pos(rng, n):
+    r = rng.random()
+    if r < 0.7:
+        return rng.randint(-2, n + 2)
+    return rng.choice([-2 ** 63, -2 ** 63 + 1, -5, -1, 0, 1, n - 1, n, n + 1, 2 ** 62, 2 ** 63 - 2,
+                       2 ** 63 - 1])
+
+
+@gen("codecs", 10)
+def gen_codecs_handler(rng):
+    kind = rng.choices(list(CH_KINDS), weights=[6, 6, 3, 2, 2, 1, 1, 1, 1, 1, 1])[0]
+    cls = CH_KINDS[kind]
+    obj_type = "bytes" if issubclass(cls, UnicodeDecodeError) else "str"
+    c = {"mod": "unicodeobj", "fn": "codecs_handler", "h": rng.choice(CH_HANDLERS), "kind": kind,
+         "cls": fqn(cls), "tp": fqn(cls), "mro": [fqn(t) for t in cls.__mro__]}
+    if obj_type == "str" and rng.random() < 0.5:
+        enc = {"k": "str", "v": ch_rand_enc(rng)}
+    else:
+        enc = {"k": "str", "v": ch_rand_enc(rng)} if rng.random() < 0.85 else \
+            ch_slot(rng, rng.choice(["bytes", "null", "none"]))
+    obj = ch_slot(rng, obj_type)
+    if obj_type == "bytes" and obj["k"] == "bytes" and rng.random() < 0.5:
+        # one surrogate in a chosen encoding, so surrogatepass has something to find
+        obj = {"k": "bytes", "v": [rng.choice(CH_BYTES) for _ in range(rng.randint(0, 2))] + ch_surr_bytes(rng)
+               + [rng.choice(CH_BYTES) for _ in range(rng.randint(0, 2))]}
+    if obj_type == "str" and obj["k"] == "str" and rng.random() < 0.4:
+        obj["v"] = obj["v"] + [rng.choice(CH_SURR) for _ in range(rng.randint(1, 3))]
+    start = None
+    if c["h"] == "surrogatepass" and obj_type == "bytes" and rng.random() < 0.6:
+        # a surrogate at start, in the encoding the exception names
+        form = rng.choice(["utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+        pre = [rng.choice(CH_BYTES) for _ in range(rng.randint(0, 2))]
+        b = list(chr(rng.choice(CH_SURR + [0xe000])).encode(form, "surrogatepass"))
+        obj = {"k": "bytes", "v": pre + b + [rng.choice(CH_BYTES) for _ in range(rng.randint(0, 2))]}
+        names = {"utf-8": ["utf-8", "UTF8", "cp65001"], "utf-16-le": ["utf-16", "utf_16_LE", "utf16le"],
+                 "utf-16-be": ["utf-16-be", "UTF16BE"], "utf-32-le": ["utf-32", "utf-32le"],
+                 "utf-32-be": ["utf-32-be", "Utf_32_bE"]}[form]
+        enc = {"k": "str", "v": cps_of(rng.choice(names))}
+        start = len(pre)
+    if c["h"] == "surrogateescape" and obj_type == "str" and rng.random() < 0.4:
+        obj = {"k": "str", "v": [rng.randint(0xdc78, 0xdd02) for _ in range(rng.randint(0, 5))]}
+    if c["h"] == "surrogatepass" and obj_type == "str" and rng.random() < 0.4:
+        obj = {"k": "str", "v": [rng.choice(CH_SURR + [0xe000]) for _ in range(rng.randint(0, 5))]}
+        enc = {"k": "str", "v": cps_of(rng.choice(CH_ENCODINGS[:22]))}
+    n = len(obj.get("v", []))
+    c.update({"encoding": enc, "object": obj, "start": ch_pos(rng, n) if start is None else start,
+              "end": ch_pos(rng, n)})
+    c["names"] = capi_names(obj["v"]) if obj["k"] == "str" else []
+    return c
+
+
+def ch_set(e, attr, slot):
+    k = slot["k"]
+    if k == "null":
+        delattr(e, attr)
+    elif k == "str":
+        setattr(e, attr, s_of(slot["v"]))
+    elif k == "bytes":
+        setattr(e, attr, bytes(slot["v"]))
+    elif k == "none":
+        setattr(e, attr, None)
+    else:
+        setattr(e, attr, 5)
+
+
+def ch_build(c):
+    cls = CH_KINDS[c["kind"]]
+    if issubclass(cls, UnicodeEncodeError):
+        e = cls("ascii", "x", 0, 1, "r")
+    elif issubclass(cls, UnicodeDecodeError):
+        e = cls("ascii", b"x", 0, 1, "r")
+    elif issubclass(cls, UnicodeTranslateError):
+        e = cls("x", 0, 1, "r")
+    elif cls is int:
+        return 5
+    elif cls is str:
+        return "abc"
+    else:
+        return cls("x")
+    ch_set(e, "encoding", c["encoding"])
+    ch_set(e, "object", c["object"])
+    e.start = c["start"]
+    e.end = c["end"]
+    return e
+
+
+@run("codecs_handler")
+def run_codecs_handler(c):
+    import codecs
+    e = ch_build(c)
+    h = codecs.lookup_error(c["h"])
+    try:
+        rep, pos = h(e)
+    except Exception as x:
+        if x is e:
+            return {"raised": "self"}
+        return {"raised": type(x).__name__, "msg": str(x)}
+    if isinstance(rep, str):
+        return {"rep": ["str", cps_of(rep)], "pos": pos}
+    return {"rep": ["bytes", list(rep)], "pos": pos}
+
+
+@gen("codecs", 2)
+def gen_codecs_ucs1_encode(rng):
+    s = ch_str(rng)
+    return {"mod": "unicodeobj", "fn": "codecs_ucs1_encode", "s": s, "limit": rng.choice([128, 256]),
+            "h": rng.choice(CH_HANDLERS), "names": capi_names(s)}
+
+
+@run("codecs_ucs1_encode")
+def run_codecs_ucs1_encode(c):
+    return list(s_of(c["s"]).encode("ascii" if c["limit"] == 128 else "latin-1", c["h"]))
+
+# ==== end codecs.c ====
+
+
 # The size cap. The model builds its output as a list, so a case that asks for a huge result
 # (a large width, a large repeat) can take hundreds of GB in pydiff, where CPython would raise
 # MemoryError at once. Every generated case passes through size_ok, and one that could
