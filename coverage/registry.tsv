@@ -2196,6 +2196,7 @@ textlibs-toml-load	proven	Lib/tomllib/_parser.py	load
 textlibs-toml-arrays-inline-tables	proven	Lib/tomllib/_parser.py	parse_array,parse_inline_table,skip_comment,skip_comments_and_array_ws,parse_key_value_pair,parse_value
 textlibs-toml-document	proven	Lib/tomllib/_parser.py	loads,key_value_rule,parse_key_value_pair
 textlibs-toml-multiline-basic	proven	Lib/tomllib/_parser.py	parse_multiline_str,parse_basic_str_escape_multiline,parse_basic_str,parse_basic_str_escape
+textlibs-toml-dotted-then-header	proven	Lib/tomllib/_parser.py	Flags.add_pending,Flags.finalize_pending,key_value_rule
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
