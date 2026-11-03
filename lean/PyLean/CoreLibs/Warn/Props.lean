@@ -149,7 +149,7 @@ theorem alreadyWarned_eq (ver : Int) (r : Reg) (k : Key) (hv : ver ≠ 0) (hk : 
 theorem show_eq (E : Env) (c : Call) (he : EnvOk E) (hl : c.pyLines = .ok ()) :
     cShow E = pyShow E c := by
   obtain ⟨_, _, wm, fn, hs⟩ := he
-  simp [cShow, pyShow, hs, hl, bind, Except.bind]
+  simp [cShow, pyShow, hs, hl, bind, Except.bind, getWarningsAttr]
 
 /-- The plain actions take the same steps in both twins, registries compared by `norm`. -/
 theorem action_eq (E : Env) (K : WCfg) (ver : Int) (c : Call) (ln : Int) (a : String) (b : Bool)
@@ -213,7 +213,7 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
         | none =>
           obtain ⟨e1, e2, e3, e4⟩ := action_eq E K ver c v a (!fs.isEmpty) .none (pyRegPrep ver []) hpa hshow
           simp only [Option.map_none] at e1 e2 e3 e4
-          simp only [cDefault, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
+          simp only [cDefault, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
           exact ⟨e2, by simpa using e3, e4⟩
         | some f =>
           obtain ⟨s', hs', hps⟩ := hplain f hpf
@@ -233,7 +233,7 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
           | none =>
             obtain ⟨e1, e2, e3, e4⟩ := action_eq E K ver c v a (!fs.isEmpty) (.some r) (pyRegPrep ver r) hpa hshow
             simp only [Option.map_some] at e1 e2 e3 e4
-            simp only [cDefault, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
+            simp only [cDefault, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
             exact ⟨e2, by simpa using e3, e4⟩
           | some f =>
             obtain ⟨s', hs', hps⟩ := hplain f hpf
@@ -241,6 +241,38 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
             simp only [Option.map_some] at e1 e2 e3 e4
             simp only [hs', withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
             exact ⟨e2, by simpa using e3, e4⟩
+
+/-! ## `get_warnings_attr` -/
+
+/-- `get_warnings_attr` (_warnings.c:224-256), which every module lookup of C `warn_explicit` goes
+through: with `try_import`, an `ImportError` (or a subclass, such as `ModuleNotFoundError`) from
+`import warnings` is cleared and the result is `NULL` with no error set (so `call_show_warning`
+falls back to `show_warning`), any other import error propagates; without it, a `warnings` absent
+from `sys.modules` is `NULL`; then a present attribute is returned, a missing one is `NULL`
+(`PyObject_GetOptionalAttr` clears the `AttributeError`, where Python's `_wm.x` raises it), and
+a lookup that raises propagates. Measured on 3.15.2: `sys.modules['warnings'] = None` makes
+`warn_explicit` print through `show_warning`; a module whose `__getattr__` raises makes it raise. -/
+def GetWarningsAttrSpec : Prop :=
+  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA e "ImportError" = true →
+    getWarningsAttr true (.error e) b attr = .ok none) ∧
+  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA e "ImportError" = false →
+    getWarningsAttr true (.error e) b attr = .error e) ∧
+  (∀ (α : Type) (imp : Py Unit) (attr : AttrR α), getWarningsAttr false imp false attr = .ok none) ∧
+  (∀ (α : Type) t (a : α), getWarningsAttr t (.ok ()) true (.found a) = .ok (some a)) ∧
+  (∀ (α : Type) t, getWarningsAttr t (.ok ()) true (AttrR.missing : AttrR α) = .ok none) ∧
+  (∀ (α : Type) t e, getWarningsAttr t (.ok ()) true (AttrR.raises e : AttrR α) = .error e)
+
+theorem getWarningsAttrSpec_proven : GetWarningsAttrSpec := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro α e attr b h; simp [getWarningsAttr, h]
+  · intro α e attr b h; simp [getWarningsAttr, h]
+  · intro α imp attr; simp [getWarningsAttr]
+  · intro α t a; cases t <;> simp [getWarningsAttr]
+  · intro α t; cases t <;> simp [getWarningsAttr]
+  · intro α t e; cases t <;> simp [getWarningsAttr]
+
+/-- `ModuleNotFoundError` is an `ImportError`. -/
+theorem moduleNotFound_isImportError : isA (.named "ModuleNotFoundError" "x") "ImportError" = true := by decide
 
 /-! ## The cases left out, each refuted -/
 

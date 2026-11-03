@@ -183,10 +183,16 @@ def entries : List Entry := [
     prop := ``ResetSpec, thm := some ``resetSpec_proven },
   { id := "warn-add-filter-valueerror", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_add_filter"]
-    statement := "A ValueError raised by an element's __eq__ during filters.remove is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays."
+    statement := "A ValueError (or subclass, such as UnicodeError) raised by an element's __eq__ during filters.remove is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
     source := "the except ValueError of :326-329", status := .proven
     prop := ``AddFilterValueError, thm := some ``addFilterValueError_proven
-    notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError or KeyError." },
+    notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError, UnicodeError or KeyError." },
+  { id := "warn-get-warnings-attr", pyFile := "Python/_warnings.c"
+    pyFns := ["get_warnings_attr"]
+    statement := "get_warnings_attr: with try_import, an ImportError (or subclass) from import warnings is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
+    source := "the comments of :219-222 and :232-233 ('Fallback to the C implementation')", status := .proven
+    prop := ``GetWarningsAttrSpec, thm := some ``getWarningsAttrSpec_proven
+    notes := "Measured on 3.15.2: sys.modules['warnings'] = None makes warn_explicit print through show_warning; a warnings module whose __getattr__ raises ValueError makes warn_explicit raise it. call_show_warning and get_default_action are written over getWarningsAttr (Model.lean)." },
   { id := "warn-defaults-twin-narrow", pyFile := "Python/_warnings.c"
     pyFns := ["init_filters", "create_filter"]
     statement := "For every module name that is __main__ or does not start with __main__, C's initial filters and the list _setup_defaults builds pick the same filter action for every warning."
@@ -308,9 +314,20 @@ def entries : List Entry := [
     prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_showwarnmsg", "_showwarnmsg_impl"]
-    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode loses the warning when sys.stderr is None or the write raises OSError, writes it when the write succeeds, and propagates any other exception from the write."
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode loses the warning when sys.stderr is None or the write raises OSError or a subclass (BrokenPipeError, ...), writes it when the write succeeds, and propagates any other exception from the write."
     source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
     prop := ``ShowDispatch, thm := some ``showDispatch_proven },
+  { id := "warn-nested-record", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_Context.copy", "_new_context", "catch_warnings.__enter__", "_showwarnmsg_impl"]
+    statement := "A catch_warnings() entered inside a catch_warnings(record=True) still records every warning shown through _showwarnmsg into the outer list, in both modes (with contexts, _Context.copy passes the log on; without, the inner __enter__ leaves _showwarnmsg_impl alone)."
+    source := "_Context.copy :59-60; docs: record=True", status := .proven
+    prop := ``NestedRecord, thm := some ``nestedRecord_proven
+    notes := "Measured on 3.15.2 in both context modes; difftest warn.ctx enters objects in any order." },
+  { id := "warn-exit-not-entered", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["catch_warnings.__exit__", "catch_warnings.__repr__"]
+    statement := "__exit__ of a catch_warnings that was never entered raises RuntimeError('Cannot exit catch_warnings(...) without entering first') with its repr (the class name, with record=True when recording) and changes nothing."
+    source := ":728-729, :689-696", status := .proven
+    prop := ``ExitNotEntered, thm := some ``exitNotEntered_proven },
   { id := "warn-catch-restores", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__init__", "catch_warnings.__enter__", "catch_warnings.__exit__", "_Context.__init__",
               "_Context.copy", "_new_context", "_set_context", "_get_context", "_get_filters", "_GlobalContext._filters"]

@@ -77,6 +77,7 @@ def pElem (j : Json) : Except String Elem := do
       | "t" => .ok true
       | "f" => .ok false
       | "verr" => .error (.valueError "eq")
+      | "uerr" => .error (.named "UnicodeError" "eq")
       | _ => .error (.keyError "'eq'")
     return .other (← jNatAt j 1) r
   | _ => return .item ⟨← jStrAt j 1, ← pRx (← jGetI j 2), ← jNatAt j 3, ← pRx (← jGetI j 4), ← jIntAt j 5⟩
