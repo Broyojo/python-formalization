@@ -69,7 +69,7 @@ Lib/_pyio.py	1003	1020	BytesIO.truncate	truncate(self, pos=None)	modelled	pyio-b
 Lib/_pyio.py	1022	1025	BytesIO.readable	readable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1027	1030	BytesIO.writable	writable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1032	1035	BytesIO.seekable	seekable(self)	modelled	pyio-bytesio-inquiries	
-Lib/_pyio.py	1049	1060	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedreader-init-inquiry-twins	review: BP2.init answers raw.readable() from a flag with no callback, so a readable() that raises, re-enters or returns a truthy non-bool (accepted here, refused by io: measured) is not modelled; all three refutations hold for any constructor that succeeds.
+Lib/_pyio.py	1049	1060	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedreader-init-inquiry-twins	
 Lib/_pyio.py	1062	1063	BufferedReader.readable	readable(self)	todo		
 Lib/_pyio.py	1065	1067	BufferedReader._reset_read_buf	_reset_read_buf(self)	todo		review: Two assignments; in the failed-seek case it runs only in __init__ (the defect is that seek never reaches it), so the refutation holds for any reset.
 Lib/_pyio.py	1069	1080	BufferedReader.read	read(self, size=None)	modelled	pyio-buffered-pyio-no-hang	candidates:pyio-bytesio-read-after-seek
@@ -80,7 +80,7 @@ Lib/_pyio.py	1156	1168	BufferedReader.read1	read1(self, size=-1)	todo
 Lib/_pyio.py	1175	1221	BufferedReader._readinto	_readinto(self, buf, read1)	modelled	pyio-bufferedreader-readinto-twins	
 Lib/_pyio.py	1223	1225	BufferedReader.tell	tell(self)	todo		review: tellR mirrors :1225, but the failed-seek refutation only needs a value other than C's 2; a tell without the max(..., 0) clamp (-4 here) still refutes, so nothing pins its formula.
 Lib/_pyio.py	1227	1236	BufferedReader.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	1247	1256	BufferedWriter.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedwriter-init-inquiry-twins	review: raw.writable() is a flag answered without a callback (truthy non-bool, raising and re-entering inquiries not modelled), and in BufferedRandom's constructor the failed-seek refutation holds for any writer init that succeeds.
+Lib/_pyio.py	1247	1256	BufferedWriter.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedwriter-init-inquiry-twins	
 Lib/_pyio.py	1258	1259	BufferedWriter.writable	writable(self)	todo		
 Lib/_pyio.py	1261	1287	BufferedWriter.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	1289	1294	BufferedWriter.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
@@ -102,7 +102,7 @@ Lib/_pyio.py	1399	1400	BufferedRWPair.flush	flush(self)	todo
 Lib/_pyio.py	1402	1406	BufferedRWPair.close	close(self)	todo		
 Lib/_pyio.py	1408	1409	BufferedRWPair.isatty	isatty(self)	todo		
 Lib/_pyio.py	1412	1413	BufferedRWPair.closed	closed(self)	todo		
-Lib/_pyio.py	1425	1428	BufferedRandom.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedrandom-init-inquiry-twins	review: raw._checkSeekable() and the readable/writable inquiries are flags without callbacks (seekable() returning 1 is accepted here and refused by io, measured), and the refutation holds for any constructor that succeeds.
+Lib/_pyio.py	1425	1428	BufferedRandom.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedrandom-init-inquiry-twins	
 Lib/_pyio.py	1430	1445	BufferedRandom.seek	seek(self, pos, whence=0)	modelled	pyio-bufferedrandom-failed-seek-twins	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/_pyio.py	1447	1451	BufferedRandom.tell	tell(self)	todo		review: The kind-2 branch of BP2.tell mirrors :1448-1451, but the refutation only needs a value other than 2 on an empty write buffer; nothing states its result or the write-buffer branch.
 Lib/_pyio.py	1453	1457	BufferedRandom.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position

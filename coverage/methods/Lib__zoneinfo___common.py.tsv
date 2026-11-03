@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
 Lib/zoneinfo/_common.py	4	29	load_tzdata	load_tzdata(key)	todo		
-Lib/zoneinfo/_common.py	32	132	load_data	load_data(fobj)	modelled	datetime-zoneinfo-load-data-no-assertion,datetime-zoneinfo-load-data-shape,datetime-zoneinfo-load-data-valueerror	review: loadData mirrors :33-132, but LoadDataValueError's counterexample fails inside _TZifHeader.from_file (:166), so the refutation holds for any body after :33; the AssertionError of :123 is shown only by the bug reproducer, and LoadDataShape (the success path) is open.
+Lib/zoneinfo/_common.py	32	132	load_data	load_data(fobj)	modelled	datetime-zoneinfo-load-data-no-assertion,datetime-zoneinfo-load-data-shape,datetime-zoneinfo-load-data-valueerror	
 Lib/zoneinfo/_common.py	146	148	_TZifHeader.__init__	__init__(self, *args)	modelled	datetime-zoneinfo-load-data-shape	
 Lib/zoneinfo/_common.py	151	168	_TZifHeader.from_file	from_file(cls, stream)	modelled	datetime-zoneinfo-load-data-valueerror	
