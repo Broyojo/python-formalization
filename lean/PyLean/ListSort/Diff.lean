@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.ListSort.Model
 import PyLean.ListSort.Compare
 import PyLean.ListSort.Minrun
+import PyLean.ListSort.FallibleBridge
 
 /-!
 Differential-testing handler for `listsort` cases (`"mod": "listsort"`).
@@ -99,6 +100,27 @@ def run (fn : String) (j : Json) : Except String Json := do
       let bounded := allCompact (a.map f)
       let (r, _) := listSortKeyCnt f (selectCompare bounded) a rev
       return Json.mkObj [("ok", encList r)]
+  | "raise" =>
+    let a ← getIntList j "a"
+    let bad ← getInt j "bad"
+    let rev ← getBool j "reverse"
+    let lt : PLt Int := fun x y => if x = bad ∨ y = bad then .error (.valueError "lt") else .ok (decide (x < y))
+    let (r, c, e) := listSortCntF lt a rev
+    return Json.mkObj [("ok", Json.arr #[encList r, toJson c, toJson e.isSome])]
+  | "keyraise" =>
+    let a ← getIntList j "a"
+    let bad ← getInt j "bad"
+    let mut' ← getBool j "mut"
+    let rev ← getBool j "reverse"
+    -- the twin's key: append 0 to the list it sorts (when `mut`), then raise on `bad`
+    let key : Int → LView Int → Py Int × LView Int := fun x u =>
+      let u := if mut' then ({ items := u.items ++ [0], allocated := 4 } : LView Int) else u
+      if x = bad then (.error (.named "KeyError" "~key"), u) else (.ok x, u)
+    let (r, e) := listSortKeyImplF (pureLt (fun x y : Int => decide (x < y))) key a rev
+    let en : Json := match e with
+      | none => Json.null
+      | some ex => toJson ex.className
+    return Json.mkObj [("ok", Json.arr #[encList r, en])]
   | "evil" =>
     let a ← getIntList j "a"
     let mode ← getStr j "mode"

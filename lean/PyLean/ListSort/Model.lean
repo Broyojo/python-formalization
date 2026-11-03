@@ -380,7 +380,7 @@ structure Slice where
   power : Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- The `for (;;)` loop of `powerloop` (`listobject.c:2694-2710`) after
+/-- The `for (;;)` loop of `powerloop` (`listobject.c:2697-2710`) after
 `++result`: `result` is the value after the increment. Also reports whether a
 value outside `Py_ssize_t` (`>= 2**63`) was ever produced. -/
 def powerIter (n : Nat) : Nat → Nat → Nat → Nat → Bool → Nat × Bool

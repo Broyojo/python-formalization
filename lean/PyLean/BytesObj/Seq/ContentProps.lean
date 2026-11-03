@@ -488,7 +488,7 @@ theorem sortsliceParallel_proven : SortsliceParallel := by
 
 /-- `merge_init` and `merge_getmem`: with a key function half the stack space goes to
 the values; the temporary area is then at least `need` and the overflow check of
-line 2247 cannot fire for a `need` no larger than the limit. `listsort.txt` bounds
+line 2323 cannot fire for a `need` no larger than the limit. `listsort.txt` bounds
 `need` by half the list, so `merge_getmem`'s `MemoryError` by overflow is unreachable. -/
 def MergeMemSpec : Prop :=
   ∀ (n need : Int) (kf : Bool) (ms : MergeMem), 0 ≤ n →

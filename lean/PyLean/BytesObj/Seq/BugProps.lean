@@ -22,24 +22,33 @@ theorem listSizeofBase_refuted : ¬ ListSizeofBase := by
   revert this
   decide
 
-/-- Outside `list.sort`, `list.__sizeof__()` is exactly `40 + 8 * allocated`, with no
-wraparound, for every list satisfying the invariant. -/
+/-- Outside `list.sort`, `list.__sizeof__()` is exactly `tp_basicsize + 8 * allocated`, with no
+wraparound, for every list satisfying the invariant and every list type: `tp_basicsize` is a
+`Py_ssize_t` that is not negative (type invariant), 40 for `list` itself and `40 + 8 * k` for a
+subclass with `k` `__slots__`, so `class L(list): __slots__ = ('a', 'b')` gives `L().__sizeof__()
+== 56`. -/
 def ListSizeofExact : Prop :=
-  ∀ (α : Type) (o : LObj α), o.WF → listSizeof o = 40 + 8 * o.allocated
+  ∀ (α : Type) (o : LObj α) (basicsize : Int), o.WF → 0 ≤ basicsize → basicsize ≤ ssizeMax →
+    listSizeof o basicsize = basicsize + 8 * o.allocated ∧ listSizeof o = 40 + 8 * o.allocated
 
-theorem listSizeofExact_proven : ListSizeofExact := by
-  intro α o hw
-  have h1 := hw.nonneg
-  have h2 := hw.bytes
+theorem listSizeof_eq {α : Type} (o : LObj α) (basicsize : Int) (hw : o.WF) (h0 : 0 ≤ basicsize)
+    (h1 : basicsize ≤ ssizeMax) : listSizeof o basicsize = basicsize + 8 * o.allocated := by
+  have h2 := hw.nonneg
+  have h3 := hw.bytes
   unfold listSizeof PyLean.RangeSlice.toU
-  have h3 : ssizeMax / 8 = 1152921504606846975 := by decide
-  rw [h3] at h2
+  have h8 : ssizeMax / 8 = 1152921504606846975 := by decide
+  have hM : ssizeMax = 9223372036854775807 := by decide
+  rw [h8] at h3
   have h4 : (2 : Int) ^ 64 = 18446744073709551616 := by decide
   unfold PyLean.RangeSlice.two64
-  rw [Int.emod_eq_of_lt h1 (by omega), h4]
-  have e : 40 + o.allocated * 8 = 40 + 8 * o.allocated := by omega
+  rw [h4, Int.emod_eq_of_lt h2 (by omega), Int.emod_eq_of_lt h0 (by omega)]
+  have e : basicsize + o.allocated * 8 = basicsize + 8 * o.allocated := by omega
   rw [e]
   apply Int.emod_eq_of_lt <;> omega
+
+theorem listSizeofExact_proven : ListSizeofExact := by
+  intro α o b hw h0 h1
+  exact ⟨listSizeof_eq o b hw h0 h1, listSizeof_eq o 40 hw (by decide) (by decide)⟩
 
 /-- `__length_hint__` is an estimate ("may be greater or less than the actual length",
 Doc/reference/datamodel.rst), so any value it may legally return, `0` to
