@@ -396,15 +396,32 @@ def readMut (k : Nat) (a : Arr) : Option PyExc × Arr :=
   | 3 => (none, { a with exports := a.exports + 1 })
   | _ => (none, a)
 
+/-- What the scripted `__release_buffer__` of the difftest does (`k`): 7 clears the array
+(`del a[:]`), 8 appends a zero item, 9 raises `ValueError`, which is only reported. A failure
+of the change itself is reported the same way. -/
+def relMut (k : Nat) (a : Arr) : Arr :=
+  match k with
+  | 7 =>
+    match arrClear a with
+    | .ok a' => a'
+    | .error _ => a
+  | 8 =>
+    match arrFromBytes a (List.replicate a.tc.itemsize.toNat 0) 1 with
+    | .ok a' => a'
+    | .error _ => a
+  | _ => a
+
 /-- `io.BytesIO(bs).read(n)` (`n >= 0`) after `readMut k`. For `k` = 4, 5, 6 the data comes
 back as an instance of a `bytes` subclass whose `__buffer__` returns `memoryview(b'')`,
-`memoryview(bytes(4)).cast('I')` (item size 4), or raises `ValueError("buf")`. -/
+`memoryview(bytes(4)).cast('I')` (item size 4), or raises `ValueError("buf")`; for `k` = 7, 8, 9
+as one with the `__release_buffer__` of `relMut k`. -/
 def scriptRead (bs : List Nat) (k : Nat) : ReadFn := fun n a =>
   let d := bs.take n.toNat
   match k with
-  | 4 => (.bytesSub d.length (.ok ([], 1)), a)
-  | 5 => (.bytesSub d.length (.ok ([0, 0, 0, 0], 4)), a)
-  | 6 => (.bytesSub d.length (.error (.valueError "buf")), a)
+  | 4 => (.bytesSub d.length ⟨fun a => (.ok ([], 1), a), id⟩, a)
+  | 5 => (.bytesSub d.length ⟨fun a => (.ok ([0, 0, 0, 0], 4), a), id⟩, a)
+  | 6 => (.bytesSub d.length ⟨fun a => (.error (.valueError "buf"), a), id⟩, a)
+  | 7 | 8 | 9 => (.bytesSub d.length ⟨fun a => (.ok (d, 1), a), relMut k⟩, a)
   | k =>
     match readMut k a with
     | (some e, a) => (.raises e, a)
@@ -498,6 +515,11 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "tolist" => return same (pyJ (fun vs => toJson (vs.map PyVal.toJ)) (arrToList a))
   | "frombytes" => return keep (arrFromBytes a (← jNats (← arg op 1)) 1) (fun _ => unitJ) id
+  | "frombytes_rel" =>
+    let bs ← jNats (← arg op 1)
+    let k ← (← arg op 2).getNat?
+    let (r, a') := arrFromBytesCall a ⟨fun a => (.ok (bs, 1), a), relMut k⟩
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "frombytes_wide" => return keep (arrFromBytes a (← jNats (← arg op 1)) 2) (fun _ => unitJ) id
   | "tobytes" => return same (okJ (natsJ (arrToBytes a)))
   | "fromfile" =>

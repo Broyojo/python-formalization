@@ -617,6 +617,7 @@ sequences-array-single-struct	refuted	Modules/arraymodule.c	f_setitem
 sequences-array-richcompare	proven	Modules/arraymodule.c	array_richcompare
 sequences-array-fromfile-doc	refuted	Modules/arraymodule.c	array_array_fromfile_impl
 sequences-array-fromfile	proven	Modules/arraymodule.c	array_array_fromfile_impl
+sequences-array-frombytes-buffer	proven	Modules/arraymodule.c	frombytes,array_array_frombytes_impl
 sequences-array-tofile	proven	Modules/arraymodule.c	array_array_tofile_impl
 sequences-array-tofile-safe	refuted	Modules/arraymodule.c	array_array_tofile_impl
 sequences-array-repr-names	refuted	Modules/arraymodule.c	array_repr

@@ -42,6 +42,7 @@ from collections import defaultdict, deque
 import common
 
 warnings.simplefilter("ignore", DeprecationWarning)
+sys.unraisablehook = lambda unraisable: None   # __release_buffer__ that raises (RelBuf)
 
 M = sys.maxsize
 BIG = 10 ** 5           # largest result the generator lets CPython allocate
@@ -601,6 +602,9 @@ def gen_array_op(rng, a):
     if op in ("extend", "extend_raise", "fromlist"):
         return [op, [rng.choice([good_val(rng, tc), good_val(rng, tc), any_val(rng, tc)])
                      for _ in range(rng.choice([0, 1, 2, 3, 5, 20]))]]
+    if op == "frombytes" and rng.random() < 0.3:
+        k = rng.choice([0, 1, 2, 4, 8]) * ITEMSIZE[tc] + rng.choice([0, 0, 1])
+        return ["frombytes_rel", [rng.randrange(256) for _ in range(k)], rng.choice([7, 8, 9])]
     if op in ("frombytes", "frombytes_wide"):
         k = rng.choice([0, 1, 2, 3, 4, 5, 7, 8, 16, 24]) * rng.choice([1, ITEMSIZE[tc]])
         return [op, [rng.choice([0, 1, 255, 0x80, rng.randrange(256)]) for _ in range(k)]]
@@ -611,7 +615,7 @@ def gen_array_op(rng, a):
                           {"o": "Idx", "i": rng.choice([1, 2, -1, 2 ** 64])}, {"o": "NoneType"}, {"f": fbits(rng)},
                           user_obj(rng, False)])
         if rng.random() < 0.4:
-            return ["fromfile_mut", [rng.randrange(256) for _ in range(nbytes)], cnt, rng.randrange(7)]
+            return ["fromfile_mut", [rng.randrange(256) for _ in range(nbytes)], cnt, rng.randrange(10)]
         return [op, [rng.randrange(256) for _ in range(nbytes)], cnt]
     if op in ("fromfile_notbytes", "fromfile_raise"):
         return [op, rng.choice([0, 1, 2, -1, {"o": "NoneType"}])]
@@ -948,6 +952,8 @@ class MutFile:
             self.a.clear()
         elif self.k == 3:
             self.extra["views"].append(memoryview(self.a))
+        elif self.k >= 7:
+            return rel_buf(self.a, self.k, self.f.read(n))
         elif self.k >= 4:
             return BUF_CLS[self.k](self.f.read(n))
         return self.f.read(n)
@@ -972,6 +978,24 @@ class BadBuf(bytes):
 
 
 BUF_CLS = {4: EmptyBuf, 5: WideBuf, 6: BadBuf}
+
+
+class RelBuf(bytes):
+    """A bytes subclass whose __release_buffer__ changes the array: k = 7 clears it, 8 appends a
+    zero item, 9 raises (reported as unraisable)."""
+    def __release_buffer__(self, view):
+        if self.k == 7:
+            del self.arr[:]
+        elif self.k == 8:
+            self.arr.frombytes(bytes(self.arr.itemsize))
+        else:
+            raise ValueError("release")
+
+
+def rel_buf(arr, k, data):
+    b = RelBuf(data)
+    b.arr, b.k = arr, k
+    return b
 
 
 def run_deque_op(d, op, extra):
@@ -1190,6 +1214,8 @@ def run_array_op(a, op, c, extra):
         return [from_val(v) for v in a.tolist()]
     if name == "frombytes":
         return a.frombytes(bytes(args[0]))
+    if name == "frombytes_rel":
+        return a.frombytes(rel_buf(a, args[1], bytes(args[0])))
     if name == "frombytes_wide":
         return a.frombytes(memoryview(array("h", [0])).cast("B").cast("h") if False else _wide(args[0]))
     if name == "tobytes":
