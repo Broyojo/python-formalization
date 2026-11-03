@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Objects/longobject.c	46	50	_Py_DECREF_INT	_Py_DECREF_INT(PyLongObject *op)	excluded		no-behaviour: reference count bookkeeping with a specialized destructor; no Python-visible value
-Objects/longobject.c	53	58	is_medium_int	is_medium_int(stwodigits x)	modelled	longobj-from-stwodigits	
+Objects/longobject.c	53	58	is_medium_int	is_medium_int(stwodigits x)	todo		review: isMediumInt (Digits.lean:391) mirrors the uint64_t wraparound test at :56-57. FromSTwoDigitsCanonical only says fromSTwoDigits builds Long.ofInt, and that still holds with isMediumInt := fun _ => false, because fromLarge's digitLoop 3 is canonical for medium values too. isMediumInt_iff is proven but is not part of the prop, and longobj-compact-ops, which would pin the predicate on |x| < 2**60, is not listed in this row.
 Objects/longobject.c	61	65	get_small_int	get_small_int(sdigit ival)	todo		
 Objects/longobject.c	68	78	maybe_small_long	maybe_small_long(PyLongObject *v)	todo		
 Objects/longobject.c	126	142	long_normalize	long_normalize(PyLongObject *v)	modelled	longobj-normalize	
@@ -37,7 +37,7 @@ Objects/longobject.c	954	963	PyLong_GetSign	PyLong_GetSign(PyObject *vv, int *si
 Objects/longobject.c	966	973	bit_length_digit	bit_length_digit(digit x)	todo		
 Objects/longobject.c	976	997	_PyLong_NumBits	_PyLong_NumBits(PyObject *vv)	modelled	longobj-native-bytes,longobj-num-bits	
 Objects/longobject.c	1000	1106	_PyLong_FromByteArray	_PyLong_FromByteArray(const unsigned char* bytes, size_t n, int little_endian, int is_signed)	modelled	mathint-from-bytes-value	
-Objects/longobject.c	1109	1254	_PyLong_AsByteArray	_PyLong_AsByteArray(PyLongObject* v, unsigned char* bytes, size_t n, int little_endian, int is_signed, int with_exceptions)	modelled	mathint-to-bytes-exact	
+Objects/longobject.c	1109	1254	_PyLong_AsByteArray	_PyLong_AsByteArray(PyLongObject* v, unsigned char* bytes, size_t n, int little_endian, int is_signed, int with_exceptions)	todo		review: asByteArray mirrors the control flow with with_exceptions=1, and ToBytesExact pins the bytes and the OverflowError for every v and n. Not modelled: the with_exceptions=0 mode, and the bytes already stored when the loop jumps to Overflow, which PyLong_AsNativeBytes relies on (comment at :1154-1157). The citations are about 10 lines stale: storeBytes cites :1181-1190 (actually :1191-1200), the loop :1155-1191 (actually :1164-1201), and the function :1109-1248 (it ends at :1254).
 Objects/longobject.c	1258	1267	_fits_in_n_bits	_fits_in_n_bits(Py_ssize_t v, Py_ssize_t n)	modelled	longobj-native-bytes	
 Objects/longobject.c	1270	1279	_resolve_endianness	_resolve_endianness(int *endianness)	todo		
 Objects/longobject.c	1282	1463	PyLong_AsNativeBytes	PyLong_AsNativeBytes(PyObject* vv, void* buffer, Py_ssize_t n, int flags)	todo		
@@ -51,7 +51,7 @@ Objects/longobject.c	1583	1622	PyLong_AsLongLong	PyLong_AsLongLong(PyObject *vv)
 Objects/longobject.c	1628	1669	PyLong_AsUnsignedLongLong	PyLong_AsUnsignedLongLong(PyObject *vv)	modelled	longobj-require-int	
 Objects/longobject.c	1675	1700	_PyLong_AsUnsignedLongLongMask	_PyLong_AsUnsignedLongLongMask(PyObject *vv)	modelled	longobj-as-mask	
 Objects/longobject.c	1703	1724	PyLong_AsUnsignedLongLongMask	PyLong_AsUnsignedLongLongMask(PyObject *op)	modelled	longobj-index-conversions	
-Objects/longobject.c	1737	1810	PyLong_AsLongLongAndOverflow	PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)	modelled	longobj-index-conversions	
+Objects/longobject.c	1737	1810	PyLong_AsLongLongAndOverflow	PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)	todo		review: asLongLongAndOverflow (Conv.lean:250) is a bare alias of asLongAndOverflow, and no proposition mentions it. The + accumulation at :1789, where PyLong_AsLongAndOverflow uses |, is justified only in a docstring and not proved, so this twin's difference is merged and nothing is stated about the function.
 Objects/longobject.c	1854	1873	v_iadd	v_iadd(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	modelled	longobj-vector-add-sub	
 Objects/longobject.c	1880	1899	v_isub	v_isub(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	modelled	longobj-vector-add-sub	
 Objects/longobject.c	1905	1917	v_lshift	v_lshift(digit *z, digit *a, Py_ssize_t m, int d)	modelled	longobj-vector-shifts	
@@ -60,9 +60,9 @@ Objects/longobject.c	1960	1974	inplace_divrem1	inplace_divrem1(digit *pout, digi
 Objects/longobject.c	1982	1993	divrem1	divrem1(PyLongObject *a, digit n, digit *prem)	modelled	longobj-divrem-one-digit	
 Objects/longobject.c	1999	2007	inplace_rem1	inplace_rem1(digit *pin, Py_ssize_t size, digit n)	modelled	longobj-divrem-one-digit	
 Objects/longobject.c	2014	2022	rem1	rem1(PyLongObject *a, digit n)	modelled	longobj-divrem	
-Objects/longobject.c	2027	2088	pylong_int_to_decimal_string	pylong_int_to_decimal_string(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-str-round-trip	
-Objects/longobject.c	2096	2318	long_to_decimal_string_internal	long_to_decimal_string_internal(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-str-round-trip	
-Objects/longobject.c	2321	2327	long_to_decimal_string	long_to_decimal_string(PyObject *aa)	modelled	longobj-str-round-trip	
+Objects/longobject.c	2027	2088	pylong_int_to_decimal_string	pylong_int_to_decimal_string(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	todo		review: Modelled as _pylong.int_to_decimal_string applied to the value; the import failure and the 'did not return a str' TypeError (:2042-2046) are not mirrored. RoundTripDecimal only says int(str(n)) == n, which an output with a '+' sign, underscores or leading zeros would also satisfy. It also assumes numDigits v <= lim, so the digit limit is never stated, although on this path only the pre-check guards it (shown by longToDecimalString_eq, which is not registered).
+Objects/longobject.c	2096	2318	long_to_decimal_string_internal	long_to_decimal_string_internal(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	todo		review: longToDecimalWith and decCore mirror the pre-check, the _pylong switch, the base-10**9 loop, the exact strlen and the second limit check; decCore's own citation 'Lines 2086-2240' should be :2148-2317. RoundTripDecimal excludes every int over the limit and does not pin the output form ('+12' or '1_2' would round-trip), so the ValueError, and whether it fires before the work, is never stated. The stronger longToDecimalString_eq is proven but is not an entry.
+Objects/longobject.c	2321	2327	long_to_decimal_string	long_to_decimal_string(PyObject *aa)	todo		review: A wrapper over long_to_decimal_string_internal with the same RoundTripDecimal, which excludes the over-limit case and admits non-canonical decimal strings.
 Objects/longobject.c	2335	2500	long_format_binary	long_format_binary(PyObject *aa, int base, int alternate, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-format-binary	
 Objects/longobject.c	2503	2514	_PyLong_Format	_PyLong_Format(PyObject *obj, int base)	todo		
 Objects/longobject.c	2517	2527	_PyLong_FormatWriter	_PyLong_FormatWriter(_PyUnicodeWriter *writer, PyObject *obj, int base, int alternate)	todo		
@@ -79,8 +79,8 @@ Objects/longobject.c	3281	3318	long_rem	long_rem(PyLongObject *a, PyLongObject *
 Objects/longobject.c	3324	3453	x_divrem	x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)	todo		changed-in-3.15:
 Objects/longobject.c	3468	3561	_PyLong_Frexp	_PyLong_Frexp(PyLongObject *a, int64_t *e)	todo		
 Objects/longobject.c	3567	3596	PyLong_AsDouble	PyLong_AsDouble(PyObject *v)	todo		
-Objects/longobject.c	3605	3623	long_compare	long_compare(PyLongObject *a, PyLongObject *b)	modelled	listsort-long-compare	
-Objects/longobject.c	3626	3635	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	modelled	listsort-long-compare	
+Objects/longobject.c	3605	3623	long_compare	long_compare(PyLongObject *a, PyLongObject *b)	todo		review: longCompare (ListSort/Compare.lean:76) mirrors :3607-3622, but LongCompareAgrees only states longCompare x y < 0 <-> x < y. A version that returned 1 for equal values (making x == x false), or any non-negative number for x >= y, would pass. The 0-for-equal and positive-for-greater results of the contract at :3600-3602, which Py_RETURN_RICHCOMPARE uses for ==, !=, <=, > and >=, are unpinned.
+Objects/longobject.c	3626	3635	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	todo		review: longRichLt models only op == Py_LT. Not mirrored: CHECK_BINOP's NotImplemented, the self == other shortcut (merged into long_compare), and the other five operators of Py_RETURN_RICHCOMPARE. The prop pins only <.
 Objects/longobject.c	3638	3651	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	excluded		no-behaviour: returns memory to the freelist or allocator; immortal small ints are only re-marked
 Objects/longobject.c	3654	3671	long_dealloc	long_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the only effect is on freed memory and the freelist
 Objects/longobject.c	3674	3743	long_hash	long_hash(PyObject *obj)	modelled	longobj-hash,typeobj-long-hash	
