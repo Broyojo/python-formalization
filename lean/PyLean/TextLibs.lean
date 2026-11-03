@@ -36,6 +36,7 @@ import PyLean.TextLibs.TomlArr
 import PyLean.TextLibs.TomlDoc
 import PyLean.TextLibs.TomlMulti
 import PyLean.TextLibs.TomlPending
+import PyLean.TextLibs.TomlScen
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1791,7 +1792,7 @@ def entries : List Entry := [
     statement := "For every dotted header key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them), bare key x and at least ten frames left when loads is called: loads('[K]\\n[K]') raises TOMLDecodeError 'Cannot declare K twice'; loads('[[K]]\\n[[K]]') gives K = [{}, {}]; loads('[K]\\n[[K]]') raises 'Cannot overwrite a value'; loads('[[K]]\\n[K]') raises 'Cannot declare K twice'; loads('[K.x]\\n[K]') gives K = {x = {}}; loads('[[K]]\\n[K.x]\\n[[K]]\\n[K.x]') gives K = [{x = {}}, {x = {}}]; each error at the position after the second key."
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Table ('you cannot define a table more than once', super-tables after sub-tables are valid) and Array of Tables", status := .proven
     prop := ``Toml.TableRules, thm := some ``Toml.tableRules_proven
-    notes := "The last document needs unset_all (the old element's flags are dropped) and get_or_create_nest's walk into the last element of a list. Pending flags stay empty in these documents, so add_pending and finalize_pending's loop are not credited here." }
+    notes := "The last document needs unset_all (the old element's flags are dropped) and get_or_create_nest's walk into the last element of a list. Pending flags, recursive flags and the errors of the rules are in the entries below." }
 ,
   { id := "textlibs-toml-load", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["load"]
@@ -1826,6 +1827,93 @@ def entries : List Entry := [
     statement := "For every dotted key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them), bare key x and at least twelve frames left, loads('K.x=true\\n[K]') raises TOMLDecodeError 'Cannot declare K twice' at the position after the header's key: the tables a dotted key defines are recorded as pending and become explicit at the next header."
     source := "TOML 1.1 spec, Table ('Since tables cannot be defined more than once, redefining such tables using a [table] header is not allowed'); comment at _parser.py:427-429", status := .proven
     prop := ``Toml.DottedThenHeader, thm := some ``Toml.dottedThenHeader_proven }
+,
+  { id := "textlibs-toml-nesting", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value", "parse_array", "skip_comments_and_array_ws", "parse_key_value_pair", "key_value_rule", "loads"]
+    statement := "For every bare key x and every m, loads('x = ' + '[' * (m + 1) + ']' * (m + 1)), called with fr frames left (sys.getrecursionlimit() minus the frames on the stack), returns {x: m + 1 nested empty lists} exactly when 2m + 7 <= fr, and raises RecursionError('maximum recursion depth exceeded') otherwise: each array level takes two frames (parse_value, parse_array)."
+    source := "docs of tomllib, 'Nesting limit' ('the nesting level is mainly limited by Python's recursion limit'); the recursion check of _Py_EnterRecursivePy", status := .proven
+    prop := ``Toml.NestingDepthLimit, thm := some ``Toml.nestingDepthLimit_proven
+    notes := "The model counts every Python frame (need in TomlModel.lean); the difftest sets the recursion limit per case and checks deep documents near the threshold. Call sites are taken as specialized (CALL_ALLOC_AND_ENTER_INIT)." },
+  { id := "textlibs-toml-nesting-unbounded", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value", "parse_array"]
+    statement := "With at least sixteen frames left (enough for every flat document of this shape), loads('x = ' + '[' * (m + 1) + ']' * (m + 1)) returns the nested lists for every m."
+    source := "the unbounded reading of ArrayTableSpec, which the docs rule out", status := .refuted
+    prop := ``Toml.NestingUnbounded, thm := some ``Toml.nestingUnbounded_refuted
+    bug := some "textlibs-toml-nesting-recursion-limit"
+    notes := "Documented limitation, not for filing: seventeen nested arrays with sixteen frames left raise RecursionError." },
+  { id := "textlibs-toml-escape-errors", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_basic_str_escape", "parse_hex_char", "skip_chars"]
+    statement := "In both modes, '\\' followed by a character that is not an escape letter (nor, multi-line, a space, tab or newline) raises TOMLDecodeError 'Unescaped '\\' in a string' at pos + 2; '\\x', '\\u', '\\U' not followed by 2, 4, 8 hex digits raise 'Invalid hex value' at pos + 2; multi-line, '\\' then spaces or tabs then a character other than a newline raises 'Unescaped '\\' in a string' at that character, and spaces or tabs up to the end of the document end the escape there with nothing; a '\\' that is the last character raises 'Unescaped '\\' in a string' at pos + 2, one past the end."
+    source := "TOML 1.1 spec, String ('All other escape sequences ... TOML should produce an error'; line ending backslash)", status := .proven
+    prop := ``Toml.EscapeErrors, thm := some ``Toml.escapeErrors_proven },
+  { id := "textlibs-toml-key-errors", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_key_part", "parse_key_value_pair", "parse_key"]
+    statement := "parse_key_part at the end of the document or at a character that cannot start a key raises TOMLDecodeError 'Invalid initial character for a key part' there; parse_key_value_pair on any dotted key KeySpec reads (at most MAX_KEY_PARTS parts) whose trailing whitespace is followed by anything but '=' (the end of the document included) raises 'Expected '=' after a key in a key/value pair' there, with at least eight frames left."
+    source := "TOML 1.1 spec, Keys and Key/Value Pair", status := .proven
+    prop := ``Toml.KeyErrors, thm := some ``Toml.keyErrors_proven },
+  { id := "textlibs-toml-invalid-value", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value"]
+    statement := "parse_value at the end of the document, or at a character that starts no value (not a digit, '\"', ''', '[', '{', '+', '-', 'i' or 'n'; 't' and 'f' when not followed by the rest of true or false), raises TOMLDecodeError 'Invalid value' there, with at least one frame left."
+    source := "TOML 1.1 spec, Key/Value Pair ('Unspecified values are invalid')", status := .proven
+    prop := ``Toml.InvalidValue, thm := some ``Toml.invalidValue_proven },
+  { id := "textlibs-toml-unterminated-string", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_basic_str", "parse_one_line_basic_str", "parse_value"]
+    statement := "'\"' followed by characters and escapes TOML 1.1 allows up to the end of the document raises TOMLDecodeError 'Unterminated string' at the end, with at least six frames left below parse_value."
+    source := "TOML 1.1 spec, String", status := .proven
+    prop := ``Toml.UnterminatedString, thm := some ``Toml.unterminatedString_proven },
+  { id := "textlibs-toml-pending-dotted", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.add_pending", "key_value_rule", "Flags.is_", "NestedDict.get_or_create_nest", "loads"]
+    statement := "For all bare keys a, b != c and booleans X, Y, and at least sixteen frames left: loads('a.b=X\\na.c=Y') gives {a: {b: X, c: Y}} (the table a is only marked pending; marking it at once would make the second line raise 'Cannot redefine namespace')."
+    source := "TOML 1.1 spec, Keys ('Dotted keys create and define a table for each key part before the last one'); comment at _parser.py:427-429", status := .proven
+    prop := ``Toml.PendingDotted, thm := some ``Toml.pendingDotted_proven },
+  { id := "textlibs-toml-unset-all-scope", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.unset_all", "create_list_rule", "create_dict_rule", "Flags.is_", "Flags.set", "NestedDict.append_nest_to_list"]
+    statement := "For all bare keys a != b and at least ten frames left, loads('[a]\\n[[b]]\\n[a]') raises TOMLDecodeError 'Cannot declare ('a',) twice' after the last a: starting the array b drops only the flags under b."
+    source := "TOML 1.1 spec, Table ('you cannot define a table more than once')", status := .proven
+    prop := ``Toml.UnsetAllScope, thm := some ``Toml.unsetAllScope_proven },
+  { id := "textlibs-toml-nested-aot", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["NestedDict.append_nest_to_list", "NestedDict.get_or_create_nest", "create_list_rule"]
+    statement := "For all bare keys a, b and at least ten frames left, loads('[[a]]\\n[[a.b]]') gives {a: [{b: [{}]}]}: the sub-array goes into the last element of a."
+    source := "TOML 1.1 spec, Array of Tables ('Any reference to an array of tables points to the most recently defined table element of the array')", status := .proven
+    prop := ``Toml.NestedArrayTables, thm := some ``Toml.nestedArrayTables_proven },
+  { id := "textlibs-toml-frozen", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.set", "Flags.is_", "create_dict_rule", "create_list_rule", "key_value_rule"]
+    statement := "For all bare keys a, b, boolean X and at least eighteen frames left: loads('a={}\\n[a.b]') raises 'Cannot declare ('a', 'b') twice' (a's recursive FROZEN flag answers for a.b); loads('a=[]\\n[[a]]') raises 'Cannot mutate immutable namespace ('a',)'; loads('a={}\\na.b=X') raises 'Cannot mutate immutable namespace ('a',)'; each after the second key (after X for the last)."
+    source := "TOML 1.1 spec, Inline Table ('fully self-contained'; 'Keys and sub-tables cannot be added outside the braces') and Array", status := .proven
+    prop := ``Toml.FrozenRules, thm := some ``Toml.frozenRules_proven },
+  { id := "textlibs-toml-overwrite", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["NestedDict.get_or_create_nest", "create_dict_rule", "key_value_rule"]
+    statement := "For all bare keys a, b, booleans X, Y and at least sixteen frames left: loads('a=X\\n[a.b]') and loads('a=X\\n[a]') raise TOMLDecodeError 'Cannot overwrite a value' after the header's key (get_or_create_nest's KeyError: no table behind a); loads('a=X\\na=Y') raises it after Y."
+    source := "TOML 1.1 spec, Keys ('Defining a key multiple times is invalid') and Table", status := .proven
+    prop := ``Toml.OverwriteRules, thm := some ``Toml.overwriteRules_proven },
+  { id := "textlibs-toml-header-relative", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["key_value_rule", "loads"]
+    statement := "For all bare keys t, k, boolean X and at least sixteen frames left, loads('[t]\\nk=X') gives {t: {k: X}}."
+    source := "TOML 1.1 spec, Table ('Under that, and until the next table or EOF are the key/values of that table')", status := .proven
+    prop := ``Toml.HeaderRelative, thm := some ``Toml.headerRelative_proven },
+  { id := "textlibs-toml-redefine-namespace", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["key_value_rule", "Flags.is_"]
+    statement := "For all bare keys a, b, c, boolean X and at least sixteen frames left, loads('[a.b]\\n[a]\\nb.c=X') raises TOMLDecodeError 'Cannot redefine namespace ('a', 'b')' after X."
+    source := "TOML 1.1 spec, Table ('using dotted keys to redefine tables already defined in [table] form is not allowed')", status := .proven
+    prop := ``Toml.RedefineNamespace, thm := some ``Toml.redefineNamespace_proven },
+  { id := "textlibs-toml-header-unclosed", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["create_dict_rule", "create_list_rule"]
+    statement := "For every dotted key K (bare, literal or basic parts, at most MAX_KEY_PARTS) followed by text that does not continue it, and at least ten frames left: loads('[' + K + rest) raises 'Expected ']' at the end of a table declaration' after K when rest does not start with ']'; loads('[[' + K + rest) raises 'Expected ']]' at the end of an array declaration' after K when rest does not start with ']]'."
+    source := "TOML 1.1 spec, Table and Array of Tables (header syntax)", status := .proven
+    prop := ``Toml.HeaderUnclosed, thm := some ``Toml.headerUnclosed_proven },
+  { id := "textlibs-toml-finalize-clears", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.finalize_pending", "Flags.add_pending", "Flags.unset_all", "create_list_rule", "create_dict_rule",
+      "NestedDict.get_or_create_nest"]
+    statement := "For all bare keys t, a, b, boolean X and at least sixteen frames left, loads('[[t]]\\na.b=X\\n[[t]]\\n[t.a]') gives {t: [{a: {b: X}}, {a: {}}]}: the second [[t]] turns the pending t.a into a flag, clears the pending set and drops the flags under t (without the clear, [t.a] would raise 'Cannot declare')."
+    source := "TOML 1.1 spec, Array of Tables (each [[t]] starts a new table)", status := .proven
+    prop := ``Toml.FinalizeClears, thm := some ``Toml.finalizeClears_proven },
+  { id := "textlibs-toml-escape-eof-pos", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_basic_str_escape", "parse_basic_str", "loads"]
+    statement := "Every TOMLDecodeError(msg, doc, pos) that loads raises has pos <= len(doc) (doc after CRLF normalisation)."
+    source := "docs of TOMLDecodeError ('pos: The index of doc where parsing failed')", status := .refuted
+    prop := ``Toml.DecodeErrorPosInDoc, thm := some ``Toml.decodeErrorPosInDoc_refuted
+    bug := some "textlibs-toml-escape-eof-pos"
+    notes := "'a = \"\\' (length 6) raises at pos 7. Duplicate of python/cpython#158566 and hukkin/tomli#312, both open." }
 ]
 
 end PyLean.TextLibs
