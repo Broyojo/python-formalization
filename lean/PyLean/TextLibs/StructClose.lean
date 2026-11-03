@@ -591,20 +591,38 @@ theorem rangeErrorBounds_proven : RangeErrorBounds := by
   unfold RangeErrorBounds
   decide +kernel
 
-/-- `repr(Struct(fmt))` of a format without whitespace is `Struct('fmt')`. -/
+/-- Python's `repr` of an ASCII `str` that has no `'`: in single quotes, with `\\`, `\t`, `\n`, `\r`
+and `\xNN` for the other control characters and DEL (`unicode_repr`, `Objects/unicodeobject.c`). -/
+def pyEsc (c : Nat) : String :=
+  let hex (d : Nat) : Char := "0123456789abcdef".toList.getD d '0'
+  if c = 92 then "\\\\" else if c = 9 then "\\t" else if c = 10 then "\\n" else if c = 13 then "\\r"
+  else if c < 32 ∨ c = 127 then String.ofList ['\\', 'x', hex (c / 16), hex (c % 16)]
+  else String.singleton (Char.ofNat c)
+
+/-- The characters an accepted format can hold: printable ASCII without `'` and `\\`, and the
+`Py_ISSPACE` controls. -/
+def formatChar (c : Nat) : Bool := (32 ≤ c && c < 127 && c != 39 && c != 92) || (9 ≤ c && c ≤ 13)
+
+/-- `repr` of a `Struct` (or of a subclass, under its own name) is the type name and Python's `repr`
+of the format, whitespace escapes included: `reprChar` agrees with `pyEsc` on every character an
+accepted format can contain. The hypothesis is the alphabet of `prepare_s`. -/
 def ReprPlain : Prop :=
-  ∀ s : SObj, (∀ c ∈ s.format, 32 ≤ c) →
-    sRepr s = "Struct('" ++ String.join (s.format.map (fun c => String.singleton (Char.ofNat c))) ++ "')"
+  ∀ (ty : String) (s : SObj), (∀ c ∈ s.format, formatChar c = true) →
+    sRepr ty s = ty ++ "('" ++ String.join (s.format.map pyEsc) ++ "')"
+
+theorem reprChar_pyEsc : ∀ c < 128, formatChar c = true → reprChar c = pyEsc c := by
+  decide +kernel
 
 theorem reprPlain_proven : ReprPlain := by
-  intro s h
-  have hm : s.format.map reprChar = s.format.map (fun c => String.singleton (Char.ofNat c)) := by
+  intro ty s h
+  have hm : s.format.map reprChar = s.format.map pyEsc := by
     apply List.map_congr_left
     intro c hc
-    have := h c hc
-    unfold reprChar
-    rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega),
-      if_neg (by omega)]
+    have hf := h c hc
+    have hlt : c < 128 := by
+      simp only [formatChar, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne] at hf
+      omega
+    exact reprChar_pyEsc c hlt hf
   unfold sRepr
   rw [hm]
 

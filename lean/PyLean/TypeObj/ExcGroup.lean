@@ -235,22 +235,30 @@ def baseExceptionGroupSubgroup (rt : Rt) (self mv : Val) : M Val := do
   let (m, _) ← splitRecursive rt mt mv false excRecFuel self
   pure (m.getD .none)
 
-/-- `collect_exception_group_leaf_ids`, `Objects/exceptions.c:1499`. -/
-def collectLeafIds (w : World) : Nat → Val → List Val
-  | 0, _ => []
-  | fuel + 1, exc =>
-    if exc.is .none then []
-    else if !egCheck w exc then [exc]
-    else
-      let rec go : List Val → List Val
-        | [] => []
-        | e :: es => collectLeafIds w fuel e ++ go es
-      go (excDataOf w exc).egExceptions
+/-- The loop of `collect_exception_group_leaf_ids` over `eg->excs`, `Objects/exceptions.c:1522-1532`
+(and of `exception_group_projection` over `keep`, `:1554-1562`): the ids of each item in order;
+the first failure is the result. -/
+def collectLeafIdsList (rec : Val → M (List Val)) : List Val → M (List Val)
+  | [] => pure []
+  | e :: es => do
+    let a ← rec e
+    let b ← collectLeafIdsList rec es
+    pure (a ++ b)
 
-/-- `exception_group_projection`, `Objects/exceptions.c:1543`. -/
+/-- `collect_exception_group_leaf_ids`, `Objects/exceptions.c:1498-1534`. The set of ids is the
+list of the leaves themselves. Running out of `fuel` stands for `_Py_EnterRecursiveCall`'s
+`RecursionError` (`:1524`) and is the model's `fuel` error, not a result. -/
+def collectLeafIds (w : World) : Nat → Val → M (List Val)
+  | 0, _ => raise .fuel
+  | fuel + 1, exc =>
+    if exc.is .none then pure []
+    else if !egCheck w exc then pure [exc]
+    else collectLeafIdsList (collectLeafIds w fuel) (excDataOf w exc).egExceptions
+
+/-- `exception_group_projection`, `Objects/exceptions.c:1542-1578`. -/
 def exceptionGroupProjection (rt : Rt) (eg : Val) (keep : List Val) : M Val := do
   let w ← getW
-  let ids := keep.flatMap (collectLeafIds w excRecFuel)
+  let ids ← collectLeafIdsList (collectLeafIds w excRecFuel) keep
   let (m, _) ← splitRecursive rt (.instanceIds ids) .none false excRecFuel eg
   pure (m.getD .none)
 

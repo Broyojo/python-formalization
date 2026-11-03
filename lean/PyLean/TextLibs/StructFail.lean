@@ -197,7 +197,7 @@ theorem packIntoOrder_proven : PackIntoOrder := by
   · simp [structPackIntoA, h, bind, Except.bind]
   · simp [structPackIntoA, h, h2, bind, Except.bind]
   · subst h2
-    simp [structPackIntoA, h, offSsize, offNumber, h3, h4, bind, Except.bind, throw, throwThe, MonadExcept.throw,
+    simp [structPackIntoA, h, offSsize, offNumber, offStruct, h3, h4, bind, Except.bind, throw, throwThe, MonadExcept.throw,
       MonadExceptOf.throw]
 
 /-- An offset too large for `Py_ssize_t` is the same `OverflowError` in `pack_into` and `unpack_from`:
@@ -246,29 +246,32 @@ theorem unpackBufferFirst_proven : UnpackBufferFirst := by
   simp [structUnpackA, structUnpackFromA, h, bind, Except.bind]
 
 /-- `iter_unpack` checks in the order of its body: a zero-sized format is refused before the buffer is
-touched, then the buffer's own failure, and then its length. -/
+touched, then the buffer's own failure, and then its length, against the `s_size` the buffer
+conversion left (a `__buffer__` can call `__init__`; `IterUnpackNoCrash` is the case where that size is
+zero). -/
 def IterUnpackOrder : Prop :=
   ∀ (s : SObj) (b : BufArg),
     (s.sSize = 0 → structIterUnpackA s b =
       .error (structErr "cannot iteratively unpack with a struct of length 0")) ∧
     (s.sSize ≠ 0 → ∀ e, readBuf b = .error e → structIterUnpackA s b = .error e) ∧
-    (s.sSize ≠ 0 → ∀ buf, readBuf b = .ok buf → buf.length % s.sSize ≠ 0 →
+    (s.sSize ≠ 0 → ∀ buf, readBuf b = .ok buf → (bufStruct s b).sSize ≠ 0 →
+      buf.length % (bufStruct s b).sSize ≠ 0 →
       structIterUnpackA s b = .error (structErr
-        s!"iterative unpacking requires a buffer of a multiple of {s.sSize} bytes")) ∧
-    (s.sSize ≠ 0 → ∀ buf, readBuf b = .ok buf → buf.length % s.sSize = 0 →
-      structIterUnpackA s b = .ok { buf })
+        s!"iterative unpacking requires a buffer of a multiple of {(bufStruct s b).sSize} bytes")) ∧
+    (s.sSize ≠ 0 → ∀ buf, readBuf b = .ok buf → (bufStruct s b).sSize ≠ 0 →
+      buf.length % (bufStruct s b).sSize = 0 → structIterUnpackA s b = .ok { buf })
 
 theorem iterUnpackOrder_proven : IterUnpackOrder := by
   intro s b
-  refine ⟨fun h => ?_, fun h e h2 => ?_, fun h buf h2 h3 => ?_, fun h buf h2 h3 => ?_⟩
+  refine ⟨fun h => ?_, fun h e h2 => ?_, fun h buf h2 h0 h3 => ?_, fun h buf h2 h0 h3 => ?_⟩
   · simp [structIterUnpackA, h]
   · simp [structIterUnpackA, h, h2]
   · simp only [structIterUnpackA]
     rw [if_neg h, h2]
-    simp only [if_pos h3]
+    simp only [if_neg h0, if_pos h3]
   · simp only [structIterUnpackA]
     rw [if_neg h, h2]
-    simp [h3]
+    simp [h0, h3]
 
 /-! ### The iterator object -/
 

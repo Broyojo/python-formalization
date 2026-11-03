@@ -1,0 +1,55 @@
+id: textlibs-struct-cache-str-subclass-key
+title: "struct: a str-subclass format poisons the module cache, so later plain formats get another format's Struct"
+priority: P5
+kind: wrong-result
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["cache_struct_converter", "_clearcache_impl"]
+summary: |
+  The module functions cache `Struct` objects in a dict keyed by the format object itself
+  (Modules/_struct.c:2640-2657). A str subclass whose `__eq__`/`__hash__` ignore case stores
+  `Struct('B')` under its key; a later plain `'b'` hashes the same and, because the subclass's
+  `__eq__` is asked first, matches it. So after `struct.calcsize(CI('B'))`,
+  `struct.unpack('b', b'\xff')` returns `(255,)` instead of `(-1,)`, and keeps doing so for every
+  module-level call with `'b'` until `struct._clearcache()` or until 100 other formats evict it.
+likelihood: |
+  Very low: it needs a str subclass with a custom `__eq__` and `__hash__` passed as a format. Once it
+  happens, it silently changes results for unrelated code in the same process.
+maybe_intended: |
+  Likely accepted as a consequence of keying a dict by user objects; a str subclass that breaks
+  `__eq__` is unusual. A fix would key the cache on an exact str copy.
+reproducer: |
+  import struct
+  class CI(str):
+      def __eq__(self, o):
+          return isinstance(o, str) and self.lower() == o.lower()
+      def __hash__(self):
+          return hash(self.lower())
+  struct._clearcache()
+  struct.calcsize(CI('B'))
+  r = struct.unpack('b', b'\xff')
+  struct._clearcache()
+  s = struct.unpack('b', b'\xff')
+  print(r, s)
+  if r == (255,) and s == (-1,):
+      print('REPRODUCED textlibs-struct-cache-str-subclass-key')
+expected: |
+  `struct.unpack('b', b'\xff') == (-1,)` whatever was passed to the module functions before.
+observed: |
+  python3 3.15.2: (255,) (-1,). REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): (255,) (-1,). REPRODUCED.
+promised_by: |
+  docs: the module-level functions are equivalent to Struct(format).method(...); the cache is an
+  undocumented optimisation.
+cause: |
+  Modules/_struct.c:2637-2638 (a non-bytes format is used as the key as it is) and 2640-2657 (dict
+  lookup and store with that key).
+possible_fix: |
+  Use an exact str as the key: `PyUnicode_CheckExact(fmt)` or convert with `_PyUnicode_Copy`, as is
+  already done for bytes.
+duplicates: |
+  No report found. Not in the bugforge list (its struct entries are about re-init, 0p and aliasing).
+  Queries: gh search issues --repo python/cpython struct cache str subclass;
+  gh search issues --repo python/cpython struct format cache __eq__ __hash__;
+  gh search issues --repo python/cpython _clearcache struct
+lean: lean/PyLean/TextLibs/StructCache.lean (CacheValueOnly, cacheValueOnly_refuted; CacheCoherent)

@@ -1822,10 +1822,38 @@ typeobj-exc-attributeerror-init	proven	Objects/exceptions.c	AttributeError_init
 typeobj-exc-oserror-parsed-once	proven	Objects/exceptions.c	oserror_use_init
 typeobj-exc-oserror-remap	proven	Objects/exceptions.c	
 typeobj-exc-oserror-errnomap	proven	Objects/exceptions.c	
-typeobj-exc-oserror-positions	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-positions	proven	Objects/exceptions.c	
 typeobj-exc-oserror-reduce	proven	Objects/exceptions.c	
 typeobj-exc-oserror-str	proven	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-branches	proven	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-no-crash	refuted	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-fixed-on-cex	proven	Objects/exceptions.c	
+typeobj-exc-oserror-str-fixed-no-crash	open	Objects/exceptions.c	
 typeobj-exc-oserror-written	proven	Objects/exceptions.c	OSError_written_get,OSError_written_set
+typeobj-exc-new-stores	proven	Objects/exceptions.c	BaseException_new
+typeobj-exc-init-kw	proven	Objects/exceptions.c	BaseException_init
+typeobj-exc-vectorcall-kw	proven	Objects/exceptions.c	BaseException_vectorcall
+typeobj-exc-traceback-set-stores	proven	Objects/exceptions.c	BaseException___traceback___set_impl,BaseException_with_traceback_impl
+typeobj-exc-chain-refusals	proven	Objects/exceptions.c	BaseException___context___set_impl,BaseException___cause___set_impl
+typeobj-exc-args-set-get	proven	Objects/exceptions.c	BaseException_args_set_impl,BaseException_args_get_impl
+typeobj-exc-add-note-branches	proven	Objects/exceptions.c	BaseException_add_note_impl
+typeobj-exc-clear-fields	proven	Objects/exceptions.c	BaseException_clear,MemoryError_dealloc,get_memory_error
+typeobj-exc-eg-new-refusals	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-new-stores	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-repr-list	proven	Objects/exceptions.c	BaseExceptionGroup_repr
+typeobj-exc-matcher-refuses	proven	Objects/exceptions.c	get_matcher_type
+typeobj-exc-check-match-branches	proven	Objects/exceptions.c	exceptiongroup_split_check_match
+typeobj-exc-subset-notes	proven	Objects/exceptions.c	exceptiongroup_subset
+typeobj-exc-projection-leaf-group	proven	Objects/exceptions.c	exception_group_projection
+typeobj-exc-same-metadata-iff	proven	Objects/exceptions.c	is_same_exception_metadata
+typeobj-exc-prep-reraise-group	proven	Objects/exceptions.c	_PyExc_PrepReraiseStar
+typeobj-exc-prep-reraise-handoff	proven	Objects/exceptions.c	PyUnstable_Exc_PrepReraiseStar
+typeobj-exc-importerror-init-kw	proven	Objects/exceptions.c	ImportError_init
+typeobj-exc-importerror-getstate-reduce	proven	Objects/exceptions.c	ImportError_getstate,ImportError_reduce
+typeobj-exc-oserror-use-init-slots	proven	Objects/exceptions.c	oserror_use_init
+typeobj-exc-oserror-init-use-init	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-init-effects	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-written-set	proven	Objects/exceptions.c	OSError_written_set
 typeobj-exc-syntaxerror-init	proven	Objects/exceptions.c	SyntaxError_init
 typeobj-exc-my-basename	proven	Objects/exceptions.c	my_basename
 typeobj-exc-syntaxerror-lineno	proven	Objects/exceptions.c	SyntaxError_str
@@ -1852,7 +1880,7 @@ typeobj-exc-eg-init	proven	Objects/exceptions.c	BaseExceptionGroup_init
 typeobj-exc-eg-repr-in-bounds	proven	Objects/exceptions.c	BaseExceptionGroup_repr
 typeobj-exc-eg-repr-after-new	proven	Objects/exceptions.c	BaseExceptionGroup_repr,BaseExceptionGroup_new
 typeobj-exc-eg-repr-saved	proven	Objects/exceptions.c	BaseExceptionGroup_repr
-typeobj-exc-eg-created-through-class	proven	Objects/exceptions.c	BaseExceptionGroup_derive_impl,_PyExc_CreateExceptionGroup
+typeobj-exc-eg-created-through-class	proven	Objects/exceptions.c	
 typeobj-exc-eg-bases	proven	Objects/exceptions.c	
 typeobj-exc-subset-metadata	proven	Objects/exceptions.c	exceptiongroup_subset
 typeobj-exc-subset-suppress-context	refuted	Objects/exceptions.c	exceptiongroup_subset,PyException_SetCause
@@ -2085,6 +2113,8 @@ pygrammar-check-format-args	proven	Python/ast_preprocess.c	parse_format,optimize
 pygrammar-check-syntax-only-identity	proven	Python/ast_preprocess.c	
 textlibs-struct-int-round-trip	proven	Modules/_struct.c	get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t,nu_byte,nu_ubyte,nu_short,nu_ushort,nu_int,nu_uint,nu_long,nu_ulong,nu_ssize_t,nu_size_t,nu_longlong,nu_ulonglong,nu_void_p,np_byte,np_ubyte,np_short,np_ushort,np_int,np_uint,np_long,np_ulong,np_ssize_t,np_size_t,np_longlong,np_ulonglong,np_void_p,bu_short,bu_int,bu_uint,bu_longlong,bu_ulonglong,bp_int,bp_uint,bp_longlong,bp_ulonglong,lu_short,lu_int,lu_uint,lu_longlong,lu_ulonglong,lp_int,lp_uint,lp_longlong,lp_ulonglong
 textlibs-struct-endian-tables	proven	Modules/_struct.c	init_endian_tables
+textlibs-struct-std-int-range	proven	Modules/_struct.c	bp_int,bp_uint,bp_longlong,bp_ulonglong,lp_int,lp_uint,lp_longlong,lp_ulonglong,_range_error,get_pylong,get_long,get_ulong
+textlibs-struct-std-longlong-twins	refuted	Modules/_struct.c	np_longlong,bp_longlong
 textlibs-struct-align	proven	Modules/_struct.c	align
 textlibs-struct-bool-nonzero	proven	Modules/_struct.c	nu_bool,bu_bool
 textlibs-struct-s-pads	proven	Modules/_struct.c	s_pack_internal
@@ -2102,6 +2132,10 @@ textlibs-struct-half-overflow	proven	Modules/_struct.c	pack_halffloat,np_halfflo
 textlibs-struct-float-unpack	proven	Modules/_struct.c	unpack_float,bu_float,lu_float
 textlibs-struct-double-bytes	proven	Modules/_struct.c	unpack_double,nu_double,np_double,bu_double,bp_double
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
+textlibs-struct-prepare-refusals	proven	Modules/_struct.c	prepare_s,getentry
+textlibs-struct-one-item-size	proven	Modules/_struct.c	prepare_s,whichtable,getentry,format_equal,align
+textlibs-struct-prefix-tables	proven	Modules/_struct.c	whichtable,prepare_s
+textlibs-struct-set-format	proven	Modules/_struct.c	set_format
 textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
 textlibs-struct-bool-code	proven	Modules/_struct.c	np_bool,bp_bool,nu_bool,bu_bool
 textlibs-struct-scalar-byte-order	proven	Modules/_struct.c	unpack_halffloat,pack_halffloat,unpack_float,unpack_double,nu_halffloat,np_halffloat,bu_halffloat,lu_halffloat,bp_halffloat,lp_halffloat,bu_float,lu_float,bp_float,lp_float,bu_double,lu_double,bp_double,lp_double,nu_double,np_double
@@ -2111,6 +2145,7 @@ textlibs-struct-native-float-snan	refuted	Modules/_struct.c	nu_float
 textlibs-struct-little-is-native	proven	Modules/_struct.c	init_endian_tables
 textlibs-struct-z-codes	proven	Modules/_struct.c	format_equal,getentry,align
 textlibs-struct-life	proven	Modules/_struct.c	s_new,s_init,Struct_impl,set_format,same_format,Struct___init___impl
+textlibs-struct-life-branches	proven	Modules/_struct.c	s_new,Struct_impl,same_format,Struct___init___impl,s_init
 textlibs-struct-native-complex-snan	refuted	Modules/_struct.c	nu_float_complex
 textlibs-struct-unpack-from-offsets	proven	Modules/_struct.c	Struct_unpack_from_impl,unpack_from_impl
 textlibs-struct-iter-length	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext
@@ -2131,6 +2166,10 @@ textlibs-struct-offset-laws	proven	Modules/_struct.c	Struct_pack_into_impl,Struc
 textlibs-struct-module-order	proven	Modules/_struct.c	unpack_impl,unpack_from_impl,iter_unpack_impl,pack_impl,pack_into_impl
 textlibs-struct-unpack-buffer	proven	Modules/_struct.c	Struct_unpack_impl,Struct_unpack_from_impl
 textlibs-struct-iter-order	proven	Modules/_struct.c	Struct_iter_unpack_impl
+textlibs-struct-iter-unpack-buffer-reinit	refuted	Modules/_struct.c	Struct_iter_unpack_impl
+textlibs-struct-unpack-count	proven	Modules/_struct.c	Struct_unpack_impl
+textlibs-struct-unpack-from-laws	proven	Modules/_struct.c	Struct_unpack_from_impl
+textlibs-struct-iter-len-laws	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext
 textlibs-struct-iter-drive	proven	Modules/_struct.c	unpackiter_iternext
 textlibs-struct-iter-len	proven	Modules/_struct.c	unpackiter_len
 textlibs-struct-reinit-pack	refuted	Modules/_struct.c	Struct_pack_impl,s_pack_internal
@@ -2139,6 +2178,8 @@ textlibs-struct-reinit-iter	refuted	Modules/_struct.c	unpackiter_iternext
 textlibs-struct-reinit-iter-len	refuted	Modules/_struct.c	unpackiter_len
 textlibs-struct-range-error	proven	Modules/_struct.c	_range_error
 textlibs-struct-repr	proven	Modules/_struct.c	s_repr
+textlibs-struct-cache-coherent	proven	Modules/_struct.c	cache_struct_converter,_clearcache_impl
+textlibs-struct-cache-value-only	refuted	Modules/_struct.c	cache_struct_converter
 textlibs-binascii-base64-round-trip	proven	Modules/binascii.c	binascii_a2b_base64_impl,binascii_b2a_base64_impl,base64_encode_trio,base64_encode_fast,base64_decode_quad,base64_decode_fast
 textlibs-binascii-base64-lenient-filter	proven	Modules/binascii.c	binascii_a2b_base64_impl
 textlibs-binascii-base64-strict-implies-lenient	proven	Modules/binascii.c	binascii_a2b_base64_impl
