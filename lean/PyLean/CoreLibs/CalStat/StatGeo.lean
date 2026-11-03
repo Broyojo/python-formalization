@@ -11,8 +11,19 @@ namespace PyLean.CoreLibs.CalStat
 
 open PyLean
 
-/-- `x > 0.0` holds (and does not raise). -/
-def posB (x : Val) : Bool := decide (vltPy (.flt Flt.pz) x = .ok true)
+/-- `x > 0.0` is false and `math.isnan(x)` is true: a NaN item, which the scan passes to `log`
+(`if x > 0.0 or math.isnan(x)`, statistics.py:246). -/
+def NanV (x : Val) : Prop :=
+  vltPy (.flt Flt.pz) x = .ok false ∧ (Flt.isNan <$> asDouble x) = .ok true
+
+/-- The scan passes `x` to `log`: `x > 0.0`, or `x` is a NaN. -/
+def LogV (x : Val) : Prop := vltPy (.flt Flt.pz) x = .ok true ∨ NanV x
+
+instance (x : Val) : Decidable (NanV x) := by unfold NanV; infer_instance
+instance (x : Val) : Decidable (LogV x) := by unfold LogV; infer_instance
+
+/-- The scan passes `x` to `log`. -/
+def posB (x : Val) : Bool := decide (LogV x)
 
 /-- `x` is a zero the scan accepts: `x > 0.0` is false, `math.isnan(x)` is false, `x == 0.0`. -/
 def ZeroV (x : Val) : Prop :=
@@ -27,17 +38,19 @@ the next item is looked at. -/
 def fsumLogs (L : Libm) (xs : List Val) (st : FsumState) : Py FsumState :=
   xs.foldlM (fun fs v => do fsumStep fs (← mathLog L v)) st
 
-theorem gm_pos (L : Libm) (st : GmSt) (x : Val) (h : vltPy (.flt Flt.pz) x = .ok true) :
+theorem gm_pos (L : Libm) (st : GmSt) (x : Val) (h : LogV x) :
     gmStep L st x = (do
       let l ← mathLog L x
       let fs ← fsumStep st.fs l
       return { n := st.n + 1, foundZero := st.foundZero, fs := fs }) := by
-  simp only [gmStep, h, ok_bind', ite_true, Bool.true_or]
-  cases mathLog L x with
-  | error e => rfl
-  | ok l =>
-    simp only [ok_bind']
-    cases fsumStep st.fs l <;> rfl
+  rcases h with h | ⟨h1, h2⟩
+  · simp only [gmStep, h, ok_bind', ite_true, Bool.true_or]
+    cases mathLog L x with
+    | error e => rfl
+    | ok l =>
+      simp only [ok_bind']
+      cases fsumStep st.fs l <;> rfl
+  · simp only [gmStep, h1, ok_bind', Bool.false_eq_true, ite_false, h2, Bool.false_or, ite_true]
 
 theorem gm_zero' (L : Libm) (st : GmSt) (x : Val) (h : ZeroV x) :
     gmStep L st x = .ok { n := st.n + 1, foundZero := true, fs := st.fs } := by
@@ -51,16 +64,17 @@ theorem gm_neg (L : Libm) (st : GmSt) (x : Val) (h : NegV x) :
   simp only [gmStep, h1, ok_bind', Bool.false_eq_true, ite_false, h2, Bool.false_or, h3]
   rfl
 
-theorem posB_of_pos {x : Val} (h : vltPy (.flt Flt.pz) x = .ok true) : posB x = true := by
+theorem posB_of_pos {x : Val} (h : LogV x) : posB x = true := by
   simp [posB, h]
 
 theorem posB_of_zero {x : Val} (h : ZeroV x) : posB x = false := by
-  simp [posB, h.1]
+  obtain ⟨h1, h2, -⟩ := h
+  simp [posB, LogV, NanV, h1, h2]
 
 /-- The scan over items that are positive or zero: the logarithms of the positive ones go to `fsum`
 in order, `n` counts every item, `found_zero` records a zero. -/
 theorem gm_fold (L : Libm) (xs : List Val) :
-    ∀ st : GmSt, (∀ x ∈ xs, vltPy (.flt Flt.pz) x = .ok true ∨ ZeroV x) →
+    ∀ st : GmSt, (∀ x ∈ xs, LogV x ∨ ZeroV x) →
     xs.foldlM (gmStep L) st = (fsumLogs L (xs.filter posB) st.fs).map
       (fun fs => { n := st.n + xs.length, foundZero := st.foundZero || xs.any (fun x => !posB x), fs := fs }) := by
   induction xs with
@@ -70,7 +84,7 @@ theorem gm_fold (L : Libm) (xs : List Val) :
   | cons x xs ih =>
     intro st h
     have hx := h x (by simp)
-    have hr : ∀ y ∈ xs, vltPy (.flt Flt.pz) y = .ok true ∨ ZeroV y := fun y hy => h y (by simp [hy])
+    have hr : ∀ y ∈ xs, LogV y ∨ ZeroV y := fun y hy => h y (by simp [hy])
     rcases hx with hp | hz
     · rw [List.foldlM_cons, gm_pos L st x hp]
       simp only [List.filter_cons, posB_of_pos hp, ite_true, fsumLogs, List.foldlM_cons]
@@ -100,9 +114,10 @@ theorem gm_fold (L : Libm) (xs : List Val) :
 
 /-- `geometric_mean`, statistics.py:225-262, through its scan `count_positive` (:243-251):
 
-* all items positive: the result is `exp(fsum(map(log, data)) / n)`, NaN when that sum is NaN;
-* items positive or zero with at least one zero: `0.0`, or NaN when the sum of the logarithms of the
-  positive items is NaN or `+inf` (:259-260);
+* all items positive or NaN (`x > 0.0 or math.isnan(x)`, :246): the result is
+  `exp(fsum(map(log, data)) / n)`, NaN when that sum is NaN (a NaN item makes it NaN);
+* items positive, NaN or zero with at least one zero: `0.0`, or NaN when the sum of the logarithms of
+  the other items is NaN or `+inf` (:259-260);
 * the first item that is neither positive, NaN nor zero raises `StatisticsError` (its `repr` in the
   message, `~`), after the logarithms of the positive items before it, whose own errors come first;
 * no data raises.
@@ -111,20 +126,20 @@ Every item is a number (`Val`); a user object whose `>` raises `StopIteration` i
 (PEP 479) is out of scope. -/
 def GeometricScan : Prop :=
   ∀ (L : Libm) (xs : List Val),
-    ((∀ x ∈ xs, vltPy (.flt Flt.pz) x = .ok true) → xs ≠ [] →
+    ((∀ x ∈ xs, LogV x) → xs ≠ [] →
       geometricMean L (xs.map Val.toN) =
         (do
           let fs ← fsumLogs L xs {}
           let total ← fsumEnd fs
           if total.isNan then return .nan
           mathExp L (← fltDiv total (Flt.ofInt xs.length)))) ∧
-    ((∀ x ∈ xs, vltPy (.flt Flt.pz) x = .ok true ∨ ZeroV x) → (∃ x ∈ xs, ZeroV x) →
+    ((∀ x ∈ xs, LogV x ∨ ZeroV x) → (∃ x ∈ xs, ZeroV x) →
       geometricMean L (xs.map Val.toN) =
         (do
           let fs ← fsumLogs L (xs.filter posB) {}
           let total ← fsumEnd fs
           return (if total.isNan then .nan else if Flt.eq total (.inf false) then .nan else Flt.pz))) ∧
-    (∀ (pre rest : List Val) (x : Val), (∀ y ∈ pre, vltPy (.flt Flt.pz) y = .ok true ∨ ZeroV y) → NegV x →
+    (∀ (pre rest : List Val) (x : Val), (∀ y ∈ pre, LogV y ∨ ZeroV y) → NegV x →
       xs = pre ++ x :: rest →
       geometricMean L (xs.map Val.toN) =
         (do
