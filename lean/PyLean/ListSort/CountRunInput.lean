@@ -104,6 +104,26 @@ theorem descLoop_stop (kf : α → Int) :
         obtain ⟨c, h1, h2⟩ := descLoop_stop kf _ _ w rest _ z r h
         exact ⟨w :: c, by rw [h1]; rfl, by rw [List.getLast_cons (by simp)]; exact h2⟩
 
+/-- The descending loop's output starts with what was already done. -/
+theorem descLoop_prefix (lt : α → α → Bool) :
+    ∀ (done grp : List α) (prev : α) (rest : List α) (ms : MS),
+      ∃ s, (descLoop lt done grp prev rest ms).1 = done ++ s
+  | done, grp, _, [], ms => ⟨grp.reverse, rfl⟩
+  | done, grp, prev, z :: rest, ms => by
+    simp only [descLoop, islt]
+    by_cases h1 : lt z prev = true
+    · simp only [h1, ↓reduceIte]
+      obtain ⟨s, hs⟩ := descLoop_prefix lt (done ++ grp.reverse) [z] z rest
+        { ms with ncmp := ms.ncmp + 1 }
+      exact ⟨grp.reverse ++ s, by rw [hs, List.append_assoc]⟩
+    · have h1' : lt z prev = false := by simpa using h1
+      simp only [h1', Bool.false_eq_true, ↓reduceIte]
+      by_cases h2 : lt prev z = true
+      · simp only [h2, ↓reduceIte]; exact ⟨grp.reverse, rfl⟩
+      · have h2' : lt prev z = false := by simpa using h2
+        simp only [h2', Bool.false_eq_true, ↓reduceIte]
+        exact descLoop_prefix lt done (grp ++ [z]) z rest _
+
 /-- `count_run` (listobject.c:1972-2064) with keys compared by `<` (any strict weak order on a finite
 list, as `Stable.lean` explains), on its input in the input's order: the first `n` items are a
 non-increasing part `P` then a non-decreasing part `Q`, and the stopping conditions of C hold:
@@ -124,7 +144,8 @@ def CountRunInputRun : Prop :=
         (2 ≤ (countRun (ltOf kf) xs ms).1 ∧ ∃ a b, xs[0]? = some a ∧
           xs[(countRun (ltOf kf) xs ms).1 - 1]? = some b ∧ kf a < kf b)) ∧
       (P ≠ [] → 2 ≤ P.length ∧ (P.length = xs.length ∨
-        ∃ a b, xs[P.length - 1]? = some a ∧ xs[P.length]? = some b ∧ kf a < kf b))
+        ∃ a b, xs[P.length - 1]? = some a ∧ xs[P.length]? = some b ∧ kf a < kf b) ∧
+        ∀ p q, P.head? = some p → Q.head? = some q → kf p ≤ kf q)
 
 theorem countRunInputRun_proven : CountRunInputRun := by
   intro α kf xs ms
@@ -170,9 +191,10 @@ theorem countRunInputRun_proven : CountRunInputRun := by
         obtain ⟨c, hc1, hc2⟩ := descLoop_consumed kf (x0 :: t).reverse [y] y r' ms2
         have hdp := (descLoop_perm (ltOf kf) (x0 :: t).reverse [y] y r' ms2).length_eq
         have hst := descLoop_stop kf (x0 :: t).reverse [y] y r' ms2
-        generalize descLoop (ltOf kf) (x0 :: t).reverse [y] y r' ms2 = D at hc1 hdp hst ⊢
+        have hpf := descLoop_prefix (ltOf kf) (x0 :: t).reverse [y] y r' ms2
+        generalize descLoop (ltOf kf) (x0 :: t).reverse [y] y r' ms2 = D at hc1 hdp hst hpf ⊢
         obtain ⟨pre, r2, ms3⟩ := D
-        simp only at hc1 hdp hst ⊢
+        simp only at hc1 hdp hst hpf ⊢
         have hP : NonInc kf ((x0 :: t) ++ y :: c) := nonInc_append kf (x0 :: t) c y hpre hc2
         have hstop : ((x0 :: t) ++ y :: c).length = (x0 :: (t ++ y :: r')).length ∨
             ∃ a b, (x0 :: (t ++ y :: r'))[((x0 :: t) ++ y :: c).length - 1]? = some a ∧
@@ -211,8 +233,36 @@ theorem countRunInputRun_proven : CountRunInputRun := by
             rw [h1]
             rw [hc1, ← hs] at hdp
             simp at hdp ⊢; omega
+          -- the extension's first comparison is with the reversed run's last item, the input's `x0` group
+          have hgl : kf x0 ≤ kf ((w :: ws).getLast (by simp)) := by
+            obtain ⟨s, hs'⟩ := hpf
+            have hw : w :: ws = s.reverse ++ x0 :: t := by rw [← hrun, hs']; simp
+            have heq : (w :: ws).getLast (by simp) = (x0 :: t).getLast (by simp) := by
+              cases hsr : s.reverse with
+              | nil =>
+                rw [hsr, List.nil_append] at hw
+                simp only [List.cons.injEq] at hw
+                obtain ⟨rfl, rfl⟩ := hw
+                rfl
+              | cons s0 ss =>
+                rw [hsr, List.cons_append] at hw
+                simp only [List.cons.injEq] at hw
+                obtain ⟨rfl, rfl⟩ := hw
+                exact getLast_cons_append w ss (x0 :: t) (by simp)
+            rw [heq]
+            exact nonDec_head_le_last kf x0 t hnd
+          have hhead : ∀ p q, ((x0 :: t) ++ y :: c).head? = some p → e.head? = some q → kf p ≤ kf q := by
+            intro p q hp hq
+            simp only [List.cons_append, List.head?_cons, Option.some.injEq] at hp
+            subst hp
+            cases e with
+            | nil => simp at hq
+            | cons q' e' =>
+              simp only [List.head?_cons, Option.some.injEq] at hq
+              subst hq
+              exact Int.le_trans hgl hn2.1
           refine ⟨(x0 :: t) ++ y :: c, e, ?_, hP, nonDec_tail kf _ e hn2, fun h => by simp at h,
-            fun _ => ⟨by simp; omega, hstop⟩⟩
+            fun _ => ⟨by simp; omega, hstop, hhead⟩⟩
           rw [hc1, ← hs]
           have : x0 :: (t ++ y :: (c ++ (e ++ r3))) = ((x0 :: t) ++ y :: c ++ e) ++ r3 := by simp
           rw [this, List.take_left' (by simp [hlen]; omega)]

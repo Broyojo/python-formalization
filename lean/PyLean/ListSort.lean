@@ -139,7 +139,7 @@ def entries : List Entry := [
     source := "listobject.c:2004-2006, :2052-2055", status := .proven
     prop := ``CountRunMaximal, thm := some ``countRunMaximal_proven },
   { id := "listsort-count-run-input", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
-    statement := "With keys compared by <, the first n items of count_run's input are a non-increasing part then a non-decreasing part; an ascending run is the whole slice or has lo[0] < lo[n-1] with n >= 2; a descending part has at least 2 items and ends at the end or at a strictly larger item. With listsort-count-run-maximal (the extension ends at a smaller item) the length is pinned: 3 on [2, 1, 3, 0]."
+    statement := "With keys compared by <, the first n items of count_run's input are a non-increasing part then a non-decreasing part; an ascending run is the whole slice or has lo[0] < lo[n-1] with n >= 2; a descending part has at least 2 items, ends at the end or at a strictly larger item, and is followed by an extension whose first item is at least the run's first (the extension starts by comparing with the reversed run's last item, :2052-2054). With listsort-count-run-maximal (the extension ends at a smaller item) the length is pinned: 3 on [2, 1, 3, 0]."
     source := "listobject.c:1972-2064 (comments at :2005-2017, :2026-2029, :2048-2050)", status := .proven
     prop := ``CountRunInputRun, thm := some ``countRunInputRun_proven },
   { id := "listsort-fail-steps", pyFile := "Objects/listobject.c"
