@@ -1779,6 +1779,9 @@ typeobj-structseq-replace-spec	proven	Objects/structseq.c	structseq_replace,PySt
 typeobj-structseq-new-impl-spec	proven	Objects/structseq.c	structseq_new_impl,PyStructSequence_New,get_type_attr_as_size
 typeobj-structseq-newtype-outcomes	proven	Objects/structseq.c	count_members,initialize_members,_PyStructSequence_NewType,PyStructSequence_NewType
 typeobj-structseq-newtype-basicsize-exact	refuted	Objects/structseq.c	_PyStructSequence_NewType,PyStructSequence_NewType,count_members,initialize_members
+typeobj-structseq-static-twin	proven	Objects/structseq.c	initialize_static_fields,PyStructSequence_InitType2,PyStructSequence_InitType,count_members,initialize_members
+typeobj-structseq-static-twin-all	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields,_PyStructSequence_NewType,PyStructSequence_NewType
+typeobj-structseq-inittype2-no-dangling	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	
