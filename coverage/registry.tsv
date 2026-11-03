@@ -3035,6 +3035,7 @@ calstat-statistics-decimal-sqrt-half-even	refuted	statistics.py	_decimal_sqrt_of
 calstat-statistics-decimal-sqrt-nearest	open	statistics.py	_decimal_sqrt_of_frac
 calstat-statistics-quantiles-inclusive-in-range	refuted	statistics.py	quantiles
 calstat-statistics-quantiles-hf	proven	statistics.py	quantiles
+calstat-statistics-quantiles-iter	proven	statistics.py	quantiles
 calstat-statistics-linreg-proportional	proven	statistics.py	linear_regression
 calstat-statistics-fmean-ints	proven	statistics.py	fmean
 calstat-statistics-fmean-weighted-ints	proven	statistics.py	fmean

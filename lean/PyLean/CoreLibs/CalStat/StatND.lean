@@ -377,4 +377,33 @@ theorem fromSamplesTwin_proven : FromSamplesTwin := by
     | [], _ => exact fromSamplesShort_proven.1
     | [q], _ => exact fromSamplesShort_proven.2 q
 
+/-! ## `quantiles` over a fallible iterable -/
+
+/-- `quantiles(data, n=n, method=method)` with `data` any iterable, statistics.py:1193-1196: the
+check of `n` comes first; then `sorted(data)` builds the list (`list(iterable)`, so the iterator's
+exception propagates before any comparison) and sorts it. -/
+def quantilesIt (data : PyIter) (n : Int) (method : String) : Py (List PyN) :=
+  if n < 1 then .error (statErr "n must be at least 1")
+  else match data.fin with
+    | some e => .error e
+    | none => quantiles data.items n method
+
+/-- The iteration of `quantiles`: with `n < 1` the iterable is not touched (whatever its iterator
+would raise); otherwise an exception of the iterator comes out before the data is compared; an
+iterable that ends normally gives what the list of its items gives. -/
+def QuantilesIter : Prop :=
+  ∀ (data : PyIter) (n : Int) (me : String),
+    (n < 1 → quantilesIt data n me = .error (.named "StatisticsError" "n must be at least 1")) ∧
+    (1 ≤ n → ∀ e, data.fin = some e → quantilesIt data n me = .error e) ∧
+    (data.fin = none → quantilesIt data n me = quantiles data.items n me)
+
+theorem quantilesIter_proven : QuantilesIter := by
+  intro data n me
+  refine ⟨fun h => by simp [quantilesIt, h, statErr], fun h e he => ?_, fun he => ?_⟩
+  · have : ¬ n < 1 := by omega
+    simp [quantilesIt, this, he]
+  · by_cases h : n < 1
+    · simp [quantilesIt, h, quantiles, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, statErr]
+    · simp [quantilesIt, h, he]
+
 end PyLean.CoreLibs.CalStat

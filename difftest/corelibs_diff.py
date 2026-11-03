@@ -8383,7 +8383,7 @@ def calstat_gen_stat(rng):
     fns = ["s._exact_ratio", "s._isfinite", "s._coerce", "s._sum", "s._ss", "s._ss", "s._convert", "s._fail_neg", "s._rank", "s._rank",
            "s._integer_sqrt_of_frac_rto", "s._float_sqrt_of_frac", "s._float_sqrt_of_frac",
            "s._decimal_sqrt_of_frac", "s._mean_stdev", "s._sqrtprod",
-           "s.mean", "s.mean", "s.fmean", "s.fmean", "s.fmean_it", "s.fmean_it", "s.fmean_it",
+           "s.mean", "s.mean", "s.fmean", "s.fmean", "s.fmean_it", "s.fmean_it", "s.fmean_it", "s.quantiles_it",
            "s._sqrtprod", "s.correlation", "s._decimal_sqrt_of_frac", "s.quantiles", "s.geometric_mean", "s.harmonic_mean", "s.harmonic_mean", "s.median", "s.median_low",
            "s.median_high", "s.median_grouped", "s.mode", "s.multimode", "s.variance", "s.variance", "s.pvariance",
            "s.stdev", "s.pstdev", "s.covariance", "s.correlation", "s.correlation", "s.linear_regression",
@@ -8468,6 +8468,13 @@ def calstat_gen_stat(rng):
         if rng.random() < 0.5:
             n = len(c["data"]) if rng.random() < 0.9 else rng.randint(0, 4)
             c["weights"] = [calstat_value_spec(rng, rng.choice(["smallint", "unitfloat", "frac"])) for _ in range(n)]
+    elif fn == "s.quantiles_it":
+        c["data"] = calstat_data(rng, calstat_NUMMIX + [["str"]], 8)
+        c["n"] = rng.choice([1, 2, 3, 4, 5, 0, -1])
+        c["method"] = rng.choice(["exclusive", "inclusive", "bogus"])
+        c["src"] = rng.choice(["list", "tuple", "iter", "fail", "fail", "gen"])
+        c["exc"] = rng.choice([["ValueError", "boom"], ["TypeError", "bad"], ["RuntimeError", "rt"],
+                               ["MyTypeError", "mt"]])
     elif fn == "s.fmean_it":
         mix = rng.choice([["smallint"], ["int"], ["unitfloat"], ["float"], ["frac"], ["smallint", "frac"], ["bool", "smallint"],
                           ["unitfloat", "specialf"], ["str"], ["dec"]])
@@ -8757,6 +8764,9 @@ def calstat_stat_call(c, fn):
         w = c["weights"]
         d = calstat_L(c["data"])
         return calstat_res(st.fmean(iter(d) if c["iter"] else d, None if w is None else calstat_L(w)))
+    if fn == "quantiles_it":
+        d = calstat_src(calstat_L(c["data"]), c["src"], c.get("exc"))
+        return [calstat_res(x) for x in st.quantiles(d, n=c["n"], method=c["method"])]
     if fn == "fmean_it":
         d = calstat_src(calstat_L(c["data"]), c["src"], c.get("exc"))
         w = None

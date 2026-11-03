@@ -1,6 +1,6 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.CalStat.Dist
-import PyLean.CoreLibs.CalStat.StatFmean
+import PyLean.CoreLibs.CalStat.StatND
 import PyLean.CoreLibs.CalStat.DiffCal
 
 /-! Differential-test dispatch for the `statistics` half of the area.
@@ -256,6 +256,9 @@ def runStat (fn : String) (j : Json) : Option (Except String Json) :=
     return encPy encF (sqrtprod (← parseFlt (← getStr j "x")) (← parseFlt (← getStr j "y")))
   | "s.mean" => some do return encPy encN (mean (← getL j "data"))
   | "s.fmean" => some do return encPy encV (fmean (← getL j "data") (← getOptL j "weights"))
+  | "s.quantiles_it" => some do
+    let data ← getIter (← getL j "data") (← getStr j "src") (getExc j "exc")
+    return encPy (encL encN) (quantilesIt data (← getInt j "n") (← getStr j "method"))
   | "s.fmean_it" => some do
     let data ← getIter (← getL j "data") (← getStr j "src") (getExc j "exc")
     let w ← match ← getOptL j "weights" with

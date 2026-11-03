@@ -198,6 +198,9 @@ def statisticsEntries : List Entry := [
   st "quantiles-hf" ["quantiles"]
     "For Fraction data, n < 1 raises before the data is read; with two or more points the cut points are Hyndman-Fan definition 7 ('inclusive') or 6 ('exclusive', extended linearly past the ends) of sorted(data) at i/n, exactly; an unknown method raises ValueError."
     "Lib/statistics.py:1149-1170 (R6/R7), 1176-1224" ``QuantilesHF ``quantilesHF_proven,
+  st "quantiles-iter" ["quantiles"]
+    "With n < 1 quantiles raises before touching the iterable; otherwise the iterator's exception comes out before any comparison; an iterable that ends normally behaves as the list of its items."
+    "Lib/statistics.py:1193-1196" ``QuantilesIter ``quantilesIter_proven,
   st "linreg-proportional" ["linear_regression"]
     "For int data, linear_regression(x, y, proportional=True) checks the lengths, then computes the exact sums sum(x*y) and sum(x*x) (sumprod is exact on ints), converts them to float (OverflowError past the float range), raises 'x is constant' when sum(x*x) == 0, and otherwise returns float(sum(x*y)) / float(sum(x*x)) with intercept 0.0: the correctly rounded least-squares slope through the origin when both sums are below 2**53."
     "Lib/statistics.py:745-805 (docstring: fit through the origin, intercept always 0.0)" ``LinRegProportional ``linRegProportional_proven,

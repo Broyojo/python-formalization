@@ -115,8 +115,10 @@ theorem hf6_eq (vs : List Rat) (n i : Int) (h2 : 2 ≤ vs.length) (hn : 0 < n) :
 /-- `quantiles` of `Fraction` data, both methods: the `n` check comes before the data is looked at;
 then the cut points are exactly Hyndman and Fan's definition 7 (`'inclusive'`) or 6 (`'exclusive'`) of
 `sorted(data)` at `p = i/n` for `i = 1, ..., n-1`, computed without rounding. Two or more points are
-needed for this; one point is repeated `n - 1` times; an unknown method raises `ValueError`. `sorted`
-is the mirror of `list.sort` (ListSort), whose result is a permutation of the data. -/
+needed for this (one point is the shortcut at statistics.py:1199-1202); an unknown method raises
+`ValueError`. `sorted` is the ListSort mirror of `list.sort` applied to the data; that its output is in
+order is proven in ListSort for integer keys only, so the statement is about the list `sorted`
+returns (scope limit), not about an order assumed here. -/
 def QuantilesHF : Prop :=
   ∀ (qs : List Rat) (n : Int) (me : String),
     (n < 1 → quantiles (fracs qs) n me = .error (.named "StatisticsError" "n must be at least 1")) ∧
