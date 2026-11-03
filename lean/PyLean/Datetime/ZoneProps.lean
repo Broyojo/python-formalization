@@ -1,4 +1,5 @@
 import PyLean.Datetime.ZoneLoadProps
+import PyLean.Datetime.ZoneTzStrProps
 import PyLean.Datetime.ZoneCache
 
 /-!
@@ -60,8 +61,39 @@ theorem tzStrTwins_refuted : ¬ TzStrTwins := by
   have h2 : pp.isOk = false := by rw [← hp]; decide
   cases pc <;> cases pp <;> simp_all [Except.isOk, Except.toBool, TzStrTwinsAgree]
 
-/-- Without a NUL byte the parsers agree (open). -/
+/-- Without a NUL byte the parsers agree. -/
 def TzStrTwinsNoNul : Prop := ∀ tz : Bytes, 0 ∉ tz → TzStrTwinsAgree (parseTzStrC tz) (pyFooter tz)
+
+theorem afterMatch_toC (a : After) : AfterMatch a (afterToC a) := by
+  cases a <;> simp [AfterMatch, afterToC]
+
+theorem tzStrTwinsNoNul_proven : TzStrTwinsNoNul := by
+  intro tz h0
+  have he := tz_eq tz h0
+  obtain ⟨herr, hasc⟩ := pyTz_props tz h0
+  unfold TzStrTwinsAgree pyFooter
+  cases hc : parseTzStrC tz with
+  | ok r =>
+    rw [hc] at he
+    cases hp : parseTzStrPy tz with
+    | error e => rw [hp] at he; simp [Except.toOption] at he
+    | ok a =>
+      rw [hp] at he
+      simp only [Except.toOption, Option.map_some, Option.some.injEq] at he
+      have hu := asc_utf8 tz (hasc a hp)
+      simp only [hu, ite_true, hp]
+      rw [he]
+      exact afterMatch_toC a
+  | error e =>
+    rw [hc] at he
+    by_cases hu : utf8Valid tz = true
+    · cases hp : parseTzStrPy tz with
+      | ok a => rw [hp] at he; simp [Except.toOption] at he
+      | error e' =>
+        simp only [hu, ite_true, hp]
+        exact Or.inl (herr e' hp)
+    · simp only [hu, Bool.false_eq_true, ite_false, decodeError]
+      exact Or.inr rfl
 
 /-! ### Lookups -/
 
@@ -1019,5 +1051,252 @@ theorem fromutcTwinsSorted_proven : FromutcTwinsSorted := by
   simp only [getLocalTsPy, DTObj.ofFields, bind, Except.bind, pure, Except.pure, Bool.not_true,
     Bool.false_eq_true, ite_false]
   rw [fromutc_core_sorted zp zc hc hlen hs hb hu hbe hn _ y htsb hcase]
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-! ### The reader's output -/
+
+theorem foldl_be_lt (bs : Bytes) : ∀ a : Nat,
+    bs.foldl (fun acc b => acc * 256 + b.toNat) a < (a + 1) * 256 ^ bs.length := by
+  induction bs with
+  | nil => intro a; simp
+  | cons b bs ih =>
+    intro a
+    simp only [List.foldl_cons, List.length_cons]
+    have h1 := ih (a * 256 + b.toNat)
+    have hb : b.toNat < 256 := b.toNat_lt
+    have h2 : (a * 256 + b.toNat + 1) * 256 ^ bs.length ≤ (a + 1) * 256 ^ (bs.length + 1) := by
+      rw [Nat.pow_succ', ← Nat.mul_assoc]
+      exact Nat.mul_le_mul_right (256 ^ bs.length) (show a * 256 + b.toNat + 1 ≤ (a + 1) * 256 by omega)
+    omega
+
+theorem beNat_lt (bs : Bytes) : beNat bs < 256 ^ bs.length := by
+  have := foldl_be_lt bs 0
+  simpa [beNat] using this
+
+theorem beInt_range (bs : Bytes) (L : Nat) (hL : bs.length = L) (hL1 : L = 1 ∨ L = 4 ∨ L = 8) :
+    -(2 ^ (8 * L - 1) : Int) ≤ beInt bs ∧ beInt bs < 2 ^ (8 * L - 1) := by
+  have hb := beNat_lt bs
+  unfold beInt
+  rw [hL] at hb ⊢
+  rcases hL1 with rfl | rfl | rfl <;>
+  · simp only [show (256 : Nat) ^ 1 = 256 from rfl, show (256 : Nat) ^ 4 = 4294967296 from rfl,
+      show (256 : Nat) ^ 8 = 18446744073709551616 from rfl] at hb
+    simp only [show (2 : Nat) ^ (8 * 1 - 1) = 128 from rfl, show (2 : Int) ^ (8 * 1 - 1) = 128 from rfl,
+      show (2 : Int) ^ (8 * 1) = 256 from rfl,
+      show (2 : Nat) ^ (8 * 4 - 1) = 2147483648 from rfl, show (2 : Int) ^ (8 * 4 - 1) = 2147483648 from rfl,
+      show (2 : Int) ^ (8 * 4) = 4294967296 from rfl,
+      show (2 : Nat) ^ (8 * 8 - 1) = 9223372036854775808 from rfl,
+      show (2 : Int) ^ (8 * 8 - 1) = 9223372036854775808 from rfl,
+      show (2 : Int) ^ (8 * 8) = 18446744073709551616 from rfl]
+    split <;> omega
+
+theorem chunks_len (size : Nat) : ∀ k (bs : Bytes), bs.length = k * size →
+    (chunks size k bs).length = k ∧ ∀ c ∈ chunks size k bs, c.length = size := by
+  intro k
+  induction k with
+  | zero => intro bs _; simp [chunks]
+  | succ k ih =>
+    intro bs hl
+    have := ih (bs.drop size) (by simp [hl, Nat.succ_mul])
+    simp only [chunks, List.length_cons, List.mem_cons, forall_eq_or_imp, List.length_take]
+    refine ⟨by omega, by rw [hl, Nat.succ_mul]; omega, this.2⟩
+
+/-- What `unpackN` returns: `count` values in the format's range. -/
+theorem unpackN_ok (count : Int) (size : Nat) (signed : Bool) (buf : Bytes) (xs : List Int)
+    (hs : size = 1 ∨ size = 4 ∨ size = 8) (h : unpackN count size signed buf = .ok xs) :
+    0 ≤ count ∧ xs.length = count.toNat ∧
+      ∀ x ∈ xs, (if signed then -(2 ^ (8 * size - 1) : Int) ≤ x ∧ x < 2 ^ (8 * size - 1)
+        else 0 ≤ x ∧ x < ((256 ^ size : Nat) : Int)) := by
+  unfold unpackN at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · rename_i h1 h2
+      simp only [Except.ok.injEq] at h
+      subst h
+      have hc := chunks_len size count.toNat buf (by omega)
+      refine ⟨by omega, by simp [hc.1], ?_⟩
+      intro x hx
+      simp only [List.mem_map] at hx
+      obtain ⟨c, hcm, rfl⟩ := hx
+      have hcl := hc.2 c hcm
+      cases signed
+      · simp only [Bool.false_eq_true, ite_false]
+        have := beNat_lt c
+        rw [hcl] at this
+        exact ⟨Int.natCast_nonneg _, Int.ofNat_lt.mpr this⟩
+      · simp only [ite_true]
+        exact beInt_range c size hcl hs
+
+theorem unpackType_ok (buf : Bytes) (t : Int × Int × Int) (h : unpackType buf = .ok t) :
+    (-(2 ^ 31) ≤ t.1 ∧ t.1 < 2 ^ 31) ∧ (-128 ≤ t.2.1 ∧ t.2.1 < 128) := by
+  unfold unpackType at h
+  split at h
+  · cases h
+  · simp only [Except.ok.injEq] at h
+    subst h
+    have h1 := beInt_range (buf.take 4) 4 (by simp; omega) (by simp)
+    have h2 := beInt_range [buf.getD 4 0] 1 rfl (by simp)
+    exact ⟨h1, h2⟩
+
+theorem readTypes_ok : ∀ (n : Nat) (f f' : BIO) (ts : List (Int × Int × Int)),
+    readTypes n f = .ok (ts, f') → ts.length = n ∧
+      ∀ t ∈ ts, (-(2 ^ 31) ≤ t.1 ∧ t.1 < 2 ^ 31) ∧ (-128 ≤ t.2.1 ∧ t.2.1 < 128) := by
+  intro n
+  induction n with
+  | zero => intro f f' ts h; simp [readTypes] at h; rw [h.1]; simp
+  | succ n ih =>
+    intro f f' ts h
+    simp only [readTypes, bind, Except.bind] at h
+    split at h
+    · cases h
+    · rename_i t ht
+      split at h
+      · cases h
+      · rename_i r hr
+        simp only [pure, Except.pure, Except.ok.injEq] at h
+        obtain ⟨ts', f''⟩ := r
+        have := ih _ _ _ hr
+        cases h
+        refine ⟨by simp [this.1], ?_⟩
+        intro x hx
+        simp only [List.mem_cons] at hx
+        rcases hx with rfl | hx
+        · exact unpackType_ok _ _ ht
+        · exact this.2 x hx
+
+theorem mapM_len {α β : Type} (f : α → Py β) : ∀ (l : List α) (r : List β), l.mapM f = .ok r → r.length = l.length := by
+  intro l
+  induction l with
+  | nil => intro r h; simp [List.mapM_nil, pure, Except.pure] at h; subst h; rfl
+  | cons a l ih =>
+    intro r h
+    simp only [List.mapM_cons, bind, Except.bind] at h
+    split at h
+    · cases h
+    · split at h
+      · cases h
+      · rename_i r' hr'
+        simp only [pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simp [ih _ hr']
+
+
+theorem bind_ok {α β : Type} {x : Py α} {f : α → Py β} {b : β} (h : (x >>= f) = .ok b) :
+    ∃ a, x = .ok a ∧ f a = .ok b := by
+  cases x with
+  | error e => cases h
+  | ok a => exact ⟨a, rfl, h⟩
+
+theorem le_foldl_max (l : List Int) : ∀ a, a ≤ l.foldl max a ∧ ∀ x ∈ l, x ≤ l.foldl max a := by
+  induction l with
+  | nil => intro a; simp
+  | cons y l ih =>
+    intro a
+    have := ih (max a y)
+    simp only [List.foldl_cons, List.mem_cons]
+    refine ⟨by omega, ?_⟩
+    intro x hx
+    rcases hx with rfl | hx
+    · omega
+    · exact this.2 x hx
+
+theorem readTrans_ok (timecnt typecnt : Int) (tsz : Nat) (htsz : tsz = 4 ∨ tsz = 8) (f f' : BIO)
+    (tu ti : List Int) (h : readTrans timecnt typecnt tsz f = .ok (tu, ti, f')) :
+    tu.length = ti.length ∧ (∀ x ∈ ti, 0 ≤ x ∧ x < typecnt) ∧
+      ∀ x ∈ tu, -2 ^ 63 ≤ x ∧ x < 2 ^ 63 := by
+  unfold readTrans at h
+  split at h
+  · obtain ⟨tu', h1, h⟩ := bind_ok h
+    obtain ⟨ti', h2, h⟩ := bind_ok h
+    have u1 := unpackN_ok _ _ _ _ _ (by omega) h1
+    have u2 := unpackN_ok _ _ _ _ _ (by omega) h2
+    simp only at h
+    split at h
+    · simp [throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at h
+    · rename_i hmx
+      simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, -⟩ := h
+      have hm := le_foldl_max ti' (ti'.headD 0)
+      refine ⟨by omega, fun x hx => ⟨?_, ?_⟩, fun x hx => ?_⟩
+      · have := u2.2.2 x hx; simp at this; omega
+      · have := hm.2 x hx; omega
+      · have := u1.2.2 x hx
+        simp only [ite_true] at this
+        rcases htsz with rfl | rfl
+        · simp only [show (2 : Int) ^ (8 * 4 - 1) = 2147483648 from rfl] at this; omega
+        · simp only [show (2 : Int) ^ (8 * 8 - 1) = 9223372036854775808 from rfl] at this; omega
+  · simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, -⟩ := h
+    simp
+
+theorem readTypesStage_ok (typecnt : Int) (f f' : BIO) (ts : List (Int × Int × Int))
+    (h : readTypesStage typecnt f = .ok (ts, f')) :
+    (typecnt ≠ 0 → 0 < typecnt ∧ ts.length = typecnt.toNat) ∧ (typecnt = 0 → ts = []) ∧
+      ∀ t ∈ ts, (-(2 ^ 31) ≤ t.1 ∧ t.1 < 2 ^ 31) ∧ (-128 ≤ t.2.1 ∧ t.2.1 < 128) := by
+  unfold readTypesStage at h
+  split at h
+  · rename_i hne
+    obtain ⟨⟨ts', f''⟩, h1, h⟩ := bind_ok h
+    have r := readTypes_ok _ _ _ _ h1
+    simp only at h
+    split at h
+    · cases h
+    · rename_i hnil
+      simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      refine ⟨fun _ => ⟨?_, r.1⟩, fun e => absurd e hne, r.2⟩
+      have : ts'.length ≠ 0 := by simpa using hnil
+      omega
+  · rename_i he
+    simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, -⟩ := h
+    simp_all
+
+theorem loadDataShape (b : Bytes) (d : TzifData) (h : loadData b = .ok d) : TzifShape d := by
+  unfold loadData at h
+  obtain ⟨⟨hd, f1⟩, -, h⟩ := bind_ok h
+  simp only at h
+  obtain ⟨⟨tsz, hd2, f2⟩, h2, h⟩ := bind_ok h
+  have htsz : tsz = 4 ∨ tsz = 8 := by
+    split at h2
+    · simp [pure, Except.pure] at h2; omega
+    · obtain ⟨_, -, h2⟩ := bind_ok h2
+      obtain ⟨⟨_, _⟩, -, h2⟩ := bind_ok h2
+      simp [pure, Except.pure] at h2; omega
+  simp only at h
+  obtain ⟨⟨tu, ti, f3⟩, h3, h⟩ := bind_ok h
+  simp only at h
+  obtain ⟨⟨types, f4⟩, h4, h⟩ := bind_ok h
+  simp only at h
+  obtain ⟨abbr, h5, h⟩ := bind_ok h
+  obtain ⟨tz, -, h⟩ := bind_ok h
+  simp only [pure, Except.pure, Except.ok.injEq] at h
+  subst h
+  have r3 := readTrans_ok _ _ _ htsz _ _ _ _ h3
+  have r4 := readTypesStage_ok _ _ _ _ h4
+  have r5 := mapM_len _ _ _ h5
+  refine ⟨by simp [r3.1], by simp, by simp [r5], ?_, ?_, ?_, ?_⟩
+  · intro i hi
+    have := r3.2.1 i hi
+    have hne : hd2.typecnt ≠ 0 := by omega
+    have := r4.1 hne
+    simp only [List.length_map]
+    omega
+  · exact r3.2.2
+  · intro u hu
+    simp only [List.mem_map] at hu
+    obtain ⟨t, ht, rfl⟩ := hu
+    exact (r4.2.2 t ht).1
+  · intro x hx
+    simp only [List.mem_map] at hx
+    obtain ⟨t, ht, rfl⟩ := hx
+    exact (r4.2.2 t ht).2
+
+theorem loadDataShape_proven : LoadDataShape := loadDataShape
 
 end PyLean.Datetime.Zone
