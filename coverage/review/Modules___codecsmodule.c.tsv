@@ -1,0 +1,18 @@
+file	line	name	verdict	mirror	property	settled	reason
+Modules/_codecsmodule.c	65	_codecs_register	FAITHFUL	yes	yes	yes	codecsRegister is PyCodec_Register then None (:67-71); RegisterDoc pins the TypeError and the appended path.
+Modules/_codecsmodule.c	85	_codecs_unregister	FAITHFUL	yes	yes	yes	codecsUnregister is PyCodec_Unregister then None (:88-92); RegisterDoc pins the identity removal and the cache clear.
+Modules/_codecsmodule.c	105	_codecs_lookup_impl	FAITHFUL	yes	yes	yes	codecsLookup is the clinic str converter (embedded NUL refused, measured) then _PyCodec_Lookup; CApiMatchesLib ties it to PyCodec_KnownEncoding and the C getters.
+Modules/_codecsmodule.c	168	codec_tuple	FAITHFUL	yes	yes	yes	codecTuple mirrors :170-173; EscapeRoundTrip pins the length component on both escape functions.
+Modules/_codecsmodule.c	185	_codecs_escape_decode_impl	FAITHFUL	yes	yes	yes	PyBytes_DecodeEscape (BytesObj model) with the input length (:189-191); EscapeRoundTrip proves it inverts escape_encode with its own length.
+Modules/_codecsmodule.c	202	_codecs_escape_encode_impl	FAITHFUL	yes	yes	yes	escapeByte mirrors the signed-char branches of :220-246 (bytes from 0x80 fall in c < ' '), with the PY_SSIZE_T_MAX/4 OverflowError; EscapeRoundTrip pins every byte's escape through the decoder.
+Modules/_codecsmodule.c	592	_codecs_mbcs_decode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:581-643, not in the Linux build.
+Modules/_codecsmodule.c	611	_codecs_oem_decode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:581-643, not in the Linux build.
+Modules/_codecsmodule.c	631	_codecs_code_page_decode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:581-643, not in the Linux build.
+Modules/_codecsmodule.c	914	_codecs_mbcs_encode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:904-953, not in the Linux build.
+Modules/_codecsmodule.c	929	_codecs_oem_encode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:904-953, not in the Linux build.
+Modules/_codecsmodule.c	945	_codecs_code_page_encode_impl	FAITHFUL	-	-	-	platform applies: inside the #ifdef MS_WINDOWS block of Modules/_codecsmodule.c:904-953, not in the Linux build.
+Modules/_codecsmodule.c	972	_codecs_register_error_impl	FAITHFUL	yes	yes	yes	PyCodec_RegisterError then None (:975-978); ErrorRegistryDoc pins refusal and registration.
+Modules/_codecsmodule.c	999	_codecs__unregister_error_impl	FAITHFUL	yes	yes	yes	_PyCodec_UnregisterError's -1/0/1 as error/False/True (:1002); ErrorRegistryDoc pins each.
+Modules/_codecsmodule.c	1017	_codecs_lookup_error_impl	FAITHFUL	yes	yes	yes	PyCodec_LookupError (:1020); ErrorRegistryDoc pins found, unknown and strict.
+Modules/_codecsmodule.c	1035	_codecs__normalize_encoding_impl	FAITHFUL	yes	yes	yes	normKeep mirrors _Py_normalize_encoding's loop (unicodeobject.c:3539-3564, ending at NUL) behind PyUnicode_AsUTF8AndSize; refuted against the codecs.rst normalization on 'a\x00b', bug yaml exists and reproduces on 3.15.2 and main, and 3.14's Python version gives 'a_b' (measured).
+Modules/_codecsmodule.c	1137	PyInit__codecs	FAITHFUL	-	-	-	internal-bootstrap applies: returns PyModuleDef_Init(&codecsmodule) with no branch.
