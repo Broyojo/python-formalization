@@ -112,7 +112,11 @@ def bufSize : Nat := 131072
 
 namespace BC
 
-/-- `_PyIO_trap_eintr`, bufferedio.c:879-901, for a scripted exception. -/
+/-- `_PyIO_trap_eintr`, bufferedio.c:878-901, for a scripted exception of this model's
+harness, where `InterruptedError` is always raised as `InterruptedError(EINTR, ...)` and no
+other scripted class has an `errno`. The real test is "an `OSError` instance whose `errno`
+is `EINTR`", whatever the class (see `BC2.trapEintr` for the buffered layer); this table
+is exact only for the classes this harness raises, and no property here relies on it. -/
 def trapEintr (cls : String) : Bool := cls == "InterruptedError"
 
 /-- `_io__IOBase_flush_impl`, iobase.c:172-185, after the script. -/

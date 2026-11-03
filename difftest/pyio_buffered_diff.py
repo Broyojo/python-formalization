@@ -42,12 +42,18 @@ class MyOSError(OSError):
     """A user subclass: `_PyIO_trap_eintr` follows the MRO, not a list of names."""
 
 
+class MyBlockingError(BlockingIOError):
+    """`_buffered_check_blocking_error` matches subclasses too."""
+
+
 CLASSES = {c.__name__: c for c in (ValueError, OSError, InterruptedError, PermissionError,
-                                   FileExistsError, ConnectionResetError, io.UnsupportedOperation, MyOSError)}
+                                   FileExistsError, ConnectionResetError, io.UnsupportedOperation, MyOSError,
+                                   MyBlockingError)}
 EXC = [("ValueError", "boom", None), ("OSError", "bad", None), ("InterruptedError", "x", errno.EINTR),
        ("InterruptedError", "x", None), ("PermissionError", "x", errno.EINTR), ("PermissionError", "x", None),
        ("FileExistsError", "x", errno.EINTR), ("ConnectionResetError", "x", errno.EINTR),
-       ("UnsupportedOperation", "x", errno.EINTR), ("MyOSError", "x", errno.EINTR), ("MyOSError", "x", None)]
+       ("UnsupportedOperation", "x", errno.EINTR), ("MyOSError", "x", errno.EINTR), ("MyOSError", "x", None),
+       ("MyBlockingError", "x", None)]
 CUR_RAW = [None]
 # sizes PyBytesWriter_Create refuses, on both sides of the "byte string is too large" bound
 HUGE = [M, M - 1, M - 32, M - 33, 2**62, 2**48]
@@ -317,7 +323,9 @@ def cstep(rng):
 def gen_op(rng, k, size, key, data):
     op = {"op": k}
     if k == "reinit":
-        op["size"] = rng.choice([size, 4, 8, 0])
+        # a refused size is stored before it is refused; 2**48 frees the buffer and
+        # then fails to allocate
+        op["size"] = rng.choice([size, 4, 8, 0, -1, -5, 2**48])
     if k in ("read", "readline"):
         op["n"] = rng.choice([None, -1, -2, 0, 1, 2, 3, size, size + 1, 2 * size, 3 * size + 1, 30])
         if key == "c" and rng.random() < 0.05:
@@ -445,7 +453,7 @@ def apply(f, op):
 
 
 def norm(e):
-    if isinstance(e, BlockingIOError):
+    if type(e) is BlockingIOError:
         return {"exc": "BlockingIOError", "msg": f"{e.strerror}|{e.characters_written}"}
     if type(e) is SystemError and ("without setting an exception" in str(e)
                                    or str(e) == "error return without exception set"):
@@ -556,5 +564,42 @@ def gen_chunk(rng):
     return c if _SEEN[0] > int(os.environ.get("CHUNK_START", "0")) else None
 
 
+def main():
+    """common.main, except that a case the model calls undefined behaviour ("ub": a
+    memcpy of a negative length) has no outcome to compare: it is counted apart."""
+    import argparse
+    import random
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cases", type=int, default=20000)
+    ap.add_argument("--seed", type=int, default=0)
+    args = ap.parse_args()
+    rng = random.Random(args.seed)
+    cases = []
+    while len(cases) < args.cases:
+        c = gen_chunk(rng)
+        if c is not None:
+            cases.append(c)
+    mismatches, ub, by_fn = 0, 0, {}
+    for c, lo in zip(cases, common.run_lean(cases)):
+        tot = by_fn.setdefault(c["fn"], [0, 0])
+        tot[0] += 1
+        if lo.get("ub"):
+            ub += 1
+            tot[1] += 1
+            continue
+        py = run_python(c)
+        ok = "harness_error" not in lo and common.agree(py, lo)
+        tot[1] += ok
+        if not ok:
+            mismatches += 1
+            if mismatches <= 20:
+                print(f"MISMATCH {json.dumps(c)}\n  python: {py}\n  lean:   {lo}", file=sys.stderr)
+    for fn, (n, good) in sorted(by_fn.items()):
+        print(f"{fn:20s} {good}/{n}")
+    print(f"undefined behaviour (not compared): {ub}")
+    print(f"python {sys.version.split()[0]}: {len(cases) - mismatches}/{len(cases)} agree")
+    sys.exit(1 if mismatches else 0)
+
+
 if __name__ == "__main__":
-    common.main(gen_chunk, run_python, default_cases=20000)
+    main()

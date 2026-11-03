@@ -199,6 +199,8 @@ inductive Outcome (σ : Type) where
   | done (s : σ) (rs : List (Py Val))
   | crashed
   | hung
+  /-- Undefined behaviour: the process may die or go on corrupted. -/
+  | ub
   | initErr (e : PyExc)
 
 /-- Run the operations in turn, stopping when the process dies or hangs. -/
@@ -218,10 +220,11 @@ def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS 
   -- `tp_alloc`'s zeros; `readable`/`writable` stand for the type
   let s0 : BufS := { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0 }
   match BC2.init kind size (stepC (reFuel raw)) s0 with
-  | (s, .error e) => if s.crashed then (if s.blocked then .hung else .crashed) else .initErr e
+  | (s, .error e) =>
+    if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub else .crashed) else .initErr e
   | (s, .ok _) =>
     match runSeq (stepC (reFuel raw + 1)) (·.crashed) s ops with
-    | .error t => if t.blocked then .hung else .crashed
+    | .error t => if t.blocked then .hung else if t.corrupt then .ub else .crashed
     | .ok (s, rs) => .done s rs
 
 /-- `_pyio.Buffered*(raw, size)` then the operations. -/

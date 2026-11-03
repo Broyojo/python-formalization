@@ -22,6 +22,10 @@ def Outcome.isInitErr {σ : Type} : Outcome σ → Bool
   | .initErr _ => true
   | _ => false
 
+def Outcome.isUB {σ : Type} : Outcome σ → Bool
+  | .ub => true
+  | _ => false
+
 def Outcome.results {σ : Type} : Outcome σ → List (Py Val)
   | .done _ rs => rs
   | _ => []
@@ -96,6 +100,43 @@ def size0WriteRaw : Raw := { plainRaw [] with hooks := [(4, .reinit 0)] }
 theorem bufferedCNoHang_refuted : ¬BufferedCNoHang := by
   intro h
   exact absurd (h 1 size0WriteRaw 5 [.write [97, 98, 99, 100, 101, 102, 103, 104, 105, 106]]) (by decide +kernel)
+
+/-- With a power-of-two size (here 8; the default 8192 too) `MINUS_LAST_BLOCK` uses
+`buffer_mask` and does not trap: after a re-entered `__init__(raw, 0)`, `read(10)`
+stops filling (`read_end < buffer_size` is false, :1858) and `PyBytesWriter_Finish`
+(:1886) returns 10 bytes, the last 2 of which nobody wrote. -/
+theorem size0_pow2_uninit :
+    (runC 0 { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit 0)] } 8 [.read (some 10)]).results =
+      [.ok (.bytes (List.replicate 8 120 ++ [uninit, uninit]))] := by
+  decide +kernel
+
+/-- A refused `__init__(raw, -1)` stores `buffer_size = -1`: `MINUS_LAST_BLOCK` then
+computes `-1 * (1 / -1) = 1` (C division truncates) and `read(10)` returns 10 bytes. -/
+theorem reinit_negative_read :
+    (runC 0 { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit (-1))] } 3 [.read (some 10)]).results =
+      [.ok (.bytes (List.replicate 10 120))] := by
+  decide +kernel
+
+/-- In `write(10 bytes)` on a writer of size 5 whose `raw.write` re-enters
+`__init__(raw, s)` and answers `None`: with `s = -1`, `memcpy(self->buffer, ...,
+self->buffer_size)` (:2195-2196) is given a huge `size_t`: undefined behaviour
+(measured: SIGSEGV for this writer; a `BufferedRandom` ran on with a corrupted heap);
+with `s = 0` it copies nothing and the write raises `BlockingIOError` (0 written). -/
+theorem reinit_negative_write :
+    (runC 1 { plainRaw [] with ws := [.block], hooks := [(4, .reinit (-1))] } 5
+      [.write [97, 98, 99, 100, 101, 102, 103, 104, 105, 106]]).isUB = true ∧
+    (runC 1 { plainRaw [] with ws := [.block], hooks := [(4, .reinit 0)] } 5
+      [.write [97, 98, 99, 100, 101, 102, 103, 104, 105, 106]]).results =
+      [.error (BC2.blocking 0)] := by
+  decide +kernel
+
+/-- A re-entered `__init__(raw, 2**48)` frees the buffer (:846-847) and fails to
+allocate the new one (:848-851): `self->buffer` is `NULL` when `read(4)` on a reader of
+size 8 copies the filled bytes out of it (:1870-1881), and the process dies. -/
+theorem reinit_nomem_read_crash :
+    (runC 0 { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit (2 ^ 48))] } 8
+      [.read (some 4)]).isCrashed = true := by
+  decide +kernel
 
 /-! ## Uninitialized memory -/
 

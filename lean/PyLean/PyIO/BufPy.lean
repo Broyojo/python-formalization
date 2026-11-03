@@ -116,6 +116,12 @@ def resetRead : PM Unit := mod fun s => { s with readBuf := [], readPos := 0 }
 
 /-- `RawIOBase.read(n)` for `n >= 0`, _pyio.py:610-627: the bytearray starts zeroed. -/
 def rawRead (n : Nat) (viaSelf : Bool := true) : PM (Option (List Nat)) := do
+  -- `self.raw.read` is looked up first; then `bytearray(size.__index__())` (:620),
+  -- and `buffer_size` can be huge after `__init__(raw, 2**48)`, which _pyio accepts
+  if viaSelf then
+    let s ← get
+    if s.detached then thr (noneAttr "read")
+  if n ≥ memLimit then thr memoryError
   let res ← if viaSelf then onRaw "read" (.readinto n) (fun r => r.readinto n)
     else onRawObj (.readinto n) (fun r => r.readinto n)
   match res with

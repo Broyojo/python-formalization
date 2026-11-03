@@ -127,6 +127,7 @@ def getRaw (j : Json) : Except String Raw := do
 def encOutcome {σ : Type} (m : Bool) (raw : σ → Raw) : Outcome σ → Json
   | .crashed => Json.mkObj [("ok", Json.null), ("crash", Json.bool true)]
   | .hung => Json.mkObj [("ok", Json.null), ("hang", Json.bool true)]
+  | .ub => Json.mkObj [("ok", Json.null), ("ub", Json.bool true)]
   | .initErr e => encPy (fun (_ : Unit) => Json.null) (.error e)
   | .done s rs =>
     let r := raw s

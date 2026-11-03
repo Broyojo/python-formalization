@@ -159,17 +159,20 @@ raw stream's `readinto`:
    exception propagates unchanged (:1639-1641 and `_PyIO_trap_eintr`, :878-901):
    `FileExistsError`, `ConnectionResetError`, `io.UnsupportedOperation` or a user
    `OSError` subclass with that `errno` is retried; `InterruptedError('x')` has no
-   `errno` and propagates.
+   `errno` and propagates;
+4. a negative `len` (`buffer_size - start` in `_bufferedreader_fill_buffer` after a
+   refused re-entered `__init__` stored a negative or zero `buffer_size`) gives the
+   raw a view of negative length, whose `len()` raises `SystemError` before
+   anything else happens.
 
-Invariant: what is copied out of the buffer was counted as read. The hypothesis
-`0 <= len` holds at every caller (`buffer_size - start`, `remaining`, `n > 0`); in
-2 and 3 the raw is attached, open and has no hooks, which is what makes its answer
-the one the script names. -/
+Invariant: what is copied out of the buffer was counted as read. In 2 and 3 the
+raw is attached, open and has no hooks, which is what makes its answer the one the
+script names. -/
 def RawReadChecks : Prop :=
   (∀ (ptr : Option Bool) (len : Int) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int) (d : List Nat),
     0 ≤ len → BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n)) ∧
-  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep),
+  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep), 0 ≤ len →
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.rs = .bad v :: t → InSsize v →
     (BC2.rawRead none len (fuel + 1) R s).2 =
       if v < 0 ∨ v > len then
@@ -177,13 +180,15 @@ def RawReadChecks : Prop :=
       else .ok (v, [])) ∧
   (∀ (H : Hier), HierOk H →
     ∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (mro : List String)
-    (t : List RStep),
+    (t : List RStep), 0 ≤ len →
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] →
     s.raw.rs = .raise c m eno mro :: t → decide ("OSError" ∈ mro) = H.sub c "OSError" →
     (H.sub c "OSError" = true ∧ eno = some 4 →
       BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t)) ∧
     (¬(H.sub c "OSError" = true ∧ eno = some 4) →
-      (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno))))
+      (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno)))) ∧
+  (∀ (ptr : Option Bool) (len : Int) (fuel : Nat) (R : CH) (s : BufS), ptr ≠ some true → len < 0 →
+    BC2.rawRead ptr len (fuel + 1) R s = (s, .error (.named "SystemError" "~NULL without an exception")))
 
 theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
     (s s' : BufS) (n : Int) (d : List Nat), BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
@@ -198,7 +203,9 @@ theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fu
     split at h
     · obtain ⟨s1, a, h1, -⟩ := BC2.bind_ok h
       exact absurd h1 (BC2.thr_not_ok _ _ _ _ _)
-    · obtain ⟨s1, res, ho, h⟩ := BC2.bind_ok h
+    · split at h
+      · omega
+      obtain ⟨s1, res, ho, h⟩ := BC2.bind_ok h
       obtain ⟨r, hr⟩ := BC2.onRaw_ok _ _ _ _ _ _ ho
       have hlt := Int.toNat_of_nonneg hl
       cases res with
@@ -248,11 +255,12 @@ theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fu
               right; simp; omega
 
 theorem rawReadChecks_proven : RawReadChecks := by
-  refine ⟨fun ptr len fuel R s s' n d hl h => rawRead_count ptr len hl fuel R s s' n d h, ?_, ?_⟩
-  · intro len fuel R s v t hd hc hh hr hv
+  refine ⟨fun ptr len fuel R s s' n d hl h => rawRead_count ptr len hl fuel R s s' n d h, ?_, ?_, ?_⟩
+  · intro len fuel R s v t hl hd hc hh hr hv
+    have hl' : ¬ len < 0 := by omega
     unfold BC2.rawRead
     dsimp only
-    simp only [reduceCtorEq, ite_false]
+    simp only [reduceCtorEq, ite_false, hl']
     rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
     have hres : ((s.raw.enter (.readinto len)).1.readinto len.toNat).2 = .bad v := by
       simp [Raw.readinto, Raw.enter, hc, hr]
@@ -265,7 +273,8 @@ theorem rawReadChecks_proven : RawReadChecks := by
       split
       · rfl
       · rfl
-  · intro H _ len fuel R s c m eno mro t hd hc hh hr hm
+  · intro H _ len fuel R s c m eno mro t hl hd hc hh hr hm
+    have hl' : ¬ len < 0 := by omega
     rw [← hm]
     simp only [decide_eq_true_eq]
     have hres : ((s.raw.enter (.readinto len)).1.readinto len.toNat).2 =
@@ -275,7 +284,7 @@ theorem rawReadChecks_proven : RawReadChecks := by
     · intro ⟨h1, h2⟩
       conv => lhs; unfold BC2.rawRead
       dsimp only
-      simp only [reduceCtorEq, ite_false]
+      simp only [reduceCtorEq, ite_false, hl']
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
@@ -287,7 +296,7 @@ theorem rawReadChecks_proven : RawReadChecks := by
     · intro hn
       unfold BC2.rawRead
       dsimp only
-      simp only [reduceCtorEq, ite_false]
+      simp only [reduceCtorEq, ite_false, hl']
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
@@ -301,6 +310,12 @@ theorem rawReadChecks_proven : RawReadChecks := by
             simp [h4]
         · left; simpa using h1
       simp only [ht, Bool.false_eq_true, ite_false, BC2.thr]
+  · intro ptr len fuel R s hp hl
+    unfold BC2.rawRead
+    dsimp only
+    rw [if_neg hp, if_pos hl]
+    rfl
+
 
 /-! ## `_bufferedwriter_raw_write` -/
 

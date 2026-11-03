@@ -44,7 +44,11 @@ structure BufS where
   readEnd : Int
   writePos : Int
   writeEnd : Int
-  size : Nat
+  /-- `buffer_size`, a `Py_ssize_t`: a refused `__init__` stores any value (:1605). -/
+  size : Int
+  /-- The last exception a raw `write` raised, with its MRO, for
+  `PyErr_GivenExceptionMatches(exc, PyExc_BlockingIOError)`. -/
+  rawExc : Option (PyExc × List String)
   /-- The process died. -/
   crashed : Bool
   /-- Which lock `self->lock` is: `_buffered_init` frees it and allocates a new one. -/
@@ -54,6 +58,9 @@ structure BufS where
   mask : Nat
   /-- With `crashed`: the process did not die but blocks forever. -/
   blocked : Bool
+  /-- With `crashed`: undefined behaviour (a `memcpy` of a negative length cast to
+  `size_t`): the process may die at once or run on with a corrupted heap. -/
+  corrupt : Bool
   deriving Repr, DecidableEq, Inhabited
 
 /-- A byte of memory nobody wrote. -/
@@ -129,6 +136,11 @@ def leave : BM Unit := mod fun s => { s with locked := false }
 /-- The process died. -/
 def crash {α : Type} : BM α := do
   mod fun s => { s with crashed := true }
+  thr crashErr
+
+/-- Undefined behaviour: no outcome after this can be predicted. -/
+def corruptC {α : Type} : BM α := do
+  mod fun s => { s with crashed := true, corrupt := true }
   thr crashErr
 
 /-- The process loops forever: nothing after this runs either. -/
@@ -263,6 +275,11 @@ def rawRead (ptr : Option Bool) (len : Int) : Nat → BM (Int × List Nat)
   | 0 => thr .modelFuel
   | fuel + 1 => do
     if ptr = some true then thr nullView
+    -- a view of negative length (`buffer_size - start < 0` after a refused
+    -- `__init__`): `len(b)` in the raw's `readinto` gets a negative `mp_length` with
+    -- no exception set, a `SystemError` (whose text depends on the call site), before
+    -- the harness raw logs the call
+    if len < 0 then thr (.named "SystemError" "~NULL without an exception")
     let res ← onRaw (.readinto len) (fun r => r.readinto len.toNat)
     match res with
     | .exc e eno mro => if trapEintr eno mro then rawRead ptr len fuel else thr e
@@ -307,7 +324,10 @@ def rawWrite (ptr : Option Bool) (b : List Nat) : Nat → BM Int
     -- `raw.write` reads the view first (the harness copies it)
     if ptr = some false then crash
     match res with
-    | .exc e eno mro => if trapEintr eno mro then rawWrite ptr b fuel else thr e
+    | .exc e eno mro =>
+      if trapEintr eno mro then rawWrite ptr b fuel else do
+        mod fun s => { s with rawExc := some (e, mro) }
+        thr e
     | .none => pure (-2)
     | .count n =>
       if n > 0 then mod fun s => if s.absPos ≠ -1 then { s with absPos := s.absPos + n } else s
@@ -400,10 +420,17 @@ def flushMethod : BM Val := do
   let s ← get
   if s.writable then flush else simpleFlush
 
+/-- A copy of `n` bytes out of or into `self->buffer`: with the buffer `NULL` (a
+re-entered `__init__` freed it, :846-847, then failed at :848-851), the access faults. -/
+def bufGuard (n : Int) : BM Unit := do
+  let s ← get
+  if n > 0 ∧ !s.hasBuf then crash
+
 /-- `_bufferedreader_read_fast`, bufferedio.c:1779-1795. -/
 def readFast (n : Int) : BM (Option (List Nat)) := do
   let s ← get
   if n ≤ readahead s then
+    bufGuard n
     mod fun s => { s with pos := s.pos + n }
     pure (some (slice s.buffer s.pos.toNat n.toNat))
   else pure none
@@ -415,7 +442,8 @@ def minusLastBlock (s : BufS) (n : Int) : BM Int :=
   -- `buffer_size` is 0 after a re-entered `__init__(raw, 0)` (:1605 stores it before
   -- `_buffered_init` refuses it, :841): the division traps (SIGFPE)
   else if s.size = 0 then crash
-  else pure (s.size * (n / s.size))
+  -- C division truncates; `buffer_size` may be negative after a refused `__init__`
+  else pure (s.size * Int.tdiv n s.size)
 
 /-- The first loop of `_bufferedreader_read_generic`, bufferedio.c:1831-1850:
 `some out` is an early return. -/
@@ -445,6 +473,7 @@ def genericFill : Nat → Int → List Nat → BM Val
       else
         let s ← get
         let k := min r remaining
+        bufGuard k
         mod fun s => { s with pos := s.pos + k }
         let out := out ++ slice s.buffer s.pos.toNat k.toNat
         let remaining := remaining - k
@@ -454,9 +483,11 @@ def genericFill : Nat → Int → List Nat → BM Val
       -- included (only after a re-entered `__init__` shrank `buffer_size`)
       pure (.bytes (out ++ List.replicate remaining.toNat uninit))
 
-/-- `PyBytesWriter_Create(n)`, Objects/bytesobject.c: a `bytes` of `n` bytes, or
-the exception of `allocBytes`. -/
-def newWriter (n : Int) : BM Unit := ofPy (allocBytes n)
+/-- `PyBytesWriter_Create(n)`, Objects/bytesobject.c:3802-3842: a negative size is
+refused (:3804-3807; `read1(-1)` passes `buffer_size`, negative after a refused
+re-entered `__init__`), then a `bytes` of `n` bytes, or the exception of `allocBytes`. -/
+def newWriter (n : Int) : BM Unit :=
+  if n < 0 then thr (.valueError "size must be >= 0") else ofPy (allocBytes n)
 
 /-- `_bufferedreader_read_generic`, bufferedio.c:1800-1891. -/
 def readGeneric (n : Int) : BM Val := do
@@ -467,6 +498,7 @@ def readGeneric (n : Int) : BM Val := do
     pure (.bytes (r.getD []))
   else
     newWriter n
+    bufGuard cur
     let out0 : List Nat := if cur > 0 then slice s.buffer s.pos.toNat cur.toNat else []
     let rem0 : Int := if cur > 0 then n - cur else n
     if cur > 0 then mod fun s => { s with pos := s.pos + cur }
@@ -512,6 +544,7 @@ def rawReadall : Nat → List Nat → Bool → BM Val
 def readAll : BM Val := do
   let s ← get
   let cur := readahead s
+  bufGuard cur
   let data := if cur ≠ 0 then slice s.buffer s.pos.toNat cur.toNat else []
   mod fun s => { s with pos := s.pos + cur }
   if s.writable then flushRewind
@@ -576,6 +609,7 @@ def readintoLoop (one : Bool) : Nat → Int → List Nat → BM (Option (List Na
         if n > 0 then
           let s ← get
           let k := min n remaining
+          bufGuard k
           mod fun s => { s with pos := s.pos + k }
           readintoLoop one fuel (remaining - k) (out ++ slice s.buffer s.pos.toNat k.toNat)
         else if n = 0 ∨ (n = -2 ∧ written > 0) then pure (some out)
@@ -595,9 +629,11 @@ def readinto (len : Nat) (one : Bool) : BM Val := do
   let fin (out : List Nat) (c : Atom) : BM Val :=
     pure (.list [c, .bytes (out ++ List.replicate (len - out.length) 255)])
   if n > 0 ∧ n ≥ len then
+    bufGuard len
     mod fun s => { s with pos := s.pos + len }
     fin (slice s.buffer s.pos.toNat len) (.int len)
   else
+    bufGuard n
     let out := if n > 0 then slice s.buffer s.pos.toNat n.toNat else []
     if n > 0 then mod fun s => { s with pos := s.pos + n }
     locked do
@@ -619,6 +655,7 @@ def readlineLoop : Nat → Int → List Nat → BM (List Nat)
     let n ← fillBuffer
     if n ≤ 0 then pure acc else
     let n := if limit ≥ 0 ∧ n > limit then limit else n
+    bufGuard n
     let s ← get
     let seg := slice s.buffer 0 n.toNat
     match findIdx? seg 10 with
@@ -639,6 +676,7 @@ def readlineRaw (limit : Int) : BM (List Nat) := do
   let s ← get
   let n := readahead s
   let n := if limit ≥ 0 ∧ n > limit then limit else n
+  bufGuard n
   let seg := slice s.buffer s.pos.toNat n.toNat
   match findIdx? seg 10 with
   | some i =>
@@ -662,11 +700,12 @@ def readlineRaw (limit : Int) : BM (List Nat) := do
 def peekUnlocked : BM Val := do
   let s ← get
   let h := readahead s
-  if h > 0 then pure (.bytes (slice s.buffer s.pos.toNat h.toNat)) else
+  if h > 0 then do bufGuard h; pure (.bytes (slice s.buffer s.pos.toNat h.toNat)) else
   resetRead
   let r ← fillBuffer
   let r := if r = -2 then 0 else r
   mod fun s => { s with pos := 0 }
+  bufGuard r
   let s ← get
   pure (.bytes (slice s.buffer 0 r.toNat))
 
@@ -789,14 +828,20 @@ def writeLoop (b : List Nat) : Nat → Int → Int → BM (Int × Int)
   | fuel + 1, written, remaining => do
     let s ← get
     if remaining ≥ s.size then
-      -- `buffer_size` 0 (a re-entered `__init__(raw, 0)`) with nothing left: the raw
+      -- `buffer_size` 0 or less (a refused re-entered `__init__`) with nothing left: the raw
       -- stream is asked for `b''` forever once its scripts and hooks are spent
-      if remaining = 0 ∧ s.size = 0 ∧ s.raw.ws = [] ∧ s.raw.closed = false ∧ s.rawNull = false ∧
+      if remaining = 0 ∧ s.size ≤ 0 ∧ s.raw.ws = [] ∧ s.raw.closed = false ∧ s.rawNull = false ∧
           s.raw.hooks.all (·.1 ≤ s.raw.tick) then hangC
       let n ← rawWrite none (b.drop written.toNat) (fuelOf s)
+      -- `self->buffer_size` is read again after the call (a re-entered `__init__`)
+      let s ← get
       if n = -2 then
         if remaining > s.size then
-          mod fun s => { s with buffer := writeAt s.buffer 0 ((b.drop written.toNat).take s.size), rawPos := 0 }
+          -- `memcpy(self->buffer, ..., self->buffer_size)` (:2195-2196): a negative
+          -- `buffer_size` (a refused `__init__`) is a huge `size_t`
+          if s.size < 0 then corruptC
+          bufGuard s.size
+          mod fun s => { s with buffer := writeAt s.buffer 0 ((b.drop written.toNat).take s.size.toNat), rawPos := 0 }
           mod fun s => adjust s s.size
           mod fun s => { s with writeEnd := s.size }
           let s ← get
@@ -815,6 +860,7 @@ def writeLocked (b : List Nat) : BM Val := do
   let avail := s.size - s.pos
   let len : Int := b.length
   if len ≤ avail ∧ len < s.size then
+    bufGuard len
     mod fun s => { s with buffer := writeAt s.buffer s.pos.toNat b }
     if !validWrite s || decide (s.writePos > s.pos) then mod fun s => { s with writePos := s.pos }
     mod fun s => adjust s (s.pos + len)
@@ -825,10 +871,17 @@ def writeLocked (b : List Nat) : BM Val := do
     match r with
     | .error e =>
       -- `_buffered_check_blocking_error`, :769-781
-      if e.className != "BlockingIOError" then thr e else
+      let s ← get
+      -- the class test follows the MRO: a subclass from `raw.write` counts
+      let isBlocking : Bool := e.className == "BlockingIOError" ||
+        (match s.rawExc with
+         | some (e', mro) => e' == e && mro.contains "BlockingIOError"
+         | none => false)
+      if !isBlocking then thr e else
       let s ← get
       if s.readable then resetRead
       let s ← get
+      bufGuard (s.writeEnd - s.writePos)
       let moved := slice s.buffer s.writePos.toNat (s.writeEnd - s.writePos).toNat
       mod fun t => { t with buffer := writeAt t.buffer 0 moved }
       mod fun t => { t with writeEnd := s.writeEnd - s.writePos, rawPos := s.rawPos - s.writePos }
@@ -836,13 +889,15 @@ def writeLocked (b : List Nat) : BM Val := do
       let s ← get
       let avail := s.size - s.writeEnd
       if len ≤ avail then
+        bufGuard len
         mod fun s => { s with buffer := writeAt s.buffer s.writeEnd.toNat b }
         mod fun s => { s with writeEnd := s.writeEnd + len, pos := s.pos + len }
         pure (.int len)
       else
         -- `avail` is negative when a re-entered `__init__` shrank `buffer_size`: the
         -- `memcpy` of :2158 gets a huge `size_t` length
-        if avail < 0 then crash
+        if avail < 0 then corruptC
+        bufGuard avail
         mod fun s => { s with buffer := writeAt s.buffer s.writeEnd.toNat (b.take avail.toNat) }
         mod fun s => { s with writeEnd := s.writeEnd + avail, pos := s.pos + avail }
         thr (blocking avail)
@@ -857,6 +912,7 @@ def writeLocked (b : List Nat) : BM Val := do
       let s ← get
       if s.readable then resetRead
       if remaining > 0 then
+        bufGuard remaining
         mod fun s => { s with buffer := writeAt s.buffer 0 (b.drop written.toNat) }
       mod fun s => { s with writePos := 0, writeEnd := remaining }
       mod fun s => adjust s remaining
@@ -895,7 +951,7 @@ def init (kind : Nat) (size : Int) : BM Unit := do
     checkInq a "File or stream is not writable."
   -- `Py_XSETREF(self->raw, Py_NewRef(raw))`: attached again even if a check's
   -- callback detached it (`detached` stays as that left it)
-  mod fun s => { s with rawNull := false, size := size.toNat }
+  mod fun s => { s with rawNull := false, size := size }
   -- `_buffered_init`
   if size ≤ 0 then thr (.valueError "buffer size must be strictly positive")
   mod fun s => { s with hasBuf := false }
