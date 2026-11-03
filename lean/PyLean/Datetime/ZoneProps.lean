@@ -605,10 +605,12 @@ theorem run_inv (loads : K → Bool) : ∀ (ops : List (CacheOp K)) (sp sc : Cac
 
 end cache
 
-/-- The primary constructor's strong cache: for every run of `ZoneInfo(key)` and
-`clear_cache` calls on the base class, both twins raise for the same calls and hold the same
-keys in the same recency order (C newest first, Python oldest first), never more than
-`_strong_cache_size = 8`. -/
+/-- The primary constructor's strong cache: for every run of `ZoneInfo(key)`, `clear_cache`
+and collection steps on the base class, with keys whose equality cannot raise or re-enter and
+that have no finalizers (the scope of `runPy`/`runC`; the subclass, `__eq__` re-entry and
+finalizer cases are refuted below), both twins hold the same keys in the same recency order
+(C newest first, Python oldest first), never more than `_strong_cache_size = 8`, and fail the
+same calls, where a call fails only because loading the key's file fails (`loads`). -/
 def CacheTwins : Prop :=
   ∀ (K : Type) [DecidableEq K] (loads : K → Bool) (ops : List (CacheOp K)),
     (runC loads ⟨[], []⟩ ops).1.strong = (runPy loads ⟨[], []⟩ ops).1.strong.reverse ∧
@@ -625,7 +627,7 @@ end PyLean.Datetime.Zone
 namespace PyLean.Datetime.Zone
 
 /-- `_common.load_data` returns well-formed data: list lengths match, indices name types, and
-the values fit their `struct` formats (open). -/
+the values fit their `struct` formats. -/
 def LoadDataShape : Prop := ∀ (b : Bytes) (d : TzifData), loadData b = .ok d → TzifShape d
 
 /-- From the same well-formed tuple, with 0/1 flags, offsets below `2**30`, no `int64_t`
@@ -1533,5 +1535,26 @@ theorem loadTwins_proven : LoadTwins := by
         cases a with
         | tti t => exact ⟨t, rfl⟩
         | tzstr z => simp at hf
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- `fromutc` agrees for every `datetime` instance whose `tzinfo` is the zone, subclasses
+included. -/
+def FromutcTwinsInstances : Prop :=
+  ∀ (zp : PyZone) (zc : CZone), Corr zp zc → ∀ dt : DTObj, dt.isDatetime = true →
+    ValidDT dt.y dt.m dt.d dt.h dt.mi dt.s dt.fold → fromutcC zc dt true = fromutcPy zp dt true
+
+/-- The same subclass instance: C narrows `toordinal()` and stays before the transition at
+`2**40`, Python goes past it. -/
+theorem fromutcTwinsInstances_refuted : ¬ FromutcTwinsInstances := by
+  intro h
+  have := h subZonePy subZoneC
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun h => absurd h (by decide), ⟨⟨rfl, rfl⟩, trivial⟩⟩
+    ⟨true, false, 2021, 1, 1, 0, 0, 0, 0, .ok (ymd2ord 2021 1 1 + 2 ^ 32), .ok 0, .ok 0, .ok 0,
+      .ok 0, .ok 2021⟩ rfl (by unfold ValidDT; decide)
+  revert this
+  decide
 
 end PyLean.Datetime.Zone

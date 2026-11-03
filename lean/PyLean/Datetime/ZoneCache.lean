@@ -9,13 +9,19 @@ The strong LRU cache of the primary constructor: Python keeps a
 of at most `ZONEINFO_STRONG_CACHE_MAX_SIZE = 8` nodes (Modules/_zoneinfo.c:2353-2590,
 :314-364, :506-567).
 
-Scope limits, stated:
-* the base class `ZoneInfo` only. For a subclass the C strong cache is a no-op
+Scope of `newPy`/`newC`/`runPy`/`runC` (the cases outside it are modelled further down and
+refuted in ZoneProps.lean):
+* the base class `ZoneInfo`. For a subclass the C strong cache is a no-op
   (:2520-2522, :2547-2549, :2584-2586: "Strong cache currently only implemented for base
-  class"), while Python gives each subclass its own (`__init_subclass__`, :36-38);
+  class"), while Python gives each subclass its own (`__init_subclass__`, :36-38); that is
+  `runSubPy`/`runSubC` and `CacheTwinsSubclass`;
 * keys are compared by a decidable equality that cannot raise, as for the documented `str`
   keys. C compares with `PyObject_RichCompareBool` (:2441), Python through the dict's hash
-  and `__eq__`; keys whose `__eq__` raises or disagrees with `__hash__` are not modelled;
+  and `__eq__`. A key whose `__eq__` re-enters `clear_cache()` is `findInStrongC`
+  (`StrongLookupDefined`); keys whose `__eq__` raises or disagrees with `__hash__` are not
+  modelled;
+* keys have no finalizer that runs Python code. One that constructs a `ZoneInfo` while
+  `clear_cache()` frees the list is `clearStrongC` (`ClearCacheDefined`);
 * the weak cache is a set of keys whose instance is still alive: it gains the key of every
   instance built by the constructor (`setdefault`), and loses one when the instance is
   collected, which can only happen while no strong entry holds it (`drop`).

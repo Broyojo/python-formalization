@@ -617,9 +617,16 @@ def entries : List Entry := [
   { id := "datetime-zoneinfo-load-data-shape", pyFile := "Lib/zoneinfo/_common.py"
     pyFns := ["load_data", "_TZifHeader.from_file", "_TZifHeader.__init__"]
     statement := "On success _common.load_data returns lists of matching lengths whose transition indices name types and whose values fit their struct formats."
-    source := "invariant (C load_data relies on it)", status := .open
-    prop := ``Zone.LoadDataShape
-    notes := "Needs length and range lemmas for unpackN, readTypes and mapM getAbbr; the difftest agrees on the data of 100k inputs." },
+    source := "invariant (C load_data relies on it)", status := .proven
+    prop := ``Zone.LoadDataShape, thm := some ``Zone.loadDataShape_proven
+    notes := "Through the staged readTrans/readTypesStage/readFooter mirror of _common.py:32-132: unpack counts, the max(trans_idx) check and the per-type abbreviation reads." },
+  { id := "datetime-zoneinfo-load-data-no-assertion", pyFile := "Lib/zoneinfo/_common.py"
+    pyFns := ["load_data", "_TZifHeader.from_file"]
+    statement := "_common.load_data reports a malformed file with an exception, never with a failed assert (which python -O removes)."
+    source := "invariant (no internal error leaking); ZoneInfo.from_file docs", status := .refuted
+    prop := ``Zone.LoadDataNoAssertion, thm := some ``Zone.loadDataNoAssertion_refuted
+    bug := some "datetime-zoneinfo-load-data-not-valueerror"
+    notes := "A complete version 2 file whose footer lacks its leading newline fails the assert at _common.py:123." },
   { id := "datetime-zoneinfo-tzstr-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C parse_tz_str", "C parse_abbr", "C parse_tz_delta", "C parse_transition_time", "C parse_digits", "C build_tzrule", "_parse_tz_str"]
     statement := "C and Python accept the same TZ footers with the same rule and refuse the same ones with ValueError."
@@ -630,24 +637,31 @@ def entries : List Entry := [
   { id := "datetime-zoneinfo-tzstr-twins-nonul", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C parse_tz_str", "C parse_abbr", "C parse_tz_delta", "C parse_transition_rule", "C parse_transition_time", "C parse_digits", "C calendarrule_new", "C dayrule_new", "C build_tzrule", "_parse_tz_str", "_parse_dst_start_end", "_parse_transition_time", "_parse_tz_delta", "_CalendarOffset.__init__", "_DayOffset.__init__", "_TZStr.__init__"]
     statement := "For footers without a NUL byte, C and Python accept the same TZ strings with the same rule and refuse the same ones."
-    source := "C/Python twins (narrows datetime-zoneinfo-tzstr-twins)", status := .open
-    prop := ``Zone.TzStrTwinsNoNul
-    notes := "Needs a component-wise induction relating the C pointer walk to the regex groups; the difftest agrees on its footers. 3.15 already fixed three regex/C differences (gh-152212, gh-152246, gh-152248)." },
+    source := "C/Python twins (narrows datetime-zoneinfo-tzstr-twins)", status := .proven
+    prop := ``Zone.TzStrTwinsNoNul, thm := some ``Zone.tzStrTwinsNoNul_proven
+    notes := "Component-wise: each C pointer walk (parse_abbr, parse_tz_delta, parse_transition_rule, parse_transition_time) is shown equal to the matching regex group; ASCII decomposition and comma/slash tail locality carry it across components. 3.15 already fixed three regex/C differences (gh-152212, gh-152246, gh-152248)." },
   { id := "datetime-zoneinfo-load-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C load_data", "ZoneInfo._load_file", "C build_ttinfo", "C ttinfo_eq", "_ttinfo.__eq__", "_ttinfo.__init__"]
-    statement := "From the same well-formed tuple, outside the refuted cases, _load_file and C load_data build corresponding zones or both raise."
-    source := "C/Python twins", status := .open
-    prop := ``Zone.LoadTwins
-    notes := "Needs datetime-zoneinfo-tzstr-twins-nonul; the dstoff and ts_to_local parts are proven. ttinfo_before also differs when every type is DST (textlibs-zoneinfo-before-first-transition), so the statement as written is false there and must exclude it." },
+    statement := "From the same well-formed tuple with isdst flags 0 or 1, type offsets below 2**30, no int64_t overflow in transition plus offset and a footer without NUL (the refuted cases), and some non-DST type or a first transition to type 0 (outside textlibs-zoneinfo-before-first-transition), _load_file and C load_data build corresponding zones or both raise."
+    source := "C/Python twins (narrows the dstoff, ts_to_local, tzstr and before-first-transition refutations)", status := .proven
+    prop := ``Zone.LoadTwins, thm := some ``Zone.loadTwins_proven
+    notes := "Composes datetime-zoneinfo-dstoff-twins-narrow, -ts-to-local-narrow and -tzstr-twins-nonul with the per-transition ttinfo list, ttinfo_before and the fixed-offset flag. The before-first-transition hypothesis is exactly the complement of the textlibs refutation." },
   { id := "datetime-zoneinfo-lookup-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
     pyFns := ["ZoneInfo._find_trans", "ZoneInfo._get_local_timestamp", "_TZStr._get_trans_info", "_TZStr.transitions", "C get_local_timestamp", "C find_ttinfo", "C _bisect", "C find_tzrule_ttinfo", "C tzrule_transitions"]
-    statement := "For corresponding zones, C find_ttinfo and Python _find_trans pick the same ttinfo for None and for every datetime (both folds), through the bisect over local transitions and the rule after the last one."
+    statement := "For corresponding zones, C find_ttinfo and Python _find_trans pick the same ttinfo for None and for every plain datetime (type(dt) is datetime, both folds), through the bisect over local transitions and the rule after the last one."
     source := "C/Python twins", status := .proven
     prop := ``Zone.LookupTwins, thm := some ``Zone.lookupTwins_proven
-    notes := "Plain datetime objects; a non-datetime argument is datetime-zoneinfo-find-ttinfo-defined. The zones correspond by hypothesis (datetime-zoneinfo-load-twins is open)." },
+    notes := "Plain datetime objects only: subclasses are datetime-zoneinfo-lookup-twins-instances (refuted), a non-datetime argument is datetime-zoneinfo-find-ttinfo-defined. The zones correspond by hypothesis, which datetime-zoneinfo-load-twins establishes." },
+  { id := "datetime-zoneinfo-lookup-twins-instances", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C get_local_timestamp", "C find_ttinfo", "ZoneInfo._get_local_timestamp", "ZoneInfo._find_trans"]
+    statement := "For corresponding zones, C find_ttinfo and Python _find_trans pick the same ttinfo for every datetime instance, subclasses included."
+    source := "C/Python twins; no silent wraparound", status := .refuted
+    prop := ``Zone.LookupTwinsInstances, thm := some ``Zone.lookupTwinsInstances_refuted
+    bug := some "datetime-zoneinfo-subclass-lookup"
+    notes := "For a subclass C calls toordinal() and narrows it with PyLong_AsLong into int ord (Modules/_zoneinfo.c:2301-2307); toordinal() + 2**32 gives +00:00 in C and +07:00 in Python." },
   { id := "datetime-zoneinfo-lookup-methods", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_ZoneInfo_utcoffset_impl", "C zoneinfo_ZoneInfo_dst_impl", "C zoneinfo_ZoneInfo_tzname_impl", "ZoneInfo.utcoffset", "ZoneInfo.dst", "ZoneInfo.tzname"]
-    statement := "For corresponding zones, utcoffset(), dst() and tzname() return the same values in both twins for None and every datetime."
+    statement := "For corresponding zones, utcoffset(), dst() and tzname() return the same values in both twins for None and every plain datetime (type(dt) is datetime)."
     source := "C/Python twins", status := .proven
     prop := ``Zone.LookupMethodsTwins, thm := some ``Zone.lookupMethodsTwins_proven },
   { id := "datetime-zoneinfo-find-ttinfo-defined", pyFile := "Modules/_zoneinfo.c"
@@ -669,12 +683,53 @@ def entries : List Entry := [
     statement := "For corresponding zones without explicit transitions, C and Python fromutc add the same offset and set the same fold."
     source := "C/Python twins (narrows datetime-zoneinfo-fromutc-twins)", status := .proven
     prop := ``Zone.FromutcTwinsNoTrans, thm := some ``Zone.fromutcTwinsNoTrans_proven },
+  { id := "datetime-zoneinfo-fromutc-twins-static", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo.fromutc", "C zoneinfo_fromutc"]
+    statement := "For corresponding zones whose rule after the last transition is a fixed offset, C and Python fromutc add the same offset and set the same fold for every plain datetime."
+    source := "C/Python twins; tzinfo.fromutc contract (result consistent with utcoffset)", status := .refuted
+    prop := ``Zone.FromutcTwinsStatic, thm := some ``Zone.fromutcTwinsStatic_refuted
+    bug := some "datetime-zoneinfo-fromutc-static-footer"
+    notes := "With two or more transitions, Python takes self._ttinfos[idx - 2 : idx] (_zoneinfo.py:144-145) after the last transition and adds that transition's offset instead of the footer's; C adds the footer's." },
+  { id := "datetime-zoneinfo-fromutc-twins-sorted", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo.fromutc", "C zoneinfo_fromutc", "C _bisect", "ZoneInfo._get_local_timestamp", "C get_local_timestamp"]
+    statement := "For corresponding zones with ascending transitions (RFC 9636 3.2), TZif-sized offsets and transition times within 2**62, C and Python fromutc add the same offset and set the same fold for every plain datetime not after the last transition, or after it when the rule there is the last transition's own ttinfo."
+    source := "C/Python twins (narrows datetime-zoneinfo-fromutc-twins and -fromutc-twins-static)", status := .proven
+    prop := ``Zone.FromutcTwinsSorted, thm := some ``Zone.fromutcTwinsSorted_proven
+    notes := "The excluded instants are exactly the two refutations: after the last transition with a TZ rule (fold of the last transition) or with a different fixed footer offset." },
+  { id := "datetime-zoneinfo-fromutc-twins-instances", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_fromutc", "C get_local_timestamp", "ZoneInfo.fromutc", "ZoneInfo._get_local_timestamp"]
+    statement := "For corresponding zones, C and Python fromutc agree for every datetime instance whose tzinfo is the zone, subclasses included."
+    source := "C/Python twins; no silent wraparound", status := .refuted
+    prop := ``Zone.FromutcTwinsInstances, thm := some ``Zone.fromutcTwinsInstances_refuted
+    bug := some "datetime-zoneinfo-subclass-lookup"
+    notes := "The same narrowed toordinal(): fromutc of 2021-01-01 adds +00:00 in C and +07:00 in Python." },
   { id := "datetime-zoneinfo-cache-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C move_strong_cache_node_to_front", "C remove_from_strong_cache", "C update_strong_cache", "C strong_cache_node_new", "C strong_cache_free", "C strong_cache_node_free", "C eject_from_strong_cache", "C clear_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
-    statement := "For every run of ZoneInfo(key) and clear_cache calls on ZoneInfo, both twins raise for the same calls and keep the same keys in the same recency order in the strong cache, never more than 8."
+    statement := "For every run of ZoneInfo(key), clear_cache and instance-collection steps on the base class ZoneInfo, with keys whose equality cannot raise or re-enter and that have no finalizers, both twins keep the same keys in the same recency order in the strong cache, never more than 8, and fail the same calls (a call fails only when loading the key fails)."
     source := "C/Python twins; _strong_cache_size", status := .proven
     prop := ``Zone.CacheTwins, thm := some ``Zone.cacheTwins_proven
-    notes := "Base class only (the C strong cache is a no-op for subclasses by design), and keys whose __eq__ cannot raise or re-enter (gh-142782 is a use-after-free through such a key)." }
+    notes := "Scope limits, each refuted outside: subclasses (datetime-zoneinfo-cache-twins-subclass), a key __eq__ that re-enters (datetime-zoneinfo-strong-lookup-defined), key finalizers during clear_cache (datetime-zoneinfo-clear-cache-defined). A key __eq__ that raises is not modelled." },
+  { id := "datetime-zoneinfo-cache-twins-subclass", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_init_subclass", "C new_weak_cache", "C get_weak_cache", "C zone_from_strong_cache", "C update_strong_cache", "C zoneinfo_ZoneInfo_impl", "ZoneInfo.__init_subclass__", "ZoneInfo.__new__"]
+    statement := "For a subclass of ZoneInfo, after __init_subclass__ runs, every run of Sub(key) calls leaves the same keys in the strong cache in both twins."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.CacheTwinsSubclass, thm := some ``Zone.cacheTwinsSubclass_refuted
+    bug := some "datetime-zoneinfo-subclass-strong-cache"
+    notes := "Python gives each subclass its own strong cache (_zoneinfo.py:36-38); C has none for subclasses (Modules/_zoneinfo.c:2520-2522, :2547-2549), so in C Sub(key) is Sub(key) only while a reference is held." },
+  { id := "datetime-zoneinfo-clear-cache-defined", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C clear_strong_cache", "C strong_cache_free", "C strong_cache_node_free", "C zoneinfo_ZoneInfo_clear_cache_impl"]
+    statement := "ZoneInfo.clear_cache() never reads or frees C memory twice, whatever the cached keys' finalizers do."
+    source := "invariant (no crash)", status := .refuted
+    prop := ``Zone.ClearCacheDefined, thm := some ``Zone.clearCacheDefined_refuted
+    bug := some "datetime-zoneinfo-clear-cache-reentrant-free"
+    notes := "strong_cache_free runs key destructors before state->ZONEINFO_STRONG_CACHE is reset (:2588-2589); a finalizer that constructs a ZoneInfo walks freed nodes." },
+  { id := "datetime-zoneinfo-strong-lookup-defined", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C find_in_strong_cache", "C zone_from_strong_cache"]
+    statement := "Looking a key up in the C strong cache never reads freed memory, whatever the keys' __eq__ does."
+    source := "invariant (no crash)", status := .refuted
+    prop := ``Zone.StrongLookupDefined, thm := some ``Zone.strongLookupDefined_refuted
+    bug := some "datetime-zoneinfo-strong-cache-eq-reentry"
+    notes := "Duplicate of gh-142782: an __eq__ that calls ZoneInfo.clear_cache() frees the node find_in_strong_cache reads next." }
 ]
 
 end PyLean.Datetime

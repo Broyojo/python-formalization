@@ -1,0 +1,76 @@
+id: datetime-zoneinfo-subclass-strong-cache
+title: "zoneinfo: a ZoneInfo subclass has a strong LRU cache in the pure-Python twin and none in C"
+priority: P4
+kind: twin-divergence
+module: datetime
+files: [Modules/_zoneinfo.c, Lib/zoneinfo/_zoneinfo.py]
+functions: ["C zoneinfo_init_subclass", "C new_weak_cache", "C zone_from_strong_cache", "C update_strong_cache", "C zoneinfo_ZoneInfo_impl", "ZoneInfo.__init_subclass__", "ZoneInfo.__new__"]
+summary: |
+  Python's `ZoneInfo.__init_subclass__` gives every subclass its own `_strong_cache` (an
+  OrderedDict) and `_weak_cache` (Lib/zoneinfo/_zoneinfo.py:36-38), and `__new__` keeps the last
+  8 keys alive through it (:40-56). C `zoneinfo_init_subclass` (Modules/_zoneinfo.c:2622-2637)
+  creates only the weak cache (`new_weak_cache`, :2592-2603); `zone_from_strong_cache` and
+  `update_strong_cache` return at once for any type but the base class (:2520-2522,
+  :2547-2549, "Strong cache currently only implemented for base class"). So for
+  `class Sub(ZoneInfo): pass`, `Sub("k")` stays alive after its last reference is dropped in
+  Python and is collected in C: `Sub("k") is Sub("k")` across a dropped reference, and the cost of
+  repeated construction, differ between the twins.
+likelihood: |
+  Low impact: identity of subclass instances is not documented beyond the base class's cache
+  behaviour; it shows as different object identity and different re-loading costs.
+maybe_intended: |
+  Yes, likely: the C comment marks it as a known limitation ("currently only implemented for base
+  class"). Doc/library/zoneinfo.rst describes the cache only for ZoneInfo itself and says nothing
+  about subclasses.
+reproducer: |
+  import os, struct, tempfile, gc, weakref, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo is not Pz.ZoneInfo
+  h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 1, 4)
+  blob = h + struct.pack('>lBB', 0, 0, 0) + b'UTC\x00'
+  T = tempfile.mkdtemp()
+  with open(os.path.join(T, 'k'), 'wb') as f:
+      f.write(blob + blob + b'\nUTC0\n')
+  out = []
+  for M in (Cz, Pz):
+      M.reset_tzpath([T])
+      class Sub(M.ZoneInfo):
+          pass
+      w = weakref.ref(Sub('k'))
+      gc.collect()
+      out.append(w() is not None)
+  print('C alive', out[0], 'Py alive', out[1])
+  if out == [False, True]:
+      print('REPRODUCED datetime-zoneinfo-subclass-strong-cache')
+expected: |
+  The twins agree on whether a subclass instance outlives its last reference (both keep the last
+  8 keys, as the base class does).
+observed: |
+  python3 3.15.2: C alive False, Py alive True. REPRODUCED.
+promised_by: |
+  C/Python twins.
+cause: |
+  Modules/_zoneinfo.c:2520-2522 and :2547-2549 skip the strong cache for subclasses;
+  zoneinfo_init_subclass (:2622-2637) builds no strong cache.
+possible_fix: |
+  Either give subclasses a per-type strong cache in C, or document the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED (scripts/check_bugs.py)
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 85197, state: closed, relation: "related: bpo-41025, made the C ZoneInfo subclassable (and added the per-subclass weak cache); the missing strong cache was left as is."}
+    - {number: 142782, state: open, relation: "unrelated defect in the same cache (use-after-free through key __eq__)."}
+    - {number: 142781, state: closed, relation: "unrelated (overridden cache setdefault)."}
+  queries: ["zoneinfo subclass cache", "zoneinfo subclass strong cache", "ZoneInfo subclass identity",
+            "zoneinfo __init_subclass__", "zoneinfo subclass weak cache"]
+  note: |
+    `gh search issues --repo python/cpython` with unquoted words; bugforge README has no zoneinfo entry.
+    Probably intended; record it so the twin divergence is on file, and fold it into the module report
+    as a documentation note rather than a bug.
+lean:
+  property: PyLean.Datetime.Zone.CacheTwinsSubclass
+  theorem: PyLean.Datetime.Zone.cacheTwinsSubclass_refuted

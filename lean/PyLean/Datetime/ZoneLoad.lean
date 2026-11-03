@@ -259,7 +259,9 @@ def fallbackC (transIdx : List Int) (ttinfoList : List TTI) : Py CRule :=
     -- :1216-1219: keep the DST offset of a DST type
     .ok (if tti.dstoff ≠ 0 then { r with std := { r.std with dstoff := tti.dstoff } } else r)
 
-/-- `self->tzrule_after`, :1184-1220 (`PyObject_IsTrue(tz_str)` is false for `None` and `b""`). -/
+/-- `self->tzrule_after`, :1184-1220 (`PyObject_IsTrue(tz_str)` is false for `None` and `b""`;
+the 3.15 `has_tz_str < 0` check at :1185-1187 cannot fire, since truth of `bytes`/`None` never
+raises). -/
 def ruleC (tzStr : Option Bytes) (fallback : Py CRule) : Py CRule :=
   let hasTzStr : Bool := match tzStr with | some s => !s.isEmpty | none => false
   if hasTzStr then parseTzStrC (tzStr.getD []) else fallback
@@ -272,7 +274,8 @@ def fixedC (ttinfoList : List TTI) (rule : CRule) : Bool :=
 
 /-- C `load_data`, Modules/_zoneinfo.c:966-1308, after `_common.load_data` returned `d`.
 `PyLong_AsLongLong` and `PyLong_AsLong` cannot fail on the 64- and 32-bit values `struct`
-produced, and the index check at :1078-1085 repeats the one `_common.load_data` made. -/
+produced (so the 3.15 `cur_trans_idx == -1 && PyErr_Occurred()` check at :1073 never fires on
+the `B` indices), and the index check at :1078-1085 repeats the one `_common.load_data` made. -/
 def loadDataC (d : TzifData) : Py CZone := do
   let isdst : List Bool := d.isdst.map (· ≠ 0)                                 -- :1112-1118
   let dstoff := utcoffToDstoffC d.transIdx d.utcoff isdst                       -- :1128-1129
