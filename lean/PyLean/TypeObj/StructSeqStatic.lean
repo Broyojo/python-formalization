@@ -252,4 +252,163 @@ theorem initType2NoDangling_refuted : ¬ InitType2NoDangling := by
 theorem initType2_dangling_ready :
     (initType2 0 descNeg (fun _ => true) .allOk).2 = ⟨true, true, true, true⟩ := by decide
 
+/-! ## Every outcome of `PyStructSequence_InitType2` -/
+
+/-- The `__match_args__` loop when `n_in_sequence` runs past the fields: the decoding error of a
+named field met first, or else the read of the terminator. -/
+theorem matchArgsLoop_past (fs : List FName) :
+    ∀ (k i : Nat), i ≤ fs.length → fs.length < i + k →
+      matchArgsLoop fs k i =
+        (CRes.ofPy ((namesOf (fs.drop i)).mapM (fun n => utf8Decode n .strict))).bind
+          (fun _ => .ub "initialize_structseq_dict: field past the terminator") := by
+  intro k
+  induction k with
+  | zero => intro i _ h; omega
+  | succ k ih =>
+    intro i hle hlt
+    simp only [matchArgsLoop]
+    by_cases hi : i < fs.length
+    · rw [dif_pos hi]
+      have hdrop : fs.drop i = fs[i] :: fs.drop (i + 1) := List.drop_eq_getElem_cons hi
+      rw [hdrop, ih (i + 1) (by omega) (by omega)]
+      cases hf : fs[i] with
+      | unnamed =>
+        simp only [CRes.pure_eq, CRes.bind_ok, namesOf, List.filterMap_cons]
+        cases (List.filterMap (fun f => match f with | .named b => some b | .unnamed => none)
+            (fs.drop (i + 1))).mapM (fun n => utf8Decode n .strict) <;> rfl
+      | named b =>
+        simp only [namesOf, List.filterMap_cons, List.mapM_cons]
+        cases hd : utf8Decode b .strict with
+        | error e => rfl
+        | ok sb =>
+          simp only [CRes.ofPy, CRes.bind_ok, CRes.pure_eq]
+          cases (List.filterMap (fun f => match f with | .named b => some b | .unnamed => none)
+              (fs.drop (i + 1))).mapM (fun n => utf8Decode n .strict) <;> rfl
+    · rw [dif_neg hi]
+      have : i = fs.length := by omega
+      subst this
+      simp [namesOf]
+      rfl
+
+/-- What `PyStructSequence_InitType2` returns, and leaves in the type, for every desc, refcount,
+allocator and outcome of the unmirrored steps of `PyType_Ready`: `SystemError` for a type whose
+refcount is not 0; `MemoryError` when `tp_members` cannot be allocated; each failing step of
+`PyType_Ready` with its own exception (the type immortal, the members freed, the descriptors
+there once the dict fill has run); and once `PyType_Ready`'s steps succeed: for a valid desc
+(`0 ≤ n_in_sequence ≤ #fields`, no bound on the field count: the static basicsize has no `(int)`
+cast) the type with `tp_members` = the named fields at their own indices,
+`tp_basicsize = 32 + 8 * hidden`, the honest size attributes and `__match_args__`, unless a
+visible name is not UTF-8; `SystemError` ("tp_dictoffset that is too small") for
+`n_in_sequence ≥ #fields + 5`; `SystemError` from `PyTuple_New` for a negative one, leaving the
+type ready over freed members; and for `#fields + 1 .. #fields + 4` a read past the field array,
+unless a field name fails to decode first. Every failure is an exception: never `NULL` without
+one. -/
+def InitType2Outcomes : Prop :=
+  ∀ (d : Desc) (malloc : Nat → Bool) (r : ReadyRest),
+    (∀ refcnt, refcnt ≠ 0 → initType2 refcnt d malloc r =
+      (.exc (systemError "Objects/structseq.c:689: bad argument to internal function"), ⟨false, false, false, false⟩)) ∧
+    (malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = false →
+      initType2 0 d malloc r = (.exc memoryError, ⟨false, false, false, false⟩)) ∧
+    (malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = true →
+      (∀ e, r.beforeFill = .error e → initType2 0 d malloc r = (.exc e, ⟨true, false, false, true⟩)) ∧
+      (∀ e, r.beforeFill = .ok () → r.fill = .error e →
+        initType2 0 d malloc r = (.exc e, ⟨true, false, r.fillPartial, true⟩)) ∧
+      (∀ e, r.beforeFill = .ok () → r.fill = .ok () → r.afterFill = .error e →
+        initType2 0 d malloc r = (.exc e, ⟨true, false, true, true⟩)) ∧
+      (r.beforeFill = .ok () → r.fill = .ok () → r.afterFill = .ok () →
+        (0 ≤ d.nInSeq → d.nInSeq ≤ d.fields.length →
+          initType2 0 d malloc r =
+            ((CRes.ofPy ((namesOf (d.fields.take d.nInSeq.toNat)).mapM (fun b => utf8Decode b .strict))).map
+              fun ma =>
+                { type := { name := d.name, members := namedFields d.fields,
+                            basicsize := (32 + 8 * ((d.fields.length : Int) - d.nInSeq)).toNat,
+                            dict := honestDict d.nInSeq d.fields.length (d.fields.count .unnamed) },
+                  matchArgs := ma },
+             ⟨true, true, true,
+              match (namesOf (d.fields.take d.nInSeq.toNat)).mapM (fun b => utf8Decode b .strict) with
+              | .ok _ => false
+              | .error _ => true⟩)) ∧
+        ((d.fields.length : Int) + 5 ≤ d.nInSeq →
+          initType2 0 d malloc r =
+            (.exc (systemError s!"~type {String.ofList (d.name.map Char.ofNat)} has a tp_dictoffset that is too small"),
+              ⟨true, false, true, true⟩)) ∧
+        (d.nInSeq < 0 →
+          initType2 0 d malloc r =
+            (.exc (systemError "~Objects/tupleobject.c:40: bad argument to internal function"), ⟨true, true, true, true⟩)) ∧
+        ((d.fields.length : Int) + 1 ≤ d.nInSeq → d.nInSeq ≤ d.fields.length + 4 →
+          (initType2 0 d malloc r).1 =
+            (CRes.ofPy ((namesOf d.fields).mapM (fun b => utf8Decode b .strict))).bind
+              (fun _ => .ub "initialize_structseq_dict: field past the terminator"))))
+
+theorem initType2Outcomes_proven : InitType2Outcomes := by
+  intro d malloc r
+  have hbase : ∀ (hm : malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = true),
+      initType2 0 d malloc r =
+        match typeReadyStatic d.name (staticBasicsize d.fields.length d.nInSeq) r with
+        | (.ok bs, descr) =>
+          match initDict d d.fields.length (d.fields.count .unnamed) with
+          | .ok (dict, ma) =>
+            (.ok { type := { name := d.name, members := namedFields d.fields, basicsize := bs, dict := dict },
+                   matchArgs := ma }, ⟨true, true, descr, false⟩)
+          | .exc e => (.exc e, ⟨true, true, descr, true⟩)
+          | .nullNoExc => (.nullNoExc, ⟨true, true, descr, true⟩)
+          | .ub w => (.ub w, ⟨true, true, descr, true⟩)
+        | (.exc e, descr) => (.exc e, ⟨true, false, descr, true⟩)
+        | (.nullNoExc, descr) => (.nullNoExc, ⟨true, false, descr, true⟩)
+        | (.ub w, descr) => (.ub w, ⟨true, false, descr, true⟩) := by
+    intro hm
+    unfold initType2
+    rw [countMembers_eq]
+    simp only [ne_eq, not_true_eq_false, if_false]
+    unfold initializeMembers
+    simp only [hm, Bool.not_true, Bool.false_eq_true, if_false, List.take_length, initMembers_named]
+  have hst : staticBasicsize d.fields.length d.nInSeq = 40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 := rfl
+  refine ⟨fun refcnt h => by simp [initType2, h], fun hm => ?_, fun hm => ⟨fun e he => ?_,
+    fun e h1 h2 => ?_, fun e h1 h2 h3 => ?_, fun h1 h2 h3 => ⟨fun h0 hle => ?_, fun hb => ?_, fun hn => ?_,
+    fun ha hb => ?_⟩⟩⟩
+  · unfold initType2
+    rw [countMembers_eq]
+    simp only [ne_eq, not_true_eq_false, if_false]
+    unfold initializeMembers
+    simp [hm]
+  · rw [hbase hm]; simp [typeReadyStatic, he]
+  · rw [hbase hm]; simp [typeReadyStatic, h1, h2]
+  · rw [hbase hm]; simp [typeReadyStatic, h1, h2, h3]
+  · rw [hbase hm]
+    simp only [typeReadyStatic, h1, h2, h3, hst]
+    rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega),
+      if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 ≤ 0) by omega)]
+    simp only [initDict]
+    rw [if_neg (by omega), matchArgsLoop_eq d.fields _ 0 (by omega)]
+    simp only [List.drop_zero]
+    cases (namesOf (d.fields.take d.nInSeq.toNat)).mapM (fun b => utf8Decode b .strict) with
+    | error e => rfl
+    | ok ma =>
+      simp only [CRes.ofPy, CRes.bind_ok, CRes.map]
+      congr 4
+      omega
+  · rw [hbase hm]
+    simp only [typeReadyStatic, h1, h2, h3, hst]
+    rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega),
+      if_pos (show 40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 ≤ 0 by omega)]
+  · rw [hbase hm]
+    simp only [typeReadyStatic, h1, h2, h3, hst]
+    rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega),
+      if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 ≤ 0) by omega)]
+    simp only [initDict]
+    rw [if_pos hn]
+  · rw [hbase hm]
+    simp only [typeReadyStatic, h1, h2, h3, hst]
+    by_cases hz : 40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0
+    · rw [if_pos hz, if_neg (by omega)]
+      simp only [initDict]
+      rw [if_neg (by omega), matchArgsLoop_past d.fields _ 0 (by omega) (by omega)]
+      simp only [List.drop_zero]
+      cases (namesOf d.fields).mapM (fun b => utf8Decode b .strict) <;> rfl
+    · rw [if_neg hz, if_neg (by omega)]
+      simp only [initDict]
+      rw [if_neg (by omega), matchArgsLoop_past d.fields _ 0 (by omega) (by omega)]
+      simp only [List.drop_zero]
+      cases (namesOf d.fields).mapM (fun b => utf8Decode b .strict) <;> rfl
+
 end PyLean.TypeObj.StructSeq
