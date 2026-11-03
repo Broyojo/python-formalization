@@ -253,16 +253,18 @@ from `sys.modules` is `NULL`; then a present attribute is returned, a missing on
 a lookup that raises propagates. Measured on 3.15.2: `sys.modules['warnings'] = None` makes
 `warn_explicit` print through `show_warning`; a module whose `__getattr__` raises makes it raise. -/
 def GetWarningsAttrSpec : Prop :=
-  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA e "ImportError" = true →
-    getWarningsAttr true (.error e) b attr = .ok none) ∧
-  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA e "ImportError" = false →
-    getWarningsAttr true (.error e) b attr = .error e) ∧
-  (∀ (α : Type) (imp : Py Unit) (attr : AttrR α), getWarningsAttr false imp false attr = .ok none) ∧
-  (∀ (α : Type) t (a : α), getWarningsAttr t (.ok ()) true (.found a) = .ok (some a)) ∧
-  (∀ (α : Type) t, getWarningsAttr t (.ok ()) true (AttrR.missing : AttrR α) = .ok none) ∧
-  (∀ (α : Type) t e, getWarningsAttr t (.ok ()) true (AttrR.raises e : AttrR α) = .error e)
+  ∀ H : Hier,
+  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA H e "ImportError" = true →
+    getWarningsAttr H true (.error e) b attr = .ok none) ∧
+  (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA H e "ImportError" = false →
+    getWarningsAttr H true (.error e) b attr = .error e) ∧
+  (∀ (α : Type) (imp : Py Unit) (attr : AttrR α), getWarningsAttr H false imp false attr = .ok none) ∧
+  (∀ (α : Type) t (a : α), getWarningsAttr H t (.ok ()) true (.found a) = .ok (some a)) ∧
+  (∀ (α : Type) t, getWarningsAttr H t (.ok ()) true (AttrR.missing : AttrR α) = .ok none) ∧
+  (∀ (α : Type) t e, getWarningsAttr H t (.ok ()) true (AttrR.raises e : AttrR α) = .error e)
 
 theorem getWarningsAttrSpec_proven : GetWarningsAttrSpec := by
+  intro H
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro α e attr b h; simp [getWarningsAttr, h]
   · intro α e attr b h; simp [getWarningsAttr, h]
@@ -271,8 +273,13 @@ theorem getWarningsAttrSpec_proven : GetWarningsAttrSpec := by
   · intro α t; cases t <;> simp [getWarningsAttr]
   · intro α t e; cases t <;> simp [getWarningsAttr]
 
-/-- `ModuleNotFoundError` is an `ImportError`. -/
-theorem moduleNotFound_isImportError : isA (.named "ModuleNotFoundError" "x") "ImportError" = true := by decide
+/-- In every hierarchy Python can have, `ModuleNotFoundError` and `ImportCycleError` (new in 3.15,
+Objects/exceptions.c:2025) are `ImportError`s, so an import of `warnings` that raises either is
+cleared. -/
+theorem importErrors_cleared (H : Hier) (h : HierOk H) :
+    isA H (.named "ModuleNotFoundError" "x") "ImportError" = true ∧
+    isA H (.named "ImportCycleError" "x") "ImportError" = true :=
+  ⟨h.2.2 _ _ rfl, h.2.2 _ _ rfl⟩
 
 /-! ## The cases left out, each refuted -/
 
@@ -281,7 +288,7 @@ theorem refute {α : Type} {a b x y : α} (h : a = b) (ha : a = x) (hb : b = y) 
     False := hxy (ha.symm.trans (h.trans hb))
 
 /-- Callbacks that never raise, a trivial `_match_filename`, and a show step that succeeds. -/
-def E0 : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, .call (.ok ()) (.ok ())⟩
+def E0 : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, .call (.ok ()) (.ok ()), builtinHier⟩
 
 /-- `warnings.filters` a list, `defaultaction` the given one, an empty once registry. -/
 def K0 (d : String) : WCfg := ⟨false, false, .val (.str d), .dict []⟩
@@ -397,7 +404,8 @@ def WarnTwinsRaising : Prop :=
     ItemsOkG IsTuple PlainAct AnyRegex LnFits fs → LineOk c → ModOk c →
     MsgOk c → RegOk reg → Twins E (K0 "always") fs ver c reg
 
-def Eraise : Env := ⟨fun _ _ => .error (.keyError "boom"), fun _ _ => true, fun _ _ => .ok true, .call (.ok ()) (.ok ())⟩
+def Eraise : Env := ⟨fun _ _ => .error (.keyError "boom"), fun _ _ => true, fun _ _ => .ok true, .call (.ok ()) (.ok ()),
+  builtinHier⟩
 def noMatch : Item := .tuple ⟨.str "error", .some (rx false), 1, .none, .int 0⟩
 
 theorem warnTwinsRaising_refuted : ¬ WarnTwinsRaising := fun h =>
@@ -587,7 +595,7 @@ def WarnTwinsModuleState : Prop :=
   ∀ (E : Env) K ver c reg, ver ≠ 0 → (∀ a b, ∃ x, E.isSub a b = .ok x) →
     LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E K [] ver c reg
 
-def Eshow (s : ShowA) : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, s⟩
+def Eshow (s : ShowA) : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, s, builtinHier⟩
 
 /-- `warnings.filters` a tuple: C's `get_warnings_filters` refuses it (:356-360); Python iterates it. -/
 theorem warnTwinsModuleState_refuted_tuple : ¬ WarnTwinsModuleState := fun h =>

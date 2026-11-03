@@ -25,7 +25,15 @@ def pFnImpl (s : String) : Fn :=
   | "noncallable" => .noncallable
   | _ => .implOrig
 
-instance : Inhabited CW := ⟨cwInit "" false none none 0 (.int 0) false⟩
+instance : Inhabited CW := ⟨cwInit "" false 0 none 0 (.int 0) false⟩
+
+/-- Module ids: 0 the `warnings` module, 1 another module; their `repr`s as the harness writes them. -/
+def dModRepr (m : Nat) : String := if m = 0 then "<W>" else "<X>"
+
+def jPyStr (r : Py String) : Json :=
+  match r with
+  | .ok s => Json.arr #["ok", jStr s]
+  | .error e => jRes (α := Unit) (.error e)
 
 structure CtxRun where
   st : MState
@@ -37,6 +45,13 @@ def seqId (seen : Array Ref) (l : Ref) : Array Ref × Nat :=
   | some i => (seen, i)
   | none => (seen.push l, seen.size)
 
+/-- `sys.modules['warnings']` during a `repr`: as usual, missing, or another module. -/
+def sysW (v : String) : Option Nat :=
+  match v with
+  | "nosys" => none
+  | "swap" => some 1
+  | _ => some 0
+
 def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json) := do
   let k ← jStrAt op 0
   match k with
@@ -46,7 +61,7 @@ def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json)
       -- `action=None` is the default: no filter
       | .arr #[.str "o", .str "None"] => pure none
       | v => some <$> pAct v
-    let cw := cwInit "catch_warnings" (← jBoolAt op 1) none a (← jNatAt op 3) (← pIntA (← jGetI op 4))
+    let cw := cwInit "catch_warnings" (← jBoolAt op 1) 0 a (← jNatAt op 3) (← pIntA (← jGetI op 4))
       (← jBoolAt op 5)
     return ({ R with cws := R.cws.push cw }, Json.arr #["ok"])
   | "enter" =>
@@ -81,12 +96,16 @@ def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json)
       | _ => return (R, Json.arr #["ok", Json.arr #["lost"]])
   | "sf" =>
     let fs := curFState use R.st
-    match simplefilter (← pAct (← jGetI op 1)) (← jNatAt op 2) (← pIntA (← jGetI op 3)) (← jBoolAt op 4) fs with
+    match simplefilter R.st.hier (← pAct (← jGetI op 1)) (← jNatAt op 2) (← pIntA (← jGetI op 3)) (← jBoolAt op 4) fs with
     | .error e => return (R, jRes (α := Unit) (.error e))
     | .ok fs' => return ({ R with st := putFState use R.st fs' }, Json.arr #["ok"])
   | "setshow" =>
     return ({ R with st := { R.st with showwarning := pFnShow (← jStrAt op 1) } }, Json.arr #["ok"])
-  | _ => return (R, Json.arr #["ok", jStr (cwRepr R.cws[(← jNatAt op 1)]!)])
+  | "mrepr" =>
+    -- catch_warnings(module=<other module>, record=...), then repr under the variant
+    let cw := cwInit "catch_warnings" (← jBoolAt op 1) 1 none 0 (.int 0) false
+    return (R, jPyStr (cwRepr cw (sysW (← jStrAt op 2)) dModRepr))
+  | _ => return (R, jPyStr (cwRepr R.cws[(← jNatAt op 1)]! (sysW (← jStrAt op 2)) dModRepr))
 
 def runCtx (j : Json) : Except String Json := do
   let use ← (← j.getObjVal? "use").getBool?
@@ -96,11 +115,16 @@ def runCtx (j : Json) : Except String Json := do
     | "oserr" => some (.error (.named "OSError" "write failed"))
     | "keyerr" => some (.error (.keyError "'write failed'"))
     | "brokenpipe" => some (.error (.named "BrokenPipeError" "write failed"))
+    | "unsupported" => some (.error (.named "UnsupportedOperation" "write failed"))
+    | "myoserr" => some (.error (.named "MyOSError" "write failed"))
     | _ => some (.ok ())
   let sw := pFnShow (← (← j.getObjVal? "show").getStr?)
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)
+  let fmt : Option Fn := match j.getObjVal? "fmt" with
+    | .ok (.str "raise") => some (.userRaises 3 (.valueError "fmt failed"))
+    | _ => some .fmtOrig
   let st : MState := MState.mk (fun i => if i = 0 then init else []) (fun _ => []) 1 (some 0) sw im
-    (some .fmtOrig) 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false)
+    fmt 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false) dHier (some 0) dModRepr
   let mut R : CtxRun := ⟨st, #[], #[]⟩
   let mut outs : Array Json := #[]
   for op in ← jArr (← j.getObjVal? "ops") do

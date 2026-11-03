@@ -25,7 +25,14 @@ def dCompile (p : String) (_ : Bool) : Py Unit :=
   | "a{4294967296}" => .error (.overflowError "the repetition number is too large")
   | _ => .ok ()
 
-def dFEnv : FEnv := ⟨dCompile, dIsType, dIsWarn⟩
+/-- The exception classes of the difftest: the builtin ones, `io.UnsupportedOperation` (an
+`OSError` and a `ValueError`), and user subclasses `MyOSError`, `MyValueError`, `MyImportError`. -/
+def dHier : Hier := ⟨fun c b =>
+  excIsA c b || (c == "UnsupportedOperation" && (excIsA "OSError" b || excIsA "ValueError" b)) ||
+  (c == "MyOSError" && excIsA "OSError" b) || (c == "MyValueError" && excIsA "ValueError" b) ||
+  (c == "MyImportError" && excIsA "ImportError" b) || c == b⟩
+
+def dFEnv : FEnv := ⟨dCompile, dIsType, dIsWarn, dHier⟩
 
 def dImp (m _ : List Char) : Py Nat :=
   match str' m with
@@ -78,6 +85,8 @@ def pElem (j : Json) : Except String Elem := do
       | "f" => .ok false
       | "verr" => .error (.valueError "eq")
       | "uerr" => .error (.named "UnicodeError" "eq")
+      | "unsup" => .error (.named "UnsupportedOperation" "eq")
+      | "myverr" => .error (.named "MyValueError" "eq")
       | _ => .error (.keyError "'eq'")
     return .other (← jNatAt j 1) r
   | _ => return .item ⟨← jStrAt j 1, ← pRx (← jGetI j 2), ← jNatAt j 3, ← pRx (← jGetI j 4), ← jIntAt j 5⟩
@@ -139,7 +148,7 @@ def runOp (isC : Bool) (op : Json) (d : LockSt) (s : FState) :
     return lift (filterwarnings dFEnv (← pAct (← jGetI op 1)) (← pStrA (← jGetI op 2)) (← jNatAt op 3)
       (← pStrA (← jGetI op 4)) (← pIntA (← jGetI op 5)) (← jBoolAt op 6) s)
   | "sf" =>
-    return lift (simplefilter (← pAct (← jGetI op 1)) (← jNatAt op 2) (← pIntA (← jGetI op 3))
+    return lift (simplefilter dHier (← pAct (← jGetI op 1)) (← jNatAt op 2) (← pIntA (← jGetI op 3))
       (← jBoolAt op 4) s)
   | "reset" => return lift (resetwarnings s)
   | "mut" =>
