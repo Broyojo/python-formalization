@@ -144,11 +144,22 @@ def SequenceFallback : Prop :=
     (Q.repeatV = some g → Q.index w = none → (numberMul A Q v w).raises "TypeError") ∧
     (Q.repeatV = some g → Q.index w = some (.ok n) → n > ssizeMax →
       (numberMul A Q v w).raises "OverflowError") ∧
+    (Q.repeatV = some g → Q.index w = some (.ok n) → n < ssizeMin →
+      numberMul A Q v w = .error (.overflowError s!"cannot fit '{Q.tn w}' into an index-sized integer")) ∧
+    (Q.repeatV = none → Q.repeatW = some g → Q.index v = some (.ok n) → (n > ssizeMax ∨ n < ssizeMin) →
+      numberMul A Q v w = .error (.overflowError s!"cannot fit '{Q.tn v}' into an index-sized integer")) ∧
     (Q.repeatV = none → Q.repeatW = none → numberMul A Q v w = .error (binopError "*" A.lt A.rt))
 
 theorem sequenceFallback_proven : SequenceFallback := by
   intro α A Q v w x n e f g h
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 7
+  · intro h1 h2 h3
+    have : n > ssizeMax ∨ n < ssizeMin := Or.inr h3
+    simp [numberMul, h, h1, sequenceRepeat, h2, fitSsize, this]
+  · intro h1 h2 h3 h4
+    simp [numberMul, h, h1, h2, sequenceRepeat, h3, fitSsize, h4]
+  rotate_left 1
   · intro h1; simp [numberAdd, h, h1]
   · intro h1; simp [numberAdd, h, h1]
   · intro h1 h2 h3 h4
@@ -458,11 +469,15 @@ def GetItemProtocol : Prop :=
     (A.mp = none → A.sqItem = some f → A.keyIndex = none →
       getItem A = .error (.typeError s!"sequence index must be integer, not '{A.keyTn}'")) ∧
     (A.mp = none → A.sqItem = none → A.asType = none →
-      getItem A = .error (.typeError s!"'{A.tn}' object is not subscriptable"))
+      getItem A = .error (.typeError s!"'{A.tn}' object is not subscriptable")) ∧
+    (A.mp = none → A.sqItem = some f → A.keyIndex = some (.ok i) → (i > ssizeMax ∨ i < ssizeMin) →
+      getItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer"))
 
 theorem getItemProtocol_proven : GetItemProtocol := by
   intro α A f i n r e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 14
+  · intro h1 h2 h3 h4; simp [getItem, h1, h2, h3, fitSsize, h4]
   · intro h; simp [getItem, h]
   · intro h1 h2 h3 h4 h5
     have h6 : ¬ (i > ssizeMax ∨ i < ssizeMin) := by
@@ -538,7 +553,10 @@ def SetDelProtocol : Prop :=
       setItem A = .error (objMsg A.tn "does not support item assignment") ∧
       delItem A = .error (objMsg A.tn "does not support item deletion")) ∧
     (A.mp = none → A.hasSeq = true → A.keyIndex = some (.ok i) → i > ssizeMax →
-      (setItem A).raises "IndexError" ∧ (delItem A).raises "IndexError")
+      (setItem A).raises "IndexError" ∧ (delItem A).raises "IndexError") ∧
+    (A.mp = none → A.hasSeq = true → A.keyIndex = some (.ok i) → (i > ssizeMax ∨ i < ssizeMin) →
+      setItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer") ∧
+      delItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer"))
 
 theorem setDelProtocol_proven : SetDelProtocol := by
   intro σ A f r i n e
@@ -550,7 +568,11 @@ theorem setDelProtocol_proven : SetDelProtocol := by
       omega
     simp [fitSsize, this]
   have hmax : i < 0 → i ≤ ssizeMax := by intro h; unfold ssizeMax; omega
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 14
+  · intro h1 h2 h3 h4
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, fitSsize, h4],
+      by simp [delItem, assignItem, h1, h2, h3, fitSsize, h4]⟩
   · intro h; simp [setItem, delItem, assignItem, h]
   · intro h1 h2 h3 h4 h5 h6
     have h7 : ssizeMin ≤ i := by
@@ -864,7 +886,7 @@ path starting from a nonzero result so it cannot answer `True`. `compare_digest`
 Non-ASCII `str` arguments raise `TypeError`. -/
 def CompareDigestCorrect : Prop :=
   ∀ (a b : List Nat), tscmp a b = decide (a = b) ∧
-    (compareDigest (.str false a) (.str true b)).raises "TypeError"
+    (compareDigest (.str false a "str") (.str true b "str")).raises "TypeError"
 
 theorem compareDigestCorrect_proven : CompareDigestCorrect := by
   intro a b

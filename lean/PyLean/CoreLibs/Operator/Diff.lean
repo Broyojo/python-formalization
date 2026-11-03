@@ -256,7 +256,8 @@ def getDefault (j : Json) : Except String HintDefault := do
 
 def getDigest (j : Json) : Except String DigestArg := do
   match ← getStr j "k" with
-  | "str" => pure (.str (← getBool j "ascii") ((← getIntList j "data").map Int.toNat))
+  | "str" => pure (.str (← getBool j "ascii") ((← getIntList j "data").map Int.toNat) "str")
+  | "strsub" => pure (.str (← getBool j "ascii") ((← getIntList j "data").map Int.toNat) "S")
   | "bytes" => pure (.buffer ((← getIntList j "data").map Int.toNat))
   | "noncontig" => pure (.bufferErr (.named "BufferError" "memoryview: underlying buffer is not C-contiguous"))
   | _ => pure (.other "int")

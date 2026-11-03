@@ -2906,7 +2906,7 @@ corelibs-abc-abstract-twins	proven	Lib/abc.py	ABCMeta.__new__,update_abstractmet
 corelibs-abc-abstract-inherited	proven	Lib/abc.py	update_abstractmethods
 corelibs-operator-first-step-wins	proven	Lib/operator.py	add,mul,pow,_operator_add_impl,_operator_mul_impl,_operator_pow_impl
 corelibs-operator-inplace-exact	proven	Lib/operator.py	iadd,imul,ipow,_operator_iadd_impl,_operator_imul_impl,_operator_ipow_impl
-corelibs-operator-rich-compare-exact	proven	Lib/operator.py	lt,le,gt,ge,_operator_lt_impl,_operator_le_impl,_operator_gt_impl,_operator_ge_impl
+corelibs-operator-rich-compare-exact	proven	Lib/operator.py	lt,le,gt,ge,eq,ne,_operator_lt_impl,_operator_le_impl,_operator_gt_impl,_operator_ge_impl,_operator_eq_impl,_operator_ne_impl
 corelibs-operator-index-exact	proven	Lib/operator.py	index,_operator_index
 corelibs-operator-concat-exact	proven	Lib/operator.py	concat,iconcat,_operator_concat_impl,_operator_iconcat_impl
 corelibs-operator-search-exact	proven	Lib/operator.py	contains,countOf,indexOf,_operator_contains_impl,_operator_countOf_impl,_operator_indexOf_impl
@@ -2930,6 +2930,9 @@ corelibs-operator-mc-reduce-exact	proven	Lib/operator.py	methodcaller_reduce
 corelibs-operator-mc-reduce-isolated	refuted	Lib/operator.py	methodcaller_reduce,methodcaller_new,methodcaller_repr
 corelibs-operator-mc-reduce-no-crash	refuted	Lib/operator.py	methodcaller_reduce,methodcaller_new,methodcaller_repr
 corelibs-operator-mc-call-isolated	refuted	Lib/operator.py	methodcaller_call,methodcaller_new,methodcaller_repr
+corelibs-operator-mc-repr-guard	proven	Lib/operator.py	methodcaller_repr
+corelibs-operator-mc-repr-pure	proven	Lib/operator.py	methodcaller_repr
+corelibs-operator-mc-repr-mutations	proven	Lib/operator.py	methodcaller_repr,methodcaller_reduce
 corelibs-operator-mc-vectorcall-fresh	proven	Lib/operator.py	methodcaller_vectorcall,_methodcaller_initialize_vectorcall
 corelibs-copy-list-exact	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy

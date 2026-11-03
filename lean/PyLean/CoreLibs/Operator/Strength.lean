@@ -68,7 +68,15 @@ def InplaceExact : Prop :=
         (Q.hasV = true → Q.irepeatV = some g → inplaceMul none A Q v w = g v n) ∧
         (Q.hasV = true → Q.irepeatV = none → Q.repeatV = some g → inplaceMul none A Q v w = g v n)) ∧
       (Q.hasV = true → Q.irepeatV = some g → Q.index w = some (.error e) → inplaceMul none A Q v w = .error e) ∧
-      (Q.hasV = true → Q.irepeatV = some g → Q.index w = none → (inplaceMul none A Q v w).raises "TypeError"))
+      (Q.hasV = true → Q.irepeatV = some g → Q.index w = none → (inplaceMul none A Q v w).raises "TypeError") ∧
+      (∀ n : Int, (n > ssizeMax ∨ n < ssizeMin) →
+        let over : Py α := .error (.overflowError s!"cannot fit '{Q.tn w}' into an index-sized integer")
+        (Q.hasV = true → Q.irepeatV = some g → Q.index w = some (.ok n) → inplaceMul none A Q v w = over) ∧
+        (Q.hasV = true → Q.irepeatV = none → Q.repeatV = some g → Q.index w = some (.ok n) →
+          inplaceMul none A Q v w = over) ∧
+        (Q.hasV = false → Q.hasW = true → Q.repeatW = some g → Q.index v = some (.ok n) →
+          inplaceMul none A Q v w =
+            .error (.overflowError s!"cannot fit '{Q.tn v}' into an index-sized integer"))))
 
 theorem inplaceExact_proven : InplaceExact := by
   intro α A Q sym v w x f e g
@@ -89,7 +97,13 @@ theorem inplaceExact_proven : InplaceExact := by
     · intro h1 h2 h3; simp [inplaceMul, binaryIop1, h, h1, h2, h3]
   · intro h; exact ⟨by simp [inplaceAdd, binaryIop1, h], by simp [inplacePow, h]⟩
   · intro h
-    refine ⟨by simp [inplacePow, ternaryOp, binaryOp, h], ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨by simp [inplacePow, ternaryOp, binaryOp, h], ?_, ?_, ?_, ?_, ?_, ?_⟩
+    rotate_left 5
+    · intro n hn
+      refine ⟨?_, ?_, ?_⟩
+      · intro h1 h2 h3; simp [inplaceMul, binaryIop1, h, h1, h2, sequenceRepeat, h3, fitSsize, hn]
+      · intro h1 h2 h3 h4; simp [inplaceMul, binaryIop1, h, h1, h2, h3, sequenceRepeat, h4, fitSsize, hn]
+      · intro h1 h2 h3 h4; simp [inplaceMul, binaryIop1, h, h1, h2, h3, sequenceRepeat, h4, fitSsize, hn]
     · intro c h1 h2; simp [inplaceAdd, binaryIop1, h, h1, h2]
     · intro c h1 h2 h3; simp [inplaceAdd, binaryIop1, h, h1, h2, h3]
     · intro n h1 h2 h3
@@ -494,31 +508,31 @@ theorem lengthHintCExact_proven : LengthHintCExact := by
 /-- `compare_digest` is equality on ASCII strings and on buffers, whatever the lengths, and refuses everything else
 with the source's message. -/
 def DigestExact : Prop :=
-  ∀ (a b : List Nat) (x y : Bool) (ta tb : String),
-    compareDigest (.str true a) (.str true b) = .ok (decide (a = b)) ∧
+  ∀ (a b : List Nat) (x y : Bool) (ta tb sa sb : String),
+    compareDigest (.str true a sa) (.str true b sb) = .ok (decide (a = b)) ∧
     compareDigest (.buffer a) (.buffer b) = .ok (decide (a = b)) ∧
-    compareDigest (.str false a) (.str y b) =
+    compareDigest (.str false a sa) (.str y b sb) =
       .error (.typeError "comparing strings with non-ASCII characters is not supported") ∧
-    compareDigest (.str x a) (.str false b) =
+    compareDigest (.str x a sa) (.str false b sb) =
       .error (.typeError "comparing strings with non-ASCII characters is not supported") ∧
-    compareDigest (.str x a) (.buffer b) = .error (.typeError "~a bytes-like object is required") ∧
-    compareDigest (.buffer a) (.str y b) = .error (.typeError "~a bytes-like object is required") ∧
+    compareDigest (.str x a sa) (.buffer b) = .error (.typeError "~a bytes-like object is required") ∧
+    compareDigest (.buffer a) (.str y b sb) = .error (.typeError "~a bytes-like object is required") ∧
     compareDigest (.other ta) (.other tb) = .error (.typeError
       s!"unsupported operand types(s) or combination of types: '{ta}' and '{tb}'") ∧
-    compareDigest (.str x a) (.other tb) = .error (.typeError
-      s!"unsupported operand types(s) or combination of types: '{"str"}' and '{tb}'") ∧
-    compareDigest (.other ta) (.str y b) = .error (.typeError
-      s!"unsupported operand types(s) or combination of types: '{ta}' and '{"str"}'") ∧
+    compareDigest (.str x a sa) (.other tb) = .error (.typeError
+      s!"unsupported operand types(s) or combination of types: '{sa}' and '{tb}'") ∧
+    compareDigest (.other ta) (.str y b sb) = .error (.typeError
+      s!"unsupported operand types(s) or combination of types: '{ta}' and '{sb}'") ∧
     (∀ (e : PyExc) (d : DigestArg),
       compareDigest (.bufferErr e) d = .error e ∧
       compareDigest .bufferNd d = .error (.named "BufferError" ndimMsg) ∧
       compareDigest (.buffer a) (.bufferErr e) = .error e ∧
       compareDigest (.buffer a) .bufferNd = .error (.named "BufferError" ndimMsg) ∧
-      compareDigest (.str x a) (.bufferErr e) = .error (.typeError "~a bytes-like object is required") ∧
+      compareDigest (.str x a sa) (.bufferErr e) = .error (.typeError "~a bytes-like object is required") ∧
       compareDigest (.other ta) .bufferNd = .error (.typeError "~a bytes-like object is required"))
 
 theorem digestExact_proven : DigestExact := by
-  intro a b x y ta tb
+  intro a b x y ta tb sa sb
   refine ⟨?_, ?_, ?_, ?_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   rotate_left 4
   · simp [compareDigest, DigestArg.hasBuffer, DigestArg.tn]
