@@ -1,0 +1,56 @@
+id: textlibs-email-quoted-string-reparse
+title: "email: str() of a quoted string drops the quoted pair that kept '=?...?=' literal, so reparsing decodes it"
+priority: P4
+kind: round-trip
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["get_bare_quoted_string", "get_quoted_string", "BareQuotedString.__str__", "quote_string", "make_quoted_pairs"]
+summary: |
+  The parser decodes an RFC 2047 encoded word inside a quoted string (with the defect "encoded word
+  inside quoted string"), testing `value[:2] == '=?'` at each position. A sender can keep the text
+  literal with a quoted pair: in `"\=?utf-8?q?a?="` the `\=` hides the `=?`, and the value is the
+  literal `=?utf-8?q?a?=`. `str()` of that token writes it back with `make_quoted_pairs`, which
+  escapes only `\` and `"`, giving `"=?utf-8?q?a?="`; parsing that decodes the encoded word, and the
+  value becomes `a`. So `str()`, which the module docstring calls the canonical form of the parsed
+  text, is not a fixed point: a display name changes when a parsed header is re-serialised from its
+  parse tree and parsed again.
+likelihood: |
+  Low. It needs `=?` inside a quoted string with a quoted pair in it, which normal mail does not
+  contain; a crafted header can make two parses of "the same" header disagree.
+maybe_intended: |
+  Possibly. Decoding encoded words inside quoted strings is already outside RFC 2047 (section 5
+  forbids them there), and the parser does it as a leniency; the maintainers may consider the
+  re-serialised form good enough. The cheap fix is to escape `=` before `?` in make_quoted_pairs.
+reproducer: |
+  from email import _header_value_parser as P
+  q, rest = P.get_quoted_string('"\\=?utf-8?q?a?="')
+  s = str(q)
+  q2, rest2 = P.get_quoted_string(s)
+  print(repr(q.value), repr(s), repr(q2.value), rest, rest2)
+  if q.value == '=?utf-8?q?a?=' and s == '"=?utf-8?q?a?="' and q2.value == 'a' and rest2 == '':
+      print('REPRODUCED textlibs-email-quoted-string-reparse')
+expected: |
+  Parsing str(q) gives a quoted string with the same value, '=?utf-8?q?a?='.
+observed: |
+  python3 3.15.2: '=?utf-8?q?a?=' '"=?utf-8?q?a?="' 'a'. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Module docstring, _header_value_parser.py:46-49: str() "attempts to be a 'canonical'
+  representation of the RFC-compliant form of the substring that produced the parsed subtree,
+  including minimal use of quoted pair quoting".
+cause: |
+  Lib/email/_header_value_parser.py:1261 recognises `=?` only unescaped; :100-102
+  (make_quoted_pairs, used by BareQuotedString.__str__ via quote_string, :277-278) does not escape
+  it back.
+possible_fix: |
+  In BareQuotedString.__str__, escape the `=` of each `=?` (`\=`), so the canonical form keeps the
+  text literal; or stop decoding encoded words inside quoted strings.
+duplicates: |
+  None found. Related: gh-121284 (closed; refolding a pre-encoded address header changes its
+  meaning) and gh-160148 (open; a header value that is itself an encoded word). Queries: gh search
+  issues --repo python/cpython encoded word inside quoted string; email quoted string encoded word
+  decoded twice; email display name encoded word round trip; quoted-pair encoded word email;
+  email header str reparse different value; BareQuotedString; make_quoted_pairs; email backslash
+  escaped encoded word quoted display name; encoded-word quoted string escape; email parser
+  decodes encoded word in quoted string.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (QuotedStringCanonical, quotedStringCanonical_refuted)

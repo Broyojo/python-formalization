@@ -12,6 +12,7 @@ import PyLean.TextLibs.DifflibDiff
 import PyLean.TextLibs.EtreeDiff
 import PyLean.TextLibs.UrlDiff
 import PyLean.TextLibs.TomlDiff
+import PyLean.TextLibs.EmailDiff
 
 /-! Differential-testing handler for `textlibs` cases (`"mod": "textlibs"`).
 The function name's prefix (`struct.`, `binascii.`, ...) selects the sub-handler. -/
@@ -37,6 +38,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   else if fn.startsWith "etreecopy." then Etree.copyRun j
   else if fn.startsWith "url." then Url.run fn j
   else if fn.startsWith "toml." then Toml.run fn j
+  else if fn.startsWith "email." then Email.run fn j
   else throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

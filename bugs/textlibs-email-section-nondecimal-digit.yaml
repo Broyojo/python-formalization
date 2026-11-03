@@ -1,0 +1,54 @@
+id: textlibs-email-section-nondecimal-digit
+title: "email: RFC 2231 section number '²' raises ValueError from int() in get_section (duplicate of gh-87112)"
+priority: P4
+kind: crash
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["get_section"]
+summary: |
+  `get_section` takes digits with `str.isdigit()`, which is true for characters such as `²`
+  (Numeric_Type=Digit) that `int()` rejects, then calls `int(digits)`. The ValueError escapes
+  `get_parameter`, which only catches HeaderParseError, so `text/plain; a*²=x` makes
+  parse_content_type_header (and msg['Content-Type'] with the modern policy) raise ValueError.
+  A section of more than 4300 ASCII digits raises the int max-str-digits ValueError the same way.
+likelihood: |
+  Low: needs a non-ASCII digit or a 4301-digit section number in a parameter name, so only crafted
+  input; it does make message parsing raise.
+maybe_intended: |
+  No.
+reproducer: |
+  from email import _header_value_parser as P
+  out = []
+  for v in ('*²', '*' + '1' * 4301):
+      try:
+          P.get_section(v)
+          out.append(None)
+      except ValueError as e:
+          out.append(type(e).__name__)
+  try:
+      P.parse_content_type_header('text/plain; a*²=x')
+      ct = None
+  except ValueError as e:
+      ct = str(e)
+  print(out, ct)
+  if all(out) and ct:
+      print('REPRODUCED textlibs-email-section-nondecimal-digit')
+expected: |
+  HeaderParseError from get_section (caught by get_parameter), or a defect.
+observed: |
+  python3 3.15.2: ValueError for both sections and for the Content-Type value. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  get_section's callers expect HeaderParseError (:2513-2518), and the header-parser contract at
+  Lib/email/headerregistry.py:169-174.
+cause: |
+  Lib/email/_header_value_parser.py:2457-2467: `value[0].isdigit()` accepts non-decimal digits,
+  and `int(digits)` (:2467) has no guard.
+possible_fix: |
+  Use `isdecimal()` and an ASCII check (or catch ValueError and raise HeaderParseError).
+duplicates: |
+  Duplicate of gh-87112 (open, "email: ValueError in get_section when parsing header with
+  non-ASCII digit"). The same isdigit/int mismatch in parse_mime_version is
+  textlibs-email-mime-version-nondecimal-digit. Queries: gh search issues --repo python/cpython
+  get_section isdigit; _header_value_parser IndexError; email header parser IndexError.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (SectionOnlyHpe, sectionOnlyHpe_refuted)

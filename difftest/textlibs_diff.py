@@ -4677,6 +4677,179 @@ class TomlArea:
             sys.set_int_max_str_digits(old_d)
 
 
+# ---- email._header_value_parser ----------------------------------------------
+
+import email._header_value_parser as HVP  # noqa: E402
+import email._encoded_words as _EW  # noqa: E402
+
+EMAIL_EW = ["=?utf-8?q?a?=", "=?utf-8?q?a_b?=", "=?utf-8?b?YWI=?=", "=?us-ascii?q?=41?=", "=?x-unk?q?a?=",
+            "=?utf-8?q?=FF?=", "=?utf-8?x?a?=", "=?utf-8?q?a?b?=", "=?utf-8*en?q?a?=", "=?utf-8?q?=3D=3Fq?=",
+            "=?utf-8?q?=20a=20?=", "=?utf-8?b?YQ?=", "=?utf-8?q?\udcff?=", "=?utf-8?q?=?=41?=", "=?utf-8?q?a?=b",
+            "=?unknown-8bit?q?=E9?=", "=?utf-8?q?\t?=", "=?utf-8?b?!!?=", "=?utf-8?q?=00=7F?=", "=?", "?=",
+            "=?utf-8?Q?=3D=3Futf-8=3Fq=3Fb=3F=3D?=", "=?utf-8?q?x\ny?=", "=?utf-8?q?a b?=", "=?latin-1?q?=E9?=",
+            "=?utf-16?b?AA?=", "=?idna?q?a..b?=", "=?utf-8?q?\"?="]
+EMAIL_ATOMS = ["a", "b", "xy", "1", "0", "é", "\xa0", " ", "\x00", "\x7f", "\udcff", "\n", "\r", "\x1c",
+               "*", "%", "'", "=", "/", "?", "!", "#", "-"]
+EMAIL_SPECIAL = list('()<>@,:;.\\"[] \t') + ["  ", " \t", "\\\\", "\\\"", "\\(", "\\)", "\\ ", "\\[", "\\]", ".."]
+EMAIL_STRUCT = ["(c)", "(a (b) c)", "((x)", "(\\()", "\"q\"", "\"a b\"", "\"a\\\"b\"", "\"\"", "\" \"", "<a@b>",
+                "<>", "<@x,@y:a@b>", "<a@[1.2.3.4]>", "a@b.c", "x:;", "x: a@b;", "g:a@b,c@d;", "[x]", "[ x]",
+                "[\\]]", "a.b", "a..b", ".a", "a.", "<a@[ x]>", "<a@b", "<a.b@c.d>", "<a@[x]>", "a b <c@d>",
+                "*0", "*1", "*01", "*0*", "*²", "*1²", "utf-8''a%41", "us-ascii'en'x", "''", "x=y",
+                "x*=utf-8''%E9", "x*0*=\"utf-8''a\"", "x*1*=\"a\"", "x*=\"'\"", "text/plain", "a/b; c=d",
+                "1.0", "1 . 0", "(c) 1.0", "².0", "1.²", "1", "1.0 x"]
+
+
+def email_piece(r):
+    k = r.random()
+    if k < 0.2:
+        return r.choice(EMAIL_EW)
+    if k < 0.45:
+        return r.choice(EMAIL_ATOMS)
+    if k < 0.75:
+        return r.choice(EMAIL_SPECIAL)
+    return r.choice(EMAIL_STRUCT)
+
+
+def email_text(r, n=10):
+    out = "".join(email_piece(r) for _ in range(r.randint(0, n)))
+    if r.random() < 0.03:
+        d = r.randint(1, 25)
+        out = "(" * d + out + ")" * r.randint(0, d)
+    if r.random() < 0.02:
+        out += "1" * r.choice([641, 4301]) if r.random() < 0.5 else "*" + "1" * 4301 + "=x"
+    return out
+
+
+def email_defect_j(d):
+    return [type(d).__name__, cps(str(d))]
+
+
+def email_av(v):
+    if isinstance(v, bool):
+        return {"b": v}
+    if isinstance(v, int):
+        return {"n": str(v)}
+    return {"s": cps(v)}
+
+
+def email_tok_j(t):
+    if isinstance(t, HVP.Terminal):
+        return ["T", type(t).__name__, cps(str.__str__(t)), t.token_type, [email_defect_j(d) for d in t.defects]]
+    attrs = [[k, email_av(v)] for k, v in vars(t).items() if k not in ("defects", "token_type")]
+    tt = t.token_type
+    return ["L", type(t).__name__, "None" if tt is None else tt, [email_tok_j(x) for x in t],
+            [email_defect_j(d) for d in t.defects], attrs]
+
+
+def email_exc_j(e):
+    return [type(e).__name__, cps(str(e))]
+
+
+def email_val_j(t):
+    try:
+        return {"v": cps(t.value)}
+    except Exception as e:
+        return {"e": email_exc_j(e)}
+
+
+def email_has_mp(t):
+    return isinstance(t, HVP.MimeParameters) or (isinstance(t, list) and any(email_has_mp(x) for x in t))
+
+
+def email_tree_j(t, rest):
+    s = None if email_has_mp(t) else cps(str(t))
+    return {"r": [email_tok_j(t), None if rest is None else cps(rest), s, email_val_j(t)]}
+
+
+@area("email", 6)
+class EmailArea:
+    """email._header_value_parser (TextLibs/Email*.lean). See EmailDiff.lean for the encoding."""
+
+    PAIR = ["get_address_list", "get_mailbox_list", "get_mailbox", "get_address", "get_group", "get_group_list",
+            "get_name_addr", "get_angle_addr", "get_obs_route", "get_addr_spec", "get_local_part",
+            "get_obs_local_part", "get_domain", "get_domain_literal", "get_dtext", "get_display_name", "get_phrase",
+            "get_word", "get_atom", "get_dot_atom", "get_dot_atom_text", "get_atext", "get_quoted_string",
+            "get_bare_quoted_string", "get_qcontent", "get_qp_ctext", "get_comment", "get_cfws", "get_fws",
+            "get_encoded_word", "get_invalid_mailbox", "get_no_fold_literal", "get_msg_id", "get_invalid_parameter",
+            "get_ttext", "get_token", "get_attrtext", "get_attribute", "get_extended_attrtext",
+            "get_extended_attribute", "get_section", "get_value", "get_parameter"]
+    WHOLE = ["get_unstructured", "parse_message_id", "parse_message_ids", "parse_mime_version",
+             "parse_mime_parameters", "parse_content_type_header", "parse_content_disposition_header",
+             "parse_content_transfer_encoding_header"]
+    HEAVY = ["get_address_list"] * 6 + ["get_unstructured"] * 3 + ["parse_content_type_header"] * 3 + \
+            ["parse_message_id", "parse_message_ids", "parse_mime_version", "parse_mime_parameters",
+             "parse_content_disposition_header", "parse_content_transfer_encoding_header", "get_parameter"] * 2
+    PREFIX = {"get_encoded_word": "=?", "get_comment": "(", "get_bare_quoted_string": '"',
+              "get_quoted_string": '"', "get_domain_literal": "[", "get_no_fold_literal": "[",
+              "get_msg_id": "<", "parse_message_id": "<", "parse_message_ids": "<", "get_section": "*",
+              "get_angle_addr": "<", "get_obs_route": "@"}
+
+    @staticmethod
+    def call(fn, v, endc):
+        f = getattr(HVP, fn)
+        if fn in ("get_invalid_mailbox", "_get_ptext_to_endchars"):
+            return f(v, txt(endc))
+        return f(v)
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(cls.PAIR + cls.WHOLE + cls.HEAVY + ["_get_ptext_to_endchars"])
+        v = email_text(r, r.choice([3, 6, 10, 16]))
+        if r.random() < 0.3:
+            v = cls.PREFIX.get(fn, "") + v
+        c = {"mod": "textlibs", "fn": "email." + fn, "v": cps(v), "maxd": 4300}
+        if fn == "get_invalid_mailbox":
+            c["endc"] = cps(r.choice([",;", ","]))
+        if fn == "_get_ptext_to_endchars":
+            c["endc"] = cps(r.choice(["()", '"', "[]"]))
+        table = {}
+        orig = _EW.decode
+
+        def rec(s):
+            try:
+                out = orig(s)
+            except (ValueError, KeyError):
+                table.setdefault(s, {"caught": 0})
+                raise
+            except Exception as e:
+                table.setdefault(s, {"raise": [type(e).__name__, cps(str(e))]})
+                raise
+            text, charset, lang, defects = out
+            table.setdefault(s, {"ok": [cps(text), cps(charset), cps(lang), [email_defect_j(d) for d in defects]]})
+            return out
+        _EW.decode = rec
+        try:
+            try:
+                cls.call(fn, v, c.get("endc", []))
+            except Exception:
+                pass
+        finally:
+            _EW.decode = orig
+        c["dec"] = [[cps(k), o] for k, o in table.items()]
+        return c
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"][6:]
+        v = txt(c["v"])
+        try:
+            res = cls.call(fn, v, c.get("endc", []))
+        except Exception as e:
+            return {"ok": {"err": email_exc_j(e)}}
+        if fn == "_get_ptext_to_endchars":
+            return {"ok": {"p": [cps(res[0]), cps(res[1]), res[2]]}}
+        if fn in cls.WHOLE:
+            return {"ok": email_tree_j(res, None)}
+        t, rest = res
+        out = email_tree_j(t, rest)
+        if fn == "get_display_name":
+            try:
+                out["dn"] = {"v": cps(t.display_name)}
+            except Exception as e:
+                out["dn"] = {"e": email_exc_j(e)}
+        return {"ok": out}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

@@ -1,0 +1,47 @@
+id: textlibs-email-mime-version-nondecimal-digit
+title: "email: MIME-Version '²' raises ValueError from int() in parse_mime_version (duplicate of gh-158708)"
+priority: P4
+kind: crash
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["parse_mime_version"]
+summary: |
+  `parse_mime_version` checks the major and minor numbers with `digits.isdigit()` and then calls
+  `int(digits)`. `'²'.isdigit()` is true and `int('²')` raises ValueError, so the header value `²`
+  (or `1.²`, or a 4301-digit number) makes the MIME-Version header parser raise instead of adding
+  "Expected MIME major version number" as it does for other junk.
+likelihood: |
+  Low: crafted input only.
+maybe_intended: |
+  No.
+reproducer: |
+  from email import _header_value_parser as P
+  out = []
+  for v in ('²', '1.²', '1' * 4301):
+      try:
+          P.parse_mime_version(v)
+          out.append(None)
+      except ValueError as e:
+          out.append(type(e).__name__)
+  print(out)
+  if all(out):
+      print('REPRODUCED textlibs-email-mime-version-nondecimal-digit')
+expected: |
+  A MIMEVersion token list with an InvalidHeaderDefect.
+observed: |
+  python3 3.15.2: ValueError for all three. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/email/headerregistry.py:169-174, and the function's own defect branch for non-digits
+  (:2253-2256, :2284-2287).
+cause: |
+  Lib/email/_header_value_parser.py:2253 and :2284 test `isdigit()`; :2258 and :2289 call `int()`.
+possible_fix: |
+  Test `isdecimal()` and ASCII, or catch ValueError and record the defect.
+duplicates: |
+  Duplicate of gh-158708 (closed by a maintainer as part of a batch of automated reports, not on
+  the merits; see gh-158748) and gh-158707 (the int max-str-digits case, closed the same way).
+  Bugforge email.headerregistry-20261003-134457-c2 and -20261003-060502-c4 are these. Same root
+  cause as gh-87112 (get_section). Queries: gh search issues --repo python/cpython get_section
+  isdigit; gh issue view 158708, 158707.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (MimeVersionNoRaise, mimeVersionNoRaise_refuted)

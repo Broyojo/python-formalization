@@ -1,0 +1,77 @@
+id: textlibs-email-msgid-no-fold-literal-space
+title: "email: Message-ID '<a@[ x]>' raises UnboundLocalError (the gh-134152 fix covers only an empty literal)"
+priority: P2
+kind: crash
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["_get_ptext_to_endchars", "get_dtext", "get_no_fold_literal", "get_msg_id", "parse_message_id", "parse_message_ids"]
+summary: |
+  `_get_ptext_to_endchars` splits off the text before the first space or tab and loops over it with
+  `for pos in range(len(fragment)): ... else: pos = pos + 1`. When the value starts with a space or
+  tab the fragment is empty, the loop body never runs, and the `else` clause reads the unbound `pos`:
+  `UnboundLocalError: cannot access local variable 'pos' where it is not associated with a value`.
+  gh-134152 reported the same error for an empty value (`<T@[`) and was fixed by an early return for
+  `not value`; a value that starts with whitespace still reaches the loop.
+
+  `get_domain_literal` skips leading whitespace before calling `get_dtext`, but
+  `get_no_fold_literal` (the `[...]` id-right of a msg-id) does not. So the header value
+  `<a@[ x]>` makes `parse_message_id` and `parse_message_ids` raise `UnboundLocalError`, which they
+  do not catch (they catch only `HeaderParseError`). With `email.policy.default`, reading
+  `msg['Message-ID']`, `msg['References']` or `msg['In-Reply-To']` of a message carrying such a
+  header raises.
+likelihood: |
+  Medium-low in honest mail, since a space after `[` in a message id is unusual, but the header
+  comes from whoever sent the message, so any program that reads these headers of untrusted mail
+  with the modern policy can be made to raise an unexpected exception type. The maintainers fixed
+  the empty-literal case of the same error (gh-134152), so this case is likely to be accepted.
+maybe_intended: |
+  No. The function's own fix for gh-134152 shows the intent that it never raise
+  UnboundLocalError, and the header parsers are meant to record defects instead of raising.
+reproducer: |
+  import email
+  from email import policy, _header_value_parser as P
+  results = []
+  for f in (P.parse_message_id, P.parse_message_ids):
+      try:
+          f('<a@[ x]>')
+          results.append(None)
+      except UnboundLocalError as e:
+          results.append(str(e))
+  m = email.message_from_string('Message-ID: <a@[ x]>\n\nbody\n', policy=policy.default)
+  try:
+      m['Message-ID']
+      hdr = None
+  except UnboundLocalError as e:
+      hdr = str(e)
+  print(results, hdr)
+  if all(results) and hdr:
+      print('REPRODUCED textlibs-email-msgid-no-fold-literal-space')
+expected: |
+  A MessageID token list (or an InvalidMessageID with an InvalidHeaderDefect), as for any other
+  malformed id.
+observed: |
+  python3 3.15.2: UnboundLocalError from parse_message_id, parse_message_ids and msg['Message-ID'].
+  REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/email/headerregistry.py:169-174 (BaseHeader.parse contract): "The parser should not,
+  insofar as practical, raise any errors. Defects should be added to the list instead."
+  parse_message_id (_header_value_parser.py:2182-2189) catches HeaderParseError to do exactly that.
+  gh-134152 (closed, fixed) treated the UnboundLocalError of this function as a bug.
+cause: |
+  Lib/email/_header_value_parser.py:1045-1066: the `if not value` guard added for gh-134152 does
+  not cover a value whose first character is in WSP, for which `fragment` (line 1047) is empty and
+  line 1065 reads `pos` unbound. get_no_fold_literal (:2100) calls get_dtext right after the `[`,
+  without the WSP check that get_domain_literal has (:1626-1628).
+possible_fix: |
+  Initialise `pos = 0` before the loop in _get_ptext_to_endchars (then an empty fragment returns
+  ('', value, False)), or have get_no_fold_literal raise HeaderParseError when the text after `[`
+  starts with whitespace (RFC 5322 no-fold-literal has no FWS).
+duplicates: |
+  Incomplete fix of gh-134152 (closed, fixed by gh-134233, backported to 3.13/3.14), which only
+  handled `<T@[`. gh-151857 (open) lists three other IndexError cases in this module, not this one.
+  Bugforge: none for this function. Queries: gh search issues --repo python/cpython
+  UnboundLocalError email; UnboundLocalError pos _get_ptext_to_endchars; get_no_fold_literal;
+  no-fold-literal; _get_ptext_to_endchars; message-id domain literal whitespace;
+  UnboundLocalError header parser; email Message-ID UnboundLocalError; get_dtext.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (MessageIdNoRaise, messageIdNoRaise_refuted)
