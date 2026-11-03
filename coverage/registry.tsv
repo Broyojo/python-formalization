@@ -3112,6 +3112,8 @@ warn-version-bumps-c	proven	Python/_warnings.c	warnings_filters_mutated_lock_hel
 warn-lock-spec	proven	Python/_warnings.c	warnings_acquire_lock_impl,warnings_release_lock_impl,warnings_filters_mutated_lock_held_impl,warnings_lock,warnings_unlock,warnings_lock_held
 warn-mutated-lock-twins	proven	Lib/_py_warnings.py	_filters_mutated_lock_held
 warn-reset-spec	proven	Lib/_py_warnings.py	resetwarnings
+warn-filters-lookup-raises	proven	Python/_warnings.c	get_warnings_filters
+warn-filters-lookup-raises-py	proven	Lib/_py_warnings.py	_GlobalContext._filters,_get_filters,_add_filter,resetwarnings,catch_warnings.__enter__
 warn-add-filter-valueerror	proven	Lib/_py_warnings.py	_add_filter
 warn-get-warnings-attr	proven	Python/_warnings.c	get_warnings_attr
 warn-defaults-twin-narrow	proven	Python/_warnings.c	init_filters,create_filter
