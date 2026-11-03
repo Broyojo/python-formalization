@@ -29,6 +29,7 @@ import PyLean.TextLibs.TomlStr
 import PyLean.TextLibs.TomlKey
 import PyLean.TextLibs.TomlNum
 import PyLean.TextLibs.TomlDate
+import PyLean.TextLibs.TomlTable
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1700,6 +1701,15 @@ def entries : List Entry := [
     source := "docs conversion table (offset/local date-time, local date, local time); TOML 1.1 spec, Offset Date-Time ('additional precision must be truncated, not rounded'), seconds optional in 1.1", status := .proven
     prop := ``Toml.DatetimeSpec, thm := some ``Toml.datetimeSpec_proven
     notes := "Also exercises parse_value's date branches. datetime.date/datetime/time and timezone are modelled by their range checks; lru_cache of cached_tz only memoizes, and timezone(timedelta(0)) is timezone.utc, so an offset is a number of minutes." }
+,
+  { id := "textlibs-toml-table-rules", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["loads", "create_dict_rule", "create_list_rule", "Flags.__init__", "Flags.set", "Flags.is_",
+      "Flags.unset_all", "NestedDict.__init__", "NestedDict.get_or_create_nest", "NestedDict.append_nest_to_list",
+      "Output.__init__"]
+    statement := "For every dotted header key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them) and bare key x: loads('[K]\\n[K]') raises TOMLDecodeError 'Cannot declare K twice'; loads('[[K]]\\n[[K]]') gives K = [{}, {}]; loads('[K]\\n[[K]]') raises 'Cannot overwrite a value'; loads('[[K]]\\n[K]') raises 'Cannot declare K twice'; loads('[K.x]\\n[K]') gives K = {x = {}}; each error at the position after the second key."
+    source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Table ('you cannot define a table more than once', super-tables after sub-tables are valid) and Array of Tables", status := .proven
+    prop := ``Toml.TableRules, thm := some ``Toml.tableRules_proven
+    notes := "Pending flags stay empty in these documents, so add_pending and finalize_pending's loop are not credited here." }
 ]
 
 end PyLean.TextLibs
