@@ -876,7 +876,8 @@ theorem deepcopyMethodAliasing_refuted : ¬DeepcopyMethodAliasing := by
 /-- The paths of `deepcopy` past the dispatch table, Lib/copy.py:128-162, for an object not in `memo`. A class with
 another metaclass is its own copy (`issubclass(cls, type)`, :132-133) and is not memoized (:159). A succeeding
 `__deepcopy__` gives a new object, recorded in `memo` and kept alive (:135-137, :159-161). The reduce value comes from
-the class's `copyreg.dispatch_table` entry first (:139-141), whatever `__reduce_ex__` is; then from `__reduce_ex__` if
+the class's `copyreg.dispatch_table` entry first (:139-141), whatever `__reduce_ex__` is, but only an entry that is
+true (`if reductor:`, :140: a false entry is skipped, where `copy` calls it); then from `__reduce_ex__` if
 it is not `None`, so a false one is called and fails (:143-145); then from a true `__reduce__` (:147-149); with none,
 `copy.Error` (:151-152). A reduce string means `x` itself, with no memo entry (:153-154); a raising reductor propagates.
 A memo entry answers before any of them (:125-126). An atom (`int` or `None`), a `str` and a class whose type is
@@ -891,24 +892,26 @@ def DeepcopyPaths : Prop :=
     (h.get x = .metaCls m → h.memo.lookup x = some y → deepcopy (fuel + 1) h x = .ok (h, y)) ∧
     (h.get x = .hooked c (some none) r → h.memo.lookup x = none →
       deepcopy (fuel + 1) h x = finish (h.alloc (.atom 1)).1 x h.cells.length) ∧
-    (h.get x = .hooked c none ⟨some .str, ex, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
-    (h.get x = .hooked c none ⟨some (.raises e), ex, pl⟩ → h.memo.lookup x = none →
+    (h.get x = .hooked c none ⟨.fn .str, ex, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨.fn (.raises e), ex, pl⟩ → h.memo.lookup x = none →
       deepcopy (fuel + 1) h x = .error e) ∧
-    (h.get x = .hooked c none ⟨none, .fn .str, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
-    (h.get x = .hooked c none ⟨none, .fn (.raises e), pl⟩ → h.memo.lookup x = none →
-      deepcopy (fuel + 1) h x = .error e) ∧
-    (h.get x = .hooked c none ⟨none, .falsy, pl⟩ → h.memo.lookup x = none →
-      deepcopy (fuel + 1) h x = .error (.typeError "'int' object is not callable")) ∧
-    (h.get x = .hooked c none ⟨none, .none, .fn .str⟩ → h.memo.lookup x = none →
+    (h.get x = .hooked c none ⟨.falsyFn rv, .fn .str, pl⟩ → h.memo.lookup x = none →
       deepcopy (fuel + 1) h x = .ok (h, x)) ∧
-    (h.get x = .hooked c none ⟨none, .none, .falsy⟩ → h.memo.lookup x = none →
+    (h.get x = .hooked c none ⟨.none, .fn .str, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨.none, .fn (.raises e), pl⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error e) ∧
+    (h.get x = .hooked c none ⟨.none, .falsy, pl⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error (.typeError "'int' object is not callable")) ∧
+    (h.get x = .hooked c none ⟨.none, .none, .fn .str⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨.none, .none, .falsy⟩ → h.memo.lookup x = none →
       deepcopy (fuel + 1) h x = .error (uncopyable true)) ∧
-    (h.get x = .hooked c none ⟨none, .none, .none⟩ → h.memo.lookup x = none →
+    (h.get x = .hooked c none ⟨.none, .none, .none⟩ → h.memo.lookup x = none →
       deepcopy (fuel + 1) h x = .error (uncopyable true))
 
 theorem deepcopyPaths_proven : DeepcopyPaths := by
   intro fuel h x y m c r e n t rv ex pl
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro hc; rw [deepcopy]; simp [hc]
   · intro hc; rw [deepcopy]; simp [hc]
   · intro hc; rw [deepcopy]; simp [hc]
@@ -957,3 +960,22 @@ theorem deepcopyKeepAlive_proven : DeepcopyKeepAlive := by
   rw [← hh2] at d1
   refine ⟨_, (deepcopy_list _ h x _ hc hm _ _ d1).trans (finish_ne _ _ _ (by omega)), ?_⟩
   simp [Heap.keepAlive, Heap.remember, Heap.set, hk3]
+
+/-- The twins on a false `copyreg.dispatch_table` entry (a callable whose `__bool__` is `False`): `copy` tests the entry
+with `is not None` (Lib/copy.py:85) and calls it, `deepcopy` tests it by truth (:140) and goes on to `__reduce_ex__`.
+Here the entry gives a string, so `copy` returns `x`, while `__reduce_ex__` gives `rv`, which `deepcopy` reconstructs or
+raises. -/
+def CopyDeepcopyTable : Prop :=
+  ∀ (fuel : Nat) (h : Heap) (x : Nat) (c : Option (Option PyExc)) (rv : RvSpec) (pl : RedAttr) (e : PyExc),
+    h.get x = .hooked none c ⟨.falsyFn .str, .fn rv, pl⟩ →
+    copyShallow h x = .ok (h, x) ∧
+    reduceValue ⟨.falsyFn .str, .fn rv, pl⟩ true = .ok rv ∧
+    (rv = .raises e → h.memo.lookup x = none → c = none → deepcopy (fuel + 1) h x = .error e)
+
+theorem copyDeepcopyTable_proven : CopyDeepcopyTable := by
+  intro fuel h x c rv pl e hc
+  refine ⟨by simp [copyShallow, reduceValue, reconShallow, hc], by simp [reduceValue], ?_⟩
+  intro hr hm hcn
+  subst hr hcn
+  rw [deepcopy]
+  simp [hc, hm, reduceValue]

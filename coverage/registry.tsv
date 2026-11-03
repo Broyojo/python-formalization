@@ -2855,6 +2855,7 @@ corelibs-copy-method-aliasing	refuted	Lib/copy.py	_deepcopy_method,deepcopy
 corelibs-copy-replace	proven	Lib/copy.py	replace
 corelibs-copy-state-none	proven	Lib/copy.py	_reconstruct,deepcopy
 corelibs-copy-deepcopy-paths	proven	Lib/copy.py	deepcopy
+corelibs-copy-table-twins	proven	Lib/copy.py	copy,deepcopy
 corelibs-copy-keep-alive	proven	Lib/copy.py	_keep_alive,deepcopy
 corelibs-copy-iter-fails	proven	Lib/copy.py	_reconstruct,deepcopy
 corelibs-abc-check-order	proven	Lib/abc.py	ABCMeta.__subclasscheck__
