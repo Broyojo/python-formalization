@@ -298,7 +298,7 @@ theorem delExtended_pos (o : LObj α) (hw : o.WF) (start step L : Nat) (stop : I
     exact ⟨_, rfl, hwf, e2⟩
 
 /-- The deletion with a negative step is the deletion with the step negated, from the lowest
-position (listobject.c:3791-3795). -/
+position (listobject.c:3789-3793). -/
 theorem delExtended_neg (o : LObj α) (start stop step len : Int) (h : step < 0) :
     delExtendedL o start stop step len =
       delExtendedL o (start + 1 + step * (len - 1) - 1) (start + 1) (-step) len := by
@@ -338,8 +338,8 @@ the `ValueError` of `AssSliceErrors`): it succeeds, keeps the list well formed, 
 the items whose positions are not in `range(a, b, c)`, in their order
 (Doc/library/stdtypes.rst, mutable sequences: `del s[i:j:k]` "removes the elements of `s[i:j:k]`
 from the list"). This covers `list_ass_subscript_lock_held`'s deletion arm (listobject.c:3773-3837):
-step 1 through `list_ass_slice_lock_held` (:3781-3782), an empty slice (:3784-3785), and the
-extended-slice compaction with its negative-step normalisation (:3787-3829). A deletion that removed
+step 1 through `list_ass_slice_lock_held` (:3783-3784), an empty slice (:3786-3787), and the
+extended-slice compaction with its negative-step normalisation (:3789-3829). A deletion that removed
 the wrong items, or the right number of items at the wrong places, fails this. -/
 def DelSlice : Prop :=
   ∀ (α : Type) (o : LObj α) (s : RangeSlice.Slice) (a b c : Int), o.WF →

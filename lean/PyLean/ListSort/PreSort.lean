@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-The pre-sort check of `list_sort_impl` (Objects/listobject.c:3027-3123, CPython 3.15.2): the scan of
+The pre-sort check of `list_sort_impl` (Objects/listobject.c:3029-3123, CPython 3.15.2): the scan of
 the keys for type homogeneity and the choice of `ms.key_compare` and `ms.tuple_elem_compare`.
 
 The check looks at a key only through its exact type (`Py_IS_TYPE`, by identity), whether a `str` is
@@ -22,13 +22,13 @@ inductive KeyTy where
   | other (id : Nat) (hasRich : Bool)
   deriving DecidableEq, Repr
 
-/-- `key_type->tp_richcompare != NULL` (:3101): `str`, `int`, `float` and `tuple` all have one. -/
+/-- `key_type->tp_richcompare != NULL` (:3100): `str`, `int`, `float` and `tuple` all have one. -/
 def KeyTy.hasRich : KeyTy → Bool
   | .other _ r => r
   | _ => true
 
 /-- What the check reads of one object: its exact type; for a `str`, whether `PyUnicode_KIND` is
-`PyUnicode_1BYTE_KIND` (:3077); for an `int`, `_PyLong_IsCompact` (:3071). -/
+`PyUnicode_1BYTE_KIND` (:3079-3081); for an `int`, `_PyLong_IsCompact` (:3073-3075). -/
 structure ElemInfo where
   ty : KeyTy
   latin : Bool := true
@@ -57,7 +57,7 @@ structure Scan where
   bounded : Bool
   deriving DecidableEq, Repr
 
-/-- The loop over the keys, listobject.c:3047-3085, with its two `break`s. -/
+/-- The loop over the keys, listobject.c:3047-3086, with its two `break`s (:3053, :3067-3068). -/
 def scanKeys (keyType : KeyTy) : List KeyInfo → Scan → Scan
   | [], st => st
   | k :: ks, st =>
@@ -76,7 +76,7 @@ def scanKeys (keyType : KeyTy) : List KeyInfo → Scan → Scan
           else st
         scanKeys keyType ks st
 
-/-- The choice, listobject.c:3087-3122. -/
+/-- The choice, listobject.c:3088-3122. -/
 def chooseCompare (keyType : KeyTy) (st : Scan) : KeyCmp :=
   let kc :=
     if st.sameType then
@@ -124,7 +124,7 @@ def selectSpec (k0 : KeyInfo) (keys : List KeyInfo) : KeyCmp :=
 
 /-- `list.sort`'s pre-sort check (listobject.c:3033-3123) for every list of at least two keys, as
 `selectSpec`: the loop's breaks and flags choose exactly the documented specialisation ("if the keys
-are all the same type", listsort.txt and the comment at :3027-3032), with the first key's type as
+are all the same type", the comment at :3029-3032), with the first key's type as
 the reference, the first items of tuples standing for the tuples, and `safe_object_compare` as soon
 as the types differ or not every key is a non-empty tuple when the first one is. -/
 def PreSortSelect : Prop :=
@@ -140,7 +140,7 @@ theorem scan_cons_flat (t : KeyTy) (k : KeyInfo) (ks : List KeyInfo) (l b : Bool
     if_true]
   cases t <;> cases l <;> cases b <;> cases k.self.latin <;> cases k.self.compact <;> simp
 
-/-- A flat key of another type ends the scan (the `break` at :3065). -/
+/-- A flat key of another type ends the scan (the `break` at :3067-3068). -/
 theorem scan_cons_flat_diff (t : KeyTy) (k : KeyInfo) (ks : List KeyInfo) (l b : Bool) (hty : ¬ k.self.ty = t) :
     scanKeys t (k :: ks) ⟨false, true, l, b⟩ = ⟨false, false, l, b⟩ := by
   simp [scanKeys, hty]

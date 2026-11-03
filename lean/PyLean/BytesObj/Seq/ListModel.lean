@@ -579,8 +579,8 @@ def listContains (cmp : Cmp α) (fuel : Nat) (o : LObj α) (el : α) : Py Bool �
   containsLoop cmp el fuel 0 o
 
 /-- `list_get_item_ref(op, i)` of the default build, listobject.c:401-408, as `list_index_impl` and
-`list_count_impl` call it: `valid_index(i, Py_SIZE(op))` on the size the list has now (:403), then
-`PyList_GET_ITEM(op, i)` (:406), an unchecked read of the current array, which would be `cUB`
+`list_count_impl` call it: `valid_index(i, Py_SIZE(op))` on the size the list has now (:404), then
+`PyList_GET_ITEM(op, i)` (:407), an unchecked read of the current array, which would be `cUB`
 outside it. `.ok none` is the `NULL` that ends both loops ("out-of-bounds", :3363-3365, :3393-3395). -/
 def listGetItemRefC (l : List α) (i : Int) : Py (Option α) :=
   if validIndex i l.length then
