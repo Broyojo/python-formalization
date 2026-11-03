@@ -51,9 +51,11 @@ possible_fix: |
   Use `avail = min(len(self._read_buf) - self._read_pos, len(buf) - written)`, and add a test that
   calls readinto with a partly filled internal buffer to test_io for both implementations.
 duplicates:
-  issues: []
+  issues:
+    - {number: 155074, state: open, relation: "duplicate: same bug (`_pyio.BufferedReader.readinto()` can raise `ValueError` after partially filling the destination), opened 2026-08-02"}
   queries: ["BufferedReader readinto memoryview assignment", "_pyio readinto ValueError lvalue and rvalue",
-            "_pyio BufferedReader _readinto avail", "bugforge README: no readinto entries"]
+            "_pyio BufferedReader _readinto avail", "bugforge README: no readinto entries",
+            "found by the buffered I/O review 2026-11-03; confirmed with gh issue view 155074"]
 lean:
   property: PyLean.PyIO.BufferedReaderReadintoTwins
   theorem: PyLean.PyIO.bufferedReaderReadintoTwins_refuted
