@@ -1,21 +1,21 @@
 file	line	endline	name	signature	status	entry	note
-Objects/structseq.c	28	42	get_type_attr_as_size	get_type_attr_as_size(PyTypeObject *tp, PyObject *name)	todo		changed-in-3.15:
-Objects/structseq.c	56	62	get_real_size	get_real_size(PyObject *op)	todo		
-Objects/structseq.c	65	88	PyStructSequence_New	PyStructSequence_New(PyTypeObject *type)	todo		
-Objects/structseq.c	91	101	PyStructSequence_SetItem	PyStructSequence_SetItem(PyObject *op, Py_ssize_t index, PyObject *value)	todo		
-Objects/structseq.c	104	113	PyStructSequence_GetItem	PyStructSequence_GetItem(PyObject *op, Py_ssize_t index)	todo		
-Objects/structseq.c	117	129	structseq_traverse	structseq_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/structseq.c	132	150	structseq_dealloc	structseq_dealloc(PyObject *op)	todo		
-Objects/structseq.c	167	270	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	modelled	typeobj-structseq-reduce-round-trip	
-Objects/structseq.c	274	339	structseq_repr	structseq_repr(PyObject *op)	todo		
-Objects/structseq.c	343	385	structseq_reduce	structseq_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-structseq-reduce-round-trip	
-Objects/structseq.c	389	458	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	modelled	typeobj-structseq-replace	
-Objects/structseq.c	469	479	count_members	count_members(PyStructSequence_Desc *desc, Py_ssize_t *n_unnamed_members) {	todo		
-Objects/structseq.c	540	570	initialize_members	initialize_members(PyStructSequence_Desc *desc, Py_ssize_t n_members, Py_ssize_t n_unnamed_members)	todo		
-Objects/structseq.c	574	593	initialize_static_fields	initialize_static_fields(PyTypeObject *type, PyStructSequence_Desc *desc, PyMemberDef *tp_members, Py_ssize_t n_members, unsigned long tp_flags)	todo		
-Objects/structseq.c	614	670	_PyStructSequence_InitBuiltinWithFlags	_PyStructSequence_InitBuiltinWithFlags(PyInterpreterState *interp, PyTypeObject *type, PyStructSequence_Desc *desc, unsigned long tp_flags)	todo		
-Objects/structseq.c	673	704	PyStructSequence_InitType2	PyStructSequence_InitType2(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		
-Objects/structseq.c	707	710	PyStructSequence_InitType	PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		
-Objects/structseq.c	718	741	_PyStructSequence_FiniBuiltin	_PyStructSequence_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	todo		
-Objects/structseq.c	745	793	_PyStructSequence_NewType	_PyStructSequence_NewType(PyStructSequence_Desc *desc, unsigned long tp_flags)	todo		
-Objects/structseq.c	797	800	PyStructSequence_NewType	PyStructSequence_NewType(PyStructSequence_Desc *desc)	todo		
+Objects/structseq.c	28	42	get_type_attr_as_size	get_type_attr_as_size(PyTypeObject *tp, PyObject *name)	modelled	typeobj-structseq-new-reads-first,typeobj-structseq-new-index-contract,typeobj-structseq-new-sets-exception,typeobj-structseq-reduce-in-bounds-honest,typeobj-structseq-replace-in-bounds-honest	
+Objects/structseq.c	56	62	get_real_size	get_real_size(PyObject *op)	modelled	typeobj-structseq-new-index-contract,typeobj-structseq-reduce-in-bounds-honest,typeobj-structseq-replace-in-bounds-honest	
+Objects/structseq.c	65	88	PyStructSequence_New	PyStructSequence_New(PyTypeObject *type)	modelled	typeobj-structseq-new-reads-first,typeobj-structseq-new-index-contract,typeobj-structseq-new-sets-exception,typeobj-structseq-replace-in-bounds-honest	
+Objects/structseq.c	91	101	PyStructSequence_SetItem	PyStructSequence_SetItem(PyObject *op, Py_ssize_t index, PyObject *value)	modelled	typeobj-structseq-new-index-contract	
+Objects/structseq.c	104	113	PyStructSequence_GetItem	PyStructSequence_GetItem(PyObject *op, Py_ssize_t index)	modelled	typeobj-structseq-new-index-contract,typeobj-structseq-repr-shape	
+Objects/structseq.c	117	129	structseq_traverse	structseq_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy: it visits the type when it is a heap type and the get_real_size items (taken from tp_basicsize, not the mutable dict), and returns 0; nothing else
+Objects/structseq.c	132	150	structseq_dealloc	structseq_dealloc(PyObject *op)	excluded		no-behaviour: tp_dealloc that only drops references (project policy): untracks, Py_XDECREFs the get_real_size items (from tp_basicsize, gh-122527), frees the block and DECREFs a heap type; it calls no PyObject_ClearWeakRefs (tuples have no weakref slot) and no finalizer of its own
+Objects/structseq.c	167	270	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	modelled	typeobj-structseq-reduce-round-trip,typeobj-structseq-new-impl-in-bounds	
+Objects/structseq.c	274	339	structseq_repr	structseq_repr(PyObject *op)	modelled	typeobj-structseq-repr-shape,typeobj-structseq-repr-labels	
+Objects/structseq.c	343	385	structseq_reduce	structseq_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-structseq-reduce-round-trip,typeobj-structseq-reduce-in-bounds,typeobj-structseq-reduce-in-bounds-honest	
+Objects/structseq.c	389	458	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	modelled	typeobj-structseq-replace,typeobj-structseq-replace-in-bounds,typeobj-structseq-replace-in-bounds-honest	
+Objects/structseq.c	469	479	count_members	count_members(PyStructSequence_Desc *desc, Py_ssize_t *n_unnamed_members) {	modelled	typeobj-structseq-newtype-layout,typeobj-structseq-repr-labels	
+Objects/structseq.c	540	570	initialize_members	initialize_members(PyStructSequence_Desc *desc, Py_ssize_t n_members, Py_ssize_t n_unnamed_members)	modelled	typeobj-structseq-newtype-layout,typeobj-structseq-repr-labels	
+Objects/structseq.c	574	593	initialize_static_fields	initialize_static_fields(PyTypeObject *type, PyStructSequence_Desc *desc, PyMemberDef *tp_members, Py_ssize_t n_members, unsigned long tp_flags)	todo		not modelled yet: the static-type twin of the layout _PyStructSequence_NewType builds (same basicsize formula in Py_ssize_t, without the (int) cast); difftest ss_newtype checks its result only on the six sys types
+Objects/structseq.c	614	670	_PyStructSequence_InitBuiltinWithFlags	_PyStructSequence_InitBuiltinWithFlags(PyInterpreterState *interp, PyTypeObject *type, PyStructSequence_Desc *desc, unsigned long tp_flags)	excluded		internal-bootstrap: declared extern in Include/internal/pycore_structseq.h (not exported) and called only while the interpreter initialises its own static struct sequence types (sys.flags, sys.float_info, ...); no Python or C-API caller can reach it. The layout it leaves is the NewType one, which difftest ss_newtype compares on those six types
+Objects/structseq.c	673	704	PyStructSequence_InitType2	PyStructSequence_InitType2(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		not modelled yet: refcount check (PyErr_BadInternalCall), count_members/initialize_members, initialize_static_fields, PyType_Ready and the dict; would be a twin property with _PyStructSequence_NewType
+Objects/structseq.c	707	710	PyStructSequence_InitType	PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		not modelled yet: (void)PyStructSequence_InitType2, dropping its status; to be covered with it
+Objects/structseq.c	718	741	_PyStructSequence_FiniBuiltin	_PyStructSequence_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	excluded		internal-bootstrap: declared extern in Include/internal/pycore_structseq.h and called only at interpreter finalization on the static builtin struct sequence types; it frees tp_members and clears tp_name/tp_base of the main interpreter copy, after which no Python code runs against the type
+Objects/structseq.c	745	793	_PyStructSequence_NewType	_PyStructSequence_NewType(PyStructSequence_Desc *desc, unsigned long tp_flags)	modelled	typeobj-structseq-newtype-layout,typeobj-structseq-newtype-in-bounds,typeobj-structseq-repr-labels	
+Objects/structseq.c	797	800	PyStructSequence_NewType	PyStructSequence_NewType(PyStructSequence_Desc *desc)	modelled	typeobj-structseq-newtype-layout,typeobj-structseq-newtype-in-bounds,typeobj-structseq-repr-labels	

@@ -1,0 +1,98 @@
+id: typeobj-structseq-repr-unnamed-labels
+title: "structseq_repr labels visible item i with tp_members[i].name, which skips unnamed fields: os.stat_result prints st_atime=<int slot 7>, and a named field after an unnamed one turns repr into SystemError"
+priority: P3
+kind: wrong-result
+module: typeobj
+files: [Objects/structseq.c]
+functions: ["structseq_repr", "initialize_members", "count_members", "_PyStructSequence_NewType"]
+summary: |
+  `initialize_members` (structseq.c:539-570) builds `tp_members` from the named fields only,
+  member `k` pointing at the slot of field `i` (:559-562), so after an unnamed field `k < i`.
+  `structseq_repr` (:296-327) prints visible item `i` as `tp_members[i].name` `=` `repr(item i)`
+  (:308, :323), using the visible index as a member index. After the first unnamed visible field
+  every label is the name of a later field:
+
+    - `os.stat_result` has unnamed visible slots 7-9 (the integer times) and hidden named fields
+      `st_atime`, `st_mtime`, `st_ctime` (floats) right after them. `repr(os.stat_result(range(19)))`
+      prints `st_atime=7, st_mtime=8, st_ctime=9`, while `.st_atime` is 10. On a real `os.stat()`
+      result the repr shows the integer seconds under the name of the float attribute.
+    - A type from `PyStructSequence_NewType` with fields `a`, unnamed, `b` and
+      `n_in_sequence = 3` (all visible, which the source comment at :23-24 allows) runs out of
+      members: `repr()` raises `SystemError: In structseq_repr(), member 2 name is NULL`.
+    - With fields `a`, unnamed, `b`, `c` and `n_in_sequence = 3`, `repr(T((1, 2, 3), {'c': 4}))`
+      is `m.T(a=1, b=2, c=3)` while `t.b == 3` and `t.c == 4`.
+
+  The Lean model refutes `ReprLabelsMatchAttrs` (each `name=value` pair repr prints has
+  `value == getattr(s, name)`, as in namedtuple's repr) with the fields `a`, unnamed, `b`.
+likelihood: |
+  Every `repr(os.stat(...))` shows it, though the integer and float times usually look alike.
+  The SystemError needs a C extension (or ctypes) with an unnamed field before a named one.
+maybe_intended: |
+  Partly. The stat_result labels have been this way for a long time and a reader can mistake them
+  for a feature (the integer times "are" st_atime and friends). The SystemError check at :309-314
+  exists precisely because the members can run out, which suggests the indexing is known to be
+  loose. gh-154387 reports this and has linked PRs, so upstream considers it a bug.
+reproducer: |
+  import ctypes, os
+  s = os.stat_result(range(19))
+  r = repr(s)
+  print(r)
+  print("s.st_atime =", s.st_atime)
+  api = ctypes.pythonapi
+  class Field(ctypes.Structure):
+      _fields_ = [("name", ctypes.c_void_p), ("doc", ctypes.c_char_p)]
+  class Desc(ctypes.Structure):
+      _fields_ = [("name", ctypes.c_char_p), ("doc", ctypes.c_char_p),
+                  ("fields", ctypes.POINTER(Field)), ("n_in_sequence", ctypes.c_int)]
+  UNNAMED = ctypes.c_void_p.in_dll(api, "PyStructSequence_UnnamedField").value
+  api.PyStructSequence_NewType.restype = ctypes.py_object
+  api.PyStructSequence_NewType.argtypes = [ctypes.POINTER(Desc)]
+  names = [ctypes.create_string_buffer(b"a"), None, ctypes.create_string_buffer(b"b")]
+  fields = (Field * 4)()
+  for i, nm in enumerate(names):
+      fields[i].name = UNNAMED if nm is None else ctypes.cast(nm, ctypes.c_void_p).value
+  fields[3].name = None
+  desc = Desc(b"m.T", None, fields, 3)
+  T = api.PyStructSequence_NewType(ctypes.byref(desc))
+  t = T((1, 2, 3))
+  print("t.a, t.b =", t.a, t.b)
+  try:
+      print(repr(t))
+      err = None
+  except SystemError as e:
+      err = str(e)
+      print("SystemError:", err)
+  if ("st_atime=7" in r and s.st_atime == 10 and t.b == 3
+          and err is not None and "member 2 name is NULL" in err):
+      print("REPRODUCED typeobj-structseq-repr-unnamed-labels")
+expected: |
+  Each label names the field whose value follows it (as `namedtuple` does), so `repr()` of the
+  stat result says nothing about `st_atime` for slot 7, and the second type prints
+  `m.T(a=1, b=3)` or similar without raising.
+observed: |
+  python3 (3.15.2): `os.stat_result(st_mode=0, ..., st_atime=7, st_mtime=8, st_ctime=9)` with
+  `s.st_atime == 10`; the ctypes type raises `SystemError: In structseq_repr(), member 2 name is
+  NULL for type m.T`. REPRODUCED by scripts/check_bugs.py.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
+promised_by: |
+  The `name=value` form promises that `value` is that attribute's value, as namedtuple's repr is;
+  Doc/c-api/tuple.rst: "The index in the PyStructSequence_Field array determines which field of
+  the struct sequence is described", and PyStructSequence_UnnamedField is documented without
+  restriction on its position among the visible fields.
+cause: |
+  Objects/structseq.c:308 uses `typ->tp_members[i].name` for visible index `i`; tp_members skips
+  unnamed fields (:552-555), so the index is off by the number of unnamed fields before `i`.
+possible_fix: |
+  Keep the field index in the member (its `offset` already encodes it) and label item `i` with the
+  member whose offset is slot `i`, skipping unnamed items or printing them positionally.
+duplicates:
+  issues:
+    - {number: 154387, state: open, relation: "duplicate: same defect, os.stat_result slots 7-9; linked PRs gh-154434, gh-154684, gh-154687"}
+    - {number: 55907, state: open, relation: "asks for the repr to show named hidden fields; related, not this defect"}
+    - {number: 46145, state: open, relation: "match namedtuple's API; related"}
+  queries: ["structseq repr unnamed", "structseq_repr SystemError", "n_unnamed_fields", "n_sequence_fields",
+            "structseq", "PyStructSequence", "structseq_new"]
+  bugforge: "no match for structseq or PyStructSequence"
+lean:
+  property: PyLean.TypeObj.StructSeq.ReprLabelsMatchAttrs
+  theorem: PyLean.TypeObj.StructSeq.reprLabelsMatchAttrs_refuted

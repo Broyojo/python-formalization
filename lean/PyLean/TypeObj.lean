@@ -11,6 +11,7 @@ import PyLean.TypeObj.PropsTotal
 import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
+import PyLean.TypeObj.StructSeqHonest
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -45,6 +46,7 @@ private def co := "Objects/classobject.c"
 private def me := "Objects/methodobject.c"
 private def de := "Objects/descrobject.c"
 private def fu := "Objects/funcobject.c"
+private def ss := "Objects/structseq.c"
 
 def entries : List Entry := [
   -- C3
@@ -961,6 +963,79 @@ def entries : List Entry := [
   p "typeobj-structseq-replace" "Objects/structseq.c" ["structseq_replace"]
     "copy.replace(s, **kws) on a struct sequence type without unnamed fields gives every named field its new value and keeps every other field, hidden ones included; a name that is not a field raises TypeError."
     "docs: copy.replace (Doc/library/copy.rst) and struct sequences supporting it" ``StructSeq.ReplaceSpec ``StructSeq.replaceSpec_proven
-    "Positional arguments and types with unnamed fields (os.stat_result) are refused as in the source; checked on 3.15.2." ] ++ excEntries
+    "Positional arguments and types with unnamed fields (os.stat_result) are refused as in the source; checked on 3.15.2.",
+  -- Objects/structseq.c in memory (TypeObj/StructSeqC.lean)
+  p "typeobj-structseq-repr-shape" ss ["structseq_repr", "PyStructSequence_GetItem"]
+    "For every struct sequence type and object and every behaviour of the items' __repr__, repr(s) is exactly tp_name + '(' + ', '.join(name_i + '=' + repr(item_i)) + ')' over the Py_SIZE visible items, name_i being tp_members[i].name, with the whole tp_name (no truncation) and <NULL> for a NULL item; or else the first failure in that order (tp_name or a member name not UTF-8, an item's __repr__ raising, SystemError once the visible items outnumber the members). It never reads tp_members past its sentinel."
+    "invariant: the repr's shape; structseq.c:273-339, through the PyUnicodeWriter model of UnicodeObj/ObjectWriter.lean"
+    ``StructSeq.ReprShape ``StructSeq.reprShape_proven
+    "Hypothesis: member names are C strings (no NUL in their bytes). Difftest ss_repr: real and ctypes-built types, items that return or raise, NULL items, rebound sizes, renamed types (names up to 700 characters, non-ASCII), the six static sys types.",
+  { id := "typeobj-structseq-repr-labels", pyFile := ss,
+    pyFns := ["structseq_repr", "count_members", "initialize_members", "_PyStructSequence_NewType", "PyStructSequence_NewType"]
+    statement := "For every type PyStructSequence_NewType builds and every object of its visible size, each name=value pair a successful repr() prints has value == getattr(s, name), as namedtuple's repr does."
+    source := "namedtuple's repr (name=value for each field and its own value); Doc/c-api/tuple.rst: the index in the field array determines the field described"
+    status := .refuted, prop := ``StructSeq.ReprLabelsMatchAttrs, thm := some ``StructSeq.reprLabelsMatchAttrs_refuted,
+    bug := some "typeobj-structseq-repr-unnamed-labels",
+    notes := "repr labels visible item i with tp_members[i].name, but tp_members skips unnamed fields: os.stat_result(range(19)) prints st_atime=7 while .st_atime is 10. Duplicate of open gh-154387." },
+  p "typeobj-structseq-newtype-layout" ss ["count_members", "initialize_members", "_PyStructSequence_NewType", "PyStructSequence_NewType"]
+    "For every desc and every outcome of the rest of PyType_FromSpecWithBases, a type PyStructSequence_NewType builds has tp_name = desc.name; as tp_members exactly the named fields in order, each reading the slot of its own index; 0 <= n_in_sequence <= #fields; the size attributes (n_in_sequence, #fields, #unnamed); as __match_args__ the decoded names of the named visible fields; and tp_basicsize = 32 + 8 * hidden when hidden < 2^28 - 4."
+    "Doc/c-api/tuple.rst (PyStructSequence_Desc; PyStructSequence_Field: the index determines the field); structseq.c:468-479, :539-570, :744-800"
+    ``StructSeq.NewTypeLayout ``StructSeq.newTypeLayout_proven
+    "The model has no tp_flags: PyStructSequence_NewType passes 0, and the Py_TPFLAGS_DISALLOW_INSTANTIATION that _curses passes is not modelled. Past 2^28 - 4 hidden fields the (int) cast at :775 wraps; the model computes it, the statement says nothing there. Difftest ss_newtype: ctypes descs with unnamed fields and invalid n_in_sequence (n+1..n+3, n+5 and more, negative), and every real heap and static type read back as its desc.",
+  { id := "typeobj-structseq-newtype-in-bounds", pyFile := ss,
+    pyFns := ["_PyStructSequence_NewType", "PyStructSequence_NewType", "count_members", "initialize_members"]
+    statement := "PyStructSequence_NewType never reads past the NULL terminator of the desc's field array, whatever n_in_sequence is."
+    source := "invariant: no out-of-bounds read; the function itself rejects n_in_sequence = #fields + 1..3 (TypeError) and >= #fields + 5 (SystemError)", status := .refuted,
+    prop := ``StructSeq.NewTypeInBounds, thm := some ``StructSeq.newTypeInBounds_refuted,
+    bug := some "typeobj-structseq-newtype-nseq-past-fields",
+    notes := "n_in_sequence = #fields + 4 makes spec.basicsize 0, which PyType_FromSpecWithBases takes as inherit, so the __match_args__ loop reads 4 fields past the terminator." },
+  p "typeobj-structseq-new-index-contract" ss
+    ["PyStructSequence_New", "get_type_attr_as_size", "get_real_size", "PyStructSequence_SetItem", "PyStructSequence_GetItem"]
+    "For every type whose size attributes are its own (fewer than 2^57 fields), PyStructSequence_New fails only with the allocator's MemoryError and otherwise returns Py_SIZE = n_sequence_fields, get_real_size = n_fields, n_fields NULL slots then n - v spare ones; SetItem/GetItem at every 0 <= i < n_fields write and read slot i alone, and, unchecked in a release build, any index outside the block is undefined behaviour."
+    "Doc/c-api/tuple.rst:230-264 (New, GetItem, SetItem; bounds are asserted only in debug builds); structseq.c:27-113"
+    ``StructSeq.NewIndexContract ``StructSeq.newIndexContract_proven
+    "The block holds hidden + n_fields slots, since tp_basicsize already counts the hidden ones: n - v slots past get_real_size are allocated and never initialised. Difftest ss_capi: New, then SetItem/GetItem on real and ctypes types, with and without rebound sizes.",
+  p "typeobj-structseq-new-reads-first" ss ["get_type_attr_as_size", "PyStructSequence_New"]
+    "For every state of the type's dict, a size read gives the lookup's exception, TypeError naming the key and the type when it is missing, TypeError for a non-int (no __index__), OverflowError outside Py_ssize_t, NULL with nothing set for a negative int, else the value; and for every allocator PyStructSequence_New allocates nothing until n_fields and then n_sequence_fields have been read, the first failing read deciding its result."
+    "structseq.c:27-42, :64-75; Objects/longobject.c:708-751"
+    ``StructSeq.NewReadsFirst ``StructSeq.newReadsFirst_proven
+    "Difftest ss_new rebinds each size attribute to a missing value, a float, a str, None, an object with __index__, bool, an int subclass, negative ints and ints outside Py_ssize_t.",
+  { id := "typeobj-structseq-new-sets-exception", pyFile := ss, pyFns := ["PyStructSequence_New", "get_type_attr_as_size"]
+    statement := "PyStructSequence_New never returns NULL without an exception set, for every state of the type's size attributes."
+    source := "Doc/c-api/tuple.rst:235: Return NULL with an exception set on failure", status := .refuted,
+    prop := ``StructSeq.NewSetsException, thm := some ``StructSeq.newSetsException_refuted,
+    bug := some "typeobj-structseq-negative-size-no-exception",
+    notes := "A negative int stored as n_fields passes get_type_attr_as_size without an error and the caller returns NULL. The constructor, __reduce__ and __replace__ then raise SystemError (... without setting an exception); the open PR gh-155361 adds the check." },
+  { id := "typeobj-structseq-new-impl-in-bounds", pyFile := ss,
+    pyFns := ["structseq_new_impl", "PyStructSequence_New", "get_type_attr_as_size"]
+    statement := "The constructor never touches memory out of bounds when the type's size attributes are its own on entry, whatever Python code run by converting the sequence argument does."
+    source := "invariant: pure Python does not crash the interpreter", status := .refuted,
+    prop := ``StructSeq.NewImplInBounds, thm := some ``StructSeq.newImplInBounds_refuted,
+    bug := some "typeobj-structseq-mutable-size-attrs",
+    notes := "structseq_new_impl reads the sizes before PySequence_Fast and PyStructSequence_New reads them again after it; an iterable that sets n_fields = n_sequence_fields = 0 gets its items written past a block of no slots." },
+  { id := "typeobj-structseq-reduce-in-bounds", pyFile := ss, pyFns := ["structseq_reduce", "get_type_attr_as_size", "get_real_size"]
+    statement := "__reduce__ never touches memory out of bounds, for every object the constructor leaves and every state of the type's size attributes."
+    source := "invariant: pure Python does not crash the interpreter", status := .refuted,
+    prop := ``StructSeq.ReduceInBounds, thm := some ``StructSeq.reduceInBounds_refuted,
+    bug := some "typeobj-structseq-mutable-size-attrs",
+    notes := "n_unnamed_fields comes from the dict and indexes tp_members[i - n_unnamed_fields] unchecked." },
+  p "typeobj-structseq-reduce-in-bounds-honest" ss ["structseq_reduce", "get_type_attr_as_size", "get_real_size"]
+    "While the type's size attributes are the ones PyStructSequence_NewType stored, __reduce__ never touches memory out of bounds, for every object the constructor leaves."
+    "invariant: no out-of-bounds access; the honest state is the one typeobj-structseq-newtype-layout proves NewType builds"
+    ``StructSeq.ReduceInBoundsHonest ``StructSeq.reduceInBoundsHonest_proven
+    "With typeobj-structseq-reduce-in-bounds: rebinding n_unnamed_fields is the only way to the out-of-bounds read.",
+  { id := "typeobj-structseq-replace-in-bounds", pyFile := ss,
+    pyFns := ["structseq_replace", "PyStructSequence_New", "get_type_attr_as_size", "get_real_size"]
+    statement := "copy.replace never touches memory out of bounds, for every object the constructor leaves and every state of the type's size attributes."
+    source := "invariant: pure Python does not crash the interpreter", status := .refuted,
+    prop := ``StructSeq.ReplaceInBounds, thm := some ``StructSeq.replaceInBounds_refuted,
+    bug := some "typeobj-structseq-mutable-size-attrs",
+    notes := "The new object is sized from the dict (PyStructSequence_New) and filled over get_real_size of self (tp_basicsize): n_fields = n_sequence_fields = 0 gives a block of no slots that the loop writes." },
+  p "typeobj-structseq-replace-in-bounds-honest" ss
+    ["structseq_replace", "PyStructSequence_New", "get_type_attr_as_size", "get_real_size"]
+    "While the type's size attributes are the ones PyStructSequence_NewType stored (fewer than 2^57 fields), copy.replace never touches memory out of bounds, for every object the constructor leaves, every keyword set and every allocator outcome."
+    "invariant: no out-of-bounds access; the honest state is the one typeobj-structseq-newtype-layout proves NewType builds"
+    ``StructSeq.ReplaceInBoundsHonest ``StructSeq.replaceInBoundsHonest_proven
+    "With typeobj-structseq-replace-in-bounds: rebinding the size attributes is the only way to the overflow." ] ++ excEntries
 
 end PyLean.TypeObj

@@ -1,0 +1,84 @@
+id: typeobj-structseq-negative-size-no-exception
+title: "A negative n_fields, n_sequence_fields or n_unnamed_fields makes PyStructSequence_New, the constructor, __reduce__ and __replace__ return NULL with no exception set"
+priority: P4
+kind: missing-error-check
+module: typeobj
+files: [Objects/structseq.c]
+functions: ["get_type_attr_as_size", "PyStructSequence_New", "structseq_new_impl", "structseq_reduce", "structseq_replace"]
+summary: |
+  `get_type_attr_as_size` (structseq.c:27-42) returns `PyLong_AsSsize_t(v)` of the int stored in
+  the type's dict. A stored negative int converts without an error. Every caller then tests
+  `if (n < 0) return NULL;` (:69, :73, :174, :178, :182, :357, :404), treating the negative
+  value as "an exception is set". None is, so:
+
+    - `PyStructSequence_New(type)`, documented to "Return NULL with an exception set on failure"
+      (Doc/c-api/tuple.rst:235), returns NULL with no exception;
+    - `os.terminal_size((1, 2))` after `os.terminal_size.n_fields = -1` raises
+      `SystemError: <class 'os.terminal_size'> returned NULL without setting an exception`;
+    - `__reduce__` and `__replace__` after `n_unnamed_fields = -1` raise the same `SystemError`.
+
+  The Lean model refutes `NewSetsException` with `n_fields = -1`.
+likelihood: |
+  Low: it needs Python code to store a negative size on the type (the heap struct sequence
+  types are mutable). The result is a SystemError, not a crash.
+maybe_intended: |
+  No. A `NULL` return with nothing set breaks the C API contract, and gh-155361 (an open PR for
+  gh-155322) adds exactly this check, raising TypeError for a negative value.
+reproducer: |
+  import copy, ctypes, os
+  T = os.terminal_size
+  t = T((1, 2))
+  errors = []
+  T.n_fields = -1
+  try:
+      T((1, 2))
+  except SystemError as e:
+      errors.append(str(e))
+  T.n_fields = 2
+  T.n_unnamed_fields = -1
+  for f in (t.__reduce__, lambda: copy.replace(t)):
+      try:
+          f()
+      except SystemError as e:
+          errors.append(str(e))
+  T.n_unnamed_fields = 0
+  api = ctypes.pythonapi
+  api.PyStructSequence_New.restype = ctypes.c_void_p
+  api.PyStructSequence_New.argtypes = [ctypes.py_object]
+  api.PyErr_Occurred.restype = ctypes.c_void_p
+  T.n_sequence_fields = -1
+  p = api.PyStructSequence_New(T)
+  occurred = api.PyErr_Occurred()
+  T.n_sequence_fields = 2
+  print(errors)
+  print("PyStructSequence_New returned", p, "with exception set:", occurred is not None)
+  if (len(errors) == 3 and all("without" in m and "exception" in m for m in errors)
+          and p is None and occurred is None):
+      print("REPRODUCED typeobj-structseq-negative-size-no-exception")
+expected: |
+  An exception that says the attribute is invalid (TypeError or ValueError), set by
+  `get_type_attr_as_size` or its callers; `PyStructSequence_New` returns NULL with it set.
+observed: |
+  python3 (3.15.2): three SystemErrors "returned NULL without setting an exception" / "error
+  return without exception set", and PyStructSequence_New returns NULL with no exception set.
+  REPRODUCED by scripts/check_bugs.py.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
+promised_by: |
+  Doc/c-api/tuple.rst:235 (PyStructSequence_New: "Return NULL with an exception set on
+  failure"), and the C API rule that a NULL return comes with an exception.
+cause: |
+  Objects/structseq.c:41 returns a valid negative `Py_ssize_t` as is; the callers at :69, :73,
+  :174, :178, :182, :357 and :404 cannot tell it from the `-1` error return.
+possible_fix: |
+  In `get_type_attr_as_size`, after `PyLong_AsSsize_t`, raise (TypeError or ValueError) when the
+  value is negative and no error is set, as gh-155361 does.
+duplicates:
+  issues:
+    - {number: 155322, state: open, relation: "the issue body is about large n_fields; its open PR gh-155361 adds this negative-value check and a test (test_terminal_size_negative_n_fields). Not mentioned in the issue text"}
+    - {number: 148119, state: closed, relation: "the PyErr_Occurred branch of the same function, fixed in 3.15; a different defect"}
+  queries: ["returned NULL without setting an exception structseq", "PyStructSequence_New negative",
+            "structseq n_fields", "n_unnamed_fields", "n_sequence_fields", "structseq", "PyStructSequence"]
+  bugforge: "no match for structseq or PyStructSequence"
+lean:
+  property: PyLean.TypeObj.StructSeq.NewSetsException
+  theorem: PyLean.TypeObj.StructSeq.newSetsException_refuted
