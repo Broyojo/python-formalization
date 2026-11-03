@@ -327,8 +327,12 @@ def getCells (j : Json) : Except String (List Cell) := do
     | "inst" =>
       let ps ← (← getArr c "attrs").mapM fun p => do
         pure (← (← p.getArrVal? 0).getStr?, ← (← p.getArrVal? 1).getNat?)
-      pure (.inst ps)
-    | "method" => pure (.method 0 (← getNat c "self"))
+      pure (.inst (ps.map fun p => (.name p.1, p.2)))
+    | "method" =>
+      let fn : Nat := match c.getObjVal? "fn" with
+        | .ok v => (v.getNat?).toOption.getD 0
+        | .error _ => 0
+      pure (.method fn (← getNat c "self"))
     | "cls" => pure (.cls 0)
     | "meta" => pure (.metaCls 0)
     | "fdict" =>
@@ -378,12 +382,17 @@ partial def render (h : Heap) (seen : List Nat) (x : Nat) : List Nat × Json :=
         let (s, js) := many (items.flatMap fun p => [p.1, p.2])
         (s, toJson [toJson "fdict", toJson js])
       | .inst attrs =>
-        let sorted := attrs.mergeSort (fun a b => decide (a.1 ≤ b.1))
-        let (s, js) := many (sorted.map Prod.snd)
-        (s, toJson [toJson "inst", toJson (sorted.map Prod.fst), toJson js])
-      | .method _ self =>
+        -- the `__dict__` in insertion order, each key before its value, as the Python side walks it
+        let (s, js) := attrs.foldl (fun (acc : List Nat × List Json) p =>
+          let (s1, kj) := match p.1 with
+            | .name n => (acc.1, toJson n)
+            | .obj k => render h acc.1 k
+          let (s2, vj) := render h s1 p.2
+          (s2, acc.2 ++ [toJson [kj, vj]])) (seen, [])
+        (s, toJson [toJson "inst", toJson js])
+      | .method f self =>
         let (s, js) := many [self]
-        (s, toJson [toJson "method", toJson js])
+        (s, toJson [toJson "method", toJson (methName f), toJson js])
       | _ => (seen, toJson [toJson "other"])
 
 def getHooks (j : Json) : Except String (List (Nat × Nat × String)) := do

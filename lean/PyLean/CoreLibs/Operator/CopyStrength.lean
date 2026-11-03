@@ -120,23 +120,6 @@ theorem deepList_cons (fuel : Nat) (h h1 h2 : Heap) (a y : Nat) (as ys : List Na
     deepList (fuel + 1) h (a :: as) = .ok (h2, y :: ys) := by
   simp [deepList, e1, e2]
 
-theorem storeItem_miss (eq : Nat → Nat → Py Bool) (k v : Nat) : ∀ (acc : List (Nat × Nat)),
-    (∀ p ∈ acc, eq p.1 k = .ok false) → storeItem eq acc k v = .ok (acc ++ [(k, v)])
-  | [], _ => by simp [storeItem]
-  | (k0, v0) :: rest, hp => by
-    have h0 : eq k0 k = .ok false := hp (k0, v0) (by simp)
-    have h1 := storeItem_miss eq k v rest (fun p q => hp p (by simp [q]))
-    simp [storeItem, h0, h1]
-
-theorem storeItem_hit (eq : Nat → Nat → Py Bool) (k v k0 v0 : Nat) (post : List (Nat × Nat)) :
-    ∀ (pre : List (Nat × Nat)), (∀ p ∈ pre, eq p.1 k = .ok false) → eq k0 k = .ok true →
-    storeItem eq (pre ++ (k0, v0) :: post) k v = .ok (pre ++ (k0, v) :: post)
-  | [], _, he => by simp [storeItem, he]
-  | (a, b) :: rest, hp, he => by
-    have h0 : eq a k = .ok false := hp (a, b) (by simp)
-    have h1 := storeItem_hit eq k v k0 v0 post rest (fun p q => hp p (by simp [q])) he
-    simp [storeItem, h0, h1]
-
 theorem pyEq_atoms (f : Nat) (h : Heap) (a b : Nat) (m n : Int) (ha : h.get a = .atom m) (hb : h.get b = .atom n) :
     pyEq (f + 1) h a b = .ok (if a = b then true else m == n) := by
   by_cases e : a = b
@@ -491,7 +474,7 @@ def ReconstructMemoFirst : Prop :=
     h.get x = .hooked c none (some (.tuple n none .inst [] (some st) none none (some none))) →
     h.get st = .list [x] → h.memo.lookup x = none → h.memo.lookup st = none →
     ∃ h', deepcopy (fuel + 6) h x = .ok (h', h.cells.length) ∧
-      h'.get h.cells.length = .inst [("__state__", h.cells.length + 1)] ∧
+      h'.get h.cells.length = .inst [(.name "__state__", h.cells.length + 1)] ∧
       h'.get (h.cells.length + 1) = .list [h.cells.length]
 
 theorem reconstructMemoFirst_proven : ReconstructMemoFirst := by
@@ -524,11 +507,11 @@ theorem reconstructMemoFirst_proven : ReconstructMemoFirst := by
     apply get_set_same
     omega
   rw [hlen] at cl
-  generalize hh5 : h4.set h.cells.length (.inst [("__state__", h.cells.length + 1)]) = h5
+  generalize hh5 : h4.set h.cells.length (.inst [(.name "__state__", h.cells.length + 1)]) = h5
   have hsn : noneCell h2 st = false := by simp [noneCell, hg2]
   have eo : deepState (fuel + 5) (h.fresh (freshOf .inst []) x) h.cells.length (some st) (some none) = .ok h5 := by
     rw [hf, hh2, ← hh5]
-    simp [deepState, hsn, cl, stateApply, setstateOf, setAttrOf, hg4y]
+    simp [deepState, hsn, cl, stateApply, setstateOf, setAttrOf, hg4y, storeItem]
   have ea : deepAppend (fuel + 5) h5 h.cells.length [] = .ok h5 := by simp [deepAppend]
   have es : deepSetItems (fuel + 5) h5 h.cells.length [] = .ok h5 := by simp [deepSetItems]
   have hd := deepcopy_hooked (fuel + 5) h h h5 h5 h5 x n c .inst [] [] (some st) none none (some none) hc hmx
@@ -588,18 +571,21 @@ theorem fold_setItemOf (y : Nat) : ∀ (l : List (Nat × Nat)) (h : Heap) (old :
 an iterator that raises after its items raises after they are stored. `dictiter` stores every pair with
 `y[key] = value`, Lib/copy.py:281 and :284, so pairs with pairwise unequal keys go at the end in order, while a key equal
 to one already stored (two atoms of one value) keeps that key's place and key object and takes the new value, and an
-unhashable key is the `TypeError` of the store. A state that is not `None` goes to `__setstate__`, whose exception
+unhashable key is the `TypeError` of the store. `listiter` runs before `dictiter`, so when both raise, the
+`listiter` error comes out. A state that is not `None` goes to `__setstate__`, which stores it as a dict store does (a new
+name at the end, an existing one in place), and whose exception
 propagates; a state that is `None` is as if there were none, so even a raising `__setstate__` is not called. A
 `dictiter` on an object without `__setitem__` is a `TypeError`. Every key in the unequal-keys case is an atom, and
 "unequal" is the invariant a real `dict` keeps. -/
 def ReconRestItems : Prop :=
-  ∀ (h : Heap) (y st : Nat) (old l : List Nat) (oldD d : List (Nat × Nat)) (a : List (String × Nat)) (e : PyExc)
-    (li : Option (ItemsIter Nat)) (di : Option (ItemsIter (Nat × Nat))) (p : Nat × Nat) (k1 v1 k2 v2 : Nat)
-    (n : Int) (ul : List Nat) (f : Option PyExc) (ss : Option (Option PyExc)),
+  ∀ (h : Heap) (y st : Nat) (old l : List Nat) (oldD d : List (Nat × Nat)) (a pre post : List (AttrKey × Nat))
+    (e : PyExc) (li : Option (ItemsIter Nat)) (di : Option (ItemsIter (Nat × Nat))) (p : Nat × Nat)
+    (k1 v1 k2 v2 w : Nat) (n : Int) (ul : List Nat) (f : Option PyExc) (ss : Option (Option PyExc)),
     y < h.cells.length →
     (h.get y = .list old → ∃ h', reconRest h y none (some ⟨l, none⟩) none none = .ok h' ∧
       h'.get y = .list (old ++ l) ∧ ∀ z, z ≠ y → h'.get z = h.get z) ∧
     (h.get y = .list old → reconRest h y none (some ⟨l, some e⟩) none none = .error e) ∧
+    (h.get y = .list old → reconRest h y none (some ⟨l, some e⟩) (some ⟨d, f⟩) none = .error e) ∧
     (h.get y = .dict oldD → (∀ q ∈ oldD ++ d, ∃ m, h.get q.1 = .atom m) →
       List.Pairwise (fun q r => h.get q.1 ≠ h.get r.1) (oldD ++ d) →
       ∃ h', reconRest h y none none (some ⟨d, none⟩) none = .ok h' ∧ h'.get y = .dict (oldD ++ d) ∧
@@ -614,8 +600,12 @@ def ReconRestItems : Prop :=
     (h.get y = .dict oldD → h.get p.1 = .list ul →
       reconRest h y none none (some ⟨p :: d, f⟩) none =
         .error (.typeError "cannot use 'list' as a dict key (unhashable type: 'list')")) ∧
-    (h.get y = .inst a → noneCell h st = false → reconRest h y (some st) none none (some none) =
-      .ok (h.set y (.inst (a.filter (fun q => q.1 ≠ "__state__") ++ [("__state__", st)])))) ∧
+    (h.get y = .inst a → noneCell h st = false → (∀ q ∈ a, q.1 ≠ .name "__state__") →
+      reconRest h y (some st) none none (some none) = .ok (h.set y (.inst (a ++ [(.name "__state__", st)])))) ∧
+    (h.get y = .inst (pre ++ (.name "__state__", w) :: post) → noneCell h st = false →
+      (∀ q ∈ pre, q.1 ≠ .name "__state__") →
+      reconRest h y (some st) none none (some none) =
+        .ok (h.set y (.inst (pre ++ (.name "__state__", st) :: post)))) ∧
     (noneCell h st = false → reconRest h y (some st) li di (some (some e)) = .error e) ∧
     (noneCell h st = true → reconRest h y (some st) li di ss = reconRest h y none li di ss) ∧
     (h.get y = .list [] → h.get p.1 = .atom n → n ≠ 0 → n ≤ 9223372036854775807 → -9223372036854775808 ≤ n →
@@ -624,12 +614,15 @@ def ReconRestItems : Prop :=
       (reconRest h y none none (some ⟨p :: d, f⟩) none).raises "TypeError")
 
 theorem reconRestItems_proven : ReconRestItems := by
-  intro h y st old l oldD d a e li di p k1 v1 k2 v2 n ul f ss hy
+  intro h y st old l oldD d a pre post e li di p k1 v1 k2 v2 w n ul f ss hy
   obtain ⟨pk, pv⟩ := p
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro hg
     obtain ⟨h', e1, g, o⟩ := fold_appendTo y l h old hg hy
     exact ⟨h', by simp [reconRest, e1], g, o⟩
+  · intro hg
+    obtain ⟨h', e1, g, o⟩ := fold_appendTo y l h old hg hy
+    simp [reconRest, e1]
   · intro hg
     obtain ⟨h', e1, g, o⟩ := fold_appendTo y l h old hg hy
     simp [reconRest, e1]
@@ -685,8 +678,15 @@ theorem reconRestItems_proven : ReconRestItems := by
         .error (.typeError "cannot use 'list' as a dict key (unhashable type: 'list')") := by
       simp [setItemOf, hg, dictSet, storeKey, keyHashErr, cellName, hl] <;> first | rfl | decide
     simp [reconRest, setAll, h1]
-  · intro hg hn
-    simp [reconRest, hn, stateApply, setstateOf, setAttrOf, hg]
+  · intro hg hn hq
+    have hst : storeItem (akEq h) a (.name "__state__") st = .ok (a ++ [(.name "__state__", st)]) :=
+      storeItem_miss _ _ _ a (fun q hq' => akEq_name_ne h q.1 _ (hq q hq'))
+    simp [reconRest, hn, stateApply, setstateOf, setAttrOf, hg, hst]
+  · intro hg hn hq
+    have hst : storeItem (akEq h) (pre ++ (.name "__state__", w) :: post) (.name "__state__") st =
+        .ok (pre ++ (.name "__state__", st) :: post) :=
+      storeItem_hit _ _ _ _ _ post pre (fun q hq' => akEq_name_ne h q.1 _ (hq q hq')) (by simp [akEq])
+    simp [reconRest, hn, stateApply, setstateOf, setAttrOf, hg, hst]
   · intro hn
     simp [reconRest, hn, stateApply, setstateOf]
   · intro hn
@@ -753,34 +753,40 @@ theorem deepcopyStateNone_proven : DeepcopyStateNone := by
     simp [hsame', hd, stateApply, setstateOf]
 
 /-- `listiter` and `dictiter` are iterators, and one that raises after its items makes the deep copy raise too, after
-the items are in, Lib/copy.py:270-272 and :278-281. -/
+the items are in, Lib/copy.py:270-272 and :278-281; `listiter` is read first, so when both raise its error wins. -/
 def DeepcopyIterFails : Prop :=
   ∀ (fuel : Nat) (h : Heap) (x n : Nat) (c : Option (Option PyExc)) (e : PyExc),
     2 ≤ n → n ≤ 5 → h.memo.lookup x = none →
     (h.get x = .hooked c none (some (.tuple n none .list [] none (some ⟨[], some e⟩) none none)) →
       deepcopy (fuel + 2) h x = .error e) ∧
     (h.get x = .hooked c none (some (.tuple n none .dict [] none none (some ⟨[], some e⟩) none)) →
+      deepcopy (fuel + 2) h x = .error e) ∧
+    (∀ e2, h.get x = .hooked c none (some (.tuple n none .list [] none (some ⟨[], some e⟩) (some ⟨[], some e2⟩) none)) →
       deepcopy (fuel + 2) h x = .error e)
 
 theorem deepcopyIterFails_proven : DeepcopyIterFails := by
   intro fuel h x n c e hn1 hn2 hm
   have h3 : ¬ n < 2 := by omega
   have h4 : ¬ n > 5 := by omega
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
   · intro hc
     rw [deepcopy]
     simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend]
   · intro hc
     rw [deepcopy]
     simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend, deepSetItems]
+  · intro e2 hc
+    rw [deepcopy]
+    simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend]
 
 /-- The heap of `a = A(); a.m = a.f0`: the instance holds its own bound method as the attribute `m`. -/
-def methodAliasHeap : Heap := ⟨[.inst [("m", 1)], .method 0 0], []⟩
+def methodAliasHeap : Heap := ⟨[.inst [(.name "m", 1)], .method 0 0], []⟩
 
 /-- `deepcopy(a.m)` in the model: the instance is copied to cell 2, whose `m` is the method copied through it (cell 3),
 and then `_deepcopy_method` makes a second method (cell 4), the result. -/
 def methodAliasCopy : Heap :=
-  ⟨[.inst [("m", 1)], .method 0 0, .inst [("m", 3)], .method 0 2, .method 0 2], [(1, 4), (1, 3), (0, 2)]⟩
+  ⟨[.inst [(.name "m", 1)], .method 0 0, .inst [(.name "m", 3)], .method 0 2, .method 0 2],
+    [(1, 4), (1, 3), (0, 2)]⟩
 
 /-- `deepcopy` keeps shared structure: the memo is there so that an object reached twice is copied once ("keeping a
 `memo` dictionary of objects already copied during the current copying pass", Doc/library/copy.rst:64). So a bound
@@ -789,21 +795,21 @@ under that name, as `_deepcopy_tuple` ensures for a tuple, Lib/copy.py:184-187 (
 copies `__self__` first, which copies the method once through that attribute and records it in `memo`, and then builds
 a second method without reading `memo` again, so the copy's `__self__.m` is a different method from the copy. -/
 def DeepcopyMethodAliasing : Prop :=
-  ∀ (fuel : Nat) (h h' : Heap) (x f s y : Nat) (attrs : List (String × Nat)) (k : String),
-    h.get x = .method f s → h.get s = .inst attrs → attrs.lookup k = some x → h.memo = [] →
+  ∀ (fuel : Nat) (h h' : Heap) (x f s y : Nat) (attrs : List (AttrKey × Nat)) (k : String),
+    h.get x = .method f s → h.get s = .inst attrs → attrs.lookup (.name k) = some x → h.memo = [] →
     deepcopy fuel h x = .ok (h', y) →
-    ∃ s' attrs', h'.get y = .method f s' ∧ h'.get s' = .inst attrs' ∧ attrs'.lookup k = some y
+    ∃ s' attrs', h'.get y = .method f s' ∧ h'.get s' = .inst attrs' ∧ attrs'.lookup (.name k) = some y
 
 theorem deepcopyMethodAliasing_refuted : ¬DeepcopyMethodAliasing := by
   intro H
   have hd : deepcopy 10 methodAliasHeap 1 = .ok (methodAliasCopy, 4) := by
     simp [deepcopy, deepAttrs, methodAliasHeap, methodAliasCopy, Heap.get, Heap.alloc, Heap.remember, Heap.set,
-      setAttrOf, List.lookup]
-  obtain ⟨s', attrs', h1, h2, h3⟩ := H 10 methodAliasHeap methodAliasCopy 1 0 0 4 [("m", 1)] "m" rfl rfl rfl rfl hd
+      setAttrOf, List.lookup, deepKey, storeItem]
+  obtain ⟨s', attrs', h1, h2, h3⟩ := H 10 methodAliasHeap methodAliasCopy 1 0 0 4 [(.name "m", 1)] "m" rfl rfl rfl rfl hd
   have e1 : methodAliasCopy.get 4 = .method 0 2 := rfl
   rw [e1] at h1
   cases h1
-  have e2 : methodAliasCopy.get 2 = .inst [("m", 3)] := rfl
+  have e2 : methodAliasCopy.get 2 = .inst [(.name "m", 3)] := rfl
   rw [e2] at h2
   cases h2
   exact absurd h3 (by decide)
@@ -812,9 +818,14 @@ theorem deepcopyMethodAliasing_refuted : ¬DeepcopyMethodAliasing := by
 another metaclass is its own copy (`issubclass(cls, type)`, :132-133) and is not memoized (:159). A succeeding
 `__deepcopy__` gives a new object, recorded in `memo` (:135-137, :159-160). A reduce string means `x` itself, with no
 memo entry (:153-154); a raising reductor propagates; with no reductor at all, `copy.Error` (:151-152). A memo entry
-answers before any of them (:125-126). -/
+answers before any of them (:125-126). An atom (`int` or `None`), a `str` and a class whose type is `type` are returned
+as they are before `memo` is read at all (:118-119 before :125), whatever `memo` holds for them. -/
 def DeepcopyPaths : Prop :=
-  ∀ (fuel : Nat) (h : Heap) (x y m : Nat) (c : Option (Option PyExc)) (r : Option RvSpec) (e : PyExc),
+  ∀ (fuel : Nat) (h : Heap) (x y m : Nat) (c : Option (Option PyExc)) (r : Option RvSpec) (e : PyExc) (n : Int)
+    (t : String),
+    (h.get x = .atom n → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .str t → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .cls m → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .metaCls m → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .metaCls m → h.memo.lookup x = some y → deepcopy (fuel + 1) h x = .ok (h, y)) ∧
     (h.get x = .hooked c (some none) r → h.memo.lookup x = none →
@@ -824,8 +835,11 @@ def DeepcopyPaths : Prop :=
     (h.get x = .hooked c none none → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .error (uncopyable true))
 
 theorem deepcopyPaths_proven : DeepcopyPaths := by
-  intro fuel h x y m c r e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  intro fuel h x y m c r e n t
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro hc; rw [deepcopy]; simp [hc]
+  · intro hc; rw [deepcopy]; simp [hc]
+  · intro hc; rw [deepcopy]; simp [hc]
   · intro hc hm; rw [deepcopy]; simp [hc, hm]
   · intro hc hm; rw [deepcopy]; simp [hc, hm]
   · intro hc hm; rw [deepcopy]; simp [hc, hm, Heap.alloc]

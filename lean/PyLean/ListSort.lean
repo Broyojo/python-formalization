@@ -1,6 +1,8 @@
 import PyLean.Registry
 import PyLean.ListSort.Props
 import PyLean.ListSort.Diff
+import PyLean.ListSort.FallibleExits
+import PyLean.ListSort.CountRunMax
 
 /-!
 `list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.15.2.
@@ -12,8 +14,10 @@ The model (`ListSort/Model.lean`) mirrors `count_run`, `binarysort`,
 difftest checks results, exact `<`-call counts and run lengths against CPython. Items are compared by an
 integer-valued key (`kf`), which covers Python ints with `<` (`kf = id`),
 `(value, index)` pairs and `key=` functions returning ints; the permutation and
-stack properties hold for every comparison function. Exceptions raised
-by `__lt__`/`key` and mutation of the list during the sort are out of scope.
+stack properties hold for every comparison function. `ListSort/Fallible.lean` is the same code with a
+comparison and a key function that may raise (`goto fail`, `keyfunc_fail`) and a key function that may
+change the list ("list modified during sort"); it is the model when nothing raises. Mutation of the
+list by a comparison is out of scope.
 -/
 
 namespace PyLean.ListSort
@@ -37,7 +41,7 @@ def entries : List Entry := [
     notes := "Quantifies over arbitrary run structures, not only those count_run/minrun produce. The proof keeps, per stack entry, a ghost list of the original runs merged into it." },
   { id := "listsort-stack-bound", pyFile := "Objects/listobject.c", pyFns := ["found_new_run", "list_sort_impl"]
     statement := "For every N <= PY_SSIZE_T_MAX and every non-empty sequence of positive run lengths summing to at most N, after each push the pending stack holds s entries with 2^s < 4N (s <= ceil(log2 N) + 1), and assert(ms.n < MAX_MERGE_PENDING) holds before every push."
-    source := "invariant: ms->pending has MAX_MERGE_PENDING = 64 slots (listobject.c:1744, :1796); assert at :3100", status := .proven
+    source := "invariant: ms->pending has MAX_MERGE_PENDING = 64 slots (listobject.c:1744, :1796); assert at :3165", status := .proven
     prop := ``PolicyStackBound, thm := some ``policyStackBound_proven },
   { id := "listsort-stack-bound-tight", pyFile := "Objects/listobject.c", pyFns := ["found_new_run"]
     statement := "The bound is attained: for N = 3 * 2**61 <= PY_SSIZE_T_MAX the runs [2**61, 2**61, 2**60, ..., 2, 1, 1] fill all 64 pending slots (and the assert still holds)."
@@ -107,7 +111,30 @@ def entries : List Entry := [
     statement := "For every result type, unsafe_object_compare answers as PyObject_RichCompareBool when v's type no longer has key_richcompare or the slot returns NotImplemented, raises what the slot raises, takes a bool as it is, and decides any other object with PyObject_IsTrue, whose exception propagates."
     source := "listobject.c:2799-2832", status := .proven
     prop := ``ObjectCompareSpec, thm := some ``objectCompareSpec_proven
-    notes := "The rich comparison, PyObject_IsTrue and the fallback are parameters with no assumptions. Difftested on two-item lists (fn \"objcmp\"). The sameSlot = false branch is not difftested: slot_tp_richcompare on a type without __lt__ returns NotImplemented, so the branch gives the same answer as the slot would and cannot be told apart from Python. The whole sort does not model a raising comparison, so what the list holds after one is not covered here." }
+    notes := "The rich comparison, PyObject_IsTrue and the fallback are parameters with no assumptions. Difftested on two-item lists (fn \"objcmp\"). The sameSlot = false branch is not difftested: slot_tp_richcompare on a type without __lt__ returns NotImplemented, so the branch gives the same answer as the slot would and cannot be told apart from Python. A raising comparison in the whole sort is listsort-perm-on-error and listsort-fails." },
+  { id := "listsort-fallible-agree", pyFile := "Objects/listobject.c"
+    pyFns := ["binarysort", "count_run", "gallop_left", "gallop_right", "merge_lo", "merge_hi", "merge_at", "list_sort_impl"]
+    statement := "With a comparison that never raises, the fallible binarysort, count_run, gallop_left, gallop_right, merge_lo, merge_hi, merge_at and list.sort (with and without a key function that leaves the list alone) compute exactly the model's result and comparison count and report no exception."
+    source := "twin: the model of the success path", status := .proven
+    prop := ``SortFallibleAgree, thm := some ``sortFallibleAgree_proven },
+  { id := "listsort-perm-on-error", pyFile := "Objects/listobject.c"
+    pyFns := ["binarysort", "count_run", "gallop_left", "gallop_right", "merge_lo", "merge_hi", "merge_at", "list_sort_impl"]
+    statement := "For every comparison, raising or not, consistent or not, and every reverse, list.sort leaves a permutation of the items, including when a comparison raises partway: binarysort leaves the pivot in place, merge_lo and merge_hi copy the rest of the temp run back."
+    source := "listobject.c:1829-1831; Doc/library/stdtypes.rst list.sort", status := .proven
+    prop := ``SortPermOnError, thm := some ``sortPermOnError_proven },
+  { id := "listsort-fail-exits", pyFile := "Objects/listobject.c"
+    pyFns := ["gallop_left", "gallop_right", "merge_at", "merge_lo", "merge_hi", "binarysort", "count_run"]
+    statement := "A raising comparison is passed on by every function: gallop returns -1 after its first comparison, merge_at with the runs untouched, merge_lo with b0 :: A ++ rest of B, merge_hi with A[:-1] ++ B ++ [A[-1]], binarysort and count_run with nothing moved."
+    source := "listobject.c:1914, :1951, :2058, :2158, :2247, :2461-2463, :2601-2603, :2650, :2661", status := .proven
+    prop := ``SortFailExits, thm := some ``sortFailExits_proven },
+  { id := "listsort-fails", pyFile := "Objects/listobject.c", pyFns := ["list_sort_impl", "PyList_Sort", "count_run"]
+    statement := "A comparison that always raises is called once and leaves the list unchanged, reverse=True too; a key function that raises leaves the list unchanged; a key function that changes the list makes a sort that otherwise succeeds raise ValueError('list modified during sort') with the sorted items in place; PyList_Sort refuses a non-list and returns -1 with the sort's exception."
+    source := "listobject.c:2989-2994, :3013-3021, :3193-3204, :3231-3245", status := .proven
+    prop := ``SortFails, thm := some ``sortFails_proven },
+  { id := "listsort-count-run-maximal", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
+    statement := "For every comparison, count_run's run is the rest of the slice or is followed by an item smaller than its last one, so with listsort-count-run the length is pinned."
+    source := "listobject.c:2004-2006, :2052-2055", status := .proven
+    prop := ``CountRunMaximal, thm := some ``countRunMaximal_proven }
 ]
 
 end PyLean.ListSort
