@@ -7,6 +7,9 @@ Cases ("mod": "datetime", "fn" starting with "zi_"):
   zi_c, zi_py  ZoneInfo.from_file(io.BytesIO(data)) of the C or the pure-Python class, then
                utcoffset/dst/tzname for None and for query datetimes, and fromutc
   zi_cache_*   a run of ZoneInfo(key) / clear_cache calls on keys under a temporary TZPATH
+  zi_cerr_*    the same on the base class or a fresh subclass, with keys that are plain str
+               (separate objects sharing a text) or str subclasses whose __eq__ raises (with their own or a shared hash),
+               only_keys iterators that raise after their keys, and del Sub._weak_cache
 
 TZif files range from well-formed v1-v4 files to truncated and inconsistent ones: counts at
 their boundaries, indices out of range, designations without NUL or not UTF-8, extreme
@@ -286,10 +289,12 @@ def gen_case(rng):
     if r < 0.3:
         data, _ = gen_tzif(rng) if rng.random() < 0.7 else gen_footer_only(rng)
         return {"mod": "datetime", "fn": "zi_data", "data": list(data)}
-    if r < 0.95:
+    if r < 0.9:
         data, trans = gen_tzif(rng) if rng.random() < 0.6 else gen_footer_only(rng)
         qs, us = gen_queries(rng, trans)
         return {"mod": "datetime", "fn": rng.choice(["zi_c", "zi_py"]), "data": list(data), "q": qs, "u": us}
+    if rng.random() < 0.5:
+        return gen_cerr(rng)
     ops = []
     for _ in range(rng.randint(1, 30)):
         k = rng.random()
@@ -301,6 +306,32 @@ def gen_case(rng):
             ops.append(["keys", [rng.randrange(14) for _ in range(rng.randint(0, 3))]])
     return {"mod": "datetime", "fn": rng.choice(["zi_cache_c", "zi_cache_py"]), "ops": ops,
             "loads": LOADABLE}
+
+
+def gen_cerr(rng):
+    nkeys = 10
+    # hold: the harness keeps every instance it gets referenced; otherwise it drops them after
+    # each call, so the strong cache alone holds the cached zones and a C eject inside
+    # clear_cache can collect one (its weak entry goes before the next pop)
+    hold = rng.random() < 0.5
+    kinds = [rng.choice([0, 0, 0, 1, 2, 3]) if rng.random() < 0.6 else 0 for _ in range(nkeys)]
+    # separate str objects with equal text compare equal
+    texts = [i if rng.random() < 0.6 else rng.randrange(nkeys) for i in range(nkeys)]
+    sub = rng.random() < 0.4
+    ops = []
+    for _ in range(rng.randint(1, 25)):
+        r = rng.random()
+        if r < 0.7:
+            ops.append(["get", rng.randrange(nkeys)])
+        elif r < 0.77:
+            ops.append(["clear"])
+        elif r < 0.95 or not sub:
+            ops.append(["keys", [rng.randrange(nkeys) for _ in range(rng.randint(0, 4))],
+                        rng.random() < 0.3])
+        else:
+            ops.append(["del"])
+    return {"mod": "datetime", "fn": rng.choice(["zi_cerr_c", "zi_cerr_py"]), "ops": ops,
+            "kinds": kinds, "texts": texts, "loads": LOADABLE, "sub": sub, "hold": hold}
 
 
 # ---- running CPython --------------------------------------------------------
@@ -384,6 +415,79 @@ def run_cache(case, Z):
     return {"ok": [keys, raised]}
 
 
+class RaiseKey(str):
+    def __eq__(self, other):
+        raise RuntimeError("eq")
+    __hash__ = str.__hash__
+
+
+class SameHashKey(RaiseKey):
+    def __hash__(self):
+        return 0
+
+
+class NoHashKey(str):
+    __hash__ = None
+
+
+def run_cerr(case, Z):
+    Z.clear_cache()
+    keys = [(str, RaiseKey, SameHashKey, NoHashKey)[kd]("".join(["k", str(t)]))
+            for kd, t in zip(case["kinds"], case["texts"])]
+    assert len({id(k) for k in keys}) == len(keys)
+    index = {id(k): i for i, k in enumerate(keys)}
+    if case["sub"]:
+        class Sub(Z):
+            pass
+        cls = Sub
+    else:
+        cls = Z
+    seen = []  # weakrefs, numbered by first appearance
+    held = []
+
+    def canon(inst):
+        for n, r in enumerate(seen):
+            if r() is inst:
+                return n
+        seen.append(weakref.ref(inst))
+        return len(seen) - 1
+
+    outs = []
+    for op in case["ops"]:
+        try:
+            if op[0] == "get":
+                inst = cls(keys[op[1]])
+                if case["hold"]:
+                    held.append(inst)
+                outs.append({"ok": [index[id(inst.key)], canon(inst)]})
+                del inst
+            elif op[0] == "clear":
+                cls.clear_cache()
+                outs.append({"ok": None})
+            elif op[0] == "keys":
+                def it(ks=[keys[k] for k in op[1]], err=op[2]):
+                    yield from ks
+                    if err:
+                        raise ValueError("it")
+                cls.clear_cache(only_keys=it())
+                outs.append({"ok": None})
+            else:
+                del cls._weak_cache
+                outs.append({"ok": None})
+        except Exception as e:
+            outs.append({"exc": type(e).__name__})
+    strong = None
+    if Z is PZI:
+        strong = [[index[id(k)], canon(v)] for k, v in cls._strong_cache.items()]
+    alive = sorted({n for n, r in enumerate(seen) if r() is not None})
+    try:
+        cls.clear_cache()
+    except AttributeError:  # C subclass after del Sub._weak_cache
+        pass
+    Z.clear_cache()
+    return {"ok": [outs, alive, strong]}
+
+
 def run_python(case):
     fn = case["fn"]
     if fn == "zi_data":
@@ -394,6 +498,8 @@ def run_python(case):
         return common.py_result(f)
     if fn in ("zi_c", "zi_py"):
         return run_zone(case, CZI if fn == "zi_c" else PZI)
+    if fn in ("zi_cerr_c", "zi_cerr_py"):
+        return run_cerr(case, CZI if fn == "zi_cerr_c" else PZI)
     return run_cache(case, CZI if fn == "zi_cache_c" else PZI)
 
 

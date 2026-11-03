@@ -58,3 +58,4 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.LoadDataValueError
   theorem: PyLean.Datetime.Zone.loadDataValueError_refuted
+  also: ["PyLean.Datetime.Zone.LoadDataNoAssertion / loadDataNoAssertion_refuted (the assert at _common.py:123)"]

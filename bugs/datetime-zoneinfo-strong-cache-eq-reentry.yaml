@@ -1,0 +1,71 @@
+id: datetime-zoneinfo-strong-cache-eq-reentry
+title: "zoneinfo: a cache key whose __eq__ calls ZoneInfo.clear_cache() makes find_in_strong_cache walk freed nodes (segfault); duplicate of gh-142782"
+priority: P1
+kind: memory-safety
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C find_in_strong_cache", "C zone_from_strong_cache"]
+summary: |
+  `find_in_strong_cache` (Modules/_zoneinfo.c:2436-2453) walks the strong cache list and compares
+  `PyObject_RichCompareBool(key, node->key, Py_EQ)` for each node (:2441). The comparison runs the
+  key's `__eq__`, which can call `ZoneInfo.clear_cache()`; that frees every node
+  (`clear_strong_cache`, :2581-2590). The walk then reads `node->next` of a freed node
+  (:2449), and on a hit `zone_from_strong_cache` (:2516-2535) hands the freed node to
+  `move_strong_cache_node_to_front`. DUPLICATE of gh-142782 (open).
+likelihood: |
+  Low: needs a str subclass key with an `__eq__` that calls clear_cache(). Pure Python.
+maybe_intended: |
+  No.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import struct, os, tempfile, zoneinfo
+  from zoneinfo import ZoneInfo
+  T = tempfile.mkdtemp()
+  h = b"TZif2" + bytes(15) + struct.pack(">6l", 0, 0, 0, 0, 1, 4)
+  blob = h + struct.pack(">lBB", 0, 0, 0) + b"UTC\x00"
+  for i in range(4):
+      with open(os.path.join(T, "k%d" % i), "wb") as f:
+          f.write(blob + blob + b"\nUTC0\n")
+  zoneinfo.reset_tzpath([T])
+  held = [ZoneInfo("k0"), ZoneInfo("k1"), ZoneInfo("k2")]
+  del held
+  class K(str):
+      def __hash__(self):
+          return str.__hash__(self)
+      def __eq__(self, other):
+          ZoneInfo.clear_cache()
+          return False
+  print("lookup", flush=True)
+  ZoneInfo(K("k3"))
+  print("survived", flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n", " | "))
+  if p.returncode < 0 and "lookup" in p.stdout and "survived" not in p.stdout:
+      print("REPRODUCED datetime-zoneinfo-strong-cache-eq-reentry")
+expected: |
+  The lookup either finds nothing or raises; the process continues ("survived").
+observed: |
+  python3 3.15.2: child prints "lookup", then dies with SIGSEGV (rc -11), 3 of 3 runs. REPRODUCED.
+promised_by: |
+  Invariant: no crash or memory corruption from pure-Python code.
+cause: |
+  Modules/_zoneinfo.c:2441-2449: the list is used across a call into Python code that can free it.
+possible_fix: |
+  As proposed on gh-142782: hold a reference to the node's key and re-check the cache head after
+  the comparison (or restart the walk when the cache changed).
+reproduces:
+  python3 (3.15.2): REPRODUCED (scripts/check_bugs.py)
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 142782, state: open, relation: duplicate, reason: "same use-after-free: re-entrant ZoneInfo.clear_cache() from a key __eq__ during zone_from_strong_cache"}
+  queries: ["zoneinfo strong cache __eq__", "zone_from_strong_cache", "zoneinfo clear_cache use after free",
+            "gh issue view 142782"]
+  note: |
+    Recorded so the Lean refutation names its bug; not to be reported separately. Report the
+    clear_cache finalizer case (datetime-zoneinfo-clear-cache-reentrant-free) together with gh-142782.
+lean:
+  property: PyLean.Datetime.Zone.StrongLookupDefined
+  theorem: PyLean.Datetime.Zone.strongLookupDefined_refuted

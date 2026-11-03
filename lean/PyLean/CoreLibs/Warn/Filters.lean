@@ -89,6 +89,8 @@ structure FEnv where
   compile : String → Bool → Py Unit
   isType : Nat → Bool
   isWarn : Nat → Bool
+  /-- the exception class relation (`PyType_IsSubtype`) -/
+  hier : Hier
 
 /-! ## `repr` of a str -/
 
@@ -151,7 +153,7 @@ def noAttr (tp attr : String) : PyExc := .named "AttributeError" s!"'{tp}' objec
 /-- `_add_filter(*item, append=append)`: under the lock (which cannot fail, and whose
 `_filters_mutated_lock_held` therefore cannot either), remove a duplicate and insert at the front,
 or append unless present; then the version moves on. -/
-def addFilter (it : FItem) (append : Bool) (s : FState) : Py FState := do
+def addFilter (H : Hier) (it : FItem) (append : Bool) (s : FState) : Py FState := do
   let c ← match s.cont with
     | .deleted => pure Cont.deleted
     | .list xs =>
@@ -160,7 +162,7 @@ def addFilter (it : FItem) (append : Bool) (s : FState) : Py FState := do
         -- `__eq__` is taken for "not in the list"
         let r ← match pyRemove it xs with
           | .ok r => pure (r.getD xs)
-          | .error e => if isA e "ValueError" then pure xs else .error e
+          | .error e => if isA H e "ValueError" then pure xs else .error e
         pure (Cont.list (.item it :: r))
       else do
         if ← pyContains it xs then pure (Cont.list xs) else pure (Cont.list (xs ++ [.item it]))
@@ -216,7 +218,7 @@ def fwPrep (E : FEnv) (action : ActA) (message : StrA) (category : Nat) (module 
 def filterwarnings (E : FEnv) (action : ActA) (message : StrA) (category : Nat) (module : StrA)
     (lineno : IntA) (append : Bool) (s : FState) : Py FState := do
   let it ← fwPrep E action message category module lineno
-  addFilter it append s
+  addFilter E.hier it append s
 
 /-- The body of `simplefilter` before `_add_filter`, :304-309: no category check. -/
 def sfPrep (action : ActA) (category : Nat) (lineno : IntA) : Py FItem := do
@@ -225,10 +227,10 @@ def sfPrep (action : ActA) (category : Nat) (lineno : IntA) : Py FItem := do
   return ⟨a, none, category, none, ln⟩
 
 /-- `simplefilter`, :294-310. -/
-def simplefilter (action : ActA) (category : Nat) (lineno : IntA) (append : Bool) (s : FState) :
+def simplefilter (H : Hier) (action : ActA) (category : Nat) (lineno : IntA) (append : Bool) (s : FState) :
     Py FState := do
   let it ← sfPrep action category lineno
-  addFilter it append s
+  addFilter H it append s
 
 /-- `resetwarnings`, :337-341: `del _wm._get_filters()[:]`. -/
 def resetwarnings (s : FState) : Py FState :=
@@ -311,9 +313,9 @@ def setupDefaults (E : FEnv) (debug : Bool) (K : DefaultCats) (s : FState) : Py 
   if debug then .ok s
   else do
     let s ← filterwarnings E (.str "default") (.str "") K.deprecation (.str "__main__") (.int 0) true s
-    let s ← simplefilter (.str "ignore") K.deprecation (.int 0) true s
-    let s ← simplefilter (.str "ignore") K.pending (.int 0) true s
-    let s ← simplefilter (.str "ignore") K.importW (.int 0) true s
-    simplefilter (.str "ignore") K.resource (.int 0) true s
+    let s ← simplefilter E.hier (.str "ignore") K.deprecation (.int 0) true s
+    let s ← simplefilter E.hier (.str "ignore") K.pending (.int 0) true s
+    let s ← simplefilter E.hier (.str "ignore") K.importW (.int 0) true s
+    simplefilter E.hier (.str "ignore") K.resource (.int 0) true s
 
 end PyLean.CoreLibs.Warn

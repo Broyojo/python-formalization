@@ -1,0 +1,82 @@
+id: textlibs-plist-deep-nesting-recursion
+title: "NOT FOR FILING: plistlib reads binary plists only as deeply nested as the recursion limit allows"
+priority: P5
+kind: documented-limitation
+module: textlibs
+files: [Lib/plistlib.py]
+functions: ["_BinaryPlistParser._read_object", "_BinaryPlistParser.parse", "loads"]
+summary: |
+  This records why LoadsBinaryInvalidOnly carries a frame bound; it is not a defect report.
+  _read_object recurses once per nested array or dict, and parse catches OSError, IndexError,
+  struct.error, OverflowError and ValueError, not RecursionError, so a binary plist of n nested
+  one-element arrays raises RecursionError("maximum recursion depth exceeded") from loads when fewer
+  than n + 6 frames are left: three for loads, load and parse, one _read_object per array, and
+  three below the innermost array's _read_object for _read_refs, _read_ints and _read (the
+  string's _read_object and its _read need only two). Cycles do not recurse: a container is stored in self._objects before its
+  elements are read, so the depth is bounded by the number of objects, which the proof uses.
+likelihood: |
+  Not applicable.
+maybe_intended: |
+  Yes. Lib/test/test_plistlib.py:1070-1082 (test_deep_nesting) reads 50, 300 and 100000 nested
+  arrays and accepts RecursionError when the nesting exceeds sys.getrecursionlimit(); gh-111803 is
+  about that test.
+reproducer: |
+  import sys, plistlib
+
+  def chain(n):
+      objs = [b"\xa1" + (i + 1).to_bytes(2, "big") for i in range(n)] + [b"\x54seed"]
+      offs, body = [], b""
+      for o in objs:
+          offs.append(8 + len(body))
+          body += o
+      tbl = 8 + len(body)
+      table = b"".join(x.to_bytes(4, "big") for x in offs)
+      trailer = (bytes(6) + bytes([4, 2]) + len(objs).to_bytes(8, "big")
+                 + (0).to_bytes(8, "big") + tbl.to_bytes(8, "big"))
+      return b"bplist00" + body + table + trailer
+
+  def run(frames, data):
+      f, depth = sys._getframe(), 0
+      while f is not None:
+          depth += 1
+          f = f.f_back
+      old = sys.getrecursionlimit()
+      sys.setrecursionlimit(depth + frames)
+      try:
+          plistlib.loads(data)
+          return "ok"
+      except RecursionError:
+          return "RecursionError"
+      finally:
+          sys.setrecursionlimit(old)
+
+  for _ in range(5):
+      plistlib.loads(chain(2))
+  res = [run(16, chain(n)) for n in (1, 5, 10, 11)]
+  print("16 frames, 1/5/10/11 nested arrays:", res)
+  try:
+      plistlib.loads(chain(5000))
+      deep = "parsed"
+  except RecursionError as e:
+      deep = "RecursionError: " + str(e)
+  print("5000 nested arrays at the default limit:", deep)
+  if res == ["ok", "ok", "ok", "RecursionError"] and deep.startswith("RecursionError"):
+      print("REPRODUCED textlibs-plist-deep-nesting-recursion")
+expected: |
+  What is observed: the documented limit (n + 6 frames for n nested arrays).
+observed: |
+  python3 3.15.2: ['ok', 'ok', 'ok', 'RecursionError']; 5000 levels raise "maximum recursion depth
+  exceeded". REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/plistlib.rst ("The parser raises InvalidFileException when the file cannot be
+  parsed"), read against test_deep_nesting, which allows RecursionError.
+cause: |
+  Lib/plistlib.py:615-621 and :629-637 recurse through _read_object; :508-510 does not catch
+  RecursionError.
+possible_fix: |
+  None needed.
+duplicates: |
+  Not for filing. gh-111803 (closed) is about test_deep_nesting. Queries: gh search issues --repo
+  python/cpython plistlib RecursionError; plistlib recursion; plistlib nested.
+lean: lean/PyLean/TextLibs/PlistRefute.lean (LoadsBinaryAnyDepth, loadsBinaryAnyDepth_refuted)

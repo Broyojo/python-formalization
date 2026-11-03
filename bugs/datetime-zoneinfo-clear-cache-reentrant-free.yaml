@@ -1,0 +1,87 @@
+id: datetime-zoneinfo-clear-cache-reentrant-free
+title: "zoneinfo: ZoneInfo.clear_cache() frees strong-cache nodes while the cache head still points at them; a key's __del__ that creates a ZoneInfo makes it walk freed memory (segfault)"
+priority: P1
+kind: memory-safety
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["clear_strong_cache", "strong_cache_free", "strong_cache_node_free", "update_strong_cache", "zoneinfo_ZoneInfo_clear_cache_impl"]
+summary: |
+  `clear_strong_cache` (Modules/_zoneinfo.c:2581-2590) calls `strong_cache_free(state->ZONEINFO_STRONG_CACHE)`
+  and only afterwards sets `state->ZONEINFO_STRONG_CACHE = NULL`. `strong_cache_free` (:2392-2402)
+  walks the list and, for each node, `strong_cache_node_free` (:2377-2383) runs `Py_XDECREF(node->key)`
+  and `Py_XDECREF(node->zone)` before `PyMem_Free(node)`. Dropping the last reference to a key runs
+  arbitrary Python code (a str subclass's `__del__`). If that code constructs a `ZoneInfo`, the
+  constructor updates the strong cache through `state->ZONEINFO_STRONG_CACHE` (`update_strong_cache`
+  and the move-to-front / eject logic), which still points at the nodes being freed: it links new
+  nodes to freed ones, reads `next`/`prev` from freed nodes, and frees nodes a second time. The
+  process segfaults.
+
+  This is not gh-142782 (use-after-free in the strong cache through a key's `__eq__` during lookup):
+  here the re-entry is through `__del__` during `clear_cache()`, and the fix belongs in
+  `clear_strong_cache` (detach the list first).
+likelihood: |
+  Low: it needs str-subclass cache keys with a `__del__` that constructs a ZoneInfo, then
+  `ZoneInfo.clear_cache()`. Pure Python; no ctypes or threads. Library code that wraps keys (e.g. a
+  key class with cleanup) could hit it.
+maybe_intended: |
+  No. Freeing a list that is still reachable from global state while running destructors is a
+  classic use-after-free; the usual CPython pattern is to detach (set the head to NULL) first and
+  free the detached list afterwards.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import struct, os, tempfile, gc
+  import zoneinfo
+  from zoneinfo import ZoneInfo
+  def tz():
+      h = b"TZif2" + bytes(15) + struct.pack(">6l", 0, 0, 0, 0, 1, 4)
+      b = h + struct.pack(">lBB", 0, 0, 0) + b"UTC\x00"
+      return b + b + b"\nUTC0\n"
+  T = tempfile.mkdtemp()
+  for i in range(10):
+      with open(os.path.join(T, "k%d" % i), "wb") as f:
+          f.write(tz())
+  zoneinfo.reset_tzpath([T])
+  N = [3]
+  class K(str):
+      def __del__(self):
+          ZoneInfo("k%d" % N[0]); N[0] += 1
+  for i in range(3):
+      ZoneInfo(K("k%d" % i))
+  gc.collect()
+  print("clearing", flush=True)
+  ZoneInfo.clear_cache()
+  print("survived", flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n", " | "))
+  if p.returncode < 0 and "clearing" in p.stdout and "survived" not in p.stdout:
+      print("REPRODUCED datetime-zoneinfo-clear-cache-reentrant-free")
+expected: |
+  `clear_cache()` empties the strong cache; the ZoneInfo objects created by `__del__` are either cached
+  in a fresh list or dropped; the process continues ("survived").
+observed: |
+  python3 3.15.2: child prints "clearing", then dies with SIGSEGV (rc -11). REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Invariant: no crash or memory corruption from pure-Python code.
+cause: |
+  Modules/_zoneinfo.c:2588-2589: the list is freed (running key/zone destructors) while
+  `state->ZONEINFO_STRONG_CACHE` still points at its head; it is cleared only after the walk.
+possible_fix: |
+  Detach first: `StrongCacheNode *old = state->ZONEINFO_STRONG_CACHE; state->ZONEINFO_STRONG_CACHE =
+  NULL; strong_cache_free(old);`. Nodes the destructors add then go into a fresh list. (The same
+  pattern is worth checking in `eject_from_strong_cache`, which also frees nodes while running
+  `Py_XDECREF` on keys.)
+duplicates:
+  issues:
+    - {number: 142782, state: open, relation: "closely related: 'Use-after-free in zone_from_strong_cache via re-entrant ZoneInfo.clear_cache() from key __eq__'. There clear_cache() runs inside a lookup; here a ZoneInfo() runs inside clear_cache() (key __del__). Different site; a fix for one does not obviously cover the other. Report together with it."}
+  queries: ["zoneinfo clear_cache crash", "zoneinfo strong cache use after free", "zoneinfo __del__ cache",
+            "zoneinfo clear_cache segfault", "_zoneinfo strong_cache_free", "zoneinfo cache reentrant",
+            "zoneinfo cache (10 results; 142782 related)", "gh issue view 142782",
+            "bugforge README: no zoneinfo entry"]
+  note: "Found by the zoneinfo review (2026-11-03); reproducer rebuilt from its probe and re-run independently."
+lean:
+  property: PyLean.Datetime.Zone.ClearCacheDefined
+  theorem: PyLean.Datetime.Zone.clearCacheDefined_refuted
+  note: "clearStrongC (ZoneCache.lean) mirrors clear_strong_cache/strong_cache_free/strong_cache_node_free with key finalizers that call ZoneInfo(...); the counterexample is three cached keys whose finalizers each construct a new key, as in the reproducer."

@@ -41,6 +41,8 @@ import PyLean.TextLibs.TomlScen
 import PyLean.TextLibs.TomlLoads
 import PyLean.TextLibs.TomlInline
 import PyLean.TextLibs.EmailEw2
+import PyLean.TextLibs.ReEngineFast
+import PyLean.TextLibs.PlistDate
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -59,6 +61,9 @@ modelled.
 `Lib/tomllib/_parser.py` and `Lib/tomllib/_re.py` are in `TextLibs/TomlModel.lean`, with
 `parse_float`, `MAX_KEY_PARTS`, `sys.get_int_max_str_digits()`, `cached_tz`'s cache and the frames
 left below the recursion limit as parameters.
+The binary side of `Lib/plistlib.py` (reader, writer, `load`/`loads`/`dump`/`dumps` dispatch) is in
+`TextLibs/PlistModel.lean` and `TextLibs/PlistWrite.lean`, with the frames left as a parameter,
+`dict_type=dict`, and the XML parser and writer as parameters.
 -/
 
 namespace PyLean.TextLibs
@@ -2122,6 +2127,118 @@ def entries : List Entry := [
     source := ":1168-1180 (missing whitespace defect and have_ws; the EWWhiteSpaceTerminal only after an encoded word), :1182-1189 (split at =? inside a word)", status := .proven
     prop := ``PyLean.TextLibs.Email.UnstructuredWordThenEw, thm := some ``PyLean.TextLibs.Email.unstructuredWordThenEw_proven
     notes := "With UnstructuredEncodedWords this pins both branches of the unstructured[-2] == 'encoded-word' test." }
+,
+  { id := "textlibs-plist-loads-binary-invalid-only", pyFile := "Lib/plistlib.py"
+    pyFns := ["loads", "load", "_BinaryPlistParser.parse", "_BinaryPlistParser._read_object",
+      "_BinaryPlistParser._get_size", "_BinaryPlistParser._read", "_BinaryPlistParser._read_ints",
+      "_BinaryPlistParser._read_refs", "InvalidFileException.__init__"]
+    statement := "With len(data) + 8 frames left, loads(data) with fmt=FMT_BINARY (or fmt=None when data does not look like XML) returns or raises InvalidFileException('Invalid file'), for every bytes object data: whatever its trailer, offset sizes, reference sizes (0 or more than 8 included), offsets past the end, counts, tokens and references (cyclic ones included), every struct.error, IndexError, OverflowError, ValueError (UnicodeDecodeError included) and unhashable-key TypeError inside is turned into InvalidFileException, and no RecursionError escapes."
+    source := "Doc/library/plistlib.rst ('The parser raises InvalidFileException when the file cannot be parsed'); :508-510 (except by class), :635-639", status := .proven
+    prop := ``Plist.LoadsBinaryInvalidOnly, thm := some ``Plist.loadsBinaryInvalidOnly_proven
+    notes := "The frame bound is what the object cache buys: a container is stored in self._objects before its elements are read (:619, :634), so nested calls visit each slot at most once and the depth is at most the number of objects. Without it the statement is refuted (textlibs-plist-loads-nesting-depth). The except clause is modelled by class membership (excMro), so UnicodeDecodeError and InvalidFileException are caught as ValueErrors and RecursionError is not. dict_type is dict (scope limit)." }
+,
+  { id := "textlibs-plist-loads-nesting-depth", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistParser._read_object", "_BinaryPlistParser.parse"]
+    statement := "With 16 frames left (more than any binary plist without nested containers needs), loads(data, fmt=FMT_BINARY) returns or raises InvalidFileException for every data."
+    source := "the unbounded reading of LoadsBinaryInvalidOnly, which test_deep_nesting rules out", status := .refuted
+    prop := ``Plist.LoadsBinaryAnyDepth, thm := some ``Plist.loadsBinaryAnyDepth_refuted
+    bug := some "textlibs-plist-deep-nesting-recursion"
+    notes := "Documented limitation, not for filing: eleven nested one-element arrays around a string raise RecursionError with 16 frames (they need 17). Lib/test/test_plistlib.py:1070-1082 accepts RecursionError." }
+,
+  { id := "textlibs-plist-binary-round-trip", pyFile := "Lib/plistlib.py"
+    pyFns := ["dumps", "dump", "loads", "load", "_BinaryPlistWriter.write", "_BinaryPlistWriter._flatten",
+      "_BinaryPlistWriter._getrefnum", "_BinaryPlistWriter._write_size", "_BinaryPlistWriter._write_object",
+      "_BinaryPlistParser.parse", "_BinaryPlistParser._read_object", "_BinaryPlistParser._get_size",
+      "_BinaryPlistParser._read", "_BinaryPlistParser._read_ints", "_BinaryPlistParser._read_refs"]
+    statement := "For every object graph (shared and cyclic lists, tuples, dicts and frozendicts; None, bools, ints, floats, strs, bytes, bytearrays, UIDs; no datetimes) that dumps(value, fmt=FMT_BINARY, sort_keys=..., skipkeys=...) writes to b (shorter than 2**63 bytes), loads(b) with len(b) + 8 frames returns a graph related to the value: the roots are related, and related objects match: equal ints (the whole -2**63..2**64-1 range the writer accepts), bools, strs (ASCII and UTF-16, astral characters included), bytes, UID data and None, floats with the same bits or equal (==), a list for each list or tuple with related elements, and a dict for each dict or frozendict with exactly the str-keyed items the writer keeps, in the order it writes them, keys and values related; and identity is kept: two related containers (or other objects tracked by id()) are the same loaded object exactly when they are the same written object, so shared lists come back shared, equal but distinct lists distinct, and a self-containing list contains itself."
+    source := "Doc/library/plistlib.rst (load reads what dump writes; supported value types); invariant: round trip", status := .proven
+    prop := ``Plist.BinaryRoundTrip, thm := some ``Plist.binaryRoundTrip_proven
+    notes := "Proved by composing the writer (_flatten numbers every reachable object, the tables map objects back to their number, _write_object writes canonical bytes: PlistWriteInv, PlistWriteObj, PlistLayout) with the reader on any canonical table (PlistReadAll, readObj_tab, with the object cache keeping cycles and sharing). Dict keys are the dict's type invariant (pairwise different strs). Exact float bits are refuted (textlibs-plist-binary-float-bits, the 0.0/-0.0 sharing); datetimes are refuted (textlibs-plist-binary-datetime). The XML writer and parser are parameters. Scope limit: no subclasses of the builtin types (PlistWrite.lean). That the writer succeeds is WriteSucceeds." }
+,
+  { id := "textlibs-plist-binary-float-bits", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistWriter._flatten", "_BinaryPlistWriter._getrefnum"]
+    statement := "The binary round trip keeps the bits of every float: loads(dumps([x, y], fmt=FMT_BINARY)) is a list of two floats with the bits of x and y."
+    source := "invariant: the binary format stores IEEE doubles exactly; the XML twin keeps -0.0", status := .refuted
+    prop := ``Plist.BinaryFloatBits, thm := some ``Plist.binaryFloatBits_refuted
+    bug := some "textlibs-plist-binary-negative-zero"
+    notes := "[0.0, -0.0]: _flatten finds (float, -0.0) equal to the (float, 0.0) already in _objtable, so both elements refer to one object and loads gives [0.0, 0.0]. BinaryRoundTrip proves the narrowed form (same bits or equal)." }
+,
+  { id := "textlibs-plist-binary-datetime", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistWriter._write_object", "_BinaryPlistParser._read_object"]
+    statement := "Every naive datetime in datetime.min..datetime.max written alone with dumps(fmt=FMT_BINARY) is read back by loads as the same datetime."
+    source := "Doc/library/plistlib.rst (datetime.datetime is a supported value); invariant: round trip", status := .refuted
+    prop := ``Plist.BinaryDateRoundTrip, thm := some ``Plist.binaryDateRoundTrip_refuted
+    bug := some "textlibs-plist-binary-datetime-max"
+    notes := "datetime.max: total_seconds() rounds to 252423993600.0, and datetime(2001, 1, 1) + timedelta(seconds=f) overflows, so loads raises InvalidFileException. The reader's timedelta(seconds=float) is modelled exactly (accum, the leftover rounding, microseconds_to_delta_ex) and checked by the difftest." }
+,
+  { id := "textlibs-plist-count-to-size", pyFile := "Lib/plistlib.py"
+    pyFns := ["_count_to_size"]
+    statement := "For every count below 2**64, _count_to_size(count) is 1, 2, 4 or 8 and is the smallest of them whose bytes hold count."
+    source := "invariant: the reference and offset sizes of the binary format (:683-687, :700-701)", status := .proven
+    prop := ``Plist.CountToSizeMinimal, thm := some ``Plist.countToSizeMinimal_proven }
+,
+  { id := "textlibs-plist-invalid-file-exception", pyFile := "Lib/plistlib.py"
+    pyFns := ["InvalidFileException.__init__"]
+    statement := "InvalidFileException(message) has str(e) == message, class InvalidFileException, is a ValueError and is caught by parse's except; raise InvalidFileException() uses the default message 'Invalid file' and raises an exception of class InvalidFileException whose message is 'Invalid file', which is a ValueError (so parse's own except clause catches it) and an Exception; with no frame left the instantiation raises RecursionError instead."
+    source := "Lib/plistlib.py:467-469; Doc/library/plistlib.rst (InvalidFileException)", status := .proven
+    prop := ``Plist.InvalidFileSpec, thm := some ``Plist.invalidFileSpec_proven }
+,
+  { id := "textlibs-plist-read", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistParser._read"]
+    statement := "For every buffer, position and size, _read(size) returns the next size bytes when that many are left and raises InvalidFileException otherwise, whatever the chunking by _MIN_READ_BUF_SIZE."
+    source := "Lib/plistlib.py:522-532 (the short-read check :526-527)", status := .proven
+    prop := ``Plist.ReadSpec, thm := some ``Plist.readSpec_proven }
+,
+  { id := "textlibs-plist-read-ints", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistParser._read_ints"]
+    statement := "For every n and size, _read_ints(n, size) splits the next size * n bytes into n big-endian integers of size bytes, for every size other than 0 (struct for 1, 2, 4, 8; int.from_bytes for 3, 5-7 and above 8); size 0 and a short read raise InvalidFileException."
+    source := "Lib/plistlib.py:534-542", status := .proven
+    prop := ``Plist.ReadIntsSpec, thm := some ``Plist.readIntsSpec_proven }
+,
+  { id := "textlibs-plist-get-size", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistParser._get_size"]
+    statement := "_get_size(tokenL) returns tokenL unless it is 0xF; for 0xF it raises IndexError at the end of the file, otherwise keeps the low two bits of the marker byte (& 0x3, whatever its high bits) and reads a big-endian size of 1, 2, 4 or 8 bytes, raising struct.error('unpack requires a buffer of N bytes') when fewer are left."
+    source := "Lib/plistlib.py:512-520", status := .proven
+    prop := ``Plist.GetSizeSpec, thm := some ``Plist.getSizeSpec_proven }
+,
+  { id := "textlibs-plist-read-token", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistParser._read_object"]
+    statement := "After the token byte, _read_object gives None, False, True and b'' for 0x00, 0x08, 0x09, 0x0f; for 0x1L the int of the next 1 << L bytes (signed from L = 3, silently fewer at the end of the file); for 0x22 the float32 through PyFloat_Unpack4 and for 0x23 the float64, with struct.error when short; for 0x33 datetime(2001, 1, 1) + timedelta(seconds=f) of the double f; for 0x8L UID of the next 1 + L bytes; and InvalidFileException for every token outside these and the sized 0x4, 0x5, 0x6, 0xA, 0xD families."
+    source := "Lib/plistlib.py:560-613, :640-641", status := .proven
+    prop := ``Plist.ReadTokenSpec, thm := some ``Plist.readTokenSpec_proven }
+,
+  { id := "textlibs-plist-load-dispatch", pyFile := "Lib/plistlib.py"
+    pyFns := ["load", "loads"]
+    statement := "With fmt=None, load raises InvalidFileException for every header that is neither XML nor bplist00 and hands every XML header to the XML parser; for any other hashable object not equal to a format _FORMATS[fmt] raises KeyError(fmt) (an fmt made equal to a format by its own __eq__/__hash__ is a stated scope limit), and for an unhashable one the frozendict lookup's TypeError(\"cannot use '<type>' as a frozendict key (<hash error>)\"); fmt=FMT_XML always goes to the XML parser and fmt=FMT_BINARY to the binary parser."
+    source := "Lib/plistlib.py:898-913", status := .proven
+    prop := ``Plist.LoadDispatchSpec, thm := some ``Plist.loadDispatchSpec_proven }
+,
+  { id := "textlibs-plist-loads-str", pyFile := "Lib/plistlib.py"
+    pyFns := ["loads"]
+    statement := "loads(s) for a str s raises TypeError('value must be bytes-like object when fmt is FMT_BINARY') with fmt=FMT_BINARY, and otherwise loads the UTF-8 encoding of s, propagating the UnicodeEncodeError of a lone surrogate."
+    source := "Lib/plistlib.py:920-926; Doc/library/plistlib.rst (data can be a string when fmt equals FMT_XML)", status := .proven
+    prop := ``Plist.LoadsStrSpec, thm := some ``Plist.loadsStrSpec_proven }
+,
+  { id := "textlibs-plist-write-succeeds", pyFile := "Lib/plistlib.py"
+    pyFns := ["dumps", "dump", "_BinaryPlistWriter.write", "_BinaryPlistWriter._flatten",
+      "_BinaryPlistWriter._getrefnum", "_BinaryPlistWriter._write_size", "_BinaryPlistWriter._write_object"]
+    statement := "With len(heap) + 8 frames, dumps(value, fmt=FMT_BINARY) returns bytes for every object graph (sharing and cycles included) of None, bools, ints in -2**63..2**64-1, floats, strs without lone surrogates, bytes, bytearrays, UIDs with data in 0..2**64-1, naive datetimes (with aware_datetime=False), lists, tuples, and dicts and frozendicts whose keys are all strs (or with skipkeys), whatever sort_keys."
+    source := "Doc/library/plistlib.rst (supported value types; TypeError and OverflowError are the documented failures)", status := .proven
+    prop := ``Plist.WriteSucceeds, thm := some ``Plist.writeSucceeds_proven
+    notes := "The frame bound comes from _flatten recursing only into objects it has not numbered (notSeen decreases). Together with BinaryRoundTrip this pins that _flatten numbers every element, dict keys and values included. Aware datetimes and naive ones with aware_datetime=True (local time) are not covered; subclasses of the builtin types are a scope limit." }
+,
+  { id := "textlibs-plist-write-errors", pyFile := "Lib/plistlib.py"
+    pyFns := ["dumps", "dump", "_BinaryPlistWriter._write_object", "_BinaryPlistWriter.write"]
+    statement := "dumps(w, fmt=FMT_BINARY) raises OverflowError(str(w)) for every int outside -2**63..2**64-1, ValueError('UIDs must be positive') for a UID with negative data and OverflowError('UID(d)') for data >= 2**64, TypeError(str(w)) for an unsupported object, UnicodeEncodeError for every str with a lone surrogate, TypeError(\"can't subtract offset-naive and offset-aware datetimes\") for an aware datetime without aware_datetime, and OverflowError('date value out of range') when an aware datetime's UTC time leaves the datetime range; dumps(value, fmt=f) raises ValueError('Unsupported format: %r') for fmt None or any other hashable object not equal to a format (an fmt made equal to FMT_XML by its own __eq__/__hash__ is a stated scope limit), and for an unhashable fmt the frozendict lookup's TypeError(\"cannot use '<type>' as a frozendict key (<hash error>)\") (another exception from __hash__ propagates); a dict root with a non-str key and skipkeys=False raises TypeError('keys must be strings') whatever sort_keys (:174-176 and :738-741); an aware datetime with aware_datetime=True (UTC offset 0, or a UTC time in range) is written as token 0x33 and the 8 bytes of the double nearest its UTC time in seconds since 2001-01-01, microseconds included; fmt=FMT_XML always goes to the XML writer; and a naive datetime alone is written as token 0x33 and the 8 bytes of the double nearest (value - datetime(2001, 1, 1)) in seconds, with the exact offset table and trailer."
+    source := "Doc/library/plistlib.rst (TypeError for unsupported types, OverflowError for unrepresentable ints); Lib/plistlib.py:788-791, :803, :808-815, :826, :832-843, :869, :934-935, :174-176, :738-741; Objects/dictobject.c:2442-2460", status := .proven
+    prop := ``Plist.WriteErrors, thm := some ``Plist.writeErrors_proven }
+,
+  { id := "textlibs-plist-date-whole-seconds", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistWriter._write_object", "_BinaryPlistParser._read_object"]
+    statement := "Every whole-second datetime in datetime.min..datetime.max survives the binary format: the float _write_object writes for it, read back by _read_object as datetime(2001, 1, 1) + timedelta(seconds=f), is the same instant: the naive wall time with aware_datetime=False, and the UTC time with aware_datetime=True for an aware datetime with a whole-second fixed offset whose UTC time is in range."
+    source := "Doc/library/plistlib.rst (datetime.datetime is supported; aware_datetime converts to UTC); Lib/plistlib.py:587-595, :808-815", status := .proven
+    prop := ``Plist.DateWholeSeconds, thm := some ``Plist.dateWholeSeconds_proven
+    notes := "Uses the exact model of timedelta(seconds=float) (accum, leftover rounding, microseconds_to_delta_ex) and the binary64 model. Datetimes with microseconds are not all kept: textlibs-plist-binary-datetime refutes the general round trip at datetime.max (InvalidFileException), and far from 2001 microseconds are lost. ReadTokenSpec ties token 0x33 to this computation." }
 ]
 
 end PyLean.TextLibs

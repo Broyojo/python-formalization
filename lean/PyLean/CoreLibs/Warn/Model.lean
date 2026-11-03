@@ -107,6 +107,63 @@ inductive Item where
   | list5 (f : Filter)
   | other (unpackErr : PyExc)
 
+/-- The base class of a builtin exception class (Objects/exceptions.c), by name: `except C:`
+catches `C` and its subclasses. Classes not listed (user classes) have no known base here. -/
+def excBase : String → Option String
+  | "BrokenPipeError" | "ConnectionAbortedError" | "ConnectionRefusedError" | "ConnectionResetError" =>
+    some "ConnectionError"
+  | "ConnectionError" | "BlockingIOError" | "ChildProcessError" | "FileExistsError" | "FileNotFoundError"
+  | "InterruptedError" | "IsADirectoryError" | "NotADirectoryError" | "PermissionError"
+  | "ProcessLookupError" | "TimeoutError" => some "OSError"
+  | "UnicodeDecodeError" | "UnicodeEncodeError" | "UnicodeTranslateError" => some "UnicodeError"
+  | "UnicodeError" => some "ValueError"
+  | "ModuleNotFoundError" | "ImportCycleError" => some "ImportError"
+  | "KeyError" | "IndexError" => some "LookupError"
+  | "OverflowError" | "ZeroDivisionError" | "FloatingPointError" => some "ArithmeticError"
+  | "RecursionError" | "NotImplementedError" | "PythonFinalizationError" => some "RuntimeError"
+  | "OSError" | "ValueError" | "ImportError" | "LookupError" | "ArithmeticError" | "RuntimeError"
+  | "TypeError" | "AttributeError" | "NameError" | "AssertionError" | "SystemError" | "Warning" =>
+    some "Exception"
+  | "UnboundLocalError" => some "NameError"
+  | "Exception" => some "BaseException"
+  | _ => none
+
+/-- Whether builtin class `c` is `base` or a subclass (the chains above are at most five long). -/
+def excIsA (c base : String) : Bool :=
+  let rec go : Nat → String → Bool
+    | 0, _ => false
+    | n + 1, k => k == base || match excBase k with
+      | some p => go n p
+      | none => false
+  go 6 c
+
+/-- The class relation `except` uses, over exception class names: `sub c b` is
+`PyType_IsSubtype(c, b)`, whether `b` is in `c.__mro__` (the test of `PyErr_GivenExceptionMatches`).
+The models take it as a parameter: the classes of the exceptions a callback raises are open (user
+classes, `io.UnsupportedOperation`, which is both an `OSError` and a `ValueError`, ...), and a
+metaclass `mro()` can drop intermediate bases, so for a non-builtin class the relation need not be
+transitive: a class whose `mro()` is `[cls, UnicodeEncodeError, BaseException, object]` is under
+`UnicodeEncodeError` but not under `ValueError`. -/
+structure Hier where
+  sub : String → String → Bool
+
+/-- A builtin class of the table (its MRO is fixed). -/
+def isBuiltinExc (c : String) : Bool := (excBase c).isSome || c == "BaseException"
+
+/-- What CPython guarantees of the relation: on a builtin class it is the builtin one, every
+builtin ancestor included (`excIsA`); a non-builtin class is unconstrained (no transitivity, no
+reflexivity: a custom `mro()` decides). -/
+def HierOk (H : Hier) : Prop :=
+  ∀ c b, isBuiltinExc c = true → H.sub c b = excIsA c b
+
+/-- The builtin classes alone (every other class unrelated to every base): one relation. -/
+def builtinHier : Hier := ⟨excIsA⟩
+
+theorem builtinHier_ok : HierOk builtinHier := fun _ _ _ => rfl
+
+/-- `except base:` for an exception, under the class relation `H`. -/
+def isA (H : Hier) (e : PyExc) (base : String) : Bool := H.sub e.className base
+
 /-- `warnings._showwarnmsg` and `warnings.WarningMessage` as the show step finds them: both there
 (`WarningMessage(...)` and the call of `_showwarnmsg` are callbacks that can raise),
 `_showwarnmsg` not callable, `_showwarnmsg` deleted, or `WarningMessage` deleted. -/
@@ -126,6 +183,8 @@ structure Env where
   matchFilename : Pat → String → Py Bool
   /-- the show step -/
   shw : ShowA
+  /-- the exception class relation (`PyType_IsSubtype`) -/
+  hier : Hier
 
 /-- `warnings.defaultaction`: a value, or deleted (C then uses the str it read last). -/
 inductive DfltV where
@@ -222,38 +281,6 @@ def noModAttr (a : String) : PyExc := .named "AttributeError" s!"module 'warning
 def unhashableErr (tp : String) : PyExc :=
   .typeError s!"cannot use '{tp}' as a set element (unhashable type: '{tp}')"
 
-/-- The base class of a builtin exception class (Objects/exceptions.c), by name: `except C:`
-catches `C` and its subclasses. Classes not listed (user classes) have no known base here. -/
-def excBase : String → Option String
-  | "BrokenPipeError" | "ConnectionAbortedError" | "ConnectionRefusedError" | "ConnectionResetError" =>
-    some "ConnectionError"
-  | "ConnectionError" | "BlockingIOError" | "ChildProcessError" | "FileExistsError" | "FileNotFoundError"
-  | "InterruptedError" | "IsADirectoryError" | "NotADirectoryError" | "PermissionError"
-  | "ProcessLookupError" | "TimeoutError" => some "OSError"
-  | "UnicodeDecodeError" | "UnicodeEncodeError" | "UnicodeTranslateError" => some "UnicodeError"
-  | "UnicodeError" => some "ValueError"
-  | "ModuleNotFoundError" => some "ImportError"
-  | "KeyError" | "IndexError" => some "LookupError"
-  | "OverflowError" | "ZeroDivisionError" | "FloatingPointError" => some "ArithmeticError"
-  | "RecursionError" | "NotImplementedError" | "PythonFinalizationError" => some "RuntimeError"
-  | "OSError" | "ValueError" | "ImportError" | "LookupError" | "ArithmeticError" | "RuntimeError"
-  | "TypeError" | "AttributeError" | "NameError" | "AssertionError" | "SystemError" | "Warning" =>
-    some "Exception"
-  | "UnboundLocalError" => some "NameError"
-  | _ => none
-
-/-- Whether class `c` is `base` or a subclass (the chains above are at most five long). -/
-def excIsA (c base : String) : Bool :=
-  let rec go : Nat → String → Bool
-    | 0, _ => false
-    | n + 1, k => k == base || match excBase k with
-      | some p => go n p
-      | none => false
-  go 6 c
-
-/-- `except base:` for an exception. -/
-def isA (e : PyExc) (base : String) : Bool := excIsA e.className base
-
 /-- An attribute of the `warnings` module as `PyObject_GetOptionalAttr` finds it: there, missing
 (an `AttributeError`, which it clears), or a lookup that raises something else. -/
 inductive AttrR (α : Type) where
@@ -262,10 +289,10 @@ inductive AttrR (α : Type) where
   | raises (e : PyExc)
 
 /-- `get_warnings_attr(interp, attr, try_import)`, _warnings.c:224-256: with `try_import` (and the
-interpreter not finalizing) `import warnings`, whose `ImportError` (or subclass) is cleared;
+interpreter not finalizing) `import warnings`, whose error is cleared when its class has `ImportError` in its MRO;
 otherwise `sys.modules['warnings']`, which may be absent; then the attribute. `.ok none` is `NULL`
 with no error set. -/
-def getWarningsAttr {α : Type} (tryImport : Bool) (importW : Py Unit) (inSysModules : Bool)
+def getWarningsAttr {α : Type} (H : Hier) (tryImport : Bool) (importW : Py Unit) (inSysModules : Bool)
     (attr : AttrR α) : Py (Option α) :=
   let lookup : Py (Option α) := match attr with
     | .found a => .ok (some a)
@@ -273,7 +300,7 @@ def getWarningsAttr {α : Type} (tryImport : Bool) (importW : Py Unit) (inSysMod
     | .raises e => .error e
   if tryImport then
     match importW with
-    | .error e => if isA e "ImportError" then .ok none else .error e
+    | .error e => if isA H e "ImportError" then .ok none else .error e
     | .ok () => lookup
   else if inSysModules then lookup else .ok none
 
@@ -295,7 +322,7 @@ def pyShow (E : Env) (c : Call) : Py Bool := do
 raises, else `WarningMessage(...)` and the call. -/
 def cShow (E : Env) : Py Bool :=
   -- `GET_WARNINGS_ATTR(interp, _showwarnmsg, 1)`, :749
-  match getWarningsAttr true (.ok ()) true (match E.shw with | .deleted => .missing | _ => .found ()) with
+  match getWarningsAttr E.hier true (.ok ()) true (match E.shw with | .deleted => .missing | _ => .found ()) with
   | .error e => .error e
   | .ok none => .ok true
   | .ok (some ()) =>
@@ -303,7 +330,7 @@ def cShow (E : Env) : Py Bool :=
     | .noncallable _ => .error (.typeError "warnings._showwarnmsg() must be set to a callable")
     | s =>
       -- `GET_WARNINGS_ATTR(interp, WarningMessage, 0)`, :763
-      match getWarningsAttr false (.ok ()) true (match s with | .noWM => .missing | _ => .found ()) with
+      match getWarningsAttr E.hier false (.ok ()) true (match s with | .noWM => .missing | _ => .found ()) with
       | .error e => .error e
       | .ok none => .error (.named "RuntimeError" "unable to get warnings.WarningMessage")
       | .ok (some ()) =>
@@ -524,9 +551,9 @@ def cListName (K : WCfg) : Py String :=
   else .ok (if K.ctx then "_warnings_context _filters" else "filters")
 
 /-- `get_default_action`, :430-455: a deleted `defaultaction` falls back to the str read last. -/
-def cDefault (K : WCfg) : Py String :=
+def cDefault (H : Hier) (K : WCfg) : Py String :=
   -- `GET_WARNINGS_ATTR(interp, defaultaction, 0)`, :437
-  match getWarningsAttr false (.ok ()) true (match K.dflt with | .deleted _ => .missing | .val a => .found a) with
+  match getWarningsAttr H false (.ok ()) true (match K.dflt with | .deleted _ => .missing | .val a => .found a) with
   | .error e => .error e
   | .ok none => match K.dflt with
     | .deleted s => .ok s
@@ -647,7 +674,7 @@ def cWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (
         -- error (`PyErr_Occurred`, :439-441)
         | .none => match pend0, K.dflt with
           | true, .deleted _ => .error longOverflow
-          | _, _ => cDefault K
+          | _, _ => cDefault E.hier K
       match act with
       | .error e => ⟨.error e, reg1, once⟩
       | .ok a =>

@@ -30,7 +30,7 @@ raises `RuntimeError` and changes nothing; whatever the block does to the filter
 `__exit__` succeeds, `_get_filters()` is what it was before, and `showwarning` (and without
 contexts `warnings.filters` and `_showwarnmsg_impl`) are back. -/
 def CatchRestores : Prop :=
-  ∀ (useCtx : Bool) (name : String) (record : Bool) (om : Option String) (action : Option ActA)
+  ∀ (useCtx : Bool) (name : String) (record : Bool) (om : Nat) (action : Option ActA)
     (cat : Nat) (ln : IntA) (ap : Bool) (st : MState) (f : List Elem → List Elem) (sw : Fn),
     Fresh st → st.showwarning = some sw → (useCtx = false → st.filters ≠ none) →
     (∀ a, action = some a → ∃ it, sfPrep a cat ln = .ok it) →
@@ -38,7 +38,9 @@ def CatchRestores : Prop :=
     ∃ cw' st1 log, cwEnter useCtx (cwInit name record om action cat ln ap) st = (cw', st1, .ok log) ∧
       (action = none → getFilters useCtx st1 = getFilters useCtx st ∧
         ctxFilters st1 (getContext useCtx st1) ≠ ctxFilters st (getContext useCtx st)) ∧
-      cwEnter useCtx cw' st1 = (cw', st1, .error (.named "RuntimeError" s!"Cannot enter {cwRepr cw'} twice")) ∧
+      cwEnter useCtx cw' st1 = (cw', st1, match cwRepr cw' st.sysWarnings st.modRepr with
+        | .ok r => .error (.named "RuntimeError" s!"Cannot enter {r} twice")
+        | .error e => .error e) ∧
       ∃ st3, cwExit useCtx cw' (editFilters useCtx f st1) = (st3, .ok ()) ∧
         getFilters useCtx st3 = getFilters useCtx st ∧ st3.showwarning = some sw ∧
         (useCtx = false → st3.showImpl = st.showImpl ∧ st3.filters = st.filters) ∧
@@ -54,7 +56,7 @@ set_option maxHeartbeats 2000000 in
 theorem catchRestores_proven : CatchRestores := by
   intro useCtx name record om action cat ln ap st f sw hfr hsw hfl hact htot
   obtain ⟨lists, logs, next, filters, showwarning, showImpl, formatwarning, ver, ctxv, ctxs, stderr,
-    out, tuples⟩ := st
+    out, tuples, hier, sysW, modR⟩ := st
   obtain ⟨hf1, hf2⟩ := hfr
   simp only at hsw hf1 hf2 hfl htot
   subst hsw
@@ -64,7 +66,7 @@ theorem catchRestores_proven : CatchRestores := by
     have hrn : r < next := hf1 r rfl
     have hne : r ≠ next := Nat.ne_of_lt hrn
     have hgf : getFilters false ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv,
-        ctxs, stderr, out, tuples⟩ = lists r := rfl
+        ctxs, stderr, out, tuples, hier, sysW, modR⟩ = lists r := rfl
     rw [hgf] at htot ⊢
     cases action with
     | none =>
@@ -74,46 +76,46 @@ theorem catchRestores_proven : CatchRestores := by
     | some a =>
       obtain ⟨it, hit⟩ := hact a rfl
       have hsf : ∀ (st' : MState), st'.lists next = lists r → st'.filters = some next →
-          simplefilter a cat ln ap (curFState false st') =
+          simplefilter hier a cat ln ap (curFState false st') =
             .ok ⟨.list (addSpec it ap (lists r)), st'.ver + 1⟩ := by
         intro st' hl hfs
         simp [simplefilter, hit, curFState, getContext, ctxFilters, hfs, hl, bind, Except.bind,
-          addFilter_list it ap (lists r) st'.ver (htot it)]
+          addFilter_list _ it ap (lists r) st'.ver (htot it)]
       cases record
-      · have hE := (show cwEnter false (cwInit name false om (some a) cat ln ap) ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = _ from by
+      · have hE := (show cwEnter false (cwInit name false om (some a) cat ln ap) ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = _ from by
           simp only [cwEnter, cwInit, Option.map_some, Bool.false_eq_true, if_false]
           rw [hsf _ (by simp [upd]) rfl])
         rw [hE]
         refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
         simp [getFilters, getContext, ctxFilters, editFilters, putFState, upd, hne]
-      · have hE := (show cwEnter false (cwInit name true om (some a) cat ln ap) ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = _ from by
+      · have hE := (show cwEnter false (cwInit name true om (some a) cat ln ap) ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = _ from by
           simp only [cwEnter, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false]
           rw [hsf _ (by simp [upd]) rfl])
         rw [hE]
         refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
         simp [getFilters, getContext, ctxFilters, editFilters, putFState, upd, hne]
   · -- with contexts: the old context's filters, and the facts the exit needs about them
-    have hold : ∀ r, ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ (getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩) = some r → r < next := by
+    have hold : ∀ r, ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ (getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩) = some r → r < next := by
       intro r hr
       cases ctxv with
       | ctx c0 =>
         simp only [ctxFilters, getContext] at hr
         rw [← Option.some.inj hr]; exact (hf2 c0 rfl).2
       | _ => simp only [ctxFilters, getContext] at hr; exact hf1 r hr
-    have hctx : ∀ c0, getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = .ctx c0 → c0 < next := by
+    have hctx : ∀ c0, getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = .ctx c0 → c0 < next := by
       intro c0 h
       cases ctxv with
       | ctx c1 => simp only [getContext] at h; injection h with h; subst h; exact (hf2 c1 rfl).1
       | _ => simp [getContext] at h
-    generalize hO : getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = old at hold hctx
+    generalize hO : getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = old at hold hctx
     have hnu : old ≠ .unset := by rw [← hO]; cases ctxv <;> simp [getContext]
-    have hgf : getFilters true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old with | some r => lists r | none => []) := by
+    have hgf : getFilters true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old with | some r => lists r | none => []) := by
       simp only [getFilters, hO]; rfl
     rw [hgf] at htot ⊢
     -- the old context as seen after the exit, whatever happened in between below `next`
     have hback : ∀ (st3 : MState), st3.ctxv = old → st3.filters = filters →
         (∀ i, i < next → st3.lists i = lists i) → (∀ c, c < next → st3.ctxs c = ctxs c) →
-        getFilters true st3 = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old with | some r => lists r | none => []) := by
+        getFilters true st3 = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old with | some r => lists r | none => []) := by
       intro st3 hv hfs hl hc
       have hg3 : getContext true st3 = old := by
         simp only [getContext, hv]; cases old <;> simp_all
@@ -130,11 +132,11 @@ theorem catchRestores_proven : CatchRestores := by
         simp only [ctxFilters, hc c0 hc0]
         exact hl _ (hold _ (by simp [ctxFilters]))
     have hsf : ∀ a it (st' : MState), sfPrep a cat ln = .ok it →
-        ctxFilters st' (getContext true st') = some next → st'.lists next = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old with | some r => lists r | none => []) →
-        simplefilter a cat ln ap (curFState true st') =
-          .ok ⟨.list (addSpec it ap (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old with | some r => lists r | none => [])), st'.ver + 1⟩ := by
+        ctxFilters st' (getContext true st') = some next → st'.lists next = (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old with | some r => lists r | none => []) →
+        simplefilter hier a cat ln ap (curFState true st') =
+          .ok ⟨.list (addSpec it ap (match ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old with | some r => lists r | none => [])), st'.ver + 1⟩ := by
       intro a it st' hit hc hl
-      simp [simplefilter, hit, curFState, hc, hl, bind, Except.bind, addFilter_list it ap _ st'.ver (htot it)]
+      simp [simplefilter, hit, curFState, hc, hl, bind, Except.bind, addFilter_list _ it ap _ st'.ver (htot it)]
     cases action with
     | none =>
       cases record
@@ -142,7 +144,7 @@ theorem catchRestores_proven : CatchRestores := by
         · simp [getFilters, getContext, ctxFilters, newContext, upd, cwInit]
           rw [← hO]; rfl
         · rw [hO]
-          generalize hR : ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old = R
+          generalize hR : ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old = R
           cases R with
           | none => simp [getContext, ctxFilters, newContext, upd, cwInit]
           | some r =>
@@ -163,7 +165,7 @@ theorem catchRestores_proven : CatchRestores := by
         · simp [getFilters, getContext, ctxFilters, newContext, upd, cwInit]
           rw [← hO]; rfl
         · rw [hO]
-          generalize hR : ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ old = R
+          generalize hR : ctxFilters ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ old = R
           cases R with
           | none => simp [getContext, ctxFilters, newContext, upd, cwInit]
           | some r =>
@@ -183,8 +185,8 @@ theorem catchRestores_proven : CatchRestores := by
     | some a =>
       obtain ⟨it, hit⟩ := hact a rfl
       cases record
-      · have hE := (show cwEnter true (cwInit name false om (some a) cat ln ap) ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = _ from by
-          simp only [cwEnter, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false]
+      · have hE := (show cwEnter true (cwInit name false om (some a) cat ln ap) ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = _ from by
+          simp only [cwEnter, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false, newContext]
           rewrite [hsf a it _ hit (by simp [getContext, ctxFilters, newContext, upd])
             (by simp only [newContext, upd, if_true]; rw [hO]; try rfl)]
           simp only [putFState, getContext, ctxFilters, upd, if_true]
@@ -201,8 +203,8 @@ theorem catchRestores_proven : CatchRestores := by
         · intro c hc
           have h1 : c ≠ next + 1 := by omega
           simp [cwExit, editFilters, putFState, getContext, ctxFilters, newContext, upd, h1]
-      · have hE := (show cwEnter true (cwInit name true om (some a) cat ln ap) ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples⟩ = _ from by
-          simp only [cwEnter, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false]
+      · have hE := (show cwEnter true (cwInit name true om (some a) cat ln ap) ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = _ from by
+          simp only [cwEnter, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false, newContext]
           rewrite [hsf a it _ hit (by simp [getContext, ctxFilters, newContext, upd])
             (by simp only [newContext, upd, if_true]; rw [hO]; try rfl)]
           simp only [putFState, getContext, ctxFilters, upd, if_true]
@@ -232,9 +234,9 @@ def EnterAtomic : Prop :=
 
 def st0 : MState :=
   MState.mk (fun _ => []) (fun _ => []) 1 (some 0) (some .showOrig) .implOrig (some .fmtOrig) 0 .unset
-    (fun _ => ⟨0, none⟩) (some (.ok ())) [] (fun _ => false)
+    (fun _ => ⟨0, none⟩) (some (.ok ())) [] (fun _ => false) builtinHier (some 0) (fun _ => "<W>")
 
-def cwBogus : CW := cwInit "catch_warnings" true none (some (.str "bogus")) 0 (.int 0) false
+def cwBogus : CW := cwInit "catch_warnings" true 0 (some (.str "bogus")) 0 (.int 0) false
 
 theorem enterAtomic_refuted : ¬ EnterAtomic := fun h =>
   refute (h false cwBogus st0 (.valueError "invalid action: 'bogus'") (by rfl)).1
@@ -260,7 +262,9 @@ theorem recordCaptures_proven : RecordCaptures := by
   intro useCtx cw st cw' st1 l m hrec himpl hen hnf
   unfold cwEnter at hen
   split at hen
-  · simp at hen
+  · simp only [Prod.mk.injEq] at hen
+    obtain ⟨_, _, h3⟩ := hen
+    split at h3 <;> simp at h3
   · cases useCtx
     · cases hf : st.filters with
       | none => simp [hf] at hen
@@ -291,21 +295,28 @@ theorem recordCaptures_proven : RecordCaptures := by
 /-- `_showwarnmsg` (:217-233) and `_showwarnmsg_impl` (:133-150): a replaced `showwarning` is
 called instead of the implementation, and an exception it raises propagates (:230-231); a
 non-callable one raises `TypeError`; the original or a deleted `showwarning` goes to
-`_showwarnmsg_impl`, which outside record mode writes the text to `sys.stderr`: lost when
-`sys.stderr` is `None` or the write raises `OSError` or a subclass (`except OSError`, :146-150),
-written when it succeeds, and any other exception from the write propagates. -/
+`_showwarnmsg_impl`, which outside record mode formats the text (a replaced `formatwarning` that
+raises propagates, :145) and writes it to `sys.stderr`: lost when `sys.stderr` is `None` or the
+write raises an exception of a class `c` with `st.hier.sub c "OSError"`, that is with `OSError` in
+its MRO (`except OSError`, :146-150; so `BrokenPipeError`, `io.UnsupportedOperation`, a user class
+whose MRO contains `OSError`), written when it succeeds, and any other exception from the write
+propagates (a class whose custom `mro()` leaves `OSError` out included). -/
 def ShowDispatch : Prop :=
   ∀ (useCtx : Bool) (m : Nat) (st : MState),
     (∀ i, st.showwarning = some (.user i) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.hook i] }) ∧
     (∀ i e, st.showwarning = some (.userRaises i e) → showwarnmsg useCtx m st = .error e) ∧
     (st.showwarning = some .noncallable → ∃ e, showwarnmsg useCtx m st = .error e ∧ e.className = "TypeError") ∧
     ((st.showwarning = some .showOrig ∨ st.showwarning = none) → st.showImpl = .implOrig →
-      ctxLog st (getContext useCtx st) = none → st.formatwarning = some .fmtOrig →
+      ctxLog st (getContext useCtx st) = none →
       (st.stderr = none → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
-      (st.stderr = some (.ok ()) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.written] }) ∧
-      (∀ e, st.stderr = some (.error e) → isA e "OSError" = true →
-        showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
-      (∀ e, st.stderr = some (.error e) → isA e "OSError" = false → showwarnmsg useCtx m st = .error e))
+      (∀ i e w, st.stderr = some w → st.formatwarning = some (.userRaises i e) →
+        showwarnmsg useCtx m st = .error e) ∧
+      (st.formatwarning = some .fmtOrig →
+        (st.stderr = some (.ok ()) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.written] }) ∧
+        (∀ e, st.stderr = some (.error e) → isA st.hier e "OSError" = true →
+          showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
+        (∀ e, st.stderr = some (.error e) → isA st.hier e "OSError" = false →
+          showwarnmsg useCtx m st = .error e)))
 
 theorem showDispatch_proven : ShowDispatch := by
   intro useCtx m st
@@ -313,18 +324,23 @@ theorem showDispatch_proven : ShowDispatch := by
   · intro i h; simp [showwarnmsg, h]
   · intro i e h; simp [showwarnmsg, h]
   · intro h; exact ⟨_, by simp [showwarnmsg, h]; rfl, rfl⟩
-  · intro hsw himpl hlog hfmt
+  · intro hsw himpl hlog
     have hcall : showwarnmsg useCtx m st = writeOut st := by
       rcases hsw with h | h <;> simp [showwarnmsg, h, callImpl, himpl, showImplOrig, hlog]
     rw [hcall]
-    refine ⟨?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · intro h; simp [writeOut, h]
-    · intro h; simp [writeOut, h, hfmt]
-    · intro e h he; simp [writeOut, h, hfmt, he]
-    · intro e h he; simp [writeOut, h, hfmt, he]
+    · intro i e w h hf; simp [writeOut, h, hf]
+    · intro hfmt
+      refine ⟨?_, ?_, ?_⟩
+      · intro h; simp [writeOut, h, hfmt]
+      · intro e h he; simp [writeOut, h, hfmt, he]
+      · intro e h he; simp [writeOut, h, hfmt, he]
 
-/-- `BrokenPipeError` is an `OSError`: a `sys.stderr` whose `write` raises it loses the warning. -/
-theorem brokenPipe_isOSError : isA (.named "BrokenPipeError" "x") "OSError" = true := by decide
+/-- In every relation CPython can have, `BrokenPipeError` is an `OSError`: a `sys.stderr` whose
+`write` raises it loses the warning. -/
+theorem brokenPipe_isOSError (H : Hier) (h : HierOk H) : isA H (.named "BrokenPipeError" "x") "OSError" = true :=
+  (h "BrokenPipeError" "OSError" (by decide)).trans (by decide)
 
 /-! ## A nested `catch_warnings` inside a recording one -/
 
@@ -335,7 +351,7 @@ in both modes: with contexts `_Context.copy` passes the log on (:59-60); without
 inner `catch_warnings` with no action and no record that enters, and every warning shown through
 `_showwarnmsg` then. -/
 def NestedRecord : Prop :=
-  ∀ (useCtx : Bool) (cw : CW) (st : MState) cw' st1 l (name : String) (om : Option String) cat ln ap
+  ∀ (useCtx : Bool) (cw : CW) (st : MState) cw' st1 l (name : String) (om : Nat) cat ln ap
     (m : Nat),
     cw.record = true → (useCtx = true → st.showImpl = .implOrig) → cw.filter = none →
     cwEnter useCtx cw st = (cw', st1, .ok (some l)) →
@@ -346,7 +362,9 @@ theorem nestedRecord_proven : NestedRecord := by
   intro useCtx cw st cw' st1 l name om cat ln ap m hrec himpl hnf hen
   unfold cwEnter at hen
   split at hen
-  · simp at hen
+  · simp only [Prod.mk.injEq] at hen
+    obtain ⟨_, _, h3⟩ := hen
+    split at h3 <;> simp at h3
   · cases useCtx
     · cases hf : st.filters with
       | none => simp [hf] at hen
@@ -375,18 +393,41 @@ theorem nestedRecord_proven : NestedRecord := by
 
 /-! ## `__exit__` of an object never entered -/
 
-/-- `__exit__` of a `catch_warnings` that was never entered raises `RuntimeError` naming it
-(:728-729) and changes nothing, in both modes; its `repr` (:689-696) is the class name with
-`record=True` when recording (the module is the `warnings` module). -/
+/-- `catch_warnings.__repr__` (:689-696), for every `catch_warnings` whose `_module` is `md`: with
+`sys.modules['warnings']` missing it raises `KeyError` (:693); with it there, the args are
+`record=True` when recording and `module=<repr>` exactly when `md` is not that module, tested
+when `repr` runs. -/
+def ReprSpec : Prop :=
+  ∀ (name : String) (record : Bool) (md : Nat) action cat ln ap (mr : Nat → String),
+    let cw := cwInit name record md action cat ln ap
+    cwRepr cw none mr = .error (.keyError "'warnings'") ∧
+    cwRepr cw (some md) mr = .ok s!"{name}({if record then "record=True" else ""})" ∧
+    (∀ w, w ≠ md → cwRepr cw (some w) mr =
+      .ok s!"{name}({if record then s!"record=True, module={mr md}" else s!"module={mr md}"})")
+
+theorem reprSpec_proven : ReprSpec := by
+  intro name record md action cat ln ap mr
+  refine ⟨rfl, ?_, ?_⟩
+  · cases record <;> simp only [cwRepr, cwInit, ite_true, Bool.false_eq_true, if_false, List.append_nil,
+      List.nil_append] <;> rfl
+  · intro w hw
+    have : md ≠ w := fun h => hw h.symm
+    cases record <;> simp only [cwRepr, cwInit, this, ite_true, ite_false, if_false, Bool.false_eq_true,
+      List.nil_append, List.singleton_append] <;> rfl
+
+/-- `__exit__` of a `catch_warnings` that was never entered raises `RuntimeError` naming it by its
+`repr` (:728-729; a `KeyError` from that `repr` propagates instead) and changes nothing, in both
+modes. -/
 def ExitNotEntered : Prop :=
-  ∀ (useCtx : Bool) (name : String) (record : Bool) (action : Option ActA) cat ln ap (st : MState),
-    cwExit useCtx (cwInit name record none action cat ln ap) st =
-      (st, .error (.named "RuntimeError"
-        s!"Cannot exit {s!"{name}({if record then "record=True" else ""})"} without entering first"))
+  ∀ (useCtx : Bool) (name : String) (record : Bool) (md : Nat) (action : Option ActA) cat ln ap (st : MState),
+    cwExit useCtx (cwInit name record md action cat ln ap) st =
+      (st, match cwRepr (cwInit name record md action cat ln ap) st.sysWarnings st.modRepr with
+        | .ok r => .error (.named "RuntimeError" s!"Cannot exit {r} without entering first")
+        | .error e => .error e)
 
 theorem exitNotEntered_proven : ExitNotEntered := by
-  intro useCtx name record action cat ln ap st
-  cases record <;> rfl
+  intro useCtx name record md action cat ln ap st
+  rfl
 
 /-! ## The list C searches against `_get_filters()` -/
 

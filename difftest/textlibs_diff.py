@@ -4986,6 +4986,492 @@ class EmailFramesArea:
         return {"ok": {"t": email_tok_j(t), "rest": cps(rest), "s": s, "c": cont}}
 
 
+# ---- plist -----------------------------------------------------------------
+
+import datetime as _pl_dt  # noqa: E402
+import plistlib  # noqa: E402
+
+PL_EPOCH = _pl_dt.datetime(2001, 1, 1)
+PL_US = _pl_dt.timedelta(microseconds=1)
+PL_FMT = {"none": None, "xml": plistlib.FMT_XML, "binary": plistlib.FMT_BINARY, "[]": [],
+          "'xml'": "xml", "3": 3, "1.5": 1.5}
+PL_DT_MIN = -(730485 * 86400 * 10**6)
+PL_DT_MAX = 2921574 * 86400 * 10**6 - 1
+PL_OTHER = {"set()": set, "1j": lambda: 1j, "Ellipsis": lambda: Ellipsis}
+
+
+def pl_depth():
+    f, d = sys._getframe(1), 0
+    while f is not None:
+        d += 1
+        f = f.f_back
+    return d
+
+
+def pl_enc(o):
+    memo = {}
+
+    def go(o):
+        if isinstance(o, (list, dict)):
+            if id(o) in memo:
+                return {"R": memo[id(o)]}
+            n = memo[id(o)] = len(memo)
+            if isinstance(o, list):
+                return {"L": n, "v": [go(x) for x in o]}
+            return {"D": n, "v": [[go(k), go(v)] for k, v in o.items()]}
+        if o is None:
+            return {"n": 0}
+        if isinstance(o, bool):
+            return {"b": o}
+        if isinstance(o, int):
+            return {"i": hex(o)}
+        if isinstance(o, float):
+            return {"f": float_bits(o)}
+        if isinstance(o, _pl_dt.datetime):
+            return {"t": (o.replace(tzinfo=None) - PL_EPOCH) // PL_US, "a": o.tzinfo is not None}
+        if isinstance(o, bytes):
+            return {"y": list(o)}
+        if isinstance(o, str):
+            return {"s": cps(o)}
+        if isinstance(o, plistlib.UID):
+            return {"u": o.data}
+        raise TypeError(type(o))
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(100000)
+    try:
+        return go(o)
+    finally:
+        sys.setrecursionlimit(old)
+
+
+def pl_build(h):
+    objs = [None] * len(h)
+    for i, c in enumerate(h):
+        if "b" in c:
+            objs[i] = c["b"]
+        elif "i" in c:
+            objs[i] = c["i"]
+        elif "f" in c:
+            objs[i] = bits_float(c["f"])
+        elif "s" in c:
+            objs[i] = txt(c["s"])
+        elif "y" in c:
+            objs[i] = bytes(c["y"])
+        elif "ba" in c:
+            objs[i] = bytearray(c["ba"])
+        elif "t" in c:
+            tz = None if c.get("o") is None else _pl_dt.timezone(_pl_dt.timedelta(microseconds=c["o"]))
+            objs[i] = (PL_EPOCH + _pl_dt.timedelta(microseconds=c["t"])).replace(tzinfo=tz)
+        elif "u" in c:
+            u = plistlib.UID(0)
+            u.data = c["u"]
+            objs[i] = u
+        elif "l" in c:
+            objs[i] = []
+        elif "d" in c:
+            objs[i] = {}
+        elif "x" in c:
+            objs[i] = PL_OTHER[c["x"]]()
+    for i, c in enumerate(h):
+        if "tu" in c:
+            objs[i] = tuple(objs[j] for j in c["tu"])
+        elif "fd" in c:
+            objs[i] = frozendict((objs[k], objs[v]) for k, v in c["fd"])
+    for i, c in enumerate(h):
+        if "l" in c:
+            objs[i].extend(objs[j] for j in c["l"])
+        elif "d" in c:
+            for k, v in c["d"]:
+                objs[i][objs[k]] = objs[v]
+    return objs
+
+
+def pl_with_frames(r, thunk):
+    """Run `thunk()` called with `r` frames left (its own frame included)."""
+    def go():
+        d = pl_depth()
+        old = sys.getrecursionlimit()
+        sys.setrecursionlimit(d + r + 1)  # the lambda thunk is one more frame
+        try:
+            return ("ok", thunk())
+        except Exception as e:
+            return ("exc", e)
+        finally:
+            sys.setrecursionlimit(old)
+    return go()
+
+
+PL_INTS = [0, 1, 2, 14, 15, 16, 127, 128, 255, 256, 65535, 65536, 2**31 - 1, 2**31, 2**32 - 1, 2**32,
+           2**53, 2**63 - 1, 2**63, 2**64 - 1, 2**64, 2**65, -1, -2, -128, -129, -2**31, -2**63,
+           -2**63 - 1, -2**64]
+PL_UIDS = [0, 1, 255, 256, 2**16 - 1, 2**16, 2**32 - 1, 2**32, 2**63, 2**64 - 1, 2**64, -1]
+PL_STRS = ["", "a", "abc", "\xe9", "€", "\U0001f600", "a\U0001f600b", "\ud800", "x\udc00",
+           "a" * 14, "b" * 15, "c" * 16, "\xe9" * 15, "<&>", "key", "k2", "Z", "\x00", "\x7f"]
+PL_FLOATS = [0, 0x8000000000000000, 0x3ff0000000000000, 0x7ff0000000000000, 0xfff0000000000000,
+             0x7ff8000000000000, 0x7ff0000000000001, 0xfff8000000000123, 1, 0x000fffffffffffff,
+             0x7fefffffffffffff, 0x3fe0000000000000]
+
+
+def pl_date_double(r):
+    k = r.random()
+    if k < 0.2:
+        return float(r.randint(-63113904000, 252423993599))
+    if k < 0.4:
+        return r.randint(-10**10, 10**10) + r.choice([0.5e-6, 1.5e-6, 0.4999999e-6, 0.5000001e-6, 1e-7,
+                                                       -0.5e-6, 2.5e-6, r.random(), -r.random()])
+    if k < 0.5:
+        return r.uniform(-1e11, 1e11)
+    if k < 0.62:
+        return r.choice([PL_DT_MIN, PL_DT_MAX, PL_DT_MIN - 1, PL_DT_MAX + 1, PL_DT_MIN - 86400 * 10**6,
+                         -86400 * 10**6, 31 * 86400 * 10**6, 30 * 86400 * 10**6]) / 1e6 + r.choice([0, 1e-6, -1e-6, 0.5, -0.5])
+    if k < 0.75:
+        return r.choice([float("nan"), float("inf"), -float("inf"), 0.0, -0.0, 5e-324, -5e-324, 1e300,
+                         -1e300, 2.0**53, 1e16, 1e14, -1e14, 86399999999999.0 * 1000, 0.5e-6, 1.5e-6,
+                         -2.5e-6, 1e-6, 3e-7, 7e-7])
+    return bits_float(r.getrandbits(64))
+
+
+def pl_scalar(r):
+    k = r.random()
+    if k < 0.04:
+        return {"n": 0}
+    if k < 0.1:
+        return {"b": r.random() < 0.5}
+    if k < 0.3:
+        return {"i": r.choice(PL_INTS) if r.random() < 0.7 else r.randint(-2**70, 2**70)}
+    if k < 0.42:
+        return {"f": r.choice(PL_FLOATS) if r.random() < 0.6 else r.getrandbits(64)}
+    if k < 0.6:
+        s = r.choice(PL_STRS) if r.random() < 0.7 else "".join(
+            chr(r.choice([97, 0xe9, 0x20ac, 0x1f600, 0xd800, 0xdfff, 0x7f, 0x41])) for _ in range(r.randint(0, 20)))
+        return {"s": cps(s)}
+    if k < 0.7:
+        n = r.choice([0, 1, 3, 14, 15, 16, 255, 256]) if r.random() < 0.8 else r.randint(0, 40)
+        return {"y" if r.random() < 0.7 else "ba": [r.randrange(256) for _ in range(n)]}
+    if k < 0.85:
+        us = r.choice([0, 1, -1, 10**6, PL_DT_MIN, PL_DT_MAX, 500000, 1234567, -86400 * 10**6]) \
+            if r.random() < 0.5 else r.randint(PL_DT_MIN, PL_DT_MAX)
+        off = None if r.random() < 0.6 else r.choice([0, 3600 * 10**6, -3600 * 10**6, 1,
+                                                       86400 * 10**6 - 1, -(86400 * 10**6 - 1)])
+        return {"t": us, "o": off}
+    if k < 0.95:
+        return {"u": r.choice(PL_UIDS)}
+    x = r.choice(list(PL_OTHER))
+    return {"x": x, "ty": repr(type(PL_OTHER[x]()))}
+
+
+def pl_heap(r):
+    n = r.randint(1, 10) if r.random() < 0.85 else r.randint(10, 40)
+    h = []
+    pool = [pl_scalar(r) for _ in range(r.randint(1, 4))]
+    for i in range(n):
+        k = r.random()
+        if k < 0.5 and i > 0 or k < 0.15:
+            kind = r.choice(["l", "l", "d", "tu", "fd"])
+            m = r.randint(0, 5)
+            if kind in ("l", "d"):
+                refs = [r.randrange(n) for _ in range(m)]
+            else:
+                refs = [r.randrange(i) for _ in range(m)] if i > 0 else []
+                refs = [j for j in refs if "l" not in h[j] and "d" not in h[j] or True]
+            if kind in ("l", "tu"):
+                h.append({kind: refs})
+            else:
+                h.append({kind: refs})
+        else:
+            h.append(dict(r.choice(pool)) if r.random() < 0.3 else pl_scalar(r))
+    # dict items: distinct str keys (new cells) or distinct int / None keys
+    extra = []
+    for i, c in enumerate(h):
+        for kind in ("d", "fd"):
+            if kind in c:
+                refs = c[kind]
+                items, used = [], set()
+                for v in refs:
+                    if r.random() < 0.85 or kind == "fd":
+                        s = r.choice(PL_STRS[:7] + ["k" + str(r.randrange(30))])
+                        if ("s", s) in used:
+                            continue
+                        used.add(("s", s))
+                        extra.append({"s": cps(s)})
+                    else:
+                        kk = r.choice([None, 0, 1, 7, 2**70])
+                        if ("o", kk) in used:
+                            continue
+                        used.add(("o", kk))
+                        extra.append({"n": 0} if kk is None else {"i": kk})
+                    items.append([len(h) + len(extra) - 1, v])
+                c[kind] = items
+    h += extra
+    # tuples / frozendicts may only hold hashable-free-of-order children: make sure
+    # their children were built before them (lower index) or are mutable containers
+    for i, c in enumerate(h):
+        if "tu" in c:
+            c["tu"] = [j for j in c["tu"] if j < i]
+        if "fd" in c:
+            c["fd"] = [[k, v] for k, v in c["fd"] if v < i]
+    root = 0 if r.random() < 0.6 else r.randrange(len(h))
+    return h, root
+
+
+def pl_deep(r, depth, kind="l"):
+    h = []
+    for i in range(depth):
+        if kind == "l":
+            h.append({"l": [i + 1]})
+        else:
+            h.append({"d": [[depth + 1 + i, i + 1]]})
+    h.append(pl_scalar(r))
+    if kind != "l":
+        h += [{"s": cps("k")} for _ in range(depth)]
+    return h, 0
+
+
+def pl_dumps_case(r, fn="plist.dumps"):
+    k = r.random()
+    if k < 0.08:
+        depth = r.randint(1, 60)
+        h, root = pl_deep(r, depth, r.choice(["l", "d"]))
+        fr = r.randint(max(1, depth - 3), 2 * depth + 12)
+    else:
+        h, root = pl_heap(r)
+        fr = r.randint(1, 14) if r.random() < 0.1 else 400
+    fmt = "binary" if fn == "plist.rt" or r.random() < 0.95 else r.choice(["none", "'xml'", "3", "[]"])
+    aware = r.random() < 0.3
+    if aware:
+        # a naive datetime would go through local time: keep those within 1970..2037
+        for c in h:
+            if "t" in c and c.get("o") is None:
+                c["t"] = r.randint(-31 * 365 * 86400 * 10**6, 36 * 365 * 86400 * 10**6)
+    c = {"mod": "textlibs", "fn": fn, "h": h, "root": root, "fmt": fmt, "sort": r.random() < 0.7,
+         "skip": r.random() < 0.3, "aware": aware, "r": fr}
+    if fn == "plist.rt":
+        c["r2"] = fr if r.random() < 0.3 else 400
+    return c
+
+
+def pl_size_field(r, L, n):
+    """The size part of a token (low nibble L, or 0xF and an int object)."""
+    if n < 15 and r.random() < 0.8:
+        return n, b""
+    m = r.choice([0, 1, 2, 3]) if r.random() < 0.9 else r.randrange(4)
+    for mm in range(4):
+        if n < 1 << (8 << mm):
+            break
+    m = max(m, mm) if r.random() < 0.8 else m
+    marker = 0x10 | m if r.random() < 0.85 else r.randrange(256)
+    w = 1 << (marker & 3)
+    return 0xF, bytes([marker]) + (n % (1 << (8 * w))).to_bytes(w, "big")
+
+
+def pl_obj(r, nrefs, ref_size):
+    k = r.random()
+    rb = lambda n: bytes(r.randrange(256) for _ in range(n))
+    def ref():
+        x = r.randrange(nrefs) if r.random() < 0.93 else r.choice([nrefs, nrefs + 1, 2**(8 * max(ref_size, 1)) - 1])
+        return (x % (1 << (8 * ref_size))).to_bytes(ref_size, "big") if ref_size else b""
+    if k < 0.06:
+        return bytes([r.choice([0x00, 0x08, 0x09, 0x0f, 0x01, 0x0a, 0x0e])])
+    if k < 0.2:
+        L = r.choice([0, 1, 2, 3, 4]) if r.random() < 0.85 else r.randrange(16)
+        n = 1 << L
+        return bytes([0x10 | L]) + rb(n if r.random() < 0.9 else r.randrange(n + 1))
+    if k < 0.26:
+        t = r.choice([0x22, 0x23, 0x20, 0x21, 0x2f])
+        return bytes([t]) + (r.choice([b"\x7f\x80\x00\x01", b"\x7f\xc0\x00\x05", b"\xff\x80\x00\x00", b"\x00\x00\x00\x01"]) if t == 0x22 and r.random() < 0.3 else rb(4 if t == 0x22 else 8))
+    if k < 0.36:
+        t = 0x33 if r.random() < 0.9 else r.choice([0x30, 0x34])
+        return bytes([t]) + struct.pack(">d", pl_date_double(r))
+    if k < 0.46:
+        n = r.choice([0, 1, 5, 14, 15, 16, 300]) if r.random() < 0.8 else r.randrange(40)
+        L, ext = pl_size_field(r, 0, n)
+        return bytes([0x40 | L]) + ext + rb(n)
+    if k < 0.56:
+        n = r.choice([0, 1, 3, 14, 15, 16]) if r.random() < 0.8 else r.randrange(40)
+        L, ext = pl_size_field(r, 0, n)
+        body = bytes(r.choice([0x61, 0x41, 0x7f, 0x00, 0x80, 0xff]) if r.random() < 0.1 else r.randrange(0x20, 0x7f) for _ in range(n))
+        return bytes([0x50 | L]) + ext + body
+    if k < 0.64:
+        n = r.choice([0, 1, 2, 3, 15, 16]) if r.random() < 0.8 else r.randrange(20)
+        L, ext = pl_size_field(r, 0, n)
+        units = []
+        for _ in range(n):
+            u = r.choice([0x61, 0xe9, 0x20ac, 0xd83d, 0xde00, 0xdbff, 0xdc00, 0xfeff, 0xfffe])
+            units.append(u)
+        return bytes([0x60 | L]) + ext + b"".join(u.to_bytes(2, "big") for u in units)
+    if k < 0.7:
+        L = r.choice([0, 1, 3, 7]) if r.random() < 0.7 else r.randrange(16)
+        return bytes([0x80 | L]) + rb(1 + L if r.random() < 0.95 else r.randrange(2 + L))
+    if k < 0.85:
+        n = r.choice([0, 1, 2, 3]) if r.random() < 0.85 else r.choice([14, 15, 16])
+        L, ext = pl_size_field(r, 0, n)
+        return bytes([0xA0 | L]) + ext + b"".join(ref() for _ in range(n))
+    if k < 0.97:
+        n = r.choice([0, 1, 2, 3]) if r.random() < 0.9 else r.choice([15, 16])
+        L, ext = pl_size_field(r, 0, n)
+        return bytes([0xD0 | L]) + ext + b"".join(ref() for _ in range(2 * n))
+    return bytes([r.choice([0x70, 0x90, 0xB0, 0xC0, 0xE0, 0xF0, 0x7f, 0x24, 0x35])]) + rb(r.randrange(4))
+
+
+def pl_file(r):
+    """A binary plist built from random objects, its trailer fields chosen or mutated."""
+    nobj = r.randint(1, 8) if r.random() < 0.9 else r.randint(9, 30)
+    ref_size = r.choice([1, 1, 1, 2, 4, 8]) if r.random() < 0.85 else r.choice([0, 3, 5, 9])
+    objs = [pl_obj(r, nobj, ref_size) for _ in range(nobj)]
+    head = b"bplist00" if r.random() < 0.95 else bytes(r.randrange(256) for _ in range(8))
+    offsets, body = [], b""
+    for o in objs:
+        offsets.append(8 + len(body))
+        body += o
+    tbl = 8 + len(body)
+    offset_size = r.choice([1, 2, 4, 8]) if r.random() < 0.85 else r.choice([0, 3, 5, 9, 16])
+    if offset_size == 1 and tbl > 255:
+        offset_size = 2
+    if r.random() < 0.05:
+        offsets[r.randrange(nobj)] = r.choice([tbl, tbl + 40, 2**63, 2**64 - 1, 0])
+    table = b"".join((x % (1 << (8 * offset_size))).to_bytes(offset_size, "big") for x in offsets) if offset_size else b""
+    num, top = nobj, 0 if r.random() < 0.8 else r.randrange(nobj)
+    if r.random() < 0.05:
+        num = r.choice([0, nobj + 1, nobj - 1, 2**64 - 1, 2**40])
+    if r.random() < 0.04:
+        top = r.choice([nobj, 2**64 - 1])
+    if r.random() < 0.04:
+        tbl = r.choice([0, tbl + 1, tbl - 1, 2**63, 2**64 - 1, 2**63 - 1])
+    pad = bytes(6) if r.random() < 0.95 else bytes(r.randrange(256) for _ in range(6))
+    trailer = pad + bytes([offset_size % 256, ref_size % 256]) + struct.pack(">QQQ", num % 2**64, top % 2**64, tbl % 2**64)
+    data = head + body + table + trailer
+    k = r.random()
+    if k < 0.04:
+        data = data[:r.randrange(len(data) + 1)]
+    elif k < 0.08:
+        i = r.randrange(len(data))
+        data = data[:i] + bytes([r.randrange(256)]) + data[i + 1:]
+    elif k < 0.1:
+        data = data + bytes(r.randrange(256) for _ in range(r.randint(1, 5)))
+    return data
+
+
+def pl_deep_file(r):
+    """N nested arrays (or dicts) ending in a short string, as test_plistlib.test_deep_nesting."""
+    n = r.randint(1, 80)
+    kind = r.random()
+    chunks = []
+    for i in range(n):
+        if kind < 0.6:
+            chunks.append(b"\xa1" + (i + 1).to_bytes(2, "big"))
+        elif kind < 0.8:
+            chunks.append(b"\xd1" + (n + 1).to_bytes(2, "big") + (i + 1).to_bytes(2, "big"))
+        else:
+            chunks.append(b"\xa1" + (i if r.random() < 0.1 else i + 1).to_bytes(2, "big"))
+    chunks.append(b"\x54seed")
+    chunks.append(b"\x51k")
+    offsets, body = [], b""
+    for o in chunks:
+        offsets.append(8 + len(body))
+        body += o
+    tbl = 8 + len(body)
+    table = b"".join(x.to_bytes(4, "big") for x in offsets)
+    trailer = bytes(6) + bytes([4, 2]) + struct.pack(">QQQ", len(chunks), 0, tbl)
+    return b"bplist00" + body + table + trailer, n
+
+
+def pl_loads_case(r):
+    k = r.random()
+    fr = 400
+    if k < 0.25:
+        h, root = pl_heap(r)
+        objs = pl_build(h)
+        try:
+            data = plistlib.dumps(objs[root], fmt=plistlib.FMT_BINARY, skipkeys=True)
+        except Exception:
+            data = b"bplist00" + bytes(32)
+        if r.random() < 0.3:
+            i = r.randrange(len(data))
+            data = data[:i] + bytes([r.randrange(256)]) + data[i + 1:]
+    elif k < 0.85:
+        data = pl_file(r)
+    elif k < 0.93:
+        data, n = pl_deep_file(r)
+        fr = r.randint(max(1, n - 5), 2 * n + 15)
+    else:
+        data = r.choice([b"", b"bplist00", b"bplist00" + bytes(31), bytes(32), b"bplist0",
+                         bytes(r.randrange(256) for _ in range(r.randint(0, 50)))])
+        if data[:5] == b"<?xml" or data[:6] == b"<plist":
+            data = b"x" + data
+    if r.random() < 0.08:
+        fr = r.randint(1, 12)
+    fmt = "none" if r.random() < 0.7 else r.choice(["binary"] * 8 + ["'xml'", "3", "[]"])
+    if fmt == "none" and plistlib._is_fmt_xml(data[:32]):
+        fmt = "binary"
+    c = {"mod": "textlibs", "fn": "plist.loads", "fmt": fmt, "aware": r.random() < 0.3, "r": fr}
+    if r.random() < 0.05:
+        s = "".join(map(chr, data))
+        if r.random() < 0.3:
+            s += "\udc80"
+        c["s"] = cps(s)
+        if fmt == "none" and plistlib._is_fmt_xml(s.encode("utf-8", "surrogatepass")[:32]):
+            c["fmt"] = "binary"
+    else:
+        c["b"] = list(data)
+    return c
+
+
+def pl_detect_case(r):
+    pfx = r.choice([b"<?xml", b"<plist", b"<?xm", b"<pli", b"bplist00", b"bplist0", b""])
+    bom = r.choice([b"", b"", b"\xef\xbb\xbf", b"\xfe\xff", b"\xff\xfe", b"\xef\xbb", b"\xfe"])
+    enc = r.choice(["ascii", "utf-16-be", "utf-16-le"])
+    body = pfx.decode("ascii").encode(enc)
+    if r.random() < 0.2 and body:
+        body = body[:r.randrange(len(body))]
+    data = bom + body + bytes(r.randrange(256) for _ in range(r.randint(0, 6)))
+    return {"mod": "textlibs", "fn": "plist.detect", "b": list(data[:32])}
+
+
+@area("plist", 8)
+class PlistArea:
+    """plistlib's binary reader and writer and format detection (PlistModel.lean, PlistWrite.lean)."""
+
+    @classmethod
+    def gen(cls, r):
+        k = r.random()
+        if k < 0.5:
+            return pl_loads_case(r)
+        if k < 0.75:
+            return pl_dumps_case(r)
+        if k < 0.95:
+            return pl_dumps_case(r, "plist.rt")
+        return pl_detect_case(r)
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"]
+        if fn == "plist.detect":
+            b = bytes(c["b"])
+            return {"ok": [plistlib._is_fmt_xml(b), plistlib._is_fmt_binary(b)]}
+        if fn == "plist.loads":
+            arg = bytes(c["b"]) if "b" in c else txt(c["s"])
+            fmt = PL_FMT[c["fmt"]]
+            k, v = pl_with_frames(c["r"], lambda: plistlib.loads(arg, fmt=fmt, aware_datetime=c["aware"]))
+            if k == "exc":
+                return {"exc": type(v).__name__, "msg": str(v)}
+            return {"ok": pl_enc(v)}
+        objs = pl_build(c["h"])
+        root = objs[c["root"]]
+        fmt = PL_FMT[c["fmt"]]
+        k, v = pl_with_frames(c["r"], lambda: plistlib.dumps(
+            root, fmt=fmt, sort_keys=c["sort"], skipkeys=c["skip"], aware_datetime=c["aware"]))
+        if fn == "plist.dumps":
+            if k == "exc":
+                return {"exc": type(v).__name__, "msg": str(v)}
+            return {"ok": list(v)}
+        if k == "exc":
+            return {"ok": {"wexc": type(v).__name__}}
+        k, v = pl_with_frames(c["r2"], lambda: plistlib.loads(v, aware_datetime=c["aware"]))
+        if k == "exc":
+            return {"ok": {"exc": type(v).__name__, "msg": str(v)}}
+        return {"ok": {"ok": pl_enc(v)}}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

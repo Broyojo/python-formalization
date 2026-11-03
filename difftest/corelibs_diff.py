@@ -9853,6 +9853,32 @@ def warn_run_we(case):
     return warn_contextvars.copy_context().run(warn_run_we1, case)
 
 
+class warn_YMeta(type):
+    def mro(cls):
+        return [cls, UnicodeEncodeError, BaseException, object]
+
+
+class warn_Y(UnicodeEncodeError, metaclass=warn_YMeta):
+    """In UnicodeEncodeError's MRO but, by its metaclass, not under UnicodeError or ValueError."""
+
+    def __str__(self):
+        return "y"
+
+
+def warn_mk_y(*a):
+    return warn_Y("utf-8", "x", 0, 1, "r")
+
+
+warn_Y.__name__ = "Y"
+# `except Exception` does not catch a Y (its MRO leaves Exception out), so the harness catches both.
+warn_EXC = (Exception, warn_Y)
+
+# The Python twin's filters version starts at 1, where a registry version `True` (== 1) would encode
+# as "cur" or "stale" (the model's version is symbolic and large); start it above both.
+for _ in range(3):
+    warn_py._filters_mutated()
+
+
 def warn_run_we1(case):
     import linecache
     linecache.clearcache()
@@ -9929,7 +9955,7 @@ def warn_run_we1(case):
             ln = warn_LINES[ln[1]]
         mod.warn_explicit(case["text"], warn_CATS[case["cat"]], case["filename"], ln, **kw)
         out = ["ok", True]
-    except Exception as e:
+    except warn_EXC as e:
         msg = str(e)
         if isinstance(e, SystemError):
             msg = "~returned a result with an exception set"
@@ -9974,6 +10000,18 @@ import subprocess as warn_subprocess  # noqa: E402
 import os as warn_os  # noqa: E402
 
 
+class warn_MyOSError(OSError):
+    pass
+
+
+class warn_MyValueError(ValueError):
+    pass
+
+
+warn_MyOSError.__name__ = "MyOSError"
+warn_MyValueError.__name__ = "MyValueError"
+
+
 class warn_Other:
     """A filters-list element that is not a filter item; its `__eq__` gives `r`."""
 
@@ -9987,6 +10025,12 @@ class warn_Other:
             raise ValueError("eq")
         if self.r == "uerr":
             raise UnicodeError("eq")
+        if self.r == "unsup":
+            raise warn_io.UnsupportedOperation("eq")
+        if self.r == "myverr":
+            raise warn_MyValueError("eq")
+        if self.r == "yerr":
+            raise warn_mk_y()
         return self.r == "t"
 
     __hash__ = object.__hash__
@@ -10054,7 +10098,7 @@ warn_STRS = ["", "a", "x.*", "(", "a{4294967296}", "[", "__main__", "mod"]
 
 def warn_gen_elem(rng):
     if rng.random() < .15:
-        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise", "verr", "uerr"])]
+        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise", "verr", "uerr", "unsup", "myverr", "yerr"])]
     rx = (lambda ci: None if rng.random() < .6 else [rng.choice(["a", "x.*", "__main__"]), ci])
     return ["i", rng.choice(warn_ACTS), rx(True), rng.choice([0, 1, 3, 12]), rx(False), rng.choice([0, 0, 1, 2])]
 
@@ -10114,7 +10158,7 @@ def warn_res(thunk):
     try:
         thunk()
         return ["ok"]
-    except Exception as e:
+    except warn_EXC as e:
         return ["exc", type(e).__name__, str(e)]
 
 
@@ -10357,9 +10401,10 @@ def warn_enc_reg(g, cur):
 # The bottom frame of the thread: a function of its own file and globals, so the generated frames
 # and this one are the whole stack (the model's frame "<top>", line 3, globals k+2).
 warn_TOPG = {"__name__": "top"}
-exec(compile("def top(nxt, box, done):\n    try:\n        nxt()\n        box.append(['ok'])\n"
-             "    except Exception as e:\n        box.append(['exc', type(e).__name__, str(e)])\n"
+exec(compile("def top(nxt, box, done, E=None):\n    try:\n        nxt()\n        box.append(['ok'])\n"
+             "    except E as e:\n        box.append(['exc', type(e).__name__, str(e)])\n"
              "    finally:\n        done.release()\n", "<top>", "exec"), warn_TOPG)
+warn_TOPG["top"].__defaults__ = (warn_EXC,)
 
 
 def warn_run_call(case):
@@ -10434,6 +10479,11 @@ class warn_ErrFile:
         raise self.exc("write failed")
 
 
+import types as warn_types  # noqa: E402
+
+warn_OTHERMOD = warn_types.ModuleType("othermod")
+
+
 def warn_gen_ctx(rng):
     ops = []
     ncw = 0
@@ -10455,12 +10505,18 @@ def warn_gen_ctx(rng):
         elif r < .95:
             ops.append(["setshow", rng.choice(["orig", "user", "noncallable", "deleted", "userraise"])])
         else:
-            ops.append(["repr", rng.randrange(ncw)])
+            v = rng.choice(["ok", "ok", "nosys", "swap"])
+            if rng.random() < .5:
+                ops.append(["repr", rng.randrange(ncw), v])
+            else:
+                ops.append(["mrepr", rng.random() < .5, v])
     return {"fn": "warn.ctx", "use": rng.random() < .5,
             "filters": [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2]))],
             "show": rng.choice(["orig", "orig", "orig", "user", "noncallable", "deleted", "userraise"]),
             "impl": rng.choice(["orig", "orig", "orig", "user", "noncallable", "userraise"]),
-            "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr", "brokenpipe"]), "ops": ops}
+            "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr", "brokenpipe", "unsupported",
+                                  "myoserr", "yerr"]),
+            "fmt": "raise" if rng.random() < .1 else "orig", "ops": ops}
 
 
 def warn_run_ctx(case):
@@ -10492,7 +10548,14 @@ def warn_run_ctx1(case):
         mod._showwarnmsg_impl = 5
     err = warn_io.StringIO()
     sys.stderr = {"ok": err, "none": None, "oserr": warn_ErrFile(OSError),
-                  "keyerr": warn_ErrFile(KeyError), "brokenpipe": warn_ErrFile(BrokenPipeError)}[case["stderr"]]
+                  "keyerr": warn_ErrFile(KeyError), "brokenpipe": warn_ErrFile(BrokenPipeError),
+                  "unsupported": warn_ErrFile(warn_io.UnsupportedOperation),
+                  "myoserr": warn_ErrFile(warn_MyOSError),
+                  "yerr": warn_ErrFile(warn_mk_y)}[case["stderr"]]
+    if case.get("fmt") == "raise":
+        def raising_fmt(*a):
+            raise ValueError("fmt failed")
+        mod.formatwarning = raising_fmt
     v0 = warn_cver()
     cws, logs, outs = [], [], []
 
@@ -10552,8 +10615,19 @@ def warn_run_ctx1(case):
                         mod.showwarning = {"orig": mod._showwarning_orig, **hooks}[op[1]]
                     outs.append(["ok"])
                 else:
-                    outs.append(["ok", repr(cws[op[1]])])
-            except Exception as e:
+                    cw = (cws[op[1]] if k == "repr" else
+                          mod.catch_warnings(record=op[1], module=warn_OTHERMOD))
+                    saved = sys.modules["warnings"]
+                    if op[2] == "nosys":
+                        del sys.modules["warnings"]
+                    elif op[2] == "swap":
+                        sys.modules["warnings"] = warn_OTHERMOD
+                    try:
+                        r = repr(cw)
+                    finally:
+                        sys.modules["warnings"] = saved
+                    outs.append(["ok", r.replace(repr(warn_c), "<W>").replace(repr(warn_OTHERMOD), "<X>")])
+            except warn_EXC as e:
                 outs.append(["exc", type(e).__name__, str(e)])
         sw = getattr(mod, "showwarning", warn_SENT)
         swk = ("deleted" if sw is warn_SENT else "orig" if sw is mod._showwarning_orig else
@@ -10569,6 +10643,7 @@ def warn_run_ctx1(case):
         sys.stderr = old_stderr
         warn_PYG["_use_context"] = old_use
         mod.showwarning, mod._showwarnmsg_impl = orig_show, orig_impl
+        mod.formatwarning = warn_PYG["formatwarning"]
         mod.filters = []
     return {"ok": [outs, final]}
 

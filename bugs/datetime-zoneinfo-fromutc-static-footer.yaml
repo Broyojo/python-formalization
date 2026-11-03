@@ -1,0 +1,83 @@
+id: datetime-zoneinfo-fromutc-static-footer
+title: "zoneinfo: pure-Python fromutc() adds the last transition's offset instead of the footer's after the last transition (two or more transitions, fixed-offset footer)"
+priority: P4
+kind: twin-divergence
+module: datetime
+files: [Lib/zoneinfo/_zoneinfo.py]
+functions: ["ZoneInfo.fromutc", "C zoneinfo_fromutc"]
+summary: |
+  After the last explicit transition, when the footer is a fixed offset (`_tz_after` is a
+  `_ttinfo`), Python's fromutc() falls through to the bisect branch
+  (Lib/zoneinfo/_zoneinfo.py:141-155). With two or more transitions and `timestamp >=
+  self._trans_utc[1]` it takes `tti_prev, tti = self._ttinfos[idx - 2 : idx]` (:144-145) before
+  the `timestamp > self._trans_utc[-1]` case (:146-148) that would use `self._tz_after`, so `tti`
+  is the last transition's type, not the footer's. C uses the footer
+  (`find_tzrule_ttinfo_fromutc` on the static rule, Modules/_zoneinfo.c:671-674). With
+  transitions at 0 s (to +01:00) and 1000 s (to +02:00) and the footer `XXX0`, 2000-01-01 00:00
+  UTC becomes 00:00 in C and 02:00 in Python, although Python's own utcoffset() of that result is
+  +00:00, so the UTC round trip loses two hours.
+likelihood: |
+  Very low. zic writes a footer that agrees with the last transition's type, so system tzdata
+  and the tzdata package never have a fixed-offset footer that differs from it; it takes a
+  hand-written or edited TZif file, and only the pure-Python twin (PyPy, or no _zoneinfo) is
+  affected. P4 rather than P3 for that reason (lowered on review, 2026-11-03): the code is
+  plainly wrong (gh-159706 fixed the one-transition case of the same branch), but no real file
+  reaches it.
+maybe_intended: |
+  No: gh-159706 fixed the same branch for a single transition (:146-148) but the `num_trans > 1`
+  test above it still wins for two or more.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  data = tzif([0, 1000], [1, 2], [(0, 0, 0), (3600, 0, 4), (7200, 0, 8)], b'AAA\x00BBB\x00CCC\x00', b'XXX0')
+  out = []
+  for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+      z = Z.from_file(io.BytesIO(data), key='k')
+      u = dt.datetime(2000, 1, 1, tzinfo=z)
+      r = z.fromutc(u)
+      out.append((r.replace(tzinfo=None) - dt.datetime(2000, 1, 1), r.utcoffset(),
+                  r.astimezone(dt.timezone.utc) == u.replace(tzinfo=dt.timezone.utc)))
+  print('C', out[0], 'Py', out[1])
+  if out[0] == (dt.timedelta(0), dt.timedelta(0), True) and out[1] == (dt.timedelta(hours=2), dt.timedelta(0), False):
+      print('REPRODUCED datetime-zoneinfo-fromutc-static-footer')
+expected: |
+  Python adds the footer's offset (+00:00), as C does, and the result round-trips to UTC.
+observed: |
+  python3 3.15.2: C (0:00:00, 0:00:00, True), Py (2:00:00, 0:00:00, False). REPRODUCED.
+promised_by: |
+  tzinfo.fromutc contract (the result's utcoffset() is the one added); C/Python twins.
+cause: |
+  Lib/zoneinfo/_zoneinfo.py:144-148: the `num_trans > 1 and timestamp >= self._trans_utc[1]`
+  branch is tested before `timestamp > self._trans_utc[-1]`, so after the last transition it
+  reads `self._ttinfos[idx - 2 : idx]` (the last two transitions' types) instead of using
+  `self._tz_after`.
+possible_fix: |
+  Test `timestamp > self._trans_utc[-1]` first (tti_prev = self._ttinfos[-1], tti =
+  self._tz_after), as C does at Modules/_zoneinfo.c:671-694.
+reproduces:
+  python3 (3.15.2): REPRODUCED (scripts/check_bugs.py)
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 159706, state: closed, relation: "related, not a duplicate: fixed the single-transition case of this branch; the two-or-more case remains."}
+    - {number: 159707, state: open, relation: "related, not a duplicate: fold after the last transition with a TZ-rule footer (datetime-zoneinfo-fromutc-fold-last-transition); its PR gh-159827 only touches the TZ-rule branch."}
+    - {number: 159708, state: open, relation: "nearby (utcoffset near the last transition, both twins); different defect."}
+  queries: ["zoneinfo fromutc footer", "zoneinfo fromutc ttinfos", "zoneinfo fromutc last transition",
+            "zoneinfo fromutc offset wrong", "zoneinfo fromutc pure python", "zoneinfo fromutc static",
+            "gh pr diff 159827"]
+  note: |
+    `gh search issues --repo python/cpython` with unquoted words; bugforge README has no zoneinfo entry.
+    Report together with gh-159707 (same function, same branch structure).
+lean:
+  property: PyLean.Datetime.Zone.FromutcTwinsStatic
+  theorem: PyLean.Datetime.Zone.fromutcTwinsStatic_refuted

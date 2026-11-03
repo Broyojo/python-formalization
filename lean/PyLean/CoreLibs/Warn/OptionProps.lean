@@ -117,8 +117,8 @@ module name, for which `__import__` raises `ValueError`, is the refuted case), `
 `AttributeError`, every attribute found is a class, `Warning` is a Warning class, and `re.compile`
 raises only `re.PatternError`, the same with or without `re.I`. -/
 def OptEnvOk (E : OEnv) : Prop :=
-  (∀ m k e, E.imp m k = .error e → isImportErr e = true) ∧
-  (∀ m k e, E.getattr m k = .error e → isA e "AttributeError" = true) ∧
+  (∀ m k e, E.imp m k = .error e → isImportErr E.fenv.hier e = true) ∧
+  (∀ m k e, E.getattr m k = .error e → isA E.fenv.hier e "AttributeError" = true) ∧
   (∀ m k, E.getattr m k ≠ .ok .nonclass) ∧
   (∀ m k i, E.getattr m k = .ok (.cls i) → E.fenv.isType i = true) ∧
   E.fenv.isType E.warning = true ∧ E.fenv.isWarn E.warning = true ∧
@@ -336,7 +336,7 @@ theorem soInstall_ok_or_opt (E : OEnv) (h : OptEnvOk E) (a : String) (ha : a ∈
       obtain ⟨cont, v⟩ := s
       simp only at hxs
       subst hxs
-      have e := addFilter_list ⟨a, mrx, cat, drx, ln⟩ false xs v (htot _)
+      have e := addFilter_list E.fenv.hier ⟨a, mrx, cat, drx, ln⟩ false xs v (htot _)
       refine ⟨⟨.list (addSpec ⟨a, mrx, cat, drx, ln⟩ false xs), v + 1⟩, ?_,
         ⟨_, rfl, listOk_add _ false xs htot⟩⟩
       simp only [bind, Except.bind, pure, Except.pure, e]
@@ -380,7 +380,7 @@ def ProcessOptionsNoEscape : Prop :=
 
 def optE (getattrPrint : Bool) : OEnv :=
   ⟨⟨fun p _ => if p = "a{4294967296}" then .error (.overflowError "the repetition number is too large") else .ok (),
-    fun _ => true, fun i => i = 0⟩,
+    fun _ => true, fun i => i = 0, builtinHier⟩,
    fun m _ => if m = [] then .error (.valueError "Empty module name") else .ok 1,
    fun _ k => if getattrPrint ∧ k = "print".toList then .ok .nonclass else .ok (.cls 0), 0⟩
 

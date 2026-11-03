@@ -1,0 +1,63 @@
+id: textlibs-plist-binary-datetime-max
+title: "plistlib: a binary plist written from datetime.max cannot be read back (InvalidFileException)"
+priority: P3
+kind: exception-on-read
+module: textlibs
+files: [Lib/plistlib.py]
+functions: ["_BinaryPlistWriter._write_object", "_BinaryPlistParser._read_object"]
+summary: |
+  The binary writer stores a datetime as the double (value - datetime(2001, 1, 1)).total_seconds()
+  (Lib/plistlib.py:808-815). Near datetime.max that double is only accurate to about 30
+  microseconds, and total_seconds() rounds 9999-12-31 23:59:59.999999 up to 252423993600.0, which is
+  10000-01-01. The reader (:587-595) computes datetime(2001, 1, 1) + timedelta(seconds=f), which
+  overflows, and parse turns the OverflowError into InvalidFileException. So
+  plistlib.dumps(datetime.datetime.max, fmt=FMT_BINARY) succeeds and plistlib.loads of the result
+  raises InvalidFileException("Invalid file"); so does any datetime within about 15 microseconds of
+  datetime.max. The XML writer drops the microseconds and round-trips the same value. Far from 2001
+  the binary round trip also silently loses microseconds (datetime(1, 1, 1, 0, 0, 0, 1) reads back
+  as datetime(1, 1, 1)), which is inherent in the format's double; the exception is not.
+likelihood: |
+  Low-medium: datetime.max is a common "never expires" sentinel in configuration and keychain-like
+  plists, and the failure is on read, possibly long after the write.
+maybe_intended: |
+  Partly: the precision loss is the format's (Apple stores a double). Writing a file the module itself
+  cannot read is not.
+reproducer: |
+  import datetime, plistlib
+  out = {}
+  for name, d in [("max", datetime.datetime.max),
+                  ("max-5us", datetime.datetime.max - datetime.timedelta(microseconds=5)),
+                  ("year1+1us", datetime.datetime(1, 1, 1, 0, 0, 0, 1))]:
+      data = plistlib.dumps(d, fmt=plistlib.FMT_BINARY)
+      try:
+          out[name] = repr(plistlib.loads(data))
+      except plistlib.InvalidFileException as e:
+          out[name] = "InvalidFileException: " + str(e)
+      print(name, repr(d), "->", out[name])
+  print("XML round trip of datetime.max:", repr(plistlib.loads(plistlib.dumps(datetime.datetime.max))))
+  if out["max"].startswith("InvalidFileException") and out["year1+1us"] == repr(datetime.datetime(1, 1, 1)):
+      print("REPRODUCED textlibs-plist-binary-datetime-max")
+expected: |
+  loads(dumps(datetime.datetime.max, fmt=FMT_BINARY)) returns a datetime (datetime.max, or the value
+  rounded down into range), as the XML format does.
+observed: |
+  python3 3.15.2: datetime.max and datetime.max - 5us -> InvalidFileException: Invalid file;
+  datetime(1, 1, 1, 0, 0, 0, 1) -> datetime(1, 1, 1, 0, 0); XML: datetime(9999, 12, 31, 23, 59, 59).
+  REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/plistlib.rst lists datetime.datetime among the supported values of dump/dumps; load
+  raises InvalidFileException only "when the file cannot be parsed".
+cause: |
+  Lib/plistlib.py:814 rounds the seconds to a double, and :595 adds the rounded value to the epoch
+  without clamping; the OverflowError is replaced by InvalidFileException at :508-510.
+possible_fix: |
+  On write, clamp the double so that it does not round past datetime.max (or write the largest
+  double not above the exact value); or on read, round down a value that lands within one double
+  ulp above datetime.max.
+duplicates: |
+  None found. Related (different): gh-85255 (date from year 0), gh-70896 (year 2038, closed).
+  Queries: gh search issues --repo python/cpython plistlib datetime max; plistlib date overflow;
+  plistlib 9999; plistlib OverflowError; plistlib round trip; plistlib microsecond; binary plist
+  datetime. Bugforge list: no plistlib datetime.max entry.
+lean: lean/PyLean/TextLibs/PlistRefute.lean (BinaryDateRoundTrip, binaryDateRoundTrip_refuted)

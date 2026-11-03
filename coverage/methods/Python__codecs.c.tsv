@@ -1,68 +1,68 @@
 file	line	endline	name	signature	status	entry	note
-Python/codecs.c	32	52	PyCodec_Register	int PyCodec_Register(PyObject *search_function)	todo		changed-in-3.15:
-Python/codecs.c	55	82	PyCodec_Unregister	PyCodec_Unregister(PyObject *search_function)	todo		changed-in-3.15:
-Python/codecs.c	88	115	normalizestring	normalizestring(const char *string)	todo		changed-in-3.15:
-Python/codecs.c	133	218	_PyCodec_Lookup	PyObject *_PyCodec_Lookup(const char *encoding)	todo		
-Python/codecs.c	222	235	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	todo		
-Python/codecs.c	238	258	args_tuple	PyObject *args_tuple(PyObject *object, const char *errors)	todo		
-Python/codecs.c	263	274	codec_getitem	PyObject *codec_getitem(const char *encoding, int index)	todo		
-Python/codecs.c	278	293	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	todo		
-Python/codecs.c	296	308	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	todo		
-Python/codecs.c	313	331	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	todo		
+Python/codecs.c	32	52	PyCodec_Register	int PyCodec_Register(PyObject *search_function)	modelled	unicodeobj-codecs-register-doc	
+Python/codecs.c	55	82	PyCodec_Unregister	PyCodec_Unregister(PyObject *search_function)	modelled	unicodeobj-codecs-register-doc	
+Python/codecs.c	88	115	normalizestring	normalizestring(const char *string)	todo		review: The mirror is exact (strlen bound, space to '-', Py_TOLOWER on ASCII only, PyUnicode_FromString), but LookupDoc only takes 'normalizestring enc = .ok v' as a hypothesis, so it holds for any normalizestring: nothing pins the lower-casing, the hyphen mapping or the OverflowError.
+Python/codecs.c	133	218	_PyCodec_Lookup	PyObject *_PyCodec_Lookup(const char *encoding)	modelled	unicodeobj-codecs-lookup-doc,unicodeobj-codecs-lookup-raises	
+Python/codecs.c	222	235	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	238	258	args_tuple	PyObject *args_tuple(PyObject *object, const char *errors)	todo		review: argsTuple appears on both sides of CodecPaths (gen is built from argsTuple obj errors itself), so any argsTuple satisfies it; the (obj,) / (obj, errors) shape the statement claims is not pinned by any theorem.
+Python/codecs.c	263	274	codec_getitem	PyObject *codec_getitem(const char *encoding, int index)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	278	293	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	296	308	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	313	331	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	modelled	unicodeobj-codecs-capi-matches-lib	
 Python/codecs.c	336	341	_PyCodecInfo_GetIncrementalDecoder	PyObject *_PyCodecInfo_GetIncrementalDecoder(PyObject *codec_info, const char *errors)	todo		
 Python/codecs.c	343	348	_PyCodecInfo_GetIncrementalEncoder	PyObject *_PyCodecInfo_GetIncrementalEncoder(PyObject *codec_info, const char *errors)	todo		
-Python/codecs.c	357	360	PyCodec_Encoder	PyObject *PyCodec_Encoder(const char *encoding)	todo		
-Python/codecs.c	362	365	PyCodec_Decoder	PyObject *PyCodec_Decoder(const char *encoding)	todo		
-Python/codecs.c	367	371	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	373	377	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	379	384	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	todo		
-Python/codecs.c	386	391	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	todo		
-Python/codecs.c	399	436	_PyCodec_EncodeInternal	_PyCodec_EncodeInternal(PyObject *object, PyObject *encoder, const char *encoding, const char *errors)	todo		
-Python/codecs.c	444	480	_PyCodec_DecodeInternal	_PyCodec_DecodeInternal(PyObject *object, PyObject *decoder, const char *encoding, const char *errors)	todo		
-Python/codecs.c	483	494	PyCodec_Encode	PyObject *PyCodec_Encode(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	496	507	PyCodec_Decode	PyObject *PyCodec_Decode(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	510	555	_PyCodec_LookupTextEncoding	PyObject * _PyCodec_LookupTextEncoding(const char *encoding, const char *alternate_command)	todo		
-Python/codecs.c	559	573	codec_getitem_checked	PyObject *codec_getitem_checked(const char *encoding, const char *alternate_command, int index)	todo		
-Python/codecs.c	575	578	_PyCodec_TextEncoder	static PyObject * _PyCodec_TextEncoder(const char *encoding)	todo		
-Python/codecs.c	580	583	_PyCodec_TextDecoder	static PyObject * _PyCodec_TextDecoder(const char *encoding)	todo		
-Python/codecs.c	585	596	_PyCodec_EncodeText	PyObject *_PyCodec_EncodeText(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	598	609	_PyCodec_DecodeText	PyObject *_PyCodec_DecodeText(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	617	627	PyCodec_RegisterError	int PyCodec_RegisterError(const char *name, PyObject *error)	todo		
-Python/codecs.c	629	641	_PyCodec_UnregisterError	int _PyCodec_UnregisterError(const char *name)	todo		
-Python/codecs.c	646	662	PyCodec_LookupError	PyObject *PyCodec_LookupError(const char *name)	todo		
-Python/codecs.c	666	670	wrong_exception_type	wrong_exception_type(PyObject *exc)	todo		
-Python/codecs.c	688	702	codec_handler_unicode_hex_width	codec_handler_unicode_hex_width(Py_UCS4 ch)	todo		
-Python/codecs.c	710	732	codec_handler_write_unicode_hex	codec_handler_write_unicode_hex(Py_UCS1 **p, Py_UCS4 ch)	todo		
-Python/codecs.c	740	751	n_decimal_digits_for_codepoint	n_decimal_digits_for_codepoint(Py_UCS4 ch)	todo		
-Python/codecs.c	759	772	codec_handler_unicode_replacement_character	codec_handler_unicode_replacement_character(Py_ssize_t count)	todo		
-Python/codecs.c	777	786	PyCodec_StrictErrors	PyObject *PyCodec_StrictErrors(PyObject *exc)	todo		
-Python/codecs.c	792	801	_PyCodec_IgnoreError	_PyCodec_IgnoreError(PyObject *exc, int as_bytes)	todo		
-Python/codecs.c	804	816	PyCodec_IgnoreErrors	PyObject *PyCodec_IgnoreErrors(PyObject *exc)	todo		
-Python/codecs.c	822	839	_PyCodec_ReplaceUnicodeEncodeError	_PyCodec_ReplaceUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	843	854	_PyCodec_ReplaceUnicodeDecodeError	_PyCodec_ReplaceUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	858	871	_PyCodec_ReplaceUnicodeTranslateError	_PyCodec_ReplaceUnicodeTranslateError(PyObject *exc)	todo		
-Python/codecs.c	874	889	PyCodec_ReplaceErrors	PyObject *PyCodec_ReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	894	959	PyCodec_XMLCharRefReplaceErrors	PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	965	1006	_PyCodec_BackslashReplaceUnicodeEncodeError	_PyCodec_BackslashReplaceUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1010	1039	_PyCodec_BackslashReplaceUnicodeDecodeError	_PyCodec_BackslashReplaceUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1043	1047	_PyCodec_BackslashReplaceUnicodeTranslateError	_PyCodec_BackslashReplaceUnicodeTranslateError(PyObject *exc)	todo		
-Python/codecs.c	1050	1065	PyCodec_BackslashReplaceErrors	PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	1070	1137	PyCodec_NameReplaceErrors	PyObject *PyCodec_NameReplaceErrors(PyObject *exc)	todo		
+Python/codecs.c	357	360	PyCodec_Encoder	PyObject *PyCodec_Encoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	362	365	PyCodec_Decoder	PyObject *PyCodec_Decoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	367	371	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	373	377	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	379	384	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	386	391	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	399	436	_PyCodec_EncodeInternal	_PyCodec_EncodeInternal(PyObject *object, PyObject *encoder, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	444	480	_PyCodec_DecodeInternal	_PyCodec_DecodeInternal(PyObject *object, PyObject *decoder, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	483	494	PyCodec_Encode	PyObject *PyCodec_Encode(PyObject *object, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	496	507	PyCodec_Decode	PyObject *PyCodec_Decode(PyObject *object, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	510	555	_PyCodec_LookupTextEncoding	PyObject * _PyCodec_LookupTextEncoding(const char *encoding, const char *alternate_command)	todo		review: isTextCodec mirrors :525-551, but CodecPaths only branches on the value isTextCodec returns, so the function's own logic (an exact tuple passes, an absent _is_text_encoding passes, PyObject_IsTrue decides) holds for any test; only the LookupError message and the error propagation are pinned.
+Python/codecs.c	559	573	codec_getitem_checked	PyObject *codec_getitem_checked(const char *encoding, const char *alternate_command, int index)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	575	578	_PyCodec_TextEncoder	static PyObject * _PyCodec_TextEncoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	580	583	_PyCodec_TextDecoder	static PyObject * _PyCodec_TextDecoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	585	596	_PyCodec_EncodeText	PyObject *_PyCodec_EncodeText(PyObject *object, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	598	609	_PyCodec_DecodeText	PyObject *_PyCodec_DecodeText(PyObject *object, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
+Python/codecs.c	617	627	PyCodec_RegisterError	int PyCodec_RegisterError(const char *name, PyObject *error)	modelled	unicodeobj-codecs-error-registry	
+Python/codecs.c	629	641	_PyCodec_UnregisterError	int _PyCodec_UnregisterError(const char *name)	modelled	unicodeobj-codecs-error-registry	
+Python/codecs.c	646	662	PyCodec_LookupError	PyObject *PyCodec_LookupError(const char *name)	modelled	unicodeobj-codecs-error-registry	
+Python/codecs.c	666	670	wrong_exception_type	wrong_exception_type(PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	688	702	codec_handler_unicode_hex_width	codec_handler_unicode_hex_width(Py_UCS4 ch)	modelled	unicodeobj-codecs-buffers-exact	
+Python/codecs.c	710	732	codec_handler_write_unicode_hex	codec_handler_write_unicode_hex(Py_UCS1 **p, Py_UCS4 ch)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree	
+Python/codecs.c	740	751	n_decimal_digits_for_codepoint	n_decimal_digits_for_codepoint(Py_UCS4 ch)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree	
+Python/codecs.c	759	772	codec_handler_unicode_replacement_character	codec_handler_unicode_replacement_character(Py_ssize_t count)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree	
+Python/codecs.c	777	786	PyCodec_StrictErrors	PyObject *PyCodec_StrictErrors(PyObject *exc)	todo		review: PyExceptionInstance_Check (:779) tests the inherited Py_TPFLAGS_BASE_EXC_SUBCLASS flag, but the model asks the MRO oracle H.sub cls 'BaseException'; on 3.15.2 a UnicodeEncodeError subclass whose metaclass mro() returns [cls, UnicodeEncodeError, object] is no BaseException instance yet strict_errors re-raises it, where the model raises 'codec must pass exception instance' (HierOk's transitivity, not a CPython guarantee, hides the gap).
+Python/codecs.c	792	801	_PyCodec_IgnoreError	_PyCodec_IgnoreError(PyObject *exc, int as_bytes)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	804	816	PyCodec_IgnoreErrors	PyObject *PyCodec_IgnoreErrors(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	822	839	_PyCodec_ReplaceUnicodeEncodeError	_PyCodec_ReplaceUnicodeEncodeError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	843	854	_PyCodec_ReplaceUnicodeDecodeError	_PyCodec_ReplaceUnicodeDecodeError(PyObject *exc)	todo		review: Mirror exact (PyUnicodeDecodeError_GetEnd with its UnicodeError check, one U+FFFD), but HandlersTotal and DecodeAgree claim success for every class below UnicodeDecodeError with a bytes object; HierOk assumes MRO transitivity, which CPython does not guarantee: on 3.15.2 a subclass of UnicodeDecodeError whose metaclass mro() returns [cls, UnicodeDecodeError, BaseException, object] passes _PyIsUnicodeDecodeError but fails PyUnicodeDecodeError_GetEnd's UnicodeError check, so replace raises TypeError 'expecting a UnicodeDecodeError object, got W'.
+Python/codecs.c	858	871	_PyCodec_ReplaceUnicodeTranslateError	_PyCodec_ReplaceUnicodeTranslateError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	874	889	PyCodec_ReplaceErrors	PyObject *PyCodec_ReplaceErrors(PyObject *exc)	todo		review: Dispatch of :876-888 mirrored, but handlers-total's 'replace succeeds exactly when the class and object fit' is proven only under HierOk and is false on 3.15.2 for the metaclass-mro decode subclass of :843 (TypeError from GetEnd).
+Python/codecs.c	894	959	PyCodec_XMLCharRefReplaceErrors	PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	965	1006	_PyCodec_BackslashReplaceUnicodeEncodeError	_PyCodec_BackslashReplaceUnicodeEncodeError(PyObject *exc)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1010	1039	_PyCodec_BackslashReplaceUnicodeDecodeError	_PyCodec_BackslashReplaceUnicodeDecodeError(PyObject *exc)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1043	1047	_PyCodec_BackslashReplaceUnicodeTranslateError	_PyCodec_BackslashReplaceUnicodeTranslateError(PyObject *exc)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1050	1065	PyCodec_BackslashReplaceErrors	PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1070	1137	PyCodec_NameReplaceErrors	PyObject *PyCodec_NameReplaceErrors(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-namereplace-names	
 Python/codecs.c	1148	1206	get_standard_encoding_impl	get_standard_encoding_impl(const char *encoding, int *bytelength)	todo		changed-in-3.15:
 Python/codecs.c	1210	1218	get_standard_encoding	get_standard_encoding(PyObject *encoding, int *code, int *bytelength)	todo		
-Python/codecs.c	1224	1311	_PyCodec_SurrogatePassUnicodeEncodeError	_PyCodec_SurrogatePassUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1315	1392	_PyCodec_SurrogatePassUnicodeDecodeError	_PyCodec_SurrogatePassUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1398	1410	PyCodec_SurrogatePassErrors	PyCodec_SurrogatePassErrors(PyObject *exc)	todo		
-Python/codecs.c	1416	1448	_PyCodec_SurrogateEscapeUnicodeEncodeError	_PyCodec_SurrogateEscapeUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1452	1487	_PyCodec_SurrogateEscapeUnicodeDecodeError	_PyCodec_SurrogateEscapeUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1491	1503	PyCodec_SurrogateEscapeErrors	PyCodec_SurrogateEscapeErrors(PyObject *exc)	todo		
-Python/codecs.c	1509	1512	strict_errors	strict_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1516	1519	ignore_errors	ignore_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1523	1526	replace_errors	replace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1530	1533	xmlcharrefreplace_errors	xmlcharrefreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1537	1540	backslashreplace_errors	backslashreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1544	1547	namereplace_errors	namereplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1551	1554	surrogatepass_errors	surrogatepass_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1558	1561	surrogateescape_errors	surrogateescape_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1224	1311	_PyCodec_SurrogatePassUnicodeEncodeError	_PyCodec_SurrogatePassUnicodeEncodeError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-surrogatepass-handlers-round-trip	
+Python/codecs.c	1315	1392	_PyCodec_SurrogatePassUnicodeDecodeError	_PyCodec_SurrogatePassUnicodeDecodeError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-surrogatepass-handlers-round-trip	
+Python/codecs.c	1398	1410	PyCodec_SurrogatePassErrors	PyCodec_SurrogatePassErrors(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-surrogatepass-handlers-round-trip	
+Python/codecs.c	1416	1448	_PyCodec_SurrogateEscapeUnicodeEncodeError	_PyCodec_SurrogateEscapeUnicodeEncodeError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-surrogateescape-handlers-round-trip	
+Python/codecs.c	1452	1487	_PyCodec_SurrogateEscapeUnicodeDecodeError	_PyCodec_SurrogateEscapeUnicodeDecodeError(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-surrogateescape-handlers-round-trip	
+Python/codecs.c	1491	1503	PyCodec_SurrogateEscapeErrors	PyCodec_SurrogateEscapeErrors(PyObject *exc)	modelled	unicodeobj-codecs-buffers-exact,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-surrogateescape-handlers-round-trip	
+Python/codecs.c	1509	1512	strict_errors	strict_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		review: Wrapper of PyCodec_StrictErrors, whose flag-based PyExceptionInstance_Check is modelled as an MRO check (see :777).
+Python/codecs.c	1516	1519	ignore_errors	ignore_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1523	1526	replace_errors	replace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		review: Wrapper of PyCodec_ReplaceErrors; the replace success claim is false for the metaclass-mro decode subclass (see :843).
+Python/codecs.c	1530	1533	xmlcharrefreplace_errors	xmlcharrefreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1537	1540	backslashreplace_errors	backslashreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-backslashreplace-unicode-escape,unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total	
+Python/codecs.c	1544	1547	namereplace_errors	namereplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-namereplace-names	
+Python/codecs.c	1551	1554	surrogatepass_errors	surrogatepass_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-surrogatepass-handlers-round-trip	
+Python/codecs.c	1558	1561	surrogateescape_errors	surrogateescape_errors(PyObject *Py_UNUSED(self), PyObject *exc)	modelled	unicodeobj-codecs-handlers-agree,unicodeobj-codecs-handlers-safe,unicodeobj-codecs-handlers-total,unicodeobj-codecs-surrogateescape-handlers-round-trip	
 Python/codecs.c	1565	1695	_PyCodec_InitRegistry	_PyCodec_InitRegistry(PyInterpreterState *interp)	todo		
-Python/codecs.c	1698	1704	_PyCodec_Fini	_PyCodec_Fini(PyInterpreterState *interp)	todo		
+Python/codecs.c	1698	1704	_PyCodec_Fini	_PyCodec_Fini(PyInterpreterState *interp)	excluded		no-behaviour: interpreter finalization: drops the three registry objects and marks the registry uninitialized; no Python code runs against the registry afterwards (PyCodec_Unregister then returns 0, codecs.c:58-62)

@@ -225,6 +225,41 @@ def readTypes : Nat → BIO → Py (List (Int × Int × Int) × BIO)
     let (ts, f) ← readTypes n f
     pure (t :: ts, f)
 
+/-- `_common.load_data`, _common.py:65-76: the transition times, then their type indices
+(unsigned), checked against `typecnt`. -/
+def readTrans (timecnt typecnt : Int) (timeSize : Nat) (f : BIO) : Py (List Int × List Int × BIO) :=
+  if timecnt ≠ 0 then do
+    let (buf, f) := f.read (timecnt * timeSize)
+    let tu ← unpackN timecnt timeSize true buf
+    let (buf, f) := f.read timecnt
+    let ti ← unpackN timecnt 1 false buf
+    let mx := ti.foldl max (ti.headD 0)
+    if mx ≥ typecnt then
+      throw (.valueError s!"Invalid transition index found while reading TZif: {mx}")
+    pure (tu, ti, f)
+  else pure ([], [], f)
+
+/-- `_common.load_data`, _common.py:79-86: `zip(*records)` unpacked into three names; no
+records (a negative count) fails. -/
+def readTypesStage (typecnt : Int) (f : BIO) : Py (List (Int × Int × Int) × BIO) :=
+  if typecnt ≠ 0 then do
+    let (ts, f) ← readTypes typecnt.toNat f
+    if ts = [] then throw (.valueError "not enough values to unpack (expected 3, got 0)")
+    pure (ts, f)
+  else pure ([], f)
+
+/-- `_common.load_data`, _common.py:117-130: the footer of a version 2+ file. -/
+def readFooter (header : Header) (f : BIO) : Py (Option Bytes) :=
+  if header.version ≥ 2 then do
+    let skip := header.isutcnt + header.isstdcnt + header.leapcnt * 12
+    let f ← f.seekCur skip
+    let (c, f) := f.read 1
+    if c ≠ [10] then throw (.assertionError (bytesRepr c))                   -- `assert c == b"\n", c`
+    let (line, _) := f.readline
+    if line.getLast? ≠ some 10 then throw (.valueError "Invalid TZif file: unexpected end of file")
+    pure (some (rstripNL line))
+  else pure none
+
 /-- `_common.load_data(fobj)`, Lib/zoneinfo/_common.py:32-132, line by line. -/
 def loadData (bytes : Bytes) : Py TzifData := do
   let f : BIO := ⟨bytes, 0⟩
@@ -236,42 +271,15 @@ def loadData (bytes : Bytes) : Py TzifData := do
       let f ← f.seekCur skip
       let (h2, f) ← headerFromFile f
       pure (8, h2, f) : Py (Nat × Header × BIO))
-  let typecnt := header.typecnt
-  let timecnt := header.timecnt
-  let charcnt := header.charcnt
-  -- :65-76: transition times, then their type indices (unsigned), checked against typecnt
-  let (transUtc, transIdx, f) ← (if timecnt ≠ 0 then do
-      let (buf, f) := f.read (timecnt * timeSize)
-      let tu ← unpackN timecnt timeSize true buf
-      let (buf, f) := f.read timecnt
-      let ti ← unpackN timecnt 1 false buf
-      let mx := ti.foldl max (ti.headD 0)
-      if mx ≥ typecnt then
-        throw (.valueError s!"Invalid transition index found while reading TZif: {mx}")
-      pure (tu, ti, f)
-    else pure ([], [], f) : Py (List Int × List Int × BIO))
-  -- :79-86: `zip(*records)` unpacked into three names; no records (a negative count) fails
-  let (types, f) ← (if typecnt ≠ 0 then do
-      let (ts, f) ← readTypes typecnt.toNat f
-      if ts = [] then throw (.valueError "not enough values to unpack (expected 3, got 0)")
-      pure (ts, f)
-    else pure ([], f) : Py (List (Int × Int × Int) × BIO))
+  let (transUtc, transIdx, f) ← readTrans header.timecnt header.typecnt timeSize f   -- :60-76
+  let (types, f) ← readTypesStage header.typecnt f                           -- :79-86
   let utcoff := types.map (·.1)
   let isdst := types.map (·.2.1)
   let abbrind := types.map (·.2.2)
   -- :92-112: the designations
-  let (abbrChars, f) := f.read charcnt
+  let (abbrChars, f) := f.read header.charcnt
   let abbr ← abbrind.mapM (getAbbr abbrChars)
-  -- :117-130: the footer of a version 2+ file
-  if header.version ≥ 2 then
-    let skip := header.isutcnt + header.isstdcnt + header.leapcnt * 12
-    let f ← f.seekCur skip
-    let (c, f) := f.read 1
-    if c ≠ [10] then throw (.assertionError (bytesRepr c))                   -- `assert c == b"\n", c`
-    let (line, _) := f.readline
-    if line.getLast? ≠ some 10 then throw (.valueError "Invalid TZif file: unexpected end of file")
-    pure ⟨transIdx, transUtc, utcoff, isdst, abbr, some (rstripNL line)⟩
-  else
-    pure ⟨transIdx, transUtc, utcoff, isdst, abbr, none⟩
+  let tzStr ← readFooter header f                                            -- :117-130
+  pure ⟨transIdx, transUtc, utcoff, isdst, abbr, tzStr⟩
 
 end PyLean.Datetime.Zone

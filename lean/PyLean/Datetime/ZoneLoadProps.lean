@@ -53,12 +53,12 @@ theorem dstoffTwins_refuted : ¬ DstoffTwins := by
 def DstoffTwinsFlags : Prop :=
   ∀ d : TzifData, TzifShape d → (∀ x ∈ d.isdst, x = 0 ∨ x = 1) → dstOffsC d = dstOffsPy d
 
-/-- A DST type `-2**31` after a standard type `2**31 - 1`: the DST offset `-(2**32 - 1)` is a
-`long` in C, and `load_timedelta` passes it to the `int` parameter of `Delta_FromDelta`, so C
-reports one second where Python reports `-(2**32 - 1)` seconds. -/
+/-- A DST type `-(2**31 - 1)` after a standard type `2**31 - 1` (both allowed by RFC 9636 §3.2):
+the DST offset `-(2**32 - 2)` is a `long` in C, and `load_timedelta` passes it to the `int`
+parameter of `Delta_FromDelta`, so C reports two seconds where Python reports `-(2**32 - 2)`. -/
 theorem dstoffTwinsFlags_refuted : ¬ DstoffTwinsFlags := by
   intro h
-  have := h ⟨[0, 1], [0, 1000], [2147483647, -2147483648], [0, 1], [[65], [66]], none⟩
+  have := h ⟨[0, 1], [0, 1000], [2147483647, -2147483647], [0, 1], [[65], [66]], none⟩
     ⟨rfl, rfl, rfl, by decide, by decide, by decide, by decide⟩ (by decide)
   revert this
   decide

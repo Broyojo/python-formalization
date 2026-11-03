@@ -78,12 +78,12 @@ Lib/codecs.py	878	879	StreamRecoder.__exit__	__exit__(self, type, value, tb)	tod
 Lib/codecs.py	881	882	StreamRecoder.__reduce_ex__	__reduce_ex__(self, proto)	todo		
 Lib/codecs.py	886	935	open	open(filename, mode='r', encoding=None, errors='strict', buffering=-1)	todo		
 Lib/codecs.py	937	971	EncodedFile	EncodedFile(file, data_encoding, file_encoding=None, errors='strict')	todo		
-Lib/codecs.py	975	983	getencoder	getencoder(encoding)	todo		
-Lib/codecs.py	985	993	getdecoder	getdecoder(encoding)	todo		
-Lib/codecs.py	995	1007	getincrementalencoder	getincrementalencoder(encoding)	todo		
-Lib/codecs.py	1009	1021	getincrementaldecoder	getincrementaldecoder(encoding)	todo		
-Lib/codecs.py	1023	1031	getreader	getreader(encoding)	todo		
-Lib/codecs.py	1033	1041	getwriter	getwriter(encoding)	todo		
+Lib/codecs.py	975	983	getencoder	getencoder(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Lib/codecs.py	985	993	getdecoder	getdecoder(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Lib/codecs.py	995	1007	getincrementalencoder	getincrementalencoder(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Lib/codecs.py	1009	1021	getincrementaldecoder	getincrementaldecoder(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Lib/codecs.py	1023	1031	getreader	getreader(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
+Lib/codecs.py	1033	1041	getwriter	getwriter(encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
 Lib/codecs.py	1043	1059	iterencode	iterencode(iterator, encoding, errors='strict', **kwargs)	todo		
 Lib/codecs.py	1061	1077	iterdecode	iterdecode(iterator, encoding, errors='strict', **kwargs)	todo		
 Lib/codecs.py	1081	1089	make_identity_dict	make_identity_dict(rng)	todo		

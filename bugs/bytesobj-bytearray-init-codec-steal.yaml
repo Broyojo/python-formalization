@@ -1,0 +1,90 @@
+id: bytesobj-bytearray-init-codec-steal
+title: "bytearray(str, encoding) with a Python codec installs the encoded bytes over what the codec did to self: a leak, and storage replaced under an export"
+priority: P2
+kind: bug
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray___init___impl"]
+summary: |
+  Since gh-139871 (3.15), bytearray___init___impl takes a uniquely referenced result of the codec as its
+  storage: `self->ob_bytes_object = encoded; bytearray_reinit_from_bytes(self, size)` (:1031-1038). The
+  checks for exports and the empty state are made before the codec runs (:993-1002), but a codec written in
+  Python (codecs.register) runs while `self` is reachable. If it adds to `self`, the old ob_bytes_object is
+  overwritten without a Py_DECREF, so its memory leaks and the bytes the codec added are dropped; if it
+  keeps memoryview(self), the storage is replaced under the export (writes through the view no longer
+  reach the object). When the codec keeps a reference to its result the other path, bytearray_iconcat
+  (:1040), runs: it appends after the codec's bytes, and refuses with BufferError while the view exists.
+  So the result depends on the reference count of an object the codec returned.
+  Lean: InitPathsAgree (the two paths leave the same object) is refuted: with `self.resize(2)` in the
+  codec the unique path gives b"hi" and the shared one b"\x00\x00hi" (init_steal_drops); with a kept view
+  the unique path succeeds with ob_exports 1 and the shared one raises BufferError (init_steal_exported).
+likelihood: |
+  Low: it needs a codec written in Python that touches the bytearray being initialised. Each call leaks
+  the bytes object the codec filled (about 1 KB per call in the reproducer: 2 MB over 2000 calls).
+maybe_intended: |
+  No. gh-153419 added the export check at the start of __init__ precisely so that this path never replaces
+  exported storage; the codec callback was not considered.
+reproducer: |
+  import codecs, tracemalloc
+  T = [None]; V = []; MODE = {"unique": True, "export": False}; KEEP = []
+  def enc(s, errors="strict"):
+      T[0].extend(b"Q" * 1000)
+      if MODE["export"]:
+          V.append(memoryview(T[0]))
+      r = bytes(bytearray(s.encode("ascii")))
+      if not MODE["unique"]:
+          KEEP.append(r)
+      return (r, len(s))
+  codecs.register(lambda n: codecs.CodecInfo(enc, lambda b, e="strict": (str(b, "ascii"), len(b)), name="steal")
+                  if n == "steal" else None)
+  res = {}
+  for unique in (True, False):
+      MODE["unique"] = unique
+      ba = bytearray(); T[0] = ba
+      ba.__init__("hello", "steal")
+      res[unique] = len(ba)
+  print("unique result: len", res[True], "/ shared result: len", res[False])
+  MODE["unique"] = True
+  tracemalloc.start()
+  ba = bytearray(); T[0] = ba
+  before = tracemalloc.get_traced_memory()[0]
+  for _ in range(2000):
+      ba.__init__("hello", "steal")
+  grown = tracemalloc.get_traced_memory()[0] - before
+  print("traced memory grew by", grown)
+  MODE["export"] = True
+  ba = bytearray(); T[0] = ba
+  ba.__init__("hello", "steal")
+  V[-1][0] = ord("Z")
+  print("exported: ba", bytes(ba), "view", bytes(V[-1][:3]))
+  if res[True] == 5 and res[False] == 1005 and grown > 1000000 and bytes(ba) == b"hello":
+      print("REPRODUCED bytesobj-bytearray-init-codec-steal")
+expected: |
+  Both paths leave the same object: the encoded bytes after whatever the codec did (or, as for every other
+  resize, a BufferError while a view is exported), and no memory is lost.
+observed: |
+  python3 3.15.2: unique result len 5, shared result len 1005; traced memory grows by about 2 MB over 2000
+  calls; with an export the write through the view does not reach the bytearray. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Invariant: no leak; the object a codec returns is the same whatever its reference count. Doc/c-api/buffer.rst:
+  an exporter must not change the memory of a buffer while it is exported.
+cause: |
+  Objects/bytearrayobject.c:1031-1038: `self->ob_bytes_object = encoded` overwrites the storage without
+  Py_DECREF and without re-checking _canresize, after PyUnicode_AsEncodedString (:1024) ran Python code.
+possible_fix: |
+  Take the fast path only when `Py_SIZE(self) == 0 && self->ob_exports == 0` after the codec returns (else use
+  bytearray_iconcat), and Py_SETREF the old ob_bytes_object.
+duplicates:
+  issues: []
+  related:
+    - {number: 153419, state: closed, relation: "the export check at the start of __init__ (gh-153498); the codec runs after it"}
+    - {number: 139871, state: closed, relation: "the optimisation (gh-142243) that added the unique-bytes path"}
+    - {number: 157198, state: closed, relation: "item 17, bytearray-init-unlocked-storage: a free-threading race on the same code, not this re-entrancy"}
+  queries: ["bytearray init encoding leak", "bytearray __init__ codec export", "bytearray init str unique",
+    "bytearray encoding leak", "bytearray __init__ leak", "bytearray init codec reentrant",
+    "_PyObject_IsUniquelyReferenced bytearray", "bytearray encoded unique leak"]
+  bugforge: "no entry (vendor/bugforge-results/README.md)"
+lean:
+  property: PyLean.BytesObj.Bytes.InitPathsAgree
+  theorem: PyLean.BytesObj.Bytes.initPathsAgree_refuted

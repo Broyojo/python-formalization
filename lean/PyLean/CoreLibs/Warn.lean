@@ -183,16 +183,16 @@ def entries : List Entry := [
     prop := ``ResetSpec, thm := some ``resetSpec_proven },
   { id := "warn-add-filter-valueerror", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_add_filter"]
-    statement := "A ValueError (or subclass, such as UnicodeError) raised by an element's __eq__ during filters.remove is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
+    statement := "For every class relation (PyType_IsSubtype over the MRO): an exception raised by an element's __eq__ during filters.remove whose class has ValueError in its MRO (every builtin ValueError subclass, io.UnsupportedOperation, a user class whose MRO contains ValueError) is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
     source := "the except ValueError of :326-329", status := .proven
     prop := ``AddFilterValueError, thm := some ``addFilterValueError_proven
     notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError, UnicodeError or KeyError." },
   { id := "warn-get-warnings-attr", pyFile := "Python/_warnings.c"
     pyFns := ["get_warnings_attr"]
-    statement := "get_warnings_attr: with try_import, an ImportError (or subclass) from import warnings is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
+    statement := "For every class relation, get_warnings_attr: with try_import, an exception from import warnings whose class has ImportError in its MRO (ModuleNotFoundError, ImportCycleError, a user class whose MRO contains ImportError) is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
     source := "the comments of :219-222 and :232-233 ('Fallback to the C implementation')", status := .proven
     prop := ``GetWarningsAttrSpec, thm := some ``getWarningsAttrSpec_proven
-    notes := "Measured on 3.15.2: sys.modules['warnings'] = None makes warn_explicit print through show_warning; a warnings module whose __getattr__ raises ValueError makes warn_explicit raise it. call_show_warning and get_default_action are written over getWarningsAttr (Model.lean)." },
+    notes := "Measured on 3.15.2: sys.modules['warnings'] = None, or a finder raising ImportCycleError or a user ImportError subclass for warnings, makes warn_explicit print through show_warning (a ValueError propagates); a warnings module whose __getattr__ raises ValueError makes warn_explicit raise it. call_show_warning and get_default_action are written over getWarningsAttr (Model.lean)." },
   { id := "warn-defaults-twin-narrow", pyFile := "Python/_warnings.c"
     pyFns := ["init_filters", "create_filter"]
     statement := "For every module name that is __main__ or does not start with __main__, C's initial filters and the list _setup_defaults builds pick the same filter action for every warning."
@@ -314,7 +314,7 @@ def entries : List Entry := [
     prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_showwarnmsg", "_showwarnmsg_impl"]
-    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode loses the warning when sys.stderr is None or the write raises OSError or a subclass (BrokenPipeError, ...), writes it when the write succeeds, and propagates any other exception from the write."
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning, loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
     source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
     prop := ``ShowDispatch, thm := some ``showDispatch_proven },
   { id := "warn-nested-record", pyFile := "Lib/_py_warnings.py"
@@ -324,10 +324,16 @@ def entries : List Entry := [
     prop := ``NestedRecord, thm := some ``nestedRecord_proven
     notes := "Measured on 3.15.2 in both context modes; difftest warn.ctx enters objects in any order." },
   { id := "warn-exit-not-entered", pyFile := "Lib/_py_warnings.py"
-    pyFns := ["catch_warnings.__exit__", "catch_warnings.__repr__"]
-    statement := "__exit__ of a catch_warnings that was never entered raises RuntimeError('Cannot exit catch_warnings(...) without entering first') with its repr (the class name, with record=True when recording) and changes nothing."
-    source := ":728-729, :689-696", status := .proven
+    pyFns := ["catch_warnings.__exit__"]
+    statement := "__exit__ of a catch_warnings that was never entered raises RuntimeError('Cannot exit <repr> without entering first') (a KeyError from the repr propagates instead) and changes nothing."
+    source := ":728-729", status := .proven
     prop := ``ExitNotEntered, thm := some ``exitNotEntered_proven },
+  { id := "warn-repr-spec", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["catch_warnings.__repr__"]
+    statement := "catch_warnings.__repr__ raises KeyError when sys.modules['warnings'] is missing; otherwise it is the class name with record=True when recording and module=<repr> exactly when self._module is not sys.modules['warnings'] at the time of the call."
+    source := ":689-696", status := .proven
+    prop := ``ReprSpec, thm := some ``reprSpec_proven
+    notes := "Measured on 3.15.2 (module=, a swapped and a missing sys.modules['warnings']); difftest warn.ctx repr cases." },
   { id := "warn-catch-restores", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__init__", "catch_warnings.__enter__", "catch_warnings.__exit__", "_Context.__init__",
               "_Context.copy", "_new_context", "_set_context", "_get_context", "_get_filters", "_GlobalContext._filters"]

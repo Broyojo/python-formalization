@@ -1,5 +1,6 @@
 import PyLean.CoreLibs.Misc.Common
 import PyLean.CoreLibs.Warn.Model
+import PyLean.CoreLibs.Warn.DiffOps
 
 /-! `warn.c` and `warn.py` cases: one `warn_explicit` call against a filters list, a registry and
 the once registry, through the C model or the Python one.
@@ -189,7 +190,7 @@ def runCase (twin : String) (j : Json) : Except String Json := do
     | "nowm" => .noWM
     | _ => .call (.ok ()) (.ok ())
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   shw := showA }
+                   shw := showA, hier := dHier }
   let K : WCfg := ⟨optBool j "ctx", optBool j "tuple", dflt, once⟩
   let r := if twin = "c" then cWarnExplicit E K fs VER c reg else pyWarnExplicit E K fs VER c reg
   let out := match r.out with

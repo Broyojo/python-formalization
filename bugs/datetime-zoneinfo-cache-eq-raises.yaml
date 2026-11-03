@@ -1,0 +1,151 @@
+id: datetime-zoneinfo-cache-eq-raises
+title: "zoneinfo: with a key whose __eq__ raises, C ZoneInfo(key) and clear_cache(only_keys=...) raise while the pure-Python twin succeeds"
+priority: P4
+kind: twin-divergence
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C find_in_strong_cache", "C zone_from_strong_cache", "C zoneinfo_ZoneInfo_impl", "C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+summary: |
+  C looks a key up in its strong cache by comparing it with every node,
+  `PyObject_RichCompareBool(key, node->key, Py_EQ)` (Modules/_zoneinfo.c:2441), and returns the
+  error when a comparison raises (:2442-2444); `zoneinfo_ZoneInfo_impl` then returns it
+  (:320-321) and `clear_cache(only_keys=...)` stops on `eject_from_strong_cache`'s -1
+  (:2475-2477, :542-545). Python keeps its caches in dicts (Lib/zoneinfo/_zoneinfo.py:40-56,
+  :95-103), which compare a key only with stored keys of the same hash. So for a `str`
+  subclass key whose `__eq__` raises, while the strong cache holds any other key,
+  `ZoneInfo.clear_cache(only_keys=[key])` and `ZoneInfo(key)` raise the `__eq__` exception in C
+  and succeed in Python (once the key itself is cached, Python's lookups compare it too and
+  raise as well).
+  Same cause, the hash side: a `str` subclass with `__hash__ = None` that equals a cached key
+  gets the cached zone from C `ZoneInfo(key)` (the strong cache compares without hashing),
+  while Python's `_weak_cache.get` hashes it and raises `TypeError`.
+  `clear_cache(only_keys=[that key])` raises `TypeError` in both, but C has already ejected
+  the strong node (eject runs before the weak-cache `pop` that hashes), so the zone is no
+  longer kept alive in C while Python's strong cache still holds it.
+  And on empty caches, `clear_cache(only_keys=[that key])` succeeds in C (the weak cache's
+  `dict.pop` returns at once on an empty dict without hashing, Objects/dictobject.c:3295-3300)
+  and raises `TypeError` in Python (`OrderedDict.pop` always hashes).
+  The same happens with a cached zone once nothing but the strong cache holds it:
+  `z = ZoneInfo('k'); del z; ZoneInfo.clear_cache(only_keys=[NoHash('k'), 'UTC'])`. C's eject
+  compares without hashing, finds `'k'`'s node and frees it (`strong_cache_node_free`); the
+  zone's last reference goes, its `KeyedRef` callback removes its weak entry, the weak cache's
+  `dict.pop` then sees an empty dict and does not hash, and C goes on to clear the later keys
+  and returns `None`. Python's weak-cache `pop` hashes first and raises `TypeError`.
+likelihood: |
+  Very low: keys are documented as strings, and it needs a str subclass with a raising
+  `__eq__`. No crash; the C behaviour is arguably reasonable on its own.
+maybe_intended: |
+  Partly: propagating the comparison error is correct C hygiene (bpo-43132/gh-87298 added
+  exactly that check). The divergence comes from the different data structures (a linked list
+  compared node by node vs a hash table), which the docs do not promise to agree on.
+reproducer: |
+  import os, struct, tempfile, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo is not Pz.ZoneInfo
+  h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 1, 4)
+  blob = h + struct.pack('>lBB', 0, 0, 0) + b'UTC\x00'
+  T = tempfile.mkdtemp()
+  for n in ('a', 'b'):
+      with open(os.path.join(T, n), 'wb') as f:
+          f.write(blob + blob + b'\nUTC0\n')
+  class Key(str):
+      def __eq__(self, other):
+          raise RuntimeError('eq')
+      __hash__ = str.__hash__
+  out = []
+  for M in (Cz, Pz):
+      M.reset_tzpath([T])
+      M.ZoneInfo.clear_cache()
+      held = M.ZoneInfo('a')
+      k = Key('b')
+      res = []
+      for f in (lambda: M.ZoneInfo.clear_cache(only_keys=[k]), lambda: str.__str__(M.ZoneInfo(k).key)):
+          try:
+              res.append(('ok', f()))
+          except RuntimeError as e:
+              res.append(('RuntimeError', str(e)))
+      out.append(res)
+      M.ZoneInfo.clear_cache()
+  class NoHash(str):
+      __hash__ = None
+  import weakref
+  out2 = []
+  for M in (Cz, Pz):
+      M.reset_tzpath([T])
+      M.ZoneInfo.clear_cache()
+      held = M.ZoneInfo('a')
+      res = []
+      try:
+          res.append(M.ZoneInfo(NoHash('a')) is held)
+      except TypeError:
+          res.append('TypeError')
+      try:
+          M.ZoneInfo.clear_cache(only_keys=[NoHash('a')])
+          res.append('cleared')
+      except TypeError:
+          res.append('TypeError')
+      r = weakref.ref(held)
+      del held
+      res.append(r() is not None)
+      out2.append(res)
+      M.ZoneInfo.clear_cache()
+  out3 = []
+  for M in (Cz, Pz):
+      M.ZoneInfo.clear_cache()
+      try:
+          M.ZoneInfo.clear_cache(only_keys=[NoHash('x')])
+          out3.append('cleared')
+      except TypeError:
+          out3.append('TypeError')
+  with open(os.path.join(T, 'UTC'), 'wb') as f:
+      f.write(blob + blob + b'\nUTC0\n')
+  out4 = []
+  for M in (Cz, Pz):
+      M.ZoneInfo.clear_cache()
+      z = M.ZoneInfo('a'); del z
+      try:
+          out4.append(M.ZoneInfo.clear_cache(only_keys=[NoHash('a'), 'UTC']))
+      except TypeError:
+          out4.append('TypeError')
+  print('C', out[0], out2[0], out3[0], out4[0], 'Py', out[1], out2[1], out3[1], out4[1])
+  if (out[0] == [('RuntimeError', 'eq')] * 2 and out[1] == [('ok', None), ('ok', 'b')]
+          and out2[0] == [True, 'TypeError', False] and out2[1] == ['TypeError', 'TypeError', True]
+          and out3 == ['cleared', 'TypeError'] and out4 == [None, 'TypeError']):
+      print('REPRODUCED datetime-zoneinfo-cache-eq-raises')
+expected: |
+  The twins agree: both return the zone and clear the key, or both raise.
+observed: |
+  python3 3.15.2: C [RuntimeError, RuntimeError], Py [ok None, ok 'b']; unhashable key: C
+  [cached zone, TypeError, node ejected], Py [TypeError, TypeError, still cached]; empty
+  caches: C cleared, Py TypeError; zone held only by the strong cache: C None (later keys
+  cleared), Py TypeError. REPRODUCED.
+promised_by: |
+  C/Python twins.
+cause: |
+  Modules/_zoneinfo.c:2436-2453 compares the key with every cached node regardless of hash;
+  Lib/zoneinfo/_zoneinfo.py uses dict/OrderedDict lookups, which compare only equal-hash keys.
+possible_fix: |
+  Compare hashes first in find_in_strong_cache (store the key's hash in the node), as a dict
+  does; or document that key comparison errors may propagate in C.
+reproduces:
+  python3 (3.15.2): REPRODUCED (scripts/check_bugs.py)
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 87298, state: closed, relation: "related: bpo-43132 made _zoneinfo propagate PyObject_RichCompareBool errors (the rv < 0 return at :2442-2444); the twin divergence it creates was not discussed."}
+    - {number: 142782, state: open, relation: "related, different defect: a key __eq__ that re-enters clear_cache() (use-after-free)."}
+  queries: ["zoneinfo key __eq__ raises", "zoneinfo strong cache exception", "zoneinfo key comparison error",
+            "ZoneInfo str subclass key", "find_in_strong_cache", "zoneinfo cache RuntimeError",
+            "gh issue view 87298"]
+  note: |
+    `gh search issues --repo python/cpython` with unquoted words; bugforge README has no zoneinfo entry.
+    Report together with the other zoneinfo cache findings.
+lean:
+  property: PyLean.Datetime.Zone.CacheErrTwins
+  theorem: PyLean.Datetime.Zone.cacheErrTwins_refuted
+  also: ["PyLean.Datetime.Zone.cacheErrTwins_refuted_unhashable (the __hash__ = None key)",
+         "PyLean.Datetime.Zone.cacheErrTwins_refuted_empty (empty caches, dict.pop fast path)",
+         "PyLean.Datetime.Zone.cacheTwinsReleased_refuted (zone held only by the strong cache)"]

@@ -82,7 +82,7 @@ def runCall (isC : Bool) (j : Json) : Except String Json := do
                     mkMsg := fun c => if c = 5 then .error (.valueError "bad message") else .ok (),
                     lines := fun _ => .ok () }
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   shw := .call (.ok ()) (.ok ()) }
+                   shw := .call (.ok ()) (.ok ()), hier := dHier }
   let m ← pMsgA (← j.getObjVal? "msg")
   let c ← pCatA (← j.getObjVal? "cat")
   let s ← (← j.getObjVal? "sl").getInt?

@@ -12,7 +12,7 @@ Python/_warnings.c: `get_warnings_context` (:303-315), `get_warnings_context_fil
 
 Scope:
 * The module is the `warnings` module (`catch_warnings(module=...)` with another module is the
-  testing hook the docstring describes; only its `repr` is kept). `_use_context` is a parameter.
+  testing hook the docstring describes; only its identity, for `repr`, is kept). `_use_context` is a parameter.
 * Lists are references into a heap; the filters lists hold `Elem`s, a record log holds message ids.
   `warnings.filters` is a list or deleted; a reference can be marked a tuple, which only C's list
   check (`cFilterList`) reads (`Filters.lean` covers the tuple for the filter functions).
@@ -85,6 +85,12 @@ structure MState where
   out : List Shown
   /-- which references are tuples rather than lists (only C's list check reads it) -/
   tuples : Ref → Bool
+  /-- the exception class relation (`PyType_IsSubtype`) -/
+  hier : Hier
+  /-- `sys.modules['warnings']`, by object id (`none` when it is missing) -/
+  sysWarnings : Option Nat
+  /-- `repr()` of a module object -/
+  modRepr : Nat → String
 
 def upd {α : Type} (f : Nat → α) (k : Nat) (v : α) : Nat → α := fun i => if i = k then v else f i
 
@@ -138,13 +144,16 @@ def writeOut (st : MState) : Py MState :=
   match st.stderr with
   | none => .ok { st with out := st.out ++ [.lost] }
   | some w =>
+    -- `text = _wm._formatwarnmsg(msg)`, :145, outside the `try`
     match st.formatwarning with
     | some .noncallable => .error (.typeError "'int' object is not callable")
+    | some (.userRaises _ e) => .error e
     | _ =>
     match w with
     | .ok () => .ok { st with out := st.out ++ [.written] }
     | .error e =>
-      if isA e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
+      -- `except OSError: pass`, :148-150
+      if isA st.hier e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
 
 /-- `_showwarnmsg_impl(msg)`, :133-150: the context's log, if any, takes it
 (`_record_warning`, :63-64). -/
@@ -182,8 +191,8 @@ def showwarnmsg (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
 structure CW where
   name : String
   record : Bool
-  /-- `repr(module)` when the module is not `sys.modules['warnings']` -/
-  otherModule : Option String
+  /-- `self._module`, by object id -/
+  module : Nat
   filter : Option (ActA × Nat × IntA × Bool)
   entered : Bool
   savedFilters : Option Ref
@@ -191,18 +200,31 @@ structure CW where
   savedShow : Option Fn
   savedCtx : CtxV
 
-/-- `catch_warnings.__init__`, :675-687. -/
-def cwInit (name : String) (record : Bool) (otherModule : Option String)
+/-- `self._module = sys.modules['warnings'] if module is None else module`, :682. -/
+def cwModuleOf (module : Option Nat) (sysWarnings : Option Nat) : Py Nat :=
+  match module with
+  | some m => .ok m
+  | none => match sysWarnings with
+    | some w => .ok w
+    | none => .error (.keyError "'warnings'")
+
+/-- `catch_warnings.__init__`, :675-687, with `self._module` resolved (`cwModuleOf`). -/
+def cwInit (name : String) (record : Bool) (module : Nat)
     (action : Option ActA) (category : Nat) (lineno : IntA) (append : Bool) : CW :=
-  { name := name, record := record, otherModule := otherModule,
+  { name := name, record := record, module := module,
     filter := action.map (fun a => (a, category, lineno, append)), entered := false,
     savedFilters := none, savedImpl := .implOrig, savedShow := none, savedCtx := .unset }
 
-/-- `catch_warnings.__repr__`, :689-696. -/
-def cwRepr (cw : CW) : String :=
-  let args := (if cw.record then ["record=True"] else []) ++
-    (match cw.otherModule with | some r => [s!"module={r}"] | none => [])
-  s!"{cw.name}({", ".intercalate args})"
+/-- `catch_warnings.__repr__`, :689-696: `self._module is not sys.modules['warnings']` is tested
+when `repr` runs (a missing `sys.modules['warnings']` raises `KeyError`); `name` is
+`type(self).__name__`. -/
+def cwRepr (cw : CW) (sysWarnings : Option Nat) (modRepr : Nat → String) : Py String :=
+  let a1 := if cw.record then ["record=True"] else []
+  match sysWarnings with
+  | none => .error (.keyError "'warnings'")
+  | some w =>
+    let args := a1 ++ (if cw.module = w then [] else [s!"module={modRepr cw.module}"])
+    .ok s!"{cw.name}({", ".intercalate args})"
 
 /-- The filters state `simplefilter` works on: the current filters list. -/
 def curFState (useCtx : Bool) (st : MState) : FState :=
@@ -222,7 +244,10 @@ def noSavedFilters : PyExc := .named "AttributeError" "'catch_warnings' object h
 /-- `catch_warnings.__enter__`, :698-725: the object and the state it leaves, and the log it
 returns or the exception it raises. Nothing is undone when it raises. -/
 def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option Ref) :=
-  if cw.entered then (cw, st, .error (.named "RuntimeError" s!"Cannot enter {cwRepr cw} twice"))
+  if cw.entered then
+    (cw, st, match cwRepr cw st.sysWarnings st.modRepr with
+      | .ok r => .error (.named "RuntimeError" s!"Cannot enter {r} twice")
+      | .error e => .error e)
   else
   let cw := { cw with entered := true }
   -- with _wm._lock:
@@ -256,7 +281,7 @@ def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option
   match cw.filter with
   | none => (cw, st, .ok log)
   | some (a, c, ln, ap) =>
-    match simplefilter a c ln ap (curFState useCtx st) with
+    match simplefilter st.hier a c ln ap (curFState useCtx st) with
     | .ok fs => (cw, putFState useCtx st fs, .ok log)
     | .error e => (cw, st, .error e)
 
@@ -265,7 +290,9 @@ def noSavedShow : PyExc := .named "AttributeError" "'catch_warnings' object has 
 /-- `catch_warnings.__exit__`, :727-737: the state it leaves and how it ends. -/
 def cwExit (useCtx : Bool) (cw : CW) (st : MState) : MState × Py Unit :=
   if !cw.entered then
-    (st, .error (.named "RuntimeError" s!"Cannot exit {cwRepr cw} without entering first"))
+    (st, match cwRepr cw st.sysWarnings st.modRepr with
+      | .ok r => .error (.named "RuntimeError" s!"Cannot exit {r} without entering first")
+      | .error e => .error e)
   else
   let step : Py MState := if useCtx then .ok { st with ctxv := cw.savedCtx }
     else match cw.savedFilters with

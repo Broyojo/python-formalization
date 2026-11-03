@@ -1,0 +1,81 @@
+id: unicodeobj-codecs-namereplace-pua-names
+title: "namereplace writes names for Plane 15 private-use characters, taken from unicodedata's hidden alias and named-sequence slots"
+priority: P3
+kind: doc-mismatch
+module: unicodeobject
+files: [Python/codecs.c, Modules/unicodedata.c]
+functions: ["PyCodec_NameReplaceErrors"]
+summary: |
+  unicodedata keeps its name aliases and named sequences at private-use code points of Plane 15:
+  aliases at U+F0000..U+F01E0, named sequences at U+F0200..U+F03CC. `_getucname` answers for those
+  slots only when its last argument, `with_alias_and_seq`, is 1. `unicodedata.name` passes 0, so
+  `unicodedata.name('\U000f0000')` raises "no such name". The namereplace handler passes 1
+  (codecs.c:1095 and :1119), so it treats these private-use characters as named:
+
+      >>> '\U000f0000'.encode('ascii', 'namereplace')
+      b'\\N{NULL}'
+      >>> '\U000f0200'.encode('ascii', 'namereplace')
+      b'\\N{KEYCAP NUMBER SIGN}'
+
+  `b'\\N{NULL}'.decode('unicode_escape')` is '\x00', not the private-use character that was
+  encoded, and `\N{KEYCAP NUMBER SIGN}` is a named sequence, which `unicode_escape` and string
+  literals refuse ("unknown Unicode character name"). All 942 code points of the two ranges get a
+  `\N{...}` this way (481 aliases, 461 named sequences). Every other private-use character gets the
+  `\U` escape, as the documentation leads one to expect.
+likelihood: |
+  Low. It needs Plane 15 private-use characters in text encoded with namereplace. Such characters
+  do occur (fonts and input methods use private-use code points), and the output then silently
+  names a different character: U+F0000 becomes NULL, U+F0001 becomes NUL, U+F00FF becomes VS31.
+maybe_intended: |
+  Probably not. The flag exists for `unicodedata.lookup` and the `\N{...}` decoder, which map names
+  to code points and use the private-use slots as an internal table. Nothing in the namereplace
+  documentation suggests private-use characters should be named, and the result does not round-trip.
+reproducer: |
+  import codecs, unicodedata
+  c = '\U000f0000'
+  out = c.encode('ascii', 'namereplace')
+  direct = codecs.namereplace_errors(UnicodeEncodeError('ascii', c, 0, 1, 'r'))
+  has_name = unicodedata.name(c, None) is not None
+  back = out.decode('unicode_escape')
+  print(out, direct, has_name, ascii(back))
+  try:
+      seq = '\U000f0200'.encode('ascii', 'namereplace')
+      seq.decode('unicode_escape')
+      seq_back = 'decoded'
+  except UnicodeDecodeError:
+      seq_back = 'UnicodeDecodeError'
+  print(seq, seq_back)
+  if out == b'\\N{NULL}' and direct == ('\\N{NULL}', 1) and not has_name and back == '\x00' \
+          and seq_back == 'UnicodeDecodeError':
+      print('REPRODUCED unicodeobj-codecs-namereplace-pua-names')
+expected: |
+  b'\\U000f0000': the character has no Name property (unicodedata.name finds none), so the handler
+  should fall back to the hexadecimal escape.
+observed: |
+  b'\\N{NULL}', which decodes to U+0000; U+F0200 gives \N{KEYCAP NUMBER SIGN}, which does not
+  decode at all.
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  Doc/library/codecs.rst, the error handler table: namereplace replaces "with \N{...} escape
+  sequences, what appears in the braces is the Name property from Unicode Character Database";
+  and under namereplace_errors: "The set of characters that appear in the braces is the Name
+  property from Unicode Character Database." U+F0000 has no Name property.
+cause: |
+  Python/codecs.c:1095 and :1119 call `ucnhash_capi->getname(c, buffer, sizeof(buffer), 1)`. With
+  the last argument 1, Modules/unicodedata.c:1446-1447 does not skip `IS_ALIAS(code) ||
+  IS_NAMED_SEQ(code)`, and the lookup returns the alias or sequence name stored in that slot.
+possible_fix: |
+  Pass 0 as `with_alias_and_seq` in both calls in PyCodec_NameReplaceErrors, as
+  unicodedata_UCD_name_impl does (unicodedata.c:1678).
+lean: |
+  Refuted by nameReplaceWritesNames_refuted (lean/PyLean/UnicodeObj/CodecsErrNames.lean);
+  nameReplace_alias shows the handler writes \N{NULL} for U+F0000 under every database meeting
+  UcdOk, while unicodedata.name has no name for it.
+duplicates:
+  issues:
+    - {number: 62434, state: open, relation: related, reason: "asks for a unicodedata API for aliases; mentions namereplace in passing, not this behaviour"}
+    - {number: 63875, state: closed, relation: related, reason: "added namereplace; the review does not discuss the private-use slots"}
+    - {number: 56962, state: closed, relation: related, reason: "added aliases and named sequences to \\N{...} decoding, which introduced the private-use slots"}
+  queries: ["namereplace", "namereplace unicodedata name private use", "_getucname", "namereplace PUA",
+            "named sequence namereplace", "with_alias_and_seq"]
+  bugforge: "no match in vendor/bugforge-results/README.md (no namereplace entry)"

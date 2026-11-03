@@ -319,7 +319,7 @@ def initState (p : Pat) (start : Nat) : SSt :=
   { ptr := start, start, mark := Array.replicate (2 * p.groups) none }
 
 def envOf (p : Pat) (s : List Nat) (endp : Nat) (matchAll : Bool) : Env :=
-  ⟨p.code, s.toArray, endp, matchAll⟩
+  ⟨p.code, s.toArray, endp, matchAll, true⟩
 
 /-- The type checks of `state_init`, `Modules/_sre/sre.c:562-571`. -/
 def checkSubject (p : Pat) (isbytes : Bool) : Py Unit :=

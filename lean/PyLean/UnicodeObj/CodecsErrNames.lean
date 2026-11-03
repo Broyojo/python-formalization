@@ -1,0 +1,97 @@
+import PyLean.UnicodeObj.CodecsErrTrips
+
+/-!
+The names `namereplace` writes. The handler asks `unicodedata`'s C API for a name with
+`getname(c, buffer, sizeof(buffer), 1)` (codecs.c:1095, :1119). The last argument,
+`with_alias_and_seq`, makes `_getucname` (Modules/unicodedata.c:1434-1502) also answer for the
+Plane 15 private-use code points where the database keeps its aliases (U+F0000..U+F01E0) and its
+named sequences (U+F0200..U+F03CC). `unicodedata.name` passes 0 (unicodedata.c:1678) and finds no
+name there.
+-/
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-- `_getucname(NULL, c, buffer, buflen, with_alias_and_seq)`, the current database. -/
+structure Ucd where
+  getname : Nat → Bool → Option Str
+
+/-- `IS_ALIAS(c) || IS_NAMED_SEQ(c)`, unicodedata.c:1188-1190, with the bounds of
+Modules/unicodename_db.h:17508-17509 and :17999-18000. -/
+def isAliasOrSeq (c : Nat) : Bool :=
+  (decide (0xF0000 ≤ c) && decide (c < 0xF01E1)) || (decide (0xF0200 ≤ c) && decide (c < 0xF03CD))
+
+/-- What `_getucname` guarantees (unicodedata.c:1446-1447: without the flag, nothing in those
+two ranges has a name; the flag changes nothing elsewhere), and one entry of the generated table:
+the first alias, kept at U+F0000, is `NULL`, the alias of U+0000 (difftested through the C API
+by `codecs_handler`). -/
+def UcdOk (u : Ucd) : Prop :=
+  (∀ c, isAliasOrSeq c = true → u.getname c false = none) ∧
+  (∀ c, isAliasOrSeq c = false → u.getname c false = u.getname c true) ∧
+  u.getname 0xF0000 true = some (lit "NULL")
+
+/-- `unicodedata.name(chr(c))`: `_getucname(self, c, name, NAME_MAXLEN, 0)`, unicodedata.c:1678. -/
+def ucdName (u : Ucd) (c : Nat) : Option Str := u.getname c false
+
+/-- What `namereplace` gets from `_PyUnicode_GetNameCAPI`: `getname(c, buffer, 256, 1)`. -/
+def capiOf (u : Ucd) : Except PyExc (Nat → Option Str) := .ok (fun c => u.getname c true)
+
+/-- **namereplace writes the Name property.** codecs.rst: namereplace replaces with `\N{...}`
+escape sequences, "what appears in the braces is the Name property from Unicode Character
+Database"; `namereplace_errors`: "The set of characters that appear in the braces is the Name
+property from Unicode Character Database." So for every encode error with any `start` and `end`,
+the replacement is `\N{name}` for each character that `unicodedata.name` names, and the
+`backslashreplace` escape for the others. -/
+def NameReplaceWritesNames : Prop :=
+  ∀ (u : Ucd) (H : Hier) (e : ExcObj) (s out : Str) (pos : Nat),
+    UcdOk u → HierOk H → H.isEnc e.cls = true → e.object = .str s → Str.Valid s →
+    callBuiltin H (capiOf u) .namereplace e = .ok (.str out, pos) →
+    out = (slice s (stOf e s.length) pos).flatMap (fun c =>
+      match ucdName u c with
+      | some n => [92, 78, 123] ++ n ++ [125]
+      | none => escapeEncodeChar c)
+
+/-- `UnicodeEncodeError('ascii', '\U000f0000', 0, 1, 'r')`. -/
+def aliasExc : ExcObj :=
+  { cls := "UnicodeEncodeError", tpName := "UnicodeEncodeError",
+    clsRepr := "<class 'UnicodeEncodeError'>", encoding := .str (lit "ascii"),
+    object := .str [0xF0000], start := 0, stop := 1 }
+
+/-- For every database that meets `UcdOk`, the real one included: `namereplace` writes
+`\N{NULL}` for U+F0000, a private-use character that `unicodedata.name` does not name. -/
+theorem nameReplace_alias (u : Ucd) (hu : UcdOk u) :
+    callBuiltin builtinHier (capiOf u) .namereplace aliasExc =
+      .ok (.str ([92, 78, 123] ++ lit "NULL" ++ [125]), 1) ∧ ucdName u 0xF0000 = none := by
+  have hn := hu.2.2
+  have hz := hu.1 0xF0000 (by decide)
+  refine ⟨?_, hz⟩
+  have hE : builtinHier.isEnc aliasExc.cls = true := by decide
+  have hs : stOf aliasExc 1 = 0 := by decide
+  have he : enOf aliasExc 1 = 1 := by decide
+  simp only [callBuiltin, nameReplaceErrors, hE, Bool.not_true, Bool.false_eq_true,
+    if_false, capiOf, getParams_str aliasExc [0xF0000] rfl, pure, Except.pure, bind, Except.bind,
+    Functor.map, Except.map, Body.result, List.length_singleton, hs, he, slice, List.drop_zero,
+    Nat.sub_zero, List.take_one, List.head?_cons, Option.toList_some, nameSizeLoop, nameSize, hn]
+  have hfit : ¬ ((ssizeMaxN : Int) - (3 + ((lit "NULL").length : Int) + 1) < 0) := by
+    simp [ssizeMaxN, lit]
+  simp [nameBlock, hn, hfit]
+
+theorem nameReplaceWritesNames_refuted : ¬ NameReplaceWritesNames := by
+  intro h
+  let u0 : Ucd := ⟨fun c f => if c = 0xF0000 ∧ f = true then some (lit "NULL") else none⟩
+  have hu0 : UcdOk u0 := by
+    refine ⟨fun c _ => by simp [u0], fun c hc => ?_, by simp [u0]⟩
+    have : c ≠ 0xF0000 := by intro h; subst h; simp [isAliasOrSeq] at hc
+    simp [u0, this]
+  obtain ⟨hcall, hname⟩ := nameReplace_alias u0 hu0
+  have := h u0 builtinHier aliasExc [0xF0000] _ 1 hu0 builtinHier_ok (by decide) rfl
+    (by intro x hx; simp at hx; subst hx; decide) hcall
+  have hs : stOf aliasExc 1 = 0 := by decide
+  simp only [List.length_singleton, hs, slice, List.drop_zero, Nat.sub_zero, List.take_one,
+    List.head?_cons, Option.toList_some, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    hname] at this
+  revert this
+  decide
+
+end PyLean.UnicodeObj.Codecs
