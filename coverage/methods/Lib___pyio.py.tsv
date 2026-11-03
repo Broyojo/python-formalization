@@ -34,19 +34,19 @@ Lib/_pyio.py	676	694	BufferedIOBase.read	read(self, size=-1)	todo		candidates:py
 Lib/_pyio.py	696	700	BufferedIOBase.read1	read1(self, size=-1)	todo		
 Lib/_pyio.py	702	714	BufferedIOBase.readinto	readinto(self, b)	modelled	pyio-bufferedreader-readinto-twins,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	716	725	BufferedIOBase.readinto1	readinto1(self, b)	todo		
-Lib/_pyio.py	727	740	BufferedIOBase._readinto	_readinto(self, b, read1)	modelled	pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	727	740	BufferedIOBase._readinto	_readinto(self, b, read1)	todo		review: The BytesIO model (BytesIO.lean:315-319) covers only the read branch: BytesIO has no readinto1 operation, so the `if read1: data = self.read1(len(b))` branch (:733-734) is never mirrored, and the memoryview cast is only exercised on bytearray.
 Lib/_pyio.py	742	751	BufferedIOBase.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	753	760	BufferedIOBase.detach	detach(self)	todo		
 Lib/_pyio.py	774	775	_BufferedIOMixin.__init__	__init__(self, raw)	todo		
 Lib/_pyio.py	779	783	_BufferedIOMixin.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	785	789	_BufferedIOMixin.tell	tell(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	785	789	_BufferedIOMixin.tell	tell(self)	todo		review: mixTell mirrors :786-789, but the failed-seek refutation only needs _pyio's final tell to differ from C's 2; a mixin tell that skipped the pos < 0 check, or answered anything else, still refutes it.
 Lib/_pyio.py	791	804	_BufferedIOMixin.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
 Lib/_pyio.py	808	811	_BufferedIOMixin.flush	flush(self)	todo		
 Lib/_pyio.py	813	819	_BufferedIOMixin.close	close(self)	todo		
 Lib/_pyio.py	821	827	_BufferedIOMixin.detach	detach(self)	todo		
 Lib/_pyio.py	831	832	_BufferedIOMixin.seekable	seekable(self)	todo		
 Lib/_pyio.py	835	836	_BufferedIOMixin.raw	raw(self)	todo		
-Lib/_pyio.py	839	840	_BufferedIOMixin.closed	closed(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	839	840	_BufferedIOMixin.closed	closed(self)	todo		review: BP2.closed is self.raw.closed forced to Bool (the property returns the raw's object unchanged); in the failed-seek case it is only the closed test inside an empty flush, so a closed that always answered False still refutes.
 Lib/_pyio.py	843	844	_BufferedIOMixin.name	name(self)	todo		
 Lib/_pyio.py	847	848	_BufferedIOMixin.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/_pyio.py	850	851	_BufferedIOMixin.__getstate__	__getstate__(self)	todo		
@@ -69,23 +69,23 @@ Lib/_pyio.py	1003	1020	BytesIO.truncate	truncate(self, pos=None)	modelled	pyio-b
 Lib/_pyio.py	1022	1025	BytesIO.readable	readable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1027	1030	BytesIO.writable	writable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1032	1035	BytesIO.seekable	seekable(self)	modelled	pyio-bytesio-inquiries	
-Lib/_pyio.py	1049	1060	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedreader-readinto-twins	
+Lib/_pyio.py	1049	1060	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	todo		review: BP2.init answers raw.readable() from a flag with no callback, so a readable() that raises, re-enters or returns a truthy non-bool (accepted here, refused by io: measured) is not modelled; all three refutations hold for any constructor that succeeds.
 Lib/_pyio.py	1062	1063	BufferedReader.readable	readable(self)	todo		
-Lib/_pyio.py	1065	1067	BufferedReader._reset_read_buf	_reset_read_buf(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1065	1067	BufferedReader._reset_read_buf	_reset_read_buf(self)	todo		review: Two assignments; in the failed-seek case it runs only in __init__ (the defect is that seek never reaches it), so the refutation holds for any reset.
 Lib/_pyio.py	1069	1080	BufferedReader.read	read(self, size=None)	modelled	pyio-buffered-pyio-no-hang,pyio-bufferedrandom-failed-seek-twins,pyio-bufferedreader-readinto-twins	candidates:pyio-bytesio-read-after-seek
-Lib/_pyio.py	1082	1132	BufferedReader._read_unlocked	_read_unlocked(self, n=None)	modelled	pyio-buffered-pyio-no-hang,pyio-bufferedrandom-failed-seek-twins,pyio-bufferedreader-readinto-twins	
+Lib/_pyio.py	1082	1132	BufferedReader._read_unlocked	_read_unlocked(self, n=None)	todo		review: readUnlocked/readMore mirror :1083-1132 (readall branch, fast path, wanted = max(buffer_size, n), nodata_val), but no property states what it returns: in the hang case it only calls raw.read under the lock, in the failed-seek and readinto cases it only leaves read-ahead behind, and each refutation holds for other read-ahead amounts.
 Lib/_pyio.py	1134	1143	BufferedReader.peek	peek(self, size=0)	todo		
-Lib/_pyio.py	1145	1154	BufferedReader._peek_unlocked	_peek_unlocked(self, n=0)	modelled	pyio-bufferedreader-readinto-twins	
+Lib/_pyio.py	1145	1154	BufferedReader._peek_unlocked	_peek_unlocked(self, n=0)	todo		review: peekUnlocked mirrors :1146-1154, but readinto-twins only needs it to refill at least two bytes; nothing states what peek returns or how much it reads.
 Lib/_pyio.py	1156	1168	BufferedReader.read1	read1(self, size=-1)	todo		
 Lib/_pyio.py	1175	1221	BufferedReader._readinto	_readinto(self, buf, read1)	modelled	pyio-bufferedreader-readinto-twins	
-Lib/_pyio.py	1223	1225	BufferedReader.tell	tell(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1223	1225	BufferedReader.tell	tell(self)	todo		review: tellR mirrors :1225, but the failed-seek refutation only needs a value other than C's 2; a tell without the max(..., 0) clamp (-4 here) still refutes, so nothing pins its formula.
 Lib/_pyio.py	1227	1236	BufferedReader.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	1247	1256	BufferedWriter.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1247	1256	BufferedWriter.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	todo		review: raw.writable() is a flag answered without a callback (truthy non-bool, raising and re-entering inquiries not modelled), and in BufferedRandom's constructor the failed-seek refutation holds for any writer init that succeeds.
 Lib/_pyio.py	1258	1259	BufferedWriter.writable	writable(self)	todo		
 Lib/_pyio.py	1261	1287	BufferedWriter.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	1289	1294	BufferedWriter.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/_pyio.py	1296	1298	BufferedWriter.flush	flush(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
-Lib/_pyio.py	1300	1315	BufferedWriter._flush_unlocked	_flush_unlocked(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1296	1298	BufferedWriter.flush	flush(self)	todo		review: withLock true flushUnlocked mirrors :1297-1298, but the failed-seek case flushes an empty buffer only; any flush that does nothing on an empty buffer still refutes.
+Lib/_pyio.py	1300	1315	BufferedWriter._flush_unlocked	_flush_unlocked(self)	todo		review: flushUnlocked/flushLoop mirror :1301-1315, but only its closed test with an empty write buffer runs in the counterexample; the write loop, None, BlockingIOError-to-RuntimeError and bad-count paths are not stated by any property.
 Lib/_pyio.py	1317	1318	BufferedWriter.tell	tell(self)	todo		
 Lib/_pyio.py	1320	1325	BufferedWriter.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/_pyio.py	1327	1340	BufferedWriter.close	close(self)	todo		
@@ -102,11 +102,11 @@ Lib/_pyio.py	1399	1400	BufferedRWPair.flush	flush(self)	todo
 Lib/_pyio.py	1402	1406	BufferedRWPair.close	close(self)	todo		
 Lib/_pyio.py	1408	1409	BufferedRWPair.isatty	isatty(self)	todo		
 Lib/_pyio.py	1412	1413	BufferedRWPair.closed	closed(self)	todo		
-Lib/_pyio.py	1425	1428	BufferedRandom.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1425	1428	BufferedRandom.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	todo		review: raw._checkSeekable() and the readable/writable inquiries are flags without callbacks (seekable() returning 1 is accepted here and refused by io, measured), and the refutation holds for any constructor that succeeds.
 Lib/_pyio.py	1430	1445	BufferedRandom.seek	seek(self, pos, whence=0)	modelled	pyio-bufferedrandom-failed-seek-twins	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	1447	1451	BufferedRandom.tell	tell(self)	modelled	pyio-bufferedrandom-failed-seek-twins	
+Lib/_pyio.py	1447	1451	BufferedRandom.tell	tell(self)	todo		review: The kind-2 branch of BP2.tell mirrors :1448-1451, but the refutation only needs a value other than 2 on an empty write buffer; nothing states its result or the write-buffer branch.
 Lib/_pyio.py	1453	1457	BufferedRandom.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/_pyio.py	1459	1463	BufferedRandom.read	read(self, size=None)	modelled	pyio-bufferedrandom-failed-seek-twins	candidates:pyio-bytesio-read-after-seek
+Lib/_pyio.py	1459	1463	BufferedRandom.read	read(self, size=None)	todo		review: flushIfRandom then BufferedReader.read mirrors :1460-1463, but in the failed-seek case the flush is empty and the read only sets up read-ahead; any read that leaves some read-ahead still refutes.
 Lib/_pyio.py	1465	1467	BufferedRandom.readinto	readinto(self, b)	todo		
 Lib/_pyio.py	1469	1471	BufferedRandom.peek	peek(self, size=0)	todo		
 Lib/_pyio.py	1473	1475	BufferedRandom.read1	read1(self, size=-1)	todo		

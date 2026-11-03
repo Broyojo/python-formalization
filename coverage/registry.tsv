@@ -709,7 +709,7 @@ dict-readers-faithful	proven	Objects/dictobject.c	PyDict_GetItemRef,_PyDict_GetI
 dict-contains	proven	Objects/dictobject.c	
 dict-subscript	proven	Objects/dictobject.c	
 dict-pop	proven	Objects/dictobject.c	
-dict-clear	proven	Objects/dictobject.c	
+dict-clear	proven	Objects/dictobject.c	clear_lock_held
 dict-len	proven	Objects/dictobject.c	
 dict-iter-order	proven	Objects/dictobject.c	dictiter_new,dict_iter,dict___reversed___impl,dictiter_iternextkey_lock_held,dictiter_iternextkey,dictiter_iternextvalue_lock_held,dictiter_iternextvalue,dictiter_iternextitem_lock_held,dictiter_iternextitem,dictreviter_iter_lock_held,dictreviter_iternext
 dict-iter-failure	proven	Objects/dictobject.c	dictiter_iternextkey_lock_held,dictiter_iternextvalue_lock_held,dictiter_iternextitem_lock_held,dictreviter_iter_lock_held
@@ -799,7 +799,7 @@ set-frozenset-hash-not-minus-one	proven	Objects/setobject.c
 set-new-size-minimal	proven	Objects/setobject.c	
 set-clear-empties	proven	Objects/setobject.c	
 set-iter-len	refuted	Objects/setobject.c	setiter_iternext,setiter_len,set_iter
-dict-pop-body	proven	Objects/dictobject.c	_PyDict_Pop_KnownHash,PyDict_Pop,PyDict_PopString,dict_pop_default,_PyDict_Pop,dict_pop_impl
+dict-pop-body	proven	Objects/dictobject.c	_PyDict_Pop_KnownHash,pop_lock_held,PyDict_Pop,PyDict_PopString,dict_pop_default,_PyDict_Pop,dict_pop_impl
 dict-setdefaultref-no-crash	refuted	Objects/dictobject.c	PyDict_SetDefaultRef
 dict-setdefault-c-contract	refuted	Objects/dictobject.c	PyDict_SetDefault
 dict-mergefromseq2-keeps-absent	refuted	Objects/dictobject.c	PyDict_MergeFromSeq2,dict_merge_from_seq2
@@ -817,6 +817,14 @@ dict-repr-quiet	proven	Objects/dictobject.c	anydict_repr_impl,dict_repr
 dict-dict-fromkeys-body	proven	Objects/dictobject.c	dict_dict_fromkeys
 dict-fromkeys-shrink-unseen	proven	Objects/dictobject.c	
 dict-fromkeys-frozen-stable	refuted	Objects/dictobject.c	_PyDict_FromKeys,dict_fromkeys_impl
+dict-fromkeys-no-crash	refuted	Objects/dictobject.c	_PyDict_FromKeys,dict_fromkeys_impl
+dict-set-fromkeys-body	proven	Objects/dictobject.c	dict_set_fromkeys
+dict-iter-yields	proven	Objects/dictobject.c	dict_iter,dict___reversed___impl,dictiter_iternextkey_lock_held,dictiter_iternextvalue_lock_held,dictiter_iternextitem_lock_held,dictreviter_iter_lock_held
+dict-iter-len	proven	Objects/dictobject.c	dictiter_len
+dict-table-geometry	proven	Objects/dictobject.c	new_keys_object,insert_to_emptydict,insertion_resize,insert_combined_dict
+dict-setdefault-refines	proven	Objects/dictobject.c	dict_setdefault_ref_lock_held
+dict-setdefault-split-str	proven	Objects/dictobject.c	dict_setdefault_ref_lock_held
+dict-update-uniq-run	proven	Objects/dictobject.c	PyDict_Update,_PyDict_MergeUniq
 longobj-normalize	proven	Objects/longobject.c	long_normalize
 longobj-from-stwodigits	proven	Objects/longobject.c	_PyLong_FromSTwoDigits,_PyLong_FromMedium,_PyLong_FromLarge,is_medium_int
 longobj-x-add	proven	Objects/longobject.c	x_add
