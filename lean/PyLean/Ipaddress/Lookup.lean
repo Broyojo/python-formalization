@@ -144,20 +144,21 @@ theorem getitemSequence_proven : GetitemSequence := by
     · rw [ite_eq_right hi, ite_eq_left (by omega), ite_eq_right (by omega)]
 
 /-- `other in net`, ipaddress.py:731-741, for every kind of `other`: an address of the network's
-version is in it exactly when it is one of the block's addresses; an address of the other version
-and any network are not (the comment at :732, "always false if one is v4 and the other is v6");
-an object without `version` raises `AttributeError`. -/
+version is in it exactly when it is one of the block's addresses, whatever either scope id (:741
+reads only `_ip`); an address of the other version and any network are not (the comment at :732,
+"always false if one is v4 and the other is v6"); an object without `version` raises
+`AttributeError`. -/
 def ContainsMem : Prop :=
   ∀ n : Net, IsVersion n.bits → n.Valid →
-    (∀ x, x < 2 ^ n.bits → containsOp n (.addr n.bits x) = .ok (n.mem x)) ∧
-    (∀ b x, versionOf b ≠ versionOf n.bits → containsOp n (.addr b x) = .ok false) ∧
+    (∀ x sc, x < 2 ^ n.bits → containsOp n (.addr n.bits x sc) = .ok (n.mem x)) ∧
+    (∀ b x sc, versionOf b ≠ versionOf n.bits → containsOp n (.addr b x sc) = .ok false) ∧
     (∀ m : Net, containsOp n (.net m) = .ok false) ∧
     (∀ ty, containsOp n (.other ty) =
       .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'"))
 
 theorem containsMem_proven : ContainsMem := by
   intro n _ hn
-  refine ⟨fun x hx => ?_, fun b x hb => ?_, fun m => ?_, fun ty => rfl⟩
+  refine ⟨fun x sc hx => ?_, fun b x sc hb => ?_, fun m => ?_, fun ty => rfl⟩
   · simp [containsOp, contains_eq_mem n x hn hx]
   · simp [containsOp, Ne.symm hb]
   · simp only [containsOp]; split <;> rfl
@@ -178,14 +179,14 @@ def OverlapsShareAddress : Prop :=
     (∀ b : Net, b.Valid → b.bits = a.bits →
       ∃ r, overlapsOp a (.net b) = .ok r ∧ (r = true ↔ ∃ x, a.mem x = true ∧ b.mem x = true)) ∧
     (∀ b : Net, versionOf b.bits ≠ versionOf a.bits → overlapsOp a (.net b) = .ok false) ∧
-    (∀ bb x, overlapsOp a (.addr bb x) =
+    (∀ bb x sc, overlapsOp a (.addr bb x sc) =
       .error (.typeError s!"argument of type 'IPv{versionOf bb}Address' is not a container or iterable")) ∧
     (∀ ty, overlapsOp a (.other ty) =
       .error (.typeError s!"argument of type '{ty}' is not a container or iterable"))
 
 theorem overlapsShareAddress_proven : OverlapsShareAddress := by
   intro a _ ha
-  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x => rfl, fun ty => rfl⟩
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc => rfl, fun ty => rfl⟩
   · refine ⟨_, overlapsOp_net a b (by rw [hbits]), ?_⟩
     have hal := Net.addr_add_size_le a ha
     have hbl := Net.addr_add_size_le b hb
@@ -212,40 +213,91 @@ theorem overlapsShareAddress_proven : OverlapsShareAddress := by
       · exact Or.inl (Or.inr ⟨by omega, by omega⟩)
   · simp [overlapsOp, inOp, containsOp, hv, Ne.symm hv, bind, Except.bind]
 
-/-- `a.subnet_of(b)`, ipaddress.py:1039-1041 through `_is_subnet_of` (:1028-1037), docstring
-"Return True if this network is a subnet of other": for a network `b` of the same version, true
-exactly when every address of `a` is in `b`; a different version raises `TypeError` (:1031-1032);
-an address of the same version or an object without `version` raises `TypeError` through the
-caught `AttributeError` (:1035-1037). -/
+/-- `a.subnet_of(b)`, ipaddress.py:1039-1041 through `_is_subnet_of` (:1028-1037): for a network `b`
+of the same version the result is `True` exactly when every address of `a` is in `b` and, for
+IPv6 networks with the same network address, their scope ids are equal. `b.network_address <=
+a.network_address` (:1033) is `total_ordering`'s `b < a or b == a`, and only `==` reads the scope
+id (`IPv6Address.__eq__`, :2009-2015). A different version raises `TypeError` (:1031-1032); an
+address of the same version or an object without `version` raises `TypeError` through the caught
+`AttributeError` (:1035-1037). The docstring's "Return True if this network is a subnet of other"
+without the scope condition is `SubnetOfScopeBlind`, refuted. -/
 def SubnetOfMem : Prop :=
   ∀ a : Net, IsVersion a.bits → a.Valid →
     (∀ b : Net, b.Valid → b.bits = a.bits →
-      ∃ r, subnetOfOp a (.net b) = .ok r ∧ (r = true ↔ ∀ x, a.mem x = true → b.mem x = true)) ∧
+      ∃ r, subnetOfOp a (.net b) = .ok r ∧
+        (r = true ↔ (∀ x, a.mem x = true → b.mem x = true) ∧
+          (b.addr = a.addr → a.bits = 128 → b.scope = a.scope))) ∧
     (∀ b : Net, versionOf b.bits ≠ versionOf a.bits →
       subnetOfOp a (.net b) = .error (.typeError "~are not of the same version")) ∧
-    (∀ bb x, versionOf bb ≠ versionOf a.bits →
-      subnetOfOp a (.addr bb x) = .error (.typeError "~are not of the same version")) ∧
-    (∀ x, subnetOfOp a (.addr a.bits x) = .error (.typeError "~Unable to test subnet containment between")) ∧
+    (∀ bb x sc, versionOf bb ≠ versionOf a.bits →
+      subnetOfOp a (.addr bb x sc) = .error (.typeError "~are not of the same version")) ∧
+    (∀ x sc, subnetOfOp a (.addr a.bits x sc) =
+      .error (.typeError "~Unable to test subnet containment between")) ∧
     (∀ ty, subnetOfOp a (.other ty) = .error (.typeError "~Unable to test subnet containment between"))
 
 theorem subnetOfMem_proven : SubnetOfMem := by
   intro a _ ha
-  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x hv => ?_, fun x => ?_, fun ty => rfl⟩
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc hv => ?_, fun x sc => ?_, fun ty => rfl⟩
   · refine ⟨subnetOf a b, by simp [subnetOfOp, isSubnetOf, hbits], ?_⟩
     have haK := Net.size_pos a
     have hbK := Net.size_pos b
-    unfold subnetOf Net.mem
-    rw [Net.broadcast_eq a ha, Net.broadcast_eq b hb]
-    simp only [Bool.and_eq_true, decide_eq_true_eq]
+    rw [subnetOf_iff, Net.broadcast_eq a ha, Net.broadcast_eq b hb]
+    have hmem : (∀ x, a.mem x = true → b.mem x = true) ↔
+        b.addr ≤ a.addr ∧ a.addr + (a.size - 1) ≤ b.addr + (b.size - 1) := by
+      unfold Net.mem
+      simp only [Bool.and_eq_true, decide_eq_true_eq]
+      constructor
+      · intro h
+        have e1 := h a.addr ⟨Nat.le_refl _, by omega⟩
+        have e2 := h (a.addr + (a.size - 1)) ⟨by omega, by omega⟩
+        exact ⟨by omega, by omega⟩
+      · rintro ⟨h1, h2⟩ x ⟨h3, h4⟩
+        exact ⟨by omega, by omega⟩
+    rw [hmem]
     constructor
-    · rintro ⟨h1, h2⟩ x ⟨h3, h4⟩
-      exact ⟨by omega, by omega⟩
-    · intro h
-      have e1 := h a.addr ⟨Nat.le_refl _, by omega⟩
-      have e2 := h (a.addr + (a.size - 1)) ⟨by omega, by omega⟩
-      exact ⟨by omega, by omega⟩
+    · rintro ⟨h1, h2⟩
+      refine ⟨⟨by rcases h1 with h | ⟨h, -⟩ <;> omega, h2⟩, fun he h128 => ?_⟩
+      rcases h1 with h | ⟨-, h⟩
+      · omega
+      · have h6 : versionOf b.bits = 6 := by simp [hbits, h128, versionOf]
+        exact h h6
+    · rintro ⟨⟨h1, h2⟩, h3⟩
+      refine ⟨?_, h2⟩
+      rcases Nat.lt_or_eq_of_le h1 with h | h
+      · exact Or.inl h
+      · exact Or.inr ⟨h, fun hv => h3 h (by rw [← hbits]; exact versionOf_six hv)⟩
   · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
   · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
   · simp [subnetOfOp, isSubnetOf]
+
+/-- `subnet_of` docstring, ipaddress.py:1040, "Return True if this network is a subnet of other",
+read on addresses: a network all of whose addresses are in `b` is a subnet of `b`. Refuted:
+`IPv6Network('fe80::%1/64').subnet_of(IPv6Network('fe80::/10'))` is `False`, because
+`IPv6Address('fe80::') <= IPv6Address('fe80::%1')` is `False` (`__lt__` ignores the scope id,
+`__eq__` does not), while `IPv6Network('fe80:0:0:1::%1/64')` is a subnet of the same network.
+Upstream: gh-151769 (open), the scope-blind ordering. -/
+def SubnetOfScopeBlind : Prop :=
+  ∀ a b : Net, IsVersion a.bits → a.Valid → b.Valid → b.bits = a.bits →
+    (∀ x, a.mem x = true → b.mem x = true) → subnetOfOp a (.net b) = .ok true
+
+theorem subnetOfScopeBlind_refuted : ¬ SubnetOfScopeBlind := by
+  intro h
+  have hc := h ⟨128, 338288524927261089654018896841347694592, 64, some "1"⟩
+    ⟨128, 338288524927261089654018896841347694592, 10, none⟩ (Or.inr rfl) (by decide) (by decide) rfl
+    (by
+      intro x hx
+      have hx' : 338288524927261089654018896841347694592 ≤ x ∧
+          x < 338288524927261089654018896841347694592 + 2 ^ (128 - 64) := by
+        simp only [Net.mem, Net.size, Bool.and_eq_true] at hx
+        exact ⟨of_decide_eq_true hx.1, of_decide_eq_true hx.2⟩
+      show (decide (338288524927261089654018896841347694592 ≤ x) &&
+        decide (x < 338288524927261089654018896841347694592 + 2 ^ (128 - 10))) = true
+      have hp : (2 : Nat) ^ (128 - 10) = 332306998946228968225951765070086144 := by decide
+      have hq : (2 : Nat) ^ (128 - 64) = 18446744073709551616 := by decide
+      rw [hp]
+      rw [hq] at hx'
+      rw [Bool.and_eq_true]
+      exact ⟨decide_eq_true (by omega), decide_eq_true (by omega)⟩)
+  exact absurd hc (by decide)
 
 end PyLean.Ipaddress

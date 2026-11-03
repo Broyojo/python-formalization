@@ -12,21 +12,27 @@ open PyLean
 range given the first and last IP addresses", with the doctest's `192.0.2.0/25, 192.0.2.128/31,
 192.0.2.130/32`): each block starts where the previous one ended, is aligned to its size, ends at
 or below `last`, and is the largest such block: doubling it would make the prefix negative, break
-the alignment, or pass `last`. At each start exactly one size passes, so `Greedy` fixes the list. -/
+the alignment, or pass `last`. At each start exactly one size passes, so `Greedy` fixes the list.
+The networks are built from ints (ipaddress.py:245), so none has a scope id. -/
 def Greedy (bits last : Nat) : List Net → Nat → Prop
   | [], lo => lo = last + 1
   | n :: ns, lo =>
     n.bits = bits ∧ n.addr = lo ∧ n.prefixlen ≤ bits ∧ lo % n.size = 0 ∧ lo + n.size ≤ last + 1 ∧
-      (n.prefixlen = 0 ∨ lo % (2 * n.size) ≠ 0 ∨ last + 1 < lo + 2 * n.size) ∧
+      (n.prefixlen = 0 ∨ lo % (2 * n.size) ≠ 0 ∨ last + 1 < lo + 2 * n.size) ∧ n.scope = none ∧
       Greedy bits last ns (lo + n.size)
 
-/-- `summarize_address_range` docstring, ipaddress.py:198-229: for addresses `first <= last` of one
-version (`last < 2**bits`, the type invariant of `_ip`), the result is the summary of
-`first..last`: valid networks, each the largest aligned block that starts where the previous one
-ended and does not pass `last`. -/
+/-- `summarize_address_range` docstring, ipaddress.py:198-229: for addresses `first` and `last` of
+one version that `first > last` (:229) lets through, the result is the summary of
+`int(first)..int(last)`: valid networks, each the largest aligned block that starts where the
+previous one ended and does not pass `last`. `last < 2**bits` is the type invariant of `_ip`.
+`first > last` is `total_ordering`'s `not first < last and first != last`, so it lets through
+`int(first) < int(last)`, and equal ints only with equal scope ids for IPv6 (`IPv6Address.__eq__`,
+:2009-2015); `SummarizeRejects` gives the other cases, and `SummarizeScopeBlind` (refuted) the
+reading where the scope ids do not matter. -/
 def SummarizeExactCover : Prop :=
-  ∀ bits first last : Nat, IsVersion bits → first ≤ last → last < 2 ^ bits →
-    ∃ nets, summarizeOp (.addr bits first) (.addr bits last) = .ok nets ∧
+  ∀ (bits first last : Nat) (sf sl : Option String), IsVersion bits → first ≤ last →
+    (first = last → bits = 128 → sf = sl) → last < 2 ^ bits →
+    ∃ nets, summarizeOp (.addr bits first sf) (.addr bits last sl) = .ok nets ∧
       (∀ n ∈ nets, n.Valid) ∧ Greedy bits last nets first
 
 /-- `_count_righthand_zero_bits(number, bits)`, ipaddress.py:181-194, "the number of zero bits on
@@ -202,7 +208,7 @@ theorem and_ipIntFromPrefix {x n bits : Nat} (hd : 2 ^ n ∣ x) (hx : x < 2 ^ bi
       simp [this]
 
 theorem mkNet_ok {a n bits : Nat} (hd : 2 ^ n ∣ a) (ha : a < 2 ^ bits) (hn : n ≤ bits) :
-    mkNet bits (a : Int) ((bits - n : Nat) : Int) = .ok ⟨bits, a, bits - n⟩ := by
+    mkNet bits (a : Int) ((bits - n : Nat) : Int) = .ok ⟨bits, a, bits - n, none⟩ := by
   have hm := and_ipIntFromPrefix hd ha hn
   have h1 : ¬ ((a : Int) > ((allOnes bits : Nat) : Int)) := by
     unfold allOnes; omega
@@ -237,12 +243,12 @@ theorem summarizeLoop_spec (bits last : Nat) (hlast : last < 2 ^ bits) :
       have hpos : 1 ≤ 2 ^ nbits := Nat.one_le_two_pow
       have hfit : first + 2 ^ nbits ≤ last + 1 := by omega
       have hfb : first < 2 ^ bits := by omega
-      have hvalid : (⟨bits, first, bits - nbits⟩ : Net).Valid := by
+      have hvalid : (⟨bits, first, bits - nbits, none⟩ : Net).Valid := by
         refine ⟨Nat.sub_le _ _, hfb, ?_⟩
         show first % 2 ^ (bits - (bits - nbits)) = 0
         rw [Nat.sub_sub_self hnb]
         exact Nat.dvd_iff_mod_eq_zero.mp hdvd'
-      have hsize : (⟨bits, first, bits - nbits⟩ : Net).size = 2 ^ nbits := by
+      have hsize : (⟨bits, first, bits - nbits, none⟩ : Net).size = 2 ^ nbits := by
         show 2 ^ (bits - (bits - nbits)) = _
         rw [Nat.sub_sub_self hnb]
       have hmaxi : bits - nbits = 0 ∨ first % (2 * 2 ^ nbits) ≠ 0 ∨
@@ -259,37 +265,37 @@ theorem summarizeLoop_spec (bits last : Nat) (hlast : last < 2 ^ bits) :
           have : 2 * 2 ^ nbits = 2 ^ bitLength (last - first + 1) := by
             rw [show bitLength (last - first + 1) = nbits + 1 by omega, Nat.pow_succ]; omega
           omega
-      have hhead : (⟨bits, first, bits - nbits⟩ : Net).bits = bits ∧
-          (⟨bits, first, bits - nbits⟩ : Net).addr = first ∧
-          (⟨bits, first, bits - nbits⟩ : Net).prefixlen ≤ bits ∧
-          first % (⟨bits, first, bits - nbits⟩ : Net).size = 0 ∧
-          first + (⟨bits, first, bits - nbits⟩ : Net).size ≤ last + 1 ∧
-          ((⟨bits, first, bits - nbits⟩ : Net).prefixlen = 0 ∨
-            first % (2 * (⟨bits, first, bits - nbits⟩ : Net).size) ≠ 0 ∨
-            last + 1 < first + 2 * (⟨bits, first, bits - nbits⟩ : Net).size) := by
+      have hhead : (⟨bits, first, bits - nbits, none⟩ : Net).bits = bits ∧
+          (⟨bits, first, bits - nbits, none⟩ : Net).addr = first ∧
+          (⟨bits, first, bits - nbits, none⟩ : Net).prefixlen ≤ bits ∧
+          first % (⟨bits, first, bits - nbits, none⟩ : Net).size = 0 ∧
+          first + (⟨bits, first, bits - nbits, none⟩ : Net).size ≤ last + 1 ∧
+          ((⟨bits, first, bits - nbits, none⟩ : Net).prefixlen = 0 ∨
+            first % (2 * (⟨bits, first, bits - nbits, none⟩ : Net).size) ≠ 0 ∨
+            last + 1 < first + 2 * (⟨bits, first, bits - nbits, none⟩ : Net).size) := by
         rw [hsize]
         exact ⟨rfl, rfl, Nat.sub_le _ _, Nat.dvd_iff_mod_eq_zero.mp hdvd', hfit, hmaxi⟩
       simp only [mkNet_ok hdvd' hfb hnb, Nat.shiftLeft_eq, Nat.one_mul]
       by_cases hend : first + 2 ^ nbits - 1 = allOnes bits
-      · refine ⟨[⟨bits, first, bits - nbits⟩], ?_, ?_, ?_⟩
+      · refine ⟨[⟨bits, first, bits - nbits, none⟩], ?_, ?_, ?_⟩
         · simp [hend, bind, Except.bind, pure, Except.pure]
         · intro n hn
           simp only [List.mem_singleton] at hn
           subst hn
           exact hvalid
-        · refine ⟨hhead.1, hhead.2.1, hhead.2.2.1, hhead.2.2.2.1, hhead.2.2.2.2.1, hhead.2.2.2.2.2, ?_⟩
+        · refine ⟨hhead.1, hhead.2.1, hhead.2.2.1, hhead.2.2.2.1, hhead.2.2.2.2.1, hhead.2.2.2.2.2, rfl, ?_⟩
           show first + _ = last + 1
           rw [hsize]
           unfold allOnes at hend
           omega
       · obtain ⟨rest, hrest, hv, ht⟩ := ih (first + 2 ^ nbits) (by omega) (by omega)
-        refine ⟨⟨bits, first, bits - nbits⟩ :: rest, ?_, ?_, ?_⟩
+        refine ⟨⟨bits, first, bits - nbits, none⟩ :: rest, ?_, ?_, ?_⟩
         · simp [hend, hrest, bind, Except.bind, pure, Except.pure]
         · intro n hn
           rcases List.mem_cons.mp hn with rfl | hn
           · exact hvalid
           · exact hv n hn
-        · refine ⟨hhead.1, hhead.2.1, hhead.2.2.1, hhead.2.2.2.1, hhead.2.2.2.2.1, hhead.2.2.2.2.2, ?_⟩
+        · refine ⟨hhead.1, hhead.2.1, hhead.2.2.1, hhead.2.2.2.1, hhead.2.2.2.2.1, hhead.2.2.2.2.2, rfl, ?_⟩
           rw [hsize]
           exact ht
     · refine ⟨[], ?_, ?_, ?_⟩
@@ -299,13 +305,37 @@ theorem summarizeLoop_spec (bits last : Nat) (hlast : last < 2 ^ bits) :
         omega
 
 theorem summarizeExactCover_proven : SummarizeExactCover := by
-  intro bits first last hb hfl hlast
-  have hng : ¬ first > last := by omega
+  intro bits first last sf sl hb hfl hsc hlast
+  have hng : addrGt bits first sf last sl = false := by
+    rw [Bool.eq_false_iff]
+    intro e
+    rcases (addrGt_iff bits first sf last sl).mp e with h | ⟨h1, h2, h3⟩
+    · omega
+    · exact h3 (hsc h1 (versionOf_six h2))
   have hv : ¬ (versionOf bits ≠ 4 ∧ versionOf bits ≠ 6) := by
     rcases hb with rfl | rfl <;> decide
   simp only [summarizeOp, Ne, not_true_eq_false, ↓reduceIte]
-  rw [summarizeAddressRange]; simp only [hng, hv, ↓reduceIte]
+  rw [summarizeAddressRange]; simp only [hng, hv, Bool.false_eq_true, ↓reduceIte]
   exact summarizeLoop_spec bits last hlast _ first (by omega) (by omega)
+
+/-- `summarize_address_range` docstring, ipaddress.py:198-221, read as a function of the two
+addresses' integers, which is all the loop uses (:240-241): for `int(first) <= int(last)` of one
+version the call returns. Refuted: `summarize_address_range(IPv6Address('::1%a'),
+IPv6Address('::1'))` raises `ValueError('last IP address must be greater than first')`, because
+`::1%a > ::1` is `True` (`not a < b and a != b`). So is `::1 > ::1%a`, and the docstring's
+"If the last object is not greater than the first" does not hold either way. Upstream:
+gh-151769 (open), the scope-blind ordering. -/
+def SummarizeScopeBlind : Prop :=
+  ∀ (bits first last : Nat) (sf sl : Option String), IsVersion bits → first ≤ last → last < 2 ^ bits →
+    ∃ nets, summarizeOp (.addr bits first sf) (.addr bits last sl) = .ok nets
+
+theorem summarizeScopeBlind_refuted : ¬ SummarizeScopeBlind := by
+  intro h
+  obtain ⟨nets, hn⟩ := h 128 1 1 (some "a") none (Or.inr rfl) (Nat.le_refl _) (by decide)
+  have hv : summarizeOp (.addr 128 1 (some "a")) (.addr 128 1 none) =
+      .error (.valueError "last IP address must be greater than first") := by decide
+  rw [hv] at hn
+  cases hn
 
 /-- `Greedy` admits one list: at each start the block size is fixed. So `SummarizeExactCover`
 pins the result, not just a tiling. -/
@@ -329,8 +359,8 @@ theorem greedy_unique (bits last : Nat) :
       have : 0 < n.size := Nat.two_pow_pos _
       simp only [Greedy] at h2; omega
     | cons m ms =>
-      obtain ⟨nb, na, np, nal, nf, nmx, nrest⟩ := h1
-      obtain ⟨mb, ma, mp, mal, mf, mmx, mrest⟩ := h2
+      obtain ⟨nb, na, np, nal, nf, nmx, nsc, nrest⟩ := h1
+      obtain ⟨mb, ma, mp, mal, mf, mmx, msc, mrest⟩ := h2
       have hsz : n.prefixlen = m.prefixlen := by
         -- sizes are powers of two; the larger one would violate the other's maximality
         unfold Net.size at *
@@ -355,42 +385,55 @@ theorem greedy_unique (bits last : Nat) :
           · exact absurd (Nat.mod_eq_zero_of_dvd (Nat.dvd_trans hd (Nat.dvd_of_mod_eq_zero mal))) h
           · omega
       have hnm : n = m := by
-        obtain ⟨nb', na', np'⟩ := n
-        obtain ⟨mb', ma', mp'⟩ := m
-        simp only at nb na hsz mb ma
+        obtain ⟨nb', na', np', ns'⟩ := n
+        obtain ⟨mb', ma', mp', ms'⟩ := m
+        simp only at nb na hsz mb ma nsc msc
         simp only [Net.mk.injEq]
-        exact ⟨by omega, by omega, by omega⟩
+        exact ⟨by omega, by omega, by omega, by rw [nsc, msc]⟩
       subst hnm
       rw [ih ms (lo + n.size) nrest mrest]
 
 /-- The docstring's "Raise:" list, ipaddress.py:214-221, in the order the code checks it
 (:223-237): an argument that is not an address raises `TypeError('first and last must be IP
 addresses, not networks')`; addresses of two versions raise `TypeError`; `first > last` raises
-`ValueError('last IP address must be greater than first')`; a version other than 4 and 6 raises
-`ValueError('unknown IP version')`. -/
+`ValueError('last IP address must be greater than first')`, which is `int(first) > int(last)`, or
+for IPv6 equal ints with different scope ids (`total_ordering`'s `not a < b and a != b`,
+`IPv6Address.__eq__` at :2009-2015); a version other than 4 and 6 raises
+`ValueError('unknown IP version')`. With `SummarizeExactCover` every pair of addresses is covered. -/
 def SummarizeRejects : Prop :=
-  (∀ f l : Operand, (∀ b x, f ≠ .addr b x) ∨ (∀ b y, l ≠ .addr b y) →
+  (∀ f l : Operand, (∀ b x s, f ≠ .addr b x s) ∨ (∀ b y s, l ≠ .addr b y s) →
     summarizeOp f l = .error (.typeError "first and last must be IP addresses, not networks")) ∧
-  (∀ b1 b2 x y : Nat, versionOf b1 ≠ versionOf b2 →
-    summarizeOp (.addr b1 x) (.addr b2 y) = .error (.typeError "~are not of the same version")) ∧
-  (∀ b1 b2 x y : Nat, versionOf b1 = versionOf b2 → x > y →
-    summarizeOp (.addr b1 x) (.addr b2 y) =
+  (∀ (b1 b2 x y : Nat) (sx sy : Option String), versionOf b1 ≠ versionOf b2 →
+    summarizeOp (.addr b1 x sx) (.addr b2 y sy) = .error (.typeError "~are not of the same version")) ∧
+  (∀ (b1 b2 x y : Nat) (sx sy : Option String), versionOf b1 = versionOf b2 →
+    (x > y ∨ (x = y ∧ b1 = 128 ∧ sx ≠ sy)) →
+    summarizeOp (.addr b1 x sx) (.addr b2 y sy) =
       .error (.valueError "last IP address must be greater than first")) ∧
-  (∀ b1 b2 x y : Nat, versionOf b1 = versionOf b2 → ¬ IsVersion b1 → x ≤ y →
-    summarizeOp (.addr b1 x) (.addr b2 y) = .error (.valueError "unknown IP version"))
+  (∀ (b1 b2 x y : Nat) (sx sy : Option String), versionOf b1 = versionOf b2 → ¬ IsVersion b1 →
+    x ≤ y → summarizeOp (.addr b1 x sx) (.addr b2 y sy) = .error (.valueError "unknown IP version"))
 
 theorem summarizeRejects_proven : SummarizeRejects := by
-  refine ⟨fun f l h => ?_, fun b1 b2 x y h => ?_, fun b1 b2 x y h hxy => ?_,
-    fun b1 b2 x y h hb hxy => ?_⟩
+  refine ⟨fun f l h => ?_, fun b1 b2 x y sx sy h => ?_, fun b1 b2 x y sx sy h hxy => ?_,
+    fun b1 b2 x y sx sy h hb hxy => ?_⟩
   · cases f <;> cases l <;> first
       | rfl
-      | (rcases h with h | h <;> exact absurd rfl (h _ _))
+      | (rcases h with h | h <;> exact absurd rfl (h _ _ _))
   · simp [summarizeOp, h]
-  · simp [summarizeOp, h, summarizeAddressRange, hxy]
+  · have hg : addrGt b1 x sx y sy = true := by
+      apply (addrGt_iff b1 x sx y sy).mpr
+      rcases hxy with hxy | ⟨h1, h2, h3⟩
+      · exact Or.inl hxy
+      · exact Or.inr ⟨h1, by simp [h2, versionOf], h3⟩
+    simp [summarizeOp, h, summarizeAddressRange, hg]
   · have hv : versionOf b1 = 0 := by
       unfold versionOf; simp only [IsVersion, not_or] at hb; simp [hb.1, hb.2]
     have hv2 : versionOf b2 = 0 := by rw [← h, hv]
-    have hn : ¬ x > y := by omega
+    have hn : addrGt b1 x sx y sy = false := by
+      rw [Bool.eq_false_iff]
+      intro e
+      rcases (addrGt_iff b1 x sx y sy).mp e with e | ⟨-, e, -⟩
+      · omega
+      · rw [hv] at e; exact absurd e (by decide)
     simp [summarizeOp, h, summarizeAddressRange, hn, hv2]
 
 end PyLean.Ipaddress

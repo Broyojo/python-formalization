@@ -29,22 +29,24 @@ reproducer: |
   import subprocess, sys
   prog = (
       "import ipaddress\n"
-      "def t():\n"
-      "    try: return str(ipaddress.IPv4Network(('10.0.0.0', 8.0)))\n"
+      "def t(cls, a, m):\n"
+      "    try: return str(cls((a, m)))\n"
       "    except Exception as e: return type(e).__name__\n"
-      "first = t()\n"
-      "ipaddress.IPv4Network(('10.0.0.0', 8))\n"
-      "print(first, t())\n")
+      "r4 = t(ipaddress.IPv4Network, '10.0.0.0', 8.0)\n"
+      "r6 = t(ipaddress.IPv6Network, '2001:db8::', 64.0)\n"
+      "ipaddress.IPv4Network(('10.0.0.0', 8)); ipaddress.IPv6Network(('2001:db8::', 64))\n"
+      "print(r4, t(ipaddress.IPv4Network, '10.0.0.0', 8.0), r6, t(ipaddress.IPv6Network, '2001:db8::', 64.0))\n")
   out = subprocess.run([sys.executable, '-c', prog], capture_output=True, text=True).stdout.split()
   print(out)
-  if out == ['AttributeError', '10.0.0.0/8']:
+  if out == ['AttributeError', '10.0.0.0/8', 'AttributeError', '2001:db8::/64']:
       print('REPRODUCED ipaddress-netmask-cache-history')
 expected: |
   The same answer both times: a NetmaskValueError or TypeError for a non-int, non-str mask (or
   acceptance both times if floats were meant to work).
 observed: |
-  python3 3.15.2: ['AttributeError', '10.0.0.0/8']. REPRODUCED.
-  main (cpython-main/python.exe): same. REPRODUCED.
+  python3 3.15.2: ['AttributeError', '10.0.0.0/8', 'AttributeError', '2001:db8::/64']. REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev ef1fce0): same. REPRODUCED.
+  (Before the IPv6 check was added the reproducer printed the first two only; same result.)
 promised_by: |
   Doc/library/ipaddress.rst, IPv4Network item 4: the netmask is "an integer representing the
   prefix length ... or a string representing the prefix mask"; NetmaskValueError for an invalid
@@ -65,3 +67,10 @@ duplicates:
 lean:
   property: PyLean.Ipaddress.NetmaskCacheTransparent
   theorem: PyLean.Ipaddress.netmaskCacheTransparent_refuted
+  also: [PyLean.Ipaddress.NetmaskCacheTransparent6, PyLean.Ipaddress.netmaskCacheTransparent6_refuted,
+         PyLean.Ipaddress.MaskInt, PyLean.Ipaddress.maskInt_proven]
+  note: |
+    MaskInt states the result for every kind of argument with a cache _make_netmask filled: bytes
+    as described above, a number equal to an int by whether that int is cached, other objects
+    AttributeError, unhashable ones TypeError at the cache lookup. The reproducer now checks the
+    IPv6 cache (64.0 before and after IPv6Network(('2001:db8::', 64))) as well.

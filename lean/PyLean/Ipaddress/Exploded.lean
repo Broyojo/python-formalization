@@ -48,7 +48,7 @@ def explodeIpStr (kind : V6Kind) (ip : Nat) (scope : Option (List Char)) : Py (L
   match kind with
   | .network => ipv6StrPy ip scope
   | .interface => ipv6StrPy ip none
-  | .address => stringFromIpInt6Py (some ip)
+  | .address => stringFromIpInt6Py .address (some ip)
 
 /-- `_BaseV6._explode_shorthand_ip_string`, ipaddress.py:1861-1884: the text, its re-parse
 (:1875), the 32 hex digits in groups of four (:1876-1877), the prefix for a network (:1878-1879),
@@ -135,7 +135,7 @@ theorem str_reparse (ip : Nat) (h : ip < 2 ^ 128) :
   rfl
 
 theorem plain_reparse (ip : Nat) (h : ip < 2 ^ 128) :
-    stringFromIpInt6Py (some ip) = .ok (stringFromIpInt6 ip) ∧
+    stringFromIpInt6Py .address (some ip) = .ok (stringFromIpInt6 ip) ∧
       ipIntFromString6 (stringFromIpInt6 ip) = .ok ip := by
   have hle : ¬ ip > allOnes 128 := by unfold allOnes; omega
   exact ⟨by simp [stringFromIpInt6Py, hle], plain_roundtrip ip h⟩
@@ -186,7 +186,7 @@ def netIsUnspecified (n : Net) : Bool :=
 /-- `IPv4Interface.is_unspecified`, ipaddress.py:1479-1481, new in 3.15, and
 `IPv6Interface.is_unspecified`, :2273-2275. `self.network` is the masked network. -/
 def ifaceIsUnspecified (bits ip p : Nat) : Bool :=
-  ip == 0 && netIsUnspecified ⟨bits, ip &&& ipIntFromPrefix bits p, p⟩
+  ip == 0 && netIsUnspecified ⟨bits, ip &&& ipIntFromPrefix bits p, p, none⟩
 
 /-- An interface is unspecified exactly when it is `0.0.0.0/32` or `::/128`. `0.0.0.0/8`
 is not: its address is zero, but its network is not the single unspecified address. -/

@@ -169,12 +169,26 @@ def hextetsOf (n : Nat) : List (List Char) :=
 `'%032x' % ip_int` as `'%x'` (:1855-1856), compressed (:1858), joined (:1859). -/
 def stringFromIpInt6 (n : Nat) : List Char := joinOn1 ':' (compressHextets (hextetsOf n))
 
-/-- `_BaseV6._string_from_ip_int(ip_int=None)`, :1835-1859, with the argument checks. It is a
-classmethod, so with no argument `cls._ip` (:1849-1850) is the `__slots__` descriptor of `_ip`, and
-`int()` of it raises `TypeError`; above `_ALL_ONES` it raises `ValueError` (:1852-1853). -/
-def stringFromIpInt6Py (ipInt : Option Nat) : Py (List Char) :=
+/-- The classes that inherit `_BaseV6._string_from_ip_int`: `IPv6Address`, `IPv6Interface` (a
+subclass of `IPv6Address`, :2207) and `IPv6Network` (:2282). -/
+inductive V6Cls where
+  | address
+  | interface
+  | network
+  deriving Repr, DecidableEq, Inhabited
+
+/-- `cls._string_from_ip_int(ip_int=None)`, `_BaseV6._string_from_ip_int`, :1835-1859, with the
+argument checks. It is a classmethod, so with no argument it reads `cls._ip` (:1849-1850): for
+`IPv6Address` and its subclass `IPv6Interface` that is the `__slots__` descriptor of `_ip` (:1919),
+and `int()` of it raises `TypeError`; `IPv6Network` has no `_ip` at all (its bases `_BaseV6` and
+`_BaseNetwork` define none), so the lookup raises `AttributeError`. Above `_ALL_ONES` it raises
+`ValueError` (:1852-1853). The class matters for nothing else. -/
+def stringFromIpInt6Py (cls : V6Cls) (ipInt : Option Nat) : Py (List Char) :=
   match ipInt with
-  | none => .error (.typeError
+  | none =>
+    match cls with
+    | .network => .error (.named "AttributeError" "type object 'IPv6Network' has no attribute '_ip'")
+    | .address | .interface => .error (.typeError
       "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'")
   | some n => if n > allOnes 128 then .error (.valueError "IPv6 address is too large")
     else .ok (stringFromIpInt6 n)
@@ -186,7 +200,7 @@ def ipv4MappedToStr (ip : Nat) : Py (List Char) :=
   match ipv4Mapped ip with
   | none => .error (.named "AddressValueError" "~Can not apply to non-IPv4-mapped IPv6 address")
   | some v4 => do
-    let hi ← stringFromIpInt6Py (some (ip >>> 32))
+    let hi ← stringFromIpInt6Py .address (some (ip >>> 32))
     pure (hi ++ ':' :: ipv4Str v4)
 
 /-- `ip_str + '%' + self._scope_id if self._scope_id else ip_str`, :2004. -/
@@ -198,7 +212,7 @@ def addScope (s : List Char) : Option (List Char) → List Char
 `_string_from_ip_int(self._ip)`) or the IPv4-mapped form, then the scope id. -/
 def ipv6StrPy (ip : Nat) (scope : Option (List Char)) : Py (List Char) := do
   let ipStr ← match ipv4Mapped ip with
-    | none => stringFromIpInt6Py (some ip)
+    | none => stringFromIpInt6Py .address (some ip)
     | some _ => ipv4MappedToStr ip
   pure (addScope ipStr scope)
 

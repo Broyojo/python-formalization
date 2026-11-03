@@ -7,19 +7,29 @@ import PyLean.Ipaddress.Mask4
 import PyLean.Ipaddress.Parse6
 import PyLean.Ipaddress.Parse6Errors
 
-/-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
+/-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen, scope]`, the scope
+id of its network address a string or `null` (and may be left out on input). -/
 
 namespace PyLean.Ipaddress
 
 open Lean PyLean PyLean.Diff
 
-def encNet (n : Net) : Json := Json.arr #[toJson n.addr, toJson n.prefixlen]
+def encScope : Option String → Json
+  | some s => toJson s
+  | none => Json.null
+
+def encNet (n : Net) : Json := Json.arr #[toJson n.addr, toJson n.prefixlen, encScope n.scope]
+
+def getScope (v : Option Json) : Except String (Option String) :=
+  match v with
+  | none | some .null => pure none
+  | some s => some <$> s.getStr?
 
 def getNet (j : Json) (bits : Nat) (key : String) : Except String Net := do
   let arr ← (← j.getObjVal? key).getArr?
   let some a := arr[0]? | throw s!"{key}: missing addr"
   let some p := arr[1]? | throw s!"{key}: missing prefixlen"
-  return ⟨bits, ← a.getNat?, ← p.getNat?⟩
+  return ⟨bits, ← a.getNat?, ← p.getNat?, ← getScope arr[2]?⟩
 
 /-- `"arg": ["int", n]`, `["bytes", [b, ...]]` or `["str", s]`. -/
 def getAddrArg (j : Json) : Except String AddrArg := do
@@ -29,11 +39,11 @@ def getAddrArg (j : Json) : Except String AddrArg := do
   | "bytes" => return .bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap (fun x => x.getNat?.toOption))
   | _ => return .str (← (← arg.getArrVal? 1).getStr?).toList
 
-/-- `{"k": "addr", "bits": b, "ip": n}`, `{"k": "net", "bits": b, "net": [a, p]}` or
+/-- `{"k": "addr", "bits": b, "ip": n, "scope": s}`, `{"k": "net", "bits": b, "net": [a, p, s]}` or
 `{"k": "other", "ty": "int"}`. -/
 def getOperand (j : Json) : Except String Operand := do
   match ← getStr j "k" with
-  | "addr" => return .addr (← getNat j "bits") (← getNat j "ip")
+  | "addr" => return .addr (← getNat j "bits") (← getNat j "ip") (← getScope (j.getObjVal? "scope").toOption)
   | "net" => return .net (← getNet j (← getNat j "bits") "net")
   | _ => return .other (← getStr j "ty")
 
@@ -99,18 +109,36 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "mask4" =>
     return encPy toJson (makeNetmask4 (← getStr j "s").toList)
   | "mask" =>
+    -- `"arg"`: `["int", n]`, `["str", s]`, `["bytes", [b, ...]]`, `["num", n, ty]` (a number equal
+    -- to the int n), `["other", ty]`, `["unhashable", ty]`; `"cache"`: the ints `_make_netmask` was
+    -- called with first, in order, after the class cache was cleared.
     let arg ← j.getObjVal? "arg"
     let a ← match ← (← arg.getArrVal? 0).getStr? with
       | "int" => pure (MaskArg.int (← (← arg.getArrVal? 1).getInt?))
+      | "bytes" => pure (MaskArg.bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap
+          (fun x => x.getNat?.toOption)))
+      | "num" => pure (MaskArg.numEq (← (← arg.getArrVal? 1).getInt?) (← (← arg.getArrVal? 2).getStr?))
+      | "other" => pure (MaskArg.other (← (← arg.getArrVal? 1).getStr?))
+      | "unhashable" => pure (MaskArg.unhashable (← (← arg.getArrVal? 1).getStr?))
       | _ => pure (MaskArg.str (← (← arg.getArrVal? 1).getStr?).toList)
-    return encPy toJson (makeNetmaskCached bits [] a).1
+    let pre : List Int ← match j.getObjVal? "cache" with
+      | .ok v => do
+        let arr ← v.getArr?
+        arr.toList.mapM (fun x => x.getInt?)
+      | .error _ => pure []
+    let cache := pre.foldl (fun c k => (makeNetmaskCached bits c (.int k)).2) []
+    return encPy toJson (makeNetmaskCached bits cache a).1
   | "prefix_from_ip_int" =>
     return encPy toJson (prefixFromIpInt bits (← getNat j "n"))
   | "string_from_ip_int" =>
     let a ← match j.getObjVal? "n" with
       | .ok .null | .error _ => pure none
       | .ok v => some <$> v.getNat?
-    return encPy (fun cs => toJson (String.ofList cs)) (stringFromIpInt6Py a)
+    let cls ← match (getStr j "cls").toOption with
+      | some "interface" => pure V6Cls.interface
+      | some "network" => pure V6Cls.network
+      | _ => pure V6Cls.address
+    return encPy (fun cs => toJson (String.ofList cs)) (stringFromIpInt6Py cls a)
   | "mapped_to_str" =>
     return encPy (fun cs => toJson (String.ofList cs)) (ipv4MappedToStr (← getNat j "ip"))
   | "v6_ip_int" =>
