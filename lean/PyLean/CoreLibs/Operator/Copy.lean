@@ -79,10 +79,124 @@ def appendTo (h : Heap) (y item : Nat) : Py Heap :=
   | .list l => .ok (h.set y (.list (l ++ [item])))
   | _ => .error (.named "AttributeError" "~object has no attribute 'append'")
 
-/-- `y[key] = value`, Lib/copy.py:281 and :284. -/
+/-- What makes `hash(k)` fail: the type that has no hash. A tuple hashes its items in order, and a `frozendict` the
+values of its items in order, Objects/dictobject.c:8425-8432 (its keys were hashed when it was built). -/
+def keyHashErr : Nat → Heap → Nat → Option String
+  | 0, _, _ => none
+  | f + 1, h, k =>
+    match h.get k with
+    | .list _ => some "list"
+    | .dict _ => some "dict"
+    | .tuple items => items.findSome? (keyHashErr f h)
+    | .fdict items => items.findSome? (fun p => keyHashErr f h p.2)
+    | _ => none
+
+def cellName : Cell → String
+  | .list _ => "list"
+  | .dict _ => "dict"
+  | .tuple _ => "tuple"
+  | .fdict _ => "frozendict"
+  | _ => "object"
+
+/-- The `TypeError` of storing `k` as a dict key, which a key's copy can meet when `memo` holds something mutable for it. -/
+def storeKey (h : Heap) (k : Nat) : Option PyExc :=
+  (keyHashErr 8 h k).map fun u => .typeError s!"cannot use '{cellName (h.get k)}' as a dict key (unhashable type: '{u}')"
+
+/-- `tuple_richcompare` for `==`, Objects/tupleobject.c:764-781: the items in order until one differs, then the
+lengths. The list version, Objects/listobject.c:3470-3499, checks the lengths first; with no error in between the two
+agree, and the list one is `seqEq` behind a length test. `eq` is `PyObject_RichCompareBool`. -/
+def seqEq (eq : Nat → Nat → Py Bool) : List Nat → List Nat → Py Bool
+  | [], [] => .ok true
+  | a :: as, b :: bs =>
+    match eq a b with
+    | .error e => .error e
+    | .ok false => .ok false
+    | .ok true => seqEq eq as bs
+  | _, _ => .ok false
+
+/-- A lookup in a dict's items: the first stored key that compares equal to `k`, the stored key on the left as in
+`compare_generic`, Objects/dictobject.c:1187-1199. -/
+def mapFind (eq : Nat → Nat → Py Bool) (k : Nat) : List (Nat × Nat) → Py (Option Nat)
+  | [] => .ok none
+  | (k0, v0) :: rest =>
+    match eq k0 k with
+    | .error e => .error e
+    | .ok true => .ok (some v0)
+    | .ok false => mapFind eq k rest
+
+/-- `dict_equal_lock_held`, Objects/dictobject.c:4622-4681: the sizes, then every item of `a` looked up in `b` and the two
+values compared, stopping at the first difference. -/
+def mapEq (eq : Nat → Nat → Py Bool) (a b : List (Nat × Nat)) : Py Bool :=
+  if a.length ≠ b.length then .ok false else
+  let rec go : List (Nat × Nat) → Py Bool
+    | [] => .ok true
+    | (k, av) :: rest =>
+      match mapFind eq k b with
+      | .error e => .error e
+      | .ok none => .ok false
+      | .ok (some bv) =>
+        match eq av bv with
+        | .error e => .error e
+        | .ok false => .ok false
+        | .ok true => go rest
+  go a
+
+/-- `PyObject_RichCompareBool(a, b, Py_EQ)`, Objects/object.c:1122-1148, on the model's objects: the same object is
+equal to itself before anything is called, :1129-1131. An atom is an `int` and compares by value; a tuple and a list
+item by item (`seqEq`); a `dict` and a `frozendict` by their items, either with either (`dict_richcompare`,
+Objects/dictobject.c:4695-4712, takes any dict); a bound method by its function and then the identity of its `__self__`,
+Objects/classobject.c:239-242; a class cell by its `id`. Everything else (`inst`, `hooked`, `metaCls`) has the default
+`__eq__`, identity only. Scope limit: no object in this universe has its own `__eq__`, so an `__eq__` that raises, or
+that disagrees with `__hash__`, is out of scope; so is the `RecursionError` of comparing two distinct cyclic
+structures, which the model reports as `modelFuel`. -/
+def pyEq : Nat → Heap → Nat → Nat → Py Bool
+  | 0, _, _, _ => .error .modelFuel
+  | f + 1, h, a, b =>
+    if a = b then .ok true else
+    match h.get a, h.get b with
+    | .atom m, .atom n => .ok (m == n)
+    | .tuple xs, .tuple ys => seqEq (pyEq f h) xs ys
+    | .list xs, .list ys => if xs.length ≠ ys.length then .ok false else seqEq (pyEq f h) xs ys
+    | .dict d, .dict e => mapEq (pyEq f h) d e
+    | .dict d, .fdict e => mapEq (pyEq f h) d e
+    | .fdict d, .dict e => mapEq (pyEq f h) d e
+    | .fdict d, .fdict e => mapEq (pyEq f h) d e
+    | .method fa sa, .method fb sb => .ok (fa == fb && sa == sb)
+    | .cls m, .cls n => .ok (m == n)
+    | _, _ => .ok false
+
+/-- Enough depth for any comparison on an acyclic graph of `h`. -/
+def eqFuel (h : Heap) : Nat := 2 * h.cells.length + 2
+
+/-- `insertdict`, Objects/dictobject.c:2001-2049, on a dict's items in insertion order: a stored key equal to `k`
+keeps its place and its own key object and takes the new value (`replace_value`, :2041); otherwise the pair goes at the
+end (`insert_combined_dict`, :2033). CPython compares only keys of equal hash; in this universe equal objects have
+equal hashes and no comparison raises, so comparing every key in order gives the same dict. -/
+def storeItem (eq : Nat → Nat → Py Bool) : List (Nat × Nat) → Nat → Nat → Py (List (Nat × Nat))
+  | [], k, v => .ok [(k, v)]
+  | (k0, v0) :: rest, k, v =>
+    match eq k0 k with
+    | .error e => .error e
+    | .ok true => .ok ((k0, v) :: rest)
+    | .ok false =>
+      match storeItem eq rest k v with
+      | .error e => .error e
+      | .ok r => .ok ((k0, v0) :: r)
+
+/-- `d[k] = v` on a `dict` with items `d`: the hash first, whose failure is `storeKey`'s `TypeError`, then the store. -/
+def dictSet (h : Heap) (d : List (Nat × Nat)) (k v : Nat) : Py (List (Nat × Nat)) :=
+  match storeKey h k with
+  | some e => .error e
+  | none => storeItem (pyEq (eqFuel h) h) d k v
+
+/-- `y[key] = value`, Lib/copy.py:281 and :284: an object that is not a dict has no `__setitem__`, before the key is
+hashed. -/
 def setItemOf (h : Heap) (y k v : Nat) : Py Heap :=
   match h.get y with
-  | .dict l => .ok (h.set y (.dict (l ++ [(k, v)])))
+  | .dict l =>
+    match dictSet h l k v with
+    | .error e => .error e
+    | .ok l' => .ok (h.set y (.dict l'))
   | _ => .error (.typeError "~object does not support item assignment")
 
 /-- `setattr(y, key, value)`, and one entry of `y.__dict__.update(state)`. -/
@@ -206,26 +320,6 @@ def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
       | none => .error (uncopyable false)
       | some r => reconShallow h r x
 
-/-- What makes `hash(k)` fail: the type that has no hash. -/
-def keyHashErr : Nat → Heap → Nat → Option String
-  | 0, _, _ => none
-  | f + 1, h, k =>
-    match h.get k with
-    | .list _ => some "list"
-    | .dict _ => some "dict"
-    | .tuple items => items.findSome? (keyHashErr f h)
-    | _ => none
-
-def cellName : Cell → String
-  | .list _ => "list"
-  | .dict _ => "dict"
-  | .tuple _ => "tuple"
-  | _ => "object"
-
-/-- The `TypeError` of storing `k` as a dict key, which a key's copy can meet when `memo` holds something mutable for it. -/
-def storeKey (h : Heap) (k : Nat) : Option PyExc :=
-  (keyHashErr 8 h k).map fun u => .typeError s!"cannot use '{cellName (h.get k)}' as a dict key (unhashable type: '{u}')"
-
 mutual
   /-- `deepcopy(x, memo)`, Lib/copy.py:110-162, with the dispatch table of `_deepcopy_list`, :171-177,
   `_deepcopy_tuple`, :180-194, `_deepcopy_dict`, :197-202, and `_deepcopy_method`, :220-221. -/
@@ -259,13 +353,13 @@ mutual
           | .dict items =>
             let (h1, y) := h.alloc (.dict [])
             let h2 := h1.remember x y
-            match deepPairs fuel h2 items with
+            match deepPairs fuel h2 [] items with
             | .error e => .error e
             | .ok (h3, ys) => .ok (h3.set y (.dict ys), y)
           | .fdict items =>
             -- `_deepcopy_frozendict`, Lib/copy.py:205-218: nothing is in `memo` during the copies, and a recursive
             -- structure may have put a copy there, which wins; the result is always a new object
-            match deepPairs fuel h items with
+            match deepPairs fuel h [] items with
             | .error e => .error e
             | .ok (h1, ys) =>
               match h1.memo.lookup x with
@@ -336,24 +430,23 @@ mutual
         | .error e => .error e
         | .ok (h2, ys) => .ok (h2, y :: ys)
 
-  /-- `y[deepcopy(key, memo)] = deepcopy(value, memo)`, Lib/copy.py:200. An assignment evaluates its right side
-  first, so the value is copied before the key. -/
-  def deepPairs : Nat → Heap → List (Nat × Nat) → Py (Heap × List (Nat × Nat))
-    | 0, _, _ => .error .modelFuel
-    | _ + 1, h, [] => .ok (h, [])
-    | fuel + 1, h, (k, v) :: rest =>
+  /-- `for key, value in x.items(): y[deepcopy(key, memo)] = deepcopy(value, memo)`, Lib/copy.py:200-201 and
+  :207-208, with `acc` the items of `y` so far. An assignment evaluates its right side first, so the value is copied
+  before the key; the store is `dictSet`, so two keys whose copies are equal (two different source keys that `memo`
+  sends to one object, say) make one item. -/
+  def deepPairs : Nat → Heap → List (Nat × Nat) → List (Nat × Nat) → Py (Heap × List (Nat × Nat))
+    | 0, _, _, _ => .error .modelFuel
+    | _ + 1, h, acc, [] => .ok (h, acc)
+    | fuel + 1, h, acc, (k, v) :: rest =>
       match deepcopy fuel h v with
       | .error e => .error e
       | .ok (h1, v') =>
         match deepcopy fuel h1 k with
         | .error e => .error e
         | .ok (h2, k') =>
-          match storeKey h2 k' with
-          | some e => .error e
-          | none =>
-            match deepPairs fuel h2 rest with
-            | .error e => .error e
-            | .ok (h3, ys) => .ok (h3, (k', v') :: ys)
+          match dictSet h2 acc k' v' with
+          | .error e => .error e
+          | .ok acc' => deepPairs fuel h2 acc' rest
 
   /-- The state of a plain instance, copied and stored attribute by attribute. -/
   def deepAttrs : Nat → Heap → Nat → List (String × Nat) → Py Heap
