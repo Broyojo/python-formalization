@@ -55,3 +55,10 @@ duplicates:
     - {number: 160884, state: merged, relation: "3.15 backport, merged 2026-10-29 (after 3.15.2)"}
     - {number: 160885, state: merged, relation: "3.14 backport"}
   queries: ["OSError str use after free", "OSError_str strong references (PRs)", "gh issue view 160773", "bugforge README: no OSError_str entry"]
+reproduces:
+  python3 (3.15.2): REPRODUCED (SIGSEGV, rc -11)
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): not reproduced (fixed by gh-160822)
+lean:
+  property: PyLean.TypeObj.OsStrC.OsErrorStrNoCrash
+  theorem: PyLean.TypeObj.OsStrC.osErrorStrNoCrash_refuted
+  model: "lean/PyLean/TypeObj/ExcOsStrC.lean (OSError_str over a reference-counted C heap; uafState is the reproducer)"

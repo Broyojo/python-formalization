@@ -809,7 +809,65 @@ class X(T.G):
         self.probe(attr(name(v), "args"))
 
 
-BLOCKS = ["block_generic", "block_generic", "block_subclass", "block_chain", "block_oserror",
+    def block_longname(self):
+        """`%.200s` of `_PyArg_NoKeywords` on long and non-ASCII class names."""
+        r = self.rng
+        base = r.choice(["Exception", "ValueError", "OSError", "KeyError", "StopIteration",
+                         "SystemExit", "SyntaxError", "ExceptionGroup", "BlockingIOError"])
+        k = r.choice(["L" * 199, "L" * 200, "L" * 201, "L" * 300, "a" + "é" * 150, "é" * 99 + "xy",
+                      "Lé" * 70, "K" + "ü" * 120])
+        self.probes(["class", k, [name(base)], [], True, self.code([["assign", "zz", lit(1)]])])
+        args = [lit("m"), LIST(call(name("ValueError")))] if base == "ExceptionGroup" else [lit(1)]
+        self.probe(call(name(k), *args, kw=[["x", lit(1)]]))
+        v = self.fresh("e")
+        self.assign(v, call(name(k), *args))
+        self.probe(call(attr(name(v), "__init__"), *args, kw=[["q", lit(2)]]))
+        self.probe(attr(name(v), "args"))
+
+    def block_setstate_live(self):
+        """`__setstate__` walks the live dict: keys a `__setattr__` adds are set too."""
+        r = self.rng
+        st, k, v = self.fresh("st"), self.fresh("S"), self.fresh("e")
+        extra = r.choice([0, 1, 3, 20])
+        body = [["log", f"{k}.__setattr__"],
+                ["if", ["cmp", "==", name("n"), lit("a")],
+                 [["setitem", name(st), lit(f"b{i}"), lit(i)] for i in range(extra)] or [["assign", "zz", lit(1)]],
+                 [["assign", "zz", lit(2)]]],
+                ["expr", call(attr(name("object"), "__setattr__"), name("self"), name("n"), name("x"))]]
+        self.cls(k, [r.choice(["Exception", "OSError", "ImportError"])],
+                 [self.method("__setattr__", f"{k}.__setattr__", ["self", "n", "x"], body)])
+        items = [[lit("a"), lit(1)]] + ([[lit("c"), lit(3)]] if r.random() < 0.5 else [])
+        if r.random() < 0.2:
+            items.append([lit(5), lit(5)])
+        self.assign(st, ["dict", items])
+        self.assign(v, call(name(k)))
+        self.probe(call(attr(name(v), "__setstate__"), name(st)))
+        self.probe(attr(name(v), "__dict__"))
+        self.probe(name(st))
+
+    def block_oserror_reentrant(self):
+        """`OSError_str` formats the members it read at the start, even when a conversion
+        reassigns one. The old values are constants, so nothing is freed."""
+        r = self.rng
+        k, v = self.fresh("En"), self.fresh("e")
+        target = r.choice(["filename", "filename2", "strerror", "errno"])
+        body = [["log", f"{k}.__str__"], ["setattr", name(v), target, r.choice([lit("new"), NONE])],
+                ["ret", lit("9")]]
+        self.cls(k, [], [self.method("__str__", f"{k}.__str__", ["self"], body)])
+        args = [call(name(k)), lit("s")]
+        m = r.randrange(3)
+        if m >= 1:
+            args += [lit("old")]
+        if m == 2:
+            args += [NONE, lit("old2")]
+        self.assign(v, call(name(r.choice(["OSError", "FileNotFoundError"])), *args))
+        self.probe(call(name("str"), name(v)))
+        self.probe(attr(name(v), target))
+        self.probe(call(name("str"), name(v)))
+
+
+BLOCKS = ["block_longname", "block_setstate_live", "block_oserror_reentrant",
+          "block_generic", "block_generic", "block_subclass", "block_chain", "block_oserror",
           "block_oserror", "block_kwargs", "block_syntax", "block_syntax", "block_unicode",
           "block_unicode", "block_unicode_reentrant", "block_group", "block_group", "block_group",
           "block_group_ctor", "block_prep", "block_memory", "block_iter", "block_userobj",

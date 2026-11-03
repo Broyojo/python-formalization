@@ -97,7 +97,8 @@ theorem egStrFormat_proven : EgStrFormat := by
   simp only [baseExceptionGroupStr, M.bind_app, getW_app, h]
   rfl
 
-/-- `__init__` of a group rejects keywords and otherwise stores `args` only. -/
+/-- `__init__` of a group rejects keywords, with the class name cut by `%.200s` (`:1028`,
+`noKwMsg`), and otherwise stores `args` only. -/
 def EgInitKeepsMembers : Prop :=
   (∀ (a : Addr) (d : ExcData) (args : List Val) (w w' : World), IsExc w a d →
     baseExceptionGroupInit (.obj a) args [] w = .ok () w' →
@@ -106,7 +107,7 @@ def EgInitKeepsMembers : Prop :=
     (excDataOf w' (.obj a)).egExceptions = d.egExceptions) ∧
   (∀ (self : Val) (args : List Val) (k : Name) (x : Val) (w : World),
     baseExceptionGroupInit self args [(k, x)] w =
-      .err (.exc B.TypeError s!"{typeName w self}() takes no keyword arguments" none) w)
+      .err (.exc B.TypeError (noKwMsg (typeName w self)) none) w)
 
 theorem egInitKeepsMembers_proven : EgInitKeepsMembers := by
   refine ⟨?_, ?_⟩
@@ -380,18 +381,39 @@ theorem matchByTypeIsSubclass_proven : MatchByTypeIsSubclass := by
 
 /-! ## `except*` -/
 
-/-- **`collect_exception_group_leaf_ids`** ignores `None` and adds a leaf as itself. -/
-def CollectLeafIdsBase : Prop :=
-  (∀ (w : World) (f : Nat), collectLeafIds w (f + 1) .none = []) ∧
-  (∀ (w : World) (f : Nat) (v : Val), v.is .none = false → egCheck w v = false →
-    collectLeafIds w (f + 1) v = [v])
+/-- **`collect_exception_group_leaf_ids` collects the leaves.** `None` adds nothing, a leaf adds
+itself, and a group adds what its items add, in order (`:1501-1533`): the recursion goes one
+level down per item, and running out of depth is an error (the `fuel` error standing for the
+`RecursionError` of `_Py_EnterRecursiveCall`), never an empty result. A failure of one item is
+the result. A collector that returns `[]` for groups fails the third and fourth parts; one that
+returns `[]` on exhaustion fails the fifth. -/
+def CollectLeafIdsSteps : Prop :=
+  (∀ (w w0 : World) (f : Nat), collectLeafIds w (f + 1) .none w0 = .ok [] w0) ∧
+  (∀ (w w0 : World) (f : Nat) (v : Val), v.is .none = false → egCheck w v = false →
+    collectLeafIds w (f + 1) v w0 = .ok [v] w0) ∧
+  (∀ (w : World) (f : Nat) (v : Val), v.is .none = false → egCheck w v = true →
+    collectLeafIds w (f + 1) v = collectLeafIdsList (collectLeafIds w f) (excDataOf w v).egExceptions) ∧
+  (∀ (rec : Val → M (List Val)) (e : Val) (es a b : List Val) (w w1 w2 : World),
+    rec e w = .ok a w1 → collectLeafIdsList rec es w1 = .ok b w2 →
+    collectLeafIdsList rec (e :: es) w = .ok (a ++ b) w2) ∧
+  (∀ (rec : Val → M (List Val)) (e : Val) (es : List Val) (er : PyErr) (w w1 : World),
+    rec e w = .err er w1 → collectLeafIdsList rec (e :: es) w = .err er w1) ∧
+  (∀ (w w0 : World) (v : Val), collectLeafIds w 0 v w0 = .err .fuel w0)
 
-theorem collectLeafIdsBase_proven : CollectLeafIdsBase := by
-  refine ⟨?_, ?_⟩
-  · intro w f
+theorem collectLeafIdsSteps_proven : CollectLeafIdsSteps := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro w w0 f
     simp [collectLeafIds, Val.is]
+  · intro w w0 f v h1 h2
+    simp [collectLeafIds, h1, h2]
   · intro w f v h1 h2
     simp [collectLeafIds, h1, h2]
+  · intro rec e es a b w w1 w2 h1 h2
+    simp [collectLeafIdsList, h1, h2]
+  · intro rec e es er w w1 h1
+    simp [collectLeafIdsList, h1]
+  · intro w w0 v
+    rfl
 
 /-- **The matcher of `except*` selects leaves only**: a group is never matched by
 `EXCEPTION_GROUP_MATCH_INSTANCE_IDS`, and a leaf is matched exactly when its id is in the set. -/

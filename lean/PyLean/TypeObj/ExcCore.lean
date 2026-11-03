@@ -244,8 +244,26 @@ def excIsInstanceOf (rt : Rt) (inst : Val) (ca : Addr) : M Bool := do
 def excArgName (w : World) (v : Val) : String :=
   if v.is .none then "None" else trunc 50 (typeName w v)
 
-/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c:2943`. -/
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2660`: at most `n` bytes of the UTF-8 string, and an incomplete
+sequence at the cut is dropped (`pconsumed`), so the result is the longest prefix of whole
+characters whose encoding fits in `n` bytes. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
+/-- The message of `_PyArg_NoKeywords`, `Python/getargs.c:2956`. -/
+def noKwMsg (name : String) : String :=
+  s!"{String.ofList (truncUtf8 200 name.toList)}() takes no keyword arguments"
+
+/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c:2942-2959`: `"%.200s() takes no keyword
+arguments"`. -/
 def argNoKeywords (name : String) (kw : Kw) : M Unit :=
+  unless kw.isEmpty do typeErr (noKwMsg name)
+
+/-- `_PyArg_NoKwnames(name, kwnames)`, `Python/getargs.c:2978-2993`: the same refusal, with `%s`,
+so the name is not cut. -/
+def argNoKwnames (name : String) (kw : Kw) : M Unit :=
   unless kw.isEmpty do typeErr s!"{name}() takes no keyword arguments"
 
 /-- The arity error of `vgetargs1_impl`, `Python/getargs.c:256`. -/
@@ -295,11 +313,14 @@ def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → 
 
 /-! ## `BaseException` -/
 
-/-- `BaseException_new`, `Objects/exceptions.c:52`; `kwds` is ignored. -/
+/-- `BaseException_new`, `Objects/exceptions.c:52-77`: `tp_alloc`, every field NULL or 0, and
+`args` stored (`:65-68`); `kwds` is ignored. `args` is never NULL here: `type_call` always passes
+a tuple. -/
 def baseExceptionNew (t : Addr) (args : List Val) : M Val :=
   alloc t (.exc { args := args })
 
-/-- `BaseException_init`, `Objects/exceptions.c:80`. -/
+/-- `BaseException_init`, `Objects/exceptions.c:80-88`: the keyword refusal (`:83-84`), then
+`args` replaced (`:86`). -/
 def baseExceptionInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let w ← getW
   argNoKeywords (typeName w self) kw
@@ -310,7 +331,7 @@ classes that use `BaseException_new` and `BaseException_init` (`_PyExc_InitTypes
 which is `type_call` with the two steps merged. -/
 def baseExceptionVectorcall (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
-  argNoKeywords (tpName w t) kw
+  argNoKwnames (tpName w t) kw
   alloc t (.exc { args := args })
 
 /-- `BaseException_str`, `Objects/exceptions.c:163`. -/
@@ -366,27 +387,35 @@ def baseExceptionReduce (v : Val) : M Val := do
   | some d => pure (.tuple [tv, .tuple (excArgs w v), .obj d])
   | none => pure (.tuple [tv, .tuple (excArgs w v)])
 
-/-- The `PyDict_Next` loop of `BaseException___setstate___impl`. -/
-def setstateLoop (rt : Rt) (self : Val) : List (Val × Val) → M Unit
-  | [] => pure ()
-  | (k, v) :: rest => do
+/-- The `PyDict_Next` loop of `BaseException___setstate___impl`, `Objects/exceptions.c:246-255`:
+position `i` of the dict as it is now, so a `__setattr__` that adds to `state` is seen by the
+later turns. Each pair goes to `PyObject_SetAttr`, whose `PyUnicode_Check` on the name
+(`Objects/object.c`) is the `TypeError`; a failed set ends the loop (`:252-254`). Deleting an
+entry during the loop is not exact: `PyDict_Next` walks a table with dummy entries, and the
+model has a list (as `dictReprLoop` in `Protocol.lean`). `fuel` is a model bound. -/
+def setstateLoop (rt : Rt) (self state : Val) : Nat → Nat → M Unit
+  | 0, _ => raise .fuel
+  | fuel + 1, i => do
     let w ← getW
-    match strOf w k with
-    | none =>
-      typeErr s!"attribute name must be string, not '{trunc 200 (typeName w k)}'"
-    | some n =>
-      rt.setAttr self n (some v)
-      setstateLoop rt self rest
+    match ((dictOf w state).getD [])[i]? with
+    | none => pure ()
+    | some (k, v) =>
+      match strOf w k with
+      | none =>
+        typeErr s!"attribute name must be string, not '{trunc 200 (typeName w k)}'"
+      | some n =>
+        rt.setAttr self n (some v)
+        setstateLoop rt self state fuel (i + 1)
 
-/-- `BaseException___setstate___impl`, `Objects/exceptions.c:235`. -/
+/-- `BaseException___setstate___impl`, `Objects/exceptions.c:235-258`. -/
 def baseExceptionSetstate (rt : Rt) (self state : Val) : M Val := do
   if state.is .none then pure .none
   else
     let w ← getW
     match dictOf w state with
     | none => typeErr "state is not a dictionary"
-    | some es =>
-      setstateLoop rt self es
+    | some _ =>
+      setstateLoop rt self state excIterFuel 0
       pure .none
 
 /-- `BaseException___traceback___set_impl`, `Objects/exceptions.c:392`, and
@@ -435,7 +464,16 @@ def pyExceptionAddNote (rt : Rt) (exc note : Val) : M Unit := do
     typeErr s!"exc must be an exception, not '{typeName w exc}'"
   let _ ← baseExceptionAddNote rt exc note
 
-/-- `BaseException_args_set_impl`, `Objects/exceptions.c:352`. -/
+/-- `BaseException_args_get_impl`, `Objects/exceptions.c:335-342`. The `self->args == NULL`
+branch (`:338-340`) is unreachable in the model: `args` is a list, and only `tp_clear` sets the
+field to NULL. -/
+def baseExceptionArgsGet (e : ExcData) : Val := .tuple e.args
+
+/-- `BaseException___traceback___get_impl`, `Objects/exceptions.c:374-381`: NULL reads as
+`None`, which is how the model stores NULL. -/
+def baseExceptionTracebackGet (e : ExcData) : Val := e.traceback
+
+/-- `BaseException_args_set_impl`, `Objects/exceptions.c:352-365`. -/
 def baseExceptionArgsSet (rt : Rt) (self : Val) (value : Option Val) : M Unit := do
   match value with
   | none => typeErr "args may not be deleted"
@@ -540,17 +578,22 @@ def keyErrorStr (rt : Rt) (v : Val) : M Val := do
 
 /-! ## `ImportError`, `NameError`, `AttributeError` -/
 
-/-- `ImportError_init`, `Objects/exceptions.c:1804`. -/
+/-- `msg` of `ImportError_init`, `Objects/exceptions.c:1831-1834`: the argument when there is
+exactly one, NULL otherwise. -/
+def importMsg (args : List Val) : Option Val :=
+  match args with
+  | [m] => some m
+  | _ => none
+
+/-- `ImportError_init`, `Objects/exceptions.c:1803-1837`: `BaseException_init` with no keywords
+first (`:1813`), then the keyword-only parse (`:1820`), then the three members and `msg`. -/
 def importErrorInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args []
   let get ← argKeywordOnly "ImportError" ["name", "path", "name_from"] kw
   excUpdate self (memSet "name" (get "name"))
   excUpdate self (memSet "path" (get "path"))
   excUpdate self (memSet "name_from" (get "name_from"))
-  let msg := match args with
-    | [m] => some m
-    | _ => none
-  excUpdate self (memSet "msg" msg)
+  excUpdate self (memSet "msg" (importMsg args))
 
 /-- `ImportError_str`, `Objects/exceptions.c:1870`. -/
 def importErrorStr (rt : Rt) (v : Val) : M Val := do
@@ -565,24 +608,28 @@ def instDictEntries (w : World) (v : Val) : List (Val × Val) :=
   | some d => (dictOf w (.obj d)).getD []
   | none => []
 
-/-- `ImportError_getstate`, `Objects/exceptions.c:1880`. -/
+/-- `if (x && PyDict_SetItem(dict, k, x) < 0)`: set `k` when the member is not NULL. The keys
+are interned exact strs, so `PyDict_SetItem` cannot fail or run code. -/
+def optSetEntry (es : List (Val × Val)) (k : Name) (x : Option Val) : List (Val × Val) :=
+  match x with
+  | some y => dictSetEntry es (.str k) y
+  | none => es
+
+/-- `ImportError_getstate`, `Objects/exceptions.c:1879-1908`. -/
 def importErrorGetstate (v : Val) : M Val := do
   let w ← getW
   let d := excDataOf w v
   let (name, path, nameFrom) := (memGet d "name", memGet d "path", memGet d "name_from")
   if name.isSome || path.isSome || nameFrom.isSome then
-    let add (es : List (Val × Val)) (k : Name) (x : Option Val) :=
-      match x with
-      | some y => dictSetEntry es (.str k) y
-      | none => es
-    let es := add (add (add (instDictEntries w v) "name" name) "path" path) "name_from" nameFrom
+    let es := optSetEntry (optSetEntry (optSetEntry (instDictEntries w v) "name" name) "path" path)
+      "name_from" nameFrom
     alloc B.dict (.dict es)
   else
     match instDictAddr w v with
     | some a => pure (.obj a)
     | none => pure .none
 
-/-- `ImportError_reduce`, `Objects/exceptions.c:1912`. -/
+/-- `ImportError_reduce`, `Objects/exceptions.c:1911-1925`. -/
 def importErrorReduce (v : Val) : M Val := do
   let state ← importErrorGetstate v
   let w ← getW
