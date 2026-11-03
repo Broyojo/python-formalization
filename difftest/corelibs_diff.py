@@ -3868,9 +3868,10 @@ def operator_graph(rng):
         elif k == "inst":
             # an attribute `f0` hides the class's method of that name from `getattr`, so from `copy` of a method
             cells.append({"k": k, "attrs": [[a, rng.randrange(0, n)]
-                                            for a in rng.sample(["a", "b", "f0"], rng.randrange(0, 3))]})
+                                            for a in rng.sample(["a", "b", "f0", "f1"], rng.randrange(0, 3))]})
         elif k == "method":
-            cells.append({"k": k, "self": rng.randrange(0, n)})
+            # `f1` is no class's attribute, and its `__self__` may be anything but `None`
+            cells.append({"k": k, "self": rng.randrange(0, n), "fn": rng.choice([0, 0, 1])})
         elif k in ("cls", "meta"):
             cells.append({"k": k})
         else:
@@ -3884,7 +3885,8 @@ def operator_graph(rng):
             cells.append(c)
     for i, c in enumerate(cells):
         if c["k"] == "method":
-            ok = [j for j in range(n) if cells[j]["k"] == "inst"]
+            ok = [j for j in range(n) if cells[j]["k"] == "inst" or c["fn"] == 1 and (
+                cells[j]["k"] == "list" or cells[j]["k"] == "atom" and cells[j]["n"] != 0)]
             if ok:
                 c["self"] = rng.choice(ok)
             else:
@@ -3942,6 +3944,14 @@ def operator_graph(rng):
                 memo.append([a, rng.randrange(0, n)])
     return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n),
             "shallow": rng.random() < .3, "memo": memo}
+
+
+def operator_f1(self):
+    """A function no class here defines: `getattr(self, "f1")`, which `copy` of its method runs, fails."""
+    return 1
+
+
+operator_f1.__name__ = "f1"      # the model's `methName 1`
 
 
 class operator_Atom(int):
@@ -4056,7 +4066,8 @@ def operator_build_graph(cells):
             objs[i] = frozendict({objs[a]: objs[b] for a, b in zip(it[::2], it[1::2])})
     for i, c in enumerate(cells):
         if c["k"] == "method":
-            objs[i] = objs[c["self"]].f0
+            objs[i] = (objs[c["self"]].f0 if c.get("fn", 0) == 0
+                       else operator_types.MethodType(operator_f1, objs[c["self"]]))
     for i, c in enumerate(cells):
         k = c["k"]
         if k == "list":
@@ -4069,15 +4080,6 @@ def operator_build_graph(cells):
             for a, j in c["attrs"]:
                 setattr(objs[i], a, objs[j])
     return objs
-
-
-def operator_key(k):
-    """An instance `__dict__` key as the model writes it: a `str` itself, an `int` `#n`, `None` `#0`."""
-    if isinstance(k, str):
-        return k
-    if k is None:
-        return "#0"
-    return "#" + str(int(k))
 
 
 def operator_render(o, seen):
@@ -4102,10 +4104,14 @@ def operator_render(o, seen):
     if isinstance(o, tuple):
         return ["tuple", [operator_render(x, seen) for x in o]]
     if isinstance(o, operator_types.MethodType):
-        return ["method", [operator_render(o.__self__, seen)]]
+        return ["method", o.__func__.__name__, [operator_render(o.__self__, seen)]]
     if isinstance(o, operator_Inst):
-        names = sorted(o.__dict__, key=operator_key)
-        return ["inst", [operator_key(n) for n in names], [operator_render(o.__dict__[n], seen) for n in names]]
+        # the `__dict__` in insertion order, a key that is not a `str` rendered as an object, before its value
+        out = []
+        for k, v in o.__dict__.items():
+            kj = k if isinstance(k, str) else operator_render(k, seen)
+            out.append([kj, operator_render(v, seen)])
+        return ["inst", out]
     out = []
     for k, v in o.items():
         out.append(operator_render(k, seen))

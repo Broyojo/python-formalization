@@ -36,11 +36,20 @@ inductive RvSpec where
       (setstate : Option (Option PyExc))
   deriving Repr, DecidableEq
 
+/-- A key of an instance's `__dict__`. Every `str` key is a `name` (setattr's names and a `str` object that
+`__dict__.update` stores alike); any other key object is `obj`, its cell, and compares with `pyEq`, so two keys merge
+exactly when the dict would merge them. -/
+inductive AttrKey where
+  | name (s : String)
+  | obj (k : Nat)
+  deriving Repr, DecidableEq
+
 /-- An object on the heap. `hooked` is an instance of a class with its own protocol: `copier` is `__copy__`,
 `deepcopier` is `__deepcopy__`, each raising if the inner value is set, and returning a fresh atom otherwise;
 `reduce` is what `__reduce_ex__` gives, `none` for an object that has neither it nor `__reduce__`. `inst` is a plain
 instance, which `object.__reduce_ex__` copies through `copyreg.__newobj__`. The atom `0` is `None`; other atoms are
-`int`s. A `method`'s function is defined on the class of its `__self__` under the name `methName func`. -/
+`int`s. An `inst`'s attributes are its `__dict__` in insertion order. A `method`'s function has the `__name__`
+`methName func`; the class of the model's instances defines function `0` and nothing else defines any. -/
 inductive Cell where
   | atom (n : Int)
   /-- A `str`, atomic for both copies, Lib/copy.py:103 and :165. -/
@@ -50,7 +59,7 @@ inductive Cell where
   | dict (items : List (Nat × Nat))
   /-- A `frozendict`: `copy` returns it, Lib/copy.py:103-104, and `deepcopy` builds a new one, :205-218. -/
   | fdict (items : List (Nat × Nat))
-  | inst (attrs : List (String × Nat))
+  | inst (attrs : List (AttrKey × Nat))
   | method (func self : Nat)
   /-- A class whose type is `type`, which `deepcopy` returns at Lib/copy.py:118, before reading `memo`. -/
   | cls (id : Nat)
@@ -185,7 +194,7 @@ def eqFuel (h : Heap) : Nat := 2 * h.cells.length + 2
 keeps its place and its own key object and takes the new value (`replace_value`, :2041); otherwise the pair goes at the
 end (`insert_combined_dict`, :2033). CPython compares only keys of equal hash; in this universe equal objects have
 equal hashes and no comparison raises, so comparing every key in order gives the same dict. -/
-def storeItem (eq : Nat → Nat → Py Bool) : List (Nat × Nat) → Nat → Nat → Py (List (Nat × Nat))
+def storeItem {α : Type} (eq : α → α → Py Bool) : List (α × Nat) → α → Nat → Py (List (α × Nat))
   | [], k, v => .ok [(k, v)]
   | (k0, v0) :: rest, k, v =>
     match eq k0 k with
@@ -231,21 +240,29 @@ def setItemOf (h : Heap) (y k v : Nat) : Py Heap :=
     | _ => .error (.typeError "~list indices must be integers or slices")
   | _ => .error (.typeError "~object does not support item assignment")
 
-/-- Store `v` under the name `k` in an instance's `__dict__`: `setattr`'s store, `__setstate__`'s, and one item of
-`__dict__.update`. Anything but an instance has no `__dict__`. -/
-def setAttrOf (h : Heap) (y : Nat) (k : String) (v : Nat) : Py Heap :=
+/-- Key equality in an instance's `__dict__`: names by their text, other keys by `pyEq`, a name and another key
+never (no other object here equals a `str`). -/
+def akEq (h : Heap) : AttrKey → AttrKey → Py Bool
+  | .name s, .name t => .ok (s == t)
+  | .obj a, .obj b => pyEq (eqFuel h) h a b
+  | _, _ => .ok false
+
+/-- Store `v` under `k` in an instance's `__dict__`: `setattr`'s store, `__setstate__`'s, and one item of
+`__dict__.update`. It is a dict store, `insertdict` as in `storeItem`: a key already there keeps its place and takes
+the value. Anything but an instance has no `__dict__`. -/
+def setAttrOf (h : Heap) (y : Nat) (k : AttrKey) (v : Nat) : Py Heap :=
   match h.get y with
-  | .inst a => .ok (h.set y (.inst ((a.filter (fun p => p.1 ≠ k)) ++ [(k, v)])))
+  | .inst a =>
+    match storeItem (akEq h) a k v with
+    | .error e => .error e
+    | .ok a' => .ok (h.set y (.inst a'))
   | _ => .error (.named "AttributeError" "~object has no attribute '__dict__'")
 
-/-- The key an object makes in an instance's `__dict__`, as the model writes it: a `str` is its text, an `int` `n` is
-`#n` (and `None`, the atom `0`, is `#0`). Scope: any other key is named by its cell, `@i`, so it compares by identity;
-the graphs never store one. -/
-def attrKey (h : Heap) (k : Nat) : String :=
+/-- The key an object makes in an instance's `__dict__`: a `str` is a name, anything else itself. -/
+def attrKey (h : Heap) (k : Nat) : AttrKey :=
   match h.get k with
-  | .str s => s
-  | .atom n => "#" ++ toString n
-  | _ => "@" ++ toString k
+  | .str s => .name s
+  | _ => .obj k
 
 def noneCell (h : Heap) (s : Nat) : Bool :=
   match h.get s with
@@ -318,7 +335,7 @@ def slotSet (y : Nat) : Heap → List (Nat × Nat) → Py Heap
     | .str s =>
       match h.get y with
       | .inst _ =>
-        match setAttrOf h y s v with
+        match setAttrOf h y (.name s) v with
         | .error e => .error e
         | .ok h => slotSet y h rest
       | _ => .error (.named "AttributeError" "~object has no attribute and no __dict__ for setting new attributes")
@@ -356,7 +373,7 @@ def stateStep (h : Heap) (y st : Nat) : Py Heap :=
 def setstateOf (h : Heap) (y st : Nat) (fail : Option PyExc) : Py Heap :=
   match fail with
   | some e => .error e
-  | none => setAttrOf h y "__state__" st
+  | none => setAttrOf h y (.name "__state__") st
 
 /-- Lib/copy.py:255-266 on a state that is not `None`: `__setstate__` if `y` has one, else the default step. -/
 def stateApply (h : Heap) (y st : Nat) (setstate : Option (Option PyExc)) : Py Heap :=
@@ -366,7 +383,7 @@ def stateApply (h : Heap) (y st : Nat) (setstate : Option (Option PyExc)) : Py H
 
 def freshOf (kind : BuildKind) (args : List Nat) : Cell :=
   match kind with
-  | .inst => .inst (args.zipIdx.map (fun p => (attrName p.2, p.1)))
+  | .inst => .inst (args.zipIdx.map (fun p => (.name (attrName p.2), p.1)))
   | .list => .list []
   | .dict => .dict []
 
@@ -443,15 +460,18 @@ def uncopyable (deep : Bool) : PyExc :=
 /-- The `__name__` of a method's function. -/
 def methName (f : Nat) : String := "f" ++ toString f
 
-/-- `getattr(self, name)` for the name of a method's function, which the class of `self` defines: an attribute of the
-instance's own `__dict__` wins over the function, a non-data descriptor; otherwise the function is bound anew. -/
-def getMethodAttr (h : Heap) (f s : Nat) : Heap × Nat :=
+/-- `getattr(self, name)` for the `__name__` of a method's function: an instance's own `__dict__` entry of that name
+wins over the class's function, a non-data descriptor, which is bound anew; any other object, and an instance whose class
+does not define the name, has no such attribute. -/
+def getMethodAttr (h : Heap) (f s : Nat) : Py (Heap × Nat) :=
   match h.get s with
   | .inst a =>
-    match a.lookup (methName f) with
-    | some v => (h, v)
-    | none => h.alloc (.method f s)
-  | _ => h.alloc (.method f s)
+    match a.lookup (.name (methName f)) with
+    | some v => .ok (h, v)
+    | none =>
+      if f = 0 then .ok (h.alloc (.method f s))
+      else .error (.named "AttributeError" "~object has no attribute")
+  | _ => .error (.named "AttributeError" "~object has no attribute")
 
 /-- `copy(x)`, Lib/copy.py:62-100. `tuple` is atomic here and only here. A bound method has no `__copy__`, so it goes
 through `method.__reduce__`, Objects/classobject.c:90-116, which gives `(getattr, (self, name))` (no name here is
@@ -462,7 +482,7 @@ def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
   | .list l => let (h1, y) := h.alloc (.list l); .ok (h1, y)
   | .dict l => let (h1, y) := h.alloc (.dict l); .ok (h1, y)
   | .inst a => let (h1, y) := h.alloc (.inst a); .ok (h1, y)
-  | .method f s => .ok (getMethodAttr h f s)
+  | .method f s => getMethodAttr h f s
   | .hooked copier _ reduce =>
     match copier with
     | some (some e) => .error e
@@ -604,16 +624,29 @@ mutual
           | .ok acc' => deepPairs fuel h2 acc' rest
 
   /-- The state of a plain instance, copied and stored attribute by attribute. -/
-  def deepAttrs : Nat → Heap → Nat → List (String × Nat) → Py Heap
+  def deepAttrs : Nat → Heap → Nat → List (AttrKey × Nat) → Py Heap
     | 0, _, _, _ => .error .modelFuel
     | _ + 1, h, _, [] => .ok h
     | fuel + 1, h, y, (k, v) :: rest =>
       match deepcopy fuel h v with
       | .error e => .error e
       | .ok (h1, v') =>
-        match setAttrOf h1 y k v' with
+        match deepKey fuel h1 k with
         | .error e => .error e
-        | .ok h2 => deepAttrs fuel h2 y rest
+        | .ok (h2, k') =>
+          match setAttrOf h2 y k' v' with
+          | .error e => .error e
+          | .ok h3 => deepAttrs fuel h3 y rest
+
+  /-- The copy of a `__dict__` key, value first as in `_deepcopy_dict`, Lib/copy.py:201: a `str` is atomic, any
+  other key is deep-copied. -/
+  def deepKey : Nat → Heap → AttrKey → Py (Heap × AttrKey)
+    | _, h, .name s => .ok (h, .name s)
+    | 0, _, .obj _ => .error .modelFuel
+    | fuel + 1, h, .obj c =>
+      match deepcopy fuel h c with
+      | .error e => .error e
+      | .ok (h1, c') => .ok (h1, attrKey h1 c')
 
   /-- Lib/copy.py:252-256 with `deep` true: a state that is not `None` is copied, and then the copy, whatever it is
   (`None` too), goes to `__setstate__` or to the default step. -/
