@@ -279,4 +279,53 @@ theorem setdefaultSplitStr_proven : SetdefaultSplitStr := by
   · have : (ix != DKIX_EMPTY) = true := by simpa using hne
     simp [dictSetdefaultRef, M.bind_run, M.lift_run, M.put_run, hashKey, hh, hEk, hb, hs, hk, this, hv, hne]
 
+/-- What `dict_setdefault_ref_lock_held` does when it falls through to `insert_combined_dict`
+(:4843-4862): insert the default, count it, status 0. -/
+def setdefaultInsert (P : Proto K (PyDict K V)) (key : K) (h : Int) (dflt : V) (t : PyDict K V) :
+    Py (Nat × Option V) × PyDict K V :=
+  match insertCombinedDict P.toKeyOps h key dflt t with
+  | (.ok _, s') => (.ok (0, some dflt), { s' with used := s'.used + 1 })
+  | (.error e, s') => (.error e, s')
+
+/-- The two paths of `dict_setdefault_ref_lock_held` on a split table that leave it for
+`insert_combined_dict`, for every key protocol, on the dict as `__hash__` left it. A key that is not an
+exact `str` goes through `_Py_dict_lookup` (:4834): its failure is the result, a miss inserts the
+default, and a slot with a value gives status 1 and that value. An exact `str` key for which
+`insert_split_key` finds neither the key nor room (:4817-4831) inserts the default the same way, on
+the shared keys `insert_split_key` left. `TableGeometry` says what the insertion makes of the table: a
+general combined one for the first path, a resized one for the second, with the entry last. -/
+def SetdefaultSplitFallthrough : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (dflt : V) (r i : Bool)
+    (mp : PyDict K V) (keys keys' : Keys K Unit) (vals : Values V) (h : Int),
+    P.hash key = .ok h → (P.hashEff key mp).body = .split keys vals →
+    (P.hashEff key mp).body.isEmptyKeys = false →
+    (P.isStr key = false →
+      (∀ e s, dictLookup P key h (P.hashEff key mp) = (.error e, s) →
+        dictSetdefaultRef P key dflt r i mp = (.error e, s)) ∧
+      (∀ v s, dictLookup P key h (P.hashEff key mp) = (.ok (DKIX_EMPTY, v), s) →
+        dictSetdefaultRef P key dflt r i mp = setdefaultInsert P key h dflt s) ∧
+      (∀ ix w s, ix ≠ DKIX_EMPTY → dictLookup P key h (P.hashEff key mp) = (.ok (ix, some w), s) →
+        dictSetdefaultRef P key dflt r i mp = (.ok (1, some w), s))) ∧
+    (P.isStr key = true → insertSplitKey P keys key h = .ok (DKIX_EMPTY, keys') →
+      dictSetdefaultRef P key dflt r i mp =
+        setdefaultInsert P key h dflt { P.hashEff key mp with body := .split keys' vals })
+
+theorem setdefaultSplitFallthrough_proven : SetdefaultSplitFallthrough := by
+  intro K V _ P key dflt r i mp keys keys' vals h hh hb hE
+  have hEk : (Body.split keys vals : Body K V).isEmptyKeys = false := hb ▸ hE
+  refine ⟨fun hs => ⟨fun e s hl => ?_, fun v s hl => ?_, fun ix w s hne hl => ?_⟩, fun hs hk => ?_⟩
+  · simp [dictSetdefaultRef, M.bind_run, hashKey, hh, hEk, hb, hs, hl]
+  · simp only [dictSetdefaultRef, M.bind_run, M.get_run, hashKey, hh, hEk, hb, hs, hl,
+      Bool.false_eq_true, if_false, beq_self_eq_true, if_true, setdefaultInsert]
+    rcases insertCombinedDict P.toKeyOps h key dflt s with ⟨a, t⟩
+    cases a <;> rfl
+  · have hne2 : (ix == DKIX_EMPTY) = false := by simpa using hne
+    simp [dictSetdefaultRef, M.bind_run, hashKey, hh, hEk, hb, hs, hl, hne, hne2]
+  · simp only [dictSetdefaultRef, M.bind_run, M.get_run, M.lift_run, M.put_run, hashKey, hh, hEk, hb,
+      hs, hk, Bool.false_eq_true, if_false, if_true, bne_self_eq_false, beq_self_eq_true,
+      setdefaultInsert]
+    rcases insertCombinedDict P.toKeyOps h key dflt
+      { P.hashEff key mp with body := .split keys' vals } with ⟨a, t⟩
+    cases a <;> rfl
+
 end PyLean.DictSet

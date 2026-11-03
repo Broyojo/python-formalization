@@ -701,9 +701,15 @@ def entries : List Entry := [
     notes := "ma_used and len are Py_ssize_t, below 2**63: a type invariant." },
   { id := "dict-table-geometry", pyFile := "Objects/dictobject.c",
     pyFns := ["new_keys_object", "insert_to_emptydict", "insertion_resize", "insert_combined_dict"]
-    statement := "For every key protocol: new_keys_object gives 2**l empty slots, no entry, USABLE_FRACTION(2**l) usable and the asked kind; insert_to_emptydict the 8-slot table, unicode exactly for an exact str key, 4 usable and the one entry; insertion_resize a table of calculate_log2_keysize(GROWTH_RATE(used)) with USABLE_FRACTION of it less used usable; insert_combined_dict, with room and no non-str key for a unicode table, the same size and kind with one usable fewer and the entry appended, and with no room first the insertion_resize size."
+    statement := "For every key protocol: new_keys_object gives 2**l empty slots, no entry, USABLE_FRACTION(2**l) usable, the asked kind, and indices of 1, 2, 4 or 8 bytes as 2**l is below 2**8, below 2**16, at least 2**32, or between, which is its __sizeof__; insert_to_emptydict the 8-slot table, unicode exactly for an exact str key, 4 usable and the one entry; insertion_resize a table of calculate_log2_keysize(GROWTH_RATE(used)) with USABLE_FRACTION of it less used usable, unicode exactly when the dict was and the caller allows it; insert_combined_dict makes a general table for a non-str key into a unicode one, split ones included; otherwise with room it keeps size and kind and appends with one usable fewer, and with no room it takes the insertion_resize size, unicode exactly when the table was; the entry is always last."
     source := "dictobject.c:794-847, :1861-1909, :2051-2095; visible through sys.getsizeof", status := .proven
-    prop := ``TableGeometry, thm := some ``tableGeometry_proven },
+    prop := ``TableGeometry, thm := some ``tableGeometry_proven
+    notes := "Checked on 3.15.2: __sizeof__ of dict.fromkeys(range(85)) is 2248 = 48+32+2**7+85*24, of range(86) 4672 = 48+32+2**9+170*24; six str keys give the unicode 256, not the general 336." },
+  { id := "dict-setdefault-split-fallthrough", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_setdefault_ref_lock_held"]
+    statement := "For every key protocol, on a split table: a key that is not an exact str goes through _Py_dict_lookup, whose failure is the result, a miss inserts the default by insert_combined_dict with status 0, and a slot with a value gives status 1 and it; an exact str key that insert_split_key can neither find nor add inserts the default the same way on the shared keys it left."
+    source := "dictobject.c:4817-4862; checked on 3.15.2: o.__dict__.setdefault(5, 'v') stores the value", status := .proven
+    prop := ``SetdefaultSplitFallthrough, thm := some ``setdefaultSplitFallthrough_proven },
   { id := "dict-setdefault-refines", pyFile := "Objects/dictobject.c",
     pyFns := ["dict_setdefault_ref_lock_held"]
     statement := "For an honest key protocol and a well-formed dict: setdefault of a present key gives status 1 and its value, the dict unchanged; of an absent key stores the default, status 0, by insert_to_emptydict on an empty table and insert_combined_dict otherwise, as d[key] = default would; the one failure is MemoryError."
