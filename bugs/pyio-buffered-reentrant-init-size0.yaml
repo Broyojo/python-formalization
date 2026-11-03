@@ -1,6 +1,6 @@
 id: pyio-buffered-reentrant-init-size0
 title: "io.BufferedReader/Writer: a failed __init__(raw, 0) re-entered from a raw callback leaves buffer_size 0: SIGFPE in read, endless loop in write"
-priority: P1
+priority: P2
 kind: crash
 module: pyio
 files: [Modules/_io/bufferedio.c]
@@ -96,3 +96,13 @@ duplicates:
 lean:
   property: PyLean.PyIO.BufferedCNoCrash
   theorem: PyLean.PyIO.bufferedCNoCrash_refuted_size0
+
+review_notes: |
+  Independent re-review (2026-11-03): claim holds on 3.15.2 and main. Re-rated P1 -> P2: the record
+  shows a deterministic crash (SIGFPE on x86), a hang a signal interrupts, and a heap disclosure,
+  but no memory corruption; it needs a raw stream that re-initialises its own wrapper from a
+  callback. The re-entrant-init-free record (same root cause, P1) already covers the corrupting case;
+  report the two together. Additional findings: with a power-of-two buffer size (including the
+  default 8192) read(n) does not trap and returns n bytes whose tail nobody wrote (size 4 measured
+  returning heap bytes such as b'...\x80C'); a refused negative size (-1) does not trap on read;
+  integer division by zero traps on x86 but yields 0 on aarch64 (not checked: no ARM pod).
