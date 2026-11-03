@@ -1898,6 +1898,7 @@ typeobj-exc-unicode-capi-refusals	proven	Objects/exceptions.c	PyUnicodeEncodeErr
 typeobj-exc-unicode-getreason-refusals	proven	Objects/exceptions.c	unicode_error_get_reason_impl,PyUnicodeEncodeError_GetReason,PyUnicodeDecodeError_GetReason,PyUnicodeTranslateError_GetReason
 typeobj-exc-unicode-encode-parse	proven	Objects/exceptions.c	UnicodeEncodeError_init
 typeobj-exc-unicode-decode-parse	proven	Objects/exceptions.c	UnicodeDecodeError_init
+typeobj-exc-unicode-decode-stores-n	proven	Objects/exceptions.c	UnicodeDecodeError_init
 typeobj-exc-unicode-translate-parse	proven	Objects/exceptions.c	UnicodeTranslateError_init
 typeobj-exc-unicode-adjust	proven	Objects/exceptions.c	unicode_error_adjust_start,unicode_error_adjust_end,unicode_error_adjust_len,assert_adjusted_unicode_error_start,assert_adjusted_unicode_error_end,assert_adjusted_unicode_error_len
 typeobj-exc-unicode-params	proven	Objects/exceptions.c	
