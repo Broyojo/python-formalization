@@ -4,7 +4,7 @@ Lib/_py_warnings.py	53	55	_Context.__init__	__init__(self, filters)	modelled	war
 Lib/_py_warnings.py	57	61	_Context.copy	copy(self)	modelled	warn-nested-record,warn-catch-restores	
 Lib/_py_warnings.py	63	64	_Context._record_warning	_record_warning(self, msg)	modelled	warn-record-captures	
 Lib/_py_warnings.py	68	69	_GlobalContext.__init__	__init__(self)	todo		
-Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-catch-restores,warn-filter-list-twins-py,warn-filters-lookup-raises-py	
+Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-filters-lookup-raises-py,warn-filter-list-twins-py,warn-catch-restores	
 Lib/_py_warnings.py	89	95	_get_context	_get_context()	modelled	warn-filter-list-twins-py,warn-catch-restores	
 Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	modelled	warn-catch-restores,warn-record-captures	
 Lib/_py_warnings.py	103	108	_new_context	_new_context()	modelled	warn-nested-record,warn-catch-restores,warn-record-captures	

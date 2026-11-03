@@ -391,9 +391,10 @@ def cwExit (useCtx : Bool) (cw : CW) (st : MState) : MState × Py Unit :=
 
 /-- How C reaches the filters list, `get_filter` :551-587: the context variable's `_filters`
 (`get_warnings_context_filters`, :318-339, through `get_warnings_context`, :303-315), else
-`warnings.filters` (`get_warnings_filters`, :343-362), which when deleted falls back to the list
-C cached the last time it read one (`cached`). The result's name is the one an item error
-message uses. -/
+`warnings.filters` (`get_warnings_filters`, :343-362), which when deleted falls back to the
+object C cached the last time it read `warnings.filters` (`cached`: `Py_SETREF`, :352, keeps
+whatever was read, a list or not); the list check (:355-360) runs on that object either way. The
+result's name is the one an item error message uses. -/
 def cFilterList (st : MState) (cached : Ref) : Py (List Elem × String) :=
   match st.ctxv with
   | .unset =>
@@ -403,9 +404,13 @@ def cFilterList (st : MState) (cached : Ref) : Py (List Elem × String) :=
       else .ok (st.lists r, "filters")
     -- `GET_WARNINGS_ATTR(interp, filters, 0)` `NULL`: with an error set it returns (:347-349),
     -- else the cached list (`PyObject_GetOptionalAttr` clears an `AttributeError`)
-    | none => match st.modGetattr "filters" with
-      | some e => if isA st.hier e "AttributeError" then .ok (st.lists cached, "filters") else .error e
-      | none => .ok (st.lists cached, "filters")
+    | none =>
+      let fromCache : Py (List Elem × String) :=
+        if st.tuples cached then .error (.valueError "_warnings.filters must be a list")
+        else .ok (st.lists cached, "filters")
+      match st.modGetattr "filters" with
+      | some e => if isA st.hier e "AttributeError" then fromCache else .error e
+      | none => fromCache
   | v =>
     match ctxFilters st v with
     | some r =>
