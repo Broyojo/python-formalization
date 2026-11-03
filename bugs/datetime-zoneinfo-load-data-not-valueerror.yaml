@@ -1,0 +1,60 @@
+id: datetime-zoneinfo-load-data-not-valueerror
+title: "zoneinfo: from_file() raises struct.error or AssertionError for truncated TZif data"
+priority: P3
+kind: doc-mismatch
+module: datetime
+files: [Lib/zoneinfo/_common.py]
+functions: ["load_data", "_TZifHeader.from_file"]
+summary: |
+  The docs of ZoneInfo.from_file say "ValueError is raised if the data read from file_obj
+  is not a valid TZif file", and both twins use _common.load_data. A header cut short makes
+  `struct.unpack(">6l", stream.read(24))` (Lib/zoneinfo/_common.py:166) raise struct.error, as do
+  short transition, index and type records (:66-69, :81); a version 2+ file whose footer does not
+  start with a newline fails `assert c == b"\n", c` (:122-123) with AssertionError, and under
+  `python -O` that check is skipped and the first byte of the footer is dropped. Neither
+  exception is a ValueError, so `except ValueError` around from_file() misses them.
+likelihood: |
+  Medium for code that loads untrusted or partially downloaded TZif files and catches ValueError.
+maybe_intended: |
+  No: the docs promise ValueError, and the same function already raises ValueError for a bad magic or a truncated footer (:127).
+reproducer: |
+  import io, struct, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  short = b'TZif2' + bytes(38)
+  body = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 1, 4) + struct.pack('>lBB', 0, 0, 0) + b'UTC\x00'
+  nonl = body + body + b'UTC0\n'
+  res = []
+  for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+      for data in (short, nonl):
+          try:
+              Z.from_file(io.BytesIO(data))
+              res.append('ok')
+          except ValueError:
+              res.append('ValueError')
+          except Exception as e:
+              res.append(type(e).__name__)
+  print(res)
+  if res == ['error', 'AssertionError'] * 2:
+      print('REPRODUCED datetime-zoneinfo-load-data-not-valueerror')
+expected: |
+  ValueError (e.g. "Invalid TZif file: unexpected end of file") for both inputs.
+promised_by: |
+  ZoneInfo.from_file docs (Doc/library/zoneinfo.rst:205-206).
+cause: |
+  Lib/zoneinfo/_common.py:66-69, :81, :166 let struct.error escape; :123 uses assert for input validation.
+possible_fix: |
+  Catch struct.error around the unpacks and re-raise ValueError; replace the assert with `if c != b"\n": raise ValueError(...)`.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues: []
+  queries: ["zoneinfo struct error", "zoneinfo AssertionError", "zoneinfo from_file ValueError", "zoneinfo incomplete file (gh-143241 is the infinite loop, fixed)", "zoneinfo malformed TZif"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.LoadDataValueError
+  theorem: PyLean.Datetime.Zone.loadDataValueError_refuted

@@ -1,0 +1,64 @@
+id: datetime-zoneinfo-dstoff-int-narrowing
+title: "_zoneinfo: load_timedelta() narrows a long DST offset to int"
+priority: P4
+kind: silent-wraparound
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C load_timedelta", "C build_ttinfo", "C utcoff_to_dstoff", "C load_data"]
+summary: |
+  utcoff_to_dstoff() computes a DST offset as the difference of two 32-bit UTC offsets in
+  a `long` (Modules/_zoneinfo.c:2085-2102), which can reach 2**32 - 1 in magnitude.
+  build_ttinfo() passes it to load_timedelta(state, long seconds) (:1150, :911), which calls
+  `PyDateTimeAPI->Delta_FromDelta(0, seconds, 0, 1, ...)` (:880-881), whose parameters are `int`
+  (Include/datetime.h:174). The value is silently truncated: a standard type at 2**31 - 1 and
+  a DST type at -2**31 give dst() == timedelta(seconds=1) in C and
+  timedelta(seconds=-4294967295) in Python. The timedelta cache is keyed by the untruncated value.
+likelihood: |
+  Very low: needs UTC offsets of about 68 years; RFC 9636 3.2 forbids -2**31 and recommends -89999..93599.
+maybe_intended: |
+  No: the cache key and the timedelta disagree, and nothing checks the range.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  data = tzif([0, 1000], [0, 1], [(2**31 - 1, 0, 0), (-2**31, 1, 4)], b'AAA\x00BBB\x00')
+  c, py = both(data, lambda z: z.dst(dt.datetime(2100, 1, 1)))
+  print('C', repr(c), 'Py', repr(py))
+  if c == dt.timedelta(seconds=1) and py == dt.timedelta(seconds=-(2**32 - 1)):
+      print('REPRODUCED datetime-zoneinfo-dstoff-int-narrowing')
+expected: |
+  dst() == timedelta(seconds=-(2**32 - 1)) as in Python, or a ValueError for the file.
+promised_by: |
+  no silent wraparound; the twins being interchangeable.
+cause: |
+  Modules/_zoneinfo.c:880-881 passes `long seconds` to the `int` parameter of Delta_FromDelta.
+possible_fix: |
+  Build the timedelta from the PyLong already made at :875 (PyNumber, or Delta_FromDelta after a range check that raises).
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues: []
+  queries: ["zoneinfo load_timedelta", "zoneinfo timedelta truncated", "zoneinfo dst offset wrong", "zoneinfo malformed TZif"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.DstoffTwinsFlags
+  theorem: PyLean.Datetime.Zone.dstoffTwinsFlags_refuted

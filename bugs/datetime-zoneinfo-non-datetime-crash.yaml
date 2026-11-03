@@ -1,0 +1,58 @@
+id: datetime-zoneinfo-non-datetime-crash
+title: "_zoneinfo: utcoffset()/dst()/tzname() read the fold byte of a non-datetime argument (segfault)"
+priority: P1
+kind: memory-safety
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C find_ttinfo", "C get_local_timestamp", "C zoneinfo_ZoneInfo_utcoffset_impl", "C zoneinfo_ZoneInfo_dst_impl", "C zoneinfo_ZoneInfo_tzname_impl"]
+summary: |
+  get_local_timestamp() accepts any object with toordinal(), hour, minute and second
+  (Modules/_zoneinfo.c:2301-2342), but find_ttinfo() then reads `PyDateTime_DATE_GET_FOLD(dt)`
+  (:2238) and `PyDateTime_GET_YEAR(dt)` (:2248) from the struct of a datetime the object is not,
+  and indexes the two-element `trans_list_wall[fold]` (:2240) with that byte. A bytes subclass
+  whose fourth data byte is 7 makes fold 7, the pointer read lands on `utcoff_seconds`, and the
+  dereference segfaults. The Python twin raises AttributeError on dt.fold. DUPLICATE of gh-125318
+  (open; see also gh-111306).
+likelihood: |
+  Low: needs a duck-typed datetime, but neo4j-style temporal types do this (gh-125318).
+maybe_intended: |
+  No: pure Python code must not crash the interpreter.
+reproducer: |
+  import subprocess, sys
+  code = r"""
+  import io, struct
+  from zoneinfo import ZoneInfo
+  v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+  data = (v1 + b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 1, 1, 4) + struct.pack('>q', 0)
+          + b'\x00' + struct.pack('>lBB', 0, 0, 0) + b'UTC\x00' + b'\n\n')
+  zi = ZoneInfo.from_file(io.BytesIO(data))
+  class D(bytes):
+      hour = minute = second = 0
+      def toordinal(self): return 738000
+  print(zi.utcoffset(D(bytes([0, 0, 0, 7] + [0] * 8))))
+  """
+  p = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True)
+  print('returncode', p.returncode)
+  if p.returncode < 0:
+      print('REPRODUCED datetime-zoneinfo-non-datetime-crash')
+expected: |
+  A TypeError, or the duck-typed lookup of the Python twin (gh-139132 proposes attribute lookups).
+promised_by: |
+  no crash from pure Python code.
+cause: |
+  Modules/_zoneinfo.c:2238-2240 read datetime fields of an object only checked by PyDateTime_CheckExact in get_local_timestamp.
+possible_fix: |
+  Check PyDateTime_Check(dt) in find_ttinfo, or read fold and year through attributes for non-datetimes (gh-139132).
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 125318, state: open, relation: duplicate, reason: same out-of-bounds fold read, open with PRs}
+    - {number: 111306, state: open, relation: duplicate, reason: same report, earlier}
+  queries: ["zoneinfo utcoffset non-datetime crash", "zoneinfo segfault", "zoneinfo segmentation fault utcoffset", "zoneinfo duck typing datetime crash", "zoneinfo crash", "zoneinfo struct error (found gh-111306)"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.FindTtinfoDefined
+  theorem: PyLean.Datetime.Zone.findTtinfoDefined_refuted

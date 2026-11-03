@@ -15,6 +15,9 @@ import PyLean.Datetime.Refute2
 import PyLean.Datetime.MiscProps
 import PyLean.Datetime.OpenProps
 import PyLean.Datetime.ChangedProps
+import PyLean.Datetime.ZoneRuleProps
+import PyLean.Datetime.ZoneLoadProps
+import PyLean.Datetime.ZoneProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -547,7 +550,131 @@ def entries : List Entry := [
     statement := "str(t) and repr(t) are the same text in both twins."
     source := "C/Python twins", status := .open
     prop := ``TimedeltaStrRepr
-    notes := "String equalities between list concatenation and interpolation; the difftest shows no difference." }
+    notes := "String equalities between list concatenation and interpolation; the difftest shows no difference." },
+  { id := "datetime-zoneinfo-rule-date-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C calendarrule_year_to_timestamp", "C dayrule_year_to_timestamp", "C ymd_to_ord", "C is_leap_year", "_CalendarOffset.year_to_epoch", "_CalendarOffset._ymd2ord", "_DayOffset.year_to_epoch", "_post_epoch_days_before_year"]
+    statement := "For every rule either TZ parser can build (Mm.w.d, Jn or n with a time of at most 167 hours) and every datetime year, C and Python compute the same local transition timestamp."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.RuleDateTwins, thm := some ``Zone.ruleDateTwins_proven
+    notes := "C int8_t/uint8_t/uint16_t locals and int64 sums are shown not to wrap for these fields." },
+  { id := "datetime-zoneinfo-calendar-rule-meaning", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["_CalendarOffset.year_to_epoch", "_CalendarOffset._ymd2ord", "_post_epoch_days_before_year"]
+    statement := "Mm.w.d/time is time on the d-th weekday (0 = Sunday) of week w of month m, week 5 meaning the last such weekday, in every datetime year."
+    source := "POSIX TZ (IEEE Std 1003.1 8.3); RFC 9636 3.3.1", status := .proven
+    prop := ``Zone.CalendarRuleMeaning, thm := some ``Zone.calendarRuleMeaning_proven
+    notes := "C gives the same timestamp by datetime-zoneinfo-rule-date-twins." },
+  { id := "datetime-zoneinfo-julian-rule-meaning", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["_DayOffset.year_to_epoch", "_post_epoch_days_before_year"]
+    statement := "Jn/time is the n-th day of a year without February 29 (March 1 is J60 in every year)."
+    source := "POSIX TZ (IEEE Std 1003.1 8.3)", status := .proven
+    prop := ``Zone.JulianRuleMeaning, thm := some ``Zone.julianRuleMeaning_proven
+    notes := "The 3.15 change from d >= 59 to d >= 60 is what makes this hold." },
+  { id := "datetime-zoneinfo-zero-based-rule", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["_DayOffset.year_to_epoch", "C dayrule_year_to_timestamp"]
+    statement := "The zero-based rule n/time is n days after January 1, in both twins."
+    source := "POSIX TZ (IEEE Std 1003.1 8.3: zero-based Julian day)", status := .refuted
+    prop := ``Zone.ZeroBasedRuleMeaning, thm := some ``Zone.zeroBasedRuleMeaning_refuted
+    bug := some "datetime-zoneinfo-zero-based-day"
+    notes := "Both start from December 31; duplicate of gh-159712." },
+  { id := "datetime-zoneinfo-dstoff-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo._utcoff_to_dstoff", "C utcoff_to_dstoff"]
+    statement := "For every tuple _common.load_data can return, C and Python give every type the same dst() offset."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.DstoffTwins, thm := some ``Zone.dstoffTwins_refuted
+    bug := some "datetime-zoneinfo-isdst-sum"
+    notes := "An isdst byte 0xff makes sum(isdsts) undercount the DST types." },
+  { id := "datetime-zoneinfo-dstoff-twins-flags", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C load_timedelta", "C utcoff_to_dstoff", "ZoneInfo._utcoff_to_dstoff"]
+    statement := "With isdst flags 0 or 1, C and Python give every type the same dst() offset."
+    source := "C/Python twins; no silent wraparound", status := .refuted
+    prop := ``Zone.DstoffTwinsFlags, thm := some ``Zone.dstoffTwinsFlags_refuted
+    bug := some "datetime-zoneinfo-dstoff-int-narrowing"
+    notes := "load_timedelta passes a long to the int parameter of Delta_FromDelta." },
+  { id := "datetime-zoneinfo-dstoff-twins-narrow", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo._utcoff_to_dstoff", "C utcoff_to_dstoff", "C load_timedelta"]
+    statement := "With isdst flags 0 or 1 and type offsets below 2**30, C and Python give every type the same dst() offset."
+    source := "C/Python twins (narrows datetime-zoneinfo-dstoff-twins-flags)", status := .proven
+    prop := ``Zone.DstoffTwinsNarrow, thm := some ``Zone.dstoffTwinsNarrow_proven
+    notes := "Python breaks when its DST count is reached and C runs on; the proof shows the remaining C steps change nothing and the 3600 fallbacks agree." },
+  { id := "datetime-zoneinfo-ts-to-local-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo._ts_to_local", "C ts_to_local"]
+    statement := "C and Python compute the same wall-clock transition times for both folds."
+    source := "C/Python twins; no silent wraparound", status := .refuted
+    prop := ``Zone.TsToLocalTwins, thm := some ``Zone.tsToLocalTwins_refuted
+    bug := some "datetime-zoneinfo-transition-int64-wrap" },
+  { id := "datetime-zoneinfo-ts-to-local-narrow", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo._ts_to_local", "C ts_to_local"]
+    statement := "When no transition time plus type offset leaves int64_t, C and Python compute the same wall-clock transition times."
+    source := "C/Python twins (narrows datetime-zoneinfo-ts-to-local-twins)", status := .proven
+    prop := ``Zone.TsToLocalTwinsNarrow, thm := some ``Zone.tsToLocalTwinsNarrow_proven },
+  { id := "datetime-zoneinfo-load-data-valueerror", pyFile := "Lib/zoneinfo/_common.py"
+    pyFns := ["load_data", "_TZifHeader.from_file"]
+    statement := "_common.load_data, which both twins call, raises only ValueError (or UnicodeDecodeError) on data that is not a valid TZif file."
+    source := "ZoneInfo.from_file docs (ValueError for an invalid TZif file)", status := .refuted
+    prop := ``Zone.LoadDataValueError, thm := some ``Zone.loadDataValueError_refuted
+    bug := some "datetime-zoneinfo-load-data-not-valueerror"
+    notes := "A short header raises struct.error; a footer without its leading newline raises AssertionError." },
+  { id := "datetime-zoneinfo-load-data-shape", pyFile := "Lib/zoneinfo/_common.py"
+    pyFns := ["load_data", "_TZifHeader.from_file", "_TZifHeader.__init__"]
+    statement := "On success _common.load_data returns lists of matching lengths whose transition indices name types and whose values fit their struct formats."
+    source := "invariant (C load_data relies on it)", status := .open
+    prop := ``Zone.LoadDataShape
+    notes := "Needs length and range lemmas for unpackN, readTypes and mapM getAbbr; the difftest agrees on the data of 100k inputs." },
+  { id := "datetime-zoneinfo-tzstr-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C parse_tz_str", "C parse_abbr", "C parse_tz_delta", "C parse_transition_time", "C parse_digits", "C build_tzrule", "_parse_tz_str"]
+    statement := "C and Python accept the same TZ footers with the same rule and refuse the same ones with ValueError."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.TzStrTwins, thm := some ``Zone.tzStrTwins_refuted
+    bug := some "datetime-zoneinfo-footer-nul"
+    notes := "C stops at an embedded NUL (PyBytes_AsString)." },
+  { id := "datetime-zoneinfo-tzstr-twins-nonul", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C parse_tz_str", "C parse_abbr", "C parse_tz_delta", "C parse_transition_rule", "C parse_transition_time", "C parse_digits", "C calendarrule_new", "C dayrule_new", "C build_tzrule", "_parse_tz_str", "_parse_dst_start_end", "_parse_transition_time", "_parse_tz_delta", "_CalendarOffset.__init__", "_DayOffset.__init__", "_TZStr.__init__"]
+    statement := "For footers without a NUL byte, C and Python accept the same TZ strings with the same rule and refuse the same ones."
+    source := "C/Python twins (narrows datetime-zoneinfo-tzstr-twins)", status := .open
+    prop := ``Zone.TzStrTwinsNoNul
+    notes := "Needs a component-wise induction relating the C pointer walk to the regex groups; the difftest agrees on its footers. 3.15 already fixed three regex/C differences (gh-152212, gh-152246, gh-152248)." },
+  { id := "datetime-zoneinfo-load-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C load_data", "ZoneInfo._load_file", "C build_ttinfo", "C ttinfo_eq", "_ttinfo.__eq__", "_ttinfo.__init__"]
+    statement := "From the same well-formed tuple, outside the refuted cases, _load_file and C load_data build corresponding zones or both raise."
+    source := "C/Python twins", status := .open
+    prop := ``Zone.LoadTwins
+    notes := "Needs datetime-zoneinfo-tzstr-twins-nonul; the dstoff and ts_to_local parts are proven. ttinfo_before also differs when every type is DST (textlibs-zoneinfo-before-first-transition), so the statement as written is false there and must exclude it." },
+  { id := "datetime-zoneinfo-lookup-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo._find_trans", "ZoneInfo._get_local_timestamp", "_TZStr._get_trans_info", "_TZStr.transitions", "C get_local_timestamp", "C find_ttinfo", "C _bisect", "C find_tzrule_ttinfo", "C tzrule_transitions"]
+    statement := "For corresponding zones, C find_ttinfo and Python _find_trans pick the same ttinfo for None and for every datetime (both folds), through the bisect over local transitions and the rule after the last one."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.LookupTwins, thm := some ``Zone.lookupTwins_proven
+    notes := "Plain datetime objects; a non-datetime argument is datetime-zoneinfo-find-ttinfo-defined. The zones correspond by hypothesis (datetime-zoneinfo-load-twins is open)." },
+  { id := "datetime-zoneinfo-lookup-methods", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_utcoffset_impl", "C zoneinfo_ZoneInfo_dst_impl", "C zoneinfo_ZoneInfo_tzname_impl", "ZoneInfo.utcoffset", "ZoneInfo.dst", "ZoneInfo.tzname"]
+    statement := "For corresponding zones, utcoffset(), dst() and tzname() return the same values in both twins for None and every datetime."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.LookupMethodsTwins, thm := some ``Zone.lookupMethodsTwins_proven },
+  { id := "datetime-zoneinfo-find-ttinfo-defined", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C find_ttinfo", "C get_local_timestamp"]
+    statement := "C find_ttinfo never reads memory it does not own: every argument whose toordinal(), hour, minute and second it can read gets a defined result."
+    source := "invariant (no crash)", status := .refuted
+    prop := ``Zone.FindTtinfoDefined, thm := some ``Zone.findTtinfoDefined_refuted
+    bug := some "datetime-zoneinfo-non-datetime-crash"
+    notes := "Duplicate of gh-125318 and gh-111306; segfaults on 3.15.2 and main." },
+  { id := "datetime-zoneinfo-fromutc-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo.fromutc", "C zoneinfo_fromutc", "C find_tzrule_ttinfo_fromutc", "_TZStr._get_trans_info_fromutc"]
+    statement := "For corresponding zones and every datetime, C and Python fromutc add the same offset and set the same fold."
+    source := "C/Python twins; tzinfo.fromutc contract", status := .refuted
+    prop := ``Zone.FromutcTwins, thm := some ``Zone.fromutcTwins_refuted
+    bug := some "datetime-zoneinfo-fromutc-fold-last-transition"
+    notes := "Python misses the fold of the last explicit transition; duplicate of gh-159707." },
+  { id := "datetime-zoneinfo-fromutc-twins-notrans", pyFile := "Lib/zoneinfo/_zoneinfo.py"
+    pyFns := ["ZoneInfo.fromutc", "C zoneinfo_fromutc", "C find_tzrule_ttinfo_fromutc", "_TZStr._get_trans_info_fromutc"]
+    statement := "For corresponding zones without explicit transitions, C and Python fromutc add the same offset and set the same fold."
+    source := "C/Python twins (narrows datetime-zoneinfo-fromutc-twins)", status := .proven
+    prop := ``Zone.FromutcTwinsNoTrans, thm := some ``Zone.fromutcTwinsNoTrans_proven },
+  { id := "datetime-zoneinfo-cache-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C move_strong_cache_node_to_front", "C remove_from_strong_cache", "C update_strong_cache", "C strong_cache_node_new", "C strong_cache_free", "C strong_cache_node_free", "C eject_from_strong_cache", "C clear_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+    statement := "For every run of ZoneInfo(key) and clear_cache calls on ZoneInfo, both twins raise for the same calls and keep the same keys in the same recency order in the strong cache, never more than 8."
+    source := "C/Python twins; _strong_cache_size", status := .proven
+    prop := ``Zone.CacheTwins, thm := some ``Zone.cacheTwins_proven
+    notes := "Base class only (the C strong cache is a no-op for subclasses by design), and keys whose __eq__ cannot raise or re-enter (gh-142782 is a use-after-free through such a key)." }
 ]
 
 end PyLean.Datetime
