@@ -212,4 +212,169 @@ theorem normalDistEq_proven : NormalDistEq := by
     · refine ⟨by rw [pdf_sigma_zero, pdf_sigma_zero], fun _ => by rw [cdf_sigma_zero, cdf_sigma_zero],
         Or.inl ⟨zscore_sigma_zero _ _ _, zscore_sigma_zero _ _ _⟩⟩
 
+/-! ## `NormalDist.from_samples` -/
+
+def ovf : PyExc := .overflowError "integer division result too large for a float"
+
+theorem intTrueDiv_err (a b : Int) (hb : b ≠ 0) (e : PyExc) (h : intTrueDiv a b = .error e) : e = ovf := by
+  unfold intTrueDiv at h
+  rw [if_neg hb] at h
+  simp only at h
+  split at h
+  · cases h
+  · split at h <;> cases h; rfl
+
+theorem ofRat_not_neg (q : Rat) (hq : ¬ q < 0) : Flt.lt (Flt.ofRat q) Flt.pz = false := by
+  unfold Flt.ofRat
+  split
+  · rfl
+  · simp only [hq, decide_false]
+    split
+    · rfl
+    · split
+      · rfl
+      · simp only [Flt.lt, Flt.pz, Flt.toRat, Bool.false_eq_true, ite_false, decide_eq_false_iff_not]
+        have h0 : (0 : Rat) ≤ Flt.pow2 (Flt.roundMag q.num.natAbs q.den).2 := Rat.le_of_lt (pow2_pos _)
+        have := Rat.mul_nonneg (Rat.natCast_nonneg (a := (Flt.roundMag q.num.natAbs q.den).1)) h0
+        grind
+
+/-- A float `intTrueDiv` returns for a non-negative numerator and positive denominator is not
+negative. -/
+theorem intTrueDiv_nonneg (a b : Int) (ha : 0 ≤ a) (hb : 0 < b) (r : Flt) (h : intTrueDiv a b = .ok r) :
+    Flt.lt r Flt.pz = false := by
+  unfold intTrueDiv at h
+  rw [if_neg (by omega)] at h
+  simp only at h
+  have hn : ((a < 0) != (b < 0)) = false := by simp; omega
+  have hq : ¬ ((a : Rat) / (b : Rat) < 0) := by
+    have h1 : (0 : Rat) ≤ (a : Rat) := Rat.intCast_nonneg.mpr ha
+    have h2 : (0 : Rat) < (b : Rat) := Rat.intCast_pos.mpr hb
+    intro hc
+    rw [Rat.div_lt_iff h2] at hc
+    grind
+  have key := ofRat_not_neg _ hq
+  split at h
+  · cases h; simp [hn, Flt.lt, Flt.pz, Flt.toRat]
+  · generalize hX : Flt.ofRat ((a : Rat) / (b : Rat)) = X at h key
+    cases X <;> simp at h <;> subst h <;> exact key
+
+theorem isqrtInt_ok (x : Int) (hx : 0 ≤ x) : ∃ r, isqrtInt x = .ok r ∧ 0 ≤ r := by
+  obtain ⟨r, h1, -, -⟩ := MathInt.isqrtFloorSqrt_proven x.toNat
+  have : ((x.toNat : Nat) : Int) = x := by omega
+  rw [this] at h1
+  exact ⟨r, by simp [isqrtInt, h1, Functor.map, Except.map], by omega⟩
+
+theorem rto_ok (n m : Int) (hn : 0 ≤ n) (hm : 0 < m) : ∃ r, integerSqrtOfFracRto n m = .ok r ∧ 0 ≤ r := by
+  obtain ⟨a, ha, ha0⟩ := isqrtInt_ok (n / m) (Int.ediv_nonneg hn (by omega))
+  refine ⟨if a * a * m ≠ n then ((a.toNat ||| 1 : Nat) : Int) else a,
+    by simp only [integerSqrtOfFracRto, ha, bind, Except.bind, pure, Except.pure], ?_⟩
+  split <;> omega
+
+/-- `_float_sqrt_of_frac(n, m)` for `n >= 0`, `m > 0` fails only by overflow and never gives a
+negative float. -/
+theorem floatSqrt_facts (n m : Int) (hn : 0 ≤ n) (hm : 0 < m) :
+    (∀ e, floatSqrtOfFrac n m = .error e → e = ovf) ∧
+    (∀ r, floatSqrtOfFrac n m = .ok r → Flt.lt r Flt.pz = false) := by
+  unfold floatSqrtOfFrac
+  simp only
+  split
+  · rename_i hq
+    have hm' : 0 < m * 2 ^ (2 * ((bitLen n - bitLen m - sqrtBitWidth) / 2)).toNat :=
+      Int.mul_pos hm (Int.pow_pos (by decide))
+    obtain ⟨r, hr, hr0⟩ := rto_ok n _ hn hm'
+    rw [bind_ok hr]
+    have h0 : 0 ≤ r * 2 ^ ((bitLen n - bitLen m - sqrtBitWidth) / 2).toNat :=
+      Int.mul_nonneg hr0 (Int.le_of_lt (Int.pow_pos (by decide)))
+    exact ⟨fun e h => intTrueDiv_err _ 1 (by decide) e h, fun r' h => intTrueDiv_nonneg _ 1 h0 (by decide) r' h⟩
+  · have hn' : 0 ≤ n * 2 ^ (-2 * ((bitLen n - bitLen m - sqrtBitWidth) / 2)).toNat :=
+      Int.mul_nonneg hn (Int.le_of_lt (Int.pow_pos (by decide)))
+    obtain ⟨r, hr, hr0⟩ := rto_ok _ m hn' hm
+    rw [bind_ok hr]
+    have hp : (0 : Int) < 2 ^ (-((bitLen n - bitLen m - sqrtBitWidth) / 2)).toNat := Int.pow_pos (by decide)
+    exact ⟨fun e h => intTrueDiv_err _ _ (by omega) e h, fun r' h => intTrueDiv_nonneg _ _ hr0 hp r' h⟩
+
+theorem rat_sq_nonneg (a : Rat) : 0 ≤ a * a := by
+  by_cases h : 0 ≤ a
+  · exact Rat.mul_nonneg h h
+  · have h' : 0 ≤ -a := by grind
+    have := Rat.mul_nonneg h' h'
+    grind
+
+theorem sumDev_nonneg (qs : List Rat) (c : Rat) : 0 ≤ sumDev qs c := by
+  unfold sumDev
+  induction qs with
+  | nil => exact Rat.le_refl
+  | cons a l ih =>
+    simp only [List.map_cons, sumQ_cons]
+    have := rat_sq_nonneg (a - c)
+    grind
+
+theorem ratToFlt_err (q : Rat) (e : PyExc) (h : ratToFlt q = .error e) : e = ovf :=
+  intTrueDiv_err _ _ (by have := q.den_pos; omega) e h
+
+/-- `NormalDist.from_samples(data)`, Lib/statistics.py:1246-1249, for `Fraction` data: it is the same
+as `NormalDist(mean(data), stdev(data))`, outcome for outcome: `mu` is the exact mean correctly
+rounded and `sigma` the correctly rounding square root `_float_sqrt_of_frac` of the exact sample
+variance, and an `OverflowError` of either conversion is the same. (Doc/library/statistics.rst:918-919
+says the parameters are estimated "using fmean() and stdev()"; the code uses the exact mean, which is
+`mean()`, not `fmean()`, and the two differ by rounding.) Fewer than two points raise. -/
+def FromSamplesTwin : Prop :=
+  ∀ qs : List Rat,
+    (2 ≤ qs.length → ND.fromSamples (fracs qs) =
+      (do let μ ← mean (fracs qs); let σ ← stdev (fracs qs) none; ND.mk' μ.v σ)) ∧
+    (qs.length < 2 → ND.fromSamples (fracs qs) =
+      .error (.named "StatisticsError" "stdev requires at least two data points"))
+
+theorem fromSamplesTwin_proven : FromSamplesTwin := by
+  intro qs
+  refine ⟨?_, ?_⟩
+  · intro h2
+    obtain ⟨v, hvar, hstd, hms⟩ := (stdevOfVariance_proven qs).1 h2
+    have hne : qs ≠ [] := by intro h; rw [h] at h2; simp at h2
+    have hmean := meanFractions_proven.1 qs hne
+    have hv0 : 0 ≤ v := by
+      have hvf := (varianceFractions_proven qs).1 h2
+      rw [hvar] at hvf
+      have hv : v = sumDev qs (meanQ qs) / ((qs.length - 1 : Nat) : Rat) := by
+        have := congrArg PyN.v (Except.ok.inj hvf)
+        simpa [Val.toN] using this
+      rw [hv]
+      have hd : (0 : Rat) < ((qs.length - 1 : Nat) : Rat) := Rat.natCast_pos.mpr (by omega)
+      exact le_div_of_mul_le hd (by rw [Rat.zero_mul]; exact sumDev_nonneg _ _)
+    have hnum : 0 ≤ v.num := Rat.num_nonneg.mpr hv0
+    have hden : (0 : Int) < (v.den : Int) := by have := v.den_pos; omega
+    obtain ⟨hse, hsn⟩ := floatSqrt_facts v.num v.den hnum hden
+    simp only [ND.fromSamples, hms, hmean, hstd, ok_bind']
+    have hmk : ∀ (q : Rat) (sv : Flt), Flt.lt sv Flt.pz = false →
+        ND.mk' (Val.frac q).toN.v (Val.flt sv) = (ratToFlt q).map (fun m => (⟨m, sv⟩ : ND)) := by
+      intro q sv h0
+      simp only [ND.mk', vltPy_flt, h0, Val.toN, toFloat, bind, Except.bind, pure, Except.pure]
+      cases ratToFlt q <;> rfl
+    have hmk2 : ∀ (m sv : Flt), Flt.lt sv Flt.pz = false → ND.mk' (Val.flt m) (Val.flt sv) = .ok ⟨m, sv⟩ := by
+      intro m sv h0
+      simp only [ND.mk', vltPy_flt, h0, toFloat, bind, Except.bind, pure, Except.pure]
+      rfl
+    unfold meanQ at *
+    cases hs : floatSqrtOfFrac v.num v.den with
+    | error e2 =>
+      have he2 := hse e2 hs
+      cases hr : ratToFlt (sumQ qs / (qs.length : Rat)) with
+      | error e1 =>
+        have he1 := ratToFlt_err _ e1 hr
+        simp [bind, Except.bind, Functor.map, Except.map, he1, he2]
+      | ok m => simp [bind, Except.bind, Functor.map, Except.map]
+    | ok sv =>
+      have hs0 := hsn sv hs
+      simp only [Functor.map, Except.map, ok_bind']
+      rw [hmk _ _ hs0]
+      cases hr : ratToFlt (sumQ qs / (qs.length : Rat)) with
+      | error e1 => simp [bind, Except.bind, Except.map]
+      | ok m =>
+        simp only [ok_bind', Except.map]
+        exact hmk2 m sv hs0
+  · intro h
+    match qs, h with
+    | [], _ => exact fromSamplesShort_proven.1
+    | [q], _ => exact fromSamplesShort_proven.2 q
+
 end PyLean.CoreLibs.CalStat

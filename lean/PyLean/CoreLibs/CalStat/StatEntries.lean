@@ -209,7 +209,10 @@ def statisticsEntries : List Entry := [
     "Lib/statistics.py:209-222" ``FmeanWeightedInts ``fmeanWeightedInts_proven,
   st "normaldist-eq" ["NormalDist.__eq__", "NormalDist.__hash__"]
     "__eq__ is NotImplemented for non-NormalDist, true iff mu and sigma compare equal, symmetric, transitive, reflexive iff no NaN; __hash__ is hash((mu, sigma)) and agrees on equal objects; equal objects give the same pdf(x), cdf(x) (erfc(+-0) equal) and zscore(x) up to ==."
-    "Lib/statistics.py:1432-1440 (docstrings)" ``NormalDistEq ``normalDistEq_proven
+    "Lib/statistics.py:1432-1440 (docstrings)" ``NormalDistEq ``normalDistEq_proven,
+  st "from-samples-twin" ["NormalDist.from_samples"]
+    "For Fraction data, NormalDist.from_samples(data) has the same outcome as NormalDist(mean(data), stdev(data)): the correctly rounded exact mean and _float_sqrt_of_frac of the exact sample variance, the same OverflowError; fewer than two points raise."
+    "Lib/statistics.py:1246-1249, 1759-1769; Doc/library/statistics.rst:918-919" ``FromSamplesTwin ``fromSamplesTwin_proven
 ]
 
 end PyLean.CoreLibs.CalStat

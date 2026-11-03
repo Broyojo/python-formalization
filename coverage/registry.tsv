@@ -3039,6 +3039,7 @@ calstat-statistics-linreg-proportional	proven	statistics.py	linear_regression
 calstat-statistics-fmean-ints	proven	statistics.py	fmean
 calstat-statistics-fmean-weighted-ints	proven	statistics.py	fmean
 calstat-statistics-normaldist-eq	proven	statistics.py	NormalDist.__eq__,NormalDist.__hash__
+calstat-statistics-from-samples-twin	proven	statistics.py	NormalDist.from_samples
 rand-genrand-in-bounds	proven	Modules/_randommodule.c	genrand_uint32
 rand-genrand-twist-recurrence	proven	Modules/_randommodule.c	genrand_uint32
 rand-random-exact-rational	proven	Modules/_randommodule.c	_random_Random_random_impl

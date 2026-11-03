@@ -33,7 +33,7 @@ Lib/statistics.py	936	1092	kde	kde(data, h, kernel='normal', *, cumulative=False
 Lib/statistics.py	1095	1137	kde_random	kde_random(data, h, kernel='normal', *, seed=None)	todo		withdrawn: only input checks: an always-raising or constant result passes
 Lib/statistics.py	1176	1224	quantiles	quantiles(data, *, n=4, method='exclusive')	modelled	calstat-statistics-quantiles-hf,calstat-statistics-quantiles-inclusive-in-range	
 Lib/statistics.py	1239	1244	NormalDist.__init__	__init__(self, mu=0.0, sigma=1.0)	modelled	calstat-statistics-normaldist-init	
-Lib/statistics.py	1247	1249	NormalDist.from_samples	from_samples(cls, data)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	1247	1249	NormalDist.from_samples	from_samples(cls, data)	modelled	calstat-statistics-from-samples-short,calstat-statistics-from-samples-twin	
 Lib/statistics.py	1251	1257	NormalDist.samples	samples(self, n, *, seed=None)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1259	1265	NormalDist.pdf	pdf(self, x)	todo		
 Lib/statistics.py	1267	1271	NormalDist.cdf	cdf(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
