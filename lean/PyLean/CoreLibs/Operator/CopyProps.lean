@@ -661,7 +661,7 @@ theorem deepcopyTupleIdentity_proven : DeepcopyTupleIdentity := by
 `getattr(self, name)`: an instance attribute of that name if there is one, which can be any object, else the class's
 function bound anew, and `AttributeError` when the class has no such function or `__self__` is not an instance. `__copy__` goes first (:80-82): its exception propagates and its result is the copy. With no
 `__copy__`, the reduce value comes from the class's `copyreg.dispatch_table` entry first (:84-86, whatever
-`__reduce_ex__` is), then from `__reduce_ex__` if it is not `None` (a false one is still called, :88-90), then from a
+`__reduce_ex__` is, and even an entry that is false, since `copy` tests it with `is not None`), then from `__reduce_ex__` if it is not `None` (a false one is still called, :88-90), then from a
 true `__reduce__` (:92-94), and with neither `copy.Error`; it goes to `_reconstruct` (:98-100), a string meaning `x`, a
 raising reductor propagating. -/
 def CopyShallow : Prop :=
@@ -683,17 +683,18 @@ def CopyShallow : Prop :=
     (h.get x = .method f s → (∀ q, h.get s ≠ .inst q) → (copyShallow h x).raises "AttributeError") ∧
     (h.get x = .hooked (some (some e)) dc r → copyShallow h x = .error e) ∧
     (h.get x = .hooked (some none) dc r → copyShallow h x = .ok ((h.alloc (.atom 1)).1, h.cells.length)) ∧
-    (h.get x = .hooked none dc ⟨none, .none, .none⟩ → (copyShallow h x).raises "Error") ∧
-    (h.get x = .hooked none dc ⟨none, .none, .falsy⟩ → (copyShallow h x).raises "Error") ∧
-    (h.get x = .hooked none dc ⟨none, .falsy, pl⟩ → (copyShallow h x).raises "TypeError") ∧
-    (h.get x = .hooked none dc ⟨some rv, ex, pl⟩ → copyShallow h x = reconShallow h rv x) ∧
-    (h.get x = .hooked none dc ⟨none, .fn rv, pl⟩ → copyShallow h x = reconShallow h rv x) ∧
-    (h.get x = .hooked none dc ⟨none, .none, .fn rv⟩ → copyShallow h x = reconShallow h rv x) ∧
+    (h.get x = .hooked none dc ⟨.none, .none, .none⟩ → (copyShallow h x).raises "Error") ∧
+    (h.get x = .hooked none dc ⟨.none, .none, .falsy⟩ → (copyShallow h x).raises "Error") ∧
+    (h.get x = .hooked none dc ⟨.none, .falsy, pl⟩ → (copyShallow h x).raises "TypeError") ∧
+    (h.get x = .hooked none dc ⟨.fn rv, ex, pl⟩ → copyShallow h x = reconShallow h rv x) ∧
+    (h.get x = .hooked none dc ⟨.falsyFn rv, ex, pl⟩ → copyShallow h x = reconShallow h rv x) ∧
+    (h.get x = .hooked none dc ⟨.none, .fn rv, pl⟩ → copyShallow h x = reconShallow h rv x) ∧
+    (h.get x = .hooked none dc ⟨.none, .none, .fn rv⟩ → copyShallow h x = reconShallow h rv x) ∧
     reconShallow h .str x = .ok (h, x) ∧ reconShallow h (.raises e) x = .error e
 
 theorem copyShallow_proven : CopyShallow := by
   intro h x f s v l d a e dc r rv ex pl n t
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl⟩
   · intro hc; simp [copyShallow, hc, Heap.alloc]
   · intro hc; simp [copyShallow, hc, Heap.alloc]
   · intro hc; simp [copyShallow, hc, Heap.alloc]
@@ -716,6 +717,7 @@ theorem copyShallow_proven : CopyShallow := by
   · intro hc; refine ⟨uncopyable false, ?_, rfl⟩; simp [copyShallow, reduceValue, hc]
   · intro hc; refine ⟨uncopyable false, ?_, rfl⟩; simp [copyShallow, reduceValue, hc]
   · intro hc; refine ⟨.typeError "'int' object is not callable", ?_, rfl⟩; simp [copyShallow, reduceValue, hc]
+  · intro hc; simp [copyShallow, reduceValue, hc]
   · intro hc; simp [copyShallow, reduceValue, hc]
   · intro hc; simp [copyShallow, reduceValue, hc]
   · intro hc; simp [copyShallow, reduceValue, hc]
@@ -868,7 +870,7 @@ def DeepcopyMethod : Prop :=
     (h.get x = .method f s → h.memo.lookup x = none → deepcopy (fuel + 1) h s = .ok (h1, s') →
       deepcopy (fuel + 2) h x = finish (h1.alloc (.method f s')).1 x h1.cells.length) ∧
     (h.get x = .hooked c (some (some e)) r → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .error e) ∧
-    (h.get x = .hooked c none ⟨none, .none, .none⟩ → h.memo.lookup x = none →
+    (h.get x = .hooked c none ⟨.none, .none, .none⟩ → h.memo.lookup x = none →
       (deepcopy (fuel + 1) h x).raises "Error")
 
 theorem deepcopyMethod_proven : DeepcopyMethod := by

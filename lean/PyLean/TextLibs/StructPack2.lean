@@ -2,7 +2,8 @@ import PyLean.TextLibs.StructPack
 
 /-!
 Third review pass of `Modules/_struct.c`: the size `prepare_s` stores for an `s`/`p` code,
-`Struct.pack` as `s_pack_internal` on zeros, and `pack_into` writing what `pack` returns.
+`Struct.pack` as `s_pack_internal` on zeros, `pack_into` writing what `pack` returns, and the
+whitespace `prepare_s` skips between items.
 -/
 
 namespace PyLean.TextLibs.Struct
@@ -379,5 +380,426 @@ theorem spCount_proven : SPCount := by
   rw [h1]
   simp only
   rw [if_neg (by simp [maxN]), h2]
+
+/-! ### Whitespace between items -/
+
+/-- No format of a table is a proper prefix of another, and every format starts with a character that
+is not a digit, not `Py_ISSPACE`, not a byte-order prefix, ASCII and not NUL. -/
+def tableShape (tbl : List FormatDef) : Bool :=
+  tbl.all (fun e1 => tbl.all (fun e2 => !e1.format.isPrefixOf e2.format || e1.format == e2.format)) &&
+  tbl.all (fun e => e.format.all (fun x => !isDigit x && !isSpace x &&
+    !(x == '<' || x == '>' || x == '!' || x == '=' || x == '@') && decide (x.toNat < 128) &&
+    decide (x.toNat ≠ 0)) && e.format != [])
+
+theorem tables_shape : ∀ t : Tab, tableShape t.table = true := by
+  intro t
+  cases t <;> decide +kernel
+
+theorem shape_prefix {tbl : List FormatDef} (h : tableShape tbl = true) {e1 e2 : FormatDef}
+    (h1 : e1 ∈ tbl) (h2 : e2 ∈ tbl) (hp : e1.format <+: e2.format) : e1.format = e2.format := by
+  simp only [tableShape, Bool.and_eq_true, List.all_eq_true] at h
+  have := h.1 e1 h1 e2 h2
+  simp only [Bool.or_eq_true, Bool.not_eq_true', beq_iff_eq] at this
+  rcases this with h3 | h3
+  · rw [List.isPrefixOf_iff_prefix.mpr hp] at h3; cases h3
+  · exact h3
+
+theorem shape_char {tbl : List FormatDef} (h : tableShape tbl = true) {e : FormatDef} (he : e ∈ tbl)
+    {x : Char} (hx : x ∈ e.format) :
+    isDigit x = false ∧ isSpace x = false ∧ x ≠ '<' ∧ x ≠ '>' ∧ x ≠ '!' ∧ x ≠ '=' ∧ x ≠ '@' ∧
+      x.toNat < 128 ∧ x.toNat ≠ 0 := by
+  simp only [tableShape, Bool.and_eq_true, List.all_eq_true] at h
+  have := (h.2 e he).1 x hx
+  simp only [Bool.and_eq_true, Bool.not_eq_true', Bool.or_eq_false_iff, beq_eq_false_iff_ne,
+    decide_eq_true_eq, ne_eq] at this
+  obtain ⟨⟨⟨⟨h1, h2⟩, ⟨⟨⟨⟨h3, h4⟩, h5⟩, h6⟩, h7⟩⟩, h8⟩, h9⟩ := this
+  exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩
+
+theorem shape_ne {tbl : List FormatDef} (h : tableShape tbl = true) {e : FormatDef} (he : e ∈ tbl) :
+    e.format ≠ [] := by
+  simp only [tableShape, Bool.and_eq_true, List.all_eq_true] at h
+  have := (h.2 e he).2
+  simpa using this
+
+/-- `getentry` at a whole format of the table, followed by anything, finds an entry with that format. -/
+theorem getentry_fmt (tbl0 : List FormatDef) (h : tableShape tbl0 = true) (e : FormatDef) (he : e ∈ tbl0)
+    (r : List Char) : ∀ tbl : List FormatDef, (∀ x ∈ tbl, x ∈ tbl0) → e ∈ tbl →
+      ∃ e', getentry (e.format ++ r) tbl = .ok e' ∧ getentry e.format tbl = .ok e' ∧ e'.format = e.format
+  | [], _, hm => by cases hm
+  | x :: xs, hsub, hm => by
+    have hx0 : x ∈ tbl0 := hsub x (by simp)
+    by_cases hxp : x.format <+: e.format
+    · have h1 : formatEqual x e.format = true := List.isPrefixOf_iff_prefix.mpr hxp
+      have h2 : formatEqual x (e.format ++ r) = true :=
+        List.isPrefixOf_iff_prefix.mpr (hxp.trans (List.prefix_append _ _))
+      exact ⟨x, by simp [getentry, h2], by simp [getentry, h1], shape_prefix h hx0 he hxp⟩
+    · have h1 : formatEqual x e.format = false := by
+        cases hh : formatEqual x e.format
+        · rfl
+        · exact absurd (List.isPrefixOf_iff_prefix.mp hh) hxp
+      have h2 : formatEqual x (e.format ++ r) = false := by
+        cases hh : formatEqual x (e.format ++ r)
+        · rfl
+        · have hp := List.isPrefixOf_iff_prefix.mp hh
+          rcases List.prefix_or_prefix_of_prefix hp (List.prefix_append e.format r) with h3 | h3
+          · exact absurd h3 hxp
+          · exact absurd ((shape_prefix h he hx0 h3) ▸ List.prefix_refl _) hxp
+      have hm' : e ∈ xs := by
+        rcases List.mem_cons.mp hm with h3 | h3
+        · subst h3; exact absurd (List.prefix_refl _) hxp
+        · exact h3
+      obtain ⟨e', a, b, c⟩ := getentry_fmt tbl0 h e he r xs (fun y hy => hsub y (by simp [hy])) hm'
+      exact ⟨e', by simp [getentry, h2, a], by simp [getentry, h1, b], c⟩
+
+theorem pass1Item_congr (tbl : List FormatDef) (st : Pass1) (num : Nat) (c : Char) (r r' : List Char)
+    (h : getentry (c :: r) tbl = getentry (c :: r') tbl) :
+    pass1Item tbl st num c r = pass1Item tbl st num c r' := by
+  unfold pass1Item
+  rw [h]
+
+theorem pass2Item_congr (tbl : List FormatDef) (acc : List Code × Nat) (num : Nat) (c : Char) (r r' : List Char)
+    (h : getentry (c :: r) tbl = getentry (c :: r') tbl) :
+    pass2Item tbl acc num c r = pass2Item tbl acc num c r' := by
+  unfold pass2Item
+  rw [h]
+
+/-- An item: a run of digits, then the whole format of an entry of the table. -/
+def IsItem (tbl : List FormatDef) (it : List Char) : Prop :=
+  ∃ ds e, it = ds ++ e.format ∧ e ∈ tbl ∧ ∀ d ∈ ds, isDigit d = true
+
+/-- Runs of `Py_ISSPACE` characters are skipped by the first pass (1673-1674). -/
+theorem pass1_spaces (tbl : List FormatDef) (s : List Char) (st : Pass1) :
+    ∀ (w : List Char) (f : Nat), (∀ x ∈ w, isSpace x = true) → pass1 tbl (f + w.length) (w ++ s) st = pass1 tbl f s st
+  | [], f, _ => rfl
+  | x :: w, f, hw => by
+    have hx : isSpace x = true := hw x (by simp)
+    rw [show f + (x :: w).length = (f + w.length) + 1 by simp; omega]
+    simp only [List.cons_append, pass1, hx, if_true]
+    exact pass1_spaces tbl s st w f (fun y hy => hw y (by simp [hy]))
+
+/-- ... and by the second (1748-1749). -/
+theorem pass2_spaces (tbl : List FormatDef) (s : List Char) (acc : List Code × Nat) :
+    ∀ (w : List Char) (f : Nat), (∀ x ∈ w, isSpace x = true) → pass2 tbl (f + w.length) (w ++ s) acc = pass2 tbl f s acc
+  | [], f, _ => rfl
+  | x :: w, f, hw => by
+    have hx : isSpace x = true := hw x (by simp)
+    rw [show f + (x :: w).length = (f + w.length) + 1 by simp; omega]
+    simp only [List.cons_append, pass2, hx, if_true]
+    exact pass2_spaces tbl s acc w f (fun y hy => hw y (by simp [hy]))
+
+theorem bind_pure_py {α : Type} (x : Py α) : (x >>= fun a => (pure a : Py α)) = x := by
+  cases x <;> rfl
+
+/-- One item costs the first pass one unit of fuel, and what it does does not depend on what follows. -/
+theorem pass1_item (tbl : List FormatDef) (h : tableShape tbl = true) (it : List Char) (hi : IsItem tbl it)
+    (f : Nat) (s : List Char) (st : Pass1) :
+    pass1 tbl (f + 1) (it ++ s) st = (pass1 tbl 2 it st >>= fun st' => pass1 tbl f s st') := by
+  obtain ⟨ds, e, rfl, he, hd⟩ := hi
+  have gen : ∀ (f : Nat) (s : List Char), pass1 tbl (f + 1) (ds ++ e.format ++ s) st =
+      ((match ds with
+        | [] => pass1Item tbl st 1 (e.format.headD ' ') (e.format.tail)
+        | d :: ds' => if digVal (digit d) ds' ≤ maxN then
+            pass1Item tbl st (digVal (digit d) ds') (e.format.headD ' ') (e.format.tail)
+            else .error overflowErr) >>= fun st' => pass1 tbl f s st') := by
+    intro f s
+    obtain ⟨e', hg1, hg2, hf⟩ := getentry_fmt tbl h e he s tbl (fun _ hy => hy) he
+    obtain ⟨c, cs, hcs⟩ : ∃ c cs, e.format = c :: cs := by
+      cases hh : e.format with
+      | nil => exact absurd hh (shape_ne h he)
+      | cons c cs => exact ⟨c, cs, rfl⟩
+    have hc := shape_char h he (x := c) (by simp [hcs])
+    rw [hcs] at hg1 hg2 hf ⊢
+    have hlen : entryLen tbl (c :: (cs ++ s)) = cs.length + 1 := by
+      simp only [entryLen, List.cons_append] at hg1 ⊢
+      rw [hg1]; simp [hf]
+    have hcong : pass1Item tbl st 1 c (cs ++ s) = pass1Item tbl st 1 c cs := by
+      apply pass1Item_congr; simpa using hg1.trans hg2.symm
+    cases ds with
+    | nil =>
+      simp only [List.nil_append, List.cons_append, pass1, hc.2.1, hc.1, Bool.false_eq_true, if_false,
+        List.headD_cons, List.tail_cons]
+      rw [hlen, hcong]
+      congr 1
+      funext st'
+      simp
+    | cons d ds' =>
+      have hdd : isDigit d = true := hd d (by simp)
+      have hsp : isSpace d = false := digit_not_space d hdd
+      simp only [List.cons_append, List.append_assoc, pass1, hsp, hdd, if_true, Bool.false_eq_true,
+        if_false, List.headD_cons, List.tail_cons]
+      by_cases hv : digVal (digit d) ds' ≤ maxN
+      · rw [scan_ok ds' (digit d) (c :: (cs ++ s)) (some c) (fun x hx => hd x (by simp [hx])) hv ⟨hc.1, rfl⟩]
+        simp only [List.drop_one, List.tail_cons, if_pos hv]
+        rw [hlen]
+        have hcong' : pass1Item tbl st (digVal (digit d) ds') c (cs ++ s) =
+            pass1Item tbl st (digVal (digit d) ds') c cs := by
+          apply pass1Item_congr; simpa using hg1.trans hg2.symm
+        rw [hcong']
+        congr 1
+        funext st'
+        simp
+      · rw [scan_ovf ds' (digit d) (c :: (cs ++ s)) (fun x hx => hd x (by simp [hx])) (by omega)
+          (by have := digit_le d hdd; simp [maxN]; omega)]
+        simp only [if_neg hv]
+        rfl
+  rw [gen f s]
+  have g1 := gen 1 []
+  simp only [List.append_nil] at g1
+  rw [show (1 + 1) = 2 from rfl] at g1
+  rw [g1]
+  rw [show (pass1 tbl 1 [] : Pass1 → Py Pass1) = pure from rfl, bind_pure_py]
+
+/-- One item, in the second pass, at the same cost. -/
+theorem pass2_item (tbl : List FormatDef) (h : tableShape tbl = true) (it : List Char) (hi : IsItem tbl it)
+    (f : Nat) (s : List Char) (acc : List Code × Nat) :
+    pass2 tbl (f + 1) (it ++ s) acc = pass2 tbl f s (pass2 tbl 2 it acc) := by
+  obtain ⟨ds, e, rfl, he, hd⟩ := hi
+  have gen : ∀ (f : Nat) (s : List Char), pass2 tbl (f + 1) (ds ++ e.format ++ s) acc =
+      pass2 tbl f s (match ds with
+        | [] => pass2Item tbl acc 1 (e.format.headD ' ') (e.format.tail)
+        | d :: ds' => pass2Item tbl acc (digVal (digit d) ds') (e.format.headD ' ') (e.format.tail)) := by
+    intro f s
+    obtain ⟨e', hg1, hg2, hf⟩ := getentry_fmt tbl h e he s tbl (fun _ hy => hy) he
+    obtain ⟨c, cs, hcs⟩ : ∃ c cs, e.format = c :: cs := by
+      cases hh : e.format with
+      | nil => exact absurd hh (shape_ne h he)
+      | cons c cs => exact ⟨c, cs, rfl⟩
+    have hc := shape_char h he (x := c) (by simp [hcs])
+    rw [hcs] at hg1 hg2 hf ⊢
+    have hlen : entryLen tbl (c :: (cs ++ s)) = cs.length + 1 := by
+      simp only [entryLen, List.cons_append] at hg1 ⊢
+      rw [hg1]; simp [hf]
+    have hcong : ∀ num, pass2Item tbl acc num c (cs ++ s) = pass2Item tbl acc num c cs := by
+      intro num; apply pass2Item_congr; simpa using hg1.trans hg2.symm
+    cases ds with
+    | nil =>
+      simp only [List.nil_append, List.cons_append, pass2, hc.2.1, hc.1, Bool.false_eq_true, if_false,
+        List.headD_cons, List.tail_cons]
+      rw [hlen, hcong]
+      simp
+    | cons d ds' =>
+      have hdd : isDigit d = true := hd d (by simp)
+      have hsp : isSpace d = false := digit_not_space d hdd
+      simp only [List.cons_append, List.append_assoc, pass2, hsp, hdd, if_true, Bool.false_eq_true,
+        if_false, List.headD_cons, List.tail_cons]
+      rw [scan2_ok ds' (digit d) c (cs ++ s) (fun x hx => hd x (by simp [hx])) hc.1]
+      simp only
+      rw [hlen, hcong]
+      simp
+  rw [gen f s]
+  have g1 := gen 1 []
+  simp only [List.append_nil] at g1
+  rw [show (1 + 1) = 2 from rfl] at g1
+  rw [g1]
+  rfl
+
+/-- The first pass over a list of items: each item at a time, from the state the last one left. -/
+def fold1 (tbl : List FormatDef) : Pass1 → List (List Char) → Py Pass1
+  | st, [] => pure st
+  | st, it :: its => pass1 tbl 2 it st >>= fun st' => fold1 tbl st' its
+
+def fold2 (tbl : List FormatDef) : List Code × Nat → List (List Char) → List Code × Nat
+  | acc, [] => acc
+  | acc, it :: its => fold2 tbl (pass2 tbl 2 it acc) its
+
+/-- Items, each followed by its run of whitespace. -/
+def inter (items ws : List (List Char)) : List Char := (List.zipWith (· ++ ·) items ws).flatten
+
+def wsum (ws : List (List Char)) : Nat := (ws.map List.length).sum
+
+theorem pass1_inter (tbl : List FormatDef) (h : tableShape tbl = true) :
+    ∀ (items ws : List (List Char)), ws.length = items.length → (∀ it ∈ items, IsItem tbl it) →
+      (∀ w ∈ ws, ∀ x ∈ w, isSpace x = true) → ∀ (f : Nat) (st : Pass1),
+      pass1 tbl (f + 1 + items.length + wsum ws) (inter items ws) st = fold1 tbl st items
+  | [], [], _, _, _, f, st => rfl
+  | [], _ :: _, hl, _, _, _, _ => by simp at hl
+  | _ :: _, [], hl, _, _, _, _ => by simp at hl
+  | it :: its, w :: ws, hl, hi, hw, f, st => by
+    simp only [inter, List.zipWith_cons_cons, List.flatten_cons, List.append_assoc, wsum, List.map_cons,
+      List.sum_cons, List.length_cons]
+    rw [show f + 1 + (its.length + 1) + (w.length + (ws.map List.length).sum) =
+      ((f + 1 + its.length + wsum ws) + w.length) + 1 by simp [wsum]; omega]
+    rw [pass1_item tbl h it (hi it (by simp)), fold1]
+    congr 1
+    funext st'
+    rw [pass1_spaces tbl _ st' w _ (hw w (by simp))]
+    exact pass1_inter tbl h its ws (by simpa using hl) (fun y hy => hi y (by simp [hy]))
+      (fun y hy => hw y (by simp [hy])) f st'
+
+theorem pass2_inter (tbl : List FormatDef) (h : tableShape tbl = true) :
+    ∀ (items ws : List (List Char)), ws.length = items.length → (∀ it ∈ items, IsItem tbl it) →
+      (∀ w ∈ ws, ∀ x ∈ w, isSpace x = true) → ∀ (f : Nat) (acc : List Code × Nat),
+      pass2 tbl (f + 1 + items.length + wsum ws) (inter items ws) acc = fold2 tbl acc items
+  | [], [], _, _, _, f, acc => rfl
+  | [], _ :: _, hl, _, _, _, _ => by simp at hl
+  | _ :: _, [], hl, _, _, _, _ => by simp at hl
+  | it :: its, w :: ws, hl, hi, hw, f, acc => by
+    simp only [inter, List.zipWith_cons_cons, List.flatten_cons, List.append_assoc, wsum, List.map_cons,
+      List.sum_cons, List.length_cons]
+    rw [show f + 1 + (its.length + 1) + (w.length + (ws.map List.length).sum) =
+      ((f + 1 + its.length + wsum ws) + w.length) + 1 by simp [wsum]; omega]
+    rw [pass2_item tbl h it (hi it (by simp)), fold2]
+    rw [pass2_spaces tbl _ _ w _ (hw w (by simp))]
+    exact pass2_inter tbl h its ws (by simpa using hl) (fun y hy => hi y (by simp [hy]))
+      (fun y hy => hw y (by simp [hy])) f _
+
+theorem inter_length (tbl : List FormatDef) (h : tableShape tbl = true) :
+    ∀ (items ws : List (List Char)), ws.length = items.length → (∀ it ∈ items, IsItem tbl it) →
+      items.length + wsum ws ≤ (inter items ws).length
+  | [], [], _, _ => by simp [inter, wsum]
+  | [], _ :: _, hl, _ => by simp at hl
+  | _ :: _, [], hl, _ => by simp at hl
+  | it :: its, w :: ws, hl, hi => by
+    have ih := inter_length tbl h its ws (by simpa using hl) (fun y hy => hi y (by simp [hy]))
+    obtain ⟨ds, e, rfl, he, _⟩ := hi it (by simp)
+    have hne := shape_ne h he
+    have : 1 ≤ e.format.length := by cases hh : e.format <;> simp_all
+    simp only [inter, wsum, List.zipWith_cons_cons, List.flatten_cons, List.length_append, List.map_cons,
+      List.sum_cons, List.length_cons] at ih ⊢
+    omega
+
+theorem inter_mem : ∀ (items ws : List (List Char)) (x : Char), x ∈ inter items ws →
+    (∃ it ∈ items, x ∈ it) ∨ (∃ w ∈ ws, x ∈ w)
+  | [], _, x, hx => by simp [inter] at hx
+  | _ :: _, [], x, hx => by simp [inter] at hx
+  | it :: its, w :: ws, x, hx => by
+    simp only [inter, List.zipWith_cons_cons, List.flatten_cons, List.mem_append] at hx
+    rcases hx with (hx | hx) | hx
+    · exact .inl ⟨it, by simp, hx⟩
+    · exact .inr ⟨w, by simp, hx⟩
+    · rcases inter_mem its ws x hx with ⟨y, hy, hxy⟩ | ⟨y, hy, hxy⟩
+      · exact .inl ⟨y, by simp [hy], hxy⟩
+      · exact .inr ⟨y, by simp [hy], hxy⟩
+
+theorem inter_nil : ∀ items : List (List Char), inter items (List.replicate items.length []) = items.flatten
+  | [] => rfl
+  | it :: its => by
+    have := inter_nil its
+    simp only [inter] at this ⊢
+    simp [List.replicate_succ, this]
+
+theorem space_char (x : Char) (h : isSpace x = true) :
+    x ≠ '<' ∧ x ≠ '>' ∧ x ≠ '!' ∧ x ≠ '=' ∧ x ≠ '@' ∧ x.toNat < 128 ∧ x.toNat ≠ 0 := by
+  simp only [isSpace, Bool.or_eq_true, decide_eq_true_eq] at h
+  rcases h with ((((h1 | h1) | h1) | h1) | h1) | h1 <;> subst h1 <;> decide
+
+theorem digit_char (x : Char) (h : isDigit x = true) :
+    x ≠ '<' ∧ x ≠ '>' ∧ x ≠ '!' ∧ x ≠ '=' ∧ x ≠ '@' ∧ x.toNat < 128 ∧ x.toNat ≠ 0 := by
+  have hr := digit_range x h
+  refine ⟨?_, ?_, ?_, ?_, ?_, by omega, by omega⟩ <;> intro h1 <;> subst h1 <;> simp at hr
+
+theorem whichtable_native (X : List Char)
+    (h : ∀ x ∈ X, x ≠ '<' ∧ x ≠ '>' ∧ x ≠ '!' ∧ x ≠ '=' ∧ x ≠ '@') : whichtable X = (.native, X) := by
+  cases X with
+  | nil => rfl
+  | cons x r =>
+    have hx := h x (by simp)
+    obtain ⟨h1, h2, h3, h4, h5⟩ := hx
+    unfold whichtable
+    split <;> simp_all
+
+/-- The result of `prepare_s` for a list of items, read item by item. -/
+def canon (t : Tab) (items : List (List Char)) : Py (List Code × Nat × Nat) :=
+  match fold1 t.table {} items with
+  | .error e => .error e
+  | .ok st =>
+    if st.ncodes + 1 > maxN / 32 then .error (.named "MemoryError" "")
+    else
+      let (codes, size) := fold2 t.table ([], 0) items
+      .ok (codes, size, st.len)
+
+/-- What a `Struct` exposes apart from its format string: codes, `s_size`, `s_len`. -/
+def sView (s : SObj) : List Code × Nat × Nat := (s.codes, s.sSize, s.sLen)
+
+theorem prepareS_inter (p : List Char) (hp : p ∈ [[], ['<'], ['>'], ['!'], ['='], ['@']])
+    (items : List (List Char)) (w0 : List Char) (ws : List (List Char))
+    (hi : ∀ it ∈ items, IsItem (whichtable p).1.table it) (h0 : ∀ x ∈ w0, isSpace x = true)
+    (hw : ∀ w ∈ ws, ∀ x ∈ w, isSpace x = true) (hl : ws.length = items.length) :
+    sView <$> prepareS ((p ++ w0 ++ inter items ws).map Char.toNat) = canon (whichtable p).1 items := by
+  have hsh := tables_shape (whichtable p).1
+  have good : ∀ x ∈ w0 ++ inter items ws,
+      x ≠ '<' ∧ x ≠ '>' ∧ x ≠ '!' ∧ x ≠ '=' ∧ x ≠ '@' ∧ x.toNat < 128 ∧ x.toNat ≠ 0 := by
+    intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · exact space_char x (h0 x hx)
+    · rcases inter_mem items ws x hx with ⟨it, hit, hxi⟩ | ⟨w, hw', hxw⟩
+      · obtain ⟨ds, e, rfl, he, hd⟩ := hi it hit
+        rcases List.mem_append.mp hxi with hxd | hxe
+        · exact digit_char x (hd x hxd)
+        · exact (shape_char hsh he hxe).2.2
+      · exact space_char x (hw w hw' x hxw)
+  have hgood : ∀ x ∈ p ++ w0 ++ inter items ws, x.toNat < 128 ∧ x.toNat ≠ 0 := by
+    intro x hx
+    rw [List.append_assoc] at hx
+    rcases List.mem_append.mp hx with hx | hx
+    · simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hp
+      rcases hp with rfl | rfl | rfl | rfl | rfl | rfl <;> simp at hx <;> subst hx <;> decide
+    · exact (good x hx).2.2.2.2.2
+  have hall : ((p ++ w0 ++ inter items ws).map Char.toNat).all (· < 128) = true := by
+    simp only [List.all_map, List.all_eq_true, Function.comp, decide_eq_true_eq]
+    exact fun x hx => (hgood x hx).1
+  have hz : 0 ∉ (p ++ w0 ++ inter items ws).map Char.toNat := by
+    simp only [List.mem_map, not_exists, not_and]
+    exact fun x hx h0 => (hgood x hx).2 h0
+  have hasc : asciiChars ((p ++ w0 ++ inter items ws).map Char.toNat) = p ++ w0 ++ inter items ws := by
+    have hcomp : (Char.ofNat ∘ Char.toNat) = id := funext Char.ofNat_toNat
+    simp [asciiChars, List.map_map, hcomp]
+  have hwt : whichtable (p ++ w0 ++ inter items ws) = ((whichtable p).1, w0 ++ inter items ws) := by
+    rw [List.append_assoc]
+    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hp
+    rcases hp with rfl | rfl | rfl | rfl | rfl | rfl
+    · rw [List.nil_append, whichtable_native _ (fun x hx => by
+        obtain ⟨a, b, c, d, e, _⟩ := good x hx; exact ⟨a, b, c, d, e⟩)]
+      rfl
+    all_goals rfl
+  have hlen := inter_length _ hsh items ws hl hi
+  have hfuel : (w0 ++ inter items ws).length + 1 =
+      ((inter items ws).length - items.length - wsum ws) + 1 + items.length + wsum ws + w0.length := by
+    simp only [List.length_append]; omega
+  have hp1 := pass1_spaces (whichtable p).1.table (inter items ws) {} w0
+    (((inter items ws).length - items.length - wsum ws) + 1 + items.length + wsum ws) h0
+  rw [pass1_inter _ hsh items ws hl hi hw] at hp1
+  have hp2 := pass2_spaces (whichtable p).1.table (inter items ws) ([], 0) w0
+    (((inter items ws).length - items.length - wsum ws) + 1 + items.length + wsum ws) h0
+  rw [pass2_inter _ hsh items ws hl hi hw] at hp2
+  unfold prepareS
+  rw [hasc, hwt]
+  simp only [hall, Bool.not_true, Bool.false_eq_true, if_false, hz]
+  rw [hfuel, hp1, hp2]
+  unfold canon
+  cases fold1 (whichtable p).1.table {} items with
+  | error e => rfl
+  | ok st =>
+    simp only
+    split
+    · rfl
+    · cases fold2 (whichtable p).1.table ([], 0) items
+      rfl
+
+/-- `Py_ISSPACE` characters between items are skipped by both passes of `prepare_s` (1673-1674,
+1748-1749): a run of them after the byte-order prefix, and one after each item, change no code, no
+offset, `s_size` or `s_len`, and no refusal. All six characters `Py_ISSPACE` accepts (space, `\t`,
+`\n`, `\r`, `\v`, `\f`) are covered: `calcsize('i i') == calcsize('\ti\x0bi\x0c\r\n') == 8`.
+
+An item is a run of digits, possibly empty, then the whole format of an entry of the table the prefix
+selects (`Zf` and `Zd` are two characters). That is the precondition of the documented rule
+("Whitespace characters between formats are ignored; a count and its format must not contain
+whitespace though"): whitespace inside an item, between `Z` and its `f`, or before the prefix is a bad
+char. Counts of any size are included, so overflow refusals are compared too. A `prepare_s` that
+refused whitespace, or counted it as an item or a byte, fails this. -/
+def WhitespaceSkip : Prop :=
+  ∀ p ∈ [[], ['<'], ['>'], ['!'], ['='], ['@']], ∀ (items : List (List Char)) (w0 : List Char)
+    (ws : List (List Char)), (∀ it ∈ items, IsItem (whichtable p).1.table it) →
+    (∀ x ∈ w0, isSpace x = true) → (∀ w ∈ ws, ∀ x ∈ w, isSpace x = true) → ws.length = items.length →
+    sView <$> prepareS ((p ++ w0 ++ inter items ws).map Char.toNat) =
+      sView <$> prepareS ((p ++ items.flatten).map Char.toNat)
+
+theorem whitespaceSkip_proven : WhitespaceSkip := by
+  intro p hp items w0 ws hi h0 hw hl
+  rw [prepareS_inter p hp items w0 ws hi h0 hw hl]
+  have := prepareS_inter p hp items [] (List.replicate items.length []) hi (by simp)
+    (by simp) (by simp)
+  rw [inter_nil, List.append_nil] at this
+  exact this.symm
 
 end PyLean.TextLibs.Struct

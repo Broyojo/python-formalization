@@ -5,6 +5,7 @@ import PyLean.ListSort.FallibleExits
 import PyLean.ListSort.CountRunMax
 import PyLean.ListSort.CountRunInput
 import PyLean.ListSort.FallibleSteps
+import PyLean.ListSort.CountRunFail
 
 /-!
 `list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.15.2.
@@ -138,7 +139,7 @@ def entries : List Entry := [
     source := "listobject.c:2004-2006, :2052-2055", status := .proven
     prop := ``CountRunMaximal, thm := some ``countRunMaximal_proven },
   { id := "listsort-count-run-input", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
-    statement := "With keys compared by <, the first n items of count_run's input are a non-increasing part then a non-decreasing part (a descending run, then the ascending extension), so with listsort-count-run and listsort-count-run-maximal the run length is pinned."
+    statement := "With keys compared by <, the first n items of count_run's input are a non-increasing part then a non-decreasing part; an ascending run is the whole slice or has lo[0] < lo[n-1] with n >= 2; a descending part has at least 2 items, ends at the end or at a strictly larger item, and is followed by an extension whose first item is at least the run's first (the extension starts by comparing with the reversed run's last item, :2052-2054). With listsort-count-run-maximal (the extension ends at a smaller item) the length is pinned: 3 on [2, 1, 3, 0]."
     source := "listobject.c:1972-2064 (comments at :2005-2017, :2026-2029, :2048-2050)", status := .proven
     prop := ``CountRunInputRun, thm := some ``countRunInputRun_proven },
   { id := "listsort-fail-steps", pyFile := "Objects/listobject.c"
@@ -149,7 +150,11 @@ def entries : List Entry := [
   { id := "listsort-fail-steps-2", pyFile := "Objects/listobject.c", pyFns := ["merge_hi", "merge_at", "count_run"]
     statement := "merge_hi's galloping gallop_left exit leaves rest of A ++ rest of B ++ merged with the B item copied; merge_at's second gallop fails with the runs untouched and passes on what merge_lo/merge_hi leave; count_run passes on its ascending scan's error with the slice untouched, and its descending loop fails on either comparison with the current equal group not reversed."
     source := "listobject.c:2031-2041, :2058-2059, :2573, :2601-2603, :2660-2670", status := .proven
-    prop := ``SortFailSteps2, thm := some ``sortFailSteps2_proven }
+    prop := ``SortFailSteps2, thm := some ``sortFailSteps2_proven },
+  { id := "listsort-count-run-fail", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
+    statement := "count_run returns the error of its IFLT(lo[0], lo[n-1]) test with the slice untouched, of its descending loop with the slice as that loop leaves it, and of its ascending extension with the run already reversed and the rest in place, for every slice and comparison."
+    source := "listobject.c:2020, :2031-2046, :2052-2059", status := .proven
+    prop := ``CountRunFailSteps, thm := some ``countRunFailSteps_proven }
 ]
 
 end PyLean.ListSort

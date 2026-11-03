@@ -44,10 +44,18 @@ inductive RedAttr where
   | fn (r : RvSpec)
   deriving Repr, DecidableEq
 
-/-- How an object reduces, Lib/copy.py:84-96 and :139-152: `table` is `copyreg.dispatch_table[type(x)](x)` when its class
-is registered; `ex` and `plain` are its `__reduce_ex__` and `__reduce__`. -/
+/-- A class's `copyreg.dispatch_table` entry: none, a reductor giving `r`, or a reductor giving `r` that is false
+(`__bool__` returns `False`; `copyreg.pickle` checks only `callable`). -/
+inductive TableEntry where
+  | none
+  | fn (r : RvSpec)
+  | falsyFn (r : RvSpec)
+  deriving Repr, DecidableEq
+
+/-- How an object reduces, Lib/copy.py:84-96 and :139-152: `table` is the class's `copyreg.dispatch_table` entry,
+called as `reductor(x)`; `ex` and `plain` are its `__reduce_ex__` and `__reduce__`. -/
 structure Reductor where
-  table : Option RvSpec
+  table : TableEntry
   ex : RedAttr
   plain : RedAttr
   deriving Repr, DecidableEq
@@ -509,11 +517,11 @@ def getMethodAttr (h : Heap) (f s : Nat) : Py (Heap × Nat) :=
 
 /-- The reduce value, Lib/copy.py:84-96 for `copy` and :139-152 for `deepcopy`: the class's `copyreg.dispatch_table`
 entry first, then `__reduce_ex__(4)` if it is not `None` (a false non-callable is called, and fails), then
-`__reduce__()` if it is true, and otherwise `copy.Error`. A reductor that raises is the `raises` value. -/
+`__reduce__()` if it is true, and otherwise `copy.Error`. A reductor that raises is the `raises` value. The twins differ
+on the table: `copy` tests the entry with `is not None` (:85), `deepcopy` by truth (`if reductor:`, :140), so a false
+entry is called by `copy` and skipped by `deepcopy`. -/
 def reduceValue (r : Reductor) (deep : Bool) : Py RvSpec :=
-  match r.table with
-  | some rv => .ok rv
-  | none =>
+  let rest : Py RvSpec :=
     match r.ex with
     | .fn rv => .ok rv
     | .falsy => .error (.typeError "'int' object is not callable")
@@ -521,6 +529,10 @@ def reduceValue (r : Reductor) (deep : Bool) : Py RvSpec :=
       match r.plain with
       | .fn rv => .ok rv
       | _ => .error (uncopyable deep)
+  match r.table with
+  | .fn rv => .ok rv
+  | .falsyFn rv => if deep then rest else .ok rv
+  | .none => rest
 
 /-- `copy(x)`, Lib/copy.py:62-100. `tuple` is atomic here and only here. A bound method has no `__copy__`, so it goes
 through `method.__reduce__`, Objects/classobject.c:90-116, which gives `(getattr, (self, name))` (no name here is
@@ -598,7 +610,9 @@ mutual
           | .inst attrs =>
             -- `object.__reduce_ex__(4)`: `copyreg.__newobj__`, `(cls,)` (a class, atomic) and `x.__dict__` as the
             -- state, `None` when it is empty; `_reconstruct` records `y`, copies the state dict (whose own
-            -- `deepcopy` keeps it alive) and updates `y.__dict__` with it
+            -- `deepcopy` keeps it alive) and updates `y.__dict__` with it. Scope: the `__dict__` is not a cell, so
+            -- the memo entry `memo[id(x.__dict__)]` for its copy, which a caller-supplied memo would show, is not
+            -- kept; nothing in the graphs reaches that `__dict__` a second time
             let (h1, y) := h.alloc (.inst [])
             let h2 := h1.remember x y
             match deepAttrs fuel h2 y attrs with

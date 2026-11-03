@@ -3590,6 +3590,16 @@ import collections as operator_collections  # noqa: E402
 import copy as operator_copy  # noqa: E402
 import copyreg as operator_copyreg  # noqa: E402
 
+class operator_FalsyReductor:
+    """A dispatch_table entry that is callable but false; it reduces to a string, so `copy` returns `x`."""
+
+    def __bool__(self):
+        return False
+
+    def __call__(self, o):
+        return "name"
+
+
 operator_registered = []        # classes put in copyreg.dispatch_table by one case, taken out after it
 import types as operator_types  # noqa: E402
 import _operator as operator_C  # noqa: E402
@@ -3836,7 +3846,8 @@ def operator_state_graph(rng):
               "state": None, "listiter": None, "dictiter": None,
               "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no",
               "listfail": rng.random() < .3, "dictfail": rng.random() < .3,
-              "via": rng.choice(["ex", "ex", "plain"]), "table": rng.random() < .2}
+              "via": rng.choice(["ex", "ex", "plain"]),
+              "table": rng.choice([True, "falsy"]) if rng.random() < .3 else False}
     if rng.random() < .15:                     # no reduce value at all, or a false reductor
         hooked.update({"rv": "absent", "via": rng.choice(["ex", "falsy", "falsyex"]), "table": False})
     cells.append(hooked)                                                                       # cell 3
@@ -3891,7 +3902,7 @@ def operator_graph(rng):
             # where the reduce value comes from: __reduce_ex__, __reduce__ behind __reduce_ex__ = None, a
             # copyreg.dispatch_table entry, or (with none) a false reductor
             c["via"] = rng.choice(["ex", "ex", "plain"] if rv != "absent" else ["ex", "falsy", "falsyex"])
-            c["table"] = rv != "absent" and rng.random() < .15
+            c["table"] = rng.choice([True, "falsy"]) if rv != "absent" and rng.random() < .25 else False
             cells.append(c)
     for i, c in enumerate(cells):
         if c["k"] == "method":
@@ -4045,7 +4056,8 @@ def operator_hooked(spec, objs):
     # how it reduces, Lib/copy.py:84-96 and :139-152: a copyreg.dispatch_table entry, which must win over the
     # `__reduce_ex__` that then raises; `__reduce_ex__ = None` and the value from `__reduce__`; or a false reductor
     via = spec.get("via", "ex")
-    table = spec.get("table", False) and rv != "absent"
+    falsy_table = spec.get("table") == "falsy" and rv != "absent"
+    table = spec.get("table") is True and rv != "absent"
     if rv == "absent":
         body["__reduce_ex__"] = 0 if via == "falsyex" else None
         body["__reduce__"] = 0 if via == "falsy" else None
@@ -4053,6 +4065,9 @@ def operator_hooked(spec, objs):
         def shadowed(s, proto):
             raise ValueError("shadowed")
         body["__reduce_ex__"] = shadowed
+        body["__reduce__"] = None
+    elif falsy_table:
+        body["__reduce_ex__"] = reduce_ex
         body["__reduce__"] = None
     elif via == "plain":
         body["__reduce_ex__"] = None
@@ -4063,6 +4078,10 @@ def operator_hooked(spec, objs):
     cls = type("Hooked", (), body)
     if table:
         operator_copyreg.dispatch_table[cls] = lambda o: reduce_ex(o, None)
+        operator_registered.append(cls)
+    elif falsy_table:
+        # copy calls a false entry (`is not None`, Lib/copy.py:85), deepcopy skips it (`if reductor:`, :140)
+        operator_copyreg.dispatch_table[cls] = operator_FalsyReductor()
         operator_registered.append(cls)
     return cls()
 

@@ -352,16 +352,20 @@ def getCells (j : Json) : Except String (List Cell) := do
       let via : String := match c.getObjVal? "via" with
         | .ok (.str v) => v
         | _ => "ex"
-      let table : Bool := match c.getObjVal? "table" with
-        | .ok (.bool true) => true
-        | _ => false
+      -- `true`: a reductor; `"falsy"`: a reductor whose `__bool__` is `False`
+      let table : String := match c.getObjVal? "table" with
+        | .ok (.bool true) => "yes"
+        | .ok (.str "falsy") => "falsy"
+        | _ => "no"
       -- the Python side's class: `__reduce_ex__`, `__reduce__` and a `copyreg.dispatch_table` entry
       let reduce : Reductor := match rv with
-        | none => ⟨none, if via == "falsyex" then .falsy else .none, if via == "falsy" then .falsy else .none⟩
+        | none => ⟨.none, if via == "falsyex" then .falsy else .none, if via == "falsy" then .falsy else .none⟩
         | some r =>
-          if table then ⟨some r, .fn (.raises (valueErr "shadowed")), .none⟩
-          else if via == "plain" then ⟨none, .none, .fn r⟩
-          else ⟨none, .fn r, .none⟩
+          if table == "yes" then ⟨.fn r, .fn (.raises (valueErr "shadowed")), .none⟩
+          -- a false entry: `copy` calls it and gets a string, `deepcopy` skips it for `__reduce_ex__`
+          else if table == "falsy" then ⟨.falsyFn .str, .fn r, .none⟩
+          else if via == "plain" then ⟨.none, .none, .fn r⟩
+          else ⟨.none, .fn r, .none⟩
       pure (.hooked (← mk "copier") (← mk "deepcopier") reduce)
 
 /-- The result graph, by depth-first search with back references, as the Python side renders it. -/

@@ -83,20 +83,75 @@ theorem descLoop_consumed (kf : α → Int) :
           { ms with ncmp := ms.ncmp + 1 + 1 }
         exact ⟨z :: c, by rw [List.cons_append, ← h1], ⟨by omega, h2⟩⟩
 
+/-- The descending loop stops at a strictly larger item, after a non-increasing stretch from `prev`. -/
+theorem descLoop_stop (kf : α → Int) :
+    ∀ (done grp : List α) (prev : α) (rest : List α) (ms : MS) (z : α) (r : List α),
+      (descLoop (ltOf kf) done grp prev rest ms).2.1 = z :: r →
+      ∃ c, rest = c ++ z :: r ∧ kf ((prev :: c).getLast (by simp)) < kf z
+  | done, grp, prev, [], ms, z, r, h => by simp [descLoop] at h
+  | done, grp, prev, w :: rest, ms, z, r, h => by
+    simp only [descLoop, islt, ltOf] at h
+    by_cases hw : kf w < kf prev
+    · simp only [hw, decide_true, ↓reduceIte] at h
+      obtain ⟨c, h1, h2⟩ := descLoop_stop kf _ _ w rest _ z r h
+      exact ⟨w :: c, by rw [h1]; rfl, by rw [List.getLast_cons (by simp)]; exact h2⟩
+    · simp only [hw, decide_false, Bool.false_eq_true, ↓reduceIte] at h
+      by_cases hw' : kf prev < kf w
+      · simp only [hw', decide_true, ↓reduceIte, List.cons.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨[], rfl, by simpa using hw'⟩
+      · simp only [hw', decide_false, Bool.false_eq_true, ↓reduceIte] at h
+        obtain ⟨c, h1, h2⟩ := descLoop_stop kf _ _ w rest _ z r h
+        exact ⟨w :: c, by rw [h1]; rfl, by rw [List.getLast_cons (by simp)]; exact h2⟩
+
+/-- The descending loop's output starts with what was already done. -/
+theorem descLoop_prefix (lt : α → α → Bool) :
+    ∀ (done grp : List α) (prev : α) (rest : List α) (ms : MS),
+      ∃ s, (descLoop lt done grp prev rest ms).1 = done ++ s
+  | done, grp, _, [], ms => ⟨grp.reverse, rfl⟩
+  | done, grp, prev, z :: rest, ms => by
+    simp only [descLoop, islt]
+    by_cases h1 : lt z prev = true
+    · simp only [h1, ↓reduceIte]
+      obtain ⟨s, hs⟩ := descLoop_prefix lt (done ++ grp.reverse) [z] z rest
+        { ms with ncmp := ms.ncmp + 1 }
+      exact ⟨grp.reverse ++ s, by rw [hs, List.append_assoc]⟩
+    · have h1' : lt z prev = false := by simpa using h1
+      simp only [h1', Bool.false_eq_true, ↓reduceIte]
+      by_cases h2 : lt prev z = true
+      · simp only [h2, ↓reduceIte]; exact ⟨grp.reverse, rfl⟩
+      · have h2' : lt prev z = false := by simpa using h2
+        simp only [h2', Bool.false_eq_true, ↓reduceIte]
+        exact descLoop_prefix lt done (grp ++ [z]) z rest _
+
 /-- `count_run` (listobject.c:1972-2064) with keys compared by `<` (any strict weak order on a finite
-list, as `Stable.lean` explains): the first `n` items of its input, in the input's order, are a
-non-increasing part followed by a non-decreasing part — a descending run whose equal groups it reversed
-in place, then the ascending extension (:2048-2056); for an ascending run the first part is empty. With
-`CountRunSpec` (the run ends up sorted) and `CountRunMaximal` (it stops only at a smaller item) this pins
-the length: a `count_run` that sorted the whole slice of `[1, 3, 2]` and returned 3 fails it. -/
+list, as `Stable.lean` explains), on its input in the input's order: the first `n` items are a
+non-increasing part `P` then a non-decreasing part `Q`, and the stopping conditions of C hold:
+
+* an ascending run (`P` empty) is the whole slice or has at least 2 items with `lo[0] < lo[n-1]`
+  (:2001-2023: otherwise the all-equal prefix is treated as descending);
+* a descending run has at least 2 items (it is entered on a strict drop, :2000-2003) and ends at the end
+  of the slice or at a strictly larger item (`IF_NEXT_LARGER break`, :2038-2041); equal items are
+  absorbed (`++neq`), so `P` is non-increasing, not strictly decreasing;
+* the ascending extension `Q` ends at the end or at a strictly smaller item (`CountRunMaximal`).
+
+So on `[2, 1, 3, 0]` the length is 3; a `count_run` that returned 1 on a drop, or sorted the whole slice,
+fails it. -/
 def CountRunInputRun : Prop :=
   ∀ (α : Type) (kf : α → Int) (xs : List α) (ms : MS),
-    ∃ P Q, xs.take (countRun (ltOf kf) xs ms).1 = P ++ Q ∧ NonInc kf P ∧ NonDec kf Q
+    ∃ P Q, xs.take (countRun (ltOf kf) xs ms).1 = P ++ Q ∧ NonInc kf P ∧ NonDec kf Q ∧
+      (P = [] → (countRun (ltOf kf) xs ms).1 = xs.length ∨
+        (2 ≤ (countRun (ltOf kf) xs ms).1 ∧ ∃ a b, xs[0]? = some a ∧
+          xs[(countRun (ltOf kf) xs ms).1 - 1]? = some b ∧ kf a < kf b)) ∧
+      (P ≠ [] → 2 ≤ P.length ∧ (P.length = xs.length ∨
+        ∃ a b, xs[P.length - 1]? = some a ∧ xs[P.length]? = some b ∧ kf a < kf b) ∧
+        ∀ p q, P.head? = some p → Q.head? = some q → kf p ≤ kf q)
 
 theorem countRunInputRun_proven : CountRunInputRun := by
   intro α kf xs ms
   match xs with
-  | [] => exact ⟨[], [], by simp [countRun], trivial, trivial⟩
+  | [] => exact ⟨[], [], by simp [countRun], trivial, trivial, fun _ => Or.inl (by simp [countRun]),
+      fun h => absurd rfl h⟩
   | x0 :: rest =>
     simp only [countRun]
     have hsp := ascTake_spec (ltOf kf) x0 rest ms
@@ -107,7 +162,8 @@ theorem countRunInputRun_proven : CountRunInputRun := by
     simp only at hsp hnd hbr ⊢
     subst hsp
     match r with
-    | [] => exact ⟨[], x0 :: t, by simp, trivial, by simpa using hnd⟩
+    | [] => exact ⟨[], x0 :: t, by simp, trivial, by simpa using hnd, fun _ => Or.inl (by simp),
+        fun h => absurd rfl h⟩
     | y :: r' =>
       simp only
       have hy := hbr y r' rfl
@@ -134,12 +190,37 @@ theorem countRunInputRun_proven : CountRunInputRun := by
         have hpre : NonInc kf ((x0 :: t) ++ [y]) := nonInc_snoc kf x0 t y hflat (Int.le_of_lt hy)
         obtain ⟨c, hc1, hc2⟩ := descLoop_consumed kf (x0 :: t).reverse [y] y r' ms2
         have hdp := (descLoop_perm (ltOf kf) (x0 :: t).reverse [y] y r' ms2).length_eq
-        generalize descLoop (ltOf kf) (x0 :: t).reverse [y] y r' ms2 = D at hc1 hdp ⊢
+        have hst := descLoop_stop kf (x0 :: t).reverse [y] y r' ms2
+        have hpf := descLoop_prefix (ltOf kf) (x0 :: t).reverse [y] y r' ms2
+        generalize descLoop (ltOf kf) (x0 :: t).reverse [y] y r' ms2 = D at hc1 hdp hst hpf ⊢
         obtain ⟨pre, r2, ms3⟩ := D
-        simp only at hc1 hdp ⊢
+        simp only at hc1 hdp hst hpf ⊢
         have hP : NonInc kf ((x0 :: t) ++ y :: c) := nonInc_append kf (x0 :: t) c y hpre hc2
+        have hstop : ((x0 :: t) ++ y :: c).length = (x0 :: (t ++ y :: r')).length ∨
+            ∃ a b, (x0 :: (t ++ y :: r'))[((x0 :: t) ++ y :: c).length - 1]? = some a ∧
+              (x0 :: (t ++ y :: r'))[((x0 :: t) ++ y :: c).length]? = some b ∧ kf a < kf b := by
+          cases hr2 : r2 with
+          | nil => left; rw [hc1, hr2]; simp
+          | cons z r =>
+            right
+            obtain ⟨c', h1, h2⟩ := hst z r hr2
+            have hcc : c' = c := by
+              rw [hc1, hr2] at h1; exact (List.append_cancel_right h1).symm
+            subst hcc
+            have hx : x0 :: (t ++ y :: r') = ((x0 :: t) ++ y :: c') ++ z :: r := by rw [h1]; simp
+            refine ⟨(y :: c').getLast (by simp), z, ?_, ?_, h2⟩
+            · rw [hx, getElem?_last_split _ _ (by simp)]
+              congr 1
+              exact getLast_cons_append x0 t (y :: c') (by simp)
+            · rw [hx, List.getElem?_append_right (by simp)]
+              simp
         match hrun : pre.reverse with
-        | [] => exact ⟨[], [], by simp, trivial, trivial⟩
+        | [] =>
+          exfalso
+          have : pre = [] := by simpa using hrun
+          subst this
+          rw [hc1] at hdp
+          simp at hdp; omega
         | w :: ws =>
           simp only
           have hs := ascTake_spec (ltOf kf) ((w :: ws).getLast (by simp)) r2 ms3
@@ -152,11 +233,47 @@ theorem countRunInputRun_proven : CountRunInputRun := by
             rw [h1]
             rw [hc1, ← hs] at hdp
             simp at hdp ⊢; omega
-          refine ⟨(x0 :: t) ++ y :: c, e, ?_, hP, nonDec_tail kf _ e hn2⟩
+          -- the extension's first comparison is with the reversed run's last item, the input's `x0` group
+          have hgl : kf x0 ≤ kf ((w :: ws).getLast (by simp)) := by
+            obtain ⟨s, hs'⟩ := hpf
+            have hw : w :: ws = s.reverse ++ x0 :: t := by rw [← hrun, hs']; simp
+            have heq : (w :: ws).getLast (by simp) = (x0 :: t).getLast (by simp) := by
+              cases hsr : s.reverse with
+              | nil =>
+                rw [hsr, List.nil_append] at hw
+                simp only [List.cons.injEq] at hw
+                obtain ⟨rfl, rfl⟩ := hw
+                rfl
+              | cons s0 ss =>
+                rw [hsr, List.cons_append] at hw
+                simp only [List.cons.injEq] at hw
+                obtain ⟨rfl, rfl⟩ := hw
+                exact getLast_cons_append w ss (x0 :: t) (by simp)
+            rw [heq]
+            exact nonDec_head_le_last kf x0 t hnd
+          have hhead : ∀ p q, ((x0 :: t) ++ y :: c).head? = some p → e.head? = some q → kf p ≤ kf q := by
+            intro p q hp hq
+            simp only [List.cons_append, List.head?_cons, Option.some.injEq] at hp
+            subst hp
+            cases e with
+            | nil => simp at hq
+            | cons q' e' =>
+              simp only [List.head?_cons, Option.some.injEq] at hq
+              subst hq
+              exact Int.le_trans hgl hn2.1
+          refine ⟨(x0 :: t) ++ y :: c, e, ?_, hP, nonDec_tail kf _ e hn2, fun h => by simp at h,
+            fun _ => ⟨by simp; omega, hstop, hhead⟩⟩
           rw [hc1, ← hs]
           have : x0 :: (t ++ y :: (c ++ (e ++ r3))) = ((x0 :: t) ++ y :: c ++ e) ++ r3 := by simp
           rw [this, List.take_left' (by simp [hlen]; omega)]
       · simp only [↓reduceIte]
-        exact ⟨[], x0 :: t, by simp, trivial, hnd⟩
+        by_cases hl : (x0 :: t).length > 1
+        · rw [if_pos hl] at hE
+          simp only [islt, ltOf, Prod.mk.injEq, decide_eq_true_eq] at hE
+          refine ⟨[], x0 :: t, by simp, trivial, hnd, (fun _ => Or.inr ⟨by omega, x0,
+            (x0 :: t).getLast (by simp), rfl, getElem?_last_split (x0 :: t) (y :: r') (by simp), hE.1⟩),
+            fun h => absurd rfl h⟩
+        · rw [if_neg hl] at hE
+          simp at hE
 
 end PyLean.ListSort

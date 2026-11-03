@@ -175,6 +175,12 @@ def entries : List Entry := [
     source := "Modules/_struct.c:1683-1690, 1761-1766", status := .proven
     prop := ``SPCount, thm := some ``spCount_proven
     notes := "Symbolic in the digit string. Checked on 3.15.2 for counts up to 65536." },
+  { id := "textlibs-struct-whitespace-skip", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s"]
+    statement := "For every prefix and every list of items (a digit run, then a whole format of the prefix's table), inserting runs of Py_ISSPACE characters (space, \\t, \\n, \\r, \\v, \\f) after the prefix and after each item changes no code, offset, s_size, s_len or refusal of prepare_s."
+    source := "Modules/_struct.c:1672-1674, 1747-1749", status := .proven
+    prop := ``WhitespaceSkip, thm := some ``whitespaceSkip_proven
+    notes := "Both passes, proven item by item for any counts (overflow refusals included). Checked on 3.15.2 on 120000 random formats over all six prefixes and all valid codes including Zf/Zd; whitespace inside an item or before the prefix is a bad char and is outside the hypothesis." },
   { id := "textlibs-struct-pack-values", pyFile := "Modules/_struct.c"
     pyFns := ["Struct_pack_impl"]
     statement := "With the right number of arguments, Struct.pack is s_pack_internal over s_size zero bytes, and returns that buffer."
