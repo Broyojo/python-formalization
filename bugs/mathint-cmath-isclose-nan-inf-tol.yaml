@@ -1,0 +1,43 @@
+id: mathint-cmath-isclose-nan-inf-tol
+title: "cmath.isclose calls a number with a NaN part close when the other part's difference overflows and a tolerance is infinite"
+priority: P5
+kind: doc-mismatch
+module: mathint
+files: [Modules/cmathmodule.c, Objects/complexobject.c]
+functions: ["cmath_isclose_impl", "_Py_c_abs"]
+summary: |
+  The docstring says "NaN is not close to anything, even itself". cmath.isclose(complex(nan,
+  1e308), complex(0.0, -1e308), abs_tol=inf) returns True: the imaginary difference 2e308
+  overflows to inf, _Py_c_abs returns inf for (nan, inf) (C99's hypot(inf, nan) = inf), and
+  inf <= abs_tol. rel_tol=inf does the same. math.isclose(nan, 0, abs_tol=inf) is False.
+likelihood: |
+  Very low: needs an infinite tolerance.
+maybe_intended: |
+  Likely. A related overflow report (python/cpython#158697, large opposite values) was closed
+  as not planned.
+reproducer: |
+  import cmath, math
+  r = cmath.isclose(complex(math.nan, 1e308), complex(0.0, -1e308), abs_tol=math.inf)
+  print('isclose:', r)
+  if r is True:
+      print('REPRODUCED mathint-cmath-isclose-nan-inf-tol')
+expected: |
+  False ("NaN is not close to anything").
+observed: |
+  python3 3.15.2: isclose: True. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  The cmath.isclose docstring (cmathmodule.c:1184-1186) and Doc/library/cmath.rst, isclose.
+cause: |
+  Modules/cmathmodule.c:1226-1230 compare _Py_c_abs(_Py_c_diff(a, b)) with the tolerances
+  without a NaN check; Objects/complexobject.c:376-380 return the infinite part's magnitude
+  when the other part is a NaN.
+possible_fix: |
+  Return 0 early when any part of a or b is a NaN (after the equality short circuit).
+duplicates:
+  issues: ["python/cpython#158697"]
+  queries: ["cmath isclose nan", "cmath isclose overflow", "isclose NaN close abs_tol inf"]
+  notes: "Same overflow family as the closed (not planned) #158697 in vendor/bugforge-results; not reported separately. Recorded for the Lean refutation."
+lean:
+  property: PyLean.MathInt.CmathIsCloseNaN
+  theorem: PyLean.MathInt.cmathIsCloseNaN_refuted

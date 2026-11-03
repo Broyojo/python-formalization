@@ -33,6 +33,7 @@ import PyLean.MathInt.FltHypotConv
 import PyLean.MathInt.FltSinpi
 import PyLean.MathInt.FltLgammaRefl
 import PyLean.MathInt.FltFsumPaths
+import PyLean.MathInt.CmathProps
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -67,6 +68,68 @@ def entries : List Entry := [
     source := "Doc/library/math.rst: fsum (\"Return an accurate floating-point sum\"); the msum comment at mathmodule.c:1239-1267", status := .open
     prop := ``FsumCorrectlyRounded
     notes := "Open: needs the invariant that the partials stay non-overlapping and sum exactly (Shewchuk) and the half-even correction of :1371-1383. Smoke-tested on 100000 random lists against Fraction sums; the model agrees with CPython in the difftest." },
+  { id := "mathint-cmath-special-type", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["special_type"]
+    statement := "For every double d, special_type(d) is ST_NAN exactly for a NaN, ST_PINF and ST_NINF exactly for +inf and -inf, ST_PZERO and ST_NZERO exactly for +0.0 and -0.0, and ST_POS and ST_NEG exactly for the other finite numbers by sign."
+    source := "cmathmodule.c:105-113 (the enum's comments) and :117-140", status := .proven
+    prop := ``SpecialTypeDoc, thm := some ``specialTypeDoc_proven
+    notes := "The index that selects the special-value tables of every cmath function (SPECIAL_VALUE, :142-147) and of rect." },
+  { id := "mathint-cmath-err-glue", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["if", "math_error"]
+    statement := "The Py_complex_protected return conversion raises ValueError('math domain error') exactly for errno EDOM and OverflowError('math range error') exactly for ERANGE, and returns the result for any other errno, 0 included; math_error raises the same two exceptions for EDOM and ERANGE and ValueError from PyErr_SetFromErrno for any other errno."
+    source := "cmathmodule.c:36-46 (the return converter, generated at clinic/cmathmodule.c.h:37-47) and :979-989 (math_error)", status := .proven
+    prop := ``CmathErrGlue, thm := some ``cmathErrGlue_proven
+    notes := "The two inventory rows named `if` are the EDOM and ERANGE branches of the converter at :37-40 and :41-44. Twin difference on record: an unexpected errno is ignored by the converter but raised by math_error." },
+  { id := "mathint-cmath-phase-polar", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.phase", "cmath.polar"]
+    statement := "For every C atan2 following C99 Annex F (no errno, no infinity, a NaN only from a NaN argument), cmath.phase(z) == math.atan2(z.imag, z.real) for every z; for any atan2, phase raises math_error() exactly when atan2 sets errno; and cmath.polar(z) is (abs(z), atan2(z.imag, z.real)) when abs(z) returns, OverflowError('math range error') when abs raises OverflowError, ignoring atan2's errno."
+    source := "Doc/library/cmath.rst: phase (\"phase(z) is equivalent to math.atan2(z.imag, z.real)\"), polar (\"polar(z) is equivalent to (abs(z), phase(z))\"); cmathmodule.c:1001-1039", status := .proven
+    prop := ``PhasePolar, thm := some ``phasePolar_proven
+    notes := "glibc's atan2 is not Annex-F-clean here: it sets ERANGE when the result underflows to 0, and then phase raises; see mathint-cmath-phase-atan2-c23. polar's message on overflow differs from abs()'s ('absolute value too large')." },
+  { id := "mathint-cmath-phase-atan2-c23", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.phase"]
+    statement := "For every C atan2 that C23 allows (errno 0, or ERANGE with a result below DBL_MIN in magnitude), cmath.phase(z) == math.atan2(z.imag, z.real) for every complex z."
+    source := "Doc/library/cmath.rst: phase (\"phase(z) is equivalent to math.atan2(z.imag, z.real)\"); C23 7.12.4.4 (range error on underflow)", status := .refuted
+    prop := ``PhaseAtan2C23, thm := some ``phaseAtan2C23_refuted
+    bug := some "mathint-cmath-phase-underflow"
+    notes := "cmath.phase(complex(1e300, 1e-300)) raises OverflowError('math range error') on python3 3.15.2 (glibc) while math.atan2(1e-300, 1e300) is 0.0: math_2's is_error ignores ERANGE below 1.5, cmath_phase_impl does not. cmath.polar of the same z returns (1e300, 0.0) since 3.15 resets errno after atan2." },
+  { id := "mathint-cmath-rect", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.rect"]
+    statement := "For every C cos and sin with cos(+-0) = 1 and sin(+-0) = +-0: cmath.rect(r, phi) for finite r and phi is complex(r*cos(phi), r*sin(phi)); for any cos and sin, rect raises ValueError('math domain error') exactly when r is nonzero, not a NaN and phi is infinite, and for an infinite r and finite nonzero phi returns the infinity with the signs of r*cos(phi) and r*sin(phi)."
+    source := "Doc/library/cmath.rst: rect (\"equivalent to complex(r * math.cos(phi), r * math.sin(phi))\"); the 'spirit of C99' comment at cmathmodule.c:1041-1048; :1072-1123", status := .proven
+    prop := ``RectDoc, thm := some ``rectDoc_proven
+    notes := "The phi == 0 branch (:1097-1102, bpo-18513) computes (r, r*phi) and agrees with the general formula given Annex F's cos(0) and sin(+-0). Smoke-tested on python3 3.15.2 against complex(r*math.cos(phi), r*math.sin(phi)) on 100000 cases." },
+  { id := "mathint-cmath-predicates", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.isfinite", "cmath.isnan", "cmath.isinf"]
+    statement := "For every complex z: cmath.isnan(z) is math.isnan(z.real) or math.isnan(z.imag), cmath.isinf(z) is math.isinf(z.real) or math.isinf(z.imag), cmath.isfinite(z) is math.isfinite(z.real) and math.isfinite(z.imag), and cmath.isfinite(z) == (not cmath.isinf(z) and not cmath.isnan(z))."
+    source := "Doc/library/cmath.rst: isfinite, isinf, isnan", status := .proven
+    prop := ``CmathPredicates, thm := some ``cmathPredicates_proven },
+  { id := "mathint-cmath-isclose", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.isclose"]
+    statement := "cmath.isclose(a, b, rel_tol=rt, abs_tol=at) raises ValueError('tolerances must be non-negative') for a negative tolerance; otherwise numbers equal part by part are close, a number with an infinite part is close only to one equal part by part, and otherwise the result is abs(a-b) <= rt*abs(b) or abs(a-b) <= rt*abs(a) or abs(a-b) <= at, with abs the complex modulus _Py_c_abs computes, for every hypot."
+    source := "the cmath.isclose docstring (\"the difference between them must be smaller than at least one of the tolerances\"; \"inf and -inf are only close to themselves\"); Doc/library/cmath.rst: isclose", status := .proven
+    prop := ``CmathIsClose, thm := some ``cmathIsClose_proven
+    notes := "Smoke-tested on python3 3.15.2 (100000 random pairs and tolerances). The docstring's 'NaN is not close to anything' fails with an infinite tolerance: mathint-cmath-isclose-nan." },
+  { id := "mathint-cmath-isclose-nan", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.isclose"]
+    statement := "For every C library and nonnegative tolerances, cmath.isclose(a, b) is False whenever a has a NaN part."
+    source := "the cmath.isclose docstring and Doc/library/cmath.rst: \"NaN is not close to anything, even itself\"", status := .refuted
+    prop := ``CmathIsCloseNaN, thm := some ``cmathIsCloseNaN_refuted
+    bug := some "mathint-cmath-isclose-nan-inf-tol"
+    notes := "cmath.isclose(complex(nan, 1e308), complex(0.0, -1e308), abs_tol=inf) is True: the imaginary difference overflows to inf and _Py_c_abs returns inf for (nan, inf). Needs an infinite tolerance; same overflow family as the closed (not planned) python/cpython#158697." },
+  { id := "mathint-cmath-log", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.log"]
+    statement := "For every c_log: cmath.log(x) is c_log(x), or math_error() when c_log sets errno; a base whose conversion raises raises that; a base whose c_log is +-0+-0j (base 1) gives ValueError('math domain error'); and when the base's c_log sets no errno and the division is not by zero, cmath.log(x, base) equals c_log(x) / c_log(base) as Python divides complex numbers, whatever errno c_log(x) left."
+    source := "cmathmodule.c:955-974; Doc/library/cmath.rst: log", status := .proven
+    prop := ``CmathLogBase, thm := some ``cmathLogBase_proven
+    notes := "The last clause is the defect of mathint-cmath-log-base-domain: the errno of c_log(x) is overwritten by c_log(base). Smoke-tested on python3 3.15.2 against cmath.log(x)/cmath.log(base)." },
+  { id := "mathint-cmath-log-base-domain", pyFile := "Modules/cmathmodule.c"
+    pyFns := ["cmath.log"]
+    statement := "For every c_log that does what CPython's c_log code fixes (c_log(0j) = (-inf, 0.0) with EDOM; errno 0 for every other finite argument): whenever cmath.log(x) raises ValueError, cmath.log(x, base) raises ValueError too, for every base."
+    source := "Doc/library/cmath.rst: log (\"Returns the logarithm of x to the given base\"); the module's 'math domain error' for log(0); math.log(0, 2) raises ValueError", status := .refuted
+    prop := ``CmathLogBaseDomain, thm := some ``cmathLogBaseDomain_refuted
+    bug := some "mathint-cmath-log-base-errno"
+    notes := "cmath.log(0) raises ValueError('math domain error') but cmath.log(0, 2) returns (-inf+nanj) on python3 3.15.2 and main: c_log(base) ends with errno = 0 (cmathmodule.c:636), erasing the EDOM c_log(x) set at :621, before the check at :971." },
   { id := "mathint-fsum-paths", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.fsum"]
     statement := "For every list of floats xs: fsum over an iterator that raises e after yielding xs raises e unless processing xs already raised OverflowError('intermediate overflow in fsum') or MemoryError('math.fsum partials'), which is raised instead; an item whose conversion raises after xs is handled the same way; and when xs contains an infinity or a NaN, fsum(xs) either raises one of those two errors or returns: ValueError('-inf + inf in fsum') when both infinities occur, else a NaN when a NaN occurs, else the infinity that occurs."

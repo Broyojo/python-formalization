@@ -1,0 +1,53 @@
+id: mathint-cmath-phase-underflow
+title: "cmath.phase(z) raises OverflowError('math range error') when atan2 underflows, unlike math.atan2"
+priority: P4
+kind: twin-mismatch
+module: mathint
+files: [Modules/cmathmodule.c]
+functions: ["cmath_phase_impl"]
+summary: |
+  The docs say phase(z) is equivalent to math.atan2(z.imag, z.real). With glibc, atan2(1e-300,
+  1e300) underflows to 0.0 and sets errno = ERANGE (C23 7.12.4.4 allows a range error there).
+  math.atan2 goes through math_2/is_error, which ignores ERANGE for results below 1.5 in
+  magnitude, and returns 0.0. cmath_phase_impl passes any nonzero errno to math_error, so
+  cmath.phase(complex(1e300, 1e-300)) raises OverflowError('math range error') for a result
+  that is a tiny angle. cmath.polar of the same z returns (1e300, 0.0), because 3.15 moved
+  `errno = 0` after polar's atan2.
+likelihood: |
+  Low to moderate: any complex number whose imaginary part is ~1e-308 times its real part
+  with positive real part.
+maybe_intended: |
+  No; it is the case PR python/cpython#153148 ("Avoid checking errno for atan2") names: "when
+  the computation underflows".
+reproducer: |
+  import cmath, math
+  z = complex(1e300, 1e-300)
+  a = math.atan2(z.imag, z.real)
+  try:
+      p = repr(cmath.phase(z))
+  except OverflowError as e:
+      p = 'OverflowError: ' + str(e)
+  print('math.atan2:', a, ' cmath.phase:', p)
+  if p.startswith('OverflowError') and a == 0.0:
+      print('REPRODUCED mathint-cmath-phase-underflow')
+expected: |
+  cmath.phase(complex(1e300, 1e-300)) == math.atan2(1e-300, 1e300) == 0.0.
+observed: |
+  python3 3.15.2: math.atan2: 0.0  cmath.phase: OverflowError: math range error. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Doc/library/cmath.rst, phase ("phase(z) is equivalent to math.atan2(z.imag, z.real)"); the
+  comment at cmathmodule.c:1008 ("should not cause any exception").
+cause: |
+  Modules/cmathmodule.c:1007-1010: errno = 0; phi = atan2(...); if (errno != 0) return
+  math_error(); math_error maps ERANGE to OverflowError (:983-984).
+possible_fix: |
+  Do not check errno after atan2 (as polar now does, and as PR #153148 proposes).
+duplicates:
+  issues: ["python/cpython#153144", "python/cpython#153148"]
+  queries: ["cmath phase OverflowError", "cmath polar atan2 errno", "cmath phase underflow",
+            "phase math range error"]
+  notes: "Duplicate: issue #153144 (atan2 errno, EDOM with icx) and its open PR #153148, whose description covers the underflow range error. Recorded because the Lean model refutes the documented equivalence on 3.15.2 with glibc."
+lean:
+  property: PyLean.MathInt.PhaseAtan2C23
+  theorem: PyLean.MathInt.phaseAtan2C23_refuted

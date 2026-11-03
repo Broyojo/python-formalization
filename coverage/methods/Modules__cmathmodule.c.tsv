@@ -28,4 +28,4 @@ Modules/cmathmodule.c	1146	1150	cmath_isnan_impl	cmath_isnan_impl(PyObject *modu
 Modules/cmathmodule.c	1159	1163	cmath_isinf_impl	cmath_isinf_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=502a75a79c773469 input=363df155c7181329]*/	todo		
 Modules/cmathmodule.c	1191	1231	cmath_isclose_impl	cmath_isclose_impl(PyObject *module, Py_complex a, Py_complex b, double rel_tol, double abs_tol) /*[clinic end generated code: output=8a2486cc6e0014d1 input=301b56c90d9a79de]*/	todo		
 Modules/cmathmodule.c	1265	1294	cmath_exec	cmath_exec(PyObject *mod)	todo		changed-in-3.15:
-Modules/cmathmodule.c	1314	1317	PyInit_cmath	PyInit_cmath(void)	todo		
+Modules/cmathmodule.c	1314	1317	PyInit_cmath	PyInit_cmath(void)	excluded		internal-bootstrap: returns PyModuleDef_Init(&cmathmodule); module creation boilerplate with no cmath behaviour (the attributes are added by cmath_exec)
