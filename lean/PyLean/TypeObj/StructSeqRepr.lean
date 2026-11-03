@@ -3,7 +3,9 @@ import PyLean.TypeObj.StructSeqC
 /-!
 # `structseq_repr`: what it writes (Objects/structseq.c:273-339, CPython 3.15.2)
 
-`ReprShape`: for every type and object, `repr(s)` is exactly
+`ReprShape`: for every type and object, `repr(s)` is `ValueError` when the writer's size
+`strlen(tp_name) + 1 + Py_SIZE * 5 + 1` wraps negative in `Py_ssize_t`, `MemoryError` when that
+buffer cannot be allocated, and otherwise exactly
 `tp_name(m0=repr(v0), m1=repr(v1), ...)` over the `Py_SIZE` visible items, where `m_i` is
 `tp_members[i].name`, or else the first failure in that order: `tp_name` or a member name that is
 not UTF-8, an item's `__repr__` raising, or `SystemError` when the visible fields outnumber the
@@ -61,6 +63,9 @@ def reprSpec (t : CType) (o : CObj α) (rep : α → Py Str) : CRes Str :=
     (catAll ((List.range o.size).map fun i => (fieldText t o rep i).map (sepOf i ++ ·))).map
       (fun body => nm ++ [chLParen] ++ body ++ [chRParen])
 
+/-- The writer's initial size, `strlen(tp_name) + 1 + Py_SIZE * 5 + 1` in `Py_ssize_t` (:281-282). -/
+def reprPrealloc (t : CType) (o : CObj α) : Int := toSsize (t.name.length + 1 + o.size * 5 + 1)
+
 /-- C strings: the bytes of a member name stop before the NUL. -/
 def MemberNamesCStr (t : CType) : Prop := ∀ m ∈ t.members, ∀ c ∈ m.name, c ≠ 0
 
@@ -68,9 +73,12 @@ def MemberNamesCStr (t : CType) : Prop := ∀ m ∈ t.members, ∀ c ∈ m.name,
 and every behaviour of the items' `__repr__`, `structseq_repr` returns exactly `reprSpec`; in
 particular it never reads `tp_members` past the sentinel. -/
 def ReprShape : Prop :=
-  ∀ (α : Type) (t : CType) (o : CObj α) (rep : α → Py Str), MemberNamesCStr t →
-    structseqRepr t o rep = reprSpec t o rep ∧
-    structseqRepr t o rep ≠ .ub "structseq_repr: tp_members past the sentinel"
+  ∀ (α : Type) (t : CType) (o : CObj α) (rep : α → Py Str) (walloc : Int → Bool), MemberNamesCStr t →
+    structseqRepr walloc t o rep =
+      (if reprPrealloc t o < 0 then .exc (.valueError "length must be positive")
+       else if reprPrealloc t o > 0 ∧ walloc (reprPrealloc t o) = false then .exc memoryError
+       else reprSpec t o rep) ∧
+    structseqRepr walloc t o rep ≠ .ub "structseq_repr: tp_members past the sentinel"
 
 /-! ### The writer, as text -/
 
@@ -316,15 +324,17 @@ theorem finish_fst (w : UWriter) : w.finish.1 = w.text := by
   · rename_i h; split <;> simp [h]
   · simp_all
 
-theorem reprShape_eq (t : CType) (ht : MemberNamesCStr t) (o : CObj α) (rep : α → Py Str) :
-    structseqRepr t o rep = reprSpec t o rep := by
-  have hc : writerCreate ((t.name.length : Int) + 1 + (o.size : Int) * 5 + 1) = .ok { cap := 127 } := by
-    unfold writerCreate
-    rw [if_neg (by omega), if_pos (by omega)]
-  unfold structseqRepr reprSpec
-  rw [hc]
-  simp only [CRes.ofPy, CRes.bind_ok]
-  have h1 := wop_rel { cap := 127 } (.utf8 t.name t.name.length)
+/-- From a writer with nothing written yet, the body of `structseq_repr` gives `reprSpec`. -/
+theorem repr_from (t : CType) (ht : MemberNamesCStr t) (o : CObj α) (rep : α → Py Str)
+    (w0 : UWriter) (h0 : w0.text = []) :
+    (do
+      let w ← wop w0 (.utf8 t.name t.name.length)
+      let w ← wop w (.char chLParen)
+      let w ← reprLoop t o rep o.size 0 w
+      let w ← wop w (.char chRParen)
+      CRes.ok w.finish.1 : CRes Str) = reprSpec t o rep := by
+  unfold reprSpec
+  have h1 := wop_rel w0 (.utf8 t.name t.name.length)
   rw [utf8_len_text] at h1
   cases hd : utf8Decode t.name .strict with
   | error e =>
@@ -351,11 +361,36 @@ theorem reprShape_eq (t : CType) (ht : MemberNamesCStr t) (o : CObj α) (rep : �
       simp only [CRes.bind_ok]
       obtain ⟨w4, e4, t4⟩ := wop_char w3 chRParen (by decide)
       rw [e4]
-      simp only [CRes.bind_ok, CRes.map, finish_fst, t4, t3, t2, t1]
+      simp only [CRes.bind_ok, CRes.map, finish_fst, t4, t3, t2, t1, h0]
       simp
     | exc e => simp only [TextRel] at h3; rw [h3]; rfl
     | nullNoExc => simp only [TextRel] at h3; rw [h3]; rfl
     | ub x => simp only [TextRel] at h3; rw [h3]; rfl
+
+theorem reprShape_eq (t : CType) (ht : MemberNamesCStr t) (o : CObj α) (rep : α → Py Str)
+    (walloc : Int → Bool) :
+    structseqRepr walloc t o rep =
+      (if reprPrealloc t o < 0 then .exc (.valueError "length must be positive")
+       else if reprPrealloc t o > 0 ∧ walloc (reprPrealloc t o) = false then .exc memoryError
+       else reprSpec t o rep) := by
+  unfold structseqRepr writerCreateC
+  rw [← reprPrealloc]
+  by_cases hn : reprPrealloc t o < 0
+  · rw [if_pos hn, if_pos hn]; rfl
+  · rw [if_neg hn, if_neg hn]
+    by_cases ha : reprPrealloc t o > 0 ∧ walloc (reprPrealloc t o) = false
+    · rw [if_pos ha, if_pos ha]; rfl
+    · rw [if_neg ha, if_neg ha]
+      have hw : ∃ w0 : UWriter, CRes.ofPy (writerCreate (reprPrealloc t o)) = .ok w0 ∧ w0.text = [] := by
+        unfold writerCreate
+        rw [if_neg hn]
+        split
+        · exact ⟨_, rfl, rfl⟩
+        · exact ⟨_, rfl, rfl⟩
+      obtain ⟨w0, e0, t0⟩ := hw
+      rw [e0]
+      simp only [CRes.bind_ok]
+      exact repr_from t ht o rep w0 t0
 
 def sentinelTag : String := "structseq_repr: tp_members past the sentinel"
 
@@ -398,9 +433,13 @@ theorem catAll_ne (l : List (CRes Str)) (h : ∀ d ∈ l, d ≠ .ub sentinelTag)
     | ub x => simp only [CRes.bind_ub]; exact hd
 
 theorem reprShape_proven : ReprShape := by
-  intro α t o rep ht
-  refine ⟨reprShape_eq t ht o rep, ?_⟩
-  rw [reprShape_eq t ht o rep]
+  intro α t o rep walloc ht
+  refine ⟨reprShape_eq t ht o rep walloc, ?_⟩
+  rw [reprShape_eq t ht o rep walloc]
+  split
+  · simp
+  split
+  · simp [memoryError]
   unfold reprSpec
   split
   · simp

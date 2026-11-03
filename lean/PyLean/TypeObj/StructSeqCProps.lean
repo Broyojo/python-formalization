@@ -235,9 +235,9 @@ def attrReprSpec (t : CType) (o : CObj α) (rep : α → Py Str) : CRes Str :=
 `repr` succeeds, every `name=value` pair it prints has `value == getattr(s, name)`. -/
 def ReprLabelsMatchAttrs : Prop :=
   ∀ (α : Type) (d : Desc) (malloc : Nat → Bool) (rest : Py Unit) (b : Built) (o : CObj α)
-    (rep : α → Py Str) (s : Str),
+    (rep : α → Py Str) (walloc : Int → Bool) (s : Str),
     newType d malloc rest = .ok b → (o.size : Int) = d.nInSeq →
-    structseqRepr b.type o rep = .ok s → attrReprSpec b.type o rep = .ok s
+    structseqRepr walloc b.type o rep = .ok s → attrReprSpec b.type o rep = .ok s
 
 /-- Fields `a`, unnamed, `b`, with `n_in_sequence = 2`: `b` is hidden. Like `os.stat_result`,
 whose visible slots 7-9 are unnamed and are followed by the hidden `st_atime`, ... -/
@@ -257,8 +257,8 @@ def repDigit (n : Nat) : Py Str := .ok [48 + n]
 theorem reprLabelsMatchAttrs_refuted : ¬ ReprLabelsMatchAttrs := by
   intro h
   have hb : newType descMid (fun _ => true) (.ok ()) = .ok builtMid := rfl
-  have hr : structseqRepr builtMid.type objMid repDigit = .ok (lit "m.T(a=0, b=1)") := rfl
-  have := h Nat descMid _ _ builtMid objMid repDigit _ hb rfl hr
+  have hr : structseqRepr (fun _ => true) builtMid.type objMid repDigit = .ok (lit "m.T(a=0, b=1)") := rfl
+  have := h Nat descMid _ _ builtMid objMid repDigit _ _ hb rfl hr
   have ha : attrReprSpec builtMid.type objMid repDigit = .ok (lit "m.T(a=0, b=2)") := rfl
   rw [ha] at this
   injection this with h'
@@ -396,7 +396,7 @@ def WellFormed (t : CType) (o : CObj α) : Prop :=
 /-- `copy.replace(s, **kws)` never accesses memory outside what it allocated or read, for every
 well-formed `s` and every state of the type's size attributes. -/
 def ReplaceInBounds : Prop :=
-  ∀ (α : Type) (t : CType) (o : CObj α) (kws : Option (List (Str × α))) (malloc : Nat → Bool),
+  ∀ (α : Type) (t : CType) (o : CObj α) (kws : Option (KwArg α)) (malloc : Nat → Bool),
     WellFormed t o → (replaceC t o 0 kws malloc).isUB = false
 
 /-- `os.terminal_size((1, 2))`, after `os.terminal_size.n_fields = n_sequence_fields = 0`. -/

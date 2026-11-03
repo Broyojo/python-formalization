@@ -31,9 +31,9 @@ summary: |
   `os.terminal_size(range(100000))` overflows it.
 
   The Lean model refutes `ReplaceInBounds`, `ReduceInBounds` and `NewImplInBounds` with the first
-  three. `ReplaceInBoundsHonest` and `ReduceInBoundsHonest` prove that while the attributes hold
-  what `PyStructSequence_NewType` stored, the same functions stay in bounds: rebinding them is
-  the only way there.
+  three. `ReplaceSpecC`, `ReduceSpecC` and `NewImplSpecC` give the exact outcome of the same
+  functions while the attributes hold what `PyStructSequence_NewType` stored (with unnamed
+  fields visible), with no undefined behaviour: rebinding them is the only way there.
 likelihood: |
   Low in real code: nobody rebinds `os.terminal_size.n_fields` on purpose. It is a crash from
   pure Python with no C extension or ctypes, on types that every program can reach (`os`, `time`,

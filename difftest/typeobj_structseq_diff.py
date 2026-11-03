@@ -132,7 +132,11 @@ def rand_desc(rng, valid=True):
         if rng.random() < 0.2:
             fields[i] = None
     if not valid:
-        nseq = rng.choice([n + 1, n + 2, n + 3, n + 5, n + 6, n + 9, -1, -2, -7])
+        if nseq < n and rng.random() < 0.3:
+            # an unnamed hidden field, which structseq.c:23-24 forbids and NewType accepts
+            fields[rng.randrange(nseq, n)] = None
+        else:
+            nseq = rng.choice([n + 1, n + 2, n + 3, n + 5, n + 6, n + 9, -1, -2, -7])
     return {"name": list(rng.choice(TPNAMES)), "fields": [None if f is None else list(f) for f in fields],
             "nseq": nseq}
 
