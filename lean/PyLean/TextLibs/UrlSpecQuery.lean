@@ -15,7 +15,7 @@ set_option linter.unusedSimpArgs false
 
 /-! ## `parse_qsl` -/
 
-/-- A `separator` `parse_qsl` accepts: a non-empty `str` or `bytes` (:943). -/
+/-- A `separator` `parse_qsl` accepts: a non-empty `str` or `bytes` (:931). -/
 def SepOk : Arg → Prop
   | .str s => s ≠ []
   | .bytes b false => b ≠ []

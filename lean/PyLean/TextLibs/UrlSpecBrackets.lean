@@ -238,7 +238,7 @@ expression of :548 (when it starts with `v` or `V`) or an IPv6 address (otherwis
 `ip_address`'s own. For every netloc, `_check_bracketed_netloc` accepts it exactly when its part
 after the last `@` is `BracketOk` (starts with `[` when it has one, only a `:` port after the
 `]`, and an accepted host), and raises 'Invalid IPv6 URL' for data before the `[` and for data
-between the `]` and the `:`. Source: the comments at :526-529 and :544-545 (RFC 3986 section
+between the `]` and the `:`. Source: the comments at :528-529 and :544-545 (RFC 3986 section
 3.2.2: `IP-literal = "[" ( IPv6address / IPvFuture ) "]"`, `IPvFuture = "v" 1*HEXDIG "." 1*(...)`),
 and the docs of `urlsplit` ("ValueError ... if the netloc contains invalid IPv6 or IPvFuture
 brackets"). -/

@@ -246,10 +246,10 @@ On `bytes`, `unquote` decodes the scanned bytes, and refuses `encoding=None` wit
 `TypeError`. `unquote_to_bytes` scans `bytes`; scans the UTF-8 bytes of a `str` without
 surrogates and raises `UnicodeEncodeError` on a lone surrogate; returns `b''` for an empty
 argument; raises `AttributeError` for `None`; and on a `bytearray` with a `%` raises the
-`TypeError` of the `bytearray` dictionary key at :818. Source: the docstrings of `unquote`
+`TypeError` of the `bytearray` dictionary key at :817. Source: the docstrings of `unquote`
 ("Replace %xx escapes by their single-character equivalent ... invalid sequences are replaced by a
 placeholder character") and `unquote_to_bytes`, the docs ("unquote() ... string may be either a str
-or a bytes object"), and the comment at :797-798 ("strings are encoded as UTF-8"). -/
+or a bytes object"), and the comment at :796-797 ("strings are encoded as UTF-8"). -/
 def UnquoteSpec : Prop :=
   (∀ (s : Str) (enc : Option Enc) (h : Option ErrHandler), (∀ c ∈ s, c < 128) →
     unquote (.str s) enc h = if 37 ∈ s then decodeWith (enc.getD .utf8) (h.getD .replace) (scan s) else .ok s) ∧

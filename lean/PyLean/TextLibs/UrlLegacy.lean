@@ -198,7 +198,7 @@ url, re.DOTALL)`) returns, for a URL starting `//`, the text up to the next `/`,
 the rest, with a `/` put before a rest that starts with `#` or `?`; and `(None, url)` for any other
 URL. Source: the docstrings (`splittype('type:opaquestring') --> 'type', 'opaquestring'`,
 `splithost('//host[:port]/path') --> 'host[:port]', '/path'`) and the regular expressions at
-Lib/urllib/parse.py:1249 and :1270. -/
+Lib/urllib/parse.py:1248 and :1269. -/
 def TypeHostSplit : Prop :=
   ∀ url : Str,
     (∀ a b, url = a ++ 58 :: b → a ≠ [] → 47 ∉ a → 58 ∉ a →

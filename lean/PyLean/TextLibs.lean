@@ -1639,7 +1639,7 @@ def entries : List Entry := [
     pyFns := ["_NetlocResultMixinStr._userinfo", "_NetlocResultMixinStr._hostinfo", "_NetlocResultMixinBase.username",
       "_NetlocResultMixinBase.password", "_NetlocResultMixinBase.hostname"]
     statement := "For every str result and netloc: username/password come from the text before the last '@' (cut at its first ':', None without '@' or ':'); _hostinfo reads the text after the last '@' (host before the first ':', or between the first '[' and the next ']', port after the ':' that follows, empty port None); hostname is None for an empty host and otherwise lower-cases the part before the first '%' and keeps the zone."
-    source := "docs of urlsplit (username, password, hostname attributes; the zone comment at Lib/urllib/parse.py:190-191); RFC 3986 section 3.2", status := .proven
+    source := "docs of urlsplit (username, password, hostname attributes; the zone comment at Lib/urllib/parse.py:191-192); RFC 3986 section 3.2", status := .proven
     prop := ``Url.NetlocAttrSpec, thm := some ``Url.netlocAttrSpec_proven },
   { id := "textlibs-urllib-port", pyFile := "Lib/urllib/parse.py"
     pyFns := ["_NetlocResultMixinBase.port"]
@@ -1666,7 +1666,7 @@ def entries : List Entry := [
   { id := "textlibs-urllib-type-host-split", pyFile := "Lib/urllib/parse.py"
     pyFns := ["_splittype", "_splithost"]
     statement := "For every str: _splittype returns the lower-cased text before the first ':' when it is non-empty and has no '/', and (None, url) otherwise; _splithost returns, for a URL starting '//', the text up to the next '/', '#' or '?' and the rest (with '/' put before a rest starting '#' or '?'), and (None, url) otherwise."
-    source := "docstrings (splittype('type:opaquestring') --> 'type', 'opaquestring'; splithost('//host[:port]/path') --> 'host[:port]', '/path') and the regular expressions at Lib/urllib/parse.py:1249, :1270", status := .proven
+    source := "docstrings (splittype('type:opaquestring') --> 'type', 'opaquestring'; splithost('//host[:port]/path') --> 'host[:port]', '/path') and the regular expressions at Lib/urllib/parse.py:1248, :1269", status := .proven
     prop := ``Url.TypeHostSplit, thm := some ``Url.typeHostSplit_proven },
   { id := "textlibs-urllib-quote-spec", pyFile := "Lib/urllib/parse.py"
     pyFns := ["quote", "quote_plus", "quote_from_bytes", "_Quoter.__init__", "_Quoter.__missing__", "_byte_quoter_factory"]
@@ -1677,12 +1677,12 @@ def entries : List Entry := [
   { id := "textlibs-urllib-unquote-spec", pyFile := "Lib/urllib/parse.py"
     pyFns := ["unquote", "unquote_to_bytes", "_unquote_impl", "_generate_unquoted_parts"]
     statement := "For every input, %XX escapes are read left to right (a '%' without two hex digits kept literally); unquote on an ASCII str is the input without '%' and otherwise the scanned bytes decoded with encoding/errors; a non-ASCII character is kept between the unquoted text on its two sides; unquote on bytes decodes the scanned bytes and refuses encoding=None; unquote_to_bytes scans bytes and the UTF-8 of a str, raises UnicodeEncodeError on a lone surrogate, AttributeError on None, and TypeError on a bytearray with '%'."
-    source := "docstrings of unquote and unquote_to_bytes; docs of unquote; the comment at Lib/urllib/parse.py:797-798", status := .proven
+    source := "docstrings of unquote and unquote_to_bytes; docs of unquote; the comment at Lib/urllib/parse.py:796-797", status := .proven
     prop := ``Url.UnquoteSpec, thm := some ``Url.unquoteSpec_proven },
   { id := "textlibs-urllib-brackets", pyFile := "Lib/urllib/parse.py"
     pyFns := ["_check_bracketed_netloc", "_check_bracketed_host"]
     statement := "_check_bracketed_host accepts exactly an IPvFuture literal per the regex of :548 (starting v/V) or an IPv6 address per ip_address (otherwise), and raises 'IPvFuture address is invalid', 'An IPv4 address cannot be in brackets' or ip_address's error; _check_bracketed_netloc accepts exactly a host part after the last '@' that starts with '[' when it has one, has only a ':' port after the ']', and holds an accepted host, and raises 'Invalid IPv6 URL' for data before '[' or between ']' and ':'."
-    source := "comments at Lib/urllib/parse.py:526-529, :544-545 (RFC 3986 IP-literal); docs of urlsplit (invalid IPv6/IPvFuture brackets raise ValueError)", status := .proven
+    source := "comments at Lib/urllib/parse.py:528-529, :544-545 (RFC 3986 IP-literal); docs of urlsplit (invalid IPv6/IPvFuture brackets raise ValueError)", status := .proven
     prop := ``Url.BracketSpec, thm := some ``Url.bracketSpec_proven
     notes := "ipaddress.ip_address is the quantified oracle ipk." },
   { id := "textlibs-urllib-splitparams", pyFile := "Lib/urllib/parse.py"

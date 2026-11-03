@@ -29,7 +29,7 @@ to the next `]` (or to the end), and the port is the text after the first `:` th
 `]`; an empty port is `None`. `hostname` is `None` for an empty host, and otherwise the host
 with the part before its first `%` lower-cased by `str.lower()` and the zone after it kept as
 it is. Source: the docs of `urlsplit` (the `username`, `password`, `hostname` attributes; "Scoped
-IPv6 address may have zone info, which must not be lowercased", :190-191), and RFC 3986 section
+IPv6 address may have zone info, which must not be lowercased", :191-192), and RFC 3986 section
 3.2 (`[ userinfo "@" ] host [ ":" port ]`, `userinfo` read as `user:password`). -/
 def NetlocAttrSpec : Prop :=
   ∀ (fields : List (Option Str)) (k : Option Bool),
