@@ -2253,6 +2253,10 @@ textlibs-toml-redefine-namespace	proven	Lib/tomllib/_parser.py	key_value_rule,Fl
 textlibs-toml-header-unclosed	proven	Lib/tomllib/_parser.py	create_dict_rule,create_list_rule
 textlibs-toml-finalize-clears	proven	Lib/tomllib/_parser.py	Flags.finalize_pending,Flags.add_pending,Flags.unset_all,create_list_rule,create_dict_rule,NestedDict.get_or_create_nest
 textlibs-toml-finalize-not-recursive	proven	Lib/tomllib/_parser.py	Flags.finalize_pending,Flags.set,Flags.is_,create_dict_rule,key_value_rule,NestedDict.get_or_create_nest
+textlibs-toml-kv-rule-more	proven	Lib/tomllib/_parser.py	key_value_rule,NestedDict.get_or_create_nest,Flags.set,Flags.is_
+textlibs-toml-top-level-comments	proven	Lib/tomllib/_parser.py	loads,skip_comment,skip_until,create_dict_rule,parse_key_part
+textlibs-toml-multiline-basic-errors	proven	Lib/tomllib/_parser.py	parse_basic_str,parse_multiline_str,parse_value
+textlibs-toml-inline-dotted	proven	Lib/tomllib/_parser.py	parse_inline_table,NestedDict.get_or_create_nest,Flags.is_,Flags.set
 textlibs-toml-escape-eof-pos	refuted	Lib/tomllib/_parser.py	parse_basic_str_escape,parse_basic_str,loads
 textlibs-toml-loads-input	proven	Lib/tomllib/_parser.py	loads
 textlibs-toml-comments	proven	Lib/tomllib/_parser.py	skip_comment,skip_until

@@ -7,29 +7,29 @@ Lib/_py_warnings.py	68	69	_GlobalContext.__init__	__init__(self)	todo
 Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-filter-list-twins-py	
 Lib/_py_warnings.py	89	95	_get_context	_get_context()	modelled	warn-filter-list-twins-py	
 Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	modelled	warn-record-captures	
-Lib/_py_warnings.py	103	108	_new_context	_new_context()	modelled	warn-record-captures	
+Lib/_py_warnings.py	103	108	_new_context	_new_context()	todo		review: newContext (Context.lean:118) mirrors :105-107, but its one settled theorem, RecordCaptures, never looks at the filters: a _new_context that shared the old list instead of copying it passes, and CatchRestores, which would pin the copy, is open.
 Lib/_py_warnings.py	111	114	_get_filters	_get_filters()	modelled	warn-filter-list-twins-py	
-Lib/_py_warnings.py	117	118	_filters_mutated_lock_held	_filters_mutated_lock_held()	modelled	warn-mutated-lock-twins	
+Lib/_py_warnings.py	117	118	_filters_mutated_lock_held	_filters_mutated_lock_held()	todo		review: pyMutatedLockHeld (Filters.lean:252) is the += 1, but its only statement is agreement with C at every lock depth, refuted at depth 0 where the caller breaks the precondition C states at _warnings.c:1368 ('the lock must be held by the caller'); nothing states the Python body's effect (VersionBumps covers only C's).
 Lib/_py_warnings.py	121	124	showwarning	showwarning(message, category, filename, lineno, file=None, line=None)	todo		
 Lib/_py_warnings.py	127	130	formatwarning	formatwarning(message, category, filename, lineno, line=None)	todo		
-Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	modelled	warn-record-captures	
+Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	todo		review: showImplOrig/writeOut (Context.lean:133-150) mirror :134-150, but only the context.log branch is in a settled theorem (RecordCaptures); the write path (sys.stderr None, OSError swallowed, other exceptions propagate, _formatwarnmsg dispatch) is in none, so a body that raises outside record mode passes.
 Lib/_py_warnings.py	153	210	_formatwarnmsg_impl	_formatwarnmsg_impl(msg)	todo		
-Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	modelled	warn-record-captures	
+Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	todo		review: showwarnmsg (Context.lean:165) mirrors :219-233, but RecordCaptures runs it only with showwarning reset to _showwarning_orig; the call to a replaced showwarning, its callable check and the deleted-attribute fallback are in no settled theorem, so a _showwarnmsg that ignored a replaced showwarning passes.
 Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	todo		
 Lib/_py_warnings.py	254	291	filterwarnings	filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)	modelled	warn-filterwarnings-spec,warn-simplefilter-warncat,warn-version-bumps	
 Lib/_py_warnings.py	294	310	simplefilter	simplefilter(action, category=Warning, lineno=0, append=False)	modelled	warn-simplefilter-warncat,warn-simplefilter-any-cat,warn-version-bumps	
 Lib/_py_warnings.py	313	317	_filters_mutated	_filters_mutated()	modelled	warn-version-bumps	
-Lib/_py_warnings.py	320	334	_add_filter	_add_filter(*item, append)	modelled	warn-filterwarnings-spec,warn-version-bumps	
-Lib/_py_warnings.py	337	341	resetwarnings	resetwarnings()	modelled	warn-version-bumps	
+Lib/_py_warnings.py	320	334	_add_filter	_add_filter(*item, append)	todo		review: pyRemove (Filters.lean:133) propagates every exception from an element's ==, but :326-329 wraps filters.remove in except ValueError, which also swallows a ValueError raised by an element's __eq__ (measured on 3.15.2: the new item is inserted and the raising element kept); FilterwarningsSpec's EqTotal hypothesis keeps this out of the theorem.
+Lib/_py_warnings.py	337	341	resetwarnings	resetwarnings()	todo		review: resetwarnings (Filters.lean:229) mirrors del _get_filters()[:] for list, tuple and deleted filters, but its only theorem (VersionBumps) says the version moves on; a resetwarnings that left the filters in place satisfies it, and nothing states that the list is emptied.
 Lib/_py_warnings.py	350	355	_processoptions	_processoptions(args)	modelled	warn-options-narrow,warn-options-no-escape	
 Lib/_py_warnings.py	359	406	_setoption	_setoption(arg)	modelled	warn-options-narrow,warn-options-no-escape	
-Lib/_py_warnings.py	410	416	_getaction	_getaction(action)	modelled	warn-getaction,warn-options-narrow	
+Lib/_py_warnings.py	410	416	_getaction	_getaction(action)	todo		review: getaction (Option.lean:126) mirrors :411-416, but GetactionSpec only requires the answer to be an action the field is a prefix of and errors to be _OptionError: a _getaction that rejects every proper abbreviation, or maps 'a' to 'all' instead of 'always', satisfies it, so the documented abbreviation is not pinned.
 Lib/_py_warnings.py	420	438	_getcategory	_getcategory(category)	modelled	warn-options-narrow,warn-options-no-escape	
-Lib/_py_warnings.py	441	442	_is_internal_filename	_is_internal_filename(filename)	modelled	warn-call-twins-narrow-py	
+Lib/_py_warnings.py	441	442	_is_internal_filename	_is_internal_filename(filename)	todo		review: internalFn (WarnCall.lean:95) is one definition shared with C's is_internal_filename, so WarnCallTwinsNarrow holds for any internalFn (fun _ => false passes) and no theorem states what it computes.
 Lib/_py_warnings.py	445	446	_is_filename_to_skip	_is_filename_to_skip(filename, skip_file_prefixes)	modelled	warn-call-twins-narrow-py	
 Lib/_py_warnings.py	449	451	_is_internal_frame	_is_internal_frame(frame)	modelled	warn-call-twins-narrow-py	
-Lib/_py_warnings.py	454	461	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	modelled	warn-call-twins-narrow-py	
-Lib/_py_warnings.py	465	520	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	modelled	warn-call-twins-narrow-py,warn-call-twins-py	
+Lib/_py_warnings.py	454	461	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	todo		review: nextExt (WarnCall.lean:120) mirrors :456-461 but is shared with C's next_external_frame, so the twin theorem holds for any nextExt (one returning none at once passes) and no theorem states which frame it returns.
+Lib/_py_warnings.py	465	520	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	todo		review: The walk is pinned against C, but CatOk, a tuple of strs and GlobalsOk exclude the category and skip_file_prefixes errors and a non-str __name__, whose twin differences (measured: check order for warn('x', 5, skip_file_prefixes=[]); __name__ None shown by Python, dropped by C) no Lean counterexample runs; registry and frame data are the shared regOf/frameAt.
 Lib/_py_warnings.py	523	553	_match_filename	_match_filename(pattern, filename, *, MS_WINDOWS=sys.platform == 'win32')	todo		changed-in-3.15: new function
 Lib/_py_warnings.py	556	625	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	todo		review: pyWarnExplicit omits the failure paths at the head of the body: int(lineno) on a non-int (:559), str(message) and category(message) raising (:560-565, a callback C runs later and only when module is not None), and registry.get on a non-dict registry; linecache.getlines and WarningMessage(...) are folded into the show callback.
 Lib/_py_warnings.py	633	643	WarningMessage.__init__	__init__(self, message, category, filename, lineno, file=None, line=None, source=None, module=None)	todo		changed-in-3.15:
