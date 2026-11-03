@@ -85,11 +85,15 @@ def onRawObj {α : Type} (c : RCall) (f : Raw → Raw × α) : PM α := do
   put { s with raw := r }
   pure a
 
-/-- A raw method the harness answers from its flags without a callback. -/
-def rawFlag (attr : String) (f : Raw → Bool) : PM Bool := do
-  let s ← get
-  if s.detached then thr (noneAttr attr)
-  pure (f s.raw)
+/-- `self.raw.readable()`, `writable()`, `seekable()`: a callback answering any object. -/
+def inquiry (attr : String) (c : RCall) (flag : Raw → Bool) : PM QAns := do
+  let r ← onRaw attr c (fun r => r.inquire (flag r))
+  ofPy r
+
+/-- The same call on the `raw` argument of a constructor. -/
+def inquiryObj (c : RCall) (flag : Raw → Bool) : PM QAns := do
+  let r ← onRawObj c (fun r => r.inquire (flag r))
+  ofPy r
 
 /-- `with self._read_lock:` / `with self._write_lock:` around `m`. -/
 def withLock {α : Type} (w : Bool) (m : PM α) : PM α := fun R s =>
@@ -115,7 +119,7 @@ def rawRead (n : Nat) (viaSelf : Bool := true) : PM (Option (List Nat)) := do
   let res ← if viaSelf then onRaw "read" (.readinto n) (fun r => r.readinto n)
     else onRawObj (.readinto n) (fun r => r.readinto n)
   match res with
-  | .exc e => thr e
+  | .exc e _ => thr e
   | .none => pure none
   | .data d => pure (some d)
   | .count _ => pure (some [])
@@ -199,7 +203,7 @@ def flushLoop : Nat → PM Unit
     if s.writeBuf = [] then pure () else
     let res ← onRaw "write" (.write s.writeBuf) (fun r => r.write s.writeBuf)
     match res with
-    | .exc e =>
+    | .exc e _ =>
       if e.className == "BlockingIOError" then
         thr (.named "RuntimeError" "self.raw should implement RawIOBase: it should not raise BlockingIOError")
       else thr e
@@ -230,7 +234,8 @@ def flush : PM Val := do
     let c ← closed
     if c then thr (.valueError "flush on closed file")
     let r ← onRaw "flush" .flush Raw.flush
-    ofPy r
+    -- the mixin drops what `raw.flush()` returns
+    let _ ← ofPy r
     pure .none
   else
     withLock true (do let s ← get; flushUnlocked (fuelOf s))
@@ -292,7 +297,7 @@ def readintoLoop (len : Nat) (one : Bool) : Nat → Int → List Nat → PM (Int
         let k := len - written.toNat
         let res ← onRaw "readinto" (.readinto k) (fun r => r.readinto k)
         match res with
-        | .exc e => thr e
+        | .exc e _ => thr e
         | .none | .count 0 | .data [] => pure (written, out)
         | .count _ => pure (written, out)
         | .wrong => thr (.typeError "unsupported operand type(s) for +=: 'int' and 'str'")
@@ -547,17 +552,21 @@ def detach : PM Val := do
   pure .none
 
 /-- The constructors, _pyio.py:1049-1060, :1247-1256, :1425-1428. -/
-def init (kind : Nat) (raw : Raw) (size : Int) : Py BufP :=
-  if kind = 2 ∧ !raw.canSeek then .error (unsupportedOp "File or stream is not seekable.") else
+def init (kind : Nat) (raw : Raw) (size : Int) : PM Unit := do
+  put ⟨raw, false, kind, 0, [], 0, [], false, false, false⟩
+  -- `raw._checkSeekable()`, _pyio.py:1426 and :430-435: `if not self.seekable()`
+  if kind = 2 then
+    let a ← inquiryObj .seekable Raw.canSeek
+    if !a.truthy then thr (unsupportedOp "File or stream is not seekable.")
   if kind = 0 ∨ kind = 2 then
-    if !raw.canRead then .error (osError "\"raw\" argument must be readable.") else
-    if size ≤ 0 then .error (.valueError "invalid buffer size") else
-    if kind = 2 ∧ !raw.canWrite then .error (osError "\"raw\" argument must be writable.") else
-    .ok ⟨raw, false, kind, size.toNat, [], 0, [], false, false, false⟩
-  else
-    if !raw.canWrite then .error (osError "\"raw\" argument must be writable.") else
-    if size ≤ 0 then .error (.valueError "invalid buffer size") else
-    .ok ⟨raw, false, kind, size.toNat, [], 0, [], false, false, false⟩
+    let a ← inquiryObj .readable Raw.canRead
+    if !a.truthy then thr (osError "\"raw\" argument must be readable.")
+    if size ≤ 0 then thr (.valueError "invalid buffer size")
+  if kind = 1 ∨ kind = 2 then
+    let a ← inquiryObj .writable Raw.canWrite
+    if !a.truthy then thr (osError "\"raw\" argument must be writable.")
+    if size ≤ 0 then thr (.valueError "invalid buffer size")
+  mod fun s => { s with size := size.toNat }
 
 end BP2
 

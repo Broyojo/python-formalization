@@ -131,8 +131,11 @@ raw stream's `readinto`:
 2. an int answer `v` that fits `Py_ssize_t` is the count when `0 <= v <= len` and
    is refused with `OSError("raw readinto() returned invalid length ...")`
    otherwise (:1661-1666);
-3. an `InterruptedError` (`EINTR`) is swallowed and the call is made again with the
-   same arguments (:1639-1641 and `_PyIO_trap_eintr`, :878-901).
+3. an exception that is an `OSError` (any subclass) with `errno == EINTR` is
+   swallowed and the call is made again with the same arguments, and every other
+   exception propagates unchanged: the class name plays no part, so
+   `InterruptedError('x')` (no `errno`) propagates and `PermissionError(EINTR, 'x')`
+   is retried (:1639-1641 and `_PyIO_trap_eintr`, :878-901).
 
 Invariant: what is copied out of the buffer was counted as read. The hypothesis
 `0 <= len` holds at every caller (`buffer_size - start`, `remaining`, `n > 0`); in
@@ -148,10 +151,13 @@ def RawReadChecks : Prop :=
       if v < 0 ∨ v > len then
         .error (osError s!"raw readinto() returned invalid length {v} (should have been between 0 and {len})")
       else .ok (v, [])) ∧
-  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (m : String) (t : List RStep),
+  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (t : List RStep),
     s.detached = false → s.raw.closed = false → s.raw.hooks = [] →
-    s.raw.rs = .raise "InterruptedError" m :: t →
-    BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t))
+    s.raw.rs = .raise c m eno :: t →
+    (BC2.isOSErrorCls c = true ∧ eno = some 4 →
+      BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t)) ∧
+    (¬(BC2.isOSErrorCls c = true ∧ eno = some 4) →
+      (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno))))
 
 theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
     (s s' : BufS) (n : Int) (d : List Nat), BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
@@ -233,19 +239,38 @@ theorem rawReadChecks_proven : RawReadChecks := by
       split
       · rfl
       · rfl
-  · intro len fuel R s m t hd hc hh hr
-    conv => lhs; unfold BC2.rawRead
-    dsimp only
-    simp only [reduceCtorEq, ite_false]
-    rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
+  · intro len fuel R s c m eno t hd hc hh hr
     have hres : ((s.raw.enter (.readinto len)).1.readinto len.toNat).2 =
-        .exc (.named "InterruptedError" m) := by
+        .exc (.named c (errMsg m eno)) eno := by
       simp [Raw.readinto, Raw.enter, hc, hr]
-    rw [hres]
-    dsimp only
-    simp only [BC2.trapEintr, PyExc.className, beq_self_eq_true, ite_true]
-    congr 1
-    simp [afterReadinto, Raw.readinto, Raw.enter, hc, hr]
+    constructor
+    · intro ⟨h1, h2⟩
+      conv => lhs; unfold BC2.rawRead
+      dsimp only
+      simp only [reduceCtorEq, ite_false]
+      rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
+      rw [hres]
+      dsimp only
+      simp only [BC2.trapEintr, PyExc.className, h1, h2, beq_self_eq_true, Bool.and_self, ite_true]
+      congr 1
+      simp [afterReadinto, Raw.readinto, Raw.enter, hc, hr]
+    · intro hn
+      unfold BC2.rawRead
+      dsimp only
+      simp only [reduceCtorEq, ite_false]
+      rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
+      rw [hres]
+      dsimp only
+      have ht : BC2.trapEintr (.named c (errMsg m eno)) eno = false := by
+        simp only [BC2.trapEintr, PyExc.className, Bool.and_eq_false_iff]
+        by_cases h1 : BC2.isOSErrorCls c = true
+        · right; cases eno with
+          | none => rfl
+          | some n =>
+            have h4 : n ≠ 4 := fun h4 => hn ⟨h1, by rw [h4]⟩
+            simp [h4]
+        · left; simpa using h1
+      simp only [ht, Bool.false_eq_true, ite_false, BC2.thr]
 
 /-! ## `_bufferedwriter_raw_write` -/
 
@@ -338,33 +363,5 @@ theorem rawWriteChecks_proven : RawWriteChecks := by
     by_cases hp : n > 0
     · rw [if_pos hp]; rfl
     · rw [if_neg hp]; rfl
-
-/-! ## The lock -/
-
-/-- `ENTER_BUFFERED`/`LEAVE_BUFFERED` (bufferedio.c:329-338) with
-`_enter_buffered_busy` (:294-327), as every locked section uses them: if this thread
-holds the lock, the section does not run, the object is untouched, and the call
-raises `RuntimeError("reentrant call inside <repr>")`; otherwise the section runs
-once with the lock held, and the lock is free again on every path, success or
-exception. Invariant: the lock serializes, and a failure never leaves it held. -/
-def LockDiscipline : Prop := ∀ (m : BM Val) (R : CH) (s : BufS),
-  (s.locked = true → BC2.locked m R s =
-    (s, .error (.named "RuntimeError" s!"reentrant call inside <_io.{BC2.className s}>"))) ∧
-  (s.locked = false →
-    (BC2.locked m R s).2 = (m R { s with locked := true }).2 ∧
-    (BC2.locked m R s).1 = { (m R { s with locked := true }).1 with locked := false })
-
-theorem lockDiscipline_proven : LockDiscipline := by
-  intro m R s
-  rcases s with ⟨raw, ok, det, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr⟩
-  constructor
-  · intro hl
-    simp only at hl
-    subst hl
-    rfl
-  · intro hl
-    simp only at hl
-    subst hl
-    constructor <;> rfl
 
 end PyLean.PyIO

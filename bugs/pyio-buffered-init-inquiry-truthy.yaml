@@ -1,0 +1,66 @@
+id: pyio-buffered-init-inquiry-truthy
+title: "io.Buffered* constructors refuse a raw whose readable()/writable()/seekable() returns a truthy non-bool; _pyio accepts it"
+priority: P4
+kind: sibling-mismatch
+module: pyio
+files: [Modules/_io/bufferedio.c, Modules/_io/iobase.c, Lib/_pyio.py]
+functions: ["_io_BufferedReader___init___impl", "_io_BufferedWriter___init___impl", "_io_BufferedRandom___init___impl",
+            "_PyIOBase_check_readable", "_PyIOBase_check_writable", "_PyIOBase_check_seekable",
+            "BufferedReader.__init__", "BufferedWriter.__init__", "BufferedRandom.__init__"]
+summary: |
+  The C constructors check the raw stream with _PyIOBase_check_readable/_writable/_seekable,
+  which accept only the object True (`res != Py_True` refuses everything else). The _pyio
+  constructors test `if not raw.readable():` and `raw._checkSeekable()`, which accept any truthy
+  value. A raw stream whose readable() returns 1 is refused by io.BufferedReader with
+  "UnsupportedOperation: File or stream is not readable." and accepted by _pyio.BufferedReader;
+  the same holds for writable() and BufferedWriter, and seekable() and BufferedRandom. The same
+  exact check guards io.BufferedReader.seek (via _PyIOBase_check_seekable at every call).
+likelihood: |
+  Low. Raw streams written in Python normally return bools; one that returns an int (for
+  example a flag field) works with _pyio and fails with io.
+maybe_intended: |
+  Possibly: the docs say these methods return True or False, and C is stricter than the
+  documented contract requires. But a truthiness test is what Python code (and _pyio) does, and
+  the difference makes the twins disagree on whether an object is accepted at all.
+reproducer: |
+  import io, _pyio
+  out = {}
+  for mod in (io, _pyio):
+      class Raw(mod.RawIOBase):
+          def readable(self):
+              return 1
+          def readinto(self, b):
+              return 0
+      try:
+          mod.BufferedReader(Raw())
+          out[mod.__name__] = "accepted"
+      except Exception as e:
+          out[mod.__name__] = f"{type(e).__name__}: {e}"
+  print(out)
+  if out["io"].startswith("UnsupportedOperation") and out["_pyio"] == "accepted":
+      print("REPRODUCED pyio-buffered-init-inquiry-truthy")
+expected: |
+  Both twins agree, either both accepting a truthy answer or both refusing a non-bool one.
+observed: |
+  python3 3.15.2: io "UnsupportedOperation: File or stream is not readable.", _pyio accepted.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Twin agreement between Modules/_io/bufferedio.c and Lib/_pyio.py.
+cause: |
+  Modules/_io/iobase.c:452 (`if (res != Py_True)` in _PyIOBase_check_readable), :485 and :419 for
+  writable and seekable, called from Modules/_io/bufferedio.c:1600, :1952 and :2493-2501.
+  Lib/_pyio.py:1052 and :1248 use `if not raw.readable()` / `if not raw.writable()`, and :1426 calls
+  raw._checkSeekable() (:430-435, `if not self.seekable()`).
+possible_fix: |
+  Use PyObject_IsTrue on the result in the C checks, or make _pyio test `is not True`; document
+  whichever is chosen.
+duplicates:
+  status: new
+  issues: []
+  queries: ["BufferedReader readable returns non bool", "_PyIOBase_check_readable Py_True",
+            "readable return truthy BufferedReader", "check_readable is not True", "io BufferedReader readable 1 not readable",
+            "bugforge README: no bufferedio entries"]
+lean:
+  property: PyLean.PyIO.ReaderInitTwins
+  theorem: PyLean.PyIO.readerInitTwins_refuted

@@ -68,7 +68,12 @@ def get : BM BufS := fun _ s => (s, .ok s)
 def put (s : BufS) : BM Unit := fun _ _ => (s, .ok ())
 def mod (f : BufS → BufS) : BM Unit := fun _ s => (f s, .ok ())
 def thr {α : Type} (e : PyExc) : BM α := fun _ s => (s, .error e)
-def attempt {α : Type} (m : BM α) : BM (Py α) := fun R s => let (s', r) := m R s; (s', .ok r)
+/-- Run `m` and hand its outcome to the caller even when it raised, as the C code
+does with `PyErr_GetRaisedException`. A crash is not an exception: nothing after it runs. -/
+def attempt {α : Type} (m : BM α) : BM (Py α) := fun R s =>
+  let (s', r) := m R s
+  if s'.crashed then (s', match r with | .ok _ => .error crashErr | .error e => .error e)
+  else (s', .ok r)
 def ofPy {α : Type} (r : Py α) : BM α := fun _ s => (s, r)
 
 def className (s : BufS) : String :=
@@ -155,12 +160,22 @@ def onRawObjArgs {α : Type} (c : RCall) (f : Raw → Raw × α) : BM α := do
   if s.detached then thr (.named "SystemError" "null argument to internal routine")
   onRaw c f
 
-/-- A raw method the harness raw answers from its flags without a callback
-(`readable`, `writable`, `seekable`). -/
-def rawFlag (f : Raw → Bool) : BM Bool := do
-  let s ← get
-  if s.detached then crash
-  pure (f s.raw)
+/-- `raw.readable()`, `raw.writable()` or `raw.seekable()` through
+`PyObject_CallMethodNoArgs(self->raw, ...)`: a callback whose answer is any object. -/
+def inquiry (c : RCall) (flag : Raw → Bool) : BM QAns := do
+  let r ← onRaw c (fun r => r.inquire (flag r))
+  ofPy r
+
+/-- The same call on the `raw` argument of a constructor (not `self->raw`). -/
+def inquiryObj (c : RCall) (flag : Raw → Bool) : BM QAns := do
+  let r ← onRawObj c (fun r => r.inquire (flag r))
+  ofPy r
+
+/-- `_PyIOBase_check_seekable`/`_readable`/`_writable(state, raw, Py_True)`,
+Modules/_io/iobase.c:413-428, :446-461, :479-494: the answer must be `True` itself
+(`res != Py_True` refuses `1`). -/
+def checkInq (a : QAns) (msg : String) : BM Unit :=
+  if a = .bool true then pure () else thr (unsupportedOp msg)
 
 /-- `buffered_closed`, bufferedio.c:520-532: `PyObject_IsTrue(raw.closed)`. -/
 def bufferedClosed : BM Bool := do
@@ -212,9 +227,15 @@ def rawSeek (t w : Int) : BM Int := do
   | .error e => thr e
   | .ok v => checkPos v
 
-/-- `_PyIO_trap_eintr`, bufferedio.c:878-901: an `OSError` whose `errno` is `EINTR`
-(the harness raises `InterruptedError(EINTR, ...)`). -/
-def trapEintr (e : PyExc) : Bool := e.className == "InterruptedError"
+/-- The `OSError` subclasses a raw stream of the harness can raise. -/
+def isOSErrorCls (c : String) : Bool :=
+  c == "OSError" || c == "InterruptedError" || c == "PermissionError" || c == "BlockingIOError"
+    || c == "FileNotFoundError" || c == "BrokenPipeError" || c == "ConnectionError" || c == "TimeoutError"
+
+/-- `_PyIO_trap_eintr`, bufferedio.c:878-901: the exception is an `OSError`
+(`PyErr_ExceptionMatches`, :881) whose `errno` is `EINTR` (4 on Linux, :887-895); the
+class name plays no part: `InterruptedError('x')` has no `errno`. -/
+def trapEintr (e : PyExc) (eno : Option Nat) : Bool := isOSErrorCls e.className && eno == some 4
 
 /-- Where a raw callback reads or writes: `ptr` says whether the start pointer
 is `NULL` (`some true`), inside a freed buffer (`some false`), or valid (`none`). -/
@@ -232,7 +253,7 @@ def rawRead (ptr : Option Bool) (len : Int) : Nat → BM (Int × List Nat)
     if ptr = some true then thr nullView
     let res ← onRaw (.readinto len) (fun r => r.readinto len.toNat)
     match res with
-    | .exc e => if trapEintr e then rawRead ptr len fuel else thr e
+    | .exc e eno => if trapEintr e eno then rawRead ptr len fuel else thr e
     | .none => pure ((-2 : Int), ([] : List Nat))
     | .data d =>
       -- storing through a pointer into freed memory
@@ -274,7 +295,7 @@ def rawWrite (ptr : Option Bool) (b : List Nat) : Nat → BM Int
     -- `raw.write` reads the view first (the harness copies it)
     if ptr = some false then crash
     match res with
-    | .exc e => if trapEintr e then rawWrite ptr b fuel else thr e
+    | .exc e eno => if trapEintr e eno then rawWrite ptr b fuel else thr e
     | .none => pure (-2)
     | .count n =>
       if n > 0 then mod fun s => if s.absPos ≠ -1 then { s with absPos := s.absPos + n } else s
@@ -348,13 +369,12 @@ def flush : BM Val := do
   pure .none
 
 /-- `_io__Buffered_simple_flush_impl`, bufferedio.c:512-518: `BufferedReader.flush`
-forwards to the raw stream, with no closed check of its own and no rewind. -/
+forwards to the raw stream, with no closed check of its own and no rewind, and
+returns whatever `raw.flush()` returns. -/
 def simpleFlush : BM Val := do
   checkInit
   let r ← onRaw .flush Raw.flush
-  match r with
-  | .error e => thr e
-  | .ok () => pure .none
+  ofPy r
 
 /-- `_PyFile_Flush(self)`, Objects/fileobject.c:539-548: the `flush` of the type
 (bufferedio.c:2553 for a reader, :2626 and :2734 for the others). -/
@@ -436,27 +456,28 @@ def readGeneric (n : Int) : BM Val := do
       genericFill (fuelOf s + remaining.toNat) remaining out
 
 /-- `_io__RawIOBase_read_impl`, Modules/_io/iobase.c:922-961, on the raw (`n >= 0`):
-the bytearray it reads into starts uninitialized. -/
-def rawBaseRead (n : Nat) : BM (Option (List Nat)) := do
+the bytearray it reads into starts uninitialized. A failure comes back as a value with
+the `errno` of the exception (`none` for the `ValueError`/`TypeError` it raises itself). -/
+def rawBaseRead (n : Nat) : BM (Except (PyExc × Option Nat) (Option (List Nat))) := do
   let res ← onRawObj (.readinto n) (fun r => r.readinto n)
   match res with
-  | .exc e => thr e
-  | .none => pure none
-  | .data d => pure (some d)
-  | .count _ => pure (some [])
-  | .wrong => thr strIndexErr
+  | .exc e eno => pure (.error (e, eno))
+  | .none => pure (.ok none)
+  | .data d => pure (.ok (some d))
+  | .count _ => pure (.ok (some []))
+  | .wrong => pure (.error (strIndexErr, none))
   | .bad v =>
-    if !InSsize v then thr (.valueError "cannot fit 'int' into an index-sized integer")
-    else if v < 0 ∨ v > n then thr (.valueError s!"readinto returned {v} outside buffer size {n}")
-    else pure (some (List.replicate v.toNat uninit))
+    if !InSsize v then pure (.error (.valueError "cannot fit 'int' into an index-sized integer", none))
+    else if v < 0 ∨ v > n then pure (.error (.valueError s!"readinto returned {v} outside buffer size {n}", none))
+    else pure (.ok (some (List.replicate v.toNat uninit)))
 
 /-- `_io__RawIOBase_readall_impl`, Modules/_io/iobase.c:970-1020, on the raw. -/
 def rawReadall : Nat → List Nat → Bool → BM Val
   | 0, _, _ => thr .modelFuel
   | fuel + 1, acc, any => do
-    let r ← attempt (rawBaseRead 131072)
+    let r ← rawBaseRead 131072
     match r with
-    | .error e => if trapEintr e then rawReadall fuel acc any else thr e
+    | .error (e, eno) => if trapEintr e eno then rawReadall fuel acc any else thr e
     | .ok none => if !any then pure .none else pure (.bytes acc)
     | .ok (some d) => if d = [] then pure (.bytes acc) else rawReadall fuel (acc ++ d) true
 
@@ -641,8 +662,8 @@ def tell : BM Val := do
 
 /-- `_PyIOBase_check_seekable(state, raw, Py_True)`, Modules/_io/iobase.c:413-428. -/
 def checkRawSeekable : BM Unit := do
-  let ok ← rawFlag Raw.canSeek
-  if !ok then thr (unsupportedOp "File or stream is not seekable.")
+  let a ← inquiry .seekable Raw.canSeek
+  checkInq a "File or stream is not seekable."
 
 /-- `_io__Buffered_seek_impl`, bufferedio.c:1361-1454, after `whence` is converted.
 `abs_pos` is only ever assigned a value `>= 0` (:800, :833) or incremented, so
@@ -701,20 +722,20 @@ def truncate (p : Option Int) : BM Val := do
 `flush()` and taken again for `raw.close()`. -/
 def close : BM Val := do
   checkInit
-  enter
-  let c ← attempt isClosed
+  -- :561-581: ENTER, IS_CLOSED (an error or True goes to `end`, which leaves), LEAVE
+  let c ← locked (attempt isClosed)
   match c with
-  | .error e => do leave; thr e
-  | .ok true => do leave; pure .none
+  | .error e => thr e
+  | .ok true => pure .none
   | .ok false =>
-    leave
     let fl ← attempt flushMethod
-    enter
-    let s ← get
-    if s.detached then crash
-    let res ← attempt (onRaw .close Raw.close)
-    mod fun s => { s with hasBuf := false, readEnd := 0, pos := 0 }
-    leave
+    -- :583-607: ENTER (a failure returns at once), raw.close(), free, LEAVE
+    let res ← locked do
+      let s ← get
+      if s.detached then crash
+      let res ← attempt (onRaw .close Raw.close)
+      mod fun s => { s with hasBuf := false, readEnd := 0, pos := 0 }
+      pure res
     match res, fl with
     | .error e, _ => thr e
     | .ok (.error e), _ => thr e
@@ -819,13 +840,22 @@ sets `abs_pos` before the first `_buffered_raw_tell` (assignments are at :800 an
 means unknown, and `RAW_TELL` (:405-406) trusts it. The raw's `tell` runs while
 `ok` is 0, so a hook that re-enters is refused by `CHECK_INITIALIZED`. -/
 def init (kind : Nat) (raw : Raw) (size : Int) : BM BufS := do
-  -- kind 0: reader (:1591-1620), 1: writer (:1943-1974), 2: random (:2484-2520)
-  if kind = 2 ∧ !raw.canSeek then thr (unsupportedOp "File or stream is not seekable.")
-  if (kind = 0 ∨ kind = 2) ∧ !raw.canRead then thr (unsupportedOp "File or stream is not readable.")
-  if (kind = 1 ∨ kind = 2) ∧ !raw.canWrite then thr (unsupportedOp "File or stream is not writable.")
+  -- the object `tp_alloc` made: `ok` 0 and no buffer; `readable`/`writable` here
+  -- stand for its type, which decides which methods a re-entered call finds
   put { raw := raw, ok := false, detached := false, readable := kind ≠ 1, writable := kind ≠ 0
         locked := false, absPos := 0, hasBuf := false, buffer := [], pos := 0, rawPos := 0,
-        readEnd := 0, writePos := 0, writeEnd := 0, size := size.toNat, crashed := false }
+        readEnd := 0, writePos := 0, writeEnd := 0, size := 0, crashed := false }
+  -- kind 0: reader (:1591-1620), 1: writer (:1943-1974), 2: random (:2484-2520)
+  if kind = 2 then
+    let a ← inquiryObj .seekable Raw.canSeek
+    checkInq a "File or stream is not seekable."
+  if kind = 0 ∨ kind = 2 then
+    let a ← inquiryObj .readable Raw.canRead
+    checkInq a "File or stream is not readable."
+  if kind = 1 ∨ kind = 2 then
+    let a ← inquiryObj .writable Raw.canWrite
+    checkInq a "File or stream is not writable."
+  mod fun s => { s with size := size.toNat }
   if size ≤ 0 then thr (.valueError "buffer size must be strictly positive")
   if size ≥ memLimit then thr memoryError
   mod fun s => { s with hasBuf := true, buffer := List.replicate size.toNat uninit }
