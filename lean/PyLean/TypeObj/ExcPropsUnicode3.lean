@@ -305,6 +305,82 @@ theorem unicodeTranslateInitParse_proven : UnicodeTranslateInitParse := by
           memGet_memSet_ne _ "end" "start" _ (by decide), memGet_memSet_same]
       · rw [memGet_memSet_ne _ "reason" "end" _ (by decide), memGet_memSet_same]
 
+/-- **`UnicodeDecodeError.__init__` stores what `n` gave** (`:3832`, `:3855-3859`): with a `str`
+encoding and reason and any `start` and `end` whose `n` conversions (`__index__` included, so
+`True` gives 1) return `s` and `e`, the members `start` and `end` are `s` and `e`, not the raw
+arguments; a `bytes` object is stored as it is and another buffer as a new `bytes` copy. -/
+def UnicodeDecodeInitStoresN : Prop :=
+  (∀ (rt : Rt) (a : Addr) (d d3 : ExcData) (enc obj sv ev reason : Val) (se sr : String)
+    (bs : List Nat) (s e : Int) (w w2 w3 : World), IsExc w a d → strOf w enc = some se →
+    argN rt sv (withArgs w a [enc, obj, sv, ev, reason]) = .ok s w2 → argN rt ev w2 = .ok e w3 →
+    strOf w3 reason = some sr → IsExc w3 a d3 → bytesOf w3 obj = some bs →
+    ∃ w', unicodeDecodeErrorInit rt (.obj a) [enc, obj, sv, ev, reason] [] w = .ok () w' ∧
+      ssizeMember (excDataOf w' (.obj a)) "start" = s ∧ ssizeMember (excDataOf w' (.obj a)) "end" = e ∧
+      memGet (excDataOf w' (.obj a)) "object" = some obj) ∧
+  (∀ (rt : Rt) (a : Addr) (d d3 : ExcData) (enc obj sv ev reason : Val) (se sr : String)
+    (bs : List Nat) (s e : Int) (w w2 w3 : World), IsExc w a d → strOf w enc = some se →
+    argN rt sv (withArgs w a [enc, obj, sv, ev, reason]) = .ok s w2 → argN rt ev w2 = .ok e w3 →
+    strOf w3 reason = some sr → IsExc w3 a d3 → bytesOf w3 obj = none →
+    payloadOf w3 obj = some (.bytes bs) →
+    ∃ w', unicodeDecodeErrorInit rt (.obj a) [enc, obj, sv, ev, reason] [] w = .ok () w' ∧
+      ssizeMember (excDataOf w' (.obj a)) "start" = s ∧ ssizeMember (excDataOf w' (.obj a)) "end" = e ∧
+      memGet (excDataOf w' (.obj a)) "object" = some (.obj w3.heap.size))
+
+theorem unicodeDecodeInitStoresN_proven : UnicodeDecodeInitStoresN := by
+  refine ⟨?_, ?_⟩
+  · intro rt a d d3 enc obj sv ev reason se sr bs s e w w2 w3 hx h1 hs he h3 hx3 hb
+    have g1 : strOf (withArgs w a [enc, obj, sv, ev, reason]) enc = some se := by
+      rw [strOf_excUpdW_eq hx]; exact h1
+    have x2 := isExc_memSet hx3 "encoding" (some enc)
+    have x3 := isExc_memSet x2 "object" (some obj)
+    have x4 := isExc_memSet x3 "start" (some (.int s))
+    have x5 := isExc_memSet x4 "end" (some (.int e))
+    have x6 := isExc_memSet x5 "reason" (some reason)
+    refine ex_of_isExc x6 ?_ ?_
+    · simp only [withArgs] at *
+      simp only [unicodeDecodeErrorInit, baseExceptionInit, argNoKeywords, M.bind_app, getW_app,
+        List.isEmpty_nil, excUpdate_app, List.length_cons, List.length_nil, Nat.reduceAdd,
+        argCount_eq']
+      simp [List.getD, g1, argU_ok' _ _ _ _ _ g1, hs, he, argU_ok' _ _ _ _ _ h3, hb, excUpdate_app]
+      try rfl
+    · intro x6
+      simp only [ssizeMember]
+      rw [x6.data]
+      refine ⟨?_, ?_, ?_⟩
+      · rw [memGet_memSet_ne _ "reason" "start" _ (by decide),
+          memGet_memSet_ne _ "end" "start" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "reason" "end" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "reason" "object" _ (by decide),
+          memGet_memSet_ne _ "end" "object" _ (by decide),
+          memGet_memSet_ne _ "start" "object" _ (by decide), memGet_memSet_same]
+  · intro rt a d d3 enc obj sv ev reason se sr bs s e w w2 w3 hx h1 hs he h3 hx3 hb hp
+    have g1 : strOf (withArgs w a [enc, obj, sv, ev, reason]) enc = some se := by
+      rw [strOf_excUpdW_eq hx]; exact h1
+    have y1 := hx3.push (.val { cls := B.bytes, body := .bytes bs })
+    have x2 := isExc_memSet y1 "encoding" (some enc)
+    have x3 := isExc_memSet x2 "object" (some (.obj w3.heap.size))
+    have x4 := isExc_memSet x3 "start" (some (.int s))
+    have x5 := isExc_memSet x4 "end" (some (.int e))
+    have x6 := isExc_memSet x5 "reason" (some reason)
+    refine ex_of_isExc x6 ?_ ?_
+    · simp only [withArgs] at *
+      simp only [unicodeDecodeErrorInit, baseExceptionInit, argNoKeywords, M.bind_app, getW_app,
+        List.isEmpty_nil, excUpdate_app, List.length_cons, List.length_nil, Nat.reduceAdd,
+        argCount_eq']
+      simp [List.getD, g1, argU_ok' _ _ _ _ _ g1, hs, he, argU_ok' _ _ _ _ _ h3, hb, bufferOf, hp,
+        alloc_app, excUpdate_app]
+      try rfl
+    · intro x6
+      simp only [ssizeMember]
+      rw [x6.data]
+      refine ⟨?_, ?_, ?_⟩
+      · rw [memGet_memSet_ne _ "reason" "start" _ (by decide),
+          memGet_memSet_ne _ "end" "start" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "reason" "end" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "reason" "object" _ (by decide),
+          memGet_memSet_ne _ "end" "object" _ (by decide),
+          memGet_memSet_ne _ "start" "object" _ (by decide), memGet_memSet_same]
+
 /-! ## `SyntaxError` -/
 
 /-- **A list or other iterable `info` goes through `tuple()`** (`:2805`): an exact list is parsed

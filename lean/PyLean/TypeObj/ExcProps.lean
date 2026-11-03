@@ -283,6 +283,9 @@ def excEntries : List Entry := [
   p "typeobj-exc-unicode-decode-parse" ["UnicodeDecodeError_init"]
     "UnicodeDecodeError.__init__ parses UOnnU: non-str encoding or reason refused with its position, start through n with the OverflowError."
     "exceptions.c:3831-3835; getargs U and n" ``UnicodeDecodeInitParse ``unicodeDecodeInitParse_proven,
+  p "typeobj-exc-unicode-decode-stores-n" ["UnicodeDecodeError_init"]
+    "UnicodeDecodeError.__init__ stores start and end as the integers n gave (through __index__, so True gives 1), with a bytes object kept and another buffer copied into a new bytes."
+    "exceptions.c:3832, 3855-3859" ``UnicodeDecodeInitStoresN ``unicodeDecodeInitStoresN_proven,
   p "typeobj-exc-unicode-translate-parse" ["UnicodeTranslateError_init"]
     "UnicodeTranslateError.__init__ parses UnnU: non-str object or reason refused with its position, start through n with the OverflowError, and start and end stored as n gives them."
     "exceptions.c:3953-3962; getargs U and n" ``UnicodeTranslateInitParse ``unicodeTranslateInitParse_proven,
