@@ -31,6 +31,7 @@ import PyLean.TextLibs.TomlNum
 import PyLean.TextLibs.TomlDate
 import PyLean.TextLibs.TomlTable
 import PyLean.TextLibs.TomlLoad
+import PyLean.TextLibs.TomlArr
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1718,6 +1719,14 @@ def entries : List Entry := [
     source := "docs of load ('The first argument should be a readable and binary file object'); load against loads", status := .proven
     prop := ``Toml.LoadSpec, thm := some ``Toml.loadSpec_proven
     notes := "Uses the UTF-8 decoder of PyLean.UnicodeObj and its round trip (utf8RoundTrip_proven)." }
+,
+  { id := "textlibs-toml-arrays-inline-tables", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_array", "parse_inline_table", "skip_comment", "skip_comments_and_array_ws",
+      "parse_key_value_pair", "parse_value"]
+    statement := "For every value built from basic strings and booleans by arrays and inline tables (distinct one-part keys, bare, literal or basic; spaces or tabs around '='), with any whitespace, newlines and comments after '[' or '{', around each ',' and before ']' or '}', and an optional trailing comma, parse_value (with the fuel loads gives it) returns the nested lists and dicts in order and the position after the value."
+    source := "docs ('parsing TOML 1.1.0'; What's New: newlines and trailing commas in inline tables); TOML 1.1 spec, Array and Inline Table", status := .proven
+    prop := ``Toml.ArrayTableSpec, thm := some ``Toml.arrayTableSpec_proven
+    notes := "skip_comments_and_array_ws is shown to skip exactly a run of whitespace, newlines and comments (skipCaw_fill); inline tables run Flags.is_, Flags.set and get_or_create_nest(access_lists=False) on their local state." }
 ]
 
 end PyLean.TextLibs
