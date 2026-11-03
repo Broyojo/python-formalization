@@ -629,13 +629,16 @@ the values fit their `struct` formats (open). -/
 def LoadDataShape : Prop := ∀ (b : Bytes) (d : TzifData), loadData b = .ok d → TzifShape d
 
 /-- From the same well-formed tuple, with 0/1 flags, offsets below `2**30`, no `int64_t`
-overflow and a footer without NUL (the cases refuted above), `_load_file` and C `load_data`
-build corresponding zones or both raise (open). -/
+overflow and a footer without NUL (the cases refuted above), and outside the recorded
+divergence before the first transition (`textlibs-zoneinfo-before-first-transition`: some
+type is not DST, or the first transition names type 0), `_load_file` and C `load_data` build
+corresponding zones or both raise. -/
 def LoadTwins : Prop :=
   ∀ d : TzifData, TzifShape d → (∀ x ∈ d.isdst, x = 0 ∨ x = 1) →
     (∀ u ∈ d.utcoff, -2 ^ 30 ≤ u ∧ u < 2 ^ 30) →
     (∀ t ∈ d.transUtc, ∀ u ∈ d.utcoff, -2 ^ 63 ≤ t + u ∧ t + u < 2 ^ 63) →
     (∀ s, d.tzStr = some s → 0 ∉ s) →
+    (d.isdst.any (· = 0) ∨ d.transIdx.head? = some 0) →
     match loadFilePy d, loadDataC d with
     | .ok zp, .ok zc => Corr zp zc
     | .error _, .error _ => True
@@ -1298,5 +1301,237 @@ theorem loadDataShape (b : Bytes) (d : TzifData) (h : loadData b = .ok d) : Tzif
     exact (r4.2.2 t ht).2
 
 theorem loadDataShape_proven : LoadDataShape := loadDataShape
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-! ### Loading: the twins build corresponding zones -/
+
+theorem ttList_eq (U Dc Dp : List Int) (N : List Bytes) (hU : ∀ u ∈ U, wrap32 u = u)
+    (hD : Dc.map wrap32 = Dp) : ttinfoListC U Dc N = ttinfoListPy U Dp N := by
+  unfold ttinfoListC ttinfoListPy
+  induction U generalizing Dc Dp N with
+  | nil => simp
+  | cons u us ih =>
+    cases Dc with
+    | nil => subst hD; simp
+    | cons c cs =>
+      cases Dp with
+      | nil => simp at hD
+      | cons p ps =>
+        simp only [List.map_cons, List.cons.injEq] at hD
+        cases N with
+        | nil => simp
+        | cons n ns =>
+          simp only [List.zip_cons_cons, List.map_cons, buildTtinfoC, loadTimedeltaC, List.cons.injEq]
+          refine ⟨by rw [hU u (by simp), hD.1], ih cs ps ns (fun x hx => hU x (by simp [hx])) hD.2⟩
+
+theorem dstLoopC_len (P U : List Int) (B : List Bool) (n c : Nat) :
+    ∀ fuel i os found, (dstLoopC P U B n c fuel i os found).1.length = os.length := by
+  intro fuel
+  induction fuel with
+  | zero => intro i os found; rfl
+  | succ fuel ih =>
+    intro i os found
+    simp only [dstLoopC]
+    split
+    · rfl
+    · rcases dstStepC_cases P U B n i os found with e | ⟨k, v, -, -, -, -, e⟩
+      · rw [e]; exact ih _ _ _
+      · rw [e, ih]; simp
+
+theorem dstC_len (P U : List Int) (B : List Bool) (hB : B.length = U.length) :
+    (utcoffToDstoffC P U B).length = U.length := by
+  unfold utcoffToDstoffC
+  simp only
+  have := dstLoopC_len P U B U.length U.length (P.length - 1) 1 (List.replicate U.length 0) 0
+  split
+  · simp [this, hB]
+  · simp [this]
+
+theorem findIdx_map_ne (D : List Int) :
+    (D.map fun x => decide (x ≠ 0)).findIdx? (· == false) = D.findIdx? (· == 0) := by
+  induction D with
+  | nil => rfl
+  | cons x xs ih =>
+    simp only [List.map_cons, List.findIdx?_cons]
+    by_cases hx : x = 0
+    · simp [hx]
+    · have h1 : (decide (x ≠ 0) == false) = false := by simp [hx]
+      have h2 : (x == 0) = false := by simp [hx]
+      rw [h1, h2]
+      simp only [Bool.false_eq_true, ite_false]
+      rw [ih]
+
+theorem tsToLocal_len (w : Int → Int) (P T U : List Int) :
+    (tsToLocal w P T U).1.length = T.length ∧ (tsToLocal w P T U).2.length = T.length := by
+  unfold tsToLocal
+  split
+  · rename_i h; subst h; simp
+  · simp
+
+
+theorem fallback_corr (transIdx : List Int) (L : List TTI) (hidx : ∀ i ∈ transIdx, 0 ≤ i ∧ i < L.length) :
+    match fallbackPy (transIdx.map fun i => L.getD i.toNat default) L, fallbackC transIdx L with
+    | .ok a, .ok r => AfterCorr a r
+    | .error _, .error _ => True
+    | _, _ => False := by
+  unfold fallbackPy fallbackC
+  by_cases hL : L = []
+  · have ht : transIdx = [] := by
+      cases transIdx with
+      | nil => rfl
+      | cons i is => have := hidx i (by simp); rw [hL] at this; simp at this; omega
+    subst hL; subst ht; simp
+  · simp only [hL, and_false, ite_false]
+    have hstd : ∀ tti : TTI, (if tti.dstoff ≠ 0 then
+        { (buildTzruleC tti.tzname none tti.utcoff 0 none none) with
+          std := { (buildTzruleC tti.tzname none tti.utcoff 0 none none).std with dstoff := tti.dstoff } }
+        else buildTzruleC tti.tzname none tti.utcoff 0 none none).std = tti ∧
+        (if tti.dstoff ≠ 0 then
+        { (buildTzruleC tti.tzname none tti.utcoff 0 none none) with
+          std := { (buildTzruleC tti.tzname none tti.utcoff 0 none none).std with dstoff := tti.dstoff } }
+        else buildTzruleC tti.tzname none tti.utcoff 0 none none).stdOnly = true := by
+      intro tti
+      obtain ⟨u, ds, n⟩ := tti
+      by_cases h : ds = 0 <;> simp [h, buildTzruleC]
+    by_cases ht : transIdx = []
+    · subst ht
+      simp only [List.map_nil, ne_eq, not_true_eq_false, ite_false, ite_true]
+      obtain ⟨h1, h2⟩ := hstd (L.getD (L.length - 1) default)
+      refine ⟨⟨h2, ?_⟩, trivial⟩
+      rw [h1, getLast_getD_tti L hL]
+    · have hne : ¬ ((transIdx.map fun i => L.getD i.toNat default) = []) := by simpa using ht
+      simp only [ne_eq, hne, not_false_eq_true, ite_true, ht, ite_false]
+      obtain ⟨h1, h2⟩ := hstd (L.getD (transIdx.getLast?.getD 0).toNat default)
+      refine ⟨⟨h2, ?_⟩, trivial⟩
+      rw [h1, List.getLast?_map]
+      cases hl : transIdx.getLast? with
+      | none => simp at hl; exact absurd hl ht
+      | some i => rfl
+
+theorem afterCorr_of (a : After) (r : CRule) (hm : AfterMatch a r) (hv : AfterValid a) : AfterCorr a r := by
+  refine ⟨hm, ?_⟩
+  cases a with
+  | tti t => trivial
+  | tzstr z => exact hv
+
+theorem afters_corr (tzStr : Option Bytes) (h0 : ∀ s, tzStr = some s → 0 ∉ s) (transIdx : List Int)
+    (L : List TTI) (hidx : ∀ i ∈ transIdx, 0 ≤ i ∧ i < L.length) :
+    match tzAfterPy tzStr (fallbackPy (transIdx.map fun i => L.getD i.toNat default) L),
+        ruleC tzStr (fallbackC transIdx L) with
+    | .ok a, .ok r => AfterCorr a r
+    | .error _, .error _ => True
+    | _, _ => False := by
+  have hfb := fallback_corr transIdx L hidx
+  cases tzStr with
+  | none => simpa [tzAfterPy, ruleC] using hfb
+  | some s =>
+    by_cases hs : s = []
+    · subst hs; simpa [tzAfterPy, ruleC] using hfb
+    · have hne : s.isEmpty = false := by cases s <;> simp_all
+      simp only [tzAfterPy, ruleC, hs, ne_eq, not_false_eq_true, ite_true, hne, Bool.not_false,
+        Option.getD_some]
+      have ht := tzStrTwinsNoNul_proven s (h0 s rfl)
+      unfold TzStrTwinsAgree pyFooter at ht
+      by_cases hu : utf8Valid s = true
+      · simp only [hu, ite_true] at ht ⊢
+        cases hc : parseTzStrC s with
+        | ok r =>
+          rw [hc] at ht
+          cases hp : parseTzStrPy s with
+          | ok a => rw [hp] at ht; exact afterCorr_of a r ht (pyTz_valid s a hp)
+          | error e => rw [hp] at ht; exact ht
+        | error e =>
+          rw [hc] at ht
+          cases hp : parseTzStrPy s with
+          | ok a => rw [hp] at ht; exact ht
+          | error e' => trivial
+      · simp only [hu, Bool.false_eq_true, ite_false] at ht ⊢
+        cases hc : parseTzStrC s with
+        | ok r => rw [hc] at ht; exact ht
+        | error e => trivial
+
+theorem loadTwins_proven : LoadTwins := by
+  intro d hs h01 hU hsum h0 hbef
+  have hdst : (utcoffToDstoffC d.transIdx d.utcoff (d.isdst.map fun x => decide (x ≠ 0))).map wrap32 =
+      utcoffToDstoffPy d.transIdx d.utcoff d.isdst := by
+    have := dstoffTwinsNarrow_proven d hs h01 hU
+    unfold dstOffsC dstOffsPy at this
+    exact this
+  have hloc := tsToLocalTwinsNarrow_proven d hs hsum
+  have hU32 : ∀ u ∈ d.utcoff, wrap32 u = u := fun u hu => by
+    have := hU u hu; exact wrap32_id u (by omega) (by omega)
+  have hL := ttList_eq d.utcoff _ _ d.abbr hU32 hdst
+  have hlenC := dstC_len d.transIdx d.utcoff (d.isdst.map fun x => decide (x ≠ 0)) (by simp [hs.lenTypes])
+  have hLlen : (ttinfoListPy d.utcoff (utcoffToDstoffPy d.transIdx d.utcoff d.isdst) d.abbr).length =
+      d.utcoff.length := by
+    rw [← hL]; unfold ttinfoListC
+    rw [List.length_map, List.length_zip, List.length_zip, hlenC, hs.lenAbbr]; simp
+  have hidx : ∀ i ∈ d.transIdx, 0 ≤ i ∧
+      i < (ttinfoListPy d.utcoff (utcoffToDstoffPy d.transIdx d.utcoff d.isdst) d.abbr).length := by
+    intro i hi; rw [hLlen]; exact hs.idx i hi
+  unfold loadFilePy loadDataC
+  simp only [bind, Except.bind]
+  rw [hloc, hL]
+  generalize ttinfoListPy d.utcoff (utcoffToDstoffPy d.transIdx d.utcoff d.isdst) d.abbr = L at hidx hLlen ⊢
+  have hac := afters_corr d.tzStr h0 d.transIdx L hidx
+  cases hA : tzAfterPy d.tzStr (fallbackPy (d.transIdx.map fun i => L.getD i.toNat default) L) with
+  | error e =>
+    rw [hA] at hac
+    cases hR : ruleC d.tzStr (fallbackC d.transIdx L) with
+    | error e' => trivial
+    | ok r => rw [hR] at hac; exact hac
+  | ok a =>
+    rw [hA] at hac
+    cases hR : ruleC d.tzStr (fallbackC d.transIdx L) with
+    | error e' => rw [hR] at hac; exact hac
+    | ok r =>
+      rw [hR] at hac
+      simp only [pure, Except.pure]
+      have hl := tsToLocal_len id d.transIdx d.transUtc d.utcoff
+      refine ⟨rfl, rfl, hl.1, hl.2, rfl, ?_, ?_, ?_, hac⟩
+      · -- the type before the first transition
+        unfold ttiBeforeC ttiBeforePy
+        rw [findIdx_map_ne]
+        cases hf : d.isdst.findIdx? (· == 0) with
+        | some i => rfl
+        | none =>
+          rcases hbef with hany | h0i
+          · exfalso
+            rw [List.findIdx?_eq_none_iff] at hf
+            obtain ⟨x, hx, hx0⟩ := List.any_eq_true.mp hany
+            have := hf x hx
+            simp at hx0 this; exact this hx0
+          · have hne : d.transIdx ≠ [] := by intro e; rw [e] at h0i; simp at h0i
+            have h0m : (0 : Int) ∈ d.transIdx := by
+              cases ht : d.transIdx with
+              | nil => exact absurd ht hne
+              | cons j js => rw [ht] at h0i; simp at h0i; simp [h0i]
+            have hLne : L ≠ [] := by
+              intro e; have := hidx 0 h0m; rw [e] at this; simp at this
+            cases ht : d.transIdx with
+            | nil => exact absurd ht hne
+            | cons j js =>
+              rw [ht] at h0i; simp at h0i; subst h0i
+              cases L with
+              | nil => exact absurd rfl hLne
+              | cons t ts => rfl
+      · -- fixed-offset flag
+        obtain ⟨hm, -⟩ := hac
+        unfold fixedC fixedPy
+        cases a with
+        | tti t =>
+          obtain ⟨hso, hstd⟩ := hm
+          simp [hso, hstd]
+        | tzstr z =>
+          obtain ⟨hso, -⟩ := hm
+          simp [hso]
+      · intro hf
+        unfold fixedPy at hf
+        cases a with
+        | tti t => exact ⟨t, rfl⟩
+        | tzstr z => simp at hf
 
 end PyLean.Datetime.Zone

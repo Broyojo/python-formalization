@@ -2111,3 +2111,189 @@ theorem pyTz_props (tz : Bytes) (h0 : (0 : UInt8) ∉ tz) :
                   rw [hx]; exact asc_append _ _ aoff (asc_cons 44 (by decide) _ ab)⟩
 
 end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-! ### What a successful Python parse holds -/
+
+theorem reTime_some (t : Bytes) (v : Bool × Int × Int × Int) (h : reTime t = some v) :
+    ∃ o, reOff t = some (o, []) ∧ v = (decide (o.1 = some 45), digitsVal o.2.1, (o.2.2.1.map digitsVal).getD 0,
+      (o.2.2.2.map digitsVal).getD 0) := by
+  unfold reTime at h
+  split at h
+  · rename_i sg hd m sec heq
+    simp only [Option.some.injEq] at h
+    exact ⟨(sg, hd, m, sec), heq, h.symm⟩
+  · cases h
+
+theorem time_valid (t : Bytes) (hms : Int × Int × Int) (h : parseTransitionTimePy t = .ok hms) :
+    -167 ≤ hms.1 ∧ hms.1 ≤ 167 ∧ -99 ≤ hms.2.1 ∧ hms.2.1 ≤ 99 ∧ -99 ≤ hms.2.2 ∧ hms.2.2 ≤ 99 := by
+  unfold parseTransitionTimePy at h
+  split at h
+  · cases h
+  · rename_i neg hh m s hre
+    obtain ⟨o, ho, hv⟩ := reTime_some t _ hre
+    have hs := reOff_shape t o [] ho
+    simp only [Prod.mk.injEq] at hv
+    obtain ⟨-, rfl, rfl, rfl⟩ := hv
+    have hH := digitsVal_nonneg o.2.1
+    have hm : 0 ≤ (o.2.2.1.map digitsVal).getD 0 ∧ (o.2.2.1.map digitsVal).getD 0 ≤ 99 := by
+      cases e : o.2.2.1 with
+      | none => simp
+      | some m => simpa using two_digits_bound m (hs.2.2.2.2.1 m e)
+    have hsx : 0 ≤ (o.2.2.2.map digitsVal).getD 0 ∧ (o.2.2.2.map digitsVal).getD 0 ≤ 99 := by
+      cases e : o.2.2.2 with
+      | none => simp
+      | some m => simpa using two_digits_bound m (hs.2.2.2.2.2.1 m e)
+    split at h
+    · cases h
+    · rename_i h167
+      split at h <;> simp only [Except.ok.injEq] at h <;> subst h <;> simp only <;> omega
+
+theorem ebind_ok {α β : Type} {x : Py α} {f : α → Py β} {b : β} (h : (x >>= f) = .ok b) :
+    ∃ a, x = .ok a ∧ f a = .ok b := by
+  cases x with
+  | error e => cases h
+  | ok a => exact ⟨a, rfl, h⟩
+
+theorem calOff_ok (m w d : Int) (off : TRule) (h : calendarOffsetNew m w d = .ok off) :
+    off = .cal m w d 2 0 0 ∧ 1 ≤ m ∧ m ≤ 12 ∧ 1 ≤ w ∧ w ≤ 5 ∧ 0 ≤ d ∧ d ≤ 6 := by
+  unfold calendarOffsetNew at h
+  by_cases h1 : 1 ≤ m ∧ m ≤ 12
+  · by_cases h2 : 1 ≤ w ∧ w ≤ 5
+    · by_cases h3 : 0 ≤ d ∧ d ≤ 6
+      · simp only [h1, h2, h3, and_self, not_true_eq_false, ite_false, Except.ok.injEq] at h
+        exact ⟨h.symm, h1.1, h1.2, h2.1, h2.2, h3.1, h3.2⟩
+      · simp [h1, h2, h3] at h
+    · simp [h1, h2] at h
+  · simp [h1] at h
+
+theorem dayOff_ok (d : Int) (j : Bool) (off : TRule) (h : dayOffsetNew d j = .ok off) :
+    off = .day j d 2 0 0 ∧ (if j then 1 else 0) ≤ d ∧ d ≤ 365 := by
+  unfold dayOffsetNew at h
+  by_cases h1 : (if j then (1 : Int) else 0) ≤ d ∧ d ≤ 365
+  · simp only [h1, and_self, not_true_eq_false, ite_false, Except.ok.injEq] at h
+    exact ⟨h.symm, h1.1, h1.2⟩
+  · simp only [h1, not_false_eq_true, ite_true] at h
+    cases h
+
+theorem setTime_valid (off : TRule) (hms : Int × Int × Int)
+    (hd : (∃ m w d, off = .cal m w d 2 0 0 ∧ 1 ≤ m ∧ m ≤ 12 ∧ 1 ≤ w ∧ w ≤ 5 ∧ 0 ≤ d ∧ d ≤ 6) ∨
+      (∃ j d, off = .day j d 2 0 0 ∧ (if j then 1 else 0) ≤ d ∧ d ≤ 365))
+    (ht : -167 ≤ hms.1 ∧ hms.1 ≤ 167 ∧ -99 ≤ hms.2.1 ∧ hms.2.1 ≤ 99 ∧ -99 ≤ hms.2.2 ∧ hms.2.2 ≤ 99) :
+    RuleValid (off.setTime hms) := by
+  obtain ⟨h, mi, s⟩ := hms
+  rcases hd with ⟨m, w, d, rfl, hr⟩ | ⟨j, d, rfl, hr⟩
+  · simp only [TRule.setTime, RuleValid]; simp only at ht; omega
+  · simp only [TRule.setTime, RuleValid]; simp only at ht; omega
+
+theorem datePy_ok (date : Bytes) (off : TRule) (h : parseDatePy date = .ok off) :
+    (∃ m w d, off = .cal m w d 2 0 0 ∧ 1 ≤ m ∧ m ≤ 12 ∧ 1 ≤ w ∧ w ≤ 5 ∧ 0 ≤ d ∧ d ≤ 6) ∨
+      (∃ j d, off = .day j d 2 0 0 ∧ (if j then 1 else 0) ≤ d ∧ d ≤ 365) := by
+  rw [datePy_eq] at h
+  split at h
+  · rename_i m w d _
+    exact .inl ⟨m, w, d, calOff_ok m w d off h⟩
+  · rename_i j d _
+    exact .inr ⟨j, d, dayOff_ok d j off h⟩
+  · cases h
+
+theorem rulePy_valid (x : Bytes) (r : TRule) (h : parseDstStartEndPy x = .ok r) : RuleValid r := by
+  unfold parseDstStartEndPy at h
+  obtain ⟨off, hd, h⟩ := ebind_ok h
+  have hv := datePy_ok _ off hd
+  split at h
+  · simp only [pure, Except.pure, Except.ok.injEq] at h
+    subst h
+    have := setTime_valid off (2, 0, 0) hv (by decide)
+    rcases hv with ⟨m, w, d, rfl, -⟩ | ⟨j, d, rfl, -⟩ <;> exact this
+  · obtain ⟨hms, ht, h⟩ := ebind_ok h
+    simp only [pure, Except.pure, Except.ok.injEq] at h
+    subst h
+    exact setTime_valid off hms hv (time_valid _ hms ht)
+
+/-- The rule a successful parse builds is one the lookups can use. -/
+def AfterValid : After → Prop
+  | .tti _ => True
+  | .tzstr z => RuleValid z.start ∧ RuleValid z.end ∧ -2 ^ 40 ≤ z.dstDiff ∧ z.dstDiff ≤ 2 ^ 40 ∧
+      -2 ^ 40 ≤ z.std.utcoff ∧ z.std.utcoff ≤ 2 ^ 40 ∧ -2 ^ 40 ≤ z.dst.utcoff ∧ z.dst.utcoff ≤ 2 ^ 40
+
+theorem pres_valid (b sa da : Bytes) (so dso : Int) (hb1 : -200000 ≤ so ∧ so ≤ 200000)
+    (hb2 : -200000 ≤ dso ∧ dso ≤ 200000) (a : After)
+    (h : (match splitFirst 44 b with
+      | (a, none) =>
+        match parseDstStartEndPy a with
+        | .error _ => (throw (tzErrPy "Invalid TZ string:") : Py After)
+        | .ok _ => throw (tzErrPy "Invalid TZ string:")
+      | (a, some c) =>
+        match parseDstStartEndPy a, parseDstStartEndPy c with
+        | .ok s, .ok e => pure (.tzstr (mkTZStr sa so da dso s e))
+        | _, _ => throw (tzErrPy "Invalid TZ string:")) = .ok a) : AfterValid a := by
+  cases hsp : splitFirst 44 b with
+  | mk x se2 =>
+    rw [hsp] at h
+    cases se2 with
+    | none => simp only at h; split at h <;> cases h
+    | some c =>
+      simp only at h
+      split at h
+      · rename_i s e hs he
+        simp only [pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simp only [AfterValid, mkTZStr]
+        exact ⟨rulePy_valid _ _ hs, rulePy_valid _ _ he, by omega, by omega, by omega, by omega, by omega⟩
+      · cases h
+
+theorem pyTz_valid (tz : Bytes) (a : After) (h : parseTzStrPy tz = .ok a) : AfterValid a := by
+  have thr : ∀ (α : Type) (e : PyExc), (throw e : Py α) = .error e := fun _ _ => rfl
+  unfold parseTzStrPy at h
+  cases hsp : splitFirst 44 tz with
+  | mk off se =>
+    rw [hsp] at h
+    simp only at h
+    cases hre : reTz off with
+    | none => rw [hre] at h; simp [thr] at h
+    | some grp =>
+      obtain ⟨stdG, so, dst, dso⟩ := grp
+      obtain ⟨-, hso, hdso⟩ := reTz_ok off stdG so dst dso hre
+      rw [hre] at h
+      simp only at h
+      cases so with
+      | none => simp [thr, bind, Except.bind] at h
+      | some t =>
+        obtain ⟨o, hs, rfl⟩ := hso t rfl
+        simp only [pyOffStep_eq o hs] at h
+        cases hdv : parseTzDeltaPy (offText o) with
+        | error _ => rw [hdv] at h; simp [thr, bind, Except.bind] at h
+        | ok v =>
+          rw [hdv] at h
+          have hvb := delta_bound o hs v hdv
+          simp only [bind, Except.bind] at h
+          cases dst with
+          | none =>
+            simp only [Option.map_none] at h
+            split at h
+            · cases h
+            · simp only [pure, Except.pure, Except.ok.injEq] at h; subst h; trivial
+          | some dg =>
+            simp only [Option.map_some] at h
+            cases dso with
+            | none =>
+              simp only [pure, Except.pure] at h
+              cases se with
+              | none => simp [thr] at h
+              | some b => exact pres_valid b _ _ v (v + 3600) (by omega) (by omega) a h
+            | some t2 =>
+              obtain ⟨o2, hs2, rfl⟩ := hdso t2 rfl
+              simp only [pyOffStep_eq o2 hs2] at h
+              cases hdv2 : parseTzDeltaPy (offText o2) with
+              | error _ => rw [hdv2] at h; simp [thr] at h
+              | ok dv =>
+                rw [hdv2] at h
+                have := delta_bound o2 hs2 dv hdv2
+                simp only at h
+                cases se with
+                | none => simp [thr] at h
+                | some b => exact pres_valid b _ _ v dv (by omega) (by omega) a h
+
+end PyLean.Datetime.Zone

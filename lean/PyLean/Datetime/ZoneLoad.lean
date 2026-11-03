@@ -136,34 +136,48 @@ structure PyZone where
   fixedOffset : Bool
   deriving Repr
 
+/-- `_ttinfo_list`, _zoneinfo.py:242-247. -/
+def ttinfoListPy (utcoff dstoff : List Int) (abbr : List Bytes) : List TTI :=
+  ((utcoff.zip dstoff).zip abbr).map fun ((u, ds), n) => ⟨u, ds, n⟩
+
+/-- `self._tti_before`, _zoneinfo.py:254-262: the first non-DST type, else the ttinfo of the
+first transition. -/
+def ttiBeforePy (isdst : List Int) (ttinfoList ttinfos : List TTI) : Option TTI :=
+  match isdst.findIdx? (· == 0) with
+  | some i => some (ttinfoList.getD i default)
+  | none => ttinfos.head?
+
+/-- `self._tz_after` without a footer, _zoneinfo.py:268-274. -/
+def fallbackPy (ttinfos ttinfoList : List TTI) : Py After :=
+  if ttinfos = [] ∧ ttinfoList = [] then .error (.valueError "No time zone information found.")
+  else if ttinfos ≠ [] then .ok (.tti (ttinfos.getLast?.getD default))
+  else .ok (.tti (ttinfoList.getLast?.getD default))
+
+/-- `self._tz_after`, _zoneinfo.py:265-274. -/
+def tzAfterPy (tzStr : Option Bytes) (fallback : Py After) : Py After :=
+  match tzStr with
+  | some s => if s ≠ [] then (if utf8Valid s then parseTzStrPy s else .error decodeError) else fallback
+  | none => fallback
+
+/-- `self._fixed_offset`, _zoneinfo.py:295-300. -/
+def fixedPy (ttinfoList : List TTI) (tzAfter : After) : Bool :=
+  let isTti := match tzAfter with | .tti _ => true | .tzstr _ => false
+  if ttinfoList.length > 1 ∨ !isTti then false
+  else if ttinfoList = [] then true
+  else match tzAfter with
+    | .tti t => ttiEq (ttinfoList.getD 0 default) t
+    | .tzstr _ => false
+
 /-- `ZoneInfo._load_file`, _zoneinfo.py:229-300, after `_common.load_data`.
 `_load_timedelta(s)` is `timedelta(seconds=s)`, which cannot fail for these 33-bit values. -/
 def loadFilePy (d : TzifData) : Py PyZone := do
   let dstoff := utcoffToDstoffPy d.transIdx d.utcoff d.isdst                    -- :236
   let transLocal := tsToLocal id d.transIdx d.transUtc d.utcoff                 -- :239
-  let ttinfoList : List TTI :=                                                  -- :242-247
-    ((d.utcoff.zip dstoff).zip d.abbr).map fun ((u, ds), n) => ⟨u, ds, n⟩
+  let ttinfoList := ttinfoListPy d.utcoff dstoff d.abbr                          -- :242-247
   let ttinfos := d.transIdx.map fun i => ttinfoList.getD i.toNat default      -- :251
-  let ttiBefore : Option TTI :=                                                 -- :254-262
-    match d.isdst.findIdx? (· == 0) with
-    | some i => some (ttinfoList.getD i default)
-    | none => ttinfos.head?
-  let fallback : Py After :=                                                    -- :268-274
-    if ttinfos = [] ∧ ttinfoList = [] then .error (.valueError "No time zone information found.")
-    else if ttinfos ≠ [] then .ok (.tti (ttinfos.getLast?.getD default))
-    else .ok (.tti (ttinfoList.getLast?.getD default))
-  let tzAfter ← (match d.tzStr with                                            -- :265-266
-    | some s => (if s ≠ [] then (if utf8Valid s then parseTzStrPy s else .error decodeError)
-        else fallback)
-    | none => fallback : Py After)
-  let isTti := match tzAfter with | .tti _ => true | .tzstr _ => false
-  let fixedOffset :=                                                            -- :295-300
-    if ttinfoList.length > 1 ∨ !isTti then false
-    else if ttinfoList = [] then true
-    else match tzAfter with
-      | .tti t => ttiEq (ttinfoList.getD 0 default) t
-      | .tzstr _ => false
-  pure ⟨d.transUtc, transLocal, ttinfos, ttiBefore, tzAfter, fixedOffset⟩
+  let ttiBefore := ttiBeforePy d.isdst ttinfoList ttinfos                       -- :254-262
+  let tzAfter ← tzAfterPy d.tzStr (fallbackPy ttinfos ttinfoList)               -- :265-274
+  pure ⟨d.transUtc, transLocal, ttinfos, ttiBefore, tzAfter, fixedPy ttinfoList tzAfter⟩
 
 /-! ### C `load_data` -/
 
@@ -223,6 +237,39 @@ structure CZone where
   fixedOffset : Bool
   deriving Repr
 
+/-- `self->_ttinfos`, Modules/_zoneinfo.c:1137-1155. -/
+def ttinfoListC (utcoff dstoff : List Int) (abbr : List Bytes) : List TTI :=
+  ((utcoff.zip dstoff).zip abbr).map fun ((u, ds), n) => buildTtinfoC u ds n
+
+/-- `self->ttinfo_before`, :1170-1182: the first non-DST type, else type 0. -/
+def ttiBeforeC (isdst : List Bool) (ttinfoList : List TTI) : Option TTI :=
+  match isdst.findIdx? (· == false) with
+  | some i => some (ttinfoList.getD i default)
+  | none => ttinfoList.head?
+
+/-- `self->tzrule_after` without a footer, :1194-1220: an STD-only rule copying the type of
+the last transition (or the last type), keeping its DST offset. -/
+def fallbackC (transIdx : List Int) (ttinfoList : List TTI) : Py CRule :=
+  if ttinfoList = [] then .error (.valueError "No time zone information found.")
+  else
+    let idx := if transIdx = [] then ttinfoList.length - 1
+      else (transIdx.getLast?.getD 0).toNat
+    let tti := ttinfoList.getD idx default
+    let r := buildTzruleC tti.tzname none tti.utcoff 0 none none
+    -- :1216-1219: keep the DST offset of a DST type
+    .ok (if tti.dstoff ≠ 0 then { r with std := { r.std with dstoff := tti.dstoff } } else r)
+
+/-- `self->tzrule_after`, :1184-1220 (`PyObject_IsTrue(tz_str)` is false for `None` and `b""`). -/
+def ruleC (tzStr : Option Bytes) (fallback : Py CRule) : Py CRule :=
+  let hasTzStr : Bool := match tzStr with | some s => !s.isEmpty | none => false
+  if hasTzStr then parseTzStrC (tzStr.getD []) else fallback
+
+/-- `self->fixed_offset`, :1240-1255. -/
+def fixedC (ttinfoList : List TTI) (rule : CRule) : Bool :=
+  if ttinfoList.length > 1 ∨ !rule.stdOnly then false
+  else if ttinfoList = [] then true
+  else ttiEq (ttinfoList.getD 0 default) rule.std
+
 /-- C `load_data`, Modules/_zoneinfo.c:966-1308, after `_common.load_data` returned `d`.
 `PyLong_AsLongLong` and `PyLong_AsLong` cannot fail on the 64- and 32-bit values `struct`
 produced, and the index check at :1078-1085 repeats the one `_common.load_data` made. -/
@@ -230,28 +277,11 @@ def loadDataC (d : TzifData) : Py CZone := do
   let isdst : List Bool := d.isdst.map (· ≠ 0)                                 -- :1112-1118
   let dstoff := utcoffToDstoffC d.transIdx d.utcoff isdst                       -- :1128-1129
   let transLocal := tsToLocal wrap64 d.transIdx d.transUtc d.utcoff             -- :1131-1135
-  let ttinfoList : List TTI :=                                                  -- :1143-1155
-    ((d.utcoff.zip dstoff).zip d.abbr).map fun ((u, ds), n) => buildTtinfoC u ds n
-  let ttinfos := d.transIdx.map fun i => ttinfoList.getD i.toNat default      -- :1164-1168
-  let ttiBefore : Option TTI :=                                                 -- :1171-1182
-    match isdst.findIdx? (· == false) with
-    | some i => some (ttinfoList.getD i default)
-    | none => ttinfoList.head?
-  let hasTzStr : Bool := match d.tzStr with | some s => !s.isEmpty | none => false -- :1184-1187
-  let rule ← if hasTzStr then parseTzStrC (d.tzStr.getD [])                     -- :1189-1193
-    else if ttinfoList = [] then .error (.valueError "No time zone information found.")
-    else
-      let idx := if d.transIdx = [] then ttinfoList.length - 1
-        else (d.transIdx.getLast?.getD 0).toNat
-      let tti := ttinfoList.getD idx default
-      let r := buildTzruleC tti.tzname none tti.utcoff 0 none none
-      -- :1216-1219: keep the DST offset of a DST type
-      pure (if tti.dstoff ≠ 0 then { r with std := { r.std with dstoff := tti.dstoff } } else r)
-  let fixedOffset :=                                                            -- :1240-1255
-    if ttinfoList.length > 1 ∨ !rule.stdOnly then false
-    else if ttinfoList = [] then true
-    else ttiEq (ttinfoList.getD 0 default) rule.std
-  pure ⟨d.transUtc, transLocal, ttinfos, ttiBefore, rule, fixedOffset⟩
+  let ttinfoList := ttinfoListC d.utcoff dstoff d.abbr                           -- :1137-1155
+  let ttinfos := d.transIdx.map fun i => ttinfoList.getD i.toNat default      -- :1157-1168
+  let ttiBefore := ttiBeforeC isdst ttinfoList                                  -- :1170-1182
+  let rule ← ruleC d.tzStr (fallbackC d.transIdx ttinfoList)                    -- :1184-1220
+  pure ⟨d.transUtc, transLocal, ttinfos, ttiBefore, rule, fixedC ttinfoList rule⟩  -- :1240-1255
 
 /-! ### The datetime argument -/
 
