@@ -3707,6 +3707,19 @@ def bare_op(c, ba):
         return ba.join(bare_build(c["it"]))
     if op == "rich":
         return getattr(ba, "__%s__" % c["cmp"])(bare_build(c["other"]))
+    if op in ("center", "ljust", "rjust"):
+        return getattr(ba, op)(bare_build(c["width"]), bytes([c["fill"]]))
+    if op == "zfill":
+        return ba.zfill(bare_build(c["width"]))
+    if op == "replace":
+        args = [bare_build(c["old"]), bare_build(c["new"])]
+        if c.get("count") is not None:
+            args.append(bare_build(c["count"]))
+        return ba.replace(*args)
+    if op == "expandtabs":
+        return ba.expandtabs(*([] if c.get("tabsize") is None else [bare_build(c["tabsize"])]))
+    if op == "splitlines":
+        return ba.splitlines(c["keepends"])
     raise ValueError(op)
 
 
@@ -3765,7 +3778,7 @@ def run_bare(c):
 
 # --- generation ---
 
-_BARE_ALPHA = [32, 32, 9, 10, 97, 97, 98, 120, 0, 255, 122]
+_BARE_ALPHA = [32, 32, 9, 10, 97, 97, 98, 120, 0, 255, 122, 13, 43]
 
 
 def _bseq(rng, lo=0, hi=10):
@@ -3845,7 +3858,8 @@ def _barg(rng, kinds, vals=_SMALLV, bufs=None, resize=True):
 _BARE_OPS = ["find", "rfind", "index", "rindex", "count", "startswith", "endswith", "contains",
              "strip", "lstrip", "rstrip", "getitem", "setsub", "sqset", "insert", "append", "remove",
              "pop", "take", "iadd", "add", "extend", "init", "translate", "split", "rsplit",
-             "partition", "rpartition", "hex", "join", "rich"]
+             "partition", "rpartition", "hex", "join", "rich", "center", "ljust", "rjust", "zfill",
+             "replace", "expandtabs", "splitlines"]
 
 
 def gen_bare(rng):
@@ -3954,6 +3968,19 @@ def gen_bare(rng):
     elif op == "rich":
         c["other"] = _barg(rng, ["bytes", "bytearray", "buf", "buf", "me", "int", "str"])
         c["cmp"] = rng.choice(["eq", "ne", "lt", "le", "gt", "ge"])
+    elif op in ("center", "ljust", "rjust", "zfill"):
+        c["width"] = _barg(rng, ["int", "idx", "idx", "float"], vals=[0, 1, 3, 5, 8, 12, -1, 2 ** 63])
+        c["fill"] = rng.choice([32, 42, 0])
+    elif op == "replace":
+        c["old"] = _barg(rng, ["bytes", "buf", "buf", "me", "int"], bufs=[[32], [97], [], [97, 98], [120]])
+        c["new"] = _barg(rng, ["bytes", "buf", "me", "int"], bufs=[[], [122], [122, 122]])
+        if rng.random() < 0.4:
+            c["count"] = _barg(rng, ["int", "idx"], vals=[-1, 0, 1, 2, 2 ** 63])
+    elif op == "expandtabs":
+        if rng.random() < 0.8:
+            c["tabsize"] = _barg(rng, ["int", "idx", "idx", "float"], vals=[0, 1, 4, 8, -1, 2 ** 31, 2 ** 63])
+    elif op == "splitlines":
+        c["keepends"] = rng.random() < 0.5
     return c
 
 

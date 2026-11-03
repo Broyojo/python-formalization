@@ -10,7 +10,8 @@ summary: |
   argument is self, the buffer is an export of self, so bytearray_resize_lock_held refuses with
   "Existing exports of data: object cannot be re-sized". bytearray_setslice copies a self argument first
   (:697-707), and so does bytearray_ass_subscript (:848-862), so b.extend(b) and b[len(b):] = b double the
-  object. The documentation describes s += t as extending s with the contents of t.
+  object. Only a non-empty bytearray fails: for an empty one the resize is to the same size, which
+  bytearray_resize_lock_held accepts before its export check (:287-289). The documentation describes s += t as extending s with the contents of t.
   Lean: IAddIsExtend (b += x is b.extend(x) for every bytes-like x) is refuted on b = bytearray(b"a"),
   x = b (iadd_self).
 likelihood: |

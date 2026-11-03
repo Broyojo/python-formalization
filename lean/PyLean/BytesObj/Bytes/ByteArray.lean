@@ -395,7 +395,7 @@ def takeCount (n : Obj) (v : Int) : Py Int :=
   if ssizeMin ≤ v ∧ v ≤ ssizeMax then .ok v
   else .error (.indexError s!"cannot fit '{n.typeName}' into an index-sized integer")
 
-/-- `bytearray.take_bytes` past the conversion of `n`, bytearrayobject.c:1650-1688: the bytes taken and
+/-- `bytearray.take_bytes` past the conversion of `n`, bytearrayobject.c:1640-1688: the bytes taken and
 the object left. The smaller part is copied: a small `to_take` moves `ob_start`, a large one leaves
 the rest in a new bytes object and hands over the old one. -/
 def baTakeCore (self : BA) (toTake : Int) : Py (Seq × BA) := do
