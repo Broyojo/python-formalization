@@ -434,8 +434,18 @@ def entries : List Entry := [
     source := "GH-91153 comments, bytearrayobject.c:746-747, :800-801, :1629", status := .proven
     prop := ``ItemAfterIndex, thm := some ``itemAfterIndex_proven
     notes := "The slice branches of subscript and assignment (__index__ of slice parts, a value converted with PyByteArray_FromObject and the slice unpacked again) are modelled and compared by the difftest family bare; their contents are those of bytesobj-bytearray-slice-*." },
+  { id := "bytesobj-bytearray-partition-after-sep", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_partition_impl", "bytearray_rpartition_impl", "_PyByteArray_FromBufferObject"]
+    statement := "partition and rpartition copy the separator (its __buffer__, then its __release_buffer__) before reading self: the result is the partition of the contents as both callbacks left them; for a C bytes-like separator it is bytes.partition and bytes.rpartition on the contents."
+    source := "twin: bytes.partition; bytearrayobject.c:1926-1935", status := .proven
+    prop := ``PartitionAfterSep, thm := some ``partitionAfterSep_proven },
+  { id := "bytesobj-bytearray-translate-after-args", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_translate_impl"]
+    statement := "translate reads self after the table's __buffer__ and before its __release_buffer__: with a table class of 256 bytes the result is the table applied to the contents as __buffer__ left them; with C arguments it is the pure translate of the contents."
+    source := "twin: bytes.translate; bytearrayobject.c:1724-1795", status := .proven
+    prop := ``TranslateAfterArgs, thm := some ``translateAfterArgs_proven },
   { id := "bytesobj-bytearray-iadd-self", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_iconcat_lock_held", "bytearray_iconcat", "bytearray_extend_impl", "bytearray_setslice"]
+    pyFns := ["bytearray_iconcat_lock_held", "bytearray_iconcat", "bytearray_setslice"]
     statement := "b += x is b.extend(x) for every bytes-like x. Refuted: b += b raises BufferError, because bytearray_iconcat_lock_held exports b as its own argument and then resizes it, where b.extend(b) copies first."
     source := "Doc/library/stdtypes.rst mutable sequence operations: s += t extends s with the contents of t", status := .refuted
     prop := ``IAddIsExtend, thm := some ``iAddIsExtend_refuted

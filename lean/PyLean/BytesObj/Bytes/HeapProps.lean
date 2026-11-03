@@ -1561,3 +1561,101 @@ theorem itemAfterIndex_proven : ItemAfterIndex := by
       E.bind_def, getByteValueE, runCb_app]
 
 end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## partition reads `self` after both callbacks of the separator -/
+
+theorem baFromStringAndSize_ok (n : Int) (h0 : 0 ≤ n) (h1 : n < 2 ^ 46) :
+    ∃ b, baFromStringAndSize none n = .ok b := by
+  unfold baFromStringAndSize
+  have hn : ¬ n < 0 := by omega
+  have hc : bytesSizeCheck n = .ok () := by
+    unfold bytesSizeCheck mallocFails bytesObjectSize
+    unfold ssizeMax
+    split
+    · rfl
+    · have e1 : ¬ (9223372036854775774 < n) := by omega
+      have e2 : ¬ (140737488355328 ≤ 33 + n) := by omega
+      simp only [decide_eq_true_eq] at *
+      simp [e1, e2]
+  simp only [hn, ↓reduceIte, hc]
+  split <;> exact ⟨_, rfl⟩
+
+/-- `bytearray.partition(sep)` and `rpartition(sep)` copy the separator first
+(`_PyByteArray_FromBufferObject`: its `__buffer__`, then its `__release_buffer__`) and read `self`
+only then: the result is `stringlib_partition` of the contents as both callbacks left them, and of
+the separator's bytes. For a C bytes-like separator that is `bytes.partition` on the contents. For
+every heap, with a separator below 2^46 bytes (`PyByteArray_FromStringAndSize` of its length cannot
+fail). -/
+def PartitionAfterSep : Prop :=
+  (∀ (h : H) (acts rel : List Act) (t : Seq) (right : Bool), t.length < 2 ^ 46 →
+    baPartitionE (.buf acts (.ok t) rel) right h =
+      ((if right then stringlibRPartition else stringlibPartition) (runActs (runActs h acts) rel).ba.seq t,
+        runActs (runActs h acts) rel)) ∧
+  (∀ (h : H) (o : Obj) (t : Seq), o.buffer? = some t → t.length < 2 ^ 46 →
+    baPartitionE (.obj o) false h = (bytesPartition h.ba.seq t, h) ∧
+    baPartitionE (.obj o) true h = (bytesRPartition h.ba.seq t, h))
+
+theorem partitionAfterSep_proven : PartitionAfterSep := by
+  refine ⟨?_, ?_⟩
+  · intro h acts rel t right ht
+    obtain ⟨b, hb⟩ := baFromStringAndSize_ok t.length (by omega) (by exact_mod_cast ht)
+    simp only [baPartitionE, E.bind_app, getBuf_buf, Buf.len, hb, Buf.read, E.pure_app, runCb_app, curSeq,
+      E.lift_app]
+  · intro h o t hb ht
+    obtain ⟨b, hb2⟩ := baFromStringAndSize_ok t.length (by omega) (by exact_mod_cast ht)
+    refine ⟨?_, ?_⟩
+    · simp only [baPartitionE, E.bind_app, getBuf_obj o t hb, Buf.len, hb2, Buf.read, E.pure_app, noRel,
+        curSeq, E.lift_app, bytesPartition, Bool.false_eq_true, ↓reduceIte]
+    · simp only [baPartitionE, E.bind_app, getBuf_obj o t hb, Buf.len, hb2, Buf.read, E.pure_app, noRel,
+        curSeq, E.lift_app, bytesRPartition, ↓reduceIte]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-- `bytearray.translate(table)` reads `self` after the table's `__buffer__` and before its
+`__release_buffer__`: with a table class of 256 bytes and no `delete`, the result is the fast loop
+over the contents as `__buffer__` left them, and the object is left as both callbacks left it. With
+a C table and C `delete` it is the pure `bytearray.translate` on the contents. For every heap below
+2^46 bytes (`PyByteArray_FromStringAndSize` of the result cannot fail). -/
+def TranslateAfterArgs : Prop :=
+  (∀ (h : H) (acts rel : List Act) (t : Seq), t.length = 256 → (runActs h acts).ba.data.length < 2 ^ 46 →
+    baTranslateE (.buf acts (.ok t) rel) none h =
+      (.ok (translateFast (runActs h acts).ba.seq t), runActs (runActs h acts) rel)) ∧
+  (∀ (h : H) (t : Seq), t.length = 256 → h.ba.data.length < 2 ^ 46 →
+    baTranslateE (.obj (.bytes t)) none h = (bytearrayTranslate h.ba.seq (.bytes t) none, h)) ∧
+  (∀ (h : H) (d : Seq), h.ba.data.length < 2 ^ 46 →
+    baTranslateE (.obj .none) (some (.obj (.bytes d))) h =
+      (bytearrayTranslate h.ba.seq .none (some (.bytes d)), h))
+
+theorem translateAfterArgs_proven : TranslateAfterArgs := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro h acts rel t ht hs
+    obtain ⟨b, hb⟩ := baFromStringAndSize_ok (runActs h acts).ba.size (by simp [BA.size]) (by
+      simp only [BA.size]; exact_mod_cast hs)
+    have h256 : ¬ ((t.length : Int) ≠ 256) := by simp [ht]
+    simp only [baTranslateE, Arg.isNone, Bool.false_eq_true, ↓reduceIte, E.bind_app, getBuf_buf, Buf.len,
+      h256, E.pure_app, curSize, hb, curSeq, Buf.read, runCb_app, Functor.map, E.bind_def]
+    rfl
+  · intro h t ht hs
+    obtain ⟨b, hb⟩ := baFromStringAndSize_ok h.ba.size (by simp [BA.size]) (by simp only [BA.size]; exact_mod_cast hs)
+    have h256 : ¬ ((t.length : Int) ≠ 256) := by simp [ht]
+    have h256' : ¬ (t.length ≠ 256) := by simp [ht]
+    simp only [baTranslateE, Arg.isNone, Bool.false_eq_true, ↓reduceIte, E.bind_app,
+      getBuf_obj (.bytes t) t rfl, Buf.len, h256, E.pure_app, curSize, hb, curSeq, Buf.read, noRel, Functor.map,
+      E.bind_def]
+    simp only [bytearrayTranslate, getBuffer, Obj.buffer?, h256', ↓reduceIte, bind, Except.bind, pure, Except.pure]
+    rfl
+  · intro h d hs
+    obtain ⟨b, hb⟩ := baFromStringAndSize_ok h.ba.size (by simp [BA.size]) (by simp only [BA.size]; exact_mod_cast hs)
+    simp only [baTranslateE, Arg.isNone, ↓reduceIte, E.bind_app, E.attempt_app,
+      getBuf_obj (.bytes d) d rfl, E.pure_app, curSize, hb, curSeq, Buf.read, noRel, Functor.map, E.bind_def]
+    simp only [bytearrayTranslate, getBuffer, Obj.buffer?, bind, Except.bind, pure, Except.pure]
+
+end PyLean.BytesObj.Bytes

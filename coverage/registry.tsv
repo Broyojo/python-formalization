@@ -1101,7 +1101,9 @@ bytesobj-bytearray-split-live	proven	Objects/bytearrayobject.c	bytearray_split_i
 bytesobj-bytearray-hex-live	proven	Objects/bytearrayobject.c	bytearray_hex_impl
 bytesobj-bytearray-rich-live	proven	Objects/bytearrayobject.c	bytearray_richcompare
 bytesobj-bytearray-item-after-index	proven	Objects/bytearrayobject.c	_getbytevalue,bytearray_subscript_lock_held,bytearray_subscript,bytearray_ass_subscript_lock_held,bytearray_ass_subscript,bytearray_setitem_lock_held,bytearray_setitem,bytearray_append_impl,bytearray_remove_impl,bytearray_insert_impl,bytearray_take_bytes_impl
-bytesobj-bytearray-iadd-self	refuted	Objects/bytearrayobject.c	bytearray_iconcat_lock_held,bytearray_iconcat,bytearray_extend_impl,bytearray_setslice
+bytesobj-bytearray-partition-after-sep	proven	Objects/bytearrayobject.c	bytearray_partition_impl,bytearray_rpartition_impl,_PyByteArray_FromBufferObject
+bytesobj-bytearray-translate-after-args	proven	Objects/bytearrayobject.c	bytearray_translate_impl
+bytesobj-bytearray-iadd-self	refuted	Objects/bytearrayobject.c	bytearray_iconcat_lock_held,bytearray_iconcat,bytearray_setslice
 bytesobj-bytearray-iadd-extend-obj	open	Objects/bytearrayobject.c	
 bytesobj-bytearray-init-steal	refuted	Objects/bytearrayobject.c	bytearray___init___impl
 bytesobj-bytes-class-tables	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit
