@@ -42,6 +42,7 @@ def hEnv (xs : List α) (r : α → α → Bool) (lenRes : Except PyExc Nat) : S
   toList o := match o with
     | .src => pure xs
     | .it => ⟨fun p => (.ok (xs.drop p), xs.length)⟩
+  selfOf o := pure o
   hier := builtinHier
 
 def pureKey (κ : α → α) : α → Eff Nat PyExc α := fun x => pure (κ x)
@@ -249,6 +250,26 @@ theorem hHeapreplace_pure {W : Type} (impl mx : Bool) (f : β → β → Bool) (
       ((pyHeapreplace listSeq (pureCmp f) mx item).run ⟨w, l⟩) at hag
     rw [hpy] at hag
     rcases hcr : (cHeapreplace mx (pureCmp f) ⟨true, "list"⟩ item).run ⟨w, l⟩ with ⟨rc, wc⟩
+    rw [hcr] at hag
+    cases rc with
+    | ok v => obtain ⟨rfl, rfl⟩ := hag; rfl
+    | error e => cases e <;> exact hag.elim
+
+theorem hHeappop_pure {W : Type} (impl mx : Bool) (f : β → β → Bool) (l : List β) (w : W) (v : β) (l' : List β)
+    (hpy : Accel.pyHeappop (heapOrd mx f) l = .ok (v, l')) :
+    (hHeappop impl mx (fun a b => (pure (f a b) : Eff W PyExc Bool)) l).run w = (.ok (.ok v, l'), w) := by
+  have hc : liftCmp (W := W) (fun a b => (pure (f a b) : Eff W PyExc Bool)) = pureCmp f := rfl
+  have hp := pyHeappop_pure mx f (⟨w, l⟩ : HW W β)
+  rw [hpy] at hp
+  cases impl
+  · simp only [hHeappop, Bool.false_eq_true, if_false, hc, onList]
+    rw [hp]
+  · simp only [hHeappop, if_true, hc, onListC]
+    have hag := pop_agree mx (fun a b s => (.ok (f a b), s)) "list" (⟨w, l⟩ : HW W β)
+    change Agree l ((cHeappop mx (pureCmp f) ⟨true, "list"⟩).run ⟨w, l⟩)
+      ((pyHeappop listSeq (pureCmp f) mx).run ⟨w, l⟩) at hag
+    rw [hp] at hag
+    rcases hcr : (cHeappop mx (pureCmp f) ⟨true, "list"⟩).run ⟨w, l⟩ with ⟨rc, wc⟩
     rw [hcr] at hag
     cases rc with
     | ok v => obtain ⟨rfl, rfl⟩ := hag; rfl

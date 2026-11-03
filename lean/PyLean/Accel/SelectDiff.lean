@@ -42,6 +42,8 @@ structure SW where
   log : List Ev
   objs : List OSt
   fresh : Nat
+  /-- iterators whose `__next__` is a staticmethod (`next.__self__` raises) -/
+  statics : List String := []
 
 instance : Inhabited OSt := ⟨.it "" [] 0⟩
 
@@ -165,6 +167,10 @@ def env (sc : Script) : SEnv SW Obj Nat where
   next := nextF sc
   len := lenF sc
   toList := toListF sc
+  selfOf o := ⟨fun w =>
+    if (oname (objAt w o)) ∈ w.statics then
+      (.error (.named "AttributeError" "'function' object has no attribute '__self__'"), w)
+    else (.ok o, w)⟩
   hier := builtinHier
 
 /-! ### CPython's `list.sort` below 64 items -/
@@ -259,6 +265,13 @@ def sorter : Sorter SW where
 
 /-! ### JSON -/
 
+/-- The name of the iterator a source gives, if its `__next__` is a staticmethod. -/
+def staticName (v : Json) : Option String :=
+  match v.getObjVal? "static", v.getObjVal? "kind", v.getObjVal? "name" with
+  | .ok (.bool true), .ok (.str "it"), .ok (.str n) => some n
+  | .ok (.bool true), .ok _, .ok (.str n) => some (n ++ "'")
+  | _, _, _ => none
+
 def getSrc (objs : List Obj) (v : Json) : Except String OSt := do
   let kind ← (← v.getObjVal? "kind").getStr?
   let name ← (← v.getObjVal? "name").getStr?
@@ -321,9 +334,10 @@ def runSel (fn : String) (isC : Bool) (j : Json) : Except String Json := do
   let keyName := (getStr j "key").toOption.getD "none"
   let key : Option (Obj → Eff SW PyExc Obj) := (keyFun keyName).map (fun f => keyCall sc f)
   if fn == "merge" then
-    let srcs ← (← (← field j "srcs").getArr?).toList.mapM (getSrc objs)
+    let srcJs := (← (← field j "srcs").getArr?).toList
+    let srcs ← srcJs.mapM (getSrc objs)
     let rev ← getBool j "reverse"
-    let w0 : SW := ⟨[], [], srcs, 1000000⟩
+    let w0 : SW := ⟨[], [], srcs, 1000000, srcJs.filterMap staticName⟩
     let its := (List.range srcs.length)
     let (r, e, w, st) := driveMerge E isC key rev its 10000 .start w0
     -- one more `next()` after the end or the exception
@@ -335,7 +349,7 @@ def runSel (fn : String) (isC : Bool) (j : Json) : Except String Json := do
   else
     let src ← getSrc objs (← field j "src")
     let n ← getInt j "n"
-    let w0 : SW := ⟨[], [], [src], 1000000⟩
+    let w0 : SW := ⟨[], [], [src], 1000000, []⟩
     match (nSelect E sorter isC (fn == "nlargest") 10000 n 0 key).run w0 with
     | (.ok r, w) => return Json.mkObj [("ok", encOut (r.map (·.v)) none w)]
     | (.error e, w) => return Json.mkObj [("ok", encOut [] (some e) w)]

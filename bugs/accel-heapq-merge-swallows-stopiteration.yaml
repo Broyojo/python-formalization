@@ -64,6 +64,7 @@ possible_fix: |
   and compute the key and replace outside it.
 duplicates:
   issues: ["python/cpython#158717 (closed, not planned; bugforge heapq-20261003-061723-c1)"]
+  related: ["python/cpython#63218 (bpo-19018, fixed): merge suppressed an IndexError from a user generator, the same over-broad except, then for IndexError"]
   queries: ["heapq merge StopIteration", "heapq merge exception", "heapq merge generator", "bugforge README: heapq.merge entries"]
 lean:
   property: PyLean.Accel.Heapq.MergeNoSilentDrop

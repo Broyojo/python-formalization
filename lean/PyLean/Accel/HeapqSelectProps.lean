@@ -177,7 +177,10 @@ ties included, through all three paths (`n == 1` with `min()`/`max()`, `n >= len
 
 Source: the docstrings, Lib/heapq.py:477-481, :537-541 ("Equivalent to: ..."), and
 Doc/library/heapq.rst. Negative `n` is excluded (python/cpython#57483). `==` inconsistent with
-`<` is out of scope (python/cpython#158718, closed). -/
+`<` is out of scope: the hypotheses are the language reference's consistency rules for a total
+ordering (Doc/reference/expressions.rst:2201-2237: `x < y` and `y > x` agree, and `x < y` is
+`not x >= y`, so `==` holds exactly when neither is `<`); python/cpython#158718 asked about
+breaking them. -/
 def NSelectIsSortedPrefix : Prop :=
   ∀ (α : Type) [DecidableEq α] [Inhabited α] (xs : List α) (r : α → α → Bool) (κ : Option (α → α))
     (n : Int) (impl large : Bool) (So : Sorter Nat) (lenRes : Except PyExc Nat) (fuel w0 : Nat),

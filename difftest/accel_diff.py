@@ -220,8 +220,9 @@ def gen_objs(rng, m):
 
 
 def gen_src(rng, name, items):
+    static = rng.random() < 0.1
     if rng.random() < 0.3:
-        return {"kind": "it", "name": name, "items": items}
+        return {"kind": "it", "name": name, "items": items, "static": static}
     u = rng.random()
     if u < 0.25:
         ln = None
@@ -232,7 +233,7 @@ def gen_src(rng, name, items):
     else:
         ln = {"exc": rng.choice(["TypeError", "AttributeError", "ValueError", "RuntimeError"]),
               "msg": "from __len__"}
-    return {"kind": "src", "name": name, "items": items, "len": ln}
+    return {"kind": "src", "name": name, "items": items, "len": ln, "static": static}
 
 
 def gen_select(rng, fn):
@@ -356,9 +357,20 @@ class It:
         raise StopIteration
 
 
+def make_it(name, items, static):
+    """An `It`; with `static`, its `__next__` is a staticmethod, so `it.__next__.__self__`
+    raises AttributeError (bugforge heapq-20261003-022813-c1)."""
+    it = It(name, items)
+    if static:
+        cls = type("It", (It,), {})
+        cls.__next__ = staticmethod(lambda: It.__next__(it))
+        it.__class__ = cls
+    return it
+
+
 class Src:
-    def __init__(self, name, items, ln=None):
-        self.name, self.items, self.ln = name, items, ln
+    def __init__(self, name, items, ln=None, static=False):
+        self.name, self.items, self.ln, self.static = name, items, ln, static
 
     def __iter__(self):
         SCtx.cur["log"].append(["iter", self.name])
@@ -367,7 +379,7 @@ class Src:
             raise ValueError(f"iter {j}")
         if a == "stop":
             raise StopIteration
-        return It(self.name + "'", self.items)
+        return make_it(self.name + "'", self.items, self.static)
 
 
 class SrcLen(Src):
@@ -387,10 +399,10 @@ class SrcLen(Src):
 def make_src(d, objs):
     items = [objs[i] for i in d["items"]]
     if d["kind"] == "it":
-        return It(d["name"], items)
+        return make_it(d["name"], items, d.get("static", False))
     if d.get("len") is None:
-        return Src(d["name"], items)
-    return SrcLen(d["name"], items, d["len"])
+        return Src(d["name"], items, None, d.get("static", False))
+    return SrcLen(d["name"], items, d["len"], d.get("static", False))
 
 
 def run_select(c):

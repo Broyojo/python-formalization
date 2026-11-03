@@ -29,6 +29,9 @@ import PyLean.Accel.HeapqSelectSim
 import PyLean.Accel.HeapqSelectSimK
 import PyLean.Accel.HeapqSelectProps
 import PyLean.Accel.HeapqMergeProps
+import PyLean.Accel.HeapqStable
+import PyLean.Accel.HeapqMergeBase
+import PyLean.Accel.HeapqMergeSorted
 import PyLean.Accel.SelectDiff
 import PyLean.Accel.Diff
 
@@ -199,7 +202,7 @@ def entries : List Entry := [
     statement := "For every element type, strict weak order < (== its equivalence), pure key or None, n >= 0, C or Python heap functions, correct list.sort, and iterable yielding xs whose len() is the count or is missing: nsmallest(n, it, key) == sorted(it, key=key)[:n] and nlargest(n, it, key) == sorted(it, key=key, reverse=True)[:n], ties included."
     source := "nsmallest/nlargest docstrings, Lib/heapq.py:477-481, :537-541; Doc/library/heapq.rst", status := .proven
     prop := ``Heapq.NSelectIsSortedPrefix, thm := some ``Heapq.nSelectIsSortedPrefix_proven
-    notes := "Covers the n == 1 min()/max() path, the n >= len sorted() path and both heap paths with their (elem, order) and (key, order, elem) tuples, whose comparisons call == and < of the elements. list.sort and list() are callees in Objects/listobject.c, taken as a parameter with the contract SortOk (a stable sort for a strict weak order). Negative n excluded (python/cpython#57483); == inconsistent with < out of scope (python/cpython#158718, closed)." },
+    notes := "Covers the n == 1 min()/max() path, the n >= len sorted() path and both heap paths with their (elem, order) and (key, order, elem) tuples, whose comparisons call == and < of the elements. list.sort and list() are callees in Objects/listobject.c, taken as a parameter with the contract SortOk (a stable sort for a strict weak order). Negative n excluded (python/cpython#57483); == and > are taken to follow the language reference's consistency rules for a total ordering (Doc/reference/expressions.rst:2201-2237); breaking them is out of scope (python/cpython#158718)." },
   { id := "accel-nselect-any-len", pyFile := "Lib/heapq.py"
     pyFns := ["nsmallest", "nlargest"]
     statement := "As accel-nselect-sorted-prefix for every len() result."
@@ -222,9 +225,9 @@ def entries : List Entry := [
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
     statement := "For inputs each sorted by key (descending if reverse), list(merge(*inputs, key, reverse)) == sorted(chain(*inputs), key=key, reverse=reverse), ties included, for every element type with a strict weak order and a pure key."
-    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst", status := .open
-    prop := ``Heapq.MergeIsSorted
-    notes := "Restated over the generator model. Open: the proof of the old int model (MergeProps.mergeLoop_spec) has to be carried across the generator's suspension states and the per-input iterator positions; the first step (accel-merge-first-next) is proven." }
+    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst", status := .proven
+    prop := ``Heapq.MergeIsSorted, thm := some ``Heapq.mergeIsSorted_proven
+    notes := "Over the generator model for both heap implementations, by an invariant (HeapqMergeSorted.MInv) held at every suspension point: per-input iterator positions, one heap entry (by reference) per non-empty input, heap order. It unfolds the main loop (:370-378 / :394-404, both the next() and the StopIteration branch) and the single-input tail with next.__self__ (:379-383 / :405-408). Scope: honest inputs, whose next.__self__ is the iterator itself; a staticmethod __next__ raises AttributeError there (modelled as SEnv.selfOf, difftested)." }
 ]
 
 end PyLean.Accel

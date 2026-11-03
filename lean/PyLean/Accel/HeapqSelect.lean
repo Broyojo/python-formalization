@@ -34,10 +34,10 @@ branch `unreachableTie`.
 `HeapqModel.lean` on the local list, which no user code can reach.
 
 `merge` is a generator: `mergeStep` runs one `next()` of it, from one suspension point to the
-next. Not modelled: re-entering the generator from a callback while it runs (genobject.c raises
-`ValueError('generator already executing')`), attribute lookups that run user code
-(`it.__next__` is taken to be the iterator type's `__next__`, so `next.__self__` is `it`),
-`n` that is not an int, and `MemoryError`.
+next. `next.__self__` is the callback `E.selfOf`. Not modelled: re-entering the generator from a
+callback while it runs (genobject.c raises `ValueError('generator already executing')`), an
+`it.__next__` attribute that is not the iterator's own `__next__` (calling the stored `next` is
+taken to be `next(it)`), `n` that is not an int, and `MemoryError`.
 -/
 
 namespace PyLean.Accel.Heapq
@@ -92,6 +92,10 @@ structure SEnv (W α O : Type) where
   next : O → Eff W PyExc α
   len : O → Eff W PyExc Nat
   toList : O → Eff W PyExc (List α)
+  /-- `next.__self__` for the `next = it.__next__` that `merge` stored from iterator `it`
+  (Lib/heapq.py:383, :408): `it` for a bound method; an `AttributeError` when `__next__` is,
+  e.g., a staticmethod (a plain function has no `__self__`). -/
+  selfOf : O → Eff W PyExc O
   hier : Hier
 
 /-- `list.sort(reverse=...)` with a given item comparison. -/
@@ -482,7 +486,8 @@ def mergeBody (E : SEnv W α O) (impl : Bool) (key : Option (α → Eff W PyExc 
         mergeYieldTop h ents
       else Eff.raise e
   | .last s => do
-    let it ← E.iter s.nxt                                       -- `yield from next.__self__`
+    let obj ← E.selfOf s.nxt                                    -- `next.__self__` (:383 / :408)
+    let it ← E.iter obj                                         -- `yield from` (GET_YIELD_FROM_ITER)
     mergeYieldFrom E it
   | .yfrom it => mergeYieldFrom E it
   | .done => pure (none, .done)

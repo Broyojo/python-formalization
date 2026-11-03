@@ -37,6 +37,7 @@ def mEnv (srcs : List (List α)) (r : α → α → Bool) : SEnv (List Nat) α M
   toList o := match o with
     | .src i => pure (srcs.getD i [])
     | .it i => ⟨fun w => (.ok ((srcs.getD i []).drop (w.getD i 0)), w)⟩
+  selfOf o := pure o
   hier := builtinHier
 
 def pureKeyG {W : Type} (κ : α → α) : α → Eff W PyExc α := fun x => pure (κ x)
@@ -383,7 +384,10 @@ theorem mergeNoSilentDrop_refuted : ¬ MergeNoSilentDrop := by
 (descending for `reverse=True`), `list(merge(*inputs, key=key, reverse=reverse)) ==
 sorted(chain(*inputs), key=key, reverse=reverse)`, ties included, for a strict weak order with
 `==` its equivalence and a pure key. Source: the docstring (Lib/heapq.py:331-345). Stated over
-the generator model; not yet proven (see the registry note). -/
+the generator model, with every input an honest iterator (its `next.__self__` is the iterator
+itself). Proven in `HeapqMergeSorted.lean` by an invariant held at every suspension point
+(`MInv`): through the main loop (:370-378 / :394-404, both `next()` outcomes and both heap
+implementations) and the single-input tail (:379-383 / :405-408). -/
 def MergeIsSorted : Prop :=
   ∀ (α : Type) [DecidableEq α] [Inhabited α] (srcs : List (List α)) (r : α → α → Bool)
     (κ : Option (α → α)) (impl rev : Bool) (fuel : Nat), Accel.StrictWeak r →
