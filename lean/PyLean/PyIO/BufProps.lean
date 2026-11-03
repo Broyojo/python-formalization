@@ -16,7 +16,7 @@ def plainRaw (d : List Nat) : Raw :=
 /-- The result of the last operation of a case, or what stopped the case. -/
 def lastResult {σ : Type} : Outcome σ → Py Val
   | .done _ rs => rs.getLastD (.ok .none)
-  | .initErr e => .error e
+  | .initErr _ e => .error e
   | .crashed => .error crashErr
   | .hung => .error hangErr
   | .ub _ _ => .error ubErr

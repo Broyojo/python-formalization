@@ -8,7 +8,7 @@ exception (class and message) is compared; the generator always ends with
 getvalue/tell (and newlines for StringIO). Bytes and str travel as lists of
 ints. Positions are kept either small or within a few thousand of a multiple
 of 2**62, so no case ever asks the allocator for a size between 2**24 and
-2**60 bytes (the model's MemoryError bound is 2**48). Exception messages that
+2**60 bytes (the model's MemoryError bound is 2**47). Exception messages that
 embed formatted objects are normalized to the model's "~" form (see `norm`).
 "fn": "ratio" checks the binary64 emulation used by TextIOWrapper.tell().
 Exits non-zero on any mismatch. See difftest/common.py.

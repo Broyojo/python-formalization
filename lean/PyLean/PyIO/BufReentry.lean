@@ -19,7 +19,7 @@ def Outcome.isHung {σ : Type} : Outcome σ → Bool
   | _ => false
 
 def Outcome.isInitErr {σ : Type} : Outcome σ → Bool
-  | .initErr _ => true
+  | .initErr _ _ => true
   | _ => false
 
 def Outcome.isUB {σ : Type} : Outcome σ → Bool

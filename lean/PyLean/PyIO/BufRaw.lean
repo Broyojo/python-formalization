@@ -328,7 +328,7 @@ user address space, part of it already mapped (on the pod, 3.15.2 refuses `2 ** 
 and grants about `1.02e14`). Requests below it are granted; the generator makes none
 between that point and `2 ** 47`. Statements about the constructors quantify over the
 allocator instead (`BufS.allocLimit`, `runCAlloc`). -/
-def testAllocLimit : Nat := 2 ^ 47
+def testAllocLimit : Nat := memLimit
 
 /-- Outcome of the whole test case: the process died, or hung. -/
 def crashErr : PyExc := .named "SIGSEGV" ""

@@ -121,7 +121,9 @@ def rawRead (n : Nat) (viaSelf : Bool := true) : PM (Option (List Nat)) := do
   if viaSelf then
     let s ← get
     if s.detached then thr (noneAttr "read")
-  -- the allocation of `bytearray(n)`, with the difftest's allocator
+  -- `bytearray(n)`: `PyNumber_AsSsize_t(n, OverflowError)` (Objects/bytearrayobject.c:1059),
+  -- then the allocation, with the difftest's allocator
+  if (n : Int) > ssizeMax then thr (.overflowError "cannot fit 'int' into an index-sized integer")
   if n ≥ testAllocLimit then thr memoryError
   let res ← if viaSelf then onRaw "read" (.readinto n) (fun r => r.readinto n)
     else onRawObj (.readinto n) (fun r => r.readinto n)

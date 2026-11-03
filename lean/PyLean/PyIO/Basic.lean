@@ -12,9 +12,10 @@ Conventions:
 * A test case is a constructor plus a list of operations; every operation
   returns a `Py Val`. Arguments are Python ints or `None` (`Option Int`).
 * LP64: `Py_ssize_t` and `long` are 64-bit, `int` is 32-bit.
-* Allocation: a request for `memLimit` or more bytes fails with `MemoryError`
-  and smaller requests succeed. Real limits depend on the machine; the
-  difftest only exercises sizes far below or far above this bound.
+* Allocation: a request for `memLimit` (`2 ** 47`) or more bytes fails with
+  `MemoryError`, as it must on x86-64, and smaller requests succeed. Real limits
+  below it depend on the machine (the pod grants about `1.02e14`); the difftests
+  only exercise sizes far below it or at least it.
 -/
 
 namespace PyLean.PyIO
@@ -63,8 +64,9 @@ def unicodeDecodeError : PyExc := .named "UnicodeDecodeError" "~utf-8 decode err
 /-- `UnicodeEncodeError` (a lone surrogate in a `newline` argument). -/
 def unicodeEncodeError : PyExc := .named "UnicodeEncodeError" "~utf-8 encode error"
 
-/-- Allocation bound (bytes), see the module docstring. -/
-def memLimit : Nat := 2 ^ 48
+/-- Allocation bound (bytes), see the module docstring: `2 ** 47`, which no x86-64
+Linux process can allocate (its user address space is 47 bits, part of it mapped). -/
+def memLimit : Nat := 2 ^ 47
 
 /-- `_PyBytes_FromSize`, Objects/bytesobject.c:101-105 and its allocation on LP64
 (`PyBytesObject_SIZE` is 33): every path that makes a `bytes` of `n` bytes ends here. -/

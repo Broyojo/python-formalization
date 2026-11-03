@@ -135,7 +135,9 @@ def encOutcome {σ : Type} (m : Bool) (raw : σ → Raw) : Outcome σ → Json
   -- the results before the undefined behaviour, which the harness compares
   | .ub init rs => Json.mkObj [("ok", Json.null), ("ub", Json.bool true),
       ("prefix", if init then Json.null else Json.arr (rs.map (fun x => encPy bVal (maskPy m x))).toArray)]
-  | .initErr e => encPy (fun (_ : Unit) => Json.null) (.error e)
+  | .initErr s e =>
+    (encPy (fun (_ : Unit) => Json.null) (.error e)).mergeObj
+      (Json.mkObj [("log", Json.arr ((raw s).log.map (encRCall m)).toArray)])
   | .done s rs =>
     let r := raw s
     Json.mkObj [("ok", Json.arr (rs.map (fun x => encPy bVal (maskPy m x))).toArray),

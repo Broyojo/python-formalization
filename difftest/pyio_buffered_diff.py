@@ -381,6 +381,14 @@ def gen_stale_mro(rng):
     return c
 
 
+def gen_huge_size(rng):
+    """A case whose buffer size the C `Py_ssize_t` converter refuses (OverflowError
+    before any raw call), or one of its bounds."""
+    c = gen_case(rng)
+    c["size"] = rng.choice([2**63, -2**63 - 1, 2**64, -2**64, 2**63 - 1, -2**63, 2**47, 2**48])
+    return c
+
+
 def gen_case(rng):
     fn = rng.choice(["buf_c", "buf_py"])
     key = fn.split("_")[1]
@@ -514,7 +522,8 @@ def run_case(c):
         try:
             f.__init__(raw, c["size"])
         except Exception as e:
-            return norm(e)
+            # with the raw calls the constructor made before it raised
+            return dict(norm(e), log=list(raw.calls))
         if key == "py":
             raw.buf, raw.n = f, 0
         out = []
@@ -611,6 +620,7 @@ def main():
     # 2% more cases from their own generator, so a seed's other cases stay as they were
     extra = random.Random(f"{args.seed}-{os.environ.get('CHUNK_START', '0')}")
     cases += [gen_stale_mro(extra) for _ in range(args.cases // 50)]
+    cases += [gen_huge_size(extra) for _ in range(args.cases // 50)]
     mismatches, bad, by_fn = 0, 0, {}
     ub, ub_init, ub_pre_ok, ub_ops = 0, 0, 0, 0
 
@@ -640,6 +650,8 @@ def main():
         tot[0] += 1
         py = run_python(c)
         ok = "harness_error" not in lo and common.agree(py, lo)
+        if ok and "exc" in lo and "log" in lo:
+            ok = py.get("log") == lo["log"]
         tot[1] += ok
         if not ok:
             bad += 1

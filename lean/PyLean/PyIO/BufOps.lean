@@ -203,7 +203,8 @@ inductive Outcome (σ : Type) where
   results of the operations that finished before it (none if it was in `__init__`,
   `init := true`); nothing after it is claimed. -/
   | ub (init : Bool) (rs : List (Py Val))
-  | initErr (e : PyExc)
+  /-- The constructor raised `e`, leaving `s` (whose raw has logged the calls made). -/
+  | initErr (s : σ) (e : PyExc)
 
 /-- Run the operations in turn, stopping when the process dies or hangs; either way
 with the results of the operations that finished. -/
@@ -225,9 +226,14 @@ def runCAlloc (alloc : Nat) (kind : Nat) (raw : Raw) (size : Int) (ops : List Bf
   -- `tp_alloc`'s zeros; `readable`/`writable` stand for the type
   let s0 : BufS :=
     { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0, allocLimit := alloc }
+  -- the `buffer_size: Py_ssize_t` converter (clinic/bufferedio.c.h) runs before the
+  -- body: an int out of range raises `OverflowError` before any call on the raw
+  match argSsize size with
+  | .error e => .initErr s0 e
+  | .ok _ =>
   match BC2.init kind size (stepC (reFuel raw)) s0 with
   | (s, .error e) =>
-    if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub true [] else .crashed) else .initErr e
+    if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub true [] else .crashed) else .initErr s e
   | (s, .ok _) =>
     match runSeq (stepC (reFuel raw + 1)) (·.crashed) s ops with
     | .error (t, rs) => if t.blocked then .hung else if t.corrupt then .ub false rs else .crashed
@@ -242,7 +248,7 @@ def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS 
 def runP (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufP :=
   -- the harness arms the hooks once the constructor has returned, and counts from there
   match BP2.init kind size (stepP 0) { (default : BufP) with raw := { raw with hooks := [] }, kind := kind } with
-  | (_, .error e) => .initErr e
+  | (s, .error e) => .initErr s e
   | (s, .ok _) =>
     let s := { s with raw := { s.raw with hooks := raw.hooks, tick := 0 } }
     match runSeq (stepP (reFuel raw + 1)) (·.hung) s ops with
