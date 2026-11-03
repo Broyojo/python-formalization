@@ -42,10 +42,17 @@ def pCatA (j : Json) : Except String CatA := do
     | "str" => return .obj "str" "str"
     | _ => return .obj "OrderedDict" "collections.OrderedDict"
 
+/-- `["s", t]` a str, `["lie", t]` a str subclass whose `__class__` gives UserWarning,
+`["raise", t]` / `["raiseA", t]` one whose `__class__` raises `ValueError('cls')` /
+`AttributeError('cls')`, `["w", k, t]` a Warning instance, `["wlie", t]` a `LieW` instance. -/
 def pMsgA (j : Json) : Except String MsgA := do
   match ← jStrAt j 0 with
-  | "s" => return .str (← jStrAt j 1)
-  | _ => return .warn (← jNatAt j 1) (← jStrAt j 2)
+  | "s" => return .str (← jStrAt j 1) .own
+  | "lie" => return .str (← jStrAt j 1) (.cls 1 "UserWarning" true)
+  | "raise" => return .str (← jStrAt j 1) (.raises (.valueError "cls"))
+  | "raiseA" => return .str (← jStrAt j 1) (.raises (.named "AttributeError" "cls"))
+  | "wlie" => return .warn 6 (← jStrAt j 1) (.cls 3 "DeprecationWarning" true)
+  | _ => return .warn (← jNatAt j 1) (← jStrAt j 2) .own
 
 def pPElem (j : Json) : Except String PElem := do
   match ← jStrAt j 0 with
@@ -82,7 +89,7 @@ def runCall (isC : Bool) (j : Json) : Except String Json := do
                     mkMsg := fun c => if c = 5 then .error (.valueError "bad message") else .ok (),
                     lines := fun _ => .ok () }
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   shw := .call (.ok ()) (.ok ()), hier := dHier }
+                   shw := .call (.ok ()) (.ok ()), hier := dHier, importW := .ok () }
   let m ← pMsgA (← j.getObjVal? "msg")
   let c ← pCatA (← j.getObjVal? "cat")
   let s ← (← j.getObjVal? "sl").getInt?

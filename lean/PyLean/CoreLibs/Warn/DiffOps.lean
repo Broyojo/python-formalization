@@ -33,7 +33,9 @@ def dHier : Hier := ⟨fun c b =>
   (c == "MyImportError" && excIsA "ImportError" b) ||
   -- `class Y(UnicodeEncodeError, metaclass=M)` whose `M.mro` is `[cls, UnicodeEncodeError,
   -- BaseException, object]`: under `UnicodeEncodeError` and `BaseException`, not `ValueError`
-  (c == "Y" && (b == "UnicodeEncodeError" || b == "BaseException")) || c == b⟩
+  (c == "Y" && (b == "UnicodeEncodeError" || b == "BaseException")) ||
+  -- `AE`, a plain subclass of `AttributeError`
+  (c == "AE" && excIsA "AttributeError" b) || c == b⟩
 
 def dFEnv : FEnv := ⟨dCompile, dIsType, dIsWarn, dHier⟩
 

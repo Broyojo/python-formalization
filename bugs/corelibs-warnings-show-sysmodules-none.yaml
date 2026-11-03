@@ -1,0 +1,69 @@
+id: corelibs-warnings-show-sysmodules-none
+title: "With sys.modules['warnings'] = None, C warnings bypass catch_warnings(record=True) and print to stderr"
+priority: P5
+kind: twin-divergence
+module: corelibs
+files: [Python/_warnings.c, Lib/_py_warnings.py]
+functions: ["call_show_warning", "get_warnings_attr"]
+summary: |
+  `sys.modules['warnings'] = None` makes C's `PyImport_Import("warnings")` in
+  `get_warnings_attr` (Python/_warnings.c:229-238) raise ModuleNotFoundError, which it clears;
+  `call_show_warning` (:749-755) then prints through its own `show_warning`, which neither
+  `_showwarnmsg` nor a `catch_warnings(record=True)` log sees. The Python twin shows through
+  `_wm._showwarnmsg` and records it. Measured on 3.15.2: inside
+  `warnings.catch_warnings(record=True)` with `sys.modules['warnings'] = None`,
+  `_warnings.warn_explicit("x", UserWarning, "a.py", 1, module="m")` records nothing and writes
+  "a.py:1: UserWarning: x" to stderr; `_py_warnings.warn_explicit(...)` records it.
+likelihood: |
+  Very low: `sys.modules['warnings'] = None` is a way to block the module, or a state late in
+  shutdown.
+maybe_intended: |
+  Likely: the comment at :232-233 ("Fallback to the C implementation if we cannot get the Python
+  implementation") describes this path, meant for a missing Python module. Recorded as a twin
+  difference only.
+reproducer: |
+  import io, sys, warnings, _warnings
+  import _py_warnings as pw
+  W = sys.modules["warnings"]
+  got = {}
+  for name, mod in (("c", _warnings), ("py", pw)):
+      err, old = io.StringIO(), sys.stderr
+      sys.stderr = err
+      try:
+          with warnings.catch_warnings(record=True) as log:
+              warnings.simplefilter("always")
+              sys.modules["warnings"] = None
+              try:
+                  mod.warn_explicit("x", UserWarning, "a.py", 1, module="m")
+              finally:
+                  sys.modules["warnings"] = W
+              got[name] = (len(log), err.getvalue() != "")
+      finally:
+          sys.stderr = old
+  print(got)
+  if got["c"] == (0, True) and got["py"] == (1, False):
+      print("REPRODUCED corelibs-warnings-show-sysmodules-none")
+expected: |
+  Both twins show the warning through `_showwarnmsg`, so the record log gets it.
+observed: |
+  python3 3.15.2: {'c': (0, True), 'py': (1, False)}. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Twin agreement; Doc/library/warnings.rst:630-632: with record=True "a list is returned that is
+  progressively populated with objects as seen by a custom showwarning function (which also
+  suppresses output to sys.stderr)".
+cause: |
+  Python/_warnings.c:229-238 and :749-755.
+possible_fix: |
+  None needed if the fallback is intended; otherwise use the module C already holds.
+duplicates:
+  issues: []
+  queries: ["warnings sys.modules None show_warning", "catch_warnings record sys.modules warnings None",
+            "warnings importing during shutdown show_warning", "_showwarnmsg import fails",
+            "warnings showwarnmsg fallback C"]
+  note: |
+    gh-63620 (FileIO destructor importing io at exit) is unrelated. Bugforge README: no warnings
+    entry. Related: corelibs-warnings-show-import (the same import, another failure).
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsImport
+  theorem: PyLean.CoreLibs.Warn.warnTwinsImport_refuted_none

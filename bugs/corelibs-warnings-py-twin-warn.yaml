@@ -58,6 +58,12 @@ summary: |
      (`PyLong_AsSsize_t`, :519-524); Python never matches it. A filter action that is unhashable:
      Python's `action in {"always", "all"}` (:601) raises TypeError about hashing, C "action must
      be a string".
+  14. A deleted `defaultaction`, `onceregistry`, `_showwarnmsg` or `WarningMessage` with a module
+     `__getattr__` that raises an AttributeError subclass: C's `PyObject_GetOptionalAttr`
+     clears it (Objects/moduleobject.c:1395-1399) and uses the cached value, falls back to
+     `show_warning`, or raises "unable to get warnings.WarningMessage"; Python's `_wm.x` raises
+     it (the warnTwinsModuleState_refuted_*Getattr theorems). With a `__getattr__` raising
+     anything else both raise it (LookupRaisesTwins, proven).
 likelihood: |
   Low: the Python twin runs only without `_warnings` (and in tests). Items 1 and 2 are the
   likeliest to be hit by code tested against both.

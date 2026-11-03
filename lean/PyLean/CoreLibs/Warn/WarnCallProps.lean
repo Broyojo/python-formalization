@@ -126,7 +126,7 @@ def GlobalsOk (G : Globals) : Prop :=
 
 /-- The category is `None` or a Warning subclass, or the message is a Warning instance. -/
 def CatOk (m : MsgA) (c : CatA) : Prop :=
-  (∃ k t, m = .warn k t) ∨ c = .none ∨ ∃ k n fq, c = .cls k n fq true
+  (∃ k t d, m = .warn k t d) ∨ c = .none ∨ ∃ k n fq, c = .cls k n fq true
 
 /-! ## What the shared helpers compute -/
 
@@ -179,7 +179,8 @@ def NextExtSpec : Prop := ∀ (sk : String → Bool) (l : List Frame) (j : Nat),
 theorem nextExtSpec_proven : NextExtSpec := nextExt_spec
 
 /-- For a documented call (a str or Warning message, a Warning subclass or `None` category, a
-`stacklevel` from 1 to the C `int` maximum, `skip_file_prefixes` a tuple of strs), every stack whose
+`stacklevel` from 1 to the C `int` maximum, `skip_file_prefixes` a tuple of strs, a message whose
+`__class__` is not overridden), every stack whose
 frames' lines are C `int`s and whose globals are `GlobalsOk` (and whose `linecache.getlines` does
 not raise), and everything `WarnTwinsNarrow` assumes of the filters, the module state, the
 callbacks and the message: C `warnings.warn` and `_py_warnings.warn` give the same result, use the
@@ -187,7 +188,8 @@ same globals' registry and leave it and the once registry the same (`True == 1`)
 def WarnCallTwinsNarrow : Prop :=
   ∀ (W : WEnv) E K fs ver (m : MsgA) (c : CatA) (s : Int) (ps : List String),
     ver ≠ 0 → EnvOk E → ItemsOk fs → CfgOk K → (∀ k, W.mkMsg k = .ok ()) → (∀ g, W.lines g = .ok ()) →
-    CatOk m c → 1 ≤ s → s ≤ intMax → (∀ f ∈ W.frames, -intMax - 1 ≤ f.lineno ∧ f.lineno ≤ intMax) →
+    CatOk m c → clsOf m = .own → 1 ≤ s → s ≤ intMax →
+    (∀ f ∈ W.frames, -intMax - 1 ≤ f.lineno ∧ f.lineno ≤ intMax) →
     (∀ g, GlobalsOk (W.globals g)) →
     let r1 := cWarn W E K fs ver m c s (.tuple (ps.map .str))
     let r2 := pyWarn W E K fs ver m c s (.tuple (ps.map .str))
@@ -213,18 +215,23 @@ def ctxAt (W : WEnv) (ps : List String) (s : Int) : WCtx :=
 /-- The stacklevel after the prefixes raise it to 2. -/
 def raised (ps : List String) (s : Int) : Int := if ps.isEmpty then s else max 2 s
 
-theorem setup_eq (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (ps : List String) (hc : CatOk m c)
+theorem setup_eq (H : Hier) (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (ps : List String) (hc : CatOk m c)
+    (hown : clsOf m = .own)
     (h1 : 1 ≤ s) (h2 : s ≤ intMax) (hg : ∀ g, GlobalsOk (W.globals g)) :
     cWarnSetup W m c s (.tuple (ps.map .str)) =
-      (pyGetCategory W m c).map (fun cat => (cat, ctxAt W ps (raised ps s))) ∧
-    pyWarnSetup W m c s (.tuple (ps.map .str)) =
-      (pyGetCategory W m c).map (fun cat => (cat, ctxAt W ps (raised ps s))) := by
+      (pyGetCategory H W m c).map (fun cat => (cat, ctxAt W ps (raised ps s))) ∧
+    pyWarnSetup H W m c s (.tuple (ps.map .str)) =
+      (pyGetCategory H W m c).map (fun cat => (cat, ctxAt W ps (raised ps s))) := by
   have hfit : ¬ (s > ssizeMax ∨ s < -ssizeMax - 1) := by simp [ssizeMax, intMax] at h2 ⊢; omega
-  have hcat : cGetCategory W m c = pyGetCategory W m c := by
-    rcases hc with ⟨k, t, rfl⟩ | rfl | ⟨k, n, fq, rfl⟩
-    · rfl
-    · cases m <;> rfl
-    · cases m <;> rfl
+  have hcat : cGetCategory W m c = pyGetCategory H W m c := by
+    rcases hc with ⟨k, t, d, rfl⟩ | rfl | ⟨k, n, fq, rfl⟩
+    · simp only [clsOf] at hown; subst hown; rfl
+    · cases m with
+      | str t d => simp only [clsOf] at hown; subst hown; rfl
+      | warn k t d => simp only [clsOf] at hown; subst hown; rfl
+    · cases m with
+      | str t d => simp only [clsOf] at hown; subst hown; rfl
+      | warn k t d => simp only [clsOf] at hown; subst hown; rfl
   have hmax : (if s < 2 then 2 else s) = max 2 s := by split <;> omega
   have hs1 : 1 ≤ raised ps s := by unfold raised; split <;> omega
   have hs2 : raised ps s ≤ intMax := by unfold raised; split <;> simp [intMax] at h2 ⊢ <;> omega
@@ -233,7 +240,7 @@ theorem setup_eq (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (ps : List String) (
   constructor
   · unfold cWarnSetup cSetup
     rw [hcat]
-    cases hp : pyGetCategory W m c with
+    cases hp : pyGetCategory H W m c with
     | error e => simp [hfit, bind, Except.bind, pure, Except.pure, Except.map]
     | ok cat =>
       cases hpe : ps.isEmpty
@@ -248,7 +255,7 @@ theorem setup_eq (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (ps : List String) (
         simp only [ctxAt, raised, List.isEmpty_nil, if_true, cPos, module_eq _ (hg _), reg_eq]
         rfl
   · unfold pyWarnSetup
-    cases hp : pyGetCategory W m c with
+    cases hp : pyGetCategory H W m c with
     | error e => simp [bind, Except.bind, Except.map]
     | ok cat =>
       have hsel : (if (ps.map PElem.str).isEmpty then s else max 2 s) = raised ps s := by
@@ -272,10 +279,10 @@ theorem frameAt_line (W : WEnv) (ps : List String) (s : Int)
   | sys => simp [frameAt, intMax]
 
 theorem warnCallTwinsNarrow_proven : WarnCallTwinsNarrow := by
-  intro W E K fs ver m c s ps hv he hi hk hmk hlines hc h1 h2 hfl hg
-  obtain ⟨hC, hP⟩ := setup_eq W m c s ps hc h1 h2 hg
+  intro W E K fs ver m c s ps hv he hi hk hmk hlines hc hown h1 h2 hfl hg
+  obtain ⟨hC, hP⟩ := setup_eq E.hier W m c s ps hc hown h1 h2 hg
   simp only [cWarn, pyWarn, hC, hP]
-  cases hp : pyGetCategory W m c with
+  cases hp : pyGetCategory E.hier W m c with
   | error e => simp [Except.map, finish]
   | ok cat =>
     simp only [Except.map, finish]
@@ -294,10 +301,10 @@ theorem warnCallTwinsNarrow_proven : WarnCallTwinsNarrow := by
       · rw [h]; exact Or.inl rfl
       · rw [h]; exact Or.inr ⟨r, rfl, hr⟩
     have hmsg : MsgOk (callOf W m cat x) := by
-      refine ⟨?_, rfl, hlines _⟩
+      refine ⟨?_, hown, rfl, hlines _⟩
       simp only [callOf]; cases m <;> simp [hmk]
     have hline : LineOk (callOf W m cat x) := ⟨x.lineno, rfl, hl.1, hl.2⟩
-    obtain ⟨t1, t2, t3⟩ := warnTwinsNarrow_proven E K fs ver (callOf W m cat x) x.reg hv he hi hk
+    obtain ⟨t1, t2, t3, _⟩ := warnTwinsNarrow_proven E K fs ver (callOf W m cat x) x.reg hv he hi hk
       hline hmod hmsg hreg
     refine ⟨t1, ?_, t3⟩
     revert t2
@@ -309,30 +316,59 @@ theorem warnCallTwinsNarrow_proven : WarnCallTwinsNarrow := by
 def wE0' : WEnv := WEnv.mk [⟨"a.py", 3, 0⟩] ⟨"PYW", 505, 2⟩ (fun _ => ⟨.str "m", .missing⟩) 1 1
   (fun _ => .ok ()) (fun _ => .ok ())
 
+/-- A str whose `__class__`, as Python's `isinstance` reads it, does not make it a Warning: not
+overridden, another class that is not a Warning subclass, or a read that raises an exception under
+`AttributeError` (which `isinstance` clears). -/
+def StrClsPlain (H : Hier) (d : ClsV) : Prop :=
+  d = .own ∨ (∃ k n, d = .cls k n false) ∨ (∃ e, d = .raises e ∧ isA H e "AttributeError" = true)
+
 /-- A str message with a category that is not a Warning subclass (an instance, or another class):
 both twins raise `TypeError` (C `get_category`, :1130-1141; Python :474-479), for every stacklevel
-that fits C `Py_ssize_t` and every tuple of prefixes. The messages differ for a class outside
+that fits C `Py_ssize_t`, every tuple of prefixes, and every str whose `__class__` does not make it
+a Warning for Python (`StrClsPlain`; C never reads it). The messages differ for a class outside
 `builtins` and `__main__` (C prints the module-qualified `%N`/`%T`). -/
 def WarnCatErr : Prop :=
-  ∀ (W : WEnv) (t : String) (c : CatA) (s : Int) (ps : List PElem),
+  ∀ (H : Hier) (W : WEnv) (t : String) (d : ClsV) (c : CatA) (s : Int) (ps : List PElem),
+    StrClsPlain H d →
     (∃ tp fq, c = .obj tp fq) ∨ (∃ k n fq, c = .cls k n fq false) → -ssizeMax - 1 ≤ s → s ≤ ssizeMax →
-    (∃ e, cWarnSetup W (.str t) c s (.tuple ps) = .error e ∧ e.className = "TypeError") ∧
-    (∃ e, pyWarnSetup W (.str t) c s (.tuple ps) = .error e ∧ e.className = "TypeError")
+    (∃ e, cWarnSetup W (.str t d) c s (.tuple ps) = .error e ∧ e.className = "TypeError") ∧
+    (∃ e, pyWarnSetup H W (.str t d) c s (.tuple ps) = .error e ∧ e.className = "TypeError")
 
 theorem warnCatErr_proven : WarnCatErr := by
-  intro W t c s ps hc h1 h2
+  intro H W t d c s ps hd hc h1 h2
   have hfit : ¬ (s > ssizeMax ∨ s < -ssizeMax - 1) := by omega
+  have hpy : pyGetCategory H W (.str t d) c = pyCheckCat W c := by
+    rcases hd with rfl | ⟨k, n, rfl⟩ | ⟨e, rfl, he⟩
+    · rfl
+    · rfl
+    · simp [pyGetCategory, he]
   rcases hc with ⟨tp, fq, rfl⟩ | ⟨k, n, fq, rfl⟩ <;>
     exact ⟨⟨_, by simp [cWarnSetup, hfit, cGetCategory, bind, Except.bind, pure, Except.pure]; rfl, rfl⟩,
-      ⟨_, by simp [pyWarnSetup, pyGetCategory, bind, Except.bind]; rfl, rfl⟩⟩
+      ⟨_, by simp [pyWarnSetup, hpy, pyCheckCat, bind, Except.bind]; rfl, rfl⟩⟩
+
+/-- The Python half for every str: refuted. A str subclass whose `__class__` claims `UserWarning`
+passes Python's checks with `category=5` (`category = message.__class__`, :469-470), while C's
+exact `PyObject_TypeCheck` keeps the category and raises `TypeError` (measured on 3.15.2). -/
+def WarnCatErrAnyCls : Prop :=
+  ∀ (H : Hier) (W : WEnv) (t : String) (d : ClsV) (c : CatA) (s : Int) (ps : List PElem),
+    (∃ tp fq, c = .obj tp fq) ∨ (∃ k n fq, c = .cls k n fq false) → -ssizeMax - 1 ≤ s → s ≤ ssizeMax →
+    ∃ e, pyWarnSetup H W (.str t d) c s (.tuple ps) = .error e ∧ e.className = "TypeError"
+
+theorem warnCatErrAnyCls_refuted : ¬ WarnCatErrAnyCls := fun h => by
+  obtain ⟨e, he, _⟩ := h builtinHier wE0' "x" (.cls 1 "UserWarning" true) (.obj "int" "int") 1 []
+    (Or.inl ⟨_, _, rfl⟩) (by decide) (by decide)
+  obtain ⟨v, hv⟩ : ∃ v, pyWarnSetup builtinHier wE0' (.str "x" (.cls 1 "UserWarning" true)) (.obj "int" "int") 1
+      (.tuple []) = .ok v := ⟨_, rfl⟩
+  rw [hv] at he; cases he
 
 /-- The messages are the same too: refuted for a class outside `builtins` and `__main__`. -/
 def WarnCatMsg : Prop :=
-  ∀ (W : WEnv) (t : String) (c : CatA) (s : Int),
-    (cWarnSetup W (.str t) c s (.tuple [])).map (fun _ => ()) = (pyWarnSetup W (.str t) c s (.tuple [])).map (fun _ => ())
+  ∀ (H : Hier) (W : WEnv) (t : String) (c : CatA) (s : Int),
+    (cWarnSetup W (.str t .own) c s (.tuple [])).map (fun _ => ()) =
+      (pyWarnSetup H W (.str t .own) c s (.tuple [])).map (fun _ => ())
 
 theorem warnCatMsg_refuted : ¬ WarnCatMsg := fun h =>
-  refute (h wE0' "x" (.cls 18 "OrderedDict" "collections.OrderedDict" false) 1)
+  refute (h builtinHier wE0' "x" (.cls 18 "OrderedDict" "collections.OrderedDict" false) 1)
     (x := .error (.typeError "category must be a Warning subclass, not class 'collections.OrderedDict'"))
     (y := .error (.typeError "category must be a Warning subclass, not class 'OrderedDict'"))
     (by rfl) (by rfl) (by simp)
@@ -357,21 +393,21 @@ theorem itemsNil : ItemsOk [] := fun _ h => by simp at h
 
 /-- `stacklevel=0`: C uses the caller's registry (globals 0), Python `warn`'s own (globals 2). -/
 theorem warnCallTwins_refuted : ¬ WarnCallTwins := fun h =>
-  refute (h wE0 E0 (K0 "default") [] 1 (.str "x") .none 0 (.tuple []) (by decide) envOk0 itemsNil
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" .own) .none 0 (.tuple []) (by decide) envOk0 itemsNil
     (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).2
     (x := some (0, [(.tri "x" 1 3, 1), (.version, 1)])) (y := some (2, [(.tri "x" 1 505, 1), (.version, 1)]))
     (by rfl) (by rfl) (by simp)
 
 /-- A prefix that is a tuple of strs: C refuses it, Python accepts it. -/
 theorem warnCallTwins_refuted_prefix : ¬ WarnCallTwins := fun h =>
-  refute (h wE0 E0 (K0 "default") [] 1 (.str "x") .none 1 (.tuple [.tup ["zz"]]) (by decide) envOk0
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" .own) .none 1 (.tuple [.tup ["zz"]]) (by decide) envOk0
     itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).1
     (x := .error (.typeError "Found non-str 'tuple' in skip_file_prefixes.")) (y := .ok true)
     (by rfl) (by rfl) (by simp)
 
 /-- A `stacklevel` beyond `Py_ssize_t`: C's conversion raises, Python reports `<sys>`. -/
 theorem warnCallTwins_refuted_huge : ¬ WarnCallTwins := fun h =>
-  refute (h wE0 E0 (K0 "default") [] 1 (.str "x") .none (2 ^ 64) (.tuple []) (by decide) envOk0
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" .own) .none (2 ^ 64) (.tuple []) (by decide) envOk0
     itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).1
     (x := .error (.overflowError "Python int too large to convert to C ssize_t")) (y := .ok true)
     (by rfl) (by rfl) (by simp)
@@ -380,7 +416,7 @@ theorem warnCallTwins_refuted_huge : ¬ WarnCallTwins := fun h =>
 `TypeError` in C (its argument conversion, :1172-1190, runs first) and the category one in
 Python (:469-482). -/
 theorem warnCallTwins_refuted_order : ¬ WarnCallTwins := fun h =>
-  refute (h wE0 E0 (K0 "default") [] 1 (.str "x") (.obj "int" "int") 1 (.other "list") (by decide) envOk0
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" .own) (.obj "int" "int") 1 (.other "list") (by decide) envOk0
     itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).1
     (x := .error (.typeError "warn() argument 'skip_file_prefixes' must be tuple, not list"))
     (y := .error (.typeError "category must be a Warning subclass, not 'int'"))
@@ -389,7 +425,7 @@ theorem warnCallTwins_refuted_order : ¬ WarnCallTwins := fun h =>
 /-- A module whose `__name__` is `None`: C passes `None` on and `warn_explicit` drops the warning
 (:812-813); Python treats it as omitted and shows it. -/
 theorem warnCallTwins_refuted_nameNone : ¬ WarnCallTwins := fun h =>
-  refute (h (wE .none) E0 (K0 "default") [] 1 (.str "x") .none 1 (.tuple []) (by decide) envOk0
+  refute (h (wE .none) E0 (K0 "default") [] 1 (.str "x" .own) .none 1 (.tuple []) (by decide) envOk0
     itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).1
     (x := .ok false) (y := .ok true) (by rfl) (by rfl) (by simp)
 
@@ -398,13 +434,52 @@ def modFilter : Item := .tuple ⟨.str "error", .none, 1, .some (rx true), .int 
 /-- A module whose `__name__` is not a str: C uses `"<string>"` (:1098-1104); Python passes the
 object, whose module-regex match raises `TypeError`. -/
 theorem warnCallTwins_refuted_nameObj : ¬ WarnCallTwins := fun h =>
-  refute (h (wE .obj) E0 (K0 "default") [modFilter] 1 (.str "x") .none 1 (.tuple []) (by decide) envOk0
+  refute (h (wE .obj) E0 (K0 "default") [modFilter] 1 (.str "x" .own) .none 1 (.tuple []) (by decide) envOk0
     (by
       intro it hit; simp only [List.mem_singleton] at hit; subst hit
       refine ⟨_, rfl, ⟨"error", rfl, plainError⟩, by simp, ?_, _, rfl, by simp [ssizeMax]⟩
       intro p hp; simp at hp; subst hp; exact ⟨_, _, _, rfl, fun _ => ⟨_, rfl⟩⟩)
     (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl)).1
-    (x := .error (warnRaised ⟨"x", 1, "a.py", .int 3, .some "<string>", .ok (), .none, .ok ()⟩))
+    (x := .error (warnRaised ⟨"x", 1, "a.py", .int 3, .some "<string>", .ok (), .none, .ok (), false, .own⟩))
     (y := .error (.typeError "~expected string")) (by rfl) (by rfl) (by simp [warnRaised])
+
+/-- `WarnCallTwinsNarrow` with any `__class__` on the message: refuted. Python `warn` reads it
+(:469-470) and so does its `warn_explicit` (:560-562); C's `get_category` and `warn_explicit` use
+the exact type (:1121-1123, :822-833). A str subclass whose `__class__` claims `UserWarning`, with
+`category=5`: C raises `TypeError`, Python shows a `UserWarning` (measured on 3.15.2). -/
+def WarnCallTwinsCls : Prop :=
+  ∀ (W : WEnv) E K fs ver (m : MsgA) (c : CatA) (s : Int) (ps : List String),
+    ver ≠ 0 → EnvOk E → ItemsOk fs → CfgOk K → (∀ k, W.mkMsg k = .ok ()) → (∀ g, W.lines g = .ok ()) →
+    1 ≤ s → s ≤ intMax → (∀ f ∈ W.frames, -intMax - 1 ≤ f.lineno ∧ f.lineno ≤ intMax) →
+    (∀ g, GlobalsOk (W.globals g)) →
+    (cWarn W E K fs ver m c s (.tuple (ps.map .str))).out = (pyWarn W E K fs ver m c s (.tuple (ps.map .str))).out ∧
+    (cWarn W E K fs ver m c s (.tuple (ps.map .str))).reg.map (fun p => (p.1, norm p.2)) =
+      (pyWarn W E K fs ver m c s (.tuple (ps.map .str))).reg.map (fun p => (p.1, norm p.2))
+
+theorem globalsOk0 : ∀ g, GlobalsOk (wE0.globals g) := fun _ => ⟨Or.inr ⟨"m", rfl⟩, Or.inl rfl⟩
+
+theorem warnCallTwinsCls_refuted : ¬ WarnCallTwinsCls := fun h =>
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" (.cls 1 "UserWarning" true)) (.obj "int" "int") 1 []
+    (by decide) envOk0 itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl) (by decide) (by decide)
+    (by intro f hf; simp [wE0, wE] at hf; subst hf; decide) globalsOk0).1
+    (x := .error (.typeError "category must be a Warning subclass, not 'int'")) (y := .ok true)
+    (by rfl) (by rfl) (by simp)
+
+/-- A str subclass whose `__class__` raises `ValueError`: C shows the warning, Python's
+`isinstance` raises. -/
+theorem warnCallTwinsCls_refuted_raise : ¬ WarnCallTwinsCls := fun h =>
+  refute (h wE0 E0 (K0 "default") [] 1 (.str "x" (.raises (.valueError "cls"))) .none 1 []
+    (by decide) envOk0 itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl) (by decide) (by decide)
+    (by intro f hf; simp [wE0, wE] at hf; subst hf; decide) globalsOk0).1
+    (x := .ok true) (y := .error (.valueError "cls")) (by rfl) (by rfl) (by simp)
+
+/-- A Warning instance whose `__class__` gives `DeprecationWarning`: C files it under its type
+(`UserWarning` here), Python under `DeprecationWarning`. -/
+theorem warnCallTwinsCls_refuted_inst : ¬ WarnCallTwinsCls := fun h =>
+  refute (h wE0 E0 (K0 "default") [] 1 (.warn 1 "x" (.cls 3 "DeprecationWarning" true)) .none 1 []
+    (by decide) envOk0 itemsNil (cfgOk0 _ plainDefault) (fun _ => rfl) (fun _ => rfl) (by decide) (by decide)
+    (by intro f hf; simp [wE0, wE] at hf; subst hf; decide) globalsOk0).2
+    (x := some (0, [(.tri "x" 1 3, 1), (.version, 1)])) (y := some (0, [(.tri "x" 3 3, 1), (.version, 1)]))
+    (by rfl) (by rfl) (by simp)
 
 end PyLean.CoreLibs.Warn

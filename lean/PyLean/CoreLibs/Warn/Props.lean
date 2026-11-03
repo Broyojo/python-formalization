@@ -34,19 +34,19 @@ def LnFits (l : LnV) : Prop := ∃ v, l = .int v ∧ 0 ≤ v ∧ v ≤ ssizeMax
 `Py_ssize_t`. -/
 def ItemsOk (fs : List Item) : Prop := ItemsOkG IsTuple PlainAct TotalPat LnFits fs
 
-/-- `issubclass` and `_match_filename` do not raise, and the show step finds both
-`_showwarnmsg` (callable) and `WarningMessage`. -/
+/-- `issubclass` and `_match_filename` do not raise, the show step finds both `_showwarnmsg`
+(callable) and `WarningMessage`, and C's `import warnings` there gives the module. -/
 def EnvOk (E : Env) : Prop :=
   (∀ a b, ∃ x, E.isSub a b = .ok x) ∧ (∀ m s, ∃ x, E.matchFilename m s = .ok x) ∧
-  ∃ wm fn, E.shw = .call wm fn
+  (∃ wm fn, E.shw = .call wm fn) ∧ E.importW = .ok ()
 
 /-- An int line that fits C `int`. -/
 def LineOk (c : Call) : Prop := ∃ v, c.lineno = .int v ∧ -intMax - 1 ≤ v ∧ v ≤ intMax
 /-- `module` omitted or a str. -/
 def ModOk (c : Call) : Prop := c.module = .omitted ∨ ∃ s, c.module = .some s
-/-- The message object can be built, `module_globals` is `None`, and `linecache.getlines` does not
-raise. -/
-def MsgOk (c : Call) : Prop := c.mkMsg = .ok () ∧ c.globs = .none ∧ c.pyLines = .ok ()
+/-- The message object can be built, its `__class__` is not overridden, `module_globals` is
+`None`, and `linecache.getlines` does not raise. -/
+def MsgOk (c : Call) : Prop := c.mkMsg = .ok () ∧ c.pyCls = .own ∧ c.globs = .none ∧ c.pyLines = .ok ()
 /-- A dict (or `None`) whose `'version'`, if any, is an exact int within C long. -/
 def RegOk (reg : RegArg) : Prop :=
   reg = .none ∨ ∃ r, reg = .dict r ∧
@@ -55,23 +55,26 @@ def RegOk (reg : RegArg) : Prop :=
 def CfgOk (K : WCfg) : Prop :=
   K.tuple = false ∧ (∃ s, K.dflt = .val (.str s) ∧ Plain s) ∧ ∃ o, K.once = .dict o
 
-/-- Same result, and the same registry and once registry as `==` sees them. -/
+/-- Same result, the same registry and once registry as `==` sees them, and C did not show the
+warning through its `show_warning` fallback (Python shows every warning through `_showwarnmsg`). -/
 def Twins (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (reg : RegArg) : Prop :=
   (cWarnExplicit E K fs ver c reg).out = (pyWarnExplicit E K fs ver c reg).out ∧
   (cWarnExplicit E K fs ver c reg).reg.map norm = (pyWarnExplicit E K fs ver c reg).reg.map norm ∧
-  norm (cWarnExplicit E K fs ver c reg).once = norm (pyWarnExplicit E K fs ver c reg).once
+  norm (cWarnExplicit E K fs ver c reg).once = norm (pyWarnExplicit E K fs ver c reg).once ∧
+  cFellBack E K fs ver c reg = false
 
 /-! ## The proven agreement -/
 
 /-- For every set of callbacks that do not raise (with `_showwarnmsg` and `WarningMessage`
-present), every filters list (in `warnings.filters` or a context) of 5-tuples whose actions are
+present, and C's `import warnings` succeeding), every filters list (in `warnings.filters` or a context) of 5-tuples whose actions are
 `error`, `ignore`, `always`, `all` or `default`, whose patterns are compiled regexes that do not
 raise and whose lines are ints that fit `Py_ssize_t`, such a `defaultaction`, a dict
 `onceregistry`, every call with an int line that fits C `int`, a `module` omitted or a str, a
-message that can be built, no `module_globals`, and every registry that is `None` or a dict whose
+message that can be built and whose `__class__` is not overridden, no `module_globals`, and every
+registry that is `None` or a dict whose
 `'version'` is an exact int within C long, and every filters version but 0 (the counter starts
 at 1), the C and Python `warn_explicit` give the same result and leave the same registry and once
-registry. -/
+registry, C showing it through `_showwarnmsg` as Python does. -/
 def WarnTwinsNarrow : Prop :=
   ∀ E K fs ver c reg,
     ver ≠ 0 → EnvOk E → ItemsOk fs → CfgOk K → LineOk c → ModOk c → MsgOk c → RegOk reg →
@@ -81,7 +84,7 @@ theorem filterMatches_eq (E : Env) (c : Call) (ln : Int) (f : Filter) (hm : ModO
     (hmsg : ∀ p, f.msg = .some p → TotalPat p) (hmod : ∀ p, f.mod = .some p → TotalPat p)
     (hln : LnFits f.ln) :
     cFilterMatches E false c ln (modArg c) f = pyFilterMatches E c ln f := by
-  obtain ⟨hs, hf, _⟩ := he
+  obtain ⟨hs, hf, _, _⟩ := he
   obtain ⟨lv, hlv, hl0, hl1⟩ := hln
   have ha : asSsize f.ln = .ok lv := by
     rw [hlv]; simp only [asSsize]; rw [if_neg]; simp only [ssizeMax] at hl1 ⊢; omega
@@ -148,18 +151,29 @@ theorem alreadyWarned_eq (ver : Int) (r : Reg) (k : Key) (hv : ver ≠ 0) (hk : 
 /-- The two show steps agree when both attributes are there and `linecache.getlines` succeeds. -/
 theorem show_eq (E : Env) (c : Call) (he : EnvOk E) (hl : c.pyLines = .ok ()) :
     cShow E = pyShow E c := by
-  obtain ⟨_, _, wm, fn, hs⟩ := he
-  simp [cShow, pyShow, hs, hl, bind, Except.bind, getWarningsAttr]
+  obtain ⟨_, _, ⟨wm, fn, hs⟩, hi⟩ := he
+  simp [cShow, pyShow, hs, hl, hi, bind, Except.bind, getWarningsAttr, swAttr, wmAttr]
+
+/-- With `import warnings` and `_showwarnmsg` there, C does not fall back to `show_warning`. -/
+theorem fallback_false (E : Env) (he : EnvOk E) : cFallback E = false := by
+  obtain ⟨_, _, ⟨wm, fn, hs⟩, hi⟩ := he
+  simp [cFallback, hs, hi, getWarningsAttr, swAttr]
+
+/-- A message whose `__class__` is not overridden passes Python's message step as it is. -/
+theorem msgStep_own (H : Hier) (c : Call) (hm : c.mkMsg = .ok ()) (hc : c.pyCls = .own) :
+    pyMsgStep H c = .ok (c, false) := by
+  unfold pyMsgStep
+  cases c.inst <;> simp [hm, hc, bind, Except.bind]
 
 /-- The plain actions take the same steps in both twins, registries compared by `norm`. -/
 theorem action_eq (E : Env) (K : WCfg) (ver : Int) (c : Call) (ln : Int) (a : String) (b : Bool)
     (reg : Option Reg) (r1 : Reg) (ha : Plain a) (hs : cShow E = pyShow E c) :
     (cAction E K ver c ln a (reg.map (fun _ => r1))).1 = false ∧
-    (cAction E K ver c ln a (reg.map (fun _ => r1))).2.1 = (pyAction E K c ln (.str a) b r1).1 ∧
+    (cAction E K ver c ln a (reg.map (fun _ => r1))).2.1 = (pyAction E K c ln (.str a) b r1 (warnRaised c)).1 ∧
     (cAction E K ver c ln a (reg.map (fun _ => r1))).2.2.1.map norm =
-      reg.map (fun _ => norm (pyAction E K c ln (.str a) b r1).2.1) ∧
+      reg.map (fun _ => norm (pyAction E K c ln (.str a) b r1 (warnRaised c)).2.1) ∧
     norm (cAction E K ver c ln a (reg.map (fun _ => r1))).2.2.2 =
-      norm (pyAction E K c ln (.str a) b r1).2.2 := by
+      norm (pyAction E K c ln (.str a) b r1 (warnRaised c)).2.2 := by
   rcases ha with h | h | h | h | h <;> subst h <;> cases reg <;>
     simp [cAction, pyAction, norm, regSet, cTrue, one, hs]
 
@@ -169,7 +183,9 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
   have hline' : ¬ (v > intMax ∨ v < -intMax - 1) := by omega
   have hfind := find_eq E c v fs hm he hi
   obtain ⟨htup, ⟨a, hda, hpa⟩, o, ho⟩ := hk
-  obtain ⟨hmk, hglob, hlines⟩ := hmsg
+  obtain ⟨hmk, hcls, hglob, hlines⟩ := hmsg
+  have hstep := msgStep_own E.hier c hmk hcls
+  have hfb := fallback_false E he
   have hshow := show_eq E c he hlines
   have hnm : cListName K = .ok (if K.ctx then "_warnings_context _filters" else "filters") := by
     simp [cListName, htup]
@@ -193,8 +209,13 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
           · exact ih (fun g'' hg'' => hp g'' (by simp [hg''])) hf'
           · simp [pure, Except.pure] at hf'; subst hf'; exact hact
     exact mem fs hi hit
-  unfold Twins cWarnExplicit pyWarnExplicit
-  simp only [hl, hmk, hglob, hnm]
+  -- C did not fall back: `cFallback E` is false
+  suffices h3 : (cWarnExplicit E K fs ver c reg).out = (pyWarnExplicit E K fs ver c reg).out ∧
+      (cWarnExplicit E K fs ver c reg).reg.map norm = (pyWarnExplicit E K fs ver c reg).reg.map norm ∧
+      norm (cWarnExplicit E K fs ver c reg).once = norm (pyWarnExplicit E K fs ver c reg).once from
+    ⟨h3.1, h3.2.1, h3.2.2, by simp [cFellBack, hfb]⟩
+  unfold cWarnExplicit pyWarnExplicit
+  simp only [hl, hmk, hglob, hnm, hstep, Bool.false_eq_true, if_false]
   rw [if_neg hline']
   cases hcm : c.module with
   | none => simp [ModOk, hcm] at hm
@@ -213,7 +234,7 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
         | none =>
           obtain ⟨e1, e2, e3, e4⟩ := action_eq E K ver c v a (!fs.isEmpty) .none (pyRegPrep ver []) hpa hshow
           simp only [Option.map_none] at e1 e2 e3 e4
-          simp only [cDefault, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
+          simp only [cDefault, dfltAttr, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
           exact ⟨e2, by simpa using e3, e4⟩
         | some f =>
           obtain ⟨s', hs', hps⟩ := hplain f hpf
@@ -233,7 +254,7 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
           | none =>
             obtain ⟨e1, e2, e3, e4⟩ := action_eq E K ver c v a (!fs.isEmpty) (.some r) (pyRegPrep ver r) hpa hshow
             simp only [Option.map_some] at e1 e2 e3 e4
-            simp only [cDefault, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
+            simp only [cDefault, dfltAttr, getWarningsAttr, if_true, ite_true, hda, withPending, Bool.false_or, e1, Bool.false_eq_true, if_false]
             exact ⟨e2, by simpa using e3, e4⟩
           | some f =>
             obtain ⟨s', hs', hps⟩ := hplain f hpf
@@ -250,8 +271,11 @@ its MRO, such as `ModuleNotFoundError`) from `import warnings` is cleared and th
 falls back to `show_warning`), any other import error propagates; without it, a `warnings` absent
 from `sys.modules` is `NULL`; then a present attribute is returned, a missing one is `NULL`
 (`PyObject_GetOptionalAttr` clears the `AttributeError`, where Python's `_wm.x` raises it), and
-a lookup that raises propagates. Measured on 3.15.2: `sys.modules['warnings'] = None` makes
-`warn_explicit` print through `show_warning`; a module whose `__getattr__` raises makes it raise. -/
+a module `__getattr__` that raises an exception of a class `c` with `H.sub c "AttributeError"` is
+`NULL` too, while any other exception from it propagates. Measured on 3.15.2:
+`sys.modules['warnings'] = None` makes `warn_explicit` print through `show_warning`; a module
+whose `__getattr__` raises `KeyError` makes it raise, one whose `__getattr__` raises an
+`AttributeError` subclass is treated as missing. -/
 def GetWarningsAttrSpec : Prop :=
   ∀ H : Hier,
   (∀ (α : Type) (e : PyExc) (attr : AttrR α) b, isA H e "ImportError" = true →
@@ -261,17 +285,21 @@ def GetWarningsAttrSpec : Prop :=
   (∀ (α : Type) (imp : Py Unit) (attr : AttrR α), getWarningsAttr H false imp false attr = .ok none) ∧
   (∀ (α : Type) t (a : α), getWarningsAttr H t (.ok ()) true (.found a) = .ok (some a)) ∧
   (∀ (α : Type) t, getWarningsAttr H t (.ok ()) true (AttrR.missing : AttrR α) = .ok none) ∧
-  (∀ (α : Type) t e, getWarningsAttr H t (.ok ()) true (AttrR.raises e : AttrR α) = .error e)
+  (∀ (α : Type) t e, isA H e "AttributeError" = true →
+    getWarningsAttr H t (.ok ()) true (AttrR.raises e : AttrR α) = .ok none) ∧
+  (∀ (α : Type) t e, isA H e "AttributeError" = false →
+    getWarningsAttr H t (.ok ()) true (AttrR.raises e : AttrR α) = .error e)
 
 theorem getWarningsAttrSpec_proven : GetWarningsAttrSpec := by
   intro H
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro α e attr b h; simp [getWarningsAttr, h]
   · intro α e attr b h; simp [getWarningsAttr, h]
   · intro α imp attr; simp [getWarningsAttr]
   · intro α t a; cases t <;> simp [getWarningsAttr]
   · intro α t; cases t <;> simp [getWarningsAttr]
-  · intro α t e; cases t <;> simp [getWarningsAttr]
+  · intro α t e h; cases t <;> simp [getWarningsAttr, h]
+  · intro α t e h; cases t <;> simp [getWarningsAttr, h]
 
 /-- In every relation CPython can have, `ModuleNotFoundError` and `ImportCycleError` (new in 3.15,
 Objects/exceptions.c:2025) are under `ImportError`, so an import of `warnings` that raises either is
@@ -289,20 +317,21 @@ theorem refute {α : Type} {a b x y : α} (h : a = b) (ha : a = x) (hb : b = y) 
     False := hxy (ha.symm.trans (h.trans hb))
 
 /-- Callbacks that never raise, a trivial `_match_filename`, and a show step that succeeds. -/
-def E0 : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, .call (.ok ()) (.ok ()), builtinHier⟩
+def E0 : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, .call (.ok ()) (.ok ()), builtinHier,
+  .ok ()⟩
 
 /-- `warnings.filters` a list, `defaultaction` the given one, an empty once registry. -/
 def K0 (d : String) : WCfg := ⟨false, false, .val (.str d), .dict []⟩
 
-def call0 (ln : Int) (m : ModArg) : Call := ⟨"x", 1, "a.py", .int ln, m, .ok (), .none, .ok ()⟩
+def call0 (ln : Int) (m : ModArg) : Call := ⟨"x", 1, "a.py", .int ln, m, .ok (), .none, .ok (), false, .own⟩
 
 def rx (b : Bool) : Pat := .regex (fun _ => .ok b) true (.typeError "~expected string")
 
-theorem envOk0 : EnvOk E0 := ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, _, _, rfl⟩
+theorem envOk0 : EnvOk E0 := ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, ⟨_, _, rfl⟩, rfl⟩
 theorem lineOk0 (ln : Int) (m : ModArg) (h1 : -intMax - 1 ≤ ln) (h2 : ln ≤ intMax) :
     LineOk (call0 ln m) := ⟨ln, rfl, h1, h2⟩
 theorem modOk0 : ModOk (call0 1 (.some "a")) := Or.inr ⟨"a", rfl⟩
-theorem msgOk0 (ln : Int) (m : ModArg) : MsgOk (call0 ln m) := ⟨rfl, rfl, rfl⟩
+theorem msgOk0 (ln : Int) (m : ModArg) : MsgOk (call0 ln m) := ⟨rfl, rfl, rfl, rfl⟩
 theorem regOk_dict_nil : RegOk (.dict []) := Or.inr ⟨[], rfl, by simp [regGet]⟩
 theorem cfgOk0 (d : String) (h : Plain d) : CfgOk (K0 d) := ⟨rfl, ⟨d, rfl, h⟩, [], rfl⟩
 theorem plainAlways : Plain "always" := Or.inr (Or.inr (Or.inl rfl))
@@ -406,7 +435,7 @@ def WarnTwinsRaising : Prop :=
     MsgOk c → RegOk reg → Twins E (K0 "always") fs ver c reg
 
 def Eraise : Env := ⟨fun _ _ => .error (.keyError "boom"), fun _ _ => true, fun _ _ => .ok true, .call (.ok ()) (.ok ()),
-  builtinHier⟩
+  builtinHier, .ok ()⟩
 def noMatch : Item := .tuple ⟨.str "error", .some (rx false), 1, .none, .int 0⟩
 
 theorem warnTwinsRaising_refuted : ¬ WarnTwinsRaising := fun h =>
@@ -515,10 +544,10 @@ theorem warnTwinsAnyLine_refuted : ¬ WarnTwinsAnyLine := fun h =>
     (by rfl) (by rfl) (by simp)
 
 def callObjLine : Call := ⟨"x", 1, "a.py", .obj (.ok 5) (.typeError "~an integer is required"), .some "a",
-  .ok (), .none, .ok ()⟩
+  .ok (), .none, .ok (), false, .own⟩
 
 theorem warnTwinsAnyLine_refuted_obj : ¬ WarnTwinsAnyLine := fun h =>
-  refute (h E0 1 callObjLine .none (by decide) envOk0 (Or.inr ⟨"a", rfl⟩) ⟨rfl, rfl, rfl⟩ (Or.inl rfl)).1
+  refute (h E0 1 callObjLine .none (by decide) envOk0 (Or.inr ⟨"a", rfl⟩) ⟨rfl, rfl, rfl, rfl⟩ (Or.inl rfl)).1
     (x := .error (.typeError "~an integer is required")) (y := .ok true) (by rfl) (by rfl) (by simp)
 
 /-- A registry that is neither a dict nor `None`: C raises `TypeError`; Python uses any mapping
@@ -544,7 +573,8 @@ def WarnTwinsMsgRaises : Prop :=
   ∀ E ver c reg, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → c.globs = .none → c.pyLines = .ok () →
     Twins E (K0 "always") [] ver c reg
 
-def callBadMsg : Call := ⟨"x", 1, "a.py", .int 1, .some "a", .error (.valueError "bad message"), .none, .ok ()⟩
+def callBadMsg : Call := ⟨"x", 1, "a.py", .int 1, .some "a", .error (.valueError "bad message"), .none, .ok (),
+  false, .own⟩
 
 theorem warnTwinsMsgRaises_refuted : ¬ WarnTwinsMsgRaises := fun h =>
   refute (h E0 1 callBadMsg .obj (by decide) envOk0 ⟨1, rfl, by decide, by decide⟩ (Or.inr ⟨"a", rfl⟩)
@@ -596,7 +626,7 @@ def WarnTwinsModuleState : Prop :=
   ∀ (E : Env) K ver c reg, ver ≠ 0 → (∀ a b, ∃ x, E.isSub a b = .ok x) →
     LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E K [] ver c reg
 
-def Eshow (s : ShowA) : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, s, builtinHier⟩
+def Eshow (s : ShowA) : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, s, builtinHier, .ok ()⟩
 
 /-- `warnings.filters` a tuple: C's `get_warnings_filters` refuses it (:356-360); Python iterates it. -/
 theorem warnTwinsModuleState_refuted_tuple : ¬ WarnTwinsModuleState := fun h =>
@@ -634,6 +664,177 @@ theorem warnTwinsModuleState_refuted_dflt : ¬ WarnTwinsModuleState := fun h =>
     (by decide) (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _)
     (Or.inl rfl)).1
     (x := .ok true) (y := .error (noModAttr "defaultaction")) (by rfl) (by rfl) (by simp)
+
+/-- A module `__getattr__` that raises an exception whose class is under `AttributeError`, for a
+deleted `defaultaction`: C's `PyObject_GetOptionalAttr` clears it and uses the str it read last;
+Python's `_wm.defaultaction` raises it. -/
+def aeErr : PyExc := .named "AttributeError" "a"
+
+theorem warnTwinsModuleState_refuted_dfltGetattr : ¬ WarnTwinsModuleState := fun h =>
+  refute (h E0 ⟨false, false, .raises aeErr "always", .dict []⟩ 1 (call0 1 (.some "a")) .none
+    (by decide) (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _)
+    (Or.inl rfl)).1
+    (x := .ok true) (y := .error aeErr) (by rfl) (by rfl) (by simp)
+
+/-- The same for a deleted `onceregistry` (C uses the dict it read last). -/
+theorem warnTwinsModuleState_refuted_onceGetattr : ¬ WarnTwinsModuleState := fun h =>
+  refute (h E0 ⟨false, false, .val (.str "once"), .raises aeErr []⟩ 1 (call0 1 (.some "a")) .none
+    (by decide) (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _)
+    (Or.inl rfl)).1
+    (x := .ok true) (y := .error aeErr) (by rfl) (by rfl) (by simp)
+
+/-- The same for a deleted `_showwarnmsg` (C falls back to `show_warning`). -/
+theorem warnTwinsModuleState_refuted_showGetattr : ¬ WarnTwinsModuleState := fun h =>
+  refute (h (Eshow (.swRaises (.ok ()) aeErr)) (K0 "always") 1 (call0 1 (.some "a")) .none (by decide)
+    (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .ok true) (y := .error aeErr) (by rfl) (by rfl) (by simp)
+
+/-- The same for a deleted `WarningMessage` (C raises its own `RuntimeError`, :765-766). -/
+theorem warnTwinsModuleState_refuted_wmGetattr : ¬ WarnTwinsModuleState := fun h =>
+  refute (h (Eshow (.wmRaises aeErr)) (K0 "always") 1 (call0 1 (.some "a")) .none (by decide)
+    (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error (.named "RuntimeError" "unable to get warnings.WarningMessage")) (y := .error aeErr)
+    (by rfl) (by rfl) (by simp [aeErr])
+
+/-- A module `__getattr__` that raises an exception whose class is not under `AttributeError`
+(measured on 3.15.2 with `KeyError`), for a deleted `defaultaction` reached with no filter, a deleted
+`onceregistry` under the `once` action with no registry, a deleted `_showwarnmsg` or a deleted
+`WarningMessage` under `always`: both twins raise it. C: `get_default_action` (:438-441),
+`get_once_registry` (:410-412) and `call_show_warning` (:749-752, :763-768) return the error
+`PyObject_GetOptionalAttr` left; Python: `_wm.defaultaction` (:587), `_wm.onceregistry` (:598),
+`_wm._showwarnmsg` (:625, after `WarningMessage(...)`) and `_wm.WarningMessage` (:623) propagate
+it. For every call with an int line in C `int`, a `module` omitted or a str, and a message that
+can be built. -/
+def LookupRaisesTwins : Prop :=
+  ∀ (E : Env) ver c e, ver ≠ 0 → LineOk c → ModOk c → MsgOk c → E.importW = .ok () →
+    isA E.hier e "AttributeError" = false →
+    (∀ s o, (cWarnExplicit E ⟨false, false, .raises e s, .dict o⟩ [] ver c .none).out = .error e ∧
+            (pyWarnExplicit E ⟨false, false, .raises e s, .dict o⟩ [] ver c .none).out = .error e) ∧
+    (∀ o, (cWarnExplicit E ⟨false, false, .val (.str "once"), .raises e o⟩ [] ver c .none).out = .error e ∧
+          (pyWarnExplicit E ⟨false, false, .val (.str "once"), .raises e o⟩ [] ver c .none).out = .error e) ∧
+    ((E.shw = .swRaises (.ok ()) e ∨ E.shw = .wmRaises e) →
+      (cWarnExplicit E (K0 "always") [] ver c .none).out = .error e ∧
+      (pyWarnExplicit E (K0 "always") [] ver c .none).out = .error e)
+
+theorem lookupRaisesTwins_proven : LookupRaisesTwins := by
+  intro E ver c e hv hline hm hmsg hi he
+  obtain ⟨v, hl, hv1, hv2⟩ := hline
+  have hfit : ¬ (v > intMax ∨ v < -intMax - 1) := by omega
+  obtain ⟨hmk, hcls, hglob, hlines⟩ := hmsg
+  have hstep := msgStep_own E.hier c hmk hcls
+  have hk0 : ∀ k, truthy (regGet (pyRegPrep ver []) k) = false ∨ k = .version := by
+    intro k
+    by_cases hk : k = .version
+    · exact Or.inr hk
+    · left; simp [pyRegPrep, regGet, regSet, Ne.symm hv, truthy, Ne.symm hk]
+  have hkey : truthy (regGet (pyRegPrep ver []) (.tri c.text c.cat v)) = false := by
+    rcases hk0 (.tri c.text c.cat v) with h | h
+    · exact h
+    · cases h
+  have hmod : c.module ≠ .none := by rcases hm with h | ⟨s, h⟩ <;> simp [h]
+  refine ⟨?_, ?_, ?_⟩
+  · intro s o
+    constructor
+    · unfold cWarnExplicit
+      cases hcm : c.module with
+      | none => exact absurd hcm hmod
+      | omitted | some _ | obj =>
+        simp [hl, hfit, hglob, hmk, cListName, cFind, cDefault, dfltAttr, getWarningsAttr, he,
+          bind, Except.bind, pure, Except.pure, withPending]
+    · unfold pyWarnExplicit
+      simp [hl, hstep, hkey, pyFind, pure, Except.pure]
+  · intro o
+    constructor
+    · unfold cWarnExplicit
+      cases hcm : c.module with
+      | none => exact absurd hcm hmod
+      | omitted | some _ | obj =>
+        simp [hl, hfit, hglob, hmk, cListName, cFind, cDefault, dfltAttr, getWarningsAttr, cAction,
+          cOnceReg, onceAttr, he, bind, Except.bind, pure, Except.pure, withPending]
+    · unfold pyWarnExplicit
+      simp [hl, hstep, hkey, pyFind, pyAction, pure, Except.pure]
+  · intro hs
+    constructor
+    · unfold cWarnExplicit
+      cases hcm : c.module with
+      | none => exact absurd hcm hmod
+      | omitted | some _ | obj =>
+        rcases hs with hs | hs <;>
+        simp [hl, hfit, hglob, hmk, cListName, cFind, cDefault, dfltAttr, getWarningsAttr, cAction,
+          K0, cShow, swAttr, wmAttr, hs, hi, he, bind, Except.bind, pure, Except.pure, withPending]
+    · unfold pyWarnExplicit
+      rcases hs with hs | hs <;>
+      simp [hl, hstep, hkey, pyFind, pyAction, K0, pyShow, hs, hlines, pure, Except.pure, bind, Except.bind]
+
+/-! ## The message's `__class__` (Python reads it, C does not) -/
+
+theorem itemsOkNil : ItemsOk [] := fun _ h => by simp at h
+
+/-- The conditions of `MsgOk` but the one on `__class__`. -/
+def MsgOkAnyCls (c : Call) : Prop := c.mkMsg = .ok () ∧ c.globs = .none ∧ c.pyLines = .ok ()
+
+/-- `WarnTwinsNarrow` with any `__class__` on the message: refuted. Python's `isinstance(message,
+Warning)` and `message.__class__` (:560-562) read the attribute, C's `PyObject_TypeCheck` and
+`Py_TYPE` (:822-833) do not. A str subclass whose `__class__` claims `W1` is taken by Python for a
+Warning instance, so the `error` action's `raise message` raises `TypeError` where C raises the
+`UserWarning` it built. -/
+def WarnTwinsClassRead : Prop :=
+  ∀ E K fs ver c reg, ver ≠ 0 → EnvOk E → ItemsOk fs → CfgOk K → LineOk c → ModOk c → MsgOkAnyCls c →
+    RegOk reg → Twins E K fs ver c reg
+
+def callLie : Call := { call0 1 (.some "a") with pyCls := .cls 2 "W1" true }
+
+theorem warnTwinsClassRead_refuted : ¬ WarnTwinsClassRead := fun h =>
+  refute (h E0 (K0 "error") [] 1 callLie .none (by decide) envOk0 itemsOkNil (cfgOk0 _ plainError)
+    ⟨1, rfl, by decide, by decide⟩ (Or.inr ⟨"a", rfl⟩) ⟨rfl, rfl, rfl⟩ (Or.inl rfl)).1
+    (x := .error (warnRaised callLie)) (y := .error notExc) (by rfl) (by rfl) (by simp [warnRaised, notExc])
+
+/-- A str subclass whose `__class__` raises `ValueError`: Python's `isinstance` raises it, C shows
+the warning. -/
+theorem warnTwinsClassRead_refuted_raise : ¬ WarnTwinsClassRead := fun h =>
+  refute (h E0 (K0 "always") [] 1 { call0 1 (.some "a") with pyCls := .raises (.valueError "cls") } .none
+    (by decide) envOk0 itemsOkNil (cfgOk0 _ plainAlways) ⟨1, rfl, by decide, by decide⟩ (Or.inr ⟨"a", rfl⟩)
+    ⟨rfl, rfl, rfl⟩ (Or.inl rfl)).1
+    (x := .ok true) (y := .error (.valueError "cls")) (by rfl) (by rfl) (by simp)
+
+/-- A Warning instance whose `__class__` gives another class: C files it under its type, Python
+under the class `__class__` gives (the registry keys differ). -/
+theorem warnTwinsClassRead_refuted_inst : ¬ WarnTwinsClassRead := fun h =>
+  refute (h E0 (K0 "default") [] 1 { call0 1 (.some "a") with inst := true, pyCls := .cls 2 "W1" true }
+    (.dict []) (by decide) envOk0 itemsOkNil (cfgOk0 _ plainDefault) ⟨1, rfl, by decide, by decide⟩
+    (Or.inr ⟨"a", rfl⟩) ⟨rfl, rfl, rfl⟩ regOk_dict_nil).2.1
+    (x := some [(.tri "x" 1 1, 1), (.version, 1)]) (y := some [(.tri "x" 2 1, 1), (.version, 1)])
+    (by rfl) (by rfl) (by simp)
+
+/-! ## C's `import warnings` in `call_show_warning` -/
+
+/-- `WarnTwinsNarrow` with any outcome of C's `PyImport_Import(warnings)` (:749, through
+`get_warnings_attr`, :229-238): refuted twice. Python looks `_showwarnmsg` up on its own module
+reference `_wm` and never imports. -/
+def WarnTwinsImport : Prop :=
+  ∀ (E : Env) K fs ver c reg, ver ≠ 0 → (∀ a b, ∃ x, E.isSub a b = .ok x) →
+    (∀ m s, ∃ x, E.matchFilename m s = .ok x) → (∃ wm fn, E.shw = .call wm fn) → ItemsOk fs → CfgOk K →
+    LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E K fs ver c reg
+
+def Eimp (r : Py Unit) : Env := { E0 with importW := r }
+
+/-- A `builtins.__import__` that raises `RuntimeError` for `warnings`: C raises it (only an
+`ImportError` is cleared, :233-235); Python shows the warning. -/
+theorem warnTwinsImport_refuted : ¬ WarnTwinsImport := fun h =>
+  refute (h (Eimp (.error (.named "RuntimeError" "no import"))) (K0 "always") [] 1 (call0 1 (.some "a")) .none
+    (by decide) (fun _ _ => ⟨_, rfl⟩) (fun _ _ => ⟨_, rfl⟩) ⟨_, _, rfl⟩ itemsOkNil (cfgOk0 _ plainAlways)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error (.named "RuntimeError" "no import")) (y := .ok true) (by rfl) (by rfl) (by simp)
+
+/-- `sys.modules['warnings'] = None`: the import raises `ModuleNotFoundError`, which C clears and
+then prints through `show_warning`, so a `catch_warnings(record=True)` log never sees the warning;
+Python records it. -/
+theorem warnTwinsImport_refuted_none : ¬ WarnTwinsImport := fun h =>
+  refute (h (Eimp (.error (.named "ModuleNotFoundError" "import of warnings halted; None in sys.modules")))
+    (K0 "always") [] 1 (call0 1 (.some "a")) .none
+    (by decide) (fun _ _ => ⟨_, rfl⟩) (fun _ _ => ⟨_, rfl⟩) ⟨_, _, rfl⟩ itemsOkNil (cfgOk0 _ plainAlways)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).2.2.2
+    (x := true) (y := false) (by rfl) rfl (by simp)
 
 /-- `module_globals` given: C checks it and runs `get_source_line` before anything else
 (:1328-1341), so even an ignored warning raises; Python only passes it to `linecache.getlines`

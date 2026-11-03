@@ -1,0 +1,74 @@
+id: corelibs-warnings-show-import
+title: "C warn_explicit imports warnings for every shown warning: an import hook that raises makes the warning raise (the Python twin shows it)"
+priority: P4
+kind: twin-divergence
+module: corelibs
+files: [Python/_warnings.c, Lib/_py_warnings.py]
+functions: ["call_show_warning", "get_warnings_attr", "warn_explicit"]
+summary: |
+  C `call_show_warning` finds `_showwarnmsg` with `GET_WARNINGS_ATTR(interp, _showwarnmsg, 1)`
+  (Python/_warnings.c:749), and `get_warnings_attr` with `try_import` runs
+  `PyImport_Import("warnings")` (:229-238), which goes through `builtins.__import__`. Only an
+  ImportError from it is cleared (and the warning then printed by C's `show_warning`); any other
+  exception propagates out of `warnings.warn`. The Python twin looks `_showwarnmsg` up on its
+  module reference `_wm` and never imports. Measured on 3.15.2: with a `builtins.__import__`
+  wrapper that raises RuntimeError for 'warnings' (an import hook that refuses a module, a
+  sandbox), `_warnings.warn_explicit(...)` raises the RuntimeError while
+  `_py_warnings.warn_explicit(...)` shows the warning. The same wrapper makes every C
+  `warnings.warn` raise, though `warnings` is already imported.
+likelihood: |
+  Low: it needs an `__import__` replacement that raises something other than ImportError for
+  'warnings'.
+maybe_intended: |
+  The import is deliberate (the comment at :232-233 falls back to C "if we cannot get the Python
+  implementation"), but the fallback is limited to ImportError, so other import failures escape
+  through an unrelated `warnings.warn` call.
+reproducer: |
+  import builtins, warnings, _warnings
+  import _py_warnings as pw
+  real = builtins.__import__
+  def hook(name, *a, **k):
+      if name == "warnings":
+          raise RuntimeError("no import")
+      return real(name, *a, **k)
+  got = {}
+  for name, mod in (("c", _warnings), ("py", pw)):
+      with warnings.catch_warnings(record=True) as log:
+          warnings.simplefilter("always")
+          builtins.__import__ = hook
+          try:
+              mod.warn_explicit("x", UserWarning, "a.py", 1, module="m")
+              got[name] = len(log)
+          except RuntimeError:
+              got[name] = "RuntimeError"
+          finally:
+              builtins.__import__ = real
+  print(got)
+  if got["c"] == "RuntimeError" and got["py"] == 1:
+      print("REPRODUCED corelibs-warnings-show-import")
+expected: |
+  The two twins handle the warning alike (C either does not import, or treats any import failure
+  as "Python implementation unavailable").
+observed: |
+  python3 3.15.2: {'c': 'RuntimeError', 'py': 1}. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Twin agreement (Lib/warnings.py uses the C functions over the Python ones); the comment at
+  Python/_warnings.c:232-233.
+cause: |
+  Python/_warnings.c:229-238 (`PyImport_Import`, only `PyExc_ImportError` cleared) and :749-752
+  (an error from the lookup propagates).
+possible_fix: |
+  Look the module up in `sys.modules` (as the `try_import=0` path does) before importing, or
+  clear any import error and fall back to `show_warning`.
+duplicates:
+  issues: []
+  queries: ["call_show_warning import warnings", "warnings __import__ RuntimeError warn_explicit",
+            "_showwarnmsg import fails", "get_warnings_attr try_import", "warn_explicit get_warnings_attr",
+            "warnings import hook recursion warn", "warnings showwarnmsg fallback C"]
+  note: |
+    gh-155319 (closed; call_show_warning dropped the source line) touches the same function but
+    not the import. Bugforge README: no warnings entry. Related: corelibs-warnings-show-sysmodules-none.
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsImport
+  theorem: PyLean.CoreLibs.Warn.warnTwinsImport_refuted

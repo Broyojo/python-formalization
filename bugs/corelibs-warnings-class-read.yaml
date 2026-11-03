@@ -1,0 +1,85 @@
+id: corelibs-warnings-class-read
+title: "_py_warnings.warn and warn_explicit read message.__class__ (isinstance), C uses the exact type: a str subclass can change the category or raise"
+priority: P4
+kind: twin-divergence
+module: corelibs
+files: [Lib/_py_warnings.py, Python/_warnings.c]
+functions: ["warn", "warn_explicit", "get_category"]
+summary: |
+  The pure-Python twin decides whether the message is a Warning with `isinstance(message,
+  Warning)` and takes the category from `message.__class__` (Lib/_py_warnings.py:469-470 in
+  `warn`, :560-562 in `warn_explicit`). `isinstance` falls back to reading `__class__` when the
+  real type is not a Warning subclass (`object_isinstance`, Objects/abstract.c:2603-2622), and
+  `message.__class__` is an attribute read too, so a class can override it. C uses the exact
+  type: `get_category` checks `PyObject_TypeCheck(message, Warning)` and takes `Py_TYPE`
+  (Python/_warnings.c:1121-1123), as does `warn_explicit` (:822-833). Measured on 3.15.2:
+  1. A str subclass whose `__class__` property returns `UserWarning`:
+     `warn(s, DeprecationWarning)` is shown as a DeprecationWarning by C and as a UserWarning by
+     Python (so `simplefilter('ignore', DeprecationWarning)` hides it in C only, and the
+     registry keys differ); `warn(s, 5)` raises TypeError in C ("category must be a Warning
+     subclass, not 'int'") and shows a UserWarning in Python.
+  2. The same message with the `error` action: C raises `DeprecationWarning(s)`; Python's
+     `raise message` (:593) raises `TypeError: exceptions must derive from BaseException`.
+  3. A str subclass whose `__class__` raises ValueError: C shows the warning, Python's
+     `isinstance` raises the ValueError (one that raises AttributeError is cleared, and both
+     agree).
+  4. A Warning subclass instance whose `__class__` returns another class: C files the warning
+     (and the registry key) under its real type, Python under the class `__class__` gives.
+likelihood: |
+  Very low: it takes a message class that overrides `__class__` (proxies and mocks do, e.g.
+  `unittest.mock` specs set `__class__`). Only the Python twin is affected, which runs without
+  `_warnings` and in tests.
+maybe_intended: |
+  Possibly: duck typing is the Python twin's usual style. But the twins are meant to agree, and
+  item 2 shows the Python twin does not cope with what its own check accepts.
+reproducer: |
+  import sys
+  import warnings, _warnings
+  import _py_warnings as pw
+  class Lie(str):
+      @property
+      def __class__(self):
+          return UserWarning
+  got = {}
+  for name, mod in (("c", _warnings), ("py", pw)):
+      with warnings.catch_warnings(record=True) as log:
+          warnings.simplefilter("always")
+          try:
+              mod.warn(Lie("hi"), 5)
+              got[name] = [m.category.__name__ for m in log]
+          except TypeError as e:
+              got[name] = "TypeError"
+  print(got)
+  if got["c"] == "TypeError" and got["py"] == ["UserWarning"]:
+      print("REPRODUCED corelibs-warnings-class-read")
+expected: |
+  Both twins treat the message the same way (C's exact type check, or both read `__class__`).
+observed: |
+  python3 3.15.2: {'c': 'TypeError', 'py': ['UserWarning']}. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Lib/warnings.py uses the C functions over the Python ones as one API. Doc/library/warnings.rst
+  :432-433: "Alternatively, *message* can be a Warning instance, in which case *category* will be
+  ignored and ``message.__class__`` will be used." (the Python twin follows the sentence
+  literally, C uses the type; a str that claims a Warning class is not a Warning instance).
+cause: |
+  Lib/_py_warnings.py:469-470 and :560-562 (`isinstance(message, Warning)`,
+  `message.__class__`) against Python/_warnings.c:1121-1123 and :822-833
+  (`PyObject_TypeCheck`, `Py_TYPE`).
+possible_fix: |
+  In `_py_warnings`, test `issubclass(type(message), Warning)` and take `type(message)`, as C
+  does.
+duplicates:
+  issues: []
+  queries: ["warnings __class__ isinstance message", "_py_warnings isinstance Warning __class__",
+            "warn str subclass __class__ category", "warnings message __class__ property",
+            "warn_explicit PyObject_TypeCheck message", "warnings category message.__class__",
+            "warnings isinstance __class__", "warn TypeCheck isinstance twin",
+            "_warnings get_category PyObject_IsInstance"]
+  note: |
+    No issue found (the hits are unrelated: gh-134082, gh-109653, gh-69100). Bugforge README:
+    no warnings entry. Same twin as corelibs-warnings-py-twin and corelibs-warnings-py-twin-warn;
+    file together.
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsClassRead
+  theorem: PyLean.CoreLibs.Warn.warnTwinsClassRead_refuted

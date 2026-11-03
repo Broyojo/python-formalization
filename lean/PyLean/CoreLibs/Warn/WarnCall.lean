@@ -18,9 +18,9 @@ Scope:
   a new dict when it is missing; the twins pass the same registry.
 * `skip_file_prefixes` is a tuple (of strs, tuples of strs, or other objects) or another object.
 * `category` is `None`, a class (id, `__name__`, the `%N` name C prints, whether it is a Warning
-  subclass) or another object (`type(x).__name__` and the `%T` name). `message` is a str or a
-  Warning instance (its class and `str(message)`); `category(message)` is a callback of the
-  category that can raise.
+  subclass) or another object (`type(x).__name__` and the `%T` name). `message` is a str (or str
+  subclass) or a Warning instance (its class and `str(message)`), with its `__class__` as Python
+  reads it (`ClsV`); `category(message)` is a callback of the category that can raise.
 -/
 
 namespace PyLean.CoreLibs.Warn
@@ -63,8 +63,8 @@ inductive CatA where
   | obj (tp fq : String)
 
 inductive MsgA where
-  | str (s : String)
-  | warn (cls : Nat) (text : String)
+  | str (s : String) (dc : ClsV)
+  | warn (cls : Nat) (text : String) (dc : ClsV)
 
 structure WEnv where
   frames : List Frame
@@ -262,21 +262,30 @@ def cSetup (W : WEnv) (s : Int) (skip : Option (List PElem)) : Py WCtx := do
 /-- `get_category`, :1119-1144. -/
 def cGetCategory (W : WEnv) (m : MsgA) (c : CatA) : Py Nat :=
   match m with
-  | .warn k _ => .ok k
-  | .str _ =>
+  | .warn k _ _ => .ok k
+  | .str _ _ =>
     match c with
     | .none => .ok W.userWarning
     | .obj _ fq => .error (.typeError s!"category must be a Warning subclass, not '{fq}'")
     | .cls k _ fq w => if w then .ok k else .error (.typeError s!"category must be a Warning subclass, not class '{fq}'")
 
 def textOf : MsgA → String
-  | .str s => s
-  | .warn _ t => t
+  | .str s _ => s
+  | .warn _ t _ => t
 
-/-- The call `warn_explicit` gets. -/
+def clsOf : MsgA → ClsV
+  | .str _ d => d
+  | .warn _ _ d => d
+
+def isInst : MsgA → Bool
+  | .str _ _ => false
+  | .warn _ _ _ => true
+
+/-- The call `warn_explicit` gets: the message as it was passed, with the category the twin's `warn`
+computed. -/
 def callOf (W : WEnv) (m : MsgA) (cat : Nat) (x : WCtx) : Call :=
   ⟨textOf m, cat, x.filename, .int x.lineno, x.module,
-   match m with | .warn _ _ => .ok () | .str _ => W.mkMsg cat, .none, W.lines x.g⟩
+   match m with | .warn _ _ _ => .ok () | .str _ _ => W.mkMsg cat, .none, W.lines x.g, isInst m, clsOf m⟩
 
 /-- C `warn(message, category, stacklevel, source, *, skip_file_prefixes)`: the clinic
 conversions (:1172-1190: `stacklevel` to `Py_ssize_t`, `skip_file_prefixes` a tuple), then
@@ -291,19 +300,34 @@ def cWarnSetup (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : Py (N
   let x ← cSetup W s skip
   return (cat, x)
 
-/-- The category checks of Python `warn`, :468-479. -/
-def pyGetCategory (W : WEnv) (m : MsgA) (c : CatA) : Py Nat :=
+/-- The category checks of Python `warn`, :468-479 (`category` is not `None`, a class, a Warning
+subclass). -/
+def pyCheckCat (W : WEnv) (c : CatA) : Py Nat :=
+  match c with
+  | .none => .ok W.userWarning
+  | .obj tp _ => .error (.typeError s!"category must be a Warning subclass, not '{tp}'")
+  | .cls k n _ w => if w then .ok k else .error (.typeError s!"category must be a Warning subclass, not class '{n}'")
+
+/-- Python `warn`'s category, :468-479: `if isinstance(message, Warning): category =
+message.__class__`, then the checks. `isinstance` holds at once for a Warning instance; for a str
+it reads `__class__` (a raising read whose class is under `AttributeError` gives false, another
+propagates), and `category = message.__class__` reads it again. -/
+def pyGetCategory (H : Hier) (W : WEnv) (m : MsgA) (c : CatA) : Py Nat :=
   match m with
-  | .warn k _ => .ok k
-  | .str _ =>
-    match c with
-    | .none => .ok W.userWarning
-    | .obj tp _ => .error (.typeError s!"category must be a Warning subclass, not '{tp}'")
-    | .cls k n _ w => if w then .ok k else .error (.typeError s!"category must be a Warning subclass, not class '{n}'")
+  | .warn k _ dc =>
+    match dc with
+    | .own => .ok k
+    | .cls k' n w => pyCheckCat W (.cls k' n n w)
+    | .raises e => .error e
+  | .str _ dc =>
+    match dc with
+    | .cls k _ true => .ok k
+    | .raises e => if isA H e "AttributeError" then pyCheckCat W c else .error e
+    | _ => pyCheckCat W c
 
 /-- Python `warn`, :465-520, up to the `warn_explicit` call. -/
-def pyWarnSetup (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : Py (Nat × WCtx) := do
-  let cat ← pyGetCategory W m c
+def pyWarnSetup (H : Hier) (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : Py (Nat × WCtx) := do
+  let cat ← pyGetCategory H W m c
   let ps ← match skip with
     | .tuple ps => pure ps
     | .other _ => .error (.typeError "skip_file_prefixes must be a tuple of strs.")
@@ -337,6 +361,6 @@ def cWarn (W : WEnv) (E : Env) (K : WCfg) (fs : List Item) (ver : Int)
 /-- Python `warnings.warn`: `_wm.warn_explicit(..., globals, ...)`, :511-520. -/
 def pyWarn (W : WEnv) (E : Env) (K : WCfg) (fs : List Item) (ver : Int)
     (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : WRes :=
-  finish (pyWarnSetup W m c s skip) W m (fun call reg => pyWarnExplicit E K fs ver call reg) (onceReg K.once)
+  finish (pyWarnSetup E.hier W m c s skip) W m (fun call reg => pyWarnExplicit E K fs ver call reg) (onceReg K.once)
 
 end PyLean.CoreLibs.Warn

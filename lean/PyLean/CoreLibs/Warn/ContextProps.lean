@@ -234,7 +234,7 @@ def EnterAtomic : Prop :=
 
 def st0 : MState :=
   MState.mk (fun _ => []) (fun _ => []) 1 (some 0) (some .showOrig) .implOrig (some .fmtOrig) 0 .unset
-    (fun _ => ⟨0, none⟩) (some (.ok ())) [] (fun _ => false) builtinHier (some 0) (fun _ => "<W>")
+    (fun _ => ⟨0, none⟩) (some (.ok ())) [] (fun _ => false) builtinHier (some 0) ⟨fun _ => "<W>", fun _ => none⟩
 
 def cwBogus : CW := cwInit "catch_warnings" true 0 (some (.str "bogus")) 0 (.int 0) false
 
@@ -294,9 +294,13 @@ theorem recordCaptures_proven : RecordCaptures := by
 
 /-- `_showwarnmsg` (:217-233) and `_showwarnmsg_impl` (:133-150): a replaced `showwarning` is
 called instead of the implementation, and an exception it raises propagates (:230-231); a
-non-callable one raises `TypeError`; the original or a deleted `showwarning` goes to
-`_showwarnmsg_impl`, which outside record mode formats the text (a replaced `formatwarning` that
-raises propagates, :145) and writes it to `sys.stderr`: lost when `sys.stderr` is `None` or the
+non-callable one raises `TypeError`; a deleted one is looked up through the module's `__getattr__`
+under `except AttributeError` (:219-222): an exception whose class is not under `AttributeError`
+propagates, one that is (the plain `AttributeError` of a module with no `__getattr__` among them,
+`plainDeleted_caught`) goes on like the original `showwarning` to `_showwarnmsg_impl`. That formats
+the text outside record mode (a replaced `formatwarning` that raises propagates, :145; a deleted
+one goes through `_formatwarnmsg`'s own `except AttributeError`, :242-245, the same way) and
+writes it to `sys.stderr`: lost when `sys.stderr` is `None` or the
 write raises an exception of a class `c` with `st.hier.sub c "OSError"`, that is with `OSError` in
 its MRO (`except OSError`, :146-150; so `BrokenPipeError`, `io.UnsupportedOperation`, a user class
 whose MRO contains `OSError`), written when it succeeds, and any other exception from the write
@@ -306,12 +310,19 @@ def ShowDispatch : Prop :=
     (∀ i, st.showwarning = some (.user i) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.hook i] }) ∧
     (∀ i e, st.showwarning = some (.userRaises i e) → showwarnmsg useCtx m st = .error e) ∧
     (st.showwarning = some .noncallable → ∃ e, showwarnmsg useCtx m st = .error e ∧ e.className = "TypeError") ∧
-    ((st.showwarning = some .showOrig ∨ st.showwarning = none) → st.showImpl = .implOrig →
-      ctxLog st (getContext useCtx st) = none →
+    (st.showwarning = none → isA st.hier (modAttrErr st "showwarning") "AttributeError" = false →
+      showwarnmsg useCtx m st = .error (modAttrErr st "showwarning")) ∧
+    ((st.showwarning = some .showOrig ∨
+        (st.showwarning = none ∧ isA st.hier (modAttrErr st "showwarning") "AttributeError" = true)) →
+      st.showImpl = .implOrig → ctxLog st (getContext useCtx st) = none →
       (st.stderr = none → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
       (∀ i e w, st.stderr = some w → st.formatwarning = some (.userRaises i e) →
         showwarnmsg useCtx m st = .error e) ∧
-      (st.formatwarning = some .fmtOrig →
+      (∀ w, st.stderr = some w → st.formatwarning = none →
+        isA st.hier (modAttrErr st "formatwarning") "AttributeError" = false →
+        showwarnmsg useCtx m st = .error (modAttrErr st "formatwarning")) ∧
+      ((st.formatwarning = some .fmtOrig ∨
+          (st.formatwarning = none ∧ isA st.hier (modAttrErr st "formatwarning") "AttributeError" = true)) →
         (st.stderr = some (.ok ()) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.written] }) ∧
         (∀ e, st.stderr = some (.error e) → isA st.hier e "OSError" = true →
           showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
@@ -320,22 +331,42 @@ def ShowDispatch : Prop :=
 
 theorem showDispatch_proven : ShowDispatch := by
   intro useCtx m st
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro i h; simp [showwarnmsg, h]
   · intro i e h; simp [showwarnmsg, h]
   · intro h; exact ⟨_, by simp [showwarnmsg, h]; rfl, rfl⟩
+  · intro h he; simp [showwarnmsg, h, he]
   · intro hsw himpl hlog
     have hcall : showwarnmsg useCtx m st = writeOut st := by
-      rcases hsw with h | h <;> simp [showwarnmsg, h, callImpl, himpl, showImplOrig, hlog]
+      rcases hsw with h | ⟨h, he⟩
+      · simp [showwarnmsg, h, callImpl, himpl, showImplOrig, hlog]
+      · simp [showwarnmsg, h, he, callImpl, himpl, showImplOrig, hlog]
     rw [hcall]
-    refine ⟨?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
     · intro h; simp [writeOut, h]
     · intro i e w h hf; simp [writeOut, h, hf]
+    · intro w h hf he; simp [writeOut, h, hf, he]
     · intro hfmt
       refine ⟨?_, ?_, ?_⟩
-      · intro h; simp [writeOut, h, hfmt]
-      · intro e h he; simp [writeOut, h, hfmt, he]
-      · intro e h he; simp [writeOut, h, hfmt, he]
+      · intro h
+        rcases hfmt with hf | ⟨hf, he⟩
+        · simp [writeOut, h, hf]
+        · simp [writeOut, h, hf, he]
+      · intro e h he
+        rcases hfmt with hf | ⟨hf, hf2⟩
+        · simp [writeOut, h, hf, he]
+        · simp [writeOut, h, hf, hf2, he]
+      · intro e h he
+        rcases hfmt with hf | ⟨hf, hf2⟩
+        · simp [writeOut, h, hf, he]
+        · simp [writeOut, h, hf, hf2, he]
+
+/-- In every relation CPython can have, the `AttributeError` a module with no `__getattr__` raises
+for a missing attribute is caught by `except AttributeError`. -/
+theorem plainDeleted_caught (st : MState) (a : String) (hk : HierOk st.hier) (hn : st.modGetattr a = none) :
+    isA st.hier (modAttrErr st a) "AttributeError" = true := by
+  simp only [modAttrErr, hn, isA, PyExc.className]
+  exact (hk "AttributeError" "AttributeError" (by decide)).trans (by decide)
 
 /-- In every relation CPython can have, `BrokenPipeError` is an `OSError`: a `sys.stderr` whose
 `write` raises it loses the warning. -/

@@ -10,6 +10,22 @@ Scope:
 * A warning is its text and its category; a category is a class id, and `issubclass` is an
   `Env` callback that can raise. Building the message object (`str(message)` for a Warning,
   `category(message)` otherwise) is a callback of the call that can raise.
+* The message is a Warning instance (its type the category) or another object (a str or a str
+  subclass with no `__str__` of its own). C tests it with the exact `PyObject_TypeCheck` and takes
+  `Py_TYPE`; Python's `isinstance(message, Warning)` and `message.__class__` read `__class__`
+  (`ClsV`), which a class can override to lie or raise. Each read gives the same outcome; a
+  Warning instance whose `__class__` is not a class is out of scope.
+* The module attributes (`defaultaction`, `onceregistry`, `_showwarnmsg`, `WarningMessage`) can be
+  there, deleted, or deleted with a module `__getattr__` that raises (`DfltV.raises`, ...): C's
+  `PyObject_GetOptionalAttr` clears an exception whose class is under `AttributeError` (by the
+  class relation) and propagates any other; Python's `_wm.x` propagates either. `_wm._lock`,
+  `_wm._filters_version` and `_wm._get_filters` are there. `sys.modules['warnings']` is the
+  `warnings` module for the lookups without import; C's `PyImport_Import` of `warnings` for
+  `_showwarnmsg` is `Env.importW` (`sys.modules['warnings'] = None` makes it raise
+  `ModuleNotFoundError`, a `builtins.__import__` hook can raise anything). With
+  `sys.modules['warnings']` `None`, C's other lookups find nothing and use the values C read last;
+  the model takes those to be the attributes' current values (they are when C read them after
+  they last changed), and a module `__getattr__` together with it is out of scope.
 * A filters-list item is a 5-tuple, a 5-element list (C refuses it, Python unpacks it), or
   something else (C refuses it; Python's unpacking raises what the call gives). Its action is a
   str, another hashable object, or an unhashable one; its message and module patterns are
@@ -39,6 +55,10 @@ Scope:
   its own `OverflowError`; with none of these, the result is `SystemError` (`... returned a result
   with an exception set`) unless the action is `error` or unknown, whose exception replaces it, and the show
   callback is not reached.
+  Under that pending error, C's import of `warnings` in the show step is out of scope (measured:
+  a raising `__import__` hook gives its own exception, `sys.modules['warnings'] = None` leaves
+  the `OverflowError`); the model gives what the plain import gives, `SystemError`, and the
+  difftest keeps the two apart.
 -/
 
 namespace PyLean.CoreLibs.Warn
@@ -143,7 +163,8 @@ The models take it as a parameter: the classes of the exceptions a callback rais
 classes, `io.UnsupportedOperation`, which is both an `OSError` and a `ValueError`, ...), and a
 metaclass `mro()` can drop intermediate bases, so for a non-builtin class the relation need not be
 transitive: a class whose `mro()` is `[cls, UnicodeEncodeError, BaseException, object]` is under
-`UnicodeEncodeError` but not under `ValueError`. -/
+`UnicodeEncodeError` but not under `ValueError`. Scope limit: classes are identified by name, so a
+user class named `OSError` is the builtin `OSError` here. -/
 structure Hier where
   sub : String → String → Bool
 
@@ -166,12 +187,16 @@ def isA (H : Hier) (e : PyExc) (base : String) : Bool := H.sub e.className base
 
 /-- `warnings._showwarnmsg` and `warnings.WarningMessage` as the show step finds them: both there
 (`WarningMessage(...)` and the call of `_showwarnmsg` are callbacks that can raise),
-`_showwarnmsg` not callable, `_showwarnmsg` deleted, or `WarningMessage` deleted. -/
+`_showwarnmsg` not callable, `_showwarnmsg` deleted, or `WarningMessage` deleted (the other
+there, `WarningMessage(...)` succeeding); or deleted with a module `__getattr__` that raises `e`
+for it: `_showwarnmsg` (`WarningMessage(...)` gives `wm`) or `WarningMessage`. -/
 inductive ShowA where
   | call (wm : Py Unit) (fn : Py Unit)
   | noncallable (tp : String)
   | deleted
   | noWM
+  | swRaises (wm : Py Unit) (e : PyExc)
+  | wmRaises (e : PyExc)
 
 /-- The Python-visible callbacks. -/
 structure Env where
@@ -185,18 +210,24 @@ structure Env where
   shw : ShowA
   /-- the exception class relation (`PyType_IsSubtype`) -/
   hier : Hier
+  /-- C's `PyImport_Import(warnings)` in `GET_WARNINGS_ATTR(_showwarnmsg, 1)`: it gives the
+  `warnings` module, or raises -/
+  importW : Py Unit
 
-/-- `warnings.defaultaction`: a value, or deleted (C then uses the str it read last). -/
+/-- `warnings.defaultaction`: a value, deleted (C then uses the str it read last), or deleted with
+a module `__getattr__` that raises `e`. -/
 inductive DfltV where
   | val (a : AV)
   | deleted (cached : String)
+  | raises (e : PyExc) (cached : String)
 
-/-- `warnings.onceregistry`: a dict, another object (its type name, with no `get`), or deleted (C
-then uses the dict it read last). -/
+/-- `warnings.onceregistry`: a dict, another object (its type name, with no `get`), deleted (C
+then uses the dict it read last), or deleted with a module `__getattr__` that raises `e`. -/
 inductive OnceV where
   | dict (r : Reg)
   | notDict (tp : String) (kept : Reg)
   | deleted (cached : Reg)
+  | raises (e : PyExc) (cached : Reg)
 
 /-- The module state `warn_explicit` reads besides the filters: whether C finds the filters in the
 context variable (`_warnings_context _filters`) rather than `warnings.filters`, whether that
@@ -212,6 +243,15 @@ def onceReg : OnceV → Reg
   | .dict r => r
   | .notDict _ r => r
   | .deleted r => r
+  | .raises _ r => r
+
+/-- `message.__class__` as the Python twin reads it: not overridden (`type(message)`), another
+class of the category table (its id, `__name__`, and whether it is a Warning subclass), or a read
+that raises. C never reads it. -/
+inductive ClsV where
+  | own
+  | cls (k : Nat) (name : String) (isWarn : Bool)
+  | raises (e : PyExc)
 
 /-- The `module` argument: omitted (C `NULL`), an explicit `None`, a str, or another object. -/
 inductive ModArg where
@@ -254,6 +294,10 @@ structure Call where
   globs : GlobA
   /-- `linecache.getlines(filename, module_globals)` in the Python twin -/
   pyLines : Py Unit
+  /-- whether the message is a Warning instance (`PyObject_TypeCheck`); then `cat` is its type -/
+  inst : Bool
+  /-- `message.__class__`, as Python's `isinstance` and `message.__class__` read it -/
+  pyCls : ClsV
 
 /-- What a call leaves: its result (`true` when the warning was shown), the registry passed in
 (if a dict or mapping), and the once registry. -/
@@ -280,24 +324,28 @@ def dfltTypeErr : PyExc := .typeError "~warnings.defaultaction must be a string"
 def noModAttr (a : String) : PyExc := .named "AttributeError" s!"module 'warnings' has no attribute '{a}'"
 def unhashableErr (tp : String) : PyExc :=
   .typeError s!"cannot use '{tp}' as a set element (unhashable type: '{tp}')"
+/-- `raise message` for a message that is not an exception. -/
+def notExc : PyExc := .typeError "exceptions must derive from BaseException"
 
-/-- An attribute of the `warnings` module as `PyObject_GetOptionalAttr` finds it: there, missing
-(an `AttributeError`, which it clears), or a lookup that raises something else. -/
+/-- An attribute of the `warnings` module as a lookup finds it: there, missing (no module
+`__getattr__`), or missing with a module `__getattr__` that raises `e`. -/
 inductive AttrR (α : Type) where
   | found (a : α)
   | missing
   | raises (e : PyExc)
 
 /-- `get_warnings_attr(interp, attr, try_import)`, _warnings.c:224-256: with `try_import` (and the
-interpreter not finalizing) `import warnings`, whose error is cleared when its class has `ImportError` in its MRO;
-otherwise `sys.modules['warnings']`, which may be absent; then the attribute. `.ok none` is `NULL`
-with no error set. -/
+interpreter not finalizing) `import warnings`, whose error is cleared when its class has
+`ImportError` in its MRO; otherwise `sys.modules['warnings']`, which may be absent; then
+`PyObject_GetOptionalAttr`, which clears an error whose class has `AttributeError` in its MRO
+(`_Py_module_getattro_impl` with `suppress`, Objects/moduleobject.c:1395-1399) and leaves any other
+set. `.ok none` is `NULL` with no error set. -/
 def getWarningsAttr {α : Type} (H : Hier) (tryImport : Bool) (importW : Py Unit) (inSysModules : Bool)
     (attr : AttrR α) : Py (Option α) :=
   let lookup : Py (Option α) := match attr with
     | .found a => .ok (some a)
     | .missing => .ok none
-    | .raises e => .error e
+    | .raises e => if isA H e "AttributeError" then .ok none else .error e
   if tryImport then
     match importW with
     | .error e => if isA H e "ImportError" then .ok none else .error e
@@ -316,13 +364,28 @@ def pyShow (E : Env) (c : Call) : Py Bool := do
   | .noncallable tp => .error (.typeError s!"'{tp}' object is not callable")
   | .deleted => .error (noModAttr "_showwarnmsg")
   | .noWM => .error (noModAttr "WarningMessage")
+  | .swRaises wm e => do wm; .error e
+  | .wmRaises e => .error e
 
-/-- C's `call_show_warning`, :739-794: `_showwarnmsg` missing falls back to `show_warning`
-(:669-736, which prints and clears every error), not callable raises, a missing `WarningMessage`
-raises, else `WarningMessage(...)` and the call. -/
+/-- The `_showwarnmsg` lookup of the show step. -/
+def swAttr : ShowA → AttrR Unit
+  | .deleted => .missing
+  | .swRaises _ e => .raises e
+  | _ => .found ()
+
+/-- The `WarningMessage` lookup of the show step. -/
+def wmAttr : ShowA → AttrR Unit
+  | .noWM => .missing
+  | .wmRaises e => .raises e
+  | _ => .found ()
+
+/-- C's `call_show_warning`, :739-794: `_showwarnmsg` not found (`NULL` with no error) falls back
+to `show_warning` (:669-736, which prints and clears every error), an error from its lookup or the
+import propagates (:749-752), not callable raises, a `WarningMessage` not found raises
+`RuntimeError`, an error from its lookup propagates, else `WarningMessage(...)` and the call. -/
 def cShow (E : Env) : Py Bool :=
   -- `GET_WARNINGS_ATTR(interp, _showwarnmsg, 1)`, :749
-  match getWarningsAttr E.hier true (.ok ()) true (match E.shw with | .deleted => .missing | _ => .found ()) with
+  match getWarningsAttr E.hier true E.importW true (swAttr E.shw) with
   | .error e => .error e
   | .ok none => .ok true
   | .ok (some ()) =>
@@ -330,13 +393,20 @@ def cShow (E : Env) : Py Bool :=
     | .noncallable _ => .error (.typeError "warnings._showwarnmsg() must be set to a callable")
     | s =>
       -- `GET_WARNINGS_ATTR(interp, WarningMessage, 0)`, :763
-      match getWarningsAttr E.hier false (.ok ()) true (match s with | .noWM => .missing | _ => .found ()) with
+      match getWarningsAttr E.hier false (.ok ()) true (wmAttr s) with
       | .error e => .error e
       | .ok none => .error (.named "RuntimeError" "unable to get warnings.WarningMessage")
       | .ok (some ()) =>
         match s with
         | .call wm fn => do wm; fn; return true
         | _ => .ok true
+
+/-- Whether C's show step takes the `show_warning` fallback, :750-755 (it prints to `sys.stderr`
+itself; Python always goes through `_showwarnmsg`, so a record log never sees the warning). -/
+def cFallback (E : Env) : Bool :=
+  match getWarningsAttr E.hier true E.importW true (swAttr E.shw) with
+  | .ok none => true
+  | _ => false
 
 /-! ## The Python twin, Lib/_py_warnings.py -/
 
@@ -403,12 +473,13 @@ def unboundItem : PyExc :=
 /-- The actions, :588-625: `(result, registry, once registry)`. `bound` is whether the loop
 variable `item` was ever assigned. An action that is not a str equals none of the names, and
 `action in {"always", "all"}` (:601) hashes it. -/
-def pyAction (E : Env) (K : WCfg) (c : Call) (ln : Int) (action : AV) (bound : Bool) (r1 : Reg) :
-    Py Bool × Reg × Reg :=
+def pyAction (E : Env) (K : WCfg) (c : Call) (ln : Int) (action : AV) (bound : Bool) (r1 : Reg)
+    (raised : PyExc) : Py Bool × Reg × Reg :=
   let once := onceReg K.once
   let key := Key.tri c.text c.cat ln
   if action = .str "ignore" then (.ok false, r1, once)
-  else if action = .str "error" then (.error (warnRaised c), r1, once)
+  -- `raise message`, :593
+  else if action = .str "error" then (.error raised, r1, once)
   else if action = .str "once" then
     let r2 := regSet r1 key one
     let ok := Key.pair c.text c.cat
@@ -418,6 +489,7 @@ def pyAction (E : Env) (K : WCfg) (c : Call) (ln : Int) (action : AV) (bound : B
       else (pyShow E c, r2, regSet o ok one)
     | .notDict _ _ => (.error noGetAttr, r2, once)
     | .deleted _ => (.error (noModAttr "onceregistry"), r2, once)
+    | .raises e _ => (.error e, r2, once)
   else match action with
   | .unhashable tp => (.error (unhashableErr tp), r1, once)
   | _ =>
@@ -430,18 +502,38 @@ def pyAction (E : Env) (K : WCfg) (c : Call) (ln : Int) (action : AV) (bound : B
   else if action = .str "default" then (pyShow E c, regSet r1 key one, once)
   else (.error (if bound then unrecognized else unboundItem), r1, once)
 
+/-- The message step, _py_warnings.py:560-565: `isinstance(message, Warning)` holds at once for a
+Warning instance (`PyObject_TypeCheck`); for another object it reads `__class__`
+(`object_isinstance`, Objects/abstract.c:2603-2622: a raising read whose class is under
+`AttributeError` is cleared and gives false, any other propagates; another class gives whether it
+is a Warning subclass). Then `text = str(message)` and `category = message.__class__` (any error
+propagates), or `message = category(message)`. The result is the call with Python's category, and
+whether `message` claims a Warning class without being an exception (`raise message` then raises
+`TypeError`). -/
+def pyMsgStep (H : Hier) (c : Call) : Py (Call × Bool) :=
+  if c.inst then
+    c.mkMsg >>= fun () => match c.pyCls with
+      | .own => .ok (c, false)
+      | .cls k _ _ => .ok ({ c with cat := k }, false)
+      | .raises e => .error e
+  else match c.pyCls with
+    | .cls k _ true => .ok ({ c with cat := k }, true)
+    | .raises e => if isA H e "AttributeError" then c.mkMsg >>= fun () => .ok (c, false) else .error e
+    | _ => c.mkMsg >>= fun () => .ok (c, false)
+
 /-- `warn_explicit`, _py_warnings.py:556-625. `ver` is `_wm._filters_version`. -/
-def pyWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (reg : RegArg) : Res :=
+def pyWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c0 : Call) (reg : RegArg) : Res :=
   let once := onceReg K.once
   let regOut : Option Reg := match reg with | .dict r | .mapping r => .some r | _ => .none
   -- `lineno = int(lineno)`, :559
-  match ((match c.lineno with | .int v => .ok v | .obj p _ => p) : Py Int) with
+  match ((match c0.lineno with | .int v => .ok v | .obj p _ => p) : Py Int) with
   | .error e => ⟨.error e, regOut, once⟩
   | .ok ln =>
   -- the message, :560-565
-  match c.mkMsg with
+  match pyMsgStep E.hier c0 with
   | .error e => ⟨.error e, regOut, once⟩
-  | .ok () =>
+  | .ok (c, pretend) =>
+  let raised := if pretend then notExc else warnRaised c
   -- the registry, :568-572
   match reg with
   | .obj => ⟨.error noGetAttr, regOut, once⟩
@@ -452,11 +544,13 @@ def pyWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) 
     else
       match pyFind E c ln fs with
       | .error e => (.error e, r1, once)
-      | .ok (.some f) => pyAction E K c ln f.action true r1
+      | .ok (.some f) => pyAction E K c ln f.action true r1 raised
       | .ok .none =>
+        -- `action = _wm.defaultaction`, :587
         match K.dflt with
         | .deleted _ => (.error (noModAttr "defaultaction"), r1, once)
-        | .val a => pyAction E K c ln a (!fs.isEmpty) r1
+        | .raises e _ => (.error e, r1, once)
+        | .val a => pyAction E K c ln a (!fs.isEmpty) r1 raised
   ⟨res.1, regOut.map (fun _ => res.2.1), res.2.2⟩
 
 /-! ## The C twin, Python/_warnings.c -/
@@ -550,13 +644,20 @@ def cListName (K : WCfg) : Py String :=
       else "_warnings.filters must be a list"))
   else .ok (if K.ctx then "_warnings_context _filters" else "filters")
 
-/-- `get_default_action`, :430-455: a deleted `defaultaction` falls back to the str read last. -/
+/-- The `defaultaction` lookup. -/
+def dfltAttr : DfltV → AttrR AV
+  | .val a => .found a
+  | .deleted _ => .missing
+  | .raises e _ => .raises e
+
+/-- `get_default_action`, :430-455: `NULL` with an error set returns it (:439-441); `NULL` with
+none falls back to the str read last; a value that is not a str raises `TypeError`. -/
 def cDefault (H : Hier) (K : WCfg) : Py String :=
   -- `GET_WARNINGS_ATTR(interp, defaultaction, 0)`, :437
-  match getWarningsAttr H false (.ok ()) true (match K.dflt with | .deleted _ => .missing | .val a => .found a) with
+  match getWarningsAttr H false (.ok ()) true (dfltAttr K.dflt) with
   | .error e => .error e
   | .ok none => match K.dflt with
-    | .deleted s => .ok s
+    | .deleted s | .raises _ s => .ok s
     | .val (.str s) => .ok s
     | .val _ => .error dfltTypeErr
   | .ok (some (.str s)) => .ok s
@@ -579,9 +680,24 @@ def cAlreadyWarned (ver : Int) (r : Reg) (k : Key) (shouldSet : Bool) : Bool × 
   else if truthy (regGet r k) then (pending, true, r)
   else (pending, false, if shouldSet then regSet r k cTrue else r)
 
+/-- The `onceregistry` lookup. -/
+def onceAttr : OnceV → AttrR OnceV
+  | .deleted _ => .missing
+  | .raises e _ => .raises e
+  | o => .found o
+
+/-- `get_once_registry`, :402-426: `NULL` with an error set returns it (:410-412); `NULL` with
+none falls back to the dict read last; an object that is not a dict raises `TypeError`. -/
+def cOnceReg (H : Hier) (K : WCfg) : Py Reg :=
+  -- `GET_WARNINGS_ATTR(interp, onceregistry, 0)`, :409
+  match getWarningsAttr H false (.ok ()) true (onceAttr K.once) with
+  | .error e => .error e
+  | .ok none => .ok (onceReg K.once)
+  | .ok (some (.notDict tp _)) => .error (.typeError s!"_warnings.onceregistry must be a dict, not '{tp}'")
+  | .ok (some o) => .ok (onceReg o)
+
 /-- The actions after `get_filter`, :861-909: `(error left set, result, registry, once
-registry)`. With no caller registry, `once` uses `get_once_registry` (:402-426), which refuses an
-object that is not a dict and falls back to the dict read last when it was deleted. -/
+registry)`. With no caller registry, `once` uses `get_once_registry` (`cOnceReg`). -/
 def cAction (E : Env) (K : WCfg) (ver : Int) (c : Call) (ln : Int) (action : String) (reg1 : Option Reg) :
     Bool × Py Bool × Option Reg × Reg :=
   let once := onceReg K.once
@@ -595,9 +711,9 @@ def cAction (E : Env) (K : WCfg) (ver : Int) (c : Call) (ln : Int) (action : Str
     if action = "once" then
       match reg2 with
       | .none =>
-        match K.once with
-        | .notDict tp _ => (false, .error (.typeError s!"_warnings.onceregistry must be a dict, not '{tp}'"), reg2, once)
-        | .dict o | .deleted o =>
+        match cOnceReg E.hier K with
+        | .error e => (false, .error e, reg2, once)
+        | .ok o =>
           let (p, w, o') := cAlreadyWarned ver o pk true
           (p, if w then .ok false else cShow E, reg2, o')
       | .some r =>
@@ -672,13 +788,25 @@ def cWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (
         | .some f => match f.action with | .str s => .ok s | _ => .error actionTypeErr
         -- with an error left set, a deleted `defaultaction` makes `get_default_action` return that
         -- error (`PyErr_Occurred`, :439-441)
+        -- (a module `__getattr__` is not reached: the attribute lookup returns at once with the
+        -- error set, Objects/moduleobject.c:1340-1344)
         | .none => match pend0, K.dflt with
-          | true, .deleted _ => .error longOverflow
+          | true, .deleted _ | true, .raises _ _ => .error longOverflow
           | _, _ => cDefault E.hier K
       match act with
       | .error e => ⟨.error e, reg1, once⟩
       | .ok a =>
         let (p, out, r, o) := cAction E K ver c ln a reg1
         ⟨withPending c (pend0 || p) out, r, o⟩
+
+/-- `.ok true`: the warning was shown. -/
+def isShown : Py Bool → Bool
+  | .ok true => true
+  | _ => false
+
+/-- Whether C `warn_explicit` showed the warning through `show_warning` rather than
+`_showwarnmsg` (the Python twin never does). -/
+def cFellBack (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (reg : RegArg) : Bool :=
+  isShown (cWarnExplicit E K fs ver c reg).out && cFallback E
 
 end PyLean.CoreLibs.Warn
