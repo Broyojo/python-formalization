@@ -202,20 +202,26 @@ def beBytes (n : Nat) : Nat → List Nat
   | 0 => []
   | k + 1 => beBytes (n / 256) k ++ [n % 256]
 
-/-- `_count_to_size(count)`, :646-657, with `r` frames left. -/
-def countToSizeR (r : Nat) (count : Nat) : Py Nat := call r fun _ =>
-  if count < 2 ^ 8 then .ok 1
-  else if count < 2 ^ 16 then .ok 2
-  else if count < 2 ^ 32 then .ok 4
-  else .ok 8
+/-- `_count_to_size(count)`, :646-657. -/
+def countToSize (count : Nat) : Nat :=
+  if count < 2 ^ 8 then 1
+  else if count < 2 ^ 16 then 2
+  else if count < 2 ^ 32 then 4
+  else 8
 
-/-- `_write_size(token, size)`, :758-772, with `r` frames left. -/
-def writeSizeR (r : Nat) (token size : Nat) : Py (List Nat) := call r fun _ =>
-  if size < 15 then .ok [token ||| size]
-  else if size < 2 ^ 8 then .ok [token ||| 0xF, 0x10, size]
-  else if size < 2 ^ 16 then .ok ([token ||| 0xF, 0x11] ++ beBytes size 2)
-  else if size < 2 ^ 32 then .ok ([token ||| 0xF, 0x12] ++ beBytes size 4)
-  else .ok ([token ||| 0xF, 0x13] ++ beBytes size 8)
+/-- `_count_to_size(count)` with `r` frames left. -/
+def countToSizeR (r : Nat) (count : Nat) : Py Nat := call r fun _ => .ok (countToSize count)
+
+/-- The bytes `_write_size(token, size)`, :758-772, writes. -/
+def writeSizeB (token size : Nat) : List Nat :=
+  if size < 15 then [token ||| size]
+  else if size < 2 ^ 8 then [token ||| 0xF, 0x10, size]
+  else if size < 2 ^ 16 then [token ||| 0xF, 0x11] ++ beBytes size 2
+  else if size < 2 ^ 32 then [token ||| 0xF, 0x12] ++ beBytes size 4
+  else [token ||| 0xF, 0x13] ++ beBytes size 8
+
+/-- `_write_size(token, size)` with `r` frames left (the bytes are `writeSizeB`). -/
+def writeSizeR (r : Nat) (token size : Nat) : Py (List Nat) := call r fun _ => .ok (writeSizeB token size)
 
 /-- `datetime(2001, 1, 1)`'s range, as microseconds from it. -/
 def dtMinUs : Int := -(730485 * 86400 * 1000000)
@@ -244,6 +250,19 @@ def dateSeconds (cfg : WCfg) (us : Int) (off : Option Int) : Py Nat := do
 /-- `struct.pack('>' + fmt * len(refs), *refs)`. -/
 def packRefs (size : Nat) (refs : List Nat) : List Nat := refs.flatMap fun x => beBytes x size
 
+/-- The `int` branch of `_write_object`, :786-803. -/
+def writeInt (v : Int) : Py (List Nat) :=
+  if v < 0 then
+    -- struct.pack('>Bq', 0x13, value); struct.error becomes OverflowError(value)
+    if v ≥ -2 ^ 63 then .ok (0x13 :: beBytes (v + 2 ^ 64).toNat 8)
+    else .error (.overflowError (toString v))
+  else if v < 2 ^ 8 then .ok [0x10, v.toNat]
+  else if v < 2 ^ 16 then .ok (0x11 :: beBytes v.toNat 2)
+  else if v < 2 ^ 32 then .ok (0x12 :: beBytes v.toNat 4)
+  else if v < 2 ^ 63 then .ok (0x13 :: beBytes v.toNat 8)
+  else if v < 2 ^ 64 then .ok (0x14 :: beBytes v.toNat 16)
+  else .error (.overflowError (toString v))
+
 /-- `_write_object(value)`, :774-869, with `r` frames left: the refnum and the bytes written. -/
 def writeObjectR (r : Nat) (H : WHeap) (cfg : WCfg) (refSize : Nat) (st : WState) (c : Nat) :
     Py (Nat × List Nat) := call r fun r => do
@@ -252,16 +271,7 @@ def writeObjectR (r : Nat) (H : WHeap) (cfg : WCfg) (refSize : Nat) (st : WState
     | .none => .ok [0x00]
     | .bool false => .ok [0x08]
     | .bool true => .ok [0x09]
-    | .int v =>
-      if v < 0 then
-        if v ≥ -2 ^ 63 then .ok (0x13 :: beBytes (v + 2 ^ 64).toNat 8)
-        else .error (.overflowError (toString v))
-      else if v < 2 ^ 8 then .ok [0x10, v.toNat]
-      else if v < 2 ^ 16 then .ok (0x11 :: beBytes v.toNat 2)
-      else if v < 2 ^ 32 then .ok (0x12 :: beBytes v.toNat 4)
-      else if v < 2 ^ 63 then .ok (0x13 :: beBytes v.toNat 8)
-      else if v < 2 ^ 64 then .ok (0x14 :: beBytes v.toNat 16)
-      else .error (.overflowError (toString v))
+    | .int v => writeInt v
     | .float bits => .ok (0x23 :: beBytes bits 8)
     | .date us off => do
       let f ← dateSeconds cfg us off

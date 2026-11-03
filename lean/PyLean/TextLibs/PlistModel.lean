@@ -228,33 +228,40 @@ def modf (x : F64) : F64 × F64 :=
   else if x.isInf then (F64.zero x.sign, x)
   else (F64.sub x (F64.trunc x), F64.trunc x)
 
-/-- `timedelta(seconds=f)` for a float `f`, Modules/_datetimemodule.c: `delta_new_impl`
-(:2832-2932) with only `seconds`, through `accum` (:2733-2811) with factor `10**6`, the
-round-half-even of `leftover_us` (:2899-2926), and `microseconds_to_delta_ex` (:2218-2284,
-`Datetime.usToDeltaC`). -/
-def deltaFromSeconds (f : F64) : Py Datetime.Delta := do
-  -- accum: fracpart = modf(dnum, &intpart); x = PyLong_FromDouble(intpart); x * factor
+/-- `accum("seconds", 0, f, 10**6, &leftover_us)` for a float `f`, Modules/_datetimemodule.c:2733-2811:
+the running sum of microseconds and the new `leftover_us`. -/
+def accumSeconds (f : F64) : Py (Int × F64) := do
+  -- fracpart = modf(dnum, &intpart); x = PyLong_FromDouble(intpart); prod = x * factor
   let (frac1, int1) := modf f
   let x1 ← longFromDouble int1
   let sum := 0 + x1 * 1000000
-  let (x, leftover) ← if F64.eq frac1 (F64.zero false) then pure (sum, F64.zero false) else do
-    -- dnum = PyLong_AsDouble(factor); dnum *= fracpart; fracpart = modf(dnum, &intpart)
-    let dnum := F64.mul (F64.ofInt 1000000) frac1
-    let (frac2, int2) := modf dnum
-    let x2 ← longFromDouble int2
-    pure (sum + x2, F64.add (F64.zero false) frac2)
-  if F64.ne leftover (F64.zero false) then
-    let whole := F64.roundAway leftover
-    let half := F64.ofRat (mkRat 1 2)
-    let whole :=
-      if F64.eq (F64.abs (F64.sub whole leftover)) half then
-        -- x_is_odd = x & 1; whole_us = 2.0 * round((leftover_us + x_is_odd) * 0.5) - x_is_odd
-        let odd : Int := x % 2
-        let o := F64.ofInt odd
-        F64.sub (F64.mul (F64.ofInt 2) (F64.roundAway (F64.mul (F64.add leftover o) half))) o
-      else whole
-    -- temp = PyLong_FromLong((long)whole_us)
-    Datetime.usToDeltaC (x + whole.truncInt)
+  if F64.eq frac1 (F64.zero false) then return (sum, F64.zero false)
+  -- dnum = PyLong_AsDouble(factor); dnum *= fracpart; fracpart = modf(dnum, &intpart)
+  let dnum := F64.mul (F64.ofInt 1000000) frac1
+  let (frac2, int2) := modf dnum
+  let x2 ← longFromDouble int2
+  -- y = sum + x; *leftover += fracpart
+  return (sum + x2, F64.add (F64.zero false) frac2)
+
+/-- The rounding of a nonzero `leftover_us` in `delta_new_impl`, :2899-2926: `whole_us =
+round(leftover_us)`, or, exactly halfway, `2.0 * round((leftover_us + x_is_odd) * 0.5) -
+x_is_odd` with `x_is_odd = x & 1`; then `(long)whole_us`. -/
+def wholeUs (x : Int) (leftover : F64) : Int :=
+  let whole := F64.roundAway leftover
+  let half := F64.ofRat (mkRat 1 2)
+  let whole :=
+    if F64.eq (F64.abs (F64.sub whole leftover)) half then
+      let o := F64.ofInt (x % 2)
+      F64.sub (F64.mul (F64.ofInt 2) (F64.roundAway (F64.mul (F64.add leftover o) half))) o
+    else whole
+  whole.truncInt
+
+/-- `timedelta(seconds=f)` for a float `f`, `delta_new_impl` (:2832-2932) with only `seconds`:
+`accum`, the rounding of the leftover, and `microseconds_to_delta_ex` (:2218-2284,
+`Datetime.usToDeltaC`). -/
+def deltaFromSeconds (f : F64) : Py Datetime.Delta := do
+  let (x, leftover) ← accumSeconds f
+  if F64.ne leftover (F64.zero false) then Datetime.usToDeltaC (x + wholeUs x leftover)
   else Datetime.usToDeltaC x
 
 /-- `date_from_ordinal` range: `MAXORDINAL`, _datetimemodule.c. -/
@@ -392,6 +399,68 @@ def dictLoop (rd : Nat → PState → Py PState) (ref : Nat) :
         dictLoop rd ref items ps (st.put ref (.dict items))
     | none => .error .modelFuel
 
+/-- `try: ... except TypeError: raise InvalidFileException()` around the loop of a dict, :635-639. -/
+def catchTypeError (r : Nat) (res : Py PState) : Py PState :=
+  match res with
+  | .ok st => .ok st
+  | .error e => if isInst e "TypeError" then raiseInvalid r else .error e
+
+/-- The part of `_read_object(ref)` after the token is read, :560-644, with `r` frames left below
+`_read_object`'s frame; `rd` is `_read_object` called with those frames, for the elements. -/
+def readToken (cfg : PCfg) (r : Nat) (rd : Nat → PState → Py PState) (ref : Nat) (st : PState)
+    (token : Nat) (fp : FP) : Py PState := do
+  let tokenH := token &&& 0xF0
+  let tokenL := token &&& 0x0F
+  let leaf (o : Obj) (fp : FP) : Py PState := .ok ({ st with fp := fp }.put ref o)
+  if token = 0x00 then leaf .none fp
+  else if token = 0x08 then leaf (.bool false) fp
+  else if token = 0x09 then leaf (.bool true) fp
+  else if token = 0x0f then leaf (.data []) fp
+  else if tokenH = 0x10 then
+    let (b, fp) := fp.read (2 ^ tokenL)
+    leaf (.int (fromBytes b (decide (tokenL ≥ 3)))) fp
+  else if token = 0x22 then
+    let (b, fp) := fp.read 4
+    leaf (.real (← unpackReal b true)) fp
+  else if token = 0x23 then
+    let (b, fp) := fp.read 8
+    leaf (.real (← unpackReal b false)) fp
+  else if token = 0x33 then
+    let (b, fp) := fp.read 8
+    let f ← unpackReal b false
+    let td ← deltaFromSeconds (F64.ofBits f)
+    leaf (.date (← epochPlus td) cfg.aware) fp
+  else if tokenH = 0x40 then
+    let (s, fp) ← getSizeR r fp tokenL
+    let (d, fp) ← readR r fp s
+    leaf (.data d) fp
+  else if tokenH = 0x50 then
+    let (s, fp) ← getSizeR r fp tokenL
+    let (d, fp) ← readR r fp s
+    leaf (.str (← UnicodeObj.asciiDecode d .strict)) fp
+  else if tokenH = 0x60 then
+    let (s, fp) ← getSizeR r fp tokenL
+    let (d, fp) ← readR r fp (s * 2)
+    let (u, _) ← UnicodeObj.utf16DecodeFull d 1 .strict true
+    leaf (.str u) fp
+  else if tokenH = 0x80 then
+    let (b, fp) := fp.read (1 + tokenL)
+    leaf (.uid (← uidR r (beVal b))) fp
+  else if tokenH = 0xA0 then
+    let (s, fp) ← getSizeR r fp tokenL
+    let (refs, fp) ← readRefsR r cfg fp s
+    let st := { st with fp := fp }.put ref (.arr [])
+    -- :643 stores the same list again; the loop left it complete in slot `ref`
+    arrLoop rd ref [] refs st
+  else if tokenH = 0xD0 then
+    let (s, fp) ← getSizeR r fp tokenL
+    let (keyRefs, fp) ← readRefsR r cfg fp s
+    let (objRefs, fp) ← readRefsR r cfg fp s
+    let st := { st with fp := fp }.put ref (.dict [])
+    -- :643 stores the same dict again
+    catchTypeError r (dictLoop rd ref [] (keyRefs.zip objRefs) st)
+  else raiseInvalid r
+
 /-- `_read_object(ref)`, :547-644, with `r` frames left. -/
 def readObj (cfg : PCfg) : (r : Nat) → (ref : Nat) → PState → Py PState
   | 0, _, _ => .error recErr
@@ -403,63 +472,11 @@ def readObj (cfg : PCfg) : (r : Nat) → (ref : Nat) → PState → Py PState
     | some none => do
       let offset := cfg.offsets.getD ref 0
       let fp ← st.fp.seek offset
+      -- token = self._fp.read(1)[0]
       let (tb, fp) := fp.read 1
       match tb with
       | [] => .error (.indexError "index out of range")
-      | token :: _ =>
-        let tokenH := token &&& 0xF0
-        let tokenL := token &&& 0x0F
-        let leaf (o : Obj) (fp : FP) : Py PState := .ok ({ st with fp := fp }.put ref o)
-        if token = 0x00 then leaf .none fp
-        else if token = 0x08 then leaf (.bool false) fp
-        else if token = 0x09 then leaf (.bool true) fp
-        else if token = 0x0f then leaf (.data []) fp
-        else if tokenH = 0x10 then
-          let (b, fp) := fp.read (2 ^ tokenL)
-          leaf (.int (fromBytes b (decide (tokenL ≥ 3)))) fp
-        else if token = 0x22 then
-          let (b, fp) := fp.read 4
-          leaf (.real (← unpackReal b true)) fp
-        else if token = 0x23 then
-          let (b, fp) := fp.read 8
-          leaf (.real (← unpackReal b false)) fp
-        else if token = 0x33 then
-          let (b, fp) := fp.read 8
-          let f ← unpackReal b false
-          let td ← deltaFromSeconds (F64.ofBits f)
-          leaf (.date (← epochPlus td) cfg.aware) fp
-        else if tokenH = 0x40 then
-          let (s, fp) ← getSizeR r fp tokenL
-          let (d, fp) ← readR r fp s
-          leaf (.data d) fp
-        else if tokenH = 0x50 then
-          let (s, fp) ← getSizeR r fp tokenL
-          let (d, fp) ← readR r fp s
-          leaf (.str (← UnicodeObj.asciiDecode d .strict)) fp
-        else if tokenH = 0x60 then
-          let (s, fp) ← getSizeR r fp tokenL
-          let (d, fp) ← readR r fp (s * 2)
-          let (u, _) ← UnicodeObj.utf16DecodeFull d 1 .strict true
-          leaf (.str u) fp
-        else if tokenH = 0x80 then
-          let (b, fp) := fp.read (1 + tokenL)
-          leaf (.uid (← uidR r (beVal b))) fp
-        else if tokenH = 0xA0 then
-          let (s, fp) ← getSizeR r fp tokenL
-          let (refs, fp) ← readRefsR r cfg fp s
-          let st := { st with fp := fp }.put ref (.arr [])
-          -- :643 stores the same list again; the loop left it complete in slot `ref`
-          arrLoop (fun x st => readObj cfg r x st) ref [] refs st
-        else if tokenH = 0xD0 then
-          let (s, fp) ← getSizeR r fp tokenL
-          let (keyRefs, fp) ← readRefsR r cfg fp s
-          let (objRefs, fp) ← readRefsR r cfg fp s
-          let st := { st with fp := fp }.put ref (.dict [])
-          -- try: ... except TypeError: raise InvalidFileException(); :643 stores the same dict
-          match dictLoop (fun x st => readObj cfg r x st) ref [] (keyRefs.zip objRefs) st with
-          | .ok st => .ok st
-          | .error e => if isInst e "TypeError" then raiseInvalid r else .error e
-        else raiseInvalid r
+      | token :: _ => readToken cfg r (fun x st => readObj cfg r x st) ref st token fp
 
 /-- The trailer, `struct.unpack('>6xBBQQQ', trailer)` on its 32 bytes, :499-502. -/
 structure Trailer where
