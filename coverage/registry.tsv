@@ -2934,6 +2934,7 @@ corelibs-operator-mc-call-isolated	refuted	Lib/operator.py	methodcaller_call,met
 corelibs-operator-mc-repr-guard	proven	Lib/operator.py	methodcaller_repr
 corelibs-operator-mc-repr-pure	proven	Lib/operator.py	methodcaller_repr
 corelibs-operator-mc-repr-mutations	proven	Lib/operator.py	methodcaller_repr,methodcaller_reduce
+corelibs-operator-itemgetter-reduce	proven	Lib/operator.py	itemgetter_reduce,itemgetter.__reduce__,itemgetter_new
 corelibs-operator-mc-vectorcall-fresh	proven	Lib/operator.py	methodcaller_vectorcall,_methodcaller_initialize_vectorcall
 corelibs-copy-list-exact	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy

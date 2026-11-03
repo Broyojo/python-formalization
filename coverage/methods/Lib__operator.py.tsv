@@ -7,10 +7,10 @@ Lib/operator.py	43	45	ge	ge(a, b)	modelled	corelibs-operator-rich-compare,coreli
 Lib/operator.py	47	49	gt	gt(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-rich-compare-exact	
 Lib/operator.py	53	55	not_	not_(a)	modelled	corelibs-operator-truth	
 Lib/operator.py	57	59	truth	truth(a)	modelled	corelibs-operator-truth	
-Lib/operator.py	61	63	is_	is_(a, b)	todo		
-Lib/operator.py	65	67	is_not	is_not(a, b)	todo		
-Lib/operator.py	69	71	is_none	is_none(a)	todo		
-Lib/operator.py	73	75	is_not_none	is_not_none(a)	todo		
+Lib/operator.py	61	63	is_	is_(a, b)	excluded		trivial: the body is the single expression `return a is b`; nothing to prove beyond the identity test itself
+Lib/operator.py	65	67	is_not	is_not(a, b)	excluded		trivial: the body is the single expression `return a is not b`; nothing to prove beyond the identity test itself
+Lib/operator.py	69	71	is_none	is_none(a)	excluded		trivial: the body is the single expression `return a is None`; nothing to prove beyond the identity test itself
+Lib/operator.py	73	75	is_not_none	is_not_none(a)	excluded		trivial: the body is the single expression `return a is not None`; nothing to prove beyond the identity test itself
 Lib/operator.py	79	81	abs	abs(a)	modelled	corelibs-operator-unary	
 Lib/operator.py	83	85	add	add(a, b)	modelled	corelibs-operator-first-step-wins	
 Lib/operator.py	87	89	and_	and_(a, b)	modelled	corelibs-operator-binary-dispatch	
@@ -45,7 +45,7 @@ Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	modelled	corelibs
 Lib/operator.py	287	297	itemgetter.__init__	__init__(self, item, /, *items)	modelled	corelibs-operator-itemgetter-exact	
 Lib/operator.py	299	300	itemgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-itemgetter-exact	
 Lib/operator.py	302	305	itemgetter.__repr__	__repr__(self)	modelled	corelibs-operator-getter-repr-exact	
-Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	todo		
+Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	modelled	corelibs-operator-itemgetter-reduce	
 Lib/operator.py	319	324	methodcaller.__init__	__init__(self, name, /, *args, **kwargs)	modelled	corelibs-operator-methodcaller-exact	
 Lib/operator.py	326	327	methodcaller.__call__	__call__(self, obj, /)	modelled	corelibs-operator-methodcaller-exact	
 Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	modelled	corelibs-operator-mc-repr-order,corelibs-operator-mc-repr-exact	
