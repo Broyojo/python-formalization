@@ -2851,7 +2851,7 @@ corelibs-lru-del-raises-py	proven	Lib/functools.py	_lru_cache_wrapper
 corelibs-lru-clear-resets	proven	Lib/functools.py	_lru_cache_wrapper,_functools__lru_cache_wrapper_cache_clear_impl
 corelibs-lru-uncached-runs	proven	Lib/functools.py	_lru_cache_wrapper,uncached_lru_cache_wrapper
 corelibs-lru-infinite-memo	proven	Lib/functools.py	_lru_cache_wrapper,infinite_lru_cache_wrapper
-corelibs-operator-binary-dispatch	proven	Lib/operator.py	sub,matmul,floordiv,truediv,mod,lshift,rshift,and_,xor,or_,_operator_sub_impl,_operator_matmul_impl,_operator_floordiv_impl,_operator_truediv_impl,_operator_mod_impl,_operator_lshift_impl,_operator_rshift_impl,_operator_and__impl,_operator_xor_impl,_operator_or__impl,_operator_add_impl,_operator_mul_impl,_operator_pow_impl,_operator_iadd_impl,_operator_isub_impl,_operator_imul_impl,_operator_imatmul_impl,_operator_ifloordiv_impl,_operator_itruediv_impl,_operator_imod_impl,_operator_ilshift_impl,_operator_irshift_impl,_operator_iand_impl,_operator_ixor_impl,_operator_ior_impl,_operator_ipow_impl
+corelibs-operator-binary-dispatch	proven	Lib/operator.py	sub,matmul,floordiv,truediv,mod,lshift,rshift,and_,xor,or_,_operator_sub_impl,_operator_matmul_impl,_operator_floordiv_impl,_operator_truediv_impl,_operator_mod_impl,_operator_lshift_impl,_operator_rshift_impl,_operator_and__impl,_operator_xor_impl,_operator_or__impl,_operator_add_impl,_operator_mul_impl,_operator_pow_impl,_operator_iadd_impl,_operator_isub_impl,_operator_imul_impl,_operator_imatmul_impl,_operator_ifloordiv_impl,_operator_itruediv_impl,_operator_imod_impl,_operator_ilshift_impl,_operator_irshift_impl,_operator_iand_impl,_operator_ixor_impl,_operator_ior_impl,_operator_ipow_impl,add,mul,pow
 corelibs-operator-heap-dispatch	proven	Lib/operator.py	sub,add,mul
 corelibs-operator-sequence-fallback	proven	Lib/operator.py	add,mul,_operator_add_impl,_operator_mul_impl
 corelibs-operator-power	proven	Lib/operator.py	pow,ipow,_operator_pow_impl,_operator_ipow_impl
@@ -2917,7 +2917,7 @@ corelibs-operator-length-hint-c-exact	proven	Lib/operator.py	_operator_length_hi
 corelibs-operator-digest-exact	proven	Lib/operator.py	_operator__compare_digest_impl
 corelibs-operator-getter-arity-exact	proven	Lib/operator.py	itemgetter_new,attrgetter_new,itemgetter_call,itemgetter_vectorcall,attrgetter_call,attrgetter_vectorcall,methodcaller_call
 corelibs-operator-itemgetter-exact	proven	Lib/operator.py	itemgetter.__init__,itemgetter.__call__,itemgetter_call,itemgetter_vectorcall,itemgetter_call_impl
-corelibs-operator-getter-repr-exact	proven	Lib/operator.py	itemgetter.__repr__,itemgetter_repr
+corelibs-operator-getter-repr-exact	proven	Lib/operator.py	itemgetter.__repr__,itemgetter_repr,attrgetter.__repr__
 corelibs-operator-attr-name-exact	proven	Lib/operator.py	attrgetter.__init__,attrgetter.__reduce__,attrgetter_new,dotjoinattr,attrgetter_args,attrgetter_reduce
 corelibs-operator-attr-call-exact	proven	Lib/operator.py	attrgetter.__init__,attrgetter.__call__,attrgetter_new,dotted_getattr,attrgetter_call,attrgetter_vectorcall,attrgetter_call_impl
 corelibs-operator-methodcaller-exact	proven	Lib/operator.py	methodcaller.__init__,methodcaller.__call__,methodcaller_new,methodcaller_call,methodcaller_vectorcall,_methodcaller_initialize_vectorcall
@@ -2935,7 +2935,17 @@ corelibs-operator-mc-call-isolated	refuted	Lib/operator.py	methodcaller_call,met
 corelibs-operator-mc-repr-guard	proven	Lib/operator.py	methodcaller_repr
 corelibs-operator-mc-repr-pure	proven	Lib/operator.py	methodcaller_repr
 corelibs-operator-mc-repr-mutations	proven	Lib/operator.py	methodcaller_repr,methodcaller_reduce
-corelibs-operator-itemgetter-reduce	proven	Lib/operator.py	itemgetter_reduce,itemgetter.__reduce__,itemgetter_new
+corelibs-operator-itemgetter-reduce	proven	Lib/operator.py	itemgetter_reduce,itemgetter_new
+corelibs-operator-index-int-subclass	refuted	Lib/operator.py	index,_operator_index
+corelibs-operator-concat-refuse-twins	refuted	Lib/operator.py	concat,iconcat,_operator_concat_impl,_operator_iconcat_impl
+corelibs-operator-concat-hasattr	proven	Lib/operator.py	concat,iconcat
+corelibs-operator-length-hint-meta	refuted	Lib/operator.py	length_hint,_operator_length_hint_impl
+corelibs-operator-length-hint-default	refuted	Lib/operator.py	length_hint,_operator_length_hint_impl
+corelibs-operator-mc-repr-py-guard	proven	Lib/operator.py	methodcaller.__repr__
+corelibs-operator-mc-repr-py-pure	proven	Lib/operator.py	methodcaller.__repr__
+corelibs-operator-mc-repr-py-mutations	proven	Lib/operator.py	methodcaller.__repr__
+corelibs-operator-mc-repr-key-twins	refuted	Lib/operator.py	methodcaller.__repr__,methodcaller_repr
+corelibs-operator-mc-reduce-py-exact	proven	Lib/operator.py	methodcaller.__reduce__
 corelibs-operator-mc-vectorcall-fresh	proven	Lib/operator.py	methodcaller_vectorcall,_methodcaller_initialize_vectorcall
 corelibs-copy-list-exact	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy

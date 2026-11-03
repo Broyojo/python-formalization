@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Lib/operator.py	27	29	lt	lt(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-rich-compare-exact	
 Lib/operator.py	31	33	le	le(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-rich-compare-exact	
-Lib/operator.py	35	37	eq	eq(a, b)	todo		review: RichCompareOrder fixes only orders with sameType = false or subtype = false, so the one-type order (subtype = true, the real case for one type) is unpinned: a richCompare that drops the sameType test passes both listed entries; corelibs-operator-rich-compare-exact pins it and already names eq in its pyFns, but the row does not list it.
-Lib/operator.py	39	41	ne	ne(a, b)	todo		review: Same as eq: with only rich-compare and object-compare listed, the one-type order of do_richcompare is unpinned; add corelibs-operator-rich-compare-exact.
+Lib/operator.py	35	37	eq	eq(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-object-compare,corelibs-operator-rich-compare-exact	
+Lib/operator.py	39	41	ne	ne(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-object-compare,corelibs-operator-rich-compare-exact	
 Lib/operator.py	43	45	ge	ge(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-rich-compare-exact	
 Lib/operator.py	47	49	gt	gt(a, b)	modelled	corelibs-operator-rich-compare,corelibs-operator-rich-compare-exact	
 Lib/operator.py	53	55	not_	not_(a)	modelled	corelibs-operator-truth	
@@ -12,47 +12,47 @@ Lib/operator.py	65	67	is_not	is_not(a, b)	excluded		trivial: the body is the sin
 Lib/operator.py	69	71	is_none	is_none(a)	excluded		trivial: the body is the single expression `return a is None`; nothing to prove beyond the identity test itself
 Lib/operator.py	73	75	is_not_none	is_not_none(a)	excluded		trivial: the body is the single expression `return a is not None`; nothing to prove beyond the identity test itself
 Lib/operator.py	79	81	abs	abs(a)	modelled	corelibs-operator-unary	
-Lib/operator.py	83	85	add	add(a, b)	todo		review: Only corelibs-operator-first-step-wins is listed, which pins numberAdd only when binary_op1 answers; the NotImplemented branch of PyNumber_Add (sq_concat, then the '+' TypeError, Objects/abstract.c:1138-1154) and binary_op1's slot order are unpinned, so a numberAdd that ignores sq_concat passes; sequence-fallback (pyFns has add) and binary-dispatch (pyFns lacks add) are not listed.
+Lib/operator.py	83	85	add	add(a, b)	modelled	corelibs-operator-first-step-wins,corelibs-operator-sequence-fallback,corelibs-operator-binary-dispatch	
 Lib/operator.py	87	89	and_	and_(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	91	93	floordiv	floordiv(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	95	97	index	index(a)	todo		review: indexPy (Proto.lean:420-429) answers PyLong_Check before the type's __index__, but `a.__index__()` (:97) is an attribute lookup that finds an int subclass's own __index__: for `class I(int): __index__ = lambda s: 7`, the pure twin returns 7 and C returns 3, while IndexExact's clause `o.inst = none -> o.isInt = some n -> indexPy o = .ok (.exact n)` says 3, so the proven statement is false about CPython (and the twin difference is not on record in corelibs-operator-twin-corners).
+Lib/operator.py	95	97	index	index(a)	modelled	corelibs-operator-index-exact,corelibs-operator-index-lawful,corelibs-operator-index-always,corelibs-operator-index-int-subclass	
 Lib/operator.py	99	101	inv	inv(a)	modelled	corelibs-operator-unary	
 Lib/operator.py	104	106	lshift	lshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	108	110	mod	mod(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	112	114	mul	mul(a, b)	todo		review: Only first-step-wins is listed, which pins numberMul only when binary_op1 answers; the sq_repeat branches of PyNumber_Multiply (left then right repeat, the count through __index__, its OverflowError, the '*' TypeError) and binary_op1's order are unpinned, so a numberMul that never repeats passes; sequence-fallback and binary-dispatch are not listed.
+Lib/operator.py	112	114	mul	mul(a, b)	modelled	corelibs-operator-first-step-wins,corelibs-operator-sequence-fallback,corelibs-operator-binary-dispatch	
 Lib/operator.py	116	118	matmul	matmul(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	120	122	neg	neg(a)	modelled	corelibs-operator-unary	
 Lib/operator.py	124	126	or_	or_(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	128	130	pos	pos(a)	modelled	corelibs-operator-unary	
-Lib/operator.py	132	134	pow	pow(a, b)	todo		review: Only first-step-wins is listed, which pins numberPow only when binary_op1 answers; the NotImplemented case (the 'unsupported operand type(s) for ** or pow()' TypeError) and binary_op1's order are unpinned, so a numberPow returning any other error passes; corelibs-operator-power (pyFns has pow) and binary-dispatch are not listed.
+Lib/operator.py	132	134	pow	pow(a, b)	modelled	corelibs-operator-first-step-wins,corelibs-operator-power,corelibs-operator-binary-dispatch	
 Lib/operator.py	136	138	rshift	rshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	140	142	sub	sub(a, b)	modelled	corelibs-operator-binary-dispatch,corelibs-operator-heap-dispatch	
 Lib/operator.py	144	146	truediv	truediv(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	148	150	xor	xor(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	154	159	concat	concat(a, b)	todo		review: ConcatArgs.hasGetitem is a plain Bool, so `hasattr(a, '__getitem__')` (:156) cannot raise, but hasattr propagates any exception other than AttributeError from a __getattribute__, __getattr__ or descriptor, which the pure twin then raises where C says \"can't be concatenated\"; the rest (message from type(a).__name__, then `a + b` as nb_add then sq_concat) is mirrored and pinned by ConcatExact.
-Lib/operator.py	161	163	contains	contains(a, b)	todo		review: Only search-exact is listed, and SearchExact never gives containsOp a slot and pins only non-TypeError iter failures, so the __contains__ branch of PySequence_Contains (`b in a`, Objects/abstract.c:2240-2250) and the 'is not a container or iterable' rewrite are unpinned; corelibs-operator-iter-errors pins both and names contains, but the row does not list it.
+Lib/operator.py	154	159	concat	concat(a, b)	modelled	corelibs-operator-concat-exact,corelibs-operator-concat-hasattr,corelibs-operator-concat-refuse-twins	
+Lib/operator.py	161	163	contains	contains(a, b)	modelled	corelibs-operator-search-exact,corelibs-operator-iter-errors	
 Lib/operator.py	165	171	countOf	countOf(a, b)	modelled	corelibs-operator-search-exact	
 Lib/operator.py	173	175	delitem	delitem(a, b)	modelled	corelibs-operator-setdel	
 Lib/operator.py	177	179	getitem	getitem(a, b)	modelled	corelibs-operator-getitem	
 Lib/operator.py	181	187	indexOf	indexOf(a, b)	modelled	corelibs-operator-search-exact	
 Lib/operator.py	189	191	setitem	setitem(a, b, c)	modelled	corelibs-operator-setdel	
-Lib/operator.py	193	230	length_hint	length_hint(obj, default=0)	todo		review: lengthHintPy follows :202-230 in order, but the lookup `type(obj).__length_hint__` (:212-215) cannot fail in the model (a descriptor's __get__(None, cls) or a metaclass __getattr__ raising anything but AttributeError propagates), and it also finds a __length_hint__ defined on the metaclass, which C's _PyObject_LookupSpecial (Objects/typeobject.c:2990-3002) never reads, so LengthHintPyExact's `o.hint = none -> .ok d` is false for such a class; the default and val are also returned as the objects given (length_hint(object(), True) is True in Python, 1 in C) and `val < 0` (:227) runs an int subclass's __lt__, all merged into Int.
+Lib/operator.py	193	230	length_hint	length_hint(obj, default=0)	modelled	corelibs-operator-length-hint-py-exact,corelibs-operator-length-hint-descriptor,corelibs-operator-length-hint-meta,corelibs-operator-length-hint-default	
 Lib/operator.py	234	236	call	call(obj, /, *args, **kwargs)	modelled	corelibs-operator-call	
-Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	todo		review: No listed theorem pins a rejection by attrgetterNewPy: AttrNameExact fixes namePy .other only and AttrCallExact only acceptance, so an attrgetterNewPy that accepts a non-str passes (corelibs-operator-attrgetter-rejects pins :252-253 and :263 but is not listed); and AttrArg.strSub carries a Chain, so a str subclass whose `split('.')` (:255) raises or returns non-str items cannot be expressed.
+Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	modelled	corelibs-operator-attr-name-exact,corelibs-operator-attr-call-exact,corelibs-operator-attr-lookup-exact,corelibs-operator-attrgetter-rejects	
 Lib/operator.py	268	269	attrgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-attr-call-exact	
-Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	todo		review: AttrReprExact only equates attrReprC with reprPy (plus dotjoin facts and C's guard), which two equally wrong repr functions would also satisfy, so the text of :272-274 and its first failing repr are not pinned by the listed entries; GetterReprExact pins reprPy itself but names only itemgetter in its pyFns and is not listed here.
-Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	todo		review: The only listed entry, attr-name-exact, says nothing about the Python __reduce__ (attrArgsPy, Getters.lean:223-226, appears in no listed theorem), and attrArgsPy turns `self._attrs` into characters, dropping the objects the body returns; the body returns one field with no branch, so a `trivial:` exclusion or a round trip through attrgetterNewPy is what is missing.
+Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	modelled	corelibs-operator-attr-repr-exact,corelibs-operator-attr-repr-twins,corelibs-operator-getter-repr-exact	
+Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	excluded		trivial: returns `self.__class__, self._attrs`, the class and the stored argument tuple (Lib/operator.py:276-277), with no branch; nothing to prove
 Lib/operator.py	287	297	itemgetter.__init__	__init__(self, item, /, *items)	modelled	corelibs-operator-itemgetter-exact	
 Lib/operator.py	299	300	itemgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-itemgetter-exact	
 Lib/operator.py	302	305	itemgetter.__repr__	__repr__(self)	modelled	corelibs-operator-getter-repr-exact	
-Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	todo		review: The Python half of ItemgetterReduce is `igReducePy args = args`, rfl on the identity (IgReduce.lean:50), which any function returning its input satisfies, and the round trip is stated for C only; IgReduce.lean:48-49 cites :291 and :297 for where _items is set, which are :289 and :294; the body returns one field with no branch, so `trivial:` would fit.
+Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	excluded		trivial: returns `self.__class__, self._items`, the class and the stored argument tuple (Lib/operator.py:307-308), with no branch; nothing to prove
 Lib/operator.py	319	324	methodcaller.__init__	__init__(self, name, /, *args, **kwargs)	modelled	corelibs-operator-methodcaller-exact	
 Lib/operator.py	326	327	methodcaller.__call__	__call__(self, obj, /)	modelled	corelibs-operator-methodcaller-exact	
-Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	todo		review: mcReprPy takes keywords as List (String x a), but `'%s' % k` (:332) is str(k), which for a str-subclass key (kept by **kwargs) runs its __str__, which may print something else or raise, where C formats %U (Modules/_operator.c:1838); and a value's repr that changes `self._kwargs` makes the items() iteration raise RuntimeError, which a list cannot express; McReprOrder is otherwise a sound pin of the name-first order.
-Lib/operator.py	337	342	methodcaller.__reduce__	__reduce__(self)	todo		review: mcReduce has no failure path, but `from functools import partial` (:341) can raise and partial(...) raises TypeError for a Placeholder keyword value, as McReduceExact pins for C; and MethodcallerNew's round trip also holds for a reduce that always takes the partial branch, so the `if not self._kwargs` branch (:338) is unpinned.
+Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	modelled	corelibs-operator-mc-repr-order,corelibs-operator-mc-repr-exact,corelibs-operator-mc-repr-py-guard,corelibs-operator-mc-repr-py-pure,corelibs-operator-mc-repr-py-mutations,corelibs-operator-mc-repr-key-twins	
+Lib/operator.py	337	342	methodcaller.__reduce__	__reduce__(self)	modelled	corelibs-operator-methodcaller-new,corelibs-operator-mc-reduce-py-exact	
 Lib/operator.py	347	350	iadd	iadd(a, b)	modelled	corelibs-operator-inplace-exact	
 Lib/operator.py	352	355	iand	iand(a, b)	modelled	corelibs-operator-inplace-fallback	
-Lib/operator.py	357	363	iconcat	iconcat(a, b)	todo		review: Same gap as concat: `hasattr(a, '__getitem__')` (:359) is a Bool in the model and cannot propagate the non-AttributeError exception that hasattr passes on; the `a += b` part is mirrored as plusEq and pinned by ConcatExact.
+Lib/operator.py	357	363	iconcat	iconcat(a, b)	modelled	corelibs-operator-concat-exact,corelibs-operator-concat-hasattr,corelibs-operator-concat-refuse-twins	
 Lib/operator.py	365	368	ifloordiv	ifloordiv(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	370	373	ilshift	ilshift(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	375	378	imod	imod(a, b)	modelled	corelibs-operator-inplace-fallback	
