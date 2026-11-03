@@ -451,7 +451,7 @@ def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := fun mp =>
 def insertionResize (unicode : Bool) : DM K V Unit := fun mp =>
   dictResize (calculateLog2Keysize (growthRate mp.used)) unicode mp
 
-/-- The body of `insert_combined_dict` after any resize (@3.14.7:1806-1826). -/
+/-- The body of `insert_combined_dict` after any resize (:1886-1906). -/
 def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V) :=
   match findEmptySlot k hash with
   | .ok hashpos =>
