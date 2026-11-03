@@ -1,10 +1,10 @@
 id: datetime-zoneinfo-transition-int64-wrap
-title: "_zoneinfo: ts_to_local() wraps int64_t for transition times near the ends of the range"
+title: "_zoneinfo: ts_to_local() and fromutc() wrap int64_t for transition times near the ends of the range"
 priority: P4
 kind: silent-wraparound
 module: datetime
 files: [Modules/_zoneinfo.c]
-functions: ["C ts_to_local", "C load_data", "C find_ttinfo"]
+functions: ["C ts_to_local", "C load_data", "C find_ttinfo", "C zoneinfo_fromutc"]
 summary: |
   ts_to_local() adds the UTC offset to each transition time in place,
   `trans_local[0][i] += offset_0` (Modules/_zoneinfo.c:2179-2191), in `int64_t`. A version 2+
@@ -12,7 +12,10 @@ summary: |
   to a large negative local time (CPython builds with -fwrapv). find_ttinfo() then sees every
   datetime as after the last transition and uses the rule for after it: utcoffset() of
   2000-01-01 is +01:00 BBB in C and +00:00 AAA (the type before the first transition) in
-  Python. fromutc() has the same `int64_t` arithmetic at :691 and :712.
+  Python. fromutc() has the same `int64_t` arithmetic at :691 and :712: with transitions at
+  -2**63 and 2**60 (all +00:00), 2000-01-01 00:00 UTC lies between them, and
+  `timestamp - self->trans_list_utc[idx - 1]` (:712) wraps to a negative number, so C sets
+  fold=1 where Python's exact difference gives fold=0.
 likelihood: |
   Very low: RFC 9636 3.2 recommends transition times of at least -2**59, and real files use 1901..2037.
 maybe_intended: |
@@ -40,15 +43,24 @@ reproducer: |
       return out
   data = tzif([2**63 - 1], [1], [(0, 0, 0), (3600, 0, 4)], b'AAA\x00BBB\x00')
   c, py = both(data, lambda z: (z.utcoffset(dt.datetime(2000, 1, 1)), z.tzname(dt.datetime(2000, 1, 1))))
-  print('C', c, 'Py', py)
-  if c == (dt.timedelta(hours=1), 'BBB') and py == (dt.timedelta(0), 'AAA'):
+  print('lookup: C', c, 'Py', py)
+  data2 = tzif([-2**63, 2**60], [0, 0], [(0, 0, 0)], b'UTC\x00')
+  def fu(z):
+      r = z.fromutc(dt.datetime(2000, 1, 1, tzinfo=z))
+      return (r.replace(tzinfo=None), r.fold)
+  c2, py2 = both(data2, fu)
+  print('fromutc: C', c2, 'Py', py2)
+  if (c == (dt.timedelta(hours=1), 'BBB') and py == (dt.timedelta(0), 'AAA')
+          and c2 == (dt.datetime(2000, 1, 1), 1) and py2 == (dt.datetime(2000, 1, 1), 0)):
       print('REPRODUCED datetime-zoneinfo-transition-int64-wrap')
 expected: |
-  +00:00 AAA in both (the instant is before the only transition).
+  +00:00 AAA in both (the instant is before the only transition); fold=0 from fromutc in both
+  (the instant is 2**63 seconds after the first transition, which changed nothing).
 promised_by: |
   no silent wraparound; the twins being interchangeable.
 cause: |
-  Modules/_zoneinfo.c:2179-2191 `+=` on int64_t without an overflow check.
+  Modules/_zoneinfo.c:2179-2191 `+=` on int64_t without an overflow check; :712
+  `timestamp - self->trans_list_utc[idx - 1]` likewise.
 possible_fix: |
   Clamp or reject transition times whose local value overflows (e.g. refuse |t| > 2**62 in load_data).
 reproduces:
@@ -62,3 +74,4 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.TsToLocalTwins
   theorem: PyLean.Datetime.Zone.tsToLocalTwins_refuted
+  also: ["PyLean.Datetime.Zone.FromutcTwinsSortedWide / fromutcTwinsSortedWide_refuted (the fromutc case)"]

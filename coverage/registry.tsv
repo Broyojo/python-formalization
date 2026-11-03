@@ -158,6 +158,7 @@ datetime-zoneinfo-load-data-no-assertion	refuted	Lib/zoneinfo/_common.py	load_da
 datetime-zoneinfo-tzstr-twins	refuted	Modules/_zoneinfo.c	C parse_tz_str,C parse_abbr,C parse_tz_delta,C parse_transition_time,C parse_digits,C build_tzrule,_parse_tz_str
 datetime-zoneinfo-tzstr-twins-nonul	proven	Modules/_zoneinfo.c	C parse_tz_str,C parse_abbr,C parse_tz_delta,C parse_transition_rule,C parse_transition_time,C parse_digits,C calendarrule_new,C dayrule_new,C build_tzrule,_parse_tz_str,_parse_dst_start_end,_parse_transition_time,_parse_tz_delta,_CalendarOffset.__init__,_DayOffset.__init__,_TZStr.__init__
 datetime-zoneinfo-load-twins	proven	Modules/_zoneinfo.c	C load_data,ZoneInfo._load_file,C build_ttinfo,C ttinfo_eq,_ttinfo.__eq__,_ttinfo.__init__
+datetime-zoneinfo-ttinfo-eq	proven	Modules/_zoneinfo.c	C ttinfo_eq,_ttinfo.__eq__
 datetime-zoneinfo-lookup-twins	proven	Lib/zoneinfo/_zoneinfo.py	ZoneInfo._find_trans,ZoneInfo._get_local_timestamp,_TZStr._get_trans_info,_TZStr.transitions,C get_local_timestamp,C find_ttinfo,C _bisect,C find_tzrule_ttinfo,C tzrule_transitions
 datetime-zoneinfo-lookup-twins-instances	refuted	Modules/_zoneinfo.c	C get_local_timestamp,C find_ttinfo,ZoneInfo._get_local_timestamp,ZoneInfo._find_trans
 datetime-zoneinfo-lookup-methods	proven	Modules/_zoneinfo.c	C zoneinfo_ZoneInfo_utcoffset_impl,C zoneinfo_ZoneInfo_dst_impl,C zoneinfo_ZoneInfo_tzname_impl,ZoneInfo.utcoffset,ZoneInfo.dst,ZoneInfo.tzname
@@ -166,8 +167,16 @@ datetime-zoneinfo-fromutc-twins	refuted	Lib/zoneinfo/_zoneinfo.py	ZoneInfo.fromu
 datetime-zoneinfo-fromutc-twins-notrans	proven	Lib/zoneinfo/_zoneinfo.py	ZoneInfo.fromutc,C zoneinfo_fromutc,C find_tzrule_ttinfo_fromutc,_TZStr._get_trans_info_fromutc
 datetime-zoneinfo-fromutc-twins-static	refuted	Lib/zoneinfo/_zoneinfo.py	ZoneInfo.fromutc,C zoneinfo_fromutc
 datetime-zoneinfo-fromutc-twins-sorted	proven	Lib/zoneinfo/_zoneinfo.py	ZoneInfo.fromutc,C zoneinfo_fromutc,C _bisect,ZoneInfo._get_local_timestamp,C get_local_timestamp
+datetime-zoneinfo-fromutc-twins-wide	refuted	Modules/_zoneinfo.c	C zoneinfo_fromutc,C _bisect,ZoneInfo.fromutc
 datetime-zoneinfo-fromutc-twins-instances	refuted	Modules/_zoneinfo.c	C zoneinfo_fromutc,C get_local_timestamp,ZoneInfo.fromutc,ZoneInfo._get_local_timestamp
 datetime-zoneinfo-cache-twins	proven	Modules/_zoneinfo.c	C zoneinfo_ZoneInfo_impl,C zone_from_strong_cache,C find_in_strong_cache,C move_strong_cache_node_to_front,C remove_from_strong_cache,C update_strong_cache,C strong_cache_node_new,C strong_cache_free,C strong_cache_node_free,C eject_from_strong_cache,C clear_strong_cache,C zoneinfo_ZoneInfo_clear_cache_impl,ZoneInfo.__new__,ZoneInfo.clear_cache
+datetime-zoneinfo-cache-twins-fallible	proven	Modules/_zoneinfo.c	C zoneinfo_ZoneInfo_impl,C zone_from_strong_cache,C find_in_strong_cache,C update_strong_cache,C eject_from_strong_cache,C clear_strong_cache,C zoneinfo_ZoneInfo_clear_cache_impl,C get_weak_cache,ZoneInfo.__new__,ZoneInfo.clear_cache
+datetime-zoneinfo-cache-err-twins	refuted	Modules/_zoneinfo.c	C zoneinfo_ZoneInfo_impl,C zone_from_strong_cache,C find_in_strong_cache,C eject_from_strong_cache,C zoneinfo_ZoneInfo_clear_cache_impl,ZoneInfo.__new__,ZoneInfo.clear_cache
+datetime-zoneinfo-cache-err-subclass	refuted	Modules/_zoneinfo.c	C eject_from_strong_cache,C zoneinfo_ZoneInfo_clear_cache_impl,C get_weak_cache,C zone_from_strong_cache,C update_strong_cache,C zoneinfo_ZoneInfo_impl,ZoneInfo.clear_cache,ZoneInfo.__new__
+datetime-zoneinfo-weak-cache-attr	refuted	Modules/_zoneinfo.c	C get_weak_cache,C zoneinfo_ZoneInfo_impl,ZoneInfo.__new__
+datetime-zoneinfo-init-subclass-twins	refuted	Modules/_zoneinfo.c	C zoneinfo_init_subclass,ZoneInfo.__init_subclass__
+datetime-zoneinfo-init-subclass-weakref	refuted	Modules/_zoneinfo.c	C new_weak_cache,C zoneinfo_init_subclass,ZoneInfo.__init_subclass__
+datetime-zoneinfo-init-subclass-same-module	proven	Modules/_zoneinfo.c	C new_weak_cache,C zoneinfo_init_subclass,ZoneInfo.__init_subclass__
 datetime-zoneinfo-cache-twins-subclass	refuted	Modules/_zoneinfo.c	C zoneinfo_init_subclass,C new_weak_cache,C get_weak_cache,C zone_from_strong_cache,C update_strong_cache,C zoneinfo_ZoneInfo_impl,ZoneInfo.__init_subclass__,ZoneInfo.__new__
 datetime-zoneinfo-clear-cache-defined	refuted	Modules/_zoneinfo.c	C clear_strong_cache,C strong_cache_free,C strong_cache_node_free,C zoneinfo_ZoneInfo_clear_cache_impl
 datetime-zoneinfo-strong-lookup-defined	refuted	Modules/_zoneinfo.c	C find_in_strong_cache,C zone_from_strong_cache

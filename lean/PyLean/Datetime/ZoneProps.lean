@@ -10,6 +10,51 @@ namespace PyLean.Datetime.Zone
 
 open PyLean PyLean.Datetime
 
+/-! ### `_ttinfo` equality -/
+
+theorem ttiEqC_spec (a b : TTI) : ttiEqC a b = if a = b then 1 else 0 := by
+  cases a with | mk u d n => cases b with | mk u' d' n' =>
+  simp only [ttiEqC, ttinfoEqWithC, TTI.mk.injEq]
+  by_cases h1 : u = u' <;> by_cases h2 : d = d' <;> by_cases h3 : n = n' <;> simp [h1, h2, h3]
+
+theorem ttiEqPy_spec (a b : TTI) : ttiEqPy a b = decide (a = b) := by
+  cases a with | mk u d n => cases b with | mk u' d' n' =>
+  simp only [ttiEqPy, ttinfoEqWithPy, TTI.mk.injEq]
+  by_cases h1 : u = u' <;> by_cases h2 : d = d' <;> by_cases h3 : n = n' <;> simp [h1, h2, h3] <;> rfl
+
+theorem ttiEqC_range (a b : TTI) : ttiEqC a b = 0 ∨ ttiEqC a b = 1 := by
+  rw [ttiEqC_spec]; split <;> simp
+
+/-- A `PyObject_RichCompareBool` result and the truth of the same Python comparison: `-1` with
+an exception, `0` with `False`, `1` with `True`. -/
+def CmpRel (r : Int) (p : Py Bool) : Prop :=
+  (r = -1 ∧ ∃ e, p = .error e) ∨ (r = 0 ∧ p = .ok false) ∨ (r = 1 ∧ p = .ok true)
+
+/-- `ttinfo_eq` and `_ttinfo.__eq__`: on two `_ttinfo`s, C gives `1` and Python `True` exactly
+when the three fields are equal (else `0`, `False`); and over any field comparisons, C's
+`rv < 1` exits and Python's `and` chain compare `utcoff`, `dstoff`, `tzname` in that order and
+stop at the same field, so an error, `False` or `True` comes out of the same comparison. -/
+def TtinfoEq : Prop :=
+  (∀ a b : TTI, ttiEqC a b = if a = b then 1 else 0) ∧
+  (∀ a b : TTI, ttiEqPy a b = decide (a = b)) ∧
+  (∀ (cu cd cn : Unit → Int) (pu pd pn : Py Bool),
+    CmpRel (cu ()) pu → CmpRel (cd ()) pd → CmpRel (cn ()) pn →
+    CmpRel (ttinfoEqWithC cu cd cn) (ttinfoEqWithPy pu pd pn))
+
+theorem ttinfoEq_proven : TtinfoEq := by
+  refine ⟨ttiEqC_spec, ttiEqPy_spec, ?_⟩
+  intro cu cd cn pu pd pn h1 h2 h3
+  rcases h1 with ⟨r1, e1, rfl⟩ | ⟨r1, rfl⟩ | ⟨r1, rfl⟩
+  · exact .inl ⟨by simp [ttinfoEqWithC, r1], e1, by simp [ttinfoEqWithPy]; rfl⟩
+  · exact .inr (.inl ⟨by simp [ttinfoEqWithC, r1], by simp [ttinfoEqWithPy]; rfl⟩)
+  rcases h2 with ⟨r2, e2, rfl⟩ | ⟨r2, rfl⟩ | ⟨r2, rfl⟩
+  · exact .inl ⟨by simp [ttinfoEqWithC, r1, r2], e2, by simp [ttinfoEqWithPy]; rfl⟩
+  · exact .inr (.inl ⟨by simp [ttinfoEqWithC, r1, r2], by simp [ttinfoEqWithPy]; rfl⟩)
+  rcases h3 with ⟨r3, e3, rfl⟩ | ⟨r3, rfl⟩ | ⟨r3, rfl⟩
+  · exact .inl ⟨by simp [ttinfoEqWithC, r1, r2, r3], e3, by simp [ttinfoEqWithPy]; rfl⟩
+  · exact .inr (.inl ⟨by simp [ttinfoEqWithC, r1, r2, r3], by simp [ttinfoEqWithPy]; rfl⟩)
+  · exact .inr (.inr ⟨by simp [ttinfoEqWithC, r1, r2, r3], by simp [ttinfoEqWithPy]; rfl⟩)
+
 /-! ### The TZif reader (shared by both twins) -/
 
 /-- `ZoneInfo.from_file` docs: "ValueError is raised if the data read from file_obj is not a
@@ -566,8 +611,8 @@ theorem step_inv (loads : K → Bool) (sp sc : CacheSt K) (h : CInv sp sc) (op :
           obtain ⟨e1, e2, e3, e4⟩ := insert_rev sp.strong k hk h.nodup h.len
           refine ⟨by rw [h.strong]; exact e1, rfl, e2, fun x hx => ?_, e4⟩
           rcases e3 x hx with hx | hx
-          · exact List.mem_cons_of_mem _ (h.sub x hx)
-          · rw [hx]; exact List.mem_cons_self
+          · exact List.mem_append_left _ (h.sub x hx)
+          · rw [hx]; exact List.mem_append_right _ (List.mem_singleton_self _)
         · simp only [hw, hl, ite_false, Bool.false_eq_true, Option.map_none]
   | clear =>
     simp only [stepPy, stepC, clearPy, clearC]
@@ -698,21 +743,6 @@ theorem lookupTwinsInstances_refuted : ¬ LookupTwinsInstances := by
 end PyLean.Datetime.Zone
 
 namespace PyLean.Datetime.Zone
-
-/-- The twins keep the same zones alive through a subclass's strong cache: after the class
-statement runs `__init_subclass__`, every run of `Sub(key)` calls leaves the same keys there. -/
-def CacheTwinsSubclass : Prop :=
-  ∀ (K : Type) [DecidableEq K] (loads : K → Bool) (wvd : Py Unit) (ks : List K) (sp sc : CacheSt K),
-    initSubclassPy wvd = .ok sp → initSubclassC wvd = .ok sc →
-    (runSubC loads sc ks).strong = (runSubPy loads sp ks).strong.reverse
-
-/-- One `Sub(key)`: Python's subclass keeps the zone in its own strong cache, C keeps none, so
-the zone dies with its last outside reference in C only. -/
-theorem cacheTwinsSubclass_refuted : ¬ CacheTwinsSubclass := by
-  intro h
-  have := h Nat (fun _ => true) (.ok ()) [0] ⟨[], []⟩ ⟨[], []⟩ rfl rfl
-  revert this
-  decide
 
 /-- `ZoneInfo.clear_cache()` never makes C read or free memory twice, whatever the keys'
 finalizers do. -/
@@ -1526,7 +1556,7 @@ theorem loadTwins_proven : LoadTwins := by
         cases a with
         | tti t =>
           obtain ⟨hso, hstd⟩ := hm
-          simp [hso, hstd]
+          simp [hso, hstd, ttiEqC_spec, ttiEqPy_spec]
         | tzstr z =>
           obtain ⟨hso, -⟩ := hm
           simp [hso]
@@ -1554,6 +1584,49 @@ theorem fromutcTwinsInstances_refuted : ¬ FromutcTwinsInstances := by
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun h => absurd h (by decide), ⟨⟨rfl, rfl⟩, trivial⟩⟩
     ⟨true, false, 2021, 1, 1, 0, 0, 0, 0, .ok (ymd2ord 2021 1 1 + 2 ^ 32), .ok 0, .ok 0, .ok 0,
       .ok 0, .ok 2021⟩ rfl (by unfold ValidDT; decide)
+  revert this
+  decide
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- `FromutcTwinsSorted` with transition times anywhere in the `int64_t` range a TZif v2+ file
+can hold, instead of within `2**62`. -/
+def FromutcTwinsSortedWide : Prop :=
+  ∀ (zp : PyZone) (zc : CZone), Corr zp zc → zp.ttinfos.length = zp.transUtc.length →
+    SortedL zp.transUtc → (∀ t ∈ zp.transUtc, -2 ^ 63 ≤ t ∧ t < 2 ^ 63) →
+    (∀ t ∈ zp.ttinfos, -2 ^ 40 ≤ t.utcoff ∧ t.utcoff ≤ 2 ^ 40) →
+    (-2 ^ 40 ≤ (zp.ttiBefore.getD default).utcoff ∧ (zp.ttiBefore.getD default).utcoff ≤ 2 ^ 40) →
+    zp.transUtc ≠ [] →
+    ∀ (y m d h mi s : Int), ValidDT y m d h mi s 0 →
+      ((ymd2ord y m d - EPOCHORDINAL) * 86400 + h * 3600 + mi * 60 + s ≤ zp.transUtc.getLast?.getD 0 ∨
+        zp.tzAfter = .tti (zp.ttinfos.getLast?.getD default)) →
+      fromutcC zc (DTObj.ofFields y m d h mi s 0) true = fromutcPy zp (DTObj.ofFields y m d h mi s 0) true
+
+def ttU : TTI := ⟨0, 0, [85, 84, 67]⟩
+def wrapPy : PyZone :=
+  ⟨[-2 ^ 63, 2 ^ 60], ([-2 ^ 63, 2 ^ 60], [-2 ^ 63, 2 ^ 60]), [ttU, ttU], some ttU, .tti ttU, false⟩
+def wrapC : CZone :=
+  ⟨[-2 ^ 63, 2 ^ 60], ([-2 ^ 63, 2 ^ 60], [-2 ^ 63, 2 ^ 60]), [ttU, ttU], some ttU,
+    ⟨ttU, default, 0, none, none, true⟩, false⟩
+
+theorem wrap_sorted : SortedL wrapPy.transUtc := by
+  intro i j hij hj
+  have hj' : j < 2 := hj
+  have : i = 0 ∧ j = 1 := by omega
+  obtain ⟨rfl, rfl⟩ := this
+  decide
+
+/-- Transitions at `-2**63` and `2**60` (all +00:00) and 2000-01-01 00:00 UTC: C's
+`timestamp - trans_list_utc[idx - 1]` (Modules/_zoneinfo.c:712) wraps to a negative number,
+so `shift > ...` sets `fold=1`; Python's exact difference gives `fold=0`. -/
+theorem fromutcTwinsSortedWide_refuted : ¬ FromutcTwinsSortedWide := by
+  intro h
+  have := h wrapPy wrapC
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun h => absurd h (by decide), ⟨⟨rfl, rfl⟩, trivial⟩⟩
+    rfl wrap_sorted (by decide) (by decide) (by decide) (by decide) 2000 1 1 0 0 0
+    (by unfold ValidDT; decide) (.inl (by decide))
   revert this
   decide
 

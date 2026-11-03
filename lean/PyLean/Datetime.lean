@@ -18,6 +18,8 @@ import PyLean.Datetime.ChangedProps
 import PyLean.Datetime.ZoneRuleProps
 import PyLean.Datetime.ZoneLoadProps
 import PyLean.Datetime.ZoneProps
+import PyLean.Datetime.ZoneCacheErrProps
+import PyLean.Datetime.ZoneCacheIdProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -646,6 +648,12 @@ def entries : List Entry := [
     source := "C/Python twins (narrows the dstoff, ts_to_local, tzstr and before-first-transition refutations)", status := .proven
     prop := ``Zone.LoadTwins, thm := some ``Zone.loadTwins_proven
     notes := "Composes datetime-zoneinfo-dstoff-twins-narrow, -ts-to-local-narrow and -tzstr-twins-nonul with the per-transition ttinfo list, ttinfo_before and the fixed-offset flag. The before-first-transition hypothesis is exactly the complement of the textlibs refutation." },
+  { id := "datetime-zoneinfo-ttinfo-eq", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C ttinfo_eq", "_ttinfo.__eq__"]
+    statement := "On two _ttinfo objects, C ttinfo_eq gives 1 and _ttinfo.__eq__ True exactly when utcoff, dstoff and tzname are all equal (else 0 and False); over arbitrary field comparisons both compare utcoff, then dstoff, then tzname, stopping at the same field, so an error, False or True comes out of the same comparison."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.TtinfoEq, thm := some ``Zone.ttinfoEq_proven
+    notes := "Each twin has its own mirror (ttinfoEqWithC over RichCompareBool results with the rv < 1 exits, ttinfoEqWithPy as the and-chain); C load_data's fixed_offset and _load_file's _fixed_offset use them, so datetime-zoneinfo-load-twins rests on both specs." },
   { id := "datetime-zoneinfo-lookup-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py"
     pyFns := ["ZoneInfo._find_trans", "ZoneInfo._get_local_timestamp", "_TZStr._get_trans_info", "_TZStr.transitions", "C get_local_timestamp", "C find_ttinfo", "C _bisect", "C find_tzrule_ttinfo", "C tzrule_transitions"]
     statement := "For corresponding zones, C find_ttinfo and Python _find_trans pick the same ttinfo for None and for every plain datetime (type(dt) is datetime, both folds), through the bisect over local transitions and the rule after the last one."
@@ -695,7 +703,14 @@ def entries : List Entry := [
     statement := "For corresponding zones with ascending transitions (RFC 9636 3.2), TZif-sized offsets and transition times within 2**62, C and Python fromutc add the same offset and set the same fold for every plain datetime not after the last transition, or after it when the rule there is the last transition's own ttinfo."
     source := "C/Python twins (narrows datetime-zoneinfo-fromutc-twins and -fromutc-twins-static)", status := .proven
     prop := ``Zone.FromutcTwinsSorted, thm := some ``Zone.fromutcTwinsSorted_proven
-    notes := "The excluded instants are exactly the two refutations: after the last transition with a TZ rule (fold of the last transition) or with a different fixed footer offset." },
+    notes := "Three exclusions, each refuted: after the last transition with a TZ rule (datetime-zoneinfo-fromutc-twins, fold of the last transition) or with a different fixed footer offset (datetime-zoneinfo-fromutc-twins-static), and transition times beyond 2**62, where C's int64_t difference at :712 can wrap (datetime-zoneinfo-fromutc-twins-wide)." },
+  { id := "datetime-zoneinfo-fromutc-twins-wide", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_fromutc", "C _bisect", "ZoneInfo.fromutc"]
+    statement := "datetime-zoneinfo-fromutc-twins-sorted with transition times anywhere in the int64_t range a TZif v2+ file can hold, instead of within 2**62."
+    source := "C/Python twins; no silent wraparound", status := .refuted
+    prop := ``Zone.FromutcTwinsSortedWide, thm := some ``Zone.fromutcTwinsSortedWide_refuted
+    bug := some "datetime-zoneinfo-transition-int64-wrap"
+    notes := "Transitions [-2**63, 2**60] (all +00:00), 2000-01-01 00:00 UTC: timestamp - trans_list_utc[idx - 1] (Modules/_zoneinfo.c:712) wraps negative, so C sets fold=1; Python gives fold=0." },
   { id := "datetime-zoneinfo-fromutc-twins-instances", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_fromutc", "C get_local_timestamp", "ZoneInfo.fromutc", "ZoneInfo._get_local_timestamp"]
     statement := "For corresponding zones, C and Python fromutc agree for every datetime instance whose tzinfo is the zone, subclasses included."
@@ -708,10 +723,56 @@ def entries : List Entry := [
     statement := "For every run of ZoneInfo(key), clear_cache and instance-collection steps on the base class ZoneInfo, with keys whose equality cannot raise or re-enter and that have no finalizers, both twins keep the same keys in the same recency order in the strong cache, never more than 8, and fail the same calls (a call fails only when loading the key fails)."
     source := "C/Python twins; _strong_cache_size", status := .proven
     prop := ``Zone.CacheTwins, thm := some ``Zone.cacheTwins_proven
-    notes := "Scope limits, each refuted outside: subclasses (datetime-zoneinfo-cache-twins-subclass), a key __eq__ that re-enters (datetime-zoneinfo-strong-lookup-defined), key finalizers during clear_cache (datetime-zoneinfo-clear-cache-defined). A key __eq__ that raises is not modelled." },
+    notes := "The abstract model; datetime-zoneinfo-cache-twins-fallible carries it to the mirrors with fallible keys. Scope limits, each refuted outside: subclasses (datetime-zoneinfo-cache-twins-subclass), a key __eq__ that re-enters (datetime-zoneinfo-strong-lookup-defined) or raises (datetime-zoneinfo-cache-err-twins), key finalizers during clear_cache (datetime-zoneinfo-clear-cache-defined)." },
+  { id := "datetime-zoneinfo-cache-twins-fallible", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C update_strong_cache", "C eject_from_strong_cache", "C clear_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "C get_weak_cache", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+    statement := "On the base class, for keys whose == is identity and whose hash() does not raise, every run of ZoneInfo(key), clear_cache(), clear_cache(only_keys=...) with an iterator that may raise after any prefix, and instance collections gives the same outcome in both twins (the same instance, the same exception) and the same strong-cache entries in recency order, never more than 8."
+    source := "C/Python twins; _strong_cache_size", status := .proven
+    prop := ``Zone.CacheTwinsFallible, thm := some ``Zone.cacheTwinsFallible_proven
+    notes := "The mirrors (ZoneCacheErr.lean) make the real lookups: C compares the key with every node through PyObject_RichCompareBool, the weak cache and Python's OrderedDict hash then compare equal-hash stored keys; get/setdefault/pop and the rv < 0 returns are fallible. With identity keys each step equals the abstract step of ZoneCache.lean, so the proof reuses CacheTwins. Value-equal distinct key objects (two equal str objects) are not covered by this statement." },
+  { id := "datetime-zoneinfo-cache-err-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+    statement := "On the base class, ZoneInfo(key) and clear_cache give the same outcomes in both twins for every run, whatever the keys' __hash__ and __eq__ do."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.CacheErrTwins, thm := some ``Zone.cacheErrTwins_refuted
+    bug := some "datetime-zoneinfo-cache-eq-raises"
+    notes := "ZoneInfo(0), clear_cache(only_keys=[1]), ZoneInfo(1) with a key 1 whose __eq__ raises: C compares it with node 0 (rv < 0 at :2442-2444, returned at :320-321 and as eject's -1 at :2475-2477) and raises twice; Python's dicts never compare keys of different hash." },
+  { id := "datetime-zoneinfo-cache-err-subclass", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "C get_weak_cache", "C zone_from_strong_cache", "C update_strong_cache", "C zoneinfo_ZoneInfo_impl", "ZoneInfo.clear_cache", "ZoneInfo.__new__"]
+    statement := "For a fresh subclass, Sub(key), clear_cache and instance collections give the same outcomes in both twins for every run, whatever the keys' __hash__ and __eq__ do."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.CacheErrTwinsSub, thm := some ``Zone.cacheErrTwinsSub_refuted
+    bug := some "datetime-zoneinfo-subclass-strong-cache"
+    notes := "Sub(0), its instance collected, then Sub.clear_cache(only_keys=[1]) with a same-hash key whose __eq__ raises: Python's subclass strong cache kept key 0 in the weak cache, so pop compares and raises; C's subclass branch of eject_from_strong_cache (:2463-2465) returns 0 and the weak entry is gone." },
+  { id := "datetime-zoneinfo-weak-cache-attr", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C get_weak_cache", "C zoneinfo_ZoneInfo_impl", "ZoneInfo.__new__"]
+    statement := "For a fresh subclass, Sub(key) behaves the same in both twins on every run, del Sub._weak_cache included."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.WeakCacheAttrTwins, thm := some ``Zone.weakCacheAttrTwins_refuted
+    bug := some "datetime-zoneinfo-get-weak-cache-fallback"
+    notes := "After del Sub._weak_cache, C's PyObject_GetAttrString(type, \"_weak_cache\") (:299-301) raises AttributeError; Python's cls._weak_cache finds ZoneInfo._weak_cache." },
+  { id := "datetime-zoneinfo-init-subclass-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_init_subclass", "ZoneInfo.__init_subclass__"]
+    statement := "With sys.modules['weakref'] the module _zoneinfo.py imported, class S(ZoneInfo, **kw) succeeds or fails alike in both twins."
+    source := "C/Python twins; data model (__init_subclass__ receives the class keywords)", status := .refuted
+    prop := ``Zone.InitSubclassTwins, thm := some ``Zone.initSubclassTwins_refuted
+    bug := some "datetime-zoneinfo-init-subclass"
+    notes := "class S(ZoneInfo, foo=1): C ignores the keyword (METH_VARARGS | METH_KEYWORDS, :2654-2656), Python's __init_subclass__(cls) raises TypeError." },
+  { id := "datetime-zoneinfo-init-subclass-weakref", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C new_weak_cache", "C zoneinfo_init_subclass", "ZoneInfo.__init_subclass__"]
+    statement := "Without class keywords, the twins create a subclass alike whatever sys.modules['weakref'] is at that point."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.InitSubclassWeakref, thm := some ``Zone.initSubclassWeakref_refuted
+    bug := some "datetime-zoneinfo-init-subclass"
+    notes := "new_weak_cache imports weakref at call time (PyImport_ImportModuleAttrString, :2595-2596); Python uses the weakref it bound at import. A replaced module without WeakValueDictionary makes C raise AttributeError." },
+  { id := "datetime-zoneinfo-init-subclass-same-module", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C new_weak_cache", "C zoneinfo_init_subclass", "ZoneInfo.__init_subclass__"]
+    statement := "Without class keywords and with sys.modules['weakref'] the module _zoneinfo.py imported, both twins read WeakValueDictionary from it and call it: the same outcome when the attribute is missing, when the call raises, and on success (a fresh subclass state)."
+    source := "C/Python twins (narrows datetime-zoneinfo-init-subclass-twins and -weakref)", status := .proven
+    prop := ``Zone.InitSubclassSameModule, thm := some ``Zone.initSubclassSameModule_proven },
   { id := "datetime-zoneinfo-cache-twins-subclass", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_init_subclass", "C new_weak_cache", "C get_weak_cache", "C zone_from_strong_cache", "C update_strong_cache", "C zoneinfo_ZoneInfo_impl", "ZoneInfo.__init_subclass__", "ZoneInfo.__new__"]
-    statement := "For a subclass of ZoneInfo, after __init_subclass__ runs, every run of Sub(key) calls leaves the same keys in the strong cache in both twins."
+    statement := "For a subclass of ZoneInfo, after __init_subclass__ runs (through new_weak_cache), every run of Sub(key) calls leaves the same keys in the strong cache in both twins."
     source := "C/Python twins", status := .refuted
     prop := ``Zone.CacheTwinsSubclass, thm := some ``Zone.cacheTwinsSubclass_refuted
     bug := some "datetime-zoneinfo-subclass-strong-cache"

@@ -74,3 +74,4 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.CacheTwinsSubclass
   theorem: PyLean.Datetime.Zone.cacheTwinsSubclass_refuted
+  also: ["PyLean.Datetime.Zone.CacheErrTwinsSub / cacheErrTwinsSub_refuted (a same-hash raising key in Sub.clear_cache(only_keys=...): Python raises because its strong cache kept the weak entry, C does not)"]
