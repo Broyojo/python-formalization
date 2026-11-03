@@ -1,9 +1,9 @@
 file	line	endline	name	signature	status	entry	note
 Lib/copy.py	62	100	copy	copy(x)	modelled	corelibs-copy-pickle-reduce,corelibs-copy-shallow	
-Lib/copy.py	110	162	deepcopy	deepcopy(x, memo=None)	modelled	corelibs-copy-aliasing,corelibs-copy-dict-exact,corelibs-copy-dict-merge,corelibs-copy-keeps-source,corelibs-copy-list-exact,corelibs-copy-memo,corelibs-copy-method-replace,corelibs-copy-reconstruct-memo-first	
+Lib/copy.py	110	162	deepcopy	deepcopy(x, memo=None)	modelled	corelibs-copy-aliasing,corelibs-copy-dict-exact,corelibs-copy-keeps-source,corelibs-copy-list-exact,corelibs-copy-memo,corelibs-copy-method-replace,corelibs-copy-reconstruct-memo-first	
 Lib/copy.py	171	177	_deepcopy_list	_deepcopy_list(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-list-exact,corelibs-copy-order,corelibs-copy-aliasing	
 Lib/copy.py	180	194	_deepcopy_tuple	_deepcopy_tuple(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-tuple-exact	
-Lib/copy.py	197	202	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-dict-exact,corelibs-copy-dict-merge,corelibs-copy-order	
+Lib/copy.py	197	202	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-dict-exact,corelibs-copy-order	
 Lib/copy.py	205	217	_deepcopy_frozendict	_deepcopy_frozendict(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-frozendict	
 Lib/copy.py	220	221	_deepcopy_method	_deepcopy_method(x, memo)	modelled	corelibs-copy-keeps-source,corelibs-copy-method-replace	
 Lib/copy.py	226	240	_keep_alive	_keep_alive(x, memo)	excluded		no-behaviour: lifetime helper; it appends x to a list in the memo so that ids stay valid, and the copy does not depend on it
