@@ -33,6 +33,7 @@ import PyLean.TextLibs.TomlTable
 import PyLean.TextLibs.TomlLoad
 import PyLean.TextLibs.TomlArr
 import PyLean.TextLibs.TomlDoc
+import PyLean.TextLibs.TomlMulti
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1734,6 +1735,13 @@ def entries : List Entry := [
     statement := "For every document of 'key = value' lines joined by newlines (one-part keys written bare, literal or basic, all distinct; spaces or tabs around '='; values built from basic strings and booleans by arrays and inline tables, with comments and newlines inside them), loads returns the dict of the pairs in insertion order."
     source := "docs ('parsing TOML 1.1.0'; Tables/dicts: 'loads dictionary entries in the order they appear'); TOML 1.1 spec, Key/Value Pair", status := .proven
     prop := ``Toml.DocRoundTrip, thm := some ``Toml.docRoundTrip_proven }
+,
+  { id := "textlibs-toml-multiline-basic", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_multiline_str", "parse_basic_str_escape_multiline", "parse_basic_str", "parse_basic_str_escape"]
+    statement := "For every list of pieces of a multi-line basic string (characters written raw, newlines included, or with any escape basic strings allow; line-ending backslashes, which drop the newline and the whitespace after them), optionally preceded by a newline right after the opening triple quote (trimmed) and followed by up to two quotes before the closing triple quote (kept), parse_value returns the text and the position after the closing quotes."
+    source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, multi-line basic strings ('A newline immediately following the opening delimiter will be trimmed', line ending backslash, 1 or 2 quotes next to the delimiters)", status := .proven
+    prop := ``Toml.MultilineBasicSpec, thm := some ``Toml.multilineBasicSpec_proven
+    notes := "Raw quotes inside the text are only allowed as the trailing one or two; the literal branch of parse_multiline_str (triple apostrophes) is not covered by this entry." }
 ]
 
 end PyLean.TextLibs
