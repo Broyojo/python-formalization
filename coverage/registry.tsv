@@ -2185,6 +2185,17 @@ textlibs-urllib-result-codec	proven	Lib/urllib/parse.py	_ResultMixinStr.encode,_
 textlibs-urllib-qsl-spec	proven	Lib/urllib/parse.py	parse_qsl
 textlibs-urllib-urlencode-spec	proven	Lib/urllib/parse.py	urlencode
 textlibs-urllib-parse-bytes-twin	proven	Lib/urllib/parse.py	urlparse,urldefrag
+textlibs-toml-decode-error-coords	proven	Lib/tomllib/_parser.py	TOMLDecodeError.__init__
+textlibs-toml-basic-str	proven	Lib/tomllib/_parser.py	parse_value,parse_one_line_basic_str,parse_basic_str,parse_basic_str_escape,parse_hex_char,is_unicode_scalar_value
+textlibs-toml-literal-str	proven	Lib/tomllib/_parser.py	parse_value,parse_literal_str,skip_until
+textlibs-toml-keys	proven	Lib/tomllib/_parser.py	parse_key,parse_key_part,skip_chars,parse_one_line_basic_str,parse_literal_str
+textlibs-toml-numbers	proven	Lib/tomllib/_parser.py	parse_value,make_safe_parse_float,match_to_number
+textlibs-toml-datetimes	proven	Lib/tomllib/_re.py	match_to_datetime,cached_tz,match_to_localtime
+textlibs-toml-table-rules	proven	Lib/tomllib/_parser.py	loads,create_dict_rule,create_list_rule,Flags.__init__,Flags.set,Flags.is_,Flags.unset_all,NestedDict.__init__,NestedDict.get_or_create_nest,NestedDict.append_nest_to_list,Output.__init__
+textlibs-toml-load	proven	Lib/tomllib/_parser.py	load
+textlibs-toml-arrays-inline-tables	proven	Lib/tomllib/_parser.py	parse_array,parse_inline_table,skip_comment,skip_comments_and_array_ws,parse_key_value_pair,parse_value
+textlibs-toml-document	proven	Lib/tomllib/_parser.py	loads,key_value_rule,parse_key_value_pair
+textlibs-toml-multiline-basic	proven	Lib/tomllib/_parser.py	parse_multiline_str,parse_basic_str_escape_multiline,parse_basic_str,parse_basic_str_escape
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements

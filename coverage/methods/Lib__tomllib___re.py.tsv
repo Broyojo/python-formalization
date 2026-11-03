@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
 Lib/tomllib/_re.py	59	92	match_to_datetime	match_to_datetime(match: re.Match[str])	todo		changed-in-3.15:
-Lib/tomllib/_re.py	99	106	cached_tz	cached_tz(hour_str: str, minute_str: str, sign_str: str)	todo		
+Lib/tomllib/_re.py	99	106	cached_tz	cached_tz(hour_str: str, minute_str: str, sign_str: str)	modelled	textlibs-toml-datetimes	
 Lib/tomllib/_re.py	109	113	match_to_localtime	match_to_localtime(match: re.Match[str])	todo		changed-in-3.15:
-Lib/tomllib/_re.py	116	119	match_to_number	match_to_number(match: re.Match[str], parse_float: ParseFloat)	todo		
+Lib/tomllib/_re.py	116	119	match_to_number	match_to_number(match: re.Match[str], parse_float: ParseFloat)	modelled	textlibs-toml-numbers	
