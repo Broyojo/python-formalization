@@ -1153,4 +1153,72 @@ def baRichE (rd : Ptr → Int → E Seq) (other : Arg) (op : CmpOp) : E (Option 
     if cmp ≠ 0 then return some (richResult op cmp 0)
     return some (richResult op selfSize otherSize)
 
+/-! ## Methods that convert their arguments and then read `self`
+
+These raise no export: the clinic converts the arguments (running their Python code) before the
+body, and the body reads `self` as it is then, through `STRINGLIB_STR(self)` and
+`STRINGLIB_LEN(self)`; no pointer is held across a callback, so a resizing callback is not refused. -/
+
+inductive PadKind where
+  | center | ljust | rjust | zfill
+  deriving DecidableEq, Repr
+
+/-- The body of `stringlib_center_impl`, `ljust`, `rjust` and `zfill`, transmogrify.h:144-247, on the
+contents `s` and the converted `width`. -/
+def padOp : PadKind → Seq → Int → Nat → Py Seq
+  | .center, s, w, f => bytesCenter s w f
+  | .ljust, s, w, f => bytesLjust s w f
+  | .rjust, s, w, f => bytesRjust s w f
+  | .zfill, s, w, _ => bytesZfill s w
+
+/-- `bytearray_center`, `bytearray_ljust`, `bytearray_rjust` (:2213-2221, :2641-2659) and
+`bytearray_zfill` (:2525-2533): the clinic of stringlib (stringlib/clinic/transmogrify.h.h) converts
+`width` with `_PyNumber_Index` and `PyLong_AsSsize_t`; `fillchar` is a `bytes` or `bytearray` of
+length 1 (no Python code); then the body reads `self`. -/
+def baPadE (k : PadKind) (width : Arg) (fill : Nat) : E Seq := do
+  let w ← clinicSsizeE width
+  let s ← curSeq
+  E.lift (padOp k s w fill)
+
+/-- `bytearray.replace(old, new, count)`: the clinic takes both buffers and converts `count`
+(clinic/bytearrayobject.c.h:858-877), `bytearray_replace_impl`, :1842-1850, reads `self`, and the
+clinic releases the buffers afterwards (:884-891), also after a failed conversion. -/
+def baReplaceE (old new : Arg) (count : Option Arg) : E Seq := do
+  let bo ← getBufE old
+  let bn ← match ← E.attempt (getBufE new) with
+    | .error e =>
+      bo.rel
+      throw e
+    | .ok b => pure b
+  let c ← match count with
+    | none => pure (-1)
+    | some a => do
+      match ← E.attempt (clinicSsizeE a) with
+      | .error e =>
+        bo.rel
+        bn.rel
+        throw e
+      | .ok c => pure c
+  let s ← curSeq
+  let o ← bo.read
+  let n ← bn.read
+  let r := bytesReplace s o n c
+  bo.rel
+  bn.rel
+  E.lift r
+
+/-- `bytearray.expandtabs(tabsize)`, :2223-2231: `PyLong_AsInt(tabsize)` runs `__index__` of a
+non-int (stringlib/clinic/transmogrify.h.h:69), then `stringlib_expandtabs_impl` reads `self`. -/
+def baExpandtabsE (tabsize : Option Arg) : E Seq := do
+  let t ← match tabsize with
+    | none => pure 8
+    | some a => indexE a
+  let s ← curSeq
+  E.lift (bytesExpandtabs s t)
+
+/-- `bytearray.splitlines(keepends)`, :2674-2682: `keepends` is `PyObject_IsTrue` of a C object. -/
+def baSplitlinesE (keepends : Bool) : E (List Seq) := do
+  let s ← curSeq
+  return bytesSplitlines s keepends
+
 end PyLean.BytesObj.Bytes

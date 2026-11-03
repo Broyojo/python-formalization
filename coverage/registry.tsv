@@ -1077,7 +1077,7 @@ bytesobj-bytes-resize-rules	proven	Objects/bytesobject.c	_PyBytes_ResizeKeepOnEr
 bytesobj-bytes-mul-specialized	refuted	Objects/bytesobject.c	bytes_repeat
 bytesobj-bytes-mul-specialized-range	proven	Objects/bytesobject.c	bytes_repeat
 bytesobj-bytes-iteritem	proven	Objects/bytesobject.c	bytes_iteritem
-bytesobj-bytearray-take-bytes	proven	Objects/bytearrayobject.c	
+bytesobj-bytearray-take-bytes	proven	Objects/bytearrayobject.c	bytearray_take_bytes_impl
 bytesobj-bytearray-resize-wf	proven	Objects/bytearrayobject.c	bytearray_resize_lock_held,bytearray_reinit_from_bytes,PyByteArray_Resize,bytearray_resize_impl,PyByteArray_Size,PyByteArray_AsString,bytearray_length,bytearray_alloc,bytearray_sizeof_impl
 bytesobj-bytearray-export-rule	proven	Objects/bytearrayobject.c	_canresize,bytearray_resize_lock_held
 bytesobj-bytearray-init-initialised	proven	Objects/bytearrayobject.c	
@@ -1093,12 +1093,14 @@ bytesobj-bytearray-slice-agrees-list	refuted	Objects/bytearrayobject.c
 bytesobj-bytearray-slice-nonempty	proven	Objects/bytearrayobject.c	
 bytesobj-bytearray-slice-delete	proven	Objects/bytearrayobject.c	
 bytesobj-bytearray-item	proven	Objects/bytearrayobject.c	
-bytesobj-bytearray-mutators	proven	Objects/bytearrayobject.c	bytearray_pop_impl,bytearray_reverse_impl,bytearray_clear_impl
+bytesobj-bytearray-mutators	proven	Objects/bytearrayobject.c	bytearray_pop_impl,bytearray_reverse_impl,bytearray_clear_impl,bytearray_append_impl,bytearray_insert_impl
 bytesobj-bytearray-concat	proven	Objects/bytearrayobject.c	bytearray_irepeat,bytearray_irepeat_lock_held,bytearray_copy_impl
 bytesobj-bytearray-init	proven	Objects/bytearrayobject.c	bytearray_new,PyByteArray_FromObject,_PyByteArray_FromBufferObject
 bytesobj-bytearray-iter	proven	Objects/bytearrayobject.c	bytearray_iter,bytearrayiter_next,bytearrayiter_length_hint,bytearrayiter_setstate
 bytesobj-bytearray-reduce	proven	Objects/bytearrayobject.c	
 bytesobj-bytearray-read-wrappers	proven	Objects/bytearrayobject.c	bytearray_replace_impl,bytearray_splitlines_impl,bytearray_center,bytearray_ljust,bytearray_rjust,bytearray_zfill,bytearray_expandtabs
+bytesobj-bytearray-copy-twin	proven	Objects/bytearrayobject.c	_bytearray_with_buffer,bytearray_contains,bytearray_startswith_impl,bytearray_endswith_impl,bytearray_split_impl,bytearray_rsplit_impl,bytearray_hex_impl,bytearray_richcompare
+bytesobj-bytearray-remove	proven	Objects/bytearrayobject.c	bytearray_remove_impl
 bytesobj-bytearray-search-live	proven	Objects/bytearrayobject.c	_bytearray_with_buffer,bytearray_find_impl,bytearray_rfind_impl,bytearray_index_impl,bytearray_rindex_impl,bytearray_count_impl,bytearray_startswith_impl,bytearray_endswith_impl,bytearray_contains
 bytesobj-bytearray-search-twin	proven	Objects/bytearrayobject.c	_bytearray_with_buffer,bytearray_find_impl,bytearray_rfind_impl,bytearray_index_impl,bytearray_rindex_impl,bytearray_count_impl
 bytesobj-bytearray-strip-release	refuted	Objects/bytearrayobject.c	bytearray_strip_impl_helper,bytearray_strip_impl

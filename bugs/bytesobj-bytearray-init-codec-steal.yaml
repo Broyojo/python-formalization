@@ -1,6 +1,6 @@
 id: bytesobj-bytearray-init-codec-steal
 title: "bytearray(str, encoding) with a Python codec installs the encoded bytes over what the codec did to self: a leak, and storage replaced under an export"
-priority: P2
+priority: P3
 kind: bug
 module: bytesobj
 files: [Objects/bytearrayobject.c]
@@ -19,7 +19,10 @@ summary: |
   codec the unique path gives b"hi" and the shared one b"\x00\x00hi" (init_steal_drops); with a kept view
   the unique path succeeds with ob_exports 1 and the shared one raises BufferError (init_steal_exported).
 likelihood: |
-  Low: it needs a codec written in Python that touches the bytearray being initialised. Each call leaks
+  Low: it needs a codec written in Python that touches the bytearray being initialised. P3, not P2: the
+  overwritten storage is leaked, not freed, so nothing reads freed memory (a held view keeps pointing at
+  the leaked bytes object); the effects are a leak and a view detached from its object. It is a 3.15-only
+  regression: the unique-bytes path came with gh-142243. Each call leaks
   the bytes object the codec filled (about 1 KB per call in the reproducer: 2 MB over 2000 calls).
 maybe_intended: |
   No. gh-153419 added the export check at the start of __init__ precisely so that this path never replaces

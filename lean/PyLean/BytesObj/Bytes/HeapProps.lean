@@ -1,5 +1,5 @@
 import PyLean.BytesObj.Bytes.Heap
-import PyLean.BytesObj.Bytes.ByteArrayProps
+import PyLean.BytesObj.Bytes.ByteArrayProps3
 
 /-!
 Lemmas on the heap model: while a C function holds an export of `self`, nothing a callback does
@@ -1659,3 +1659,258 @@ theorem translateAfterArgs_proven : TranslateAfterArgs := by
     simp only [bytearrayTranslate, getBuffer, Obj.buffer?, bind, Except.bind, pure, Except.pure]
 
 end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## The methods that read `self` after their conversions -/
+
+theorem clinic_idx (acts : List Act) (v : Int) (hv : ssizeMin ≤ v ∧ v ≤ ssizeMax) (h : H) :
+    clinicSsizeE (.idx acts (.ok v)) h = (.ok v, runActs h acts) := by
+  simp [clinicSsizeE, indexE, runCb_app, Sequences.asSsize, hv]
+
+theorem clinic_int (v : Int) (hv : ssizeMin ≤ v ∧ v ≤ ssizeMax) (h : H) :
+    clinicSsizeE (.obj (.int v)) h = (.ok v, h) := by
+  simp [clinicSsizeE, indexE, Obj.index?, Sequences.asSsize, hv]
+
+/-- `center`, `ljust`, `rjust`, `zfill`, `replace`, `expandtabs` and `splitlines` of `bytearray`
+raise no export: the arguments' callbacks (`__index__` of `width`, `count` and `tabsize`,
+`__buffer__` of `old` and `new`) run first, may resize the object (nothing refuses), and the result
+is the `bytes` method on the contents as they left them; `replace` releases its buffers after the
+copy, so `__release_buffer__` acts on the object afterwards. For every heap and every callback, with
+converted values in `Py_ssize_t`. Scope: callbacks act on `self` only, and a Python `__buffer__`
+returns `memoryview(bytes(...))`. -/
+def ReadAfterArgs : Prop :=
+  (∀ (h : H) (k : PadKind) (acts : List Act) (w : Int) (fill : Nat), ssizeMin ≤ w → w ≤ ssizeMax →
+    baPadE k (.idx acts (.ok w)) fill h = (padOp k (runActs h acts).ba.seq w fill, runActs h acts)) ∧
+  (∀ (h : H) (w : Int) (fill : Nat), ssizeMin ≤ w → w ≤ ssizeMax →
+    baPadE .center (.obj (.int w)) fill h = (bytesCenter h.ba.seq w fill, h) ∧
+    baPadE .ljust (.obj (.int w)) fill h = (bytesLjust h.ba.seq w fill, h) ∧
+    baPadE .rjust (.obj (.int w)) fill h = (bytesRjust h.ba.seq w fill, h) ∧
+    baPadE .zfill (.obj (.int w)) fill h = (bytesZfill h.ba.seq w, h)) ∧
+  (∀ (h : H) (a1 r1 a2 r2 : List Act) (o n : Seq),
+    baReplaceE (.buf a1 (.ok o) r1) (.buf a2 (.ok n) r2) none h =
+      (bytesReplace (runActs (runActs h a1) a2).ba.seq o n (-1),
+        runActs (runActs (runActs (runActs h a1) a2) r1) r2)) ∧
+  (∀ (h : H) (acts : List Act) (t : Int),
+    baExpandtabsE (some (.idx acts (.ok t))) h = (bytesExpandtabs (runActs h acts).ba.seq t, runActs h acts)) ∧
+  (∀ (h : H) (keepends : Bool), baSplitlinesE keepends h = (.ok (bytesSplitlines h.ba.seq keepends), h))
+
+theorem readAfterArgs_proven : ReadAfterArgs := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro h k acts w fill h1 h2
+    simp [baPadE, E.bind_app, clinic_idx acts w ⟨h1, h2⟩, curSeq]
+  · intro h w fill h1 h2
+    refine ⟨?_, ?_, ?_, ?_⟩ <;> simp [baPadE, E.bind_app, clinic_int w ⟨h1, h2⟩, curSeq, padOp]
+  · intro h a1 r1 a2 r2 o n
+    simp [baReplaceE, E.bind_app, E.attempt_app, getBuf_buf, curSeq, Buf.read, runCb_app, E.pure_app]
+  · intro h acts t
+    simp [baExpandtabsE, E.bind_app, indexE, runCb_app, curSeq]
+  · intro h keepends
+    rfl
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-- `bytearray.remove(c)` (the body after `_getbytevalue`, :2401-2421) removes the first occurrence,
+as `list.remove` does, and raises `ValueError("value not found in bytearray")` when there is none;
+with exports it refuses a removal with `BufferError`. For every object below 2^45 bytes. -/
+def RemoveSpec : Prop :=
+  ∀ (b : BA) (c : Nat), c < 256 → b.size < 2 ^ 45 →
+    (b.data.findIdx? (· == (c : Int)) = none →
+      baRemove b (.int c) = .error (.valueError "value not found in bytearray")) ∧
+    (∀ i, b.data.findIdx? (· == (c : Int)) = some i → b.exports = 0 →
+      ∃ r, baRemove b (.int c) = .ok r ∧ r.data = b.data.eraseIdx i) ∧
+    (∀ i, b.data.findIdx? (· == (c : Int)) = some i → 0 < b.exports →
+      baRemove b (.int c) = .error (bufferError "Existing exports of data: object cannot be re-sized"))
+
+theorem removeSpec_proven : RemoveSpec := by
+  intro b c hc hs
+  have hg := getByte_ok c hc
+  refine ⟨?_, ?_, ?_⟩
+  · intro hn
+    simp [baRemove, hg, hn, bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
+  · intro i hi hE
+    have hlt : i < b.data.length := (List.findIdx?_eq_some_iff_findIdx_eq.mp hi).1
+    obtain ⟨r, hr⟩ := resize_small b (b.size - 1) (by simp only [BA.size]; omega) hE (by omega)
+    refine ⟨{ r with data := b.data.eraseIdx i }, ?_, rfl⟩
+    simp [baRemove, hg, hi, bind, Except.bind, canResize, hE, hr, pure, Except.pure]
+  · intro i hi hE
+    simp [baRemove, hg, hi, bind, Except.bind, canResize, hE]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## With C arguments, `in`, `startswith`, `split`, `hex` and comparison are those of `bytes` -/
+
+theorem getBuf_obj_none (o : Obj) (hb : o.buffer? = none) (h : H) :
+    getBufE (.obj o) h = (.error (notBytesLike o), h) := by
+  unfold getBufE
+  dsimp only
+  rw [hb]
+  rfl
+
+theorem pinned_up (h : H) (hi : Inv h) : Pinned { h with ba := baGetBuffer h.ba } := by
+  unfold Inv at hi; simp only [Pinned, baGetBuffer]; omega
+
+theorem contains_twin (h : H) (hi : Inv h) (o : Obj) :
+    baContainsE cRead (.obj o) h = (bytesContains h.ba.seq o, h) := by
+  have rl := readE_live { h with ba := baGetBuffer h.ba } { h with ba := baGetBuffer h.ba } (Ok.refl _ (pinned_up h hi))
+  unfold baContainsE
+  apply withBuffer_seq h hi
+  intro h1 e1
+  subst e1
+  have hv : ∀ (r : Py Bool), (match getBuffer o with
+      | .error e => .error e
+      | .ok b => .ok (decide (stringlibFind h.ba.seq b 0 ≥ 0)) : Py Bool) = r →
+      (do
+        let b ← getBufE (.obj o)
+        let s ← cRead { h with ba := baGetBuffer h.ba }.ptr { h with ba := baGetBuffer h.ba }.ba.size
+        let t ← b.read
+        let r := decide (stringlibFind s t 0 ≥ 0)
+        b.rel
+        return r : E Bool) { h with ba := baGetBuffer h.ba } = (r, { h with ba := baGetBuffer h.ba }) := by
+    intro r hr
+    cases hb : o.buffer? with
+    | none =>
+      simp only [getBuffer, hb] at hr
+      rw [← hr]
+      simp only [E.bind_app, getBuf_obj_none o hb]
+    | some t =>
+      simp only [getBuffer, hb] at hr
+      rw [← hr]
+      simp only [E.bind_app, getBuf_obj o t hb, cRead, rl, curSeq, Buf.read, E.pure_app, noRel, seq_getBuffer]
+  unfold bytesContains
+  simp only [E.bind_app, E.attempt_app]
+  cases hx : o.index? with
+  | none =>
+    simp only [asSsizeE, indexE, hx, E.bind_app, E.throw_app]
+    exact hv _ rfl
+  | some r =>
+    cases r with
+    | error e =>
+      simp only [asSsizeE, indexE, hx, E.bind_app, E.lift_app]
+      exact hv _ rfl
+    | ok v =>
+      simp only [asSsizeE, indexE, hx, E.bind_app, E.lift_app, E.pure_app]
+      split
+      · rfl
+      · simp only [cRead, E.bind_app, rl, curSeq, seq_getBuffer, E.pure_app]
+
+theorem split_twin (h : H) (hi : Inv h) (o : Obj) (t : Seq) (m : Int) (right : Bool)
+    (hb : o.buffer? = some t) (h1 : ssizeMin ≤ m) (h2 : m ≤ ssizeMax) :
+    baSplitE cRead (some (.obj o)) (some (.obj (.int m))) right h =
+      ((if right then bytesRSplit else bytesSplit) h.ba.seq (some t) m, h) := by
+  have rl := readE_live { h with ba := baGetBuffer h.ba } { h with ba := baGetBuffer h.ba } (Ok.refl _ (pinned_up h hi))
+  unfold baSplitE
+  simp only [E.bind_app, clinic_int m ⟨h1, h2⟩]
+  apply withBuffer_seq h hi
+  intro h1' e1
+  subst e1
+  have hn : (Arg.obj o).isNone = false := by cases o <;> simp_all [Arg.isNone, Obj.buffer?]
+  simp only [splitBodyE, hn, Bool.false_eq_true, ↓reduceIte, E.bind_app, getBuf_obj o t hb, cRead, rl, curSeq,
+    Buf.read, E.pure_app, noRel, seq_getBuffer, E.lift_app]
+
+theorem split_twin_none (h : H) (hi : Inv h) (m : Int) (right : Bool) (h1 : ssizeMin ≤ m) (h2 : m ≤ ssizeMax) :
+    baSplitE cRead none (some (.obj (.int m))) right h =
+      ((if right then bytesRSplit else bytesSplit) h.ba.seq none m, h) := by
+  have rl := readE_live { h with ba := baGetBuffer h.ba } { h with ba := baGetBuffer h.ba } (Ok.refl _ (pinned_up h hi))
+  unfold baSplitE
+  simp only [E.bind_app, clinic_int m ⟨h1, h2⟩]
+  apply withBuffer_seq h hi
+  intro h1' e1
+  subst e1
+  simp only [splitBodyE, E.bind_app, cRead, rl, curSeq, seq_getBuffer, E.lift_app]
+
+theorem strhexImpl_none (s : Seq) (bps : Int) : strhexImpl s none bps false = strhexBody s none bps := rfl
+
+theorem hex_twin (h : H) (bps : Int) (h1 : ssizeMin ≤ bps) (h2 : bps ≤ ssizeMax) :
+    baHexE cRead none (some (.obj (.int bps))) h = (bytesHex h.ba.seq none bps, h) := by
+  have hr : ¬ (bps < ssizeMin ∨ bps > ssizeMax) := by omega
+  have rs := read_same h { h with ba := baGetBuffer h.ba } ⟨rfl, rfl, rfl, rfl⟩
+  have e3 : ({ ba := baReleaseBuffer (baGetBuffer h.ba), gen := h.gen, kept := h.kept } : H) = h := by
+    rw [release_get]
+  simp only [baHexE, E.bind_app, clinic_int bps ⟨h1, h2⟩, E.get_app, exportsUp, E.modify_app, E.attempt_app,
+    hexSepE, E.pure_app, cRead, readE_app, rs, E.lift_app, exportsDown, e3, bytesHex, hr, ↓reduceIte,
+    strhexImpl_none, seq_getBuffer]
+
+/-- `bytearray_richcompare` against a C object is the comparison of the two byte strings. -/
+theorem rich_twin (h : H) (o : Obj) (op : CmpOp) :
+    baRichE cRead (.obj o) op h = (.ok (baRichcompare (.bytearray h.ba.seq) o op), h) := by
+  unfold baRichE baRichcompare
+  cases hb : o.buffer? with
+  | none =>
+    have hbc : (Arg.obj o).bufferCheck = false := by simp [Arg.bufferCheck, hb]
+    simp [hbc, hb]
+  | some t =>
+    have hbc : (Arg.obj o).bufferCheck = true := by simp [Arg.bufferCheck, hb]
+    have rs := read_same h { h with ba := baGetBuffer h.ba } ⟨rfl, rfl, rfl, rfl⟩
+    have e3 : ({ ba := baReleaseBuffer (baGetBuffer h.ba), gen := h.gen, kept := h.kept } : H) = h := by
+      rw [release_get]
+    have hlen : h.ba.size = (h.ba.seq.length : Int) := by simp [BA.size, BA.seq]
+    simp only [hbc, Bool.not_true, Bool.false_eq_true, ↓reduceIte, E.bind_app, getBuf_me, E.attempt_app,
+      getBuf_obj o t hb, Obj.buffer?, Buf.len]
+    by_cases hc : h.ba.size ≠ (t.length : Int) ∧ (op = .eq ∨ op = .ne)
+    · have hc' : h.ba.seq.length ≠ t.length ∧ (op = .eq ∨ op = .ne) := by
+        refine ⟨?_, hc.2⟩; intro e; apply hc.1; rw [hlen, e]
+      simp only [hc, and_self, ↓reduceIte, exportsDown, E.modify_app, E.bind_app, noRel, E.pure_app, e3, hc',
+        ne_eq, not_false_eq_true]
+    · have hc' : ¬ (h.ba.seq.length ≠ t.length ∧ (op = .eq ∨ op = .ne)) := by
+        intro e; apply hc; refine ⟨?_, e.2⟩; intro e2; apply e.1; rw [hlen] at e2; exact_mod_cast e2
+      simp only [hc, ↓reduceIte, cRead, readE_app, rs, E.bind_app, Buf.read, E.pure_app, exportsDown,
+        E.modify_app, noRel, e3, hc']
+      rw [hlen]
+      simp only [seq_getBuffer]
+      split <;> simp_all [E.pure_app]
+
+theorem tail_twin (h : H) (hi : Inv h) (o : Obj) (t : Seq) (hb : o.buffer? = some t) (fname : String)
+    (st en : Option Int) (fwd : Bool) :
+    baTailmatchE cRead fname (.one (.obj o)) (bnd st) (bnd en) fwd h =
+      (bytesTailmatchObj h.ba.seq fname o (argStart st) (argEnd en) fwd, h) := by
+  have rl := readE_live { h with ba := baGetBuffer h.ba } { h with ba := baGetBuffer h.ba } (Ok.refl _ (pinned_up h hi))
+  have hpure : bytesTailmatchObj h.ba.seq fname o (argStart st) (argEnd en) fwd =
+      .ok (bytesTailmatch h.ba.seq t (argStart st) (argEnd en) fwd) := by
+    cases o <;> simp_all [Obj.buffer?, bytesTailmatchObj, tailItem, getBuffer]
+  rw [hpure]
+  unfold baTailmatchE
+  simp only [E.bind_app, sliceIndex_bnd]
+  apply withBuffer_seq h hi
+  intro h1 e1
+  subst e1
+  simp only [E.bind_app, E.attempt_app, tailmatchE, getBuf_obj o t hb, cRead, rl, curSeq, Buf.read, E.pure_app,
+    noRel, seq_getBuffer, argStart_map, argEnd_map]
+
+/-- With arguments that run no Python code, `in`, `startswith`/`endswith` of one buffer, `split` and
+`rsplit`, `hex()` and comparison give what the `bytes` methods give on the contents, and leave the
+object as it was. For every heap whose views are exports. -/
+def CopyTwinBytes : Prop :=
+  ∀ (h : H), Inv h →
+    (∀ o : Obj, baContainsE cRead (.obj o) h = (bytesContains h.ba.seq o, h)) ∧
+    (∀ (o : Obj) (t : Seq) (fname : String) (st en : Option Int) (fwd : Bool), o.buffer? = some t →
+      baTailmatchE cRead fname (.one (.obj o)) (bnd st) (bnd en) fwd h =
+        (bytesTailmatchObj h.ba.seq fname o (argStart st) (argEnd en) fwd, h)) ∧
+    (∀ (o : Obj) (t : Seq) (m : Int) (right : Bool), o.buffer? = some t → ssizeMin ≤ m → m ≤ ssizeMax →
+      baSplitE cRead (some (.obj o)) (some (.obj (.int m))) right h =
+        ((if right then bytesRSplit else bytesSplit) h.ba.seq (some t) m, h)) ∧
+    (∀ (m : Int) (right : Bool), ssizeMin ≤ m → m ≤ ssizeMax →
+      baSplitE cRead none (some (.obj (.int m))) right h =
+        ((if right then bytesRSplit else bytesSplit) h.ba.seq none m, h)) ∧
+    (∀ (bps : Int), ssizeMin ≤ bps → bps ≤ ssizeMax →
+      baHexE cRead none (some (.obj (.int bps))) h = (bytesHex h.ba.seq none bps, h)) ∧
+    (∀ (o : Obj) (op : CmpOp), baRichE cRead (.obj o) op h = (.ok (baRichcompare (.bytearray h.ba.seq) o op), h))
+
+theorem copyTwinBytes_proven : CopyTwinBytes := fun h hi =>
+  ⟨contains_twin h hi, fun o t fname st en fwd hb => tail_twin h hi o t hb fname st en fwd,
+   fun o t m right hb h1 h2 => split_twin h hi o t m right hb h1 h2,
+   fun m right h1 h2 => split_twin_none h hi m right h1 h2,
+   fun bps h1 h2 => hex_twin h bps h1 h2, fun o op => rich_twin h o op⟩
+
+end PyLean.BytesObj.Bytes
+

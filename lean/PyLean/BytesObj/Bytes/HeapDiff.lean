@@ -174,6 +174,13 @@ def runBare (op : String) (j : Json) : Except String Json := do
       | some b => toJson b
       | none => "NotImplemented"
     return ans enc (baRichE cRead (← argK j "other") (← cmpOf (← getStr j "cmp")))
+  | "center" | "ljust" | "rjust" | "zfill" =>
+    let k := if op = "center" then PadKind.center else if op = "ljust" then .ljust
+      else if op = "rjust" then .rjust else .zfill
+    return ans toJson (baPadE k (← argK j "width") (← getNat j "fill"))
+  | "replace" => return ans toJson (baReplaceE (← argK j "old") (← argK j "new") (← optArg j "count"))
+  | "expandtabs" => return ans toJson (baExpandtabsE (← optArg j "tabsize"))
+  | "splitlines" => return ans seqsJ (baSplitlinesE (← getBool j "keepends"))
   | other => throw s!"unknown bare op {other}"
 
 def heapHandler : Handler := fun fn j =>
