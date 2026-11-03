@@ -167,17 +167,17 @@ theorem buffersExact_proven : BuffersExact := by
     split at hb
     · simp only [surrogatePassEncode] at hb
       cases hc : encCodeOf H e "UnicodeEncodeError" <;> rw [hc] at hb <;> simp only [err_bind, ok_bind] at hb
-      · exact (S _ hb).elim
+      · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
       · rename_i code
         split at hb
-        · exact (S _ hb).elim
+        · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
         · cases hp : getParams e false <;> rw [hp] at hb <;> simp only [err_bind, ok_bind] at hb
-          · exact (S _ hb).elim
+          · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
           · rename_i p
             obtain ⟨h1, h2, h3, h4⟩ := params_facts e false _ hp
             rw [passWrite_eq] at hb
             split at hb
-            · simp [bind, Except.bind, pure, Except.pure] at hb
+            · simp [bind, Except.bind, pure, Except.pure, bailOn_ok] at hb
               subst hb
               simp only [repLen]
               rw [flatMap_const_length _ code.bytelength (passBytes_length code)]
@@ -185,18 +185,20 @@ theorem buffersExact_proven : BuffersExact := by
                   (guardRange code.bytelength p).2 = (guardRange code.bytelength p).1 - p.start := by
                 unfold guardRange; split <;> simp <;> omega
               rw [slice_length _ _ _ (by omega), hg.2]
-            · simp [bind, Except.bind] at hb
+            · rw [bailOn_reraise] at hb
+              obtain ⟨x, hx⟩ := bail_isError (α := List Nat) H e
+              rw [hx] at hb; simp [bind, Except.bind] at hb
     · split at hb
       · simp only [surrogatePassDecode] at hb
         cases hc : encCodeOf H e "UnicodeDecodeError" <;> rw [hc] at hb <;> simp only [err_bind, ok_bind] at hb
-        · exact (S _ hb).elim
+        · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
         · split at hb
-          · exact (S _ hb).elim
+          · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
           · cases hp : getParams e true <;> rw [hp] at hb <;> simp only [err_bind, ok_bind] at hb
-            · exact (S _ hb).elim
+            · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
             · split at hb <;> split at hb
               all_goals first
-                | exact (S _ hb).elim
+                | first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
                 | (simp [pure, Except.pure] at hb; subst hb; simp [repLen])
       · simp [wrongType, raiseT] at hb
   | surrogateescape =>
@@ -206,24 +208,26 @@ theorem buffersExact_proven : BuffersExact := by
       apply goal_of_eq
       simp only [surrogateEscapeEncode] at hb
       cases hp : getParams e false <;> rw [hp] at hb <;> simp only [err_bind, ok_bind] at hb
-      · exact (S _ hb).elim
+      · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
       · rename_i p
         obtain ⟨h1, h2, h3, h4⟩ := params_facts e false _ hp
         rw [escWrite_eq] at hb
         split at hb
-        · simp [bind, Except.bind, pure, Except.pure] at hb
+        · simp [bind, Except.bind, pure, Except.pure, bailOn_ok] at hb
           subst hb
           simp only [repLen, List.length_map]
           rw [slice_length _ _ _ (by omega), h4]
-        · simp [bind, Except.bind] at hb
+        · rw [bailOn_reraise] at hb
+          obtain ⟨x, hx⟩ := bail_isError (α := List Nat) H e
+          rw [hx] at hb; simp [bind, Except.bind] at hb
     · split at hb
       · rename_i hE hD
         simp only [surrogateEscapeDecode] at hb
         cases hp : getParams e true <;> rw [hp] at hb <;> simp only [err_bind, ok_bind] at hb
-        · exact (S _ hb).elim
+        · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
         · rename_i p
           split at hb
-          · exact (S _ hb).elim
+          · first | exact (S _ hb).elim | exact absurd hb (bail_ne_ok _ _ _)
           · simp [pure, Except.pure] at hb
             subst hb
             have hE' : H.isEnc e.cls = false := by simpa using hE

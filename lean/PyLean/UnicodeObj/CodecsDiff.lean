@@ -32,26 +32,18 @@ def getSlot (j : Json) : Except String Slot := do
   | "none" | "int" => return .other
   | k => throw s!"bad slot {k}"
 
-/-- The builtin part of the MRO relation. -/
-def builtinSub (c b : String) : Bool :=
-  c == b || go 6 c
-where
-  go : Nat → String → Bool
-    | 0, _ => false
-    | n + 1, x => match builtinBase x with
-      | some y => y == b || go n y
-      | none => false
-
 /-- The hierarchy of a case: the MRO of the object's class as Python reports it, and the
 builtin bases for every other class. -/
 def getHier (j : Json) : Except String Hier := do
   let cls ← getStr j "cls"
   let mro ← (← field j "mro").getArr?
   let mro ← mro.toList.mapM (·.getStr?)
-  return ⟨fun c b => if c == cls then mro.contains b else builtinSub c b⟩
+  let flag ← getBool j "flag"
+  return ⟨fun c b => if c == cls then mro.contains b else Codecs.builtinSub c b,
+    fun c => if c == cls then flag else true⟩
 
 def getExcObj (j : Json) : Except String ExcObj := do
-  return { cls := ← getStr j "cls", tpName := ← getStr j "tp",
+  return { cls := ← getStr j "cls", tpName := ← getStr j "tp", clsRepr := ← getStr j "repr",
            encoding := ← getSlot (← field j "encoding"), object := ← getSlot (← field j "object"),
            start := ← getInt j "start", stop := ← getInt j "end" }
 

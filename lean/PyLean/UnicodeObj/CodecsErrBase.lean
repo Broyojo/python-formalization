@@ -11,67 +11,47 @@ open PyLean PyLean.UnicodeObj
 
 /-! ## The hierarchy -/
 
-theorem HierOk.sub_trans {H : Hier} (hH : HierOk H) {a b c : String} (h1 : H.sub a b = true)
-    (h2 : H.sub b c = true) : H.sub a c = true := hH.2.1 a b c h1 h2
+theorem HierOk.builtin {H : Hier} (hH : HierOk H) {c : String} (hc : c ∈ builtinClasses) (b : String) :
+    H.sub c b = builtinSub c b := hH.1 c hc b
 
-theorem HierOk.base {H : Hier} (hH : HierOk H) {c b : String} (h : builtinBase c = some b) :
-    H.sub c b = true := hH.2.2.1 c b h
-
-/-- Every class below `UnicodeError` is below `BaseException`. -/
-theorem HierOk.uerr_base {H : Hier} (hH : HierOk H) {c : String} (h : H.sub c "UnicodeError" = true) :
-    H.sub c "BaseException" = true := by
-  have h1 := hH.base (c := "UnicodeError") (b := "ValueError") rfl
-  have h2 := hH.base (c := "ValueError") (b := "Exception") rfl
-  have h3 := hH.base (c := "Exception") (b := "BaseException") rfl
-  exact hH.sub_trans (hH.sub_trans (hH.sub_trans h h1) h2) h3
-
-theorem HierOk.enc_uerr {H : Hier} (hH : HierOk H) {c : String} (h : H.isEnc c = true) :
-    H.sub c "UnicodeError" = true :=
-  hH.sub_trans h (hH.base (c := "UnicodeEncodeError") rfl)
-
-theorem HierOk.dec_uerr {H : Hier} (hH : HierOk H) {c : String} (h : H.isDec c = true) :
-    H.sub c "UnicodeError" = true :=
-  hH.sub_trans h (hH.base (c := "UnicodeDecodeError") rfl)
-
-theorem HierOk.tr_uerr {H : Hier} (hH : HierOk H) {c : String} (h : H.isTr c = true) :
-    H.sub c "UnicodeError" = true :=
-  hH.sub_trans h (hH.base (c := "UnicodeTranslateError") rfl)
+theorem HierOk.flag {H : Hier} (hH : HierOk H) {c : String} (hc : c ∈ builtinClasses) :
+    H.excFlag c = true := hH.2.1 c hc
 
 theorem HierOk.enc_not_dec {H : Hier} (hH : HierOk H) {c : String} (h : H.isEnc c = true) :
     H.isDec c = false := by
   cases hd : H.isDec c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.2.1 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.1 c)
 
 theorem HierOk.enc_not_tr {H : Hier} (hH : HierOk H) {c : String} (h : H.isEnc c = true) :
     H.isTr c = false := by
   cases hd : H.isTr c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2.1 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.2.1 c)
 
 theorem HierOk.dec_not_enc {H : Hier} (hH : HierOk H) {c : String} (h : H.isDec c = true) :
     H.isEnc c = false := by
   cases hd : H.isEnc c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.2.1 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.1 c)
 
 theorem HierOk.dec_not_tr {H : Hier} (hH : HierOk H) {c : String} (h : H.isDec c = true) :
     H.isTr c = false := by
   cases hd : H.isTr c
   · rfl
-  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2.2 c)
+  · exact absurd ⟨h, hd⟩ (hH.2.2.2.2 c)
 
 theorem HierOk.tr_not_enc {H : Hier} (hH : HierOk H) {c : String} (h : H.isTr c = true) :
     H.isEnc c = false := by
   cases hd : H.isEnc c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2.1 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.2.1 c)
 
 theorem HierOk.tr_not_dec {H : Hier} (hH : HierOk H) {c : String} (h : H.isTr c = true) :
     H.isDec c = false := by
   cases hd : H.isDec c
   · rfl
-  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2.2 c)
+  · exact absurd ⟨hd, h⟩ (hH.2.2.2.2 c)
 
 /-! ## Clamping -/
 
@@ -218,5 +198,29 @@ theorem xmlBlock_eq (c : Nat) (h : c ≤ maxUnicode) : xmlBlock c = xmlRef c := 
   have hm : maxUnicode = 0x10FFFF := rfl
   unfold xmlBlock xmlRef
   rw [decChars_decFill (c + 1) c [] (by omega), nDecimalDigits_eq c (by omega)]
+
+end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+theorem bail_flag {α : Type} {H : Hier} {e : ExcObj} (h : H.excFlag e.cls = true) :
+    (bail H e : HPy α) = .error .reraise := by simp [bail, h]
+
+theorem bailOn_flag {α : Type} {H : Hier} {e : ExcObj} (h : H.excFlag e.cls = true) (r : HPy α) :
+    bailOn H e r = r := by
+  cases r with
+  | ok _ => rfl
+  | error x => cases x <;> simp [bailOn, bail, h]
+
+theorem bail_isError {α : Type} (H : Hier) (e : ExcObj) : ∃ x, (bail H e : HPy α) = .error x := by
+  unfold bail; split <;> exact ⟨_, rfl⟩
+
+theorem bail_ne_ok {α : Type} (H : Hier) (e : ExcObj) (y : α) : (bail H e : HPy α) ≠ .ok y := by
+  obtain ⟨x, hx⟩ := bail_isError (α := α) H e; rw [hx]; simp
+
+theorem bailOn_reraise {α : Type} (H : Hier) (e : ExcObj) :
+    bailOn H e (.error .reraise : HPy α) = bail H e := rfl
+
+theorem bailOn_ok {α : Type} (H : Hier) (e : ExcObj) (x : α) : bailOn H e (.ok x) = .ok x := rfl
 
 end PyLean.UnicodeObj.Codecs

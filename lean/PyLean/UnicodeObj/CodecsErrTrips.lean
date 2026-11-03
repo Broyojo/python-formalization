@@ -66,7 +66,8 @@ theorem surrogateEscapeHandlersRoundTrip_proven : SurrogateEscapeHandlersRoundTr
     surrogateEscapeDecode, getParams_bytes d b hdo, ok_bind] at hd
   rw [escConsume_eq] at hd
   split at hd
-  · cases hd
+  · obtain ⟨x, hx⟩ := bail_isError (α := Body) H d
+    rw [hx] at hd; cases hd
   · simp only [pure, Except.pure, Functor.map, Except.map, Body.result, Except.ok.injEq,
       Prod.mk.injEq, Rep.str.injEq] at hd
     obtain ⟨hs, hpos⟩ := hd
@@ -88,8 +89,8 @@ theorem surrogateEscapeHandlersRoundTrip_proven : SurrogateEscapeHandlersRoundTr
       have h2 := hv y (List.mem_of_mem_drop h1.1)
       simp; omega
     rw [if_pos hall]
-    simp only [ok_bind, pure, Except.pure, Functor.map, Except.map, Body.result, Except.ok.injEq,
-      Prod.mk.injEq, and_true]
+    simp only [bailOn_ok, ok_bind, pure, Except.pure, Functor.map, Except.map, Body.result,
+      Except.ok.injEq, Prod.mk.injEq, and_true]
     have hsl : slice s 0 s.length = s := by simp [slice]
     rw [hsl, ← hs, ← hpos]
     rw [map_sub_add]
@@ -141,29 +142,36 @@ theorem encCodeOf_same (H : Hier) (hH : HierOk H) (d e : ExcObj) (x y : String)
 The bytes `surrogatepass` writes for a lone surrogate under an exception naming any encoding,
 placed at `start` of the `object` of a decode error naming the same encoding, decode back to that
 surrogate. codecs.rst: surrogatepass "allow[s] encoding and decoding surrogate code point
-(U+D800 - U+DFFF) as normal code point" for utf-8, utf-16, utf-32 and their big- and little-endian forms. -/
+(U+D800 - U+DFFF) as normal code point" for utf-8, utf-16, utf-32 and their big- and little-endian forms.
+Scope: the decode error's MRO keeps `UnicodeError` (a custom `mro()` that drops it makes
+`PyUnicodeDecodeError_GetEncoding` refuse the object, `OddClasses`). -/
 def SurrogatePassHandlersRoundTrip : Prop :=
   ∀ (H : Hier) (capi : Except PyExc (Nat → Option Str)) (e d : ExcObj) (c : Nat) (pre post out : Bytes)
     (pos : Nat),
     HierOk H → isSurrogate c = true → H.isEnc e.cls = true → e.object = .str [c] → e.start ≤ 0 →
     1 ≤ e.stop →
     callBuiltin H capi .surrogatepass e = .ok (.bytes out, pos) →
-    H.isDec d.cls = true → d.encoding = e.encoding → d.object = .bytes (pre ++ out ++ post) →
+    H.isDec d.cls = true → H.sub d.cls "UnicodeError" = true → d.encoding = e.encoding →
+    d.object = .bytes (pre ++ out ++ post) →
     d.start = pre.length → Bytes.Valid post →
     callBuiltin H capi .surrogatepass d = .ok (.str [c], pre.length + out.length)
 
 theorem surrogatePassHandlersRoundTrip_proven : SurrogatePassHandlersRoundTrip := by
-  intro H capi e d c pre post out pos hH hs hE heo hst hen he hD henc hdo hds hpv
+  intro H capi e d c pre post out pos hH hs hE heo hst hen he hD hdU henc hdo hds hpv
   have hDE := hH.dec_not_enc hD
-  have hcode := encCodeOf_same H hH d e "UnicodeDecodeError" "UnicodeEncodeError" (hH.dec_uerr hD)
-    (hH.enc_uerr hE) henc
   simp only [callBuiltin, surrogatePassErrors, hE, if_true, surrogatePassEncode] at he
   cases hc : encCodeOf H e "UnicodeEncodeError" with
   | error x => rw [hc] at he; cases he
   | ok code =>
+    have heU : H.sub e.cls "UnicodeError" = true := by
+      cases hn : H.sub e.cls "UnicodeError"
+      · simp [encCodeOf, getEncoding, checkType, hn, raiseT, bind, Except.bind] at hc
+      · rfl
+    have hcode := encCodeOf_same H hH d e "UnicodeDecodeError" "UnicodeEncodeError" hdU heU henc
     rw [hc, ok_bind] at he
     split at he
-    · cases he
+    · obtain ⟨x, hx⟩ := bail_isError (α := Body) H e
+      rw [hx] at he; cases he
     · rename_i hu
       have hst0 := stOf_zero e 1 hst
       have hen0 := enOf_full e 1 (by simpa using hen)
@@ -177,7 +185,8 @@ theorem surrogatePassHandlersRoundTrip_proven : SurrogatePassHandlersRoundTrip :
       simp only [hg, slice, List.drop_zero, Nat.sub_zero, List.take_one, List.head?_cons,
         Option.toList_some] at he
       rw [passWrite_eq] at he
-      simp only [List.all_cons, hs, List.all_nil, Bool.and_self, if_true, ok_bind, List.flatMap_cons,
+      simp only [List.all_cons, hs, List.all_nil, Bool.and_self, if_true, bailOn_ok, ok_bind,
+        List.flatMap_cons,
         List.flatMap_nil, List.append_nil, pure, Except.pure, Functor.map, Except.map, Body.result,
         Except.ok.injEq, Prod.mk.injEq, Rep.bytes.injEq] at he
       obtain ⟨hout, _⟩ := he

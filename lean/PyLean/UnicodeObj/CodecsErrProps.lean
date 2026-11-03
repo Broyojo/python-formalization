@@ -12,45 +12,18 @@ open PyLean PyLean.UnicodeObj
 
 /-! ## The builtin hierarchy satisfies `HierOk` -/
 
-/-- The bases of the builtin classes, each with all its ancestors. -/
-def ancestors (c : String) : List String :=
-  match c with
-  | "UnicodeEncodeError" | "UnicodeDecodeError" | "UnicodeTranslateError" =>
-    ["UnicodeError", "ValueError", "Exception", "BaseException"]
-  | "UnicodeError" => ["ValueError", "Exception", "BaseException"]
-  | "ValueError" => ["Exception", "BaseException"]
-  | "IndexError" => ["LookupError", "Exception", "BaseException"]
-  | "LookupError" => ["Exception", "BaseException"]
-  | "Exception" => ["BaseException"]
-  | _ => []
-
-/-- The builtin classes, with every other class unrelated to them. -/
-def builtinHier : Hier := ⟨fun c b => c == b || (ancestors c).contains b⟩
-
-theorem ancestors_trans (a b : String) (hb : b ∈ ancestors a) : ∀ c ∈ ancestors b, c ∈ ancestors a := by
-  unfold ancestors at hb
-  split at hb <;> simp at hb <;> rcases hb with rfl | rfl | rfl | rfl <;> simp [ancestors]
-  all_goals (try rcases hb with rfl | rfl | rfl) <;> simp [ancestors]
+/-- The builtin classes with their static MROs, every other class unrelated to them and given
+the exception flag. -/
+def builtinHier : Hier := ⟨builtinSub, fun _ => true⟩
 
 /-- `HierOk` can be met: it is no vacuous hypothesis. -/
 theorem builtinHier_ok : HierOk builtinHier := by
-  refine ⟨fun c => by simp [builtinHier], ?_, ?_, ?_, ?_, ?_⟩
-  · intro a b c h1 h2
-    simp only [builtinHier, Bool.or_eq_true, beq_iff_eq, List.contains_iff_mem] at *
-    rcases h1 with rfl | h1
-    · exact h2
-    · rcases h2 with rfl | h2
-      · exact Or.inr h1
-      · exact Or.inr (ancestors_trans a b h1 c h2)
-  · intro c b h
-    simp only [builtinHier, Bool.or_eq_true, beq_iff_eq, List.contains_iff_mem]
-    unfold builtinBase at h
-    split at h <;> simp at h <;> subst h <;> simp [ancestors]
+  refine ⟨fun c _ b => rfl, fun c _ => rfl, ?_, ?_, ?_⟩
   all_goals
     intro c ⟨h1, h2⟩
-    simp only [builtinHier, Bool.or_eq_true, beq_iff_eq, List.contains_iff_mem] at h1 h2
-    unfold ancestors at h1 h2
-    split at h1 <;> simp_all
+    first
+      | (have := builtinSub_enc c h1; subst this; revert h2; decide)
+      | (have := builtinSub_dec c h1; subst this; revert h2; decide)
 
 /-! ## When the replacing handlers succeed -/
 
@@ -73,27 +46,28 @@ def objFits (H : Hier) (e : ExcObj) : Bool :=
 
 /-- **The replacing handlers always replace.** `ignore`, `replace`, `backslashreplace`,
 `xmlcharrefreplace` and `namereplace` succeed exactly when the class is one they take, the
-`object` attribute has the type that class needs, and (for `namereplace`) `unicodedata` loads.
+`object` attribute has the type that class needs, (for `namereplace`) `unicodedata` loads, and
+(for `replace` on a decode error, whose `PyUnicodeDecodeError_GetEnd` checks for a
+`UnicodeError`) the class's MRO has `UnicodeError`, which a custom `mro()` can drop.
 On a class a handler does not take, every handler but `strict` raises the `TypeError` of
 `wrong_exception_type`. -/
 def HandlersTotal : Prop :=
   ∀ (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj), HierOk H →
     (h ∈ [.ignore, .replace, .backslashreplace, .xmlcharrefreplace, .namereplace] →
       ((∃ r, callBuiltin H capi h e = .ok r) ↔
-        (takes H h e.cls = true ∧ objFits H e = true ∧ (h = .namereplace → ∃ g, capi = .ok g)))) ∧
+        (takes H h e.cls = true ∧ objFits H e = true ∧ (h = .namereplace → ∃ g, capi = .ok g) ∧
+          (h = .replace → H.isDec e.cls = true → H.sub e.cls "UnicodeError" = true)))) ∧
     (h ≠ .strict → takes H h e.cls = false → callBuiltin H capi h e = wrongType e)
 
 theorem handlersTotal_proven : HandlersTotal := by
   intro H capi h e hH
-  have d1 := hH.2.2.2.1 e.cls
-  have d2 := hH.2.2.2.2.1 e.cls
-  have d3 := hH.2.2.2.2.2 e.cls
-  have u1 := fun h => hH.enc_uerr (c := e.cls) h
-  have u2 := fun h => hH.dec_uerr (c := e.cls) h
-  have u3 := fun h => hH.tr_uerr (c := e.cls) h
+  have d1 := hH.2.2.1 e.cls
+  have d2 := hH.2.2.2.1 e.cls
+  have d3 := hH.2.2.2.2 e.cls
   constructor
   · intro hm
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hm
+    cases hU : H.sub e.cls "UnicodeError" <;>
     cases hE : H.isEnc e.cls <;> cases hD : H.isDec e.cls <;> cases hT : H.isTr e.cls <;>
       simp only [Hier.isEnc, Hier.isDec, Hier.isTr] at hE hD hT <;>
       (try simp_all) <;>
