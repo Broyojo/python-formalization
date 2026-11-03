@@ -3,6 +3,8 @@ import PyLean.ListSort.Props
 import PyLean.ListSort.Diff
 import PyLean.ListSort.FallibleExits
 import PyLean.ListSort.CountRunMax
+import PyLean.ListSort.CountRunInput
+import PyLean.ListSort.FallibleSteps
 
 /-!
 `list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.15.2.
@@ -134,7 +136,20 @@ def entries : List Entry := [
   { id := "listsort-count-run-maximal", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
     statement := "For every comparison, count_run's run is the rest of the slice or is followed by an item smaller than its last one, so with listsort-count-run the length is pinned."
     source := "listobject.c:2004-2006, :2052-2055", status := .proven
-    prop := ``CountRunMaximal, thm := some ``countRunMaximal_proven }
+    prop := ``CountRunMaximal, thm := some ``countRunMaximal_proven },
+  { id := "listsort-count-run-input", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
+    statement := "With keys compared by <, the first n items of count_run's input are a non-increasing part then a non-decreasing part (a descending run, then the ascending extension), so with listsort-count-run and listsort-count-run-maximal the run length is pinned."
+    source := "listobject.c:1972-2064 (comments at :2005-2017, :2026-2029, :2048-2050)", status := .proven
+    prop := ``CountRunInputRun, thm := some ``countRunInputRun_proven },
+  { id := "listsort-fail-steps", pyFile := "Objects/listobject.c"
+    pyFns := ["binarysort", "gallop_left", "gallop_right", "merge_lo", "merge_hi", "merge_at", "count_run", "list_sort_impl", "PyList_Sort"]
+    statement := "At every comparison site and every state of its loop, a raising comparison stops the function there with the C array state: the binary search and the gallops' loops return the error, binarysort fails on any pivot with the sorted prefix, the pivot and the rest in place, merge_lo's straight and galloping exits leave merged ++ rest of A ++ rest of B and merge_hi's rest of A ++ rest of B ++ merged, later merges and the main loop stop; PyList_Sort returns 0 with the sorted list on success."
+    source := "listobject.c:1914, :1951, :2004-2006, :2105, :2125, :2150, :2158, :2194, :2215, :2239, :2247, :2383, :2419, :2442, :2461-2463, :2521, :2555, :2601-2603, :3148-3175, :3241-3244", status := .proven
+    prop := ``SortFailSteps, thm := some ``sortFailSteps_proven },
+  { id := "listsort-fail-steps-2", pyFile := "Objects/listobject.c", pyFns := ["merge_hi", "merge_at", "count_run"]
+    statement := "merge_hi's galloping gallop_left exit leaves rest of A ++ rest of B ++ merged with the B item copied; merge_at's second gallop fails with the runs untouched and passes on what merge_lo/merge_hi leave; count_run passes on its ascending scan's error with the slice untouched, and its descending loop fails on either comparison with the current equal group not reversed."
+    source := "listobject.c:2031-2041, :2058-2059, :2573, :2601-2603, :2660-2670", status := .proven
+    prop := ``SortFailSteps2, thm := some ``sortFailSteps2_proven }
 ]
 
 end PyLean.ListSort
