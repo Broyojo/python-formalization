@@ -1,0 +1,18 @@
+file	line	name	verdict	mirror	property	settled	reason
+Lib/heapq.py	133	heappush	FAITHFUL	yes	yes	yes	pyHeappush is append, len, _siftdown(0, n-1) over a Seq; HeapOpsKeepInvariant (any strict weak order) and HeapTwinsAgree unfold it; caveat: every theorem uses listSeq, so duck-typed and list-subclass arguments, where the twins differ, are scoped out without a refutation on record.
+Lib/heapq.py	138	heappop	FAITHFUL	yes	yes	yes	pop, truth test, heap[0], store, _siftup, in order (:140-146); correctness, twin agreement and the empty-message refutation all unfold it.
+Lib/heapq.py	148	heapreplace	FAITHFUL	yes	yes	yes	heap[0], store, _siftup (:159-162); HeapOpsKeepInvariant and HeapTwinsAgree cover it.
+Lib/heapq.py	164	heappushpop	FAITHFUL	yes	yes	yes	pyTopLt keeps the `heap and heap[0] < item` short-circuit and the tuple assignment re-reads heap[0] before storing (:166-169).
+Lib/heapq.py	171	heapify	FAITHFUL	yes	yes	yes	len then _siftup over reversed(range(n//2)) (:173-180); HeapifyMakesHeap, both twin agreements and the 2501 refutation unfold it.
+Lib/heapq.py	182	heappop_max	FAITHFUL	yes	yes	yes	Same body as heappop with _siftup_max (:184-190).
+Lib/heapq.py	192	heapreplace_max	FAITHFUL	yes	yes	yes	Same body as heapreplace with _siftup_max (:194-197).
+Lib/heapq.py	199	heappush_max	FAITHFUL	yes	yes	yes	Same body as heappush with _siftdown_max (:201-202).
+Lib/heapq.py	204	heappushpop_max	FAITHFUL	yes	yes	yes	`heap and item < heap[0]` (:206) through pyLtOrd with mx = true, then the swap and _siftup_max.
+Lib/heapq.py	211	heapify_max	FAITHFUL	yes	yes	yes	Same loop as heapify with _siftup_max (:213-215); HeapifyMakesHeap and HeapifyTwinsAgree cover mx = true.
+Lib/heapq.py	221	_siftdown	FAITHFUL	yes	yes	yes	newitem read, `while pos > startpos`, (pos-1)>>1, `newitem < parent` truth test, hole move, final store (:222-233); sdLoop_sim and pySdLoop_pure unfold it, and the appendOnce refutation runs its missing size check.
+Lib/heapq.py	274	_siftup	FAITHFUL	yes	yes	yes	len, newitem, the child loop with the short-circuit `rightpos < endpos and not heap[childpos] < heap[rightpos]`, hole moves, store, _siftdown (:275-292); the raiseSecond refutation runs its item-losing raise path.
+Lib/heapq.py	294	_siftdown_max	FAITHFUL	yes	yes	yes	`parent < newitem` (:302) through pyLtOrd with mx = true; otherwise the _siftdown mirror.
+Lib/heapq.py	309	_siftup_max	FAITHFUL	yes	yes	yes	Reads heap[rightpos] then heap[childpos] and compares them in that order (:319); otherwise the _siftup mirror.
+Lib/heapq.py	330	merge	HOLLOW	no	no	yes	The model is over int lists with a pure Int -> Int key: iterators cannot raise or be lazy (the generator, `next()` and `yield from next.__self__` are a list tail), key and `<` cannot raise, and elements are not an abstract type with an order assumption; mergeLoop still cites @3.14.7:394-404.
+Lib/heapq.py	477	nsmallest	HOLLOW	no	no	yes	Elements are Int compared with Int `<`, the key is a pure Int -> Int and the iterable is a List Int, so the raising key, raising `__lt__`, raising iterator and non-int element paths cannot be stated; only len() is modelled as fallible.
+Lib/heapq.py	537	nlargest	HOLLOW	no	no	yes	As nsmallest: int elements, a pure int key and a list iterable, so no failure path of key, `__lt__` or the iterator is modelled, and the property holds only over ints.
