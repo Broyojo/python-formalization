@@ -18,6 +18,8 @@ import PyLean.BytesObj.Seq.ListRows3
 import PyLean.BytesObj.Seq.ListRows4
 import PyLean.BytesObj.Seq.ListRows5
 import PyLean.BytesObj.Seq.ListRows6
+import PyLean.BytesObj.Seq.ListRows7
+import PyLean.BytesObj.Seq.ListRows8
 
 /-! Registry entries for tuple (Objects/tupleobject.c) and list (Objects/listobject.c). -/
 
@@ -160,7 +162,7 @@ def entries : List Entry := [
     prop := ``MergeMemSpec, thm := some ``mergeMemSpec_proven },
   { id := "bytesobj-sort-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_latin_compare", "unsafe_tuple_compare", "PyList_Sort"]
     statement := "The compares list.sort selects agree with the generic path: unsafe_latin_compare is str.__lt__ on all byte strings, unsafe_tuple_compare is tuple.__lt__ for every comparison including raising ones, and PyList_Sort rejects a non-list and is otherwise list.sort."
-    source := "listobject.c:2777-2938 (the asserts at :2789, :2814, :2829)", status := .proven
+    source := "listobject.c:2777-2938 (the asserts at :2854, :2879, :2894)", status := .proven
     prop := ``SortCompareAgree, thm := some ``sortCompareAgree_proven },
   { id := "bytesobj-release-order", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_dealloc", "list_dealloc"]
     statement := "Containers release and visit their items last to first, for every element type, as finalizers and gc.get_referents show; a live iterator refers to exactly its sequence."
@@ -179,7 +181,7 @@ def entries : List Entry := [
     source := "listobject.c:4259-4263", status := .proven
     prop := ``ListRevIterStops, thm := some ``listRevIterStops_proven },
   { id := "bytesobj-list-sizeof-exact", pyFile := "Objects/listobject.c", pyFns := ["list___sizeof___impl"]
-    statement := "Outside list.sort, list.__sizeof__() is exactly 40 + 8 * allocated, with no wraparound."
+    statement := "Outside list.sort, list.__sizeof__() is exactly tp_basicsize + 8 * allocated, with no wraparound, for every list type: 40 + 8 * allocated for list, 56 + 8 * allocated for a subclass with two __slots__."
     source := "Doc/library/sys.rst (getsizeof); narrowed version of bytesobj-list-sizeof-during-sort", status := .proven
     prop := ``ListSizeofExact, thm := some ``listSizeofExact_proven },
   { id := "bytesobj-list-sizeof-during-sort", pyFile := "Objects/listobject.c", pyFns := ["list___sizeof___impl"]
@@ -294,7 +296,25 @@ def entries : List Entry := [
   { id := "bytesobj-list-extend-iter-wf", pyFile := "Objects/listobject.c", pyFns := ["list_extend_iter_lock_held"]
     statement := "list.extend from a generic iterable keeps the list's invariant (allocated covers the items, an array exists when anything is allocated) for every iterator whose callbacks keep it, including one that clears the list or replaces its array: the size and allocation are reread after each __next__."
     source := "listobject.c:1338-1365 (the reread at :1350)", status := .proven
-    prop := ``ListExtendIterWF, thm := some ``listExtendIterWF_proven }
+    prop := ``ListExtendIterWF, thm := some ``listExtendIterWF_proven },
+  { id := "bytesobj-sort-compare-tied", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_tuple_compare"]
+    statement := "list.sort with safe_object_compare leaves a permutation whatever __lt__ does and is the model's sort when __lt__ never raises; unsafe_tuple_compare calls tuple_elem_compare exactly when the first elements differ, returns its answer, never calls it after an equal first element, and is tuple < for every tuple_elem_compare that agrees with < on the first elements."
+    source := "listobject.c:2788-2792, :2904-2938 (the i == 0 test at :2934)", status := .proven
+    prop := ``SortCompareTied, thm := some ``sortCompareTied_proven },
+  { id := "bytesobj-sortslice-reverse", pyFile := "Objects/listobject.c", pyFns := ["sortslice_reverse", "PyList_Reverse"]
+    statement := "sortslice_reverse(s, n) puts slot n - 1 - t of the keys, and of the values when there are any, at slot t for t < n and leaves the rest; PyList_Reverse refuses a non-list with SystemError."
+    source := "listobject.c:1956-1961, :3263-3278", status := .proven
+    prop := ``SortsliceReverseSlots, thm := some ``sortsliceReverseSlots_proven },
+  { id := "bytesobj-list-iter-states", pyFile := "Objects/listobject.c"
+    pyFns := ["listiter_len", "listreviter_len", "listiter_setstate", "listreviter_setstate"]
+    statement := "The list iterators' length hints on every branch (what is left, 0 when exhausted, 0 when the list shrank below the index, 0 when it_seq is NULL) and __setstate__ clipping to [-1, len] (reversed: [-1, len - 1]), nothing on an exhausted iterator, TypeError for a non-int; reversed([1, 2, 3]).__setstate__(10) then next() gives 3."
+    source := "listobject.c:4112-4147, :4267-4299", status := .proven
+    prop := ``ListIterStates, thm := some ``listIterStates_proven },
+  { id := "bytesobj-list-init-iterable", pyFile := "Objects/listobject.c"
+    pyFns := ["list___init___impl", "list_vectorcall", "list_richcompare_impl", "list_richcompare"]
+    statement := "list.__init__(iterable) drops the old items and holds the iterable's, list(x) is that on a new list (TypeError for a non-iterable), success forced up to PY_SSIZE_T_MAX/16 items; a list comparison with a non-list operand is NotImplemented."
+    source := "listobject.c:3464-3465, :3543-3590", status := .proven
+    prop := ``ListInitIterable, thm := some ``listInitIterable_proven }
 ]
 
 end PyLean.BytesObj.Seq

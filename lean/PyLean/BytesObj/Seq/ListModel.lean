@@ -46,9 +46,12 @@ def LObj.prealloc (items : List α) : LObj α :=
   if items.length = 0 then LObj.empty
   else { items := items, allocated := items.length, hasItems := true }
 
-/-- `list.__sizeof__`, `list___sizeof___impl`, listobject.c:3599-3615, for exact
-lists: `_PyObject_SIZE(type) + (size_t)allocated * sizeof(PyObject *)` in `size_t`. -/
-def listSizeof (o : LObj α) : Int := (40 + toU o.allocated * 8) % (2 ^ 64 : Int)
+/-- `list.__sizeof__`, `list___sizeof___impl`, listobject.c:3599-3615:
+`_PyObject_SIZE(Py_TYPE(self)) + (size_t)allocated * sizeof(PyObject *)` in `size_t`.
+`basicsize` is the type's `tp_basicsize` (`_PyObject_SIZE`, Include/cpython/objimpl.h): 40 for an
+exact list, larger for a subclass with `__slots__`. -/
+def listSizeof (o : LObj α) (basicsize : Int := 40) : Int :=
+  (toU basicsize + toU o.allocated * 8) % (2 ^ 64 : Int)
 
 /-- `((size_t)newsize + (newsize >> 3) + 6) & ~(size_t)3`, listobject.c:148. -/
 def overalloc (newsize : Int) : Int := ((newsize + newsize / 8 + 6) / 4) * 4
@@ -829,6 +832,12 @@ def listIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIter :
     .ok { it with index := index }
   else .ok it
 
+/-- `__setstate__(state)` for any object: `PyLong_AsSsize_t(state)` (:4136, :4288) refuses a non-int
+(`none`) with `TypeError("an integer is required")` before looking at the iterator. -/
+def listIterSetstateObj (it : ListIter) (l : List α) : Option Int → Py ListIter
+  | none => .error (.typeError "an integer is required")
+  | some s => listIterSetstate it l s
+
 /-- `list___reversed___impl`, listobject.c:4210-4224. -/
 def listReversed (l : List α) : ListIter := ⟨(l.length : Int) - 1, true⟩
 
@@ -854,6 +863,11 @@ def listRevIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIte
     let index := if index < -1 then -1 else if index > top then top else index
     .ok { it with index := index }
   else .ok it
+
+/-- `listreviter_setstate` for any object, as `listIterSetstateObj`. -/
+def listRevIterSetstateObj (it : ListIter) (l : List α) : Option Int → Py ListIter
+  | none => .error (.typeError "an integer is required")
+  | some s => listRevIterSetstate it l s
 
 /-- `listiter_reduce_general(_it, forward)`, listobject.c:4303-4335, as `(args,
 state)`: `iter(seq)` or `reversed(seq)` with the index, or an empty list. -/
