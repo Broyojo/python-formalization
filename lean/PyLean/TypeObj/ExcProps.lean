@@ -5,6 +5,7 @@ import PyLean.TypeObj.ExcPropsBase2
 import PyLean.TypeObj.ExcPropsRest2
 import PyLean.TypeObj.ExcPropsOsStr
 import PyLean.TypeObj.ExcPropsSetstateC
+import PyLean.TypeObj.ExcPropsUnicode2
 import PyLean.TypeObj.ExcPropsSplitTotal
 
 /-!
@@ -299,7 +300,7 @@ def excEntries : List Entry := [
     "The two creators call the class with the formatted arguments, so the constructor's checks apply."
     "exceptions.c:3930-3937, 4036-4043" ``UnicodeCreateCallsClass ``unicodeCreateCallsClass_proven,
   -- MemoryError
-  p "typeobj-exc-memoryerror-freelist-bound" ["MemoryError_dealloc", "preallocate_memerrors", "free_preallocated_memerrors", "_PyErr_NoMemory", "get_memory_error"]
+  p "typeobj-exc-memoryerror-freelist-bound" ["MemoryError_dealloc", "preallocate_memerrors", "_PyErr_NoMemory", "get_memory_error"]
     "MemoryError_dealloc keeps the freelist within MEMERRORS_SAVE and ignores subclasses, preallocate_memerrors fills it, teardown empties it, and an empty list with allocation forbidden gives the last-resort error."
     "exceptions.c:4101, 4111-4227" ``MemoryErrorFreelistBound ``memoryErrorFreelistBound_proven,
   r "typeobj-exc-memoryerror-freelist-fresh" ["MemoryError_dealloc", "get_memory_error", "BaseException_clear", "MemoryError_new"]
@@ -308,8 +309,69 @@ def excEntries : List Entry := [
     "typeobj-exc-memoryerror-freelist-state",
   r "typeobj-exc-memoryerror-new-args" ["MemoryError_new", "get_memory_error"]
     "MemoryError.__new__(MemoryError, *args) keeps args, as BaseException.__new__ and MemoryError subclasses do."
-    "implementation disagreeing with itself: the freelist and allocation paths of get_memory_error (exceptions.c:4124, 4139)" ``MemoryErrorNewKeepsArgs ``memoryErrorNewKeepsArgs_refuted
-    "typeobj-exc-memoryerror-freelist-state",
+    "implementation disagreeing with itself: the freelist and allocation paths of get_memory_error (exceptions.c:4124, 4139)" ``MemoryErrorNewCKeepsArgs ``memoryErrorNewCKeepsArgs_refuted
+    "typeobj-exc-memoryerror-freelist-state"
+    "Stated on memoryErrorNewC, the mirror with the freelist explicit: false whenever an entry is free (from startup), true once the freelist is empty.",
+  p "typeobj-exc-memoryerror-new-branches" ["MemoryError_new", "get_memory_error"]
+    "MemoryError.__new__ on a subclass makes a fresh object with its args; on MemoryError it takes a free entry with args () when there is one, and a fresh object with its args when there is none."
+    "exceptions.c:4111-4151" ``MemoryErrorNewBranches ``memoryErrorNewBranches_proven
+    "The interpreter's memoryErrorNew has no freelist in its world and always takes the entry branch (CPython while an entry is free).",
+  p "typeobj-exc-pyerr-nomemory" ["_PyErr_NoMemory", "get_memory_error"]
+    "_PyErr_NoMemory takes the most recent free entry with args () and shrinks the list, or gives the last-resort singleton when the list is empty."
+    "exceptions.c:4153-4167, 4111-4140" ``PyErrNoMemoryBranches ``pyErrNoMemoryBranches_proven,
+  p "typeobj-exc-preallocate-contents" ["preallocate_memerrors"]
+    "preallocate_memerrors leaves sixteen entries on the freelist, each a MemoryError made with no arguments and cleared."
+    "exceptions.c:4198-4217" ``PreallocateContents ``preallocateContents_proven,
+  -- Review part 2 fixes
+  p "typeobj-exc-name-attr-stores" ["NameError_init", "AttributeError_init"]
+    "NameError.__init__ and AttributeError.__init__ set args and each keyword member to its keyword or NULL, on every call."
+    "exceptions.c:2580-2605, 2663-2690" ``NameAttrInitStores ``nameAttrInitStores_proven,
+  p "typeobj-exc-attr-getstate-reduce" ["AttributeError_getstate", "AttributeError_reduce"]
+    "AttributeError.__getstate__ is a new copy of the instance dict with name (when set) and args over it and obj left out; __reduce__ is (type, args, state)."
+    "exceptions.c:2719-2760" ``AttributeErrorGetstateReduce ``attributeErrorGetstateReduce_proven
+    "Keys are compared by the model's identity test; the colliding-__eq__ path of PyDict_Copy is bug typeobj-exc-getstate-borrowed-dict.",
+  p "typeobj-exc-syntaxerror-init-stores" ["SyntaxError_init"]
+    "SyntaxError.__init__ stores msg with at least one argument and, with two, the 4, 6 or 7 items of tuple(info) as the location members (NULL when absent)."
+    "exceptions.c:2790-2837" ``SyntaxErrorInitStores ``syntaxErrorInitStores_proven,
+  p "typeobj-exc-my-basename-exact" ["my_basename"]
+    "my_basename gives what follows the last '/', or the whole name when there is none."
+    "exceptions.c:2882-2904" ``MyBasenameExact ``myBasenameExact_proven,
+  p "typeobj-exc-syntaxerror-str-formats" ["SyntaxError_str"]
+    "str(SyntaxError) is str(msg) followed by ' (file, line N)', ' (file)' or ' (line N)' from a str filename's basename and an exact-int lineno (-1 outside long)."
+    "exceptions.c:2907-2949" ``SyntaxErrorStrFormats ``syntaxErrorStrFormats_proven,
+  p "typeobj-exc-unicode-attr-full" ["check_unicode_error_attribute", "as_unicode_error_attribute", "check_unicode_error_type"]
+    "The attribute check refuses NULL, a non-bytes with as_bytes and a non-str without it, and as_unicode_error_attribute otherwise returns the attribute; the type check passes every UnicodeError."
+    "exceptions.c:3064-3098, 3127-3137" ``UnicodeAttributeFull ``unicodeAttributeFull_proven,
+  p "typeobj-exc-unicode-getters" ["unicode_error_get_encoding_impl", "unicode_error_get_object_impl", "unicode_error_get_reason_impl", "unicode_error_get_start_impl", "unicode_error_get_end_impl", "PyUnicodeEncodeError_GetEncoding", "PyUnicodeDecodeError_GetEncoding", "PyUnicodeEncodeError_GetObject", "PyUnicodeDecodeError_GetObject", "PyUnicodeTranslateError_GetObject", "PyUnicodeEncodeError_GetStart", "PyUnicodeDecodeError_GetStart", "PyUnicodeTranslateError_GetStart", "PyUnicodeEncodeError_GetEnd", "PyUnicodeDecodeError_GetEnd", "PyUnicodeTranslateError_GetEnd", "PyUnicodeEncodeError_GetReason", "PyUnicodeDecodeError_GetReason", "PyUnicodeTranslateError_GetReason"]
+    "On a UnicodeError the getters return the encoding, reason and object attributes (the object as bytes for decode), and GetStart/GetEnd the stored values clipped to the object's length."
+    "exceptions.c:3149-3180, 3437-3494, 3555-3562, 3565-3638" ``UnicodeGettersRead ``unicodeGettersRead_proven,
+  p "typeobj-exc-unicode-setters" ["unicode_error_set_reason_impl", "unicode_error_set_start_impl", "unicode_error_set_end_impl", "PyUnicodeEncodeError_SetStart", "PyUnicodeDecodeError_SetStart", "PyUnicodeTranslateError_SetStart", "PyUnicodeEncodeError_SetEnd", "PyUnicodeDecodeError_SetEnd", "PyUnicodeTranslateError_SetEnd", "PyUnicodeEncodeError_SetReason", "PyUnicodeDecodeError_SetReason", "PyUnicodeTranslateError_SetReason"]
+    "On a UnicodeError SetStart and SetEnd succeed and store the raw value, which e.start and e.end read; SetReason stores the str."
+    "exceptions.c:3188-3229, 3523-3612, 3643-3664" ``UnicodeSettersStore ``unicodeSettersStore_proven,
+  p "typeobj-exc-unicode-adjust-keeps" ["unicode_error_adjust_start", "unicode_error_adjust_end", "unicode_error_adjust_len"]
+    "The clipping keeps a start in [0, objlen), an end in [1, objlen] and a non-negative length, and moves the others to the bound."
+    "exceptions.c:3242-3337" ``UnicodeAdjustKeeps ``unicodeAdjustKeeps_proven,
+  p "typeobj-exc-unicode-encode-init" ["UnicodeEncodeError_init"]
+    "UnicodeEncodeError.__init__ with str encoding, object and reason and Py_ssize_t start and end stores args and the five members, start and end raw."
+    "exceptions.c:3715-3738" ``UnicodeEncodeInitStores ``unicodeEncodeInitStores_proven,
+  p "typeobj-exc-unicode-decode-init" ["UnicodeDecodeError_init"]
+    "UnicodeDecodeError.__init__ keeps a bytes object, copies another buffer into a new bytes, and refuses a non-buffer with the %.100s message of PyObject_GetBuffer after storing args."
+    "exceptions.c:3822-3861; Objects/abstract.c:450-452" ``UnicodeDecodeInitStores ``unicodeDecodeInitStores_proven,
+  p "typeobj-exc-unicode-translate-init" ["UnicodeTranslateError_init"]
+    "UnicodeTranslateError.__init__ with a str object and reason and Py_ssize_t start and end stores args and the four members."
+    "exceptions.c:3944-3964" ``UnicodeTranslateInitStores ``unicodeTranslateInitStores_proven,
+  p "typeobj-exc-unicode-encode-str" ["UnicodeEncodeError_str"]
+    "str(UnicodeEncodeError) is '' with no object; otherwise after str(reason) and str(encoding) (<NULL> when deleted) the object must still be a str, and the message names one bad character with its escape or the range start-(end-1)."
+    "exceptions.c:3740-3801" ``UnicodeEncodeStrFormats ``unicodeEncodeStrFormats_proven,
+  p "typeobj-exc-unicode-decode-str" ["UnicodeDecodeError_str"]
+    "The same for UnicodeDecodeError over bytes, with 'byte 0x%02x' and the bytes re-check."
+    "exceptions.c:3863-3924" ``UnicodeDecodeStrFormats ``unicodeDecodeStrFormats_proven,
+  p "typeobj-exc-unicode-translate-str" ["UnicodeTranslateError_str"]
+    "The same for UnicodeTranslateError, with only str(reason) and no encoding."
+    "exceptions.c:3967-4022" ``UnicodeTranslateStrFormats ``unicodeTranslateStrFormats_proven,
+  p "typeobj-exc-unicode-escapes" []
+    "The escapes of one bad character on the 3.15.2 runs: \\xe9, \\u0100, \\U0001f600, \\x61."
+    "exceptions.c:3772-3780" ``BadCharEscapes ``badCharEscapes_proven,
   -- BaseExceptionGroup
   p "typeobj-exc-eg-rejects-non-exception" ["BaseExceptionGroup_new"]
     "The first item that is not an exception instance raises ValueError naming its index."

@@ -45,6 +45,13 @@ def getMemoryError (allowAllocation : Bool) (args : List Val) (s : MemFreelist) 
   | d :: rest => (.reused { d with args := [] }, rest)
   | [] => if allowAllocation then (.fresh { args := args }, []) else (.lastResort, [])
 
+/-- `MemoryError_new`, `Objects/exceptions.c:4142-4151`, with the freelist explicit: a subclass
+(`exact = false`) gets a fresh object with its `args`, and `MemoryError` itself goes through
+`get_memory_error(1, args, kwds)`, which takes a freelist entry (with `args` `()`) when there is
+one and otherwise a fresh object with the given `args`. -/
+def memoryErrorNewC (exact : Bool) (args : List Val) (s : MemFreelist) : MemGot × MemFreelist :=
+  if !exact then (.fresh { args := args }, s) else getMemoryError true args s
+
 /-- `_PyErr_NoMemory`, `Objects/exceptions.c:4154`, past the startup check. -/
 def pyErrNoMemory (s : MemFreelist) : MemGot × MemFreelist := getMemoryError false [] s
 
@@ -52,7 +59,10 @@ def pyErrNoMemory (s : MemFreelist) : MemGot × MemFreelist := getMemoryError fa
 def preallocateMemerrors : MemFreelist :=
   (List.range memerrorsSave).foldl (fun s _ => memoryErrorDealloc true { args := [] } s) []
 
-/-- `free_preallocated_memerrors`, `Objects/exceptions.c:4220`. -/
-def freePreallocatedMemerrors (_s : MemFreelist) : MemFreelist := []
+/-- `free_preallocated_memerrors`, `Objects/exceptions.c:4219-4227`: pop and `tp_free` each entry
+until the list is empty. Freeing has no effect the model can see. -/
+def freePreallocatedMemerrors : MemFreelist → MemFreelist
+  | [] => []
+  | _ :: rest => freePreallocatedMemerrors rest
 
 end PyLean.TypeObj

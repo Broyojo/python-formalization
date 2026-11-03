@@ -1,0 +1,98 @@
+id: typeobj-exc-getstate-borrowed-dict
+title: "AttributeError/ImportError __reduce__ copy the instance dict through a borrowed pointer; a key's __eq__ that replaces e.__dict__ frees it while PyDict_Copy still reads it"
+priority: P2
+kind: memory-safety
+module: typeobj
+files: [Objects/exceptions.c, Objects/dictobject.c]
+functions: ["AttributeError_getstate", "ImportError_getstate", "PyDict_Copy", "dict_dict_merge"]
+status: new
+summary: |
+  `AttributeError_getstate` (Objects/exceptions.c:2723-2725) and `ImportError_getstate`
+  (:1883-1885) read `PyObject *dict = self->dict` without a reference and call
+  `PyDict_Copy(dict)`. For a dict with many deleted entries (`ma_used < 2/3 * dk_nentries`),
+  `copy_lock_held_untracked` (Objects/dictobject.c:4490-4539) does not clone the table but
+  calls `dict_merge(copy, o)`, and `dict_dict_merge` (:4223-4249) inserts each item with
+  `insertdict`, which runs a key's `__eq__` when two keys share a hash. Nothing in this chain
+  holds a reference to `o` (`dict_merge` and `PyDict_Copy` take it borrowed). If that `__eq__`
+  runs `e.__dict__ = {}`, the last reference to the instance dict is dropped and the dict is
+  freed; `dict_dict_merge` then reads `other->ma_used` (:4243) and calls `_PyDict_Next(other)`
+  on the freed object.
+
+  Observed: the copy raises `RuntimeError: dict mutated during update` although no code
+  mutated the dict; with a second reference to the dict kept alive, the same program copies it
+  normally. The error comes from reading `ma_used` of the freed (and reused or poisoned)
+  object. No segfault was produced; whether one follows depends on what reuses the memory.
+likelihood: |
+  Low: needs an instance dict of an AttributeError or ImportError with two keys of equal hash,
+  one third of its entries deleted, and a key `__eq__` that replaces `e.__dict__`, then
+  `__reduce__` (pickling). Pure Python.
+maybe_intended: "No: reading a freed object is never intended; the pattern is the borrowed-pointer class fixed for OSError_str in gh-160822."
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import sys
+  keep = sys.argv[1] == "keep"
+  armed = False
+  class K:
+      def __init__(self, n): self.n = n
+      def __hash__(self): return 1
+      def __eq__(self, other):
+          global armed
+          if armed:
+              armed = False
+              e.__dict__ = {}
+              # allocate dicts so the freed one is reused
+              junk = [{"a%d" % i: [i] * 8} for i in range(50)]
+          return False
+  e = AttributeError("x", name="n")
+  d = {}
+  for i in range(6):
+      d["p%d" % i] = i
+  d[K(1)] = 1
+  d[K(2)] = 2
+  for i in range(6):
+      del d["p%d" % i]
+  e.__dict__ = d
+  if not keep:
+      del d
+  armed = True
+  try:
+      e.__reduce__()
+      print("ok")
+  except RuntimeError as ex:
+      print("RuntimeError:", ex)
+  '''
+  out = {}
+  for mode in ("keep", "free"):
+      p = subprocess.run([sys.executable, "-c", child, mode], capture_output=True, text=True)
+      out[mode] = (p.returncode, p.stdout.strip())
+      print(mode, out[mode])
+  if out["keep"] == (0, "ok") and out["free"] != (0, "ok"):
+      print("REPRODUCED typeobj-exc-getstate-borrowed-dict")
+expected: "Both modes copy the dict: the instance dict that was replaced is not mutated, so __reduce__ returns its state."
+observed: |
+  python3 3.15.2: keep -> ok; free -> "RuntimeError: dict mutated during update" (also under
+  PYTHONMALLOC=debug, and for ImportError). REPRODUCED.
+  main (3.16.0a1+dev): the same.
+promised_by: "Invariant: no read of freed memory from pure-Python code."
+cause: |
+  Objects/exceptions.c:2723-2725 and :1883-1885 pass the borrowed `self->dict` to PyDict_Copy;
+  Objects/dictobject.c:4535-4539 (dict_merge into the copy) and :4223-4249 (dict_dict_merge's
+  insert loop, which runs __eq__ and then reads other->ma_used) hold no reference to the source.
+possible_fix: "Take a strong reference: `PyObject *dict = Py_XNewRef(self->dict);` and release it after the copy (in both getstate functions); or have PyDict_Copy/dict_merge hold `other` for the slow path."
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["AttributeError getstate dict copy use after free", "ImportError getstate PyDict_Copy",
+            "dict mutated during update __reduce__", "dict_merge use after free __eq__ other",
+            "PyDict_Copy borrowed reference eq", "dict_dict_merge use-after-free",
+            "dict copy __eq__ use-after-free", "exceptions.c getstate __dict__", "PyDict_Copy crash",
+            "use after free dict copy (words)", "borrowed dict getstate (words)",
+            "PRs: dict_dict_merge", "bugforge README: no getstate entry"]
+  related:
+    - {number: 160773, state: closed, relation: "same class (borrowed member passed to code that runs Python), different function"}
+    - {number: 158525, state: open, relation: "unrelated: free-threaded dict.copy() lock spin on the same slow path"}
+lean:
+  note: "Outside the TypeObj object model, which has no reference counts and compares attribute-dict keys by identity; AttributeErrorGetstateReduce states the scope."
