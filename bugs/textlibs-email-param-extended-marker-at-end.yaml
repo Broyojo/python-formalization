@@ -1,0 +1,62 @@
+id: textlibs-email-param-extended-marker-at-end
+title: "email: Content-Type parameter ending in '*' raises IndexError in get_parameter (duplicate of gh-151857)"
+priority: P3
+kind: crash
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["get_parameter", "parse_mime_parameters", "parse_content_type_header", "parse_content_disposition_header"]
+summary: |
+  `get_parameter` reads the attribute, sees `*`, tries `get_section` (which raises
+  HeaderParseError, ignored, when no digits follow), checks `if not value`, then takes the `*` as
+  the extended-parameter marker with `value = value[1:]`, and goes on to `if value[0] != '='`
+  without checking that `value` is still non-empty. For `text/plain; a*` that is `''[0]`:
+  IndexError, which `parse_mime_parameters` does not catch. Reading `msg['Content-Type']`, or
+  `get_content_type()` (and so `message_from_string` itself, through the feed parser's
+  `get_content_type()` call) raises with email.policy.default.
+likelihood: |
+  Medium-low: a truncated or hand-written RFC 2231 parameter name. Any program parsing untrusted
+  mail with the modern policy gets IndexError from message_from_string.
+maybe_intended: |
+  No.
+reproducer: |
+  import email
+  from email import policy, _header_value_parser as P
+  out = []
+  for f, v in ((P.parse_content_type_header, 'text/plain; a*'),
+               (P.parse_content_disposition_header, 'attachment; filename*')):
+      try:
+          f(v)
+          out.append(None)
+      except IndexError as e:
+          out.append(str(e))
+  try:
+      email.message_from_string('Content-Type: text/plain; name*\n\nbody\n', policy=policy.default)
+      msg = None
+  except IndexError as e:
+      msg = str(e)
+  print(out, msg)
+  if all(out) and msg:
+      print('REPRODUCED textlibs-email-param-extended-marker-at-end')
+expected: |
+  A ContentType token list with an InvalidHeaderDefect for the malformed parameter.
+observed: |
+  python3 3.15.2: IndexError: string index out of range, from both parsers and from
+  message_from_string. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/email/headerregistry.py:169-174: "The parser should not, insofar as practical, raise any
+  errors. Defects should be added to the list instead."
+cause: |
+  Lib/email/_header_value_parser.py:2519-2525: the `if not value` check comes before the marker
+  `*` is consumed at :2521-2524, and :2525 indexes the possibly empty rest.
+possible_fix: |
+  Check `if not value or value[0] != '='` at :2525 (raising HeaderParseError), as gh-151858
+  proposes.
+duplicates: |
+  Duplicate of gh-151857 (open; "Instance 1: MIME parameter name ending with `*`"), with PR
+  gh-151858. Not in bugforge. Queries: gh search issues --repo python/cpython get_parameter
+  IndexError; IndexError string index out of range email parameter; email Content-Type parameter
+  asterisk IndexError; _header_value_parser IndexError; rfc2231 parameter trailing asterisk;
+  email header parser IndexError; parse_mime_parameters IndexError; message_from_string
+  IndexError Content-Type.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (ContentHeadersNoRaise, contentHeadersNoRaise_refuted)

@@ -36,6 +36,7 @@ import PyLean.TextLibs.TomlArr
 import PyLean.TextLibs.TomlDoc
 import PyLean.TextLibs.TomlMulti
 import PyLean.TextLibs.TomlPending
+import PyLean.TextLibs.EmailQuote
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1825,6 +1826,86 @@ def entries : List Entry := [
     statement := "For every dotted key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them) and bare key x, loads('K.x=true\\n[K]') raises TOMLDecodeError 'Cannot declare K twice' at the position after the header's key: the tables a dotted key defines are recorded as pending and become explicit at the next header."
     source := "TOML 1.1 spec, Table ('Since tables cannot be defined more than once, redefining such tables using a [table] header is not allowed'); comment at _parser.py:427-429", status := .proven
     prop := ``Toml.DottedThenHeader, thm := some ``Toml.dottedThenHeader_proven }
+,
+  -- Lib/email/_header_value_parser.py: TextLibs/EmailBase.lean (tree, str, value),
+  -- EmailLex.lean, EmailAddr.lean, EmailMime.lean, EmailHeaders.lean (the get_*/parse_*
+  -- parsers, with _ew.decode as a parameter); properties in EmailUnstruct.lean, EmailRefute.lean.
+  { id := "textlibs-email-unstructured", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_unstructured", "get_fws", "TokenList.__str__", "TokenList.value",
+      "WhiteSpaceTerminal.value", "ValueTerminal.value"]
+    statement := "For every header value, get_unstructured returns (never raises, never loops: at most one iteration per character) whatever _ew.decode returns, if it raises only ValueError or KeyError; and when _ew.decode rejects every encoded word, str() of the result is the value and .value is the value with each run of whitespace that starts with a space or tab (plus the str.isspace characters after it) replaced by one space."
+    source := "module docstring (:35-49: whitespace tokens have value ' ', str() does not collapse whitespace runs); comment at :1182-1187 (the =? split must not loop); invariant: no exception", status := .proven
+    prop := ``PyLean.TextLibs.Email.UnstructuredSpec, thm := some ``PyLean.TextLibs.Email.unstructuredSpec_proven
+    notes := "_ew.decode (Lib/email/_encoded_words.py) is a parameter. The termination part needs the regex rfc2047_matcher (hand-written as rfcSearch): a word starting with =? that it matches has a ?= after the =?, so get_encoded_word did not raise its plain HeaderParseError there. Encoded words that decode are not covered by the str/value part." }
+,
+  { id := "textlibs-email-msgid-no-fold-literal-space", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["parse_message_id", "parse_message_ids", "get_msg_id", "get_no_fold_literal", "get_dtext",
+      "_get_ptext_to_endchars"]
+    statement := "For every header value, parse_message_id and parse_message_ids return a token list and raise nothing (they turn the HeaderParseError of get_msg_id into a defect)."
+    source := "Lib/email/headerregistry.py:169-174 ('The parser should not, insofar as practical, raise any errors'); :2182-2189", status := .refuted
+    prop := ``PyLean.TextLibs.Email.MessageIdNoRaise, thm := some ``PyLean.TextLibs.Email.messageIdNoRaise_refuted
+    bug := some "textlibs-email-msgid-no-fold-literal-space"
+    notes := "'<a@[ x]>': get_no_fold_literal calls get_dtext on ' x]>', and _get_ptext_to_endchars reads the unbound pos for a value starting with a space (messageId_unbound, messageIds_unbound). The gh-134152 fix covered only the empty value." }
+,
+  { id := "textlibs-email-param-extended-marker-at-end", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["parse_content_type_header", "parse_content_disposition_header", "parse_mime_parameters",
+      "get_parameter"]
+    statement := "For every header value, parse_content_type_header and parse_content_disposition_header return a token list and raise nothing (parse_mime_parameters keeps an unparsable parameter as an invalid one)."
+    source := "Lib/email/headerregistry.py:169-174; :2650-2671", status := .refuted
+    prop := ``PyLean.TextLibs.Email.ContentHeadersNoRaise, thm := some ``PyLean.TextLibs.Email.contentHeadersNoRaise_refuted
+    bug := some "textlibs-email-param-extended-marker-at-end"
+    notes := "'text/plain; a*' and 'attachment; filename*' raise IndexError at :2525 (contentType_star, contentDisposition_star). Duplicate of python/cpython#151857 (open)." }
+,
+  { id := "textlibs-email-section-nondecimal-digit", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_section"]
+    statement := "For every value, get_section returns a Section or raises HeaderParseError, the only exception get_parameter catches around it."
+    source := "invariant: the caller's try/except at :2513-2518", status := .refuted
+    prop := ``PyLean.TextLibs.Email.SectionOnlyHpe, thm := some ``PyLean.TextLibs.Email.sectionOnlyHpe_refuted
+    bug := some "textlibs-email-section-nondecimal-digit"
+    notes := "'*²': isdigit() accepts '²' and int() rejects it (section_superscript; contentType_superscript shows the ValueError leaving parse_content_type_header). int() is modelled for str.isdigit strings with the max-str-digits limit (pyInt). Duplicate of python/cpython#87112 (open)." }
+,
+  { id := "textlibs-email-mime-version-nondecimal-digit", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["parse_mime_version"]
+    statement := "For every header value, parse_mime_version returns a MIMEVersion token list and raises nothing (non-numbers become defects)."
+    source := "Lib/email/headerregistry.py:169-174; the defect branches at :2253-2256, :2284-2287", status := .refuted
+    prop := ``PyLean.TextLibs.Email.MimeVersionNoRaise, thm := some ``PyLean.TextLibs.Email.mimeVersionNoRaise_refuted
+    bug := some "textlibs-email-mime-version-nondecimal-digit"
+    notes := "'²' raises ValueError from int() (mimeVersion_superscript). Duplicate of python/cpython#158708 (closed in a batch, not on the merits)." }
+,
+  { id := "textlibs-email-display-name-only-cfws", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["DisplayName.display_name", "DisplayName.value", "get_display_name", "get_phrase"]
+    statement := "For every value get_display_name parses, display_name and value of the resulting DisplayName are strings (raise nothing)."
+    source := "Lib/email/headerregistry.py:169-174 and :343-347 (address headers read display_name of every group and mailbox)", status := .refuted
+    prop := ``PyLean.TextLibs.Email.DisplayNameTotal, thm := some ``PyLean.TextLibs.Email.displayNameTotal_refuted
+    bug := some "textlibs-email-display-name-only-cfws"
+    notes := "'(c)': the phrase is one CFWS token; display_name pops it and reads res[-1] of an empty list (displayName_comment). Duplicate of python/cpython#151857 (open)." }
+,
+  { id := "textlibs-email-quoted-string-reparse", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_quoted_string", "get_bare_quoted_string", "BareQuotedString.__str__", "quote_string",
+      "make_quoted_pairs"]
+    statement := "For every value get_quoted_string parses (and every _ew.decode that raises only ValueError/KeyError), parsing str() of the result again gives a whole quoted string with the same value."
+    source := "module docstring :46-49 (str() is 'a canonical representation of the RFC-compliant form ... including minimal use of quoted pair quoting')", status := .refuted
+    prop := ``PyLean.TextLibs.Email.QuotedStringCanonical, thm := some ``PyLean.TextLibs.Email.quotedStringCanonical_refuted
+    bug := some "textlibs-email-quoted-string-reparse"
+    notes := "'\"\\\\=?utf-8?q?a?=\"' has value '=?utf-8?q?a?=' (the quoted pair hides the encoded word); str() drops the backslash and the reparse decodes it to 'a' (quotedString_reparse), with _ew.decode answering as CPython's does on that word." }
+,
+  { id := "textlibs-email-quoting-round-trip", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["make_quoted_pairs", "make_parenthesis_pairs", "quote_string", "get_bare_quoted_string",
+      "get_qcontent", "_get_ptext_to_endchars", "get_comment", "get_qp_ctext", "get_fws",
+      "BareQuotedString.__str__", "BareQuotedString.value", "Comment.__str__", "Comment.quote",
+      "Comment.content"]
+    statement := "For every text s and rest r: get_bare_quoted_string(quote_string(s) + r) returns r and a bare quoted string whose value is s and whose str() is quote_string(s), when _ew.decode rejects every encoded word; get_comment('(' + make_parenthesis_pairs(s) + ')' + r) returns r and a comment whose content is s and whose str() is '(' + make_parenthesis_pairs(s) + ')'. Fuel above len(s) + 1 suffices."
+    source := "docstrings of make_quoted_pairs and make_parenthesis_pairs (:100-108), _get_ptext_to_endchars (:1037-1043: quoted pairs are unquoted), get_bare_quoted_string (:1244-1250: whitespace preserved); module docstring :51-52 (Comment.content)", status := .proven
+    prop := ``PyLean.TextLibs.Email.QuotingRoundTrip, thm := some ``PyLean.TextLibs.Email.quotingRoundTrip_proven
+    notes := "s is any text, whitespace included (runs of spaces become fws tokens, the rest qcontent/ctext runs). With an encoded word that decodes, the quoted-string half fails: textlibs-email-quoted-string-reparse." }
+,
+  { id := "textlibs-email-ptext-had-qp", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["_get_ptext_to_endchars", "get_dtext"]
+    statement := "Whenever _get_ptext_to_endchars returns fewer characters than it consumed (it dropped the backslash of a quoted pair), its had_qp flag is True."
+    source := "docstring :1037-1043 ('a flag that is True iff there were any quoted printables decoded')", status := .refuted
+    prop := ``PyLean.TextLibs.Email.PtextQpFlag, thm := some ``PyLean.TextLibs.Email.ptextQpFlag_refuted
+    bug := some "textlibs-email-ptext-had-qp"
+    notes := "'a\\b' gives ('ab', '', False) (ptext_qp_unset); get_dtext therefore adds no ObsoleteHeaderDefect for '[a\\b]' while '[a\\\\b]' gets one (dtext_no_defect)." }
 ]
 
 end PyLean.TextLibs

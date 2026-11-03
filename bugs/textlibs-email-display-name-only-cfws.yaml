@@ -1,0 +1,57 @@
+id: textlibs-email-display-name-only-cfws
+title: "email: group display name that is only a comment raises IndexError in DisplayName.display_name (duplicate of gh-151857)"
+priority: P3
+kind: crash
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["DisplayName.display_name", "DisplayName.value", "get_display_name", "get_phrase"]
+summary: |
+  For `(c)`, `get_phrase` returns a phrase holding one CFWS token (with the defect "phrase does not
+  start with word"). `DisplayName.display_name` copies it, pops the leading CFWS, and then reads
+  `res[-1]` of the now empty list: IndexError. `DisplayName.value` calls `display_name` whenever
+  the name has defects. So the group `(c):;` or `(x): a@b.com;` in To/Cc makes
+  `msg['To']` raise IndexError with the modern policy (AddressHeader.parse reads `display_name`).
+likelihood: |
+  Low-medium: a group whose display name is only a comment is unusual but syntactically valid
+  RFC 5322 for the second example; crafted mail triggers it.
+maybe_intended: |
+  No; the function already guards the empty case before popping.
+reproducer: |
+  import email
+  from email import policy, _header_value_parser as P
+  dn, _ = P.get_display_name('(c)')
+  out = []
+  for f in (lambda: dn.display_name, lambda: dn.value):
+      try:
+          f()
+          out.append(None)
+      except IndexError as e:
+          out.append(str(e))
+  m = email.message_from_string('To: (x): a@b.com;\n\nbody\n', policy=policy.default)
+  try:
+      m['To']
+      hdr = None
+  except IndexError as e:
+      hdr = str(e)
+  print(out, hdr)
+  if all(out) and hdr:
+      print('REPRODUCED textlibs-email-display-name-only-cfws')
+expected: |
+  An empty display name.
+observed: |
+  python3 3.15.2: IndexError: list index out of range for display_name, value and msg['To'].
+  REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/email/headerregistry.py:169-174.
+cause: |
+  Lib/email/_header_value_parser.py:589-595: after `res.pop(0)` the list may be empty, and :595
+  reads `res[-1]`.
+possible_fix: |
+  Return `''` when `res` is empty after removing the leading CFWS.
+duplicates: |
+  Duplicate of gh-151857 (open; "Instance 2: address display name that is only a comment"), PR
+  gh-151858. Related closed: gh-76359. Queries: gh search issues --repo python/cpython
+  display_name IndexError group; email group display name comment IndexError;
+  _header_value_parser IndexError; email header parser IndexError.
+lean: lean/PyLean/TextLibs/EmailRefute.lean (DisplayNameTotal, displayNameTotal_refuted)

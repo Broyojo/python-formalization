@@ -1,0 +1,54 @@
+id: textlibs-email-ptext-had-qp
+title: "email: _get_ptext_to_endchars sets had_qp only for '\\\\', so get_dtext misses the obsolete quoted-pair defect for '[a\\b]'"
+priority: P4
+kind: wrong-defect
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["_get_ptext_to_endchars", "get_dtext"]
+summary: |
+  The docstring of `_get_ptext_to_endchars` says its third result is "a flag that is True iff there
+  were any quoted printables decoded". The loop sets `had_qp` only in the branch for a backslash
+  after a backslash; any other quoted pair (`\b`, `\]`, `\"`) is decoded with the flag left False.
+  `get_dtext` uses the flag to add ObsoleteHeaderDefect("quoted printable found in domain-literal"),
+  so the domain literal `[a\\b]` (an escaped backslash) gets the defect and `[a\b]` and `[a\]b]` do
+  not, although all three use the obsolete quoted-pair form of RFC 5322 obs-dtext. For `[a\]b]` the
+  `domain` property then reads `[a]b]`, a domain literal that is no longer well formed, with no
+  defect recorded.
+likelihood: |
+  Low: quoted pairs in domain literals are rare, and the effect is a missing defect, not a wrong
+  parse.
+maybe_intended: |
+  Possibly an oversight only in the flag; the defect message and the docstring both say any quoted
+  printable should count. A maintainer may consider it too minor to change.
+reproducer: |
+  from email import _header_value_parser as P
+  a = P._get_ptext_to_endchars('a\\b', '[]')
+  b = P._get_ptext_to_endchars('a\\\\b', '[]')
+  d1 = [type(d).__name__ for d in P.get_domain_literal('[a\\b]')[0].all_defects]
+  d2 = [type(d).__name__ for d in P.get_domain_literal('[a\\\\b]')[0].all_defects]
+  print(a, b, d1, d2)
+  if a == ('ab', '', False) and b == ('a\\b', '', True) and d1 == [] and d2 == ['ObsoleteHeaderDefect']:
+      print('REPRODUCED textlibs-email-ptext-had-qp')
+expected: |
+  had_qp is True for 'a\b' (a quoted pair was decoded), and '[a\b]' gets the same
+  ObsoleteHeaderDefect as '[a\\b]'.
+observed: |
+  python3 3.15.2: ('ab', '', False) ('a\\b', '', True) [] ['ObsoleteHeaderDefect']. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Docstring of _get_ptext_to_endchars, Lib/email/_header_value_parser.py:1037-1043 ("a flag that is
+  True iff there were any quoted printables decoded"); get_dtext's docstring (:1582-1591, "If there
+  were quoted-printables, an ObsoleteHeaderDefect is added").
+cause: |
+  Lib/email/_header_value_parser.py:1052-1060: `had_qp = True` sits in the `if escape:` branch of
+  the backslash test (a second backslash); the `if escape: escape = False` at :1059-1060, which
+  decodes every other quoted pair, does not set it.
+possible_fix: |
+  Set `had_qp = True` in the `if escape:` branch at :1059-1060 too (or whenever `escape` is
+  cleared).
+duplicates: |
+  None found. Queries: gh search issues --repo python/cpython had_qp; quoted printable found in
+  domain-literal; domain literal quoted pair defect; domain-literal quoted-pair obsolete;
+  _get_ptext_to_endchars had_qp. Bugforge: email.headerregistry-20261004-004044-c1 ("Address fails
+  to escape closing brackets in domain literals", not filed) is about writing, not this flag.
+lean: lean/PyLean/TextLibs/EmailQuote.lean (PtextQpFlag, ptextQpFlag_refuted, dtext_no_defect)
