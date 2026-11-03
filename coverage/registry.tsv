@@ -2072,8 +2072,12 @@ textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_com
 textlibs-struct-bytes-format-nonascii-error	proven	Modules/_struct.c	cache_struct_converter,set_format,pack_impl
 textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
 textlibs-struct-pack-into-0p-outside-field	open	Modules/_struct.c	
-textlibs-struct-half-round-trip	open	Modules/_struct.c	unpack_halffloat,pack_halffloat,nu_halffloat,np_halffloat
-textlibs-struct-float-round-trip	open	Modules/_struct.c	unpack_float,lu_float,lp_float
+textlibs-struct-half-round-trip	proven	Modules/_struct.c	unpack_halffloat,pack_halffloat
+textlibs-struct-float-round-trip	proven	Modules/_struct.c	unpack_float
+textlibs-struct-half-unpack	proven	Modules/_struct.c	unpack_halffloat,nu_halffloat,bu_halffloat,lu_halffloat
+textlibs-struct-half-overflow	proven	Modules/_struct.c	pack_halffloat,np_halffloat,bp_halffloat,lp_halffloat
+textlibs-struct-float-unpack	proven	Modules/_struct.c	unpack_float,bu_float,lu_float
+textlibs-struct-double-bytes	proven	Modules/_struct.c	unpack_double,nu_double,np_double,bu_double,bp_double
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
 textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
 textlibs-struct-bool-code	proven	Modules/_struct.c	np_bool,bp_bool,nu_bool,bu_bool
@@ -2092,6 +2096,8 @@ textlibs-struct-uninitialized	proven	Modules/_struct.c	s_new
 textlibs-struct-get-pylong	proven	Modules/_struct.c	get_pylong
 textlibs-struct-index-raises	proven	Modules/_struct.c	get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
 textlibs-struct-index-overflow	proven	Modules/_struct.c	np_int
+textlibs-struct-get-conversions	proven	Modules/_struct.c	get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
+textlibs-struct-native-int-range	proven	Modules/_struct.c	np_byte,np_ubyte,np_short,np_ushort,np_int,np_uint,np_long,np_ulong,np_ssize_t,np_size_t,np_longlong,np_ulonglong,_range_error,get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
 textlibs-struct-bool-raises	proven	Modules/_struct.c	np_bool,bp_bool
 textlibs-struct-float-replaced	proven	Modules/_struct.c	pack_halffloat,np_float,np_double,bp_float,bp_double,lp_float,lp_double
 textlibs-struct-float-order	proven	Modules/_struct.c	pack_halffloat,np_float,np_double
