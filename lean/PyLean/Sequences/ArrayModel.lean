@@ -766,10 +766,16 @@ def arrFromBytes (a : Arr) (bs : List Nat) (bufItemsize : Int) : Py Arr := do
     return { a' with items := memcpy a'.items old new }
   return a
 
-/-- What `f.read(nbytes)` returned: a `bytes` object or an instance of a subclass
-(`PyBytes_Check`), an object of another class, or an exception (also for a missing `read`). -/
+/-- What `f.read(nbytes)` returned: an exact `bytes` object, whose `PyBytes_GET_SIZE` and
+buffer are both its contents with item size 1; an instance of a `bytes` subclass
+(`PyBytes_Check` passes), whose `PyBytes_GET_SIZE` is the length `size` of its contents but
+whose buffer, the one `PyObject_GetBuffer(b, PyBUF_SIMPLE)` gets through a `__buffer__` the
+class may define, is `buf`: some bytes with an item size, or the exception `__buffer__` raises
+(`.ok (contents, 1)` without `__buffer__`); an object of another class; or an exception (also
+for a missing `read`). -/
 inductive ReadResult where
   | bytes (bs : List Nat)
+  | bytesSub (size : Nat) (buf : Py (List Nat × Int))
   | notBytes
   | raises (e : PyExc)
 
@@ -788,10 +794,13 @@ def fromFileCount (n : PyVal) : Py Int := do
 
 /-- `a.fromfile(f, n)` (`array_array_fromfile_impl`, arraymodule.c:1745-1791), after the clinic
 conversion of `n` (`fromFileCount`). Returns the outcome, the array afterwards and the sizes
-`read` was called with. The bytes go through `array_array_frombytes` (:1778), so a length that
-is not a multiple of the item size raises `ValueError` and appends nothing, and the
-`EOFError` of a short read (:1783-1788) comes after the items were appended. Both act on the
-array as `read` left it. -/
+`read` was called with. The short-read flag is computed from `PyBytes_GET_SIZE(b)` (:1776); the
+items come from `array_array_frombytes(self, b)` (:1778), whose clinic wrapper takes `b`'s
+buffer with `PyObject_GetBuffer(arg, &buffer, PyBUF_SIMPLE)` (Modules/clinic/arraymodule.c.h:537-540),
+so for a `bytes` subclass with a `__buffer__` the two can disagree. A length that is not a
+multiple of the item size raises `ValueError` and appends nothing, a buffer whose item size is
+not 1 `TypeError`, and the `EOFError` of a short read (:1783-1788) comes after the items were
+appended. All act on the array as `read` left it. -/
 def arrFromFileC (a : Arr) (read : ReadFn) (n : Int) : Py Unit × Arr × List Int :=
   if n > ssizeMax / a.tc.itemsize then (.error memoryError, a, [])
   else
@@ -806,6 +815,16 @@ def arrFromFileC (a : Arr) (read : ReadFn) (n : Int) : Py Unit × Arr × List In
         if (bs.length : Int) ≠ nbytes then
           (.error (.named "EOFError" "read() didn't return enough bytes"), a', [nbytes])
         else (.ok (), a', [nbytes])
+    | (.bytesSub size buf, a) =>
+      match buf with
+      | .error e => (.error e, a, [nbytes])
+      | .ok (bs, isz) =>
+        match arrFromBytes a bs isz with
+        | .error e => (.error e, a, [nbytes])
+        | .ok a' =>
+          if (size : Int) ≠ nbytes then
+            (.error (.named "EOFError" "read() didn't return enough bytes"), a', [nbytes])
+          else (.ok (), a', [nbytes])
 
 def arrFromFile (a : Arr) (read : ReadFn) (n : PyVal) : Py Unit × Arr × List Int :=
   match fromFileCount n with

@@ -139,13 +139,18 @@ return any object, or change the array:
   `PY_SSIZE_T_MAX` (`MemoryError`, :1754-1757);
 * `read(n * itemsize)` is called once; its exception propagates, a result that is not `bytes`
   (or a subclass) raises `TypeError`;
-* bytes whose length is not a multiple of the item size raise `ValueError` and append nothing;
-  otherwise every item they hold is appended, to the array as `read` left it, and `EOFError`
-  is raised afterwards unless exactly `n` items came, also when `read` returned more bytes than
-  asked for (the check is `!=`, :1776);
+* exact `bytes` whose length is not a multiple of the item size raise `ValueError` and append
+  nothing; otherwise every item they hold is appended, to the array as `read` left it, and
+  `EOFError` is raised afterwards unless exactly `n` items came, also when `read` returned more
+  bytes than asked for (the check is `!=`, :1776);
 * when `read` left a buffer of the array exported, a non-empty result raises `BufferError`
-  after the bytes were read. -/
-def ArrayFromFile : Prop :=
+  after the bytes were read;
+* for an instance of a `bytes` subclass (`ArrayFromFileSub`) the two reads of `b` differ: the
+  `EOFError` test uses its length (`PyBytes_GET_SIZE`), the items come from its buffer
+  (`PyObject_GetBuffer`, through a `__buffer__` the class may define): a `__buffer__` that raises
+  propagates, a buffer of item size other than 1 raises `TypeError`, and otherwise the buffer's
+  items are appended, whatever the length says. -/
+def ArrayFromFileBytes : Prop :=
   (∀ n : Int, 0 ≤ n → n ≤ ssizeMax → fromFileCount (.int n) = .ok n) ∧
   (∀ n : Int, n < 0 → ssizeMin ≤ n → fromFileCount (.int n) = .error (.valueError "n cannot be negative")) ∧
   (∀ n : Int, (ssizeMax < n ∨ n < ssizeMin) →
@@ -172,7 +177,7 @@ def ArrayFromFile : Prop :=
     a1.Fits (a1.items.length + (bs.length : Int) / a.tc.itemsize) →
     (arrFromFileC a read n).1 = .error bufferErr)
 
-theorem arrayFromFile_proven : ArrayFromFile := by
+theorem arrayFromFileBytes_proven : ArrayFromFileBytes := by
   have hsz : ∀ tc : TC, 0 < tc.itemsize := fun tc => by
     rcases itemsize_cases tc with h | h | h | h | h <;> rw [h] <;> decide
   refine ⟨fun n h0 h1 => ?_, fun n h0 h1 => ?_, fun n h => ?_, fun v e he => ?_,
@@ -227,6 +232,58 @@ theorem arrayFromFile_proven : ArrayFromFile := by
         omega
       rw [iteF hsm, arrResize_exported a1 _ hx (by omega)]
     rw [this]
+
+/-- `fromfile` when `read` returns an instance of a `bytes` subclass of length `size` whose
+buffer is `buf`. -/
+def ArrayFromFileSub : Prop :=
+  (∀ a read n (size : Nat) e a1, n ≤ ssizeMax / a.tc.itemsize →
+    read (n * a.tc.itemsize) a = (.bytesSub size (.error e), a1) →
+    arrFromFileC a read n = (.error e, a1, [n * a.tc.itemsize])) ∧
+  (∀ a read n (size : Nat) bs isz a1, n ≤ ssizeMax / a.tc.itemsize → isz ≠ 1 →
+    read (n * a.tc.itemsize) a = (.bytesSub size (.ok (bs, isz)), a1) →
+    arrFromFileC a read n = (.error (.typeError "a bytes-like object is required"), a1, [n * a.tc.itemsize])) ∧
+  (∀ a read n (size : Nat) bs a1, n ≤ ssizeMax / a.tc.itemsize →
+    read (n * a.tc.itemsize) a = (.bytesSub size (.ok (bs, 1)), a1) →
+    a1.tc = a.tc → (bs.length : Int) % a.tc.itemsize ≠ 0 →
+    arrFromFileC a read n = (.error (.valueError "bytes length not a multiple of item size"), a1, [n * a.tc.itemsize])) ∧
+  (∀ a read n (size : Nat) bs a1, n ≤ ssizeMax / a.tc.itemsize →
+    read (n * a.tc.itemsize) a = (.bytesSub size (.ok (bs, 1)), a1) →
+    a1.exports = 0 → a1.tc = a.tc → (bs.length : Int) % a.tc.itemsize = 0 →
+    a1.Fits (a1.items.length + (bs.length : Int) / a.tc.itemsize) →
+    ∃ a2, arrFromFileC a read n =
+      ((if (size : Int) = n * a.tc.itemsize then .ok () else .error eofErr), a2, [n * a.tc.itemsize]) ∧
+      a2.items = a1.items ++ decodedItems a.tc bs)
+
+theorem arrayFromFileSub_proven : ArrayFromFileSub := by
+  refine ⟨fun a read n size e a1 hn hr => ?_, fun a read n size bs isz a1 hn hi hr => ?_,
+    fun a read n size bs a1 hn hr ht hm => ?_, fun a read n size bs a1 hn hr hx ht hm hf => ?_⟩
+  · simp only [arrFromFileC]; rw [iteF (by omega), hr]
+  · simp only [arrFromFileC]; rw [iteF (by omega), hr]
+    simp only
+    have : arrFromBytes a1 bs isz = .error (.typeError "a bytes-like object is required") := by
+      unfold arrFromBytes
+      simp only [bind, Except.bind, pure, Except.pure, throwE]
+      rw [iteT hi]
+    rw [this]
+  · simp only [arrFromFileC]; rw [iteF (by omega), hr]
+    simp only
+    have : arrFromBytes a1 bs 1 = .error (.valueError "bytes length not a multiple of item size") := by
+      unfold arrFromBytes
+      simp only [bind, Except.bind, pure, Except.pure, throwE, show ¬ ((1 : Int) ≠ 1) by decide, ite_false]
+      rw [ht, iteT hm]
+    rw [this]
+  · obtain ⟨a2, h1, h2, _, _⟩ := arrFromBytes_ok a1 bs hx (by rw [ht]; exact hm) (by rw [ht]; exact hf)
+    refine ⟨a2, ?_, by rw [h2, ht]; rfl⟩
+    simp only [arrFromFileC]; rw [iteF (by omega), hr]
+    simp only [h1]
+    by_cases hl : (size : Int) = n * a.tc.itemsize
+    · rw [iteF (by omega), iteT hl]
+    · rw [iteT hl, iteF hl]; rfl
+
+/-- `ArrayFromFileBytes` and `ArrayFromFileSub`. -/
+def ArrayFromFile : Prop := ArrayFromFileBytes ∧ ArrayFromFileSub
+
+theorem arrayFromFile_proven : ArrayFromFile := ⟨arrayFromFileBytes_proven, arrayFromFileSub_proven⟩
 
 /-! ### `tofile` -/
 

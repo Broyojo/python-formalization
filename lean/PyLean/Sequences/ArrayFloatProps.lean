@@ -137,7 +137,9 @@ which may raise or return objects of any class):
   `PyFloat_Pack2` of that binary32 (the two roundings of `ArrayHalfStruct`); `cd_setitem` stores
   the two parts of `PyComplex_AsCComplex(v)`, `cf_setitem` each rounded to binary32. A failed
   conversion raises its exception, the same one for every typecode, before the index is checked
-  (`CHECK_ARRAY_BOUNDS` comes after `PyArg_Parse`).
+  (`CHECK_ARRAY_BOUNDS` comes after `PyArg_Parse`); after a successful one every setitem, `Zf`
+  and `Zd` included, checks the index again (a conversion that shrank the array gives
+  `IndexError`).
 * `PyFloat_AsDouble` (Doc/c-api/float.rst:45-55): a float, or an instance of a float subclass,
   is its value without a call of `__float__`; otherwise `__float__` is called and must return a
   float (a float subclass after a `DeprecationWarning`, which raises when warnings are errors;
@@ -162,6 +164,8 @@ def ArrayFloatConv : Prop :=
   (∀ tc v e, (tc = .Zf ∨ tc = .Zd) → asComplex v = .error e →
     tcSetitem tc true v = .error e ∧ tcSetitem tc false v = .error e) ∧
   (∀ tc v x, (tc = .e ∨ tc = .f ∨ tc = .d) → asDouble v = .ok x →
+    tcSetitem tc false v = .error (.indexError "array assignment index out of range")) ∧
+  (∀ tc v p, (tc = .Zf ∨ tc = .Zd) → asComplex v = .ok p →
     tcSetitem tc false v = .error (.indexError "array assignment index out of range")) ∧
   -- `PyFloat_AsDouble`, object by object
   (∀ b, asDouble (.float b) = .ok b) ∧
@@ -200,7 +204,7 @@ def ArrayFloatConv : Prop :=
 
 theorem arrayFloatConv_proven : ArrayFloatConv := by
   refine ⟨fun v => ?_, fun v => ?_, fun v => ?_, fun v => ?_, fun v => ?_, fun v => ?_,
-    fun tc v e htc he => ?_, fun tc v e htc he => ?_, fun tc v x htc hx => ?_,
+    fun tc v e htc he => ?_, fun tc v e htc he => ?_, fun tc v x htc hx => ?_, fun tc v p htc hp => ?_,
     fun _ => rfl, fun _ => rfl, fun _ _ _ _ _ => rfl, fun t base r idx cpx hb => ?_,
     fun _ _ _ _ => rfl, fun t base r cpx hb => ?_, fun t base cpx hb => ?_, fun _ _ => rfl,
     fun _ => rfl, fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ _ _ => rfl, fun _ _ => rfl,
@@ -229,6 +233,8 @@ theorem arrayFloatConv_proven : ArrayFloatConv := by
       simp only [tcSetitem, bind, Except.bind, pure, Except.pure, he] <;> trivial
   · rcases htc with rfl | rfl | rfl <;>
       simp only [tcSetitem, bind, Except.bind, pure, Except.pure, hx, Bool.not_false, if_true, throwE]
+  · rcases htc with rfl | rfl <;>
+      simp only [tcSetitem, bind, Except.bind, pure, Except.pure, hp, Bool.not_false, if_true, throwE]
   · cases base with
     | float b => exact absurd rfl (hb b)
     | _ => rfl

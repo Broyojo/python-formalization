@@ -611,7 +611,7 @@ def gen_array_op(rng, a):
                           {"o": "Idx", "i": rng.choice([1, 2, -1, 2 ** 64])}, {"o": "NoneType"}, {"f": fbits(rng)},
                           user_obj(rng, False)])
         if rng.random() < 0.4:
-            return ["fromfile_mut", [rng.randrange(256) for _ in range(nbytes)], cnt, rng.randrange(4)]
+            return ["fromfile_mut", [rng.randrange(256) for _ in range(nbytes)], cnt, rng.randrange(7)]
         return [op, [rng.randrange(256) for _ in range(nbytes)], cnt]
     if op in ("fromfile_notbytes", "fromfile_raise"):
         return [op, rng.choice([0, 1, 2, -1, {"o": "NoneType"}])]
@@ -935,7 +935,8 @@ class BlockFile(ChunkFile):
 
 class MutFile:
     """A scripted `read`: before returning data[:n], k = 1 appends a zero item, k = 2 clears
-    the array, k = 3 opens a memoryview of it that stays open."""
+    the array, k = 3 opens a memoryview of it that stays open; k = 4, 5, 6 return data[:n] as
+    a bytes subclass whose buffer differs from its contents (see BUF_CLS)."""
 
     def __init__(self, a, data, k, extra):
         self.a, self.f, self.k, self.extra = a, io.BytesIO(data), k, extra
@@ -947,7 +948,30 @@ class MutFile:
             self.a.clear()
         elif self.k == 3:
             self.extra["views"].append(memoryview(self.a))
+        elif self.k >= 4:
+            return BUF_CLS[self.k](self.f.read(n))
         return self.f.read(n)
+
+
+class EmptyBuf(bytes):
+    """A bytes subclass whose buffer is empty."""
+    def __buffer__(self, flags):
+        return memoryview(b"")
+
+
+class WideBuf(bytes):
+    """A bytes subclass whose buffer has item size 4."""
+    def __buffer__(self, flags):
+        return memoryview(bytes(4)).cast("I")
+
+
+class BadBuf(bytes):
+    """A bytes subclass whose __buffer__ raises."""
+    def __buffer__(self, flags):
+        raise ValueError("buf")
+
+
+BUF_CLS = {4: EmptyBuf, 5: WideBuf, 6: BadBuf}
 
 
 def run_deque_op(d, op, extra):
