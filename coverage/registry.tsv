@@ -1880,7 +1880,13 @@ typeobj-exc-oserror-written-set	proven	Objects/exceptions.c	OSError_written_set
 typeobj-exc-syntaxerror-init	proven	Objects/exceptions.c	SyntaxError_init
 typeobj-exc-my-basename	proven	Objects/exceptions.c	my_basename
 typeobj-exc-syntaxerror-lineno	proven	Objects/exceptions.c	SyntaxError_str
-typeobj-exc-syntaxerror-plain	proven	Objects/exceptions.c	
+typeobj-exc-syntaxerror-plain	proven	Objects/exceptions.c	SyntaxError_str
+typeobj-exc-syntaxerror-info-tuple	proven	Objects/exceptions.c	SyntaxError_init
+typeobj-exc-unicode-capi-refusals	proven	Objects/exceptions.c	PyUnicodeEncodeError_SetStart,PyUnicodeDecodeError_SetStart,PyUnicodeTranslateError_SetStart,PyUnicodeEncodeError_GetEnd,PyUnicodeDecodeError_GetEnd,PyUnicodeTranslateError_GetEnd,PyUnicodeEncodeError_SetEnd,PyUnicodeDecodeError_SetEnd,PyUnicodeTranslateError_SetEnd,PyUnicodeEncodeError_SetReason,PyUnicodeDecodeError_SetReason,PyUnicodeTranslateError_SetReason
+typeobj-exc-unicode-getreason-refusals	proven	Objects/exceptions.c	unicode_error_get_reason_impl,PyUnicodeEncodeError_GetReason,PyUnicodeDecodeError_GetReason,PyUnicodeTranslateError_GetReason
+typeobj-exc-unicode-encode-parse	proven	Objects/exceptions.c	UnicodeEncodeError_init
+typeobj-exc-unicode-decode-parse	proven	Objects/exceptions.c	UnicodeDecodeError_init
+typeobj-exc-unicode-translate-parse	proven	Objects/exceptions.c	UnicodeTranslateError_init
 typeobj-exc-unicode-adjust	proven	Objects/exceptions.c	unicode_error_adjust_start,unicode_error_adjust_end,unicode_error_adjust_len,assert_adjusted_unicode_error_start,assert_adjusted_unicode_error_end,assert_adjusted_unicode_error_len
 typeobj-exc-unicode-params	proven	Objects/exceptions.c	
 typeobj-exc-unicode-str-bounds	proven	Objects/exceptions.c	UnicodeEncodeError_str,UnicodeDecodeError_str,UnicodeTranslateError_str

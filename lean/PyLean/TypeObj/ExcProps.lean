@@ -6,6 +6,7 @@ import PyLean.TypeObj.ExcPropsRest2
 import PyLean.TypeObj.ExcPropsOsStr
 import PyLean.TypeObj.ExcPropsSetstateC
 import PyLean.TypeObj.ExcPropsUnicode2
+import PyLean.TypeObj.ExcPropsUnicode3
 import PyLean.TypeObj.ExcPropsSplitTotal
 
 /-!
@@ -264,9 +265,27 @@ def excEntries : List Entry := [
   p "typeobj-exc-syntaxerror-lineno" ["SyntaxError_str"]
     "The line number printed is the value when it fits in long and -1 otherwise, so __str__ cannot raise OverflowError."
     "comment at exceptions.c:2914-2916; :2936-2948" ``SyntaxErrorLinenoInRange ``syntaxErrorLinenoInRange_proven,
-  p "typeobj-exc-syntaxerror-plain" []
-    "With filename and lineno unset, str(e) is str(msg), or 'None' when msg is unset."
-    "exceptions.c:2931-2932" ``SyntaxErrorStrPlain ``syntaxErrorStrPlain_proven,
+  p "typeobj-exc-syntaxerror-plain" ["SyntaxError_str"]
+    "When filename is not a str (NULL or any other value) and lineno is not an exact int (NULL, True, a float), str(e) is str(msg), or 'None' when msg is unset."
+    "exceptions.c:2931-2932" ``SyntaxErrorStrPlainAll ``syntaxErrorStrPlainAll_proven,
+  p "typeobj-exc-syntaxerror-info-tuple" ["SyntaxError_init"]
+    "SyntaxError(msg, info) parses an exact list info as the tuple of its items, and a non-iterable info is the TypeError of iter()."
+    "exceptions.c:2805; PySequence_Tuple, Objects/abstract.c:2005-2078" ``SyntaxErrorInfoTuple ``syntaxErrorInfoTuple_proven,
+  p "typeobj-exc-unicode-capi-refusals" ["PyUnicodeEncodeError_SetStart", "PyUnicodeDecodeError_SetStart", "PyUnicodeTranslateError_SetStart", "PyUnicodeEncodeError_GetEnd", "PyUnicodeDecodeError_GetEnd", "PyUnicodeTranslateError_GetEnd", "PyUnicodeEncodeError_SetEnd", "PyUnicodeDecodeError_SetEnd", "PyUnicodeTranslateError_SetEnd", "PyUnicodeEncodeError_SetReason", "PyUnicodeDecodeError_SetReason", "PyUnicodeTranslateError_SetReason"]
+    "SetStart, GetEnd, SetEnd and SetReason of every kind refuse a non-UnicodeError with 'expecting a <Kind> object, got <type>' before anything else."
+    "exceptions.c:3127-3137, 3523-3612, 3643-3664" ``UnicodeCapiRefusals ``unicodeCapiRefusals_proven,
+  p "typeobj-exc-unicode-getreason-refusals" ["unicode_error_get_reason_impl", "PyUnicodeEncodeError_GetReason", "PyUnicodeDecodeError_GetReason", "PyUnicodeTranslateError_GetReason"]
+    "GetReason refuses a NULL reason ('UnicodeError 'reason' attribute is not set') and a non-str one ('... must be a string')."
+    "exceptions.c:3175-3180, 3093-3098" ``UnicodeGetReasonRefusals ``unicodeGetReasonRefusals_proven,
+  p "typeobj-exc-unicode-encode-parse" ["UnicodeEncodeError_init"]
+    "UnicodeEncodeError.__init__ parses UUnnU: a non-str encoding, object or reason is 'argument i must be str, not T'; an int start outside Py_ssize_t is the OverflowError; start and end are stored as the integers n gives (through __index__)."
+    "exceptions.c:3724-3736; getargs U and n" ``UnicodeEncodeInitParse ``unicodeEncodeInitParse_proven,
+  p "typeobj-exc-unicode-decode-parse" ["UnicodeDecodeError_init"]
+    "UnicodeDecodeError.__init__ parses UOnnU: non-str encoding or reason refused with its position, start through n with the OverflowError."
+    "exceptions.c:3831-3835; getargs U and n" ``UnicodeDecodeInitParse ``unicodeDecodeInitParse_proven,
+  p "typeobj-exc-unicode-translate-parse" ["UnicodeTranslateError_init"]
+    "UnicodeTranslateError.__init__ parses UnnU: non-str object or reason refused with its position, start through n with the OverflowError, and start and end stored as n gives them."
+    "exceptions.c:3953-3962; getargs U and n" ``UnicodeTranslateInitParse ``unicodeTranslateInitParse_proven,
   -- Unicode errors
   p "typeobj-exc-unicode-adjust" ["unicode_error_adjust_start", "unicode_error_adjust_end", "unicode_error_adjust_len", "assert_adjusted_unicode_error_start", "assert_adjusted_unicode_error_end", "assert_adjusted_unicode_error_len"]
     "For every start, end and length, the three adjustments satisfy the three assert_adjusted functions."
@@ -315,7 +334,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-memoryerror-new-branches" ["MemoryError_new", "get_memory_error"]
     "MemoryError.__new__ on a subclass makes a fresh object with its args; on MemoryError it takes a free entry with args () when there is one, and a fresh object with its args when there is none."
     "exceptions.c:4111-4151" ``MemoryErrorNewBranches ``memoryErrorNewBranches_proven
-    "The interpreter's memoryErrorNew has no freelist in its world and always takes the entry branch (CPython while an entry is free).",
+    "Scope limit of the interpreter: its memoryErrorNew has no freelist in its world and always takes the entry branch, so it gives args () where CPython, with the freelist empty, keeps the args; and every MemoryError it makes has suppress_context False, so the freelist-state leak of typeobj-exc-memoryerror-freelist-state is invisible at the interpreter level and is stated on the explicit freelist model only.",
   p "typeobj-exc-pyerr-nomemory" ["_PyErr_NoMemory", "get_memory_error"]
     "_PyErr_NoMemory takes the most recent free entry with args () and shrinks the list, or gives the last-resort singleton when the list is empty."
     "exceptions.c:4153-4167, 4111-4140" ``PyErrNoMemoryBranches ``pyErrNoMemoryBranches_proven,
