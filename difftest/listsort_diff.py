@@ -212,6 +212,13 @@ def gen_case(rng):
         n1 = rng.randrange(1, n - s1)
         n2 = rng.randrange(1, n - s1 - n1 + 1)
         return {"mod": "listsort", "fn": "powerloop", "s1": s1, "n1": n1, "n2": n2, "n": n}
+    if r < 0.12:
+        a = gen_list(rng)
+        bad = rng.choice(a) if a and rng.random() < 0.9 else 10 ** 9
+        if rng.random() < 0.6:
+            return {"mod": "listsort", "fn": "raise", "a": a, "bad": bad, "reverse": rng.random() < 0.3}
+        return {"mod": "listsort", "fn": "keyraise", "a": a, "bad": bad, "mut": rng.random() < 0.5,
+                "reverse": rng.random() < 0.3}
     if r < 0.26:
         mode = rng.choice(["noisy", "noisy", "hash"])
         m = rng.choice([5, 11, 37, 101, 1009, 10007] if mode == "noisy" else [3, 5, 8, 16, 101])
@@ -290,6 +297,39 @@ def run_python(c):
         return {"ok": [o.i for o in l]} if "ok" in r else r
     if fn == "powerloop":
         return {"ok": py_powerloop(c["s1"], c["n1"], c["n2"], c["n"])}
+    if fn == "raise":
+        # __lt__ raises when either operand is `bad`; the list and the call count afterwards
+        bad = c["bad"]
+        COUNT[0] = 0
+
+        def lt(a, b):
+            if a == bad or b == bad:
+                raise ValueError("lt")
+            return a < b
+        es = [E(x, lt) for x in c["a"]]
+        try:
+            es.sort(reverse=c["reverse"])
+            exc = False
+        except ValueError:
+            exc = True
+        return {"ok": [[e.v for e in es], COUNT[0], exc]}
+    if fn == "keyraise":
+        # the key raises on `bad` and, with `mut`, appends to the list it sorts
+        bad = c["bad"]
+        l = list(c["a"])
+
+        def key(x):
+            if c["mut"]:
+                l.append(0)
+            if x == bad:
+                raise KeyError("key")
+            return x
+        try:
+            l.sort(key=key, reverse=c["reverse"])
+            exc = None
+        except (KeyError, ValueError) as e:
+            exc = type(e).__name__
+        return {"ok": [l, exc]}
     if fn == "evil":
         lt = EVIL[c["mode"]]
         m = c["m"]

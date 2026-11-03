@@ -634,6 +634,9 @@ def list_case(c):
         return {"ok": log}
     if fn == "list.sort_sizeof":
         return {"ok": sizes_in_sort()}
+    if fn == "list.sizeof_sub":
+        cls = type("L", (list,), {"__slots__": tuple(f"s{i}" for i in range(c["k"]))})
+        return {"ok": cls(c["items"]).__sizeof__()}
     if fn == "list.latin_lt":
         v, w = "".join(map(chr, c["v"])), "".join(map(chr, c["w"]))
         return {"ok": [v < w, v < w]}
@@ -834,7 +837,7 @@ def gen_iter(rng):
 
     def op():
         k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate", "pop", "add", "clear"])
-        return [k, rng.choice([0, 1, -1, -2, n, n + 1, n - 1, M, -M - 1, M + 1, 2 ** 64])] if k == "setstate" else [k]
+        return [k, rng.choice([0, 1, -1, -2, n, n + 1, n - 1, M, -M - 1, M + 1, 2 ** 64, "x"])] if k == "setstate" else [k]
     return {"mod": "bytesobj", "fn": "list.iter", "items": items, "forward": rng.random() < 0.5,
             "ops": [op() for _ in range(rng.randint(1, 12))]}
 
@@ -945,6 +948,9 @@ def gen_seq(rng):
     if k == 22:
         return {**case, "fn": "list.call", "nargs": rng.randint(0, 3), "nkw": rng.randint(0, 1)}
     if k == 23:
+        if rng.random() < 0.5:
+            return {**case, "fn": "list.sizeof_sub", "k": rng.randint(0, 5),
+                    "items": [rng.randint(0, 3) for _ in range(rng.randint(0, 9))]}
         return {**case, "fn": "list.sort_sizeof"}
     if k == 24:
         s = lambda: [rng.choice([0, 1, 2, 65, 200, 255]) for _ in range(rng.randint(0, 4))]
