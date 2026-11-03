@@ -401,13 +401,13 @@ theorem getD_app_right (a b : List Nat) (i : Nat) : (a ++ b).getD (a.length + i)
 /-- `compileInfoW` writes the words `PrefixBlock` asks for. -/
 def CompiledPrefixBlock : Prop :=
   ∀ (w : Nat × Nat) (p : List Node) (flags : Nat) (P : List Nat) (skip : Option Nat) (got : Bool)
-    (rest : List Nat) (s : Array Nat) (endp : Nat) (ma : Bool),
+    (rest : List Nat) (s : Array Nat) (endp : Nat) (ma fa : Bool),
     w.1 ≠ 0 → ¬(hasFlag flags FLAG_IGNORECASE = true ∧ hasFlag flags FLAG_LOCALE = true) →
     literalPrefix (p.length + 64) p flags [] none = (P, skip, got) → 2 ≤ P.length →
-    PrefixBlock ⟨(compileInfoW w p flags ++ rest).toArray, s, endp, ma⟩ 7 P.length P
+    PrefixBlock ⟨(compileInfoW w p flags ++ rest).toArray, s, endp, ma, fa⟩ 7 P.length P
 
 theorem compiledPrefixBlock_proven : CompiledPrefixBlock := by
-  intro w p flags P skip got rest s endp ma h0 hloc hlit h2
+  intro w p flags P skip got rest s endp ma fa h0 hloc hlit h2
   obtain ⟨lo, hi⟩ := w
   have hl : (hasFlag flags FLAG_IGNORECASE && hasFlag flags FLAG_LOCALE) = false := by
     cases h1 : hasFlag flags FLAG_IGNORECASE <;> cases h3 : hasFlag flags FLAG_LOCALE <;> simp_all
