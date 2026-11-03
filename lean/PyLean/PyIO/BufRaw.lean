@@ -136,7 +136,8 @@ structure Raw where
   rs : List RStep
   ws : List RStep
   ss : List SStep
-  /-- The MRO of the exception the last `seek` or `tell` raised. -/
+  /-- The MRO of the class of the exception the last `seek` or `tell` raised (its own:
+  scripted, or the harness raw's `ValueError`/`OSError`). -/
   excMro : List String
   cs : List CStep
   /-- Answers of `readable()`, `writable()`, `seekable()`, in call order. -/
@@ -184,6 +185,7 @@ inductive IRes where
 
 def rawClosedErr : PyExc := .valueError "raw closed"
 def valueErrorMro : List String := ["ValueError", "Exception", "BaseException", "object"]
+def osErrorMro : List String := ["OSError", "Exception", "BaseException", "object"]
 def closedFileErr : PyExc := .valueError "I/O operation on closed file."
 /-- `'x' < 0` in Python. -/
 def strLtErr (op : String) : PyExc := .typeError s!"'{op}' not supported between instances of 'str' and 'int'"
@@ -191,6 +193,21 @@ def strLtErr (op : String) : PyExc := .typeError s!"'{op}' not supported between
 def strIndexErr : PyExc := .typeError "'str' object cannot be interpreted as an integer"
 
 namespace Raw
+
+/-- How far a re-entered operation can grow the raw's contents (a bound): `truncate(p)`
+pads to `p`, `write(b)` adds `len(b)` at a position a `seek` may have moved (capped
+where the harness raw refuses, `2 ** 24`). -/
+def _root_.PyLean.PyIO.BfOp.growth : BfOp → Nat
+  | .truncate p => (p.getD 0).toNat
+  | .write b => b.length
+  | .seek p _ => min p.natAbs (2 ^ 24)
+  | _ => 0
+
+/-- A bound on the bytes the raw can come to hold beyond `data`, for loop fuel: its
+position (a `truncate()` pads to it), the contents again per hook (a relative seek),
+and every hook's own growth. -/
+def growth (r : Raw) : Nat :=
+  r.pos + r.hooks.length * r.data.length + (r.hooks.map (·.2.growth)).sum
 
 /-- The start of a callback: log `c`, count it, and find the hook it fires. -/
 def enter (r : Raw) (c : RCall) : Raw × Option BfOp :=
@@ -236,28 +253,31 @@ def popS (r : Raw) : Raw × SStep :=
 
 /-- `seek(p, w)`. -/
 def seek (r : Raw) (p w : Int) : Raw × Py IRes :=
-  if r.closed then (r, .error rawClosedErr) else
+  -- every exception carries the MRO of its own class in `excMro`
+  if r.closed then ({ r with excMro := valueErrorMro }, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
   | .raise c m mro => ({ r with excMro := mro }, .error (.named c m))
   | .bad v => (r, .ok (.int v))
   | .wrong => (r, .ok .wrong)
   | .ok =>
-    if !r.canSeek then (r, .error (osError "unseekable")) else
+    if !r.canSeek then ({ r with excMro := osErrorMro }, .error (osError "unseekable")) else
     let n : Int :=
       if w = 0 then p else if w = 1 then r.pos + p else if w = 2 then r.data.length + p else -1
-    if n < 0 then (r, .error (.valueError "bad seek")) else
+    if n < 0 then ({ r with excMro := valueErrorMro }, .error (.valueError "bad seek")) else
     ({ r with pos := n.toNat }, .ok (.int n))
 
 /-- `tell()`. -/
 def tell (r : Raw) : Raw × Py IRes :=
-  if r.closed then (r, .error rawClosedErr) else
+  if r.closed then ({ r with excMro := valueErrorMro }, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
   | .raise c m mro => ({ r with excMro := mro }, .error (.named c m))
   | .bad v => (r, .ok (.int v))
   | .wrong => (r, .ok .wrong)
-  | .ok => if !r.canSeek then (r, .error (osError "unseekable")) else (r, .ok (.int r.pos))
+  | .ok =>
+    if !r.canSeek then ({ r with excMro := osErrorMro }, .error (osError "unseekable"))
+    else (r, .ok (.int r.pos))
 
 /-- `truncate(p)` (`None` is the current position). -/
 def truncate (r : Raw) (p : Option Int) : Raw × Py Int :=
@@ -301,6 +321,14 @@ def closedAttr (r : Raw) : Raw × Py Bool :=
   | .raise c m :: t => ({ r with cs := t }, .error (.named c m))
 
 end Raw
+
+/-- The allocator of the difftest's machine, for the buffered models: a request of
+`2 ** 47` bytes or more fails for certain, since an x86-64 Linux process has a 47-bit
+user address space, part of it already mapped (on the pod, 3.15.2 refuses `2 ** 47`
+and grants about `1.02e14`). Requests below it are granted; the generator makes none
+between that point and `2 ** 47`. Statements about the constructors quantify over the
+allocator instead (`BufS.allocLimit`, `runCAlloc`). -/
+def testAllocLimit : Nat := 2 ^ 47
 
 /-- Outcome of the whole test case: the process died, or hung. -/
 def crashErr : PyExc := .named "SIGSEGV" ""

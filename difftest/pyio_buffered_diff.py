@@ -359,6 +359,28 @@ HOOK_OPS = ["read", "read1", "peek", "readinto", "readline", "write", "flush", "
             "truncate", "close", "close", "detach", "detach", "closed", "isatty", "reinit", "reinit"]
 
 
+def gen_stale_mro(rng):
+    """A seek that raises a BlockingIOError subclass, caught, then the raw's own
+    ValueError from a later seek: each exception carries its own class, so the second
+    is not taken for blocking (`BufferedRandom(raw, 4)` over b'abcdefgh' whose readinto
+    answers 4 without storing)."""
+    fn = rng.choice(["buf_c", "buf_py"])
+    c = {"mod": "pyio", "fn": fn, "kind": 2, "size": rng.choice([2, 4, 8]),
+         "data": list(b"abcdefgh"), "flags": [1, 1, 1],
+         "rs": [{"bad": rng.choice([1, 2, 4])}], "ws": [],
+         "ss": [None] * rng.choice([0, 0, 1]) + [sstep(rng) if rng.random() < 0.3 else
+                {"raise": "MyBlockingError", "msg": "x",
+                 "mro": [k.__name__ for k in CLASSES["MyBlockingError"].__mro__]}],
+         "cs": [], "hooks": [], "qs": [], "flushRet": None, "closeFail": None}
+    c["mask"] = fn == "buf_c"
+    ops = [{"op": "seek", "pos": rng.choice([0, 1]), "whence": 0}, {"op": "read", "n": 1},
+           {"op": "write", "b": list(b"zz")}, {"op": "write", "b": list(b"yyyy")}]
+    if rng.random() < 0.5:
+        ops.insert(rng.randrange(1, len(ops)), {"op": rng.choice(["tell", "flush", "seek"]), "pos": -1, "whence": 1})
+    c["ops"] = ops + [{"op": "closed"}]
+    return c
+
+
 def gen_case(rng):
     fn = rng.choice(["buf_c", "buf_py"])
     key = fn.split("_")[1]
@@ -586,6 +608,9 @@ def main():
         c = gen_chunk(rng)
         if c is not None:
             cases.append(c)
+    # 2% more cases from their own generator, so a seed's other cases stay as they were
+    extra = random.Random(f"{args.seed}-{os.environ.get('CHUNK_START', '0')}")
+    cases += [gen_stale_mro(extra) for _ in range(args.cases // 50)]
     mismatches, bad, by_fn = 0, 0, {}
     ub, ub_init, ub_pre_ok, ub_ops = 0, 0, 0, 0
 

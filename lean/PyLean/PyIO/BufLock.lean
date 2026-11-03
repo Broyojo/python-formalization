@@ -297,6 +297,7 @@ theorem keeps_rawTell : Keeps rawTell := by unfold rawTell; keeps
 end BC2
 keeps_use PyLean.PyIO.BC2.keeps_rawTell
 namespace BC2
+set_option maxHeartbeats 1000000 in
 theorem keeps_init (kind : Nat) (size : Int) : Keeps (init kind size) := by unfold init; keeps
 theorem keeps_flushMethod : Keeps flushMethod := by unfold flushMethod; keeps
 end BC2

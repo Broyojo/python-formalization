@@ -64,6 +64,10 @@ structure BufS where
   /-- With `crashed`: undefined behaviour (a `memcpy` of a negative length cast to
   `size_t`): the process may die at once or run on with a corrupted heap. -/
   corrupt : Bool
+  /-- The allocator, an oracle: `PyMem_Malloc(n)` succeeds exactly when `n < allocLimit`.
+  A property of the machine, not of CPython: statements quantify over it, and the
+  difftest runs with `testAllocLimit`. -/
+  allocLimit : Nat
   deriving Repr, DecidableEq, Inhabited
 
 /-- A byte of memory nobody wrote. -/
@@ -343,7 +347,7 @@ standing for the bytes it left alone. -/
 def pad (n : Int) (d : List Nat) (fill : Nat) : List Nat := d ++ List.replicate (n.toNat - d.length) fill
 
 def fuelOf (s : BufS) : Nat :=
-  s.raw.rs.length + s.raw.ws.length + s.raw.hooks.length + s.raw.data.length + 4
+  s.raw.rs.length + s.raw.ws.length + s.raw.hooks.length + s.raw.data.length + s.raw.growth + 4
 
 /-- `_bufferedreader_fill_buffer`, bufferedio.c:1672-1687. -/
 def fillBuffer : BM Int := do
@@ -1007,7 +1011,9 @@ def init (kind : Nat) (size : Int) : BM Unit := do
   -- `_buffered_init`
   if size ≤ 0 then thr (.valueError "buffer size must be strictly positive")
   mod fun s => { s with hasBuf := false, bufGen := s.bufGen + 1 }
-  if size ≥ memLimit then thr memoryError
+  -- `PyMem_Malloc(self->buffer_size)`, :848-851
+  let s ← get
+  if size ≥ s.allocLimit then thr memoryError
   mod fun s => { s with hasBuf := true, buffer := List.replicate size.toNat uninit }
   mod fun s => { s with lockGen := s.lockGen + 1, locked := false }
   mod fun s => { s with mask := if size.toNat &&& (size.toNat - 1) = 0 then size.toNat - 1 else 0 }

@@ -219,10 +219,12 @@ def runSeq {σ : Type} (step : BfOp → SM σ Val) (stop : σ → Bool) :
 
 def reFuel (r : Raw) : Nat := r.hooks.length + 2
 
-/-- `io.Buffered*(raw, size)` then the operations. -/
-def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS :=
+/-- `io.Buffered*(raw, size)` then the operations, on a machine whose allocator grants
+requests below `alloc` (`BufS.allocLimit`). -/
+def runCAlloc (alloc : Nat) (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS :=
   -- `tp_alloc`'s zeros; `readable`/`writable` stand for the type
-  let s0 : BufS := { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0 }
+  let s0 : BufS :=
+    { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0, allocLimit := alloc }
   match BC2.init kind size (stepC (reFuel raw)) s0 with
   | (s, .error e) =>
     if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub true [] else .crashed) else .initErr e
@@ -230,6 +232,11 @@ def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS 
     match runSeq (stepC (reFuel raw + 1)) (·.crashed) s ops with
     | .error (t, rs) => if t.blocked then .hung else if t.corrupt then .ub false rs else .crashed
     | .ok (s, rs) => .done s rs
+
+/-- `io.Buffered*(raw, size)` then the operations, with the difftest's allocator
+(`testAllocLimit`). -/
+def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS :=
+  runCAlloc testAllocLimit kind raw size ops
 
 /-- `_pyio.Buffered*(raw, size)` then the operations. -/
 def runP (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufP :=

@@ -121,7 +121,8 @@ def rawRead (n : Nat) (viaSelf : Bool := true) : PM (Option (List Nat)) := do
   if viaSelf then
     let s ← get
     if s.detached then thr (noneAttr "read")
-  if n ≥ memLimit then thr memoryError
+  -- the allocation of `bytearray(n)`, with the difftest's allocator
+  if n ≥ testAllocLimit then thr memoryError
   let res ← if viaSelf then onRaw "read" (.readinto n) (fun r => r.readinto n)
     else onRawObj (.readinto n) (fun r => r.readinto n)
   match res with
@@ -145,8 +146,11 @@ def rawReadall : Nat → List Nat → PM (Option (List Nat))
 
 def tail (s : BufP) : List Nat := s.readBuf.drop s.readPos
 
+/-- Fuel for a loop: every step reads or writes a byte, or runs a script step or hook;
+`growth` bounds what a re-entered call can add to the raw while the loop runs. -/
 def fuelOf (s : BufP) : Nat :=
-  s.raw.rs.length + s.raw.ws.length + s.raw.hooks.length + s.raw.data.length + s.writeBuf.length + 4
+  s.raw.rs.length + s.raw.ws.length + s.raw.hooks.length + s.raw.data.length + s.raw.growth +
+    s.writeBuf.length + 4
 
 /-- The `while avail < n` loop of `_read_unlocked`, _pyio.py:1119-1125:
 `(chunks, avail, nodata)`, with `nodata = none` for `None`. -/
