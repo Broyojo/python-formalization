@@ -169,12 +169,12 @@ Invariant: what is copied out of the buffer was counted as read. In 2 and 3 the
 raw is attached, open and has no hooks, which is what makes its answer the one the
 script names. -/
 def RawReadChecks : Prop :=
-  (∀ (ptr : Option Bool) (len : Int) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int) (d : List Nat),
-    0 ≤ len → BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
+  (∀ (ptr : Option Bool) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int) (d : List Nat),
+    0 ≤ len → BC2.rawRead ptr gen len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n)) ∧
   (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep), 0 ≤ len →
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.rs = .bad v :: t → InSsize v →
-    (BC2.rawRead none len (fuel + 1) R s).2 =
+    (BC2.rawRead none none len (fuel + 1) R s).2 =
       if v < 0 ∨ v > len then
         .error (osError s!"raw readinto() returned invalid length {v} (should have been between 0 and {len})")
       else .ok (v, [])) ∧
@@ -184,14 +184,14 @@ def RawReadChecks : Prop :=
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] →
     s.raw.rs = .raise c m eno mro :: t → decide ("OSError" ∈ mro) = H.sub c "OSError" →
     (H.sub c "OSError" = true ∧ eno = some 4 →
-      BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t)) ∧
+      BC2.rawRead none none len (fuel + 2) R s = BC2.rawRead none none len (fuel + 1) R (afterReadinto s len t)) ∧
     (¬(H.sub c "OSError" = true ∧ eno = some 4) →
-      (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno)))) ∧
-  (∀ (ptr : Option Bool) (len : Int) (fuel : Nat) (R : CH) (s : BufS), ptr ≠ some true → len < 0 →
-    BC2.rawRead ptr len (fuel + 1) R s = (s, .error (.named "SystemError" "~NULL without an exception")))
+      (BC2.rawRead none none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno)))) ∧
+  (∀ (ptr : Option Bool) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s : BufS), ptr ≠ some true → len < 0 →
+    BC2.rawRead ptr gen len (fuel + 1) R s = (s, .error (.named "SystemError" "~NULL without an exception")))
 
-theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
-    (s s' : BufS) (n : Int) (d : List Nat), BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
+theorem rawRead_count (ptr : Option Bool) (gen : Option Nat) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
+    (s s' : BufS) (n : Int) (d : List Nat), BC2.rawRead ptr gen len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n) := by
   intro fuel
   induction fuel with
@@ -224,7 +224,8 @@ theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fu
         split at h
         · obtain ⟨s2, a, h1, -⟩ := BC2.bind_ok h
           exact absurd h1 (BC2.crash_not_ok _ _ _ _)
-        · split at h
+        · obtain ⟨s3, u, -, h⟩ := BC2.bind_ok h
+          split at h
           · obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
             have := BC2.pure_ok h
             simp only [Prod.mk.injEq] at this
@@ -255,7 +256,7 @@ theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fu
               right; simp; omega
 
 theorem rawReadChecks_proven : RawReadChecks := by
-  refine ⟨fun ptr len fuel R s s' n d hl h => rawRead_count ptr len hl fuel R s s' n d h, ?_, ?_, ?_⟩
+  refine ⟨fun ptr gen len fuel R s s' n d hl h => rawRead_count ptr gen len hl fuel R s s' n d h, ?_, ?_, ?_⟩
   · intro len fuel R s v t hl hd hc hh hr hv
     have hl' : ¬ len < 0 := by omega
     unfold BC2.rawRead
@@ -310,7 +311,7 @@ theorem rawReadChecks_proven : RawReadChecks := by
             simp [h4]
         · left; simpa using h1
       simp only [ht, Bool.false_eq_true, ite_false, BC2.thr]
-  · intro ptr len fuel R s hp hl
+  · intro ptr gen len fuel R s hp hl
     unfold BC2.rawRead
     dsimp only
     rw [if_neg hp, if_pos hl]
@@ -332,18 +333,18 @@ stream's `write`:
 Invariant: `write_pos` only advances over bytes the raw stream accepted. In 2 the
 raw is attached, open and has no hooks. -/
 def RawWriteChecks : Prop :=
-  (∀ (ptr : Option Bool) (b : List Nat) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
-    BC2.rawWrite ptr b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length)) ∧
+  (∀ (ptr : Option Bool) (gen : Option Nat) (b : List Nat) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
+    BC2.rawWrite ptr gen b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length)) ∧
   (∀ (b : List Nat) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep),
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.ws = .bad v :: t →
     let n : Int := if InSsize v then v else -1
-    (BC2.rawWrite none b (fuel + 1) R s).2 =
+    (BC2.rawWrite none none b (fuel + 1) R s).2 =
       if n < 0 ∨ n > b.length then
         .error (osError s!"raw write() returned invalid length {n} (should have been between 0 and {b.length})")
       else .ok n)
 
-theorem rawWrite_count (ptr : Option Bool) (b : List Nat) : ∀ (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
-    BC2.rawWrite ptr b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length) := by
+theorem rawWrite_count (ptr : Option Bool) (gen : Option Nat) (b : List Nat) : ∀ (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
+    BC2.rawWrite ptr gen b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length) := by
   intro fuel
   induction fuel with
   | zero => intro R s s' n h; simp [BC2.rawWrite, BC2.thr] at h
@@ -354,7 +355,8 @@ theorem rawWrite_count (ptr : Option Bool) (b : List Nat) : ∀ (fuel : Nat) (R 
     split at h
     · obtain ⟨s1, a, h1, -⟩ := BC2.bind_ok h
       exact absurd h1 (BC2.thr_not_ok _ _ _ _ _)
-    · obtain ⟨s1, res, ho, h⟩ := BC2.bind_ok h
+    · obtain ⟨s0, u, -, h⟩ := BC2.bind_ok h
+      obtain ⟨s1, res, ho, h⟩ := BC2.bind_ok h
       obtain ⟨r, hr⟩ := BC2.onRaw_ok _ _ _ _ _ _ ho
       try dsimp only at h
       split at h
@@ -391,11 +393,12 @@ theorem rawWrite_count (ptr : Option Bool) (b : List Nat) : ∀ (fuel : Nat) (R 
                subst this; right; omega)
 
 theorem rawWriteChecks_proven : RawWriteChecks := by
-  refine ⟨fun ptr b fuel R s s' n h => rawWrite_count ptr b fuel R s s' n h, ?_⟩
+  refine ⟨fun ptr gen b fuel R s s' n h => rawWrite_count ptr gen b fuel R s s' n h, ?_⟩
   intro b fuel R s v t hd hc hh hw
   unfold BC2.rawWrite
   dsimp only
   simp only [reduceCtorEq, ite_false]
+  rw [BC2.bind_of_ok (show BC2.staleRead none R s = (s, .ok ()) from rfl)]
   rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
   have hres : ((s.raw.enter (.write b)).1.write b).2 = .bad v := by
     simp [Raw.write, Raw.enter, hc, hw]

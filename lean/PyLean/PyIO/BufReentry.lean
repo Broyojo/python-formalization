@@ -62,8 +62,10 @@ theorem bufferedCNoCrash_refuted : ¬BufferedCNoCrash := by
 after the `readable()` and `tell()` of `__init__` and the `closed` of `CHECK_CLOSED`),
 calls `__init__(raw, 8)` on the reader: `_buffered_init` frees the buffer and the lock
 the read holds (bufferedio.c:846-860), and the read's `LEAVE_BUFFERED` then unlocks a
-lock nobody holds, which aborts the process. -/
-def reinitRaw : Raw := { plainRaw [120] with hooks := [(4, .reinit 8)] }
+lock nobody holds, which aborts the process. The raw answers 1 without storing
+anything, so nothing is written into the freed buffer first (that write would be
+undefined behaviour of its own). -/
+def reinitRaw : Raw := { plainRaw [120] with rs := [.bad 1], hooks := [(4, .reinit 8)] }
 
 theorem bufferedCNoCrash_refuted_reinit : ¬BufferedCNoCrash := by
   intro h
@@ -132,10 +134,22 @@ theorem reinit_negative_write :
 
 /-- A re-entered `__init__(raw, 2**48)` frees the buffer (:846-847) and fails to
 allocate the new one (:848-851): `self->buffer` is `NULL` when `read(4)` on a reader of
-size 8 copies the filled bytes out of it (:1870-1881), and the process dies. -/
+size 8 copies the filled bytes out of it with `memcpy(out, self->buffer + self->pos, 4)`
+(:1877) at `pos` 0, an address no unprivileged Linux process can map, and the process
+dies (measured: SIGSEGV). The raw answers 8 without storing anything, so nothing is
+written into the freed buffer before that. -/
 theorem reinit_nomem_read_crash :
-    (runC 0 { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit (2 ^ 48))] } 8
+    (runC 0 { plainRaw (List.replicate 20 120) with rs := [.bad 8], hooks := [(4, .reinit (2 ^ 48))] } 8
       [.read (some 4)]).isCrashed = true := by
+  decide +kernel
+
+/-- The same `NULL` buffer read by `peek()` after its fill: the copy is
+`PyBytes_FromStringAndSize(self->buffer, r)` (:1917), and a `NULL` pointer asks for `r`
+uninitialized bytes (Objects/bytesobject.c:132-145), so nothing faults and the caller
+gets a byte nobody wrote. -/
+theorem reinit_nomem_peek_uninit :
+    (runC 0 { plainRaw [] with rs := [.bad 1], hooks := [(4, .reinit (2 ^ 48))] } 16
+      [.peek 0]).results = [.ok (.bytes [uninit])] := by
   decide +kernel
 
 /-! ## Uninitialized memory -/
