@@ -1,0 +1,78 @@
+id: corelibs-warnings-option-escape
+title: "warnings: some invalid -W / PYTHONWARNINGS options make 'import warnings' fail instead of being ignored"
+priority: P3
+kind: missing-error-check
+module: corelibs
+files: [Lib/_py_warnings.py, Lib/warnings.py]
+functions: ["_processoptions", "_setoption", "_getcategory"]
+summary: |
+  `_processoptions` (run while `warnings` is imported, Lib/warnings.py:94) catches only
+  `_OptionError` and prints "Invalid -W option ignored: ...". Three kinds of invalid option raise
+  something else from `_setoption`, so the exception escapes, the import of `warnings` fails
+  ("'import warnings' failed; traceback: ..." at startup) and every later `import warnings` raises
+  the same error, so the program does not run:
+  1. a category field naming a builtin or module attribute that is not a class:
+     `-W ignore::print`, `-W ignore::os.path`: `issubclass(cat, Warning)` (:436) raises
+     `TypeError: issubclass() arg 1 must be a class`;
+  2. a category field whose module part is empty: `-W ignore::.Foo`: `__import__('')` (:429)
+     raises `ValueError: Empty module name`, and only `ImportError` is caught (:430);
+  3. a raw regular expression whose repetition count overflows: `-W 'ignore:/a{4294967296}/'`:
+     `re.compile` raises `OverflowError`, and only `re.PatternError` is caught (:392-404).
+  bpo-39056 (gh-83237) fixed case 1 for names that are not attributes at all (`-Wignore::0`) by
+  catching `AttributeError`; a name that is an attribute but not a class still escapes.
+likelihood: |
+  Low to moderate: a typo in PYTHONWARNINGS (e.g. naming a function instead of a category, or a
+  leading dot) is plausible, and the result is a program that does not start rather than a
+  one-line warning.
+maybe_intended: |
+  No: the module's own handling prints "Invalid -W option ignored" for every other invalid option,
+  and bpo-39056 fixed exactly this symptom for `-Wignore::0`.
+reproducer: |
+  import subprocess, sys
+  hits = []
+  for opt in ['ignore::print', 'ignore::.Foo', 'ignore:/a{4294967296}/']:
+      r = subprocess.run([sys.executable, '-W', opt, '-c', 'import warnings; print("ran")'],
+                         capture_output=True, text=True)
+      last = (r.stderr.strip().splitlines() or [''])[-1]
+      print(opt, '->', r.returncode, repr(r.stdout), last)
+      if r.returncode != 0 and 'ran' not in r.stdout and 'Invalid -W option ignored' not in r.stderr:
+          hits.append(opt)
+  if len(hits) == 3:
+      print('REPRODUCED corelibs-warnings-option-escape')
+expected: |
+  "Invalid -W option ignored: invalid warning category: 'print'" (and likewise "invalid module
+  name: ''" and "invalid regular expression for message: ..."), and the program runs.
+observed: |
+  python3 3.15.2: all three exit 1; the traceback ends in "TypeError: issubclass() arg 1 must be a
+  class", "ValueError: Empty module name", "OverflowError: the repetition number is too large".
+  REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): same. REPRODUCED.
+promised_by: |
+  Doc/library/warnings.rst (the -W option): invalid options are ignored with a message; the
+  `_processoptions` handler prints "Invalid -W option ignored:"; bpo-39056.
+cause: |
+  Lib/_py_warnings.py:350-355 catches only `_OptionError`; :428-431 catches only `ImportError`
+  around `__import__` (which raises ValueError for an empty name); :436 calls `issubclass` on an
+  attribute that need not be a class; :392 catches only `re.PatternError` around `re.compile`,
+  which raises OverflowError for a repetition count of 2**32 or more.
+possible_fix: |
+  In `_getcategory`, check `isinstance(cat, type)` before `issubclass` and catch
+  `(ImportError, ValueError)` around `__import__`; in `_setoption`, catch
+  `(re.PatternError, OverflowError)`; or make `_processoptions` report any `Exception` from one
+  option as an ignored option.
+duplicates:
+  issues: []
+  queries: ["warnoptions invalid", "_getcategory", "_processoptions", "PYTHONWARNINGS traceback",
+            "PYTHONWARNINGS invalid", "warnings issubclass arg 1 must be a class",
+            "import warnings failed", "warnoptions crash", "PYTHONWARNINGS crash",
+            "PYTHONWARNINGS ValueError", "warnings Empty module name",
+            "warnings repetition number too large"]
+  note: |
+    Related, fixed: gh-83237 (bpo-39056, "Issues with handling the -W option"), which made
+    `-Wignore::0` and similar print "Invalid -W option ignored" by catching AttributeError; this
+    is the case it left (an attribute that is not a class), plus two others. gh-66733 (open, -W
+    cannot name non-standard categories) is a different request. Bugforge README: no warnings
+    entry. Queries run as separate unquoted terms.
+lean:
+  property: PyLean.CoreLibs.Warn.ProcessOptionsNoEscape
+  theorem: PyLean.CoreLibs.Warn.processOptionsNoEscape_refuted

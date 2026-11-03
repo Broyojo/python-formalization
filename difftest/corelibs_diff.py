@@ -9665,7 +9665,7 @@ warn_ACTS = ["error", "ignore", "always", "all", "default", "module", "once"]
 warn_TEXTS = ["a", "ab", "b", "A", "xb"]
 
 
-def warn_gen(rng):
+def warn_gen_we(rng):
     def pat(mod):
         return rng.choice([None, None, "a", "ab", ".*b", "x"] + (["m"] if mod else []) +
                           (["RAISE"] if rng.random() < .1 else []) +
@@ -9787,7 +9787,7 @@ def warn_enc(d, cur):
     return sorted(out, key=lambda e: warn_json.dumps(e, separators=(',', ':')))
 
 
-def warn_run(case):
+def warn_run_we(case):
     twin = case["fn"].split(".")[1]
     mod = warn_c if twin == "c" else warn_py
     sys.modules['warnings'] = warn_c
@@ -9857,10 +9857,580 @@ def warn_warmup():
                [["always", None, 4, None, 0, "tuple"]]):
         for module in (["s", "m"], ["omit"]):
             for _ in range(3):
-                warn_run(dict(base, filters=fs, module=module))
+                warn_run_we(dict(base, filters=fs, module=module))
 
 
 warn_warmup()
+
+# --- filters-list API, the lock, -W options (Warn/Filters.lean, Warn/Option.lean) ---
+import io as warn_io  # noqa: E402
+import subprocess as warn_subprocess  # noqa: E402
+import os as warn_os  # noqa: E402
+
+
+class warn_Other:
+    """A filters-list element that is not a filter item; its `__eq__` gives `r`."""
+
+    def __init__(self, i, r):
+        self.i, self.r = i, r
+
+    def __eq__(self, o):
+        if self.r == "raise":
+            raise KeyError("eq")
+        return self.r == "t"
+
+    __hash__ = object.__hash__
+
+
+# object ids: categories 0-5 as above, then more classes, a non-class object and a function
+warn_OBJS = warn_CATS + [PendingDeprecationWarning, ImportWarning, ResourceWarning, RuntimeWarning,
+                         int, ValueError, 5, print, SyntaxWarning, OSError, warn_py._OptionError,
+                         warn_py.WarningMessage]
+
+
+def warn_oid(o):
+    for i, x in enumerate(warn_OBJS):
+        if x is o:
+            return i
+    raise AssertionError(o)
+
+
+def warn_rx_enc(p):
+    return None if p is None else [p.pattern, bool(p.flags & warn_re.I)]
+
+
+def warn_elem_enc(e):
+    if isinstance(e, warn_Other):
+        return ["o", e.i]
+    a, m, c, d, ln = e
+    return ["i", a, warn_rx_enc(m), warn_oid(c), warn_rx_enc(d), int(ln)]
+
+
+def warn_cont_enc(mod):
+    try:
+        f = mod.filters
+    except AttributeError:
+        return ["deleted"]
+    return ["list" if isinstance(f, list) else "tuple", [warn_elem_enc(e) for e in f]]
+
+
+def warn_elem_mk(e):
+    if e[0] == "o":
+        return warn_Other(e[1], e[2])
+    rx = (lambda r: None if r is None else warn_re.compile(r[0], warn_re.I if r[1] else 0))
+    return (e[1], rx(e[2]), warn_OBJS[e[3]], rx(e[4]), e[5])
+
+
+def warn_cver():
+    """The C filters version: what already_warned stores in a stale registry."""
+    probe = {}
+    old = warn_c._showwarnmsg
+    warn_c._showwarnmsg = lambda m: None
+    try:
+        warn_c.warn_explicit("probe", UserWarning, "p", 1, module="probe", registry=probe)
+    except Exception:
+        pass
+    finally:
+        warn_c._showwarnmsg = old
+    return probe["version"]
+
+
+def warn_ver(mod):
+    return warn_cver() if mod is warn_c else mod._filters_version
+
+
+warn_STRS = ["", "a", "x.*", "(", "a{4294967296}", "[", "__main__", "mod"]
+
+
+def warn_gen_elem(rng):
+    if rng.random() < .15:
+        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise"])]
+    rx = (lambda ci: None if rng.random() < .6 else [rng.choice(["a", "x.*", "__main__"]), ci])
+    return ["i", rng.choice(warn_ACTS), rx(True), rng.choice([0, 1, 3, 12]), rx(False), rng.choice([0, 0, 1, 2])]
+
+
+def warn_gen_act(rng):
+    k = rng.random()
+    if k < .8:
+        return ["s", rng.choice(warn_ACTS)]
+    if k < .9:
+        return ["s", rng.choice(["bogus", "", "Error", "it's", "a\xa0b"])]
+    if k < .95:
+        return ["o", rng.choice(["5", "None"])]
+    return ["u"]
+
+
+def warn_gen_line(rng):
+    k = rng.random()
+    if k < .85:
+        return ["i", rng.choice([0, 0, 1, 2, -1, 2**70])]
+    if k < .93:
+        return ["b", rng.random() < .5]
+    return ["o"]
+
+
+def warn_gen_str(rng):
+    return ["o"] if rng.random() < .05 else ["s", rng.choice(warn_STRS)]
+
+
+def warn_gen_filt(rng):
+    twin = rng.choice(["filt_c", "filt_py"])
+    k = rng.random()
+    if k < .8:
+        init = ["list", [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2, 3]))]]
+    elif k < .9:
+        init = ["tuple", [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2]))]]
+    else:
+        init = ["deleted"]
+    ops = []
+    for _ in range(rng.choice([1, 2, 3, 4])):
+        r = rng.random()
+        cat = rng.choice([0, 1, 2, 3, 3, 10, 12, 13])
+        if r < .45:
+            ops.append(["fw", warn_gen_act(rng), warn_gen_str(rng), cat, warn_gen_str(rng), warn_gen_line(rng),
+                        rng.random() < .3])
+        elif r < .75:
+            ops.append(["sf", warn_gen_act(rng), cat, warn_gen_line(rng), rng.random() < .3])
+        elif r < .82:
+            ops.append(["reset"])
+        elif r < .87:
+            ops.append(["mut"])
+        else:
+            ops.append([rng.choice(["acq", "rel", "mlh"])])
+    return {"fn": "warn." + twin, "init": init, "ops": ops}
+
+
+def warn_res(thunk):
+    try:
+        thunk()
+        return ["ok"]
+    except Exception as e:
+        return ["exc", type(e).__name__, str(e)]
+
+
+def warn_act_mk(a):
+    return a[1] if a[0] == "s" else (5 if a[1] == "5" else None) if a[0] == "o" else []
+
+
+def warn_line_mk(ln):
+    return ln[1] if ln[0] in ("i", "b") else "5"
+
+
+def warn_str_mk(s):
+    return s[1] if s[0] == "s" else 5
+
+
+def warn_set_cont(mod, init):
+    if init[0] == "deleted":
+        if hasattr(mod, "filters"):
+            del mod.filters
+    else:
+        xs = [warn_elem_mk(e) for e in init[1]]
+        mod.filters = xs if init[0] == "list" else tuple(xs)
+
+
+def warn_run_filt(case):
+    mod = warn_c if case["fn"] == "warn.filt_c" else warn_py
+    sys.modules['warnings'] = warn_c
+    warn_set_cont(mod, case["init"])
+    v0 = warn_ver(mod)
+    depth = 0
+    outs = []
+    for op in case["ops"]:
+        k = op[0]
+        if k == "fw":
+            f = (lambda op=op: mod.filterwarnings(warn_act_mk(op[1]), warn_str_mk(op[2]), warn_OBJS[op[3]],
+                                                  warn_str_mk(op[4]), warn_line_mk(op[5]), op[6]))
+        elif k == "sf":
+            f = (lambda op=op: mod.simplefilter(warn_act_mk(op[1]), warn_OBJS[op[2]], warn_line_mk(op[3]), op[4]))
+        elif k == "reset":
+            f = mod.resetwarnings
+        elif k == "mut":
+            f = mod._filters_mutated
+        elif k == "acq":
+            f = (mod._acquire_lock if mod is warn_c else (lambda: None))
+        elif k == "rel":
+            f = (mod._release_lock if mod is warn_c else (lambda: None))
+        else:
+            f = mod._filters_mutated_lock_held
+        r = warn_res(f)
+        if mod is warn_c and r == ["ok"]:
+            depth += {"acq": 1, "rel": -1}.get(k, 0)
+        outs.append(r)
+    cont = warn_cont_enc(mod)
+    dv = warn_ver(mod) - v0
+    for _ in range(depth):
+        warn_c._release_lock()
+    mod.filters = []
+    return {"ok": [outs, cont, dv]}
+
+
+# -W options: run on the warnings module itself (the startup configuration), filters starting empty
+warn_OPT_ACTS = ["", "d", "default", "a", "al", "all", "alw", "i", "ignore", "m", "o", "e", "error", "x",
+                 "Ignore", "always ", "defaults", " once"]
+warn_OPT_MSGS = ["", "abc", "a.b", "/a.*b/", "/(/", "(", "/", "//", " x ", "/a{4294967296}/", "a{4294967296}",
+                 "/[/", "a\xa0b", " a", "it's"]
+warn_OPT_CATS = ["", "Warning", "UserWarning", "DeprecationWarning", "RuntimeWarning", "int", "ValueError",
+                 "print", "None", "Foo", "0", "builtins.UserWarning", "builtins.print", "os.path", "os.sep",
+                 "os.error", "os.path.sep", "warnings.filters", "warnings._OptionError", "nosuch.X", ".X",
+                 "x..Y", "os.", "warnings.Foo", " UserWarning ", "builtins.", "..X"]
+warn_OPT_MODS = ["", "mod", "a.b", "/x.*/", "/(/", "/a{4294967296}/", "__main__", "/"]
+warn_OPT_LINES = ["", "0", "5", "-1", "-0", "5_0", "٥", "x", "1.5", " 7 ", "+3", "_5",
+                  "99999999999999999999", "0x10", "１２", "5__0", "5_"]
+
+
+def warn_gen_opt(rng):
+    args = []
+    for _ in range(rng.choice([1, 1, 2, 3])):
+        fields = [rng.choice(warn_OPT_ACTS), rng.choice(warn_OPT_MSGS), rng.choice(warn_OPT_CATS),
+                  rng.choice(warn_OPT_MODS), rng.choice(warn_OPT_LINES)]
+        n = rng.choice([1, 2, 3, 3, 4, 5, 5, 5, 6])
+        if n == 6:
+            fields.append("x")
+        args.append(":".join(fields[:n]))
+    return {"fn": "warn.opt", "args": args}
+
+
+def warn_run_opt(case):
+    sys.modules['warnings'] = warn_c
+    warn_c.filters = []
+    err, old = warn_io.StringIO(), sys.stderr
+    sys.stderr = err
+    try:
+        out = warn_res(lambda: warn_c._processoptions(case["args"]))
+    finally:
+        sys.stderr = old
+    lines = err.getvalue().splitlines(keepends=True)
+    cont = warn_cont_enc(warn_c)
+    warn_c.filters = []
+    return {"ok": [lines, out, cont]}
+
+
+# the C initial filters list and the Python `_setup_defaults` result, each in a fresh interpreter
+warn_DEFAULTS = None
+
+
+def warn_run_defaults(case):
+    global warn_DEFAULTS
+    if warn_DEFAULTS is None:
+        src = ("import sys, json\n"
+               "sys.modules['_warnings'] = None if sys.argv[1] == 'py' else sys.modules.get('_warnings')\n"
+               "import warnings, re\n"
+               "ids = {DeprecationWarning: 3, PendingDeprecationWarning: 6, ImportWarning: 7, ResourceWarning: 8}\n"
+               "def m(p):\n"
+               "    return None if p is None else ['plain', p] if isinstance(p, str) else [p.pattern, bool(p.flags & re.I)]\n"
+               "print(json.dumps([[a, m(x), ids[c], m(d), l] for a, x, c, d, l in warnings.filters]))\n")
+        warn_DEFAULTS = {}
+        for t in ("c", "py"):
+            r = warn_subprocess.run([sys.executable, "-I", "-c", src, t], capture_output=True, text=True,
+                                    env={k: v for k, v in warn_os.environ.items() if k != "PYTHONWARNINGS"})
+            warn_DEFAULTS[t] = warn_json.loads(r.stdout)
+    return {"ok": warn_DEFAULTS[case["twin"]]}
+
+
+def warn_gen_defaults(rng):
+    return {"fn": "warn.defaults", "twin": rng.choice(["c", "py"])}
+
+
+def warn_gen(rng):
+    k = rng.random()
+    if k < .3:
+        return warn_gen_we(rng)
+    if k < .5:
+        return warn_gen_filt(rng)
+    if k < .65:
+        return warn_gen_opt(rng)
+    if k < .8:
+        return warn_gen_call(rng)
+    if k < .995:
+        return warn_gen_ctx(rng)
+    return warn_gen_defaults(rng)
+
+
+def warn_run(case):
+    fn = case["fn"]
+    if fn in ("warn.c", "warn.py"):
+        return warn_run_we(case)
+    if fn in ("warn.filt_c", "warn.filt_py"):
+        return warn_run_filt(case)
+    if fn == "warn.opt":
+        return warn_run_opt(case)
+    if fn in ("warn.call_c", "warn.call_py"):
+        return warn_run_call(case)
+    if fn == "warn.ctx":
+        return warn_run_ctx(case)
+    return warn_run_defaults(case)
+
+
+# --- warnings.warn: the stack walk and the context (Warn/WarnCall.lean) ---
+import _thread as warn_thread  # noqa: E402
+import functools as warn_functools  # noqa: E402
+import collections as warn_collections  # noqa: E402
+
+warn_FNAMES = ["a/m.py", "lib/b.py", "importlib/_bootstrap.py", "<frozen importlib._bootstrap_external>",
+               "importlib/util.py", "x_bootstrap.py", "zz.py"]
+warn_PFX = [["s", "a/"], ["s", "lib"], ["s", "importlib"], ["s", "<"], ["s", ""], ["s", "zz"],
+            ["t", ["a/", "zz"]], ["o"]]
+warn_SL = [-2**40, -1, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 5, 2**31, 2**64]
+
+
+def warn_gen_call(rng):
+    ng = rng.choice([1, 2, 3])
+    gl = [[rng.choice(["m", "m", "n", "none", "obj", "missing"]),
+           rng.choice(["missing", "missing", "empty", "stale", "none", "obj"])] for _ in range(ng)]
+    frames = [[rng.choice(warn_FNAMES), rng.randrange(ng), rng.randrange(3)]
+              for _ in range(rng.choice([0, 1, 2, 3, 3, 4, 5]))]
+    k = rng.random()
+    skip = (["o"] if k < .03 else ["t", []] if k < .6 else
+            ["t", [rng.choice(warn_PFX[:-1] + ([warn_PFX[-1]] if rng.random() < .2 else []))
+                   for _ in range(rng.choice([1, 1, 2]))]])
+    cat = rng.choice([["none"], ["none"], ["c", 1], ["c", 3], ["c", 5], ["c", 10], ["c", 18], ["obj", "str"],
+                      ["obj", "od"]])
+    msg = rng.choice([["s", "m"], ["s", "m"], ["w", 1, "wm"], ["w", 2, "w1"]])
+    return {"fn": "warn." + rng.choice(["call_c", "call_py"]), "globals": gl, "frames": frames,
+            "sl": rng.choice(warn_SL), "skip": skip, "cat": cat, "msg": msg}
+
+
+warn_CALL_CATS = {1: UserWarning, 3: DeprecationWarning, 5: warn_BadInit, 10: int,
+                  18: warn_collections.OrderedDict}
+warn_SENT = object()
+
+
+def warn_mk_globals(spec, cur):
+    name, reg = spec
+    g = {}
+    if name != "missing":
+        g["__name__"] = {"m": "m", "n": "n", "none": None, "obj": 5}[name]
+    if reg != "missing":
+        g["__warningregistry__"] = {"empty": {}, "stale": {"version": cur - 1}, "none": None, "obj": 5}[reg]
+    return g
+
+
+def warn_enc_reg(g, cur):
+    r = g.get("__warningregistry__", warn_SENT)
+    if r is warn_SENT:
+        return ["missing"]
+    if r is None:
+        return ["none"]
+    if not isinstance(r, dict):
+        return ["obj"]
+    return ["dict", warn_enc(r, cur)]
+
+
+# The bottom frame of the thread: a function of its own file and globals, so the generated frames
+# and this one are the whole stack (the model's frame "<top>", line 3, globals k+2).
+warn_TOPG = {"__name__": "top"}
+exec(compile("def top(nxt, box, done):\n    try:\n        nxt()\n        box.append(['ok'])\n"
+             "    except Exception as e:\n        box.append(['exc', type(e).__name__, str(e)])\n"
+             "    finally:\n        done.release()\n", "<top>", "exec"), warn_TOPG)
+
+
+def warn_run_call(case):
+    isc = case["fn"] == "warn.call_c"
+    mod = warn_c if isc else warn_py
+    sys.modules['warnings'] = warn_c
+    mod.filters[:] = []
+    mod.defaultaction = "default"
+    cur = warn_cver() if isc else mod._filters_version
+    gls = [warn_mk_globals(s, cur) for s in case["globals"]]
+    extra = [sys.__dict__, warn_py.__dict__, warn_TOPG]
+    for g in extra:
+        g.pop("__warningregistry__", None)
+    shown = []
+    mod._showwarnmsg = lambda m: shown.append(m)
+    msg = case["msg"]
+    message = msg[1] if msg[0] == "s" else (UserWarning if msg[1] == 1 else warn_W1)(msg[2])
+    c = case["cat"]
+    category = (None if c[0] == "none" else warn_CALL_CATS[c[1]] if c[0] == "c" else
+                "abc" if c[1] == "str" else warn_collections.OrderedDict())
+    sk = case["skip"]
+    skip = ['a'] if sk[0] == "o" else tuple(
+        p[1] if p[0] == "s" else tuple(p[1]) if p[0] == "t" else 5 for p in sk[1])
+    nxt = warn_functools.partial(mod.warn, message, category, case["sl"], skip_file_prefixes=skip)
+    for fname, gi, blank in case["frames"]:
+        ns = gls[gi]
+        before = dict(ns)
+        exec(compile("\n" * blank + "def _f(nxt):\n    return nxt()\n", fname, "exec"), ns)
+        f = ns.pop("_f")
+        for k in list(ns):
+            if k not in before and k != "__builtins__":
+                del ns[k]
+        nxt = warn_functools.partial(f, nxt)
+    done = warn_thread.allocate_lock()
+    done.acquire()
+    box = []
+
+    warn_TOPG.pop("__warningregistry__", None)
+    warn_thread.start_new_thread(warn_TOPG["top"], (nxt, box, done))
+    done.acquire()
+    out = box[0]
+    if out[0] == "ok":
+        out = ["ok", bool(shown)]
+    else:
+        out = [out[0], out[1], warn_norm(out[2])]
+    sh = None
+    if shown:
+        m = shown[0]
+        fn = "PYW" if m.filename == warn_py.__file__ else m.filename
+        mo = m.module
+        sh = [fn, m.lineno, mo if isinstance(mo, str) or mo is None else ["obj"]]
+    regs = [warn_enc_reg(g, cur) for g in gls + extra]
+    for g in extra:
+        g.pop("__warningregistry__", None)
+    for g in gls:
+        g.pop("__builtins__", None)
+    mod._showwarnmsg = warn_c._showwarnmsg if False else (lambda m: None)
+    return {"ok": [out, sh, regs]}
+
+
+# --- catch_warnings, the contexts, _showwarnmsg (Warn/Context.lean) ---
+import contextvars as warn_contextvars  # noqa: E402
+
+warn_PYG = warn_c.catch_warnings.__init__.__globals__   # the _py_warnings module warn_c uses
+
+
+class warn_ErrFile:
+    def __init__(self, exc):
+        self.exc = exc
+
+    def write(self, s):
+        raise self.exc("write failed")
+
+
+def warn_gen_ctx(rng):
+    ops = []
+    ncw = 0
+    for _ in range(rng.choice([2, 3, 4, 5, 6, 8])):
+        r = rng.random()
+        if r < .2 or ncw == 0:
+            a = None if rng.random() < .6 else warn_gen_act(rng)
+            ops.append(["new", rng.random() < .5, a, rng.choice([0, 1, 3, 12]), warn_gen_line(rng),
+                        rng.random() < .3])
+            ncw += 1
+        elif r < .45:
+            ops.append(["enter", rng.randrange(ncw)])
+        elif r < .65:
+            ops.append(["exit", rng.randrange(ncw)])
+        elif r < .8:
+            ops.append(["show", rng.randrange(100)])
+        elif r < .88:
+            ops.append(["sf", warn_gen_act(rng), rng.choice([0, 1, 3]), ["i", 0], rng.random() < .3])
+        elif r < .95:
+            ops.append(["setshow", rng.choice(["orig", "user", "noncallable", "deleted"])])
+        else:
+            ops.append(["repr", rng.randrange(ncw)])
+    return {"fn": "warn.ctx", "use": rng.random() < .5,
+            "filters": [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2]))],
+            "show": rng.choice(["orig", "orig", "orig", "user", "noncallable", "deleted"]),
+            "impl": rng.choice(["orig", "orig", "orig", "user", "noncallable"]),
+            "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr"]), "ops": ops}
+
+
+def warn_run_ctx(case):
+    return warn_contextvars.copy_context().run(warn_run_ctx1, case)
+
+
+def warn_run_ctx1(case):
+    sys.modules['warnings'] = warn_c
+    mod = warn_c
+    old_use, old_stderr = warn_PYG["_use_context"], sys.stderr
+    orig_show, orig_impl = warn_PYG["showwarning"], warn_PYG["_showwarnmsg_impl"]
+    mod.showwarning, mod._showwarnmsg_impl = orig_show, orig_impl
+    warn_PYG["_use_context"] = case["use"]
+    shown = []
+    hooks = {"user": lambda *a: shown.append(["hook", 1]), "noncallable": 5}
+    init = [warn_elem_mk(e) for e in case["filters"]]
+    mod.filters = init
+    if case["show"] == "deleted":
+        del mod.showwarning
+    elif case["show"] != "orig":
+        mod.showwarning = hooks[case["show"]]
+    if case["impl"] == "user":
+        mod._showwarnmsg_impl = lambda m: shown.append(["hook", 2])
+    elif case["impl"] == "noncallable":
+        mod._showwarnmsg_impl = 5
+    err = warn_io.StringIO()
+    sys.stderr = {"ok": err, "none": None, "oserr": warn_ErrFile(OSError),
+                  "keyerr": warn_ErrFile(KeyError)}[case["stderr"]]
+    v0 = warn_cver()
+    cws, logs, outs = [], [], []
+
+    def logid(lst):
+        for i, x in enumerate(logs):
+            if x is lst:
+                return i
+        logs.append(lst)
+        return len(logs) - 1
+    try:
+        for op in case["ops"]:
+            k = op[0]
+            try:
+                if k == "new":
+                    kw = {"record": op[1]}
+                    if op[2] is not None:
+                        kw.update(action=warn_act_mk(op[2]), category=warn_OBJS[op[3]],
+                                  lineno=warn_line_mk(op[4]), append=op[5])
+                    cws.append(mod.catch_warnings(**kw))
+                    outs.append(["ok"])
+                elif k == "enter":
+                    log = cws[op[1]].__enter__()
+                    outs.append(["ok", None if log is None else logid(log)])
+                elif k == "exit":
+                    cws[op[1]].__exit__(None, None, None)
+                    outs.append(["ok"])
+                elif k == "show":
+                    sizes = [len(x) for x in logs]
+                    n0, e0 = len(shown), err.tell()
+                    m = mod.WarningMessage(str(op[1]), UserWarning, "f.py", 1)
+                    warn_PYG["_showwarnmsg"](m)
+                    grew = [i for i, x in enumerate(logs) if len(x) > sizes[i]]
+                    if grew:
+                        res = ["log", grew[0]]
+                    elif len(shown) > n0:
+                        res = shown[-1]
+                    elif err.tell() > e0:
+                        res = ["written"]
+                    else:
+                        cand = None
+                        impl = getattr(mod, "_showwarnmsg_impl", None)
+                        if isinstance(getattr(impl, "__self__", None), list):
+                            cand = impl.__self__
+                        ctx = mod._get_context()
+                        if cand is None and ctx.log is not None:
+                            cand = ctx.log
+                        res = ["log", logid(cand)] if cand is not None and m in cand else ["lost"]
+                    outs.append(["ok", res])
+                elif k == "sf":
+                    mod.simplefilter(warn_act_mk(op[1]), warn_OBJS[op[2]], warn_line_mk(op[3]), op[4])
+                    outs.append(["ok"])
+                elif k == "setshow":
+                    if op[1] == "deleted":
+                        if hasattr(mod, "showwarning"):
+                            del mod.showwarning
+                    else:
+                        mod.showwarning = {"orig": mod._showwarning_orig, **hooks}[op[1]]
+                    outs.append(["ok"])
+                else:
+                    outs.append(["ok", repr(cws[op[1]])])
+            except Exception as e:
+                outs.append(["exc", type(e).__name__, str(e)])
+        sw = getattr(mod, "showwarning", warn_SENT)
+        swk = ("deleted" if sw is warn_SENT else "orig" if sw is mod._showwarning_orig else
+               "user" if sw is hooks["user"] else "noncallable" if sw is hooks["noncallable"] else "other")
+        imp = mod._showwarnmsg_impl
+        impk = ("orig" if imp is orig_impl else "noncallable" if isinstance(imp, int) else
+                ["log", logid(imp.__self__)] if isinstance(getattr(imp, "__self__", None), list) else "user")
+        final = [[warn_elem_enc(e) for e in mod._get_filters()], mod.filters is init, swk, impk,
+                 warn_cver() - v0, [[str(getattr(x, "message", x)) for x in lg] for lg in logs]]
+    finally:
+        sys.stderr = old_stderr
+        warn_PYG["_use_context"] = old_use
+        mod.showwarning, mod._showwarnmsg_impl = orig_show, orig_impl
+        mod.filters = []
+    return {"ok": [outs, final]}
+
+
+# @@WARN_EXT@@
 # ====== END AREA warn ======
 
 

@@ -1,0 +1,73 @@
+id: corelibs-warnings-catch-enter-leak
+title: "warnings.catch_warnings(action=...): a bad action leaves the module patched; with record=True every later warning is swallowed"
+priority: P3
+kind: missing-cleanup
+module: corelibs
+files: [Lib/_py_warnings.py]
+functions: ["catch_warnings.__enter__", "catch_warnings.__exit__", "simplefilter"]
+summary: |
+  `catch_warnings.__enter__` first saves and replaces the module state (a copy of
+  `warnings.filters`, or a new context in context-aware mode; with `record=True`,
+  `_showwarnmsg_impl = log.append` or `context.log = log`, and `showwarning` reset), bumps the
+  filters version, and only then calls `simplefilter(*self._filter)` for the `action`, `category`,
+  `lineno`, `append` arguments (:723-724). When that call raises (an invalid action such as
+  'bogus' or 'Ignore', a negative or non-int lineno), `__enter__` raises after the state was
+  changed, and a `with` statement does not call `__exit__` when `__enter__` raises. So the module
+  stays patched: with `record=True`, every later warning in the program is appended to a list
+  nobody holds and is never shown; without it, `warnings.filters` is left as a copy (filters
+  installed later are dropped from view when an enclosing catch_warnings exits) and, in
+  context-aware mode, the thread's context stays switched.
+likelihood: |
+  Low to moderate: the arguments are typed by hand (`catch_warnings(action="ignore",
+  category=...)` is the documented shorthand), a typo raises at once, but a caller that catches
+  the exception (a test harness, a retry, a framework that wraps user code) then runs with
+  warnings silently disabled.
+maybe_intended: |
+  No: the context manager's job is to restore the state, and the validation could run before any
+  change (or the failure path could undo it).
+reproducer: |
+  import io, sys, warnings
+  try:
+      with warnings.catch_warnings(record=True, action='bogus'):
+          pass
+  except ValueError as e:
+      print('enter raised:', e)
+  err = io.StringIO()
+  old, sys.stderr = sys.stderr, err
+  try:
+      warnings.simplefilter('always')
+      warnings.warn('hello')
+  finally:
+      sys.stderr = old
+  print('shown:', repr(err.getvalue()))
+  if 'hello' not in err.getvalue():
+      print('REPRODUCED corelibs-warnings-catch-enter-leak')
+expected: |
+  `__enter__` raises ValueError and the module is as it was: the later warning is printed.
+observed: |
+  python3 3.15.2: "enter raised: invalid action: 'bogus'", then shown: '' (the warning went to
+  the orphaned record list). REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): same. REPRODUCED.
+promised_by: |
+  Doc/library/warnings.rst (catch_warnings): "A context manager that copies and, upon exit,
+  restores the warnings filter and the showwarning() function"; the action argument is passed to
+  simplefilter "as if it were called immediately on entering the context".
+cause: |
+  Lib/_py_warnings.py:698-725: `self._entered = True` and the state changes (:701-722) come
+  before `self._module.simplefilter(*self._filter)` (:723-724), with no try/except to undo them;
+  `__init__` (:684-687) stores the filter arguments without checking them.
+possible_fix: |
+  Validate the filter arguments in `__init__` (or call simplefilter's checks before changing any
+  state), or wrap the simplefilter call so that a failure runs the body of `__exit__` before
+  re-raising.
+duplicates:
+  issues: []
+  queries: ["catch_warnings action", "catch_warnings __enter__", "catch_warnings enter exception",
+            "catch_warnings record simplefilter error leak", "catch_warnings exception restore"]
+  note: |
+    gh-73858 (catch_warnings makes warnings print every time, the version bump) and gh-151149
+    (context_aware_warnings thread safety) are different. gh-91230 added the action argument.
+    Bugforge README: no warnings entry. Queries run as separate unquoted terms.
+lean:
+  property: PyLean.CoreLibs.Warn.EnterAtomic
+  theorem: PyLean.CoreLibs.Warn.enterAtomic_refuted

@@ -1,0 +1,58 @@
+id: corelibs-warnings-simplefilter-category
+title: "warnings.simplefilter accepts any category, then every warning raises TypeError (duplicate of gh-125893)"
+priority: P4
+kind: missing-validation
+module: corelibs
+status: duplicate
+duplicate_of: python/cpython#125893 (open)
+files: [Lib/_py_warnings.py, Python/_warnings.c]
+functions: ["simplefilter", "_add_filter", "filter_search"]
+summary: |
+  `filterwarnings` checks that `category` is a Warning subclass (:270-271); `simplefilter`, whose
+  docstring says its parameters mean what they mean for filterwarnings, checks nothing
+  (:304-310). `simplefilter('ignore', 5)` installs `('ignore', None, 5, None, 0)`, and from then on
+  every warning that reaches that filter fails in C `PyObject_IsSubclass(category, 5)`
+  (_warnings.c:512): "TypeError: issubclass() arg 2 must be a class, a tuple of classes, or a
+  union". Already reported upstream as gh-125893 (open).
+likelihood: |
+  Low: a wrong category is usually a typo caught at once, but it is reported at the next warning,
+  far from the call.
+maybe_intended: |
+  No; gh-125893 is open.
+reproducer: |
+  import warnings
+  warnings.simplefilter('ignore', 5)
+  try:
+      warnings.warn('x')
+      print('no error')
+  except TypeError as e:
+      print('TypeError:', e)
+      try:
+          warnings.filterwarnings('ignore', category=5)
+      except TypeError as e2:
+          print('filterwarnings refuses it:', e2)
+          print('REPRODUCED corelibs-warnings-simplefilter-category')
+expected: |
+  simplefilter raises TypeError("category must be a Warning subclass"), as filterwarnings does.
+observed: |
+  python3 3.15.2: TypeError: issubclass() arg 2 must be a class, a tuple of classes, or a union;
+  filterwarnings refuses it: category must be a Warning subclass. REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): same. REPRODUCED.
+promised_by: |
+  The simplefilter docstring (:295-302) and Doc/library/warnings.rst: "The meaning of the function
+  parameters is as for filterwarnings()".
+cause: |
+  Lib/_py_warnings.py:294-310: no `isinstance(category, type) and issubclass(category, Warning)`
+  check, unlike :270-271.
+possible_fix: |
+  Add filterwarnings's category check to simplefilter (gh-125893).
+duplicates:
+  issues: ["#125893"]
+  queries: ["simplefilter category", "simplefilter category not Warning subclass",
+            "simplefilter category validation"]
+  note: |
+    Duplicate of gh-125893 (open). gh-61049 ("warnings.simplefilter should validate input",
+    closed) added the action and lineno checks only.
+lean:
+  property: PyLean.CoreLibs.Warn.SimpleIsFilter
+  theorem: PyLean.CoreLibs.Warn.simpleIsFilter_refuted
