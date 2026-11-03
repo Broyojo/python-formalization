@@ -21,7 +21,7 @@ Modules/cmathmodule.c	877	939	cmath_tanh_impl	cmath_tanh_impl(PyObject *module, 
 Modules/cmathmodule.c	956	974	cmath_log_impl	cmath_log_impl(PyObject *module, Py_complex x, PyObject *y_obj) /*[clinic end generated code: output=4effdb7d258e0d94 input=eb25de0757baf4a0]*/	todo		
 Modules/cmathmodule.c	980	989	math_error	math_error(void)	todo		
 Modules/cmathmodule.c	1002	1013	cmath_phase_impl	cmath_phase_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=50725086a7bfd253 input=5cf75228ba94b69d]*/	todo		
-Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	todo		changed-in-3.15:
+Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	todo		
 Modules/cmathmodule.c	1073	1123	cmath_rect_impl	cmath_rect_impl(PyObject *module, double r, double phi) /*[clinic end generated code: output=385a0690925df2d5 input=24c5646d147efd69]*/	todo		
 Modules/cmathmodule.c	1133	1137	cmath_isfinite_impl	cmath_isfinite_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=ac76611e2c774a36 input=e224f5c36d94f5da]*/	todo		
 Modules/cmathmodule.c	1146	1150	cmath_isnan_impl	cmath_isnan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=e7abf6e0b28beab7 input=71799f5d284c9baf]*/	todo		
