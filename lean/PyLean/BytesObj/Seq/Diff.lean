@@ -265,6 +265,34 @@ def jExt (j : Json) : Except String (ExtArg DEl) := do
 
 def fuelOf (o : St) : Nat := o.items.length + 64
 
+/-- The twin's `Ix(v, eff).__index__`: raise `ValueError("idx")` for `bad`, otherwise apply `eff` to
+the list under test as `El` does, then return `v`. -/
+def ixFn (v : Int) (eff : String) : St → Py Int × St := fun o =>
+  if eff = "bad" then (.error (.valueError "idx"), o) else (.ok v, applyEff (some eff) o)
+
+/-- An index argument as a subscript: `{"ix": "int"|"obj"|"str"|"float", "v": n, "eff": e}`. -/
+def jSubItem (j : Json) : Except String (SubItem DEl) := do
+  match ← getStr j "ix" with
+  | "int" => return .int (← (← field j "v").getInt?)
+  | "obj" => return .index "Ix" (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | k => return .other k
+
+/-- An index argument of `l.index`. -/
+def jIdxArg (j : Json) : Except String (IdxArg DEl) := do
+  match ← getStr j "ix" with
+  | "int" => return .int (← (← field j "v").getInt?)
+  | "obj" => return .index "Ix" (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | k => return .notIndex k
+
+def jOptIdxArg (j : Option Json) : Except String (Option (IdxArg DEl)) :=
+  match j with
+  | none | some Json.null => .ok none
+  | some v => some <$> jIdxArg v
+
+def lresJ : LRes DEl → Json × St
+  | (o', none) => (okJ unitJ, o')
+  | (o', some e) => (errJ e, o')
+
 def resJ (o : St) : LRes DEl → Json × St
   | (o', none) => let _ := o; (okJ unitJ, o')
   | (o', some e) => (errJ e, o')
@@ -303,6 +331,20 @@ def stepList (o : St) (op : Array Json) : Except String (Json × St) := do
   | "copy" => return (okJ (stateJ (listSliceLH o.items 0 o.items.length)), o)
   | "reverse" => return (okJ unitJ, listReverse o)
   | "getitem" => return (encPy enEl (listGetItem o.items (← (← argAt op 1).getInt?)), o)
+  | "getitemx" =>
+    let (r, o') := listSubscriptAny o (← jSubItem (← argAt op 1))
+    match r with
+    | .ok (.inl v) => return (okJ (enEl v), o')
+    | .ok (.inr r) => return (okJ (stateJ r), o')
+    | .error e => return (errJ e, o')
+  | "setitemx" =>
+    let v ← jEl (← argAt op 2)
+    return lresJ (listAssSubscriptAny o (← jSubItem (← argAt op 1)) (some (v, .notIterable)))
+  | "delitemx" => return lresJ (listAssSubscriptAny o (← jSubItem (← argAt op 1)) none)
+  | "indexx" =>
+    let (r, o') := listIndexCall effCmp (fuelOf o) o (← jEl (← argAt op 1))
+      (← jOptIdxArg op[2]?) (← jOptIdxArg op[3]?)
+    return (encPy toJson r, o')
   | "getslice" => return (encPy stateJ (listGetSlice o.items (← jSlice (← argAt op 1))), o)
   | "binslice" =>
     let arr ← (← argAt op 1).getArr?
@@ -359,6 +401,23 @@ def runOps (j : Json) : Except String Json := do
 
 def itJ (it : ListIter) : Json := Json.arr #[toJson it.index, toJson it.alive]
 
+/-- `for _ in it: pass`: `next` until it reports the end. -/
+def exhaustIt (forward : Bool) (l : List DEl) : Nat → ListIter → ListIter
+  | 0, it => it
+  | n + 1, it =>
+    match (if forward then listIterNext it l else listRevIterNext it l) with
+    | .ok (some _, it') => exhaustIt forward l n it'
+    | .ok (none, it') => it'
+    | .error _ => it
+
+/-- `it.__reduce__()` with the builtins lookup `g`: `[seq, index or null, callable's __name__]`. -/
+def reduceJ (forward : Bool) (g : String → ListIter × List DEl → Py String × (ListIter × List DEl))
+    (it : ListIter) (l : List DEl) : Json × ListIter × List DEl :=
+  match listIterReduceGen g forward (it, l) with
+  | (.ok (.live c seq i), (it', l')) => (okJ (Json.arr #[enEls seq, toJson i, toJson c]), it', l')
+  | (.ok (.empty c), (it', l')) => (okJ (Json.arr #[enEls [], Json.null, toJson c]), it', l')
+  | (.error e, (it', l')) => (errJ e, it', l')
+
 /-- `[r, list]` after each of `next`, `hint`, `reduce`, `setstate`, `pop`, `add`, `clear`. -/
 def stepIter (forward : Bool) (it : ListIter) (l : List DEl) (op : Array Json) :
     Except String (Json × ListIter × List DEl) := do
@@ -370,9 +429,11 @@ def stepIter (forward : Bool) (it : ListIter) (l : List DEl) (op : Array Json) :
       return (okJ (match v with | some x => enEl x | none => toJson "stop"), it', l)
     | .error e => return (errJ e, it, l)
   | "hint" => return (okJ (toJson (if forward then listIterLen it l else listRevIterLen it l)), it, l)
-  | "reduce" =>
-    let (a, st) := listIterReduce it l
-    return (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]), it, l)
+  | "reduce" => return reduceJ forward (fun name st => (.ok name, st)) it l
+  | "reduce_exhaust" =>
+    return reduceJ forward (fun name st => (.ok name, (exhaustIt forward st.2 (st.2.length + 2) st.1, st.2))) it l
+  | "reduce_add" => return reduceJ forward (fun name st => (.ok name, (st.1, st.2 ++ [.int 0]))) it l
+  | "reduce_missing" => return reduceJ forward (fun name st => (.error (.named "AttributeError" name), st)) it l
   | "setstate" =>
     let s : Option Int := ((← argAt op 1).getInt?).toOption
     let r := if forward then listIterSetstateObj it l s else listRevIterSetstateObj it l s

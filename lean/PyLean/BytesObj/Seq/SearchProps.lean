@@ -51,6 +51,29 @@ theorem listGetItemRef_nat (l : List α) (i : Nat) (hl : (l.length : Int) ≤ ss
     rw [this]
     simp
 
+/-- `list_get_item_ref` as `list.index` and `list.count` reach it, at an index in `Py_ssize_t` range
+on a list of at most `PY_SSIZE_T_MAX` items: the `PyList_GET_ITEM` read after `valid_index` is inside
+the items, so its `cUB` branch is not taken, and the result is plain indexing. -/
+theorem getItemRefC_eq (l : List α) (i : Int) (h0 : 0 ≤ i) (hi : i ≤ ssizeMax)
+    (hl : (l.length : Int) ≤ ssizeMax) : listGetItemRefC l i = .ok l[i.toNat]? := by
+  unfold listGetItemRefC
+  have hv := validIndex_eq i l.length (by unfold ssizeMax at *; omega)
+    (by unfold ssizeMax at *; omega) (by omega) hl
+  rw [hv]
+  by_cases h : i < l.length
+  · have hs : slot l i = some l[i.toNat] := by simp [slot, h0]
+    have hg : l[i.toNat]? = some l[i.toNat] := List.getElem?_eq_getElem (by omega)
+    rw [hs, hg]
+    simp [h0, h]
+  · have : l[i.toNat]? = none := List.getElem?_eq_none (by omega)
+    rw [this]
+    simp [h]
+
+theorem getItemRefC_nat (l : List α) (i : Nat) (hl : (l.length : Int) ≤ ssizeMax)
+    (hi : (i : Int) ≤ ssizeMax) : listGetItemRefC l (i : Int) = .ok l[i]? := by
+  rw [getItemRefC_eq l (i : Int) (by omega) hi hl]
+  simp
+
 theorem drop_cons_of_lt (l : List α) (i : Nat) (h : i < l.length) :
     l.drop i = l[i] :: l.drop (i + 1) := by
   rw [List.drop_eq_getElem_cons h]
@@ -167,8 +190,21 @@ theorem containsLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (el : α) (fuel : Na
         | false => exact ih _ _
       | error e => exact hx
 
-theorem indexLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (v : α) (stop : Int) (fuel : Nat) (i : Int)
-    (o : LObj α) (msg : String) : (indexLoop cmp v stop fuel i o).1 ≠ .error (cUB msg) := by
+/-- Every list a comparison leaves has at most `PY_SSIZE_T_MAX` items, the type invariant of a list. -/
+def LenInv (cmp : Cmp α) : Prop :=
+  ∀ o a b, (o.items.length : Int) ≤ ssizeMax → (((cmp o a b).2).items.length : Int) ≤ ssizeMax
+
+/-- A successful read at `i` was inside the list it read. -/
+theorem getItemRefC_some (l : List α) (i : Int) (x : α) (h0 : 0 ≤ i) (hi : i ≤ ssizeMax)
+    (hl : (l.length : Int) ≤ ssizeMax) (h : listGetItemRefC l i = .ok (some x)) : i < l.length := by
+  rw [getItemRefC_eq l i h0 hi hl] at h
+  have h' : l[i.toNat]? = some x := by simpa using h
+  have := (List.getElem?_eq_some_iff.mp h').1
+  omega
+
+theorem indexLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (hn : LenInv cmp) (v : α) (stop : Int) (fuel : Nat)
+    (i : Int) (h0 : 0 ≤ i) (hi : i ≤ ssizeMax) (o : LObj α) (hl : (o.items.length : Int) ≤ ssizeMax)
+    (msg : String) : (indexLoop cmp v stop fuel i o).1 ≠ .error (cUB msg) := by
   induction fuel generalizing i o with
   | zero =>
     simp only [indexLoop]
@@ -179,24 +215,33 @@ theorem indexLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (v : α) (stop : Int) (
   | succ fuel ih =>
     simp only [indexLoop]
     split
-    · cases hg : listGetItemRef o.items i with
-      | none => simp
-      | some item =>
-        simp only
-        have hx := hc o item v msg
-        rcases hr : cmp o item v with ⟨r, s⟩
-        rw [hr] at hx
-        simp only at hx
+    · cases hg : listGetItemRefC o.items i with
+      | error e =>
+        rw [getItemRefC_eq o.items i h0 hi hl] at hg
+        cases hg
+      | ok r =>
         cases r with
-        | ok b =>
-          cases b with
-          | true => simp
-          | false => exact ih _ _
-        | error e => simpa using hx
+        | none => simp
+        | some item =>
+          have hlt := getItemRefC_some o.items i item h0 hi hl hg
+          simp only
+          have hx := hc o item v msg
+          have hl' := hn o item v hl
+          rcases hr : cmp o item v with ⟨r, s⟩
+          rw [hr] at hx hl'
+          simp only at hx hl'
+          cases r with
+          | ok b =>
+            cases b with
+            | true => simp
+            | false => exact ih _ (by omega) (by omega) _ hl'
+          | error e => simpa using hx
     · simp
 
-theorem countLoop_safe (same : α → α → Bool) (cmp : Cmp α) (hc : NoFault cmp) (v : α) (fuel : Nat)
-    (i n : Int) (o : LObj α) (msg : String) : (countLoop same cmp v fuel i n o).1 ≠ .error (cUB msg) := by
+theorem countLoop_safe (same : α → α → Bool) (cmp : Cmp α) (hc : NoFault cmp) (hn : LenInv cmp) (v : α)
+    (fuel : Nat) (i n : Int) (h0 : 0 ≤ i) (hi : i ≤ ssizeMax) (o : LObj α)
+    (hl : (o.items.length : Int) ≤ ssizeMax) (msg : String) :
+    (countLoop same cmp v fuel i n o).1 ≠ .error (cUB msg) := by
   induction fuel generalizing i n o with
   | zero =>
     simp only [countLoop]
@@ -206,22 +251,29 @@ theorem countLoop_safe (same : α → α → Bool) (cmp : Cmp α) (hc : NoFault 
     cases h
   | succ fuel ih =>
     simp only [countLoop]
-    cases hg : listGetItemRef o.items i with
-    | none => simp
-    | some item =>
-      simp only
-      split
-      · exact ih _ _ _
-      · have hx := hc o item v msg
-        rcases hr : cmp o item v with ⟨r, s⟩
-        rw [hr] at hx
-        simp only at hx
-        cases r with
-        | ok b =>
-          cases b with
-          | true => exact ih _ _ _
-          | false => exact ih _ _ _
-        | error e => simpa using hx
+    cases hg : listGetItemRefC o.items i with
+    | error e =>
+      rw [getItemRefC_eq o.items i h0 hi hl] at hg
+      cases hg
+    | ok r =>
+      cases r with
+      | none => simp
+      | some item =>
+        have hlt := getItemRefC_some o.items i item h0 hi hl hg
+        simp only
+        split
+        · exact ih _ _ (by omega) (by omega) _ hl
+        · have hx := hc o item v msg
+          have hl' := hn o item v hl
+          rcases hr : cmp o item v with ⟨r, s⟩
+          rw [hr] at hx hl'
+          simp only at hx hl'
+          cases r with
+          | ok b =>
+            cases b with
+            | true => exact ih _ _ (by omega) (by omega) _ hl'
+            | false => exact ih _ _ (by omega) (by omega) _ hl'
+          | error e => simpa using hx
 
 theorem resizeTo_err (o : LObj α) (items : List α) (e : PyExc) (h : resizeTo o items = .error e) :
     e = memoryError := by
@@ -334,21 +386,27 @@ theorem cmpLoop_safe (same : α → α → Bool) (cmp : Cmp2 α) (hc : ∀ st a 
 anything Python can: raise, and change the list, however often. No path reads outside the items, in
 the C sense. The list is reread on each pass (`list_get_item_ref`, the size tests of :3424-3445
 and :3479-3495), which is what these functions are written for; `l.remove` then deletes with the old
-index on the current list, and `list_ass_slice` clips it. Hypothesis: `NoFault`. -/
+index on the current list, and `list_ass_slice` clips it. `l.index` and `l.count` read through
+`PyList_GET_ITEM` once `valid_index` has passed against the current size (`listGetItemRefC`), which
+would be `cUB` if the check used a stale size. Hypotheses: `NoFault`; every list, the given one and
+those a comparison leaves, has at most `PY_SSIZE_T_MAX` items (type invariant, `LenInv`); `index`'s
+start is in `[0, PY_SSIZE_T_MAX]`, as `list_index_impl`'s clipping leaves it. -/
 def ListSearchSafe : Prop :=
   ∀ (α : Type) (cmp : Cmp α) (cmp2 : Cmp2 α) (same : α → α → Bool) (o : LObj α) (x : α) (fuel : Nat)
-    (stop : Int) (v w : List α) (msg : String), NoFault cmp →
+    (start stop : Int) (v w : List α) (msg : String), NoFault cmp → LenInv cmp →
+    (o.items.length : Int) ≤ ssizeMax → 0 ≤ start → start ≤ ssizeMax →
     (∀ st a b m, (cmp2 st a b).1 ≠ .error (cUB m)) →
     (listContains cmp fuel o x).1 ≠ .error (cUB msg) ∧
-    (indexLoop cmp x stop fuel 0 o).1 ≠ .error (cUB msg) ∧
+    (indexLoop cmp x stop fuel start o).1 ≠ .error (cUB msg) ∧
     (listCount same cmp fuel o x).1 ≠ .error (cUB msg) ∧
     (listRemove cmp fuel o x).1 ≠ .error (cUB msg) ∧
     (cmpLoop same cmp2 fuel 0 (v, w)).1 ≠ .error (cUB msg)
 
 theorem listSearchSafe_proven : ListSearchSafe := by
-  intro α cmp cmp2 same o x fuel stop v w msg hc hc2
-  exact ⟨containsLoop_safe cmp hc x fuel 0 o msg, indexLoop_safe cmp hc x stop fuel 0 o msg,
-    countLoop_safe same cmp hc x fuel 0 0 o msg, removeLoop_safe cmp hc x fuel 0 (by omega) o msg,
+  intro α cmp cmp2 same o x fuel start stop v w msg hc hn hl hs0 hs1 hc2
+  exact ⟨containsLoop_safe cmp hc x fuel 0 o msg, indexLoop_safe cmp hc hn x stop fuel start hs0 hs1 o hl msg,
+    countLoop_safe same cmp hc hn x fuel 0 0 (by omega) (by decide) o hl msg,
+    removeLoop_safe cmp hc x fuel 0 (by omega) o msg,
     cmpLoop_safe same cmp2 hc2 fuel 0 (by omega) (v, w) msg⟩
 
 /-! ## index -/
@@ -362,7 +420,7 @@ theorem indexLoop_pure (E : ElemOps α ρ) (o : LObj α) (v : α) (stop : Int)
   induction f generalizing i with
   | zero => omega
   | succ f ih =>
-    have hg := listGetItemRef_nat o.items i hl (by omega)
+    have hg := getItemRefC_nat o.items i hl (by omega)
     by_cases hi' : i < o.items.length
     · have hget : o.items[i]? = some o.items[i] := List.getElem?_eq_getElem hi'
       rw [indexLoop, drop_cons_of_lt _ _ hi']
@@ -396,7 +454,7 @@ theorem indexLoop_past (E : ElemOps α ρ) (o : LObj α) (v : α) (stop : Int)
   cases f with
   | zero => omega
   | succ f =>
-    have hg := listGetItemRef_nat o.items i hl hi'
+    have hg := getItemRefC_nat o.items i hl hi'
     have : o.items[i]? = none := List.getElem?_eq_none (by omega)
     rw [indexLoop]
     by_cases hs : (i : Int) < stop
@@ -507,7 +565,7 @@ theorem countLoop_pure (E : ElemOps α ρ) (o : LObj α) (v : α)
   induction f generalizing i count with
   | zero => omega
   | succ f ih =>
-    have hg := listGetItemRef_nat o.items i hl (by omega)
+    have hg := getItemRefC_nat o.items i hl (by omega)
     have hnext : ((i + 1 : Nat) : Int) = (i : Int) + 1 := by omega
     by_cases hi' : i < o.items.length
     · have hget : o.items[i]? = some o.items[i] := List.getElem?_eq_getElem hi'
