@@ -127,6 +127,30 @@ class KEvil(K):
         return False
 
 
+class KRep(K):
+    """`__repr__` does `evil_act` to the target dict, which is the dict being printed."""
+    __slots__ = ("ract",)
+    __hash__ = K.__hash__
+
+    def __init__(self, c, h, u, ract):
+        super().__init__(c, h, u)
+        self.ract = ract
+
+    def __repr__(self):
+        evil_act(TARGET[0], self.ract)
+        return f"K({self.u})"
+
+
+class KSub(dict):
+    """Overrides `__iter__` and `keys()`, so `copy` goes through `keys()` and `o[key]`."""
+
+    def __iter__(self):
+        return iter(list(dict.keys(self))[::-1])
+
+    def keys(self):
+        return list(dict.keys(self))[::-1]
+
+
 class HRaise:
     __slots__ = ("u",)
 
@@ -242,6 +266,8 @@ def build(spec):
         return KRaise(p[0], p[1], u)
     if kind == "Kev":
         return KEvil(p[0], p[1], u, p[2], len(p) > 3 and p[3])
+    if kind == "Krep":
+        return KRep(p[0], p[1], u, p[2])
     if kind == "list":
         return [u]
     if kind == "hraise":
@@ -261,10 +287,11 @@ class Pool:
     def _cls(self, key):
         return self.cls.setdefault(key, len(self.cls))
 
-    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None):
+    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None, ra=0):
         u = len(self.specs)
         ckey = ckey if ckey is not None else ("u", u)
-        spec = {"py": [kind, p], "u": u, "c": self._cls(ckey), "hk": hk, "r": r, "a": a, "fs": fs}
+        spec = {"py": [kind, p], "u": u, "c": self._cls(ckey), "hk": hk, "r": r, "a": a, "fs": fs,
+                "ra": ra}
         o = build(spec)
         try:
             spec["h"] = hash(o)
@@ -276,7 +303,8 @@ class Pool:
             spec["hk"] = 2
         spec["s"] = type(o) is str
         spec["sl"] = isinstance(o, str)
-        spec["rep"] = repr(o)
+        # A KRep's repr acts on a dict, so its text is written here instead.
+        spec["rep"] = f"K({u})" if kind == "Krep" else repr(o)
         spec["t"] = type(o).__name__
         spec["nan"] = kind == "nan"
         self.specs.append(spec)
@@ -407,12 +435,14 @@ def dict_op2(rng, n, specs):
         return ["ior", d, upd_arg(rng, n)]
     if o < 0.50:
         return ["or", d, rng.randrange(3)]
-    if o < 0.65:
+    if o < 0.62:
         return ["copy", rng.randrange(3)]
+    if o < 0.65:
+        return ["copy_ks", rng.randrange(3)]
     if o < 0.75:
         return ["eq", d, rng.randrange(3), rng.random() < 0.3]
     if o < 0.85:
-        src = rng.choice([["d", rng.randrange(3)], ["s", rng.randrange(3)],
+        src = rng.choice([["d", rng.randrange(3)], ["s", rng.randrange(3)], ["fd", rng.randrange(3)],
                           ["l", [k() for _ in range(rng.randint(0, 7))]],
                           ["g", [k() for _ in range(rng.randint(0, 3))]], ["n"]])
         return ["fromkeys", 0, src, k()]
@@ -443,7 +473,7 @@ def fz_op(rng, n, specs):
     if o < 0.60:
         return ["repr", 2]
     if o < 0.66:
-        src = rng.choice([["d", rng.randrange(3)], ["s", rng.randrange(3)],
+        src = rng.choice([["d", rng.randrange(3)], ["s", rng.randrange(3)], ["fd", rng.randrange(2)],
                           ["l", [k() for _ in range(rng.randint(0, 7))]],
                           ["g", [k() for _ in range(rng.randint(0, 3))]], ["n"]])
         return ["f_fromkeys", src, k()]
@@ -490,12 +520,17 @@ def capi_op(rng, n, specs):
         return ["c_gete", t, k()]
     if o < 0.51:
         return ["c_getr", t, k()]
-    if o < 0.56:
+    if o < 0.53:
         return ["c_pop", t, k()]
+    if o < 0.56:
+        strs = [s["u"] for s in specs if s["s"]]
+        return ["c_pops", t, rng.choice(strs) if strs and rng.random() < 0.9 else -1]
     if o < 0.62:
         return [rng.choice(["c_sdef", "c_sdefr"]), t, k(), k()]
+    if o < 0.69:
+        return ["c_merge", t, capi_arg(rng, n), rng.choice([0, 1, 2, -1, 5])]
     if o < 0.72:
-        return ["c_merge", t, capi_arg(rng, n), rng.choice([0, 1, 2])]
+        return ["c_upd", t, capi_arg(rng, n)]
     if o < 0.78:
         items = [pair_item(rng, n) for _ in range(rng.randint(0, 5))]
         return ["c_seq2", t, items, rng.random() < 0.5]
@@ -844,6 +879,44 @@ def gen_merge(rng):
     return pool, ops, target
 
 
+def gen_reent(rng):
+    """`==`, `repr` and `fromkeys` while a callback changes a dict they are reading: a key or value
+    whose `__eq__` clears, pops from or rewrites the target, and a key or value whose `__repr__`
+    does. The target is an operand of every such operation."""
+    pool = Pool()
+    h = rng.choice([0, 1, 8, 16])
+    for i in range(rng.randint(2, 6)):
+        pool.add("K", [i, h if rng.random() < 0.8 else i], ("K", i))
+    fresh = pool.add("K", [50, 1000 + rng.randrange(1000)], ("K", 50))
+    target = rng.choice(["d0", "d1"])
+    t = 0 if target == "d0" else 1
+    # Not the rewrite of evil_act (10 + i): it appends an entry the loop then reaches again, and
+    # `==` or `repr` on such a dict can run for ever in CPython too.
+    act = rng.choice([1, 2])
+    for i in range(rng.randint(1, 3)):
+        pool.add("Kev", [100 + i, h, act], ("Kev", i), a=act)
+    for i in range(rng.randint(0, 2)):
+        ra = rng.choice([1, 2])
+        pool.add("Krep", [200 + i, h, ra], ra=ra)
+    int_pool(pool, rng, 3, 8)
+    n = len(pool.specs)
+    ops = []
+    for _ in range(rng.randint(2, 12)):
+        ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+    for _ in range(rng.randint(1, 8)):
+        r = rng.random()
+        if r < 0.4:
+            i, j = rng.choice([(0, 1), (1, 0), (t, t)])
+            ops.append(["eq", i, j, rng.random() < 0.3])
+        elif r < 0.6:
+            ops.append(["repr", t])
+        elif r < 0.8:
+            ops.append(["fromkeys", 0, ["d", t], rng.randrange(n)])
+        else:
+            ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+    return pool, ops, target
+
+
 def set_evil_arg(rng, n):
     """The other operand of an operation with a key whose `__eq__` changes a set."""
     k = lambda: rng.randrange(n)
@@ -1114,8 +1187,10 @@ def gen_case(rng):
         pool, ops = gen_iters(rng)
     elif r < 0.66:
         pool, ops, target = gen_evil(rng)
-    elif r < 0.70:
+    elif r < 0.68:
         pool, ops, target = gen_merge(rng)
+    elif r < 0.70:
+        pool, ops, target = gen_reent(rng)
     elif r < 0.72:
         pool, ops, target = gen_set_evil(rng)
     elif r < 0.81:
@@ -1489,10 +1564,18 @@ class Runner:
             return self.E(r)
         elif name == "c_sdefr":
             return self.E(tc.dict_setdefaultref(d, P[op[2]], P[op[3]]))
+        elif name == "c_pops":
+            key = P[op[2]].encode() if op[2] >= 0 else b"\xff"
+            r = tc.dict_popstring(d, key)
+            return [r[0], self.E(r[1]) if r[0] else None]
         elif name == "c_merge":
             a = op[2]
             b = None if a[0] == "n" else self.ds[a[1]] if a[0] == "d" else self.upd_arg(a)
             tl.dict_merge(d, b, op[3])
+        elif name == "c_upd":
+            a = op[2]
+            b = None if a[0] == "n" else self.ds[a[1]] if a[0] == "d" else self.upd_arg(a)
+            tl.dict_update(d, b)
         elif name == "c_seq2":
             tl.dict_mergefromseq2(d, [self.seq2(x) for x in op[2]], int(op[3]))
         elif name == "c_clear":
@@ -1548,7 +1631,8 @@ class Runner:
             return hash(ds[2])
         elif name == "f_fromkeys":
             t = op[1]
-            src = ds[t[1]] if t[0] == "d" else ss[t[1]] if t[0] == "s" else self.set_arg(t)
+            src = (ds[t[1]] if t[0] == "d" else ss[t[1]] if t[0] == "s"
+                   else frozendict(ds[t[1]]) if t[0] == "fd" else self.set_arg(t))
             ds[2] = frozendict.fromkeys(src, P[op[2]])
         elif name == "f_it":
             d = ds[2]
@@ -1622,11 +1706,15 @@ class Runner:
         if name == "copy":
             ds[2] = ds[op[1]].copy()
             return None
+        if name == "copy_ks":
+            ds[2] = KSub(ds[op[1]]).copy()
+            return None
         if name == "eq":
             return (ds[op[1]] != ds[op[2]]) if op[3] else (ds[op[1]] == ds[op[2]])
         if name == "fromkeys":
             t = op[2]
-            src = ds[t[1]] if t[0] == "d" else ss[t[1]] if t[0] == "s" else self.set_arg(t)
+            src = (ds[t[1]] if t[0] == "d" else ss[t[1]] if t[0] == "s"
+                   else frozendict(ds[t[1]]) if t[0] == "fd" else self.set_arg(t))
             ds[2] = dict.fromkeys(src, P[op[3]])
             return None
         if name == "fromitems":

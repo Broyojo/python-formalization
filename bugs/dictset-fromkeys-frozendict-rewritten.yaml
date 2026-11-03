@@ -1,0 +1,98 @@
+id: dictset-fromkeys-frozendict-rewritten
+title: "frozendict.fromkeys of a subclass hands an untracked frozendict to Python code, and a later fromkeys fills that frozendict in place"
+priority: P2
+kind: immutability-violation
+module: dictset
+files: [Objects/dictobject.c]
+functions: ["_PyDict_FromKeys", "dict_fromkeys_impl"]
+summary: |
+  Since gh-151722, `_PyDict_FromKeys` uses "not tracked by the GC" to mean "a frozendict still being
+  built, which I may fill". A tracked frozendict returned by `cls()` is copied into a fresh untracked
+  frozendict, which is filled and then passed to `cls(d)` at :3593. That call runs Python code
+  (`cls.__new__`, `cls.__init__`) with the finished but still untracked frozendict, so the object
+  escapes untracked. A later `fromkeys` whose `cls()` returns that object sees an untracked
+  frozendict, skips the copy (:3443), and fills it in place through `setitem_take2_lock_held`
+  (:3538-3555), or through `dict_dict_fromkeys`/`dict_set_fromkeys` for a dict or set argument.
+
+  The result is a frozendict that changes after it was hashed and used as a key: its cached
+  `ma_hash` is stale, so an equal frozendict built from its new contents is not found in a dict that
+  holds it.
+likelihood: |
+  Low. It needs a frozendict subclass whose `__new__` or `__init__` keeps its argument (as a cache or
+  registry might), and a second class whose `__new__` returns that object, then `fromkeys` on the
+  second class. Both are ordinary Python; no ctypes, threads or gc module. Pure-Python code cannot
+  otherwise get an untracked frozendict in 3.15.2. The open PR gh-155178 ("Don't track frozendicts
+  whose contents can never be tracked by the GC") would make every frozendict of atomic values
+  untracked, and then the second step alone would rewrite any such frozendict.
+maybe_intended: |
+  No. `can_modify_dict` (:293-313, compiled only with assertions) states the rule this breaks: a
+  frozendict may be modified only while it is untracked and uniquely referenced, because only then is
+  it private to its constructor. The object passed to `cls(d)` is not private; a debug build would
+  fail the assertion at :305 on the second call (called from :3457), a release build fills the
+  object. PEP 814 makes frozendict immutable and hashable.
+reproducer: |
+  leaked = []
+  class F(frozendict):
+      def __init__(self, *args):
+          if args:
+              leaked.append(args[0])   # the argument of cls(d) at :3593
+  F.fromkeys([1, 2])
+  fd = leaked[0]
+  before = dict(fd)
+  h = hash(fd)
+  table = {fd: 'value'}
+  class G(frozendict):
+      def __new__(cls, *args):
+          return fd
+  r = G.fromkeys(['x'])
+  equal = frozendict(dict(fd))   # a new frozendict with the same items
+  print('type', type(fd).__name__, 'same object', r is fd)
+  print('before', before, 'after', dict(fd))
+  print('hash unchanged', hash(fd) == h, 'equal copy == fd', equal == fd,
+        'hash(copy) == hash(fd)', hash(equal) == hash(fd), 'copy in table', equal in table)
+  if (equal is not fd and r is fd and dict(fd) != before and hash(fd) == h and equal == fd
+          and equal not in table):
+      print('REPRODUCED dictset-fromkeys-frozendict-rewritten')
+expected: |
+  `fd` never changes: `G.fromkeys(['x'])` either copies `fd` before filling (as it does for a tracked
+  frozendict) or returns a new object; `dict(fd)` stays `{1: None, 2: None}`.
+observed: |
+  python3 3.15.2: `same object True`, `before {1: None, 2: None} after {1: None, 2: None, 'x': None}`,
+  `hash unchanged True`, `equal copy == fd True`, `hash(copy) == hash(fd) False`,
+  `copy in table False`. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  PEP 814 / Doc/library/stdtypes.rst frozendict: an immutable, hashable mapping. Invariant of
+  Objects/dictobject.c:293-313 (`can_modify_dict`): a frozendict is modified only while it is not
+  tracked by the GC, that is, while no other code can reach it. Invariant: `a == b` implies
+  `hash(a) == hash(b)`.
+cause: |
+  Objects/dictobject.c:3592-3595: `_PyObject_CallOneArg(cls, d)` runs with `d` the untracked copy made
+  at :3443-3455, and nothing tracks `d` first, so `cls.__new__`/`cls.__init__` can keep it.
+  :3443 then treats any untracked frozendict that `cls()` returns as one it may fill: `need_copy`
+  stays 0 and :3486-3508 (dict or set argument) or :3538-3555 (any other iterable) write into it;
+  :3596-3597 then tracks it.
+possible_fix: |
+  Track the copy before handing it out: `_PyObject_GC_TRACK(d)` before `_PyObject_CallOneArg(cls, d)`
+  at :3593. Alternatively, test at :3443 that `cls()` returned a new object, not only an untracked one
+  (for example, copy whenever `d` is a frozendict that `cls()` returned, tracked or not).
+duplicates:
+  issues:
+    - {number: 151722, state: closed, relation: "origin of the untracked-frozendict design; this is a hole in its fix, not a duplicate"}
+  prs:
+    - {number: 152067, state: merged, relation: "gh-151722: Do not track the dict in the GC in _PyDict_FromKeys(); introduced need_copy"}
+    - {number: 152225, state: merged, relation: "3.15 backport of 152067"}
+    - {number: 155178, state: open, relation: "would widen this: untracked frozendicts of atomic values"}
+    - {number: 144952, state: merged, relation: "gh-141510 frozendict.fromkeys() for subclasses; earlier, different fix"}
+  queries: ["frozendict fromkeys", "frozendict mutated", "frozendict untracked", "frozendict modify",
+            "frozendict immutable", "frozendict gc tracked", "151722", "frozendict fromkeys subclass",
+            "frozendict mutable", "fromkeys frozendict copy", "frozendict hash changes",
+            "fromkeys __new__ frozendict", "frozendict fromkeys gc", "frozendict subclass fromkeys",
+            "frozendict hash stale", "_PyDict_FromKeys", "frozendict changed after hash",
+            "PRs: frozendict fromkeys", "bugforge README: no fromkeys or frozendict entry"]
+  note: |
+    Searched as separate terms (`gh search issues --repo python/cpython ...`); none reports a frozendict
+    rewritten through fromkeys.
+lean:
+  property: PyLean.DictSet.FromKeysFrozenStable
+  theorem: PyLean.DictSet.fromKeysFrozenStable_refuted

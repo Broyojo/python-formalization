@@ -31,6 +31,8 @@ structure Atom where
   fs : Option Int := none
   /-- Not equal to itself. -/
   nan : Bool := false
+  /-- `__repr__` does to the target dict what `act` would, then answers `rep`. -/
+  ract : Nat := 0
   deriving DecidableEq, Repr, Inhabited
 
 /-- A pool object, or a pair built by the items views. -/
@@ -114,6 +116,10 @@ def setHash : DObj → Option Int
   | _ => none
 def uid : DObj → Nat
   | .atom a => a.uid
+  | _ => 0
+/-- What `repr(x)` does to the target dict. -/
+def reprAct : DObj → Nat
+  | .atom a => a.ract
   | _ => 0
 
 end DObj
