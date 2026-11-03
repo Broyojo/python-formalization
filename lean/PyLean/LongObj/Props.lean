@@ -22,21 +22,31 @@ def LongAllocLimit : Prop :=
 theorem longAllocLimit_proven : LongAllocLimit := fun n =>
   ⟨longAlloc_ok, fun h => by simp [longAlloc, h]⟩
 
-/-- `long_normalize` keeps the value and leaves a non-zero top digit. Type invariant:
-none; it holds of any list. -/
+/-- `long_normalize` keeps the value and leaves a non-zero top digit, by cutting the
+vector to a prefix (it only lowers the size, longobject.c:131-136), so digits stay
+digits. Type invariant: none; it holds of any list. -/
 def NormalizeSpec : Prop :=
-  ∀ l, val (normalize l) = val l ∧ Normal (normalize l) ∧ (normalize l).length ≤ l.length
+  ∀ l, val (normalize l) = val l ∧ Normal (normalize l) ∧ (normalize l).length ≤ l.length ∧
+    normalize l <+: l ∧ (IsDigits l → IsDigits (normalize l))
 
 theorem normalizeSpec_proven : NormalizeSpec := fun l =>
-  ⟨val_normalize l, normal_normalize l, length_normalize_le l⟩
+  ⟨val_normalize l, normal_normalize l, length_normalize_le l, List.take_prefix _ _,
+    isDigits_normalize⟩
 
 /-- The constructors of a small object build the canonical object for all of
-`stwodigits`: small, medium and three-digit values. -/
+`stwodigits`: small, medium and three-digit values; and `is_medium_int`'s unsigned
+wraparound test (longobject.c:53-58) holds exactly when `|x| < 2**30`, i.e. when the
+value fits one digit. The range is the type `int64_t`. -/
 def FromSTwoDigitsCanonical : Prop :=
-  ∀ x : Int, -(2 ^ 63 : Int) ≤ x → x < 2 ^ 63 → fromSTwoDigits x = Long.ofInt x
+  ∀ x : Int, -(2 ^ 63 : Int) ≤ x → x < 2 ^ 63 →
+    fromSTwoDigits x = Long.ofInt x ∧ isMediumInt x = decide (x.natAbs < 2 ^ 30)
 
-theorem fromSTwoDigitsCanonical_proven : FromSTwoDigitsCanonical :=
-  fun _ h1 h2 => fromSTwoDigits_eq h1 h2
+theorem fromSTwoDigitsCanonical_proven : FromSTwoDigitsCanonical := fun _ h1 h2 =>
+  ⟨fromSTwoDigits_eq h1 h2, by
+    rw [isMediumInt_iff h1 h2]
+    apply decide_eq_decide.2
+    simp only [MASK]
+    omega⟩
 
 /-- `x_add` is exact on all digit vectors and its `digit` carry never wraps.
 Hypotheses: digit vectors (type invariant) and room for one more digit. -/

@@ -136,11 +136,18 @@ def IndexConversionsExact : Prop :=
     (index o = .error e →
       viaIndex index asLong (.other o) = .error e ∧
       viaIndex index asCInt (.other o) = .error e ∧
-      viaIndex index asLongLong (.other o) = .error e)
+      viaIndex index asLongLong (.other o) = .error e) ∧
+    (viaIndex index asLong (.int (.ofInt a)) =
+        (if -(2 ^ 63 : Int) ≤ a ∧ a < 2 ^ 63 then .ok a
+          else .error (.overflowError "Python int too large to convert to C long")) ∧
+      viaIndex index (fun v => .ok (asLongAndOverflow v)) (.int (.ofInt a)) =
+        .ok (if -(2 ^ 63 : Int) ≤ a ∧ a < 2 ^ 63 then (a, 0)
+          else (-1, if a < 0 then -1 else 1)) ∧
+      viaIndex index (fun v => .ok (asUnsignedMask v)) (.int (.ofInt a)) = .ok (a % 2 ^ 64).toNat)
 
 theorem indexConversionsExact_proven : IndexConversionsExact := by
   intro α index o a e
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro h
     have hL := asLongLong_spec a
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -155,6 +162,33 @@ theorem indexConversionsExact_proven : IndexConversionsExact := by
       exact hL.2 h2
   · intro h
     simp only [viaIndex, h, and_self]
+  · exact ⟨asLong_spec a, by simp only [viaIndex, asLongAndOverflow_spec],
+      by simp only [viaIndex, asUnsignedMask_spec]⟩
+
+/-- `PyLong_AsLongLongAndOverflow`, with its own `+` loop, agrees with
+`PyLong_AsLongAndOverflow` on every object whose digits are below `2**30` (the type
+invariant), and so gives `(a, 0)` inside `long long` and `(-1, sign)` outside it, for an
+int and for the value of `__index__`, an arbitrary fallible function whose exception
+passes through. -/
+def LongLongAndOverflowExact : Prop :=
+  (∀ v : Long, IsDigits v.ds → asLongLongAndOverflow v = asLongAndOverflow v) ∧
+  ∀ (α : Type) (index : α → Py Long) (o : α) (a : Int) (e : PyExc),
+    viaIndex index (fun v => .ok (asLongLongAndOverflow v)) (.int (.ofInt a)) =
+      .ok (if -(2 ^ 63 : Int) ≤ a ∧ a < 2 ^ 63 then (a, 0) else (-1, if a < 0 then -1 else 1)) ∧
+    (index o = .ok (.ofInt a) →
+      viaIndex index (fun v => .ok (asLongLongAndOverflow v)) (.other o) =
+        .ok (if -(2 ^ 63 : Int) ≤ a ∧ a < 2 ^ 63 then (a, 0)
+          else (-1, if a < 0 then -1 else 1))) ∧
+    (index o = .error e →
+      viaIndex index (fun v => .ok (asLongLongAndOverflow v)) (.other o) = .error e)
+
+theorem longLongAndOverflowExact_proven : LongLongAndOverflowExact := by
+  refine ⟨asLongLongAndOverflow_eq, fun α index o a e => ⟨?_, fun h => ?_, fun h => ?_⟩⟩
+  · simp only [viaIndex, asLongLongAndOverflow_eq (Long.ofInt a) (digitsOf_digits a.natAbs),
+      asLongAndOverflow_spec]
+  · simp only [viaIndex, h, asLongLongAndOverflow_eq (Long.ofInt a) (digitsOf_digits a.natAbs),
+      asLongAndOverflow_spec]
+  · simp only [viaIndex, h]
 
 /-- The conversions that refuse non-ints: `TypeError`, and otherwise exact. -/
 def RequireIntExact : Prop :=
@@ -196,11 +230,17 @@ def entriesBinop : List Entry := [
     prop := ``BinaryMethodsExact, thm := some ``binaryMethodsExact_proven
     notes := "`checkBinop_other` gives NotImplemented for any non-int operand. MemoryError is not modelled." },
   { id := "longobj-index-conversions", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsLongAndOverflow", "PyLong_AsLongLongAndOverflow", "PyLong_AsLong", "PyLong_AsInt",
+    pyFns := ["PyLong_AsLongAndOverflow", "PyLong_AsLong", "PyLong_AsInt",
       "PyLong_AsUnsignedLongMask", "PyLong_AsUnsignedLongLongMask", "PyLong_AsLongLong", "unroll_digits_ulong"]
-    statement := "A non-int goes through __index__, an arbitrary fallible function: its value converts exactly as an int does, and its exception passes through."
+    statement := "An int converts exactly; a non-int goes through __index__, an arbitrary fallible function: its value converts exactly as an int does, and its exception passes through."
     source := "C API docs: Integer Objects", status := .proven
     prop := ``IndexConversionsExact, thm := some ``indexConversionsExact_proven },
+  { id := "longobj-as-long-long-and-overflow", pyFile := "Objects/longobject.c"
+    pyFns := ["PyLong_AsLongLongAndOverflow", "unroll_digits_ulong"]
+    statement := "PyLong_AsLongLongAndOverflow, whose loop adds each digit where PyLong_AsLongAndOverflow ors it, agrees with that twin on every object, and gives (a, 0) inside long long and (-1, sign) outside it for an int and for the value of __index__, whose exception passes through."
+    source := "the implementation disagreeing with itself (twin functions); C API docs: Integer Objects", status := .proven
+    prop := ``LongLongAndOverflowExact, thm := some ``longLongAndOverflowExact_proven
+    notes := "The + loop is mirrored with uint64 wraparound on both the shift and the sum; accumLoopLL_eq proves neither wraps after the overflow test." },
   { id := "longobj-require-int", pyFile := "Objects/longobject.c"
     pyFns := ["PyLong_AsSsize_t", "PyLong_AsUnsignedLong", "PyLong_AsSize_t", "PyLong_AsUnsignedLongLong",
       "unroll_digits_ulong", "unroll_digits_size_t"]

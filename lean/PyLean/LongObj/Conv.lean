@@ -244,10 +244,69 @@ def asUnsignedMask (v : Long) : Nat :=
     let sign : Int := if v.neg then -1 else 1
     (((maskDigits v.ds.reverse : Nat) * sign) % 2 ^ 64).toNat
 
-/-- `PyLong_AsLongLongAndOverflow(vv, &overflow)`, longobject.c:1737-1810. It adds the
-digit where `PyLong_AsLongAndOverflow` ors it; `x << SHIFT` has zero low bits, so
-this is the same `accumDigits`. -/
-def asLongLongAndOverflow (v : Long) : Int × Int := asLongAndOverflow v
+/-- The loop of `PyLong_AsLongLongAndOverflow`, longobject.c:1783-1790:
+`if (x > ULLONG_MAX >> SHIFT) overflow; x = (x << SHIFT) + digit;` on
+`unsigned long long`, so both the shift and the sum wrap modulo `2**64`. It adds the
+digit where `PyLong_AsLongAndOverflow` (:646) ors it. `ds` runs from the top digit down. -/
+def accumLoopLL : List Nat → Nat → Option Nat
+  | [], x => some x
+  | d :: ds, x =>
+    if x > (2 ^ 64 - 1) >>> 30 then none else accumLoopLL ds (u64 (u64 (x <<< 30) + d))
+
+/-- `unroll_digits_ulong` (:1782), then the `+` loop. -/
+def accumDigitsLL (ds : List Nat) : Option Nat :=
+  let (x, rest) := unroll ds
+  accumLoopLL rest x
+
+/-- `PyLong_AsLongLongAndOverflow(vv, &overflow)`, longobject.c:1737-1810, for an exact
+int: the compact value (:1761-1777), otherwise the `+` accumulation and the
+`LLONG_MAX`/`PY_ABS_LLONG_MIN` tests of :1794-1803. `res = -1` is set on each overflow
+path (:1786, :1802) where the `long` twin sets it once at :636. -/
+def asLongLongAndOverflow (v : Long) : Int × Int :=
+  if v.isCompact = true then (v.medium, 0)
+  else
+    let sign : Int := if v.neg then -1 else 1
+    match accumDigitsLL v.ds.reverse with
+    | none => (-1, sign)
+    | some x =>
+      if x ≤ 2 ^ 63 - 1 then ((x : Int) * sign, 0)
+      else if sign < 0 ∧ x = 2 ^ 63 then (-(2 ^ 63), 0)
+      else (-1, sign)
+
+/-- The `+` loop is the `|` loop on digit vectors: after the overflow test
+`x << SHIFT` is below `2**64` with zero low bits, so neither the shift nor the sum
+wraps. -/
+theorem accumLoopLL_eq : ∀ (ds : List Nat) (x : Nat), IsDigits ds → x < 2 ^ 64 →
+    accumLoopLL ds x = accumLoop ds x
+  | [], _, _, _ => rfl
+  | d :: ds, x, hd, hx => by
+    have ⟨h1, h2⟩ := isDigits_cons.1 hd
+    simp only [accumLoopLL, accumLoop]
+    have hc : (2 ^ 64 - 1) >>> 30 = 2 ^ 34 - 1 := by decide
+    rw [hc]
+    by_cases hfit : x > 2 ^ 34 - 1
+    · rw [if_pos hfit, if_pos hfit]
+    · rw [if_neg hfit, if_neg hfit]
+      have hor : (x <<< 30) ||| d = x * 2 ^ 30 + d := shl_or x d 30 h1
+      have hsh : x <<< 30 = x * 2 ^ 30 := Nat.shiftLeft_eq x 30
+      have e1 : u64 (x <<< 30) = x * 2 ^ 30 := by
+        rw [hsh]; exact Nat.mod_eq_of_lt (by omega)
+      have e2 : u64 (u64 (x <<< 30) + d) = (x <<< 30) ||| d := by
+        rw [e1, hor]; exact Nat.mod_eq_of_lt (by omega)
+      rw [e2]
+      exact accumLoopLL_eq ds _ h2 (by rw [hor]; omega)
+
+theorem accumDigitsLL_eq (ds : List Nat) (hd : IsDigits ds) : accumDigitsLL ds = accumDigits ds := by
+  obtain ⟨h1, h2, _⟩ := unroll_spec ds hd
+  simp only [accumDigitsLL, accumDigits]
+  exact accumLoopLL_eq _ _ h2 (by omega)
+
+/-- The two `AndOverflow` twins agree on every object with digits below `2**30`. -/
+theorem asLongLongAndOverflow_eq (v : Long) (hd : IsDigits v.ds) :
+    asLongLongAndOverflow v = asLongAndOverflow v := by
+  have hr : IsDigits v.ds.reverse := fun x hx => hd x (List.mem_reverse.1 hx)
+  unfold asLongLongAndOverflow asLongAndOverflow
+  rw [accumDigitsLL_eq _ hr]
 
 theorem compact_iff (a : Int) : (Long.ofInt a).isCompact = true ↔ a.natAbs < 2 ^ 30 := by
   rw [Long.isCompact_ofInt]; simp

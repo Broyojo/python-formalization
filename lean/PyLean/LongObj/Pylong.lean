@@ -416,14 +416,46 @@ def consumerInner (limit : Nat) (needHi : Bool) :
 
 /-! ## The knots with the C code -/
 
-/-- `pylong_int_to_decimal_string(aa, ...)`, longobject.c:2027-2088, as `str(a)` with
-fuel for the mutual recursion between C and `_pylong`: `int_to_decimal_string` calls
-`str` on pieces. -/
+/-- What `PyObject_CallMethod(mod, "int_to_decimal_string", "O", aa)` returns when it
+does not raise: a `str` (any object passing `PyUnicode_Check`, so a subclass too), or
+any other object. -/
+inductive PylongStrRes where
+  | str (s : List Char)
+  | other
+
+/-- `pylong_int_to_decimal_string(aa, ...)`, longobject.c:2026-2088. `imp` is
+`PyImport_ImportModule("_pylong")` (:2033-2036), which raises if the import fails or
+`sys.modules['_pylong']` is `None`; `call` is the method call (:2037-2040), which can
+raise or return anything when `_pylong.int_to_decimal_string` has been replaced. A
+non-`str` result is the TypeError of :2041-2045. All three output targets
+(:2046-2075) receive the same characters; `_PyUnicodeWriter_Prepare`'s and
+`PyBytesWriter_GrowAndUpdatePointer`'s MemoryError are out of scope. -/
+def pylongIntToDecimalString (imp : Py Unit) (call : Long → Py PylongStrRes) (x : Long) :
+    Py (List Char) := do
+  imp
+  match ← call x with
+  | .str s => pure s
+  | .other => throw (.typeError "_pylong.int_to_decimal_string did not return a str")
+
+/-- The real `_pylong.int_to_decimal_string`, which always returns a `str`. -/
+def pylongCallStr (strf : Int → Py (List Char)) (y : Long) : Py PylongStrRes := do
+  let s ← intToDecimalString strf y.toInt
+  return .str s
+
+theorem pylongIntToDecimalString_real (strf : Int → Py (List Char)) (x : Long) :
+    pylongIntToDecimalString (.ok ()) (pylongCallStr strf) x = intToDecimalString strf x.toInt := by
+  unfold pylongIntToDecimalString pylongCallStr
+  cases intToDecimalString strf x.toInt <;> rfl
+
+/-- `str(a)` with fuel for the mutual recursion between C and `_pylong`:
+`long_to_decimal_string_internal` switches to `pylong_int_to_decimal_string`, whose
+`int_to_decimal_string` calls `str` on pieces. -/
 def longStrF : Nat → Nat → Long → Py (List Char)
   | 0, _, _ => .error .modelFuel
   | f + 1, lim, x =>
     longToDecimalWith
-      (fun y => intToDecimalString (fun n => longStrF f lim (Long.ofInt n)) y.toInt) lim x
+      (pylongIntToDecimalString (.ok ()) (pylongCallStr (fun n => longStrF f lim (Long.ofInt n))))
+      lim x
 
 /-- `long_to_decimal_string(aa)`, longobject.c:2321-2327. -/
 def longToDecimalString (lim : Nat) (x : Long) : Py (List Char) := longStrF 3 lim x

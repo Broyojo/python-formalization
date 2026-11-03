@@ -99,9 +99,11 @@ def writeLimbs : List Nat → List Char → Py (List Char)
   | [t], acc => writeTop 10 t acc
   | p :: q :: ps, acc => writeLimbs (q :: ps) (writeFixed decShift p acc)
 
-/-- Lines 2086-2240 of `long_to_decimal_string_internal`: everything after the
-switch to `_pylong`. All three output targets (`PyUnicode_New`, `writer`,
-`bytes_writer`) receive the same characters. -/
+/-- Lines 2148-2317 of `long_to_decimal_string_internal`: everything after the
+switch to `_pylong`. `d` and `size` are :2162-2165, `long_alloc` :2166-2168, the
+`size == 0` fix-up :2196-2197, the exact `strlen` :2200-2206, the second limit check
+:2207-2217 and the sign :2260-2261. All three output targets (`PyUnicode_New`,
+`writer`, `bytes_writer`, :2218-2239) receive the same characters. -/
 def decCore (lim : Nat) (x : Long) : Py (List Char) := do
   let size_a := x.ds.length
   let d := (33 * decShift) / (10 * 30 - 33 * decShift)
@@ -128,7 +130,8 @@ def decPreCheck (lim size_a : Nat) : Py Unit :=
   else .ok ()
 
 /-- `long_to_decimal_string_internal(aa, ...)`, longobject.c:2096-2318; `pyl` is
-`pylong_int_to_decimal_string` (the switch at :2137-2146). -/
+`pylong_int_to_decimal_string` (the switch at :2137-2146). After the switch nothing
+re-checks the digit count: the exact check of :2207-2217 is inside `decCore`. -/
 def longToDecimalWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) : Py (List Char) := do
   let size_a := x.ds.length
   decPreCheck lim size_a
