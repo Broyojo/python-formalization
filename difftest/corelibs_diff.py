@@ -3745,7 +3745,28 @@ def operator_spec(rng, n):
             "dictiter": None, "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no"}
 
 
+def operator_merge_graph(rng):
+    """Dict stores that meet an equal key, which the general graphs reach only rarely: `memo` sends a dict key to an
+    atom that may equal the other key (Lib/copy.py:201), or a reduce value's `dictiter` repeats a key's value
+    (:279-281 and :283-284). `y[k] = v` then keeps one item, in the first key's place, with the last value."""
+    cells = [{"k": "atom", "n": rng.randrange(0, 3)} for _ in range(3)]            # 0, 1, 2
+    cells.append({"k": "hooked", "copier": "no", "tag": "3", "rv": "absent",       # 3: the key `memo` answers for
+                  "deepcopier": rng.choice(["raise", "no"])})
+    cells.append({"k": "hooked", "copier": "no", "tag": "4", "deepcopier": "no", "rv": "tuple", "size": 5,
+                  "ctorfail": False, "kind": "dict", "args": [], "state": None, "listiter": None, "setstate": "no",
+                  "dictiter": [[rng.randrange(0, 3), rng.randrange(0, 6)] for _ in range(rng.randrange(1, 4))]})
+    items = [3, rng.randrange(0, 6), rng.randrange(0, 3), rng.randrange(0, 6)]
+    if rng.random() < .5:
+        items = items[2:] + items[:2]
+    cells.append({"k": "dict", "items": items})                                     # 5
+    root = rng.choice([4, 5, 5])
+    return {"fn": "operator.deepcopy", "cells": cells, "root": root, "shallow": root == 4 and rng.random() < .3,
+            "memo": [[3, rng.randrange(0, 3)]] if rng.random() < .8 else []}
+
+
 def operator_graph(rng):
+    if rng.random() < .15:
+        return operator_merge_graph(rng)
     n = rng.randrange(1, 7)
     cells = []
     for i in range(n):
@@ -3822,9 +3843,12 @@ def operator_graph(rng):
                 c["listiter"] = [rng.randrange(0, n) if c["kind"] == "list" else rng.choice(ok)]
             distinct = list({cells[j]["n"]: j for j in ok}.values())
             if c["kind"] == "dict" and c["size"] >= 5 and rng.random() < .6:
-                c["dictiter"] = [[key, rng.randrange(0, n)] for key in rng.sample(distinct, min(len(distinct), 2))]
-    # a key whose `__deepcopy__` raises: no store happens, so `dict`'s merging of equal keys cannot show, and
-    # which exception comes out says which of the key and the value was copied first
+                # sometimes keys of one value (two equal atoms, or one atom twice): `y[key] = value` makes one item
+                keys = ([rng.choice(ok) for _ in range(2)] if rng.random() < .3
+                        else rng.sample(distinct, min(len(distinct), 2)))
+                c["dictiter"] = [[key, rng.randrange(0, n)] for key in keys]
+    # a key whose `__deepcopy__` raises: which exception comes out says which of the key and the value was copied
+    # first; when `memo` answers for the key instead, its copy can equal another key, and the two items merge
     raising = [j for j in range(n) if cells[j]["k"] == "hooked" and cells[j]["deepcopier"] == "raise"]
     for c in cells:
         if c["k"] == "dict" and raising and rng.random() < .5:

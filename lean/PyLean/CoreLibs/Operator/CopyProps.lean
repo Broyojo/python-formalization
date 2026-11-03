@@ -47,8 +47,10 @@ theorem setItemOf_keeps (n : Nat) (h h' : Heap) (y k v : Nat) (hn : n ≤ h.cell
     (e : setItemOf h y k v = .ok h') : Keeps n h h' := by
   simp only [setItemOf] at e
   split at e
-  · cases e
-    exact keeps_set n h y _ hn hy
+  · split at e
+    · cases e
+    · cases e
+      exact keeps_set n h y _ hn hy
   · cases e
 
 theorem setAttrOf_keeps (n : Nat) (h h' : Heap) (y : Nat) (k : String) (v : Nat) (hn : n ≤ h.cells.length)
@@ -167,7 +169,7 @@ theorem reconRest_keeps (n y : Nat) (hy : n ≤ y) (h h' : Heap) (hn : n ≤ h.c
 theorem keeps_all (n : Nat) : ∀ fuel : Nat,
     (∀ h x h' y, n ≤ h.cells.length → deepcopy fuel h x = .ok (h', y) → Keeps n h h') ∧
     (∀ h l h' ys, n ≤ h.cells.length → deepList fuel h l = .ok (h', ys) → Keeps n h h') ∧
-    (∀ h l h' ys, n ≤ h.cells.length → deepPairs fuel h l = .ok (h', ys) → Keeps n h h') ∧
+    (∀ h acc l h' ys, n ≤ h.cells.length → deepPairs fuel h acc l = .ok (h', ys) → Keeps n h h') ∧
     (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepAttrs fuel h y l = .ok h' → Keeps n h h') ∧
     (∀ h l h' ys, n ≤ h.cells.length → deepOpt fuel h l = .ok (h', ys) → Keeps n h h') ∧
     (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepAppend fuel h y l = .ok h' → Keeps n h h') ∧
@@ -176,7 +178,7 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro h x h' y _ e; simp [deepcopy] at e
     · intro h l h' ys _ e; simp [deepList] at e
-    · intro h l h' ys _ e; simp [deepPairs] at e
+    · intro h acc l h' ys _ e; simp [deepPairs] at e
     · intro h y l h' _ _ e; simp [deepAttrs] at e
     · intro h l h' ys hn e
       cases l with
@@ -233,14 +235,14 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
             split at e
             · cases e
             · next h3 ys e3 =>
-              have k2 := ih3 _ _ _ _ hk.1.1 e3
+              have k2 := ih3 _ _ _ _ _ hk.1.1 e3
               cases e
               exact (hk.1.trans k2).trans (keeps_set n _ _ _ k2.1 hk.2)
           · -- frozendict
             split at e
             · cases e
             · next h1 ys e1 =>
-              have k1 := ih3 _ _ _ _ hn e1
+              have k1 := ih3 _ _ _ _ _ hn e1
               split at e
               · cases e
                 exact k1
@@ -325,7 +327,7 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
             have k2 := ih2 _ _ _ _ k1.1 e2
             cases e
             exact k1.trans k2
-    · intro h l h' ys hn e
+    · intro h acc l h' ys hn e
       cases l with
       | nil =>
         simp only [deepPairs, Except.ok.injEq, Prod.mk.injEq] at e
@@ -336,20 +338,15 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
         simp only [deepPairs] at e
         split at e
         · cases e
-        · next h1 k' e1 =>
+        · next h1 v' e1 =>
           have k1 := ih1 _ _ _ _ hn e1
           split at e
           · cases e
-          · next h2 v' e2 =>
+          · next h2 k' e2 =>
             have k2 := ih1 _ _ _ _ k1.1 e2
             split at e
             · cases e
-            · split at e
-              · cases e
-              · next h3 ys3 e3 =>
-                have k3 := ih3 _ _ _ _ k2.1 e3
-                cases e
-                exact (k1.trans k2).trans k3
+            · exact (k1.trans k2).trans (ih3 _ _ _ _ _ k2.1 e)
     · intro h y l h' hn hy e
       cases l with
       | nil =>
