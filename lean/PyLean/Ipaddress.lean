@@ -212,7 +212,7 @@ def entries : List Entry := [
   { id := "ipaddress-hosts-doc", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.hosts", "IPv6Network.hosts", "_BaseNetwork.__iter__", "_BaseNetwork.num_addresses",
       "_BaseNetwork.broadcast_address"]
-    statement := "For every valid IPv4 or IPv6 network, list(net) is every address from the network address up, num_addresses counts them, and list(net.hosts()) is that list minus exactly what the documentation excludes (IPv4: network and broadcast below /31; IPv6: the Subnet-Router anycast address below /127)."
+    statement := "For every valid IPv4 or IPv6 network, list(net) is every address from the network address up, num_addresses counts them, and the int values of list(net.hosts()) are those of that list minus exactly what the documentation excludes (IPv4: network and broadcast below /31; IPv6: the Subnet-Router anycast address below /127). Only int values are compared: for a scoped IPv6 /128 network, hosts() is the per-instance lambda (Lib/ipaddress.py:2343-2344) and yields the address with its scope id, so list(net.hosts()) == list(net) is False for IPv6Network('fe80::1%1/128')."
     source := "Doc/library/ipaddress.rst, hosts() for IPv4Network and IPv6Network", status := .proven
     prop := ``HostsDoc, thm := some ``hostsDoc_proven
     notes := "Difftest fn hosts (list, hosts, num_addresses on prefixes within 10 of the maximum)." },

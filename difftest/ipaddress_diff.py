@@ -197,7 +197,7 @@ def gen_mask_arg(rng, bits):
             ["num", p, "float"],
             ["num", rng.choice([0, 1, bits, bits + 1, -1]), "float"],
             ["other", rng.choice(["NoneType", "float", "tuple"])],
-            ["unhashable", rng.choice(["list", "bytearray"])],
+            unhashable_case(rng.choice(sorted(UNHASHABLE))),
         ])
     k = rng.random()
     if bits == 32 and k < 0.5:
@@ -375,8 +375,57 @@ def make_mask_arg(arg):
     if kind == "other":
         return {"NoneType": None, "float": 8.5, "tuple": (8,)}[arg[1]]
     if kind == "unhashable":
-        return {"list": [8], "bytearray": bytearray(b"8")}[arg[1]]
+        return UNHASHABLE[arg[1]][1]()
     return arg[1]
+
+
+class _NoHash:
+    __module__ = "mod"
+    __hash__ = None
+
+
+class _HashValueError:
+    __module__ = "mod"
+
+    def __hash__(self):
+        raise ValueError("boom")
+
+
+class _TypeErrorSub(TypeError):
+    pass
+
+
+class _HashTypeErrorSub:
+    def __hash__(self):
+        raise _TypeErrorSub("sub")
+
+
+class _HashTypeError2:
+    __module__ = "mod.sub"
+
+    def __hash__(self):
+        raise TypeError("a", 2)
+
+
+# key -> (the type's name as `%T` prints it, a factory); the hash exception is read off the object.
+UNHASHABLE = {
+    "list": ("list", lambda: [8]),
+    "bytearray": ("bytearray", lambda: bytearray(b"8")),
+    "tuple-list": ("tuple", lambda: ([8],)),
+    "nohash": ("mod._NoHash", _NoHash),
+    "valueerror": ("mod._HashValueError", _HashValueError),
+    "typeerror-sub": ("_HashTypeErrorSub", _HashTypeErrorSub),
+    "typeerror-2": ("mod.sub._HashTypeError2", _HashTypeError2),
+}
+
+
+def unhashable_case(key):
+    """`["unhashable", key, %T name, exception class, str(exception)]` for the object's hash error."""
+    try:
+        hash(UNHASHABLE[key][1]())
+    except Exception as e:
+        return ["unhashable", key, UNHASHABLE[key][0], type(e).__name__, str(e)]
+    raise AssertionError(key)
 
 
 def make_arg(arg):

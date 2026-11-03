@@ -140,24 +140,39 @@ def makeNetmaskBytes (bits : Nat) (b : List Nat) : Py Nat :=
 /-- A mask argument: an int, a str, a bytes object, another number equal to the int `v` (a float
 such as `8.0`, `Decimal(8)`), which `in` and dict lookup treat as `v`, another hashable object of
 type `tyName` equal to no int, str or bytes and without `isascii` (`8.5`, `None`, a tuple), or an
-unhashable object of type `tyName` (a list, a `bytearray`). -/
+object whose `__hash__` raises `hashExc` (a list or `bytearray` raises
+`TypeError("unhashable type: 'list'")`; a tuple holding a list raises the list's error; a class may
+raise anything). `tyQual` is the argument type's fully qualified name, as `%T` prints it (`list`,
+`mod.C`). -/
 inductive MaskArg where
   | int (v : Int)
   | str (s : List Char)
   | bytes (b : List Nat)
   | numEq (v : Int) (tyName : String)
   | other (tyName : String)
-  | unhashable (tyName : String)
+  | unhashable (tyQual : String) (hashExc : PyExc)
 
 /-- `_netmask_cache` as the prefix lengths it holds, keyed by the int value they were stored under.
 A str or bytes key can only be hit by an equal str or bytes, whose result it repeats, so it is left
 out. -/
 abbrev NetmaskCache := List (Int × Nat)
 
+/-- `dict_unhashable_type(op, key)` for a non-frozen dict, Objects/dictobject.c:2442-2460: the
+exception `key`'s hash raised is kept unless its type is exactly `TypeError` (:2446,
+`Py_IS_TYPE`, so a subclass is kept too), and a `TypeError` is replaced by one whose message
+formats the key's type (`%T`, fully qualified) and the original exception (`%S`, its `str`, which
+for a one-argument `TypeError` is the message). -/
+def dictUnhashableType (tyQual : String) : PyExc → PyExc
+  | .typeError m => .typeError s!"cannot use '{tyQual}' as a dict key ({m})"
+  | e => e
+
 /-- `_make_netmask(arg)` with the class's `_netmask_cache`, ipaddress.py:1153-1177 (IPv4,
 `bits = 32`) and :1628-1646 (IPv6, `bits = 128`): the cache is consulted first
-(`arg not in cls._netmask_cache`, :1162 and :1637), which hashes `arg` (an unhashable one raises
-`TypeError` there), and only a miss checks the type (:1163, :1638); a non-int argument goes to the
+(`arg not in cls._netmask_cache`, :1162 and :1637), which hashes `arg` through `dict_contains`
+(Objects/dictobject.c:5235-5240); a hash error goes through `dict_unhashable_type` (:2442-2460),
+which re-raises any exception other than an exact `TypeError` unchanged and replaces a `TypeError`
+by `TypeError("cannot use '%T' as a dict key (%S)")` around the original message. Only a miss
+checks the type (:1163, :1638); a non-int argument goes to the
 str functions: a bytes object works through them, and any other object raises `AttributeError` at
 `isascii()` (:481). Returns the prefix length and the cache afterwards; the netmask is
 `_ip_int_from_prefix` of it (:1175, :1644). -/
@@ -176,8 +191,7 @@ def makeNetmaskCached (bits : Nat) (cache : NetmaskCache) (a : MaskArg) : Py Nat
     | some p => (.ok p, cache)
     | none => (.error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'"), cache)
   | .other ty => (.error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'"), cache)
-  | .unhashable ty =>
-    (.error (.typeError s!"cannot use '{ty}' as a dict key (unhashable type: '{ty}')"), cache)
+  | .unhashable ty e => (.error (dictUnhashableType ty e), cache)
 
 /-- A cache that only `_make_netmask` filled: each int key holds what the int branch computes. -/
 def CacheOk (bits : Nat) (c : NetmaskCache) : Prop :=
@@ -477,8 +491,10 @@ bytes raises `NetmaskValueError` with its repr, except that IPv4 then tries the 
 whose `split('.')` leaks `TypeError` for every non-empty bytes (`b'255.0.0.0'`). A number equal to
 an int is the cached prefix length if that int is cached and otherwise raises `AttributeError` at
 `isascii()` (`NetmaskCacheTransparent`, refuted), another object without `isascii` raises
-`AttributeError`, and an unhashable one raises `TypeError` at the cache lookup (:1162, :1637).
-The netmask is `_ip_int_from_prefix` of the prefix (:1175, :1644). -/
+`AttributeError`, and one whose hash raises an exact `TypeError` with message `m` raises
+`TypeError("cannot use '<qualified type>' as a dict key (<m>)")` at the cache lookup (:1162, :1637;
+`dict_unhashable_type`, Objects/dictobject.c:2446-2458), while any other hash exception propagates
+unchanged. The netmask is `_ip_int_from_prefix` of the prefix (:1175, :1644). -/
 def MaskInt : Prop :=
   ∀ bits : Nat, bits = 32 ∨ bits = 128 → ∀ c : NetmaskCache, CacheOk bits c →
     (∀ p : Int, (makeNetmaskCached bits c (.int p)).1 =
@@ -500,12 +516,14 @@ def MaskInt : Prop :=
       else .error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'")) ∧
     (∀ ty : String, (makeNetmaskCached bits c (.other ty)).1 =
       .error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'")) ∧
-    (∀ ty : String, (makeNetmaskCached bits c (.unhashable ty)).1 =
-      .error (.typeError s!"cannot use '{ty}' as a dict key (unhashable type: '{ty}')"))
+    (∀ (ty m : String), (makeNetmaskCached bits c (.unhashable ty (.typeError m))).1 =
+      .error (.typeError s!"cannot use '{ty}' as a dict key ({m})")) ∧
+    (∀ (ty : String) (e : PyExc), (∀ m, e ≠ .typeError m) →
+      (makeNetmaskCached bits c (.unhashable ty e)).1 = .error e)
 
 theorem maskInt_proven : MaskInt := by
   intro bits hbits c hc
-  refine ⟨fun p => ?_, fun s => ?_, fun b => ?_, fun v ty => ?_, fun ty => rfl, fun ty => rfl⟩
+  refine ⟨fun p => ?_, fun s => ?_, fun b => ?_, fun v ty => ?_, fun ty => rfl, fun ty m => rfl, fun ty e he => ?_⟩
   · have hint : makeNetmaskInt bits p = if 0 ≤ p ∧ p ≤ bits then .ok p.toNat
         else .error (.named "NetmaskValueError" s!"{p} is not a valid netmask") := by
       unfold makeNetmaskInt reportInvalidNetmask; split <;> rfl
@@ -551,6 +569,9 @@ theorem maskInt_proven : MaskInt := by
       split at h
       · cases h; simp
       · cases h
+  · -- a hash error other than an exact `TypeError` propagates
+    show Except.error (dictUnhashableType ty e) = Except.error e
+    cases e <;> first | rfl | exact absurd rfl (he _)
 
 /-- IPv6's cache, as `NetmaskCacheTransparent` is IPv4's: the result of `_BaseV6._make_netmask(arg)`
 does not depend on what earlier calls stored. Refuted: `64.0` raises `AttributeError` with an empty

@@ -110,7 +110,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (makeNetmask4 (← getStr j "s").toList)
   | "mask" =>
     -- `"arg"`: `["int", n]`, `["str", s]`, `["bytes", [b, ...]]`, `["num", n, ty]` (a number equal
-    -- to the int n), `["other", ty]`, `["unhashable", ty]`; `"cache"`: the ints `_make_netmask` was
+    -- to the int n), `["other", ty]`, `["unhashable", key, ty, cls, msg]`; `"cache"`: the ints `_make_netmask` was
     -- called with first, in order, after the class cache was cleared.
     let arg ← j.getObjVal? "arg"
     let a ← match ← (← arg.getArrVal? 0).getStr? with
@@ -119,7 +119,13 @@ def run (fn : String) (j : Json) : Except String Json := do
           (fun x => x.getNat?.toOption)))
       | "num" => pure (MaskArg.numEq (← (← arg.getArrVal? 1).getInt?) (← (← arg.getArrVal? 2).getStr?))
       | "other" => pure (MaskArg.other (← (← arg.getArrVal? 1).getStr?))
-      | "unhashable" => pure (MaskArg.unhashable (← (← arg.getArrVal? 1).getStr?))
+      | "unhashable" => do
+        -- `["unhashable", key, %T name, exception class, str(exception)]`: an exact `TypeError` is
+        -- `.typeError`, any other class (a `TypeError` subclass included) is `.named`.
+        let cls ← (← arg.getArrVal? 3).getStr?
+        let m ← (← arg.getArrVal? 4).getStr?
+        pure (MaskArg.unhashable (← (← arg.getArrVal? 2).getStr?)
+          (if cls = "TypeError" then .typeError m else .named cls m))
       | _ => pure (MaskArg.str (← (← arg.getArrVal? 1).getStr?).toList)
     let pre : List Int ← match j.getObjVal? "cache" with
       | .ok v => do
