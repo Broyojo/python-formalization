@@ -910,4 +910,41 @@ theorem mergeIsSorted_proven : MergeIsSorted := by
   simp only [List.map_id] at this
   exact this.symm
 
+/-! ### `next.__self__` free -/
+
+/-- `MergeIsSorted` for every iterator, not only those whose `__next__` is a bound method:
+the honest inputs of `mEnv` with `next.__self__` (`SEnv.selfOf`, Lib/heapq.py:383 / :408) any
+callback. A valid iterator may define `__next__` as a staticmethod (the iterator protocol only
+asks that `it.__next__()` work); then `it.__next__` is a plain function and `next.__self__`
+raises `AttributeError: 'function' object has no attribute '__self__'`. Source: the docstring
+(Lib/heapq.py:331-345), which promises the merge for any sorted iterables. -/
+def MergeIsSortedAnyIter : Prop :=
+  ∀ (α : Type) [DecidableEq α] [Inhabited α] (srcs : List (List α)) (r : α → α → Bool)
+    (κ : Option (α → α)) (impl rev : Bool) (fuel : Nat) (selfOf : MO → Eff (List Nat) PyExc MO),
+    Accel.StrictWeak r →
+    (srcs.map List.length).sum + 2 < fuel →
+    (∀ l ∈ srcs, l.Pairwise (fun a b => if rev then !r (kOf κ a) (kOf κ b) else !r (kOf κ b) (kOf κ a))) →
+    ((mergeDrain { mEnv srcs r with selfOf := selfOf } impl (κ.map pureKeyG) rev
+        ((List.range srcs.length).map MO.src) fuel .start).run (srcs.map (fun _ => 0))).1 =
+      .ok (srcs.flatten.mergeSort (fun a b => if rev then !r (kOf κ a) (kOf κ b) else !r (kOf κ b) (kOf κ a)))
+
+/-- What CPython's `next.__self__` does for an iterator whose `__next__` is a staticmethod. -/
+def selfOfStatic : MO → Eff (List Nat) PyExc MO :=
+  fun _ => Eff.raise (.named "AttributeError" "'function' object has no attribute '__self__'")
+
+/-- `list(merge(It()))` for an iterator `It()` over `[1, 2, 3]` whose `__next__` is a
+staticmethod: the first `next()` yields `1`, the second reaches `yield from next.__self__` with
+only this input left and raises `AttributeError`, for both heap implementations. -/
+theorem mergeStatic_run (impl : Bool) :
+    ((mergeDrain { mEnv [[(1 : Int), 2, 3]] intLtB with selfOf := selfOfStatic } impl none false
+        ((List.range 1).map MO.src) 10 .start).run [0]).1 =
+      .error (.named "AttributeError" "'function' object has no attribute '__self__'") := by
+  cases impl <;> decide +kernel
+
+theorem mergeIsSortedAnyIter_refuted : ¬ MergeIsSortedAnyIter := by
+  intro h
+  have := h Int [[1, 2, 3]] intLtB none false false 10 selfOfStatic strictWeak_intLtB (by decide) (by decide)
+  have h2 := (mergeStatic_run false).symm.trans this
+  cases h2
+
 end PyLean.Accel.Heapq
