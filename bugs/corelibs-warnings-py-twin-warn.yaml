@@ -37,7 +37,10 @@ summary: |
      and ignored by C's.
   7. `del warnings.filters`: C keeps searching the list it read last (`get_warnings_filters`
      keeps `st->filters`, :346-353); Python's `_GlobalContext._filters` returns a fresh `[]`
-     (:76-80), so `filterwarnings` then changes nothing C sees.
+     (:76-80), so `filterwarnings` then changes nothing C sees. `Py_SETREF` (:352) caches
+     whatever was read before the list check (:355-360), so after `warnings.filters = (...)`
+     (C raises ValueError) and `del warnings.filters`, C keeps raising "_warnings.filters must be
+     a list" while Python shows the warning (filterListTwinsCached_refuted).
   warn_explicit, measured on 3.15.2 (Warn/Props.lean, the WarnTwinsModuleState, WarnTwinsGlobals,
   WarnTwinsLineObj, WarnTwinsRegObj and WarnTwinsItemShape refutations):
   8. `warnings.filters` (or a context's `_filters`) a tuple: C raises ValueError

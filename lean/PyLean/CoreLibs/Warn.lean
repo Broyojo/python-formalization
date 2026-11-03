@@ -363,6 +363,18 @@ def entries : List Entry := [
     statement := "Also when warnings.filters was deleted, C and Python search the same list."
     source := "twin", status := .refuted
     prop := ``FilterListTwinsAny, thm := some ``filterListTwinsAny_refuted, bug := some "corelibs-warnings-py-twin-warn" },
+  { id := "warn-filter-list-cached", pyFile := "Python/_warnings.c"
+    pyFns := ["get_warnings_filters"]
+    statement := "With warnings.filters deleted and its lookup cleared (no module __getattr__, or one raising an exception under AttributeError) and no context set, C searches the object it cached when it last read warnings.filters, and its list check runs on that object: a cached list gives its contents, a cached tuple ValueError '_warnings.filters must be a list'."
+    source := "Py_SETREF of :352 and the check of :355-360", status := .proven
+    prop := ``CFilterListCached, thm := some ``cFilterListCached_proven
+    notes := "Measured on 3.15.2: warnings.filters = (...) (C caches the tuple and raises), then del warnings.filters: C warn_explicit raises the same ValueError." },
+  { id := "warn-filter-list-twins-cached", pyFile := "Python/_warnings.c"
+    pyFns := ["get_warnings_filters"]
+    statement := "When the current warnings.filters (if any) is a list, C and Python search the same list, also when only the object C cached is a tuple."
+    source := "twin", status := .refuted
+    prop := ``FilterListTwinsCached, thm := some ``filterListTwinsCached_refuted, bug := some "corelibs-warnings-py-twin-warn"
+    notes := "warnings.filters = (...) then del warnings.filters: C raises ValueError from the cached tuple, Python's _GlobalContext._filters gives []." },
   { id := "warn-filter-list-twins-tuple", pyFile := "Python/_warnings.c"
     pyFns := ["get_warnings_filters", "get_warnings_context_filters"]
     statement := "Also with a tuple as warnings.filters, C and Python search the same list."
@@ -393,7 +405,7 @@ def entries : List Entry := [
   { id := "warn-catch-restores", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__init__", "catch_warnings.__enter__", "catch_warnings.__exit__", "_Context.__init__",
               "_Context.copy", "_new_context", "_set_context", "_get_context", "_get_filters", "_GlobalContext._filters"]
-    statement := "In both context modes, in a state where a deleted warnings.filters reads as [] (its lookup error is caught; always so with no module __getattr__), a catch_warnings(...) whose action simplefilter accepts enters; with no action the block sees a copy of the filters (a new list, same contents); a second __enter__ raises RuntimeError and changes nothing; and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
+    statement := "In both context modes, in a state where (with contexts and no current _Context) a deleted warnings.filters reads as [] (its lookup error is caught; always so with no module __getattr__), a catch_warnings(...) whose action simplefilter accepts enters; with no action the block sees a copy of the filters (a new list, same contents); a second __enter__ raises RuntimeError and changes nothing; and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
     source := "docs: copies and, upon exit, restores the warnings filter and showwarning()", status := .proven
     prop := ``CatchRestores, thm := some ``catchRestores_proven
     notes := "Difftest warn.ctx agrees on 200k cases over 4 seeds. Without the condition on a deleted warnings.filters the statement is false (catchRestoresAnyRead_refuted: a module __getattr__ raising KeyError makes __enter__ raise, as measured on 3.15.2); that is the documented behaviour, recorded in warn-filters-lookup-raises." },

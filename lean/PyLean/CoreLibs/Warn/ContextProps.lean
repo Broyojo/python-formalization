@@ -24,9 +24,11 @@ def editFilters (useCtx : Bool) (f : List Elem → List Elem) (st : MState) : MS
 /-- `catch_warnings` "copies and, upon exit, restores the warnings filter and the showwarning()
 function" (Doc/library/warnings.rst), in both context modes: for every `catch_warnings(...)` whose
 `action` (if any) `simplefilter` accepts, in a state whose references are fresh and (without
-contexts) whose `warnings.filters` exists, and (with contexts) whose deleted `warnings.filters`, if
-it is, reads as `[]` (`_GlobalContext._filters` catches the lookup error: always so for a module
-with no `__getattr__`, `plainDeleted_caught`), `__enter__` succeeds and (with no action) the block sees
+contexts) whose `warnings.filters` exists, and (with contexts, when no `_Context` is current, so
+that `__enter__` copies the global one) whose deleted `warnings.filters`, if it is, reads as `[]`
+(`_GlobalContext._filters` catches the lookup error: always so for a module with no
+`__getattr__`, `plainDeleted_caught`; with a current `_Context` nothing reads it), `__enter__`
+succeeds and (with no action) the block sees
 a copy of the filters, a new list with the same contents; a second `__enter__` of the same object
 raises `RuntimeError` and changes nothing; whatever the block does to the filters it sees,
 `__exit__` succeeds, `_get_filters()` is what it was before, and `showwarning` (and without
@@ -35,7 +37,8 @@ def CatchRestores : Prop :=
   ∀ (useCtx : Bool) (name : String) (record : Bool) (om : Nat) (action : Option ActA)
     (cat : Nat) (ln : IntA) (ap : Bool) (st : MState) (f : List Elem → List Elem) (sw : Fn),
     Fresh st → st.showwarning = some sw → (useCtx = false → st.filters ≠ none) →
-    (st.filters = none → isA st.hier (modAttrErr st "filters") "AttributeError" = true) →
+    (useCtx = true → (∀ c, st.ctxv ≠ .ctx c) → st.filters = none →
+      isA st.hier (modAttrErr st "filters") "AttributeError" = true) →
     (∀ a, action = some a → ∃ it, sfPrep a cat ln = .ok it) →
     (∀ it, EqTotal it (getFilters useCtx st)) →
     ∃ cw' st1 log, cwEnter useCtx (cwInit name record om action cat ln ap) st = (cw', st1, .ok log) ∧
@@ -513,6 +516,38 @@ def FilterListTwinsAny : Prop :=
 theorem filterListTwinsAny_refuted : ¬ FilterListTwinsAny := fun h => by
   have e := congrArg (fun r => (r.map List.length : Py Nat))
     (h false { st0 with filters := none, lists := fun _ => [.other 0 (.ok false)] } 0 (Or.inr rfl) (fun _ => rfl))
+  simp [cFilterList, getFilters, getContext, ctxFilters, st0, MState.modGetattr, Except.map] at e
+
+/-- With `warnings.filters` deleted and its lookup cleared (no module `__getattr__`, or one raising
+an exception under `AttributeError`), and no context set, C searches the object it cached when it
+last read `warnings.filters`, and runs its list check on it (:352-360): a cached list gives its
+contents, a cached tuple `ValueError`. -/
+def CFilterListCached : Prop :=
+  ∀ (st : MState) (cached : Ref), st.ctxv = .unset → st.filters = none →
+    (st.modGetattr "filters" = none ∨ ∃ e, st.modGetattr "filters" = some e ∧ isA st.hier e "AttributeError" = true) →
+    (st.tuples cached = false → cFilterList st cached = .ok (st.lists cached, "filters")) ∧
+    (st.tuples cached = true → cFilterList st cached = .error (.valueError "_warnings.filters must be a list"))
+
+theorem cFilterListCached_proven : CFilterListCached := by
+  intro st cached hu hf hg
+  rcases hg with hg | ⟨e, hg, he⟩
+  · exact ⟨fun ht => by simp [cFilterList, hu, hf, hg, ht],
+           fun ht => by simp [cFilterList, hu, hf, hg, ht]⟩
+  · exact ⟨fun ht => by simp [cFilterList, hu, hf, hg, ht, he],
+           fun ht => by simp [cFilterList, hu, hf, hg, ht, he]⟩
+
+/-- Without the condition that no filters container is a tuple, also when only the object C cached
+is one: refuted. `warnings.filters = (...)` (C reads and caches the tuple, then raises), then
+`del warnings.filters`: C's `warn_explicit` raises `ValueError` from the cached tuple, Python's
+`_GlobalContext._filters` gives `[]` (measured on 3.15.2). -/
+def FilterListTwinsCached : Prop :=
+  ∀ (useCtx : Bool) (st : MState) cached, (useCtx = true ∨ st.ctxv = .unset) →
+    (∀ r, st.filters = some r → st.tuples r = false) →
+    (cFilterList st cached).map (·.1) = .ok (getFilters useCtx st)
+
+theorem filterListTwinsCached_refuted : ¬ FilterListTwinsCached := fun h => by
+  have e := h false { st0 with filters := none, tuples := fun r => r = 5 } 5 (Or.inr rfl)
+    (fun r hr => by simp at hr)
   simp [cFilterList, getFilters, getContext, ctxFilters, st0, MState.modGetattr, Except.map] at e
 
 /-! ## A deleted `warnings.filters` whose lookup raises -/
