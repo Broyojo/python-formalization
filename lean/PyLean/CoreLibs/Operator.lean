@@ -9,6 +9,7 @@ import PyLean.CoreLibs.Operator.CopyStrength
 import PyLean.CoreLibs.Operator.AbcStrength
 import PyLean.CoreLibs.Operator.McShare
 import PyLean.CoreLibs.Operator.AttrObjProps
+import PyLean.CoreLibs.Operator.IgReduce
 
 /-! Registry for the `Operator` area of CoreLibs: Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py,
 CPython 3.15.2. -/
@@ -48,7 +49,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-sequence-fallback"
     pyFile := file
     pyFns := ["add", "mul", "_operator_add_impl", "_operator_mul_impl"]
-    statement := "+ and * after the number slots: sq_concat, then sq_repeat of the left and of the right, with the count through __index__, its exception, a TypeError for a non-index, an OverflowError for one that does not fit."
+    statement := "+ and * after the number slots: sq_concat, then sq_repeat of the left and of the right, with the count through __index__, its exception, a TypeError for a non-index, an OverflowError for one above or below the Py_ssize_t range."
     source := "Objects/abstract.c"
     status := .proven
     prop := ``SequenceFallback
@@ -503,8 +504,9 @@ def entries : List Entry := [
     thm := some ``inplaceExact_proven },
   { id := "corelibs-operator-rich-compare-exact"
     pyFile := file
-    pyFns := ["lt", "le", "gt", "ge", "_operator_lt_impl", "_operator_le_impl", "_operator_gt_impl", "_operator_ge_impl"]
-    statement := "do_richcompare on one type, and the TypeError of every ordering, and a raising reflected method of a subclass."
+    pyFns := ["lt", "le", "gt", "ge", "eq", "ne", "_operator_lt_impl", "_operator_le_impl", "_operator_gt_impl",
+      "_operator_ge_impl", "_operator_eq_impl", "_operator_ne_impl"]
+    statement := "do_richcompare on one type, and the TypeError of every ordering, and a raising reflected method of a strict subclass, tried first, for every operator."
     source := "Objects/object.c"
     status := .proven
     prop := ``RichCompareExact
@@ -552,7 +554,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-digest-exact"
     pyFile := file
     pyFns := ["_operator__compare_digest_impl"]
-    statement := "compare_digest is equality on ASCII strings and on buffers, refuses the rest with the source's message, and propagates a failing PyObject_GetBuffer or a view with ndim > 1, a's before b's."
+    statement := "compare_digest is equality on ASCII strings and on buffers, refuses the rest with the source's message naming both types (a str subclass by its own name), and propagates a failing PyObject_GetBuffer or a view with ndim > 1, a's before b's."
     source := "docs of hmac.compare_digest"
     status := .proven
     prop := ``DigestExact
@@ -700,6 +702,38 @@ def entries : List Entry := [
     prop := ``McShare.McCallIsolated
     thm := some ``McShare.mcCallIsolated_refuted
     bug := some "operator-methodcaller-reduce-shares-kwargs" },
+  { id := "corelibs-operator-mc-repr-guard"
+    pyFile := file
+    pyFns := ["methodcaller_repr"]
+    statement := "The keyword loop of methodcaller_repr, every step: PyDict_Next reads the dict as the last repr left it; an item past numtotalargs, or an end short of it, is RuntimeError 'keywords dict changed size during iteration'; a failing repr stops it; a non-str key is undefined behaviour."
+    source := "Modules/_operator.c:1834-1853"
+    status := .proven
+    prop := ``McShare.McReprGuard
+    thm := some ``McShare.mcReprGuard_proven },
+  { id := "corelibs-operator-mc-repr-pure"
+    pyFile := file
+    pyFns := ["methodcaller_repr"]
+    statement := "With reprs that write nothing, methodcaller_repr over a compact keyword dict never raises the size error and is the name, the positional reprs and the key=repr items joined, the first failure being the outcome."
+    source := "Modules/_operator.c:1799-1873"
+    status := .proven
+    prop := ``McShare.McReprPure
+    thm := some ``McShare.mcReprPure_proven },
+  { id := "corelibs-operator-mc-repr-mutations"
+    pyFile := file
+    pyFns := ["methodcaller_repr", "methodcaller_reduce"]
+    statement := "Through the dict shared by __reduce__, a value's __repr__ that adds a key, deletes one not yet printed or clears the dict early makes repr(mc) raise RuntimeError; deleting a printed key, clearing at the last item, changing a value, or a deletion balanced by an addition do not, as measured on 3.15.2."
+    source := "Modules/_operator.c:1834-1853; measured on 3.15.2"
+    status := .proven
+    prop := ``McShare.McReprMutations
+    thm := some ``McShare.mcReprMutations_proven },
+  { id := "corelibs-operator-itemgetter-reduce"
+    pyFile := file
+    pyFns := ["itemgetter_reduce", "itemgetter.__reduce__", "itemgetter_new"]
+    statement := "itemgetter.__reduce__ round-trips: type(ig)(*args) rebuilds the same nitems, item and index, and the arguments are the constructor's own in both twins; one item gives (item,), more give the stored tuple."
+    source := "pickle protocol; Modules/_operator.c:1191-1198"
+    status := .proven
+    prop := ``ItemgetterReduce
+    thm := some ``itemgetterReduce_proven },
   { id := "corelibs-operator-mc-vectorcall-fresh"
     pyFile := file
     pyFns := ["methodcaller_vectorcall", "_methodcaller_initialize_vectorcall"]

@@ -3727,7 +3727,7 @@ def operator_gen(rng):
         return {"fn": "operator.mc_reduce", "twin": twin, "args": args, "kw": kw}
     if r == 17:
         def arg():
-            k = rng.choice(["str", "str", "bytes", "bytes", "int", "noncontig"])
+            k = rng.choice(["str", "str", "strsub", "bytes", "bytes", "int", "noncontig"])
             return {"k": k, "ascii": rng.random() < .8,
                     "data": [rng.randrange(97, 100) for _ in range(rng.randrange(0, 4))]}
         a = arg()
@@ -4319,8 +4319,9 @@ def operator_run(case):
         return {"ok": ["partial", [[k, v] for k, v in r[0].keywords.items()], list(r[1])]}
     if fn == "digest":
         def conv(a):
-            if a["k"] == "str":
-                return "".join(map(chr, a["data"])) + ("" if a["ascii"] else "é")
+            if a["k"] in ("str", "strsub"):
+                s = "".join(map(chr, a["data"])) + ("" if a["ascii"] else "é")
+                return operator_DigestS(s) if a["k"] == "strsub" else s
             if a["k"] == "bytes":
                 return bytes(a["data"])
             if a["k"] == "noncontig":
@@ -4596,6 +4597,10 @@ def operator_search(case, m):
     if "exc" in r and r["exc"] == "TypeError" and case.get("twin") == "py" and name != "contains":
         r["msg"] = "'int' object is not iterable"
     return r
+
+
+# a str subclass whose tp_name is 'S', for the type names _compare_digest prints
+operator_DigestS = type("S", (str,), {})
 
 
 def operator_hint(case, m):
