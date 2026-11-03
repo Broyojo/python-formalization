@@ -398,20 +398,22 @@ theorem truthProtocol_proven : TruthProtocol := by
 
 /-! ### `index`, unary operators -/
 
-/-- `operator.index` agrees in the twins on an `int`, and on an object whose type's `__index__` returns an exact
-`int` or raises, with nothing in the instance. The cases left out are refuted next. -/
+/-- `operator.index` agrees in the twins on an `int` whose class does not override `__index__` (so `a.__index__()` is
+`int.__index__`, the value), and on an object whose type's `__index__` returns an exact `int` or raises, with nothing
+in the instance. The cases left out are refuted: `IndexTwinsAlways`, and `IndexIntSubclass` for an override. -/
 def IndexTwinsLawful : Prop :=
   ∀ o : IndexObj, o.inst = none → (∀ n, o.slot ≠ some (.ok (.sub n))) → (∀ tn, o.slot ≠ some (.ok (.other tn))) →
-    o.slot.isSome = true ∨ o.isInt.isSome = true → indexC o = indexPy o
+    (∀ n, o.isInt = some n → o.slot = some (.ok (.exact n))) →
+    o.slot.isSome = true → indexC o = indexPy o
 
 theorem indexTwinsLawful_proven : IndexTwinsLawful := by
-  intro o h1 h2 h3 h4
+  intro o h1 h2 h3 hint h4
   simp only [indexC, indexPy, h1]
   cases hi : o.isInt with
-  | some n => rfl
+  | some n => simp [hint n hi]
   | none =>
     cases hs : o.slot with
-    | none => simp [hi, hs] at h4
+    | none => simp [hs] at h4
     | some r =>
       cases r with
       | error e => rfl
@@ -420,6 +422,19 @@ theorem indexTwinsLawful_proven : IndexTwinsLawful := by
         | exact n => rfl
         | sub n => exact absurd hs (h2 n)
         | other tn => exact absurd hs (h3 tn)
+
+/-- `operator.index` agrees in the twins on every `int`, subclasses included. False: C answers `PyLong_Check` first
+(Objects/abstract.c:1416-1418) with the value, Python calls `a.__index__()` (Lib/operator.py:97), which for
+`class I(int): __index__ = lambda s: 7` is 7, so `index(I(3))` is 3 in C and 7 in Python
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def IndexIntSubclass : Prop :=
+  ∀ (o : IndexObj) (n : Int), o.isInt = some n → o.inst = none → indexC o = indexPy o
+
+theorem indexIntSubclass_refuted : ¬IndexIntSubclass := by
+  intro h
+  have := h ⟨some 3, some (.ok (.exact 7)), none, "I", none⟩ 3 rfl rfl
+  revert this
+  simp [indexC, indexPy]
 
 /-- `operator.index` is one function, whichever twin runs. False, four ways, all of which follow from the Python
 twin being the literal `a.__index__()`: no `__index__` is `AttributeError` against `TypeError`; a result that is
@@ -621,7 +636,7 @@ Objects/abstract.c:1734-1742 exists for: neither has a sequence slot and both op
 so both call `nb_add`; both raise `TypeError` without an answer. -/
 def ConcatTwinsOnUserSequences : Prop :=
   ∀ (α : Type) (A : ConcatArgs α) (lt rt : String) (a b : α) (x : α),
-    A.sqConcat = none → A.hasGetitem = true → A.seqA = true → A.seqB = true →
+    A.sqConcat = none → A.hasGetitem = .ok true → A.seqA = true → A.seqB = true →
     A.nbAdd a b = .ok (.val x) → concatC A lt a b = .ok x ∧ concatPy A lt rt a b = .ok x
 
 theorem concatTwinsOnUserSequences_proven : ConcatTwinsOnUserSequences := by
@@ -642,10 +657,34 @@ def ConcatIsPlus : Prop :=
 theorem concatIsPlus_refuted : ¬ConcatIsPlus := by
   intro h
   let A : ConcatArgs Nat :=
-    ⟨true, some (fun _ _ => .error (.typeError "x")), none, true, true,
+    ⟨.ok true, some (fun _ _ => .error (.typeError "x")), none, true, true,
       fun _ _ => .ok (.val 7), fun _ _ => .ok (.val 7)⟩
   have := h A "list" "X" 0 0 rfl rfl
   simp [A, concatC, plus, bind, Except.bind, pure, Except.pure] at this
+
+/-- `concat` and `iconcat` fail alike in the twins on an operand that is no sequence: both refuse it. False when
+looking up `__getitem__` raises something other than `AttributeError`: `hasattr` (Lib/operator.py:156, :359) passes
+that exception on, while C, which reads the type's slots, says the object can't be concatenated
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def ConcatRefuseTwins : Prop :=
+  ∀ (A : ConcatArgs Nat) (lt rt : String) (a b : Nat), A.sqConcat = none → A.sqInplace = none → A.seqA = false →
+    (concatC A lt a b = concatPy A lt rt a b ∧ iconcatC A lt a b = iconcatPy A lt rt a b)
+
+theorem concatRefuseTwins_refuted : ¬ConcatRefuseTwins := by
+  intro h
+  have := (h ⟨.error (.valueError "getattr"), none, none, false, false,
+      fun _ _ => .ok .notImplemented, fun _ _ => .ok .notImplemented⟩ "G" "int" 0 0 rfl rfl rfl).1
+  revert this
+  decide
+
+/-- `concat` and `iconcat` in Python when `hasattr` raises: that exception, before anything else. -/
+def ConcatHasattrRaises : Prop :=
+  ∀ (α : Type) (A : ConcatArgs α) (lt rt : String) (a b : α) (e : PyExc), A.hasGetitem = .error e →
+    concatPy A lt rt a b = .error e ∧ iconcatPy A lt rt a b = .error e
+
+theorem concatHasattrRaises_proven : ConcatHasattrRaises := by
+  intro α A lt rt a b e h
+  exact ⟨by simp [concatPy, h], by simp [iconcatPy, h]⟩
 
 
 /-! ### Iteration -/
@@ -767,24 +806,26 @@ theorem callTwins_proven : CallTwins := fun _ _ _ _ _ _ => ⟨rfl, rfl, ⟨_, rf
 
 /-! ### `length_hint` -/
 
-/-- `length_hint` agrees between the twins for an `int` default and hint that fit in `Py_ssize_t`, and a hint that is not
-an `int`: the result, or the same exception. A negative hint is a `ValueError` in both, but since 3.15 the two say it
-differently, and that is the only difference: Objects/abstract.c:147-148 against Lib/operator.py:228. Outside that range C
-raises `OverflowError` where Python returns the value, and C accepts an `__index__` default Python rejects; these follow
-from the C signature and are recorded here in the hypotheses. `__length_hint__` is a function in the class (`r` is its
-call, `none` without one), which both twins call with the object; other descriptors bind differently, refuted next. -/
+/-- `length_hint` agrees between the twins for an exact `int` default and hint that fit in `Py_ssize_t`, and a hint
+that is not an `int`: the result (an exact `int` in both), or the same exception. A negative hint is a `ValueError`
+in both, but since 3.15 the two say it differently, and that is the only difference: Objects/abstract.c:147-148
+against Lib/operator.py:228. Outside that range C raises `OverflowError` where Python returns the value, and C
+accepts an `__index__` default Python rejects; these follow from the C signature and are recorded here in the
+hypotheses. `__length_hint__` is a function in the class (`r` is its call, `none` without one), which both twins call
+with the object, and the metaclass has none; other descriptors, the metaclass and `int` subclasses are refuted
+next. -/
 def LengthHintTwins : Prop :=
   ∀ (o : HintObj) (d : Int) (r : Option (Py HintRet)), ssizeMin ≤ d → d ≤ ssizeMax →
-    o.hint = r.map HintDesc.func →
+    o.hint = r.map HintDesc.func → o.metaHint = none →
     (∀ v, r = some (.ok (.int v)) → ssizeMin ≤ v ∧ v ≤ ssizeMax) →
-    (∀ tn, r ≠ some (.ok (.other tn))) →
-    ((∀ v, r = some (.ok (.int v)) → 0 ≤ v) → lengthHintC o (.int d) = lengthHintPy o (.int d)) ∧
+    (∀ tn, r ≠ some (.ok (.other tn))) → (∀ v tn, r ≠ some (.ok (.intSub v tn))) →
+    ((∀ v, r = some (.ok (.int v)) → 0 ≤ v) → (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)) ∧
     (∀ v e, r = some (.ok (.int v)) → v < 0 → o.len = .error e → isTypeError e = true →
       lengthHintC o (.int d) = .error (.valueError (negativeHintC o)) ∧
       lengthHintPy o (.int d) = .error (.valueError negativeHint))
 
 theorem lengthHintTwins_proven : LengthHintTwins := by
-  intro o d r h1 h2 ho hr hn
+  intro o d r h1 h2 ho hm hr hn hs
   have hd : toSsize d = .ok d := by
     unfold toSsize ssizeMax ssizeMin at *
     rw [if_neg (by omega)]
@@ -795,19 +836,21 @@ theorem lengthHintTwins_proven : LengthHintTwins := by
     | ok n => rfl
     | error e =>
       cases ht : isTypeError e with
-      | false => simp [hl, ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
+      | false => simp [ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, Except.map]
       | true =>
-        simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false, ho]
+        simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false, ho, hm]
         cases r with
         | none => rfl
         | some h =>
-          simp only [Option.map, hintLookupC, hintCallPy]
+          simp only [Option.map, hintLookupC, hintLookupPy]
           cases h with
-          | error e2 => rfl
+          | error e2 =>
+            cases ht2 : isTypeError e2 <;> simp [ht2, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, Except.map]
           | ok v =>
             cases v with
             | notImplemented => rfl
             | other tn => exact absurd rfl (hn tn)
+            | intSub v tn => exact absurd rfl (hs v tn)
             | int v =>
               have hv := hr v rfl
               have hp' := hp v rfl
@@ -815,7 +858,7 @@ theorem lengthHintTwins_proven : LengthHintTwins := by
                 unfold toSsize ssizeMax ssizeMin at *
                 rw [if_neg (by omega)]
               have hn0 : ¬v < 0 := by omega
-              simp [this, hn0, bind, Except.bind]
+              simp [this, hn0, bind, Except.bind, Except.map]
   · intro v e hh hlt hl ht
     subst hh
     have hv := hr v rfl
@@ -825,7 +868,7 @@ theorem lengthHintTwins_proven : LengthHintTwins := by
     constructor
     · simp [lengthHintC, hd, hl, ht, ho, hintLookupC, this, hlt, bind, Except.bind, pure, Except.pure, throw,
         throwThe, MonadExcept.throw, MonadExceptOf.throw]
-    · simp [lengthHintPy, hl, ht, ho, hintCallPy, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
+    · simp [lengthHintPy, hl, ht, ho, hintLookupPy, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
         MonadExcept.throw, MonadExceptOf.throw]
 
 /-- `length_hint` agrees between the twins for any `__length_hint__` the class holds, when the hint is an `int`
@@ -838,21 +881,48 @@ def LengthHintDescTwins : Prop :=
   ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax →
     (∀ h, o.hint = some h → ∀ v, (hintLookupC h = .ok (.ok (.int v)) ∨ hintCallPy h = .ok (.int v)) →
       0 ≤ v ∧ v ≤ ssizeMax) →
-    lengthHintC o (.int d) = lengthHintPy o (.int d)
+    (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)
 
 theorem lengthHintDescTwins_refuted : ¬LengthHintDescTwins := by
   intro h
-  have := h ⟨.error (.typeError "no len"), some (.static (.ok (.int 5)) (.error (.typeError "takes 0"))), "O"⟩ 0
+  have := h ⟨.error (.typeError "no len"), some (.static (.ok (.int 5)) (.error (.typeError "takes 0"))), "O", none⟩ 0
     (by decide) (by decide) (by
       intro hd hh v hv
       simp only [Option.some.injEq] at hh
       subst hh
-      simp only [hintLookupC, hintCallPy] at hv
+      simp only [hintLookupC, hintCallPy, hintLookupPy] at hv
       rcases hv with hv | hv
       · simp only [Except.ok.injEq, HintRet.int.injEq] at hv
         subst hv
         decide
       · simp at hv)
+  revert this
+  decide
+
+/-- `length_hint` of an object whose class has no `__length_hint__` is the default in both twins, when `len` does not
+answer. False: Python's `type(obj).__length_hint__` (Lib/operator.py:213) also finds one on the metaclass, which
+`_PyObject_LookupSpecial` never reads, so a metaclass hint of 3 gives 3 in Python and the default 0 in C
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def LengthHintMetaTwins : Prop :=
+  ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax → o.hint = none →
+    (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)
+
+theorem lengthHintMetaTwins_refuted : ¬LengthHintMetaTwins := by
+  intro h
+  have := h ⟨.error (.typeError "no len"), none, "O", some (.ok (.int 3))⟩ 0 (by decide) (by decide) rfl
+  revert this
+  decide
+
+/-- `length_hint` gives the same object in both twins when only the default answers. False for an `int` subclass:
+Python returns the default as given (Lib/operator.py:203-204, :216), C converts it to `Py_ssize_t`, so
+`length_hint(object(), True)` is `True` in Python and `1` in C (bugs/corelibs-operator-twin-lookups.yaml). -/
+def LengthHintDefaultTwins : Prop :=
+  ∀ (o : HintObj) (dflt : HintDefault), o.hint = none → o.metaHint = none →
+    (lengthHintC o dflt).map .exact = lengthHintPy o dflt
+
+theorem lengthHintDefaultTwins_refuted : ¬LengthHintDefaultTwins := by
+  intro h
+  have := h ⟨.error (.typeError "no len"), none, "object", none⟩ (.intSub 1 "bool") rfl rfl
   revert this
   decide
 

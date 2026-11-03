@@ -45,19 +45,16 @@ def igReduceC {κ : Type} (ig : IgObj κ) : List (ItemKey κ) :=
     | .tuple ks => ks
     | .one k => [k]
 
-/-- `itemgetter.__reduce__`, Lib/operator.py:307-308: `self.__class__, self._items`, where `_items` is `(item,)` or
-the argument tuple (:291, :297). -/
-def igReducePy {κ : Type} (items : List (ItemKey κ)) : List (ItemKey κ) := items
-
 /-- `__reduce__` round-trips: `type(ig)(*args)` rebuilds the same getter, with the same `nitems`, `item` and
-`index`, in C, for every argument list the constructor accepts, and the arguments are the constructor's own, in
-both twins. The two forms of `itemgetter_reduce`: one item gives the 1-tuple `(item,)`, more give the stored
+`index`, in C, for every argument list the constructor accepts, and the arguments are the constructor's own. (The
+Python twin's `__reduce__`, Lib/operator.py:307-308, returns `self._items`, set at :289 or :294, as it is.) The two
+forms of `itemgetter_reduce`: one item gives the 1-tuple `(item,)`, more give the stored
 tuple. -/
 def ItemgetterReduce : Prop :=
   ∀ (κ : Type) (args : List (ItemKey κ)) (ig : IgObj κ) (k : ItemKey κ) (ks : List (ItemKey κ)) (n : Nat)
     (i : Option Nat),
     (igNewC args 0 = .ok ig →
-      igReduceC ig = args ∧ igReducePy args = args ∧ igNewC (igReduceC ig) 0 = .ok ig ∧
+      igReduceC ig = args ∧ igNewC (igReduceC ig) 0 = .ok ig ∧
       (args.length = 1 ↔ ig.nitems = 1)) ∧
     igReduceC ⟨1, .one k, i⟩ = [k] ∧
     (n ≠ 1 → igReduceC ⟨n, .tuple ks, i⟩ = ks) ∧
@@ -73,13 +70,13 @@ theorem itemgetterReduce_proven : ItemgetterReduce := by
       simp only [igNewC, newArgC, List.length_singleton] at h
       simp at h
       subst h
-      exact ⟨by simp [igReduceC], rfl, by simp [igNewC, newArgC, igReduceC], by simp⟩
+      exact ⟨by simp [igReduceC], by simp [igNewC, newArgC, igReduceC], by simp⟩
     | a :: b :: rest, h =>
       simp only [igNewC, newArgC, List.length_cons] at h
       simp at h
       subst h
       have hn : rest.length + 1 + 1 ≠ 1 := by omega
-      refine ⟨by simp [igReduceC], rfl, ?_, by simp⟩
+      refine ⟨by simp [igReduceC], ?_, by simp⟩
       simp [igNewC, newArgC, igReduceC]
   · intro hn; simp [igReduceC, hn]
 
