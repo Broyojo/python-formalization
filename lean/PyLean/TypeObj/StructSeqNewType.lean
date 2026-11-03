@@ -58,15 +58,17 @@ theorem matchArgsLoop_eq (fs : List FName) :
             ((fs.drop (i + 1)).take k)).mapM (fun n => utf8Decode n .strict) <;> rfl
 
 /-- What `PyStructSequence_NewType` does with every desc, every allocator and every outcome of
-the rest of `PyType_FromSpecWithBases`. -/
+the rest of `PyType_FromSpecWithBases`. A named field called `__weaklistoffset__`,
+`__dictoffset__` or `__vectorcalloffset__` is refused with `SystemError` (`specialCheck`); the
+other cases are stated for descs without such a field. -/
 def NewTypeOutcomes : Prop :=
   ∀ (d : Desc) (malloc : Nat → Bool) (rest : Py Unit),
     (malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = false →
       newType d malloc rest = .exc memoryError) ∧
     (malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = true →
       (∀ e, rest = .error e → newType d malloc rest = .exc e) ∧
-      (rest = .ok () → 0 ≤ d.nInSeq → d.nInSeq ≤ d.fields.length →
-        (d.fields.length : Int) - d.nInSeq < 2 ^ 28 - 4 →
+      (rest = .ok () → specialCheck (namedFields d.fields) = none → 0 ≤ d.nInSeq →
+        d.nInSeq ≤ d.fields.length → (d.fields.length : Int) - d.nInSeq < 2 ^ 28 - 4 →
         newType d malloc rest =
           (CRes.ofPy ((namesOf (d.fields.take d.nInSeq.toNat)).mapM (fun b => utf8Decode b .strict))).map
             fun ma =>
@@ -74,32 +76,43 @@ def NewTypeOutcomes : Prop :=
                           basicsize := (32 + 8 * ((d.fields.length : Int) - d.nInSeq)).toNat,
                           dict := honestDict d.nInSeq d.fields.length (d.fields.count .unnamed) },
                 matchArgs := ma }) ∧
-      (rest = .ok () → (d.fields.length : Int) + 1 ≤ d.nInSeq → d.nInSeq ≤ d.fields.length + 3 →
+      (rest = .ok () → specialCheck (namedFields d.fields) = none →
+        (d.fields.length : Int) + 1 ≤ d.nInSeq → d.nInSeq ≤ d.fields.length + 3 →
         ∃ m, newType d malloc rest = .exc (.typeError m)) ∧
       (rest = .ok () → (d.fields.length : Int) + 5 ≤ d.nInSeq → d.nInSeq - d.fields.length < 2 ^ 28 →
         newType d malloc rest =
           .exc (systemError "Cannot extend variable-size class without Py_TPFLAGS_ITEMS_AT_END.")) ∧
-      (rest = .ok () → d.nInSeq < 0 → (d.fields.length : Int) - d.nInSeq < 2 ^ 28 - 4 →
+      (rest = .ok () → specialCheck (namedFields d.fields) = none → d.nInSeq < 0 →
+        (d.fields.length : Int) - d.nInSeq < 2 ^ 28 - 4 →
         newType d malloc rest =
-          .exc (systemError "~Objects/tupleobject.c:40: bad argument to internal function")))
+          .exc (systemError "~Objects/tupleobject.c:40: bad argument to internal function")) ∧
+      (∀ e, rest = .ok () → specialCheck (namedFields d.fields) = some e →
+        d.nInSeq ≤ d.fields.length + 4 → (d.fields.length : Int) - d.nInSeq < 2 ^ 28 - 4 →
+        newType d malloc rest = .exc e))
+
+theorem initMembers_named (fs : List FName) : initMembersLoop fs 0 [] = namedFields fs := by
+  rw [initMembersLoop_eq]
+  simp [namedFields, List.range_eq_range']
 
 theorem newTypeOutcomes_proven : NewTypeOutcomes := by
   intro d malloc rest
   have hbase : ∀ (hm : malloc ((d.fields.length - d.fields.count .unnamed + 1) * 40) = true),
       newType d malloc rest =
-        (fromSpecBasicsize d.name (toCInt (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8)) rest).bind
+        (fromSpecBasicsize d.name (namedFields d.fields)
+            (toCInt (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8)) rest).bind
           fun bs => (initDict d d.fields.length (d.fields.count .unnamed)).bind fun r =>
-            .ok { type := { name := d.name, members := initMembersLoop d.fields 0 [], basicsize := bs,
+            .ok { type := { name := d.name, members := namedFields d.fields, basicsize := bs,
                             dict := r.1 }, matchArgs := r.2 } := by
     intro hm
     unfold newType
     rw [countMembers_eq]
     simp only
     unfold initializeMembers
-    simp only [hm, Bool.not_true, Bool.false_eq_true, if_false, CRes.bind_ok, List.take_length]
+    simp only [hm, Bool.not_true, Bool.false_eq_true, if_false, CRes.bind_ok, List.take_length,
+      initMembers_named]
     rfl
-  refine ⟨fun hm => ?_, fun hm => ⟨fun e he => ?_, fun hr h0 h1 h2 => ?_, fun hr h1 h2 => ?_,
-    fun hr h1 h2 => ?_, fun hr h1 h2 => ?_⟩⟩
+  refine ⟨fun hm => ?_, fun hm => ⟨fun e he => ?_, fun hr hs h0 h1 h2 => ?_, fun hr hs h1 h2 => ?_,
+    fun hr h1 h2 => ?_, fun hr hs h1 h2 => ?_, fun e hr hs h1 h2 => ?_⟩⟩
   · unfold newType
     rw [countMembers_eq]
     simp only
@@ -110,21 +123,22 @@ theorem newTypeOutcomes_proven : NewTypeOutcomes := by
     simp only [fromSpecBasicsize]
     rw [toCInt_id _ (by omega) (by omega), if_neg (by omega)]
     rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega)]
+    simp only [hs]
     rw [if_neg (show ¬ ((40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8).toNat < 32) by omega)]
     simp only [CRes.bind_ok, initDict]
     rw [if_neg (by omega), matchArgsLoop_eq d.fields _ 0 (by omega)]
-    simp only [List.drop_zero, initMembersLoop_eq, List.nil_append]
+    simp only [List.drop_zero, List.nil_append]
     cases (namesOf (d.fields.take d.nInSeq.toNat)).mapM (fun b => utf8Decode b .strict) with
     | error e => rfl
     | ok ma =>
       simp only [CRes.ofPy, CRes.bind_ok, CRes.map, CRes.bind]
       congr 3
-      · simp [namedFields, List.range_eq_range']
-      · congr 1; omega
+      congr 1; omega
   · rw [hbase hm, hr]
     simp only [fromSpecBasicsize]
     rw [toCInt_id _ (by omega) (by omega), if_neg (by omega)]
     rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega)]
+    simp only [hs]
     rw [if_pos (show (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8).toNat < 32 by omega)]
     exact ⟨_, rfl⟩
   · rw [hbase hm, hr]
@@ -135,9 +149,15 @@ theorem newTypeOutcomes_proven : NewTypeOutcomes := by
     simp only [fromSpecBasicsize]
     rw [toCInt_id _ (by omega) (by omega), if_neg (by omega)]
     rw [if_neg (show ¬ (40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8 = 0) by omega)]
+    simp only [hs]
     rw [if_neg (show ¬ ((40 + ((d.fields.length : Int) - d.nInSeq - 1) * 8).toNat < 32) by omega)]
     simp only [CRes.bind_ok, initDict]
     rw [if_pos h1]
+    rfl
+  · rw [hbase hm, hr]
+    simp only [fromSpecBasicsize]
+    rw [toCInt_id _ (by omega) (by omega), if_neg (by omega)]
+    simp only [hs]
     rfl
 
 /-! ## The `(int)` cast of the basicsize -/
@@ -156,7 +176,7 @@ theorem initMembersLoop_unnamed (k i : Nat) (acc : List Member) :
 
 theorem newType_unnamed (nm : Bytes) (k : Nat) :
     newType { name := nm, fields := List.replicate k .unnamed, nInSeq := 0 } (fun _ => true) (.ok ()) =
-      (fromSpecBasicsize nm (toCInt (40 + ((k : Int) - 0 - 1) * 8)) (.ok ())).bind fun bs =>
+      (fromSpecBasicsize nm [] (toCInt (40 + ((k : Int) - 0 - 1) * 8)) (.ok ())).bind fun bs =>
         .ok { type := { name := nm, members := [], basicsize := bs, dict := honestDict 0 k k },
               matchArgs := [] } := by
   unfold newType
@@ -165,7 +185,7 @@ theorem newType_unnamed (nm : Bytes) (k : Nat) :
   unfold initializeMembers
   simp only [Bool.not_true, Bool.false_eq_true, if_false, CRes.bind_ok]
   rw [List.take_of_length_le (by simp), initMembersLoop_unnamed]
-  cases fromSpecBasicsize nm (toCInt (40 + ((k : Int) - 0 - 1) * 8)) (.ok ()) with
+  cases fromSpecBasicsize nm [] (toCInt (40 + ((k : Int) - 0 - 1) * 8)) (.ok ()) with
   | ok bs => rfl
   | exc e => rfl
   | nullNoExc => rfl
@@ -182,7 +202,7 @@ theorem newTypeBasicsizeExact_refuted : ¬ NewTypeBasicsizeExact := by
   intro h
   have hw := newType_unnamed (lit "m.Wide") (2 ^ 29)
   rw [toCInt_wide] at hw
-  have hf : fromSpecBasicsize (lit "m.Wide") 32 (.ok ()) = .ok 32 := rfl
+  have hf : fromSpecBasicsize (lit "m.Wide") [] 32 (.ok ()) = .ok 32 := rfl
   rw [hf] at hw
   have := h descWide (fun _ => true) (.ok ()) _ hw
   rw [show descWide.fields = List.replicate (2 ^ 29) .unnamed from rfl, List.length_replicate] at this

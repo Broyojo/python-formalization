@@ -546,13 +546,27 @@ def toCInt (x : Int) : Int :=
   let m := x % 2 ^ 32
   if m ≥ 2 ^ 31 then m - 2 ^ 32 else m
 
-/-- What `PyType_FromSpecWithBases(&spec, &PyTuple_Type)` does with `spec.basicsize`:
-`> 0` is used (Objects/typeobject.c:5339-5341); `< 0` asks for that much room on top of tuple
-(:5342-5344), which tuple, a variable-size base without `Py_TPFLAGS_ITEMS_AT_END`, refuses
-(:5629-5643); `0` inherits tuple's 32 (:5645-5648); then `type_ready` refuses a basicsize below
-the base's (:5207-5212). Every other check and allocation it does before is `rest`, an arbitrary
-outcome. Returns `tp_basicsize`. -/
-def fromSpecBasicsize (name : Bytes) (basicsize : Int) (rest : Py Unit) : CRes Nat :=
+/-- The member names `PyType_FromMetaclass` treats as special offsets (typeobject.c:5443-5451),
+in the order it checks them (:5651-5665). -/
+def specialNames : List String := ["__weaklistoffset__", "__dictoffset__", "__vectorcalloffset__"]
+
+/-- `special_offset_from_member` (Objects/typeobject.c:5272-5297) for the members of a struct
+sequence: they are `_Py_T_OBJECT`, so a member under one of the special names is refused with
+`SystemError`. The first special name (in check order) that some member has decides. -/
+def specialCheck (ms : List Member) : Option PyExc :=
+  match specialNames.find? (fun s => ms.any (·.name == lit s)) with
+  | some s => some (systemError s!"type of {s} must be Py_T_PYSSIZET")
+  | none => none
+
+/-- What `PyType_FromSpecWithBases(&spec, &PyTuple_Type)` does with `spec.basicsize` and the
+members: `> 0` is used (Objects/typeobject.c:5339-5341); `< 0` asks for that much room on top of
+tuple (:5342-5344), which tuple, a variable-size base without `Py_TPFLAGS_ITEMS_AT_END`, refuses
+(:5629-5643); `0` inherits tuple's 32 (:5645-5648); then the special offsets are computed from
+the members named `__weaklistoffset__`, `__dictoffset__`, `__vectorcalloffset__` (:5649-5665,
+`specialCheck`); and `check_basicsize_includes_size_and_offsets` refuses a basicsize below the
+base's (:5207-5212, called at :5781). Every other check and allocation it does before is `rest`,
+an arbitrary outcome. Returns `tp_basicsize`. -/
+def fromSpecBasicsize (name : Bytes) (ms : List Member) (basicsize : Int) (rest : Py Unit) : CRes Nat :=
   match rest with
   | .error e => .exc e
   | .ok () =>
@@ -560,9 +574,12 @@ def fromSpecBasicsize (name : Bytes) (basicsize : Int) (rest : Py Unit) : CRes N
       .exc (systemError "Cannot extend variable-size class without Py_TPFLAGS_ITEMS_AT_END.")
     else
       let bs := if basicsize = 0 then 32 else basicsize.toNat
-      if bs < 32 then
-        .exc (.typeError s!"~tp_basicsize for type '{String.ofList (name.map Char.ofNat)}' ({bs}) is too small for base 'tuple' (32)")
-      else .ok bs
+      match specialCheck ms with
+      | some e => .exc e
+      | none =>
+        if bs < 32 then
+          .exc (.typeError s!"~tp_basicsize for type '{String.ofList (name.map Char.ofNat)}' ({bs}) is too small for base 'tuple' (32)")
+        else .ok bs
 
 /-- The `__match_args__` loop of `initialize_structseq_dict`, :510-520: for `i < n_in_sequence`,
 the decoded names of the named fields. The terminator (index `fields.length`) has a `NULL`
@@ -611,7 +628,7 @@ def newType (d : Desc) (malloc : Nat → Bool) (rest : Py Unit) : CRes Built := 
   let (n, u) := countMembers d.fields
   let ms ← initializeMembers d.fields n u malloc
   let hidden : Int := (n : Int) - d.nInSeq
-  let bs ← fromSpecBasicsize d.name (toCInt (40 + (hidden - 1) * 8)) rest
+  let bs ← fromSpecBasicsize d.name ms (toCInt (40 + (hidden - 1) * 8)) rest
   let (dict, ma) ← initDict d n u
   .ok { type := { name := d.name, members := ms, basicsize := bs, dict := dict }, matchArgs := ma }
 
