@@ -30,6 +30,7 @@ import PyLean.TextLibs.TomlKey
 import PyLean.TextLibs.TomlNum
 import PyLean.TextLibs.TomlDate
 import PyLean.TextLibs.TomlTable
+import PyLean.TextLibs.TomlLoad
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1710,6 +1711,13 @@ def entries : List Entry := [
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Table ('you cannot define a table more than once', super-tables after sub-tables are valid) and Array of Tables", status := .proven
     prop := ``Toml.TableRules, thm := some ``Toml.tableRules_proven
     notes := "Pending flags stay empty in these documents, so add_pending and finalize_pending's loop are not credited here." }
+,
+  { id := "textlibs-toml-load", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["load"]
+    statement := "For every text of Unicode scalar values, load() of a binary file holding its UTF-8 encoding equals loads() of the text; bytes that are not valid UTF-8 raise the decoder's UnicodeDecodeError; a file opened in text mode (read() returns str) and an AttributeError from a decode() method both raise TypeError 'File must be opened in binary mode, ...'; an exception from fp.read() propagates."
+    source := "docs of load ('The first argument should be a readable and binary file object'); load against loads", status := .proven
+    prop := ``Toml.LoadSpec, thm := some ``Toml.loadSpec_proven
+    notes := "Uses the UTF-8 decoder of PyLean.UnicodeObj and its round trip (utf8RoundTrip_proven)." }
 ]
 
 end PyLean.TextLibs
