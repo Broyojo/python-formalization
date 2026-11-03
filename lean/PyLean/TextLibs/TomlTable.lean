@@ -407,7 +407,9 @@ literal or basic parts, at most `MAX_KEY_PARTS` - 1 parts) and bare key `x`:
 (2) `[[K]]` twice gives `K = [{}, {}]`;
 (3) `[K]` then `[[K]]` raises "Cannot overwrite a value" (a table is not an array);
 (4) `[[K]]` then `[K]` raises "Cannot declare K twice";
-(5) `[K.x]` then `[K]` gives `K = {x = {}}` (a super-table may follow its sub-table). -/
+(5) `[K.x]` then `[K]` gives `K = {x = {}}` (a super-table may follow its sub-table);
+(6) `[[K]]`, `[K.x]`, `[[K]]`, `[K.x]` gives `K = [{x = {}}, {x = {}}]` (each element of an array of
+tables has its own sub-tables). -/
 def TableRules : Prop :=
   ∀ (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str),
     p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 2 ≤ maxK → x ≠ [] → (∀ c ∈ x, bareKey c = true) →
@@ -421,7 +423,9 @@ def TableRules : Prop :=
       .error (tdeS "Cannot overwrite a value" (hdr K ++ 10 :: aot K) (2 * K.length + 5)) ∧
     loads pf maxK maxD (.str (aot K ++ 10 :: hdr K)) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") (aot K ++ 10 :: hdr K) (2 * K.length + 6)) ∧
-    loads pf maxK maxD (.str (hdr (K ++ 46 :: x) ++ 10 :: hdr K)) = .ok (nestDict k [(x, .tbl [])])
+    loads pf maxK maxD (.str (hdr (K ++ 46 :: x) ++ 10 :: hdr K)) = .ok (nestDict k [(x, .tbl [])]) ∧
+    loads pf maxK maxD (.str (aot K ++ 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x))) =
+      .ok (nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl [(x, .tbl [])]])])
 
 theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ maxK) :
@@ -754,10 +758,268 @@ theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
               flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) [], pending := [] } })
     hg3 (finalize_nil _ rfl) hrule hend
 
+/-! ## Sub-tables of array-of-tables elements -/
+
+/-- The flags tree along one key path: empty nodes, then `n` at the end. -/
+def chainT : Key → FNode → List (Str × FNode)
+  | [], _ => []
+  | [s], n => [(s, n)]
+  | s :: ks, n => [(s, .mk [] [] (chainT ks n))]
+
+theorem chainT_set (g : Nat) : ∀ (k : Key), k ≠ [] → fsetAux g false k [] = chainT k (.mk [g] [] [])
+  | [], h => absurd rfl h
+  | [s], _ => by simp [fsetAux, chainT, dget_nil, FNode.empty, addFlag, dset_nil]
+  | s :: s2 :: ks, _ => by
+    simp only [fsetAux, dget_nil, Option.getD_none, FNode.empty, dset_nil, chainT]
+    rw [chainT_set g (s2 :: ks) (by simp)]
+
+theorem chainT_ext (g : Nat) (x : Str) (fl : List Nat) (ns : List (Str × FNode)) :
+    ∀ (k : Key), k ≠ [] → fsetAux g false (k ++ [x]) (chainT k (.mk fl [] ns)) =
+      chainT k (.mk fl [] (fsetAux g false [x] ns))
+  | [], h => absurd rfl h
+  | [s], _ => by
+    show fsetAux g false [s, x] [(s, .mk fl [] ns)] = [(s, .mk fl [] (fsetAux g false [x] ns))]
+    simp only [fsetAux, dget_single, Option.getD_some, dset_single]
+  | s :: s2 :: ks, _ => by
+    have ih := chainT_ext g x fl ns (s2 :: ks) (by simp)
+    generalize hX : fsetAux g false [x] ns = X at ih ⊢
+    show fsetAux g false (s :: (s2 :: ks ++ [x])) [(s, .mk [] [] (chainT (s2 :: ks) (.mk fl [] ns)))] =
+      [(s, .mk [] [] (chainT (s2 :: ks) (.mk fl [] X)))]
+    have h2 : s2 :: ks ++ [x] = s2 :: (ks ++ [x]) := rfl
+    rw [h2]
+    simp only [fsetAux, dget_single, Option.getD_some, dset_single]
+    rw [← h2, ih]
+
+theorem chainT_reset (g : Nat) (n : FNode) : ∀ (k : Key), k ≠ [] →
+    fsetAux g false k (unsetAux k (chainT k n)) = chainT k (.mk [g] [] [])
+  | [], h => absurd rfl h
+  | [s], _ => by simp [chainT, unsetAux, dpop, fsetAux, dget_nil, FNode.empty, addFlag, dset_nil]
+  | s :: s2 :: ks, _ => by
+    cases n with
+    | mk f r ns =>
+      show fsetAux g false (s :: s2 :: ks) (unsetAux (s :: s2 :: ks) [(s, .mk [] [] (chainT (s2 :: ks) (.mk f r ns)))]) = _
+      simp only [unsetAux, dget_single, dset_single, fsetAux, Option.getD_some]
+      rw [chainT_reset g (.mk f r ns) (s2 :: ks) (by simp)]
+      rfl
+
+theorem chainT_query_ext (flag : Nat) (x : Str) (fl : List Nat) : ∀ (k : Key), k ≠ [] →
+    isAux flag (k ++ [x]) (chainT k (.mk fl [] [])) = false
+  | [], h => absurd rfl h
+  | [s], _ => by
+    show isAux flag [s, x] [(s, .mk fl [] [])] = false
+    simp [isAux, dget_single, FNode.rflags, FNode.nested, dget_nil]
+  | s :: s2 :: ks, _ => by
+    show isAux flag (s :: (s2 :: ks ++ [x])) [(s, .mk [] [] (chainT (s2 :: ks) (.mk fl [] [])))] = false
+    have h2 : s2 :: ks ++ [x] = s2 :: (ks ++ [x]) := rfl
+    rw [h2]
+    simp only [isAux, dget_single, FNode.rflags, FNode.nested, List.contains_nil, Bool.false_eq_true, ite_false]
+    rw [← h2]; exact chainT_query_ext flag x fl (s2 :: ks) (by simp)
+
+theorem chainT_query (flag : Nat) (fl : List Nat) (ns : List (Str × FNode)) (hf : flag ∉ fl) :
+    ∀ (k : Key), k ≠ [] → isAux flag k (chainT k (.mk fl [] ns)) = false
+  | [], h => absurd rfl h
+  | [s], _ => by simp [chainT, isAux, dget_single, FNode.flags, FNode.rflags, hf]
+  | s :: s2 :: ks, _ => by
+    show isAux flag (s :: s2 :: ks) [(s, .mk [] [] (chainT (s2 :: ks) (.mk fl [] ns)))] = false
+    simp only [isAux, dget_single, FNode.rflags, FNode.nested, List.contains_nil, Bool.false_eq_true, ite_false]
+    exact chainT_query flag fl ns hf (s2 :: ks) (by simp)
+
+theorem withNest_nest_append {α : Type} (acc : Bool) (f : Dict → Py (Dict × α)) :
+    ∀ (k1 k2 : Key) (D : Dict), withNest acc f (k1 ++ k2) (nestDict k1 D) =
+      (withNest acc f k2 D).map (fun r => (nestDict k1 r.1, r.2))
+  | [], k2, D => by simp [nestDict]; cases withNest acc f k2 D <;> rfl
+  | k :: ks, k2, D => by
+    simp only [List.cons_append, nestDict, withNest, dget_single, Option.isSome_some, ite_true]
+    rw [withNest_nest_append acc f ks k2 D]
+    cases withNest acc f k2 D <;> simp [Except.map, bind, Except.bind, dset_single, pure, Except.pure]
+
+theorem withNest_aot {α : Type} (f : Dict → Py (Dict × α)) (l x : Str) (xs : List TVal) (d : Dict) :
+    withNest true f [l, x] [(l, .arr (xs ++ [.tbl d]))] =
+      (withNest true f [x] d).map (fun r => ([(l, .arr (xs ++ [.tbl r.1]))], r.2)) := by
+  simp only [withNest, dget_single, Option.isSome_some, ite_true, List.getLast?_concat, List.dropLast_concat]
+  cases withNest true f [x] d <;> simp [Except.map, bind, Except.bind, dset_single, pure, Except.pure]
+
+theorem key_split {k : Key} (h : k ≠ []) (x : Str) : k ++ [x] = k.dropLast ++ [k.getLastD [], x] := by
+  have e := List.dropLast_concat_getLast h
+  have : k.getLast h = k.getLastD [] := by
+    cases k with
+    | nil => exact absurd rfl h
+    | cons a t => rfl
+  conv => lhs; rw [← e]
+  rw [this]; simp
+
+theorem nest_aot {k : Key} (h : k ≠ []) (x : Str) (xs : List TVal) :
+    getOrCreateNest true (k ++ [x]) (nestDict k.dropLast [(k.getLastD [], .arr (xs ++ [.tbl []]))]) =
+      .ok (nestDict k.dropLast [(k.getLastD [], .arr (xs ++ [.tbl [(x, .tbl [])]]))]) := by
+  unfold getOrCreateNest
+  rw [key_split h x, withNest_nest_append, withNest_aot, withNest_empty]
+  simp [Except.map, nestDict]
+
+theorem append_aot {k : Key} (h : k ≠ []) (ys : List TVal) :
+    appendNestToList k (nestDict k.dropLast [(k.getLastD [], .arr ys)]) =
+      .ok (nestDict k.dropLast [(k.getLastD [], .arr (ys ++ [.tbl []]))]) := by
+  simp only [appendNestToList, withNest_nest, getLast?_ne h, dget_single, dset_single, Except.map]
+
+theorem dict_at {cfg : Cfg} {src : Str} {pos : Nat} {p0 : KPart} {ps : List KPart} {rest : Str} {out : Out}
+    (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ cfg.maxKeyParts)
+    (h : src.drop pos = hdr (keyEnc p0 ps) ++ rest) :
+    (if src[pos + 1]? == some 91 then createListRule cfg src pos out else createDictRule cfg src pos out) =
+      if out.flags.is_ (keyVal p0 ps) EXPLICIT_NEST || out.flags.is_ (keyVal p0 ps) FROZEN then
+        .error (tde (S "Cannot declare " ++ keyRepr (keyVal p0 ps) ++ S " twice") src (pos + 1 + (keyEnc p0 ps).length))
+      else (overwriteErr src (pos + 1 + (keyEnc p0 ps).length) (getOrCreateNest true (keyVal p0 ps) out.data)).map
+        (fun data => (pos + 1 + (keyEnc p0 ps).length + 1, keyVal p0 ps,
+          { data, flags := { out.flags with tree := fsetAux EXPLICIT_NEST false (keyVal p0 ps) out.flags.tree } })) := by
+  obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
+  have h' : src.drop pos = 91 :: (keyEnc p0 ps ++ 93 :: rest) := by rw [h, hdr]; simp
+  have hd1 : src.drop (pos + 1) = keyEnc p0 ps ++ (93 :: rest) := drop_succ_of_drop h'
+  have h1 : src[pos + 1]? = some c := getElem?_of_drop (r := t ++ 93 :: rest) (by rw [hd1, hKe]; simp)
+  rw [if_neg (by simp [h1, hc91])]
+  have hk := parseKey_enc (maxK := cfg.maxKeyParts) h0 hps hmax (hrest93 rest) hd1
+  have hws : skipChars src (pos + 1) tomlWs = pos + 1 := skipChars_at h1 hcws
+  have hcl : startsAt src (pos + 1 + (keyEnc p0 ps).length) [93] = true :=
+    startsAt_of_drop (r := rest) (by simpa using drop_add_of_drop hd1)
+  exact createDictRule_eq hws hk (keyVal_ne p0 ps) hcl
+
+theorem list_at {cfg : Cfg} {src : Str} {pos : Nat} {p0 : KPart} {ps : List KPart} {rest : Str} {out : Out}
+    (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ cfg.maxKeyParts)
+    (h : src.drop pos = aot (keyEnc p0 ps) ++ rest) :
+    (if src[pos + 1]? == some 91 then createListRule cfg src pos out else createDictRule cfg src pos out) =
+      if out.flags.is_ (keyVal p0 ps) FROZEN then
+        .error (tde (S "Cannot mutate immutable namespace " ++ keyRepr (keyVal p0 ps)) src (pos + 2 + (keyEnc p0 ps).length))
+      else (overwriteErr src (pos + 2 + (keyEnc p0 ps).length) (appendNestToList (keyVal p0 ps) out.data)).map
+        (fun data => (pos + 2 + (keyEnc p0 ps).length + 2, keyVal p0 ps,
+          { data, flags := { out.flags with
+            tree := fsetAux EXPLICIT_NEST false (keyVal p0 ps) (unsetAux (keyVal p0 ps) out.flags.tree) } })) := by
+  obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
+  have h' : src.drop pos = 91 :: 91 :: (keyEnc p0 ps ++ 93 :: 93 :: rest) := by rw [h, aot]; simp
+  have h1 : src[pos + 1]? = some 91 := getElem?_of_drop (drop_succ_of_drop h')
+  rw [if_pos (by simp [h1])]
+  have hd2 : src.drop (pos + 2) = keyEnc p0 ps ++ (93 :: 93 :: rest) := by
+    simpa using drop_add_of_drop (a := [91, 91]) (by simpa using h')
+  have h2 : src[pos + 2]? = some c := getElem?_of_drop (r := t ++ 93 :: 93 :: rest) (by rw [hd2, hKe]; simp)
+  have hk := parseKey_enc (maxK := cfg.maxKeyParts) h0 hps hmax (hrest93 (93 :: rest)) hd2
+  have hws : skipChars src (pos + 2) tomlWs = pos + 2 := skipChars_at h2 hcws
+  have hcl : startsAt src (pos + 2 + (keyEnc p0 ps).length) [93, 93] = true :=
+    startsAt_of_drop (r := rest) (by simpa using drop_add_of_drop hd2)
+  exact createListRule_eq hws hk (keyVal_ne p0 ps) hcl
+
+/-- `[[K]]`, `[K.x]`, `[[K]]`, `[K.x]`: each element of the array of tables gets its own
+sub-table (the flags of the old element are dropped when the new one starts). -/
+theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str)
+    (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 2 ≤ maxK) (hx : x ≠ [])
+    (hxb : ∀ c ∈ x, bareKey c = true) :
+    loads pf maxK maxD (.str (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps ++ 46 :: x) ++ 10 ::
+        aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps ++ 46 :: x))) =
+      .ok (nestDict (keyVal p0 ps).dropLast
+        [((keyVal p0 ps).getLastD [], .arr [.tbl [(x, .tbl [])], .tbl [(x, .tbl [])]])]) := by
+  have hne := keyVal_ne p0 ps
+  have hKx : keyEnc p0 (ps ++ [.bare x]) = keyEnc p0 ps ++ 46 :: x := by simp [keyEnc, KPart.enc]
+  have hkx : keyVal p0 (ps ++ [.bare x]) = keyVal p0 ps ++ [x] := by simp [keyVal, KPart.val]
+  have hpsx : ∀ p ∈ ps ++ [.bare x], p.ok := by
+    intro p hp; simp only [List.mem_append, List.mem_singleton] at hp
+    rcases hp with hp | rfl
+    · exact hps p hp
+    · exact ⟨hx, hxb⟩
+  have hmx : (ps ++ [KPart.bare x]).length + 1 ≤ (mkCfg pf maxK maxD).maxKeyParts := by
+    show (ps ++ [KPart.bare x]).length + 1 ≤ maxK; simp; omega
+  have hm1 : ps.length + 1 ≤ (mkCfg pf maxK maxD).maxKeyParts := by show ps.length + 1 ≤ maxK; omega
+  have h13x := keyEnc_no13 h0 hpsx
+  rw [hKx] at h13x
+  generalize hK : keyEnc p0 ps = K at hKx h13x
+  generalize hk : keyVal p0 ps = k at hne hkx
+  have h13K : 13 ∉ K := by rw [← hK]; exact keyEnc_no13 h0 hps
+  generalize hsrc : aot K ++ 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x) = src
+  have h13 : 13 ∉ src := by
+    rw [← hsrc]; simp only [aot, hdr, List.cons_append, List.mem_cons, List.mem_append, not_or]
+    simp_all
+  rw [loads_eq pf maxK maxD src h13]
+  obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 + 1 + 1 :=
+    ⟨src.length - 3, by rw [← hsrc]; simp [aot, hdr] <;> omega⟩
+  rw [hf]
+  -- step 1: `[[K]]`
+  have hr1 := first_list (cfg := mkCfg pf maxK maxD) (src := src) (rest := 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 ::
+    hdr (K ++ 46 :: x)) h0 hps hm1 (by rw [hK, ← hsrc]; simp)
+  rw [hK, hk] at hr1
+  have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
+  have hn1 : src[K.length + 4]? = some 10 :=
+    getElem_of_eq (a := aot K) (b := hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x))
+      (by rw [← hsrc]; simp) _ (by simp [aot] <;> omega)
+  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hn1]
+  -- step 2: `[K.x]`
+  have hd2 : src.drop (K.length + 4 + 1) = hdr (K ++ 46 :: x) ++ (10 :: aot K ++ 10 :: hdr (K ++ 46 :: x)) :=
+    drop_eq_of (a := aot K ++ [10]) (by rw [← hsrc]; simp) _ (by simp [aot] <;> omega)
+  have hr2 := dict_at (cfg := mkCfg pf maxK maxD)
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
+              flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
+    h0 hpsx hmx (by rw [hKx]; exact hd2)
+  rw [hKx, hkx] at hr2
+  have hq1 : ∀ fl, isAux fl (k ++ [x]) (fsetAux EXPLICIT_NEST false k []) = false := by
+    intro fl; rw [chainT_set _ k hne]; exact chainT_query_ext fl x _ k hne
+  have hna := nest_aot hne x []
+  simp only [List.nil_append] at hna
+  simp only [flags_is _ _ (by simp : k ++ [x] ≠ []), hq1, Bool.or_false, Bool.false_eq_true, ite_false,
+    hna, overwriteErr, Except.map] at hr2
+  have hg2 : src[K.length + 4 + 1]? = some 91 := getElem?_of_drop (by rw [hd2]; rfl)
+  have hn2 : src[K.length + 4 + 1 + 1 + (K ++ 46 :: x).length + 1]? = some 10 :=
+    getElem_of_eq (a := aot K ++ [10] ++ hdr (K ++ 46 :: x)) (b := aot K ++ 10 :: hdr (K ++ 46 :: x))
+      (by rw [← hsrc]; simp) _ (by simp [aot, hdr] <;> omega)
+  rw [mainLoop_hdr_ok
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
+              flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
+    hg2 (finalize_nil _ rfl) hr2 hn2]
+  -- step 3: `[[K]]`
+  generalize hE2 : K.length + 4 + 1 + 1 + (K ++ 46 :: x).length + 1 + 1 = E2
+  have hd3 : src.drop E2 = aot K ++ (10 :: hdr (K ++ 46 :: x)) :=
+    drop_eq_of (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10]) (by rw [← hsrc]; simp) _
+      (by rw [← hE2]; simp [aot, hdr] <;> omega)
+  have hr3 := list_at (cfg := mkCfg pf maxK maxD)
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])]])],
+              flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k []),
+                         pending := [] } })
+    h0 hps hm1 (by rw [hK]; exact hd3)
+  rw [hK, hk] at hr3
+  have hq2 : isAux FROZEN k (fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k [])) = false := by
+    rw [chainT_set _ k hne, chainT_ext _ x _ _ k hne]; exact chainT_query FROZEN _ _ (by decide) k hne
+  have hreset : fsetAux EXPLICIT_NEST false k (unsetAux k
+      (fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k []))) = fsetAux EXPLICIT_NEST false k [] := by
+    rw [chainT_set _ k hne, chainT_ext _ x _ _ k hne, chainT_reset _ _ k hne]
+  simp only [flags_is _ _ hne, hq2, Bool.false_eq_true, ite_false, append_aot hne, overwriteErr, Except.map,
+    hreset] at hr3
+  have hg3 : src[E2]? = some 91 := getElem?_of_drop (by rw [hd3]; rfl)
+  have hn3 : src[E2 + 2 + K.length + 2]? = some 10 :=
+    getElem_of_eq (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10] ++ aot K) (b := hdr (K ++ 46 :: x))
+      (by rw [← hsrc]; simp) _
+      (by rw [← hE2]; simp [aot, hdr] <;> omega)
+  rw [mainLoop_hdr_ok
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])]])],
+              flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k []),
+                         pending := [] } })
+    hg3 (finalize_nil _ rfl) hr3 hn3]
+  -- step 4: `[K.x]`
+  generalize hE3 : E2 + 2 + K.length + 2 + 1 = E3
+  have hd4 : src.drop E3 = hdr (K ++ 46 :: x) ++ [] :=
+    drop_eq_of (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10] ++ aot K ++ [10]) (by rw [← hsrc]; simp) _
+      (by rw [← hE3, ← hE2]; simp [aot, hdr] <;> omega)
+  have hr4 := dict_at (cfg := mkCfg pf maxK maxD)
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl []])],
+              flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
+    h0 hpsx hmx (by rw [hKx]; exact hd4)
+  rw [hKx, hkx] at hr4
+  simp only [flags_is _ _ (by simp : k ++ [x] ≠ []), hq1, Bool.or_false, Bool.false_eq_true, ite_false,
+    show [TVal.tbl [(x, .tbl [])], .tbl []] = [TVal.tbl [(x, .tbl [])]] ++ [.tbl []] from rfl,
+    nest_aot hne x [TVal.tbl [(x, .tbl [])]], overwriteErr, Except.map] at hr4
+  have hg4 : src[E3]? = some 91 := getElem?_of_drop (by rw [hd4]; rfl)
+  have hend : src[E3 + 1 + (K ++ 46 :: x).length + 1]? = none := by
+    rw [← hE3, ← hE2, ← hsrc]; simp [aot, hdr]; omega
+  exact mainLoop_hdr_end (f := f)
+    (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl []])],
+              flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
+    hg4 (finalize_nil _ rfl) hr4 hend
+
 theorem tableRules_proven : TableRules := by
   intro pf maxK maxD p0 ps x h0 hps hmax hx hxb
   exact ⟨scen1 pf maxK maxD p0 ps h0 hps (by omega), scen2 pf maxK maxD p0 ps h0 hps (by omega),
     scen3 pf maxK maxD p0 ps h0 hps (by omega), scen4 pf maxK maxD p0 ps h0 hps (by omega),
-    scen5 pf maxK maxD p0 ps x h0 hps hmax hx hxb⟩
+    scen5 pf maxK maxD p0 ps x h0 hps hmax hx hxb, scen6 pf maxK maxD p0 ps x h0 hps hmax hx hxb⟩
 
 end PyLean.TextLibs.Toml

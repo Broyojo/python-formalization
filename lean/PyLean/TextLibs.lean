@@ -1709,10 +1709,10 @@ def entries : List Entry := [
     pyFns := ["loads", "create_dict_rule", "create_list_rule", "Flags.__init__", "Flags.set", "Flags.is_",
       "Flags.unset_all", "NestedDict.__init__", "NestedDict.get_or_create_nest", "NestedDict.append_nest_to_list",
       "Output.__init__"]
-    statement := "For every dotted header key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them) and bare key x: loads('[K]\\n[K]') raises TOMLDecodeError 'Cannot declare K twice'; loads('[[K]]\\n[[K]]') gives K = [{}, {}]; loads('[K]\\n[[K]]') raises 'Cannot overwrite a value'; loads('[[K]]\\n[K]') raises 'Cannot declare K twice'; loads('[K.x]\\n[K]') gives K = {x = {}}; each error at the position after the second key."
+    statement := "For every dotted header key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them) and bare key x: loads('[K]\\n[K]') raises TOMLDecodeError 'Cannot declare K twice'; loads('[[K]]\\n[[K]]') gives K = [{}, {}]; loads('[K]\\n[[K]]') raises 'Cannot overwrite a value'; loads('[[K]]\\n[K]') raises 'Cannot declare K twice'; loads('[K.x]\\n[K]') gives K = {x = {}}; loads('[[K]]\\n[K.x]\\n[[K]]\\n[K.x]') gives K = [{x = {}}, {x = {}}]; each error at the position after the second key."
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Table ('you cannot define a table more than once', super-tables after sub-tables are valid) and Array of Tables", status := .proven
     prop := ``Toml.TableRules, thm := some ``Toml.tableRules_proven
-    notes := "Pending flags stay empty in these documents, so add_pending and finalize_pending's loop are not credited here." }
+    notes := "The last document needs unset_all (the old element's flags are dropped) and get_or_create_nest's walk into the last element of a list. Pending flags stay empty in these documents, so add_pending and finalize_pending's loop are not credited here." }
 ,
   { id := "textlibs-toml-load", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["load"]
