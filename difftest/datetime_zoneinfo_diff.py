@@ -8,7 +8,7 @@ Cases ("mod": "datetime", "fn" starting with "zi_"):
                utcoffset/dst/tzname for None and for query datetimes, and fromutc
   zi_cache_*   a run of ZoneInfo(key) / clear_cache calls on keys under a temporary TZPATH
   zi_cerr_*    the same on the base class or a fresh subclass, with keys that are plain str
-               or str subclasses whose __eq__ raises (with their own or a shared hash),
+               (separate objects sharing a text) or str subclasses whose __eq__ raises (with their own or a shared hash),
                only_keys iterators that raise after their keys, and del Sub._weak_cache
 
 TZif files range from well-formed v1-v4 files to truncated and inconsistent ones: counts at
@@ -311,6 +311,8 @@ def gen_case(rng):
 def gen_cerr(rng):
     nkeys = 10
     kinds = [rng.choice([0, 0, 0, 1, 2]) if rng.random() < 0.6 else 0 for _ in range(nkeys)]
+    # separate str objects with equal text compare equal
+    texts = [i if rng.random() < 0.6 else rng.randrange(nkeys) for i in range(nkeys)]
     sub = rng.random() < 0.4
     ops = []
     for _ in range(rng.randint(1, 25)):
@@ -325,7 +327,7 @@ def gen_cerr(rng):
         else:
             ops.append(["del"])
     return {"mod": "datetime", "fn": rng.choice(["zi_cerr_c", "zi_cerr_py"]), "ops": ops,
-            "kinds": kinds, "loads": LOADABLE, "sub": sub}
+            "kinds": kinds, "texts": texts, "loads": LOADABLE, "sub": sub}
 
 
 # ---- running CPython --------------------------------------------------------
@@ -422,7 +424,9 @@ class SameHashKey(RaiseKey):
 
 def run_cerr(case, Z):
     Z.clear_cache()
-    keys = [(str, RaiseKey, SameHashKey)[kd](f"k{i}") for i, kd in enumerate(case["kinds"])]
+    keys = [(str, RaiseKey, SameHashKey)[kd]("".join(["k", str(t)]))
+            for kd, t in zip(case["kinds"], case["texts"])]
+    assert len({id(k) for k in keys}) == len(keys)
     index = {id(k): i for i, k in enumerate(keys)}
     if case["sub"]:
         class Sub(Z):

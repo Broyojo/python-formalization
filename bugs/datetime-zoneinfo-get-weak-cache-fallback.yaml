@@ -1,5 +1,5 @@
 id: datetime-zoneinfo-get-weak-cache-fallback
-title: "zoneinfo: after del Sub._weak_cache, C Sub(key) raises AttributeError while the pure-Python twin falls back to ZoneInfo._weak_cache"
+title: "zoneinfo: a deleted or replaced Sub._weak_cache makes C Sub(key) raise (AttributeError, RuntimeError) where the pure-Python twin falls back or returns the stored object"
 priority: P4
 kind: twin-divergence
 module: datetime
@@ -13,6 +13,9 @@ summary: |
   (Lib/zoneinfo/_zoneinfo.py:41-43, :97-102) finds the class attribute
   `ZoneInfo._weak_cache` through the MRO, so `Sub(key)` works and stores the subclass instance
   in the base class's cache, and `Sub.clear_cache()` clears the base class's weak cache.
+  Same family: after `Sub._weak_cache = {'a': 1}`, C's `PyObject_TypeCheck` on the cached value
+  (:352-358, added for gh-142781) raises `RuntimeError: Unexpected instance of int in Sub weak
+  cache for key 'a'`, while Python's `__new__` (no such check) returns `1`.
 likelihood: |
   Very low: deleting a private class attribute.
 maybe_intended: |
@@ -40,14 +43,21 @@ reproducer: |
           out.append(type(Sub('a')).__name__)
       except AttributeError:
           out.append('AttributeError')
+      class Sub2(M.ZoneInfo):
+          pass
+      Sub2._weak_cache = {'a': 1}
+      try:
+          out.append(repr(Sub2('a')))
+      except RuntimeError:
+          out.append('RuntimeError')
       M.ZoneInfo.clear_cache()
-  print('C', out[0], 'Py', out[1])
-  if out == ['AttributeError', 'Sub']:
+  print('C', out[:2], 'Py', out[2:])
+  if out == ['AttributeError', 'RuntimeError', 'Sub', '1']:
       print('REPRODUCED datetime-zoneinfo-get-weak-cache-fallback')
 expected: |
   The twins agree (both raise, or both fall back).
 observed: |
-  python3 3.15.2: C AttributeError, Py Sub. REPRODUCED.
+  python3 3.15.2: del: C AttributeError, Py Sub; replaced: C RuntimeError, Py 1. REPRODUCED.
 promised_by: |
   C/Python twins.
 cause: |
@@ -63,6 +73,7 @@ duplicates:
   issues:
     - {number: 146076, state: closed, relation: "related: the segfault on this exact path (deleting Sub._weak_cache); its fix chose AttributeError, leaving this twin difference."}
     - {number: 142783, state: closed, relation: "related (use-after-free in get_weak_cache), fixed."}
+    - {number: 142781, state: closed, relation: "related: type confusion through a replaced weak cache; its fix is the PyObject_TypeCheck that now raises RuntimeError where Python returns the stored object."}
   queries: ["zoneinfo _weak_cache", "zoneinfo get_weak_cache AttributeError", "del _weak_cache",
             "zoneinfo subclass _weak_cache", "gh issue view 146076"]
   note: |
@@ -71,3 +82,4 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.WeakCacheAttrTwins
   theorem: PyLean.Datetime.Zone.weakCacheAttrTwins_refuted
+  also: ["PyLean.Datetime.Zone.WeakCacheTypeTwins / weakCacheTypeTwins_refuted (the replaced cache and the TypeCheck)"]

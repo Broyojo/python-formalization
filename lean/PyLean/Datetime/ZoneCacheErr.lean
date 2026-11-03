@@ -124,17 +124,19 @@ def wvdPop (weak : List (K × Inst K)) (key : K) : Py (List (K × Inst K)) :=
 first, Python oldest first; C keeps none for a subclass). `weak` is the class's own
 `_weak_cache` attribute (C's base class keeps it in the module state), `none` after
 `del Sub._weak_cache`; `baseWeak` is `ZoneInfo._weak_cache`, which Python's attribute lookup
-reaches from a subclass without its own. -/
+reaches from a subclass without its own. `foreign` lists the objects a user put in a
+replaced `_weak_cache` (`setWeak`), which are not `ZoneInfo` instances. -/
 structure ZCls (K : Type) where
   base : Bool
   strong : List (K × Inst K)
   weak : Option (List (K × Inst K))
   baseWeak : List (K × Inst K)
   next : Nat
+  foreign : List (Inst K)
   deriving DecidableEq
 
 /-- A fresh `ZoneInfo` class state. -/
-def freshBase : ZCls K := ⟨true, [], some [], [], 0⟩
+def freshBase : ZCls K := ⟨true, [], some [], [], 0, []⟩
 
 /-- C `get_weak_cache`, Modules/_zoneinfo.c:292-302: the module state's cache for the base
 class, `PyObject_GetAttrString(type, "_weak_cache")` for a subclass (the C base type has no
@@ -204,7 +206,9 @@ def newErrC (c : ZCls K) (key : K) : ZCls K × Py (Inst K) :=
         | .error x => (c, .error x)
         | .ok (inst, weak', next) =>
           let c := { c with weak := some weak', next := next }
-          ({ c with strong := updateStrongC c key inst }, .ok inst)   -- :361
+          if inst ∈ c.foreign then                                -- :352-358 PyObject_TypeCheck
+            (c, .error (.named "RuntimeError" "~Unexpected instance in weak cache"))
+          else ({ c with strong := updateStrongC c key inst }, .ok inst)   -- :361
 
 /-- `eject_from_strong_cache`, :2459-2479: `0` for a subclass (:2463-2465); a found node is
 unlinked and freed; `-1` when the comparison raised (:2475-2477). -/
@@ -215,7 +219,7 @@ def ejectC (c : ZCls K) (key : K) : Py (List (K × Inst K)) :=
     | .ok (some n) => .ok (c.strong.erase n)
     | .ok none => .ok c.strong
 
-/-- The `only_keys` loop of `zoneinfo_ZoneInfo_clear_cache_impl`, :535-557: per key, eject
+/-- The `only_keys` loop of `zoneinfo_ZoneInfo_clear_cache_impl`, :533-557: per key, eject
 from the strong cache, then `weak_cache.pop(key, None)`; the first failure stops the loop.
 `err` is the exception the iterator raises after yielding `ks` (or `PyObject_GetIter`'s,
 with `ks = []`). -/
@@ -293,19 +297,28 @@ def clearErrPy (c : ZCls K) (only : Option (List K × Option PyExc)) : ZCls K ×
 
 /-- `ZoneInfo(k)`, `clear_cache()`, `clear_cache(only_keys=...)` (the keys the iterator
 yields, and the exception it then raises), the collection of the instance in the weak entry
-for key `k` (`dropIn`), and `del cls._weak_cache`. -/
+for key `k` (`dropIn`), `del cls._weak_cache`, and `cls._weak_cache = d` for a dict `d` whose
+values are not `ZoneInfo` instances. -/
 inductive ZOp (K : Type) where
   | get (k : K)
   | clear
   | clearKeys (ks : List K) (err : Option PyExc)
   | drop (k : K)
   | delWeak
+  | setWeak (d : List (K × Inst K))
 
-/-- `del cls._weak_cache` is modelled for subclasses only (the base class's C cache is module
-state, and the C type is immutable); runs of the base class exclude it. -/
+/-- Deleting or replacing `cls._weak_cache` is modelled for subclasses only (the base class's
+C cache is module state, and the C type is immutable); runs of the base class exclude them. -/
 def ZOp.isDel : ZOp K → Bool
   | .delWeak => true
+  | .setWeak _ => true
   | _ => false
+
+/-- `cls._weak_cache = d` on a subclass, in both twins (a no-op on the base class, which runs
+exclude). -/
+def setWeakStep (c : ZCls K) (d : List (K × Inst K)) : ZCls K × Py (Option (Inst K)) :=
+  if c.base then (c, .ok none)
+  else ({ c with weak := some d, foreign := c.foreign ++ d.map Prod.snd }, .ok none)
 
 /-- The instance in the weak entry for key object `k` is collected (possible only while no
 strong entry holds it): its `KeyedRef` callback removes its entry. -/
@@ -328,6 +341,7 @@ def stepErrC (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
   | .clearKeys ks err => clearErrC o c (some (ks, err))
   | .drop k => ({ c with weak := c.weak.map fun w => dropIn c.strong w k }, .ok none)
   | .delWeak => delWeakStep c
+  | .setWeak d => setWeakStep c d
 
 def stepErrPy (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
   | .get k => let (c', r) := newErrPy o c k; (c', r.map some)
@@ -336,6 +350,7 @@ def stepErrPy (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
   | .drop k => ({ c with weak := c.weak.map fun w => dropIn c.strong w k,
                          baseWeak := dropIn c.strong c.baseWeak k }, .ok none)
   | .delWeak => delWeakStep c
+  | .setWeak d => setWeakStep c d
 
 def runErrC : ZCls K → List (ZOp K) → ZCls K × List (Py (Option (Inst K)))
   | c, [] => (c, [])
@@ -376,7 +391,7 @@ def initSubclassErrC (kw : List String) (imported : Py WvdAttr) (baseWeak : List
   let _ := kw
   match newWeakCacheC imported with
   | .error x => .error x
-  | .ok () => .ok ⟨false, [], some [], baseWeak, 0⟩
+  | .ok () => .ok ⟨false, [], some [], baseWeak, 0, []⟩
 
 /-- `ZoneInfo.__init_subclass__(cls)`, _zoneinfo.py:36-38: `type.__new__` passes the class
 keywords, which this signature does not take; then a new `OrderedDict` and
@@ -388,6 +403,6 @@ def initSubclassErrPy (kw : List String) (bound : WvdAttr) (baseWeak : List (K �
   | [] =>
     match newWeakCachePy bound with
     | .error x => .error x
-    | .ok () => .ok ⟨false, [], some [], baseWeak, 0⟩
+    | .ok () => .ok ⟨false, [], some [], baseWeak, 0, []⟩
 
 end PyLean.Datetime.Zone

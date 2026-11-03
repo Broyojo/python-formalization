@@ -80,14 +80,17 @@ def getOps (j : Json) : Except String (List (CacheOp Nat)) := do
       pure (.clearKeys ks)
     | t => throw s!"bad op {t}"
 
-/-- Key behaviour for `zi_cerr_*`: kind 0 a plain `str`, 1 a `str` subclass whose `__eq__`
+/-- Key behaviour for `zi_cerr_*`: key `k` has text `texts[k]` (separate objects may share a
+text, and then compare equal); kind 0 a plain `str`, 1 a `str` subclass whose `__eq__`
 raises `RuntimeError`, 2 the same with `__hash__` returning 0. A comparison involving a kind 1
 or 2 key raises (its `__eq__`, or its reflected one, runs first). -/
-def cerrOps (kinds loads : List Int) : KeyOps Nat :=
+def cerrOps (kinds texts loads : List Int) : KeyOps Nat :=
   let kind (k : Nat) : Int := kinds.getD k 0
-  ⟨fun k => .ok (if kind k = 2 then 0 else (k : Int) + 1),
-   fun a b => if kind a ≠ 0 ∨ kind b ≠ 0 then .error (.named "RuntimeError" "eq") else .ok (decide (a = b)),
-   fun k => loads.contains (k : Int)⟩
+  let text (k : Nat) : Int := texts.getD k k
+  ⟨fun k => .ok (if kind k = 2 then 0 else text k + 1),
+   fun a b => if kind a ≠ 0 ∨ kind b ≠ 0 then .error (.named "RuntimeError" "eq")
+     else .ok (decide (text a = text b)),
+   fun k => loads.contains (text k)⟩
 
 def getErrOps (j : Json) : Except String (List (ZOp Nat)) := do
   let arr ← (← field j "ops").getArr?
@@ -114,11 +117,12 @@ def sweepZ (c : ZCls Nat) : ZCls Nat :=
 the harness numbers the objects it sees. -/
 def runCerr (fn : String) (j : Json) : Except String Json := do
   let kinds ← intList j "kinds"
+  let texts ← intList j "texts"
   let loads ← intList j "loads"
   let sub ← (← field j "sub").getBool?
   let ops ← getErrOps j
-  let o := cerrOps kinds loads
-  let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0⟩
+  let o := cerrOps kinds texts loads
+  let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0, []⟩
   let isPy := fn = "zi_cerr_py"
   let step := if isPy then stepErrPy o else stepErrC o
   let (c, outs) := ops.foldl (fun (c, acc) op =>

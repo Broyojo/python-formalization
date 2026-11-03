@@ -22,7 +22,7 @@ def sameHashKeys : KeyOps Nat := ⟨fun _ => .ok 0, fun _ _ => .error rtErr, fun
 /-- Keys compared by identity, as plain `object`s are. -/
 def idKeys : KeyOps Nat := ⟨fun k => .ok k, fun a b => .ok (decide (a = b)), fun _ => true⟩
 
-def freshSub : ZCls Nat := ⟨false, [], some [], [], 0⟩
+def freshSub : ZCls Nat := ⟨false, [], some [], [], 0, []⟩
 
 /-! ### Base class, keys whose comparison raises -/
 
@@ -84,7 +84,7 @@ theorem cacheTwinsSubclass_refuted : ¬ CacheTwinsSubclass := by
 (C `get_weak_cache` vs Python's `cls._weak_cache`). -/
 def WeakCacheAttrTwins : Prop :=
   ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (ops : List (ZOp K)),
-    (runErrC o ⟨false, [], some [], [], 0⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0⟩ ops).2
+    (runErrC o ⟨false, [], some [], [], 0, []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, []⟩ ops).2
 
 /-- `del Sub._weak_cache; Sub(0)`: C's `PyObject_GetAttrString(type, "_weak_cache")`
 (:299-301) raises `AttributeError`, Python's `cls._weak_cache` finds `ZoneInfo._weak_cache`
@@ -136,5 +136,43 @@ def InitSubclassSameModule : Prop :=
 theorem initSubclassSameModule_proven : InitSubclassSameModule := by
   intro K bound bw
   rcases bound with _ | (e | ⟨⟩) <;> rfl
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- `Sub(key)` behaves the same in both twins on every run that does not delete
+`Sub._weak_cache` (replacing it included). -/
+def WeakCacheTypeTwins : Prop :=
+  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (ops : List (ZOp K)),
+    ops.all (fun op => match op with | .delWeak => false | _ => true) = true →
+    (runErrC o ⟨false, [], some [], [], 0, []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, []⟩ ops).2
+
+/-- `Sub._weak_cache = {0: obj}` with `obj` not a `ZoneInfo`, then `Sub(0)`: C's
+`PyObject_TypeCheck` (Modules/_zoneinfo.c:352-358) raises `RuntimeError`, Python returns
+`obj`. -/
+theorem weakCacheTypeTwins_refuted : ¬ WeakCacheTypeTwins := by
+  intro h
+  have := h Nat idKeys [.setWeak [(0, (0, 0))], .get 0] rfl
+  revert this
+  decide
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- Key `1` is a `str` subclass with `__hash__ = None` equal to the plain key `0`. -/
+def unhashableKeys : KeyOps Nat :=
+  ⟨fun k => if k = 1 then .error (.typeError "~unhashable type") else .ok 0,
+   fun _ _ => .ok true, fun _ => true⟩
+
+/-- A second counterexample to `CacheErrTwins`: `ZoneInfo(0)`, then `ZoneInfo(1)` with an
+unhashable key equal to `0`: C's strong cache compares without hashing and returns the cached
+zone, Python's weak-cache lookup hashes the key and raises `TypeError`. -/
+theorem cacheErrTwins_refuted_unhashable : ¬ CacheErrTwins := by
+  intro h
+  have := h Nat unhashableKeys [.get 0, .get 1] rfl
+  revert this
+  decide
 
 end PyLean.Datetime.Zone

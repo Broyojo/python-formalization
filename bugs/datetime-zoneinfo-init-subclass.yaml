@@ -72,7 +72,9 @@ reproduces:
   python3 (3.15.2): REPRODUCED (scripts/check_bugs.py)
   main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
 duplicates:
-  issues: []
+  issues:
+    - {number: 85197, state: closed, relation: "related: bpo-41025 made the C ZoneInfo subclassable and added zoneinfo_init_subclass; the keyword handling was not discussed."}
+    - {number: 87199, state: closed, relation: "related: bpo-43033, error handling of PyObject_SetAttrString in _zoneinfo (zoneinfo_init_subclass among the sites)."}
   queries: ["ZoneInfo __init_subclass__ keyword", "zoneinfo subclass keyword argument", "zoneinfo init_subclass",
             "zoneinfo new_weak_cache", "zoneinfo weakref sys.modules", "METH_KEYWORDS __init_subclass__ ignored"]
   note: |

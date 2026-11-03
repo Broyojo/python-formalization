@@ -160,7 +160,7 @@ theorem dropIn_pr (ι : K → Nat) (s w : List K) (k : K) (hsub : ∀ x ∈ s, x
 /-- A base-class state of `ZoneCache.lean`; key `k`'s instance is `(k, ι k)`, `n` instances
 built so far. -/
 def embZ (s : CacheSt K) (ι : K → Nat) (n : Nat) : ZCls K :=
-  ⟨true, s.strong.map (pr ι), some (s.weak.map (pr ι)), [], n⟩
+  ⟨true, s.strong.map (pr ι), some (s.weak.map (pr ι)), [], n, []⟩
 
 def forget : ZOp K → CacheOp K
   | .get k => .get k
@@ -168,6 +168,7 @@ def forget : ZOp K → CacheOp K
   | .clearKeys ks _ => .clearKeys ks
   | .drop k => .drop k
   | .delWeak => .clear
+  | .setWeak _ => .clear
 
 /-- Whether the operation builds a new instance: `ZoneInfo(k)` with `k` not in the weak cache
 and loadable. -/
@@ -193,7 +194,7 @@ def resOf (ι : K → Nat) : ZOp K → Bool → Py (Option (Inst K))
 theorem clearKeysC_id (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = b)))
     (hH : ∀ k, ∃ h, o.hash k = .ok h) (ι : K → Nat) (n : Nat) (err : Option PyExc)
     (cw : Option (List (K × Inst K))) :
-    ∀ (ks st w : List K), clearKeysC o (w.map (pr ι)) err ⟨true, st.map (pr ι), cw, [], n⟩ ks =
+    ∀ (ks st w : List K), clearKeysC o (w.map (pr ι)) err ⟨true, st.map (pr ι), cw, [], n, []⟩ ks =
       (embZ (ks.foldl (fun st k => ⟨st.strong.erase k, st.weak.erase k⟩) (⟨st, w⟩ : CacheSt K)) ι n,
         match err with | some e => .error e | none => .ok none) := by
   intro ks
@@ -201,7 +202,7 @@ theorem clearKeysC_id (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = 
   | nil => intro st w; rfl
   | cons k ks ih =>
     intro st w
-    have hej : ejectC o ⟨true, st.map (pr ι), cw, [], n⟩ k = .ok ((st.erase k).map (pr ι)) := by
+    have hej : ejectC o ⟨true, st.map (pr ι), cw, [], n, []⟩ k = .ok ((st.erase k).map (pr ι)) := by
       simp only [ejectC, Bool.not_true, Bool.false_eq_true, ite_false, findStrongC_id o hE ι]
       by_cases hk : k ∈ st
       · simp [hk, pr, erase_pr]
@@ -256,6 +257,7 @@ theorem stepErrC_emb (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = b
     simp only [stepErrC, embZ, Option.map_some, dropIn_pr ι _ _ k hsub, forget, stepC,
       Option.getD_some, Option.isSome_some, resOf, nextι, nextN, builds, Bool.false_eq_true, ite_false]
   | delWeak => simp [ZOp.isDel] at hop
+  | setWeak d => simp [ZOp.isDel] at hop
 
 theorem stepErrPy_emb (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = b)))
     (hH : ∀ k, ∃ h, o.hash k = .ok h) (ι : K → Nat) (n : Nat) (s : CacheSt K)
@@ -304,6 +306,7 @@ theorem stepErrPy_emb (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = 
       Option.getD_some, Option.isSome_some, resOf, nextι, nextN, builds, Bool.false_eq_true, ite_false]
     simp [dropIn]
   | delWeak => simp [ZOp.isDel] at hop
+  | setWeak d => simp [ZOp.isDel] at hop
 
 theorem run_twins (o : KeyOps K) (hE : ∀ a b, o.eq a b = .ok (decide (a = b)))
     (hH : ∀ k, ∃ h, o.hash k = .ok h) :

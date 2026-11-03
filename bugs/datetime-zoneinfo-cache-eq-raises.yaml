@@ -16,6 +16,12 @@ summary: |
   `ZoneInfo.clear_cache(only_keys=[key])` and `ZoneInfo(key)` raise the `__eq__` exception in C
   and succeed in Python (once the key itself is cached, Python's lookups compare it too and
   raise as well).
+  Same cause, the hash side: a `str` subclass with `__hash__ = None` that equals a cached key
+  gets the cached zone from C `ZoneInfo(key)` (the strong cache compares without hashing),
+  while Python's `_weak_cache.get` hashes it and raises `TypeError`.
+  `clear_cache(only_keys=[that key])` raises `TypeError` in both, but C has already ejected
+  the strong node (eject runs before the weak-cache `pop` that hashes), so the zone is no
+  longer kept alive in C while Python's strong cache still holds it.
 likelihood: |
   Very low: keys are documented as strings, and it needs a str subclass with a raising
   `__eq__`. No crash; the C behaviour is arguably reasonable on its own.
@@ -54,13 +60,38 @@ reproducer: |
               res.append(('RuntimeError', str(e)))
       out.append(res)
       M.ZoneInfo.clear_cache()
-  print('C', out[0], 'Py', out[1])
-  if out[0] == [('RuntimeError', 'eq')] * 2 and out[1] == [('ok', None), ('ok', 'b')]:
+  class NoHash(str):
+      __hash__ = None
+  import weakref
+  out2 = []
+  for M in (Cz, Pz):
+      M.reset_tzpath([T])
+      M.ZoneInfo.clear_cache()
+      held = M.ZoneInfo('a')
+      res = []
+      try:
+          res.append(M.ZoneInfo(NoHash('a')) is held)
+      except TypeError:
+          res.append('TypeError')
+      try:
+          M.ZoneInfo.clear_cache(only_keys=[NoHash('a')])
+          res.append('cleared')
+      except TypeError:
+          res.append('TypeError')
+      r = weakref.ref(held)
+      del held
+      res.append(r() is not None)
+      out2.append(res)
+      M.ZoneInfo.clear_cache()
+  print('C', out[0], out2[0], 'Py', out[1], out2[1])
+  if (out[0] == [('RuntimeError', 'eq')] * 2 and out[1] == [('ok', None), ('ok', 'b')]
+          and out2[0] == [True, 'TypeError', False] and out2[1] == ['TypeError', 'TypeError', True]):
       print('REPRODUCED datetime-zoneinfo-cache-eq-raises')
 expected: |
   The twins agree: both return the zone and clear the key, or both raise.
 observed: |
-  python3 3.15.2: C [RuntimeError, RuntimeError], Py [ok None, ok 'b']. REPRODUCED.
+  python3 3.15.2: C [RuntimeError, RuntimeError], Py [ok None, ok 'b']; unhashable key: C
+  [cached zone, TypeError, node ejected], Py [TypeError, TypeError, still cached]. REPRODUCED.
 promised_by: |
   C/Python twins.
 cause: |
@@ -85,3 +116,4 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.CacheErrTwins
   theorem: PyLean.Datetime.Zone.cacheErrTwins_refuted
+  also: ["PyLean.Datetime.Zone.cacheErrTwins_refuted_unhashable (the __hash__ = None key)"]

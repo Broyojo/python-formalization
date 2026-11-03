@@ -20,6 +20,8 @@ import PyLean.Datetime.ZoneLoadProps
 import PyLean.Datetime.ZoneProps
 import PyLean.Datetime.ZoneCacheErrProps
 import PyLean.Datetime.ZoneCacheIdProps
+import PyLean.Datetime.ZoneCacheEqProps
+import PyLean.Datetime.ZoneCacheSubProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -730,6 +732,25 @@ def entries : List Entry := [
     source := "C/Python twins; _strong_cache_size", status := .proven
     prop := ``Zone.CacheTwinsFallible, thm := some ``Zone.cacheTwinsFallible_proven
     notes := "The mirrors (ZoneCacheErr.lean) make the real lookups: C compares the key with every node through PyObject_RichCompareBool, the weak cache and Python's OrderedDict hash then compare equal-hash stored keys; get/setdefault/pop and the rv < 0 returns are fallible. With identity keys each step equals the abstract step of ZoneCache.lean, so the proof reuses CacheTwins. Value-equal distinct key objects (two equal str objects) are not covered by this statement." },
+  { id := "datetime-zoneinfo-cache-twins-equiv", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C update_strong_cache", "C eject_from_strong_cache", "C clear_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+    statement := "On the base class, for keys whose == compares a value and never raises and whose hash() is a function of that value (separate str objects with equal text are equal keys), every run of ZoneInfo(key), clear_cache(), clear_cache(only_keys=...) with an iterator that may raise after any prefix, and instance collections gives the same outcome in both twins (the same instance, the same exception), and the strong caches hold the same key values with the same instances in recency order, never more than 8."
+    source := "C/Python twins; _strong_cache_size", status := .proven
+    prop := ``Zone.CacheTwinsEquiv, thm := some ``Zone.cacheTwinsEquiv_proven
+    notes := "A strong-cache hit for an equal but distinct key is the main case: C keeps the first key object and moves the node to the front, Python's OrderedDict pop then __setitem__ stores the latest key object; the proof relates both to ZoneCache.lean over values, each value naming its current instance. A lookup that ignored a True __eq__ would leave two C nodes for one value and break the strong-cache conjunct. Raising (datetime-zoneinfo-cache-err-twins) and re-entering (datetime-zoneinfo-strong-lookup-defined) comparisons are refuted." },
+  { id := "datetime-zoneinfo-sub-cache-twins", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C get_weak_cache", "C zoneinfo_init_subclass", "C new_weak_cache", "C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C update_strong_cache", "C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__init_subclass__", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
+    statement := "After class Sub(ZoneInfo), while the instances stay referenced, every run of Sub(key), Sub.clear_cache() and Sub.clear_cache(only_keys=...) gives the same results and leaves the same weak cache in both twins, for keys whose __hash__ and __eq__ do not raise."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.SubCacheTwins, thm := some ``Zone.subCacheTwins_proven
+    notes := "C get_weak_cache's subclass branch returns the _weak_cache attribute zoneinfo_init_subclass stored (:299-301); a version returning a fresh dictionary would lose the cached instance and fail. Collections are excluded: once unreferenced, C's subclass instance dies and Python's strong cache keeps it (datetime-zoneinfo-cache-twins-subclass, -cache-err-subclass)." },
+  { id := "datetime-zoneinfo-weak-cache-type", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_impl", "C get_weak_cache", "ZoneInfo.__new__"]
+    statement := "For a fresh subclass, Sub(key) behaves the same in both twins on every run that does not delete Sub._weak_cache, replacing it included."
+    source := "C/Python twins", status := .refuted
+    prop := ``Zone.WeakCacheTypeTwins, thm := some ``Zone.weakCacheTypeTwins_refuted
+    bug := some "datetime-zoneinfo-get-weak-cache-fallback"
+    notes := "Sub._weak_cache = {'a': 1}; Sub('a'): C's PyObject_TypeCheck (:352-358) raises RuntimeError, Python returns 1." },
   { id := "datetime-zoneinfo-cache-err-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
     statement := "On the base class, ZoneInfo(key) and clear_cache give the same outcomes in both twins for every run, whatever the keys' __hash__ and __eq__ do."
