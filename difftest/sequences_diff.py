@@ -293,15 +293,23 @@ def slice_len(n, s):
         return 0
 
 
-def repeat_factor(rng, size, maxlen, itemsize=None, inplace=True):
+def repeat_factor(rng, size, maxlen, itemsize=None, inplace=True, is_list=False):
     """A factor that is either small, or large enough that CPython's explicit
     overflow check fires, or bounded by a small maxlen. Returns None to skip."""
+    s = max(size, 1)
     n = rng.choice([-2, -1, 0, 1, 2, 3, 2, 3, -M - 1, -2 ** 64, M, M + 1, 2 ** 62, 2 ** 61,
-                    2 ** 64, M // max(size, 1), M // max(size, 1) + 1, 10 ** 30, -10 ** 30])
+                    2 ** 64, M // s, M // s + 1, 10 ** 30, -10 ** 30, 2 ** 60, 2 ** 60 - 1,
+                    (M // 8) // s, (M // 8) // s + 1, (M // 8 - 3) // s, (M // 8 - 3) // s + 1])
     if not (-M - 1 <= n <= M):
         return n            # OverflowError in the conversion
     if n <= 1 or size == 0:
         return n
+    if is_list:
+        # list_new_prealloc (l * n) and py_list_resize (l *= n, rounded up to a multiple of 4)
+        # refuse more than PY_SSIZE_T_MAX / 8 slots before allocating anything.
+        if size * n > M // 8 or (inplace and size * n > M // 8 - 3):
+            return n
+        return n if size * n <= BIG else None
     if itemsize is not None:
         nbytes = size * itemsize
         if (inplace and nbytes * n > M) or (not inplace and (n > M // size or size * n > M // itemsize)):
@@ -404,7 +412,7 @@ def gen_list_op(rng, l):
     if op == "init_self":
         return [op]
     if op in ("imul", "mul"):
-        f = repeat_factor(rng, n, None)
+        f = repeat_factor(rng, n, None, inplace=op == "imul", is_list=True)
         return None if f is None else [op, f]
     s = rand_slice(rng, n)
     if op == "setslice":

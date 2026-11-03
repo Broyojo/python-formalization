@@ -218,29 +218,59 @@ theorem dequeIRepeatChecked_proven : DequeIRepeatChecked := by
     rw [length_rep, Int.natCast_mul, hlen, show ((k.toNat : Nat) : Int) = k by omega, Int.mul_comm]
     exact hmk
 
-/-- `l *= n` and `l * n` (note (2) of Doc/builtins/stdtypes.rst:1539-1552 and
-the `s * n` row of the common-sequence table): for every list of ints and
-every int `n`: outside `Py_ssize_t` both raise `OverflowError`; `n <= 0`
-gives `[]`; otherwise the result is `l` repeated `n` times, and `MemoryError`
-is raised exactly when that would exceed `sys.maxsize` items. -/
+/-- For `n >= 2` and a non-empty list, the rounded allocation of `l *= n`
+(`listNewAllocated`) fits `PY_SSIZE_T_MAX / 8` exactly when the output is at least 3
+below it: the output is then at least twice the old size, so the over-allocation is
+dropped and only the rounding to a multiple of 4 remains. -/
+theorem listNewAllocated_grow (size out : Int) (h1 : 1 ≤ size) (h2 : 2 * size ≤ out) :
+    listNewAllocated size out ≤ ssizeMax / 8 ↔ out ≤ ssizeMax / 8 - 3 := by
+  have h8 : ssizeMax / 8 = 1152921504606846975 := by decide
+  rw [h8]
+  unfold listNewAllocated
+  simp only
+  rw [if_neg (by omega)]
+  split <;> omega
+
+/-- `l * n` and `l *= n` (note (2) of Doc/builtins/stdtypes.rst:1539-1552 and the
+`s * n` row of the common-sequence table), for every list and every int `n`. The
+hypothesis `len(l) <= PY_SSIZE_T_MAX / 8` is the type invariant: the items array of a
+list is at most `PY_SSIZE_T_MAX` bytes. Outside `Py_ssize_t` both raise `OverflowError`;
+`n <= 0` gives `[]`; `l *= 1` is `l`. Otherwise:
+
+* `l * n` is `l` repeated `n` times when that is at most `PY_SSIZE_T_MAX / 8` items,
+  and `MemoryError` past it (`list_new_prealloc`'s `PyMem_New`, listobject.c:319);
+* `l *= n` is `l` repeated `n` times when that is at most `PY_SSIZE_T_MAX / 8 - 3`
+  items, and `MemoryError` past it, because `py_list_resize` rounds the size up to a
+  multiple of 4 before its overflow test (listobject.c:148-156, :194-200).
+
+So the two agree except in the window of three sizes just below `PY_SSIZE_T_MAX / 8`,
+where `l * n` passes its test and asks `PyMem_Malloc` for `8 * len(l) * n` bytes, about
+`2**63`, which no allocator provides; neither the model nor this statement covers that
+allocation, so the agreement conjunct excludes the window. -/
 def ListRepeat : Prop :=
-  ∀ (α : Type) [Inhabited α] (l : List α) (n : Int), (l.length : Int) ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (l : List α) (n : Int), (l.length : Int) ≤ ssizeMax / 8 →
     ((n < ssizeMin ∨ ssizeMax < n) →
       listIRepeat l n = .error (.overflowError "cannot fit 'int' into an index-sized integer") ∧
       listRepeat l n = .error (.overflowError "cannot fit 'int' into an index-sized integer")) ∧
     (ssizeMin ≤ n → n ≤ ssizeMax →
-      listIRepeat l n = listRepeat l n ∧
-      (n ≤ 0 → listRepeat l n = .ok []) ∧
-      (0 < n → (l.length : Int) * n ≤ ssizeMax → listRepeat l n = .ok (rep n.toNat l)) ∧
-      (0 < n → ssizeMax < (l.length : Int) * n → listRepeat l n = .error memoryError))
+      (n ≤ 0 → listRepeat l n = .ok [] ∧ listIRepeat l n = .ok []) ∧
+      (n = 1 → listIRepeat l n = .ok l ∧ listRepeat l n = .ok l) ∧
+      (0 < n → (l.length : Int) * n ≤ ssizeMax / 8 → listRepeat l n = .ok (rep n.toNat l)) ∧
+      (0 < n → ssizeMax / 8 < (l.length : Int) * n → listRepeat l n = .error memoryError) ∧
+      (0 < n → (l.length : Int) * n ≤ ssizeMax / 8 - 3 → listIRepeat l n = .ok (rep n.toNat l)) ∧
+      (1 < n → 0 < (l.length : Int) → ssizeMax / 8 - 3 < (l.length : Int) * n →
+        listIRepeat l n = .error memoryError) ∧
+      (0 < n → ((l.length : Int) * n ≤ ssizeMax / 8 - 3 ∨ ssizeMax / 8 < (l.length : Int) * n) →
+        listIRepeat l n = listRepeat l n))
 
 theorem listRepeat_proven : ListRepeat := by
   intro α _ l n hlen
+  have h8 : ssizeMax / 8 = 1152921504606846975 := by decide
+  have hM : ssizeMax = 9223372036854775807 := by decide
   refine ⟨fun hn => ?_, fun hn0 hn1 => ?_⟩
   · simp only [listIRepeat, listRepeat, repeatCount, asSsizeExc, bind, Except.bind]
     rw [iteF (by omega)]; exact ⟨rfl, rfl⟩
   have hc : repeatCount n = .ok n := by unfold repeatCount asSsizeExc; rw [iteT ⟨hn0, hn1⟩]
-  simp only [listIRepeat, listRepeat, hc, bind, Except.bind, pure, Except.pure]
   have hdiv : ∀ (h : 0 < n), ((l.length : Int) > ssizeMax / n ↔ ssizeMax < (l.length : Int) * n) := by
     intro h
     constructor
@@ -248,33 +278,82 @@ theorem listRepeat_proven : ListRepeat := by
       have := (Int.le_ediv_iff_mul_le h).mpr hle; omega
     · intro hg; apply Int.not_le.mp; intro hle
       have := (Int.le_ediv_iff_mul_le h).mp hle; omega
-  refine ⟨?_, fun h => ?_, fun h hle => ?_, fun h hgt => ?_⟩
+  have hnil : (l.length : Int) = 0 → l = [] := fun h => List.eq_nil_of_length_eq_zero (by omega)
+  have hrep1 : rep (1 : Int).toNat l = l := by simp [rep]
+  have hrepnil : ∀ k : Nat, rep k ([] : List α) = [] := by
+    intro k; induction k with
+    | zero => rfl
+    | succ k ih => rw [rep_succ', ih]; rfl
+  -- `l * n` for `0 < n`
+  have hR : 0 < n → listRepeat l n =
+      (if (l.length : Int) * n ≤ ssizeMax / 8 then .ok (rep n.toNat l) else .error memoryError) := by
+    intro h
+    simp only [listRepeat, hc, bind, Except.bind, pure, Except.pure]
+    by_cases h0 : (l.length : Int) = 0
+    · rw [iteT (Or.inl h0), iteT (by rw [h0, Int.zero_mul]; omega), hnil h0, hrepnil]
+    rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n ≤ 0) by omega)]
+    by_cases hb : (l.length : Int) * n ≤ ssizeMax / 8
+    · rw [iteF (show ¬ ((l.length : Int) > ssizeMax / n) from fun hA => by
+          have := (hdiv h).mp hA; omega),
+        iteF (show ¬ ((l.length : Int) * n > ssizeMax / 8) by omega), iteT hb]; rfl
+    · rw [iteF hb]
+      by_cases hA : (l.length : Int) > ssizeMax / n
+      · rw [iteT hA]; rfl
+      · rw [iteF hA, iteT (show (l.length : Int) * n > ssizeMax / 8 by omega)]; rfl
+  -- `l *= n` for `1 < n` and a non-empty list
+  have hI : 1 < n → 0 < (l.length : Int) → listIRepeat l n =
+      (if (l.length : Int) * n ≤ ssizeMax / 8 - 3 then .ok (rep n.toNat l) else .error memoryError) := by
+    intro h h0
+    simp only [listIRepeat, hc, bind, Except.bind, pure, Except.pure]
+    have h2 : 2 * (l.length : Int) ≤ (l.length : Int) * n := by
+      have := Int.mul_le_mul_of_nonneg_left (show (2 : Int) ≤ n by omega) (show (0 : Int) ≤ l.length by omega)
+      omega
+    have hg := listNewAllocated_grow (l.length : Int) ((l.length : Int) * n) (by omega) h2
+    rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n = 1) by omega), iteF (show ¬ n < 1 by omega)]
+    by_cases hb : (l.length : Int) * n ≤ ssizeMax / 8 - 3
+    · rw [iteF (show ¬ ((l.length : Int) > ssizeMax / n) from fun hA => by
+          have := (hdiv (by omega)).mp hA; omega),
+        iteF (show ¬ (listNewAllocated (l.length : Int) ((l.length : Int) * n) > ssizeMax / 8) by
+          have := hg.mpr hb; omega), iteT hb]; rfl
+    · rw [iteF hb]
+      by_cases hA : (l.length : Int) > ssizeMax / n
+      · rw [iteT hA]; rfl
+      · rw [iteF hA, iteT (show listNewAllocated (l.length : Int) ((l.length : Int) * n) > ssizeMax / 8 by
+          have := mt hg.mp hb; omega)]; rfl
+  have hI1 : n = 1 → listIRepeat l n = .ok l := by
+    intro h
+    simp only [listIRepeat, hc, bind, Except.bind, pure, Except.pure]
+    rw [iteT (Or.inr h)]
+  have hI0 : (l.length : Int) = 0 → listIRepeat l n = .ok l := by
+    intro h0
+    simp only [listIRepeat, hc, bind, Except.bind, pure, Except.pure]
+    rw [iteT (Or.inl h0)]
+  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, ?_⟩, fun h hb => ?_, fun h hb => ?_, fun h hb => ?_,
+    fun h h0 hb => ?_, fun h hb => ?_⟩
+  · simp only [listRepeat, hc, bind, Except.bind, pure, Except.pure]
+    rw [iteT (Or.inr h)]
+  · simp only [listIRepeat, hc, bind, Except.bind, pure, Except.pure]
+    by_cases h0 : (l.length : Int) = 0
+    · rw [iteT (Or.inl h0), hnil h0]
+    · rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n = 1) by omega), iteT (show n < 1 by omega)]
+  · exact hI1 h
+  · rw [hR (by omega), iteT (by rw [h, Int.mul_one]; omega), h, hrep1]
+  · rw [hR h, iteT hb]
+  · rw [hR h, iteF (by omega)]
   · by_cases h0 : (l.length : Int) = 0
-    · have : l = [] := List.eq_nil_of_length_eq_zero (by omega)
-      subst this; simp
+    · rw [hI0 h0, hnil h0, hrepnil]
     by_cases h1 : n = 1
-    · subst h1
-      rw [iteT (show (l.length : Int) = 0 ∨ (1 : Int) = 1 from Or.inr rfl),
-        iteF (show ¬ ((l.length : Int) = 0 ∨ (1 : Int) ≤ 0) by omega),
-        iteF (show ¬ ((l.length : Int) > ssizeMax / 1) by rw [Int.ediv_one]; omega)]
-      simp
-    rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n = 1) by omega)]
-    by_cases hneg : n < 1
-    · rw [iteT hneg, iteT (show (l.length : Int) = 0 ∨ n ≤ 0 by omega)]
-    · rw [iteF hneg, iteF (show ¬ ((l.length : Int) = 0 ∨ n ≤ 0) by omega)]
+    · rw [hI1 h1, h1, hrep1]
+    · rw [hI (by omega) (by omega), iteT hb]
+  · rw [hI h h0, iteF (by omega)]
   · by_cases h0 : (l.length : Int) = 0
-    · rw [iteT (Or.inl h0)]
-    · rw [iteT (Or.inr h)]
-  · by_cases h0 : (l.length : Int) = 0
-    · have : l = [] := List.eq_nil_of_length_eq_zero (by omega)
-      subst this; rw [iteT (Or.inl h0)]; simp [rep]
-    rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n ≤ 0) by omega),
-      iteF (show ¬ ((l.length : Int) > ssizeMax / n) from fun hA => absurd ((hdiv h).mp hA) (by omega))]; rfl
-  · rw [iteF (show ¬ ((l.length : Int) = 0 ∨ n ≤ 0) by
-      intro hh; rcases hh with hh | hh
-      · rw [hh] at hgt; simp at hgt; unfold ssizeMax at hgt; omega
-      · omega),
-      iteT (show ((l.length : Int) > ssizeMax / n) from (hdiv h).mpr hgt)]; rfl
+    · rw [hI0 h0, hR h, iteT (by rw [h0, Int.zero_mul]; omega), hnil h0, hrepnil]
+    by_cases h1 : n = 1
+    · rw [hI1 h1, hR (by omega), iteT (by rw [h1, Int.mul_one]; omega), h1, hrep1]
+    rw [hI (by omega) (by omega), hR h]
+    rcases hb with hb | hb
+    · rw [iteT hb, iteT (by omega)]
+    · rw [iteF (by omega), iteF (by omega)]
 
 /-- `d.copy()`, `d + other`: for every deque (type invariants: `WF`, and `maxlen` a
 `Py_ssize_t`) and every other deque, `copy()` has the same items, `maxlen` and type, and

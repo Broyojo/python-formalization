@@ -197,17 +197,57 @@ def jHint (j : Json) : Except String (Py Int) :=
     if h < 0 then return .error (.valueError "Hinted.__length_hint__() must return a non-negative int")
     return .ok h
 
+/-- An iterator over `items` that leaves the list alone. -/
+def pureFx (items : List DEl) (hint : Py Int := .ok 8) (err : Option PyExc := none) : IterFx DEl :=
+  IterSrc.fx { hint := hint, items := items, err := err }
+
+/-- The twin's `mut_items(items)`: a generator that appends `0` to the list under test before it
+yields each item. A generator has no length, so the hint is the default 8. -/
+def mutFx (items : List DEl) : IterFx DEl where
+  getIter o := (.ok (), o)
+  hint o := (.ok 8, o)
+  next k o :=
+    match items[k]? with
+    | some x => (some (.ok x), match listAppend o (.int 0) with | .ok o' => o' | .error _ => o)
+    | none => (none, o)
+
+def unpair : DEl → DEl × DEl
+  | .tup [a, b] => (a, b)
+  | x => (x, x)
+
 def jExt (j : Json) : Except String (ExtArg DEl) := do
   match ← getStr j "k" with
-  | "self" => return .self
-  | "fast" => return .fast (← jEls (← field j "items"))
-  | "sized" => return .sized (← jEls (← field j "items"))
+  | "self" => return classifyExt 0 .same
+  | "fast" =>
+    let items ← jEls (← field j "items")
+    if (← getStr j "as") == "tuple" then return classifyExt 0 (.tuple true items (pureFx items))
+    else return classifyExt 0 (.list true items (pureFx items))
+  | "sized" =>
+    let items ← jEls (← field j "items")
+    let ones := items.map (fun _ => DEl.int 1)
+    match ← getStr j "as" with
+    | "set" => return classifyExt 0 (.set true items (pureFx items))
+    | "frozenset" => return classifyExt 0 (.set true items (pureFx items))
+    | "dict" => return classifyExt 0 (.dict true items ones (pureFx items))
+    | "keys" => return classifyExt 0 (.keys items ones)
+    | "values" => return classifyExt 0 (.values ((List.range items.length).map (fun (i : Nat) => DEl.int (i : Int))) items)
+    | "items" =>
+      let ps := items.map unpair
+      return classifyExt 0 (.items (ps.map (·.1)) (ps.map (·.2)) (fun k v => .ok (.tup [k, v])))
+    | a => throw s!"sized {a}"
   | "iter" =>
     let hint ← jHint (← field j "hint")
     let err := (j.getObjValAs? Bool "err").toOption.getD false
-    return .iter { hint := hint, items := ← jEls (← field j "items"),
-                   err := if err then some (.valueError "gen") else none }
-  | "noniter" => return .notIterable "int"
+    let items ← jEls (← field j "items")
+    return classifyExt (items.length + 1)
+      (.other (pureFx items hint (if err then some (.valueError "gen") else none)))
+  | "sub" =>
+    let items ← jEls (← field j "items")
+    return classifyExt (items.length + 1) (.list false items (pureFx items.reverse (.ok items.length)))
+  | "mutiter" =>
+    let items ← jEls (← field j "items")
+    return classifyExt (items.length + 1) (.other (mutFx items))
+  | "noniter" => return classifyExt 0 (.notIterable "int")
   | k => throw s!"ext {k}"
 
 def fuelOf (o : St) : Nat := o.items.length + 64
@@ -560,6 +600,10 @@ def runList (fn : String) (j : Json) : Except String Json := do
     let n ← getNat j "n"
     let o := LObj.prealloc (List.range n)
     return okJ (Json.arr ((listDeallocOrder o).map enOptNat).toArray)
+  | "list.clear_release" =>
+    let n ← getNat j "n"
+    let o := listFromStack (List.range n)
+    return okJ (Json.arr ((listClearOrder o).map enOptNat).toArray)
   | "list.sort_sizeof" => return okJ (toJson (listSizeof (listDuringSort : St)))
   | "list.latin_lt" =>
     let v ← elIntPair (← field j "v")
@@ -595,8 +639,14 @@ def runList (fn : String) (j : Json) : Except String Json := do
     return encPy stateJ (pyListGetSlice (jEls (← field j "items")).toOption (← getInt j "i") (← getInt j "j"))
   | "list.c_setslice" =>
     let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
-    let v : Option (List DEl) := (jEls (← field j "v")).toOption
-    return encPy stateJ (pyListSetSlice o (← getInt j "i") (← getInt j "j") v (← getBool j "self"))
+    let vj ← field j "v"
+    let v : AssVal DEl :=
+      if (← getBool j "self") then .selfCopy
+      else if vj == Json.str "noniter" then .notIterable
+      else match jEls vj with
+        | .ok items => .seq items
+        | .error _ => .del
+    return encPy stateJ (pyListSetSlice o (← getInt j "i") (← getInt j "j") v)
   | "list.c_clear" =>
     return encPy stateJ (pyListClear ((jEls (← field j "items")).toOption.map LObj.prealloc))
   | "list.c_reverse" =>

@@ -63,9 +63,9 @@ theorem listResize_spec (allocated : Int) (hasItems : Bool) (size newsize a : In
       · simp at hr
 
 /-- `list_resize`, for every state and size: a successful resize leaves room for
-`newsize`; the fast path of line 121 changes nothing, and it is taken when `newsize <= allocated`
+`newsize`; the fast path of lines 121-128 changes nothing, and it is taken when `newsize <= allocated`
 and either `allocated >> 1 <= newsize` or the list is small. The over-allocation is a
-multiple of 4 for a non-zero size. The note at lines 130-131 of listobject.c holds:
+multiple of 4 for a non-zero size. The note at lines 145-146 of listobject.c holds:
 `new_allocated` is below `2^64` for all `newsize <= PY_SSIZE_T_MAX`, so it cannot
 overflow `size_t`, and it is at most `newsize * 9/8 + 6`. -/
 def ListResizeSpec : Prop :=
