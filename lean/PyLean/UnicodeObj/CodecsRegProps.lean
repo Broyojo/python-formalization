@@ -178,7 +178,8 @@ theorem searchLoop_err (W : World) (v : Str) (encoding : String) (len : Nat) :
 /-- **codecs.lookup raises a LookupError when it finds no codec.** codecs.rst (`lookup`): "If no
 CodecInfo object is found, a LookupError is raised." For every registry, name and search
 functions (which may change the registry while it is being scanned), a failed lookup raises an
-exception whose class is below `LookupError` in every hierarchy CPython can have, the `TypeError`
+exception whose class is below `LookupError` (the exceptions here are the builtin `LookupError`
+and `IndexError`, whose MROs are fixed), the `TypeError`
 for a search function's bad answer, or what a search function raised. When a search function
 unregisters search functions during the scan, the saved length (codecs.c:165) outlives the list
 and the error is the `IndexError` of `PyList_GetItemRef`, a subclass of `LookupError`
@@ -191,8 +192,10 @@ def LookupRaisesLookupError : Prop :=
 
 theorem lookupRaisesLookupError_proven : LookupRaisesLookupError := by
   intro H W st enc v st' x hH hv hl
-  have hL : H.sub "LookupError" "LookupError" = true := hH.1 _
-  have hI : H.sub "IndexError" "LookupError" = true := hH.base rfl
+  have hL : H.sub "LookupError" "LookupError" = true := by
+    rw [hH.builtin (by decide)]; decide
+  have hI : H.sub "IndexError" "LookupError" = true := by
+    rw [hH.builtin (by decide)]; decide
   simp only [pyCodecLookup, hv] at hl
   split at hl
   · cases hl

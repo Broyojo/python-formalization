@@ -1,0 +1,80 @@
+id: unicodeobj-codecs-surrogate-handlers-systemerror
+title: "surrogateescape and surrogatepass raise SystemError on a UnicodeError subclass that lacks the exception flag"
+priority: P5
+kind: internal-error
+module: unicodeobject
+files: [Python/codecs.c, Python/errors.c, Objects/typeobject.c]
+functions: ["_PyCodec_SurrogateEscapeUnicodeEncodeError", "_PyCodec_SurrogateEscapeUnicodeDecodeError",
+            "_PyCodec_SurrogatePassUnicodeEncodeError", "_PyCodec_SurrogatePassUnicodeDecodeError"]
+summary: |
+  The surrogate handlers accept an object when `PyObject_TypeCheck` finds
+  UnicodeEncodeError/UnicodeDecodeError in its type's MRO, and when they cannot handle it they
+  re-raise it with `PyErr_SetObject(PyExceptionInstance_Class(exc), exc)` (codecs.c:1309, :1390,
+  :1440, :1478). `_PyErr_SetObject` checks the class with `PyExceptionClass_Check`, which tests
+  the `Py_TPFLAGS_BASE_EXC_SUBCLASS` flag (Python/errors.c:157-163). That flag comes from the MRO of
+  the class's `tp_base` (`inherit_special`, typeobject.c:8825-8831), and a metaclass `mro()` can
+  leave `BaseException` out of it:
+
+      class M(type):
+          def mro(cls): return [cls, UnicodeEncodeError, object]
+      class A(UnicodeEncodeError, metaclass=M): pass
+      class B(A): pass          # tp_base A has no BaseException in its MRO: no flag
+
+  A `B` instance is a UnicodeEncodeError to the handlers, but `codecs.surrogateescape` on it
+  raises `SystemError: _PyErr_SetObject: exception <class '__main__.B'> is not a BaseException
+  subclass`. `strict_errors`, which checks `PyExceptionInstance_Check` first, raises the proper
+  `TypeError("codec must pass exception instance")` for the same object.
+likelihood: |
+  Very low. It needs a metaclass whose `mro()` drops BaseException, and a subclass of a class
+  using it. Recorded because it is an internal error reachable from Python code, not because
+  real code hits it.
+maybe_intended: |
+  Not intended, but the class is broken by construction (it cannot be raised: `raise B()` fails
+  with "exceptions must derive from BaseException"). A fix is a check before the re-raise, the
+  one `PyCodec_StrictErrors` makes. Only worth reporting together with other findings.
+reproducer: |
+  import codecs
+  class M(type):
+      def mro(cls):
+          return [cls, UnicodeEncodeError, object]
+  class A(UnicodeEncodeError, metaclass=M):
+      pass
+  class B(A):
+      pass
+  e = B('ascii', '\xff', 0, 1, 'r')
+  try:
+      codecs.lookup_error('surrogateescape')(e)
+      result = 'no error'
+  except SystemError as x:
+      result = 'SystemError: %s' % x
+  except TypeError as x:
+      result = 'TypeError: %s' % x
+  print(result)
+  if result.startswith('SystemError: _PyErr_SetObject: exception') and 'is not a BaseException subclass' in result:
+      print('REPRODUCED unicodeobj-codecs-surrogate-handlers-systemerror')
+expected: |
+  A TypeError, as strict_errors gives ("codec must pass exception instance"), or the handler's
+  wrong-type TypeError.
+observed: |
+  SystemError: _PyErr_SetObject: exception <class '__main__.B'> is not a BaseException subclass
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  Invariant: no internal error (SystemError) leaks from a builtin function called with any
+  Python object.
+cause: |
+  Python/codecs.c:1440 (and :1309, :1390, :1478) call `PyErr_SetObject(PyExceptionInstance_Class(exc),
+  exc)` after a `PyObject_TypeCheck` on the MRO, never checking `PyExceptionInstance_Check`, which
+  tests a flag that the MRO does not determine.
+possible_fix: |
+  In the four bail paths, check `PyExceptionInstance_Check(exc)` and raise the TypeError of
+  `PyCodec_StrictErrors` when it fails (or reuse PyCodec_StrictErrors for the re-raise).
+lean: |
+  Refuted by handlersSafeAll_refuted (lean/PyLean/UnicodeObj/CodecsErrSafe.lean): oddExc_systemError
+  computes the SystemError for this class; handlersSafe_proven holds when encode and decode errors
+  have the flag.
+duplicates:
+  issues:
+    - {number: 50622, state: closed, relation: unrelated, reason: "a 2009 SystemError in an encoder, unrelated to handlers"}
+  queries: ["_PyErr_SetObject is not a BaseException subclass", "metaclass mro BaseException SystemError",
+            "surrogateescape SystemError", "PyExceptionInstance_Check mro flag", "Py_TPFLAGS_BASE_EXC_SUBCLASS"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

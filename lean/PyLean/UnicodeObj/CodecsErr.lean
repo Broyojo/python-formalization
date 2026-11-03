@@ -11,9 +11,11 @@ The model of the same handlers as the codec loops see them, on exceptions the co
 themselves, is `CodecHandlers.lean`. `CodecsErrProps.lean` proves the two agree.
 
 Scope:
-* Classes are type names. `PyObject_TypeCheck` walks `tp_mro`, which no metaclass can
-  override, and is taken as the oracle `Hier.sub`, constrained only by what CPython
-  guarantees (`HierOk`).
+* Classes are type names. `PyObject_TypeCheck` walks `tp_mro`, which a metaclass `mro()` can
+  set to any list `mro_check` accepts; it is the oracle `Hier.sub`, and the exception flag
+  `PyExceptionInstance_Check` tests is the separate oracle `Hier.excFlag`. Both are
+  constrained only by what CPython guarantees (`HierOk`); `Ordinary` is the scope of the
+  theorems that need a class without a custom `mro()`.
 * The `encoding`, `object` and `reason` slots are `_Py_T_OBJECT` members: NULL after
   `del exc.object` or before `__init__`, otherwise any object. `start` and `end` are
   `Py_T_PYSSIZET` members, so they always hold a `Py_ssize_t`.
@@ -29,10 +31,19 @@ open PyLean PyLean.UnicodeObj
 
 /-! ## Classes -/
 
-/-- `issubclass` between types as `PyObject_TypeCheck` sees it: `sub c b` when `b` is in the
-MRO of `c`. -/
+/-- What the handlers know of a class.
+* `sub c b`: `PyType_IsSubtype`, which walks `tp_mro`. A metaclass `mro()` can make that
+  anything that passes `mro_check` (typeobject.c:3586-3614): it can leave out bases, so the
+  relation need not be transitive. `class M(type): def mro(cls): return [cls,
+  UnicodeEncodeError, object]` gives a subclass of `UnicodeEncodeError` that is no
+  `UnicodeError` and no `BaseException` by MRO.
+* `excFlag c`: `Py_TPFLAGS_BASE_EXC_SUBCLASS`, which `PyExceptionInstance_Check` and
+  `PyExceptionClass_Check` test (Include/pyerrors.h:60-66). `inherit_special`
+  (typeobject.c:8825-8831) sets it when the MRO of the class's `tp_base` reaches
+  `BaseException`, so it can differ from `sub c "BaseException"` in both directions. -/
 structure Hier where
   sub : String → String → Bool
+  excFlag : String → Bool
 
 /-- The builtin bases on the way from the three error classes, and from `IndexError`, to
 `BaseException`, Objects/exceptions.c (`SimpleExtendsException(PyExc_ValueError, UnicodeError,
@@ -47,17 +58,43 @@ def builtinBase : String → Option String
   | "Exception" => some "BaseException"
   | _ => none
 
-/-- What CPython guarantees of the MRO relation: reflexive, transitive, the builtin bases, and
-no class below two of the three error classes: each is its own solid base, so
-`class X(UnicodeEncodeError, UnicodeDecodeError)` fails with "multiple bases have instance
-lay-out conflict" (typeobject.c, `best_base`). -/
+/-- The MRO of each builtin exception class above, without the class itself and `object`. -/
+def ancestors (c : String) : List String :=
+  match c with
+  | "UnicodeEncodeError" | "UnicodeDecodeError" | "UnicodeTranslateError" =>
+    ["UnicodeError", "ValueError", "Exception", "BaseException"]
+  | "UnicodeError" => ["ValueError", "Exception", "BaseException"]
+  | "ValueError" => ["Exception", "BaseException"]
+  | "IndexError" => ["LookupError", "Exception", "BaseException"]
+  | "LookupError" => ["Exception", "BaseException"]
+  | "Exception" => ["BaseException"]
+  | _ => []
+
+/-- The builtin classes whose MRO is fixed. -/
+def builtinClasses : List String :=
+  ["UnicodeEncodeError", "UnicodeDecodeError", "UnicodeTranslateError", "UnicodeError",
+   "ValueError", "IndexError", "LookupError", "Exception", "BaseException"]
+
+/-- `issubclass` for a builtin class `c`. -/
+def builtinSub (c b : String) : Bool := c == b || (ancestors c).contains b
+
+/-- What CPython guarantees, and nothing more: a builtin class has its static MRO and the
+exception flag; and no MRO lists two of the three error classes, because each is the solid base
+of its layout and `mro_check` (typeobject.c:3604-3611) refuses an MRO entry whose layout the
+class lacks ("mro() returned base with unsuitable layout"; with ordinary bases `best_base`,
+typeobject.c:3792, refuses "multiple bases have instance lay-out conflict"). A class of user code
+is otherwise free: its MRO need not contain itself or be transitive, and its flag is
+independent of its MRO. -/
 def HierOk (H : Hier) : Prop :=
-  (∀ c, H.sub c c = true) ∧
-  (∀ a b c, H.sub a b = true → H.sub b c = true → H.sub a c = true) ∧
-  (∀ c b, builtinBase c = some b → H.sub c b = true) ∧
+  (∀ c ∈ builtinClasses, ∀ b, H.sub c b = builtinSub c b) ∧
+  (∀ c ∈ builtinClasses, H.excFlag c = true) ∧
   (∀ c, ¬ (H.sub c "UnicodeEncodeError" = true ∧ H.sub c "UnicodeDecodeError" = true)) ∧
   (∀ c, ¬ (H.sub c "UnicodeEncodeError" = true ∧ H.sub c "UnicodeTranslateError" = true)) ∧
   (∀ c, ¬ (H.sub c "UnicodeDecodeError" = true ∧ H.sub c "UnicodeTranslateError" = true))
+
+/-- The scope of theorems that need an ordinary class: its MRO keeps `UnicodeError` and it
+has the exception flag. Every class without a custom `mro()` is such. -/
+def Ordinary (H : Hier) (c : String) : Prop := H.sub c "UnicodeError" = true ∧ H.excFlag c = true
 
 /-- `_PyIsUnicodeEncodeError`, codecs.c:673-674. -/
 def Hier.isEnc (H : Hier) (c : String) : Bool := H.sub c "UnicodeEncodeError"
@@ -83,6 +120,8 @@ when the object is a `PyUnicodeErrorObject`. -/
 structure ExcObj where
   cls : String
   tpName : String
+  /-- `repr(type(exc))`, which `%R` prints. -/
+  clsRepr : String
   encoding : Slot
   object : Slot
   start : Int
@@ -244,9 +283,22 @@ def Body.result (b : Body) : Rep × Nat := (b.out, b.pos)
 
 /-! ## strict and ignore, codecs.c:775-816 -/
 
-/-- `PyCodec_StrictErrors`, codecs.c:777-786. -/
+/-- `PyErr_SetObject(PyExceptionInstance_Class(exc), exc)` (codecs.c:1309, :1390, :1440,
+:1478): `_PyErr_SetObject` refuses a class without the exception flag with a `SystemError`
+(Python/errors.c:157-163). -/
+def bail {α : Type} (H : Hier) (e : ExcObj) : HPy α :=
+  if H.excFlag e.cls then .error .reraise
+  else .error (.exc (.named "SystemError"
+    s!"_PyErr_SetObject: exception {e.clsRepr} is not a BaseException subclass"))
+
+/-- What a loop's `.reraise` becomes: the `bail` of its body. -/
+def bailOn {α : Type} (H : Hier) (e : ExcObj) : HPy α → HPy α
+  | .error .reraise => bail H e
+  | r => r
+
+/-- `PyCodec_StrictErrors`, codecs.c:777-786: `PyExceptionInstance_Check` tests the flag. -/
 def strictErrors (H : Hier) (e : ExcObj) : HPy (Rep × Nat) :=
-  if H.sub e.cls "BaseException" then .error .reraise
+  if H.excFlag e.cls then .error .reraise
   else raiseT "codec must pass exception instance"
 
 /-- `_PyCodec_IgnoreError`, codecs.c:791-801. -/
@@ -341,7 +393,7 @@ def nameSizeLoop (getname : Nat → Option Str) : List Nat → Nat → Nat → N
   | [], imax, ressize => (imax, ressize)
   | c :: cs, imax, ressize =>
     let replsize := nameSize getname c
-    if ressize > ssizeMaxN - replsize then (imax, ressize)
+    if (ressize : Int) > (ssizeMaxN : Int) - replsize then (imax, ressize)
     else nameSizeLoop getname cs (imax + 1) (ressize + replsize)
 
 /-- One replacement as the write loop writes it, codecs.c:1119-1129. -/
@@ -462,11 +514,11 @@ def passWrite (code : EncCode) : List Nat → HPy (List Nat)
 /-- `_PyCodec_SurrogatePassUnicodeEncodeError`, codecs.c:1223-1311. -/
 def surrogatePassEncode (H : Hier) (e : ExcObj) : HPy Body := do
   let code ← encCodeOf H e "UnicodeEncodeError"
-  if code = .unknown then .error .reraise
+  if code = .unknown then bail H e
   else
     let p ← getParams e false
     let (stop, slen) := guardRange code.bytelength p
-    let out ← passWrite code (slice p.obj p.start stop)
+    let out ← bailOn H e (passWrite code (slice p.obj p.start stop))
     pure ⟨code.bytelength * slen, .bytes out, stop⟩
 
 /-- The code unit read at `p`, codecs.c:1346-1377: 0 when fewer than `bytelength` bytes are
@@ -487,11 +539,11 @@ def passRead (code : EncCode) (p : List Nat) : Nat :=
 /-- `_PyCodec_SurrogatePassUnicodeDecodeError`, codecs.c:1314-1392. -/
 def surrogatePassDecode (H : Hier) (e : ExcObj) : HPy Body := do
   let code ← encCodeOf H e "UnicodeDecodeError"
-  if code = .unknown then .error .reraise
+  if code = .unknown then bail H e
   else
     let p ← getParams e true
     let ch := if p.objlen - p.start ≥ code.bytelength then passRead code (p.obj.drop p.start) else 0
-    if !isSurrogate ch then .error .reraise
+    if !isSurrogate ch then bail H e
     else pure ⟨1, .str [ch], p.start + code.bytelength⟩
 
 /-- `PyCodec_SurrogatePassErrors`, codecs.c:1397-1410. -/
@@ -512,9 +564,9 @@ def escWrite : List Nat → HPy (List Nat)
       pure ((ch - 0xdc00) :: rest)
 
 /-- `_PyCodec_SurrogateEscapeUnicodeEncodeError`, codecs.c:1415-1448. -/
-def surrogateEscapeEncode (e : ExcObj) : HPy Body := do
+def surrogateEscapeEncode (H : Hier) (e : ExcObj) : HPy Body := do
   let p ← getParams e false
-  let out ← escWrite (slice p.obj p.start p.stop)
+  let out ← bailOn H e (escWrite (slice p.obj p.start p.stop))
   pure ⟨p.slen, .bytes out, p.stop⟩
 
 /-- The loop of codecs.c:1466-1473: at most `limit` bytes, stopping at an ASCII one. -/
@@ -525,16 +577,16 @@ def escConsume : Nat → List Nat → List Nat
 
 /-- `_PyCodec_SurrogateEscapeUnicodeDecodeError`, codecs.c:1451-1487. The characters go to the
 stack array `Py_UCS2 ch[4]` (:1463), whose size is `alloc` here. -/
-def surrogateEscapeDecode (e : ExcObj) : HPy Body := do
+def surrogateEscapeDecode (H : Hier) (e : ExcObj) : HPy Body := do
   let p ← getParams e true
   let chs := escConsume (min 4 p.slen) (p.obj.drop p.start)
-  if chs.length = 0 then .error .reraise
+  if chs.length = 0 then bail H e
   else pure ⟨4, .str chs, p.start + chs.length⟩
 
 /-- `PyCodec_SurrogateEscapeErrors`, codecs.c:1490-1503. -/
 def surrogateEscapeErrors (H : Hier) (e : ExcObj) : HPy Body :=
-  if H.isEnc e.cls then surrogateEscapeEncode e
-  else if H.isDec e.cls then surrogateEscapeDecode e
+  if H.isEnc e.cls then surrogateEscapeEncode H e
+  else if H.isDec e.cls then surrogateEscapeDecode H e
   else wrongType e
 
 /-! ## The registered functions, codecs.c:1506-1561 and :1565-1651 -/

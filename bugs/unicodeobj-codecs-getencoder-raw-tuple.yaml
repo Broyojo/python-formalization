@@ -1,0 +1,63 @@
+id: unicodeobj-codecs-getencoder-raw-tuple
+title: "codecs.getencoder and friends raise AttributeError for a codec registered as a plain 4-tuple, where codecs.encode and the C API work"
+priority: P5
+kind: twin-mismatch
+module: unicodeobject
+files: [Lib/codecs.py, Python/codecs.c, Modules/_codecsmodule.c]
+functions: ["getencoder", "getdecoder", "getreader", "getwriter", "PyCodec_Encoder"]
+summary: |
+  The docstring of `codecs.register` (_codecsmodule.c:57-60) lets a search function "return
+  None, or a tuple of functions (encoder, decoder, stream_reader, stream_writer) (or a CodecInfo
+  object)", and `codecs.lookup` returns such a tuple unchanged. The C side reads the tuple's items:
+  `codecs.encode`, `PyCodec_Encoder`, `PyCodec_StreamReader` all work. `Lib/codecs.py` reads
+  attributes instead (`lookup(encoding).encode`, `.streamreader`, ...), so `codecs.getencoder`,
+  `getdecoder`, `getreader` and `getwriter` raise `AttributeError: 'tuple' object has no attribute
+  'encode'` for the same codec.
+likelihood: |
+  Low: registering a raw tuple is an old style; the standard library and most codecs return
+  CodecInfo.
+maybe_intended: |
+  Probably acceptable. codecs.rst documents that search functions return a CodecInfo object and
+  that lookup returns one; the tuple form survives only in the docstring. A fix would be to
+  document the tuple form as unsupported, or to make lookup wrap it in a CodecInfo.
+reproducer: |
+  import codecs
+  def enc(s, errors='strict'):
+      return (s.encode('ascii'), len(s))
+  def dec(b, errors='strict'):
+      return (bytes(b).decode('ascii'), len(b))
+  def search(name):
+      return (enc, dec, None, None) if name == 'uoc-raw-tuple' else None
+  codecs.register(search)
+  via_encode = codecs.encode('x', 'uoc-raw-tuple')
+  info = codecs.lookup('uoc-raw-tuple')
+  try:
+      codecs.getencoder('uoc-raw-tuple')
+      via_getencoder = 'ok'
+  except AttributeError as e:
+      via_getencoder = 'AttributeError'
+  print(type(info).__name__, via_encode, via_getencoder)
+  if type(info) is tuple and via_encode == b'x' and via_getencoder == 'AttributeError':
+      print('REPRODUCED unicodeobj-codecs-getencoder-raw-tuple')
+expected: |
+  getencoder returns the encoder that codecs.encode uses (or register refuses the tuple).
+observed: |
+  codecs.encode works; codecs.getencoder raises AttributeError.
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  The `_codecs.register` docstring (tuple accepted) and the agreement of the C API with its
+  Lib/codecs.py twins.
+cause: |
+  Python/codecs.c:262-274 (`codec_getitem`) uses `PyTuple_GET_ITEM`; Lib/codecs.py:975-1041 use
+  attribute access.
+possible_fix: |
+  Have `_PyCodec_Lookup` convert a plain 4-tuple to a CodecInfo before caching it, or drop the
+  tuple form from the docstring.
+lean: |
+  Refuted by cApiMatchesLibAll_refuted (lean/PyLean/UnicodeObj/CodecsRegProps2.lean);
+  cApiMatchesLib_proven holds for codec objects whose attributes are their items.
+duplicates:
+  issues:
+    - {number: 49746, state: closed, relation: related, reason: "2009 docstring fix for codecs.lookup returning a tuple vs CodecInfo; not the getters"}
+  queries: ["getencoder tuple AttributeError", "codecs register tuple CodecInfo lookup", "codec search function return tuple"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
