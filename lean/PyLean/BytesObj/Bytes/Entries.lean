@@ -465,6 +465,34 @@ def entries : List Entry := [
     source := "twin: bytes.translate; bytearrayobject.c:1724-1795", status := .proven
     prop := ``TranslateAfterArgs, thm := some ``translateAfterArgs_proven
     notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-delegates", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isalnum", "bytearray_isalpha", "bytearray_isascii", "bytearray_isdigit", "bytearray_islower",
+      "bytearray_isspace", "bytearray_istitle", "bytearray_isupper", "bytearray_capitalize", "bytearray_swapcase",
+      "bytearray_title", "bytearray_upper", "bytearray_lower"]
+    statement := "For every bytearray, each is* predicate returns the bytes helper's answer on its contents, and each case map returns a new bytearray holding the helper's result (below 2^46 bytes, where the allocation cannot fail); neither changes the object."
+    source := "twin: stringlib/ctype.h delegates to the _Py_bytes_* helpers of bytes_methods.c", status := .proven
+    prop := ``DelegatesSpec, thm := some ``delegatesSpec_proven },
+  { id := "bytesobj-bytearray-affix", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_removeprefix_impl", "bytearray_removesuffix_impl"]
+    statement := "removeprefix/removesuffix of bytearray, which lack the prefix_len > 0 test of bytes, agree with the bytes bodies for every contents and affix; with a prefix class the contents read are those __buffer__ left, and __release_buffer__ runs after."
+    source := "twin: bytes_removeprefix_impl, bytesobject.c; bytearrayobject.c:1525-1576", status := .proven
+    prop := ``AffixSpec, thm := some ``affixSpec_proven
+    notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-maketrans", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_maketrans_impl"]
+    statement := "bytearray.maketrans(frm, to) is _Py_bytes_maketrans of the two buffers as their __buffer__ gave them, both released after."
+    source := "bytearrayobject.c:1817-1822", status := .proven
+    prop := ``BaMaketransSpec, thm := some ``baMaketransSpec_proven },
+  { id := "bytesobj-bytearray-getitem-raw", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_getitem_lock_held", "bytearray_getitem"]
+    statement := "sq_item of a bytearray whose bytes are all written is list indexing: the byte at an index in range(len), IndexError('bytearray index out of range') for every other index."
+    source := "Doc/library/stdtypes.rst common sequence s[i]", status := .proven
+    prop := ``GetItemRawSpec, thm := some ``getItemRawSpec_proven },
+  { id := "bytesobj-bytearray-repeat", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_repeat_lock_held", "bytearray_repeat"]
+    statement := "b * n: n <= 0 gives an empty bytearray, MemoryError exactly when len(b) > PyByteArray_SIZE_MAX // n, and otherwise (below 2^46 bytes) a new bytearray without exports holding n copies of b."
+    source := "Doc/library/stdtypes.rst common sequence s * n; bytearrayobject.c:439-469", status := .proven
+    prop := ``BaRepeatSpec, thm := some ``baRepeatSpec_proven },
   { id := "bytesobj-bytearray-iadd-self", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray_iconcat_lock_held", "bytearray_iconcat", "bytearray_setslice"]
     statement := "b += x is b.extend(x) for every bytes-like x. Refuted: b += b raises BufferError, because bytearray_iconcat_lock_held exports b as its own argument and then resizes it, where b.extend(b) copies first."
@@ -541,7 +569,7 @@ def entries : List Entry := [
     source := "docstring, bytesobject.c:2611-2614", status := .proven
     prop := ``FromHexSpec, thm := some ``fromHexSpec_proven },
   { id := "bytesobj-bytes-repr-spec", pyFile := "Objects/bytesobject.c"
-    pyFns := ["PyBytes_Repr", "_Py_bytes_repr"]
+    pyFns := ["PyBytes_Repr", "_Py_bytes_repr", "bytearray_repr", "bytearray_repr_lock_held"]
     statement := "repr(b) uses \" only in smart mode for a body with ' and no \", its text is printable ASCII, printable bytes other than the quote and the backslash stand for themselves, and the quote appears only escaped."
     source := "Doc/library/functions.rst repr; Doc/library/stdtypes.rst bytes literals", status := .proven
     prop := ``ReprSpec, thm := some ``reprSpec_proven },
