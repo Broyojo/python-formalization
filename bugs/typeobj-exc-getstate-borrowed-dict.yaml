@@ -15,7 +15,7 @@ summary: |
   `insertdict`, which runs a key's `__eq__` when two keys share a hash. Nothing in this chain
   holds a reference to `o` (`dict_merge` and `PyDict_Copy` take it borrowed). If that `__eq__`
   runs `e.__dict__ = {}`, the last reference to the instance dict is dropped and the dict is
-  freed; `dict_dict_merge` then reads `other->ma_used` (:4243) and calls `_PyDict_Next(other)`
+  freed; `dict_dict_merge` then reads `other->ma_used` (:4249) and calls `_PyDict_Next(other)`
   on the freed object.
 
   Observed: the copy raises `RuntimeError: dict mutated during update` although no code
