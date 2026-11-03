@@ -1127,4 +1127,578 @@ theorem baAssSubIndex_proven : BaAssSubIndex := by
   · intro o value hx
     simp [baAssSubE, Arg.indexCheck, hx, E.bind_app, Arg.typeName]
 
+/-! ## Buffer export and release -/
+
+/-- `bytearray_getbuffer_lock_held`/`bytearray_getbuffer` (:69-96) and `bytearray_releasebuffer`
+(:98-106): a `NULL` view is the `BufferError` of :74-78; the flags `PyBUF_READ` and `PyBUF_WRITE` are
+refused by `PyBuffer_FillInfo` with `SystemError`; any other request exports the contents, writable,
+and raises `ob_exports` by one. While the export is held every resize to another size is refused;
+releasing it lowers `ob_exports` again, after which every resize does what it did before the export;
+and taking and releasing a `memoryview` in Python leaves the heap as it was. For every object. -/
+def BaBufferExport : Prop :=
+  ∀ (b : BA) (flags : Int),
+    baGetBufferC b true flags = .error (bufferError "bytearray_getbuffer: view==NULL argument is obsolete") ∧
+    ((flags = 0x100 ∨ flags = 0x200) →
+      baGetBufferC b false flags = .error (systemError "Objects/abstract.c:785: bad argument to internal function")) ∧
+    (flags ≠ 0x100 → flags ≠ 0x200 →
+      baGetBufferC b false flags = .ok ((b.seq, false), { b with exports := b.exports + 1 })) ∧
+    baReleaseBuffer (baGetBuffer b) = b ∧
+    (∀ n : Int, 0 ≤ n → n ≠ b.size → baResize (baGetBuffer b) n = .error exportsMsg) ∧
+    (∀ n : Int, baResize (baReleaseBuffer (baGetBuffer b)) n = baResize b n) ∧
+    (∀ h : H, runActs h [.grab, .drop] = h)
+
+theorem baBufferExport_proven : BaBufferExport := by
+  intro b flags
+  refine ⟨rfl, ?_, ?_, release_get b, ?_, ?_, ?_⟩
+  · intro hf
+    have : flags ≠ 0 := by omega
+    simp [baGetBufferC, this, hf]
+  · intro h1 h2
+    have : ¬ (flags ≠ 0 ∧ (flags = 0x100 ∨ flags = 0x200)) := by omega
+    simp only [baGetBufferC, Bool.false_eq_true, ↓reduceIte, this]
+    rfl
+  · intro n h0 hn
+    exact exportRule_proven.2.1 _ n h0 hn (by simp [baGetBuffer])
+  · intro n
+    rw [release_get]
+  · intro h
+    simp [runActs, Act.run, release_get]
+
+/-! ## `__alloc__` and `__sizeof__` -/
+
+/-- `bytearray.__alloc__()` (:2605-2613) reports the size of the `bytes` object, `ob_alloc + 33`, when
+there is storage and 0 otherwise; `__sizeof__` (:2813-2823) is the type's basic size plus that, 64 for
+`bytearray`. Through the growth strategy: `bytearray()` reports 0, `bytearray(n)` for `n > 0` reports
+`n + 33` (an exact allocation from empty storage), and `bytearray(10).append(1)` reports 51. -/
+def BaAllocReport : Prop :=
+  (∀ b : BA, baAllocMethod b = if b.alloc > 0 then b.alloc + 33 else 0) ∧
+  (∀ (basic : Int) (b : BA), baSizeofT basic b = basic + baAllocMethod b) ∧
+  (∀ b : BA, baSizeof b = baSizeofT 64 b) ∧
+  (baAllocMethod <$> baNew none none none = .ok 0) ∧
+  (∀ n : Nat, 0 < n → (n : Int) + 1 < 2 ^ 46 → baAllocMethod <$> baNew (some (.int n)) none none = .ok (n + 33)) ∧
+  ((do let b ← baNew (some (.int 10)) none none; let r ← baAppend b (.int 1); pure (baAllocMethod r) : Py Int) = .ok 51)
+
+theorem baAllocReport_proven : BaAllocReport := by
+  refine ⟨fun b => rfl, ?_, ?_, rfl, ?_, baResizeStrategy_proven.2.2.2⟩
+  · intro basic b
+    simp only [baSizeofT, baAllocMethod, objsize_val]
+    split <;> omega
+  · intro b
+    rfl
+  · intro n h0 hs
+    obtain ⟨r, hr, _, _, hc⟩ := baResizeStrategy_proven.2.1 {} n (by omega) (by simp [BA.size]; omega) rfl (by omega)
+    have hz : ¬ ((n : Int) + 0 ≤ 0 ∧ ¬ (n : Int) < 0 / 2) := by omega
+    have h1 : ¬ ((n : Int) + 0 ≤ 0) := by omega
+    have h2 : ¬ (8 * (n : Int) ≤ 9 * 0) := by omega
+    simp only [show ({} : BA).offset = 0 from rfl, show ({} : BA).alloc = 0 from rfl, hz, ↓reduceIte, h1, h2] at hc
+    have hr1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
+      rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega
+    have hn : ¬ ((n : Int) < 0) := by omega
+    have hza : ({} : BA).size = 0 := rfl
+    have hp' : 0 < n := h0
+    have hnew : baNew (some (.int n)) none none = .ok { r with data := List.replicate n 0 } := by
+      simp [baNew, baNewObject_eq, baInit, init_fresh, hza, Obj.index?, countOf, hr1, hn, hp', hr]
+    rw [hnew]
+    simp [Functor.map, Except.map, baAllocMethod, hc.2, objsize_val]
+    omega
+
+/-! ## `resize(size)` -/
+
+theorem resizedData_take (d : List Int) (n : Int) (h : (d.length : Int) ≤ n) :
+    (resizedData d n).take d.length = d := by
+  simp only [resizedData]
+  rw [List.take_of_length_le (l := d) (by omega)]
+  simp
+
+/-- `bytearray.resize(size)` (:1588-1602, with `bytearray_resize_lock_held`): a negative size is the
+`ValueError`; the same size changes nothing (also with exports); another size raises `BufferError`
+with exports; otherwise the first bytes are kept and new bytes are zero (the `memset` of :1597-1600,
+so nothing unwritten shows). The clinic's conversion runs first and its exception passes out. For
+every object and size in `Py_ssize_t`, below 2^46 for the success. -/
+def BaResizeMethodSpec : Prop :=
+  (∀ (b : BA) (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
+    (n < 0 → baResizeMethod b n = .error (.valueError s!"Can only resize to positive sizes, got {n}")) ∧
+    (n = b.size → baResizeMethod b n = .ok b) ∧
+    (0 ≤ n → n ≠ b.size → 0 < b.exports → baResizeMethod b n = .error exportsMsg) ∧
+    (0 ≤ n → b.exports = 0 → n < 2 ^ 46 → ∃ r, baResizeMethod b n = .ok r ∧
+      r.data = b.data.take n.toNat ++ List.replicate (n.toNat - b.data.length) 0)) ∧
+  (∀ (h : H) (a : Arg) (n : Int) (h1 : H), clinicSsizeE a h = (.ok n, h1) →
+    baResizeMethodE a h = liftBA (fun b => baResizeMethod b n) h1) ∧
+  (∀ (h : H) (a : Arg) (e : PyExc) (h1 : H), clinicSsizeE a h = (.error e, h1) →
+    baResizeMethodE a h = (.error e, h1))
+
+theorem baResizeMethodSpec_proven : BaResizeMethodSpec := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro b n h1 h2
+    have ha : Sequences.asSsize n = .ok n := by simp [Sequences.asSsize, h1, h2]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro hn
+      simp [baResizeMethod, ha, baResize, hn, bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
+    · intro hn
+      subst hn
+      simp [baResizeMethod, ha, exportRule_proven.1 b, bind, Except.bind, pure, Except.pure]
+    · intro h0 hn hx
+      simp [baResizeMethod, ha, exportRule_proven.2.1 b n h0 hn hx, bind, Except.bind, exportsMsg]
+    · intro h0 hx hs
+      by_cases hn : n = b.size
+      · subst hn
+        refine ⟨b, by simp [baResizeMethod, ha, exportRule_proven.1 b, bind, Except.bind, pure, Except.pure], ?_⟩
+        have : b.size.toNat = b.data.length := by simp [BA.size]
+        simp [this]
+      · obtain ⟨r, hr, hd, _⟩ := exportRule_proven.2.2.2 b n h0 hx hs
+        simp only [hn, ↓reduceIte] at hd
+        by_cases hg : n > b.size
+        · refine ⟨{ r with data := r.data.take b.size.toNat ++ List.replicate (n - b.size).toNat 0 }, ?_, ?_⟩
+          · simp [baResizeMethod, ha, hr, bind, Except.bind, pure, Except.pure, hg]
+          · have e1 : b.size.toNat = b.data.length := by simp [BA.size]
+            have e2 : (n - b.size).toNat = n.toNat - b.data.length := by simp only [BA.size]; omega
+            simp only [e1, e2, hd]
+            rw [resizedData_take _ _ (by simp [BA.size] at hg; omega)]
+            rw [List.take_of_length_le (l := b.data) (by simp [BA.size] at hg; omega)]
+        · refine ⟨r, by simp [baResizeMethod, ha, hr, bind, Except.bind, pure, Except.pure, hg], ?_⟩
+          rw [hd]
+          simp only [resizedData]
+          have : n.toNat - b.data.length = 0 := by simp [BA.size] at hg; omega
+          simp [this]
+  · intro h a n h1 hi
+    simp [baResizeMethodE, E.bind_app, hi]
+  · intro h a e h1 hi
+    simp [baResizeMethodE, E.bind_app, hi]
+
+/-! ## `reverse()` -/
+
+theorem getD_of_lt (l : List Int) (p : Nat) (h : p < l.length) : l.getD p 0 = l[p] := by
+  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h]
+
+theorem getD_set (l : List Int) (i j : Nat) (a : Int) (hi : i < l.length) :
+    (l.set i a).getD j 0 = if i = j then a else l.getD j 0 := by
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_set]
+  split
+  · simp [hi]
+  · rfl
+
+theorem reverseLoop_length (n : Nat) (d : List Int) (k : Nat) : (reverseLoop n d k).length = d.length := by
+  induction k with
+  | zero => rfl
+  | succ k ih => simp [reverseLoop, swapAt, ih]
+
+theorem reverseLoop_getD (d : List Int) (k : Nat) (hk : k ≤ d.length / 2) (p : Nat) (hp : p < d.length) :
+    (reverseLoop d.length d k).getD p 0 =
+      if p < k ∨ d.length - 1 - p < k then d.getD (d.length - 1 - p) 0 else d.getD p 0 := by
+  induction k generalizing p with
+  | zero => simp [reverseLoop]
+  | succ k ih =>
+    have hl := reverseLoop_length d.length d k
+    simp only [reverseLoop, swapAt]
+    have hk1 : k < d.length := by omega
+    have hk2 : d.length - 1 - k < d.length := by omega
+    rw [getD_set _ _ _ _ (by simp [hl]; omega), getD_set _ _ _ _ (by rw [hl]; omega)]
+    have ea := ih (by omega) k hk1
+    have eb := ih (by omega) (d.length - 1 - k) hk2
+    simp only [show ¬ (k < k ∨ d.length - 1 - k < k) by omega, ↓reduceIte] at ea
+    simp only [show ¬ (d.length - 1 - k < k ∨ d.length - 1 - (d.length - 1 - k) < k) by omega, ↓reduceIte] at eb
+    have em : d.length - 1 - (d.length - 1 - k) = k := by omega
+    by_cases h1 : d.length - 1 - k = p
+    · subst h1
+      simp only [↓reduceIte, ea, em]
+      simp [show d.length - 1 - k < k + 1 ∨ k < k + 1 by omega]
+    · simp only [h1, ↓reduceIte]
+      by_cases h2 : k = p
+      · subst h2
+        simp only [↓reduceIte, eb]
+        simp [show k < k + 1 by omega]
+      · simp only [h2, ↓reduceIte]
+        rw [ih (by omega) p hp]
+        have c : (p < k ∨ d.length - 1 - p < k) ↔ (p < k + 1 ∨ d.length - 1 - p < k + 1) := by omega
+        by_cases hc : p < k ∨ d.length - 1 - p < k
+        · simp [hc, c.mp hc]
+        · have hc' : ¬ (p < k + 1 ∨ d.length - 1 - p < k + 1) := fun x => hc (c.mpr x)
+          simp only [hc, hc', ↓reduceIte]
+
+/-- `bytearray.reverse()`, :2033-2050: the swap loop over `head` and `tail` leaves the contents
+reversed, for every object, the odd middle byte staying in place; nothing else changes. -/
+def BaReverseSpec : Prop :=
+  ∀ b : BA, baReverseLoop b = { b with data := b.data.reverse } ∧ baReverseLoop b = baReverse b
+
+theorem baReverseSpec_proven : BaReverseSpec := by
+  intro b
+  have e : reverseLoop b.data.length b.data (b.data.length / 2) = b.data.reverse := by
+    apply List.ext_getElem (by simp [reverseLoop_length])
+    intro p h1 h2
+    have hp : p < b.data.length := by simpa [reverseLoop_length] using h1
+    have := reverseLoop_getD b.data (b.data.length / 2) (Nat.le_refl _) p hp
+    rw [getD_of_lt _ _ h1] at this
+    rw [this, List.getElem_reverse]
+    split
+    · rw [getD_of_lt _ _ (by omega)]
+    · have : p = b.data.length - 1 - p := by omega
+      rw [getD_of_lt _ _ hp]
+      congr 1
+  exact ⟨by simp [baReverseLoop, e], by simp [baReverseLoop, baReverse, e]⟩
+
+/-! ## The iterator -/
+
+theorem baDrain_from (seq : BA) : ∀ (fuel i : Nat), seq.data.length - i < fuel →
+    baDrain seq fuel { index := i } = seq.data.drop i := by
+  intro fuel
+  induction fuel with
+  | zero => intro i h; omega
+  | succ k ih =>
+    intro i h
+    by_cases hi : i < seq.data.length
+    · have hn : baIterNext seq { index := i } = (some (seq.data.getD i 0), { index := (i : Int) + 1 }) :=
+        baIterSpec_proven.1 seq i hi
+      simp only [baDrain, hn]
+      have e : ({ index := (i : Int) + 1 } : BAIter) = { index := ((i + 1 : Nat) : Int) } := by simp
+      rw [e, ih (i + 1) (by omega)]
+      rw [getD_of_lt _ _ hi]
+      exact (List.drop_eq_getElem_cons hi).symm
+    · have hn := baIterSpec_proven.2.1 seq i (by omega)
+      simp only [baDrain, hn]
+      rw [List.drop_of_length_le (by omega)]
+
+/-- The iterator of `bytearray` (`bytearray_iter`, :3179-3195, `bytearrayiter_next`, :3042-3074,
+`bytearrayiter_length_hint`, :3076-3089, `bytearrayiter_setstate`, :3110-3132): `iter` refuses
+anything but a bytearray and starts at 0, so `list(iter(b))` is `list(b)`; on an object that does not
+change, the length hint is exactly the number of items still to come, 0 once exhausted;
+`__setstate__` takes an `int` only (`TypeError` otherwise, `OverflowError` outside `Py_ssize_t`, no
+`__index__`), does nothing to an exhausted iterator, and otherwise sets the index clamped to
+`[-1, len]`, so that the iterator then yields `b[k:]`. For every object and state. -/
+def BaIterFull : Prop :=
+  baIterOf false = .error (systemError "Objects/bytearrayobject.c:3184: bad argument to internal function") ∧
+  baIterOf true = .ok { index := 0 } ∧
+  (∀ seq : BA, baDrain seq (seq.data.length + 1) { index := 0 } = seq.data) ∧
+  (∀ (seq : BA) (i : Nat), baIterLen seq { index := i } = (baDrain seq (seq.data.length + 1) { index := i }).length) ∧
+  (∀ (seq : BA) (it : BAIter) (fuel : Nat), it.index < 0 → baIterLen seq it = 0 ∧ baDrain seq fuel it = []) ∧
+  (∀ (seq : BA) (it : BAIter) (o : Obj), o.longValue? = none →
+    baIterSetstateObj seq it o = .error (.typeError "an integer is required")) ∧
+  (∀ (seq : BA) (it : BAIter) (v : Int), (v < ssizeMin ∨ v > ssizeMax) →
+    baIterSetstateObj seq it (.int v) = .error (.overflowError "Python int too large to convert to C ssize_t")) ∧
+  (∀ (seq : BA) (it : BAIter) (v : Int), ssizeMin ≤ v → v ≤ ssizeMax → it.index < 0 →
+    baIterSetstateObj seq it (.int v) = .ok it) ∧
+  (∀ (seq : BA) (it : BAIter) (v : Int), ssizeMin ≤ v → v ≤ ssizeMax → 0 ≤ it.index →
+    baIterSetstateObj seq it (.int v) = .ok { index := if v < -1 then -1 else if v > seq.size then seq.size else v }) ∧
+  (∀ (seq : BA) (k : Nat), k ≤ seq.data.length → (k : Int) ≤ ssizeMax →
+    ∃ it, baIterSetstateObj seq {} (.int k) = .ok it ∧ baDrain seq (seq.data.length + 1) it = seq.data.drop k)
+
+theorem baIterFull_proven : BaIterFull := by
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro seq
+    have := baDrain_from seq (seq.data.length + 1) 0 (by omega)
+    simpa using this
+  · intro seq i
+    rw [baDrain_from seq _ i (by omega)]
+    simp [baIterLen, BA.size]
+    omega
+  · intro seq it fuel hi
+    refine ⟨by simp [baIterLen, show ¬ (0 ≤ it.index) by omega], ?_⟩
+    cases fuel with
+    | zero => rfl
+    | succ k => simp [baDrain, baIterNext, hi]
+  · intro seq it o hl
+    simp [baIterSetstateObj, hl]
+  · intro seq it v hv
+    have : ¬ (ssizeMin ≤ v ∧ v ≤ ssizeMax) := by omega
+    simp [baIterSetstateObj, Obj.longValue?, baIterSetstate, Sequences.asSsize, this, bind, Except.bind]
+  · intro seq it v h1 h2 hi
+    simp [baIterSetstateObj, Obj.longValue?, baIterSetstate, Sequences.asSsize, h1, h2, bind, Except.bind,
+      show ¬ (0 ≤ it.index) by omega, pure, Except.pure]
+  · intro seq it v h1 h2 hi
+    simp [baIterSetstateObj, Obj.longValue?, baIterSetstate, Sequences.asSsize, h1, h2, bind, Except.bind, hi,
+      pure, Except.pure]
+  · intro seq k hk hm
+    have h1 : ssizeMin ≤ (k : Int) := by rw [show ssizeMin = -9223372036854775808 by decide]; omega
+    have hs : ¬ ((k : Int) > seq.size) := by simp [BA.size]; omega
+    have hn : ¬ ((k : Int) < -1) := by omega
+    refine ⟨{ index := k }, ?_, baDrain_from seq _ k (by omega)⟩
+    simp [baIterSetstateObj, Obj.longValue?, baIterSetstate, Sequences.asSsize, h1, hm, bind, Except.bind, hs, hn,
+      pure, Except.pure]
+
+/-! ## The slice branch of assignment -/
+
+/-- A converted right-hand side as the pure model takes it: `NULL`, or a `bytearray`. -/
+def valObj : Option Seq → Option Obj
+  | none => none
+  | some s => some (.bytearray s)
+
+theorem assSliceCore_ip (st sp se : Option (List Act × Int)) (bytes : Option Seq) (h : H) (hok : stepOk se) :
+    assSliceCore (ipArg st) (ipArg sp) (ipArg se) bytes h =
+      liftBA (fun b => baAssSlice b ⟨ipVal st, ipVal sp, ipVal se⟩ (valObj bytes))
+        (runActs (runActs (runActs h (ipActs se)) (ipActs st)) (ipActs sp)) := by
+  unfold assSliceCore
+  simp only [E.bind_app, sliceUnpack_ip _ _ _ h hok]
+  unfold baAssSlice
+  cases hu : RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ with
+  | error e => simp [put_ok, Except.bind, bind]
+  | ok t =>
+    obtain ⟨a, b, c⟩ := t
+    have hv : ∀ x : BA, assValue x (valObj bytes) = .ok bytes := by
+      intro x; cases bytes <;> rfl
+    simp only [curSize, E.pure_app, Except.bind, bind, hv]
+    split <;> rfl
+
+/-- `bytearray_ass_subscript_lock_held` (:828-940) for a slice of `__index__` parts: `del b[s]` and
+`b[s] = bytearray(...)` unpack the slice once (step, start, stop) and then splice the contents as the
+callbacks left them, as the pure model of the assignment does (whose contents
+`SliceAssignAgreesNonempty` and `SliceDeleteAgrees` pin to `list`); any other right-hand side is
+looked at after one unpacking: a number or a `str` is the `TypeError`, and a `bytes` is copied with
+`PyByteArray_FromObject` and the function called again (:856-862), so every part's `__index__` runs
+twice. For every heap, every callback and value, with a non-zero step and a value below 2^46 bytes. -/
+def BaAssSubSlice : Prop :=
+  ∀ (h : H) (st sp se : Option (List Act × Int)), stepOk se →
+    let sl : RangeSlice.Slice := ⟨ipVal st, ipVal sp, ipVal se⟩
+    let once := fun (h0 : H) => runActs (runActs (runActs h0 (ipActs se)) (ipActs st)) (ipActs sp)
+    baAssSubE (.slice (ipArg st) (ipArg sp) (ipArg se)) none h =
+      liftBA (fun b => baAssSlice b sl none) (once h) ∧
+    (∀ v : Seq, baAssSubE (.slice (ipArg st) (ipArg sp) (ipArg se)) (some (.obj (.bytearray v))) h =
+      liftBA (fun b => baAssSlice b sl (some (.bytearray v))) (once h)) ∧
+    (∀ v : Seq, (v.length : Int) + 1 < 2 ^ 46 →
+      baAssSubE (.slice (ipArg st) (ipArg sp) (ipArg se)) (some (.obj (.bytes v))) h =
+        liftBA (fun b => baAssSlice b sl (some (.bytes v))) (once (once h))) ∧
+    (∀ n : Int, baAssSubE (.slice (ipArg st) (ipArg sp) (ipArg se)) (some (.obj (.int n))) h =
+      (.error (.typeError "can assign only bytes, buffers, or iterables of ints in range(0, 256)"), once h)) ∧
+    (∀ cs : Seq, baAssSubE (.slice (ipArg st) (ipArg sp) (ipArg se)) (some (.obj (.str cs))) h =
+      (.error (.typeError "can assign only bytes, buffers, or iterables of ints in range(0, 256)"), once h))
+
+theorem sliceUnpack_ne (st sp se : Option (List Act × Int)) (hok : stepOk se) (e : PyExc) :
+    RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ ≠ .error e := by
+  unfold RangeSlice.sliceUnpack
+  rcases se with _ | ⟨a, v⟩
+  · simp [ipVal, bind, Except.bind, pure, Except.pure]
+  · have hz := hok a v rfl
+    simp [ipVal, hz, bind, Except.bind, pure, Except.pure]
+
+theorem baAssSubSlice_proven : BaAssSubSlice := by
+  intro h st sp se hok
+  dsimp only
+  have hu := sliceUnpack_ip st sp se
+  obtain ⟨t, ht⟩ : ∃ t, RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ = .ok t := by
+    cases hsu : RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ with
+    | error e => exact absurd hsu (sliceUnpack_ne st sp se hok e)
+    | ok t => exact ⟨t, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · simp only [baAssSubE]
+    exact assSliceCore_ip st sp se none h hok
+  · intro v
+    simp only [baAssSubE]
+    exact assSliceCore_ip st sp se (some v) h hok
+  · intro v hv
+    obtain ⟨r, hr, hd⟩ := initSpec_proven.1 v hv
+    have hseq : r.seq = v := by rw [BA.seq, hd]; exact seqData_seq v
+    have hsl : ∀ x : BA, baAssSlice x ⟨ipVal st, ipVal sp, ipVal se⟩ (some (.bytes v)) =
+        baAssSlice x ⟨ipVal st, ipVal sp, ipVal se⟩ (valObj (some v)) := by
+      intro x
+      simp only [baAssSlice, valObj, assValue_bytes]
+      rfl
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, hr, Functor.map, Except.map, hseq]
+    rw [assSliceCore_ip st sp se (some v) _ hok]
+    simp only [hsl]
+  · intro n
+    simp [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber]
+  · intro cs
+    simp [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber]
+
+/-! ## `bytearray_setslice` -/
+
+def clampLo (lo n : Int) : Int := if lo < 0 then 0 else if lo > n then n else lo
+
+def clampHi (lo hi n : Int) : Int :=
+  let l := clampLo lo n
+  let x := if hi < l then l else hi
+  if x > n then n else x
+
+/-- `bytearray_setslice(self, lo, hi, values)`, :686-738, as `extend` and the C API reach it: `NULL`
+deletes; `self` is copied first; a value without the buffer protocol is
+`TypeError("can't set bytearray slice from <type>")`; a buffer's `__buffer__` runs first and both
+bounds are clamped to the size it left (gh-153578), the splice is `bytearray_setslice_linear` on
+those bounds, and `__release_buffer__` runs after the splice, whatever it returned. For every heap,
+bounds and value. Scope: a Python `__buffer__` returns `memoryview(bytes(...))`. -/
+def BaSetsliceSpec : Prop :=
+  ∀ (h : H) (lo hi : Int),
+    baSetsliceE lo hi none h =
+      liftBA (fun b => baSetsliceLinear b (clampLo lo h.ba.size) (clampHi lo hi h.ba.size) []) h ∧
+    baSetsliceE lo hi (some .me) h =
+      liftBA (fun b => baSetsliceLinear b (clampLo lo h.ba.size) (clampHi lo hi h.ba.size) (seqData h.ba.seq)) h ∧
+    (∀ (o : Obj) (t : Seq), o.buffer? = some t → baSetsliceE lo hi (some (.obj o)) h =
+      liftBA (fun b => baSetsliceLinear b (clampLo lo h.ba.size) (clampHi lo hi h.ba.size) (seqData t)) h) ∧
+    (∀ o : Obj, o.buffer? = none → baSetsliceE lo hi (some (.obj o)) h =
+      (.error (.typeError s!"can't set bytearray slice from {o.typeName}"), h)) ∧
+    (∀ (acts rel : List Act) (t : Seq),
+      let h1 := runActs h acts
+      let r := liftBA (fun b => baSetsliceLinear b (clampLo lo h1.ba.size) (clampHi lo hi h1.ba.size) (seqData t)) h1
+      baSetsliceE lo hi (some (.buf acts (.ok t) rel)) h = (r.1, runActs r.2 rel)) ∧
+    (∀ (acts rel : List Act) (e : PyExc), baSetsliceE lo hi (some (.buf acts (.error e) rel)) h =
+      (.error (.typeError "can't set bytearray slice from RBuf"), runActs h acts))
+
+theorem liftBA_split (f : BA → Py BA) (h : H) :
+    liftBA f h = ((liftBA f h).1, (liftBA f h).2) := rfl
+
+theorem baSetsliceSpec_proven : BaSetsliceSpec := by
+  intro h lo hi
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [baSetsliceE, E.bind_app, E.pure_app, curSize, E.attempt_app, noRel, E.lift_app, clampLo, clampHi]
+    rfl
+  · simp only [baSetsliceE, E.bind_app, E.pure_app, curSize, curSeq, E.attempt_app, noRel, E.lift_app, clampLo,
+      clampHi]
+    rfl
+  · intro o t hb
+    simp only [baSetsliceE, E.bind_app, E.attempt_app, getBuf_obj o t hb, Buf.read, E.pure_app, curSize, noRel,
+      E.lift_app, clampLo, clampHi]
+    rfl
+  · intro o hb
+    simp only [baSetsliceE, E.bind_app, E.attempt_app, getBuf_obj_none o hb]
+    rfl
+  · intro acts rel t
+    simp only [baSetsliceE, E.bind_app, E.attempt_app, getBuf_buf, Buf.read, E.pure_app, curSize, E.lift_app,
+      runCb_app, clampLo, clampHi]
+    rfl
+  · intro acts rel e
+    have hg : getBufE (.buf acts (.error e) rel) h = (.error e, runActs h acts) := by
+      unfold getBufE; rfl
+    simp only [baSetsliceE, E.bind_app, E.attempt_app, hg]
+    rfl
+
+/-! ## `__init__` -/
+
+theorem put_ba (h : H) (b : BA) : (h.put b).ba = b := rfl
+
+theorem init_reset (h : H) (hx : h.ba.exports = 0) :
+    ∃ h0 : H, (∀ k : E Unit, (do canResizeE; resizeE 0; k : E Unit) h = k h0) ∧ h0.ba.data = [] ∧
+      h0.ba.exports = 0 := by
+  have hc : canResize h.ba = .ok () := by simp [canResize, hx]
+  by_cases hz : h.ba.size = 0
+  · refine ⟨h, ?_, by simpa [BA.size] using hz, hx⟩
+    have hr : baResize h.ba 0 = .ok h.ba := by
+      have := exportRule_proven.1 h.ba; rw [hz] at this; exact this
+    intro k
+    simp [E.bind_app, canResizeE, hc, resizeE, hr, put_self]
+  · have hr := baResizeStrategy_proven.1 h.ba hz hx
+    refine ⟨h.put { h.ba with data := [], alloc := 0, offset := 0 }, fun k => ?_, rfl, by simp [H.put, hx]⟩
+    simp [E.bind_app, canResizeE, hc, resizeE, hr]
+
+theorem initFast_ok : ∀ (vs : List Nat) (i : Nat) (cur : BA) (pre : List Int), (∀ c ∈ vs, c < 256) →
+    cur.data = pre ++ List.replicate vs.length uninit → pre.length = i →
+    baInitFast.go i cur (vs.map (fun c : Nat => Obj.int (c : Int))) = .inl ({ cur with data := pre ++ seqData vs }, none) := by
+  intro vs
+  induction vs with
+  | nil =>
+    intro i cur pre _ hd _
+    simp [baInitFast.go, seqData]
+    cases cur; simp_all
+  | cons c cs ih =>
+    intro i cur pre hc hd hi
+    have h1 : c < 256 := hc c (by simp)
+    have hb : getByteValue (.int c) = .ok c := by
+      have h : ¬ ((c : Int) < 0 ∨ (c : Int) ≥ 256) := by omega
+      simp [getByteValue, Obj.index?, h]
+    simp only [List.map_cons, baInitFast.go, hb]
+    have hset : (cur.data.set i (c : Int)) = (pre ++ [(c : Int)]) ++ List.replicate cs.length uninit := by
+      rw [hd, ← hi]
+      simp [List.replicate_succ, List.set_append_right]
+    rw [ih (i + 1) { cur with data := cur.data.set i (c : Int) } (pre ++ [(c : Int)])
+      (fun x hx => hc x (by simp [hx])) hset (by simp [hi])]
+    simp [seqData]
+
+/-- `bytearray___init___impl`, :982-1182: with exports `__init__` raises `BufferError` and changes
+nothing, whatever the argument (`_canresize` comes first); otherwise the object is emptied first and
+then: no argument leaves it empty; an `int` `n > 0` gives `n` zero bytes, a negative one
+`ValueError('negative count')` (the object stays empty), one outside `Py_ssize_t` the `OverflowError`
+of `PyNumber_AsSsize_t`; a buffer gives its bytes; a list of `int`s goes through the fast path, which
+gives the values when all are in `range(256)` and otherwise empties the object again and raises the
+`ValueError` of the first bad one (so no unwritten byte is left, `InitInitialised`). For every heap
+and argument below 2^46 bytes. -/
+def BaInitESpec : Prop :=
+  ∀ h : H,
+    (0 < h.ba.exports → ∀ (arg : Option Arg) (enc : Option (String × Codec)) (err : Option String),
+      baInitE arg enc err h = (.error exportsMsg, h)) ∧
+    (h.ba.exports = 0 →
+      (∃ h', baInitE none none none h = (.ok (), h') ∧ h'.ba.data = []) ∧
+      (∀ n : Nat, 0 < n → (n : Int) < 2 ^ 46 →
+        ∃ h', baInitE (some (.obj (.int n))) none none h = (.ok (), h') ∧ h'.ba.data = List.replicate n 0) ∧
+      (∀ v : Int, v < 0 → ssizeMin ≤ v →
+        ∃ h', baInitE (some (.obj (.int v))) none none h = (.error (.valueError "negative count"), h') ∧ h'.ba.data = []) ∧
+      (∀ v : Int, v > ssizeMax →
+        ∃ h', baInitE (some (.obj (.int v))) none none h =
+          (.error (.overflowError "cannot fit 'int' into an index-sized integer"), h') ∧ h'.ba.data = []) ∧
+      (∀ s : Seq, (s.length : Int) < 2 ^ 46 →
+        ∃ h', baInitE (some (.obj (.bytes s))) none none h = (.ok (), h') ∧ h'.ba.data = seqData s) ∧
+      (∀ vs : List Nat, (∀ c ∈ vs, c < 256) → 0 < vs.length → (vs.length : Int) < 2 ^ 46 →
+        ∃ h', baInitE (some (.obj (.list (vs.map (fun c : Nat => Obj.int (c : Int)))))) none none h = (.ok (), h') ∧
+          h'.ba.data = seqData vs))
+
+theorem baInitESpec_proven : BaInitESpec := by
+  intro h
+  refine ⟨?_, ?_⟩
+  · intro hx arg enc err
+    have hc : canResize h.ba = .error exportsMsg := by simp [canResize, hx, exportsMsg]
+    simp [baInitE, E.bind_app, canResizeE, hc]
+  · intro hx
+    obtain ⟨h0, hbase, hd0, hx0⟩ := init_reset h hx
+    have hs0 : h0.ba.size = 0 := by simp [BA.size, hd0]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+    · exact ⟨h0, by unfold baInitE; rw [hbase]; rfl, hd0⟩
+    · intro n hn hs
+      obtain ⟨r, hr, hd, hxr⟩ := exportRule_proven.2.2.2 h0.ba n (by omega) hx0 hs
+      have hne : ¬ ((n : Int) = h0.ba.size) := by omega
+      simp only [hne, ↓reduceIte] at hd
+      have hr1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
+        rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega
+      refine ⟨{ h0.put r with ba := { r with data := List.replicate n 0 } }, ?_, rfl⟩
+      unfold baInitE
+      rw [hbase]
+      simp [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, E.attempt_app, asSsizeE, indexE, E.lift_app, hr1,
+        show ¬ ((n : Int) < 0) by omega, resizeE, hr, Arg.typeName, Obj.typeName, hn, put_ba]
+    · intro v hv h1
+      have hr1 : ssizeMin ≤ v ∧ v ≤ ssizeMax := ⟨h1, by rw [ssizeMax_val]; omega⟩
+      refine ⟨h0, ?_, hd0⟩
+      unfold baInitE
+      rw [hbase]
+      simp [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, E.attempt_app, asSsizeE, indexE, E.lift_app, hr1, hv,
+        E.throw_app]
+    · intro v hv
+      have hr1 : ¬ (ssizeMin ≤ v ∧ v ≤ ssizeMax) := by omega
+      refine ⟨h0, ?_, hd0⟩
+      unfold baInitE
+      rw [hbase]
+      have hte : ∀ m, isTypeError (.overflowError m) = false := fun _ => rfl
+      simp [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, E.attempt_app, asSsizeE, indexE, E.lift_app, hr1,
+        E.throw_app, hte, Arg.typeName, Obj.typeName]
+      rfl
+    · intro s hs
+      by_cases hz : s.length = 0
+      · have he : s = [] := List.eq_nil_of_length_eq_zero hz
+        subst he
+        have hr : baResize h0.ba 0 = .ok h0.ba := by
+          have := exportRule_proven.1 h0.ba; rw [hs0] at this; exact this
+        refine ⟨{ h0 with ba := { h0.ba with data := seqData [] } }, ?_, by simp [seqData]⟩
+        unfold baInitE
+        rw [hbase]
+        simp only [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, Arg.bufferCheck, Obj.buffer?,
+          getBuf_obj (.bytes []) [] rfl, E.attempt_app, resizeE, Buf.len, List.length_nil,
+          show ((0 : Nat) : Int) = 0 from rfl, hr, put_self,
+          Buf.read, noRel, E.pure_app, E.modify_app, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, E.throw_app,
+          Bool.not_false, Option.isSome_some]
+      · obtain ⟨r, hr, _, _⟩ := exportRule_proven.2.2.2 h0.ba s.length (by omega) hx0 hs
+        refine ⟨{ h0.put r with ba := { r with data := seqData s } }, ?_, rfl⟩
+        unfold baInitE
+        rw [hbase]
+        simp only [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, Arg.bufferCheck, Obj.buffer?,
+          getBuf_obj (.bytes s) s rfl, E.attempt_app, resizeE, Buf.len, hr, Buf.read, noRel, put_ba, E.pure_app,
+          E.modify_app, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, E.throw_app, Bool.not_false,
+          Option.isSome_some]
+    · intro vs hc hpos hs
+      obtain ⟨r, hr, hd, _⟩ := exportRule_proven.2.2.2 h0.ba vs.length (by omega) hx0 (by simpa using hs)
+      have hne : ¬ ((vs.length : Int) = h0.ba.size) := by omega
+      simp only [hne, ↓reduceIte, resizedData, hd0, List.take_nil, List.nil_append, List.length_nil,
+        Nat.sub_zero] at hd
+      have hl : (vs.length : Int).toNat = vs.length := by simp
+      rw [hl] at hd
+      have hf := initFast_ok vs 0 r [] hc (by simpa [List.length_map] using hd) rfl
+      refine ⟨(h0.put r).put { r with data := [] ++ seqData vs }, ?_, rfl⟩
+      unfold baInitE
+      rw [hbase]
+      simp [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, Arg.bufferCheck, Obj.buffer?, resizeE, hr, baInitFast,
+        List.length_map, hf, put_ba]
+
 end PyLean.BytesObj.Bytes

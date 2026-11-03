@@ -113,4 +113,71 @@ def baSplitlinesTE (keepends : Option TArg) : E (List Seq) := do
   let s ← curSeq
   return bytesSplitlines s k
 
+/-! ## Buffer export and release, :69-106 -/
+
+/-- `bytearray_getbuffer_lock_held`, :69-86, and `bytearray_getbuffer`, :88-96: a `NULL` view is the
+`BufferError` of :74-78; `PyBuffer_FillInfo` (Objects/abstract.c:774-810, `readonly` 0) refuses
+`PyBUF_READ` (0x100) and `PyBUF_WRITE` (0x200) with `PyErr_BadInternalCall` (:784-786) and accepts
+every other flag value; then the view shows `ob_start` and `Py_SIZE`, writable, and `ob_exports`
+goes up. -/
+def baGetBufferC (b : BA) (viewNull : Bool) (flags : Int) : Py ((Seq × Bool) × BA) :=
+  if viewNull then .error (bufferError "bytearray_getbuffer: view==NULL argument is obsolete")
+  else if flags ≠ 0 ∧ (flags = 0x100 ∨ flags = 0x200) then
+    .error (systemError "Objects/abstract.c:785: bad argument to internal function")
+  else .ok ((b.seq, false), baGetBuffer b)
+
+/-! ## `__sizeof__` for a type of any basic size -/
+
+/-- `bytearray_sizeof_impl`, :2813-2823: `_PyObject_SIZE(Py_TYPE(self))` is the type's basic size
+(64 for `bytearray` on LP64, and for a subclass without `__slots__`), plus the `bytes` object when
+there is storage. -/
+def baSizeofT (basic : Int) (self : BA) : Int :=
+  if self.alloc > 0 then basic + bytesObjectSize + self.alloc else basic
+
+/-! ## `resize(size)` with its clinic conversion -/
+
+/-- `bytearray.resize(size)`: the clinic converts `size` with `_PyNumber_Index` and
+`PyLong_AsSsize_t` (clinic/bytearrayobject.c.h:611-634), then `bytearray_resize_impl`, :1588-1602. -/
+def baResizeMethodE (size : Arg) : E Unit := do
+  let n ← clinicSsizeE size
+  liftBA fun b => baResizeMethod b n
+
+/-! ## `reverse()`, the swap loop -/
+
+/-- `*head = *tail; *tail = swap` at positions `a` and `b`. -/
+def swapAt (d : List Int) (a b : Nat) : List Int := (d.set a (d.getD b 0)).set b (d.getD a 0)
+
+/-- The loop of `bytearray_reverse_impl`, :2033-2050, after `k` rounds: round `i` swaps `head = i`
+and `tail = n - 1 - i`. -/
+def reverseLoop (n : Nat) (d : List Int) : Nat → List Int
+  | 0 => d
+  | k + 1 => swapAt (reverseLoop n d k) k (n - 1 - k)
+
+/-- `bytearray_reverse_impl`: `n / 2` rounds of the swap loop. -/
+def baReverseLoop (self : BA) : BA :=
+  { self with data := reverseLoop self.data.length self.data (self.data.length / 2) }
+
+/-! ## The iterator: `bytearray_iter` and `__setstate__` of any object -/
+
+/-- `bytearray_iter`, :3179-3195: `PyErr_BadInternalCall` for an object that is not a bytearray (which
+`tp_iter` never passes), else a new iterator at index 0. -/
+def baIterOf (isBytearray : Bool) : Py BAIter :=
+  if !isBytearray then .error (systemError "Objects/bytearrayobject.c:3184: bad argument to internal function")
+  else .ok { index := 0 }
+
+/-- `bytearrayiter_setstate`, :3110-3132, on any object: `PyLong_AsSsize_t` takes only an `int` (a
+`bool` included) and does not call `__index__` (Objects/longobject.c:708-720). -/
+def baIterSetstateObj (seq : BA) (it : BAIter) (state : Obj) : Py BAIter :=
+  match state.longValue? with
+  | none => .error (.typeError "an integer is required")
+  | some v => baIterSetstate seq it v
+
+/-- What `next` yields from `it` on an object that does not change, with fuel. -/
+def baDrain (seq : BA) : Nat → BAIter → List Int
+  | 0, _ => []
+  | k + 1, it =>
+    match baIterNext seq it with
+    | (some v, it') => v :: baDrain seq k it'
+    | (none, _) => []
+
 end PyLean.BytesObj.Bytes

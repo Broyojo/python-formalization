@@ -187,6 +187,7 @@ def runBare (op : String) (j : Json) : Except String Json := do
     let k := if op = "center" then PadKind.center else if op = "ljust" then .ljust else .rjust
     return ans toJson (baJustE k (← argK j "width") (← optArg j "fill"))
   | "zfill" => return ans toJson (baPadE .zfill (← argK j "width") 0)
+  | "resize" => return ans unitJ (baResizeMethodE (← argK j "n"))
   | "pred" =>
     let x ← match ← getStr j "name" with
       | "isalnum" => pure baIsalnumE

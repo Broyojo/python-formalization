@@ -657,11 +657,54 @@ def entries : List Entry := [
     prop := ``BaSubscriptSlice, thm := some ``baSubscriptSlice_proven
     notes := "Scope: callbacks act on self only." },
   { id := "bytesobj-bytearray-ass-subscript-index", pyFile := "Objects/bytearrayobject.c"
-    pyFns := []
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
     statement := "b[k] = v and del b[k] with an __index__ key run the key's callback, then the value's, and check the position against the size both left; a key that is neither an index nor a slice is the TypeError."
     source := "GH-91153 comments, bytearrayobject.c:791-827", status := .proven
     prop := ``BaAssSubIndex, thm := some ``baAssSubIndex_proven
-    notes := "Covers the index branch only; the slice branch of ass_subscript is in no statement yet. Scope: callbacks act on self only." },
+    notes := "The index branch; the slice branch is bytesobj-bytearray-ass-subscript-slice. Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-buffer-export", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_getbuffer_lock_held", "bytearray_getbuffer", "bytearray_releasebuffer"]
+    statement := "A NULL view is the BufferError of getbuffer; PyBUF_READ and PyBUF_WRITE are refused by PyBuffer_FillInfo with SystemError; any other request exports the contents writable and raises ob_exports by one; while it is held every resize to another size is refused, and after the release every resize does what it did before."
+    source := "Doc/c-api/buffer.rst; bytearrayobject.c:69-106, Objects/abstract.c:774-810", status := .proven
+    prop := ``BaBufferExport, thm := some ``baBufferExport_proven },
+  { id := "bytesobj-bytearray-alloc-report", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_alloc", "bytearray_sizeof_impl"]
+    statement := "__alloc__() is ob_alloc + 33 with storage and 0 without, __sizeof__() the type's basic size (64) plus that; bytearray() reports 0, bytearray(n) reports n + 33, bytearray(10).append(1) reports 51."
+    source := "Doc/library/stdtypes.rst bytearray; bytearrayobject.c:2605-2613, :2813-2823", status := .proven
+    prop := ``BaAllocReport, thm := some ``baAllocReport_proven },
+  { id := "bytesobj-bytearray-resize-method", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_resize_impl"]
+    statement := "resize(n) converts n first; a negative n is ValueError, the same size changes nothing, another size raises BufferError with exports, and otherwise the first bytes are kept and the new ones are zero."
+    source := "Doc/library/stdtypes.rst bytearray.resize; bytearrayobject.c:1588-1602", status := .proven
+    prop := ``BaResizeMethodSpec, thm := some ``baResizeMethodSpec_proven },
+  { id := "bytesobj-bytearray-reverse-loop", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_reverse_impl"]
+    statement := "The head/tail swap loop of reverse() leaves the contents reversed for every object, the odd middle byte in place."
+    source := "Doc/library/stdtypes.rst s.reverse(); bytearrayobject.c:2033-2050", status := .proven
+    prop := ``BaReverseSpec, thm := some ``baReverseSpec_proven },
+  { id := "bytesobj-bytearray-iter-full", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_iter", "bytearrayiter_next", "bytearrayiter_length_hint", "bytearrayiter_setstate"]
+    statement := "list(iter(b)) is list(b); on an unchanged object the length hint is the number of items still to come; __setstate__ takes only an int (TypeError, or OverflowError outside Py_ssize_t), ignores an exhausted iterator, and otherwise sets the index clamped to [-1, len], after which the iterator yields b[k:]."
+    source := "iterator protocol; bytearrayobject.c:3042-3132, :3179-3195", status := .proven
+    prop := ``BaIterFull, thm := some ``baIterFull_proven },
+  { id := "bytesobj-bytearray-ass-subscript-slice", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "del b[s] and b[s] = bytearray(...) with __index__ slice parts unpack once and splice as the pure assignment does; a bytes value is copied with PyByteArray_FromObject and the function called again, so every part's __index__ runs twice; a number or str value is the TypeError after one unpacking."
+    source := "bytearrayobject.c:828-940; PySlice_Unpack, Objects/sliceobject.c:219-262", status := .proven
+    prop := ``BaAssSubSlice, thm := some ``baAssSubSlice_proven
+    notes := "Scope: callbacks act on self only. Together with bytesobj-bytearray-ass-subscript-index, which has the index branch." },
+  { id := "bytesobj-bytearray-setslice-values", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_setslice"]
+    statement := "bytearray_setslice deletes for NULL, copies self first, refuses a value without the buffer protocol with TypeError, runs a value's __buffer__ before clamping both bounds to the size it left (gh-153578), splices with bytearray_setslice_linear and releases the buffer after."
+    source := "gh-153578; bytearrayobject.c:686-738", status := .proven
+    prop := ``BaSetsliceSpec, thm := some ``baSetsliceSpec_proven
+    notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-init-paths", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray___init___impl"]
+    statement := "__init__ with exports raises BufferError and changes nothing; otherwise it empties the object and then gives nothing, n zero bytes for an int n > 0, ValueError for a negative count, OverflowError outside Py_ssize_t, a buffer's bytes, and a list of ints in range(256) through the fast path."
+    source := "docstring, bytearrayobject.c:2954-2966; bytearrayobject.c:982-1128", status := .proven
+    prop := ``BaInitESpec, thm := some ``baInitESpec_proven
+    notes := "The iterator loop (:1142-1172) is in bytesobj-bytearray-init-iterator; the str branch in bytesobj-bytearray-init-steal." },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."

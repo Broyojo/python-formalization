@@ -3725,6 +3725,8 @@ def bare_op(c, ba):
         return getattr(ba, op)(*args)
     if op in ("pred", "map"):
         return getattr(ba, c["name"])()
+    if op == "resize":
+        return ba.resize(bare_build(c["n"]))
     if op == "zfill":
         return ba.zfill(bare_build(c["width"]))
     if op == "replace":
@@ -3882,7 +3884,7 @@ _BARE_OPS = ["find", "rfind", "index", "rindex", "count", "startswith", "endswit
              "strip", "lstrip", "rstrip", "getitem", "setsub", "sqset", "insert", "append", "remove",
              "pop", "take", "iadd", "add", "extend", "init", "translate", "split", "rsplit",
              "partition", "rpartition", "hex", "join", "rich", "center", "ljust", "rjust", "zfill",
-             "replace", "expandtabs", "splitlines", "pred", "map"]
+             "replace", "expandtabs", "splitlines", "pred", "map", "resize"]
 
 
 def gen_bare(rng):
@@ -4029,6 +4031,8 @@ def gen_bare(rng):
             c["keepends"] = ["me"]
         if rng.random() < 0.5:
             c["s"] = [rng.choice([10, 13, 97, 32]) for _ in range(rng.randint(0, 8))]
+    elif op == "resize":
+        c["n"] = _barg(rng, ["int", "int", "idx", "idx", "float"], vals=[0, 1, 2, 3, 5, 8, 9, 12, 20, 40, -1, 2 ** 63])
     elif op == "pred":
         c["name"] = rng.choice(["isalnum", "isalpha", "isascii", "isdigit", "islower", "isspace", "istitle",
                                 "isupper"])
