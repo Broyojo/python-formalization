@@ -89,7 +89,7 @@ structure FEnv where
   compile : String → Bool → Py Unit
   isType : Nat → Bool
   isWarn : Nat → Bool
-  /-- the exception class hierarchy -/
+  /-- the exception class relation (`PyType_IsSubtype`) -/
   hier : Hier
 
 /-! ## `repr` of a str -/

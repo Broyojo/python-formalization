@@ -30,7 +30,10 @@ def dCompile (p : String) (_ : Bool) : Py Unit :=
 def dHier : Hier := ⟨fun c b =>
   excIsA c b || (c == "UnsupportedOperation" && (excIsA "OSError" b || excIsA "ValueError" b)) ||
   (c == "MyOSError" && excIsA "OSError" b) || (c == "MyValueError" && excIsA "ValueError" b) ||
-  (c == "MyImportError" && excIsA "ImportError" b) || c == b⟩
+  (c == "MyImportError" && excIsA "ImportError" b) ||
+  -- `class Y(UnicodeEncodeError, metaclass=M)` whose `M.mro` is `[cls, UnicodeEncodeError,
+  -- BaseException, object]`: under `UnicodeEncodeError` and `BaseException`, not `ValueError`
+  (c == "Y" && (b == "UnicodeEncodeError" || b == "BaseException")) || c == b⟩
 
 def dFEnv : FEnv := ⟨dCompile, dIsType, dIsWarn, dHier⟩
 
@@ -87,6 +90,7 @@ def pElem (j : Json) : Except String Elem := do
       | "uerr" => .error (.named "UnicodeError" "eq")
       | "unsup" => .error (.named "UnsupportedOperation" "eq")
       | "myverr" => .error (.named "MyValueError" "eq")
+      | "yerr" => .error (.named "Y" "y")
       | _ => .error (.keyError "'eq'")
     return .other (← jNatAt j 1) r
   | _ => return .item ⟨← jStrAt j 1, ← pRx (← jGetI j 2), ← jNatAt j 3, ← pRx (← jGetI j 4), ← jIntAt j 5⟩

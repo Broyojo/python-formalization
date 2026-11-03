@@ -85,7 +85,7 @@ structure MState where
   out : List Shown
   /-- which references are tuples rather than lists (only C's list check reads it) -/
   tuples : Ref → Bool
-  /-- the exception class hierarchy -/
+  /-- the exception class relation (`PyType_IsSubtype`) -/
   hier : Hier
   /-- `sys.modules['warnings']`, by object id (`none` when it is missing) -/
   sysWarnings : Option Nat

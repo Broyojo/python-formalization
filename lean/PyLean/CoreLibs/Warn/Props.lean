@@ -245,8 +245,8 @@ theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
 /-! ## `get_warnings_attr` -/
 
 /-- `get_warnings_attr` (_warnings.c:224-256), which every module lookup of C `warn_explicit` goes
-through: with `try_import`, an `ImportError` (or a subclass, such as `ModuleNotFoundError`) from
-`import warnings` is cleared and the result is `NULL` with no error set (so `call_show_warning`
+through: with `try_import`, an error of a class `c` with `H.sub c "ImportError"` (`ImportError` in
+its MRO, such as `ModuleNotFoundError`) from `import warnings` is cleared and the result is `NULL` with no error set (so `call_show_warning`
 falls back to `show_warning`), any other import error propagates; without it, a `warnings` absent
 from `sys.modules` is `NULL`; then a present attribute is returned, a missing one is `NULL`
 (`PyObject_GetOptionalAttr` clears the `AttributeError`, where Python's `_wm.x` raises it), and
@@ -273,13 +273,14 @@ theorem getWarningsAttrSpec_proven : GetWarningsAttrSpec := by
   · intro α t; cases t <;> simp [getWarningsAttr]
   · intro α t e; cases t <;> simp [getWarningsAttr]
 
-/-- In every hierarchy Python can have, `ModuleNotFoundError` and `ImportCycleError` (new in 3.15,
-Objects/exceptions.c:2025) are `ImportError`s, so an import of `warnings` that raises either is
+/-- In every relation CPython can have, `ModuleNotFoundError` and `ImportCycleError` (new in 3.15,
+Objects/exceptions.c:2025) are under `ImportError`, so an import of `warnings` that raises either is
 cleared. -/
 theorem importErrors_cleared (H : Hier) (h : HierOk H) :
     isA H (.named "ModuleNotFoundError" "x") "ImportError" = true ∧
     isA H (.named "ImportCycleError" "x") "ImportError" = true :=
-  ⟨h.2.2 _ _ rfl, h.2.2 _ _ rfl⟩
+  ⟨(h "ModuleNotFoundError" "ImportError" (by decide)).trans (by decide),
+   (h "ImportCycleError" "ImportError" (by decide)).trans (by decide)⟩
 
 /-! ## The cases left out, each refuted -/
 

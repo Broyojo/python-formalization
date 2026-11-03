@@ -254,12 +254,13 @@ def ResetSpec : Prop :=
 theorem resetSpec_proven : ResetSpec :=
   ⟨fun _ _ => rfl, fun _ _ => ⟨_, rfl, rfl⟩, fun _ => rfl⟩
 
-/-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches a `ValueError` (or
-any subclass, such as `UnicodeError`) that an element's `__eq__` raises: the remove stops there,
-the new item goes in front anyway, and the elements (the raising one included) stay; any other
-exception propagates and changes nothing. Stated for a list whose first element raises, for every
-class hierarchy (so for `io.UnsupportedOperation`, both an `OSError` and a `ValueError`, and for
-user subclasses). -/
+/-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches an exception of a
+class `c` with `H.sub c "ValueError"` (`ValueError` in its MRO: every builtin subclass such as
+`UnicodeError`, `io.UnsupportedOperation`, a user class whose MRO contains it) that an element's
+`__eq__` raises: the remove stops there, the new item goes in front anyway, and the elements (the
+raising one included) stay; any other exception propagates and changes nothing (also a class under
+`UnicodeEncodeError` whose custom `mro()` leaves `ValueError` out). Stated for a list whose first
+element raises, for every class relation `H`, with no hypothesis on it. -/
 def AddFilterValueError : Prop :=
   ∀ (H : Hier) it id e xs v,
     (isA H e "ValueError" = true → addFilter H it false ⟨.list (.other id (.error e) :: xs), v⟩ =

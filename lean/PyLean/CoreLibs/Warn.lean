@@ -183,13 +183,13 @@ def entries : List Entry := [
     prop := ``ResetSpec, thm := some ``resetSpec_proven },
   { id := "warn-add-filter-valueerror", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_add_filter"]
-    statement := "For every class hierarchy: an exception raised by an element's __eq__ during filters.remove whose class is ValueError or a subclass (UnicodeError, io.UnsupportedOperation, user subclasses) is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
+    statement := "For every class relation (PyType_IsSubtype over the MRO): an exception raised by an element's __eq__ during filters.remove whose class has ValueError in its MRO (every builtin ValueError subclass, io.UnsupportedOperation, a user class whose MRO contains ValueError) is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
     source := "the except ValueError of :326-329", status := .proven
     prop := ``AddFilterValueError, thm := some ``addFilterValueError_proven
     notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError, UnicodeError or KeyError." },
   { id := "warn-get-warnings-attr", pyFile := "Python/_warnings.c"
     pyFns := ["get_warnings_attr"]
-    statement := "For every class hierarchy, get_warnings_attr: with try_import, an exception from import warnings whose class is ImportError or a subclass (ModuleNotFoundError, ImportCycleError, user subclasses) is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
+    statement := "For every class relation, get_warnings_attr: with try_import, an exception from import warnings whose class has ImportError in its MRO (ModuleNotFoundError, ImportCycleError, a user class whose MRO contains ImportError) is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
     source := "the comments of :219-222 and :232-233 ('Fallback to the C implementation')", status := .proven
     prop := ``GetWarningsAttrSpec, thm := some ``getWarningsAttrSpec_proven
     notes := "Measured on 3.15.2: sys.modules['warnings'] = None, or a finder raising ImportCycleError or a user ImportError subclass for warnings, makes warn_explicit print through show_warning (a ValueError propagates); a warnings module whose __getattr__ raises ValueError makes warn_explicit raise it. call_show_warning and get_default_action are written over getWarningsAttr (Model.lean)." },
@@ -314,7 +314,7 @@ def entries : List Entry := [
     prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_showwarnmsg", "_showwarnmsg_impl"]
-    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning, loses the warning when sys.stderr is None or the write raises an exception whose class is OSError or a subclass under the class hierarchy (BrokenPipeError, io.UnsupportedOperation, user subclasses), writes it when the write succeeds, and propagates any other exception from the write. Quantified over every class hierarchy."
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning, loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
     source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
     prop := ``ShowDispatch, thm := some ``showDispatch_proven },
   { id := "warn-nested-record", pyFile := "Lib/_py_warnings.py"
