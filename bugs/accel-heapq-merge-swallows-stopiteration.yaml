@@ -1,0 +1,70 @@
+id: accel-heapq-merge-swallows-stopiteration
+title: "heapq.merge: a StopIteration raised by the key (or by __lt__) is taken for an exhausted input, which is silently dropped"
+priority: P5
+kind: wrong-result
+module: accel
+files: [Lib/heapq.py]
+functions: ["merge"]
+summary: |
+  merge wraps `value = next(); s[0] = key(value); ...; _heapreplace(h, s)` (Lib/heapq.py:396-402,
+  and the key=None twin :372-376) and the start-up `value = next(); h_append([key(value), ...])`
+  (:388-390) in `try ... except StopIteration`, which is meant to catch an exhausted input. A
+  StopIteration raised by the key, or by an element's `__lt__` during the `_heapreplace`
+  comparisons inside the try, is caught the same way: the current input is popped from the heap
+  (:404) and its remaining items, plus the value just fetched, are lost, while merge returns
+  normally. list(merge([1, 5], [2], key=key)) with key(5) raising StopIteration returns [1, 2].
+  With the pure-Python heap functions it is worse when the StopIteration comes from `__lt__`
+  inside `_heapreplace`: `_siftup` has already copied a child into the hole, the popped and the
+  copied slot then refer to the same entry list, and the in-place `s[0] = next()` updates both,
+  so merge can yield an item twice (the difftest found [-89, 22, 25, 35, 68, 80, 80] for inputs
+  holding one 80; accel_diff.py seed 5).
+  Lean: accel-merge-no-silent-drop is refuted on exactly this case; the model reproduces the
+  difftest's scripted StopIteration from key, __lt__ and __eq__ at every position.
+likelihood: |
+  Needs a key or comparison that raises StopIteration, typically by calling next() on an
+  exhausted iterator inside the key. Rare.
+maybe_intended: |
+  Probably tolerated: a key raising StopIteration is a programming error, and outside the try
+  (in the generator body) PEP 479 turns it into RuntimeError. The same report was filed as
+  python/cpython#158717 and closed (not planned) as part of a batch closure of automated
+  reports (python/cpython#158748), not on its merits.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  ch = import_fresh_module('heapq', fresh=['_heapq'])
+  ph = import_fresh_module('heapq', blocked=['_heapq'])
+
+  def key(x):
+      if x == 5:
+          raise StopIteration
+      return x
+
+  rows = []
+  for name, mod in (('stock heapq (C heap functions)', ch), ('pure-Python heapq', ph)):
+      try:
+          out = list(mod.merge([1, 5], [2], key=key))
+      except Exception as e:
+          out = f'{type(e).__name__}: {e}'
+      rows.append(out)
+      print(f'{name}: list(merge([1, 5], [2], key=key)) -> {out}')
+
+  if all(out == [1, 2] for out in rows):
+      print('REPRODUCED accel-heapq-merge-swallows-stopiteration')
+expected: |
+  The StopIteration (or a RuntimeError wrapping it) propagates, or all items are returned.
+observed: |
+  python3 3.15.2: [1, 2] with both heap implementations. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  The merge docstring (Lib/heapq.py:331-335): it merges the inputs.
+cause: |
+  Lib/heapq.py:364-368, :371-378, :387-392, :395-404: the `except StopIteration` clauses cover
+  user code (key, comparisons) as well as `next()`.
+possible_fix: |
+  Narrow the try to the `next()` call, e.g. `try: value = next() except StopIteration: ...`
+  and compute the key and replace outside it.
+duplicates:
+  issues: ["python/cpython#158717 (closed, not planned; bugforge heapq-20261003-061723-c1)"]
+  queries: ["heapq merge StopIteration", "heapq merge exception", "heapq merge generator", "bugforge README: heapq.merge entries"]
+lean:
+  property: PyLean.Accel.Heapq.MergeNoSilentDrop
+  theorem: PyLean.Accel.Heapq.mergeNoSilentDrop_refuted

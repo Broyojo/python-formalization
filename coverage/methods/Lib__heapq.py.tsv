@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/heapq.py	133	136	heappush	heappush(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
+Lib/heapq.py	133	136	heappush	heappush(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-any-seq	
 Lib/heapq.py	138	146	heappop	heappop(heap)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-exact	
 Lib/heapq.py	148	162	heapreplace	heapreplace(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
 Lib/heapq.py	164	169	heappushpop	heappushpop(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
@@ -9,7 +9,7 @@ Lib/heapq.py	192	197	heapreplace_max	heapreplace_max(heap, item)	modelled	accel-
 Lib/heapq.py	199	202	heappush_max	heappush_max(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
 Lib/heapq.py	204	209	heappushpop_max	heappushpop_max(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
 Lib/heapq.py	211	215	heapify_max	heapify_max(x)	modelled	accel-heap-twins-agree,accel-heapify-makes-heap,accel-heapify-twins-agree	
-Lib/heapq.py	221	233	_siftdown	_siftdown(heap, startpos, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-reentrant,accel-heapify-makes-heap	
+Lib/heapq.py	221	233	_siftdown	_siftdown(heap, startpos, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-any-seq,accel-heap-twins-agree-reentrant,accel-heapify-makes-heap	
 Lib/heapq.py	274	292	_siftup	_siftup(heap, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-same-list-on-raise,accel-heapify-makes-heap,accel-heapify-twins-agree-fallible	
 Lib/heapq.py	294	307	_siftdown_max	_siftdown_max(heap, startpos, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heapify-makes-heap	
 Lib/heapq.py	309	328	_siftup_max	_siftup_max(heap, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heapify-makes-heap	

@@ -307,4 +307,38 @@ theorem heapTwinsSameListOnRaise_refuted : ¬ HeapTwinsSameListOnRaise := by
   rw [hc] at hp
   exact absurd hp (by decide)
 
+/-! ### Beyond exact lists -/
+
+/-- The broad statement behind `HeapTwinsAgree` without its exact-list scope: for every first
+argument, the C functions (which see `PyList_Check` and the raw list storage) and the Python
+functions (which see the object's own `append`, `__getitem__`, `__setitem__`, `__len__`, `pop`
+and truth, `S`) agree. A list subclass is `⟨true, _⟩` on the C side with any `S` on the Python
+side; a non-list is `⟨false, _⟩`. -/
+def HeapTwinsAgreeAnySeq : Prop :=
+  ∀ (σ α : Type) [Inhabited α] (f : α → α → σ → Except PyExc Bool × σ) (mx : Bool) (w : HW σ α)
+    (item : α) (arg : CArg) (S : Seq (HW σ α) α),
+    Agree w.heap ((cHeappush mx (ofSt f) arg item).run w) ((pyHeappush S (ofSt f) mx item).run w) ∧
+    Agree w.heap ((cHeapify mx (ofSt f) arg).run w) ((pyHeapify S (ofSt f) mx).run w)
+
+/-- A list subclass whose `append` override records each call in `st`, then appends. -/
+def loggedListSeq : Seq (HW Nat Int) Int :=
+  { (listSeq : Seq (HW Nat Int) Int) with
+    append := fun v => ⟨fun w => (.ok (), { st := w.st + 1, heap := w.heap ++ [v] })⟩ }
+
+/-- `heappush(LoggedList([1, 2, 3]), 0)` for a list subclass overriding `append`: both twins
+leave `[0, 1, 3, 2]`, but only Python calls the override (C appends to the raw storage,
+`_heapqmodule.c:142`). (The non-list case: `heapify(())` raises `TypeError` in C and returns
+`None` in Python; see `bugs/accel-heapq-list-subclass-overrides.yaml`.) -/
+theorem heapTwinsAgreeAnySeq_refuted : ¬ HeapTwinsAgreeAnySeq := by
+  intro h
+  have := (h Nat Int (fun a b s => (.ok (decide (a < b)), s)) false ⟨0, [1, 2, 3]⟩ 0
+    ⟨true, "LoggedList"⟩ loggedListSeq).1
+  have hc : (cHeappush false (ofSt (fun a b s => (.ok (decide (a < b)), s))) ⟨true, "LoggedList"⟩
+      (0 : Int)).run ⟨(0 : Nat), [1, 2, 3]⟩ = (.ok (), ⟨0, [0, 1, 3, 2]⟩) := by rfl
+  have hp : (pyHeappush loggedListSeq (ofSt (fun a b s => (.ok (decide (a < b)), s))) false
+      (0 : Int)).run ⟨(0 : Nat), [1, 2, 3]⟩ = (.ok (), ⟨1, [0, 1, 3, 2]⟩) := by rfl
+  rw [hc, hp] at this
+  have := congrArg HW.st this.2
+  exact absurd this (by decide)
+
 end PyLean.Accel.Heapq
