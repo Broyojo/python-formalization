@@ -6,7 +6,7 @@ Modules/mathmodule.c	144	150	dl_split	dl_split(double x) {	excluded		platform: c
 Modules/mathmodule.c	153	163	dl_mul	dl_mul(double x, double y)	excluded		platform: the Dekker dl_mul, compiled only under UNRELIABLE_FMA (Modules/mathmodule.c:115-165), which no configure or pyconfig.h of 3.15.2 defines; the default build uses the fma version at :117-124
 Modules/mathmodule.c	172	180	tl_fma	tl_fma(double x, double y, TripleLength total)	todo		
 Modules/mathmodule.c	183	187	tl_to_d	tl_to_d(TripleLength total)	todo		
-Modules/mathmodule.c	223	254	m_sinpi	m_sinpi(double x)	todo		
+Modules/mathmodule.c	223	254	m_sinpi	m_sinpi(double x)	modelled	mathint-gamma-underflow-sign,mathint-lgamma-reflection,mathint-sinpi-sign	
 Modules/mathmodule.c	352	378	lanczos_sum	lanczos_sum(double x)	todo		
 Modules/mathmodule.c	382	475	m_tgamma	m_tgamma(double x)	todo		review: GammaDoc pins only the special values, the table for 1..23, OverflowError above 200 and when ValueError is raised, so a m_tgamma returning 0.0 for every other finite non-integer (the 1/x branch below 1e-20, which needs no libm, the 0/m_sinpi branch below -200 and the Lanczos branch) passes.
 Modules/mathmodule.c	483	524	m_lgamma	m_lgamma(double x)	todo		review: GammaDoc pins only nan, +-inf, lgamma(1), lgamma(2) and the poles, so the value for every other finite x (-log(absx) below 1e-20, the Lanczos sum and the reflection) is unconstrained; returning 0.0 there passes.

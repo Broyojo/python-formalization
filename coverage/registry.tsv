@@ -21,6 +21,7 @@ ipaddress-hosts-doc	proven	Lib/ipaddress.py	_BaseNetwork.hosts,IPv6Network.hosts
 ipaddress-v4-mask-roundtrip	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_IPAddressBase._prefix_from_prefix_string,_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int
 ipaddress-v4-mask-int	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_IPAddressBase._report_invalid_netmask
 ipaddress-v6-text-roundtrip	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._ip_int_from_string,_BaseV6._parse_hextet,_BaseV6._compress_hextets,_BaseV6._string_from_ip_int,_BaseV6._split_scope_id,IPv6Address.__str__,IPv6Address._ipv4_mapped_ipv6_to_str,IPv6Address.ipv4_mapped
+ipaddress-v4-netmask-cache	refuted	Lib/ipaddress.py	_BaseV4._make_netmask
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
 ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
@@ -157,7 +158,18 @@ rangeslice-slice-hash-eq	proven	Objects/sliceobject.c	slice_hash,slice_richcompa
 rangeslice-range-bool	proven	Objects/rangeobject.c	range_bool
 rangeslice-range-reduce-round-trip	proven	Objects/rangeobject.c	range_reduce,range_new,range_vectorcall
 mathint-fsum-correctly-rounded	open	Modules/mathmodule.c	math.fsum,_fsum_realloc
-mathint-remainder-exact	open	Modules/mathmodule.c	m_remainder
+mathint-cmath-special-type	proven	Modules/cmathmodule.c	special_type
+mathint-cmath-err-glue	proven	Modules/cmathmodule.c	if,math_error
+mathint-cmath-phase-polar	proven	Modules/cmathmodule.c	cmath.phase,cmath.polar
+mathint-cmath-phase-atan2-c23	refuted	Modules/cmathmodule.c	cmath.phase
+mathint-cmath-rect	proven	Modules/cmathmodule.c	cmath.rect
+mathint-cmath-predicates	proven	Modules/cmathmodule.c	cmath.isfinite,cmath.isnan,cmath.isinf
+mathint-cmath-isclose	proven	Modules/cmathmodule.c	cmath.isclose
+mathint-cmath-isclose-nan	refuted	Modules/cmathmodule.c	cmath.isclose
+mathint-cmath-log	proven	Modules/cmathmodule.c	cmath.log
+mathint-cmath-log-base-domain	refuted	Modules/cmathmodule.c	cmath.log
+mathint-fsum-paths	proven	Modules/mathmodule.c	math.fsum
+mathint-remainder-exact	proven	Modules/mathmodule.c	m_remainder
 mathint-prod-twin	proven	Modules/mathmodule.c	math.prod,_check_long_mult_overflow
 mathint-pow-twin	proven	Modules/mathmodule.c	math.pow
 mathint-isclose-doc	proven	Modules/mathmodule.c	math.isclose
@@ -165,7 +177,12 @@ mathint-fmod-doc	proven	Modules/mathmodule.c	math.fmod
 mathint-modf-doc	proven	Modules/mathmodule.c	math.modf
 mathint-fma-doc	proven	Modules/mathmodule.c	math.fma
 mathint-hypot-dist	proven	Modules/mathmodule.c	math.hypot,math.dist
+mathint-hypot-dist-args	proven	Modules/mathmodule.c	math.hypot,math.dist
 mathint-gamma-doc	proven	Modules/mathmodule.c	m_tgamma,m_lgamma,math_1a
+mathint-gamma-tiny	proven	Modules/mathmodule.c	m_tgamma,m_lgamma
+mathint-sinpi-sign	proven	Modules/mathmodule.c	m_sinpi
+mathint-gamma-underflow-sign	proven	Modules/mathmodule.c	m_tgamma,m_sinpi
+mathint-lgamma-reflection	proven	Modules/mathmodule.c	m_lgamma,m_sinpi
 mathint-nextafter-default-step	refuted	Modules/mathmodule.c	math.nextafter
 mathint-ulp-doc	proven	Modules/mathmodule.c	math.ulp
 mathint-classify	proven	Modules/mathmodule.c	math.isfinite,math.isnan,math.isinf,math.isnormal,math.issubnormal,math.signbit
@@ -176,6 +193,8 @@ mathint-math1a-rules	proven	Modules/mathmodule.c	math_1a,is_error
 mathint-math2-rules	proven	Modules/mathmodule.c	math_2,is_error
 mathint-log-twins	proven	Modules/mathmodule.c	m_log,m_log2,m_log10,loghelper_int,loghelper,math.log,math.log2,math.log10
 mathint-log2-powers-of-two	proven	Modules/mathmodule.c	m_log2,loghelper_int,loghelper,math.log2
+mathint-log-objects	proven	Modules/mathmodule.c	loghelper,loghelper_int,math.log,math.log2,math.log10
+mathint-log-big-powers-of-two	proven	Modules/mathmodule.c	loghelper_int,loghelper,math.log,math.log10
 mathint-isqrt-floor-sqrt	proven	Modules/mathintegermodule.c	math.integer.isqrt,_approximate_isqrt
 mathint-comb-formula	proven	Modules/mathintegermodule.c	math.integer.comb,perm_comb_small,perm_comb
 mathint-perm-formula	proven	Modules/mathintegermodule.c	math.integer.perm,perm_comb_small,perm_comb

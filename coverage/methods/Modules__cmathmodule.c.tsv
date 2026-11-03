@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Modules/cmathmodule.c	37	40	if	if (errno == EDOM) {	todo		
-Modules/cmathmodule.c	41	44	if	else if (errno == ERANGE) {	todo		
-Modules/cmathmodule.c	118	140	special_type	special_type(double d)	todo		
+Modules/cmathmodule.c	37	40	if	if (errno == EDOM) {	todo		candidates:mathint-cmath-err-glue
+Modules/cmathmodule.c	41	44	if	else if (errno == ERANGE) {	todo		candidates:mathint-cmath-err-glue
+Modules/cmathmodule.c	118	140	special_type	special_type(double d)	modelled	mathint-cmath-special-type	
 Modules/cmathmodule.c	185	209	cmath_acos_impl	cmath_acos_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=40bd42853fd460ae input=bd6cbd78ae851927]*/	todo		
 Modules/cmathmodule.c	229	252	cmath_acosh_impl	cmath_acosh_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=3e2454d4fcf404ca input=3f61bee7d703e53c]*/	todo		
 Modules/cmathmodule.c	261	272	cmath_asin_impl	cmath_asin_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=3b264cd1b16bf4e1 input=be0bf0cfdd5239c5]*/	todo		
@@ -18,14 +18,14 @@ Modules/cmathmodule.c	703	750	cmath_sinh_impl	cmath_sinh_impl(PyObject *module, 
 Modules/cmathmodule.c	770	835	cmath_sqrt_impl	cmath_sqrt_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=b6507b3029c339fc input=7088b166fc9a58c7]*/	todo		
 Modules/cmathmodule.c	845	856	cmath_tan_impl	cmath_tan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=7c5f13158a72eb13 input=fc167e528767888e]*/	todo		
 Modules/cmathmodule.c	877	939	cmath_tanh_impl	cmath_tanh_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=36d547ef7aca116c input=22f67f9dc6d29685]*/	todo		
-Modules/cmathmodule.c	956	974	cmath_log_impl	cmath_log_impl(PyObject *module, Py_complex x, PyObject *y_obj) /*[clinic end generated code: output=4effdb7d258e0d94 input=eb25de0757baf4a0]*/	todo		
-Modules/cmathmodule.c	980	989	math_error	math_error(void)	todo		
-Modules/cmathmodule.c	1002	1013	cmath_phase_impl	cmath_phase_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=50725086a7bfd253 input=5cf75228ba94b69d]*/	todo		
-Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	todo		
-Modules/cmathmodule.c	1073	1123	cmath_rect_impl	cmath_rect_impl(PyObject *module, double r, double phi) /*[clinic end generated code: output=385a0690925df2d5 input=24c5646d147efd69]*/	todo		
-Modules/cmathmodule.c	1133	1137	cmath_isfinite_impl	cmath_isfinite_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=ac76611e2c774a36 input=e224f5c36d94f5da]*/	todo		
-Modules/cmathmodule.c	1146	1150	cmath_isnan_impl	cmath_isnan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=e7abf6e0b28beab7 input=71799f5d284c9baf]*/	todo		
-Modules/cmathmodule.c	1159	1163	cmath_isinf_impl	cmath_isinf_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=502a75a79c773469 input=363df155c7181329]*/	todo		
-Modules/cmathmodule.c	1191	1231	cmath_isclose_impl	cmath_isclose_impl(PyObject *module, Py_complex a, Py_complex b, double rel_tol, double abs_tol) /*[clinic end generated code: output=8a2486cc6e0014d1 input=301b56c90d9a79de]*/	todo		
+Modules/cmathmodule.c	956	974	cmath_log_impl	cmath_log_impl(PyObject *module, Py_complex x, PyObject *y_obj) /*[clinic end generated code: output=4effdb7d258e0d94 input=eb25de0757baf4a0]*/	modelled	mathint-cmath-log,mathint-cmath-log-base-domain	
+Modules/cmathmodule.c	980	989	math_error	math_error(void)	modelled	mathint-cmath-err-glue	
+Modules/cmathmodule.c	1002	1013	cmath_phase_impl	cmath_phase_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=50725086a7bfd253 input=5cf75228ba94b69d]*/	modelled	mathint-cmath-phase-atan2-c23,mathint-cmath-phase-polar	
+Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	modelled	mathint-cmath-phase-polar	
+Modules/cmathmodule.c	1073	1123	cmath_rect_impl	cmath_rect_impl(PyObject *module, double r, double phi) /*[clinic end generated code: output=385a0690925df2d5 input=24c5646d147efd69]*/	modelled	mathint-cmath-rect	
+Modules/cmathmodule.c	1133	1137	cmath_isfinite_impl	cmath_isfinite_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=ac76611e2c774a36 input=e224f5c36d94f5da]*/	modelled	mathint-cmath-predicates	
+Modules/cmathmodule.c	1146	1150	cmath_isnan_impl	cmath_isnan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=e7abf6e0b28beab7 input=71799f5d284c9baf]*/	modelled	mathint-cmath-predicates	
+Modules/cmathmodule.c	1159	1163	cmath_isinf_impl	cmath_isinf_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=502a75a79c773469 input=363df155c7181329]*/	modelled	mathint-cmath-predicates	
+Modules/cmathmodule.c	1191	1231	cmath_isclose_impl	cmath_isclose_impl(PyObject *module, Py_complex a, Py_complex b, double rel_tol, double abs_tol) /*[clinic end generated code: output=8a2486cc6e0014d1 input=301b56c90d9a79de]*/	modelled	mathint-cmath-isclose,mathint-cmath-isclose-nan	
 Modules/cmathmodule.c	1265	1294	cmath_exec	cmath_exec(PyObject *mod)	todo		changed-in-3.15:
 Modules/cmathmodule.c	1314	1317	PyInit_cmath	PyInit_cmath(void)	excluded		internal-bootstrap: returns PyModuleDef_Init(&cmathmodule); module creation boilerplate with no cmath behaviour (the attributes are added by cmath_exec)
