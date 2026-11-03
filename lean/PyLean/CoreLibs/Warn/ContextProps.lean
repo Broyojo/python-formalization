@@ -30,7 +30,9 @@ that `__enter__` copies the global one) whose deleted `warnings.filters`, if it 
 `__getattr__`, `plainDeleted_caught`; with a current `_Context` nothing reads it), `__enter__`
 succeeds and (with no action) the block sees
 a copy of the filters, a new list with the same contents; a second `__enter__` of the same object
-raises `RuntimeError` and changes nothing; whatever the block does to the filters it sees,
+raises `RuntimeError` and changes nothing; with an action the block sees the old filters with
+`simplefilter`'s item added (`addSpec`: in front, the first equal old item removed; with `append`
+at the end unless an equal item is there); whatever the block does to the filters it sees,
 `__exit__` succeeds, `_get_filters()` is what it was before, and `showwarning` (and without
 contexts `warnings.filters` and `_showwarnmsg_impl`) are back. -/
 def CatchRestores : Prop :=
@@ -44,6 +46,8 @@ def CatchRestores : Prop :=
     ∃ cw' st1 log, cwEnter useCtx (cwInit name record om action cat ln ap) st = (cw', st1, .ok log) ∧
       (action = none → getFilters useCtx st1 = getFilters useCtx st ∧
         ctxFilters st1 (getContext useCtx st1) ≠ ctxFilters st (getContext useCtx st)) ∧
+      (∀ a it, action = some a → sfPrep a cat ln = .ok it →
+        getFilters useCtx st1 = addSpec it ap (getFilters useCtx st)) ∧
       cwEnter useCtx cw' st1 = (cw', st1, match cwRepr cw' st.sysWarnings st.modRepr with
         | .ok r => .error (.named "RuntimeError" s!"Cannot enter {r} twice")
         | .error e => .error e) ∧
@@ -77,7 +81,7 @@ theorem catchRestores_proven : CatchRestores := by
     cases action with
     | none =>
       cases record <;>
-      refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩ <;>
+      refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, ?_, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩ <;>
       simp [getFilters, getContext, ctxFilters, editFilters, upd, hne, Ne.symm hne]
     | some a =>
       obtain ⟨it, hit⟩ := hact a rfl
@@ -92,13 +96,19 @@ theorem catchRestores_proven : CatchRestores := by
           simp only [cwEnter, cwEnterWith, cwInit, Option.map_some, Bool.false_eq_true, if_false]
           rw [hsf _ (by simp [upd]) rfl])
         rw [hE]
-        refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
+        refine ⟨_, _, _, rfl, fun h => by simp at h, ?_, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
+        · intro a' it' ha hit'
+          cases ha; rw [hit] at hit'; cases hit'
+          simp [getFilters, getContext, ctxFilters, putFState, upd]
         simp [getFilters, getContext, ctxFilters, editFilters, putFState, upd, hne]
       · have hE := (show cwEnter false (cwInit name true om (some a) cat ln ap) ⟨lists, logs, next, some r, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ = _ from by
           simp only [cwEnter, cwEnterWith, cwInit, Option.map_some, if_true, Bool.false_eq_true, if_false]
           rw [hsf _ (by simp [upd]) rfl])
         rw [hE]
-        refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
+        refine ⟨_, _, _, rfl, fun h => by simp at h, ?_, rfl, _, rfl, ?_, rfl, fun _ => ⟨rfl, rfl⟩, rfl⟩
+        · intro a' it' ha hit'
+          cases ha; rw [hit] at hit'; cases hit'
+          simp [getFilters, getContext, ctxFilters, putFState, upd]
         simp [getFilters, getContext, ctxFilters, editFilters, putFState, upd, hne]
   · -- with contexts: the read of the old context's `_filters` succeeds
     have hg : ctxRead ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩ (getContext true ⟨lists, logs, next, filters, some sw, showImpl, formatwarning, ver, ctxv, ctxs, stderr, out, tuples, hier, sysW, modR⟩) = .ok () := by
@@ -152,7 +162,7 @@ theorem catchRestores_proven : CatchRestores := by
     cases action with
     | none =>
       cases record
-      · refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+      · refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, ?_, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
         · simp [getFilters, getContext, ctxFilters, newContext, upd, cwInit]
           rw [← hO]; rfl
         · rw [hO]
@@ -163,6 +173,7 @@ theorem catchRestores_proven : CatchRestores := by
             have hr := hold r hR
             simp [getContext, ctxFilters, newContext, upd, cwInit]
             exact fun h => Nat.lt_irrefl _ (h ▸ hr)
+        · intro _ _ h; cases h
         · apply hback
           · exact hO
           · rfl
@@ -173,7 +184,7 @@ theorem catchRestores_proven : CatchRestores := by
           · intro c hc
             have h1 : c ≠ next + 1 := by omega
             simp [cwExit, editFilters, getContext, ctxFilters, newContext, upd, cwInit, h1]
-      · refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+      · refine ⟨_, _, _, rfl, fun _ => ⟨?_, ?_⟩, ?_, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
         · simp [getFilters, getContext, ctxFilters, newContext, upd, cwInit]
           rw [← hO]; rfl
         · rw [hO]
@@ -184,6 +195,7 @@ theorem catchRestores_proven : CatchRestores := by
             have hr := hold r hR
             simp [getContext, ctxFilters, newContext, upd, cwInit]
             exact fun h => Nat.lt_irrefl _ (h ▸ hr)
+        · intro _ _ h; cases h
         · apply hback
           · exact hO
           · rfl
@@ -204,7 +216,10 @@ theorem catchRestores_proven : CatchRestores := by
           simp only [putFState, getContext, ctxFilters, upd, if_true]
           try rfl)
         rw [hE]
-        refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+        refine ⟨_, _, _, rfl, fun h => by simp at h, ?_, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+        · intro a' it' ha hit'
+          cases ha; rw [hit] at hit'; cases hit'
+          simp [getFilters, getContext, ctxFilters, putFState, upd, newContext]
         apply hback
         · rw [← hO]; rfl
         · rfl
@@ -222,7 +237,10 @@ theorem catchRestores_proven : CatchRestores := by
           simp only [putFState, getContext, ctxFilters, upd, if_true]
           try rfl)
         rw [hE]
-        refine ⟨_, _, _, rfl, fun h => by simp at h, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+        refine ⟨_, _, _, rfl, fun h => by simp at h, ?_, rfl, _, rfl, ?_, rfl, fun h => by simp at h, rfl⟩
+        · intro a' it' ha hit'
+          cases ha; rw [hit] at hit'; cases hit'
+          simp [getFilters, getContext, ctxFilters, putFState, upd, newContext]
         apply hback
         · rw [← hO]; rfl
         · rfl
@@ -504,7 +522,7 @@ theorem filterListTwins_proven : FilterListTwins := by
   intro useCtx st cached hu hf ht
   obtain ⟨r, hr⟩ := Option.ne_none_iff_exists'.mp hf
   unfold cFilterList getFilters getContext ctxFilters
-  cases useCtx <;> cases hc : st.ctxv <;> simp_all [Except.map]
+  cases useCtx <;> cases hc : st.ctxv <;> simp_all [Except.map, ctxRead]
 
 /-- Without the condition on `warnings.filters`: refuted, when it was deleted C searches the list
 it read last (`get_warnings_filters` keeps `st->filters`, :346-353) and Python the empty list of
@@ -563,7 +581,8 @@ theorem getContext_global (useCtx : Bool) (st : MState) (h : ∀ c, st.ctxv ≠ 
 
 /-- A deleted `warnings.filters` with a module `__getattr__` that raises an exception whose class
 is not under `AttributeError` (measured on 3.15.2 with `KeyError`): C's `get_warnings_filters`
-returns the error `PyObject_GetOptionalAttr` left (:347-349), and Python's
+returns the error `PyObject_GetOptionalAttr` left (:347-349), as does `get_warnings_context_filters`
+with `_global_context` set (the `PyObject_GetAttr` of :327-331 runs the property), and Python's
 `_GlobalContext._filters` lets it out of its `except AttributeError` (:75-80), so `_get_filters()`,
 `simplefilter` (`_add_filter`, :322), `resetwarnings` (:340) and `catch_warnings.__enter__`
 (without contexts its own `self._module.filters`, :707; with contexts `old.copy()` of the global
@@ -571,7 +590,7 @@ context, :58) all raise it, while no `_Context` is current. For every state and 
 def FiltersLookupRaises : Prop :=
   ∀ (st : MState) e (cached : Ref), st.filters = none → st.modGetattr "filters" = some e →
     isA st.hier e "AttributeError" = false →
-    (st.ctxv = .unset → cFilterList st cached = .error e) ∧
+    ((∀ c, st.ctxv ≠ .ctx c) → cFilterList st cached = .error e) ∧
     (∀ useCtx, (∀ c, st.ctxv ≠ .ctx c) → pyGetFilters useCtx st = .error e) ∧
     (∀ useCtx a cat ln ap it, (∀ c, st.ctxv ≠ .ctx c) → sfPrep a cat ln = .ok it →
       simplefilter st.hier a cat ln ap (curFState useCtx st) = .error e) ∧
@@ -585,7 +604,11 @@ theorem filtersLookupRaises_proven : FiltersLookupRaises := by
     intro useCtx hc
     simp [curFState, getContext_global useCtx st hc, ctxFilters, hf, hg]
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · intro hu; simp [cFilterList, hu, hf, hg, he]
+  · intro hc
+    cases hv : st.ctxv with
+    | unset => simp [cFilterList, hv, hf, hg, he]
+    | global => simp [cFilterList, hv, ctxRead, hf, hm, deletedOk, he]
+    | ctx c => exact absurd hv (hc c)
   · intro useCtx hc
     simp [pyGetFilters, getContext_global useCtx st hc, ctxRead, hf, hm, deletedOk, he, Except.map]
   · intro useCtx a cat ln ap it hc hp
