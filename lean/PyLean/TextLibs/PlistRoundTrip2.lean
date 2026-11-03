@@ -36,10 +36,15 @@ def Match (H : WHeap) (cfg : WCfg) (R : Nat → Nat → Prop) (o : Obj) (w : WOb
   | _, _ => False
 
 /-- The loaded object graph is the written one: a relation between loaded slots and written
-cells relates the roots, and each related pair matches. -/
+cells relates the roots, each related pair matches, and identity is kept: two related
+containers (or other objects tracked by `id()`) are the same loaded object exactly when they are
+the same written object (shared lists come back shared, equal but distinct ones distinct, and a list
+that contains itself contains its loaded self). -/
 def Bisim (H : WHeap) (cfg : WCfg) (root : Nat) (res : Res) : Prop :=
   ∃ R : Nat → Nat → Prop, R res.root root ∧
-    ∀ i c, R i c → ∃ o, res.objs[i]? = some (some o) ∧ Match H cfg R o (H.getD c .none)
+    (∀ i c, R i c → ∃ o, res.objs[i]? = some (some o) ∧ Match H cfg R o (H.getD c .none)) ∧
+    (∀ i c i' c', R i c → R i' c' → isScalar H c = false → isScalar H c' = false →
+      (i = i' ↔ objId H c = objId H c'))
 
 theorem objId_cell (H : WHeap) (c d : Nat) (h : objId H c = .cell d) : d = c := by
   unfold objId at h; split at h <;> (try split at h) <;> simp_all

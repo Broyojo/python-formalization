@@ -4,6 +4,27 @@ namespace PyLean.TextLibs.Plist
 
 open PyLean PyLean.TextLibs
 
+theorem lookup_id_iff {H : WHeap} {st : WState} (hI : WInv H st) {c c' i i' : Nat}
+    (hs1 : isScalar H c = false) (hs2 : isScalar H c' = false)
+    (h1 : lookupW H st c = some i) (h2 : lookupW H st c' = some i') : i = i' ↔ objId H c = objId H c' := by
+  constructor
+  · rintro rfl
+    obtain ⟨d, hd, hm⟩ := lookup_sound hI h1
+    obtain ⟨d', hd', hm'⟩ := lookup_sound hI h2
+    rw [hd] at hd'; cases hd'
+    rcases hm with ⟨h, _⟩ | ⟨_, e1, _⟩
+    · rw [hs1] at h; cases h
+    rcases hm' with ⟨h, _⟩ | ⟨_, e2, _⟩
+    · rw [hs2] at h; cases h
+    rw [← e1, ← e2]
+  · intro he
+    unfold lookupW at h1 h2
+    rw [if_neg (by simp [hs1])] at h1
+    rw [if_neg (by simp [hs2])] at h2
+    unfold idLookup at h1 h2
+    rw [he] at h1
+    rw [h1] at h2; cases h2; rfl
+
 theorem isFmtXml_bplist (rest : List Nat) : isFmtXml ((bplistHeader ++ rest).take 32) = false := by
   simp [isFmtXml, bplistHeader, asciiBytes, encodeAscii, List.isPrefixOf]
 
@@ -125,7 +146,10 @@ theorem binaryRoundTrip_proven : BinaryRoundTrip := by
     rw [header_take, hbx2, isFmtXml_bplist, isFmtBinary_bplist, ← hbx2]
     simp only [Bool.false_eq_true, ↓reduceIte, parseR, call]
     rw [hparse]
-  · refine ⟨fun i c => lookupW H st c = some i ∧ Defined st' i, ⟨htop, hdef⟩, ?_⟩
+  · refine ⟨fun i c => lookupW H st c = some i ∧ Defined st' i, ⟨htop, hdef⟩, ?_, ?_⟩
+    rotate_left
+    · intro i c i' c' ⟨h1, _⟩ ⟨h2, _⟩ hs1 hs2
+      exact lookup_id_iff hI hs1 hs2 h1 h2
     intro i c ⟨hl, hdi⟩
     obtain ⟨o, ho⟩ := hdi
     refine ⟨o, ho, ?_⟩
