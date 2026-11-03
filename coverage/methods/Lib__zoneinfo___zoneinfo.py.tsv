@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
 Lib/zoneinfo/_zoneinfo.py	26	27	_load_timedelta	_load_timedelta(seconds)	todo		
 Lib/zoneinfo/_zoneinfo.py	36	38	ZoneInfo.__init_subclass__	__init_subclass__(cls)	todo		
-Lib/zoneinfo/_zoneinfo.py	40	56	ZoneInfo.__new__	__new__(cls, key)	todo		
+Lib/zoneinfo/_zoneinfo.py	40	56	ZoneInfo.__new__	__new__(cls, key)	modelled	datetime-zoneinfo-cache-twins	
 Lib/zoneinfo/_zoneinfo.py	59	63	ZoneInfo.no_cache	no_cache(cls, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	66	79	ZoneInfo._new_instance	_new_instance(cls, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	82	92	ZoneInfo.from_file	from_file(cls, file_obj, /, key=None)	todo		
-Lib/zoneinfo/_zoneinfo.py	95	103	ZoneInfo.clear_cache	clear_cache(cls, *, only_keys=None)	todo		
-Lib/zoneinfo/_zoneinfo.py	106	107	ZoneInfo.key	key(self)	todo		
-Lib/zoneinfo/_zoneinfo.py	109	110	ZoneInfo.utcoffset	utcoffset(self, dt)	todo		
-Lib/zoneinfo/_zoneinfo.py	112	113	ZoneInfo.dst	dst(self, dt)	todo		
-Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	todo		
-Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	todo		changed-in-3.15:
-Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	todo		
-Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	todo		
+Lib/zoneinfo/_zoneinfo.py	95	103	ZoneInfo.clear_cache	clear_cache(cls, *, only_keys=None)	modelled	datetime-zoneinfo-cache-twins	
+Lib/zoneinfo/_zoneinfo.py	106	107	ZoneInfo.key	key(self)	excluded		trivial: property returning self._key, no branch
+Lib/zoneinfo/_zoneinfo.py	109	110	ZoneInfo.utcoffset	utcoffset(self, dt)	modelled	datetime-zoneinfo-lookup-methods	
+Lib/zoneinfo/_zoneinfo.py	112	113	ZoneInfo.dst	dst(self, dt)	modelled	datetime-zoneinfo-lookup-methods	
+Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	modelled	datetime-zoneinfo-lookup-methods	
+Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	modelled	datetime-zoneinfo-fromutc-twins,datetime-zoneinfo-fromutc-twins-notrans	
+Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	modelled	datetime-zoneinfo-lookup-twins	
+Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	modelled	datetime-zoneinfo-lookup-twins	
 Lib/zoneinfo/_zoneinfo.py	197	201	ZoneInfo.__str__	__str__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	203	207	ZoneInfo.__repr__	__repr__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	209	210	ZoneInfo.__reduce__	__reduce__(self)	todo		
@@ -20,22 +20,22 @@ Lib/zoneinfo/_zoneinfo.py	212	217	ZoneInfo._file_reduce	_file_reduce(self)	todo
 Lib/zoneinfo/_zoneinfo.py	220	224	ZoneInfo._unpickle	_unpickle(cls, key, from_cache, /)	todo		
 Lib/zoneinfo/_zoneinfo.py	226	227	ZoneInfo._find_tzfile	_find_tzfile(self, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	229	300	ZoneInfo._load_file	_load_file(self, fobj)	todo		
-Lib/zoneinfo/_zoneinfo.py	303	363	ZoneInfo._utcoff_to_dstoff	_utcoff_to_dstoff(trans_idx, utcoffsets, isdsts)	todo		
-Lib/zoneinfo/_zoneinfo.py	366	397	ZoneInfo._ts_to_local	_ts_to_local(trans_idx, trans_list_utc, utcoffsets)	todo		
+Lib/zoneinfo/_zoneinfo.py	303	363	ZoneInfo._utcoff_to_dstoff	_utcoff_to_dstoff(trans_idx, utcoffsets, isdsts)	modelled	datetime-zoneinfo-dstoff-twins,datetime-zoneinfo-dstoff-twins-flags,datetime-zoneinfo-dstoff-twins-narrow	
+Lib/zoneinfo/_zoneinfo.py	366	397	ZoneInfo._ts_to_local	_ts_to_local(trans_idx, trans_list_utc, utcoffsets)	modelled	datetime-zoneinfo-ts-to-local-narrow,datetime-zoneinfo-ts-to-local-twins	
 Lib/zoneinfo/_zoneinfo.py	403	406	_ttinfo.__init__	__init__(self, utcoff, dstoff, tzname)	todo		
 Lib/zoneinfo/_zoneinfo.py	408	413	_ttinfo.__eq__	__eq__(self, other)	todo		
 Lib/zoneinfo/_zoneinfo.py	415	419	_ttinfo.__repr__	__repr__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	436	458	_TZStr.__init__	__init__(self, std_abbr, std_offset, dst_abbr, dst_offset, start=None, end=None)	todo		
-Lib/zoneinfo/_zoneinfo.py	460	463	_TZStr.transitions	transitions(self, year)	todo		
-Lib/zoneinfo/_zoneinfo.py	465	487	_TZStr._get_trans_info	_get_trans_info(self, ts, year, fold)	todo		
-Lib/zoneinfo/_zoneinfo.py	489	511	_TZStr._get_trans_info_fromutc	_get_trans_info_fromutc(self, ts, year)	todo		
-Lib/zoneinfo/_zoneinfo.py	514	517	_post_epoch_days_before_year	_post_epoch_days_before_year(year)	todo		
+Lib/zoneinfo/_zoneinfo.py	460	463	_TZStr.transitions	transitions(self, year)	modelled	datetime-zoneinfo-lookup-twins	
+Lib/zoneinfo/_zoneinfo.py	465	487	_TZStr._get_trans_info	_get_trans_info(self, ts, year, fold)	modelled	datetime-zoneinfo-lookup-twins	
+Lib/zoneinfo/_zoneinfo.py	489	511	_TZStr._get_trans_info_fromutc	_get_trans_info_fromutc(self, ts, year)	modelled	datetime-zoneinfo-fromutc-twins,datetime-zoneinfo-fromutc-twins-notrans	
+Lib/zoneinfo/_zoneinfo.py	514	517	_post_epoch_days_before_year	_post_epoch_days_before_year(year)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-julian-rule-meaning,datetime-zoneinfo-rule-date-twins	
 Lib/zoneinfo/_zoneinfo.py	523	532	_DayOffset.__init__	__init__(self, d, julian, hour=2, minute=0, second=0)	todo		
-Lib/zoneinfo/_zoneinfo.py	534	544	_DayOffset.year_to_epoch	year_to_epoch(self, year)	todo		changed-in-3.15:
+Lib/zoneinfo/_zoneinfo.py	534	544	_DayOffset.year_to_epoch	year_to_epoch(self, year)	modelled	datetime-zoneinfo-julian-rule-meaning,datetime-zoneinfo-rule-date-twins,datetime-zoneinfo-zero-based-rule	
 Lib/zoneinfo/_zoneinfo.py	566	581	_CalendarOffset.__init__	__init__(self, m, w, d, hour=2, minute=0, second=0)	todo		
-Lib/zoneinfo/_zoneinfo.py	584	590	_CalendarOffset._ymd2ord	_ymd2ord(cls, year, month, day)	todo		
-Lib/zoneinfo/_zoneinfo.py	593	624	_CalendarOffset.year_to_epoch	year_to_epoch(self, year)	todo		
-Lib/zoneinfo/_zoneinfo.py	627	703	_parse_tz_str	_parse_tz_str(tz_str)	todo		
+Lib/zoneinfo/_zoneinfo.py	584	590	_CalendarOffset._ymd2ord	_ymd2ord(cls, year, month, day)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-rule-date-twins	
+Lib/zoneinfo/_zoneinfo.py	593	624	_CalendarOffset.year_to_epoch	year_to_epoch(self, year)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-rule-date-twins	
+Lib/zoneinfo/_zoneinfo.py	627	703	_parse_tz_str	_parse_tz_str(tz_str)	modelled	datetime-zoneinfo-tzstr-twins	
 Lib/zoneinfo/_zoneinfo.py	706	731	_parse_dst_start_end	_parse_dst_start_end(dststr)	todo		
 Lib/zoneinfo/_zoneinfo.py	734	753	_parse_transition_time	_parse_transition_time(time_str)	todo		
 Lib/zoneinfo/_zoneinfo.py	756	779	_parse_tz_delta	_parse_tz_delta(tz_delta)	todo		

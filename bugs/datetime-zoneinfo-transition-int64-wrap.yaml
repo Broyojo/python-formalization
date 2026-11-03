@@ -1,0 +1,64 @@
+id: datetime-zoneinfo-transition-int64-wrap
+title: "_zoneinfo: ts_to_local() wraps int64_t for transition times near the ends of the range"
+priority: P4
+kind: silent-wraparound
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C ts_to_local", "C load_data", "C find_ttinfo"]
+summary: |
+  ts_to_local() adds the UTC offset to each transition time in place,
+  `trans_local[0][i] += offset_0` (Modules/_zoneinfo.c:2179-2191), in `int64_t`. A version 2+
+  file may give any 64-bit transition time, so a transition at 2**63 - 1 into a +1h type wraps
+  to a large negative local time (CPython builds with -fwrapv). find_ttinfo() then sees every
+  datetime as after the last transition and uses the rule for after it: utcoffset() of
+  2000-01-01 is +01:00 BBB in C and +00:00 AAA (the type before the first transition) in
+  Python. fromutc() has the same `int64_t` arithmetic at :691 and :712.
+likelihood: |
+  Very low: RFC 9636 3.2 recommends transition times of at least -2**59, and real files use 1901..2037.
+maybe_intended: |
+  No: Python computes with ints and C has no range check.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  data = tzif([2**63 - 1], [1], [(0, 0, 0), (3600, 0, 4)], b'AAA\x00BBB\x00')
+  c, py = both(data, lambda z: (z.utcoffset(dt.datetime(2000, 1, 1)), z.tzname(dt.datetime(2000, 1, 1))))
+  print('C', c, 'Py', py)
+  if c == (dt.timedelta(hours=1), 'BBB') and py == (dt.timedelta(0), 'AAA'):
+      print('REPRODUCED datetime-zoneinfo-transition-int64-wrap')
+expected: |
+  +00:00 AAA in both (the instant is before the only transition).
+promised_by: |
+  no silent wraparound; the twins being interchangeable.
+cause: |
+  Modules/_zoneinfo.c:2179-2191 `+=` on int64_t without an overflow check.
+possible_fix: |
+  Clamp or reject transition times whose local value overflows (e.g. refuse |t| > 2**62 in load_data).
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues: []
+  queries: ["zoneinfo transition overflow", "zoneinfo ts_to_local", "zoneinfo int64 wraparound", "zoneinfo malformed TZif"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.TsToLocalTwins
+  theorem: PyLean.Datetime.Zone.tsToLocalTwins_refuted

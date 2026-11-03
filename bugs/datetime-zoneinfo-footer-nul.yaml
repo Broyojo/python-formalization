@@ -1,0 +1,62 @@
+id: datetime-zoneinfo-footer-nul
+title: "_zoneinfo: a TZ footer with an embedded NUL is cut at the NUL"
+priority: P4
+kind: twin-divergence
+module: datetime
+files: [Modules/_zoneinfo.c]
+functions: ["C parse_tz_str", "C load_data", "_parse_tz_str"]
+summary: |
+  The footer of a version 2+ file is the bytes up to the next newline (_common.py:125-128),
+  which may contain NUL bytes. C parse_tz_str() takes `PyBytes_AsString(tz_str_obj)`
+  (Modules/_zoneinfo.c:1626) and walks it as a C string, so it stops at the first NUL:
+  the footer `EST5\0junk` is read as `EST5` and accepted. Python decodes the whole footer and
+  its pattern refuses it (ValueError "... is not a valid TZ string").
+likelihood: |
+  Low: needs a malformed file; real footers are printable ASCII.
+maybe_intended: |
+  No: C otherwise rejects trailing characters ("Extraneous characters at end of TZ string").
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  data = tzif([], [], [(0, 0, 0)], b'AAA\x00', b'EST5\x00junk')
+  c, py = both(data, lambda z: z.utcoffset(dt.datetime(2000, 1, 1)))
+  print('C', repr(c), 'Py', repr(py))
+  if c == dt.timedelta(hours=-5) and py == 'ValueError':
+      print('REPRODUCED datetime-zoneinfo-footer-nul')
+expected: |
+  ValueError in both (the footer is not a valid TZ string).
+promised_by: |
+  the twins being interchangeable; ZoneInfo.from_file docs (ValueError for an invalid TZif file).
+cause: |
+  Modules/_zoneinfo.c:1626 PyBytes_AsString with no check for embedded NUL.
+possible_fix: |
+  Use PyBytes_AsStringAndSize and refuse a length that differs from strlen, or check `*p == '\0'` against the end.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues: []
+  queries: ["zoneinfo footer null byte", "zoneinfo TZ string NUL", "_zoneinfo PyBytes_AsString", "zoneinfo malformed TZif"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.TzStrTwins
+  theorem: PyLean.Datetime.Zone.tzStrTwins_refuted

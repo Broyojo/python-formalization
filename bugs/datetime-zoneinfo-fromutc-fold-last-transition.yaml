@@ -1,0 +1,68 @@
+id: datetime-zoneinfo-fromutc-fold-last-transition
+title: "zoneinfo: pure-Python fromutc() misses the fold of the last explicit transition"
+priority: P3
+kind: twin-divergence
+module: datetime
+files: [Lib/zoneinfo/_zoneinfo.py]
+functions: ["ZoneInfo.fromutc", "_TZStr._get_trans_info_fromutc", "C zoneinfo_fromutc"]
+summary: |
+  After the last explicit transition Python's fromutc() asks only the footer rule for the
+  fold (Lib/zoneinfo/_zoneinfo.py:132-137). C also checks whether that last transition lowered
+  the offset (Modules/_zoneinfo.c:681-694). For a transition from +03 to +02 on 2001-11-15 and
+  the footer BBB-2CCC-3,M3.5.0,M10.5.0/3, 00:30 UTC is 02:30 local with fold=1 in C and fold=0
+  in Python, whose result converts back to 23:30 UTC. DUPLICATE of gh-159707 (open).
+likelihood: |
+  Medium for pure-Python users (PyPy) in zones whose last explicit transition is a non-DST offset decrease.
+maybe_intended: |
+  No: C was written to handle exactly this case.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  T = int(dt.datetime(2001, 11, 15, tzinfo=dt.timezone.utc).timestamp())
+  data = tzif([T], [1], [(10800, 0, 0), (7200, 0, 4)], b'AAA\x00BBB\x00', b'BBB-2CCC-3,M3.5.0,M10.5.0/3')
+  def f(z):
+      u = dt.datetime(2001, 11, 15, 0, 30, tzinfo=z)
+      r = z.fromutc(u)
+      return (r.fold, r.astimezone(dt.timezone.utc) == u.replace(tzinfo=dt.timezone.utc))
+  c, py = both(data, f)
+  print('C', c, 'Py', py)
+  if c == (1, True) and py == (0, False):
+      print('REPRODUCED datetime-zoneinfo-fromutc-fold-last-transition')
+expected: |
+  fold=1 and a UTC round trip, as C gives.
+promised_by: |
+  tzinfo.fromutc contract (inverse of utcoffset); C/Python twins.
+cause: |
+  Lib/zoneinfo/_zoneinfo.py:132-137 lacks the check at Modules/_zoneinfo.c:681-694.
+possible_fix: |
+  After get_trans_info_fromutc, set fold when the previous ttinfo's offset exceeds the new one and timestamp < trans[-1] + diff.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 159707, state: open, relation: duplicate, reason: same missing check}
+  queries: ["zoneinfo fromutc fold", "zoneinfo fromutc", "_zoneinfo"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.FromutcTwins
+  theorem: PyLean.Datetime.Zone.fromutcTwins_refuted

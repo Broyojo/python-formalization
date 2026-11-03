@@ -1,0 +1,66 @@
+id: datetime-zoneinfo-isdst-sum
+title: "zoneinfo: pure-Python dst() is 0 for DST types when an isdst byte is neither 0 nor 1"
+priority: P4
+kind: twin-divergence
+module: datetime
+files: [Lib/zoneinfo/_zoneinfo.py, Modules/_zoneinfo.c]
+functions: ["ZoneInfo._utcoff_to_dstoff", "ZoneInfo._load_file", "C utcoff_to_dstoff"]
+summary: |
+  Both twins infer each DST type's offset from neighbouring transitions and stop early
+  once every DST type has one. Python counts the DST types with `dst_cnt = sum(isdsts)`
+  (Lib/zoneinfo/_zoneinfo.py:314), but `struct` read the flags as signed bytes (`">lbb"`,
+  _common.py:81), so a flag byte 0xff counts as -1. With flags (0, 1, 0xff) the sum is 0, the
+  loop breaks before its first step (:318-319), and the `for ... else` fallback to 3600 is
+  skipped, so both DST types report dst() == 0. C counts every type (:2066-2070) and treats
+  each flag by truthiness, so it gives 1h and 2h. utcoffset() and tzname() agree.
+likelihood: |
+  Low: RFC 9636 3.2 requires tt_isdst to be 0 or 1, so this needs a malformed file.
+maybe_intended: |
+  No: the count is meant to be the number of DST types; C's is the number of types.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  data = tzif([0, 1000, 2000, 3000], [0, 1, 0, 2], [(0, 0, 0), (3600, 1, 4), (7200, 255, 8)],
+              b'AAA\x00BBB\x00CCC\x00')
+  probe = [dt.datetime(1970, 1, 1) + dt.timedelta(seconds=s) for s in (5000, 11000)]
+  c, py = both(data, lambda z: [z.dst(p) for p in probe])
+  print('C', c, 'Py', py)
+  if c == [dt.timedelta(hours=1), dt.timedelta(hours=2)] and py == [dt.timedelta(0)] * 2:
+      print('REPRODUCED datetime-zoneinfo-isdst-sum')
+expected: |
+  Both: dst() of 1h and 2h, as C gives (or both refuse the file, since the flag is invalid).
+promised_by: |
+  the C and Python twins being interchangeable; RFC 9636 3.2 (isdst is a boolean).
+cause: |
+  Lib/zoneinfo/_zoneinfo.py:314 `dst_cnt = sum(isdsts)` over signed bytes, with the break at :318-319.
+possible_fix: |
+  `dst_cnt = sum(map(bool, isdsts))`, or reject flags other than 0/1 in _common.load_data.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues: []
+  queries: ["zoneinfo dst isdst", "zoneinfo utcoff_to_dstoff", "zoneinfo invalid isdst", "zoneinfo dst offset wrong", "zoneinfo malformed TZif", "bugforge README: no zoneinfo entry"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.DstoffTwins
+  theorem: PyLean.Datetime.Zone.dstoffTwins_refuted

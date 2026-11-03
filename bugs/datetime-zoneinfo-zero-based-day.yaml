@@ -1,0 +1,63 @@
+id: datetime-zoneinfo-zero-based-day
+title: "zoneinfo: the zero-based TZ rule `n` is evaluated one day early in both twins"
+priority: P3
+kind: spec-violation
+module: datetime
+files: [Lib/zoneinfo/_zoneinfo.py, Modules/_zoneinfo.c]
+functions: ["_DayOffset.year_to_epoch", "_post_epoch_days_before_year", "C dayrule_year_to_timestamp", "C ymd_to_ord"]
+summary: |
+  POSIX defines the rule `n` as the zero-based day of the year (0 is January 1). Both twins
+  start from the day before January 1 (Lib/zoneinfo/_zoneinfo.py:535, :541;
+  Modules/_zoneinfo.c:1425, :1443) and add n, which is right for the one-based `Jn` but puts `n`
+  a day early: with STD0DST-1,10/0,J100/0, DST starts on January 10 instead of January 11.
+  glibc's tzset() gives January 11. DUPLICATE of gh-159712 (open).
+likelihood: |
+  Low: zic emits `Jn` or `Mm.w.d` rules; hand-written TZ strings use `n`.
+maybe_intended: |
+  No: the 3.15 fix of J60 shows the Julian forms are meant to follow POSIX.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  assert Cz.ZoneInfo.__module__ == 'zoneinfo' and Cz.ZoneInfo is not Pz.ZoneInfo
+  def tzif(trans, idx, types, abbr, footer=b''):
+      v1 = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, 0, 0, 0)
+      h = b'TZif2' + bytes(15) + struct.pack('>6l', 0, 0, 0, len(trans), len(types), len(abbr))
+      body = b''.join(struct.pack('>q', t) for t in trans) + bytes(idx)
+      body += b''.join(struct.pack('>lBB', *t) for t in types) + abbr
+      return v1 + h + body + b'\n' + footer + b'\n'
+  def both(data, f):
+      out = []
+      for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+          try:
+              out.append(f(Z.from_file(io.BytesIO(data), key='k')))
+          except Exception as e:
+              out.append(type(e).__name__)
+      return out
+  data = tzif([], [], [(0, 0, 0)], b'STD\x00', b'STD0DST-1,10/0,J100/0')
+  c, py = both(data, lambda z: [dt.datetime(2021, 1, d, 12, tzinfo=z).tzname() for d in (10, 11)])
+  print('C', c, 'Py', py)
+  if c == py == ['DST', 'DST']:
+      print('REPRODUCED datetime-zoneinfo-zero-based-day')
+expected: |
+  ['STD', 'DST'] (January 10 is still standard time).
+promised_by: |
+  POSIX TZ (IEEE Std 1003.1 8.3: "The zero-based Julian day (0 <= n <= 365)"); RFC 9636 3.3.1.
+cause: |
+  Lib/zoneinfo/_zoneinfo.py:541 and Modules/_zoneinfo.c:1443 add n to the day before January 1.
+possible_fix: |
+  Add 1 to d for the non-Julian form (`if not self.julian: d += 1`), in both twins.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED (3.16.0a1+dev)
+duplicates:
+  issues:
+    - {number: 159712, state: open, relation: duplicate, reason: same off-by-one}
+  queries: ["zoneinfo julian day", "_zoneinfo"]
+  note: |
+    Searched with `gh search issues --repo python/cpython` and unquoted words; bugforge README has no zoneinfo entry.
+lean:
+  property: PyLean.Datetime.Zone.ZeroBasedRuleMeaning
+  theorem: PyLean.Datetime.Zone.zeroBasedRuleMeaning_refuted
