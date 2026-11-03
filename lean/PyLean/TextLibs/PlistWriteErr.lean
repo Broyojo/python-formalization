@@ -70,7 +70,7 @@ be positive')` and `OverflowError(value)` for a UID's data (:832-833, :843), `Ty
 unsupported type (:869), `UnicodeEncodeError` for a `str` with a lone surrogate (:826),
 `TypeError` for an aware datetime without `aware_datetime` (:814) and `OverflowError` when its UTC
 time leaves the datetime range (:810); and `dump`'s `ValueError('Unsupported format: %r')`
-(:934-935) for any value. -/
+(:934-935) for any value and any hashable `fmt` not equal to a format. Scope limit: `.other` is a hashable object that is not equal to `FMT_XML` or `FMT_BINARY`; `_FORMATS` finds a key by hash and equality, so an object whose own `__hash__`/`__eq__` makes it equal to a format would select that format, and is not represented. -/
 def WriteErrors : Prop :=
   ∀ (xmlw : XmlWrite) (cfg : WCfg) (k : Nat),
     (∀ v : Int, (v < -2 ^ 63 ∨ 2 ^ 64 ≤ v) →
@@ -95,13 +95,18 @@ def WriteErrors : Prop :=
     (∀ (H : WHeap) items, H.getD 0 .none = .dict items → cfg.skipkeys = false →
       (∃ q ∈ items, keyStr H q.1 = none) →
       dumpsR xmlw (k + 8) H 0 .binary cfg = .error (.typeError "keys must be strings")) ∧
+    (∀ us o, cfg.awareDatetime = true → (o = 0 ∨ (dtMinUs ≤ us - o ∧ us - o ≤ dtMaxUs)) →
+      dumpsR xmlw (k + 8) [.date us (some o)] 0 .binary cfg =
+      .ok (asciiBytes "bplist00" ++ 0x33 :: beBytes (Binary64.F64.ofRat (mkRat (us - o) 1000000)).bits 8 ++
+        [8, 0, 0, 0, 0, 0, 0, 1, 1] ++ beBytes 1 8 ++ beBytes 0 8 ++ beBytes 17 8)) ∧
+    (∀ (H : WHeap) root, dumpsR xmlw (k + 3) H root .xml cfg = xmlw (k + 1) H cfg root) ∧
     (∀ us, cfg.awareDatetime = false → dumpsR xmlw (k + 8) [.date us none] 0 .binary cfg =
       .ok (asciiBytes "bplist00" ++ 0x33 :: beBytes (Binary64.F64.ofRat (mkRat us 1000000)).bits 8 ++
         [8, 0, 0, 0, 0, 0, 0, 1, 1] ++ beBytes 1 8 ++ beBytes 0 8 ++ beBytes 17 8))
 
 theorem writeErrors_proven : WriteErrors := by
   intro xmlw cfg k
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro v hv
     have h0 : ∀ h : -2 ^ 63 ≤ v, v < 2 ^ 64 → False := fun h1 h2 => by omega
     simp [dumpsR, dumpR, binaryWriteR, flattenR, WState.init, tableLookup, idLookup, scalarType,
@@ -152,6 +157,17 @@ theorem writeErrors_proven : WriteErrors := by
   · intro H root ty e; simp [dumpsR, dumpR, call, bind, Except.bind, frozendictKeyErr]
   · intro H items hd hs hq
     exact dumps_dict_nonstr xmlw cfg k H items hd hs hq
+  · intro us o ha ho
+    have hd : dateSeconds cfg us (some o) = .ok (Binary64.F64.ofRat (mkRat (us - o) 1000000)).bits := by
+      by_cases h0 : o = 0
+      · subst h0; simp [dateSeconds, ha, pure, Except.pure, bind, Except.bind]
+      · have hr : ¬ (us - o < dtMinUs ∨ us - o > dtMaxUs) := by omega
+        simp [dateSeconds, ha, h0, hr, pure, Except.pure, bind, Except.bind]
+    simp [dumpsR, dumpR, binaryWriteR, flattenR, WState.init, tableLookup, idLookup, scalarType,
+      call, countToSizeR, countToSize, writeAll, writeObjectR, getrefnumR, scalarMatch, bind,
+      Except.bind, hd, pure, Except.pure, beBytes_length, packRefs, beBytes, asciiBytes, bplistHeader]
+  · intro H root
+    simp [dumpsR, dumpR, call, bind, Except.bind]
   · intro us ha
     simp [dumpsR, dumpR, binaryWriteR, flattenR, WState.init, tableLookup, idLookup, scalarType,
       call, countToSizeR, countToSize, writeAll, writeObjectR, getrefnumR, scalarMatch, bind,

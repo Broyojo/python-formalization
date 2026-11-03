@@ -263,7 +263,8 @@ theorem readTokenSpec_proven : ReadTokenSpec := by
 /-! ## `load` and `loads` -/
 
 /-- `load` with `fmt=None` refuses a header that is neither XML nor `bplist00` (:906-907), and
-`_FORMATS[fmt]` raises `KeyError(fmt)` for any other format object (:910). -/
+`_FORMATS[fmt]` raises `KeyError(fmt)` for any other hashable object not equal to a format (:910).
+Scope limit: `.other` is a hashable object that is not equal to `FMT_XML` or `FMT_BINARY`; `_FORMATS` finds a key by hash and equality, so an object whose own `__hash__`/`__eq__` makes it equal to a format would select that format, and is not represented. -/
 def LoadDispatchSpec : Prop :=
   (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool), 3 ≤ r →
     isFmtXml (buf.take 32) = false → isFmtBinary (buf.take 32) = false →
