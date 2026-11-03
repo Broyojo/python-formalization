@@ -409,7 +409,7 @@ theorem revRun_inv {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K �
         exact ih d' di h2 h
     | del k =>
       simp only [revRun]
-      rcases delItemRefines_proven K V P hf eqv H d hd k with ⟨_, h1⟩ | ⟨_, d', h1, h2, _⟩
+      rcases dictDelItem_spec H d hd k with ⟨_, h1⟩ | ⟨_, d', h1, h2, _⟩
       · rw [h1]
         exact ih d di hd h
       · rw [h1]

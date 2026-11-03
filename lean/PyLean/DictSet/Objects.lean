@@ -16,7 +16,8 @@ structure Atom where
   /-- Equality class: `==` holds between atoms of one class. -/
   cls : Nat
   hash : Int
-  /-- 0: hashable; 1: `TypeError` from `hash()`; 2: `hash()` raises `ValueError`. -/
+  /-- 0: hashable; 1: `TypeError` from `hash()`; 2: `hash()` raises `ValueError`; 3: it clears the
+  target dict, then raises `ValueError`. -/
   hkind : Nat := 0
   isStr : Bool := false
   isStrLike : Bool := false
@@ -33,7 +34,18 @@ structure Atom where
   nan : Bool := false
   /-- `__repr__` does to the target dict what `act` would, then answers `rep`. -/
   ract : Nat := 0
+  /-- `__eq__` raises `KESub("eq")`, a subclass of `KeyError`, instead of `ValueError('eq')`. -/
+  rk : Bool := false
   deriving DecidableEq, Repr, Inhabited
+
+/-- What `a == b` raises when one of them raises: the left operand's `__eq__` runs first. -/
+def Atom.eqExc (a b : Atom) : PyExc :=
+  let r := if a.raises then a else b
+  if r.rk then .named "KESub" "'eq'" else .valueError "eq"
+
+/-- `PyErr_GivenExceptionMatches(e, PyExc_KeyError)` for what the test objects raise. -/
+def isKeyErrorTest (e : PyExc) : Bool :=
+  isKeyErrorExact e || e == .named "KESub" "'eq'"
 
 /-- A pool object, or a pair built by the items views. -/
 inductive DObj where
@@ -74,7 +86,7 @@ def eq (x y : DObj) : Py Bool :=
   if x = y then .ok true else
   match x, y with
   | .atom a, .atom b =>
-    if a.raises || b.raises then .error (.valueError "eq") else .ok (a.cls == b.cls)
+    if a.raises || b.raises then .error (Atom.eqExc a b) else .ok (a.cls == b.cls)
   | .tuple a b, .tuple c d =>
     match eq a c with
     | .error e => .error e
@@ -86,7 +98,7 @@ def eq (x y : DObj) : Py Bool :=
 def plainEq (x y : DObj) : Py Bool :=
   match x, y with
   | .atom a, .atom b =>
-    if a.raises || b.raises then .error (.valueError "eq")
+    if a.raises || b.raises then .error (Atom.eqExc a b)
     else .ok (a.cls == b.cls && !a.nan && !b.nan)
   | _, _ => eq x y
 
@@ -131,9 +143,16 @@ def dKeyOps : KeyOps DObj :=
 abbrev DD := PyDict DObj DObj
 abbrev DS := SetObj DObj
 
-/-- `__eq__` on a key whose comparison may clear or pop from the dict being probed. -/
+/-- `__hash__` clears the dict before it raises (the test's `HClear`, `hkind` 3). -/
+def DObj.hashClears : DObj → Bool
+  | .atom a => a.hkind == 3
+  | _ => false
+
+/-- `__eq__` on a key whose comparison may clear or pop from the dict being probed, and `__hash__`
+that may clear it. -/
 def dProto : Proto DObj DD :=
   { dKeyOps with
+    hashEff := fun k s => if k.hashClears then dictClear s else s
     eq := fun a b s =>
       match DObj.action a b with
       | 1 => (.ok false, dictClear s)
@@ -160,7 +179,7 @@ def evilAct (pool : Array DObj) (n : Nat) (t : DD) : DD :=
 /-- `KEvil.__eq__` answers `False`, or raises once it has acted if the key is flagged so. -/
 def evilAnswer (a b : DObj) : Py Bool :=
   match a, b with
-  | .atom x, .atom y => if x.raises || y.raises then .error (.valueError "eq") else .ok false
+  | .atom x, .atom y => if x.raises || y.raises then .error (Atom.eqExc x y) else .ok false
   | _, _ => .ok false
 
 /-- `__eq__` acting on the dict being probed. -/

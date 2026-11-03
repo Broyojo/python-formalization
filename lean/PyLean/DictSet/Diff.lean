@@ -80,7 +80,8 @@ def parseAtom (j : Json) : Except String Atom := do
            raises := ← getBool j "r", act := ← getNat j "a", rep := ← getStr j "rep"
            tname := ← getStr j "t", fs := ← getOptInt j "fs"
            nan := (j.getObjValAs? Bool "nan").toOption.getD false
-           ract := (j.getObjValAs? Nat "ra").toOption.getD 0 }
+           ract := (j.getObjValAs? Nat "ra").toOption.getD 0
+           rk := (j.getObjValAs? Bool "rk").toOption.getD false }
 
 def arg (op : Array Json) (k : Nat) : Except String Json :=
   match op[k]? with
@@ -154,7 +155,11 @@ def seq2Item (st : St) (j : Json) : Except String (Seq2Item DObj DObj) := do
   let tag ← (← arg a 0).getStr?
   match tag with
   | "p" => return .pair (← obj st (← arg a 1)) (← obj st (← arg a 2))
-  | "b" => return .notSeq (.typeError "object is not iterable")
+  | "b" => return .notSeq (.typeError "object is not iterable") true
+  -- An element whose iterator raises a subclass of `TypeError`, which `PySequence_Fast` passes on.
+  | "bt" => return .notSeq (.named "TESub" "sub") true
+  -- An element whose iterator raises `ValueError`.
+  | "bv" => return .notSeq (.valueError "next") false
   | "l" => return .wrongLen (← argN a 1)
   | t => throw s!"seq2 {t}"
 
@@ -165,7 +170,23 @@ def mapArg (st : St) (ksJ pairsJ : Json) : Except String (MergeArg DObj DObj) :=
   let ps ← (← arrOf pairsJ).mapM fun p => do
     let a ← p.getArr?
     return ((← obj st (← arg a 0)), (← obj st (← arg a 1)))
-  return .mapping (pure ks) fun k =>
+  return .mapping (pure (ReIter.ofKeys ks)) fun k =>
+    M.lift (match ps.find? (fun p => p.1 == k) with
+      | some p => .ok p.2
+      | none => .error (keyErr dProto k))
+
+/-- `['ma', keys, pairs, extra, extraValue]`: `keys()` returns the mapping's own list, and the first
+`__getitem__` appends `extra` to it, which the loop of `dict_merge` then reaches. -/
+def mapAppendArg (st : St) (a : Array Json) : Except String (MergeArg DObj DObj) := do
+  let ks ← objs st (← arg a 1)
+  let ps ← (← arrOf (← arg a 2)).mapM fun p => do
+    let q ← p.getArr?
+    return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+  let extra ← obj st (← arg a 3)
+  let ev ← obj st (← arg a 4)
+  let ps := ps ++ [(extra, ev)]
+  let all := if ks.isEmpty then [] else ks ++ [extra]
+  return .mapping (pure (ReIter.ofKeys all)) fun k =>
     M.lift (match ps.find? (fun p => p.1 == k) with
       | some p => .ok p.2
       | none => .error (keyErr dProto k))
@@ -213,6 +234,7 @@ def updArg (st : St) (j : Json) : Except String (UpdateArg DObj DObj) := do
       { steps := steps ++ if stop then [M.throw (.valueError "stop")] else [] }
   | "m" => return .other (pure true) (← mapArg st (← arg a 1) (← arg a 2)) { steps := [] }
   | "mr" => return .other (pure true) (← mapHookArg st a) { steps := [] }
+  | "ma" => return .other (pure true) (← mapAppendArg st a) { steps := [] }
   | "hr" => return .other (M.throw (.valueError "hasattr")) (.dict {}) { steps := [] }
   | "n" =>
     return .other (pure false) (.dict {})
@@ -336,7 +358,7 @@ def fkIterOf (st : St) (t : Array Json) (id : Nat) : Except String (FkIter DObj 
   | "fd" => return { fast := some (.dict (frozenOf st.ds[← argN t 1]! id)), iter := { steps := [] } }
   | "s" =>
     let s := st.ss[← argN t 1]!
-    return { fast := some (.set s.used (setEntries s)), iter := { steps := [] } }
+    return { fast := some (.set s.used ((setEntries s).map fun e => pure (some e))), iter := { steps := [] } }
   | "l" => return { fast := none, iter := ReIter.ofIterable { items := ← objs st (← arg t 1) } }
   | "g" =>
     return { fast := none
@@ -382,7 +404,7 @@ def mergeObj (st : St) (j : Json) : Except String (Option (MergeObj DObj DObj)) 
   match ← (← arg a 0).getStr? with
   | "d" =>
     return some { isDict := true, iterIsDict := true, asDict := st.ds[← argN a 1]!,
-                  keys := pure [], getitem := fun _ => M.throw .modelFuel }
+                  keys := pure (ReIter.ofKeys []), getitem := fun _ => M.throw .modelFuel }
   | "m" =>
     match ← mapArg st (← arg a 1) (← arg a 2) with
     | .mapping ks g => return some { isDict := false, iterIsDict := false, asDict := {}, keys := ks,
@@ -408,7 +430,7 @@ def stepC (st : St) (name : String) (a : Array Json) : Except String (Option (Js
   | "c_del" => return some (resJ unitJ (withD st i (dictDelItemChecked P isAny (← k 2))))
   | "c_in" => return some (resJ toJson (withD st i (pyDictContainsChecked P isAny (← k 2))))
   | "c_get" =>
-    let (r, st') := withD st i (dictGetitemFull P isAny (← k 2))
+    let (r, st') := withD st i (dictGetitemFull P isKeyErrorTest isAny (← k 2))
     let f : Option DObj × Option PyExc → Json := fun p =>
       Json.arr #[match p.1 with
         | some v => enc v
@@ -654,7 +676,7 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
     let (_, sub) := dictMerge dProto (.dict st.ds[i]!) 1 ({ ident := id } : DD)
     let (id2, st) := fresh st
     let asMap : MergeArg DObj DObj :=
-      .mapping (pure (dictKeysList sub).reverse) fun key s =>
+      .mapping (pure (ReIter.ofKeys (dictKeysList sub).reverse)) fun key s =>
         ((dictSubscript dProto none key sub).1, s)
     return some (toDSlot2 st (dictCopyImpl dProto sub id2 false asMap))
   | "eq" =>

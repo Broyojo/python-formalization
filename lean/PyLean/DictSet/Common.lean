@@ -101,6 +101,9 @@ structure KeyOps (K : Type) where
 shortcut built in and may raise or mutate the state. -/
 structure Proto (K σ : Type) extends KeyOps K where
   eq : K → K → M σ Bool
+  /-- What a call of `__hash__` does to the state, whatever it then answers: `hash` gives the
+  answer (or the exception), this the effect, which comes first. -/
+  hashEff : K → σ → σ := fun _ s => s
 
 /-- `_PyErr_SetKeyError(key)`: `str(e)` is `repr(key)`. -/
 def keyErr {K σ : Type} (P : Proto K σ) (k : K) : PyExc := .keyError (P.reprStr k)

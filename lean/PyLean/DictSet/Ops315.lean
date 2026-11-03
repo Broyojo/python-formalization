@@ -265,13 +265,25 @@ def dictDictFromkeys (src : PyDict K V) (value : V) : DM K V Unit := fun mp =>
     let s := if alias then s else { s with peer := some src.toPeer }
     fromkeysLive P value alias (fromkeysFuel src) 0 s
 
-/-- `dict_set_fromkeys` (:3389-3413), from an exact set or frozenset of `size` entries, `es` in table
-order. The set is read as it stood at the start: a callback that changes it while it is read is out
-of the model. -/
-def dictSetFromkeys (size : Nat) (es : List (K × Int)) (value : V) : DM K V Unit := do
+/-- The loop of `dict_set_fromkeys` (:3406-3411): each step is one `_PySet_NextEntryRef`, which reads
+the set as the last `insertdict` left it (a key's `__eq__` can change the set), and gives the next
+key with its stored hash, or `none` at the end. -/
+def setFromkeysLoop (value : V) : List (DM K V (Option (K × Int))) → DM K V Unit
+  | [] => pure ()
+  | step :: rest => do
+    match ← step with
+    | none => pure ()
+    | some (key, hash) =>
+      insertDict P key hash value
+      setFromkeysLoop value rest
+
+/-- `dict_set_fromkeys` (:3389-3413), from an exact set or frozenset of `size` entries at the start;
+`steps` is the walk of `_PySet_NextEntryRef` over it. -/
+def dictSetFromkeys (size : Nat) (steps : List (DM K V (Option (K × Int)))) (value : V) :
+    DM K V Unit := do
   let mp ← M.get
   dictResize (max (estimateLog2Keysize size) mp.body.log2Size) false
-  fromkeysLoop P value es
+  setFromkeysLoop P value steps
 
 /-- An object `cls()` may return, as `_PyDict_FromKeys` tests it. -/
 structure FkObj (K V : Type) where
@@ -284,6 +296,9 @@ structure FkObj (K V : Type) where
   exact : Bool := true
   /-- `_PyObject_GC_IS_TRACKED`. -/
   tracked : Bool := true
+  /-- `Py_TPFLAGS_HAVE_GC` of its type: the object has a GC header in front of it. Every dict and
+  frozendict has one; a `bytes` or an `int` does not. -/
+  isGC : Bool := true
   /-- `Py_TYPE(d)->tp_iter == dict_iter`. -/
   iterIsDict : Bool := true
   deriving Inhabited
@@ -312,8 +327,8 @@ structure FkCls (K V : Type) where
 inductive FkFast (K V : Type) where
   /-- `PyDict_CheckExact(iterable)` or `PyFrozenDict_CheckExact(iterable)`. -/
   | dict (src : PyDict K V)
-  /-- `PyAnySet_CheckExact(iterable)`: its size and `(key, hash)` in table order. -/
-  | set (size : Nat) (es : List (K × Int))
+  /-- `PyAnySet_CheckExact(iterable)`: its size, and the steps of `_PySet_NextEntryRef` over it. -/
+  | set (size : Nat) (steps : List (DM K V (Option (K × Int))))
 
 structure FkIter (K V : Type) where
   fast : Option (FkFast K V)
@@ -365,7 +380,7 @@ def pyDictFromKeys (cls : FkCls K V) (iterable : FkIter K V) (value : V) (id : N
         if d.dictExact || d.frozenExact then
           match iterable.fast with
           | some (.dict src) => some (dictDictFromkeys P src value)
-          | some (.set size es) => some (dictSetFromkeys P size es value)
+          | some (.set size steps) => some (dictSetFromkeys P size steps value)
           | none => none
         else none
       let filled : Py (FkObj K V) :=
@@ -381,8 +396,11 @@ def pyDictFromKeys (cls : FkCls K V) (iterable : FkIter K V) (value : V) (id : N
       match filled with
       | .error e => (.error e, [])
       | .ok d' =>
-        -- Done (:3587-3599)
+        -- Done (:3587-3599). `_PyObject_GC_IS_TRACKED` and `_PyObject_GC_TRACK` read and write the
+        -- GC header in front of `d`, whatever `cls()` returned: for an object without one that is
+        -- the end of whatever lies before it in memory.
         if needCopy then (cls.callWith d', [d'])
+        else if !d'.isGC then (.error (crash "_PyObject_GC_TRACK on an object with no GC header"), [])
         else (.ok (if d'.tracked then d' else { d' with tracked := true }), [])
 
 /-- `dict_fromkeys_impl` (:3983-3988), the classmethod `fromkeys`. -/

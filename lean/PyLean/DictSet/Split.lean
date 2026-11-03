@@ -1219,7 +1219,7 @@ theorem dictDelItem_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Uni
     ∃ d', dictDelItem P key d = (.ok (), d') ∧ SplitInv hf eqv P.isStr d' ∧
       dictAssoc d' = assocDel eqv (dictAssoc d) key := by
   have hkh : dictDelItem P key d = dictDelItemKnownHash P key (hf key) d := by
-    simp only [dictDelItem, H.hash_ok]
+    simp only [dictDelItem, H.hash_ok, H.hash_quiet]
   rw [hkh]
   rcases dichotomy (eqv := eqv) k key with ⟨ix, e, he, heq⟩ | hno
   · have hlook : dictLookup P key (hf key) d = (.ok ((ix : Int), v.get ix), d) :=
@@ -1431,7 +1431,7 @@ theorem dictSetItem_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Uni
     have := w.notEmpty
     simp only [Body.isEmptyKeys, Body.log2Size, hb, beq_eq_false_iff_ne]
     omega
-  simp [dictSetItem, H.hash_ok, hne]
+  simp [dictSetItem, H.hash_ok, H.hash_quiet, hne]
 
 end Rest
 
@@ -1448,9 +1448,13 @@ def SplitRefines : Prop :=
         ∃ d', dictSetItem P key value d = (.ok (), d') ∧
           (SplitInv hf eqv P.isStr d' ∨ DictInv hf eqv P.isStr d') ∧
           AssocEq eqv (dictAssoc d') (assocSet eqv (dictAssoc d) key value)) ∧
-      ((assocGet eqv (dictAssoc d) key = none ∧ dictDelItem P key d = (.error (keyErr P key), d)) ∨
-        ∃ d', dictDelItem P key d = (.ok (), d') ∧ SplitInv hf eqv P.isStr d' ∧
-          dictAssoc d' = assocDel eqv (dictAssoc d) key) ∧
+      ((d.frozen = true ∧
+          dictDelItemChecked P true key d = (.error (frozendictNoSupport "deletion"), d)) ∨
+        (d.frozen = false ∧
+          ((assocGet eqv (dictAssoc d) key = none ∧
+              dictDelItemChecked P true key d = (.error (keyErr P key), d)) ∨
+            ∃ d', dictDelItemChecked P true key d = (.ok (), d') ∧ SplitInv hf eqv P.isStr d' ∧
+              dictAssoc d' = assocDel eqv (dictAssoc d) key))) ∧
       ((dictAssoc d = [] ∧
           dictPopitem d = (.error (.keyError "'popitem(): dictionary is empty'"), d)) ∨
         ∃ p d', dictPopitem d = (.ok p, d') ∧ DictInv hf eqv P.isStr d' ∧
@@ -1462,10 +1466,17 @@ def SplitRefines : Prop :=
 theorem splitRefines_proven : SplitRefines := by
   intro K V _ P hf eqv H d hd key value
   obtain ⟨k, v, hb, w⟩ := hd
-  refine ⟨lookup_split H d k v hb w key, ?_, dictDelItem_split H d k v hb w key,
+  refine ⟨lookup_split H d k v hb w key, ?_, ?_,
     dictPopitem_split H d k v hb w, dictClear_split d k v hb w, ?_⟩
   · rw [dictSetItem_split H d k v hb w]
     exact insertDict_split H d k v hb w key value
+  · cases hfz : d.frozen with
+    | true => exact Or.inl ⟨rfl, dictDelItemChecked_frozen H key d hfz⟩
+    | false =>
+      right
+      refine ⟨rfl, ?_⟩
+      rw [dictDelItemChecked_dict H key d hfz]
+      exact dictDelItem_split H d k v hb w key
   · rw [dictItems_split d k v hb w, dictAssoc_split d k v hb w]
     simp [live, Function.comp_def]
 

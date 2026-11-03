@@ -23,36 +23,38 @@ theorem dictGetitemSuppress_total (P : Proto K (PyDict K V)) (isDict : Bool) (ke
   | true =>
     simp only [Bool.not_true, Bool.false_eq_true, if_false]
     cases hh : P.hash key with
-    | error e => exact ⟨none, d, rfl⟩
+    | error e => exact ⟨none, P.hashEff key d, rfl⟩
     | ok h =>
       simp only [M.tryCatch]
-      cases hr : (dictLookup P key h >>= fun r => pure r.2) d with
+      cases hr : (dictLookup P key h >>= fun r => pure r.2) (P.hashEff key d) with
       | mk a s =>
         cases a with
-        | error e => exact ⟨none, s, rfl⟩
-        | ok v => exact ⟨v, s, rfl⟩
+        | error e => exact ⟨none, s, by simp [hr]⟩
+        | ok v => exact ⟨v, s, by simp [hr]⟩
 
-/-- Every entry point that hashes first reports a failed hash as `dict_unhashable_type` does and
-leaves the dict alone: an exact `TypeError` is rewritten, anything else passes through. -/
+/-- Every entry point that hashes first reports a failed hash as `dict_unhashable_type` does, in the
+state `__hash__` left (which a `__hash__` that changes the dict and then raises does change): an exact
+`TypeError` is rewritten, anything else passes through, and nothing else happens. -/
 theorem hash_failure (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.hash key = .error e)
     (d : PyDict K V) (v : V) :
-    let err := dictUnhashableType P d.frozen key e
-    dictSetItem P key v d = (.error err, d) ∧
-    dictDelItem P key d = (.error err, d) ∧
-    pyDictContains P key d = (.error err, d) ∧
-    dictSubscript P none key d = (.error err, d) ∧
-    dictGet P key v d = (.error err, d) ∧
-    pyDictGetItemWithError P true key d = (.error err, d) ∧
-    pyDictGetItemRef P true key d = (.error err, d) := by
-  intro err
-  have hk : ∀ {β : Type} (f : Int → DM K V β), (hashKey P key >>= f) d = (.error err, d) := by
+    let d' := P.hashEff key d
+    let err := dictUnhashableType P d'.frozen key e
+    dictSetItem P key v d = (.error err, d') ∧
+    dictDelItemChecked P true key d = (.error err, d') ∧
+    pyDictContains P key d = (.error err, d') ∧
+    dictSubscript P none key d = (.error err, d') ∧
+    dictGet P key v d = (.error err, d') ∧
+    pyDictGetItemWithError P true key d = (.error err, d') ∧
+    pyDictGetItemRef P true key d = (.error err, d') := by
+  intro d' err
+  have hk : ∀ {β : Type} (f : Int → DM K V β), (hashKey P key >>= f) d = (.error err, d') := by
     intro β f
     apply M.bind_err
     simp only [hashKey, hh]
     rfl
   refine ⟨?_, ?_, hk _, hk _, hk _, ?_, ?_⟩
-  · simp only [dictSetItem, hh, err]
-  · simp only [dictDelItem, hh, err]
+  · simp only [dictSetItem, hh, err, d']
+  · simp only [dictDelItemChecked, hh, err, d']
   · simp only [pyDictGetItemWithError, Bool.not_true, Bool.false_eq_true, if_false]
     show (pure PUnit.unit >>= fun _ => hashKey P key >>= fun h =>
       dictLookup P key h >>= fun r => pure r.2) d = _
@@ -65,11 +67,13 @@ theorem hash_failure (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.ha
     exact hk _
 
 /-- On an empty dict `pop` answers before hashing, so an unhashable key is not an error there, while
-on any non-empty dict it is. Both halves are reachable: `{}.pop([], 1)` returns 1. -/
+on any non-empty dict it is, in the state `__hash__` left. Both halves are reachable: `{}.pop([], 1)`
+returns 1. -/
 theorem pop_hash_order (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.hash key = .error e)
     (d : PyDict K V) (hfz : d.frozen = false) :
     (d.used = 0 → pyDictPop P true key d = (.ok none, d)) ∧
-    (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P d.frozen key e), d)) := by
+    (d.used ≠ 0 → pyDictPop P true key d =
+      (.error (dictUnhashableType P (P.hashEff key d).frozen key e), P.hashEff key d)) := by
   constructor
   · intro h
     simp [pyDictPop, h, hfz]
@@ -129,18 +133,19 @@ def GetItemSuppressed : Prop :=
 theorem getItemSuppressed_proven : GetItemSuppressed := fun _ _ _ P isDict key d =>
   dictGetitemSuppress_total P isDict key d
 
-/-- A failed hash, for any protocol. -/
+/-- A failed hash, for any protocol: the exception, in the state `__hash__` left. -/
 def HashFailureFamily : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (e : PyExc), P.hash key = .error e →
     ∀ (d : PyDict K V) (v : V),
-      let err := dictUnhashableType P d.frozen key e
-      dictSetItem P key v d = (.error err, d) ∧
-      dictDelItem P key d = (.error err, d) ∧
-      pyDictContains P key d = (.error err, d) ∧
-      dictSubscript P none key d = (.error err, d) ∧
-      dictGet P key v d = (.error err, d) ∧
-      pyDictGetItemWithError P true key d = (.error err, d) ∧
-      pyDictGetItemRef P true key d = (.error err, d)
+      let d' := P.hashEff key d
+      let err := dictUnhashableType P d'.frozen key e
+      dictSetItem P key v d = (.error err, d') ∧
+      dictDelItemChecked P true key d = (.error err, d') ∧
+      pyDictContains P key d = (.error err, d') ∧
+      dictSubscript P none key d = (.error err, d') ∧
+      dictGet P key v d = (.error err, d') ∧
+      pyDictGetItemWithError P true key d = (.error err, d') ∧
+      pyDictGetItemRef P true key d = (.error err, d')
 theorem hashFailureFamily_proven : HashFailureFamily := fun _ _ _ P key e hh d v =>
   hash_failure P key e hh d v
 
@@ -149,7 +154,8 @@ def PopHashOrder : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (e : PyExc), P.hash key = .error e →
     ∀ d : PyDict K V, d.frozen = false →
       (d.used = 0 → pyDictPop P true key d = (.ok none, d)) ∧
-      (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P d.frozen key e), d))
+      (d.used ≠ 0 → pyDictPop P true key d =
+        (.error (dictUnhashableType P (P.hashEff key d).frozen key e), P.hashEff key d))
 theorem popHashOrder_proven : PopHashOrder := fun _ _ _ P key e hh d hfz =>
   pop_hash_order P key e hh d hfz
 

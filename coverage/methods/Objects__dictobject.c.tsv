@@ -125,7 +125,7 @@ Objects/dictobject.c	3326	3339	PyDict_PopString	PyDict_PopString(PyObject *op, c
 Objects/dictobject.c	3343	3354	dict_pop_default	dict_pop_default(PyObject *dict, PyObject *key, PyObject *default_value)	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
 Objects/dictobject.c	3357	3360	_PyDict_Pop	_PyDict_Pop(PyObject *dict, PyObject *key, PyObject *default_value)	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
 Objects/dictobject.c	3363	3387	dict_dict_fromkeys	dict_dict_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	modelled	dict-dict-fromkeys-body	
-Objects/dictobject.c	3390	3413	dict_set_fromkeys	dict_set_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		changed-in-3.15:
+Objects/dictobject.c	3390	3413	dict_set_fromkeys	dict_set_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		
 Objects/dictobject.c	3417	3600	_PyDict_FromKeys	_PyDict_FromKeys(PyObject *cls, PyObject *iterable, PyObject *value)	modelled	dict-fromkeys-frozen-stable	
 Objects/dictobject.c	3605	3638	dict_dealloc	dict_dealloc(PyObject *self)	modelled	dict-dealloc	
 Objects/dictobject.c	3642	3724	anydict_repr_impl	anydict_repr_impl(PyObject *self)	modelled	dict-repr-body,dict-repr-quiet	

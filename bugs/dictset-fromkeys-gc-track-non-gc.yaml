@@ -94,6 +94,5 @@ duplicates:
     (same function, same gh-151722 change, different defect: that one fills a leaked frozendict, this
     one GC-tracks a non-GC object).
 lean:
-  property: null
-  theorem: null
-  note: "Not yet a Lean refutation: the DictSet model of _PyDict_FromKeys (Ops315.lean) has no GC-header notion; the review marked the row HOLLOW for this."
+  property: PyLean.DictSet.FromKeysNoCrash
+  theorem: PyLean.DictSet.fromKeysNoCrash_refuted
