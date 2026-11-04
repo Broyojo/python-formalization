@@ -1,5 +1,5 @@
 id: pyio-stringio-pyio-newlines-attributeerror
-title: "_pyio.TextIOWrapper.newlines raises AttributeError once a non-universal stream has been read"
+title: "_pyio.TextIOWrapper.newlines raises AttributeError once a non-universal stream has been read, and is None before the first read where C reports the written newlines"
 priority: P4
 kind: twin-mismatch
 module: pyio
@@ -12,6 +12,10 @@ summary: |
   as a read has created the decoder. It works before the first read (None), so the failure depends
   on the stream's history. The C property uses PyObject_GetOptionalAttr and returns None. The same
   happens for _pyio.TextIOWrapper over a file, not only StringIO.
+  (2) In the universal modes the twins also disagree before the first read: io.StringIO('a\n',
+  newline=None).newlines is '\n', because the C StringIO runs its IncrementalNewlineDecoder on
+  every write (stringio.c:198-200), while _pyio returns None until a read creates its decoder
+  (_pyio.py:2732-2733). After a read() both report the kinds of the whole value.
 likelihood: |
   Low. It needs _pyio (normally only used in tests or on implementations without _io) and reading
   `newlines` on a stream with a fixed newline, where the value is not interesting.
@@ -33,7 +37,9 @@ reproducer: |
   p = show(_pyio)
   print('io   ', c)
   print('_pyio', p)
-  if c == (None, 'None') and p[0] is None and p[1].startswith('AttributeError'):
+  before = (io.StringIO('a\n', None).newlines, _pyio.StringIO('a\n', None).newlines)
+  print('universal, before a read: io %r, _pyio %r' % before)
+  if c == (None, 'None') and p[0] is None and p[1].startswith('AttributeError') and before == ('\n', None):
       print('REPRODUCED pyio-stringio-pyio-newlines-attributeerror')
 expected: |
   None, as in the C TextIOWrapper and StringIO.
@@ -41,6 +47,7 @@ observed: |
   python3 3.15.2: io (None, None); _pyio None before the read, then AttributeError:
   'IncrementalDecoder' object has no attribute 'newlines'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  (2), added 2026-11-04: universal, before a read: io '\n', _pyio None, on 3.15.2 and main.
 promised_by: |
   Doc/library/io.rst:900-904 says "A string, a tuple of strings, or None ... this may not be
   available"; the C twin returns None (Modules/_io/textio.c:3374-3385).
@@ -49,9 +56,12 @@ cause: |
 possible_fix: |
   `return getattr(self._decoder, 'newlines', None)`.
 duplicates:
-  issues: []
+  issues:
+    - {number: 64634, state: closed, relation: "same area: io.StringIO vs _pyio.StringIO with universal newlines (bpo-20435, getvalue translation)", reason: "different behaviour, fixed in 2014"}
   queries: ["IncrementalDecoder object has no attribute newlines", "TextIOWrapper newlines attribute",
-            "newlines AttributeError", "_pyio StringIO", "bugforge README: no io entries"]
+            "newlines AttributeError", "_pyio StringIO", "bugforge README: no io entries",
+            "StringIO newlines attribute None (unquoted)", "_pyio StringIO newlines (unquoted; 64634)"]
 lean:
   property: PyLean.PyIO.StringIONewlinesAttr
   theorem: PyLean.PyIO.stringIONewlinesAttr_refuted
+  also_refuted: "PyLean.PyIO.StringIONewlinesTwins (stringIONewlinesTwins_refuted), item (2); PyLean.PyIO.StringIOInitRead (proven) states both twins' newlines before and after the first read"

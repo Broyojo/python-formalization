@@ -152,7 +152,7 @@ Lib/_pyio.py	2034	2038	IncrementalNewlineDecoder.reset	reset(self)	modelled	pyio
 Lib/_pyio.py	2045	2054	IncrementalNewlineDecoder.newlines	newlines(self)	todo		
 Lib/_pyio.py	2090	2120	TextIOWrapper.__init__	__init__(self, buffer, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		review: TP.init models only StringIO's fixed call: text_encoding, 'locale', the isinstance and codecs.lookup checks of encoding and errors (:2093-2111), buffer.seekable() and _has_read1 (:2117-2118) are not mirrored, and PyStringIONewlineLegal states only which newline values succeed.
 Lib/_pyio.py	2122	2126	TextIOWrapper._check_newline	_check_newline(self, newline)	modelled	pyio-stringio-newline-check,pyio-stringio-py-newline-legal	
-Lib/_pyio.py	2128	2153	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		review: _configure always succeeds, so PyStringIONewlineLegal (success iff legal) holds whatever it sets; the fields (:2136-2140) are in TP.init.build but no theorem listed for this row states them, and the BOM branch (:2146-2153) is not modelled.
+Lib/_pyio.py	2128	2153	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	modelled	pyio-stringio-init-read	
 Lib/_pyio.py	2164	2179	TextIOWrapper.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	2182	2183	TextIOWrapper.encoding	encoding(self)	todo		
 Lib/_pyio.py	2186	2187	TextIOWrapper.errors	errors(self)	todo		
@@ -163,7 +163,7 @@ Lib/_pyio.py	2201	2242	TextIOWrapper.reconfigure	reconfigure(self, *, encoding=N
 Lib/_pyio.py	2244	2247	TextIOWrapper.seekable	seekable(self)	modelled	pyio-stringio-inquiries	
 Lib/_pyio.py	2249	2250	TextIOWrapper.readable	readable(self)	modelled	pyio-stringio-inquiries	
 Lib/_pyio.py	2252	2253	TextIOWrapper.writable	writable(self)	modelled	pyio-stringio-inquiries	
-Lib/_pyio.py	2255	2257	TextIOWrapper.flush	flush(self)	todo		review: TP.flush is buffer.flush() (closed check) then _telling = _seekable (:2256-2257), but writes-twins-not-none only flushes an open stream and never observes _telling, so a flush that did nothing passes.
+Lib/_pyio.py	2255	2257	TextIOWrapper.flush	flush(self)	modelled	pyio-stringio-next-flush	
 Lib/_pyio.py	2259	2264	TextIOWrapper.close	close(self)	todo		
 Lib/_pyio.py	2267	2268	TextIOWrapper.closed	closed(self)	todo		
 Lib/_pyio.py	2271	2272	TextIOWrapper.name	name(self)	todo		
@@ -171,7 +171,7 @@ Lib/_pyio.py	2274	2275	TextIOWrapper.fileno	fileno(self)	modelled	pyio-stringio-
 Lib/_pyio.py	2277	2278	TextIOWrapper.isatty	isatty(self)	modelled	pyio-stringio-inquiries	
 Lib/_pyio.py	2280	2302	TextIOWrapper.write	write(self, s)	modelled	pyio-stringio-init-write-twins,pyio-stringio-read-write-twins,pyio-stringio-write-check-order-twins,pyio-stringio-write-refusals,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
 Lib/_pyio.py	2304	2307	TextIOWrapper._get_encoder	_get_encoder(self)	todo		
-Lib/_pyio.py	2309	2315	TextIOWrapper._get_decoder	_get_decoder(self)	todo		review: A _get_decoder that never wraps in IncrementalNewlineDecoder satisfies both entries: newlines-attr is refuted by the unwrapped decoder for 'n', and for newline '' the final, untranslated getvalue decode is the same wrapped or not.
+Lib/_pyio.py	2309	2315	TextIOWrapper._get_decoder	_get_decoder(self)	modelled	pyio-stringio-init-read	
 Lib/_pyio.py	2320	2323	TextIOWrapper._set_decoded_chars	_set_decoded_chars(self, chars)	todo		review: read-write-twins is refuted by getvalue alone ('aXcdef' vs a write after the read-ahead), whatever _set_decoded_chars stores.
 Lib/_pyio.py	2325	2333	TextIOWrapper._get_decoded_chars	_get_decoded_chars(self, n=None)	todo		review: read-write-twins is refuted whatever read(1) returns (getvalue differs anyway), so the slice and the _decoded_chars_used update (:2327-2333) are unpinned.
 Lib/_pyio.py	2335	2342	TextIOWrapper._get_locale_encoding	_get_locale_encoding(self)	todo		
@@ -184,11 +184,11 @@ Lib/_pyio.py	2508	2512	TextIOWrapper.truncate	truncate(self, pos=None)	todo		can
 Lib/_pyio.py	2514	2520	TextIOWrapper.detach	detach(self)	todo		
 Lib/_pyio.py	2522	2595	TextIOWrapper.seek	seek(self, cookie, whence=0)	todo		review: The only entry, init-write-twins, runs seek(0) inside StringIO.__init__ and is refuted ('é' then write('x')) even if that seek did nothing (the write then appends), so no branch of :2536-2595 is pinned.
 Lib/_pyio.py	2597	2627	TextIOWrapper.read	read(self, size=None)	todo		review: read-write-twins is refuted whatever read(1) does (with no read the write lands at 0 and getvalue still differs), and size is an Option Int, so the __index__ path (:2602-2607) is not modelled.
-Lib/_pyio.py	2629	2636	TextIOWrapper.__next__	__next__(self)	todo		review: tell-after-reads depends only on `self._telling = False` (:2630) surviving a readlines that breaks early; the readline call, StopIteration and the restore of _snapshot and _telling (:2632-2635) are unpinned.
+Lib/_pyio.py	2629	2636	TextIOWrapper.__next__	__next__(self)	modelled	pyio-stringio-next-flush	
 Lib/_pyio.py	2638	2729	TextIOWrapper.readline	readline(self, size=None)	todo		review: tell-after-reads only needs readline to return a non-empty line, so the newline search for each mode (:2660-2722), the size limit and the rewind are in no theorem; size is an Option Int (no __index__ path).
-Lib/_pyio.py	2732	2733	TextIOWrapper.newlines	newlines(self)	todo		review: newlines-attr is refuted by the AttributeError from a plain decoder, which a newlines that always raised would also give; the value for a wrapped decoder (newline None or '') and None before the first read are in no theorem.
+Lib/_pyio.py	2732	2733	TextIOWrapper.newlines	newlines(self)	modelled	pyio-stringio-init-read,pyio-stringio-newlines-twins	
 Lib/_pyio.py	2735	2737	TextIOWrapper._dealloc_warn	_dealloc_warn(self, source)	todo		
-Lib/_pyio.py	2747	2761	StringIO.__init__	__init__(self, initial_value='', newline='\\n')	todo		review: writes-twins-not-none starts with no initial value and a non-None newline, and init-write-twins is refuted even without the seek(0) (an appending write also differs), so `_writetranslate = False` for newline=None (:2754-2755), the initial_value TypeError (:2757-2759) and the rewind are unpinned.
+Lib/_pyio.py	2747	2761	StringIO.__init__	__init__(self, initial_value='', newline='\\n')	modelled	pyio-stringio-init-read,pyio-stringio-newline-check	
 Lib/_pyio.py	2763	2771	StringIO.getvalue	getvalue(self)	modelled	pyio-stringio-init-write-twins,pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	2773	2776	StringIO.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	2779	2780	StringIO.errors	errors(self)	todo		
