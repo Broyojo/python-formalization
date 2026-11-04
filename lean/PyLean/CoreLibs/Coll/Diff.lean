@@ -2,7 +2,8 @@ import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
 import PyLean.CoreLibs.Coll.ChainMapG
 import PyLean.CoreLibs.Coll.UserDictG
-import PyLean.CoreLibs.Coll.UserListG
+import PyLean.CoreLibs.Coll.ODictG
+import PyLean.CoreLibs.Coll.UserListG2
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
 import PyLean.CoreLibs.Coll.Namedtuple
@@ -453,6 +454,18 @@ def runUL (j : Json) : Except String Json := do
     | "gen_list_iadd" => return encOut encInts (listExtendP u.data o)
     | "gen_add" => return enc (ulAddP u o)
     | _ => return enc (ulRaddP u o)
+  | "sort_p" =>
+    let npos := (← getOptInt j "npos").getD 0
+    let rev : Option Json := match j.getObjVal? "rev" with
+      | .ok v => some v
+      | .error _ => none
+    let truth : Json → Py Bool := fun v => match v with
+      | .bool b => .ok b
+      | _ => .error (.valueError "b")
+    let hasKey := (j.getObjVal? "keynone" >>= Json.getBool?).toOption.getD false
+    let a : SortArgs Int Int Json := ⟨npos.toNat, if hasKey then some none else none, rev⟩
+    return encOut encUL (ulSortP truth (fun x y => .ok (decide (x < y))) (fun x y => .ok (decide (x < y)))
+      (fun _ v => v) u a)
   | "init_sub" =>
     let l ← getInts j "o"
     return encPy (fun (r : ULO Int Int) => encUL ⟨r.cls, r.data⟩)
@@ -921,9 +934,107 @@ def runNT (j : Json) : Except String Json := do
     | "roundtrip" => return encPy encInts (ntCall T [] (ntAsdict T vals))
     | _ => throw s!"unknown nt op {op}"
 
+/-! ### `OrderedDict` (the pure-Python class) -/
+
+abbrev ODS := OD String Int
+
+def odItems (o : ODS) : List (String × Int) := o.keysList.filterMap (fun k => (D.get? o.d k).map (k, ·))
+
+def odFromItems (items : List (String × Int)) : ODS :=
+  (odUpdate kStr OD.new (.pairs (.ok (FIt.ofList (items.map .ok))))).1
+
+/-- `repr` of a key: `"#L"` stands for `[1]`. -/
+def rkOD (k : String) : String := if k = "#L" then "[1]" else pyStrRepr k
+
+/-- One operation of the program; the result is `null` for a call returning `None`. -/
+def odStep (o : ODS) (op k : String) (v : Int) (flag : Bool) : Out ODS × Json :=
+  let unit : Py ODS → Out ODS × Json := fun r => match r with
+    | .ok o' => ((o', none), Json.null)
+    | .error e => ((o, some e), Json.null)
+  match op with
+  | "set" => unit (odSet kStr o k v)
+  | "del" => unit (odDel kStr rkOD o k)
+  | "pop" | "popd" =>
+    match odPop kStr rkOD o k (if op = "popd" then some v else none) with
+    | .ok (r, o') => ((o', none), toJson r)
+    | .error e => ((o, some e), Json.null)
+  | "popitem" =>
+    match odPopitem rkOD o flag with
+    | .ok (p, o') => ((o', none), Json.arr #[toJson p.1, toJson p.2])
+    | .error e => ((o, some e), Json.null)
+  | "move" => unit (odMoveToEnd kStr rkOD o k flag)
+  | "setdefault" =>
+    match odSetdefault kStr o k v with
+    | .ok (r, o') => ((o', none), toJson r)
+    | .error e => ((o, some e), Json.null)
+  | "clear" => ((odClear o, none), Json.null)
+  | _ => (odUpdate kStr o (.pairs (.ok (FIt.ofList [.ok (k, v), .ok ("b", v + 1)]))), Json.null)
+
+def encODItems (l : List (String × Int)) : Json := Json.arr (l.map encPair).toArray
+
+def runOD (j : Json) : Except String Json := do
+  let ops ← jArr (← field j "ops")
+  let mut o : ODS := OD.new
+  let mut results : Array Json := #[]
+  let mut exc : Json := Json.null
+  for op in ops do
+    match ← jArr op with
+    | [a, b, c, d] =>
+      let ((o', e), r) := odStep o (← a.getStr?) (← b.getStr?) (← c.getInt?) (← d.getBool?)
+      o := o'
+      match e with
+      | some e =>
+        exc := encExc e
+        break
+      | none => results := results.push r
+    | _ => throw "bad op"
+  let fin ← getStr j "fin"
+  let perm := (j.getObjVal? "perm" >>= Json.getBool?).toOption.getD false
+  let finRes : Json ← match fin with
+    | "eq_od" =>
+      let items := odItems o
+      let items := if perm && items.length > 1 then items.drop 1 ++ items.take 1 else items
+      pure (encPy toJson (odEq (fun a b => .ok (decide (a = b))) o (.od (odFromItems items))))
+    | "eq_dict" =>
+      let items := odItems o
+      let items := if perm then items.reverse else items
+      pure (encPy toJson (odEq (fun a b => .ok (decide (a = b))) o (.dict items)))
+    | "repr" => pure (encPy toJson (odRepr (fun s => .ok (pyStrRepr s)) (fun v => .ok (toString v)) "OrderedDict" o))
+    | "reduce" =>
+      let r := odReduce "OrderedDict" o
+      pure (okJ (Json.arr #[toJson r.1, Json.arr #[], Json.null, Json.null, encODItems r.2]))
+    | "copy" => pure (encPy (fun (c : ODS) => Json.arr #[toJson true, toJson "OrderedDict", encODItems (odItems c)])
+        (odCopy kStr o))
+    | "or" =>
+      match odOr kStr o (some (dictUSrc [("c", 9), ("a", 8)])) with
+      | some r => pure (encPy (fun c => encODItems (odItems c)) r)
+      | none => throw "unreachable"
+    | "ror" =>
+      match odRor kStr o (some (dictUSrc [("c", 9), ("a", 8)])) with
+      | some r => pure (encPy (fun c => encODItems (odItems c)) r)
+      | none => throw "unreachable"
+    | "fromkeys" =>
+      pure (encPy (fun c => encODItems (odItems c)) (odFromkeys kStr (.ok (FIt.ofList (← getStrs j "xs"))) (1 : Int)))
+    | "iter_del" =>
+      match odGenNext o false .fresh with
+      | (.ok none, _) => pure (okJ (Json.arr #[Json.arr #[], Json.null]))
+      | (.ok (some k), g) =>
+        match odDel kStr pyStrRepr o k with
+        | .ok o' =>
+          o := o'
+          match odGenRun o false (o.next + 1) g with
+          | .ok rest => pure (okJ (Json.arr #[encStrs (k :: rest), Json.null]))
+          | .error e => pure (okJ (Json.arr #[encStrs [k], encExc e]))
+        | .error e => throw s!"unexpected {e.message}"
+      | (.error e, _) => pure (okJ (Json.arr #[Json.arr #[], encExc e]))
+    | _ => pure (okJ Json.null)
+  return okJ (Json.arr #[encStrs o.keysList, encStrs o.keysBack, encODItems (odItems o),
+    Json.arr results, exc, finRes])
+
 def run (fn : String) (j : Json) : Except String Json :=
   match fn with
   | "ctr" => runCtr j
+  | "od" => runOD j
   | "cm" => runCM j
   | "ud" => runUD j
   | "ul" => runUL j

@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.PyIO.ArgTwins
 import PyLean.PyIO.NewlineProps
+import PyLean.PyIO.TextTellStale
 
 /-! Registry entries for the argument and check-order differences of the BytesIO and
 StringIO twins (`PyIO/ArgTwins.lean`), and for TextIOWrapper, IncrementalNewlineDecoder,
@@ -79,6 +80,13 @@ def textEntries : List Entry := [
     source := "Doc/library/io.rst:1001 (newline can be None, '', '\\n', '\\r' or '\\r\\n'); the bodies _pyio.py:2090-2092, :2122-2126, :2747-2759 and stringio.c:693-721"
     status := .proven, prop := ``PyStringIONewlineCheck, thm := some ``pyStringIONewlineCheck_proven
     notes := "Which newline values succeed is pyio-stringio-py-newline-legal; this entry pins the refusals' classes, messages and order. A repr with non-ASCII characters is compared as '~illegal newline value' by the difftest." },
+  { id := "pyio-textio-c-tell-after-next-in-range", pyFile := "Modules/_io/textio.c"
+    pyFns := ["_io_TextIOWrapper_tell_impl"]
+    statement := "For every byte string, io.TextIOWrapper(io.BytesIO(data), encoding='utf-8') followed by f.seek(f.tell()), next(f), f.flush() and f.tell() returns a position no greater than len(data), or raises."
+    source := "invariant: tell() returns a position in the stream (Doc/library/io.rst, TextIOBase.tell: 'Return the current stream position as an opaque number')"
+    status := .refuted, prop := ``TextCTellAfterNextInRange, thm := some ``textCTellAfterNextInRange_refuted
+    bug := some "pyio-textio-tell-after-next-stale-snapshot"
+    notes := "b'\\nb\\xe2\\x82\\xac' (5 bytes): tell() returns 6. next() stops updating the snapshot, flush() re-enables tell(), and tell() asks for skip_bytes = 1 of the empty snapshot (textio.c:2949-2957), decoding the bytes object's terminating NUL. Found by pyio_text_diff seed 44 (coordinator run); the model now reads that NUL (TCm.snapBytes) and calls a longer over-read undefined behaviour." },
   { id := "pyio-nldec-chunks", pyFile := "Lib/_pyio.py"
     pyFns := ["IncrementalNewlineDecoder.decode", "IncrementalNewlineDecoder.__init__"]
     statement := "For _pyio.IncrementalNewlineDecoder(None, translate) and every split of a text into chunks, decoded with final=False and then decode('', final=True): the outputs concatenate to the text with \\r\\n and \\r translated to \\n when translate is set, and to the text itself otherwise; the recorded newline kinds are exactly those of the whole text, so a \\r\\n cut between two chunks counts as \\r\\n and never as \\r and \\n; nothing is left pending."

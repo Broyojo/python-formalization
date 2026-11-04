@@ -1,35 +1,35 @@
 file	line	endline	name	signature	status	entry	note
-Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	104	111	OrderedDict.__new__	__new__(cls, /, *args, **kwds)	todo		
-Lib/collections/__init__.py	113	117	OrderedDict.__init__	__init__(self, other=(), /, **kwds)	todo		
-Lib/collections/__init__.py	119	131	OrderedDict.__setitem__	__setitem__(self, key, value, dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link)	todo		
-Lib/collections/__init__.py	133	144	OrderedDict.__delitem__	__delitem__(self, key, dict_delitem=dict.__delitem__)	todo		
-Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	todo		
-Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	todo		
-Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	todo		candidates:coll-userdict-popitem-lifo
-Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		
-Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	todo		
-Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	todo		
-Lib/collections/__init__.py	234	236	OrderedDict.items	items(self)	todo		
-Lib/collections/__init__.py	238	240	OrderedDict.values	values(self)	todo		
-Lib/collections/__init__.py	246	266	OrderedDict.pop	pop(self, key, default=__marker)	todo		
-Lib/collections/__init__.py	268	276	OrderedDict.setdefault	setdefault(self, key, default=None)	todo		
-Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	todo		
-Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	todo		
-Lib/collections/__init__.py	309	315	OrderedDict.fromkeys	fromkeys(cls, iterable, value=None)	todo		
-Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo		
-Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		
-Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		changed-in-3.15:
-Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		changed-in-3.15:
+Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	104	111	OrderedDict.__new__	__new__(cls, /, *args, **kwds)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	113	117	OrderedDict.__init__	__init__(self, other=(), /, **kwds)	todo		review: `odUpdate` takes only the positional `USrc`, so the `**kwds` of `self.__update(other, **kwds)` (:117, MutableMapping.update's `for key, value in kwds.items()`) is not modelled, though the docstring at :114-116 promises 'Keyword argument order is preserved'; ODUpdateOrder also states only non-raising sources.
+Lib/collections/__init__.py	119	131	OrderedDict.__setitem__	__setitem__(self, key, value, dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link)	modelled	coll-odict-setitem	
+Lib/collections/__init__.py	133	144	OrderedDict.__delitem__	__delitem__(self, key, dict_delitem=dict.__delitem__)	todo		review: ODDelInv quantifies only over a key present in the list (`A ++ (i, key) :: B`); the `KeyError` of `dict_delitem` on an absent key (:137), which its own docstring claims, is not in the Prop, so a `__delitem__` that ignored absent keys passes.
+Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	modelled	coll-odict-iter	
+Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		todo: mirrored (odGenNext rev) and difftested; the walk along prev links has no theorem yet
+Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	modelled	coll-odict-clear	
+Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	modelled	coll-odict-popitem	
+Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		todo: mirrored in ODictG.odMoveToEnd and difftested; the invariant proof (unlink, then append or prepend an existing link) is not done
+Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	excluded		platform: sums sys.getsizeof of the instance dict, __map, the links and their proxies; the value depends on the build's object layout, not on the mapping
+Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	todo		review: Excluded `trivial:`, but the body does not return a field: it picks `_OrderedDictKeysView`, whose iteration follows the links (not dict storage order) and which adds `__reversed__`, an observable choice with a theorem to state (`list(od.keys()) == list(od)`).
+Lib/collections/__init__.py	234	236	OrderedDict.items	items(self)	todo		review: Excluded `trivial:` wrongly for the same reason: `_OrderedDictItemsView` gives link-ordered items where `dict.items` would give storage order.
+Lib/collections/__init__.py	238	240	OrderedDict.values	values(self)	todo		review: Excluded `trivial:` wrongly: the view class decides the order of the values and their reversibility.
+Lib/collections/__init__.py	246	266	OrderedDict.pop	pop(self, key, default=__marker)	todo		review: ODDelInv states only a present key; the `__marker` logic of :264-266 (an absent key returns the default, or raises `KeyError(key)` with none given), which the Prop's docstring claims, is not stated, so a `pop` that raised even with a default passes.
+Lib/collections/__init__.py	268	276	OrderedDict.setdefault	setdefault(self, key, default=None)	modelled	coll-odict-setdefault	
+Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	todo		todo: odRepr follows link order (coll-odict-order-views states it) but the recursive_repr guard is not modelled
+Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	todo		review: `odReduce` models only an instance without other attributes and returns `(cls, items)`: the `__getstate__` handling of :287-301 (copying state and slots, dropping `vars(OrderedDict())`'s private link attributes, `state or None`) and the `()` and `None` slots of the tuple are not modelled, so a `__reduce__` that leaked or dropped those attributes passes.
+Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	todo		review: ODUpdateOrder states only that `odCopy` yields some instance satisfying ODInv with the same key order: no value is stated and OD has no identity, so `odCopy o = .ok o` (returning `self`) or a copy with different values passes.
+Lib/collections/__init__.py	309	315	OrderedDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo		review: ODOrderViews states the plain-dict case only as `odEq veq o (.dict d) = dictEq veq o.d d` (rfl) and, against an OrderedDict, only that a different key order gives false; the true case (equal items, same order) and the `dictEq = false` case are unstated, so an `__eq__` returning false for every OrderedDict operand passes.
+Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		todo: mirrored (odIor = update) and difftested; no theorem of its own yet
+Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		todo: mirrored (copy then update) and difftested; no theorem of its own yet
+Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		todo: mirrored and difftested; no theorem of its own yet
 Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-conversions,coll-namedtuple-defaults,coll-namedtuple-getnewargs,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-repr,coll-namedtuple-source-attribute,coll-namedtuple-validation	
 Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
 Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
-Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
-Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		review: `sum(self.values())` on arbitrary values (float `sum` uses compensated summation, mixed types raise TypeError) is modelled as an Int fold, so the property holds only on the int-only domain the model picks.
+Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	excluded		trivial: the body is the single constant `return 0`; the hook's effect (a missing count reads as 0 without being stored) is the `dGet ... N.zero` of every count lookup in the Counter model
+Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		review: `sumP`'s fast-path test omits the `overflow == 0` check on the item (Python/bltinmodule.c:2937-2953): an int item outside Py_ssize_t whose addition keeps the sum in range (`acc >= 0`, item `< PY_SSIZE_T_MIN`) stays on the fast path in the model, while C leaves it with an int result and never enters the float path, so the model routes later floats to `fcTail` where CPython adds them plainly (`sum([0, -2**64, 1e100, 1.0, -1e100])`); CounterTotalSum itself (exact int sum, left fold in insertion order for other types) holds, and leaving the compensated float/complex path as a parameter is acceptable for this one-line row, since it belongs to builtin_sum's own row.
 Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common,coll-counter-most-common-neg	
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
@@ -123,7 +123,7 @@ Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-use
 Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1398	1399	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1401	1402	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	todo		review: `ulSortP` delegates to the ListSort mirrors (raising `<` and key, \"list modified during sort\"), but its argument check is wrong: `_PyArg_UnpackKeywords` (Python/getargs.c:2572-2590) first tests `nargs + nkwargs > 2`, so `u.sort(1, 2, 3)` or `u.sort(1, key=f, reverse=True)` raises \"sort() takes at most 2 arguments (3 given)\", while UserListSortP's first conjunct proves \"sort() takes no positional arguments\" for every `npos ≠ 0`, a statement false about CPython; `reverse` is a `Bool`, so a raising `__bool__` (PyObject_IsTrue, Objects/clinic/listobject.c.h) cannot be expressed either.
+Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-sort-p	
 Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-iadd-atomic	
 Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1428	1429	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	

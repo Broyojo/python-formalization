@@ -8,7 +8,9 @@ import PyLean.CoreLibs.Misc.Numbers.Props
 import PyLean.CoreLibs.Misc.Types.Props
 import PyLean.CoreLibs.Misc.Contextlib.Props
 import PyLean.CoreLibs.Misc.Contextlib.StackProps
-import PyLean.CoreLibs.Misc.Weakref.Props2
+import PyLean.CoreLibs.Misc.Weakref.PropsWkd2
+import PyLean.CoreLibs.Misc.Weakref.PropsDeep
+import PyLean.CoreLibs.Misc.Weakref.PropsFin
 
 /-! Registry for the `Misc` area of CoreLibs: Lib/contextlib.py, Lib/numbers.py, Lib/keyword.py, Lib/types.py, Lib/weakref.py, Lib/graphlib.py, Lib/sched.py, Lib/queue.py, CPython 3.15.2. -/
 
@@ -466,82 +468,105 @@ def contextlibEntries : List Entry := [
 ]
 
 def weakrefEntries : List Entry := [
-  { id := "misc-wvd-reads", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.__getitem__", "WeakValueDictionary.__len__",
-              "WeakValueDictionary.__contains__", "WeakValueDictionary.__repr__",
-              "WeakValueDictionary.get", "WeakValueDictionary.items", "WeakValueDictionary.keys",
-              "WeakValueDictionary.itervaluerefs", "WeakValueDictionary.values",
-              "WeakValueDictionary.valuerefs"]
-    statement := "For distinct keys, __getitem__, get and in agree with items(), and keys() and values() are its columns."
-    source := "docstring of WeakValueDictionary"
-    status := .proven, prop := ``Weakref.WVD.WvdReads, thm := some ``Weakref.WVD.wvdReads_proven },
-  { id := "misc-wvd-death", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.__init__", "KeyedRef.__new__", "KeyedRef.__init__"]
-    statement := "When an object dies the live items lose exactly it, and with the callback its entries leave data."
-    source := "docstring of WeakValueDictionary"
-    status := .proven, prop := ``Weakref.WVD.WvdDeath, thm := some ``Weakref.WVD.wvdDeath_proven },
-  { id := "misc-wvd-writes", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.__setitem__", "WeakValueDictionary.__delitem__"]
-    statement := "d[k] = v makes d[k] give a live v and leaves other keys; an int raises TypeError; del removes the key or raises KeyError."
-    source := "collections.abc.MutableMapping"
-    status := .proven, prop := ``Weakref.WVD.WvdWrites, thm := some ``Weakref.WVD.wvdWrites_proven },
-  { id := "misc-wvd-pop-setdefault", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.pop", "WeakValueDictionary.setdefault"]
-    statement := "pop returns a live value and removes it, and treats a dead one as missing; setdefault returns a live value and replaces a dead one."
-    source := "collections.abc.MutableMapping"
-    status := .proven, prop := ``Weakref.WVD.WvdPopSetdefault, thm := some ``Weakref.WVD.wvdPopSetdefault_proven },
+  { id := "misc-wvd-iters", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.items", "WeakValueDictionary.keys", "WeakValueDictionary.itervaluerefs", "WeakValueDictionary.values", "WeakValueDictionary.valuerefs"]
+    statement := "The generators take the snapshot at the first next(), ignore later changes, and read each reference in the world of that call; drained they give the live items, keys, values and every reference; valuerefs lists the stored references."
+    source := "Lib/weakref.py:173-202, 245-255"
+    status := .proven, prop := ``Weakref.WVD.WvdIters, thm := some ``Weakref.WVD.wvdIters_proven },
   { id := "misc-wvd-popitem", pyFile := "Lib/weakref.py"
     pyFns := ["WeakValueDictionary.popitem"]
     statement := "popitem returns the last live item, dropping dead entries behind it, and raises KeyError when none is left."
     source := "collections.abc.MutableMapping"
     status := .proven, prop := ``Weakref.WVD.WvdPopitem, thm := some ``Weakref.WVD.wvdPopitem_proven },
-  { id := "misc-wvd-update", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.update"]
-    statement := "update is __setitem__ of each item in turn, keywords after other."
-    source := "collections.abc.MutableMapping"
-    status := .proven, prop := ``Weakref.WVD.WvdUpdate, thm := some ``Weakref.WVD.wvdUpdate_proven },
   { id := "misc-wvd-copy", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.copy", "WeakValueDictionary.__deepcopy__"]
-    statement := "copy gives a new dictionary with the same live items; __deepcopy__ copies keys and shares values."
+    pyFns := ["WeakValueDictionary.copy"]
+    statement := "For identity keys copy gives a new dictionary with the removing callback and the same live items in order."
     source := "Doc/library/weakref.rst"
     status := .proven, prop := ``Weakref.WVD.WvdCopy, thm := some ``Weakref.WVD.wvdCopy_proven },
   { id := "misc-wvd-or", pyFile := "Lib/weakref.py"
     pyFns := ["WeakValueDictionary.__or__", "WeakValueDictionary.__ror__", "WeakValueDictionary.__ior__"]
-    statement := "In d | other other's value wins, in other | d a live value of d wins, a non-Mapping gives NotImplemented, and |= is update."
+    statement := "In d | other other's value wins, in other | d a live value of d wins, a non-Mapping gives NotImplemented; |= stores dict(pairs) of an iterable and leaves d on failure."
     source := "PEP 584"
     status := .proven, prop := ``Weakref.WVD.WvdOr, thm := some ``Weakref.WVD.wvdOr_proven },
+  { id := "misc-wvd-update", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.update"]
+    statement := "A failing hasattr, items() or dict() changes nothing; items are stored in turn, keywords after, and the first failure stops there with the earlier items kept."
+    source := "Lib/weakref.py:235-243"
+    status := .proven, prop := ``Weakref.WVD.WvdUpdate, thm := some ``Weakref.WVD.wvdUpdate_proven },
   { id := "misc-wvd-init", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakValueDictionary.__init__", "KeyedRef.__new__", "KeyedRef.__init__"]
-    statement := "__init__ updates an empty dictionary; a KeyedRef holds the referent and the key, refuses what cannot be referenced, and reads None once the referent is dead."
-    source := "docstring of KeyedRef"
+    pyFns := ["WeakValueDictionary.__init__"]
+    statement := "WeakValueDictionary() is empty, a failing other raises, and a list of pairs gives the items of dict(pairs) and then the keywords."
+    source := "Lib/weakref.py:104-113"
     status := .proven, prop := ``Weakref.WVD.WvdInit, thm := some ``Weakref.WVD.wvdInit_proven },
-  { id := "misc-wkd-non-weak", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakKeyDictionary.__contains__", "WeakKeyDictionary.__getitem__",
-              "WeakKeyDictionary.get", "WeakKeyDictionary.__setitem__", "WeakKeyDictionary.__delitem__",
-              "WeakKeyDictionary.pop", "WeakKeyDictionary.setdefault"]
-    statement := "With a key that cannot be weakly referenced, in says False and the other operations raise the TypeError of ref()."
-    source := "Lib/weakref.py:359-364"
-    status := .proven, prop := ``Weakref.WKD.WkdNonWeak, thm := some ``Weakref.WKD.wkdNonWeak_proven },
-  { id := "misc-wkd-reads", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakKeyDictionary.__getitem__", "WeakKeyDictionary.get", "WeakKeyDictionary.__contains__",
-              "WeakKeyDictionary.__len__", "WeakKeyDictionary.__repr__", "WeakKeyDictionary.items",
-              "WeakKeyDictionary.keys", "WeakKeyDictionary.values", "WeakKeyDictionary.keyrefs"]
-    statement := "d[k], get and in report the entry whose ref equals ref(k); keys() and values() are the columns of items()."
-    source := "docstring of WeakKeyDictionary"
-    status := .proven, prop := ``Weakref.WKD.WkdReads, thm := some ``Weakref.WKD.wkdReads_proven },
+  { id := "misc-wkd-iters", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakKeyDictionary.items", "WeakKeyDictionary.keys", "WeakKeyDictionary.values", "WeakKeyDictionary.keyrefs"]
+    statement := "The generators take the snapshot at the first next(), ignore later changes, and read each key in the world of that call; drained they give the live items, keys and values; keyrefs lists the stored refs."
+    source := "Lib/weakref.py:366-395"
+    status := .proven, prop := ``Weakref.WKD.WkdIters, thm := some ``Weakref.WKD.wkdIters_proven },
+  { id := "misc-wkd-copy-or", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakKeyDictionary.copy", "WeakKeyDictionary.__or__", "WeakKeyDictionary.__ror__"]
+    statement := "For hashable keys a copy maps every live key to its value; in d | other a key of other takes its value, in other | d a live key of d keeps its value; a non-Mapping gives NotImplemented."
+    source := "PEP 584"
+    status := .proven, prop := ``Weakref.WKD.WkdCopyOr, thm := some ``Weakref.WKD.wkdCopyOr_proven },
+  { id := "misc-wkd-update", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakKeyDictionary.update", "WeakKeyDictionary.__ior__", "WeakKeyDictionary.__init__"]
+    statement := "Keywords are refused before dict is applied; a failing hasattr, items(), iter() or dict() changes nothing; items are stored in turn and the first failure stops with the earlier ones kept; |= is update; __init__ holds dict's items."
+    source := "Lib/weakref.py:309-320, 410-424"
+    status := .proven, prop := ``Weakref.WKD.WkdUpdate, thm := some ``Weakref.WKD.wkdUpdate_proven },
+  { id := "misc-wvd-lookup", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.__getitem__", "WeakValueDictionary.__contains__", "WeakValueDictionary.get"]
+    statement := "in and get are d[key] with any KeyError caught; a raising __hash__ or same-hash __eq__ ends the read (TypeError renamed); for identity keys d[key] is the live value in items()."
+    source := "Lib/weakref.py:115-171"
+    status := .proven, prop := ``Weakref.WVD.WvdLookup, thm := some ``Weakref.WVD.wvdLookup_proven },
+  { id := "misc-wvd-writes", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.__setitem__", "WeakValueDictionary.__delitem__"]
+    statement := "KeyedRef refuses an int before the key is hashed; a raising hash ends the store; a store reads back for any keys; del removes the found entry; for identity keys other keys are unchanged."
+    source := "collections.abc.MutableMapping"
+    status := .proven, prop := ``Weakref.WVD.WvdWrites, thm := some ``Weakref.WVD.wvdWrites_proven },
+  { id := "misc-wvd-pop", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.pop"]
+    statement := "pop answers an empty dict without hashing, catches only KeyError from the lookup, removes the found entry live or dead, and for identity keys leaves the key absent."
+    source := "Lib/weakref.py:211-222"
+    status := .proven, prop := ``Weakref.WVD.WvdPop, thm := some ``Weakref.WVD.wvdPop_proven },
+  { id := "misc-wvd-pop-arity", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.pop"]
+    statement := "WeakValueDictionary.pop with two or more defaults raises TypeError, as dict.pop and WeakKeyDictionary.pop do."
+    source := "twin: WeakKeyDictionary.pop, dict.pop"
+    status := .refuted, prop := ``Weakref.WVD.WvdPopArity, thm := some ``Weakref.WVD.wvdPopArity_refuted
+    bug := some "corelibs-weakref-wvd-pop-arity" },
+  { id := "misc-wvd-setdefault", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.setdefault"]
+    statement := "The read catches KeyError and the store does not; for identity keys a live value is kept and a missing or dead one replaced by the default."
+    source := "Lib/weakref.py:224-233"
+    status := .proven, prop := ``Weakref.WVD.WvdSetdefault, thm := some ``Weakref.WVD.wvdSetdefault_proven },
+  { id := "misc-wvd-death", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.__init__"]
+    statement := "A death removes the object from the live items for any keys; for identity keys every entry with the removing callback leaves data and the others stay."
+    source := "docstring of WeakValueDictionary"
+    status := .proven, prop := ``Weakref.WVD.WvdDeath, thm := some ``Weakref.WVD.wvdDeath_proven },
+  { id := "misc-keyedref-callback", pyFile := "Lib/weakref.py"
+    pyFns := ["KeyedRef.__new__"]
+    statement := "KeyedRef keeps the referent, the key and the callback it was made with: an entry stored with the removing callback leaves on death even after _remove is replaced, one stored with a no-op stays."
+    source := "docstring of KeyedRef"
+    status := .proven, prop := ``Weakref.WVD.KeyedRefCallback, thm := some ``Weakref.WVD.keyedRefCallback_proven },
+  { id := "misc-wkd-lookup", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakKeyDictionary.__getitem__", "WeakKeyDictionary.get", "WeakKeyDictionary.__contains__"]
+    statement := "An int key: in is False and the rest raise ref()'s TypeError; a raising referent __hash__ makes every read raise, in included; a raising __eq__ ends the read; hashable keys read the entry that compares equal."
+    source := "Lib/weakref.py:322-364"
+    status := .proven, prop := ``Weakref.WKD.WkdLookup, thm := some ``Weakref.WKD.wkdLookup_proven },
   { id := "misc-wkd-writes", pyFile := "Lib/weakref.py"
     pyFns := ["WeakKeyDictionary.__setitem__"]
-    statement := "With == an equivalence, d[k] = v makes d[k] give v for a live k and leaves every key not equal to k."
+    statement := "For hashable keys d[k] = v reads back, keeps the hash invariant and leaves unequal keys; a key never equal to itself adds an entry each time and reads KeyError."
     source := "collections.abc.MutableMapping"
     status := .proven, prop := ``Weakref.WKD.WkdWrites, thm := some ``Weakref.WKD.wkdWrites_proven },
   { id := "misc-wkd-pop-setdefault", pyFile := "Lib/weakref.py"
     pyFns := ["WeakKeyDictionary.__delitem__", "WeakKeyDictionary.pop", "WeakKeyDictionary.setdefault"]
-    statement := "del, pop and setdefault follow the entry for k."
+    statement := "pop takes at most one default and answers an empty dict without hashing; del and pop remove the equal key's entry, after which it reads KeyError; setdefault keeps or stores."
     source := "collections.abc.MutableMapping"
     status := .proven, prop := ``Weakref.WKD.WkdPopSetdefault, thm := some ``Weakref.WKD.wkdPopSetdefault_proven },
   { id := "misc-wkd-death", pyFile := "Lib/weakref.py"
     pyFns := ["WeakKeyDictionary.__init__"]
-    statement := "When a key dies the live items lose it, and with the callback its entry leaves data."
+    statement := "When a key dies the live items lose it whatever the keys do, every entry with the removing callback leaves data, and the others stay."
     source := "docstring of WeakKeyDictionary"
     status := .proven, prop := ``Weakref.WKD.WkdDeath, thm := some ``Weakref.WKD.wkdDeath_proven },
   { id := "misc-wkd-popitem", pyFile := "Lib/weakref.py"
@@ -549,40 +574,51 @@ def weakrefEntries : List Entry := [
     statement := "popitem returns the last entry with a live key and raises KeyError when none is left."
     source := "collections.abc.MutableMapping"
     status := .proven, prop := ``Weakref.WKD.WkdPopitem, thm := some ``Weakref.WKD.wkdPopitem_proven },
-  { id := "misc-wkd-copy", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakKeyDictionary.copy", "WeakKeyDictionary.__deepcopy__"]
-    statement := "While the live keys are pairwise different, a copy maps every live key to the same value and the deep copy to a copy of it."
-    source := "Doc/library/weakref.rst"
-    status := .proven, prop := ``Weakref.WKD.WkdCopy, thm := some ``Weakref.WKD.wkdCopy_proven },
-  { id := "misc-wkd-or", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakKeyDictionary.__or__", "WeakKeyDictionary.__ror__", "WeakKeyDictionary.__ior__",
-              "WeakKeyDictionary.update"]
-    statement := "In d | other other's value wins, in other | d a live key of d wins, a non-Mapping gives NotImplemented, and keywords to update raise TypeError."
-    source := "PEP 584"
-    status := .proven, prop := ``Weakref.WKD.WkdOr, thm := some ``Weakref.WKD.wkdOr_proven },
-  { id := "misc-wkd-init", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakKeyDictionary.__init__", "WeakKeyDictionary.update"]
-    statement := "__init__ updates an empty dictionary, and a list of pairs goes through dict() first."
-    source := "Lib/weakref.py:309-320"
-    status := .proven, prop := ``Weakref.WKD.WkdInit, thm := some ``Weakref.WKD.wkdInit_proven },
-  { id := "misc-weakmethod-basics", pyFile := "Lib/weakref.py"
-    pyFns := ["WeakMethod.__new__", "WeakMethod.__call__", "WeakMethod.__eq__", "WeakMethod.__ne__"]
-    statement := "__new__ refuses what is no bound method, __call__ rebuilds the method while both referents live, __ne__ negates __eq__, and a dead weak method equals only itself."
-    source := "Doc/library/weakref.rst"
-    status := .proven, prop := ``Weakref.WeakMethodBasics, thm := some ``Weakref.weakMethodBasics_proven },
+  { id := "misc-wvd-deepcopy-sharing", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.__deepcopy__"]
+    statement := "deepcopy keeps references consistent with memo: a key that refers back to the dictionary refers to its copy."
+    source := "Doc/library/copy.rst:62-65"
+    status := .refuted, prop := ``Weakref.DeepcopyKeepsSharing, thm := some ``Weakref.deepcopyKeepsSharing_wvd_refuted
+    bug := some "corelibs-weakref-deepcopy-memo" },
+  { id := "misc-wkd-deepcopy-sharing", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakKeyDictionary.__deepcopy__"]
+    statement := "deepcopy keeps references consistent with memo: a value that refers back to the dictionary refers to its copy."
+    source := "Doc/library/copy.rst:62-65"
+    status := .refuted, prop := ``Weakref.DeepcopyKeepsSharing, thm := some ``Weakref.deepcopyKeepsSharing_wkd_refuted
+    bug := some "corelibs-weakref-deepcopy-memo" },
+  { id := "misc-deepcopy-loops", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakValueDictionary.__deepcopy__", "WeakKeyDictionary.__deepcopy__"]
+    statement := "A raising self.__class__() or a raising deepcopy of a key or value ends __deepcopy__; with items that copy as themselves it gives the items of copy()."
+    source := "Lib/weakref.py:151-158, 347-354"
+    status := .proven, prop := ``Weakref.DeepcopyLoops, thm := some ``Weakref.deepcopyLoops_proven },
+  { id := "misc-weakmethod-new", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakMethod.__new__", "WeakMethod.__call__"]
+    statement := "__new__ turns an AttributeError into the bound-method TypeError, passes other errors, refuses an object or function ref() refuses; __call__ rebuilds the method while both live."
+    source := "Lib/weakref.py:46-73"
+    status := .proven, prop := ``Weakref.WeakMethodNew, thm := some ``Weakref.weakMethodNew_proven },
   { id := "misc-weakmethod-callback-once", pyFile := "Lib/weakref.py"
     pyFns := ["WeakMethod.__new__"]
     statement := "The callback of a WeakMethod runs at most once, at the first death of the object or the function."
     source := "Lib/weakref.py:53-60"
     status := .proven, prop := ``Weakref.WeakMethodCallbackOnce, thm := some ``Weakref.weakMethodCallbackOnce_proven },
+  { id := "misc-weakmethod-compare", pyFile := "Lib/weakref.py"
+    pyFns := ["WeakMethod.__eq__", "WeakMethod.__ne__"]
+    statement := "__eq__ and __ne__ return the referents' own results (a false object as is, exceptions through); __ne__ uses the objects' __ne__; with the default __ne__ it is the negated truth of __eq__."
+    source := "Lib/weakref.py:75-87"
+    status := .proven, prop := ``Weakref.WeakMethodCompare, thm := some ``Weakref.weakMethodCompare_proven },
   { id := "misc-finalize-once", pyFile := "Lib/weakref.py"
-    pyFns := ["finalize.__call__", "finalize.detach", "finalize.peek", "finalize.alive", "finalize.atexit"]
-    statement := "The first call runs the function and later ones return None; detach kills and peek keeps; shutdown stops the call; atexit reads and writes the flag."
+    pyFns := ["finalize.__call__", "finalize.detach", "finalize.peek", "finalize.alive"]
+    statement := "The first call runs the function and later ones return None; detach kills and peek keeps; shutdown stops the call."
     source := "docstring of finalize"
     status := .proven, prop := ``Weakref.Fin.FinalizeOnce, thm := some ``Weakref.Fin.finalizeOnce_proven },
+  { id := "misc-finalize-atexit", pyFile := "Lib/weakref.py"
+    pyFns := ["finalize.atexit"]
+    statement := "The getter is False for a dead finalizer; the setter evaluates bool(value) only for a live one, passes its exception, and changes only that finalizer."
+    source := "Lib/weakref.py:515-525"
+    status := .proven, prop := ``Weakref.Fin.FinalizeAtexit, thm := some ``Weakref.Fin.finalizeAtexit_proven },
   { id := "misc-finalize-init", pyFile := "Lib/weakref.py"
     pyFns := ["finalize.__init__", "finalize.__repr__"]
-    statement := "__init__ registers a live finalizer and marks the registry dirty, a non-referenceable target registers nothing, and __repr__ says dead or names the object."
+    statement := "__init__ stores the _Info (object, function, atexit True, next index) and leaves the others; an int target registers nothing; __repr__ names type(self) and says dead for an unregistered or dead target."
     source := "docstring of finalize"
     status := .proven, prop := ``Weakref.Fin.FinalizeInit, thm := some ``Weakref.Fin.finalizeInit_proven },
   { id := "misc-finalize-select", pyFile := "Lib/weakref.py"
@@ -592,9 +628,14 @@ def weakrefEntries : List Entry := [
     status := .proven, prop := ``Weakref.Fin.SelectForExit, thm := some ``Weakref.Fin.selectForExit_proven },
   { id := "misc-finalize-exitfunc", pyFile := "Lib/weakref.py"
     pyFns := ["finalize._exitfunc"]
-    statement := "With functions that neither fail nor create finalizers, _exitfunc runs each selected finalizer once, newest first, and sets _shutdown."
+    statement := "With functions that neither fail nor create finalizers, _exitfunc runs each selected finalizer once, newest first, with gc disabled, then sets _shutdown and restores gc."
     source := "docstring of finalize"
-    status := .proven, prop := ``Weakref.Fin.ExitfuncOrder, thm := some ``Weakref.Fin.exitfuncOrder_proven }
+    status := .proven, prop := ``Weakref.Fin.ExitfuncOrder, thm := some ``Weakref.Fin.exitfuncOrder_proven },
+  { id := "misc-finalize-exitfunc-paths", pyFile := "Lib/weakref.py"
+    pyFns := ["finalize._exitfunc"]
+    statement := "An Exception goes to the hook and the loop goes on; a raising hook or a BaseException ends it; re-registering fails the assert; a dirty registry re-selects; _shutdown and gc are restored on every path."
+    source := "Lib/weakref.py:543-576"
+    status := .proven, prop := ``Weakref.Fin.ExitfuncPaths, thm := some ``Weakref.Fin.exitfuncPaths_proven }
 ]
 
 def entries : List Entry :=

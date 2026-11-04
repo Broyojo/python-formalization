@@ -1,0 +1,81 @@
+id: corelibs-weakref-deepcopy-memo
+title: "deepcopy of a WeakKeyDictionary or WeakValueDictionary that refers to itself makes two copies of it"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/weakref.py, Lib/copy.py]
+functions: ["WeakValueDictionary.__deepcopy__", "WeakKeyDictionary.__deepcopy__", "deepcopy"]
+summary: |
+  WeakValueDictionary.__deepcopy__ (Lib/weakref.py:151-158) and WeakKeyDictionary.__deepcopy__
+  (:347-354) create `new = self.__class__()` and then deep-copy the keys (WVD) or the values (WKD)
+  with the caller's memo, but never record `memo[id(self)] = new`. copy.deepcopy only records the
+  result after __deepcopy__ returns (Lib/copy.py:159-161). So when a key or value refers back to the
+  dictionary, copying it calls deepcopy(self, memo) again, which misses memo and builds a second new
+  dictionary; the outer call then overwrites memo[id(self)] with the first one. The copy's key/value
+  points at the second copy, not at the returned one. For `d = WeakKeyDictionary(); d[k] = [d];
+  c = deepcopy(d)`, `c[k][0] is c` is False (it is a third dictionary, neither c nor d), while a plain
+  dict gives True. The same holds for a WeakValueDictionary whose key has an attribute referring to
+  the dictionary.
+likelihood: |
+  Low. It needs a weak dictionary that is reachable from its own keys or values (a registry that
+  stores back-references, an object graph holding a WeakKeyDictionary of metadata about objects that
+  point back to the registry) and is deep-copied. The result is silent: an extra, detached dictionary
+  in the copy.
+maybe_intended: |
+  Probably not intended. Every container copier in Lib/copy.py records the new object in memo before
+  copying its components (_deepcopy_list, _deepcopy_dict, _reconstruct) or re-reads memo afterwards
+  (_deepcopy_tuple), precisely for recursive structures. The two __deepcopy__ methods just skip the
+  step. A maintainer may call it a corner case.
+reproducer: |
+  import copy, weakref
+  class B:
+      pass
+  k, v = B(), B()
+  d = weakref.WeakKeyDictionary()
+  d[k] = [d]
+  c = copy.deepcopy(d)
+  wv = weakref.WeakValueDictionary()
+  key = B()
+  key.back = wv
+  wv[key] = v
+  cv = copy.deepcopy(wv)
+  ck = next(iter(cv.keys()))
+  p = {}
+  p['a'] = [p]
+  cp = copy.deepcopy(p)
+  outcome = {'wkd': c[k][0] is c, 'wvd': ck.back is cv, 'dict': cp['a'][0] is cp}
+  print(outcome)
+  if outcome == {'wkd': False, 'wvd': False, 'dict': True}:
+      print('REPRODUCED corelibs-weakref-deepcopy-memo')
+expected: |
+  {'wkd': True, 'wvd': True, 'dict': True}: the self-reference in the copy points at the copy, as for
+  a dict.
+observed: |
+  python3 3.15.2: {'wkd': False, 'wvd': False, 'dict': True}. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/copy.rst:62-65: "The deepcopy() function avoids these problems by: keeping a ``memo``
+  dictionary of objects already copied during the current copying pass". Here the dictionary is
+  copied twice in one pass.
+cause: |
+  Lib/weakref.py:153 and :349 create `new` and the loops at :154-157 and :350-353 recurse with memo
+  without `memo[id(self)] = new`; Lib/copy.py:159-161 stores the result only after __deepcopy__
+  returns, so the inner deepcopy(self, memo) misses.
+possible_fix: |
+  Record the new dictionary first in both methods:
+      new = self.__class__()
+      memo[id(self)] = new
+  Checked by monkeypatching both methods on 3.15.2: {'wkd': True, 'wvd': True}, and a dictionary
+  without a back-reference still deep-copies its values.
+duplicates:
+  issues:
+    - {number: 79796, state: closed, relation: "RuntimeError while copying a WeakValueDictionary (the data.copy() snapshot fix); not about memo", reason: "not a duplicate"}
+  queries: ["WeakKeyDictionary deepcopy", "WeakValueDictionary deepcopy", "weakref deepcopy memo",
+            "WeakKeyDictionary __deepcopy__ memo", "weakref dictionary deepcopy recursive",
+            "WeakValueDictionary deep copy", "weakref deepcopy", "deepcopy self-referencing dictionary memo __deepcopy__",
+            "WeakKeyDictionary copy", "__deepcopy__ memo self",
+            "bugforge README: no match for weakref, WeakValueDictionary or WeakKeyDictionary"]
+  related: [corelibs-copy-method-aliasing]
+lean:
+  property: PyLean.CoreLibs.Misc.Weakref.DeepcopyKeepsSharing
+  theorem: PyLean.CoreLibs.Misc.Weakref.deepcopyKeepsSharing_wvd_refuted

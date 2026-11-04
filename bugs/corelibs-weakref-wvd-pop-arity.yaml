@@ -1,0 +1,62 @@
+id: corelibs-weakref-wvd-pop-arity
+title: "WeakValueDictionary.pop accepts any number of defaults and silently uses the first"
+priority: P5
+kind: api-inconsistency
+module: corelibs
+files: [Lib/weakref.py]
+functions: ["WeakValueDictionary.pop"]
+summary: |
+  WeakValueDictionary.pop is `def pop(self, key, *args)` (Lib/weakref.py:211-222) and returns
+  `args[0]` for a missing or dead key, ignoring the rest. dict.pop, MutableMapping.pop
+  (`pop(self, key, default=__marker)`, Lib/_collections_abc.py:930) and WeakKeyDictionary.pop, which
+  forwards `*args` to dict.pop (Lib/weakref.py:404-405), all raise "TypeError: pop expected at most 2
+  arguments, got 3". So `WeakValueDictionary().pop('k', 1, 2)` returns 1, while the same call on a
+  WeakKeyDictionary or a dict raises. When the key is present, the extra arguments are ignored as
+  well.
+likelihood: |
+  Low. A wrong extra argument is a caller bug that the other mappings report; this one hides it.
+maybe_intended: |
+  Possibly historical: `*args` mirrors the old `dict.pop(key, *args)` spelling. No documentation
+  allows more than one default.
+reproducer: |
+  import weakref
+  class B:
+      pass
+  def res(f):
+      try:
+          return f()
+      except TypeError as e:
+          return 'TypeError'
+  o = B()
+  outcome = {
+      'wvd': res(lambda: weakref.WeakValueDictionary().pop('k', 1, 2)),
+      'wkd': res(lambda: weakref.WeakKeyDictionary().pop(o, 1, 2)),
+      'dict': res(lambda: {}.pop('k', 1, 2)),
+  }
+  print(outcome)
+  if outcome == {'wvd': 1, 'wkd': 'TypeError', 'dict': 'TypeError'}:
+      print('REPRODUCED corelibs-weakref-wvd-pop-arity')
+expected: |
+  {'wvd': 'TypeError', 'wkd': 'TypeError', 'dict': 'TypeError'}.
+observed: |
+  python3 3.15.2: {'wvd': 1, 'wkd': 'TypeError', 'dict': 'TypeError'}. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  The MutableMapping interface (Lib/_collections_abc.py:930, "D.pop(k[,d])"), which
+  WeakValueDictionary subclasses, and its twin WeakKeyDictionary.pop.
+cause: |
+  Lib/weakref.py:211 takes `*args` and :217-218 uses `args[0]` without checking `len(args)`.
+possible_fix: |
+  Check the count, as dict.pop does:
+      if len(args) > 1:
+          raise TypeError(f"pop expected at most 2 arguments, got {len(args) + 1}")
+  or use the `default=_marker` signature of MutableMapping.pop.
+duplicates:
+  issues:
+    - {number: 63741, state: closed, relation: "WeakValueDictionary setdefault()/pop() race with the GC (bpo-19542); not about arguments", reason: "not a duplicate"}
+  queries: ["WeakValueDictionary pop arguments", "WeakValueDictionary pop default", "WeakValueDictionary pop TypeError",
+            "weakref pop too many arguments", "WeakValueDictionary.pop", "weakref.py pop",
+            "bugforge README: no match for weakref, WeakValueDictionary or WeakKeyDictionary"]
+lean:
+  property: PyLean.CoreLibs.Misc.Weakref.WVD.WvdPopArity
+  theorem: PyLean.CoreLibs.Misc.Weakref.WVD.wvdPopArity_refuted

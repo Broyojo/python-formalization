@@ -106,54 +106,87 @@ theorem userListPopInt (c : String) (l : List Int) (x : Int) :
 
 /-! ### `sort` -/
 
-/-- The arguments of `u.sort(...)`: the number of positional arguments, and the `key` keyword
-(a function that may raise and change the list, or `None`). -/
-structure SortArgs (α κ : Type) where
+/-- The arguments of `u.sort(...)`: the number of positional arguments, and the keywords `key`
+(`none`: omitted; `some none`: `key=None`; else a function that may raise and change the list) and
+`reverse` (omitted, or an object whose truth test may raise). Other keyword names are out of scope. -/
+structure SortArgs (α κ ρ : Type) where
   npos : Nat := 0
-  key : Option (α → LView α → Py κ × LView α) := none
-  reverse : Bool := false
+  key : Option (Option (α → LView α → Py κ × LView α)) := none
+  reverse : Option ρ := none
 
-/-- `UserList.sort(*args, **kwds)`, :1404-1405: `self.data.sort(*args, **kwds)`. `list.sort` takes no
-positional argument (Objects/clinic/listobject.c.h), then `list_sort_impl` with the comparison `ltA`
-of items or `ltK` of keys, and `eff` what the comparisons do to the list. -/
-def ulSortP {κ : Type} (ltA : PLt α) (ltK : PLt κ) (eff : Nat → LView α → LView α) (u : UL α)
-    (a : SortArgs α κ) : Out (UL α) :=
-  if a.npos ≠ 0 then (u, some (.typeError "sort() takes no positional arguments"))
+/-- The number of keyword arguments given. -/
+def SortArgs.nkw {α κ ρ : Type} (a : SortArgs α κ ρ) : Nat :=
+  (if a.key.isSome then 1 else 0) + (if a.reverse.isSome then 1 else 0)
+
+/-- `UserList.sort(*args, **kwds)`, :1404-1405: `self.data.sort(*args, **kwds)`. Clinic
+(Objects/clinic/listobject.c.h:248-270, `_PyArg_UnpackKeywords`, Python/getargs.c:2572-2593) first
+refuses more than two arguments in all, then any positional one, then takes `key` and
+`reverse = PyObject_IsTrue(reverse)` (`truth`, which may raise); then `list_sort_impl` with the
+comparison `ltA` of items or `ltK` of keys, and `eff` what the comparisons do to the list. -/
+def ulSortP {κ ρ : Type} (truth : ρ → Py Bool) (ltA : PLt α) (ltK : PLt κ) (eff : Nat → LView α → LView α)
+    (u : UL α) (a : SortArgs α κ ρ) : Out (UL α) :=
+  if a.npos + a.nkw > 2 then
+    (u, some (.typeError s!"sort() takes at most 2 {if a.npos = 0 then "keyword " else ""}arguments ({a.npos + a.nkw} given)"))
+  else if a.npos ≠ 0 then (u, some (.typeError "sort() takes no positional arguments"))
   else
-    let r := match a.key with
-      | none => listSortImplFx ltA eff u.data a.reverse
-      | some k => listSortKeyImplFx ltK k eff u.data a.reverse
-    (⟨u.cls, r.1⟩, r.2)
+    let rev : Py Bool := match a.reverse with
+      | none => .ok false
+      | some r => truth r
+    match rev with
+    | .error e => (u, some e)
+    | .ok rev =>
+      let r := match a.key.getD none with
+        | none => listSortImplFx ltA eff u.data rev
+        | some k => listSortKeyImplFx ltK k eff u.data rev
+      (⟨u.cls, r.1⟩, r.2)
 
-/-- **`u.sort(...)` is `list.sort` on `u.data`, outcomes included.** For every comparison and key
-(which may raise or change the list): with no positional argument, `u.sort(key=k, reverse=r)` leaves
-`u.data` and raises exactly as `self.data.sort(key=k, reverse=r)` does (`list_sort_impl` with or without
-a key), so a raising `<` or `key` is propagated and a sort whose comparisons touched the list raises
-`ValueError('list modified during sort')`; any positional argument is a `TypeError` with `u`
-unchanged.
+/-- **`u.sort(...)` is `list.sort` on `u.data`, argument checks and outcomes included.** For every
+comparison and key (which may raise or change the list) and every `reverse` object: more than two
+arguments in all is `sort() takes at most 2 arguments`, otherwise any positional argument is
+`sort() takes no positional arguments`, both with `u` unchanged; a `reverse` whose truth test
+raises raises that with `u` unchanged; otherwise `u.sort(key=k, reverse=r)` leaves `u.data` and
+raises exactly as `self.data.sort(key=k, reverse=r)` does (with or without a key, `key=None` being
+none), so a raising `<` or `key` is propagated and a sort whose comparisons touched the list
+raises `ValueError('list modified during sort')`.
 
-Source: Lib/collections/__init__.py:1404-1405; Objects/listobject.c:2965-3227. -/
+Source: Lib/collections/__init__.py:1404-1405; Objects/clinic/listobject.c.h:248-270;
+Python/getargs.c:2572-2593; Objects/listobject.c:2965-3227. -/
 def UserListSortP : Prop :=
-  ∀ (α κ : Type) (ltA : PLt α) (ltK : PLt κ) (eff : Nat → LView α → LView α) (u : UL α) (a : SortArgs α κ),
-    (a.npos ≠ 0 → ulSortP ltA ltK eff u a = (u, some (.typeError "sort() takes no positional arguments"))) ∧
-    (a.npos = 0 → a.key = none →
-      ulSortP ltA ltK eff u a = (⟨u.cls, (listSortImplFx ltA eff u.data a.reverse).1⟩,
-        (listSortImplFx ltA eff u.data a.reverse).2)) ∧
-    (∀ k, a.npos = 0 → a.key = some k →
-      ulSortP ltA ltK eff u a = (⟨u.cls, (listSortKeyImplFx ltK k eff u.data a.reverse).1⟩,
-        (listSortKeyImplFx ltK k eff u.data a.reverse).2)) ∧
-    (∀ r n, a.npos = 0 → a.key = none → listSortCntF ltA u.data a.reverse = (r, n, none) →
-      (applyEffs eff n LView.during).allocated ≠ -1 →
-      (ulSortP ltA ltK eff u a).2 = some (.valueError "list modified during sort")) ∧
-    (∀ r n e, a.npos = 0 → a.key = none → listSortCntF ltA u.data a.reverse = (r, n, some e) →
-      (ulSortP ltA ltK eff u a).2 = some e)
+  ∀ (α κ ρ : Type) (truth : ρ → Py Bool) (ltA : PLt α) (ltK : PLt κ) (eff : Nat → LView α → LView α)
+    (u : UL α) (a : SortArgs α κ ρ) (b : Bool) (e : PyExc),
+    (a.npos + a.nkw > 2 → ulSortP truth ltA ltK eff u a =
+      (u, some (.typeError
+        s!"sort() takes at most 2 {if a.npos = 0 then "keyword " else ""}arguments ({a.npos + a.nkw} given)"))) ∧
+    (a.npos ≠ 0 → a.npos + a.nkw ≤ 2 →
+      ulSortP truth ltA ltK eff u a = (u, some (.typeError "sort() takes no positional arguments"))) ∧
+    (∀ r, a.npos = 0 → a.reverse = some r → truth r = .error e → ulSortP truth ltA ltK eff u a = (u, some e)) ∧
+    (a.npos = 0 → (a.reverse.map truth).getD (.ok false) = .ok b → a.key.getD none = none →
+      ulSortP truth ltA ltK eff u a = (⟨u.cls, (listSortImplFx ltA eff u.data b).1⟩,
+        (listSortImplFx ltA eff u.data b).2)) ∧
+    (∀ k, a.npos = 0 → (a.reverse.map truth).getD (.ok false) = .ok b → a.key.getD none = some k →
+      ulSortP truth ltA ltK eff u a = (⟨u.cls, (listSortKeyImplFx ltK k eff u.data b).1⟩,
+        (listSortKeyImplFx ltK k eff u.data b).2)) ∧
+    (∀ r n, a.npos = 0 → (a.reverse.map truth).getD (.ok false) = .ok b → a.key.getD none = none →
+      listSortCntF ltA u.data b = (r, n, none) → (applyEffs eff n LView.during).allocated ≠ -1 →
+      (ulSortP truth ltA ltK eff u a).2 = some (.valueError "list modified during sort"))
+
+theorem nkw_le {α κ ρ : Type} (a : SortArgs α κ ρ) : a.nkw ≤ 2 := by
+  unfold SortArgs.nkw; split <;> split <;> omega
 
 theorem userListSortP_proven : UserListSortP := by
-  intro α κ ltA ltK eff u a
-  refine ⟨fun h => by simp [ulSortP, h], fun h hk => by simp [ulSortP, h, hk],
-    fun k h hk => by simp [ulSortP, h, hk], fun r n h hk hs ha => ?_, fun r n e h hk hs => ?_⟩
-  · simp [ulSortP, h, hk, listSortImplFx, hs, modifiedCheck, ha]
-  · simp [ulSortP, h, hk, listSortImplFx, hs, modifiedCheck]
+  intro α κ ρ truth ltA ltK eff u a b e
+  have hrev : ∀ b, (a.reverse.map truth).getD (.ok false) = .ok b →
+      (match a.reverse with | none => (Except.ok false : Py Bool) | some r => truth r) = .ok b := by
+    intro b h; cases hr : a.reverse <;> simp_all
+  have h2 : ¬ 2 < a.nkw := by have := nkw_le a; omega
+  refine ⟨fun h => ?_, fun h h3 => ?_, fun r h hr he => ?_, fun h hb hk => ?_, fun k h hb hk => ?_,
+    fun r n h hb hk hs ha => ?_⟩
+  · simp only [ulSortP, h, if_true]
+  · simp [ulSortP, h, show ¬ (a.npos + a.nkw > 2) by omega]
+  · simp [ulSortP, h, h2, hr, he]
+  · simp [ulSortP, h, h2, hrev b hb, hk]
+  · simp [ulSortP, h, h2, hrev b hb, hk]
+  · simp [ulSortP, h, h2, hrev b hb, hk, listSortImplFx, hs, modifiedCheck, ha]
 
 /-- **`[a] < [b, 2]` when `a == b`: past an `==`-true prefix the lengths decide.** For every
 element comparison: when `u.data`'s items are pairwise identical or `==` to the first items of `l`,

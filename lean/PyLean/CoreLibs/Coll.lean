@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
-import PyLean.CoreLibs.Coll.CounterProps5
+import PyLean.CoreLibs.Coll.CounterTotal
+import PyLean.CoreLibs.Coll.ODictUpd
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
@@ -104,6 +105,10 @@ def counterEntries : List Entry := [
     statement := "For any pure +=, -=, <, > on counts, a += b leaves a[k] += b[k] at b's keys and a[k] elsewhere, -= likewise, |= takes b[k] where b[k] > a[k], &= takes b[k] (0 when missing) where b[k] < a[k], each keeping only counts > 0, without raising."
     source := "docstrings, Lib/collections/__init__.py:964-1011"
     status := .proven, prop := ``InplaceArith, thm := some ``inplaceArith_proven },
+  { id := "coll-counter-total-sum", pyFile := file, pyFns := ["Counter.total"]
+    statement := "total() is sum(self.values()): the exact sum for int counts (whether or not the Py_ssize_t fast path overflows), and ((0 + c1) + c2) + ... in insertion order for counts that are not int, float or complex, + free to raise; the compensated float/complex paths are a parameter."
+    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625; Python/bltinmodule.c:2878-2972"
+    status := .proven, prop := ``CounterTotalSum, thm := some ``counterTotalSum_proven },
   { id := "coll-counter-total", pyFile := file, pyFns := []
     statement := "total() is sum(self.values()) for every count type."
     source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
@@ -293,8 +298,8 @@ def userListEntries : List Entry := [
     source := "Lib/collections/__init__.py:1383-1384"
     status := .proven, prop := ``UserListPop, thm := some ``userListPop_proven },
   { id := "coll-userlist-sort-p", pyFile := file, pyFns := ["UserList.sort"]
-    statement := "u.sort(key=k, reverse=r) leaves u.data and raises as list.sort does on it (raising < or key, list modified during sort); a positional argument is TypeError with u unchanged."
-    source := "Lib/collections/__init__.py:1404-1405; Objects/listobject.c:2965-3227"
+    statement := "u.sort(...) refuses more than 2 arguments, then any positional one, then a reverse whose truth test raises, each with u unchanged; otherwise it leaves u.data and raises as list.sort(key=k, reverse=r) does on it (raising < or key, list modified during sort)."
+    source := "Lib/collections/__init__.py:1404-1405; Objects/clinic/listobject.c.h:248-270; Python/getargs.c:2572-2593; Objects/listobject.c:2965-3227"
     status := .proven, prop := ``UserListSortP, thm := some ``userListSortP_proven },
   { id := "coll-userlist-len-after-prefix", pyFile := file
     pyFns := ["UserList.__lt__", "UserList.__le__", "UserList.__gt__", "UserList.__ge__"]
@@ -466,8 +471,44 @@ def namedtupleEntries : List Entry := [
     status := .proven, prop := ``NamedtupleRepr, thm := some ``namedtupleRepr_proven }
 ]
 
+def odictEntries : List Entry := [
+  { id := "coll-odict-setitem", pyFile := file, pyFns := ["OrderedDict.__setitem__"]
+    statement := "od[k] = v keeps the list invariant (chain from the root, __map, dict keys): an existing key keeps its link and place, a new key gets a new link at the end."
+    source := "Lib/collections/__init__.py:119-131; Doc/library/collections.rst, OrderedDict"
+    status := .proven, prop := ``ODSetInv, thm := some ``odSetInv_proven },
+  { id := "coll-odict-del-pop", pyFile := file, pyFns := ["OrderedDict.__delitem__", "OrderedDict.pop"]
+    statement := "del od[k] and od.pop(k[, d]) drop exactly k's link, the others keeping their order, pop returning k's value."
+    source := "Lib/collections/__init__.py:133-144, :245-265"
+    status := .proven, prop := ``ODDelInv, thm := some ``odDelInv_proven },
+  { id := "coll-odict-clear", pyFile := file, pyFns := ["OrderedDict.clear"]
+    statement := "clear() leaves the root pointing at itself and __map and the dict empty."
+    source := "Lib/collections/__init__.py:164-169"
+    status := .proven, prop := ``ODClearInv, thm := some ``odClearInv_proven },
+  { id := "coll-odict-popitem", pyFile := file, pyFns := ["OrderedDict.popitem"]
+    statement := "popitem() returns and removes the last item, popitem(last=False) the first, keeping the invariant; an empty instance raises KeyError('dictionary is empty')."
+    source := "docstring, Lib/collections/__init__.py:172-175"
+    status := .proven, prop := ``ODPopitemInv, thm := some ``odPopitemInv_proven },
+  { id := "coll-odict-setdefault", pyFile := file, pyFns := ["OrderedDict.setdefault"]
+    statement := "setdefault returns a present key's value unchanged, or stores the default with a new link at the end and returns it."
+    source := "docstring, Lib/collections/__init__.py:268-271"
+    status := .proven, prop := ``ODSetdefaultInv, thm := some ``odSetdefaultInv_proven },
+  { id := "coll-odict-order-views", pyFile := file, pyFns := ["OrderedDict.__reduce__", "OrderedDict.__eq__"]
+    statement := "list(od) and the items of __reduce__ follow the link order; == with an OrderedDict is dict equality and then the same key order, with a plain dict dict equality alone."
+    source := "Lib/collections/__init__.py:285-301, :316-324"
+    status := .proven, prop := ``ODOrderViews, thm := some ``odOrderViews_proven },
+  { id := "coll-odict-update-order", pyFile := file
+    pyFns := ["OrderedDict.__new__", "OrderedDict.__init__", "OrderedDict.fromkeys", "OrderedDict.copy"]
+    statement := "update(pairs) (and OrderedDict(pairs) from a new instance) appends new keys in first-seen order keeping the invariant; fromkeys(xs) has xs's keys in first-seen order; copy() has the same keys in the same order."
+    source := "Doc/library/collections.rst, OrderedDict; Lib/collections/__init__.py:104-117, :303-314"
+    status := .proven, prop := ``ODUpdateOrder, thm := some ``odUpdateOrder_proven },
+  { id := "coll-odict-iter", pyFile := file, pyFns := ["OrderedDict.__iter__"]
+    statement := "The __iter__ generator yields the keys in link order, list(od); resuming it after its current key was deleted raises AttributeError."
+    source := "Lib/collections/__init__.py:146-153"
+    status := .proven, prop := ``ODIterGen, thm := some ``odIterGen_proven }
+]
+
 def entries : List Entry :=
-  counterEntries ++ chainMapEntries ++ userDictEntries ++ userListEntries ++ userStringEntries ++
+  counterEntries ++ odictEntries ++ chainMapEntries ++ userDictEntries ++ userListEntries ++ userStringEntries ++
     namedtupleEntries
 
 end PyLean.CoreLibs.Coll
