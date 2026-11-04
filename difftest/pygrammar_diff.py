@@ -565,6 +565,15 @@ RULE_FORMS = [
     "x[a, b:c]", "{e}.", "{e}[", "{e}(", "{e}[]", "(x for x in {e})", "[{e}]", "{{{e}}}", "{{{e}: {f}}}",
     "'s'.x", "1 .real", "1.real", "f'{e}'.x", "for {e}.x in y: pass", "for {e}[0] in y: pass",
     "with a as {e}.b: pass", "with a as ({e}, {f}): pass", "x: {e}[0] = 1", "{e}.x: int",
+    # imports, patterns, invalid assignments (Peg/Rules/Imports.lean, Patterns.lean, InvalidTargets.lean)
+    "import {n}.x as y", "import a . b . c", "import a.b as {n}", "from x import a as b, c as {n}",
+    "from x import ({n}, a as b,)", "import a, b.c as d, {n}",
+    "match {e}:\n case (a): pass", "match {e}:\n case (a,): pass", "match {e}:\n case a | {k}: pass",
+    "match {e}, {f}:\n case _: pass", "match {e},:\n case [a, *_]: pass", "match {e}:\n case (): pass",
+    "match {e}:\n case a.b | c.d: pass", "match {e}:\n case (a | b) as c: pass", "match {e}:\n case {k}, *r: pass",
+    "match {e}:\n case [{k}, (a, b)]: pass", "match {e}:\n case _ | _: pass", "match *{e}, {f}:\n case _: pass",
+    "({e}, {f}): int", "[{e}]: int", "(({e}, {f})): int", "{e}, {f}: int", "{e}: int", "{e} += 1",
+    "({e}) += 1", "{e}, {f} += 1", "del {e}, f()", "del ({e}, {e} + 1)", "{e} = yield = 1",
 ]
 
 
