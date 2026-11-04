@@ -16,6 +16,7 @@ import PyLean.Decimal.ContextExact
 import PyLean.Decimal.DelegateExact
 import PyLean.Decimal.Pow10a
 import PyLean.Decimal.DelegateExact2
+import PyLean.Decimal.Exact3
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
