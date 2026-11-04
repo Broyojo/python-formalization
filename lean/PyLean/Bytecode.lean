@@ -32,6 +32,8 @@ import PyLean.Bytecode.SpecAsync
 import PyLean.Bytecode.SpecCallBuiltin
 import PyLean.Bytecode.SpecGen
 import PyLean.Bytecode.KwDefaultsC
+import PyLean.Bytecode.SpecBinding
+import PyLean.Bytecode.SpecResume
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -379,17 +381,18 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``IterObj.CellNew, thm := some ``IterObj.cellNew_proven },
   -- Frame-switching and unwinding invariants.
   { id := "bytecode-return-value", pyFile := "Python/bytecodes.c"
-    pyFns := [op "RETURN_VALUE", op "_RETURN_VALUE"]
+    pyFns := [op "RETURN_VALUE", op "_RETURN_VALUE", "_PyEval_FrameClearAndPop", "clear_thread_frame", "clear_gen_frame"]
     statement := "RETURN_VALUE pops the frame, restores the Python recursion budget, and resumes the caller at instr_ptr + return_offset with the returned value on top, for every caller stack; from a generator's frame it also marks the generator FRAME_CLEARED, gives tstate->exc_info back to the item below the generator's, clears the generator's handled exception and drops its frame's locals."
     source := "RETURN_VALUE, Python/bytecodes.c:1573-1593; clear_gen_frame and _PyEval_FrameClearAndPop, Python/ceval.c:2001-2030"
-    status := .proven, prop := ``ReturnValueRules, thm := some ``returnValueRules_proven },
+    status := .proven, prop := ``ReturnValueRules, thm := some ``returnValueRules_proven
+    notes := "clear_thread_frame only drops the frame's references and pops the data stack: the machine has no reference counts, finalizers or PyFrameObject, so the frame object's take_ownership copy (sys._getframe, tracebacks) is out of scope. clear_gen_frame's 3.15 store of generator_return_kind = GENERATOR_RETURN is what gen_send_ex2 reads to tell a return from a yield; the machine tells them apart by the frame state it sets here." },
   { id := "bytecode-unwind-to-handler", pyFile := "Python/bytecodes.c"
     pyFns := ["get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
     statement := "exception_unwind truncates the stack to the handler's recorded depth, pushes lasti if the entry says so, pushes the exception, and jumps to the handler; every value below the recorded level survives."
     source := "exception_unwind, Python/bytecodes.c:6485-6524; get_exception_handler, Python/ceval.h:457-510"
     status := .proven, prop := ``UnwindToHandler, thm := some ``unwindToHandler_proven },
   { id := "bytecode-unwind-no-handler", pyFile := "Python/bytecodes.c"
-    pyFns := ["_PyEval_FrameClearAndPop", "clear_thread_frame"]
+    pyFns := []
     statement := "With no handler, exception_unwind pops the frame, restores the recursion budget, and continues the search in the caller; the frame's own stack is discarded."
     source := "exception_unwind / exit_unwind, Python/bytecodes.c:6493-6577"
     status := .proven, prop := ``UnwindNoHandler, thm := some ``unwindNoHandler_proven },
@@ -836,6 +839,30 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:1931-1958"
     status := .proven, prop := ``EndAsyncForRules, thm := some ``endAsyncForRules_proven
     notes := "The JUMPBY(0) is for monitoring only. On the re-raise the model drops the two before unwinding; the C unwinding to the handler's depth, below them, drops them." },
+  { id := "bytecode-bind-keywords", pyFile := "Python/ceval.c"
+    pyFns := ["initialize_locals"]
+    statement := "For every code object, function, **kwargs dict and keyword list, initialize_locals' keyword loop raises 'Q() got multiple values for argument K' for a keyword naming a parameter already set and otherwise binds it; a keyword naming no parameter goes into **kwargs, or, with no **kwargs, raises the positional-only error first when there are positional-only parameters and a keyword names one, else the unexpected keyword error."
+    source := "Python/ceval.c:1803-1899"
+    status := .proven, prop := ``BindKeywordsRules, thm := some ``bindKeywordsRules_proven
+    notes := "Keyword names are text in the machine: a str subclass key with its own __eq__ (reachable through ** and _PyStack_UnpackDict, compared by PyObject_RichCompareBool at :1826) is out of scope, as is __kwdefaults__ with non-str keys (see bytecode-kwonly-defaults-borrowed). The defaults step, with m = co_argcount - defcount negative when __defaults__ is longer than the parameters, is checked by the difftest (p_binding)." },
+  { id := "bytecode-posonly-keyword", pyFile := "Python/ceval.c"
+    pyFns := ["positional_only_passed_as_keyword"]
+    statement := "For every code object and keyword list, positional_only_passed_as_keyword joins with ', ' the keywords equal to a positional-only name, name by name and in keyword order, into 'Q() got some positional-only arguments passed as keyword arguments: 'A, B'', and with none changes nothing."
+    source := "Python/ceval.c:1674-1735"
+    status := .proven, prop := ``PosonlyKeywordRules, thm := some ``posonlyKeywordRules_proven },
+  { id := "bytecode-unexpected-keyword", pyFile := "Python/ceval.c"
+    pyFns := []
+    statement := "For every code object and keyword, the unexpected keyword TypeError is 'Q() got an unexpected keyword argument 'K'', followed by '. Did you mean 'S'?' exactly when _Py_CalculateSuggestions finds S among the names that may be passed by keyword; S is always such a name (never positional-only) and never K."
+    source := "Python/ceval.c:1851-1876; Python/suggestions.c:122-180"
+    status := .proven, prop := ``UnexpectedKeywordRules, thm := some ``unexpectedKeywordRules_proven
+    notes := "Part of initialize_locals (bytecode-bind-keywords). The suggestion model is TypeObj.calcSuggestion, shared with getargs.c's message; checked on 3.15.2: h(abd=1) for h(abc, *, defg=1) suggests 'abc', h(1, xyz=3) suggests nothing." },
+  { id := "bytecode-resume", pyFile := "Python/bytecodes.c"
+    pyFns := [op "RESUME", op "_CHECK_PERIODIC_IF_NOT_YIELD_FROM", op "_MAYBE_INSTRUMENT", op "RESUME_CHECK",
+              op "_RESUME_CHECK", op "RESUME_CHECK_JIT"]
+    statement := "For every state, RESUME checks the eval breaker (a pending exception is raised with nothing popped, else nothing changes) exactly when its location bits are below RESUME_AFTER_YIELD_FROM, and does nothing otherwise; RESUME_CHECK and RESUME_CHECK_JIT do nothing with no event pending and otherwise run RESUME."
+    source := "Python/bytecodes.c:168-248; Include/internal/pycore_opcode_utils.h:86-92"
+    status := .proven, prop := ``ResumeRules, thm := some ``resumeRules_proven
+    notes := "No monitoring tool is active in the machine, so _MAYBE_INSTRUMENT never re-instruments and the breaker's version bits equal the code's. A pending event whose handlers succeed is pendingExc = .null; RESUME_CHECK's deopt to RESUME then has the same effect as going on. _QUICKEN_RESUME is the quickening relation; _JIT is a no-op without tier 2." },
   { id := "bytecode-kwonly-defaults-borrowed", pyFile := "Python/ceval.c"
     pyFns := ["initialize_locals"]
     statement := "The keyword-only defaults loop of initialize_locals never reads freed memory, whatever the __eq__ of a key stored in __kwdefaults__ does to f.__kwdefaults__. It does not: func->func_kwdefaults is passed borrowed to PyDict_GetItemRef, so a non-str key with the parameter name's hash whose __eq__ sets f.__kwdefaults__ = None frees the dict, and compare_generic then reads mp->ma_keys of the freed dict."

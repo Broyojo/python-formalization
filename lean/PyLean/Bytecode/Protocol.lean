@@ -609,7 +609,28 @@ def setAttrImpl (o : Val) (name : String) (v : Val) : RM Unit := do
         if !(← dictPopStr d name) then noAttr o name
       else dictSetStr d name v
       return ()
-    | .func _ => return ()
+    | .func f =>
+      -- `func_set_defaults` and `func_set_kwdefaults` (`Objects/funcobject.c:827-858`, `:875-906`):
+      -- `None` and deletion store NULL, anything but a tuple (a dict) is a `TypeError`, and
+      -- `func_clear_version` (`:335-350`) sets a valid version to `FUNC_VERSION_CLEARED` (1). Other
+      -- function attributes are not modelled (the store is dropped).
+      let clearVer := if f.version < 2 then f.version else 1
+      let v' := if v == .none then .null else v
+      let kindOf : Val → RM String := fun x => do
+        match x with
+        | .ref b =>
+          match ← getObj b with
+          | .tuple _ => pure "tuple"
+          | .dict _ => pure "dict"
+          | _ => pure ""
+        | _ => pure ""
+      if name == "__defaults__" then
+        if v' != .null && (← kindOf v') != "tuple" then typeError "__defaults__ must be set to a tuple object"
+        setObj a (.func { f with defaults := v', version := clearVer })
+      else if name == "__kwdefaults__" then
+        if v' != .null && (← kindOf v') != "dict" then typeError "__kwdefaults__ must be set to a dict object"
+        setObj a (.func { f with kwdefaults := v', version := clearVer })
+      return ()
     | _ => pure ()
   | _ => pure ()
   raiseS "AttributeError"
