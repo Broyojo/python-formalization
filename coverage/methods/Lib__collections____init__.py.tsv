@@ -97,11 +97,11 @@ Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	co
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	
 Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-init-copy,coll-userlist-operands	
 Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	todo		review: `ListOps.repr : List α → String` can neither raise nor recurse, so an element `__repr__` that raises and the `[...]` of a UserList that holds itself cannot be expressed, and UserListObservers states only `ulRepr ops u = ops.repr u.data`, the definition (UserDict.__repr__ pins both cases).
-Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	todo		review: The length hypothesis is gone, but the decisive-pair conjunct still needs a prefix of identical objects (`pre ++ x :: s`, `pre ++ y :: t`, `DecidableEq α` being `is`), and the all-true conjunct needs `E.eqB` true everywhere, so a prefix of equal but not identical items before the decisive pair is never stated: a `<` that returned the length comparison at the first non-identical pair whose `==` is true (`[1000, 1] < [1000, 2]` with two distinct 1000s gives False instead of True) passes; a `firstDiff` lemma over a pairwise-`==`-true prefix would close it.
+Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	todo		review: As `__lt__`: a prefix of equal but not identical items is unstated, so a `<=` stopping at the first non-identical pair whose `==` is true passes.
+Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	todo		review: Identical lists and lists where every `==` is true are now True, but a mix is unstated: the decisive-pair conjunct needs an identical prefix and the all-true conjunct a universally true `E.eqB`, so a `==` that returned True at the first non-identical pair whose `==` is true (`[a, b] == [a2, b2]` with `a == a2` true and `b == b2` false gives True) passes.
+Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	todo		review: As `__lt__`: a prefix of equal but not identical items is unstated.
+Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	todo		review: As `__lt__`: a prefix of equal but not identical items is unstated.
 Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-compare-p	
 Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1323	1324	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
