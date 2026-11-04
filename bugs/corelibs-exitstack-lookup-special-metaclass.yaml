@@ -1,0 +1,92 @@
+id: corelibs-exitstack-lookup-special-metaclass
+title: "ExitStack.enter_context and push use a metaclass's __enter__/__exit__ on an instance, which the with statement refuses"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/contextlib.py, Lib/inspect.py]
+functions: ["_lookup_special", "_BaseExitStack.enter_context", "_BaseExitStack.push", "AsyncExitStack.enter_async_context", "AsyncExitStack.push_async_exit"]
+summary: |
+  `_lookup_special(obj, name, default)`, new in 3.15 (Lib/contextlib.py:534-542), says it follows
+  "the standard lookup behaviour for special methods" (:535) and does
+  `getattr_static(type(obj), name)`. But `getattr_static` on a class also searches the class's
+  metaclass when the class's own MRO has no such attribute ("for types we check the metaclass too",
+  Lib/inspect.py:1795-1801). The interpreter's special lookup, `_PyObject_LookupSpecial` and
+  `_PyObject_LookupSpecialMethod` (Objects/typeobject.c:2990-3002, :3009), looks at the MRO of
+  `type(obj)` only.
+
+  So for `class Meta(type)` defining `__enter__` and `__exit__` and `class C(metaclass=Meta)`, an
+  instance `C()` is no context manager: `with C(): pass` raises `TypeError: 'C' object does not
+  support the context manager protocol`. Yet `ExitStack().enter_context(C())` finds
+  `Meta.__enter__`, `_descriptor_get` binds it to the instance, and it returns `Meta.__enter__`'s
+  result; `stack.push(C())` registers `Meta.__exit__` bound to the instance, which can then suppress
+  exceptions. `AsyncExitStack.enter_async_context` and `push_async_exit` do the same with
+  `__aenter__`/`__aexit__`, against `async with`.
+likelihood: |
+  Low. It needs a metaclass that defines the context manager methods (to make the classes
+  themselves usable in `with`, which some libraries do) and an instance of such a class handed to an
+  ExitStack. The result is silent: code that `with` rejects runs, with the metaclass's method
+  receiving an instance instead of a class.
+maybe_intended: |
+  No. The comment states the intent, and in python/cpython#144386, the issue `_lookup_special` was
+  added for, ncoghlan wrote that looking special methods up on the type is intentional and part of
+  the language specification, "hence it being consistent between the syntactic and programmatic
+  forms". In 3.14.7 the same input failed differently: `type(cm).__enter__` found the metaclass
+  method bound to the class, and calling it with `cm` raised a TypeError about the argument count.
+reproducer: |
+  import contextlib
+  class Meta(type):
+      def __enter__(self):
+          return 'meta'
+      def __exit__(self, *exc):
+          return True
+  class C(metaclass=Meta):
+      pass
+  try:
+      with C():
+          pass
+      with_ok = True
+  except TypeError as e:
+      with_ok = False
+      print('with C():', e)
+  got = contextlib.ExitStack().enter_context(C())
+  print('ExitStack().enter_context(C()):', repr(got))
+  stack = contextlib.ExitStack()
+  stack.push(C())
+  try:
+      with stack:
+          raise ValueError('lost')
+      suppressed = True
+  except ValueError:
+      suppressed = False
+  print('push(C()) suppressed ValueError:', suppressed)
+  if not with_ok and got == 'meta' and suppressed:
+      print('REPRODUCED corelibs-exitstack-lookup-special-metaclass')
+expected: |
+  `enter_context(C())` raises the same TypeError as `with C()` ("does not support the context
+  manager protocol"), and `push(C())` registers `C()` as a plain callable (calling it at exit then
+  fails, as for any non-callable object).
+observed: |
+  python3 3.15.2: `with C()` raises TypeError; `enter_context(C())` returns 'meta'; the pushed
+  `Meta.__exit__` suppresses the ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  The comment at Lib/contextlib.py:535, "Follow the standard lookup behaviour for special methods",
+  and the docs of `enter_context` ("Enters a new context manager"); python/cpython#144386, where
+  the consistency of `with` and ExitStack was the point of the change.
+cause: |
+  Lib/contextlib.py:539 calls `getattr_static(cls, name)` with `cls = type(obj)` a class, and
+  Lib/inspect.py:1795-1801 then looks in the metaclass's MRO as well.
+possible_fix: |
+  Look `name` up in the MRO of `type(obj)` only, for example with `inspect._check_class(cls, name)`
+  (Lib/inspect.py:1719-1723) and the sentinel, instead of `getattr_static`.
+duplicates:
+  issues:
+    - {number: 144386, state: closed, relation: "the issue whose fix (gh-144420) added _lookup_special", reason: "about __slots__ member descriptors; the metaclass fallback is not mentioned"}
+    - {number: 144989, state: open, relation: "proposal to expose the C special-method lookup to Python, from the review of gh-144420", reason: "feature request; does not mention the metaclass"}
+    - {number: 144420, state: merged, relation: "PR that added _lookup_special", reason: "review comments discuss the cost of getattr_static, not the metaclass"}
+  queries: ["ExitStack metaclass", "_lookup_special contextlib", "contextlib getattr_static",
+            "enter_context descriptor", "ExitStack special method lookup", "getattr_static metaclass",
+            "bugforge README: no contextlib entries"]
+lean:
+  property: PyLean.CoreLibs.Misc.Contextlib.LookupSpecialIsSpecial
+  theorem: PyLean.CoreLibs.Misc.Contextlib.lookupSpecialIsSpecial_refuted

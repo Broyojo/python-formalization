@@ -379,9 +379,9 @@ def issubTuple (d : Derived) (handled : Option ExcId) : List (SupItem σ) → St
     | (s, .ok false) => issubTuple d handled is s
     | r => r
 
-/-- `get_matcher_type`, Objects/exceptions.c:1245-1276, on the tuple `self._exceptions`: it is a type
-matcher when every item is an exception class, and `none`, the `TypeError` of :1271-1274,
-otherwise. -/
+/-- `get_matcher_type`, Objects/exceptions.c:1245-1276, on the tuple `self._exceptions` (:1260-1269):
+it is a type matcher when every item is an exception class, and `none`, the `TypeError` of
+:1271-1275, otherwise. -/
 def matcherClasses : List (SupItem σ) → Option (List Cls)
   | [] => some []
   | .cls c :: is => if c.contains "BaseException" then (c :: ·) <$> matcherClasses is else none
@@ -407,10 +407,10 @@ def builtinDerive : Derive σ := fun orig excs s =>
     { cls := deriveCls s.h excs, msg := (s.h.get orig).msg, children := some excs }
   ({ s with h := h }, .ok e)
 
-/-- `exceptiongroup_subset`, Objects/exceptions.c:1151-1230: `none` for an empty `excs` (:1166-1168);
-else `orig.derive(excs)` (:1170-1174), refused unless it is a `BaseExceptionGroup` (:1176-1180),
-then `__traceback__` when `orig` has one (:1184-1191), `__context__` and `__cause__` from `orig`
-(:1192-1193). The copy of `__notes__`, :1195-1220, is outside the model. -/
+/-- `exceptiongroup_subset`, Objects/exceptions.c:1151-1230: `none` for an empty `excs` (:1169-1171);
+else `orig.derive(excs)` (:1173-1177), refused unless it is a `BaseExceptionGroup` (:1179-1183),
+then `__traceback__` when `orig` has one (:1187-1194), `__context__` and `__cause__` from `orig`
+(:1195-1196). The copy of `__notes__`, :1198-1223, is outside the model. -/
 def subsetM (derive : Derive σ) (handled : Option ExcId) (s : St σ) (orig : ExcId)
     (excs : List ExcId) : St σ × Res (Option ExcId) :=
   if excs.isEmpty then (s, .ok none)
@@ -447,8 +447,9 @@ def splitStep (rec : St σ → ExcId → SplitRes σ)
     | some (s, .ok (m, r)) => some (s, .ok (ml ++ m.toList, rl ++ r.toList))
 
 /-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1322-1430, with the type matcher `ms`: a
-full match (:1335-1339), an unmatched leaf (:1340-1346), or the loop over `eg->excs` and the two
-subsets, match first (:1410-1419). `none` is out of fuel. -/
+full match (:1337-1341), an unmatched leaf (:1342-1348; a group of the heap always has members), or
+the loop over `eg->excs` (:1374-1407) and the two subsets, match first (:1409-1420). `none` is out
+of fuel. -/
 def splitRec (ms : List Cls) (derive : Derive σ) (handled : Option ExcId) :
     Nat → St σ → ExcId → SplitRes σ
   | 0, _, _ => none
