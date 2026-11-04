@@ -322,4 +322,166 @@ theorem invalidAssignment_proven : InvalidAssignment := by
     simp only at herr
     simp [nonNull, herr, heq]
 
+/-- The three annotation alternatives of `invalid_assignment` fail with no error, from the entry
+state `p.enter`, ending in `s5`: `invalid_ann_assign_target` (217) gives `NULL`; then
+`star_named_expression` (116) gives `NULL`, or is followed by no `,` (12), or by `,` and the
+`star_named_expressions*` loop (398) and no `:` (11); then `expression` (109) gives `NULL`, or is
+followed by no `:`. Each failed alternative puts the mark back to the start. -/
+def AnnAltsFail (f : Nat) (p s5 : PS) : Prop :=
+  ∃ (s1 s3 : PS), callRule (f + 7) 217 p.enter = (.null, s1) ∧ s1.errorIndicator = false ∧
+    (callRule (f + 6) 116 { s1 with mark := p.mark } = (.null, s3) ∨
+      (∃ (a' : Ast) (s2 : PS), callRule (f + 6) 116 { s1 with mark := p.mark } = (a', s2) ∧
+        a' ≠ .null ∧ expectToken 12 s2 = (.null, s3)) ∨
+      (∃ (a' xs : Ast) (c : Token) (s2 s2' s2'' : PS),
+        callRule (f + 6) 116 { s1 with mark := p.mark } = (a', s2) ∧ a' ≠ .null ∧
+        expectToken 12 s2 = (.tok c, s2') ∧ callRule (f + 4) 398 s2' = (xs, s2'') ∧ xs ≠ .null ∧
+        expectToken 11 s2'' = (.null, s3))) ∧
+    s3.errorIndicator = false ∧
+    (callRule (f + 5) 109 { s3 with mark := p.mark } = (.null, s5) ∨
+      (∃ (a0 : Ast) (s4 : PS), callRule (f + 5) 109 { s3 with mark := p.mark } = (a0, s4) ∧
+        a0 ≠ .null ∧ expectToken 11 s4 = (.null, s5))) ∧
+    s5.errorIndicator = false
+
+/-- `invalid_assignment` (`Grammar/python.gram:1297-1316`), the two `=` alternatives:
+```
+    | (star_targets '=')* a=star_expressions '=' {
+        RAISE_SYNTAX_ERROR_INVALID_TARGET(STAR_TARGETS, a) }
+    | (star_targets '=')* a=yield_expr '=' { RAISE_SYNTAX_ERROR_KNOWN_LOCATION(a, "assignment to yield expression not possible") }
+```
+Once the three annotation alternatives fail (`AnnAltsFail`), the `(star_targets '=')*` loop
+(`_loop0_122`, 399) from the start mark, `star_expressions` (112) and `=` (22) run
+`_RAISE_SYNTAX_ERROR_INVALID_TARGET(p, STAR_TARGETS, a)` (`Parser/pegen.h:245-264`): with a first
+node `t` that cannot be assigned to (`_PyPegen_get_invalid_target(a, STAR_TARGETS)`, `invalidTarget
+0`), "cannot assign to <name of t>" raised over `t` (so `f() = 1` names a "function call" at `f()`,
+and `x = f() = 1` too, after the loop took `x =`), the rule ending `NULL` with `error_indicator`
+set; with none (no exception), the action's `NULL` ends the rule with `NULL`, no error, the mark
+after the `=`. When `star_expressions` gives `NULL` (as at `yield`), the loop runs again from the
+start mark and `yield_expr` (111) and `=` raise "assignment to yield expression not possible" over
+the yield expression (`x = yield = 1`). -/
+def InvalidAssignmentEq : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false →
+  p.level ≠ MAXSTACK →
+  let raised (a : Ast) (m : String) (s : PS) : Ast × PS :=
+    (.null, { (raiseErrorKnownLocation "SyntaxError" (locOf a).lineno (locOf a).colOffset
+      (locOf a).endLineno (locOf a).endColOffset m s).2 with errorIndicator := true }.leave)
+  ∀ (l : Ast) (s5 s6 : PS), AnnAltsFail f p s5 →
+    callRule (f + 4) 399 { s5 with mark := p.mark } = (l, s6) → l ≠ .null →
+  (∀ (a : Ast) (c : Token) (s7 s8 : PS), callRule (f + 3) 112 s6 = (a, s7) → a ≠ .null →
+    expectToken 22 s7 = (.tok c, s8) → s8.errorIndicator = false →
+    (∀ (tg : Ast) (nm : String), invalidTarget 0 100000 a = tg → tg ≠ .null →
+      exprName tg = some nm → callRule (f + 12) 216 p = raised tg ("cannot assign to " ++ nm) s8) ∧
+    (invalidTarget 0 100000 a = .null → s8.errOccurred = false →
+      callRule (f + 12) 216 p = (.null, s8.leave))) ∧
+  (∀ (l' a : Ast) (c : Token) (s7 s9 s10 s11 : PS), callRule (f + 3) 112 s6 = (.null, s7) →
+    s7.errorIndicator = false → callRule (f + 3) 399 { s7 with mark := p.mark } = (l', s9) →
+    l' ≠ .null → callRule (f + 2) 111 s9 = (a, s10) → a ≠ .null →
+    expectToken 22 s10 = (.tok c, s11) → s11.errorIndicator = false →
+    callRule (f + 12) 216 p = raised a "assignment to yield expression not possible" s11)
+
+/-- The first three alternatives of `invalid_assignment` fail as `AnnAltsFail` says. -/
+theorem annAltsFail_run {f : Nat} {p s5 : PS} (he' : p.enter.errorIndicator = false)
+    (h : AnnAltsFail f p s5) (rest : List Alt) (g : Bool) (st : Int × Int) :
+    runAlts (f + 10) (r216.alts.take 3 ++ rest) g p.mark st p.enter =
+      runAlts (f + 7) rest g p.mark st { s5 with mark := p.mark } := by
+  obtain ⟨s1, s3, h1, h1e, h2, h3e, h3, h5e⟩ := h
+  have E : ∀ s : PS, s.errorIndicator = false → ({ s with mark := p.mark } : PS).errorIndicator = false :=
+    fun s hs => hs
+  have i2 : runItems (f + 8) [(.call (.rule 116)), (.call (.tok 12)), (.call (.rule 398)),
+      (.call (.tok 11)), (.call (.rule 109))] #[] false { s1 with mark := p.mark } =
+      ((none, false), s3) := by
+    rcases h2 with h2 | ⟨a', s2, h2, ha', h2'⟩ | ⟨a', xs, c, s2, s2', s2'', h2, ha', h2', h2x, hxs, h2c⟩
+    · exact items_call_null (by rw [call_rule, h2])
+    · exact (items_call (by rw [call_rule, h2]) ha').trans (items_call_null (by rw [call_tok, h2']))
+    · rw [items_call (by rw [call_rule, h2]) ha', items_call (by rw [call_tok, h2']) (by simp),
+        items_call (by rw [call_rule, h2x]) hxs, items_call_null (by rw [call_tok, h2c])]
+  have i3 : runItems (f + 7) [(.call (.rule 109)), (.call (.tok 11)), (.call (.rule 109))] #[] false
+      { s3 with mark := p.mark } = ((none, false), s5) := by
+    rcases h3 with h3 | ⟨a0, s4, h3, ha0, h4⟩
+    · exact items_call_null (by rw [call_rule, h3])
+    · exact (items_call (by rw [call_rule, h3]) ha0).trans (items_call_null (by rw [call_tok, h4]))
+  simp only [r216, List.take, List.cons_append, List.nil_append]
+  rw [show f + 10 = (f + 9) + 1 from rfl,
+    alts_fail (by rfl) he' (by dsimp only; rw [items_call_null (by rw [call_rule, h1])]),
+    alts_fail (by rfl) (E s1 h1e) (by exact i2), alts_fail (by rfl) (E s3 h3e) (by exact i3)]
+
+theorem invalidAssignmentEq_proven : InvalidAssignmentEq := by
+  intro f p he hl raised l s5 s6 hA h6 hl6
+  have he' : p.enter.errorIndicator = false := he
+  have E : ∀ s : PS, s.errorIndicator = false → ({ s with mark := p.mark } : PS).errorIndicator = false :=
+    fun s hs => hs
+  have h5e : s5.errorIndicator = false := by
+    obtain ⟨_, _, _, _, _, _, _, h⟩ := hA
+    exact h
+  rw [callRule_plain rfl rfl rfl rfl rfl he hl]
+  have hr : (ruleOf 216).alts = r216.alts.take 3 ++ r216.alts.drop 3 := (List.take_append_drop 3 _).symm
+  rw [hr, annAltsFail_run he' hA]
+  simp only [r216, List.drop]
+  refine ⟨fun a c s7 s8 h7 ha h8 h8e => ⟨fun tg nm htg htn hnm => ?_, fun hnt h8o => ?_⟩,
+    fun l' a c s7 s9 s10 s11 h7 h7e h9 hl9 h10 ha h11 h11e => ?_⟩
+  · rw [alts_ok (by rfl) (E s5 h5e) (by
+      dsimp only
+      rw [items_call (by rw [call_rule, h6]) hl6, items_call (by rw [call_rule, h7]) ha,
+        items_call (by rw [call_tok, h8]) (by simp), items_nil]), altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper]
+    have hmsg : toString "cannot assign to " ++ toString ((exprName tg).getD "") = "cannot assign to " ++ nm := by
+      rw [hnm]
+      rfl
+    have herr := raiseEKL_errOcc "SyntaxError" ("cannot assign to " ++ nm) (locOf tg).lineno
+      (locOf tg).colOffset (locOf tg).endLineno (locOf tg).endColOffset s8 h8e
+    have g1 : ((((#[] : Array Ast).push l).push a).push (.tok c)).getD 1 .null = a := rfl
+    have i0 : Int.toNat 0 = 0 := rfl
+    have l0 : [Ast.int 0, a].getD 0 Ast.null = .int 0 := rfl
+    have l1 : [Ast.int 0, a].getD 1 Ast.null = a := rfl
+    have hb : ((0 : Int) == 0 || (0 : Int) == 2) = true := rfl
+    simp only [g1, l0, i0, l1, hb, ↓reduceIte]
+    subst htg
+    revert herr hmsg
+    generalize hT : invalidTarget 0 100000 a = T
+    intro hmsg herr
+    cases T with
+    | null => exact absurd hT htn
+    | _ =>
+      simp only [hmsg, raiseRange, bind, StateT.bind, pure, StateT.pure]
+      split
+      rename_i u s' heq
+      rw [heq] at herr
+      simp only at herr
+      simp [nonNull, herr, heq, raised]
+  · rw [alts_ok (by rfl) (E s5 h5e) (by
+      dsimp only
+      rw [items_call (by rw [call_rule, h6]) hl6, items_call (by rw [call_rule, h7]) ha,
+        items_call (by rw [call_tok, h8]) (by simp), items_nil]), altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper]
+    have g1 : ((((#[] : Array Ast).push l).push a).push (.tok c)).getD 1 .null = a := rfl
+    have i0 : Int.toNat 0 = 0 := rfl
+    have l1 : [Ast.int 0, a].getD 1 Ast.null = a := rfl
+    simp only [g1, i0, l1]
+    simp [hnt, h8o, StateT.pure, pure]
+  · rw [alts_fail (by rfl) (E s5 h5e) (by
+      dsimp only
+      rw [items_call (by rw [call_rule, h6]) hl6, items_call_null (by rw [call_rule, h7])]),
+      alts_ok (by rfl) (E s7 h7e) (by
+      dsimp only
+      rw [items_call (by rw [call_rule, h9]) hl9, items_call (by rw [call_rule, h10]) ha,
+        items_call (by rw [call_tok, h11]) (by simp), items_nil]), altResult_plain rfl rfl]
+    have g1 : ((((#[] : Array Ast).push l').push a).push (.tok c)).getD 1 .null = a := rfl
+    have hm : msgOf [.str ("assignment to yield expression not possible".toList.map Char.toNat)] =
+        "assignment to yield expression not possible" := by decide +kernel
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper,
+      raiseRange, List.drop_succ_cons, List.drop_zero, g1, List.getD, List.getElem?_cons_zero,
+      Option.getD_some]
+    rw [hm]
+    have herr := raiseEKL_errOcc "SyntaxError" "assignment to yield expression not possible"
+      (locOf a).lineno (locOf a).colOffset (locOf a).endLineno (locOf a).endColOffset s11 h11e
+    split
+    rename_i u s' heq
+    rw [heq] at herr
+    simp only at herr
+    simp [nonNull, herr, heq, raised]
+
+/-- `invalid_assignment` as a whole: the annotation and augmented-assignment alternatives
+(`InvalidAssignment`) and the two `=` alternatives (`InvalidAssignmentEq`). -/
+def InvalidAssignmentRule : Prop := InvalidAssignment ∧ InvalidAssignmentEq
+theorem invalidAssignmentRule_proven : InvalidAssignmentRule :=
+  ⟨invalidAssignment_proven, invalidAssignmentEq_proven⟩
+
 end PyLean.PyGrammar.Peg

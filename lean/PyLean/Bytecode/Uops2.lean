@@ -593,7 +593,7 @@ def singletonVal : Val → Bool
 /-- The runtime itself. -/
 def getRt : RM Rt := fun rt => .ok rt rt
 
-/-- `Py_Is(left, right)` (`Include/object.h:187`), pointer equality. Heap objects are the same object
+/-- `Py_Is(left, right)` (`Include/object.h:185`), pointer equality. Heap objects are the same object
 exactly when they have the same address; values that differ are different objects; equal
 singletons are one object; for two equal ints, floats, strs or bytes the answer is the runtime's
 `sameImmediate` oracle. -/

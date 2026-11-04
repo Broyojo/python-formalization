@@ -2339,6 +2339,15 @@ bytecode-getattribute-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATT
 bytecode-import	proven	Python/bytecodes.c	opcode:IMPORT_NAME,opcode:IMPORT_FROM
 bytecode-null-guards	proven	Python/bytecodes.c	opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_TOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL
 bytecode-match	proven	Python/bytecodes.c	opcode:MATCH_CLASS,opcode:_MATCH_CLASS,opcode:MATCH_MAPPING,opcode:MATCH_SEQUENCE,opcode:MATCH_KEYS
+bytecode-call-py-general	proven	Python/bytecodes.c	opcode:CALL_PY_GENERAL,opcode:_CHECK_FUNCTION_VERSION,opcode:_CHECK_RECURSION_REMAINING,opcode:_PY_FRAME_GENERAL,opcode:_SAVE_RETURN_OFFSET,opcode:_PUSH_FRAME
+bytecode-call-bound-method-general	proven	Python/bytecodes.c	opcode:CALL_BOUND_METHOD_GENERAL,opcode:_CHECK_METHOD_VERSION,opcode:_EXPAND_METHOD
+bytecode-call-py-exact-args	proven	Python/bytecodes.c	opcode:CALL_PY_EXACT_ARGS,opcode:_CHECK_FUNCTION_EXACT_ARGS,opcode:_CHECK_STACK_SPACE,opcode:_INIT_CALL_PY_EXACT_ARGS
+bytecode-call-bound-method-exact-args	proven	Python/bytecodes.c	opcode:CALL_BOUND_METHOD_EXACT_ARGS,opcode:_CHECK_CALL_BOUND_METHOD_EXACT_ARGS,opcode:_INIT_CALL_BOUND_METHOD_EXACT_ARGS
+bytecode-call-kw-py	proven	Python/bytecodes.c	opcode:CALL_KW_PY,opcode:_CHECK_FUNCTION_VERSION_KW,opcode:_PY_FRAME_KW
+bytecode-call-kw-bound-recursion	refuted	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW,opcode:_PY_FRAME_KW
+bytecode-call-kw-bound-budget	proven	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW
+bytecode-call-ex-py-recursion	refuted	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
+bytecode-call-ex-py-budget	proven	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
@@ -2495,7 +2504,45 @@ pygrammar-rule-invalid-assignment	proven	Grammar/python.gram	rule:invalid_assign
 pygrammar-rule-sum-sub-sub	proven	Grammar/python.gram	rule:sum
 pygrammar-rule-dotted-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_dotted_as_name
 pygrammar-rule-import-from-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_import_from_as_name
+pygrammar-rule-invalid-dotted-as-name	proven	Grammar/python.gram	rule:invalid_dotted_as_name
+pygrammar-rule-invalid-import-from-as-name	proven	Grammar/python.gram	rule:invalid_import_from_as_name
 pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
+pygrammar-rule-literal-pattern	proven	Grammar/python.gram	rule:literal_pattern
+pygrammar-rule-literal-expr	proven	Grammar/python.gram	rule:literal_expr
+pygrammar-rule-complex-number	proven	Grammar/python.gram	rule:complex_number
+pygrammar-rule-signed-real-number	proven	Grammar/python.gram	rule:signed_real_number
+pygrammar-rule-real-imaginary-number	proven	Grammar/python.gram	rule:real_number,rule:imaginary_number
+pygrammar-rule-pattern-capture-target	proven	Grammar/python.gram	rule:pattern_capture_target
+pygrammar-rule-value-pattern	proven	Grammar/python.gram	rule:value_pattern
+pygrammar-rule-star-pattern	proven	Grammar/python.gram	rule:star_pattern
+pygrammar-rule-double-star-pattern	proven	Grammar/python.gram	rule:double_star_pattern
+pygrammar-rule-key-value-pattern	proven	Grammar/python.gram	rule:key_value_pattern
+pygrammar-rule-keyword-pattern	proven	Grammar/python.gram	rule:keyword_pattern
+pygrammar-rule-open-sequence-pattern	proven	Grammar/python.gram	rule:open_sequence_pattern
+pygrammar-rule-maybe-sequence-pattern	proven	Grammar/python.gram	rule:maybe_sequence_pattern
+pygrammar-rule-items-pattern	proven	Grammar/python.gram	rule:items_pattern
+pygrammar-rule-keyword-patterns	proven	Grammar/python.gram	rule:keyword_patterns
+pygrammar-rule-positional-patterns	proven	Grammar/python.gram	rule:positional_patterns
+pygrammar-rule-guard	proven	Grammar/python.gram	rule:guard
+pygrammar-rule-attr	proven	Grammar/python.gram	rule:attr
+pygrammar-rule-name-or-attr	proven	Grammar/python.gram	rule:name_or_attr
+pygrammar-rule-as-pattern	proven	Grammar/python.gram	rule:as_pattern
+pygrammar-rule-case-block	proven	Grammar/python.gram	rule:case_block
+pygrammar-rule-mapping-pattern	proven	Grammar/python.gram	rule:mapping_pattern
+pygrammar-rule-class-pattern	proven	Grammar/python.gram	rule:class_pattern
+pygrammar-rule-named-expression	proven	Grammar/python.gram	rule:named_expression
+pygrammar-rule-assignment-expression	proven	Grammar/python.gram	rule:assignment_expression
+pygrammar-rule-star-named-expression	proven	Grammar/python.gram	rule:star_named_expression
+pygrammar-rule-star-expression	proven	Grammar/python.gram	rule:star_expression
+pygrammar-rule-if-expression	proven	Grammar/python.gram	rule:if_expression
+pygrammar-rule-group	proven	Grammar/python.gram	rule:group
+pygrammar-rule-lambdef	proven	Grammar/python.gram	rule:lambdef
+pygrammar-rule-list	proven	Grammar/python.gram	rule:list
+pygrammar-rule-tuple	proven	Grammar/python.gram	rule:tuple
+pygrammar-rule-set	proven	Grammar/python.gram	rule:set
+pygrammar-rule-single-target	proven	Grammar/python.gram	rule:single_target
+pygrammar-rule-disjunction	proven	Grammar/python.gram	rule:disjunction
+pygrammar-rule-conjunction	proven	Grammar/python.gram	rule:conjunction
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
 pygrammar-ast-splitlines	proven	Lib/ast.py	

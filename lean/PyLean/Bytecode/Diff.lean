@@ -188,14 +188,15 @@ def recordProfile (P : Program) (s : St) : St :=
           { s with regs := { s.regs with rt := { rt with profile := rt.profile.setIfInBounds c row } } }
         | _ => s
 
-/-- `runLoop` with `recordProfile` before each instruction. -/
-def runLoopP (P : Program) (om : ObjModel) : Nat → St → EStateM.Result Err Rt Val
+/-- `runLoop` of `P` with `recordProfile` before each instruction, asking about the
+instruction of `P0` (the unspecialized program) at that position. -/
+def runLoopP (P0 P : Program) (om : ObjModel) : Nat → St → EStateM.Result Err Rt Val
   | 0, s => .error .fuel s.regs.rt
   | n + 1, s =>
-    let s := recordProfile P s
-    let ctx : Ctx := { evalFrame := evalWith P (runLoopP P om n) }
+    let s := recordProfile P0 s
+    let ctx : Ctx := { evalFrame := evalWith P (runLoopP P0 P om n) }
     match afterInstr P (stepInstr P om ctx s 6 0) with
-    | .cont s' => runLoopP P om n s'
+    | .cont s' => runLoopP P0 P om n s'
     | .ret v rt => .ok v rt
     | .raised v rt => .error (.exc v) rt
     | .stop e rt => .error e rt
@@ -239,12 +240,16 @@ def runProgram (j : Json) (quick : Bool) : Except String Json := do
     let rt := match (getNat j "reclimit" |>.toOption) with
       | some n => { rt with pyRecursionRemaining := n, recursionLimit := n }
       | none => rt
-    let P ← if quick then do
-        let rt1 := { rt with profile := P.map fun c => Array.replicate c.instrs.size none }
-        match runMainWith (evalWith P (runLoopP P (builtinOM P) fuel)) P (main + 2) rt1 with
-        | .ok _ r | .error (.exc _) r => pure (applyProfile P r.profile)
-        | .error _ _ => pure P
-      else pure P
+    -- The caches hold heap objects (a method's function, a getter) at the addresses the
+    -- profiled run gave them. A specialized run can allocate differently from a generic one, so
+    -- the program is profiled a second time, running the once-specialized program, and the
+    -- caches of that run are the ones used: their addresses are those of a specialized run.
+    let profileOf (Pk : Program) : Program :=
+      let rt1 := { rt with profile := P.map fun c => Array.replicate c.instrs.size none }
+      match runMainWith (evalWith Pk (runLoopP P Pk (builtinOM Pk) fuel)) Pk (main + 2) rt1 with
+      | .ok _ r | .error (.exc _) r => applyProfile P r.profile
+      | .error _ _ => Pk
+    let P := if quick then profileOf (profileOf P) else P
     let out (rt : Rt) (e : Json) : Json :=
       Json.mkObj [("ok", Json.mkObj [("out", toJson (String.join rt.out.toList)), ("exc", e)])]
     match runMain fuel P (main + 2) rt with

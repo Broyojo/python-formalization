@@ -1,0 +1,111 @@
+id: bytecode-call-ex-kw-bound-recursion
+title: "CALL_EX_PY and CALL_KW_BOUND_METHOD push the callee's frame with no recursion check, so f(*args) and m(k=v) recursion passes the recursion limit once the site has specialized (duplicate of python/cpython#155151)"
+priority: P3
+kind: specialization-mismatch
+module: bytecode
+files: [Python/bytecodes.c]
+functions: ["CALL_EX_PY", "_CHECK_IS_PY_CALLABLE_EX", "_PY_FRAME_EX", "CALL_KW_BOUND_METHOD", "_CHECK_METHOD_VERSION_KW", "_EXPAND_METHOD_KW", "_PY_FRAME_KW", "_PUSH_FRAME"]
+summary: |
+  Already reported upstream as python/cpython#155151 (open), with an open fix,
+  python/cpython#156346. Recorded here because the Lean model refutes "CALL_EX_PY refines
+  CALL_FUNCTION_EX" and "CALL_KW_BOUND_METHOD refines CALL_KW", and a refutation needs a record.
+  The generic CALL_FUNCTION_EX (Python/bytecodes.c:5637-5711) and CALL_KW (:5419-5472) inline a
+  Python function with DISPATCH_INLINED, whose start_frame runs _Py_EnterRecursivePy and raises
+  RecursionError at the limit. Their specializations CALL_EX_PY (:5763-5771, new in 3.15) and
+  CALL_KW_BOUND_METHOD (:5542-5551) end in _PUSH_FRAME (:4628-4642), which decrements
+  py_recursion_remaining (:4637) and tests nothing, and neither macro has
+  _CHECK_RECURSION_REMAINING (:4611-4613), which CALL_PY_GENERAL, CALL_PY_EXACT_ARGS,
+  CALL_BOUND_METHOD_* and CALL_KW_PY carry before their frame op. So a recursion through
+  f(*args) or a bound method called with keywords goes past the limit once its site has
+  specialized.
+likelihood: |
+  Low, as for bytecode-attr-frame-recursion: it takes recursion deeper than the limit through
+  one of these two call shapes, a bug in the program anyway. The frames are pushed inline and use
+  no C stack; with limit 50 the reproducer reaches 101 levels on both forms and nothing crashed.
+maybe_intended: |
+  No: the maintainers' own fix for CALL_KW_PY (python/cpython#137887) and the open PR for these two
+  forms treat the missing check as a bug.
+reproducer: |
+  import os, sys
+
+  LIMIT, DEPTH = 50, 100
+  state = {"max": 0}
+
+  def recurse_star_args(depth, level=1):
+      # CALL_FUNCTION_EX on a Python function specializes to CALL_EX_PY
+      state["max"] = max(state["max"], level)
+      if depth:
+          recurse_star_args(*(depth - 1, level + 1))
+
+  class Recurse:
+      def recurse(self, depth, level=1):
+          # CALL_KW on a bound method specializes to CALL_KW_BOUND_METHOD
+          state["max"] = max(state["max"], level)
+          if depth:
+              recurse_bound_method(depth=depth - 1, level=level + 1)
+
+  recurse_bound_method = Recurse().recurse
+
+  def recurse_plain(depth, level=1):
+      # CALL_KW on a plain function specializes to CALL_KW_PY, which checks
+      state["max"] = max(state["max"], level)
+      if depth:
+          recurse_plain(depth=depth - 1, level=level + 1)
+
+  def deepest(f):
+      state["max"] = 0
+      try:
+          f(DEPTH)
+          return state["max"], "no RecursionError"
+      except RecursionError:
+          return state["max"], "RecursionError"
+
+  for f in (recurse_star_args, recurse_bound_method, recurse_plain):
+      for _ in range(5):  # warm the call sites up so that they specialize
+          f(3)
+
+  sys.setrecursionlimit(LIMIT)
+  res = {"recurse_star_args": deepest(recurse_star_args), "recurse_bound_method": deepest(recurse_bound_method),
+         "recurse_plain": deepest(recurse_plain)}
+  for name, (lvl, how) in res.items():
+      print(f"{name}: {lvl} levels, {how} (limit {LIMIT})", flush=True)
+  if (res["recurse_plain"][1] == "RecursionError" and
+          res["recurse_star_args"][1] == "no RecursionError" and
+          res["recurse_bound_method"][1] == "no RecursionError"):
+      print("REPRODUCED bytecode-call-ex-kw-bound-recursion", flush=True)
+  os._exit(0)
+expected: |
+  Every recursion of depth 100 under limit 50 raises RecursionError, whatever the call shape and
+  whether or not the call site has specialized.
+observed: |
+  python3 3.15.2: recurse_star_args 101 levels, no RecursionError; recurse_bound_method 101 levels,
+  no RecursionError; recurse_plain 48 levels, RecursionError (limit 50). REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  invariant: a specialized opcode refines its generic form; the recursion limit
+  (sys.setrecursionlimit) holds for Python-to-Python calls.
+cause: |
+  Python/bytecodes.c:5763-5771 (CALL_EX_PY) and :5542-5551 (CALL_KW_BOUND_METHOD) have no
+  _CHECK_RECURSION_REMAINING before _PY_FRAME_EX / _PY_FRAME_KW, and _PUSH_FRAME (:4628-4642) only
+  decrements the counter.
+possible_fix: |
+  python/cpython#156346: add _CHECK_RECURSION_REMAINING to both macros, before the frame op. It
+  should go together with bytecode-attr-frame-recursion (LOAD_ATTR_PROPERTY,
+  LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) and bytecode-push-frame-gen-recursion (SEND_GEN,
+  FOR_ITER_GEN), which the PR does not cover.
+duplicates:
+  issues:
+    - {number: 155151, state: open, relation: duplicate, reason: "CALL_EX_PY and CALL_KW_BOUND_METHOD can bypass RecursionError after specialization (marinelay): exactly this defect"}
+    - {number: 137883, state: closed, relation: related, reason: "the same gap in CALL_KW_PY, fixed by PR 137887"}
+  prs:
+    - {number: 156346, state: open, relation: duplicate, reason: "gh-155151: Check recursion limits in specialized Python calls; adds _CHECK_RECURSION_REMAINING to CALL_EX_PY and CALL_KW_BOUND_METHOD"}
+    - {number: 155405, state: closed, relation: related, reason: "earlier gh-155151 PR, closed unmerged"}
+    - {number: 155272, state: closed, relation: related, reason: "earlier gh-155151 PR, closed unmerged"}
+  bugforge: "none: vendor/bugforge-results/README.md has no recursion-limit or CALL_EX_PY entry"
+  queries: ["gh search prs --repo python/cpython _CHECK_RECURSION_REMAINING (156346, 155405, 155272, 144394, 137887)",
+            "gh search prs --repo python/cpython 155151 (156346, 155405, 155272)",
+            "gh issue view 155151 (open)", "gh pr view 156346; gh pr diff 156346"]
+lean:
+  property: PyLean.Bytecode.CallExPyRefines
+  theorem: PyLean.Bytecode.callExPyRefines_refuted
+  also: [PyLean.Bytecode.CallKwBoundMethodRefines, PyLean.Bytecode.callKwBoundMethodRefines_refuted]
