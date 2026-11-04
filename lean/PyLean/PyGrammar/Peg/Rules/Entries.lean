@@ -314,6 +314,29 @@ def ruleEntries : List Entry := [
     prop := ``AssignmentInvalid
     thm := some ``assignmentInvalid_proven
     notes := scheme },
+  { id := "pygrammar-rule-import-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_stmt
+    statement := "import_stmt (memo): first pass import_name before import_from; second pass " ++
+      "invalid_import first, its error ending the rule unmemoized, its NULL leading to " ++
+      "import_name; results memoized."
+    source := "Grammar/python.gram:219-222"
+    status := .proven
+    prop := ``ImportStmt
+    thm := some ``importStmt_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-import-from"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from
+    statement := "import_from: '[lazy] from [dots] mod import targets' is " ++
+      "_PyPegen_checked_from_import's result; '[lazy] from dots import targets' backs up and " ++
+      "gives ImportFrom(NULL, targets, dots counted, is_lazy); second pass: an error from " ++
+      "invalid_import_from ends the rule."
+    source := "Grammar/python.gram:231-236"
+    status := .proven
+    prop := ``ImportFrom
+    thm := some ``importFrom_proven
+    notes := scheme ++ " _PyPegen_checked_from_import itself is pygrammar-peg-checked-from-import." },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_file

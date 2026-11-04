@@ -217,8 +217,14 @@ def rule_for_stmt : List String := [
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
 
+def rule_import_from : List String := [
+  "rule:import_from"]
+
 def rule_import_name : List String := [
   "rule:import_name"]
+
+def rule_import_stmt : List String := [
+  "rule:import_stmt"]
 
 def rule_interactive : List String := [
   "rule:interactive"]

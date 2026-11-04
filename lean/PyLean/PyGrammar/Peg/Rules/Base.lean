@@ -234,6 +234,25 @@ theorem callRule_extra_fail {f id : Nat} {p q : PS}
   simp only [callRule, h1, h2, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
   simp only [ruleBody, hp, retLevel_eq]
 
+/-- Entry of a `(memo)` rule function that does not read `EXTRA`, at a position with no memo entry
+for it yet: the memo lookup reads the token under the mark, then the alternatives run, and the
+result is memoized. -/
+theorem callRule_memo_plain {f id : Nat} {p q : PS}
+    (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = false)
+    (h3 : (ruleOf id).memo = true) (h4 : (ruleOf id).kind = .normal) (h5 : (ruleOf id).extra = false)
+    (h : Entered p q) (hn : (q.memo.getD p.mark []).find? (fun m => m.1 == 1000 + id) = none) :
+    callRule (f + 2) id p = memoDone p.mark id (runAlts f (ruleOf id).alts false p.mark (0, 0) q) := by
+  obtain ⟨-, -, -, -, hm, hlt, -⟩ := h.facts
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hp : rulePrologue id (ruleOf id) p = (.inr (p.mark, (0, 0)), q) := by
+    simp only [rulePrologue, addLevel_ok p h.level, he', h3, Bool.false_eq_true, ↓reduceIte,
+      isMemoized, h.read, memoLookup, hm, hn, ruleStart, h5]
+  simp only [callRule, h1, h2, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+  simp only [ruleBody, hp, h4, retLevel_eq]
+  have hg : (RuleKind.normal == RuleKind.gather) = false := rfl
+  simp only [hg, h3, ↓reduceIte, memoDone]
+  split <;> simp_all
+
 /-- Entry of a plain rule function that does not read `EXTRA`: no token is read on entry. -/
 theorem callRule_plain {f id : Nat} {p : PS}
     (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = false)

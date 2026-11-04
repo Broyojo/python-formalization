@@ -57,6 +57,8 @@ CREDIT = {
     "pygrammar-rule-del-stmt-invalid": {GRAM: ["rule:del_stmt"]},
     "pygrammar-rule-assert-stmt-invalid": {GRAM: ["rule:assert_stmt"]},
     "pygrammar-rule-for-stmt": {GRAM: ["rule:for_stmt"]},
+    "pygrammar-rule-import-stmt": {GRAM: ["rule:import_stmt"]},
+    "pygrammar-rule-import-from": {GRAM: ["rule:import_from"]},
     "pygrammar-rule-assignment-aug": {GRAM: ["rule:assignment"]},
     "pygrammar-rule-assignment-ann-plain": {GRAM: ["rule:assignment"]},
     "pygrammar-rule-assignment-invalid": {GRAM: ["rule:assignment"]},
