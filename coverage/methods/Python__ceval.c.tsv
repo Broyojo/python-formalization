@@ -21,11 +21,11 @@ Python/ceval.c	710	715	PyEval_EvalFrame	PyEval_EvalFrame(PyFrameObject *f)	todo
 Python/ceval.c	718	722	PyEval_EvalFrameEx	PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)	todo		
 Python/ceval.c	730	765	_Py_VectorCall_StackRefSteal	_Py_VectorCall_StackRefSteal( _PyStackRef callable, _PyStackRef *arguments, int total_args, _PyStackRef kwnames)	todo		changed-in-3.15: new function
 Python/ceval.c	768	824	_Py_VectorCallInstrumentation_StackRefSteal	_Py_VectorCallInstrumentation_StackRefSteal( _PyStackRef callable, _PyStackRef* arguments, int total_args, _PyStackRef kwnames, bool call_instrumentation, _PyInterpreterFrame* frame, _Py_CODEUNIT* this_instr, PyThreadState* tstate)	todo		changed-in-3.15: new function
-Python/ceval.c	827	847	_Py_BuiltinCallFast_StackRef	_Py_BuiltinCallFast_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
-Python/ceval.c	850	867	_Py_BuiltinCallFastWithKeywords_StackRef	_Py_BuiltinCallFastWithKeywords_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
-Python/ceval.c	870	888	_PyCallMethodDescriptorFast_StackRef	_PyCallMethodDescriptorFast_StackRef( _PyStackRef callable, PyCFunctionFast cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
-Python/ceval.c	891	909	_PyCallMethodDescriptorFastWithKeywords_StackRef	_PyCallMethodDescriptorFastWithKeywords_StackRef( _PyStackRef callable, PyCFunctionFastWithKeywords cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
-Python/ceval.c	912	927	_Py_CallBuiltinClass_StackRef	_Py_CallBuiltinClass_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	827	847	_Py_BuiltinCallFast_StackRef	_Py_BuiltinCallFast_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	modelled	bytecode-call-builtin-fn	
+Python/ceval.c	850	867	_Py_BuiltinCallFastWithKeywords_StackRef	_Py_BuiltinCallFastWithKeywords_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	modelled	bytecode-call-builtin-fn	
+Python/ceval.c	870	888	_PyCallMethodDescriptorFast_StackRef	_PyCallMethodDescriptorFast_StackRef( _PyStackRef callable, PyCFunctionFast cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	modelled	bytecode-call-method-descriptor	
+Python/ceval.c	891	909	_PyCallMethodDescriptorFastWithKeywords_StackRef	_PyCallMethodDescriptorFastWithKeywords_StackRef( _PyStackRef callable, PyCFunctionFastWithKeywords cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	modelled	bytecode-call-method-descriptor	
+Python/ceval.c	912	927	_Py_CallBuiltinClass_StackRef	_Py_CallBuiltinClass_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	modelled	bytecode-call-builtin-fn	
 Python/ceval.c	930	952	_Py_BuildString_StackRefSteal	_Py_BuildString_StackRefSteal( _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
 Python/ceval.c	955	981	_Py_BuildMap_StackRefSteal	_Py_BuildMap_StackRefSteal( _PyStackRef *arguments, int half_args)	todo		changed-in-3.15: new function
 Python/ceval.c	984	1000	_Py_LoadAttr_StackRefSteal	_Py_LoadAttr_StackRefSteal( PyThreadState *tstate, _PyStackRef owner, PyObject *name, _PyStackRef *self_or_null)	todo		
@@ -106,7 +106,7 @@ Python/ceval.c	3495	3511	_PyEval_FormatAwaitableError	_PyEval_FormatAwaitableErr
 Python/ceval.c	3515	3542	PyUnstable_Eval_RequestCodeExtraIndex	PyUnstable_Eval_RequestCodeExtraIndex(freefunc free)	todo		
 Python/ceval.c	3547	3550	Py_EnterRecursiveCall	int Py_EnterRecursiveCall(const char *where)	todo		
 Python/ceval.c	3552	3555	Py_LeaveRecursiveCall	void Py_LeaveRecursiveCall(void)	todo		
-Python/ceval.c	3558	3594	_PyEval_GetANext	_PyEval_GetANext(PyObject *aiter)	todo		review: The PyAsyncGen_CheckExact fast path (:3563-3565) is not mirrored, and getANextImpl tests am_anext through callDunder, which sees only heap classes, so an async generator object (GenKind.asyncGen in the model, am_anext = async_gen_anext, Objects/genobject.c:1833-1838) gets \"'async for' requires an iterator with __anext__ method\" where CPython returns its asend awaitable; the rest (the call, _PyCoro_GetAwaitableIter, _PyErr_FormatFromCause setting __cause__ and __context__ of the new TypeError) is mirrored and pinned, but the first branch of the body and the commonest operand are outside the model.
+Python/ceval.c	3558	3594	_PyEval_GetANext	_PyEval_GetANext(PyObject *aiter)	modelled	bytecode-get-anext	
 Python/ceval.c	3597	3643	_PyEval_LoadGlobalStackRef	_PyEval_LoadGlobalStackRef(PyObject *globals, PyObject *builtins, PyObject *name, _PyStackRef *writeto)	todo		changed-in-3.15:
 Python/ceval.c	3646	3667	_PyEval_GetAwaitable	_PyEval_GetAwaitable(PyObject *iterable, int oparg)	modelled	bytecode-get-awaitable	
 Python/ceval.c	3670	3707	_PyEval_LoadName	_PyEval_LoadName(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *name)	todo		changed-in-3.15:

@@ -32,7 +32,7 @@ Modules/_zoneinfo.c	1486	1492	tzrule_transitions	tzrule_transitions(_tzrule *rul
 Modules/_zoneinfo.c	1503	1542	find_tzrule_ttinfo	find_tzrule_ttinfo(_tzrule *rule, int64_t ts, unsigned char fold, int year)	modelled	datetime-zoneinfo-lookup-twins	
 Modules/_zoneinfo.c	1556	1598	find_tzrule_ttinfo_fromutc	find_tzrule_ttinfo_fromutc(_tzrule *rule, int64_t ts, int year, unsigned char *fold)	modelled	datetime-zoneinfo-fromutc-twins,datetime-zoneinfo-fromutc-twins-notrans	
 Modules/_zoneinfo.c	1616	1723	parse_tz_str	parse_tz_str(zoneinfo_state *state, PyObject *tz_str_obj, _tzrule *out)	modelled	datetime-zoneinfo-tzstr-twins	
-Modules/_zoneinfo.c	1726	1738	parse_digits	parse_digits(const char **p, int min, int max, int *value)	modelled	datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip,datetime-zoneinfo-tzstr-twins,datetime-zoneinfo-tzstr-twins-nonul	
+Modules/_zoneinfo.c	1726	1738	parse_digits	parse_digits(const char **p, int min, int max, int *value)	modelled	datetime-zoneinfo-tzstr-twins,datetime-zoneinfo-tzstr-twins-nonul	
 Modules/_zoneinfo.c	1742	1798	parse_abbr	parse_abbr(const char **p, PyObject **abbr)	modelled	datetime-zoneinfo-tzstr-twins,datetime-zoneinfo-tzstr-twins-nonul	
 Modules/_zoneinfo.c	1802	1836	parse_tz_delta	parse_tz_delta(const char **p, long *total_seconds)	modelled	datetime-zoneinfo-tzstr-twins,datetime-zoneinfo-tzstr-twins-nonul	
 Modules/_zoneinfo.c	1840	1937	parse_transition_rule	parse_transition_rule(const char **p, TransitionRuleType **out)	modelled	datetime-zoneinfo-tzstr-twins-nonul	

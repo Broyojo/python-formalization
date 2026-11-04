@@ -49,21 +49,21 @@ ipaddress-v6-netmask-cache	refuted	Lib/ipaddress.py	_BaseV6._make_netmask
 ipaddress-v6-init-str	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._split_scope_id
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
 ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
-datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
+datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord
 datetime-isocalendar-roundtrip	proven	Lib/_pydatetime.py	date.isocalendar,date.fromisocalendar,_isoweek_to_gregorian,_isoweek1monday,C date_isocalendar,C datetime_date_fromisocalendar_impl,C iso_week1_monday,C weekday
 datetime-fromisocalendar-exact	proven	Lib/_pydatetime.py	date.fromisocalendar,date.isocalendar,_isoweek_to_gregorian,_isoweek1monday
 datetime-fromisocalendar-twins	refuted	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian
 datetime-fromisocalendar-twins-cint	proven	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian,C datetime_date_fromisocalendar_impl
-datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum,C microseconds_to_delta_ex,C new_delta_ex,C check_delta_day_range,C checked_divmod,C normalize_pair,C normalize_d_s_us,C divmod
+datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum,C microseconds_to_delta_ex,C check_delta_day_range
 datetime-timedelta-ctor-exact	proven	Lib/_pydatetime.py	timedelta.__new__,timedelta.days,timedelta.seconds,timedelta.microseconds
-datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,timedelta.__sub__,timedelta.__neg__,timedelta.__abs__,timedelta.__mul__,timedelta.__floordiv__,timedelta.__truediv__,timedelta.__mod__,timedelta.__divmod__,timedelta._to_microseconds,_divide_and_round,C delta_add,C delta_subtract,C delta_negative,C delta_abs,C delta_multiply,C delta_divide,C delta_truedivide,C delta_remainder,C delta_divmod,C multiply_int_timedelta,C divide_timedelta_int,C divide_timedelta_timedelta,C truedivide_timedelta_int,C divide_nearest,C delta_to_microseconds
+datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,timedelta.__sub__,timedelta.__neg__,timedelta.__abs__,timedelta.__mul__,timedelta.__floordiv__,timedelta.__truediv__,timedelta.__mod__,timedelta.__divmod__,timedelta._to_microseconds,_divide_and_round,C delta_add,C delta_subtract,C delta_negative,C delta_abs,C delta_divide,C delta_remainder,C delta_divmod,C multiply_int_timedelta,C divide_timedelta_int,C divide_timedelta_timedelta,C truedivide_timedelta_int,C divide_nearest,C delta_to_microseconds,C normalize_d_s_us,C normalize_pair,C divmod
 datetime-divide-and-round	proven	Lib/_pydatetime.py	_divide_and_round,C divide_nearest
 datetime-timedelta-divmod	proven	Lib/_pydatetime.py	timedelta.__divmod__,timedelta.__floordiv__,timedelta.__mod__,timedelta._to_microseconds
 datetime-timedelta-compare	proven	Lib/_pydatetime.py	timedelta.__eq__,timedelta.__le__,timedelta.__lt__,timedelta.__ge__,timedelta.__gt__,timedelta._cmp,timedelta._getstate,_cmp,C delta_cmp,C delta_richcompare,C diff_to_bool
 datetime-timedelta-bool-hash	proven	Lib/_pydatetime.py	timedelta.__bool__,timedelta.__hash__,C delta_bool,C delta_hash,C delta_getstate
-datetime-timedelta-reduce	proven	Lib/_pydatetime.py	timedelta.__reduce__,timedelta._getstate,C delta_reduce,C delta_getstate
+datetime-timedelta-reduce	proven	Lib/_pydatetime.py	timedelta.__reduce__,timedelta._getstate,C delta_getstate
 datetime-timedelta-pos	proven	Lib/_pydatetime.py	timedelta.__pos__,C delta_positive
 datetime-timedelta-rsub	proven	Lib/_pydatetime.py	timedelta.__rsub__,C delta_subtract
 datetime-timedelta-rsub-twins	refuted	Lib/_pydatetime.py	timedelta.__rsub__
@@ -71,13 +71,13 @@ datetime-timezone-range	proven	Lib/_pydatetime.py	timezone.__new__,C new_timezon
 datetime-timezone-name	proven	Lib/_pydatetime.py	timezone.__str__,timezone.tzname,timezone._name_from_offset,C timezone_str,C timezone_tzname
 datetime-tzinfo-base	proven	Lib/_pydatetime.py	tzinfo.tzname,tzinfo.utcoffset,tzinfo.dst,C tzinfo_nogo,C tzinfo_tzname,C tzinfo_utcoffset,C tzinfo_dst
 datetime-timezone-methods	proven	Lib/_pydatetime.py	timezone.utcoffset,timezone.dst,timezone.__eq__,timezone.__hash__,C timezone_utcoffset,C timezone_dst,C timezone_richcompare,C timezone_hash
-datetime-timezone-new	proven	Lib/_pydatetime.py	timezone.__new__,timezone._create,C timezone_new_impl,C create_timezone,C new_timezone
-datetime-time-offsets	proven	Lib/_pydatetime.py	time.utcoffset,time.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C time_utcoffset,C time_dst
-datetime-datetime-offsets	proven	Lib/_pydatetime.py	datetime.utcoffset,datetime.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C datetime_utcoffset,C datetime_dst
+datetime-timezone-new	proven	Lib/_pydatetime.py	timezone.__new__,timezone._create,C timezone_new_impl,C create_timezone,C new_timezone,C look_up_timezone
+datetime-time-offsets	proven	Lib/_pydatetime.py	time.utcoffset,time.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C time_utcoffset,C time_dst
+datetime-datetime-offsets	proven	Lib/_pydatetime.py	datetime.utcoffset,datetime.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C datetime_utcoffset,C datetime_dst
 datetime-tzname-twins	proven	Lib/_pydatetime.py	time.tzname,datetime.tzname,_check_tzname,C time_tzname,C datetime_tzname,C call_tzname
-datetime-time-repr	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
-datetime-datetime-repr	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
-datetime-time-isoformat-twins	proven	Lib/_pydatetime.py	time.isoformat,time._tzstr,_format_time,_format_offset,C datetime_time_isoformat_impl,C time_str,C format_utcoffset
+datetime-time-repr	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo
+datetime-datetime-repr	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo
+datetime-time-isoformat-twins	proven	Lib/_pydatetime.py	time.isoformat,time._tzstr,_format_time,_format_offset,C datetime_time_isoformat_impl,C format_utcoffset
 datetime-datetime-isoformat-twins	proven	Lib/_pydatetime.py	datetime.isoformat,datetime.__str__,_format_time,_format_offset,C datetime_datetime_isoformat_impl,C datetime_str,C format_utcoffset
 datetime-replace-combine	proven	Lib/_pydatetime.py	time.replace,datetime.replace,datetime.combine,datetime.date,datetime.time,datetime.timetz,C datetime_time_replace_impl,C datetime_datetime_replace_impl,C datetime_datetime_combine_impl,C datetime_getdate,C datetime_gettime,C datetime_gettimetz
 datetime-time-pickle	proven	Lib/_pydatetime.py	time._getstate,time.__setstate,time.__reduce_ex__,time.__reduce__,C time_getstate,C time_from_pickle,C datetime_time___reduce_ex___impl,C datetime_time___reduce___impl
@@ -114,7 +114,7 @@ datetime-timedelta-float-ratio-twins	refuted	Lib/_pydatetime.py	timedelta.__mul_
 datetime-timedelta-float-ratio	proven	Lib/_pydatetime.py	timedelta.__mul__,timedelta.__truediv__,_divide_and_round,C multiply_truedivide_timedelta_float,C get_float_as_integer_ratio,C divide_nearest
 datetime-timedelta-truediv-delta	open	Lib/_pydatetime.py	timedelta.__truediv__,C truedivide_timedelta_timedelta
 datetime-date-format	proven	Lib/_pydatetime.py	date.__format__,C datetime_date___format__,C datetime_date___format___impl
-datetime-date-strptime	proven	Lib/_pydatetime.py	date.strptime,C datetime_date_strptime_impl
+datetime-date-strptime	proven	Lib/_pydatetime.py	date.strptime
 datetime-parse-isodate-forms	proven	Lib/_pydatetime.py	_parse_isoformat_date,_read_isoformat_component,_isoweek_to_gregorian
 datetime-parse-isodate-refusals	proven	Lib/_pydatetime.py	_parse_isoformat_date
 datetime-is-ascii-digit	proven	Lib/_pydatetime.py	_is_ascii_digit
@@ -129,7 +129,7 @@ datetime-date-ctor-args	proven	Lib/_pydatetime.py	date.__new__,_check_date_field
 datetime-date-sub-twins	refuted	Lib/_pydatetime.py	date.__sub__,C date_subtract
 datetime-date-sub-operand	proven	Lib/_pydatetime.py	date.__sub__,C date_subtract,C add_date_timedelta
 datetime-fromordinal-range	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C datetime_date_fromordinal_impl,C ord_to_ymd
-datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp
+datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp,C datetime_date_fromtimestamp_impl
 datetime-days-in-month	proven	Lib/_pydatetime.py	_days_in_month,C days_in_month,C is_leap
 datetime-check-date-fields	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args
 datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,date.__new__,C check_date_args,C datetime_date,C PyLong_AsInt
@@ -158,17 +158,16 @@ datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datet
 datetime-time-pickle-ctor-twins	refuted	Lib/_pydatetime.py	time.__new__,C time_new
 datetime-mktime-fixed	proven	Lib/_pydatetime.py	datetime._mktime,C local_to_seconds
 datetime-utc-to-seconds	proven	Lib/_pydatetime.py	C utc_to_seconds,C ymd_to_ord
-datetime-packed-accessors	proven	Lib/_pydatetime.py	date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,datetime.hour,datetime.minute,datetime.second,datetime.microsecond,C date_year,C date_month,C date_day,C time_hour,C time_minute,C py_time_second,C time_microsecond,C datetime_hour,C datetime_minute,C datetime_second,C datetime_microsecond,C set_date_fields
-datetime-subclass-construction	proven	Lib/_pydatetime.py	C new_date_subclass_ex,C new_datetime_ex,C new_datetime_subclass_fold_ex,C call_subclass_fold,C new_time_ex,C new_time_subclass_fold_ex
+datetime-packed-accessors	proven	Lib/_pydatetime.py	date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,datetime.hour,datetime.minute,datetime.second,datetime.microsecond,C date_year,C time_hour,C time_minute,C py_time_second,C time_microsecond,C datetime_hour,C datetime_minute,C datetime_second,C datetime_microsecond,C set_date_fields
 datetime-format-via-strftime	proven	Lib/_pydatetime.py	date.__format__,time.__format__,C datetime_date___format___impl,C datetime_time___format___impl
 datetime-sanitize-isoformat	proven	Lib/_pydatetime.py	C _sanitize_isoformat_str
 strptime-julian-weekday	proven	Lib/_strptime.py	_calc_julian_from_U_or_W
 strptime-seqtore-sorted	proven	Lib/_strptime.py	TimeRE.__seqToRE
 strptime-compile-errors	proven	Lib/_strptime.py	TimeRE.pattern,TimeRE.compile,TimeRE.__init__
-strptime-methods	proven	Lib/_strptime.py	_strptime,_strptime_datetime_date,_strptime_datetime_time,_strptime_datetime_datetime,_parse_tz,C datetime_date_strptime_impl,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
+strptime-methods	proven	Lib/_strptime.py	_strptime,_strptime_datetime_date,_strptime_datetime_time,_strptime_datetime_datetime,_parse_tz,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
 datetime-strptime-wrappers	proven	Lib/_pydatetime.py	date.strptime,time.strptime,datetime.strptime
-datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,_read_isoformat_component,_find_isoformat_datetime_separator,_is_ascii_digit,C date_isoformat,C date_str,C datetime_date_fromisoformat_impl,C datetime_datetime_fromisoformat_impl,C tzinfo_from_isoformat_results,C parse_isoformat_date,C parse_digits,C is_digit,C _find_isoformat_datetime_separator
-datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,C datetime_date_fromisoformat_impl,C parse_isoformat_date,C parse_digits
+datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,_read_isoformat_component,_find_isoformat_datetime_separator,_is_ascii_digit,C date_isoformat,C datetime_date_fromisoformat_impl,C datetime_datetime_fromisoformat_impl,C tzinfo_from_isoformat_results,C parse_isoformat_date,C _find_isoformat_datetime_separator
+datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,C datetime_date_fromisoformat_impl,C parse_isoformat_date
 datetime-time-fromiso-twins	refuted	Lib/_pydatetime.py	time.fromisoformat,_parse_hh_mm_ss_ff,_parse_isoformat_time,C datetime_time_fromisoformat_impl,C parse_hh_mm_ss_ff,C parse_isoformat_time
 datetime-datetime-fromiso-twins	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_parse_isoformat_time,C datetime_datetime_fromisoformat_impl,C parse_isoformat_time
 datetime-datetime-fromiso-bare-separator	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_find_isoformat_datetime_separator
@@ -264,9 +263,9 @@ datetime-time-reduce-roundtrip	proven	Lib/_pydatetime.py	time._getstate,time.__r
 datetime-datetime-reduce-roundtrip	proven	Lib/_pydatetime.py	datetime._getstate,datetime.__reduce_ex__,datetime.__reduce__,datetime.__setstate,datetime.__new__,C datetime_getstate,C datetime_datetime___reduce_ex___impl,C datetime_datetime___reduce___impl,C datetime_from_pickle,C datetime_new
 datetime-time-new-pickle	proven	Lib/_pydatetime.py	time.__new__,time.__setstate,C time_new,C time_from_pickle
 datetime-datetime-new-pickle	proven	Lib/_pydatetime.py	datetime.__new__,datetime.__setstate,C datetime_new,C datetime_from_pickle
-datetime-time-repr-cls	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-time-repr-cls	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo
 datetime-time-repr-cls-twins	refuted	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr
-datetime-datetime-repr-cls	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr-cls	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo
 datetime-repr-fold-tzinfo-twins	refuted	Lib/_pydatetime.py	datetime.__repr__,C datetime_repr
 datetime-tzinfo-base-dispatch	proven	Lib/_pydatetime.py	tzinfo.tzname,tzinfo.utcoffset,tzinfo.dst,C tzinfo_nogo,C tzinfo_tzname,C tzinfo_utcoffset,C tzinfo_dst
 datetime-isocalendardate-new	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__
@@ -277,14 +276,39 @@ datetime-time-new-str-state	proven	Lib/_pydatetime.py	time.__new__,time.__setsta
 datetime-datetime-new-str-state	proven	Lib/_pydatetime.py	datetime.__new__,datetime.__setstate,C datetime_new,C datetime_from_pickle
 datetime-strptime-offset-range	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
 datetime-datetime-fromiso-rollover	proven	Lib/_pydatetime.py	datetime.fromisoformat
-datetime-time-repr-fallible	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
-datetime-datetime-repr-fallible	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-time-repr-fallible	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo
+datetime-datetime-repr-fallible	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo
 datetime-datetime-repr-cls-twins	refuted	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr
 datetime-local-timezone-full	proven	Lib/_pydatetime.py	datetime._local_timezone,datetime._mktime,C local_timezone_from_local,C local_timezone,C local_timezone_from_timestamp,C local_to_seconds
 datetime-astimezone-local	proven	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone_from_local,C local_timezone
 datetime-astimezone-local-naive-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone
 datetime-astimezone-local-none-offset-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
 datetime-timedelta-float-ctor-twins	refuted	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C delta_new_impl,C accum
+datetime-c-normalize-helpers	proven	Modules/_datetimemodule.c	C divmod,C normalize_pair,C normalize_d_s_us
+datetime-new-delta-ex	proven	Modules/_datetimemodule.c	C new_delta_ex,C look_up_delta,C normalize_d_s_us
+datetime-timedelta-ctor-obj	proven	Modules/_datetimemodule.c	C delta_new_impl,C microseconds_to_delta_ex,C new_delta_ex,C look_up_delta
+datetime-us-to-delta-obj	proven	Modules/_datetimemodule.c	C microseconds_to_delta_ex,C checked_divmod
+datetime-timedelta-mul-int-subclass	refuted	Modules/_datetimemodule.c	timedelta.__mul__,C delta_multiply,C multiply_int_timedelta,C microseconds_to_delta_ex,C checked_divmod
+datetime-timedelta-mul-dispatch	proven	Modules/_datetimemodule.c	timedelta.__mul__,C delta_multiply,C multiply_int_timedelta,C multiply_truedivide_timedelta_float
+datetime-timedelta-truediv-dispatch	proven	Modules/_datetimemodule.c	timedelta.__truediv__,C delta_truedivide,C truedivide_timedelta_int,C multiply_truedivide_timedelta_float
+datetime-timedelta-reduce-cls	proven	Modules/_datetimemodule.c	timedelta.__reduce__,C delta_reduce,C delta_getstate
+datetime-ymd-to-ord-twins	proven	Modules/_datetimemodule.c	C ymd_to_ord,C days_before_year,C days_before_month,C is_leap,_ymd2ord,_days_before_year,_days_before_month
+datetime-date-subclass-ctor	proven	Modules/_datetimemodule.c	C new_date_subclass_ex,C new_date_ex,C new_datetime_ex,date.fromordinal
+datetime-new-datetime-ex-twins	proven	Modules/_datetimemodule.c	C new_datetime_ex,C new_time_ex
+datetime-subclass-fold-twins	proven	Modules/_datetimemodule.c	C call_subclass_fold,C new_datetime_subclass_fold_ex,C new_time_subclass_fold_ex,datetime.replace,time.replace
+datetime-replace-subclass-fold-any	refuted	Modules/_datetimemodule.c	C call_subclass_fold,C new_datetime_subclass_fold_ex,datetime.replace
+datetime-parse-digits-c	proven	Modules/_datetimemodule.c	C parse_digits,C is_digit
+datetime-parse-isoformat-date-c	proven	Modules/_datetimemodule.c	C parse_isoformat_date,C parse_digits,C is_digit
+datetime-str-via-isoformat	proven	Modules/_datetimemodule.c	C date_str,C time_str,date.__str__,time.__str__
+datetime-str-isoformat-override-twins	refuted	Modules/_datetimemodule.c	C date_str,date.__str__
+datetime-append-fold-twins	proven	Modules/_datetimemodule.c	C append_keyword_fold
+datetime-timestamp-conversion	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
+datetime-timestamp-floor	open	Modules/_datetimemodule.c	C date_fromtimestamp
+datetime-date-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_date_strptime_impl,date.strptime,_strptime_datetime_date
+datetime-strptime-class-impl	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,_strptime_datetime_time,_strptime_datetime_datetime,_check_tzinfo_arg
+datetime-timedelta-type-loop	proven	Lib/_pydatetime.py	timedelta.__new__
+datetime-timedelta-num-py-int	open	Lib/_pydatetime.py	timedelta.__new__
+datetime-astimezone-local-aware-edge-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
@@ -431,6 +455,7 @@ decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal._
 decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
 decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
+decimal-str-spell-exact	proven	Lib/_pydecimal.py	Decimal.__str__
 decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__,_dec_hash
 decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal._rescale,Decimal.__int__,dec_as_long,_decimal_Decimal___floor___impl,_decimal_Decimal___ceil___impl,_decimal_Decimal___round___impl
@@ -538,6 +563,10 @@ decimal-next-minus-exact	proven	Lib/_pydecimal.py	Decimal.next_minus
 decimal-next-toward-exact	proven	Lib/_pydecimal.py	Decimal.next_toward
 decimal-eng-string-exact	proven	Lib/_pydecimal.py	Decimal.to_eng_string
 decimal-repr-exact	proven	Lib/_pydecimal.py	Decimal.__repr__
+decimal-hash-exact-py	proven	Lib/_pydecimal.py	Decimal.__hash__
+decimal-as-tuple-exact-py	proven	Lib/_pydecimal.py	Decimal.as_tuple
+decimal-ieee-context-exact	proven	Lib/_pydecimal.py	IEEEContext
+decimal-ratio-exact-py	proven	Lib/_pydecimal.py	Decimal.as_integer_ratio
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
@@ -2330,7 +2359,7 @@ bytecode-iter-len-reduce	open	Objects/iterobject.c	iter_len,iter_reduce
 bytecode-anext-coroutine	open	Objects/iterobject.c	anextawaitable_iternext,anextawaitable_getiter
 bytecode-enum-reduce	open	Objects/enumobject.c	enum_reduce
 bytecode-reversed-setstate	open	Objects/enumobject.c	reversed_setstate,reversed_len
-bytecode-yield-suspends	open	Python/bytecodes.c	opcode:YIELD_VALUE
+bytecode-yield-suspends	proven	Python/bytecodes.c	opcode:YIELD_VALUE,opcode:_YIELD_VALUE
 bytecode-frame-push-pop	open	Objects/frameobject.c	push_value,pop_value,top_of_stack
 bytecode-lawful-builtin	proven	Python/bytecodes.c	
 bytecode-gap-str-percent	open	Objects/unicodeobject.c	
@@ -2375,6 +2404,16 @@ bytecode-get-anext	proven	Python/bytecodes.c	opcode:GET_ANEXT,_PyEval_GetANext
 bytecode-load-special	proven	Python/bytecodes.c	opcode:LOAD_SPECIAL,opcode:_LOAD_SPECIAL,opcode:_INSERT_NULL
 bytecode-attr-method-no-dict	proven	Python/bytecodes.c	opcode:LOAD_ATTR_METHOD_NO_DICT,opcode:_LOAD_ATTR_METHOD_NO_DICT,opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:LOAD_ATTR_METHOD_LAZY_DICT,opcode:_CHECK_ATTR_METHOD_LAZY_DICT,opcode:_LOAD_ATTR_METHOD_LAZY_DICT
 bytecode-get-awaitable	proven	Python/bytecodes.c	opcode:GET_AWAITABLE,_PyEval_GetAwaitable,_PyEval_FormatAwaitableError
+bytecode-call-builtin-fn	proven	Python/bytecodes.c	opcode:CALL_BUILTIN_O,opcode:_GUARD_CALLABLE_BUILTIN_O,opcode:_CALL_BUILTIN_O,opcode:_CHECK_RECURSION_LIMIT,opcode:CALL_BUILTIN_FAST,opcode:_GUARD_CALLABLE_BUILTIN_FAST,opcode:_CALL_BUILTIN_FAST,opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS,opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:CALL_BUILTIN_CLASS,opcode:_GUARD_CALLABLE_BUILTIN_CLASS,opcode:_CALL_BUILTIN_CLASS,_Py_BuiltinCallFast_StackRef,_Py_BuiltinCallFastWithKeywords_StackRef,_Py_CallBuiltinClass_StackRef
+bytecode-call-method-descriptor	proven	Python/bytecodes.c	opcode:CALL_METHOD_DESCRIPTOR_O,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O,opcode:_CALL_METHOD_DESCRIPTOR_O,opcode:CALL_METHOD_DESCRIPTOR_NOARGS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS,opcode:CALL_METHOD_DESCRIPTOR_FAST,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST,opcode:_CALL_METHOD_DESCRIPTOR_FAST,opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,_PyCallMethodDescriptorFast_StackRef,_PyCallMethodDescriptorFastWithKeywords_StackRef
+bytecode-call-method-descriptor-inline	proven	Python/bytecodes.c	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE
+bytecode-send-async-gen	proven	Python/bytecodes.c	opcode:SEND_ASYNC_GEN,opcode:_GUARD_3OS_ASYNC_GEN_ASEND,opcode:_SEND_ASYNC_GEN,_PyAsyncGenASend_Send
+bytecode-return-generator	proven	Python/bytecodes.c	opcode:RETURN_GENERATOR
+bytecode-send	proven	Python/bytecodes.c	opcode:SEND,opcode:_SEND
+bytecode-iter-send	proven	Objects/abstract.c	
+bytecode-traceback-here	proven	Python/bytecodes.c	
+bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
+bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	

@@ -211,7 +211,7 @@ def dateNewPy (year month day : Arg) : Py (Int × Int × Int) :=
 with `check_date_args`. -/
 def datetimeDateImplC (y m d : Int) : Py (Int × Int × Int) := checkDateC y m d
 
-/-- The clinic wrapper `datetime_date`, clinic/_datetimemodule.c.h:131-183: arity, then
+/-- The clinic wrapper `datetime_date`, clinic/_datetimemodule.c.h:131-189: arity, then
 `year`, `month`, `day` in turn, then the impl. -/
 def datetimeDateClinicC (args : List Arg) : Py (Int × Int × Int) := do
   if let some e := clinicArity "date" 3 3 args.length 0 then throw e
@@ -288,7 +288,7 @@ def datetimeTimeImplC (h mi s u : Int) (tzi : Arg) (fold : Int) : Py TM := do
   let t ← checkTzinfoSubclassC tzi
   return ⟨h, mi, s, u, fold, t⟩
 
-/-- The clinic wrapper `datetime_time`, clinic/_datetimemodule.c.h:746-871, for positional
+/-- The clinic wrapper `datetime_time`, clinic/_datetimemodule.c.h:746-850, for positional
 arguments and the keyword `fold` (always passed here, so the arity check counts it). -/
 def datetimeTimeClinicC (args : List Arg) (fold : Arg) : Py TM := do
   if let some e := clinicArity "time" 5 6 args.length 1 then throw e
@@ -351,7 +351,7 @@ def datetimeDatetimeImplC (y m d h mi s u : Int) (tzi : Arg) (fold : Int) : Py D
   let t ← checkTzinfoSubclassC tzi
   return ⟨y, m, d, h, mi, s, u, fold, t⟩
 
-/-- The clinic wrapper `datetime_datetime`, clinic/_datetimemodule.c.h:1641-1771, for
+/-- The clinic wrapper `datetime_datetime`, clinic/_datetimemodule.c.h:1282-1401, for
 positional arguments and the keyword `fold` (always passed here). -/
 def datetimeDatetimeClinicC (args : List Arg) (fold : Arg) : Py DT := do
   if let some e := clinicArity "datetime" 8 9 args.length 1 then throw e

@@ -228,7 +228,7 @@ def dtReprPyF (renv : TzReprEnv) (c : ReprCls) (dt : DT) : Py String := do
   let s ← appendTzinfoF renv (dtReprBodyPy (getClassModule c.module ++ c.dtQualname) dt) dt.tz
   return appendFold s dt.fold
 
-/-- `datetime_repr`, :6378-6413: fold (:6406-6407), then tzinfo (:6408-6410). -/
+/-- `datetime_repr`, :6378-6413: fold (:6408-6409), then tzinfo (:6410-6412). -/
 def dtReprCF (renv : TzReprEnv) (c : ReprCls) (dt : DT) : Py String :=
   appendTzinfoF renv (appendFold (dtReprBodyC c.dtTpName dt) dt.fold) dt.tz
 

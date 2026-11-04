@@ -10,7 +10,7 @@ Lib/_pydecimal.py	284	297	Overflow.handle	handle(self, context, sign, *args)	mod
 Lib/_pydecimal.py	358	370	getcontext	getcontext()	todo		
 Lib/_pydecimal.py	372	377	setcontext	setcontext(context)	todo		
 Lib/_pydecimal.py	381	424	localcontext	localcontext(ctx=None, **kwargs)	todo		
-Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	todo		
+Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	modelled	decimal-ieee-context-exact	
 Lib/_pydecimal.py	465	467	_tento	_tento(n)	modelled	decimal-pow10a-exact	
 Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	modelled	decimal-pow10-correct,decimal-pow10-band-exact	
 Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	modelled	decimal-pow10a-exact,decimal-remainder-near-exact	
@@ -29,11 +29,11 @@ Lib/_pydecimal.py	943	950	Decimal.__le__	__le__(self, other, context=None)	model
 Lib/_pydecimal.py	952	959	Decimal.__gt__	__gt__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	961	968	Decimal.__ge__	__ge__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	modelled	decimal-comparisons-exact	
-Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	todo		review: The only entry is the int-limit refutation (hash(Decimal(10**4300))), a limitation upstream declined (python/cpython#96589; the record says do not file), so it is not a promised behaviour; nothing states the hash of an in-limit value (no narrowed twin agreement or Fraction-consistency for _pydecimal).
-Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		
-Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
+Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	modelled	decimal-hash-twins-agree,decimal-hash-exact-py	
+Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		review: asTuple (Tuple.lean:160) is :1019, the finite case is pinned exactly (first conjunct, digit range, digit value) and the round trip goes through the independent tuple-constructor model pyFromTuple, so it is not a restatement; but for the specials the prop pins only what the constructor reads back, and pyFromTuple ignores the digits under 'F' and skips leading zeros, so an as_tuple giving (0, (), 'F') or (0, (5,), 'F') for Decimal('Infinity'), or (0, (0, 1, 2), 'n') for NaN12, satisfies AsTupleExactPy although the registry statement claims '(0,) for an infinity' and the payload digits; equations for asTuple (.inf neg) and asTuple (.nan neg s p) would close it.
+Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	modelled	decimal-ratio-exact-py	
 Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	modelled	decimal-repr-exact	
-Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree-int-digits	
+Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-str-spell-exact,decimal-tuple-twins-agree-int-digits	
 Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	modelled	decimal-eng-string-exact	
 Lib/_pydecimal.py	1137	1157	Decimal.__neg__	__neg__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1159	1178	Decimal.__pos__	__pos__(self, context=None)	modelled	decimal-unary-exact	
@@ -72,10 +72,10 @@ Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	modelled	d
 Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	modelled	decimal-fma-exact,decimal-fma-special-exact,decimal-fma-fin-exact	
-Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
-Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
-Lib/_pydecimal.py	2352	2566	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		
-Lib/_pydecimal.py	2568	2573	Decimal.__rpow__	__rpow__(self, other, modulo=None, context=None)	todo		
+Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		not modelled yet (three-argument pow).
+Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		not modelled yet. Smoke on 3.15.2 (20,000 random exp/ln/log10/sqrt/power calls, prec 1-50, HALF_EVEN): _pydecimal and _decimal agree except 5 integer powers, where an exact-Fraction reference shows _pydecimal correctly rounded and _decimal off by one unit (documented: the C power is only 'almost always correctly rounded'), e.g. Context(prec=16).power(Decimal('0.9999'), -2)
+Lib/_pydecimal.py	2352	2566	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		not modelled yet. Smoke on 3.15.2 (20,000 random exp/ln/log10/sqrt/power calls, prec 1-50, HALF_EVEN): _pydecimal and _decimal agree except 5 integer powers, where an exact-Fraction reference shows _pydecimal correctly rounded and _decimal off by one unit (documented: the C power is only 'almost always correctly rounded'), e.g. Context(prec=16).power(Decimal('0.9999'), -2)
+Lib/_pydecimal.py	2568	2573	Decimal.__rpow__	__rpow__(self, other, modulo=None, context=None)	todo		not modelled yet. Smoke on 3.15.2 (20,000 random exp/ln/log10/sqrt/power calls, prec 1-50, HALF_EVEN): _pydecimal and _decimal agree except 5 integer powers, where an exact-Fraction reference shows _pydecimal correctly rounded and _decimal off by one unit (documented: the C power is only 'almost always correctly rounded'), e.g. Context(prec=16).power(Decimal('0.9999'), -2)
 Lib/_pydecimal.py	2575	2598	Decimal.normalize	normalize(self, context=None)	modelled	decimal-normalize-exact,decimal-normalize-nan-exact	
 Lib/_pydecimal.py	2600	2659	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	modelled	decimal-quantize-exact,decimal-quantize-correct	
 Lib/_pydecimal.py	2661	2674	Decimal.same_quantum	same_quantum(self, other, context=None)	modelled	decimal-same-quantum-exact	
@@ -83,7 +83,7 @@ Lib/_pydecimal.py	2676	2708	Decimal._rescale	_rescale(self, exp, rounding)	model
 Lib/_pydecimal.py	2710	2731	Decimal._round	_round(self, places, rounding)	todo		
 Lib/_pydecimal.py	2733	2760	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	modelled	decimal-to-integral-exact-exact	
 Lib/_pydecimal.py	2762	2776	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	modelled	decimal-to-integral-value-correct	
-Lib/_pydecimal.py	2781	2878	Decimal.sqrt	sqrt(self, context=None)	todo		
+Lib/_pydecimal.py	2781	2878	Decimal.sqrt	sqrt(self, context=None)	todo		not modelled yet; correct rounding needs Newton's floor-sqrt loop and the n%5 sticky step proved. No twin disagreement in the 3.15.2 smoke test.
 Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	2956	2963	Decimal._isinteger	_isinteger(self)	todo		
@@ -96,7 +96,7 @@ Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, ot
 Lib/_pydecimal.py	3084	3086	Decimal.copy_abs	copy_abs(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3088	3093	Decimal.copy_negate	copy_negate(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3095	3099	Decimal.copy_sign	copy_sign(self, other, context=None)	modelled	decimal-copy-ops-correct	
-Lib/_pydecimal.py	3101	3174	Decimal.exp	exp(self, context=None)	todo		
+Lib/_pydecimal.py	3101	3174	Decimal.exp	exp(self, context=None)	todo		not modelled yet; no twin disagreement in the 3.15.2 smoke test.
 Lib/_pydecimal.py	3176	3182	Decimal.is_canonical	is_canonical(self)	excluded		trivial: the body is `return True`, one constant with no branch.
 Lib/_pydecimal.py	3184	3190	Decimal.is_finite	is_finite(self)	modelled	decimal-classification-correct	
 Lib/_pydecimal.py	3192	3194	Decimal.is_infinite	is_infinite(self)	modelled	decimal-classification-correct	
@@ -108,9 +108,9 @@ Lib/_pydecimal.py	3216	3218	Decimal.is_snan	is_snan(self)	modelled	decimal-class
 Lib/_pydecimal.py	3220	3226	Decimal.is_subnormal	is_subnormal(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3228	3230	Decimal.is_zero	is_zero(self)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3232	3254	Decimal._ln_exp_bound	_ln_exp_bound(self)	todo		
-Lib/_pydecimal.py	3257	3305	Decimal.ln	ln(self, context=None)	todo		
+Lib/_pydecimal.py	3257	3305	Decimal.ln	ln(self, context=None)	todo		not modelled yet; no twin disagreement in the 3.15.2 smoke test.
 Lib/_pydecimal.py	3307	3335	Decimal._log10_exp_bound	_log10_exp_bound(self)	todo		
-Lib/_pydecimal.py	3337	3386	Decimal.log10	log10(self, context=None)	todo		
+Lib/_pydecimal.py	3337	3386	Decimal.log10	log10(self, context=None)	todo		not modelled yet; no twin disagreement in the 3.15.2 smoke test.
 Lib/_pydecimal.py	3388	3416	Decimal.logb	logb(self, context=None)	modelled	decimal-logb-exact	
 Lib/_pydecimal.py	3418	3430	Decimal._islogical	_islogical(self)	modelled	decimal-logical-exact	
 Lib/_pydecimal.py	3432	3443	Decimal._fill_logical	_fill_logical(self, context, opa, opb)	modelled	decimal-logical-exact	
@@ -202,7 +202,7 @@ Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	modelled
 Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	modelled	decimal-context-methods-match-decimal,decimal-normalize-exact,decimal-normalize-nan-exact	
 Lib/_pydecimal.py	5157	5205	Context.number_class	number_class(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		
+Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		not modelled yet. Smoke on 3.15.2 (20,000 random exp/ln/log10/sqrt/power calls, prec 1-50, HALF_EVEN): _pydecimal and _decimal agree except 5 integer powers, where an exact-Fraction reference shows _pydecimal correctly rounded and _decimal off by one unit (documented: the C power is only 'almost always correctly rounded'), e.g. Context(prec=16).power(Decimal('0.9999'), -2)
 Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-quantize-exact	
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
 Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	modelled	decimal-context-methods-match-decimal	

@@ -303,13 +303,14 @@ def scaleb (c : Ctx) (a b : Dec) : DM Dec := do
 
 /-! ## `next_*` -/
 
-/-- `context._ignore_all_flags()` on a copy, _pydecimal.py:3587-3588: nothing is
-flagged and nothing raises. -/
+/-- `context._ignore_all_flags()` on a copy (_pydecimal.py:3589-3591 in `next_minus`, :3612-3614 in
+`next_plus`): nothing is flagged and nothing raises. -/
 def quietly {α : Type} (x : DM α) : DM α := fun fl => do
   let (a, _) ← x fl
   pure (a, fl)
 
-/-- The context copy `next_*` work in, _pydecimal.py:3586-3588. -/
+/-- The context copy `next_*` work in, _pydecimal.py:3589-3591 (`next_minus`) and :3612-3614
+(`next_plus`): `context.copy()`, `_set_rounding`, `_ignore_all_flags()`. -/
 def quietCtx (c : Ctx) (m : Rounding) : Ctx := { c with rounding := m, traps := [] }
 
 /-- `Decimal.next_minus`, _pydecimal.py:3575-3596. -/
@@ -423,13 +424,17 @@ def pyEngObj (o : PyObj) (caps : Bool := true) : Py (List Char) :=
 /-- `Decimal.to_eng_string()` in `_pydecimal` (`capitals` from the context). -/
 def pyEng (d : Dec) (caps : Bool := true) : Py (List Char) := pyEngObj d.toPyObj caps
 
-/-- The spelling of `repr(d)` (`_decimal`'s `dec_repr` writes the same, without a limit). -/
-def reprD (d : Dec) : List Char := "Decimal('".toList ++ toSci d ++ "')".toList
+/-- The spelling of `repr(d)` in `_decimal`: `dec_repr` (Modules/_decimal/_decimal.c) formats with
+`mpd_to_sci(MPD(dec), CtxCaps(context))` for the current context, so `caps` is
+`getcontext().capitals`; no int/str limit. -/
+def reprD (d : Dec) (caps : Bool := true) : List Char := "Decimal('".toList ++ toSci d caps ++ "')".toList
 
-/-- `Decimal.__repr__` of `_pydecimal`, _pydecimal.py:1071-1074: `"Decimal('%s')" % str(self)`,
-so it raises what `str(self)` raises (the int/str limit of a more than 4300-digit exponent). -/
-def pyRepr (d : Dec) : Py (List Char) := do
-  let s ← pyStr d
+/-- `Decimal.__repr__` of `_pydecimal`, _pydecimal.py:1071-1074: `"Decimal('%s')" % str(self)`, and
+`str(self)` is `__str__(eng=False, context=None)`, which takes `capitals` from `getcontext()`
+(:1122-1124), here `caps`; so it raises what `str(self)` raises (the int/str limit of a more than
+4300-digit exponent). -/
+def pyRepr (d : Dec) (caps : Bool := true) : Py (List Char) := do
+  let s ← pyStr d caps
   return "Decimal('".toList ++ s ++ "')".toList
 
 /-- `Decimal._round`, _pydecimal.py:2710-2731, for `places ≥ 1`. -/

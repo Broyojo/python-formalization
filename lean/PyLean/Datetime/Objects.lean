@@ -206,7 +206,7 @@ def dateSubDeltaPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
 
 /-- `add_date_timedelta` with `negate = 1`, :3547-3559. -/
 def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
-  let (y, m, d) ← normalizeYMDC y m (d + -t.days)
+  let (y, m, d) ← normalizeDateC y m (d + -t.days)
   checkDate y m d
 
 /-! ### Time tuples -/
@@ -330,11 +330,32 @@ def tmIsoformatPy (env : TzEnv) (t : TM) (spec : TimeSpec) : Py String := do
   let s := String.ofList (formatTime t.h t.mi t.s t.us spec)
   return s ++ (← tmTzstrPy env t)
 
-/-- `datetime_time_isoformat_impl`, :4900-4959, with `format_utcoffset` (:1767-1813). -/
+/-- `format_utcoffset`, :1731-1776, with the tzinfo argument of the caller. -/
+def formatUtcoffsetC (sep : List Char) : Option Delta → List Char
+  | none => []
+  | some off =>
+    -- :1749-1757: the sign from `days < 0`, then `delta_negative`
+    let (sign, off) : Char × Delta :=
+      if off.days < 0 then ('-', match off.negC with | .ok v => v | .error _ => off) else ('+', off)
+    let microseconds := off.us
+    let seconds := off.seconds
+    -- :1760-1761: `divmod` by 60 twice
+    let minutes := seconds / 60
+    let seconds := seconds % 60
+    let hours := minutes / 60
+    let minutes := minutes % 60
+    -- :1762-1775: three `snprintf` forms
+    let s := sign :: (padInt 2 hours) ++ sep ++ (padInt 2 minutes)
+    if microseconds ≠ 0 then s ++ sep ++ padInt 2 seconds ++ ['.'] ++ padInt 6 microseconds
+    else if seconds ≠ 0 then s ++ sep ++ padInt 2 seconds
+    else s
+
+/-- `datetime_time_isoformat_impl`, :4900-4959: the fields, then `format_utcoffset` with
+`sep = ":"` and the tzinfo argument `None` (:1731-1776, through `call_utcoffset`). -/
 def tmIsoformatC (env : TzEnv) (t : TM) (spec : TimeSpec) : Py String := do
   let s := String.ofList (formatTime t.h t.mi t.s t.us spec)
   let off ← t.utcoffsetC env
-  return s ++ String.ofList (formatOffset (off.map Delta.toUs))
+  return s ++ String.ofList (formatUtcoffsetC [':'] off)
 
 /-- `datetime.isoformat`, Py:2174-2199. -/
 def dtIsoformatPy (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec) : Py String := do
@@ -342,11 +363,12 @@ def dtIsoformatPy (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec) : Py St
   let off ← dt.utcoffsetPy env
   return s ++ String.ofList (formatOffset (off.map Delta.toUs))
 
-/-- `datetime_datetime_isoformat_impl`, :6450-6510. -/
+/-- `datetime_datetime_isoformat_impl`, :6450-6510: the fields, then `format_utcoffset` with
+`sep = ":"` and the datetime as tzinfo argument (:1731-1776). -/
 def dtIsoformatC (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec) : Py String := do
   let s := String.ofList (dateIsoformat dt.y dt.m dt.d ++ [sep] ++ formatTime dt.h dt.mi dt.s dt.us spec)
   let off ← dt.utcoffsetC env
-  return s ++ String.ofList (formatOffset (off.map Delta.toUs))
+  return s ++ String.ofList (formatUtcoffsetC [':'] off)
 
 /-! ### `time`: comparison and hash -/
 
@@ -532,7 +554,7 @@ def normalizeDatetimeC (y m d hh mi s us : Int) : Py DT :=
   let (mi, s) := normalizePair mi s 60
   let (hh, mi) := normalizePair hh mi 60
   let (d, hh) := normalizePair d hh 24
-  normalizeTailC hh mi s us (normalizeYMDC y m d)
+  normalizeTailC hh mi s us (normalizeDateC y m d)
 
 /-- `add_datetime_timedelta`, :6241-6266, with the `factor` of the caller. -/
 def addDatetimeTimedeltaC (dt : DT) (delta : Delta) (factor : Int) : Py DT := do

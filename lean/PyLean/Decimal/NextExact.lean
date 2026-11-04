@@ -1162,6 +1162,128 @@ theorem nextTowardExact_proven : NextTowardExact := by
       | error x => rfl
       | ok p => obtain ⟨y, fl2⟩ := p; exact toward_tail c y fl2
 
+/-! ## `next_plus` of a finite operand, every outcome -/
+
+/-- The result `r` of a computation in `next_plus`'s flag-ignoring copy, with the caller's flags
+`fl` (the copy's flags are dropped, `_ignore_all_flags`). -/
+def keepFl (fl : List Signal) : Py (Dec × List Signal) → Py (Dec × List Signal)
+  | .error x => .error x
+  | .ok (y, _) => .ok (y, fl)
+
+/-- `next_plus` of a finite `±co·10^e` (_pydecimal.py:3612-3619) with `_fix` (`fixSpec`) and
+`__add__` (`AddExact`'s cases) written out, in the copy `q` of the context that rounds toward `+∞`
+and ignores every flag (`eb = Etiny - 1`):
+
+* a zero: `_fix` keeps its value, and `0 + 1E(eb)` is `1E(eb)` padded to the exponent
+  `max(min(e, eb), eb - prec - 1)` and rounded by `_fix`;
+* otherwise `_fix(q)` of the operand (its own int/str-limit `ValueError` included); a value that
+  differs from the operand is the result; else `__add__` of `1E(eb)`: `int(self._int)`'s
+  `ValueError` for a coefficient of more than 4300 digits, the zero sum, `str(result.int)`'s
+  `ValueError` when the working sum `_normalize` makes has more than 4300 digits, and otherwise the
+  exact sum rounded by `_fix(q)`. -/
+def nextPlusFinSpec (c : Ctx) (s : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    Py (Dec × List Signal) :=
+  let q := quietCtx c .ceiling
+  let eb := c.etiny - 1
+  if co = 0 then
+    keepFl fl (fixSpec q false (1 * 10 ^ (eb - max (min e eb) (eb - c.prec - 1)).toNat)
+      (max (min e eb) (eb - c.prec - 1)) fl)
+  else match fixSpec q s co e fl with
+    | .error x => .error x
+    | .ok (v, _) =>
+      if cmpVal v (.fin s co e) ≠ .eq then .ok (v, fl)
+      else if maxStrDigits < numDigits co then .error (.valueError (limitToIntMsg (numDigits co)))
+      else if exactSum s co e false 1 eb = 0 then keepFl fl ((fix q (.fin false 0 (min e eb))).run fl)
+      else if (maxStrDigits : Int) < (numDigits (exactSum s co e false 1 eb).natAbs : Int) + min e eb -
+          addWorkExp c.prec co e 1 eb then .error (.valueError limitToStrMsg)
+      else keepFl fl (fixSpec q (decide (exactSum s co e false 1 eb < 0))
+        (exactSum s co e false 1 eb).natAbs (min e eb) fl)
+
+theorem match_keep (fl : List Signal) (r : Py (Dec × List Signal)) :
+    (match r with
+      | .error x => .error x
+      | .ok (y, _) => .ok (y, fl)) = keepFl fl r := by
+  cases r with
+  | error x => rfl
+  | ok p => rfl
+
+theorem keep_sigRun (q : Ctx) (h : q.traps = []) (ss fl1 fl : List Signal) (v : Dec) :
+    keepFl fl (sigRun q ss fl1 v) = .ok (v, fl) := by
+  obtain ⟨fl', h'⟩ := sigRun_noTraps q h ss fl1 v
+  rw [h']; rfl
+
+/-- In a context that traps nothing, what `_fix` returns does not depend on the flags. -/
+theorem fixSpec_keep (q : Ctx) (h : q.traps = []) (neg : Bool) (co : Nat) (e : Int)
+    (fl1 fl2 fl : List Signal) :
+    keepFl fl (fixSpec q neg co e fl1) = keepFl fl (fixSpec q neg co e fl2) := by
+  unfold fixSpec
+  simp only
+  split
+  · rw [keep_sigRun q h, keep_sigRun q h]
+  · split
+    · split
+      · rw [keep_sigRun q h, keep_sigRun q h]
+      · rw [keep_sigRun q h, keep_sigRun q h]
+    · split
+      · rfl
+      · rw [keep_sigRun q h, keep_sigRun q h]
+
+theorem fixZero_keep (q : Ctx) (hp : 1 ≤ q.prec) (h : q.traps = []) (neg : Bool) (e : Int)
+    (fl1 fl2 fl : List Signal) :
+    keepFl fl ((fix q (.fin neg 0 e)).run fl1) = keepFl fl ((fix q (.fin neg 0 e)).run fl2) := by
+  rw [(fixExact_proven q fl1 hp).2.1 neg e, (fixExact_proven q fl2 hp).2.1 neg e]
+  repeat' split
+  all_goals first
+    | rfl
+    | rw [keep_sigRun q h, keep_sigRun q h]
+
+theorem nextPlus_fin_spec (c : Ctx) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (e : Int)
+    (fl : List Signal) : (nextPlus c (.fin s co e)).run fl = nextPlusFinSpec c s co e fl := by
+  rw [nextPlus_fin_run]
+  have hqp : 1 ≤ (quietCtx c .ceiling).prec := hp
+  have hqt : (quietCtx c .ceiling).traps = [] := rfl
+  unfold nextPlusFinSpec
+  simp only
+  by_cases hc : co = 0
+  · subst hc
+    rw [if_pos rfl]
+    obtain ⟨ne, fl2, hfz⟩ : ∃ ne fl2,
+        (fix (quietCtx c .ceiling) (.fin s 0 e)).run fl = .ok (.fin s 0 ne, fl2) := by
+      rw [(fixExact_proven _ fl hqp).2.1 s e]
+      split <;> (try split) <;> first
+        | exact ⟨e, fl, rfl⟩
+        | exact ⟨_, _, (sigRun_noTraps _ hqt _ fl _).choose_spec⟩
+    have hcm : cmpVal (.fin s 0 ne) (.fin s 0 e) = .eq := by simp [cmpVal]
+    rw [hfz]
+    simp only [hcm, ne_eq, not_true_eq_false, ↓reduceIte]
+    rw [match_keep, add_zero_left _ fl2 hqp s e false 1 _ (by decide), quiet_etiny, quiet_prec]
+    exact fixSpec_keep _ hqt _ _ _ fl2 fl fl
+  · rw [if_neg hc, fixExact_fin _ s co e fl hqp hc]
+    cases hfs : fixSpec (quietCtx c .ceiling) s co e fl with
+    | error x => rfl
+    | ok p =>
+      obtain ⟨v, fl2⟩ := p
+      simp only
+      by_cases hcmp : cmpVal v (.fin s co e) ≠ .eq
+      · rw [if_pos hcmp, if_pos hcmp]
+      · rw [if_neg hcmp, if_neg hcmp, match_keep,
+          add_fin_exact _ fl2 hqp s co e false 1 _ hc (by decide), quiet_etiny, quiet_prec]
+        have h1 : ¬ maxStrDigits < numDigits 1 := by decide
+        by_cases l1 : maxStrDigits < numDigits co
+        · rw [if_pos l1, if_pos l1]; rfl
+        · rw [if_neg l1, if_neg l1, if_neg h1]
+          by_cases l2 : exactSum s co e false 1 (c.etiny - 1) = 0
+          · rw [if_pos l2, if_pos l2]
+            have hr : decide ((quietCtx c .ceiling).rounding = .floor) = false := rfl
+            rw [hr]
+            exact fixZero_keep _ hqp hqt _ _ fl2 fl fl
+          · rw [if_neg l2, if_neg l2]
+            by_cases l3 : (maxStrDigits : Int) < (numDigits (exactSum s co e false 1 (c.etiny - 1)).natAbs : Int) +
+                min e (c.etiny - 1) - addWorkExp c.prec co e 1 (c.etiny - 1)
+            · rw [if_pos l3, if_pos l3]; rfl
+            · rw [if_neg l3, if_neg l3]
+              exact fixSpec_keep _ hqt _ _ _ fl2 fl fl
+
 /-! ## The statements -/
 
 /-- `Decimal.next_plus` (_pydecimal.py:3598-3619; docstring "Returns the smallest representable
@@ -1173,8 +1295,13 @@ number larger than itself"), for every context (`prec ≥ 1`, `Emin ≤ Emax`) a
   representable value is at most the operand), and leaves the caller's flags as they were (it
   works in a copy that ignores every flag, so no trap fires);
 * it does return for every finite operand whose coefficient has at most `4300 - prec - 3` digits;
-  past that, `__add__`'s `str(result.int)` can raise the int/str-limit `ValueError`
-  (`Decimal((0, (1,) + (0,)*4299, -4299)).next_plus()` does, on 3.15.2);
+* every outcome of a finite operand, the exceptions included, is `nextPlusFinSpec`: `_fix` toward
+  `+∞` in the flag-ignoring copy (`fixSpec`, with its int/str-limit `ValueError` on an incremented
+  coefficient of more than 4300 digits), and when that keeps the value, `__add__` of `1E(Etiny-1)`
+  with its two int/str-limit `ValueError`s (`int(self._int)` for a coefficient of more than 4300
+  digits, `str(result.int)` for a working sum of more than 4300 digits) and its `_fix`: so
+  `Decimal((0, (1,) + (0,)*4299, -4299)).next_plus()` and `Decimal(1).next_plus(Context(prec=5000))`
+  raise that `ValueError`, as they do on 3.15.2, and nothing else raises;
 * `+Infinity` stays; `-Infinity` gives the most negative finite value `-(10^prec-1)·10^Etop`;
 * a quiet NaN gives itself with its payload cut to `prec - clamp` digits; a signaling NaN
   signals InvalidOperation and gives that quiet NaN. -/
@@ -1185,6 +1312,7 @@ def NextPlusExact : Prop :=
       fl' = fl ∧ NextGoal c (min e (c.etiny - 1)) (scl s co e (min e (c.etiny - 1))) y) ∧
     (∀ (s : Bool) (co : Nat) (e : Int), numDigits co + c.prec + 3 ≤ maxStrDigits →
       ∃ y, (nextPlus c (.fin s co e)).run fl = .ok (y, fl)) ∧
+    (∀ (s : Bool) (co : Nat) (e : Int), (nextPlus c (.fin s co e)).run fl = nextPlusFinSpec c s co e fl) ∧
     (nextPlus c (.inf false)).run fl = .ok (.inf false, fl) ∧
     (nextPlus c (.inf true)).run fl = .ok (.fin true (10 ^ c.prec - 1) c.etop, fl) ∧
     (∀ (neg : Bool) (p : Nat),
@@ -1195,7 +1323,8 @@ def NextPlusExact : Prop :=
 theorem nextPlusExact_proven : NextPlusExact := by
   intro c fl hp hE
   exact ⟨fun s co e y fl' h => nextPlus_correct_fin c fl hp hE s co e y fl' h,
-    fun s co e hd => nextPlus_ok_fin c fl hp s co e hd, (nextPlus_inf c fl).1, (nextPlus_inf c fl).2,
+    fun s co e hd => nextPlus_ok_fin c fl hp s co e hd, fun s co e => nextPlus_fin_spec c hp s co e fl,
+    (nextPlus_inf c fl).1, (nextPlus_inf c fl).2,
     fun neg p => nextPlus_nan c fl neg p⟩
 
 /-- `Decimal.next_minus` (_pydecimal.py:3575-3596; docstring "Returns the largest representable

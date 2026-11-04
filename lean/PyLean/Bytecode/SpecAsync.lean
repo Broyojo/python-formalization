@@ -13,11 +13,15 @@ namespace PyLean.Bytecode
 open Uop
 
 /-- `GET_AITER` on `obj`: the result of `am_aiter` replaces it, and on failure it is popped
-(`PyStackRef_CLOSE(obj)` before `ERROR_IF`, `:1621-1627`); the protocol (`getAIterImpl`): a type
-with no `__aiter__` gives `TypeError("'async for' requires an object with __aiter__ method, got T")`
-(`%.100s`), the lookup's or the call's error propagates, and a result whose type has no `__anext__`
-gives `TypeError("'async for' received an object from __aiter__ that does not implement __anext__:
-U")`; otherwise the result itself, whatever else it is. -/
+(`PyStackRef_CLOSE(obj)` before `ERROR_IF`, `:1621-1627`); the protocol (`getAIterImpl`), for every
+inner object model: a type with no `am_aiter` gives `TypeError("'async for' requires an object with
+__aiter__ method, got T")` (`%.100s`), the slot's error propagates, and a result whose type has no
+`am_anext` gives `TypeError("'async for' received an object from __aiter__ that does not implement
+__anext__: U")`; otherwise the result itself, whatever else it is. The slots: an async generator's
+`am_aiter` is `PyObject_SelfIter` (`Objects/genobject.c:1835`), with no call and no effect, and its type
+has `am_anext` (`:1836`), so `GET_AITER` gives an async generator back unchanged; every other object's
+`am_aiter` is `slot_am_aiter` (the `__aiter__` of its class, `callDunder`) and a type's `am_anext` is
+there exactly when its class defines `__anext__`. -/
 def GetAIterRules : Prop :=
   (∀ (e : Env) (regs : Regs) (o : Val) (rest : List Val),
     (∀ it rt, e.om.getAIter e.ctx o regs.rt = .ok it rt →
@@ -25,37 +29,69 @@ def GetAIterRules : Prop :=
     (∀ x rt, e.om.getAIter e.ctx o regs.rt = .error x rt →
       execOp e .GET_AITER ⟨regs, o :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩)) ∧
   (∀ (om : ObjModel) (ctx : Ctx) (o : Val) (rt : Rt),
-    (∀ rt1 t rt2, Proto.callDunder om ctx o "__aiter__" [] rt = .ok none rt1 → tpName o rt1 = .ok t rt2 →
+    (∀ rt1 t rt2, Proto.amAIter om ctx o rt = .ok none rt1 → tpName o rt1 = .ok t rt2 →
       Proto.getAIterImpl om ctx o rt =
         typeError s!"'async for' requires an object with __aiter__ method, got {trunc100 t}" rt2) ∧
-    (∀ x rt1, Proto.callDunder om ctx o "__aiter__" [] rt = .error x rt1 → Proto.getAIterImpl om ctx o rt = .error x rt1) ∧
-    (∀ it rt1 T rt2, Proto.callDunder om ctx o "__aiter__" [] rt = .ok (some it) rt1 → typeOf it rt1 = .ok T rt2 →
-      (∀ rt3, Proto.userLookup T "__anext__" rt2 = .ok none rt3 → ∀ u rt4, tpName it rt3 = .ok u rt4 →
+    (∀ x rt1, Proto.amAIter om ctx o rt = .error x rt1 → Proto.getAIterImpl om ctx o rt = .error x rt1) ∧
+    (∀ it rt1 T rt2, Proto.amAIter om ctx o rt = .ok (some it) rt1 → typeOf it rt1 = .ok T rt2 →
+      (∀ rt3, Proto.hasAmANext T rt2 = .ok false rt3 → ∀ u rt4, tpName it rt3 = .ok u rt4 →
         ∀ x rt5, typeError (α := Unit)
           s!"'async for' received an object from __aiter__ that does not implement __anext__: {trunc100 u}" rt4 =
             .error x rt5 →
         Proto.getAIterImpl om ctx o rt = .error x rt5) ∧
-      (∀ f rt3, Proto.userLookup T "__anext__" rt2 = .ok (some f) rt3 → Proto.getAIterImpl om ctx o rt = .ok it rt3)))
+      (∀ rt3, Proto.hasAmANext T rt2 = .ok true rt3 → Proto.getAIterImpl om ctx o rt = .ok it rt3))) ∧
+  (∀ (om : ObjModel) (ctx : Ctx) (rt : Rt) (a : Addr) (g : GenObj),
+    rt.heap[a]? = some (.gen g) → g.kind = .asyncGen →
+    Proto.amAIter om ctx (.ref a) rt = .ok (some (.ref a)) rt ∧
+    Proto.getAIterImpl om ctx (.ref a) rt = .ok (.ref a) rt) ∧
+  (∀ (om : ObjModel) (ctx : Ctx) (o : Val) (rt : Rt) (rt1 : Rt) (T : Val),
+    typeOf o rt = .ok T rt1 → T ≠ .cls "async_generator" →
+    Proto.amAIter om ctx o rt = Proto.callDunder om ctx o "__aiter__" [] rt1) ∧
+  (∀ (T : Val) (rt : Rt),
+    Proto.hasAmANext (.cls "async_generator") rt = .ok true rt ∧
+    (T ≠ .cls "async_generator" → Proto.hasAmANext T rt =
+      (do return (← Proto.userLookup T "__anext__").isSome : RM Bool) rt))
+
+theorem typeOf_asyncGen (rt : Rt) (a : Addr) (g : GenObj) (h : rt.heap[a]? = some (.gen g))
+    (hk : g.kind = .asyncGen) : typeOf (.ref a) rt = .ok (.cls "async_generator") rt := by
+  simp [typeOf, getObj, h, hk, bind, EStateM.bind, pure, EStateM.pure]
 
 theorem getAIterRules_proven : GetAIterRules := by
-  refine ⟨fun e regs o rest => ⟨fun it rt h => ?_, fun x rt h => ?_⟩, fun om ctx o rt => ?_⟩
+  refine ⟨fun e regs o rest => ⟨fun it rt h => ?_, fun x rt h => ?_⟩, fun om ctx o rt => ?_,
+    fun om ctx rt a g hg hk => ?_, fun om ctx o rt rt1 T hT hne => ?_, fun T rt => ⟨?_, fun hne => ?_⟩⟩
   · bc_simp [execOp, GET_AITER, h]
   · bc_simp [execOp, GET_AITER, h]
   · refine ⟨fun rt1 t rt2 h1 h2 => ?_, fun x rt1 h => ?_, fun it rt1 T rt2 h1 h2 => ⟨fun rt3 h3 u rt4 h4 x rt5 h5 => ?_,
-      fun f rt3 h3 => ?_⟩⟩
+      fun rt3 h3 => ?_⟩⟩
     · simp [Proto.getAIterImpl, h1, h2, bind, EStateM.bind]
     · simp [Proto.getAIterImpl, h, bind, EStateM.bind]
     · simp [Proto.getAIterImpl, h1, h2, h3, h4, h5, bind, EStateM.bind]
     · simp [Proto.getAIterImpl, h1, h2, h3, bind, EStateM.bind, pure, EStateM.pure]
+  · have h1 : Proto.amAIter om ctx (.ref a) rt = .ok (some (.ref a)) rt := by
+      simp [Proto.amAIter, typeOf_asyncGen rt a g hg hk, bind, EStateM.bind, pure, EStateM.pure]
+    refine ⟨h1, ?_⟩
+    simp [Proto.getAIterImpl, h1, typeOf_asyncGen rt a g hg hk, Proto.hasAmANext, bind, EStateM.bind, pure,
+      EStateM.pure]
+  · have hb : (T == .cls "async_generator") = false := by simpa using hne
+    simp [Proto.amAIter, hT, hb, bind, EStateM.bind]
+  · simp [Proto.hasAmANext, pure, EStateM.pure]
+  · have hb : (T == .cls "async_generator") = false := by simpa using hne
+    simp [Proto.hasAmANext, hb, bind, EStateM.bind, pure, EStateM.pure]
 
 /-- `GET_ANEXT` on `aiter`: it pushes the awaitable `_PyEval_GetANext` returns above `aiter` and keeps
-`aiter` when it fails (`ERROR_NO_POP`, `:1643-1649`). `_PyEval_GetANext` (`getANextImpl`): a type
-with no `__anext__` gives `TypeError("'async for' requires an iterator with __anext__ method, got
-T")`; the lookup's or the call's error propagates; the result `n` goes through
-`_PyCoro_GetAwaitableIter`, whose result is returned, and whose exception, any exception and not only
-a `TypeError` (`__await__` raising `ValueError` included), becomes the `__cause__` and `__context__`
-of a new `TypeError("'async for' received an invalid object from __anext__: U")` raised as it is
-(`_PyErr_FormatFromCause`). -/
+`aiter` when it fails (`ERROR_NO_POP`, `:1643-1649`). `_PyEval_GetANext` (`getANextImpl`), for every
+inner object model: an exact async generator takes the fast path (`PyAsyncGen_CheckExact`,
+`Python/ceval.c:3563-3565`), `async_gen_anext` with no awaitable check; otherwise a type with no
+`am_anext` gives `TypeError("'async for' requires an iterator with __anext__ method, got T")`; the
+slot's error propagates; the result `n` goes through `_PyCoro_GetAwaitableIter`, whose result is
+returned, and whose exception, any exception and not only a `TypeError` (`__await__` raising
+`ValueError` included), becomes the `__cause__` and `__context__` of a new `TypeError("'async for'
+received an invalid object from __anext__: U")` raised as it is (`_PyErr_FormatFromCause`). A
+non-generator's `am_anext` is its class's `__anext__`. `async_gen_anext` (`Objects/genobject.c:1706-1713`)
+runs `async_gen_init_hooks` (`:1668-1702`) and then makes a fresh `AWAITABLE_STATE_INIT` `asend` with
+no send value: once `ag_hooks_inited` is set it only allocates; the first time it sets the flag and,
+with `firstiter` unset, allocates; with `firstiter` set, it calls `firstiter(gen)` with the flag
+already set, and that call's error is the result. -/
 def GetANextRules : Prop :=
   (∀ (e : Env) (regs : Regs) (a : Val) (rest : List Val),
     (∀ w rt, e.om.getANext e.ctx a regs.rt = .ok w rt →
@@ -63,29 +99,67 @@ def GetANextRules : Prop :=
     (∀ x rt, e.om.getANext e.ctx a regs.rt = .error x rt →
       execOp e .GET_ANEXT ⟨regs, a :: rest⟩ = .error x ⟨{ regs with rt := rt }, a :: rest⟩)) ∧
   (∀ (P : Program) (om : ObjModel) (ctx : Ctx) (o : Val) (rt : Rt),
-    (∀ rt1 t rt2, Proto.callDunder om ctx o "__anext__" [] rt = .ok none rt1 → tpName o rt1 = .ok t rt2 →
-      Proto.getANextImpl P om ctx o rt =
-        typeError s!"'async for' requires an iterator with __anext__ method, got {trunc100 t}" rt2) ∧
-    (∀ x rt1, Proto.callDunder om ctx o "__anext__" [] rt = .error x rt1 → Proto.getANextImpl P om ctx o rt = .error x rt1) ∧
-    (∀ n rt1, Proto.callDunder om ctx o "__anext__" [] rt = .ok (some n) rt1 →
-      (∀ r rt2, Proto.awaitableIter P om ctx n rt1 = .ok r rt2 → Proto.getANextImpl P om ctx o rt = .ok r rt2) ∧
-      (∀ x rt2 t rt3 err rt4, Proto.awaitableIter P om ctx n rt1 = .error (.exc x) rt2 → tpName n rt2 = .ok t rt3 →
-        newExc (.cls "TypeError") [.str s!"'async for' received an invalid object from __anext__: {trunc100 t}"] rt3 =
-          .ok err rt4 →
-        Proto.getANextImpl P om ctx o rt = (do setCause err x; setContext err x; throw (.exc err) : RM Val) rt4)))
+    (∀ a g, rt.heap[a]? = some (.gen g) → o = .ref a → g.kind = .asyncGen →
+      Proto.getANextImpl P om ctx o rt = Proto.asyncGenAnext om ctx a rt) ∧
+    (∀ k, genKindOf o rt = .ok k rt → k ≠ some .asyncGen →
+      (∀ rt1 t rt2, Proto.amANext om ctx o rt = .ok none rt1 → tpName o rt1 = .ok t rt2 →
+        Proto.getANextImpl P om ctx o rt =
+          typeError s!"'async for' requires an iterator with __anext__ method, got {trunc100 t}" rt2) ∧
+      (∀ x rt1, Proto.amANext om ctx o rt = .error x rt1 → Proto.getANextImpl P om ctx o rt = .error x rt1) ∧
+      (∀ n rt1, Proto.amANext om ctx o rt = .ok (some n) rt1 →
+        (∀ r rt2, Proto.awaitableIter P om ctx n rt1 = .ok r rt2 → Proto.getANextImpl P om ctx o rt = .ok r rt2) ∧
+        (∀ x rt2 t rt3 err rt4, Proto.awaitableIter P om ctx n rt1 = .error (.exc x) rt2 → tpName n rt2 = .ok t rt3 →
+          newExc (.cls "TypeError") [.str s!"'async for' received an invalid object from __anext__: {trunc100 t}"] rt3 =
+            .ok err rt4 →
+          Proto.getANextImpl P om ctx o rt = (do setCause err x; setContext err x; throw (.exc err) : RM Val) rt4)))) ∧
+  (∀ (om : ObjModel) (ctx : Ctx) (o : Val) (rt rt1 : Rt) (T : Val),
+    typeOf o rt = .ok T rt1 → T ≠ .cls "async_generator" →
+    Proto.amANext om ctx o rt = Proto.callDunder om ctx o "__anext__" [] rt1) ∧
+  (∀ (om : ObjModel) (ctx : Ctx) (rt : Rt) (a : Addr) (g : GenObj), rt.heap[a]? = some (.gen g) →
+    let fresh (r : Rt) : EStateM.Result Err Rt Val := .ok (.ref r.heap.size) { r with heap := r.heap.push (.asend a .null 0) }
+    let marked : Rt := { rt with heap := rt.heap.setIfInBounds a (.gen { g with hooksInited := true }) }
+    (g.hooksInited = true → Proto.asyncGenAnext om ctx a rt = fresh rt) ∧
+    (g.hooksInited = false → rt.asyncGenFirstiter = .null → Proto.asyncGenAnext om ctx a rt = fresh marked) ∧
+    (g.hooksInited = false → rt.asyncGenFirstiter ≠ .null →
+      (∀ r rt2, om.call ctx rt.asyncGenFirstiter [.ref a] [] marked = .ok r rt2 →
+        Proto.asyncGenAnext om ctx a rt = fresh rt2) ∧
+      (∀ x rt2, om.call ctx rt.asyncGenFirstiter [.ref a] [] marked = .error x rt2 →
+        Proto.asyncGenAnext om ctx a rt = .error x rt2)))
 
 theorem getANextRules_proven : GetANextRules := by
-  refine ⟨fun e regs a rest => ⟨fun w rt h => ?_, fun x rt h => ?_⟩, fun P om ctx o rt => ?_⟩
+  refine ⟨fun e regs a rest => ⟨fun w rt h => ?_, fun x rt h => ?_⟩, fun P om ctx o rt => ⟨?_, ?_⟩,
+    fun om ctx o rt rt1 T hT hne => ?_, fun om ctx rt a g hg => ?_⟩
   · bc_simp [execOp, GET_ANEXT, h]
   · bc_simp [execOp, GET_ANEXT, h]
-  · refine ⟨fun rt1 t rt2 h1 h2 => ?_, fun x rt1 h => ?_, fun n rt1 h1 => ⟨fun r rt2 h2 => ?_,
+  · intro a g hg ho hk
+    subst ho
+    simp [Proto.getANextImpl, genKindOf, getObj, hg, hk, bind, EStateM.bind, pure, EStateM.pure]
+  · intro k hk1 hk2
+    have hb : (k == some .asyncGen) = false := by simpa using hk2
+    refine ⟨fun rt1 t rt2 h1 h2 => ?_, fun x rt1 h => ?_, fun n rt1 h1 => ⟨fun r rt2 h2 => ?_,
       fun x rt2 t rt3 err rt4 h2 h3 h4 => ?_⟩⟩
-    · simp [Proto.getANextImpl, h1, h2, bind, EStateM.bind]
-    · simp [Proto.getANextImpl, h, bind, EStateM.bind]
-    · simp [Proto.getANextImpl, h1, h2, tryExc, bind, EStateM.bind]
-    · simp only [Proto.getANextImpl, h1, tryExc, bind, EStateM.bind]
+    · simp [Proto.getANextImpl, hk1, hb, h1, h2, bind, EStateM.bind]
+    · simp [Proto.getANextImpl, hk1, hb, h, bind, EStateM.bind]
+    · simp [Proto.getANextImpl, hk1, hb, h1, h2, tryExc, bind, EStateM.bind]
+    · simp only [Proto.getANextImpl, hk1, hb, h1, tryExc, bind, EStateM.bind, Bool.false_eq_true, ↓reduceIte]
       simp only [h2]
       simp only [h3, h4]
+  · have hb : (T == .cls "async_generator") = false := by simpa using hne
+    simp [Proto.amANext, hT, hb, bind, EStateM.bind]
+  · intro fresh marked
+    refine ⟨fun hi => ?_, fun hi hf => ?_, fun hi hf => ⟨fun r rt2 h => ?_, fun x rt2 h => ?_⟩⟩
+    · simp [fresh, Proto.asyncGenAnext, Proto.asyncGenInitHooks, getGen, getObj, hg, hi, alloc, bind, EStateM.bind,
+        pure, EStateM.pure]
+    · simp [fresh, marked, Proto.asyncGenAnext, Proto.asyncGenInitHooks, getGen, getObj, hg, hi, hf, alloc, setObj,
+        bind, EStateM.bind, pure, EStateM.pure]
+    · have hb : (rt.asyncGenFirstiter != .null) = true := by simpa using hf
+      simp only [marked] at h
+      simp [fresh, Proto.asyncGenAnext, Proto.asyncGenInitHooks, getGen, getObj, hg, hi, hb, alloc, setObj, h,
+        bind, EStateM.bind, pure, EStateM.pure]
+    · have hb : (rt.asyncGenFirstiter != .null) = true := by simpa using hf
+      simp only [marked] at h
+      simp [Proto.asyncGenAnext, Proto.asyncGenInitHooks, getGen, getObj, hg, hi, hb, setObj, h,
+        bind, EStateM.bind, pure, EStateM.pure]
 
 /-! ## `LOAD_SPECIAL` -/
 
@@ -198,8 +272,10 @@ def GetAwaitableRules : Prop :=
         Proto.getAwaitableImpl P om ctx o oparg rt = .error y rt2) ∧
       (∀ rt2, Proto.formatAwaitableError o oparg rt1 = .ok () rt2 →
         Proto.getAwaitableImpl P om ctx o oparg rt = .error (.exc x) rt2))) ∧
+  (∀ (o : Val) (oparg : Nat) (rt rt1 : Rt), typeOf o rt = .ok (.cls "async_generator_asend") rt1 →
+    ∀ k rt2, genKindOf o rt1 = .ok k rt2 → Proto.formatAwaitableError o oparg rt = .ok () rt2) ∧
   (∀ (o : Val) (oparg : Nat) (rt : Rt) (T : Val) (rt1 : Rt),
-    typeOf o rt = .ok T rt1 →
+    typeOf o rt = .ok T rt1 → T ≠ .cls "async_generator_asend" →
     (∀ f rt2 k rt3, Proto.userLookup T "__await__" rt1 = .ok (some f) rt2 → genKindOf o rt2 = .ok k rt3 →
       Proto.formatAwaitableError o oparg rt = .ok () rt3) ∧
     (∀ rt2 rt3, Proto.userLookup T "__await__" rt1 = .ok none rt2 → genKindOf o rt2 = .ok (some .coro) rt3 →
@@ -213,8 +289,7 @@ def GetAwaitableRules : Prop :=
       (oparg ≠ 1 → oparg ≠ 2 → Proto.formatAwaitableError o oparg rt = .ok () rt4)))
 
 theorem getAwaitableRules_proven : GetAwaitableRules := by
-  refine ⟨fun e regs o rest => ⟨fun it rt h => ?_, fun x rt h => ?_⟩, fun P om ctx o oparg rt => ?_,
-    fun o oparg rt T rt1 hT => ?_⟩
+  refine ⟨fun e regs o rest => ⟨fun it rt h => ?_, fun x rt h => ?_⟩, fun P om ctx o oparg rt => ?_, ?_, ?_⟩
   · bc_simp [execOp, GET_AWAITABLE, h]
   · bc_simp [execOp, GET_AWAITABLE, h]
   · refine ⟨fun r rt1 k rt2 h1 h2 h3 => ?_, fun a rt1 g h1 hg hk => ⟨fun hy y rt2 hre => ?_, fun hy => ?_⟩,
@@ -235,21 +310,25 @@ theorem getAwaitableRules_proven : GetAwaitableRules := by
     · simp [Proto.getAwaitableImpl, tryExc, h1, h2, bind, EStateM.bind]
     · simp [Proto.getAwaitableImpl, tryExc, h1, h2, bind, EStateM.bind, throw, throwThe, MonadExcept.throw,
         EStateM.throw, MonadExceptOf.throw]
-  · refine ⟨fun f rt2 k rt3 h1 h2 => ?_, fun rt2 rt3 h1 h2 => ?_, fun rt2 k rt3 t rt4 h1 h2 h3 h4 =>
+  · intro o oparg rt rt1 hT k rt2 hk
+    simp [Proto.formatAwaitableError, Proto.hasAmAwait, hT, hk, bind, EStateM.bind, pure, EStateM.pure]
+  · intro o oparg rt T rt1 hT hne
+    have hb : (T == .cls "async_generator_asend") = false := by simpa using hne
+    refine ⟨fun f rt2 k rt3 h1 h2 => ?_, fun rt2 rt3 h1 h2 => ?_, fun rt2 k rt3 t rt4 h1 h2 h3 h4 =>
       ⟨fun ho => ?_, fun ho => ?_, fun ho1 ho2 => ?_⟩⟩
-    · simp [Proto.formatAwaitableError, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
-    · simp [Proto.formatAwaitableError, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
+    · simp [Proto.formatAwaitableError, Proto.hasAmAwait, hb, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
+    · simp [Proto.formatAwaitableError, Proto.hasAmAwait, hb, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
     · have h3' : (k != some GenKind.coro) = true := by simpa using h3
       subst ho
-      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
+      simp [Proto.formatAwaitableError, Proto.hasAmAwait, hb, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
       cases hte : (typeError (α := Unit)
         s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}" : RM Unit) rt4 with
       | ok u s => exact absurd hte (typeError_ne_ok _ _ _ _)
       | error y s => simp [hte]
     · have h3' : (k != some GenKind.coro) = true := by simpa using h3
       subst ho
-      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
+      simp [Proto.formatAwaitableError, Proto.hasAmAwait, hb, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
     · have h3' : (k != some GenKind.coro) = true := by simpa using h3
-      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, ho1, ho2, bind, EStateM.bind, pure, EStateM.pure]
+      simp [Proto.formatAwaitableError, Proto.hasAmAwait, hb, hT, h1, h2, h3', h4, ho1, ho2, bind, EStateM.bind, pure, EStateM.pure]
 
 end PyLean.Bytecode

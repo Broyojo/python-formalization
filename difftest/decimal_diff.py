@@ -255,7 +255,7 @@ def gen_ctx(rng):
             "rounding": rng.choice(ROUNDINGS),
             "emin": rng.choice([-999999, -999, -30, -5, -1, 0]),
             "emax": rng.choice([999999, 999, 30, 5, 1, 0]),
-            "clamp": rng.choice([0, 1]),
+            "clamp": rng.choice([0, 1]), "capitals": rng.choice([0, 1, 1]),
             "traps": [t for t in SIGNALS if rng.random() < 0.15]}
 
 
@@ -330,6 +330,14 @@ def gen_method(rng):
         adj = rng.choice([1, -1]) * (10 ** 4300 + rng.choice([-2, -1, 0, 1]))
         adj = rng.choice([adj, rng.choice(HUGE_INTS)])
         a = ["Fh", rng.random() < 0.5, d, hex(adj - len(d) + 1)]
+    if name in ("next_plus", "next_minus", "next_toward") and rng.random() < 0.15:
+        # __add__'s int(self._int) and str(result.int) limits, and _fix's on a large prec.
+        impl = "py"
+        n = rng.choice([1, 2, 4290, 4295, 4297, 4298, 4299, 4300, 4301])
+        d = rng.choice(["1" + "0" * (n - 1), "9" * n,
+                        str(rng.randint(1, 9)) + "".join(rng.choice("0123456789") for _ in range(n - 1))])
+        a = ["F", rng.random() < 0.5, d, rng.choice([0, -n + 1, -n, 5, -40])]
+        ctx = dict(ctx, prec=rng.choice([1, 28, 4296, 4298, 4300, 5000]))
     return {"mod": "decimal", "fn": "m", "m": name, "impl": impl, "ctx": ctx, "a": a, "b": b, "t": t}
 
 
@@ -884,7 +892,7 @@ def gen_case1(rng):
 def run_op(M, case):
     c = case["ctx"]
     ctx = M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
-                    Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                    Emax=c["emax"], clamp=c["clamp"], capitals=c.get("capitals", 1), traps=[getattr(M, t) for t in c["traps"]],
                     flags=[])
     a, b = build(M, case["a"]), build(M, case["b"])
     r2 = getattr(M, case["rounding2"]) if "rounding2" in case else None
@@ -926,7 +934,7 @@ def enc_val(M, v):
 
 def make_ctx(M, c):
     return M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
-                     Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                     Emax=c["emax"], clamp=c["clamp"], capitals=c.get("capitals", 1), traps=[getattr(M, t) for t in c["traps"]],
                      flags=[])
 
 
@@ -1217,7 +1225,7 @@ def run_local(M, case):
 def run_method(M, case):
     c = case["ctx"]
     ctx = M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
-                    Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                    Emax=c["emax"], clamp=c["clamp"], capitals=c.get("capitals", 1), traps=[getattr(M, t) for t in c["traps"]],
                     flags=[])
     a, b, t = build(M, case["a"]), build(M, case["b"]), build(M, case["t"])
     with M.localcontext(ctx) as cx:
