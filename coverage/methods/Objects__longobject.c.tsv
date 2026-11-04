@@ -109,7 +109,7 @@ Objects/longobject.c	4607	4861	long_true_divide	long_true_divide(PyObject *v, Py
 Objects/longobject.c	4864	4873	long_mod	long_mod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4876	4885	long_divmod	long_divmod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4909	4965	long_invmod	long_invmod(PyLongObject *a, PyLongObject *n)	modelled	mathint-pow-neg-exp-inverse	
-Objects/longobject.c	4970	5248	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	todo		review: The row's only entry, mathint-pow-neg-exp-inverse, uses MathInt.powMod, which replaces the three exponentiation paths (:5117-5225) by the specification modPow, and states only negative exponents with a modulus; positive exponents, the float hand-off for a negative exponent with no modulus (:5006-5014), and the NotImplemented branches are not stated. The row's own note says it was withdrawn, yet its status is still modelled.
+Objects/longobject.c	4970	5248	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	modelled	longobj-pow-obj,mathint-pow-neg-exp-inverse	
 Objects/longobject.c	5251	5266	long_invert	long_invert(PyObject *self)	modelled	longobj-unary	
 Objects/longobject.c	5269	5280	long_neg	long_neg(PyLongObject *v)	modelled	longobj-unary	
 Objects/longobject.c	5283	5286	long_neg_method	long_neg_method(PyObject *v)	modelled	longobj-unary	
@@ -166,6 +166,6 @@ Objects/longobject.c	6861	6864	PyLong_AsUInt64	int PyLong_AsUInt64(PyObject *obj
 Objects/longobject.c	6876	6879	PyLong_GetNativeLayout	PyLong_GetNativeLayout(void)	todo		
 Objects/longobject.c	6883	6922	PyLong_Export	PyLong_Export(PyObject *obj, PyLongExport *export_long)	todo		
 Objects/longobject.c	6926	6933	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	excluded		no-behaviour: drops the reference held by the export; no value is produced
-Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	todo		review: Re-reviewed after the fix. WriterExact (longobj-writer) now pins the ValueError for zero digits and long_alloc's OverflowError. But longWriter takes ndigits as a List's length, so it tests ds.length = 0 where the C tests ndigits <= 0 (:6941). A negative Py_ssize_t ndigits, which the C API forbids and the check exists to reject, cannot be expressed. A Create that tested only == 0 would pass, and would then call long_alloc with a negative size, which its assert forbids. ndigits should be an Int parameter.
+Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	modelled	longobj-export-writer,longobj-writer	
 Objects/longobject.c	6965	6974	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	excluded		no-behaviour: frees an unfinished writer; no value is produced
 Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	modelled	longobj-writer,longobj-export-writer	
