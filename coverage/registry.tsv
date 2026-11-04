@@ -3908,6 +3908,7 @@ misc-ctx-exit-throw-cases	proven	Lib/contextlib.py	_GeneratorContextManager.__ex
 misc-ctx-exit-value-none	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
 misc-ctx-exit-never-raises-value	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
 misc-ctx-try-finally	proven	Lib/contextlib.py	contextmanager,_GeneratorContextManagerBase.__init__,_GeneratorContextManager.__enter__,_GeneratorContextManager.__exit__
+misc-ctx-wraps	proven	Lib/contextlib.py	contextmanager,asynccontextmanager
 misc-ctx-async-twin	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__,_GeneratorContextManager.__exit__
 misc-ctx-aenter	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aenter__
 misc-ctx-aexit-no-exception	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__
@@ -3916,12 +3917,13 @@ misc-ctx-aexit-value-none	proven	Lib/contextlib.py	_AsyncGeneratorContextManager
 misc-ctx-async-try-finally	proven	Lib/contextlib.py	asynccontextmanager,_GeneratorContextManagerBase.__init__,_AsyncGeneratorContextManager.__aenter__,_AsyncGeneratorContextManager.__aexit__
 misc-ctx-closing	proven	Lib/contextlib.py	closing.__exit__
 misc-ctx-aclosing	proven	Lib/contextlib.py	aclosing.__aexit__
-misc-ctx-redirect	proven	Lib/contextlib.py	_RedirectStream.__enter__,_RedirectStream.__exit__
-misc-ctx-chdir	proven	Lib/contextlib.py	chdir.__enter__,chdir.__exit__
+misc-ctx-redirect	proven	Lib/contextlib.py	_RedirectStream.__init__,_RedirectStream.__enter__,_RedirectStream.__exit__
+misc-ctx-chdir	proven	Lib/contextlib.py	chdir.__init__,chdir.__enter__,chdir.__exit__
 misc-ctx-suppress-issubclass	proven	Lib/contextlib.py	suppress.__exit__
 misc-ctx-suppress-issubtuple	proven	Lib/contextlib.py	suppress.__exit__
 misc-ctx-suppress-derive	proven	Lib/contextlib.py	suppress.__exit__
 misc-ctx-suppress-group-consistent	refuted	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-split-refusals	proven	Lib/contextlib.py	suppress.__exit__
 misc-ctx-suppress-nested	proven	Lib/contextlib.py	suppress.__exit__
 misc-ctx-lookup-special-is-special	refuted	Lib/contextlib.py	_lookup_special
 misc-ctx-exit-matches-nested	proven	Lib/contextlib.py	ExitStack.__exit__
@@ -3937,6 +3939,7 @@ misc-ctx-lookup-special	proven	Lib/contextlib.py	_lookup_special
 misc-ctx-callback-cannot-suppress	proven	Lib/contextlib.py	_BaseExitStack._create_cb_wrapper,_BaseExitStack.callback
 misc-ctx-async-callback-cannot-suppress	proven	Lib/contextlib.py	AsyncExitStack._create_async_cb_wrapper,AsyncExitStack.push_async_callback
 misc-ctx-aenter-context	proven	Lib/contextlib.py	AsyncExitStack.enter_async_context
+misc-ctx-enter-context-refusals	proven	Lib/contextlib.py	_BaseExitStack.enter_context,AsyncExitStack.enter_async_context
 misc-ctx-close-matches-nested	proven	Lib/contextlib.py	ExitStack.close
 misc-ctx-aexit-matches-nested	proven	Lib/contextlib.py	AsyncExitStack.__aexit__
 misc-ctx-aclose-matches-nested	proven	Lib/contextlib.py	AsyncExitStack.aclose
