@@ -170,6 +170,8 @@ CREDIT = {
     "pygrammar-rule-tuple": {GRAM: ["rule:tuple"]},
     "pygrammar-rule-set": {GRAM: ["rule:set"]},
     "pygrammar-rule-single-target": {GRAM: ["rule:single_target"]},
+    "pygrammar-rule-disjunction": {GRAM: ["rule:disjunction"]},
+    "pygrammar-rule-conjunction": {GRAM: ["rule:conjunction"]},
     "pygrammar-rule-match-stmt": {GRAM: ["rule:match_stmt"]},
     "pygrammar-rule-decorators": {GRAM: ["rule:decorators"]},
     "pygrammar-rule-annotation-default": {GRAM: ["rule:annotation", "rule:star_annotation",

@@ -2527,6 +2527,8 @@ pygrammar-rule-list	proven	Grammar/python.gram	rule:list
 pygrammar-rule-tuple	proven	Grammar/python.gram	rule:tuple
 pygrammar-rule-set	proven	Grammar/python.gram	rule:set
 pygrammar-rule-single-target	proven	Grammar/python.gram	rule:single_target
+pygrammar-rule-disjunction	proven	Grammar/python.gram	rule:disjunction
+pygrammar-rule-conjunction	proven	Grammar/python.gram	rule:conjunction
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
 pygrammar-ast-splitlines	proven	Lib/ast.py	

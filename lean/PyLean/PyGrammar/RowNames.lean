@@ -256,6 +256,9 @@ def rule_compound_stmt : List String := [
 def rule_compound_stmt_more : List String := [
   "rule:compound_stmt"]
 
+def rule_conjunction : List String := [
+  "rule:conjunction"]
+
 def rule_decorators : List String := [
   "rule:decorators"]
 
@@ -273,6 +276,9 @@ def rule_del_target : List String := [
 
 def rule_del_targets : List String := [
   "rule:del_targets"]
+
+def rule_disjunction : List String := [
+  "rule:disjunction"]
 
 def rule_dotted_as_name : List String := [
   "rule:dotted_as_name"]

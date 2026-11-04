@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Exprs4
+import PyLean.PyGrammar.Peg.Rules.Exprs5
 
 /-! Registry entries for the pattern rules of `Peg/Rules/Patterns2.lean` and after, in the scheme
 of `Entries.lean`. -/
@@ -389,7 +389,29 @@ def patternEntries : List Entry := [
     status := .proven
     prop := ``SingleTarget
     thm := some ``singleTarget_proven
-    notes := scheme }
+    notes := scheme },
+  { id := "pygrammar-rule-disjunction"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_disjunction
+    statement := "disjunction (memo): conjunction followed by one or more 'or' conjunction gives " ++
+      "one flat BoolOp(Or, [a] + the loop's values in order); once that fails, conjunction from " ++
+      "the start mark; the loop _loop1_61 and its group 'or' conjunction stated with it."
+    source := "Grammar/python.gram:763-766"
+    status := .proven
+    prop := ``DisjunctionRule
+    thm := some ``disjunctionRule_proven
+    notes := scheme ++ " Loop1Over: the + loop by induction on its rounds (runLoop_chain)." },
+  { id := "pygrammar-rule-conjunction"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_conjunction
+    statement := "conjunction (memo): inversion followed by one or more 'and' inversion gives " ++
+      "one flat BoolOp(And, [a] + the loop's values in order); once that fails, inversion from " ++
+      "the start mark; the loop _loop1_62 and its group 'and' inversion stated with it."
+    source := "Grammar/python.gram:768-771"
+    status := .proven
+    prop := ``ConjunctionRule
+    thm := some ``conjunctionRule_proven
+    notes := scheme ++ " Loop1Over as for disjunction." }
 ]
 
 end PyLean.PyGrammar.Peg
