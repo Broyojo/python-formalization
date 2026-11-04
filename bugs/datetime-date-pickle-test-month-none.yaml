@@ -1,0 +1,48 @@
+id: datetime-date-pickle-test-month-none
+title: "date(state, None) unpickles in _pydatetime and is a TypeError in C"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["date.__new__"]
+summary: |
+  `date(b'\x07\xd0\x01\x01', None)` unpickles date(2000, 1, 1) in Python, whose pickle test
+  is `month is None`; C's test is "exactly one positional argument", so the state goes to
+  the int converter and the call raises `TypeError: date() missing required argument 'day'`.
+  `date(year=b'\x07\xd0\x01\x01')` behaves the same way. Split from
+  datetime-pydatetime-none-as-omitted, which has the same cause (None as the "omitted"
+  default) in date.replace.
+likelihood: |
+  Very low: it needs hand-made pickle state passed with an explicit None.
+maybe_intended: |
+  likely. The pickle path is an implementation detail of both twins; only hand-written calls
+  can tell them apart.
+reproducer: |
+  import datetime, _pydatetime
+  def run(f):
+      try:
+          return repr(f())
+      except TypeError:
+          return 'TypeError'
+  s = [run(lambda: m.date(b'\x07\xd0\x01\x01', None)) for m in (datetime, _pydatetime)]
+  print('ctor C/Python:', s)
+  if s[0] == 'TypeError' and s[1].endswith('date(2000, 1, 1)'):
+      print('REPRODUCED datetime-date-pickle-test-month-none')
+expected: The same outcome in both implementations (TypeError, as in C).
+promised_by: PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:1008-1010: the pickle test `month is None and isinstance(year, (bytes, str))`.
+  Modules/_datetimemodule.c:3238: `if (PyTuple_GET_SIZE(args) == 1)`.
+possible_fix: |
+  Test the number of arguments rather than `month is None` in date.__new__ (a private
+  sentinel default), or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh api search: date+pickle+state+None+month", "date+constructor+bytes+state+None",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.DateNewTwins
+  theorem: PyLean.Datetime.dateNewTwins_refuted

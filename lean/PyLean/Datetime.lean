@@ -339,7 +339,7 @@ def entries : List Entry := [
     statement := "date(*args) agrees between the twins for every positional argument list whose ints fit a C int."
     source := "C/Python twins", status := .refuted
     prop := ``DateNewTwins, thm := some ``dateNewTwins_refuted
-    bug := some "datetime-pydatetime-none-as-omitted"
+    bug := some "datetime-date-pickle-test-month-none"
     notes := "date(b'\\x07\\xd0\\x01\\x01', None): Python unpickles (its test is month is None), C raises TypeError (its test is one positional argument)." },
   { id := "datetime-date-isoformat-text", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.isoformat", "C date_isoformat"]
