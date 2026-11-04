@@ -273,6 +273,21 @@ theorem dateFromisoformat_proven : DateFromisoformat := by
     · rw [if_pos hl]
       exact ⟨_, rfl, rfl⟩
 
+/-- `date.fromisoformat(x)` on every argument: a non-`str` (bytes included) is
+`TypeError('Argument must be a str')` in Python and a `TypeError` in C's clinic converter; a
+`str` with a lone surrogate is `ValueError('Argument must be an ASCII str')` in Python and a
+`ValueError` in C; a `str` is `dateFromIsoPy` (pinned by `DateFromisoformat`) and C's impl. -/
+def DateFromisoformatArg : Prop :=
+  ∀ s : List Char,
+    dateFromIsoArgPy .other = .error (.typeError "Argument must be a str") ∧
+    (dateFromIsoArgC .other).raises "TypeError" ∧
+    dateFromIsoArgPy .surrogateStr = .error (.valueError "Argument must be an ASCII str") ∧
+    (dateFromIsoArgC .surrogateStr).raises "ValueError" ∧
+    dateFromIsoArgPy (.str s) = dateFromIsoPy s ∧ dateFromIsoArgC (.str s) = dateFromIsoC s
+
+theorem dateFromisoformatArg_proven : DateFromisoformatArg :=
+  fun _ => ⟨rfl, ⟨_, rfl, rfl⟩, rfl, ⟨_, rfl, rfl⟩, rfl, rfl⟩
+
 /-! ### `_parse_hh_mm_ss_ff` -/
 
 /-- `_parse_hh_mm_ss_ff(t)` on the time forms of the docs, for all digits: `HH`, `HH:MM`,

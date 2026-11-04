@@ -438,6 +438,11 @@ def entries : List Entry := [
     statement := "For every string, date.fromisoformat refuses non-ASCII text ('Argument must be an ASCII str') and lengths other than 7, 8, 10 (ValueError), returns the checked date of an accepted parse, and raises ValueError for a refused parse or an invalid date."
     source := "date.fromisoformat docs", status := .proven
     prop := ``DateFromisoformat, thm := some ``dateFromisoformat_proven },
+  { id := "datetime-date-fromisoformat-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromisoformat", "C datetime_date_fromisoformat", "C datetime_date_fromisoformat_impl"]
+    statement := "For every argument, date.fromisoformat raises TypeError('Argument must be a str') for a non-str (C: TypeError from the clinic converter), ValueError('Argument must be an ASCII str') for a str with a lone surrogate (C: ValueError), and is the str parser otherwise."
+    source := "date.fromisoformat docs; C/Python twins", status := .proven
+    prop := ``DateFromisoformatArg, thm := some ``dateFromisoformatArg_proven },
   { id := "datetime-parse-hhmmssff-forms", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_parse_hh_mm_ss_ff", "_read_isoformat_component"]
     statement := "For all ASCII digits, _parse_hh_mm_ss_ff parses HH, HH:MM, HHMMSS, HH:MM:SS.ffffff, HH:MM:SS,fff (times 1000) and truncates a seventh fraction digit; it raises 'Invalid time separator' for a non-colon after HH:MM, 'Invalid microsecond separator' for a separator other than . or ,, and 'Non-digit values in fraction'."

@@ -954,6 +954,9 @@ def gen_case(rng):
     if kind < 0.55:
         fn = rng.choice(ISO_FNS)
         return {"mod": "datetime", "fn": f"{fn}_{impl}", "s": [ord(ch) for ch in iso_string(rng)]}
+    if kind < 0.57:
+        return {"mod": "datetime", "fn": f"date_fromiso_arg_{impl}", "arg": rng.choice("bnu"),
+                "s": [ord(ch) for ch in iso_string(rng)]}
     fn = rng.choice(["td", "td_op", "td_str", "fromordinal", "toordinal", "isocalendar",
                      "fromisocalendar", "date_add", "timezone", "date_isoformat", "time_isoformat",
                      "datetime_isoformat"])
@@ -1090,6 +1093,11 @@ def run_python(c):
             v = [d.year, d.month, d.day]
         elif base == "timezone":
             v = common_us(m.timezone(m.timedelta(*c["td"])).utcoffset(None))
+        elif base == "date_fromiso_arg":
+            s = "".join(map(chr, c["s"]))
+            a = {"b": s.encode("utf-8", "surrogatepass"), "n": None, "u": s + "\ud800"}[c["arg"]]
+            r = m.date.fromisoformat(a)
+            v = [r.year, r.month, r.day]
         elif base in ("date_fromiso", "time_fromiso", "datetime_fromiso"):
             s = "".join(map(chr, c["s"]))
             cls = {"date_fromiso": m.date, "time_fromiso": m.time, "datetime_fromiso": m.datetime}[base]

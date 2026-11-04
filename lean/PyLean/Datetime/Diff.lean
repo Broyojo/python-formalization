@@ -126,6 +126,12 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (if fn = "timezone_py" then timezonePy t else newTimezoneC t)
   | "date_fromiso_py" => return encPy encYMD (dateFromIsoPy (← getChars j "s"))
   | "date_fromiso_c" => return encPy encYMD (dateFromIsoC (← getChars j "s"))
+  | "date_fromiso_arg_py" | "date_fromiso_arg_c" =>
+    -- `"arg"`: `"b"` bytes, `"n"` None, `"u"` a str with a lone surrogate
+    let a : IsoArg := match (j.getObjValAs? String "arg").toOption with
+      | some "u" => .surrogateStr
+      | _ => .other
+    return encPy encYMD ((if fn = "date_fromiso_arg_py" then dateFromIsoArgPy else dateFromIsoArgC) a)
   | "time_fromiso_py" => return encPy encTime (timeFromIsoPy (← getChars j "s"))
   | "time_fromiso_c" => return encPy encTime (timeFromIsoC (← getChars j "s"))
   | "datetime_fromiso_py" => return encPy encDT (datetimeFromIsoPy (← getChars j "s"))
