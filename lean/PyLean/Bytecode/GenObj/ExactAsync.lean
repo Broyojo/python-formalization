@@ -273,4 +273,287 @@ theorem asyncGenAsendSendOutcomes_proven : AsendSendOutcomes := by
       ite_false]
     rw [hg, asendFinish_eq]
 
+section Lemmas2
+
+theorem awaitTail_running (c : World V X → World V X) (w' : World V X) (g : Ref) (res : Ret V) :
+    awaitTail (fun w => c (w.setRunning g false)) w' g res = awaitTail c w' g res := by
+  cases res with
+  | ok v => cases v <;> simp [awaitTail, setRunning_setRunning]
+  | err e => cases e <;> simp [awaitTail, setRunning_setRunning]
+
+theorem asendThrowFinish_eq (w' : World V X) (a g : Ref) (res : Ret V) :
+    asendThrowFinish w' a g res = awaitTail (fun w => w.setAsendState a .closed) w' g res := by
+  rw [← awaitTail_running, ← unwrap_tail]; simp only [asendThrowFinish]
+  cases asyncGenUnwrapValue w' g res with
+  | mk u1 u2 => cases u2 <;> rfl
+
+theorem closeResult_eq (res : Ret V) : closeResult res = closeAwaitableOutcome res := by
+  cases res with
+  | ok v => rfl
+  | err e =>
+    cases e with
+    | none => rfl
+    | some x =>
+      by_cases h1 : x.kind = .stopIteration
+      · simp [closeResult, closeAwaitableOutcome, swallowedByClose, Exc.isStopIteration, h1]
+      by_cases h2 : x.kind = .stopAsyncIteration
+      · simp [closeResult, closeAwaitableOutcome, swallowedByClose, Exc.isStopAsyncIteration, h2]
+      by_cases h3 : x.kind = .generatorExit
+      · simp [closeResult, closeAwaitableOutcome, swallowedByClose, Exc.isGeneratorExit, h3]
+      · simp [closeResult, closeAwaitableOutcome, swallowedByClose, Exc.isStopIteration,
+          Exc.isStopAsyncIteration, Exc.isGeneratorExit, h1, h2, h3]
+
+theorem acloseTail_eq (w' : World V X) (a g : Ref) (res : Ret V) :
+    acloseTail w' a g res = acloseOutcome w' a g res := by
+  cases res with
+  | ok v => cases v <;> simp [acloseTail, acloseOutcome, athrowYieldClose, ignoredExitMsg]
+  | err e =>
+    cases e with
+    | none => simp [acloseTail, acloseOutcome, athrowCheckError, matchesStopAsyncOrExit]
+    | some x =>
+      by_cases h1 : x.kind = .stopAsyncIteration
+      · simp [acloseTail, acloseOutcome, athrowCheckError, matchesStopAsyncOrExit,
+          Exc.isStopAsyncIteration, h1, Exc.stopIterationNone]
+      by_cases h2 : x.kind = .generatorExit
+      · simp [acloseTail, acloseOutcome, athrowCheckError, matchesStopAsyncOrExit,
+          Exc.isGeneratorExit, h2, Exc.stopIterationNone]
+      · simp [acloseTail, acloseOutcome, athrowCheckError, matchesStopAsyncOrExit,
+          Exc.isStopAsyncIteration, Exc.isGeneratorExit, h1, h2]
+
+theorem athrowStartArgs_tail (w' : World V X) (a g : Ref) (res : Ret V) :
+    (match (asyncGenUnwrapValue w' g res).2 with
+     | .ok v => ((asyncGenUnwrapValue w' g res).1, Ret.ok v)
+     | .err e => athrowCheckError (asyncGenUnwrapValue w' g res).1 a g false e) =
+      awaitTail (fun w => w.setAthrowState a .closed) w' g res := by
+  rw [← awaitTail_running, ← unwrap_tail]
+  cases asyncGenUnwrapValue w' g res with
+  | mk u1 u2 => cases u2 <;> simp [athrowCheckError]
+
+theorem unwrap_id (w' : World V X) (g : Ref) (res : Ret V) :
+    asyncGenUnwrapValue w' g res = awaitTail id w' g res := by
+  rw [← unwrap_tail]
+  cases asyncGenUnwrapValue w' g res with
+  | mk u1 u2 => cases u2 <;> rfl
+
+theorem athrowThrowFinish_eq (w' : World V X) (a g : Ref)
+    (args : Option (Obj V × Option (Obj V) × Option (Obj V))) (res : Ret V) :
+    athrowThrowFinish w' a g args res =
+      match args with
+      | some _ => awaitTail (fun w => w.setAthrowState a .closed) w' g res
+      | none => acloseOutcome w' a g res := by
+  cases args with
+  | some t =>
+    simp only [athrowThrowFinish]
+    rw [← awaitTail_running, ← unwrap_tail]
+    cases asyncGenUnwrapValue w' g res with
+    | mk u1 u2 => cases u2 <;> rfl
+  | none =>
+    rw [← acloseTail_eq]
+    cases res with
+    | ok v => cases v <;> rfl
+    | err e => simp [athrowThrowFinish, acloseTail, athrowCheckError]
+
+end Lemmas2
+
+/-- `async_gen_asend_throw` (:2032-2065). As `send` for the closed and already-running
+refusals; otherwise an `AWAITABLE_STATE_INIT` awaitable moves to `AWAITABLE_STATE_ITER` and
+sets `ag_running_async`, and `gen_throw` gets the arguments as they are; `awaitTail` reads the
+result and closes the awaitable on `NULL` (clearing `ag_running_async` again, :2058-2061). -/
+def AsendThrowOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (args : List (Obj V)),
+    ((w.asends a).state = .closed → asyncGenAsendThrow h fuel w a args =
+      (w, .err (some (Exc.runtimeError "cannot reuse already awaited __anext__()/asend()")))) ∧
+    ((w.asends a).state = .init → (w.get (w.asends a).gen).agRunningAsync = true →
+      asyncGenAsendThrow h fuel w a args = (w.setAsendState a .closed,
+        .err (some (Exc.runtimeError "anext(): asynchronous generator is already running")))) ∧
+    ((w.asends a).state = .init → (w.get (w.asends a).gen).agRunningAsync = false → ∀ w' res,
+      genThrow h fuel ((w.setAsendState a .iter).setRunning (w.asends a).gen true) (w.asends a).gen
+        args = (w', res) →
+      asyncGenAsendThrow h fuel w a args =
+        awaitTail (fun w => w.setAsendState a .closed) w' (w.asends a).gen res) ∧
+    ((w.asends a).state = .iter → ∀ w' res,
+      genThrow h fuel w (w.asends a).gen args = (w', res) →
+      asyncGenAsendThrow h fuel w a args =
+        awaitTail (fun w => w.setAsendState a .closed) w' (w.asends a).gen res)
+
+theorem asendThrowOutcomes_proven : AsendThrowOutcomes := by
+  intro V X h fuel w a args
+  refine ⟨fun hs => by simp [asyncGenAsendThrow, hs, reuseAsendMsg],
+    fun hs hr => by simp [asyncGenAsendThrow, hs, hr, anextRunningMsg],
+    fun hs hr w' res hg => ?_, fun hs w' res hg => ?_⟩
+  · simp only [asyncGenAsendThrow, hs, hr, reduceCtorEq, if_false, Bool.false_eq_true, and_false,
+      if_true]
+    rw [hg, asendThrowFinish_eq]
+  · simp only [asyncGenAsendThrow, hs, reduceCtorEq, if_false, false_and, ite_false]
+    rw [hg, asendThrowFinish_eq]
+
+/-- `async_gen_asend_close` (:2069-2091): a closed awaitable gives `None`; otherwise it is
+`async_gen_asend_throw(self, &PyExc_GeneratorExit, 1)` read by `closeAwaitableOutcome`. -/
+def AsendCloseOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref),
+    ((w.asends a).state = .closed → asyncGenAsendClose h fuel w a = (w, .ok .none)) ∧
+    ((w.asends a).state ≠ .closed → ∀ w' res,
+      asyncGenAsendThrow h fuel w a [.excClass .generatorExit "GeneratorExit"] = (w', res) →
+      asyncGenAsendClose h fuel w a = (w', closeAwaitableOutcome res))
+
+theorem asendCloseOutcomes_proven : AsendCloseOutcomes := by
+  intro V X h fuel w a
+  refine ⟨fun hs => by simp [asyncGenAsendClose, hs], fun hs w' res ht => ?_⟩
+  simp only [asyncGenAsendClose, hs, if_false, ht, closeResult_eq]
+
+/-! ## The `athrow` awaitable -/
+
+/-- `async_gen_athrow_send` (:2301-2421). Closed is the cannot-reuse `RuntimeError`; a finished
+generator closes the awaitable with `StopIteration`. At `AWAITABLE_STATE_INIT`: a running
+generator closes it with the already-running `RuntimeError` of its mode; `ag_closed` closes it
+with `StopAsyncIteration`; a value other than `None` is `NON_INIT_CORO_MSG` with nothing
+changed; otherwise it moves to `AWAITABLE_STATE_ITER` with `ag_running_async` set, and in
+`aclose()` mode also sets `ag_closed` and throws `GeneratorExit` with `close_on_genexit` 0
+(`acloseOutcome` reads the result), in `athrow()` mode throws the stored arguments, unwraps and
+closes on `NULL`. At `AWAITABLE_STATE_ITER` the value is sent with `gen_send`; `aclose()` mode
+reads it with `acloseOutcome`, `athrow()` mode only unwraps it and leaves the awaitable open on
+`NULL` (the refuted `gen-athrow-error-closes`). -/
+def AthrowSendOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V),
+    ((w.athrows a).state = .closed → asyncGenAthrowSend h fuel w a arg =
+      (w, .err (some (Exc.runtimeError "cannot reuse already awaited aclose()/athrow()")))) ∧
+    ((w.athrows a).state ≠ .closed → (w.get (w.athrows a).gen).state = .cleared →
+      asyncGenAthrowSend h fuel w a arg =
+        (w.setAthrowState a .closed, .err (some ⟨.stopIteration, "StopIteration", "", .none⟩))) ∧
+    ((w.athrows a).state = .init → (w.get (w.athrows a).gen).state ≠ .cleared →
+      ((w.get (w.athrows a).gen).agRunningAsync = true →
+        asyncGenAthrowSend h fuel w a arg = (w.setAthrowState a .closed, .err (some (Exc.runtimeError
+          (match (w.athrows a).args with
+           | none => "aclose(): asynchronous generator is already running"
+           | some _ => "athrow(): asynchronous generator is already running"))))) ∧
+      ((w.get (w.athrows a).gen).agRunningAsync = false → (w.get (w.athrows a).gen).agClosed = true →
+        asyncGenAthrowSend h fuel w a arg =
+          (w.setAthrowState a .closed, .err (some ⟨.stopAsyncIteration, "StopAsyncIteration", "", .none⟩))) ∧
+      ((w.get (w.athrows a).gen).agRunningAsync = false → (w.get (w.athrows a).gen).agClosed = false →
+        arg.isNone = false → asyncGenAthrowSend h fuel w a arg =
+          (w, .err (some (Exc.runtimeError "can't send non-None value to a just-started coroutine")))) ∧
+      ((w.get (w.athrows a).gen).agRunningAsync = false → (w.get (w.athrows a).gen).agClosed = false →
+        arg.isNone = true → (w.athrows a).args = none → ∀ w' res,
+        genThrowF h fuel (((w.setAthrowState a .iter).setRunning (w.athrows a).gen true).setClosed
+          (w.athrows a).gen) (w.athrows a).gen false (.excClass .generatorExit "GeneratorExit") none none
+          = (w', res) →
+        asyncGenAthrowSend h fuel w a arg = acloseOutcome w' a (w.athrows a).gen res) ∧
+      ((w.get (w.athrows a).gen).agRunningAsync = false → (w.get (w.athrows a).gen).agClosed = false →
+        arg.isNone = true → ∀ t v tb, (w.athrows a).args = some (t, v, tb) → ∀ w' res,
+        genThrowF h fuel ((w.setAthrowState a .iter).setRunning (w.athrows a).gen true)
+          (w.athrows a).gen false t v tb = (w', res) →
+        asyncGenAthrowSend h fuel w a arg =
+          awaitTail (fun w => w.setAthrowState a .closed) w' (w.athrows a).gen res)) ∧
+    ((w.athrows a).state = .iter → (w.get (w.athrows a).gen).state ≠ .cleared → ∀ w' res,
+      genSend h w (w.athrows a).gen (some arg) = (w', res) →
+      asyncGenAthrowSend h fuel w a arg =
+        match (w.athrows a).args with
+        | some _ => awaitTail id w' (w.athrows a).gen res
+        | none => acloseOutcome w' a (w.athrows a).gen res)
+
+theorem athrowSendOutcomes_proven : AthrowSendOutcomes := by
+  intro V X h fuel w a arg
+  refine ⟨fun hs => by simp [asyncGenAthrowSend, hs, reuseAthrowMsg], fun hs hf => ?_,
+    fun hs hf => ⟨fun hr => ?_, fun hr hc => ?_, fun hr hc ha => ?_, fun hr hc ha hm w' res ht => ?_,
+      fun hr hc ha t v tb hm w' res ht => ?_⟩, fun hs hf w' res hg => ?_⟩
+  · simp [asyncGenAthrowSend, hs, hf, Exc.stopIterationNone]
+  all_goals
+    have hf' : (w.get (w.athrows a).gen).state.finished = false := by
+      cases h' : (w.get (w.athrows a).gen).state <;> simp_all
+  · cases hm : (w.athrows a).args <;> simp [asyncGenAthrowSend, hs, hf', hr, athrowRunningMsg, hm]
+  · simp [asyncGenAthrowSend, hs, hf', hr, hc, Exc.stopAsyncIteration]
+  · simp [asyncGenAthrowSend, hs, hf', hr, hc, ha, nonInitCoroMsg]
+  · simp only [asyncGenAthrowSend, hs, hf', hr, hc, ha, hm, reduceCtorEq, if_false, if_true,
+      Bool.false_eq_true, Bool.not_eq_true, ite_false, ite_true, athrowStartAclose, ht, acloseTail_eq]
+  · simp only [asyncGenAthrowSend, hs, hf', hr, hc, ha, hm, reduceCtorEq, if_false, if_true,
+      Bool.false_eq_true, Bool.not_eq_true, ite_false, ite_true, athrowStartArgs, ht]
+    exact athrowStartArgs_tail w' a _ res
+  · simp only [asyncGenAthrowSend, hs, hf', reduceCtorEq, if_false, Bool.false_eq_true, ite_false,
+      athrowIter, hg]
+    cases (w.athrows a).args with
+    | some t => exact unwrap_id w' _ res
+    | none => exact acloseTail_eq w' a _ res
+
+/-- `async_gen_athrow_iternext` (:2495-2498) is `send(None)`: on a fresh awaitable it always
+takes the throw (never the `NON_INIT_CORO_MSG` refusal), and later it sends `None`. -/
+def AthrowIternextOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref),
+    ((w.athrows a).state = .init → (w.get (w.athrows a).gen).state ≠ .cleared →
+      (w.get (w.athrows a).gen).agRunningAsync = false → (w.get (w.athrows a).gen).agClosed = false →
+      ((w.athrows a).args = none → ∀ w' res,
+        genThrowF h fuel (((w.setAthrowState a .iter).setRunning (w.athrows a).gen true).setClosed
+          (w.athrows a).gen) (w.athrows a).gen false (.excClass .generatorExit "GeneratorExit") none none
+          = (w', res) →
+        asyncGenAthrowIternext h fuel w a = acloseOutcome w' a (w.athrows a).gen res) ∧
+      (∀ t v tb, (w.athrows a).args = some (t, v, tb) → ∀ w' res,
+        genThrowF h fuel ((w.setAthrowState a .iter).setRunning (w.athrows a).gen true)
+          (w.athrows a).gen false t v tb = (w', res) →
+        asyncGenAthrowIternext h fuel w a =
+          awaitTail (fun w => w.setAthrowState a .closed) w' (w.athrows a).gen res)) ∧
+    ((w.athrows a).state = .iter → (w.get (w.athrows a).gen).state ≠ .cleared → ∀ w' res,
+      genSend h w (w.athrows a).gen (some .none) = (w', res) →
+      asyncGenAthrowIternext h fuel w a =
+        match (w.athrows a).args with
+        | some _ => awaitTail id w' (w.athrows a).gen res
+        | none => acloseOutcome w' a (w.athrows a).gen res)
+
+theorem athrowIternextOutcomes_proven : AthrowIternextOutcomes := by
+  intro V X h fuel w a
+  have S := athrowSendOutcomes_proven V X h fuel w a .none
+  refine ⟨fun hs hf hr hc => ⟨fun hm w' res ht => ?_, fun t v tb hm w' res ht => ?_⟩,
+    fun hs hf w' res hg => ?_⟩
+  · exact (S.2.2.1 hs hf).2.2.2.1 hr hc rfl hm w' res ht
+  · exact (S.2.2.1 hs hf).2.2.2.2 hr hc rfl t v tb hm w' res ht
+  · exact S.2.2.2 hs hf w' res hg
+
+/-- `async_gen_athrow_throw` (:2425-2491). Closed is the cannot-reuse `RuntimeError`; at
+`AWAITABLE_STATE_INIT` a running generator closes the awaitable with the already-running
+`RuntimeError` of its mode, and otherwise it moves to `AWAITABLE_STATE_ITER` with
+`ag_running_async` set (no finished or `ag_closed` check here); then `gen_throw` gets the
+arguments, and `athrow()` mode unwraps and closes on `NULL`, `aclose()` mode reads the result
+with `acloseOutcome`. -/
+def AthrowThrowOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (args : List (Obj V)),
+    ((w.athrows a).state = .closed → asyncGenAthrowThrow h fuel w a args =
+      (w, .err (some (Exc.runtimeError "cannot reuse already awaited aclose()/athrow()")))) ∧
+    ((w.athrows a).state = .init → (w.get (w.athrows a).gen).agRunningAsync = true →
+      asyncGenAthrowThrow h fuel w a args = (w.setAthrowState a .closed, .err (some (Exc.runtimeError
+        (match (w.athrows a).args with
+         | none => "aclose(): asynchronous generator is already running"
+         | some _ => "athrow(): asynchronous generator is already running"))))) ∧
+    (∀ w1, ((w.athrows a).state = .init ∧ (w.get (w.athrows a).gen).agRunningAsync = false ∧
+          w1 = (w.setAthrowState a .iter).setRunning (w.athrows a).gen true) ∨
+        ((w.athrows a).state = .iter ∧ w1 = w) →
+      ∀ w' res, genThrow h fuel w1 (w.athrows a).gen args = (w', res) →
+      asyncGenAthrowThrow h fuel w a args =
+        match (w.athrows a).args with
+        | some _ => awaitTail (fun w => w.setAthrowState a .closed) w' (w.athrows a).gen res
+        | none => acloseOutcome w' a (w.athrows a).gen res)
+
+theorem athrowThrowOutcomes_proven : AthrowThrowOutcomes := by
+  intro V X h fuel w a args
+  refine ⟨fun hs => by simp [asyncGenAthrowThrow, hs, reuseAthrowMsg], fun hs hr => ?_,
+    fun w1 hw w' res ht => ?_⟩
+  · cases hm : (w.athrows a).args <;> simp [asyncGenAthrowThrow, hs, hr, athrowRunningMsg, hm]
+  · rcases hw with ⟨hs, hr, rfl⟩ | ⟨hs, rfl⟩
+    · simp only [asyncGenAthrowThrow, hs, hr, reduceCtorEq, if_false, Bool.false_eq_true, and_false,
+        if_true, ht]
+      exact athrowThrowFinish_eq w' a _ _ res
+    · simp only [asyncGenAthrowThrow, hs, reduceCtorEq, if_false, false_and, ite_false, ht]
+      exact athrowThrowFinish_eq w' a _ _ res
+
+/-- `async_gen_athrow_close` (:2502-2524): a closed awaitable gives `None`; otherwise it is
+`async_gen_athrow_throw(self, &PyExc_GeneratorExit, 1)` read by `closeAwaitableOutcome`. -/
+def AthrowCloseOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref),
+    ((w.athrows a).state = .closed → asyncGenAthrowClose h fuel w a = (w, .ok .none)) ∧
+    ((w.athrows a).state ≠ .closed → ∀ w' res,
+      asyncGenAthrowThrow h fuel w a [.excClass .generatorExit "GeneratorExit"] = (w', res) →
+      asyncGenAthrowClose h fuel w a = (w', closeAwaitableOutcome res))
+
+theorem athrowCloseOutcomes_proven : AthrowCloseOutcomes := by
+  intro V X h fuel w a
+  refine ⟨fun hs => by simp [asyncGenAthrowClose, hs], fun hs w' res ht => ?_⟩
+  simp only [asyncGenAthrowClose, hs, if_false, ht, closeResult_eq]
+
 end PyLean.Bytecode.GenObj
