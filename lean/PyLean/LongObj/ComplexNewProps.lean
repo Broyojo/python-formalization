@@ -139,7 +139,7 @@ theorem try_special_not_none {R : Type} [CDouble R] (E : Env R) (op : Obj R) (s 
 
 /-! ## `complex_new_impl` check order -/
 
-/-- `realNumberLike`, unfolded: the test of lines 1196-1197 and 1209-1210. -/
+/-- `realNumberLike`, unfolded: the test of lines 1216-1217 and 1229-1230. -/
 theorem realNumberLike_false_iff {R : Type} [CDouble R] (o : Obj R) :
     realNumberLike o = false ↔
       (o.ti.hasNumber = false ∨

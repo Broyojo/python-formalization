@@ -127,7 +127,7 @@ theorem toUhash_of_neg {h : Int} (h0 : h < 0) (h1 : -(2 ^ 63) ≤ h) :
 /-- `complex_hash` over any real hash `hd`. `_Py_HashDouble` returns a `Py_hash_t`
 that is never `-1` (`Python/pyhash.c:127-128`, and `Py_HashPointer` for a NaN),
 which is the hypothesis. Then the result is never `-1`, and if the imaginary part
-hashes to `0` the result is the hash of the real part: the note on lines 625-630,
+hashes to `0` the result is the hash of the real part: the note on lines 641-645,
 which is what makes `hash(x + 0j) == hash(x)`. -/
 def HashComposition : Prop :=
   ∀ (R : Type) [CDouble R] (hd : R → Int),
@@ -258,7 +258,7 @@ theorem realToDouble_proven : RealToDouble := by
     simp [real_to_complex, h]
   · intro c h; simp [TO_COMPLEX, h]
 
-/-- The comment on lines 665-678: mixed-mode arithmetic combines a real operand
+/-- The comment on lines 681-694: mixed-mode arithmetic combines a real operand
 with a complex directly, without coercing it first, so the part it does not
 touch is exactly the complex operand's, whatever that value is (a `-0.0` or a NaN
 in that part survives). The formula for the real part is the same on both orders

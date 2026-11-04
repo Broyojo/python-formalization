@@ -107,7 +107,7 @@ def entriesComplex : List Entry := [
   { id := "complex-cpow-edom-needs-zero-base", pyFile := complexFile
     pyFns := ["_Py_c_pow"]
     statement := "At binary64 with a glibc-like libm, _Py_c_pow sets EDOM only for a zero base."
-    source := "complexobject.c:318-320 and 746-749"
+    source := "complexobject.c:318-319 and 762-765"
     status := .refuted, prop := ``CPowEdomNeedsZeroBase, thm := some ``cPowEdomNeedsZeroBase_refuted
     bug := some "longobj-complex-pow-infinite-phase-edom"
     notes := "(1+1j) ** float('inf'): cos of an infinite phase sets EDOM. Fixed on main (gh-156886); still in 3.15.2. bugs/binary64-complex-pow-stray-edom.yaml is a duplicate of this record." },
@@ -306,7 +306,7 @@ def entriesComplex : List Entry := [
   { id := "complex-parse-surroundings", pyFile := complexFile
     pyFns := ["complex_from_string_inner"]
     statement := "An accepted string with no parenthesis of its own keeps its value with trailing whitespace, and inside parentheses with whitespace after them, on any strtod satisfying StrtodSpec."
-    source := "complex docs (\"can optionally be surrounded by whitespaces and the round parentheses\"); complexobject.c:962-968 and 1028-1039"
+    source := "complex docs (\"can optionally be surrounded by whitespaces and the round parentheses\"); complexobject.c:962-968 and 1048-1059"
     status := .proven, prop := ``ParseSurroundings, thm := some ``parseSurroundings_proven
     notes := "Whitespace inside the parentheses is complex-parse-leading-whitespace and this entry applied first. A second pair of parentheses is rejected." },
   { id := "complex-parse-forms", pyFile := complexFile
