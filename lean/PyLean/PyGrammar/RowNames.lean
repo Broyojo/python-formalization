@@ -295,6 +295,9 @@ def rule_import_stmt : List String := [
 def rule_interactive : List String := [
   "rule:interactive"]
 
+def rule_invalid_assert_stmt : List String := [
+  "rule:invalid_assert_stmt"]
+
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
 

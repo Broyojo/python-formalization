@@ -18,6 +18,7 @@ import PyLean.PyGrammar.Peg.Rules.Defs
 import PyLean.PyGrammar.Peg.Rules.AsyncWith
 import PyLean.PyGrammar.Peg.Rules.LeftRec
 import PyLean.PyGrammar.Peg.Rules.LeftRec2
+import PyLean.PyGrammar.Peg.Rules.InvalidAssert
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -722,6 +723,20 @@ def ruleEntries : List Entry := [
     prop := ``ShiftExprRule
     thm := some ``shiftExprRule_proven
     notes := LR },
+  { id := "pygrammar-rule-invalid-assert-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_assert_stmt
+    statement := "invalid_assert_stmt: 'assert a = b' raises \"cannot assign to <name> here. Maybe you " ++
+      "meant '==' instead of '='?\" over a..b with <name> = _PyPegen_get_expr_name(a); then 'assert " ++
+      "t, a = b' the same about a; then 'assert a := b' and 'assert t, a := b' raise \"cannot use " ++
+      "named expression without parentheses here\" over a..b; each in order after the ones before " ++
+      "fail; any other token: NULL, no error."
+    source := "Grammar/python.gram:1329-1348"
+    status := .proven
+    prop := ``InvalidAssertStmt
+    thm := some ``invalidAssertStmt_proven
+    notes := scheme ++ " Hypothesis exprName a = some nm: every node expression returns has a " ++
+      "name (only Slice lacks one, and only a subscript holds a Slice)." },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed

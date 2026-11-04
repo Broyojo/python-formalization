@@ -545,6 +545,11 @@ RULE_FORMS = [
     "def f({n}) -> {e}: pass", "def f[T](x: {e} = {f}, *a: *{e}): pass", "async def f(x={e}): pass",
     "def f(x=): pass", "def f(): # type: () -> int\n pass", "def f(*a: {e}): pass", "def f(x: {e}, y={f}): pass",
     "@{e}\nx = 1", "def f({e}): pass", "lambda x={e}: x",
+    # left-recursive operators and invalid_assert_stmt (Peg/Rules/LeftRec*.lean, InvalidAssert.lean)
+    "{e} - {f} - {e}", "{e} + {f} - {e} + {f}", "{e} * {f} @ {e}", "{e} @ {f}", "{e} // {f} % {e} / {f}",
+    "{e} << {f} >> {e}", "{e} | {f} ^ {e} & {f}", "{e} | {f} | {e}", "{e} + not {f}", "{e} * not {f}",
+    "{e} << not {f}", "{e} -", "{e} & & {f}", "assert {e}, {f} := {e}", "assert {e} = {f}, {e}",
+    "assert ({e}) = {f}", "assert {e}, ({f}) = {e}",
 ]
 
 

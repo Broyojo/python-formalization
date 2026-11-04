@@ -101,6 +101,7 @@ CREDIT = {
     "pygrammar-rule-bitwise-and": {GRAM: ["rule:bitwise_and"]},
     "pygrammar-rule-term": {GRAM: ["rule:term"]},
     "pygrammar-rule-shift-expr": {GRAM: ["rule:shift_expr"]},
+    "pygrammar-rule-invalid-assert-stmt": {GRAM: ["rule:invalid_assert_stmt"]},
     "pygrammar-rule-annotation-default": {GRAM: ["rule:annotation", "rule:star_annotation",
                                                  "rule:default"]},
     "pygrammar-lex-nextc-in-buffer": {
