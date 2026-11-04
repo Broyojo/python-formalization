@@ -308,6 +308,21 @@ def gen_method(rng):
     if name in SMALL_INT and rng.random() < 0.9:
         n = rng.randint(-35, 35)
         b = ["F", n < 0, str(abs(n)), 0]
+    if name == "scaleb" and rng.random() < 0.15:
+        # int(other) of an integral second operand: the 4300-digit limit, before the range test.
+        impl = "py"
+        b = ["F", rng.random() < 0.5, "1" + "0" * rng.choice([4298, 4299, 4300, 5000]), 0]
+        if rng.random() < 0.3:
+            a = ["I", rng.random() < 0.5]
+    if name == "remainder_near" and rng.random() < 0.15:
+        # _WorkRep's int(self._int) on a coefficient around the limit, with expdiff in range.
+        impl = "py"
+        la, lb = rng.choice([1, 4299, 4300, 4301]), rng.choice([1, 4300, 4301])
+        da = str(rng.randint(1, 9)) + "".join(rng.choice("0123456789") for _ in range(la - 1))
+        db = str(rng.randint(1, 9)) + "".join(rng.choice("0123456789") for _ in range(lb - 1))
+        ea = rng.randint(-5, 5) - la
+        eb = ea + la - lb + rng.choice([-1, 0, 1, 2])
+        a, b = ["F", rng.random() < 0.5, da, ea], ["F", rng.random() < 0.5, db, eb]
     if name == "logb" and rng.random() < 0.3:
         # Decimal(self.adjusted()) takes str(abs(adjusted)): the 4300-digit limit.
         impl = "py"
