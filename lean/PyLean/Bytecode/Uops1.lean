@@ -691,11 +691,32 @@ def LIST_APPEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   (listAppend (rest.headD .null) v : RM Unit)
   pure rest
-/-- `:1380`. -/
+/-- `PySet_CheckExact`. -/
+def isExactSet : Val → RM Bool
+  | .ref a => do
+    match ← getObj a with
+    | .set false _ => pure true
+    | _ => pure false
+  | _ => pure false
+
+/-- `:1380-1392`. Since 3.15 (gh-154902: user code can rebind `__conditional_annotations__`) the
+target is checked first: anything but an exact set raises `TypeError("'%T' object is not a set")`
+with both operands popped (`PyStackRef_CLOSE(v); ERROR_IF(true)`). `%T` is the qualified type name,
+which for the model's builtin types and `__main__` classes is the `__qualname__`. -/
 def SET_ADD (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
-  (setAdd e.om e.ctx (rest.headD .null) v : RM Unit)
+  let set := rest.headD .null
+  if !(← (isExactSet set : RM Bool)) then
+    let tn ← (do
+      match ← typeOf set with
+      | .ref a =>
+        match ← getObj a with
+        | .cls c => pure c.qualname
+        | _ => fault "not a type"
+      | t => typeNameOf t : RM String)
+    (typeError s!"'{tn}' object is not a set" : RM Unit)
+  (setAdd e.om e.ctx set v : RM Unit)
   pure rest
 /-- `:1399`. -/
 def _SPECIALIZE_STORE_SUBSCR : M Unit := pure ()

@@ -1610,27 +1610,30 @@ def superLookupImpl (suType suObj : Val) (name : String) (wantMethod : Bool) : R
   | none =>
     raiseS "AttributeError" s!"'super' object has no attribute '{name}'"
 
-/-- `PyDict_Update`/`_PyDict_MergeEx`: `override = 2` raises `KeyError` on a
-duplicate key. -/
-def dictMergeImpl (override : Nat) (d o : Val) : RM Unit := do
+/-- `dict_merge`, `Objects/dictobject.c:4259-4355`: with `override = 2` and a `dupkey` slot
+(`_PyDict_MergeUniq`) the first key of `o` already in `d` stops the merge and is returned, the
+`-2` return; with `override = 1` (`PyDict_Update`) every key is stored. The exact-dict fast path
+is `dict_dict_merge` (`:4170-4256`); the model takes it for an exact dict, where C takes it for any
+dict whose `tp_iter` is `dict_iter`. -/
+def dictMergeImpl (override : Nat) (d o : Val) : RM (Option Val) := do
   if ← isExactDict o then
     let src ← getDict o
     for en in src.entries.toList do
       if override == 2 then
         if (← dictGet om ctx d en.key).isSome then
-          raiseVal (← newExc (.cls "KeyError") [en.key])
+          return some en.key
       dictSet om ctx d en.key en.value
-    return ()
-  match ← optAttr om ctx o "keys" with
-  | some kf =>
-    let keys ← seqToList om ctx (← call1 om ctx kf [])
-    for k in keys do
-      if override == 2 then
-        if (← dictGet om ctx d k).isSome then
-          raiseVal (← newExc (.cls "KeyError") [k])
-      dictSet om ctx d k (← om.getItem ctx o k)
-  | none =>
-    raiseVal (← newExc (.cls "AttributeError") [.str s!"'{← tpName o}' object has no attribute 'keys'"])
+    return none
+  -- `PyMapping_Keys(b)`: `b.keys()`, so a missing `keys` is the `AttributeError` of the lookup
+  -- itself, and one raised inside a `keys` property propagates as it is
+  let kf ← om.getAttr ctx o "keys"
+  let keys ← seqToList om ctx (← call1 om ctx kf [])
+  for k in keys do
+    if override == 2 then
+      if (← dictGet om ctx d k).isSome then
+        return some k
+    dictSet om ctx d k (← om.getItem ctx o k)
+  return none
 
 /-- `stopiteration_error`, `Python/intrinsics.c:140-182`. -/
 def stopIterationError (f : Frame) (exc : Val) : RM Val := do
@@ -1899,7 +1902,7 @@ def mkOM (P : Program) : Nat → ObjModel
       getAIter := fun ctx o => getAIterImpl om ctx o
       getANext := fun ctx o => getANextImpl P om ctx o
       getAwaitable := fun ctx o n => getAwaitableImpl P om ctx o n
-      dictUpdate := fun ctx d o => dictMergeImpl om ctx 1 d o
+      dictUpdate := fun ctx d o => do let _ ← dictMergeImpl om ctx 1 d o
       dictMerge := fun ctx d o => dictMergeImpl om ctx 2 d o
       listExtend := fun ctx l o => do
         let vals ← seqToList om ctx o
