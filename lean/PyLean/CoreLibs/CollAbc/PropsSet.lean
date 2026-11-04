@@ -579,13 +579,11 @@ theorem feedAll_setb_err (hash : α → Py Unit) (t : Option PyExc) (z : α) (po
 
 end
 
-/-- `_from_iterable`. `Set._from_iterable` calls the class it is reached through, `cls(it)`, with whatever outcome
-that call has. `KeysView._from_iterable` and `ItemsView._from_iterable` ignore `cls` and build a builtin `set`:
+/-- `KeysView._from_iterable` and `ItemsView._from_iterable` ignore `cls` and build a builtin `set`:
 `iter(it)` failing is the outcome, then the first element whose hash fails (after the earlier ones were inserted),
 then the iterator's end; with every element hashable the result holds exactly the elements, once each.
-Lib/_collections_abc.py:597-604, 851-853, 869-871. -/
+Lib/_collections_abc.py:851-853, 869-871. -/
 def FromIterableSpec : Prop :=
-  (∀ (C β γ : Type) (call : C → β → Py γ) (cls : C) (it : β), setFromIterable call cls it = call cls it) ∧
   ∀ (C α : Type) [DecidableEq α] (hash : α → Py Unit) (cls cls' : C) (it : Py (List α)) (t : Option PyExc)
     (xs pre post : List α) (z : α) (e : PyExc),
     viewFromIterable hash cls it t = viewFromIterable hash cls' it t ∧
@@ -597,7 +595,6 @@ def FromIterableSpec : Prop :=
     ((∀ x ∈ xs, hash x = .ok ()) → viewFromIterable hash cls (.ok xs) (some e) = .error e)
 
 theorem fromIterableSpec_proven : FromIterableSpec := by
-  refine ⟨fun _ _ _ _ _ _ => rfl, ?_⟩
   intro C α _ hash cls cls' it t xs pre post z e
   have hs : (setBuilder hash).start = .ok [] := rfl
   have hd : ∀ r, (setBuilder hash).done r = .ok r := fun _ => rfl

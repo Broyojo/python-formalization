@@ -2719,14 +2719,15 @@ coll-namedtuple-instance-methods	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-defaults	proven	Lib/collections/__init__.py	namedtuple
 corelibs-collabc-check-methods	proven	Lib/_collections_abc.py	_check_methods
 corelibs-collabc-subclasshooks	proven	Lib/_collections_abc.py	Hashable.__subclasshook__,Awaitable.__subclasshook__,Coroutine.__subclasshook__,AsyncIterable.__subclasshook__,AsyncIterator.__subclasshook__,AsyncGenerator.__subclasshook__,Iterable.__subclasshook__,Iterator.__subclasshook__,Reversible.__subclasshook__,Generator.__subclasshook__,Sized.__subclasshook__,Container.__subclasshook__,Collection.__subclasshook__,Buffer.__subclasshook__,Callable.__subclasshook__
-corelibs-collabc-abstract-bodies	proven	Lib/_collections_abc.py	Awaitable.__await__,Iterable.__iter__,Reversible.__reversed__,Iterator.__next__,Generator.send,Coroutine.send,AsyncIterator.__anext__,AsyncGenerator.asend,AsyncIterable.__aiter__,Buffer.__buffer__,MutableSet.add,MutableSet.discard,Mapping.__getitem__,MutableMapping.__setitem__,MutableMapping.__delitem__,Sequence.__getitem__,MutableSequence.__setitem__,MutableSequence.__delitem__,MutableSequence.insert
+corelibs-collabc-abstract-bodies	proven	Lib/_collections_abc.py	
+corelibs-collabc-abstract-primitives	proven	Lib/_collections_abc.py	Sequence.__getitem__,Mapping.__getitem__,MutableSequence.insert,MutableMapping.__setitem__
 corelibs-collabc-throw	proven	Lib/_collections_abc.py	Generator.throw,Coroutine.throw,AsyncGenerator.athrow
 corelibs-collabc-throw-paths	proven	Lib/_collections_abc.py	Coroutine.throw,Generator.throw,AsyncGenerator.athrow
 corelibs-collabc-close-up-to-value	proven	Lib/_collections_abc.py	Generator.close,Coroutine.close
 corelibs-collabc-close-value	refuted	Lib/_collections_abc.py	Generator.close
 corelibs-collabc-aclose-up-to-message	proven	Lib/_collections_abc.py	AsyncGenerator.aclose
 corelibs-collabc-aclose-message	refuted	Lib/_collections_abc.py	AsyncGenerator.aclose
-corelibs-collabc-next-is-send	proven	Lib/_collections_abc.py	Generator.__next__,AsyncGenerator.__anext__
+corelibs-collabc-next-is-send	proven	Lib/_collections_abc.py	
 corelibs-collabc-is-param-expr	proven	Lib/_collections_abc.py	_is_param_expr
 corelibs-collabc-callable-new	proven	Lib/_collections_abc.py	_CallableGenericAlias.__new__,_is_param_expr
 corelibs-collabc-callable-repr	proven	Lib/_collections_abc.py	_CallableGenericAlias.__repr__,_is_param_expr
@@ -2754,7 +2755,7 @@ corelibs-collabc-mutableset	proven	Lib/_collections_abc.py	MutableSet.remove,Mut
 corelibs-collabc-mset-paths	proven	Lib/_collections_abc.py	MutableSet.remove,MutableSet.pop,MutableSet.clear,MutableSet.__ior__,MutableSet.__iand__,MutableSet.__ixor__,MutableSet.__isub__
 corelibs-collabc-mapping	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,KeysView.__contains__,ItemsView.__iter__,ValuesView.__contains__,ValuesView.__iter__
 corelibs-collabc-view-repr	proven	Lib/_collections_abc.py	MappingView.__repr__
-corelibs-collabc-from-iterable	proven	Lib/_collections_abc.py	Set._from_iterable,KeysView._from_iterable,ItemsView._from_iterable
+corelibs-collabc-from-iterable	proven	Lib/_collections_abc.py	KeysView._from_iterable,ItemsView._from_iterable
 corelibs-collabc-mapping-paths	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,ItemsView.__contains__,KeysView.__contains__
 corelibs-collabc-map-view-paths	proven	Lib/_collections_abc.py	ItemsView.__iter__,ValuesView.__iter__,ValuesView.__contains__
 corelibs-collabc-itemsview-tuples	proven	Lib/_collections_abc.py	ItemsView.__contains__

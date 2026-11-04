@@ -113,34 +113,34 @@ theorem hookExact_proven : HookExact := by
 
 /-! ### Abstract bodies -/
 
-def stubGetitem {K α : Type} (e : PyExc) : K → Py α := fun _ => .error e
+/-- The exception the abstract body `name` raises, read from `stubBody`. -/
+def stubExc (name : String) : PyExc :=
+  match stubBody name with
+  | some (.raises e) | some (.awaitRaises e) => e
+  | _ => .modelFuel
 
-/-- The `Sequence` an object has when it relies on the abstract `__getitem__` and `__len__`. -/
-def stubSeq (α : Type) : Seq α := ⟨stubGetitem (.indexError ""), .ok 0⟩
+/-- The `Sequence` an object has when it relies on the abstract `__getitem__` (and a `__len__` of 0). -/
+def stubSeq (α : Type) : Seq α := ⟨fun _ => .error (stubExc "Sequence.__getitem__"), .ok 0⟩
 
-/-- The `Mapping` an object has when it relies on the abstract primitives. -/
-def stubMap (K V : Type) : MapV K V := { getitem := stubGetitem (.keyError ""), iter := .ok [], len := .ok 0 }
+/-- The `Mapping` an object has when it relies on the abstract `__getitem__`, with no keys. -/
+def stubMap (K V : Type) : MapV K V :=
+  { getitem := fun _ => .error (stubExc "Mapping.__getitem__"), iter := .ok [], len := .ok 0 }
 
-/-- A `MutableSequence` relying on the abstract `__setitem__`, `__delitem__` and `insert`. -/
+/-- A `MutableSequence` relying on the abstract `__getitem__`, `__setitem__`, `__delitem__` and `insert`. -/
 def stubMSeq (α : Type) : MSeq Unit α :=
-  ⟨fun _ => stubGetitem (.indexError ""), fun _ _ _ => .error (.indexError ""), fun _ _ => .error (.indexError ""),
-    fun _ _ _ => .error (.indexError ""), fun _ => .ok 0⟩
+  ⟨fun _ _ => .error (stubExc "Sequence.__getitem__"), fun _ _ _ => .error (stubExc "MutableSequence.__setitem__"),
+    fun _ _ => .error (stubExc "MutableSequence.__delitem__"), fun _ _ _ => .error (stubExc "MutableSequence.insert"),
+    fun _ => .ok 0⟩
 
-/-- A `MutableMapping` relying on the abstract `__setitem__` and `__delitem__`. -/
+/-- A `MutableMapping` relying on the abstract `__getitem__`, `__setitem__` and `__delitem__`. -/
 def stubMMap (K V : Type) : MMap Unit K V :=
-  ⟨fun _ => stubMap K V, fun _ _ _ => .error (.keyError ""), fun _ _ => .error (.keyError "")⟩
+  ⟨fun _ => stubMap K V, fun _ _ _ => .error (stubExc "MutableMapping.__setitem__"),
+    fun _ _ => .error (stubExc "MutableMapping.__delitem__")⟩
 
-/-- The generator a generator stub returns, yielding `n` `None`s: its state is the number of steps taken. -/
-def stubGen (n : Nat) : Gen Nat Unit :=
-  ⟨fun k _ => if k < n then (.yielded (), k + 1) else (.stopped (), k), fun k => (.raised generatorExit, k)⟩
-
-/-- The abstract bodies, reachable through `super()` or the class: each raising body raises exactly its exception,
-with an empty message (`StopIteration`, `StopAsyncIteration`, `NotImplementedError`, `KeyError`, `IndexError`), the
-`async def` ones only when awaited, and `AsyncIterable.__aiter__` the `TypeError` of instantiating the abstract
-`AsyncIterator`; `Awaitable.__await__` is a generator that yields one `None` and stops, `Iterable.__iter__` and
-`Reversible.__reversed__` generators that stop at once, and stay stopped. The abstract `__getitem__`s raise the very
-exceptions the mixins catch, so the mixins built on them see an empty `Sequence` and an empty `Mapping`, while the
-abstract `insert` and `__setitem__` make `append` and `setdefault` raise. -/
+/-- The table of abstract bodies, Lib/_collections_abc.py: each raising body raises exactly its exception with an
+empty message, the `async def` ones when awaited, `AsyncIterable.__aiter__` the `TypeError` of the abstract
+`AsyncIterator`; the generator bodies yield one `None` or none. A record of what the difftest checks; it credits no
+row. -/
 def StubsAreEmpty : Prop :=
   stubBody "Awaitable.__await__" = some (.gen 1) ∧
   stubBody "Iterable.__iter__" = some (.gen 0) ∧
@@ -161,30 +161,48 @@ def StubsAreEmpty : Prop :=
   stubBody "Sequence.__getitem__" = some (.raises (.indexError "")) ∧
   stubBody "MutableSequence.__setitem__" = some (.raises (.indexError "")) ∧
   stubBody "MutableSequence.__delitem__" = some (.raises (.indexError "")) ∧
-  stubBody "MutableSequence.insert" = some (.raises (.indexError "")) ∧
-  (∀ n k : Nat, k < n → (stubGen n).next () k = (.yielded (), k + 1)) ∧
-  (∀ n k : Nat, n ≤ k → (stubGen n).next () k = (.stopped (), k)) ∧
+  stubBody "MutableSequence.insert" = some (.raises (.indexError ""))
+
+theorem stubsAreEmpty_proven : StubsAreEmpty :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem stubExc_seq : stubExc "Sequence.__getitem__" = .indexError "" := rfl
+theorem stubExc_map : stubExc "Mapping.__getitem__" = .keyError "" := rfl
+theorem stubExc_insert : stubExc "MutableSequence.insert" = .indexError "" := rfl
+theorem stubExc_mmset : stubExc "MutableMapping.__setitem__" = .keyError "" := rfl
+
+/-- What the mixins do over the abstract primitives, the bodies read from the table: the abstract
+`Sequence.__getitem__` raises the `IndexError` that `__iter__`, `__contains__` and `index` take as the end, so the
+sequence iterates empty, contains nothing and `index` raises `ValueError`; the abstract `Mapping.__getitem__` raises the
+`KeyError` that `get` and `__contains__` catch, so `get` gives the default and `in` is `False`, and `pop` with a default
+gives it; the abstract `MutableSequence.insert` makes `append` raise its `IndexError`, and the abstract
+`MutableMapping.__setitem__` makes `setdefault` of a missing key raise its `KeyError`. A swallowed or different
+exception in a stub fails one of these. Lib/_collections_abc.py:790, 922, 1014, 1125 with the mixins. -/
+def StubMixins : Prop :=
   (∀ (α : Type) (fuel : Nat), (stubSeq α).iterFrom (fuel + 1) 0 = .ok []) ∧
+  (∀ (α : Type) (E : EqOps α) (v : α) (fuel : Nat), (stubSeq α).containsFrom E v (fuel + 1) 0 = .ok false) ∧
   (∀ (α : Type) (E : EqOps α) (v : α) (fuel : Nat),
-    (stubSeq α).containsFrom E v (fuel + 1) 0 = .ok false) ∧
+    (stubSeq α).index E v 0 none (fuel + 1) = .error (.valueError "")) ∧
   (∀ (K V : Type) (k : K) (d : V), (stubMap K V).get k d = .ok d) ∧
   (∀ (K V : Type) (k : K), (stubMap K V).contains k = .ok false) ∧
+  (∀ (K V : Type) (k : K) (d : V), (stubMMap K V).pop () k (some d) = .ok (d, ())) ∧
+  (∀ (K V : Type) (k : K), (stubMMap K V).pop () k none = .error (.keyError "")) ∧
   (∀ (α : Type) (v : α), (stubMSeq α).append () v = .error (.indexError "")) ∧
   (∀ (K V : Type) (k : K) (d : V), (stubMMap K V).setdefault () k d = .error (.keyError ""))
 
-theorem stubsAreEmpty_proven : StubsAreEmpty := by
-  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro n k h; simp [Gen.next, stubGen, h]
-  · intro n k h
-    have : ¬ k < n := by omega
-    simp [Gen.next, stubGen, this]
-  · intro α fuel; simp [Seq.iterFrom, stubSeq, stubGetitem, isIndexError]
-  · intro α E v fuel; simp [Seq.containsFrom, stubSeq, stubGetitem, isIndexError]
-  · intro K V k d; simp [MapV.get, stubMap, stubGetitem, isKeyError]
-  · intro K V k; simp [MapV.contains, stubMap, stubGetitem, isKeyError]
-  · intro α v; simp [MSeq.append, stubMSeq, bind, Except.bind]
-  · intro K V k d; simp [MMap.setdefault, stubMMap, stubMap, stubGetitem, isKeyError, bind, Except.bind]
+theorem stubMixins_proven : StubMixins := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro α fuel; simp [Seq.iterFrom, stubSeq, stubExc_seq, isIndexError]
+  · intro α E v fuel; simp [Seq.containsFrom, stubSeq, stubExc_seq, isIndexError]
+  · intro α E v fuel
+    simp [Seq.index, Seq.indexLoop, stubSeq, stubExc_seq, isIndexError, bind, Except.bind, pure, Except.pure]
+  · intro K V k d; simp [MapV.get, stubMap, stubExc_map, isKeyError]
+  · intro K V k; simp [MapV.contains, stubMap, stubExc_map, isKeyError]
+  · intro K V k d; simp [MMap.pop, stubMMap, stubMap, stubExc_map, isKeyError]
+  · intro K V k; simp [MMap.pop, stubMMap, stubMap, stubExc_map, isKeyError]
+  · intro α v; simp [MSeq.append, stubMSeq, stubExc_insert, bind, Except.bind]
+  · intro K V k d
+    simp [MMap.setdefault, stubMMap, stubMap, stubExc_map, stubExc_mmset, isKeyError, bind, Except.bind]
 
 /-! ### `throw`, `close` -/
 

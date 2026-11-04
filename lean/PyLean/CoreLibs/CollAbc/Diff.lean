@@ -372,8 +372,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     match (← getStr j "kind") with
     | "set" =>
       let uh ← getOptInt j "uh"
-      let call : Unit → Py (List Int) → Py (SetV Int) := fun _ it => build (faultBuilder none uh) it t
-      let r := setFromIterable call () (.ok (elems.filterMap id))
+      let r := build (faultBuilder none uh) (.ok (elems.filterMap id)) t
       pure (encPy (fun (s : SetV Int) => match s.iter with | .ok xs => encIntList xs | .error _ => Json.null) r)
     | _ =>
       let hash : Option Int → Py Unit := fun
