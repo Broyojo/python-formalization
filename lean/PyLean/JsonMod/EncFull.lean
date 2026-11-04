@@ -511,6 +511,15 @@ def pyIterX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (v : 
       | .ok v' => pyCallX b (fun b' _ => addNote (.obj t) (pyIterX cfg b' lvl (n :: seen) anc v'))
 termination_by (2 * b, 0, 0)
 
+/-- A value inside the `try` of `_iterencode_list` (encoder.py:300-313) or `_iterencode_dict`
+(:385-402): the scalars and the containers as in `_iterencode`, an unknown object in a new
+`_iterencode` generator (a frame). -/
+def pyItemX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (x : XVal) : XR :=
+  match x with
+  | .other _ _ => pyCallX b (fun b' _ => pyIterX cfg b' lvl seen anc x)
+  | _ => pyIterX cfg b lvl seen anc x
+termination_by (2 * b, 1, 0)
+
 /-- `_iterencode_list` (encoder.py:265-326) or `_iterencode_dict` (:328-413) on `a`, in its frame. -/
 def pyContX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (cyc : Bool) (a : XVal) : XR :=
   match a with
@@ -547,17 +556,13 @@ def pyListPart (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (c
 termination_by (2 * b + 1, 1, 0)
 
 /-- The `for i, value in enumerate(lst)` loop: `buf` (the opening bracket, then the separator)
-and the value; the `try` adds the note. A container value is a new generator, an unknown object
-a new `_iterencode` (both frames); the rest is dispatched in this frame. -/
+and the value; the `try` adds the note. -/
 def pyListItemsX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (t : PyType)
     (buf0 sep : PStr) (i : Nat) (ys : List XVal) : XR :=
   match ys with
   | [] => .ok []
   | x :: rest =>
-    let r := match x with
-      | .other _ _ => pyCallX b (fun b' _ => pyIterX cfg b' lvl seen anc x)
-      | _ => pyIterX cfg b lvl seen anc x
-    match r with
+    match pyItemX cfg b lvl seen anc x with
     | .error e => addNote (.item t i) (.error e)
     | .ok tx =>
       match pyListItemsX cfg b lvl seen anc t buf0 sep (i + 1) rest with
@@ -610,10 +615,7 @@ def pyDictItemsX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) 
         match pyEncStrX cfg b ks with
         | .error e => .error e
         | .ok kt =>
-          let r := match x with
-            | .other _ _ => pyCallX b (fun b' _ => pyIterX cfg b' lvl seen anc x)
-            | _ => pyIterX cfg b lvl seen anc x
-          match r with
+          match pyItemX cfg b lvl seen anc x with
           | .error e => addNote (.key t (.conv ks)) (.error e)
           | .ok tx =>
             match pyDictItemsX cfg b lvl seen anc t nl sep false rest with
