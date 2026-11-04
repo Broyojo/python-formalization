@@ -408,7 +408,9 @@ the type's slot, so they can see two different things. -/
 structure IndexObj where
   /-- `PyLong_Check(item)`, with its value. -/
   isInt : Option Int
-  /-- `nb_index` of the type, run. -/
+  /-- `__index__` of the type, run: `nb_index` in C, the attribute `a.__index__` finds on the class in Python. For an
+  `int` or an `int` subclass that does not override it this is `int.__index__`, which gives the value as an exact
+  `int`; a subclass may override it. Type invariant: `isInt = some n` implies `slot` is `some` (`int` has one). -/
   slot : Option (Py IndexRet)
   /-- An `__index__` in the instance dict, run. A type attribute that is not a data descriptor loses to it. -/
   inst : Option (Py IndexRet)
@@ -416,17 +418,15 @@ structure IndexObj where
   /-- The `DeprecationWarning` of Objects/abstract.c:1442, when it raises. -/
   warn : Option PyExc
 
-/-- `index(a)`, Lib/operator.py:95-97: `a.__index__()`, whatever that returns. -/
+/-- `index(a)`, Lib/operator.py:95-97: `a.__index__()`, an attribute lookup, whatever it returns: the instance dict,
+then the class, so an `int` subclass's own `__index__` runs, where C answers from `PyLong_Check` first. -/
 def indexPy (o : IndexObj) : Py IndexRet :=
   match o.inst with
   | some r => r
   | none =>
-    match o.isInt with
-    | some n => .ok (.exact n)
-    | none =>
-      match o.slot with
-      | some r => r
-      | none => .error (.named "AttributeError" s!"'{o.tn}' object has no attribute '__index__'")
+    match o.slot with
+    | some r => r
+    | none => .error (.named "AttributeError" s!"'{o.tn}' object has no attribute '__index__'")
 
 /-- `_operator_index`, Modules/_operator.c:698-702, through `PyNumber_Index`, Objects/abstract.c:1452-1460, and
 `_PyNumber_Index`, :1410-1447. -/
@@ -661,8 +661,9 @@ def callC {α β : Type} (apply : α → List α → List (String × α) → Py 
 
 /-- What `concat(a, b)` sees of its operands. -/
 structure ConcatArgs (α : Type) where
-  /-- `hasattr(a, '__getitem__')`. -/
-  hasGetitem : Bool
+  /-- `hasattr(a, '__getitem__')`: `True`, `False` (an `AttributeError`), or the other exception a
+  `__getattribute__`, `__getattr__` or descriptor raised, which `hasattr` passes on. -/
+  hasGetitem : Py Bool
   /-- `a`'s `sq_concat`. -/
   sqConcat : Option (α → α → Py α)
   /-- `a`'s `sq_inplace_concat`. -/
@@ -698,11 +699,17 @@ def plusEq {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α :
 
 /-- `concat`, Lib/operator.py:154-159. -/
 def concatPy {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α :=
-  if !A.hasGetitem then .error (noConcat lt) else plus A lt rt a b
+  match A.hasGetitem with
+  | .error e => .error e
+  | .ok false => .error (noConcat lt)
+  | .ok true => plus A lt rt a b
 
 /-- `iconcat`, Lib/operator.py:357-363. -/
 def iconcatPy {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α :=
-  if !A.hasGetitem then .error (noConcat lt) else plusEq A lt rt a b
+  match A.hasGetitem with
+  | .error e => .error e
+  | .ok false => .error (noConcat lt)
+  | .ok true => plusEq A lt rt a b
 
 /-- `_operator_concat_impl`, Modules/_operator.c:461-465, through `PySequence_Concat`,
 Objects/abstract.c:1721-1744. -/
@@ -734,6 +741,9 @@ def iconcatC {α : Type} (A : ConcatArgs α) (lt : String) (a b : α) : Py α :=
 /-- What `__length_hint__` returns. -/
 inductive HintRet where
   | int (n : Int)
+  /-- An instance of an `int` subclass, `bool` included, with its value and type name. Scope limit: its `__lt__`
+  is `int`'s (Lib/operator.py:227 runs `val < 0`). -/
+  | intSub (n : Int) (tn : String)
   | notImplemented
   /-- Something that is not an `int`, of the named type. -/
   | other (tn : String)
@@ -751,6 +761,9 @@ inductive HintDesc where
   /-- A `property`: C's lookup runs the getter on `obj`, which can raise, and calls what it returns (`get`);
   Python gets the property object itself, and calling it is a `TypeError`. -/
   | prop (get : Py (Py HintRet))
+  /-- Any other descriptor: C's `__get__(obj, type)` and the call of its result (`cGet`); Python's
+  `__get__(None, cls)` and the call `hint(obj)` of its result (`pyGet`). Either `__get__` may raise. -/
+  | desc (cGet pyGet : Py (Py HintRet))
   deriving Repr
 
 /-- C: the lookup's exception, or the outcome of the call. -/
@@ -758,12 +771,20 @@ def hintLookupC : HintDesc → Py (Py HintRet)
   | .func r => .ok r
   | .static r _ => .ok r
   | .prop g => g
+  | .desc c _ => c
 
-/-- Python: the outcome of `hint(obj)`. -/
-def hintCallPy : HintDesc → Py HintRet
-  | .func r => r
-  | .static _ r => r
-  | .prop _ => .error (.typeError "'property' object is not callable")
+/-- Python: the exception of `type(obj).__length_hint__`, or the outcome of `hint(obj)`. -/
+def hintLookupPy : HintDesc → Py (Py HintRet)
+  | .func r => .ok r
+  | .static _ r => .ok r
+  | .prop _ => .ok (.error (.typeError "'property' object is not callable"))
+  | .desc _ p => p
+
+/-- Python: the outcome of `hint(obj)` when the lookup succeeds. -/
+def hintCallPy (h : HintDesc) : Py HintRet :=
+  match hintLookupPy h with
+  | .error e => .error e
+  | .ok r => r
 
 /-- What `length_hint` sees of an object. -/
 structure HintObj where
@@ -773,18 +794,35 @@ structure HintObj where
   hint : Option HintDesc
   /-- `%T` of the object. -/
   tn : String := "O"
+  /-- A function `__length_hint__` on the metaclass: `type(obj).__length_hint__` finds it when the class has none, and
+  `hint(obj)` calls it, the outcome here; `_PyObject_LookupSpecial` reads only the class's MRO and never sees it.
+  Scope limit: a data descriptor on the metaclass, which would beat the class's own attribute, is out of scope. -/
+  metaHint : Option (Py HintRet) := none
   deriving Repr
 
 /-- The `default` argument. -/
 inductive HintDefault where
   | int (n : Int)
+  /-- An instance of an `int` subclass, `bool` included. -/
+  | intSub (n : Int) (tn : String)
   /-- Not an `int`, with an `__index__` returning `n`. -/
   | indexable (n : Int)
   | other (tn : String)
   deriving Repr, DecidableEq
 
+/-- What the Python twin returns: an object, kept as it is. `len(obj)` is an exact `int`; the default and the hint
+come back as given, so `length_hint(obj, True)` is `True`. -/
+inductive HintVal where
+  | exact (n : Int)
+  | sub (n : Int) (tn : String)
+  deriving Repr, DecidableEq
+
 def isTypeError : PyExc → Bool
   | .typeError _ => true
+  | _ => false
+
+def isAttrError : PyExc → Bool
+  | .named "AttributeError" _ => true
   | _ => false
 
 def negativeHint := "__length_hint__() should return >= 0"
@@ -792,24 +830,32 @@ def negativeHint := "__length_hint__() should return >= 0"
 /-- The message of `PyObject_LengthHint`, Objects/abstract.c:147-148. -/
 def negativeHintC (o : HintObj) : String := s!"{o.tn}.__length_hint__() must return a non-negative int"
 
-/-- `length_hint`, Lib/operator.py:193-230. -/
-def lengthHintPy (o : HintObj) (default : HintDefault) : Py Int := do
+/-- `length_hint`, Lib/operator.py:193-230. The lookup of :213-216 finds the class's attribute, else the metaclass's,
+and its `AttributeError` alone is the default. -/
+def lengthHintPy (o : HintObj) (default : HintDefault) : Py HintVal := do
   let d ← match default with
-    | .int n => pure n
+    | .int n => pure (HintVal.exact n)
+    | .intSub n tn => pure (HintVal.sub n tn)
     | .indexable _ => throw (.typeError "~object cannot be interpreted as an integer")
     | .other tn => throw (.typeError s!"'{tn}' object cannot be interpreted as an integer")
   match o.len with
-  | .ok n => return n
+  | .ok n => return .exact n
   | .error e => if !isTypeError e then throw e
-  match o.hint with
+  let look : Option (Py (Py HintRet)) := match o.hint with
+    | some h => some (hintLookupPy h)
+    | none => o.metaHint.map .ok
+  match look with
   | none => pure d
-  | some h =>
-    match hintCallPy h with
+  | some (.error e) => if isAttrError e then pure d else throw e
+  | some (.ok call) =>
+    match call with
     | .error e => if isTypeError e then pure d else throw e
     | .ok .notImplemented => pure d
     | .ok (.other tn) => throw (.typeError s!"__length_hint__ must be integer, not {tn}")
     | .ok (.int v) =>
-      if v < 0 then throw (.valueError negativeHint) else pure v
+      if v < 0 then throw (.valueError negativeHint) else pure (.exact v)
+    | .ok (.intSub v tn) =>
+      if v < 0 then throw (.valueError negativeHint) else pure (.sub v tn)
 
 /-- `Py_ssize_t` conversion of a Python `int`. -/
 def toSsize (n : Int) : Py Int :=
@@ -818,10 +864,12 @@ def toSsize (n : Int) : Py Int :=
   else .ok n
 
 /-- `_operator_length_hint_impl`, Modules/_operator.c:826-831, with the argument-clinic conversion
-of `default` to `Py_ssize_t`, and `PyObject_LengthHint`, Objects/abstract.c:95-150, whose `_PyObject_LookupSpecial` failure propagates whatever its class (:113-116). -/
+of `default` to `Py_ssize_t`, and `PyObject_LengthHint`, Objects/abstract.c:95-150, whose `_PyObject_LookupSpecial`
+failure propagates whatever its class (:113-116). The result is a `Py_ssize_t`, an exact `int` in Python. -/
 def lengthHintC (o : HintObj) (default : HintDefault) : Py Int := do
   let d ← match default with
     | .int n => toSsize n
+    | .intSub n _ => toSsize n
     | .indexable n => toSsize n
     | .other tn => throw (.typeError s!"'{tn}' object cannot be interpreted as an integer")
   match o.len with
@@ -838,6 +886,9 @@ def lengthHintC (o : HintObj) (default : HintDefault) : Py Int := do
       | .ok .notImplemented => pure d
       | .ok (.other tn) => throw (.typeError s!"{o.tn}.__length_hint__() must return an int, not {tn}")
       | .ok (.int v) =>
+        let r ← toSsize v
+        if r < 0 then throw (.valueError (negativeHintC o)) else pure r
+      | .ok (.intSub v _) =>
         let r ← toSsize v
         if r < 0 then throw (.valueError (negativeHintC o)) else pure r
 

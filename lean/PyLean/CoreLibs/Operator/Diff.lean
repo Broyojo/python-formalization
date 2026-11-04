@@ -217,10 +217,10 @@ def concatArgs (a b : String) : ConcatArgs String :=
     if x == "seqadd" || x == "plain" then .ok (.val x)
     else if y == "radd" && x != "radd" then .ok (.val y)
     else .ok .notImplemented
-  { hasGetitem := seq a || a == "dict"
+  { hasGetitem := if a == "gar" then .error (valueErr "getattr") else .ok (seq a || a == "dict")
     sqConcat := if builtinSeq a then some builtinConcat else none
     sqInplace := if a == "list" then some fun x y =>
-        (if y == "plain" || y == "int" then .error (.typeError "~object is not iterable")
+        (if y == "plain" || y == "int" || y == "gar" then .error (.typeError "~object is not iterable")
          else .ok x) else none
     seqA := seq a
     seqB := seq b
@@ -238,19 +238,32 @@ def getHintObj (j : Json) : Except String HintObj := do
     | .str "typeerror" => pure (some (.error (.typeError "hint")))
     | .str "raise" => pure (some (.error (valueErr "hint")))
     | .str "str" => pure (some (.ok (.other "str")))
+    | .str "true" => pure (some (.ok (.intSub 1 "bool")))
     | v => do pure (some (.ok (.int (← v.getInt?))))
   -- how the class holds it: a function, a staticmethod taking no argument (Python's call with `obj` is a
-  -- `TypeError`), a property returning the function, or a property whose getter raises `TypeError`
-  let desc : Option HintDesc := match (j.getObjValD "desc").getStr?.toOption.getD "func" with
+  -- `TypeError`), a property returning the function, a property whose getter raises `TypeError`, a descriptor
+  -- whose `__get__(None, cls)` raises `ValueError` or `AttributeError` (with an instance it gives the function),
+  -- or a function on the metaclass
+  let kind := (j.getObjValD "desc").getStr?.toOption.getD "func"
+  let desc : Option HintDesc := match kind with
     | "static" => hint.map (fun r => .static r (.error (.typeError "takes 0 positional arguments")))
     | "prop" => hint.map (fun r => .prop (.ok r))
     | "propraise" => hint.map (fun _ => .prop (.error (.typeError "get")))
+    | "descraise" => hint.map (fun r => .desc (.ok r) (.error (valueErr "get")))
+    | "descattr" => hint.map (fun r => .desc (.ok r) (.error (.named "AttributeError" "get")))
+    | "meta" => none
     | _ => hint.map .func
-  pure ⟨len, desc, "O"⟩
+  pure ⟨len, desc, "O", if kind == "meta" then hint else none⟩
+
+def hintValJ : HintVal → Json
+  | .exact n => toJson n
+  | .sub n "bool" => toJson (n != 0)
+  | .sub n _ => toJson n
 
 def getDefault (j : Json) : Except String HintDefault := do
   match ← getStr j "dkind" with
   | "int" => pure (.int (← getInt j "d"))
+  | "bool" => pure (.intSub (if (← getInt j "d") == 0 then 0 else 1) "bool")
   | "index" => pure (.indexable (← getInt j "d"))
   | _ => pure (.other "str")
 
@@ -505,11 +518,13 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (encPy toJson (unaryOp slot op "A" 0))
   | "index" =>
     let n ← getInt j "n"
+    let isint ← getBool j "isint"
     let o : IndexObj :=
-      { isInt := if (← getBool j "isint") then some n else none
+      { isInt := if isint then some n else none
+        -- an int's class has `int.__index__` unless the subclass overrides it (the test's override answers n + 2)
         slot := match ← getStr j "slot" with
-          | "none" => none
-          | s => some (parseIndexRet s n)
+          | "none" => if isint then some (.ok (.exact n)) else none
+          | s => some (parseIndexRet s (if isint then n + 2 else n))
         inst := match ← getStr j "inst" with
           | "none" => none
           | s => some (parseIndexRet s (n + 1))
@@ -532,6 +547,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "seqadd" => "SeqAdd"
       | "radd" => "RAdd"
       | "plain" => "Plain"
+      | "gar" => "GAR"
       | o => o
     pure (encPy toJson ((if ← getBool j "inplace" then
         (if c then iconcatC A (tn a) else iconcatPy A (tn a) (tn b))
@@ -557,7 +573,9 @@ def run (fn : String) (j : Json) : Except String Json := do
         | _ => none
       pure (encPy toJson (containsOp slot same "int" b a))
   | "length_hint" =>
-    pure (encPy toJson ((if c then lengthHintC else lengthHintPy) (← getHintObj j) (← getDefault j)))
+    let o ← getHintObj j
+    let d ← getDefault j
+    if c then pure (encPy toJson (lengthHintC o d)) else pure (encPy hintValJ (lengthHintPy o d))
   | "itemgetter" =>
     let xs ← getIntList j "xs"
     let items ← (← getIntList j "items").mapM fun i => pure (⟨i, some i⟩ : ItemKey Int)

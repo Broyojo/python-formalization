@@ -156,7 +156,9 @@ def joinChars : Chain → List Char
 /-- The argument of `attrgetter` or `methodcaller`. -/
 inductive AttrArg where
   | str (s : List Char)
-  /-- A `str` subclass with this value, and what its own `split('.')` returns. C reads the characters. -/
+  /-- A `str` subclass with this value, and what its own `split('.')` returns. C reads the characters. Scope limit:
+  the split succeeds and gives `str` parts; a `split` that raises, or returns objects that are not `str`, which the
+  Python twin's `__init__` (Lib/operator.py:255) and call (:258) would meet, is out of scope. -/
   | strSub (s : List Char) (split : Chain)
   | other
   deriving Repr, DecidableEq
