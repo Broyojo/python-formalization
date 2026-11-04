@@ -89,6 +89,7 @@ def getSAny (j : Json) : Except String (SOp ⊕ SXOp) := do
   | "getstate" => return .inr .getstate
   | "setstate" => return .inr (.setstate (← getOptNats j "v") (← getOptNats j "nl") (← getInt j "pos"))
   | "truncobj" => return .inr (.truncateObj (← getTArg (← field j "a")))
+  | "writeobj" => return .inr (.writeObj (← getStr j "t"))
   | _ => return .inl (← getSOp j)
 
 def runText (fn : String) (j : Json) : Option (Except String Json) :=
@@ -128,12 +129,23 @@ def runText (fn : String) (j : Json) : Option (Except String Json) :=
     let init ← getOptNats j "init"
     let nl ← getOptNats j "newline"
     let ops ← (← (← field j "ops").getArr?).toList.mapM getSAny
+    -- a constructor argument that is not a `str` or `None`, by type name
+    let nlObj : Option String := (j.getObjVal? "nlobj" >>= Json.getStr?).toOption
+    let valObj : Option String := (j.getObjVal? "valobj" >>= Json.getStr?).toOption
     if fn = "stringx_c" then
-      match SC.init init nl with
+      let initC : Py SCState := match nlObj, valObj with
+        | some t, _ => SC.initNlObj t
+        | none, some t => SC.initValObj nl t
+        | none, none => SC.init init nl
+      match initC with
       | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)
       | .ok t => return Json.mkObj [("ok", Json.arr ((runOps stepSAnyC t ops).2.map (encPy bVal)).toArray)]
     else
-      match TP.init init nl with
+      let initP : Py TState := match nlObj, valObj with
+        | some t, _ => TP.initNlObj t
+        | none, some t => TP.initValObj nl t
+        | none, none => TP.init init nl
+      match initP with
       | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)
       | .ok t => return Json.mkObj [("ok", Json.arr ((runOps stepSAnyP t ops).2.map (encPy bVal)).toArray)]
   | _ => none

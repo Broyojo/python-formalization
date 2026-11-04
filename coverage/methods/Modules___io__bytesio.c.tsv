@@ -34,7 +34,7 @@ Modules/_io/bytesio.c	938	945	bytesio_getstate	bytesio_getstate(PyObject *op, Py
 Modules/_io/bytesio.c	948	1023	bytesio_setstate_lock_held	bytesio_setstate_lock_held(PyObject *op, PyObject *state)	modelled	pyio-bytesio-pickle-roundtrip	
 Modules/_io/bytesio.c	1026	1033	bytesio_setstate	bytesio_setstate(PyObject *op, PyObject *state)	modelled	pyio-bytesio-pickle-roundtrip	
 Modules/_io/bytesio.c	1036	1051	bytesio_dealloc	bytesio_dealloc(PyObject *op)	todo		
-Modules/_io/bytesio.c	1054	1073	bytesio_new	bytesio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_io/bytesio.c	1054	1073	bytesio_new	bytesio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	pyio-bytesio-init-twins	
 Modules/_io/bytesio.c	1084	1114	_io_BytesIO___init___impl	_io_BytesIO___init___impl(bytesio *self, PyObject *initvalue) /*[clinic end generated code: output=65c0c51e24c5b621 input=3da5a74ee4c4f1ac]*/	modelled	pyio-bytesio-reinit,pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	1117	1131	bytesio_sizeof_lock_held	bytesio_sizeof_lock_held(PyObject *op)	todo		
 Modules/_io/bytesio.c	1134	1141	bytesio_sizeof	bytesio_sizeof(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		

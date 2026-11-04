@@ -64,3 +64,4 @@ duplicates:
 lean:
   property: PyLean.PyIO.ReaderInitTwins
   theorem: PyLean.PyIO.readerInitTwins_refuted
+  also_refuted: "PyLean.PyIO.BaseChecksTwins (baseChecksTwins_refuted): the same check called directly, IOBase._checkSeekable() over a seekable() returning 1 (C UnsupportedOperation, _pyio None); C also returns True where _pyio returns None for a True answer (pyio-base-checks)"

@@ -4,6 +4,8 @@ import PyLean.CoreLibs.Coll.CounterProps5
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
+import PyLean.CoreLibs.Coll.UserListG2
+import PyLean.CoreLibs.Coll.UserStringG
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -261,7 +263,48 @@ def userListEntries : List Entry := [
     pyFns := ["UserList.reverse", "UserList.sort", "UserList.__eq__", "UserList.__le__", "UserList.__lt__"]
     statement := "With the real list on ints, reverse and sort give the reversal and the stable order, and a UserList is ==, <= and not < a list or UserList of the same items."
     source := "invariant"
-    status := .proven, prop := ``UserListIntInstance, thm := some ``userListIntInstance_proven }
+    status := .proven, prop := ``UserListIntInstance, thm := some ``userListIntInstance_proven },
+  { id := "coll-userlist-iadd-atomic", pyFile := file
+    pyFns := ["UserList.__iadd__", "UserList.extend", "UserList.__add__", "UserList.__radd__"]
+    statement := "For an iterator that yields xs then raises e, u += it raises e with u unchanged while u.extend(it) and list += it keep xs; u + it and it + u raise e; without the failure all append xs, and a non-iterable's TypeError leaves u unchanged."
+    source := "Lib/collections/__init__.py:1338-1359, :1407-1411; Objects/listobject.c list_extend"
+    status := .proven, prop := ``UserListIaddAtomic, thm := some ``userListIaddAtomic_proven },
+  { id := "coll-userlist-list-operands", pyFile := file
+    pyFns := ["UserList.__add__", "UserList.__radd__", "UserList.__iadd__"]
+    statement := "+ and radd concatenate a list subclass by its storage whatever its __iter__ does; += with an exact list appends its items, with a subclass goes through its __iter__ (list_extend), keeping the items read before an exception."
+    source := "Lib/collections/__init__.py:1338-1359; Objects/listobject.c:1478-1520"
+    status := .proven, prop := ``UserListListOperands, thm := some ``userListListOperands_proven },
+  { id := "coll-userlist-init-copy", pyFile := file, pyFns := ["UserList.__init__", "UserList.copy", "UserList.__copy__"]
+    statement := "UserList(x) holds a new list: an exact list's items copied (not aliased), a UserList's data, a list subclass's __iter__ items, another iterable's items or its exception (UserList(5) is TypeError); copy() is a new object with a new data list and no other attribute, copy.copy() a new object with a new data list and self's other attributes."
+    source := "Lib/collections/__init__.py:1288-1297, :1370-1375, :1392-1393"
+    status := .proven, prop := ``UserListInitCopy, thm := some ``userListInitCopy_proven },
+  { id := "coll-userlist-compare-p", pyFile := file
+    pyFns := ["UserList.__lt__", "UserList.__le__", "UserList.__eq__", "UserList.__gt__", "UserList.__ge__",
+      "UserList.__cast"]
+    statement := "Comparisons are list_richcompare on data with the elements' own results: lengths shortcut ==, after a prefix of identical or ==-true pairs the first pair whose == is false decides (== False, orderings return that pair's object), a raising element == raises; a UserList compares by its data; any other operand's reflected method answers (UserList([1]) == mock.ANY), else == is False and orderings raise TypeError."
+    source := "Lib/collections/__init__.py:1302-1318; Objects/listobject.c:3459-3519"
+    status := .proven, prop := ``UserListCompareP, thm := some ``userListCompareP_proven },
+  { id := "coll-userlist-repr-r", pyFile := file, pyFns := ["UserList.__repr__"]
+    statement := "repr(u) is repr(u.data): [r1, ...] from the items' reprs, [] when empty, [...] where u holds itself, and the exception of a raising item repr."
+    source := "Lib/collections/__init__.py:1299-1300; Objects/listobject.c list_repr"
+    status := .proven, prop := ``UserListReprR, thm := some ``userListReprR_proven },
+  { id := "coll-userlist-pop", pyFile := file, pyFns := ["UserList.pop"]
+    statement := "u.pop(i) returns list.pop's value and leaves its remaining items, or raises its exception; on ints u.pop() returns the last item."
+    source := "Lib/collections/__init__.py:1383-1384"
+    status := .proven, prop := ``UserListPop, thm := some ``userListPop_proven },
+  { id := "coll-userlist-sort-p", pyFile := file, pyFns := ["UserList.sort"]
+    statement := "u.sort(key=k, reverse=r) leaves u.data and raises as list.sort does on it (raising < or key, list modified during sort); a positional argument is TypeError with u unchanged."
+    source := "Lib/collections/__init__.py:1404-1405; Objects/listobject.c:2965-3227"
+    status := .proven, prop := ``UserListSortP, thm := some ``userListSortP_proven },
+  { id := "coll-userlist-len-after-prefix", pyFile := file
+    pyFns := ["UserList.__lt__", "UserList.__le__", "UserList.__gt__", "UserList.__ge__"]
+    statement := "Past a prefix of identical or ==-true pairs that exhausts u.data, the orderings compare the lengths ([a] < [b, 2] when a == b)."
+    source := "Objects/listobject.c:3497-3500"
+    status := .proven, prop := ``UserListLenAfterPrefix, thm := some ``userListLenAfterPrefix_proven },
+  { id := "coll-userlist-contains-count", pyFile := file, pyFns := ["UserList.__contains__", "UserList.count"]
+    statement := "x in u and u.count(x) use each element's == after identity; a raising == raises."
+    source := "Lib/collections/__init__.py:1320-1321, :1395-1396; Objects/listobject.c:677-690, :3387-3410"
+    status := .proven, prop := ``UserListContainsCount, thm := some ``userListContainsCount_proven }
 ]
 
 def userStringEntries : List Entry := [
@@ -286,7 +329,7 @@ def userStringEntries : List Entry := [
     pyFns := ["UserString.startswith", "UserString.endswith", "UserString.partition", "UserString.rpartition",
       "UserString.split", "UserString.rsplit", "UserString.strip", "UserString.lstrip", "UserString.rstrip",
       "UserString.center", "UserString.ljust", "UserString.rjust", "UserString.join"]
-    statement := "Every method taking a str gives the same result for the equal UserString. False: count, find, replace and others unwrap the argument; partition, split, strip, center, join and, on 3.14, startswith do not and raise TypeError."
+    statement := "Every method taking a str gives the same result for the equal UserString. False: count, find, replace and others unwrap the argument; partition, split, strip, center, join, startswith and endswith do not and raise TypeError (3.15.2 :1538-1539, :1648-1649)."
     source := "invariant: sibling methods; gh-159868 fixed startswith and endswith on main"
     status := .refuted, prop := ``UserStringUnwrapSiblings, thm := some ``userStringUnwrapSiblings_refuted
     bug := some "corelibs-userstring-unwrap-siblings" },
@@ -332,7 +375,45 @@ def userStringEntries : List Entry := [
   { id := "coll-userstring-mul", pyFile := file, pyFns := ["UserString.__mul__"]
     statement := "u * n is empty for n <= 0 and has length n * len(u), keeping the class, when that fits Py_ssize_t."
     source := "Doc/builtins/stdtypes.rst, common sequence operations"
-    status := .proven, prop := ``UserStringMul, thm := some ``userStringMul_proven }
+    status := .proven, prop := ``UserStringMul, thm := some ``userStringMul_proven },
+  { id := "coll-userstring-str-calls", pyFile := file
+    pyFns := ["UserString.__init__", "UserString.__add__", "UserString.__radd__", "UserString.__rmod__",
+      "UserString.__getnewargs__"]
+    statement := "UserString(x), u + x, x + u and x % u call str(x) on other objects and raise what its __str__ raises; __getnewargs__ is the 1-tuple (data,) and the class rebuilds u from it."
+    source := "Lib/collections/__init__.py:1420-1426, :1446-1447, :1485-1495, :1505-1506"
+    status := .proven, prop := ``UserStringStrCalls, thm := some ``userStringStrCalls_proven },
+  { id := "coll-userstring-compare-p", pyFile := file
+    pyFns := ["UserString.__eq__", "UserString.__lt__", "UserString.__le__", "UserString.__gt__", "UserString.__ge__"]
+    statement := "A UserString operand compares by its data; another object's reflected method answers with its object (UserString('a') == mock.ANY), else == is False and orderings raise TypeError."
+    source := "Lib/collections/__init__.py:1449-1472"
+    status := .proven, prop := ``UserStringCompareP, thm := some ``userStringCompareP_proven },
+  { id := "coll-userstring-no-unwrap", pyFile := file
+    pyFns := ["UserString.strip", "UserString.lstrip", "UserString.rstrip", "UserString.rpartition",
+      "UserString.split", "UserString.rsplit", "UserString.center", "UserString.ljust", "UserString.rjust",
+      "UserString.join"]
+    statement := "strip, lstrip, rstrip, rpartition, split, rsplit, center, ljust, rjust and join raise str's TypeError for a UserString argument; join(5) raises 'can only join an iterable' and a raising iterator raises before any item check."
+    source := "Lib/collections/__init__.py:1515-1652; Objects/unicodeobject.c"
+    status := .proven, prop := ``UserStringNoUnwrap, thm := some ``userStringNoUnwrap_proven },
+  { id := "coll-userstring-defaults", pyFile := file
+    pyFns := ["UserString.count", "UserString.find", "UserString.index", "UserString.rfind", "UserString.rindex",
+      "UserString.startswith", "UserString.endswith"]
+    statement := "With start and end omitted, count, find, rfind, index, rindex, startswith and endswith pass 0 and sys.maxsize and give what the str method gives with them omitted."
+    source := "Lib/collections/__init__.py:1518-1649"
+    status := .proven, prop := ``UserStringDefaults, thm := some ``userStringDefaults_proven },
+  { id := "coll-userstring-pass-through", pyFile := file
+    pyFns := ["UserString.__mod__", "UserString.format", "UserString.format_map", "UserString.translate"]
+    statement := "u % x for a tuple, single object, mapping or UserString, u.format(*args, **kwds), u.format_map(m) with __missing__, and u.translate(*args) with any table pass their arguments to the str method; translate takes exactly one argument."
+    source := "Lib/collections/__init__.py:1502-1503, :1549-1553, :1660-1661"
+    status := .proven, prop := ``UserStringPassThrough, thm := some ``userStringPassThrough_proven },
+  { id := "coll-userstring-affix-no-unwrap", pyFile := file, pyFns := ["UserString.startswith", "UserString.endswith"]
+    statement := "startswith and endswith raise str's TypeError for a UserString prefix or suffix."
+    source := "Lib/collections/__init__.py:1538-1539, :1648-1649"
+    status := .proven, prop := ``UserStringAffixNoUnwrap, thm := some ``userStringAffixNoUnwrap_proven },
+  { id := "coll-str-clinic-order", pyFile := file
+    pyFns := ["UserString.center", "UserString.ljust", "UserString.rjust", "UserString.split", "UserString.rsplit"]
+    statement := "center/ljust/rjust with a width outside Py_ssize_t and split/rsplit with such a maxsplit raise OverflowError whatever the fill or sep: clinic converts the integer first."
+    source := "Objects/clinic/unicodeobject.c.h:115-132; Objects/unicodeobject.c:12900-12912"
+    status := .proven, prop := ``StrClinicOrder, thm := some ``strClinicOrder_proven }
 ]
 
 def namedtupleEntries : List Entry := [

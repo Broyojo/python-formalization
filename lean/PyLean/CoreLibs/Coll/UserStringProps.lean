@@ -31,6 +31,36 @@ def UserStringSimulatesStr : Prop :=
 theorem unwrap_str {a : SArg} (h : a.isStr = true) : unwrap a = a := by
   cases a <;> simp_all [SArg.isStr, unwrap]
 
+theorem argStart_dflt0 (st : Option Int) : argStart (dflt0 st) = argStart st := by
+  cases st with
+  | none => simp only [dflt0, argStart, clampSsize, Option.getD_none, ssizeMin, ssizeMax]; omega
+  | some x => rfl
+
+theorem argEnd_dfltMax (en : Option Int) : argEnd (dfltMax en) = argEnd en := by
+  cases en with
+  | none => simp only [dfltMax, argEnd, clampSsize, Option.getD_none, ssizeMin, ssizeMax]; omega
+  | some x => rfl
+
+theorem strCountA_dflt (s : Seq) (a : SArg) (st en : Option Int) :
+    strCountA s a (dflt0 st) (dfltMax en) = strCountA s a st en := by
+  simp only [strCountA, strCount, argStart_dflt0, argEnd_dfltMax]
+
+theorem strFindA_dflt (s : Seq) (a : SArg) (st en : Option Int) (fwd : Bool) :
+    strFindA s a (dflt0 st) (dfltMax en) fwd = strFindA s a st en fwd := by
+  simp only [strFindA, strFind, argStart_dflt0, argEnd_dfltMax]
+
+theorem strIndexA_dflt (s : Seq) (a : SArg) (st en : Option Int) (fwd : Bool) :
+    strIndexA s a (dflt0 st) (dfltMax en) fwd = strIndexA s a st en fwd := by
+  simp only [strIndexA, strIndex, argStart_dflt0, argEnd_dfltMax]
+
+theorem strStartswithA_dflt (s : Seq) (a : AffixArg) (st en : Option Int) :
+    strStartswithA s a (dflt0 st) (dfltMax en) = strStartswithA s a st en := by
+  simp only [strStartswithA, strStartswith, argStart_dflt0, argEnd_dfltMax]
+
+theorem strEndswithA_dflt (s : Seq) (a : AffixArg) (st en : Option Int) :
+    strEndswithA s a (dflt0 st) (dfltMax en) = strEndswithA s a st en := by
+  simp only [strEndswithA, strEndswith, argStart_dflt0, argEnd_dfltMax]
+
 theorem userStringSimulatesStr_proven : UserStringSimulatesStr := by
   intro ops c u h
   cases c with
@@ -42,19 +72,19 @@ theorem userStringSimulatesStr_proven : UserStringSimulatesStr := by
   | zfill w => exact map_plain_us u _
   | expandtabs t => exact map_plain_us u _
   | count a st en =>
-    simp only [usCall, strCall, usCount, unwrap_str (a := a) h]
+    simp only [usCall, strCall, usCount, strCountA_dflt, unwrap_str (a := a) h]
     cases strCountA u.data a st en <;> rfl
   | find a st en fwd =>
-    simp only [usCall, strCall, usFind, unwrap_str (a := a) h]
+    simp only [usCall, strCall, usFind, strFindA_dflt, unwrap_str (a := a) h]
     cases strFindA u.data a st en fwd <;> rfl
   | index a st en fwd =>
-    simp only [usCall, strCall, usIndex, unwrap_str (a := a) h]
+    simp only [usCall, strCall, usIndex, strIndexA_dflt, unwrap_str (a := a) h]
     cases strIndexA u.data a st en fwd <;> rfl
   | startswith a st en =>
-    simp only [usCall, strCall, usStartswith]
+    simp only [usCall, strCall, usStartswith, strStartswithA_dflt]
     cases strStartswithA u.data a st en <;> rfl
   | endswith a st en =>
-    simp only [usCall, strCall, usEndswith]
+    simp only [usCall, strCall, usEndswith, strEndswithA_dflt]
     cases strEndswithA u.data a st en <;> rfl
   | removeprefix a =>
     simp only [usCall, strCall, usRemoveprefix, unwrap_str (a := a) h]
@@ -93,9 +123,9 @@ theorem userStringSimulatesStr_proven : UserStringSimulatesStr := by
   | mul n => exact map_plain_us u _
   | getitem i => exact map_plain_us u _
   | getslice s => exact map_plain_us u _
-  | format args =>
+  | format args kw =>
     simp only [usCall, strCall, usFormat]
-    cases ops.format u.data args <;> rfl
+    cases ops.format u.data args kw <;> rfl
   | formatMap m =>
     simp only [usCall, strCall, usFormatMap]
     cases ops.formatMap u.data m <;> rfl
@@ -130,10 +160,9 @@ def trivialOps : UniOps where
   case _ s := s
   pred _ _ := false
   encode s _ _ := .ok s
-  format s _ := .ok s
+  format s _ _ := .ok s
   formatMap s _ := .ok s
   mod s _ := .ok s
-  modUser s _ := .ok s
   translate s _ := .ok s
   hash _ := 0
   repr _ := ""
@@ -335,7 +364,7 @@ def UserStringConstructAdd : Prop :=
     usNew cls (.user u.data) = ⟨cls, u.data⟩ ∧
     usNew u.cls (.str (usGetnewargs u)) = u ∧
     usNew u.cls (.str (usStr u)) = u ∧
-    usRmod ops u t = (ops.modUser t u.data).map (fun d => ⟨u.cls, d⟩) ∧
+    usRmod ops u t = (ops.mod t (.user u.data)).map (fun d => ⟨u.cls, d⟩) ∧
     usEncode ops u none none = ops.encode u.data "utf-8" "strict" ∧
     ((usAdd u a).data = u.data ++ (usNew cls a).data) ∧
     ((usRadd u a).data = (usNew cls a).data ++ u.data) ∧

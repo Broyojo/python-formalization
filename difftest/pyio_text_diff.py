@@ -31,6 +31,8 @@ def text(rng, inner):
 
 
 SMALL = [None, -1, 0, 1, 2, 3, 5, 8, 12, 100]
+# non-str arguments of StringIO.write, by type name
+TOBJ = {"int": 1, "bytes": b"x", "NoneType": None, "float": 1.5, "list": []}
 ENCS = ["utf-8", "utf-8", "utf-8", "ascii", "latin-1", "utf-16", "utf-16-le", "utf-16-be", "utf-32",
         "utf-32-le", "utf-32-be"]
 ALPHA = {"utf-8": [97, 98, 13, 10, 233, 8364, 128512, 0], "ascii": [97, 98, 13, 10, 0],
@@ -131,10 +133,19 @@ def gen_stringx(rng):
     fn = rng.choice(["stringx_c", "stringx_py"])
     c = {"mod": "pyio", "fn": fn}
     c.update(pyio_diff.gen_stringio(rng, fn))
+    # a constructor argument that is not a str or None
+    r = rng.random()
+    if r < 0.05:
+        c["nlobj"] = rng.choice([t for t in TOBJ if t != "NoneType"])
+    elif r < 0.1:
+        c["valobj"] = rng.choice([t for t in TOBJ if t != "NoneType"])
     for _ in range(rng.randint(1, 5)):
         k = rng.choice(["readable", "writable", "seekable", "flush", "isatty", "fileno", "detach", "encoding",
-                        "errors", "line_buffering", "name", "getstate", "setstate", "truncobj", "truncobj"])
+                        "errors", "line_buffering", "name", "getstate", "setstate", "truncobj", "truncobj",
+                        "writeobj", "writeobj"])
         op = {"op": k}
+        if k == "writeobj":
+            op["t"] = rng.choice(list(TOBJ))
         if k in ("getstate", "setstate", "truncobj") and fn == "stringx_py":
             continue
         if k == "truncobj":
@@ -236,6 +247,10 @@ def run_stringx(c):
     m = M[key]
     init = None if c["init"] is None else "".join(map(chr, c["init"]))
     nl = None if c["newline"] is None else "".join(map(chr, c["newline"]))
+    if "nlobj" in c:
+        nl = TOBJ[c["nlobj"]]
+    if "valobj" in c:
+        init = TOBJ[c["valobj"]]
     try:
         f = m.StringIO(init, nl)
     except Exception as e:
@@ -259,6 +274,8 @@ def run_stringx(c):
                 if not f.closed:
                     f.readline(0)
                 v = f.truncate(pyio_diff.make_targ(f, op["a"], []))
+            elif k == "writeobj":
+                v = f.write(TOBJ[op["t"]])
             elif k in ("readable", "writable", "seekable", "flush", "isatty", "fileno", "detach"):
                 v = getattr(f, k)()
             else:

@@ -21,10 +21,10 @@ Lib/_pyio.py	482	485	IOBase.__enter__	__enter__(self)	modelled	pyio-base-closed-
 Lib/_pyio.py	487	489	IOBase.__exit__	__exit__(self, *args)	todo		
 Lib/_pyio.py	495	501	IOBase.fileno	fileno(self)	todo		review: `self._unsupported(\"fileno\")` (:501) is BP.step .fileno, but BaseUnsupportedOps leaves the message existential and is rfl on a hard-coded error, so any UnsupportedOperation passes.
 Lib/_pyio.py	503	509	IOBase.isatty	isatty(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-inquiries	
-Lib/_pyio.py	513	553	IOBase.readline	readline(self, size=-1)	modelled	pyio-bufferedreader-readline-bound,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-alloc-fail,pyio-iobase-readline-readahead	
+Lib/_pyio.py	513	553	IOBase.readline	readline(self, size=-1)	modelled	pyio-bufferedreader-readline-bound,pyio-bytesio-index-arg-spec,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-alloc-fail,pyio-iobase-readline-readahead	
 Lib/_pyio.py	555	557	IOBase.__iter__	__iter__(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	559	563	IOBase.__next__	__next__(self)	modelled	pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
-Lib/_pyio.py	565	581	IOBase.readlines	readlines(self, hint=None)	modelled	pyio-stringio-tell-after-reads	
+Lib/_pyio.py	565	581	IOBase.readlines	readlines(self, hint=None)	modelled	pyio-bytesio-readlines-float-twins,pyio-bytesio-twins-same-class-core,pyio-stringio-tell-after-reads	
 Lib/_pyio.py	583	591	IOBase.writelines	writelines(self, lines)	todo		review: BytesIOWritelines assumes s.closed = false and concludes only when every write succeeds, so the closed refusal (:589), stopping and propagating at the first failing write, and an iterator that raises (lines is a List) are in no theorem: a writelines that skipped failed writes or ignored closed passes; BP.writelinesLoop mirrors the failure path but no theorem uses it.
 Lib/_pyio.py	610	627	RawIOBase.read	read(self, size=-1)	todo		changed-in-3.15: candidates:pyio-bytesio-read-after-seek
 Lib/_pyio.py	629	638	RawIOBase.readall	readall(self)	todo		changed-in-3.15:
@@ -144,7 +144,7 @@ Lib/_pyio.py	1938	1945	TextIOBase.detach	detach(self)	todo
 Lib/_pyio.py	1948	1950	TextIOBase.encoding	encoding(self)	todo		
 Lib/_pyio.py	1953	1960	TextIOBase.newlines	newlines(self)	todo		
 Lib/_pyio.py	1963	1967	TextIOBase.errors	errors(self)	todo		
-Lib/_pyio.py	1979	1984	IncrementalNewlineDecoder.__init__	__init__(self, decoder, translate, errors='strict')	todo		
+Lib/_pyio.py	1979	1984	IncrementalNewlineDecoder.__init__	__init__(self, decoder, translate, errors='strict')	modelled	pyio-nldec-chunks	
 Lib/_pyio.py	1986	2015	IncrementalNewlineDecoder.decode	decode(self, input, final=False)	todo		review: Dec.decode mirrors :1988-2015, but both entries reach it only through StringIO.getvalue, which resets the decoder and decodes with final=True: the pendingcr retention and prefix (:1992-2000, the class's stated purpose of returning rn in one piece) and the seennl record never affect a stated result, so a decode without them passes.
 Lib/_pyio.py	2017	2026	IncrementalNewlineDecoder.getstate	getstate(self)	todo		review: In writes-twins-not-none getvalue saves the state and restores it afterwards, but the restored state is never observed (only write counts and getvalue strings are compared), so any getstate passes; for 'n', 'r', 'rn' the decoder is not even an IncrementalNewlineDecoder.
 Lib/_pyio.py	2028	2032	IncrementalNewlineDecoder.setstate	setstate(self, state)	todo		review: As getstate: the state getvalue restores (:2771) is never read by the theorem, so a no-op setstate passes.
