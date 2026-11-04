@@ -462,7 +462,7 @@ theorem bytesIOInquiries_proven : BytesIOInquiries := by
 
 /-- `writelines(ls)` on an open BytesIO is `write(l)` for each `l` in turn,
 stopping at the first failure ("equivalent to calling write() for each
-element", bytesio.c:846-847): same final state and outcome as the run of
+element", bytesio.c:845-846): same final state and outcome as the run of
 `write` operations (both twins). -/
 def BytesIOWritelines : Prop := ∀ (s : BState) (ls : List (List Nat)), s.closed = false →
   ∃ (rs : List (Py Val)),
