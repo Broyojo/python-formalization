@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.Pickle.Enc
+import PyLean.Pickle.EncRec
 import PyLean.Pickle.DecC
 import PyLean.Pickle.Tools
 
@@ -8,6 +9,9 @@ Differential-testing handler for `pickle` cases (`"mod": "pickle"`).
 
 * `dumps`: `{"impl": "c"|"py", "proto": p, "val": V}` returns the pickle as a
   list of byte values.
+* `dumpsr`: `{"impl", "proto": P, "bufcb": bool, "frames": n, "val": V}`, the bounded twins of
+  `EncRec.lean`: `P` is a protocol object, `frames` the frames left where `pickle._dumps` is
+  called (Python only; C runs with 100000 levels of stack room).
 * `loads`: `{"impl": "c"|"py", "data": [bytes]}` returns the decoded object.
 * `roundtrip`: `{"enc": .., "dec": .., "proto": p, "val": V}` returns
   `loads(dumps(val, p))`.
@@ -151,6 +155,15 @@ def getMemoPairs (j : Json) : Except String (List (Int × String)) := do
     | _ => throw "bad memo pair"
   return ps.foldl (fun m kv => memoStore m kv.1 kv.2) []
 
+/-- `{"k": "none"}`, `{"k": "int", "v": hex}`, `{"k": "float", "bits": n}`, `{"k": "other", "t": name}`. -/
+def getProtoArg (j : Json) : Except String ProtoArg := do
+  match ← getStr j "k" with
+  | "none" => return .none
+  | "int" => return .int (← parseHexInt (← getStr j "v"))
+  | "float" => return .float (Binary64.F64.ofBits (← getNat j "bits"))
+  | "other" => return .other (← getStr j "t")
+  | k => throw s!"bad protocol kind {k}"
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "genops" =>
@@ -169,6 +182,13 @@ def run (fn : String) (j : Json) : Except String Json := do
     let x ← getPV (← field j "val")
     let p ← getInt j "proto"
     return encPy bytesJson (if isC then cDumps x p else pyDumps x p)
+  | "dumpsr" =>
+    -- `frames`: frames left where `pickle._dumps` is called; C gets ample stack room
+    let isC := (← getStr j "impl") == "c"
+    let x ← getPV (← field j "val")
+    let a : DumpsArgs := { protocol := ← getProtoArg (← field j "proto"), bufcb := ← getBool j "bufcb" }
+    let frames ← getNat j "frames"
+    return encPy bytesJson (if isC then cDumpsA 100000 x a else pyDumpsA frames x a)
   | "loads" =>
     let isC := (← getStr j "impl") == "c"
     let d ← getBytesArr (← field j "data")
