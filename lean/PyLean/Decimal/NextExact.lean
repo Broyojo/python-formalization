@@ -756,4 +756,217 @@ theorem nextPlus_ok_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (s : Bo
       rw [ha]
       exact ⟨y, rfl⟩
 
+/-! ## `next_minus` is `next_plus` mirrored -/
+
+/-- Negate the value of a result, keeping the flags. -/
+def negRes (r : Py (Dec × List Signal)) : Py (Dec × List Signal) :=
+  match r with
+  | .ok (v, fl) => .ok (negate v, fl)
+  | .error x => .error x
+
+theorem sigRun_negate (c : Ctx) : ∀ (ss fl : List Signal) (v : Dec),
+    sigRun c ss fl (negate v) = negRes (sigRun c ss fl v)
+  | [], fl, v => rfl
+  | s :: ss, fl, v => by
+    simp only [sigRun]
+    split
+    · rfl
+    · exact sigRun_negate c ss _ v
+
+theorem negate_negate (d : Dec) : negate (negate d) = d := by
+  cases d <;> simp [negate, Dec.withSign, Dec.neg]
+
+theorem negRes_negRes (r : Py (Dec × List Signal)) : negRes (negRes r) = r := by
+  cases r with
+  | error x => rfl
+  | ok p => obtain ⟨v, fl⟩ := p; simp [negRes, negate_negate]
+
+theorem ite_negate_fin (neg b : Bool) (x : Dec) (cf : Nat) (ef : Int) :
+    (if b = true then negate x else Dec.fin neg cf ef) = negate (if b = true then x else Dec.fin (!neg) cf ef) := by
+  cases b <;> cases neg <;> rfl
+
+/-- `_fix` under `ROUND_FLOOR` of a value is `_fix` under `ROUND_CEILING` of its negation, negated
+(the two modes are each other's mirror, overflow values included). -/
+theorem fixSpec_floor (c : Ctx) (neg : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    fixSpec (quietCtx c .floor) neg co e fl = negRes (fixSpec (quietCtx c .ceiling) (!neg) co e fl) := by
+  have hov : ∀ n, overflowResult (quietCtx c .floor) n = negate (overflowResult (quietCtx c .ceiling) (!n)) := by
+    intro n; cases n <;> simp [overflowResult, quietCtx, negate, Dec.withSign, Dec.neg]
+  have hrs : ∀ q0 r b, roundSpec (quietCtx c .floor).rounding neg q0 r b =
+      roundSpec (quietCtx c .ceiling).rounding (!neg) q0 r b := by
+    intro q0 r b; cases neg <;> simp [roundSpec, quietCtx]
+  have hz : ∀ v : Dec, isZero (negate v) = isZero v := by
+    intro v
+    cases v with
+    | fin n co e => cases co <;> rfl
+    | _ => rfl
+  unfold fixSpec
+  simp only [hrs]
+  have hp : (quietCtx c .floor).prec = (quietCtx c .ceiling).prec := rfl
+  have he1 : (quietCtx c .floor).emax = (quietCtx c .ceiling).emax := rfl
+  have he2 : (quietCtx c .floor).emin = (quietCtx c .ceiling).emin := rfl
+  have hcl : (quietCtx c .floor).clamp = (quietCtx c .ceiling).clamp := rfl
+  have htr : (quietCtx c .floor).traps = (quietCtx c .ceiling).traps := rfl
+  have hsr : ∀ ss fl v, sigRun (quietCtx c .floor) ss fl v = sigRun (quietCtx c .ceiling) ss fl v := by
+    intro ss; induction ss with
+    | nil => intro fl v; rfl
+    | cons s ss ih => intro fl v; simp only [sigRun, htr, ih]
+  simp only [hp, he1, he2, hcl, hsr, hov]
+  split
+  · rw [sigRun_negate]
+  · split
+    · split
+      · have : Dec.fin neg = fun c e => negate (Dec.fin (!neg) c e) := by
+          funext c e; cases neg <;> rfl
+        rw [this, sigRun_negate]
+      · have : Dec.fin neg co e = negate (Dec.fin (!neg) co e) := by cases neg <;> rfl
+        rw [this, sigRun_negate]
+    · split
+      · rfl
+      · simp only [ite_negate_fin neg]
+        rw [hz, sigRun_negate]
+
+theorem quiet_prec (c : Ctx) (m : Rounding) : (quietCtx c m).prec = c.prec := rfl
+theorem quiet_etiny (c : Ctx) (m : Rounding) : (quietCtx c m).etiny = c.etiny := rfl
+theorem quiet_emin (c : Ctx) (m : Rounding) : (quietCtx c m).emin = c.emin := rfl
+theorem quiet_emax (c : Ctx) (m : Rounding) : (quietCtx c m).emax = c.emax := rfl
+theorem quiet_clamp (c : Ctx) (m : Rounding) : (quietCtx c m).clamp = c.clamp := rfl
+
+theorem sigRun_congr (c1 c2 : Ctx) (h : c1.traps = c2.traps) :
+    ∀ (ss fl : List Signal) (v : Dec), sigRun c1 ss fl v = sigRun c2 ss fl v
+  | [], _, _ => rfl
+  | s :: ss, fl, v => by
+    simp only [sigRun, h]
+    split
+    · rfl
+    · exact sigRun_congr c1 c2 h ss _ v
+
+theorem zero_branch_neg (q1 q2 : Ctx) (hs : ∀ ss fl v, sigRun q1 ss fl v = sigRun q2 ss fl v)
+    (P : Prop) [Decidable P] (neg : Bool) (x e : Int) (fl : List Signal) :
+    (if P then sigRun q1 [.clamped] fl (.fin neg 0 x) else .ok (.fin neg 0 e, fl)) =
+      negRes (if P then sigRun q2 [.clamped] fl (.fin (!neg) 0 x) else .ok (.fin (!neg) 0 e, fl)) := by
+  have hv : ∀ x, Dec.fin neg 0 x = negate (Dec.fin (!neg) 0 x) := by intro x; cases neg <;> rfl
+  by_cases hP : P
+  · rw [if_pos hP, if_pos hP, hv, hs, sigRun_negate]
+  · rw [if_neg hP, if_neg hP, hv]; rfl
+
+theorem fix_floor (c : Ctx) (hp : 1 ≤ c.prec) (neg : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    (fix (quietCtx c .floor) (.fin neg co e)).run fl =
+      negRes ((fix (quietCtx c .ceiling) (.fin (!neg) co e)).run fl) := by
+  by_cases hc : co = 0
+  · subst hc
+    rw [(fixExact_proven (quietCtx c .floor) fl hp).2.1 neg e,
+      (fixExact_proven (quietCtx c .ceiling) fl hp).2.1 (!neg) e]
+    have hv : ∀ x, Dec.fin neg 0 x = negate (Dec.fin (!neg) 0 x) := by intro x; cases neg <;> rfl
+    have hs := sigRun_congr (quietCtx c .floor) (quietCtx c .ceiling) rfl
+    simp only [quiet_emin, quiet_emax, quiet_clamp, quiet_prec]
+    exact zero_branch_neg _ _ hs _ neg _ e fl
+  · rw [fixExact_fin (quietCtx c .floor) neg co e fl hp hc, fixExact_fin (quietCtx c .ceiling) (!neg) co e fl hp hc,
+      fixSpec_floor]
+
+theorem exactSum_neg (s : Bool) (co : Nat) (e eb : Int) :
+    exactSum s co e true 1 eb = -(exactSum (!s) co e false 1 eb) := by
+  cases s <;> simp [exactSum] <;> omega
+
+/-- `__add__` under `ROUND_FLOOR` of `x + (-1E(eb))` is `__add__` under `ROUND_CEILING` of
+`(-x) + 1E(eb)`, negated. -/
+theorem add_floor (c : Ctx) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (e eb : Int) (fl : List Signal) :
+    (add (quietCtx c .floor) (.fin s co e) (.fin true 1 eb)).run fl =
+      negRes ((add (quietCtx c .ceiling) (.fin (!s) co e) (.fin false 1 eb)).run fl) := by
+  by_cases hc : co = 0
+  · subst hc
+    rw [add_zero_left (quietCtx c .floor) fl hp s e true 1 eb (by decide),
+      add_zero_left (quietCtx c .ceiling) fl hp (!s) e false 1 eb (by decide),
+      quiet_prec, quiet_prec, fixSpec_floor]
+    rfl
+  · rw [add_fin_exact (quietCtx c .floor) fl hp s co e true 1 eb hc (by decide),
+      add_fin_exact (quietCtx c .ceiling) fl hp (!s) co e false 1 eb hc (by decide), exactSum_neg, quiet_prec,
+      quiet_prec]
+    split
+    · rfl
+    split
+    · rfl
+    split
+    · rename_i h0
+      have h0' : exactSum (!s) co e false 1 eb = 0 := by omega
+      simp only [h0', ↓reduceIte]
+      have h1 : decide ((quietCtx c .floor).rounding = .floor) = true := rfl
+      have h2 : decide ((quietCtx c .ceiling).rounding = .floor) = false := rfl
+      rw [h1, h2, fix_floor c hp]
+      rfl
+    · rename_i h0
+      have h0' : ¬ exactSum (!s) co e false 1 eb = 0 := by omega
+      simp only [h0', ↓reduceIte, Int.natAbs_neg]
+      split
+      · rfl
+      · have hd : decide (-exactSum (!s) co e false 1 eb < 0) = !decide (exactSum (!s) co e false 1 eb < 0) := by
+          by_cases hx : exactSum (!s) co e false 1 eb < 0 <;> simp [hx] <;> omega
+        rw [hd, fixSpec_floor, Bool.not_not]
+
+theorem sgnVal_not (n : Bool) (x : Nat) : sgnVal (!n) x = -sgnVal n x := by
+  cases n <;> simp [sgnVal]
+
+theorem cmp_negate (v : Dec) (s : Bool) (co : Nat) (e : Int) :
+    (cmpVal (negate v) (.fin s co e) = .eq) ↔ (cmpVal v (.fin (!s) co e) = .eq) := by
+  cases v with
+  | fin n c1 e1 =>
+    show cmpVal (.fin (!n) c1 e1) (.fin s co e) = .eq ↔ cmpVal (.fin n c1 e1) (.fin (!s) co e) = .eq
+    rw [cmpVal_fin_exact, cmpVal_fin_exact]
+    simp only [finOrder, ordOf_eq_iff, sgnVal_not]
+    omega
+  | inf n =>
+    show (cmpVal (.inf (!n)) (.fin s co e) = .eq) ↔ (cmpVal (.inf n) (.fin (!s) co e) = .eq)
+    cases n <;> simp [cmpVal]
+  | nan n sg p =>
+    show (cmpVal (.nan (!n) sg p) (.fin s co e) = .eq) ↔ (cmpVal (.nan n sg p) (.fin (!s) co e) = .eq)
+    constructor <;> intro _ <;> rfl
+
+theorem nextMinus_fin_run (c : Ctx) (s : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    (nextMinus c (.fin s co e)).run fl =
+      match (fix (quietCtx c .floor) (.fin s co e)).run fl with
+      | .error x => .error x
+      | .ok (v, fl2) =>
+        if cmpVal v (.fin s co e) ≠ .eq then .ok (v, fl)
+        else match (sub (quietCtx c .floor) (.fin s co e)
+            (.fin false 1 ((quietCtx c .floor).etiny - 1))).run fl2 with
+          | .error x => .error x
+          | .ok (y, _) => .ok (y, fl) := by
+  simp only [nextMinus, checkNans, isinfinity, StateT.run, bind, StateT.bind, pure, StateT.pure,
+    Except.bind, Except.pure]
+  simp only [show ¬ ((0 : Int) = 1) by decide, show ¬ ((0 : Int) = -1) by decide, ↓reduceIte]
+  unfold quietly
+  simp only [StateT.bind, bind, Except.bind, pure, Except.pure]
+  cases fix (quietCtx c .floor) (.fin s co e) fl with
+  | error x => rfl
+  | ok p =>
+    obtain ⟨v, fl2⟩ := p
+    simp only
+    by_cases hc : cmpVal v (.fin s co e) ≠ .eq
+    · simp only [hc, ↓reduceIte, ne_eq, not_false_eq_true]; rfl
+    · simp only [hc, ↓reduceIte]
+      cases sub (quietCtx c .floor) (.fin s co e) (.fin false 1 ((quietCtx c .floor).etiny - 1)) fl2 with
+      | error x => rfl
+      | ok p => rfl
+
+/-- `next_minus` is `next_plus` mirrored: `x.next_minus() == x.copy_negate().next_plus().copy_negate()`
+for every operand, NaNs and infinities included, with the same flags. -/
+theorem nextMinus_twin_fin (c : Ctx) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    (nextMinus c (.fin s co e)).run fl = negRes ((nextPlus c (.fin (!s) co e)).run fl) := by
+  rw [nextMinus_fin_run, nextPlus_fin_run, fix_floor c hp]
+  cases hf : (fix (quietCtx c .ceiling) (.fin (!s) co e)).run fl with
+  | error x => rfl
+  | ok p =>
+    obtain ⟨v, fl2⟩ := p
+    simp only [negRes]
+    have hcm := cmp_negate v s co e
+    by_cases hc : cmpVal v (.fin (!s) co e) = .eq
+    · have hc' : cmpVal (negate v) (.fin s co e) = .eq := hcm.mpr hc
+      simp only [hc, hc', ne_eq, not_true_eq_false, ↓reduceIte]
+      rw [show (quietCtx c .floor).etiny = (quietCtx c .ceiling).etiny from rfl]
+      rw [sub_fin_run, show (!false) = true from rfl, add_floor c hp]
+      cases (add (quietCtx c .ceiling) (.fin (!s) co e) (.fin false 1 ((quietCtx c .ceiling).etiny - 1))).run fl2 with
+      | error x => rfl
+      | ok p => rfl
+    · have hc' : ¬ cmpVal (negate v) (.fin s co e) = .eq := fun h => hc (hcm.mp h)
+      simp only [hc, hc', ne_eq, not_false_eq_true, ↓reduceIte]
+
 end PyLean.Decimal
