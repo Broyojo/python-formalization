@@ -95,70 +95,70 @@ Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	modelled	
 Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	modelled	coll-userdict-copy-o	
 Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	coll-userdict-popitem-lifo	
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	
-Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	modelled	coll-userlist-observers	
-Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	todo		review: `ulNew` merges the exact `type(initlist) == type(self.data)` test (:1292) with the isinstance sense of `.list`, so a list subclass, which goes through `list(initlist)` and its `__iter__`, is not distinguished; `.iter ty l` is pre-materialised, so an iterator that raises cannot occur; and with no identity, an `__init__` that aliased `initlist` instead of copying it (`self.data[:] = initlist`) passes the rfl conjuncts of UserListOperandsAgree.
+Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	todo		review: `ListOps.repr : List α → String` can neither raise nor recurse, so an element `__repr__` that raises and the `[...]` of a UserList that holds itself cannot be expressed, and UserListObservers states only `ulRepr ops u = ops.repr u.data`, the definition (UserDict.__repr__ pins both cases).
+Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	todo		review: `ListOps.rich` returns an infallible `Bool`, but list comparison returns the result of the first differing pair's `<`, which can be any object, and an element `__eq__` can raise; `ulCmp` fixes a non-list operand to TypeError without trying its reflected `__gt__`; the theorems only restate `ulCmp = ops.rich` and, on ints, that `l < l` is false.
+Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	todo		review: As `__lt__`: the `Bool`-valued, infallible `rich` cannot hold the element comparison's object or its exception, and a non-list operand's reflected `__ge__` is never tried; on ints only `l <= l` is checked.
+Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	todo		review: `ulCmp` fixes `==` against a non-list operand to `False`, but `self.data == other` then calls the operand's reflected `__eq__` (`UserList([1]) == unittest.mock.ANY` is True); `rich` is an infallible `Bool`, though element `__eq__` can raise or return any object; on ints only reflexivity is checked.
+Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	todo		review: As `__lt__`, with only UserListOperandsAgree's restatement `ulCmp = ops.rich` and no statement at all on a non-list operand.
+Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	todo		review: As `__gt__`: the infallible `Bool` `rich` cannot hold the element comparison's result or its exception, and the reflected `__le__` of a non-list operand is not modelled.
+Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	todo		review: `ulCast` mirrors :1317-1318, but no theorem states `ulCmp` on an `.iter` or `.noniter` operand, so a `__cast` that turned any iterable into a list (making `UserList([1]) == (1,)` true) passes UserListOperandsAgree; its docstring also cites `__cast` at :1266-1267, which is UserDict code in 3.15.2.
+Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	todo		review: `ListOps.contains : List α → α → Bool` cannot raise, so an element `__eq__` that raises inside `item in self.data` cannot be expressed, and the conjunct is the rfl definition.
 Lib/collections/__init__.py	1323	1324	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1326	1330	UserList.__getitem__	__getitem__(self, i)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1332	1333	UserList.__setitem__	__setitem__(self, i, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1335	1336	UserList.__delitem__	__delitem__(self, i)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
+Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	todo		review: The three branches are mirrored, but `.iter ty l` is an already-materialised list, so `list(other)` failing part way (an `__iter__` or `__next__` that raises) cannot be expressed; only the non-iterable TypeError is.
+Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	todo		review: As `__add__`: `list(other)` on a raising iterator is not expressible, since `.iter` holds the items already read.
+Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	todo		review: `.iter` is pre-materialised, so the one observable difference of this body cannot be expressed: `self.data += list(other)` leaves `u` unchanged when the iterator raises part way, while `list.__iadd__` and `UserList.extend` keep the items already read; UserListOperandsAgree's `ulIadd = ulExtend` would be false there, and UserListSimulatesList drives `+=` with list operands only.
 Lib/collections/__init__.py	1361	1362	UserList.__mul__	__mul__(self, n)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1366	1368	UserList.__imul__	__imul__(self, n)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	modelled	coll-userlist-copies	withdrawn: = on a value structure: a copy returning self passes
+Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	todo		review: `UL` has no identity or `__dict__`, so a `__copy__` that returned `self` or shared `data` satisfies `ulCopyDunder u = u`; the row's own note already withdraws it.
 Lib/collections/__init__.py	1377	1378	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1380	1381	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	todo		review: `ulPop` still cites `@3.14.7:1328-1329` (3.15.2 is :1383-1384), and UserListSimulatesList drops the popped value through `(·.2)`, so a `pop` that returned the wrong element passes; no entry states the return value.
 Lib/collections/__init__.py	1386	1387	UserList.remove	remove(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1389	1390	UserList.clear	clear(self)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-userlist-copies	withdrawn: = on a value structure: a copy returning self passes
-Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-observers	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	todo		review: `ulCopy u = .ok u` is `=` on a value structure, so a `copy` that returned `self` passes; the row's own note already withdraws it.
+Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	todo		review: `ListOps.count : List α → α → Int` cannot raise, so an element `__eq__` that raises inside `self.data.count(item)` cannot be expressed, and the conjunct is the rfl definition.
 Lib/collections/__init__.py	1398	1399	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1401	1402	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
-Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	todo		review: `ListOps.sort : List α → Bool → List α` drops `key` and the positional `*args` and cannot raise, so a raising element `__lt__` or `key`, the TypeError for a positional argument, and `ValueError('list modified during sort')` (Objects/listobject.c:3197) cannot be expressed; UserListIntInstance only checks `ops.sort` on ints by rfl.
+Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	todo		review: `.iter ty l` is pre-materialised, so `list.extend` on an iterator that raises part way, which keeps the items read so far, cannot be expressed, and UserListSimulatesList drives `extend` with list operands only.
+Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	todo		review: `usNew` takes `str(seq)` as the given `text` of `.other`, so a `__str__` that raises cannot be expressed; a str subclass, which the `isinstance(seq, str)` branch stores as is, is merged with `str`; and the `usNew` conjuncts are its definition.
 Lib/collections/__init__.py	1428	1429	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	
 Lib/collections/__init__.py	1431	1432	UserString.__repr__	__repr__(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1434	1435	UserString.__int__	__int__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1437	1438	UserString.__float__	__float__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1440	1441	UserString.__complex__	__complex__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1443	1444	UserString.__hash__	__hash__(self)	modelled	coll-userstring-order-hash,coll-userstring-simulates	
-Lib/collections/__init__.py	1446	1447	UserString.__getnewargs__	__getnewargs__(self)	modelled	coll-userstring-construct-add	
-Lib/collections/__init__.py	1449	1452	UserString.__eq__	__eq__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1454	1457	UserString.__lt__	__lt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1459	1462	UserString.__le__	__le__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1464	1467	UserString.__gt__	__gt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1469	1472	UserString.__ge__	__ge__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1446	1447	UserString.__getnewargs__	__getnewargs__(self)	todo		review: `usGetnewargs` returns the bare `Seq`, not the 1-tuple `(self.data[:],)`, so a `__getnewargs__` that returned the string itself passes the round trip, although copy and pickle reject it (\"__getnewargs__ should return a tuple\", Objects/typeobject.c:8217).
+Lib/collections/__init__.py	1449	1452	UserString.__eq__	__eq__(self, string)	todo		review: `strRich` fixes `==` against an operand that is neither str nor UserString to `False`, but `self.data == string` then calls the operand's reflected `__eq__` (`UserString('a') == unittest.mock.ANY` is True) and returns whatever it gives, which `Py Bool` cannot hold; no theorem states that path.
+Lib/collections/__init__.py	1454	1457	UserString.__lt__	__lt__(self, string)	todo		review: `strRich` fixes `<` against another operand to TypeError, but CPython first tries the operand's reflected `__gt__` and returns its object; `Py Bool` cannot hold it, and no theorem states that path.
+Lib/collections/__init__.py	1459	1462	UserString.__le__	__le__(self, string)	todo		review: As `__lt__`: the reflected `__ge__` of a non-str operand and its arbitrary result are not modelled.
+Lib/collections/__init__.py	1464	1467	UserString.__gt__	__gt__(self, string)	todo		review: As `__lt__`: the reflected `__lt__` of a non-str operand and its arbitrary result are not modelled.
+Lib/collections/__init__.py	1469	1472	UserString.__ge__	__ge__(self, string)	todo		review: As `__lt__`: the reflected `__le__` of a non-str operand and its arbitrary result are not modelled.
 Lib/collections/__init__.py	1474	1477	UserString.__contains__	__contains__(self, char)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1479	1480	UserString.__len__	__len__(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1482	1483	UserString.__getitem__	__getitem__(self, index)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1485	1490	UserString.__add__	__add__(self, other)	modelled	coll-userstring-construct-add	
-Lib/collections/__init__.py	1492	1495	UserString.__radd__	__radd__(self, other)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1485	1490	UserString.__add__	__add__(self, other)	todo		review: The three branches are mirrored, but `str(other)` is the given `text` of `.other`, so an `other` whose `__str__` raises cannot be expressed; UserStringConstructAdd only ties `__add__` to the same infallible `text`.
+Lib/collections/__init__.py	1492	1495	UserString.__radd__	__radd__(self, other)	todo		review: As `__add__`: `str(other)` cannot raise in the model.
 Lib/collections/__init__.py	1497	1498	UserString.__mul__	__mul__(self, n)	modelled	coll-userstring-mul,coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1505	1506	UserString.__rmod__	__rmod__(self, template)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	todo		review: `args` is a tuple of ints, so `u % mapping`, `u % 'x'` and `u % UserString(...)` (a non-tuple with `__getitem__`, which PyUnicode_Format takes as a mapping) cannot be expressed, and a body that did `self.data % tuple(args)` passes.
+Lib/collections/__init__.py	1505	1506	UserString.__rmod__	__rmod__(self, template)	todo		review: `usRmod` takes `template` already converted to a `Seq`, dropping `str(template)` and its failure, and the only statement is its definition, `usRmod = wrap (modUser t data)`.
 Lib/collections/__init__.py	1509	1510	UserString.capitalize	capitalize(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1512	1513	UserString.casefold	casefold(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1515	1516	UserString.center	center(self, width, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-center-balanced,strsearch-pad-str-bytes
-Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1515	1516	UserString.center	center(self, width, *args)	todo		review: `usCenter`, and `strCall` with it, checks `fill` before `width`, but Argument Clinic converts `width` first (Objects/clinic/unicodeobject.c.h:115-132), so `center(2**63, 'ab')` is OverflowError in CPython and TypeError in the model; and the TypeError for a UserString fill is stated only in the siblings refutation, whose counterexample runs `partition`, so a version that unwraps passes every proven entry.
+Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` (:1518) are not modelled: an omitted argument is `none` on both sides, so `u.count(x)` is compared with `str.count(x)`, not with the `str.count(x, 0, sys.maxsize)` the body calls, and a version with a wrong default such as `end=0` passes.
 Lib/collections/__init__.py	1523	1526	UserString.removeprefix	removeprefix(self, prefix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1528	1531	UserString.removesuffix	removesuffix(self, suffix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1533	1536	UserString.encode	encode(self, encoding='utf-8', errors='strict')	modelled	coll-userstring-construct-add,coll-userstring-simulates	
-Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	modelled	strsearch-tailmatch-str-bytes	
+Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), and the TypeError for a UserString suffix, which 3.15.2 still raises, is stated only in the siblings refutation, whose counterexample runs `partition`; the row's entry, strsearch-tailmatch-str-bytes, is about `str` and `bytes` and does not name UserString.
 Lib/collections/__init__.py	1541	1542	UserString.expandtabs	expandtabs(self, tabsize=8)	modelled	strsearch-expandtabs-str-bytes	
-Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-find-str-bytes
+Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
+Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	todo		review: `usFormat` takes positional ints only and drops `**kwds`, so `u.format(name=...)` cannot be expressed, and a body that ignored `kwds` passes.
+Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	todo		review: The mapping is a list of (str, int) pairs, so a mapping with `__missing__` or a raising `__getitem__`, which is what distinguishes `format_map` from `format(**m)`, cannot be expressed, and a body `self.data.format(**mapping)` passes.
+Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
 Lib/collections/__init__.py	1560	1561	UserString.isalpha	isalpha(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1563	1564	UserString.isalnum	isalnum(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1566	1567	UserString.isascii	isascii(self)	modelled	coll-userstring-simulates	
@@ -171,24 +171,24 @@ Lib/collections/__init__.py	1584	1585	UserString.isprintable	isprintable(self)	m
 Lib/collections/__init__.py	1587	1588	UserString.isspace	isspace(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1590	1591	UserString.istitle	istitle(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1593	1594	UserString.isupper	isupper(self)	modelled	coll-userstring-simulates	
-Lib/collections/__init__.py	1596	1597	UserString.join	join(self, seq)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	
-Lib/collections/__init__.py	1599	1600	UserString.ljust	ljust(self, width, *args)	modelled	strsearch-pad-str-bytes	
+Lib/collections/__init__.py	1596	1597	UserString.join	join(self, seq)	todo		review: `items` is a finite list, so a non-iterable (\"can only join an iterable\", Objects/unicodeobject.c:10027) or an iterator that raises cannot be expressed, and the TypeError for a UserString item is stated only in the siblings refutation, whose counterexample runs `partition`, so a `join` that applied `str()` to each item passes every proven entry.
+Lib/collections/__init__.py	1599	1600	UserString.ljust	ljust(self, width, *args)	todo		review: As `center`: the model checks `fill` before clinic's `width` conversion, and the no-unwrap TypeError is only in the `partition` refutation; strsearch-pad-str-bytes, the row's entry, does not name UserString.
 Lib/collections/__init__.py	1602	1603	UserString.lower	lower(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1605	1606	UserString.lstrip	lstrip(self, chars=None)	modelled	strsearch-strip-paths	
+Lib/collections/__init__.py	1605	1606	UserString.lstrip	lstrip(self, chars=None)	todo		review: The TypeError (\"lstrip arg must be None or str\") for a UserString `chars` is stated only in the siblings refutation, whose counterexample runs `partition`, so a version that unwraps passes every proven entry; strsearch-strip-paths, the row's entry, does not name UserString.
 Lib/collections/__init__.py	1610	1611	UserString.partition	partition(self, sep)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-partition-find
 Lib/collections/__init__.py	1613	1618	UserString.replace	replace(self, old, new, maxsplit=-1)	modelled	coll-userstring-replace-count,coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-replace-str-bytes
-Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-extreme,strsearch-find-str-bytes,strsearch-rfind-reverse	
-Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-str-bytes	
-Lib/collections/__init__.py	1630	1631	UserString.rjust	rjust(self, width, *args)	modelled	strsearch-pad-str-bytes	
-Lib/collections/__init__.py	1633	1634	UserString.rpartition	rpartition(self, sep)	modelled	strsearch-partition-find	
-Lib/collections/__init__.py	1636	1637	UserString.rstrip	rstrip(self, chars=None)	modelled	strsearch-strip-paths	
-Lib/collections/__init__.py	1639	1640	UserString.split	split(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
-Lib/collections/__init__.py	1642	1643	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); the row's strsearch entries are about `str` and do not name UserString.
+Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); strsearch-find-str-bytes, the row's entry, does not name UserString.
+Lib/collections/__init__.py	1630	1631	UserString.rjust	rjust(self, width, *args)	todo		review: As `center`: the model checks `fill` before clinic's `width` conversion, and the no-unwrap TypeError is only in the `partition` refutation.
+Lib/collections/__init__.py	1633	1634	UserString.rpartition	rpartition(self, sep)	todo		review: The TypeError for a UserString `sep` is stated only in the siblings refutation, whose counterexample runs `partition`, so a version that unwraps passes every proven entry; strsearch-partition-find, the row's entry, does not name UserString.
+Lib/collections/__init__.py	1636	1637	UserString.rstrip	rstrip(self, chars=None)	todo		review: As `lstrip`: the no-unwrap TypeError for `chars` is only in the `partition` refutation.
+Lib/collections/__init__.py	1639	1640	UserString.split	split(self, sep=None, maxsplit=-1)	todo		review: `strSplitA` checks `sep` before `maxsplit`, but clinic converts `maxsplit` before `unicode_split_impl` tests `sep` (Objects/unicodeobject.c:12900-12912), so `split(1, 2**63)` is OverflowError in CPython and TypeError in the model; and the no-unwrap TypeError for a UserString `sep` is only in the `partition` refutation.
+Lib/collections/__init__.py	1642	1643	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	todo		review: As `split`: the `sep` test comes before clinic's `maxsplit` conversion in the model, the reverse of CPython's order, and the no-unwrap TypeError is only in the `partition` refutation.
 Lib/collections/__init__.py	1645	1646	UserString.splitlines	splitlines(self, keepends=False)	modelled	strsearch-splitlines-str-bytes	
-Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	modelled	strsearch-find-slice-literal,strsearch-tailmatch-str-bytes	
-Lib/collections/__init__.py	1651	1652	UserString.strip	strip(self, chars=None)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-strip-paths
+Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled, and the TypeError for a UserString prefix, which 3.15.2 still raises (:1648-1649), is stated only in the `partition` refutation.
+Lib/collections/__init__.py	1651	1652	UserString.strip	strip(self, chars=None)	todo		review: As `lstrip`: the no-unwrap TypeError for `chars` is only in the `partition` refutation.
 Lib/collections/__init__.py	1654	1655	UserString.swapcase	swapcase(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1657	1658	UserString.title	title(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	todo		review: `*args` becomes one table of (int, int-or-None) pairs, so a sequence or str-valued table, a `__getitem__` that raises LookupError (keep the character) or anything else, and a wrong argument count cannot be expressed, and a body that did `self.data.translate(dict(table))` passes.
 Lib/collections/__init__.py	1663	1664	UserString.upper	upper(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1666	1667	UserString.zfill	zfill(self, width)	modelled	strsearch-pad-str-bytes,strsearch-zfill-spec	
