@@ -629,7 +629,77 @@ def run_tool(c):
     return {"ok": _colorize.decolor(out.getvalue())}
 
 
+# ---------------------------------------------------------------- recursion limits and arguments
+# (lean/PyLean/Pickle/EncRec.lean)
+
+def frame_depth():
+    """The depth of the caller's frame."""
+    f = sys._getframe(1)
+    n = 0
+    while f is not None:
+        n += 1
+        f = f.f_back
+    return n
+
+
+PROTO_ARGS = [None, 0, 1, 2, 3, 4, 5, -1, 6, True, False, -2**63 - 1, 2.5, 0.5, 0.0, -0.0, 1.0, 4.999,
+              5.0, 5.5, -1.5, float('nan'), float('inf'), float('-inf'), 3.0, 2.9999999, 1e300, "2", b"3"]
+
+
+def enc_proto(p):
+    if p is None:
+        return {"k": "none"}
+    if type(p) in (int, bool):
+        return {"k": "int", "v": hex(int(p))}
+    if type(p) is float:
+        return {"k": "float", "bits": struct.unpack('<Q', struct.pack('<d', p))[0]}
+    return {"k": "other", "t": type(p).__name__}
+
+
+def nested(rng):
+    """A value nested k deep, with sharing, to drive both recursion limits."""
+    v = rng.choice([None, 1, 2**40, -2**40, 'a', 'x' * 300, b'xy', b'', bytearray(b'z'), bytearray(),
+                    set(), {1, 2}, frozenset({1}), (), []])
+    for _ in range(rng.randrange(0, 14)):
+        v = rng.choice([lambda v: [v], lambda v: (v,), lambda v: (v, v), lambda v: {1: v},
+                        lambda v: [v, v], lambda v: (1, 2, 3, v), lambda v: {'k': v, 2: None},
+                        lambda v: frozenset([(v,)]) if _hashable(v) else [v],
+                        lambda v: {v} if _hashable(v) else (v,)])(v)
+    return v
+
+
+def rec_case(rng):
+    impl = rng.choice(["c", "py"])
+    x = nested(rng) if rng.random() < 0.6 else ValueGen(rng).value()
+    COUNTER[0] += 1
+    OBJS[COUNTER[0]] = x
+    p = rng.choice(PROTO_ARGS) if rng.random() < 0.5 else rng.choice([None, 0, 1, 2, 3, 4, 5])
+    PROTOS[COUNTER[0]] = p
+    frames = rng.choice([rng.randrange(1, 80), rng.randrange(1, 30), 1000])
+    return {"mod": "pickle", "fn": "dumpsr", "impl": impl, "proto": enc_proto(p),
+            "bufcb": rng.random() < 0.25, "frames": frames, "val": encode_value(x), "key": COUNTER[0]}
+
+
+PROTOS = {}
+
+
+def run_py_frames(x, proto, cb, frames):
+    d = frame_depth()
+    old = sys.getrecursionlimit()
+    # this frame is at depth d: `frames` are left where pickle._dumps is called
+    sys.setrecursionlimit(d + frames)
+    try:
+        r = pickle._dumps(x, proto, buffer_callback=cb)
+    except Exception as e:
+        return {"exc": type(e).__name__, "msg": str(e)}
+    finally:
+        sys.setrecursionlimit(old)
+    return {"ok": list(r)}
+
+
 def gen_case(rng):
+    if rng.random() < 0.3:
+        return rec_case(rng)
     if rng.random() < 0.35:
         return tool_case(rng)
     k = rng.random()
@@ -686,6 +756,12 @@ def run_python(c):
         assert r.get("exc") != "ImportBlocked", c
         return r
     x = OBJS[c["key"]]
+    if fn == "dumpsr":
+        proto = PROTOS[c["key"]]
+        cb = (lambda b: None) if c["bufcb"] else None
+        if c["impl"] == "c":
+            return common.py_result(lambda: list(pickle.dumps(x, proto, buffer_callback=cb)))
+        return run_py_frames(x, proto, cb, c["frames"])
     if fn == "dumps":
         f = pickle.dumps if c["impl"] == "c" else pickle._dumps
         return common.py_result(lambda: list(f(x, c["proto"])))
