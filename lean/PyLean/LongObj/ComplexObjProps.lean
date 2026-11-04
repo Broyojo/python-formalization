@@ -335,9 +335,12 @@ theorem powModuloOrder_proven : PowModuloOrder := by
   · intro a h1 h2; simp [complex_pow, h1, h2]
   · intro a e h1 h2; simp [complex_pow, h1, h2]
 
-/-- The exponent test on line 738 decides the path. An integral exponent with
+/-- The exponent test of complexobject.c:754 decides the path. An integral exponent with
 `|b.real| <= 100` and a zero imaginary part makes no libm call at all, so the
-result cannot depend on the libm; any other exponent is `_Py_c_pow`. -/
+result cannot depend on the libm, and it is `c_powi` with `_Py_ADJUST_ERANGE2`
+(:755-756); any other exponent is `_Py_c_pow` (:759). Either way `EDOM` and `ERANGE`
+become the two exceptions of :762-770. `c_powi` itself is pinned by `FieldPowi` and
+`RingPowu`. -/
 def PowFastPathBound : Prop :=
   ∀ (R : Type) [CDouble R] (L₁ L₂ : Libm R) (a b : Cx R),
     ((b.imag ==. CDouble.zero && b.real ==. CDouble.floor b.real &&
@@ -350,15 +353,26 @@ def PowFastPathBound : Prop :=
         if e = Errno.edom then
           .error (.zeroDivisionError "zero to a negative or complex power")
         else if e = Errno.erange then .error (.overflowError "complex exponentiation")
+        else .ok p) ∧
+    ((b.imag ==. CDouble.zero && b.real ==. CDouble.floor b.real &&
+        le (fabs b.real) hundred) = true →
+      complex_pow_core L₁ a b =
+        let (p, e) := c_powi a (toLong b.real) Errno.ok
+        let e := adjustERange2 p.real p.imag e
+        if e = Errno.edom then
+          .error (.zeroDivisionError "zero to a negative or complex power")
+        else if e = Errno.erange then .error (.overflowError "complex exponentiation")
         else .ok p)
 
 theorem powFastPathBound_proven : PowFastPathBound := by
   intro R _ L₁ L₂ a b
-  constructor
+  refine ⟨?_, ?_, ?_⟩
   · intro h
     simp only [complex_pow_core, h, ite_true]
   · intro h
     simp only [complex_pow_core, h, Bool.false_eq_true, ite_false]
+  · intro h
+    simp only [complex_pow_core, h, ite_true]
 
 theorem c_powu_zero {R : Type} [CDouble R] (x : Cx R) : c_powu x 0 = c_1 := rfl
 
@@ -418,10 +432,11 @@ theorem cPowBranches_proven : CPowBranches := by
 
 /-! ## `complex_richcompare` -/
 
-/-- Only `==` and `!=` are implemented, `!=` is the negation of `==` on every
-right operand, an int is compared exactly through `eqInt` and only when the
-imaginary part is zero, and the result for a `float` or `complex` is the
-componentwise C `==`. -/
+/-- `complex_richcompare`, complexobject.c:819-872. Only `==` and `!=` are implemented,
+`!=` is the negation of `==` on every right operand, an int is compared exactly through
+`eqInt` and only when the imaginary part is zero, the result for a `float` or `complex`
+is the componentwise C `==`, and any other right operand is `NotImplemented` for every
+operator. -/
 def RichCompareShape : Prop :=
   ∀ (R : Type) [CDouble R] (v : Cx R) (w : Obj R),
     (∀ op, op ≠ CmpOp.eq → op ≠ CmpOp.ne → complex_richcompare v w op = none) ∧
@@ -434,11 +449,13 @@ def RichCompareShape : Prop :=
         some (v.real ==. x && v.imag ==. CDouble.zero)) ∧
     (∀ c, w.val = .cplx c →
       complex_richcompare v w CmpOp.eq =
-        some (v.real ==. c.real && v.imag ==. c.imag))
+        some (v.real ==. c.real && v.imag ==. c.imag)) ∧
+    ((∀ n, w.val ≠ .long n) → (∀ x, w.val ≠ .flt x) → (∀ c, w.val ≠ .cplx c) →
+      ∀ op, complex_richcompare v w op = none)
 
 theorem richCompareShape_proven : RichCompareShape := by
   intro R _ v w
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro op h1 h2
     cases op <;> first | exact absurd rfl h1 | exact absurd rfl h2 | rfl
   · have hne : (CmpOp.ne == CmpOp.eq) = false := by decide
@@ -460,6 +477,15 @@ theorem richCompareShape_proven : RichCompareShape := by
     simp [complex_richcompare, h]
   · intro c h
     simp [complex_richcompare, h]
+  · intro h1 h2 h3 op
+    unfold complex_richcompare
+    cases hv : w.val with
+    | long n => exact absurd hv (h1 n)
+    | flt x => exact absurd hv (h2 x)
+    | cplx c => exact absurd hv (h3 c)
+    | str _ _ => cases op <;> rfl
+    | none => cases op <;> rfl
+    | other => cases op <;> rfl
 
 /-- At exact binary64, `complex(x) == n` compares the int without rounding it:
 it holds exactly when the integer value of `x`'s bits, in units of `2^-1074`, is
