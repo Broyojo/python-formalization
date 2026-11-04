@@ -22,6 +22,7 @@ import PyLean.Bytecode.SpecBuild
 import PyLean.Bytecode.SpecMisc
 import PyLean.Bytecode.SpecCall
 import PyLean.Bytecode.SpecCallGeneric
+import PyLean.Bytecode.SpecLoadAttr
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -605,6 +606,14 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model and every live callable: CALL and CALL_KW first split a bound method object with a NULL self_or_null into im_func and im_self and are then exactly themselves on the split stack; a function object is inlined (operands popped, _PyEvalFramePushAndInit on self then the arguments, with kwnames for CALL_KW, return_offset = INSTRUCTION_SIZE, DISPATCH_INLINED), its frame-building error raised with the operands consumed; anything else goes to PyObject_Vectorcall, whose result replaces the operands (then _CHECK_PERIODIC_AT_END for CALL) and whose error pops them. CALL_FUNCTION_EX makes a non-tuple callargs a tuple after the 'Value after * must be an iterable, not T' check, keeping every operand on either failure, and is then itself on the tuple; with a tuple it inlines a function object with the kwargs dict unpacked after the positional items, and hands anything else to PyObject_Call with the dict itself, result then _CHECK_PERIODIC_AT_END, error popping the operands."
     source := "Python/bytecodes.c:4373-4457, :5407-5472, :5565-5569, :5620-5732; _Py_Check_ArgsIterable, Python/ceval.c:3403-3412; _PyObject_Call, Objects/call.c:333-367"
     status := .proven, prop := ``CallGenericFull, thm := some ``callGenericFull_proven },
+  { id := "bytecode-attr-specialized", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_SLOT", op "_LOAD_ATTR_SLOT", op "LOAD_ATTR_MODULE", op "_LOAD_ATTR_MODULE",
+      op "LOAD_ATTR_CLASS", op "_CHECK_ATTR_CLASS", op "_LOAD_ATTR_CLASS", op "LOAD_ATTR_CLASS_WITH_METACLASS_CHECK",
+      op "STORE_ATTR_SLOT", op "_STORE_ATTR_SLOT", op "_GUARD_TYPE_VERSION"]
+    statement := "For every object model: LOAD_ATTR_SLOT, under the owner's cached type version, replaces an instance by the non-NULL value in its cached slot (a NULL above it for the method form) and is the generic LOAD_ATTR on another version or an empty slot; LOAD_ATTR_MODULE replaces a module by the non-NULL value at the cached index of its dict under the cached keys version, and is LOAD_ATTR on anything but a module, another version or a NULL value; LOAD_ATTR_CLASS replaces a class object with the cached version by the cached descriptor and is LOAD_ATTR otherwise; LOAD_ATTR_CLASS_WITH_METACLASS_CHECK asks the metaclass version first and then the class version, each mismatch being LOAD_ATTR; STORE_ATTR_SLOT stores the value in the cached slot of an instance under the cached type version, popping both, and is the generic STORE_ATTR on another version."
+    source := "Python/bytecodes.c:2862-2866, :2918-2948, :2999-3054, :3193-3212"
+    status := .proven, prop := ``AttrSpecRules, thm := some ``attrSpecRules_proven
+    notes := "A slot index and a dict entry index stand for C's byte offset and DK_UNICODE_ENTRIES index. The machine's builtin types carry no tp_version_tag, so _CHECK_ATTR_CLASS exits on them where CPython could pass." },
   { id := "bytecode-null-guards", pyFile := "Python/bytecodes.c"
     pyFns := [op "_GUARD_NOS_NOT_NULL", op "_GUARD_TOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL"]
     statement := "_GUARD_NOS_NOT_NULL exits exactly when the second value is NULL and _GUARD_TOS_NOT_NULL exactly when the top is; _GUARD_NOS_NULL and _GUARD_THIRD_NULL exit exactly when their slot is not NULL; each leaves the stack unchanged, for every stack."

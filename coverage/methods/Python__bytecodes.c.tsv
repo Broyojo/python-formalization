@@ -258,22 +258,22 @@ Python/bytecodes.c	2782	2782	opcode:_LOAD_SUPER_ATTR_METHOD	op(_LOAD_SUPER_ATTR_
 Python/bytecodes.c	2828	2828	opcode:_SPECIALIZE_LOAD_ATTR	specializing op(_SPECIALIZE_LOAD_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2841	2841	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2857	2857	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	modelled	bytecode-attr-dispatch	
-Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	todo		
+Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	2868	2868	opcode:_GUARD_TYPE_VERSION_LOCKED	op(_GUARD_TYPE_VERSION_LOCKED, (type_version/2, owner -- owner)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2878	2878	opcode:_GUARD_TYPE	op(_GUARD_TYPE, (type/4, owner -- owner)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2883	2883	opcode:_CHECK_MANAGED_OBJECT_HAS_VALUES	op(_CHECK_MANAGED_OBJECT_HAS_VALUES, (owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2890	2890	opcode:_LOAD_ATTR_INSTANCE_VALUE	op(_LOAD_ATTR_INSTANCE_VALUE, (offset/1, owner -- attr, o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2908	2908	opcode:LOAD_ATTR_INSTANCE_VALUE	macro(LOAD_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	2918	2918	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr, o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2943	2943	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	todo		changed-in-3.15:
+Python/bytecodes.c	2918	2918	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr, o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	2943	2943	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	2950	2950	opcode:_LOAD_ATTR_WITH_HINT	op(_LOAD_ATTR_WITH_HINT, (hint/1, owner -- attr, o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2990	2990	opcode:LOAD_ATTR_WITH_HINT	macro(LOAD_ATTR_WITH_HINT) =	todo		changed-in-3.15:
-Python/bytecodes.c	2999	2999	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr, o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3016	3016	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	todo		changed-in-3.15:
-Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	todo		
-Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	todo		changed-in-3.15:
-Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	todo		changed-in-3.15:
+Python/bytecodes.c	2999	2999	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr, o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3016	3016	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	todo		changed-in-3.15:
 Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	todo		changed-in-3.15: new function
@@ -284,8 +284,8 @@ Python/bytecodes.c	3138	3138	opcode:_LOCK_OBJECT	op(_LOCK_OBJECT, (value -- valu
 Python/bytecodes.c	3142	3142	opcode:STORE_ATTR_INSTANCE_VALUE	macro(STORE_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	3151	3151	opcode:_STORE_ATTR_WITH_HINT	op(_STORE_ATTR_WITH_HINT, (hint/1, value, owner -- o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3186	3186	opcode:STORE_ATTR_WITH_HINT	macro(STORE_ATTR_WITH_HINT) =	todo		changed-in-3.15:
-Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	3220	3220	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	modelled	bytecode-compare-op	
 Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	modelled	bytecode-compare-op	

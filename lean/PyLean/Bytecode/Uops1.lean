@@ -1320,13 +1320,14 @@ def _GUARD_GLOBALS_VERSION (e : Env) : M Unit := guardTop 0 fun _ => do
   let d ← (getDict (← getFrame).globals : RM _)
   return d.version != cacheNat e 0
 
-/-- `entries[index].me_value` under `dk_version == version`. -/
+/-- `entries[index].me_value` under `dk_version == version`; a `NULL` value exits
+(`EXIT_IF(attr_o == NULL)` in `_LOAD_ATTR_MODULE`, `Python/bytecodes.c:2929`; `DEOPT_IF` in `_LOAD_GLOBAL_MODULE`, `:2309`). -/
 def dictSlot (dv : Val) (version index : Nat) : BM Val := do
   deoptIf !(← (isExactDict dv : RM Bool))
   let d ← (getDict dv : RM _)
   deoptIf (d.version != version)
   match d.entries[index]? with
-  | some en => pure en.value
+  | some en => if en.value == .null then throw .deopt else pure en.value
   | none => throw .deopt
 
 /-- `:2299`. -/

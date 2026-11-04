@@ -422,21 +422,29 @@ def classVersion : Val → RM (Option Nat)
     | _ => pure none
   | _ => pure none
 
-/-- `:3025`. -/
-def _CHECK_ATTR_CLASS (e : Env) : M Unit := guardTop 1 fun
+/-- `_CHECK_ATTR_CLASS` (`:3025-3031`) reading its `type_version` at cache position `i`:
+`EXIT_IF(!PyType_Check(owner))`, then the owner's own `tp_version_tag`. The machine's builtin types
+carry no version, so they exit. -/
+def checkAttrClassAt (e : Env) (i : Nat) : M Unit := guardTop 1 fun
   | [o] => do
     match ← (classVersion o : RM _) with
-    | some v => pure (v != cacheNat e 0)
+    | some v => pure (v != cacheNat e i)
     | none => pure true
   | _ => fault "arity"
+/-- `:3025`. -/
+def _CHECK_ATTR_CLASS (e : Env) : M Unit := checkAttrClassAt e 0
+/-- `_LOAD_ATTR_CLASS` (`:3033-3038`) reading its `descr` at cache position `i`: the owner is
+replaced by the cached object. -/
+def loadAttrClassAt (e : Env) (i : Nat) : M Unit := stk 1 1 fun _ => pure [(e.cache[i]?).getD .null]
 /-- `:3033`. -/
-def _LOAD_ATTR_CLASS (e : Env) : M Unit := stk 1 1 fun _ => pure [(e.cache[1]?).getD .null]
-/-- `:3040`. -/
+def _LOAD_ATTR_CLASS (e : Env) : M Unit := loadAttrClassAt e 1
+/-- `:3040-3046`: the cache is `[type_version, descr]` (`unused/2` between them in C). -/
 def LOAD_ATTR_CLASS (e : Env) : M Unit := do
   _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
-/-- `:3048`. -/
+/-- `:3048-3054`: `_GUARD_TYPE_VERSION` on the metaclass first, then `_CHECK_ATTR_CLASS` on the class
+itself; the cache is `[metaclass version, class version, descr]`. -/
 def LOAD_ATTR_CLASS_WITH_METACLASS_CHECK (e : Env) : M Unit := do
-  _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
+  _GUARD_TYPE_VERSION e; checkAttrClassAt e 1; loadAttrClassAt e 2; _PUSH_NULL_CONDITIONAL e
 
 /-- The function in a `descr/4` cache entry, under its version guard. In C the entry cannot
 dangle while the type version holds. The model's `quick` difftest rewrites a program from an
