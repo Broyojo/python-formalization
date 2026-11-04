@@ -734,4 +734,231 @@ theorem callKwBoundMethodRefines_refuted : ¬CallKwBoundMethodRefines := by
   exact absurd (h kwBoundEnv kwBoundSt) (by decide)
 
 
+/-- With recursion budget left (`py_recursion_remaining > 0`, so that `CALL_KW`'s `start_frame`
+passes), `CALL_KW_BOUND_METHOD` does what `CALL_KW` does, for every live callable with well-formed
+method objects, every runtime and object model: unless the callable is a method object whose
+`im_func` is a function with the cached version and `self_or_null` is `NULL` (`:5521-5529`) it exits;
+otherwise it splits the method (`:5531-5540`) and builds and enters the frame `CALL_KW` builds, or
+fails as it does. The narrowing of `CallKwBoundMethodRefines` to what is true. -/
+def CallKwBoundMethodRefinesWithBudget : Prop := ∀ (e : Env) (regs : Regs) (c self kwv : Val)
+    (args rest : List Val) (kw : List String),
+  args.length = e.oparg → Live regs.rt c → MethodsWF regs.rt c → kwNames kwv regs.rt = .ok kw regs.rt →
+  regs.next = e.this + instrSize e.opcode → 0 < regs.rt.pyRecursionRemaining →
+  afterInstr e.P (execOp e .CALL_KW_BOUND_METHOD ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩) =
+    afterInstr e.P (execOp e .CALL_KW ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩)
+
+theorem callKwBoundMethodRefinesWithBudget_proven : CallKwBoundMethodRefinesWithBudget := by
+  intro e regs c self kwv args rest kw hlen hc hwf hkw hn hr
+  have hlen1 : (args ++ [kwv]).length = (kwEnv e).oparg := by simp [kwEnv, hlen]
+  simp only [execOp]
+  by_cases hp : ∃ b f s fo, MethodPass e regs.rt c self b f s fo
+  · obtain ⟨b, f, s, fo, hp⟩ := hp
+    have hp' := hp
+    obtain ⟨a, rfl, ho, rfl, hb, hv, rfl⟩ := hp'
+    obtain ⟨hs, hfl⟩ := hwf a (.ref b) s rfl ho
+    have hexp := (callKwGenericRules_proven e regs (.ref a) .null kwv args rest kw hlen hc hkw).1
+      a (.ref b) s rfl ho hs rfl hfl
+    have hgen := (callKwGenericRules_proven e regs (.ref b) s kwv args rest kw hlen hfl hkw).2.1 b fo rfl hb
+    simp only [execOp] at hexp hgen
+    rw [hexp]
+    have hmv : _CHECK_METHOD_VERSION_KW e ⟨regs, kwv :: (args.reverse ++ .null :: .ref a :: rest)⟩ =
+        .ok () ⟨regs, kwv :: (args.reverse ++ .null :: .ref a :: rest)⟩ := by
+      rw [mvKw_eq, kwStack_eq]
+      exact methodVersion_pass (kwEnv e) regs (.ref a) .null (args ++ [kwv]) rest hlen1 b (.ref b) s fo hp
+    have hex : _EXPAND_METHOD_KW e ⟨regs, kwv :: (args.reverse ++ .null :: .ref a :: rest)⟩ =
+        .ok () ⟨regs, kwv :: (args.reverse ++ s :: .ref b :: rest)⟩ := by
+      rw [expKw_eq, kwStack_eq, kwStack_eq]
+      exact expandMethod_eq (kwEnv e) regs .null (args ++ [kwv]) rest hlen1 a (.ref b) s ho
+    cases hpi : pushInit e (.ref b) (withSelf s args) kw regs with
+    | ok nf r =>
+      obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hpi
+      have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
+      have hspec : CALL_KW_BOUND_METHOD e ⟨regs, kwv :: (args.reverse ++ .null :: .ref a :: rest)⟩ =
+          .ok () (enteredSt e nf r rest) := by
+        simp only [CALL_KW_BOUND_METHOD, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hmv]; simp only; rw [hex]; simp only
+        rw [pyFrameKw_ok e regs _ s kwv args rest kw hlen hkw nf r hpi]
+        simp only
+        have := pushFrame_entered e nf r rest hnext
+        simp only [bind, EStateM.bind] at this
+        exact this
+      rw [wd_ok hspec, hgen.1 nf r hpi, dispatch_entered e nf r rest (by omega)]
+      rfl
+    | error x r =>
+      have hspec : CALL_KW_BOUND_METHOD e ⟨regs, kwv :: (args.reverse ++ .null :: .ref a :: rest)⟩ =
+          .error x ⟨r, rest⟩ := by
+        simp only [CALL_KW_BOUND_METHOD, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hmv]; simp only; rw [hex]; simp only
+        rw [pyFrameKw_err e regs _ s kwv args rest kw hlen hkw x r hpi]
+      by_cases hx : x = .deopt
+      · subst hx; rw [wd_deopt hspec, hexp]
+      · rw [wd_err hspec hx, hgen.2 x r hpi]
+  · have hn' : ∀ b f s fo, ¬ MethodPass (kwEnv e) regs.rt c self b f s fo := fun b f s fo h => hp ⟨b, f, s, fo, h⟩
+    have hspec : CALL_KW_BOUND_METHOD e ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ =
+        .error .deopt ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ := by
+      simp only [CALL_KW_BOUND_METHOD, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [mvKw_eq, kwStack_eq, methodVersion_fail (kwEnv e) regs c self (args ++ [kwv]) rest hlen1 hc hwf hn']
+    rw [wd_deopt hspec]
+
+/-! ## `CALL_EX_PY` -/
+
+theorem getDict_rt (v : Val) (rt : Rt) (d : DictObj) (rt' : Rt) (h : getDict v rt = .ok d rt') : rt' = rt := by
+  cases v with
+  | ref a =>
+    simp only [getDict, getObj, bind, EStateM.bind] at h
+    cases ho : rt.heap[a]? with
+    | none => simp [ho] at h
+    | some o =>
+      cases o <;> simp [ho, pure, EStateM.pure, fault, throw, throwThe, MonadExcept.throw, EStateM.throw,
+        MonadExceptOf.throw] at h
+      exact h.2.symm
+  | _ => simp [getDict, fault, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw] at h
+
+theorem unpackKwargs_rt (kw : Val) (rt : Rt) (p : List String × List Val) (rt' : Rt)
+    (h : unpackKwargs kw rt = .ok p rt') : rt' = rt := by
+  cases kw with
+  | null => simp [unpackKwargs, pure, EStateM.pure] at h; exact h.2.symm
+  | _ =>
+    simp only [unpackKwargs, bind, EStateM.bind, get, getThe, MonadStateOf.get, EStateM.get] at h
+    split at h
+    · rename_i d rt1 hd
+      have h2 := getDict_rt _ _ _ _ hd
+      subst h2
+      split at h
+      · simp [pure, EStateM.pure] at h; exact h.2.symm
+      · exact absurd h (typeError_ne_ok _ _ _ _)
+    · cases h
+
+theorem isPyCallableEx_pass (regs : Regs) (f n ca kw : Val) (rest : List Val) (a : Addr) (fo : FuncObj)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hf : f = .ref a) :
+    _CHECK_IS_PY_CALLABLE_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+  subst hf
+  simp [_CHECK_IS_PY_CALLABLE_EX, guardTop, exStack_peek, bind, EStateM.bind, BM.lift, RM.lift, isFunction, getObj, ho,
+    deoptIf, pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift]
+
+theorem isPyCallableEx_fail (regs : Regs) (f n ca kw : Val) (rest : List Val) (hl : Live regs.rt f)
+    (hnf : ¬ ∃ a fo, f = .ref a ∧ regs.rt.heap[a]? = some (.func fo)) :
+    _CHECK_IS_PY_CALLABLE_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error .deopt ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+  have hff := isFunction_false regs f hl hnf
+  simp [_CHECK_IS_PY_CALLABLE_EX, guardTop, exStack_peek, bind, EStateM.bind, BM.lift, RM.lift, hff,
+    deoptIf, pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift, throw, throwThe, MonadExcept.throw,
+    EStateM.throw, MonadExceptOf.throw]
+
+/-- `CALL_EX_PY` (`:5763-5771`: `_CHECK_PEP_523 + _MAKE_CALLARGS_A_TUPLE + _CHECK_IS_PY_CALLABLE_EX +
+_PY_FRAME_EX + _SAVE_RETURN_OFFSET + _PUSH_FRAME`, new in 3.15) does what `CALL_FUNCTION_EX` does.
+False: there is no `_CHECK_RECURSION_REMAINING`, so with the budget spent it pushes the frame where
+`CALL_FUNCTION_EX`'s `start_frame` raises `RecursionError` (python/cpython#155151). -/
+def CallExPyRefines : Prop := ∀ (e : Env) (s : St),
+  completed (execOp e .CALL_EX_PY s) = completed (execOp e .CALL_FUNCTION_EX s)
+
+/-- `f(*())` with `f` the function at 0 (`def f()`), from code 3, with `py_recursion_remaining = 0`. -/
+def exPySt : St :=
+  { regs := { rt := { heap := #[.func { code := 2, version := 9 }, .tuple #[]], pyRecursionRemaining := 0 },
+              frame := { code := 3 }, next := 2 },
+    stack := [.null, .ref 1, .null, .ref 0] }
+
+def exPyEnv : Env :=
+  { P := #[{}, {}, { flags := 1 }, {}], om := Proto.mkOM #[] 0, ctx := ⟨fun _ _ => throw .fuel⟩,
+    opcode := .CALL_EX_PY, oparg := 0, this := 0, cache := [] }
+
+theorem callExPyRefines_refuted : ¬CallExPyRefines := by
+  intro h
+  exact absurd (h exPyEnv exPySt) (by decide)
+
+theorem pyFrameEx_kwerr (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (x : Err) (rt : Rt)
+    (hu : unpackKwargs kw regs.rt = .error x rt) :
+    _PY_FRAME_EX e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩ := by
+  simp [_PY_FRAME_EX, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, hu, liftM, monadLift, MonadLift.monadLift]
+
+theorem pyFrameEx_ok (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (t : Addr) (items : Array Val)
+    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List String) (vals : List Val)
+    (hu : unpackKwargs kw regs.rt = .ok (names, vals) regs.rt) (nf : Frame) (r : Regs)
+    (hp : pushInit e f (items.toList ++ vals) names regs = .ok nf r) :
+    _PY_FRAME_EX e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok nf ⟨r, rest⟩ := by
+  subst hct
+  have hreg : ({ rt := regs.rt, frame := regs.frame, prev := regs.prev, next := regs.next } : Regs) = regs := rfl
+  simp only [_PY_FRAME_EX, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, hu, liftM, monadLift,
+    MonadLift.monadLift, tupleItems, getObj, ht, pure, EStateM.pure, hreg, hp]
+
+theorem pyFrameEx_err (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (t : Addr) (items : Array Val)
+    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List String) (vals : List Val)
+    (hu : unpackKwargs kw regs.rt = .ok (names, vals) regs.rt) (x : Err) (r : Regs)
+    (hp : pushInit e f (items.toList ++ vals) names regs = .error x r) :
+    _PY_FRAME_EX e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩ := by
+  subst hct
+  have hreg : ({ rt := regs.rt, frame := regs.frame, prev := regs.prev, next := regs.next } : Regs) = regs := rfl
+  simp only [_PY_FRAME_EX, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, hu, liftM, monadLift,
+    MonadLift.monadLift, tupleItems, getObj, ht, pure, EStateM.pure, hreg, hp]
+
+/-- With an exact tuple as `callargs` and recursion budget left (`py_recursion_remaining > 0`),
+`CALL_EX_PY` does what `CALL_FUNCTION_EX` does, for every live function or other callable, every
+`kwargs` (`NULL` or a dict), runtime and object model: on anything but a Python function it exits
+(`:5734-5738`); on a function it unpacks the dict with `_PyStack_UnpackDict` (refusing non-str keys
+as `CALL_FUNCTION_EX` does) and builds and enters the frame `CALL_FUNCTION_EX` builds
+(`_PY_FRAME_EX`, `:5740-5761`, `_PyEvalFramePushAndInit_Ex`), or fails as it does. The narrowing of
+`CallExPyRefines`; a non-tuple `callargs` is first made a tuple by the same
+`_MAKE_CALLARGS_A_TUPLE` on both paths (`CallFunctionExRules`). -/
+def CallExPyRefinesWithBudget : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val)
+    (t : Addr) (items : Array Val),
+  ca = .ref t → regs.rt.heap[t]? = some (.tuple items) → Live regs.rt f →
+  regs.next = e.this + instrSize e.opcode → 0 < regs.rt.pyRecursionRemaining →
+  afterInstr e.P (execOp e .CALL_EX_PY ⟨regs, kw :: ca :: n :: f :: rest⟩) =
+    afterInstr e.P (execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩)
+
+theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
+  intro e regs f n ca kw rest t items hct ht hfl hn hr
+  have htup : IsTuple regs.rt ca := ⟨t, items, hct, ht⟩
+  have hca : Live regs.rt ca := by
+    intro a ha; rw [hct] at ha; cases ha
+    exact (Array.getElem?_eq_some_iff.mp ht).1
+  have hmk := makeCallargs_keep e regs f n ca kw rest htup
+  have hgen := (callFunctionExRules_proven e regs f n ca kw rest hca).2.2 t items hct ht
+  simp only [execOp] at hgen ⊢
+  by_cases hf : ∃ a fo, f = .ref a ∧ regs.rt.heap[a]? = some (.func fo)
+  · obtain ⟨a, fo, hfa, ho⟩ := hf
+    have hg := hgen.1 a fo hfa ho
+    have hpc := isPyCallableEx_pass regs f n ca kw rest a fo ho hfa
+    cases hu : unpackKwargs kw regs.rt with
+    | error x rt =>
+      have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩ := by
+        simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hmk]; simp only; rw [hpc]; simp only
+        rw [pyFrameEx_kwerr e regs f n ca kw rest x rt hu]
+      by_cases hx : x = .deopt
+      · subst hx; rw [wd_deopt hspec]
+      · rw [wd_err hspec hx, hg.1 x rt hu]
+    | ok p rt =>
+      obtain ⟨names, vals⟩ := p
+      have hrt := unpackKwargs_rt kw regs.rt _ rt hu
+      subst hrt
+      have hg2 := hg.2 names vals hu
+      cases hpi : pushInit e f (items.toList ++ vals) names regs with
+      | ok nf r =>
+        obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hpi
+        have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
+        have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () (enteredSt e nf r rest) := by
+          simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hmk]; simp only; rw [hpc]; simp only
+          rw [pyFrameEx_ok e regs f n ca kw rest t items hct ht names vals hu nf r hpi]
+          simp only
+          have := pushFrame_entered e nf r rest hnext
+          simp only [bind, EStateM.bind] at this
+          exact this
+        rw [wd_ok hspec, hg2.1 nf r hpi, dispatch_entered e nf r rest (by omega)]
+        rfl
+      | error x r =>
+        have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩ := by
+          simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hmk]; simp only; rw [hpc]; simp only
+          rw [pyFrameEx_err e regs f n ca kw rest t items hct ht names vals hu x r hpi]
+        by_cases hx : x = .deopt
+        · subst hx; rw [wd_deopt hspec]
+        · rw [wd_err hspec hx, hg2.2 x r hpi]
+  · have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error .deopt ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+      simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [hmk]; simp only
+      rw [isPyCallableEx_fail regs f n ca kw rest hfl hf]
+    rw [wd_deopt hspec]
+
+
 end PyLean.Bytecode
