@@ -105,7 +105,8 @@ theorem loopS_stepG {K : KOps κ} (H : κ → ν → ν → Option ν) (z : ν) 
 /-! ### `update` and `subtract` with a `Mapping`, keywords, the constructor -/
 
 /-- **The `Mapping` branch adds (or subtracts) counts in the source's order of operands, and the
-keywords go through it after the positional argument.** For every key type, every count type
+keywords go through it after the positional argument.** `d.subtract(**kw)` is
+`d.subtract(kw)`: each keyword `k=v` stores `d.get(k, 0) - v`. For every key type, every count type
 whose `+` and `-` are pure functions `A`, `S` (any functions: non-commutative, non-numeric), and
 every dict `L` of hashable keys: on a non-empty counter `d`, `d.update(L)` stores
 `L[k] + d.get(k, 0)` (that operand order, `:702`) for each key of `L`, every other key keeping
@@ -139,7 +140,13 @@ def UpdateMappingKw : Prop :=
     (L ≠ [] → ∃ r, counterNew K N (.mapping (dictSrc L)) kw = .ok r ∧
       D.get? r k = (match D.get? kw k with
         | some w => some (A w (at0 N L k))
-        | none => D.get? L k))
+        | none => D.get? L k)) ∧
+    subtract K N {} d .none kw = subtract K N {} d (.mapping (dictSrc kw)) [] ∧
+    (subtract K N {} d .none kw).2 = none ∧
+    D.get? (subtract K N {} d .none kw).1 k =
+      (match D.get? kw k with
+       | some v => some (S (at0 N d k) v)
+       | none => D.get? d k)
 
 theorem updateLoop_dict (K : KOps κ) (N : Num ν) (A : ν → ν → ν) (d L : D κ ν) (hh : HashOk K L)
     (hA : N.add = fun x y => .ok (A x y)) :
@@ -181,10 +188,23 @@ theorem update_nonempty_dict [DecidableEq ν] (K : KOps κ) (N : Num ν) (A : ν
   simp only [updateMapping, he, Bool.not_false, if_true, updateLoop_dict K N A d L hh hA]
   rfl
 
+theorem subtract_kw_eq (K : KOps κ) (N : Num ν) (d kw : D κ ν) :
+    subtract K N {} d .none kw = subtract K N {} d (.mapping (dictSrc kw)) [] := by
+  cases kw with
+  | nil => rfl
+  | cons p t =>
+    show subtractSrc K N {} d (.mapping (dictSrc (p :: t))) =
+      (subtractSrc K N {} d (.mapping (dictSrc (p :: t)))).andThen (fun d => (d, none))
+    cases subtractSrc K N {} d (.mapping (dictSrc (p :: t))) with
+    | mk s e => cases e <;> rfl
+
 theorem updateMappingKw_proven : UpdateMappingKw := by
   intro κ ν _ _ K N A S d L kw src k hwL hwkw hhL hhkw hA hS
   have hsub := subtract_dict K N S d L hhL hS
-  refine ⟨fun hd => ⟨update_nonempty_dict K N A d L hd hhL hA, ?_⟩, by rw [hsub], ?_, ?_, ?_, ?_, ?_, ?_⟩
+  have hkeq := subtract_kw_eq K N d kw
+  have hsubkw := subtract_dict K N S d kw hhkw hS
+  refine ⟨fun hd => ⟨update_nonempty_dict K N A d L hd hhL hA, ?_⟩, by rw [hsub], ?_, ?_, ?_, ?_, ?_, ?_,
+    hkeq, by rw [hkeq, hsubkw], ?_⟩
   · rw [update_nonempty_dict K N A d L hd hhL hA]
     rw [get?_foldl_stepG _ _ k L d hwL]
     cases D.get? L k <;> rfl
@@ -228,6 +248,8 @@ theorem updateMappingKw_proven : UpdateMappingKw := by
         rfl
       · rw [get?_foldl_stepG _ _ k _ L hwkw]
         cases D.get? (p :: t) k <;> rfl
+  · rw [hkeq, hsubkw, get?_foldl_stepG _ _ k kw d hwkw]
+    cases D.get? kw k <;> rfl
 
 /-! ### In-place operators -/
 
