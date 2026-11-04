@@ -1,0 +1,149 @@
+id: dictset-set-lookup-table-aba
+title: "set lookup and add trust `table == so->table` after __eq__; a smaller table at the old address makes discard free a key the set no longer holds and add store a key outside the table"
+priority: P3
+kind: memory-safety
+module: dictset
+files: [Objects/setobject.c]
+functions: ["set_compare_entry_lock_held", "set_do_lookup", "set_lookkey", "set_discard_entry", "set_add_entry_takeref"]
+summary: |
+  After PyObject_RichCompareBool runs a key's __eq__, set_compare_entry_lock_held decides that
+  the set did not change if `table == so->table && entry->key == startkey` (Objects/setobject.c:159),
+  and set_add_entry_takeref makes the same test (:294). Both are pointer tests. If __eq__ clears
+  the set (freeing the table) and refills it, the allocator can hand out the old address again for
+  a table with a smaller mask. The test then passes although `entry` now points past the end of
+  the new table, at stale memory that still holds the old entry, whose key is `startkey`.
+
+  set_lookkey then reports the key found at that entry. set_discard_entry writes a dummy there,
+  decrements `used`, and Py_DECREFs the key, a reference the set gave up when __eq__ cleared it.
+  The key object is freed while other containers still hold it (use after free), and len(s) is one
+  less than the number of items in the table. set_do_lookup also keeps walking with the old,
+  larger mask (:221-247), so a lookup that does not stop there reads entries past the new table.
+
+  set_add_entry_takeref, given a "not equal" answer, reloads `mask = so->mask` (:296) and goes on
+  from the stale entry; it finds a stale NULL entry past the new table, stores the new key there,
+  and increments fill and used. len(s) is then one more than the number of items in the table,
+  and set_clear_internal and set_dealloc, which walk the table until `used` entries are seen
+  (:684-689, :745-750), read past its end. That matches the heap-buffer-overflow READ in
+  set_clear_internal reported in gh-143546, which was closed when its reproducer stopped
+  reproducing.
+
+  The reproducer runs this with no ctypes: on 3.15.2 and on main, s.discard(k) leaves len(s) one
+  short of the items iterated and frees an object that a frozenset still holds (a weakref to it
+  dies while the frozenset contains it), and s.add(k) leaves len(s) one over. The address reuse is
+  glibc's: freeing a table next to the top chunk and allocating a smaller one returns the same
+  address. The reproducer tries a few sizes; on the pod every run reproduces both.
+likelihood: |
+  Low in practice: it needs an __eq__ that empties and refills the very set being searched, with
+  table sizes the allocator happens to place at the old address. Deterministic once that happens
+  (the reproducer hits it on every run). The consequence is memory corruption from pure Python:
+  a premature free of an arbitrary object, and an out-of-bounds write into freed heap memory.
+maybe_intended: |
+  No. The table/key re-check exists precisely to make a mutating __eq__ safe (bpo-1517, bpo-8420).
+  It was pointed out in bpo-8420 (2010) that the pointer test is open to an ABA reallocation "at
+  the same address but with different (possibly smaller) size, so entry->key may be in deallocated
+  memory", with the suggestion to compare so->mask too; the reply was "I saw that and agree it
+  would make a tighter check, but haven't convinced myself that it is necessary." The rest of
+  that issue was fixed and closed; this part was not.
+reproducer: |
+  import os, sys, weakref
+
+  keep = []      # what a trial touched is never freed, except the E object below
+  state = {}
+
+  class E:
+      """Hash 700: slot 700 of a 1024-slot table. Its __eq__ empties the set and refills it,
+      which gives a smaller table that the allocator can place at the old address."""
+      def __init__(self, ret):
+          self.ret = ret
+          self.armed = False
+      def __hash__(self):
+          return 700
+      def __eq__(self, other):
+          if self.armed:
+              self.armed = False
+              s = state["s"]
+              s.clear()
+              s.update(state["small"])
+              return self.ret
+          return self is other
+
+  class Key:
+      def __hash__(self):
+          return 700
+      def __eq__(self, other):
+          return NotImplemented
+
+  def trial(op, ret, nbig, nsmall):
+      s = set()
+      e = E(ret)
+      big = frozenset(range(nbig)) | {e}
+      small = frozenset(range(10 ** 6, 10 ** 6 + nsmall))
+      keep.extend([s, big, small])
+      state["s"], state["small"] = s, small
+      s.update(big)
+      e.armed = True
+      getattr(s, op)(Key())
+      n = sum(1 for _ in s)
+      wr = weakref.ref(e)
+      del e
+      # `big` still holds the E object, so it must still be alive.
+      return len(s), n, wr() is None
+
+  found = []
+  for nbig in (200, 400, 800, 1600):
+      for nsmall in (40, 80, 160):
+          for op, ret in (("discard", True), ("add", False)):
+              ln, n, freed = trial(op, ret, nbig, nsmall)
+              if ln != n or freed:
+                  found.append(op)
+                  print(f"s.{op}: len(s) is {ln}, iterating s gives {n} items; "
+                        f"E freed while a frozenset holds it: {freed} (big {nbig}, small {nsmall})")
+  if "discard" in found and "add" in found:
+      print("REPRODUCED dictset-set-lookup-table-aba")
+  sys.stdout.flush()
+  os._exit(0)   # the frozensets hold a freed object and the sets wrong counts; skip finalization
+expected: |
+  A lookup or add whose __eq__ replaced the table starts over (SET_LOOKKEY_CHANGED / `goto
+  restart`), so len(s) always equals the number of items, and no object is released that the set
+  does not own.
+observed: |
+  python3 3.15.2 (pod, glibc): for example "s.discard: len(s) is 39, iterating s gives 40 items; E
+  freed while a frozenset holds it: True (big 200, small 40)" and "s.add: len(s) is 81, iterating s
+  gives 80 items" on every run (three runs). REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same pattern, at slightly different sizes. REPRODUCED.
+promised_by: |
+  Invariant: no use after free and no out-of-bounds access from pure Python code; len(s) equals the
+  number of elements. The re-check at :159 and :294 exists to give exactly this guarantee.
+cause: |
+  Objects/setobject.c:153 and :286 save `table = so->table` before the comparison and :159 and :294
+  compare only that pointer (and the key pointer at the entry) afterwards. set_clear_internal frees
+  the table (:692) and set_table_resize allocates a new one (:527), which PyMem_Malloc may place at
+  the same address with a different mask. `entry` was computed from the old mask (:226-231,
+  :266-272), so it can lie past the end of the new table, where the old entry's bytes are still
+  there. set_do_lookup's `mask` argument (:221) and `table` argument stay the old ones for the
+  rest of the walk.
+possible_fix: |
+  Also compare the mask: save `mask = so->mask` with the table and restart when
+  `table != so->table || mask != so->mask || entry->key != startkey`. With table and mask both
+  unchanged, `entry` is in bounds. (A table of the same size at the same address is then safe: the
+  entry is in the table, and a moved key fails the key test.) set_add_entry_takeref needs the same
+  test before `mask = so->mask` at :296.
+duplicates:
+  issues:
+    - {number: 52667, state: closed, relation: "bpo-8420 (2010): the ABA reallocation and the mask check were pointed out in review; the other crashers there were fixed, this one was not"}
+    - {number: 143546, state: closed, relation: "heap-buffer-overflow READ in set_clear_internal after a re-entrant __eq__; closed when the random reproducer stopped reproducing; consistent with the add half of this bug (used one too large)"}
+    - {number: 139071, state: closed, relation: "freeslot refilled by __eq__ in set_add_entry; fixed by the freeslot->hash != -1 re-check at :311, a different path"}
+    - {number: 141805, state: closed, relation: "same freeslot family (repr of a corrupted set); fixed by gh-143815"}
+  queries: ["set lookkey table reuse address", "set_lookkey use after free", "setobject __eq__ mutates set use-after-free",
+            "set discard __eq__ clear crash", "set table pointer ABA", "set_compare_entry table changed",
+            "setobject.c heap buffer overflow eq", "set mutated during comparison crash", "set __eq__ clears set segfault",
+            "set use after free", "set heap use after free", "set_do_lookup", "set_lookkey", "setobject.c",
+            "set table resize during comparison", "set reentrant eq table reallocated same address",
+            "set table same address smaller mask", "setobject ABA", "set lookkey mask check",
+            "set heap buffer overflow reentrant", "set refcount reentrant __eq__ discard", "set_discard_entry",
+            "set mutate eq crash", "set __eq__ mutation", "heap-buffer-overflow setobject", "use-after-free setobject",
+            "set_add_entry", "set_compare_entry_lock_held", "set crash re-entrant",
+            "bugforge README: no setobject entries"]
+lean:
+  property: "none: the model names a table by an identity that a resize never reuses for a malloc'ed table (tableId), so it cannot express an address reused with another mask; see the set_lookkey and set_add_entry_takeref docstrings in lean/PyLean/DictSet/SetModel.lean"
+  theorem: "none"
