@@ -247,6 +247,10 @@ def entries : List Entry := [
     statement := "PyTuple_New, PyTuple_SetItem and _PyTuple_Resize on every branch: the singleton for size 0, the SystemError and MemoryError refusals, the item replaced with type, GC flag and ob_hash kept, and the resized tuple keeping its prefix, NULL padding and ob_hash."
     source := "Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiTupleObj, thm := some ``cApiTupleObj_proven },
+  { id := "bytesobj-tuple-binary-slice-obj", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_BinarySlice"]
+    statement := "t[a:b] on an exact tuple under BINARY_SLICE converts a before b, and the first exception (a raising __index__, or TypeError for a bound that is not an int, None or an __index__ object) is the result; otherwise it has the items of t[slice(a, b)]."
+    source := "twin: tuple_subscript; tupleobject.c:534-551; Python/ceval.c:2948-2999", status := .proven
+    prop := ``TupleBinarySliceObj, thm := some ``tupleBinarySliceObj_proven },
   { id := "bytesobj-tuple-setitem-hash-fresh", pyFile := "Objects/tupleobject.c", pyFns := ["PyTuple_SetItem", "tuple_hash"]
     statement := "After PyTuple_SetItem on a uniquely referenced tuple, hash agrees with that of a fresh tuple of the same items."
     source := "invariant: ob_hash is a cache of the hash of the items (Include/cpython/tupleobject.h, 'Cached hash')", status := .refuted

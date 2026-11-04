@@ -183,6 +183,38 @@ where
         | .ok v => .ok (.inl v)
         | .error e => .error e
 
+/-! ## `t[a:b]` under `BINARY_SLICE` -/
+
+/-- A bound of `t[a:b]` as `_PyEval_SliceIndex` sees it: `None`, an int, an object with `__index__`
+(`r` its result: user code that may raise; the tuple cannot change), or anything else. -/
+inductive SIdx where
+  | none
+  | int (n : Int)
+  | index (r : Py Int)
+  | other
+
+/-- `_PyEval_SliceIndex(v, &x)`, Python/ceval.c:2948-2979: `None` keeps the default (:2951-2953); a
+compact int is read (:2962-2965), and any other int or `__index__` object goes through
+`PyNumber_AsSsize_t(v, NULL)` (:2966-2970), which saturates to `Py_ssize_t` (here `some v`, saturated by
+`unpackIndices`'s `clampSsize`) and passes on an exception of `__index__`; anything else is a
+`TypeError` (:2971-2976). -/
+def evalSliceIndex : SIdx → Py (Option Int)
+  | .none => .ok none
+  | .int n => .ok (some n)
+  | .index r => r.map some
+  | .other => .error (.typeError "slice indices must be integers or have an __index__ method")
+
+/-- `_PyTuple_BinarySlice(container, start, stop)`, tupleobject.c:534-551, for an exact tuple, with
+`_PyEval_UnpackIndices` (Python/ceval.c:2981-2999): `start` is converted before `stop` (:2991-2996)
+and the first failure is the result (:540-542); then `tupleBinarySlice` on the two values. -/
+def tupleBinarySliceObj (mayTrack : α → Bool) (t : Tup α) (start stop : SIdx) : Py (TRes α) :=
+  match evalSliceIndex start with
+  | .error e => .error e
+  | .ok a =>
+    match evalSliceIndex stop with
+    | .error e => .error e
+    | .ok b => tupleBinarySlice mayTrack t ⟨a, b, none⟩
+
 /-! ## Rich comparison -/
 
 /-- `tuple_richcompare(v, w, op)` with the operands' types, tupleobject.c:737-788: `none` is an

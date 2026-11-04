@@ -674,6 +674,19 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
       return encPy (enTRes t noTup) (tupleBinarySlice mayTrack t ⟨s.start, s.stop, none⟩)
     else
       return encPy (enTRes t noTup) (tupleGetSlice t ⟨s.start, s.stop, none⟩)
+  | "tuple.binslice2" =>
+    let t ← jTup (← field j "t")
+    let jb := fun (x : Json) => (match x with
+      | Json.null => pure SIdx.none
+      | Json.num _ => do return SIdx.int (← x.getInt?)
+      | _ => do
+        match ← getStr x "ix" with
+        | "int" => return SIdx.int (← (← field x "v").getInt?)
+        | "obj" | "uniobj" =>
+          let v ← (← field x "v").getInt?
+          return SIdx.index (if (← getStr x "eff") = "bad" then .error (.valueError "idx") else .ok v)
+        | _ => return SIdx.other : Except String SIdx)
+    return encPy (enTRes t noTup) (tupleBinarySliceObj mayTrack t (← jb (← field j "a")) (← jb (← field j "b")))
   | "tuple.add" =>
     let a ← jTup (← field j "a")
     match j.getObjVal? "other" with

@@ -135,6 +135,31 @@ theorem cApiTupleObj_proven : CApiTupleObj := by
     have hb : n > (ssizeMax - tupleBase) / 8 := by omega
     simp [tupleResize, he, hne, hn0, hn0', hl, hb]
 
+/-- `t[a:b]` on an exact tuple under `BINARY_SLICE` (`_PyTuple_BinarySlice`, tupleobject.c:534-551,
+with `_PyEval_UnpackIndices`, Python/ceval.c:2981-2999), for every pair of bounds, including objects
+with `__index__`: `start` is converted first, and its exception (from `__index__`, or the `TypeError`
+for an object that is neither an int, `None` nor has `__index__`) is the result whatever `stop` is;
+then `stop`'s; otherwise the result has the items of `t[slice(a, b)]` for the values `a` and `b`
+(`TupleBinarySlice`). Hypothesis: the tuple's length is one `tuple_alloc` gives (type invariant). -/
+def TupleBinarySliceObj : Prop :=
+  ∀ (α : Type) (mt : α → Bool) (t : Tup α) (start stop : SIdx) (e : PyExc) (a b : Option Int),
+    t.exact = true → (t.items.length : Int) ≤ tupleLimit →
+    evalSliceIndex SIdx.other = .error (.typeError "slice indices must be integers or have an __index__ method") ∧
+    evalSliceIndex (SIdx.index (.error e)) = .error e ∧
+    (evalSliceIndex start = .error e → tupleBinarySliceObj mt t start stop = .error e) ∧
+    (evalSliceIndex start = .ok a → evalSliceIndex stop = .error e → tupleBinarySliceObj mt t start stop = .error e) ∧
+    (evalSliceIndex start = .ok a → evalSliceIndex stop = .ok b →
+      ∃ r r', tupleBinarySliceObj mt t start stop = .ok r ∧ tupleGetSlice t ⟨a, b, none⟩ = .ok r' ∧
+        r.items t.items [] = r'.items t.items [])
+
+theorem tupleBinarySliceObj_proven : TupleBinarySliceObj := by
+  intro α mt t start stop e a b he hl
+  refine ⟨rfl, rfl, fun h => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
+  · simp only [tupleBinarySliceObj, h]
+  · simp only [tupleBinarySliceObj, h1, h2]
+  · obtain ⟨r, r', hr, hr', hi⟩ := tupleBinarySlice_proven α mt t a b he hl
+    exact ⟨r, r', by simp only [tupleBinarySliceObj, h1, h2, hr], hr', hi⟩
+
 /-- After `PyTuple_SetItem` on a uniquely referenced tuple, `hash` agrees with that of a fresh tuple
 of the same items: the cache invariant of `ob_hash` ("Cached hash", Include/cpython/tupleobject.h),
 which `tuple_alloc`, `tuple_subtype_new` and `_PyTuple_Recycle` keep by resetting it. Refuted:

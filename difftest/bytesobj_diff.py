@@ -388,7 +388,7 @@ def iter_op(it, op, l):
         # list iterators (l given) also report the callable, `iter` or `reversed`
         return out if l is None else out + [r[0].__name__]
     if name in ("reduce_exhaust", "reduce_add", "reduce_missing"):
-        return reduce_hooked(it, l, name)
+        return reduce_hooked(it, l, name) if l is not None else tuple_reduce_hooked(it, name)
     if name == "setstate":
         return it.__setstate__(op[1])
     if name == "pop":
@@ -433,6 +433,43 @@ def reduce_hooked(it, l, how):
         bd[name] = orig
 
 
+def tuple_reduce_hooked(it, how):
+    """A tuple iterator's `__reduce__()` with `builtins.iter` replaced by a key whose `__eq__` exhausts
+    the iterator before it matches (gh-101765), or removed."""
+    bd = builtins.__dict__
+    orig = bd["iter"]
+
+    class Key:
+        def __hash__(self):
+            return hash("iter")
+
+        def __eq__(self, other):
+            for _ in it:
+                pass
+            return other == "iter"
+
+    del bd["iter"]
+    if how != "reduce_missing":
+        bd[Key()] = orig
+    try:
+        r = it.__reduce__()
+        return [encs(r[1][0]), r[2] if len(r) > 2 else None]
+    finally:
+        for k in [k for k in bd if isinstance(k, Key)]:
+            del bd[k]
+        bd["iter"] = orig
+
+
+class RaiseIter:
+    """An object whose `__iter__` raises."""
+
+    def __iter__(self):
+        raise ValueError("iter")
+
+
+NOARG = object()
+
+
 def run_list_iter(c):
     reg = Reg()
     TARGET[0] = None
@@ -467,9 +504,26 @@ def out_tuple(res, a=None, b=None):
 
 
 def mk_src(s, reg):
+    """The argument of `tuple(x)` (`NOARG` for none); see `jSrc` in Seq/Diff.lean."""
     items = reg.mks(s["items"])
-    return {"tuple": lambda: tuple(items), "list": lambda: list(items),
-            "iter": lambda: (x for x in items)}[s["k"]]()
+    return {"none": lambda: NOARG, "tuple": lambda: tuple(items), "list": lambda: list(items),
+            "iter": lambda: (x for x in items), "raise_next": lambda: gen_items(items, True),
+            "hinted": lambda: Hinted(items, "raise", False), "raise_iter": lambda: RaiseIter(),
+            "noniter": lambda: 5, "uni": lambda: UCls(), "tsub": lambda: TS(items),
+            "lsub": lambda: RevList(items)}[s["k"]]()
+
+
+def out4(r):
+    return [encs(r), type(r) is tuple, r is EMPTY, gc.is_tracked(r)]
+
+
+def hash_of(p):
+    """`hash` of the object at `p`, holding no reference afterwards."""
+    o = from_ptr(p)
+    try:
+        return hash(o)
+    finally:
+        del o
 
 
 SIZE = ctypes.c_ssize_t
@@ -533,6 +587,13 @@ def tuple_c_setitem(c, reg):
     if c["items"] == "x":
         return T_SETITEM_O(5, c["i"], new_ref(x))
     items = reg.mks(c["items"])
+    if c.get("hashed"):
+        # hash a uniquely referenced tuple, store an item, and hash it again and a fresh copy
+        p = tuple_raw(items)
+        h1 = hash_of(p)
+        T_SETITEM(p, c["i"], new_ref(x))
+        o = from_ptr(p)
+        return [h1, common.py_result(lambda: hash(o)), common.py_result(lambda: hash(tuple(list(o)))), encs(o)]
     if c["unique"]:
         p = tuple_raw(items)
         T_SETITEM(p, c["i"], new_ref(x))
@@ -543,14 +604,35 @@ def tuple_c_setitem(c, reg):
 
 
 def tuple_c_resize(c, reg):
-    p = VOID(tuple_raw(reg.mks(c["items"])))
+    """`_PyTuple_Resize` on a uniquely referenced tuple (`unique`, optionally hashed first), a tuple
+    Python also holds (`shared`), a subclass instance (`sub`) or the empty singleton (`empty`):
+    `[slots, is the singleton, hash afterwards or None]`."""
+    items = reg.mks(c["items"])
+    kind = c.get("kind", "unique")
+    if kind == "unique":
+        p = VOID(tuple_raw(items))
+    elif kind == "shared":
+        t = tuple(items)
+        p = VOID(new_ref(t))
+    elif kind == "sub":
+        t = TS(items)
+        p = VOID(new_ref(t))
+    else:
+        p = VOID(new_ref(EMPTY))
+    hashed = c.get("hashed") and kind == "unique"
+    if hashed:
+        hash_of(p.value)
     T_RESIZE(ctypes.byref(p), c["n"])
-    n = T_SIZE(from_ptr(p.value))
+    q = p.value
+    n = T_SIZE(from_ptr(q))
     out = []
     for i in range(n):
-        q = T_GETITEM_R(p.value, i)
-        out.append(None if q is None else enc(from_ptr(q)))
-    return out
+        r = T_GETITEM_R(q, i)
+        out.append(None if r is None else enc(from_ptr(r)))
+    h = None
+    if hashed and n > 0 and all(x is not None for x in out):
+        h = common.py_result(lambda: hash_of(q))
+    return [out, q == id(EMPTY), h]
 
 
 def tuple_untrack(c, reg):
@@ -587,6 +669,10 @@ def tuple_case(c):
         t = mk_tuple(c["t"], reg)
         a, b = c["s"][:2]
         return common.py_result(lambda: out_tuple(t[a:b], t))
+    if fn == "tuple.binslice2":
+        t = mk_tuple(c["t"], reg)
+        a, b = [x if x is None or isinstance(x, int) else mk_ix(x) for x in (c["a"], c["b"])]
+        return common.py_result(lambda: out_tuple(t[a:b], t))
     if fn == "tuple.add":
         a = mk_tuple(c["a"], reg)
         if "other" in c:
@@ -613,17 +699,34 @@ def tuple_case(c):
         return common.py_result(lambda: enc_res(getattr(operator, c["op"])(a, b)))
     if fn == "tuple.new":
         s = mk_src(c["src"], reg)
-        return common.py_result(lambda: out_tuple(tuple(s), s))
+        return common.py_result(lambda: out4(tuple() if s is NOARG else tuple(s)))
     if fn == "tuple.sub_new":
         s = mk_src(c["src"], reg)
-        return common.py_result(lambda: (lambda r: [encs(r), type(r) is tuple])(TS(s)))
+        return common.py_result(lambda: out4(TS() if s is NOARG else TS(s)))
     if fn == "tuple.call":
         args = [()] * c["nargs"]
         kw = {f"k{i}": 1 for i in range(c["nkw"])}
         return common.py_result(lambda: (tuple(*args, **kw), None)[1])
     if fn == "tuple.getnewargs":
         t = mk_tuple(c["t"], reg)
-        return common.py_result(lambda: out_tuple(t.__getnewargs__()[0], t))
+        return common.py_result(lambda: (lambda r: [len(r), type(r) is tuple, [out_tuple(x, t) for x in r]])(
+            t.__getnewargs__()))
+    if fn == "tuple.cmpany":
+        a = tuple(reg.mks(c["a"]))
+        b = reg.mks(c["b"])
+        other = {"tuple": lambda: tuple(b), "list": lambda: list(b), "int": lambda: 5}[c["other"]]()
+
+        def cmp_any():
+            r = getattr(a, f"__{c['op']}__")(other)
+            return "NotImplemented" if r is NotImplemented else enc_res(r)
+        return common.py_result(cmp_any)
+    if fn == "tuple.subscript":
+        t = mk_tuple(c["t"], reg)
+        it = c["item"]
+        if "s" in it:
+            return common.py_result(lambda: ["slice", out_tuple(t[as_slice(it["s"])], t)])
+        k = mk_ix(it)
+        return common.py_result(lambda: ["item", enc(t[k])])
     if fn == "tuple.iter":
         return run_tuple_iter(c)
     if fn == "tuple.referents":
@@ -964,8 +1067,10 @@ def gen_tuple_iter(rng):
     n = len(items)
 
     def op():
-        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate"])
-        return [k, rng.choice([0, 1, -1, n, n + 1, n - 1, M, -M - 1, M + 1])] if k == "setstate" else [k]
+        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate", "setstate",
+                        "reduce_exhaust", "reduce_missing"])
+        return [k, rng.choice([0, 1, -1, -2, n, n + 1, n - 1, M, -M - 1, M + 1, -M - 2, 2 ** 64, "x"])] \
+            if k == "setstate" else [k]
     return {"mod": "bytesobj", "fn": "tuple.iter", "items": items,
             "ops": [op() for _ in range(rng.randint(1, 10))]}
 
@@ -997,6 +1102,9 @@ def gen_capi_tuple(rng):
     if which == 1:
         return {**case, "fn": "tuple.c_getitem", "items": rng.choice([items, "x"]), "i": seq_edge_c(rng, n)}
     if which == 2:
+        if n and rng.random() < 0.35:
+            return {**case, "fn": "tuple.c_setitem", "items": items, "hashed": True,
+                    "i": rng.choice([0, n - 1, rng.randrange(n), n, -1]), "x": x}
         return {**case, "fn": "tuple.c_setitem", "items": rng.choice([items, "x"]) if n else items,
                 "unique": n > 0 and rng.random() < 0.7, "i": seq_edge_c(rng, n), "x": x}
     if which == 3:
@@ -1005,8 +1113,13 @@ def gen_capi_tuple(rng):
         return {**case, "fn": "tuple.c_new", "n": rng.choice([0, 1, 2, 7, 25, 1000, -1, -M - 1, ALLOC_LIMIT + 1, M])}
     if which == 5 or not n:
         return {**case, "fn": "tuple.c_pack", "items": items}
-    return {**case, "fn": "tuple.c_resize", "items": [e for e in items if not isinstance(e, dict)] or [1],
-            "n": rng.randint(0, n + 3)}
+    ints = [e for e in items if not isinstance(e, (dict, list))]
+    kind = rng.choice(["unique", "unique", "unique", "shared", "sub", "empty"])
+    if kind != "empty" and not ints and rng.random() < 0.7:
+        ints = [1]
+    return {**case, "fn": "tuple.c_resize", "items": ints, "kind": kind, "hashed": rng.random() < 0.4,
+            "n": rng.choice([rng.randint(0, len(ints) + 3), rng.randint(0, len(ints) + 3), 0, len(ints), -1,
+                             ALLOC_LIMIT + 1, M])}
 
 
 def gen_capi_list(rng):
@@ -1112,7 +1225,10 @@ def gen_seq(rng):
         b = list(a) if rng.random() < 0.5 else seq_items(rng, 5)
         return {**case, "fn": "tuple.cmp", "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]), "a": a, "b": b}
     if k == 36:
-        src = {"k": rng.choice(["tuple", "list", "iter"]), "items": seq_items(rng, 14)}
+        kinds = ["tuple", "list", "iter", "iter", "raise_next", "raise_next", "hinted", "raise_iter", "noniter",
+                 "uni", "tsub", "lsub", "none"]
+        n = rng.choice([0, 1, 2, 7, 8, 9, 15, 16, 17, 24, 25, rng.randint(0, 40)])
+        src = {"k": rng.choice(kinds), "items": [seq_elem(rng) for _ in range(n)]}
         return {**case, "fn": rng.choice(["tuple.new", "tuple.sub_new"]), "src": src}
     if k == 37:
         return {**case, "fn": "tuple.call", "nargs": rng.randint(0, 3), "nkw": rng.randint(0, 1)}
@@ -1128,6 +1244,37 @@ def gen_seq(rng):
     if k == 42:
         return {**case, "fn": rng.choice(["tuple.release", "list.release", "list.clear_release"]),
                 "n": rng.randint(0, 6)}
+    if k == 43:
+        a = seq_items(rng, 5)
+        other = rng.choice(["list", "list", "int", "tuple"])
+        return {**case, "fn": "tuple.cmpany", "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]), "a": a,
+                "b": list(a) if rng.random() < 0.5 else seq_items(rng, 5), "other": other}
+    if k == 44:
+        t = seq_tup(rng)
+        n = len(t["items"])
+        item = {"s": seq_slice(rng, n)} if rng.random() < 0.25 else gen_ix(rng, n)
+        if item.get("eff") not in (None, "none", "bad"):
+            item["eff"] = "none"
+        return {**case, "fn": "tuple.subscript", "t": t, "item": item}
+    if k == 45:
+        if rng.random() < 0.5:
+            t = {"items": seq_items(rng), "sub": False}
+            n = len(t["items"])
+
+            def bound():
+                r = rng.random()
+                if r < 0.2:
+                    return None
+                if r < 0.5:
+                    return seq_edge(rng, n)
+                x = gen_ix(rng, n)
+                if x.get("eff") not in (None, "none", "bad"):
+                    x["eff"] = "none"
+                return x
+            return {**case, "fn": "tuple.binslice2", "t": t, "a": bound(), "b": bound()}
+        return gen_tuple_iter(rng)
+    if k == 46:
+        return gen_capi_tuple(rng)
     return gen_capi_list(rng)
 
 
