@@ -131,22 +131,22 @@ def getstateSlotsLoop (rt : Rt) (obj names : Val) (size : Nat) (slots : Addr) :
       runtimeErr "__slotnames__ changed size during iteration"
     getstateSlotsLoop rt obj names size slots fuel (i + 1)
 
-/-- `object_getstate_default`, `Objects/typeobject.c:7979`. `required` is the pickling check on
-objects that hold more than their `__dict__` and slots. -/
-def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
+/-- The state `object_getstate_default` starts from, `Objects/typeobject.c:7991-7999`: `None` for an
+empty instance dict, else the `__dict__`. -/
+def getstateInitial (obj : Val) : M Val := do
   let w ← getW
-  let d := tdata w (typeOf w obj)
-  let d' (t : Addr) : NameDict := (tdata w t).dict
-  if required && d.itemsize != 0 then
-    typeErr s!"cannot pickle {trunc 200 (typeName w obj)} objects"
   -- The `__dict__` of a class is `tp_dict`, here a `NameDict`, read out as a dict. A static type
   -- keeps its dict per interpreter, so its `tp_dict` field is NULL and it counts as empty.
-  let state ← match asType w obj with
-    | some t =>
-      if (tdata w t).heap then alloc B.dict (.dict ((d' t).map fun (k, v) => (Val.str k, v)))
-      else pure .none
-    | none => if instanceDictEmpty w obj then pure .none else genericGetDict obj
-  let names ← typeGetSlotNames rt (typeOf w obj)
+  match asType w obj with
+  | some t =>
+    if (tdata w t).heap then alloc B.dict (.dict ((tdata w t).dict.map fun (k, v) => (Val.str k, v)))
+    else pure .none
+  | none => if instanceDictEmpty w obj then pure .none else genericGetDict obj
+
+/-- `object_getstate_default` after `_PyType_GetSlotNames`, `Objects/typeobject.c:8008-8098`, for
+the type data `d` of the object, the initial `state` and the slot `names`. -/
+def getstateTail (rt : Rt) (obj : Val) (required : Bool) (d : TypeData) (state names : Val) :
+    M Val := do
   let w ← getW
   let count := ((listOf w names).getD []).length
   if required then
@@ -165,6 +165,17 @@ def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
     if (dictEntries w slots).isEmpty then pure state
     else pure (.tuple [state, .obj slots])
   else pure state
+
+/-- `object_getstate_default`, `Objects/typeobject.c:7979`. `required` is the pickling check on
+objects that hold more than their `__dict__` and slots. -/
+def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
+  let w ← getW
+  let d := tdata w (typeOf w obj)
+  if required && d.itemsize != 0 then
+    typeErr s!"cannot pickle {trunc 200 (typeName w obj)} objects"
+  let state ← getstateInitial obj
+  let names ← typeGetSlotNames rt (typeOf w obj)
+  getstateTail rt obj required d state names
 
 /-- `object_getstate`, `Objects/typeobject.c:8104`: `__getstate__` is looked up on the object, and
 only `object`'s own, bound to this object, gets the `required` argument. -/

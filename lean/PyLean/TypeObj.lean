@@ -13,7 +13,7 @@ import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
 import PyLean.TypeObj.StructSeqStatic
 import PyLean.TypeObj.MroSpec2
-import PyLean.TypeObj.PropsAttrExact
+import PyLean.TypeObj.PropsGetstate
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -271,6 +271,10 @@ def entries : List Entry := [
     "type_ready_set_hash leaves a type with tp_hash, or with __hash__ in its dict, alone, and otherwise sets __hash__ = None and tp_hash = PyObject_HashNotImplemented, changing nothing else."
     "typeobject.c:9428-9449"
     ``TypeReadySetHashExact ``typeReadySetHashExact_proven,
+  p "typeobj-getstate-default-exact" ty ["object_getstate_default"]
+    "For an instance: with required, a variable-size type, then an oversized basicsize, raise the exact 'cannot pickle' TypeErrors; the state is None or the __dict__; slot names come from _PyType_GetSlotNames (exceptions propagate); with no slot names the state is returned, otherwise the slot attributes are collected and the result is the state, or (state, slots) when any was set."
+    "typeobject.c:7979-8101"
+    ``GetstateDefaultExact ``getstateDefaultExact_proven,
   -- metaclass
   p "typeobj-metaclass-winner" ty ["_PyType_CalculateMetaclass"]
     "Under a reflexive transitive subtype order, the winner is a subclass of the given metaclass and of the metaclass of every base."
