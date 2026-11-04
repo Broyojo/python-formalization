@@ -417,15 +417,10 @@ def formatExcUnbound {α : Type} (co : Code) (oparg : Nat) : RM α :=
 def catchMsg : String :=
   "catching classes that do not inherit from BaseException is not allowed"
 
-/-- `_PyEval_CheckExceptTypeValid`, lines 3340-3363. -/
+/-- `_PyEval_CheckExceptTypeValid`, `Python/ceval.c:3340-3363`: `PyTuple_Check`, so a `tuple` subclass
+instance is checked item by item. -/
 def checkExceptTypeValid (right : Val) : RM Unit := do
-  let items? ← match right with
-    | .ref a =>
-      match ← getObj a with
-      | .tuple items => pure (some items)
-      | _ => pure none
-    | _ => pure none
-  match items? with
+  match ← tupleCheckItems? right with
   | some items =>
     for e in items.toList do
       if !(← isExcClass e) then typeError catchMsg
@@ -435,13 +430,7 @@ def checkExceptTypeValid (right : Val) : RM Unit := do
 /-- `_PyEval_CheckExceptStarTypeValid`, lines 3365-3400. -/
 def checkExceptStarTypeValid (right : Val) : RM Unit := do
   checkExceptTypeValid right
-  let items? ← match right with
-    | .ref a =>
-      match ← getObj a with
-      | .tuple items => pure (some items)
-      | _ => pure none
-    | _ => pure none
-  let isSub ← match items? with
+  let isSub ← match ← tupleCheckItems? right with
     | some items => items.toList.anyM fun e => isSubtype e (.cls "BaseExceptionGroup")
     | none => isSubtype right (.cls "BaseExceptionGroup")
   if isSub then
@@ -637,7 +626,22 @@ def getOptionalItem (o k : Val) : RM (Option Val) :=
   tryExc (some <$> om.getItem ctx o k) fun e => do
     if ← givenMatches e 8 (.cls "KeyError") then pure none else throw (.exc e)
 
-/-- `_PyEval_ExceptionGroupMatch`, lines 2263-2348: `(match, rest)`. -/
+/-- The items of an exact tuple (`PyTuple_CheckExact`): a tuple subclass instance is not one. -/
+def exactTupleItems? : Val → RM (Option (Array Val))
+  | .ref a => do
+    match ← getObj a with
+    | .tuple items => pure (some items)
+    | _ => pure none
+  | _ => pure none
+
+/-- `_PyEval_ExceptionGroupMatch`, `Python/ceval.c:2263-2348`: `(match, rest)`. `None` gives
+`(None, None)` (`:2266-2270`); a full match by `PyErr_GivenExceptionMatches` gives the group
+itself, or a naked exception wrapped by `_PyExc_CreateExceptionGroup` (`:2273-2305`, the wrapping
+and traceback are the `egWrap` oracle); a group that does not match is split by calling its
+`split` attribute with the match type (`PyObject_CallMethod`, `:2313-2317`, which can run any
+Python code a subclass defines), whose result must be an exact tuple (`:2321-2327`) of at least two
+items (`:2330-2337`), the first two of which are taken as they are (`:2339-2340`); anything else
+gives `(None, exc_value)` (`:2344-2346`). -/
 def exceptionGroupMatch (excValue matchType : Val) : RM (Val × Val) := do
   if excValue == .none then return (.none, .none)
   if ← givenMatches excValue 8 matchType then
@@ -646,7 +650,16 @@ def exceptionGroupMatch (excValue matchType : Val) : RM (Val × Val) := do
     let wrapped ← om.egWrap ctx excValue
     return (wrapped, .none)
   if ← isSubtype (← typeOf excValue) (.cls "BaseExceptionGroup") then
-    om.egSplit ctx excValue matchType
+    let split ← om.getAttr ctx excValue "split"
+    let pair ← om.call ctx split [matchType] []
+    match ← exactTupleItems? pair with
+    | none =>
+      typeError s!"{trunc200 (← tpName excValue)}.split must return a tuple, not {trunc200 (← tpName pair)}"
+    | some items =>
+      match items.toList with
+      | m :: r :: _ => return (m, r)
+      | _ =>
+        typeError s!"{trunc200 (← tpName excValue)}.split must return a 2-tuple, got tuple of size {items.size}"
   else return (.none, excValue)
 
 end

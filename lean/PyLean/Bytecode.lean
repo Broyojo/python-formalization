@@ -27,6 +27,7 @@ import PyLean.Bytecode.AttrRecursion
 import PyLean.Bytecode.SpecImport
 import PyLean.Bytecode.SpecCallPy
 import PyLean.Bytecode.SpecCallPyFast
+import PyLean.Bytecode.SpecExcMatch
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -700,7 +701,35 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX", op "_MAKE_CALLARGS_A_TUPLE"]
     statement := "The narrowing of bytecode-call-ex-py-recursion: with an exact tuple as callargs and py_recursion_remaining > 0, for every live callable, every kwargs (NULL or a dict), runtime and object model, what the machine does after CALL_EX_PY is what it does after CALL_FUNCTION_EX: it exits on anything but a Python function; on one it unpacks the dict with _PyStack_UnpackDict (refusing non-str keys the same way) and builds and enters CALL_FUNCTION_EX's frame with _PyEvalFramePushAndInit_Ex, or fails as it does. Every other callargs goes through CALL_EX_PY's own _MAKE_CALLARGS_A_TUPLE first (CallExPyFast): the 'Value after * must be an iterable, not T' TypeError and a failing tuple() keep every operand and are what CALL_FUNCTION_EX raises, and a successful conversion makes the body and the dispatch exactly themselves on the stack with that tuple, so tuple(callargs) runs once even when _CHECK_IS_PY_CALLABLE_EX then exits (JUMP_TO_PREDICTED keeps the converted stack). The body on its own: on an exact tuple anything but a Python function exits with the stack unchanged; a function gets _PyStack_UnpackDict's error with the operands consumed, or the frame entered (enteredSt) at any budget, or the builder's error."
     source := "Python/bytecodes.c:5734-5771; _PyEvalFramePushAndInit_Ex, Python/ceval.c:2074-2125"
-    status := .proven, prop := ``CallExPySpec, thm := some ``callExPySpec_proven }
+    status := .proven, prop := ``CallExPySpec, thm := some ``callExPySpec_proven },
+  -- The exception-handling instructions (SpecExcMatch.lean).
+  { id := "bytecode-check-exc-match", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EXC_MATCH"]
+    statement := "For every object model: CHECK_EXC_MATCH on (left, right) raises _PyEval_CheckExceptTypeValid(right)'s error with both operands kept (ERROR_NO_POP), and otherwise replaces right by the bool of PyErr_GivenExceptionMatches(left, right), keeping left; the type check comes first. Both use PyTuple_Check, so an instance of a tuple subclass is checked and matched exactly as the exact tuple of its items (except T((KeyError, ValueError)) catches a ValueError)."
+    source := "Python/bytecodes.c:3441-3453; _PyEval_CheckExceptTypeValid, Python/ceval.c:3340-3363; PyErr_GivenExceptionMatches, Python/errors.c:331-370"
+    status := .proven, prop := ``CheckExcMatchSpec, thm := some ``checkExcMatchSpec_proven },
+  { id := "bytecode-check-eg-match", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EG_MATCH", "_PyEval_ExceptionGroupMatch"]
+    statement := "For every object model: CHECK_EG_MATCH on (exc_value, match_type) raises _PyEval_CheckExceptStarTypeValid's error, then _PyEval_ExceptionGroupMatch's, with both operands popped; otherwise (match, rest) replace them, match on top, and a match that is not None becomes tstate->exc_info->exc_value, whatever it is. _PyEval_ExceptionGroupMatch gives (None, None) for None; on a full PyErr_GivenExceptionMatches match, the group itself or the naked exception wrapped by _PyExc_CreateExceptionGroup, rest None; for a group that does not match, it calls the group's split attribute with match_type and requires an exact tuple (TypeError 'T.split must return a tuple, not U') of at least two items (TypeError 'T.split must return a 2-tuple, got tuple of size n'), whose first two items are (match, rest) unchecked; the attribute's and the call's errors propagate; anything else gives (None, exc_value)."
+    source := "Python/bytecodes.c:3415-3439; _PyEval_ExceptionGroupMatch, Python/ceval.c:2263-2348; _PyErr_SetHandledException, Python/errors.c:619-622"
+    status := .proven, prop := ``CheckEgMatchSpec, thm := some ``checkEgMatchSpec_proven
+    notes := "The wrapping of a naked exception (PyTuple_Pack, _PyExc_CreateExceptionGroup, the traceback from the frame) is the egWrap oracle." },
+  { id := "bytecode-eg-match-handled", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EG_MATCH", "_PyEval_ExceptionGroupMatch"]
+    statement := "CHECK_EG_MATCH keeps the handled exception (tstate->exc_info->exc_value) NULL or an exception instance. False: for an ExceptionGroup subclass whose split() returns (1, None) the int 1 is installed by PyErr_SetHandledException, sys.exception() returns it, and the next raise in the handler crashes in PyException_GetContext."
+    source := "invariant: sys.exception() returns the exception instance being handled; Python/ceval.c:2339-2340, Python/bytecodes.c:3434-3436"
+    status := .refuted, prop := ``EgMatchHandledIsException, thm := some ``egMatchHandledIsException_refuted
+    bug := some "bytecode-eg-match-split-items-unchecked" },
+  { id := "bytecode-reraise", pyFile := "Python/bytecodes.c"
+    pyFns := [op "RERAISE"]
+    statement := "For every stack (values[oparg], exc): RERAISE re-raises exc through exception_unwind (no traceback entry for this instruction), leaving the oparg values; with oparg != 0 it first sets frame->instr_ptr to the offset tagged in values[0] (lasti), with oparg = 0 it leaves the frame alone."
+    source := "Python/bytecodes.c:1918-1929"
+    status := .proven, prop := ``ReraiseRules, thm := some ``reraiseRules_proven },
+  { id := "bytecode-cleanup-throw", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CLEANUP_THROW"]
+    statement := "For every object model: CLEANUP_THROW on (sub_iter, null_in, last_sent_val, exc_value) replaces the four by (None, null_in, exc_value.value) when PyErr_GivenExceptionMatches(exc_value, StopIteration) (a subclass included), and otherwise re-raises exc_value through exception_unwind (the model pops the four first; in C the unwinding to the handler's depth, below them, pops them)."
+    source := "Python/bytecodes.c:1960-1978"
+    status := .proven, prop := ``CleanupThrowRules, thm := some ``cleanupThrowRules_proven }
 ]
 
 end PyLean.Bytecode

@@ -50,7 +50,7 @@ Python/ceval.c	2034	2068	_PyEvalFramePushAndInit	_PyEvalFramePushAndInit(PyThrea
 Python/ceval.c	2074	2137	_PyEvalFramePushAndInit_Ex	_PyEvalFramePushAndInit_Ex(PyThreadState *tstate, _PyStackRef func, PyObject *locals, Py_ssize_t nargs, PyObject *callargs, PyObject *kwargs, _PyInterpreterFrame *previous)	todo		changed-in-3.15:
 Python/ceval.c	2140	2183	_PyEval_Vector	_PyEval_Vector(PyThreadState *tstate, PyFunctionObject *func, PyObject *locals, PyObject* const* args, size_t argcount, PyObject *kwnames)	todo		changed-in-3.15:
 Python/ceval.c	2187	2257	PyEval_EvalCodeEx	PyEval_EvalCodeEx(PyObject *_co, PyObject *globals, PyObject *locals, PyObject *const *args, int argcount, PyObject *const *kws, int kwcount, PyObject *const *defs, int defcount, PyObject *kwdefs, PyObject *closure)	todo		changed-in-3.15:
-Python/ceval.c	2264	2348	_PyEval_ExceptionGroupMatch	_PyEval_ExceptionGroupMatch(_PyInterpreterFrame *frame, PyObject* exc_value, PyObject *match_type, PyObject **match, PyObject **rest)	todo		changed-in-3.15:
+Python/ceval.c	2264	2348	_PyEval_ExceptionGroupMatch	_PyEval_ExceptionGroupMatch(_PyInterpreterFrame *frame, PyObject* exc_value, PyObject *match_type, PyObject **match, PyObject **rest)	modelled	bytecode-check-eg-match,bytecode-eg-match-handled	
 Python/ceval.c	2358	2459	_PyEval_UnpackIterableStackRef	_PyEval_UnpackIterableStackRef(PyThreadState *tstate, PyObject *v, int argcnt, int argcntafter, _PyStackRef *sp)	todo		
 Python/ceval.c	2464	2471	_PyEval_MonitorRaise	_PyEval_MonitorRaise(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
 Python/ceval.c	2474	2477	_PyEval_NoToolsForUnwind	_PyEval_NoToolsForUnwind(PyThreadState *tstate, _PyInterpreterFrame *frame)	todo		changed-in-3.15:

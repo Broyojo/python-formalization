@@ -180,12 +180,12 @@ Python/bytecodes.c	1889	1889	opcode:YIELD_VALUE	macro(YIELD_VALUE) =	todo		chang
 Python/bytecodes.c	1893	1893	opcode:_YIELD_VALUE_EVENT	tier1 op(_YIELD_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1906	1906	opcode:INSTRUMENTED_YIELD_VALUE	macro(INSTRUMENTED_YIELD_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1911	1911	opcode:POP_EXCEPT	inst(POP_EXCEPT, (exc_value -- )) {	modelled	bytecode-exc-info-nests	
-Python/bytecodes.c	1918	1918	opcode:RERAISE	tier1 inst(RERAISE, (values[oparg], exc_st -- values[oparg])) {	todo		
+Python/bytecodes.c	1918	1918	opcode:RERAISE	tier1 inst(RERAISE, (values[oparg], exc_st -- values[oparg])) {	modelled	bytecode-reraise	
 Python/bytecodes.c	1931	1931	opcode:_END_ASYNC_FOR	tier1 op(_END_ASYNC_FOR, (awaitable_st, exc_st -- )) {	todo		
 Python/bytecodes.c	1949	1949	opcode:_MONITOR_END_ASYNC_FOR	tier1 op(_MONITOR_END_ASYNC_FOR, ( -- )) {	todo		
 Python/bytecodes.c	1954	1954	opcode:INSTRUMENTED_END_ASYNC_FOR	macro(INSTRUMENTED_END_ASYNC_FOR) =	todo		
 Python/bytecodes.c	1958	1958	opcode:END_ASYNC_FOR	macro(END_ASYNC_FOR) = _END_ASYNC_FOR;	todo		
-Python/bytecodes.c	1960	1960	opcode:CLEANUP_THROW	tier1 inst(CLEANUP_THROW, (sub_iter, null_in, last_sent_val, exc_value_st -- none, null_out, value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1960	1960	opcode:CLEANUP_THROW	tier1 inst(CLEANUP_THROW, (sub_iter, null_in, last_sent_val, exc_value_st -- none, null_out, value)) {	modelled	bytecode-cleanup-throw	
 Python/bytecodes.c	1980	1980	opcode:LOAD_COMMON_CONSTANT	inst(LOAD_COMMON_CONSTANT, ( -- value)) {	todo		
 Python/bytecodes.c	1986	1986	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( -- bc)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1998	1998	opcode:STORE_NAME	inst(STORE_NAME, (v -- )) {	todo		
@@ -307,8 +307,8 @@ Python/bytecodes.c	3378	3378	opcode:CONTAINS_OP_SET	macro(CONTAINS_OP_SET) = _GU
 Python/bytecodes.c	3380	3380	opcode:_CONTAINS_OP_SET	op(_CONTAINS_OP_SET, (left, right -- b, l, r)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3397	3397	opcode:CONTAINS_OP_DICT	macro(CONTAINS_OP_DICT) = _GUARD_TOS_ANY_DICT + unused/1 + _CONTAINS_OP_DICT + POP_TOP + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	3399	3399	opcode:_CONTAINS_OP_DICT	op(_CONTAINS_OP_DICT, (left, right -- b, l, r)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_value_st, match_type_st -- rest, match)) {	todo		
-Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
+Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_value_st, match_type_st -- rest, match)) {	modelled	bytecode-check-eg-match,bytecode-eg-match-handled	
+Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	modelled	bytecode-check-exc-match	
 Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	modelled	bytecode-import	
 Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	modelled	bytecode-import	
 Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	modelled	bytecode-jumps	

@@ -99,7 +99,8 @@ structure ObjModel where
   isLazyImport : Val → RM Bool
   /-- `_PyEval_LazyImportFrom(tstate, frame, from, name)` (`Objects/lazyimportobject.c:133`). -/
   lazyImportFrom : Ctx → Frame → Val → String → RM Val
-  /-- `PyObject_CallMethod(exc_group, "split", match_type)` for `except*`. -/
+  /-- Unused since `exceptionGroupMatch` mirrors `PyObject_CallMethod(exc_group, "split", match_type)`
+  and the checks on its result with `getAttr` and `call` (kept so the object models still build). -/
   egSplit : Ctx → Val → Val → RM (Val × Val)
   /-- `_PyExc_CreateExceptionGroup("", excs)`. -/
   egWrap : Ctx → Val → RM Val
@@ -371,16 +372,32 @@ def excMatchesOne (err exc : Val) : RM Bool := do
   if (← isExcClass cls) && (← isExcClass exc) then isSubtype cls exc
   else pure (cls == exc)
 
-/-- `PyErr_GivenExceptionMatches(err, exc)`: `exc` may be a nested tuple. -/
+/-- `PyTuple_Check(v)`: the items of a tuple, or of an instance of a `tuple` subclass (its
+payload); `none` for anything else. -/
+def tupleCheckItems? : Val → RM (Option (Array Val))
+  | .ref a => do
+    match ← getObj a with
+    | .tuple items => pure (some items)
+    | .inst i =>
+      match i.base with
+      | .ref b => do
+        match ← getObj b with
+        | .tuple items => pure (some items)
+        | _ => pure none
+      | _ => pure none
+    | _ => pure none
+  | _ => pure none
+
+/-- `PyErr_GivenExceptionMatches(err, exc)`, `Python/errors.c:331-370`: `exc` may be a nested
+tuple, or an instance of a `tuple` subclass (`PyTuple_Check`, `:338`). The fuel stands for the
+`_Py_ReachedRecursionLimitWithMargin` cut-off of `:340-349` (which answers 0); the `except`
+clauses only ever pass a flat tuple, since `_PyEval_CheckExceptTypeValid` rejects nesting. -/
 def givenMatches (err : Val) : Nat → Val → RM Bool
   | 0, _ => pure false
   | n + 1, exc => do
-    match exc with
-    | .ref a =>
-      match ← getObj a with
-      | .tuple items => items.toList.anyM (givenMatches err n)
-      | _ => excMatchesOne err exc
-    | _ => excMatchesOne err exc
+    match ← tupleCheckItems? exc with
+    | some items => items.toList.anyM (givenMatches err n)
+    | none => excMatchesOne err exc
 
 /-- Catch `Err.exc` only; deopts and labels pass through. -/
 def tryExc {α : Type} (m : RM α) (h : Val → RM α) : RM α := fun rt =>
