@@ -498,4 +498,196 @@ theorem betaParetoWeibullF64_proven : BetaParetoWeibullF64 := by
         pysimp
         cases pyPow (-l) e <;> rfl
 
+/-! ### `binomialvariate`, Lib/random.py:789-890 -/
+
+/-- `binomialvariate(n, p)` for `n >= 0` and `0.0 < p < 1.0`: one draw `random() < p` for
+`n == 1` (:829-830); `n - binomialvariate(n, 1.0 - p)` for `p > 0.5` (:832-833); for
+`n * p < 10.0` the geometric (BG) loop with `c = log2(1.0 - p)`, returning `0` at once when
+`c` is zero (:835-846); otherwise, past the `assert`, the BTRS loop with
+`spq = sqrt(n * p * (1.0 - p))`, `b = 1.15 + 2.53 * spq`, `a = -0.0873 + 0.0248 * b + 0.01 * p`,
+`c = n * p + 0.5` and `vr = 0.92 - 4.2 / b` (:850-857). The rounds are pinned in
+`BinomialLoopsF64`. -/
+def BinomialF64 : Prop :=
+  ∀ [RandLibm] (σ : Type) (g : Gen σ F64) (fuel depth : Nat) (n : Int) (p : F64) (s : σ),
+    0 ≤ n → (Flt.le p 0.0 || Flt.le 1.0 p) = false →
+    (n = 1 → ∀ u s1, g.random s = (u, s1) →
+      binomialvariate g fuel (depth + 1) n p s = (.ok (if Flt.lt u p then 1 else 0), s1)) ∧
+    (n ≠ 1 → Flt.lt 0.5 p = true →
+      binomialvariate g fuel (depth + 1) n p s =
+        match binomialvariate g fuel depth n (1.0 - p) s with
+        | (.ok x, t) => (.ok (n - x), t)
+        | (.error e, t) => (.error e, t)) ∧
+    (∀ nf, n ≠ 1 → Flt.lt 0.5 p = false → Flt.ofInt n = some nf → Flt.lt (nf * p) 10.0 = true →
+      binomialvariate g fuel (depth + 1) n p s =
+        match mathLog2 (1.0 - p) with
+        | .error e => (.error e, s)
+        | .ok c => if !truthy c then (.ok 0, s) else binomBG g n c fuel 0 0 s) ∧
+    (∀ nf, n ≠ 1 → Flt.lt 0.5 p = false → Flt.ofInt n = some nf → Flt.lt (nf * p) 10.0 = false →
+      Flt.le 10.0 (nf * p) = true → Flt.le p 0.5 = true →
+      binomialvariate g fuel (depth + 1) n p s =
+        match mathSqrt (nf * p * (1.0 - p)) with
+        | .error e => (.error e, s)
+        | .ok spq =>
+          match pyDiv 4.2 (1.15 + 2.53 * spq) with
+          | .error e => (.error e, s)
+          | .ok t =>
+            btrsLoop g n p spq (-0.0873 + 0.0248 * (1.15 + 2.53 * spq) + 0.01 * p) (1.15 + 2.53 * spq)
+              (nf * p + 0.5) (0.92 - t) fuel none s)
+
+theorem binomialF64_proven : BinomialF64 := by
+  intro _ σ g fuel depth n p s hn hp
+  have hn' : ¬ n < 0 := by omega
+  refine ⟨fun h1 u s1 h => ?_, fun h1 h5 => ?_, fun nf h1 h5 hf h10 => ?_,
+    fun nf h1 h5 hf h10 h10' hp5 => ?_⟩
+  · subst h1
+    simp only [binomialvariate, hp, Bool.false_eq_true, if_false, rnd_bind_apply h]
+    rw [if_neg hn']
+    simp only [if_true]
+    rw [rnd_bind_apply h]; rfl
+  · simp only [binomialvariate, hp, Bool.false_eq_true, if_false, h5, if_true]
+    rw [if_neg hn', if_neg h1, RM.bind_apply]
+    cases binomialvariate g fuel depth n (1.0 - p) s with
+    | mk r t => cases r <;> rfl
+  · have hf' : (pyFloat n : Py F64) = .ok nf := by simp [pyFloat, hf]
+    simp only [binomialvariate, hp, Bool.false_eq_true, if_false, h5]
+    rw [if_neg hn', if_neg h1]
+    simp only [lift_bind_apply, hf', h10, if_true]
+    cases mathLog2 (1.0 - p) with
+    | error e => rfl
+    | ok c => by_cases hc : (!truthy c) = true <;> simp [hc]
+  · have hf' : (pyFloat n : Py F64) = .ok nf := by simp [pyFloat, hf]
+    simp only [binomialvariate, hp, Bool.false_eq_true, if_false, h5]
+    rw [if_neg hn', if_neg h1]
+    simp only [lift_bind_apply, hf', h10, h10', hp5, Bool.and_self, Bool.not_true, Bool.false_eq_true,
+      if_false]
+    cases mathSqrt (nf * p * (1.0 - p)) with
+    | error e => rfl
+    | ok spq =>
+      pysimp
+      cases pyDiv 4.2 (1.15 + 2.53 * spq) <;> rfl
+
+/-- One round of each `binomialvariate` loop. BG (:840-846): draw `r`; `y += floor(log2(r) / c) + 1`
+unless that raises `ValueError`, which starts the round again with `x` and `y` unchanged;
+return `x` once `y > n`. BTRS (:859-890): draw `u0`, `u = u0 - 0.5`, `us = 0.5 - fabs(u)`,
+`k = floor((2.0 * a / us + b) * u + c)`, a `ZeroDivisionError` or `k` outside `[0, n]`
+starts again after that one draw; else draw `v`, accept at once when `us >= 0.07 and v <= vr`,
+otherwise compute the setup (once, cached) and accept when
+`log(v * alpha / (a / (us * us) + b)) <= h - lgamma(k + 1) - lgamma(n - k + 1) + (k - m) * lpq`;
+the setup is `alpha = (2.83 + 5.1 / b) * spq`, `lpq = log(p / (1.0 - p))`,
+`m = floor((n + 1) * p)`, `h = lgamma(m + 1) + lgamma(n - m + 1)` (:878-883). -/
+def BinomialLoopsF64 : Prop :=
+  ∀ [RandLibm] (σ : Type) (g : Gen σ F64),
+    (∀ (n : Int) (c : F64) (fuel : Nat) (x y : Int) (r : F64) (s s1 : σ), g.random s = (r, s1) →
+      binomBG g n c (fuel + 1) x y s =
+        match (do let l ← mathLog2 r; let q ← pyDiv l c; mathFloor q : Py Int) with
+        | .error (.valueError _) => binomBG g n c fuel x y s1
+        | .error e => (.error e, s1)
+        | .ok v => if y + v + 1 > n then (.ok x, s1) else binomBG g n c fuel (x + 1) (y + v + 1) s1) ∧
+    (∀ (n : Int) (p spq a b c vr : F64) (fuel : Nat) (setup : Option (BtrsSetup F64)) (u0 v : F64)
+        (s s1 s2 : σ), g.random s = (u0, s1) → g.random s1 = (v, s2) →
+      btrsLoop g n p spq a b c vr (fuel + 1) setup s =
+        match (do let d ← pyDiv (2.0 * a) (0.5 - fabs (u0 - 0.5))
+                  mathFloor ((d + b) * (u0 - 0.5) + c) : Py Int) with
+        | .error (.zeroDivisionError _) => btrsLoop g n p spq a b c vr fuel setup s1
+        | .error e => (.error e, s1)
+        | .ok k =>
+          if k < 0 ∨ k > n then btrsLoop g n p spq a b c vr fuel setup s1
+          else if Flt.le 0.07 (0.5 - fabs (u0 - 0.5)) && Flt.le v vr then (.ok k, s2)
+          else
+            match (do
+                let st ← btrsEnsure n p spq b setup
+                let us := 0.5 - fabs (u0 - 0.5)
+                let d1 ← pyDiv a (us * us)
+                let d2 ← pyDiv st.alpha (d1 + b)
+                let lv ← mathLog (v * d2)
+                let a1 ← pyFloat (k + 1)
+                let a2 ← pyFloat (n - k + 1)
+                let l1 ← mathLgamma a1
+                let l2 ← mathLgamma a2
+                let km ← pyFloat (k - st.m)
+                pure (st, Flt.le lv (st.h - l1 - l2 + km * st.lpq)) : Py (BtrsSetup F64 × Bool)) with
+            | .error e => (.error e, s2)
+            | .ok (_, true) => (.ok k, s2)
+            | .ok (st, false) => btrsLoop g n p spq a b c vr fuel (some st) s2) ∧
+    (∀ (n : Int) (p spq b : F64) (st : BtrsSetup F64),
+      btrsEnsure n p spq b (some st) = .ok st ∧
+      btrsEnsure n p spq b none = (do
+        let t ← pyDiv 5.1 b
+        let lpq ← (pyDiv p (1.0 - p) >>= mathLog)
+        let n1 ← pyFloat (n + 1)
+        let m ← mathFloor (n1 * p)
+        let a1 ← pyFloat (m + 1)
+        let a2 ← pyFloat (n - m + 1)
+        let l1 ← mathLgamma a1
+        let l2 ← mathLgamma a2
+        pure { alpha := (2.83 + t) * spq, lpq, m, h := l1 + l2 }))
+
+theorem binomialLoopsF64_proven : BinomialLoopsF64 := by
+  intro _ σ g
+  refine ⟨fun n c fuel x y r s s1 h => ?_, fun n p spq a b c vr fuel setup u0 v s s1 s2 h1 h2 => ?_,
+    fun n p spq b st => ⟨rfl, ?_⟩⟩
+  · simp only [binomBG, rnd_bind_apply h]
+    cases (do let l ← mathLog2 r; let q ← pyDiv l c; mathFloor q : Py Int) with
+    | error e => cases e <;> rfl
+    | ok w => by_cases hw : y + w + 1 > n <;> simp [hw] <;> rfl
+  · simp only [btrsLoop, rnd_bind_apply h1]
+    cases (do let d ← pyDiv (2.0 * a) (0.5 - fabs (u0 - 0.5))
+              mathFloor ((d + b) * (u0 - 0.5) + c) : Py Int) with
+    | error e => cases e <;> rfl
+    | ok k =>
+      pysimp
+      by_cases hk : k < 0 ∨ k > n
+      · simp only [hk, if_true]
+      · simp only [hk, if_false, rnd_bind_apply h2]
+        by_cases ha : (Flt.le 0.07 (0.5 - fabs (u0 - 0.5)) && Flt.le v vr) = true
+        · simp only [ha, if_true, RM.pure_apply]
+        · simp only [ha, Bool.false_eq_true, if_false, lift_bind_apply]
+          cases btrsEnsure n p spq b setup with
+          | error e => rfl
+          | ok st =>
+            pysimp
+            cases pyDiv a ((0.5 - fabs (u0 - 0.5)) * (0.5 - fabs (u0 - 0.5))) with
+            | error e => rfl
+            | ok d1 =>
+              pysimp
+              cases pyDiv st.alpha (d1 + b) with
+              | error e => rfl
+              | ok d2 =>
+                pysimp
+                cases mathLog (v * d2) with
+                | error e => rfl
+                | ok lv =>
+                  pysimp
+                  cases (pyFloat (k + 1) : Py F64) with
+                  | error e => rfl
+                  | ok a1 =>
+                    pysimp
+                    cases (pyFloat (n - k + 1) : Py F64) with
+                    | error e => rfl
+                    | ok a2 =>
+                      pysimp
+                      cases mathLgamma a1 with
+                      | error e => rfl
+                      | ok l1 =>
+                        pysimp
+                        cases mathLgamma a2 with
+                        | error e => rfl
+                        | ok l2 =>
+                          pysimp
+                          cases (pyFloat (k - st.m) : Py F64) with
+                          | error e => rfl
+                          | ok km =>
+                            pysimp
+                            by_cases hl : Flt.le lv (st.h - l1 - l2 + km * st.lpq) = true
+                            · simp only [hl, if_true, RM.pure_apply]
+                            · simp only [hl, Bool.false_eq_true, if_false]
+  · simp only [btrsEnsure, btrsSetup]
+    cases pyDiv 5.1 b with
+    | error e => rfl
+    | ok t =>
+      pysimp
+      cases pyDiv p (1.0 - p) with
+      | error e => rfl
+      | ok q => rfl
+
 end PyLean.CoreLibs.Rand
