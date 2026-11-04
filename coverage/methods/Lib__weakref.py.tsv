@@ -1,60 +1,60 @@
 file	line	endline	name	signature	status	entry	note
-Lib/weakref.py	46	66	WeakMethod.__new__	__new__(cls, meth, callback=None)	modelled	misc-weakmethod-basics,misc-weakmethod-callback-once	
+Lib/weakref.py	46	66	WeakMethod.__new__	__new__(cls, meth, callback=None)	todo		review: WM.new treats every object with __self__/__func__ as success, so the TypeError from ref.__new__(cls, obj, _cb) (:61) for a __self__ that cannot be weakly referenced (a bound method of a __slots__ class without __weakref__) and from ref(func, _cb) (:62) is missing, as is a non-AttributeError from meth.__self__ (:48); the new-conjuncts of WeakMethodBasics are rfl on the definition, and only WeakMethodCallbackOnce (the _cb closure, :53-60) pins anything.
 Lib/weakref.py	68	73	WeakMethod.__call__	__call__(self)	modelled	misc-weakmethod-basics	
-Lib/weakref.py	75	80	WeakMethod.__eq__	__eq__(self, other)	modelled	misc-weakmethod-basics	
-Lib/weakref.py	82	87	WeakMethod.__ne__	__ne__(self, other)	modelled	misc-weakmethod-basics	
-Lib/weakref.py	104	113	WeakValueDictionary.__init__	__init__(self, other=(), /, **kw)	modelled	misc-wvd-death,misc-wvd-init	
-Lib/weakref.py	115	120	WeakValueDictionary.__getitem__	__getitem__(self, key)	modelled	misc-wvd-reads	
-Lib/weakref.py	122	123	WeakValueDictionary.__delitem__	__delitem__(self, key)	modelled	misc-wvd-writes	
-Lib/weakref.py	125	126	WeakValueDictionary.__len__	__len__(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	128	133	WeakValueDictionary.__contains__	__contains__(self, key)	modelled	misc-wvd-reads	
-Lib/weakref.py	135	136	WeakValueDictionary.__repr__	__repr__(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	138	139	WeakValueDictionary.__setitem__	__setitem__(self, key, value)	modelled	misc-wvd-writes	
+Lib/weakref.py	75	80	WeakMethod.__eq__	__eq__(self, other)	todo		review: ref.__eq__ is weakref_richcompare, which returns PyObject_RichCompare(obj, other_obj) (Objects/weakrefobject.c:269), an arbitrary object that may raise, and `x and y` (:79) returns that object when falsy; the model forces Bool through an infallible q, and the theorem only pins the dead branch (:77-78) and NotImplemented.
+Lib/weakref.py	82	87	WeakMethod.__ne__	__ne__(self, other)	todo		review: ref.__ne__ calls the referent's own __ne__ (weakref_richcompare with Py_NE), but WM.ne uses `!q`, the negated __eq__, so the proven `ne = map not eq` merges two methods CPython keeps separate and is false for a referent whose __ne__ is not the negation of its __eq__; raising or non-bool results are again not expressible.
+Lib/weakref.py	104	113	WeakValueDictionary.__init__	__init__(self, other=(), /, **kw)	todo		review: WvdDeath pins the remove closure (:105-110) through onDeath, but the update call (:113) is unpinned: WvdInit only says init returns some ok dictionary with eager = true, which `init _ _ := .ok empty` also satisfies.
+Lib/weakref.py	115	120	WeakValueDictionary.__getitem__	__getitem__(self, key)	todo		review: Keys are an abstract DecidableEq K, so `self.data[key]` (:116) cannot raise from the key's __hash__/__eq__ (wvd[[1]] raises TypeError: unhashable); the live/dead/missing branches are mirrored and pinned against items().
+Lib/weakref.py	122	123	WeakValueDictionary.__delitem__	__delitem__(self, key)	todo		review: No unhashable or raising-key path (DecidableEq K); WvdWrites only says a missing key raises KeyError and the deleted key is no longer `in`, so a delitem that empties the whole dict also satisfies it.
+Lib/weakref.py	125	126	WeakValueDictionary.__len__	__len__(self)	todo		review: `d.len = d.data.length` is rfl on a one-line definition; the body is `len(self.data)`, a trivial: exclusion, not coverage.
+Lib/weakref.py	128	133	WeakValueDictionary.__contains__	__contains__(self, key)	todo		review: contains returns a total Bool, but the try at :129-132 catches only KeyError: an unhashable key raises TypeError out of `in`, and a KeyError raised by the key's __hash__/__eq__ is swallowed into False; neither is expressible with DecidableEq K.
+Lib/weakref.py	135	136	WeakValueDictionary.__repr__	__repr__(self)	todo		review: The class name and address are inputs, and the conjunct is the definition restated (rfl); nothing is pinned.
+Lib/weakref.py	138	139	WeakValueDictionary.__setitem__	__setitem__(self, key, value)	todo		review: KeyedRef(value, ...) then the dict store is mirrored and WvdWrites is a good get-after-set property, but the store cannot fail on the key (unhashable key, raising __eq__ on a collision), so the order \"TypeError for the value before the key is hashed\" is not expressible either.
 Lib/weakref.py	141	147	WeakValueDictionary.copy	copy(self)	modelled	misc-wvd-copy	
-Lib/weakref.py	151	158	WeakValueDictionary.__deepcopy__	__deepcopy__(self, memo)	modelled	misc-wvd-copy	
-Lib/weakref.py	160	171	WeakValueDictionary.get	get(self, key, default=None)	modelled	misc-wvd-reads	
-Lib/weakref.py	173	177	WeakValueDictionary.items	items(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	179	182	WeakValueDictionary.keys	keys(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	186	196	WeakValueDictionary.itervaluerefs	itervaluerefs(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	198	202	WeakValueDictionary.values	values(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	151	158	WeakValueDictionary.__deepcopy__	__deepcopy__(self, memo)	todo		review: deepcopy(key, memo) (:157) is an infallible `dc : K -> K`, self.__class__() (:153, unlike copy's WeakValueDictionary()) is not modelled, and WvdCopy assumes dc injective, an undocumented hypothesis that removes the case where two keys deep-copy to equal keys.
+Lib/weakref.py	160	171	WeakValueDictionary.get	get(self, key, default=None)	todo		review: The three branches (:161-171) are mirrored and pinned against items(), but with DecidableEq K the lookup cannot raise: an unhashable key raises TypeError out of get even with a default, and a KeyError from the key's __hash__/__eq__ becomes the default via `except KeyError` (:163).
+Lib/weakref.py	173	177	WeakValueDictionary.items	items(self)	todo		review: items is a generator that derefs each snapshot entry lazily (:174-177); the model returns an eager list in one World, so a value dying between next() calls (CPython skips it) and an insert before the first next() (CPython's snapshot sees it) are not expressible, and the .copy() snapshot has no effect in the model.
+Lib/weakref.py	179	182	WeakValueDictionary.keys	keys(self)	todo		review: Lazy generator over a snapshot (:180-182) modelled as an eager list in a fixed World, so deaths or writes during iteration cannot be stated; keys = map fst items is pinned only relative to items.
+Lib/weakref.py	186	196	WeakValueDictionary.itervaluerefs	itervaluerefs(self)	todo		review: The snapshot is taken at the first next(), not at the call (:196), which the eager list cannot express; the only property is `itervaluerefs = valuerefs`, rfl between two identical definitions, which any function used for both satisfies.
+Lib/weakref.py	198	202	WeakValueDictionary.values	values(self)	todo		review: Lazy generator over a snapshot (:199-202) modelled as an eager list in a fixed World; a death between yields is not expressible.
 Lib/weakref.py	204	209	WeakValueDictionary.popitem	popitem(self)	modelled	misc-wvd-popitem	
-Lib/weakref.py	211	222	WeakValueDictionary.pop	pop(self, key, *args)	modelled	misc-wvd-pop-setdefault	
-Lib/weakref.py	224	233	WeakValueDictionary.setdefault	setdefault(self, key, default=None)	modelled	misc-wvd-pop-setdefault	
-Lib/weakref.py	235	243	WeakValueDictionary.update	update(self, other=None, /, **kwargs)	modelled	misc-wvd-update	
-Lib/weakref.py	245	255	WeakValueDictionary.valuerefs	valuerefs(self)	modelled	misc-wvd-reads	
-Lib/weakref.py	257	259	WeakValueDictionary.__ior__	__ior__(self, other)	modelled	misc-wvd-or	
+Lib/weakref.py	211	222	WeakValueDictionary.pop	pop(self, key, *args)	todo		review: `except KeyError` (:214) also swallows a KeyError from the key's __hash__/__eq__ and lets an unhashable TypeError through, neither expressible with DecidableEq K; WvdPopSetdefault only says the popped key is no longer `in` (a pop that clears the dict passes) and says nothing about data after a dead or missing pop.
+Lib/weakref.py	224	233	WeakValueDictionary.setdefault	setdefault(self, key, default=None)	todo		review: Branches (:225-233) are mirrored and the live/dead cases pinned, but the `except KeyError` lookup (:226-228) cannot fail on the key (unhashable TypeError, KeyError from __hash__ treated as missing).
+Lib/weakref.py	235	243	WeakValueDictionary.update	update(self, other=None, /, **kwargs)	todo		review: `other` is a ready list, so hasattr(other, \"items\") (:238), dict(other) (:239, e.g. a non-iterable or a 3-tuple element) and other.items() (:240) cannot raise; WvdUpdate covers only all-object values through `update (some ...)`, so the dictFrom pairs branch and the partial update the docstring claims are unpinned.
+Lib/weakref.py	245	255	WeakValueDictionary.valuerefs	valuerefs(self)	todo		review: The only statement is `itervaluerefs = valuerefs` (rfl); a valuerefs returning [] satisfies it, so nothing about the returned references (one per entry, in order, dead ones included) is pinned.
+Lib/weakref.py	257	259	WeakValueDictionary.__ior__	__ior__(self, other)	todo		review: `d.ior objs = d.update (some objs)` is an alias restated by rfl; the model also always passes `other` as items, skipping update's dict(other) branch for a non-Mapping iterable (:238-239), and never states that self is returned.
 Lib/weakref.py	261	266	WeakValueDictionary.__or__	__or__(self, other)	modelled	misc-wvd-or	
 Lib/weakref.py	268	274	WeakValueDictionary.__ror__	__ror__(self, other)	modelled	misc-wvd-or	
-Lib/weakref.py	289	292	KeyedRef.__new__	__new__(type, ob, callback, key)	modelled	misc-wvd-death,misc-wvd-init	
-Lib/weakref.py	294	295	KeyedRef.__init__	__init__(self, ob, callback, key)	modelled	misc-wvd-death,misc-wvd-init	
+Lib/weakref.py	289	292	KeyedRef.__new__	__new__(type, ob, callback, key)	todo		review: KRef.new drops the callback argument of ref.__new__(type, ob, callback) (:290), and WvdInit's KRef conjuncts are rfl on a one-line definition; WvdDeath never unfolds KRef.new.
+Lib/weakref.py	294	295	KeyedRef.__init__	__init__(self, ob, callback, key)	todo		review: No Lean function mirrors it (the model only says it \"adds nothing\") and no theorem unfolds it; it only forwards (ob, callback) to ref.__init__, so it should be an excluded no-behaviour row, not modelled.
 Lib/weakref.py	309	320	WeakKeyDictionary.__init__	__init__(self, dict=None)	modelled	misc-wkd-death,misc-wkd-init	
-Lib/weakref.py	322	323	WeakKeyDictionary.__delitem__	__delitem__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
-Lib/weakref.py	325	326	WeakKeyDictionary.__getitem__	__getitem__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-reads	
-Lib/weakref.py	328	329	WeakKeyDictionary.__len__	__len__(self)	modelled	misc-wkd-reads	
-Lib/weakref.py	331	332	WeakKeyDictionary.__repr__	__repr__(self)	modelled	misc-wkd-reads	
-Lib/weakref.py	334	335	WeakKeyDictionary.__setitem__	__setitem__(self, key, value)	modelled	misc-wkd-non-weak,misc-wkd-writes	
+Lib/weakref.py	322	323	WeakKeyDictionary.__delitem__	__delitem__(self, key)	todo		review: Eqv is a total Bool and hashing is not modelled, so an unhashable weakrefable key (a class with __eq__ and no __hash__) or a raising __eq__ cannot be expressed; no theorem states a successful delete, so a delitem that always raises KeyError after ref() satisfies WkdPopSetdefault and WkdNonWeak.
+Lib/weakref.py	325	326	WeakKeyDictionary.__getitem__	__getitem__(self, key)	todo		review: hash(ref(key)) calls hash(key) (:326), so a weakrefable unhashable key raises TypeError; the model has no hash and WkdReads says such a key gives KeyError or a value, which is false about CPython; __eq__ raising or re-entering is also not expressible.
+Lib/weakref.py	328	329	WeakKeyDictionary.__len__	__len__(self)	todo		review: `len(self.data)`: WkdReads only proves `keyrefs.length = len`, both `data.length` by definition (rfl); a trivial: exclusion, not coverage.
+Lib/weakref.py	331	332	WeakKeyDictionary.__repr__	__repr__(self)	todo		review: The class name and address are inputs and the conjunct restates the definition (rfl).
+Lib/weakref.py	334	335	WeakKeyDictionary.__setitem__	__setitem__(self, key, value)	todo		review: setRef mirrors \"an equal key keeps its ref\" and WkdWrites is a good property, but the store cannot fail or re-enter (no hash, total Bool __eq__): an unhashable weakrefable key raises TypeError in CPython and a value in the model.
 Lib/weakref.py	337	343	WeakKeyDictionary.copy	copy(self)	modelled	misc-wkd-copy	
-Lib/weakref.py	347	354	WeakKeyDictionary.__deepcopy__	__deepcopy__(self, memo)	modelled	misc-wkd-copy	
-Lib/weakref.py	356	357	WeakKeyDictionary.get	get(self, key, default=None)	modelled	misc-wkd-non-weak,misc-wkd-reads	
-Lib/weakref.py	359	364	WeakKeyDictionary.__contains__	__contains__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-reads	
-Lib/weakref.py	366	370	WeakKeyDictionary.items	items(self)	modelled	misc-wkd-reads	
-Lib/weakref.py	372	376	WeakKeyDictionary.keys	keys(self)	modelled	misc-wkd-reads	
-Lib/weakref.py	380	383	WeakKeyDictionary.values	values(self)	modelled	misc-wkd-reads	
-Lib/weakref.py	385	395	WeakKeyDictionary.keyrefs	keyrefs(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	347	354	WeakKeyDictionary.__deepcopy__	__deepcopy__(self, memo)	todo		review: deepcopy(value, memo) (:353) is an infallible `dc`, though deep-copying a value often raises (a lock, a generator), memo and self.__class__() (:349) are not modelled, and the theorem cannot see that memo never maps id(self) to new (see the suspected defect).
+Lib/weakref.py	356	357	WeakKeyDictionary.get	get(self, key, default=None)	todo		review: `self.data.get(ref(key), default)` (:357) raises TypeError for a weakrefable unhashable key even with a default; the model returns the default.
+Lib/weakref.py	359	364	WeakKeyDictionary.__contains__	__contains__(self, key)	todo		review: Only ref()'s TypeError is caught (:360-363); `wr in self.data` (:364) raises TypeError for a weakrefable unhashable key (and whatever __eq__ raises), but contains is a total Bool.
+Lib/weakref.py	366	370	WeakKeyDictionary.items	items(self)	todo		review: Lazy generator over a snapshot (:367-370) modelled as an eager list in a fixed World; a key dying between next() calls is not expressible.
+Lib/weakref.py	372	376	WeakKeyDictionary.keys	keys(self)	todo		review: Lazy generator (:373-376) modelled as an eager list in a fixed World.
+Lib/weakref.py	380	383	WeakKeyDictionary.values	values(self)	todo		review: Lazy generator (:381-383) modelled as an eager list in a fixed World.
+Lib/weakref.py	385	395	WeakKeyDictionary.keyrefs	keyrefs(self)	todo		review: The only statement is `keyrefs.length = len`; any list of the right length (e.g. one ref repeated) satisfies it, so the refs and their order are unpinned.
 Lib/weakref.py	397	402	WeakKeyDictionary.popitem	popitem(self)	modelled	misc-wkd-popitem	
-Lib/weakref.py	404	405	WeakKeyDictionary.pop	pop(self, key, *args)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
-Lib/weakref.py	407	408	WeakKeyDictionary.setdefault	setdefault(self, key, default=None)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
-Lib/weakref.py	410	420	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	modelled	misc-wkd-init,misc-wkd-or	
-Lib/weakref.py	422	424	WeakKeyDictionary.__ior__	__ior__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	404	405	WeakKeyDictionary.pop	pop(self, key, *args)	todo		review: The model takes the first of any number of defaults, but `self.data.pop(ref(key), *args)` (:405) is dict.pop, which raises TypeError for two or more defaults (the model copies WeakValueDictionary.pop's args[0]); WkdPopSetdefault never says the found entry is removed, so a pop that leaves it passes; the unhashable path is missing too.
+Lib/weakref.py	407	408	WeakKeyDictionary.setdefault	setdefault(self, key, default=None)	todo		review: Mirrored and pinned (an existing value is kept, otherwise the default is stored), but dict.setdefault on ref(key, ...) cannot fail on hashing or __eq__ in the model.
+Lib/weakref.py	410	420	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	todo		review: The 3.15.2 keyword refusal first (:411-414) is mirrored and stated, but hasattr/type({})(dict)/dict.items() (:417-419) are infallible over a list; dictOf (the pairs branch) is unpinned (WkdInit's conjunct restates updatePairs by rfl); the partial update after a non-weakrefable key is not stated; WkdOr's docstring still says the TypeError comes \"after dict has been applied\", the 3.14 order.
+Lib/weakref.py	422	424	WeakKeyDictionary.__ior__	__ior__(self, other)	todo		review: `ior = update (some objs)` is an alias restated by rfl, and the model passes `other` as items, skipping update's dict() branch for a non-Mapping iterable.
 Lib/weakref.py	426	431	WeakKeyDictionary.__or__	__or__(self, other)	modelled	misc-wkd-or	
 Lib/weakref.py	433	439	WeakKeyDictionary.__ror__	__ror__(self, other)	modelled	misc-wkd-or	
-Lib/weakref.py	470	485	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	modelled	misc-finalize-init	
+Lib/weakref.py	470	485	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	todo		review: FinalizeInit pins presence, dirty, the counter and the failure path, but not the stored _Info: an init that stores another func or obj, atexit := false (contradicting \"By default atexit is true\") or a wrong index satisfies it, and no other theorem starts from init.
 Lib/weakref.py	487	492	finalize.__call__	__call__(self, _=None)	modelled	misc-finalize-once	
 Lib/weakref.py	494	500	finalize.detach	detach(self)	modelled	misc-finalize-once	
 Lib/weakref.py	502	508	finalize.peek	peek(self)	modelled	misc-finalize-once	
 Lib/weakref.py	511	513	finalize.alive	alive(self)	modelled	misc-finalize-once	
-Lib/weakref.py	516	519	finalize.atexit	atexit(self)	modelled	misc-finalize-once	
-Lib/weakref.py	522	525	finalize.atexit	atexit(self, value)	modelled	misc-finalize-once	
-Lib/weakref.py	527	534	finalize.__repr__	__repr__(self)	modelled	misc-finalize-init	
+Lib/weakref.py	516	519	finalize.atexit	atexit(self)	todo		review: The getter: FinalizeOnce only states the registered case (`atexit = info.atexit`); the dead branch `bool(info)` giving False (:519) is unpinned, so a getter returning True for a dead finalizer passes, despite the docstring's claim.
+Lib/weakref.py	522	525	finalize.atexit	atexit(self, value)	todo		review: The setter takes a Lean Bool, so bool(value) (:525) on an arbitrary object, including a raising __bool__, is not modelled; only set-then-get on the same live finalizer is stated, with no no-op for a dead one and no frame for the others.
+Lib/weakref.py	527	534	finalize.__repr__	__repr__(self)	todo		review: type(self).__name__ (:531, :534) is hard-coded \"finalize\" (a subclass shows its own name) and %r of the object's type name is rendered as '{tn}'; the theorem restates the two format strings, leaving the registered-but-dead branch unstated.
 Lib/weakref.py	537	541	finalize._select_for_exit	_select_for_exit(cls)	modelled	misc-finalize-select	
-Lib/weakref.py	544	576	finalize._exitfunc	_exitfunc(cls)	modelled	misc-finalize-exitfunc	
+Lib/weakref.py	544	576	finalize._exitfunc	_exitfunc(cls)	todo		review: gc.disable/enable (:551-554, :575-576), observable through gc.isenabled() in a finalizer, is not modelled, and onHook cannot raise; ExitfuncOrder assumes PlainRun (no func raises or creates a finalizer), which removes the excepthook path, the BaseException abort and the dirty re-select (:557-570), and also assumes dirty = false, though __init__ always leaves _dirty True.
