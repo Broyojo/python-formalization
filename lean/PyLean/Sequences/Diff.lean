@@ -296,12 +296,14 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
   | "maxlen" => return same (okJ (match d.getMaxlen with | none => Json.null | some m => toJson m))
   | "repr" => return same (pyJ toJson (d.repr DElem.repr false))
   | "repr_nested" =>
-    -- repr(d) of a deque holding itself as the last item
+    -- `c = d.copy(); c.append(c); repr(c)`: a deque holding itself as the last item
     let inner ← match d.repr DElem.repr true with
       | .ok v => pure v
       | .error _ => throw "repr"
     let r : DElem → Py String := fun e => if e = .mut 99 then .ok inner else e.repr
-    return same (pyJ toJson ((d.append (.mut 99)).repr r false))
+    match d.copy with
+    | .ok c => return same (pyJ toJson ((c.append (.mut 99)).repr r false))
+    | .error e => return same (errJ e)
   | "reduce" =>
     let (m, _) := d.reduce
     return same (okJ (Json.arr #[(match m with | none => Json.null | some v => toJson v),
@@ -963,7 +965,7 @@ def runTG (j : Json) : Except String Json := do
     let docJ : Option Int → Json := fun o => match o with | some v => toJson v | none => toJson "R"
     let docRepr : Option Int → Py String := fun o => match o with
       | some v => .ok (toString v)
-      | none => .error (.valueError "drepr")
+      | none => .error (.valueError "vrepr")
     let r1 : Py (Option Int) := tuplegetterGet g' (.tuple xs)
     let r2 : Py (Option Int) := tuplegetterGet g' (.none)
     let r3 : Py (Option Int) := tuplegetterGet g' (.null)
