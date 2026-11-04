@@ -229,6 +229,7 @@ CREDIT = {
     "pygrammar-rule-type-param-bound": {GRAM: ["rule:type_param_bound"]},
     "pygrammar-rule-type-param-default": {GRAM: ["rule:type_param_default"]},
     "pygrammar-rule-type-param-starred-default": {GRAM: ["rule:type_param_starred_default"]},
+    "pygrammar-rule-genexp-like-listcomp": {GRAM: ["rule:genexp", "rule:listcomp"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],

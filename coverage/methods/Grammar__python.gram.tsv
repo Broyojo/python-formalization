@@ -182,9 +182,9 @@ Grammar/python.gram	1038	1038	rule:double_starred_kvpair	double_starred_kvpair[K
 Grammar/python.gram	1042	1042	rule:kvpair	kvpair[KeyValuePair*]: a=expression ':' b=expression { _PyPegen_key_value_pair(p, a, b) }	modelled	pygrammar-rule-kvpair	
 Grammar/python.gram	1047	1047	rule:for_if_clauses	for_if_clauses[asdl_comprehension_seq*]:	modelled	pygrammar-rule-for-if-clauses	
 Grammar/python.gram	1050	1050	rule:for_if_clause	for_if_clause[comprehension_ty]:	modelled	pygrammar-rule-for-if-clause	
-Grammar/python.gram	1058	1058	rule:listcomp	listcomp[expr_ty]:	modelled	pygrammar-rule-listcomp	
+Grammar/python.gram	1058	1058	rule:listcomp	listcomp[expr_ty]:	modelled	pygrammar-rule-listcomp,pygrammar-rule-genexp-like-listcomp	
 Grammar/python.gram	1062	1062	rule:setcomp	setcomp[expr_ty]:	modelled	pygrammar-rule-setcomp	
-Grammar/python.gram	1066	1066	rule:genexp	genexp[expr_ty]:	modelled	pygrammar-rule-genexp	
+Grammar/python.gram	1066	1066	rule:genexp	genexp[expr_ty]:	modelled	pygrammar-rule-genexp,pygrammar-rule-genexp-like-listcomp	
 Grammar/python.gram	1070	1070	rule:dictcomp	dictcomp[expr_ty]:	modelled	pygrammar-rule-dictcomp	
 Grammar/python.gram	1077	1077	rule:arguments	arguments[expr_ty] (memo):	modelled	pygrammar-rule-arguments	
 Grammar/python.gram	1081	1081	rule:args	args[expr_ty]:	modelled	pygrammar-rule-args	

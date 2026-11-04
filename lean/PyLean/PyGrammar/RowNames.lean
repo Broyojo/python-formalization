@@ -361,6 +361,9 @@ def rule_function_def_raw : List String := [
 def rule_genexp : List String := [
   "rule:genexp"]
 
+def rule_genexp_like_listcomp : List String := [
+  "rule:listcomp", "rule:genexp"]
+
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
 

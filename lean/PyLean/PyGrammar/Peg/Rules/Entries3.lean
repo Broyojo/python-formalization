@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Rules.Args2
+import PyLean.PyGrammar.Peg.Rules.GenexpStar
 
 /-! Registry entries for the parameter rules (`Peg/Rules/Params*.lean`) and `invalid_group`
 (`Peg/Rules/Invalid2.lean`), in the scheme of `Entries.lean`. -/
@@ -561,6 +562,21 @@ def argEntries : List Entry := [
     prop := ``TypeParamStarredDefaultRule
     thm := some ``typeParamStarredDefaultRule_proven
     notes := scheme ++ " TokThenCV 107 22 113 13." }
+]
+
+def findingEntries : List Entry := [
+  { id := "pygrammar-rule-genexp-like-listcomp"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_genexp_like_listcomp
+    statement := "For every element text e, (e for x in y) parses exactly when [e for x in y] " ++
+      "does (the reference: generator expressions have the syntax of list comprehensions)."
+    source := "Doc/reference/expressions.rst, Generator expressions; the implementation against itself"
+    status := .refuted
+    prop := ``GenexpLikeListcomp
+    thm := some ``genexpLikeListcomp_refuted
+    bug := some "pygrammar-genexp-star-precedence"
+    notes := "Counterexample run in the kernel: e = '*a or b'. genexp's element ends in " ++
+      "starred_expression ('*' expression), listcomp's star_named_expression ('*' bitwise_or)." }
 ]
 
 end PyLean.PyGrammar.Peg
