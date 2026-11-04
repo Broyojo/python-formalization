@@ -163,7 +163,8 @@ theorem suppressGroupDerive_proven : SuppressGroupDerive := by
   have hbegc : subOf dc clsBEG = true := by
     simp only [Heap.isInst] at hbeg
     simpa [subOf, clsBEG, hcls] using hbeg
-  obtain ⟨f, hf⟩ : ∃ f, s1.h.length = f + 1 := ⟨s1.h.length - 1, by omega⟩
+  obtain ⟨f, hf⟩ : ∃ f, s1.h.length = f + 1 :=
+    ⟨s1.h.length - 1, (Nat.succ_pred_eq_of_pos (Nat.lt_of_le_of_lt (Nat.zero_le e) hl)).symm⟩
   have hfold := foldl_leaves ms derive handled f s1 cs [] [] hleaf
   have hsplit : ∀ (k : St σ × Res (Option ExcId)),
       subsetM derive handled s1 e cs = k →
@@ -173,8 +174,8 @@ theorem suppressGroupDerive_proven : SuppressGroupDerive := by
          | (s, .ok r) => some (s, .ok (none, r))) := by
     intro k hk
     simp only [egSplit, hbeg, Bool.not_true, Bool.false_eq_true, if_false, hms]
-    rw [hf]
-    simp only [splitRec, hm, Bool.false_eq_true, if_false, hch]
+    rw [hf, splitRec]
+    simp only [hm, Bool.false_eq_true, if_false, hch]
     rw [hfold]
     simp only [List.nil_append]
     have hsub0 : subsetM derive handled s1 e [] = (s1, .ok none) := by simp [subsetM]
@@ -194,13 +195,16 @@ theorem suppressGroupDerive_proven : SuppressGroupDerive := by
        | some (s, .ok (_, none)) => .ok (s, .ok (some true))
        | some (s, .ok (_, some r)) => .ok ({ s with h := s.h.raiseCtx r handled }, .error r)) := by
     simp [suppressExit, hsub, issubItem, hbegc]
+    try rfl
   refine ⟨?_, ?_, ?_⟩
   · intro hd
-    rw [hpre, hsplit _ (by simp [subsetM, hcs, hd])]
+    rw [hpre, hsplit (s2, .error x) (by simp [subsetM, hcs, hd])]
+    try rfl
   · intro hd hg
     let k := s2.raiseNew clsType "derive must return an instance of BaseExceptionGroup" handled
     refine ⟨k.2, ?_, (raiseNew_obj s2 clsType _ handled).2.1⟩
-    rw [hpre, hsplit (k.1, .error k.2) (by simp [subsetM, hcs, hd, hg, k])]
+    rw [hpre, hsplit (k.1, .error k.2) (by simp [subsetM, hcs, hd, hg, k]; try rfl)]
+    try rfl
   · intro hd hg
     let o := s2.h.get e
     let h1 := match o.tb with
@@ -209,6 +213,7 @@ theorem suppressGroupDerive_proven : SuppressGroupDerive := by
     let h2 := (h1.setContext g o.context).modify g (fun y => { y with cause := o.cause })
     have hk : subsetM derive handled s1 e cs = ({ s2 with h := h2 }, .ok (some g)) := by
       simp [subsetM, hcs, hd, hg, h2, h1, o]
+      try rfl
     rw [hpre, hsplit _ hk]
     have hgl : g < s2.h.length := isInst_lt hg
     have hl1 : g < h1.length := by
@@ -268,14 +273,19 @@ def abcHeap : Heap :=
 
 theorem suppressGroupConsistent_refuted : ¬SuppressGroupConsistent := by
   intro h
+  have hmember : (suppressExit [abcItem] builtinDerive { h := abcHeap, g := () } (some 0)
+      (some (Derived.cls (({ h := abcHeap, g := () } : St Unit).h.get 0).cls)) (some 0)).map (·.2) =
+      .ok (.ok (some true)) := by rfl
+  have hgroup : (suppressExit [abcItem] builtinDerive { h := abcHeap, g := () } (some 1)
+      (some (Derived.cls (({ h := abcHeap, g := () } : St Unit).h.get 1).cls)) (some 1)).map (·.2) =
+      .ok (.error 2) := by rfl
   have := h Unit [abcItem] { h := abcHeap, g := () } 1 [0] rfl (by decide)
     (by
       intro c hc
       simp at hc
       subst hc
-      refine ⟨rfl, ?_⟩
-      decide)
-  revert this
-  decide
+      exact ⟨rfl, hmember⟩)
+  rw [hgroup] at this
+  simp at this
 
 end PyLean.CoreLibs.Misc.Contextlib

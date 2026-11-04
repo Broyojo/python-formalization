@@ -115,9 +115,12 @@ theorem raiseNew_isInst {σ : Type} (s : St σ) (c : Cls) (msg : String) (hd : O
   simp [Heap.isInst, (raiseNew_obj s c msg hd).2.2.2.2]
 
 theorem isInst_lt {h : Heap} {e : ExcId} {n : String} (hi : h.isInst e n = true) : e < h.length := by
-  by_contra hl
-  simp [Heap.isInst, Heap.get, List.getD_eq_getElem?_getD, List.getElem?_eq_none (Nat.le_of_not_lt hl)] at hi
-  cases hi
+  rcases Nat.lt_or_ge e h.length with hl | hl
+  · exact hl
+  · exfalso
+    simp [Heap.isInst, Heap.get, List.getD_eq_getElem?_getD, List.getElem?_eq_none hl] at hi
+    change n ∈ ([] : List String) at hi
+    simp at hi
 
 theorem length_modify (h : Heap) (a : ExcId) (f : ExcObj → ExcObj) : (h.modify a f).length = h.length := by
   simp [Heap.modify]

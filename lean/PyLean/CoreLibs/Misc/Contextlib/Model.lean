@@ -125,11 +125,12 @@ def gcmInit {D : Type} (call : St σ → St σ × Res Unit) (getDoc : St σ → 
   match call s with
   | (s, .error e) => (s, .error e)
   | (s, .ok ()) =>
-    let (s, d) := getDoc s
-    match getattrDefault s d with
-    | .error e => (s, .error e)
-    | .ok none => (s, .ok ({ live := true }, classDoc))
-    | .ok (some d) => (s, .ok ({ live := true }, some d))
+    match getDoc s with
+    | (s, d) =>
+      match getattrDefault s d with
+      | .error e => (s, .error e)
+      | .ok none => (s, .ok ({ live := true }, classDoc))
+      | .ok (some d) => (s, .ok ({ live := true }, some d))
 
 /-- `_GeneratorContextManagerBase._recreate_cm`, Lib/contextlib.py:184-188:
 `self.__class__(self.func, self.args, self.kwds)`. `init` is the `__init__` of the class with the

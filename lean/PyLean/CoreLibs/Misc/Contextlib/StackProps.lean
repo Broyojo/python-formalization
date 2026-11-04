@@ -427,13 +427,13 @@ theorem exitRunsLifo_proven : ExitRunsLifo := by
       · simpa [raiseKeepingContext] using hx
       · simp only [raiseKeepingContext]
         rw [hr.heap, hl]
-        simp only at hmap
+        try simp only at hmap
         rw [hmap]
   | false =>
     refine ⟨x', .ok (exc.isSome && sup), ?_, hx, ?_⟩
     · simp [exit, h1, bind, Except.bind, pure, Except.pure]
     · rw [hl]
-      simp only at hmap
+      try simp only at hmap
       rw [hmap]
 
 /-- `close()` "immediately unwinds the context stack": it is the exit with no exception, so the
@@ -452,23 +452,31 @@ theorem closeMatchesNested_proven : CloseMatchesNested := by
   cases hn : nested c frameExc fixFuel fuel x none with
   | error e =>
     rw [hn] at h
-    simp only at h
+    try simp only at h
     simp [close, h, bind, Except.bind]
   | ok p =>
     obtain ⟨x1, o⟩ := p
     rw [hn] at h
-    simp only at h
+    try simp only at h
     cases he : exit c fuel fixFuel x none frameExc with
-    | error e => rw [he] at h; exact h
+    | error e => rw [he] at h; simp at h
     | ok q =>
       obtain ⟨x2, r⟩ := q
       rw [he] at h
       obtain ⟨ho, hs⟩ := h
-      simp only [close, he, bind, Except.bind, pure, Except.pure]
-      refine ⟨hs, ?_⟩
       cases r with
-      | ok b => cases b <;> simp [outcome] at ho <;> subst ho <;> rfl
-      | error e => simp [outcome] at ho; subst ho; rfl
+      | ok b =>
+        have hc : close c fuel fixFuel x frameExc = .ok (x2, .ok ()) := by
+          simp [close, he, bind, Except.bind, pure, Except.pure]
+        rw [hc]
+        refine ⟨hs, ?_⟩
+        cases b <;> simp [outcome] at ho <;> subst ho <;> rfl
+      | error e =>
+        have hc : close c fuel fixFuel x frameExc = .ok (x2, .error e) := by
+          simp [close, he, bind, Except.bind, pure, Except.pure]
+        rw [hc]
+        refine ⟨hs, ?_⟩
+        simp [outcome] at ho; subst ho; rfl
 
 /-- `callback` "Cannot suppress exceptions": the wrapper of `_create_cb_wrapper` calls the callback
 with its own arguments, drops the result, and ignores the exception details. An exit method bound to `cm`, which is
@@ -547,14 +555,14 @@ theorem aEnterContextCases_proven : AEnterContextCases := by
   · cases hs : x.1.h.isInst e "StopIteration" <;>
       simp [aenterContext, enterContext, lookupSentinel, descriptorGet, coBoundary, wrap, hs, coroutineStop]
   · intro h1
+    simp only [aenterContext, enterContext, lookupSentinel, h1]
     cases hs : x.1.h.isInst e "StopIteration" <;>
-      simp [aenterContext, enterContext, lookupSentinel, descriptorGet, h1, coBoundary, wrap, hs,
-        coroutineStop]
-  · have hr := raiseNew_isInst x.1 clsType msg none "StopIteration"
+      simp [descriptorGet, coBoundary, wrap, hs, coroutineStop]
+  · have hr := raiseNew_not_stop x.1 clsType msg none (by decide)
     have ho := raiseNew_obj x.1 clsType msg none
     refine ⟨(x.1.raiseNew clsType msg).2, ?_, ho.2.1, ho.2.2.2.2⟩
-    simp only [aenterContext, enterContext, lookupSentinel, coBoundary]
-    simp [hr, clsType]
+    simp only [aenterContext, enterContext, lookupSentinel]
+    rw [coBoundary_of_not_stop _ _ hr]
 
 /-- Nested `async with` statements, innermost first: a sync entry is called, an async one awaited. -/
 def anested (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) :
@@ -687,11 +695,11 @@ theorem aexit_shape (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O 
         obtain ⟨e, he, hl⟩ := coBoundary_leaves (raiseKeepingContext x1 p frameExc).1 p
         simp only [aexit, h1, bind, Except.bind, pure, Except.pure, if_true]
         rw [he]
-        refine ⟨by simp [raiseKeepingContext], p, rfl, hl⟩
+        refine ⟨by simp [raiseKeepingContext], p, by simp, hl⟩
     | false =>
       have ho := h2 rfl
       simp only [aexit, h1, bind, Except.bind, pure, Except.pure, Bool.false_eq_true, if_false]
-      refine ⟨rfl, ?_⟩
+      refine ⟨by simp, ?_⟩
       cases sup <;> cases exc <;> simp at ho ⊢ <;> exact ho
 
 theorem aExitMatchesNested_proven : AExitMatchesNested := by
@@ -717,30 +725,35 @@ theorem aCloseMatchesNested_proven : ACloseMatchesNested := by
   cases hn : anested c ac frameExc fixFuel fuel x none with
   | error e =>
     rw [hn] at h
-    simp only at h
+    try simp only at h
     simp [aclose, h, bind, Except.bind]
   | ok p =>
     obtain ⟨x1, o⟩ := p
     rw [hn] at h
-    simp only at h
+    try simp only at h
     cases he : aexit c ac fuel fixFuel x none frameExc with
-    | error e => rw [he] at h; exact h
+    | error e => rw [he] at h; simp at h
     | ok q =>
       obtain ⟨x2, r⟩ := q
       rw [he] at h
       obtain ⟨hs, ho⟩ := h
-      simp only [aclose, he, bind, Except.bind, pure, Except.pure]
       cases r with
       | ok b =>
-        cases b <;> simp at ho <;> simp [coBoundary, hs, ho]
+        have hc : aclose c ac fuel fixFuel x frameExc = .ok (x2, .ok ()) := by
+          simp [aclose, he, bind, Except.bind, pure, Except.pure, coBoundary]
+        rw [hc]
+        refine ⟨hs, ?_⟩
+        cases b <;> simpa using ho
       | error e =>
         obtain ⟨p, hp, hl⟩ := ho
         have hne : x2.1.h.isInst e "StopIteration" = false := by
           rcases hl with ⟨rfl, h2⟩ | ⟨_, _, h3, _⟩
           · exact h2
           · simp [Heap.isInst, h3, clsRuntime]
-        simp [coBoundary, hne, hs]
-        exact ⟨p, hp, hl⟩
+        have hc : aclose c ac fuel fixFuel x frameExc = .ok (x2, .error e) := by
+          simp [aclose, he, bind, Except.bind, pure, Except.pure, coBoundary, hne]
+        rw [hc]
+        exact ⟨hs, p, hp, hl⟩
 
 /-- `AsyncExitStack.__aexit__` terminates for every exception a callback raises. Refuted like
 `ExitStackTerminates`: the copy of `_fix_exception_context` at Lib/contextlib.py:768-780 has the
@@ -766,8 +779,10 @@ Refuted by the counterexample of `ExitKeepsContextAcyclic` with both callbacks a
 def AExitKeepsContextAcyclic : Prop :=
   ∀ (σ F O A : Type) (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x x' : Xs σ F O A)
     (exc frameExc : Option ExcId) (r : Res Bool),
-    (∀ (cb : Cb F O A) (y : Xs σ F O A) (d : Option ExcId), (cb.acall ac y d).1.1.h = y.1.h) →
-    (∀ (cb : Cb F O A) (y : Xs σ F O A) (d : Option ExcId), (cb.call c y d).1.1.h = y.1.h) →
+    (∀ k : Calls σ F O A, k = c ∨ k = ac →
+      (∀ f (y : Xs σ F O A) d, (k.raw f y d).1.1.h = y.1.h) ∧
+      (∀ m o (y : Xs σ F O A) d, (k.bound m o y d).1.1.h = y.1.h) ∧
+      (∀ f a (y : Xs σ F O A), (k.wrapped f a y).1.1.h = y.1.h)) →
     Acyclic x.1.h → aexit c ac fuel fixFuel x exc frameExc = .ok (x', r) → Acyclic x'.1.h
 
 theorem aExitKeepsContextAcyclic_refuted : ¬AExitKeepsContextAcyclic := by
@@ -787,11 +802,8 @@ theorem aExitKeepsContextAcyclic_refuted : ¬AExitKeepsContextAcyclic := by
     rfl
   have := h Unit Nat Unit Unit fbaCalls fbaCalls 3 5 _ _ (some 0) (some 0) _
     (by
-      intro cb y d
-      cases cb <;> rfl)
-    (by
-      intro cb y d
-      cases cb <;> rfl)
+      intro k hk
+      rcases hk with rfl | rfl <;> exact ⟨fun _ _ _ => rfl, fun _ _ _ _ => rfl, fun _ _ _ => rfl⟩)
     hacy hrun
   obtain ⟨n, hn⟩ := this 1
   rw [chainEnds_set 1 n (.inl rfl)] at hn

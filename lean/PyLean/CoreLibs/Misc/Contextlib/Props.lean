@@ -122,13 +122,12 @@ def RecreateFresh : Prop :=
 theorem recreateFresh_proven : RecreateFresh := by
   intro σ V D cfg ops name ename init handled self s s0
   refine ⟨rfl, ?_⟩
-  have : (gcmEnter cfg ops ename self s0).1 = { live := false } := by
+  have : (gcmEnter cfg ops ename self s0).1.live = false := by
     unfold gcmEnter
     split
-    · rfl
+    · rename_i h; simpa using h
     · split <;> (try split) <;> rfl
-  rw [this]
-  rfl
+  simp only [gcmRecreate, this, Bool.false_eq_true, if_false]
 
 /-- `__enter__`: the value the generator yields is the value of the `with` target; a generator that
 stops at once gives `RuntimeError("generator didn't yield")` with the `StopIteration` as context; any
@@ -278,21 +277,13 @@ theorem gcmInit_live {σ D : Type} {call : St σ → St σ × Res Unit}
     {getDoc : St σ → St σ × Res (Option D)} {cdoc : Option D} {s0 s : St σ} {g : GCM}
     {doc : Option D} (h : gcmInit call getDoc cdoc s0 = (s, .ok (g, doc))) : g = { live := true } := by
   unfold gcmInit at h
-  revert h
-  cases call s0 with
-  | mk s1 r =>
-    cases r with
-    | error x => simp
-    | ok u =>
-      cases getDoc s1 with
-      | mk s2 d =>
-        simp only
-        cases hd : getattrDefault s2 d with
-        | error x => simp
-        | ok o =>
-          cases o with
-          | none => intro h; simp at h; exact h.2.1.symm
-          | some y => intro h; simp at h; exact h.2.1.symm
+  split at h
+  · simp at h
+  · split at h
+    split at h
+    · simp at h
+    · simp only [Prod.mk.injEq, Except.ok.injEq] at h; exact h.2.1.symm
+    · simp only [Prod.mk.injEq, Except.ok.injEq] at h; exact h.2.1.symm
 
 /-- The docstring of `contextmanager`: calling the decorated function calls `func` at once, and its
 failure is the call's; the manager it returns behaves, with a generator that yields once and then

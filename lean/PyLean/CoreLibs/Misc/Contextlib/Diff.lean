@@ -581,7 +581,7 @@ def runStack (j : Json) : Except String Json := do
         then pushAsyncExit (fun _ => none) id x.2 f
         else push (fun _ => none) id x.2 f
       x := (x.1, ret)
-      out := out.push (Json.arr #[toJson f.1, jBool (r == .ok f)])
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_cm" =>
       let f ← beh 2
       let look : ExitLookup XF XF Unit := fun o => some (.get (.ok (.bound o o)))
@@ -589,7 +589,7 @@ def runStack (j : Json) : Except String Json := do
         then pushAsyncExit look id x.2 f
         else push look id x.2 f
       x := (x.1, ret)
-      out := out.push (Json.arr #[toJson f.1, jBool (r == .ok f)])
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_static" =>
       let f ← beh 2
       let kind ← jStrAt op 4
@@ -602,7 +602,7 @@ def runStack (j : Json) : Except String Json := do
         then pushAsyncExit look id x.2 f
         else push look id x.2 f
       x := (x.1, ret)
-      out := out.push (Json.arr #[toJson f.1, jBool (r == .ok f)])
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_descfail" =>
       let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
       let isAsync ← jBoolAt op 1

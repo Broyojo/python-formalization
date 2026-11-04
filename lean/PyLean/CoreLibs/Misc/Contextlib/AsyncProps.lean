@@ -20,6 +20,15 @@ def coroutineStop {σ α : Type} (s : St σ) (e : ExcId) : St σ × Res α :=
     { cls := clsRuntime, msg := "coroutine raised StopIteration", context := some e, cause := some e }
   ({ s with h := h }, .error x)
 
+theorem coBoundary_of_not_stop {σ α : Type} (s : St σ) (e : ExcId)
+    (h : s.h.isInst e "StopIteration" = false) : coBoundary s (.error e : Res α) = (s, .error e) := by
+  simp [coBoundary, h]
+
+theorem raiseNew_not_stop {σ : Type} (s : St σ) (c : Cls) (msg : String) (hd : Option ExcId)
+    (hc : c.contains "StopIteration" = false) :
+    (s.raiseNew c msg hd).1.h.isInst (s.raiseNew c msg hd).2 "StopIteration" = false := by
+  rw [raiseNew_isInst]; exact hc
+
 /-- `__aenter__`: the value the generator gives is the value of the `async with` target. A
 `StopAsyncIteration` is `RuntimeError("generator didn't yield")` with it as context; a
 `StopIteration`, which an object that is no async generator can raise from `anext`, leaves the
@@ -49,26 +58,37 @@ theorem aEnterCases_proven : AEnterCases := by
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro h; simp [agcmEnter, gcmEnter, coBoundary, h]
   · intro h1 h2
-    have hr := raiseNew_isInst s' clsRuntime "generator didn't yield" (some e) "StopIteration"
-    simp only [agcmEnter, gcmEnter, asyncCfg, h1, h2, coBoundary, Bool.not_true, Bool.false_eq_true,
-      if_false, if_true]
-    simp [hr, clsRuntime]
+    have hr := raiseNew_not_stop s' clsRuntime "generator didn't yield" (some e) (by decide)
+    generalize hk : s'.raiseNew clsRuntime "generator didn't yield" (some e) = k at hr
+    obtain ⟨s2, x⟩ := k
+    simp only at hr
+    simp only [agcmEnter, gcmEnter, asyncCfg, h1, h2, hk, Bool.not_true, Bool.false_eq_true,
+      if_false, if_true, coBoundary_of_not_stop _ _ hr]
   · intro h1 h2 h3
     simp [agcmEnter, gcmEnter, asyncCfg, h1, h2, h3, coBoundary, coroutineStop]
   · intro h1 h2 h3
     simp [agcmEnter, gcmEnter, asyncCfg, h1, h2, h3, coBoundary]
-  · have hr := raiseNew_isInst s clsAttr
-      "'_AsyncGeneratorContextManager' object has no attribute 'args'" none "StopIteration"
-    simp only [agcmEnter, gcmEnter, Bool.not_false, if_true, coBoundary]
-    simp [hr, clsAttr]
+  · have hr := raiseNew_not_stop s clsAttr
+      "'_AsyncGeneratorContextManager' object has no attribute 'args'" none (by decide)
+    generalize hk : s.raiseNew clsAttr
+      "'_AsyncGeneratorContextManager' object has no attribute 'args'" none = k at hr
+    obtain ⟨s2, x⟩ := k
+    simp only at hr
+    simp only [agcmEnter, gcmEnter, Bool.not_false, if_true]
+    rw [show (toString "'" ++ toString "_AsyncGeneratorContextManager" ++
+      toString "' object has no attribute 'args'") =
+      "'_AsyncGeneratorContextManager' object has no attribute 'args'" from rfl, hk]
+    simp only [coBoundary_of_not_stop _ _ hr]
 
 /-- The way out of `try: raise RuntimeError(msg) finally: await self.gen.aclose()` in `__aexit__`:
 the `RuntimeError` when `aclose` succeeds, else what `aclose` raised, a `StopIteration` turned into
-the coroutine's `RuntimeError`. -/
+the coroutine's `RuntimeError`. The first case assumes that the `RuntimeError` is still one after
+`aclose`: a `__class__` assignment cannot make it a `StopIteration`, whose layout differs. -/
 def AfterYield {σ V : Type} (ops : GenOps σ V) (s : St σ) (msg : String) (run : St σ × Res Bool) :
     Prop :=
   let (s2, rt) := s.raiseNew clsRuntime msg (ops.handled s)
-  (∀ s3, ops.close s2 (some rt) = (s3, .ok ()) → run = (s3, .error rt)) ∧
+  (∀ s3, ops.close s2 (some rt) = (s3, .ok ()) → (s3.h.get rt).cls = clsRuntime →
+    run = (s3, .error rt)) ∧
   (∀ s3 x, ops.close s2 (some rt) = (s3, .error x) → s3.h.isInst x "StopIteration" = true →
     run = coroutineStop s3 x) ∧
   (∀ s3 x, ops.close s2 (some rt) = (s3, .error x) → s3.h.isInst x "StopIteration" = false →
@@ -76,16 +96,26 @@ def AfterYield {σ V : Type} (ops : GenOps σ V) (s : St σ) (msg : String) (run
 
 theorem afterYield_of {σ V : Type} (ops : GenOps σ V) (s : St σ) (msg : String) :
     AfterYield ops s msg (coBoundary (raiseThenClose ops s msg).1 (raiseThenClose ops s msg).2) := by
-  have hr := raiseNew_isInst s clsRuntime msg (ops.handled s) "StopIteration"
+  unfold AfterYield
+  generalize hk : s.raiseNew clsRuntime msg (ops.handled s) = k
+  obtain ⟨s2, rt⟩ := k
+  have hrt : raiseThenClose ops s msg = (match ops.close s2 (some rt) with
+      | (s, .ok ()) => (s, .error rt)
+      | (s, .error e) => (s, .error e)) := by
+    simp only [raiseThenClose, hk]
+    try rfl
+  simp only
   refine ⟨?_, ?_, ?_⟩
-  · intro s3 h
-    simp only [raiseThenClose, h, coBoundary]
-    simp only [St.raiseNew] at hr h ⊢
-    simp [hr, clsRuntime]
+  · intro s3 h hc
+    rw [hrt, h]
+    have : s3.h.isInst rt "StopIteration" = false := by simp [Heap.isInst, hc, clsRuntime]
+    exact coBoundary_of_not_stop _ _ this
   · intro s3 x h hx
-    simp [raiseThenClose, h, coBoundary, hx, coroutineStop]
+    rw [hrt, h]
+    simp [coBoundary, hx, coroutineStop]
   · intro s3 x h hx
-    simp [raiseThenClose, h, coBoundary, hx]
+    rw [hrt, h]
+    simp [coBoundary, hx]
 
 /-- `__aexit__(None, None, None)`: an async generator that finishes gives `False`; one that yields
 again is closed, and the result is `AfterYield` with "generator didn't stop"; a `StopIteration`
@@ -161,19 +191,13 @@ theorem aExitThrowCases_proven : AExitThrowCases := by
     simp only [run, agcmExit, gcmExit, h1, asyncCfg] at hw ⊢
     simp [h2, h3, h4, hw, h6, coBoundary]
   · intro h1 h2 h3 h4
-    have hcase : (if s'.h.isInst exc "RuntimeError" = true then
-        (if exc = value then ({ s' with h := s'.h.setTb exc tb }, (.ok false : Res Bool))
-         else if s'.h.isInstAny value ["StopIteration", "StopAsyncIteration"] = true ∧
-            (s'.h.get exc).cause = some value then ({ s' with h := s'.h.setTb value tb }, .ok false)
-          else (s', .error exc))
-        else if exc ≠ value then (s', .error exc) else ({ s' with h := s'.h.setTb exc tb }, .ok false))
-        = (s', .error exc) := by
+    have key : gcmExit asyncCfg ops inst s (some c) (some value) tb = (s', .error exc) := by
+      simp only [gcmExit, h1, asyncCfg, h3, Bool.false_eq_true, if_false]
       rcases h4 with h4 | ⟨h4a, h4b⟩ | h4
       · simp [h4, h2]
       · simp [Heap.isInstAny, h4a, h4b, h2]
       · cases hr : s'.h.isInst exc "RuntimeError" <;> simp [h2, h4]
-    simp only [run, agcmExit, gcmExit, h1, asyncCfg, h3, Bool.false_eq_true, if_false]
-    rw [hcase]
+    simp only [run, agcmExit, key]
     cases hs : s'.h.isInst exc "StopIteration" <;> simp [coBoundary, hs, coroutineStop]
 
 /-- `__aexit__(typ, None, tb)`: `value = typ()` runs first. Its exception is the result, a
