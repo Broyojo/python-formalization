@@ -13,6 +13,7 @@ import PyLean.LongObj.SignApi
 import PyLean.LongObj.Compare
 import PyLean.LongObj.AsByteArray
 import PyLean.LongObj.RoundNear
+import PyLean.LongObj.PowObj
 
 /-!
 All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.15.2.
@@ -63,6 +64,11 @@ def entriesCompare : List Entry := [
     statement := "round(x, ndigits) for an int returns x for None; ndigits goes through _PyNumber_Index (an int directly, another object's __index__, whose exception or TypeError passes through); the value is the multiple of 10**-ndigits nearest x, ties to even, and x for ndigits >= 0."
     source := "built-in round() docs", status := .proven
     prop := ``IntRoundExact, thm := some ``intRoundExact_proven },
+  { id := "longobj-pow-obj", pyFile := "Objects/longobject.c", pyFns := ["long_pow"]
+    statement := "pow(v, w, x) for ints gives NotImplemented for a non-int base or exponent and for a modulus that is neither an int nor None; with no modulus a negative exponent goes to float_pow and otherwise the result is exactly v**w on all three exponentiation paths; with a modulus, ValueError for x == 0, the Python remainder of v**w by x for w >= 0, and MathInt.powMod for every argument."
+    source := "built-in pow() docs; CHECK_BINOP at longobject.c:1843-1847", status := .proven
+    prop := ``LongPowExact, thm := some ``longPowExact_proven
+    notes := "Smoke-tested on 3.15.2 through int.__pow__: float and str operands and a float modulus give NotImplemented, pow(2, -1) is 0.5, pow(2, 3, 0) raises. The float_pow result itself is outside the integer model." },
   { id := "longobj-as-byte-array-stores", pyFile := "Objects/longobject.c", pyFns := ["_PyLong_AsByteArray"]
     statement := "When v >= 0 or the conversion is signed, _PyLong_AsByteArray stores exactly n bytes holding v mod 256**n whether or not it succeeds, returns 0 exactly when v fits, and sets OverflowError only with with_exceptions; a negative v converted unsigned stores nothing."
     source := "comment at longobject.c:1154-1157; int.to_bytes docs", status := .open
