@@ -87,7 +87,7 @@ tested:
   python3 3.15.2: REPRODUCED (reproducer and public_api_reproducer)
   python3 3.14.7: not affected (the helper does not exist; _divide computes 10 ** prec)
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED (public_api_reproducer)
-  lean_counterexample: "_pydecimal.Decimal('1E+355861594')._divide(Decimal('1.000000001'), c) at prec 355861594 (the Lean instance; 10**355861603 takes about 40 minutes): see notes"
+  lean_counterexample: "python3 3.15.2: _pydecimal.Decimal('1E+355861594')._divide(Decimal('1.000000001'), c), c = Context(prec=355861594, Emax=Emin=+-(10**18-1), traps=[]), returns (NaN, NaN) with InvalidOperation (2377 s, mostly 10**355861603): the exact instance of divideCorrect_refuted"
 duplicates:
   issues: []
   related: [140036]
