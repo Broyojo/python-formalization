@@ -794,14 +794,6 @@ theorem arrayBuffer_proven : ArrayBuffer := by
 
 /-! ### The iterator -/
 
-/-- What `next(it)` gives until `StopIteration`: values and raised exceptions. -/
-def arrDrain (a : Arr) : Nat → ArrIter → List (Py PyVal)
-  | 0, _ => []
-  | fuel + 1, it =>
-    match arrIterNext a it with
-    | (.ok none, _) => []
-    | (.ok (some v), it') => .ok v :: arrDrain a fuel it'
-    | (.error e, it') => .error e :: arrDrain a fuel it'
 
 theorem arrDrain_spec (a : Arr) (k i : Nat) (hk : i + k = a.items.length) :
     arrDrain a (k + 1) ⟨i, true⟩ = (a.items.drop i).map (tcGetitem a.tc) := by
@@ -838,34 +830,33 @@ theorem arrDrain_spec (a : Arr) (k i : Nat) (hk : i + k = a.items.length) :
 /-- The iterator, for every array that does not change while it runs: `iter(a)` yields
 `a[0], a[1], ...` in order (an unreadable item raises and the iteration goes on) and stops
 after `len(a)` items. Once exhausted it stays exhausted, whatever happens to the array
-later. `__setstate__` clips to `0 <= i <= len(a)` and a state from `__reduce__` restores
-the position; a state outside `Py_ssize_t` raises `OverflowError`, and an exhausted
-iterator ignores `__setstate__`. -/
+later. `__setstate__` clips an int state to `0 <= i <= len(a)`; a state outside `Py_ssize_t`
+raises `OverflowError`, and an exhausted iterator ignores an int state. (`__reduce__`, the
+round trip and the non-int states are `ArrayIterPickle`.) -/
 def ArrayIterator : Prop :=
   ∀ (a a' : Arr) (i : Int),
     arrDrain a (a.items.length + 1) arrIter = a.items.map (tcGetitem a.tc) ∧
     ((a.items.length : Int) ≤ i → arrIterNext a ⟨i, true⟩ = (.ok none, ⟨i, false⟩) ∧
       arrIterNext a' ⟨i, false⟩ = (.ok none, ⟨i, false⟩)) ∧
-    (arrIterReduce ⟨i, true⟩ = some i ∧ arrIterReduce ⟨i, false⟩ = none) ∧
     (ssizeMin ≤ i → i ≤ ssizeMax →
-      arrIterSetstate a arrIter i = .ok ⟨if i < 0 then 0 else if i > a.items.length then a.items.length else i, true⟩ ∧
-      arrIterSetstate a ⟨0, false⟩ i = .ok ⟨0, false⟩) ∧
-    ((i < ssizeMin ∨ i > ssizeMax) → (arrIterSetstate a arrIter i).raises "OverflowError")
+      arrIterSetstate a arrIter (.int i) = .ok ⟨if i < 0 then 0 else if i > a.items.length then a.items.length else i, true⟩ ∧
+      arrIterSetstate a ⟨0, false⟩ (.int i) = .ok ⟨0, false⟩) ∧
+    ((i < ssizeMin ∨ i > ssizeMax) → (arrIterSetstate a arrIter (.int i)).raises "OverflowError")
 
 theorem arrayIterator_proven : ArrayIterator := by
   intro a a' i
-  refine ⟨?_, fun h => ⟨?_, rfl⟩, ⟨rfl, rfl⟩, fun h0 h1 => ⟨?_, ?_⟩, fun h => ?_⟩
+  refine ⟨?_, fun h => ⟨?_, rfl⟩, fun h0 h1 => ⟨?_, ?_⟩, fun h => ?_⟩
   · have := arrDrain_spec a a.items.length 0 (by omega)
     simpa [arrIter] using this
   · simp only [arrIterNext, Bool.not_true, Bool.false_eq_true, ite_false]
     rw [iteF (by omega)]
   · have : asSsize i = .ok i := by unfold asSsize; rw [iteT ⟨h0, h1⟩]
-    simp only [arrIterSetstate, this, bind, Except.bind, pure, Except.pure, arrIter, ite_true]
+    simp only [arrIterSetstate, iterStateIndex, this, bind, Except.bind, pure, Except.pure, arrIter, ite_true]
   · have : asSsize i = .ok i := by unfold asSsize; rw [iteT ⟨h0, h1⟩]
-    simp only [arrIterSetstate, this, bind, Except.bind, pure, Except.pure, Bool.false_eq_true, ite_false]
+    simp only [arrIterSetstate, iterStateIndex, this, bind, Except.bind, pure, Except.pure, Bool.false_eq_true, ite_false]
   · have : asSsize i = .error (.overflowError "Python int too large to convert to C ssize_t") := by
       unfold asSsize; rw [iteF (by omega)]
-    simp only [arrIterSetstate, this, bind, Except.bind]
+    simp only [arrIterSetstate, iterStateIndex, this, bind, Except.bind]
     exact ⟨_, rfl, rfl⟩
 
 end PyLean.Sequences

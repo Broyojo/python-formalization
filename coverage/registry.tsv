@@ -346,10 +346,10 @@ decimal-parse-converse	open	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnic
 decimal-as-tuple-roundtrip	open	Lib/_pydecimal.py	Decimal.as_tuple,_decimal_Decimal_as_tuple_impl,dectuple_as_str
 decimal-normalize-correct	open	Lib/_pydecimal.py	Decimal.normalize,Decimal._fix
 decimal-copy-ops-correct	proven	Lib/_pydecimal.py	Decimal.copy_abs,Decimal.copy_negate,Decimal.copy_sign,Decimal.compare_total_mag
-decimal-classification-correct	proven	Lib/_pydecimal.py	Decimal.number_class,Decimal.is_nan,Decimal.is_qnan,Decimal.is_snan,Decimal.is_finite,Decimal.is_infinite,Decimal.is_normal,Decimal.is_subnormal,Decimal.is_zero,Decimal.is_canonical,Decimal.__bool__,Decimal._isnan,Decimal._isinfinity
+decimal-classification-correct	proven	Lib/_pydecimal.py	Decimal.number_class,Decimal.is_nan,Decimal.is_qnan,Decimal.is_snan,Decimal.is_finite,Decimal.is_infinite,Decimal.is_normal,Decimal.is_subnormal,Decimal.is_zero,Decimal.__bool__,Decimal._isnan,Decimal._isinfinity
 decimal-comparisons-consistent	proven	Lib/_pydecimal.py	Decimal.__eq__,Decimal.__lt__,Decimal.__le__,Decimal.__gt__,Decimal.__ge__,Decimal.compare,Decimal.compare_signal,Decimal._cmp,Decimal._check_nans,Decimal._compare_check_nans,Decimal._fix_nan
 decimal-minmax-correct	proven	Lib/_pydecimal.py	Decimal.max,Decimal.min,Decimal.max_mag,Decimal.min_mag
-decimal-raise-error-correct	proven	Lib/_pydecimal.py	Context._raise_error,DecimalException.handle,InvalidOperation.handle,ConversionSyntax.handle,DivisionByZero.handle,DivisionImpossible.handle,DivisionUndefined.handle,InvalidContext.handle,Overflow.handle
+decimal-raise-error-correct	proven	Lib/_pydecimal.py	Context._raise_error
 decimal-context-methods-match-decimal	proven	Lib/_pydecimal.py	_convert_other,Context.add,Context.subtract,Context.multiply,Context.divide,Context.divide_int,Context.divmod,Context.remainder,Context.compare,Context.compare_signal,Context.max,Context.max_mag,Context.min,Context.min_mag,Context.logical_and,Context.logical_or,Context.logical_xor,Context.next_toward,Context.quantize,Context.remainder_near,Context.rotate,Context.scaleb,Context.shift,Context.compare_total,Context.compare_total_mag,Context.copy_sign,Context.same_quantum,Context.abs,Context.logb,Context.logical_invert,Context.minus,Context.plus,Context.next_minus,Context.next_plus,Context.normalize,Context.to_integral_exact,Context.to_integral_value,Context.number_class,Context.is_normal,Context.is_subnormal,Context.to_eng_string,Context.to_sci_string,Context.copy_abs,Context.copy_negate,Context.copy_decimal,Context.is_finite,Context.is_infinite,Context.is_nan,Context.is_qnan,Context.is_signed,Context.is_snan,Context.is_zero,Context.canonical,Context.is_canonical,Context.radix,Context.fma
 decimal-reflected-operators	proven	Lib/_pydecimal.py	_convert_other,Decimal.__rsub__,Decimal.__rtruediv__,Decimal.__rdivmod__,Decimal.__rmod__,Decimal.__rfloordiv__
 decimal-c-context-clears-flags	refuted	Modules/_decimal/_decimal.c	context_new,context_init_impl
@@ -363,8 +363,8 @@ decimal-c-signaldict-eq-canonical	proven	Modules/_decimal/_decimal.c	signaldict_
 decimal-c-signaldict-set-get	proven	Modules/_decimal/_decimal.c	signaldict_getitem,signaldict_setitem
 decimal-divide-verdict	proven	Lib/_pydecimal.py	Decimal._divide,Decimal._rescale,_WorkRep.__init__,_is_less_than_pow10a_use_str
 decimal-pow10-band-exact	proven	Lib/_pydecimal.py	_is_less_than_pow10a_use_str
-decimal-divide-correct	open	Lib/_pydecimal.py	Decimal._divide,Decimal._rescale,_WorkRep.__init__
-decimal-truediv-specials	proven	Lib/_pydecimal.py	Decimal.__truediv__
+decimal-divide-correct	refuted	Lib/_pydecimal.py	Decimal._divide,Decimal._rescale,_WorkRep.__init__,_is_less_than_pow10a_use_str
+decimal-truediv-specials	proven	Lib/_pydecimal.py	Decimal.__truediv__,DivisionByZero.handle
 decimal-truediv-core	proven	Lib/_pydecimal.py	Decimal.__truediv__,_WorkRep.__init__
 decimal-divmod-consistent	proven	Lib/_pydecimal.py	Decimal.__divmod__,Decimal.__mod__,Decimal.__floordiv__,Decimal._divide,Decimal._fix
 decimal-floordiv-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__floordiv__,Decimal._divide
@@ -382,6 +382,20 @@ decimal-int-conversions-c	proven	Modules/_decimal/_decimal.c	dec_as_long,_decima
 decimal-int-conversions-py-or-limit	proven	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal.__int__,Decimal._rescale
 decimal-hash-consistent-c	proven	Modules/_decimal/_decimal.c	_dec_hash,dec_from_long
 decimal-ratio-correct-c	proven	Modules/_decimal/_decimal.c	_decimal_Decimal_as_integer_ratio_impl
+decimal-pow10-correct	refuted	Lib/_pydecimal.py	_is_less_than_pow10a_use_str
+decimal-cmp-exact	proven	Lib/_pydecimal.py	Decimal._cmp,Decimal._isinfinity,Decimal.__bool__
+decimal-check-nans-exact	proven	Lib/_pydecimal.py	Decimal._check_nans,Decimal._isnan,Decimal._fix_nan,InvalidOperation.handle,Context._raise_error
+decimal-compare-check-nans-exact	proven	Lib/_pydecimal.py	Decimal._compare_check_nans,Decimal.is_snan,Decimal.is_qnan,Decimal._fix_nan,InvalidOperation.handle,Context._raise_error
+decimal-comparisons-exact	proven	Lib/_pydecimal.py	Decimal.__eq__,Decimal.__lt__,Decimal.__le__,Decimal.__gt__,Decimal.__ge__,Decimal.compare,Decimal.compare_signal,Decimal._cmp,Decimal._check_nans,Decimal._compare_check_nans,_convert_for_comparison
+decimal-convert-comparisons	proven	Lib/_pydecimal.py	_convert_for_comparison,Decimal.__eq__,Decimal.__lt__,Decimal.__le__,Decimal.__gt__,Decimal.__ge__
+decimal-minmax-exact	proven	Lib/_pydecimal.py	Decimal.max,Decimal.min,Decimal.max_mag,Decimal.min_mag
+decimal-compare-total-exact	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal.compare_total_mag
+decimal-classification-exact	proven	Lib/_pydecimal.py	Decimal.number_class,Decimal.is_normal,Decimal.is_subnormal,Decimal.is_zero,Decimal.__bool__,Decimal._isinfinity,Decimal.is_snan,Decimal.is_qnan
+decimal-copy-exact	proven	Lib/_pydecimal.py	Decimal.copy_abs,Decimal.copy_negate,Decimal.copy_sign
+decimal-overflow-handle-table	proven	Lib/_pydecimal.py	Overflow.handle
+decimal-fix-nan-exact	proven	Lib/_pydecimal.py	Decimal._fix_nan,InvalidOperation.handle
+decimal-int-trunc-exact	proven	Lib/_pydecimal.py	Decimal.__int__
+decimal-from-float-exact	open	Lib/_pydecimal.py	Decimal.from_float,Decimal.__new__,Decimal.from_number
 decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp,Decimal._isnan
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
@@ -2199,7 +2213,7 @@ pygrammar-peg-roundtrip-parser	refuted	Parser/pegen.c
 pygrammar-peg-roundtrip-actions	refuted	Parser/action_helpers.c	
 pygrammar-unparse-roundtrip	refuted	Lib/_ast_unparse.py	Unparser._write_ftstring_inner,unparse
 pygrammar-unparse-c-roundtrip	refuted	Python/ast_unparse.c	append_joinedstr
-pygrammar-grammar-call-rule-sound	proven	Grammar/python.gram	rule:file,rule:interactive,rule:eval,rule:func_type,rule:statements,rule:statement,rule:single_compound_stmt,rule:statement_newline,rule:simple_stmts,rule:simple_stmt,rule:compound_stmt,rule:assignment,rule:annotated_rhs,rule:augassign,rule:return_stmt,rule:raise_stmt,rule:pass_stmt,rule:break_stmt,rule:continue_stmt,rule:global_stmt,rule:nonlocal_stmt,rule:del_stmt,rule:yield_stmt,rule:assert_stmt,rule:import_stmt,rule:import_name,rule:import_from,rule:import_from_targets,rule:import_from_as_names,rule:import_from_as_name,rule:dotted_as_names,rule:dotted_as_name,rule:dotted_name,rule:block,rule:decorators,rule:class_def,rule:class_def_raw,rule:function_def,rule:function_def_raw,rule:params,rule:parameters,rule:slash_no_default,rule:slash_with_default,rule:star_etc,rule:kwds,rule:param_no_default,rule:param_no_default_star_annotation,rule:param_with_default,rule:param_maybe_default,rule:param,rule:param_star_annotation,rule:annotation,rule:star_annotation,rule:default,rule:if_stmt,rule:elif_stmt,rule:else_block,rule:while_stmt,rule:for_stmt,rule:with_stmt,rule:with_item,rule:try_stmt,rule:except_block,rule:except_star_block,rule:finally_block,rule:match_stmt,rule:subject_expr,rule:case_block,rule:guard,rule:patterns,rule:pattern,rule:as_pattern,rule:or_pattern,rule:closed_pattern,rule:literal_pattern,rule:literal_expr,rule:complex_number,rule:signed_number,rule:signed_real_number,rule:real_number,rule:imaginary_number,rule:capture_pattern,rule:pattern_capture_target,rule:wildcard_pattern,rule:value_pattern,rule:attr,rule:name_or_attr,rule:group_pattern,rule:sequence_pattern,rule:open_sequence_pattern,rule:maybe_sequence_pattern,rule:maybe_star_pattern,rule:star_pattern,rule:mapping_pattern,rule:items_pattern,rule:key_value_pattern,rule:double_star_pattern,rule:class_pattern,rule:positional_patterns,rule:keyword_patterns,rule:keyword_pattern,rule:type_alias,rule:type_params,rule:type_param_seq,rule:type_param,rule:type_param_bound,rule:type_param_default,rule:type_param_starred_default,rule:expressions,rule:expression,rule:if_expression,rule:yield_expr,rule:star_expressions,rule:star_expression,rule:star_named_expressions,rule:star_named_expressions_sequence,rule:star_named_expression,rule:star_named_expression_sequence,rule:assignment_expression,rule:named_expression,rule:disjunction,rule:conjunction,rule:inversion,rule:comparison,rule:compare_op_bitwise_or_pair,rule:eq_bitwise_or,rule:noteq_bitwise_or,rule:lte_bitwise_or,rule:lt_bitwise_or,rule:gte_bitwise_or,rule:gt_bitwise_or,rule:notin_bitwise_or,rule:in_bitwise_or,rule:isnot_bitwise_or,rule:is_bitwise_or,rule:bitwise_or,rule:bitwise_xor,rule:bitwise_and,rule:shift_expr,rule:sum,rule:term,rule:factor,rule:power,rule:await_primary,rule:primary,rule:slices,rule:slice,rule:atom,rule:group,rule:lambdef,rule:lambda_params,rule:lambda_parameters,rule:lambda_slash_no_default,rule:lambda_slash_with_default,rule:lambda_star_etc,rule:lambda_kwds,rule:lambda_param_no_default,rule:lambda_param_with_default,rule:lambda_param_maybe_default,rule:lambda_param,rule:fstring_middle,rule:fstring_replacement_field,rule:fstring_conversion,rule:fstring_full_format_spec,rule:fstring_format_spec,rule:fstring,rule:tstring_format_spec_replacement_field,rule:tstring_format_spec,rule:tstring_full_format_spec,rule:tstring_replacement_field,rule:tstring_middle,rule:tstring,rule:string,rule:strings,rule:list,rule:tuple,rule:set,rule:dict,rule:double_starred_kvpairs,rule:double_starred_kvpair,rule:kvpair,rule:for_if_clauses,rule:for_if_clause,rule:listcomp,rule:setcomp,rule:genexp,rule:dictcomp,rule:arguments,rule:args,rule:kwargs,rule:starred_expression,rule:kwarg_or_starred,rule:kwarg_or_double_starred,rule:star_targets,rule:star_targets_list_seq,rule:star_targets_tuple_seq,rule:star_target,rule:target_with_star_atom,rule:star_atom,rule:single_target,rule:single_subscript_attribute_target,rule:t_primary,rule:t_lookahead,rule:del_targets,rule:del_target,rule:del_t_atom,rule:type_expressions,rule:func_type_comment,rule:invalid_arguments,rule:invalid_kwarg,rule:expression_without_invalid,rule:invalid_legacy_expression,rule:invalid_type_param,rule:invalid_expression,rule:invalid_if_expression,rule:invalid_named_expression,rule:invalid_assignment,rule:invalid_ann_assign_target,rule:invalid_raise_stmt,rule:invalid_del_stmt,rule:invalid_assert_stmt,rule:invalid_block,rule:invalid_comprehension,rule:invalid_parameters,rule:invalid_default,rule:invalid_star_etc,rule:invalid_kwds,rule:invalid_parameters_helper,rule:invalid_lambda_parameters,rule:invalid_lambda_parameters_helper,rule:invalid_lambda_star_etc,rule:invalid_lambda_kwds,rule:invalid_double_type_comments,rule:invalid_with_item,rule:invalid_for_if_clause,rule:invalid_for_target,rule:invalid_group,rule:invalid_import,rule:invalid_dotted_as_name,rule:invalid_import_from_as_name,rule:invalid_import_from,rule:invalid_import_from_targets,rule:invalid_with_stmt,rule:invalid_with_stmt_indent,rule:invalid_try_stmt,rule:invalid_except_stmt,rule:invalid_except_star_stmt,rule:invalid_finally_stmt,rule:invalid_except_stmt_indent,rule:invalid_except_star_stmt_indent,rule:invalid_match_stmt,rule:invalid_case_block,rule:invalid_as_pattern,rule:invalid_class_pattern,rule:invalid_mapping_pattern,rule:invalid_class_argument_pattern,rule:invalid_if_stmt,rule:invalid_elif_stmt,rule:invalid_else_stmt,rule:invalid_while_stmt,rule:invalid_for_stmt,rule:invalid_def_raw,rule:invalid_class_def_raw,rule:invalid_double_starred_kvpairs,rule:invalid_kvpair_unpacking,rule:invalid_kvpair,rule:invalid_starred_expression_unpacking,rule:invalid_starred_expression_unpacking_sequence,rule:invalid_starred_expression,rule:invalid_fstring_replacement_field,rule:invalid_fstring_conversion_character,rule:invalid_tstring_replacement_field,rule:invalid_tstring_conversion_character,rule:invalid_string_tstring_concat,rule:invalid_arithmetic,rule:invalid_factor,rule:invalid_type_params,rule:invalid_noteq
+pygrammar-grammar-call-rule-sound	proven	Grammar/python.gram	
 pygrammar-grammar-rule-starts	proven	Grammar/python.gram	
 pygrammar-peg-progress	proven	Parser/parser.c	
 pygrammar-peg-actions-frame	proven	Parser/action_helpers.c	
@@ -2227,6 +2241,26 @@ pygrammar-peg-identifier-not-constant	open	Parser/pegen.c
 pygrammar-peg-decimal-value	open	Parser/pegen.c	
 pygrammar-peg-terminates	open	Parser/pegen.c	
 pygrammar-peg-parser-output-validates	open	Python/ast.c	
+pygrammar-rule-keyword-stmts	proven	Grammar/python.gram	rule:pass_stmt,rule:break_stmt,rule:continue_stmt
+pygrammar-rule-return-stmt	proven	Grammar/python.gram	rule:return_stmt
+pygrammar-rule-raise-stmt	proven	Grammar/python.gram	rule:raise_stmt
+pygrammar-rule-raise-stmt-invalid	proven	Grammar/python.gram	rule:raise_stmt
+pygrammar-rule-invalid-raise-stmt	proven	Grammar/python.gram	rule:invalid_raise_stmt
+pygrammar-rule-factor	proven	Grammar/python.gram	rule:factor
+pygrammar-rule-power	proven	Grammar/python.gram	rule:power
+pygrammar-rule-signed-number	proven	Grammar/python.gram	rule:signed_number
+pygrammar-rule-yield-expr	proven	Grammar/python.gram	rule:yield_expr
+pygrammar-rule-yield-stmt	proven	Grammar/python.gram	rule:yield_stmt
+pygrammar-rule-assert-stmt	proven	Grammar/python.gram	rule:assert_stmt
+pygrammar-rule-import-name	proven	Grammar/python.gram	rule:import_name
+pygrammar-rule-invalid-import	proven	Grammar/python.gram	rule:invalid_import
+pygrammar-rule-del-stmt	proven	Grammar/python.gram	rule:del_stmt
+pygrammar-rule-augassign	proven	Grammar/python.gram	rule:augassign
+pygrammar-rule-file	proven	Grammar/python.gram	rule:file
+pygrammar-rule-eval	proven	Grammar/python.gram	rule:eval
+pygrammar-rule-interactive	proven	Grammar/python.gram	rule:interactive
+pygrammar-rule-statement	proven	Grammar/python.gram	rule:statement
+pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
 pygrammar-ast-splitlines	proven	Lib/ast.py	

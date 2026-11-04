@@ -214,12 +214,12 @@ def checkNans (c : Ctx) (a : Dec) (b : Option Dec) : DM (Option Dec) :=
 the result is a positive quiet NaN. -/
 def invalid (c : Ctx) : DM Dec := do raiseSig c .invalidOperation; return .nan false false 0
 
-/-! ## Value comparison (`_cmp`, _pydecimal.py:862-924, for non-NaNs) -/
+/-! ## Value comparison (`_cmp`, _pydecimal.py:862-907, for non-NaNs) -/
 
 /-- `(-1)**sign` as an ordering. -/
 def signOrd (neg : Bool) : Ordering := if neg then .lt else .gt
 
-/-- `Decimal._cmp`, _pydecimal.py:862-924, for operands that are not NaNs.
+/-- `Decimal._cmp`, _pydecimal.py:862-907, for operands that are not NaNs.
 When the adjusted exponents agree, the zero-padded digit strings have equal
 length, so comparing them as strings compares them as numbers. -/
 def cmpVal : Dec → Dec → Ordering
@@ -523,7 +523,7 @@ def cHash : Dec → Py (Option Int)
   | .fin neg co e => .ok (some (hashFinite neg co e))
 
 /-- `as_integer_ratio`, _pydecimal.py:1021-1069. The source strips factors of 5 and
-of 2 from `n` and `10^-exp` in turn (:984-997), which yields the fraction in
+of 2 from `n` and `10^-exp` in turn (:1052-1062), which yields the fraction in
 lowest terms; the model writes that fraction with a gcd. -/
 def pyRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")

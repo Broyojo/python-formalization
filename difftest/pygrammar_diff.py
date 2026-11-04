@@ -496,7 +496,43 @@ def make_case(src, rng):
     return c
 
 
+# ---- statements of the rules with rule-specific theorems (Peg/Rules/)
+
+RULE_EXPRS = ["x", "a.b", "f(x)", "1", "-1", "+1", "~x", "(a, b)", "x if y else z", "lambda: 0",
+              "await x", "[x]", "x ** y", "not x", "*x", "x := 1", "(x := 1)", "yield", "from",
+              "import", "lazy", "raise", "1 2", "", "a, b", "-x ** -y", "2 ** 3 ** 4"]
+RULE_NAMES = ["a", "a.b", "a.b.c", "a as b", "a, b", "lazy", "a as", ".a", "", "(a)", "*"]
+RULE_FORMS = [
+    "raise {e}", "raise {e} from {f}", "raise from {e}", "raise {e} from", "raise", "raise from",
+    "return {e}", "return", "return {e}, {f}", "yield {e}", "yield from {e}", "yield",
+    "x = yield {e}", "x = yield from {e}", "assert {e}", "assert {e}, {f}", "assert {e} = {f}",
+    "assert {e}, {f} = {e}", "assert {e} := {f}", "import {n}", "lazy import {n}", "import",
+    "lazy import", "import {n} from {m}", "lazy import {n} from {m}", "lazy from {n} import {m}",
+    "lazy from {n} import", "from {n} import", "from {n} lazy import {m}", "lazy {n}",
+    "match x:\n case {s}{k}: pass", "match x:\n case {s}{k} | {s}{k}j: pass",
+    "{u}{u}{e}", "{e} ** {u}{f}", "{e} ** {f} ** {e}", "{u}{e} ** {f}", "await {e} ** {f}",
+    "pass", "break", "continue", "pass; break", "x += {e}", "x @= {e}", "x **= {e}", "x //= {e}",
+]
+
+
+def gen_rule_target(rng):
+    def pick(xs):
+        return rng.choice(xs)
+    form = pick(RULE_FORMS)
+    src = form.format(e=pick(RULE_EXPRS), f=pick(RULE_EXPRS), n=pick(RULE_NAMES),
+                      m=pick(RULE_NAMES), s=pick(["", "+", "-", "+ ", "- ", "--", "~"]),
+                      k=pick(["1", "0", "1.5", "1j", "0x10", "1_0", "x", "(1)"]),
+                      u=pick(["", "-", "+", "~", "not ", "- "]))
+    if rng.random() < 0.3:
+        src = "def f():\n    " + src.replace("\n", "\n    ")
+    if rng.random() < 0.2:
+        src = rng.choice(["while x:\n    ", "for a in b:\n    ", "if x:\n    "]) + src
+    return src + rng.choice(["\n", "\n", "", " \n", "\nx\n", ";\n", " # c\n"])
+
+
 def gen_case_peg(rng):
+    if rng.random() < 0.3:
+        return make_case(gen_rule_target(rng), rng)
     if rng.random() < 0.12:
         src = rng.choice(REPIN)
         if rng.random() < 0.3:
