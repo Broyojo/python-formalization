@@ -56,13 +56,18 @@ def tdAdd (a b : TdNum) : Py TdNum :=
 def f86400 : F64 := F64.ofBits 0x40f5180000000000
 def f1e6 : F64 := F64.ofBits 0x412e848000000000
 
+/-- The type loop of `timedelta.__new__`, Py:667-679: the components in signature order, the
+first one that is neither an `int` nor a `float` raising `TypeError` with its name and type. -/
+def tdTypeCheckPy : List (String × TdNum) → Py Unit
+  | [] => .ok ()
+  | (name, .other ty) :: _ => .error (.typeError s!"~unsupported type for timedelta {name} component: {ty}")
+  | _ :: rest => tdTypeCheckPy rest
+
 /-- `timedelta.__new__`, Py:657-768, for every argument. -/
 def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdNum) : Py Delta := do
   -- :667-679, in this order
-  for (name, v) in [("days", days), ("seconds", seconds), ("microseconds", microseconds),
-      ("milliseconds", milliseconds), ("minutes", minutes), ("hours", hours), ("weeks", weeks)] do
-    if let .other ty := v then
-      throw (.typeError s!"~unsupported type for timedelta {name} component: {ty}")
+  tdTypeCheckPy [("days", days), ("seconds", seconds), ("microseconds", microseconds),
+      ("milliseconds", milliseconds), ("minutes", minutes), ("hours", hours), ("weeks", weeks)]
   -- :686-688
   let days ← tdAdd days (← tdMul weeks 7)
   let seconds ← tdAdd seconds (← tdAdd (← tdMul minutes 60) (← tdMul hours 3600))
@@ -77,7 +82,7 @@ def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdN
       pure (d, s, daysecondsfrac)
     | .int n => pure (n, (0 : Int), F64.zero false)
     | .other _ => throw .modelFuel
-  -- :709-724
+  -- :708-723
   let (seconds, secondsfrac) ← match seconds with
     | .float x => do
       let (secondsfrac, seconds) := modfF x
@@ -87,9 +92,9 @@ def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdN
     | .other _ => throw .modelFuel
   let d := d + seconds / 86400
   let s := s + seconds % 86400
-  -- :727
+  -- :728
   let usdouble := F64.mul secondsfrac f1e6
-  -- :731-746
+  -- :732-744
   let (d, s, microseconds) ← match microseconds with
     | .float x => do
       let m ← float_round_int (F64.add x usdouble)
@@ -102,12 +107,12 @@ def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdN
       let m ← float_round_int (F64.add (← tdToFloat m) usdouble)
       pure (d + sec / 86400, s + sec % 86400, m)
     | .other _ => throw .modelFuel
-  -- :754-757
+  -- :751-754
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
   let d := d + s / 86400
   let s := s % 86400
-  -- :763-764
+  -- :760-761
   if d.natAbs > 999999999 then throw (.overflowError s!"timedelta # of days is too large: {d}")
   return ⟨d, s, us⟩
 
@@ -183,5 +188,51 @@ theorem timedeltaFloatCtor_example :
     deltaNumC none none none none none (some (.float (F64.ofBits 0x416312d003333333))) none =
       .ok ⟨416666, 57959, 999999⟩ := by
   decide +kernel
+
+/-- The first argument that is not a number, by component name and type name. -/
+def firstOther : List (String × TdNum) → Option (String × String)
+  | [] => none
+  | (name, .other ty) :: _ => some (name, ty)
+  | _ :: rest => firstOther rest
+
+theorem tdTypeCheckPy_eq (l : List (String × TdNum)) :
+    tdTypeCheckPy l = match firstOther l with
+      | none => .ok ()
+      | some (name, ty) => .error (.typeError s!"~unsupported type for timedelta {name} component: {ty}") := by
+  induction l with
+  | nil => rfl
+  | cons a rest ih =>
+    obtain ⟨name, v⟩ := a
+    cases v with
+    | int n => simp only [tdTypeCheckPy, firstOther]; exact ih
+    | float x => simp only [tdTypeCheckPy, firstOther]; exact ih
+    | other ty => rfl
+
+/-- `timedelta(...)` in Python (Py:667-679) refuses every argument that is neither an `int`
+nor a `float` before any arithmetic: `TypeError` naming the first such component in
+signature order (`days, seconds, microseconds, milliseconds, minutes, hours, weeks`) and its
+type, whatever the other arguments are (an infinite or NaN float elsewhere included). -/
+def TimedeltaTypeLoop : Prop :=
+  ∀ (days seconds microseconds milliseconds minutes hours weeks : TdNum) (name ty : String),
+    firstOther [("days", days), ("seconds", seconds), ("microseconds", microseconds),
+      ("milliseconds", milliseconds), ("minutes", minutes), ("hours", hours), ("weeks", weeks)] = some (name, ty) →
+    deltaNumPy days seconds microseconds milliseconds minutes hours weeks =
+      .error (.typeError s!"~unsupported type for timedelta {name} component: {ty}")
+
+theorem timedeltaTypeLoop_proven : TimedeltaTypeLoop := by
+  intro days seconds microseconds milliseconds minutes hours weeks name ty h
+  unfold deltaNumPy
+  rw [tdTypeCheckPy_eq, h]
+  rfl
+
+/-- `deltaNumPy` with int arguments is the int-only model `deltaPy`, whose twin agreement and
+exactness are `TimedeltaCtorTwins` and `TimedeltaCtorExact`: on ints the float branches are
+not taken and `round(microseconds + usdouble)` (:744) adds `0.0` to an int below `10**6`.
+Open: needs the binary64 facts that `float(m) + 0.0` is `float(m)` and that `round` of an
+integral double is itself. -/
+def TimedeltaNumPyInt : Prop :=
+  ∀ days seconds microseconds milliseconds minutes hours weeks : Int,
+    deltaNumPy (.int days) (.int seconds) (.int microseconds) (.int milliseconds) (.int minutes)
+      (.int hours) (.int weeks) = deltaPy days seconds microseconds milliseconds minutes hours weeks
 
 end PyLean.Datetime

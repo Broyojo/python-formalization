@@ -1521,7 +1521,18 @@ def entries : List Entry := [
     pyFns := ["time.strptime", "datetime.strptime", "_strptime_datetime_time", "_strptime_datetime_datetime", "_check_tzinfo_arg"]
     statement := "time.strptime and datetime.strptime give the StrptimeTimeDatetime results when the class and _strptime's datetime module are one implementation; when they differ (a _pydatetime class with the C _strptime), a parsed %z offset is TypeError from the class's tzinfo check and a format without %z gives the same value."
     source := "Lib/datetime.py:7-10 and _strptime.py:22-24 (configuration); _check_tzinfo_arg", status := .proven
-    prop := ``StrptimeClassImpl, thm := some ``strptimeClassImpl_proven }
+    prop := ``StrptimeClassImpl, thm := some ``strptimeClassImpl_proven },
+  { id := "datetime-timedelta-type-loop", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__new__"]
+    statement := "timedelta(...) in Python raises TypeError naming the first component, in signature order, that is neither an int nor a float, before any arithmetic."
+    source := "timedelta docs (arguments may be integers or floats); Py:667-679", status := .proven
+    prop := ``TimedeltaTypeLoop, thm := some ``timedeltaTypeLoop_proven },
+  { id := "datetime-timedelta-num-py-int", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__new__"]
+    statement := "With int arguments the float-capable model of timedelta.__new__ is the int-only model (so TimedeltaCtorTwins and TimedeltaCtorExact apply to it)."
+    source := "invariant (the float branches are not taken)", status := .open
+    prop := ``TimedeltaNumPyInt
+    notes := "Needs binary64 lemmas: float(m) + 0.0 == float(m) for |m| < 10**6 and round() of an integral double." }
 ]
 
 end PyLean.Datetime

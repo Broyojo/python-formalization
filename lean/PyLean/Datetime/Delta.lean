@@ -42,7 +42,7 @@ instance (t : Delta) : Decidable t.Valid := by unfold Delta.Valid; infer_instanc
 
 /-- `timedelta(days, seconds, microseconds, milliseconds, minutes, hours,
 weeks)` with int arguments, _pydatetime.py:657-768. The type loop (:667-679) passes and the
-float branches are not taken; `round(microseconds + usdouble)` (:746) is the identity because
+float branches are not taken; `round(microseconds + usdouble)` (:744) is the identity because
 `usdouble == 0.0` and `|microseconds| < 10**6` there. -/
 def deltaPy (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
   -- :686-688
@@ -52,20 +52,20 @@ def deltaPy (days seconds microseconds milliseconds minutes hours weeks : Int) :
   -- :699-701 (int branch of :692-701: `daysecondsfrac = 0.0`, `d = days`)
   let d := days
   let s : Int := 0
-  -- :721-724 (`seconds` is an int: :715-716)
+  -- :721-723 (`seconds` is an int: :714-715)
   let d := d + seconds / 86400
   let s := s + seconds % 86400
-  -- :740-745 (int branch of :733-746)
+  -- :739-743 (int branch of :732-744)
   let sec2 := microseconds / 1000000
   let microseconds := microseconds % 1000000
   let d := d + sec2 / 86400
   let s := s + sec2 % 86400
-  -- :754-757
+  -- :751-754
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
   let d := d + s / 86400
   let s := s % 86400
-  -- :763-764
+  -- :760-761
   if d.natAbs > 999999999 then .error (.overflowError s!"timedelta # of days is too large: {d}")
   else .ok ⟨d, s, us⟩
 
