@@ -627,3 +627,43 @@ theorem astimezoneLocalNoneOffsetTwins_refuted : ¬ AstimezoneLocalNoneOffsetTwi
 
 end PyLean.Datetime
 
+
+namespace PyLean.Datetime
+
+/-- A local zone 24:30 ahead of UTC (POSIX `TZ='XXX-24:30'`), whose `tm_gmtoff` no
+`timezone` can hold. -/
+def farZone (_ : Int) : Py LocalTmZ := .ok ((2020, 1, 2, 3, 0, 0), 88200, "XXX")
+
+theorem farZone_valid : ∀ v r, farZone v = .ok r → LocalTmValid r.1 := by
+  intro v r h
+  cases h
+  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+/-- `astimezone()` (`tz=None`) on an aware datetime with an offset agrees between the twins,
+the edge where `self - offset` leaves the datetime range included (clause (b) of
+`AstimezoneLocal` without its range assumption). -/
+def AstimezoneLocalAwareEdgeTwins : Prop :=
+  ∀ (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT) (o : Delta),
+    env.Valid → self.Valid → (∀ v r, ltz v = .ok r → LocalTmValid r.1) → o1 ≠ 0 → o2 ≠ 0 → o1 ≠ o2 →
+    (∀ z, self.tz = some z → z.oid ≠ o1 ∧ z.oid ≠ o2 ∧ (z.oid = 0 → z = tzUTC)) →
+    self.tz ≠ none → self.utcoffsetPy env = .ok (some o) →
+    SameOutcome (dtAstimezoneFullPy env ltz o1 o2 self .none_) (dtAstimezoneFullC env ltz o1 o2 self .none_)
+
+/-- `datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone()` under
+`TZ='XXX-24:30'` (`tm_gmtoff` 88200): Python takes the target zone first,
+`self._local_timezone()`, and `timezone(timedelta(seconds=88200), 'XXX')` raises `ValueError`;
+C subtracts the offset first (:6957) and raises `OverflowError: date value out of range`
+(CPython 3.15.2 on Linux). -/
+theorem astimezoneLocalAwareEdgeTwins_refuted : ¬ AstimezoneLocalAwareEdgeTwins := by
+  intro h
+  have hv : (⟨1, 1, 1, 0, 0, 0, 0, 0, some ⟨5, .timezone ⟨0, 3600, 0⟩ none⟩⟩ : DT).Valid := by
+    refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+      Or.inl rfl, ?_⟩
+    exact ⟨by decide, by decide, by decide, fun h => by cases h⟩
+  have := h emptyEnv farZone 7 8 ⟨1, 1, 1, 0, 0, 0, 0, 0, some ⟨5, .timezone ⟨0, 3600, 0⟩ none⟩⟩ ⟨0, 3600, 0⟩
+    emptyEnv_valid hv farZone_valid (by decide) (by decide) (by decide)
+    (fun z hz => by cases hz; decide) (by simp) (by decide +kernel)
+  revert this
+  decide +kernel
+
+end PyLean.Datetime

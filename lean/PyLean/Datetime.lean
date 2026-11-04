@@ -1532,7 +1532,14 @@ def entries : List Entry := [
     statement := "With int arguments the float-capable model of timedelta.__new__ is the int-only model (so TimedeltaCtorTwins and TimedeltaCtorExact apply to it)."
     source := "invariant (the float branches are not taken)", status := .open
     prop := ``TimedeltaNumPyInt
-    notes := "Needs binary64 lemmas: float(m) + 0.0 == float(m) for |m| < 10**6 and round() of an integral double." }
+    notes := "Needs binary64 lemmas: float(m) + 0.0 == float(m) for |m| < 10**6 and round() of an integral double." },
+  { id := "datetime-astimezone-local-aware-edge-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.astimezone", "datetime._local_timezone", "C datetime_datetime_astimezone_impl"]
+    statement := "astimezone() (tz=None) on an aware datetime with an offset agrees between the twins, where self - offset leaves the datetime range included."
+    source := "C/Python twins", status := .refuted
+    prop := ``AstimezoneLocalAwareEdgeTwins, thm := some ``astimezoneLocalAwareEdgeTwins_refuted
+    bug := some "datetime-pydatetime-astimezone-local-target"
+    notes := "datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone() with TZ='XXX-24:30': Python builds the local timezone first and raises ValueError (offset 24:30), C subtracts first and raises OverflowError." }
 ]
 
 end PyLean.Datetime

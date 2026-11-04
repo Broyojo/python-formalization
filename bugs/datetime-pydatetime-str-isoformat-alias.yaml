@@ -1,0 +1,56 @@
+id: datetime-pydatetime-str-isoformat-alias
+title: "str() of a date or time subclass overriding isoformat: C calls the override, _pydatetime does not"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["date.__str__", "time.__str__", "C date_str", "C time_str"]
+summary: |
+  `_pydatetime` defines `__str__ = isoformat` in `date` (Lib/_pydatetime.py:1150) and `time`
+  (:1642), which binds the base class's function, so a subclass's own `isoformat` is not used
+  by `str()`. C's `date_str` and `time_str` (Modules/_datetimemodule.c:3637-3640, :4880-4883)
+  call `self.isoformat()` through the object's class. With
+  `class D(date): def isoformat(self): return 'X'`, `str(D(2000, 1, 1))` is `'X'` in C and
+  `'2000-01-01'` in Python; the same for `time`. `datetime.__str__` is a method calling
+  `self.isoformat(sep=' ')` in both and agrees.
+likelihood: |
+  Moderate for code that customises isoformat in a subclass and relies on str() or
+  f-strings (`format(d, '')` is `str(d)`), when run on PyPy or another _pydatetime user.
+maybe_intended: |
+  Not intended: the C behaviour is the documented one (str(d) is d.isoformat()), and
+  datetime.__str__ already dispatches in Python.
+reproducer: |
+  import datetime, _pydatetime
+  out = []
+  for m in (datetime, _pydatetime):
+      class D(m.date):
+          def isoformat(self):
+              return 'X'
+      class T(m.time):
+          def isoformat(self, timespec='auto'):
+              return 'Y'
+      out.append((str(D(2000, 1, 1)), str(T(1, 2))))
+  print('C:', out[0], ' Python:', out[1])
+  if out[0] == ('X', 'Y') and out[1] == ('2000-01-01', '01:02:00'):
+      print('REPRODUCED datetime-pydatetime-str-isoformat-alias')
+expected: "'X' and 'Y' in both implementations, as str(d) is documented to be d.isoformat()."
+promised_by: |
+  date.__str__ docs: "For a date d, str(d) is equivalent to d.isoformat()"; time.__str__
+  docs: "For a time t, str(t) is equivalent to t.isoformat()"; PEP 399.
+cause: |
+  Lib/_pydatetime.py:1150 and :1642 `__str__ = isoformat`; Modules/_datetimemodule.c:3639 and
+  :4882 `PyObject_CallMethodNoArgs(self, &_Py_ID(isoformat))`.
+possible_fix: |
+  In _pydatetime, `def __str__(self): return self.isoformat()` in date and time.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main: PENDING
+duplicates:
+  issues:
+    - {number: 41239, state: closed, relation: unrelated (datetime.__str__ microsecond format, 2004)}
+  queries: ["gh search issues: date subclass isoformat str", "pydatetime str isoformat overridden",
+            "__str__ = isoformat", "date __str__ isoformat override subclass",
+            "pydatetime str subclass isoformat", "bugforge-results/README.md: isoformat (no str entries)"]
+lean:
+  property: PyLean.Datetime.StrIsoformatOverrideTwins
+  theorem: PyLean.Datetime.strIsoformatOverrideTwins_refuted
