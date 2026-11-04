@@ -15,6 +15,7 @@ import PyLean.Bytecode.SpecSubscr
 import PyLean.Bytecode.SpecCells
 import PyLean.Bytecode.SpecForIter
 import PyLean.Bytecode.SpecDict
+import PyLean.Bytecode.GenericProps
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -84,19 +85,19 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``GetLenRules, thm := some ``getLenRules_proven },
   { id := "bytecode-unary", pyFile := "Python/bytecodes.c"
     pyFns := [op "UNARY_NEGATIVE", op "UNARY_INVERT"]
-    statement := "UNARY_NEGATIVE and UNARY_INVERT push what __neg__ and __invert__ return or pop and propagate their exception, for any object model; on an int ~x is -(x+1), as the language reference states."
-    source := "Python/bytecodes.c UNARY_NEGATIVE, UNARY_INVERT; Doc/reference/expressions.rst (bitwise inversion of x is -(x+1))"
+    statement := "UNARY_NEGATIVE and UNARY_INVERT replace the operand with what __neg__ and __invert__ return, or propagate their exception with the operand still on the stack (ERROR_NO_POP, new in 3.15), for any object model; on an int ~x is -(x+1), as the language reference states."
+    source := "Python/bytecodes.c:451-461, :604-614; Doc/reference/expressions.rst (bitwise inversion of x is -(x+1))"
     status := .proven, prop := ``UnaryRules, thm := some ``unaryRules_proven },
   { id := "bytecode-for-iter-range", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER_RANGE", op "_ITER_CHECK_RANGE", op "_ITER_JUMP_RANGE", op "_ITER_NEXT_RANGE"]
-    statement := "FOR_ITER_RANGE equals FOR_ITER on every live stack GET_ITER could have left, given rangeiter_next, value by value and at the end."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c _ITER_CHECK_RANGE .. _ITER_NEXT_RANGE; Objects/rangeobject.c rangeiter_next"
-    status := .proven, prop := ``ForIterRange, thm := some ``forIterRange_proven },
+    statement := "FOR_ITER_RANGE equals FOR_ITER on every live stack GET_ITER could have left, given rangeiter_next; and the fast path itself, on a range iterator, pushes start and advances it by step while len > 0, jumps over END_FOR when len <= 0, and exits on anything that is not a range iterator."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:4053-4101 (_ITER_CHECK_RANGE .. FOR_ITER_RANGE); Objects/rangeobject.c rangeiter_next"
+    status := .proven, prop := ``ForIterRangeRules, thm := some ``forIterRangeRules_proven },
   { id := "bytecode-for-iter-seq", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER_LIST", op "_ITER_CHECK_LIST", op "_ITER_JUMP_LIST", op "_ITER_NEXT_LIST", op "FOR_ITER_TUPLE", op "_ITER_CHECK_TUPLE", op "_ITER_JUMP_TUPLE", op "_ITER_NEXT_TUPLE"]
-    statement := "FOR_ITER_LIST and FOR_ITER_TUPLE equal FOR_ITER on every live stack GET_ITER could have left, item by item and at the end of the sequence."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c _ITER_CHECK_LIST .. _ITER_NEXT_TUPLE; _PyForIter_VirtualIteratorNext, Python/ceval.c"
-    status := .proven, prop := ``ForIterSeq, thm := some ``forIterSeq_proven },
+    statement := "FOR_ITER_LIST and FOR_ITER_TUPLE equal FOR_ITER on every live stack GET_ITER could have left; and on an exact list or tuple with a tagged index they push item i and bump the tag, or at the end jump over END_FOR with both slots kept, and exit on anything else."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3927-4051 (_ITER_CHECK_LIST .. FOR_ITER_TUPLE)"
+    status := .proven, prop := ``ForIterSeqRules, thm := some ``forIterSeqRules_proven },
   { id := "bytecode-cells", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_DEREF", op "STORE_DEREF", op "DELETE_DEREF"]
     statement := "STORE_DEREF writes the cell and LOAD_DEREF reads back what was stored; DELETE_DEREF empties a bound cell; on an empty cell LOAD_DEREF and DELETE_DEREF raise the same exception with the stack and cell unchanged."
@@ -114,39 +115,40 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``BuildRules, thm := some ``buildRules_proven },
   { id := "bytecode-store-subscr-list-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_SUBSCR_LIST_INT", op "_STORE_SUBSCR_LIST_INT"]
-    statement := "STORE_SUBSCR_LIST_INT equals STORE_SUBSCR on every live stack, negative indices included, given list_ass_subscript."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c STORE_SUBSCR_LIST_INT (3.15 counts a negative index from the end)"
-    status := .proven, prop := ``StoreSubscrListInt, thm := some ``storeSubscrListInt_proven },
+    statement := "STORE_SUBSCR_LIST_INT equals STORE_SUBSCR on every live stack, negative indices included, given list_ass_subscript; and on an exact list and a compact int whose adjusted index is in range it stores in place and pops all three, exiting on every other stack."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:1420-1452 (3.15 counts a negative index from the end)"
+    status := .proven, prop := ``StoreSubscrListIntRules, thm := some ``storeSubscrListIntRules_proven },
   { id := "bytecode-subscr-tuple-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBSCR_TUPLE_INT", op "_BINARY_OP_SUBSCR_TUPLE_INT", op "_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS", op "_GUARD_NOS_TUPLE"]
-    statement := "BINARY_OP_SUBSCR_TUPLE_INT equals BINARY_OP for [] on every live stack, given tuplesubscript."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c BINARY_OP_SUBSCR_TUPLE_INT"
-    status := .proven, prop := ``SubscrTupleInt, thm := some ``subscrTupleInt_proven },
+    statement := "BINARY_OP_SUBSCR_TUPLE_INT equals BINARY_OP for [] on every live stack, given tuplesubscript; and its bounds guard passes exactly on a non-negative compact index below the length, the macro answers the item there and exits on every other stack."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:1230-1278"
+    status := .proven, prop := ``SubscrTupleIntRules, thm := some ``subscrTupleIntRules_proven },
   { id := "bytecode-subscr-str-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBSCR_STR_INT", op "_BINARY_OP_SUBSCR_STR_INT", op "_GUARD_NOS_COMPACT_ASCII", op "BINARY_OP_SUBSCR_USTR_INT", op "_BINARY_OP_SUBSCR_USTR_INT"]
-    statement := "BINARY_OP_SUBSCR_STR_INT and the 3.15 BINARY_OP_SUBSCR_USTR_INT equal BINARY_OP for [] on every stack, given unicode_subscript."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c BINARY_OP_SUBSCR_STR_INT, _USTR_INT"
-    status := .proven, prop := ``SubscrStrInt, thm := some ``subscrStrInt_proven },
+    statement := "BINARY_OP_SUBSCR_STR_INT and the 3.15 BINARY_OP_SUBSCR_USTR_INT equal BINARY_OP for [] on every stack, given unicode_subscript; and they answer the one-character str at a non-negative compact in-range index of an ASCII str (STR_INT) or of any str whose character there is ASCII (USTR_INT), exiting on every other stack."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:564-568, :1185-1228"
+    status := .proven, prop := ``SubscrStrIntRules, thm := some ``subscrStrIntRules_proven },
   { id := "bytecode-compare-float", pyFile := "Python/bytecodes.c"
     pyFns := [op "COMPARE_OP_FLOAT", op "_COMPARE_OP_FLOAT"]
-    statement := "COMPARE_OP_FLOAT equals COMPARE_OP on every stack for the operand the compiler emits, NaN, infinities and signed zeros included, given float_richcompare."
+    statement := "COMPARE_OP_FLOAT equals COMPARE_OP on every stack for the operand the compiler emits, NaN, infinities and signed zeros included, given float_richcompare; and on two floats it answers the IEEE-754 relation oparg >> 5 of left with right, exiting with the stack unchanged otherwise."
     source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3253, :3262-3278; COMPARISON_BIT, Include/internal/pycore_code.h:523"
-    status := .proven, prop := ``CompareFloat, thm := some ``compareFloat_proven },
+    status := .proven, prop := ``CompareFloatRules, thm := some ``compareFloatRules_proven },
   { id := "bytecode-compare-fused", pyFile := "Python/bytecodes.c"
-    pyFns := [op "COMPARE_OP", op "_COMPARE_OP"]
+    pyFns := []
     statement := "COMPARE_OP with the bool-coercion bit is COMPARE_OP without it followed by TO_BOOL, on every stack and for every object model, a raising __lt__ or __bool__ included."
     source := "compiler contract: COMPARE_OP fuses TO_BOOL (oparg & 16); Python/bytecodes.c:3232-3249"
-    status := .proven, prop := ``CompareFused, thm := some ``compareFused_proven },
+    status := .proven, prop := ``CompareFused, thm := some ``compareFused_proven
+    notes := "Credits no row by itself: COMPARE_OP and _COMPARE_OP are credited through bytecode-compare-op, which includes this statement." },
   { id := "bytecode-compare-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "COMPARE_OP_INT", op "_COMPARE_OP_INT"]
-    statement := "COMPARE_OP_INT equals COMPARE_OP on every stack for the operand the compiler emits, given long_richcompare."
+    statement := "COMPARE_OP_INT equals COMPARE_OP on every stack for the operand the compiler emits, given long_richcompare; and on two compact ints it answers the comparison oparg >> 5 of left with right, exiting with the stack unchanged otherwise."
     source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3256, :3280-3300"
-    status := .proven, prop := ``CompareInt, thm := some ``compareInt_proven },
+    status := .proven, prop := ``CompareIntRules, thm := some ``compareIntRules_proven },
   { id := "bytecode-compare-str", pyFile := "Python/bytecodes.c"
     pyFns := [op "COMPARE_OP_STR", op "_COMPARE_OP_STR"]
-    statement := "COMPARE_OP_STR equals COMPARE_OP for == and != on every stack, given unicode_compare_eq."
+    statement := "COMPARE_OP_STR equals COMPARE_OP for == and != on every stack, given unicode_compare_eq; and on two strs it answers a == b or a != b, exiting with the stack unchanged otherwise."
     source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3259, :3302-3318"
-    status := .proven, prop := ``CompareStr, thm := some ``compareStr_proven },
+    status := .proven, prop := ``CompareStrRules, thm := some ``compareStrRules_proven },
   { id := "bytecode-to-bool-generic", pyFile := "Python/bytecodes.c"
     pyFns := [op "TO_BOOL", op "_TO_BOOL"]
     statement := "Generic TO_BOOL pushes the truth value __bool__ or __len__ gives, and when either raises it pops the value and propagates the exception, for any object model."
@@ -154,14 +156,23 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``ToBoolGeneric, thm := some ``toBoolGeneric_proven },
   { id := "bytecode-to-bool-specialized", pyFile := "Python/bytecodes.c"
     pyFns := [op "TO_BOOL_BOOL", op "TO_BOOL_INT", op "_TO_BOOL_INT", op "TO_BOOL_NONE", op "TO_BOOL_STR", op "_TO_BOOL_STR", op "TO_BOOL_LIST", op "_TO_BOOL_LIST", op "_GUARD_TOS_LIST"]
-    statement := "TO_BOOL_BOOL, _INT, _NONE, _STR and _LIST equal TO_BOOL for every value on every stack, given the builtin bool slots; TO_BOOL_STR's identity test against the empty-string singleton agreed with emptiness for all 77 constructors probed on 3.15.2 and main."
-    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:513-582"
-    status := .proven, prop := ``ToBoolSpecialized, thm := some ``toBoolSpecialized_proven },
+    statement := "TO_BOOL_BOOL, _INT, _NONE, _STR and _LIST equal TO_BOOL for every value on every stack, given the builtin bool slots; and each answers by itself on its own type (a compact int for TO_BOOL_INT since 3.15, None, a str, a list, a bool) and exits with the stack unchanged on every other value. TO_BOOL_STR's identity test against the empty-string singleton agreed with emptiness for all 77 constructors probed on 3.15.2 and main."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:514-589"
+    status := .proven, prop := ``ToBoolRules, thm := some ``toBoolRules_proven },
+  { id := "bytecode-fast-guards", pyFile := "Python/bytecodes.c"
+    pyFns := [op "_GUARD_TOS_INT", op "_GUARD_NOS_INT", op "_GUARD_TOS_FLOAT", op "_GUARD_NOS_FLOAT",
+              op "_GUARD_TOS_UNICODE", op "_GUARD_NOS_UNICODE", op "_GUARD_NOS_COMPACT_ASCII",
+              op "_GUARD_TOS_LIST", op "_GUARD_NOS_LIST", op "_GUARD_NOS_TUPLE", op "_GUARD_TOS_TUPLE",
+              op "_GUARD_TOS_SLICE", op "TO_BOOL_BOOL"]
+    statement := "Each type guard of the BINARY_OP, COMPARE_OP, TO_BOOL and STORE_SUBSCR families passes, changing nothing, exactly on the values it asks for (a compact exact int, an exact float, an exact str, an exact ASCII str, an exact list, an exact tuple, a slice, a bool) and exits with the state unchanged on every other live value."
+    source := "Python/bytecodes.c:514-517, :530-543, :564-578, :635-643, :768-776, :1230-1238"
+    status := .proven, prop := ``GuardRules, thm := some ``guardRules_proven },
   { id := "bytecode-load-fast", pyFile := "Python/bytecodes.c"
-    pyFns := [op "LOAD_FAST", op "LOAD_FAST_BORROW"]
+    pyFns := []
     statement := "LOAD_FAST and LOAD_FAST_BORROW push the local and change nothing else, for every state."
     source := "invariant: Python/bytecodes.c:283-291"
-    status := .proven, prop := ``LoadFastPushes, thm := some ``loadFastPushes_proven },
+    status := .proven, prop := ``LoadFastPushes, thm := some ``loadFastPushes_proven
+    notes := "Credits no row: LOAD_FAST and LOAD_FAST_BORROW are one branch-free read of a local, excluded as trivial: in the inventory." },
   { id := "bytecode-load-fast-check", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_FAST_CHECK"]
     statement := "LOAD_FAST_CHECK is LOAD_FAST on a bound local, and on an unbound one raises UnboundLocalError naming the variable with the stack and locals unchanged."
@@ -193,15 +204,17 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:2354-2362"
     status := .proven, prop := ``DeleteFastRules, thm := some ``deleteFastRules_proven },
   { id := "bytecode-load-const", pyFile := "Python/bytecodes.c"
-    pyFns := [op "LOAD_CONST", op "LOAD_SMALL_INT"]
+    pyFns := []
     statement := "LOAD_CONST pushes co_consts[oparg] and LOAD_SMALL_INT pushes the int oparg."
     source := "Python/bytecodes.c:312-321"
-    status := .proven, prop := ``LoadConstRules, thm := some ``loadConstRules_proven },
+    status := .proven, prop := ``LoadConstRules, thm := some ``loadConstRules_proven
+    notes := "Credits no row: LOAD_CONST and LOAD_SMALL_INT return one constant with no branch, excluded as trivial: in the inventory." },
   { id := "bytecode-stack-drops", pyFile := "Python/bytecodes.c"
-    pyFns := [op "POP_TOP", op "END_FOR", op "POP_ITER", op "END_SEND", op "PUSH_NULL"]
+    pyFns := []
     statement := "POP_TOP, END_FOR and POP_ITER drop their operands, END_SEND keeps the value and drops what was below it, and PUSH_NULL then POP_TOP changes nothing."
     source := "Python/bytecodes.c:359-361, :389-407, :428-434"
-    status := .proven, prop := ``StackDrops, thm := some ``stackDrops_proven },
+    status := .proven, prop := ``StackDrops, thm := some ``stackDrops_proven
+    notes := "Credits no row: POP_TOP, POP_ITER, END_SEND and PUSH_NULL are branch-free moves excluded as trivial:, and END_FOR is credited through bytecode-end-for." },
   { id := "bytecode-copy", pyFile := "Python/bytecodes.c"
     pyFns := [op "COPY"]
     statement := "COPY n pushes a duplicate of the nth item from the top and changes nothing else."
@@ -213,9 +226,9 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:5942-5947"
     status := .proven, prop := ``SwapRules, thm := some ``swapRules_proven },
   { id := "bytecode-jumps", pyFile := "Python/bytecodes.c"
-    pyFns := [op "JUMP_FORWARD", op "JUMP_BACKWARD_NO_INTERRUPT", op "JUMP_BACKWARD"]
-    statement := "Jumps move next_instr by oparg and touch nothing else, and a jump forward then back returns to the start."
-    source := "Python/bytecodes.c:3494-3496, :3544-3550, :3656"
+    pyFns := [op "JUMP_FORWARD", op "JUMP_BACKWARD_NO_INTERRUPT", op "JUMP_BACKWARD", op "_CHECK_PERIODIC"]
+    statement := "JUMP_FORWARD and JUMP_BACKWARD_NO_INTERRUPT move next_instr by oparg and touch nothing else, a pending signal included (it is left for the innermost generator, bpo-30039); JUMP_BACKWARD runs _CHECK_PERIODIC first: with nothing pending it jumps back, and when the pending handler raises it propagates that exception with the stack unchanged and without jumping. A jump forward then back returns to the start."
+    source := "Python/bytecodes.c:157-160, :3494-3496, :3544-3548, :3656-3664; check_periodics, Python/ceval_macros.h:541-548"
     status := .proven, prop := ``JumpRules, thm := some ``jumpRules_proven },
   { id := "bytecode-branches", pyFile := "Python/bytecodes.c"
     pyFns := [op "POP_JUMP_IF_TRUE", op "POP_JUMP_IF_FALSE", op "POP_JUMP_IF_NONE", op "POP_JUMP_IF_NOT_NONE", op "_POP_JUMP_IF_TRUE", op "_POP_JUMP_IF_FALSE", op "_IS_NONE"]
@@ -224,51 +237,50 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``BranchRules, thm := some ``branchRules_proven },
   { id := "bytecode-unary-not", pyFile := "Python/bytecodes.c"
     pyFns := [op "UNARY_NOT"]
-    statement := "UNARY_NOT flips a bool, and doing it twice changes nothing."
-    source := "Python/bytecodes.c:477"
-    status := .proven, prop := ``UnaryNotRules, thm := some ``unaryNotRules_proven },
+    statement := "UNARY_NOT flips a bool, doing it twice changes nothing, and `not x` (TO_BOOL then UNARY_NOT) pushes the negation of PyObject_IsTrue(x) or propagates its exception with x popped, for any object model."
+    source := "Python/bytecodes.c:477-482, :505-512"
+    status := .proven, prop := ``UnaryNotFull, thm := some ``unaryNotFull_proven },
   -- Specialized binary operators equal their generic form, over all stacks and all lawful models.
   { id := "bytecode-binary-op-add-int", pyFile := "Python/bytecodes.c"
-    pyFns := [op "BINARY_OP_ADD_INT", op "_BINARY_OP_ADD_INT", op "_GUARD_TOS_INT", op "_GUARD_NOS_INT",
-              op "BINARY_OP", op "_BINARY_OP", op "_SPECIALIZE_BINARY_OP"]
-    statement := "For every stack and every object model with the builtin int-add slot, BINARY_OP_ADD_INT steps exactly as the generic BINARY_OP (oparg NB_ADD or NB_INPLACE_ADD)."
-    source := "invariant: specialized opcode refines its generic form (adaptive interpreter contract)"
-    status := .proven, prop := ``BinaryAddInt, thm := some ``binaryAddInt_proven },
+    pyFns := [op "BINARY_OP_ADD_INT", op "_BINARY_OP_ADD_INT"]
+    statement := "BINARY_OP_ADD_INT steps as BINARY_OP for + and += on every stack and lawful model; and it answers left + right exactly when both operands and the sum are compact ints, exiting otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:672-685, :705; _PyCompactLong_Add, Objects/longobject.c:3870"
+    status := .proven, prop := ``BinaryAddIntRules, thm := some ``binaryAddIntRules_proven },
   { id := "bytecode-binary-op-sub-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBTRACT_INT", op "_BINARY_OP_SUBTRACT_INT"]
-    statement := "BINARY_OP_SUBTRACT_INT steps as BINARY_OP for every stack and lawful model (oparg NB_SUBTRACT or NB_INPLACE_SUBTRACT)."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinarySubInt, thm := some ``binarySubInt_proven },
+    statement := "BINARY_OP_SUBTRACT_INT steps as BINARY_OP for every stack and lawful model; and it answers left - right exactly when both operands and the difference are compact ints, exiting otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:687-700, :708; Objects/longobject.c:3915"
+    status := .proven, prop := ``BinarySubIntRules, thm := some ``binarySubIntRules_proven },
   { id := "bytecode-binary-op-mul-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_MULTIPLY_INT", op "_BINARY_OP_MULTIPLY_INT"]
-    statement := "BINARY_OP_MULTIPLY_INT steps as BINARY_OP for every stack and lawful model."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinaryMulInt, thm := some ``binaryMulInt_proven },
+    statement := "BINARY_OP_MULTIPLY_INT steps as BINARY_OP for every stack and lawful model; and it answers left * right exactly when both operands and the product are compact ints, exiting otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:657-670, :702; Objects/longobject.c:4362"
+    status := .proven, prop := ``BinaryMulIntRules, thm := some ``binaryMulIntRules_proven },
   { id := "bytecode-binary-op-add-float", pyFile := "Python/bytecodes.c"
-    pyFns := [op "BINARY_OP_ADD_FLOAT", op "_BINARY_OP_ADD_FLOAT", op "_GUARD_TOS_FLOAT", op "_GUARD_NOS_FLOAT"]
-    statement := "BINARY_OP_ADD_FLOAT steps as BINARY_OP for every stack and lawful model."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinaryAddFloat, thm := some ``binaryAddFloat_proven },
+    pyFns := [op "BINARY_OP_ADD_FLOAT", op "_BINARY_OP_ADD_FLOAT"]
+    statement := "BINARY_OP_ADD_FLOAT steps as BINARY_OP for every stack and lawful model; and it answers the binary64 sum of two exact floats, exiting with the stack unchanged otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:798-816, :840"
+    status := .proven, prop := ``BinaryAddFloatRules, thm := some ``binaryAddFloatRules_proven },
   { id := "bytecode-binary-op-sub-float", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBTRACT_FLOAT", op "_BINARY_OP_SUBTRACT_FLOAT"]
-    statement := "BINARY_OP_SUBTRACT_FLOAT steps as BINARY_OP for every stack and lawful model."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinarySubFloat, thm := some ``binarySubFloat_proven },
+    statement := "BINARY_OP_SUBTRACT_FLOAT steps as BINARY_OP for every stack and lawful model; and it answers the binary64 difference left - right of two exact floats, exiting with the stack unchanged otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:818-836, :842"
+    status := .proven, prop := ``BinarySubFloatRules, thm := some ``binarySubFloatRules_proven },
   { id := "bytecode-binary-op-mul-float", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_MULTIPLY_FLOAT", op "_BINARY_OP_MULTIPLY_FLOAT"]
-    statement := "BINARY_OP_MULTIPLY_FLOAT steps as BINARY_OP for every stack and lawful model."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinaryMulFloat, thm := some ``binaryMulFloat_proven },
+    statement := "BINARY_OP_MULTIPLY_FLOAT steps as BINARY_OP for every stack and lawful model; and it answers the binary64 product of two exact floats, exiting with the stack unchanged otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:778-796, :838"
+    status := .proven, prop := ``BinaryMulFloatRules, thm := some ``binaryMulFloatRules_proven },
   { id := "bytecode-binary-op-add-unicode", pyFile := "Python/bytecodes.c"
-    pyFns := [op "BINARY_OP_ADD_UNICODE", op "_BINARY_OP_ADD_UNICODE", op "_GUARD_TOS_UNICODE", op "_GUARD_NOS_UNICODE"]
-    statement := "BINARY_OP_ADD_UNICODE steps as BINARY_OP for every stack and lawful model."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``BinaryAddUnicode, thm := some ``binaryAddUnicode_proven },
+    pyFns := [op "BINARY_OP_ADD_UNICODE", op "_BINARY_OP_ADD_UNICODE"]
+    statement := "BINARY_OP_ADD_UNICODE steps as BINARY_OP for every stack and lawful model; and it answers the concatenation left + right of two exact strs, exiting with the stack unchanged otherwise."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:945-963"
+    status := .proven, prop := ``BinaryAddUnicodeRules, thm := some ``binaryAddUnicodeRules_proven },
   { id := "bytecode-binary-op-subscr-list-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBSCR_LIST_INT", op "_BINARY_OP_SUBSCR_LIST_INT"]
-    statement := "For every stack of live values and every lawful model, BINARY_OP_SUBSCR_LIST_INT steps as BINARY_OP (NB_SUBSCR) for any index, including negative, out-of-range and huge ints."
-    source := "invariant: specialized opcode refines its generic form"
-    status := .proven, prop := ``SubscrListInt, thm := some ``subscrListInt_proven },
+    statement := "BINARY_OP_SUBSCR_LIST_INT steps as BINARY_OP (NB_SUBSCR) for every stack of live values and every lawful model, any index; and on an exact list and a compact int it answers the item, a negative index counting from the end, exiting on any other stack or an index outside the list."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:1134-1162"
+    status := .proven, prop := ``SubscrListIntRules, thm := some ``subscrListIntRules_proven },
   -- Stack effects against the generated metadata.
   { id := "bytecode-stack-effects", pyFile := "Python/bytecodes.c"
     pyFns := []
@@ -356,7 +368,7 @@ def entries : List Entry := GenObj.entries ++ [
     source := "RETURN_VALUE, Python/bytecodes.c:1573-1593"
     status := .proven, prop := ``ReturnValue, thm := some ``returnValue_proven },
   { id := "bytecode-unwind-to-handler", pyFile := "Python/bytecodes.c"
-    pyFns := [op "RAISE_VARARGS", "get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
+    pyFns := ["get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
     statement := "exception_unwind truncates the stack to the handler's recorded depth, pushes lasti if the entry says so, pushes the exception, and jumps to the handler; every value below the recorded level survives."
     source := "exception_unwind, Python/bytecodes.c:6485-6524; get_exception_handler, Python/ceval.h:457-510"
     status := .proven, prop := ``UnwindToHandler, thm := some ``unwindToHandler_proven },
@@ -371,20 +383,52 @@ def entries : List Entry := GenObj.entries ++ [
     source := "exit_unwind, Python/bytecodes.c:6543-6573"
     status := .proven, prop := ``UnwindExit, thm := some ``unwindExit_proven },
   { id := "bytecode-exc-info-nests", pyFile := "Python/bytecodes.c"
-    pyFns := [op "PUSH_EXC_INFO", op "POP_EXCEPT"]
+    pyFns := [op "POP_EXCEPT"]
     statement := "PUSH_EXC_INFO then POP_EXCEPT restores tstate->exc_info->exc_value, so except blocks nest: the handled exception after a block is the one before it."
     source := "PUSH_EXC_INFO/POP_EXCEPT, Python/bytecodes.c:1911-1916, 3579-3592"
     status := .proven, prop := ``ExcInfoNests, thm := some ``excInfoNests_proven },
   { id := "bytecode-for-iter-exhausted", pyFile := "Python/bytecodes.c"
-    pyFns := [op "FOR_ITER", op "_FOR_ITER", op "_SPECIALIZE_FOR_ITER"]
+    pyFns := []
     statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with iter and index_or_null left on the stack for the POP_ITER at the target, for every iterator and both forms of the slot."
     source := "_FOR_ITER, Python/bytecodes.c:3810-3821"
-    status := .proven, prop := ``ForIterExhausted, thm := some ``forIterExhausted_proven },
+    status := .proven, prop := ``ForIterExhausted, thm := some ``forIterExhausted_proven
+    notes := "Credits no row by itself: FOR_ITER and _FOR_ITER are credited through bytecode-for-iter, which includes this statement." },
   { id := "bytecode-for-iter-next", pyFile := "Python/bytecodes.c"
-    pyFns := [op "FOR_ITER"]
+    pyFns := []
     statement := "FOR_ITER with a next item writes the new index_or_null back to its slot and pushes the item above it, for every iterator."
     source := "_FOR_ITER, Python/bytecodes.c:3810-3821; _PyForIter_VirtualIteratorNext, Python/ceval.c:3709-3739"
-    status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven },
+    status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven
+    notes := "Credits no row by itself: FOR_ITER is credited through bytecode-for-iter, which includes this statement." },
+  { id := "bytecode-for-iter", pyFile := "Python/bytecodes.c"
+    pyFns := [op "FOR_ITER", op "_FOR_ITER"]
+    statement := "FOR_ITER pushes the next item above the updated index slot, at the end jumps over END_FOR with both slots kept, and when tp_iternext raises anything but StopIteration propagates it with both slots kept (ERROR_NO_POP), where a StopIteration ends the loop like exhaustion; for every iterator and object model."
+    source := "_FOR_ITER, Python/bytecodes.c:3810-3823; _PyForIter_VirtualIteratorNext, Python/ceval.c:3709-3739"
+    status := .proven, prop := ``ForIterRules, thm := some ``forIterRules_proven },
+  { id := "bytecode-binary-op", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BINARY_OP", op "_BINARY_OP"]
+    statement := "BINARY_OP calls _PyEval_BinaryOps[oparg](lhs, rhs) with lhs the second value and replaces both operands with the result, and when the slot raises it propagates the exception with both operands still on the stack (ERROR_NO_POP); for every object model, oparg and operands."
+    source := "Python/bytecodes.c:5924-5940"
+    status := .proven, prop := ``BinaryOpRules, thm := some ``binaryOpRules_proven },
+  { id := "bytecode-compare-op", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COMPARE_OP", op "_COMPARE_OP"]
+    statement := "COMPARE_OP calls PyObject_RichCompare(left, right, oparg >> 5) with left the second value and pushes the result, or with bit 16 its truth value as a bool; when either call raises both operands are popped and the exception propagates. With bit 16 it is COMPARE_OP without it followed by TO_BOOL. For every object model."
+    source := "Python/bytecodes.c:3232-3251"
+    status := .proven, prop := ``CompareOpFull, thm := some ``compareOpFull_proven },
+  { id := "bytecode-push-exc-info", pyFile := "Python/bytecodes.c"
+    pyFns := [op "PUSH_EXC_INFO"]
+    statement := "PUSH_EXC_INFO makes the exception on top of the stack the handled one (exc_info->exc_value) and pushes the previous handled exception, or None, below it; followed by POP_EXCEPT it restores the previous one."
+    source := "Python/bytecodes.c:4213-4226, :1911-1916"
+    status := .proven, prop := ``PushExcInfoFull, thm := some ``pushExcInfoFull_proven },
+  { id := "bytecode-raise-varargs", pyFile := "Python/bytecodes.c"
+    pyFns := [op "RAISE_VARARGS"]
+    statement := "RAISE_VARARGS 1 raises the top of the stack and RAISE_VARARGS 2 the second value with the top as its cause, through do_raise, popping the operands; RAISE_VARARGS 0 re-raises the handled exception through exception_unwind, or raises RuntimeError when there is none."
+    source := "Python/bytecodes.c:1531-1542; do_raise, Python/ceval.c"
+    status := .proven, prop := ``RaiseVarargsRules, thm := some ``raiseVarargsRules_proven },
+  { id := "bytecode-end-for", pyFile := "Python/bytecodes.c"
+    pyFns := [op "END_FOR"]
+    statement := "END_FOR is no_save_ip: dispatching it leaves frame->instr_ptr unchanged, where POP_TOP with the same body records its own address; then it pops its operand."
+    source := "Python/bytecodes.c:393-398"
+    status := .proven, prop := ``EndForRules, thm := some ``endForRules_proven },
   { id := "bytecode-frame-swap-shallow", pyFile := "Objects/frameobject.c"
     pyFns := ["stack_swap", "peek"]
     statement := "stack_swap is correct while its result fits 32 bits (at most ten stack entries): there the truncating version equals the full 64-bit computation."

@@ -120,6 +120,20 @@ theorem notTuple_spec (regs : Regs) (x : Val) (hx : Live regs.rt x) :
     | _ => exact ⟨true, notTuple_other regs ho (by simp), by simp [IsTuple, ho]⟩
   | _ => exact ⟨true, notTuple_nonref regs _ (by simp), by simp [IsTuple]⟩
 
+/-- `PySlice_Check`; `slice` cannot be subclassed. -/
+def IsSlice (rt : Rt) (v : Val) : Prop :=
+  ∃ a st sp se, v = .ref a ∧ rt.heap[a]? = some (.slice st sp se)
+
+theorem notSlice_spec (regs : Regs) (x : Val) (hx : Live regs.rt x) :
+    ∃ b, notSlice x regs = .ok b regs ∧ (b = false ↔ IsSlice regs.rt x) := by
+  cases x with
+  | ref a =>
+    obtain ⟨o, ho⟩ := live_obj hx
+    cases o with
+    | slice st sp se => exact ⟨false, by bc_simp [notSlice, ho], by simp [IsSlice, ho]⟩
+    | _ => exact ⟨true, by bc_simp [notSlice, ho], by simp [IsSlice, ho]⟩
+  | _ => exact ⟨true, by bc_simp [notSlice], by simp [IsSlice]⟩
+
 theorem ascii_any_false (t : String) :
     (t.toList.any fun c => asciiLimit ≤ c.toNat) = false ↔ ∀ c ∈ t.toList, c.toNat < 128 := by
   rw [← Bool.not_eq_true, List.any_eq_true]
@@ -136,8 +150,9 @@ theorem ascii_any_false (t : String) :
 compact exact int, `_GUARD_TOS_FLOAT`/`_GUARD_NOS_FLOAT` (`:768-776`) for an exact float,
 `_GUARD_TOS_UNICODE`/`_GUARD_NOS_UNICODE` (`:570-578`) for an exact str, `_GUARD_NOS_COMPACT_ASCII`
 (`:564-568`) for an exact str of ASCII code points, `_GUARD_TOS_LIST`/`_GUARD_NOS_LIST`
-(`:530-538`) for an exact list, `_GUARD_NOS_TUPLE` (`:1230-1233`) for an exact tuple, and
-`TO_BOOL_BOOL` (`:514-517`) is a guard for a bool. Each passes without changing anything on the
+(`:530-538`) for an exact list, `_GUARD_NOS_TUPLE`/`_GUARD_TOS_TUPLE` (`:1230-1238`) for an exact
+tuple, `_GUARD_TOS_SLICE` (`:540-543`) for a slice, and `TO_BOOL_BOOL` (`:514-517`) is a guard for
+a bool. Each passes without changing anything on the
 values it asks for and exits with the state unchanged on every other value. -/
 def GuardRules : Prop :=
   GuardTos _GUARD_TOS_INT (fun _ => CompactInt) ∧ GuardNos _GUARD_NOS_INT (fun _ => CompactInt) ∧
@@ -146,10 +161,11 @@ def GuardRules : Prop :=
   GuardNos _GUARD_NOS_COMPACT_ASCII (fun _ => IsAsciiStr) ∧
   GuardTos _GUARD_TOS_LIST IsList ∧ GuardNos _GUARD_NOS_LIST IsList ∧
   GuardNos _GUARD_NOS_TUPLE IsTuple ∧
-  GuardTos TO_BOOL_BOOL (fun _ => IsBool)
+  GuardTos TO_BOOL_BOOL (fun _ => IsBool) ∧
+  GuardTos _GUARD_TOS_TUPLE IsTuple ∧ GuardTos _GUARD_TOS_SLICE IsSlice
 
 theorem guardRules_proven : GuardRules := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact guardTos_of _ _ fun regs x _ => ⟨_, rfl, notCompactInt_iff x⟩
   · exact guardNos_of _ _ fun regs x y _ => ⟨_, rfl, notCompactInt_iff x⟩
   · exact guardTos_of _ _ fun regs x _ => ⟨_, rfl, notFloat_iff x⟩
@@ -167,6 +183,8 @@ theorem guardRules_proven : GuardRules := by
     cases x with
     | bool b => exact ⟨false, rfl, by simp [IsBool]⟩
     | _ => exact ⟨true, rfl, by simp [IsBool]⟩
+  · exact guardTos_of _ _ fun regs x hx => notTuple_spec regs x hx
+  · exact guardTos_of _ _ fun regs x hx => notSlice_spec regs x hx
 
 theorem guard_tos_int_pass {regs : Regs} {rest : List Val} {i : Int} (h : Compact i) :
     _GUARD_TOS_INT ⟨regs, .int i :: rest⟩ = .ok () ⟨regs, .int i :: rest⟩ :=
@@ -241,8 +259,8 @@ theorem toBoolFast_proven : ToBoolFast := by
   · have hg := (G.2.2.2.2.2.2.2.1 regs rest _ hv).2 hn
     show (do _GUARD_TOS_LIST; _TO_BOOL_LIST) _ = _
     simp only [bind, EStateM.bind, hg]
-  · exact (G.2.2.2.2.2.2.2.2.2.2 regs rest v hv).1 hb
-  · exact (G.2.2.2.2.2.2.2.2.2.2 regs rest v hv).2 hb
+  · exact (G.2.2.2.2.2.2.2.2.2.2.1 regs rest v hv).1 hb
+  · exact (G.2.2.2.2.2.2.2.2.2.2.1 regs rest v hv).2 hb
 
 /-! ## Arithmetic -/
 
@@ -409,7 +427,7 @@ theorem live_str (rt : Rt) (t : String) : Live rt (.str t) := by simp [Live]
 
 theorem subscrListFast_proven : SubscrListFast := by
   intro regs rest l r hl
-  obtain ⟨gti, _, _, _, _, _, _, _, gnl, _, _⟩ := guardRules_proven
+  obtain ⟨gti, _, _, _, _, _, _, _, gnl, _, _, _, _⟩ := guardRules_proven
   constructor
   · rintro a items i v rfl ho rfl hc hn hv
     have h1 := (gti regs (.ref a :: rest) _ (live_int _ i)).1 ⟨i, rfl, hc⟩

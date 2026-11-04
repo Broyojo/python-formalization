@@ -33,7 +33,7 @@ theorem compact_of_nonneg {i : Int} (h0 : 0 ≤ i) (h1 : i < 2 ^ 30) : Compact i
 
 theorem subscrStrFast_proven : SubscrStrFast := by
   intro regs rest l r
-  obtain ⟨_, _, _, _, _, gnu, gna, _, _, _, _⟩ := guardRules_proven
+  obtain ⟨_, _, _, _, _, gnu, gna, _, _, _, _, _, _⟩ := guardRules_proven
   refine ⟨?_, ?_, ?_, ?_⟩
   · rintro t i c rfl ha rfl h0 h1 hc
     have g1 := guard_tos_int_pass (regs := regs) (rest := .str t :: rest) (compact_of_nonneg h0 h1)
@@ -138,7 +138,7 @@ theorem tupleBounds (regs : Regs) (rest : List Val) (a : Addr) (items : Array Va
 
 theorem subscrTupleFast_proven : SubscrTupleFast := by
   intro regs rest l r hl
-  obtain ⟨_, _, _, _, _, _, _, _, _, gnt, _⟩ := guardRules_proven
+  obtain ⟨_, _, _, _, _, _, _, _, _, gnt, _, _, _⟩ := guardRules_proven
   refine ⟨fun a items i ho => ?_, ?_, ?_⟩
   · rw [tupleBounds regs rest a items i ho]
     exact ⟨fun h0 h1 h2 => if_pos ⟨h0, h1, h2⟩, fun h => if_neg h⟩
@@ -186,7 +186,7 @@ def StoreSubscrListFast : Prop := ∀ (regs : Regs) (rest : List Val) (k c v : V
 
 theorem storeSubscrListFast_proven : StoreSubscrListFast := by
   intro regs rest k c v hl
-  obtain ⟨_, _, _, _, _, _, _, _, gnl, _, _⟩ := guardRules_proven
+  obtain ⟨_, _, _, _, _, _, _, _, gnl, _, _, _, _⟩ := guardRules_proven
   constructor
   · rintro a items i rfl ho rfl hc h0 h1
     have g1 := guard_tos_int_pass (regs := regs) (rest := .ref a :: v :: rest) hc

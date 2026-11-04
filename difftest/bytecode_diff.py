@@ -470,6 +470,15 @@ def p_fastpath(r):
         "class P:\n    def __init__(self):\n        self.n = 0\n    @property\n    def p(self):\n        self.n += 1\n        return self.n\n"
         "def f(o):\n    return o.p\nx = P()\nprint(f(x), f(x), f(x))\n"
         "class Q:\n    def __getattribute__(self, n):\n        return 'ga:' + n\ndef g(o):\n    return o.p\nprint(g(Q()), g(Q()), g(x))\n",
+        # TO_BOOL_INT and COMPARE_OP_INT exit on an int past one digit (3.15 `_GUARD_TOS_INT`);
+        # `-x`/`~x` raising keeps the operand (`ERROR_NO_POP`); a raising `__next__` ends a loop
+        f"def t(x):\n    return 1 if x else 0\ndef c(x, y):\n    return x < y, x == y, x >= y\n"
+        f"print(t(0), t({a}), t({b}), t(0), t({c}))\nprint(c(1, 2), c({a}, {b}), c({b}, {c}), c(1, 2))\n"
+        "class N:\n    def __neg__(self):\n        raise ValueError('neg')\n    def __invert__(self):\n        raise KeyError('inv')\n"
+        + guarded("print(-N())") + "\n" + guarded("print(~N())") + "\n"
+        + "class It:\n    def __init__(self):\n        self.n = 0\n    def __iter__(self):\n        return self\n    def __next__(self):\n"
+        "        self.n += 1\n        if self.n > 2:\n            raise ValueError(self.n)\n        return self.n\n"
+        + guarded("for v in It():\n    print(v)"),
         # one site per form: a site first reached by another type specializes to that type
         "def f(s, i):\n    return s[i]\n" + guarded(f"print(f('aé☃', {r.choice(['0', '1', '2', '3', '-1', 'True', '-4'])}))")
         + "\n" + guarded(f"print(f('aé☃', {j}))") + "\n" + guarded(f"print(f('abc', {i}))"),
