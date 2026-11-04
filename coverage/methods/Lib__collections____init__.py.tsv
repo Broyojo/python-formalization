@@ -28,7 +28,7 @@ Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	tod
 Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-conversions,coll-namedtuple-defaults,coll-namedtuple-getnewargs,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-repr,coll-namedtuple-source-attribute,coll-namedtuple-validation	
 Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
 Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
-Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
+Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	excluded		trivial: the body is the single constant `return 0`; the hook's effect (a missing count reads as 0 without being stored) is the `dGet ... N.zero` of every count lookup in the Counter model
 Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total-sum	
 Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common,coll-counter-most-common-neg	
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
