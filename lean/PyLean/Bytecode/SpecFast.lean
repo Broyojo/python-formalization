@@ -176,6 +176,16 @@ theorem guard_nos_int_pass {regs : Regs} {rest : List Val} {i : Int} (y : Val) (
     _GUARD_NOS_INT ⟨regs, y :: .int i :: rest⟩ = .ok () ⟨regs, y :: .int i :: rest⟩ :=
   (guardRules_proven.2.1 regs rest _ y (by simp [Live])).1 ⟨i, rfl, h⟩
 
+theorem guard_tos_int_fail {regs : Regs} {rest : List Val} {r : Val} (h : ¬ CompactInt r) :
+    _GUARD_TOS_INT ⟨regs, r :: rest⟩ = .error .deopt ⟨regs, r :: rest⟩ := by
+  have he : _GUARD_TOS_INT ⟨regs, r :: rest⟩ = if notCompactInt r then
+      .error .deopt ⟨regs, r :: rest⟩ else .ok () ⟨regs, r :: rest⟩ := intKind.tos_eval regs rest r
+  have hb : notCompactInt r = true := by
+    cases hb : notCompactInt r
+    · exact absurd ((notCompactInt_iff r).1 hb) h
+    · rfl
+  simp [he, hb]
+
 /-! ## `TO_BOOL` -/
 
 /-- The `TO_BOOL` specializations on the value they were made for, `Python/bytecodes.c:514-588`:
@@ -376,5 +386,71 @@ theorem binaryKindFast_proven : BinaryKindFast := by
     bc_simp [_BINARY_OP_ADD_UNICODE, sconcat]
   exact ⟨hm, kindArith_of floatKind _ notFloat_iff _ _ hm, ha, kindArith_of floatKind _ notFloat_iff _ _ ha,
     hs, kindArith_of floatKind _ notFloat_iff _ _ hs, hu, kindArith_of strKind _ notStr_iff _ _ hu⟩
+
+/-! ## Subscripts -/
+
+/-- `if (index < 0) index += PyList_GET_SIZE(list)`, `Python/bytecodes.c:1145-1147` and
+`:1431-1434`. -/
+def normIndex (i : Int) (n : Nat) : Int := if i < 0 then i + n else i
+
+/-- `BINARY_OP_SUBSCR_LIST_INT`, `Python/bytecodes.c:1134-1162`: on an exact list and a compact
+int it answers the item, a negative index counting from the end (new in 3.15), and it exits on
+any other operands and on an index outside the list after that adjustment. -/
+def SubscrListFast : Prop := ∀ (regs : Regs) (rest : List Val) (l r : Val), Live regs.rt l →
+  (∀ a items i v, l = .ref a → regs.rt.heap[a]? = some (.list items) → r = .int i → Compact i →
+    0 ≤ normIndex i items.size → items[(normIndex i items.size).toNat]? = some v →
+    BINARY_OP_SUBSCR_LIST_INT ⟨regs, r :: l :: rest⟩ = .ok () ⟨regs, v :: rest⟩) ∧
+  (¬ (∃ a items i v, l = .ref a ∧ regs.rt.heap[a]? = some (.list items) ∧ r = .int i ∧ Compact i ∧
+      0 ≤ normIndex i items.size ∧ items[(normIndex i items.size).toNat]? = some v) →
+    Deopts (BINARY_OP_SUBSCR_LIST_INT ⟨regs, r :: l :: rest⟩))
+
+theorem live_int (rt : Rt) (i : Int) : Live rt (.int i) := by simp [Live]
+theorem live_str (rt : Rt) (t : String) : Live rt (.str t) := by simp [Live]
+
+theorem subscrListFast_proven : SubscrListFast := by
+  intro regs rest l r hl
+  obtain ⟨gti, _, _, _, _, _, _, _, gnl, _, _⟩ := guardRules_proven
+  constructor
+  · rintro a items i v rfl ho rfl hc hn hv
+    have h1 := (gti regs (.ref a :: rest) _ (live_int _ i)).1 ⟨i, rfl, hc⟩
+    have h2 := (gnl regs rest _ (.int i) hl).1 ⟨a, items, rfl, ho⟩
+    show (do _GUARD_TOS_INT; _GUARD_NOS_LIST; _BINARY_OP_SUBSCR_LIST_INT) _ = _
+    simp only [bind, EStateM.bind, h1, h2]
+    unfold normIndex at hn hv
+    by_cases hneg : i < 0
+    · simp only [hneg, ite_true] at hn hv
+      have : ¬ (i + items.size < 0) := by omega
+      bc_simp [_BINARY_OP_SUBSCR_LIST_INT, ho, hneg, this, hv]
+    · simp only [hneg, ite_false] at hn hv
+      bc_simp [_BINARY_OP_SUBSCR_LIST_INT, ho, hneg, hv]
+  · intro hne
+    by_cases hr : CompactInt r
+    · obtain ⟨i, rfl, hc⟩ := hr
+      have h1 := guard_tos_int_pass (regs := regs) (rest := l :: rest) hc
+      by_cases hli : IsList regs.rt l
+      · have h2 := (gnl regs rest l (.int i) hl).1 hli
+        obtain ⟨a, items, rfl, ho⟩ := hli
+        refine ⟨⟨regs, rest⟩, ?_⟩
+        show (do _GUARD_TOS_INT; _GUARD_NOS_LIST; _BINARY_OP_SUBSCR_LIST_INT) _ = _
+        simp only [bind, EStateM.bind, h1, h2]
+        have hno : ∀ v, ¬ (0 ≤ normIndex i items.size ∧ items[(normIndex i items.size).toNat]? = some v) :=
+          fun v ⟨h3, h4⟩ => hne ⟨a, items, i, v, rfl, ho, rfl, hc, h3, h4⟩
+        unfold normIndex at hno
+        by_cases hneg : i < 0
+        · simp only [hneg, ite_true] at hno
+          by_cases hz : i + items.size < 0
+          · bc_simp [_BINARY_OP_SUBSCR_LIST_INT, ho, hneg, hz]
+          · have hz' : 0 ≤ i + items.size := by omega
+            cases hv : items[(i + (items.size : Int)).toNat]? with
+            | none => bc_simp [_BINARY_OP_SUBSCR_LIST_INT, ho, hneg, hz, hv]
+            | some v => exact absurd ⟨hz', hv⟩ (hno v)
+        · simp only [hneg, ite_false] at hno
+          have hz' : 0 ≤ i := by omega
+          cases hv : items[i.toNat]? with
+          | none => bc_simp [_BINARY_OP_SUBSCR_LIST_INT, ho, hneg, hv]
+          | some v => exact absurd ⟨hz', hv⟩ (hno v)
+      · exact ⟨_, by simp only [BINARY_OP_SUBSCR_LIST_INT, bind, EStateM.bind, h1,
+          (gnl regs rest l (.int i) hl).2 hli]; rfl⟩
+    · exact ⟨_, by simp only [BINARY_OP_SUBSCR_LIST_INT, bind, EStateM.bind, guard_tos_int_fail hr]; rfl⟩
 
 end PyLean.Bytecode

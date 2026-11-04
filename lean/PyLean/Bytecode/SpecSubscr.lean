@@ -1,4 +1,4 @@
-import PyLean.Bytecode.SpecHeap
+import PyLean.Bytecode.SpecFastSubscr
 import PyLean.Bytecode.LawfulBuiltin
 
 /-!
@@ -29,56 +29,21 @@ theorem subscrTupleInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (
   obtain ⟨regs, stack⟩ := s
   match stack, hs with
   | r :: l :: rest, _ =>
-    refine guards_spec _ _ _ (BINARY_OP e) _ ?_
-    by_cases hr : notCompactInt r = true
-    · left; rw [guard_tos_int]; simp [hr]
+    have hl : Live regs.rt l := hlive l (by simp)
+    obtain ⟨_, F1, F2⟩ := subscrTupleFast_proven regs rest l r hl
+    apply withDeopt_eq
+    by_cases h : ∃ a items i v, l = .ref a ∧ regs.rt.heap[a]? = some (.tuple items) ∧ r = .int i ∧
+        0 ≤ i ∧ i < 2 ^ 30 ∧ items[i.toNat]? = some v
     · right
-      refine ⟨by rw [guard_tos_int]; simp [hr], ?_⟩
-      obtain ⟨sub, rfl, _⟩ := notCompactInt_false (by simpa using hr)
-      have hl : Live regs.rt l := hlive l (by simp)
-      by_cases hlr : ∃ a, l = .ref a
-      · obtain ⟨a, rfl⟩ := hlr
-        obtain ⟨o, ho⟩ := live_obj hl
-        by_cases htup : ∃ items, o = .tuple items
-        · obtain ⟨items, rfl⟩ := htup
-          right
-          refine ⟨guardTop_two regs rest _ _ _ false (notTuple_tuple regs ho), ?_⟩
-          by_cases hnn : isNonNegCompact sub = true
-          · obtain ⟨hsub, hmax⟩ := nonneg_of sub hnn
-            by_cases hi : ∃ v, items[sub.toNat]? = some v
-            · obtain ⟨v, hv⟩ := hi
-              right
-              have hg : e.om.binaryOp e.ctx e.oparg (.ref a) (.int sub) regs.rt = .ok v regs.rt := by
-                rw [hop, hom.subscr]
-                have := hom.tuple_item e.ctx a items sub.toNat v regs.rt ho hv (by omega)
-                rwa [Int.toNat_of_nonneg hsub] at this
-              rw [generic_binop e regs rest _ _ v hg]
-              apply fast_stk21
-              simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hnn,
-                hv, pure, EStateM.pure]
-            · left
-              have hnone : items[sub.toNat]? = none := by
-                cases h : items[sub.toNat]? with
-                | none => rfl
-                | some v => exact absurd ⟨v, h⟩ hi
-              apply stk_deopt
-              · simp
-              · refine ⟨regs, ?_⟩
-                simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hnn,
-                  hnone, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
-                  MonadExceptOf.throw]
-          · left
-            apply stk_deopt
-            · simp
-            · refine ⟨regs, ?_⟩
-              simp [bind, EStateM.bind, hnn, throw, throwThe, MonadExcept.throw, EStateM.throw,
-                MonadExceptOf.throw]
-        · left
-          have hn : ∀ i, o ≠ .tuple i := fun i hi => htup ⟨i, hi⟩
-          exact guardTop_two regs rest _ _ _ true (notTuple_other regs ho hn) |>.trans (by simp)
-      · left
-        have hn : ∀ a, l ≠ .ref a := fun a ha => hlr ⟨a, ha⟩
-        exact guardTop_two regs rest _ _ _ true (notTuple_nonref regs _ hn) |>.trans (by simp)
+      obtain ⟨a, items, i, v, rfl, ho, rfl, h0, h1, hv⟩ := h
+      rw [F1 a items i v rfl ho rfl h0 h1 hv]
+      have hg : e.om.binaryOp e.ctx e.oparg (.ref a) (.int i) regs.rt = .ok v regs.rt := by
+        rw [hop, hom.subscr]
+        have := hom.tuple_item e.ctx a items i.toNat v regs.rt ho hv
+          (by rw [Int.toNat_of_nonneg h0]; unfold PyLean.ssizeMax; omega)
+        rwa [Int.toNat_of_nonneg h0] at this
+      exact (generic_binop e regs rest _ _ v hg).symm
+    · exact Or.inl (F2 h)
 
 /-- The generic subscript of a str at an in-range non-negative int. -/
 theorem generic_str (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (regs : Regs) (rest : List Val)
