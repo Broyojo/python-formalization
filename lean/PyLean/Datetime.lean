@@ -405,7 +405,7 @@ def entries : List Entry := [
     prop := ``DateFormat, thm := some ``dateFormat_proven },
   { id := "datetime-date-strptime", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.strptime", "C datetime_date_strptime_impl"]
-    statement := "For every parse r of _strptime, date.strptime returns date(r.year, r.month, r.day) whatever the time fields (so second=60 is accepted), and the parse's exception otherwise."
+    statement := "For every parse, date.strptime(s, fmt) is date(*(time.strptime(s, fmt)[0:3])) through the date constructor, exceptions included; for a parse with a valid date, no offset and second 60 or 61 it returns the date while datetime.strptime raises ValueError; and '2024 1 2 60' with %Y %m %d %S is such a parse."
     source := "date.strptime docs; _strptime_datetime_date", status := .proven
     prop := ``DateStrptime, thm := some ``dateStrptime_proven },
   { id := "datetime-parse-isodate-forms", pyFile := "Lib/_pydatetime.py"

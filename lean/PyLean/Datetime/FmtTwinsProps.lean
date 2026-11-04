@@ -314,24 +314,63 @@ theorem dateFormat_proven : DateFormat := by
 
 /-! ### `date.strptime` -/
 
-/-- `date.strptime(s, fmt)` (both twins call `_strptime._strptime_datetime_date`): for every
-parse `r`, the result is `date(r.year, r.month, r.day)`, whatever the time fields; so it
-succeeds on every valid date even where `datetime.strptime` refuses (`%S` matches 60 and
-61), and the parse's exception propagates. A `date.strptime` defined as
-`datetime.strptime(...).date()` fails at a second of 60. -/
+/-- `date.strptime(s, fmt)` (both twins call `_strptime._strptime_datetime_date`, the C
+impl through `PyObject_CallMethodObjArgs`, :3521-3536) for every parse:
+- it is the documented `date(*(time.strptime(s, fmt)[0:3]))`: `time.strptime` is
+  `_strptime_time` (`strptimeTime`, the same `_strptime` call, whose `struct_time` starts
+  with year, month, day), and `date(...)` is the constructor `date.__new__` with its
+  `_check_date_fields` (`dateCallPy`), including every exception of the parse;
+- the time fields play no part: for a parse with a valid date, no UTC offset and a second
+  of 60 or 61 (which `%S` matches), `date.strptime` returns the date while
+  `datetime.strptime` raises `ValueError`, so `date.strptime` is not
+  `datetime.strptime(...).date()`;
+- and such a parse exists: with `%Y %m %d %S` on `2024 1 2 60` (the groups `Y`, `m`, `d`,
+  `S`) and a locale without alternative digits (`LC_alt_digits` empty, as in C). -/
 def DateStrptime : Prop :=
   ∀ (lt : LocaleTimeV) (found : StrpFound),
-    (∀ r, strptimeCore lt found = .ok r →
-      strptimeDate lt found = checkDate r.year r.month r.day ∧
-      (ValidDate r.year r.month r.day → strptimeDate lt found = .ok (r.year, r.month, r.day))) ∧
-    (∀ e, strptimeCore lt found = .error e → strptimeDate lt found = .error e)
+    strptimeDate lt found =
+      (do let tt ← strptimeTime lt found; dateCallPy [.int tt.year, .int tt.month, .int tt.day]) ∧
+    (∀ r, strptimeCore lt found = .ok r → ValidDate r.year r.month r.day → r.gmtoff = none →
+      (r.second = 60 ∨ r.second = 61) →
+      strptimeDate lt found = .ok (r.year, r.month, r.day) ∧ (strptimeDatetime lt found).raises "ValueError") ∧
+    (lt.altDigits = none →
+      let f60 : StrpFound := [("Y", some "2024"), ("m", some "1"), ("d", some "2"), ("S", some "60")]
+      ∃ r, strptimeCore lt f60 = .ok r ∧ r.year = 2024 ∧ r.month = 1 ∧ r.day = 2 ∧ r.second = 60 ∧
+        r.gmtoff = none)
+
+theorem dateCallPy_ints (y m d : Int) : dateCallPy [.int y, .int m, .int d] = checkDate y m d := by
+  simp [dateCallPy, dateNewPy, checkDateFieldsArgPy, stateOf, pyIndex, bind, Except.bind]
 
 theorem dateStrptime_proven : DateStrptime := by
   intro lt found
-  refine ⟨fun r hr => ?_, fun e he => ?_⟩
-  · have e : strptimeDate lt found = checkDate r.year r.month r.day := by
-      unfold strptimeDate; rw [hr]; rfl
-    exact ⟨e, fun hv => by rw [e]; exact checkDate_ok _ _ _ hv⟩
-  · unfold strptimeDate; rw [he]; rfl
+  refine ⟨?_, fun r hr hv hg hs => ?_, fun hlt => ?_⟩
+  · unfold strptimeDate strptimeTime
+    cases strptimeCore lt found with
+    | error e => rfl
+    | ok r => simp only [bind, Except.bind]; rw [dateCallPy_ints]
+  · refine ⟨?_, ?_⟩
+    · unfold strptimeDate; rw [hr]; exact checkDate_ok _ _ _ hv
+    · unfold strptimeDatetime
+      rw [hr]
+      simp only [bind, Except.bind, hg]
+      unfold newDT
+      rw [checkDate_ok _ _ _ hv]
+      simp only
+      have : ¬ (0 ≤ r.second ∧ r.second ≤ 59) := by omega
+      unfold checkTime
+      by_cases h1 : 0 ≤ r.hour ∧ r.hour ≤ 23
+      · by_cases h2 : 0 ≤ r.minute ∧ r.minute ≤ 59
+        · simp only [h1, h2, this, not_false_eq_true, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+        · simp only [h1, h2, not_false_eq_true, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+      · simp only [h1, not_false_eq_true, ↓reduceIte]
+        exact ⟨_, rfl, rfl⟩
+  · have hp : ∀ s, parseIntLt lt s = pyInt s.toList := by
+      intro s; simp [parseIntLt, hlt]
+    simp only
+    refine ⟨⟨2024, 1, 2, 0, 0, 60, 1, 2, -1, none, none, 0, 0⟩, ?_, rfl, rfl, rfl, rfl, rfl⟩
+    simp [strptimeCore, strpStep, foundGet, hp, bind, Except.bind, pure, Except.pure]
+    decide
 
 end PyLean.Datetime
