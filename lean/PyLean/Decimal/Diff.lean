@@ -193,7 +193,7 @@ def evalM (c : Ctx) (name : String) (a b t : Dec) (isC : Bool := false) : Option
   | "mod" => some (jD (modD c a b))
   | "divmod" => some (jDec ((if isC then divmodC else divmodD) c a b) (fun p => Json.arr #[encDec p.1, encDec p.2]))
   | "remainder_near" => some (jD (remainderNear c a b))
-  | "to_eng_string" => some (pureJ (encStr (toEng a c.capitals)))
+  | "to_eng_string" => some (if isC then pureJ (encStr (toEng a c.capitals)) else jDec (liftPy (pyEng a c.capitals)) encStr)
   | "repr" => some (pureJ (encStr (reprD a)))
   | _ => none
 
@@ -254,7 +254,8 @@ def evalC (c : Ctx) (name : String) (a b t : Arg) (isC : Bool) : Option (DM Json
   | "number_class" => some (jDec (contextNumberClass c a) (fun (s : String) => toJson s))
   | "is_normal" => some (jB (contextIsNormal c a))
   | "is_subnormal" => some (jB (contextIsSubnormal c a))
-  | "to_eng_string" => some (jDec (contextToEngString c a) encStr)
+  | "to_eng_string" => some (jDec (if isC then ctxUn (fun c a => (pure (toEng a c.capitals) : DM (List Char))) c a
+      else contextToEngString c a) encStr)
   | "to_sci_string" => some (jDec (contextToSciString c a) encStr)
   | "copy_abs" => some (jD (contextCopyAbs c a))
   | "copy_negate" => some (jD (contextCopyNegate c a))
@@ -327,6 +328,8 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "parse_c" => return encPy encDec (cParse (← getChars j "s"))
   | "str_py" => return encPy encStr (pyStr (← getDec j "a"))
   | "str_c" => return encPy encStr (.ok (toSci (← getDec j "a")) : Py (List Char))
+  | "eng_py" => return encPy encStr (pyEng (← getDec j "a"))
+  | "eng_c" => return encPy encStr (.ok (toEng (← getDec j "a")) : Py (List Char))
   | "strrt_c" => return encPy encDec (cParse (toSci (← getDec j "a")))
   | "strrt_py" => return encPy encDec (pyStr (← getDec j "a") >>= pyParse)
   | "tuple_py" =>

@@ -815,6 +815,15 @@ def gen_case1(rng):
     if k < 0.24:
         return {"mod": "decimal", "fn": rng.choice(["str_py", "str_c"]),
                 "a": gen_dec(rng, huge=True, wide=True, special=0.15)}
+    if k < 0.255:
+        # to_eng_string; for _pydecimal also exponents around the 4300-digit limit of "%+d"
+        fn = rng.choice(["eng_py", "eng_c"])
+        a = gen_dec(rng, huge=True, wide=True, special=0.15)
+        if fn == "eng_py" and rng.random() < 0.2:
+            big = 10 ** rng.choice([4299, 4300, 4301]) + rng.randint(-3, 3)
+            a = ["Fh", rng.random() < 0.5, rng.choice(["0", "1", "12", "123", "5000"]),
+                 hex(rng.choice([1, -1]) * big)]
+        return {"mod": "decimal", "fn": fn, "a": a}
     if k < 0.30:
         s, d, e = gen_tuple(rng)
         return {"mod": "decimal", "fn": rng.choice(["tuple_py", "tuple_c"]), "sign": s, "digits": d, "exp": e}
@@ -1227,6 +1236,9 @@ def run_python(case):
         if fn in ("str_py", "str_c"):
             M = P if fn == "str_py" else C
             return cps(str(build(M, case["a"])))
+        if fn in ("eng_py", "eng_c"):
+            M = P if fn == "eng_py" else C
+            return cps(build(M, case["a"]).to_eng_string())
         if fn in ("strrt_py", "strrt_c"):
             M = P if fn == "strrt_py" else C
             return enc_dec(M.Decimal(str(build(M, case["a"]))))
