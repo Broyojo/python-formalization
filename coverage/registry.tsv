@@ -2233,13 +2233,13 @@ pygrammar-peg-tokenize-full-source	proven	Parser/pegen_errors.c	_PyPegen_tokeniz
 pygrammar-peg-raise-known-location	proven	Parser/pegen_errors.c	_PyPegen_raise_error_known_location
 pygrammar-peg-raise-error	proven	Parser/pegen_errors.c	_PyPegen_raise_error
 pygrammar-peg-raise-unclosed	proven	Parser/pegen_errors.c	raise_unclosed_parentheses_error
-pygrammar-peg-decode-error	proven	Parser/pegen_errors.c	_Pypegen_raise_decode_error
+pygrammar-peg-decode-error	proven	Parser/pegen_errors.c	
 pygrammar-peg-fill-token	proven	Parser/pegen.c	_PyPegen_fill_token
 pygrammar-peg-expect-token	proven	Parser/pegen.c	_PyPegen_expect_token
 pygrammar-peg-memo-cache	proven	Parser/pegen.c	_PyPegen_insert_memo,_PyPegen_update_memo,_PyPegen_is_memoized
 pygrammar-peg-last-token	proven	Parser/pegen.c	_PyPegen_get_last_nonnwhitespace_token
 pygrammar-peg-strip-interpolation	proven	Parser/action_helpers.c	_strip_interpolation_debug_expr
-pygrammar-peg-decode-known	proven	Parser/pegen_errors.c	_Pypegen_raise_decode_error_known_location
+pygrammar-peg-decode-known	proven	Parser/pegen_errors.c	
 pygrammar-peg-decode-format-spec	refuted	Parser/action_helpers.c	_PyPegen_decoded_constant_from_token
 pygrammar-peg-missing-comma	proven	Parser/action_helpers.c	_PyPegen_raise_error_for_missing_comma
 pygrammar-peg-warn-lazy	proven	Parser/action_helpers.c	_warn_relative_import_of_lazy
@@ -2264,6 +2264,20 @@ pygrammar-rule-import-name	proven	Grammar/python.gram	rule:import_name
 pygrammar-rule-invalid-import	proven	Grammar/python.gram	rule:invalid_import
 pygrammar-rule-del-stmt	proven	Grammar/python.gram	rule:del_stmt
 pygrammar-rule-augassign	proven	Grammar/python.gram	rule:augassign
+pygrammar-rule-del-stmt-invalid	proven	Grammar/python.gram	rule:del_stmt
+pygrammar-rule-assert-stmt-invalid	proven	Grammar/python.gram	rule:assert_stmt
+pygrammar-rule-for-stmt	proven	Grammar/python.gram	rule:for_stmt
+pygrammar-rule-compound-stmt	proven	Grammar/python.gram	rule:compound_stmt
+pygrammar-rule-simple-stmt	proven	Grammar/python.gram	rule:simple_stmt
+pygrammar-rule-global-nonlocal	proven	Grammar/python.gram	rule:global_stmt,rule:nonlocal_stmt
+pygrammar-rule-inversion	proven	Grammar/python.gram	rule:inversion
+pygrammar-rule-comparison	proven	Grammar/python.gram	rule:comparison
+pygrammar-rule-await-primary	proven	Grammar/python.gram	rule:await_primary
+pygrammar-rule-assignment-aug	proven	Grammar/python.gram	rule:assignment
+pygrammar-rule-assignment-ann-plain	proven	Grammar/python.gram	rule:assignment
+pygrammar-rule-assignment-invalid	proven	Grammar/python.gram	rule:assignment
+pygrammar-rule-import-stmt	proven	Grammar/python.gram	rule:import_stmt
+pygrammar-rule-import-from	proven	Grammar/python.gram	rule:import_from
 pygrammar-rule-file	proven	Grammar/python.gram	rule:file
 pygrammar-rule-eval	proven	Grammar/python.gram	rule:eval
 pygrammar-rule-interactive	proven	Grammar/python.gram	rule:interactive
