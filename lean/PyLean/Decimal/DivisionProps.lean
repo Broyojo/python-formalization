@@ -180,6 +180,8 @@ theorem pow10BandExact_proven : Pow10BandExact := by
   simp only at h
   split at h
   · cases h
+  split at h
+  · cases h
   · split at h
     · cases h
     · unfold strLimit at h
@@ -242,6 +244,16 @@ theorem divideVerdict_proven : DivideVerdict := by
       cases hr
       exact Or.inr ⟨Or.inl (by omega), rfl, rfl, hm⟩
 
+/-- `divByZero` is the flag, the trap, then `DivisionByZero.handle`'s signed infinity. -/
+theorem divByZero_eq (c : Ctx) (sign : Bool) :
+    divByZero c sign = (do raiseSig c .divisionByZero; pure (.inf sign) : DM Dec) := by
+  funext fl
+  by_cases h : Signal.divisionByZero ∈ c.traps <;>
+    simp [divByZero, raiseError, raiseSig, Cond.signal, handle, h, bind, StateT.bind, Except.bind, pure,
+      StateT.pure, Except.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, throw, throwThe,
+      MonadExcept.throw, MonadExceptOf.throw, StateT.lift] <;>
+    by_cases hm : Signal.divisionByZero ∈ fl <;> simp [hm]
+
 /-- The special values of `/`, General Decimal Arithmetic, "divide": `x/0` is an infinity
 with DivisionByZero, `0/0` and `inf/inf` are NaN with InvalidOperation, `inf/x` is an
 infinity with no flag, and `x/inf` is a zero at `Etiny` with Clamped. -/
@@ -262,7 +274,7 @@ theorem truedivSpecials_proven : TruedivSpecials := by
   have hz : isZero (.fin s co e) = false := isZero_fin s co e hc
   have hz2 : isZero (.fin t 0 e2) = true := rfl
   simp only [truediv, isSpecial, Bool.or_false, Bool.false_eq_true, ↓reduceIte, decBool, hz, hz2,
-    Bool.not_true, Bool.not_false, Dec.neg, divByZero]
+    Bool.not_true, Bool.not_false, Dec.neg, divByZero_eq]
 
 /-! ## `__truediv__`'s integer core -/
 

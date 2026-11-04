@@ -167,54 +167,6 @@ def contextApply (c : Ctx) (a : Dec) : DM (List Char) := do
   let r ← fix c a
   liftPy (pyStr r c.capitals)
 
-/-! ## Conditions: `_raise_error` and the `handle` methods -/
-
-/-- A condition with the arguments `_raise_error` passes to its handler. -/
-inductive Cond where
-  | invalidOperation (arg : Option Dec)
-  | conversionSyntax
-  | divisionImpossible
-  | divisionUndefined
-  | invalidContext
-  | divisionByZero (sign : Bool)
-  | overflow (sign : Bool)
-  /-- Clamped, Inexact, Rounded, Subnormal, Underflow, FloatOperation: no `handle` of
-  their own. -/
-  | plain (s : Signal)
-  deriving Repr
-
-/-- `_condition_map.get(condition, condition)`, _pydecimal.py:336-339. -/
-def Cond.signal : Cond → Signal
-  | .invalidOperation _ | .conversionSyntax | .divisionImpossible
-  | .divisionUndefined | .invalidContext => .invalidOperation
-  | .divisionByZero _ => .divisionByZero
-  | .overflow _ => .overflow
-  | .plain s => s
-
-/-- `_NaN`, _pydecimal.py:6489. -/
-def nanD : Dec := .nan false false 0
-
-/-- The `handle` methods: `DecimalException.handle` (:119-120, `none`),
-`InvalidOperation.handle` (:158-162), `ConversionSyntax.handle` (:171-172),
-`DivisionByZero.handle` (:187-188), `DivisionImpossible.handle` (:198-199),
-`DivisionUndefined.handle` (:209-210), `InvalidContext.handle` (:236-237),
-`Overflow.handle` (:284-297, `overflowResult`). -/
-def handle (c : Ctx) : Cond → Option Dec
-  | .invalidOperation (some a) => some (quietOf c a)
-  | .invalidOperation none => some nanD
-  | .conversionSyntax | .divisionImpossible | .divisionUndefined | .invalidContext => some nanD
-  | .divisionByZero sign => some (.inf sign)
-  | .overflow sign => some (overflowResult c sign)
-  | .plain _ => none
-
-/-- `Context._raise_error`, _pydecimal.py:4105-4125. -/
-def raiseError (c : Ctx) (ignored : List Signal) (cnd : Cond) : DM (Option Dec) := do
-  let error := cnd.signal
-  if error ∈ ignored then return handle c cnd
-  modify (fun fl => if error ∈ fl then fl else fl ++ [error])
-  if error ∉ c.traps then return handle c cnd
-  throw (.named error.name "~")
-
 /-! ## The `Context` object -/
 
 /-- `_signals`, _pydecimal.py:332-333. -/
