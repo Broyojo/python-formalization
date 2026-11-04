@@ -23,7 +23,7 @@ theorem pow_ten_cases (k : Nat) : 10 ^ k = 1 ∨ ∃ P', 10 ^ k = 10 * P' := by
   | zero => exact Or.inl rfl
   | succ n => exact Or.inr ⟨10 ^ n, by rw [Nat.pow_succ, Nat.mul_comm]⟩
 
-/-- The `coeff % 5 == 0` bump of `__truediv__` (_pydecimal.py:1414-1416). -/
+/-- The `coeff % 5 == 0` bump of `__truediv__` (_pydecimal.py:1415-1417). -/
 def bump (T : Nat) : Nat := if T % 5 = 0 then T + 1 else T
 
 theorem bump_div10 (T : Nat) : bump T / 10 = T / 10 := by
@@ -171,10 +171,10 @@ theorem sticky_between (T X d : Nat) (h1 : 10 ^ (d + 1) * T < X) (h2 : X < 10 ^ 
 
 /-! ## `__truediv__`'s working values -/
 
-/-- `shift = len(other._int) - len(self._int) + context.prec + 1` (_pydecimal.py:1405). -/
+/-- `shift = len(other._int) - len(self._int) + context.prec + 1` (_pydecimal.py:1406). -/
 def tdShift (prec ca cb : Nat) : Int := (numDigits cb : Int) - numDigits ca + prec + 1
 
-/-- The dividend and divisor `divmod` divides (_pydecimal.py:1409-1412), so that the exact quotient
+/-- The dividend and divisor `divmod` divides (_pydecimal.py:1410-1413), so that the exact quotient
 `(ca/cb)·10^(ea-eb)` is `(tdNum/tdDen)·10^(ea - eb - shift)`. -/
 def tdNum (prec ca cb : Nat) : Nat :=
   if tdShift prec ca cb ≥ 0 then ca * 10 ^ (tdShift prec ca cb).toNat else ca

@@ -464,6 +464,23 @@ def gen_eqkey(rng):
     return ["eq", "".join(rng.choice("nnnnnyyri") for _ in range(n))]
 
 
+def add_cross(rng, names):
+    """Give some EqKey elements a hash shared with others and answers against the EqKeys before
+    them (`x == k` in `k in traps`, :3994, and the dict's comparison of equal hashes)."""
+    out = []
+    for i, x in enumerate(names):
+        if isinstance(x, list) and x[0] == "eq" and rng.random() < 0.6:
+            hv = rng.choice([100, 100, 101, None])
+            x = ["eq", x[1], hv, "".join(rng.choice("nnnyyri") for _ in range(i))]
+        out.append(x)
+    return out
+
+
+def plain_keys(names):
+    """List elements as dict keys: no positions, so no cross answers or shared hashes."""
+    return [x[:2] if isinstance(x, list) else x for x in names]
+
+
 def gen_sig_list(rng):
     names = [x for x in ALL_SIGNALS if rng.random() < 0.3]
     if rng.random() < 0.3:
@@ -472,7 +489,7 @@ def gen_sig_list(rng):
         for _ in range(rng.choice([1, 1, 2, 3])):
             k = rng.choice(["other", "other", "hugeint", "unhash", "badrepr", "eq", "eq", "eq"])
             names.insert(rng.randrange(len(names) + 1), gen_eqkey(rng) if k == "eq" else k)
-    return ["list", names]
+    return ["list", add_cross(rng, names)]
 
 
 def gen_sig_dict(rng):
@@ -535,7 +552,9 @@ def gen_sig_focus(rng, impl):
                 names.insert(rng.randrange(len(names) + 1), gen_eqkey(rng))
             if rng.random() < 0.2:
                 names.insert(rng.randrange(len(names) + 1), rng.choice(["unhash", "badrepr", "hugeint"]))
-            return ["list", names]
+            if rng.random() < 0.3:
+                names.insert(rng.randrange(len(names) + 1), rng.choice(["other", "hugeint", "unhash"]))
+            return ["list", add_cross(rng, names)]
         keys = list(ALL_SIGNALS)
         for _ in range(rng.choice([0, 1, 1, 2])):
             keys.insert(rng.randrange(len(keys) + 1), gen_eqkey(rng))
@@ -547,7 +566,7 @@ def gen_sig_focus(rng, impl):
         return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
     val = arg()
     if val[0] == "list":
-        val = ["dict", [[x, True] for x in val[1] if x != "unhash"]]
+        val = ["dict", [[x, True] for x in plain_keys(val[1]) if x != "unhash"]]
     return {"mod": "decimal", "fn": "ctxset", "impl": impl, "tmpl": gen_tmpl(rng),
             "name": rng.choice(["flags", "traps"]), "val": val}
 
@@ -951,10 +970,16 @@ def run_rop(M, case):
 
 class EqKey:
     """Answers `self == signal` (and the reflected `signal == self`) from a string indexed by
-    `_signals` order; NotImplemented for anything else, so two of them compare unequal."""
+    `_signals` order. As an element of a list at position `pos`, it answers `self == x` for an
+    `EqKey` x at an earlier position from `prev[x.pos]` (and NotImplemented to `x == self` itself,
+    so that comparison reaches the reflected one); NotImplemented for anything else. It hashes to
+    `hv`, or by identity."""
 
-    def __init__(self, answers):
+    def __init__(self, answers, pos=None, hv=None, prev=""):
         self.answers = answers
+        self.pos = pos
+        self.hv = hv
+        self.prev = prev
 
     def __eq__(self, other):
         for M in (P, C):
@@ -966,9 +991,18 @@ class EqKey:
                     if a == "i":
                         return NotImplemented
                     return a == "y"
+        if (isinstance(other, EqKey) and self.pos is not None and other.pos is not None
+                and other.pos < self.pos):
+            a = self.prev[other.pos] if other.pos < len(self.prev) else "n"
+            if a == "r":
+                raise RuntimeError("boom")
+            if a == "i":
+                return NotImplemented
+            return a == "y"
         return NotImplemented
 
-    __hash__ = object.__hash__
+    def __hash__(self):
+        return object.__hash__(self) if self.hv is None else self.hv
 
     def __repr__(self):
         return "EqKey"
@@ -978,9 +1012,11 @@ PY_SIGNAL_ORDER = ["Clamped", "DivisionByZero", "Inexact", "Overflow", "Rounded"
                    "InvalidOperation", "Subnormal", "FloatOperation"]
 
 
-def key_obj(M, k):
+def key_obj(M, k, pos=None):
     if isinstance(k, list) and k[0] == "eq":
-        return EqKey(k[1])
+        if pos is None:
+            return EqKey(k[1])
+        return EqKey(k[1], pos, k[2] if len(k) > 2 else None, k[3] if len(k) > 3 else "")
     if k == "other":
         return 5
     if k == "hugeint":
@@ -1013,7 +1049,7 @@ def ctx_val(M, v):
     if t == "str":
         return v[1]
     if t == "list":
-        return [key_obj(M, k) for k in v[1]]
+        return [key_obj(M, k, i) for i, k in enumerate(v[1])]
     if t == "dict":
         return {key_obj(M, k): val_obj(b) for k, b in v[1]}
     if t in ("frozendict", "frozendict_py"):

@@ -569,46 +569,71 @@ def optSig : Option SigArg → CtxArg
 /-- What `hash()` of an element raises (`none`: it is hashable); a signal is a class. -/
 def SigKey.hashErr : SigKey → StrErr
   | .sig _ => none
-  | .other _ h _ => h
+  | .other _ h .. => h
 
 /-- What `s in l` answers for a signal `s` (`int(s in traps)`, _pydecimal.py:3994): the elements'
 comparisons with `s`, in order. -/
 def SigAns (l : List SigKey) (s : Signal) : EqAns := firstAns (l.map (fun x : SigKey => x.eqSig s))
 
-/-- What `k in l` answers for an element `k` before it reaches itself, `pre` the elements before
-it: a signal `t` among them answers through `k`'s reflected `__eq__`, another non-signal element is
-unequal (scope of `SigKey.other`). -/
-def SelfAns (pre : List SigKey) (k : SigKey) : EqAns := firstAns (pre.map k.ansBefore)
+/-- What `k in l` answers for an element `k` that is not a signal before it reaches itself, `pre`
+the elements before it: `x == k` for each earlier `x` (Objects/listobject.c:686), a signal `t`
+answering through `k`'s reflected `__eq__` and any other element as `k.prev` records for its
+position (`SigKey.prevAns`). -/
+def SelfAns (pre : List SigKey) (k : SigKey) : EqAns := firstAns (pre.mapIdx k.prevAns)
 
-/-- An element `dict(...)` takes in: its `k in l` does not raise and it hashes. -/
-def ElemOk (pre : List SigKey) (k : SigKey) : Prop := NotRaise (SelfAns pre k) ∧ k.hashErr = none
+/-- What inserting `k` into a dict holding the non-signal keys `keys` (with their list positions)
+answers: `stored == k` for each stored key whose hash equals `k`'s, in insertion order. -/
+def DictAnsK (keys : List (Nat × SigKey)) (k : SigKey) : EqAns := firstAns (dictAns k keys)
 
-/-- An element on which `dict(...)` stops with `r`: its `k in l` raises `r`, or it is hashed and
+/-- The non-signal keys after the element `k` at position `n`: a new key unless a stored key of
+equal hash compares equal to it. -/
+def keptStep (n : Nat) (keys : List (Nat × SigKey)) (k : SigKey) : List (Nat × SigKey) :=
+  if k.isSig then keys else if DictAnsK keys k = .yes then keys else keys ++ [(n, k)]
+
+def keptGo (n : Nat) (keys : List (Nat × SigKey)) : List SigKey → List (Nat × SigKey)
+  | [] => keys
+  | k :: rest => keptGo (n + 1) (keptStep n keys k) rest
+
+/-- The keys other than signals that `dict(...)` holds after the elements of `l`, with their
+positions in `l`, when nothing raises: each element that is not a signal, unless an earlier key
+with the same hash compares equal to it, in which case that key stays and the element adds none. -/
+def keptOf (l : List SigKey) : List (Nat × SigKey) := keptGo 0 [] l
+
+/-- What inserting the element `k`, `pre` the elements before it, answers. -/
+def DictAns (pre : List SigKey) (k : SigKey) : EqAns := DictAnsK (keptOf pre) k
+
+/-- An element `dict(...)` takes in, given the keys `keys` already there: its `k in l` does not
+raise, it hashes, and the comparisons with stored keys of equal hash do not raise. -/
+def ElemOkK (pre : List SigKey) (keys : List (Nat × SigKey)) (k : SigKey) : Prop :=
+  NotRaise (SelfAns pre k) ∧ k.hashErr = none ∧ NotRaise (DictAnsK keys k)
+
+def ElemOk (pre : List SigKey) (k : SigKey) : Prop := ElemOkK pre (keptOf pre) k
+
+/-- An element on which `dict(...)` stops with `r`: its `k in l` raises `r`; or it is hashed and
 `hash()` raises, a `TypeError` becoming "cannot use '<type>' as a dict key (<e>)" and anything else
-propagating (Objects/dictobject.c:2442-2461). -/
-def ElemFails (pre : List SigKey) (k : SigKey) (r : PyExc) : Prop :=
+propagating (Objects/dictobject.c:2442-2461); or the comparison with a stored key of equal hash
+raises `r`. -/
+def ElemFailsK (pre : List SigKey) (keys : List (Nat × SigKey)) (k : SigKey) (r : PyExc) : Prop :=
   SelfAns pre k = .raises r ∨
   (NotRaise (SelfAns pre k) ∧ ∃ h, k.hashErr = some h ∧
     (∀ m, h = .typeError m → r = .typeError s!"~cannot use as a dict key ({m})") ∧
-    ((∀ m, h ≠ .typeError m) → r = h))
+    ((∀ m, h ≠ .typeError m) → r = h)) ∨
+  (NotRaise (SelfAns pre k) ∧ k.hashErr = none ∧ DictAnsK keys k = .raises r)
 
-/-- The items the elements of `l` that are not signals add, each with the value `1`. -/
-def otherList : List SigKey → List (SigKey × SigVal)
-  | [] => []
-  | .sig _ :: rest => otherList rest
-  | .other r _ eq :: rest => (.other r none eq, { truth := true }) :: otherList rest
+def ElemFails (pre : List SigKey) (k : SigKey) (r : PyExc) : Prop := ElemFailsK pre (keptOf pre) k r
 
 /-- `dict((s, int(s in l)) for s in _signals + l)` when nothing raises: the nine signals, each set
-when `s in l` is true, then the other elements. -/
+when `s in l` is true, then the keys the other elements make (`keptOf`), each with the value 1. -/
 def ListBuilt (l : List SigKey) : List (SigKey × SigVal) :=
   pySignals.map (fun s => (SigKey.sig s, ({ truth := decide (SigAns l s = .yes) } : SigVal))) ++
-    otherList l
+    (keptOf l).map (fun q => (q.2, ({ truth := true } : SigVal)))
 
 /-- `Context()` with the list `l` as `traps` or `flags` (_pydecimal.py:3993-3994, :4000-4001), `r`
 being the result and `K` what holds of the stored dict: `dict(...)` takes the signals first, in
 `_signals` order, and the first whose `s in l` raises raises that; then the elements in order, the
-first that fails (`ElemFails`) raising its exception; then the dict goes to `_set_signal_dict`
-(`DictOutcome`). -/
+first that fails (`ElemFails`: its `k in l`, its hash, or its comparison with a stored key of equal
+hash) raising its exception; then the dict, which holds one key per class of equal elements of
+equal hash (`keptOf`), goes to `_set_signal_dict` (`DictOutcome`). -/
 def ListOutcome {α : Type} (l : List SigKey) (r : Py α)
     (K : SigDict → List (SigKey × SigVal) → Prop) : Prop :=
   (∀ pre s post e, pySignals = pre ++ s :: post → (∀ t ∈ pre, NotRaise (SigAns l t)) →
@@ -643,8 +668,10 @@ attributes are assigned in the order `prec`, `rounding`, `Emin`, `Emax`, `capita
 `_set_integer_check` (the int/str-limit `ValueError` when its `%s` has more than 4300 digits), the
 `TypeError` of an unknown rounding name, the `TypeError` of a `prec` that is not an int, and for
 `traps` then `flags` every outcome of `ListOutcome` (a list: `s in l` and `k in l` run the
-elements' `__eq__`, so `Context(traps=[k])` raises what `k.__eq__` raises, or with a `k` equal to
-every signal traps every signal and keeps `k`; then hashing) or `DictOutcome` (a dict); any other
+elements' `__eq__`, against the signals and against each other, so `Context(traps=[k])` raises what
+`k.__eq__` raises, or with a `k` equal to every signal traps every signal and keeps `k`, and
+`Context(traps=[R(), R()])` raises what comparing the two raises; then hashing, and the dict keeps
+one key for equal elements of equal hash) or `DictOutcome` (a dict); any other
 value fails at `_signals + value` with `TypeError`. When every value is accepted the context holds
 exactly these values. -/
 def ContextInitExact : Prop :=
@@ -718,19 +745,38 @@ theorem firstAns_noRaise : ∀ as : List EqAns, (∀ a ∈ as, NotRaise a) → N
     exact firstAns_noRaise rest (fun a ha => h a (by simp [ha]))
   | .raises e :: _, h => absurd rfl (h (.raises e) (by simp) e)
 
+theorem prevAns_sig (s : Signal) (i : Nat) (x : SigKey) : (SigKey.sig s).prevAns i x = .no := by
+  cases x <;> rfl
+
+theorem firstAns_allNo : ∀ as : List EqAns, (∀ a ∈ as, a = .no) → firstAns as = .no
+  | [], _ => rfl
+  | a :: rest, h => by
+    rw [h a (by simp)]
+    exact firstAns_allNo rest (fun b hb => h b (by simp [hb]))
+
 /-- A signal element never makes `dict(...)` stop. -/
-theorem elemOk_sig (pre : List SigKey) (s : Signal) : ElemOk pre (.sig s) := by
-  refine ⟨firstAns_noRaise _ (fun a ha => ?_), rfl⟩
-  simp only [List.mem_map] at ha
-  obtain ⟨x, _, rfl⟩ := ha
-  cases x with
-  | sig t =>
-    show NotRaise ((SigKey.sig s).eqSig t)
-    simp only [SigKey.eqSig]
-    split <;> exact fun e h => nomatch h
-  | other r h eq =>
-    show NotRaise EqAns.no
-    exact fun e h => nomatch h
+theorem elemOkK_sig (pre : List SigKey) (keys : List (Nat × SigKey)) (s : Signal) :
+    ElemOkK pre keys (.sig s) ∧ ∀ e, ¬ ElemFailsK pre keys (.sig s) e := by
+  have h1 : SelfAns pre (.sig s) = .no := by
+    unfold SelfAns
+    apply firstAns_allNo
+    intro a ha
+    simp only [List.mem_mapIdx] at ha
+    obtain ⟨i, _, rfl⟩ := ha
+    exact prevAns_sig s i _
+  have h2 : DictAnsK keys (.sig s) = .no := by
+    unfold DictAnsK dictAns
+    apply firstAns_allNo
+    intro a ha
+    simp only [List.mem_map] at ha
+    obtain ⟨q, _, rfl⟩ := ha
+    exact prevAns_sig s _ _
+  refine ⟨⟨by rw [h1]; exact (fun e h => nomatch h), rfl, by rw [h2]; exact (fun e h => nomatch h)⟩, ?_⟩
+  intro e hf
+  rcases hf with hf | ⟨_, h, hh, _⟩ | ⟨_, _, hf⟩
+  · rw [h1] at hf; exact nomatch hf
+  · exact nomatch hh
+  · rw [h2] at hf; exact nomatch hf
 
 theorem sigItems_ok (l : List SigKey) : ∀ ss : List Signal, (∀ s ∈ ss, NotRaise (SigAns l s)) →
     sigItems l ss =
@@ -760,37 +806,62 @@ theorem selfIn_err (k : SigKey) (pre : List SigKey) (e : PyExc) (h : SelfAns pre
     selfIn k pre = .error e := by
   simp only [selfIn, ansIn_err_of _ e h, bind, Except.bind]
 
-theorem otherItems_ok : ∀ (l acc : List SigKey),
-    (∀ pre k post, l = pre ++ k :: post → ElemOk (acc ++ pre) k) → otherItems acc l = .ok (otherList l)
-  | [], _, _ => rfl
-  | .sig t :: rest, acc, h => by
-    simp only [otherItems, otherList]
-    exact otherItems_ok rest (acc ++ [.sig t]) (fun pre k post hl => by
-      have := h (.sig t :: pre) k post (by simp [hl])
-      simpa using this)
-  | .other r hh eq :: rest, acc, h => by
-    have h0 := h [] (.other r hh eq) rest (by simp)
-    simp only [List.append_nil] at h0
-    obtain ⟨h1, h2⟩ := h0
+theorem keptGo_append (n : Nat) (keys : List (Nat × SigKey)) : ∀ a b : List SigKey,
+    keptGo n keys (a ++ b) = keptGo (n + a.length) (keptGo n keys a) b := by
+  intro a
+  induction a generalizing n keys with
+  | nil => intro b; rfl
+  | cons x xs ih =>
+    intro b
+    simp only [List.cons_append, keptGo, ih, List.length_cons]
+    congr 1
+    omega
+
+/-- The steps of an element that is not a signal, hashable, with no raising answer. -/
+theorem otherItems_other (pre : List SigKey) (keys : List (Nat × SigKey)) (r : StrErr) (eq : List EqAns)
+    (hv : Int) (pv : List EqAns) (rest : List SigKey)
+    (h1 : NotRaise (SelfAns pre (.other r none eq hv pv)))
+    (h3 : NotRaise (DictAnsK keys (.other r none eq hv pv))) :
+    otherItems pre keys (.other r none eq hv pv :: rest) =
+      otherItems (pre ++ [.other r none eq hv pv]) (keptStep pre.length keys (.other r none eq hv pv)) rest := by
+  have ha := ansIn_ok_of (dictAns (.other r none eq hv pv) keys) h3
+  simp only [otherItems, selfIn_ok _ _ h1, ha, bind, Except.bind, keptStep, SigKey.isSig, DictAnsK,
+    Bool.false_eq_true, if_false, decide_eq_true_eq]
+  congr 1
+
+theorem otherItems_ok : ∀ (l pre : List SigKey) (keys : List (Nat × SigKey)),
+    (∀ p k post, l = p ++ k :: post → ElemOkK (pre ++ p) (keptGo pre.length keys p) k) →
+    otherItems pre keys l = .ok (keptGo pre.length keys l)
+  | [], _, _, _ => rfl
+  | .sig t :: rest, pre, keys, h => by
+    have ih := otherItems_ok rest (pre ++ [.sig t]) keys (fun p k post hl => by
+      have := h (.sig t :: p) k post (by simp [hl])
+      simpa [keptGo, keptStep, SigKey.isSig] using this)
+    simp only [otherItems, ih, keptGo, keptStep, SigKey.isSig, if_true, List.length_append,
+      List.length_cons, List.length_nil]
+  | .other r hh eq hv pv :: rest, pre, keys, h => by
+    have h0 := h [] (.other r hh eq hv pv) rest (by simp)
+    simp only [List.append_nil, keptGo] at h0
+    obtain ⟨h1, h2, h3⟩ := h0
     have h2' : hh = none := h2
     subst h2'
-    have ih := otherItems_ok rest (acc ++ [.other r none eq]) (fun pre k post hl => by
-      have := h (.other r none eq :: pre) k post (by simp [hl])
-      simpa using this)
-    simp only [otherItems, otherList, selfIn_ok _ _ h1, ih, bind, Except.bind, pure, Except.pure]
+    have ih := otherItems_ok rest (pre ++ [.other r none eq hv pv])
+      (keptStep pre.length keys (.other r none eq hv pv)) (fun p k post hl => by
+      have := h (.other r none eq hv pv :: p) k post (by simp [hl])
+      simpa [keptGo] using this)
+    rw [otherItems_other pre keys r eq hv pv rest h1 h3, ih]
+    simp [keptGo]
 
-theorem otherItems_err (e : PyExc) : ∀ (pre acc : List SigKey) (k : SigKey) (post : List SigKey),
-    (∀ pre1 k1 post1, pre = pre1 ++ k1 :: post1 → ElemOk (acc ++ pre1) k1) →
-    ElemFails (acc ++ pre) k e → otherItems acc (pre ++ k :: post) = .error e
-  | [], acc, .sig t, post, _, hf => by
+theorem otherItems_err (e : PyExc) : ∀ (p pre : List SigKey) (keys : List (Nat × SigKey)) (k : SigKey)
+    (post : List SigKey),
+    (∀ p1 k1 post1, p = p1 ++ k1 :: post1 → ElemOkK (pre ++ p1) (keptGo pre.length keys p1) k1) →
+    ElemFailsK (pre ++ p) (keptGo pre.length keys p) k e → otherItems pre keys (p ++ k :: post) = .error e
+  | [], pre, keys, .sig t, post, _, hf => by
     exfalso
-    obtain ⟨hn, hh⟩ := elemOk_sig (acc ++ []) t
-    rcases hf with hf | ⟨_, h, hh', _⟩
-    · exact hn e hf
-    · rw [hh] at hh'; exact nomatch hh'
-  | [], acc, .other r hh eq, post, _, hf => by
-    simp only [List.append_nil] at hf
-    rcases hf with hf | ⟨hn, h, hh', h1, h2⟩
+    exact (elemOkK_sig _ _ t).2 e (by simpa [keptGo] using hf)
+  | [], pre, keys, .other r hh eq hv pv, post, _, hf => by
+    simp only [List.append_nil, keptGo] at hf
+    rcases hf with hf | ⟨hn, h, hh', h1, h2⟩ | ⟨hn, hh', hf⟩
     · simp only [List.nil_append, otherItems, selfIn_err _ _ e hf, bind, Except.bind]
     · have hh'' : hh = some h := hh'
       subst hh''
@@ -800,21 +871,29 @@ theorem otherItems_err (e : PyExc) : ∀ (pre acc : List SigKey) (k : SigKey) (p
         rw [(dictKeyExc_spec h).1 m hm, h1 m hm]
       · have hn' : ∀ m, h ≠ .typeError m := fun m hm => ht ⟨m, hm⟩
         rw [(dictKeyExc_spec h).2 hn', h2 hn']
-  | x :: pre, acc, k, post, hp, hf => by
-    have h0 := hp [] x pre (by simp)
-    simp only [List.append_nil] at h0
-    have ih := otherItems_err e pre (acc ++ [x]) k post (fun pre1 k1 post1 hl => by
-      have := hp (x :: pre1) k1 post1 (by simp [hl])
-      simpa using this) (by simpa using hf)
+    · have hh'' : hh = none := hh'
+      subst hh''
+      have ha := ansIn_err_of (dictAns (.other r none eq hv pv) keys) e hf
+      simp only [List.nil_append, otherItems, selfIn_ok _ _ hn, ha, bind, Except.bind]
+  | x :: p, pre, keys, k, post, hp, hf => by
+    have h0 := hp [] x p (by simp)
+    simp only [List.append_nil, keptGo] at h0
+    have ih := otherItems_err e p (pre ++ [x]) (keptStep pre.length keys x) k post
+      (fun p1 k1 post1 hl => by
+        have := hp (x :: p1) k1 post1 (by simp [hl])
+        simpa [keptGo] using this) (by simpa [keptGo] using hf)
     cases x with
     | sig t =>
+      have hs : keptStep pre.length keys (.sig t) = keys := by simp [keptStep, SigKey.isSig]
+      rw [hs] at ih
       simp only [List.cons_append, otherItems]
       exact ih
-    | other r hh eq =>
-      obtain ⟨h1, h2⟩ := h0
+    | other r hh eq hv pv =>
+      obtain ⟨h1, h2, h3⟩ := h0
       have h2' : hh = none := h2
       subst h2'
-      simp only [List.cons_append, otherItems, selfIn_ok _ _ h1, ih, bind, Except.bind]
+      rw [List.cons_append, otherItems_other pre keys r eq hv pv _ h1 h3]
+      exact ih
 
 /-- `signalArg` then `_set_signal_dict` on a list or dict argument, then `g`, has every outcome
 `SigOutcome` states. -/
@@ -835,17 +914,17 @@ theorem sigArg_outcome {α : Type} (dflt : List (SigKey × SigVal)) (t : SigArg)
     · have : sigItems l pySignals = .error e := by rw [hps]; exact sigItems_err l e pre s post hp hs
       simp only [SigArg.arg, signalArg, signalDictOf, this, bind, Except.bind]
     · have h1 := sigItems_ok l pySignals (fun s _ => hs s)
-      have h2 : otherItems [] l = .error e := by
+      have h2 : otherItems [] [] l = .error e := by
         rw [hl]
-        exact otherItems_err e pre [] k post (fun pre1 k1 post1 hq => by simpa using hp pre1 k1 post1 hq)
-          (by simpa using hf)
+        exact otherItems_err e pre [] [] k post (fun pre1 k1 post1 hq => by simpa [ElemOk, keptOf] using hp pre1 k1 post1 hq)
+          (by simpa [ElemFails, keptOf] using hf)
       simp only [SigArg.arg, signalArg, signalDictOf, h1, h2, bind, Except.bind]
     · have h1 := sigItems_ok l pySignals (fun s _ => hs s)
-      have h2 := otherItems_ok l [] (fun pre k post hq => by simpa using he pre k post hq)
+      have h2 := otherItems_ok l [] [] (fun pre k post hq => by simpa [ElemOk, keptOf] using he pre k post hq)
       have e : (signalArg dflt (SigArg.list l).arg >>= fun v => setSignalDict v >>= g) =
           (setSignalDict (.dict (ListBuilt l)) >>= g) := by
-        simp only [SigArg.arg, signalArg, signalDictOf, h1, h2, bind, Except.bind, pure, Except.pure,
-          ListBuilt]
+        simp only [SigArg.arg, signalArg, signalDictOf, h1, h2, bind, Except.bind, pure, Except.pure, keptOf,
+          ListBuilt, List.length_nil]
       rw [e]
       exact DictOutcome.bind (setSignalDict_outcome _)
 

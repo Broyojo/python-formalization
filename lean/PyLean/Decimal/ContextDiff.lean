@@ -61,6 +61,56 @@ where
     | some x => pure x
     | none => throw s!"bad signal {s}"
 
+/-- The kind of a list element of the difftest: `eq` for an `EqKey`, else its name. -/
+def keyKind (j : Json) : String :=
+  match j.getArr? with
+  | .ok _ => "eq"
+  | .error _ => match j.getStr? with
+    | .ok s => s
+    | .error _ => ""
+
+/-- The elements of a list passed as `flags` or `traps`, with what they answer against each other
+and their hashes (`SigKey.other`'s `hv` and `prev`): `5` (`other`, one cached object) equals and
+hashes as every other `5`; `10**5000` (`hugeint`) equals every other `10**5000`, with one hash;
+`[]` (`unhash`) equals every other `[]` (unhashable, so no dict comparison); an object whose repr
+raises (`badrepr`) is equal only to itself and hashes by identity. An `EqKey` at position `i`
+(`["eq", answers, hv, prevs]`) hashes to `hv` (`null` or absent: by identity) and answers
+`prevs[i']` against the `EqKey` at an earlier position `i'` (`y`, `n`, `r` raises `boom`, `i`
+NotImplemented both ways, so unequal), and NotImplemented against anything else. An
+identity hash is a value no other element has (`-(1000 + i)`). -/
+def listKeysOf (js : List Json) : Except String (List SigKey) := do
+  let kinds := js.map keyKind
+  let mut out : List SigKey := []
+  let mut i : Nat := 0
+  for j in js do
+    let k ← sigKeyOf j
+    let kind := kinds.getD i ""
+    let uniq : Int := -(1000 + (i : Int))
+    let same (kd : String) : List EqAns :=
+      (List.range i).map (fun i' => if kinds.getD i' "" == kd then .yes else .no)
+    let k' : SigKey := match k with
+      | .sig s => .sig s
+      | .other r h eq _ _ =>
+        if kind == "other" then .other r h eq 5 (same "other")
+        else if kind == "hugeint" then .other r h eq (-1) (same "hugeint")
+        else if kind == "unhash" then .other r h eq 0 (same "unhash")
+        else if kind == "eq" then
+          let a := (j.getArr?.toOption.getD #[])
+          let hv : Int := match a[2]? with
+            | some v => match v.getInt? with
+              | .ok n => n
+              | .error _ => uniq
+            | none => uniq
+          let ps : List Char := match a[3]? with
+            | some v => (v.getStr?.toOption.getD "").toList
+            | none => []
+          .other r h eq hv ((List.range i).map (fun i' =>
+            if kinds.getD i' "" == "eq" then eqAnsOf (ps.getD i' 'n') else .no))
+        else .other r h eq uniq []
+    out := out ++ [k']
+    i := i + 1
+  return out
+
 /-- A dict value: `true`/`false`, or `"huge"`, `10**5000` (true, its repr raising the limit). -/
 def sigValOf (j : Json) : Except String SigVal :=
   match j.getBool? with
@@ -90,7 +140,7 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
     match tag with
     | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | "str" => return .str (← (a[1]!).getStr?)
-    | "list" => return .list (← (← (a[1]!).getArr?).toList.mapM sigKeyOf)
+    | "list" => return .list (← listKeysOf (← (a[1]!).getArr?).toList)
     | "dict" | "frozendict" | "frozendict_py" =>
       let pairs ← (← (a[1]!).getArr?).toList.mapM (fun p => do
         let q ← p.getArr?

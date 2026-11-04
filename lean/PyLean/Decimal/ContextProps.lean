@@ -368,7 +368,7 @@ theorem sigEntries_nonsig : ∀ x : List (SigKey × SigVal), (∀ p ∈ x, p.1.i
     have hk := h (k, v) (by simp)
     cases k with
     | sig s => simp [SigKey.isSig] at hk
-    | other r hh eq =>
+    | other r hh eq hv pv =>
       simp only [sigEntries, List.filterMap_cons]
       exact sigEntries_nonsig rest (fun p hp => h p (by simp [hp]))
 
