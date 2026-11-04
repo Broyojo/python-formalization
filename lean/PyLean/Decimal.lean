@@ -9,6 +9,8 @@ import PyLean.Decimal.MulProps
 import PyLean.Decimal.ParseAgree
 import PyLean.Decimal.OpenProps
 import PyLean.Decimal.DivisionProps
+import PyLean.Decimal.ExactProps
+import PyLean.Decimal.Pow10Refute
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -164,7 +166,7 @@ def entries : List Entry := [
   { id := "decimal-classification-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.number_class", "Decimal.is_nan", "Decimal.is_qnan", "Decimal.is_snan", "Decimal.is_finite",
               "Decimal.is_infinite", "Decimal.is_normal", "Decimal.is_subnormal", "Decimal.is_zero",
-              "Decimal.is_canonical", "Decimal.__bool__", "Decimal._isnan", "Decimal._isinfinity"]
+              "Decimal.__bool__", "Decimal._isnan", "Decimal._isinfinity"]
     statement := "For every context and decimal: number_class reports sNaN and NaN exactly for is_snan and is_qnan, is_nan is their union, bool(d) is not is_zero, is_finite, is_infinite and is_nan partition the values, is_normal and is_subnormal partition the finite non-zero values, and is_canonical is true."
     source := "decimal docs, is_* methods and number_class"
     status := .proven, prop := ``ClassificationCorrect, thm := some ``classificationCorrect_proven },
@@ -182,9 +184,7 @@ def entries : List Entry := [
     source := "decimal docs, max and min; General Decimal Arithmetic, 'max'"
     status := .proven, prop := ``MinMaxCorrect, thm := some ``minMaxCorrect_proven },
   { id := "decimal-raise-error-correct", pyFile := "Lib/_pydecimal.py"
-    pyFns := ["Context._raise_error", "DecimalException.handle", "InvalidOperation.handle", "ConversionSyntax.handle",
-              "DivisionByZero.handle", "DivisionImpossible.handle", "DivisionUndefined.handle",
-              "InvalidContext.handle", "Overflow.handle"]
+    pyFns := ["Context._raise_error"]
     statement := "For every condition: an ignored signal sets no flag and raises nothing; otherwise the flag is set, and the result is the handler's unless the signal is trapped, when its exception is raised. The handlers return NaN, the quieted operand, a signed infinity, the rounding mode's overflow value, or None, per condition."
     source := "decimal docs, Signals; invariant"
     status := .proven, prop := ``RaiseErrorCorrect, thm := some ``raiseErrorCorrect_proven },
@@ -279,13 +279,14 @@ def entries : List Entry := [
     source := "Docstring of _is_less_than_pow10a_use_str, _pydecimal.py:471-476"
     status := .proven, prop := ``Pow10BandExact, thm := some ``pow10BandExact_proven },
   { id := "decimal-divide-correct", pyFile := "Lib/_pydecimal.py"
-    pyFns := ["Decimal._divide", "Decimal._rescale", "_WorkRep.__init__"]
+    pyFns := ["Decimal._divide", "Decimal._rescale", "_WorkRep.__init__", "_is_less_than_pow10a_use_str"]
     statement := "For finite non-zero operands, a returning _divide gives the integer quotient and remainder of the operands scaled to their lower exponent, the quotient at exponent 0 with the sign of the product and the remainder at min(ea, eb) with the sign of the dividend, or NaN for both with InvalidOperation exactly when the quotient has more than prec digits."
-    source := "Doc/library/decimal.rst:441: 'the usual identity x == (x // y) * y + x % y'; General Decimal Arithmetic, 'divide-integer' and 'remainder'"
-    status := .open, prop := ``DivideCorrect
-    notes := "Proven on 3.14.7. It now depends on the float tests of _is_less_than_pow10a_use_str, whose comments ignore the rounding of a * _LOG_10_BASE_2_HI. On 3.15.2, _is_less_than_pow10a_use_str(2**2415425411, 727115501) returns (False, None) though q < 10**a by about 1.2e-8 in log2, so this statement is false at that precision, and only by that run: there is no Lean refutation. Refuting it needs a certified bound on log2(10) past what the kernel can compute with 10**a directly; proving a bounded version needs a Diophantine argument over all smaller a. Neither was cheap." },
+    source := "Doc/library/decimal.rst:441: 'the usual identity x == (x // y) * y + x % y'; General Decimal Arithmetic, 'divide-integer' and 'remainder'; DivisionImpossible docstring, _pydecimal.py:190-196"
+    status := .refuted, prop := ``DivideCorrect, thm := some ``divideCorrect_refuted
+    bug := some "decimal-pydecimal-pow10-float-misfire"
+    notes := "Decimal('1E+355861594')._divide(Decimal('1.000000001')) at prec 355861594, traps off: the quotient 10**355861603 // 1000000001 has 355861594 digits (proven with 128-bit interval arithmetic, Pow10Refute.lean), but _is_less_than_pow10a_use_str's float test calls it too large, so the result is NaN with InvalidOperation. Proven on 3.14.7, where the test was q < 10**prec." },
   { id := "decimal-truediv-specials", pyFile := "Lib/_pydecimal.py"
-    pyFns := ["Decimal.__truediv__"]
+    pyFns := ["Decimal.__truediv__", "DivisionByZero.handle"]
     statement := "x/0 is a signed infinity with DivisionByZero, 0/0 and inf/inf are NaN with InvalidOperation, inf/x is a signed infinity with no flag, and x/inf is a signed zero at Etiny with Clamped."
     source := "General Decimal Arithmetic, 'divide'"
     status := .proven, prop := ``TruedivSpecials, thm := some ``truedivSpecials_proven },
@@ -344,13 +345,13 @@ def entries : List Entry := [
     pyFns := ["Decimal._rescale", "Decimal._round_down", "Decimal._round_up", "Decimal._round_half_up",
               "Decimal._round_half_down", "Decimal._round_half_even", "Decimal._round_ceiling",
               "Decimal._round_floor", "Decimal._round_05up"]
-    statement := "For all 8 rounding modes, every finite non-zero value and every larger target exponent, _rescale returns the coefficient the mode prescribes (roundSpec: truncate / away from zero / toward ±inf / nearest with ties up, down, even / 05up), or raises the int-limit ValueError."
+    statement := "For all 8 rounding modes, every finite non-zero value and every larger target exponent, _rescale returns the coefficient the mode prescribes (roundSpec: truncate / away from zero / toward ±inf / nearest with ties up, down, even / 05up), except for the int-limit ValueError, which needs a coefficient of more than 4300 digits; to a smaller or equal exponent it pads with zeros, and a zero coefficient just takes the new exponent."
     source := "decimal docs, 'Rounding modes'; General Decimal Arithmetic, 'Rounding'"
     status := .proven, prop := ``RoundingModesCorrect, thm := some ``roundingModesCorrect_proven
     notes := "Covers the digits-below-zero substitution (_pydecimal.py:2700-2702). The ValueError branch is decimal-pydecimal-int-max-str-digits." },
   { id := "decimal-to-integral-value-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.to_integral_value", "Decimal._rescale"]
-    statement := "For every context, rounding argument and finite value, to_integral_value returns the value unchanged if its exponent is >= 0, and otherwise the correctly rounded integer at exponent 0, without setting any flag (or the int-limit ValueError)."
+    statement := "For every context, rounding argument and value, to_integral_value returns a finite value unchanged if its exponent is >= 0, and otherwise the correctly rounded integer at exponent 0 without setting any flag (a zero gives the signed zero), except for the int-limit ValueError on a coefficient of more than 4300 digits; an infinity is returned unchanged, a quiet NaN quieted, and a signaling NaN signals InvalidOperation."
     source := "to_integral_value docstring ('without raising inexact, rounded'), decimal docs"
     status := .proven, prop := ``ToIntegralValueCorrect, thm := some ``toIntegralValueCorrect_proven },
   { id := "decimal-quantize-correct", pyFile := "Lib/_pydecimal.py"
@@ -379,7 +380,7 @@ def entries : List Entry := [
     status := .proven, prop := ``IntConversionsC, thm := some ``intConversionsC_proven },
   { id := "decimal-int-conversions-py-or-limit", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__floor__", "Decimal.__ceil__", "Decimal.__round__", "Decimal.__int__", "Decimal._rescale"]
-    statement := "For every finite decimal and rounding mode, _pydecimal's integer conversion returns the same int as _decimal's, or raises the int-limit ValueError."
+    statement := "For every finite decimal and rounding mode, _pydecimal's integer conversion returns the same int as _decimal's, except for the int-limit ValueError, which needs the coefficient or the result to have more than 4300 digits."
     source := "twin agreement (narrowed version of decimal-int-conversions-py)"
     status := .proven, prop := ``IntConversionsPyOrLimit, thm := some ``intConversionsPyOrLimit_proven },
   { id := "decimal-hash-consistent-c", pyFile := "Modules/_decimal/_decimal.c"
@@ -393,6 +394,87 @@ def entries : List Entry := [
     statement := "For every finite Decimal, as_integer_ratio() returns (n, d) with d > 0, n and d coprime, and n/d exactly the value."
     source := "as_integer_ratio docstring, _pydecimal.py:1021-1033"
     status := .proven, prop := ``RatioCorrectC, thm := some ``ratioCorrectC_proven },
+  { id := "decimal-pow10-correct", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_is_less_than_pow10a_use_str"]
+    statement := "For every q and a >= 1, if _is_less_than_pow10a_use_str(q, a) returns, its first item is q < 10**a."
+    source := "Docstring of _is_less_than_pow10a_use_str, _pydecimal.py:471-476, and the claims in its comments (:479-492)"
+    status := .refuted, prop := ``Pow10Correct, thm := some ``pow10Correct_refuted
+    bug := some "decimal-pydecimal-pow10-float-misfire"
+    notes := "q = 10**355861603 // 1000000001, a = 355861594: q has bit length 1182146628 and 355861594 digits, and the double 1 + a*_LOG_10_BASE_2_HI is exactly 1182146628.0, so the helper returns (False, None). The smallest such a below 4*10**9; the _LOG_10_BASE_2_LO test never misfires in that range. The band where str(q) decides is decimal-pow10-band-exact." },
+  { id := "decimal-cmp-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._cmp", "Decimal._isinfinity", "Decimal.__bool__"]
+    statement := "For all decimals that are not NaNs, _cmp is the exact numeric order: finite values compared at the lower exponent as integers, -Infinity below and Infinity above every finite value, +0 equal to -0."
+    source := "_cmp docstring, _pydecimal.py:863-866: 'Returns -1 if self < other, 0 if self == other and 1 if self > other'"
+    status := .proven, prop := ``CmpExact, thm := some ``cmpExact_proven },
+  { id := "decimal-check-nans-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._check_nans", "Decimal._isnan", "Decimal._fix_nan", "InvalidOperation.handle", "Context._raise_error"]
+    statement := "_check_nans: a signaling NaN on either side signals InvalidOperation (raising if trapped) and returns that operand quiet with its payload cut to prec - clamp digits, the left one first; otherwise a quiet NaN is returned so, the left one first, with no flag; with no NaN it returns 0. The same for the one-operand form."
+    source := "_check_nans docstring, _pydecimal.py:791-798; InvalidOperation docstring (:150-157)"
+    status := .proven, prop := ``CheckNansExact, thm := some ``checkNansExact_proven },
+  { id := "decimal-compare-check-nans-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._compare_check_nans", "Decimal.is_snan", "Decimal.is_qnan", "Decimal._fix_nan",
+              "InvalidOperation.handle", "Context._raise_error"]
+    statement := "_compare_check_nans signals InvalidOperation for any NaN operand and returns the signaling one before a quiet one, the left before the right, quieted; with no NaN it returns 0 and sets nothing."
+    source := "_compare_check_nans docstring, _pydecimal.py:823-831: 'Signaling NaNs take precedence over quiet NaNs.'"
+    status := .proven, prop := ``CompareCheckNansExact, thm := some ``compareCheckNansExact_proven },
+  { id := "decimal-comparisons-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__eq__", "Decimal.__lt__", "Decimal.__le__", "Decimal.__gt__", "Decimal.__ge__",
+              "Decimal.compare", "Decimal.compare_signal", "Decimal._cmp", "Decimal._check_nans",
+              "Decimal._compare_check_nans", "_convert_for_comparison"]
+    statement := "For two Decimals: without NaNs, ==, <, <=, >, >= are the exact numeric order with no flag, and compare and compare_signal return Decimal(-1/0/1) of it; with a NaN, == is False and signals InvalidOperation only for a signaling NaN, the orderings and compare_signal signal InvalidOperation for every NaN and the orderings are False, and compare and compare_signal return the NaN chosen sNaN-first, left-first."
+    source := "Comment at _pydecimal.py:909-924 on rich comparisons and NaNs; compare docstring (:971-977); decimal docs, compare_signal"
+    status := .proven, prop := ``ComparisonsExact, thm := some ``comparisonsExact_proven
+    notes := "Operators are called as a == b (context=None), so the context read is getcontext()." },
+  { id := "decimal-convert-comparisons", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_convert_for_comparison", "Decimal.__eq__", "Decimal.__lt__", "Decimal.__le__", "Decimal.__gt__",
+              "Decimal.__ge__"]
+    statement := "Against an int or Fraction n/d, a comparison is that of self*d with Decimal(n) (for a finite self the exact order of the value and n/d), raising ValueError exactly past the 4300-digit limits; against a float, that with Decimal.from_float(f) after FloatOperation, which == only flags and the orderings signal; a complex with zero imaginary part compares under == as its real part; any other complex or object gives NotImplemented with no flag."
+    source := "_convert_for_comparison docstring and comments, _pydecimal.py:6116-6140; decimal docs, FloatOperation"
+    status := .proven, prop := ``ConvertComparisonsCorrect, thm := some ``convertComparisonsCorrect_proven
+    notes := "The float path is stated through fromFloat, whose exactness is decimal-from-float-exact (open)." },
+  { id := "decimal-minmax-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.max", "Decimal.min", "Decimal.max_mag", "Decimal.min_mag"]
+    statement := "max, min, max_mag and min_mag of two numbers return _fix of the operand the exact order picks (of the magnitudes for the _mag forms), ties broken by compare_total; a quiet NaN against a number gives _fix of the number; a signaling NaN or two quiet NaNs give _check_nans's result."
+    source := "max/min docstrings and comments, _pydecimal.py:2880-2954, :3515-3573; General Decimal Arithmetic, 'max', 'min'"
+    status := .proven, prop := ``MinMaxExact, thm := some ``minMaxExact_proven },
+  { id := "decimal-compare-total-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.compare_total", "Decimal.compare_total_mag"]
+    statement := "compare_total is antisymmetric and 0 only for identical representations; for numbers of different value it is the numeric order; equal values put the negative sign first, and then the lower exponent first when positive and last when negative; a positive NaN is above every number and a negative one below, sNaN below qNaN for positive NaNs and above for negative, NaNs of one kind by payload. compare_total_mag is that order of the magnitudes, NaNs above every number."
+    source := "Doc/library/decimal.rst:518-545 (Decimal('12.0').compare_total(Decimal('12')) == Decimal('-1')); General Decimal Arithmetic, 'compare-total'"
+    status := .proven, prop := ``CompareTotalExact, thm := some ``compareTotalExact_proven },
+  { id := "decimal-classification-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.number_class", "Decimal.is_normal", "Decimal.is_subnormal", "Decimal.is_zero",
+              "Decimal.__bool__", "Decimal._isinfinity", "Decimal.is_snan", "Decimal.is_qnan"]
+    statement := "number_class returns each of the ten documented classes by sign, kind, zero coefficient and adjusted() < Emin; is_normal and is_subnormal test that threshold for non-zero finite values and are False otherwise; is_zero and bool test the coefficient (specials are nonzero); _isinfinity is +1/-1 by sign and 0 otherwise."
+    source := "number_class docstring (_pydecimal.py:3668-3681); is_normal, is_subnormal, is_zero docstrings; __bool__ docstring (:856-859)"
+    status := .proven, prop := ``ClassificationExact, thm := some ``classificationExact_proven },
+  { id := "decimal-copy-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.copy_abs", "Decimal.copy_negate", "Decimal.copy_sign"]
+    statement := "copy_negate flips the sign and keeps coefficient, exponent, NaN kind and payload: an involution reversing the numeric order; copy_abs is copy_negate on a negative operand and the operand otherwise, and copy_sign(copy_abs(a), a) rebuilds a."
+    source := "decimal docs, copy_abs ('Return the absolute value of the argument'), copy_negate ('Return the negation of the argument')"
+    status := .proven, prop := ``CopyExact, thm := some ``copyExact_proven },
+  { id := "decimal-overflow-handle-table", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Overflow.handle"]
+    statement := "Overflow.handle gives the signed infinity for ROUND_HALF_UP, HALF_EVEN, HALF_DOWN and UP; prec nines at exponent Emax - prec + 1 (prec digits, adjusted exponent Emax) with the result's sign for ROUND_DOWN and ROUND_05UP; for ROUND_CEILING that for a negative result and +Infinity otherwise; for ROUND_FLOOR that for a positive result and -Infinity otherwise."
+    source := "Overflow docstring, _pydecimal.py:267-282"
+    status := .proven, prop := ``OverflowHandleTable, thm := some ``overflowHandleTable_proven
+    notes := "ROUND_05UP is not in the docstring; the handler gives the ROUND_DOWN value, which is what 05up rounding of nines gives." },
+  { id := "decimal-fix-nan-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._fix_nan", "InvalidOperation.handle"]
+    statement := "_fix_nan keeps the sign and kind and the last prec - clamp payload digits (leading zeros dropped); InvalidOperation.handle returns that, quiet, for its NaN argument, and the positive quiet NaN without one."
+    source := "_fix_nan comment, _pydecimal.py:1704-1708; InvalidOperation docstring (:150-157)"
+    status := .proven, prop := ``FixNanExact, thm := some ``fixNanExact_proven },
+  { id := "decimal-int-trunc-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__int__"]
+    statement := "int(d) truncates toward zero, as _decimal's int() does, for every finite decimal; it raises the int-limit ValueError exactly when the digit string it converts (the coefficient for exp >= 0, the integer part otherwise) has more than 4300 digits; NaN raises ValueError and an infinity OverflowError."
+    source := "__int__ docstring, _pydecimal.py:1673; twin agreement"
+    status := .proven, prop := ``IntTruncExact, thm := some ``intTruncExact_proven },
+  { id := "decimal-from-float-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.from_float", "Decimal.__new__", "Decimal.from_number"]
+    statement := "Decimal.from_float(f) is exact: for finite f, the sign of f and co / 10**k = |f|; infinities map to signed infinities and NaNs to Decimal('NaN')."
+    source := "from_float docstring, _pydecimal.py:720-735: 'Converts a float to a decimal number, exactly.'"
+    status := .open, prop := ``FromFloatExact
+    notes := "Model: fromFloat and pyNew (Convert.lean). Missing: a bound on as_integer_ratio's numerator and denominator (n < 2**53, d <= 2**1074) to show str(n*5**k) stays under the 4300-digit limit; the value part (co/10**k = n/2**k) went through in a draft." },
   { id := "decimal-compare-total-order", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.compare_total", "Decimal._cmp", "Decimal._isnan"]
     statement := "For all decimals a, b (NaNs, infinities, signed zeros, any exponents), compare_total(b, a) == -compare_total(a, b), and compare_total(a, b) == 0 iff a and b are the same representation."

@@ -1,6 +1,8 @@
 import PyLean.Decimal.CmpProps
 import PyLean.Decimal.Convert
 import PyLean.Decimal.ContextProps
+import PyLean.Binary64.RatioProps
+import PyLean.Binary64.Props2
 
 /-!
 The comparison family pinned to the exact numeric order (`numOrder`, `CmpProps.lean`) and to
@@ -10,6 +12,16 @@ the documented NaN rules, for every operand kind `_convert_for_comparison` accep
 namespace PyLean.Decimal
 
 open PyLean
+
+/-! ## `_cmp` -/
+
+/-- `_cmp` (_pydecimal.py:862-907) is the exact numeric order of its non-NaN operands
+(`numOrder`: both finite values scaled to the lower exponent and compared as integers, with
+-Infinity below and Infinity above every finite value), whatever the exponents, signs and zeros. -/
+def CmpExact : Prop :=
+  ∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → cmpVal a b = numOrder a b
+
+theorem cmpExact_proven : CmpExact := fun a b ha hb => cmpVal_exact a b ha hb
 
 /-! ## The NaN a comparison reports -/
 
@@ -663,5 +675,33 @@ theorem convertComparisonsCorrect_proven : ConvertComparisonsCorrect := by
   · intro t re im; simp [richOrd, convertForComparison]
   · simp [richEq, convertForComparison]
   · intro t; simp [richOrd, convertForComparison]
+
+/-! ## `from_float` and `Decimal(float)` -/
+
+theorem ratio_den_pow2 {x : Binary64.F64} {n d : Int} (h : Binary64.float_as_integer_ratio x = .ok (n, d)) :
+    ∃ j : Nat, d = 2 ^ j := by
+  unfold Binary64.float_as_integer_ratio at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  simp only at h
+  split at h
+  · cases h
+  · split at h
+    · cases h; exact ⟨0, rfl⟩
+    · cases h; exact ⟨_, rfl⟩
+
+/-- `Decimal.from_float(f)` (_pydecimal.py:718-760) is exact: for a finite `f` it is
+`±co·10^-k` with the sign of `f` (so `-0.0` gives `Decimal('-0')`) and `co / 10^k = |f|`;
+an infinity gives the signed infinity and a NaN `Decimal('NaN')` (positive: `repr` drops a
+NaN's sign). -/
+def FromFloatExact : Prop :=
+  ∀ f : Binary64.F64,
+    (f.isFinite = true → ∃ (co k : Nat), fromFloat f = .ok (.fin f.sign co (-(k : Int))) ∧
+      (co : Rat) / ((10 ^ k : Nat) : Rat) = (Binary64.F64.abs f).toRat) ∧
+    (f.isInf = true → fromFloat f = .ok (.inf f.sign)) ∧
+    (f.isNaN = true → fromFloat f = .ok (.nan false false 0))
+
 
 end PyLean.Decimal

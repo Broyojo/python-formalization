@@ -46,13 +46,17 @@ theorem rescale_noerr (m : Rounding) (neg : Bool) (c : Nat) (e x : Int) (hc : c 
 digits (`roundSpec`), at exponent `x`; the only other outcome is the int/str-limit
 `ValueError`, and only for a coefficient of more than 4300 digits. -/
 def RoundingModesCorrect : Prop :=
-  ∀ (m : Rounding) (neg : Bool) (c : Nat) (e x : Int), c ≠ 0 → e < x →
-    rescale (.fin neg c e) x m = .ok (.fin neg
-        (roundSpec m neg (c / 10 ^ (x - e).toNat) (c % 10 ^ (x - e).toNat) (10 ^ (x - e).toNat)) x) ∨
-    (maxStrDigits < numDigits c ∧ ∃ msg, rescale (.fin neg c e) x m = .error (.valueError msg))
+  ∀ (m : Rounding) (neg : Bool) (c : Nat) (e x : Int),
+    (c ≠ 0 → e < x →
+      rescale (.fin neg c e) x m = .ok (.fin neg
+          (roundSpec m neg (c / 10 ^ (x - e).toNat) (c % 10 ^ (x - e).toNat) (10 ^ (x - e).toNat)) x) ∨
+      (maxStrDigits < numDigits c ∧ ∃ msg, rescale (.fin neg c e) x m = .error (.valueError msg))) ∧
+    (c ≠ 0 → x ≤ e → rescale (.fin neg c e) x m = .ok (.fin neg (c * 10 ^ (e - x).toNat) x)) ∧
+    rescale (.fin neg 0 e) x m = .ok (.fin neg 0 x)
 
 theorem roundingModesCorrect_proven : RoundingModesCorrect := by
-  intro m neg c e x hc hx
+  intro m neg c e x
+  refine ⟨fun hc hx => ?_, fun hc hx => by simp [rescale, hc, hx], by simp [rescale]⟩
   rcases rescale_round m neg c e x hc hx with h | ⟨msg, h⟩
   · exact Or.inl h
   · by_cases hd : numDigits c ≤ maxStrDigits
@@ -78,14 +82,16 @@ def ToIntegralValueCorrect : Prop :=
       (maxStrDigits < numDigits c ∧ ∃ msg, (toIntegralValue ctx (.fin neg c e) r).run fl = .error (.valueError msg))) ∧
     (e < 0 → (toIntegralValue ctx (.fin neg 0 e) r).run fl = .ok (.fin neg 0 0, fl)) ∧
     (toIntegralValue ctx (.inf neg) r).run fl = .ok (.inf neg, fl) ∧
-    (toIntegralValue ctx (.nan neg false c) r).run fl = .ok (.nan neg false (c % 10 ^ nanDigits ctx), fl)
+    (toIntegralValue ctx (.nan neg false c) r).run fl = .ok (.nan neg false (c % 10 ^ nanDigits ctx), fl) ∧
+    (toIntegralValue ctx (.nan neg true c) r).run fl =
+      afterSig ctx .invalidOperation fl (.nan neg false (c % 10 ^ nanDigits ctx))
 
 theorem toIntegralValueCorrect_proven : ToIntegralValueCorrect := by
   intro ctx r neg c e fl m k
-  refine ⟨fun he => ?_, fun he hc => ?_, fun he => ?_, by cases neg <;> rfl, ?_⟩
+  refine ⟨fun he => ?_, fun he hc => ?_, fun he => ?_, by cases neg <;> rfl, ?_, ?_⟩
   · simp [toIntegralValue, he, StateT.run, pure, StateT.pure, Except.pure]
   · have hk : (0 - e).toNat = k := by simp only [k]; omega
-    rcases roundingModesCorrect_proven m neg c e 0 hc he with h | ⟨hd, msg, h⟩
+    rcases (roundingModesCorrect_proven m neg c e 0).1 hc he with h | ⟨hd, msg, h⟩
     · left
       rw [hk] at h
       simp [toIntegralValue, show ¬ e ≥ 0 by omega, liftPy, h, StateT.run, Functor.map,
@@ -97,6 +103,12 @@ theorem toIntegralValueCorrect_proven : ToIntegralValueCorrect := by
   · have h := fixNan_spec ctx neg false c
     simp [toIntegralValue, checkNans, StateT.run, pure, StateT.pure, Except.pure, bind, StateT.bind,
       Except.bind, h]
+  · rw [← raiseSig_then]
+    have h := fixNan_spec ctx neg false c
+    have e : toIntegralValue ctx (.nan neg true c) r =
+        (do raiseSig ctx .invalidOperation; pure (.nan neg false (c % 10 ^ nanDigits ctx))) := by
+      simp [toIntegralValue, checkNans, h]
+    rw [e]
 
 /-! ## Integer conversions -/
 
@@ -158,7 +170,7 @@ theorem intConversionsPyOrLimit_proven : IntConversionsPyOrLimit := by
     · left
       simp [intLimit, hl, pure, Except.pure, truncDiv]
   · have hk : (0 - e).toNat = e.natAbs := by omega
-    rcases roundingModesCorrect_proven m neg c e 0 hc (by omega) with h | ⟨hd, msg, h⟩
+    rcases (roundingModesCorrect_proven m neg c e 0).1 hc (by omega) with h | ⟨hd, msg, h⟩
     · rw [hk] at h
       simp only [h, bind, Except.bind, pyInt, ge_iff_le, Int.le_refl, ↓reduceIte, he]
       have hm : mag = roundSpec m neg (c / 10 ^ e.natAbs) (c % 10 ^ e.natAbs) (10 ^ e.natAbs) := by
