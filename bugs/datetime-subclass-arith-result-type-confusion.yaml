@@ -10,8 +10,8 @@ summary: |
   (Modules/_datetimemodule.c:6262-6265), which for a subclass is cls(y, m, d, hh, mm, ss, us,
   tzinfo) and returns whatever that call returns. Two more callers than the one gh-145166
   reports (tzinfo_fromutc) then use that object as a PyDateTime_DateTime without a type check:
-  - datetime_datetime_astimezone_impl reads HASTZINFO(result) (:6963), and either rebuilds the
-    object through new_datetime_ex2(..., Py_TYPE(result)) (:6965-6978: the foreign type's own
+  - datetime_datetime_astimezone_impl reads HASTZINFO(result) (:6964), and either rebuilds the
+    object through new_datetime_ex2(..., Py_TYPE(result)) (:6965-6977: the foreign type's own
     tp_alloc, then datetime fields written into it) or does Py_SETREF(result->tzinfo, utc)
     (:6983); it then writes result->tzinfo again (:6996). With `class D(datetime)` whose
     __new__ returns `1` (or `b'\x00'*3`, sometimes `object()`) for eight positional arguments,

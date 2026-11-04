@@ -1645,7 +1645,7 @@ def entries : List Entry := [
     prop := ``ParseDigitsSpec, thm := some ``parseDigitsSpec_proven },
   { id := "datetime-parse-isoformat-date-c", pyFile := "Modules/_datetimemodule.c"
     pyFns := ["C parse_isoformat_date", "C parse_digits", "C is_digit"]
-    statement := "parse_isoformat_date returns -1 unless the first four bytes are digits; YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww give iso_to_ymd's date or -3 + its code; a wrong separator is -2 in both branches, a missing day digit -4, a missing week digit -3; YYYY-MM-DD and YYYYMMDD give their fields."
+    statement := "parse_isoformat_date returns -1 unless the first four bytes are digits; YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww give iso_to_ymd's date or -3 + its code; a wrong separator is -2 in both branches, a missing ISO day digit -4, a missing week digit -3; outside the week branch a non-digit month or day byte is -1, and YYYY-MM-DD and YYYYMMDD give their fields for every two-digit month and day, whatever follows and whatever len is."
     source := "code comment (return codes, :946-955); invariant", status := .proven
     prop := ``ParseIsoDateCSpec, thm := some ``parseIsoDateCSpec_proven },
   { id := "datetime-str-via-isoformat", pyFile := "Modules/_datetimemodule.c"

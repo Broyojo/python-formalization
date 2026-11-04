@@ -153,7 +153,7 @@ Modules/_datetimemodule.c	4498	4504	timezone_dst	timezone_dst(PyObject *op, PyOb
 Modules/_datetimemodule.c	4507	4523	timezone_fromutc	timezone_fromutc(PyObject *op, PyObject *arg)	modelled	datetime-astimezone-to-timezone,datetime-timezone-fromutc,datetime-timezone-method-args	
 Modules/_datetimemodule.c	4526	4532	timezone_getinitargs	timezone_getinitargs(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	datetime-timezone-getinitargs	
 Modules/_datetimemodule.c	4603	4609	look_up_timezone	look_up_timezone(PyObject *offset, PyObject *name)	modelled	datetime-init-types-twins	
-Modules/_datetimemodule.c	4620	4624	time_hour	time_hour(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(TIME_GET_HOUR(self)), one byte of the struct (data[0], :4620-4624) with no branch; PyTime_CAST only asserts
+Modules/_datetimemodule.c	4620	4624	time_hour	time_hour(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(TIME_GET_HOUR(self)), one byte of the struct (data[0], :4620-4624) with no branch; PyTime_CAST is a plain cast with no check (:91)
 Modules/_datetimemodule.c	4627	4631	time_minute	time_minute(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(TIME_GET_MINUTE(self)), one byte (data[1], :4627-4631) with no branch
 Modules/_datetimemodule.c	4635	4639	py_time_second	py_time_second(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(TIME_GET_SECOND(self)), one byte (data[2], :4635-4639) with no branch
 Modules/_datetimemodule.c	4642	4646	time_microsecond	time_microsecond(PyObject *op, void *Py_UNUSED(closure))	modelled	datetime-packed-accessors	
@@ -179,7 +179,7 @@ Modules/_datetimemodule.c	5191	5258	datetime_time_fromisoformat_impl	datetime_ti
 Modules/_datetimemodule.c	5269	5287	time_getstate	time_getstate(PyDateTime_Time *self, int proto)	modelled	datetime-time-pickle,datetime-time-reduce-roundtrip	
 Modules/_datetimemodule.c	5297	5301	datetime_time___reduce_ex___impl	datetime_time___reduce_ex___impl(PyDateTime_Time *self, int proto) /*[clinic end generated code: output=ccfab65f5c320c1b input=4cd06bb3ac3657bb]*/	modelled	datetime-time-reduce-ex-all-int,datetime-time-reduce-ex-cls	
 Modules/_datetimemodule.c	5308	5312	datetime_time___reduce___impl	datetime_time___reduce___impl(PyDateTime_Time *self) /*[clinic end generated code: output=9a2fcc87e64ce300 input=0fb8dd14d275857f]*/	modelled	datetime-time-reduce-ex-cls	
-Modules/_datetimemodule.c	5398	5402	datetime_hour	datetime_hour(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(DATE_GET_HOUR(self)), one byte (data[4], :5398-5402) with no branch; PyDateTime_CAST only asserts
+Modules/_datetimemodule.c	5398	5402	datetime_hour	datetime_hour(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(DATE_GET_HOUR(self)), one byte (data[4], :5398-5402) with no branch; PyDateTime_CAST is a plain cast with no check (:87)
 Modules/_datetimemodule.c	5405	5409	datetime_minute	datetime_minute(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(DATE_GET_MINUTE(self)), one byte (data[5], :5405-5409) with no branch
 Modules/_datetimemodule.c	5412	5416	datetime_second	datetime_second(PyObject *op, void *Py_UNUSED(closure))	excluded		trivial: PyLong_FromLong(DATE_GET_SECOND(self)), one byte (data[6], :5412-5416) with no branch
 Modules/_datetimemodule.c	5419	5423	datetime_microsecond	datetime_microsecond(PyObject *op, void *Py_UNUSED(closure))	modelled	datetime-packed-accessors	

@@ -114,15 +114,17 @@ be four ASCII digits (else `-1`, :956-959); a `W` after the year (and an optiona
 the ISO week branch (:966-995): two week digits (else `-3`), then, if bytes remain within
 `len`, the separator (`-2` when the year had one and this is not `-`) and one day digit (else
 `-4`), the day defaulting to 1 when nothing remains, and `iso_to_ymd`'s code `rv` becomes
-`-3 + rv` (`-7` year, `-5` week, `-6` weekday); otherwise two month digits, the matching
-separator (`-2`) and two day digits (`-1` for a missing digit). Stated for the four week
-forms `YYYY-Www-D`, `YYYYWwwD`, `YYYY-Www` and `YYYYWww` with any digits, the separator
-mismatches of both branches, and the digit failures. `len` is the UTF-8 length
-`date.fromisoformat` passes. -/
+`-3 + rv` (`-7` year, `-5` week, `-6` weekday). Otherwise (:997-1011) two month digits (else
+`-1`, :998-1001), the matching separator (`-2`, :1003-1005) and two day digits (else `-1`,
+:1006-1009), whatever `len` is and whatever follows (the caller checks the length). Stated for
+the four week forms `YYYY-Www-D`, `YYYYWwwD`, `YYYY-Www` and `YYYYWww` with any digits, the
+separator mismatches of both branches, the digit failures of every field, and `YYYY-MM-DD` and
+`YYYYMMDD` with any two-digit month and day. `len` is the UTF-8 length `date.fromisoformat`
+passes. -/
 def ParseIsoDateCSpec : Prop :=
   (∀ (b : List Nat) (len : Nat), (∃ i, i < 4 ∧ isDigitC (byteAt b i) = false) →
     parseIsoDateC b len = .error (-1)) ∧
-  ∀ (Y W D : Nat), Y < 10000 → W < 100 → D < 10 →
+  (∀ (Y W D : Nat), Y < 10000 → W < 100 → D < 10 →
     let rv := fun (r : Except Int (Int × Int × Int)) => match r with
       | .error e => Except.error (-3 + e) | .ok v => .ok v
     parseIsoDateC (enc4 Y ++ [45, 87] ++ enc2 W ++ [45, digB D]) 10 = rv (isoToYmdC Y W D) ∧
@@ -131,10 +133,19 @@ def ParseIsoDateCSpec : Prop :=
     parseIsoDateC (enc4 Y ++ [87] ++ enc2 W) 7 = rv (isoToYmdC Y W 1) ∧
     (∀ c, c ≠ 45 → parseIsoDateC (enc4 Y ++ [45, 87] ++ enc2 W ++ [c, digB D]) 10 = .error (-2)) ∧
     (∀ c, isDigitC c = false → parseIsoDateC (enc4 Y ++ [45, 87] ++ enc2 W ++ [45, c]) 10 = .error (-4)) ∧
-    (∀ c, isDigitC c = false → parseIsoDateC (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 10 = .error (-3)) ∧
-    (∀ c, c ≠ 45 → c ≠ 87 → parseIsoDateC (enc4 Y ++ [45] ++ enc2 W ++ [c] ++ enc2 D) 10 = .error (-2)) ∧
-    (∀ M : Nat, M < 100 → D < 10 → parseIsoDateC (enc4 Y ++ [45] ++ enc2 M ++ [45] ++ enc2 D) 10 = .ok (Y, M, D)) ∧
-    (∀ M : Nat, M < 100 → parseIsoDateC (enc4 Y ++ enc2 M ++ enc2 D) 8 = .ok (Y, M, D))
+    (∀ c, isDigitC c = false → parseIsoDateC (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 10 = .error (-3))) ∧
+  (∀ (Y M D : Nat) (len : Nat) (rest : List Nat), Y < 10000 → M < 100 → D < 100 →
+    parseIsoDateC (enc4 Y ++ [45] ++ enc2 M ++ [45] ++ enc2 D ++ rest) len = .ok (Y, M, D) ∧
+    parseIsoDateC (enc4 Y ++ enc2 M ++ enc2 D ++ rest) len = .ok (Y, M, D) ∧
+    (∀ c, c ≠ 45 → parseIsoDateC (enc4 Y ++ [45] ++ enc2 M ++ [c] ++ rest) len = .error (-2))) ∧
+  (∀ (Y : Nat) (m0 m1 : Nat) (len : Nat) (rest : List Nat), Y < 10000 → m0 ≠ 87 →
+    (isDigitC m0 = false ∨ isDigitC m1 = false) →
+    parseIsoDateC (enc4 Y ++ [45, m0, m1] ++ rest) len = .error (-1) ∧
+    (m0 ≠ 45 → parseIsoDateC (enc4 Y ++ [m0, m1] ++ rest) len = .error (-1))) ∧
+  (∀ (Y M : Nat) (d0 d1 : Nat) (len : Nat) (rest : List Nat), Y < 10000 → M < 100 →
+    (isDigitC d0 = false ∨ isDigitC d1 = false) →
+    parseIsoDateC (enc4 Y ++ [45] ++ enc2 M ++ [45, d0, d1] ++ rest) len = .error (-1) ∧
+    parseIsoDateC (enc4 Y ++ enc2 M ++ [d0, d1] ++ rest) len = .error (-1))
 
 theorem digB_isDigit (n : Nat) (h : n < 10) : isDigitC (digB n) = true := by
   unfold isDigitC digB; simp; omega
@@ -180,16 +191,60 @@ theorem pdNone2 (b : List Nat) (p : Nat) (h : isDigitC (byteAt b p) = false) : p
 theorem digB_ne (n c : Nat) (h : n < 10) (hc : c = 45 ∨ c = 87) : digB n ≠ c := by
   unfold digB; omega
 
+theorem pd2None (b : List Nat) (p : Nat)
+    (h : isDigitC (byteAt b p) = false ∨ isDigitC (byteAt b (p + 1)) = false) : parseDigitsC b p 2 = none := by
+  rcases h with h | h
+  · exact pdNone2 b p h
+  · exact (parseDigitsC_none b p 2).mpr ⟨1, by omega, h⟩
+
+/-- The non-`W` branch after a separated year (:997-1011), case by case. -/
+theorem nonW_sep_ok (b : List Nat) (Y len month p day q : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 = 45) (h5 : byteAt b 5 ≠ 87) (hm : parseDigitsC b 5 2 = some (month, p))
+    (hs : byteAt b p = 45) (hd : parseDigitsC b (p + 1) 2 = some (day, q)) :
+    parseIsoDateC b len = .ok (Y, month, day) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h5, hm, hs, hd]
+
+theorem nonW_sep_m (b : List Nat) (Y len : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 = 45) (h5 : byteAt b 5 ≠ 87) (hm : parseDigitsC b 5 2 = none) :
+    parseIsoDateC b len = .error (-1) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h5, hm]
+
+theorem nonW_sep_sep (b : List Nat) (Y len month p : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 = 45) (h5 : byteAt b 5 ≠ 87) (hm : parseDigitsC b 5 2 = some (month, p))
+    (hs : byteAt b p ≠ 45) : parseIsoDateC b len = .error (-2) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h5, hm, hs]
+
+theorem nonW_sep_d (b : List Nat) (Y len month p : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 = 45) (h5 : byteAt b 5 ≠ 87) (hm : parseDigitsC b 5 2 = some (month, p))
+    (hs : byteAt b p = 45) (hd : parseDigitsC b (p + 1) 2 = none) : parseIsoDateC b len = .error (-1) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h5, hm, hs, hd]
+
+/-- The non-`W` branch after an unseparated year (:997-1011), case by case. -/
+theorem nonW_nosep_ok (b : List Nat) (Y len month p day q : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 ≠ 45) (h4' : byteAt b 4 ≠ 87) (hm : parseDigitsC b 4 2 = some (month, p))
+    (hd : parseDigitsC b p 2 = some (day, q)) : parseIsoDateC b len = .ok (Y, month, day) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h4', hm, hd]
+
+theorem nonW_nosep_m (b : List Nat) (Y len : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 ≠ 45) (h4' : byteAt b 4 ≠ 87) (hm : parseDigitsC b 4 2 = none) :
+    parseIsoDateC b len = .error (-1) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h4', hm]
+
+theorem nonW_nosep_d (b : List Nat) (Y len month p : Nat) (hy : parseDigitsC b 0 4 = some (Y, 4))
+    (h4 : byteAt b 4 ≠ 45) (h4' : byteAt b 4 ≠ 87) (hm : parseDigitsC b 4 2 = some (month, p))
+    (hd : parseDigitsC b p 2 = none) : parseIsoDateC b len = .error (-1) := by
+  unfold parseIsoDateC; rw [hy]; simp [h4, h4', hm, hd]
+
 theorem parseIsoDateCSpec_proven : ParseIsoDateCSpec := by
-  refine ⟨fun b len ⟨i, hi, hf⟩ => ?_, fun Y W D hY hW hD => ?_⟩
+  refine ⟨fun b len ⟨i, hi, hf⟩ => ?_, fun Y W D hY hW hD => ?_, fun Y M D len rest hY hM hD => ?_,
+    fun Y m0 m1 len rest hY h87 hm => ?_, fun Y M d0 d1 len rest hY hM hd => ?_⟩
   · unfold parseIsoDateC
     rw [(parseDigitsC_none b 0 4).mpr ⟨i, hi, by simpa using hf⟩]
   · have hy : ∀ r : List Nat, parseDigitsC (enc4 Y ++ r) 0 4 = some (Y, 4) := fun r =>
       pd4 _ Y hY rfl rfl rfl rfl
     have w45 := digB_ne (W / 10) 45 (by omega) (Or.inl rfl)
     have w87 := digB_ne (W / 10) 87 (by omega) (Or.inr rfl)
-    refine ⟨?_, ?_, ?_, ?_, fun c hc => ?_, fun c hc => ?_, fun c hc => ?_, fun c hc1 hc2 => ?_,
-      fun M hM hD' => ?_, fun M hM => ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, fun c hc => ?_, fun c hc => ?_, fun c hc => ?_⟩
     · unfold parseIsoDateC
       simp only [List.append_assoc]
       rw [hy]
@@ -242,31 +297,32 @@ theorem parseIsoDateCSpec_proven : ParseIsoDateCSpec := by
       simp only [show byteAt (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 4 = 45 from rfl,
         show byteAt (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 5 = 87 from rfl, ite_true,
         Nat.reduceAdd, pdNone2 (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 6 (by rw [show byteAt (enc4 Y ++ [45, 87, c, digB 0, 45, digB D]) 6 = c from rfl]; exact hc)]
-    · unfold parseIsoDateC
-      simp only [List.append_assoc]
-      rw [hy]
-      simp only [show byteAt (enc4 Y ++ ([45] ++ (enc2 W ++ ([c] ++ enc2 D)))) 4 = 45 from rfl,
-        show byteAt (enc4 Y ++ ([45] ++ (enc2 W ++ ([c] ++ enc2 D)))) 5 = digB (W / 10) from rfl, ite_true,
-        Nat.reduceAdd, w87, ite_false, pd2 (enc4 Y ++ ([45] ++ (enc2 W ++ ([c] ++ enc2 D)))) 5 W hW rfl rfl,
-        show byteAt (enc4 Y ++ ([45] ++ (enc2 W ++ ([c] ++ enc2 D)))) 7 = c from rfl,
-        hc1, ne_eq, not_false_eq_true, and_self]
-    · have m87 := digB_ne (M / 10) 87 (by omega) (Or.inr rfl)
-      unfold parseIsoDateC
-      simp only [List.append_assoc]
-      rw [hy]
-      simp only [show byteAt (enc4 Y ++ ([45] ++ (enc2 M ++ ([45] ++ enc2 D)))) 4 = 45 from rfl,
-        show byteAt (enc4 Y ++ ([45] ++ (enc2 M ++ ([45] ++ enc2 D)))) 5 = digB (M / 10) from rfl, ite_true,
-        Nat.reduceAdd, m87, ite_false, pd2 (enc4 Y ++ ([45] ++ (enc2 M ++ ([45] ++ enc2 D)))) 5 M hM rfl rfl,
-        show byteAt (enc4 Y ++ ([45] ++ (enc2 M ++ ([45] ++ enc2 D)))) 7 = 45 from rfl,
-        ne_eq, not_true_eq_false, and_false,
-        pd2 (enc4 Y ++ ([45] ++ (enc2 M ++ ([45] ++ enc2 D)))) 8 D (by omega) rfl rfl]
-    · have m87 := digB_ne (M / 10) 87 (by omega) (Or.inr rfl)
-      have m45 := digB_ne (M / 10) 45 (by omega) (Or.inl rfl)
-      unfold parseIsoDateC
-      simp only [List.append_assoc]
-      rw [hy]
-      simp only [show byteAt (enc4 Y ++ (enc2 M ++ enc2 D)) 4 = digB (M / 10) from rfl, m45, m87, ite_false,
-        pd2 (enc4 Y ++ (enc2 M ++ enc2 D)) 4 M hM rfl rfl, false_and,
-        pd2 (enc4 Y ++ (enc2 M ++ enc2 D)) 6 D (by omega) rfl rfl, Nat.reduceAdd]
+  · have hy : ∀ r : List Nat, parseDigitsC (enc4 Y ++ r) 0 4 = some (Y, 4) := fun r =>
+      pd4 _ Y hY rfl rfl rfl rfl
+    have m87 := digB_ne (M / 10) 87 (by omega) (Or.inr rfl)
+    have m45 := digB_ne (M / 10) 45 (by omega) (Or.inl rfl)
+    refine ⟨?_, ?_, fun c hc => ?_⟩
+    · simp only [List.append_assoc]
+      exact nonW_sep_ok _ Y len M 7 D 10 (hy _) rfl m87 (pd2 _ 5 M hM rfl rfl) rfl (pd2 _ 8 D hD rfl rfl)
+    · simp only [List.append_assoc]
+      exact nonW_nosep_ok _ Y len M 6 D 8 (hy _) m45 m87 (pd2 _ 4 M hM rfl rfl) (pd2 _ 6 D hD rfl rfl)
+    · simp only [List.append_assoc]
+      exact nonW_sep_sep _ Y len M 7 (hy _) rfl m87 (pd2 _ 5 M hM rfl rfl) hc
+  · have hy : ∀ r : List Nat, parseDigitsC (enc4 Y ++ r) 0 4 = some (Y, 4) := fun r =>
+      pd4 _ Y hY rfl rfl rfl rfl
+    refine ⟨?_, fun h45 => ?_⟩
+    · simp only [List.append_assoc]
+      exact nonW_sep_m _ Y len (hy _) rfl h87 (pd2None _ 5 hm)
+    · simp only [List.append_assoc]
+      exact nonW_nosep_m _ Y len (hy _) h45 h87 (pd2None _ 4 hm)
+  · have hy : ∀ r : List Nat, parseDigitsC (enc4 Y ++ r) 0 4 = some (Y, 4) := fun r =>
+      pd4 _ Y hY rfl rfl rfl rfl
+    have m87 := digB_ne (M / 10) 87 (by omega) (Or.inr rfl)
+    have m45 := digB_ne (M / 10) 45 (by omega) (Or.inl rfl)
+    refine ⟨?_, ?_⟩
+    · simp only [List.append_assoc]
+      exact nonW_sep_d _ Y len M 7 (hy _) rfl m87 (pd2 _ 5 M hM rfl rfl) rfl (pd2None _ 8 hd)
+    · simp only [List.append_assoc]
+      exact nonW_nosep_d _ Y len M 6 (hy _) m45 m87 (pd2 _ 4 M hM rfl rfl) (pd2None _ 6 hd)
 
 end PyLean.Datetime
