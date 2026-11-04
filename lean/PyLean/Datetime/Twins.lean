@@ -370,12 +370,30 @@ structure Clock where
   now : Py Int
   localtime : Int → Py (Int × Int × Int)
 
-/-- `_PyTime_ObjectToTime_t(obj, ROUND_FLOOR)`, Python/pytime.c:484-520: an int through
-`_PyLong_AsTime_t` (:205-224, a 64-bit `time_t`); otherwise `PyFloat_AsDouble`, whose
-`TypeError` names the type for `None` and the other non-numbers. -/
+/-- The `OverflowError` of `pytime_time_t_overflow`, Python/pytime.c. -/
+def timeTOverflow : PyExc := .overflowError "timestamp out of range for platform time_t"
+
+/-- `_PyTime_ObjectToTime_t(obj, ROUND_FLOOR)`, Python/pytime.c:484-520: an object with
+`__index__` (`PyIndex_Check`) goes through `_PyLong_AsTime_t` (:205-221, `PyLong_AsLongLong`
+on a 64-bit `time_t`, its `OverflowError` replaced by `timestamp out of range`); anything else
+through `PyFloat_AsDouble` (`TypeError` naming the type for `None`, `str`, ...), then a NaN is
+`ValueError`, the double is floored (`pytime_round`, :381-400), and its integral part must lie in
+`[-2**63, 2**63)` (`OverflowError` otherwise, infinities included). Another object's
+`__float__` is the clock's `otherTimeT`. -/
 def objectToTimeT (k : Clock) : Arg → Py Int
-  | .int n => if -2 ^ 63 ≤ n ∧ n < 2 ^ 63 then .ok n
-      else .error (.overflowError "timestamp out of range for platform time_t")
+  | .int n => if -2 ^ 63 ≤ n ∧ n < 2 ^ 63 then .ok n else .error timeTOverflow
+  | .index r =>
+    match r with
+    | .error e => .error e
+    | .ok none => .error (.typeError "~__index__ returned non-int")
+    | .ok (some n) => if -2 ^ 63 ≤ n ∧ n < 2 ^ 63 then .ok n else .error timeTOverflow
+  | .float x =>
+    if x.isNaN then .error (.valueError "Invalid value NaN (not a number)")
+    else
+      let d := Binary64.F64.floor x
+      if Binary64.F64.le (Binary64.F64.ofInt (-2 ^ 63)) d && Binary64.F64.lt d (Binary64.F64.ofInt (2 ^ 63)) then
+        .ok d.truncInt
+      else .error timeTOverflow
   | .other => k.otherTimeT .other
   | _ => .error (.typeError "~must be real number")
 

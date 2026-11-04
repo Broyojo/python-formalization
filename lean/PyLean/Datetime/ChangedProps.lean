@@ -61,13 +61,13 @@ theorem tzinfo_ok (X : Int) (h0 : -86400 < X) (h1 : X < 86400) :
     have hm : X * 1000000 ≠ 0 := by omega
     by_cases hp : 0 < X
     · have : newDeltaNormC 0 X 0 = .ok ⟨0, X, 0⟩ := by
-        simp [newDeltaNormC, checkDeltaDayRange, MAX_DELTA_DAYS, show ¬ X < 0 by omega, show ¬ 86400 ≤ X by omega,
+        simp [newDeltaNormC, normalizeDSUsC, checkDeltaDayRange, MAX_DELTA_DAYS, show ¬ X < 0 by omega, show ¬ 86400 ≤ X by omega,
           bind, Except.bind, pure, Except.pure]
       simp [bind, Except.bind, this, newTimezoneC, Delta.toUs, hm, Functor.map, Except.map]
     · have : newDeltaNormC 0 X 0 = .ok ⟨-1, X + 86400, 0⟩ := by
         have e1 : X / 86400 = -1 := by omega
         have e2 : X % 86400 = X + 86400 := by omega
-        simp [newDeltaNormC, checkDeltaDayRange, MAX_DELTA_DAYS, normalizePair, show X < 0 by omega, e1, e2,
+        simp [newDeltaNormC, normalizeDSUsC, checkDeltaDayRange, MAX_DELTA_DAYS, normalizePair_pos _ _ 86400 (by decide), show X < 0 by omega, e1, e2,
           bind, Except.bind, pure, Except.pure]
       have e3 : (-86400 + (X + 86400)) * 1000000 = X * 1000000 := by omega
       simp [bind, Except.bind, this, newTimezoneC, Delta.toUs, Functor.map, Except.map, e3, hm,

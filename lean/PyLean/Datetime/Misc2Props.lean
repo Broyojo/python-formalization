@@ -96,7 +96,9 @@ the parsed fields (and the naive time of its time fields) when they are in range
 constructor's `ValueError` otherwise; a parse with an offset attaches the `timezone`
 `_parse_tz` builds; and the methods are not vacuous: with a locale without alternative digits,
 `'%H:%M'` on `12:30` is `time(12, 30)` and `'%Y %m %d %H %M'` on `2024 1 2 12 30` is
-`datetime(2024, 1, 2, 12, 30)`. -/
+`datetime(2024, 1, 2, 12, 30)`. Scope: the class belongs to the implementation of the
+`datetime` module `_strptime` imported (`_strptime.py:22-24`), as `Lib/datetime.py` arranges;
+the mixed case (a `_pydatetime` class given the C `timezone`) is `StrptimeClassImpl`. -/
 def StrptimeTimeDatetime : Prop :=
   ∀ (lt : LocaleTimeV) (found : StrpFound),
     (∀ e, strptimeCore lt found = .error e →
