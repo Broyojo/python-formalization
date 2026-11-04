@@ -536,9 +536,26 @@ def cHash : Dec → Py (Option Int)
   | .inf neg => .ok (some (if neg then -hashInf else hashInf))
   | .fin neg co e => .ok (some (hashFinite neg co e))
 
-/-- `as_integer_ratio`, _pydecimal.py:1021-1069. The source strips factors of 5 and
-of 2 from `n` and `10^-exp` in turn (:1052-1062), which yields the fraction in
-lowest terms; the model writes that fraction with a gcd. -/
+/-- `while d5 > 0 and n % 5 == 0: n //= 5; d5 -= 1` (_pydecimal.py:1053-1055): `(n, d5)` after
+the loop. -/
+def strip5 : Nat → Nat → Nat × Nat
+  | n, 0 => (n, 0)
+  | n, d5 + 1 => if n % 5 = 0 then strip5 (n / 5) d5 else (n, d5 + 1)
+
+/-- The number of trailing zero bits of `n > 0`, which is what `(n & -n).bit_length() - 1`
+computes (_pydecimal.py:1057-1060: `n & -n` is the lowest set bit `2**k`, of bit length `k + 1`);
+`f ≥ n` is enough fuel. -/
+def tz2 : Nat → Nat → Nat
+  | 0, _ => 0
+  | f + 1, n => if n ≠ 0 ∧ n % 2 = 0 then tz2 f (n / 2) + 1 else 0
+
+def trailingZeros (n : Nat) : Nat := tz2 n n
+
+/-- `as_integer_ratio`, _pydecimal.py:1021-1069: NaN and infinity refused (:1035-1039), `(0, 1)`
+for a zero (:1041-1042), `int(self._int)` with its int/str limit (:1046), and for a negative
+exponent the source's own reduction: strip factors of 5 while `d5 > 0` (:1052-1055), then
+`shift2 = min(trailing zero bits, d2)` factors of 2 (:1059-1063), and `d = 5**d5 << d2`
+(:1065). -/
 def pyRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")
   | .inf _ => .error (.overflowError "cannot convert Infinity to integer ratio")
@@ -548,8 +565,9 @@ def pyRatio : Dec → Py (Int × Int)
     let (n, d) : Nat × Nat :=
       if e ≥ 0 then (co * 10 ^ e.toNat, 1)
       else
-        let g := Nat.gcd co (10 ^ e.natAbs)
-        (co / g, 10 ^ e.natAbs / g)
+        let p := strip5 co e.natAbs
+        let shift2 := min (trailingZeros p.1) e.natAbs
+        (p.1 / 2 ^ shift2, 5 ^ p.2 * 2 ^ (e.natAbs - shift2))
     return (if neg then -(n : Int) else n, d)
 
 /-- `_decimal`'s `as_integer_ratio` (`_decimal_Decimal_as_integer_ratio_impl`, _decimal.c:3990-4090): numerator and

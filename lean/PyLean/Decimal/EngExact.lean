@@ -166,25 +166,291 @@ theorem toDigits_ne_zero {c : Nat} (hc : c ≠ 0) : (Nat.toDigits 10 c == ['0'])
     rw [h0] at h
     exact absurd h.symm hc
 
-/-- `Decimal.to_eng_string()` in `_pydecimal`, for every value within the C limits whose
-coefficient has at most 4294 digits (NaN payload at most 4300), as `decimal-str-roundtrip-py-bounded`
-bounds `str()`:
 
-* `Decimal(d.to_eng_string())` is `d` with the `engPad c e ≤ 2` trailing zeros the spelling adds
-  moved into the coefficient (`engBack`): the same sign and value, the exponent lowered by as much;
-  zeros and the specials come back exactly;
-* the spelling of a finite `d` is `[-] I [. F] [E±x]`, and when it has an exponent (that is, unless
-  `d`'s exponent is at most 0 and its adjusted exponent at least -6), `x` is a multiple of three
-  and, for a non-zero `d`, `I` has one to three digits. -/
-def EngStringExact : Prop :=
-  (∀ d : Dec, InCLimits d →
-    (∀ neg c e, d = .fin neg c e → numDigits c + 6 ≤ maxStrDigits) →
-    (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
-    (pyEng d >>= pyParse) = .ok (engBack d)) ∧
-  (∀ (neg : Bool) (c : Nat) (e : Int), engPad c e ≤ 2 ∧ (c = 0 → engPad c e = 0)) ∧
-  (∀ (neg : Bool) (c : Nat) (e : Int), InCLimits (.fin neg c e) →
-    ∃ I fr x, pyEng (.fin neg c e) = .ok ((if neg then ['-'] else []) ++ numBody I fr ++ expPart x) ∧
-      (∀ y, x = sciExp y → y % 3 = 0 ∧ (c ≠ 0 → 1 ≤ I.length ∧ I.length ≤ 3)))
+/-! ## The spellings, as the specification gives them
+
+General Decimal Arithmetic, "to-scientific-string" and "to-engineering-string" (and the decimal
+docs, `to_eng_string`): a finite number whose exponent is at most 0 and whose adjusted exponent is at
+least -6 is written without an exponent, with `-e` digits after the point and a `0` before it when
+needed; otherwise scientific notation puts one digit before the point and the adjusted exponent after
+`E`, and engineering notation picks the exponent that is a multiple of three with one to three
+digits before the point (for a zero: the least multiple of three at or above the exponent, the
+places in between written as zeros after the point). These are written from that description, not
+from `__str__`'s `dotplace` arithmetic. -/
+
+def signSpec (neg : Bool) : List Char := if neg then ['-'] else []
+
+/-- The digits `D` with `m` of them after a decimal point and at least one digit before it. -/
+def plainSpec (D : List Char) (m : Nat) : List Char :=
+  if m = 0 then D
+  else if m < D.length then D.take (D.length - m) ++ '.' :: D.drop (D.length - m)
+  else '0' :: '.' :: (List.replicate (m - D.length) '0' ++ D)
+
+/-- `E±X` (`e±X` when `capitals` is 0), nothing for `X = 0`. -/
+def expSpec (caps : Bool) (X : Int) : List Char :=
+  if X = 0 then [] else (if caps then 'E' else 'e') :: fmtSigned X
+
+/-- `Infinity`, `NaN` and `sNaN` with the sign and the payload digits. -/
+def specialSpell : Dec → List Char
+  | .inf neg => signSpec neg ++ "Infinity".toList
+  | .nan neg sig p => signSpec neg ++ (if sig then "sNaN" else "NaN").toList ++
+      (if p = 0 then [] else Nat.toDigits 10 p)
+  | .fin _ _ _ => []
+
+/-- Plain notation: exponent at most 0 and adjusted exponent at least -6. -/
+def PlainNot (c : Nat) (e : Int) : Prop := e ≤ 0 ∧ e + (numDigits c : Int) - 1 ≥ -6
+
+instance (c : Nat) (e : Int) : Decidable (PlainNot c e) := by unfold PlainNot; infer_instance
+
+/-- The scientific spelling of `±c·10^e`. -/
+def sciSpec (neg : Bool) (c : Nat) (e : Int) (caps : Bool) : List Char :=
+  if PlainNot c e then signSpec neg ++ plainSpec (Nat.toDigits 10 c) (-e).toNat
+  else signSpec neg ++ (Nat.toDigits 10 c).take 1 ++
+    (if 1 < numDigits c then '.' :: (Nat.toDigits 10 c).drop 1 else []) ++
+    expSpec caps (e + numDigits c - 1)
+
+/-- The exponent the engineering spelling prints (`0`: none). -/
+def engX (c : Nat) (e : Int) : Int :=
+  if PlainNot c e then 0
+  else if c = 0 then e + (-e) % 3
+  else (e + numDigits c - 1) - (e + numDigits c - 1) % 3
+
+/-- The engineering spelling of `±c·10^e`. -/
+def engSpec (neg : Bool) (c : Nat) (e : Int) (caps : Bool) : List Char :=
+  if PlainNot c e then signSpec neg ++ plainSpec (Nat.toDigits 10 c) (-e).toNat
+  else if c = 0 then
+    signSpec neg ++ '0' :: ((if engX c e = e then [] else '.' :: List.replicate (engX c e - e).toNat '0') ++
+      expSpec caps (engX c e))
+  else
+    signSpec neg ++
+      (Nat.toDigits 10 c ++ List.replicate ((e + numDigits c - engX c e).toNat - numDigits c) '0').take
+        (e + numDigits c - engX c e).toNat ++
+      (if (e + numDigits c - engX c e).toNat < numDigits c then
+        '.' :: (Nat.toDigits 10 c).drop (e + numDigits c - engX c e).toNat else []) ++
+      expSpec caps (engX c e)
+
+/-! ## `__str__`'s arithmetic gives these spellings -/
+
+theorem fmtDot_exp (e n dp : Int) (caps : Bool) :
+    (if e + n = dp then [] else (if caps then 'E' else 'e') :: fmtSigned (e + n - dp)) =
+      expSpec caps (e + n - dp) := by
+  unfold expSpec
+  by_cases h : e + n = dp
+  · rw [if_pos h, if_pos (show e + n - dp = 0 by omega)]
+  · rw [if_neg h, if_neg (show ¬ (e + n - dp = 0) by omega)]
+
+theorem fmtDot_plain (neg : Bool) (D : List Char) (e : Int) (caps : Bool) (hn : 0 < D.length)
+    (hp : e ≤ 0 ∧ e + (D.length : Int) - 1 ≥ -6) :
+    fmtDot neg D e (e + D.length) caps = signSpec neg ++ plainSpec D (-e).toNat := by
+  simp only [fmtDot, signSpec, plainSpec, ↓reduceIte, List.append_nil]
+  by_cases h2 : e + (D.length : Int) ≤ 0
+  · have m0 : ¬ (-e).toNat = 0 := by omega
+    have m1 : ¬ ((-e).toNat < D.length) := by omega
+    have m2 : (-e).toNat - D.length = (-(e + (D.length : Int))).toNat := by omega
+    simp only [h2, ↓reduceIte, m0, m1, m2, List.append_assoc, List.singleton_append, List.cons_append,
+      List.nil_append]
+  · by_cases h3 : e + (D.length : Int) ≥ D.length
+    · have he : e = 0 := by omega
+      subst he
+      have h4 : ¬ ((D.length : Int) ≤ 0) := by omega
+      have hD : D ≠ [] := List.ne_nil_of_length_pos hn
+      simp [h4, hD]
+    · have m0 : ¬ (-e).toNat = 0 := by omega
+      have m1 : (-e).toNat < D.length := by omega
+      have m2 : D.length - (-e).toNat = (e + (D.length : Int)).toNat := by omega
+      simp only [h2, h3, ↓reduceIte, m0, m1, m2, List.append_assoc]
+
+theorem sciFinite_spec (neg : Bool) (c : Nat) (e : Int) (caps : Bool) :
+    sciFinite neg (Nat.toDigits 10 c) e caps = sciSpec neg c e caps := by
+  have hn : 0 < (Nat.toDigits 10 c).length := numDigits_pos c
+  unfold sciSpec PlainNot
+  by_cases hp : e ≤ 0 ∧ e + (numDigits c : Int) - 1 ≥ -6
+  · rw [if_pos hp]
+    have h1 : e ≤ 0 ∧ e + ((Nat.toDigits 10 c).length : Int) > -6 := by
+      rw [toDigits_len]; omega
+    have := fmtDot_plain neg (Nat.toDigits 10 c) e caps hn (by rw [toDigits_len]; omega)
+    rw [← this]
+    simp only [sciFinite, fmtDot, h1, and_self, ↓reduceIte]
+  · rw [if_neg hp]
+    have h1 : ¬ (e ≤ 0 ∧ e + (numDigits c : Int) > -6) := by omega
+    have hx := fmtDot_exp e (numDigits c : Int) 1 caps
+    rw [toDigits_len] at hn
+    simp only [sciFinite, toDigits_len, h1, ↓reduceIte, signSpec, show ¬ ((1 : Int) ≤ 0) by omega,
+      show ((1 : Int).toNat = 1) from rfl]
+    rw [hx]
+    by_cases h3 : (1 : Int) ≥ (numDigits c : Int)
+    · have hl1 : numDigits c = 1 := by omega
+      have ht : (Nat.toDigits 10 c).take 1 = Nat.toDigits 10 c :=
+        List.take_of_length_le (by rw [toDigits_len]; omega)
+      simp only [h3, ↓reduceIte, hl1, ht, Nat.lt_irrefl, List.append_nil,
+        show ((1 : Int) - ((1 : Nat) : Int)).toNat = 0 from rfl, List.replicate_zero]
+      simp
+    · have hl1 : 1 < numDigits c := by omega
+      simp only [h3, ↓reduceIte, hl1, List.append_assoc]
+
+theorem fmtDot_pos (neg : Bool) (D : List Char) (e dp : Int) (caps : Bool) (hd : 1 ≤ dp) :
+    fmtDot neg D e dp caps = signSpec neg ++
+      (D ++ List.replicate (dp.toNat - D.length) '0').take dp.toNat ++
+      (if dp.toNat < D.length then '.' :: D.drop dp.toNat else []) ++
+      expSpec caps (e + D.length - dp) := by
+  have hx := fmtDot_exp e (D.length : Int) dp caps
+  simp only [fmtDot, signSpec]
+  rw [hx]
+  have h0 : ¬ dp ≤ 0 := by omega
+  by_cases h3 : dp ≥ D.length
+  · have hk : ¬ dp.toNat < D.length := by omega
+    have hr : (dp - D.length).toNat = dp.toNat - D.length := by omega
+    have ht : (D ++ List.replicate (dp.toNat - D.length) '0').take dp.toNat =
+        D ++ List.replicate (dp.toNat - D.length) '0' :=
+      List.take_of_length_le (by simp; omega)
+    simp only [h0, h3, ↓reduceIte, hk, hr, ht, List.append_nil]
+  · have hk : dp.toNat < D.length := by omega
+    have hr : dp.toNat - D.length = 0 := by omega
+    simp only [h0, h3, ↓reduceIte, hk, hr, List.replicate_zero, List.append_nil, List.append_assoc]
+
+theorem fmtDot_zero (neg : Bool) (e dp : Int) (caps : Bool) (h1 : -1 ≤ dp) (h2 : dp ≤ 1) :
+    fmtDot neg ['0'] e dp caps = signSpec neg ++ '0' ::
+      ((if dp = 1 then [] else '.' :: List.replicate (1 - dp).toNat '0') ++ expSpec caps (e + 1 - dp)) := by
+  have hx := fmtDot_exp e (1 : Int) dp caps
+  simp only [fmtDot, signSpec, List.length_singleton, show ((1 : Nat) : Int) = 1 from rfl]
+  rw [hx]
+  by_cases hd : dp = 1
+  · subst hd
+    simp
+  · have h0 : dp ≤ 0 := by omega
+    have hr : (1 - dp).toNat = (-dp).toNat + 1 := by omega
+    simp only [h0, hd, ↓reduceIte, hr, List.replicate_succ', List.append_assoc, List.cons_append,
+      List.nil_append]
+
+theorem engDot_plain (z : Bool) (e l : Int) (h : e ≤ 0 ∧ l > -6) : engDot z e l = l := by
+  unfold engDot; rw [if_pos h]
+
+/-- The engineering `dotplace` arithmetic gives the exponent `engX`. -/
+theorem eng_dp (c : Nat) (e : Int) :
+    e + ((Nat.toDigits 10 c).length : Int) -
+      engDot (Nat.toDigits 10 c == ['0']) e (e + (Nat.toDigits 10 c).length) = engX c e := by
+  have hn := numDigits_pos c
+  rw [toDigits_len]
+  unfold engX PlainNot
+  by_cases hp : e ≤ 0 ∧ e + (numDigits c : Int) - 1 ≥ -6
+  · rw [engDot_plain _ _ _ (by omega), if_pos hp]; omega
+  · rw [if_neg hp]
+    unfold engDot
+    rw [if_neg (by omega)]
+    by_cases hc : c = 0
+    · subst hc
+      have hz : (Nat.toDigits 10 0 == ['0']) = true := rfl
+      have h0 : numDigits 0 = 1 := rfl
+      simp only [hz, ↓reduceIte, h0]
+      omega
+    · rw [toDigits_ne_zero hc, if_neg hc]
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      omega
+
+theorem engFinite_spec (neg : Bool) (c : Nat) (e : Int) (caps : Bool) :
+    engFinite neg (Nat.toDigits 10 c) e caps = engSpec neg c e caps := by
+  have hn : 0 < (Nat.toDigits 10 c).length := numDigits_pos c
+  have hX := eng_dp c e
+  rw [engFinite_eq]
+  unfold engSpec
+  by_cases hp : PlainNot c e
+  · rw [if_pos hp]
+    unfold PlainNot at hp
+    rw [engDot_plain _ _ _ (by rw [toDigits_len]; omega)]
+    exact fmtDot_plain neg _ e caps hn (by rw [toDigits_len]; omega)
+  · rw [if_neg hp]
+    by_cases hc : c = 0
+    · subst hc
+      rw [if_pos rfl]
+      have hz : Nat.toDigits 10 0 = ['0'] := rfl
+      rw [hz] at hX ⊢
+      simp only [List.length_singleton, show ((1 : Nat) : Int) = 1 from rfl] at hX ⊢
+      generalize hdp : engDot (['0'] == ['0']) e (e + 1) = dp at hX ⊢
+      have hb : -1 ≤ dp ∧ dp ≤ 1 := by
+        rw [← hdp]; unfold engDot
+        split
+        · unfold PlainNot at hp; rw [show numDigits 0 = 1 from rfl] at hp; omega
+        · simp only [show (['0'] == ['0']) = true from rfl, ↓reduceIte]; omega
+      rw [fmtDot_zero neg e dp caps hb.1 hb.2, hX]
+      have e1 : (engX 0 e = e) ↔ dp = 1 := by omega
+      have e2 : (engX 0 e - e).toNat = (1 - dp).toNat := by omega
+      by_cases hd : dp = 1
+      · rw [if_pos hd, if_pos (e1.mpr hd)]
+      · rw [if_neg hd, if_neg (fun h => hd (e1.mp h)), e2]
+    · rw [if_neg hc]
+      generalize hdp : engDot (Nat.toDigits 10 c == ['0']) e (e + (Nat.toDigits 10 c).length) = dp at hX ⊢
+      have hb : 1 ≤ dp := by
+        rw [← hdp]; unfold engDot
+        split
+        · unfold PlainNot at hp; rw [toDigits_len] at *; omega
+        · rw [toDigits_ne_zero hc]; simp only [Bool.false_eq_true, ↓reduceIte]; omega
+      rw [fmtDot_pos neg _ e dp caps hb, hX]
+      rw [toDigits_len] at hX
+      have hk : e + (numDigits c : Int) - engX c e = dp := by omega
+      rw [hk, toDigits_len]
+
+/-- `str(d)` of a finite value: the scientific spelling, raising the int/str-limit `ValueError`
+when it prints an adjusted exponent of more than 4300 digits. -/
+theorem pyStr_fin_spell (neg : Bool) (c : Nat) (e : Int) (caps : Bool) :
+    pyStr (.fin neg c e) caps =
+      if ¬ PlainNot c e ∧ maxStrDigits < numDigits (e + numDigits c - 1).natAbs then
+        .error (.valueError limitToStrMsg)
+      else .ok (sciSpec neg c e caps) := by
+  have hn := numDigits_pos c
+  rw [← sciFinite_spec]
+  simp only [pyStr, Dec.toPyObj, pyStrObj, toDigits_len]
+  unfold PlainNot
+  by_cases hp : e ≤ 0 ∧ e + (numDigits c : Int) - 1 ≥ -6
+  · have h1 : e ≤ 0 ∧ e + (numDigits c : Int) > -6 := by omega
+    simp only [h1, and_self, ↓reduceIte, ne_eq, not_true_eq_false, hp, not_false_eq_true,
+      false_and]
+    rfl
+  · have h1 : ¬ (e ≤ 0 ∧ e + (numDigits c : Int) > -6) := by omega
+    have h2 : e + (numDigits c : Int) ≠ 1 := by omega
+    simp only [h1, ↓reduceIte, ne_eq, h2, not_false_eq_true, hp, true_and, strLimit, gt_iff_lt]
+    by_cases hl : maxStrDigits < numDigits (e + (numDigits c : Int) - 1).natAbs
+    · rw [if_pos hl, if_pos hl]; rfl
+    · rw [if_neg hl, if_neg hl]; rfl
+
+theorem pyStr_special (d : Dec) (caps : Bool) (h : isSpecial d = true) :
+    pyStr d caps = .ok (specialSpell d) := by
+  cases d with
+  | fin => exact absurd h (by simp [isSpecial])
+  | inf neg => cases neg <;> rfl
+  | nan neg sig p => cases neg <;> cases sig <;> rfl
+
+theorem pyEngObj_num_eq (neg : Bool) (I : List Char) (x : Int) (caps : Bool) :
+    pyEngObj ⟨neg, I, .num x⟩ caps =
+      (strLimit (x + (I.length : Int) - engDot (I == ['0']) x (x + I.length)).natAbs).bind
+        (fun _ => .ok (engFinite neg I x caps)) := by
+  simp only [pyEngObj]
+  split
+  · rfl
+  · rename_i h
+    have h0 : x + (I.length : Int) - engDot (I == ['0']) x (x + I.length) = 0 := by
+      simp only [ne_eq, Decidable.not_not] at h; omega
+    rw [h0]; rfl
+
+theorem pyEng_fin_spell (neg : Bool) (c : Nat) (e : Int) (caps : Bool) :
+    pyEng (.fin neg c e) caps =
+      if maxStrDigits < numDigits (engX c e).natAbs then .error (.valueError limitToStrMsg)
+      else .ok (engSpec neg c e caps) := by
+  rw [← engFinite_spec]
+  show pyEngObj ⟨neg, Nat.toDigits 10 c, .num e⟩ caps = _
+  rw [pyEngObj_num_eq, eng_dp]
+  simp only [strLimit, gt_iff_lt]
+  by_cases hl : maxStrDigits < numDigits (engX c e).natAbs
+  · rw [if_pos hl, if_pos hl]; rfl
+  · rw [if_neg hl, if_neg hl]; rfl
+
+theorem pyEng_special (d : Dec) (caps : Bool) (h : isSpecial d = true) :
+    pyEng d caps = .ok (specialSpell d) := by
+  cases d with
+  | fin => exact absurd h (by simp [isSpecial])
+  | inf neg => cases neg <;> rfl
+  | nan neg sig p => cases neg <;> cases sig <;> rfl
+
+/-! ## Reading the spelling back -/
 
 theorem pyEngObj_num (neg : Bool) (I : List Char) (x : Int)
     (h : strLimit (x + (I.length : Int) - engDot (I == ['0']) x (x + I.length)).natAbs = .ok ()) :
@@ -199,47 +465,34 @@ theorem engPad_eq (c : Nat) (e : Int) :
       then (engDot (Nat.toDigits 10 c == ['0']) e (e + (Nat.toDigits 10 c).length) - (Nat.toDigits 10 c).length).toNat
       else 0) := rfl
 
-/-- The finite case: the spelling, its shape, and what it reads back as, within the C limits. -/
-theorem eng_fin (neg : Bool) (c : Nat) (e : Int) (hlim : InCLimits (.fin neg c e)) :
+/-- The finite case: the spelling, its shape, and what it reads back as, whenever the printed
+exponent has at most 4300 digits. -/
+theorem eng_fin (neg : Bool) (c : Nat) (e : Int) (hXd : numDigits (engX c e).natAbs ≤ maxStrDigits) :
     ∃ I fr x, pyEng (.fin neg c e) = .ok ((if neg then ['-'] else []) ++ numBody I fr ++ expPart x) ∧
       I ≠ [] ∧ AD I ∧ AD (fr.getD []) ∧ ExOk x ∧
       digitsValue (I ++ fr.getD []) = c * 10 ^ engPad c e ∧
       exVal x - ((fr.getD []).length : Int) = e - engPad c e ∧
       (I ++ fr.getD []).length ≤ numDigits c + 6 ∧
-      (∀ ind sg D, x = some (ind, sg, D) → D.length ≤ maxStrDigits) ∧
-      (∀ y, x = sciExp y → y % 3 = 0 ∧ (c ≠ 0 → 1 ≤ I.length ∧ I.length ≤ 3)) := by
-  obtain ⟨_, hl2, hl3⟩ := hlim
-  simp only [mpdMaxEmax, mpdMinEtiny, mpdMinEmin, mpdMaxPrec] at hl2 hl3
+      (∀ ind sg D, x = some (ind, sg, D) → D.length ≤ maxStrDigits) := by
   have hn := numDigits_pos c
   have hds := toDigits_AD c
   have hlen := toDigits_len c
   have hne : Nat.toDigits 10 c ≠ [] := Nat.toDigits_ne_nil
   have hval := digitsValue_toDigits c
-  have hsl : ∀ m : Nat, m < 10 ^ 20 → numDigits m ≤ maxStrDigits := by
-    intro m hm
-    have := (numDigits_le_iff (n := m) (k := 20) (by decide)).mpr hm
-    simp only [maxStrDigits]; omega
-  have hsz : ∀ m : Nat, m < 10 ^ 20 → strLimit m = .ok () := by
-    intro m hm
-    unfold strLimit
-    rw [if_neg (Nat.not_lt.mpr (hsl m hm))]
+  have hXdp := eng_dp c e
   have hz1 : (Nat.toDigits 10 c == ['0']) = true → (Nat.toDigits 10 c).length = 1 := by
     intro h; rw [hlen]; exact toDigits_eq_zero_iff c h
   obtain ⟨b1, b2, b3⟩ := engDot_bounds (Nat.toDigits 10 c == ['0']) e (Nat.toDigits 10 c).length
     (by rw [hlen]; exact hn) hz1
-  generalize hdp : engDot (Nat.toDigits 10 c == ['0']) e (e + (Nat.toDigits 10 c).length) = dp at b1 b2 b3
-  have hdpB : e + (Nat.toDigits 10 c).length - dp = 0 ∨ (-5 ≤ dp ∧ dp ≤ 3) := by
-    rw [← hdp]
-    unfold engDot; split
-    · left; omega
-    · right; split <;> omega
+  generalize hdp : engDot (Nat.toDigits 10 c == ['0']) e (e + (Nat.toDigits 10 c).length) = dp at b1 b2 b3 hXdp
   obtain ⟨I, fr, h1, hI0, hI, hF, hv, he, hfl, hl, hId⟩ := fmtDot_shape neg (Nat.toDigits 10 c) e dp hds hne b1 b2
   refine ⟨I, fr, if e + (Nat.toDigits 10 c).length = dp then none else sciExp (e + (Nat.toDigits 10 c).length - dp),
-    ?_, hI0, hI, hF, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, hI0, hI, hF, ?_, ?_, ?_, ?_, ?_⟩
   · have hs : pyEng (.fin neg c e) = .ok (engFinite neg (Nat.toDigits 10 c) e true) := by
       apply pyEngObj_num
-      rw [hdp]
-      exact hsz _ (by rw [hlen] at hdpB ⊢; omega)
+      rw [hdp, hXdp]
+      unfold strLimit
+      rw [if_neg (Nat.not_lt.mpr hXd)]
     rw [hs, engFinite_eq, hdp, h1]
   · split
     · trivial
@@ -251,50 +504,76 @@ theorem eng_fin (neg : Bool) (c : Nat) (e : Int) (hlim : InCLimits (.fin neg c e
     split at hD
     · cases hD
     · simp only [sciExp, Option.some.injEq, Prod.mk.injEq] at hD
-      rw [← hD.2.2]
-      exact hsl _ (by rw [hlen] at hdpB ⊢; omega)
-  · intro y hy
-    split at hy
-    · cases hy
-    · rename_i hne'
-      have hyv : y = e + (Nat.toDigits 10 c).length - dp := by
-        have := congrArg exVal hy
-        rw [sciExp_val, sciExp_val] at this
-        exact this.symm
-      obtain ⟨h3a, h3b⟩ := b3 hne'
-      refine ⟨by rw [hyv]; exact h3a, fun hc => ?_⟩
-      have := h3b (toDigits_ne_zero hc)
-      have := hId this.1
-      omega
-
-/-- `repr(d)` in `_pydecimal` (_pydecimal.py:1071-1074, whose comment states the invariant
-`eval(repr(d)) == d`): it is `Decimal('` + `str(d)` + `')`, raising what `str(d)` raises, and for
-every value within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300)
-the quoted string reads back to `d` exactly: sign, coefficient, exponent, NaN kind and payload. -/
-def ReprExact : Prop :=
-  (∀ d : Dec, pyRepr d = (fun s => "Decimal('".toList ++ s ++ "')".toList) <$> pyStr d) ∧
-  (∀ d : Dec, InCLimits d →
-    (∀ neg c e, d = .fin neg c e → numDigits c + 6 ≤ maxStrDigits) →
-    (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
-    ∃ s, pyRepr d = .ok ("Decimal('".toList ++ s ++ "')".toList) ∧ pyParse s = .ok d)
-
-theorem reprExact_proven : ReprExact := by
-  refine ⟨fun d => ?_, fun d hl h1 h2 => ?_⟩
-  · simp only [pyRepr, bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
-  · have h := strRoundTripPyBounded_proven d hl h1 h2
-    cases hs : pyStr d with
-    | error x => rw [hs] at h; exact absurd h (by simp [bind, Except.bind])
-    | ok s =>
-      rw [hs] at h
-      exact ⟨s, by simp [pyRepr, hs, bind, Except.bind, pure, Except.pure], h⟩
+      rw [← hD.2.2, hXdp]
+      exact hXd
 
 theorem engPad_zero (e : Int) : engPad 0 e = 0 := by
   unfold engPad engDot
   simp only [show (Nat.toDigits 10 0 == ['0']) = true from rfl, show numDigits 0 = 1 from rfl, ↓reduceIte]
   (repeat' split) <;> omega
 
+/-! ## The statements -/
+
+/-- `str(d)` in `_pydecimal` (`Decimal.__str__`, _pydecimal.py:1076-1126, `eng=False`, with
+`capitals` from the context, :1122-1124), for every value and both `capitals` settings: a finite
+`±c·10^e` is spelled `sciSpec` (plain notation when the exponent is at most 0 and the adjusted
+exponent at least -6, otherwise one digit, the rest after a point, and `E`/`e` with the signed
+adjusted exponent), and raises the int/str-limit `ValueError` of `"%+d"` (:1124) exactly when it
+would print an adjusted exponent of more than 4300 digits; infinities and NaNs are `Infinity`, `NaN`,
+`sNaN` with the sign and the payload. There is no other bound: `_pydecimal`'s exponents are ints. -/
+def StrSpellExact : Prop :=
+  (∀ (neg : Bool) (c : Nat) (e : Int) (caps : Bool),
+    pyStr (.fin neg c e) caps =
+      if ¬ PlainNot c e ∧ maxStrDigits < numDigits (e + numDigits c - 1).natAbs then
+        .error (.valueError limitToStrMsg)
+      else .ok (sciSpec neg c e caps)) ∧
+  (∀ (d : Dec) (caps : Bool), isSpecial d = true → pyStr d caps = .ok (specialSpell d))
+
+theorem strSpellExact_proven : StrSpellExact :=
+  ⟨pyStr_fin_spell, pyStr_special⟩
+
+/-- `Decimal.to_eng_string()` in `_pydecimal` (_pydecimal.py:1128-1135, `__str__(eng=True)` with the
+context's `capitals`, :1076-1126), for every value and both `capitals` settings:
+
+* a finite `±c·10^e` is spelled `engSpec`: plain notation as `str()` when the exponent is at most 0
+  and the adjusted exponent at least -6; otherwise the exponent `engX` is a multiple of three, the
+  greatest at or below the adjusted exponent for a non-zero value (one to three digits before the
+  point, trailing zeros added when the coefficient is shorter), the least at or above the exponent
+  for a zero (the places in between written as zeros after the point), and is omitted when it is 0;
+* it raises the int/str-limit `ValueError` of `"%+d"` (:1124) exactly when that exponent has more
+  than 4300 digits (the C twin has no such limit);
+* infinities and NaNs as in `str()`;
+* `Decimal(d.to_eng_string())` is `d` with the zero to two trailing zeros the spelling adds moved into
+  the coefficient (same sign and value), for every `d` whose spelling stays inside `int()`'s
+  limit (coefficient of at most 4294 digits, printed exponent and NaN payload of at most 4300). -/
+def EngStringExact : Prop :=
+  (∀ (neg : Bool) (c : Nat) (e : Int) (caps : Bool),
+    pyEng (.fin neg c e) caps =
+      if maxStrDigits < numDigits (engX c e).natAbs then .error (.valueError limitToStrMsg)
+      else .ok (engSpec neg c e caps)) ∧
+  (∀ (d : Dec) (caps : Bool), isSpecial d = true → pyEng d caps = .ok (specialSpell d)) ∧
+  (∀ (c : Nat) (e : Int), engX c e % 3 = 0 ∧
+    (¬ PlainNot c e → c ≠ 0 → 1 ≤ e + numDigits c - engX c e ∧ e + numDigits c - engX c e ≤ 3) ∧
+    (¬ PlainNot c e → c = 0 → e ≤ engX c e ∧ engX c e - e ≤ 2)) ∧
+  (∀ d : Dec,
+    (∀ neg c e, d = .fin neg c e → numDigits c + 6 ≤ maxStrDigits ∧ numDigits (engX c e).natAbs ≤ maxStrDigits) →
+    (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
+    (pyEng d >>= pyParse) = .ok (engBack d)) ∧
+  (∀ (c : Nat) (e : Int), engPad c e ≤ 2 ∧ (c = 0 → engPad c e = 0))
+
+theorem engX_facts (c : Nat) (e : Int) : engX c e % 3 = 0 ∧
+    (¬ PlainNot c e → c ≠ 0 → 1 ≤ e + numDigits c - engX c e ∧ e + numDigits c - engX c e ≤ 3) ∧
+    (¬ PlainNot c e → c = 0 → e ≤ engX c e ∧ engX c e - e ≤ 2) := by
+  unfold engX
+  refine ⟨?_, fun hp hc => ?_, fun hp hc => ?_⟩
+  · split
+    · rfl
+    · split <;> omega
+  · rw [if_neg hp, if_neg hc]; omega
+  · rw [if_neg hp, if_pos hc]; omega
+
 theorem engStringExact_proven : EngStringExact := by
-  refine ⟨fun d hlim hb1 hb2 => ?_, fun neg c e => ?_, fun neg c e hlim => ?_⟩
+  refine ⟨pyEng_fin_spell, pyEng_special, engX_facts, fun d hb1 hb2 => ?_, fun c e => ?_⟩
   · cases d with
     | inf neg => cases neg <;> decide
     | nan neg sig p =>
@@ -304,8 +583,8 @@ theorem engStringExact_proven : EngStringExact := by
       rw [hs]
       exact pyParse_nan neg sig p (hb2 neg sig p rfl)
     | fin neg c e =>
-      obtain ⟨I, fr, x, hs, hI0, hI, hF, hx, hv, he, hl, hD, _⟩ := eng_fin neg c e hlim
-      have hb := hb1 neg c e rfl
+      obtain ⟨hb, hXd⟩ := hb1 neg c e rfl
+      obtain ⟨I, fr, x, hs, hI0, hI, hF, hx, hv, he, hl, hD⟩ := eng_fin neg c e hXd
       rw [hs]
       show pyParse _ = _
       simp only [pyParse]
@@ -324,7 +603,43 @@ theorem engStringExact_proven : EngStringExact := by
       · omega
     · subst hc
       exact engPad_zero e
-  · obtain ⟨I, fr, x, hs, _, _, _, _, _, _, _, _, h3⟩ := eng_fin neg c e hlim
-    exact ⟨I, fr, x, hs, h3⟩
+
+/-- `repr(d)` in `_pydecimal` (_pydecimal.py:1071-1074, `"Decimal('%s')" % str(self)`, with
+`str(self)` reading `getcontext().capitals`, :1122-1124; the comment states the invariant
+`eval(repr(d)) == d`), for every value and both `capitals` settings: the quoted `sciSpec` spelling
+for a finite value, raising the int/str-limit `ValueError` exactly when `str()` would print an
+adjusted exponent of more than 4300 digits (`Decimal((0, (1,), 10**4300))`); the quoted special
+spellings; and for every value whose `str()` stays inside `int()`'s limit (coefficient of at most
+4294 digits, adjusted exponent and NaN payload of at most 4300; exponents beyond the C module's
+`10**18` are fine, `Decimal((0, (1,), 10**19))`), the quoted string reads back to `d` exactly. -/
+def ReprExact : Prop :=
+  (∀ (neg : Bool) (c : Nat) (e : Int) (caps : Bool),
+    pyRepr (.fin neg c e) caps =
+      if ¬ PlainNot c e ∧ maxStrDigits < numDigits (e + numDigits c - 1).natAbs then
+        .error (.valueError limitToStrMsg)
+      else .ok ("Decimal('".toList ++ sciSpec neg c e caps ++ "')".toList)) ∧
+  (∀ (d : Dec) (caps : Bool), isSpecial d = true →
+    pyRepr d caps = .ok ("Decimal('".toList ++ specialSpell d ++ "')".toList)) ∧
+  (∀ (d : Dec) (caps : Bool),
+    (∀ neg c e, d = .fin neg c e →
+      numDigits c + 6 ≤ maxStrDigits ∧ numDigits (e + numDigits c - 1).natAbs ≤ maxStrDigits) →
+    (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
+    ∃ s, pyRepr d caps = .ok ("Decimal('".toList ++ s ++ "')".toList) ∧ pyParse s = .ok d)
+
+theorem pyRepr_eq (d : Dec) (caps : Bool) :
+    pyRepr d caps = (fun s => "Decimal('".toList ++ s ++ "')".toList) <$> pyStr d caps := by
+  simp only [pyRepr, bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
+
+theorem reprExact_proven : ReprExact := by
+  refine ⟨fun neg c e caps => ?_, fun d caps h => ?_, fun d caps h1 h2 => ?_⟩
+  · rw [pyRepr_eq, pyStr_fin_spell]
+    split <;> rfl
+  · rw [pyRepr_eq, pyStr_special d caps h]; rfl
+  · have h := strRoundTripPyBounded_proven d caps h1 h2
+    cases hs : pyStr d caps with
+    | error x => rw [hs] at h; exact absurd h (by simp [bind, Except.bind])
+    | ok s =>
+      rw [hs] at h
+      exact ⟨s, by rw [pyRepr_eq, hs]; rfl, h⟩
 
 end PyLean.Decimal
