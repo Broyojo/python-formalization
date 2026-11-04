@@ -1,0 +1,82 @@
+id: pyio-bytesio-stale-shared-hash
+title: "io.BytesIO.getvalue() can return bytes with a stale cached hash (duplicate of gh-160181)"
+priority: P3
+kind: wrong-result
+module: pyio
+status: duplicate
+duplicate_of: python/cpython#160181 (closed 2026-10-23, fixed on main after 3.15.2)
+files: [Modules/_io/bytesio.c, Objects/bytesobject.c]
+functions: ["_io_BytesIO_getvalue_impl", "read_bytes_lock_held", "write_bytes_lock_held",
+            "unshare_buffer_lock_held", "bytesiobuf_getbuffer_lock_held", "_io_BytesIO_truncate_impl"]
+summary: |
+  getvalue(), and read()/readline() of the whole buffer from position 0, return the internal
+  bytes object itself (bytesio.c:431-432, :476-482). Whether a later write may change that
+  object in place is decided by SHARED_BUF, which on the default build is only
+  `!_PyObject_IsUniquelyReferenced(self->buf)` (bytesio.c:81). If the program hashed the
+  returned object and then dropped it, the buffer is uniquely referenced again but carries a
+  cached ob_shash. A same-size write (bytesio.c:258-269 take neither the resize nor the unshare
+  branch, then :286 copies in place), a store through getbuffer() (the unshare at :1243-1246 is
+  skipped for the same reason), or truncate() followed by a refilling write then change the
+  contents, and the next getvalue() returns the same object with the old hash: `v == b'efgh'`
+  but `v not in {b'efgh'}`. The same happens when a hashed `bytes` passed to BytesIO(x) is
+  dropped. Set and dict lookups with the result silently miss. Already reported upstream as
+  gh-160181 (closed), fixed on main by adding HASHED_BUF to SHARED_BUF (PRs gh-160182, gh-160408,
+  gh-160409); 3.15.2 has the bug.
+likelihood: |
+  Low to medium: it needs the result of getvalue() (or of a whole-buffer read) to be hashed,
+  for example used as a dict key or set member, then dropped while the BytesIO keeps being
+  written. The failure is silent.
+maybe_intended: |
+  No. bytes are immutable and hashable; gh-160181 was accepted and fixed.
+reproducer: |
+  import io
+  def stale(v, contents):
+      return v == contents and v not in {bytes(bytearray(contents))}
+  routes = {}
+  b = io.BytesIO(); b.write(b'abcd'); hash(b.getvalue())
+  b.seek(0); b.write(b'efgh'); v = b.getvalue()
+  routes['write'] = stale(v, b'efgh'); del v
+  b = io.BytesIO(); b.write(b'abcd'); hash(b.getvalue())
+  m = b.getbuffer(); m[0] = 0x7a; m.release(); v = b.getvalue()
+  routes['getbuffer'] = stale(v, b'zbcd'); del v
+  b = io.BytesIO(); b.write(b'abcd'); hash(b.getvalue())
+  b.truncate(2); b.seek(2); b.write(b'zz'); v = b.getvalue()
+  routes['truncate'] = stale(v, b'abzz'); del v
+  x = bytes([1, 2, 3]); hash(x); b = io.BytesIO(x); del x
+  b.write(b'\x09'); v = b.getvalue()
+  routes['init'] = stale(v, bytes([9, 2, 3])); del v
+  print(routes)
+  if all(routes.values()):
+      print('REPRODUCED pyio-bytesio-stale-shared-hash')
+expected: |
+  Every bytes object hashes as its contents: v in {b'efgh'} is True.
+observed: |
+  python3 3.15.2: {'write': True, 'getbuffer': True, 'truncate': True, 'init': True}. REPRODUCED.
+  main (cpython-main/python.exe 3.16.0a1+dev ef1fce0): {'write': False, 'getbuffer': False,
+  'truncate': False, 'init': False}, NOT REPRODUCED (fixed by HASHED_BUF, gh-160181).
+promised_by: |
+  The data model: hashable objects must have a hash that never changes during their lifetime,
+  and objects that compare equal have the same hash (Doc/reference/datamodel.rst, object.__hash__);
+  bytes are immutable (Doc/library/stdtypes.rst, Bytes Objects).
+cause: |
+  Modules/_io/bytesio.c:81 `SHARED_BUF(self)` tests only the reference count, not
+  `_PyBytes_GET_CACHED_HASH(self->buf) != -1`, so the in-place paths at :264-269 + :286 (write),
+  :1243-1246 (export) and getvalue's zero-copy return :431-432 treat a hashed object as private.
+  _PyBytes_ResizeKeepOnError already copies a hashed object (Objects/bytesobject.c:3452-3454),
+  which is why only the paths that do not resize are affected.
+possible_fix: |
+  main's fix: `#define HASHED_BUF(self) (_PyBytes_GET_CACHED_HASH(self->buf) != -1)` and
+  `SHARED_BUF(self) = !_PyObject_IsUniquelyReferenced(self->buf) || HASHED_BUF(self)`
+  (vendor/cpython-main/Modules/_io/bytesio.c:80-93); backport to 3.15.
+duplicates:
+  issues:
+    - {number: 160181, state: closed, relation: "same bug, same reproducer", reason: "duplicate"}
+    - {number: 158219, state: closed, relation: "same problem in bytearray (cited by gh-160181)", reason: "different type"}
+  queries: ["gh issue view 160181 --repo python/cpython", "gh search issues: BytesIO getvalue cached",
+            "gh search issues: BytesIO stale", "bugforge README: no io entries"]
+  note: |
+    Duplicate of gh-160181 (closed 2026-10-23); the fix landed on main after 3.15.2, so 3.15.2
+    reproduces. Found independently by the model's sharing state (PyIO/BytesShare.lean).
+lean:
+  property: PyLean.PyIO.Share.BytesIOHashConsistent
+  theorem: PyLean.PyIO.Share.bytesIOHashConsistent_refuted

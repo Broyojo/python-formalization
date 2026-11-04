@@ -12,6 +12,7 @@ import PyLean.PyIO.Reentry
 import PyLean.PyIO.RegText
 import PyLean.PyIO.RegBuffered
 import PyLean.PyIO.RegFile
+import PyLean.PyIO.RegBytes
 
 /-!
 `Lib/_pyio.py` vs `Modules/_io/` (BytesIO, StringIO), CPython 3.15.2.
@@ -299,6 +300,6 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``BytesIOReadintoOverlap, thm := some ``bytesIOReadintoOverlap_proven }
 ]
 
-def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries
+def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries ++ bytesShareEntries
 
 end PyLean.PyIO

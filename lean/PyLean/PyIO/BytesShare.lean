@@ -190,6 +190,26 @@ def resizeBuffer (st : St) (size : Nat) : Py St :=
       if st.shared r then unshare st a
       else resizeUnshared st (if (a : Int) > ssizeMax then (a : Int) - 2 ^ 64 else a)
 
+/-- What `write_bytes_lock_held` does to `self->buf` before copying, bytesio.c:257-269: a
+resize when the end passes the allocation, else an unshare when shared. -/
+def writePrep (st : St) (r : Ref) (endpos : Nat) : Py St :=
+  if endpos > (st.data r).length then resizeBuffer st endpos
+  else if st.shared r then unshare st (max endpos st.size)
+  else .ok st
+
+/-- The copy of `write_bytes_lock_held`, bytesio.c:271-292, into the memory of `self->buf`:
+the zero padding of an overseek, then the bytes; `st` is the state before the prep. -/
+def writeInto (st st1 : St) (b : List Nat) : St × Py Val :=
+  match st1.buf with
+  | none => (st, .error C.closedErr)
+  | some r1 =>
+    let endpos := st1.pos + b.length
+    let d := st1.data r1
+    let d := if st1.pos > st1.size
+      then d.take st1.size ++ List.replicate (st1.pos - st1.size) 0 ++ d.drop st1.pos else d
+    let d := d.take st1.pos ++ b ++ d.drop endpos
+    ({ st1.setData r1 d with pos := endpos, size := max st1.size endpos }, .ok (.int b.length))
+
 /-- `write_bytes_lock_held`, bytesio.c:236-297, for a `bytes` argument the program does not
 keep (its buffer export cannot fail or run code): closed and exports checks (:246), an
 empty write (:251-254), a resize when the end passes the allocation (:257-263), else an
@@ -201,22 +221,15 @@ def write (st : St) (b : List Nat) : St × Py Val :=
   | some r =>
     if st.exports > 0 then (st, .error bufferError) else
     if b.length = 0 then (st, .ok (.int 0)) else
-    let endpos := st.pos + b.length
-    let prep : Py St :=
-      if endpos > (st.data r).length then resizeBuffer st endpos
-      else if st.shared r then unshare st (max endpos st.size)
-      else .ok st
-    match prep with
+    match writePrep st r (st.pos + b.length) with
     | .error e => (st, .error e)
-    | .ok st1 =>
-      match st1.buf with
-      | none => (st, .error C.closedErr)
-      | some r1 =>
-        let d := st1.data r1
-        let d := if st1.pos > st1.size
-          then d.take st1.size ++ List.replicate (st1.pos - st1.size) 0 ++ d.drop st1.pos else d
-        let d := d.take st1.pos ++ b ++ d.drop endpos
-        ({ st1.setData r1 d with pos := endpos, size := max st1.size endpos }, .ok (.int b.length))
+    | .ok st1 => writeInto st st1 b
+
+/-- `self->buf` sized to `string_size` before `getvalue` returns it, bytesio.c:421-430. -/
+def sizePrep (st : St) (r : Ref) : Py St :=
+  if st.size ≠ (st.data r).length then
+    (if st.shared r then unshare st st.size else resizeUnshared st st.size)
+  else .ok st
 
 /-- `_io_BytesIO_getvalue_impl`, bytesio.c:413-433: a copy when `string_size <= 1` or a view
 exists (:417-419); otherwise `self->buf`, first sized to `string_size` by an unshare or a
@@ -229,11 +242,7 @@ def getvalue (st : St) : St × Py Val :=
     if st.size ≤ 1 ∨ st.exports > 0 then
       ({ (st.fromBytes c).1 with held := st.held ++ [(st.fromBytes c).2] }, .ok (.bytes c))
     else
-      let prep : Py St :=
-        if st.size ≠ (st.data r).length then
-          (if st.shared r then unshare st st.size else resizeUnshared st st.size)
-        else .ok st
-      match prep with
+      match sizePrep st r with
       | .error e => (st, .error e)
       | .ok st1 =>
         match st1.buf with
@@ -283,16 +292,18 @@ def readline (st : St) (size : Option Int) : St × Py Val :=
     let (st', r) := readBytes st (C.scanEol st.proj size)
     keepRes st' r
 
+/-- The new size of `truncate`: `pos` for `None` (:700-701), else `PyLong_AsLong` (:703-707). -/
+def truncArg (st : St) : Option Int → Py Int
+  | none => .ok st.pos
+  | some v => asLong v
+
 /-- `_io_BytesIO_truncate_impl`, bytesio.c:692-727, for `None` or an int: `string_size` is
 set before `resize_buffer_lock_held` (:716-722), which may shrink or replace the object,
 and restored if it fails. -/
 def truncate (st : St) (size : Option Int) : St × Py Val :=
   if st.buf.isNone then (st, .error C.closedErr) else
   if st.exports > 0 then (st, .error bufferError) else
-  let n : Py Int := match size with
-    | none => .ok st.pos
-    | some v => asLong v
-  match n with
+  match truncArg st size with
   | .error e => (st, .error e)
   | .ok n =>
     if n < 0 then (st, .error (.valueError s!"negative size value {n}")) else
@@ -302,6 +313,10 @@ def truncate (st : St) (size : Option Int) : St × Py Val :=
       | .ok st1 => (st1, .ok (.int n))
     else (st, .ok (.int n))
 
+/-- The unshare before the first export of a shared buffer, bytesio.c:1243-1246. -/
+def exportPrep (st : St) (r : Ref) : Py St :=
+  if st.exports = 0 ∧ st.shared r = true then unshare st st.size else .ok st
+
 /-- `_io_BytesIO_getbuffer_impl` (bytesio.c:386-403) and `bytesiobuf_getbuffer_lock_held`
 (:1236-1254): `CHECK_CLOSED`, then the first export of a shared buffer unshares it
 (:1243-1246), and the view is `string_size` writable bytes of `self->buf` (:1249-1251). -/
@@ -309,8 +324,7 @@ def getbuffer (st : St) : St × Py Val :=
   match st.buf with
   | none => (st, .error C.closedErr)
   | some r =>
-    let prep : Py St := if st.exports = 0 ∧ st.shared r = true then unshare st st.size else .ok st
-    match prep with
+    match exportPrep st r with
     | .error e => (st, .error e)
     | .ok st1 =>
       match st1.buf with
