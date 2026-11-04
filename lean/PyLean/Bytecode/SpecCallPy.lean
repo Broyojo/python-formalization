@@ -275,4 +275,183 @@ theorem pushInit_ok (e : Env) (c : Val) (args : List Val) (kw : List String) (re
     · cases h1
   · cases h
 
+/-! ## Entering the callee: `_PUSH_FRAME` and `DISPATCH_INLINED` -/
+
+theorem wd_deopt {m g : M Unit} {s s' : St} (h : m s = .error .deopt s') : withDeopt m g s = g s := by
+  simp [withDeopt, h]
+
+theorem wd_ok {m g : M Unit} {s s' : St} (h : m s = .ok () s') : withDeopt m g s = .ok () s' := by
+  simp [withDeopt, h]
+
+theorem wd_err {m g : M Unit} {s s' : St} {x : Err} (h : m s = .error x s') (hx : x ≠ .deopt) :
+    withDeopt m g s = .error x s' := by
+  simp only [withDeopt, h]
+  split
+  · rename_i heq; cases heq; exact absurd rfl hx
+  · rfl
+
+/-- The state both ways of entering a callee frame `nf` leave, from registers `r` with the
+caller's operands gone (`rest`): the caller's frame saved with `return_offset =
+INSTRUCTION_SIZE` and its stack, `nf` current, the recursion counter decremented once, and
+`next_instr` at `nf`'s first instruction. -/
+def enteredSt (e : Env) (nf : Frame) (r : Regs) (rest : List Val) : St :=
+  { regs := { rt := { r.rt with pyRecursionRemaining := r.rt.pyRecursionRemaining - 1 }, frame := nf,
+              prev := ({ r.frame with returnOffset := instrSize e.opcode, stack := rest } :: r.prev),
+              next := nf.instrPtr },
+    stack := nf.stack }
+
+/-- `_SAVE_RETURN_OFFSET + _PUSH_FRAME` (`:6136-6140`, `:4628-4642`). -/
+theorem pushFrame_entered (e : Env) (nf : Frame) (r : Regs) (rest : List Val)
+    (hn : r.next = e.this + instrSize e.opcode) :
+    (do BM.lift (_SAVE_RETURN_OFFSET e); _PUSH_FRAME nf : M Unit) ⟨r, rest⟩ = .ok () (enteredSt e nf r rest) := by
+  simp [bind, EStateM.bind, BM.lift, _SAVE_RETURN_OFFSET, setReturnOffset, modifyFrame, getNext, hn,
+    _PUSH_FRAME, enterFrame, loadIp, RM.lift, enteredSt, pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift]
+
+/-- `frame->return_offset = INSTRUCTION_SIZE; DISPATCH_INLINED(new_frame)` with budget left: `start_frame`'s
+`_Py_EnterRecursivePy` decrements the counter and passes. -/
+theorem dispatch_entered (e : Env) (nf : Frame) (r : Regs) (rest : List Val)
+    (h : 0 < r.rt.pyRecursionRemaining) :
+    (dispatchInlined nf : M Unit) ⟨{ r with frame := { r.frame with returnOffset := instrSize e.opcode } }, rest⟩ =
+      .error .dispatch (enteredSt e nf r rest) := by
+  have h' : ¬ r.rt.pyRecursionRemaining ≤ 0 := by omega
+  simp [dispatchInlined, enterFrame, startFrame, bind, EStateM.bind, BM.lift, RM.lift, tryExc, enterRecursivePy, h',
+    getFrame, setNext, enteredSt, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, pure,
+    EStateM.pure, liftM, monadLift, MonadLift.monadLift]
+
+/-! ## The guards -/
+
+section
+variable (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+
+theorem fnVersion_pass (hlen : args.length = e.oparg) (a : Addr) (fo : FuncObj)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hv : fo.version = cacheNat e 0) :
+    _CHECK_FUNCTION_VERSION e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+      .ok () ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ := by
+  simp only [_CHECK_FUNCTION_VERSION, funcVersionAt, guardTop, bind, EStateM.bind,
+    callStack_peek regs (.ref a) self args rest e.oparg hlen]
+  simp [BM.lift, RM.lift, isFunction, getFunc, getObj, ho, hv, deoptIf, bind, EStateM.bind, pure, EStateM.pure,
+    liftM, monadLift, MonadLift.monadLift]
+
+theorem fnVersion_fail (hlen : args.length = e.oparg) (hc : Live regs.rt c)
+    (hb : ∀ a fo, c = .ref a → regs.rt.heap[a]? = some (.func fo) → fo.version ≠ cacheNat e 0) :
+    _CHECK_FUNCTION_VERSION e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+      .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+  simp only [_CHECK_FUNCTION_VERSION, funcVersionAt, guardTop, bind, EStateM.bind,
+    callStack_peek regs c self args rest e.oparg hlen]
+  cases c with
+  | ref a =>
+    obtain ⟨o, ho⟩ := live_obj hc
+    cases o with
+    | func fo =>
+      have hv := hb a fo rfl ho
+      simp [BM.lift, RM.lift, isFunction, getFunc, getObj, ho, hv, deoptIf, bind, EStateM.bind, pure, EStateM.pure,
+        liftM, monadLift, MonadLift.monadLift, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+    | _ =>
+      simp [BM.lift, RM.lift, isFunction, getObj, ho, deoptIf, bind, EStateM.bind, pure, EStateM.pure,
+        liftM, monadLift, MonadLift.monadLift, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+  | _ =>
+    simp [BM.lift, RM.lift, isFunction, deoptIf, bind, EStateM.bind, pure, EStateM.pure,
+      liftM, monadLift, MonadLift.monadLift, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+end
+
+theorem recRemaining_pass (s : St) (h : 1 < s.regs.rt.pyRecursionRemaining) :
+    _CHECK_RECURSION_REMAINING s = .ok () s := by
+  have h' : ¬ s.regs.rt.pyRecursionRemaining ≤ 1 := by omega
+  simp [_CHECK_RECURSION_REMAINING, guardTop, peekN, BM.lift, RM.lift, getRecursionRemaining, deoptIf, h',
+    bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift]
+
+theorem recRemaining_fail (s : St) (h : s.regs.rt.pyRecursionRemaining ≤ 1) :
+    _CHECK_RECURSION_REMAINING s = .error .deopt s := by
+  simp [_CHECK_RECURSION_REMAINING, guardTop, peekN, BM.lift, RM.lift, getRecursionRemaining, deoptIf, h,
+    bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift, throw, throwThe,
+    MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+
+/-- `afterInstr` treats an instruction that ended normally and one that ended in `DISPATCH_INLINED`
+alike: the machine carries on in the state left. -/
+theorem afterInstr_entered (P : Program) (s : St) :
+    afterInstr P (.ok () s) = afterInstr P (.error .dispatch s) := rfl
+
+theorem pyFrameGeneral_ok (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+    (hlen : args.length = e.oparg) (nf : Frame) (r : Regs)
+    (hp : pushInit e c (withSelf self args) [] regs = .ok nf r) :
+    _PY_FRAME_GENERAL e ⟨regs, args.reverse ++ self :: c :: rest⟩ = .ok nf ⟨r, rest⟩ := by
+  simp [_PY_FRAME_GENERAL, bind, EStateM.bind, callStack_pop regs c self args rest e.oparg hlen, BM.lift, hp]
+
+theorem pyFrameGeneral_err (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+    (hlen : args.length = e.oparg) (x : Err) (r : Regs)
+    (hp : pushInit e c (withSelf self args) [] regs = .error x r) :
+    _PY_FRAME_GENERAL e ⟨regs, args.reverse ++ self :: c :: rest⟩ = .error x ⟨r, rest⟩ := by
+  simp [_PY_FRAME_GENERAL, bind, EStateM.bind, callStack_pop regs c self args rest e.oparg hlen, BM.lift, hp]
+
+/-- `CALL_PY_GENERAL` (`:4498-4506`: `_CHECK_PEP_523 + _CHECK_FUNCTION_VERSION +
+_CHECK_RECURSION_REMAINING + _PY_FRAME_GENERAL + _SAVE_RETURN_OFFSET + _PUSH_FRAME`) on
+`(callable, self_or_null, args[oparg])` does what the generic `CALL` does, for every live callable,
+every `self_or_null`, every runtime and every object model: when the callable is not a function, or
+is one whose `func_version` is not the cached one (`:4485-4490`), or the recursion budget is down to
+1 (`:4611-4613`), it exits to `CALL`; otherwise it builds the same frame with
+`_PyEvalFramePushAndInit` (or fails the same way, operands consumed) and enters it in the state
+`CALL`'s `DISPATCH_INLINED` reaches. Not hypotheses on the function: any code, defaults or
+keyword-only parameters, since both paths run `initialize_locals`. A form that skipped the version
+guard, the recursion check, `self`, or the return offset would differ in one of the cases. -/
+def CallPyGeneralRefines : Prop := ∀ (e : Env) (regs : Regs) (c self : Val) (args rest : List Val),
+  args.length = e.oparg → Live regs.rt c → regs.next = e.this + instrSize e.opcode →
+  afterInstr e.P (execOp e .CALL_PY_GENERAL ⟨regs, args.reverse ++ self :: c :: rest⟩) =
+    afterInstr e.P (execOp e .CALL ⟨regs, args.reverse ++ self :: c :: rest⟩)
+
+theorem callPyGeneralRefines_proven : CallPyGeneralRefines := by
+  intro e regs c self args rest hlen hc hn
+  simp only [execOp]
+  by_cases hf : ∃ a fo, c = .ref a ∧ regs.rt.heap[a]? = some (.func fo) ∧ fo.version = cacheNat e 0
+  · obtain ⟨a, fo, rfl, ho, hv⟩ := hf
+    have hgen := (callGenericRules_proven e regs (.ref a) self args rest hlen hc).2.1 a fo rfl ho
+    simp only [execOp] at hgen
+    by_cases hr : 1 < regs.rt.pyRecursionRemaining
+    · have hrs := recRemaining_pass ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ hr
+      cases hp : pushInit e (.ref a) (withSelf self args) [] regs with
+      | ok nf r =>
+        obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hp
+        have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
+        have hspec : CALL_PY_GENERAL e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+            .ok () (enteredSt e nf r rest) := by
+          simp only [CALL_PY_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [fnVersion_pass e regs self args rest hlen a fo ho hv]
+          simp only
+          rw [hrs]
+          simp only
+          rw [pyFrameGeneral_ok e regs _ self args rest hlen nf r hp]
+          simp only
+          have := pushFrame_entered e nf r rest hnext
+          simp only [bind, EStateM.bind] at this
+          exact this
+        rw [wd_ok hspec, hgen.1 nf r hp, dispatch_entered e nf r rest (by omega)]
+        rfl
+      | error x r =>
+        have hspec : CALL_PY_GENERAL e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ = .error x ⟨r, rest⟩ := by
+          simp only [CALL_PY_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [fnVersion_pass e regs self args rest hlen a fo ho hv]
+          simp only
+          rw [hrs]
+          simp only
+          rw [pyFrameGeneral_err e regs _ self args rest hlen x r hp]
+        by_cases hx : x = .deopt
+        · subst hx; rw [wd_deopt hspec]
+        · rw [wd_err hspec hx, hgen.2 x r hp]
+    · have hspec : CALL_PY_GENERAL e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+          .error .deopt ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ := by
+        simp only [CALL_PY_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [fnVersion_pass e regs self args rest hlen a fo ho hv]
+        simp only
+        rw [recRemaining_fail _ (by simpa using hr)]
+      rw [wd_deopt hspec]
+  · have hb : ∀ a fo, c = .ref a → regs.rt.heap[a]? = some (.func fo) → fo.version ≠ cacheNat e 0 :=
+      fun a fo h1 h2 h3 => hf ⟨a, fo, h1, h2, h3⟩
+    have hspec : CALL_PY_GENERAL e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+        .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+      simp only [CALL_PY_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [fnVersion_fail e regs c self args rest hlen hc hb]
+    rw [wd_deopt hspec]
+
+
 end PyLean.Bytecode
