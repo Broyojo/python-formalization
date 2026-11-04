@@ -1,0 +1,99 @@
+id: bytecode-posonly-keyword-borrowed-qualname
+title: "positional_only_passed_as_keyword formats a borrowed func->func_qualname after running a str subclass's __eq__, which can reassign f.__qualname__ and free it (use after free)"
+priority: P3
+kind: memory-safety
+module: bytecode
+files: [Python/ceval.c, Objects/funcobject.c]
+functions: ["initialize_locals", "positional_only_passed_as_keyword", "func_set_qualname"]
+summary: |
+  When a call passes a keyword that names no parameter, the function has positional-only
+  parameters and no **kwargs, `initialize_locals` calls
+  `positional_only_passed_as_keyword(tstate, co, kwcount, kwnames, func->func_qualname)`
+  (Python/ceval.c:1844-1846 in 3.15.2), passing the qualified name as a borrowed pointer. Inside,
+  each positional-only name is compared with each keyword by
+  `PyObject_RichCompareBool(posonly_name, kwname, Py_EQ)` (:1697). A keyword can be an instance of
+  a str subclass (`f(**{S('zz'): 2})`: `_PyStack_UnpackDict` keeps any key whose type has
+  Py_TPFLAGS_UNICODE_SUBCLASS), and the comparison then runs that subclass's `__eq__`, which is
+  Python code. If it assigns `f.__qualname__`, `func_set_qualname` (Objects/funcobject.c:743-761)
+  drops the function's reference to the old name; when the function held the last one (any
+  name assigned at run time rather than the code object's interned `co_qualname`) the string is
+  freed. If `__eq__` also returned true, the function goes on to format
+  "%U() got some positional-only arguments passed as keyword arguments: '%U'" (:1721-1724) with
+  the freed string.
+
+  On a release build the freed string is usually intact and the message shows the old name. With
+  PYTHONMALLOC=debug (freed memory overwritten) 3.15.2 prints a corrupted name: the message
+  becomes ") got some positional-only arguments ...". main no longer has the defect: it passes the
+  function object and reads `func->func_qualname` where it formats the message
+  (vendor/cpython-main Python/ceval.c:1742-1745, :1789-1792), part of the free-threading work on
+  function attributes, and prints "replaced() got ...".
+
+  The other messages of `initialize_locals` read `func->func_qualname` at the point of use, or
+  run no Python code between the read and the use (`too_many_positional`, `missing_arguments`,
+  and `%U` formatted before `%S` calls `PyObject_Str`).
+likelihood: |
+  Low. It needs a str subclass key passed through ** whose __eq__ both reassigns the called
+  function's __qualname__ and reports a match with a positional-only name, on a function whose
+  __qualname__ was itself assigned before. Pure Python, no ctypes.
+maybe_intended: "No. Reading freed memory from pure Python; main reads the field at the point of use."
+reproducer: |
+  import os, subprocess, sys
+  child = r'''
+  class S(str):
+      def __eq__(self, other):
+          f.__qualname__ = "replaced"
+          return True
+      def __hash__(self):
+          return hash(str(self))
+  def f(a, /):
+      return a
+  f.__qualname__ = "".join(["q"] * 40)
+  try:
+      f(1, **{S("zz"): 2})
+  except TypeError as e:
+      print("MSG", str(e), flush=True)
+  '''
+  env = dict(os.environ, PYTHONMALLOC="debug")
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True, env=env)
+  out = p.stdout.strip()
+  print("child returncode:", p.returncode, "stdout:", out)
+  tail = "() got some positional-only arguments passed as keyword arguments: 'zz'"
+  ok_names = ("q" * 40 + tail, "replaced" + tail)
+  if p.returncode != 0 or not out.startswith("MSG ") or out[4:] not in ok_names:
+      print("REPRODUCED bytecode-posonly-keyword-borrowed-qualname")
+expected: "TypeError naming the function by its old ('qqq...') or new ('replaced') __qualname__, never freed memory."
+observed: |
+  python3 (3.15.2, release build) with PYTHONMALLOC=debug: "MSG ) got some positional-only
+  arguments passed as keyword arguments: 'zz'" (the name read from the freed, overwritten
+  string), rc 0. REPRODUCED. Without PYTHONMALLOC=debug the message shows the stale old name.
+  main (vendor/cpython-main/python.exe, release build) with PYTHONMALLOC=debug:
+  "MSG replaced() got some positional-only arguments passed as keyword arguments: 'zz'". NOT
+  REPRODUCED: fixed on main.
+promised_by: "Invariant: no read of freed memory from pure-Python code."
+cause: |
+  Python/ceval.c:1844-1846 (3.15.2) passes `func->func_qualname` borrowed; :1697 runs
+  `PyObject_RichCompareBool`, which can run a str subclass's `__eq__`; :1721-1724 formats the
+  borrowed pointer afterwards. func_set_qualname (Objects/funcobject.c:756-759) decrefs the old
+  name.
+possible_fix: |
+  What main does: pass `func` and read `func->func_qualname` at the `_PyErr_Format` call, or take
+  a strong reference (`Py_NewRef(func->func_qualname)`) for the duration of the call.
+duplicates:
+  issues: ["python/cpython#101967 (closed 2024: a segfault in positional_only_passed_as_keyword, a different cause)",
+           "python/cpython#153297 and #154821 (free-threading races on func_set_qualname; not this single-threaded path)"]
+  queries: ["gh search issues --repo python/cpython positional_only_passed_as_keyword",
+            "gh search issues --repo python/cpython func_qualname use after free",
+            "gh search prs --repo python/cpython positional_only_passed_as_keyword",
+            "gh search prs --repo python/cpython func_qualname positional",
+            "gh search issues --repo python/cpython positional-only arguments passed as keyword qualname",
+            "gh search prs --repo python/cpython qualname free-threading function",
+            "gh search issues --repo python/cpython str subclass __eq__ keyword argument crash",
+            "gh search prs --repo python/cpython initialize_locals",
+            "gh search prs --repo python/cpython FT_ATOMIC_LOAD_PTR_ACQUIRE func_qualname",
+            "gh issue view 153297, gh issue view 154821, gh pr view 153335/154826/154829 (funcobject.c only)"]
+  note: "Fixed on main by a change to ceval.c that the searches did not identify (the 3.15 backport of gh-154821 touches only funcobject.c). bugforge-results/README.md has no positional_only or qualname entry."
+reproduces:
+  python3 (3.15.2): REPRODUCED (corrupted name with PYTHONMALLOC=debug)
+  main (vendor/cpython-main/python.exe): NOT REPRODUCED (fixed)
+lean:
+  model: "lean/PyLean/Bytecode/Ceval.lean bindKeywords: posonlyPassedAsKeyword gets the qualname read before its comparisons, as 3.15.2 does, and PosonlyKeywordRules runs PyObject_RichCompareBool through KwHooks.eq. The model holds values, not reference counts, so it shows the stale name, not the freed memory; no registry entry refutes it."

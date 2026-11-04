@@ -1192,6 +1192,15 @@ def callMethod (tp name : String) (self0 : Val) (args : List Val) (kw : List Str
     let d ← mkDict
     om.dictUpdate ctx d self
     pure d
+  | "str", "__eq__" | "str", "__ne__" =>
+    -- the slot wrapper of `unicode_richcompare` (`Objects/unicodeobject.c`): `NotImplemented`
+    -- unless both operands pass `PyUnicode_Check`, else the comparison of the text
+    match args with
+    | [o] =>
+      match self, ← payload o with
+      | .str a, .str b => pure (.bool (if name == "__eq__" then a == b else a != b))
+      | _, _ => pure .notImpl
+    | _ => typeError s!"expected 1 argument, got {args.length}"
   | "str", _ =>
     let s := match self with
       | .str x => x
@@ -2142,7 +2151,10 @@ def callDictImpl (f callargs kwargs : Val) : RM Val := do
     | none => typeError s!"'{← tpName f}' object is not callable"
   | none =>
     let (kw, kwvals) ← unpackKwargs kwargs
-    om.call ctx f (pos ++ kwvals) kw
+    -- `PyObject_Vectorcall` takes the names as text here (`ObjModel.call`); the key objects
+    -- themselves reach `initialize_locals` through `CALL_FUNCTION_EX`'s inlined path.
+    let rt ← get
+    om.call ctx f (pos ++ kwvals) (kw.map fun k => (kwKeyName rt k).getD "")
 
 /-- `PyObject_LengthHint(o, defaultvalue)`, `Objects/abstract.c:95-152`. `_PyObject_HasLen` is
 asked through `PyObject_Length` itself: a type with no `__len__` raises `TypeError`, which the hint

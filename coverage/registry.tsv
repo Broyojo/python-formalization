@@ -2423,6 +2423,28 @@ typeobj-exc-prep-reraise-short	proven	Objects/exceptions.c	_PyExc_PrepReraiseSta
 typeobj-exc-prep-reraise-validates	proven	Objects/exceptions.c	PyUnstable_Exc_PrepReraiseStar
 typeobj-exc-same-metadata-refl	proven	Objects/exceptions.c	
 typeobj-exc-same-metadata-notes	refuted	Objects/exceptions.c	is_same_exception_metadata,_PyExc_PrepReraiseStar,exception_group_projection
+gen-send-ex-outcomes	proven	Objects/genobject.c	gen_send_ex,gen_send_ex2
+gen-send-stop-iteration	proven	Objects/genobject.c	gen_send,gen_set_stop_iteration
+gen-throw-current-outcomes	proven	Objects/genobject.c	gen_throw_current_exception,gen_set_stop_iteration
+gen-close-outcomes	proven	Objects/genobject.c	gen_close,is_resume,gen_clear_frame,gen_send_ex2
+gen-close-iter-outcomes	proven	Objects/genobject.c	gen_close_iter
+gen-set-exception-cases	proven	Objects/genobject.c	gen_set_exception
+gen-throw-outcomes	proven	Objects/genobject.c	_gen_throw
+gen-throw-args	proven	Objects/genobject.c	gen_throw
+gen-throw-arity	proven	Objects/genobject.c	gen_throw
+gen-finalize-outcomes	proven	Objects/genobject.c	gen_finalize
+gen-awaitable-iter-outcomes	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
+gen-async-unwrap-outcomes	proven	Objects/genobject.c	async_gen_unwrap_value,_PyAsyncGenValueWrapperNew
+gen-async-init-hooks-outcomes	proven	Objects/genobject.c	async_gen_init_hooks
+gen-async-methods-outcomes	proven	Objects/genobject.c	async_gen_anext,async_gen_asend,async_gen_aclose,async_gen_athrow,async_gen_athrow_new
+gen-asend-send-outcomes	proven	Objects/genobject.c	async_gen_asend_send,async_gen_asend_iternext
+gen-asend-throw-outcomes	proven	Objects/genobject.c	async_gen_asend_throw
+gen-asend-close-outcomes	proven	Objects/genobject.c	async_gen_asend_close
+gen-athrow-send-outcomes	proven	Objects/genobject.c	async_gen_athrow_send
+gen-athrow-iternext-outcomes	proven	Objects/genobject.c	async_gen_athrow_iternext
+gen-athrow-throw-outcomes	proven	Objects/genobject.c	async_gen_athrow_throw
+gen-athrow-close-outcomes	proven	Objects/genobject.c	async_gen_athrow_close
+gen-dealloc-finalizers	proven	Objects/genobject.c	gen_dealloc,async_gen_asend_dealloc,async_gen_asend_finalize,async_gen_athrow_dealloc,async_gen_athrow_finalize
 gen-send-rejected-no-effect	proven	Objects/genobject.c	gen_send_ex,PyGen_am_send
 gen-already-executing	proven	Objects/genobject.c	gen_send_ex,gen_raise_already_executing_error
 gen-resume-sees-executing	proven	Objects/genobject.c	gen_send_ex2,gen_send_ex,gen_close,_gen_throw
@@ -2460,7 +2482,7 @@ gen-throw-lookup-sees-executing	proven	Objects/genobject.c	_gen_throw
 gen-close-iter-foreign	proven	Objects/genobject.c	gen_close_iter
 gen-pep479-conversion	proven	Python/intrinsics.c	stopiteration_error
 gen-frame-never-raises-stopiteration	refuted	Objects/genobject.c	
-gen-name-setters	proven	Objects/genobject.c	gen_get_name,gen_set_name,gen_get_qualname,gen_set_qualname
+gen-name-setters	proven	Objects/genobject.c	gen_set_name,gen_set_qualname
 gen-make-coro-kinds	proven	Objects/genobject.c	make_gen,_Py_MakeCoro
 gen-cr-origin-take	proven	Objects/genobject.c	_PyCoro_ComputeOrigin
 gen-awaitable-iter-result	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
@@ -2603,6 +2625,9 @@ bytecode-traceback-here	proven	Python/bytecodes.c
 bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
 bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
 bytecode-bind-keywords	proven	Python/ceval.c	initialize_locals
+bytecode-find-kw-slot	proven	Python/ceval.c	initialize_locals
+bytecode-initialize-locals	proven	Python/ceval.c	initialize_locals
+bytecode-too-many-positional	proven	Python/ceval.c	too_many_positional
 bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
 bytecode-unexpected-keyword	proven	Python/ceval.c	
 bytecode-resume	proven	Python/bytecodes.c	opcode:RESUME,opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM,opcode:RESUME_CHECK,opcode:_RESUME_CHECK,opcode:RESUME_CHECK_JIT

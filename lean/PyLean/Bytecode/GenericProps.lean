@@ -257,10 +257,10 @@ shim holding `self` becomes the frame `__init__` returns to, the caller records
 `return_offset = 1 + INLINE_CACHE_ENTRIES_CALL`, and one recursion unit is taken for the shim. -/
 def CreateInitFrameRules : Prop := ∀ (e : Env) (regs : Regs) (init self : Val) (args rest : List Val),
   args.length = e.oparg →
-  (∀ x rt, framePushAndInit e.P init .null (self :: args) [] regs.rt = .error x rt →
+  (∀ x rt, framePushAndInit e.P (kwHooksOf e.om e.ctx) init .null (self :: args) [] regs.rt = .error x rt →
     _CREATE_INIT_FRAME e ⟨regs, args.reverse ++ self :: init :: rest⟩ =
       .error x ⟨{ regs with rt := rt }, rest⟩) ∧
-  (∀ nf rt, framePushAndInit e.P init .null (self :: args) [] regs.rt = .ok nf rt →
+  (∀ nf rt, framePushAndInit e.P (kwHooksOf e.om e.ctx) init .null (self :: args) [] regs.rt = .ok nf rt →
     _CREATE_INIT_FRAME e ⟨regs, args.reverse ++ self :: init :: rest⟩ = .ok nf
       ⟨{ regs with
           rt := { rt with pyRecursionRemaining := rt.pyRecursionRemaining - 1 }
