@@ -87,4 +87,97 @@ theorem forStmt_proven : ForStmt := by
         items_call_null (by rw [call_rule, h3])])]
     rfl
 
+/-! ### `compound_stmt` -/
+
+/-- `compound_stmt` (`Grammar/python.gram:137-145`), dispatch by positive lookahead, in order:
+```
+    | &('def' | '@' | 'async') function_def
+    | &'if' if_stmt
+    | &('class' | '@') class_def
+    | &('with' | 'async') with_stmt
+    | &('for' | 'async') for_stmt
+    | &'try' try_stmt
+    | &'while' while_stmt
+    | match_stmt
+```
+The lookaheads consume nothing (the `('def' | '@' | 'async')` groups are the artificial rules
+`_tmp_4` to `_tmp_7`). Clauses: the first lookahead holding and `function_def` succeeding gives
+its statement; at `if`, `if_stmt`'s; at a decorator, `function_def` failing falls through to
+`class_def` (the `@` lookahead of the third alternative); and with every lookahead failing,
+`match_stmt` decides. -/
+def CompoundStmt : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false → p.level ≠ MAXSTACK →
+  (∀ (x v : Ast) (s0 s1 : PS), callRule (f + 7) 283 p.enter = (x, s0) → x ≠ .null →
+    callRule (f + 6) 37 { s0 with mark := p.mark } = (v, s1) → v ≠ .null →
+    s1.errorIndicator = false → callRule (f + 12) 10 p = (v, s1.leave)) ∧
+  (∀ (v : Ast) (ti : Token) (s0 s1 s2 : PS), callRule (f + 7) 283 p.enter = (.null, s0) →
+    s0.errorIndicator = false → expectToken 700 { s0 with mark := p.mark } = (.tok ti, s1) →
+    callRule (f + 5) 54 { s1 with mark := p.mark } = (v, s2) → v ≠ .null →
+    s2.errorIndicator = false → callRule (f + 12) 10 p = (v, s2.leave)) ∧
+  (∀ (x y v : Ast) (s0 s1 s2 s3 s4 : PS), callRule (f + 7) 283 p.enter = (x, s0) → x ≠ .null →
+    callRule (f + 6) 37 { s0 with mark := p.mark } = (.null, s1) → s1.errorIndicator = false →
+    expectToken 700 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 5) 284 { s2 with mark := p.mark } = (y, s3) → y ≠ .null →
+    callRule (f + 4) 35 { s3 with mark := p.mark } = (v, s4) → v ≠ .null →
+    s4.errorIndicator = false → callRule (f + 12) 10 p = (v, s4.leave)) ∧
+  (∀ (v : Ast) (s0 s1 s2 s3 s4 s5 s6 s7 : PS),
+    callRule (f + 7) 283 p.enter = (.null, s0) → s0.errorIndicator = false →
+    expectToken 700 { s0 with mark := p.mark } = (.null, s1) → s1.errorIndicator = false →
+    callRule (f + 5) 284 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 4) 285 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = false →
+    callRule (f + 3) 286 { s3 with mark := p.mark } = (.null, s4) → s4.errorIndicator = false →
+    expectToken 674 { s4 with mark := p.mark } = (.null, s5) → s5.errorIndicator = false →
+    expectToken 707 { s5 with mark := p.mark } = (.null, s6) → s6.errorIndicator = false →
+    callRule f 65 { s6 with mark := p.mark } = (v, s7) → v ≠ .null →
+    callRule (f + 12) 10 p = (v, s7.leave))
+
+theorem compoundStmt_proven : CompoundStmt := by
+  intro f p he hl
+  have he' : p.enter.errorIndicator = false := he
+  rw [callRule_plain rfl rfl rfl rfl rfl he hl]
+  simp only [show ruleOf 10 = r10 from rfl, r10]
+  have nn : ∀ v : Ast, v ≠ .null → nonNull v = true := fun v hv => by
+    cases v <;> simp_all [nonNull]
+  refine ⟨fun x v s0 s1 h0 hx h1 hv h1e => ?_, fun v ti s0 s1 s2 h0 h0e h1 h2 hv h2e => ?_,
+    fun x y v s0 s1 s2 s3 s4 h0 hx h1 h1e h2 h2e h3 hy h4 hv h4e => ?_,
+    fun v s0 s1 s2 s3 s4 s5 s6 s7 h0 h0e h1 h1e h2 h2e h3 h3e h4 h4e h5 h5e h6 h6e h7 hv => ?_⟩
+  · rw [alts_ok (by rfl) he' (by
+      dsimp only
+      rw [items_look (by rw [call_rule, h0]) (nn x hx), PS.enter_mark, items_call (by rw [call_rule, h1]) hv,
+        items_nil]), altResult_none1 rfl rfl]
+    rfl
+  · rw [alts_fail (by rfl) he' (by
+      dsimp only; rw [items_look_fail (b := true) (by rw [call_rule, h0]) rfl, PS.enter_mark]),
+      alts_ok (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = false from h0e) (by
+        dsimp only
+        rw [items_look (b := true) (by rw [call_tok, h1]) rfl, items_call (by rw [call_rule, h2]) hv,
+          items_nil]), altResult_none1 rfl rfl]
+    rfl
+  · rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_look (by rw [call_rule, h0]) (nn x hx), PS.enter_mark, items_call_null (by rw [call_rule, h1])]),
+      alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_tok, h2]) rfl]),
+      alts_ok (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e) (by
+        dsimp only
+        rw [items_look (by rw [call_rule, h3]) (nn y hy), items_call (by rw [call_rule, h4]) hv,
+          items_nil]), altResult_none1 rfl rfl]
+    rfl
+  · rw [alts_fail (by rfl) he' (by
+      dsimp only; rw [items_look_fail (b := true) (by rw [call_rule, h0]) rfl, PS.enter_mark]),
+      alts_fail (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = false from h0e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_tok, h1]) rfl]),
+      alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_rule, h2]) rfl]),
+      alts_fail (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_rule, h3]) rfl]),
+      alts_fail (by rfl) (show ({ s3 with mark := p.mark } : PS).errorIndicator = false from h3e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_rule, h4]) rfl]),
+      alts_fail (by rfl) (show ({ s4 with mark := p.mark } : PS).errorIndicator = false from h4e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_tok, h5]) rfl]),
+      alts_fail (by rfl) (show ({ s5 with mark := p.mark } : PS).errorIndicator = false from h5e) (by
+        dsimp only; rw [items_look_fail (b := true) (by rw [call_tok, h6]) rfl]),
+      alts_ok (by rfl) (show ({ s6 with mark := p.mark } : PS).errorIndicator = false from h6e) (by
+        dsimp only; rw [items_call (by rw [call_rule, h7]) hv, items_nil]), altResult_none1 rfl rfl]
+    rfl
+
 end PyLean.PyGrammar.Peg

@@ -29,6 +29,8 @@ theorem ite_f {α : Sort _} {c : Prop} [Decidable c] {a b : α} (h : ¬c) : (if 
 /-- `p->level++`, on entry to a rule function. -/
 def PS.enter (p : PS) : PS := { p with level := p.level + 1 }
 
+theorem PS.enter_mark (p : PS) : p.enter.mark = p.mark := rfl
+
 /-- `p->level--`, on the way out. -/
 def PS.leave (q : PS) : PS := { q with level := q.level - 1 }
 
