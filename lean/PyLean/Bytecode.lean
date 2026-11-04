@@ -25,6 +25,7 @@ import PyLean.Bytecode.SpecCallGeneric
 import PyLean.Bytecode.SpecLoadAttr
 import PyLean.Bytecode.AttrRecursion
 import PyLean.Bytecode.SpecImport
+import PyLean.Bytecode.SpecCallPy
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -645,6 +646,61 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:3675-3717"
     status := .proven, prop := ``MatchRules, thm := some ``matchRules_proven
     notes := "_PyEval_MatchClass and _PyEval_MatchKeys themselves are Python/ceval.c rows." }
+,
+  -- The specialized Python calls against their generic forms (SpecCallPy.lean).
+  { id := "bytecode-call-py-general", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_PY_GENERAL", op "_CHECK_FUNCTION_VERSION", op "_CHECK_RECURSION_REMAINING",
+      op "_PY_FRAME_GENERAL", op "_SAVE_RETURN_OFFSET", op "_PUSH_FRAME"]
+    statement := "For every live callable, self_or_null, argument list, runtime and object model, and next_instr = this_instr + INSTRUCTION_SIZE: what the machine does after CALL_PY_GENERAL (carry on, raise, return, stop) is what it does after the generic CALL. It exits to CALL on a non-function or a stale func_version and when py_recursion_remaining <= 1; otherwise _PyEvalFramePushAndInit builds the same frame (or fails the same way, operands consumed) and _SAVE_RETURN_OFFSET + _PUSH_FRAME leave exactly the state CALL's return_offset = INSTRUCTION_SIZE + DISPATCH_INLINED + start_frame leave, recursion counter decremented once. _PyEvalFramePushAndInit is proven to leave py_recursion_remaining alone (KeepsRec), so the check before it and start_frame's after it see the same budget."
+    source := "Python/bytecodes.c:4460-4506, :4611-4613, :4628-4642, :6136-6140; DISPATCH_INLINED, Python/ceval_macros.h; _PyEvalFramePushAndInit, Python/ceval.c:2033-2068"
+    status := .proven, prop := ``CallPyGeneralRefines, thm := some ``callPyGeneralRefines_proven
+    notes := "No PEP 523 eval-frame hook is modelled, so _CHECK_PEP_523 never exits; it is not listed." },
+  { id := "bytecode-call-bound-method-general", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_BOUND_METHOD_GENERAL", op "_CHECK_METHOD_VERSION", op "_EXPAND_METHOD"]
+    statement := "For every live callable whose method objects are well formed (im_self not NULL, im_func live), every runtime and object model: what the machine does after CALL_BOUND_METHOD_GENERAL is what it does after CALL. It exits unless the callable is a method object whose im_func is a function with the cached version and self_or_null is NULL, and with py_recursion_remaining <= 1; otherwise it splits the method into im_func and im_self as CALL's _MAYBE_EXPAND_METHOD does and builds and enters the same frame."
+    source := "Python/bytecodes.c:4508-4539"
+    status := .proven, prop := ``CallBoundMethodGeneralRefines, thm := some ``callBoundMethodGeneralRefines_proven },
+  { id := "bytecode-call-py-exact-args", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_PY_EXACT_ARGS", op "_CHECK_FUNCTION_EXACT_ARGS", op "_CHECK_STACK_SPACE",
+      op "_INIT_CALL_PY_EXACT_ARGS"]
+    statement := "For every live callable, runtime and object model, when the function the version guard lets through has SIMPLE_FUNCTION code (no *args, **kwargs or keyword-only parameters, CO_OPTIMIZED: the invariant specialize_py_call maintains): what the machine does after CALL_PY_EXACT_ARGS is what it does after CALL. It exits on a non-function, a stale version, co_argcount != oparg + (self_or_null != NULL), no data-stack space and py_recursion_remaining <= 1; otherwise the frame _INIT_CALL_PY_EXACT_ARGS fills by copying the arguments (NULL locals) is the frame _PyEvalFramePushAndInit/initialize_locals builds, entered the same way."
+    source := "Python/bytecodes.c:4596-4626, :4659-4669; function_kind and specialize_py_call, Python/specialize.c:1472-1481, :1754-1792"
+    status := .proven, prop := ``CallPyExactArgsRefines, thm := some ``callPyExactArgsRefines_proven
+    notes := "The SIMPLE_FUNCTION hypothesis is necessary: the copy leaves a *args or keyword-only local NULL where initialize_locals fills it." },
+  { id := "bytecode-call-bound-method-exact-args", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_BOUND_METHOD_EXACT_ARGS", op "_CHECK_CALL_BOUND_METHOD_EXACT_ARGS",
+      op "_INIT_CALL_BOUND_METHOD_EXACT_ARGS"]
+    statement := "For every live callable with well-formed method objects whose im_func satisfies the SIMPLE_FUNCTION invariant: what the machine does after CALL_BOUND_METHOD_EXACT_ARGS is what it does after CALL. It exits unless the callable is a method object and self_or_null is NULL; otherwise it splits the method and is then CALL_PY_EXACT_ARGS on im_func and im_self, its later exits restarting CALL on the split stack (the flush), which CALL would have made itself."
+    source := "Python/bytecodes.c:4577-4590, :4644-4657"
+    status := .proven, prop := ``CallBoundMethodExactArgsRefines, thm := some ``callBoundMethodExactArgsRefines_proven },
+  { id := "bytecode-call-kw-py", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_KW_PY", op "_CHECK_FUNCTION_VERSION_KW", op "_PY_FRAME_KW"]
+    statement := "For every live callable, argument list and kwnames tuple of names, every runtime and object model: what the machine does after CALL_KW_PY is what it does after CALL_KW. It exits on a non-function, a stale version and py_recursion_remaining <= 1 (the check python/cpython#137887 added); otherwise it builds the frame with the keyword names and enters it as CALL_KW does, or fails as it does."
+    source := "Python/bytecodes.c:5474-5519"
+    status := .proven, prop := ``CallKwPyRefines, thm := some ``callKwPyRefines_proven },
+  { id := "bytecode-call-kw-bound-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_KW_BOUND_METHOD", op "_CHECK_METHOD_VERSION_KW", op "_EXPAND_METHOD_KW", op "_PY_FRAME_KW"]
+    statement := "CALL_KW_BOUND_METHOD completes exactly when CALL_KW does. False: it has no _CHECK_RECURSION_REMAINING, so with py_recursion_remaining = 0 it pushes the method's frame where CALL_KW's start_frame raises RecursionError (python/cpython#155151, fix in PR 156346)."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:5521-5551, :4628-4642"
+    status := .refuted, prop := ``CallKwBoundMethodRefines, thm := some ``callKwBoundMethodRefines_refuted
+    bug := some "bytecode-call-ex-kw-bound-recursion" },
+  { id := "bytecode-call-kw-bound-budget", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_KW_BOUND_METHOD", op "_CHECK_METHOD_VERSION_KW", op "_EXPAND_METHOD_KW"]
+    statement := "The narrowing of bytecode-call-kw-bound-recursion: with py_recursion_remaining > 0, for every live callable with well-formed method objects, every argument list and kwnames tuple, runtime and object model, what the machine does after CALL_KW_BOUND_METHOD is what it does after CALL_KW: it exits unless the callable is a method object with a function im_func of the cached version and a NULL self_or_null, and otherwise splits it and builds and enters CALL_KW's frame."
+    source := "Python/bytecodes.c:5521-5551"
+    status := .proven, prop := ``CallKwBoundMethodRefinesWithBudget, thm := some ``callKwBoundMethodRefinesWithBudget_proven },
+  { id := "bytecode-call-ex-py-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX"]
+    statement := "CALL_EX_PY completes exactly when CALL_FUNCTION_EX does. False: it has no _CHECK_RECURSION_REMAINING, so with py_recursion_remaining = 0 it pushes the function's frame where CALL_FUNCTION_EX's start_frame raises RecursionError (python/cpython#155151, fix in PR 156346)."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:5734-5771, :4628-4642"
+    status := .refuted, prop := ``CallExPyRefines, thm := some ``callExPyRefines_refuted
+    bug := some "bytecode-call-ex-kw-bound-recursion" },
+  { id := "bytecode-call-ex-py-budget", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX"]
+    statement := "The narrowing of bytecode-call-ex-py-recursion: with an exact tuple as callargs and py_recursion_remaining > 0, for every live callable, every kwargs (NULL or a dict), runtime and object model, what the machine does after CALL_EX_PY is what it does after CALL_FUNCTION_EX: it exits on anything but a Python function; on one it unpacks the dict with _PyStack_UnpackDict (refusing non-str keys the same way) and builds and enters CALL_FUNCTION_EX's frame with _PyEvalFramePushAndInit_Ex, or fails as it does."
+    source := "Python/bytecodes.c:5734-5771; _PyEvalFramePushAndInit_Ex, Python/ceval.c:2074-2125"
+    status := .proven, prop := ``CallExPyRefinesWithBudget, thm := some ``callExPyRefinesWithBudget_proven
+    notes := "A non-tuple callargs goes through the same _MAKE_CALLARGS_A_TUPLE on both paths (stated for CALL_FUNCTION_EX in bytecode-call-generic); this entry does not state the CALL_EX_PY side of that step." }
 ]
 
 end PyLean.Bytecode

@@ -1157,4 +1157,91 @@ theorem callPyExactArgsRefines_proven : CallPyExactArgsRefines := by
     rw [wd_deopt hspec]
 
 
+section
+variable (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+
+theorem boundExact_pass (hlen : args.length = e.oparg) (a : Addr) (f s : Val)
+    (ho : regs.rt.heap[a]? = some (.method f s)) :
+    _CHECK_CALL_BOUND_METHOD_EXACT_ARGS e ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ =
+      .ok () ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ := by
+  simp only [_CHECK_CALL_BOUND_METHOD_EXACT_ARGS, guardTop, bind, EStateM.bind,
+    callStack_peek regs (.ref a) .null args rest e.oparg hlen]
+  simp [BM.lift, RM.lift, methodParts, getObj, ho, bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift,
+    MonadLift.monadLift, deoptIf]
+
+theorem boundExact_fail (hlen : args.length = e.oparg) (hc : Live regs.rt c)
+    (hn : ¬ ∃ a f s, c = .ref a ∧ regs.rt.heap[a]? = some (.method f s) ∧ self = .null) :
+    _CHECK_CALL_BOUND_METHOD_EXACT_ARGS e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+      .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+  simp only [_CHECK_CALL_BOUND_METHOD_EXACT_ARGS, guardTop, bind, EStateM.bind,
+    callStack_peek regs c self args rest e.oparg hlen]
+  by_cases hs : self = .null
+  · subst hs
+    cases c with
+    | ref a =>
+      obtain ⟨o, ho⟩ := live_obj hc
+      cases o with
+      | method f s => exact absurd ⟨a, f, s, rfl, ho, rfl⟩ hn
+      | _ =>
+        simp [BM.lift, RM.lift, methodParts, getObj, ho, bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift,
+          MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+    | _ =>
+      simp [BM.lift, RM.lift, methodParts, bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift,
+        MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+  · simp [BM.lift, RM.lift, hs, bind, EStateM.bind, pure, EStateM.pure, liftM, monadLift,
+      MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+end
+
+/-- Once its own guard has passed and the method is split, `CALL_BOUND_METHOD_EXACT_ARGS` is
+`CALL_PY_EXACT_ARGS` on the split stack (`_CHECK_PEP_523` has nothing to do). -/
+theorem boundExact_split (e : Env) (regs : Regs) (args rest : List Val) (hlen : args.length = e.oparg) (a : Addr)
+    (f s : Val) (ho : regs.rt.heap[a]? = some (.method f s)) :
+    CALL_BOUND_METHOD_EXACT_ARGS e ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ =
+      CALL_PY_EXACT_ARGS e ⟨regs, args.reverse ++ s :: f :: rest⟩ := by
+  simp only [CALL_BOUND_METHOD_EXACT_ARGS, CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure,
+    EStateM.pure]
+  rw [boundExact_pass e regs args rest hlen a f s ho]
+  simp only [_INIT_CALL_BOUND_METHOD_EXACT_ARGS]
+  rw [expandMethod_eq e regs .null args rest hlen a f s ho]
+
+/-- `CALL_BOUND_METHOD_EXACT_ARGS` (`:4644-4657`: `_CHECK_PEP_523 + _CHECK_CALL_BOUND_METHOD_EXACT_ARGS
++ _INIT_CALL_BOUND_METHOD_EXACT_ARGS + flush + _CHECK_FUNCTION_VERSION + _CHECK_FUNCTION_EXACT_ARGS +
+_CHECK_STACK_SPACE + _CHECK_RECURSION_REMAINING + _INIT_CALL_PY_EXACT_ARGS + _SAVE_RETURN_OFFSET +
+_PUSH_FRAME`) does what `CALL` does, for every live callable with well-formed method objects, every
+runtime and object model, under the specializer's invariant on `im_func`: unless the callable is a
+method object with `self_or_null` `NULL` (`:4577-4580`) it exits; otherwise it splits the method
+(`:4582-4590`) and is then `CALL_PY_EXACT_ARGS` on `im_func` and `im_self`, whose guards' exits restart
+`CALL` (after the `flush`, on the split stack, which `CALL` itself would have made). -/
+def CallBoundMethodExactArgsRefines : Prop := ∀ (e : Env) (regs : Regs) (c self : Val) (args rest : List Val),
+  args.length = e.oparg → Live regs.rt c → MethodsWF regs.rt c →
+  (∀ a f s, c = .ref a → regs.rt.heap[a]? = some (.method f s) → SimpleAtVersion e regs.rt f) →
+  regs.next = e.this + instrSize e.opcode →
+  afterInstr e.P (execOp e .CALL_BOUND_METHOD_EXACT_ARGS ⟨regs, args.reverse ++ self :: c :: rest⟩) =
+    afterInstr e.P (execOp e .CALL ⟨regs, args.reverse ++ self :: c :: rest⟩)
+
+theorem callBoundMethodExactArgsRefines_proven : CallBoundMethodExactArgsRefines := by
+  intro e regs c self args rest hlen hc hwf hsv hn
+  by_cases hp : ∃ a f s, c = .ref a ∧ regs.rt.heap[a]? = some (.method f s) ∧ self = .null
+  · obtain ⟨a, f, s, rfl, ho, rfl⟩ := hp
+    obtain ⟨hs, hfl⟩ := hwf a f s rfl ho
+    have hexp := (callGenericRules_proven e regs (.ref a) .null args rest hlen hc).1 a f s rfl ho hs rfl hfl
+    have hpy := callPyExactArgsRefines_proven e regs f s args rest hlen hfl (hsv a f s rfl ho) hn
+    rw [hexp, ← hpy]
+    simp only [execOp]
+    have hsplit := boundExact_split e regs args rest hlen a f s ho
+    simp only [execOp] at hexp
+    unfold withDeopt
+    rw [hsplit]
+    split
+    · rw [hexp]
+    · rfl
+  · have hspec : CALL_BOUND_METHOD_EXACT_ARGS e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+        .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+      simp only [CALL_BOUND_METHOD_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [boundExact_fail e regs c self args rest hlen hc hp]
+    simp only [execOp]
+    rw [wd_deopt hspec]
+
+
 end PyLean.Bytecode
