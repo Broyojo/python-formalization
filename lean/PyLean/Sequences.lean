@@ -21,6 +21,8 @@ import PyLean.Sequences.ArrayRepr
 import PyLean.Sequences.ArrayReentrant
 import PyLean.Sequences.ArrayLimits
 import PyLean.Sequences.ArraySubscr
+import PyLean.Sequences.ArraySearchRe
+import PyLean.Sequences.ArrayFromListRe
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`

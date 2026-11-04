@@ -181,6 +181,98 @@ def arrFromListRe {X : Type} (conv : X → Arr × List X → (Arr × List X) × 
 /-- The conversion of a list of plain values, which changes nothing. -/
 def pureConv : PyVal → Arr × List PyVal → (Arr × List PyVal) × PyVal := fun v s => (s, v)
 
+/-! ### Searching with a comparison that runs Python code -/
+
+/-- `PyObject_RichCompareBool(selfi, v, Py_EQ)` of `count`, `index`, `in` and `remove` for a
+`v` whose `__eq__` runs Python code that may change the array: `cmp i a x` is the comparison
+of item `i` (the loops compare each index at most once), read as `x`, while the array is `a`;
+the array the code leaves, and the outcome (an exception of `__eq__` or of the truth test of
+its result included). -/
+abbrev ReCmp := Int → Arr → PyVal → Arr × Py Bool
+
+/-- A comparison that leaves the array alone. -/
+def ReCmp.pure (eqv : PyVal → Py Bool) : ReCmp := fun _ a x => (a, eqv x)
+
+/-- An upper bound on the iterations of the search loops: each compares an index
+`i < Py_SIZE(self) <= PY_SSIZE_T_MAX`. Running out is `PyExc.modelFuel`. -/
+def searchFuel : Nat := 9223372036854775808
+
+/-- The loop of `array_array_count_impl` (arraymodule.c:1354-1367):
+`for (i = 0; i < Py_SIZE(self); i++)`, the size read anew before each item, the item read
+with `getarrayitem` (:1358-1360) and compared (:1361-1366), whose code may change the array the
+next test reads. -/
+def countReLoop (cmp : ReCmp) : Nat → Int → Int → Arr → Arr × Py Int
+  | 0, _, _, a => (a, .error .modelFuel)
+  | fuel + 1, i, c, a =>
+    if i < a.items.length then
+      match a.get i with
+      | .error e => (a, .error e)
+      | .ok x =>
+        match cmp i a x with
+        | (a', .error e) => (a', .error e)
+        | (a', .ok b) => countReLoop cmp fuel (i + 1) (if b then c + 1 else c) a'
+    else (a, .ok c)
+
+/-- `a.count(v)` (`array_array_count_impl`, arraymodule.c:1348-1369): the array the
+comparisons leave, and the count. -/
+def arrCountRe (cmp : ReCmp) (a : Arr) : Arr × Py Int := countReLoop cmp searchFuel 0 0 a
+
+/-- The bound of `index`'s loop besides the size: `i < stop` (`some stop`), none for `in`
+and `remove`. -/
+def stopOk (stop : Option Int) (i : Int) : Bool :=
+  match stop with
+  | some s => decide (i < s)
+  | none => true
+
+/-- The scan of `array_array_index_impl` (arraymodule.c:1399-1415,
+`for (i = start; i < stop && i < Py_SIZE(self); i++)`, "Use Py_SIZE() for every iteration in
+case the array is mutated during PyObject_RichCompareBool()"), of `array_contains` (:1426-1432,
+`cmp == 0 && i < Py_SIZE(self)`) and of `array_array_remove_impl` (:1451-1467): the size is
+read anew before each item; `.ok (some i)` is the first match. -/
+def scanRe (cmp : ReCmp) (stop : Option Int) : Nat → Int → Arr → Arr × Py (Option Int)
+  | 0, _, a => (a, .error .modelFuel)
+  | fuel + 1, i, a =>
+    if stopOk stop i = true ∧ i < a.items.length then
+      match a.get i with
+      | .error e => (a, .error e)
+      | .ok x =>
+        match cmp i a x with
+        | (a', .error e) => (a', .error e)
+        | (a', .ok true) => (a', .ok (some i))
+        | (a', .ok false) => scanRe cmp stop fuel (i + 1) a'
+    else (a, .ok none)
+
+/-- `a.index(v[, start[, stop]])` (`array_array_index_impl`, arraymodule.c:1386-1418): `start`
+and `stop` are adjusted with the size at entry (:1390-1398; Argument Clinic's `slice_index`
+accepts only ints, so no code runs before), then the scan. -/
+def arrIndexRe (cmp : ReCmp) (a : Arr) (start stop : Option Int) : Arr × Py Int :=
+  let n : Int := a.items.length
+  let start := sliceIndex (start.getD 0)
+  let stop := sliceIndex (stop.getD ssizeMax)
+  let start := if start < 0 then (if start + n < 0 then 0 else start + n) else start
+  let stop := if stop < 0 then stop + n else stop
+  match scanRe cmp (some stop) searchFuel start a with
+  | (a', .error e) => (a', .error e)
+  | (a', .ok (some i)) => (a', .ok i)
+  | (a', .ok none) => (a', .error (.valueError "array.index(x): x not in array"))
+
+/-- `v in a` (`array_contains`, arraymodule.c:1421-1434). -/
+def arrContainsRe (cmp : ReCmp) (a : Arr) : Arr × Py Bool :=
+  match scanRe cmp none searchFuel 0 a with
+  | (a', r) => (a', r.map Option.isSome)
+
+/-- `a.remove(v)` (`array_array_remove_impl`, arraymodule.c:1446-1470): the match at `i`
+is deleted with `array_del_slice(self, i, i+1)` from the array as the comparison left it
+(:1461), which clips `i` to that array's size. -/
+def arrRemoveRe (cmp : ReCmp) (a : Arr) : Arr × Py Unit :=
+  match scanRe cmp none searchFuel 0 a with
+  | (a', .error e) => (a', .error e)
+  | (a', .ok (some i)) =>
+    match arrDelSlice a' i (i + 1) with
+    | .ok a'' => (a'', .ok ())
+    | .error e => (a', .error e)
+  | (a', .ok none) => (a', .error (.valueError "array.remove(x): x not in array"))
+
 /-! ### Subscript keys -/
 
 /-- The key of `a[key]`: an object with `__index__` (its value), a slice, or anything else. -/

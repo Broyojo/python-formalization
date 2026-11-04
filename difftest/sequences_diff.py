@@ -132,6 +132,37 @@ class Mut:
         return "M%d" % self.k
 
 
+class EqScript:
+    """A value whose __eq__ runs a script against the array under test: call k does sc[k][0]
+    (1 clear, 2 append a zero item, 3 del a[-1], 4 del a[0]) then returns False (0), True (1)
+    or raises ValueError('eq') (2); past the script it returns False."""
+    __hash__ = None
+
+    def __init__(self, a, sc):
+        self.a, self.sc, self.k = a, sc, 0
+
+    def __eq__(self, other):
+        k = self.k
+        self.k += 1
+        if k >= len(self.sc):
+            return False
+        act, res = self.sc[k]
+        a = self.a
+        if act == 1:
+            a.clear()
+        elif act == 2:
+            a.frombytes(bytes(a.itemsize))
+        elif act == 3:
+            if len(a):
+                del a[-1]
+        elif act == 4:
+            if len(a):
+                del a[0]
+        if res == 2:
+            raise ValueError("eq")
+        return res == 1
+
+
 BOMB = Bomb()
 MUTS = [Mut(k) for k in range(5)]
 
@@ -632,7 +663,8 @@ def gen_array_op(rng, a):
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
                      "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
                      "it_setstate", "append_m", "append_m", "insert_m", "setitem_m", "extend_m",
-                     "fromlist_m", "fromlist_m", "getitem_bad"])
+                     "fromlist_m", "fromlist_m", "getitem_bad", "count_eq", "index_eq", "contains_eq",
+                     "remove_eq"])
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
     if op.endswith("_m"):
@@ -649,6 +681,11 @@ def gen_array_op(rng, a):
         return [op, vs]
     if op == "append":
         return [op, store_val(rng, tc)]
+    if op in ("count_eq", "index_eq", "contains_eq", "remove_eq"):
+        # a value whose __eq__ changes the array (EqScript): call k runs action sc[k][0] and
+        # returns False, True or raises (sc[k][1])
+        return [op, [[rng.choice([0, 0, 0, 1, 2, 2, 3, 4]), rng.choice([0, 0, 0, 1, 2])]
+                     for _ in range(rng.randint(0, n + 3))]]
     if op in ("count", "contains", "remove", "index"):
         v = rng.choice([good_val(rng, tc), any_val(rng, tc), {"o": "Bomb"}])
         if n and rng.random() < 0.5:
@@ -1288,6 +1325,14 @@ def run_array_op(a, op, c, extra):
         return a.index(to_val(args[0]), *args[1:])
     if name == "count":
         return a.count(to_val(args[0]))
+    if name == "count_eq":
+        return a.count(EqScript(a, args[0]))
+    if name == "index_eq":
+        return a.index(EqScript(a, args[0]))
+    if name == "contains_eq":
+        return EqScript(a, args[0]) in a
+    if name == "remove_eq":
+        return a.remove(EqScript(a, args[0]))
     if name == "contains":
         return to_val(args[0]) in a
     if name == "remove":
