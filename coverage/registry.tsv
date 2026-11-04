@@ -620,7 +620,7 @@ sequences-list-slice-assign	proven	Objects/listobject.c	list_ass_subscript_lock_
 sequences-array-slice-assign-agree	refuted	Modules/arraymodule.c	array_ass_subscr
 sequences-array-slice-assign-agree-nonempty	proven	Modules/arraymodule.c	array_ass_subscr
 sequences-array-range-check	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem,ins1,ins,array_resize,array_array_append_impl,array_array_insert_impl,array_new
-sequences-array-subscript	proven	Modules/arraymodule.c	array_subscr,array_ass_subscr,array_item,array_ass_item,getarrayitem,array_del_slice,array_length
+sequences-array-subscript	proven	Modules/arraymodule.c	array_subscr,array_ass_subscr,array_item,array_ass_item,getarrayitem,array_del_slice,array_length,setarrayitem
 sequences-array-insert-agree	proven	Modules/arraymodule.c	array_array_insert_impl,ins,ins1
 sequences-array-search-agree	proven	Modules/arraymodule.c	array_array_index_impl,array_array_count_impl,array_contains,array_array_remove_impl,array_array_pop_impl,getarrayitem,array_del_slice
 sequences-array-non-index-item	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem
@@ -658,9 +658,10 @@ sequences-array-get-slice	proven	Modules/arraymodule.c	array_subscr
 sequences-array-tolist	proven	Modules/arraymodule.c	array_array_tolist_impl,getarrayitem
 sequences-array-ass-slice-checks	proven	Modules/arraymodule.c	array_ass_subscr
 sequences-array-mformat-table	proven	Modules/arraymodule.c	typecode_to_mformat_code
+sequences-array-sizeof-exact	proven	Modules/arraymodule.c	array_array___sizeof___impl,array_resize
 sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
 sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
-sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem
+sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,getarrayitem
 sequences-array-reverse	proven	Modules/arraymodule.c	array_array_reverse_impl
 sequences-array-attrs	proven	Modules/arraymodule.c	array_resize,newarrayobject,newarrayobject_untracked,array_length,array_array___sizeof___impl,array_array_buffer_info_impl,array_get_typecode,array_get_itemsize
 sequences-array-buffer	proven	Modules/arraymodule.c	array_buffer_getbuf,array_buffer_relbuf,array_resize,ins1,array_array_append_impl,array_del_slice,array_array_clear_impl

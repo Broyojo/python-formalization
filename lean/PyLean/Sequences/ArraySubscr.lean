@@ -215,4 +215,42 @@ theorem arrayMformatTable_proven : ArrayMformatTable := by
   intro tc
   cases tc <;> decide
 
+/-- `a.__sizeof__()` is exactly `basicsize + allocated * itemsize` (arraymodule.c:2085-2091), and
+`allocated` follows `array_resize`'s growth rule (:156-198): for every array without exported
+buffers (`n` items fit), after a resize to `n` it is unchanged when the old buffer is kept
+(`allocated >= n`, the size shrinks by less than 16, a buffer exists), 0 for `n == 0`, and
+otherwise `(n >> 4) + (Py_SIZE < 8 ? 3 : 7) + n`. So `__sizeof__` after `a.append(v)` on an
+empty array is `basicsize + 4 * itemsize`, unlike `basicsize + len * itemsize`. -/
+def ArraySizeofExact : Prop :=
+  ∀ (a : Arr) (n b : Int), a.exports = 0 → 0 ≤ n → a.Fits n →
+    ∃ a', arrResize a n = .ok a' ∧
+      arrSizeof a' b = b + a.tc.itemsize *
+        (if a.allocated ≥ n ∧ (a.items.length : Int) < n + 16 ∧ a.hasBuf = true then a.allocated
+         else if n = 0 then 0
+         else n / 16 + (if (a.items.length : Int) < 8 then 3 else 7) + n)
+
+theorem arraySizeofExact_proven : ArraySizeofExact := by
+  intro a n b hx h0 hf
+  have hc := itemsize_cases a.tc
+  unfold arrResize arrSizeof
+  dsimp only
+  rw [iteF (by omega)]
+  by_cases h1 : a.allocated ≥ n ∧ (a.items.length : Int) < n + 16 ∧ a.hasBuf = true
+  · rw [iteT h1]
+    refine ⟨_, rfl, ?_⟩
+    rw [iteT h1, Int.mul_comm]
+  · rw [iteF h1]
+    by_cases h2 : n = 0
+    · rw [iteT h2]
+      refine ⟨_, rfl, ?_⟩
+      rw [iteF h1, iteT h2]
+      simp
+    · rw [iteF h2]
+      have hfit : n / 16 + (if (a.items.length : Int) < 8 then 3 else 7) + n ≤ 18446744073709551615 / a.tc.itemsize := by
+        unfold Arr.Fits ssizeMax at hf
+        rcases hc with h | h | h | h | h <;> rw [h] at hf ⊢ <;> split <;> omega
+      rw [iteT hfit]
+      refine ⟨_, rfl, ?_⟩
+      rw [iteF h1, iteF h2, Int.mul_comm]
+
 end PyLean.Sequences

@@ -120,7 +120,7 @@ def entries : List Entry := [
     notes := "'b' rejects 128..32767 with 'signed char is greater than maximum' but larger values with the 'signed short integer' message of PyArg_Parse('h'); class is OverflowError throughout." },
   { id := "sequences-array-subscript", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_subscr", "array_ass_subscr", "array_item", "array_ass_item", "getarrayitem",
-      "array_del_slice", "array_length"]
+      "array_del_slice", "array_length", "setarrayitem"]
     statement := "For every array and int i: a[i], a[i] = v and del a[i] are the list operations on the stored values, with IndexError out of range; the sq_item and sq_ass_item slots do the same."
     source := "invariant: sequence indexing", status := .proven
     prop := ``ArraySubscript, thm := some ``arraySubscript_proven },
@@ -346,6 +346,12 @@ def entries : List Entry := [
     statement := "On a little-endian machine, every typecode's machine format code is in 0..27 and names a little-endian row, and for every typecode but u and w its mformat_descriptors row has the typecode's item size and signedness."
     source := "twin: typecode_to_mformat_code vs the descriptor table (arraymodule.c:770-789, 2096-2129)", status := .proven
     prop := ``ArrayMformatTable, thm := some ``arrayMformatTable_proven },
+  { id := "sequences-array-sizeof-exact", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array___sizeof___impl", "array_resize"]
+    statement := "a.__sizeof__() is basicsize + allocated * itemsize, and after array_resize to n (no exports, n items fit) allocated is unchanged when the buffer is kept (allocated >= n, shrink by less than 16, a buffer exists), 0 for n == 0, else (n >> 4) + (size < 8 ? 3 : 7) + n."
+    source := "Modules/arraymodule.c:2085-2091, 140-199 (difftested against __sizeof__)", status := .proven
+    prop := ``ArraySizeofExact, thm := some ``arraySizeofExact_proven
+    notes := "The source comment's growth pattern (0, 4, 8, 16, 25, 34, 46, ...) is off from 34 on: the code gives 44, which 3.15.2 confirms." },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
     statement := "For every array and int n whose result fits: a * n and a *= n give n copies of the items (none for n <= 0), OverflowError outside Py_ssize_t included."
@@ -359,7 +365,7 @@ def entries : List Entry := [
     prop := ``ArrayClearCopy, thm := some ``arrayClearCopy_proven
     notes := "copy.copy of a subclass gives a plain array: python/cpython#152042." },
   { id := "sequences-array-fromlist", pyFile := "Modules/arraymodule.c"
-    pyFns := ["array_array_fromlist_impl", "array_array_tolist_impl", "setarrayitem", "getarrayitem"]
+    pyFns := ["array_array_fromlist_impl", "array_array_tolist_impl", "getarrayitem"]
     statement := "a.fromlist(l) is all or nothing; a.tolist() on an integer typecode gives the items."
     source := "Doc/library/array.rst fromlist", status := .proven
     prop := ``ArrayFromList, thm := some ``arrayFromList_proven },
