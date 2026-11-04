@@ -606,7 +606,9 @@ def gen_case(rng):
                 "pfloat": 0, "pconst": 0, "ahook": rng.choice([0, 0, 1, 2, 3])}
     if r < 0.96:
         attrs = [a for a in CTX_ATTRS if rng.random() < 0.9]
-        return {"mod": "json", "fn": "scanner_new", "tp": "Ctx", "attrs": attrs, "strict_mode": rng.choice([0, 1, 2])}
+        raising = [a for a in CTX_ATTRS if rng.random() < 0.1]
+        return {"mod": "json", "fn": "scanner_new", "tp": "Ctx", "attrs": attrs, "raising": raising,
+                "strict_mode": rng.choice([0, 1, 2])}
     if r < 0.98:
         v, kw = enc_opts(rng)
         c = base_case("make_enc", v, kw)
@@ -868,9 +870,16 @@ def run_python(c):
                 def __bool__(self):
                     raise ValueError("boom")
 
+            def raiser(a):
+                def get(self):
+                    raise ValueError(a)
+                return property(get)
+
             ns = {a: None for a in c["attrs"]}
             if "strict" in ns:
                 ns["strict"] = {0: True, 1: False, 2: Bad()}[c["strict_mode"]]
+            for a in c.get("raising", []):
+                ns[a] = raiser(a)
             Ctx = type("Ctx", (), ns)
             return {"ok": bool(json.scanner.c_make_scanner(Ctx()).strict)}
         if fn == "make_enc":

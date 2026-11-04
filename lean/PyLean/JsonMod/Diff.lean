@@ -350,8 +350,14 @@ def run (fn : String) (j : Json) : Except String Json := do
       | .other _ => []
     return encDR doc (fun (v, e) => Json.arr #[encJVal false v, toJson (toString e)]) (cScannerCall cfg x idx)
   | "scanner_new" =>
-    let attrs ← (← field j "attrs").getArr?
-    let ctx : ScanCtx := { tp := ← getStr j "tp", attrs := ← attrs.toList.mapM (·.getStr?)
+    let attrs ← (← (← field j "attrs").getArr?).toList.mapM (·.getStr?)
+    let raising ← match j.getObjVal? "raising" with
+      | .ok r => do (← r.getArr?).toList.mapM (·.getStr?)
+      | .error _ => pure []
+    let tp ← getStr j "tp"
+    let ctx : ScanCtx := { getattr := fun a =>
+                             if a ∈ raising then .error (.valueError a)
+                             else if a ∈ attrs then .ok () else .error (attrErr tp a)
                            strict := match mode j "strict_mode" with
                              | 0 => .ok true
                              | 1 => .ok false

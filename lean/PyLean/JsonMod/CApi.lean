@@ -87,29 +87,32 @@ def cScannerCall (cfg : DCfg) (x : StrArg) (idx : Int) : DR (JVal × Int) :=
 
 /-- The object given to `make_scanner`. -/
 structure ScanCtx where
-  /-- Its type name. -/
-  tp : String
-  /-- The attributes it has. -/
-  attrs : List String
-  /-- The outcome of `bool(context.strict)`. -/
+  /-- `PyObject_GetAttrString(ctx, name)`: returns, or raises (the `AttributeError` of a missing
+  attribute, or whatever a property or `__getattr__` raises). The values read are those of the
+  `DCfg`. -/
+  getattr : String → Except PyExc Unit
+  /-- `PyObject_IsTrue(ctx.strict)`: `strict`'s `__bool__` may raise. -/
   strict : Except PyExc Bool
 
-def attrErr (t a : String) : PyExc := .named "AttributeError" s!"'{t}' object has no attribute '{a}'"
+/-- `'%.100s' object has no attribute '%U'` (`_PyObject_GenericGetAttrWithDict`). -/
+def attrErr (t a : String) : PyExc := .named "AttributeError" s!"'{truncName 100 t}' object has no attribute '{a}'"
 
 /-- The attributes after `strict`, in the order of `scanner_new`, :1262-1280. -/
 def scannerAttrs : List String :=
   ["object_hook", "object_pairs_hook", "array_hook", "parse_float", "parse_int", "parse_constant"]
 
-/-- `scanner_new`, :1239-1287, with the attribute values already in `cfg`. -/
+/-- `scanner_new`, :1239-1287: `strict` and its truth value first (:1255-1260), then the six
+attributes, each lookup's failure ending the call (`goto bail`). -/
 def scannerNew (ctx : ScanCtx) (cfg : DCfg) : Except PyExc DCfg :=
-  if !ctx.attrs.contains "strict" then .error (attrErr ctx.tp "strict")
-  else
+  match ctx.getattr "strict" with
+  | .error e => .error e
+  | .ok () =>
     match ctx.strict with
     | .error e => .error e
     | .ok st =>
-      match scannerAttrs.find? (fun a => !ctx.attrs.contains a) with
-      | some a => .error (attrErr ctx.tp a)
-      | none => .ok { cfg with strict := st }
+      match scannerAttrs.foldlM (fun _ a => ctx.getattr a) () with
+      | .error e => .error e
+      | .ok () => .ok { cfg with strict := st }
 
 /-! ### The encoder -/
 
