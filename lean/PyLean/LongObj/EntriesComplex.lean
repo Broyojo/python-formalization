@@ -188,10 +188,11 @@ def entriesComplex : List Entry := [
     source := "complexobject.c:640-645 (\"hash(x + 0*j) must equal hash(x)\")"
     status := .proven, prop := ``HashComposition, thm := some ``hashComposition_proven },
   { id := "complex-repr-structure", pyFile := complexFile
-    pyFns := ["complex_repr", "complex___format___impl"]
-    statement := "repr leaves out a +0 real part, without parentheses, and otherwise prints the real part and a signed imaginary part in parentheses; format(z, '') is repr(z) and any other spec goes to the format engine."
+    pyFns := ["complex_repr"]
+    statement := "repr leaves out a +0 real part, without parentheses, and otherwise prints the real part and a signed imaginary part in parentheses; for an exact complex, format(z, '') is repr(z) and any other spec goes to the format engine."
     source := "complexobject.c:592-623; Objects/unicode_formatter.c:1936-1939"
-    status := .proven, prop := ``ReprStructure, thm := some ``reprStructure_proven },
+    status := .proven, prop := ``ReprStructure, thm := some ``reprStructure_proven
+    notes := "The format half uses complex_repr for PyObject_Str, right only for an exact complex; complex___format___impl is covered by complex-format-exact over the Binary64 model." },
   { id := "complex-repr-round-trip", pyFile := complexFile
     pyFns := ["complex_repr", "complex_from_string_inner", "complex_subtype_from_string"]
     statement := "complex(repr(z)) is z up to the sign of a NaN, for every z, for any double printer and strtod that read each other's text."
