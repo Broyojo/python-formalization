@@ -547,6 +547,7 @@ theorem step_spec {st : St} (hI : Inv st) (op : SOp) : Keeps st (step st op).1 �
     exact ⟨a, b, fun i hi hm => c i hi (List.mem_of_mem_eraseIdx hm), d⟩
   | hash h => exact hashOp_spec hI h
   | same h k => exact ⟨fun _ _ => rfl, hI⟩
+  | sizeof => exact ⟨fun _ _ => rfl, hI⟩
 
 theorem start_inv (init : List Nat) (keep : Bool) : Inv (start init keep) := by
   refine ⟨fun i h => ?_, fun i h => ?_, fun w hw => by simp [start] at hw⟩
@@ -831,5 +832,27 @@ theorem bytesIOStaleHash_trace :
     [.ok (.int 4), .ok (.bytes [97, 98, 99, 100]), .ok (.bool true), .ok .none, .ok (.int 0),
      .ok (.int 4), .ok (.bytes [101, 102, 103, 104]), .ok (.bool false)] := by
   decide +kernel
+
+/-! ### `__sizeof__` -/
+
+/-- `f.__sizeof__()` counts the buffer exactly when the stream holds the only reference to it:
+it is the 64-byte object alone when the stream is closed or the buffer is shared (held by the
+program or a singleton), and otherwise adds the whole allocation of the buffer object (33
+bytes of `bytes` header plus every allocated byte, over-allocation included), which covers
+the contents. Hypothesis: `string_size` is within the allocation (a type invariant). -/
+def BytesIOSizeof : Prop := ∀ st : St,
+  (st.buf = none → (sizeof st).2 = .ok (.int 64)) ∧
+  ∀ r, st.buf = some r →
+    (st.shared r = true → (sizeof st).2 = .ok (.int 64)) ∧
+    (st.shared r = false → st.size ≤ (st.data r).length →
+      (sizeof st).2 = .ok (.int (97 + (st.data r).length)) ∧ 97 + (st.size : Int) ≤ 97 + (st.data r).length)
+
+theorem bytesIOSizeof_proven : BytesIOSizeof := by
+  intro st
+  refine ⟨fun h => by simp [sizeof, h], fun r h => ⟨fun hs => by simp [sizeof, h, hs], fun hs hl => ?_⟩⟩
+  refine ⟨?_, by omega⟩
+  simp only [sizeof, h, hs, Bool.false_eq_true, ite_false]
+  congr 2
+  omega
 
 end PyLean.PyIO.Share

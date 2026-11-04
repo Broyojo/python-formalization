@@ -369,6 +369,17 @@ def hashOp (st : St) (h : Nat) : St × Py Val :=
      .ok (.bool (decide (hv = o.data))))
   | _ => (st, .ok (.bool true))
 
+/-- `bytesio_sizeof_lock_held`, bytesio.c:1117-1131: `_PyObject_SIZE(Py_TYPE(self))`, which is
+64 on LP64 (the object header and six 8-byte fields, `bytesio`, :18-29), plus
+`_PySys_GetSizeOf(self->buf)` when the buffer is not shared (:1123-1129): a `bytes` object's
+`__sizeof__` is `PyBytesObject_SIZE + len` (33 plus the allocation; Objects/typeobject.c
+`object___sizeof___impl`), with no GC header or pre-header (Python/sysmodule.c:1932-1980).
+The getsizeof call cannot fail for a `bytes`. -/
+def sizeof (st : St) : St × Py Val :=
+  (st, .ok (.int (64 + match st.buf with
+    | some r => if st.shared r then 0 else 33 + ((st.data r).length : Int)
+    | none => 0)))
+
 inductive SOp where
   | write (b : List Nat)
   | getvalue
@@ -388,6 +399,8 @@ inductive SOp where
   | hash (h : Nat)
   /-- `held[h] is held[k]`. -/
   | same (h k : Nat)
+  /-- `f.__sizeof__()`. -/
+  | sizeof
   deriving Repr, DecidableEq
 
 def step (st : St) : SOp → St × Py Val
@@ -409,6 +422,7 @@ def step (st : St) : SOp → St × Py Val
   | .drop h => ({ st with held := st.held.eraseIdx h }, .ok .none)
   | .hash h => hashOp st h
   | .same h k => (st, .ok (.bool (decide (st.held[h]? = st.held[k]?))))
+  | .sizeof => sizeof st
 
 /-- `io.BytesIO(x)` for `x = bytes(init)`: `bytesio_new` then `__init__`, which stores `x`
 itself (bytesio.c:1097-1101); the program keeps `x` or deletes it. -/

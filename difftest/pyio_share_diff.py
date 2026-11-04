@@ -44,7 +44,7 @@ def gen_case(rng):
         k = rng.choice(["write", "write", "write", "getvalue", "getvalue", "getvalue", "read", "read",
                         "readline", "seek", "seek", "seek", "tell", "truncate", "truncate", "getbuffer",
                         "viewset", "viewset", "viewbytes", "release", "close", "closed", "drop", "drop",
-                        "drop", "hash", "hash", "hash", "same", "same"])
+                        "drop", "hash", "hash", "hash", "same", "same", "sizeof", "sizeof"])
         op = {"op": k}
         if k == "write":
             op["b"] = gen_bytes(rng)
@@ -86,7 +86,7 @@ def gen_case(rng):
         elif k == "getbuffer":
             views += 1
     ops += [{"op": "release", "v": v} for v in range(views)]
-    ops += [{"op": "getvalue"}, {"op": "hash", "h": held}, {"op": "tell"}, {"op": "closed"}]
+    ops += [{"op": "sizeof"}, {"op": "getvalue"}, {"op": "hash", "h": held}, {"op": "tell"}, {"op": "closed"}]
     return {"mod": "pyio", "fn": "share_c", "init": init, "keep": keep, "ops": ops}
 
 
@@ -146,6 +146,8 @@ def apply(f, op, held, views):
             return True
         x = held[op["h"]]
         return hash(x) == hash(bytes(bytearray(x)))
+    if k == "sizeof":
+        return f.__sizeof__()
     if k == "same":
         def get(i):
             return held[i] if i < len(held) else None

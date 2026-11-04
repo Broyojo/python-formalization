@@ -73,6 +73,7 @@ def getShareOp (j : Json) : Except String Share.SOp := do
   | "drop" => return .drop (← getNat j "h")
   | "hash" => return .hash (← getNat j "h")
   | "same" => return .same (← getNat j "h") (← getNat j "k")
+  | "sizeof" => return .sizeof
   | o => throw s!"unknown op {o}"
 
 def runShare (fn : String) (j : Json) : Option (Except String Json) :=

@@ -36,6 +36,12 @@ def bytesShareEntries : List Entry := [
     source := "Doc/library/io.rst:741-753 (BytesIO.getbuffer: 'a readable and writable view over the contents of the buffer without copying them ... mutating the view will transparently update the contents'; 'As long as the view exists, the BytesIO object cannot be resized or closed')"
     status := .proven, prop := ``Share.BytesIOGetbufferLive, thm := some ``Share.bytesIOGetbufferLive_proven
     notes := "A getbuffer that returned a detached copy fails the write-through clause; one that skipped the unshare fails pyio-bytesio-held-immutable. bytesiobuf_getbuffer's view == NULL BufferError (:1259-1263) cannot be reached from Python: PyMemoryView_FromObject always passes a view. Hypotheses: a reachable state, size within the allocation and below the allocation bound." },
+  { id := "pyio-bytesio-sizeof", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["bytesio_sizeof_lock_held", "bytesio_sizeof"]
+    statement := "io.BytesIO.__sizeof__() is 64 (the object alone) when the stream is closed or its buffer is shared with the program or a singleton, and otherwise 64 + 33 + the buffer's whole allocation, over-allocation included, which covers the contents."
+    source := "the body bytesio.c:1117-1131 with Python/sysmodule.c:1932-1980; invariant: __sizeof__ counts what the object owns"
+    status := .proven, prop := ``Share.BytesIOSizeof, thm := some ``Share.bytesIOSizeof_proven
+    notes := "The share difftest compares __sizeof__() after every kind of operation (60000/60000 on seeds 1-3), which also pins the over-allocation policy of resize_buffer_lock_held (Share.newAlloc) byte for byte. A constant 64, a size that always counted the buffer, or one that counted string_size instead of the allocation fails. Hypothesis: string_size within the allocation (type invariant)." },
   { id := "pyio-bytesio-hash-consistent", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_getvalue_impl", "write_bytes_lock_held", "_io_BytesIO_write_impl",
       "resize_buffer_lock_held", "unshare_buffer_lock_held", "resize_unshared_buffer_lock_held",
