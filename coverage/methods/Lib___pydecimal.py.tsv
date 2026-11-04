@@ -30,7 +30,7 @@ Lib/_pydecimal.py	952	959	Decimal.__gt__	__gt__(self, other, context=None)	model
 Lib/_pydecimal.py	961	968	Decimal.__ge__	__ge__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	modelled	decimal-comparisons-exact	
 Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	modelled	decimal-hash-twins-agree,decimal-hash-exact-py	
-Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	modelled	decimal-as-tuple-exact-py	
+Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		review: asTuple (Tuple.lean:160) is :1019, the finite case is pinned exactly (first conjunct, digit range, digit value) and the round trip goes through the independent tuple-constructor model pyFromTuple, so it is not a restatement; but for the specials the prop pins only what the constructor reads back, and pyFromTuple ignores the digits under 'F' and skips leading zeros, so an as_tuple giving (0, (), 'F') or (0, (5,), 'F') for Decimal('Infinity'), or (0, (0, 1, 2), 'n') for NaN12, satisfies AsTupleExactPy although the registry statement claims '(0,) for an infinity' and the payload digits; equations for asTuple (.inf neg) and asTuple (.nan neg s p) would close it.
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	modelled	decimal-ratio-exact-py	
 Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	modelled	decimal-repr-exact	
 Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-str-spell-exact,decimal-tuple-twins-agree-int-digits	
