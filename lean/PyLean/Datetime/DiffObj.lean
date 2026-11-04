@@ -158,7 +158,23 @@ def decArg (j : Json) : Except String Arg := do
       match ← decTz (a.getD 1 .null) with
       | some t => return .tz t
       | none => return .none_
+    -- an object with `__index__`: `["x", ["i", n]]` returns n, `["x", ["s"]]` a str,
+    -- `["x", ["e", msg]]` raises `ValueError(msg)`
+    | "x" =>
+      let r ← (a.getD 1 .null).getArr?
+      match ← (r.getD 0 .null).getStr? with
+      | "i" => return .index (.ok (some (← (r.getD 1 .null).getInt?)))
+      | "e" => return .index (.error (.valueError (← (r.getD 1 .null).getStr?)))
+      | _ => return .index (.ok none)
+    | "f" => return .float (Binary64.F64.ofBits (← (a.getD 1 .null).getNat?))
     | _ => return .other
+
+/-- The `fold` argument: a JSON number is an int, anything else an encoded `Arg`. -/
+def getFoldArg (j : Json) : Except String Arg := do
+  let v ← field j "fold"
+  match v.getInt? with
+  | .ok n => return .int n
+  | .error _ => decArg v
 
 def getArgs (j : Json) (k : String) : Except String (List Arg) := do
   (← (← field j k).getArr?).toList.mapM decArg
@@ -281,6 +297,13 @@ def runObj (fn : String) (j : Json) : Except String Json := do
       | 2 => .sub "__main__" "Outer.DSub" "DSub"
       | _ => .base
     return toJson ((if isC then dateReprClsC else dateReprClsPy) cls a.1 a.2.1 a.2.2)
+  | "td_repr_cls" =>
+    let a ← decDelta (← field j "a")
+    let cls : ReprCls := match (j.getObjValAs? Nat "cls").toOption.getD 0 with
+      | 1 => .sub "__main__" "TSub" "TSub"
+      | 2 => .sub "__main__" "Outer.TSub" "TSub"
+      | _ => .base
+    return toJson ((if isC then Delta.reprClsC else Delta.reprClsPy) cls a)
   | "td_float" =>
     let a ← decDelta (← field j "a")
     let x := Binary64.F64.ofBits (← getNat j "x")
@@ -290,6 +313,25 @@ def runObj (fn : String) (j : Json) : Except String Json := do
       | _, true => a.truedivFloatC x
       | _, false => a.truedivFloatPy x
     return encPy encD r
+  | "td_float_sub" =>
+    -- a float subclass whose `as_integer_ratio` returns `["t", ints]` (a tuple), `["l", ints]`
+    -- (a list), `["n"]` (an int, not iterable) or raises `ValueError(msg)` (`["e", msg]`)
+    let a ← decDelta (← field j "a")
+    let r ← (← field j "r").getArr?
+    let ints : List Int := ((r.getD 1 .null).getArr?.toOption.getD #[]).toList.map
+      (fun v => (v.getInt?).toOption.getD 0)
+    let rs : Py RatioSeq ← match ← (r.getD 0 .null).getStr? with
+      | "t" => pure (.ok (.tuple ints))
+      | "l" => pure (.ok (.list ints))
+      | "e" => pure (.error (.valueError (← (r.getD 1 .null).getStr?)))
+      | _ => pure (.ok .notIter)
+    let x : FloatOperand := .sub rs
+    let res := match (← getStr j "op"), isC with
+      | "mul", true => a.mulFloatObjC x
+      | "mul", false => a.mulFloatObjPy x
+      | _, true => a.truedivFloatObjC x
+      | _, false => a.truedivFloatObjPy x
+    return encPy encD res
   | "date_sub_dt" =>
     let a ← getYMD j "a"; let b ← getYMD j "b"
     let r := binarySub ((if isC then dateSubC else dateSubPy) a.1 a.2.1 a.2.2 (.datetime b.1 b.2.1 b.2.2))
@@ -420,16 +462,19 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     let a ← decDT (← field j "a"); let f ← chars "f"
     let g := (isocalendar a.y a.m a.d).1
     return encPy encStrf ((if isC then dtStrftimeC else dtStrftimePy) env a f g norm)
+  | "fromordinal_arg" =>
+    let a ← decArg (← field j "a")
+    return encPy encYMD' (if isC then fromordinalArgC a else fromordinalArgPy a)
   | "ctor_date" =>
     let args ← getArgs j "args"
     return encPy encYMD' (if isC then dateNewC args else dateCallPy args)
   | "ctor_time" =>
     let args ← getArgs j "args"
-    let fold ← getInt j "fold"
+    let fold ← getFoldArg j
     return encPy encTMv (if isC then timeNewC args fold else timeCallPy args fold)
   | "ctor_datetime" =>
     let args ← getArgs j "args"
-    let fold ← getInt j "fold"
+    let fold ← getFoldArg j
     return encPy encDTv (if isC then datetimeNewC args fold else datetimeCallPy args fold)
   | "td_str2" =>
     let a ← decDelta (← field j "a")

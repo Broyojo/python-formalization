@@ -46,6 +46,9 @@ def decDec (j : Json) : Except String Dec := do
   let k ← (a.getD 0 Json.null).getStr?
   match k with
   | "F" => return .fin (← (a.getD 1 Json.null).getBool?) (natOfStr (← (a.getD 2 Json.null).getStr?)) (← (a.getD 3 Json.null).getInt?)
+  | "Fh" =>
+    let e := intOfHex (← (a.getD 3 Json.null).getStr?)
+    return .fin (← (a.getD 1 Json.null).getBool?) (natOfStr (← (a.getD 2 Json.null).getStr?)) e
   | "I" => return .inf (← (a.getD 1 Json.null).getBool?)
   | "N" => return .nan (← (a.getD 1 Json.null).getBool?) (← (a.getD 2 Json.null).getBool?) (natOfStr (← (a.getD 3 Json.null).getStr?))
   | _ => throw s!"bad dec {k}"

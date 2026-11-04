@@ -403,6 +403,92 @@ theorem contextNewCleanTemplate_proven : ContextNewCleanTemplate := by
   cases t
   simp_all
 
+/-! ## `_pydecimal`'s integer attributes, case by case -/
+
+/-- The exception `raise ValueError("..." % (..., value))` raises for an int `value`: the message,
+or the int/str-limit `ValueError` when `str(value)` has more than 4300 digits. -/
+def limitOr (n : Int) (e : PyExc) : PyExc :=
+  if maxStrDigits < numDigits n.natAbs then .valueError limitToStrMsg else e
+
+theorem limitOr_valueError (n : Int) (m : String) : ∃ m', limitOr n (.valueError m) = .valueError m' := by
+  unfold limitOr; split
+  · exact ⟨_, rfl⟩
+  · exact ⟨_, rfl⟩
+
+theorem sic_hi (name : String) (n hi : Int) :
+    setIntegerCheck name (.int n) none (some hi) =
+      (if n > hi then .error (limitOr n (.valueError s!"{name} must be in [-inf, {hi}]. got: {n}"))
+       else .ok n) := by
+  by_cases h : n > hi <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
+    simp [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, bind, Except.bind, pure,
+      Except.pure]
+  all_goals rfl
+
+theorem sic_lo (name : String) (n lo : Int) :
+    setIntegerCheck name (.int n) (some lo) none =
+      (if n < lo then .error (limitOr n (.valueError s!"{name} must be in [{lo}, inf]. got: {n}"))
+       else .ok n) := by
+  by_cases h : n < lo <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
+    simp [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, bind, Except.bind, pure,
+      Except.pure]
+  all_goals rfl
+
+theorem sic_lohi (name : String) (n lo hi : Int) :
+    setIntegerCheck name (.int n) (some lo) (some hi) =
+      (if n < lo ∨ n > hi then .error (limitOr n (.valueError s!"{name} must be in [{lo}, {hi}]. got {n}"))
+       else .ok n) := by
+  by_cases h : n < lo ∨ n > hi <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
+    simp only [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, ite_true, ite_false,
+      gt_iff_lt, bind, Except.bind, pure, Except.pure] <;> rfl
+
+theorem pySetattr_prec (c : PyContext) (n : Int) :
+    pySetattr c "prec" (.int n) =
+      (if n < 1 then .error (limitOr n (.valueError s!"prec must be in [1, inf]. got: {n}"))
+       else .ok { c with prec := n }) := by
+  have := sic_lo "prec" n 1
+  by_cases h : n < 1 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
+
+theorem pySetattr_emin (c : PyContext) (n : Int) :
+    pySetattr c "Emin" (.int n) =
+      (if n > 0 then .error (limitOr n (.valueError s!"Emin must be in [-inf, 0]. got: {n}"))
+       else .ok { c with emin := n }) := by
+  have := sic_hi "Emin" n 0
+  by_cases h : n > 0 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
+
+theorem pySetattr_emax (c : PyContext) (n : Int) :
+    pySetattr c "Emax" (.int n) =
+      (if n < 0 then .error (limitOr n (.valueError s!"Emax must be in [0, inf]. got: {n}"))
+       else .ok { c with emax := n }) := by
+  have := sic_lo "Emax" n 0
+  by_cases h : n < 0 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
+
+theorem pySetattr_capitals (c : PyContext) (n : Int) :
+    pySetattr c "capitals" (.int n) =
+      (if n < 0 ∨ n > 1 then .error (limitOr n (.valueError s!"capitals must be in [0, 1]. got {n}"))
+       else .ok { c with capitals := n }) := by
+  have := sic_lohi "capitals" n 0 1
+  by_cases h : n < 0 ∨ n > 1
+  · rw [if_pos h] at this ⊢
+    simp [pySetattr, this, bind, Except.bind]
+    all_goals rfl
+  · rw [if_neg h] at this ⊢
+    simp [pySetattr, this, bind, Except.bind, pure, Except.pure]
+
+theorem pySetattr_clamp (c : PyContext) (n : Int) :
+    pySetattr c "clamp" (.int n) =
+      (if n < 0 ∨ n > 1 then .error (limitOr n (.valueError s!"clamp must be in [0, 1]. got {n}"))
+       else .ok { c with clamp := n }) := by
+  have := sic_lohi "clamp" n 0 1
+  by_cases h : n < 0 ∨ n > 1
+  · rw [if_pos h] at this ⊢
+    simp [pySetattr, this, bind, Except.bind]
+    all_goals rfl
+  · rw [if_neg h] at this ⊢
+    simp [pySetattr, this, bind, Except.bind, pure, Except.pure]
+
 /-! ## Attributes: the two twins agree inside the documented ranges -/
 
 /-- An integer attribute set in range is stored by both twins, and one below the range
@@ -533,37 +619,34 @@ theorem contextAttrTwins_proven : ContextAttrTwins := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro h1 h2
     have g : ¬n < 1 := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setprec_ok c n h1 h2⟩
+    exact ⟨by rw [pySetattr_prec, if_neg g], by simpa [cSetattr] using setprec_ok c n h1 h2⟩
   · intro h1 h2
     have g : n < 1 := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setprec_err c n h1 h2⟩
+    obtain ⟨m, hm⟩ := limitOr_valueError n s!"prec must be in [1, inf]. got: {n}"
+    exact ⟨⟨m, by rw [pySetattr_prec, if_pos g, hm]⟩, by simpa [cSetattr] using setprec_err c n h1 h2⟩
   · intro h1 h2
     have g : ¬n > 0 := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setemin_ok c n h1 h2⟩
+    exact ⟨by rw [pySetattr_emin, if_neg g], by simpa [cSetattr] using setemin_ok c n h1 h2⟩
   · intro h1 h2
-    exact ⟨by simp [pySetattr, setIntegerCheck, h1, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setemin_err c n h1 h2⟩
+    obtain ⟨m, hm⟩ := limitOr_valueError n s!"Emin must be in [-inf, 0]. got: {n}"
+    exact ⟨⟨m, by rw [pySetattr_emin, if_pos h1, hm]⟩, by simpa [cSetattr] using setemin_err c n h1 h2⟩
   · intro h1 h2
     have g : ¬n < 0 := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setemax_ok c n h1 h2⟩
+    exact ⟨by rw [pySetattr_emax, if_neg g], by simpa [cSetattr] using setemax_ok c n h1 h2⟩
   · intro h1 h2
-    exact ⟨by simp [pySetattr, setIntegerCheck, h1, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setemax_err c n h1 h2⟩
+    obtain ⟨m, hm⟩ := limitOr_valueError n s!"Emax must be in [0, inf]. got: {n}"
+    exact ⟨⟨m, by rw [pySetattr_emax, if_pos h1, hm]⟩, by simpa [cSetattr] using setemax_err c n h1 h2⟩
   · intro h
     have g : ¬(n < 0 ∨ n > 1) := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setcapitals_ok c n h,
-      by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
-      by simpa [cSetattr] using setclamp_ok c n h⟩
+    exact ⟨by rw [pySetattr_capitals, if_neg g], by simpa [cSetattr] using setcapitals_ok c n h,
+      by rw [pySetattr_clamp, if_neg g], by simpa [cSetattr] using setclamp_ok c n h⟩
   · intro h1 h2 h3 h4
     have g : n < 0 ∨ n > 1 := by omega
-    exact ⟨by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
+    obtain ⟨m1, hm1⟩ := limitOr_valueError n s!"capitals must be in [0, 1]. got {n}"
+    obtain ⟨m2, hm2⟩ := limitOr_valueError n s!"clamp must be in [0, 1]. got {n}"
+    exact ⟨⟨m1, by rw [pySetattr_capitals, if_pos g, hm1]⟩,
       by simpa [cSetattr] using setcapitals_err c n h1 h2 h3 h4,
-      by simp [pySetattr, setIntegerCheck, g, bind, Except.bind, pure, Except.pure],
+      ⟨m2, by rw [pySetattr_clamp, if_pos g, hm2]⟩,
       by simpa [cSetattr] using setclamp_err c n h1 h2 h3 h4⟩
 
 /-! ## `SignalDict` -/

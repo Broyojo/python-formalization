@@ -314,7 +314,7 @@ def DateCtorInt : Prop :=
 theorem dateCtorInt_proven : DateCtorInt := by
   intro y m d h1 h2 h3
   have e : dateNewPy (.int y) (.int m) (.int d) = checkDate y m d := by
-    simp [dateNewPy, stateOf, pyIndex, bind, Except.bind]
+    simp [dateNewPy, checkDateFieldsArgPy, stateOf, pyIndex, bind, Except.bind]
   refine ⟨?_, fun hv => by rw [e]; exact checkDate_ok y m d hv⟩
   rw [e]
   simp [dateNewC, datetimeDateClinicC, datetimeDateImplC, checkDateC_eq, clinicArity, stateOf, parseI_int, h1, h2, h3, bind,

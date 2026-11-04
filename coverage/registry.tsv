@@ -107,16 +107,24 @@ datetime-date-isoformat-text	proven	Lib/_pydatetime.py	date.isoformat,C date_iso
 datetime-format-time-text	proven	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
 datetime-format-offset-text	proven	Lib/_pydatetime.py	_format_offset,C format_utcoffset
 datetime-timespec-twins	refuted	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
-datetime-timespec-str	proven	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
+datetime-timespec-str-twins	refuted	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl,C datetime_time_isoformat,C datetime_datetime_isoformat
+datetime-timespec-str	proven	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl,C datetime_time_isoformat,C datetime_datetime_isoformat
 datetime-timedelta-float-ops	proven	Lib/_pydatetime.py	timedelta.__mul__,timedelta.__truediv__,_divide_and_round,C multiply_truedivide_timedelta_float,C get_float_as_integer_ratio,C divide_nearest
+datetime-timedelta-float-ratio-twins	refuted	Lib/_pydatetime.py	timedelta.__mul__,timedelta.__truediv__,C multiply_truedivide_timedelta_float,C get_float_as_integer_ratio
+datetime-timedelta-float-ratio	proven	Lib/_pydatetime.py	timedelta.__mul__,timedelta.__truediv__,_divide_and_round,C multiply_truedivide_timedelta_float,C get_float_as_integer_ratio,C divide_nearest
 datetime-timedelta-truediv-delta	open	Lib/_pydatetime.py	timedelta.__truediv__,C truedivide_timedelta_timedelta
 datetime-date-format	proven	Lib/_pydatetime.py	date.__format__,C datetime_date___format__,C datetime_date___format___impl
 datetime-date-strptime	proven	Lib/_pydatetime.py	date.strptime,C datetime_date_strptime_impl
 datetime-parse-isodate-forms	proven	Lib/_pydatetime.py	_parse_isoformat_date,_read_isoformat_component,_isoweek_to_gregorian
 datetime-parse-isodate-refusals	proven	Lib/_pydatetime.py	_parse_isoformat_date
+datetime-is-ascii-digit	proven	Lib/_pydatetime.py	_is_ascii_digit
 datetime-find-sep-forms	proven	Lib/_pydatetime.py	_find_isoformat_datetime_separator,_is_ascii_digit
+datetime-find-sep-week-digits	proven	Lib/_pydatetime.py	_find_isoformat_datetime_separator,_is_ascii_digit
 datetime-date-fromisoformat	proven	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date
+datetime-date-fromisoformat-arg	proven	Lib/_pydatetime.py	date.fromisoformat,C datetime_date_fromisoformat,C datetime_date_fromisoformat_impl
 datetime-parse-hhmmssff-forms	proven	Lib/_pydatetime.py	_parse_hh_mm_ss_ff,_read_isoformat_component
+datetime-parse-isotime-forms	proven	Lib/_pydatetime.py	_parse_isoformat_time
+datetime-parse-hhmmssff-fraction	proven	Lib/_pydatetime.py	_parse_hh_mm_ss_ff,_read_isoformat_component
 datetime-date-ctor-args	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date,C datetime_date_impl,C new_date_ex,C check_date_args,C date_from_pickle
 datetime-date-sub-twins	refuted	Lib/_pydatetime.py	date.__sub__,C date_subtract
 datetime-date-sub-operand	proven	Lib/_pydatetime.py	date.__sub__,C date_subtract,C add_date_timedelta
@@ -124,6 +132,14 @@ datetime-fromordinal-range	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C
 datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp
 datetime-days-in-month	proven	Lib/_pydatetime.py	_days_in_month,C days_in_month,C is_leap
 datetime-check-date-fields	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args
+datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args,C datetime_date,C PyLong_AsInt
+datetime-date-new-index-missing	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date
+datetime-check-time-fields-index	proven	Lib/_pydatetime.py	_check_time_fields,C check_time_args,C datetime_time,C PyLong_AsInt
+datetime-time-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time,C PyLong_AsInt
+datetime-datetime-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,datetime.__new__,C datetime_datetime,C PyLong_AsInt
+datetime-time-fold-arg	proven	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time
+datetime-fromordinal-index-twins	refuted	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C datetime_date_fromordinal,C datetime_date_fromordinal_impl
+datetime-fromordinal-arg	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C datetime_date_fromordinal,C datetime_date_fromordinal_impl
 datetime-check-time-fields	proven	Lib/_pydatetime.py	_check_time_fields,C check_time_args
 datetime-check-tzinfo-arg	proven	Lib/_pydatetime.py	_check_tzinfo_arg,C check_tzinfo_subclass
 datetime-build-struct-time	proven	Lib/_pydatetime.py	_build_struct_time,C build_struct_time
@@ -136,6 +152,7 @@ datetime-datetime-hash	proven	Lib/_pydatetime.py	datetime.__hash__,C datetime_ha
 datetime-datetime-timetuple	proven	Lib/_pydatetime.py	datetime.timetuple,C datetime_timetuple
 datetime-datetime-utctimetuple	proven	Lib/_pydatetime.py	datetime.utctimetuple,C datetime_utctimetuple
 datetime-datetime-compare	proven	Lib/_pydatetime.py	datetime.__eq__,datetime.__le__,datetime.__lt__,datetime.__ge__,datetime.__gt__,datetime._cmp,_cmp,C datetime_richcompare,C diff_to_bool,C flip_fold,C get_flip_fold_offset,C pep495_eq_exception
+datetime-wrap-scan-directives	proven	Lib/_pydatetime.py	_wrap_strftime
 datetime-strftime-twins	refuted	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime
 datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datetime_datetime_astimezone_impl
 datetime-time-pickle-ctor-twins	refuted	Lib/_pydatetime.py	time.__new__,C time_new
@@ -172,7 +189,9 @@ datetime-strftime-twins-narrow	open	Lib/_pydatetime.py	_wrap_strftime,C wrap_str
 datetime-time-compare-whole-minutes	open	Lib/_pydatetime.py	time._cmp,C time_richcompare
 datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,timezone.fromutc,C datetime_datetime_astimezone_impl,C timezone_fromutc
 datetime-tzinfo-fromutc	open	Lib/_pydatetime.py	tzinfo.fromutc,C tzinfo_fromutc
-datetime-timedelta-str-repr	open	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
+datetime-timedelta-str-repr	proven	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
+datetime-timedelta-repr-cls	proven	Lib/_pydatetime.py	timedelta.__repr__,_get_class_module,C delta_repr
+datetime-timedelta-repr-twins	refuted	Lib/_pydatetime.py	timedelta.__repr__,_get_class_module,C delta_repr
 datetime-zoneinfo-rule-date-twins	proven	Modules/_zoneinfo.c	C calendarrule_year_to_timestamp,C dayrule_year_to_timestamp,C ymd_to_ord,C is_leap_year,_CalendarOffset.year_to_epoch,_CalendarOffset._ymd2ord,_DayOffset.year_to_epoch,_post_epoch_days_before_year
 datetime-zoneinfo-calendar-rule-meaning	proven	Lib/zoneinfo/_zoneinfo.py	_CalendarOffset.year_to_epoch,_CalendarOffset._ymd2ord,_post_epoch_days_before_year
 datetime-zoneinfo-julian-rule-meaning	proven	Lib/zoneinfo/_zoneinfo.py	_DayOffset.year_to_epoch,_post_epoch_days_before_year
@@ -444,6 +463,16 @@ decimal-fix-nan-exact	proven	Lib/_pydecimal.py	Decimal._fix_nan,InvalidOperation
 decimal-int-trunc-exact	proven	Lib/_pydecimal.py	Decimal.__int__
 decimal-from-float-exact	open	Lib/_pydecimal.py	Decimal.from_float,Decimal.__new__,Decimal.from_number
 decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp,Decimal._isnan
+decimal-mul-nan-exact	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._check_nans,_convert_other
+decimal-normalize-nan-exact	proven	Lib/_pydecimal.py	Decimal.normalize,Decimal._check_nans,Decimal._fix_nan
+decimal-scaleb-rest-exact	proven	Lib/_pydecimal.py	Decimal.scaleb,Decimal._check_nans
+decimal-fma-special-exact	proven	Lib/_pydecimal.py	Decimal.fma
+decimal-abs-no-round-exact	proven	Lib/_pydecimal.py	Decimal.__abs__,Decimal.copy_abs
+decimal-compare-total-mag-rest	proven	Lib/_pydecimal.py	Decimal.compare_total_mag
+decimal-convert-other-tuple-exact	proven	Lib/_pydecimal.py	_convert_other
+decimal-remainder-near-rest	proven	Lib/_pydecimal.py	Decimal.remainder_near,Decimal._check_nans,_WorkRep.__init__
+decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans
+decimal-adjusted-exact	proven	Lib/_pydecimal.py	Decimal.adjusted
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
@@ -2356,6 +2385,29 @@ pygrammar-rule-file	proven	Grammar/python.gram	rule:file
 pygrammar-rule-eval	proven	Grammar/python.gram	rule:eval
 pygrammar-rule-interactive	proven	Grammar/python.gram	rule:interactive
 pygrammar-rule-statement	proven	Grammar/python.gram	rule:statement
+pygrammar-rule-elif-stmt	proven	Grammar/python.gram	rule:elif_stmt
+pygrammar-rule-finally-block	proven	Grammar/python.gram	rule:finally_block
+pygrammar-rule-try-stmt	proven	Grammar/python.gram	rule:try_stmt
+pygrammar-rule-except-block	proven	Grammar/python.gram	rule:except_block
+pygrammar-rule-except-star-block	proven	Grammar/python.gram	rule:except_star_block
+pygrammar-rule-with-stmt	proven	Grammar/python.gram	rule:with_stmt
+pygrammar-rule-async-with-type-comment	refuted	Grammar/python.gram	rule:with_stmt
+pygrammar-rule-with-item	proven	Grammar/python.gram	rule:with_item
+pygrammar-rule-import-from-targets	proven	Grammar/python.gram	rule:import_from_targets
+pygrammar-rule-class-def	proven	Grammar/python.gram	rule:class_def
+pygrammar-rule-function-def	proven	Grammar/python.gram	rule:function_def
+pygrammar-rule-class-def-raw	proven	Grammar/python.gram	rule:class_def_raw
+pygrammar-rule-function-def-raw	proven	Grammar/python.gram	rule:function_def_raw
+pygrammar-rule-annotation-default	proven	Grammar/python.gram	rule:annotation,rule:star_annotation,rule:default
+pygrammar-rule-sum	proven	Grammar/python.gram	rule:sum
+pygrammar-rule-bitwise-or	proven	Grammar/python.gram	rule:bitwise_or
+pygrammar-rule-bitwise-xor	proven	Grammar/python.gram	rule:bitwise_xor
+pygrammar-rule-bitwise-and	proven	Grammar/python.gram	rule:bitwise_and
+pygrammar-rule-term	proven	Grammar/python.gram	rule:term
+pygrammar-rule-shift-expr	proven	Grammar/python.gram	rule:shift_expr
+pygrammar-rule-invalid-assert-stmt	proven	Grammar/python.gram	rule:invalid_assert_stmt
+pygrammar-rule-match-stmt	proven	Grammar/python.gram	rule:match_stmt
+pygrammar-rule-decorators	proven	Grammar/python.gram	rule:decorators
 pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	

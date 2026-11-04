@@ -16,6 +16,8 @@ import PyLean.Decimal.ContextExact
 import PyLean.Decimal.DelegateExact
 import PyLean.Decimal.Pow10a
 import PyLean.Decimal.DelegateExact2
+import PyLean.Decimal.Exact3
+import PyLean.Decimal.Exact4
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -244,10 +246,10 @@ def entries : List Entry := [
     notes := "Unconditional: an equation for (fix c d).run fl, so an always-raising or always-returning _fix fails it. fixSpec writes Etiny and Etop out as Emin - prec + 1 and Emax - prec + 1, so it also pins Context.Etiny and Context.Etop." },
   { id := "decimal-context-setattr-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Context.__setattr__", "Context._set_integer_check", "Context._set_signal_dict"]
-    statement := "Every assignment to a _pydecimal Context attribute: prec, Emin, Emax, capitals, clamp store an int in [1, inf], [-inf, 0], [0, inf], [0, 1], [0, 1] and refuse one outside with ValueError and _set_integer_check's exact message, and any non-int with TypeError('<name> must be an integer'); rounding stores one of the eight mode names and refuses any other string with TypeError('<s>: invalid rounding mode') and any non-string with TypeError; flags and traps store a dict whose keys are exactly the signals, refuse a dict with another key or a missing signal with KeyError and anything else with TypeError; _ignored_flags stores its list; any other name raises AttributeError."
+    statement := "Every assignment to a _pydecimal Context attribute: prec, Emin, Emax, capitals, clamp store an int (or bool) in [1, inf], [-inf, 0], [0, inf], [0, 1], [0, 1] and refuse one outside with ValueError and _set_integer_check's exact message (a bool printed as True/False), except that an int of more than 4300 digits raises the int/str-limit ValueError from the message's %s; any non-int raises TypeError('<name> must be an integer'); rounding stores one of the eight mode names and refuses any other string with TypeError('<s>: invalid rounding mode'); because `value in _rounding_modes` compares with ==, an object whose __eq__ answers true for a mode is stored (the first such mode in order), an exception from __eq__ propagates, and an object equal to none of them is refused with TypeError; an int (its %s subject to the limit), a bool, None, a tuple (formatted as the argument tuple), a list, a dict or a plain object is refused with the TypeError its formatting gives; flags and traps store a dict whose keys are exactly the signals, refuse a dict with another key or a missing signal with KeyError('<d> is not a valid signal dict') and anything else with TypeError; _ignored_flags stores its list; any other name raises AttributeError."
     source := "Lib/_pydecimal.py:4005-4053; decimal docs, Context attributes"
     status := .proven, prop := ``SetattrExact, thm := some ``setattrExact_proven
-    notes := "For a tuple, '%s must be a signal dict' % d formats the tuple's elements as the arguments, so () and tuples of two or more elements give a format-string TypeError instead of the message (decimal-pydecimal-signal-dict-tuple-message). The model stores only the signals of a list assigned to _ignored_flags; other objects are out of scope (the module only assigns lists)." },
+    notes := "Context().prec = -10**5000 raises 'Exceeds the limit (4300 digits) for integer string conversion...' (checked on 3.15.2), so the message conjuncts carry limitOr. For a tuple, '%s must be a signal dict' % d formats the tuple's elements as the arguments, so () and tuples of two or more elements give a format-string TypeError instead of the message (decimal-pydecimal-signal-dict-tuple-message); the rounding message does the same. The model stores only the signals of a list assigned to _ignored_flags; other objects are out of scope (the module only assigns lists). A non-str rounding object is recorded by identity (roundingObj); what arithmetic does under such a context is out of scope, as are int subclasses overriding __str__ and dict keys with their own __eq__." },
   { id := "decimal-signal-dict-type-error-message", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Context._set_signal_dict", "Context.__setattr__"]
     statement := "Assigning anything but a dict to a _pydecimal Context's traps (or flags) raises TypeError('<value> must be a signal dict')."
@@ -257,9 +259,10 @@ def entries : List Entry := [
     notes := "Context().traps = (): '%s must be a signal dict' % () fails with 'not enough arguments for format string (got 0)'; a tuple of two or more elements gives 'not all arguments converted during string formatting'." },
   { id := "decimal-context-init-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Context.__init__", "Context.__setattr__", "Context._set_integer_check", "Context._set_signal_dict"]
-    statement := "For every DefaultContext whose traps is a signal dict, Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps) with ints, a rounding mode and lists of signals returns, when every int is in range, exactly the context with the given values, the DefaultContext's for the omitted ones, flags set exactly for the listed signals (all clear when omitted) and traps for the listed ones (DefaultContext's when omitted); a prec below 1, then an Emin above 0, then an Emax below 0 raises the ValueError of _set_integer_check in that order."
-    source := "Doc/library/decimal.rst:1104-1120 (Context constructor)"
-    status := .proven, prop := ``ContextInitExact, thm := some ``contextInitExact_proven },
+    statement := "For every DefaultContext (traps a signal dict; a non-str rounding it holds equal to its stored mode), Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps, _ignored_flags) with ints, rounding modes, a list of signals for _ignored_flags, and lists or dicts for flags and traps returns, when every value is accepted, exactly the context with the given values, the DefaultContext's for the omitted ones (flags all clear and _ignored_flags empty when omitted), a list becoming the dict of the listed signals and a dict stored as given; otherwise the first refused value in the order prec, rounding, Emin, Emax, capitals, clamp, traps, flags raises: the ValueError of _set_integer_check (the int/str-limit ValueError for an int of more than 4300 digits), TypeError('<s>: invalid rounding mode'), or KeyError for a list with a non-signal or a dict that is not a signal dict; a prec that is not an int raises TypeError('prec must be an integer')."
+    source := "Doc/library/decimal.rst:1104-1120 (Context constructor); Lib/_pydecimal.py:3969-4003"
+    status := .proven, prop := ``ContextInitExact, thm := some ``contextInitExact_proven
+    notes := "Context(prec=-10**5000) and Context(clamp=10**5000) raise the int/str-limit ValueError (checked on 3.15.2); Context(flags={1: 2}, traps={3: 4}) reports the traps dict, which is assigned first." },
   { id := "decimal-convert-other-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["_convert_other"]
     statement := "_convert_other returns a Decimal unchanged and an int n as the exact Decimal(n) (sign n < 0, coefficient |n|, exponent 0), raising the int/str-limit ValueError exactly when |n| has more than 4300 digits; any other operand is NotImplemented, or TypeError('Unable to convert ... to Decimal') with raiseit."
@@ -269,7 +272,7 @@ def entries : List Entry := [
   { id := "decimal-convert-other-type-error-message", pyFile := "Lib/_pydecimal.py"
     pyFns := ["_convert_other"]
     statement := "_convert_other(x, raiseit=True) raises TypeError('Unable to convert <x> to Decimal') for every operand that is not a Decimal or an int."
-    source := "the message Lib/_pydecimal.py:6111 writes; twin agreement (_decimal: 'conversion from <type> to Decimal is not supported')"
+    source := "the message Lib/_pydecimal.py:6112 writes; twin agreement (_decimal: 'conversion from <type> to Decimal is not supported')"
     status := .refuted, prop := ``ConvertOtherTypeErrorMessage, thm := some ``convertOtherTypeErrorMessage_refuted
     bug := some "decimal-pydecimal-signal-dict-tuple-message"
     notes := "Context().plus(()): '... %s ...' % () takes the empty tuple as the argument tuple and fails with 'not enough arguments for format string (got 0)'. Context.add and the other arithmetic wrappers format their second operand the same way (:4248)." },
@@ -291,9 +294,10 @@ def entries : List Entry := [
     status := .proven, prop := ``SameQuantumExact, thm := some ``sameQuantumExact_proven },
   { id := "decimal-logb-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.logb", "Decimal.adjusted"]
-    statement := "For every context with prec >= 1, logb of a finite non-zero value is its adjusted exponent e + digits - 1 as a Decimal rounded into the context by _fix; logb(0) signals DivisionByZero and returns -Infinity; logb(±Infinity) is Infinity; a NaN goes through _check_nans."
+    statement := "For every context with prec >= 1, logb of a finite non-zero value is its adjusted exponent A = e + digits - 1 as a Decimal rounded into the context by _fix when |A| has at most 4300 digits, and otherwise the int/str-limit ValueError of Decimal(A)'s str(abs(A)); logb(0) signals DivisionByZero and returns -Infinity; logb(±Infinity) is Infinity; a NaN goes through _check_nans."
     source := "decimal docs, logb: 'the adjusted exponent of the operand ... If the operand is a zero then Decimal('-Infinity') is returned and the DivisionByZero flag is raised. If the operand is an infinity then Decimal('Infinity') is returned'"
-    status := .proven, prop := ``LogbExact, thm := some ``logbExact_proven },
+    status := .proven, prop := ``LogbExact, thm := some ``logbExact_proven
+    notes := "Decimal((0, (1,), 10**4300)).logb() raises 'Exceeds the limit (4300 digits) for integer string conversion...' and Decimal((0, (1,), 10**4299)).logb() returns 1.000000000000000000000000000E+4299 (checked on 3.15.2). The model makes the result with pyFromInt, the mirror of Decimal(int)." },
   { id := "decimal-scaleb-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.scaleb"]
     statement := "For every context with prec >= 1, scaleb(±co·10^e, n) for an integral n (exponent 0, at most 4300 digits) with |n| <= 2·(Emax + prec) is ±co·10^(e+n) rounded into the context by _fix; an n outside that range, a non-integral n (non-zero exponent or infinity) signals InvalidOperation; an infinite first operand is returned unchanged; NaNs go through _check_nans."
@@ -582,7 +586,67 @@ def entries : List Entry := [
     pyFns := ["Decimal.compare_total", "Decimal._cmp", "Decimal._isnan"]
     statement := "For all decimals a, b (NaNs, infinities, signed zeros, any exponents), compare_total(b, a) == -compare_total(a, b), and compare_total(a, b) == 0 iff a and b are the same representation."
     source := "compare_total docs: 'the result gives a total ordering on Decimal instances' (Doc/library/decimal.rst:521-522)"
-    status := .proven, prop := ``CompareTotalOrder, thm := some ``compareTotalOrder_proven }
+    status := .proven, prop := ``CompareTotalOrder, thm := some ``compareTotalOrder_proven },
+  { id := "decimal-mul-nan-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__mul__", "Decimal._check_nans", "_convert_other"]
+    statement := "For every context: a product with a NaN operand is what _check_nans gives, whatever the other operand (an infinity included): a signaling NaN on the left, else on the right, signals InvalidOperation and is returned quiet with its payload cut to prec - clamp digits, else the left quiet NaN, else the right one, quieted, with no flag. __mul__'s prologue multiplies a Decimal operand as is and an int n as the exact Decimal(n), raising the int/str-limit ValueError when |n| has more than 4300 digits, and returns NotImplemented for any other operand with no flag."
+    source := "Lib/_pydecimal.py:1317-1329; _check_nans docstring (:791-798); General Decimal Arithmetic, 'multiply' (NaN operands)"
+    status := .proven, prop := ``MulNanExact, thm := some ``mulNanExact_proven
+    notes := "With decimal-mul-exact (finite, zero and infinite operands) every pair of operands is stated. Checked on 3.15.2: NaN12 * Inf = NaN12 with no flag; Inf * sNaN7 = NaN7 with InvalidOperation; NaN123456789 * 1 = NaN56789 at prec 5." },
+  { id := "decimal-normalize-nan-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.normalize", "Decimal._check_nans", "Decimal._fix_nan"]
+    statement := "For every context, normalize of a quiet NaN returns it with its payload cut to prec - clamp digits and no flag, and of a signaling NaN signals InvalidOperation (raising if trapped) and returns it quiet."
+    source := "Lib/_pydecimal.py:2581-2584; General Decimal Arithmetic, 'reduce' (NaN operands)"
+    status := .proven, prop := ``NormalizeNanExact, thm := some ``normalizeNanExact_proven
+    notes := "With decimal-normalize-exact (every non-NaN operand) normalize is stated for every operand." },
+  { id := "decimal-scaleb-rest-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.scaleb", "Decimal._check_nans"]
+    statement := "For every context: scaleb with a NaN operand is what _check_nans gives (a signaling NaN, left first, signals InvalidOperation and is returned quiet, else the quiet NaN); for an integral second operand whose digit string has more than 4300 digits, int(other) raises the int/str-limit ValueError ('value has N digits') whatever the non-NaN first operand; and an infinite first operand with an integral n outside [-2*(Emax+prec), 2*(Emax+prec)] signals InvalidOperation."
+    source := "Lib/_pydecimal.py:3751-3769; General Decimal Arithmetic, 'scaleb'"
+    status := .proven, prop := ``ScalebRestExact, thm := some ``scalebRestExact_proven
+    notes := "With decimal-scaleb-exact every operand pair is stated. Checked on 3.15.2: Context().scaleb(1, Decimal((0, (1,)+(0,)*5000, 0))) and the same with Infinity raise 'value has 5001 digits'; scaleb(Inf, 10**9) is NaN with InvalidOperation." },
+  { id := "decimal-fma-special-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.fma"]
+    statement := "For every context, with no signaling NaN among a and b: a quiet NaN a (else b) is the product, which __add__ returns quieted unless t is a signaling NaN (InvalidOperation, t returned quiet); an infinity times an infinity or a non-zero finite value is the infinity of the product's sign added to t: a NaN t goes through _check_nans, the opposite infinity is InvalidOperation, anything else gives the infinity."
+    source := "Decimal.fma docstring and Lib/_pydecimal.py:1986-2017, with __add__'s special branch (:1213-1225)"
+    status := .proven, prop := ``FmaSpecialExact, thm := some ``fmaSpecialExact_proven
+    notes := "Checked on 3.15.2: fma(NaN1, 2, sNaN2) = NaN2 with InvalidOperation; fma(Inf, -Inf, Inf) = NaN with InvalidOperation; fma(-Inf, 2, sNaN3) = NaN3 with InvalidOperation. The finite product's sum is still decimal-fma-exact's __add__ (decimal-add-correct, open)." },
+  { id := "decimal-abs-no-round-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__abs__", "Decimal.copy_abs"]
+    statement := "For every context, abs(x, round=False) is x with its sign cleared, unrounded and with no flag, a signaling NaN included (no _check_nans)."
+    source := "__abs__ docstring: 'self.__abs__(round=False) is equivalent to self.copy_abs()' (Lib/_pydecimal.py:1183-1188)"
+    status := .proven, prop := ``AbsNoRoundExact, thm := some ``absNoRoundExact_proven
+    notes := "Checked on 3.15.2: Decimal('-sNaN5').__abs__(round=False) is sNaN5 with no flag; Decimal('-1.23456789').__abs__(round=False) at prec 5 is 1.23456789." },
+  { id := "decimal-compare-total-mag-rest", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.compare_total_mag"]
+    statement := "compare_total_mag(b, a) == -compare_total_mag(a, b) for all decimals, and a number (finite or infinite) against a NaN of either sign and kind is -1."
+    source := "compare_total_mag docs: 'like compare_total, but ignoring the sign of each operand' (Doc/library/decimal.rst); total-order antisymmetry"
+    status := .proven, prop := ``CompareTotalMagRest, thm := some ``compareTotalMagRest_proven
+    notes := "With decimal-compare-total-exact's compare_total_mag conjuncts every pair is stated. Checked on 3.15.2: Decimal(5).compare_total_mag(Decimal('-NaN')) and Decimal('-Inf').compare_total_mag(Decimal('sNaN')) are -1." },
+  { id := "decimal-convert-other-tuple-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_convert_other"]
+    statement := "_convert_other(t, raiseit=True) for a tuple t raises TypeError with what 'Unable to convert %s to Decimal' % t gives: 'not enough arguments for format string (got 0)' for (), the formatted message for a 1-tuple, and 'not all arguments converted during string formatting (required 1, got k)' for k >= 2 elements."
+    source := "Lib/_pydecimal.py:6111-6112; PyUnicode_Format's argument-count errors"
+    status := .proven, prop := ``ConvertOtherTupleExact, thm := some ``convertOtherTupleExact_proven
+    notes := "What CPython 3.15.2 does (checked), which is the wrong message recorded in decimal-pydecimal-signal-dict-tuple-message; with decimal-convert-other-exact every operand and both raiseit values are stated." },
+  { id := "decimal-remainder-near-rest", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.remainder_near", "Decimal._check_nans", "_WorkRep.__init__"]
+    statement := "For every context and every math.log10: remainder_near with a NaN operand is what _check_nans gives, before the infinity and zero tests; a zero a is the zero of a's sign at min(ea, eb) through _fix for a non-zero finite b, and a through _fix for an infinite b; for non-zero finite operands whose adjusted exponents differ by prec + 1 or more the result is InvalidOperation (DivisionImpossible), and by -2 or less it is a, padded to exponent min(ea, eb), through _fix; in between, a coefficient of more than 4300 digits raises _WorkRep's int/str-limit ValueError, a's first."
+    source := "remainder_near docstring and Lib/_pydecimal.py:1559-1598; General Decimal Arithmetic, 'remainder-near'"
+    status := .proven, prop := ``RemainderNearRest, thm := some ``remainderNearRest_proven
+    notes := "With decimal-remainder-near-exact (the in-between case within the limit, a zero b, an infinite a or b) every operand pair is stated; the only remaining hypothesis there is a quotient of fewer than 2**40 digits (the domain on which math.log10's accuracy is assumed). Checked on 3.15.2 at prec 5: remainder_near(-0E+5, 3E-2) = -0.00; remainder_near(1E+5, 1) is NaN with InvalidOperation; remainder_near(0.0123456789, 7) = 0.012346 with Inexact, Rounded; a 4301-digit coefficient raises 'value has 4301 digits'." },
+  { id := "decimal-quantize-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.quantize", "Decimal._check_nans"]
+    statement := "For every context and rounding argument, on every operand pair: for finite ±co·10^e and a finite target exponent qe, with v the coefficient at qe (co padded with zeros when qe <= e, otherwise co with its last qe - e digits dropped and rounded as the mode says): qe outside [Etiny, Emax] is InvalidOperation; a zero becomes the zero of its sign at qe through _fix; an adjusted exponent above Emax, or adjusted - qe + 1 above prec, is InvalidOperation; the int/str-limit ValueError is raised exactly when the rounding incremented to a coefficient of more than 4300 digits; otherwise a result with adjusted exponent above Emax or more than prec digits is InvalidOperation, and else Subnormal (non-zero and below Emin), Inexact (non-zero digits dropped) and Rounded (digits dropped) are signalled in that order, the first trapped one raising, and ±v·10^qe goes through _fix. A NaN operand goes through _check_nans, two infinities give the first operand, one infinity is InvalidOperation."
+    source := "quantize docs (Doc/library/decimal.rst, Decimal.quantize); Lib/_pydecimal.py:2600-2659; General Decimal Arithmetic, 'quantize'"
+    status := .proven, prop := ``QuantizeExact, thm := some ``quantizeExact_proven
+    notes := "Unconditional, so it supersedes decimal-quantize-correct (which holds only when quantize returns). Checked on 3.15.2 at prec 5, Emin -5: quantize(1.234E-6, 1E-8) = 1.23E-6 with Subnormal, Inexact, Rounded, and Subnormal is the one raised when both it and Inexact are trapped; quantize(123, 1E-3) is NaN with InvalidOperation; 4301 nines E-1 quantized to 1 with ROUND_UP raises the int/str-limit ValueError, 4300 nines does not." },
+  { id := "decimal-adjusted-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.adjusted"]
+    statement := "adjusted() is exp + (number of coefficient digits) - 1 for every finite decimal, zeros included (Decimal('0E+5').adjusted() == 5), and 0 for every infinity and NaN."
+    source := "adjusted docstring 'Return the adjusted exponent of self' and Lib/_pydecimal.py:2973-2977 (the except TypeError for special values)"
+    status := .proven, prop := ``AdjustedExact, thm := some ``adjustedExact_proven
+    notes := "The difftest compares adjusted() with both twins on every operand kind (the 'adjusted' method case)." }
 ]
 
 end PyLean.Decimal

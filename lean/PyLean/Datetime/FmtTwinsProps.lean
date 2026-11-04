@@ -109,10 +109,8 @@ def offsetText (sep : List Char) (neg : Bool) (a : Nat) : List Char :=
   (if neg then '-' else '+') :: d2 hh ++ sep ++ d2 mm ++
     (if ss ≠ 0 ∨ us ≠ 0 then sep ++ d2 ss ++ (if us ≠ 0 then '.' :: d6 us else []) else [])
 
-/-- `_format_offset(off, sep)` for every valid offset strictly inside ±24 hours is that text,
-and C `format_utcoffset` (which negates the timedelta and splits its seconds field by
-`divmod`) gives the same text. -/
-def FormatOffsetText : Prop :=
+/-- The `off is not None` branch of `FormatOffsetText`. -/
+def FormatOffsetSome : Prop :=
   ∀ (sep : List Char) (t : Delta), t.Valid → -86400000000 < t.toUs → t.toUs < 86400000000 →
     formatOffsetSep sep (some t.toUs) = offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs ∧
     formatUtcoffsetC sep (some t) = formatOffsetSep sep (some t.toUs)
@@ -120,7 +118,7 @@ def FormatOffsetText : Prop :=
 theorem padNat_d2 (n : Nat) (h : n < 100) : padNat 2 n = d2 n := padNat2 n h
 theorem padNat_d6 (n : Nat) (h : n < 1000000) : padNat 6 n = d6 n := padNat6 n h
 
-theorem formatOffsetText_proven : FormatOffsetText := by
+theorem formatOffsetSome_proven : FormatOffsetSome := by
   intro sep t hv hlo hhi
   have py : formatOffsetSep sep (some t.toUs) = offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs := by
     unfold formatOffsetSep offsetText
@@ -181,6 +179,29 @@ theorem formatOffsetText_proven : FormatOffsetText := by
     by_cases hu' : t.toUs.natAbs % 1000000 = 0 <;>
     by_cases hss' : t.toUs.natAbs % 60000000 / 1000000 = 0 <;> simp [hu, hss, hu', hss'] <;> omega
 
+/-- `_format_offset(off, sep)` for every `off` that `utcoffset()` can return (None, or a valid
+timedelta strictly inside ±24 hours, the range `_check_utc_offset` enforces) and every
+separator: None (a naive object) is the empty string, so `isoformat()` has no offset suffix;
+an offset is the text `±HH sep MM[sep SS[.ffffff]]` of `offsetText`; and C `format_utcoffset`
+(which writes `""` for `Py_None`, negates the timedelta and splits its seconds field by
+`divmod`) gives the same text. -/
+def FormatOffsetText : Prop :=
+  ∀ (sep : List Char) (off : Option Delta),
+    (∀ t ∈ off, t.Valid ∧ -86400000000 < t.toUs ∧ t.toUs < 86400000000) →
+    formatOffsetSep sep (off.map Delta.toUs) =
+      (match off with
+       | none => []
+       | some t => offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs) ∧
+    formatUtcoffsetC sep off = formatOffsetSep sep (off.map Delta.toUs)
+
+theorem formatOffsetText_proven : FormatOffsetText := by
+  intro sep off h
+  cases off with
+  | none => exact ⟨rfl, rfl⟩
+  | some t =>
+    obtain ⟨hv, hlo, hhi⟩ := h t rfl
+    exact formatOffsetSome_proven sep t hv hlo hhi
+
 /-! ### The `timespec` argument -/
 
 /-- `isoformat(timespec=x)` refuses the same arguments with the same exception class in both
@@ -195,31 +216,76 @@ theorem timespecTwins_refuted : ¬TimespecTwins := by
   have := h (.other true)
   simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className] at this
 
-/-- For every `str` the twins give the same spec or the same `ValueError` (message included),
-and an unhashable non-`str` is a `TypeError` in both. -/
+theorem parseTimespec_other (s : String) (h1 : s ≠ "auto") (h2 : s ≠ "hours") (h3 : s ≠ "minutes")
+    (h4 : s ≠ "seconds") (h5 : s ≠ "milliseconds") (h6 : s ≠ "microseconds") :
+    parseTimespec s = .error (.valueError "Unknown timespec value") := by
+  unfold parseTimespec; split <;> simp_all
+
+/-- For every `str` the twins give the same spec or the same `ValueError` (message included).
+Taken literally this is false: C's clinic converter refuses a NUL before the impl runs. -/
+def TimespecStrTwins : Prop :=
+  ∀ s : String, parseTimespecArgPy (.str s) = parseTimespecArgC (.str s)
+
+/-- `time(1).isoformat(timespec='auto\0')`: Python looks `'auto\0'` up in `specs` and raises
+`ValueError('Unknown timespec value')`; C's clinic `str` converter raises
+`ValueError('embedded null character')`. -/
+theorem timespecStrTwins_refuted : ¬TimespecStrTwins := by
+  intro h
+  have := h "auto\x00"
+  revert this; decide
+
+/-- `isoformat(timespec=s)` for every `str` without a lone surrogate: without a NUL the twins
+give the same spec or the same `ValueError` (message included), and the spec is the one the
+documented name selects; with a NUL Python raises `ValueError('Unknown timespec value')` and C
+`ValueError('embedded null character')`, the same class; a `str` with a lone surrogate is a
+`ValueError` in Python and a `UnicodeEncodeError` (a `ValueError` subclass) in C; an
+unhashable non-`str` is a `TypeError` in both. -/
 def TimespecStr : Prop :=
-  (∀ s : String, parseTimespecArgPy (.str s) = parseTimespecArgC (.str s)) ∧
+  (∀ s : String, '\x00' ∉ s.toList →
+    parseTimespecArgPy (.str s) = parseTimespecArgC (.str s) ∧
+    parseTimespecArgC (.str s) =
+      (if s = "auto" then .ok .auto else if s = "hours" then .ok .hours
+       else if s = "minutes" then .ok .minutes else if s = "seconds" then .ok .seconds
+       else if s = "milliseconds" then .ok .milliseconds
+       else if s = "microseconds" then .ok .microseconds
+       else .error (.valueError "Unknown timespec value"))) ∧
+  (∀ s : String, '\x00' ∈ s.toList →
+    parseTimespecArgPy (.str s) = .error (.valueError "Unknown timespec value") ∧
+    parseTimespecArgC (.str s) = .error (.valueError "embedded null character")) ∧
+  parseTimespecArgPy .surrogateStr = .error (.valueError "Unknown timespec value") ∧
+  (parseTimespecArgC .surrogateStr).raises "UnicodeEncodeError" ∧
   SameOutcome (parseTimespecArgPy (.other false)) (parseTimespecArgC (.other false))
 
 theorem timespecStr_proven : TimespecStr := by
-  refine ⟨fun s => ?_, by simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className]⟩
-  by_cases h1 : s = "auto"
-  · subst h1; decide
-  by_cases h2 : s = "hours"
-  · subst h2; decide
-  by_cases h3 : s = "minutes"
-  · subst h3; decide
-  by_cases h4 : s = "seconds"
-  · subst h4; decide
-  by_cases h5 : s = "milliseconds"
-  · subst h5; decide
-  by_cases h6 : s = "microseconds"
-  · subst h6; decide
-  have hp : parseTimespec s = .error (.valueError "Unknown timespec value") := by
-    unfold parseTimespec; split <;> simp_all
-  have hc : specsC.find? (·.1 = s) = none := by
-    simp [specsC, List.find?, Ne.symm h2, Ne.symm h3, Ne.symm h4, Ne.symm h5, Ne.symm h6]
-  simp only [parseTimespecArgPy, parseTimespecArgC, hp, h1, ↓reduceIte, hc]
+  refine ⟨fun s hn => ?_, fun s hn => ?_, rfl, ⟨_, rfl, rfl⟩,
+    by simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className]⟩
+  · have hc0 : s.toList.contains '\x00' = false := by simpa using hn
+    by_cases h1 : s = "auto"
+    · subst h1; decide
+    by_cases h2 : s = "hours"
+    · subst h2; decide
+    by_cases h3 : s = "minutes"
+    · subst h3; decide
+    by_cases h4 : s = "seconds"
+    · subst h4; decide
+    by_cases h5 : s = "milliseconds"
+    · subst h5; decide
+    by_cases h6 : s = "microseconds"
+    · subst h6; decide
+    have hp := parseTimespec_other s h1 h2 h3 h4 h5 h6
+    have hc : specsC.find? (·.1 = s) = none := by
+      simp [specsC, List.find?, Ne.symm h2, Ne.symm h3, Ne.symm h4, Ne.symm h5, Ne.symm h6]
+    simp only [parseTimespecArgPy, parseTimespecArgC, hp, hc0, h1, h2, h3, h4, h5, h6, hc,
+      Bool.false_eq_true, ↓reduceIte, and_self]
+  · have hc0 : s.toList.contains '\x00' = true := by simpa using hn
+    have ne : ∀ k ∈ ["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"], s ≠ k := by
+      intro k hk heq; subst heq; simp at hk; rcases hk with h | h | h | h | h | h <;> subst h <;>
+        revert hn <;> decide
+    simp at ne
+    obtain ⟨h1, h2, h3, h4, h5, h6⟩ := ne
+    refine ⟨?_, ?_⟩
+    · simp only [parseTimespecArgPy]; exact parseTimespec_other s h1 h2 h3 h4 h5 h6
+    · simp only [parseTimespecArgC, hc0, ↓reduceIte]
 
 /-! ### `date.__format__` -/
 
@@ -248,24 +314,63 @@ theorem dateFormat_proven : DateFormat := by
 
 /-! ### `date.strptime` -/
 
-/-- `date.strptime(s, fmt)` (both twins call `_strptime._strptime_datetime_date`): for every
-parse `r`, the result is `date(r.year, r.month, r.day)`, whatever the time fields; so it
-succeeds on every valid date even where `datetime.strptime` refuses (`%S` matches 60 and
-61), and the parse's exception propagates. A `date.strptime` defined as
-`datetime.strptime(...).date()` fails at a second of 60. -/
+/-- `date.strptime(s, fmt)` (both twins call `_strptime._strptime_datetime_date`, the C
+impl through `PyObject_CallMethodObjArgs`, :3521-3536) for every parse:
+- it is the documented `date(*(time.strptime(s, fmt)[0:3]))`: `time.strptime` is
+  `_strptime_time` (`strptimeTime`, the same `_strptime` call, whose `struct_time` starts
+  with year, month, day), and `date(...)` is the constructor `date.__new__` with its
+  `_check_date_fields` (`dateCallPy`), including every exception of the parse;
+- the time fields play no part: for a parse with a valid date, no UTC offset and a second
+  of 60 or 61 (which `%S` matches), `date.strptime` returns the date while
+  `datetime.strptime` raises `ValueError`, so `date.strptime` is not
+  `datetime.strptime(...).date()`;
+- and such a parse exists: with `%Y %m %d %S` on `2024 1 2 60` (the groups `Y`, `m`, `d`,
+  `S`) and a locale without alternative digits (`LC_alt_digits` empty, as in C). -/
 def DateStrptime : Prop :=
   ∀ (lt : LocaleTimeV) (found : StrpFound),
-    (∀ r, strptimeCore lt found = .ok r →
-      strptimeDate lt found = checkDate r.year r.month r.day ∧
-      (ValidDate r.year r.month r.day → strptimeDate lt found = .ok (r.year, r.month, r.day))) ∧
-    (∀ e, strptimeCore lt found = .error e → strptimeDate lt found = .error e)
+    strptimeDate lt found =
+      (do let tt ← strptimeTime lt found; dateCallPy [.int tt.year, .int tt.month, .int tt.day]) ∧
+    (∀ r, strptimeCore lt found = .ok r → ValidDate r.year r.month r.day → r.gmtoff = none →
+      (r.second = 60 ∨ r.second = 61) →
+      strptimeDate lt found = .ok (r.year, r.month, r.day) ∧ (strptimeDatetime lt found).raises "ValueError") ∧
+    (lt.altDigits = none →
+      let f60 : StrpFound := [("Y", some "2024"), ("m", some "1"), ("d", some "2"), ("S", some "60")]
+      ∃ r, strptimeCore lt f60 = .ok r ∧ r.year = 2024 ∧ r.month = 1 ∧ r.day = 2 ∧ r.second = 60 ∧
+        r.gmtoff = none)
+
+theorem dateCallPy_ints (y m d : Int) : dateCallPy [.int y, .int m, .int d] = checkDate y m d := by
+  simp [dateCallPy, dateNewPy, checkDateFieldsArgPy, stateOf, pyIndex, bind, Except.bind]
 
 theorem dateStrptime_proven : DateStrptime := by
   intro lt found
-  refine ⟨fun r hr => ?_, fun e he => ?_⟩
-  · have e : strptimeDate lt found = checkDate r.year r.month r.day := by
-      unfold strptimeDate; rw [hr]; rfl
-    exact ⟨e, fun hv => by rw [e]; exact checkDate_ok _ _ _ hv⟩
-  · unfold strptimeDate; rw [he]; rfl
+  refine ⟨?_, fun r hr hv hg hs => ?_, fun hlt => ?_⟩
+  · unfold strptimeDate strptimeTime
+    cases strptimeCore lt found with
+    | error e => rfl
+    | ok r => simp only [bind, Except.bind]; rw [dateCallPy_ints]
+  · refine ⟨?_, ?_⟩
+    · unfold strptimeDate; rw [hr]; exact checkDate_ok _ _ _ hv
+    · unfold strptimeDatetime
+      rw [hr]
+      simp only [bind, Except.bind, hg]
+      unfold newDT
+      rw [checkDate_ok _ _ _ hv]
+      simp only
+      have : ¬ (0 ≤ r.second ∧ r.second ≤ 59) := by omega
+      unfold checkTime
+      by_cases h1 : 0 ≤ r.hour ∧ r.hour ≤ 23
+      · by_cases h2 : 0 ≤ r.minute ∧ r.minute ≤ 59
+        · simp only [h1, h2, this, not_false_eq_true, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+        · simp only [h1, h2, not_false_eq_true, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+      · simp only [h1, not_false_eq_true, ↓reduceIte]
+        exact ⟨_, rfl, rfl⟩
+  · have hp : ∀ s, parseIntLt lt s = pyInt s.toList := by
+      intro s; simp [parseIntLt, hlt]
+    simp only
+    refine ⟨⟨2024, 1, 2, 0, 0, 60, 1, 2, -1, none, none, 0, 0⟩, ?_, rfl, rfl, rfl, rfl, rfl⟩
+    simp [strptimeCore, strpStep, foundGet, hp, bind, Except.bind, pure, Except.pure]
+    decide
 
 end PyLean.Datetime

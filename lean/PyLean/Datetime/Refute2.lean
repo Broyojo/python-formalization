@@ -70,19 +70,19 @@ theorem astimezoneTwins_refuted : ¬AstimezoneTwins := by
 /-- The pickle form `time(state, tzinfo)` takes the same second argument in both twins. -/
 def TimePickleCtorTwins : Prop :=
   ∀ (state : List Nat) (tzarg : Arg),
-    SameOutcome (timeNewPy (.bytes state) tzarg (.int 0) (.int 0) .none_ 0) (timeNewC [.bytes state, tzarg] 0)
+    SameOutcome (timeNewPy (.bytes state) tzarg (.int 0) (.int 0) .none_ (.int 0)) (timeNewC [.bytes state, tzarg] (.int 0))
 
 /-- `time(b'\x01\x00\x00\x00\x00\x00', 0)`: Python's `minute or None` turns the falsy
 second argument into `None` (Py:1434), C raises `TypeError('bad tzinfo state arg')`. -/
 theorem timePickleCtorTwins_refuted : ¬TimePickleCtorTwins := by
   intro h
   have h1 := h [1, 0, 0, 0, 0, 0] (.int 0)
-  have e1 : Py.isOk (timeNewPy (.bytes [1, 0, 0, 0, 0, 0]) (.int 0) (.int 0) (.int 0) .none_ 0) = true := by decide
-  have e2 : Py.isOk (timeNewC [.bytes [1, 0, 0, 0, 0, 0], .int 0] 0) = false := by decide
-  cases hp : timeNewPy (.bytes [1, 0, 0, 0, 0, 0]) (.int 0) (.int 0) (.int 0) .none_ 0 with
+  have e1 : Py.isOk (timeNewPy (.bytes [1, 0, 0, 0, 0, 0]) (.int 0) (.int 0) (.int 0) .none_ (.int 0)) = true := by decide
+  have e2 : Py.isOk (timeNewC [.bytes [1, 0, 0, 0, 0, 0], .int 0] (.int 0)) = false := by decide
+  cases hp : timeNewPy (.bytes [1, 0, 0, 0, 0, 0]) (.int 0) (.int 0) (.int 0) .none_ (.int 0) with
   | error e => rw [hp] at e1; cases e1
   | ok a =>
-    cases hc : timeNewC [.bytes [1, 0, 0, 0, 0, 0], .int 0] 0 with
+    cases hc : timeNewC [.bytes [1, 0, 0, 0, 0, 0], .int 0] (.int 0) with
     | ok c => rw [hc] at e2; cases e2
     | error e => rw [hp, hc] at h1; exact h1
 

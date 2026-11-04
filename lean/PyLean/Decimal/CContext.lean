@@ -162,6 +162,7 @@ def longAsSsize : CtxArg → Py Int
   | .int n =>
     if n < mpdSsizeMin ∨ n > mpdSsizeMax then .error (.overflowError "~Python int too large to convert to C ssize_t")
     else .ok n
+  | .bool b => .ok (if b then 1 else 0)
   | _ => .error (.typeError "~object cannot be interpreted as an integer")
 
 /-- `context_setprec`, _decimal.c:954-971, and `mpd_qsetprec`, libmpdec/context.c:198-205. -/

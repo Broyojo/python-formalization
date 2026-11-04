@@ -64,6 +64,73 @@ def Delta.truedivFloatC (a : Delta) (x : Binary64.F64) : Py Delta := do
   let temp := pyusIn * ratio.2
   usToDeltaC (← divideNearestC temp ratio.1)
 
+/-! ### Float operands whose `as_integer_ratio` is overridden -/
+
+/-- What `other.as_integer_ratio()` returns: a tuple of ints, a list of ints (any iterable
+that is not a tuple), or an object that is neither a tuple nor iterable (an int, `None`).
+A part that is not an int (a float, a str) is out of scope: C refuses it in `divide_nearest`
+(`TypeError: non-integer arguments in division`), Python computes with it. -/
+inductive RatioSeq where
+  | tuple (items : List Int)
+  | list (items : List Int)
+  | notIter
+  deriving DecidableEq, Repr
+
+/-- The float operand of `timedelta * x` and `timedelta / x`: a `float` (or a subclass that
+keeps `float.as_integer_ratio`), or a `float` subclass whose `as_integer_ratio` returns `r`
+or raises. Both twins call the method through normal attribute lookup. -/
+inductive FloatOperand where
+  | exact (x : Binary64.F64)
+  | sub (r : Py RatioSeq)
+
+/-- The call `other.as_integer_ratio()`. -/
+def FloatOperand.ratioCall : FloatOperand → Py RatioSeq
+  | .exact x => (fun p => RatioSeq.tuple [p.1, p.2]) <$> asRatio x
+  | .sub r => r
+
+/-- `a, b = other.as_integer_ratio()`, _pydatetime.py:866 and :895: sequence unpacking, so
+any iterable of exactly two items is accepted, a tuple or not. -/
+def unpackRatioPy : RatioSeq → Py (Int × Int)
+  | .tuple [n, d] | .list [n, d] => .ok (n, d)
+  | .tuple l | .list l =>
+    if l.length < 2 then .error (.valueError "~not enough values to unpack (expected 2)")
+    else .error (.valueError "~too many values to unpack (expected 2)")
+  | .notIter => .error (.typeError "~cannot unpack non-iterable object")
+
+/-- `get_float_as_integer_ratio`, _datetimemodule.c:2312-2336: the result must be a tuple
+(`PyTuple_Check`, else `TypeError`, :2320-2326) of size 2 (else `ValueError`, :2327-2332). -/
+def getFloatAsIntegerRatioC : RatioSeq → Py (Int × Int)
+  | .tuple [n, d] => .ok (n, d)
+  | .tuple _ => .error (.valueError "as_integer_ratio() must return a 2-tuple")
+  | .list _ | .notIter =>
+    .error (.typeError "~unexpected return type from as_integer_ratio(): expected tuple")
+
+/-- `timedelta * x` for a float operand, _pydatetime.py:864-868. -/
+def Delta.mulFloatObjPy (a : Delta) (x : FloatOperand) : Py Delta := do
+  let usec := a.toUs
+  let (n, d) ← unpackRatioPy (← x.ratioCall)
+  usToDeltaPy (← divideAndRound (usec * n) d)
+
+/-- `multiply_truedivide_timedelta_float(delta, x, 0)`, :2339-2368. -/
+def Delta.mulFloatObjC (a : Delta) (x : FloatOperand) : Py Delta := do
+  let pyusIn := a.toUs
+  let ratio ← getFloatAsIntegerRatioC (← x.ratioCall)
+  let temp := pyusIn * ratio.1
+  usToDeltaC (← divideNearestC temp ratio.2)
+
+/-- `timedelta / x` for a float operand, _pydatetime.py:894-896. -/
+def Delta.truedivFloatObjPy (a : Delta) (x : FloatOperand) : Py Delta := do
+  let usec := a.toUs
+  let (n, d) ← unpackRatioPy (← x.ratioCall)
+  usToDeltaPy (← divideAndRound (d * usec) n)
+
+/-- `multiply_truedivide_timedelta_float(delta, x, 1)`, :2339-2368. -/
+def Delta.truedivFloatObjC (a : Delta) (x : FloatOperand) : Py Delta := do
+  let pyusIn := a.toUs
+  let ratio ← getFloatAsIntegerRatioC (← x.ratioCall)
+  let temp := pyusIn * ratio.2
+  usToDeltaC (← divideNearestC temp ratio.1)
+
 /-- `timedelta / timedelta`, _pydatetime.py:890-891: `usec / other._to_microseconds()`, the
 int true division `long_true_divide` (Objects/longobject.c:4607-4861). -/
 def Delta.truedivDeltaPy (a b : Delta) : Py LongObj.Cplx.Dbl :=
@@ -190,23 +257,64 @@ def dateReprClsPy (c : ReprCls) (y m d : Int) : String :=
 def dateReprClsC (c : ReprCls) (y m d : Int) : String :=
   s!"{c.tpName}({fmtD y}, {fmtD m}, {fmtD d})"
 
+/-- `__qualname__` of `timedelta` or a subclass. -/
+def ReprCls.tdQualname : ReprCls → String
+  | .base => "timedelta"
+  | .sub _ q _ => q
+
+/-- `Py_TYPE(self)->tp_name` of `timedelta` or a heap subclass. -/
+def ReprCls.tdTpName : ReprCls → String
+  | .base => "datetime.timedelta"
+  | .sub _ _ n => n
+
+/-- The argument text of `timedelta.__repr__`, _pydatetime.py:771-779: the nonzero fields
+appended to a list, `'0'` if none, joined with `', '`. -/
+def Delta.reprArgsPy (t : Delta) : String :=
+  let args := (if t.days ≠ 0 then ["days=" ++ fmtD t.days] else []) ++
+    (if t.seconds ≠ 0 then ["seconds=" ++ fmtD t.seconds] else []) ++
+    (if t.us ≠ 0 then ["microseconds=" ++ fmtD t.us] else [])
+  let args := if args.isEmpty then ["0"] else args
+  ", ".intercalate args
+
+/-- `timedelta.__repr__`, _pydatetime.py:770-782, with the class's module and `__qualname__`. -/
+def Delta.reprClsPy (c : ReprCls) (t : Delta) : String :=
+  s!"{getClassModule c.module}{c.tdQualname}({t.reprArgsPy})"
+
+/-- The argument text of `delta_repr`, :2945-2981: built field by field with a separator
+that becomes `", "` after the first, `"0"` if empty. -/
+def Delta.reprArgsC (t : Delta) : String :=
+  let args := if t.days ≠ 0 then s!"days={fmtD t.days}" else ""
+  let sep := if t.days ≠ 0 then ", " else ""
+  let (args, sep) := if t.seconds ≠ 0 then (s!"{args}{sep}seconds={fmtD t.seconds}", ", ") else (args, sep)
+  let args := if t.us ≠ 0 then s!"{args}{sep}microseconds={fmtD t.us}" else args
+  if args.isEmpty then "0" else args
+
+/-- `delta_repr`, :2943-2989: `"%s(%S)"` with `Py_TYPE(self)->tp_name`. -/
+def Delta.reprClsC (c : ReprCls) (t : Delta) : String :=
+  s!"{c.tdTpName}({t.reprArgsC})"
+
 /-! ### `isoformat` text in C -/
 
 /-- C `date_isoformat`, :3627-3633: `PyUnicode_FromFormat("%04d-%02d-%02d", ...)`. -/
 def dateIsoformatC (y m d : Int) : List Char :=
   (fmt0 4 y ++ "-" ++ fmt0 2 m ++ "-" ++ fmt0 2 d).toList
 
-/-- The `timespec` argument: a `str`, or another object, hashable or not. -/
+/-- The `timespec` argument: a `str` (Lean's `String` has no lone surrogates), a `str` that
+contains a lone surrogate code point (its other characters do not matter to either twin), or
+another object, hashable or not. -/
 inductive SpecArg where
   | str (s : String)
+  | surrogateStr
   | other (hashable : Bool)
   deriving Repr, DecidableEq
 
 /-- `_format_time(..., timespec)`'s spec handling, _pydatetime.py:175-184, on any object:
-a non-`str` compares unequal to every key, so `specs[timespec]` raises `KeyError` (turned
-into `ValueError`), or `TypeError` from hashing an unhashable object. -/
+a `str` that is not a key (one with a NUL or a surrogate included) and a non-`str` compare
+unequal to every key, so `specs[timespec]` raises `KeyError` (turned into `ValueError`), or
+`TypeError` from hashing an unhashable object. -/
 def parseTimespecArgPy : SpecArg → Py TimeSpec
   | .str s => parseTimespec s
+  | .surrogateStr => .error (.valueError "Unknown timespec value")
   | .other true => .error (.valueError "Unknown timespec value")
   | .other false => .error (.typeError "~cannot use an unhashable object as a dict key")
 
@@ -215,16 +323,22 @@ def specsC : List (String × TimeSpec) :=
   [("hours", .hours), ("minutes", .minutes), ("seconds", .seconds), ("milliseconds", .milliseconds),
    ("microseconds", .microseconds)]
 
-/-- The clinic `str` converter of `timespec` (clinic/_datetimemodule.c.h, `time.isoformat`
-and `datetime.isoformat`): a non-`str` is a `TypeError` before the impl runs; then the
-search of `specs` in `datetime_time_isoformat_impl`, :4916-4941. -/
+/-- The clinic `str` converter of `timespec` (clinic/_datetimemodule.c.h:956-968 for
+`time.isoformat`, :1815-1827 for `datetime.isoformat`): a non-`str` is a `TypeError`
+(`PyUnicode_Check`, :956-959); `PyUnicode_AsUTF8AndSize` fails with `UnicodeEncodeError`
+on a lone surrogate (:961-964); a NUL makes `strlen` differ from the length, `ValueError:
+embedded null character` (:965-968). Then the search of `specs` in
+`datetime_time_isoformat_impl`, :4916-4941. -/
 def parseTimespecArgC : SpecArg → Py TimeSpec
   | .str s =>
+    if s.toList.contains '\x00' then .error (.valueError "embedded null character")
     -- `timespec == NULL || strcmp(timespec, "auto") == 0`, then the loop over `specs`
-    if s = "auto" then .ok .auto
+    else if s = "auto" then .ok .auto
     else match specsC.find? (·.1 = s) with
       | some (_, sp) => .ok sp
       | none => .error (.valueError "Unknown timespec value")
+  | .surrogateStr =>
+    .error (.named "UnicodeEncodeError" "~'utf-8' codec can't encode character: surrogates not allowed")
   | .other _ => .error (.typeError "~isoformat() argument 'timespec' must be str")
 
 /-- The time part of C `datetime_time_isoformat_impl`, :4900-4952 (and of

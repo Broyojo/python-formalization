@@ -8,26 +8,26 @@ Lib/_pydatetime.py	63	66	_days_before_month	_days_before_month(year, month)	mode
 Lib/_pydatetime.py	68	75	_ymd2ord	_ymd2ord(year, month, day)	modelled	datetime-date-add-timedelta,datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
 Lib/_pydatetime.py	93	153	_ord2ymd	_ord2ymd(n)	modelled	datetime-date-add-timedelta,datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
 Lib/_pydatetime.py	161	164	_build_struct_time	_build_struct_time(y, m, d, hh, mm, ss, dstflag)	modelled	datetime-build-struct-time,datetime-date-timetuple	
-Lib/_pydatetime.py	166	185	_format_time	_format_time(hh, mm, ss, us, timespec='auto')	todo		review: formatTime mirrors :175-185 and FormatTimeText pins every timespec's text against a separate C formatTimeC, but the credited TimespecStr is false about CPython: it claims the same result and message for every str, while C's clinic str converter (clinic/_datetimemodule.c.h:960-968) raises 'embedded null character' for a timespec containing NUL (Python: 'Unknown timespec value'), and parseTimespecArgC omits that check.
-Lib/_pydatetime.py	187	203	_format_offset	_format_offset(off, sep=':')	todo		review: formatOffsetSep mirrors :188-203 and FormatOffsetText pins the +-HH sep MM[sep SS[.ffffff]] text against C format_utcoffset for every offset inside +-24h, but only for some offset: the off is None branch (:189, the '' of a naive object) is in no theorem, so a formatter returning '+00:00' for None passes.
+Lib/_pydatetime.py	166	185	_format_time	_format_time(hh, mm, ss, us, timespec='auto')	modelled	datetime-format-time-text,datetime-timespec-str,datetime-timespec-str-twins,datetime-timespec-twins	after review da1929da: the clinic NUL and surrogate checks are in parseTimespecArgC; TimespecStr restated, TimespecStrTwins refuted
+Lib/_pydatetime.py	187	203	_format_offset	_format_offset(off, sep=':')	modelled	datetime-format-offset-text	after review da1929da: FormatOffsetText quantifies over Option Delta, the None branch included
 Lib/_pydatetime.py	206	214	_need_normalize_century	_need_normalize_century()	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	217	295	_wrap_strftime	_wrap_strftime(object, format, timetuple)	todo		review: wrapScanPy mirrors :227-295 in branch order (f, z, :z, Z, the YGFC century branch, a bare %), stopping before time.strftime and assuming pure tzinfo methods; but the only entry is the StrftimeTwins refutation, whose witness 'abc%:' needs only that Python drops a trailing '%:', so a scan that mishandled %z, %Z, %f or the century branch still refutes it; the narrowed StrftimeTwinsNoBareColon is open and unlisted.
-Lib/_pydatetime.py	298	299	_is_ascii_digit	_is_ascii_digit(c)	todo		review: isAsciiDigit matches :299, but FindSepForms states every non-digit case under the hypothesis isAsciiDigit x = false, i.e. through the function itself, so isAsciiDigit := fun _ => true makes those clauses vacuous and still satisfies the rest; the non-digit condition needs an independent statement (e.g. on x.toNat).
-Lib/_pydatetime.py	301	355	_find_isoformat_datetime_separator	_find_isoformat_datetime_separator(dtstr)	todo		review: findSepPy mirrors :303-355 and FindSepForms now reaches the YYYY-MM-DD, YYYYMMDD, week-date and YYYY-Www-## branches and the length-9 refusal, but the YYYYWww digit loop is only run with idx < 9: the idx % 2 branches (:344-349) are in no theorem (always returning 7 there passes), and the non-digit hypotheses are phrased through isAsciiDigit itself.
+Lib/_pydatetime.py	217	295	_wrap_strftime	_wrap_strftime(object, format, timetuple)	modelled	datetime-strftime-twins,datetime-wrap-scan-directives	after review da1929da: WrapScanDirectives pins each directive (%f, %z, %:z, %Z, %:x, %%, trailing %, %:, the YGFC century branch and its fallthrough); the twin agreement without a bare %: stays open (datetime-strftime-twins-narrow)
+Lib/_pydatetime.py	298	299	_is_ascii_digit	_is_ascii_digit(c)	modelled	datetime-find-sep-forms,datetime-find-sep-week-digits,datetime-is-ascii-digit	after review da1929da: IsAsciiDigit states U+0030..U+0039; the separator theorems state non-digits on toNat
+Lib/_pydatetime.py	301	355	_find_isoformat_datetime_separator	_find_isoformat_datetime_separator(dtstr)	modelled	datetime-find-sep-forms,datetime-find-sep-week-digits	after review da1929da: FindSepWeekDigits pins the YYYYWww digit loop and both idx % 2 branches for every digit run
 Lib/_pydatetime.py	358	363	_read_isoformat_component	_read_isoformat_component(s, n)	modelled	datetime-date-isoformat-roundtrip,datetime-read-isoformat-component	
 Lib/_pydatetime.py	366	403	_parse_isoformat_date	_parse_isoformat_date(dtstr)	modelled	datetime-date-isoformat-roundtrip,datetime-parse-isodate-forms,datetime-parse-isodate-refusals	
-Lib/_pydatetime.py	409	451	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	todo		review: parseHHMMSSFFPy mirrors :411-451 and ParseHHMMSSFFForms now pins HH, HH:MM, HHMMSS, the three refusals and 3-, 6- and 7-digit fractions, but _FRACTION_CORRECTION (:448-449) is pinned only at index 2: fractions of 1, 2, 4 or 5 digits are in no theorem, so a wrong table such as [1, 1, 1000, 1, 1] passes.
-Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	todo		review: parseIsoTimePy mirrors :455-519 (tz_pos search, 24:00 flags, Z, the length refusal, error_from_tz), but the proven FromisoOffsetRange fixes the string to '12:00+-HH:MM' and each refutation witness needs only one rejection; the 24:00 flags, a trailing Z, HHMMSS and fractional offsets and the zero-offset utc branch are unpinned.
+Lib/_pydatetime.py	409	451	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	modelled	datetime-parse-hhmmssff-forms,datetime-parse-hhmmssff-fraction	after review da1929da: ParseHHMMSSFFFraction pins every _FRACTION_CORRECTION entry against 10**(6-k)
+Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	modelled	datetime-fromiso-offset-range,datetime-parse-isotime-forms	after review da1929da: ParseIsoTimeForms pins no offset, trailing Z, every offset form (zero, valid, out of range, malformed lengths, Z followed by text) and the 24:00 flags
 Lib/_pydatetime.py	522	551	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
 Lib/_pydatetime.py	555	558	_check_tzname	_check_tzname(name)	modelled	datetime-tzname-twins	
 Lib/_pydatetime.py	566	576	_check_utc_offset	_check_utc_offset(name, offset)	modelled	datetime-datetime-offsets,datetime-time-offsets	
-Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	todo		review: checkDate mirrors :582-589 and CheckDateFields now pins check order and messages against a separately mirrored C check_date_args and success exactly on Gregorian-valid dates, but the three _index calls (:579-581) are outside it (it starts after _index) and Arg has no object with __index__, so an __index__ that returns or raises is modelled as a plain TypeError (AGENTS: __index__ failure paths are part of the body).
-Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	todo		review: checkTimeFieldsPy and CheckTimeFields pin the ranges, order and messages against C check_time_args, but fold is an Int: :605 tests fold not in (0, 1) without _index, so time(fold=1.0) or fold=True pass and are stored as given in Python while C's int converter refuses 1.0, a duck-typing twin difference the model cannot express; the _index (__index__) calls of :592-595 are not modelled either.
+Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-check-date-fields,datetime-check-date-fields-index,datetime-date-ctor-args	after review da1929da: checkDateFieldsArgPy includes the three _index calls; Arg has __index__ objects (int, non-int, raising) and floats
+Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-check-time-fields,datetime-check-time-fields-index,datetime-datetime-fold-twins,datetime-time-fold-arg,datetime-time-fold-twins	after review da1929da: checkTimeFieldsArgPy includes the _index calls and tests fold on any object without _index; the fold twin difference is refuted (datetime-pydatetime-fold-ordinal-no-index)
 Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-check-tzinfo-arg	
 Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-divide-and-round,datetime-timedelta-float-ops	
 Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	todo		int path mirrored against 3.15.2 (:686-688, :699-701, :721-724, :740-745, :754-757, :763-764) and proven (datetime-timedelta-ctor-twins, -ctor-exact); still missing: the float branches (:692-746: math.modf, float divmod, round) and the type loop (:667-679). review: deltaPy models only int arguments: the float branches (:692-744) of the documented float support and the per-argument TypeError loop (:667-679) are absent (the entry's note defers floats to binary64); its six citations still read @3.14.7 (Delta.lean:46-66) and were not rechecked against the 3.15.2 lines (:686-761).
-Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	todo		
-Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	todo		
+Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	modelled	datetime-timedelta-repr-cls,datetime-timedelta-repr-twins,datetime-timedelta-str-repr	
+Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	modelled	datetime-timedelta-str-repr	
 Lib/_pydatetime.py	796	799	timedelta.total_seconds	total_seconds(self)	todo		
 Lib/_pydatetime.py	803	805	timedelta.days	days(self)	excluded		trivial: the property body is `return self._days`, one field and no branch (_pydatetime.py:803-805)
 Lib/_pydatetime.py	808	810	timedelta.seconds	seconds(self)	excluded		trivial: the property body is `return self._seconds`, one field and no branch (_pydatetime.py:808-810)
@@ -38,7 +38,7 @@ Lib/_pydatetime.py	837	840	timedelta.__rsub__	__rsub__(self, other)	modelled	dat
 Lib/_pydatetime.py	842	847	timedelta.__neg__	__neg__(self)	modelled	datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	849	850	timedelta.__pos__	__pos__(self)	modelled	datetime-timedelta-pos	
 Lib/_pydatetime.py	852	856	timedelta.__abs__	__abs__(self)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	858	869	timedelta.__mul__	__mul__(self, other)	todo		review: Both branches are now modelled (int via TimedeltaOpsTwins, float via TimedeltaFloatOps), but one asRatio serves both twins: C get_float_as_integer_ratio refuses a non-tuple or non-2-tuple result (:2320-2333, omitted from mulFloatC) and divide_nearest non-int parts, while Python unpacks any pair and divmods floats, so for a float subclass whose as_integer_ratio returns a list or floats the twins differ and the model cannot say so.
+Lib/_pydatetime.py	858	869	timedelta.__mul__	__mul__(self, other)	modelled	datetime-timedelta-float-ops,datetime-timedelta-float-ratio,datetime-timedelta-float-ratio-twins,datetime-timedelta-ops-twins	after review da1929da: a float subclass with its own as_integer_ratio is modelled per twin (unpackRatioPy, getFloatAsIntegerRatioC); float parts are out of scope
 Lib/_pydatetime.py	873	875	timedelta._to_microseconds	_to_microseconds(self)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	877	884	timedelta.__floordiv__	__floordiv__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	886	896	timedelta.__truediv__	__truediv__(self, other)	todo		int divisor: datetime-timedelta-ops-twins; float divisor: datetime-timedelta-float-ops (both proven); timedelta divisor (:890-891, long_true_divide) is the open datetime-timedelta-truediv-delta, waiting for the rounding proof of longobj-true-divide-rounds. review: Only the int branch (:892-893) is modelled; timedelta / timedelta returning a float (:890-891) and a float divisor (:894-896) are not.
@@ -54,13 +54,13 @@ Lib/_pydatetime.py	947	950	timedelta.__hash__	__hash__(self)	modelled	datetime-t
 Lib/_pydatetime.py	952	955	timedelta.__bool__	__bool__(self)	modelled	datetime-timedelta-bool-hash	
 Lib/_pydatetime.py	959	960	timedelta._getstate	_getstate(self)	modelled	datetime-timedelta-compare,datetime-timedelta-reduce	
 Lib/_pydatetime.py	962	963	timedelta.__reduce__	__reduce__(self)	modelled	datetime-timedelta-reduce	
-Lib/_pydatetime.py	1001	1031	date.__new__	__new__(cls, year, month=None, day=None)	modelled	datetime-date-ctor,datetime-date-ctor-args,datetime-date-ctor-twins	
+Lib/_pydatetime.py	1001	1031	date.__new__	__new__(cls, year, month=None, day=None)	modelled	datetime-check-date-fields-index,datetime-date-ctor,datetime-date-ctor-args,datetime-date-ctor-twins,datetime-date-new-index-missing	
 Lib/_pydatetime.py	1036	1041	date.fromtimestamp	fromtimestamp(cls, t)	modelled	datetime-date-fromtimestamp	
 Lib/_pydatetime.py	1044	1047	date.today	today(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	1050	1057	date.fromordinal	fromordinal(cls, n)	modelled	datetime-fromordinal-range,datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
-Lib/_pydatetime.py	1060	1075	date.fromisoformat	fromisoformat(cls, date_string)	todo		review: dateFromIsoPy mirrors :1066-1075 and DateFromisoformat with the twin refutation now pins the ASCII and length refusals and the parse result, but the str check (:1063-1064, TypeError 'Argument must be a str') is not modelled: the argument is a List Char, so a fromisoformat that accepted bytes passes (__format__ and timespec model their non-str argument, this one does not).
+Lib/_pydatetime.py	1050	1057	date.fromordinal	fromordinal(cls, n)	modelled	datetime-fromordinal-arg,datetime-fromordinal-index-twins,datetime-fromordinal-range,datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
+Lib/_pydatetime.py	1060	1075	date.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-fromiso-twins,datetime-date-fromisoformat,datetime-date-fromisoformat-arg,datetime-date-isoformat-roundtrip	after review da1929da: the str check (:1063-1064) and a surrogate str are modelled (IsoArg) in both twins
 Lib/_pydatetime.py	1078	1082	date.fromisocalendar	fromisocalendar(cls, year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
-Lib/_pydatetime.py	1085	1092	date.strptime	strptime(cls, date_string, format)	todo		review: strptimeDate models _strptime_datetime_date (_strptime.py:815-820) from found.groupdict() on, but DateStrptime only restates its two-line definition (strptimeCore, then checkDate of the date fields; proved by unfold and rw), so it holds for whatever strptimeCore does; neither the documented equivalence date(*time.strptime(s, f)[0:3]) nor a parse with second 60 that datetime.strptime refuses is stated.
+Lib/_pydatetime.py	1085	1092	date.strptime	strptime(cls, date_string, format)	modelled	datetime-date-strptime	after review da1929da: DateStrptime states date(*time.strptime(s, f)[0:3]) through dateCallPy and the second-60 case with a witness
 Lib/_pydatetime.py	1096	1107	date.__repr__	__repr__(self)	modelled	datetime-date-repr,datetime-date-repr-twins	
 Lib/_pydatetime.py	1114	1120	date.ctime	ctime(self)	modelled	datetime-ctime	
 Lib/_pydatetime.py	1122	1130	date.strftime	strftime(self, format)	todo		
@@ -98,14 +98,14 @@ Lib/_pydatetime.py	1389	1390	IsoCalendarDate.week	week(self)	modelled	datetime-i
 Lib/_pydatetime.py	1393	1394	IsoCalendarDate.weekday	weekday(self)	modelled	datetime-isocalendardate	
 Lib/_pydatetime.py	1396	1399	IsoCalendarDate.__reduce__	__reduce__(self)	todo		
 Lib/_pydatetime.py	1401	1403	IsoCalendarDate.__repr__	__repr__(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1436	1473	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-time-ctor,datetime-time-ctor-fold-twins,datetime-time-pickle-ctor-twins	
+Lib/_pydatetime.py	1436	1473	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-check-time-fields-index,datetime-time-ctor,datetime-time-ctor-fold-twins,datetime-time-fold-arg,datetime-time-fold-twins,datetime-time-pickle-ctor-twins	
 Lib/_pydatetime.py	1477	1484	time.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
 Lib/_pydatetime.py	1488	1490	time.hour	hour(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1493	1495	time.minute	minute(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1498	1500	time.second	second(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1503	1505	time.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1508	1510	time.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1513	1514	time.fold	fold(self)	todo		
+Lib/_pydatetime.py	1508	1510	time.tzinfo	tzinfo(self)	excluded		trivial: the property body is `return self._tzinfo`, one field and no branch (_pydatetime.py:1508-1510)
+Lib/_pydatetime.py	1513	1514	time.fold	fold(self)	excluded		trivial: the property body is `return self._fold`, one field and no branch (_pydatetime.py:1513-1514)
 Lib/_pydatetime.py	1520	1524	time.__eq__	__eq__(self, other)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
 Lib/_pydatetime.py	1526	1530	time.__le__	__le__(self, other)	modelled	datetime-time-compare-base	
 Lib/_pydatetime.py	1532	1536	time.__lt__	__lt__(self, other)	modelled	datetime-time-compare-base	
@@ -127,13 +127,13 @@ Lib/_pydatetime.py	1753	1764	time._getstate	_getstate(self, protocol=3)	modelled
 Lib/_pydatetime.py	1766	1777	time.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-time-pickle	
 Lib/_pydatetime.py	1779	1780	time.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-time-pickle	
 Lib/_pydatetime.py	1782	1783	time.__reduce__	__reduce__(self)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1800	1833	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor,datetime-datetime-ctor-fold-twins	
+Lib/_pydatetime.py	1800	1833	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor,datetime-datetime-ctor-fold-twins,datetime-datetime-fold-twins	
 Lib/_pydatetime.py	1837	1839	datetime.hour	hour(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1842	1844	datetime.minute	minute(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1847	1849	datetime.second	second(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1852	1854	datetime.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1857	1859	datetime.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1862	1863	datetime.fold	fold(self)	todo		
+Lib/_pydatetime.py	1857	1859	datetime.tzinfo	tzinfo(self)	excluded		trivial: the property body is `return self._tzinfo`, one field and no branch (_pydatetime.py:1857-1859)
+Lib/_pydatetime.py	1862	1863	datetime.fold	fold(self)	excluded		trivial: the property body is `return self._fold`, one field and no branch (_pydatetime.py:1862-1863)
 Lib/_pydatetime.py	1866	1907	datetime._fromtimestamp	_fromtimestamp(cls, t, utc, tz)	todo		
 Lib/_pydatetime.py	1910	1917	datetime.fromtimestamp	fromtimestamp(cls, timestamp, tz=None)	todo		
 Lib/_pydatetime.py	1920	1929	datetime.utcfromtimestamp	utcfromtimestamp(cls, t)	todo		
