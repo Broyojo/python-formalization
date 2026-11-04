@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Rules.Args2
 import PyLean.PyGrammar.Peg.Rules.GenexpStar
+import PyLean.PyGrammar.Peg.Rules.Cmp
 
 /-! Registry entries for the parameter rules (`Peg/Rules/Params*.lean`) and `invalid_group`
 (`Peg/Rules/Invalid2.lean`), in the scheme of `Entries.lean`. -/
@@ -577,6 +578,64 @@ def findingEntries : List Entry := [
     bug := some "pygrammar-genexp-star-precedence"
     notes := "Counterexample run in the kernel: e = '*a or b'. genexp's element ends in " ++
       "starred_expression ('*' expression), listcomp's star_named_expression ('*' bitwise_or)." }
+]
+
+private def cmpEntry (id : String) (fns : List String) (name tok op line : String) (prop thm : Lean.Name) : Entry :=
+  { id := id
+    pyFile := "Grammar/python.gram"
+    pyFns := fns
+    statement := name ++ ": " ++ tok ++ " bitwise_or gives the CmpopExprPair record (" ++ op ++
+      ", operand); another token, or no bitwise_or after it, NULL with the mark back."
+    source := "Grammar/python.gram:" ++ line
+    status := .proven
+    prop := prop
+    thm := some thm
+    notes := scheme ++ " One statement (CmpPair / CmpPair2) over the token and operator, proven " ++
+      "against each rule's data." }
+
+def cmpEntries : List Entry := [
+  { id := "pygrammar-rule-compare-op-bitwise-or-pair"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_compare_op_bitwise_or_pair
+    statement := "compare_op_bitwise_or_pair: the ordered choice of eq, noteq, lte, invalid_noteq " ++
+      "(second pass only), lt, gte, gt, notin, in, isnot, is (_bitwise_or rules), each from the " ++
+      "start mark."
+    source := "Grammar/python.gram:793-804"
+    status := .proven
+    prop := ``CompareOpPair
+    thm := some ``compareOpPair_proven
+    notes := scheme ++ " choiceResG: choice_run with invalid_ alternatives skipped by the pass flag " ++
+      "of the state reached, by induction on the alternatives." },
+  cmpEntry "pygrammar-rule-eq-bitwise-or" Rows.rule_eq_bitwise_or "eq_bitwise_or" "'=='" "Eq" "806"
+    ``EqBitwiseOr ``eqBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-lte-bitwise-or" Rows.rule_lte_bitwise_or "lte_bitwise_or" "'<='" "LtE" "809"
+    ``LteBitwiseOr ``lteBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-lt-bitwise-or" Rows.rule_lt_bitwise_or "lt_bitwise_or" "'<'" "Lt" "810"
+    ``LtBitwiseOr ``ltBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-gte-bitwise-or" Rows.rule_gte_bitwise_or "gte_bitwise_or" "'>='" "GtE" "811"
+    ``GteBitwiseOr ``gteBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-gt-bitwise-or" Rows.rule_gt_bitwise_or "gt_bitwise_or" "'>'" "Gt" "812"
+    ``GtBitwiseOr ``gtBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-notin-bitwise-or" Rows.rule_notin_bitwise_or "notin_bitwise_or" "'not' 'in'"
+    "NotIn" "813" ``NotinBitwiseOr ``notinBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-in-bitwise-or" Rows.rule_in_bitwise_or "in_bitwise_or" "'in'" "In" "814"
+    ``InBitwiseOr ``inBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-isnot-bitwise-or" Rows.rule_isnot_bitwise_or "isnot_bitwise_or" "'is' 'not'"
+    "IsNot" "815" ``IsnotBitwiseOr ``isnotBitwiseOr_proven,
+  cmpEntry "pygrammar-rule-is-bitwise-or" Rows.rule_is_bitwise_or "is_bitwise_or" "'is'" "Is" "816"
+    ``IsBitwiseOr ``isBitwiseOr_proven,
+  { id := "pygrammar-rule-noteq-bitwise-or"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_noteq_bitwise_or
+    statement := "noteq_bitwise_or: the operator group and bitwise_or give (NotEq, operand); the " ++
+      "group _tmp_64 takes NOTEQUAL: without barry_as_FLUFL '!=' is the operator and '<>' gives " ++
+      "NULL with no error; with it '<>' is the operator and '!=' raises \"with Barry as BDFL, use " ++
+      "'<>' instead of '!='\" and gives NULL."
+    source := "Grammar/python.gram:807-808; Parser/pegen.c (_PyPegen_check_barry_as_flufl)"
+    status := .proven
+    prop := ``NoteqBitwiseOrRule
+    thm := some ``noteqBitwiseOrRule_proven
+    notes := scheme ++ " The '<>' without barry clause assumes no exception pending." }
 ]
 
 end PyLean.PyGrammar.Peg

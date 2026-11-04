@@ -250,6 +250,9 @@ def rule_class_pattern : List String := [
 def rule_closed_pattern : List String := [
   "rule:closed_pattern"]
 
+def rule_compare_op_bitwise_or_pair : List String := [
+  "rule:compare_op_bitwise_or_pair"]
+
 def rule_comparison : List String := [
   "rule:comparison"]
 
@@ -316,6 +319,9 @@ def rule_elif_stmt : List String := [
 def rule_else_block : List String := [
   "rule:else_block"]
 
+def rule_eq_bitwise_or : List String := [
+  "rule:eq_bitwise_or"]
+
 def rule_eval : List String := [
   "rule:eval"]
 
@@ -373,6 +379,12 @@ def rule_group : List String := [
 def rule_group_pattern : List String := [
   "rule:group_pattern"]
 
+def rule_gt_bitwise_or : List String := [
+  "rule:gt_bitwise_or"]
+
+def rule_gte_bitwise_or : List String := [
+  "rule:gte_bitwise_or"]
+
 def rule_guard : List String := [
   "rule:guard"]
 
@@ -399,6 +411,9 @@ def rule_import_name : List String := [
 
 def rule_import_stmt : List String := [
   "rule:import_stmt"]
+
+def rule_in_bitwise_or : List String := [
+  "rule:in_bitwise_or"]
 
 def rule_interactive : List String := [
   "rule:interactive"]
@@ -432,6 +447,12 @@ def rule_invalid_raise_stmt : List String := [
 
 def rule_inversion : List String := [
   "rule:inversion"]
+
+def rule_is_bitwise_or : List String := [
+  "rule:is_bitwise_or"]
+
+def rule_isnot_bitwise_or : List String := [
+  "rule:isnot_bitwise_or"]
 
 def rule_items_pattern : List String := [
   "rule:items_pattern"]
@@ -514,6 +535,12 @@ def rule_literal_expr : List String := [
 def rule_literal_pattern : List String := [
   "rule:literal_pattern"]
 
+def rule_lt_bitwise_or : List String := [
+  "rule:lt_bitwise_or"]
+
+def rule_lte_bitwise_or : List String := [
+  "rule:lte_bitwise_or"]
+
 def rule_mapping_pattern : List String := [
   "rule:mapping_pattern"]
 
@@ -531,6 +558,12 @@ def rule_name_or_attr : List String := [
 
 def rule_named_expression : List String := [
   "rule:named_expression"]
+
+def rule_noteq_bitwise_or : List String := [
+  "rule:noteq_bitwise_or"]
+
+def rule_notin_bitwise_or : List String := [
+  "rule:notin_bitwise_or"]
 
 def rule_open_sequence_pattern : List String := [
   "rule:open_sequence_pattern"]
