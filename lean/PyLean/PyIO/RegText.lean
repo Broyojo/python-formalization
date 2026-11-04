@@ -2,6 +2,9 @@ import PyLean.Registry
 import PyLean.PyIO.ArgTwins
 import PyLean.PyIO.NewlineProps
 import PyLean.PyIO.TextTellStale
+import PyLean.PyIO.InitRead
+import PyLean.PyIO.TellNext
+import PyLean.PyIO.SeekStart
 
 /-! Registry entries for the argument and check-order differences of the BytesIO and
 StringIO twins (`PyIO/ArgTwins.lean`), and for TextIOWrapper, IncrementalNewlineDecoder,
@@ -87,6 +90,32 @@ def textEntries : List Entry := [
     status := .refuted, prop := ``TextCTellAfterNextInRange, thm := some ``textCTellAfterNextInRange_refuted
     bug := some "pyio-textio-tell-after-next-stale-snapshot"
     notes := "b'\\nb\\xe2\\x82\\xac' (5 bytes): tell() returns 6. next() stops updating the snapshot, flush() re-enables tell(), and tell() asks for skip_bytes = 1 of the empty snapshot (textio.c:2949-2957), decoding the bytes object's terminating NUL. Found by pyio_text_diff seed 44 (coordinator run); the model now reads that NUL (TCm.snapBytes) and calls a longer over-read undefined behaviour." },
+  { id := "pyio-stringio-init-read", pyFile := "Lib/_pyio.py"
+    pyFns := ["StringIO.__init__", "TextIOWrapper._configure", "TextIOWrapper._get_decoder",
+      "TextIOWrapper.newlines", "_io_StringIO___init___impl", "_io_StringIO_newlines_get_impl"]
+    statement := "For every legal newline and every str value below the allocation bound, StringIO(value, newline) then newlines, read(), newlines: both twins' read() return the value as the mode stores and reads it (newline=None turns \\r\\n and \\r into \\n, '\\r' and '\\r\\n' turn each \\n into that ending, '' and '\\n' leave it), so the constructor rewinds and the decoder is wrapped with translate exactly for the universal modes; C's newlines is the kinds of the value from construction on (None for the other modes), _pyio's is None until the first read, then the same kinds for the universal modes and AttributeError for the others."
+    source := "Doc/library/io.rst:1001-1018 (TextIOWrapper newline), :1118-1120 (StringIO: initial value, stream positioned at the start), :900-904 (newlines); the bodies _pyio.py:2128-2143, :2309-2315, :2597-2619, :2732-2733, :2747-2761 and stringio.c:684-792, :1037-1046"
+    status := .proven, prop := ``StringIOInitRead, thm := some ``stringIOInitRead_proven
+    notes := "Smoke-tested on 3.15.2: 30000 random values (a, \\n, \\r, é, €, 😀, NUL, a lone surrogate; up to 3000 characters) and every legal newline, both twins: read() and newlines as stated. Scope: StringIO's own TextIOWrapper call (utf-8, surrogatepass, a BytesIO); _configure's BOM branch (:2145-2153) does not run, since the buffer is at 0. _writetranslate = False for newline=None (:2754-2755) is not observable where os.linesep is '\\n'." },
+  { id := "pyio-stringio-newlines-twins", pyFile := "Lib/_pyio.py"
+    pyFns := ["TextIOWrapper.newlines", "_io_StringIO_newlines_get_impl"]
+    statement := "For the universal newline modes, io.StringIO(v, newline).newlines and _pyio.StringIO(v, newline).newlines agree right after construction."
+    source := "invariant: C accelerator vs pure-Python twin; Doc/library/io.rst:900-904 ('the newlines translated so far')"
+    status := .refuted, prop := ``StringIONewlinesTwins, thm := some ``stringIONewlinesTwins_refuted
+    bug := some "pyio-stringio-pyio-newlines-attributeerror"
+    notes := "StringIO('a\\n').newlines: C '\\n' (its decoder runs on write, stringio.c:198-200), _pyio None (no decoder before the first read, _pyio.py:2732-2733)." },
+  { id := "pyio-stringio-next-flush", pyFile := "Lib/_pyio.py"
+    pyFns := ["TextIOWrapper.__next__", "TextIOWrapper.flush"]
+    statement := "On every open _pyio.StringIO state, next() is readline() with tell() disabled first: an exception propagates; an empty line raises StopIteration with the snapshot dropped and tell() enabled again; a line is returned, after which tell() raises OSError('telling position disabled by next() call') until flush(), which returns None and re-enables it, so that error can no longer come from tell(). flush() on a closed stream raises ValueError('I/O operation on closed file.') and changes nothing."
+    source := "the bodies _pyio.py:2255-2257, :2409-2413, :2629-2636; Doc/library/io.rst (TextIOWrapper: 'tell() ... disabled during iteration')"
+    status := .proven, prop := ``StringIONextFlush, thm := some ``stringIONextFlush_proven
+    notes := "Smoke-tested on 3.15.2: 20000 random streams, all newline modes, reads before next(); every outcome as stated. Over every state, not only reachable ones; what tell() then returns after next() and flush() is the stale-snapshot case of pyio-textio-c-tell-after-next-in-range (C) and an AssertionError in _pyio." },
+  { id := "pyio-stringio-seek-start-end", pyFile := "Lib/_pyio.py"
+    pyFns := ["TextIOWrapper.seek"]
+    statement := "On every open _pyio.StringIO state, seek(0) returns 0 and a following read() returns getvalue(); seek(0, 2) returns the buffer's length and a following read() returns ''; seek refuses a closed stream with ValueError('tell on closed file'), a nonzero offset with whence 1 or 2 with UnsupportedOperation, another whence with ValueError('unsupported whence (w)') and a negative cookie with ValueError('negative seek position c'), each changing nothing."
+    source := "Doc/library/io.rst (TextIOBase.seek: 'seek(0, SEEK_END)', 'cookie ... previously returned by tell()'); the body _pyio.py:2522-2576"
+    status := .proven, prop := ``StringIOSeekStartEnd, thm := some ``stringIOSeekStartEnd_proven
+    notes := "Smoke-tested on 3.15.2: 20000 random streams after random reads, writes, next() and seeks, all newline modes. Scope: the cookie 0 and end branches; a cookie that replays chars_to_skip (:2577-2595) is not covered here, so the seek row stays open. seek(0, 2) returns a byte offset in the UTF-8 buffer (bugs/pyio-stringio-pyio-byte-positions.yaml)." },
   { id := "pyio-nldec-chunks", pyFile := "Lib/_pyio.py"
     pyFns := ["IncrementalNewlineDecoder.decode", "IncrementalNewlineDecoder.__init__"]
     statement := "For _pyio.IncrementalNewlineDecoder(None, translate) and every split of a text into chunks, decoded with final=False and then decode('', final=True): the outputs concatenate to the text with \\r\\n and \\r translated to \\n when translate is set, and to the text itself otherwise; the recorded newline kinds are exactly those of the whole text, so a \\r\\n cut between two chunks counts as \\r\\n and never as \\r and \\n; nothing is left pending."

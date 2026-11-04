@@ -1,7 +1,8 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterTotal
-import PyLean.CoreLibs.Coll.ODictUpd
+import PyLean.CoreLibs.Coll.ODictMore2
+import PyLean.CoreLibs.Coll.ODictMove
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
@@ -501,10 +502,45 @@ def odictEntries : List Entry := [
     statement := "update(pairs) (and OrderedDict(pairs) from a new instance) appends new keys in first-seen order keeping the invariant; fromkeys(xs) has xs's keys in first-seen order; copy() has the same keys in the same order."
     source := "Doc/library/collections.rst, OrderedDict; Lib/collections/__init__.py:104-117, :303-314"
     status := .proven, prop := ``ODUpdateOrder, thm := some ``odUpdateOrder_proven },
+  { id := "coll-odict-absent", pyFile := file, pyFns := ["OrderedDict.__delitem__", "OrderedDict.pop"]
+    statement := "For an absent hashable key, del od[k] and od.pop(k) raise KeyError(k), and od.pop(k, d) returns d with od unchanged (the __marker logic)."
+    source := "docstrings, Lib/collections/__init__.py:247-250; :264-266"
+    status := .proven, prop := ``ODAbsent, thm := some ``odAbsent_proven },
+  { id := "coll-odict-eq-full", pyFile := file, pyFns := ["OrderedDict.__eq__"]
+    statement := "od == other: equal items in the same order is True, unequal items False, a raising value == propagates; against a plain dict order is ignored (od equals the dict of its items reversed)."
+    source := "docstring, Lib/collections/__init__.py:317-321"
+    status := .proven, prop := ``ODEqFull, thm := some ``odEqFull_proven },
+  { id := "coll-odict-views", pyFile := file
+    pyFns := ["OrderedDict.keys", "OrderedDict.items", "OrderedDict.values", "OrderedDict.__reversed__",
+      "_OrderedDictKeysView.__reversed__", "_OrderedDictItemsView.__reversed__", "_OrderedDictValuesView.__reversed__"]
+    statement := "list(od.keys()) == list(od); items() and values() follow the same link order; reversed(od) and the views' __reversed__ give the same lists reversed, walking prev links back from the root."
+    source := "Lib/collections/__init__.py:69-84, :155-162, :228-240"
+    status := .proven, prop := ``ODViewsOrder, thm := some ``odViewsOrder_proven },
+  { id := "coll-odict-init-merge", pyFile := file
+    pyFns := ["OrderedDict.__init__", "OrderedDict.__ior__", "OrderedDict.__or__", "OrderedDict.__ror__"]
+    statement := "OrderedDict(pairs, **kw) keeps the pairs' first-seen order then the keyword order; od |= pairs appends new keys in order; od | other and other | od merge the two key orders, left operand first."
+    source := "docstring, Lib/collections/__init__.py:114-116; :325-342; PEP 584"
+    status := .proven, prop := ``ODInitMerge, thm := some ``odInitMerge_proven },
   { id := "coll-odict-iter", pyFile := file, pyFns := ["OrderedDict.__iter__"]
     statement := "The __iter__ generator yields the keys in link order, list(od); resuming it after its current key was deleted raises AttributeError."
     source := "Lib/collections/__init__.py:146-153"
-    status := .proven, prop := ``ODIterGen, thm := some ``odIterGen_proven }
+    status := .proven, prop := ``ODIterGen, thm := some ``odIterGen_proven },
+  { id := "coll-odict-copy-obj", pyFile := file, pyFns := ["OrderedDict.copy"]
+    statement := "od.copy() is a new object of the same class (not od), with od's keys in order and od's value objects; od and every other object are unchanged."
+    source := "Lib/collections/__init__.py:304-306, :104-117"
+    status := .proven, prop := ``ODCopyObj, thm := some ``odCopyObj_proven },
+  { id := "coll-odict-reduce", pyFile := file, pyFns := ["OrderedDict.__reduce__"]
+    statement := "od.__reduce__() is (cls, (), state, None, items in link order): state drops the three private attributes, is None when nothing is left, (state, slots) with non-empty slots; a falsy __getstate__ result passes as is, (None, slots) raises AttributeError, a raising __getstate__ propagates."
+    source := "Lib/collections/__init__.py:285-302"
+    status := .proven, prop := ``ODReduce, thm := some ``odReduce_proven },
+  { id := "coll-odict-repr-rec", pyFile := file, pyFns := ["OrderedDict.__repr__"]
+    statement := "repr(od) under recursive_repr: '...' for an instance already being repr'd, Cls() when empty, Cls({k: ...}) for a self-reference, a twice-held other instance in full both times, Cls(%r) of the items in link order with plain values, and raising key or value reprs propagate."
+    source := "Lib/collections/__init__.py:278-283; Lib/reprlib.py:9-24"
+    status := .proven, prop := ``ODReprRec, thm := some ``odReprRec_proven },
+  { id := "coll-odict-move-to-end", pyFile := file, pyFns := ["OrderedDict.move_to_end"]
+    statement := "move_to_end(key) leaves the list with that link moved last, move_to_end(key, last=False) with it first, the dict unchanged; an absent key raises KeyError(key), an unhashable one the dict-key TypeError."
+    source := "docstring, Lib/collections/__init__.py:194-217"
+    status := .proven, prop := ``ODMoveInv, thm := some ``odMoveInv_proven }
 ]
 
 def entries : List Entry :=

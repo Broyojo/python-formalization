@@ -1027,8 +1027,21 @@ def runOD (j : Json) : Except String Json := do
           | .error e => pure (okJ (Json.arr #[encStrs [k], encExc e]))
         | .error e => throw s!"unexpected {e.message}"
       | (.error e, _) => pure (okJ (Json.arr #[Json.arr #[], encExc e]))
+    | "views" =>
+      let enc3 (rev : Bool) : Json := Json.arr #[encPy encStrs (odKeysView o rev),
+        encPy encODItems (odItemsView rkOD o rev), encPy (fun (l : List Int) => Json.arr (l.map toJson).toArray)
+          (odValuesView rkOD o rev)]
+      pure (okJ (Json.arr #[enc3 false, enc3 true]))
+    | "init_kw" =>
+      let ps ← getItems j "ps"
+      let kw ← getItems j "kw"
+      pure (encPy (fun c => encODItems (odItems c))
+        (odInit kStr (some (.pairs (.ok (FIt.ofList (ps.map .ok))))) kw))
     | _ => pure (okJ Json.null)
-  return okJ (Json.arr #[encStrs o.keysList, encStrs o.keysBack, encODItems (odItems o),
+  let back : Json := match odKeysView o true with
+    | .ok l => encStrs l
+    | .error e => encExc e
+  return okJ (Json.arr #[encStrs o.keysList, back, encODItems (odItems o),
     Json.arr results, exc, finRes])
 
 def run (fn : String) (j : Json) : Except String Json :=
