@@ -23,6 +23,7 @@ import PyLean.Bytecode.SpecMisc
 import PyLean.Bytecode.SpecCall
 import PyLean.Bytecode.SpecCallGeneric
 import PyLean.Bytecode.SpecLoadAttr
+import PyLean.Bytecode.AttrRecursion
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -614,6 +615,18 @@ def entries : List Entry := GenObj.entries ++ [
     source := "Python/bytecodes.c:2862-2866, :2918-2948, :2999-3054, :3193-3212"
     status := .proven, prop := ``AttrSpecRules, thm := some ``attrSpecRules_proven
     notes := "A slot index and a dict entry index stand for C's byte offset and DK_UNICODE_ENTRIES index. The machine's builtin types carry no tp_version_tag, so _CHECK_ATTR_CLASS exits on them where CPython could pass." },
+  { id := "bytecode-property-frame-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_PROPERTY", op "_LOAD_ATTR_PROPERTY_FRAME"]
+    statement := "With the recursion budget spent (py_recursion_remaining <= 1), LOAD_ATTR_PROPERTY does not enter the getter's frame, as every CALL form that pushes a Python frame checks with _CHECK_RECURSION_REMAINING. It does: _GUARD_TYPE_VERSION, the function-version and stack-space exits of _LOAD_ATTR_PROPERTY_FRAME, _SAVE_RETURN_OFFSET and _PUSH_FRAME pass, and _PUSH_FRAME tests nothing, so a recursive property passes the limit once its site has specialized."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3056-3077, :4611-4613, :4628-4642"
+    status := .refuted, prop := ``PropertyFrameChecksRecursion, thm := some ``propertyFrameChecksRecursion_refuted
+    bug := some "bytecode-attr-frame-recursion" },
+  { id := "bytecode-getattribute-frame-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN", op "_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME"]
+    statement := "With the recursion budget spent, LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN does not enter the overriding __getattribute__'s frame. It does, by the same _PUSH_FRAME with no _CHECK_RECURSION_REMAINING."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3079-3105, :4628-4642"
+    status := .refuted, prop := ``GetattributeFrameChecksRecursion, thm := some ``getattributeFrameChecksRecursion_refuted
+    bug := some "bytecode-attr-frame-recursion" },
   { id := "bytecode-null-guards", pyFile := "Python/bytecodes.c"
     pyFns := [op "_GUARD_NOS_NOT_NULL", op "_GUARD_TOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL"]
     statement := "_GUARD_NOS_NOT_NULL exits exactly when the second value is NULL and _GUARD_TOS_NOT_NULL exactly when the top is; _GUARD_NOS_NULL and _GUARD_THIRD_NULL exit exactly when their slot is not NULL; each leaves the stack unchanged, for every stack."

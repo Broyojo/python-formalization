@@ -274,10 +274,10 @@ Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (typ
 Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	modelled	bytecode-attr-specialized	
-Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	todo		changed-in-3.15:
-Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3098	3098	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	macro(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) =	todo		changed-in-3.15:
+Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	modelled	bytecode-property-frame-recursion	
+Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	modelled	bytecode-property-frame-recursion	
+Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	modelled	bytecode-getattribute-frame-recursion	
+Python/bytecodes.c	3098	3098	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	macro(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) =	modelled	bytecode-getattribute-frame-recursion	
 Python/bytecodes.c	3107	3107	opcode:_GUARD_DORV_NO_DICT	op(_GUARD_DORV_NO_DICT, (owner -- owner)) {	todo		
 Python/bytecodes.c	3119	3119	opcode:_STORE_ATTR_INSTANCE_VALUE	op(_STORE_ATTR_INSTANCE_VALUE, (offset/1, value, owner -- o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3138	3138	opcode:_LOCK_OBJECT	op(_LOCK_OBJECT, (value -- value)) {	todo		changed-in-3.15: new function
