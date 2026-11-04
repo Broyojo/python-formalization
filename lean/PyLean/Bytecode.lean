@@ -28,6 +28,7 @@ import PyLean.Bytecode.SpecImport
 import PyLean.Bytecode.SpecCallPy
 import PyLean.Bytecode.SpecCallPyFast
 import PyLean.Bytecode.SpecExcMatch
+import PyLean.Bytecode.SpecAsync
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -729,7 +730,20 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := [op "CLEANUP_THROW"]
     statement := "For every object model: CLEANUP_THROW on (sub_iter, null_in, last_sent_val, exc_value) replaces the four by (None, null_in, exc_value.value) when PyErr_GivenExceptionMatches(exc_value, StopIteration) (a subclass included), and otherwise re-raises exc_value through exception_unwind (the model pops the four first; in C the unwinding to the handler's depth, below them, pops them)."
     source := "Python/bytecodes.c:1960-1978"
-    status := .proven, prop := ``CleanupThrowRules, thm := some ``cleanupThrowRules_proven }
+    status := .proven, prop := ``CleanupThrowRules, thm := some ``cleanupThrowRules_proven },
+  -- `async for` (SpecAsync.lean).
+  { id := "bytecode-get-aiter", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_AITER"]
+    statement := "For every object model, GET_AITER replaces obj by am_aiter's result and pops it on failure; and for every inner object model, the protocol the difftest model installs (getAIterImpl): no __aiter__ on the type gives TypeError \"'async for' requires an object with __aiter__ method, got T\" (%.100s), the lookup's or call's error propagates, a result whose type has no __anext__ gives TypeError \"'async for' received an object from __aiter__ that does not implement __anext__: U\", and otherwise the result is pushed as it is."
+    source := "Python/bytecodes.c:1607-1641; slot_am_aiter, Objects/typeobject.c"
+    status := .proven, prop := ``GetAIterRules, thm := some ``getAIterRules_proven
+    notes := "Scope limit: the builtin async iterators (async_generator and its asend objects) have no am_aiter/am_anext in the difftest object model, so async for over an async generator object is a TypeError there; the instruction statement holds for every object model." },
+  { id := "bytecode-get-anext", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_ANEXT", "_PyEval_GetANext"]
+    statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): no __anext__ gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the lookup's or call's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause)."
+    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; _PyErr_FormatFromCause, Python/errors.c"
+    status := .proven, prop := ``GetANextRules, thm := some ``getANextRules_proven
+    notes := "The PyAsyncGen_CheckExact fast path (:3563-3565) is outside the difftest model (see bytecode-get-aiter); the model previously wrapped only a TypeError and chained __context__ to the handled exception." }
 ]
 
 end PyLean.Bytecode

@@ -157,8 +157,8 @@ Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- r
 Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	modelled	bytecode-return-value	
 Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1602	1602	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		
-Python/bytecodes.c	1643	1643	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	todo		
+Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	modelled	bytecode-get-aiter	
+Python/bytecodes.c	1643	1643	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	modelled	bytecode-get-anext	
 Python/bytecodes.c	1651	1651	opcode:GET_AWAITABLE	inst(GET_AWAITABLE, (iterable -- iter)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1664	1664	opcode:_SPECIALIZE_SEND	specializing op(_SPECIALIZE_SEND, (counter/1, receiver, unused, unused -- receiver, unused, unused)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1676	1676	opcode:_SEND	tier1 op(_SEND, (receiver, null_or_index, v -- receiver, null_or_index, retval)) {	todo		changed-in-3.15:

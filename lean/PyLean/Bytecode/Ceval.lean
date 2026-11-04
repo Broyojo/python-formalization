@@ -388,6 +388,9 @@ def truncUtf8 : Nat → List Char → List Char
 `tp_name`. A `String` holds no surrogate, so the UTF-8 is valid and nothing is replaced. -/
 def trunc200 (s : String) : String := String.ofList (truncUtf8 200 s.toList)
 
+/-- `%.100s`, as `trunc200`. -/
+def trunc100 (s : String) : String := String.ofList (truncUtf8 100 s.toList)
+
 /-- `_PyEval_FormatExcCheckArg`, `Python/ceval.c:3449-3475`: raise `cls` with the formatted
 message, and when `cls` is `NameError` itself (`exc == PyExc_NameError`, so not its subclass
 `UnboundLocalError`) set the new exception's `name` to `obj`, to offer suggestions later. The

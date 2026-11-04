@@ -1714,30 +1714,36 @@ def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
         runtimeError "coroutine is being awaited already"
   pure r
 
-/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`. -/
+/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`: `tp_as_async->am_aiter` of a class is
+`slot_am_aiter`, which looks `__aiter__` up on the type and calls it; the result's type must have
+`am_anext`. Scope limit: the builtin async iterators (`async_generator`) have no slots here, so
+`async for` over an async generator object is a `TypeError` in the model. -/
 def getAIterImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__aiter__" [] with
   | none =>
-    typeError s!"'async for' requires an object with __aiter__ method, got {← tpName o}"
+    typeError s!"'async for' requires an object with __aiter__ method, got {trunc100 (← tpName o)}"
   | some it =>
     if (← userLookup (← typeOf it) "__anext__").isNone then
-      typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {← tpName it}"
+      typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {trunc100 (← tpName it)}"
     pure it
 
-/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`. -/
+/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`: `am_anext` (`slot_am_anext`: `__anext__` looked
+up on the type and called), then `_PyCoro_GetAwaitableIter` on its result, whose failure, whatever
+the exception, becomes `TypeError("'async for' received an invalid object from __anext__: T")` by
+`_PyErr_FormatFromCause` (`Python/errors.c`), which sets both `__cause__` and `__context__` of the new
+error to the old one and raises it as it is (`_PyErr_SetRaisedException`, no further chaining). The
+`PyAsyncGen_CheckExact` fast path (`:3563-3565`) is the scope limit of `getAIterImpl`. -/
 def getANextImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__anext__" [] with
   | none =>
-    typeError s!"'async for' requires an iterator with __anext__ method, got {← tpName o}"
+    typeError s!"'async for' requires an iterator with __anext__ method, got {trunc100 (← tpName o)}"
   | some n =>
     tryExc (awaitableIter P om ctx n) fun e => do
-      if ← givenMatches e 8 (.cls "TypeError") then
-        let err ← newExc (.cls "TypeError")
-          [.str s!"'async for' received an invalid object from __anext__: {← tpName n}"]
-        setCause err e
-        setContext err e
-        raiseVal err
-      else throw (.exc e)
+      let err ← newExc (.cls "TypeError")
+        [.str s!"'async for' received an invalid object from __anext__: {trunc100 (← tpName n)}"]
+      setCause err e
+      setContext err e
+      throw (.exc err)
 
 /-- `_PyEval_MatchKeys`, `Python/ceval.c:439-523`. -/
 def matchKeysImpl (m keys : Val) : RM Val := do
