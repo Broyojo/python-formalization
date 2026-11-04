@@ -68,7 +68,7 @@ Lib/_pydecimal.py	1842	1848	Decimal._round_half_even	_round_half_even(self, prec
 Lib/_pydecimal.py	1850	1855	Decimal._round_ceiling	_round_ceiling(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1857	1862	Decimal._round_floor	_round_floor(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1864	1869	Decimal._round_05up	_round_05up(self, prec)	modelled	decimal-rounding-modes-correct	
-Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	todo		review: pyRound (Arith.lean:338) follows :1930-1943 and IntConversionsPyOrLimit now pins round(d) (the int, the int-limit ValueError exactly past 4300 digits, the NaN and infinity errors) and the non-int n TypeError, but round(d, n) is stated only as equal to quantize(Decimal((0, (1,), -n))), and quantize is not pinned (Decimal.quantize is a todo row; QuantizeCorrect holds only when it returns), so the two-argument form's result is unstated.
+Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	modelled	decimal-int-conversions-py-or-limit,decimal-quantize-exact	
 Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	modelled	decimal-fma-exact,decimal-fma-special-exact	
@@ -77,7 +77,7 @@ Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	to
 Lib/_pydecimal.py	2352	2566	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		
 Lib/_pydecimal.py	2568	2573	Decimal.__rpow__	__rpow__(self, other, modulo=None, context=None)	todo		
 Lib/_pydecimal.py	2575	2598	Decimal.normalize	normalize(self, context=None)	modelled	decimal-normalize-exact,decimal-normalize-nan-exact	
-Lib/_pydecimal.py	2600	2659	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	todo		review: quantize/quantizeFin (Arith.lean:257-281) mirror :2605-2659 and QuantizeCorrect is a strong statement, but it holds only when quantize returns, so an always-raising quantize passes, and the special operands (:2612-2621: NaNs, both-infinite returns self, one INF gives InvalidOperation) are not stated.
+Lib/_pydecimal.py	2600	2659	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	modelled	decimal-quantize-exact,decimal-quantize-correct	
 Lib/_pydecimal.py	2661	2674	Decimal.same_quantum	same_quantum(self, other, context=None)	modelled	decimal-same-quantum-exact	
 Lib/_pydecimal.py	2676	2708	Decimal._rescale	_rescale(self, exp, rounding)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	2710	2731	Decimal._round	_round(self, places, rounding)	todo		
@@ -203,7 +203,7 @@ Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	modelled	decima
 Lib/_pydecimal.py	5157	5205	Context.number_class	number_class(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		
-Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	todo		review: ctxBin quantize (Context.lean:115) is :5359-5360 plus Decimal.quantize's conversion (:2605) and Equiv2 pins the wrapper, but Decimal.quantize is part 1 HOLLOW (QuantizeCorrect holds only when quantize returns, so an always-raising one passes).
+Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-quantize-exact	
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
 Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	todo		review: ctxOp modD (Context.lean:103) is :5401-5406 and Equiv2 pins the wrapper, but Decimal.__mod__ is part 1 HOLLOW (rfl on the finite path; the INF % x, x % 0, 0 % 0 and NaN branches are unstated).
 Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-remainder-near-exact,decimal-remainder-near-rest	
