@@ -70,11 +70,11 @@ theorem convertOther_false (b : Arg) (y : Dec) (h : convertRaise b = .ok y) :
     cases hp : pyFromInt n with
     | error e => simp [hp] at h
     | ok d => simpa [hp] using h
-  | tuple n => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
-  | other => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
+  | tuple t => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
+  | other s => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
 
 theorem convertOther_false_err (b : Arg) (e : PyExc) (h : convertRaise b = .error e) :
-    convertOther false b = .error e ∨ (convertOther false b = .ok none ∧ e = .typeError (unableMsgOf b)) := by
+    convertOther false b = .error e ∨ (convertOther false b = .ok none ∧ e = unableExc b) := by
   cases b with
   | dec d => simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
   | int n =>
@@ -83,11 +83,11 @@ theorem convertOther_false_err (b : Arg) (e : PyExc) (h : convertRaise b = .erro
     cases hp : pyFromInt n with
     | error e' => simp_all
     | ok d => simp [hp] at h
-  | tuple n =>
+  | tuple t =>
     right
     simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
     exact ⟨rfl, h.symm⟩
-  | other =>
+  | other s =>
     right
     simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
     exact ⟨rfl, h.symm⟩
@@ -252,9 +252,9 @@ def ReflectedOperators : Prop :=
       (rdivmod c a b).run fl = ((divmodD c y a).run fl).map (fun p => (some p.1, p.2)) ∧
       (rmod c a b).run fl = ((modD c y a).run fl).map (fun p => (some p.1, p.2)) ∧
       (rfloordiv c a b).run fl = ((floordivD c y a).run fl).map (fun p => (some p.1, p.2))) ∧
-    (rsub c a .other).run fl = .ok (none, fl) ∧ (rtruediv c a .other).run fl = .ok (none, fl) ∧
-    (rdivmod c a .other).run fl = .ok (none, fl) ∧ (rmod c a .other).run fl = .ok (none, fl) ∧
-    (rfloordiv c a .other).run fl = .ok (none, fl)
+    (∀ s, (rsub c a (.other s)).run fl = .ok (none, fl) ∧ (rtruediv c a (.other s)).run fl = .ok (none, fl) ∧
+      (rdivmod c a (.other s)).run fl = .ok (none, fl) ∧ (rmod c a (.other s)).run fl = .ok (none, fl) ∧
+      (rfloordiv c a (.other s)).run fl = .ok (none, fl))
 
 theorem ropArg_run {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a y : Dec) (b : Arg)
     (fl : List Signal) (hb : convertRaise b = .ok y) :
@@ -267,7 +267,7 @@ theorem ropArg_run {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a 
 theorem reflectedOperators_proven : ReflectedOperators := by
   intro c a y b fl
   refine ⟨fun hb => ⟨ropArg_run _ c a y b fl hb, ropArg_run _ c a y b fl hb, ropArg_run _ c a y b fl hb,
-    ropArg_run _ c a y b fl hb, ropArg_run _ c a y b fl hb⟩, rfl, rfl, rfl, rfl, rfl⟩
+    ropArg_run _ c a y b fl hb, ropArg_run _ c a y b fl hb⟩, fun _ => ⟨rfl, rfl, rfl, rfl, rfl⟩⟩
 
 /-! ## New contexts -/
 
@@ -316,10 +316,10 @@ theorem sigEntries_keyed (d : SigDict) : sigEntries (keyed d) = d := by
 
 theorem pySignals_mem (s : Signal) : s ∈ pySignals := by cases s <;> decide
 
-theorem hasKey_keyed_other (d : SigDict) : hasKey (keyed d) .other = false := by
+theorem hasOther_keyed (d : SigDict) : hasOther (keyed d) = false := by
   induction d with
   | nil => rfl
-  | cons x xs ih => simpa [hasKey, keyed] using ih
+  | cons x xs ih => simpa [hasOther, keyed, SigKey.isSig] using ih
 
 theorem hasKey_keyed_sig (d : SigDict) (s : Signal) (h : (d.lookup s).isSome) :
     hasKey (keyed d) (.sig s) = true := by
@@ -342,7 +342,7 @@ theorem setSignalDict_keyed (d : SigDict) (h : ∀ s, (d.lookup s).isSome) :
     rw [List.all_eq_true]
     intro s _
     exact hasKey_keyed_sig d s (h s)
-  simp [setSignalDict, hasKey_keyed_other, h1, sigEntries_keyed]
+  simp [setSignalDict, hasOther_keyed, h1, sigEntries_keyed]
 
 theorem pySetattr_flags (c : PyContext) (v : CtxArg) :
     pySetattr c "flags" v = (do let d ← setSignalDict v; pure { c with flags := d }) := by

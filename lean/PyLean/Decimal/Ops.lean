@@ -205,7 +205,7 @@ def logb (c : Ctx) (a : Dec) : DM Dec := do
   if !decBool a then
     raiseSig c .divisionByZero
     return .inf true
-  -- `ans = Decimal(self.adjusted())` (:3415): `str(abs(value))` (:621) raises past 4300 digits.
+  -- `ans = Decimal(self.adjusted())` (:3415): `str(abs(value))` (:622) raises past 4300 digits.
   let ans ← liftPy (pyFromInt a.adjusted)
   fix c ans
 

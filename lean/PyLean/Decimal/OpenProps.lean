@@ -4,7 +4,8 @@ import PyLean.Decimal.Ops
 
 /-!
 Statements with no proof yet. Each is registered `.open` with a note on what is
-missing; none is used by any other file. They are stated in full, with the same
+missing; none is used by any other file, except `AddCorrect` and `SubCorrect`, which
+`AddExact.lean` now proves (from `AddExact` and `SubExact`). They are stated in full, with the same
 hypotheses a proof would be allowed: `prec ≥ 1` and `Emin ≤ 0 ≤ Emax` are the
 invariants `Context._set_integer_check` enforces (_pydecimal.py:4005-4017).
 -/

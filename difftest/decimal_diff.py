@@ -358,28 +358,37 @@ INT_EDGES = [0, 1, -1, 2, 9, 10, 28, 999999, -999999, 2 ** 31 - 1, 2 ** 31, -2 *
              1000000000000000000, -999999999999999999, -1000000000000000000]
 
 
-def gen_arg(rng, wide=True):
+def gen_arg(rng, wide=True, fancy=False):
     k = rng.random()
     if k < 0.70:
         return ["dec", gen_dec(rng, wide=wide)]
     if k < 0.92:
         return ["int", str(rng.choice([0, 1, -1, 2, 7, 10, -10, 123, 10 ** 20, -10 ** 20]))]
+    if fancy and rng.random() < 0.6:
+        # str() of the operand raises: [10**5000] or Fraction(10**5000) (the int/str limit), or an
+        # object whose __str__ raises (_pydecimal formats the operand; _decimal does not).
+        return rng.choice([["other", "h", "list"], ["other", "h", "frac"], ["other", "r"]])
     return ["other"]
+
+
+def gen_strkinds(rng, n):
+    """Tuple elements: i(nt that prints), h(uge int, the limit), r(aising __str__)."""
+    return [rng.choice("iiiihr") for _ in range(n)]
 
 
 def gen_cm(rng):
     name = rng.choice(list(CMETHODS))
-    a, b, t = gen_arg(rng), gen_arg(rng), gen_arg(rng)
+    impl = rng.choice(["py", "c"])
+    a, b, t = (gen_arg(rng, fancy=impl == "py") for _ in range(3))
     if name in ("rotate", "shift", "scaleb") and rng.random() < 0.8:
         b = ["int", str(rng.randint(-35, 35))]
     if name.startswith("logical") and rng.random() < 0.9:
         n = rng.choice([1, 2, 3, 5, 9])
         a = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
         b = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
-    impl = rng.choice(["py", "c"])
     if impl == "py" and rng.random() < 0.05:
         # "Unable to convert %s to Decimal" % () formats the tuple's items (_pydecimal only)
-        tup = ["tuple", str(rng.choice([0, 1, 2, 3]))]
+        tup = ["tuple", gen_strkinds(rng, rng.choice([0, 1, 1, 2, 3]))]
         k = rng.choice(["a", "b", "t"])
         a, b, t = (tup if k == "a" else a), (tup if k == "b" else b), (tup if k == "t" else t)
     return {"mod": "decimal", "fn": "cm", "m": name, "impl": impl, "ctx": gen_ctx(rng),
@@ -445,13 +454,16 @@ def gen_eqobj(rng):
     """An object whose __eq__ answers the eight modes of _rounding_modes: y(es), n(o), r(aise),
     i (NotImplemented)."""
     n = rng.choice([0, 1, 3, 5, 8, 8])
-    return ["eqobj", [rng.choice("nnnnyri") for _ in range(n)]]
+    return ["eqobj", [rng.choice("nnnnyri") for _ in range(n)], rng.choice("iiihr")]
 
 
 def gen_sig_list(rng):
     names = [x for x in ALL_SIGNALS if rng.random() < 0.3]
-    if rng.random() < 0.08:
-        names.append("other")
+    if rng.random() < 0.15:
+        # 5; 10**5000 (repr raises the limit); [] (unhashable); an object whose repr raises
+        for _ in range(rng.choice([1, 1, 2])):
+            names.insert(rng.randrange(len(names) + 1),
+                         rng.choice(["other", "other", "hugeint", "unhash", "badrepr"]))
     return ["list", names]
 
 
@@ -460,9 +472,10 @@ def gen_sig_dict(rng):
     r = rng.random()
     if r < 0.1:
         keys.remove(rng.choice(keys))
-    elif r < 0.2:
-        keys.append("other")
-    return ["dict", [[k, rng.random() < 0.3] for k in keys]]
+    elif r < 0.25:
+        keys.insert(rng.randrange(len(keys) + 1), rng.choice(["other", "other", "hugeint", "badrepr"]))
+    # a value of 10**5000: true, and its repr raises the limit
+    return ["dict", [[k, "huge" if rng.random() < 0.05 else rng.random() < 0.3] for k in keys]]
 
 
 def frozen(v, impl):
@@ -475,20 +488,28 @@ def gen_attr(rng, name):
     if name in ("prec", "Emin", "Emax", "capitals", "clamp"):
         if r < 0.85:
             return gen_int_arg(rng)
-        return rng.choice([["str", "1"], ["obj"]])
+        return rng.choice([["str", "1"], ["obj"], gen_obj(rng)])
     if name == "rounding":
         if r < 0.8:
             return ["str", rng.choice(ROUNDINGS)]
-        return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"], gen_eqobj(rng), gen_eqobj(rng),
-                           ["hint", hex(rng.choice(HUGE_INTS))], ["bool", rng.random() < 0.5],
-                           ["tuple", str(rng.choice([0, 1, 2, 3]))], ["none"], gen_sig_dict(rng)])
+        return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"], gen_obj(rng), gen_eqobj(rng),
+                           gen_eqobj(rng), ["hint", hex(rng.choice(HUGE_INTS))], ["bool", rng.random() < 0.5],
+                           ["tuple", gen_strkinds(rng, rng.choice([0, 1, 2, 3]))], ["none"],
+                           gen_sig_dict(rng), gen_sig_list(rng)])
     if name == "_ignored_flags":
         return gen_sig_list(rng)
     if r < 0.6:
         return gen_sig_dict(rng)
     if r < 0.85:
         return gen_sig_list(rng)
-    return ["tuple", str(rng.choice([0, 1, 2, 3]))] if r < 0.93 else ["obj"]
+    if r < 0.93:
+        return ["tuple", gen_strkinds(rng, rng.choice([0, 1, 2, 3]))]
+    return rng.choice([["obj"], gen_obj(rng), ["hint", hex(rng.choice(HUGE_INTS))]])
+
+
+def gen_obj(rng):
+    """A plain object whose str() raises: h, Fraction(10**5000) (the limit); r, a raising __str__."""
+    return ["obj", rng.choice("hr")]
 
 
 def gen_ctxobj(rng):
@@ -842,8 +863,25 @@ def build_arg(M, j):
     if j[0] == "int":
         return int(j[1])
     if j[0] == "tuple":
-        return tuple(range(int(j[1])))
+        return tuple(str_kind_obj(k) for k in j[1])
+    if len(j) > 1 and j[1] == "h":
+        return [10 ** 5000] if j[2] == "list" else fractions.Fraction(10 ** 5000)
+    if len(j) > 1 and j[1] == "r":
+        return BadStr()
     return "x"
+
+
+class BadStr:
+    """str() and repr() raise RuntimeError("boom"); hashable."""
+    def __str__(self):
+        raise RuntimeError("boom")
+
+    __repr__ = __str__
+    __hash__ = object.__hash__
+
+
+def str_kind_obj(k):
+    return {"i": 7, "h": 10 ** 5000, "r": BadStr()}[k]
 
 
 def run_cm(M, case):
@@ -867,7 +905,19 @@ def run_rop(M, case):
 
 
 def key_obj(M, k):
-    return 5 if k == "other" else getattr(M, k)
+    if k == "other":
+        return 5
+    if k == "hugeint":
+        return 10 ** 5000
+    if k == "unhash":
+        return []
+    if k == "badrepr":
+        return BadStr()
+    return getattr(M, k)
+
+
+def val_obj(b):
+    return 10 ** 5000 if b == "huge" else b
 
 
 def ctx_val(M, v):
@@ -883,19 +933,23 @@ def ctx_val(M, v):
     if t == "none":
         return None
     if t == "eqobj":
-        return EqObj(v[1])
+        return EqObj(v[1], v[2] if len(v) > 2 else "i")
     if t == "str":
         return v[1]
     if t == "list":
         return [key_obj(M, k) for k in v[1]]
     if t == "dict":
-        return {key_obj(M, k): b for k, b in v[1]}
+        return {key_obj(M, k): val_obj(b) for k, b in v[1]}
     if t in ("frozendict", "frozendict_py"):
-        return frozendict({key_obj(M, k): b for k, b in v[1]})
+        return frozendict({key_obj(M, k): val_obj(b) for k, b in v[1]})
     if t == "idx":
         return Idx(int(v[1]))
     if t == "tuple":
-        return tuple(range(int(v[1])))
+        return tuple(str_kind_obj(k) for k in v[1])
+    if len(v) > 1 and v[1] == "h":
+        return fractions.Fraction(10 ** 5000)
+    if len(v) > 1 and v[1] == "r":
+        return BadStr()
     return object()
 
 
@@ -904,8 +958,16 @@ class EqObj:
     MODES = ["ROUND_DOWN", "ROUND_HALF_UP", "ROUND_HALF_EVEN", "ROUND_CEILING", "ROUND_FLOOR",
              "ROUND_UP", "ROUND_HALF_DOWN", "ROUND_05UP"]
 
-    def __init__(self, answers):
+    def __init__(self, answers, strkind="i"):
         self.answers = answers
+        self.strkind = strkind
+
+    def __str__(self):
+        if self.strkind == "h":
+            return str(10 ** 5000)
+        if self.strkind == "r":
+            raise RuntimeError("boom")
+        return "EqObj"
 
     def __eq__(self, other):
         if not isinstance(other, str) or other not in self.MODES:
