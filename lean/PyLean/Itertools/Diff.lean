@@ -7,6 +7,7 @@ import PyLean.Itertools.GroupbyRaising
 import PyLean.Itertools.TeeReentry
 import PyLean.Itertools.PairwiseReentry
 import PyLean.Itertools.CountFloat
+import PyLean.Itertools.CountReentry
 
 /-!
 Differential-testing handler for `itertools` cases (`"mod": "itertools"`).
@@ -134,15 +135,43 @@ def encPairRes : NextRes (Int × Int) → Json
   | .stop => Json.null
   | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
 
-/-- A value for `count`: an int, `true`/`false`, `{"f": bits}`, `"bad"` for a
-`Raising` object, `"badint"` for `RaisingInt(1)`, `"str"` for a non-number. -/
+def hexDigitVal (c : Char) : Except String Nat :=
+  if '0' ≤ c ∧ c ≤ '9' then .ok (c.toNat - '0'.toNat)
+  else if 'a' ≤ c ∧ c ≤ 'f' then .ok (c.toNat - 'a'.toNat + 10)
+  else .error s!"bad hex digit {c}"
+
+/-- Python's `hex(i)` read back. -/
+def parseHexInt (s : String) : Except String Int := do
+  let (neg, cs) := match s.toList with
+    | '-' :: r => (true, r)
+    | r => (false, r)
+  match cs with
+  | '0' :: 'x' :: ds =>
+    let n ← ds.foldlM (fun acc c => do return acc * 16 + (← hexDigitVal c)) 0
+    return if neg then -(n : Int) else n
+  | _ => throw s!"bad hex {s}"
+
+/-- Python's `hex(i)`. -/
+def hexInt (i : Int) : String :=
+  (if i < 0 then "-0x" else "0x") ++ String.ofList (Nat.toDigits 16 i.natAbs)
+
+/-- An int past the int/str limit travels as `{"x": hex}`, as in the difftest. -/
+def encBigInt (i : Int) : Json :=
+  if 10 ^ 4300 ≤ i.natAbs then Json.mkObj [("x", toJson (hexInt i))] else toJson i
+
+/-- A value for `count`: an int (`{"x": hex}` past 4300 digits), `true`/`false`,
+`{"f": bits}`, `"bad"` for a `Raising` object, `"badint"` for `RaisingInt(1)`, `"str"`
+for a non-number. -/
 def decVal (v : Json) : Except String (CVal PyNum) :=
   match v with
   | .str "bad" => .ok (.num .raising)
   | .str "badint" => .ok (.intSub 1 .raising)
   | .str "str" => .ok (.nonNum .str)
   | .bool b => .ok (.intSub (if b then 1 else 0) (.bool b))
-  | .obj _ => do return .num (.float (Binary64.F64.ofBits (← (← v.getObjVal? "f").getNat?)))
+  | .obj _ =>
+    match v.getObjVal? "x" with
+    | .ok (.str h) => do return .int (← parseHexInt h)
+    | _ => do return .num (.float (Binary64.F64.ofBits (← (← v.getObjVal? "f").getNat?)))
   | v => do return .int (← v.getInt?)
 
 def getOptVal (j : Json) (k : String) : Except String (Option (CVal PyNum)) :=
@@ -151,7 +180,7 @@ def getOptVal (j : Json) (k : String) : Except String (Option (CVal PyNum)) :=
   | .error _ => .ok none
 
 def encVal : CVal PyNum → Json
-  | .int i => toJson i
+  | .int i => encBigInt i
   | .intSub _ (.bool b) => Json.bool b
   | .intSub _ .raising => toJson "badint"
   | .num (.float x) => if x.isNaN then toJson "nan" else Json.mkObj [("f", toJson x.bits)]
@@ -313,6 +342,23 @@ def run (fn : String) (j : Json) : Except String Json := do
     else
       let r := docCountRun numOps (step.getD (.int 1)) (ops.filter (· == .next)).length (start.getD (.int 0))
       return ok (encRun encVal r)
+  | "count_reentry" =>
+    let start ← getInt j "start"
+    let d ← getInt j "d"
+    let re ← (← (← field j "reenter").getArr?).toList.mapM (·.getNat?)
+    let bad ← (← (← field j "raise").getArr?).toList.mapM (·.getNat?)
+    let k ← getNat j "k"
+    -- `ReStep` of the difftest: its `n`-th `__radd__` raises, or calls `next()` first.
+    let N : NumOpsR Unit := ⟨fun n a _ =>
+      let up : CVal Unit := .int (a.longVal + d)
+      if n ∈ bad then .ret (.error (boom "add"))
+      else if n ∈ re then .callNext (fun _ => .ret (.ok up)) else .ret (.ok up)⟩
+    match cCountR N 64 (some (.int start)) (some (.num ())) k with
+    | .error e => return Json.mkObj [("exc", toJson e.className), ("msg", toJson e.message)]
+    | .ok t => return ok (Json.arr (t.log.map (fun p => match p.1 with
+        | .val v => toJson v.longVal
+        | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
+        | _ => Json.null)).toArray)
   | "repeat" =>
     let elem ← getInt j "elem"
     let times ← getOptInt j "times"
