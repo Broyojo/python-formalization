@@ -433,6 +433,17 @@ CREDIT = {
         "Parser__action_helpers.c": ["_strip_interpolation_debug_expr"]},
     "pygrammar-peg-register-stmts": {"Parser__action_helpers.c": ["_PyPegen_register_stmts"]},
     "pygrammar-peg-expect-token": {"Parser__pegen.c": ["_PyPegen_expect_token"]},
+    "pygrammar-peg-token-readers-exact": {
+        "Parser__pegen.c": ["_PyPegen_name_token", "_PyPegen_soft_keyword_token",
+                            "_PyPegen_expect_soft_keyword", "_PyPegen_expect_forced_token"]},
+    "pygrammar-peg-token-readers-frontier": {
+        "Parser__pegen.c": ["_PyPegen_name_token", "_PyPegen_soft_keyword_token",
+                            "_PyPegen_expect_soft_keyword", "_PyPegen_expect_forced_token"]},
+    "pygrammar-peg-name-from-token": {"Parser__pegen.c": ["_PyPegen_name_from_token"]},
+    "pygrammar-peg-tokenizer-error-arms": {"Parser__pegen_errors.c": ["_Pypegen_tokenizer_error"]},
+    "pygrammar-peg-set-syntax-error-arms": {"Parser__pegen_errors.c": ["_Pypegen_set_syntax_error"]},
+    "pygrammar-peg-memo-frontier": {"Parser__pegen.c": ["_PyPegen_is_memoized"]},
+    "pygrammar-peg-raise-error-exact": {"Parser__pegen_errors.c": ["_PyPegen_raise_error"]},
     "pygrammar-peg-memo-cache": {
         "Parser__pegen.c": ["_PyPegen_insert_memo", "_PyPegen_update_memo"]},
     "pygrammar-peg-last-token": {"Parser__pegen.c": ["_PyPegen_get_last_nonnwhitespace_token"]},

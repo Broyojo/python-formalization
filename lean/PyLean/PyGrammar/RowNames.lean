@@ -194,8 +194,14 @@ def peg_make_arguments_exact : List String := [
 def peg_memo_cache : List String := [
   "_PyPegen_insert_memo", "_PyPegen_update_memo"]
 
+def peg_memo_frontier : List String := [
+  "_PyPegen_is_memoized"]
+
 def peg_missing_comma : List String := [
   "_PyPegen_raise_error_for_missing_comma"]
+
+def peg_name_from_token : List String := [
+  "_PyPegen_name_from_token"]
 
 def peg_never_silent : List String := [
   ]
@@ -205,6 +211,9 @@ def peg_nonparen_genexp : List String := [
 
 def peg_raise_error : List String := [
   ]
+
+def peg_raise_error_exact : List String := [
+  "_PyPegen_raise_error"]
 
 def peg_raise_known_location : List String := [
   ]
@@ -224,6 +233,9 @@ def peg_roundtrip_parser : List String := [
 def peg_set_syntax_error : List String := [
   ]
 
+def peg_set_syntax_error_arms : List String := [
+  "_Pypegen_set_syntax_error"]
+
 def peg_setup_format_spec : List String := [
   "result_token_with_metadata", "_PyPegen_setup_full_format_spec"]
 
@@ -236,11 +248,20 @@ def peg_strip_interpolation : List String := [
 def peg_token_readers : List String := [
   ]
 
+def peg_token_readers_exact : List String := [
+  "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
+
+def peg_token_readers_frontier : List String := [
+  "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
+
 def peg_tokenize_full_source : List String := [
   ]
 
 def peg_tokenizer_error : List String := [
   ]
+
+def peg_tokenizer_error_arms : List String := [
+  "_Pypegen_tokenizer_error"]
 
 def peg_warn_lazy : List String := [
   "_warn_relative_import_of_lazy"]

@@ -3,6 +3,8 @@ import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
 import PyLean.PyGrammar.Peg.ImportProps
+import PyLean.PyGrammar.Peg.ReaderProps
+import PyLean.PyGrammar.Peg.ErrorArms
 import PyLean.PyGrammar.Peg.HelperProps
 import PyLean.PyGrammar.Peg.RuleFacts
 import PyLean.PyGrammar.Peg.Rules.Entries
@@ -227,6 +229,90 @@ def entries : List Entry := [
     status := .proven
     prop := ``TokenReaders
     thm := some ``tokenReaders_proven },
+  { id := "pygrammar-peg-tokenizer-error-arms"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_tokenizer_error_arms
+    statement := "_Pypegen_tokenizer_error returns -1 and, with no exception set before, sets " ++
+      "error_indicator and raises by tok->done: E_TOKEN 'invalid token', E_EOF the unclosed " ++
+      "bracket or 'unexpected EOF while parsing', E_DEDENT IndentationError 'unindent does not " ++
+      "match any outer indentation level', E_INTR KeyboardInterrupt, E_NOMEM MemoryError, " ++
+      "E_TABSPACE TabError, E_TOODEEP IndentationError 'too many levels of indentation', " ++
+      "E_LINECONT 'unexpected character after line continuation character', E_COLUMNOVERFLOW " ++
+      "OverflowError, anything else 'unknown parsing error'; the known-location arms on the " ++
+      "tokenizer's line. With an exception already set it changes nothing."
+    source := "Parser/pegen_errors.c:23-81"
+    status := .proven
+    prop := ``TokenizerErrorArms
+    thm := some ``tokenizerErrorArms_proven },
+  { id := "pygrammar-peg-set-syntax-error-arms"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_set_syntax_error_arms
+    statement := "_Pypegen_set_syntax_error keeps an existing exception (refined by the " ++
+      "full-source check only for a SyntaxError with the tokenizer fine), and otherwise raises " ++
+      "for the first pass's last token: the unclosed bracket or 'unexpected EOF while parsing' " ++
+      "for an ERRORTOKEN at EOF, 'unexpected indent'/'unexpected unindent' for INDENT/DEDENT, " ++
+      "and else 'invalid syntax' at that token's line followed by the full-source check."
+    source := "Parser/pegen_errors.c:383-424"
+    status := .proven
+    prop := ``SetSyntaxErrorArms
+    thm := some ``setSyntaxErrorArms_proven
+    notes := "p->fill == 0 is not stated: unreachable, the first pass always counts a token." },
+  { id := "pygrammar-peg-memo-frontier"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_memo_frontier
+    statement := "_PyPegen_is_memoized at mark == fill fills a token, returning -1 with " ++
+      "error_indicator set if that fails and a miss on the filled state otherwise; with the " ++
+      "token read and no entry of the rule's type it is a miss that leaves the parser alone."
+    source := "Parser/pegen.c:341-373"
+    status := .proven
+    prop := ``MemoFrontier
+    thm := some ``memoFrontier_proven
+    notes := "memo.size = fill is the invariant FillToken keeps." },
+  { id := "pygrammar-peg-raise-error-exact"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_raise_error_exact
+    statement := "_PyPegen_raise_error bails out on an earlier error, raises at line 0 with no " ++
+      "token read, and otherwise raises at known_err_token or else tokens[mark] (use_mark) or " ++
+      "tokens[fill - 1], one-based columns or the tokenizer's column for a token without one, " ++
+      "on that token's line; with use_mark at the frontier it fills a token first and on " ++
+      "failure only sets error_indicator."
+    source := "Parser/pegen_errors.c:197-241"
+    status := .proven
+    prop := ``RaiseErrorExact
+    thm := some ``raiseErrorExact_proven },
+  { id := "pygrammar-peg-token-readers-exact"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_token_readers_exact
+    statement := "With the token at the mark read: expect_forced_token bails out on an earlier " ++
+      "error, takes a token of the type and moves the mark, and otherwise raises SyntaxError " ++
+      "\"expected '<x>'\" at that token's line without moving; expect_soft_keyword takes a NAME " ++
+      "spelled kw as a Name, and leaves the parser untouched otherwise; name_token takes a NAME " ++
+      "as a Name, and leaves the parser untouched otherwise; soft_keyword_token takes a NAME " ++
+      "that is a soft keyword, returns NULL past any other NAME, and leaves other tokens alone."
+    source := "Parser/pegen.c:435-478, 585-612"
+    status := .proven
+    prop := ``TokenReadersExact
+    thm := some ``tokenReadersExact_proven },
+  { id := "pygrammar-peg-token-readers-frontier"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_token_readers_frontier
+    statement := "At the mark == fill frontier each token reader first fills a token: if that " ++
+      "fails it returns NULL with error_indicator set on the state the fill left, and " ++
+      "otherwise it reads the new token as when it was already there."
+    source := "Parser/pegen.c:407-411, 437-441, 459-463"
+    status := .proven
+    prop := ``TokenReadersFrontier
+    thm := some ``tokenReadersFrontier_proven },
+  { id := "pygrammar-peg-name-from-token"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_name_from_token
+    statement := "_PyPegen_name_from_token builds Name(id, Load) at the token's location from " ++
+      "the identifier _PyPegen_new_identifier makes of its bytes, and returns NULL with " ++
+      "error_indicator set when the identifier is refused."
+    source := "Parser/pegen.c:565-582"
+    status := .proven
+    prop := ``NameFromToken
+    thm := some ``nameFromToken_proven },
   { id := "pygrammar-peg-never-silent"
     pyFile := "Parser/pegen.c"
     pyFns := Rows.peg_never_silent

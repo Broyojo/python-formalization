@@ -1,4 +1,4 @@
-import PyLean.PyGrammar.Peg.ErrorProps
+import PyLean.PyGrammar.Peg.TokenProps
 
 /-!
 What the token readers of `Parser/pegen.c` return, token by token: `_PyPegen_expect_forced_token`,
@@ -100,6 +100,8 @@ theorem nameToken_ready (p : PS) (h : p.mark < p.fill) :
     nameToken p = (match takeToken TokKind.NAME.num p with
       | (a, q) => nameFromToken a q) := by
   simp only [nameToken, bind, StateT.bind, expect_ready _ p h]
+  cases takeToken TokKind.NAME.num p
+  rfl
 
 theorem tokenReadersExact_proven : TokenReadersExact := by
   intro p hm
@@ -163,9 +165,10 @@ def TokenReadersFrontier : Prop := ∀ (p : PS), p.mark = p.fill →
     (∀ kw, expectSoftKeyword kw p = (if (q.tokenAt q.mark).type != TokKind.NAME.num then (.null, q)
       else if (q.tokenAt q.mark).bytes != kw then (.null, q) else nameToken q)) ∧
     nameToken p = (match takeToken TokKind.NAME.num q with | (a, r) => nameFromToken a r) ∧
-    softKeywordToken p = (match takeToken TokKind.NAME.num q with
-      | (.tok t, r) => if softKeywords.contains t.bytes then nameFromToken (.tok t) r else (.null, r)
-      | (_, r) => (.null, r)))
+    softKeywordToken p = (match (takeToken TokKind.NAME.num q).1 with
+      | .tok t => if softKeywords.contains t.bytes then nameFromToken (.tok t)
+          (takeToken TokKind.NAME.num q).2 else (.null, (takeToken TokKind.NAME.num q).2)
+      | _ => (.null, (takeToken TokKind.NAME.num q).2)))
 
 theorem tokenReadersFrontier_proven : TokenReadersFrontier := by
   intro p hm
@@ -182,11 +185,14 @@ theorem tokenReadersFrontier_proven : TokenReadersFrontier := by
     have he := ensure_ok p hm hf
     refine ⟨fun ty x h hq => ?_, fun kw => ?_, ?_, ?_⟩
     · have hr : (fillToken p).2.mark < (fillToken p).2.fill := by
-        have := fillToken_grows p
+        obtain ⟨a, b, _⟩ := fillToken_proven p
         omega
       simp [forcedToken, h, hq, he, ensure_ready _ hr]
     · simp [expectSoftKeyword, he]
     · simp only [nameToken, bind, StateT.bind, expect_ensure, he, ↓reduceIte]
+      cases takeToken TokKind.NAME.num (fillToken p).2
+      rfl
     · simp only [softKeywordToken, expect_ensure, he, ↓reduceIte]
+      cases (takeToken TokKind.NAME.num (fillToken p).2).1 <;> rfl
 
 end PyLean.PyGrammar.Peg
