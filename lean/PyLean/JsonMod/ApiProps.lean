@@ -600,11 +600,11 @@ theorem encoderNewSepTypeError_refuted : ¬EncoderNewSepTypeError := by
 /-- `c_make_encoder(...)(o, 0)`, the 1-tuple `JSONEncoder.encode` joins. With the
 two C `encoder`s it is the text of `dumps`. -/
 def EncoderCallDumps : Prop :=
-  ∀ (cfg : ECfg) (v : EVal), cfg.customEnc = none →
-    encoderCall cfg v 0 = (dumpsC cfg v).map (fun t => [t])
+  ∀ (alloc : Alloc) (cfg : ECfg) (v : EVal), cfg.customEnc = none →
+    encoderCall alloc cfg v 0 = (dumpsC cfg v).map (fun t => [t])
 
 theorem encoderCallDumps_proven : EncoderCallDumps := by
-  intro cfg v hc
+  intro alloc cfg v hc
   have ho : outOfSsize (0 : Int) = false := outOfSsize_false (by omega) (by decide)
   have hcc : cacheCopies 0 = 0 := rfl
   unfold encoderCall
@@ -650,27 +650,40 @@ theorem rep_length (t : PStr) (n : Nat) : (rep t n).length = n * t.length := by
 
 theorem rep_one (t : PStr) : rep t 1 = t := by simp [rep]
 
-/-- `PyUnicode_New` succeeds for sizes well below the `malloc` limit. -/
-theorem unicodeNewOk_small {size m : Nat} (h : 56 + 4 * (size + 1) < mallocLimit) :
-    unicodeNewOk size m = true := by
-  simp only [mallocLimit] at h
-  unfold unicodeNewOk ucsStruct ucsWidth
-  by_cases h1 : m < 128 <;> by_cases h2 : m < 256 <;> by_cases h3 : m < 65536 <;>
-    simp [h1, h2, h3, ssizeMax, mallocLimit] <;> omega
+/-- `PyUnicode_New` succeeds when its size check passes for every kind and `malloc` grants every
+request up to the largest it could make. -/
+theorem unicodeNewOk_small {alloc : Alloc} {size m : Nat} (h1 : ((56 + 4 * (size + 1) : Nat) : Int) ≤ ssizeMax)
+    (h2 : ∀ n, n ≤ 56 + 4 * (size + 1) → alloc n = true) : unicodeNewOk alloc size m = true := by
+  unfold unicodeNewOk
+  have hb : ucsStruct m + (size + 1) * ucsWidth m ≤ 56 + 4 * (size + 1) := by
+    unfold ucsStruct ucsWidth
+    by_cases a : m < 128 <;> by_cases b : m < 256 <;> by_cases c : m < 65536 <;> simp [a, b, c] <;> omega
+  rw [h2 _ hb]
+  unfold ucsStruct ucsWidth
+  simp only [ssizeMax] at h1
+  by_cases a : m < 128 <;> by_cases b : m < 256 <;> by_cases c : m < 65536 <;> simp [a, b, c, ssizeMax] <;> omega
 
-/-- `PyUnicode_New` refuses `mallocLimit` characters or more. -/
-theorem unicodeNewOk_big {size m : Nat} (h : mallocLimit ≤ size) : unicodeNewOk size m = false := by
-  simp only [mallocLimit] at h
+/-- `PyUnicode_New`'s size check refuses more than `PY_SSIZE_T_MAX - 41` characters, whatever
+`malloc` would do. -/
+theorem unicodeNewOk_big {alloc : Alloc} {size m : Nat} (h : (size : Int) > ssizeMax - 41) :
+    unicodeNewOk alloc size m = false := by
   unfold unicodeNewOk ucsStruct ucsWidth
-  by_cases h1 : m < 128 <;> by_cases h2 : m < 256 <;> by_cases h3 : m < 65536 <;>
-    simp [h1, h2, h3, mallocLimit] <;> omega
+  simp only [ssizeMax] at h
+  by_cases a : m < 128 <;> by_cases b : m < 256 <;> by_cases c : m < 65536 <;> simp [a, b, c, ssizeMax] <;> omega
+
+/-- A refused `malloc` is `MemoryError`. -/
+theorem unicodeNewOk_refused {alloc : Alloc} {size m : Nat}
+    (h : alloc (ucsStruct m + (size + 1) * ucsWidth m) = false) : unicodeNewOk alloc size m = false := by
+  simp [unicodeNewOk, h]
 
 /-- What `PyUnicode_New` allows is below `PY_SSIZE_T_MAX - 40`. -/
-theorem unicodeNewOk_le {size m : Nat} (h : unicodeNewOk size m = true) : (size : Int) ≤ ssizeMax - 41 := by
+theorem unicodeNewOk_le {alloc : Alloc} {size m : Nat} (h : unicodeNewOk alloc size m = true) :
+    (size : Int) ≤ ssizeMax - 41 := by
   unfold unicodeNewOk ucsStruct ucsWidth at h
   simp only [Bool.and_eq_true, decide_eq_true_eq] at h
-  by_cases h1 : m < 128 <;> by_cases h2 : m < 256 <;> by_cases h3 : m < 65536 <;>
-    simp [h1, h2, h3, ssizeMax] at h ⊢ <;> omega
+  obtain ⟨h, _⟩ := h
+  by_cases a : m < 128 <;> by_cases b : m < 256 <;> by_cases c : m < 65536 <;>
+    simp [a, b, c, ssizeMax] at h ⊢ <;> omega
 
 theorem update_cached {cfg : ECfg} {ind : PStr} {i : Nat} {c : IndentCache} {n : Nat}
     (h : Cached cfg ind i c n) : Cached cfg ind i (updateIndentCache cfg ind (n + 1) c) (n + 1) := by
@@ -704,75 +717,82 @@ theorem update_cached {cfg : ECfg} {ind : PStr} {i : Nat} {c : IndentCache} {n :
       have e : 2 * (n + 1) - 1 - c.length = 0 := by omega
       simp [e, cSepIndent]
 
+/-- `malloc` grants every request of at most `n` bytes, and `n` passes every size check. -/
+def Grants (alloc : Alloc) (n : Nat) : Prop := (n : Int) ≤ ssizeMax ∧ ∀ m, m ≤ n → alloc m = true
+
 /-- The indent cache, for every `indent` (a `str`, so shorter than `PY_SSIZE_T_MAX`, a type
-invariant) and every level in `Py_ssize_t`:
+invariant), every level in `Py_ssize_t` and every behaviour `alloc` of `malloc`:
 1. `create_indent_cache` (:1373-1390): below level 1 the cache is `['\n']` (`PySequence_Repeat`
    gives `''`, or the repeat is skipped at 0); from level 2, `OverflowError('repeated string is
    too long')` when `len(indent) > PY_SSIZE_T_MAX / level`; otherwise `['\n' + indent * level]`
-   or `MemoryError`: the cache whenever its string is far below the `malloc` limit, and
-   `MemoryError` whenever `len(indent) * level` reaches it;
+   or `MemoryError`: the cache when `malloc` grants the two strings' requests (up to
+   `56 + 4 * (len(indent) * level + 2)` bytes), `MemoryError` when `PyUnicode_New`'s size check
+   refuses the repeat (more than `PY_SSIZE_T_MAX - 41` characters) or `malloc` refuses its request;
 2. from a cache `['\n' + indent * i]`, at every level `k` reached one at a time (the assertion of
    `update_indent_cache`), `get_item_separator` returns `item_separator + '\n' + indent * (k + i)`,
    `write_newline_indent` returns `'\n' + indent * (k + i)`, and the invariant of the comment at
    :1362-1371 holds afterwards. This is why the encoder models, which write those strings
    directly at level `cacheCopies level + k`, are faithful to the C code. -/
 def IndentCacheSpec : Prop :=
-  (∀ (ind : PStr) (level : Int), (ind.length : Int) < ssizeMax → ¬ outOfSsize level →
-    (level < 1 → createIndentCache ind level = .ok [[10]] ∧ cacheCopies level = 0) ∧
+  (∀ (alloc : Alloc) (ind : PStr) (level : Int), (ind.length : Int) < ssizeMax → ¬ outOfSsize level →
+    (level < 1 → createIndentCache alloc ind level = .ok [[10]] ∧ cacheCopies level = 0) ∧
     (2 ≤ level → (ind.length : Int) > ssizeMax / level →
-      createIndentCache ind level = .error (.overflowError "repeated string is too long")) ∧
+      createIndentCache alloc ind level = .error (.overflowError "repeated string is too long")) ∧
     (1 ≤ level → ¬ (2 ≤ level ∧ (ind.length : Int) > ssizeMax / level) →
-      (createIndentCache ind level = .ok [cNewlineIndent ind (cacheCopies level)] ∨
-        createIndentCache ind level = .error memoryError) ∧
-      (56 + 4 * (level.toNat * ind.length + 2) < mallocLimit →
-        createIndentCache ind level = .ok [cNewlineIndent ind (cacheCopies level)]) ∧
-      (2 ≤ level → mallocLimit ≤ level.toNat * ind.length →
-        createIndentCache ind level = .error memoryError))) ∧
+      (createIndentCache alloc ind level = .ok [cNewlineIndent ind (cacheCopies level)] ∨
+        createIndentCache alloc ind level = .error memoryError) ∧
+      (Grants alloc (56 + 4 * (level.toNat * ind.length + 2)) →
+        createIndentCache alloc ind level = .ok [cNewlineIndent ind (cacheCopies level)]) ∧
+      (2 ≤ level → ((level.toNat * ind.length : Nat) : Int) > ssizeMax - 41 →
+        createIndentCache alloc ind level = .error memoryError) ∧
+      (2 ≤ level → level.toNat * ind.length ≠ 0 →
+        alloc (ucsStruct (strMax ind) + (level.toNat * ind.length + 1) * ucsWidth (strMax ind)) = false →
+        createIndentCache alloc ind level = .error memoryError))) ∧
   ∀ (cfg : ECfg) (ind : PStr) (i : Nat), Cached cfg ind i [cNewlineIndent ind i] 0 ∧
     ∀ (c : IndentCache) (n k : Nat), Cached cfg ind i c n → 1 ≤ k → k ≤ n + 1 →
       let r := getItemSeparator cfg ind k c
       r.1 = cSepIndent cfg ind (k + i) ∧ Cached cfg ind i r.2 (max n k) ∧
       writeNewlineIndent k r.2 = cNewlineIndent ind (k + i)
 
-theorem createIndentCache_one (ind : PStr) (hl : (ind.length : Int) < ssizeMax) :
-    (createIndentCache ind 1 = .ok [[10] ++ ind] ∨ createIndentCache ind 1 = .error memoryError) ∧
-    (56 + 4 * (ind.length + 2) < mallocLimit → createIndentCache ind 1 = .ok [[10] ++ ind]) := by
-  have hr : unicodeRepeat ind 1 = .ok ind := by simp [unicodeRepeat]
-  have hca : createIndentCache ind 1 = (unicodeAppend [10] ind).map (fun nl => [nl]) := by
+theorem createIndentCache_one (alloc : Alloc) (ind : PStr) (hl : (ind.length : Int) < ssizeMax) :
+    (createIndentCache alloc ind 1 = .ok [[10] ++ ind] ∨ createIndentCache alloc ind 1 = .error memoryError) ∧
+    (Grants alloc (56 + 4 * (ind.length + 2)) → createIndentCache alloc ind 1 = .ok [[10] ++ ind]) := by
+  have hr : unicodeRepeat alloc ind 1 = .ok ind := by simp [unicodeRepeat]
+  have hca : createIndentCache alloc ind 1 = (unicodeAppend alloc [10] ind).map (fun nl => [nl]) := by
     simp only [createIndentCache, ne_eq, show (1 : Int) ≠ 0 by decide, not_false_eq_true, ↓reduceIte, hr]
-    cases unicodeAppend [10] ind <;> rfl
+    cases unicodeAppend alloc [10] ind <;> rfl
   rw [hca]
   by_cases he : ind = []
   · subst he; simp [unicodeAppend, Except.map]
   have hov : ¬ ((([10] : PStr).length : Int) > ssizeMax - ind.length) := by simp; omega
   have hov' : ¬ (ssizeMax - (ind.length : Int) < 1) := by omega
-  refine ⟨?_, fun hb => ?_⟩
+  refine ⟨?_, fun ⟨g1, g2⟩ => ?_⟩
   · simp only [unicodeAppend, he, List.cons_ne_nil, ↓reduceIte, hov]
     split <;> simp [Except.map]
-  · have hk := unicodeNewOk_small (m := max (strMax [10]) (strMax ind))
-      (size := 1 + ind.length) (by omega)
+  · have hk := unicodeNewOk_small (alloc := alloc) (m := max (strMax [10]) (strMax ind))
+      (size := 1 + ind.length) (by push_cast at g1 ⊢; omega) (fun n hn => g2 n (by omega))
     simp [unicodeAppend, he, hov', hk, Except.map]
 
-theorem createIndentCache_two (ind : PStr) (level : Int) (h2 : 2 ≤ level)
+theorem createIndentCache_two (alloc : Alloc) (ind : PStr) (level : Int) (h2 : 2 ≤ level)
     (hno : ¬ ((ind.length : Int) > ssizeMax / level)) :
-    createIndentCache ind level =
+    createIndentCache alloc ind level =
       if level.toNat * ind.length = 0 then .ok [[10]]
-      else if unicodeNewOk (level.toNat * ind.length) (strMax ind) then
-        (if unicodeNewOk (1 + level.toNat * ind.length) (max (strMax [10]) (strMax (rep ind level.toNat)))
+      else if unicodeNewOk alloc (level.toNat * ind.length) (strMax ind) then
+        (if unicodeNewOk alloc (1 + level.toNat * ind.length) (max (strMax [10]) (strMax (rep ind level.toNat)))
          then .ok [[10] ++ rep ind level.toNat] else .error memoryError)
       else .error memoryError := by
   have h0 : level ≠ 0 := by omega
   have hrl : (rep ind level.toNat).length = level.toNat * ind.length := rep_length _ _
   generalize hN : level.toNat * ind.length = N at hrl ⊢
-  have hrep : unicodeRepeat ind level =
-      if N = 0 then .ok [] else if unicodeNewOk N (strMax ind) then .ok (rep ind level.toNat)
+  have hrep : unicodeRepeat alloc ind level =
+      if N = 0 then .ok [] else if unicodeNewOk alloc N (strMax ind) then .ok (rep ind level.toNat)
       else .error memoryError := by
     simp [unicodeRepeat, show ¬ level < 1 by omega, show level ≠ 1 by omega, hno, hN]
   simp only [createIndentCache, ne_eq, h0, not_false_eq_true, ↓reduceIte, hrep]
   by_cases hN0 : N = 0
   · simp [hN0, unicodeAppend]
   simp only [hN0, ↓reduceIte]
-  by_cases hk : unicodeNewOk N (strMax ind) = true
+  by_cases hk : unicodeNewOk alloc N (strMax ind) = true
   · have hle := unicodeNewOk_le hk
     have hne : rep ind level.toNat ≠ [] := by
       intro h; rw [h] at hrl; simp at hrl; omega
@@ -780,42 +800,44 @@ theorem createIndentCache_two (ind : PStr) (level : Int) (h2 : 2 ≤ level)
       rw [hrl]; simp; omega
     have hlen : ([10] : PStr).length + (rep ind level.toNat).length = 1 + N := by simp [hrl]
     simp only [hk, ↓reduceIte, unicodeAppend, List.cons_ne_nil, hne, hov, hlen]
-    by_cases hk2 : unicodeNewOk (1 + N) (max (strMax [10]) (strMax (rep ind level.toNat))) = true
+    by_cases hk2 : unicodeNewOk alloc (1 + N) (max (strMax [10]) (strMax (rep ind level.toNat))) = true
     · simp [hk2]
     · simp [hk2]
   · simp [hk]
 
-theorem createIndentCache_spec (ind : PStr) (level : Int) (hl : (ind.length : Int) < ssizeMax)
-    (hs : ¬ outOfSsize level) :
-    (level < 1 → createIndentCache ind level = .ok [[10]] ∧ cacheCopies level = 0) ∧
+theorem createIndentCache_spec (alloc : Alloc) (ind : PStr) (level : Int) (hl : (ind.length : Int) < ssizeMax) :
+    (level < 1 → createIndentCache alloc ind level = .ok [[10]] ∧ cacheCopies level = 0) ∧
     (2 ≤ level → (ind.length : Int) > ssizeMax / level →
-      createIndentCache ind level = .error (.overflowError "repeated string is too long")) ∧
+      createIndentCache alloc ind level = .error (.overflowError "repeated string is too long")) ∧
     (1 ≤ level → ¬ (2 ≤ level ∧ (ind.length : Int) > ssizeMax / level) →
-      (createIndentCache ind level = .ok [cNewlineIndent ind (cacheCopies level)] ∨
-        createIndentCache ind level = .error memoryError) ∧
-      (56 + 4 * (level.toNat * ind.length + 2) < mallocLimit →
-        createIndentCache ind level = .ok [cNewlineIndent ind (cacheCopies level)]) ∧
-      (2 ≤ level → mallocLimit ≤ level.toNat * ind.length →
-        createIndentCache ind level = .error memoryError)) := by
+      (createIndentCache alloc ind level = .ok [cNewlineIndent ind (cacheCopies level)] ∨
+        createIndentCache alloc ind level = .error memoryError) ∧
+      (Grants alloc (56 + 4 * (level.toNat * ind.length + 2)) →
+        createIndentCache alloc ind level = .ok [cNewlineIndent ind (cacheCopies level)]) ∧
+      (2 ≤ level → ((level.toNat * ind.length : Nat) : Int) > ssizeMax - 41 →
+        createIndentCache alloc ind level = .error memoryError) ∧
+      (2 ≤ level → level.toNat * ind.length ≠ 0 →
+        alloc (ucsStruct (strMax ind) + (level.toNat * ind.length + 1) * ucsWidth (strMax ind)) = false →
+        createIndentCache alloc ind level = .error memoryError)) := by
   refine ⟨fun h => ?_, fun h2 hov => ?_, fun h1 hno => ?_⟩
-  · exact ⟨createIndentCache_lt1 ind h, by simp [cacheCopies, h]⟩
-  · exact createIndentCache_ovf ind h2 hov
+  · exact ⟨createIndentCache_lt1 alloc ind h, by simp [cacheCopies, h]⟩
+  · exact createIndentCache_ovf alloc ind h2 hov
   · have hc : cacheCopies level = level.toNat := by simp [cacheCopies, show ¬ level < 1 by omega]
     rw [hc]
     by_cases hone : level = 1
     · subst hone
-      obtain ⟨a, b⟩ := createIndentCache_one ind hl
+      obtain ⟨a, b⟩ := createIndentCache_one alloc ind hl
       have e : (1 : Int).toNat = 1 := rfl
       simp only [e, cNewlineIndent, rep_one, Nat.one_mul]
-      exact ⟨a, b, fun h => by omega⟩
+      exact ⟨a, b, fun h => by omega, fun h => by omega⟩
     have h2 : 2 ≤ level := by omega
     have hno' : ¬ ((ind.length : Int) > ssizeMax / level) := fun h => hno ⟨h2, h⟩
-    rw [createIndentCache_two ind level h2 hno']
+    rw [createIndentCache_two alloc ind level h2 hno']
     have hrl : (rep ind level.toNat).length = level.toNat * ind.length := rep_length _ _
     generalize level.toNat * ind.length = N at hrl ⊢
     have hnl : N = 0 → cNewlineIndent ind level.toNat = [10] := by
       intro h; rw [h] at hrl; simp [cNewlineIndent, List.length_eq_zero_iff.mp hrl]
-    refine ⟨?_, fun hb => ?_, fun _ hbig => ?_⟩
+    refine ⟨?_, fun ⟨g1, g2⟩ => ?_, fun _ hbig => ?_, fun _ hN0 hrf => ?_⟩
     · by_cases hN0 : N = 0
       · left; simp [hN0, hnl hN0]
       simp only [hN0, ↓reduceIte]
@@ -826,15 +848,18 @@ theorem createIndentCache_spec (ind : PStr) (level : Int) (hl : (ind.length : In
       · right; rfl
     · by_cases hN0 : N = 0
       · simp [hN0, hnl hN0]
-      have hk1 := unicodeNewOk_small (size := N) (m := strMax ind) (by omega)
-      have hk2 := unicodeNewOk_small (size := 1 + N)
-        (m := max (strMax [10]) (strMax (rep ind level.toNat))) (by omega)
+      have hk1 := unicodeNewOk_small (alloc := alloc) (size := N) (m := strMax ind)
+        (by push_cast at g1 ⊢; omega) (fun n hn => g2 n (by omega))
+      have hk2 := unicodeNewOk_small (alloc := alloc) (size := 1 + N)
+        (m := max (strMax [10]) (strMax (rep ind level.toNat))) (by push_cast at g1 ⊢; omega)
+        (fun n hn => g2 n (by omega))
       simp [hN0, hk1, hk2, cNewlineIndent]
-    · have hN0 : N ≠ 0 := by simp [mallocLimit] at hbig; omega
-      simp [hN0, unicodeNewOk_big (m := strMax ind) hbig]
+    · have hN0 : N ≠ 0 := by intro h; subst h; simp [ssizeMax] at hbig
+      simp [hN0, unicodeNewOk_big (alloc := alloc) (m := strMax ind) hbig]
+    · simp [hN0, unicodeNewOk_refused (alloc := alloc) hrf]
 
 theorem indentCacheSpec_proven : IndentCacheSpec := by
-  refine ⟨fun ind level hl hs => createIndentCache_spec ind level hl hs, ?_⟩
+  refine ⟨fun alloc ind level hl _ => createIndentCache_spec alloc ind level hl, ?_⟩
   intro cfg ind i
   refine ⟨create_cached cfg ind i, ?_⟩
   intro c n k h h1 h2

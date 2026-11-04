@@ -1004,8 +1004,9 @@ def gen_case(rng):
             c["indent"] = c["indent"] if kw["check_circular"] else None
         c["encoder"] = rng.choice([0, 1, 2, 3, 4, 5])
         # Huge levels: create_indent_cache fails before encoding (OverflowError from unicode_repeat,
-        # MemoryError from PyUnicode_New's size check or a malloc of 2**47 bytes or more). Never a
-        # level whose indent string would fall between this machine's memory and 2**47 bytes.
+        # MemoryError from PyUnicode_New's size check or a refused malloc of 2**61 bytes or more;
+        # the model's allocator, Diff.diffAlloc, refuses those). Never a level whose indent string
+        # would be large but grantable: what malloc gives there depends on the machine.
         # (With indent '' the cache is built at every level; the model then writes '' * level, which
         # it cannot evaluate at 2**61, so those levels are left to a non-empty indent.)
         huge = [2**61, 2**62 - 1, 2**62, 2**63 - 1, 2**63 // 3, 2**63 // 3 + 1] if c["indent"] != [] else []
