@@ -59,11 +59,14 @@ datetime-fromisocalendar-twins-cint	proven	Lib/_pydatetime.py	date.fromisocalend
 datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum,C microseconds_to_delta_ex,C new_delta_ex,C check_delta_day_range,C checked_divmod,C normalize_pair,C normalize_d_s_us,C divmod
 datetime-timedelta-ctor-exact	proven	Lib/_pydatetime.py	timedelta.__new__,timedelta.days,timedelta.seconds,timedelta.microseconds
 datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,timedelta.__sub__,timedelta.__neg__,timedelta.__abs__,timedelta.__mul__,timedelta.__floordiv__,timedelta.__truediv__,timedelta.__mod__,timedelta.__divmod__,timedelta._to_microseconds,_divide_and_round,C delta_add,C delta_subtract,C delta_negative,C delta_abs,C delta_multiply,C delta_divide,C delta_truedivide,C delta_remainder,C delta_divmod,C multiply_int_timedelta,C divide_timedelta_int,C divide_timedelta_timedelta,C truedivide_timedelta_int,C divide_nearest,C delta_to_microseconds
+datetime-divide-and-round	proven	Lib/_pydatetime.py	_divide_and_round,C divide_nearest
 datetime-timedelta-divmod	proven	Lib/_pydatetime.py	timedelta.__divmod__,timedelta.__floordiv__,timedelta.__mod__,timedelta._to_microseconds
 datetime-timedelta-compare	proven	Lib/_pydatetime.py	timedelta.__eq__,timedelta.__le__,timedelta.__lt__,timedelta.__ge__,timedelta.__gt__,timedelta._cmp,timedelta._getstate,_cmp,C delta_cmp,C delta_richcompare,C diff_to_bool
-datetime-timedelta-bool-hash	proven	Lib/_pydatetime.py	timedelta.__bool__,timedelta.__hash__,C delta_bool,C delta_hash
+datetime-timedelta-bool-hash	proven	Lib/_pydatetime.py	timedelta.__bool__,timedelta.__hash__,C delta_bool,C delta_hash,C delta_getstate
 datetime-timedelta-reduce	proven	Lib/_pydatetime.py	timedelta.__reduce__,timedelta._getstate,C delta_reduce,C delta_getstate
-datetime-timedelta-pos-rsub	proven	Lib/_pydatetime.py	timedelta.__pos__,timedelta.__rsub__,C delta_positive
+datetime-timedelta-pos	proven	Lib/_pydatetime.py	timedelta.__pos__,C delta_positive
+datetime-timedelta-rsub	proven	Lib/_pydatetime.py	timedelta.__rsub__,C delta_subtract
+datetime-timedelta-rsub-twins	refuted	Lib/_pydatetime.py	timedelta.__rsub__
 datetime-timezone-range	proven	Lib/_pydatetime.py	timezone.__new__,C new_timezone
 datetime-timezone-name	proven	Lib/_pydatetime.py	timezone.__str__,timezone.tzname,timezone._name_from_offset,C timezone_str,C timezone_tzname
 datetime-tzinfo-base	proven	Lib/_pydatetime.py	tzinfo.tzname,tzinfo.utcoffset,tzinfo.dst,C tzinfo_nogo,C tzinfo_tzname,C tzinfo_utcoffset,C tzinfo_dst
@@ -91,12 +94,39 @@ datetime-date-compare	proven	Lib/_pydatetime.py	date.__eq__,date.__le__,date.__l
 datetime-date-hash	proven	Lib/_pydatetime.py	date.__hash__,date._getstate,C date_hash,C generic_hash,C date_getstate
 datetime-date-weekday	proven	Lib/_pydatetime.py	date.weekday,date.isoweekday,C date_weekday,C date_isoweekday,C weekday
 datetime-date-subtract	proven	Lib/_pydatetime.py	date.__sub__,C date_subtract,C add_date_timedelta
-datetime-date-replace	proven	Lib/_pydatetime.py	date.replace,C datetime_date_replace_impl
+datetime-date-replace	proven	Lib/_pydatetime.py	date.replace,date.__new__,C datetime_date_replace,C datetime_date_replace_impl,C new_date_subclass_ex,C new_date_ex,C check_date_args
+datetime-date-replace-twins	refuted	Lib/_pydatetime.py	date.replace
 datetime-date-timetuple	proven	Lib/_pydatetime.py	date.timetuple,_build_struct_time,C date_timetuple,C build_struct_time
 datetime-ctime	proven	Lib/_pydatetime.py	date.ctime,datetime.ctime,C date_ctime,C datetime_ctime,C format_ctime
 datetime-date-repr	proven	Lib/_pydatetime.py	date.__repr__,_get_class_module,C date_repr
+datetime-date-repr-twins	refuted	Lib/_pydatetime.py	date.__repr__,_get_class_module,C date_repr
 datetime-date-pickle	proven	Lib/_pydatetime.py	date._getstate,date.__setstate,date.__reduce__,C date_getstate,C date_from_pickle,C date_reduce
 datetime-date-ctor	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date_impl,C new_date_ex,C check_date_args
+datetime-date-ctor-twins	refuted	Lib/_pydatetime.py	date.__new__,C date_new
+datetime-date-isoformat-text	proven	Lib/_pydatetime.py	date.isoformat,C date_isoformat
+datetime-format-time-text	proven	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
+datetime-format-offset-text	proven	Lib/_pydatetime.py	_format_offset,C format_utcoffset
+datetime-timespec-twins	refuted	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
+datetime-timespec-str	proven	Lib/_pydatetime.py	_format_time,C datetime_time_isoformat_impl
+datetime-timedelta-float-ops	proven	Lib/_pydatetime.py	timedelta.__mul__,timedelta.__truediv__,_divide_and_round,C multiply_truedivide_timedelta_float,C get_float_as_integer_ratio,C divide_nearest
+datetime-timedelta-truediv-delta	open	Lib/_pydatetime.py	timedelta.__truediv__,C truedivide_timedelta_timedelta
+datetime-date-format	proven	Lib/_pydatetime.py	date.__format__,C datetime_date___format__,C datetime_date___format___impl
+datetime-date-strptime	proven	Lib/_pydatetime.py	date.strptime,C datetime_date_strptime_impl
+datetime-parse-isodate-forms	proven	Lib/_pydatetime.py	_parse_isoformat_date,_read_isoformat_component,_isoweek_to_gregorian
+datetime-parse-isodate-refusals	proven	Lib/_pydatetime.py	_parse_isoformat_date
+datetime-find-sep-forms	proven	Lib/_pydatetime.py	_find_isoformat_datetime_separator,_is_ascii_digit
+datetime-date-fromisoformat	proven	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date
+datetime-parse-hhmmssff-forms	proven	Lib/_pydatetime.py	_parse_hh_mm_ss_ff,_read_isoformat_component
+datetime-date-ctor-args	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date,C datetime_date_impl,C new_date_ex,C check_date_args,C date_from_pickle
+datetime-date-sub-twins	refuted	Lib/_pydatetime.py	date.__sub__,C date_subtract
+datetime-date-sub-operand	proven	Lib/_pydatetime.py	date.__sub__,C date_subtract,C add_date_timedelta
+datetime-fromordinal-range	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C datetime_date_fromordinal_impl,C ord_to_ymd
+datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp
+datetime-days-in-month	proven	Lib/_pydatetime.py	_days_in_month,C days_in_month,C is_leap
+datetime-check-date-fields	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args
+datetime-check-time-fields	proven	Lib/_pydatetime.py	_check_time_fields,C check_time_args
+datetime-check-tzinfo-arg	proven	Lib/_pydatetime.py	_check_tzinfo_arg,C check_tzinfo_subclass
+datetime-build-struct-time	proven	Lib/_pydatetime.py	_build_struct_time,C build_struct_time
 datetime-isocalendardate	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__,IsoCalendarDate.year,IsoCalendarDate.week,IsoCalendarDate.weekday,IsoCalendarDate.__repr__,C iso_calendar_date_repr,C iso_calendar_date_year,C iso_calendar_date_week,C iso_calendar_date_weekday
 datetime-datetime-sub-twins	proven	Lib/_pydatetime.py	datetime.__sub__,C datetime_subtract,C delta_cmp,C delta_subtract
 datetime-datetime-add	proven	Lib/_pydatetime.py	datetime.__add__,C datetime_add,C add_datetime_timedelta,C normalize_datetime
