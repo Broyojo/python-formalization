@@ -190,8 +190,8 @@ def TzinfoBase : Prop :=
 theorem tzinfoBase_proven : TzinfoBase := fun _ => ⟨rfl, rfl⟩
 
 /-- For `timezone` objects: `utcoffset` is the offset, `dst` is `None`, for any
-argument the method accepts, in both twins; `__eq__` compares offsets only, equal
-timezones hash alike, and `__getinitargs__` rebuilds the object. -/
+argument the method accepts, in both twins; `__eq__` compares offsets only and equal
+timezones hash alike. (`__getinitargs__` is `TimezoneGetinitargs`.) -/
 def TimezoneMethods : Prop :=
   ∀ (env : TzEnv) (oid : Nat) (off off2 : Delta) (name name2 : Option String) (a : Option DT),
     off.Valid → off2.Valid →
@@ -199,12 +199,11 @@ def TimezoneMethods : Prop :=
     tzDstRaw env ⟨oid, .timezone off name⟩ a = .ok .none ∧
     some (timezoneEqPy off off2) = timezoneRichC .eq off off2 ∧
     timezoneRichC .lt off off2 = none ∧
-    (timezoneEqPy off off2 = true → timezoneHashKey off = timezoneHashKey off2) ∧
-    timezoneGetinitargs off name = (off, name)
+    (timezoneEqPy off off2 = true → timezoneHashKey off = timezoneHashKey off2)
 
 theorem timezoneMethods_proven : TimezoneMethods := by
   intro env oid off off2 name name2 a h1 h2
-  refine ⟨rfl, rfl, ?_, by simp [timezoneRichC], ?_, rfl⟩
+  refine ⟨rfl, rfl, ?_, by simp [timezoneRichC], ?_⟩
   · have := timedeltaCompare_proven off off2 .eq h1 h2
     simp only [timezoneRichC, timezoneEqPy, this.1, this.2]
     simp

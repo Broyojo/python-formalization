@@ -1,0 +1,59 @@
+id: datetime-pydatetime-isoformat-int-sep
+title: "_pydatetime's datetime.isoformat accepts an int sep ('%c' % sep), C requires a one-character str"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime.isoformat"]
+summary: |
+  `datetime.isoformat(sep)` formats the separator with `"%04d-%02d-%02d%c" % (..., sep)`
+  (Lib/_pydatetime.py:2190), and `%c` also takes an integer code point (anything with
+  `__index__`). So `datetime(2020, 1, 1).isoformat(sep=65)` is `'2020-01-01A00:00:00'` and
+  `isoformat(sep=True)` is `'2020-01-01\x0100:00:00'` in Python, while C's argument clinic
+  converter accepts only a str of length 1 and raises `TypeError: isoformat() argument 'sep'
+  must be a unicode character, not int` (Modules/clinic/_datetimemodule.c.h:1798-1811).
+  An int outside range(0x110000) is `OverflowError` in Python and `TypeError` in C. Strings of
+  other lengths and other objects are `TypeError` in both (different messages).
+likelihood: |
+  Very low: passing an int separator is a programming error. It only matters for code tested
+  on PyPy or _pydatetime that then runs on CPython.
+maybe_intended: |
+  Unlikely to be intended (the documented sep is "a one-character separator"), but also
+  unlikely to be considered worth changing on its own; it belongs with the other argument-type
+  differences of the twins (gh-89979 lists signature differences).
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      try:
+          return m.datetime(2020, 1, 1).isoformat(sep=65)
+      except TypeError:
+          return 'TypeError'
+  r = [run(m) for m in (datetime, _pydatetime)]
+  print('isoformat(sep=65) C/Python:', r)
+  if r == ['TypeError', '2020-01-01A00:00:00']:
+      print('REPRODUCED datetime-pydatetime-isoformat-int-sep')
+expected: |
+  The same outcome in both implementations: TypeError for a sep that is not a one-character
+  str, as in C.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; the datetime.isoformat docs ("sep is a
+  one-character separator").
+cause: |
+  Lib/_pydatetime.py:2190: `"%04d-%02d-%02d%c" % (self._year, self._month, self._day, sep)`;
+  `%c` (Objects/unicode_format.c:416-454, formatchar) accepts a str of length 1 or an integer.
+  C: the clinic `int(accept={str})` converter, Modules/clinic/_datetimemodule.c.h:1798-1811.
+possible_fix: |
+  Check `isinstance(sep, str) and len(sep) == 1` in _pydatetime's isoformat, raising
+  TypeError as C does, or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 89979, state: open, relation: related (other signature differences of the twins)}
+  queries: ["gh search issues: isoformat sep integer", "isoformat sep pydatetime",
+            "isoformat separator int TypeError", "isoformat sep (exact phrase)",
+            "bugforge-results/README.md: isoformat entries (fromisoformat offsets only, unrelated)"]
+lean:
+  property: PyLean.Datetime.IsoformatSepTwins
+  theorem: PyLean.Datetime.isoformatSepTwins_refuted
