@@ -333,6 +333,18 @@ theorem call_tok (f t : Nat) (s : PS) : runCall (f + 1) (.tok t) s = expectToken
 theorem call_number (f : Nat) (s : PS) : runCall (f + 1) .number s = numberToken s := by
   simp [runCall]
 
+theorem call_softKw (f : Nat) (kw : List Nat) (s : PS) :
+    runCall (f + 1) (.softKw kw) s = expectSoftKeyword kw s := by
+  simp [runCall]
+
+/-- The tail of an action that raises: `RAISE_*` returns `NULL` with the exception set, and
+`emit_action` turns that into an error return. -/
+theorem raised_result {r : Unit × PS} {s : PS} (cls msg : String) (a b c d : Int)
+    (hr : raiseErrorKnownLocation cls a b c d msg s = r) (he : s.errorIndicator = false) :
+    r.2.errOccurred = true := by
+  rw [← hr]
+  exact raiseEKL_errOcc cls msg a b c d s he
+
 theorem call_rule (f r : Nat) (s : PS) : runCall (f + 1) (.rule r) s = callRule f r s := by
   simp [runCall]
 
