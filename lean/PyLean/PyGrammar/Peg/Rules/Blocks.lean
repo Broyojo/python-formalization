@@ -175,4 +175,124 @@ theorem ifStmt_proven : IfStmt := by
       Bool.or_false, mkAt, extraLoc, locArgs, callHelper]
     simp [mkAst, nonNull, h4e]
 
+/-! ### `else_block` -/
+
+/-- `else_block` (`Grammar/python.gram:396-398`):
+```
+    | invalid_else_stmt
+    | 'else' &&':' b=block { b }
+```
+First pass: at any token but `else`, `NULL`; `else: b` gives `b`; after `else`, the forced token
+`&&':'` (`_PyPegen_expect_forced_token`) either takes the `:` or fails the rule in the state it
+left (with its "expected ':'" error), never falling back. Second pass: an error from
+`invalid_else_stmt` ends the rule. -/
+def ElseBlock : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  let t := q.tokenAt p.mark
+  let s1 := { q with mark := p.mark + 1 }
+  (t.type ≠ 704 → p.callInvalidRules = false → callRule (f + 8) 56 p = (.null, q.leave)) ∧
+  (t.type = 704 → p.callInvalidRules = false → ∀ (b : Ast) (tc : Token) (s2 s3 : PS),
+    forcedToken 11 ":" s1 = (.tok tc, s2) → callRule f 33 s2 = (b, s3) → b ≠ .null →
+    s3.errorIndicator = false → callRule (f + 8) 56 p = (b, s3.leave)) ∧
+  (t.type = 704 → p.callInvalidRules = false → ∀ (s2 : PS), forcedToken 11 ":" s1 = (.null, s2) →
+    callRule (f + 8) 56 p = (.null, { s2 with mark := p.mark }.leave)) ∧
+  (p.callInvalidRules = true → ∀ (s0 : PS), callRule (f + 3) 258 p.enter = (.null, s0) →
+    s0.errorIndicator = true → callRule (f + 8) 56 p = (.null, { s0 with mark := p.mark }.leave))
+
+theorem elseBlock_proven : ElseBlock := by
+  intro f p q h
+  obtain ⟨he, -, hci, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  have hci' : p.enter.callInvalidRules = p.callInvalidRules := rfl
+  rw [callRule_plain rfl rfl rfl rfl rfl h.ei h.level]
+  simp only [show ruleOf 56 = r56 from rfl, r56]
+  refine ⟨fun ht hinv => ?_, fun ht hinv b tc s2 s3 h2 h3 hb h3e => ?_, fun ht hinv s2 h2 => ?_,
+    fun hinv s0 h0 h0e => ?_⟩
+  · have e1 : runCall (f + 3) (.tok 704) p.enter = (.null, q) := by
+      rw [call_tok, expect_entered h, ite_f ht]
+    rw [alts_skip (by simp [hci', hinv]), alts_fail (by rfl) he' (items_call_null e1), hq, alts_nil]
+    rfl
+  · have e1 : runCall (f + 3) (.tok 704) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    rw [alts_skip (by simp [hci', hinv]), alts_ok (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call (by rw [call_forcedTok, h2]) (by simp),
+        items_call (by rw [call_rule, h3]) hb, items_nil]), altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure]
+    have hb' : nonNull b = true := by cases b <;> simp_all [nonNull]
+    simp [hb', h3e]
+  · have e1 : runCall (f + 3) (.tok 704) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    rw [alts_skip (by simp [hci', hinv]), alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call_null (by rw [call_forcedTok, h2])]), alts_nil]
+    rfl
+  · rw [alts_fail (by simp [hci', hinv]) he' (by dsimp only; rw [items_call_null (by rw [call_rule, h0])]),
+      alts_err (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = true from h0e)]
+    rfl
+
+/-! ### `block` -/
+
+/-- `block (memo)` (`Grammar/python.gram:266-269`):
+```
+    | NEWLINE INDENT a=statements DEDENT { a }
+    | simple_stmts
+    | invalid_block
+```
+At a position not yet memoized for it: `NEWLINE INDENT statements DEDENT` gives the statements;
+at a token other than `NEWLINE`, `simple_stmts`' result (a one-line body); in the second pass,
+`NEWLINE` without `INDENT` and no `simple_stmts` leaves `invalid_block` (which raises "expected an
+indented block") to decide. Results are memoized, `NULL` included. -/
+def Block : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (q.memo.getD p.mark []).find? (fun m => m.1 == 1000 + 33) = none →
+  let t := q.tokenAt p.mark
+  let s1 := { q with mark := p.mark + 1 }
+  let memo (v : Ast) (s : PS) : Ast × PS := (v, (insertMemo p.mark (1000 + 33) v s).2.leave)
+  (t.type = 4 → ∀ (st : Ast) (ti td : Token) (s2 s3 s4 : PS), expectToken 5 s1 = (.tok ti, s2) →
+    callRule (f + 1) 4 s2 = (st, s3) → st ≠ .null → expectToken 6 s3 = (.tok td, s4) →
+    s4.errorIndicator = false → callRule (f + 8) 33 p = memo st s4) ∧
+  (t.type ≠ 4 → ∀ (v : Ast) (s : PS), callRule (f + 2) 8 q = (v, s) → v ≠ .null →
+    callRule (f + 8) 33 p = memo v s) ∧
+  (t.type = 4 → ∀ (s2 s3 s4 : PS), expectToken 5 s1 = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 2) 8 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = false →
+    s3.callInvalidRules = true → callRule (f + 1) 221 { s3 with mark := p.mark } = (.null, s4) →
+    callRule (f + 8) 33 p = memo .null { s4 with mark := p.mark })
+
+theorem block_proven : Block := by
+  intro f p q h hn
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  rw [callRule_memo_plain rfl rfl rfl rfl rfl h hn]
+  simp only [show ruleOf 33 = r33 from rfl, r33]
+  have E : ∀ s : PS, s.errorIndicator = false → ({ s with mark := p.mark } : PS).errorIndicator = false :=
+    fun s hs => hs
+  have tok_ok : ∀ g, (q.tokenAt p.mark).type = 4 →
+      runCall (g + 1) (.tok 4) q = (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) :=
+    fun g ht => by rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+  refine ⟨fun ht st ti td s2 s3 s4 h2 h3 hst h4 h4e => ?_, fun ht v s h1 hv => ?_,
+    fun ht s2 s3 s4 h2 h2e h3 h3e h3i h4 => ?_⟩
+  · rw [alts_ok (by rfl) he (by
+      dsimp only
+      rw [items_call (tok_ok _ ht) (by simp), items_call (by rw [call_tok, h2]) (by simp),
+        items_call (by rw [call_rule, h3]) hst, items_call (by rw [call_tok, h4]) (by simp),
+        items_nil]), altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure]
+    have hs' : nonNull st = true := by cases st <;> simp_all [nonNull]
+    simp [hs', h4e, memoDone]
+  · have e1 : runCall (f + 4) (.tok 4) q = (.null, q) := by
+      rw [call_tok, expectToken_at _ _ hlt', hm, ite_f ht]
+    rw [alts_fail (by rfl) he (items_call_null e1), hq, alts_ok (by rfl) he (by
+      dsimp only; rw [items_call (by rw [call_rule, h1]) hv, items_nil]), altResult_none1 rfl rfl]
+    rfl
+  · rw [alts_fail (by rfl) he (by
+      dsimp only; rw [items_call (tok_ok _ ht) (by simp), items_call_null (by rw [call_tok, h2])]),
+      alts_fail (by rfl) (E s2 h2e) (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]),
+      alts_fail (by simp [h3i]) (E s3 h3e) (by dsimp only; rw [items_call_null (by rw [call_rule, h4])]),
+      alts_nil]
+    rfl
+
 end PyLean.PyGrammar.Peg
