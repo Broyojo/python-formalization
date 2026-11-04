@@ -376,7 +376,8 @@ def gen_div_band(rng):
     b = ["F", False, "1", 0]
     impl = rng.choice(["py", "c"])
     # The model has no C remainder of its own: past the limit it would apply _pydecimal's.
-    names = ["divide_int", "divmod", "remainder"] if impl == "py" or ctx["prec"] < 4000 else ["divide_int", "divmod"]
+    names = (["divide_int", "divmod", "remainder", "remainder_near"] if impl == "py" or ctx["prec"] < 4000
+             else ["divide_int", "divmod"])
     return {"mod": "decimal", "fn": "cm", "m": rng.choice(names), "impl": impl, "ctx": ctx,
             "a": ["dec", a], "b": ["dec", b], "t": ["dec", b]}
 
