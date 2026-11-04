@@ -109,6 +109,7 @@ structure EClassG (α : Type) where
   flagMask : Int := 0
   singlesMask : Int := 0
   allBits : Int := 0
+  deriving DecidableEq
 
 /-- The `EV` class as one over `EV` values. -/
 def EClass.toG (c : EClass) : EClassG EV :=
@@ -243,12 +244,17 @@ def EClassG.setName (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) 
       | .ok c3 => c3.noteValue o name name v
 
 /-- The `__set_name__` calls of `type.__new__`, in definition order, with the maker of each member. -/
-def EClassG.build (o : Ops α) (mk : Maker α) (c : EClassG α) : List (Name × α) → Py (EClassG α)
+def EClassG.build (o : Ops α) (mk : α → Maker α) (c : EClassG α) : List (Name × α) → Py (EClassG α)
   | [] => .ok c
   | (n, v) :: r =>
-    match c.setName o mk n v with
+    match c.setName o (mk v) n v with
     | .error e => .error e
     | .ok c' => c'.build o mk r
+
+/-- The `EV` class back from the generic one, its kind kept. -/
+def EClass.ofG (c : EClass) (g : EClassG EV) : EClass :=
+  { c with memberNames := g.memberNames, memberMap := g.memberMap, values := g.values, value2member := g.value2member,
+           hashableValues := g.hashableValues, unhashableValues := g.unhashableValues, unhashableMap := g.unhashableMap }
 
 /-! ### `Enum.__new__`, Lib/enum.py:1175-1234 -/
 

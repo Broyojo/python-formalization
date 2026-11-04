@@ -621,30 +621,10 @@ def enumNew (c : EClass) (self : Option Name) (v : EV) (inProgress : Bool) (miss
         | .other => .error (.typeError "~error in _missing_: returned instead of None or a valid member")
         | .raises e => .error e
 
-/-- `EnumType.__call__`, Lib/enum.py:729-739. `none` is the functional API, `_create_`, reached with `names` on a class
-without members. -/
-def enumCall (c : EClass) (self : Option Name) (value : Atom) (more : List Atom) (miss : MissingRet) :
-    Option (Py Name) :=
-  if !c.memberMap.isEmpty then
-    some (enumNew c self (if more.isEmpty then .atom value else .tup (value :: more)) false miss)
-  else if more.isEmpty then some (.error (.typeError "~has no members; specify `names=()`"))
-  else none
-
 /-- `EnumType.__contains__`, Lib/enum.py:758-769, for a class that is not a `Flag`. Both lists use `==`, so an
 unhashable value does not raise. -/
 def enumContains (c : EClass) (isMember : Bool) (value : EV) : Bool :=
   isMember || c.unhashableValues.contains value || c.hashableValues.contains value
-
-/-- `EnumType.__contains__`, Lib/enum.py:760-769, for a `Flag` class. `none` is a value that is not an `int`, for
-which `_missing_` raises `ValueError`, and which is in neither list. -/
-def FlagCls.classContains (c : FlagCls) (value : Option Int) : Bool :=
-  match value with
-  | none => false
-  | some i =>
-    match c.missing i with
-    | .ok (.flag _ _) => true
-    | .ok (.plain _) => false
-    | .error _ => c.members.any (fun p => (p.2 : Int) == i)
 
 /-- `EnumType.__getitem__`, Lib/enum.py:800-804. -/
 def EClass.getItem (c : EClass) (name : Name) : Py Name :=
@@ -809,23 +789,6 @@ def EClass.intValues (c : EClass) : List Int :=
 /-- The integers from `a` up to, and not including, `b`. -/
 def intRange (a b : Int) : List Int := (List.range (b - a).toNat).map (fun (i : Nat) => a + (i : Int))
 
-/-- The `CONTINUOUS` check, Lib/enum.py:1989-2010, on `int` values. -/
-def EClass.verifyContinuous (c : EClass) : Py Unit :=
-  match c.intValues with
-  | [] => .ok ()
-  | i :: is =>
-    let low := is.foldl min i
-    let high := is.foldl max i
-    if low = high then .ok ()
-    else
-      let values := i :: is
-      let missing : List Int :=
-        if c.kind == .flag then
-          (intRange (bitLength low.natAbs) (bitLength high.natAbs - 1)).filter
-            (fun k => !values.contains (2 ^ k.toNat))
-        else (intRange (low + 1) high).filter (fun k => !values.contains k)
-      if missing.isEmpty then .ok () else .error (.valueError "~missing values")
-
 /-- An alias with a bit that is not the value of a member, Lib/enum.py:2018-2030. A negative value has `toNat` 0, and
 so no bits, which is the `continue` at :2022-2024. -/
 def EClass.missesName (c : EClass) (p : Name × Name) : Bool :=
@@ -844,22 +807,5 @@ inductive Check where
   | continuous
   | named
   deriving Repr, DecidableEq, Inhabited
-
-def EClass.verifyOne (c : EClass) (memberName : Name → Name) : Check → Py Unit
-  | .unique => c.verifyUnique memberName
-  | .continuous => c.verifyContinuous
-  | .named => c.verifyNamed
-
-def EClass.verifyAll (c : EClass) (memberName : Name → Name) : List Check → Py Unit
-  | [] => .ok ()
-  | k :: r =>
-    match c.verifyOne memberName k with
-    | .error e => .error e
-    | .ok () => c.verifyAll memberName r
-
-/-- `verify.__call__`, Lib/enum.py:1968-2046. `isEnum` is `issubclass(enumeration, Enum)`. -/
-def EClass.verifyCall (c : EClass) (isEnum : Bool) (memberName : Name → Name) (checks : List Check) : Py Unit :=
-  if !isEnum then .error (.typeError "the 'verify' decorator only works with Enum and Flag")
-  else c.verifyAll memberName checks
 
 end PyLean.CoreLibs.EnumDC

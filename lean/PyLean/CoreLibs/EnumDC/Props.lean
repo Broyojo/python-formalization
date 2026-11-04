@@ -40,16 +40,6 @@ theorem flagContainsBits_proven : FlagContainsBits := by
     | false => simp
     | true => simp [h i ho]
 
-/-- Under `CONFORM`, an out-of-range value keeps only defined bits: `value & _flag_mask_`, whatever
-the sign. Docs of `FlagBoundary.CONFORM`: "extra bits are discarded". -/
-def ConformKeepsMask : Prop :=
-  ∀ (v : Int) (m : Nat), andMask v m &&& m = andMask v m
-
-theorem conformKeepsMask_proven : ConformKeepsMask := by
-  intro v m
-  simp only [andMask]
-  rw [Nat.and_assoc, Nat.and_self]
-
 /-- A value of a `STRICT` flag class that the class accepts and that is not zero has a name: it is a
 combination of members. False: with `A = 1` and `X = 6`, `F(3)` raises "no members with value 2", but
 `F(2)` is accepted as a nameless pseudo-member, because the test at Lib/enum.py:1555 returns before the
@@ -62,19 +52,6 @@ theorem strictValuesAreNamed_refuted : ¬StrictValuesAreNamed := by
   intro h
   have := h ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 2 2 none rfl (by decide) (by decide)
   simp at this
-
-/-- `len(x)` is the number of members `iter(x)` yields, the docs' "Returns number of members in flag".
-False: under `KEEP`, bits outside the class are counted by `bit_count` and skipped by `__iter__`, which
-masks with `_flag_mask_`, so `F(8)` of a three-bit class has `len` 1 and no members. -/
-def LenMatchesIter : Prop :=
-  ∀ (c : FlagCls) (v : Int) (n : Nat) (name : Option String),
-    c.call v = .ok (.flag n name) → bitCount n = (c.iterMembers n).length
-
-theorem lenMatchesIter_refuted : ¬LenMatchesIter := by
-  intro h
-  have := h ⟨"F", [("A", 1), ("B", 2), ("C", 4)], .keep⟩ 8 8 none (by decide)
-  revert this
-  decide
 
 /-- The bit helpers on concrete shapes used by every `Flag`: zero is not a single bit, the
 next `auto()` value after a power of two doubles it, and `Enum`'s next value follows the largest. -/

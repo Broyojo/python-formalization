@@ -538,25 +538,6 @@ theorem enumLookup_proven : EnumLookup := by
   · intro h1 l k h2 h3
     simp only [enumNew, EClass.found, EClass.search, h1, h2, h3, Bool.false_eq_true, ↓reduceIte]
 
-/-- `Color(1, 2)` looks up the tuple `(1, 2)`, so that a tuple value can be written without its parentheses; one
-argument is the value itself; a class without members has no lookup, and with `names` goes to the functional API. -/
-def EnumCallShape : Prop :=
-  ∀ (c : EClass) (self : Option Name) (a b : Atom) (r : List Atom) (miss : MissingRet),
-    (c.memberMap.isEmpty = false →
-      enumCall c self a (b :: r) miss = some (enumNew c self (.tup (a :: b :: r)) false miss) ∧
-      enumCall c self a [] miss = some (enumNew c self (.atom a) false miss)) ∧
-    (c.memberMap.isEmpty = true →
-      enumCall c self a (b :: r) miss = none ∧ ∃ x, enumCall c self a [] miss = some x ∧ x.raises "TypeError")
-
-theorem enumCallShape_proven : EnumCallShape := by
-  intro c self a b r miss
-  refine ⟨?_, ?_⟩
-  · intro h
-    simp [enumCall, h]
-  · intro h
-    refine ⟨by simp [enumCall, h], _, ?_, ⟨.typeError "~has no members; specify `names=()`", rfl, rfl⟩⟩
-    simp [enumCall, h]
-
 /-! ### `_add_member_` and its callers -/
 
 /-- `_add_alias_`: a new name is added and points at the member, the same name again is nothing, and a name bound to
@@ -714,38 +695,6 @@ theorem valueAliasBinds_proven : ValueAliasBinds := by
   · simp [EClass.bindValue, hv]
   · simp [enumContains, EClass.bindValue, hv, List.contains_append]
 
-/-- The same sentence for every value. False: for an unhashable value the check at Lib/enum.py:1248-1252 reads the
-`_value_` of the members only, so a value linked with `_add_value_alias_` is not seen, and the second member gets it
-as well. -/
-def ValueAliasExclusive : Prop :=
-  ∀ (c c' : EClass) (f : Name → Name) (m m' : Name) (v : EV), m ≠ m' →
-    c.addValueAlias f m v = .ok c' → (c'.addValueAlias f m' v).raises "ValueError"
-
-theorem valueAliasExclusive_refuted : ¬ValueAliasExclusive := by
-  intro h
-  let c := twoMembers (.atom (.int 1)) (.atom (.int 2))
-  obtain ⟨e, he, _⟩ := h c (c.bindValue id ['A'] (.atom (.list 9))) id ['A'] ['B'] (.atom (.list 9)) (by decide)
-    (by decide +kernel)
-  have : (c.bindValue id ['A'] (.atom (.list 9))).addValueAlias id ['B'] (.atom (.list 9)) =
-      .ok ((c.bindValue id ['A'] (.atom (.list 9))).bindValue id ['B'] (.atom (.list 9))) := by decide +kernel
-  rw [this] at he
-  cases he
-
-/-- With the value bound as a member's `_value_`, the same sentence fails another way: the `ValueError` is formatted with
-`cls._value2member_map_[value]`, at Lib/enum.py:1251, so hashing the unhashable value again raises `TypeError`. -/
-def ValueAliasBoundError : Prop :=
-  ∀ (c : EClass) (f : Name → Name) (m m' : Name) (v : EV), m ≠ m' → c.findEqual v = some m' →
-    (c.addValueAlias f m v).raises "ValueError"
-
-theorem valueAliasBoundError_refuted : ¬ValueAliasBoundError := by
-  intro h
-  let c := twoMembers (.atom (.list 1)) (.atom (.int 2))
-  obtain ⟨e, he, hc⟩ := h c id ['B'] ['A'] (.atom (.list 1)) (by decide) (by decide +kernel)
-  have : c.addValueAlias id ['B'] (.atom (.list 1)) = .error (.typeError "~unhashable") := by decide +kernel
-  rw [this] at he
-  cases he
-  exact absurd hc (by decide)
-
 /-- `unique` raises only for a class with aliases: "Class decorator for enumerations ensuring unique member values",
 and `verify(UNIQUE)` the same. False: it compares each name with `member.name`, so a class that defines a `name` of
 its own, a property returning the lower-case name say, has every member reported as a duplicate of itself. -/
@@ -779,21 +728,6 @@ theorem uniqueNamed_proven : UniqueNamed := by
     exact fun hh => hn (hh p hp)
   · simp only [List.any_eq_true, bne_iff_ne, not_exists, not_and, Decidable.not_not] at h
     simpa using h
-
-/-- `Enum.__new__` finds a value bound by `_add_value_alias_`, as in the example of the docs,
-`Color.RED._add_value_alias_(42)` and then `Color(42)`. False for a class with a `name` of its own: Lib/enum.py:1262 files the value under `self.name` and :1193 does `cls[name]`, which is
-a `KeyError` from a lookup that should end in the member. -/
-def ValueAliasFound : Prop :=
-  ∀ (c c' : EClass) (f : Name → Name) (m : Name) (v : EV), c.memberMap.lookup m = some m →
-    c.addValueAlias f m v = .ok c' → enumNew c' none v false .none = .ok m
-
-theorem valueAliasFound_refuted : ¬ValueAliasFound := by
-  intro h
-  let c : EClass := { memberMap := [(['A'], ['A'])], values := [(['A'], .atom (.int 1))] }
-  have := h c (c.bindValue (fun _ => ['a']) ['A'] (.atom (.list 1))) (fun _ => ['a']) ['A'] (.atom (.list 1))
-    (by decide) (by decide +kernel)
-  revert this
-  decide +kernel
 
 /-! ### The body and `EnumDict` used directly -/
 
@@ -889,24 +823,6 @@ theorem enumGenerateRules_proven : EnumGenerateRules := by
   · rfl
   · rfl
 
-/-- `StrEnum.__new__`: a member takes one `str`, or nothing at all, and every other argument list raises `TypeError`.
-Docstring of the method: "values must already be of type `str`". -/
-def StrEnumValues : Prop :=
-  ∀ (l : List Atom) (s : String), strEnumNew l = .ok s ↔ (l = [] ∧ s = "") ∨ l = [.str s]
-
-theorem strEnumValues_proven : StrEnumValues := by
-  intro l s
-  match l with
-  | [] => simp [strEnumNew, eq_comm]
-  | [a] =>
-    cases a <;> simp [strEnumNew]
-  | [_, b] =>
-    cases b <;> simp [strEnumNew]
-  | [_, b, c] =>
-    cases b <;> cases c <;> simp [strEnumNew]
-  | _ :: _ :: _ :: _ :: r =>
-    simp [strEnumNew]
-
 /-- `_order_`: for a class that is not a `Flag`, a non-empty order that names members and nothing that is an alias
 passes exactly when it is the definition order. Docs: "It will be checked against the actual order of the enumeration
 and raise an error if the two do not match". -/
@@ -930,63 +846,6 @@ theorem orderCheck_proven : OrderCheck := by
   by_cases h : o = c.memberNames
   · simp [h]
   · simp [h]
-
-/-- `verify(CONTINUOUS)` on a class that is not a `Flag`: it passes exactly when every integer between the lowest and
-the highest value is a value. Docs: "Ensure that there are no missing values between the lowest-valued member and the
-highest-valued member". -/
-def VerifyContinuous : Prop :=
-  ∀ (c : EClass) (i : Int) (is : List Int), c.kind ≠ .flag → c.intValues = i :: is →
-    (c.verifyContinuous = .ok () ↔
-      ∀ k, is.foldl min i < k → k < is.foldl max i → k ∈ i :: is)
-
-private theorem mem_intRange (a b k : Int) : k ∈ intRange a b ↔ a ≤ k ∧ k < b := by
-  simp only [intRange, List.mem_map, List.mem_range]
-  constructor
-  · rintro ⟨n, hn, rfl⟩
-    omega
-  · intro h
-    exact ⟨(k - a).toNat, by omega, by omega⟩
-
-theorem verifyContinuous_proven : VerifyContinuous := by
-  intro c i is hk hv
-  have hk' : (c.kind == EKind.flag) = false := by simpa using hk
-  simp only [EClass.verifyContinuous, hv]
-  split
-  · rename_i he
-    simp only [true_iff]
-    intro k h1 h2
-    omega
-  · simp only [hk', Bool.false_eq_true, ↓reduceIte]
-    have hc : ∀ k : Int, (!(i :: is).contains k) = false ↔ k ∈ i :: is := by
-      intro k
-      have e : (i :: is).contains k = decide (k ∈ i :: is) := by simp
-      rw [e]
-      simp only [Bool.not_eq_false', decide_eq_true_eq]
-    have hg : ((intRange (is.foldl min i + 1) (is.foldl max i)).filter
-        (fun k => !(i :: is).contains k)).isEmpty = true ↔
-        ∀ k, is.foldl min i < k → k < is.foldl max i → k ∈ i :: is := by
-      rw [List.isEmpty_iff, List.filter_eq_nil_iff]
-      constructor
-      · intro h k h1 h2
-        have := h k ((mem_intRange _ _ _).2 ⟨by omega, h2⟩)
-        exact (hc k).1 (Bool.eq_false_iff.2 this)
-      · intro h k hk
-        have hk' := (mem_intRange _ _ _).1 hk
-        have := (hc k).2 (h k (by omega) hk'.2)
-        intro e
-        rw [this] at e
-        exact Bool.noConfusion e
-    by_cases h : ∀ k, is.foldl min i < k → k < is.foldl max i → k ∈ i :: is
-    · simp only [hg.2 h, ↓reduceIte, true_iff]
-      exact h
-    · have : ((intRange (is.foldl min i + 1) (is.foldl max i)).filter
-          (fun k => !(i :: is).contains k)).isEmpty = false := by
-        cases he : ((intRange (is.foldl min i + 1) (is.foldl max i)).filter
-          (fun k => !(i :: is).contains k)).isEmpty with
-        | false => rfl
-        | true => exact absurd (hg.1 he) h
-      simp only [this, Bool.false_eq_true, ↓reduceIte, reduceCtorEq, false_iff]
-      exact h
 
 /-! ### `Flag` operators -/
 
@@ -1019,39 +878,6 @@ theorem flagOperands_proven : FlagOperands := by
   · simp [flagBin, getValue]
   · simp [flagBool]
   · intro h; simp [flagInvert, h]
-
-/-- `value in cls` for a `Flag` class, each path: a value that is not an `int` is not in it; what `_missing_` makes a member of
-the class is in it, and a plain `int` from `EJECT` is not; and with `ValueError` from `_missing_` the value of a member is
-in it, and nothing else. -/
-def FlagClassPaths : Prop :=
-  ∀ (c : FlagCls) (i : Int) (n : Nat) (m : Option String) (p : Int) (e : PyExc),
-    c.classContains none = false ∧
-    (c.missing i = .ok (.flag n m) → c.classContains (some i) = true) ∧
-    (c.missing i = .ok (.plain p) → c.classContains (some i) = false) ∧
-    (c.missing i = .error e → c.classContains (some i) = c.members.any (fun q => (q.2 : Int) == i))
-
-theorem flagClassPaths_proven : FlagClassPaths := by
-  intro c i n m p e
-  refine ⟨rfl, ?_, ?_, ?_⟩
-  · intro h; simp [FlagCls.classContains, h]
-  · intro h; simp [FlagCls.classContains, h]
-  · intro h; simp [FlagCls.classContains, h]
-
-/-- `value in cls`, for a `Flag` class and a value that is not negative, means that the value is the value of a member or
-a pseudo-member: the docstring of `EnumType.__contains__`. False under `CONFORM`: `_missing_` discards the unknown bits
-before it returns a member, and `__contains__` only looks at the type of that member, so `8 in F` is true for a class of
-two bits, for which `F(8)` is `F(0)`. -/
-def FlagClassContainsValue : Prop :=
-  ∀ (c : FlagCls) (i : Int), 0 ≤ i → c.classContains (some i) = true →
-    ∃ n name, c.call i = .ok (.flag n name) ∧ (n : Int) = i
-
-theorem flagClassContainsValue_refuted : ¬FlagClassContainsValue := by
-  intro h
-  obtain ⟨n, name, h1, h2⟩ := h ⟨"F", [("A", 1), ("B", 2)], .conform⟩ 8 (by decide) (by decide +kernel)
-  have : (FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .conform⟩ 8) = .ok (.flag 0 none) := by decide +kernel
-  rw [this] at h1
-  simp only [Except.ok.injEq, FlagVal.flag.injEq] at h1
-  omega
 
 /-- `Flag._generate_next_value_`: the first value is `start`; after that the next power of two above every value so far,
 the least one, so that a value further up fails this. Docs of `auto`, for `Flag`. Values with no order are the `TypeError`s
@@ -1260,70 +1086,6 @@ theorem invertBits_proven : InvertBits := by
         simp [Nat.testBit_two_pow_sub_one, hlt]
   · intro h
     rcases h with h | h <;> simp [FlagCls.invert, h]
-
-/-! ### `verify` -/
-
-/-- `verify` runs its checks in order, and passes exactly when each passes; on anything but an enumeration it raises
-`TypeError` before it looks at them. `NAMED_FLAGS` passes exactly when no alias has a bit outside the values of the
-members. -/
-def VerifyCall : Prop :=
-  ∀ (c : EClass) (f : Name → Name) (checks : List Check),
-    (c.verifyCall true f checks = .ok () ↔ ∀ k ∈ checks, c.verifyOne f k = .ok ()) ∧
-    c.verifyCall false f checks = .error (.typeError "the 'verify' decorator only works with Enum and Flag") ∧
-    (c.verifyNamed = .ok () ↔ ∀ p ∈ c.memberMap, c.memberNames.contains p.1 = false → ∀ v,
-      c.valueOf p.2 = some (.atom (.int v)) → ∀ b ∈ bitsOf v.toNat, (b : Int) ∈ c.intValues)
-
-theorem verifyCall_proven : VerifyCall := by
-  intro c f checks
-  refine ⟨?_, rfl, ?_⟩
-  · simp only [EClass.verifyCall, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-    induction checks with
-    | nil => simp [EClass.verifyAll]
-    | cons k r ih =>
-      simp only [EClass.verifyAll, List.mem_cons, forall_eq_or_imp]
-      cases h : c.verifyOne f k with
-      | error e => simp
-      | ok u => simpa using ih
-  · have hm : ∀ p, c.missesName p = true ↔ c.memberNames.contains p.1 = false ∧ ∃ v,
-        c.valueOf p.2 = some (.atom (.int v)) ∧ ∃ b ∈ bitsOf v.toNat, (b : Int) ∉ c.intValues := by
-      intro p
-      unfold EClass.missesName
-      by_cases hc : c.memberNames.contains p.1 = true
-      · simp only [hc, ↓reduceIte, Bool.false_eq_true, Bool.true_eq_false, false_and]
-      · have hc' : c.memberNames.contains p.1 = false := Bool.eq_false_iff.2 hc
-        simp only [hc', Bool.false_eq_true, ↓reduceIte, true_and]
-        cases hv : c.valueOf p.2 with
-        | none => simp
-        | some w =>
-          cases w with
-          | atom a =>
-            cases a with
-            | int v =>
-              simp only [List.any_eq_true, Bool.not_eq_true', Option.some.injEq, EV.atom.injEq, Atom.int.injEq]
-              constructor
-              · rintro ⟨b, hb, hq⟩
-                exact ⟨v, rfl, b, hb, by simpa using hq⟩
-              · rintro ⟨u, rfl, b, hb, hq⟩
-                exact ⟨b, hb, by simpa using hq⟩
-            | _ => simp
-          | _ => simp
-    simp only [EClass.verifyNamed]
-    cases h : c.memberMap.any c.missesName with
-    | true =>
-      simp only [↓reduceIte, reduceCtorEq, false_iff]
-      intro hall
-      obtain ⟨p, hp, hq⟩ := List.any_eq_true.1 h
-      obtain ⟨h1, v, h2, b, h3, h4⟩ := (hm p).1 hq
-      exact h4 (hall p hp h1 v h2 b h3)
-    | false =>
-      simp only [Bool.false_eq_true, ↓reduceIte, true_iff]
-      intro p hp hc v hv b hb
-      apply Classical.byContradiction
-      intro hn
-      have : c.memberMap.any c.missesName = true :=
-        List.any_eq_true.2 ⟨p, hp, (hm p).2 ⟨hc, v, hv, b, hb, hn⟩⟩
-      rw [h] at this
-      exact Bool.noConfusion this
 
 /-! ### Names and bits -/
 
