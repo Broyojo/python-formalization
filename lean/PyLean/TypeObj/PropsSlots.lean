@@ -76,7 +76,7 @@ def GetattrHookNotCalledWhenFound : Prop :=
 
 theorem getattrHookNotCalledWhenFound_proven : GetattrHookNotCalledWhenFound := by
   intro rt self v getattr n w w1 h1 h2 h3
-  simp [slotTpGetattrHook, h1, h2, h3]
+  simp [slotTpGetattrHook, isGenericGetattribute, h1, h2, h3]
 
 /-- ... and it does run, with the name, when the lookup misses. -/
 def GetattrHookCalledWhenMissing : Prop :=
@@ -88,7 +88,7 @@ def GetattrHookCalledWhenMissing : Prop :=
 
 theorem getattrHookCalledWhenMissing_proven : GetattrHookCalledWhenMissing := by
   intro rt self getattr n w w1 h1 h2 h3
-  simp [slotTpGetattrHook, h1, h2, h3]
+  simp [slotTpGetattrHook, isGenericGetattribute, h1, h2, h3]
 
 /-- **A user `__getattribute__` that raises `AttributeError` falls back to `__getattr__`**;
 any other exception propagates, `Objects/typeobject.c:11131`. -/
@@ -106,7 +106,9 @@ theorem getattributeAttributeErrorFallback_proven : GetattributeAttributeErrorFa
   intro rt self getattr ga n e w w1 h1 h2 h3 h4
   have hne : (typeOf w ga == B.wrapperDescr) = false := by
     simpa using h3
-  simp only [slotTpGetattrHook, M.bind_app, getW_app, h1, h2, hne, Bool.false_and,
+  have hg : isGenericGetattribute w (some ga) = false := by
+    simp [isGenericGetattribute, hne]
+  simp only [slotTpGetattrHook, M.bind_app, getW_app, h1, h2, hg,
     Bool.false_eq_true, ite_false, catchMatch, tryM_app, h4]
   split <;> simp
 
@@ -118,7 +120,7 @@ def NoHookSimpleDispatch : Prop :=
 
 theorem noHookSimpleDispatch_proven : NoHookSimpleDispatch := by
   intro rt self n w h
-  simp [slotTpGetattrHook, h]
+  simp [slotTpGetattrHook, isGenericGetattribute, h]
 
 /-- **`PyObject_GetOptionalAttr` agrees with `PyObject_GetAttr` on a found attribute**, for
 the generic path: the suppressing variant differs only on failure. -/

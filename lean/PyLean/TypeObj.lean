@@ -12,6 +12,8 @@ import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
 import PyLean.TypeObj.StructSeqStatic
+import PyLean.TypeObj.MroSpec2
+import PyLean.TypeObj.PropsGetstate
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -80,7 +82,7 @@ def entries : List Entry := [
     "invariant"
     ``C3Complete ``c3Complete_proven,
   p "typeobj-c3-fast-path" ty ["mro_implementation_unlocked"]
-    "With one base whose MRO starts with it and has no repeats, the fast path at :3352 gives what pmerge gives."
+    "With one base whose MRO starts with it and has no repeats, the fast path at :3493-3513 gives what pmerge gives."
     "fast path vs slow path, typeobject.c:3493-3513"
     ``C3FastPathAgrees ``c3FastPathAgrees_proven
     "A custom mro() can break the precondition; class creation then fails or keeps the custom order. Reached only through a metaclass overriding mro().",
@@ -92,6 +94,187 @@ def entries : List Entry := [
     "A duplicate-free tuple of bases passes check_duplicates."
     "typeobject.c:3266-3267"
     ``C3DuplicateBaseRejected ``c3DuplicateBaseRejected_proven,
+  p "typeobj-c3-exact" ty ["pmerge", "tail_contains"]
+    "For all lists of classes, pmerge returns m exactly when the C3 rule (take the head of the earliest list whose head is in no tail, remove it from every list, repeat) linearizes them to m, and fails at remaining lists r exactly when that rule gets stuck at r."
+    "typeobject.c:3431-3436 (earliest direct superclass) and the C3 paper cited at :3259"
+    ``C3MergeExact ``c3MergeExact_proven,
+  p "typeobj-check-duplicates-exact" ty ["check_duplicates"]
+    "check_duplicates finds nothing exactly when the bases have no repeat, and otherwise reports the first base that occurs again later."
+    "typeobject.c:3310-3338; docs: duplicate bases are an error (:3266-3267)"
+    ``CheckDuplicatesExact ``checkDuplicatesExact_proven,
+  p "typeobj-mro-impl-exact" ty ["mro_implementation_unlocked", "check_duplicates", "pmerge", "tail_contains"]
+    "For every class, bases and base MROs: the first base without an MRO is reported first; one base gives the class then the base's MRO; several bases give the first duplicate, else the class then the C3 merge of the base MROs and the bases, or a conflict at the stuck state."
+    "typeobject.c:3471-3556"
+    ``MroImplementationExact ``mroImplementationExact_proven,
+  p "typeobj-c3-example-earliest" ty ["mro_implementation_unlocked", "pmerge", "tail_contains"]
+    "D(B(X), C(Y)) has MRO D B X C Y object, as on CPython 3.15.2; a merge scanning lists from the end would give D B C Y X object."
+    "typeobject.c:3431-3436"
+    ``C3ExampleEarliestBase ``c3ExampleEarliestBase_proven,
+  p "typeobj-c3-example-conflict" ty ["mro_implementation_unlocked", "pmerge"]
+    "X2(A, B2), Y2(B2, A), Z(X2, Y2) fails stuck with heads A and B2, the names CPython 3.15.2 prints."
+    "typeobject.c:3459-3462"
+    ``C3ExampleConflict ``c3ExampleConflict_proven,
+  p "typeobj-mro-impl-errors" ty ["mro_implementation_unlocked", "class_name", "check_duplicates", "set_mro_error"]
+    "mro_implementation_unlocked raises 'Cannot extend an incomplete type' for a base without an MRO, 'duplicate base class' with class_name of the duplicate (its str __name__, the bare message for a non-str __name__, its repr when __name__ is missing, or the lookup's exception), set_mro_error's error on a conflict, and returns the MRO with the world unchanged otherwise."
+    "typeobject.c:3299-3307, :3316-3333, :3482-3491"
+    ``MroImplementationErrors ``mroImplementationErrors_proven,
+  p "typeobj-set-mro-error-message" ty ["set_mro_error"]
+    "When each candidate's __name__ is a str and the text fits the buffer, the MRO conflict TypeError is 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each after a space, joined by ','."
+    "typeobject.c:3350-3398"
+    ``SetMroErrorMessage ``setMroErrorMessage_proven
+    "Scope: candidates are hashed by identity; a metaclass __hash__ or __name__ that re-enters can free the borrowed to_merge tuples (bugs/typeobj-set-mro-error-borrowed-mro.yaml).",
+  p "typeobj-metaclass-exact" ty ["_PyType_CalculateMetaclass"]
+    "The calculated metaclass is the given one or a base's metaclass and, under the subtype order, a subclass of all of them; the calculation fails exactly when some base's metaclass is unrelated to the winner of the bases before it, with the exact message."
+    "typeobject.c:4213-4244"
+    ``MetaclassExact ``metaclassExact_proven,
+  p "typeobj-best-base-exact" ty ["find_best_base"]
+    "find_best_base returns the first base whose solid base is below every base's solid base; acceptable bases with pairwise related solid bases always succeed; two unrelated solid bases give the layout conflict; the first non-class or final base gives its exact message."
+    "typeobject.c:3743-3797 ('the first one that's on the path to the solid base')"
+    ``FindBestBaseExact ``findBestBaseExact_proven,
+  -- exact statements of single functions, every branch
+  p "typeobj-maybe-call-special-exact" ty ["maybe_call_special_no_args", "maybe_call_special_one_arg", "lookup_maybe_method", "lookup_method_ex"]
+    "For every rt and class structure: a special method missing from the type's MRO is missing; a method descriptor is called with self first; another descriptor is bound by __get__ (AttributeError from it counts as missing, other exceptions propagate) and called; a plain value is called; with attr_is_none, a found None is reported and not called."
+    "typeobject.c:3038-3080, :3204-3243"
+    ``MaybeCallSpecialExact ``maybeCallSpecialExact_proven,
+  p "typeobj-slot-tp-hash-exact" ty ["slot_tp_hash"]
+    "slot_tp_hash propagates an exception from __hash__ or its lookup, gives PyObject_HashNotImplemented for __hash__ = None or none usable, raises the exact TypeError for a non-int, returns an in-range int (with -1 as -2), and hashes an out-of-range int by long.__hash__ (sign times |i| mod 2**61-1, -1 as -2)."
+    "typeobject.c:11002-11039"
+    ``SlotTpHashExact ``slotTpHashExact_proven,
+  p "typeobj-slot-nb-bool-exact" ty ["slot_nb_bool"]
+    "slot_nb_bool: __bool__ = None raises; a bool result is the answer and any other result raises the exact TypeError; exceptions propagate; without __bool__ the truth of __len__()'s result decides, and without either the object is true."
+    "typeobject.c:10903-10944"
+    ``SlotNbBoolExact ``slotNbBoolExact_proven,
+  p "typeobj-slot-sq-contains-exact" ty ["slot_sq_contains"]
+    "slot_sq_contains: __contains__ = None raises 'not a container'; otherwise the truth of its result, its exception propagating; without __contains__, _PySequence_IterSearch decides."
+    "typeobject.c:10790-10811"
+    ``SlotSqContainsExact ``slotSqContainsExact_proven,
+  p "typeobj-slot-tp-init-exact" ty ["slot_tp_init"]
+    "slot_tp_init succeeds exactly when __init__ returns None, raises the exact TypeError for any other result, and propagates __init__'s exception."
+    "typeobject.c:11279-11294"
+    ``SlotTpInitExact ``slotTpInitExact_proven,
+  p "typeobj-slot-tp-iter-exact" ty ["slot_tp_iter", "has_dunder_getitem"]
+    "slot_tp_iter returns __iter__()'s result or exception; __iter__ = None raises 'not iterable' without looking up __getitem__; with no __iter__, a found __getitem__ gives a sequence iterator, a missing one or a failing lookup the 'not iterable' TypeError."
+    "typeobject.c:11184-11216; checked on 3.15.2 with a __getitem__ descriptor whose __get__ raises"
+    ``SlotTpIterExact ``slotTpIterExact_proven,
+  p "typeobj-slot-sq-length-exact" ty ["slot_sq_length"]
+    "slot_sq_length returns __len__()'s result through _PyNumber_Index when it is in [0, PY_SSIZE_T_MAX], raises ValueError for a negative one and OverflowError naming the result's type for a larger one, and propagates exceptions of __len__ and __index__."
+    "typeobject.c:10718-10745; len() of I(2**70) for an int subclass I names 'I' on 3.15.2"
+    ``SlotSqLengthExact ``slotSqLengthExact_proven,
+  p "typeobj-slot-nb-index-exact" ty ["slot_nb_index", "vectorcall_method"]
+    "slot_nb_index looks __index__ up on the type (missing: AttributeError('__index__')), binds or calls it as vectorcall_method does, and returns the call's result unchecked, whatever it is."
+    "typeobject.c:3156-3175, :10948-10952"
+    ``SlotNbIndexExact ``slotNbIndexExact_proven,
+  p "typeobj-method-is-overloaded-exact" ty ["method_is_overloaded"]
+    "method_is_overloaded is false when the right operand's type lacks the name, true when only the left one lacks it, the != of the two attributes by PyObject_RichCompareBool otherwise, and propagates lookup and comparison exceptions."
+    "typeobject.c:10643-10670"
+    ``MethodIsOverloadedExact ``methodIsOverloadedExact_proven,
+  p "typeobj-wrap-binary-exact" ty ["wrap_binaryfunc_l", "wrap_binaryfunc_r"]
+    "x.__add__(y) calls the slot with (x, y) and x.__radd__(y) with (y, x); any argument count but one raises check_num_args's TypeError."
+    "typeobject.c:9996-10018"
+    ``WrapBinaryExact ``wrapBinaryExact_proven,
+  p "typeobj-type-call-exact" ty ["type_call"]
+    "type_call: type(x) is type(x); type with another count than 1 or 3 raises; NULL tp_new raises 'cannot create'; tp_new's exception propagates; a result that is not an instance is returned without __init__; otherwise tp_init runs with the same arguments, its exception propagating and the object dropped."
+    "typeobject.c:2470-2534"
+    ``TypeCallExact ``typeCallExact_proven,
+  p "typeobj-object-init-exact" ty ["object_init", "excess_args"]
+    "object.__init__ accepts no arguments always, and arguments only when __init__ is not overridden but __new__ is; otherwise the exact message, which names the class when neither is overridden."
+    "typeobject.c:7400-7459"
+    ``ObjectInitExact ``objectInitExact_proven,
+  p "typeobj-object-new-exact" ty ["object_new", "excess_args"]
+    "object.__new__ rejects arguments when __new__ is overridden or neither is, with the exact messages; otherwise a non-abstract class gets a fresh instance of exactly that class, and an abstract one the 'Can't instantiate abstract class' TypeError with the sorted names, or the exception computing them."
+    "typeobject.c:7400-7520"
+    ``ObjectNewExact ``objectNewExact_proven,
+  p "typeobj-abstract-names-exact" ty ["object_new"]
+    "The abstract-method names are sorted before they are joined: str names come back in code-point order; a single non-str item raises the join's 'sequence item 0' TypeError; two items of different types are compared once before any join, so ['a', 1] raises the '<' not supported TypeError."
+    "typeobject.c:7484-7502; checked on 3.15.2"
+    ``AbstractNamesExact ``abstractNamesExact_proven,
+  p "typeobj-object-richcompare-exact" ty ["object_richcompare", "_Py_BaseObject_RichCompare"]
+    "object_richcompare: == is True for the same object and NotImplemented otherwise, by identity (distinct heap objects, and distinct values, are NotImplemented); != negates the truth of tp_richcompare(==) unless that is NotImplemented, propagating exceptions; orderings are NotImplemented."
+    "typeobject.c:7576-7624; object.__eq__(int('1'*30), int('1'*30)) is NotImplemented on 3.15.2"
+    ``ObjectRichcompareExact ``objectRichcompareExact_proven,
+  p "typeobj-object-format-exact" ty ["object___format___impl"]
+    "object.__format__ raises the exact TypeError for a non-empty spec and is str(self) for an empty one, propagating str()'s exception."
+    "typeobject.c:8501-8513"
+    ``ObjectFormatExact ``objectFormatExact_proven,
+  p "typeobj-get-new-arguments-exact" ty ["_PyObject_GetNewArguments"]
+    "_PyObject_GetNewArguments calls __getnewargs_ex__ when the type has it (lookup and call exceptions propagating, __getnewargs__ never consulted), else __getnewargs__ (its result must be a tuple), else gives no arguments."
+    "typeobject.c:8146-8234"
+    ``GetNewArgumentsExact ``getNewArgumentsExact_proven,
+  p "typeobj-check-newargs-ex-exact" ty ["_PyObject_GetNewArguments"]
+    "__getnewargs_ex__'s result is checked in order: a tuple, of length 2, whose first item is a tuple and second a dict, each failure with its exact message."
+    "typeobject.c:8164-8200"
+    ``CheckNewargsExExact ``checkNewargsExExact_proven,
+  p "typeobj-slot-names-exact" ty ["_PyType_GetSlotNames"]
+    "_PyType_GetSlotNames returns a cached list or None and refuses another cached value; otherwise it calls copyreg._slotnames through the module, so a replaced function runs, its exception propagates, and a result that is neither a list nor None raises the exact TypeError."
+    "typeobject.c:7930-7977; copyreg._slotnames = lambda cls: 42 raises it on 3.15.2"
+    ``SlotNamesExact ``slotNamesExact_proven,
+  p "typeobj-wrap-in-dict-exact" ty ["type_new_staticmethod", "type_new_classmethod"]
+    "In the class namespace, __new__ (and __init_subclass__, __class_getitem__) as a plain function is replaced by a new staticmethod (classmethod) wrapping it, with the function's metadata copied; a missing key or a non-function value is left alone."
+    "typeobject.c:4628-4679; funcobject.c:1806-1815, :1993-2006"
+    ``WrapInDictExact ``wrapInDictExact_proven,
+  p "typeobj-set-cell-exact" ty ["type_new_set_classcell", "type_new_set_classdictcell"]
+    "__classcell__ (__classdictcell__): absent is a no-op; a cell receives the value and the key is deleted from the namespace; anything else raises the exact TypeError with the repr of its type."
+    "typeobject.c:4808-4858"
+    ``TypeNewSetCellExact ``typeNewSetCellExact_proven
+    "For __classdictcell__ CPython stores the class's dict object; the model's caller passes the class, since its tp_dict is not an object.",
+  p "typeobj-type-new-exact" ty ["type_new"]
+    "After its argument checks, type_new propagates type_new_get_bases's exception, returns as it is a class a more derived metaclass's tp_new created, and otherwise builds the class with type_new_impl from the namespace."
+    "typeobject.c:5115-5167"
+    ``TypeNewExact ``typeNewExact_proven,
+  p "typeobj-same-slots-added-exact" ty ["same_slots_added"]
+    "same_slots_added compares the two heap types' slot tuples with PyObject_RichCompareBool (running a str subclass slot name's __eq__), counts an exception as 'differ', and then checks the sizes."
+    "typeobject.c:7643-7670"
+    ``SameSlotsAddedExact ``sameSlotsAddedExact_proven,
+  p "typeobj-compatible-for-assignment-exact" ty ["compatible_for_assignment"]
+    "For __class__ assignment: a different deallocator, then different layout flags or dict/weaklist offsets, raise their exact messages; then equal highest compatible bases pass, bases with different tp_base fail, and otherwise same_slots_added decides."
+    "typeobject.c:7683-7750"
+    ``CompatibleForAssignmentExact ``compatibleForAssignmentExact_proven,
+  p "typeobj-set-class-world-stopped-exact" ty ["object_set_class_world_stopped"]
+    "Unless both types are ModuleType subclasses, an immutable old or new type is refused; otherwise compatible_for_assignment decides, and on success the object's type is the new one and nothing else changes."
+    "typeobject.c:7755-7853; m.__class__ = Mod for Mod(types.ModuleType) succeeds on 3.15.2"
+    ``ObjectSetClassWorldStoppedExact ``objectSetClassWorldStoppedExact_proven,
+  p "typeobj-set-class-exact" ty ["object_set_class"]
+    "object_set_class refuses deletion and non-classes, then runs the object.__setattr__ audit event, whose hook exception aborts the assignment, then object_set_class_world_stopped decides."
+    "typeobject.c:7856-7894"
+    ``ObjectSetClassExact ``objectSetClassExact_proven
+    "Scope: reference counts are not modelled; the stale old type of :7881 is bugs/typeobj-set-class-reentrant-slot-eq.yaml.",
+  p "typeobj-find-name-in-mro-exact" ty ["find_name_in_mro"]
+    "find_name_in_mro returns the value of the first class of the MRO whose dict has the name, nothing when none has it, and nothing for a type without an MRO yet."
+    "typeobject.c:6193-6243"
+    ``FindNameInMroExact ``findNameInMroExact_proven
+    "Scope: string-keyed class dicts and str names, so the hash and DKIX_ERROR paths, which CPython reports as not found, do not arise.",
+  p "typeobj-call-attribute-exact" ty ["call_attribute"]
+    "call_attribute calls a method descriptor with (self, name), binds another descriptor with __get__(self, type(self)) and calls the result with (name,), propagating a binding exception, and calls anything else with (name,)."
+    "typeobject.c:11065-11088"
+    ``CallAttributeExact ``callAttributeExact_proven,
+  p "typeobj-getattr-hook-exact" ty ["_Py_slot_tp_getattr_hook"]
+    "Without __getattr__ the hook calls __getattribute__; with __getattr__ and object's __getattribute__ it runs the generic lookup and calls __getattr__ only when the name is missing; with an overriding __getattribute__ it calls __getattr__ only after an AttributeError."
+    "typeobject.c:11090-11139"
+    ``GetattrHookExact ``getattrHookExact_proven,
+  p "typeobj-do-super-lookup-exact" ty ["do_super_lookup"]
+    "do_super_lookup falls back to the generic lookup on the super object when unbound or when nothing follows su->type in the MRO, returns a found plain value, and binds a found descriptor with obj = NULL for a class-bound super and su_obj otherwise."
+    "typeobject.c:12741-12790"
+    ``DoSuperLookupExact ``doSuperLookupExact_proven,
+  p "typeobj-super-getattro-exact" ty ["super_getattro"]
+    "super_getattro sends __class__ to the generic lookup on the super object and every other name to do_super_lookup with the object's fields."
+    "typeobject.c:12792-12805"
+    ``SuperGetattroExact ``superGetattroExact_proven,
+  p "typeobj-supercheck-exact" ty ["supercheck"]
+    "supercheck accepts a subclass class, then an instance of a subclass, then a proxy whose __class__ is a different subclass (propagating the lookup's exception), and otherwise raises the exact TypeError naming 'type' or 'instance of'."
+    "typeobject.c:12807-12871"
+    ``SupercheckExact ``supercheckExact_proven,
+  p "typeobj-type-getattro-exact" ty ["_Py_type_getattro_stackref", "_Py_type_getattro_impl"]
+    "type.__getattribute__: a metaclass data descriptor wins; then the class's MRO, bound by __get__(None, C) or returned as it is; then a metaclass non-data descriptor bound by __get__(C, M) or a plain metaclass attribute; then nothing with suppress or the exact AttributeError."
+    "typeobject.c:6591-6738"
+    ``TypeGetattroExact ``typeGetattroExact_proven,
+  p "typeobj-type-ready-set-hash-exact" ty ["type_ready_set_hash"]
+    "type_ready_set_hash leaves a type with tp_hash, or with __hash__ in its dict, alone, and otherwise sets __hash__ = None and tp_hash = PyObject_HashNotImplemented, changing nothing else."
+    "typeobject.c:9428-9449"
+    ``TypeReadySetHashExact ``typeReadySetHashExact_proven,
+  p "typeobj-getstate-default-exact" ty ["object_getstate_default"]
+    "For an instance: with required, a variable-size type, then an oversized basicsize, raise the exact 'cannot pickle' TypeErrors; the state is None or the __dict__; slot names come from _PyType_GetSlotNames (exceptions propagate); with no slot names the state is returned, otherwise the slot attributes are collected and the result is the state, or (state, slots) when any was set."
+    "typeobject.c:7979-8101"
+    ``GetstateDefaultExact ``getstateDefaultExact_proven,
   -- metaclass
   p "typeobj-metaclass-winner" ty ["_PyType_CalculateMetaclass"]
     "Under a reflexive transitive subtype order, the winner is a subclass of the given metaclass and of the metaclass of every base."
@@ -311,7 +494,7 @@ def entries : List Entry := [
     "abstract.c:2812-2814"
     ``GetIterSequenceFallback ``getIterSequenceFallback_proven,
   p "typeobj-iter-none" ty ["slot_tp_iter"]
-    "__iter__ = None disables the __getitem__ fallback."
+    "__iter__ = None disables the __getitem__ fallback, and __getitem__ is not even looked up."
     "docs: object.__iter__, None blocks fallback; typeobject.c:11208"
     ``IterNoneNotIterable ``iterNoneNotIterable_proven,
   p "typeobj-seqiter-sticky" "Objects/iterobject.c" ["iter_iternext"]
