@@ -59,7 +59,7 @@ Lib/_pydecimal.py	1692	1693	Decimal.imag	imag(self)	todo
 Lib/_pydecimal.py	1695	1696	Decimal.conjugate	conjugate(self)	todo		
 Lib/_pydecimal.py	1698	1699	Decimal.__complex__	__complex__(self)	todo		
 Lib/_pydecimal.py	1701	1711	Decimal._fix_nan	_fix_nan(self, context)	modelled	decimal-fix-nan-exact,decimal-check-nans-exact	
-Lib/_pydecimal.py	1713	1803	Decimal._fix	_fix(self, context)	todo		review: `fix` mirrors :1723-1803 branch by branch, but MulCorrect and QuantizeCorrect hold only when the operation returns (an always-raising _fix passes) and assume the Overflow (:1747-1752, :1774-1775), Underflow/Subnormal and Clamped-on-underflow branches away; those are the open decimal-mul-overflow-correct and -subnormal-correct.
+Lib/_pydecimal.py	1713	1803	Decimal._fix	_fix(self, context)	modelled	decimal-fix-exact	
 Lib/_pydecimal.py	1815	1820	Decimal._round_down	_round_down(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1822	1824	Decimal._round_up	_round_up(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1826	1833	Decimal._round_half_up	_round_half_up(self, prec)	modelled	decimal-rounding-modes-correct	
@@ -136,10 +136,10 @@ Lib/_pydecimal.py	3911	3925	_dec_from_triple	_dec_from_triple(sign, coefficient,
 Lib/_pydecimal.py	3941	3942	_ContextManager.__init__	__init__(self, new_context)	todo		
 Lib/_pydecimal.py	3943	3946	_ContextManager.__enter__	__enter__(self)	todo		
 Lib/_pydecimal.py	3947	3948	_ContextManager.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	todo		review: pyContextNew (Context.lean:310) follows :3978-4003 through __setattr__, but ContextNewClearsFlagsPy only says a Context() that returns has clear flags, and its proof discards the six attribute steps and traps through ebind_ok, so an __init__ that ignores prec/rounding/traps, mishandles a list of flags or always raises passes.
-Lib/_pydecimal.py	4005	4017	Context._set_integer_check	_set_integer_check(self, name, value, vmin, vmax)	todo		review: setIntegerCheck (Context.lean:220) is :4006-4017 and ContextAttrTwins pins acceptance and ValueError on each side of the three range shapes, but the TypeError for a non-int (:4006-4007) is never stated (and the ValueError text only as ∃ m), so a check that stores a non-int passes.
-Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	todo		review: setSignalDict (Context.lean:245) is :4020-4028, but its only entry uses it on one complete all-false dict (setSignalDict_keyed in ContextNewClearsFlagsPy); the TypeError for a non-dict and both KeyErrors (an extra key, a missing signal) are unstated, so a setter that accepts any dict passes.
-Lib/_pydecimal.py	4030	4053	Context.__setattr__	__setattr__(self, name, value)	todo		review: pySetattr (Context.lean:254) has no `_ignored_flags` branch (:4049-4050), so `ctx._ignored_flags = x` is an AttributeError in the model; ContextAttrTwins pins only the five integer attributes, and the rounding TypeError (:4041-4046), the flags/traps validation (:4047-4048) and the AttributeError for other names (:4051-4053) are unstated.
+Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	modelled	decimal-context-init-exact	
+Lib/_pydecimal.py	4005	4017	Context._set_integer_check	_set_integer_check(self, name, value, vmin, vmax)	modelled	decimal-context-setattr-exact,decimal-context-attr-twins	
+Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message	
+Lib/_pydecimal.py	4030	4053	Context.__setattr__	__setattr__(self, name, value)	modelled	decimal-context-setattr-exact,decimal-context-init-exact	
 Lib/_pydecimal.py	4055	4056	Context.__delattr__	__delattr__(self, name)	todo		
 Lib/_pydecimal.py	4059	4064	Context.__reduce__	__reduce__(self)	todo		
 Lib/_pydecimal.py	4066	4077	Context.__repr__	__repr__(self)	todo		
@@ -151,8 +151,8 @@ Lib/_pydecimal.py	4105	4125	Context._raise_error	_raise_error(self, condition, e
 Lib/_pydecimal.py	4127	4129	Context._ignore_all_flags	_ignore_all_flags(self)	todo		
 Lib/_pydecimal.py	4131	4136	Context._ignore_flags	_ignore_flags(self, *flags)	todo		
 Lib/_pydecimal.py	4138	4143	Context._regard_flags	_regard_flags(self, *flags)	todo		
-Lib/_pydecimal.py	4148	4150	Context.Etiny	Etiny(self)	todo		review: Ctx.etiny (Arith.lean:59) is `Emin - prec + 1` (:4150), but both entries hold only when * or quantize returns (part 1 HOLLOW for __mul__ and quantize) and use etiny in their hypotheses as well as in the model, so an Etiny that is off by one satisfies them.
-Lib/_pydecimal.py	4152	4154	Context.Etop	Etop(self)	todo		review: Ctx.etop (Arith.lean:60) is `Emax - prec + 1` (:4154), but it reaches the statements only through _fix's clamp fold-down inside MulCorrect and QuantizeCorrect, which hold only when the operation returns (part 1 HOLLOW for both) and state the fold-down in terms of Etop itself, so a wrong Etop passes.
+Lib/_pydecimal.py	4148	4150	Context.Etiny	Etiny(self)	modelled	decimal-fix-exact	
+Lib/_pydecimal.py	4152	4154	Context.Etop	Etop(self)	modelled	decimal-fix-exact	
 Lib/_pydecimal.py	4156	4173	Context._set_rounding	_set_rounding(self, type)	todo		
 Lib/_pydecimal.py	4175	4190	Context.create_decimal	create_decimal(self, num='0')	todo		
 Lib/_pydecimal.py	4192	4207	Context.create_decimal_from_float	create_decimal_from_float(self, f)	todo		

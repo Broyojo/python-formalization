@@ -11,6 +11,8 @@ import PyLean.Decimal.OpenProps
 import PyLean.Decimal.DivisionProps
 import PyLean.Decimal.ExactProps
 import PyLean.Decimal.Pow10Refute
+import PyLean.Decimal.FixExact
+import PyLean.Decimal.ContextExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -231,6 +233,30 @@ def entries : List Entry := [
     statement := "For every state of DefaultContext, _pydecimal's Context() with no flags argument has all flags clear."
     source := "Doc/library/decimal.rst:1110-1111"
     status := .proven, prop := ``ContextNewClearsFlagsPy, thm := some ``contextNewClearsFlagsPy_proven },
+  { id := "decimal-fix-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._fix", "Context.Etiny", "Context.Etop", "Overflow.handle", "Decimal._fix_nan"]
+    statement := "For every context with prec >= 1 and every flag state, _fix of a finite non-zero ±co·10^e is the exact value rounded into the context: an adjusted exponent above Emax overflows (Overflow, Inexact, Rounded, the mode's overflow value); otherwise the exponent becomes max(e + digits - prec, Emin - prec + 1), the dropped digits rounded as the mode says, a carry to 10**prec taking one more exponent, a result exponent above Emax - prec + 1 overflowing, with Underflow (inexact and subnormal), Subnormal, Inexact (non-zero digits dropped), Rounded and Clamped (zero result) in that order; a value already at or above that exponent is kept, folded down to Emax - prec + 1 under clamp=1 with Clamped, and Subnormal when below Emin. The first trapped signal raises. _pydecimal's only other outcome is the int-limit ValueError when the rounded coefficient is the kept prefix plus one with more than 4300 digits. A zero has its exponent clamped into [Etiny, Emax] ([Etiny, Etop] under clamp=1) with Clamped when that changes it; infinities are unchanged and a NaN keeps the last prec - clamp payload digits."
+    source := "General Decimal Arithmetic, 'Rounding' and 'Exceptional conditions'; decimal docs, signals Clamped, Inexact, Overflow, Rounded, Subnormal, Underflow"
+    status := .proven, prop := ``FixExact, thm := some ``fixExact_proven
+    notes := "Unconditional: an equation for (fix c d).run fl, so an always-raising or always-returning _fix fails it. fixSpec writes Etiny and Etop out as Emin - prec + 1 and Emax - prec + 1, so it also pins Context.Etiny and Context.Etop." },
+  { id := "decimal-context-setattr-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Context.__setattr__", "Context._set_integer_check", "Context._set_signal_dict"]
+    statement := "Every assignment to a _pydecimal Context attribute: prec, Emin, Emax, capitals, clamp store an int in [1, inf], [-inf, 0], [0, inf], [0, 1], [0, 1] and refuse one outside with ValueError and _set_integer_check's exact message, and any non-int with TypeError('<name> must be an integer'); rounding stores one of the eight mode names and refuses any other string with TypeError('<s>: invalid rounding mode') and any non-string with TypeError; flags and traps store a dict whose keys are exactly the signals, refuse a dict with another key or a missing signal with KeyError and anything else with TypeError; _ignored_flags stores its list; any other name raises AttributeError."
+    source := "Lib/_pydecimal.py:4005-4053; decimal docs, Context attributes"
+    status := .proven, prop := ``SetattrExact, thm := some ``setattrExact_proven
+    notes := "For a tuple, '%s must be a signal dict' % d formats the tuple's elements as the arguments, so () and tuples of two or more elements give a format-string TypeError instead of the message (decimal-pydecimal-signal-dict-tuple-message). The model stores only the signals of a list assigned to _ignored_flags; other objects are out of scope (the module only assigns lists)." },
+  { id := "decimal-signal-dict-type-error-message", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Context._set_signal_dict", "Context.__setattr__"]
+    statement := "Assigning anything but a dict to a _pydecimal Context's traps (or flags) raises TypeError('<value> must be a signal dict')."
+    source := "the message Lib/_pydecimal.py:4021 writes; twin agreement (_decimal: 'argument must be a signal dict')"
+    status := .refuted, prop := ``SignalDictTypeErrorMessage, thm := some ``signalDictTypeErrorMessage_refuted
+    bug := some "decimal-pydecimal-signal-dict-tuple-message"
+    notes := "Context().traps = (): '%s must be a signal dict' % () fails with 'not enough arguments for format string (got 0)'; a tuple of two or more elements gives 'not all arguments converted during string formatting'." },
+  { id := "decimal-context-init-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Context.__init__", "Context.__setattr__", "Context._set_integer_check", "Context._set_signal_dict"]
+    statement := "For every DefaultContext whose traps is a signal dict, Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps) with ints, a rounding mode and lists of signals returns, when every int is in range, exactly the context with the given values, the DefaultContext's for the omitted ones, flags set exactly for the listed signals (all clear when omitted) and traps for the listed ones (DefaultContext's when omitted); a prec below 1, then an Emin above 0, then an Emax below 0 raises the ValueError of _set_integer_check in that order."
+    source := "Doc/library/decimal.rst:1104-1120 (Context constructor)"
+    status := .proven, prop := ``ContextInitExact, thm := some ``contextInitExact_proven },
   { id := "decimal-c-context-clean-template", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["context_new", "context_init_impl"]
     statement := "For a template whose flags are clear and whose capitals is 1, the state DefaultContext starts in, _decimal's Context() equals the template in every field."

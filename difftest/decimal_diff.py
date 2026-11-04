@@ -432,9 +432,13 @@ def gen_attr(rng, name):
         if r < 0.8:
             return ["str", rng.choice(ROUNDINGS)]
         return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"]])
+    if name == "_ignored_flags":
+        return gen_sig_list(rng)
     if r < 0.6:
         return gen_sig_dict(rng)
-    return gen_sig_list(rng) if r < 0.9 else ["obj"]
+    if r < 0.85:
+        return gen_sig_list(rng)
+    return ["tuple", str(rng.choice([0, 1, 2, 3]))] if r < 0.93 else ["obj"]
 
 
 def gen_ctxobj(rng):
@@ -450,7 +454,8 @@ def gen_ctxobj(rng):
                 init[n] = frozen(v, impl)
         return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
     if k < 0.5:
-        name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"])
+        name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope",
+                           "_ignored_flags"])
         val = gen_attr(rng, name) if name != "nope" else ["int", "1"]
         if name in ("flags", "traps") and val[0] == "list":
             val = gen_sig_dict(rng)
@@ -829,6 +834,8 @@ def ctx_val(M, v):
         return frozendict({key_obj(M, k): b for k, b in v[1]})
     if t == "idx":
         return Idx(int(v[1]))
+    if t == "tuple":
+        return tuple(range(int(v[1])))
     return object()
 
 

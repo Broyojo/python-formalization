@@ -367,6 +367,7 @@ theorem contextNewClearsFlagsPy_proven : ContextNewClearsFlagsPy := by
   obtain ⟨c4, _, h⟩ := ebind_ok h
   obtain ⟨c5, _, h⟩ := ebind_ok h
   obtain ⟨c6, _, h⟩ := ebind_ok h
+  obtain ⟨c6', _, h⟩ := ebind_ok h
   obtain ⟨t, _, h⟩ := ebind_ok h
   obtain ⟨c7, _, h⟩ := ebind_ok h
   obtain ⟨f, hf, h⟩ := ebind_ok h

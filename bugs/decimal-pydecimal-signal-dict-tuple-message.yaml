@@ -1,0 +1,58 @@
+id: decimal-pydecimal-signal-dict-tuple-message
+title: "_pydecimal's Context.traps/flags setter loses its error message for a tuple: '%s must be a signal dict' % d formats the tuple's items"
+priority: P4
+kind: wrong-message
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["Context._set_signal_dict", "Context.__setattr__"]
+summary: |
+  Context._set_signal_dict refuses a non-dict with
+      raise TypeError("%s must be a signal dict" % d)
+  When d is a tuple, `%` takes the tuple as its argument tuple, so the intended message is
+  replaced by a formatting error, or by the wrong text:
+      _pydecimal.Context().traps = ()       -> TypeError: not enough arguments for format string (got 0)
+      _pydecimal.Context().traps = (1, 2)   -> TypeError: not all arguments converted during string formatting (required 1, got 2)
+      _pydecimal.Context().traps = (1,)     -> TypeError: 1 must be a signal dict
+      _pydecimal.Context().traps = [1]      -> TypeError: [1] must be a signal dict
+      _decimal.Context().traps = ()         -> TypeError: argument must be a signal dict
+  The same holds for flags. The exception class is right (TypeError) in every case; only the
+  message is wrong.
+likelihood: |
+  Low. It needs a tuple assigned to flags or traps, a plausible mistake (a tuple of signals where
+  a dict is wanted), and only the error text suffers.
+maybe_intended: |
+  No: the other refusals in the same function format `d` the same way and get the intended text.
+  It is the classic `"%s" % tuple` pitfall. A maintainer may still consider it too small to fix
+  on its own; it should go upstream only together with other _pydecimal findings.
+reproducer: |
+  import _pydecimal as P
+  c = P.Context()
+  try:
+      c.traps = ()
+  except TypeError as e:
+      msg = str(e)
+  print('message:', msg)
+  if 'signal dict' not in msg:
+      print('REPRODUCED decimal-pydecimal-signal-dict-tuple-message')
+expected: |
+  TypeError: () must be a signal dict (or, as in _decimal, "argument must be a signal dict").
+promised_by: |
+  The message the source writes (Lib/_pydecimal.py:4021); twin agreement with _decimal's
+  "argument must be a signal dict" (Modules/_decimal/_decimal.c dict_as_flags).
+cause: |
+  Lib/_pydecimal.py:4021 `raise TypeError("%s must be a signal dict" % d)`: a tuple `d` is the
+  argument tuple of `%`. The KeyErrors at :4024 and :4027 format a dict, which is safe. Same code
+  on main at Lib/_pydecimal.py:4021.
+possible_fix: |
+  `raise TypeError("%s must be a signal dict" % (d,))`, or an f-string `f"{d!r} must be a signal dict"`.
+tested:
+  python3 3.15.2: REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["_set_signal_dict", "pydecimal signal dict TypeError tuple", "decimal traps tuple format string",
+            "must be a signal dict", "pydecimal not enough arguments for format string"]
+  bugforge: "no _set_signal_dict entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.SignalDictTypeErrorMessage
+  theorem: PyLean.Decimal.signalDictTypeErrorMessage_refuted

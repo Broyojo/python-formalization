@@ -190,6 +190,8 @@ inductive CtxArg where
   | str (s : String)
   | list (l : List SigKey)
   | dict (d : List (SigKey × Bool))
+  /-- A tuple of `n` elements, which `"%s ..." % d` treats as the format arguments. -/
+  | tuple (n : Nat)
   | obj
   deriving Repr, Inhabited
 
@@ -241,6 +243,14 @@ def sigEntries (d : List (SigKey × Bool)) : SigDict :=
     | .sig s => some (s, p.2)
     | .other => none)
 
+/-- `"%s must be a signal dict" % d` for a non-dict `d`, _pydecimal.py:4021: a tuple is
+taken as the argument tuple of `%`, so an empty one and one of two or more elements fail in
+the formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
+def notSignalDictMsg : CtxArg → String
+  | .tuple 0 => "not enough arguments for format string (got 0)"
+  | .tuple (n + 2) => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
+  | _ => "~must be a signal dict"
+
 /-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. -/
 def setSignalDict (v : CtxArg) : Py SigDict :=
   match v with
@@ -248,7 +258,17 @@ def setSignalDict (v : CtxArg) : Py SigDict :=
     if hasKey d .other then .error (.keyError "~is not a valid signal dict")
     else if !pySignals.all (fun s => hasKey d (.sig s)) then .error (.keyError "~is not a valid signal dict")
     else .ok (sigEntries d)
-  | _ => .error (.typeError "~must be a signal dict")
+  | v => .error (.typeError (notSignalDictMsg v))
+
+/-- The signals of a list assigned to `_ignored_flags`. `_raise_error` and `_regard_flags`
+only test signals for membership and remove them (_pydecimal.py:4113, :4141), so other
+elements change nothing they do. Any other object is stored as is in Python and is out of
+scope here: `_ignored_flags` is private, and the module only ever assigns a list. -/
+def ignoredOf : CtxArg → List Signal
+  | .list l => l.filterMap (fun k => match k with
+    | .sig s => some s
+    | .other => none)
+  | _ => []
 
 /-- `Context.__setattr__`, _pydecimal.py:4030-4053. -/
 def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
@@ -266,6 +286,7 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
     | _ => throw (.typeError "~: invalid rounding mode")
   else if name == "flags" then return { c with flags := ← setSignalDict v }
   else if name == "traps" then return { c with traps := ← setSignalDict v }
+  else if name == "_ignored_flags" then return { c with ignored := ignoredOf v }
   else throw (.named "AttributeError" s!"'decimal.Context' object has no attribute '{name}'")
 
 /-- `Context.__delattr__`, _pydecimal.py:4055-4056. -/
@@ -315,7 +336,7 @@ def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c ← pySetattr c "Emax" (orElseArg a.emax (.int dc.emax))
   let c ← pySetattr c "capitals" (orElseArg a.capitals (.int dc.capitals))
   let c ← pySetattr c "clamp" (orElseArg a.clamp (.int dc.clamp))
-  let c := { c with ignored := a.ignored.getD [] }
+  let c ← pySetattr c "_ignored_flags" (.list ((a.ignored.getD []).map .sig))
   let c ← pySetattr c "traps" (← signalArg (keyed dc.traps) a.traps)
   pySetattr c "flags" (← signalArg (keyed (pySignals.map (fun s => (s, false)))) a.flags)
 
