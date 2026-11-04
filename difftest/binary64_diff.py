@@ -715,7 +715,50 @@ def pos_finite(rng):
     return to_bits(x)
 
 
+import ctypes
+
+LIBM = ctypes.CDLL("libm.so.6")
+for _name, _args in (("hypot", 2), ("atan2", 2), ("log", 1)):
+    getattr(LIBM, _name).restype = ctypes.c_double
+    getattr(LIBM, _name).argtypes = [ctypes.c_double] * _args
+LIBM.sincos.restype = None
+LIBM.sincos.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)]
+
+
+def as_complex(o):
+    try:
+        z = py_c(o)
+        return complex(z)
+    except (OverflowError, TypeError, ValueError):
+        return None
+
+
+def with_libm(c):
+    """Attach the platform hypot and sincos that the compiled _Py_c_pow and _Py_c_abs call."""
+    if c is None or c["fn"] not in ("c_abs", "c_pow"):
+        return c
+    a = as_complex(c["v"])
+    if a is None:
+        return c
+    vabs = LIBM.hypot(a.real, a.imag)
+    c["hy"] = to_bits(vabs)
+    if c["fn"] == "c_pow":
+        b = as_complex(c["w"])
+        if b is not None:
+            phase = LIBM.atan2(a.imag, a.real) * b.real
+            if b.imag != 0.0:
+                phase += b.imag * LIBM.log(vabs)
+            sn, cs = ctypes.c_double(), ctypes.c_double()
+            LIBM.sincos(phase, ctypes.byref(sn), ctypes.byref(cs))
+            c["sc"] = [to_bits(phase), to_bits(cs.value), to_bits(sn.value)]
+    return c
+
+
 def gen_complex_case(rng):
+    return with_libm(gen_complex_case_raw(rng))
+
+
+def gen_complex_case_raw(rng):
     m = {"mod": "binary64"}
     k = rng.random()
     if k < 0.15:  # Annex G: infinite, NaN and overflowing parts in * and /
