@@ -1,0 +1,90 @@
+id: datetime-pydatetime-astimezone-local-target
+title: "_pydatetime astimezone() takes the target local zone from self before converting, C from the UTC result"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime.astimezone", "datetime._local_timezone"]
+summary: |
+  With `tz=None`, `_pydatetime`'s `datetime.astimezone` computes the target zone first,
+  `tz = self._local_timezone()` (Lib/_pydatetime.py:2138-2139), from `self` as it is. C's
+  `datetime_datetime_astimezone_impl` converts `self` to UTC first and only then takes the zone
+  of the UTC result, `local_timezone(result)` (Modules/_datetimemodule.c:6985-6991). Two
+  observable differences follow:
+  - A naive `self` in a spring-forward gap: Python's `_local_timezone` uses the `_mktime`
+    timestamp of the wall time and its offset, so `datetime(2021, 3, 14, 2, 30).astimezone()`
+    with `TZ=EST5EDT,M3.2.0,M11.1.0` is `2021-03-14 02:30-05:00` (a wall time that does not
+    exist, labelled EST) in Python and `2021-03-14 03:30-04:00` (EDT) in C; with `fold=1`
+    Python gives `02:30-04:00` and C `01:30-05:00`. The instants agree, the wall time and the
+    tzinfo do not.
+  - An aware `self` whose tzinfo's `utcoffset()` returns `None`: Python's
+    `self._local_timezone()` takes the aware branch, `(self - _EPOCH) // timedelta(seconds=1)`,
+    which raises `TypeError: cannot mix naive and timezone-aware time`; C treats `self` as
+    naive (`goto naive`, :6944-6947) and returns the local time.
+  `astimezone(tz)` with an explicit tz, and aware datetimes with an offset, agree (proven in
+  Lean, AstimezoneLocal).
+likelihood: |
+  Low. Gap wall times are invalid input (PEP 495 leaves their conversion to the
+  implementation), and a tzinfo answering None for an aware datetime is unusual; _pydatetime
+  only runs where _datetime is unavailable (PyPy uses it).
+maybe_intended: |
+  Not intended as a difference: PEP 399 asks the twins to agree. Which result is preferable in
+  the gap is a PEP 495 question (C's normalised wall time is what fromtimestamp would give);
+  the TypeError is plainly an accident of computing the target zone from `self`.
+reproducer: |
+  import datetime, _pydatetime, os, time
+  os.environ['TZ'] = 'EST5EDT,M3.2.0,M11.1.0'
+  time.tzset()
+  def run(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  def gap(m, fold):
+      r = m.datetime(2021, 3, 14, 2, 30, fold=fold).astimezone()
+      return (r.hour, r.minute, r.utcoffset().total_seconds() / 3600, r.tzname())
+  def none_offset(m):
+      class T(m.tzinfo):
+          def utcoffset(self, dt): return None
+          def dst(self, dt): return None
+      r = m.datetime(2021, 1, 2, 3, tzinfo=T()).astimezone()
+      return (r.hour, r.utcoffset().total_seconds() / 3600)
+  out = {k: (run(lambda: f(datetime)), run(lambda: f(_pydatetime))) for k, f in [
+      ('gap fold=0', lambda m: gap(m, 0)), ('gap fold=1', lambda m: gap(m, 1)),
+      ('utcoffset None', none_offset)]}
+  for k, (c, p) in out.items():
+      print(k, ' C:', c, ' Python:', p)
+  if out['gap fold=0'] == ((3, 30, -4.0, 'EDT'), (2, 30, -5.0, 'EST')) and \
+     out['gap fold=1'] == ((1, 30, -5.0, 'EST'), (2, 30, -4.0, 'EDT')) and \
+     out['utcoffset None'] == ((3, -5.0), 'TypeError'):
+      print('REPRODUCED datetime-pydatetime-astimezone-local-target')
+expected: |
+  The same result in both implementations: as C, the target local zone taken from the UTC
+  result of the conversion.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; the astimezone docs ("If called without
+  arguments (or with tz=None) the system local timezone is assumed for the target timezone").
+cause: |
+  Lib/_pydatetime.py:2138-2139 `tz = self._local_timezone()` before the conversion; the naive
+  branch of `_local_timezone` (:2122-2128) picks the `_mktime` timestamp of the wall time, the
+  aware branch (:2130) subtracts `_EPOCH`. Modules/_datetimemodule.c:6985-6991 calls
+  `local_timezone(result)` on the UTC result (:6831-6870), and :6944-6947 sends a None offset
+  to `naive:`.
+possible_fix: |
+  In `_pydatetime.astimezone`, compute `utc = (self - myoffset)` first and, for `tz is None`,
+  take `tz = utc.replace(tzinfo=timezone.utc)._local_timezone()`, as C does.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 83861, state: closed, relation: related (astimezone and gap times under PEP 495, round trips through UTC; not the twin difference)}
+    - {number: 103982, state: open, relation: related (astimezone(None) and fold; not the twin difference)}
+  queries: ["gh search issues: astimezone gap pydatetime", "astimezone nonexistent", "astimezone gap fold local (found 83861, 116038, 116035)",
+            "_local_timezone", "astimezone utcoffset None (found 103982)",
+            "bugforge-results/README.md: astimezone, local_timezone (no entries)"]
+lean:
+  property: PyLean.Datetime.AstimezoneLocalNaiveTwins
+  theorem: PyLean.Datetime.astimezoneLocalNaiveTwins_refuted
+  also:
+    - {property: PyLean.Datetime.AstimezoneLocalNoneOffsetTwins, theorem: PyLean.Datetime.astimezoneLocalNoneOffsetTwins_refuted}

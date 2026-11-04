@@ -335,4 +335,18 @@ theorem datetimeReprFallible_proven : DatetimeReprFallible := by
   · simp [dtReprPyF, dtReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind, pure, Except.pure]
   · simp [dtReprPyF, dtReprCF, dtReprClsPy, dtReprClsC, appendTzinfoF_env, bind, Except.bind, pure, Except.pure]
 
+/-- `repr(datetime)` agrees between the twins for every class, a nested subclass included. -/
+def DatetimeReprClsTwins : Prop :=
+  ∀ (renv : TzReprEnv) (c : ReprCls) (dt : DT), dt.Valid → dtReprPyF renv c dt = dtReprCF renv c dt
+
+/-- `class Outer: class DT(datetime): pass`; `repr(Outer.DT(2020, 1, 1))`: `Outer.DT(2020, 1, 1,
+0, 0)` in Python (`__qualname__`), `DT(2020, 1, 1, 0, 0)` in C (`tp_name`). -/
+theorem datetimeReprClsTwins_refuted : ¬ DatetimeReprClsTwins := by
+  intro h
+  have := h (fun _ => .ok (.str "")) (.sub "__main__" "Outer.DT" "DT") ⟨2020, 1, 1, 0, 0, 0, 0, 0, none⟩
+    (by refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+      by decide, Or.inl rfl, trivial⟩)
+  revert this
+  decide
+
 end PyLean.Datetime
