@@ -450,8 +450,11 @@ happened, and the store is unchanged. The order is pinned both ways: a conversio
 of `b`, `h`, `i` (:1950-1957) and the overflow of `PyFloat_Pack2` (:2029) come after the re-check, so
 `__index__` returning 200 into format `b`, or `__float__` returning `1e300` into `e`, still reports
 the release. Integer formats run `__index__`, `f`, `d`, `e`, `Zf`, `Zd` run `__float__`, `?` runs
-`__bool__` or `__len__`. Hypotheses: `self` is a view of the state, with no exports, so the
-callback's `release()` succeeds (a refused release is the `BufferError` the callback swallows). -/
+`__bool__` or `__len__`. The other two arms are not here: `P` converts with `PyLong_AsVoidPtr`, which
+takes only an `int` and runs no Python code, so the item cannot release the view before its re-check,
+and `c` has no re-check at all (`releasedKeyNoWrite_refuted`). Hypotheses: `self` is a view of the
+state, with no exports, so the callback's `release()` succeeds (a refused release is the
+`BufferError` the callback swallows). -/
 def PackItemReleases : Prop :=
   ∀ (st : St) (self : Nat) (ptr : Int), self < st.mvs.length → (st.mv self).exports = 0 →
     let st1 := (memoryRelease self st).2
