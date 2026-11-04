@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
+import PyLean.CoreLibs.Coll.ChainMapG
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
 import PyLean.CoreLibs.Coll.Namedtuple
@@ -185,7 +186,15 @@ def rvInt (v : Int) : String := toString v
 def cmMiss (j : Json) : String → Py Int :=
   match j.getObjVal? "sub" with
   | .ok (.num 1) => fun _ => .ok (-1)
-  | _ => cmMissing rkStr
+  | _ => cmMissing pyStrRepr
+
+/-- The `ChainMap` object `0` with map objects `10, 11, ...`. -/
+def cmObj (c : CM) : CMapO String Int := ⟨0, c.maps.zipIdx.map (fun (m, j) => (10 + j, m))⟩
+
+/-- `[r is not self, r.maps[0] is not self.maps[0], r.maps[1:] are self's objects, maps]`. -/
+def encCopy (c : CMapO String Int) (r : CMapO String Int) : Json :=
+  Json.arr #[toJson (r.id != c.id), toJson ((r.maps.head?.map (·.1)) != (c.maps.head?.map (·.1))),
+    toJson (r.maps.tail.map (·.1) == c.maps.tail.map (·.1)), Json.arr (r.view.map encItems).toArray]
 
 def optOther (j : Json) : Except String (Option (Ctr String)) :=
   match j.getObjVal? "o" with
@@ -206,22 +215,44 @@ def runCM (j : Json) : Except String Json := do
   | "iter" => return okJ (encStrs (cmIter c))
   | "contains" => return okJ (toJson (cmContains c k))
   | "bool" => return okJ (toJson (cmBool c))
-  | "repr" => return okS (cmRepr "ChainMap" rkStr rvInt c)
-  | "fromkeys" => return okJ (encCM (cmFromkeys (← getStrs j "xs") (dflt.getD 0)))
-  | "copy" => return encPy encCM (cmCopy c)
+  | "repr" =>
+    let heap : Nat → Option (String × List (MRef String Int)) := fun i =>
+      if i = 0 then some ("ChainMap", c.maps.map .dict) else none
+    return encPy toJson (cmReprR (fun d => .ok (reprD pyStrRepr rvInt d)) heap 10 [] 0)
+  | "repr_self" =>
+    let heap : Nat → Option (String × List (MRef String Int)) := fun i =>
+      if i = 0 then some ("ChainMap", c.maps.map .dict ++ [.chain 0]) else none
+    return encPy toJson (cmReprR (fun d => .ok (reprD pyStrRepr rvInt d)) heap 10 [] 0)
+  | "getitem_dd" =>
+    let gm := match c.maps with
+      | [] => []
+      | m :: t => defaultG m (.ok 0) :: t.map (dictG pyStrRepr)
+    return encPy toJson (cmGetitemG Accel.Heapq.builtinHier miss gm k)
+  | "contains_dd" =>
+    let gm := match c.maps with
+      | [] => []
+      | m :: t => defaultG m (.ok 0) :: t.map (dictG pyStrRepr)
+    return encPy toJson (cmContainsG gm k)
+  | "fromkeys" => return encPy encCM (cmFromkeysP kStr (← getIt j "xs") (dflt.getD 0))
+  | "copy" => return encPy (encCopy (cmObj c)) (cmCopyO 1 100 (cmObj c))
   | "new_child" =>
     let m ← optOther j
     return okJ (encCM (cmNewChild c m (← getItems j "kw")))
   | "parents" => return okJ (encCM (cmParents c))
   | "setitem" => return encPy encCM (cmSetitem c k (dflt.getD 0))
-  | "delitem" => return encPy encCM (cmDelitem rkStr c k)
+  | "delitem" => return encPy encCM (cmDelitem pyStrRepr c k)
   | "popitem" => return encPy (fun r => Json.arr #[encPair r.1, encCM r.2]) (cmPopitem c)
-  | "pop" => return encPy (fun r => Json.arr #[toJson r.1, encCM r.2]) (cmPop rkStr c k dflt)
-  | "clear" => return encPy encCM (cmClear c)
-  | "ior" => return encPy encCM (cmIor c (← getItems j "o"))
+  | "pop" => return encPy (fun r => Json.arr #[toJson r.1, encCM r.2]) (cmPop pyStrRepr c k dflt)
+  | "clear" => return encPy (fun (r : CMapO String Int) => Json.arr (r.view.map encItems).toArray) (cmClearO (cmObj c))
+  | "ior" =>
+    let o : Py (List (String × Int)) := match j.getObjVal? "o" with
+      | .ok .null | .error _ => .error (.typeError "'int' object is not iterable")
+      | .ok _ => (getItems j "o").toOption.getD [] |> .ok
+    return encPy (fun (r : CMapO String Int) => Json.arr #[toJson (r.id == 0),
+      toJson ((r.maps.head?.map (·.1)) == some 10), Json.arr (r.view.map encItems).toArray]) (cmIorO (cmObj c) o)
   | "or" =>
-    match cmOr c (← optOther j) with
-    | some r => return encPy encCM r
+    match cmOrO 1 100 (cmObj c) ((← optOther j).map .ok) with
+    | some r => return encPy (encCopy (cmObj c)) r
     | none => return encPy encCM (.error (.typeError
         "unsupported operand type(s) for |: 'ChainMap' and 'int'"))
   | "ror" =>

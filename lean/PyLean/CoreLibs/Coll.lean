@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterProps4
+import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -102,30 +103,51 @@ def counterEntries : List Entry := [
 
 def chainMapEntries : List Entry := [
   { id := "coll-chainmap-flat-view", pyFile := file
-    pyFns := ["ChainMap.__getitem__", "ChainMap.__missing__", "ChainMap.get", "ChainMap.__len__", "ChainMap.__iter__",
+    pyFns := ["ChainMap.__missing__", "ChainMap.get", "ChainMap.__len__", "ChainMap.__iter__",
       "ChainMap.__contains__", "ChainMap.__bool__"]
     statement := "Subscript, get, in, len, iter and bool on a ChainMap agree with the flat dict built by updating from the last map to the first."
     source := "Doc/library/collections.rst, ChainMap"
     status := .proven, prop := ``ChainMapFlatView, thm := some ``chainMapFlatView_proven },
   { id := "coll-chainmap-writes-first", pyFile := file
-    pyFns := ["ChainMap.__setitem__", "ChainMap.__delitem__", "ChainMap.popitem", "ChainMap.pop", "ChainMap.clear"]
-    statement := "Writes and deletions change maps[0] only, their KeyError is decided by maps[0] alone, and a key removed from maps[0] then reads from the later maps."
+    pyFns := ["ChainMap.__setitem__", "ChainMap.__delitem__", "ChainMap.popitem", "ChainMap.pop"]
+    statement := "Writes and deletions change maps[0] only, their KeyError (whose str is the real repr of the message) is decided by maps[0] alone, and a key removed from maps[0] then reads from the later maps."
     source := "Doc/library/collections.rst, ChainMap: 'writes, updates, and deletions only operate on the first mapping'"
     status := .proven, prop := ``ChainMapWritesFirst, thm := some ``chainMapWritesFirst_proven },
   { id := "coll-chainmap-union-flat", pyFile := file
-    pyFns := ["ChainMap.__ior__", "ChainMap.__or__", "ChainMap.__ror__", "ChainMap.copy"]
+    pyFns := ["ChainMap.__ror__"]
     statement := "cm | o reads as dict(cm) | o with the tail maps kept, cm |= o likewise, o | cm is the one-map o | dict(cm), copy reads the same, items and order, and non-mappings get NotImplemented."
     source := "PEP 584; Lib/collections/__init__.py:1151-1168"
     status := .proven, prop := ``ChainMapUnionFlat, thm := some ``chainMapUnionFlat_proven },
   { id := "coll-chainmap-child-parents", pyFile := file
-    pyFns := ["ChainMap.__init__", "ChainMap.new_child", "ChainMap.parents", "ChainMap.fromkeys"]
+    pyFns := ["ChainMap.new_child", "ChainMap.parents"]
     statement := "__init__ always leaves at least one map, new_child and parents are inverse on the map list, and fromkeys reads like dict.fromkeys."
     source := "docstrings and comment, Lib/collections/__init__.py:1055-1059, :1099, :1109-1121"
     status := .proven, prop := ``ChainMapChildParents, thm := some ``chainMapChildParents_proven },
-  { id := "coll-chainmap-repr", pyFile := file, pyFns := ["ChainMap.__repr__"]
+  { id := "coll-chainmap-repr", pyFile := file, pyFns := []
     statement := "repr shows the maps in order, so new_child prepends the child's repr, and ChainMap() prints its empty dict."
     source := "invariant; Lib/collections/__init__.py:1093-1095"
-    status := .proven, prop := ``ChainMapRepr, thm := some ``chainMapRepr_proven }
+    status := .proven, prop := ``ChainMapRepr, thm := some ``chainMapRepr_proven },
+  { id := "coll-chainmap-init", pyFile := file, pyFns := ["ChainMap.__init__"]
+    statement := "ChainMap() has exactly the one map {}; with arguments, maps is their list."
+    source := "docstring, Lib/collections/__init__.py:1055-1057"
+    status := .proven, prop := ``ChainMapInit, thm := some ``chainMapInit_proven },
+  { id := "coll-chainmap-getitem-any", pyFile := file, pyFns := ["ChainMap.__getitem__"]
+    statement := "__getitem__ asks each mapping's [] in turn: on dicts it is the flat lookup; a map answering (a defaultdict for a key it lacks, while `in` says no) wins; a KeyError or subclass moves on; any other exception propagates."
+    source := "Doc/library/collections.rst, ChainMap; comment, Lib/collections/__init__.py:1067"
+    status := .proven, prop := ``ChainMapGetitemAny, thm := some ``chainMapGetitemAny_proven },
+  { id := "coll-chainmap-repr-guard", pyFile := file, pyFns := ["ChainMap.__repr__"]
+    statement := "repr prints Cls(r1, r2, ...) from the maps' reprs (cmRepr on dicts), a ChainMap holding itself prints ... in its place, and a raising map repr raises."
+    source := "Lib/collections/__init__.py:1093-1095; Lib/reprlib.py:9-24"
+    status := .proven, prop := ``ChainMapReprGuard, thm := some ``chainMapReprGuard_proven },
+  { id := "coll-chainmap-fromkeys", pyFile := file, pyFns := ["ChainMap.fromkeys"]
+    statement := "ChainMap.fromkeys(xs, v) has exactly the one map dict.fromkeys(xs, v); an exception from the iterable propagates."
+    source := "docstring, Lib/collections/__init__.py:1099"
+    status := .proven, prop := ``ChainMapFromkeys, thm := some ``chainMapFromkeys_proven },
+  { id := "coll-chainmap-objects", pyFile := file
+    pyFns := ["ChainMap.copy", "ChainMap.__or__", "ChainMap.__ior__", "ChainMap.clear"]
+    statement := "copy() is a new ChainMap with a new copy of maps[0] and maps[1:]'s own objects; cm | o puts maps[0] | o in that new dict and leaves self's maps[0] alone, NotImplemented for a non-Mapping; cm |= o returns self with maps[0] updated in place and maps[1:] untouched, raising what dict.update raises; clear() empties maps[0] in place so later maps answer."
+    source := "docstrings, Lib/collections/__init__.py:1103, :1148; PEP 584"
+    status := .proven, prop := ``ChainMapObjects, thm := some ``chainMapObjects_proven }
 ]
 
 def userDictEntries : List Entry := [

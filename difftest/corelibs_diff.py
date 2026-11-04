@@ -265,12 +265,16 @@ def coll_d(items):
     return dict(map(tuple, items))
 
 
+coll_CM_ODD_KEYS = ["a\\b", "it's", "q\"'x", "\t"]
+
+
 def coll_gen_cm(rng):
-    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "fromkeys",
-                     "copy", "new_child", "parents", "setitem", "delitem", "popitem", "pop",
-                     "clear", "ior", "or", "ror"])
+    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "repr_self",
+                     "getitem_dd", "contains_dd", "fromkeys", "copy", "new_child", "parents", "setitem",
+                     "delitem", "popitem", "pop", "clear", "ior", "or", "ror"])
     n = rng.choice([0, 1, 1, 2, 2, 3, 4])
-    case = {"fn": "coll.cm", "op": op, "k": rng.choice(coll_KEYS),
+    keys = coll_KEYS + (coll_CM_ODD_KEYS if op in ("getitem", "delitem", "pop") else [])
+    case = {"fn": "coll.cm", "op": op, "k": rng.choice(keys),
             "maps": [coll_items(rng, small=True) if rng.random() < 0.8 else [] for _ in range(n)]}
     if rng.random() < 0.4:
         case["d"] = rng.randint(-3, 3)
@@ -278,11 +282,10 @@ def coll_gen_cm(rng):
         case["sub"] = 1
     if op == "fromkeys":
         case["xs"] = coll_xs(rng)
-    if op in ("or", "ror", "new_child"):
+        case["fail"] = rng.random() < 0.2
+    if op in ("or", "ror", "new_child", "ior"):
         if rng.random() < 0.8:
             case["o"] = coll_items(rng, small=True)
-    if op == "ior":
-        case["o"] = coll_items(rng, small=True)
     if op == "new_child":
         case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
     return case
@@ -290,6 +293,12 @@ def coll_gen_cm(rng):
 
 def coll_enc_cm(c):
     return [coll_enc(m) for m in c.maps]
+
+
+def coll_copy_bits(r, c):
+    return [r is not c, r.maps[0] is not c.maps[0],
+            len(r.maps) == len(c.maps) and all(x is y for x, y in zip(r.maps[1:], c.maps[1:])),
+            coll_enc_cm(r)]
 
 
 def coll_run_cm(case):
@@ -307,6 +316,10 @@ def coll_run_cm(case):
             return coll_enc_cm(ChainMap(*maps))
         if op == "getitem":
             return c[k]
+        if op in ("getitem_dd", "contains_dd"):
+            if maps:
+                c.maps = [coll_collections.defaultdict(int, maps[0])] + maps[1:]
+            return c[k] if op == "getitem_dd" else (k in c)
         if op == "get":
             return c.get(k, d) if d is not None else c.get(k)
         if op == "len":
@@ -319,10 +332,13 @@ def coll_run_cm(case):
             return bool(c)
         if op == "repr":
             return repr(c)
+        if op == "repr_self":
+            c.maps.append(c)
+            return repr(c)
         if op == "fromkeys":
-            return coll_enc_cm(ChainMap.fromkeys(case["xs"], 0 if d is None else d))
+            return coll_enc_cm(ChainMap.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         if op == "copy":
-            return coll_enc_cm(c.copy())
+            return coll_copy_bits(c.copy(), c)
         if op == "new_child":
             m = coll_d(case["o"]) if "o" in case else None
             return coll_enc_cm(c.new_child(m, **coll_d(case["kw"])))
@@ -344,11 +360,12 @@ def coll_run_cm(case):
             c.clear()
             return coll_enc_cm(c)
         if op == "ior":
+            m0 = c.maps[0] if c.maps else None
             r = c
-            r |= coll_d(case["o"])
-            return coll_enc_cm(r)
+            r |= coll_d(case["o"]) if "o" in case else 5
+            return [r is c, r.maps[0] is m0, coll_enc_cm(r)]
         if op == "or":
-            return coll_enc_cm(c | (coll_d(case["o"]) if "o" in case else 5))
+            return coll_copy_bits(c | (coll_d(case["o"]) if "o" in case else 5), c)
         if op == "ror":
             return coll_enc_cm((coll_d(case["o"]) if "o" in case else 5) | c)
         raise AssertionError(op)
