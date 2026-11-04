@@ -313,9 +313,12 @@ def encFKind (o : FObj) : Json :=
   | .float x => Json.mkObj [("tp", toJson o.tp), ("f", toJson x.bits)]
   | _ => Json.mkObj [("tp", toJson o.tp)]
 
+/-- A slot result with `id` 0 is an object the slot made itself (the inherited `float_float`
+or `long_float`), which the Python side cannot tell from any other new float, so it
+travels as `fresh`. -/
 def encFRes : FRes → Json
   | .same x => Json.mkObj [("same", toJson x.bits)]
-  | .obj o _ => Json.mkObj [("obj", toJson o.id)]
+  | .obj o x => if o.id == 0 then Json.mkObj [("fresh", toJson x.bits)] else Json.mkObj [("obj", toJson o.id)]
   | .fresh x => Json.mkObj [("fresh", toJson x.bits)]
   | .freshSub c x => Json.mkObj [("sub", Json.arr #[toJson c, toJson x.bits])]
   | .called o => Json.mkObj [("called", encFKind o)]
@@ -327,7 +330,7 @@ def encRound : RoundRes → Json
 def runObj (fn : String) (j : Json) : Except String Json := do
   let w ← getBool j "warn"
   match fn with
-  | "o_asdouble" => return encPy (fun x => toJson x.bits) (asDoubleO w (← getFObjJ (← field j "v")))
+  | "o_asdouble" => return encPy encF (asDoubleO w (← getFObjJ (← field j "v")))
   | "o_new" =>
     let args ← (← field j "args").getArr?
     let args ← args.toList.mapM getFObjJ
@@ -338,7 +341,7 @@ def runObj (fn : String) (j : Json) : Except String Json := do
   | "o_fromhex" => return encPy encFRes (floatFromhexO (← getCls j) (← getFObjJ (← field j "v")))
   | "o_round" =>
     let o : Option FObj ← match j.getObjVal? "v" with
-      | .ok v => do return some (← getFObjJ v)
+      | .ok v => (getFObjJ v).map some
       | .error _ => pure none
     return encPy encRound (floatRoundO w (F64.ofBits (← getNat j "x")) o)
   | "o_float" =>
