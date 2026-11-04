@@ -1,0 +1,74 @@
+file	line	name	verdict	mirror	property	settled	reason
+Modules/_collectionsmodule.c	21	get_module_state	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	29	get_module_state_by_cls	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	39	find_module_state_by_def	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	177	newblock	FAITHFUL	yes	-	-	Freelist reuse is invisible; its only visible effect is MemoryError under OOM, which the model's stated unbounded-memory scope (Common.lean) leaves out.
+Modules/_collectionsmodule.c	192	freeblock	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	203	deque_new	HOLLOW	no	no	yes	`Deque.new` is a constant and DequeConstruct only reaches it through `makeOf`, which always runs `init` after it, so new's `maxlen = -1` (observable as `deque.__new__(deque).maxlen is None`) is unpinned: a `new` with `maxlen := 0` passes.
+Modules/_collectionsmodule.c	245	deque_pop_impl	FAITHFUL	yes	yes	yes	`Deque.pop` mirrors :251-277 (empty check, read, rightindex--, size--, state++, block free or re-centre); DequeEndsEvict pins WF, the item and dropLast, PopRemoveCountAgree pins it against list.pop(); caveat: no theorem pins the state++ that invalidates iterators.
+Modules/_collectionsmodule.c	290	deque_popleft_impl	FAITHFUL	yes	yes	yes	`Deque.popleft` mirrors :296-323; same two theorems pin item, drop 1, WF and the empty IndexError.
+Modules/_collectionsmodule.c	341	deque_append_lock_held	FAITHFUL	yes	yes	yes	`appendM` mirrors the new-block test, store and NEEDS_TRIM popleft/state++ of :343-365; appendM_spec/DequeEndsEvict pin keepLast maxlen and WF (newblock failure and the evicted item's finalizer are out of the stated scope).
+Modules/_collectionsmodule.c	380	deque_append_impl	FAITHFUL	yes	yes	yes	`append = appendM x d.maxlen` as :383; pinned by DequeEndsEvict.
+Modules/_collectionsmodule.c	389	deque_appendleft_lock_held	FAITHFUL	yes	yes	yes	`appendleftM` mirrors :392-414; keepFirst maxlen and WF pinned.
+Modules/_collectionsmodule.c	429	deque_appendleft_impl	FAITHFUL	yes	yes	yes	Pinned by DequeEndsEvict; citation nit: DequeModel.lean cites :425-431 for deque_appendleft_impl, which is :429-435.
+Modules/_collectionsmodule.c	438	finalize_iterator	HOLLOW	yes	no	yes	The only conjuncts mentioning `finalizeIterator` restate the model by rfl (`d.iadd (.iter xs e) = (finalizeIterator e, d.extend xs)`), so nothing pins that StopIteration is cleared and other exceptions propagate: `fun _ => .ok ()` passes.
+Modules/_collectionsmodule.c	455	consume_iterator	HOLLOW	no	no	yes	No Lean function mirrors the drain loop (maxlen == 0 is just `if d.maxlen = 0 then d` over an already-materialised list), and its outcome is the unpinned `finalizeIterator`, so a consume that swallowed the iterator's exception passes.
+Modules/_collectionsmodule.c	479	deque_extend_impl	HOLLOW	no	yes	yes	The iterator is a plain list plus a final exception and cannot re-enter the deque, and the fold re-reads `d.maxlen` per item where C uses the local captured at :484, so a `__next__` that mutates d (e.g. calls `d.__init__(maxlen=1)`, after which C keeps appending unbounded) is inexpressible.
+Modules/_collectionsmodule.c	534	deque_extendleft_impl	HOLLOW	no	yes	yes	Same as extend: non-reentrant list iterator and per-step `d.maxlen` instead of the local captured at :539; also the self-case citation :538-546 should be :542-550.
+Modules/_collectionsmodule.c	578	deque_inplace_concat	HOLLOW	no	yes	yes	`iadd` is `extendIter`, so it inherits extend's non-reentrant iterator; the `d += it` conjunct is an rfl restatement of `extendIter`.
+Modules/_collectionsmodule.c	602	deque_copy_impl	FAITHFUL	yes	yes	yes	`copyExact` mirrors the block walk with deque_append_lock_held from leftindex 1 (:608-646) and the subclass path is `type(d)(d[, maxlen])` through makeOf with the 3.15 "On" format; DequeCopyConcat pins items, maxlen, type and WF; caveats: the "must return a deque" check needs a subclass `__new__` (stated scope), and copyExact cites :608-648 for :608-646.
+Modules/_collectionsmodule.c	671	deque___copy___impl	FAITHFUL	yes	yes	yes	Same function as copy, pinned by DequeCopyConcat.
+Modules/_collectionsmodule.c	678	deque_concat_lock_held	HOLLOW	yes	no	yes	DequeCopyConcat(Checked) quantify only over `.inl other` (a deque), so the non-deque TypeError branch (:684-690) is never stated: a concat returning `.ok d` for `.inr t` passes.
+Modules/_collectionsmodule.c	710	deque_concat	HOLLOW	yes	no	yes	Lock wrapper over deque_concat_lock_held; inherits the unstated TypeError branch for a non-deque operand.
+Modules/_collectionsmodule.c	721	deque_clear	FAITHFUL	yes	yes	yes	`clear` mirrors the size-0 return and the emptied re-centred block with state++ (:732-767); WF, [] and maxlen pinned; the alternate_method needs a failed newblock (stated scope); caveat: state++ is not pinned.
+Modules/_collectionsmodule.c	815	deque_clearmethod_impl	FAITHFUL	yes	yes	yes	Calls `clear`; pinned by DequeEndsEvict.
+Modules/_collectionsmodule.c	823	deque_inplace_repeat_lock_held	FAITHFUL	yes	yes	yes	`irepeatC` mirrors :829-896 in order (size 0/n 1, n <= 0 clear, single-item block fill with maxlen clip, the size > MAX/n MemoryError before the maxlen reduction, n-1 extends); refuted DequeIRepeat (bug sequences-deque-imul-maxlen-memoryerror.yaml) and proven DequeIRepeatChecked pin keepLast maxlen (rep n items).
+Modules/_collectionsmodule.c	900	deque_inplace_repeat	FAITHFUL	yes	yes	yes	`irepeat` = sequence_repeat conversion then irepeatC; both entries unfold it.
+Modules/_collectionsmodule.c	911	deque_repeat	HOLLOW	yes	no	yes	`Deque.mul` (copy, then irepeatC on the copy) appears only in Diff.lean; neither DequeIRepeat nor DequeIRepeatChecked mentions it and the refutation's counterexample runs only `d *= n`, so no theorem covers `d * n`.
+Modules/_collectionsmodule.c	955	_deque_rotate	FAITHFUL	yes	yes	yes	rotNorm/rotRight/rotLeft mirror the truncating % normalisation and both chunked loops with their block alloc/free (:965-1065); RotateLoop proves equality with the documented appendleft(pop()) / append(popleft()) loop for every Py_ssize_t n, keeping WF.
+Modules/_collectionsmodule.c	1091	deque_rotate_impl	FAITHFUL	yes	yes	yes	Clinic Py_ssize_t (OverflowError pinned outside it) then rotateC.
+Modules/_collectionsmodule.c	1109	deque_reverse_impl	FAITHFUL	yes	yes	yes	`reverseLoop` swaps through the left and right block cursors len // 2 times reading only used slots (no state change, as in C); DequeReverse pins items.reverse, WF and maxlen.
+Modules/_collectionsmodule.c	1159	deque_count_impl	HOLLOW	yes	no	yes	countLoop mirrors the raise and `start_state != deque->state` checks with a mutating `Cmp`, but PopRemoveCountAgree instantiates only `pureCmp f`, so neither the error path nor the RuntimeError re-check is stated: a count without the state check, or one ignoring a raising `__eq__`, passes.
+Modules/_collectionsmodule.c	1196	deque_contains_lock_held	HOLLOW	yes	no	yes	Same: only `pureCmp f` is used, so the match-before-state-check order (:1210-1216) and the "deque mutated during iteration" RuntimeError are unstated.
+Modules/_collectionsmodule.c	1228	deque_contains	HOLLOW	yes	no	yes	Lock wrapper over deque_contains_lock_held, which is stated only for a pure `__eq__`.
+Modules/_collectionsmodule.c	1239	deque_len	HOLLOW	yes	no	yes	The body returns one field with no branch (FT_ATOMIC_LOAD_SSIZE(ob_size)), so per AGENTS.md it is a `trivial:` exclusion and does not count; `d.len = xs.length` is rfl on a one-line definition.
+Modules/_collectionsmodule.c	1262	deque_index_impl	HOLLOW	yes	no	yes	The clipping and whole-block skip are mirrored and pinned by IndexAgree, but only for `pureCmp f`, so the cmp-error path, the RuntimeError re-check and the match-wins-over-mutation order (:1307-1315) are unstated.
+Modules/_collectionsmodule.c	1347	deque_insert_impl	FAITHFUL	yes	yes	yes	`insertC` mirrors the full check, the append/appendleft shortcuts and rotate(-i)/add/rotate(i) (:1353-1372); InsertAgree pins list.insert's result for every int i and the full-deque IndexError.
+Modules/_collectionsmodule.c	1376	valid_index	FAITHFUL	yes	yes	yes	`validIndex` is the unsigned single comparison for limit >= 0; pinned through SubscriptAgree and the tuplegetter IndexError.
+Modules/_collectionsmodule.c	1384	deque_item_lock_held	FAITHFUL	yes	yes	yes	`itemC` mirrors the 0 / last / left-walk / right-walk block arithmetic (:1395-1418); SubscriptAgree pins d[i] = seqGet for every int i.
+Modules/_collectionsmodule.c	1423	deque_item	FAITHFUL	yes	yes	yes	Lock wrapper; pinned through `getitem`.
+Modules/_collectionsmodule.c	1434	deque_del_item	FAITHFUL	yes	yes	yes	`delItem` is rotate(-i), popleft, rotate(i) as :1440-1446; SubscriptAgree pins `del d[i]` as eraseIdx with WF.
+Modules/_collectionsmodule.c	1461	deque_remove_impl	HOLLOW	yes	no	yes	scanLoop with checkFirst mirrors the state-before-match order and its IndexError, but PopRemoveCountAgree uses only `pureCmp f`, so the raise path and the IndexError("deque mutated during iteration") re-check are unstated.
+Modules/_collectionsmodule.c	1503	deque_ass_item_lock_held	FAITHFUL	yes	yes	yes	`assItemC` mirrors halflen = (len+1)>>1 and both walks (:1506-1531); SubscriptAgree pins `d[i] = v` as set and WF/maxlen kept.
+Modules/_collectionsmodule.c	1535	deque_ass_item	FAITHFUL	yes	yes	yes	Lock wrapper; pinned through `setitem`.
+Modules/_collectionsmodule.c	1546	deque_dealloc	HOLLOW	yes	-	-	The no-behaviour note does not apply: FT_CLEAR_WEAKREFS (:1553) calls PyObject_ClearWeakRefs, which runs weakref callbacks, an explicit effect AGENTS.md says is not excluded.
+Modules/_collectionsmodule.c	1569	deque_traverse	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	1755	deque_init_impl	HOLLOW	no	no	yes	DequeConstruct only runs init on a fresh `new` deque, so the re-init `deque_clear` branch (:1769-1770) is unpinned (an init that skips the clear passes), the `iterable == NULL` branch (:1771) is not mirrored (`init` always extends, moving an empty deque's indices to 1/0), and a raising iterator is not stated.
+Modules/_collectionsmodule.c	1803	deque_get_maxlen	FAITHFUL	yes	yes	yes	`getMaxlen` mirrors the maxlen < 0 → None branch; DequeConstruct pins none / some m.
+Modules/_collectionsmodule.c	1941	dequeiter_traverse	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	1950	dequeiter_clear	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	1958	dequeiter_dealloc	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2234	defdict_missing	FAITHFUL	yes	yes	yes	`missing` mirrors NULL/None → KeyError((key,)), a factory that may raise and mutate the items, and PyDict_SetDefaultRef keeping a value the factory stored; DefDictGetitem pins every branch.
+Modules/_collectionsmodule.c	2259	new_defdict	FAITHFUL	yes	yes	yes	`newFrom` is `type(dd)(factory or None, arg)` under the stated same-constructor scope; pinned through copy and `|`.
+Modules/_collectionsmodule.c	2269	defdict_copy	FAITHFUL	yes	yes	yes	DefDictCopyReduce pins items in order, type and factory; caveat: a value model cannot tell the new object from dd itself.
+Modules/_collectionsmodule.c	2279	defdict_reduce	HOLLOW	no	no	yes	`reduce` keeps only (factory repr option, items): the 5-tuple `(type(dd), args, None, None, iter(items))` and the `PyObject_CallMethodNoArgs(op, "items")` call (a subclass override, which can raise) are not modelled, and the conjuncts are rfl projections of that pair.
+Modules/_collectionsmodule.c	2362	defdict_dealloc	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2374	defdict_repr	HOLLOW	no	no	yes	`repr` returns a String, so the failure paths of the body (dict repr NULL :2380-2382, Py_ReprEnter < 0 :2389-2392, the factory's `__repr__` raising :2396, :2400-2402) are inexpressible, and `entered` is a free Bool that the model also consults for a NULL factory, which C prints as "None" without Py_ReprEnter.
+Modules/_collectionsmodule.c	2413	defdict_or	FAITHFUL	yes	yes	yes	`orOp` mirrors the left-first defaultdict choice, PyAnyDict_Check (frozendict in 3.15) → NotImplemented, new_defdict(self, left) then update with right; DefDictReprInitOr pins all operand shapes.
+Modules/_collectionsmodule.c	2447	defdict_traverse	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2456	defdict_tp_clear	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2464	defdict_init	FAITHFUL	yes	yes	yes	`init` mirrors the callable-or-None TypeError, the factory replaced before dict.__init__ and kept when it raises; DefDictReprInitOr pins these branches (dict.__init__ itself is abstract).
+Modules/_collectionsmodule.c	2545	_collections__count_elements_impl	HOLLOW	no	yes	yes	`add1 : ν → Py ν` and the key list cannot touch the mapping, so the path the C comment at :2604-2606 guards (a `__add__` or `__next__` that mutates or clears the dict before _PyDict_SetItem_KnownHash) is inexpressible; CountAgree/CountElements are otherwise real twin and count properties, and countFast/countSlow cite :2578-2620/:2622-2646 for :2575-2617/:2620-2645.
+Modules/_collectionsmodule.c	2679	tuplegetter_new_impl	FAITHFUL	yes	yes	yes	Clinic Py_ssize_t then store; TupleGetterSpec pins the reduce round trip and the OverflowError.
+Modules/_collectionsmodule.c	2693	tuplegetter_descr_get	FAITHFUL	yes	yes	yes	`tuplegetterGet` mirrors NULL/None → self, non-tuple TypeError, valid_index IndexError (no negative wrap) and the item; all pinned.
+Modules/_collectionsmodule.c	2723	tuplegetter_descr_set	HOLLOW	yes	no	yes	TupleGetterSpec pins only `className = "AttributeError"`, so the body's one branch (delete vs set message) is unpinned: a constant `AttributeError("x")` passes.
+Modules/_collectionsmodule.c	2734	tuplegetter_traverse	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2743	tuplegetter_clear	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2751	tuplegetter_dealloc	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2761	tuplegetter_reduce	FAITHFUL	yes	yes	yes	`(type, (index, doc))`; pinned by the round trip through tuplegetter_new_impl.
+Modules/_collectionsmodule.c	2769	tuplegetter_repr	HOLLOW	no	no	yes	The conjunct `tuplegetterRepr g docRepr = s!"_tuplegetter(...)"` is rfl on the one-line definition, and `docRepr : δ → String` cannot express `%R` of a doc whose `__repr__` raises.
+Modules/_collectionsmodule.c	2813	collections_traverse	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2825	collections_clear	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2837	collections_free	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2865	collections_exec	FAITHFUL	yes	-	-
+Modules/_collectionsmodule.c	2903	PyInit__collections	FAITHFUL	yes	-	-
