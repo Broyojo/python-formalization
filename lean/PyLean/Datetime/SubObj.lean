@@ -203,7 +203,7 @@ def pep495EqExceptionObjC (flip1 flip2 : Py OffObj) (o1 o2 : OffObj) : Option (P
       | .error e => some (.error e)
       | .ok f2 => (pep495StepC f2 o2).map .ok
 
-/-- Python's PEP 495 exception in `datetime._cmp(..., allow_mixed=True)`, Py:2314-2318:
+/-- Python's PEP 495 exception in `datetime._cmp(..., allow_mixed=True)`, Py:2315-2319:
 `myoff != self.replace(fold=not self.fold).utcoffset()` (a `timedelta` against `None` is
 unequal: `timedelta.__ne__` returns `NotImplemented` and the fallback compares identity), then
 the same for `other`. -/

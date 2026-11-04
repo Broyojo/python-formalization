@@ -50,6 +50,7 @@ import PyLean.Datetime.SubclassCtor
 import PyLean.Datetime.IsoformatCProps
 import PyLean.Datetime.FromtimestampProps
 import PyLean.Datetime.StrptimeImpl
+import PyLean.Datetime.Misc3Props
 import PyLean.Datetime.SubObjProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -65,6 +66,127 @@ namespace PyLean.Datetime
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "datetime-date-replace-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_date_replace_impl", "C new_date_subclass_ex", "date.replace"]
+    statement := "date.replace in both twins, for every receiver class (date, datetime, a subclass), valid date and omitted or C-int int fields: C builds through Py_TYPE(self) as Python's type(self)(year, month, day) does, a subclass is called with exactly the kept or given fields positionally, and a field outside C int is OverflowError in C before any construction."
+    source := "C/Python twins; mirror of :3956-3961", status := .proven
+    prop := ``DateReplaceCls, thm := some ``dateReplaceCls_proven },
+  { id := "datetime-time-replace-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time_replace_impl", "C new_time_subclass_fold_ex"]
+    statement := "C time.replace for every receiver type: for time it is tmReplaceC; for a subclass with C-int fields the class is called with the fields and tzinfo positionally and fold as a keyword only when nonzero; a field outside C int is OverflowError before any call."
+    source := "mirror of :5171-5178", status := .proven
+    prop := ``TimeReplaceCls, thm := some ``timeReplaceCls_proven },
+  { id := "datetime-datetime-replace-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_replace_impl", "C new_datetime_subclass_fold_ex"]
+    statement := "C datetime.replace for every receiver type: for datetime it is dtReplaceC; for a subclass with C-int fields the class is called with the eight fields positionally and fold as a keyword only when nonzero; a field outside C int is OverflowError before any call."
+    source := "mirror of :6753-6762", status := .proven
+    prop := ``DatetimeReplaceCls, thm := some ``datetimeReplaceCls_proven },
+  { id := "datetime-combine-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_combine_impl", "C new_datetime_subclass_fold_ex"]
+    statement := "C datetime.combine for every class: the date then time TypeErrors first; for datetime it is dtCombineArgC; a subclass is called with the date and time fields and the tzinfo (the time's when omitted) positionally, fold as a keyword only when the time's fold is set."
+    source := "mirror of :5891-5911", status := .proven
+    prop := ``CombineCls, thm := some ``combineCls_proven },
+  { id := "datetime-time-strptime-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time_strptime_impl", "time.strptime", "_strptime_datetime_time"]
+    statement := "time.strptime in both twins for every class: C passes its class to _strptime_datetime_time as Python does; time gives strptimeDatetimeTime's result; a subclass is called with hour, minute, second, fraction and, only with an offset, the timezone; parse and offset errors come before any call."
+    source := "C/Python twins; mirror of :4793-4810 and _strptime.py:829-839", status := .proven
+    prop := ``TimeStrptimeCls, thm := some ``timeStrptimeCls_proven },
+  { id := "datetime-datetime-strptime-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_strptime_impl", "datetime.strptime", "_strptime_datetime_datetime"]
+    statement := "datetime.strptime in both twins for every class: C passes its class to _strptime_datetime_datetime as Python does; datetime gives strptimeDatetime's result; a subclass is called with the seven parsed fields and, only with an offset, the timezone; parse and offset errors come before any call."
+    source := "C/Python twins; mirror of :5862-5878 and _strptime.py:841-851", status := .proven
+    prop := ``DatetimeStrptimeCls, thm := some ``datetimeStrptimeCls_proven },
+  { id := "datetime-time-fromisoformat-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time_fromisoformat_impl", "C tzinfo_from_isoformat_results"]
+    statement := "C time.fromisoformat for every class: for time it is timeFromIsoC; the parse's error is the result for every class before any call; on success time checks the values and a subclass is called with hour, minute, second, microsecond and tzinfo positionally, unchecked."
+    source := "mirror of :5191-5258", status := .proven
+    prop := ``TimeFromIsoCls, thm := some ``timeFromIsoCls_proven },
+  { id := "datetime-datetime-fromisoformat-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_fromisoformat_impl", "C _sanitize_isoformat_str", "C new_datetime_subclass_ex"]
+    statement := "C datetime.fromisoformat for every class, on the code points of any str: a surrogate-free string is datetimeFromIsoC for datetime; a surrogate at the separator position the sanitizer picks behaves as T; a surrogate left after sanitizing is ValueError; the parse's error is the result for every class; on success a subclass is called with the eight values positionally, no fold keyword."
+    source := "mirror of :6079-6194", status := .proven
+    prop := ``DatetimeFromIsoCls, thm := some ``datetimeFromIsoCls_proven },
+  { id := "datetime-sanitize-isoformat-full", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C _sanitize_isoformat_str"]
+    statement := "_sanitize_isoformat_str on every path: NULL below 7 code points; the first of positions 7, 8, 10 holding a surrogate (index len read as NUL, stopping past it) becomes T and nothing else changes; with none there the string is unchanged."
+    source := "mirror of :5914-5966; code comment (:5922-5926)", status := .proven
+    prop := ``SanitizeIsoformatFull, thm := some ``sanitizeIsoformatFull_proven },
+  { id := "datetime-find-sep-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C _find_isoformat_datetime_separator", "_find_isoformat_datetime_separator"]
+    statement := "C _find_isoformat_datetime_separator (on UTF-8 bytes) and Python's (on code points) give the same separator index on every ASCII string of at least 7 characters, on every branch, and C's -1 exactly where Python raises ValueError('Invalid ISO string')."
+    source := "C/Python twins", status := .proven
+    prop := ``FindSepTwins, thm := some ``findSepTwins_proven },
+  { id := "datetime-date-reduce-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_reduce", "date.__reduce__"]
+    statement := "date.__reduce__ in both twins is (type(self), (bytes,)) with the receiver's own type for every class and the four state bytes."
+    source := "C/Python twins; pickle contract", status := .proven
+    prop := ``DateReduceCls, thm := some ``dateReduceCls_proven },
+  { id := "datetime-time-reduce-ex-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time___reduce_ex___impl", "C datetime_time___reduce___impl", "time.__reduce_ex__", "time.__reduce__"]
+    statement := "time.__reduce_ex__(p) in C for every receiver type: the clinic int converter first (OverflowError outside C int, a failure for objects without __index__), then (type(self), state); for every p in C int it is Python's (self.__class__, self._getstate(p)), and __reduce__ is the protocol-2 state in both twins."
+    source := "C/Python twins; mirror of :5297-5311 and clinic .h:1234-1247", status := .proven
+    prop := ``TimeReduceExCls, thm := some ``timeReduceExCls_proven },
+  { id := "datetime-datetime-reduce-ex-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime___reduce_ex___impl", "C datetime_datetime___reduce___impl", "datetime.__reduce_ex__", "datetime.__reduce__"]
+    statement := "datetime.__reduce_ex__(p) in C for every receiver type: the clinic int converter first, then (type(self), state); for every p in C int it is Python's, and __reduce__ is the protocol-2 state in both twins."
+    source := "C/Python twins; mirror of :7229-7245 and clinic .h:2063-2076", status := .proven
+    prop := ``DatetimeReduceExCls, thm := some ``datetimeReduceExCls_proven },
+  { id := "datetime-time-reduce-ex-all-int", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time___reduce_ex___impl", "time.__reduce_ex__"]
+    statement := "time.__reduce_ex__(p) agrees between C and Python for every valid time and every int p."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimeReduceExTwinsAllInt, thm := some ``timeReduceExTwinsAllInt_refuted
+    bug := some "datetime-reduce-ex-protocol-int-converter"
+    notes := "p = 2**31: C OverflowError from the clinic int converter, Python returns the state." },
+  { id := "datetime-datetime-reduce-ex-all-int", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime___reduce_ex___impl", "datetime.__reduce_ex__"]
+    statement := "datetime.__reduce_ex__(p) agrees between C and Python for every valid datetime and every int p."
+    source := "C/Python twins", status := .refuted
+    prop := ``DatetimeReduceExTwinsAllInt, thm := some ``datetimeReduceExTwinsAllInt_refuted
+    bug := some "datetime-reduce-ex-protocol-int-converter"
+    notes := "p = 2**31: C OverflowError, Python returns the state." },
+  { id := "datetime-tzinfo-reduce-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C tzinfo_reduce", "tzinfo.__reduce__"]
+    statement := "tzinfo.__reduce__ in both twins for every receiver type: (type(self), args, state) with tzinfoReduceC's / tzinfoReducePy's args and state, so the triples agree where those do, and the first element is always the receiver's type."
+    source := "C/Python twins; mirror of :4257-4283", status := .proven
+    prop := ``TzinfoReduceCls, thm := some ``tzinfoReduceCls_proven },
+  { id := "datetime-isocalendar-date-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C iso_calendar_date_year", "C iso_calendar_date_week", "C iso_calendar_date_weekday", "C iso_calendar_date_reduce", "C iso_calendar_date_new_impl", "C date_isocalendar"]
+    statement := "IsoCalendarDate in C: for C-int fields the object is the 3-tuple Python builds, year/week/weekday read items 0/1/2 (never PyTuple_GetItem's NULL) as Python's self[0..2] do, __reduce__ is the same plain tuple, a field outside C int is OverflowError; isocalendar()'s attributes are the ISO triple fromisocalendar inverts."
+    source := "C/Python twins; mirror of :3743-3876", status := .proven
+    prop := ``IsoCalendarDateObj, thm := some ``isoCalendarDateObj_proven },
+  { id := "datetime-date-toordinal-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_toordinal", "C ymd_to_ord"]
+    statement := "C date.toordinal() (ymd_to_ord of the fields) equals Python's toordinal on every valid date, lies in 1..date.max.toordinal(), and C date.fromordinal of it gives the date back."
+    source := "C/Python twins; toordinal docs", status := .proven
+    prop := ``DateToordinalC, thm := some ``dateToordinalC_proven },
+  { id := "datetime-timezone-richcompare", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C timezone_richcompare", "timezone.__eq__"]
+    statement := "timezone comparison in both twins for every operator and right operand: == and != against a timezone compare offsets only and != negates ==; <, <=, >, >= and any operator against a non-timezone are NotImplemented."
+    source := "C/Python twins", status := .proven
+    prop := ``TimezoneRichcompare, thm := some ``timezoneRichcompare_proven },
+  { id := "datetime-init-types-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C _PyDateTime_InitTypes", "C create_timezone_from_delta", "C look_up_timezone", "C create_timezone"]
+    statement := "The class attributes timedelta/date/time/datetime min, max, resolution and timezone utc/min/max are the same values in C (built by new_delta, new_date, new_time, new_datetime, create_timezone_from_delta) and Python; timezone.min/max are -/+23:59; create_timezone_from_delta reaches look_up_timezone's utc branch exactly for a zero offset."
+    source := "C/Python twins; datetime docs (class attributes)", status := .proven
+    prop := ``InitTypesTwins, thm := some ``initTypesTwins_proven },
+  { id := "datetime-datetime-str-call", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_str", "datetime.__str__"]
+    statement := "str(dt) calls the object's own isoformat in both twins, C with ' ' positional and Python with sep=' '; for the built-in isoformat both are dt.isoformat(' ')."
+    source := "C/Python twins; datetime.__str__ docs", status := .proven
+    prop := ``DatetimeStrCall, thm := some ``datetimeStrCall_proven },
+  { id := "datetime-datetime-str-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_str", "datetime.__str__"]
+    statement := "str(dt) agrees between the twins for every isoformat a subclass defines."
+    source := "C/Python twins", status := .refuted
+    prop := ``DatetimeStrTwins, thm := some ``datetimeStrTwins_refuted
+    bug := some "datetime-pydatetime-str-isoformat-alias"
+    notes := "An override isoformat(self, *a, **k) sees (' ',) in C and sep=' ' in Python." },
+  { id := "datetime-now-checks", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_now_impl"]
+    statement := "datetime.now(tz) in C: a tz that is neither None nor a tzinfo is TypeError whatever the clock does; None is the local reading; a tzinfo gets the UTC reading passed to its fromutc, whose result or exception is returned, a clock error first."
+    source := "mirror of :5721-5743 (the clock is a parameter)", status := .proven
+    prop := ``DatetimeNowChecks, thm := some ``datetimeNowChecks_proven },
   { id := "datetime-add-timedelta-obj", pyFile := "Modules/_datetimemodule.c"
     pyFns := ["C add_datetime_timedelta", "C new_datetime_subclass_ex", "C new_datetime_subclass_fold_ex", "C call_subclass_fold"]
     statement := "C datetime +/- timedelta (add_datetime_timedelta) for every receiver type: a normalization error comes before any constructor call; for datetime itself the result is the base model (pinned against Python elsewhere); for a subclass the class is called once with the eight normalized fields and the receiver's tzinfo positionally, no fold keyword, and its result (any object) is returned."
@@ -718,7 +840,7 @@ def entries : List Entry := [
   { id := "datetime-sanitize-isoformat", pyFile := "Lib/_pydatetime.py"
     pyFns := ["C _sanitize_isoformat_str"]
     statement := "Short strings fail, a string with no surrogate at positions 7, 8 or 10 comes back unchanged, and a surrogate at 7 becomes T."
-    source := "code comment (:5763-5766)", status := .proven
+    source := "code comment (:5922-5926)", status := .proven
     prop := ``SanitizeIsoformat, thm := some ``sanitizeIsoformat_proven },
   { id := "strptime-julian-weekday", pyFile := "Lib/_strptime.py"
     pyFns := ["_calc_julian_from_U_or_W"]
@@ -1174,7 +1296,7 @@ def entries : List Entry := [
   { id := "datetime-tzinfo-reduce-body", pyFile := "Lib/_pydatetime.py"
     pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
     statement := "For every lookup of __getinitargs__ and every state: a lookup error propagates; a missing attribute gives () and the state; Python tests the object's truth (an error propagates), gives () for a false object without calling it and calls a true one, C calls whatever it found; an error of the call propagates before the state is asked for."
-    source := "_pydatetime.py:1370-1376; _datetimemodule.c:4256-4282; pickle contract", status := .proven
+    source := "_pydatetime.py:1370-1376; _datetimemodule.c:4257-4283; pickle contract", status := .proven
     prop := ``TzinfoReduceBody, thm := some ``tzinfoReduceBody_proven },
   { id := "datetime-tzinfo-reduce-twins", pyFile := "Lib/_pydatetime.py"
     pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
@@ -1309,12 +1431,12 @@ def entries : List Entry := [
     prop := ``TimeFromIsoBody, thm := some ``timeFromIsoBody_proven },
   { id := "datetime-time-reduce-roundtrip", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time._getstate", "time.__reduce_ex__", "time.__reduce__", "time.__setstate", "time.__new__", "C time_getstate", "C datetime_time___reduce_ex___impl", "C datetime_time___reduce___impl", "C time_from_pickle", "C time_new"]
-    statement := "For every valid time and protocol, both twins' __reduce_ex__(p) give the same state tuple (with the tzinfo when there is one), __reduce__ is __reduce_ex__(2), and time(*state) gives back the time with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
+    statement := "For every valid time and protocol p as the C impl receives it (after the clinic int converter, which rejects p outside C int: datetime-time-reduce-ex-all-int), both twins' __reduce_ex__(p) give the same state tuple (with the tzinfo when there is one), __reduce__ is __reduce_ex__(2), and time(*state) gives back the time with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
     source := "pickle contract; PEP 495; C/Python twins", status := .proven
     prop := ``TimeReduceRoundtrip, thm := some ``timeReduceRoundtrip_proven },
   { id := "datetime-datetime-reduce-roundtrip", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime._getstate", "datetime.__reduce_ex__", "datetime.__reduce__", "datetime.__setstate", "datetime.__new__", "C datetime_getstate", "C datetime_datetime___reduce_ex___impl", "C datetime_datetime___reduce___impl", "C datetime_from_pickle", "C datetime_new"]
-    statement := "For every valid datetime and protocol, both twins' __reduce_ex__(p) give the same state tuple, __reduce__ is __reduce_ex__(2), and datetime(*state) gives back the datetime with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
+    statement := "For every valid datetime and protocol p as the C impl receives it (after the clinic int converter: datetime-datetime-reduce-ex-all-int), both twins' __reduce_ex__(p) give the same state tuple, __reduce__ is __reduce_ex__(2), and datetime(*state) gives back the datetime with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
     source := "pickle contract; PEP 495; C/Python twins", status := .proven
     prop := ``DatetimeReduceRoundtrip, thm := some ``datetimeReduceRoundtrip_proven },
   { id := "datetime-time-new-pickle", pyFile := "Lib/_pydatetime.py"
