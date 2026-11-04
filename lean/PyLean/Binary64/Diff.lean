@@ -234,7 +234,27 @@ def encOptCPow : Option C → Json
     let u (x : F64) := if x.isZero then F64.zero false else x
     encC ⟨u z.re, u z.im⟩
 
+/-- The platform library as CPython's compiled code calls it: `hy` is its `hypot` of the base,
+and `sc` the phase with the `sincos` GCC merges `cos` and `sin` into (complexobject.c:333-334),
+when the case carries them. Neither is correctly rounded, so a correctly rounded stand-in
+differs from CPython by an ulp now and then. -/
+def caseLibm (j : Json) : Libm :=
+  let hy := (getNat j "hy").toOption
+  let sc : Option (Nat × Nat × Nat) := (do
+    let a ← (← field j "sc").getArr?
+    return ((← (a.getD 0 Json.null).getNat?), (← (a.getD 1 Json.null).getNat?),
+      (← (a.getD 2 Json.null).getNat?))).toOption
+  { libm with
+    hypot := fun x y => match hy with | some h => F64.ofBits h | none => libm.hypot x y
+    cos := fun p => match sc with
+      | some (ph, c, _) => if p.bits == ph then F64.ofBits c else libm.cos p
+      | none => libm.cos p
+    sin := fun p => match sc with
+      | some (ph, _, s') => if p.bits == ph then F64.ofBits s' else libm.sin p
+      | none => libm.sin p }
+
 def runComplex (fn : String) (j : Json) : Except String Json := do
+  let libm := caseLibm j
   let v := getCObj j "v"
   let w := getCObj j "w"
   let z : Except String C := do

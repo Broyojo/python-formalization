@@ -29,6 +29,9 @@ import PyLean.Binary64.FloatObjProps
 import PyLean.Binary64.FloatParse
 import PyLean.Binary64.FloatPack4
 import PyLean.Binary64.Diff
+import PyLean.Binary64.ComplexExact
+import PyLean.Binary64.ComplexAnnexG
+import PyLean.Binary64.ComplexFormat
 
 /-!
 Shared exact IEEE-754 binary64 model, and `Objects/floatobject.c`, `Python/dtoa.c`,
@@ -474,7 +477,7 @@ def entries : List Entry := [
     statement := "With a nonzero base, _Py_c_pow never leaves EDOM set, for any C library."
     source := "complex_pow, complexobject.c:762-765: EDOM is reported as zero to a negative or complex power"
     status := .refuted, prop := ``ComplexPowEdomOnlyForZero, thm := some ``complexPowEdomOnlyForZero_refuted
-    bug := some "binary64-complex-pow-stray-edom"
+    bug := some "longobj-complex-pow-infinite-phase-edom"
     notes := "On glibc, cos(inf) sets EDOM, so (1+1j) ** complex(1, inf) raises ZeroDivisionError with a nonzero base." },
   { id := "complex-real-operand", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
     statement := "A float operand keeps its value and gets imaginary part 0.0, and an int goes through the float conversion."
@@ -489,6 +492,53 @@ def entries : List Entry := [
     statement := "complex() of an empty string, or of one that is only spaces, raises ValueError."
     source := "parse_error label, complexobject.c:1067-1070"
     status := .proven, prop := ``ComplexBlankRaises, thm := some ``complexBlankRaises_proven },
+  { id := "complex-sum-diff-exact", pyFile := complexFile
+    pyFns := ["_Py_c_sum", "_Py_cr_sum", "_Py_rc_sum", "_Py_c_diff", "_Py_cr_diff", "_Py_rc_diff"]
+    statement := "For every pair of complex numbers and every float, each part of _Py_c_sum and _Py_c_diff is the IEEE 754 sum or difference of the matching parts (NaN for a NaN or opposite infinities, the infinity otherwise, the exact result rounded to nearest even with its sign, -0.0 only for two negative operands); the mixed forms do that to the real part only, keep the complex operand's imaginary part bit for bit, and _Py_rc_diff flips its sign bit."
+    source := "IEEE 754 6.3 and 5.4.1; complexobject.c:32-78, the mixed-mode rules of :681-694"
+    status := .proven, prop := ``ComplexSumDiffExact, thm := some ``complexSumDiffExact_proven
+    notes := "AddSpec, SubSpec and NegSpec fix a part bit for bit except for which NaN." },
+  { id := "complex-neg-conj-exact", pyFile := complexFile
+    pyFns := ["_Py_c_neg", "complex_neg", "complex_conjugate_impl"]
+    statement := "-z flips the sign bit of both parts and nothing else, NaNs included, through _Py_c_neg and through complex_neg's own negation; z.conjugate() keeps the real part bit for bit and flips the sign bit of the imaginary part."
+    source := "IEEE 754 5.5.1; complexobject.c:81-87, :776-783, :882-888"
+    status := .proven, prop := ``ComplexNegConjExact, thm := some ``complexNegConjExact_proven },
+  { id := "complex-mixed-prod-exact", pyFile := complexFile
+    pyFns := ["_Py_cr_prod", "_Py_rc_prod"]
+    statement := "complex * float and float * complex multiply each part by the float, each an IEEE 754 product (NaN for a NaN or an infinity times a zero, the signed infinity otherwise, the exact product rounded with the exclusive or of the signs), so 2.0 * complex(inf, 0.0) is inf+0j."
+    source := "IEEE 754 6.3; complexobject.c:151-163 and the mixed-mode rules of :681-694"
+    status := .proven, prop := ``ComplexMixedProdExact, thm := some ``complexMixedProdExact_proven },
+  { id := "complex-cr-quot-exact", pyFile := complexFile, pyFns := ["_Py_cr_quot"]
+    statement := "complex / float with a zero float of either sign sets EDOM and gives 0; with any other float, a NaN included, each part is the IEEE 754 quotient by it and errno is untouched."
+    source := "complexobject.c:249-261 (if (b) is b != 0)"
+    status := .proven, prop := ``ComplexCrQuotExact, thm := some ``complexCrQuotExact_proven },
+  { id := "complex-real-operand-exact", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
+    statement := "real_to_double on every object: a float or float subclass instance gives its value, an int its value rounded to nearest even or OverflowError from DBL_MAX + 2**970 on, anything else NotImplemented; real_to_complex adds a +0.0 imaginary part."
+    source := "complexobject.c:661-679; floatobject.c:319-336"
+    status := .proven, prop := ``ComplexRealOperandExact, thm := some ``complexRealOperandExact_proven },
+  { id := "complex-pow-real-twin", pyFile := complexFile, pyFns := ["_Py_c_pow", "complex_pow"]
+    statement := "For a C library with the C99 Annex F values at +-0 and for pow of a positive base, complex(x, 0) ** complex(y, +-0) with x > 0 finite and y finite, nonzero and not a small integer takes the general branch of _Py_c_pow and gives pow(x, y) with a zero imaginary part of the sign of y, or OverflowError when pow(x, y) is infinite: exactly when float.__pow__ gives pow(x, y) or raises OverflowError."
+    source := "twin of float_pow (floatobject.c:686-803); complexobject.c:325-336, :752-770"
+    status := .proven, prop := ``ComplexPowRealTwin, thm := some ``complexPowRealTwin_proven
+    notes := "The libm hypotheses are AnnexFPow. The general branch overflows in its intermediate pow(|a|, b.real) before exp(-arg*b.imag) can bring it back: complex(-1e200, 0) ** complex(2, 100) raises OverflowError for a value near 1e263, and complex(2, 300) as the exponent gives nan+nanj for one near 1e-9 (bugs/binary64-complex-pow-intermediate-overflow.yaml, a duplicate of gh-60200)." },
+  { id := "complex-prod-annex-g-binary64", pyFile := complexFile, pyFns := ["_Py_c_prod"]
+    statement := "At binary64, for every input: if one factor of _Py_c_prod has an infinite part and the other has no NaN part and is not zero, the product has an infinite part (C11 Annex G.5.1), through the plain product or through the boxing and recomputation of the recovery."
+    source := "C11 Annex G.5.1; complexobject.c:94-145"
+    status := .proven, prop := ``ProdAnnexG, thm := some ``prodAnnexG_proven
+    notes := "The overflow branch of :125-140 is not stated." },
+  { id := "complex-quot-annex-g-binary64", pyFile := complexFile, pyFns := ["_Py_c_quot"]
+    statement := "At binary64, for every input: an infinite dividend over a nonzero finite divisor gives an infinite part and no EDOM, and a finite dividend over a divisor with exactly one infinite part gives zero parts and no EDOM (C11 Annex G.5.2), through Smith's branches or the recoveries."
+    source := "C11 Annex G.5.2; complexobject.c:195-243"
+    status := .proven, prop := ``QuotAnnexG, thm := some ``quotAnnexG_proven
+    notes := "Both divisor parts infinite is left out: 0.0 * (a.real*x + a.imag*y) at :239 overflows, so complex(1e308, 1e308) / complex(inf, inf) is nan+0j, as in the C11 reference _Cdivd." },
+  { id := "complex-rc-quot-zero", pyFile := complexFile, pyFns := ["_Py_rc_quot"]
+    statement := "At binary64, a finite float over a complex with an infinite part gives zero parts and no EDOM, for every such divisor, through Smith's branches or the recovery of :294-301."
+    source := "C11 Annex G.5.2; complexobject.c:265-304"
+    status := .proven, prop := ``RcQuotZero, thm := some ``rcQuotZero_proven },
+  { id := "complex-format-exact", pyFile := complexFile, pyFns := ["complex___format___impl"]
+    statement := "format(z, '') is str(z) whatever str does for z's type; any other spec written from its fields is parsed with default alignment '>' and formatted by format_complex_internal for the types '' e E f F g G n, and raises the unknown-type ValueError otherwise; and a spec with no type, precision, sign or width gives repr(z)."
+    source := "complexobject.c:914-929; Objects/unicode_formatter.c:1778-1790, :1929-1964"
+    status := .proven, prop := ``ComplexFormatExact, thm := some ``complexFormatExact_proven },
   { id := "pystrtod-case-insensitive-match", pyFile := strtodFile, pyFns := ["case_insensitive_match"]
     statement := "case_insensitive_match(s, t) is true exactly when the lowered prefix of s spells t."
     source := "Comment at pystrtod.c:9-10"
