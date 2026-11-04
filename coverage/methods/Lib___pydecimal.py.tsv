@@ -32,9 +32,9 @@ Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	mod
 Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	todo		review: The only entry is the int-limit refutation (hash(Decimal(10**4300))), a limitation upstream declined (python/cpython#96589; the record says do not file), so it is not a promised behaviour; nothing states the hash of an in-limit value (no narrowed twin agreement or Fraction-consistency for _pydecimal).
 Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
-Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	todo		
+Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	modelled	decimal-repr-exact	
 Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree-int-digits	
-Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	todo		
+Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	modelled	decimal-eng-string-exact	
 Lib/_pydecimal.py	1137	1157	Decimal.__neg__	__neg__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1159	1178	Decimal.__pos__	__pos__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1180	1200	Decimal.__abs__	__abs__(self, round=True, context=None)	modelled	decimal-unary-exact,decimal-abs-no-round-exact	
@@ -120,9 +120,9 @@ Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=N
 Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	modelled	decimal-logical-exact	
 Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact	
-Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
-Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	todo		
-Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	todo		
+Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	modelled	decimal-next-minus-exact	
+Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	modelled	decimal-next-plus-exact	
+Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	modelled	decimal-next-toward-exact	
 Lib/_pydecimal.py	3667	3707	Decimal.number_class	number_class(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3709	3711	Decimal.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:3709-3711), one constant with no branch.
 Lib/_pydecimal.py	3713	3744	Decimal.rotate	rotate(self, other, context=None)	modelled	decimal-rotate-exact	
@@ -136,7 +136,7 @@ Lib/_pydecimal.py	3911	3925	_dec_from_triple	_dec_from_triple(sign, coefficient,
 Lib/_pydecimal.py	3941	3942	_ContextManager.__init__	__init__(self, new_context)	todo		
 Lib/_pydecimal.py	3943	3946	_ContextManager.__enter__	__enter__(self)	todo		
 Lib/_pydecimal.py	3947	3948	_ContextManager.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	todo		review: pyContextNew (Context.lean:619) follows :3978-4003 and the last review's counterexamples now hold (ListOutcome: Context(traps=[k]) raises what k.__eq__ raises against the first signal, a k equal to every signal traps all nine and is kept as an extra key; a traps that is neither list nor dict is the `_signals + value` TypeError), but the model still drops the comparisons `k in traps` (:3994) makes between two non-signal elements (SigKey.ansBefore gives `.no` for an earlier non-signal element, Objects/listobject.c:686 calls `earlier == k`), so for a hashable class R whose __eq__ raises against another R and returns NotImplemented otherwise, Context(traps=[R(), R()]) raises that exception in CPython where ContextInitExact gives KeyError; the same scope hides the dict merging of two equal non-signal elements with equal hashes (otherItems keeps both as keys, so trapsExtra is wrong for two K() whose __eq__ is always True and __hash__ constant). The hash-collision and stateless-__eq__ scopes are acceptable (signals hash by identity), but this one removes an __eq__-raises path of the credited line.
+Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	modelled	decimal-context-init-exact	
 Lib/_pydecimal.py	4005	4017	Context._set_integer_check	_set_integer_check(self, name, value, vmin, vmax)	modelled	decimal-context-setattr-exact,decimal-context-attr-twins	
 Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message,decimal-context-init-exact	
 Lib/_pydecimal.py	4030	4053	Context.__setattr__	__setattr__(self, name, value)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message	
@@ -196,9 +196,9 @@ Lib/_pydecimal.py	4965	4990	Context.min	min(self, a, b)	modelled	decimal-context
 Lib/_pydecimal.py	4992	5007	Context.min_mag	min_mag(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5009	5024	Context.minus	minus(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5026	5056	Context.multiply	multiply(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5058	5076	Context.next_minus	next_minus(self, a)	todo		review: ctxUn nextMinus (Context.lean:130) is :5075-5076 and Equiv1 pins the wrapper, but Decimal.next_minus has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	5078	5096	Context.next_plus	next_plus(self, a)	todo		review: ctxUn nextPlus (Context.lean:131) is :5095-5096 and Equiv1 pins the wrapper, but Decimal.next_plus has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	todo		review: ctxBin nextToward (Context.lean:114) is :5130-5131 plus :3630 and Equiv2 pins the wrapper, but Decimal.next_toward has no entry (part 1 HOLLOW), so the result is unstated.
+Lib/_pydecimal.py	5058	5076	Context.next_minus	next_minus(self, a)	modelled	decimal-context-methods-match-decimal,decimal-next-minus-exact	
+Lib/_pydecimal.py	5078	5096	Context.next_plus	next_plus(self, a)	modelled	decimal-context-methods-match-decimal,decimal-next-plus-exact	
+Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-next-toward-exact	
 Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	modelled	decimal-context-methods-match-decimal,decimal-normalize-exact,decimal-normalize-nan-exact	
 Lib/_pydecimal.py	5157	5205	Context.number_class	number_class(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-methods-match-decimal	
@@ -213,7 +213,7 @@ Lib/_pydecimal.py	5495	5512	Context.scaleb	scaleb(self, a, b)	modelled	decimal-c
 Lib/_pydecimal.py	5514	5542	Context.shift	shift(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-shift-exact	
 Lib/_pydecimal.py	5544	5574	Context.sqrt	sqrt(self, a)	todo		
 Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	todo		review: ctxUn of toEng a c.capitals (Context.lean:138) is :5624-5625 and Equiv1 pins the wrapper, but Decimal.to_eng_string has no entry (part 1 HOLLOW), so the engineering notation is stated nowhere.
+Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	modelled	decimal-context-methods-match-decimal,decimal-eng-string-exact	
 Lib/_pydecimal.py	5627	5633	Context.to_sci_string	to_sci_string(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	modelled	decimal-context-methods-match-decimal,decimal-to-integral-exact-exact	
 Lib/_pydecimal.py	5665	5692	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	

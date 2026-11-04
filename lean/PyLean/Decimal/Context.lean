@@ -181,7 +181,7 @@ def contextToIntegralValue := ctxUn (fun c a => toIntegralValue c a)
 def contextNumberClass := ctxUn (fun c a => (pure (numberClass c a) : DM String))
 def contextIsNormal := ctxUn (fun c a => (pure (isNormal c a) : DM Bool))
 def contextIsSubnormal := ctxUn (fun c a => (pure (isSubnormal c a) : DM Bool))
-def contextToEngString := ctxUn (fun c a => (pure (toEng a c.capitals) : DM (List Char)))
+def contextToEngString := ctxUn (fun c a => liftPy (pyEng a c.capitals))
 def contextToSciString := ctxUn (fun c a => liftPy (pyStr a c.capitals))
 def contextCopyAbs := ctxUn (fun _ a => (pure (copyAbs a) : DM Dec))
 def contextCopyNegate := ctxUn (fun _ a => (pure (copyNegate a) : DM Dec))
@@ -241,13 +241,21 @@ inductive SigKey where
   signal's own `type.__eq__` then gives `NotImplemented` too and the identity fallback is false,
   Objects/object.c:1049-1094). `x in _signals`, `s in traps` and `key in d` (_pydecimal.py:3994,
   :4023, :4026) run that `__eq__`, so it can accept a key or raise.
+  For an element of a list passed as `flags` or `traps` there is more: `hv` is the value `hash()`
+  returns, and `prev` what `x == self` answers, as `PyObject_RichCompareBool(x, self, Py_EQ)`
+  (Objects/object.c:1122-1147: identity first, then `x.__eq__(self)`, the reflected
+  `self.__eq__(x)` and the identity fallback), for the element `x` at each earlier position of the
+  list that is not a signal (a missing answer is `no`; the entries at a signal's position are not
+  read). `k in traps` (:3994) compares each earlier element with `k` (`list_contains`,
+  Objects/listobject.c:677-692), and `dict(...)` compares `k` with each key already in the dict
+  whose hash equals `k`'s (Objects/dictobject.c, `compare_generic`, the stored key on the left), so
+  two equal elements with equal hashes are one key; the same object twice is `yes` by identity.
   Scope: `__eq__` is a function of its argument (no state, no mutation of the list or dict being
-  searched); the hash of an object, when it returns, differs from every signal's (a signal hashes by
-  identity), so the dict lookups and insertions compare it with no signal; and two distinct
-  non-signal elements compare unequal without raising (`s in traps` compares an element with the
-  ones before it, Objects/listobject.c:677-692, and `dict(...)` compares keys with equal hashes).
-  The C twin reads none of the three fields: it compares signals by identity. -/
-  | other (repr : StrErr := none) (hash : StrErr := none) (eq : List EqAns := [])
+  searched); and the hash of an object, when it returns, differs from every signal's (a signal
+  hashes by identity), so the dict lookups and insertions compare it with no signal. The C twin
+  reads none of these fields: it compares signals by identity. -/
+  | other (repr : StrErr := none) (hash : StrErr := none) (eq : List EqAns := []) (hv : Int := 0)
+      (prev : List EqAns := [])
   deriving Repr, DecidableEq, Inhabited
 
 /-- An int element or key: hashable, and `repr()` of it raises past 4300 digits. -/
@@ -260,7 +268,7 @@ def SigKey.isSig : SigKey → Bool
 /-- What `repr()` of an element or key raises; a signal is a class, whose repr always returns. -/
 def SigKey.reprErr : SigKey → StrErr
   | .sig _ => none
-  | .other r _ _ => r
+  | .other r .. => r
 
 /-- The position of a signal in `_signals` (_pydecimal.py:332-333). -/
 def Signal.idx : Signal → Nat
@@ -272,7 +280,7 @@ def Signal.idx : Signal → Nat
 answers through its own `__eq__`. -/
 def SigKey.eqSig : SigKey → Signal → EqAns
   | .sig t, s => if t = s then .yes else .no
-  | .other _ _ eq, s => eq.getD s.idx .no
+  | .other _ _ eq _ _, s => eq.getD s.idx .no
 
 /-- `x in seq` for an `x` whose comparisons with the items of `seq` answer `as`, in order
 (`list_contains`, Objects/listobject.c:677-692, with `PyObject_RichCompareBool`): the first true
@@ -448,7 +456,9 @@ def checkKeys (fmt : PyExc) : List (SigKey × SigVal) → Py Unit
 /-- `Context._set_signal_dict`, _pydecimal.py:4019-4028: what is stored is the dict itself, its
 signal entries and any other keys `__eq__` let through. `key in d` for each signal (:4025-4027) is
 a dict lookup, which compares no key under the hash scope of `SigKey.other`. Each refusal formats
-`d` with `%s` (:4021, :4024, :4027), which can itself raise (`CtxArg.pct`). -/
+`d` with `%s` (:4021, :4024, :4027), which can itself raise (`CtxArg.pct`). Scope: `.dict` is a
+`dict` or a subclass that keeps `dict`'s own iteration and lookup; a subclass overriding `__iter__`
+or `__contains__`, which `isinstance(d, dict)` (:4020) admits, is out of scope. -/
 def setSignalDict (v : CtxArg) : Py (SigDict × List (SigKey × SigVal)) :=
   match v with
   | .dict d => do
@@ -555,43 +565,64 @@ def sigItems (l : List SigKey) : List Signal → Py (List (SigKey × SigVal))
     let b ← ansIn (l.map (fun x : SigKey => x.eqSig s))
     return (.sig s, { truth := b }) :: (← sigItems l rest)
 
-/-- What comparing an earlier element `x` with the element `k` answers in `k in l`: a signal `t`
-gives `t == k`, which is `NotImplemented` from `type.__eq__` and then `k`'s reflected `__eq__`;
-another non-signal element is unequal without raising (scope of `SigKey.other`). -/
-def SigKey.ansBefore (k : SigKey) : SigKey → EqAns
-  | .sig t => k.eqSig t
-  | .other .. => .no
+/-- What `x == k` answers, `x` the element at position `i` of the list and `k` a later element
+that is not a signal: a signal `t` gives `t == k`, which is `NotImplemented` from `type.__eq__` and
+then `k`'s reflected `__eq__` (`SigKey.eqSig`); any other element answers as `k.prev` records. A
+signal `k` is never searched for this way (`otherItems` skips it). -/
+def SigKey.prevAns (k : SigKey) (i : Nat) : SigKey → EqAns
+  | .sig t => match k with
+    | .sig _ => .no
+    | .other .. => k.eqSig t
+  | .other .. => match k with
+    | .sig _ => .no
+    | .other _ _ _ _ p => p.getD i .no
+
+/-- The hash value of an element (a signal's is never compared, see `SigKey.other`). -/
+def SigKey.hashVal : SigKey → Int
+  | .sig _ => 0
+  | .other _ _ _ hv _ => hv
 
 /-- `k in l` for an element `k` that is not a signal, `pre` the elements before it: `list_contains`
-compares each of them with `k` before it reaches `k` itself, which is true by identity. A signal
-`t` among them gives `t == k`, `NotImplemented` from `type.__eq__` and then `k`'s reflected
-`__eq__`, which can raise; another non-signal element is unequal without raising (scope of
-`SigKey.other`). -/
+(Objects/listobject.c:677-692) compares each of them with `k` (`earlier == k`, line 686) before it
+reaches `k` itself, which is true by identity; the first true answer stops it, an exception
+propagates. -/
 def selfIn (k : SigKey) (pre : List SigKey) : Py Unit := do
-  let _ ← ansIn (pre.map k.ansBefore)
+  let _ ← ansIn (pre.mapIdx k.prevAns)
   return ()
 
-/-- The items `dict(...)` adds after the signals for the elements of `l` (each `int(s in l)` is
-1), in order, `pre` the elements already consumed. A signal is already a key: its `int(s in l)`
-repeats the comparisons its first pass made, with the same answers, and the dict keeps its value.
-Any other element runs `selfIn`, is hashed (a `hash()` that raises stops the construction), and is
-a new key. Distinct elements are separate keys (scope of `SigKey.other`). -/
-def otherItems (pre : List SigKey) : List SigKey → Py (List (SigKey × SigVal))
-  | [] => .ok []
-  | .sig t :: rest => otherItems (pre ++ [.sig t]) rest
-  | .other r h eq :: rest => do
-    selfIn (.other r h eq) pre
+/-- The comparisons inserting `k` into the dict makes: with each key already there whose hash
+equals `k`'s, in insertion order (the probe sequence of one hash value visits its keys in the order
+they were inserted), `stored == k`. `keys` holds each key with its position in the list. -/
+def dictAns (k : SigKey) (keys : List (Nat × SigKey)) : List EqAns :=
+  (keys.filter (fun q => q.2.hashVal == k.hashVal)).map (fun q => k.prevAns q.1 q.2)
+
+/-- The keys `dict(...)` holds after the elements of `l` that are not signals (each with the value
+`int(k in l)`, which is 1), in insertion order, `pre` the elements already consumed and `keys` the
+non-signal keys already inserted, with their positions. A signal is already a key: its
+`int(s in l)` repeats the comparisons its first pass made, with the same answers, and the dict keeps
+its value. Any other element runs `selfIn`, is hashed (a `hash()` that raises stops the
+construction), and is compared with the keys of equal hash: an equal one keeps its key (the new
+value, 1, replaces the old 1), otherwise it is a new key; an exception from that `__eq__`
+propagates (`PyDict_SetItem`, Objects/dictobject.c). -/
+def otherItems (pre : List SigKey) (keys : List (Nat × SigKey)) : List SigKey → Py (List (Nat × SigKey))
+  | [] => .ok keys
+  | .sig t :: rest => otherItems (pre ++ [.sig t]) keys rest
+  | .other r h eq hv p :: rest => do
+    selfIn (.other r h eq hv p) pre
     match h with
     | some e => .error (dictKeyExc e)
-    | none => return (.other r none eq, { truth := true }) :: (← otherItems (pre ++ [.other r h eq]) rest)
+    | none =>
+      let dup ← ansIn (dictAns (.other r none eq hv p) keys)
+      otherItems (pre ++ [.other r none eq hv p])
+        (if dup then keys else keys ++ [(pre.length, .other r none eq hv p)]) rest
 
 /-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3994: the signals first, each
-set when an element compares equal to it, then the other elements, which stay in the dict for
-`_set_signal_dict` to check. -/
+set when an element compares equal to it, then the keys the other elements make, which stay in the
+dict for `_set_signal_dict` to check. -/
 def signalDictOf (l : List SigKey) : Py (List (SigKey × SigVal)) := do
   let sigs ← sigItems l pySignals
-  let rest ← otherItems [] l
-  return sigs ++ rest
+  let rest ← otherItems [] [] l
+  return sigs ++ rest.map (fun q => (q.2, { truth := true }))
 
 /-- The value `Context()` assigns to `traps` or `flags`, _pydecimal.py:3991-4003. A
 value that is neither a dict nor a list fails at `_signals + value` (`list_concat`,

@@ -206,7 +206,7 @@ def ContextMethodsMatchDecimal : Prop :=
   Equiv1 contextNumberClass (fun c a => pure (numberClass c a)) ∧
   Equiv1 contextIsNormal (fun c a => pure (isNormal c a)) ∧
   Equiv1 contextIsSubnormal (fun c a => pure (isSubnormal c a)) ∧
-  Equiv1 contextToEngString (fun c a => pure (toEng a c.capitals)) ∧
+  Equiv1 contextToEngString (fun c a => liftPy (pyEng a c.capitals)) ∧
   Equiv1 contextToSciString (fun c a => liftPy (pyStr a c.capitals)) ∧
   Equiv1 contextCopyAbs (fun _ a => pure (copyAbs a)) ∧
   Equiv1 contextCopyNegate (fun _ a => pure (copyNegate a)) ∧
@@ -368,7 +368,7 @@ theorem sigEntries_nonsig : ∀ x : List (SigKey × SigVal), (∀ p ∈ x, p.1.i
     have hk := h (k, v) (by simp)
     cases k with
     | sig s => simp [SigKey.isSig] at hk
-    | other r hh eq =>
+    | other r hh eq hv pv =>
       simp only [sigEntries, List.filterMap_cons]
       exact sigEntries_nonsig rest (fun p hp => h p (by simp [hp]))
 

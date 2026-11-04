@@ -397,14 +397,40 @@ def engFinite (neg : Bool) (ds : List Char) (e : Int) (caps : Bool) : List Char 
     (if caps then 'E' else 'e') :: fmtSigned (leftdigits - dotplace)
   sign ++ intpart ++ fracpart ++ exp
 
-/-- `Decimal.to_eng_string`, _pydecimal.py:1128-1135. -/
+/-- The spelling of `Decimal.to_eng_string` (_pydecimal.py:1128-1135), as `_decimal`'s
+`mpd_to_eng` writes it too; `pyEng` adds `_pydecimal`'s int/str limit. -/
 def toEng (d : Dec) (caps : Bool := true) : List Char :=
   match d with
   | .fin neg c e => engFinite neg (Nat.toDigits 10 c) e caps
   | d => toSci d caps
 
-/-- `Decimal.__repr__`, _pydecimal.py:1071-1074. -/
+/-- `_pydecimal.Decimal.__str__(eng=True)`, _pydecimal.py:1076-1126, on raw attributes: the
+specials as in `__str__`, and for a number the engineering `dotplace` (:1097-1108);
+`"%+d" % (leftdigits-dotplace)` (:1124) formats an int, so an exponent of more than 4300 digits
+raises the int/str-limit `ValueError`. -/
+def pyEngObj (o : PyObj) (caps : Bool := true) : Py (List Char) :=
+  let sign := if o.sign then ['-'] else []
+  match o.exp with
+  | .inf => .ok (sign ++ "Infinity".toList)
+  | .qnan => .ok (sign ++ "NaN".toList ++ o.int)
+  | .snan => .ok (sign ++ "sNaN".toList ++ o.int)
+  | .num e => do
+    let leftdigits : Int := e + o.int.length
+    let dotplace : Int := engDot (o.int == ['0']) e leftdigits
+    if leftdigits ≠ dotplace then strLimit (leftdigits - dotplace).natAbs
+    return engFinite o.sign o.int e caps
+
+/-- `Decimal.to_eng_string()` in `_pydecimal` (`capitals` from the context). -/
+def pyEng (d : Dec) (caps : Bool := true) : Py (List Char) := pyEngObj d.toPyObj caps
+
+/-- The spelling of `repr(d)` (`_decimal`'s `dec_repr` writes the same, without a limit). -/
 def reprD (d : Dec) : List Char := "Decimal('".toList ++ toSci d ++ "')".toList
+
+/-- `Decimal.__repr__` of `_pydecimal`, _pydecimal.py:1071-1074: `"Decimal('%s')" % str(self)`,
+so it raises what `str(self)` raises (the int/str limit of a more than 4300-digit exponent). -/
+def pyRepr (d : Dec) : Py (List Char) := do
+  let s ← pyStr d
+  return "Decimal('".toList ++ s ++ "')".toList
 
 /-- `Decimal._round`, _pydecimal.py:2710-2731, for `places ≥ 1`. -/
 def roundPlaces (d : Dec) (places : Nat) (m : Rounding) : Py Dec := do
