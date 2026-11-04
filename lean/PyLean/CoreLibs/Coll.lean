@@ -3,6 +3,7 @@ import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterProps4
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
+import PyLean.CoreLibs.Coll.NamedtupleP
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -355,7 +356,15 @@ def namedtupleEntries : List Entry := [
   { id := "coll-namedtuple-defaults", pyFile := file, pyFns := ["namedtuple"]
     statement := "Defaults fill the rightmost parameters in order, and _field_defaults has exactly the last len(defaults) fields."
     source := "Doc/library/collections.rst, namedtuple"
-    status := .proven, prop := ``NamedtupleDefaults, thm := some ``namedtupleDefaults_proven }
+    status := .proven, prop := ``NamedtupleDefaults, thm := some ``namedtupleDefaults_proven },
+  { id := "coll-namedtuple-conversions", pyFile := file, pyFns := ["namedtuple"]
+    statement := "A str field_names is its comma/whitespace-separated words; an iterable of names whose str() or next() raises raises before any check; tuple(defaults) raising does so only after the name checks pass."
+    source := "Lib/collections/__init__.py:387-389, :421-423; Doc/library/collections.rst, namedtuple"
+    status := .proven, prop := ``NamedtupleConversions, thm := some ``namedtupleConversions_proven },
+  { id := "coll-namedtuple-getnewargs", pyFile := file, pyFns := ["namedtuple"]
+    statement := "T(*p.__getnewargs__()) gives back p's values for every generated class and tuple of the right length."
+    source := "docstring, Lib/collections/__init__.py:481"
+    status := .proven, prop := ``NamedtupleGetnewargs, thm := some ``namedtupleGetnewargs_proven }
 ]
 
 def entries : List Entry :=
