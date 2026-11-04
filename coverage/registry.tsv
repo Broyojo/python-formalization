@@ -1006,10 +1006,12 @@ pystrtod-precision-guard	proven	Python/pystrtod.c	PyOS_double_to_string
 float-int-compare-exact	proven	Objects/floatobject.c	float_richcompare
 float-as-double	proven	Objects/floatobject.c	PyFloat_AsDouble
 float-number-index	proven	Objects/floatobject.c	
-float-from-string-dispatch	proven	Objects/floatobject.c	
+float-from-string-infnan	proven	Objects/floatobject.c	float_from_string_inner,PyFloat_FromString
+float-from-string-dispatch	proven	Objects/floatobject.c	PyFloat_FromString
 float-compare-floats	proven	Objects/floatobject.c	float_richcompare
 float-hex-tables	proven	Objects/floatobject.c	char_from_hex,hex_from_char
 float-pack8-bytes	proven	Objects/floatobject.c	PyFloat_Pack8
+float-pack4-spec	proven	Objects/floatobject.c	PyFloat_Pack4
 float-unpack4-widen	proven	Objects/floatobject.c	PyFloat_Unpack4
 float-fromhex-object	proven	Objects/floatobject.c	float_fromhex_impl
 float-round-object	proven	Objects/floatobject.c	
