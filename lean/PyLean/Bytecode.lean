@@ -743,7 +743,21 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): no __anext__ gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the lookup's or call's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause)."
     source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; _PyErr_FormatFromCause, Python/errors.c"
     status := .proven, prop := ``GetANextRules, thm := some ``getANextRules_proven
-    notes := "The PyAsyncGen_CheckExact fast path (:3563-3565) is outside the difftest model (see bytecode-get-aiter); the model previously wrapped only a TypeError and chained __context__ to the handled exception." }
+    notes := "The PyAsyncGen_CheckExact fast path (:3563-3565) is outside the difftest model (see bytecode-get-aiter); the model previously wrapped only a TypeError and chained __context__ to the handled exception." },
+  { id := "bytecode-load-special", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_SPECIAL", op "_LOAD_SPECIAL", op "_INSERT_NULL"]
+    statement := "For every object model, LOAD_SPECIAL replaces owner by the (method, self) _PyObject_LookupSpecialMethod finds, self on top; keeps owner and raises its error (ERROR_NO_POP); and when nothing is found raises TypeError with _Py_SpecialMethods[oparg].error, or .error_suggestion when _PyEval_SpecialMethodCanSuggest holds, formatted with %T of owner (the __qualname__ of a __main__ class). type_has_special_method counts a name only when what _PyType_Lookup finds has tp_descr_get: a function does, an int or a builtin function does not."
+    source := "Python/bytecodes.c:4125-4151; _Py_SpecialMethods, Python/ceval.c:375-422; type_has_special_method, _PyEval_SpecialMethodCanSuggest, Python/ceval.c:3742-3769"
+    status := .proven, prop := ``LoadSpecialRules, thm := some ``loadSpecialRules_proven
+    notes := "On a failed lookup C leaves NULL, owner in the two slots and the model owner alone; exception_unwind pops to the handler's depth, below both. The model used tp_name for %T and counted any attribute as a special method before." },
+  { id := "bytecode-attr-method-no-dict", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_METHOD_NO_DICT", op "_LOAD_ATTR_METHOD_NO_DICT", op "LOAD_ATTR_NONDESCRIPTOR_NO_DICT",
+      op "_LOAD_ATTR_NONDESCRIPTOR_NO_DICT", op "LOAD_ATTR_METHOD_LAZY_DICT", op "_CHECK_ATTR_METHOD_LAZY_DICT",
+      op "_LOAD_ATTR_METHOD_LAZY_DICT"]
+    statement := "For every object model, with cache [type_version, descr]: on another tp_version_tag each of LOAD_ATTR_METHOD_NO_DICT, LOAD_ATTR_NONDESCRIPTOR_NO_DICT and LOAD_ATTR_METHOD_LAZY_DICT is the generic LOAD_ATTR on the same state; under the cached version the method forms leave the cached descriptor with owner above it as self and the non-descriptor form replaces owner by it, LOAD_ATTR_METHOD_LAZY_DICT only while the instance's __dict__ has not been created (otherwise, or on a non-instance, it is LOAD_ATTR)."
+    source := "Python/bytecodes.c:4261-4333"
+    status := .proven, prop := ``MethodLoadNoDictRules, thm := some ``methodLoadNoDictRules_proven
+    notes := "That the cached descriptor is what the generic lookup finds under that version is the specializer's invariant (Python/specialize.c), as for bytecode-attr-specialized; the dict pointer at MANAGED_DICT_OFFSET + dictoffset is the instance's dict field." }
 ]
 
 end PyLean.Bytecode

@@ -307,6 +307,13 @@ def p_with(r):
                       "class D:\n    def __enter__(self):\n        return 1\n" + guarded("with D():\n    pass"),
                       "class A:\n    async def __aenter__(self):\n        pass\n    async def __aexit__(self, *a):\n        pass\n" + guarded("with A():\n    pass"),
                       "class E:\n    __enter__ = 1\n    __exit__ = 2\n" + guarded("with E():\n    pass"),
+                      # `%T` is the qualified name; the suggestion needs `tp_descr_get` on both
+                      "class O:\n    class I:\n        pass\n" + guarded("with O.I():\n    pass"),
+                      "def mk():\n    class L:\n        pass\n    return L\n" + guarded("with mk()():\n    pass"),
+                      "class NS:\n    __aenter__ = " + r.choice(["1", "len", "staticmethod(len)", "lambda s: 1"]) + "\n"
+                      "    async def __aexit__(self, *a):\n        pass\n" + guarded("with NS():\n    pass"),
+                      "class NA:\n    __enter__ = " + r.choice(["1", "len", "lambda s: 1"]) + "\n"
+                      "    def __exit__(self, *a):\n        pass\n" + guarded("async def f():\n    async with NA():\n        pass\nf().send(None)"),
                       cls + guarded("with C() as a, C() as b:\n    print('both')\n"),
                       ])
     return t + "\n" + extra
