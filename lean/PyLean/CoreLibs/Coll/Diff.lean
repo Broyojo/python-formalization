@@ -28,6 +28,9 @@ def decPair (j : Json) : Except String (String × Int) := do
   | [k, v] => return (← k.getStr?, ← v.getInt?)
   | _ => throw "expected pair"
 
+/-- A counter of the cases: string keys, int counts. -/
+abbrev Ctr (κ : Type) := D κ Int
+
 def getItems (j : Json) (key : String) : Except String (Ctr String) := do
   (← jArr (← field j key)).mapM decPair
 
@@ -44,33 +47,60 @@ def okE (c : Ctr String) : Json := okJ (encItems c)
 def okI (i : Int) : Json := okJ (toJson i)
 def okS (s : String) : Json := okJ (toJson s)
 
-/-- `{"src": "none"|"mapping"|"iter", "items"|"xs": ...}`. -/
-def getSrc (j : Json) : Except String (Src String) := do
+/-- String keys; `"#L"` stands for the unhashable list `[1]`. -/
+def kStr : KOps String :=
+  ⟨fun k => if k = "#L" then .error (.typeError "unhashable type: 'list'") else .ok (), fun _ => "list"⟩
+
+/-- An exception as `[class, message]`, without the model's `~` marker. -/
+def encExc (e : PyExc) : Json :=
+  let m := e.message
+  Json.arr #[toJson e.className, toJson (if m.startsWith "~" then m.drop 1 |>.toString else m)]
+
+/-- A mutating method's outcome: `[state, null]` or `[state, [class, message]]`. -/
+def encOut {σ : Type} (enc : σ → Json) (r : Out σ) : Json :=
+  okJ (Json.arr #[enc r.1, match r.2 with | none => Json.null | some e => encExc e])
+
+/-- An iterator over `xs` that raises `ValueError('boom')` instead of stopping when `fail`. -/
+def getIt (j : Json) (key : String) : Except String (Py (FIt String)) := do
+  let xs ← getStrs j key
+  let fail := (j.getObjVal? "fail" >>= Json.getBool?).toOption.getD false
+  return .ok ⟨xs, if fail then some (.valueError "boom") else none⟩
+
+/-- `{"src": "none"|"mapping"|"iter", "mty": "dict"|"mapping"|"bad_items", ...}`. -/
+def getSrc (j : Json) : Except String (Src String Int) := do
   match ← getStr j "src" with
   | "none" => return .none
-  | "mapping" => return .mapping (← getItems j "items")
-  | "iter" => return .iter (← getStrs j "xs")
+  | "mapping" =>
+    let items ← getItems j "items"
+    match (j.getObjVal? "mty" >>= Json.getStr?).toOption.getD "dict" with
+    | "dict" => return .mapping (dictSrc items)
+    | "mapping" => return .mapping ⟨none, .ok (FIt.ofList items), .ok (D.keys items), (dictSrc items).getitem⟩
+    | _ => return .mapping ⟨none, .error (.named "RuntimeError" "items"), .ok (D.keys items),
+        (dictSrc items).getitem⟩
+  | "iter" => return .iter (← getIt j "xs")
   | s => throw s!"bad src {s}"
 
 /-- The `b` operand of an in-place operator. -/
-def getIOpnd (j : Json) : Except String (IOpnd String) := do
+def getIOpnd (j : Json) : Except String (IOpnd String Int) := do
+  let b ← getItems j "b"
   match ← getStr j "bty" with
-  | "Counter" => return .ctr (← getItems j "b")
-  | "dict" => return .dict (← getItems j "b")
-  | ty => return .nonmapping ty
+  | "Counter" => return ctrOpnd kStr intNum b
+  | "dict" => return dictOpnd kStr rkStr b
+  | ty => return ⟨.error (.named "AttributeError" s!"'{ty}' object has no attribute 'items'"),
+      fun _ => .error (.typeError s!"'{ty}' object is not subscriptable")⟩
 
 /-- A binary dunder: a `Counter` right operand, or `b` absent. -/
-def binop (j : Json) (opname : String) (f : Ctr String → Ctr String → Ctr String) : Except String Json := do
+def binop (j : Json) (opname : String) (f : Ctr String → Ctr String → Py (Ctr String)) : Except String Json := do
   let a ← getItems j "a"
   match j.getObjVal? "b" with
   | .ok .null | .error _ =>
     return encPy encItems (.error (.typeError
       s!"unsupported operand type(s) for {opname}: 'Counter' and 'int'"))
-  | .ok _ => return encPy encItems (.ok (f a (← getItems j "b")))
+  | .ok _ => return encPy encItems (f a (← getItems j "b"))
 
 /-- A rich comparison. `__eq__`/`__ne__` on a non-`Counter` fall back to identity,
 ordering raises. -/
-def cmpop (j : Json) (opname : String) (f : Ctr String → Ctr String → Bool) : Except String Json := do
+def cmpop (j : Json) (opname : String) (f : Ctr String → Ctr String → Py Bool) : Except String Json := do
   let a ← getItems j "a"
   match j.getObjVal? "b" with
   | .ok .null | .error _ =>
@@ -78,45 +108,63 @@ def cmpop (j : Json) (opname : String) (f : Ctr String → Ctr String → Bool) 
     else if opname == "!=" then return encPy toJson (.ok true)
     else return encPy (fun (b : Bool) => toJson b) (.error (.typeError
       s!"'{opname}' not supported between instances of 'Counter' and 'int'"))
-  | .ok _ => return encPy (fun (b : Bool) => toJson b) (.ok (f a (← getItems j "b")))
+  | .ok _ => return encPy (fun (b : Bool) => toJson b) (f a (← getItems j "b"))
+
+/-- The target of `_count_elements`: `inst` adds an instance attribute
+`get = lambda k, d: dict.get(c, k, d) + 10`; `slow` overrides `get` on the class. -/
+def getTarget (j : Json) : CTarget String Int :=
+  let inst := (j.getObjVal? "inst" >>= Json.getBool?).toOption.getD false
+  let slow := (j.getObjVal? "slow" >>= Json.getBool?).toOption.getD false
+  { typeGet := if slow then some (dGet kStr) else none
+    instGet := if inst then some (fun d k z => do let v ← dGet kStr d k z; pure (v + 10)) else none }
+
+def sorterN : Accel.Heapq.Sorter Nat := Accel.Heapq.pureSorter Nat
 
 def runCtr (j : Json) : Except String Json := do
   let op ← getStr j "op"
+  let rkP : String → Py String := fun k => .ok (rkStr k)
+  let rvP : Int → Py String := fun v => .ok (toString v)
   match op with
-  | "new" => return okE (counterNew (← getSrc j) (← getItems j "kw"))
-  | "update" => return okE (update (← getItems j "a") (← getSrc j) (← getItems j "kw"))
-  | "subtract" => return okE (subtract (← getItems j "a") (← getSrc j) (← getItems j "kw"))
-  | "count_py" => return okE (countElementsPy (← getItems j "a") (← getStrs j "xs"))
-  | "count_c" => return okE (countElements (← getItems j "a") (← getStrs j "xs"))
-  | "count_slow" => return okE (countElementsCSlow (← getItems j "a") (← getStrs j "xs"))
-  | "total" => return okI (total (← getItems j "a"))
-  | "most_common" => return encPy encItems (mostCommon (← getItems j "a") (← getOptInt j "n"))
-  | "elements" => return encPy encStrs (elements (← getItems j "a"))
-  | "copy" => return okE (counterCopy (← getItems j "a"))
-  | "reduce" => return okE (counterReduce (← getItems j "a"))
-  | "delitem" => return okE (delitem (← getItems j "a") (← getStr j "e"))
-  | "getitem" => return okI (cGet (← getItems j "a") (← getStr j "e"))
-  | "repr" => return okS (counterRepr "Counter" rkStr (← getItems j "a"))
-  | "fromkeys" => return encPy encItems (counterFromkeys (← getStrs j "xs") none)
-  | "keep_positive" => return okE (keepPositive (← getItems j "a"))
-  | "pos" => return okE (posC (← getItems j "a"))
-  | "neg" => return okE (negC (← getItems j "a"))
-  | "add" => binop j "+" addC
-  | "sub" => binop j "-" subC
-  | "or" => binop j "|" orC
-  | "and" => binop j "&" andC
-  | "xor" => binop j "^" xorC
-  | "ixor" => return encPy encItems (dunderIxor rkStr (← getItems j "a") (← getIOpnd j))
-  | "eq" => cmpop j "==" eqC
-  | "ne" => cmpop j "!=" neC
-  | "le" => cmpop j "<=" leC
-  | "lt" => cmpop j "<" ltC
-  | "ge" => cmpop j ">=" geC
-  | "gt" => cmpop j ">" gtC
-  | "iadd" => return encPy encItems (dunderIadd (← getItems j "a") (← getIOpnd j))
-  | "isub" => return encPy encItems (dunderIsub (← getItems j "a") (← getIOpnd j))
-  | "ior" => return encPy encItems (dunderIor (← getItems j "a") (← getIOpnd j))
-  | "iand" => return encPy encItems (dunderIand rkStr (← getItems j "a") (← getIOpnd j))
+  | "new" => return encPy encItems (counterNew kStr intNum (← getSrc j) (← getItems j "kw"))
+  | "update" => return encOut encItems (update kStr intNum {} (← getItems j "a") (← getSrc j) (← getItems j "kw"))
+  | "subtract" => return encOut encItems (subtract kStr intNum {} (← getItems j "a") (← getSrc j) (← getItems j "kw"))
+  | "count_py" => return encOut encItems (countPy kStr intNum (getTarget j) (← getItems j "a") (← getIt j "xs"))
+  | "count_c" => return encOut encItems (countC kStr intNum (getTarget j) (← getItems j "a") (← getIt j "xs"))
+  | "most_common" => return encPy encItems (mostCommon intNum sorterN (← getItems j "a") (← getOptInt j "n"))
+  | "elements" =>
+    let r := elements intNum (← getItems j "a")
+    return encOut encStrs (r.xs, r.stop)
+  | "copy" =>
+    let c : CObj String Int := ⟨0, "Counter", ← getItems j "a"⟩
+    return encPy (fun (o : CObj String Int) => Json.arr #[toJson o.cls, toJson (o.id != c.id), encItems o.data])
+      (counterCopy kStr intNum 1 c)
+  | "reduce" =>
+    let r := counterReduce 1 (⟨0, "Counter", ← getItems j "a"⟩ : CObj String Int)
+    return okJ (Json.arr #[toJson r.1, toJson r.2.ty, encItems r.2.data])
+  | "delitem" => return encPy encItems (delitem kStr rkStr (← getItems j "a") (← getStr j "e"))
+  | "getitem" => return encPy toJson (dGet kStr (← getItems j "a") (← getStr j "e") 0)
+  | "repr" => return encPy toJson (counterRepr kStr intNum sorterN Accel.Heapq.builtinHier rkP rvP "Counter"
+      (← getItems j "a"))
+  | "fromkeys" => return encPy encItems (counterFromkeys (ν := Int) (← getStrs j "xs") none)
+  | "keep_positive" => return encOut encItems (keepPositive kStr rkStr intNum (← getItems j "a"))
+  | "pos" => return encPy encItems (posC kStr intNum (← getItems j "a"))
+  | "neg" => return encPy encItems (negC kStr intNum (← getItems j "a"))
+  | "add" => binop j "+" (addC kStr intNum)
+  | "sub" => binop j "-" (subC kStr intNum)
+  | "or" => binop j "|" (orC kStr intNum)
+  | "and" => binop j "&" (andC kStr intNum)
+  | "xor" => binop j "^" (xorC kStr intNum)
+  | "eq" => cmpop j "==" (eqC kStr intNum)
+  | "ne" => cmpop j "!=" (neC kStr intNum)
+  | "le" => cmpop j "<=" (leC kStr intNum)
+  | "lt" => cmpop j "<" (ltC kStr intNum)
+  | "ge" => cmpop j ">=" (geC kStr intNum)
+  | "gt" => cmpop j ">" (gtC kStr intNum)
+  | "iadd" => return encOut encItems (iaddC kStr rkStr intNum (← getItems j "a") (← getIOpnd j))
+  | "isub" => return encOut encItems (isubC kStr rkStr intNum (← getItems j "a") (← getIOpnd j))
+  | "ior" => return encOut encItems (iorC kStr rkStr intNum (← getItems j "a") (← getIOpnd j))
+  | "iand" => return encOut encItems (iandC kStr rkStr intNum (← getItems j "a") (← getIOpnd j))
+  | "ixor" => return encOut encItems (ixorC kStr rkStr intNum (← getItems j "a") (← getIOpnd j))
   | _ => throw s!"unknown ctr op {op}"
 
 /-! ### `ChainMap` -/

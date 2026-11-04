@@ -1,7 +1,6 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
-import PyLean.CoreLibs.Coll.CounterMost
-import PyLean.CoreLibs.Coll.CounterXor
+import PyLean.CoreLibs.Coll.CounterProps4
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -17,101 +16,88 @@ private def file : String := "Lib/collections/__init__.py"
 
 def counterEntries : List Entry := [
   { id := "coll-count-elements-twins", pyFile := file, pyFns := ["_count_elements"]
-    statement := "The Python _count_elements, the C fast path and the C slow path write the same dict, keys in the same order, for every mapping of int counts and every iterable."
-    source := "invariant: C and Python twins; Lib/collections/__init__.py:540-549, Modules/_collectionsmodule.c:2544-2644"
-    status := .proven, prop := ``CountElementsTwins, thm := some ``countElementsTwins_proven },
+    statement := "The C _count_elements and the Python twin leave the same dict and raise the same exception for every target and iterable. False: an instance attribute get is seen by mapping.get but not by the C fast-path test, Counter() with c.get set stores 11 in Python and 1 in C."
+    source := "invariant: C and Python twins; Lib/collections/__init__.py:540-549, Modules/_collectionsmodule.c:2563-2617"
+    status := .refuted, prop := ``CountElementsTwins, thm := some ``countElementsTwins_refuted
+    bug := some "corelibs-count-elements-twins" },
+  { id := "coll-count-elements-twins-hashable", pyFile := file, pyFns := ["_count_elements"]
+    statement := "Without an instance get, the twins agree. False: for an unhashable element the C fast path raises the bare hash TypeError, the Python twin dict.get's 'cannot use ... as a dict key' TypeError."
+    source := "invariant: C and Python twins; Modules/_collectionsmodule.c:2591-2594, Objects/dictobject.c:2442-2460"
+    status := .refuted, prop := ``CountElementsTwinsHashable, thm := some ``countElementsTwinsHashable_refuted
+    bug := some "corelibs-count-elements-twins" },
+  { id := "coll-count-elements-twins-narrow", pyFile := file, pyFns := ["_count_elements"]
+    statement := "With no instance get and keys whose __hash__ never raises a bare TypeError, the C function (fast or slow path, overridden get/__setitem__ free to raise) and the Python one leave the same dict and raise the same exception, partial updates included, for any count type with 0 + 1 == 1."
+    source := "narrowing of coll-count-elements-twins"
+    status := .proven, prop := ``CountElementsTwinsNarrow, thm := some ``countElementsTwinsNarrow_proven },
+  { id := "coll-counter-count-iter-int", pyFile := file
+    pyFns := ["Counter.__init__", "Counter.update", "Counter.subtract", "_count_elements"]
+    statement := "On ints, update(iterable) adds each element's number of occurrences, appends new keys in first-seen order and raises what the iterator raised keeping the counts before it; subtract lowers the same counts, so it undoes update; Counter(iterable) is the update of an empty counter or the exception."
+    source := "docstrings, Lib/collections/__init__.py:606-615, :678-688, :712-725"
+    status := .proven, prop := ``CountIterInt, thm := some ``countIterInt_proven },
   { id := "coll-counter-update-fast-slow", pyFile := file, pyFns := ["Counter.update"]
-    statement := "The fast path of update on an empty Counter (dict.update) builds the same dict, order included, as the general adding loop, for every dict of int counts."
+    statement := "On an empty counter, the dict.update fast path and the general count + self_get(elem, 0) loop leave the same items for every Mapping whose items() agrees with its storage or keys()/[] and every count type with x + 0 == x."
     source := "invariant: fast and slow path, Lib/collections/__init__.py:698-705"
-    status := .proven, prop := ``UpdateFastEqSlow, thm := some ``updateFastEqSlow_proven },
-  { id := "coll-counter-update-adds", pyFile := file
-    pyFns := ["Counter.update", "Counter.__init__", "Counter.__missing__", "_count_elements"]
-    statement := "After update(src, **kw) the count of x is its old count plus the source's and the keywords' contribution, for every counter; Counter(src, **kw) is the empty-counter case, and a missing element counts zero."
-    source := "docstrings, Lib/collections/__init__.py:606-615, :678"
-    status := .proven, prop := ``UpdateAddsCounts, thm := some ``updateAddsCounts_proven },
-  { id := "coll-counter-first-seen-order", pyFile := file, pyFns := ["Counter.__init__", "_count_elements"]
-    statement := "Counter(iterable) holds its elements in the order of dict.fromkeys(iterable)."
-    source := "Doc/library/collections.rst, Counter (order of first occurrence since 3.7)"
-    status := .proven, prop := ``CounterFirstSeenOrder, thm := some ``counterFirstSeenOrder_proven },
-  { id := "coll-counter-subtract", pyFile := file, pyFns := ["Counter.subtract", "Counter.update"]
-    statement := "subtract lowers counts by the source's contribution, and subtract after update with the same arguments restores every count."
-    source := "docstring, Lib/collections/__init__.py:712-717"
-    status := .proven, prop := ``SubtractUndoesUpdate, thm := some ``subtractUndoesUpdate_proven },
-  { id := "coll-counter-total", pyFile := file, pyFns := ["Counter.total"]
-    statement := "total() rises by n when n elements are counted and by another mapping's total when it is merged."
-    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
-    status := .proven, prop := ``TotalTracksUpdate, thm := some ``totalTracksUpdate_proven },
+    status := .proven, prop := ``UpdateFastSlow, thm := some ``updateFastSlow_proven },
   { id := "coll-counter-copy-reduce", pyFile := file, pyFns := ["Counter.copy", "Counter.__reduce__"]
-    statement := "copy() and the __reduce__ payload keep the items and their order, non-positive counts included."
-    source := "invariant; docstring 'Return a shallow copy.', Lib/collections/__init__.py:739"
-    status := .proven, prop := ``CopyReduceFaithful, thm := some ``copyReduceFaithful_proven },
+    statement := "copy() is a new object of self's class with self's items in order; __reduce__ is (self.__class__, (d,)) for a new plain dict d of the items, and the class rebuilds them from d."
+    source := "docstring 'Return a shallow copy.', Lib/collections/__init__.py:739; pickle protocol"
+    status := .proven, prop := ``CopyReduce, thm := some ``copyReduce_proven },
   { id := "coll-counter-delitem", pyFile := file, pyFns := ["Counter.__delitem__"]
-    statement := "del c[e] never raises, removes exactly e, and is a no-op on a missing element."
+    statement := "del c[e] removes a hashable e, and leaves the counter unchanged on an absent e where dict.__delitem__ raises KeyError; an unhashable e raises exactly the dict operation's exception."
     source := "docstring, Lib/collections/__init__.py:746"
-    status := .proven, prop := ``DelitemTotal, thm := some ``delitemTotal_proven },
+    status := .proven, prop := ``DelitemGuard, thm := some ``delitemGuard_proven },
+  { id := "coll-counter-most-common", pyFile := file, pyFns := ["Counter.most_common"]
+    statement := "For counts ordered by a strict weak order and a correct stable list.sort, most_common() is the items in non-increasing count order with ties in insertion order, and most_common(n), n >= 0, through every nlargest path, is its first n items."
+    source := "docstring, Lib/collections/__init__.py:629-630; Doc/library/collections.rst"
+    status := .proven, prop := ``MostCommonSorted, thm := some ``mostCommonSorted_proven },
+  { id := "coll-counter-most-common-neg", pyFile := file, pyFns := ["Counter.most_common"]
+    statement := "most_common(n) for n < 0 is [] for every count type, no count being compared."
+    source := "invariant; Lib/heapq.py:537-593"
+    status := .proven, prop := ``MostCommonNeg, thm := some ``mostCommonNeg_proven },
+  { id := "coll-counter-repr", pyFile := file, pyFns := ["Counter.__repr__"]
+    statement := "repr prints Cls() when empty, the items in most_common() order for ordered counts, and, when every < raises, the items in insertion order if that is a TypeError and the exception otherwise."
+    source := "comments, Lib/collections/__init__.py:754, :757"
+    status := .proven, prop := ``ReprOrders, thm := some ``reprOrders_proven },
+  { id := "coll-counter-elements", pyFile := file, pyFns := ["Counter.elements"]
+    statement := "elements() yields each key max(0, n) times in insertion order; it yields the elements before the first count whose __index__ raises or overflows Py_ssize_t, then raises."
+    source := "docstring, Lib/collections/__init__.py:643-658"
+    status := .proven, prop := ``ElementsLazy, thm := some ``elementsLazy_proven },
   { id := "coll-counter-compare-pointwise", pyFile := file
     pyFns := ["Counter.__eq__", "Counter.__ne__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "The six comparisons are the pointwise order on count functions with missing as zero, for all counters."
+    statement := "For any pure ==, <=, >= on counts, the six comparisons test every key of both counters with missing counts as zero, < and > add !=, and each returns NotImplemented exactly for a non-Counter operand."
     source := "docstrings, Lib/collections/__init__.py:800-830"
-    status := .proven, prop := ``ComparisonsPointwise, thm := some ``comparisonsPointwise_proven },
-  { id := "coll-counter-compare-order", pyFile := file
-    pyFns := ["Counter.__eq__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "a <= b and b <= a exactly when a == b; < and > are converses, as are <= and >=."
+    status := .proven, prop := ``ComparePointwise, thm := some ``comparePointwise_proven },
+  { id := "coll-counter-compare-raises", pyFile := file, pyFns := ["Counter.__eq__", "Counter.__le__", "Counter.__ge__"]
+    statement := "If comparing some key's counts raises and no earlier key compared false, ==, <= and >= raise."
     source := "invariant"
-    status := .proven, prop := ``ComparisonsAreOrder, thm := some ``comparisonsAreOrder_proven },
+    status := .proven, prop := ``CompareRaises, thm := some ``compareRaises_proven },
+  { id := "coll-counter-ops-pointwise", pyFile := file
+    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__"]
+    statement := "For any pure +, -, <, > on counts, +, -, | and & store a's keys with the combined count when it is > 0, then b's keys not in a under the operator's test, in that order, and return NotImplemented for a non-Counter operand."
+    source := "docstrings and comments, Lib/collections/__init__.py:765-772, :836-908"
+    status := .proven, prop := ``OperatorsPointwise, thm := some ``operatorsPointwise_proven },
+  { id := "coll-counter-unary", pyFile := file, pyFns := ["Counter.__pos__", "Counter.__neg__"]
+    statement := "-c is Counter() - c for every count type, result and exception alike; +c is c + Counter() when x + 0 is x."
+    source := "docstrings, Lib/collections/__init__.py:938, :946-947"
+    status := .proven, prop := ``UnaryAsBinary, thm := some ``unaryAsBinary_proven },
+  { id := "coll-counter-keep-positive", pyFile := file, pyFns := ["Counter._keep_positive", "Counter.__pos__"]
+    statement := "For any pure > on counts (NaN-like included), _keep_positive leaves exactly the items with count > 0, in order, the items +c returns."
+    source := "docstrings, Lib/collections/__init__.py:938, :957"
+    status := .proven, prop := ``KeepPositiveFilters, thm := some ``keepPositiveFilters_proven },
+  { id := "coll-counter-inplace-operands", pyFile := file
+    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__"]
+    statement := "+=, -=, |= read only other.items(): a dict and a Counter with the same items agree, and a raising .items() leaves self unchanged; &= reads other[elem]: Counter() &= 5 succeeds and a dict missing the first key raises its KeyError with self unchanged."
+    source := "invariant; Lib/collections/__init__.py:972, :985, :998, :1013-1014"
+    status := .proven, prop := ``InplaceOperands, thm := some ``inplaceOperands_proven },
+  { id := "coll-counter-total", pyFile := file, pyFns := []
+    statement := "total() is sum(self.values()) for every count type."
+    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
+    status := .open, prop := ``TotalTracksUpdate
+    notes := "Open: needs a model of builtin sum (Python/bltinmodule.c builtin_sum_impl, with its int and compensated float fast paths); the Int fold it had was withdrawn." },
   { id := "coll-counter-fromkeys", pyFile := file, pyFns := []
     statement := "Counter.fromkeys raises NotImplementedError for every input."
     source := "Doc/library/collections.rst, Counter.fromkeys; Lib/collections/__init__.py:665-675"
-    status := .proven, prop := ``FromkeysUndefined, thm := some ``fromkeysUndefined_proven },
-  { id := "coll-counter-ops-pointwise", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__pos__", "Counter.__neg__"]
-    statement := "+, -, |, & and unary + and - compute sum, difference, maximum, minimum, positive part and negated positive part of counts, clipped at zero, for all counters including non-positive counts."
-    source := "docstrings, Lib/collections/__init__.py:836-950"
-    status := .proven, prop := ``OperatorsPointwise, thm := some ``operatorsPointwise_proven },
-  { id := "coll-counter-ops-contract", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__pos__", "Counter.__neg__"]
-    statement := "Operator results hold only positive counts, and keys appear in left-operand order, then right-operand order."
-    source := "comments, Lib/collections/__init__.py:765, :770-772"
-    status := .proven, prop := ``OperatorsOutputContract, thm := some ``operatorsOutputContract_proven },
-  { id := "coll-counter-unary-binary", pyFile := file, pyFns := ["Counter.__pos__", "Counter.__neg__"]
-    statement := "+c equals c + Counter() and -c equals Counter() - c, items and order."
-    source := "docstrings, Lib/collections/__init__.py:938, :946"
-    status := .proven, prop := ``UnaryAreBinary, thm := some ``unaryAreBinary_proven },
-  { id := "coll-counter-inplace", pyFile := file
-    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__", "Counter._keep_positive"]
-    statement := "c += d, c -= d, c |= d, c &= d leave c equal to c + d, c - d, c | d, c & d, items and order, for all counters."
-    source := "invariant: in-place and binary forms; docstrings, Lib/collections/__init__.py:964-1011"
-    status := .proven, prop := ``InplaceAgreesBinary, thm := some ``inplaceAgreesBinary_proven },
-  { id := "coll-counter-xor", pyFile := file, pyFns := []
-    statement := "c ^ d is the absolute difference of counts, for all counters including zero and negative counts, equal to (c - d) | (d - c), with positive counts only, in the operators' key order; c ^= d gives the same items in the same order."
-    source := "docstrings, Lib/collections/__init__.py:910-935, :1019-1033"
-    status := .proven, prop := ``XorPointwise, thm := some ``xorPointwise_proven },
-  { id := "coll-counter-keep-positive", pyFile := file, pyFns := ["Counter._keep_positive"]
-    statement := "_keep_positive removes exactly the non-positive counts, in place order kept, and equals unary +."
-    source := "docstring, Lib/collections/__init__.py:957"
-    status := .proven, prop := ``KeepPositiveFilters, thm := some ``keepPositiveFilters_proven },
-  { id := "coll-counter-set-correspondence", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__eq__",
-      "Counter.__ne__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "With multiplicities zero or one, all ten relations of the comment hold between multiset and set operations."
-    source := "comment, Lib/collections/__init__.py:774-792"
-    status := .proven, prop := ``SetCorrespondence, thm := some ``setCorrespondence_proven },
-  { id := "coll-counter-most-common-prefix", pyFile := file, pyFns := ["Counter.most_common"]
-    statement := "most_common(n) is most_common()[:n] for every n >= 0, ties included, across the max, sorted and heap paths; a negative n gives []."
-    source := "docstring, Lib/collections/__init__.py:629-630"
-    status := .proven, prop := ``MostCommonPrefix, thm := some ``mostCommonPrefix_proven },
-  { id := "coll-counter-most-common-sorted", pyFile := file, pyFns := ["Counter.most_common"]
-    statement := "most_common() is a permutation of the items in non-increasing order of count, equal counts staying in insertion order."
-    source := "Doc/library/collections.rst, most_common"
-    status := .proven, prop := ``MostCommonSorted, thm := some ``mostCommonSorted_proven },
-  { id := "coll-counter-elements", pyFile := file, pyFns := ["Counter.elements"]
-    statement := "For counts that fit Py_ssize_t, counting c.elements() gives +c, the elements coming in insertion order."
-    source := "docstring, Lib/collections/__init__.py:643-657"
-    status := .proven, prop := ``ElementsRoundTrip, thm := some ``elementsRoundTrip_proven },
-  { id := "coll-counter-repr", pyFile := file, pyFns := ["Counter.__repr__"]
-    statement := "repr of a non-empty counter lists items in most_common order and an empty one prints Counter()."
-    source := "comment, Lib/collections/__init__.py:754"
-    status := .proven, prop := ``ReprMostCommonOrder, thm := some ``reprMostCommonOrder_proven }
+    status := .proven, prop := ``FromkeysUndefined, thm := some ``fromkeysUndefined_proven }
 ]
 
 def chainMapEntries : List Entry := [
