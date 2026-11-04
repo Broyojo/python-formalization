@@ -438,10 +438,10 @@ def entries : List Entry := [
     prop := ``ParseHHMMSSFFFraction, thm := some ``parseHHMMSSFFFraction_proven },
   { id := "datetime-date-ctor-args", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__new__", "_check_date_fields", "C date_new", "C datetime_date", "C datetime_date_impl", "C new_date_ex", "C check_date_args", "C date_from_pickle"]
-    statement := "date(*args) agrees between the twins for every positional argument list whose second argument is not None and whose ints fit a C int: pickle state, int fields, non-int fields, missing or extra arguments."
+    statement := "date(*args) agrees between the twins for every positional argument list whose second argument is not None, whose ints (given or returned by __index__) fit a C int, and in which no __index__ raises: pickle state, int and __index__ fields, non-int fields, missing or extra arguments."
     source := "C/Python twins", status := .proven
     prop := ``DateNewArgs, thm := some ``dateNewArgs_proven
-    notes := "A None second argument is on record as datetime-date-ctor-twins; ints beyond C int are gh-158778's class." },
+    notes := "A None second argument is on record as datetime-date-ctor-twins; ints beyond C int are gh-158778's class; a raising __index__ with a missing field is datetime-date-new-index-missing." },
   { id := "datetime-date-sub-twins", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__sub__", "C date_subtract"]
     statement := "date - x agrees between the twins for every valid right operand: timedelta, date, datetime or another object."
@@ -475,6 +475,52 @@ def entries : List Entry := [
     statement := "For all ints y, m, d, _check_date_fields and C check_date_args give the same result and message; it succeeds exactly for valid dates, returning the fields, and raises ValueError otherwise."
     source := "date docs (ValueError out of range); C/Python twins", status := .proven
     prop := ``CheckDateFields, thm := some ``checkDateFields_proven },
+  { id := "datetime-check-date-fields-index", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_date_fields", "C check_date_args", "C datetime_date", "C PyLong_AsInt"]
+    statement := "For all arguments, _check_date_fields equals C's clinic date() conversions plus check_date_args whenever every argument fits a C int; __index__ results are the fields, an exception of __index__ propagates unchanged in argument order, and a non-int __index__ result or a float is a TypeError."
+    source := "operator.index docs; C/Python twins", status := .proven
+    prop := ``CheckDateFieldsIndex, thm := some ``checkDateFieldsIndex_proven },
+  { id := "datetime-date-new-index-missing", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__new__", "_check_date_fields", "C date_new", "C datetime_date"]
+    statement := "date(a, b) where a.__index__ raises e and b is not None raises e in Python (day=None is reached after a's conversion) and TypeError for the missing day in C."
+    source := "C/Python twins (the case DateNewArgs excludes)", status := .proven
+    prop := ``DateNewIndexMissing, thm := some ``dateNewIndexMissing_proven },
+  { id := "datetime-check-time-fields-index", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_time_fields", "C check_time_args", "C datetime_time", "C PyLong_AsInt"]
+    statement := "For all arguments, _check_time_fields on ints is the int-level check with fold returned as given; __index__ results are the fields; an exception of __index__ propagates unchanged in argument order; a non-int __index__ result is a TypeError; and time(h, m, s, us, fold=f) with fields that are ints or __index__ objects within a C int and an int fold within a C int is the same in both twins."
+    source := "operator.index docs; C/Python twins", status := .proven
+    prop := ``CheckTimeFieldsIndex, thm := some ``checkTimeFieldsIndex_proven },
+  { id := "datetime-time-fold-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_time_fields", "time.__new__", "C datetime_time", "C PyLong_AsInt"]
+    statement := "time(fold=x) agrees between the twins for every fold that fits a C int."
+    source := "C/Python twins; time docs (fold in [0, 1])", status := .refuted
+    prop := ``TimeFoldTwins, thm := some ``timeFoldTwins_refuted
+    bug := some "datetime-pydatetime-fold-ordinal-no-index"
+    notes := "time(fold=1.0): Python's fold not in (0, 1) accepts 1.0 (no _index); C's int converter raises TypeError." },
+  { id := "datetime-datetime-fold-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_time_fields", "datetime.__new__", "C datetime_datetime", "C PyLong_AsInt"]
+    statement := "datetime(2020, 1, 1, fold=x) agrees between the twins for every fold that fits a C int."
+    source := "C/Python twins; datetime docs (fold in [0, 1])", status := .refuted
+    prop := ``DatetimeFoldTwins, thm := some ``datetimeFoldTwins_refuted
+    bug := some "datetime-pydatetime-fold-ordinal-no-index"
+    notes := "datetime(2020, 1, 1, fold=1.0): accepted by Python, TypeError in C." },
+  { id := "datetime-time-fold-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_time_fields", "time.__new__", "C datetime_time"]
+    statement := "time(fold=x) for every float x succeeds in Python exactly when x == 0 or x == 1 (so -0.0 too) and is a TypeError in C; for an object whose __index__ returns n it is a ValueError in Python and C's time(fold=n)."
+    source := "C/Python twins; time docs (fold)", status := .proven
+    prop := ``TimeFoldArg, thm := some ``timeFoldArg_proven },
+  { id := "datetime-fromordinal-index-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromordinal", "_ord2ymd", "C datetime_date_fromordinal", "C datetime_date_fromordinal_impl"]
+    statement := "date.fromordinal(x) agrees between the twins for every argument that fits a C int."
+    source := "C/Python twins", status := .refuted
+    prop := ``FromordinalIndexTwins, thm := some ``fromordinalIndexTwins_refuted
+    bug := some "datetime-pydatetime-fold-ordinal-no-index"
+    notes := "date.fromordinal(obj) with obj.__index__() == 5: date(1, 1, 5) in C, TypeError from n -= 1 in Python." },
+  { id := "datetime-fromordinal-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromordinal", "_ord2ymd", "C datetime_date_fromordinal", "C datetime_date_fromordinal_impl"]
+    statement := "date.fromordinal(x) for every argument: an int is the int-level model in each twin; an object whose __index__ returns n is fromordinal(n) in C and a TypeError in Python; an exception of __index__ propagates in C; every argument without __index__ (None, str, bytes, float, any other object) is a TypeError in both."
+    source := "C/Python twins", status := .proven
+    prop := ``FromordinalArg, thm := some ``fromordinalArg_proven },
   { id := "datetime-check-time-fields", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_check_time_fields", "C check_time_args"]
     statement := "For all ints h, m, s, us, fold, _check_time_fields and C check_time_args give the same result and message; it succeeds exactly when every field is in range and fold is 0 or 1, and raises ValueError otherwise."

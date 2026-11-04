@@ -436,6 +436,9 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     let a ← decDT (← field j "a"); let f ← chars "f"
     let g := (isocalendar a.y a.m a.d).1
     return encPy encStrf ((if isC then dtStrftimeC else dtStrftimePy) env a f g norm)
+  | "fromordinal_arg" =>
+    let a ← decArg (← field j "a")
+    return encPy encYMD' (if isC then fromordinalArgC a else fromordinalArgPy a)
   | "ctor_date" =>
     let args ← getArgs j "args"
     return encPy encYMD' (if isC then dateNewC args else dateCallPy args)

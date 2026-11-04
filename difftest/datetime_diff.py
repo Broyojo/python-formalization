@@ -8,6 +8,7 @@ See difftest/common.py.
 """
 
 import os
+import struct
 import time
 import warnings
 
@@ -277,11 +278,35 @@ def rand_arg(rng, n):
         return [rng.choice("bs"), b]
     if k < 0.8:
         return ["s", [rng.randrange(256) for _ in range(n - 1)] + [0x1234]]
-    if k < 0.9:
+    if k < 0.88:
         return None
-    if k < 0.95:
+    if k < 0.91:
         return ["o"]
+    if k < 0.96:
+        return rand_index_arg(rng)
+    if k < 0.98:
+        return ["f", float_bits(rng.choice(FLOATS + [1.0, 12.0]))]
     return ["tz", rand_tz_spec(rng, 3)]
+
+
+def rand_index_arg(rng):
+    """An object with `__index__`: it returns an int, returns a str, or raises ValueError."""
+    k = rng.random()
+    if k < 0.8:
+        return ["x", ["i", rng.choice([0, 1, 2, 5, 12, 13, 24, 31, 59, 60, 2020, 9999, 10000, -1, 999999,
+                                       2**31 - 1, 2**31, 3652059, 3652060])]]
+    if k < 0.9:
+        return ["x", ["s"]]
+    return ["x", ["e", rng.choice(["idx", "boom"])]]
+
+
+def rand_fold(rng):
+    k = rng.random()
+    if k < 0.7:
+        return rng.choice([0, 0, 1, 2, 2**31])
+    if k < 0.85:
+        return ["f", float_bits(rng.choice([0.0, -0.0, 1.0, 1.5, -1.0, 2.0, float("nan"), float("inf"), 5e-324]))]
+    return rand_index_arg(rng) if rng.random() < 0.7 else rng.choice([None, ["o"], ["s", [49]]])
 
 
 def small_field(rng):
@@ -303,7 +328,7 @@ OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "dat
            "tm_iso", "tm_state", "tm_strftime", "tm_replace", "dt_cmp", "dt_cmp", "dt_hash", "dt_repr", "dt_iso", "dt_ctime",
            "dt_add", "dt_sub_delta", "dt_sub", "dt_sub", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_combine",
            "dt_replace", "dt_fromutc", "dt_astimezone", "dt_state", "dt_strftime", "ctor_date", "ctor_time", "ctor_datetime",
-           "td_float", "td_float", "date_sub_dt", "date_format"]
+           "ctor_time", "ctor_datetime", "fromordinal_arg", "td_float", "td_float", "date_sub_dt", "date_format"]
 
 FLOATS = [0.0, -0.0, 0.5, -0.5, 1.5, -2.5, 2.0, 1e-7, -1e-7, 1e-300, 3.3, 0.1, 1e6, 1e12, 1e18, 1e300, -1e300,
           float("inf"), float("-inf"), float("nan"), 5e-324, 1.7976931348623157e308]
@@ -547,6 +572,8 @@ def gen_obj_case(rng):
     elif fn == "dt_strftime":
         d = rng.choice([rand_date(rng), [rng.randint(1, 1100), rng.randint(1, 12), 1]])
         c.update(a=d + rand_dt(rng)[3:], f=[ord(x) for x in strf_format(rng)])
+    elif fn == "fromordinal_arg":
+        c.update(a=rand_index_arg(rng) if rng.random() < 0.6 else rand_arg(rng, 4))
     elif fn == "ctor_date":
         # 0 and 4 reach the arity checks of the clinic wrapper
         n = rng.choice([1, 1, 3, 3, 2, 0, 4])
@@ -555,10 +582,10 @@ def gen_obj_case(rng):
             c["args"] = [["i", x] for x in rand_date(rng)]
     elif fn == "ctor_time":
         n = rng.choice([0, 1, 1, 2, 2, 4, 5, 6])
-        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
+        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rand_fold(rng))
     else:
         n = rng.choice([1, 1, 2, 2, 3, 3, 7, 8, 0, 9])
-        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
+        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rand_fold(rng))
         if n >= 3 and rng.random() < 0.5:
             c["args"][:3] = [["i", x] for x in rand_date(rng)]
     return c
@@ -648,6 +675,20 @@ def enc_strp_tz(v):
     return [1, [off.days, off.seconds, off.microseconds], t.tzname(None) if r.endswith("')") or r.endswith('")') else None]
 
 
+class Idx:
+    """An object that has `__index__` and nothing else: it returns an int, a str, or raises."""
+
+    def __init__(self, spec):
+        self.spec = spec
+
+    def __index__(self):
+        if self.spec[0] == "i":
+            return self.spec[1]
+        if self.spec[0] == "e":
+            raise ValueError(self.spec[1])
+        return "1"
+
+
 def run_obj(c):
     fn, impl = c["fn"], c["impl"]
     m = IMPL[impl]
@@ -727,7 +768,14 @@ def run_obj(c):
             return "".join(map(chr, a[1]))
         if a[0] == "tz":
             return T(a[1])
+        if a[0] == "x":
+            return Idx(a[1])
+        if a[0] == "f":
+            return struct.unpack("<d", struct.pack("<Q", a[1]))[0]
         return 1.5
+
+    def fold_arg(f):
+        return f if isinstance(f, int) else arg(f)
 
     def kw(c, *names):
         return {py: c[k] for k, py in names if c.get(k) is not None}
@@ -866,9 +914,10 @@ def run_obj(c):
             return capture(lambda: t.strftime("".join(map(chr, c["f"]))))
         if fn == "ctor_date": return ymd(m.date(*map(arg, c["args"])))
         if fn == "ctor_time":
-            return enctm(m.time(*map(arg, c["args"]), fold=c["fold"]))
+            return enctm(m.time(*map(arg, c["args"]), fold=fold_arg(c["fold"])))
         if fn == "ctor_datetime":
-            return encdt(m.datetime(*map(arg, c["args"]), fold=c["fold"]))
+            return encdt(m.datetime(*map(arg, c["args"]), fold=fold_arg(c["fold"])))
+        if fn == "fromordinal_arg": return ymd(m.date.fromordinal(arg(c["a"])))
         raise AssertionError(fn)
 
     return common.py_result(thunk)
