@@ -486,6 +486,7 @@ json-c-scanstring	proven	Modules/_json.c	py_scanstring_impl,scanstring_unicode,_
 json-scanner-call-raw	proven	Modules/_json.c	scanner_call,raise_stop_iteration,_build_rval_index_tuple
 json-scanner-new	proven	Modules/_json.c	scanner_new
 json-encoder-new	proven	Modules/_json.c	encoder_new
+json-encoder-new-sep-typeerror	refuted	Modules/_json.c	encoder_new
 json-encoder-call	proven	Modules/_json.c	encoder_call
 json-encoder-string	proven	Modules/_json.c	encoder_write_string
 json-indent-cache	proven	Modules/_json.c	create_indent_cache,update_indent_cache,get_item_separator,write_newline_indent
@@ -1140,6 +1141,9 @@ bytesobj-bytes-warnings	proven	Objects/bytesobject.c	bytes_str,bytes_richcompare
 bytesobj-bytes-subscript-dispatch	proven	Objects/bytesobject.c	bytes_item,bytes_subscript
 bytesobj-bytes-buffer-readonly	proven	Objects/bytesobject.c	bytes_buffer_getbuffer
 bytesobj-bytes-partition-obj	proven	Objects/bytesobject.c	bytes_partition_impl,bytes_rpartition_impl
+bytesobj-bytes-private-rfind	proven	Objects/bytesobject.c	_PyBytes_ReverseFind
+bytesobj-bytes-getnewargs	proven	Objects/bytesobject.c	bytes_getnewargs
+bytesobj-bytes-fromhex-callback	proven	Objects/bytesobject.c	bytes_fromhex_impl
 bytesobj-bytes-escape-roundtrip	proven	Objects/bytesobject.c	_PyBytes_DecodeEscape2,PyBytes_DecodeEscape,PyBytes_Repr,bytearray_repr,bytearray_repr_lock_held
 bytesobj-bytes-escape-warning	proven	Objects/bytesobject.c	PyBytes_DecodeEscape,_PyBytes_DecodeEscape2
 bytesobj-bytes-repr-size	proven	Objects/bytesobject.c	PyBytes_Repr,_Py_bytes_repr

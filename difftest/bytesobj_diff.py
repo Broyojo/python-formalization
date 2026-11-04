@@ -1967,7 +1967,11 @@ def gen_bytes(rng):
             # bytes_new_impl for a subtype: bytes_subtype_new
             c["fn"] = "bytes.newsub"
     elif r < 0.685 and ty == "bytes":
-        c["fn"] = rng.choice(["bytes.fromhexsub", "bytes.dunderbytes", "bytes.dunderbytessub"])
+        c["fn"] = rng.choice(["bytes.fromhexsub", "bytes.dunderbytes", "bytes.dunderbytessub", "bytes.fromhexcls",
+                              "bytes.fromhexcls", "bytes.getnewargs", "bytes.pickle"])
+        c["cls"] = rng.choice(["bytes", "BSubB", "BHexInit", "BHexNew"])
+        c["sub"] = rng.random() < 0.5
+        c["proto"] = rng.choice([2, 3, 4, 5])
         c["x"] = rng.choice([["str", list(b"61 62 ff")], ["str", list(b"6")], ["bytes", list(b"0a")], ["int", 1],
                              ["str", [0x20ac]], ["str", []]])
     elif r < 0.72:
@@ -2259,6 +2263,18 @@ class BSubB(bytes):
     """A bytes subclass that keeps bytes.__new__ and object.__init__."""
 
 
+class BHexInit(bytes):
+    """type(result) in fromhex fails: __init__ takes two arguments."""
+    def __init__(self, a, b):
+        pass
+
+
+class BHexNew(bytes):
+    """type(result) in fromhex returns an int."""
+    def __new__(cls, *args):
+        return 42
+
+
 class BSub(bytearray):
     pass
 
@@ -2397,6 +2413,20 @@ def run_bytes(case):
             if c.get("err") is not None:
                 kw["errors"] = c["err"]
             r = BSubB(*a, **kw)
+            return [type(r).__name__, b_benc(bytes(r))]
+        if m == "fromhexcls":
+            cls = {"bytes": bytes, "BSubB": BSubB, "BHexInit": BHexInit, "BHexNew": BHexNew}[c["cls"]]
+            r = cls.fromhex(b_build(c["x"]))
+            if isinstance(r, bytes):
+                return [type(r).__name__, b_benc(bytes(r))]
+            return ["obj", type(r).__name__, repr(r)]
+        if m == "getnewargs":
+            o = BSubB(bytes(c["s"])) if c["sub"] else bytes(c["s"])
+            t = o.__getnewargs__()
+            return [type(t).__name__, len(t), type(t[0]).__name__, b_benc(bytes(t[0]))]
+        if m == "pickle":
+            import pickle
+            r = pickle.loads(pickle.dumps(BSubB(bytes(c["s"])), c["proto"]))
             return [type(r).__name__, b_benc(bytes(r))]
         if m == "fromhexsub":
             r = BSubB.fromhex(b_build(c["x"]))

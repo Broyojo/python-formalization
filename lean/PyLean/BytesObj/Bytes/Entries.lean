@@ -190,7 +190,7 @@ def entries : List Entry := [
     statement := "bytes.__new__(T, ...) for a subclass T is an instance of T with the contents bytes(...) has; __bytes__ of any instance is an exact bytes with the same contents; T.fromhex(s) is an instance of T with bytes.fromhex(s)'s contents."
     source := "Doc/library/stdtypes.rst bytes.fromhex ('classmethod'); bytesobject.c:1832-1837, :2951-2953", status := .proven
     prop := ``BytesNewSubtype, thm := some ``bytesNewSubtype_proven
-    notes := "Classes by identity: a subclass with its own __new__ or __init__, which type(result) would run, is out of scope." },
+    notes := "For fromhex: a subclass that keeps bytes.__new__ and object.__init__; any other is bytesobj-bytes-fromhex-callback." },
   { id := "bytesobj-bytes-escape-spec", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_DecodeEscape2"]
     statement := "escape_decode before any run without a backslash: the one-character escapes, backslash-newline, three octal digits (mod 256, a value above 0o377 reported), one octal digit, \\xHH, an unknown escape (kept, reported); a trailing backslash is ValueError; an invalid \\x is the positioned ValueError under strict, '?' under replace, nothing under ignore (then one hex digit skipped), and the unknown-handler ValueError otherwise."
@@ -245,6 +245,22 @@ def entries : List Entry := [
     source := "docstrings, bytesobject.c:1883-1897 ('the separator itself'); python/cpython#137217", status := .proven
     prop := ``PartitionObj, thm := some ``partitionObj_proven
     notes := "Identity of self in the not-found item is out of scope (an exact bytes); its contents are pinned." },
+  { id := "bytesobj-bytes-private-rfind", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_ReverseFind"]
+    statement := "_PyBytes_ReverseFind is the offset plus the start of the last occurrence of the needle (the haystack's length for an empty needle), or -1 when there is none, for every haystack, needle and offset."
+    source := "stringlib_rfind contract, Objects/stringlib/find.h:26-42", status := .proven
+    prop := ``PrivateRFindSpec, thm := some ``privateRFindSpec_proven },
+  { id := "bytesobj-bytes-getnewargs", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_getnewargs"]
+    statement := "b.__getnewargs__() is a 1-tuple holding an exact bytes with the contents for every class of b, and passing it back to cls.__new__ (pickle protocol 2+) rebuilds an instance of cls with the same contents."
+    source := "pickle protocol 2 (__getnewargs__, copyreg.__newobj__)", status := .proven
+    prop := ``GetnewargsPickle, thm := some ``getnewargsPickle_proven },
+  { id := "bytesobj-bytes-fromhex-callback", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_fromhex_impl"]
+    statement := "T.fromhex(s) for a subclass T is whatever type(result) gives, an exception (e.g. an __init__ with another signature) or any object included, called only after the parse succeeded; for bytes no call is made."
+    source := "Doc/library/stdtypes.rst bytes.fromhex (classmethod); bytesobject.c:2621-2623", status := .proven
+    prop := ``FromHexCallback, thm := some ``fromHexCallback_proven
+    notes := "type(result) is a fallible callback; the difftest runs a subclass whose __init__ takes two arguments and one whose __new__ returns 42." },
   { id := "bytesobj-bytes-escape-roundtrip", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytearray_repr", "bytearray_repr_lock_held"]
     statement := "For every byte string and either quote: decoding the body of the literal repr writes, for bytes and for bytearray, gives back the bytes with no invalid escape, so repr is an inverse of escape_decode."
