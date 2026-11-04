@@ -42,12 +42,12 @@ Lib/_pydecimal.py	1202	1286	Decimal.__add__	__add__(self, other, context=None)	m
 Lib/_pydecimal.py	1290	1302	Decimal.__sub__	__sub__(self, other, context=None)	modelled	decimal-sub-exact,decimal-sub-correct,decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	1304	1310	Decimal.__rsub__	__rsub__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1312	1366	Decimal.__mul__	__mul__(self, other, context=None)	modelled	decimal-mul-exact,decimal-mul-nan-exact	
-Lib/_pydecimal.py	1369	1426	Decimal.__truediv__	__truediv__(self, other, context=None)	todo		review: TruedivSpecials pins the zero/infinity cases, but TruedivCoreCorrect is conditional on truedivFin returning and stops before _fix (the correctly rounded quotient is unstated), so a __truediv__ raising for every finite non-zero pair passes; 0/x and NaN operands are not stated.
-Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	modelled	decimal-divide-correct	
+Lib/_pydecimal.py	1369	1426	Decimal.__truediv__	__truediv__(self, other, context=None)	modelled	decimal-truediv-exact,decimal-truediv-specials	
+Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	modelled	decimal-divide-exact,decimal-divide-correct	
 Lib/_pydecimal.py	1466	1471	Decimal.__rtruediv__	__rtruediv__(self, other, context=None)	modelled	decimal-reflected-operators	
-Lib/_pydecimal.py	1473	1507	Decimal.__divmod__	__divmod__(self, other, context=None)	todo		review: DivmodConsistent is the finite-path body unfolded by `rfl` (divmodD = divideD then _fix of the remainder); the special branches (:1484-1503: NaNs, INF with InvalidOperation, x/0 giving DivisionByZero plus InvalidOperation, 0/0 DivisionUndefined) are unstated, and the twin disagreement recorded for its quotient (decimal-pydecimal-floordiv-no-finalize) is not an entry of this row.
+Lib/_pydecimal.py	1473	1507	Decimal.__divmod__	__divmod__(self, other, context=None)	modelled	decimal-divmod-exact	
 Lib/_pydecimal.py	1509	1514	Decimal.__rdivmod__	__rdivmod__(self, other, context=None)	modelled	decimal-reflected-operators	
-Lib/_pydecimal.py	1516	1541	Decimal.__mod__	__mod__(self, other, context=None)	todo		review: DivmodConsistent is `rfl` on the finite path (modD = _fix of _divide's remainder); 'INF % x' and 'x % 0' InvalidOperation, '0 % 0' DivisionUndefined and the NaN branch (:1527-1537) are unstated, and _divide itself is pinned only conditionally.
+Lib/_pydecimal.py	1516	1541	Decimal.__mod__	__mod__(self, other, context=None)	modelled	decimal-mod-exact	
 Lib/_pydecimal.py	1543	1548	Decimal.__rmod__	__rmod__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1550	1625	Decimal.remainder_near	remainder_near(self, other, context=None)	modelled	decimal-remainder-near-exact,decimal-remainder-near-rest	
 Lib/_pydecimal.py	1627	1653	Decimal.__floordiv__	__floordiv__(self, other, context=None)	modelled	decimal-divmod-consistent,decimal-floordiv-twins-agree	
@@ -112,12 +112,12 @@ Lib/_pydecimal.py	3257	3305	Decimal.ln	ln(self, context=None)	todo
 Lib/_pydecimal.py	3307	3335	Decimal._log10_exp_bound	_log10_exp_bound(self)	todo		
 Lib/_pydecimal.py	3337	3386	Decimal.log10	log10(self, context=None)	todo		
 Lib/_pydecimal.py	3388	3416	Decimal.logb	logb(self, context=None)	modelled	decimal-logb-exact	
-Lib/_pydecimal.py	3418	3430	Decimal._islogical	_islogical(self)	todo		
-Lib/_pydecimal.py	3432	3443	Decimal._fill_logical	_fill_logical(self, context, opa, opb)	todo		
-Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context=None)	todo		
-Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	todo		
-Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	todo		
-Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	todo		
+Lib/_pydecimal.py	3418	3430	Decimal._islogical	_islogical(self)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3432	3443	Decimal._fill_logical	_fill_logical(self, context, opa, opb)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	modelled	decimal-logical-exact	
 Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
@@ -136,9 +136,9 @@ Lib/_pydecimal.py	3911	3925	_dec_from_triple	_dec_from_triple(sign, coefficient,
 Lib/_pydecimal.py	3941	3942	_ContextManager.__init__	__init__(self, new_context)	todo		
 Lib/_pydecimal.py	3943	3946	_ContextManager.__enter__	__enter__(self)	todo		
 Lib/_pydecimal.py	3947	3948	_ContextManager.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	todo		review: pyContextNew (Context.lean:531) follows :3978-4003, and the last review's gaps are fixed (otherItems/dictKeyExc hash each element in `dict(...)` order with the \"cannot use ... as a dict key\" wrapping, Objects/dictobject.c:2442-2460; the KeyError message's repr is fallible; SigRefusal states both against ListRaises/DictRaises, independent of listReprErr), but every statement rests on SigKey.other's scope that a non-signal element compares unequal to every signal without running Python code, which removes a path of this body: `s in traps` (:3994, list_contains calls `element == signal`, Objects/listobject.c:686) runs each element's __eq__, so for a hashable k whose __eq__ raises Context(traps=[k]) raises that exception, and for one whose __eq__ answers True every signal is trapped and `key in _signals` (:4023) lets k through, so Context(traps=[k]) returns a context, where ContextInitExact gives KeyError in both; AGENTS.md requires the __eq__-raises path (the rounding branch already models __eq__ answers as eqObj). Also unstated: a traps or flags that is neither a list nor a dict (`_signals + traps` TypeError, signalArg's last case).
+Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	todo		review: pyContextNew (Context.lean:619) follows :3978-4003 and the last review's counterexamples now hold (ListOutcome: Context(traps=[k]) raises what k.__eq__ raises against the first signal, a k equal to every signal traps all nine and is kept as an extra key; a traps that is neither list nor dict is the `_signals + value` TypeError), but the model still drops the comparisons `k in traps` (:3994) makes between two non-signal elements (SigKey.ansBefore gives `.no` for an earlier non-signal element, Objects/listobject.c:686 calls `earlier == k`), so for a hashable class R whose __eq__ raises against another R and returns NotImplemented otherwise, Context(traps=[R(), R()]) raises that exception in CPython where ContextInitExact gives KeyError; the same scope hides the dict merging of two equal non-signal elements with equal hashes (otherItems keeps both as keys, so trapsExtra is wrong for two K() whose __eq__ is always True and __hash__ constant). The hash-collision and stateless-__eq__ scopes are acceptable (signals hash by identity), but this one removes an __eq__-raises path of the credited line.
 Lib/_pydecimal.py	4005	4017	Context._set_integer_check	_set_integer_check(self, name, value, vmin, vmax)	modelled	decimal-context-setattr-exact,decimal-context-attr-twins	
-Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	todo		review: setSignalDict (Context.lean:400) follows :4020-4028 and the repr gap is fixed (SetattrExact gives, through PctRaises and the independent ListRaises/DictRaises, the limit ValueError for {10**5000: 1} and {Clamped: 10**5000}; the SigVal __bool__ scope hides nothing, as no truth test is in :4019-4028), but SigKey.other's scope that a non-signal key compares unequal to every signal without running Python code removes this body's own comparison path: `key in _signals` (:4023, Objects/listobject.c:686) falls back to the key's reflected __eq__, and `key in d` (:4026) compares stored keys of equal hash, so for a hashable key k whose __eq__ raises, Context().traps = {k: 1} raises that exception, and for one whose __eq__ answers True a dict of the nine signals plus k is stored, where SetattrExact gives KeyError in both; AGENTS.md lists the __eq__-raises path as part of the body (the rounding branch of __setattr__ models it, eqObj).
+Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message,decimal-context-init-exact	
 Lib/_pydecimal.py	4030	4053	Context.__setattr__	__setattr__(self, name, value)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message	
 Lib/_pydecimal.py	4055	4056	Context.__delattr__	__delattr__(self, name)	todo		
 Lib/_pydecimal.py	4059	4064	Context.__reduce__	__reduce__(self)	todo		
@@ -168,9 +168,9 @@ Lib/_pydecimal.py	4378	4389	Context.copy_abs	copy_abs(self, a)	modelled	decimal-
 Lib/_pydecimal.py	4391	4402	Context.copy_decimal	copy_decimal(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4404	4415	Context.copy_negate	copy_negate(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4417	4439	Context.copy_sign	copy_sign(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	4441	4476	Context.divide	divide(self, a, b)	todo		review: ctxOp truediv (Context.lean:100) is :4471-4476 and Equiv2 pins the wrapper, but Decimal.__truediv__ is part 1 HOLLOW (TruedivCoreCorrect holds only when it returns and stops before _fix), so the quotient is pinned only to an unproven model.
+Lib/_pydecimal.py	4441	4476	Context.divide	divide(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4478	4499	Context.divide_int	divide_int(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	4501	4520	Context.divmod	divmod(self, a, b)	todo		review: ctxOp divmodD (Context.lean:102) is :4515-4520 and Equiv2 pins the wrapper, but Decimal.__divmod__ is part 1 HOLLOW (DivmodConsistent is rfl on the finite path and the special branches are unstated).
+Lib/_pydecimal.py	4501	4520	Context.divmod	divmod(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4522	4544	Context.exp	exp(self, a)	todo		
 Lib/_pydecimal.py	4546	4567	Context.fma	fma(self, a, b, c)	modelled	decimal-fma-exact,decimal-fma-fin-exact	
 Lib/_pydecimal.py	4569	4580	Context.is_canonical	is_canonical(self, a)	modelled	decimal-context-predicates-exact	
@@ -186,10 +186,10 @@ Lib/_pydecimal.py	4728	4743	Context.is_zero	is_zero(self, a)	modelled	decimal-co
 Lib/_pydecimal.py	4745	4765	Context.ln	ln(self, a)	todo		
 Lib/_pydecimal.py	4767	4793	Context.log10	log10(self, a)	todo		
 Lib/_pydecimal.py	4795	4819	Context.logb	logb(self, a)	modelled	decimal-context-methods-match-decimal,decimal-logb-exact	
-Lib/_pydecimal.py	4821	4846	Context.logical_and	logical_and(self, a, b)	todo		review: ctxBin logicalAnd (Context.lean:111) is :4845-4846 plus :3453 and Equiv2 pins the wrapper, but Decimal.logical_and has no entry (part 1 HOLLOW), so the digit-wise result and the InvalidOperation for non-logical operands are unstated.
-Lib/_pydecimal.py	4848	4865	Context.logical_invert	logical_invert(self, a)	todo		review: ctxUn logicalInvert (Context.lean:127) is :4864-4865 and Equiv1 pins the wrapper, but Decimal.logical_invert has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	4867	4892	Context.logical_or	logical_or(self, a, b)	todo		review: ctxBin logicalOr (Context.lean:112) is :4891-4892 plus :3483 and Equiv2 pins the wrapper, but Decimal.logical_or has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	4894	4919	Context.logical_xor	logical_xor(self, a, b)	todo		review: ctxBin logicalXor (Context.lean:113) is :4918-4919 plus :3503 and Equiv2 pins the wrapper, but Decimal.logical_xor has no entry (part 1 HOLLOW), so the result is unstated.
+Lib/_pydecimal.py	4821	4846	Context.logical_and	logical_and(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4848	4865	Context.logical_invert	logical_invert(self, a)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4867	4892	Context.logical_or	logical_or(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4894	4919	Context.logical_xor	logical_xor(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
 Lib/_pydecimal.py	4921	4946	Context.max	max(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4948	4963	Context.max_mag	max_mag(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4965	4990	Context.min	min(self, a, b)	modelled	decimal-context-methods-match-decimal	
@@ -205,7 +205,7 @@ Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-
 Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		
 Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-quantize-exact	
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
-Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	todo		review: ctxOp modD (Context.lean:103) is :5401-5406 and Equiv2 pins the wrapper, but Decimal.__mod__ is part 1 HOLLOW (rfl on the finite path; the INF % x, x % 0, 0 % 0 and NaN branches are unstated).
+Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-remainder-near-exact,decimal-remainder-near-rest	
 Lib/_pydecimal.py	5442	5469	Context.rotate	rotate(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-rotate-exact	
 Lib/_pydecimal.py	5471	5493	Context.same_quantum	same_quantum(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-same-quantum-exact	

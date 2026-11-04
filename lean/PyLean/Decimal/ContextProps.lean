@@ -335,21 +335,97 @@ theorem hasKey_keyed_sig (d : SigDict) (s : Signal) (h : (d.lookup s).isSome) :
       simp only [hasKey, keyed] at this
       simp [hasKey, keyed, this]
 
-/-- A dict with an entry for every signal is what `_set_signal_dict` keeps. -/
-theorem setSignalDict_keyed (d : SigDict) (h : ∀ s, (d.lookup s).isSome) :
-    setSignalDict (.dict (keyed d)) = .ok d := by
-  have h1 : pySignals.all (fun s => hasKey (keyed d) (.sig s)) = true := by
+/-- A signal is found in `_signals`: by identity, at its own position. -/
+theorem ansIn_sig (s : Signal) : ansIn (pySignals.map (SigKey.sig s).eqSig) = .ok true := by
+  cases s <;> rfl
+
+/-- `checkKeys` passes a dict whose keys all compare equal to some signal before any comparison
+raises. -/
+theorem checkKeys_ok (fmt : PyExc) : ∀ d : List (SigKey × SigVal),
+    (∀ p ∈ d, ansIn (pySignals.map p.1.eqSig) = .ok true) → checkKeys fmt d = .ok ()
+  | [], _ => rfl
+  | (k, v) :: rest, h => by
+    have hk := h (k, v) (by simp)
+    simp only [checkKeys, hk, bind, Except.bind, Bool.not_true]
+    exact checkKeys_ok fmt rest (fun p hp => h p (by simp [hp]))
+
+theorem extrasOf_keyed (d : SigDict) : extrasOf (keyed d) = [] := by
+  induction d with
+  | nil => rfl
+  | cons x xs ih => simpa [extrasOf, keyed, SigKey.isSig] using ih
+
+theorem sigEntries_append (a b : List (SigKey × SigVal)) :
+    sigEntries (a ++ b) = sigEntries a ++ sigEntries b := by
+  simp [sigEntries, List.filterMap_append]
+
+theorem extrasOf_append (a b : List (SigKey × SigVal)) :
+    extrasOf (a ++ b) = extrasOf a ++ extrasOf b := by
+  simp [extrasOf, List.filter_append]
+
+theorem sigEntries_nonsig : ∀ x : List (SigKey × SigVal), (∀ p ∈ x, p.1.isSig = false) → sigEntries x = []
+  | [], _ => rfl
+  | (k, v) :: rest, h => by
+    have hk := h (k, v) (by simp)
+    cases k with
+    | sig s => simp [SigKey.isSig] at hk
+    | other r hh eq =>
+      simp only [sigEntries, List.filterMap_cons]
+      exact sigEntries_nonsig rest (fun p hp => h p (by simp [hp]))
+
+theorem extrasOf_nonsig : ∀ x : List (SigKey × SigVal), (∀ p ∈ x, p.1.isSig = false) → extrasOf x = x
+  | [], _ => rfl
+  | (k, v) :: rest, h => by
+    have hk := h (k, v) (by simp)
+    simp only [extrasOf, List.filter_cons, hk, Bool.not_false, if_true]
+    exact congrArg _ (extrasOf_nonsig rest (fun p hp => h p (by simp [hp])))
+
+/-- Extra keys a dict was stored with. -/
+def ExtrasOk (x : List (SigKey × SigVal)) : Prop :=
+  ∀ p ∈ x, p.1.isSig = false ∧ ansIn (pySignals.map p.1.eqSig) = .ok true
+
+theorem hasKey_append_left (a b : List (SigKey × SigVal)) (k : SigKey) (h : hasKey a k = true) :
+    hasKey (a ++ b) k = true := by
+  simp only [hasKey, List.any_append, Bool.or_eq_true] at h ⊢
+  exact Or.inl h
+
+/-- A dict with an entry for every signal, plus extra keys `__eq__` lets through, is what
+`_set_signal_dict` keeps. -/
+theorem setSignalDict_keyed_extra (d : SigDict) (x : List (SigKey × SigVal))
+    (h : ∀ s, (d.lookup s).isSome) (hx : ExtrasOk x) :
+    setSignalDict (.dict (keyed d ++ x)) = .ok (d, x) := by
+  have h1 : pySignals.all (fun s => hasKey (keyed d ++ x) (.sig s)) = true := by
     rw [List.all_eq_true]
     intro s _
-    exact hasKey_keyed_sig d s (h s)
-  simp [setSignalDict, hasOther_keyed, h1, sigEntries_keyed]
+    exact hasKey_append_left _ _ _ (hasKey_keyed_sig d s (h s))
+  have hc : checkKeys (CtxArg.pct (.dict (keyed d ++ x)) (.keyError "~is not a valid signal dict"))
+      (keyed d ++ x) = .ok () := by
+    apply checkKeys_ok
+    intro p hp
+    simp only [List.mem_append] at hp
+    rcases hp with hp | hp
+    · simp only [keyed, List.mem_map] at hp
+      obtain ⟨q, _, rfl⟩ := hp
+      exact ansIn_sig q.1
+    · exact (hx p hp).2
+  simp only [setSignalDict, hc, h1, bind, Except.bind, Bool.not_true, pure, Except.pure]
+  rw [sigEntries_append, extrasOf_append, sigEntries_keyed, extrasOf_keyed,
+    sigEntries_nonsig x (fun p hp => (hx p hp).1), extrasOf_nonsig x (fun p hp => (hx p hp).1)]
+  simp
+
+/-- A dict with an entry for every signal is what `_set_signal_dict` keeps. -/
+theorem setSignalDict_keyed (d : SigDict) (h : ∀ s, (d.lookup s).isSome) :
+    setSignalDict (.dict (keyed d)) = .ok (d, []) := by
+  have := setSignalDict_keyed_extra d [] h (fun p hp => by simp at hp)
+  simpa using this
 
 theorem pySetattr_flags (c : PyContext) (v : CtxArg) :
-    pySetattr c "flags" v = (do let d ← setSignalDict v; pure { c with flags := d }) := by
+    pySetattr c "flags" v =
+      (do let d ← setSignalDict v; pure { c with flags := d.1, flagsExtra := d.2 }) := by
   simp [pySetattr]
 
 theorem pySetattr_traps (c : PyContext) (v : CtxArg) :
-    pySetattr c "traps" v = (do let d ← setSignalDict v; pure { c with traps := d }) := by
+    pySetattr c "traps" v =
+      (do let d ← setSignalDict v; pure { c with traps := d.1, trapsExtra := d.2 }) := by
   simp [pySetattr]
 
 /-- All-false dict for every signal. -/
@@ -382,7 +458,7 @@ theorem contextNewClearsFlagsPy_proven : ContextNewClearsFlagsPy := by
   cases hf
   rw [pySetattr_flags] at h
   have hk := setSignalDict_keyed clearDict0 clearDict0_total
-  have hk' : setSignalDict (.dict (keyed (pySignals.map (fun s => (s, false))))) = .ok clearDict0 := hk
+  have hk' : setSignalDict (.dict (keyed (pySignals.map (fun s => (s, false))))) = .ok (clearDict0, []) := hk
   simp only [hk', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
   subst h
   exact clearDict0_false s

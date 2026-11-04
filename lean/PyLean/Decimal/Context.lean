@@ -220,15 +220,34 @@ def pySignals : List Signal :=
   [.clamped, .divisionByZero, .inexact, .overflow, .rounded,
    .underflow, .invalidOperation, .subnormal, .floatOperation]
 
+/-- What `mode == value` gives, in `value in _rounding_modes`, for an object `value` of a class
+that is not `str` (or a subclass of it): `str.__eq__` returns `NotImplemented`, so the reflected
+`value.__eq__(mode)` runs (Objects/object.c:1122-1147, `PyObject_RichCompareBool`). `yes` is a
+true result (after `__bool__`), `no` a false one, `NotImplemented` included (the identity
+fallback), and `raises e` an exception from `__eq__` or from the result's `__bool__`. -/
+inductive EqAns where
+  | yes
+  | no
+  | raises (e : PyExc)
+  deriving Repr, DecidableEq, Inhabited
+
 /-- An element of a list, or a key of a dict, passed as `flags` or `traps`. -/
 inductive SigKey where
   | sig (s : Signal)
   /-- Any other object. `repr` is what `repr()` of it raises (`none`: it returns; an int of more
   than 4300 digits raises the limit `ValueError`, `intKey`), `hash` what `hash()` of it raises
-  (`none`: hashable; a list raises `TypeError`). Scope: it compares unequal to every signal and to
-  the other elements without running Python code (`s in traps` and the dict lookups at
-  _pydecimal.py:3994, :4023, :4026 call no `__eq__` that raises); the C twin reads neither field. -/
-  | other (repr : StrErr := none) (hash : StrErr := none)
+  (`none`: hashable; a list raises `TypeError`), and `eq` what its `__eq__` answers against the
+  nine signals, in `_signals` order (a missing answer is `no`; `NotImplemented` is `no`, since a
+  signal's own `type.__eq__` then gives `NotImplemented` too and the identity fallback is false,
+  Objects/object.c:1049-1094). `x in _signals`, `s in traps` and `key in d` (_pydecimal.py:3994,
+  :4023, :4026) run that `__eq__`, so it can accept a key or raise.
+  Scope: `__eq__` is a function of its argument (no state, no mutation of the list or dict being
+  searched); the hash of an object, when it returns, differs from every signal's (a signal hashes by
+  identity), so the dict lookups and insertions compare it with no signal; and two distinct
+  non-signal elements compare unequal without raising (`s in traps` compares an element with the
+  ones before it, Objects/listobject.c:677-692, and `dict(...)` compares keys with equal hashes).
+  The C twin reads none of the three fields: it compares signals by identity. -/
+  | other (repr : StrErr := none) (hash : StrErr := none) (eq : List EqAns := [])
   deriving Repr, DecidableEq, Inhabited
 
 /-- An int element or key: hashable, and `repr()` of it raises past 4300 digits. -/
@@ -241,7 +260,28 @@ def SigKey.isSig : SigKey → Bool
 /-- What `repr()` of an element or key raises; a signal is a class, whose repr always returns. -/
 def SigKey.reprErr : SigKey → StrErr
   | .sig _ => none
-  | .other r _ => r
+  | .other r _ _ => r
+
+/-- The position of a signal in `_signals` (_pydecimal.py:332-333). -/
+def Signal.idx : Signal → Nat
+  | .clamped => 0 | .divisionByZero => 1 | .inexact => 2 | .overflow => 3 | .rounded => 4
+  | .underflow => 5 | .invalidOperation => 6 | .subnormal => 7 | .floatOperation => 8
+
+/-- What comparing an element or key with the signal `s` answers: a signal is equal only to itself
+(classes compare by identity; a metaclass overriding `__eq__` is out of scope), any other object
+answers through its own `__eq__`. -/
+def SigKey.eqSig : SigKey → Signal → EqAns
+  | .sig t, s => if t = s then .yes else .no
+  | .other _ _ eq, s => eq.getD s.idx .no
+
+/-- `x in seq` for an `x` whose comparisons with the items of `seq` answer `as`, in order
+(`list_contains`, Objects/listobject.c:677-692, with `PyObject_RichCompareBool`): the first true
+answer stops it, an exception propagates, and no true answer is `False`. -/
+def ansIn : List EqAns → Py Bool
+  | [] => .ok false
+  | .yes :: _ => .ok true
+  | .no :: rest => ansIn rest
+  | .raises e :: _ => .error e
 
 /-- A value of a dict passed as `flags` or `traps`: its truth value, which is all
 `_raise_error` reads (`if not self.traps[error]`, :4118; a `__bool__` that raises is out of
@@ -275,17 +315,6 @@ def dictReprErr : List (SigKey × SigVal) → StrErr
       | some e => some e
       | none => dictReprErr rest
 
-/-- What `mode == value` gives, in `value in _rounding_modes`, for an object `value` of a class
-that is not `str` (or a subclass of it): `str.__eq__` returns `NotImplemented`, so the reflected
-`value.__eq__(mode)` runs (Objects/object.c:1122-1147, `PyObject_RichCompareBool`). `yes` is a
-true result (after `__bool__`), `no` a false one, `NotImplemented` included (the identity
-fallback), and `raises e` an exception from `__eq__` or from the result's `__bool__`. -/
-inductive EqAns where
-  | yes
-  | no
-  | raises (e : PyExc)
-  deriving Repr, DecidableEq, Inhabited
-
 /-- A value assigned to a context attribute or passed to `Context()`. `int` is an object of
 exact type `int` (an `int` subclass that overrides `__str__` or `__eq__` is out of scope). -/
 inductive CtxArg where
@@ -303,7 +332,9 @@ inductive CtxArg where
   /-- A tuple, which `"%s ..." % d` takes as its argument tuple; `elems` is what `str()` of each
   element raises. -/
   | tuple (elems : List StrErr)
-  /-- Any other object; `str` is what `str()` of it raises. -/
+  /-- Any other object; `str` is what `str()` of it raises. Scope: its class defines no
+  `__radd__` (which `_signals + value` in `Context()` would call, _pydecimal.py:3994) and no
+  `__eq__` that answers true for a rounding mode (that is `eqObj`). -/
   | obj (str : StrErr := none)
   deriving Repr, Inhabited
 
@@ -339,6 +370,11 @@ structure PyContext where
   an operation does under such a context (`_pick_rounding_function[rounding]` hashes the object)
   is out of scope. -/
   roundingObj : Option (Nat × List EqAns × StrErr) := none
+  /-- The keys of the `flags` and `traps` dicts that are not signals, which `_set_signal_dict`
+  stores when their `__eq__` answers true against a signal (`Context(traps=[k])` for such a `k`).
+  `__repr__`, `__reduce__` and `copy` read them in Python; their models do not. -/
+  flagsExtra : List (SigKey × SigVal) := []
+  trapsExtra : List (SigKey × SigVal) := []
   deriving Repr, DecidableEq, Inhabited
 
 def Rounding.name : Rounding → String
@@ -395,20 +431,38 @@ def sigEntries (d : List (SigKey × SigVal)) : SigDict :=
     | .sig s => some (s, p.2.truth)
     | .other .. => none)
 
-/-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. Each refusal formats `d` with `%s`
-(:4021, :4024, :4027), which can itself raise (`CtxArg.pct`). -/
-def setSignalDict (v : CtxArg) : Py SigDict :=
+/-- The keys of a dict that are not signals, with their values. -/
+def extrasOf (d : List (SigKey × SigVal)) : List (SigKey × SigVal) := d.filter (fun p => !p.1.isSig)
+
+/-- `for key in d: if not key in _signals: raise KeyError(...)` (_pydecimal.py:4022-4024): each key
+in insertion order is searched for in the list `_signals`, whose `list_contains` compares
+`signal == key`; a signal's `type.__eq__` gives `NotImplemented` for anything but itself, so a key
+that is not a signal answers through its own reflected `__eq__` (`SigKey.eqSig`). The first key
+found in none refuses the dict with `fmt`; an exception from `__eq__` propagates. -/
+def checkKeys (fmt : PyExc) : List (SigKey × SigVal) → Py Unit
+  | [] => .ok ()
+  | (k, _) :: rest => do
+    if !(← ansIn (pySignals.map k.eqSig)) then throw fmt
+    checkKeys fmt rest
+
+/-- `Context._set_signal_dict`, _pydecimal.py:4019-4028: what is stored is the dict itself, its
+signal entries and any other keys `__eq__` let through. `key in d` for each signal (:4025-4027) is
+a dict lookup, which compares no key under the hash scope of `SigKey.other`. Each refusal formats
+`d` with `%s` (:4021, :4024, :4027), which can itself raise (`CtxArg.pct`). -/
+def setSignalDict (v : CtxArg) : Py (SigDict × List (SigKey × SigVal)) :=
   match v with
-  | .dict d =>
-    if hasOther d then .error (v.pct (.keyError "~is not a valid signal dict"))
-    else if !pySignals.all (fun s => hasKey d (.sig s)) then .error (v.pct (.keyError "~is not a valid signal dict"))
-    else .ok (sigEntries d)
+  | .dict d => do
+    checkKeys (v.pct (.keyError "~is not a valid signal dict")) d
+    if !pySignals.all (fun s => hasKey d (.sig s)) then throw (v.pct (.keyError "~is not a valid signal dict"))
+    return (sigEntries d, extrasOf d)
   | v => .error (v.pct (.typeError "~must be a signal dict"))
 
 /-- The signals of a list assigned to `_ignored_flags`. `_raise_error` and `_regard_flags`
 only test signals for membership and remove them (_pydecimal.py:4113, :4141), so other
-elements change nothing they do. Any other object is stored as is in Python and is out of
-scope here: `_ignored_flags` is private, and the module only ever assigns a list. -/
+elements change nothing they do, unless their `__eq__` against a signal answers true or raises
+(`error in self._ignored_flags` runs it), which is out of scope with any other object: it is
+stored as is in Python, `_ignored_flags` is private, and the module only ever assigns a list of
+signals. -/
 def ignoredOf : CtxArg → List Signal
   | .list l => l.filterMap (fun k => match k with
     | .sig s => some s
@@ -458,8 +512,12 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
       | some r => return { c with rounding := r, roundingObj := some (id, eq, st) }
       | none => throw (invalidRoundingExc (.eqObj id eq st))
     | v => throw (invalidRoundingExc v)
-  else if name == "flags" then return { c with flags := ← setSignalDict v }
-  else if name == "traps" then return { c with traps := ← setSignalDict v }
+  else if name == "flags" then
+    let (d, x) ← setSignalDict v
+    return { c with flags := d, flagsExtra := x }
+  else if name == "traps" then
+    let (d, x) ← setSignalDict v
+    return { c with traps := d, trapsExtra := x }
   else if name == "_ignored_flags" then return { c with ignored := ignoredOf v }
   else throw (.named "AttributeError" s!"'decimal.Context' object has no attribute '{name}'")
 
@@ -488,26 +546,56 @@ def dictKeyExc (e : PyExc) : PyExc :=
   | .typeError m => .typeError s!"~cannot use as a dict key ({m})"
   | e => e
 
-/-- The items `dict(...)` adds after the signals for the elements of `l` (each `int(s in l)` is
-1), in order: a signal is already a key, any other element is a new key, and one whose `hash()`
-raises stops the construction. Equal elements are kept as separate keys (scope of `SigKey.other`). -/
-def otherItems : List SigKey → Py (List (SigKey × SigVal))
+/-- `int(s in l)` then the insertion, for the signals of `_signals + l`, in `_signals` order: `s in l`
+compares each element with `s` until one answers true (`SigKey.eqSig`; another signal is
+unequal), and an exception from an element's `__eq__` stops the construction. -/
+def sigItems (l : List SigKey) : List Signal → Py (List (SigKey × SigVal))
   | [] => .ok []
-  | .sig _ :: rest => otherItems rest
-  | .other r h :: rest =>
+  | s :: rest => do
+    let b ← ansIn (l.map (fun x : SigKey => x.eqSig s))
+    return (.sig s, { truth := b }) :: (← sigItems l rest)
+
+/-- What comparing an earlier element `x` with the element `k` answers in `k in l`: a signal `t`
+gives `t == k`, which is `NotImplemented` from `type.__eq__` and then `k`'s reflected `__eq__`;
+another non-signal element is unequal without raising (scope of `SigKey.other`). -/
+def SigKey.ansBefore (k : SigKey) : SigKey → EqAns
+  | .sig t => k.eqSig t
+  | .other .. => .no
+
+/-- `k in l` for an element `k` that is not a signal, `pre` the elements before it: `list_contains`
+compares each of them with `k` before it reaches `k` itself, which is true by identity. A signal
+`t` among them gives `t == k`, `NotImplemented` from `type.__eq__` and then `k`'s reflected
+`__eq__`, which can raise; another non-signal element is unequal without raising (scope of
+`SigKey.other`). -/
+def selfIn (k : SigKey) (pre : List SigKey) : Py Unit := do
+  let _ ← ansIn (pre.map k.ansBefore)
+  return ()
+
+/-- The items `dict(...)` adds after the signals for the elements of `l` (each `int(s in l)` is
+1), in order, `pre` the elements already consumed. A signal is already a key: its `int(s in l)`
+repeats the comparisons its first pass made, with the same answers, and the dict keeps its value.
+Any other element runs `selfIn`, is hashed (a `hash()` that raises stops the construction), and is
+a new key. Distinct elements are separate keys (scope of `SigKey.other`). -/
+def otherItems (pre : List SigKey) : List SigKey → Py (List (SigKey × SigVal))
+  | [] => .ok []
+  | .sig t :: rest => otherItems (pre ++ [.sig t]) rest
+  | .other r h eq :: rest => do
+    selfIn (.other r h eq) pre
     match h with
     | some e => .error (dictKeyExc e)
-    | none => do return (.other r none, { truth := true }) :: (← otherItems rest)
+    | none => return (.other r none eq, { truth := true }) :: (← otherItems (pre ++ [.other r h eq]) rest)
 
 /-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3994: the signals first, each
-set exactly when listed, then the other elements, which stay in the dict for `_set_signal_dict`
-to refuse. -/
+set when an element compares equal to it, then the other elements, which stay in the dict for
+`_set_signal_dict` to check. -/
 def signalDictOf (l : List SigKey) : Py (List (SigKey × SigVal)) := do
-  let rest ← otherItems l
-  return pySignals.map (fun s => (SigKey.sig s, ({ truth := l.contains (.sig s) } : SigVal))) ++ rest
+  let sigs ← sigItems l pySignals
+  let rest ← otherItems [] l
+  return sigs ++ rest
 
 /-- The value `Context()` assigns to `traps` or `flags`, _pydecimal.py:3991-4003. A
-value that is neither a dict nor a list fails at `_signals + value`. -/
+value that is neither a dict nor a list fails at `_signals + value` (`list_concat`,
+Objects/listobject.c; an object whose class defines `__radd__` is out of scope, see `CtxArg.obj`). -/
 def signalArg (dflt : List (SigKey × SigVal)) : CtxArg → Py CtxArg
   | .none => .ok (.dict dflt)
   | .dict d => .ok (.dict d)
@@ -537,7 +625,7 @@ def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c ← pySetattr c "capitals" (orElseArg a.capitals (.int dc.capitals))
   let c ← pySetattr c "clamp" (orElseArg a.clamp (.int dc.clamp))
   let c ← pySetattr c "_ignored_flags" (.list ((a.ignored.getD []).map .sig))
-  let c ← pySetattr c "traps" (← signalArg (keyed dc.traps) a.traps)
+  let c ← pySetattr c "traps" (← signalArg (keyed dc.traps ++ dc.trapsExtra) a.traps)
   pySetattr c "flags" (← signalArg (keyed (pySignals.map (fun s => (s, false)))) a.flags)
 
 /-- `Context.__repr__`, _pydecimal.py:4066-4077: the names in dict order. -/
@@ -557,8 +645,8 @@ def clearTraps (c : PyContext) : PyContext := { c with traps := clearDict c.trap
 def contextCopy (dc c : PyContext) : Py PyContext :=
   pyContextNew dc
     { prec := .int c.prec, rounding := c.roundingArg, emin := .int c.emin, emax := .int c.emax
-      capitals := .int c.capitals, clamp := .int c.clamp, flags := .dict (keyed c.flags)
-      traps := .dict (keyed c.traps), ignored := some c.ignored }
+      capitals := .int c.capitals, clamp := .int c.clamp, flags := .dict (keyed c.flags ++ c.flagsExtra)
+      traps := .dict (keyed c.traps ++ c.trapsExtra), ignored := some c.ignored }
 
 /-- `Context.__reduce__`, _pydecimal.py:4059-4064: the arguments to rebuild the context. -/
 def contextReduce (c : PyContext) : CtxInit :=

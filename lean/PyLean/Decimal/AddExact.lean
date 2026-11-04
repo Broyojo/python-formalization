@@ -270,7 +270,7 @@ theorem strLimit_fix_run (c : Ctx) (rint : Nat) (s : Bool) (E : Int) (fl : List 
 /-- `__add__` of two non-zero finite operands once `_normalize` has brought them to one exponent `E`
 (_pydecimal.py:1255-1286): opposite signs and equal coefficients give the zero of the
 `negativezero` sign at `min(ea, eb)`; otherwise the signed sum of the working coefficients, whose
-`str()` (:1285 for `result.int`) is subject to the int/str limit, goes through `_fix`. -/
+`str()` (`Decimal(result)`, :1284) is subject to the int/str limit, goes through `_fix`. -/
 theorem add_run_of_norm (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
     (fl : List Signal) (ha : ca ≠ 0) (hb : cb ≠ 0) (hl1 : numDigits ca ≤ maxStrDigits)
     (hl2 : numDigits cb ≤ maxStrDigits) (s1 s2 : Bool) (n1 n2 : Nat) (E : Int)
@@ -324,10 +324,10 @@ theorem add_run_of_norm (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) 
 
 /-! ## `_normalize` -/
 
-/-- `exp = tmp.exp + min(-1, len(str(tmp.int)) - prec - 2)` (_pydecimal.py:5740). -/
+/-- `exp = tmp.exp + min(-1, len(str(tmp.int)) - prec - 2)` (_pydecimal.py:5740-5742). -/
 def normX (p : Nat) (ct : Nat) (T : Int) : Int := T + min (-1) ((numDigits ct : Int) - p - 2)
 
-/-- `other_len + other.exp - 1 < exp` (_pydecimal.py:5741): the other operand is below `10^exp`
+/-- `other_len + other.exp - 1 < exp` (_pydecimal.py:5743): the other operand is below `10^exp`
 and is replaced by `1·10^exp`. -/
 def normSub (p : Nat) (ct : Nat) (T : Int) (co : Nat) (oe : Int) : Prop :=
   (numDigits co : Int) + oe - 1 < normX p ct T
@@ -518,7 +518,7 @@ theorem add_finish (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa sb : Boo
 /-- `__add__` (_pydecimal.py:1202-1286) of two non-zero finite operands, for every context with
 `prec ≥ 1`: `_WorkRep` raises the int/str-limit `ValueError` for a coefficient of more than 4300
 digits (`int(value._int)`, :1255-1256 via :5703); otherwise an exact sum of zero is the zero of
-sign `ROUND_FLOOR` at `min(ea, eb)` through `_fix` (:1263-1265), the working sum `_normalize` makes
+sign `ROUND_FLOOR` at `min(ea, eb)` through `_fix` (:1258-1261), the working sum `_normalize` makes
 raises the int/str-limit `ValueError` in `str(result.int)` when it has more than 4300 digits (its
 digit count is the exact sum's plus `min(ea, eb)` less the working exponent), and anything else is
 the exact sum `x` rounded into the context by `_fix` (`fixSpec`, overflow and subnormals included):
@@ -585,7 +585,7 @@ theorem add_fin_exact (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Boo
     · obtain ⟨hE', hσ⟩ := hns hsub
       exact Or.inl ⟨by rw [if_neg hsub]; exact hσ, hE'⟩
 
-/-- `0 + b` for a non-zero finite `b` (_pydecimal.py:1236-1240): `b` padded with zeros to the
+/-- `0 + b` for a non-zero finite `b` (_pydecimal.py:1240-1244): `b` padded with zeros to the
 exponent `max(min(ea, eb), eb - prec - 1)` (`_rescale` only pads here), through `_fix`. -/
 theorem add_zero_left (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bool) (ea : Int) (sb : Bool)
     (cb : Nat) (eb : Int) (hb : cb ≠ 0) :
@@ -602,7 +602,7 @@ theorem add_zero_left (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Boo
   rw [← fixExact_fin c _ _ _ fl hp hne]
   simp only [add, hb, and_false, ↓reduceIte, liftPy_run, hr, bind_pure]
 
-/-- `a + 0` for a non-zero finite `a` (_pydecimal.py:1241-1245). -/
+/-- `a + 0` for a non-zero finite `a` (_pydecimal.py:1245-1249). -/
 theorem add_zero_right (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bool) (ca : Nat) (ea : Int)
     (sb : Bool) (eb : Int) (ha : ca ≠ 0) :
     (add c (.fin sa ca ea) (.fin sb 0 eb)).run fl =
@@ -618,7 +618,7 @@ theorem add_zero_right (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bo
   rw [← fixExact_fin c _ _ _ fl hp hne]
   simp only [add, ha, false_and, ↓reduceIte, liftPy_run, hr, bind_pure]
 
-/-- `0 + 0` (_pydecimal.py:1231-1235). -/
+/-- `0 + 0` (_pydecimal.py:1233-1239). -/
 theorem add_zero_zero (c : Ctx) (fl : List Signal) (sa : Bool) (ea : Int) (sb : Bool) (eb : Int) :
     (add c (.fin sa 0 ea) (.fin sb 0 eb)).run fl =
       (fix c (.fin ((sa && sb) || decide (c.rounding = .floor ∧ sa ≠ sb)) 0 (min ea eb))).run fl := by
