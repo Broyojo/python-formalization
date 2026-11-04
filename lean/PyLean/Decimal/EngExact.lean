@@ -267,6 +267,27 @@ theorem eng_fin (neg : Bool) (c : Nat) (e : Int) (hlim : InCLimits (.fin neg c e
       have := hId this.1
       omega
 
+/-- `repr(d)` in `_pydecimal` (_pydecimal.py:1071-1074, whose comment states the invariant
+`eval(repr(d)) == d`): it is `Decimal('` + `str(d)` + `')`, raising what `str(d)` raises, and for
+every value within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300)
+the quoted string reads back to `d` exactly: sign, coefficient, exponent, NaN kind and payload. -/
+def ReprExact : Prop :=
+  (∀ d : Dec, pyRepr d = (fun s => "Decimal('".toList ++ s ++ "')".toList) <$> pyStr d) ∧
+  (∀ d : Dec, InCLimits d →
+    (∀ neg c e, d = .fin neg c e → numDigits c + 6 ≤ maxStrDigits) →
+    (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
+    ∃ s, pyRepr d = .ok ("Decimal('".toList ++ s ++ "')".toList) ∧ pyParse s = .ok d)
+
+theorem reprExact_proven : ReprExact := by
+  refine ⟨fun d => ?_, fun d hl h1 h2 => ?_⟩
+  · simp only [pyRepr, bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
+  · have h := strRoundTripPyBounded_proven d hl h1 h2
+    cases hs : pyStr d with
+    | error x => rw [hs] at h; exact absurd h (by simp [bind, Except.bind])
+    | ok s =>
+      rw [hs] at h
+      exact ⟨s, by simp [pyRepr, hs, bind, Except.bind, pure, Except.pure], h⟩
+
 theorem engPad_zero (e : Int) : engPad 0 e = 0 := by
   unfold engPad engDot
   simp only [show (Nat.toDigits 10 0 == ['0']) = true from rfl, show numDigits 0 = 1 from rfl, ↓reduceIte]

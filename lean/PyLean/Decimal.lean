@@ -737,7 +737,13 @@ def entries : List Entry := [
     statement := "For every decimal d within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300): Decimal(d.to_eng_string()) is d with the zero, one or two trailing zeros the spelling adds moved into the coefficient (same sign and value, the exponent lowered by as much; zeros, infinities and NaNs come back exactly); and the spelling of a finite d is [-] I [. F] [E±x] where, when an exponent is printed, x is a multiple of 3 and, for a non-zero d, I has one to three digits."
     source := "Decimal.to_eng_string docstring (Lib/_pydecimal.py:1129-1134: 'Engineering notation has an exponent which is a multiple of 3. This can leave up to 3 digits to the left of the decimal place and may require the addition of either one or two trailing zeros.'); Lib/_pydecimal.py:1076-1135"
     status := .proven, prop := ``EngStringExact, thm := some ``engStringExact_proven
-    notes := "pyEng now carries the int/str limit of '%+d' % (leftdigits-dotplace) (:1124), which the old toEng (a pure string) did not; the C twin's mpd_to_eng has none, and the difftest (eng_py/eng_c, exponents near 10**4300 for _pydecimal) checks both. Checked on 3.15.2: 20,000 random values (coefficients of up to 20 digits, zero included, exponents up to ±10**6) read back as stated, exponent a multiple of 3 and one to three integer digits." }
+    notes := "pyEng now carries the int/str limit of '%+d' % (leftdigits-dotplace) (:1124), which the old toEng (a pure string) did not; the C twin's mpd_to_eng has none, and the difftest (eng_py/eng_c, exponents near 10**4300 for _pydecimal) checks both. Checked on 3.15.2: 20,000 random values (coefficients of up to 20 digits, zero included, exponents up to ±10**6) read back as stated, exponent a multiple of 3 and one to three integer digits." },
+  { id := "decimal-repr-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__repr__"]
+    statement := "repr(d) in _pydecimal is \"Decimal('\" + str(d) + \"')\", raising exactly what str(d) raises (the int/str-limit ValueError of an exponent of more than 4300 digits); for every value within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300) the quoted string reads back to d exactly (sign, coefficient, exponent, NaN kind and payload), the invariant eval(repr(d)) == d the source states."
+    source := "Lib/_pydecimal.py:1071-1074 (comment '# Invariant:  eval(repr(d)) == d')"
+    status := .proven, prop := ``ReprExact, thm := some ``reprExact_proven
+    notes := "pyRepr replaces the old reprD (a pure string without str()'s limit) for _pydecimal; the C twin keeps reprD. The read-back is decimal-str-roundtrip-py-bounded on the quoted string; past the bounds it is the int-limit class (decimal-str-roundtrip-py, python/cpython#96589)." }
 ]
 
 end PyLean.Decimal

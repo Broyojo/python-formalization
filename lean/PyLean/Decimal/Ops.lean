@@ -423,8 +423,14 @@ def pyEngObj (o : PyObj) (caps : Bool := true) : Py (List Char) :=
 /-- `Decimal.to_eng_string()` in `_pydecimal` (`capitals` from the context). -/
 def pyEng (d : Dec) (caps : Bool := true) : Py (List Char) := pyEngObj d.toPyObj caps
 
-/-- `Decimal.__repr__`, _pydecimal.py:1071-1074. -/
+/-- The spelling of `repr(d)` (`_decimal`'s `dec_repr` writes the same, without a limit). -/
 def reprD (d : Dec) : List Char := "Decimal('".toList ++ toSci d ++ "')".toList
+
+/-- `Decimal.__repr__` of `_pydecimal`, _pydecimal.py:1071-1074: `"Decimal('%s')" % str(self)`,
+so it raises what `str(self)` raises (the int/str limit of a more than 4300-digit exponent). -/
+def pyRepr (d : Dec) : Py (List Char) := do
+  let s ← pyStr d
+  return "Decimal('".toList ++ s ++ "')".toList
 
 /-- `Decimal._round`, _pydecimal.py:2710-2731, for `places ≥ 1`. -/
 def roundPlaces (d : Dec) (places : Nat) (m : Rounding) : Py Dec := do

@@ -194,7 +194,7 @@ def evalM (c : Ctx) (name : String) (a b t : Dec) (isC : Bool := false) : Option
   | "divmod" => some (jDec ((if isC then divmodC else divmodD) c a b) (fun p => Json.arr #[encDec p.1, encDec p.2]))
   | "remainder_near" => some (jD (remainderNear c a b))
   | "to_eng_string" => some (if isC then pureJ (encStr (toEng a c.capitals)) else jDec (liftPy (pyEng a c.capitals)) encStr)
-  | "repr" => some (pureJ (encStr (reprD a)))
+  | "repr" => some (if isC then pureJ (encStr (reprD a)) else jDec (liftPy (pyRepr a)) encStr)
   | _ => none
 
 def argOf (j : Json) : Except String Arg := do

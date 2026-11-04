@@ -32,7 +32,7 @@ Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	mod
 Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	todo		review: The only entry is the int-limit refutation (hash(Decimal(10**4300))), a limitation upstream declined (python/cpython#96589; the record says do not file), so it is not a promised behaviour; nothing states the hash of an in-limit value (no narrowed twin agreement or Fraction-consistency for _pydecimal).
 Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
-Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	todo		
+Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	modelled	decimal-repr-exact	
 Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree-int-digits	
 Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	modelled	decimal-eng-string-exact	
 Lib/_pydecimal.py	1137	1157	Decimal.__neg__	__neg__(self, context=None)	modelled	decimal-unary-exact	
