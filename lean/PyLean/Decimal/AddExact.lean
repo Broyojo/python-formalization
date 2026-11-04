@@ -785,4 +785,35 @@ theorem subCorrect_proven : SubCorrect := by
   rw [← fixExact_fin c _ _ _ fl hp hS] at h
   exact (fix_normal c neg S e fl fl' d hS hp hmin hover h).1
 
+/-! ## `fma`: the single final rounding -/
+
+/-- `fma(a, b, t)` (_pydecimal.py:1975-2017) for non-zero finite `a`, `b`, `t` whose coefficients and
+product are within the int/str limit, for every context with `prec ≥ 1`: "self*other+third with no
+rounding of the intermediate product" (the docstring), i.e. `__add__` of the exact product
+`±(ca·cb)·10^(ea+eb)` and `t`, which `AddExact` makes the exact `a·b + t` rounded once by `_fix`
+(an exact zero giving the zero of sign `ROUND_FLOOR`), with `_WorkRep`'s and `str(result.int)`'s
+int/str-limit `ValueError`s where `__add__` raises them. -/
+def FmaFinExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec →
+    ∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int) (st : Bool) (ct : Nat) (et : Int),
+      ca ≠ 0 → cb ≠ 0 → ct ≠ 0 →
+      numDigits ca ≤ maxStrDigits → numDigits cb ≤ maxStrDigits → numDigits (ca * cb) ≤ maxStrDigits →
+      let sp := sa != sb
+      let cp := ca * cb
+      let ep := ea + eb
+      (fma c (.fin sa ca ea) (.fin sb cb eb) (.fin st ct et)).run fl =
+        if maxStrDigits < numDigits ct then .error (.valueError (limitToIntMsg (numDigits ct)))
+        else if exactSum sp cp ep st ct et = 0 then
+          (fix c (.fin (decide (c.rounding = .floor)) 0 (min ep et))).run fl
+        else if (maxStrDigits : Int) < (numDigits (exactSum sp cp ep st ct et).natAbs : Int) +
+            min ep et - addWorkExp c.prec cp ep ct et then .error (.valueError limitToStrMsg)
+        else fixSpec c (decide (exactSum sp cp ep st ct et < 0)) (exactSum sp cp ep st ct et).natAbs
+          (min ep et) fl
+
+theorem fmaFinExact_proven : FmaFinExact := by
+  intro c fl hp sa ca ea sb cb eb st ct et ha hb ht l1 l2 l3
+  dsimp only
+  rw [fmaExact_proven.2.1 c sa ca ea sb cb eb _ fl l1 l2 l3,
+    add_fin_exact c fl hp _ _ _ st ct et (Nat.mul_ne_zero ha hb) ht, if_neg (by omega)]
+
 end PyLean.Decimal

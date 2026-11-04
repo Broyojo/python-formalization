@@ -18,6 +18,7 @@ import PyLean.Decimal.Pow10a
 import PyLean.Decimal.DelegateExact2
 import PyLean.Decimal.Exact3
 import PyLean.Decimal.Exact4
+import PyLean.Decimal.AddExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -127,14 +128,32 @@ def entries : List Entry := [
     pyFns := ["Decimal.__add__", "_normalize", "_WorkRep.__init__", "Decimal._fix"]
     statement := "For every context with prec >= 1 and all finite non-zero operands with a non-zero exact sum, when + returns a value in the normal range, it is the exact sum correctly rounded to prec digits, with Inexact set exactly when non-zero digits were dropped and Rounded exactly when any were."
     source := "General Decimal Arithmetic, 'add' and 'Rounding'; decimal docs, signals Inexact and Rounded"
-    status := .open, prop := ``AddCorrect
-    notes := "Missing: the sticky-digit argument for _normalize, namely that replacing the smaller operand by 1 at exponent min(-1, len-prec-2) below the larger changes neither the rounded result nor Inexact/Rounded. Without it, even commutativity is not structural, because _normalize is not symmetric at equal exponents. The difftest finds no counterexample." },
+    status := .proven, prop := ``AddCorrect, thm := some ``addCorrect_proven
+    notes := "A consequence of decimal-add-exact (the sum is fixSpec of the exact sum, so a returning + is fix of it) and fix_normal; decimal-add-exact also states the overflow, subnormal and int-limit outcomes this statement assumes away." },
+  { id := "decimal-add-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__add__", "_normalize", "_WorkRep.__init__"]
+    statement := "For every context with prec >= 1, on every operand pair: for non-zero finite operands, _WorkRep's int/str-limit ValueError when a coefficient has more than 4300 digits (the first operand's first); an exact sum of zero is the zero _fix makes of +0 (of -0 under ROUND_FLOOR) at min(ea, eb); the int/str-limit ValueError of str(result.int) exactly when _normalize's working sum has more than 4300 digits; and otherwise the exact sum rounded into the context by _fix (fixSpec: overflow, subnormals, clamping, the signals in order with the first trapped one raising), whatever _normalize's substitution of the smaller operand did. 0 + b is b padded to exponent max(min(ea, eb), eb - prec - 1) through _fix (and a + 0 alike); 0 + 0 is the zero of sign (sa and sb), or negative under ROUND_FLOOR when the signs differ, at min(ea, eb); a NaN operand goes through _check_nans; an infinity plus t is t's NaN, InvalidOperation for the opposite infinity, else the infinity; a finite value plus an infinity is the infinity."
+    source := "General Decimal Arithmetic, 'add' and 'Rounding'; decimal docs, Context.add; Lib/_pydecimal.py:1202-1286, :5723-5749"
+    status := .proven, prop := ``AddExact, thm := some ``addExact_proven
+    notes := "Unconditional equations for (add c a b).run fl. The sticky-digit lemma (fixSpec_sticky) shows that the substituted working sum, which has at least prec + 1 digits, agrees with the exact sum on the kept prefix, on dropping non-zero digits and on the comparison with half a unit, so _fix gives the same result and signals, subnormal and overflow ranges included. Checked on 3.15.2 (200,000 random contexts and operands, zeros, subnormal and overflow ranges and clamp included): _pydecimal's add equals _decimal's correctly rounded add with the same flags; Context(prec=6000).add(Decimal('1E+5000'), 1) and Context(prec=5000).add(Decimal('1E+10000'), 1) raise the int/str-limit ValueError and Context(prec=4000).add(Decimal('1E+10000'), 1) does not, as the working-sum condition says." },
   { id := "decimal-sub-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__sub__", "Decimal.__add__", "_normalize", "Decimal._fix"]
     statement := "For every context with prec >= 1 and all finite non-zero operands with a non-zero exact difference, when - returns a value in the normal range, it is the exact difference correctly rounded to prec digits."
     source := "General Decimal Arithmetic, 'subtract'"
-    status := .open, prop := ``SubCorrect
-    notes := "Follows from decimal-add-correct once that is proven: sub reduces to add with the sign of the second operand flipped." },
+    status := .proven, prop := ``SubCorrect, thm := some ``subCorrect_proven
+    notes := "A consequence of decimal-sub-exact and fix_normal." },
+  { id := "decimal-fma-fin-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.fma", "Decimal.__add__", "_normalize"]
+    statement := "For every context with prec >= 1 and non-zero finite a, b, t whose coefficients and product have at most 4300 digits, fma(a, b, t) is the exact a*b + t rounded once into the context by _fix (fixSpec), an exact zero giving the zero of sign ROUND_FLOOR, except for __add__'s int/str-limit ValueErrors (t's coefficient past 4300 digits, or the working sum past 4300 digits)."
+    source := "Decimal.fma docstring: 'Returns self*other+third with no rounding of the intermediate product self*other'"
+    status := .proven, prop := ``FmaFinExact, thm := some ``fmaFinExact_proven
+    notes := "decimal-fma-exact's finite conjunct (fma is __add__ of the unrounded product) composed with decimal-add-exact. Checked on 3.15.2 (100,000 random contexts and operands, subnormal and overflow ranges and clamp included): _pydecimal's fma equals _decimal's correctly rounded fma with the same flags." },
+  { id := "decimal-sub-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__sub__", "Decimal.__add__", "_normalize", "_WorkRep.__init__"]
+    statement := "For every context with prec >= 1, on every operand pair: a NaN operand goes through _check_nans on the operands as given; on finite operands a - b is decimal-add-exact with the sign of b flipped (the exact difference rounded by _fix, the same int/str-limit ValueErrors, x - x the zero of sign ROUND_FLOOR); an infinity minus a non-NaN t is the infinity added to -t; a finite value minus an infinity is the opposite infinity."
+    source := "General Decimal Arithmetic, 'subtract'; Lib/_pydecimal.py:1290-1302"
+    status := .proven, prop := ``SubExact, thm := some ``subExact_proven
+    notes := "Checked on 3.15.2: Context(rounding=ROUND_FLOOR).subtract(Decimal('1.5'), Decimal('1.5')) is -0.0, at the default rounding 0.0." },
   { id := "decimal-mul-overflow-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__mul__", "Decimal._fix", "Overflow.handle"]
     statement := "For every context with prec >= 1 and Emin <= 0 <= Emax and all finite non-zero operands, if the correctly rounded product has an adjusted exponent above Emax, a returning * gives the rounding mode's overflow value and sets Overflow, Inexact and Rounded."
@@ -308,7 +327,7 @@ def entries : List Entry := [
     statement := "Context.fma converts a, b and t in order, the first failing conversion raising; for finite a and b, fma is __add__ of the exact, unrounded product ±(ca·cb)·10^(ea+eb) and t, except for the int/str-limit ValueError when a coefficient or the product has more than 4300 digits; a signaling NaN a, else b, signals InvalidOperation and is returned quieted; an infinity times zero is InvalidOperation; an infinity times a non-zero finite value adds the signed infinity to t."
     source := "Decimal.fma docstring: 'Returns self*other+third with no rounding of the intermediate product self*other'"
     status := .proven, prop := ``FmaExact, thm := some ``fmaExact_proven
-    notes := "The single final rounding is __add__'s; __add__ itself is decimal-add-correct (open)." },
+    notes := "The single final rounding is __add__'s, which decimal-add-exact states for every operand pair: for finite a, b, t with a non-zero product the result is the exact a*b + t rounded once by _fix." },
   { id := "decimal-context-predicates-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Context.is_signed", "Context.canonical", "Context.is_canonical", "_convert_other"]
     statement := "Context.is_signed(a) is the sign bit of a Decimal (True for -0) and n < 0 for an int within the int/str limit; Context.canonical and is_canonical return the Decimal itself and True for a Decimal and raise TypeError for every other operand, ints included."
@@ -610,7 +629,7 @@ def entries : List Entry := [
     statement := "For every context, with no signaling NaN among a and b: a quiet NaN a (else b) is the product, which __add__ returns quieted unless t is a signaling NaN (InvalidOperation, t returned quiet); an infinity times an infinity or a non-zero finite value is the infinity of the product's sign added to t: a NaN t goes through _check_nans, the opposite infinity is InvalidOperation, anything else gives the infinity."
     source := "Decimal.fma docstring and Lib/_pydecimal.py:1986-2017, with __add__'s special branch (:1213-1225)"
     status := .proven, prop := ``FmaSpecialExact, thm := some ``fmaSpecialExact_proven
-    notes := "Checked on 3.15.2: fma(NaN1, 2, sNaN2) = NaN2 with InvalidOperation; fma(Inf, -Inf, Inf) = NaN with InvalidOperation; fma(-Inf, 2, sNaN3) = NaN3 with InvalidOperation. The finite product's sum is still decimal-fma-exact's __add__ (decimal-add-correct, open)." },
+    notes := "Checked on 3.15.2: fma(NaN1, 2, sNaN2) = NaN2 with InvalidOperation; fma(Inf, -Inf, Inf) = NaN with InvalidOperation; fma(-Inf, 2, sNaN3) = NaN3 with InvalidOperation. The finite product's sum is decimal-fma-exact's __add__, stated by decimal-add-exact." },
   { id := "decimal-abs-no-round-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__abs__", "Decimal.copy_abs"]
     statement := "For every context, abs(x, round=False) is x with its sign cleared, unrounded and with no flag, a signaling NaN included (no _check_nans)."

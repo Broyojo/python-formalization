@@ -38,8 +38,8 @@ Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=No
 Lib/_pydecimal.py	1137	1157	Decimal.__neg__	__neg__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1159	1178	Decimal.__pos__	__pos__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1180	1200	Decimal.__abs__	__abs__(self, round=True, context=None)	modelled	decimal-unary-exact,decimal-abs-no-round-exact	
-Lib/_pydecimal.py	1202	1286	Decimal.__add__	__add__(self, other, context=None)	todo		review: `add` (Arith.lean:421) mirrors :1207-1286, but the only settled entries are the int-limit refutations (deliberate per python/cpython#96589, record kind known-limitation), and decimal-add-correct is open, so nothing pins the sum for in-limit operands: an __add__ returning any value below 4300 digits passes.
-Lib/_pydecimal.py	1290	1302	Decimal.__sub__	__sub__(self, other, context=None)	todo		review: `sub` mirrors :1292-1302, but the only settled entry is the int-limit refutation (declined upstream); decimal-sub-correct is open, so the difference is unpinned.
+Lib/_pydecimal.py	1202	1286	Decimal.__add__	__add__(self, other, context=None)	modelled	decimal-add-exact,decimal-add-correct,decimal-add-no-valueerror-py	
+Lib/_pydecimal.py	1290	1302	Decimal.__sub__	__sub__(self, other, context=None)	modelled	decimal-sub-exact,decimal-sub-correct,decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	1304	1310	Decimal.__rsub__	__rsub__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1312	1366	Decimal.__mul__	__mul__(self, other, context=None)	modelled	decimal-mul-exact,decimal-mul-nan-exact	
 Lib/_pydecimal.py	1369	1426	Decimal.__truediv__	__truediv__(self, other, context=None)	todo		review: TruedivSpecials pins the zero/infinity cases, but TruedivCoreCorrect is conditional on truedivFin returning and stops before _fix (the correctly rounded quotient is unstated), so a __truediv__ raising for every finite non-zero pair passes; 0/x and NaN operands are not stated.
@@ -71,7 +71,7 @@ Lib/_pydecimal.py	1864	1869	Decimal._round_05up	_round_05up(self, prec)	modelled
 Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
-Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	todo		review: fma (Ops.lean:358) follows :1986-2017 and FmaExact with FmaSpecialExact now states every special product (sNaN a then b, the quiet-NaN product, INF*0, INF*INF and INF*x added to t through nanSpec2/addInfSpec), but for finite a, b the result is still stated only as the model `add` of the exact product and t, and __add__ is unpinned (decimal-add-correct open, __add__ a todo row), so the docstring's single final rounding of a*b+t is unstated: a wrong add makes every finite fma wrong without failing anything. It can become FAITHFUL once __add__'s sum is pinned, or with a statement against an independent spec of the rounded sum.
+Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	modelled	decimal-fma-exact,decimal-fma-special-exact,decimal-fma-fin-exact	
 Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
 Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
 Lib/_pydecimal.py	2352	2566	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		
@@ -157,7 +157,7 @@ Lib/_pydecimal.py	4156	4173	Context._set_rounding	_set_rounding(self, type)	todo
 Lib/_pydecimal.py	4175	4190	Context.create_decimal	create_decimal(self, num='0')	todo		
 Lib/_pydecimal.py	4192	4207	Context.create_decimal_from_float	create_decimal_from_float(self, f)	todo		
 Lib/_pydecimal.py	4210	4229	Context.abs	abs(self, a)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	4231	4250	Context.add	add(self, a, b)	todo		review: ctxOp add (Context.lean:71, :97) is :4245-4250 with __add__'s NotImplemented prologue (:1207-1209) as opArg, and Equiv2 pins it, but Decimal.__add__'s only settled entries are the declined int-limit refutations (decimal-add-correct is open, part 1 HOLLOW), so the sum is pinned only to an unproven model.
+Lib/_pydecimal.py	4231	4250	Context.add	add(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-add-exact	
 Lib/_pydecimal.py	4252	4253	Context._apply	_apply(self, a)	todo		
 Lib/_pydecimal.py	4255	4266	Context.canonical	canonical(self, a)	modelled	decimal-context-predicates-exact	
 Lib/_pydecimal.py	4268	4303	Context.compare	compare(self, a, b)	modelled	decimal-context-methods-match-decimal	
@@ -172,7 +172,7 @@ Lib/_pydecimal.py	4441	4476	Context.divide	divide(self, a, b)	todo		review: ctxO
 Lib/_pydecimal.py	4478	4499	Context.divide_int	divide_int(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4501	4520	Context.divmod	divmod(self, a, b)	todo		review: ctxOp divmodD (Context.lean:102) is :4515-4520 and Equiv2 pins the wrapper, but Decimal.__divmod__ is part 1 HOLLOW (DivmodConsistent is rfl on the finite path and the special branches are unstated).
 Lib/_pydecimal.py	4522	4544	Context.exp	exp(self, a)	todo		
-Lib/_pydecimal.py	4546	4567	Context.fma	fma(self, a, b, c)	todo		review: contextFma (Context.lean:108) is :4566-4567 plus Decimal.fma's conversions (:1986-1987) and FmaExact pins the conversion order and errors, but the delegate Decimal.fma is HOLLOW: its special products are now all stated, yet its finite result is stated only as the unpinned __add__ of the exact product (decimal-add-correct open).
+Lib/_pydecimal.py	4546	4567	Context.fma	fma(self, a, b, c)	modelled	decimal-fma-exact,decimal-fma-fin-exact	
 Lib/_pydecimal.py	4569	4580	Context.is_canonical	is_canonical(self, a)	modelled	decimal-context-predicates-exact	
 Lib/_pydecimal.py	4582	4602	Context.is_finite	is_finite(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4604	4617	Context.is_infinite	is_infinite(self, a)	modelled	decimal-context-methods-match-decimal	
@@ -212,14 +212,14 @@ Lib/_pydecimal.py	5471	5493	Context.same_quantum	same_quantum(self, a, b)	modell
 Lib/_pydecimal.py	5495	5512	Context.scaleb	scaleb(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-scaleb-exact,decimal-scaleb-rest-exact	
 Lib/_pydecimal.py	5514	5542	Context.shift	shift(self, a, b)	todo		review: ctxBin shift (Context.lean:119) is :5541-5542 plus :3776 and Equiv2 pins the wrapper, but Decimal.shift has no entry (todo), so the result is unstated.
 Lib/_pydecimal.py	5544	5574	Context.sqrt	sqrt(self, a)	todo		
-Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	todo		review: ctxOp sub (Context.lean:98) is :5592-5597 and Equiv2 pins the wrapper, but Decimal.__sub__'s only settled entry is the declined int-limit refutation (decimal-sub-correct open, part 1 HOLLOW).
+Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-sub-exact	
 Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	todo		review: ctxUn of toEng a c.capitals (Context.lean:138) is :5624-5625 and Equiv1 pins the wrapper, but Decimal.to_eng_string has no entry (part 1 HOLLOW), so the engineering notation is stated nowhere.
 Lib/_pydecimal.py	5627	5633	Context.to_sci_string	to_sci_string(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	modelled	decimal-context-methods-match-decimal,decimal-to-integral-exact-exact	
 Lib/_pydecimal.py	5665	5692	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5703	5716	_WorkRep.__init__	__init__(self, value=None)	modelled	decimal-mul-exact	
 Lib/_pydecimal.py	5718	5719	_WorkRep.__repr__	__repr__(self)	todo		
-Lib/_pydecimal.py	5723	5749	_normalize	_normalize(op1, op2, prec=0)	todo		review: workNormalize (Arith.lean:407) mirrors :5728-5749 (swap, the two str() lengths with their limits, the 10**exp substitution, the scaling), but its only settled entries are the declined int-limit refutations, whose counterexamples pass _normalize, and decimal-add-correct, which would pin the substitution, is open.
+Lib/_pydecimal.py	5723	5749	_normalize	_normalize(op1, op2, prec=0)	modelled	decimal-add-exact,decimal-sub-exact	
 Lib/_pydecimal.py	5755	5774	_decimal_lshift_exact	_decimal_lshift_exact(n, e)	todo		
 Lib/_pydecimal.py	5776	5789	_sqrt_nearest	_sqrt_nearest(n, a)	todo		
 Lib/_pydecimal.py	5791	5797	_rshift_nearest	_rshift_nearest(x, shift)	todo		
