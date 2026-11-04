@@ -857,7 +857,7 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``UnexpectedKeywordRules, thm := some ``unexpectedKeywordRules_proven
     notes := "Part of initialize_locals (bytecode-bind-keywords). The suggestion model is TypeObj.calcSuggestion, shared with getargs.c's message; checked on 3.15.2: h(abd=1) for h(abc, *, defg=1) suggests 'abc', h(1, xyz=3) suggests nothing." },
   { id := "bytecode-resume", pyFile := "Python/bytecodes.c"
-    pyFns := [op "RESUME", op "_CHECK_PERIODIC_IF_NOT_YIELD_FROM", op "_MAYBE_INSTRUMENT", op "RESUME_CHECK",
+    pyFns := [op "RESUME", op "_CHECK_PERIODIC_IF_NOT_YIELD_FROM", op "RESUME_CHECK",
               op "_RESUME_CHECK", op "RESUME_CHECK_JIT"]
     statement := "For every state, RESUME checks the eval breaker (a pending exception is raised with nothing popped, else nothing changes) exactly when its location bits are below RESUME_AFTER_YIELD_FROM, and does nothing otherwise; RESUME_CHECK and RESUME_CHECK_JIT do nothing with no event pending and otherwise run RESUME."
     source := "Python/bytecodes.c:168-248; Include/internal/pycore_opcode_utils.h:86-92"
