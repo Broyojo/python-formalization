@@ -507,34 +507,64 @@ theorem scannerCallRaw_proven : ScannerCallRaw := by
       | error e => cases e <;> simp [stopToJde]
       | ok r => obtain ⟨v, n⟩ := r; simp [stopToJde]
 
-/-- What `JSONDecoder.__init__` hands to `make_scanner` is accepted, with
-`strict` read from its truth value; a missing attribute is named, `strict` first
-and then in the order of `scanner_new`. -/
+theorem foldlM_getattr_ok (g : String → Except PyExc Unit) :
+    ∀ (l : List String), (∀ a ∈ l, g a = .ok ()) → l.foldlM (fun _ a => g a) () = .ok ()
+  | [], _ => rfl
+  | a :: l, h => by
+    simp only [List.foldlM_cons, h a (by simp)]
+    exact foldlM_getattr_ok g l (fun b hb => h b (by simp [hb]))
+
+theorem foldlM_getattr_err (g : String → Except PyExc Unit) (e : PyExc) :
+    ∀ (pre : List String) (a : String) (post : List String), (∀ b ∈ pre, g b = .ok ()) → g a = .error e →
+    (pre ++ a :: post).foldlM (fun _ a => g a) () = .error e
+  | [], a, post, _, ha => by simp [List.foldlM_cons, ha]; rfl
+  | b :: pre, a, post, h, ha => by
+    simp only [List.cons_append, List.foldlM_cons, h b (by simp)]
+    exact foldlM_getattr_err g e pre a post (fun c hc => h c (by simp [hc])) ha
+
+/-- `make_scanner(ctx)` for every context object: when `strict` and the six other attributes can
+be read and `bool(ctx.strict)` returns, the scanner has every hook with `strict` by truth value;
+otherwise the first failure in the order of `scanner_new` (`strict`, its truth value,
+`object_hook`, `object_pairs_hook`, `array_hook`, `parse_float`, `parse_int`, `parse_constant`)
+is what it raises, whatever exception that is. -/
 def ScannerNew : Prop :=
-  ∀ (tp : String) (cfg : DCfg) (st : Bool),
-    scannerNew { tp, attrs := "strict" :: scannerAttrs, strict := .ok st } cfg = .ok { cfg with strict := st } ∧
-    (∀ (attrs : List String) (s : Except PyExc Bool), "strict" ∉ attrs →
-      scannerNew { tp, attrs, strict := s } cfg = .error (attrErr tp "strict"))
+  ∀ (ctx : ScanCtx) (cfg : DCfg),
+    ((∀ a ∈ "strict" :: scannerAttrs, ctx.getattr a = .ok ()) → ∀ st, ctx.strict = .ok st →
+      scannerNew ctx cfg = .ok { cfg with strict := st }) ∧
+    (∀ e, ctx.getattr "strict" = .error e → scannerNew ctx cfg = .error e) ∧
+    (ctx.getattr "strict" = .ok () → ∀ e, ctx.strict = .error e → scannerNew ctx cfg = .error e) ∧
+    (∀ (pre : List String) (a : String) (post : List String) (e : PyExc), scannerAttrs = pre ++ a :: post →
+      ctx.getattr "strict" = .ok () → (∃ st, ctx.strict = .ok st) → (∀ b ∈ pre, ctx.getattr b = .ok ()) →
+      ctx.getattr a = .error e → scannerNew ctx cfg = .error e)
 
 theorem scannerNew_proven : ScannerNew := by
-  intro tp cfg st
-  refine ⟨?_, ?_⟩
-  · simp [scannerNew, scannerAttrs]
-  · intro attrs s h
-    simp [scannerNew, h]
+  intro ctx cfg
+  refine ⟨fun h st hs => ?_, fun e he => ?_, fun h1 e he => ?_, fun pre a post e hl h1 hs hpre ha => ?_⟩
+  · have h1 := h "strict" (by simp)
+    simp only [scannerNew, h1, hs]
+    rw [foldlM_getattr_ok _ _ (fun b hb => h b (by simp [hb]))]
+  · simp [scannerNew, he]
+  · simp [scannerNew, h1, he]
+  · obtain ⟨st, hs⟩ := hs
+    simp only [scannerNew, h1, hs]
+    rw [hl, foldlM_getattr_err _ e pre a post hpre ha]
 
-/-- `c_make_encoder(markers, default, encoder, indent, key_sep, item_sep,
-sort_keys, skipkeys, allow_nan)` as `JSONEncoder.iterencode` calls it
-(encoder.py:254-257) keeps every option; a wrong type is rejected, the `U`
-conversions first. -/
+/-- `c_make_encoder(markers, default, encoder, indent, key_sep, item_sep, sort_keys, skipkeys,
+allow_nan)`: as `JSONEncoder.iterencode` calls it (encoder.py:254-257) it keeps every option,
+`check_circular` being `markers is not None`; and with `str` separators, a `markers` that is
+neither a dict nor `None` is refused with `make_encoder() argument 1 must be dict or None, not
+<type>` (`%.200s` of `tp_name`, :1327-1331), whatever the other arguments. -/
 def EncoderNew : Prop :=
-  ∀ cfg : ECfg, cfg.customEnc = none →
+  (∀ cfg : ECfg, cfg.customEnc = none →
     encoderNew (if cfg.checkCircular then .dict else .none) cfg.dflt cfg.dfltDepth
       (if cfg.ensureAscii then .cAscii else .cPlain) cfg.indent (.str cfg.keySep) (.str cfg.itemSep)
-      cfg.sortKeys cfg.skipKeys cfg.allowNan = .ok cfg
+      cfg.sortKeys cfg.skipKeys cfg.allowNan = .ok cfg) ∧
+  (∀ (t : String) dflt dfltDepth encoder indent (ks is : PStr) sortKeys skipKeys allowNan,
+    encoderNew (.other t) dflt dfltDepth encoder indent (.str ks) (.str is) sortKeys skipKeys allowNan =
+      .error (.typeError s!"make_encoder() argument 1 must be dict or None, not {truncName 200 t}"))
 
 theorem encoderNew_proven : EncoderNew := by
-  intro cfg h
+  refine ⟨fun cfg h => ?_, fun t _ _ _ _ _ _ _ _ _ => rfl⟩
   rcases cfg with ⟨ea, cc, an, so, sk, ind, it, ks, df, dd, ce⟩
   simp only at h
   subst h
