@@ -215,13 +215,13 @@ def ListAppendRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (mid rest : 
 
 theorem listAppendRules_proven : ListAppendRules := by
   intro e regs v mid rest a items hn ha
-  show stk _ _ _ _ = _
+  show stkE _ _ _ _ _ = _
   have ht : ((v :: mid ++ .ref a :: rest).take (e.oparg + 1)).reverse = .ref a :: mid.reverse ++ [v] := by
     rw [← hn]; have := take_app (v :: mid) (.ref a) rest; simp only [List.cons_append, List.length_cons] at this ⊢
     simp [this]
   have hd : (v :: mid ++ .ref a :: rest).drop (e.oparg + 1) = rest := by
     rw [← hn]; have := drop_app (v :: mid) (.ref a) rest; simpa using this
-  refine (stk_ok (outs := .ref a :: mid.reverse)
+  refine (stkE_ok (outs := .ref a :: mid.reverse)
     (r := { regs with rt := { regs.rt with heap := regs.rt.heap.setIfInBounds a (.list (items.push v)) } })
     (by simp; omega) ?_ (by simp; omega)).trans ?_
   · have hdl : (Val.ref a :: (mid.reverse ++ [v])).dropLast = Val.ref a :: mid.reverse := by

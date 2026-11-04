@@ -538,11 +538,23 @@ def unpackIterable (v : Val) (argcnt : Nat) (argcntafter : Option Nat) : RM (Lis
         else valueError s!"too many values to unpack (expected {argcnt})"
       | none => valueError s!"too many values to unpack (expected {argcnt})"
   | some after =>
-    let l ← drain om ctx it 1000000 []
+    -- `PySequence_List(it)`, `Objects/abstract.c:2081-2101`: `PyList_New(0)` then
+    -- `_PyList_Extend(result, it)`, which is the object model's `listExtend`
+    let lv ← mkList []
+    om.listExtend ctx lv it
+    let l ← match lv with
+      | .ref a => do
+        match ← getObj a with
+        | .list items => pure items.toList
+        | _ => fault "PySequence_List: not a list"
+      | _ => fault "PySequence_List: not a list"
     let ll := l.length
     if ll < after then
       valueError s!"not enough values to unpack (expected at least {argcnt + after}, got {argcnt + ll})"
-    let lv ← mkList (l.take (ll - after))
+    -- `Py_SET_SIZE(l, ll - argcntafter)` (`:2449`): the same list, cut
+    match lv with
+    | .ref a => setObj a (.list (l.take (ll - after)).toArray)
+    | _ => pure ()
     pure (head ++ [lv] ++ l.drop (ll - after))
 
 /-- `PyObject_RichCompareBool(a, b, Py_EQ)`: identity implies equality. -/

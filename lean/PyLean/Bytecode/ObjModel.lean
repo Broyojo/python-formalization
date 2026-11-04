@@ -60,6 +60,10 @@ structure ObjModel where
   isIterable : Val → RM Bool
   /-- `PyObject_Vectorcall`. `args` ends with the values of `kwnames`. -/
   call : Ctx → Val → List Val → List String → RM Val
+  /-- `PyObject_Call(callable, args, kwargs)` (`Objects/call.c:333-373`): `args` a tuple, `kwargs` a
+  dict or `NULL`. A callable with vectorcall gets the dict unpacked first (`_PyVectorcall_Call`), one
+  with only `tp_call` gets the dict itself. -/
+  callDict : Ctx → Val → Val → Val → RM Val
   /-- `PyObject_Str`. -/
   str : Ctx → Val → RM Val
   /-- `PyObject_Repr`. -/
@@ -87,6 +91,14 @@ structure ObjModel where
   importName : Ctx → Frame → String → Val → Val → RM Val
   /-- `_PyEval_ImportFrom`. -/
   importFrom : Ctx → Val → String → RM Val
+  /-- `_PyEval_LazyImportName(tstate, builtins, globals, locals, name, fromlist, level, lazy)`
+  (`Python/ceval.c:3096-3164`, PEP 810): the global lazy-imports mode and `__lazy_modules__` may
+  make an import lazy, `lazy` is the `lazy import` keyword; an eager one is `_PyEval_ImportName`. -/
+  lazyImportName : Ctx → Frame → String → Val → Val → Bool → RM Val
+  /-- `PyLazyImport_CheckExact` (`Include/internal/pycore_lazyimportobject.h:15`). -/
+  isLazyImport : Val → RM Bool
+  /-- `_PyEval_LazyImportFrom(tstate, frame, from, name)` (`Objects/lazyimportobject.c:133`). -/
+  lazyImportFrom : Ctx → Frame → Val → String → RM Val
   /-- `PyObject_CallMethod(exc_group, "split", match_type)` for `except*`. -/
   egSplit : Ctx → Val → Val → RM (Val × Val)
   /-- `_PyExc_CreateExceptionGroup("", excs)`. -/

@@ -32,6 +32,18 @@ theorem stk_err {p q : Nat} {f : List Val → BM (List Val)} {s : St} {e : Err} 
     stk p q f s = .error e { regs := r, stack := s.stack.drop p } := by
   simp [stk, popN, hp, bind, EStateM.bind, BM.lift, hf]
 
+theorem stkE_ok {p q k : Nat} {f : List Val → BM (List Val)} {s : St} {outs : List Val} {r : Regs}
+    (hp : p ≤ s.stack.length) (hf : f (s.stack.take p).reverse s.regs = .ok outs r)
+    (hq : outs.length = q) :
+    stkE p q k f s = .ok () { regs := r, stack := outs.reverse ++ s.stack.drop p } := by
+  subst hq
+  simp [stkE, stkK, peekN, popN, hp, bind, EStateM.bind, BM.lift, hf, pushAll, pure, EStateM.pure]
+
+theorem stkE_err {p q k : Nat} {f : List Val → BM (List Val)} {s : St} {e : Err} {r : Regs}
+    (hp : p ≤ s.stack.length) (hf : f (s.stack.take p).reverse s.regs = .error e r) :
+    stkE p q k f s = .error e { regs := r, stack := s.stack.drop k } := by
+  simp [stkE, stkK, peekN, hp, bind, EStateM.bind, BM.lift, hf]
+
 theorem getLocal_ok {r : Regs} {i : Nat} {v : Val} (h : r.frame.fast[i]? = some v) :
     getLocal i r = .ok v r := by
   simp [getLocal, h]

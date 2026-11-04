@@ -51,11 +51,16 @@ def getSpec (j : Json) : Except String TimeSpec := do
 
 def getOptTz (j : Json) : Except String (Option Int) := getOptInt j "tz"
 
-/-- The `timespec` argument: a string, or (a JSON number) a hashable non-`str`. -/
+/-- The `timespec` argument: a string, `{"surrogate": [code points]}` for a `str` with a lone
+surrogate, or (a JSON number) a hashable non-`str`. -/
 def getSpecArg (j : Json) : Except String SpecArg := do
-  match (← field j "spec").getStr? with
+  let v ← field j "spec"
+  match v.getStr? with
   | .ok s => return .str s
-  | .error _ => return .other true
+  | .error _ =>
+    match v.getObjVal? "surrogate" with
+    | .ok _ => return .surrogateStr
+    | .error _ => return .other true
 
 /-- The valid timedelta of `us` microseconds (an offset from the difftest). -/
 def deltaOfUs (us : Int) : Delta := ⟨us / 86400000000, us / 1000000 % 86400, us % 1000000⟩
@@ -121,6 +126,12 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (if fn = "timezone_py" then timezonePy t else newTimezoneC t)
   | "date_fromiso_py" => return encPy encYMD (dateFromIsoPy (← getChars j "s"))
   | "date_fromiso_c" => return encPy encYMD (dateFromIsoC (← getChars j "s"))
+  | "date_fromiso_arg_py" | "date_fromiso_arg_c" =>
+    -- `"arg"`: `"b"` bytes, `"n"` None, `"u"` a str with a lone surrogate
+    let a : IsoArg := match (j.getObjValAs? String "arg").toOption with
+      | some "u" => .surrogateStr
+      | _ => .other
+    return encPy encYMD ((if fn = "date_fromiso_arg_py" then dateFromIsoArgPy else dateFromIsoArgC) a)
   | "time_fromiso_py" => return encPy encTime (timeFromIsoPy (← getChars j "s"))
   | "time_fromiso_c" => return encPy encTime (timeFromIsoC (← getChars j "s"))
   | "datetime_fromiso_py" => return encPy encDT (datetimeFromIsoPy (← getChars j "s"))

@@ -52,6 +52,15 @@ def stkK (p q : Nat) (f : List Val → BM (List Val)) : M Unit := do
     pushAll outs
   else fault "wrong number of outputs"
 
+/-- `(inputs[p] -- outputs[q])` where failure pops only the top `k` inputs. `ERROR_IF` pops the
+inputs that are not also outputs in the same slot (`pop_k_error`, `Python/generated_cases.c.h`):
+`SET_ADD`'s `(set, unused[oparg-1], v -- set, unused[oparg-1])` pops `v` alone and leaves the set
+and the items below it for the comprehension's cleanup handler. -/
+def stkE (p q k : Nat) (f : List Val → BM (List Val)) : M Unit := fun s =>
+  match stkK p q f s with
+  | .error x s' => .error x { s' with stack := s'.stack.drop k }
+  | r => r
+
 /-- `DEOPT_IF(c)` / `EXIT_IF(c)`. -/
 def deoptIf (c : Bool) : BM Unit := if c then throw .deopt else pure ()
 
@@ -148,6 +157,17 @@ theorem eff_stkK (p q : Nat) (f : List Val → BM (List Val)) : Eff p q (stkK p 
       · cases h
     · cases h
   · cases h
+
+theorem eff_stkE (p q k : Nat) (f : List Val → BM (List Val)) : Eff p q (stkE p q k f) := by
+  intro s a s' h
+  simp only [stkE] at h
+  split at h
+  · cases h
+  · rename_i hne
+    generalize hr : stkK p q f s = r at h hne
+    cases r with
+    | ok a' s'' => exact eff_stkK p q f s a s' (hr.trans h)
+    | error x s'' => exact absurd rfl (hne x s'')
 
 /-- Sequencing a stack-neutral program (a guard) before an effect. -/
 theorem Eff.seq0 {β : Type} {m : M Unit} {k : M β} {p q : Nat}

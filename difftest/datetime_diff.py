@@ -8,6 +8,7 @@ See difftest/common.py.
 """
 
 import os
+import struct
 import time
 import warnings
 
@@ -277,11 +278,35 @@ def rand_arg(rng, n):
         return [rng.choice("bs"), b]
     if k < 0.8:
         return ["s", [rng.randrange(256) for _ in range(n - 1)] + [0x1234]]
-    if k < 0.9:
+    if k < 0.88:
         return None
-    if k < 0.95:
+    if k < 0.91:
         return ["o"]
+    if k < 0.96:
+        return rand_index_arg(rng)
+    if k < 0.98:
+        return ["f", float_bits(rng.choice(FLOATS + [1.0, 12.0]))]
     return ["tz", rand_tz_spec(rng, 3)]
+
+
+def rand_index_arg(rng):
+    """An object with `__index__`: it returns an int, returns a str, or raises ValueError."""
+    k = rng.random()
+    if k < 0.8:
+        return ["x", ["i", rng.choice([0, 1, 2, 5, 12, 13, 24, 31, 59, 60, 2020, 9999, 10000, -1, 999999,
+                                       2**31 - 1, 2**31, 3652059, 3652060])]]
+    if k < 0.9:
+        return ["x", ["s"]]
+    return ["x", ["e", rng.choice(["idx", "boom"])]]
+
+
+def rand_fold(rng):
+    k = rng.random()
+    if k < 0.7:
+        return rng.choice([0, 0, 1, 2, 2**31])
+    if k < 0.85:
+        return ["f", float_bits(rng.choice([0.0, -0.0, 1.0, 1.5, -1.0, 2.0, float("nan"), float("inf"), 5e-324]))]
+    return rand_index_arg(rng) if rng.random() < 0.7 else rng.choice([None, ["o"], ["s", [49]]])
 
 
 def small_field(rng):
@@ -298,12 +323,12 @@ MORE_FNS = {"td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime", "strp_patter
             "strp_time", "strp_dt", "strp_julian", "strp_findall", "strp_seq"}
 OPS2 = ["lt", "le", "eq", "ne", "gt", "ge"]
 OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "date_cmp", "date_hash", "date_weekday",
-           "date_sub_date", "date_sub_delta", "date_replace", "date_timetuple", "date_ctime", "date_repr", "date_state",
+           "date_sub_date", "date_sub_delta", "date_replace", "date_timetuple", "date_ctime", "date_repr", "td_repr_cls", "date_state",
            "iso_repr", "date_strftime", "tz_str", "tz_repr", "tm_off", "dt_off", "tm_cmp", "tm_cmp", "tm_hash", "tm_repr",
            "tm_iso", "tm_state", "tm_strftime", "tm_replace", "dt_cmp", "dt_cmp", "dt_hash", "dt_repr", "dt_iso", "dt_ctime",
            "dt_add", "dt_sub_delta", "dt_sub", "dt_sub", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_combine",
            "dt_replace", "dt_fromutc", "dt_astimezone", "dt_state", "dt_strftime", "ctor_date", "ctor_time", "ctor_datetime",
-           "td_float", "td_float", "date_sub_dt", "date_format"]
+           "ctor_time", "ctor_datetime", "fromordinal_arg", "td_float_sub", "td_float", "td_float", "date_sub_dt", "date_format"]
 
 FLOATS = [0.0, -0.0, 0.5, -0.5, 1.5, -2.5, 2.0, 1e-7, -1e-7, 1e-300, 3.3, 0.1, 1e6, 1e12, 1e18, 1e300, -1e300,
           float("inf"), float("-inf"), float("nan"), 5e-324, 1.7976931348623157e308]
@@ -473,6 +498,11 @@ def gen_obj_case(rng):
         c.update(a=rand_date(rng), td=rand_delta_small(rng))
     elif fn == "date_replace":
         c.update(a=rand_date(rng), ny=repl_field(rng), nm=repl_field(rng), nd=repl_field(rng))
+    elif fn == "td_float_sub":
+        ints = lambda k: [rng.choice([0, 1, -1, 2, 3, -3, 7, 10**6, 10**18, rng.randint(-10**9, 10**9)]) for _ in range(k)]
+        r = rng.choice([["t", ints(2)], ["t", ints(2)], ["l", ints(2)], ["t", ints(rng.choice([0, 1, 3]))],
+                        ["l", ints(rng.choice([0, 1, 3]))], ["n"], ["e", "ratio"]])
+        c.update(a=rand_delta(rng), r=r, op=rng.choice(["mul", "div"]))
     elif fn == "td_float":
         c.update(a=rand_delta(rng), x=float_bits(rand_float(rng)), op=rng.choice(["mul", "div"]))
     elif fn == "date_sub_dt":
@@ -481,6 +511,8 @@ def gen_obj_case(rng):
         c.update(a=rand_date(rng), f=rng.choice([None, []]))
     elif fn == "date_repr":
         c.update(a=rand_date(rng), cls=rng.choice([0, 1, 2]))
+    elif fn == "td_repr_cls":
+        c.update(a=rand_delta(rng) if rng.random() < 0.8 else [0, 0, 0], cls=rng.choice([0, 1, 2]))
     elif fn == "date_strftime":
         c.update(a=rng.choice([rand_date(rng), [rng.randint(1, 1100), 1, 1], [rng.randint(1, 1100), 12, 31]]),
                  f=[ord(x) for x in strf_format(rng)])
@@ -547,6 +579,8 @@ def gen_obj_case(rng):
     elif fn == "dt_strftime":
         d = rng.choice([rand_date(rng), [rng.randint(1, 1100), rng.randint(1, 12), 1]])
         c.update(a=d + rand_dt(rng)[3:], f=[ord(x) for x in strf_format(rng)])
+    elif fn == "fromordinal_arg":
+        c.update(a=rand_index_arg(rng) if rng.random() < 0.6 else rand_arg(rng, 4))
     elif fn == "ctor_date":
         # 0 and 4 reach the arity checks of the clinic wrapper
         n = rng.choice([1, 1, 3, 3, 2, 0, 4])
@@ -555,10 +589,10 @@ def gen_obj_case(rng):
             c["args"] = [["i", x] for x in rand_date(rng)]
     elif fn == "ctor_time":
         n = rng.choice([0, 1, 1, 2, 2, 4, 5, 6])
-        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
+        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rand_fold(rng))
     else:
         n = rng.choice([1, 1, 2, 2, 3, 3, 7, 8, 0, 9])
-        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
+        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rand_fold(rng))
         if n >= 3 and rng.random() < 0.5:
             c["args"][:3] = [["i", x] for x in rand_date(rng)]
     return c
@@ -648,6 +682,20 @@ def enc_strp_tz(v):
     return [1, [off.days, off.seconds, off.microseconds], t.tzname(None) if r.endswith("')") or r.endswith('")') else None]
 
 
+class Idx:
+    """An object that has `__index__` and nothing else: it returns an int, a str, or raises."""
+
+    def __init__(self, spec):
+        self.spec = spec
+
+    def __index__(self):
+        if self.spec[0] == "i":
+            return self.spec[1]
+        if self.spec[0] == "e":
+            raise ValueError(self.spec[1])
+        return "1"
+
+
 def run_obj(c):
     fn, impl = c["fn"], c["impl"]
     m = IMPL[impl]
@@ -727,7 +775,14 @@ def run_obj(c):
             return "".join(map(chr, a[1]))
         if a[0] == "tz":
             return T(a[1])
+        if a[0] == "x":
+            return Idx(a[1])
+        if a[0] == "f":
+            return struct.unpack("<d", struct.pack("<Q", a[1]))[0]
         return 1.5
+
+    def fold_arg(f):
+        return f if isinstance(f, int) else arg(f)
 
     def kw(c, *names):
         return {py: c[k] for k, py in names if c.get(k) is not None}
@@ -777,6 +832,29 @@ def run_obj(c):
         if fn == "date_timetuple": return list(m.date(*c["a"]).timetuple())
         if fn == "date_ctime": return m.date(*c["a"]).ctime()
         if fn == "date_repr": return repr(date_cls(c.get("cls", 0))(*c["a"]))
+        if fn == "td_repr_cls":
+            k = c.get("cls", 0)
+            cls = m.timedelta
+            if k:
+                class TSub(m.timedelta):
+                    pass
+                TSub.__qualname__ = "Outer.TSub" if k == 2 else "TSub"
+                cls = TSub
+            return repr(cls(*c["a"]))
+        if fn == "td_float_sub":
+            r = c["r"]
+
+            class F(float):
+                def as_integer_ratio(self):
+                    if r[0] == "t":
+                        return tuple(r[1])
+                    if r[0] == "l":
+                        return list(r[1])
+                    if r[0] == "e":
+                        raise ValueError(r[1])
+                    return 5
+            t = m.timedelta(*c["a"])
+            return deltaenc(t * F(1.5) if c["op"] == "mul" else t / F(1.5))
         if fn == "td_float":
             import struct
             x = struct.unpack("<d", struct.pack("<Q", c["x"]))[0]
@@ -866,9 +944,10 @@ def run_obj(c):
             return capture(lambda: t.strftime("".join(map(chr, c["f"]))))
         if fn == "ctor_date": return ymd(m.date(*map(arg, c["args"])))
         if fn == "ctor_time":
-            return enctm(m.time(*map(arg, c["args"]), fold=c["fold"]))
+            return enctm(m.time(*map(arg, c["args"]), fold=fold_arg(c["fold"])))
         if fn == "ctor_datetime":
-            return encdt(m.datetime(*map(arg, c["args"]), fold=c["fold"]))
+            return encdt(m.datetime(*map(arg, c["args"]), fold=fold_arg(c["fold"])))
+        if fn == "fromordinal_arg": return ymd(m.date.fromordinal(arg(c["a"])))
         raise AssertionError(fn)
 
     return common.py_result(thunk)
@@ -886,6 +965,9 @@ def gen_case(rng):
     if kind < 0.55:
         fn = rng.choice(ISO_FNS)
         return {"mod": "datetime", "fn": f"{fn}_{impl}", "s": [ord(ch) for ch in iso_string(rng)]}
+    if kind < 0.57:
+        return {"mod": "datetime", "fn": f"date_fromiso_arg_{impl}", "arg": rng.choice("bnu"),
+                "s": [ord(ch) for ch in iso_string(rng)]}
     fn = rng.choice(["td", "td_op", "td_str", "fromordinal", "toordinal", "isocalendar",
                      "fromisocalendar", "date_add", "timezone", "date_isoformat", "time_isoformat",
                      "datetime_isoformat"])
@@ -923,6 +1005,11 @@ def gen_case(rng):
         spec = rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"])
         if rng.random() < 0.03:
             spec = rng.choice([1, 0, "AUTO", "", "minute"])
+        elif rng.random() < 0.03:
+            # NUL (refused by C's clinic converter) and lone surrogates (UnicodeEncodeError in C)
+            spec = rng.choice([spec + "\0", "\0" + spec, "\0", spec[:2] + "\0" + spec[2:],
+                               {"surrogate": [ord(ch) for ch in rng.choice([spec + "\ud800", "\udfff",
+                                                                             "\0\udc80", spec[:1] + "\udbff"])]}])
         tz = None if rng.random() < 0.3 else rng.choice([0, 1, -1, 999999, -999999, 86399999999, -86399999999,
                                                         3600 * 10**6, -19800 * 10**6, rng.randint(-86399999999, 86399999999)])
         t = [rng.randint(0, 23), rng.randint(0, 59), rng.randint(0, 59), rng.choice([0, 1, 999, 1000, 999999, rng.randrange(10**6)])]
@@ -958,6 +1045,13 @@ def enc_time(t):
 def enc_dt(v):
     return [v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond,
             None if v.tzinfo is None else common_us(v.utcoffset())]
+
+
+def spec_arg(spec):
+    """The timespec of a case: `{"surrogate": [code points]}` is a str with a lone surrogate."""
+    if isinstance(spec, dict):
+        return "".join(map(chr, spec["surrogate"]))
+    return spec
 
 
 def run_python(c):
@@ -1010,6 +1104,11 @@ def run_python(c):
             v = [d.year, d.month, d.day]
         elif base == "timezone":
             v = common_us(m.timezone(m.timedelta(*c["td"])).utcoffset(None))
+        elif base == "date_fromiso_arg":
+            s = "".join(map(chr, c["s"]))
+            a = {"b": s.encode("utf-8", "surrogatepass"), "n": None, "u": s + "\ud800"}[c["arg"]]
+            r = m.date.fromisoformat(a)
+            v = [r.year, r.month, r.day]
         elif base in ("date_fromiso", "time_fromiso", "datetime_fromiso"):
             s = "".join(map(chr, c["s"]))
             cls = {"date_fromiso": m.date, "time_fromiso": m.time, "datetime_fromiso": m.datetime}[base]
@@ -1019,10 +1118,10 @@ def run_python(c):
             v = m.date(*c["date"]).isoformat()
         elif base == "time_isoformat":
             tz = None if c["tz"] is None else m.timezone(m.timedelta(microseconds=c["tz"]))
-            v = m.time(*c["time"], tzinfo=tz).isoformat(c["spec"])
+            v = m.time(*c["time"], tzinfo=tz).isoformat(spec_arg(c["spec"]))
         elif base == "datetime_isoformat":
             tz = None if c["tz"] is None else m.timezone(m.timedelta(microseconds=c["tz"]))
-            v = m.datetime(*c["dt"], tzinfo=tz).isoformat(chr(c["sep"]), c["spec"])
+            v = m.datetime(*c["dt"], tzinfo=tz).isoformat(chr(c["sep"]), spec_arg(c["spec"]))
         else:
             raise AssertionError(fn)
         return {"ok": v}

@@ -697,8 +697,8 @@ def listAppend (l v : Val) : RM Unit := do
     | _ => fault "not a list"
   | _ => fault "not a list"
 
-/-- `:1374`. -/
-def LIST_APPEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
+/-- `:1374-1378`. A failed append pops only `v` (`pop_1_error`, `generated_cases.c.h:8221`). -/
+def LIST_APPEND (e : Env) : M Unit := stkE (e.oparg + 1) e.oparg 1 fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
   (listAppend (rest.headD .null) v : RM Unit)
@@ -725,8 +725,12 @@ def isExactSet : Val → RM Bool
 /-- `:1380-1392`. Since 3.15 (gh-154902: user code can rebind `__conditional_annotations__`) the
 target is checked first: anything but an exact set raises `TypeError("'%T' object is not a set")`
 with both operands popped (`PyStackRef_CLOSE(v); ERROR_IF(true)`). `%T` is the qualified type name,
-which for the model's builtin types and `__main__` classes is the `__qualname__`. -/
-def SET_ADD (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
+which for the model's builtin types and `__main__` classes is the `__qualname__`. Either failure
+pops `v` alone: the not-a-set path does `stack_pointer += -1` then `goto error`
+(`generated_cases.c.h:11384-11389`) and a failed `_PySet_AddTakeRef` is `pop_1_error` (`:11396`), so
+the set and the items below it stay for the comprehension's cleanup handler
+(`Python/codegen.c:4946-4950`). -/
+def SET_ADD (e : Env) : M Unit := stkE (e.oparg + 1) e.oparg 1 fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
   let set := rest.headD .null
@@ -1316,13 +1320,14 @@ def _GUARD_GLOBALS_VERSION (e : Env) : M Unit := guardTop 0 fun _ => do
   let d ← (getDict (← getFrame).globals : RM _)
   return d.version != cacheNat e 0
 
-/-- `entries[index].me_value` under `dk_version == version`. -/
+/-- `entries[index].me_value` under `dk_version == version`; a `NULL` value exits
+(`EXIT_IF(attr_o == NULL)` in `_LOAD_ATTR_MODULE`, `Python/bytecodes.c:2929`; `DEOPT_IF` in `_LOAD_GLOBAL_MODULE`, `:2309`). -/
 def dictSlot (dv : Val) (version index : Nat) : BM Val := do
   deoptIf !(← (isExactDict dv : RM Bool))
   let d ← (getDict dv : RM _)
   deoptIf (d.version != version)
   match d.entries[index]? with
-  | some en => pure en.value
+  | some en => if en.value == .null then throw .deopt else pure en.value
   | none => throw .deopt
 
 /-- `:2299`. -/
