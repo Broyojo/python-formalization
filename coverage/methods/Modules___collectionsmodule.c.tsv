@@ -7,15 +7,15 @@ Modules/_collectionsmodule.c	192	200	freeblock	freeblock(dequeobject *deque, blo
 Modules/_collectionsmodule.c	203	233	deque_new	deque_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-init	
 Modules/_collectionsmodule.c	245	278	deque_pop_impl	deque_pop_impl(dequeobject *deque) /*[clinic end generated code: output=2e5f7890c4251f07 input=55c5b6a8ad51d72f]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
 Modules/_collectionsmodule.c	290	324	deque_popleft_impl	deque_popleft_impl(dequeobject *deque) /*[clinic end generated code: output=62b154897097ff68 input=1571ce88fe3053de]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
-Modules/_collectionsmodule.c	341	366	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	341	366	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict,sequences-deque-extend-stale-bound	
 Modules/_collectionsmodule.c	380	386	deque_append_impl	deque_append_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9c7bcb8b599c6362 input=b0eeeb09b9f5cf18]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	389	415	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	389	415	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict,sequences-deque-extend-stale-bound	
 Modules/_collectionsmodule.c	429	435	deque_appendleft_impl	deque_appendleft_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9a192edbcd0f20db input=236c2fbceaf08e14]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	438	450	finalize_iterator	finalize_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	455	465	consume_iterator	consume_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant	
-Modules/_collectionsmodule.c	479	520	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-extend-reentrant,sequences-deque-extend-keeps-bound,sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	todo		review: extendleftRe mirrors :534-575 with the local maxlen of :539, but DequeExtendRe's KeepsWF hypothesis requires every call to keep maxlen, so an iterator calling d.__init__(maxlen=...) is assumed away, and dequeExtendKeepsBound_refuted uses only the extendRe conjunct (`.1`) with pyFns [\"deque_extend_impl\"]: an extendleftRe that re-reads d.maxlen per item passes every theorem, though the bug's own r4 shows the stale bound for extendleft.
-Modules/_collectionsmodule.c	578	590	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	todo		review: `iaddRe` is a definitional alias of extendRe and its conjuncts in DequeExtendRe and DequeEndsEvict reuse the extend proofs (`Deque.extendRe_wf ...` and `r1` again); the one thing the body adds, returning the deque itself (:587-589) rather than extend's None, is not represented in the `Py Unit` result, so an iadd returning None is indistinguishable.
+Modules/_collectionsmodule.c	438	450	finalize_iterator	finalize_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict,sequences-deque-extend-stale-bound	
+Modules/_collectionsmodule.c	455	465	consume_iterator	consume_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict,sequences-deque-extend-stale-bound	
+Modules/_collectionsmodule.c	479	520	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-extend-reentrant,sequences-deque-extend-keeps-bound,sequences-deque-ends-evict,sequences-deque-extend-stale-bound	
+Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	modelled	sequences-deque-ends-evict,sequences-deque-extend-reentrant,sequences-deque-extend-stale-bound,sequences-deque-extend-keeps-bound	
+Modules/_collectionsmodule.c	578	590	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-iadd	
 Modules/_collectionsmodule.c	602	661	deque_copy_impl	deque_copy_impl(dequeobject *deque) /*[clinic end generated code: output=6409b3d1ad2898b5 input=51d2ed1a23bab5e2]*/	modelled	sequences-deque-copy-concat,sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	671	675	deque___copy___impl	deque___copy___impl(dequeobject *deque) /*[clinic end generated code: output=7c5821504342bf23 input=f5464036f9686a55]*/	modelled	sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	678	707	deque_concat_lock_held	deque_concat_lock_held(dequeobject *deque, PyObject *other)	modelled	sequences-deque-concat-args,sequences-deque-copy-concat	
@@ -43,30 +43,30 @@ Modules/_collectionsmodule.c	1503	1532	deque_ass_item_lock_held	deque_ass_item_l
 Modules/_collectionsmodule.c	1535	1543	deque_ass_item	deque_ass_item(PyObject *self, Py_ssize_t i, PyObject *v)	modelled	sequences-subscript-agree	
 Modules/_collectionsmodule.c	1546	1566	deque_dealloc	deque_dealloc(PyObject *self)	todo		todo: FT_CLEAR_WEAKREFS(self, weakreflist) at :1553 is PyObject_ClearWeakRefs (Include/internal/pycore_weakref.h:32-52; guarded by weakref_list != NULL in the default build), which clears the deque's weakrefs and calls their callbacks, an observable effect; the model has no weakref or finalization state, so it is not mirrored. The rest of the body (deque_clear, freeblock, PyMem_Free of the free list) only drops references and frees memory.
 Modules/_collectionsmodule.c	1569	1593	deque_traverse	deque_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Modules/_collectionsmodule.c	1604	1628	deque___reduce___impl	deque___reduce___impl(dequeobject *deque) /*[clinic end generated code: output=cb85d9e0b7d2c5ad input=991a933a5bc7a526]*/	todo		
-Modules/_collectionsmodule.c	1633	1661	deque_repr	deque_repr(PyObject *deque)	todo		
-Modules/_collectionsmodule.c	1664	1740	deque_richcompare	deque_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Modules/_collectionsmodule.c	1604	1628	deque___reduce___impl	deque___reduce___impl(dequeobject *deque) /*[clinic end generated code: output=cb85d9e0b7d2c5ad input=991a933a5bc7a526]*/	modelled	sequences-deque-reduce	
+Modules/_collectionsmodule.c	1633	1661	deque_repr	deque_repr(PyObject *deque)	modelled	sequences-deque-repr	
+Modules/_collectionsmodule.c	1664	1740	deque_richcompare	deque_richcompare(PyObject *v, PyObject *w, int op)	modelled	sequences-deque-compare-reentrant,sequences-deque-compare-seq	
 Modules/_collectionsmodule.c	1755	1778	deque_init_impl	deque_init_impl(dequeobject *deque, PyObject *iterable, PyObject *maxlenobj) /*[clinic end generated code: output=7084a39d71218dcd input=2b9e37af1fd73143]*/	modelled	sequences-deque-init,sequences-deque-construct	
-Modules/_collectionsmodule.c	1790	1800	deque___sizeof___impl	deque___sizeof___impl(dequeobject *deque) /*[clinic end generated code: output=4d36e9fb4f30bbaf input=762312f2d4813535]*/	todo		
+Modules/_collectionsmodule.c	1790	1800	deque___sizeof___impl	deque___sizeof___impl(dequeobject *deque) /*[clinic end generated code: output=4d36e9fb4f30bbaf input=762312f2d4813535]*/	modelled	sequences-deque-sizeof	
 Modules/_collectionsmodule.c	1803	1809	deque_get_maxlen	deque_get_maxlen(PyObject *self, void *Py_UNUSED(closure))	modelled	sequences-deque-construct	
-Modules/_collectionsmodule.c	1822	1826	deque___reversed___impl	deque___reversed___impl(dequeobject *deque) /*[clinic end generated code: output=3e7e7e715883cf2e input=3d494c25a6fe5c7e]*/	todo		
-Modules/_collectionsmodule.c	1920	1938	deque_iter	deque_iter(PyObject *self)	todo		
+Modules/_collectionsmodule.c	1822	1826	deque___reversed___impl	deque___reversed___impl(dequeobject *deque) /*[clinic end generated code: output=3e7e7e715883cf2e input=3d494c25a6fe5c7e]*/	modelled	sequences-deque-iter-walk	
+Modules/_collectionsmodule.c	1920	1938	deque_iter	deque_iter(PyObject *self)	modelled	sequences-deque-iter-walk,sequences-deque-iter-new	
 Modules/_collectionsmodule.c	1941	1947	dequeiter_traverse	dequeiter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_collectionsmodule.c	1950	1955	dequeiter_clear	dequeiter_clear(PyObject *op)	excluded		no-behaviour: GC clear
 Modules/_collectionsmodule.c	1958	1966	dequeiter_dealloc	dequeiter_dealloc(PyObject *dio)	excluded		no-behaviour: frees the iterator
-Modules/_collectionsmodule.c	1969	1993	dequeiter_next_lock_held	dequeiter_next_lock_held(dequeiterobject *it, dequeobject *deque)	todo		
-Modules/_collectionsmodule.c	1996	2008	dequeiter_next	dequeiter_next(PyObject *op)	todo		
-Modules/_collectionsmodule.c	2011	2043	dequeiter_new	dequeiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_collectionsmodule.c	2046	2051	dequeiter_len	dequeiter_len(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_collectionsmodule.c	2056	2069	dequeiter_reduce	dequeiter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_collectionsmodule.c	2100	2117	deque_reviter	deque_reviter(dequeobject *deque)	todo		
-Modules/_collectionsmodule.c	2120	2144	dequereviter_next_lock_held	dequereviter_next_lock_held(dequeiterobject *it, dequeobject *deque)	todo		
-Modules/_collectionsmodule.c	2147	2158	dequereviter_next	dequereviter_next(PyObject *self)	todo		
-Modules/_collectionsmodule.c	2161	2193	dequereviter_new	dequereviter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_collectionsmodule.c	1969	1993	dequeiter_next_lock_held	dequeiter_next_lock_held(dequeiterobject *it, dequeobject *deque)	modelled	sequences-deque-iter-walk	
+Modules/_collectionsmodule.c	1996	2008	dequeiter_next	dequeiter_next(PyObject *op)	modelled	sequences-deque-iter-walk	
+Modules/_collectionsmodule.c	2011	2043	dequeiter_new	dequeiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-iter-new,sequences-deque-iter-new-kwargs	
+Modules/_collectionsmodule.c	2046	2051	dequeiter_len	dequeiter_len(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	sequences-deque-iter-walk,sequences-deque-iter-new	
+Modules/_collectionsmodule.c	2056	2069	dequeiter_reduce	dequeiter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	sequences-deque-iter-new	
+Modules/_collectionsmodule.c	2100	2117	deque_reviter	deque_reviter(dequeobject *deque)	modelled	sequences-deque-iter-walk,sequences-deque-iter-new	
+Modules/_collectionsmodule.c	2120	2144	dequereviter_next_lock_held	dequereviter_next_lock_held(dequeiterobject *it, dequeobject *deque)	modelled	sequences-deque-iter-walk	
+Modules/_collectionsmodule.c	2147	2158	dequereviter_next	dequereviter_next(PyObject *self)	modelled	sequences-deque-iter-walk	
+Modules/_collectionsmodule.c	2161	2193	dequereviter_new	dequereviter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-iter-new,sequences-deque-iter-new-kwargs	
 Modules/_collectionsmodule.c	2234	2256	defdict_missing	defdict_missing(PyObject *op, PyObject *key)	modelled	sequences-defdict-getitem	
 Modules/_collectionsmodule.c	2259	2264	new_defdict	new_defdict(PyObject *op, PyObject *arg)	modelled	sequences-defdict-copy-reduce	
 Modules/_collectionsmodule.c	2269	2276	defdict_copy	defdict_copy(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	sequences-defdict-copy-reduce	
-Modules/_collectionsmodule.c	2279	2332	defdict_reduce	defdict_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		review: `reduce` now takes the outcome of `dd.items()` and builds the 5-tuple (:2309-2327), but DefDictCopyReduce states the success case only for `.ok (.iter dd.items none)`, so a reduce that ignores what an overriding items() returned and always iterates dd.items passes; only its error and non-iterable outcomes are pinned.
+Modules/_collectionsmodule.c	2279	2332	defdict_reduce	defdict_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	sequences-defdict-copy-reduce	
 Modules/_collectionsmodule.c	2362	2371	defdict_dealloc	defdict_dealloc(PyObject *op)	excluded		no-behaviour: frees the factory, then dict dealloc
 Modules/_collectionsmodule.c	2374	2410	defdict_repr	defdict_repr(PyObject *op)	modelled	sequences-defdict-repr-init-or	
 Modules/_collectionsmodule.c	2413	2444	defdict_or	defdict_or(PyObject* left, PyObject* right)	modelled	sequences-defdict-repr-init-or	
