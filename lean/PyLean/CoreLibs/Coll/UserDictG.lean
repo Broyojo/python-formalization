@@ -114,28 +114,32 @@ def udIorP (K : KOps κ) (u : UD κ ν) : IorOpnd κ ν → Out (UD κ ν)
 
 /-! ### `__copy__`, `copy`, `fromkeys` -/
 
-/-- A `UserDict` object: id, class, `data`, and the rest of its `__dict__`. -/
+/-- A `UserDict` object: id, class, the id and contents of its `data` dict, and the rest of its
+`__dict__`. -/
 structure UDO (κ ν α : Type) where
   id : Nat
   cls : String
+  dataId : Nat
   data : D κ ν
   attrs : List (String × α)
   deriving Repr, DecidableEq
 
-/-- `UserDict.__copy__`, :1240-1245: a new instance `fresh` of `self.__class__`, its `__dict__`
-updated from `self`'s, and `data` replaced by `self.data.copy()`. -/
-def udCopyDunderO {α : Type} (fresh : Nat) (u : UDO κ ν α) : UDO κ ν α :=
-  ⟨fresh, u.cls, D.update [] u.data, u.attrs⟩
+/-- `UserDict.__copy__`, :1240-1245: a new instance `fresh` of `self.__class__`
+(`__new__`, :1241), its `__dict__` updated from `self`'s (:1242, so for a moment it shares
+`self.data`), then `data` replaced by `self.data.copy()`, the new dict `freshD` (:1244). -/
+def udCopyDunderO {α : Type} (fresh freshD : Nat) (u : UDO κ ν α) : UDO κ ν α :=
+  ⟨fresh, u.cls, freshD, D.update [] u.data, u.attrs⟩
 
-/-- `UserDict.copy`, :1247-1257. For `UserDict` itself, `UserDict(self.data.copy())`, the new
-object `fresh`. For a subclass: `self.data = {}`, `c = copy.copy(self)` (`copyFn`, the class's
+/-- `UserDict.copy`, :1247-1257. For `UserDict` itself, `UserDict(self.data.copy())`: the new object
+`fresh`, whose `__init__` makes the new dict `freshD` and updates it. For a subclass:
+`self.data = {}` (the new dict `tmpD`), `c = copy.copy(self)` (`copyFn`, the class's
 `__copy__`, Python code that may raise), `self.data` restored by the `finally`, then
-`c.update(self)`. Returns `self` as it is left, and the result. -/
-def udCopyO {α : Type} (K : KOps κ) (copyFn : UDO κ ν α → Py (UDO κ ν α)) (fresh : Nat) (u : UDO κ ν α) :
-    UDO κ ν α × Py (UDO κ ν α) :=
-  if u.cls = "UserDict" then (u, .ok ⟨fresh, "UserDict", D.update [] u.data, []⟩)
+`c.update(self)` into `c.data`. Returns `self` as it is left, and the result. -/
+def udCopyO {α : Type} (K : KOps κ) (copyFn : UDO κ ν α → Py (UDO κ ν α)) (fresh freshD tmpD : Nat)
+    (u : UDO κ ν α) : UDO κ ν α × Py (UDO κ ν α) :=
+  if u.cls = "UserDict" then (u, .ok ⟨fresh, "UserDict", freshD, D.update [] u.data, []⟩)
   else
-    match copyFn { u with data := [] } with
+    match copyFn { u with dataId := tmpD, data := [] } with
     | .error e => (u, .error e)
     | .ok c =>
       let r := udUpdateP K c.data (dictUSrc u.data)

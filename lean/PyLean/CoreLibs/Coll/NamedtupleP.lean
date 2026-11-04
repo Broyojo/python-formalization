@@ -110,4 +110,50 @@ theorem namedtupleGetnewargs_proven : NamedtupleGetnewargs := by
   rw [List.drop_eq_nil_of_le (by omega)]
   simp [fillRest]
 
+/-- `__repr__`, :472-474: `self.__class__.__name__ + repr_fmt % self`, `repr_fmt` being
+`'(' + ', '.join(f'{name}=%r' for name in field_names) + ')'` (:435), so each value's `repr`
+is called in field order and may raise. -/
+def ntReprP {ν : Type} (rv : ν → Py String) (cls : String) (T : NT ν) (vals : List ν) : Py String := do
+  let parts ← (T.fields.zip vals).mapM (fun p => do
+    let r ← rv p.2
+    pure (p.1 ++ "=" ++ r))
+  pure (cls ++ "(" ++ ", ".intercalate parts ++ ")")
+
+/-- **`repr` names the instance's class and the class's fields.** For every generated class
+and tuple of the right length, and every class name (a subclass's included): with values whose
+`repr` returns, `repr(p)` is `Cls(f1=r1, ..., fn=rn)` with the fields of `_fields`, which are the
+names given (after `rename`), in order; a value whose `repr` raises makes `repr(p)` raise.
+
+Source: docstring 'Return a nicely formatted representation string',
+Lib/collections/__init__.py:473; :435. -/
+def NamedtupleRepr : Prop :=
+  ∀ (U : UniId) (tn : String) (fn : FieldNames) (r : Bool) (d : Option (List Nat)) (T : NT Nat)
+    (vals : List Nat) (cls : String) (rv : Nat → String),
+    namedtuple U tn fn r d = .ok T →
+    ntReprP (fun v => .ok (rv v)) cls T vals =
+      .ok (cls ++ "(" ++ ", ".intercalate ((T.fields.zip vals).map (fun p => p.1 ++ "=" ++ rv p.2)) ++ ")") ∧
+    T.fields = (if r then renameLoop U [] 0 (fieldList fn) else fieldList fn) ∧
+    ntReprP (fun v => .ok (rv v)) cls T vals = .ok (ntRepr rv cls T vals) ∧
+    (∀ (e : PyExc) (rv' : Nat → Py String) (f : String) (fs : List String) (v : Nat) (rest : List Nat),
+      T.fields = f :: fs → vals = v :: rest → rv' v = .error e → ntReprP rv' cls T vals = .error e)
+
+theorem namedtupleRepr_proven : NamedtupleRepr := by
+  intro U tn fn r d T vals cls rv hT
+  have hm : ∀ l : List (String × Nat), l.mapM (fun p => (do
+      let r ← (Except.ok (rv p.2) : Py String)
+      pure (p.1 ++ "=" ++ r))) = .ok (l.map (fun p => p.1 ++ "=" ++ rv p.2)) := by
+    intro l
+    induction l with
+    | nil => rfl
+    | cons a t ih => rw [List.mapM_cons, ih]; rfl
+  have h1 : ntReprP (fun v => .ok (rv v)) cls T vals =
+      .ok (cls ++ "(" ++ ", ".intercalate ((T.fields.zip vals).map (fun p => p.1 ++ "=" ++ rv p.2)) ++ ")") := by
+    unfold ntReprP
+    rw [hm]
+    rfl
+  refine ⟨h1, (namedtuple_inv hT).2.2.2.2.2, by rw [h1]; rfl, fun e rv' f fs v rest hf hv he => ?_⟩
+  unfold ntReprP
+  rw [hf, hv]
+  simp [List.zip_cons_cons, List.mapM_cons, he]
+
 end PyLean.CoreLibs.Coll

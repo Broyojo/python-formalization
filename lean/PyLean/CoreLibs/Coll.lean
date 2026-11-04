@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
-import PyLean.CoreLibs.Coll.CounterProps4
+import PyLean.CoreLibs.Coll.CounterProps5
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
@@ -92,6 +92,16 @@ def counterEntries : List Entry := [
     statement := "+=, -=, |= read only other.items(): a dict and a Counter with the same items agree, and a raising .items() leaves self unchanged; &= reads other[elem]: Counter() &= 5 succeeds and a dict missing the first key raises its KeyError with self unchanged."
     source := "invariant; Lib/collections/__init__.py:972, :985, :998, :1013-1014"
     status := .proven, prop := ``InplaceOperands, thm := some ``inplaceOperands_proven },
+  { id := "coll-counter-update-mapping-kw", pyFile := file
+    pyFns := ["Counter.update", "Counter.subtract", "Counter.__init__"]
+    statement := "For any pure + and - on counts, update(L) on a non-empty counter stores L[k] + self.get(k, 0) for L's keys (dict.update's replacement fails), subtract(L) stores self.get(k, 0) - L[k], the keywords are applied after the positional argument by the same branch, Counter(**kw) holds kw, Counter(L) holds L, and Counter(L, **kw) adds kw to L."
+    source := "docstrings, Lib/collections/__init__.py:606-615, :678, :712-714"
+    status := .proven, prop := ``UpdateMappingKw, thm := some ``updateMappingKw_proven },
+  { id := "coll-counter-inplace-arith", pyFile := file
+    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__"]
+    statement := "For any pure +=, -=, <, > on counts, a += b leaves a[k] += b[k] at b's keys and a[k] elsewhere, -= likewise, |= takes b[k] where b[k] > a[k], &= takes b[k] (0 when missing) where b[k] < a[k], each keeping only counts > 0, without raising."
+    source := "docstrings, Lib/collections/__init__.py:964-1011"
+    status := .proven, prop := ``InplaceArith, thm := some ``inplaceArith_proven },
   { id := "coll-counter-total", pyFile := file, pyFns := []
     statement := "total() is sum(self.values()) for every count type."
     source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
@@ -147,9 +157,13 @@ def chainMapEntries : List Entry := [
     status := .proven, prop := ``ChainMapFromkeys, thm := some ``chainMapFromkeys_proven },
   { id := "coll-chainmap-objects", pyFile := file
     pyFns := ["ChainMap.copy", "ChainMap.__or__", "ChainMap.__ior__", "ChainMap.clear"]
-    statement := "copy() is a new ChainMap with a new copy of maps[0] and maps[1:]'s own objects; cm | o puts maps[0] | o in that new dict and leaves self's maps[0] alone, NotImplemented for a non-Mapping; cm |= o returns self with maps[0] updated in place and maps[1:] untouched, raising what dict.update raises; clear() empties maps[0] in place so later maps answer."
+    statement := "copy() is a new ChainMap with a new copy of maps[0] and maps[1:]'s own objects; cm | o puts maps[0] | o in that new dict and leaves self's maps[0] alone, NotImplemented for a non-Mapping, and raises (discarding the copy) when o fails; cm |= o returns self with maps[0] updated in place and maps[1:] untouched, a non-iterable raising with self unchanged and an operand failing part way raising with its earlier pairs kept in maps[0]; clear() empties maps[0] in place so later maps answer."
     source := "docstrings, Lib/collections/__init__.py:1103, :1148; PEP 584"
-    status := .proven, prop := ``ChainMapObjects, thm := some ``chainMapObjects_proven }
+    status := .proven, prop := ``ChainMapObjects, thm := some ``chainMapObjects_proven },
+  { id := "coll-chainmap-ror-p", pyFile := file, pyFns := ["ChainMap.__ror__"]
+    statement := "other | cm builds dict(other) first: its value gives the one-map ChainMap of coll-chainmap-union-flat, its exception propagates, and a non-Mapping gets NotImplemented."
+    source := "PEP 584; Lib/collections/__init__.py:1162-1168"
+    status := .proven, prop := ``ChainMapRorP, thm := some ``chainMapRorP_proven }
 ]
 
 def userDictEntries : List Entry := [
@@ -210,7 +224,7 @@ def userDictEntries : List Entry := [
     source := "PEP 584; Lib/collections/__init__.py:1233-1238"
     status := .proven, prop := ``UserDictIorP, thm := some ``userDictIorP_proven },
   { id := "coll-userdict-copy-o", pyFile := file, pyFns := ["UserDict.__copy__", "UserDict.copy"]
-    statement := "copy.copy(u) and u.copy() are new objects of u's class with u's items (and, for __copy__ and subclasses, u's other attributes); when a subclass's copy.copy raises, copy raises it and u.data is restored."
+    statement := "copy.copy(u) and u.copy() are new objects of u's class whose data is a new dict (not u.data) with u's items (and, for __copy__ and subclasses, u's other attributes); when a subclass's copy.copy raises, copy raises it and u.data is restored."
     source := "Lib/collections/__init__.py:1240-1257"
     status := .proven, prop := ``UserDictCopyO, thm := some ``userDictCopyO_proven },
   { id := "coll-userdict-fromkeys-p", pyFile := file, pyFns := ["UserDict.fromkeys"]
@@ -364,7 +378,11 @@ def namedtupleEntries : List Entry := [
   { id := "coll-namedtuple-getnewargs", pyFile := file, pyFns := ["namedtuple"]
     statement := "T(*p.__getnewargs__()) gives back p's values for every generated class and tuple of the right length."
     source := "docstring, Lib/collections/__init__.py:481"
-    status := .proven, prop := ``NamedtupleGetnewargs, thm := some ``namedtupleGetnewargs_proven }
+    status := .proven, prop := ``NamedtupleGetnewargs, thm := some ``namedtupleGetnewargs_proven },
+  { id := "coll-namedtuple-repr", pyFile := file, pyFns := ["namedtuple"]
+    statement := "repr(p) is Cls(f1=r1, ..., fn=rn) with the instance's class name and the class's _fields (the names given, after rename) in order, and raises when a value's repr raises."
+    source := "docstring, Lib/collections/__init__.py:473; :435"
+    status := .proven, prop := ``NamedtupleRepr, thm := some ``namedtupleRepr_proven }
 ]
 
 def entries : List Entry :=

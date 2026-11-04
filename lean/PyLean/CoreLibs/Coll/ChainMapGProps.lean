@@ -174,29 +174,52 @@ place and `maps[1:]` untouched, and an `other` that `dict.update` rejects raises
 Source: docstrings, Lib/collections/__init__.py:1103 ('New ChainMap or subclass with a new copy
 of maps[0] and refs to maps[1:]') and :1148 ('Clear maps[0], leaving maps[1:] intact'); PEP 584. -/
 def ChainMapObjects : Prop :=
-  ∀ (κ ν : Type) [DecidableEq κ] (id i fresh fresh0 : Nat) (m : D κ ν) (t : List (Nat × D κ ν))
-    (o : List (κ × ν)) (e : PyExc), D.WF m →
+  ∀ (κ ν : Type) [DecidableEq κ] (K : KOps κ) (id i fresh fresh0 : Nat) (m : D κ ν) (t : List (Nat × D κ ν))
+    (o : D κ ν) (e : PyExc), D.WF m → HashOk K o →
     let c : CMapO κ ν := ⟨id, (i, m) :: t⟩
     cmCopyO fresh fresh0 c = .ok ⟨fresh, (fresh0, m) :: t⟩ ∧
-    cmOrO fresh fresh0 c (some (.ok o)) = some (.ok ⟨fresh, (fresh0, D.update m o) :: t⟩) ∧
-    cmOrO fresh fresh0 c none = none ∧
-    cmIorO c (.ok o) = .ok ⟨id, (i, D.update m o) :: t⟩ ∧
-    cmIorO c (.error e) = .error e ∧
+    cmOrO K fresh fresh0 c (some (.ok (FIt.ofList o))) = some (.ok ⟨fresh, (fresh0, D.update m o) :: t⟩) ∧
+    cmOrO K fresh fresh0 c (some (.ok ⟨o, some e⟩)) = some (.error e) ∧
+    cmOrO K fresh fresh0 c none = none ∧
+    cmIorO K c (.ok (FIt.ofList o)) = (⟨id, (i, D.update m o) :: t⟩, none) ∧
+    cmIorO K c (.error e) = (c, some e) ∧
+    cmIorO K c (.ok ⟨o, some e⟩) = (⟨id, (i, D.update m o) :: t⟩, some e) ∧
     (∃ r, cmClearO c = .ok r ∧ r.id = id ∧ r.maps = (i, []) :: t ∧
       ∀ k, cmLookup r.view k = cmLookup (t.map (·.2)) k) ∧
     (∀ (c' : CMapO κ ν), c'.maps = [] →
-      cmCopyO fresh fresh0 c' = .error noMap ∧ cmIorO c' (.ok o) = .error noMap ∧ cmClearO c' = .error noMap)
+      cmCopyO fresh fresh0 c' = .error noMap ∧ cmIorO K c' (.ok (FIt.ofList o)) = (c', some noMap) ∧
+      cmClearO c' = .error noMap)
 
 theorem chainMapObjects_proven : ChainMapObjects := by
-  intro κ ν _ id i fresh fresh0 m t o e hw
+  intro κ ν _ K id i fresh fresh0 m t o e hw hh
   simp only
   have hu := update_nil_WF hw
-  refine ⟨by simp [cmCopyO, hu], by simp [cmOrO, cmCopyO, cmIorO, hu], rfl, rfl, rfl,
+  have hl : ∀ d : D κ ν, loopS (fun d (p : κ × ν) => dSet K d p.1 p.2) d o = (D.update d o, none) :=
+    fun d => loopS_pure o d (fun s p hp => dSet_ok s p.2 (hash_of_mem hh hp))
+  refine ⟨by simp [cmCopyO, hu], ?_, ?_, rfl, ?_, rfl, ?_,
     ⟨⟨id, (i, []) :: t⟩, rfl, rfl, rfl, fun k => ?_⟩, fun c' hc => ?_⟩
+  · simp [cmOrO, cmCopyO, cmIorO, hu, forPy, forIt, FIt.ofList, hl, Out.toPy]
+  · simp [cmOrO, cmCopyO, cmIorO, hu, forPy, forIt, hl, Out.toPy]
+  · simp [cmIorO, forPy, forIt, FIt.ofList, hl]
+  · simp [cmIorO, forPy, forIt, hl]
   · simp [CMapO.view, cmLookup, D.get?]
   · obtain ⟨id', maps'⟩ := c'
     simp only at hc
     subst hc
     exact ⟨rfl, rfl, rfl⟩
+
+/-- **`other | cm` builds `dict(other)` first, and its exception propagates.** For every
+`ChainMap`: a `Mapping` `other` whose `dict(other)` gives `o` yields the one-map `ChainMap` of
+`ChainMapUnionFlat` (`o` updated from the last map to the first); a `dict(other)` that raises
+raises that exception; a non-`Mapping` gets `NotImplemented`.
+
+Source: PEP 584; Lib/collections/__init__.py:1162-1168. -/
+def ChainMapRorP : Prop :=
+  ∀ (κ ν : Type) [DecidableEq κ] (c : CMap κ ν) (o : D κ ν) (e : PyExc),
+    cmRorP c (some (.ok o)) = (cmRor c (some o)).map .ok ∧
+    cmRorP c (some (.error e)) = some (.error e) ∧
+    cmRorP c none = none
+
+theorem chainMapRorP_proven : ChainMapRorP := fun _ _ _ _ _ _ => ⟨rfl, rfl, rfl⟩
 
 end PyLean.CoreLibs.Coll

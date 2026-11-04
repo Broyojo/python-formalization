@@ -296,7 +296,7 @@ coll_CM_ODD_KEYS = ["a\\b", "it's", "q\"'x", "\t"]
 def coll_gen_cm(rng):
     op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "repr_self",
                      "getitem_dd", "contains_dd", "fromkeys", "copy", "new_child", "parents", "setitem",
-                     "delitem", "popitem", "pop", "clear", "ior", "or", "ror"])
+                     "delitem", "popitem", "pop", "clear", "ior", "ior", "or", "ror", "ror_bad"])
     n = rng.choice([0, 1, 1, 2, 2, 3, 4])
     keys = coll_KEYS + (coll_CM_ODD_KEYS if op in ("getitem", "delitem", "pop") else [])
     case = {"fn": "coll.cm", "op": op, "k": rng.choice(keys),
@@ -313,11 +313,25 @@ def coll_gen_cm(rng):
             case["o"] = coll_items(rng, small=True)
     if op == "new_child":
         case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+    if op == "ior":
+        case["gen"] = rng.random() < 0.3
     return case
 
 
 def coll_enc_cm(c):
     return [coll_enc(m) for m in c.maps]
+
+
+class coll_BadMap(coll_abc.Mapping):
+    """A Mapping whose [] raises, so dict(other) fails."""
+    def __getitem__(self, k):
+        raise LookupError("gi")
+
+    def __iter__(self):
+        return iter(["x"])
+
+    def __len__(self):
+        return 1
 
 
 def coll_copy_bits(r, c):
@@ -386,9 +400,21 @@ def coll_run_cm(case):
             return coll_enc_cm(c)
         if op == "ior":
             m0 = c.maps[0] if c.maps else None
-            r = c
-            r |= coll_d(case["o"]) if "o" in case else 5
-            return [r is c, r.maps[0] is m0, coll_enc_cm(r)]
+            if "o" not in case:
+                other = 5
+            elif case.get("gen"):
+                other = coll_gen_pairs(case["o"])
+            else:
+                other = coll_d(case["o"])
+            try:
+                r = c
+                r |= other
+                bits, exc = [r is c, r.maps[0] is m0], None
+            except Exception as e:
+                bits, exc = None, [type(e).__name__, str(e)]
+            return [bits, coll_enc_cm(c), exc]
+        if op == "ror_bad":
+            return coll_enc_cm(ChainMap.__ror__(c, coll_BadMap()))
         if op == "or":
             return coll_copy_bits(c | (coll_d(case["o"]) if "o" in case else 5), c)
         if op == "ror":
@@ -554,7 +580,8 @@ def coll_run_ud(case):
             v.extra = 5
             try:
                 c = v.copy()
-                res = {"ok": [type(c).__name__, c is not v, coll_enc(c.data), len(vars(c)) - 1]}
+                res = {"ok": [type(c).__name__, c is not v, c.data is not v.data, coll_enc(c.data),
+                              len(vars(c)) - 1]}
             except Exception as e:
                 res = {"exc": type(e).__name__, "msg": str(e)}
             return [coll_enc(v.data), res]

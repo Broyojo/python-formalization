@@ -2683,6 +2683,8 @@ coll-counter-ops-pointwise	proven	Lib/collections/__init__.py	Counter.__add__,Co
 coll-counter-unary	proven	Lib/collections/__init__.py	Counter.__pos__,Counter.__neg__
 coll-counter-keep-positive	proven	Lib/collections/__init__.py	Counter._keep_positive,Counter.__pos__
 coll-counter-inplace-operands	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__
+coll-counter-update-mapping-kw	proven	Lib/collections/__init__.py	Counter.update,Counter.subtract,Counter.__init__
+coll-counter-inplace-arith	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__
 coll-counter-total	open	Lib/collections/__init__.py	
 coll-counter-fromkeys	proven	Lib/collections/__init__.py	
 coll-chainmap-flat-view	proven	Lib/collections/__init__.py	ChainMap.__missing__,ChainMap.get,ChainMap.__len__,ChainMap.__iter__,ChainMap.__contains__,ChainMap.__bool__
@@ -2695,6 +2697,7 @@ coll-chainmap-getitem-any	proven	Lib/collections/__init__.py	ChainMap.__getitem_
 coll-chainmap-repr-guard	proven	Lib/collections/__init__.py	ChainMap.__repr__
 coll-chainmap-fromkeys	proven	Lib/collections/__init__.py	ChainMap.fromkeys
 coll-chainmap-objects	proven	Lib/collections/__init__.py	ChainMap.copy,ChainMap.__or__,ChainMap.__ior__,ChainMap.clear
+coll-chainmap-ror-p	proven	Lib/collections/__init__.py	ChainMap.__ror__
 coll-userdict-matches-dict	proven	Lib/collections/__init__.py	UserDict.__len__,UserDict.get
 coll-userdict-set-del	proven	Lib/collections/__init__.py	UserDict.__setitem__,UserDict.__delitem__
 coll-userdict-constructors-union	proven	Lib/collections/__init__.py	UserDict.__or__,UserDict.__ror__
@@ -2734,6 +2737,7 @@ coll-namedtuple-instance-methods	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-defaults	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-conversions	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-getnewargs	proven	Lib/collections/__init__.py	namedtuple
+coll-namedtuple-repr	proven	Lib/collections/__init__.py	namedtuple
 corelibs-collabc-check-methods	proven	Lib/_collections_abc.py	_check_methods
 corelibs-collabc-subclasshooks	proven	Lib/_collections_abc.py	Hashable.__subclasshook__,Awaitable.__subclasshook__,Coroutine.__subclasshook__,AsyncIterable.__subclasshook__,AsyncIterator.__subclasshook__,AsyncGenerator.__subclasshook__,Iterable.__subclasshook__,Iterator.__subclasshook__,Reversible.__subclasshook__,Generator.__subclasshook__,Sized.__subclasshook__,Container.__subclasshook__,Collection.__subclasshook__,Buffer.__subclasshook__,Callable.__subclasshook__
 corelibs-collabc-abstract-bodies	proven	Lib/_collections_abc.py	

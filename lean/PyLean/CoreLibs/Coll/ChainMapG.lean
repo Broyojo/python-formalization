@@ -106,22 +106,27 @@ def cmCopyO (fresh fresh0 : Nat) (c : CMapO κ ν) : Py (CMapO κ ν) :=
   | (_, m) :: t => .ok ⟨fresh, (fresh0, D.update [] m) :: t⟩
 
 /-- `ChainMap.__ior__`, :1151-1153: `self.maps[0].update(other)` in place, then `self`. `other`
-is what `dict.update` reads from it, or the exception it raises (a non-iterable's
-`TypeError`). -/
-def cmIorO (c : CMapO κ ν) (other : Py (List (κ × ν))) : Py (CMapO κ ν) :=
+is what `dict.update` reads from it, pair by pair: a non-iterable's `TypeError` before any pair,
+or a failure part way, after which the pairs already stored stay in `maps[0]`. -/
+def cmIorO (K : KOps κ) (c : CMapO κ ν) (other : Py (FIt (κ × ν))) : Out (CMapO κ ν) :=
   match c.maps with
-  | [] => .error noMap
-  | (i, m) :: t => do
-    let o ← other
-    pure ⟨c.id, (i, D.update m o) :: t⟩
+  | [] => (c, some noMap)
+  | (i, m) :: t =>
+    let r := forPy (fun d (p : κ × ν) => dSet K d p.1 p.2) m other
+    (⟨c.id, (i, r.1) :: t⟩, r.2)
 
 /-- `ChainMap.__or__`, :1155-1160: `NotImplemented` (`none`) for a non-`Mapping`, else
-`m = self.copy(); m.maps[0].update(other); return m`. -/
-def cmOrO (fresh fresh0 : Nat) (c : CMapO κ ν) (other : Option (Py (List (κ × ν)))) :
+`m = self.copy(); m.maps[0].update(other); return m`; an exception discards `m`. -/
+def cmOrO (K : KOps κ) (fresh fresh0 : Nat) (c : CMapO κ ν) (other : Option (Py (FIt (κ × ν)))) :
     Option (Py (CMapO κ ν)) :=
   other.map (fun o => do
     let m ← cmCopyO fresh fresh0 c
-    cmIorO m o)
+    (cmIorO K m o).toPy)
+
+/-- `ChainMap.__ror__`, :1162-1168, with `dict(other)` (:1165) Python code that may raise (a
+`Mapping` whose `keys()` or `[]` raises); the later updates are from dicts. -/
+def cmRorP (c : CMap κ ν) (other : Option (Py (D κ ν))) : Option (Py (CMap κ ν)) :=
+  other.map (fun p => p.map (fun o => cmNew [c.maps.reverse.foldl D.update (D.update [] o)]))
 
 /-- `ChainMap.clear`, :1147-1149: `self.maps[0].clear()` in place. -/
 def cmClearO (c : CMapO κ ν) : Py (CMapO κ ν) :=

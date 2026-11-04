@@ -246,21 +246,31 @@ def runCM (j : Json) : Except String Json := do
   | "pop" => return encPy (fun r => Json.arr #[toJson r.1, encCM r.2]) (cmPop pyStrRepr c k dflt)
   | "clear" => return encPy (fun (r : CMapO String Int) => Json.arr (r.view.map encItems).toArray) (cmClearO (cmObj c))
   | "ior" =>
-    let o : Py (List (String × Int)) := match j.getObjVal? "o" with
+    let gen := (j.getObjVal? "gen" >>= Json.getBool?).toOption.getD false
+    let o : Py (FIt (String × Int)) := match j.getObjVal? "o" with
       | .ok .null | .error _ => .error (.typeError "'int' object is not iterable")
-      | .ok _ => (getItems j "o").toOption.getD [] |> .ok
-    return encPy (fun (r : CMapO String Int) => Json.arr #[toJson (r.id == 0),
-      toJson ((r.maps.head?.map (·.1)) == some 10), Json.arr (r.view.map encItems).toArray]) (cmIorO (cmObj c) o)
+      | .ok _ => .ok ⟨(getItems j "o").toOption.getD [], if gen then some (.valueError "boom") else none⟩
+    let r := cmIorO kStr (cmObj c) o
+    return okJ (Json.arr #[
+      (match r.2 with
+       | none => Json.arr #[toJson (r.1.id == 0), toJson ((r.1.maps.head?.map (·.1)) == some 10)]
+       | some _ => Json.null),
+      Json.arr (r.1.view.map encItems).toArray,
+      (match r.2 with | none => Json.null | some e => encExc e)])
   | "or" =>
-    match cmOrO 1 100 (cmObj c) ((← optOther j).map .ok) with
+    match cmOrO kStr 1 100 (cmObj c) ((← optOther j).map (fun o => .ok (FIt.ofList o))) with
     | some r => return encPy (encCopy (cmObj c)) r
     | none => return encPy encCM (.error (.typeError
         "unsupported operand type(s) for |: 'ChainMap' and 'int'"))
   | "ror" =>
-    match cmRor c (← optOther j) with
-    | some r => return okJ (encCM r)
+    match cmRorP c ((← optOther j).map .ok) with
+    | some r => return encPy encCM r
     | none => return encPy encCM (.error (.typeError
         "unsupported operand type(s) for |: 'int' and 'ChainMap'"))
+  | "ror_bad" =>
+    match cmRorP c (some (.error (.named "LookupError" "gi"))) with
+    | some r => return encPy encCM r
+    | none => throw "unreachable"
   | _ => throw s!"unknown cm op {op}"
 
 /-! ### `UserDict` -/
@@ -354,12 +364,13 @@ def runUD (j : Json) : Except String Json := do
     return encOut encUD r
   | "copy_p" =>
     let raising := (j.getObjVal? "raise" >>= Json.getBool?).toOption.getD false
-    let uo : UDO String Int Int := ⟨0, if raising then "coll_UDRaise" else cls, u.data, [("extra", 5)]⟩
+    let uo : UDO String Int Int := ⟨0, if raising then "coll_UDRaise" else cls, 50, u.data, [("extra", 5)]⟩
     let copyFn : UDO String Int Int → Py (UDO String Int Int) := fun t =>
-      if raising then .error (.named "RuntimeError" "nocopy") else .ok (udCopyDunderO 1 t)
-    let r := udCopyO kStr copyFn 1 uo
+      if raising then .error (.named "RuntimeError" "nocopy") else .ok (udCopyDunderO 1 51 t)
+    let r := udCopyO kStr copyFn 1 51 52 uo
     return okJ (Json.arr #[encItems r.1.data, encPy (fun (c : UDO String Int Int) =>
-      Json.arr #[toJson c.cls, toJson (c.id != uo.id), encItems c.data, toJson (c.attrs.length)]) r.2])
+      Json.arr #[toJson c.cls, toJson (c.id != uo.id), toJson (c.dataId != uo.dataId), encItems c.data,
+        toJson (c.attrs.length)]) r.2])
   | "fromkeys_p" =>
     return encPy encUD (udFromkeysP kStr cls (← getIt j "xs") (dflt.getD 0))
   | _ => throw s!"unknown ud op {op}"

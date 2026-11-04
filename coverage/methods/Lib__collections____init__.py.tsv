@@ -25,16 +25,16 @@ Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo
 Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		
 Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		changed-in-3.15:
 Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		changed-in-3.15:
-Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	todo		review: The validation, rename, defaults and compile (NFKC) steps of :387-451 are mirrored well and NamedtupleValidation is a real iff, but no theorem quantifies over the `FieldNames.str` path (:387-388), `__getnewargs__` (:480-482) is not modelled at all, `ntRepr` (:472-474) uses the typename where the source uses `self.__class__.__name__` and has no theorem, `map(str, field_names)` and `tuple(defaults)` are infallible lists, and the `_replace` conjunct pins its message through `pyStrRepr`, which is wrong for a name holding a backslash or both quote kinds (`T._replace(**{'a\\b': 1})`); `fieldList` still carries an `@3.14.7` marker.
+Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-conversions,coll-namedtuple-defaults,coll-namedtuple-getnewargs,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-repr,coll-namedtuple-source-attribute,coll-namedtuple-validation	
 Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
-Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	todo		review: Counts are Int and `Src` is an infallible list, so a raising iterable or mapping `.items()`, and non-int counts (documented: floats, Fractions), are out of reach; the row reduces to `update [] src kwds`, which inherits update's gaps.
+Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
 Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
 Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		review: `sum(self.values())` on arbitrary values (float `sum` uses compensated summation, mixed types raise TypeError) is modelled as an Int fold, so the property holds only on the int-only domain the model picks.
 Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common,coll-counter-most-common-neg	
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
-Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	todo		review: Counts are Int and the source is an infallible list, so `count + self_get(elem, 0)` on non-commutative or non-numeric values, a raising `.items()`/iterator, and the fast path's `dict.update` (which reads `keys()`/`__getitem__`, not `.items()`) are not distinguished; UpdateFastEqSlow only compares two lists of pairs.
-Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	todo		review: Int counts over an infallible list: `self_get(elem, 0) - count` on arbitrary values and a raising iterator or mapping cannot be expressed, and SubtractUndoesUpdate relies on Int arithmetic that floats do not satisfy.
+Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-fast-slow,coll-counter-update-mapping-kw	
+Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
 Lib/collections/__init__.py	738	740	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	
 Lib/collections/__init__.py	742	743	Counter.__reduce__	__reduce__(self)	modelled	coll-counter-copy-reduce	
 Lib/collections/__init__.py	745	748	Counter.__delitem__	__delitem__(self, elem)	modelled	coll-counter-delitem	
@@ -53,10 +53,10 @@ Lib/collections/__init__.py	910	935	Counter.__xor__	__xor__(self, other)	todo		w
 Lib/collections/__init__.py	937	943	Counter.__pos__	__pos__(self)	modelled	coll-counter-keep-positive,coll-counter-unary	
 Lib/collections/__init__.py	945	954	Counter.__neg__	__neg__(self)	modelled	coll-counter-unary	
 Lib/collections/__init__.py	956	961	Counter._keep_positive	_keep_positive(self)	modelled	coll-counter-keep-positive	
-Lib/collections/__init__.py	963	974	Counter.__iadd__	__iadd__(self, other)	todo		review-pending: operand handling proven (coll-counter-inplace-operands: dict and Counter operands, a raising .items(), &= on an empty counter and a dict missing a key), but the arithmetic of the loop is not pinned by a theorem yet
-Lib/collections/__init__.py	976	987	Counter.__isub__	__isub__(self, other)	todo		review-pending: operand handling proven (coll-counter-inplace-operands: dict and Counter operands, a raising .items(), &= on an empty counter and a dict missing a key), but the arithmetic of the loop is not pinned by a theorem yet
-Lib/collections/__init__.py	989	1002	Counter.__ior__	__ior__(self, other)	todo		review-pending: operand handling proven (coll-counter-inplace-operands: dict and Counter operands, a raising .items(), &= on an empty counter and a dict missing a key), but the arithmetic of the loop is not pinned by a theorem yet
-Lib/collections/__init__.py	1004	1017	Counter.__iand__	__iand__(self, other)	todo		review-pending: operand handling proven (coll-counter-inplace-operands: dict and Counter operands, a raising .items(), &= on an empty counter and a dict missing a key), but the arithmetic of the loop is not pinned by a theorem yet
+Lib/collections/__init__.py	963	974	Counter.__iadd__	__iadd__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	976	987	Counter.__isub__	__isub__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	989	1002	Counter.__ior__	__ior__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	1004	1017	Counter.__iand__	__iand__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
 Lib/collections/__init__.py	1019	1033	Counter.__ixor__	__ixor__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any object; the model follows the 3.15.2 body on Int counts, and XorPointwise stands for those
 Lib/collections/__init__.py	1054	1059	ChainMap.__init__	__init__(self, *maps)	modelled	coll-chainmap-init	
 Lib/collections/__init__.py	1061	1062	ChainMap.__missing__	__missing__(self, key)	modelled	coll-chainmap-flat-view	
@@ -76,9 +76,9 @@ Lib/collections/__init__.py	1127	1131	ChainMap.__delitem__	__delitem__(self, key
 Lib/collections/__init__.py	1133	1138	ChainMap.popitem	popitem(self)	modelled	coll-chainmap-writes-first	
 Lib/collections/__init__.py	1140	1145	ChainMap.pop	pop(self, key, *args)	modelled	coll-chainmap-writes-first	
 Lib/collections/__init__.py	1147	1149	ChainMap.clear	clear(self)	modelled	coll-chainmap-objects	
-Lib/collections/__init__.py	1151	1153	ChainMap.__ior__	__ior__(self, other)	todo		review: Only the flat view is stated, with no `maps[1:]` clause, so a `|=` that collapses every map into one passes; the conjunct is `rfl`, and `return self` identity and a non-iterable `other` (TypeError) are not modelled.
+Lib/collections/__init__.py	1151	1153	ChainMap.__ior__	__ior__(self, other)	modelled	coll-chainmap-objects	
 Lib/collections/__init__.py	1155	1160	ChainMap.__or__	__or__(self, other)	modelled	coll-chainmap-objects	
-Lib/collections/__init__.py	1162	1168	ChainMap.__ror__	__ror__(self, other)	todo		review: `other` is an infallible plain dict (`Option (D κ ν)`), so `dict(other)` on a Mapping whose `keys()` or `[]` raises cannot be expressed, though `__or__` and `__ior__` now take a fallible operand.
+Lib/collections/__init__.py	1162	1168	ChainMap.__ror__	__ror__(self, other)	modelled	coll-chainmap-ror-p,coll-chainmap-union-flat	
 Lib/collections/__init__.py	1178	1183	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	modelled	coll-userdict-init-p	
 Lib/collections/__init__.py	1185	1186	UserDict.__len__	__len__(self)	modelled	coll-userdict-matches-dict	
 Lib/collections/__init__.py	1188	1193	UserDict.__getitem__	__getitem__(self, key)	modelled	coll-userdict-getitem-p,coll-userdict-missing-like-dict	
@@ -91,7 +91,7 @@ Lib/collections/__init__.py	1216	1217	UserDict.__repr__	__repr__(self)	modelled	
 Lib/collections/__init__.py	1219	1224	UserDict.__or__	__or__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1226	1231	UserDict.__ror__	__ror__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1233	1238	UserDict.__ior__	__ior__(self, other)	modelled	coll-userdict-ior-p	
-Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	todo		review: `udCopyDunder u = u` is value equality, so returning `self` passes, and copying other `__dict__` attributes (:1242) is not modelled.
+Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	modelled	coll-userdict-copy-o	
 Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	modelled	coll-userdict-copy-o	
 Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	coll-userdict-popitem-lifo	
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	

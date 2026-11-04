@@ -247,8 +247,8 @@ theorem userDictIorP_proven : UserDictIorP := by
 
 /-- **`copy.copy(u)` and `u.copy()` make new objects of `u`'s class, and `copy` restores
 `u.data` when copying fails.** For every `UserDict` object with a dict as `data`: `__copy__`
-gives the new object `fresh` of `u`'s class with `u`'s other attributes and a new dict of `u`'s
-items; `copy()` on `UserDict` itself gives the new `UserDict` `fresh` with `u`'s items; on a
+gives the new object `fresh` of `u`'s class with `u`'s other attributes and, as `data`, the new
+dict `freshD` (not `u.data` itself) with `u`'s items; `copy()` on `UserDict` itself gives the new `UserDict` `fresh` with `u`'s items; on a
 subclass whose `__copy__` is `UserDict`'s, a new object of `u`'s class with `u`'s attributes and
 items; on a subclass whose `copy.copy` raises, that exception, with `u` left as it was (the
 `try`/`finally` of :1251-1255 puts `data` back).
@@ -256,16 +256,18 @@ items; on a subclass whose `copy.copy` raises, that exception, with `u` left as 
 Source: docstring of `copy` ('Return a shallow copy', Doc/library/collections.rst) and
 Lib/collections/__init__.py:1240-1257. -/
 def UserDictCopyO : Prop :=
-  ∀ (κ ν α : Type) [DecidableEq κ] (K : KOps κ) (copyFn : UDO κ ν α → Py (UDO κ ν α)) (fresh : Nat)
+  ∀ (κ ν α : Type) [DecidableEq κ] (K : KOps κ) (copyFn : UDO κ ν α → Py (UDO κ ν α)) (fresh freshD tmpD : Nat)
     (u : UDO κ ν α) (e : PyExc), D.WF u.data → HashOk K u.data →
-    udCopyDunderO fresh u = ⟨fresh, u.cls, u.data, u.attrs⟩ ∧
-    (u.cls = "UserDict" → udCopyO K copyFn fresh u = (u, .ok ⟨fresh, "UserDict", u.data, []⟩)) ∧
+    udCopyDunderO fresh freshD u = ⟨fresh, u.cls, freshD, u.data, u.attrs⟩ ∧
+    (u.cls = "UserDict" →
+      udCopyO K copyFn fresh freshD tmpD u = (u, .ok ⟨fresh, "UserDict", freshD, u.data, []⟩)) ∧
     (u.cls ≠ "UserDict" →
-      udCopyO K (fun t => .ok (udCopyDunderO fresh t)) fresh u = (u, .ok ⟨fresh, u.cls, u.data, u.attrs⟩)) ∧
-    (u.cls ≠ "UserDict" → udCopyO K (fun _ => .error e) fresh u = (u, .error e))
+      udCopyO K (fun t => .ok (udCopyDunderO fresh freshD t)) fresh freshD tmpD u =
+        (u, .ok ⟨fresh, u.cls, freshD, u.data, u.attrs⟩)) ∧
+    (u.cls ≠ "UserDict" → udCopyO K (fun _ => .error e) fresh freshD tmpD u = (u, .error e))
 
 theorem userDictCopyO_proven : UserDictCopyO := by
-  intro κ ν α _ K copyFn fresh u e hw hh
+  intro κ ν α _ K copyFn fresh freshD tmpD u e hw hh
   have hu := update_nil_WF hw
   refine ⟨by simp [udCopyDunderO, hu], fun hc => ?_, fun hc => ?_, fun hc => ?_⟩
   · simp [udCopyO, hc, hu]
