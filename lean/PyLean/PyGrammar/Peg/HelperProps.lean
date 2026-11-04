@@ -324,7 +324,7 @@ theorem checkBarry_proven : CheckBarry := by
   · simp [checkBarry, h1, h2, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
       pure, StateT.pure]
 
-/-- `_PyPegen_ensure_imaginary` and `_PyPegen_ensure_real` (`Parser/action_helpers.c:853-871`, the
+/-- `_PyPegen_ensure_imaginary` and `_PyPegen_ensure_real` (`Parser/action_helpers.c:853-872`, the
 two halves of a complex literal pattern `1 + 2j`): the imaginary one passes a `Constant` holding
 a `complex` through, the real one a `Constant` holding anything else; every other node raises at
 the node, "imaginary number required in complex literal" or "real number required in complex
@@ -489,7 +489,7 @@ def textView : List Ast → List (Sum Nat Ast)
   | [] => []
   | e :: r => (if isConstant e then (constStr e).map Sum.inl else [Sum.inr e]) ++ textView r
 
-/-- The flattening loop of `_build_concatenated_str` (`Parser/action_helpers.c:1810-1836`): the
+/-- The flattening loop of `_build_concatenated_str` (`Parser/action_helpers.c:1795-1843`): the
 values of each `JoinedStr` and `TemplateStr`, every other node as itself. -/
 def concatFlat (strings : Ast) : List Ast :=
   (seqOf strings).flatMap fun e =>
@@ -507,7 +507,7 @@ folding loops make of any sequence of parts: (a) the text is kept, character by 
 node by node, in order (no part dropped, duplicated or moved, no character lost: `f'a' 'b'
 f'{c}' 'd'` reads `a b {c} d`); (b) every run of adjacent constants is folded into one, so no two
 constants are adjacent in the result; (c) no empty str constant is left ("Drop all empty contanst
-strings", `:1931-1935`). Together these fix the result up to the constants' kinds and
+strings", `:1929-1934`). Together these fix the result up to the constants' kinds and
 locations. -/
 def ConcatFolds : Prop := ∀ strings : Ast,
   textView (buildConcatenatedStr strings) = textView (concatFlat strings) ∧
@@ -780,7 +780,7 @@ theorem setupFullFormatSpec_proven : SetupFullFormatSpec := by
 :class:`JoinedStr` node representing the formatting of the value", and `:402-405` for
 `Interpolation`), at the helper that builds it: whatever `_PyPegen_setup_full_format_spec` returns
 (not `NULL`) carries a `JoinedStr`. This is what python/cpython#122300 restored for one constant
-(gh-122308, the `n == 1` branch at `:1076`). -/
+(gh-122308, the `n == 1` branch at `:1069-1072`). -/
 def FormatSpecIsJoinedStr : Prop := ∀ (colon : Ast) (xs : List Ast) (l c el ec : Int) (p : PS)
   (r : Ast) (s : PS),
   callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p = (r, s) →
@@ -822,8 +822,8 @@ theorem interpolationConversion_proven : InterpolationConversion := by
   · subst hd; rfl
   · cases debug <;> cases fmt <;> first | exact absurd rfl hf | rfl
 
-/-- Where the debug text ends and which metadata it is, `Parser/action_helpers.c:1595-1609` and
-`:1656-1670`: the conversion's (its name's line and column), else the format spec's (its line,
+/-- Where the debug text ends and which metadata it is, `Parser/action_helpers.c:1589-1603` and
+`:1658-1672`: the conversion's (its name's line and column), else the format spec's (its line,
 its column + 1), else the closing brace's (the end of the field). -/
 def DebugInfoSource : Prop := ∀ (conv fmt closing : Ast) (el ec : Int),
   (conv ≠ .null → debugInfo conv fmt closing el ec =
@@ -849,8 +849,8 @@ def wrapDebug (debug inner : Ast) (l c : Int) (di : Int × Int × Ast) : Ast :=
   | _ => mkAt .JoinedStr [.seq [mkAt .Constant [metaConst di.2.2, .null] ⟨l, c + 1, di.1, di.2.1 - 1⟩,
       inner]] ⟨l, c, di.1, di.2.1⟩
 
-/-- `_PyPegen_formatted_value` (`Parser/action_helpers.c:1640-1687`) and `_PyPegen_interpolation`
-(`:1577-1638`), the f-string and t-string replacement fields, side by side through `callHelper`:
+/-- `_PyPegen_formatted_value` (`Parser/action_helpers.c:1639-1686`) and `_PyPegen_interpolation`
+(`:1578-1637`), the f-string and t-string replacement fields, side by side through `callHelper`:
 the same conversion (`_get_interpolation_conversion`), the same format spec (the result of the
 format-spec record), the same location and the same debug wrapper (`wrapDebug`, with the same
 debug text and end); the `Interpolation` also keeps the expression's text, the metadata the debug
@@ -888,7 +888,7 @@ theorem formattedValueInterpolation_proven : FormattedValueInterpolation := by
 `_PyPegen_constant_from_string` -/
 
 /-- The parts a value contributes to `_get_resized_exprs`'s result when it is not a constant: the
-two values of a debug `JoinedStr` (`:1384-1402`), the node itself otherwise. -/
+two values of a debug `JoinedStr` (`:1378-1397`), the node itself otherwise. -/
 def pairParts : Ast → List Ast
   | .node .JoinedStr (v :: _) _ => seqOf v
   | e => [e]
@@ -905,7 +905,7 @@ theorem pairParts_other (x : Ast) (h : ∀ v r l, x = .node .JoinedStr (v :: r) 
     exact absurd rfl (h v r l)
   · rfl
 
-/-- `_get_resized_exprs`' loop (`Parser/action_helpers.c:1378-1416`) over parts that are not
+/-- `_get_resized_exprs`' loop (`Parser/action_helpers.c:1370-1415`) over parts that are not
 constants (nothing to decode): debug pairs spliced in, everything else kept, in order, no state
 change. -/
 theorem resizedLoop_noconst (isRaw tstr : Bool) (b : Ast) :
@@ -938,7 +938,7 @@ theorem resizedLoop_noconst (isRaw tstr : Bool) (b : Ast) :
     · rw [ih _ hc' hj']
       simp [List.flatMap_cons, pairParts_other x (by assumption)]
 
-/-- The `SystemError` of `_get_resized_exprs`, `Parser/action_helpers.c:1389-1394`. -/
+/-- The `SystemError` of `_get_resized_exprs`, `Parser/action_helpers.c:1380-1387`. -/
 def resizedErr (tstr : Bool) (line : Int) : PyError :=
   { cls := "SystemError"
     msg := if tstr then s!"unexpected TemplateStr node without debug data in t-string at line {line}"
@@ -1066,7 +1066,7 @@ theorem parseString_triple (t : Token) (bs : List Nat) (raw : Bool)
 `Parser/action_helpers.c:1483-1499`): `_PyPegen_decode_fstring_part` (`:1316-1345`) decodes the
 text, raw when the start token has `r`/`R` or the text has no backslash; a decode error becomes
 the `SyntaxError` of `_Pypegen_raise_decode_error_known_location` at the part; an empty result is
-dropped (`:1407-1412`). Hypotheses: the token's text is UTF-8 (the source was decoded) and is not
+dropped (`:1405-1412`). Hypotheses: the token's text is UTF-8 (the source was decoded) and is not
 the escaped brace `{{`/`}}` (which decodes to one brace). -/
 def JoinedStrLiteral : Prop := ∀ (a b m : Token) (p : PS),
   utf8Encode (utf8Decode m.bytes) = m.bytes → m.bytes ≠ [123, 123] → m.bytes ≠ [125, 125] →
@@ -1194,9 +1194,36 @@ def EscapeWarningLineTwin : Prop := ∀ body : List Nat, (∀ c ∈ body, c ≠ 
 set_option maxRecDepth 100000 in
 /-- The body `\n\d\n`: `'''\n\d\n'''` warns on line 2, where `\d` is; `f'''\n\d\n'''` on line 4,
 one past the last line of the source: `_get_resized_exprs` hands `_PyPegen_decode_fstring_part`
-the end token `b` (`Parser/action_helpers.c:1405`), so the count starts at the closing `'''`'s
+the end token `b` (`Parser/action_helpers.c:1401`), so the count starts at the closing `'''`'s
 line (3) instead of the line the text starts on (1). -/
 theorem escapeWarningLineTwin_refuted : ¬ EscapeWarningLineTwin := fun h =>
   absurd (h [10, 92, 100, 10] (by decide)) (by decide +kernel)
+
+/-! ### `_PyPegen_constant_from_string` -/
+
+/-- `_PyPegen_constant_from_string(p, tok)` (`Parser/action_helpers.c:1501-1524`, the `string`
+rule, python.gram:1010): the value `_PyPegen_parse_string` gives, as a `Constant` at the token,
+with `kind` `'u'` exactly when the token's text starts with a lowercase `u` (`the_str[0] == 'u'`:
+`U"a"` has no kind, as python/cpython#149267 noted); a failure gives `NULL` after
+`_Pypegen_raise_decode_error` (`Parser/pegen_errors.c:84-87`), which turns a decode error into a
+`SyntaxError` "(unicode error) ..." and leaves any other exception alone. -/
+def ConstantFromString : Prop := ∀ (t : Token) (p q : PS),
+  (∀ v, parseString t p = (.str v, q) → callHelper .constant_from_string [.tok t] p =
+    (mkAt .Constant [.const (.str v), if t.bytes.head? = some 117 then .str [117] else .null]
+      (tokLoc t), q)) ∧
+  (∀ v, parseString t p = (.bytes v, q) → callHelper .constant_from_string [.tok t] p =
+    (mkAt .Constant [.const (.bytes v), if t.bytes.head? = some 117 then .str [117] else .null]
+      (tokLoc t), q)) ∧
+  (parseString t p = (.fail, q) → callHelper .constant_from_string [.tok t] p = (.null, (raiseDecodeError q).2))
+
+theorem constantFromString_proven : ConstantFromString := by
+  intro t p q
+  refine ⟨fun v h => ?_, fun v h => ?_, fun h => ?_⟩
+  · simp only [callHelper, List.getD_cons_zero, bind, StateT.bind, h]
+    by_cases hu : t.bytes.head? = some 117 <;> simp [hu, pure, StateT.pure]
+  · simp only [callHelper, List.getD_cons_zero, bind, StateT.bind, h]
+    by_cases hu : t.bytes.head? = some 117 <;> simp [hu, pure, StateT.pure]
+  · simp only [callHelper, List.getD_cons_zero, bind, StateT.bind, h]
+    rfl
 
 end PyLean.PyGrammar.Peg
