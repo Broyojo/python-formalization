@@ -23,6 +23,7 @@ import PyLean.Decimal.RotateShift
 import PyLean.Decimal.DivExact
 import PyLean.Decimal.LogicalExact
 import PyLean.Decimal.NextExact
+import PyLean.Decimal.EngExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -730,7 +731,13 @@ def entries : List Entry := [
     statement := "For every context and flag state: next_toward with a NaN operand is _check_nans of the pair; for numerically equal operands it is self.copy_sign(other) with no flag; otherwise it is next_plus(self) when self < other and next_minus(self) when self > other (decimal-next-plus-exact, decimal-next-minus-exact), after which an infinite result raises Overflow, Inexact, Rounded, and a result whose adjusted exponent is below Emin raises Underflow, Subnormal, Inexact, Rounded and, for a zero, Clamped, in that order on the caller's context, the first trapped one raising."
     source := "Decimal.next_toward docstring (Lib/_pydecimal.py:3622-3629); Lib/_pydecimal.py:3621-3665"
     status := .proven, prop := ``NextTowardExact, thm := some ``nextTowardExact_proven
-    notes := "The comparison is numOrder (cmpVal_exact), the order of the values; with the two next_* statements this fixes the value, the flags and the exceptions of next_toward for every operand pair." }
+    notes := "The comparison is numOrder (cmpVal_exact), the order of the values; with the two next_* statements this fixes the value, the flags and the exceptions of next_toward for every operand pair." },
+  { id := "decimal-eng-string-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.to_eng_string"]
+    statement := "For every decimal d within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300): Decimal(d.to_eng_string()) is d with the zero, one or two trailing zeros the spelling adds moved into the coefficient (same sign and value, the exponent lowered by as much; zeros, infinities and NaNs come back exactly); and the spelling of a finite d is [-] I [. F] [E±x] where, when an exponent is printed, x is a multiple of 3 and, for a non-zero d, I has one to three digits."
+    source := "Decimal.to_eng_string docstring (Lib/_pydecimal.py:1129-1134: 'Engineering notation has an exponent which is a multiple of 3. This can leave up to 3 digits to the left of the decimal place and may require the addition of either one or two trailing zeros.'); Lib/_pydecimal.py:1076-1135"
+    status := .proven, prop := ``EngStringExact, thm := some ``engStringExact_proven
+    notes := "pyEng now carries the int/str limit of '%+d' % (leftdigits-dotplace) (:1124), which the old toEng (a pure string) did not; the C twin's mpd_to_eng has none, and the difftest (eng_py/eng_c, exponents near 10**4300 for _pydecimal) checks both. Checked on 3.15.2: 20,000 random values (coefficients of up to 20 digits, zero included, exponents up to ±10**6) read back as stated, exponent a multiple of 3 and one to three integer digits." }
 ]
 
 end PyLean.Decimal

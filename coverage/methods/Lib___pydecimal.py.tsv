@@ -34,7 +34,7 @@ Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
 Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	todo		
 Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree-int-digits	
-Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	todo		
+Lib/_pydecimal.py	1128	1135	Decimal.to_eng_string	to_eng_string(self, context=None)	modelled	decimal-eng-string-exact	
 Lib/_pydecimal.py	1137	1157	Decimal.__neg__	__neg__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1159	1178	Decimal.__pos__	__pos__(self, context=None)	modelled	decimal-unary-exact	
 Lib/_pydecimal.py	1180	1200	Decimal.__abs__	__abs__(self, round=True, context=None)	modelled	decimal-unary-exact,decimal-abs-no-round-exact	
@@ -213,7 +213,7 @@ Lib/_pydecimal.py	5495	5512	Context.scaleb	scaleb(self, a, b)	modelled	decimal-c
 Lib/_pydecimal.py	5514	5542	Context.shift	shift(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-shift-exact	
 Lib/_pydecimal.py	5544	5574	Context.sqrt	sqrt(self, a)	todo		
 Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	todo		review: ctxUn of toEng a c.capitals (Context.lean:138) is :5624-5625 and Equiv1 pins the wrapper, but Decimal.to_eng_string has no entry (part 1 HOLLOW), so the engineering notation is stated nowhere.
+Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	modelled	decimal-context-methods-match-decimal,decimal-eng-string-exact	
 Lib/_pydecimal.py	5627	5633	Context.to_sci_string	to_sci_string(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	modelled	decimal-context-methods-match-decimal,decimal-to-integral-exact-exact	
 Lib/_pydecimal.py	5665	5692	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	
