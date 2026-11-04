@@ -265,12 +265,12 @@ def cacheNat (e : Env) (i : Nat) : Nat :=
   | some (.tagged n) => n
   | _ => 0
 
-/-- `@3.14.7:2317`. -/
+/-- `:2862`. -/
 def _GUARD_TYPE_VERSION (e : Env) : M Unit := guardTop 1 fun
   | [o] => do return (← typeVersionOf o) != cacheNat e 0
   | _ => fault "arity"
 
-/-- `@3.14.7:585`. -/
+/-- `:597`: `_RECORD_TOS_TYPE` only records for tier 2, and the `POP_TOP` is folded in. -/
 def TO_BOOL_ALWAYS_TRUE (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _REPLACE_WITH_TRUE
 /-- `:604`: `_UNARY_INVERT + POP_TOP`. `_UNARY_INVERT` (`:606-614`) leaves through
 `ERROR_NO_POP()` when `PyNumber_Invert` fails, keeping the operand, as `UNARY_NEGATIVE`. -/
@@ -387,7 +387,7 @@ def _BINARY_OP_INPLACE_ADD_UNICODE (e : Env) : M Unit := do
       setLocal nextOparg .null
       pure [.str (l ++ r)]
   | _ => fault "not strs"
-/-- `@3.14.7:837`. -/
+/-- `:1069`. -/
 def BINARY_OP_INPLACE_ADD_UNICODE (e : Env) : M Unit := do
   _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _BINARY_OP_INPLACE_ADD_UNICODE e
 
@@ -528,8 +528,8 @@ def _GUARD_NOS_DICT_STORE_SUBSCRIPT : M Unit := guardTop 2 fun
 def _GUARD_TOS_ANY_DICT : M Unit := guardTop 1 fun
   | [tos] => notDict tos
   | _ => fault "arity"
-/-- `@3.14.7:1226`. -/
-def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stk 2 1 fun
+/-- `:1326`: `ERROR_NO_POP` when `_PyDict_Subscript` raises, so the operands stay. -/
+def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stkK 2 1 fun
   | [d, sub] => do
     let r ← (dictGet e.om e.ctx d sub : RM _)
     match r with

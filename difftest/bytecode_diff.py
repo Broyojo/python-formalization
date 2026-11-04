@@ -237,6 +237,10 @@ def p_scope(r):
         "x = 1\ndel x\n" + guarded("print(x)"),
         guarded("class C:\n    print(missing)"),
         "def f():\n    x = 1\n    return [x + i for i in range(3)], x\nprint(f())",
+        # `_PyEval_FormatExcCheckArg` sets `.name` on a NameError, not on an UnboundLocalError
+        "def f():\n    return nope_q\ndef g():\n    y = y\ndef h():\n    def k():\n        return w\n    k()\n    w = 1\n"
+        "for fn in (f, g, h):\n    try:\n        fn()\n    except NameError as e:\n        print(type(e).__name__, e.name)\n"
+        "try:\n    del nope_r\nexcept NameError as e:\n    print(e.name)\nprint(NameError('m').name)",
         "def f():\n    x = 5\n    r = [x for x in range(2)]\n    return x, r\nprint(f())",
         "def f():\n    try:\n        return [1 / i for i in [1, 0]]\n    except ZeroDivisionError:\n        return i\n" + guarded("f()"),
     ])
