@@ -288,4 +288,57 @@ theorem pow10Correct_refuted : ¬ Pow10Correct := by
   have := h _ _ (by decide) _ _ (pow10_hi_fires _ pow10_quot_bitLen)
   exact absurd (this.mpr pow10_quot_bounds.2.2) (by decide)
 
+/-! ### `_divide` -/
+
+/-- The context of the counterexample: prec 355861594, nothing trapped (Emin, Emax and
+clamp are not read by `_divide`). -/
+def pow10Ctx : Ctx := { prec := 355861594, traps := [] }
+
+theorem pow10_scaled : scaled 1 355861594 1000000001 (-9) = (10 ^ 355861603, 1000000001) := by
+  unfold scaled
+  rw [if_pos (by decide), show ((355861594 : Int) - -9).toNat = 355861603 by decide, Nat.one_mul]
+
+/-- `_divide` signals DivisionImpossible whenever the helper says the quotient is too
+large, stated over variables so that no big numeral reaches the kernel's evaluator. -/
+theorem divideD_misfire (c : Ctx) (sa sb : Bool) (ca cb : Nat) (ea eb : Int) (X Y : Nat) (s : Bool)
+    (ha : ca ≠ 0) (hd1 : ¬ (adjustedD ca ea - adjustedD cb eb ≤ -2))
+    (hd2 : adjustedD ca ea - adjustedD cb eb ≤ c.prec)
+    (hl1 : ¬ numDigits ca > maxStrDigits) (hl2 : ¬ numDigits cb > maxStrDigits)
+    (hs : scaled ca ea cb eb = (X, Y)) (hp : isLessThanPow10aUseStr (X / Y) c.prec = .ok (false, s))
+    (ht : Signal.invalidOperation ∉ c.traps) :
+    (divideD c (.fin sa ca ea) (.fin sb cb eb)).run [] =
+      .ok ((.nan false false 0, .nan false false 0), [.invalidOperation]) := by
+  have hw1 : workRep (.fin sa ca ea) = .ok (sa, ca, ea) := by simp [workRep, intLimit, hl1, pure, Except.pure, bind, Except.bind]
+  have hw2 : workRep (.fin sb cb eb) = .ok (sb, cb, eb) := by simp [workRep, intLimit, hl2, pure, Except.pure, bind, Except.bind]
+  simp only [divideD, decBool, isZero_fin sa ca ea ha, isinfinity, expOf, Dec.adjusted, Dec.neg,
+    Bool.not_false, Bool.not_true, ne_eq, not_true_eq_false, decide_false, Bool.false_or,
+    ↓reduceIte, decide_eq_true_eq, hd1, hd2, hs]
+  simp [StateT.run, bind, StateT.bind, Except.bind, liftPy, hw1, hw2, hp, invalid, raiseSig, ht, pure,
+    StateT.pure, Except.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, Functor.map,
+    Except.map]
+
+theorem pow10_divide_run :
+    (divideD pow10Ctx (.fin false 1 355861594) (.fin false 1000000001 (-9))).run [] =
+      .ok ((.nan false false 0, .nan false false 0), [.invalidOperation]) :=
+  divideD_misfire pow10Ctx false false 1 1000000001 355861594 (-9) _ _ false (by decide) (by decide)
+    (by decide) (by decide) (by decide) pow10_scaled (pow10_hi_fires _ pow10_quot_bitLen) (by decide)
+
+/-- `_divide` of `Decimal('1E+355861594')` by `Decimal('1.000000001')` at prec 355861594:
+the integer quotient `10^355861603 // 1000000001` has 355861594 digits, so `divide-integer`
+fits, but `_divide` returns NaN with InvalidOperation (DivisionImpossible). -/
+theorem divideCorrect_refuted : ¬ DivideCorrect := by
+  intro h
+  have key : ∀ (c : Ctx) (ca cb : Nat) (ea eb : Int) (X Y P : Nat), ca ≠ 0 → cb ≠ 0 →
+      scaled ca ea cb eb = (X, Y) → c.prec = P → X / Y < 10 ^ P →
+      (divideD c (.fin false ca ea) (.fin false cb eb)).run [] =
+        .ok ((.nan false false 0, .nan false false 0), [.invalidOperation]) → False := by
+    intro c ca cb ea eb X Y P ha hb hs hP hlt hrun
+    have := h c false ca ea false cb eb [] _ _ _ ha hb hrun
+    simp only [hs, hP] at this
+    rcases this with ⟨_, hq, _⟩ | ⟨hle, _⟩
+    · cases hq
+    · exact absurd hlt (Nat.not_lt.mpr hle)
+  exact key pow10Ctx 1 1000000001 355861594 (-9) _ _ 355861594 (by decide) (by decide) pow10_scaled rfl
+    pow10_quot_bounds.2.2 pow10_divide_run
+
 end PyLean.Decimal

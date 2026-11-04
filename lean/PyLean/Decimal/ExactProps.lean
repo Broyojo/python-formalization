@@ -1,0 +1,350 @@
+import PyLean.Decimal.CmpProps
+import PyLean.Decimal.Convert
+import PyLean.Decimal.ContextProps
+
+/-!
+The comparison family pinned to the exact numeric order (`numOrder`, `CmpProps.lean`) and to
+the documented NaN rules, for every operand kind `_convert_for_comparison` accepts.
+-/
+
+namespace PyLean.Decimal
+
+open PyLean
+
+/-! ## The NaN a comparison reports -/
+
+/-- The operand the NaN checks pick: a signaling NaN first, the left one first, then a
+quiet NaN, the left one first; quieted, with the payload cut to `prec - clamp` digits. -/
+def nanPick (c : Ctx) (a b : Dec) : Dec :=
+  if nanKind a = 2 then quietNaN c a else if nanKind b = 2 then quietNaN c b
+  else if nanKind a = 1 then quietNaN c a else quietNaN c b
+
+/-- `_ordInt`: the -1/0/1 `_cmp` returns for an ordering. -/
+def ordInt : Ordering → Int
+  | .lt => -1
+  | .eq => 0
+  | .gt => 1
+
+theorem compareCheckNans_nan (c : Ctx) (a b : Dec) (h : nanKind a ≠ 0 ∨ nanKind b ≠ 0) :
+    compareCheckNans c a b = (do raiseSig c .invalidOperation; pure (some (nanPick c a b))) := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;>
+    simp_all [compareCheckNans, nanPick, quietOf_eq, isSpecial, isSnan, isQnan, isnan, nanKind]
+
+theorem compareCheckNans_num (c : Ctx) (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) :
+    compareCheckNans c a b = pure none := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> simp_all [compareCheckNans, isSpecial, isSnan, isQnan, isnan, nanKind]
+
+/-- With a signaling NaN, `_check_nans` signals and returns `nanPick`. -/
+theorem checkNans_snan (c : Ctx) (a b : Dec) (h : nanKind a = 2 ∨ nanKind b = 2) :
+    checkNans c a (some b) = (do raiseSig c .invalidOperation; pure (some (nanPick c a b))) := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> simp_all [checkNans, nanPick, quietNaN, fixNan_spec, nanKind]
+
+/-- With quiet NaNs only, `_check_nans` returns `nanPick` and signals nothing. -/
+theorem checkNans_qnan (c : Ctx) (a b : Dec) (h : nanKind a = 1 ∨ nanKind b = 1)
+    (ha : nanKind a ≠ 2) (hb : nanKind b ≠ 2) : checkNans c a (some b) = pure (some (nanPick c a b)) := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> simp_all [checkNans, nanPick, quietNaN, fixNan_spec, nanKind]
+
+theorem checkNans_num (c : Ctx) (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) :
+    checkNans c a (some b) = pure none := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> simp_all [checkNans, nanKind]
+
+/-- `_compare_check_nans`, _pydecimal.py:822-853: any NaN signals InvalidOperation, and the
+NaN returned is a signaling one before a quiet one, the left before the right. -/
+def CompareCheckNansExact : Prop :=
+  ∀ (c : Ctx) (a b : Dec) (fl : List Signal),
+    (nanKind a ≠ 0 ∨ nanKind b ≠ 0 →
+      (compareCheckNans c a b).run fl = afterSig c .invalidOperation fl (some (nanPick c a b))) ∧
+    (nanKind a = 0 → nanKind b = 0 → (compareCheckNans c a b).run fl = .ok (none, fl))
+
+theorem compareCheckNansExact_proven : CompareCheckNansExact := by
+  intro c a b fl
+  refine ⟨fun h => ?_, fun ha hb => ?_⟩
+  · rw [compareCheckNans_nan c a b h]; exact raiseSig_then _ _ _ _
+  · rw [compareCheckNans_num c a b ha hb]; rfl
+
+/-! ## Rich comparisons and `compare` of two Decimals -/
+
+/-- For two decimals: if neither is a NaN, `==`, `<`, `<=`, `>`, `>=` follow the exact numeric
+order and set no flag, and `compare` and `compare_signal` return it as `Decimal(-1/0/1)`. If one
+is a NaN, `==` is False and signals InvalidOperation only for a signaling NaN (False when that is
+not trapped); the orderings and `compare_signal` signal InvalidOperation for every NaN; `<` etc.
+are False; `compare` and `compare_signal` return the NaN `nanPick` chooses, and `compare` signals
+only for a signaling NaN. (The comment at _pydecimal.py:909-924 and the decimal docs.) -/
+def ComparisonsExact : Prop :=
+  ∀ (c : Ctx) (a b : Dec) (fl : List Signal),
+    (nanKind a = 0 → nanKind b = 0 →
+      (richEq c a (.dec b)).run fl = .ok (some (decide (numOrder a b = .eq)), fl) ∧
+      (richLt c a (.dec b)).run fl = .ok (some (decide (numOrder a b = .lt)), fl) ∧
+      (richLe c a (.dec b)).run fl = .ok (some (decide (numOrder a b ≠ .gt)), fl) ∧
+      (richGt c a (.dec b)).run fl = .ok (some (decide (numOrder a b = .gt)), fl) ∧
+      (richGe c a (.dec b)).run fl = .ok (some (decide (numOrder a b ≠ .lt)), fl) ∧
+      (compareD c a b).run fl = .ok (decOfInt (ordInt (numOrder a b)), fl) ∧
+      (compareSignal c a b).run fl = .ok (decOfInt (ordInt (numOrder a b)), fl)) ∧
+    (nanKind a ≠ 0 ∨ nanKind b ≠ 0 →
+      (richEq c a (.dec b)).run fl =
+        (if nanKind a = 2 ∨ nanKind b = 2 then afterSig c .invalidOperation fl (some false)
+         else .ok (some false, fl)) ∧
+      (richLt c a (.dec b)).run fl = afterSig c .invalidOperation fl (some false) ∧
+      (richLe c a (.dec b)).run fl = afterSig c .invalidOperation fl (some false) ∧
+      (richGt c a (.dec b)).run fl = afterSig c .invalidOperation fl (some false) ∧
+      (richGe c a (.dec b)).run fl = afterSig c .invalidOperation fl (some false) ∧
+      (compareD c a b).run fl =
+        (if nanKind a = 2 ∨ nanKind b = 2 then afterSig c .invalidOperation fl (nanPick c a b)
+         else .ok (nanPick c a b, fl)) ∧
+      (compareSignal c a b).run fl = afterSig c .invalidOperation fl (nanPick c a b))
+
+theorem cmpInt_numOrder (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) :
+    cmpInt a b = ordInt (numOrder a b) := by
+  simp only [cmpInt, cmpVal_exact a b ha hb]
+  cases numOrder a b <;> rfl
+
+theorem isSpecial_of_nan {a : Dec} (h : nanKind a ≠ 0) : isSpecial a = true := by
+  cases a with
+  | nan n s p => rfl
+  | _ => simp [nanKind] at h
+
+theorem nanKind_cases (a : Dec) : nanKind a = 0 ∨ nanKind a = 1 ∨ nanKind a = 2 := by
+  cases a with
+  | nan n s p => cases s <;> simp [nanKind]
+  | _ => simp [nanKind]
+
+theorem comparisonsExact_proven : ComparisonsExact := by
+  intro c a b fl
+  refine ⟨fun ha hb => ?_, fun h => ?_⟩
+  · have e := cmpInt_numOrder a b ha hb
+    have hc : compareD c a b = pure (decOfInt (ordInt (numOrder a b))) := by
+      unfold compareD
+      rw [checkNans_num c a b ha hb, ← e]
+      by_cases hs : (isSpecial a || isSpecial b) = true <;> simp [hs]
+    refine ⟨?_, ?_, ?_, ?_, ?_, by rw [hc]; rfl, ?_⟩
+    · have h' : richEq c a (.dec b) = pure (some (cmpInt a b == 0)) := by
+        simp [richEq, convertForComparison, dunderEq, checkNans_num c a b ha hb]
+      rw [h', e]; cases numOrder a b <;> rfl
+    · have h' : richLt c a (.dec b) = pure (some (decide (cmpInt a b < 0))) := by
+        simp [richLt, richOrd, convertForComparison, dunderOrd, compareCheckNans_num c a b ha hb]
+      rw [h', e]; cases numOrder a b <;> rfl
+    · have h' : richLe c a (.dec b) = pure (some (decide (cmpInt a b ≤ 0))) := by
+        simp [richLe, richOrd, convertForComparison, dunderOrd, compareCheckNans_num c a b ha hb]
+      rw [h', e]; cases numOrder a b <;> rfl
+    · have h' : richGt c a (.dec b) = pure (some (decide (cmpInt a b > 0))) := by
+        simp [richGt, richOrd, convertForComparison, dunderOrd, compareCheckNans_num c a b ha hb]
+      rw [h', e]; cases numOrder a b <;> rfl
+    · have h' : richGe c a (.dec b) = pure (some (decide (cmpInt a b ≥ 0))) := by
+        simp [richGe, richOrd, convertForComparison, dunderOrd, compareCheckNans_num c a b ha hb]
+      rw [h', e]; cases numOrder a b <;> rfl
+    · simp only [compareSignal, compareCheckNans_num c a b ha hb, hc]; rfl
+  · have hcc := compareCheckNans_nan c a b h
+    have hsp : (isSpecial a || isSpecial b) = true := by
+      rcases h with h | h <;> simp [isSpecial_of_nan h]
+    have hord : ∀ t : Int → Bool, (richOrd t c a (.dec b)).run fl = afterSig c .invalidOperation fl (some false) := by
+      intro t
+      have h' : richOrd t c a (.dec b) = (do raiseSig c .invalidOperation; pure (some false)) := by
+        simp [richOrd, convertForComparison, dunderOrd, hcc]
+      rw [h']; exact raiseSig_then _ _ _ _
+    refine ⟨?_, hord _, hord _, hord _, hord _, ?_, ?_⟩
+    · by_cases hs : nanKind a = 2 ∨ nanKind b = 2
+      · rw [if_pos hs]
+        have h' : richEq c a (.dec b) = (do raiseSig c .invalidOperation; pure (some false)) := by
+          simp [richEq, convertForComparison, dunderEq, checkNans_snan c a b hs]
+        rw [h']; exact raiseSig_then _ _ _ _
+      · rw [if_neg hs]
+        have hq : nanKind a = 1 ∨ nanKind b = 1 := by
+          rcases nanKind_cases a with h1 | h1 | h1 <;> rcases nanKind_cases b with h2 | h2 | h2 <;> omega
+        have h' : richEq c a (.dec b) = pure (some false) := by
+          simp [richEq, convertForComparison, dunderEq,
+            checkNans_qnan c a b hq (fun h' => hs (Or.inl h')) (fun h' => hs (Or.inr h'))]
+        rw [h']; rfl
+    · by_cases hs : nanKind a = 2 ∨ nanKind b = 2
+      · rw [if_pos hs]
+        have h' : compareD c a b = (do raiseSig c .invalidOperation; pure (nanPick c a b)) := by
+          simp [compareD, hsp, checkNans_snan c a b hs]
+        rw [h']; exact raiseSig_then _ _ _ _
+      · rw [if_neg hs]
+        have hq : nanKind a = 1 ∨ nanKind b = 1 := by
+          rcases nanKind_cases a with h1 | h1 | h1 <;> rcases nanKind_cases b with h2 | h2 | h2 <;> omega
+        have h' : compareD c a b = pure (nanPick c a b) := by
+          simp [compareD, hsp,
+            checkNans_qnan c a b hq (fun h' => hs (Or.inl h')) (fun h' => hs (Or.inr h'))]
+        rw [h']; rfl
+    · have h' : compareSignal c a b = (do raiseSig c .invalidOperation; pure (nanPick c a b)) := by
+        simp [compareSignal, hcc]
+      rw [h']; exact raiseSig_then _ _ _ _
+
+/-! ## `max`, `min`, `max_mag`, `min_mag` -/
+
+theorem nanKind_copyAbs (a : Dec) : nanKind (copyAbs a) = nanKind a := by
+  cases a with
+  | nan n s p => cases s <;> rfl
+  | _ => rfl
+
+theorem minmaxNans_nan (c : Ctx) (a b : Dec) (h : nanKind a = 2 ∨ nanKind b = 2 ∨ (nanKind a = 1 ∧ nanKind b = 1)) :
+    minmaxNans c a b = (do let r ← checkNans c a (some b); pure r) := by
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> simp_all [minmaxNans, isSpecial, isnan, nanKind]
+
+/-- The NaN outcome of `max` and friends: `_check_nans`, which signals for a signaling NaN. -/
+def nanOutcome (c : Ctx) (a b : Dec) (fl : List Signal) : Py (Dec × List Signal) :=
+  if nanKind a = 2 ∨ nanKind b = 2 then afterSig c .invalidOperation fl (nanPick c a b)
+  else .ok (nanPick c a b, fl)
+
+theorem minmaxBy_nan (cmp : Dec → Dec → Int) (lw : Bool) (c : Ctx) (a b : Dec) (fl : List Signal)
+    (h : nanKind a = 2 ∨ nanKind b = 2 ∨ (nanKind a = 1 ∧ nanKind b = 1)) :
+    (minmaxBy cmp lw c a b).run fl = nanOutcome c a b fl := by
+  unfold nanOutcome
+  by_cases hs : nanKind a = 2 ∨ nanKind b = 2
+  · rw [if_pos hs]
+    have h' : minmaxBy cmp lw c a b = (do raiseSig c .invalidOperation; pure (nanPick c a b)) := by
+      simp [minmaxBy, minmaxNans_nan c a b h, checkNans_snan c a b hs]
+    rw [h']; exact raiseSig_then _ _ _ _
+  · rw [if_neg hs]
+    have hq : nanKind a = 1 ∨ nanKind b = 1 := by omega
+    have h' : minmaxBy cmp lw c a b = pure (nanPick c a b) := by
+      simp [minmaxBy, minmaxNans_nan c a b h,
+        checkNans_qnan c a b hq (fun h' => hs (Or.inl h')) (fun h' => hs (Or.inr h'))]
+    rw [h']; rfl
+
+theorem minmaxBy_qnan_left (cmp : Dec → Dec → Int) (lw : Bool) (c : Ctx) (a b : Dec) (fl : List Signal)
+    (ha : nanKind a = 1) (hb : nanKind b = 0) : (minmaxBy cmp lw c a b).run fl = (fix c b).run fl := by
+  have h' : minmaxBy cmp lw c a b = fix c b := by
+    rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+      (try cases s1) <;> (try cases s2) <;> simp_all [minmaxBy, minmaxNans, isSpecial, isnan, nanKind]
+  rw [h']
+
+theorem minmaxBy_qnan_right (cmp : Dec → Dec → Int) (lw : Bool) (c : Ctx) (a b : Dec) (fl : List Signal)
+    (ha : nanKind a = 0) (hb : nanKind b = 1) : (minmaxBy cmp lw c a b).run fl = (fix c a).run fl := by
+  have h' : minmaxBy cmp lw c a b = fix c a := by
+    rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+      (try cases s1) <;> (try cases s2) <;> simp_all [minmaxBy, minmaxNans, isSpecial, isnan, nanKind]
+  rw [h']
+
+/-- Which operand `max` keeps for numbers: the greater value, and for equal values the one
+`compare_total` puts higher (_pydecimal.py:2903-2918). `min` keeps the other. -/
+def maxPick (o : Ordering) (ct : Int) (a b : Dec) : Dec :=
+  match o with
+  | .gt => a
+  | .lt => b
+  | .eq => if ct = -1 then b else a
+
+def minPick (o : Ordering) (ct : Int) (a b : Dec) : Dec :=
+  match o with
+  | .lt => a
+  | .gt => b
+  | .eq => if ct = -1 then a else b
+
+/-- `max`, `min` (_pydecimal.py:2880-2954) and `max_mag`, `min_mag` (:3515-3573): for two
+numbers, `_fix` of the operand the exact order picks (of the magnitudes for `*_mag`), ties
+broken by `compare_total` on the operands themselves; a quiet NaN against a number gives `_fix`
+of the number; otherwise (a signaling NaN, or two quiet NaNs) the `_check_nans` result. -/
+def MinMaxExact : Prop :=
+  ∀ (c : Ctx) (a b : Dec) (fl : List Signal),
+    (nanKind a = 0 → nanKind b = 0 →
+      (maxD c a b).run fl = (fix c (maxPick (numOrder a b) (compareTotal a b) a b)).run fl ∧
+      (minD c a b).run fl = (fix c (minPick (numOrder a b) (compareTotal a b) a b)).run fl ∧
+      (maxMag c a b).run fl =
+        (fix c (maxPick (numOrder (copyAbs a) (copyAbs b)) (compareTotal a b) a b)).run fl ∧
+      (minMag c a b).run fl =
+        (fix c (minPick (numOrder (copyAbs a) (copyAbs b)) (compareTotal a b) a b)).run fl) ∧
+    (nanKind a = 1 → nanKind b = 0 →
+      (maxD c a b).run fl = (fix c b).run fl ∧ (minD c a b).run fl = (fix c b).run fl ∧
+      (maxMag c a b).run fl = (fix c b).run fl ∧ (minMag c a b).run fl = (fix c b).run fl) ∧
+    (nanKind a = 0 → nanKind b = 1 →
+      (maxD c a b).run fl = (fix c a).run fl ∧ (minD c a b).run fl = (fix c a).run fl ∧
+      (maxMag c a b).run fl = (fix c a).run fl ∧ (minMag c a b).run fl = (fix c a).run fl) ∧
+    (nanKind a = 2 ∨ nanKind b = 2 ∨ (nanKind a = 1 ∧ nanKind b = 1) →
+      (maxD c a b).run fl = nanOutcome c a b fl ∧ (minD c a b).run fl = nanOutcome c a b fl ∧
+      (maxMag c a b).run fl = nanOutcome c a b fl ∧ (minMag c a b).run fl = nanOutcome c a b fl)
+
+theorem select_pick (o : Ordering) (ct : Int) (a b : Dec) :
+    (let cc := ordInt o
+     let cc := if cc = 0 then ct else cc
+     if cc = -1 then (if false then a else b) else (if false then b else a)) = maxPick o ct a b ∧
+    (let cc := ordInt o
+     let cc := if cc = 0 then ct else cc
+     if cc = -1 then (if true then a else b) else (if true then b else a)) = minPick o ct a b := by
+  cases o <;> simp [ordInt, maxPick, minPick]
+
+theorem minMaxExact_proven : MinMaxExact := by
+  intro c a b fl
+  refine ⟨fun ha hb => ?_, fun ha hb => ?_, fun ha hb => ?_, fun h => ?_⟩
+  · have e1 := cmpInt_numOrder a b ha hb
+    have e2 : magCmp a b = ordInt (numOrder (copyAbs a) (copyAbs b)) :=
+      cmpInt_numOrder _ _ (by rw [nanKind_copyAbs]; exact ha) (by rw [nanKind_copyAbs]; exact hb)
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · simp only [maxD]; rw [minmax_run _ _ c a b ha hb, e1, (select_pick _ _ a b).1]
+    · simp only [minD]; rw [minmax_run _ _ c a b ha hb, e1, (select_pick _ _ a b).2]
+    · simp only [maxMag]; rw [minmax_run _ _ c a b ha hb, e2, (select_pick _ _ a b).1]
+    · simp only [minMag]; rw [minmax_run _ _ c a b ha hb, e2, (select_pick _ _ a b).2]
+  · exact ⟨minmaxBy_qnan_left _ _ c a b fl ha hb, minmaxBy_qnan_left _ _ c a b fl ha hb,
+      minmaxBy_qnan_left _ _ c a b fl ha hb, minmaxBy_qnan_left _ _ c a b fl ha hb⟩
+  · exact ⟨minmaxBy_qnan_right _ _ c a b fl ha hb, minmaxBy_qnan_right _ _ c a b fl ha hb,
+      minmaxBy_qnan_right _ _ c a b fl ha hb, minmaxBy_qnan_right _ _ c a b fl ha hb⟩
+  · exact ⟨minmaxBy_nan _ _ c a b fl h, minmaxBy_nan _ _ c a b fl h, minmaxBy_nan _ _ c a b fl h,
+      minmaxBy_nan _ _ c a b fl h⟩
+
+/-! ## `compare_total`, `compare_total_mag` -/
+
+/-- `compare_total` (_pydecimal.py:2999-3069) is the total order of the specification
+(General Decimal Arithmetic, "compare-total"; decimal docs: `Decimal('12.0').compare_total(
+Decimal('12'))` is -1): it is antisymmetric and 0 only for identical representations; for
+numbers of different value it is the numeric order; equal values with different signs put the
+negative first; equal values with the same sign are ordered by exponent, the lower exponent
+first when positive and last when negative; a positive NaN is above every number and a negative
+one below, a signaling NaN is between the numbers and the quiet NaNs, and NaNs of one kind and
+sign are ordered by payload. `compare_total_mag` is the same order of the magnitudes. -/
+def CompareTotalExact : Prop :=
+  (∀ a b : Dec, compareTotal b a = -compareTotal a b ∧ (compareTotal a b = 0 ↔ a = b)) ∧
+  (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → numOrder a b ≠ .eq →
+    compareTotal a b = ordInt (numOrder a b)) ∧
+  (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → numOrder (copyAbs a) (copyAbs b) ≠ .eq →
+    compareTotalMag a b = ordInt (numOrder (copyAbs a) (copyAbs b))) ∧
+  (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → numOrder a b = .eq → a.neg ≠ b.neg →
+    compareTotal a b = if a.neg then -1 else 1) ∧
+  (∀ (n : Bool) (c1 c2 : Nat) (e1 e2 : Int), numOrder (.fin n c1 e1) (.fin n c2 e2) = .eq → e1 < e2 →
+    compareTotal (.fin n c1 e1) (.fin n c2 e2) = if n then 1 else -1) ∧
+  (∀ (x : Dec) (s : Bool) (p : Nat), nanKind x = 0 →
+    compareTotal (.nan false s p) x = 1 ∧ compareTotal (.nan true s p) x = -1 ∧
+    compareTotalMag (.nan true s p) x = 1) ∧
+  (∀ p q : Nat, compareTotal (.nan false true p) (.nan false false q) = -1 ∧
+    compareTotal (.nan true true p) (.nan true false q) = 1) ∧
+  (∀ (n s : Bool) (p q : Nat), p < q → compareTotal (.nan n s p) (.nan n s q) = if n then 1 else -1)
+
+theorem compareTotal_num (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) (h : numOrder a b ≠ .eq) :
+    compareTotal a b = ordInt (numOrder a b) := by
+  have hc := cmpVal_exact a b ha hb
+  rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+    (try cases s1) <;> (try cases s2) <;> (try simp [nanKind] at ha hb)
+  all_goals
+    cases n1 <;> cases n2 <;>
+    simp only [compareTotal, compareTotalSame, Dec.neg, nanKind, ne_eq, not_true_eq_false, or_self,
+      ↓reduceIte, hc, Bool.false_eq_true] <;>
+    (try (revert h hc; generalize numOrder _ _ = o; intro h hc; cases o <;> simp_all [ordInt]))
+  all_goals (simp only [cmpVal, signOrd, Ordering.swap] at hc; (repeat' split at hc) <;> simp_all)
+
+theorem compareTotalExact_proven : CompareTotalExact := by
+  refine ⟨fun a b => ⟨compareTotal_antisymm a b, compareTotal_eq_zero a b⟩,
+    fun a b ha hb h => compareTotal_num a b ha hb h,
+    fun a b ha hb h => compareTotal_num _ _ (by rw [nanKind_copyAbs]; exact ha) (by rw [nanKind_copyAbs]; exact hb) h,
+    ?_, ?_, ?_, ?_, ?_⟩
+  · intro a b ha hb _ hs
+    rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+      (try cases s1) <;> (try cases s2) <;> (try simp [nanKind] at ha hb) <;>
+      cases n1 <;> cases n2 <;> simp_all [compareTotal, Dec.neg]
+  · intro n c1 c2 e1 e2 h he
+    have hc := cmpVal_exact (.fin n c1 e1) (.fin n c2 e2) rfl rfl
+    rw [h] at hc
+    cases n <;> simp [compareTotal, compareTotalSame, Dec.neg, nanKind, hc, expOf, he]
+  · intro x s p hx
+    rcases x with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;> (try cases s2) <;> (try simp [nanKind] at hx) <;>
+      cases s <;> (try cases n2) <;>
+      simp [compareTotal, compareTotalMag, compareTotalSame, copyAbs, Dec.withSign, Dec.neg, nanKind]
+  · intro p q
+    simp [compareTotal, compareTotalSame, Dec.neg, nanKind]
+  · intro n s p q h
+    cases n <;> cases s <;> simp [compareTotal, compareTotalSame, Dec.neg, nanKind, payloadOf, h]
+
+end PyLean.Decimal
