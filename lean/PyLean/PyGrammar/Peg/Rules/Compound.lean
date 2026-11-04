@@ -13,55 +13,99 @@ open Lexer
     | invalid_for_stmt
     | 'for' t=star_targets 'in' ~ ex=star_expressions ':' tc=[TYPE_COMMENT] b=block el=[else_block] {
         _PyAST_For(t, ex, b, el, NEW_TYPE_COMMENT(p, tc), EXTRA) }
-    | 'async' 'for' ... (the same with AsyncFor)
+    | 'async' 'for' t=star_targets 'in' ~ ex=star_expressions ':' tc=[TYPE_COMMENT] b=block el=[else_block] {
+        CHECK_VERSION(stmt_ty, 5, "Async for loops are", _PyAST_AsyncFor(t, ex, b, el, NEW_TYPE_COMMENT(p, tc), EXTRA)) }
     | invalid_for_target
 ```
-With `t` the token under the mark, `for`:
-* first pass, the whole alternative matching: `For(t, ex, b, el, type_comment)`;
+With `t` the token under the mark:
+* first pass, neither `for` nor `async`: `NULL`, mark unmoved;
+* first pass, the `for` alternative matching: `For(t, ex, b, el, type_comment)`;
+* first pass, `async for ...` matching: `AsyncFor(...)` when `feature_version` is at least 5, and
+  with a lower one `NULL` with the exception for "Async for loops are only supported in Python 3.5
+  and greater";
 * first pass, `star_expressions` failing after `in`: the cut ends the rule, `NULL` with the mark
-  back and nothing else tried;
-* second pass, `invalid_for_stmt` returning `NULL` with no error and the same failure after the
-  cut: `NULL` again, and `invalid_for_target` (the last alternative) is not run: the rule ends in
-  the state `star_expressions` left. -/
+  back;
+* second pass: an error from `invalid_for_stmt` ends the rule; with `invalid_for_stmt` returning
+  `NULL` and no error, a failure after the cut ends the rule without running `invalid_for_target`,
+  while a failure before the cut (no `star_targets` after `for`) lets `invalid_for_target`, the
+  last alternative, decide. -/
 def ForStmt : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
+  (t.type ≠ 712 → t.type ≠ 716 → p.callInvalidRules = false →
+    callRule (f + 16) 58 p = (.null, q.leave)) ∧
   (t.type = 712 → p.callInvalidRules = false →
     ∀ (tg it body orelse tcm : Ast) (ti tc : Token) (s2 s3 s4 s5 s6 s7 s8 : PS),
-    callRule (f + 7) 193 { q with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
+    callRule (f + 9) 193 { q with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
+    expectToken 713 s2 = (.tok ti, s3) → callRule (f + 6) 112 s3 = (it, s4) → it ≠ .null →
+    expectToken 11 s4 = (.tok tc, s5) → expectToken 57 s5 = (tcm, s6) → s6.errorIndicator = false →
+    callRule (f + 3) 33 s6 = (body, s7) → body ≠ .null →
+    callRule (f + 2) 56 s7 = (orelse, s8) → s8.errorIndicator = false →
+    callRule (f + 16) 58 p =
+      (mkAt .For [tg, it, body, orelse, typeCommentOf tcm] (extraLoc t s8), s8.leave)) ∧
+  (t.type = 716 → p.callInvalidRules = false →
+    ∀ (tg it body orelse tcm : Ast) (tf ti tc : Token) (s1 s2 s3 s4 s5 s6 s7 s8 : PS),
+    expectToken 712 { q with mark := p.mark + 1 } = (.tok tf, s1) →
+    callRule (f + 7) 193 s1 = (tg, s2) → tg ≠ .null →
     expectToken 713 s2 = (.tok ti, s3) → callRule (f + 4) 112 s3 = (it, s4) → it ≠ .null →
     expectToken 11 s4 = (.tok tc, s5) → expectToken 57 s5 = (tcm, s6) → s6.errorIndicator = false →
     callRule (f + 1) 33 s6 = (body, s7) → body ≠ .null →
     callRule f 56 s7 = (orelse, s8) → s8.errorIndicator = false →
-    callRule (f + 14) 58 p =
-      (mkAt .For [tg, it, body, orelse, typeCommentOf tcm] (extraLoc t s8), s8.leave)) ∧
+    (5 ≤ s8.featureVersion → callRule (f + 16) 58 p =
+      (mkAt .AsyncFor [tg, it, body, orelse, typeCommentOf tcm] (extraLoc t s8), s8.leave)) ∧
+    (s8.featureVersion < 5 →
+      (callRule (f + 16) 58 p).1 = .null ∧ (callRule (f + 16) 58 p).2.errorIndicator = true ∧
+      (callRule (f + 16) 58 p).2.tok = (raiseError0 "SyntaxError"
+        "Async for loops are only supported in Python 3.5 and greater"
+        { s8 with errorIndicator := true }).2.tok)) ∧
   (t.type = 712 → p.callInvalidRules = false →
     ∀ (tg : Ast) (ti : Token) (s2 s3 s4 : PS),
-    callRule (f + 7) 193 { q with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
-    expectToken 713 s2 = (.tok ti, s3) → callRule (f + 4) 112 s3 = (.null, s4) →
-    callRule (f + 14) 58 p = (.null, { s4 with mark := p.mark }.leave)) ∧
+    callRule (f + 9) 193 { q with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
+    expectToken 713 s2 = (.tok ti, s3) → callRule (f + 6) 112 s3 = (.null, s4) →
+    callRule (f + 16) 58 p = (.null, { s4 with mark := p.mark }.leave)) ∧
+  (p.callInvalidRules = true → ∀ (s0 : PS), callRule (f + 11) 260 q = (.null, s0) →
+    s0.errorIndicator = true → callRule (f + 16) 58 p = (.null, { s0 with mark := p.mark }.leave)) ∧
   (t.type = 712 → p.callInvalidRules = true →
     ∀ (tg : Ast) (ti : Token) (s0 s2 s3 s4 : PS),
-    callRule (f + 9) 260 q = (.null, s0) → s0.errorIndicator = false →
-    callRule (f + 7) 193 { s0 with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
-    expectToken 713 s2 = (.tok ti, s3) → callRule (f + 4) 112 s3 = (.null, s4) →
-    callRule (f + 14) 58 p = (.null, { s4 with mark := p.mark }.leave))
+    callRule (f + 11) 260 q = (.null, s0) → s0.errorIndicator = false →
+    callRule (f + 9) 193 { s0 with mark := p.mark + 1 } = (tg, s2) → tg ≠ .null →
+    expectToken 713 s2 = (.tok ti, s3) → callRule (f + 6) 112 s3 = (.null, s4) →
+    callRule (f + 16) 58 p = (.null, { s4 with mark := p.mark }.leave)) ∧
+  (t.type = 712 → p.callInvalidRules = true →
+    ∀ (v : Ast) (s0 s2 s3 : PS),
+    callRule (f + 11) 260 q = (.null, s0) → s0.errorIndicator = false →
+    callRule (f + 9) 193 { s0 with mark := p.mark + 1 } = (.null, s2) → s2.errorIndicator = false →
+    s2.callInvalidRules = true →
+    callRule (f + 8) 235 { s2 with mark := p.mark } = (v, s3) →
+    v = .null → callRule (f + 16) 58 p = (.null, { s3 with mark := p.mark }.leave))
 
 theorem forStmt_proven : ForStmt := by
   intro f p q h
-  obtain ⟨he, -, hci, -, hm, hlt, -⟩ := h.facts
+  obtain ⟨he, -, hci, hfv, hm, hlt, -⟩ := h.facts
   have hlt' : q.mark < q.fill := hm ▸ hlt
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
   rw [callRule_extra rfl rfl rfl rfl rfl h]
   simp only [show ruleOf 58 = r58 from rfl, r58]
-  have tok_ok : ∀ g, (q.tokenAt p.mark).type = 712 →
-      runCall (g + 1) (.tok 712) q = (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) :=
-    fun g ht => by rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
-  refine ⟨fun ht hinv tg it body orelse tcm ti tc s2 s3 s4 s5 s6 s7 s8 h1 htg h2 h3 hit h4 h5 h5e
+  have tok_ok : ∀ g ty, (q.tokenAt p.mark).type = ty →
+      runCall (g + 1) (.tok ty) q = (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) :=
+    fun g ty ht => by rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+  have tok_no : ∀ g ty, (q.tokenAt p.mark).type ≠ ty → runCall (g + 1) (.tok ty) q = (.null, q) :=
+    fun g ty ht => by rw [call_tok, expectToken_at _ _ hlt', hm, ite_f ht]
+  refine ⟨fun h1 h2 hinv => ?_,
+    fun ht hinv tg it body orelse tcm ti tc s2 s3 s4 s5 s6 s7 s8 h1 htg h2 h3 hit h4 h5 h5e
+      h6 hb h7 h7e => ?_,
+    fun ht hinv tg it body orelse tcm tf ti tc s1 s2 s3 s4 s5 s6 s7 s8 h0 h1 htg h2 h3 hit h4 h5 h5e
       h6 hb h7 h7e => ?_,
     fun ht hinv tg ti s2 s3 s4 h1 htg h2 h3 => ?_,
-    fun ht hinv tg ti s0 s2 s3 s4 h0 h0e h1 htg h2 h3 => ?_⟩
+    fun hinv s0 h0 h0e => ?_,
+    fun ht hinv tg ti s0 s2 s3 s4 h0 h0e h1 htg h2 h3 => ?_,
+    fun ht hinv v s0 s2 s3 h0 h0e h1 h1e h1i h3 hv => ?_⟩
+  · rw [alts_skip (by simp [hci, hinv]), alts_fail (by rfl) he (items_call_null (tok_no _ _ h1)), hq,
+      alts_fail (by rfl) he (items_call_null (tok_no _ _ h2)), hq, alts_skip (by simp [hci, hinv]),
+      alts_nil]
+    rfl
   · rw [alts_skip (by simp [hci, hinv]), alts_ok (by rfl) he (by
       dsimp only
-      rw [items_call (tok_ok _ ht) (by simp), items_call (by rw [call_rule, h1]) htg,
+      rw [items_call (tok_ok _ _ ht) (by simp), items_call (by rw [call_rule, h1]) htg,
         items_call (by rw [call_tok, h2]) (by simp), items_cut,
         items_call (by rw [call_rule, h3]) hit, items_call (by rw [call_tok, h4]) (by simp),
         items_opt (by rw [call_tok, h5]) h5e, items_call (by rw [call_rule, h6]) hb,
@@ -69,14 +113,66 @@ theorem forStmt_proven : ForStmt := by
     simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, mkExtra, h7e,
       Bool.or_false, mkAt, extraLoc, locArgs, callHelper]
     simp [mkAst, nonNull]
+  · rw [alts_skip (by simp [hci, hinv]), alts_fail (by rfl) he (items_call_null (tok_no _ _ (by omega))),
+      hq, alts_ok (by rfl) he (by
+      dsimp only
+      rw [items_call (tok_ok _ _ ht) (by simp), items_call (by rw [call_tok, h0]) (by simp),
+        items_call (by rw [call_rule, h1]) htg,
+        items_call (by rw [call_tok, h2]) (by simp), items_cut,
+        items_call (by rw [call_rule, h3]) hit, items_call (by rw [call_tok, h4]) (by simp),
+        items_opt (by rw [call_tok, h5]) h5e, items_call (by rw [call_rule, h6]) hb,
+        items_opt (by rw [call_rule, h7]) h7e, items_nil]), altResult_extra rfl rfl]
+    refine ⟨fun hv => ?_, fun hv => ?_⟩
+    · have h5' : ¬ ((s8.featureVersion : Int) < 5) := by omega
+      have hE : evalA (((((((((((#[] : Array Ast).push (.tok (q.tokenAt p.mark))).push (.tok tf)).push
+          tg).push (.tok ti)).push (.int 1)).push it).push (.tok tc)).push tcm).push body).push orelse)
+          (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s8))
+          (.checkVersion (.int 5) (.str "Async for loops are")
+            (.mk .AsyncFor [.var 2, .var 5, .var 8, .var 9, .call .NEW_TYPE_COMMENT [.var 7], .extra0,
+              .extra1, .extra2, .extra3])) s8 =
+          (mkAt .AsyncFor [tg, it, body, orelse, typeCommentOf tcm] (extraLoc (q.tokenAt p.mark) s8), s8) := by
+        simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+          MonadStateOf.get, StateT.get, mkAst, callHelper]
+        rw [ite_f h5']
+        simp [mkAst, mkAt, extraLoc, locArgs, mkExtra, StateT.pure, pure]
+      rw [hE]
+      simp [mkAst, mkAt, nonNull, h7e]
+    · have h5' : (s8.featureVersion : Int) < 5 := by omega
+      have hE : evalA (((((((((((#[] : Array Ast).push (.tok (q.tokenAt p.mark))).push (.tok tf)).push
+          tg).push (.tok ti)).push (.int 1)).push it).push (.tok tc)).push tcm).push body).push orelse)
+          (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s8))
+          (.checkVersion (.int 5) (.str "Async for loops are")
+            (.mk .AsyncFor [.var 2, .var 5, .var 8, .var 9, .call .NEW_TYPE_COMMENT [.var 7], .extra0,
+              .extra1, .extra2, .extra3])) s8 =
+          (.null, (raiseError0 "SyntaxError" "Async for loops are only supported in Python 3.5 and greater"
+            { s8 with errorIndicator := true }).2) := by
+        have hmsg : toString (cpsStr ("Async for loops are".toList.map Char.toNat)) ++
+            toString " only supported in Python 3." ++ toString (5 : Int) ++ toString " and greater" =
+            "Async for loops are only supported in Python 3.5 and greater" := by decide +kernel
+        simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+          MonadStateOf.get, StateT.get, mkAst, callHelper]
+        rw [ite_t h5']
+        simp only [hmsg]
+        rfl
+      rw [hE]
+      have hei := (frame_raiseError0 "SyntaxError"
+        "Async for loops are only supported in Python 3.5 and greater"
+        { s8 with errorIndicator := true }).grows.err rfl
+      generalize raiseError0 "SyntaxError" "Async for loops are only supported in Python 3.5 and greater"
+        { s8 with errorIndicator := true } = r at hei ⊢
+      dsimp only
+      split <;> simp [hei, PS.leave]
   · rw [alts_skip (by simp [hci, hinv]), alts_cut (by rfl) he (by
       dsimp only
-      rw [items_call (tok_ok _ ht) (by simp), items_call (by rw [call_rule, h1]) htg,
+      rw [items_call (tok_ok _ _ ht) (by simp), items_call (by rw [call_rule, h1]) htg,
         items_call (by rw [call_tok, h2]) (by simp), items_cut,
         items_call_null (by rw [call_rule, h3])])]
     rfl
+  · rw [alts_fail (by simp [hci, hinv]) he (by dsimp only; rw [items_call_null (by rw [call_rule, h0])]),
+      alts_err (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = true from h0e)]
+    rfl
   · have g0 : TokGrows q s0 := tg_call h0
-    have e1 : runCall (f + 9) (.tok 712) { s0 with mark := p.mark } =
+    have e1 : runCall (f + 11) (.tok 712) { s0 with mark := p.mark } =
         (.tok (q.tokenAt p.mark), { s0 with mark := p.mark + 1 }) := by
       rw [call_tok, expect_again g0 hlt, ite_t ht]
     rw [alts_fail (by simp [hci, hinv]) he (by dsimp only; rw [items_call_null (by rw [call_rule, h0])]),
@@ -86,14 +182,30 @@ theorem forStmt_proven : ForStmt := by
         items_call (by rw [call_tok, h2]) (by simp), items_cut,
         items_call_null (by rw [call_rule, h3])])]
     rfl
+  · subst hv
+    have g0 : TokGrows q s0 := tg_call h0
+    have g2 : TokGrows q s2 := g0.trans (tg_mark' (tg_call h1) _)
+    have e1 : runCall (f + 11) (.tok 712) { s0 with mark := p.mark } =
+        (.tok (q.tokenAt p.mark), { s0 with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_again g0 hlt, ite_t ht]
+    have e2 : runCall (f + 10) (.tok 716) { s2 with mark := p.mark } = (.null, { s2 with mark := p.mark }) := by
+      rw [call_tok, expect_again g2 hlt, ite_f (by omega)]
+    rw [alts_fail (by simp [hci, hinv]) he (by dsimp only; rw [items_call_null (by rw [call_rule, h0])]),
+      alts_fail (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = false from h0e) (by
+        dsimp only; rw [items_call e1 (by simp), items_call_null (by rw [call_rule, h1])]),
+      alts_fail (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (items_call_null e2),
+      alts_fail (by simp [h1i]) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]), alts_nil]
+    rfl
 
 /-! ### `assignment`, the augmented alternative -/
 
 /-- `assignment` (`Grammar/python.gram:151-166`), its fourth alternative
 `a=single_target b=augassign ~ c=annotated_rhs { _PyAST_AugAssign(a, b->kind, c, EXTRA) }`,
 reached on `x += ...`: the annotated forms fail (`x` is a `NAME` not followed by `:`, and the
-artificial `_tmp_9` of the parenthesised / subscript targets fails), and no `star_targets '='`
-prefix matches (`_loop1_10`). Then:
+artificial `_tmp_11` of the parenthesised / subscript targets fails), and no `star_targets '='`
+prefix matches (`_loop1_12`). Then:
 * `annotated_rhs` succeeding gives `AugAssign(a, op, c)`, `op` the operator `augassign` returned;
 * `annotated_rhs` failing hits the cut: `NULL` with the mark back, in either pass, so
   `invalid_assignment` (the last alternative) never runs after an augmented operator. -/
@@ -148,7 +260,7 @@ theorem assignmentAug_proven : AssignmentAug := by
 /-- `assignment`'s first and third alternatives (`Grammar/python.gram:152-163`):
 * `x: T [= v]`: `NAME ':' expression ['=' annotated_rhs]` gives, under `CHECK_VERSION(6, ...)`,
   `AnnAssign(x, T, v, simple=1)` with the name's context set to `Store`;
-* `(x): T [= v]` and other non-`NAME` targets: with no `NAME` first, the artificial `_tmp_9`
+* `(x): T [= v]` and other non-`NAME` targets: with no `NAME` first, the artificial `_tmp_11`
   (`'(' single_target ')' | single_subscript_attribute_target`) gives the target, and the result
   is `AnnAssign(target, T, v, simple=0)`, under the same version check;
 * `x = v` (the annotated forms failing as in `AssignmentAug`): the targets `(star_targets '=')+`,
@@ -247,7 +359,7 @@ theorem assignmentAnnPlain_proven : AssignmentAnnPlain := by
     simp [mkAst, nonNull, h6e, StateT.pure, pure]
 
 /-- `assignment` in the second pass: when no alternative matches without passing a cut (here: no
-`NAME`, no `_tmp_9` target, no `star_targets '='`, no `single_target`), `invalid_assignment`, the
+`NAME`, no `_tmp_11` target, no `star_targets '='`, no `single_target`), `invalid_assignment`, the
 last alternative, runs from the start mark and its outcome is the rule's. -/
 def AssignmentInvalid : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   ∀ (v : Ast) (s0 s1 s2 s3 s4 : PS),
@@ -290,7 +402,7 @@ theorem assignmentInvalid_proven : AssignmentInvalid := by
     | match_stmt
 ```
 The lookaheads consume nothing (the `('def' | '@' | 'async')` groups are the artificial rules
-`_tmp_4` to `_tmp_7`). Clauses: the first lookahead holding and `function_def` succeeding gives
+`_tmp_6` to `_tmp_9`). Clauses: the first lookahead holding and `function_def` succeeding gives
 its statement; at `if`, `if_stmt`'s; at a decorator, `function_def` failing falls through to
 `class_def` (the `@` lookahead of the third alternative); and with every lookahead failing,
 `match_stmt` decides. -/
