@@ -268,9 +268,9 @@ theorem arrayIns1Reentrant_refuted : ¬ ArrayIns1Reentrant := by
 /-- What happens instead, for every integer typecode, every array of at least 16 items
 without exported buffers (`n + 1` items fit) and every `x` in the typecode's range, with an
 item whose `__index__` clears the array once and returns `x`: the clear frees the buffer
-(`array_resize` to 0 from 16 or more items, arraymodule.c:157-169), and `a.append(v)` succeeds
+(`array_resize` to 0 from 16 or more items, arraymodule.c:156-169), and `a.append(v)` succeeds
 with `n + 1` items, the first `n` of them the cells that `array_resize(self, n+1)` (:873)
-obtained by reallocating a NULL buffer (:183-194) and nobody wrote: uninitialised memory in
+obtained by reallocating a NULL buffer (:183-198) and nobody wrote: uninitialised memory in
 CPython, 0 in the model. -/
 def ArrayIns1Stale : Prop :=
   ∀ (a : Arr) (x : Int), a.tc.isInteger = true → a.exports = 0 → 16 ≤ a.items.length →
