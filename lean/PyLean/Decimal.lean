@@ -20,6 +20,7 @@ import PyLean.Decimal.Exact3
 import PyLean.Decimal.Exact4
 import PyLean.Decimal.AddExact
 import PyLean.Decimal.RotateShift
+import PyLean.Decimal.DivExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -434,7 +435,7 @@ def entries : List Entry := [
     statement := "For finite non-zero operands, __truediv__'s integer division gives q, e with: either q*10^e is the exact quotient, at the ideal exponent unless trailing digits prevent it, or q has more than prec digits, its last digit is not 0 or 5, and the exact quotient lies strictly between q0 and q0+1 for q0 equal to q or q-1."
     source := "General Decimal Arithmetic, 'divide'; the comment at _pydecimal.py:1415"
     status := .proven, prop := ``TruedivCoreCorrect, thm := some ``truedivCoreCorrect_proven
-    notes := "This is the integer core. That _fix of this q gives the correctly rounded quotient is the sticky-digit argument, not yet stated." },
+    notes := "This is the integer core; decimal-truediv-exact states the whole operator, the sticky-digit argument included." },
   { id := "decimal-divmod-consistent", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__divmod__", "Decimal.__mod__", "Decimal.__floordiv__", "Decimal._divide", "Decimal._fix"]
     statement := "For finite operands with a non-zero divisor, //, % and divmod run the same _divide, so divmod(x, y) is (x // y, x % y), with _fix applied to the remainder alone."
@@ -678,7 +679,31 @@ def entries : List Entry := [
     statement := "adjusted() is exp + (number of coefficient digits) - 1 for every finite decimal, zeros included (Decimal('0E+5').adjusted() == 5), and 0 for every infinity and NaN."
     source := "adjusted docstring 'Return the adjusted exponent of self' and Lib/_pydecimal.py:2973-2977 (the except TypeError for special values)"
     status := .proven, prop := ``AdjustedExact, thm := some ``adjustedExact_proven
-    notes := "The difftest compares adjusted() with both twins on every operand kind (the 'adjusted' method case)." }
+    notes := "The difftest compares adjusted() with both twins on every operand kind (the 'adjusted' method case)." },
+  { id := "decimal-truediv-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__truediv__", "_WorkRep.__init__"]
+    statement := "For every context with prec >= 1 and finite operands a = ±ca·10^ea, b = ±cb·10^eb with cb != 0: a coefficient of more than 4300 digits raises the int/str-limit ValueError ('value has N digits'), a's first; otherwise, with shift = len(cb) - len(ca) + prec + 1, E0 = ea - eb - shift and N/D the exact quotient scaled to E0, T = N // D has more than prec digits; when D does not divide N, the exact quotient lies strictly between T·10^E0 and (T+1)·10^E0, str(coeff) raises the int/str-limit ValueError when T has more than 4300 digits, and otherwise a / b is _fix of every decimal strictly between those bounds (the truncated quotient with an inexact digit, 10T+1 at E0-1, among them), so the exact rational quotient rounded into the context; when D divides N, a / b is _fix of the exact quotient at the exponent closest to the ideal ea - eb (unique), after str()'s limit; 0 / b is _fix of the signed zero at ea - eb; a NaN operand gives _check_nans's NaN (decimal-truediv-specials states x/0, 0/0 and infinities)."
+    source := "General Decimal Arithmetic, 'divide' (the exact quotient rounded; the ideal exponent for an exact result); Lib/_pydecimal.py:1369-1426"
+    status := .proven, prop := ``TruedivExact, thm := some ``truedivExact_proven
+    notes := "The sticky argument: _fix drops at least two digits of 10T+1 (T has prec+1 or prec+2 digits), so every decimal in (T·10^E0, (T+1)·10^E0) rounds alike (fixSpec_sticky2), and the coeff % 5 bump at E0 is one of them (sticky_bump). Checked on 3.15.2: Context.divide(a, b) equals Context.plus of a random decimal strictly between the bounds, value and flags, on 38,349 random inexact pairs over every rounding, clamp, subnormal and overflow range." },
+  { id := "decimal-divide-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._divide", "_WorkRep.__init__"]
+    statement := "For every context, a finite dividend and a non-zero finite divisor, _divide returns: for a zero dividend or an adjusted-exponent gap <= -2, the zero quotient (sign the exclusive or) at exponent 0 and the dividend itself at min(ea, eb); for a gap above prec, InvalidOperation (DivisionImpossible) with a NaN pair; otherwise the int/str-limit ValueError of _WorkRep for a coefficient of more than 4300 digits, then whatever _is_less_than_pow10a_use_str(X // Y, prec) decides on the operands scaled to min(ea, eb): its exception, InvalidOperation for 'too large', or the quotient X // Y at exponent 0 and the remainder X % Y at min(ea, eb) with the dividend's sign, after the int/str limit of str(q) (when the helper did not compute it) and str(r)."
+    source := "Lib/_pydecimal.py:1428-1464; Doc/library/decimal.rst:441"
+    status := .proven, prop := ``DivideExact, thm := some ``divideExact_proven
+    notes := "The helper's verdict is the code's own behaviour and is kept as such: decimal-pow10-band-exact pins it where it computes str(q), and decimal-pow10-correct / decimal-divide-correct refute 'it says q < 10**prec' at prec 355861594 (decimal-pydecimal-pow10-float-misfire), where this statement gives InvalidOperation for a quotient that fits, as CPython does." },
+  { id := "decimal-mod-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__mod__"]
+    statement := "For every context: x % y with a NaN operand is _check_nans's NaN; INF % y, x % 0 and 0 % 0 are InvalidOperation with a NaN; x % INF is x through _fix; and for a finite non-zero divisor, the remainder _divide makes (decimal-divide-exact's cases, the helper's verdict included) through _fix, with _divide's exceptions (a too-large quotient gives InvalidOperation and NaN)."
+    source := "Lib/_pydecimal.py:1516-1541; General Decimal Arithmetic, 'remainder'"
+    status := .proven, prop := ``ModExact, thm := some ``modExact_proven
+    notes := "Checked on 3.15.2 with traps off, DivisionByZero, InvalidOperation and both trapped: remainder(5, 0), remainder(Inf, 3) and remainder(1E+9, 7) at prec 5 give NaN with InvalidOperation (or raise it), remainder(-123456.7, Inf) gives -1.2346E+5 with Inexact and Rounded." },
+  { id := "decimal-divmod-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__divmod__"]
+    statement := "For every context: divmod with a NaN operand is _check_nans's NaN twice; divmod(INF, INF) and divmod(0, 0) are InvalidOperation with a NaN pair; divmod(INF, x) for finite x is the signed infinity and InvalidOperation's NaN; divmod(x, 0) for non-zero x is DivisionByZero's signed infinity then InvalidOperation's NaN, the first trapped of them raising; divmod(x, INF) is the signed zero and x through _fix; and for a finite non-zero divisor, _divide's quotient (decimal-divide-exact's cases) with its remainder through _fix."
+    source := "Lib/_pydecimal.py:1473-1507; Doc/reference/datamodel.rst (__divmod__)"
+    status := .proven, prop := ``DivmodExact, thm := some ``divmodExact_proven
+    notes := "Checked on 3.15.2 under the four trap sets: divmod(-3, 0) gives (-Infinity, NaN) with DivisionByZero and InvalidOperation, raises DivisionByZero when it is trapped and InvalidOperation (both flags set) when only that is; divmod(-Inf, 2) and divmod(-Inf, 0) give (-Infinity, NaN); divmod(-123456.7, -Inf) gives (0, -1.2346E+5)." }
 ]
 
 end PyLean.Decimal

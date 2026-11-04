@@ -574,4 +574,252 @@ theorem divideExact_proven : DivideExact := by
             rw [strLimit_then]
             rfl
 
+/-! ## `%` and `divmod`, exactly -/
+
+theorem modD_fin (c : Ctx) (fl : List Signal) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat)
+    (eb : Int) (hb : cb ≠ 0) :
+    (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+      match (divideD c (.fin sa ca ea) (.fin sb cb eb)).run fl with
+      | .ok (qr, fl') => (fix c qr.2).run fl'
+      | .error e => .error e := by
+  have hz2 : isZero (.fin sb cb eb) = false := isZero_fin sb cb eb hb
+  have hd : decBool (.fin sb cb eb) = true := by simp [decBool, hz2]
+  simp only [modD, checkNans, isinfinity, hd, pure_bind, ne_eq, not_true_eq_false, ↓reduceIte,
+    Bool.not_true, Bool.false_eq_true]
+  simp only [StateT.run, bind, StateT.bind, Except.bind]
+  cases divideD c (.fin sa ca ea) (.fin sb cb eb) fl <;> rfl
+
+theorem divmodD_fin (c : Ctx) (fl : List Signal) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat)
+    (eb : Int) (hb : cb ≠ 0) :
+    (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+      match (divideD c (.fin sa ca ea) (.fin sb cb eb)).run fl with
+      | .ok (qr, fl') => ((fix c qr.2).run fl').map (fun p => ((qr.1, p.1), p.2))
+      | .error e => .error e := by
+  have hz2 : isZero (.fin sb cb eb) = false := isZero_fin sb cb eb hb
+  have hd : decBool (.fin sb cb eb) = true := by simp [decBool, hz2]
+  simp only [divmodD, checkNans, isinfinity, hd, pure_bind, ne_eq, not_true_eq_false, ↓reduceIte,
+    Bool.not_true, Bool.false_eq_true]
+  simp only [StateT.run, bind, StateT.bind, Except.bind, pure, StateT.pure, Except.pure]
+  cases divideD c (.fin sa ca ea) (.fin sb cb eb) fl with
+  | error e => rfl
+  | ok v =>
+    simp only
+    cases fix c v.1.2 v.2 <;> rfl
+
+theorem fix_nanD (c : Ctx) (fl : List Signal) : (fix c nanD).run fl = .ok (nanD, fl) := by
+  simp [fix, nanD, fixNan_spec]; rfl
+
+/-- `%` (_pydecimal.py:1516-1541) on every operand pair, for every context: a NaN operand gives
+`_check_nans`; `INF % x`, `x % 0` and `0 % 0` are InvalidOperation (`DivisionUndefined` is
+InvalidOperation too) with a NaN; `x % INF` is `x` through `_fix`; and for a finite non-zero divisor
+the remainder `_divide` makes (`DivideExact`, the helper's verdict included) through `_fix`, with
+`_divide`'s exceptions. -/
+def ModExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal),
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (modD c a b).run fl = nanSpec2 c a b fl) ∧
+    (∀ (s : Bool) (b : Dec), nanKind b = 0 → (modD c (.inf s) b).run fl = afterSig c .invalidOperation fl nanD) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (eb : Int),
+      (modD c (.fin sa ca ea) (.fin sb 0 eb)).run fl = afterSig c .invalidOperation fl nanD) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool),
+      (modD c (.fin sa ca ea) (.inf sb)).run fl = (fix c (.fin sa ca ea)).run fl) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), cb ≠ 0 →
+      let ie := min ea eb
+      let X := (scaled ca ea cb eb).1
+      let Y := (scaled ca ea cb eb).2
+      let gap := adjustedD ca ea - adjustedD cb eb
+      ((ca = 0 ∨ gap ≤ -2) → (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        (fix c (.fin sa (ca * 10 ^ (ea - ie).toNat) ie)).run fl) ∧
+      (ca ≠ 0 → -2 < gap → (c.prec : Int) < gap →
+        (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl = afterSig c .invalidOperation fl nanD) ∧
+      (ca ≠ 0 → -2 < gap → gap ≤ c.prec →
+        (maxStrDigits < numDigits ca → (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+          .error (.valueError (limitToIntMsg (numDigits ca)))) ∧
+        (numDigits ca ≤ maxStrDigits → maxStrDigits < numDigits cb →
+          (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl = .error (.valueError (limitToIntMsg (numDigits cb)))) ∧
+        (numDigits ca ≤ maxStrDigits → numDigits cb ≤ maxStrDigits →
+          (∀ e, isLessThanPow10aUseStr (X / Y) c.prec = .error e →
+            (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl = .error e) ∧
+          (∀ st, isLessThanPow10aUseStr (X / Y) c.prec = .ok (false, st) →
+            (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl = afterSig c .invalidOperation fl nanD) ∧
+          (∀ st, isLessThanPow10aUseStr (X / Y) c.prec = .ok (true, st) →
+            (modD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+              if st = false ∧ maxStrDigits < numDigits (X / Y) then .error (.valueError limitToStrMsg)
+              else if maxStrDigits < numDigits (X % Y) then .error (.valueError limitToStrMsg)
+              else (fix c (.fin sa (X % Y) ie)).run fl))))
+
+theorem afterSig_fix (c : Ctx) (fl : List Signal) :
+    (match afterSig c .invalidOperation fl (nanD, nanD) with
+      | .ok (qr, fl') => (fix c qr.2).run fl'
+      | .error e => .error e) = afterSig c .invalidOperation fl nanD := by
+  by_cases h : Signal.invalidOperation ∈ c.traps
+  · simp [afterSig, h]
+  · simp only [afterSig, h, ↓reduceIte]
+    exact fix_nanD c _
+
+theorem modExact_proven : ModExact := by
+  intro c fl
+  refine ⟨fun a b h => ?_, fun s b hb => ?_, fun sa ca ea sb eb => ?_, fun sa ca ea sb => ?_,
+    fun sa ca ea sb cb eb hb => ?_⟩
+  · rcases a with ⟨sa, ca, ea⟩ | na | ⟨na, ssa, pa⟩ <;> rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, ssb, pb⟩ <;>
+      first
+      | (simp [nanKind] at h; done)
+      | (simp only [modD]; exact checkNans_return c _ _ fl _ (fun d => rfl) h)
+  · rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, ssb, pb⟩
+    · cases s <;> simpa [modD, checkNans, isinfinity, nanD] using invalid_run c fl
+    · cases s <;> simpa [modD, checkNans, isinfinity, nanD] using invalid_run c fl
+    · cases ssb <;> simp [nanKind] at hb
+  · simpa [modD, checkNans, isinfinity, decBool, isZero, nanD] using invalid_run c fl
+  · cases sb <;> cases ca <;>
+      simp [modD, checkNans, isinfinity, decBool, isZero, divideD, expOf, rescale, liftPy, StateT.run, bind,
+        StateT.bind, Except.bind, pure, StateT.pure, Except.pure, Functor.map, Except.map]
+  · have DE := divideExact_proven c fl sa ca ea sb cb eb hb
+    dsimp only at DE ⊢
+    rw [modD_fin c fl sa ca ea sb cb eb hb]
+    obtain ⟨d1, d2, d3⟩ := DE
+    refine ⟨fun h => by rw [d1 h], fun ha hg hp => by rw [d2 ha hg hp]; exact afterSig_fix c fl,
+      fun ha hg hp => ?_⟩
+    obtain ⟨d4, d5, d6⟩ := d3 ha hg hp
+    refine ⟨fun h1 => by rw [d4 h1], fun h1 h2 => by rw [d5 h1 h2], fun h1 h2 => ?_⟩
+    obtain ⟨d7, d8, d9⟩ := d6 h1 h2
+    refine ⟨fun e he => by rw [d7 e he], fun st he => by rw [d8 st he]; exact afterSig_fix c fl,
+      fun st he => ?_⟩
+    rw [d9 st he]
+    by_cases g1 : st = false ∧ maxStrDigits < numDigits ((scaled ca ea cb eb).1 / (scaled ca ea cb eb).2)
+    · simp only [if_pos g1]
+    · simp only [if_neg g1]
+      by_cases g2 : maxStrDigits < numDigits ((scaled ca ea cb eb).1 % (scaled ca ea cb eb).2)
+      · simp only [if_pos g2]
+      · simp only [if_neg g2]
+
+/-- `checkNans` then returning the NaN twice, as `__divmod__` does (_pydecimal.py:1484-1486). -/
+theorem checkNans_return2 (c : Ctx) (a b : Dec) (fl : List Signal) (k : Option Dec → DM (Dec × Dec))
+    (hk : ∀ d, k (some d) = pure (d, d)) (h : nanKind a ≠ 0 ∨ nanKind b ≠ 0) :
+    (checkNans c a (some b) >>= k).run fl = (nanSpec2 c a b fl).map (fun p => ((p.1, p.1), p.2)) := by
+  have sig : ∀ x, ((do raiseSig c .invalidOperation; (pure (some x) : DM (Option Dec))) >>= k).run fl =
+      afterSig c .invalidOperation fl (x, x) := by
+    intro x; rw [bind_assoc]; simp only [pure_bind, hk]; exact raiseSig_then c _ fl (x, x)
+  have ok : ∀ x, ((pure (some x) : DM (Option Dec)) >>= k).run fl = .ok ((x, x), fl) := by
+    intro x; rw [pure_bind, hk]; rfl
+  rcases a with ⟨na, ca, ea⟩ | na | ⟨na, sa, pa⟩ <;> rcases b with ⟨nb, cb, eb⟩ | nb | ⟨nb, sb, pb⟩ <;>
+    (try cases sa) <;> (try cases sb) <;>
+    first
+    | (simp [nanKind] at h; done)
+    | (simp only [checkNans]
+       first
+       | (rw [sig]
+          by_cases ht : Signal.invalidOperation ∈ c.traps <;>
+            simp [afterSig, ht, nanSpec2, nanKind, quietNaN, fixNan_spec, Except.map])
+       | (rw [ok]; simp [nanSpec2, nanKind, quietNaN, fixNan_spec, Except.map]))
+
+/-- `divmod` (_pydecimal.py:1473-1507) on every operand pair, for every context: a NaN operand gives
+`_check_nans`'s NaN twice; `divmod(INF, INF)` and `divmod(0, 0)` InvalidOperation twice; `divmod(INF, x)`
+the signed infinity and InvalidOperation; `divmod(x, 0)` DivisionByZero's signed infinity, then
+InvalidOperation (the first trapped one raising); `divmod(x, INF)` a signed zero and `x` through
+`_fix`; and for a finite non-zero divisor `_divide`'s quotient (`DivideExact`, the helper's verdict
+included) with its remainder through `_fix`. -/
+def DivmodExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal),
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 →
+      (divmodD c a b).run fl = (nanSpec2 c a b fl).map (fun p => ((p.1, p.1), p.2))) ∧
+    (∀ s t : Bool, (divmodD c (.inf s) (.inf t)).run fl = afterSig c .invalidOperation fl (nanD, nanD)) ∧
+    (∀ (s sb : Bool) (cb : Nat) (eb : Int),
+      (divmodD c (.inf s) (.fin sb cb eb)).run fl = afterSig c .invalidOperation fl (.inf (s != sb), nanD)) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (eb : Int), ca ≠ 0 →
+      (divmodD c (.fin sa ca ea) (.fin sb 0 eb)).run fl =
+        if Signal.divisionByZero ∈ c.traps then .error (.named "DivisionByZero" "~")
+        else afterSig c .invalidOperation (addFlag .divisionByZero fl) (.inf (sa != sb), nanD)) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (eb : Int),
+      (divmodD c (.fin sa 0 ea) (.fin sb 0 eb)).run fl = afterSig c .invalidOperation fl (nanD, nanD)) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool),
+      (divmodD c (.fin sa ca ea) (.inf sb)).run fl =
+        ((fix c (.fin sa ca ea)).run fl).map (fun p => ((.fin (sa != sb) 0 0, p.1), p.2))) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), cb ≠ 0 →
+      let s := sa != sb
+      let ie := min ea eb
+      let X := (scaled ca ea cb eb).1
+      let Y := (scaled ca ea cb eb).2
+      let gap := adjustedD ca ea - adjustedD cb eb
+      ((ca = 0 ∨ gap ≤ -2) → (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        ((fix c (.fin sa (ca * 10 ^ (ea - ie).toNat) ie)).run fl).map (fun p => ((.fin s 0 0, p.1), p.2))) ∧
+      (ca ≠ 0 → -2 < gap → (c.prec : Int) < gap →
+        (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl = afterSig c .invalidOperation fl (nanD, nanD)) ∧
+      (ca ≠ 0 → -2 < gap → gap ≤ c.prec →
+        (maxStrDigits < numDigits ca → (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+          .error (.valueError (limitToIntMsg (numDigits ca)))) ∧
+        (numDigits ca ≤ maxStrDigits → maxStrDigits < numDigits cb →
+          (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl = .error (.valueError (limitToIntMsg (numDigits cb)))) ∧
+        (numDigits ca ≤ maxStrDigits → numDigits cb ≤ maxStrDigits →
+          (∀ e, isLessThanPow10aUseStr (X / Y) c.prec = .error e →
+            (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl = .error e) ∧
+          (∀ st, isLessThanPow10aUseStr (X / Y) c.prec = .ok (false, st) →
+            (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl = afterSig c .invalidOperation fl (nanD, nanD)) ∧
+          (∀ st, isLessThanPow10aUseStr (X / Y) c.prec = .ok (true, st) →
+            (divmodD c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+              if st = false ∧ maxStrDigits < numDigits (X / Y) then .error (.valueError limitToStrMsg)
+              else if maxStrDigits < numDigits (X % Y) then .error (.valueError limitToStrMsg)
+              else ((fix c (.fin sa (X % Y) ie)).run fl).map (fun p => ((.fin s (X / Y) 0, p.1), p.2))))))
+
+theorem afterSig_fix2 (c : Ctx) (fl : List Signal) :
+    (match afterSig c .invalidOperation fl (nanD, nanD) with
+      | .ok (qr, fl') => ((fix c qr.2).run fl').map (fun p => ((qr.1, p.1), p.2))
+      | .error e => .error e) = afterSig c .invalidOperation fl (nanD, nanD) := by
+  by_cases h : Signal.invalidOperation ∈ c.traps
+  · simp [afterSig, h]
+  · simp only [afterSig, h, ↓reduceIte, fix_nanD]
+    rfl
+
+theorem invalid_pair_run' (c : Ctx) (fl : List Signal) :
+    (invalid c >>= fun ans => (pure (ans, ans) : DM (Dec × Dec))).run fl =
+      afterSig c .invalidOperation fl (nanD, nanD) := invalid_pair_run c fl
+
+theorem divmodExact_proven : DivmodExact := by
+  intro c fl
+  refine ⟨fun a b h => ?_, fun s t => ?_, fun s sb cb eb => ?_, fun sa ca ea sb eb ha => ?_,
+    fun sa ea sb eb => ?_, fun sa ca ea sb => ?_, fun sa ca ea sb cb eb hb => ?_⟩
+  · rcases a with ⟨sa, ca, ea⟩ | na | ⟨na, ssa, pa⟩ <;> rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, ssb, pb⟩ <;>
+      first
+      | (simp [nanKind] at h; done)
+      | (simp only [divmodD]; exact checkNans_return2 c _ _ fl _ (fun d => rfl) h)
+  · cases s <;> cases t <;>
+      simpa [divmodD, checkNans, isinfinity, nanD] using invalid_pair_run' c fl
+  · have hv : (do let r ← invalid c; (pure (Dec.inf (s != sb), r) : DM (Dec × Dec))).run fl =
+        afterSig c .invalidOperation fl (.inf (s != sb), nanD) := by
+      simp only [invalid, bind_assoc, pure_bind]
+      exact raiseSig_then c .invalidOperation fl _
+    cases s <;> simpa [divmodD, checkNans, isinfinity, Dec.neg] using hv
+  · have hza : isZero (.fin sa ca ea) = false := isZero_fin sa ca ea ha
+    have hd : decBool (.fin sa ca ea) = true := by simp [decBool, hza]
+    have hd0 : decBool (.fin sb 0 eb) = false := rfl
+    simp only [divmodD, checkNans, isinfinity, hd, hd0, pure_bind, ne_eq, not_true_eq_false, ↓reduceIte,
+      Bool.not_true, Bool.not_false, Bool.false_eq_true, Dec.neg, divByZero_eq, invalid, bind_assoc]
+    rw [raiseSig_bind]
+    by_cases h : Signal.divisionByZero ∈ c.traps
+    · simp only [h, ↓reduceIte]
+      rfl
+    · simp only [h, ↓reduceIte, pure_bind]
+      exact raiseSig_then c .invalidOperation _ _
+  · simpa [divmodD, checkNans, isinfinity, decBool, isZero, nanD] using invalid_pair_run' c fl
+  · cases sb <;> cases ca <;>
+      simp [divmodD, checkNans, isinfinity, decBool, isZero, divideD, expOf, rescale, liftPy, StateT.run, bind,
+        StateT.bind, Except.bind, pure, StateT.pure, Except.pure, Functor.map, Except.map, Dec.neg] <;>
+      (cases fix c _ fl <;> rfl)
+  · have DE := divideExact_proven c fl sa ca ea sb cb eb hb
+    dsimp only at DE ⊢
+    rw [divmodD_fin c fl sa ca ea sb cb eb hb]
+    obtain ⟨d1, d2, d3⟩ := DE
+    refine ⟨fun h => by rw [d1 h], fun ha hg hp => by rw [d2 ha hg hp]; exact afterSig_fix2 c fl,
+      fun ha hg hp => ?_⟩
+    obtain ⟨d4, d5, d6⟩ := d3 ha hg hp
+    refine ⟨fun h1 => by rw [d4 h1], fun h1 h2 => by rw [d5 h1 h2], fun h1 h2 => ?_⟩
+    obtain ⟨d7, d8, d9⟩ := d6 h1 h2
+    refine ⟨fun e he => by rw [d7 e he], fun st he => by rw [d8 st he]; exact afterSig_fix2 c fl,
+      fun st he => ?_⟩
+    rw [d9 st he]
+    by_cases g1 : st = false ∧ maxStrDigits < numDigits ((scaled ca ea cb eb).1 / (scaled ca ea cb eb).2)
+    · simp only [if_pos g1]
+    · simp only [if_neg g1]
+      by_cases g2 : maxStrDigits < numDigits ((scaled ca ea cb eb).1 % (scaled ca ea cb eb).2)
+      · simp only [if_pos g2]
+      · simp only [if_neg g2]
+
 end PyLean.Decimal
