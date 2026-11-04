@@ -190,6 +190,9 @@ def rule_assignment_ann_plain : List String := [
 def rule_assignment_aug : List String := [
   "rule:assignment"]
 
+def rule_assignment_expression : List String := [
+  "rule:assignment_expression"]
+
 def rule_assignment_invalid : List String := [
   "rule:assignment"]
 
@@ -325,11 +328,17 @@ def rule_function_def_raw : List String := [
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
 
+def rule_group : List String := [
+  "rule:group"]
+
 def rule_group_pattern : List String := [
   "rule:group_pattern"]
 
 def rule_guard : List String := [
   "rule:guard"]
+
+def rule_if_expression : List String := [
+  "rule:if_expression"]
 
 def rule_if_stmt : List String := [
   "rule:if_stmt"]
@@ -400,8 +409,14 @@ def rule_keyword_patterns : List String := [
 def rule_keyword_stmts : List String := [
   "rule:pass_stmt", "rule:break_stmt", "rule:continue_stmt"]
 
+def rule_lambdef : List String := [
+  "rule:lambdef"]
+
 def rule_lazy_import_diagnosed : List String := [
   "rule:invalid_import"]
+
+def rule_list : List String := [
+  "rule:list"]
 
 def rule_literal_expr : List String := [
   "rule:literal_expr"]
@@ -423,6 +438,9 @@ def rule_maybe_star_pattern : List String := [
 
 def rule_name_or_attr : List String := [
   "rule:name_or_attr"]
+
+def rule_named_expression : List String := [
+  "rule:named_expression"]
 
 def rule_open_sequence_pattern : List String := [
   "rule:open_sequence_pattern"]
@@ -463,6 +481,9 @@ def rule_return_stmt : List String := [
 def rule_sequence_pattern : List String := [
   "rule:sequence_pattern"]
 
+def rule_set : List String := [
+  "rule:set"]
+
 def rule_shift_expr : List String := [
   "rule:shift_expr"]
 
@@ -478,14 +499,23 @@ def rule_simple_stmt : List String := [
 def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
+def rule_single_target : List String := [
+  "rule:single_target"]
+
 def rule_slice : List String := [
   "rule:slice"]
 
 def rule_slices : List String := [
   "rule:slices"]
 
+def rule_star_expression : List String := [
+  "rule:star_expression"]
+
 def rule_star_expressions : List String := [
   "rule:star_expressions"]
+
+def rule_star_named_expression : List String := [
+  "rule:star_named_expression"]
 
 def rule_star_pattern : List String := [
   "rule:star_pattern"]
@@ -522,6 +552,9 @@ def rule_term : List String := [
 
 def rule_try_stmt : List String := [
   "rule:try_stmt"]
+
+def rule_tuple : List String := [
+  "rule:tuple"]
 
 def rule_value_pattern : List String := [
   "rule:value_pattern"]

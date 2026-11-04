@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Patterns6
+import PyLean.PyGrammar.Peg.Rules.Exprs4
 
 /-! Registry entries for the pattern rules of `Peg/Rules/Patterns2.lean` and after, in the scheme
 of `Entries.lean`. -/
@@ -274,7 +274,122 @@ def patternEntries : List Entry := [
     status := .proven
     prop := ``ClassPattern
     thm := some ``classPattern_proven
-    notes := scheme ++ " Each failed alternative is stated through ClsA*Fails." }
+    notes := scheme ++ " Each failed alternative is stated through ClsA*Fails." },
+  { id := "pygrammar-rule-named-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_named_expression
+    statement := "named_expression: assignment_expression is the result; without it, an " ++
+      "expression not followed by ':=' (followed by ':=' NULL with the mark back); in the second " ++
+      "pass invalid_named_expression first, its error ending the rule."
+    source := "Grammar/python.gram:758-761"
+    status := .proven
+    prop := ``NamedExpression
+    thm := some ``namedExpression_proven
+    notes := scheme ++ " The pass flag is read from the state the failed alternative left." },
+  { id := "pygrammar-rule-assignment-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assignment_expression
+    statement := "assignment_expression: NAME ':=' ~ expression gives NamedExpr(name in Store, " ++
+      "value) with feature_version >= 8, and below 8 raises \"Assignment expressions are only " ++
+      "supported in Python 3.8 and greater\"; past the cut a missing expression ends the rule " ++
+      "with NULL; without NAME or ':=' NULL with the mark back."
+    source := "Grammar/python.gram:753-756"
+    status := .proven
+    prop := ``AssignmentExpression
+    thm := some ``assignmentExpression_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-named-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_named_expression
+    statement := "star_named_expression: '*' bitwise_or gives Starred(a, Load); otherwise " ++
+      "named_expression from the start mark."
+    source := "Grammar/python.gram:745-747"
+    status := .proven
+    prop := ``StarNamedExpression
+    thm := some ``starNamedExpression_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_expression
+    statement := "star_expression (memo): '*' bitwise_or gives Starred(a, Load); otherwise " ++
+      "expression from the start mark; memoized at the start mark."
+    source := "Grammar/python.gram:737-739"
+    status := .proven
+    prop := ``StarExpression
+    thm := some ``starExpression_proven
+    notes := scheme },
+  { id := "pygrammar-rule-if-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_if_expression
+    statement := "if_expression: disjunction 'if' disjunction 'else' expression gives IfExp(test " ++
+      "= the middle one, body = the first, orelse); a missing first disjunction, 'if' or 'else' " ++
+      "gives NULL with the mark back."
+    source := "Grammar/python.gram:724-726"
+    status := .proven
+    prop := ``IfExpression
+    thm := some ``ifExpression_proven
+    notes := scheme },
+  { id := "pygrammar-rule-group"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_group
+    statement := "group: '(' (yield_expr | named_expression) ')' gives the inner expression; " ++
+      "otherwise NULL with the mark back in the first pass, invalid_group in the second."
+    source := "Grammar/python.gram:906-909"
+    status := .proven
+    prop := ``GroupRule
+    thm := some ``groupRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-lambdef"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_lambdef
+    statement := "lambdef: 'lambda' [lambda_params] ':' expression gives Lambda(params, body), " ++
+      "params _PyPegen_empty_arguments without any; another token or no ':' NULL with the mark back."
+    source := "Grammar/python.gram:913-915"
+    status := .proven
+    prop := ``Lambdef
+    thm := some ``lambdef_proven
+    notes := scheme },
+  { id := "pygrammar-rule-list"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_list
+    statement := "list: '[' [star_named_expressions] ']' gives List(elts, Load); another token or " ++
+      "no ']' NULL with the mark back."
+    source := "Grammar/python.gram:1016-1017"
+    status := .proven
+    prop := ``ListRule
+    thm := some ``listRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-tuple"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_tuple
+    statement := "tuple: '(' [star_named_expression ',' [star_named_expressions]] ')' gives " ++
+      "Tuple(elts, Load), the group the first element in front of the rest; another token or no " ++
+      "')' NULL with the mark back."
+    source := "Grammar/python.gram:1019-1021"
+    status := .proven
+    prop := ``TupleRuleFull
+    thm := some ``tupleRuleFull_proven
+    notes := scheme },
+  { id := "pygrammar-rule-set"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_set
+    statement := "set: '{' star_named_expressions '}' gives Set(elts); another token, no " ++
+      "elements or no '}' NULL with the mark back."
+    source := "Grammar/python.gram:1023"
+    status := .proven
+    prop := ``SetRule
+    thm := some ``setRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-single-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_single_target
+    statement := "single_target: single_subscript_attribute_target; else NAME in Store context; " ++
+      "else '(' single_target ')' the inner target; otherwise NULL with the mark back."
+    source := "Grammar/python.gram:1145-1148"
+    status := .proven
+    prop := ``SingleTarget
+    thm := some ``singleTarget_proven
+    notes := scheme }
 ]
 
 end PyLean.PyGrammar.Peg
