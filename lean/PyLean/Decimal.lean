@@ -14,6 +14,7 @@ import PyLean.Decimal.Pow10Refute
 import PyLean.Decimal.FixExact
 import PyLean.Decimal.ContextExact
 import PyLean.Decimal.DelegateExact
+import PyLean.Decimal.Pow10a
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -308,6 +309,18 @@ def entries : List Entry := [
     statement := "Context.is_signed(a) is the sign bit of a Decimal (True for -0) and n < 0 for an int within the int/str limit; Context.canonical and is_canonical return the Decimal itself and True for a Decimal and raise TypeError for every other operand, ints included."
     source := "decimal docs, Context.is_signed, canonical, is_canonical"
     status := .proven, prop := ``ContextPredicatesExact, thm := some ``contextPredicatesExact_proven },
+  { id := "decimal-pow10a-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_is_less_than_pow10a", "_tento"]
+    statement := "For every math.log10 that is accurate to 19 ulps (on ints q >= 10 with fewer than 2**40 digits: a finite double in [1, 2**40) whose 19-ulp interval meets [len(str(q)) - 1, len(str(q)))), _is_less_than_pow10a(q, a) returns len(str(q)) <= a for every a and every such q: both assertions hold, z - 20 ulp is exact, z + 20 ulp rounds within the band, and the exact _tento(inthi) = 10**inthi comparison settles a band that straddles an integer."
+    source := "the helper's docstring: 'Check that len(str(q)) <= a without computing str(q)' (Lib/_pydecimal.py:504-517)"
+    status := .proven, prop := ``Pow10aExact, thm := some ``pow10aExact_proven
+    notes := "math.log10 is a parameter of the model (it is libm's). Unlike _is_less_than_pow10a_use_str (decimal-pydecimal-pow10-float-misfire), the margin here is wide: CPython's log10 of an int is within about one ulp (libm log10 of the correctly rounded double, or fma(log10(2), e, log10(x)) past 2**1024, whose constant's error contributes under 0.1 ulp), and the largest error measured on 3.15.2 over 2824 ints up to 2**1000000 bits is 0.56 ulp, against the 19 the proof allows. No misfire, so no bug record. The digit bound excludes only ints of more than 10**12 digits." },
+  { id := "decimal-remainder-near-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.remainder_near", "_is_less_than_pow10a", "_tento", "_WorkRep.__init__"]
+    statement := "For every context with prec >= 1 and every accurate math.log10: for finite non-zero operands within the int/str limit whose adjusted exponents differ by -1 to prec, remainder_near(a, b) is InvalidOperation (DivisionImpossible) exactly when the integer n nearest a/b (ties to even) has more than prec digits, and otherwise r = a - n·b at exponent min(ea, eb), with the sign of a flipped when r < 0, rounded into the context by _fix, where |r| <= |b|/2 (and n is even when |r| = |b|/2); the int/str-limit ValueError of str(r) is the only other outcome. A zero b or an infinite a is InvalidOperation, an infinite b gives a through _fix."
+    source := "decimal docs, remainder_near: 'Return the remainder from dividing self by other ... the nearest integer to the exact value of self / other, and if two integers are equally near then the even one is chosen'; General Decimal Arithmetic, 'remainder-near'"
+    status := .proven, prop := ``RemainderNearExact, thm := some ``remainderNearExact_proven
+    notes := "The model's remainderNear (and Context.remainder_near) runs with log10Stand, which log10Stand_accurate proves accurate, so the statement covers it. The quotient is assumed to have fewer than 2**40 digits." },
   { id := "decimal-c-context-clean-template", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["context_new", "context_init_impl"]
     statement := "For a template whose flags are clear and whose capitals is 1, the state DefaultContext starts in, _decimal's Context() equals the template in every field."

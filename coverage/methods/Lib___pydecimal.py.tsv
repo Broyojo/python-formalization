@@ -11,9 +11,9 @@ Lib/_pydecimal.py	358	370	getcontext	getcontext()	todo
 Lib/_pydecimal.py	372	377	setcontext	setcontext(context)	todo		
 Lib/_pydecimal.py	381	424	localcontext	localcontext(ctx=None, **kwargs)	todo		
 Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	todo		
-Lib/_pydecimal.py	465	467	_tento	_tento(n)	todo		changed-in-3.15: new function
+Lib/_pydecimal.py	465	467	_tento	_tento(n)	modelled	decimal-pow10a-exact	
 Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	modelled	decimal-pow10-correct,decimal-pow10-band-exact	
-Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	todo		changed-in-3.15: new function
+Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	modelled	decimal-pow10a-exact,decimal-remainder-near-exact	
 Lib/_pydecimal.py	552	700	Decimal.__new__	__new__(cls, value='0', context=None)	todo		model complete: pyNew (Convert.lean) adds the float branch (FloatOperation, then from_float) and ConversionSyntax under a non-trapping context, difftested (new_py); decimal-from-float-exact, which the float branch needs, is open.
 Lib/_pydecimal.py	703	715	Decimal.from_number	from_number(cls, number)	todo		
 Lib/_pydecimal.py	718	760	Decimal.from_float	from_float(cls, f)	todo		model: fromFloat (Convert.lean), difftested; decimal-from-float-exact is open (missing the digit bound on n*5**k).
@@ -49,7 +49,7 @@ Lib/_pydecimal.py	1473	1507	Decimal.__divmod__	__divmod__(self, other, context=N
 Lib/_pydecimal.py	1509	1514	Decimal.__rdivmod__	__rdivmod__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1516	1541	Decimal.__mod__	__mod__(self, other, context=None)	todo		review: DivmodConsistent is `rfl` on the finite path (modD = _fix of _divide's remainder); 'INF % x' and 'x % 0' InvalidOperation, '0 % 0' DivisionUndefined and the NaN branch (:1527-1537) are unstated, and _divide itself is pinned only conditionally.
 Lib/_pydecimal.py	1543	1548	Decimal.__rmod__	__rmod__(self, other, context=None)	modelled	decimal-reflected-operators	
-Lib/_pydecimal.py	1550	1625	Decimal.remainder_near	remainder_near(self, other, context=None)	todo		changed-in-3.15:
+Lib/_pydecimal.py	1550	1625	Decimal.remainder_near	remainder_near(self, other, context=None)	modelled	decimal-remainder-near-exact	
 Lib/_pydecimal.py	1627	1653	Decimal.__floordiv__	__floordiv__(self, other, context=None)	modelled	decimal-divmod-consistent,decimal-floordiv-twins-agree	
 Lib/_pydecimal.py	1655	1660	Decimal.__rfloordiv__	__rfloordiv__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1662	1670	Decimal.__float__	__float__(self)	todo		
@@ -206,7 +206,7 @@ Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo
 Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	todo		review: ctxBin quantize (Context.lean:115) is :5359-5360 plus Decimal.quantize's conversion (:2605) and Equiv2 pins the wrapper, but Decimal.quantize is part 1 HOLLOW (QuantizeCorrect holds only when quantize returns, so an always-raising one passes).
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
 Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	todo		review: ctxOp modD (Context.lean:103) is :5401-5406 and Equiv2 pins the wrapper, but Decimal.__mod__ is part 1 HOLLOW (rfl on the finite path; the INF % x, x % 0, 0 % 0 and NaN branches are unstated).
-Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	todo		review: ctxBin remainderNear (Context.lean:116) is :5439-5440, but remainderNear (Division.lean:197) replaces 3.15's `_is_less_than_pow10a(q, context.prec)` (:1613) with the exact test `q >= 10**prec` (Division.lean:214), and Decimal.remainder_near is a changed-in-3.15 todo row with no entry.
+Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-remainder-near-exact,decimal-convert-other-exact	
 Lib/_pydecimal.py	5442	5469	Context.rotate	rotate(self, a, b)	todo		review: ctxBin rotate (Context.lean:117) is :5468-5469 plus :3718 and Equiv2 pins the wrapper, but Decimal.rotate has no entry (todo), so the result is unstated.
 Lib/_pydecimal.py	5471	5493	Context.same_quantum	same_quantum(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-same-quantum-exact,decimal-convert-other-exact	
 Lib/_pydecimal.py	5495	5512	Context.scaleb	scaleb(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-scaleb-exact,decimal-convert-other-exact	
