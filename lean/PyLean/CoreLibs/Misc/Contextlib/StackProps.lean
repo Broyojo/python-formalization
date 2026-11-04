@@ -1,4 +1,4 @@
-import PyLean.CoreLibs.Misc.Contextlib.Model
+import PyLean.CoreLibs.Misc.Contextlib.AsyncProps
 
 /-!
 Properties of `ExitStack` and `AsyncExitStack`.
@@ -316,26 +316,24 @@ theorem lookupSpecialFollowsDescriptor_proven : LookupSpecialFollowsDescriptor :
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
   cases r <;> rfl
 
-/-- What `push`, `callback`, `enter_context`, `pop_all` do to `_exit_callbacks`, in the sync and the async class. `push`
-registers what `_lookup_special` gives, or else the object as a plain callable, and a failing `__get__` raises and
-registers nothing. `callback` registers a wrapper around the callable. `enter_context` looks up `__enter__` and then
-`__exit__`, either one missing or failing stops it before the enter method runs; it then runs the enter method, and the
-exit is pushed only if that succeeded. `pop_all` moves everything to a new stack. -/
+/-- What `push`, `callback`, `enter_context` do to `_exit_callbacks`, in the sync and the async class. `push` registers
+what `_lookup_special` gives, or else the object as a plain callable, and returns the object it was given, "for use as a
+decorator"; a failing `__get__` raises and registers nothing. `callback` registers a wrapper whose `__wrapped__` is the
+callable, and returns the callable. `enter_context` looks up `__enter__` and then `__exit__`, either one missing or failing
+stops it before the enter method runs; it then runs the enter method, and the exit is pushed only if that succeeded. Every
+registration puts its entry on top, where `__exit__` takes it first. -/
 def StackRegistration : Prop :=
   ∀ (σ F O A V : Type) (st : Stack F O A) (lookup : ExitLookup F O A) (asF : O → F) (o : O) (f : F) (cb : Cb F O A)
     (a : A) (x : Xs σ F O A) (msg : String) (en : Xs σ F O A → Xs σ F O A × Res V) (x1 : Xs σ F O A)
     (v : V) (e : ExcId) (b : Bool) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V)) (dx : Descr (Cb F O A)),
-    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → push lookup asF st o = ((true, cb) :: st, .ok ())) ∧
-    (lookup o = none → push lookup asF st o = ((true, .raw (asF o)) :: st, .ok ())) ∧
+    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → push lookup asF st o = ((true, cb) :: st, .ok o)) ∧
+    (lookup o = none → push lookup asF st o = ((true, .raw (asF o)) :: st, .ok o)) ∧
     (lookup o = some (.get (.error e)) → push lookup asF st o = (st, .error e)) ∧
-    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → pushAsyncExit lookup asF st o = ((false, cb) :: st, .ok ())) ∧
-    (lookup o = none → pushAsyncExit lookup asF st o = ((false, .raw (asF o)) :: st, .ok ())) ∧
+    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → pushAsyncExit lookup asF st o = ((false, cb) :: st, .ok o)) ∧
+    (lookup o = none → pushAsyncExit lookup asF st o = ((false, .raw (asF o)) :: st, .ok o)) ∧
     (lookup o = some (.get (.error e)) → pushAsyncExit lookup asF st o = (st, .error e)) ∧
-    callback st f a = (true, .wrapped f a) :: st ∧
-    pushAsyncCallback st f a = (false, .wrapped f a) :: st ∧
-    (Stack.init : Stack F O A) = [] ∧
-    popAll st = (st, []) ∧
-    stackEnter o = o ∧
+    (callback st f a = ((true, .wrapped f a) :: st, f) ∧ (Cb.wrapped f a : Cb F O A).wrappedAttr = some f) ∧
+    pushAsyncCallback st f a = ((false, .wrapped f a) :: st, f) ∧
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .error e) →
       enterContext (fun _ => some dn) (fun _ => some dx) msg b x o = (x1, .error e)) ∧
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .ok v) →
@@ -348,7 +346,7 @@ def StackRegistration : Prop :=
 
 theorem stackRegistration_proven : StackRegistration := by
   intro σ F O A V st lookup asF o f cb a x msg en x1 v e b dn dx
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ⟨rfl, rfl⟩, rfl, ?_, ?_, ?_, ?_, rfl, ?_⟩
   · intro h; simp [push, h, pushExitCallback]
   · intro h; simp [push, lookupSpecial, h, pushExitCallback]
   · intro h; simp [push, lookupSpecial, descriptorGet, h]
@@ -362,6 +360,115 @@ theorem stackRegistration_proven : StackRegistration := by
   · intro h1
     simp only [enterContext, lookupSentinel, h1]
     rfl
+
+/-- `pop_all` "transfers the context stack to a new instance": the instance is made first, by
+`type(self)()`, and when that raises, `self` keeps every callback; otherwise the new instance gets
+the deque in its order and `self` is left empty. -/
+def PopAllMoves : Prop :=
+  ∀ (σ F O A N : Type) (mk : St σ → St σ × Res N) (s s' : St σ) (st : Stack F O A) (n : N) (e : ExcId),
+    (mk s = (s', .error e) → popAll mk s st = (s', st, .error e)) ∧
+    (mk s = (s', .ok n) → popAll mk s st = (s', [], .ok (n, st)))
+
+theorem popAllMoves_proven : PopAllMoves := by
+  intro σ F O A N mk s s' st n e
+  constructor
+  · intro h; simp [popAll, h]
+  · intro h; simp [popAll, h]
+
+/-- The deque after registering `cbs` in order with `_push_exit_callback`. -/
+def registerAll (st : Stack F O A) : List (Cb F O A) → Stack F O A
+  | [] => st
+  | cb :: cbs => registerAll (pushExitCallback st cb) cbs
+
+theorem registerAll_eq (st : Stack F O A) (cbs : List (Cb F O A)) :
+    registerAll st cbs = (cbs.map (fun cb => (true, cb))).reverse ++ st := by
+  induction cbs generalizing st with
+  | nil => rfl
+  | cons cb rest ih => simp [registerAll, ih, pushExitCallback]
+
+/-- "Callbacks are invoked in LIFO order": after any sequence of registrations, which put their
+entries on top (`StackRegistration`), `ExitStack.__exit__` calls the entries from the last
+registered to the first, each once, and leaves the stack empty, when the walk of
+`_fix_exception_context` ends (`FixDefined`, which `ExitStackTerminates` shows can fail). -/
+def ExitRunsLifo : Prop :=
+  ∀ (σ F O A : Type) (c : Calls σ F O A) (lg : St σ → List (Cb F O A)), Recording c lg →
+    ∀ (fixFuel : Nat) (s : St σ) (cbs : List (Cb F O A)) (exc frameExc : Option ExcId),
+      (∀ e h n, (fixExceptionContext frameExc e fixFuel h n).isSome = true) →
+      ∃ x' r, exit c (cbs.length + 1) fixFuel (s, registerAll [] cbs) exc frameExc = .ok (x', r) ∧
+        x'.2 = [] ∧ lg x'.1 = lg s ++ cbs.reverse
+
+theorem exitRunsLifo_proven : ExitRunsLifo := by
+  intro σ F O A c lg hr fixFuel s cbs exc frameExc hfix
+  have hall : ∀ p ∈ (s, registerAll [] cbs).2, p.1 = true := by
+    intro p hp
+    rw [registerAll_eq] at hp
+    simp at hp
+    obtain ⟨cb, _, rfl⟩ := hp
+    rfl
+  have hlen : (s, registerAll ([] : Stack F O A) cbs).2.length = cbs.length := by
+    simp [registerAll_eq]
+  obtain ⟨x', o, hn, hx, hl⟩ := exitLifo_proven σ F O A c lg hr fixFuel (s, registerAll [] cbs) exc
+    frameExc hfix hall
+  rw [hlen] at hn
+  have hinv : FlagInv exc exc false false := ⟨fun _ => (by simp), fun h => (by cases h)⟩
+  have h := exitLoop_nested c frameExc fixFuel exc (cbs.length + 1) (s, registerAll [] cbs) exc false
+    false hinv
+  rw [hn] at h
+  obtain ⟨sup, pend, h1, _, h3⟩ := h
+  have hmap : (registerAll ([] : Stack F O A) cbs).map (·.2) = cbs.reverse := by
+    simp [registerAll_eq, List.map_reverse, Function.comp_def]
+  cases pend with
+  | true =>
+    cases o with
+    | none => simpa using h3 rfl
+    | some e =>
+      refine ⟨raiseKeepingContext x' e frameExc, .error e, ?_, ?_, ?_⟩
+      · simp [exit, h1, bind, Except.bind, pure, Except.pure]
+      · simpa [raiseKeepingContext] using hx
+      · simp only [raiseKeepingContext]
+        rw [hr.heap, hl]
+        simp only at hmap
+        rw [hmap]
+  | false =>
+    refine ⟨x', .ok (exc.isSome && sup), ?_, hx, ?_⟩
+    · simp [exit, h1, bind, Except.bind, pure, Except.pure]
+    · rw [hl]
+      simp only at hmap
+      rw [hmap]
+
+/-- `close()` "immediately unwinds the context stack": it is the exit with no exception, so the
+exception that leaves it is the one leaving nested `with` statements with no exception, and a
+callback's true result does not make it return anything but `None`. -/
+def CloseMatchesNested : Prop :=
+  ∀ (σ F O A : Type) (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frameExc : Option ExcId),
+    match nested c frameExc fixFuel fuel x none, close c fuel fixFuel x frameExc with
+    | .error e, r => r = .error e
+    | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧ (match o with | none => r = .ok () | some e => r = .error e)
+    | .ok _, .error _ => False
+
+theorem closeMatchesNested_proven : CloseMatchesNested := by
+  intro σ F O A c fuel fixFuel x frameExc
+  have h := exitMatchesNested_proven σ F O A c fuel fixFuel x none frameExc
+  cases hn : nested c frameExc fixFuel fuel x none with
+  | error e =>
+    rw [hn] at h
+    simp only at h
+    simp [close, h, bind, Except.bind]
+  | ok p =>
+    obtain ⟨x1, o⟩ := p
+    rw [hn] at h
+    simp only at h
+    cases he : exit c fuel fixFuel x none frameExc with
+    | error e => rw [he] at h; exact h
+    | ok q =>
+      obtain ⟨x2, r⟩ := q
+      rw [he] at h
+      obtain ⟨ho, hs⟩ := h
+      simp only [close, he, bind, Except.bind, pure, Except.pure]
+      refine ⟨hs, ?_⟩
+      cases r with
+      | ok b => cases b <;> simp [outcome] at ho <;> subst ho <;> rfl
+      | error e => simp [outcome] at ho; subst ho; rfl
 
 /-- `callback` "Cannot suppress exceptions": the wrapper of `_create_cb_wrapper` calls the callback
 with its own arguments, drops the result, and ignores the exception details. An exit method bound to `cm`, which is
@@ -380,87 +487,314 @@ theorem callbackCannotSuppress_proven : CallbackCannotSuppress := by
   · intro x' h; simp [Cb.call, h]
   · intro x' e h; simp [Cb.call, h]
 
-/-! ### `AsyncExitStack` against `ExitStack` -/
+/-! ### `AsyncExitStack` -/
 
-/-- No entry of the stack is async. -/
-def AllSync (st : Stack F O A) : Prop := ∀ p ∈ st, p.1 = true
+/-- `push_async_callback`'s entry "Cannot suppress exceptions" either: the `async def` wrapper of
+`_create_async_cb_wrapper` awaits the callback with its own arguments, ignores the details and gives
+`None`; an exception comes through, except that a `StopIteration`, which a callable that is no
+coroutine function can raise from the call, leaves the wrapper as the coroutine's `RuntimeError`. -/
+def AsyncCallbackCannotSuppress : Prop :=
+  ∀ (σ F O A : Type) (ac : Calls σ F O A) (f : F) (a : A) (x x' : Xs σ F O A) (d d' : Option ExcId)
+    (e : ExcId),
+    (Cb.wrapped f a : Cb F O A).acall ac x d = (Cb.wrapped f a : Cb F O A).acall ac x d' ∧
+    (ac.wrapped f a x = (x', .ok ()) → (Cb.wrapped f a : Cb F O A).acall ac x d = (x', .ok false)) ∧
+    (ac.wrapped f a x = (x', .error e) → x'.1.h.isInst e "StopIteration" = false →
+      (Cb.wrapped f a : Cb F O A).acall ac x d = (x', .error e)) ∧
+    (ac.wrapped f a x = (x', .error e) → x'.1.h.isInst e "StopIteration" = true →
+      (Cb.wrapped f a : Cb F O A).acall ac x d =
+        let r : St σ × Res Bool := coroutineStop x'.1 e
+        ((r.1, x'.2), r.2))
 
-theorem aexitLoop_sync (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat)
-    (hk : ∀ (cb : Cb F O A) (x : Xs σ F O A) (d : Option ExcId), AllSync x.2 →
-      AllSync (cb.call c x d).1.2) :
-    ∀ (fuel : Nat) (x : Xs σ F O A) (exc : Option ExcId) (sup pend : Bool), AllSync x.2 →
-      aexitLoop c ac frameExc fixFuel fuel x exc sup pend =
-        exitLoop c frameExc fixFuel fuel x exc sup pend := by
+theorem asyncCallbackCannotSuppress_proven : AsyncCallbackCannotSuppress := by
+  intro σ F O A ac f a x x' d d' e
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  · intro h; simp [Cb.acall, h, coBoundary]
+  · intro h1 h2; simp [Cb.acall, h1, h2, coBoundary]
+  · intro h1 h2; simp [Cb.acall, h1, h2, coBoundary, coroutineStop]
+
+/-- `enter_async_context` is `enter_context` with `__aenter__`, `__aexit__` and `is_sync=False`, in
+an `async def`: the result of `await _enter()` is returned and the exit pushed after it; a failure
+of a lookup or of `_enter` pushes nothing and comes through, a `StopIteration` as the coroutine's
+`RuntimeError`; a missing method is the `TypeError` with the source's message. -/
+def AEnterContextCases : Prop :=
+  ∀ (σ F O A V : Type) (x x1 : Xs σ F O A) (o : O) (msg : String) (cb : Cb F O A) (v : V) (e : ExcId)
+    (en : Xs σ F O A → Xs σ F O A × Res V) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V))
+    (dx : Descr (Cb F O A)) (lookup : ExitLookup F O A),
+    let wrap : Xs σ F O A → ExcId → Xs σ F O A × Res V := fun y e =>
+      if y.1.h.isInst e "StopIteration" then
+        let r : St σ × Res V := coroutineStop y.1 e
+        ((r.1, y.2), r.2)
+      else (y, .error e)
+    (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .ok v) →
+      aenterContext (fun _ => some dn) (fun _ => some dx) msg x o = ((x1.1, (false, cb) :: x1.2), .ok v)) ∧
+    (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .error e) →
+      aenterContext (fun _ => some dn) (fun _ => some dx) msg x o = wrap x1 e) ∧
+    aenterContext (V := V) (fun _ => some (.get (.error e))) lookup msg x o = wrap x e ∧
+    (descriptorGet dn = .ok en →
+      aenterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg x o = wrap x e) ∧
+    (∃ t, aenterContext (V := V) (fun _ => none) lookup msg x o =
+      (((x.1.raiseNew clsType msg).1, x.2), .error t) ∧ ((x.1.raiseNew clsType msg).1.h.get t).msg = msg ∧
+      ((x.1.raiseNew clsType msg).1.h.get t).cls = clsType)
+
+theorem aEnterContextCases_proven : AEnterContextCases := by
+  intro σ F O A V x x1 o msg cb v e en dn dx lookup wrap
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro h1 h2 h3
+    simp [aenterContext, enterContext, lookupSentinel, h1, h2, h3, pushExitCallback, coBoundary]
+  · intro h1 h2 h3
+    cases hs : x1.1.h.isInst e "StopIteration" <;>
+      simp [aenterContext, enterContext, lookupSentinel, h1, h2, h3, coBoundary, wrap, hs, coroutineStop]
+  · cases hs : x.1.h.isInst e "StopIteration" <;>
+      simp [aenterContext, enterContext, lookupSentinel, descriptorGet, coBoundary, wrap, hs, coroutineStop]
+  · intro h1
+    cases hs : x.1.h.isInst e "StopIteration" <;>
+      simp [aenterContext, enterContext, lookupSentinel, descriptorGet, h1, coBoundary, wrap, hs,
+        coroutineStop]
+  · have hr := raiseNew_isInst x.1 clsType msg none "StopIteration"
+    have ho := raiseNew_obj x.1 clsType msg none
+    refine ⟨(x.1.raiseNew clsType msg).2, ?_, ho.2.1, ho.2.2.2.2⟩
+    simp only [aenterContext, enterContext, lookupSentinel, coBoundary]
+    simp [hr, clsType]
+
+/-- Nested `async with` statements, innermost first: a sync entry is called, an async one awaited. -/
+def anested (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) :
+    Nat → Xs σ F O A → Option ExcId → Py (Xs σ F O A × Option ExcId)
+  | 0, _, _ => .error .modelFuel
+  | fuel + 1, x, exc =>
+    match x.2 with
+    | [] => .ok (x, exc)
+    | (isSync, cb) :: rest =>
+      match (if isSync then cb.call c (x.1, rest) exc else cb.acall ac (x.1, rest) exc) with
+      | (x, .ok true) => anested c ac frameExc fixFuel fuel x none
+      | (x, .ok false) => anested c ac frameExc fixFuel fuel x exc
+      | (x, .error newExc) =>
+        match fixExceptionContext frameExc exc fixFuel x.1.h newExc with
+        | none => .error .modelFuel
+        | some h => anested c ac frameExc fixFuel fuel ({ x.1 with h := h }, x.2) (some newExc)
+
+theorem aexitLoop_anested (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat)
+    (received : Option ExcId) :
+    ∀ (fuel : Nat) (x : Xs σ F O A) (exc : Option ExcId) (sup pend : Bool),
+      FlagInv received exc sup pend →
+      match anested c ac frameExc fixFuel fuel x exc with
+      | .error e => aexitLoop c ac frameExc fixFuel fuel x exc sup pend = .error e
+      | .ok (x', o) => ∃ sup' pend',
+          aexitLoop c ac frameExc fixFuel fuel x exc sup pend = .ok (x', o, sup', pend') ∧
+          FlagInv received o sup' pend' := by
   intro fuel
   induction fuel with
   | zero => intro x exc sup pend _; rfl
   | succ f ih =>
-    intro x exc sup pend hs
+    intro x exc sup pend hinv
     obtain ⟨s, st⟩ := x
-    simp only [aexitLoop, exitLoop]
     cases st with
-    | nil => rfl
+    | nil =>
+      simp only [anested, aexitLoop]
+      exact ⟨sup, pend, rfl, hinv⟩
     | cons p rest =>
       obtain ⟨isSync, cb⟩ := p
-      have hy : isSync = true := hs (isSync, cb) (by simp)
-      subst hy
-      have hr : AllSync rest := fun p hp => hs p (by simp [hp])
-      simp only [Bool.not_true, Bool.false_eq_true, if_false, if_true]
-      have hk' := hk cb (s, rest) exc hr
-      cases hc : cb.call c (s, rest) exc with
-      | mk x1 r =>
-        rw [hc] at hk'
-        simp only at hk'
-        cases r with
-        | ok b =>
-          cases b with
-          | true => exact ih _ _ _ _ hk'
-          | false => exact ih _ _ _ _ hk'
-        | error n =>
-          simp only
-          cases fixExceptionContext frameExc exc fixFuel x1.1.h n with
-          | none => rfl
-          | some h => exact ih _ _ _ _ hk'
+      simp only [anested, aexitLoop]
+      generalize (if isSync = true then cb.call c (s, rest) exc else cb.acall ac (s, rest) exc) = res
+      obtain ⟨x', r⟩ := res
+      cases r with
+      | ok b =>
+        cases b with
+        | true => exact ih x' none true false ⟨fun _ => (by simp), fun h => (by cases h)⟩
+        | false => exact ih x' exc sup pend hinv
+      | error n =>
+        simp only
+        cases hf : fixExceptionContext frameExc exc fixFuel x'.1.h n with
+        | none => simp
+        | some h =>
+          exact ih _ (some n) sup true ⟨fun h => (by cases h), fun _ => rfl⟩
 
-/-- `AsyncExitStack.__aexit__` is `ExitStack.__exit__` over sync entries, except that an exception
-leaving an `async def` turns from `StopIteration` into `RuntimeError`. The `_exit_wrapper` of
-`_create_async_cb_wrapper` and `_create_async_exit_wrapper` build the same entries with
-`is_sync=False`. `close()` and `aclose()` are the exit with no exception and drop the result. -/
-def AsyncExitMatches : Prop :=
+/-- The exception `AsyncExitStack.__aexit__` raises, `e`, against the exception `p` leaving the
+nested `async with` levels: `p` itself, or for a `StopIteration` `p` the coroutine's
+`RuntimeError` for it. -/
+def ALeaves (h : Heap) (p e : ExcId) : Prop :=
+  (e = p ∧ h.isInst p "StopIteration" = false) ∨
+  (h.isInst p "StopIteration" = true ∧ e ≠ p ∧ (h.get e).cls = clsRuntime ∧
+    (h.get e).msg = "coroutine raised StopIteration" ∧ (h.get e).cause = some p ∧
+    (h.get e).context = some p)
+
+theorem coBoundary_leaves {σ : Type} (s : St σ) (p : ExcId) :
+    ∃ e, coBoundary s (.error p : Res Bool) = ((coBoundary s (.error p : Res Bool)).1, .error e) ∧
+      ALeaves (coBoundary s (.error p : Res Bool)).1.h p e := by
+  cases hs : s.h.isInst p "StopIteration" with
+  | false =>
+    refine ⟨p, by simp [coBoundary, hs], ?_⟩
+    left
+    simp [coBoundary, hs]
+  | true =>
+    have hl := isInst_lt hs
+    refine ⟨s.h.length, by simp [coBoundary, hs, Heap.alloc], ?_⟩
+    right
+    simp only [coBoundary, hs, if_true]
+    have hg := get_alloc_last s.h
+      { cls := clsRuntime, msg := "coroutine raised StopIteration", context := some p, cause := some p }
+    have hp := get_alloc_lt s.h
+      { cls := clsRuntime, msg := "coroutine raised StopIteration", context := some p, cause := some p } p hl
+    simp only [Heap.alloc] at hg hp ⊢
+    refine ⟨?_, Nat.ne_of_gt hl, ?_, ?_, ?_, ?_⟩
+    · simp only [Heap.isInst] at hs ⊢; rw [hp]; exact hs
+    all_goals simp [hg]
+
+/-- `AsyncExitStack.__aexit__` "behaves as though we were actually nesting multiple with
+statements", here `async with` and `with` statements: for every stack, sync and async entries
+mixed, every behaviour of the callbacks and every exception passed in, the callbacks run in the
+same order with the same arguments, ending with the same stack, and what `__aexit__` gives is what
+leaves the nested statements: true for nothing, false for the exception passed in, or the
+exception raised, after the coroutine boundary of `__aexit__`. -/
+def AExitMatchesNested : Prop :=
   ∀ (σ F O A : Type) (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
     (exc frameExc : Option ExcId),
-    (∀ (cb : Cb F O A) (x : Xs σ F O A) (d : Option ExcId), AllSync x.2 → AllSync (cb.call c x d).1.2) →
-    AllSync x.2 →
-    aexit c ac fuel fixFuel x exc frameExc =
-      (match exit c fuel fixFuel x exc frameExc with
-       | .error e => .error e
-       | .ok (x', r) =>
-         let (s, r') := coBoundary x'.1 r
-         .ok ((s, x'.2), r')) ∧
-    (∀ (x' : Xs σ F O A) r, exit c fuel fixFuel x none frameExc = .ok (x', r) →
-      close c fuel fixFuel x frameExc =
-        .ok (x', match r with
-          | .ok _ => .ok ()
-          | .error e => .error e))
+    match anested c ac frameExc fixFuel fuel x exc, aexit c ac fuel fixFuel x exc frameExc with
+    | .error e, r => r = .error e
+    | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧
+        (match r with
+         | .ok true => o = none
+         | .ok false => o = exc
+         | .error e => ∃ p, o = some p ∧ ALeaves x2.1.h p e)
+    | .ok _, .error _ => False
 
-theorem asyncExitMatches_proven : AsyncExitMatches := by
-  intro σ F O A c ac fuel fixFuel x exc frameExc hk hs
-  constructor
-  · simp only [aexit, exit, aexitLoop_sync c ac frameExc fixFuel hk fuel x exc false false hs,
-      bind, Except.bind, pure, Except.pure]
-    cases exitLoop c frameExc fixFuel fuel x exc false false with
-    | error e => rfl
-    | ok p =>
-      obtain ⟨x', o, sup, pend⟩ := p
-      simp only
-      cases pend with
-      | true =>
-        cases o with
-        | none => rfl
-        | some e => rfl
-      | false => simp [coBoundary]
-  · intro x' r h
-    simp only [close, h, bind, Except.bind, pure, Except.pure]
-    cases r <;> rfl
+theorem aexit_shape (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
+    (exc frameExc : Option ExcId) :
+    match anested c ac frameExc fixFuel fuel x exc, aexit c ac fuel fixFuel x exc frameExc with
+    | .error e, r => r = .error e
+    | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧
+        (match r with
+         | .ok true => o = none
+         | .ok false => o = exc
+         | .error e => ∃ p, o = some p ∧ ALeaves x2.1.h p e)
+    | .ok _, .error _ => False := by
+  have hinv : FlagInv exc exc false false := ⟨fun _ => (by simp), fun h => (by cases h)⟩
+  have h := aexitLoop_anested c ac frameExc fixFuel exc fuel x exc false false hinv
+  cases hn : anested c ac frameExc fixFuel fuel x exc with
+  | error e =>
+    rw [hn] at h
+    simp only at h
+    simp [aexit, h, bind, Except.bind]
+  | ok p =>
+    obtain ⟨x1, o⟩ := p
+    rw [hn] at h
+    simp only at h
+    obtain ⟨sup, pend, h1, h2, h3⟩ := h
+    cases pend with
+    | true =>
+      cases o with
+      | none => simpa using h3 rfl
+      | some p =>
+        obtain ⟨e, he, hl⟩ := coBoundary_leaves (raiseKeepingContext x1 p frameExc).1 p
+        simp only [aexit, h1, bind, Except.bind, pure, Except.pure, if_true]
+        rw [he]
+        refine ⟨by simp [raiseKeepingContext], p, rfl, hl⟩
+    | false =>
+      have ho := h2 rfl
+      simp only [aexit, h1, bind, Except.bind, pure, Except.pure, Bool.false_eq_true, if_false]
+      refine ⟨rfl, ?_⟩
+      cases sup <;> cases exc <;> simp at ho ⊢ <;> exact ho
+
+theorem aExitMatchesNested_proven : AExitMatchesNested := by
+  intro σ F O A c ac fuel fixFuel x exc frameExc
+  exact aexit_shape c ac fuel fixFuel x exc frameExc
+
+/-- `aclose()` is `__aexit__(None, None, None)` with the result dropped: what leaves it is the
+exception leaving nested `async with` statements with no exception, after the coroutine boundary,
+and a callback's true result does not make it return anything but `None`. -/
+def ACloseMatchesNested : Prop :=
+  ∀ (σ F O A : Type) (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frameExc : Option ExcId),
+    match anested c ac frameExc fixFuel fuel x none, aclose c ac fuel fixFuel x frameExc with
+    | .error e, r => r = .error e
+    | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧
+        (match r with
+         | .ok () => o = none
+         | .error e => ∃ p, o = some p ∧ ALeaves x2.1.h p e)
+    | .ok _, .error _ => False
+
+theorem aCloseMatchesNested_proven : ACloseMatchesNested := by
+  intro σ F O A c ac fuel fixFuel x frameExc
+  have h := aexit_shape c ac fuel fixFuel x none frameExc
+  cases hn : anested c ac frameExc fixFuel fuel x none with
+  | error e =>
+    rw [hn] at h
+    simp only at h
+    simp [aclose, h, bind, Except.bind]
+  | ok p =>
+    obtain ⟨x1, o⟩ := p
+    rw [hn] at h
+    simp only at h
+    cases he : aexit c ac fuel fixFuel x none frameExc with
+    | error e => rw [he] at h; exact h
+    | ok q =>
+      obtain ⟨x2, r⟩ := q
+      rw [he] at h
+      obtain ⟨hs, ho⟩ := h
+      simp only [aclose, he, bind, Except.bind, pure, Except.pure]
+      cases r with
+      | ok b =>
+        cases b <;> simp at ho <;> simp [coBoundary, hs, ho]
+      | error e =>
+        obtain ⟨p, hp, hl⟩ := ho
+        have hne : x2.1.h.isInst e "StopIteration" = false := by
+          rcases hl with ⟨rfl, h2⟩ | ⟨_, _, h3, _⟩
+          · exact h2
+          · simp [Heap.isInst, h3, clsRuntime]
+        simp [coBoundary, hne, hs]
+        exact ⟨p, hp, hl⟩
+
+/-- `AsyncExitStack.__aexit__` terminates for every exception a callback raises. Refuted like
+`ExitStackTerminates`: the copy of `_fix_exception_context` at Lib/contextlib.py:768-780 has the
+same `while 1`, and an awaited callback raising an exception whose `__context__` chain is a cycle
+keeps it running. -/
+def AExitTerminates : Prop :=
+  ∀ (σ F O A : Type) (c ac : Calls σ F O A) (x : Xs σ F O A) (exc frameExc : Option ExcId),
+    ∃ fuel fixFuel, aexit c ac fuel fixFuel x exc frameExc ≠ .error .modelFuel
+
+theorem aExitTerminates_refuted : ¬AExitTerminates := by
+  intro h
+  obtain ⟨fuel, fixFuel, hne⟩ := h Unit Unit Unit Unit cycleCalls cycleCalls
+    ({ h := cycleHeap, g := () }, [(false, .raw ())]) none none
+  apply hne
+  cases fuel with
+  | zero => rfl
+  | succ f =>
+    have hf := fix_cycle fixFuel 0 (.inl rfl)
+    simp [aexit, aexitLoop, Cb.acall, Cb.call, cycleCalls, hf, bind, Except.bind]
+
+/-- `AsyncExitStack.__aexit__` does not create a `__context__` cycle when the callbacks do not.
+Refuted by the counterexample of `ExitKeepsContextAcyclic` with both callbacks awaited. -/
+def AExitKeepsContextAcyclic : Prop :=
+  ∀ (σ F O A : Type) (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x x' : Xs σ F O A)
+    (exc frameExc : Option ExcId) (r : Res Bool),
+    (∀ (cb : Cb F O A) (y : Xs σ F O A) (d : Option ExcId), (cb.acall ac y d).1.1.h = y.1.h) →
+    (∀ (cb : Cb F O A) (y : Xs σ F O A) (d : Option ExcId), (cb.call c y d).1.1.h = y.1.h) →
+    Acyclic x.1.h → aexit c ac fuel fixFuel x exc frameExc = .ok (x', r) → Acyclic x'.1.h
+
+theorem aExitKeepsContextAcyclic_refuted : ¬AExitKeepsContextAcyclic := by
+  intro h
+  have hacy : Acyclic fbaHeap := by
+    intro e
+    refine ⟨4, ?_⟩
+    match e with
+    | 0 => rfl
+    | 1 => rfl
+    | 2 => rfl
+    | _ + 3 => rfl
+  have hrun : aexit fbaCalls fbaCalls 3 5
+      ({ h := fbaHeap, g := () }, [(false, .raw 0), (false, .raw 1)]) (some 0) (some 0) =
+      .ok (({ h := [{ cls := clsExc }, { cls := clsExc, context := some 2 },
+        { cls := clsExc, context := some 1 }], g := () }, []), .error 1) := by
+    rfl
+  have := h Unit Nat Unit Unit fbaCalls fbaCalls 3 5 _ _ (some 0) (some 0) _
+    (by
+      intro cb y d
+      cases cb <;> rfl)
+    (by
+      intro cb y d
+      cases cb <;> rfl)
+    hacy hrun
+  obtain ⟨n, hn⟩ := this 1
+  rw [chainEnds_set 1 n (.inl rfl)] at hn
+  cases hn
 
 end PyLean.CoreLibs.Misc.Contextlib
