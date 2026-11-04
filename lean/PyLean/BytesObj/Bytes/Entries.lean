@@ -1,6 +1,11 @@
 import PyLean.Registry
 import PyLean.BytesObj.Bytes.Specs4
 import PyLean.BytesObj.Bytes.HeapProps3
+import PyLean.BytesObj.Bytes.FormatProps8
+import PyLean.BytesObj.Bytes.FromFormatProps
+import PyLean.BytesObj.Bytes.CtorProps
+import PyLean.BytesObj.Bytes.SlotsProps
+import PyLean.BytesObj.Bytes.TailProps
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -59,9 +64,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst bytes.startswith", status := .proven
     prop := ``TailmatchTuple, thm := some ``tailmatchTuple_proven },
   { id := "bytesobj-bytes-capi", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_get_empty", "_PyBytes_FromSize", "PyBytes_FromStringAndSize", "PyBytes_FromString",
-      "PyBytes_FromFormatV", "bytes_fromformat", "PyBytes_FromFormat", "PyBytes_Size", "PyBytes_AsString", "PyBytes_AsStringAndSize",
-      "bytes_length"]
+    pyFns := ["PyBytes_FromStringAndSize", "PyBytes_FromString", "PyBytes_Size", "PyBytes_AsString"]
     statement := "PyBytes_FromFormat copies a format with no conversion; PyBytes_Size, PyBytes_AsString and PyBytes_AsStringAndSize report TypeError for non-bytes; without a length pointer an embedded NUL is ValueError; PyBytes_FromStringAndSize copies and refuses a negative size; PyBytes_FromString stops at the first NUL."
     source := "Doc/c-api/bytes.rst", status := .proven
     prop := ``CApiSpec, thm := some ``cApiSpec_proven
@@ -73,7 +76,7 @@ def entries : List Entry := [
     prop := ``BytesHashCache, thm := some ``bytesHashCache_proven
     notes := "Generic over the hash function: Py_HashBuffer lives in Python/pyhash.c and has a random seed." },
   { id := "bytesobj-bytes-format-field", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FormatEx", "bytes_mod"]
+    pyFns := ["_PyBytes_FormatEx"]
     statement := "For every flag set, sign, width and length: the writes of a field produce exactly the alloc bytes reserved (the assert at bytesobject.c:1136), so the writer's buffer is neither overrun nor left with a gap."
     source := "bytesobject.c:1136 (assert); invariant", status := .proven
     prop := ``FieldAllocExact, thm := some ``fieldAllocExact_proven },
@@ -82,9 +85,9 @@ def entries : List Entry := [
     statement := "%d %i %u %o %x of an exact int with no width, precision or sign flag: the fast path gives the same text as formatlong and the field writer, for every int, including the digit-limit error."
     source := "fast path against slow path of the same conversion, bytesobject.c:924-968", status := .proven
     prop := ``FastSlowLong, thm := some ``fastSlowLong_proven
-    notes := "Hypothesis: the text is below INT_MAX bytes, the guard the slow path has and the fast path has not. X has no fast path." },
+    notes := "Hypothesis: the text is below INT_MAX bytes, the guard the slow path has and the fast path has not; without it the agreement is refuted (bytesobj-bytes-format-fast-slow-all). X has no fast path." },
   { id := "bytesobj-bytes-format-literal", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FormatEx", "bytes_mod"]
+    pyFns := ["_PyBytes_FormatEx"]
     statement := "For every format without % whose size an object can have: the bytes are copied, an empty tuple or a mapping is accepted, and any other right operand raises TypeError('not all arguments converted during bytes formatting')."
     source := "Doc/library/stdtypes.rst, printf-style bytes formatting", status := .proven
     prop := ``FormatLiteral, thm := some ``formatLiteral_proven },
@@ -118,8 +121,180 @@ def entries : List Entry := [
     statement := "A negative * width is a left-justified field of that absolute width; PY_SSIZE_T_MIN and a width outside Py_ssize_t are the OverflowError."
     source := "Doc/library/stdtypes.rst, printf-style formatting: '*' width; bytesobject.c:771-804", status := .proven
     prop := ``NegStarWidth, thm := some ``negStarWidth_proven },
+  { id := "bytesobj-bytes-format-bytes-args", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "getnextarg", "format_obj"]
+    statement := "b'%b%s' % (x, y) is the bytes of x then those of y for every bytes-like x and y; a * precision cuts the bytes (a negative one cuts all) and a * width pads with spaces, on the right when negative."
+    source := "Doc/library/stdtypes.rst, printf-style bytes formatting", status := .proven
+    prop := ``FormatBytesArgs, thm := some ``formatBytesArgs_proven
+    notes := "Hypothesis: fewer than 2^44 bytes, an allocation the writer can make." },
+  { id := "bytesobj-bytes-format-arg-errors", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "getnextarg"]
+    statement := "Too few arguments (a tuple, or a single non-tuple for two conversions) is 'not enough arguments ... (got n)', a left-over one 'not all arguments converted ... (required 1, got 2)', and a * outside Py_ssize_t (width) or int (precision), or not an int, is refused naming argument 1."
+    source := "bytesobject.c:421-424, :781-848, :1145-1151", status := .proven
+    prop := ``FormatArgErrors, thm := some ``formatArgErrors_proven },
+  { id := "bytesobj-bytes-format-char", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "byte_converter"]
+    statement := "%c writes the byte of an int in range(256) and of a length-1 bytes or bytearray, pads to a * width; an int outside the range is the OverflowError naming the argument by position in a tuple and by none otherwise."
+    source := "Doc/library/stdtypes.rst, printf-style bytes formatting", status := .proven
+    prop := ``FormatChar, thm := some ``formatChar_proven },
+  { id := "bytesobj-bytes-format-ascii", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx"]
+    statement := "%a and %r write ascii(x) and keep its exception."
+    source := "Doc/library/stdtypes.rst, printf-style bytes formatting ('%a', '%r')", status := .proven
+    prop := ``FormatAscii, thm := some ``formatAscii_proven },
+  { id := "bytesobj-bytes-format-int-field", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "formatlong"]
+    statement := "For every int v and width w: %*d pads str(v) with spaces on the left, %-*d on the right, %0*d puts zeros between the sign and the digits, and %+d / % d put '+' / ' ' before a non-negative number."
+    source := "Doc/library/stdtypes.rst, printf-style formatting, conversion flags", status := .proven
+    prop := ``FormatIntField, thm := some ``formatIntField_proven },
+  { id := "bytesobj-bytes-format-float-text", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "formatfloat"]
+    statement := "For every double and every conversion in eEfFgG: the text is PyOS_double_to_string's with precision 6 by default, the alternate form for #, a * precision as given (negative as 0), its 'precision too big' error kept, an int converted by PyLong_AsDouble, and a * width padding on the left."
+    source := "Doc/library/stdtypes.rst, printf-style formatting; twin: str % (same PyOS_double_to_string)", status := .proven
+    prop := ``FormatFloatText, thm := some ``formatFloatText_proven
+    notes := "The double is Binary64.F64 and the text Binary64.PyOS_double_to_string_checked, the models difftested in the Binary64 module." },
+  { id := "bytesobj-bytes-format-mapping", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx"]
+    statement := "%(key)b looks up the bytes between balanced parentheses ('ab', '', '(x)') and a missing key is a KeyError; a non-mapping is 'format requires a mapping, not T'; after a key a specifier without one, and a * with one, are refused with their positions."
+    source := "Doc/library/stdtypes.rst, printf-style formatting, mapping keys", status := .proven
+    prop := ``FormatMapping, thm := some ``formatMapping_proven },
+  { id := "bytesobj-bytes-format-digit-limits", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx"]
+    statement := "A digit width of PY_SSIZE_T_MAX is accepted (and is a MemoryError to allocate), one more is 'width too big at position 0'; a precision of INT_MAX is accepted, one more is 'precision too big at position 0'."
+    source := "bytesobject.c:805-818, :855-868", status := .proven
+    prop := ``FormatDigitLimits, thm := some ``formatDigitLimits_proven },
+  { id := "bytesobj-bytes-mod-notimpl", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_mod"]
+    statement := "bytes_mod(self, arg) is NotImplemented for every self that is not bytes (bytearray and buffers included), the case x % b with the bytes on the right, and bytes formatting otherwise."
+    source := "binary operator protocol; bytesobject.c:2845-2847", status := .proven
+    prop := ``BytesModNotImpl, thm := some ``bytesModNotImpl_proven },
+  { id := "bytesobj-bytes-format-fast-slow-all", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FormatEx", "formatlong"]
+    statement := "Refuted: the fast path of %x and the general path through formatlong agree for every int. b'%x' % 16**2**31 is written by the fast path, which has no INT_MAX guard, while the same int through formatlong (any width, as in b'%5x') raises 'string too large in _PyUnicode_FormatLong'."
+    source := "fast path against slow path, bytesobject.c:924-968; unicode_format.c:247-251", status := .refuted
+    prop := ``FastSlowLongAll, thm := some ``fastSlowLongAll_refuted
+    bug := some "bytesobj-format-int-fast-slow-int-max"
+    notes := "The reproducer needs about 6 GiB." },
+  { id := "bytesobj-bytes-fromformat-conv", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_fromformat", "PyBytes_FromFormatV", "PyBytes_FromFormat"]
+    statement := "PyBytes_FromFormat on LP64: %d/%i print an int, %u an unsigned int, %ld/%zd 64-bit signed and %lu/%zu unsigned, %x the int in hex, %c a byte in [0, 255] and OverflowError otherwise, %s up to the NUL and %.3s at most 3 bytes, %p 0x and hex digits and '0x(nil)' for NULL (glibc), %% a percent; widths are skipped, arguments taken in order, an invalid conversion copies the rest."
+    source := "Doc/c-api/bytes.rst, PyBytes_FromFormat table", status := .proven
+    prop := ``FromFormatConv, thm := some ``fromFormatConv_proven
+    notes := "The difftest calls PyBytes_FromFormat through ctypes, NULL for %p included." },
+  { id := "bytesobj-bytes-new-arms", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_new_impl", "_PyBytes_FromSize"]
+    statement := "bytes(): encoding/errors without an argument, an encoding with a non-str and errors without an encoding are the TypeErrors in their order; __bytes__ returning bytes gives them and anything else is 'T.__bytes__() must return a bytes, not U'; an int outside Py_ssize_t cannot fit, past PY_SSIZE_T_MAX - 33 the string is too large, past malloc it is MemoryError, a negative one is 'negative count', otherwise n zero bytes; latin-1 with any known handler copies a text below 256."
+    source := "docstring of bytes, bytesobject.c:3201-3212; Doc/library/stdtypes.rst bytes()", status := .proven
+    prop := ``BytesNewArms, thm := some ``bytesNewArms_proven },
+  { id := "bytesobj-bytes-new-subtype", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_new_impl", "bytes_subtype_new", "bytes___bytes___impl", "bytes_fromhex_impl"]
+    statement := "bytes.__new__(T, ...) for a subclass T is an instance of T with the contents bytes(...) has; __bytes__ of any instance is an exact bytes with the same contents; T.fromhex(s) is an instance of T with bytes.fromhex(s)'s contents."
+    source := "Doc/library/stdtypes.rst bytes.fromhex ('classmethod'); bytesobject.c:1832-1837, :2951-2953", status := .proven
+    prop := ``BytesNewSubtype, thm := some ``bytesNewSubtype_proven
+    notes := "For fromhex: a subclass that keeps bytes.__new__ and object.__init__; any other is bytesobj-bytes-fromhex-callback." },
+  { id := "bytesobj-bytes-escape-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_DecodeEscape2"]
+    statement := "escape_decode before any run without a backslash: the one-character escapes, backslash-newline, three octal digits (mod 256, a value above 0o377 reported), one octal digit, \\xHH, an unknown escape (kept, reported); a trailing backslash is ValueError; an invalid \\x is the positioned ValueError under strict, '?' under replace, nothing under ignore (then one hex digit skipped), and the unknown-handler ValueError otherwise."
+    source := "Doc/reference/lexical_analysis.rst escape sequences; codecs.escape_decode", status := .proven
+    prop := ``EscapeSpec, thm := some ``escapeSpec_proven },
+  { id := "bytesobj-bytes-decode-escape-warn", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytes_DecodeEscape", "_PyBytes_DecodeEscape2"]
+    statement := "PyBytes_DecodeEscape returns the decoded bytes when no escape is invalid; otherwise it issues the DeprecationWarning (octal text above 0o377, the byte otherwise), and under an error filter the call fails with that warning, as for b'\\777' and every unknown escape."
+    source := "Doc/whatsnew/3.12.rst invalid escape sequences; bytesobject.c:1297-1318", status := .proven
+    prop := ``DecodeEscapeWarn, thm := some ``decodeEscapeWarn_proven },
+  { id := "bytesobj-bytes-set-ob-shash", pyFile := "Objects/bytesobject.c"
+    pyFns := ["set_ob_shash", "bytes_hash"]
+    statement := "bytes_hash stores the hash it computed in ob_shash and changes nothing else; a filled cache is returned as it is."
+    source := "invariant of ob_shash, Include/cpython/bytesobject.h", status := .proven
+    prop := ``SetObShash, thm := some ``setObShash_proven },
+  { id := "bytesobj-bytes-asstringandsize", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytes_AsStringAndSize"]
+    statement := "PyBytes_AsStringAndSize refuses a non-bytes with 'expected bytes, X found' with or without a length pointer; with len == NULL it accepts a string without NUL and refuses one with a NUL."
+    source := "Doc/c-api/bytes.rst PyBytes_AsStringAndSize", status := .proven
+    prop := ``AsStringAndSizeSpec, thm := some ``asStringAndSizeSpec_proven },
+  { id := "bytesobj-bytes-pyjoin-sep", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytes_Join"]
+    statement := "PyBytes_Join refuses a sep that is not bytes with 'sep: expected bytes, got T' whatever the iterable, and is bytes.join otherwise."
+    source := "Doc/c-api/bytes.rst PyBytes_Join", status := .proven
+    prop := ``PyBytesJoinSep, thm := some ``pyBytesJoinSep_proven },
+  { id := "bytesobj-bytes-repr-smart", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_repr"]
+    statement := "repr(b) quotes with \" exactly when b has a ' and no \", and with ' otherwise, around the literal body."
+    source := "Doc/library/functions.rst repr; bytesobject.c:1512", status := .proven
+    prop := ``BytesReprSmart, thm := some ``bytesReprSmart_proven },
+  { id := "bytesobj-bytes-warnings", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_str", "bytes_richcompare"]
+    statement := "Under -b, str(b) warns 'str() on a bytes instance' and b == x / b != x with a str or int x warn and give NotImplemented; under -bb those raise BytesWarning; order comparisons and runs without -b issue nothing."
+    source := "Doc/using/cmdline.rst -b", status := .proven
+    prop := ``BytesWarnings, thm := some ``bytesWarnings_proven
+    notes := "The difftest runs these in a child interpreter with -b / -bb." },
+  { id := "bytesobj-bytes-subscript-dispatch", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_item", "bytes_subscript"]
+    statement := "sq_item does not wrap a negative index, and through PySequence_GetItem agrees with b[i] for every Py_ssize_t i; b[x] for an int, bool or __index__ object is that index (the overflow message names x's type), a raising __index__ passes its exception on, and any other non-slice is the 'byte indices must be integers or slices' TypeError."
+    source := "twin: PySequence_GetItem against mp_subscript; bytesobject.c:1730-1789", status := .proven
+    prop := ``SubscriptDispatch, thm := some ``subscriptDispatch_proven
+    notes := "A slice object is not in Obj; the slice arm is bytesGetSlice (bytesobj-bytes-subscript-spec)." },
+  { id := "bytesobj-bytes-buffer-readonly", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_buffer_getbuffer"]
+    statement := "A bytes exports its contents read-only: a request without PyBUF_WRITABLE succeeds with readonly 1, one with it is BufferError('Object is not writable.'), and PyBUF_READ is the SystemError of PyErr_BadInternalCall."
+    source := "Doc/c-api/buffer.rst PyBUF_WRITABLE; Objects/abstract.c:783-794", status := .proven
+    prop := ``BytesBufferSpec, thm := some ``bytesBufferSpec_proven
+    notes := "The PyBUF_READ / PyBUF_WRITE SystemError is recorded in bugs/bytesobj-bytearray-buffer-flags-systemerror.yaml (bytes behaves the same)." },
+  { id := "bytesobj-bytes-partition-obj", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_partition_impl", "bytes_rpartition_impl"]
+    statement := "b.partition(sep) and b.rpartition(sep) have the contents of stringlib_partition on the buffers, and the middle item is the separator object itself when found (a bytearray or memoryview separator comes back unchanged), the empty bytes otherwise."
+    source := "docstrings, bytesobject.c:1883-1897 ('the separator itself'); python/cpython#137217", status := .proven
+    prop := ``PartitionObj, thm := some ``partitionObj_proven
+    notes := "Identity of self in the not-found item is out of scope (an exact bytes); its contents are pinned." },
+  { id := "bytesobj-bytes-private-rfind", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_ReverseFind"]
+    statement := "_PyBytes_ReverseFind is the offset plus the start of the last occurrence of the needle (the haystack's length for an empty needle), or -1 when there is none, for every haystack, needle and offset."
+    source := "stringlib_rfind contract, Objects/stringlib/find.h:26-42", status := .proven
+    prop := ``PrivateRFindSpec, thm := some ``privateRFindSpec_proven },
+  { id := "bytesobj-bytes-getnewargs", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_getnewargs"]
+    statement := "b.__getnewargs__() is a 1-tuple holding an exact bytes with the contents for every class of b, and passing it back to cls.__new__ (pickle protocol 2+) rebuilds an instance of cls with the same contents."
+    source := "pickle protocol 2 (__getnewargs__, copyreg.__newobj__)", status := .proven
+    prop := ``GetnewargsPickle, thm := some ``getnewargsPickle_proven },
+  { id := "bytesobj-bytes-fromhex-callback", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_fromhex_impl"]
+    statement := "T.fromhex(s) for a subclass T is whatever type(result) gives, an exception (e.g. an __init__ with another signature) or any object included, called only after the parse succeeded; for bytes no call is made."
+    source := "Doc/library/stdtypes.rst bytes.fromhex (classmethod); bytesobject.c:2621-2623", status := .proven
+    prop := ``FromHexCallback, thm := some ``fromHexCallback_proven
+    notes := "type(result) is a fallible callback; the difftest runs a subclass whose __init__ takes two arguments and one whose __new__ returns 42." },
+  { id := "bytesobj-bytes-fromlist-mut", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FromList"]
+    statement := "bytes(lst) rereads the list after every __index__: with no item touching it the result is each item converted in turn; an appended value is converted too (range check included); clearing the list ends the loop after the current byte, popping the last item keeps it from being read, a raising __index__ stops with its exception, and the writer grows past its allocation (257 items whose last __index__ appends a 258th give 258 bytes)."
+    source := "bytesobject.c:2995-3019 (3.15 loop); Doc/library/stdtypes.rst bytes(iterable_of_ints)", status := .proven
+    prop := ``FromListMut, thm := some ``fromListMut_proven
+    notes := "Scope: the GIL build. Unverified lead: under Py_GIL_DISABLED _PyList_GetItemRef can return NULL without an exception set (listobject.c:375-388), which :2997-2998 would return as NULL with no exception (a SystemError); no free-threaded build was available, no record." },
+  { id := "bytesobj-bytes-alloc", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_alloc", "bytes_subtype_new"]
+    statement := "bytes_alloc leaves ob_shash at -1 (not the 0 of zeroed memory), so the first hash() of an object it allocated is the hash of whatever contents were written (gh-91020); bytes_subtype_new then copies its source's cache."
+    source := "gh-91020; bytesobject.c:3166-3180", status := .proven
+    prop := ``BytesAllocSpec, thm := some ``bytesAllocSpec_proven },
+  { id := "bytesobj-bytes-resize-pv", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_Resize"]
+    statement := "_PyBytes_Resize sets *pv to NULL when the resize fails (a negative size is the bad internal call, a size past PY_SSIZE_T_MAX - 33 the OverflowError) and gives the resized object otherwise; PyBytes_Concat's in-place branch past that limit leaves *pv NULL with the OverflowError."
+    source := "Doc/c-api/bytes.rst _PyBytes_Resize; bytesobject.c:3474-3484", status := .proven
+    prop := ``PyBytesResizeSpec, thm := some ``pyBytesResizeSpec_proven },
+  { id := "bytesobj-bytes-iter-reduce", pyFile := "Objects/bytesobject.c"
+    pyFns := ["striter_reduce"]
+    statement := "iter(b).__reduce__() looks up iter first and reads it_seq and it_index as that lookup left them (gh-101765): a lookup that exhausts the iterator gives (iter, ((),)), a failed one is the result; a live iterator reduces to (iter, (b,), index) and iter(b).__setstate__(index) rebuilds it."
+    source := "pickle round trip; gh-101765", status := .proven
+    prop := ``StrIterReduceSpec, thm := some ``strIterReduceSpec_proven },
+  { id := "bytesobj-bytes-iter-setstate", pyFile := "Objects/bytesobject.c"
+    pyFns := ["striter_setstate"]
+    statement := "__setstate__ clamps an index above len(b) to len(b) and a negative one to 0, does nothing to an exhausted iterator, and refuses an index outside Py_ssize_t with OverflowError; afterwards the length hint is in [0, len(b)]."
+    source := "bytesobject.c:3567-3582; the iterator protocol (__length_hint__ is not negative)", status := .proven
+    prop := ``StrIterSetstateSpec, thm := some ``strIterSetstateSpec_proven },
+  { id := "bytesobj-bytes-writer-bytes", pyFile := "Objects/bytesobject.c"
+    pyFns := ["byteswriter_resize"]
+    statement := "byteswriter_resize with its storage bytes has the writer model's control flow and keeps every old byte at the front of the new storage, the small buffer included when the first object is made; its overallocation guard makes a size whose quarter would overflow ask for itself (MemoryError up to PY_SSIZE_T_MAX - 33) and a size below it ask for size + size/4 (OverflowError past the limit), as b'%*bx' % (7378697629483820645, b'') and (7378697629483820638, b'') show."
+    source := "bytesobject.c:3730-3798", status := .proven
+    prop := ``WriterBytesSpec, thm := some ``writerBytesSpec_proven },
   { id := "bytesobj-bytes-escape-roundtrip", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytes_repr", "bytes_str", "bytearray_repr", "bytearray_repr_lock_held"]
+    pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytearray_repr", "bytearray_repr_lock_held"]
     statement := "For every byte string and either quote: decoding the body of the literal repr writes, for bytes and for bytearray, gives back the bytes with no invalid escape, so repr is an inverse of escape_decode."
     source := "repr of bytes is a literal, Doc/library/functions.rst repr", status := .proven
     prop := ``ReprDecodeRoundTrip, thm := some ``reprDecodeRoundTrip_proven
@@ -135,7 +310,7 @@ def entries : List Entry := [
     source := "invariant: PyUnicode_New(newsize) must hold the writes, bytesobject.c:1473", status := .proven
     prop := ``ReprSizeExact, thm := some ``reprSizeExact_proven },
   { id := "bytesobj-bytes-private-find", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_Find", "_PyBytes_ReverseFind"]
+    pyFns := ["_PyBytes_Find"]
     statement := "_PyBytes_Find is stringlib_find for every haystack, needle and offset >= 0: searching one byte less and comparing the last alignment by hand changes nothing."
     source := "comment bytesobject.c:1400", status := .proven
     prop := ``PrivateFindAgrees, thm := some ``privateFindAgrees_proven },
@@ -165,7 +340,7 @@ def entries : List Entry := [
     source := "twins; Doc/library/stdtypes.rst common sequence operations", status := .proven
     prop := ``SubscriptTwins, thm := some ``subscriptTwins_proven },
   { id := "bytesobj-bytes-buffer", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_buffer_getbuffer", "bytes___bytes___impl", "bytes_getnewargs", "bytearray_getbuffer",
+    pyFns := ["bytearray_getbuffer",
       "bytearray_getbuffer_lock_held", "bytearray_releasebuffer"]
     statement := "A view of bytes is read-only and exposes the contents; a view of bytearray is writable and raises ob_exports by one for as long as it lives; bytes(b) and __getnewargs__ give the contents."
     source := "Doc/library/stdtypes.rst memoryview.readonly; PEP 3118", status := .proven
@@ -192,10 +367,10 @@ def entries : List Entry := [
     prop := ``RemoveAffix, thm := some ``removeAffix_proven },
   { id := "bytesobj-bytes-decode", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_decode_impl"]
-    statement := "For every byte string, s.decode('latin-1') is the code points of the bytes and bytes(text, 'latin-1') inverts it; 'ascii' accepts exactly the strings below 128."
-    source := "Doc/library/codecs.rst", status := .proven
+    statement := "decode('latin-1') is the code points of the bytes for every errors value and bytes(text, 'latin-1') inverts it; 'ascii' accepts a string below 128 and reports the first byte above with its span; utf-8, the default, and its spellings decode what bytes(text, 'utf-8') wrote for every text without surrogates; b'' decodes to '' whatever the encoding and errors."
+    source := "Doc/library/codecs.rst; Doc/library/stdtypes.rst bytes.decode", status := .proven
     prop := ``DecodeRoundTrip, thm := some ``decodeRoundTrip_proven
-    notes := "Two codecs stand for the codec registry, which is out of this module's scope; decode itself only forwards." },
+    notes := "Scope: the shortcut codecs utf-8, ascii, latin-1 of PyUnicode_Decode and PyUnicode_AsEncodedString, on the UnicodeObj codec models, with the handlers _Py_GetErrorHandler knows; the codec registry (other encodings, utf-16/32, other handler names) is out of scope." },
   { id := "bytesobj-bytes-fromhex-roundtrip", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytes_hex_impl"]
     statement := "bytes.fromhex(b.hex()) == b for every byte string."
@@ -798,7 +973,7 @@ def entries : List Entry := [
     source := "docstrings, bytes_methods.c:245-326", status := .proven
     prop := ``CaseLaws, thm := some ``caseLaws_proven },
   { id := "bytesobj-bytes-maketrans-hit", pyFile := "Objects/bytes_methods.c"
-    pyFns := ["_Py_bytes_maketrans"]
+    pyFns := ["_Py_bytes_maketrans", "bytes_maketrans_impl"]
     statement := "maketrans sends each byte of frm to the byte of to at the place of its last occurrence."
     source := "docstring, bytes_methods.c:348-354", status := .proven
     prop := ``MaketransHit, thm := some ``maketransHit_proven },

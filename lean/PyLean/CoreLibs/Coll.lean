@@ -1,7 +1,9 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
-import PyLean.CoreLibs.Coll.CounterMost
-import PyLean.CoreLibs.Coll.CounterXor
+import PyLean.CoreLibs.Coll.CounterProps5
+import PyLean.CoreLibs.Coll.ChainMapGProps
+import PyLean.CoreLibs.Coll.UserDictGProps
+import PyLean.CoreLibs.Coll.NamedtupleP
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -17,134 +19,156 @@ private def file : String := "Lib/collections/__init__.py"
 
 def counterEntries : List Entry := [
   { id := "coll-count-elements-twins", pyFile := file, pyFns := ["_count_elements"]
-    statement := "The Python _count_elements, the C fast path and the C slow path write the same dict, keys in the same order, for every mapping of int counts and every iterable."
-    source := "invariant: C and Python twins; Lib/collections/__init__.py:540-549, Modules/_collectionsmodule.c:2544-2644"
-    status := .proven, prop := ``CountElementsTwins, thm := some ``countElementsTwins_proven },
+    statement := "The C _count_elements and the Python twin leave the same dict and raise the same exception for every target and iterable. False: an instance attribute get is seen by mapping.get but not by the C fast-path test, Counter() with c.get set stores 11 in Python and 1 in C."
+    source := "invariant: C and Python twins; Lib/collections/__init__.py:540-549, Modules/_collectionsmodule.c:2563-2617"
+    status := .refuted, prop := ``CountElementsTwins, thm := some ``countElementsTwins_refuted
+    bug := some "corelibs-count-elements-twins" },
+  { id := "coll-count-elements-twins-hashable", pyFile := file, pyFns := ["_count_elements"]
+    statement := "Without an instance get, the twins agree. False: for an unhashable element the C fast path raises the bare hash TypeError, the Python twin dict.get's 'cannot use ... as a dict key' TypeError."
+    source := "invariant: C and Python twins; Modules/_collectionsmodule.c:2591-2594, Objects/dictobject.c:2442-2460"
+    status := .refuted, prop := ``CountElementsTwinsHashable, thm := some ``countElementsTwinsHashable_refuted
+    bug := some "corelibs-count-elements-twins" },
+  { id := "coll-count-elements-twins-narrow", pyFile := file, pyFns := ["_count_elements"]
+    statement := "With no instance get and keys whose __hash__ never raises a bare TypeError, the C function (fast or slow path, overridden get/__setitem__ free to raise) and the Python one leave the same dict and raise the same exception, partial updates included, for any count type with 0 + 1 == 1."
+    source := "narrowing of coll-count-elements-twins"
+    status := .proven, prop := ``CountElementsTwinsNarrow, thm := some ``countElementsTwinsNarrow_proven },
+  { id := "coll-counter-count-iter-int", pyFile := file
+    pyFns := ["Counter.__init__", "Counter.update", "Counter.subtract", "_count_elements"]
+    statement := "On ints, update(iterable) adds each element's number of occurrences, appends new keys in first-seen order and raises what the iterator raised keeping the counts before it; subtract lowers the same counts, so it undoes update; Counter(iterable) is the update of an empty counter or the exception."
+    source := "docstrings, Lib/collections/__init__.py:606-615, :678-688, :712-725"
+    status := .proven, prop := ``CountIterInt, thm := some ``countIterInt_proven },
   { id := "coll-counter-update-fast-slow", pyFile := file, pyFns := ["Counter.update"]
-    statement := "The fast path of update on an empty Counter (dict.update) builds the same dict, order included, as the general adding loop, for every dict of int counts."
+    statement := "On an empty counter, the dict.update fast path and the general count + self_get(elem, 0) loop leave the same items for every Mapping whose items() agrees with its storage or keys()/[] and every count type with x + 0 == x."
     source := "invariant: fast and slow path, Lib/collections/__init__.py:698-705"
-    status := .proven, prop := ``UpdateFastEqSlow, thm := some ``updateFastEqSlow_proven },
-  { id := "coll-counter-update-adds", pyFile := file
-    pyFns := ["Counter.update", "Counter.__init__", "Counter.__missing__", "_count_elements"]
-    statement := "After update(src, **kw) the count of x is its old count plus the source's and the keywords' contribution, for every counter; Counter(src, **kw) is the empty-counter case, and a missing element counts zero."
-    source := "docstrings, Lib/collections/__init__.py:606-615, :678"
-    status := .proven, prop := ``UpdateAddsCounts, thm := some ``updateAddsCounts_proven },
-  { id := "coll-counter-first-seen-order", pyFile := file, pyFns := ["Counter.__init__", "_count_elements"]
-    statement := "Counter(iterable) holds its elements in the order of dict.fromkeys(iterable)."
-    source := "Doc/library/collections.rst, Counter (order of first occurrence since 3.7)"
-    status := .proven, prop := ``CounterFirstSeenOrder, thm := some ``counterFirstSeenOrder_proven },
-  { id := "coll-counter-subtract", pyFile := file, pyFns := ["Counter.subtract", "Counter.update"]
-    statement := "subtract lowers counts by the source's contribution, and subtract after update with the same arguments restores every count."
-    source := "docstring, Lib/collections/__init__.py:712-717"
-    status := .proven, prop := ``SubtractUndoesUpdate, thm := some ``subtractUndoesUpdate_proven },
-  { id := "coll-counter-total", pyFile := file, pyFns := ["Counter.total"]
-    statement := "total() rises by n when n elements are counted and by another mapping's total when it is merged."
-    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
-    status := .proven, prop := ``TotalTracksUpdate, thm := some ``totalTracksUpdate_proven },
+    status := .proven, prop := ``UpdateFastSlow, thm := some ``updateFastSlow_proven },
   { id := "coll-counter-copy-reduce", pyFile := file, pyFns := ["Counter.copy", "Counter.__reduce__"]
-    statement := "copy() and the __reduce__ payload keep the items and their order, non-positive counts included."
-    source := "invariant; docstring 'Return a shallow copy.', Lib/collections/__init__.py:739"
-    status := .proven, prop := ``CopyReduceFaithful, thm := some ``copyReduceFaithful_proven },
+    statement := "copy() is a new object of self's class with self's items in order; __reduce__ is (self.__class__, (d,)) for a new plain dict d of the items, and the class rebuilds them from d."
+    source := "docstring 'Return a shallow copy.', Lib/collections/__init__.py:739; pickle protocol"
+    status := .proven, prop := ``CopyReduce, thm := some ``copyReduce_proven },
   { id := "coll-counter-delitem", pyFile := file, pyFns := ["Counter.__delitem__"]
-    statement := "del c[e] never raises, removes exactly e, and is a no-op on a missing element."
+    statement := "del c[e] removes a hashable e, and leaves the counter unchanged on an absent e where dict.__delitem__ raises KeyError; an unhashable e raises exactly the dict operation's exception."
     source := "docstring, Lib/collections/__init__.py:746"
-    status := .proven, prop := ``DelitemTotal, thm := some ``delitemTotal_proven },
+    status := .proven, prop := ``DelitemGuard, thm := some ``delitemGuard_proven },
+  { id := "coll-counter-most-common", pyFile := file, pyFns := ["Counter.most_common"]
+    statement := "For counts ordered by a strict weak order and a correct stable list.sort, most_common() is the items in non-increasing count order with ties in insertion order, and most_common(n), n >= 0, through every nlargest path, is its first n items."
+    source := "docstring, Lib/collections/__init__.py:629-630; Doc/library/collections.rst"
+    status := .proven, prop := ``MostCommonSorted, thm := some ``mostCommonSorted_proven },
+  { id := "coll-counter-most-common-neg", pyFile := file, pyFns := ["Counter.most_common"]
+    statement := "most_common(n) for n < 0 is [] for every count type, no count being compared."
+    source := "invariant; Lib/heapq.py:537-593"
+    status := .proven, prop := ``MostCommonNeg, thm := some ``mostCommonNeg_proven },
+  { id := "coll-counter-repr", pyFile := file, pyFns := ["Counter.__repr__"]
+    statement := "repr prints Cls() when empty, the items in most_common() order for ordered counts, and, when every < raises, the items in insertion order if that is a TypeError and the exception otherwise."
+    source := "comments, Lib/collections/__init__.py:754, :757"
+    status := .proven, prop := ``ReprOrders, thm := some ``reprOrders_proven },
+  { id := "coll-counter-elements", pyFile := file, pyFns := ["Counter.elements"]
+    statement := "elements() yields each key max(0, n) times in insertion order; it yields the elements before the first count whose __index__ raises or overflows Py_ssize_t, then raises."
+    source := "docstring, Lib/collections/__init__.py:643-658"
+    status := .proven, prop := ``ElementsLazy, thm := some ``elementsLazy_proven },
   { id := "coll-counter-compare-pointwise", pyFile := file
     pyFns := ["Counter.__eq__", "Counter.__ne__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "The six comparisons are the pointwise order on count functions with missing as zero, for all counters."
+    statement := "For any pure ==, <=, >= on counts, the six comparisons test every key of both counters with missing counts as zero, < and > add !=, and each returns NotImplemented exactly for a non-Counter operand."
     source := "docstrings, Lib/collections/__init__.py:800-830"
-    status := .proven, prop := ``ComparisonsPointwise, thm := some ``comparisonsPointwise_proven },
-  { id := "coll-counter-compare-order", pyFile := file
-    pyFns := ["Counter.__eq__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "a <= b and b <= a exactly when a == b; < and > are converses, as are <= and >=."
+    status := .proven, prop := ``ComparePointwise, thm := some ``comparePointwise_proven },
+  { id := "coll-counter-compare-raises", pyFile := file, pyFns := ["Counter.__eq__", "Counter.__le__", "Counter.__ge__"]
+    statement := "If comparing some key's counts raises and no earlier key compared false, ==, <= and >= raise."
     source := "invariant"
-    status := .proven, prop := ``ComparisonsAreOrder, thm := some ``comparisonsAreOrder_proven },
+    status := .proven, prop := ``CompareRaises, thm := some ``compareRaises_proven },
+  { id := "coll-counter-ops-pointwise", pyFile := file
+    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__"]
+    statement := "For any pure +, -, <, > on counts, +, -, | and & store a's keys with the combined count when it is > 0, then b's keys not in a under the operator's test, in that order, and return NotImplemented for a non-Counter operand."
+    source := "docstrings and comments, Lib/collections/__init__.py:765-772, :836-908"
+    status := .proven, prop := ``OperatorsPointwise, thm := some ``operatorsPointwise_proven },
+  { id := "coll-counter-unary", pyFile := file, pyFns := ["Counter.__pos__", "Counter.__neg__"]
+    statement := "-c is Counter() - c for every count type, result and exception alike; +c is c + Counter() when x + 0 is x."
+    source := "docstrings, Lib/collections/__init__.py:938, :946-947"
+    status := .proven, prop := ``UnaryAsBinary, thm := some ``unaryAsBinary_proven },
+  { id := "coll-counter-keep-positive", pyFile := file, pyFns := ["Counter._keep_positive", "Counter.__pos__"]
+    statement := "For any pure > on counts (NaN-like included), _keep_positive leaves exactly the items with count > 0, in order, the items +c returns."
+    source := "docstrings, Lib/collections/__init__.py:938, :957"
+    status := .proven, prop := ``KeepPositiveFilters, thm := some ``keepPositiveFilters_proven },
+  { id := "coll-counter-inplace-operands", pyFile := file
+    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__"]
+    statement := "+=, -=, |= read only other.items(): a dict and a Counter with the same items agree, and a raising .items() leaves self unchanged; &= reads other[elem]: Counter() &= 5 succeeds and a dict missing the first key raises its KeyError with self unchanged."
+    source := "invariant; Lib/collections/__init__.py:972, :985, :998, :1013-1014"
+    status := .proven, prop := ``InplaceOperands, thm := some ``inplaceOperands_proven },
+  { id := "coll-counter-update-mapping-kw", pyFile := file
+    pyFns := ["Counter.update", "Counter.subtract", "Counter.__init__"]
+    statement := "For any pure + and - on counts, update(L) on a non-empty counter stores L[k] + self.get(k, 0) for L's keys (dict.update's replacement fails), subtract(L) stores self.get(k, 0) - L[k], the keywords are applied after the positional argument by the same branch, Counter(**kw) holds kw, Counter(L) holds L, and Counter(L, **kw) adds kw to L."
+    source := "docstrings, Lib/collections/__init__.py:606-615, :678, :712-714"
+    status := .proven, prop := ``UpdateMappingKw, thm := some ``updateMappingKw_proven },
+  { id := "coll-counter-inplace-arith", pyFile := file
+    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__"]
+    statement := "For any pure +=, -=, <, > on counts, a += b leaves a[k] += b[k] at b's keys and a[k] elsewhere, -= likewise, |= takes b[k] where b[k] > a[k], &= takes b[k] (0 when missing) where b[k] < a[k], each keeping only counts > 0, without raising."
+    source := "docstrings, Lib/collections/__init__.py:964-1011"
+    status := .proven, prop := ``InplaceArith, thm := some ``inplaceArith_proven },
+  { id := "coll-counter-total", pyFile := file, pyFns := []
+    statement := "total() is sum(self.values()) for every count type."
+    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"
+    status := .open, prop := ``TotalTracksUpdate
+    notes := "Open: needs a model of builtin sum (Python/bltinmodule.c builtin_sum_impl, with its int and compensated float fast paths); the Int fold it had was withdrawn." },
   { id := "coll-counter-fromkeys", pyFile := file, pyFns := []
     statement := "Counter.fromkeys raises NotImplementedError for every input."
     source := "Doc/library/collections.rst, Counter.fromkeys; Lib/collections/__init__.py:665-675"
-    status := .proven, prop := ``FromkeysUndefined, thm := some ``fromkeysUndefined_proven },
-  { id := "coll-counter-ops-pointwise", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__pos__", "Counter.__neg__"]
-    statement := "+, -, |, & and unary + and - compute sum, difference, maximum, minimum, positive part and negated positive part of counts, clipped at zero, for all counters including non-positive counts."
-    source := "docstrings, Lib/collections/__init__.py:836-950"
-    status := .proven, prop := ``OperatorsPointwise, thm := some ``operatorsPointwise_proven },
-  { id := "coll-counter-ops-contract", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__pos__", "Counter.__neg__"]
-    statement := "Operator results hold only positive counts, and keys appear in left-operand order, then right-operand order."
-    source := "comments, Lib/collections/__init__.py:765, :770-772"
-    status := .proven, prop := ``OperatorsOutputContract, thm := some ``operatorsOutputContract_proven },
-  { id := "coll-counter-unary-binary", pyFile := file, pyFns := ["Counter.__pos__", "Counter.__neg__"]
-    statement := "+c equals c + Counter() and -c equals Counter() - c, items and order."
-    source := "docstrings, Lib/collections/__init__.py:938, :946"
-    status := .proven, prop := ``UnaryAreBinary, thm := some ``unaryAreBinary_proven },
-  { id := "coll-counter-inplace", pyFile := file
-    pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__", "Counter._keep_positive"]
-    statement := "c += d, c -= d, c |= d, c &= d leave c equal to c + d, c - d, c | d, c & d, items and order, for all counters."
-    source := "invariant: in-place and binary forms; docstrings, Lib/collections/__init__.py:964-1011"
-    status := .proven, prop := ``InplaceAgreesBinary, thm := some ``inplaceAgreesBinary_proven },
-  { id := "coll-counter-xor", pyFile := file, pyFns := []
-    statement := "c ^ d is the absolute difference of counts, for all counters including zero and negative counts, equal to (c - d) | (d - c), with positive counts only, in the operators' key order; c ^= d gives the same items in the same order."
-    source := "docstrings, Lib/collections/__init__.py:910-935, :1019-1033"
-    status := .proven, prop := ``XorPointwise, thm := some ``xorPointwise_proven },
-  { id := "coll-counter-keep-positive", pyFile := file, pyFns := ["Counter._keep_positive"]
-    statement := "_keep_positive removes exactly the non-positive counts, in place order kept, and equals unary +."
-    source := "docstring, Lib/collections/__init__.py:957"
-    status := .proven, prop := ``KeepPositiveFilters, thm := some ``keepPositiveFilters_proven },
-  { id := "coll-counter-set-correspondence", pyFile := file
-    pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__eq__",
-      "Counter.__ne__", "Counter.__le__", "Counter.__lt__", "Counter.__ge__", "Counter.__gt__"]
-    statement := "With multiplicities zero or one, all ten relations of the comment hold between multiset and set operations."
-    source := "comment, Lib/collections/__init__.py:774-792"
-    status := .proven, prop := ``SetCorrespondence, thm := some ``setCorrespondence_proven },
-  { id := "coll-counter-most-common-prefix", pyFile := file, pyFns := ["Counter.most_common"]
-    statement := "most_common(n) is most_common()[:n] for every n >= 0, ties included, across the max, sorted and heap paths; a negative n gives []."
-    source := "docstring, Lib/collections/__init__.py:629-630"
-    status := .proven, prop := ``MostCommonPrefix, thm := some ``mostCommonPrefix_proven },
-  { id := "coll-counter-most-common-sorted", pyFile := file, pyFns := ["Counter.most_common"]
-    statement := "most_common() is a permutation of the items in non-increasing order of count, equal counts staying in insertion order."
-    source := "Doc/library/collections.rst, most_common"
-    status := .proven, prop := ``MostCommonSorted, thm := some ``mostCommonSorted_proven },
-  { id := "coll-counter-elements", pyFile := file, pyFns := ["Counter.elements"]
-    statement := "For counts that fit Py_ssize_t, counting c.elements() gives +c, the elements coming in insertion order."
-    source := "docstring, Lib/collections/__init__.py:643-657"
-    status := .proven, prop := ``ElementsRoundTrip, thm := some ``elementsRoundTrip_proven },
-  { id := "coll-counter-repr", pyFile := file, pyFns := ["Counter.__repr__"]
-    statement := "repr of a non-empty counter lists items in most_common order and an empty one prints Counter()."
-    source := "comment, Lib/collections/__init__.py:754"
-    status := .proven, prop := ``ReprMostCommonOrder, thm := some ``reprMostCommonOrder_proven }
+    status := .proven, prop := ``FromkeysUndefined, thm := some ``fromkeysUndefined_proven }
 ]
 
 def chainMapEntries : List Entry := [
   { id := "coll-chainmap-flat-view", pyFile := file
-    pyFns := ["ChainMap.__getitem__", "ChainMap.__missing__", "ChainMap.get", "ChainMap.__len__", "ChainMap.__iter__",
+    pyFns := ["ChainMap.__missing__", "ChainMap.get", "ChainMap.__len__", "ChainMap.__iter__",
       "ChainMap.__contains__", "ChainMap.__bool__"]
     statement := "Subscript, get, in, len, iter and bool on a ChainMap agree with the flat dict built by updating from the last map to the first."
     source := "Doc/library/collections.rst, ChainMap"
     status := .proven, prop := ``ChainMapFlatView, thm := some ``chainMapFlatView_proven },
   { id := "coll-chainmap-writes-first", pyFile := file
-    pyFns := ["ChainMap.__setitem__", "ChainMap.__delitem__", "ChainMap.popitem", "ChainMap.pop", "ChainMap.clear"]
-    statement := "Writes and deletions change maps[0] only, their KeyError is decided by maps[0] alone, and a key removed from maps[0] then reads from the later maps."
+    pyFns := ["ChainMap.__setitem__", "ChainMap.__delitem__", "ChainMap.popitem", "ChainMap.pop"]
+    statement := "Writes and deletions change maps[0] only, their KeyError (whose str is the real repr of the message) is decided by maps[0] alone, and a key removed from maps[0] then reads from the later maps."
     source := "Doc/library/collections.rst, ChainMap: 'writes, updates, and deletions only operate on the first mapping'"
     status := .proven, prop := ``ChainMapWritesFirst, thm := some ``chainMapWritesFirst_proven },
   { id := "coll-chainmap-union-flat", pyFile := file
-    pyFns := ["ChainMap.__ior__", "ChainMap.__or__", "ChainMap.__ror__", "ChainMap.copy"]
+    pyFns := ["ChainMap.__ror__"]
     statement := "cm | o reads as dict(cm) | o with the tail maps kept, cm |= o likewise, o | cm is the one-map o | dict(cm), copy reads the same, items and order, and non-mappings get NotImplemented."
     source := "PEP 584; Lib/collections/__init__.py:1151-1168"
     status := .proven, prop := ``ChainMapUnionFlat, thm := some ``chainMapUnionFlat_proven },
   { id := "coll-chainmap-child-parents", pyFile := file
-    pyFns := ["ChainMap.__init__", "ChainMap.new_child", "ChainMap.parents", "ChainMap.fromkeys"]
+    pyFns := ["ChainMap.new_child", "ChainMap.parents"]
     statement := "__init__ always leaves at least one map, new_child and parents are inverse on the map list, and fromkeys reads like dict.fromkeys."
     source := "docstrings and comment, Lib/collections/__init__.py:1055-1059, :1099, :1109-1121"
     status := .proven, prop := ``ChainMapChildParents, thm := some ``chainMapChildParents_proven },
-  { id := "coll-chainmap-repr", pyFile := file, pyFns := ["ChainMap.__repr__"]
+  { id := "coll-chainmap-repr", pyFile := file, pyFns := []
     statement := "repr shows the maps in order, so new_child prepends the child's repr, and ChainMap() prints its empty dict."
     source := "invariant; Lib/collections/__init__.py:1093-1095"
-    status := .proven, prop := ``ChainMapRepr, thm := some ``chainMapRepr_proven }
+    status := .proven, prop := ``ChainMapRepr, thm := some ``chainMapRepr_proven },
+  { id := "coll-chainmap-init", pyFile := file, pyFns := ["ChainMap.__init__"]
+    statement := "ChainMap() has exactly the one map {}; with arguments, maps is their list."
+    source := "docstring, Lib/collections/__init__.py:1055-1057"
+    status := .proven, prop := ``ChainMapInit, thm := some ``chainMapInit_proven },
+  { id := "coll-chainmap-getitem-any", pyFile := file, pyFns := ["ChainMap.__getitem__"]
+    statement := "__getitem__ asks each mapping's [] in turn: on dicts it is the flat lookup; a map answering (a defaultdict for a key it lacks, while `in` says no) wins; a KeyError or subclass moves on; any other exception propagates."
+    source := "Doc/library/collections.rst, ChainMap; comment, Lib/collections/__init__.py:1067"
+    status := .proven, prop := ``ChainMapGetitemAny, thm := some ``chainMapGetitemAny_proven },
+  { id := "coll-chainmap-repr-guard", pyFile := file, pyFns := ["ChainMap.__repr__"]
+    statement := "repr prints Cls(r1, r2, ...) from the maps' reprs (cmRepr on dicts), a ChainMap holding itself prints ... in its place, and a raising map repr raises."
+    source := "Lib/collections/__init__.py:1093-1095; Lib/reprlib.py:9-24"
+    status := .proven, prop := ``ChainMapReprGuard, thm := some ``chainMapReprGuard_proven },
+  { id := "coll-chainmap-fromkeys", pyFile := file, pyFns := ["ChainMap.fromkeys"]
+    statement := "ChainMap.fromkeys(xs, v) has exactly the one map dict.fromkeys(xs, v); an exception from the iterable propagates."
+    source := "docstring, Lib/collections/__init__.py:1099"
+    status := .proven, prop := ``ChainMapFromkeys, thm := some ``chainMapFromkeys_proven },
+  { id := "coll-chainmap-objects", pyFile := file
+    pyFns := ["ChainMap.copy", "ChainMap.__or__", "ChainMap.__ior__", "ChainMap.clear"]
+    statement := "copy() is a new ChainMap with a new copy of maps[0] and maps[1:]'s own objects; cm | o puts maps[0] | o in that new dict and leaves self's maps[0] alone, NotImplemented for a non-Mapping, and raises (discarding the copy) when o fails; cm |= o returns self with maps[0] updated in place and maps[1:] untouched, a non-iterable raising with self unchanged and an operand failing part way raising with its earlier pairs kept in maps[0]; clear() empties maps[0] in place so later maps answer."
+    source := "docstrings, Lib/collections/__init__.py:1103, :1148; PEP 584"
+    status := .proven, prop := ``ChainMapObjects, thm := some ``chainMapObjects_proven },
+  { id := "coll-chainmap-ror-p", pyFile := file, pyFns := ["ChainMap.__ror__"]
+    statement := "other | cm builds dict(other) first: its value gives the one-map ChainMap of coll-chainmap-union-flat, its exception propagates, and a non-Mapping gets NotImplemented."
+    source := "PEP 584; Lib/collections/__init__.py:1162-1168"
+    status := .proven, prop := ``ChainMapRorP, thm := some ``chainMapRorP_proven }
 ]
 
 def userDictEntries : List Entry := [
   { id := "coll-userdict-matches-dict", pyFile := file
-    pyFns := ["UserDict.__len__", "UserDict.__getitem__", "UserDict.__iter__", "UserDict.__contains__", "UserDict.get"]
+    pyFns := ["UserDict.__len__", "UserDict.get"]
     statement := "Without __missing__, subscript, get, in, len, iter, pop, setdefault and (k, v) in items() give what the wrapped dict gives, on every dict."
     source := "Doc/library/collections.rst, UserDict: 'simulates a dictionary'"
     status := .proven, prop := ``UserDictMatchesDict, thm := some ``userDictMatchesDict_proven },
@@ -153,12 +177,11 @@ def userDictEntries : List Entry := [
     source := "invariant of a mapping"
     status := .proven, prop := ``UserDictSetDel, thm := some ``userDictSetDel_proven },
   { id := "coll-userdict-constructors-union", pyFile := file
-    pyFns := ["UserDict.__init__", "UserDict.__or__", "UserDict.__ror__", "UserDict.__ior__", "UserDict.__copy__",
-      "UserDict.copy", "UserDict.fromkeys"]
+    pyFns := ["UserDict.__or__", "UserDict.__ror__"]
     statement := "|, |= and the constructors agree with dict's and keep the class, for dict and UserDict operands alike; copy and copy.copy preserve items, order and class."
     source := "Doc/library/collections.rst, UserDict; PEP 584"
     status := .proven, prop := ``UserDictConstructorsUnion, thm := some ``userDictConstructorsUnion_proven },
-  { id := "coll-userdict-clear-repr", pyFile := file, pyFns := ["UserDict.__repr__"]
+  { id := "coll-userdict-clear-repr", pyFile := file, pyFns := []
     statement := "clear() empties any UserDict through its popitem loop, and repr(UserDict(d)) == repr(d)."
     source := "invariant; Lib/collections/__init__.py:1216-1217"
     status := .proven, prop := ``UserDictClearRepr, thm := some ``userDictClearRepr_proven },
@@ -179,7 +202,35 @@ def userDictEntries : List Entry := [
   { id := "coll-userdict-missing-narrow", pyFile := file, pyFns := ["UserDict.__contains__", "UserDict.get"]
     statement := "With __missing__, get and in never call it, and on a present key pop, setdefault and items() agree with dict."
     source := "narrowing of coll-userdict-missing-like-dict; gh-83445"
-    status := .proven, prop := ``UserDictMissingNarrow, thm := some ``userDictMissingNarrow_proven }
+    status := .proven, prop := ``UserDictMissingNarrow, thm := some ``userDictMissingNarrow_proven },
+  { id := "coll-userdict-init-p", pyFile := file, pyFns := ["UserDict.__init__"]
+    statement := "UserDict(src, **kw) holds dict(src, **kw)'s items for a dict or an iterable of the same pairs; an argument whose iter(), next(), pair unpacking or [] raises makes it raise."
+    source := "Doc/library/collections.rst, UserDict; Lib/collections/__init__.py:1177-1182; Lib/_collections_abc.py:965-984"
+    status := .proven, prop := ``UserDictInitP, thm := some ``userDictInitP_proven },
+  { id := "coll-userdict-getitem-p", pyFile := file, pyFns := ["UserDict.__getitem__", "UserDict.__contains__"]
+    statement := "u[k] is the value of a present key, else exactly what __missing__ returns or raises, else KeyError(k); k in u is k in u.data, false for an absent key even when __missing__ answers; an unhashable key raises the dict's error from both."
+    source := "Lib/collections/__init__.py:1188-1193, :1204-1207"
+    status := .proven, prop := ``UserDictGetitemP, thm := some ``userDictGetitemP_proven },
+  { id := "coll-userdict-iter-order", pyFile := file, pyFns := ["UserDict.__iter__"]
+    statement := "iter(u) follows insertion order: u[k] = v keeps a present key in place and appends a new one, del u[k] removes k from the order."
+    source := "Doc/library/stdtypes.rst, dict; Lib/collections/__init__.py:1201-1202"
+    status := .proven, prop := ``UserDictIterOrder, thm := some ``userDictIterOrder_proven },
+  { id := "coll-userdict-repr-r", pyFile := file, pyFns := ["UserDict.__repr__"]
+    statement := "repr(u) is repr(u.data): the dict's repr for ordinary values, {...} where u holds itself, and the exception of a raising key repr."
+    source := "Lib/collections/__init__.py:1216-1217; Objects/dictobject.c:3647-3650"
+    status := .proven, prop := ``UserDictReprR, thm := some ``userDictReprR_proven },
+  { id := "coll-userdict-ior-p", pyFile := file, pyFns := ["UserDict.__ior__"]
+    statement := "u |= other merges other's items into u.data from either branch (UserDict or anything dict |= reads); a non-iterable raises TypeError with u unchanged, an iterable failing part way raises with its earlier pairs merged."
+    source := "PEP 584; Lib/collections/__init__.py:1233-1238"
+    status := .proven, prop := ``UserDictIorP, thm := some ``userDictIorP_proven },
+  { id := "coll-userdict-copy-o", pyFile := file, pyFns := ["UserDict.__copy__", "UserDict.copy"]
+    statement := "copy.copy(u) and u.copy() are new objects of u's class whose data is a new dict (not u.data) with u's items (and, for __copy__ and subclasses, u's other attributes); when a subclass's copy.copy raises, copy raises it and u.data is restored."
+    source := "Lib/collections/__init__.py:1240-1257"
+    status := .proven, prop := ``UserDictCopyO, thm := some ``userDictCopyO_proven },
+  { id := "coll-userdict-fromkeys-p", pyFile := file, pyFns := ["UserDict.fromkeys"]
+    statement := "cls.fromkeys(xs, v) is an instance of cls with dict.fromkeys(xs, v)'s items; an exception from the iterable propagates."
+    source := "Lib/collections/__init__.py:1272-1277"
+    status := .proven, prop := ``UserDictFromkeysP, thm := some ``userDictFromkeysP_proven }
 ]
 
 def userListEntries : List Entry := [
@@ -319,7 +370,19 @@ def namedtupleEntries : List Entry := [
   { id := "coll-namedtuple-defaults", pyFile := file, pyFns := ["namedtuple"]
     statement := "Defaults fill the rightmost parameters in order, and _field_defaults has exactly the last len(defaults) fields."
     source := "Doc/library/collections.rst, namedtuple"
-    status := .proven, prop := ``NamedtupleDefaults, thm := some ``namedtupleDefaults_proven }
+    status := .proven, prop := ``NamedtupleDefaults, thm := some ``namedtupleDefaults_proven },
+  { id := "coll-namedtuple-conversions", pyFile := file, pyFns := ["namedtuple"]
+    statement := "A str field_names is its comma/whitespace-separated words; an iterable of names whose str() or next() raises raises before any check; tuple(defaults) raising does so only after the name checks pass."
+    source := "Lib/collections/__init__.py:387-389, :421-423; Doc/library/collections.rst, namedtuple"
+    status := .proven, prop := ``NamedtupleConversions, thm := some ``namedtupleConversions_proven },
+  { id := "coll-namedtuple-getnewargs", pyFile := file, pyFns := ["namedtuple"]
+    statement := "T(*p.__getnewargs__()) gives back p's values for every generated class and tuple of the right length."
+    source := "docstring, Lib/collections/__init__.py:481"
+    status := .proven, prop := ``NamedtupleGetnewargs, thm := some ``namedtupleGetnewargs_proven },
+  { id := "coll-namedtuple-repr", pyFile := file, pyFns := ["namedtuple"]
+    statement := "repr(p) is Cls(f1=r1, ..., fn=rn) with the instance's class name and the class's _fields (the names given, after rename) in order, and raises when a value's repr raises."
+    source := "docstring, Lib/collections/__init__.py:473; :435"
+    status := .proven, prop := ``NamedtupleRepr, thm := some ``namedtupleRepr_proven }
 ]
 
 def entries : List Entry :=

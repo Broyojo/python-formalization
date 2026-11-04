@@ -31,38 +31,48 @@ def coll_items(rng, small=False):
     return [[k, rng.randint(-3, 5) if small else coll_int(rng)] for k in keys]
 
 
-def coll_xs(rng):
-    return [rng.choice(coll_KEYS) for _ in range(rng.randint(0, 10))]
+def coll_xs(rng, unhashable=False):
+    xs = [rng.choice(coll_KEYS) for _ in range(rng.randint(0, 10))]
+    if unhashable and xs and rng.random() < 0.1:
+        xs.insert(rng.randrange(len(xs) + 1), "#L")
+    return xs
 
 
 def coll_src(rng, case):
     case["src"] = rng.choice(["none", "mapping", "iter"])
     if case["src"] == "mapping":
         case["items"] = coll_items(rng)
+        case["mty"] = rng.choice(["dict", "dict", "mapping", "bad_items"])
     elif case["src"] == "iter":
-        case["xs"] = coll_xs(rng)
+        case["xs"] = coll_xs(rng, unhashable=True)
+        case["fail"] = rng.random() < 0.2
     case["kw"] = coll_items(rng) if rng.random() < 0.3 else []
 
 
 def coll_gen_ctr(rng):
-    op = rng.choice(["new", "update", "subtract", "count_py", "count_c", "count_slow", "total",
-                     "most_common", "most_common", "elements", "copy", "reduce", "delitem",
-                     "getitem", "repr", "fromkeys", "keep_positive", "pos", "neg", "add", "sub",
-                     "or", "and", "xor", "xor", "eq", "ne", "le", "lt", "ge", "gt", "iadd", "isub", "ior",
-                     "iand", "ixor", "ixor"])
+    op = rng.choice(["new", "update", "update", "subtract", "count_py", "count_c", "count_c", "most_common",
+                     "most_common", "elements", "copy", "reduce", "delitem", "getitem", "repr", "fromkeys",
+                     "keep_positive", "pos", "neg", "add", "sub", "or", "and", "xor", "xor", "eq", "ne", "le",
+                     "lt", "ge", "gt", "iadd", "isub", "ior", "iand", "ixor", "ixor"])
     case = {"fn": "coll.ctr", "op": op, "a": coll_items(rng)}
     if op in ("new", "update", "subtract"):
         coll_src(rng, case)
-    if op in ("count_py", "count_c", "count_slow", "fromkeys"):
+    if op in ("count_py", "count_c"):
+        case["xs"] = coll_xs(rng, unhashable=True)
+        case["fail"] = rng.random() < 0.2
+        case["inst"] = rng.random() < 0.3
+        case["slow"] = rng.random() < 0.3
+    if op == "fromkeys":
         case["xs"] = coll_xs(rng)
     if op in ("delitem", "getitem"):
-        case["e"] = rng.choice(coll_KEYS)
+        case["e"] = rng.choice(coll_KEYS + ["#L"])
     if op == "most_common":
         case["n"] = rng.choice([None, None, 0, 1, 2, 3, 4, 5, 6, 7, 100, -1, -2, 2**63, -2**63])
     if op == "elements":
         case["a"] = coll_items(rng, small=True)
         if rng.random() < 0.1:
-            case["a"].append(["z", rng.choice([2**63, -2**63 - 1, 2**64])])
+            case["a"].insert(rng.randrange(len(case["a"]) + 1),
+                             ["z", rng.choice([2**63, -2**63 - 1, 2**64])])
     if op in ("add", "sub", "or", "and", "xor", "eq", "ne", "le", "lt", "ge", "gt"):
         r = rng.random()
         if r < 0.9:
@@ -82,8 +92,8 @@ def coll_gen_ctr(rng):
     return case
 
 
-def coll_ctr(items):
-    c = coll_collections.Counter()
+def coll_ctr(items, cls=None):
+    c = (cls or coll_collections.Counter)()
     for k, v in items:
         dict.__setitem__(c, k, v)
     return c
@@ -93,24 +103,69 @@ def coll_enc(d):
     return [[k, v] for k, v in d.items()]
 
 
+def coll_el(x):
+    return [1] if x == "#L" else x
+
+
+def coll_iter(xs, fail):
+    for x in xs:
+        yield coll_el(x)
+    if fail:
+        raise ValueError("boom")
+
+
+class coll_Map(coll_abc.Mapping):
+    """A Mapping that is not a dict: dict.update reads keys() and [] (bad: items() raises)."""
+    def __init__(self, d, bad):
+        self._d = d
+        self._bad = bad
+
+    def __getitem__(self, k):
+        return self._d[k]
+
+    def __iter__(self):
+        return iter(self._d)
+
+    def __len__(self):
+        return len(self._d)
+
+    def items(self):
+        if self._bad:
+            raise RuntimeError("items")
+        return self._d.items()
+
+
 def coll_src_arg(case):
     if case["src"] == "none":
         return None
     if case["src"] == "mapping":
-        return dict(map(tuple, case["items"]))
-    return iter(case["xs"])
+        d = dict(map(tuple, case["items"]))
+        mty = case.get("mty", "dict")
+        return d if mty == "dict" else coll_Map(d, mty == "bad_items")
+    return coll_iter(case["xs"], case.get("fail", False))
 
 
-def coll_ipy_count(m, xs):
-    mapping_get = m.get
-    for elem in xs:
-        m[elem] = mapping_get(elem, 0) + 1
+def coll_ipy_count(mapping, iterable):
+    'Lib/collections/__init__.py:540-544, verbatim.'
+    mapping_get = mapping.get
+    for elem in iterable:
+        mapping[elem] = mapping_get(elem, 0) + 1
 
 
 class coll_SlowCounter(coll_collections.Counter):
     """Overrides `get`, which sends the C `_count_elements` down its slow path."""
     def get(self, *args):
         return super().get(*args)
+
+
+def coll_out(thunk, state):
+    """A mutating call: the state it leaves and the exception, as `[state, exc]`."""
+    try:
+        thunk()
+        exc = None
+    except Exception as e:
+        exc = [type(e).__name__, str(e)]
+    return [coll_enc(state), exc]
 
 
 def coll_run_ctr(case):
@@ -122,47 +177,44 @@ def coll_run_ctr(case):
         if op == "new":
             return coll_enc(Counter(coll_src_arg(case), **dict(map(tuple, case["kw"]))))
         if op == "update":
-            a.update(coll_src_arg(case), **dict(map(tuple, case["kw"])))
-            return coll_enc(a)
+            return coll_out(lambda: a.update(coll_src_arg(case), **dict(map(tuple, case["kw"]))), a)
         if op == "subtract":
-            a.subtract(coll_src_arg(case), **dict(map(tuple, case["kw"])))
-            return coll_enc(a)
-        if op == "count_py":
-            coll_ipy_count(a, case["xs"])
-            return coll_enc(a)
-        if op == "count_c":
-            coll_collections._count_elements(a, case["xs"])
-            return coll_enc(a)
-        if op == "count_slow":
-            s = coll_SlowCounter()
-            for k, v in case["a"]:
-                dict.__setitem__(s, k, v)
-            coll_collections._count_elements(s, case["xs"])
-            return coll_enc(s)
-        if op == "total":
-            return a.total()
+            return coll_out(lambda: a.subtract(coll_src_arg(case), **dict(map(tuple, case["kw"]))), a)
+        if op in ("count_py", "count_c"):
+            m = coll_ctr(case["a"], coll_SlowCounter if case["slow"] else None)
+            if case["inst"]:
+                m.get = lambda k, d: dict.get(m, k, d) + 10
+            f = coll_ipy_count if op == "count_py" else coll_collections._count_elements
+            return coll_out(lambda: f(m, coll_iter(case["xs"], case["fail"])), m)
         if op == "most_common":
             r = a.most_common(case["n"]) if case["n"] is not None else a.most_common()
             return [list(p) for p in r]
         if op == "elements":
-            return list(a.elements())
+            out = []
+
+            def drain():
+                for x in a.elements():
+                    out.append(x)
+            r = coll_out(drain, {})
+            return [out, r[1]]
         if op == "copy":
-            return coll_enc(a.copy())
+            c = a.copy()
+            return [type(c).__name__, c is not a, coll_enc(c)]
         if op == "reduce":
             cls, args = a.__reduce__()
-            assert cls is Counter and len(args) == 1 and type(args[0]) is dict
-            return coll_enc(args[0])
+            assert len(args) == 1
+            return [cls.__name__, type(args[0]).__name__, coll_enc(args[0])]
         if op == "delitem":
-            del a[case["e"]]
+            del a[coll_el(case["e"])]
             return coll_enc(a)
         if op == "getitem":
-            return a[case["e"]]
+            return a[coll_el(case["e"])]
         if op == "repr":
             return repr(a)
         if op == "fromkeys":
             return coll_enc(Counter.fromkeys(case["xs"]))
         if op == "keep_positive":
-            return coll_enc(a._keep_positive())
+            return coll_out(a._keep_positive, a)
         if op == "pos":
             return coll_enc(+a)
         if op == "neg":
@@ -180,18 +232,9 @@ def coll_run_ctr(case):
             ty = case["bty"]
             b = coll_ctr(case["b"]) if ty == "Counter" else (
                 dict(map(tuple, case["b"])) if ty == "dict" else 5)
-            nonlocal_a = a
-            if op == "iadd":
-                nonlocal_a += b
-            elif op == "isub":
-                nonlocal_a -= b
-            elif op == "ior":
-                nonlocal_a |= b
-            elif op == "ixor":
-                nonlocal_a ^= b
-            else:
-                nonlocal_a &= b
-            return coll_enc(nonlocal_a)
+            f = {"iadd": Counter.__iadd__, "isub": Counter.__isub__, "ior": Counter.__ior__,
+                 "iand": Counter.__iand__, "ixor": Counter.__ixor__}[op]
+            return coll_out(lambda: f(a, b), a)
         raise AssertionError(op)
     return py_result(body)
 
@@ -215,6 +258,31 @@ class coll_DictMiss(dict):
         return -1
 
 
+class coll_UDRaise(coll_collections.UserDict):
+    def __copy__(self):
+        raise RuntimeError("nocopy")
+
+
+class coll_UDRaiseMiss(coll_collections.UserDict):
+    def __missing__(self, key):
+        raise ValueError("miss")
+
+
+def coll_pairs(case):
+    for k, v in case["o"]:
+        yield (k, v)
+    if case.get("bad"):
+        yield (1,)
+    if case.get("fail"):
+        raise ValueError("boom")
+
+
+def coll_gen_pairs(items):
+    for k, v in items:
+        yield (k, v)
+    raise ValueError("boom")
+
+
 coll_UD_CLASSES = [coll_collections.UserDict, coll_UDPlain, coll_UDMiss]
 
 
@@ -222,12 +290,16 @@ def coll_d(items):
     return dict(map(tuple, items))
 
 
+coll_CM_ODD_KEYS = ["a\\b", "it's", "q\"'x", "\t"]
+
+
 def coll_gen_cm(rng):
-    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "fromkeys",
-                     "copy", "new_child", "parents", "setitem", "delitem", "popitem", "pop",
-                     "clear", "ior", "or", "ror"])
+    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "repr_self",
+                     "getitem_dd", "contains_dd", "fromkeys", "copy", "new_child", "parents", "setitem",
+                     "delitem", "popitem", "pop", "clear", "ior", "ior", "or", "ror", "ror_bad"])
     n = rng.choice([0, 1, 1, 2, 2, 3, 4])
-    case = {"fn": "coll.cm", "op": op, "k": rng.choice(coll_KEYS),
+    keys = coll_KEYS + (coll_CM_ODD_KEYS if op in ("getitem", "delitem", "pop") else [])
+    case = {"fn": "coll.cm", "op": op, "k": rng.choice(keys),
             "maps": [coll_items(rng, small=True) if rng.random() < 0.8 else [] for _ in range(n)]}
     if rng.random() < 0.4:
         case["d"] = rng.randint(-3, 3)
@@ -235,18 +307,37 @@ def coll_gen_cm(rng):
         case["sub"] = 1
     if op == "fromkeys":
         case["xs"] = coll_xs(rng)
-    if op in ("or", "ror", "new_child"):
+        case["fail"] = rng.random() < 0.2
+    if op in ("or", "ror", "new_child", "ior"):
         if rng.random() < 0.8:
             case["o"] = coll_items(rng, small=True)
-    if op == "ior":
-        case["o"] = coll_items(rng, small=True)
     if op == "new_child":
         case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+    if op == "ior":
+        case["gen"] = rng.random() < 0.3
     return case
 
 
 def coll_enc_cm(c):
     return [coll_enc(m) for m in c.maps]
+
+
+class coll_BadMap(coll_abc.Mapping):
+    """A Mapping whose [] raises, so dict(other) fails."""
+    def __getitem__(self, k):
+        raise LookupError("gi")
+
+    def __iter__(self):
+        return iter(["x"])
+
+    def __len__(self):
+        return 1
+
+
+def coll_copy_bits(r, c):
+    return [r is not c, r.maps[0] is not c.maps[0],
+            len(r.maps) == len(c.maps) and all(x is y for x, y in zip(r.maps[1:], c.maps[1:])),
+            coll_enc_cm(r)]
 
 
 def coll_run_cm(case):
@@ -264,6 +355,10 @@ def coll_run_cm(case):
             return coll_enc_cm(ChainMap(*maps))
         if op == "getitem":
             return c[k]
+        if op in ("getitem_dd", "contains_dd"):
+            if maps:
+                c.maps = [coll_collections.defaultdict(int, maps[0])] + maps[1:]
+            return c[k] if op == "getitem_dd" else (k in c)
         if op == "get":
             return c.get(k, d) if d is not None else c.get(k)
         if op == "len":
@@ -276,10 +371,13 @@ def coll_run_cm(case):
             return bool(c)
         if op == "repr":
             return repr(c)
+        if op == "repr_self":
+            c.maps.append(c)
+            return repr(c)
         if op == "fromkeys":
-            return coll_enc_cm(ChainMap.fromkeys(case["xs"], 0 if d is None else d))
+            return coll_enc_cm(ChainMap.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         if op == "copy":
-            return coll_enc_cm(c.copy())
+            return coll_copy_bits(c.copy(), c)
         if op == "new_child":
             m = coll_d(case["o"]) if "o" in case else None
             return coll_enc_cm(c.new_child(m, **coll_d(case["kw"])))
@@ -301,11 +399,24 @@ def coll_run_cm(case):
             c.clear()
             return coll_enc_cm(c)
         if op == "ior":
-            r = c
-            r |= coll_d(case["o"])
-            return coll_enc_cm(r)
+            m0 = c.maps[0] if c.maps else None
+            if "o" not in case:
+                other = 5
+            elif case.get("gen"):
+                other = coll_gen_pairs(case["o"])
+            else:
+                other = coll_d(case["o"])
+            try:
+                r = c
+                r |= other
+                bits, exc = [r is c, r.maps[0] is m0], None
+            except Exception as e:
+                bits, exc = None, [type(e).__name__, str(e)]
+            return [bits, coll_enc_cm(c), exc]
+        if op == "ror_bad":
+            return coll_enc_cm(ChainMap.__ror__(c, coll_BadMap()))
         if op == "or":
-            return coll_enc_cm(c | (coll_d(case["o"]) if "o" in case else 5))
+            return coll_copy_bits(c | (coll_d(case["o"]) if "o" in case else 5), c)
         if op == "ror":
             return coll_enc_cm((coll_d(case["o"]) if "o" in case else 5) | c)
         raise AssertionError(op)
@@ -317,9 +428,23 @@ def coll_gen_ud(rng):
                      "repr", "or", "ror", "ior", "copy", "copy_dunder", "fromkeys", "pop",
                      "popitem", "setdefault", "clear", "items_contains", "reversed",
                      "dict_reversed", "dict_getitem",
-                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains"])
+                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains",
+                     "new_p", "getitem_p", "repr_self", "ior_p", "ior_p", "copy_p", "copy_p", "fromkeys_p"])
     case = {"fn": "coll.ud", "op": op, "a": coll_items(rng, small=True),
             "sub": rng.choice([0, 1, 2]), "k": rng.choice(coll_KEYS)}
+    if op == "new_p":
+        case["o"] = coll_items(rng, small=True)
+        case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+        case["bad"] = rng.random() < 0.2
+        case["fail"] = rng.random() < 0.2
+    if op == "ior_p":
+        case["oty"] = rng.choice(["user", "dict", "gen", "int"])
+        case["o"] = coll_items(rng, small=True)
+    if op == "copy_p":
+        case["raise"] = rng.random() < 0.3
+    if op == "fromkeys_p":
+        case["xs"] = coll_xs(rng)
+        case["fail"] = rng.random() < 0.2
     if rng.random() < 0.5:
         case["d"] = rng.randint(-3, 3)
     if op in ("items_contains", "dict_items_contains") and rng.random() < 0.5:
@@ -428,6 +553,40 @@ def coll_run_ud(case):
             return [r, coll_enc(plain)]
         if op == "dict_items_contains":
             return (k, 0 if d is None else d) in plain.items()
+        if op == "new_p":
+            return coll_enc(cls(coll_pairs(case), **coll_d(case["kw"])).data)
+        if op == "getitem_p":
+            v = coll_UDRaiseMiss()
+            v.data = coll_d(case["a"])
+            return v[k]
+        if op == "repr_self":
+            u[k] = u
+            return repr(u)
+        if op == "ior_p":
+            ty = case["oty"]
+            o = {"user": lambda: coll_collections.UserDict(coll_d(case["o"])), "dict": lambda: coll_d(case["o"]),
+                 "gen": lambda: coll_gen_pairs(case["o"]), "int": lambda: 5}[ty]()
+            try:
+                r = u
+                r |= o
+                assert r is u
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [coll_enc_ud(u), exc]
+        if op == "copy_p":
+            v = (coll_UDRaise if case["raise"] else cls)()
+            v.data = coll_d(case["a"])
+            v.extra = 5
+            try:
+                c = v.copy()
+                res = {"ok": [type(c).__name__, c is not v, c.data is not v.data, coll_enc(c.data),
+                              len(vars(c)) - 1]}
+            except Exception as e:
+                res = {"exc": type(e).__name__, "msg": str(e)}
+            return [coll_enc(v.data), res]
+        if op == "fromkeys_p":
+            return coll_enc_ud(cls.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         raise AssertionError(op)
     return py_result(body)
 
@@ -951,8 +1110,8 @@ class collabc_E:
 
 
 class collabc_Seq(collabc_A.Sequence):
-    def __init__(self, xs, fail):
-        self.xs, self.fail = xs, fail
+    def __init__(self, xs, fail, badlen=False):
+        self.xs, self.fail, self.badlen = xs, fail, badlen
 
     def __getitem__(self, i):
         if i == self.fail:
@@ -960,12 +1119,17 @@ class collabc_Seq(collabc_A.Sequence):
         return self.xs[i]
 
     def __len__(self):
+        if self.badlen:
+            raise ValueError("len")
         return len(self.xs)
 
 
+collabc_LENEXC = {"TypeError": TypeError, "ValueError": ValueError}
+
+
 class collabc_MSeq(collabc_A.MutableSequence):
-    def __init__(self, xs, fail):
-        self.xs, self.fail = list(xs), fail
+    def __init__(self, xs, fail, lenexc=None):
+        self.xs, self.fail, self.lenexc = list(xs), fail, lenexc
 
     def __getitem__(self, i):
         if i == self.fail:
@@ -979,6 +1143,8 @@ class collabc_MSeq(collabc_A.MutableSequence):
         del self.xs[i]
 
     def __len__(self):
+        if self.lenexc:
+            raise collabc_LENEXC[self.lenexc]("len")
         return len(self.xs)
 
     def insert(self, i, v):
@@ -993,11 +1159,14 @@ def collabc_tail(xs):
 
 class collabc_Set(collabc_A.MutableSet):
     bad = None
+    uh = None
     itail = False
 
     def __init__(self, it=()):
         self.xs = []
         for x in it:
+            if collabc_Set.uh is not None and x == collabc_Set.uh:
+                raise TypeError("unhashable")
             if x not in self.xs:
                 self.xs.append(x)
 
@@ -1010,6 +1179,8 @@ class collabc_Set(collabc_A.MutableSet):
         return collabc_tail(list(self.xs)) if self.itail else iter(list(self.xs))
 
     def __len__(self):
+        if getattr(self, "badlen", False):
+            raise ValueError("len")
         return len(self.xs)
 
     def add(self, x):
@@ -1023,14 +1194,42 @@ class collabc_Set(collabc_A.MutableSet):
     __hash__ = None
 
 
+class collabc_GI:
+    """Iterable through __getitem__ only: not an Iterable to the ABC."""
+
+    def __init__(self, xs, tail):
+        self.xs, self.tail = xs, tail
+
+    def __getitem__(self, i):
+        if i < len(self.xs):
+            return self.xs[i]
+        if self.tail:
+            raise ValueError("itail")
+        raise IndexError
+
+
+class collabc_R:
+    """Not iterable, with a reflected subtraction that gives a set."""
+
+    def __init__(self, xs):
+        self.xs = xs
+
+    def __rsub__(self, o):
+        s = collabc_Set()
+        s.xs = list(self.xs)
+        return s
+
+
 class collabc_Map(collabc_A.MutableMapping):
     itail = False
 
-    def __init__(self, items, fail):
-        self.d, self.fail = dict(items), fail
+    def __init__(self, items, fail, failkey=False):
+        self.d, self.fail, self.failkey = dict(items), fail, failkey
 
     def __getitem__(self, k):
         if k == self.fail:
+            if self.failkey:
+                raise KeyError(k)
             raise ValueError("fail")
         return self.d[k]
 
@@ -1047,11 +1246,37 @@ class collabc_Map(collabc_A.MutableMapping):
         return len(self.d)
 
 
-class collabc_HSet(collabc_A.Set):
-    """A Set that reports the given hashes, for Set._hash."""
+class collabc_MapO(collabc_Map):
+    """A mapping whose own __contains__ differs from Mapping.__contains__."""
 
-    def __init__(self, hashes):
-        self.hs = [collabc_H(h) for h in hashes]
+    def __contains__(self, k):
+        return k % 2 == 0
+
+
+class collabc_KeysLike:
+    def __init__(self, pairs, fail, tail):
+        self.d, self.fail, self.tail = dict(pairs), fail, tail
+
+    def keys(self):
+        return collabc_tail(list(self.d)) if self.tail else iter(list(self.d))
+
+    def __getitem__(self, k):
+        if k == self.fail:
+            raise ValueError("fail")
+        return self.d[k]
+
+
+class collabc_BadAttr:
+    def __getattr__(self, n):
+        raise ValueError("ga")
+
+
+class collabc_HSet(collabc_A.Set):
+    """A Set that reports the given hashes, for Set._hash; None is an unhashable element."""
+
+    def __init__(self, hashes, badlen=False):
+        self.hs = [[0] if h is None else collabc_H(h) for h in hashes]
+        self.badlen = badlen
 
     def __contains__(self, x):
         return x in self.hs
@@ -1060,6 +1285,8 @@ class collabc_HSet(collabc_A.Set):
         return iter(self.hs)
 
     def __len__(self):
+        if self.badlen:
+            raise ValueError("len")
         return len(self.hs)
 
 
@@ -1098,6 +1325,8 @@ def collabc_scripted(base, stop_exc, async_=False):
 
         if async_:
             async def asend(self, v):
+                if not self.s.script:
+                    raise StopAsyncIteration(0)
                 return self.s.step()
 
             async def athrow(self, typ, val=None, tb=None):
@@ -1152,18 +1381,12 @@ collabc_METHODS = ["__hash__", "__await__", "send", "throw", "close", "__aiter__
                    "asend", "athrow", "aclose", "__iter__", "__next__", "__reversed__", "__len__",
                    "__contains__", "__buffer__", "__call__", "__eq__", "other"]
 collabc_STUBS = {
-    "Hashable.__hash__": lambda: collabc_A.Hashable.__hash__(None),
-    "Sized.__len__": lambda: collabc_A.Sized.__len__(None),
-    "Container.__contains__": lambda: collabc_A.Container.__contains__(None, 1),
-    "Callable.__call__": lambda: collabc_A.Callable.__call__(None),
     "Awaitable.__await__": lambda: len(list(collabc_A.Awaitable.__await__(None))),
     "Iterable.__iter__": lambda: len(list(collabc_A.Iterable.__iter__(None))),
     "Reversible.__reversed__": lambda: len(list(collabc_A.Reversible.__reversed__(None))),
     "Iterator.__next__": lambda: collabc_A.Iterator.__next__(None),
     "Generator.send": lambda: collabc_A.Generator.send(None, 1),
     "Coroutine.send": lambda: collabc_A.Coroutine.send(None, 1),
-    "AsyncIterator.__anext__": lambda: collabc_drive(collabc_A.AsyncIterator.__anext__(None)),
-    "AsyncGenerator.asend": lambda: collabc_drive(collabc_A.AsyncGenerator.asend(None, 1)),
     "AsyncIterable.__aiter__": lambda: collabc_A.AsyncIterable.__aiter__(None),
     "Buffer.__buffer__": lambda: collabc_A.Buffer.__buffer__(None, 0),
     "MutableSet.add": lambda: collabc_A.MutableSet.add(None, 1),
@@ -1176,7 +1399,6 @@ collabc_STUBS = {
     "MutableSequence.__delitem__": lambda: collabc_A.MutableSequence.__delitem__(None, 1),
     "MutableSequence.insert": lambda: collabc_A.MutableSequence.insert(None, 1, 2),
 }
-collabc_EXCS = {"ValueError": ValueError, "KeyError": KeyError, "GeneratorExit": GeneratorExit}
 
 
 def collabc_rand_class(rng):
@@ -1187,6 +1409,16 @@ def collabc_rand_class(rng):
             d[m] = None if rng.random() < 0.25 else (lambda self: 0)
         C = type(f"C{depth}", (C,), d)
     return C
+
+
+def collabc_full_class(rng, x):
+    """A class defining exactly the methods of hook `x`, or all but one, so that True answers are frequent."""
+    ms = list(collabc_A.__dict__[x].__subclasshook__.__func__.__code__.co_consts)
+    ms = [m for m in ms if isinstance(m, str) and m.startswith(("_", "s", "t", "c", "a")) and m != x]
+    if ms and rng.random() < .4:
+        ms.remove(rng.choice(ms))
+    d = {m: (None if rng.random() < .1 else (lambda self: 0)) for m in ms}
+    return type("F", (object,), d)
 
 
 def collabc_mro(C):
@@ -1207,6 +1439,37 @@ def collabc_opt(rng, xs):
     return None if rng.random() < 0.7 or not xs else rng.choice(xs)
 
 
+collabc_ASYNC_STUBS = {
+    "AsyncIterator.__anext__": lambda: collabc_A.AsyncIterator.__anext__(None),
+    "AsyncGenerator.asend": lambda: collabc_A.AsyncGenerator.asend(None, 1),
+}
+
+
+def collabc_stub(name):
+    if name in collabc_ASYNC_STUBS:
+        c = py_result(collabc_ASYNC_STUBS[name])
+        if "exc" in c:
+            return {"callexc": c}
+        return py_result(lambda: collabc_drive(c["ok"]))
+    return py_result(collabc_STUBS[name])
+
+
+class collabc_BadRepr(dict):
+    def __repr__(self):
+        raise ValueError("repr")
+
+
+class collabc_NotStr(dict):
+    def __repr__(self):
+        return 5
+
+
+collabc_TOBJ = [{"k": "cls", "n": "ValueError"}, {"k": "cls", "n": "KeyError"}, {"k": "cls_ude"},
+                {"k": "cls_bad"}, {"k": "inst", "n": "ValueError"}, {"k": "func"}, {"k": "wtb"},
+                {"k": "other"}]
+collabc_CITEMS = ["int", "str", "bool", ["int"], {"t": ["int", "str"]}, "...", "~P"]
+
+
 def collabc_gen(rng):
     r = rng.randrange(0, 25)
     xs = collabc_list(rng)
@@ -1218,34 +1481,57 @@ def collabc_gen(rng):
         return {"fn": "collabc.check_methods", "mro": collabc_mro(collabc_rand_class(rng)),
                 "methods": rng.sample(collabc_METHODS, rng.randrange(0, 4))}
     if r == 1:
-        return {"fn": "collabc.hook", "mro": collabc_mro(collabc_rand_class(rng)),
-                "x": rng.choice(collabc_HOOKS), "cls": rng.choice(collabc_HOOKS)}
+        x = rng.choice(collabc_HOOKS)
+        C = collabc_full_class(rng, x) if rng.random() < .5 else collabc_rand_class(rng)
+        return {"fn": "collabc.hook", "mro": collabc_mro(C),
+                "x": x, "cls": x if rng.random() < .7 else rng.choice(collabc_HOOKS)}
     if r == 2:
-        return {"fn": "collabc.stub", "name": rng.choice(list(collabc_STUBS))}
+        if rng.random() < .5:
+            return {"fn": "collabc.stub", "name": rng.choice(list(collabc_STUBS) + list(collabc_ASYNC_STUBS))}
+        k = rng.randrange(0, 4)
+        if k == 0:
+            return {"fn": "collabc.list_remove", "xs": xs, "v": v, "bad": bad}
+        act = rng.choice(["ignore", "always", "error"])
+        if k == 1:
+            return {"fn": "collabc.bytestring_new", "act": act,
+                    "name": rng.choice(["ByteString", "Other", "bytestring"])}
+        if k == 2:
+            return {"fn": "collabc.bytestring_check", "answer": rng.random() < .5, "act": act}
+        if rng.random() < .5:
+            ys = [None if rng.random() < .15 else x for x in xs]
+            return {"fn": "collabc.from_iterable", "kind": rng.choice(["set", "keys", "items"]), "xs": ys,
+                    "tail": rng.random() < .2, "uh": collabc_opt(rng, xs)}
+        return {"fn": "collabc.view_repr", "cls": rng.choice(["KeysView", "ItemsView", "ValuesView"]),
+                "kind": rng.choice(["ok", "raise", "notstr"])}
     if r == 3:
-        def arg():
-            return rng.choice([{"k": "cls", "n": "ValueError"}, {"k": "cls", "n": "KeyError"},
-                               {"k": "inst", "n": "ValueError"}, {"k": "other"}])
-        return {"fn": "collabc.throw", "typ": arg(), "val": None if rng.random() < .5 else arg(),
-                "tb": rng.random() < .5}
+        return {"fn": "collabc.throw", "typ": rng.choice(collabc_TOBJ),
+                "val": None if rng.random() < .5 else rng.choice(collabc_TOBJ),
+                "tb": rng.choice(["none", "tb", "bad"])}
     if r in (4, 5):
         script = [rng.choice([["y", 1], ["r", 7], ["exit", 0], ["e", 3]])
                   for _ in range(rng.randrange(0, 3))]
         if r == 4:
             return {"fn": "collabc.gen_close", "script": script,
                     "kind": rng.choice(["gen", "coro", "agen"])}
-        return {"fn": rng.choice(["collabc.gen_next", "collabc.builtin_close"]), "script": script[:1]}
+        return {"fn": rng.choice(["collabc.gen_next", "collabc.agen_next", "collabc.builtin_close",
+                                  "collabc.builtin_aclose"]),
+                "script": script[:1], "kind": rng.choice(["gen", "coro"])}
     if r == 6:
-        if rng.random() < .3:
-            return {"fn": "collabc.callable_getitem", "shape": rng.choice(["tv", "param"]),
-                    "a": rng.choice(["int", "str"]), "b": rng.choice(["bool", "float"])}
-        k = rng.choice(["seq", "ell", "param", "other", "bad"])
-        return {"fn": "collabc.callable_new", "a": {"k": k, "repr": "~T", "items":
-                rng.sample(["int", "str", "bool"], rng.randrange(0, 3))}, "r": "float"}
+        if rng.random() < .35:
+            a, b = rng.choice(["int", "str"]), rng.choice(["bool", "float"])
+            shape = rng.choice(["tv", "param", "listlist", "pseq"])
+            new = {"tv": [a, "int", b], "param": [{"t": [a, b]}, "int"], "listlist": [[a], [b]],
+                   "pseq": [{"t": [a]}, [b]]}[shape]
+            return {"fn": "collabc.callable_getitem", "shape": shape, "a": a, "b": b, "new": new}
+        k = rng.randrange(0, 8)
+        items = [rng.choice(collabc_CITEMS[:5]) for _ in range(rng.randrange(0, 4))]
+        a = [items, {"t": items}, "...", "~P", "C", "int", "notpair",
+             [rng.choice([["int"], ["int", "str"], "~P", "..."])]][k]
+        return {"fn": "collabc.callable_new", "a": a, "r": rng.choice(["float", "...", ["int"]])}
     if r == 7:
         return {"fn": "collabc.seq_iter", "xs": xs, "fail": fail}
     if r == 8:
-        return {"fn": "collabc.seq_reversed", "xs": xs, "fail": fail}
+        return {"fn": "collabc.seq_reversed", "xs": xs, "fail": fail, "badlen": rng.random() < .15}
     if r in (9, 10):
         return {"fn": "collabc." + ("seq_contains" if r == 9 else "seq_count"), "xs": xs,
                 "fail": fail, "bad": bad, "v": v}
@@ -1254,9 +1540,11 @@ def collabc_gen(rng):
         start = rng.choice([0, 1, -1, n, -n, n + 1, -n - 1, n // 2, -2**70, 2**70])
         stop = rng.choice([None, 0, 1, -1, n, -n, n + 1, -n - 1, n // 2, -2**70, 2**70])
         return {"fn": rng.choice(["collabc.seq_index", "collabc.list_index"]), "xs": xs,
-                "fail": fail, "bad": bad, "v": v, "start": start, "stop": stop}
+                "fail": fail, "bad": bad, "v": v, "start": start, "stop": stop,
+                "badlen": rng.random() < .15}
     if r == 12:
-        return {"fn": "collabc.mseq_append", "xs": xs, "v": v}
+        return {"fn": "collabc.mseq_append", "xs": xs, "v": v,
+                "lenexc": None if rng.random() < .8 else rng.choice(["TypeError", "ValueError"])}
     if r == 13:
         return {"fn": "collabc.mseq_pop", "xs": xs, "i": idx, "fail": fail}
     if r == 14:
@@ -1264,62 +1552,64 @@ def collabc_gen(rng):
                 "fail": fail}
     if r == 15:
         return {"fn": "collabc.mseq_extend", "xs": xs, "fail": fail,
-                "vs": None if rng.random() < .3 else collabc_list(rng, 4)}
+                "vs": None if rng.random() < .3 else collabc_list(rng, 4),
+                "vtail": rng.random() < .2, "iadd": rng.random() < .3,
+                "lenexc": None if rng.random() < .7 else rng.choice(["TypeError", "ValueError"])}
     if r == 16:
-        k = rng.randrange(0, 6)
-        if k == 0:
-            return {"fn": "collabc.list_remove", "xs": xs, "v": v, "bad": bad}
-        if k == 5:
+        if rng.random() < .3:
             return {"fn": "collabc.module_getattr", "name": rng.choice(["ByteString", "ByteString", "Other"]),
-                    "error": rng.random() < .3}
-        if k == 1:
-            return {"fn": "collabc.bytestring_new",
-                    "name": rng.choice(["ByteString", "Other", "bytestring"])}
-        if k == 2:
-            return {"fn": "collabc.bytestring_check", "answer": rng.random() < .5}
-        if k == 3:
-            return {"fn": "collabc.view_repr", "cls": rng.choice(["KeysView", "ItemsView", "ValuesView"]),
-                    "r": "{1: 2}"}
+                    "act": rng.choice(["ignore", "always", "error"])}
         return {"fn": "collabc.mseq_remove", "xs": xs, "v": v, "fail": fail, "bad": bad}
     a, b = collabc_uniq(xs), collabc_list(rng)
-    kind = rng.choice(["set", "iter", "other"])
-    if kind == "set":
+    kind = rng.choice(["set", "iter", "gi", "other", "rsub"])
+    if kind in ("set", "rsub"):
         b = collabc_uniq(b)
+    uh = None if rng.random() < .75 or not (a or b) else rng.choice(a + b)
     if r == 17:
         return {"fn": "collabc.set_cmp", "op": rng.choice(["le", "lt", "ge", "gt", "eq"]), "xs": a,
-                "other": b, "okind": kind, "bad": bad, **collabc_tails(rng)}
+                "other": b, "okind": kind, "bad": bad, "badlen": rng.random() < .1, **collabc_tails(rng)}
     if r == 18:
         return {"fn": "collabc.set_op", "op": rng.choice(["and", "or", "sub", "rsub", "xor"]),
-                "xs": a, "other": b, "okind": kind, "bad": bad, **collabc_tails(rng)}
+                "xs": a, "other": b, "okind": kind, "bad": bad, "uh": uh, **collabc_tails(rng)}
     if r == 19:
         return {"fn": "collabc.set_isdisjoint", "xs": a, "other": b, "okind": kind, "bad": bad,
                 **collabc_tails(rng)}
     if r == 20:
-        hs = rng.sample([0, 1, -2, 2**61 - 1, -2**63, 2**63 - 1, 5, 2**32, 123456789, -77,
+        hs = rng.sample([0, 1, -1, -2, 2**61 - 1, -2**63, 2**63 - 1, 5, 2**32, 123456789, -77,
                          rng.randrange(-2**63, 2**63)], rng.randrange(0, 8))
-        return {"fn": rng.choice(["collabc.set_hash", "collabc.frozenset_hash"]), "hashes": hs,
+        if rng.random() < .5:
+            if hs and rng.random() < .3:
+                hs[rng.randrange(len(hs))] = None
+            return {"fn": "collabc.set_hash", "hashes": hs, "badlen": rng.random() < .1}
+        return {"fn": "collabc.frozenset_hash", "hashes": [h for h in hs if h != -1],
                 "nulls": rng.randrange(0, 9), "dummies": rng.randrange(0, 3)}
     if r == 21:
         return {"fn": "collabc.mset_op", "op": rng.choice(["ior", "iand", "ixor", "isub", "clear",
                                                            "remove", "pop"]),
-                "xs": a, "other": b, "okind": kind, "bad": bad, "v": v,
+                "xs": a, "other": b, "okind": kind, "bad": bad, "uh": uh, "v": v,
                 "selfit": rng.random() < .2, **collabc_tails(rng)}
     d = [[k, rng.randrange(-2, 4)] for k in collabc_uniq(xs)]
     k = rng.choice(xs) if xs and rng.random() < .6 else rng.randrange(-3, 6)
     failk = None if rng.random() < .75 else rng.randrange(-3, 6)
     if r == 22:
+        d2 = d if rng.random() < .5 else [[k2, rng.randrange(-2, 4)] for k2 in collabc_uniq(collabc_list(rng))]
         return {"fn": "collabc.map_op", "op": rng.choice(["get", "contains", "items", "values",
                                                           "valuecontains", "keyscontain",
-                                                          "itemcontains"]),
-                "d": d, "k": k, "default": 99, "fail": failk, "bad": bad, "v": rng.randrange(-2, 4),
-                "ikind": rng.choice(["tuple", "list", "short", "long", "none"]),
+                                                          "itemcontains", "eq"]),
+                "d": d, "d2": d2, "k": k, "default": 99, "fail": failk, "failkey": rng.random() < .3,
+                "bad": bad, "v": rng.randrange(-2, 4), "ovr": rng.random() < .3,
+                "ikind": rng.choice(["tuple", "list", "short", "empty", "long", "dict3", "str3", "iter3",
+                                     "sublist3", "gen2t", "gen1t", "none"]),
                 "who": rng.choice(["abc", "dict"]), **collabc_tails(rng)}
     other = [[rng.randrange(-3, 6), rng.randrange(-2, 4)] for _ in range(rng.randrange(0, 4))]
-    op = rng.choice(["pop", "popd", "popitem", "clear", "setdefault", "update_map", "update_pairs"])
-    if op == "update_map":
+    op = rng.choice(["pop", "popd", "popitem", "clear", "setdefault", "update_map", "update_keys",
+                     "update_pairs", "update_hasattr"])
+    if op in ("update_map", "update_keys"):
         other = [[k2, v2] for k2, v2 in dict(map(tuple, other)).items()]
+    items = [rng.choice([p, p, "short", "long", "none", "str3", "empty"]) for p in other]
     return {"fn": "collabc.mmap_op", "op": op, "d": d, "k": k, "default": 99, "fail": failk,
-            "kw": [], "other": other, **collabc_tails(rng)}
+            "ofail": None if rng.random() < .7 else rng.randrange(-3, 6),
+            "kw": [], "other": other, "items": items, **collabc_tails(rng)}
 
 
 def collabc_tails(rng):
@@ -1338,6 +1628,10 @@ def collabc_operand(case):
         return collabc_self(collabc_Set, case["other"], tail=case["otail"])
     if k == "iter":
         return collabc_tail(case["other"]) if case["otail"] else iter(case["other"])
+    if k == "gi":
+        return collabc_GI(case["other"], case["otail"])
+    if k == "rsub":
+        return collabc_R(case["other"])
     return 5
 
 
@@ -1361,6 +1655,7 @@ def collabc_run(case):
     fail = case.get("fail")
     collabc_E.bad = bad
     collabc_Set.bad = bad
+    collabc_Set.uh = None
     if fn == "check_methods":
         return {"ok": collabc_ret(collabc_check_methods(collabc_fake(case["mro"]),
                                                         *case["methods"]))}
@@ -1369,7 +1664,11 @@ def collabc_run(case):
         hook = getattr(collabc_A, case["x"]).__dict__["__subclasshook__"].__func__
         return collabc_hook(cls, hook, case["mro"])
     if fn == "stub":
-        return py_result(collabc_STUBS[case["name"]])
+        return collabc_stub(case["name"])
+    if fn == "agen_next":
+        return collabc_agen_next([tuple(s) for s in case["script"]])
+    if fn == "from_iterable":
+        return collabc_from_iterable(case)
     if fn == "throw":
         return collabc_throw(case)
     if fn == "gen_close":
@@ -1380,7 +1679,9 @@ def collabc_run(case):
             return collabc_run_gen(collabc_CoroC, script, lambda g: g.close())
         return collabc_run_gen(collabc_AGenC, script, lambda g: collabc_drive(g.aclose()))
     if fn == "builtin_close":
-        return collabc_builtin_close([tuple(s) for s in case["script"]])
+        return collabc_builtin_close([tuple(s) for s in case["script"]], case["kind"])
+    if fn == "builtin_aclose":
+        return collabc_builtin_aclose([tuple(s) for s in case["script"]])
     if fn == "callable_getitem":
         return collabc_getitem(case)
     if fn == "gen_next":
@@ -1393,7 +1694,7 @@ def collabc_run(case):
         s = collabc_Seq(raw, fail)
         return py_result(lambda: list(iter(s)))
     if fn == "seq_reversed":
-        s = collabc_Seq(raw, fail)
+        s = collabc_Seq(raw, fail, case["badlen"])
         return py_result(lambda: list(reversed(s)))
     if fn == "seq_contains":
         s = collabc_Seq(xs, fail)
@@ -1402,7 +1703,7 @@ def collabc_run(case):
         s = collabc_Seq(xs, fail)
         return py_result(lambda: s.count(collabc_E(case["v"])))
     if fn == "seq_index":
-        s = collabc_Seq(xs, fail)
+        s = collabc_Seq(xs, fail, case["badlen"])
         return py_result(lambda: s.index(collabc_E(case["v"]), case["start"], case["stop"]))
     if fn == "list_index":
         def f():
@@ -1413,9 +1714,8 @@ def collabc_run(case):
                 return None
         return collabc_plain(f)
     if fn == "mseq_append":
-        s = collabc_MSeq(raw, None)
-        s.append(case["v"])
-        return {"ok": s.xs}
+        s = collabc_MSeq(raw, None, case["lenexc"])
+        return py_result(lambda: (s.append(case["v"]), s.xs)[1])
     if fn == "mseq_pop":
         s = collabc_MSeq(raw, fail)
         return py_result(lambda: [s.pop(case["i"]), s.xs])
@@ -1426,9 +1726,12 @@ def collabc_run(case):
         s = collabc_MSeq(raw, fail)
         return py_result(lambda: (s.reverse(), s.xs)[1])
     if fn == "mseq_extend":
-        s = collabc_MSeq(raw, fail)
+        s = collabc_MSeq(raw, fail, case["lenexc"])
         vs = case["vs"]
-        return py_result(lambda: (s.extend(s if vs is None else vs), s.xs)[1])
+        vals = s if vs is None else (collabc_tail(vs) if case["vtail"] else iter(vs))
+        if case["iadd"]:
+            return py_result(lambda: s.__iadd__(vals).xs)
+        return py_result(lambda: (s.extend(vals), s.xs)[1])
     if fn == "mseq_remove":
         s = collabc_MSeq(xs, fail)
 
@@ -1452,37 +1755,36 @@ def collabc_run(case):
         import warnings
         g, B = vars(collabc_A), collabc_bytestring()
         del g["ByteString"]
-        with warnings.catch_warnings():
-            warnings.simplefilter("error" if case["error"] else "ignore")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter(case["act"])
             r = py_result(lambda: None if getattr(collabc_A, case["name"]) is B else "other")
         loaded = "ByteString" in g
         g["ByteString"] = B
-        return {"ok": [loaded, r]}
-    if fn == "bytestring_new":
+        return {"ok": [[[x.category.__name__, str(x.message)] for x in w], loaded, r]}
+    if fn in ("bytestring_new", "bytestring_check"):
         import warnings
         B = collabc_bytestring()
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            type(B)(case["name"], (), {})
-        return {"ok": any(x.category is DeprecationWarning for x in w)}
-    if fn == "bytestring_check":
-        import warnings
-        B = collabc_bytestring()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            a = isinstance(b"" if case["answer"] else 1, B)
-        return {"ok": [any(x.category is DeprecationWarning for x in w), a]}
+            warnings.simplefilter(case["act"])
+            if fn == "bytestring_new":
+                r = py_result(lambda: (type(B)(case["name"], (), {}), None)[1])
+            else:
+                r = py_result(lambda: isinstance(b"" if case["answer"] else 1, B))
+        return {"ok": [[[x.category.__name__, str(x.message)] for x in w], r]}
     if fn == "view_repr":
         cls = getattr(collabc_A, case["cls"])
-        return {"ok": repr(cls({1: 2}))}
+        m = {"ok": dict, "raise": collabc_BadRepr, "notstr": collabc_NotStr}[case["kind"]]({1: 2})
+        return py_result(lambda: repr(cls(m)))
     if fn == "set_cmp":
         s = collabc_self(collabc_Set, raw, tail=case["selftail"])
+        s.badlen = case["badlen"]
         o = collabc_operand(case)
         m = {"le": s.__le__, "lt": s.__lt__, "ge": s.__ge__, "gt": s.__gt__, "eq": s.__eq__}
         return py_result(lambda: collabc_ret(m[case["op"]](o)))
     if fn == "set_op":
         s = collabc_self(collabc_Set, raw, tail=case["selftail"])
         o = collabc_operand(case)
+        collabc_Set.uh = case["uh"]
         m = {"and": s.__and__, "or": s.__or__, "sub": s.__sub__, "rsub": s.__rsub__,
              "xor": s.__xor__}
         return py_result(lambda: collabc_setret(m[case["op"]](o)))
@@ -1491,7 +1793,7 @@ def collabc_run(case):
         o = collabc_operand(case)
         return py_result(lambda: s.isdisjoint(o))
     if fn == "set_hash":
-        return collabc_plain(lambda: collabc_A.Set._hash(collabc_HSet(case["hashes"])))
+        return py_result(lambda: collabc_A.Set._hash(collabc_HSet(case["hashes"], case["badlen"])))
     if fn == "frozenset_hash":
         return collabc_plain(lambda: hash(frozenset(collabc_H(h) for h in case["hashes"])))
     if fn == "mset_op":
@@ -1526,28 +1828,51 @@ def collabc_plain(f):
     return {"ok": f()}
 
 
-def collabc_throw(case):
-    def mk(a):
-        if a is None:
-            return None
-        if a["k"] == "cls":
-            return {"ValueError": ValueError, "KeyError": KeyError}[a["n"]]
-        if a["k"] == "inst":
-            return {"ValueError": ValueError}[a["n"]]("x")
+class collabc_X(Exception):
+    def __new__(cls):
         return 5
+
+
+class collabc_W:
+    def with_traceback(self, tb):
+        return KeyError("w")
+
+
+def collabc_tobj(a):
+    if a is None:
+        return None
+    k = a["k"]
+    if k == "cls":
+        return {"ValueError": ValueError, "KeyError": KeyError}[a["n"]]
+    if k == "cls_ude":
+        return UnicodeDecodeError
+    if k == "cls_bad":
+        return collabc_X
+    if k == "inst":
+        return {"ValueError": ValueError, "KeyError": KeyError}[a["n"]]("x")
+    if k == "func":
+        return lambda: KeyError("k")
+    if k == "wtb":
+        return collabc_W()
+    return 5
+
+
+def collabc_throw(case):
     tb = None
-    if case["tb"]:
+    if case["tb"] == "tb":
         try:
             raise ValueError
         except ValueError as e:
             tb = e.__traceback__
+    elif case["tb"] == "bad":
+        tb = 5
     try:
-        collabc_A.Generator.throw(None, mk(case["typ"]), mk(case["val"]), tb)
+        collabc_A.Generator.throw(None, collabc_tobj(case["typ"]), collabc_tobj(case["val"]), tb)
     except (ValueError, KeyError) as e:
         return {"ok": {"raised": type(e).__name__,
                        "tb": e.__traceback__.tb_next.tb_next is not None}}
     except (TypeError, AttributeError) as e:
-        return {"ok": {"wrong": type(e).__name__}}
+        return {"exc": type(e).__name__, "msg": str(e)}
 
 
 def collabc_gen_next(script):
@@ -1561,6 +1886,31 @@ def collabc_gen_next(script):
     except ValueError as e:
         r = {"exc": "ValueError", "msg": str(e)}
     return {"ok": {"r": r, "left": len(g.s.script)}}
+
+
+def collabc_agen_next(script):
+    g = collabc_AGenC(script)
+    try:
+        r = {"y": collabc_drive(g.__anext__())}
+    except StopAsyncIteration as e:
+        r = {"r": e.args[0] if e.args else None}
+    except GeneratorExit as e:
+        r = {"exc": "GeneratorExit", "msg": str(e)}
+    except ValueError as e:
+        r = {"exc": "ValueError", "msg": str(e)}
+    return {"ok": {"r": r, "left": len(g.s.script)}}
+
+
+def collabc_from_iterable(case):
+    elems = [[0] if x is None else x for x in case["xs"]]
+    it = collabc_tail(elems) if case["tail"] else iter(elems)
+    if case["kind"] == "set":
+        collabc_Set.uh = case["uh"]
+        return py_result(lambda: collabc_Set._from_iterable(
+            collabc_tail([x for x in case["xs"] if x is not None]) if case["tail"]
+            else iter([x for x in case["xs"] if x is not None])).xs)
+    cls = collabc_A.KeysView if case["kind"] == "keys" else collabc_A.ItemsView
+    return py_result(lambda: sorted(cls._from_iterable(it)))
 
 
 def collabc_real(step):
@@ -1577,30 +1927,97 @@ def collabc_real(step):
         raise ValueError(str(v))
 
 
-def collabc_builtin_close(script):
-    g = collabc_real(script[0] if script else ("exit", 0))
-    next(g)
+class collabc_Aw:
+    def __await__(self):
+        yield 0
+
+
+async def collabc_creal(step):
+    k, v = step
+    try:
+        await collabc_Aw()
+    except GeneratorExit:
+        if k == "y":
+            await collabc_Aw()
+        if k == "r":
+            return v
+        if k == "exit":
+            raise
+        raise ValueError(str(v))
+
+
+async def collabc_areal(step):
+    k, v = step
+    try:
+        yield 0
+    except GeneratorExit:
+        if k == "y":
+            yield v
+        if k == "r":
+            return
+        if k == "exit":
+            raise
+        raise ValueError(str(v))
+
+
+def collabc_builtin_close(script, kind):
+    step = script[0] if script else ("exit", 0)
+    if kind == "coro":
+        g = collabc_creal(step)
+        g.send(None)
+    else:
+        g = collabc_real(step)
+        next(g)
     return {"ok": {"r": py_result(g.close), "left": 0}}
+
+
+def collabc_builtin_aclose(script):
+    g = collabc_areal(script[0] if script else ("exit", 0))
+    collabc_drive(g.asend(None))
+    return {"ok": {"r": py_result(lambda: collabc_drive(g.aclose())), "left": 0}}
+
+
+def collabc_carg(a, P, C):
+    if a == "...":
+        return Ellipsis
+    if a == "~P":
+        return P
+    if a == "C":
+        return C
+    if isinstance(a, list):
+        return [collabc_carg(x, P, C) for x in a]
+    if isinstance(a, dict):
+        return tuple(collabc_carg(x, P, C) for x in a["t"])
+    return {"int": int, "str": str, "bool": bool, "float": float}[a]
+
+
+def collabc_cenc(x, P, C):
+    if x is Ellipsis:
+        return "..."
+    if x is P:
+        return "~P"
+    if x is C:
+        return "C"
+    if isinstance(x, list):
+        return [collabc_cenc(y, P, C) for y in x]
+    if isinstance(x, tuple):
+        return {"t": [collabc_cenc(y, P, C) for y in x]}
+    return x.__name__
 
 
 def collabc_callable(case):
     import typing
-    a, r = case["a"], {"float": float}[case["r"]]
-    names = {"int": int, "str": str, "bool": bool}
-    T = typing.ParamSpec("T")
-    arg = {"seq": lambda: [names[n] for n in a["items"]], "ell": lambda: Ellipsis, "param": lambda: T,
-           "other": lambda: int}.get(a["k"])
-    item = (r,) if arg is None else (arg(), r)
-    if arg is None:
-        item = (int, str, r)
+    P = typing.ParamSpec("P")
+    C = typing.Concatenate[int, P]
+    a = case["a"]
+    item = (int, str, float) if a == "notpair" else (collabc_carg(a, P, C), collabc_carg(case["r"], P, C))
 
     def f():
         x = collabc_A._CallableGenericAlias(collabc_A.Callable, item)
-        args = [getattr(t, "__name__", "...") if t is not T else "~T" for t in x.__args__]
-        red = x.__reduce__()[1][1][0]
-        red = ([t.__name__ for t in red] if isinstance(red, list)
-               else "..." if red is Ellipsis else "~T")
-        return {"args": args, "repr": repr(x), "reduce": red}
+        enc = lambda t: [collabc_cenc(y, P, C) for y in t]  # noqa: E731
+        red = x.__reduce__()[1][1]
+        return {"args": enc(x.__args__), "repr": py_result(lambda: repr(x)), "reduce": {"ok": enc(red)},
+                "rt": py_result(lambda: enc(collabc_A._CallableGenericAlias(collabc_A.Callable, red).__args__))}
     return py_result(f)
 
 
@@ -1608,26 +2025,33 @@ def collabc_getitem(case):
     import typing
     names = {"int": int, "str": str, "bool": bool, "float": float}
     a, b = names[case["a"]], names[case["b"]]
-    if case["shape"] == "tv":
-        T, S = typing.TypeVar("T"), typing.TypeVar("S")
+    T, S = typing.TypeVar("T"), typing.TypeVar("S")
+    P = typing.ParamSpec("P")
+    shape = case["shape"]
+    if shape == "tv":
         x = collabc_A.Callable[[T, int], S][a, b]
-    else:
-        P = typing.ParamSpec("P")
+    elif shape == "param":
         x = collabc_A.Callable[P, int][[a, b]]
+    elif shape == "listlist":
+        x = collabc_A.Callable[[T], S][[a], [b]]
+    else:
+        x = collabc_A.Callable[P, T][[a], [b]]
     assert type(x) is collabc_A._CallableGenericAlias
-    return {"ok": [t.__name__ for t in x.__args__]}
+    return {"ok": [collabc_cenc(t, P, None) for t in x.__args__]}
 
 
 def collabc_mset(case, raw):
     s = collabc_self(collabc_Set, raw, tail=case["selftail"])
-    o = s if case["selfit"] else collabc_operand(case)
+    fresh = collabc_operand(case)
+    o = s if case["selfit"] else fresh
+    collabc_Set.uh = case["uh"]
     op = case["op"]
 
     def f():
         if op == "ior":
-            s.__ior__(collabc_operand(case))
+            s.__ior__(fresh)
         elif op == "iand":
-            s.__iand__(collabc_operand(case))
+            s.__iand__(fresh)
         elif op == "ixor":
             s.__ixor__(o)
         elif op == "isub":
@@ -1642,28 +2066,55 @@ def collabc_mset(case, raw):
     return py_result(f)
 
 
+def collabc_item(case):
+    k, v = case["k"], case["v"]
+
+    def gen(n):
+        yield k
+        if n == 2:
+            yield v
+        raise ValueError("itail")
+
+    class LS(list):
+        pass
+    return {"tuple": lambda: (k, v), "list": lambda: [k, v], "short": lambda: (1,), "empty": lambda: (),
+            "long": lambda: (1, 2, 3), "dict3": lambda: {1: 2, 3: 4, 5: 6}, "str3": lambda: "abc",
+            "iter3": lambda: iter([1, 2, 3]), "sublist3": lambda: LS([1, 2, 3]), "gen2t": lambda: gen(2),
+            "gen1t": lambda: gen(1), "none": lambda: 5}[case["ikind"]]()
+
+
 def collabc_map(case):
-    m = collabc_self(collabc_Map, case["d"], case["fail"], tail=case["selftail"])
+    cls = collabc_MapO if case["ovr"] else collabc_Map
+    m = collabc_self(cls, case["d"], case["fail"], case["failkey"], tail=case["selftail"])
     op, k = case["op"], case["k"]
     E = collabc_E
     if op == "get":
         return py_result(lambda: m.get(k, case["default"]))
     if op == "contains":
-        return py_result(lambda: k in m)
+        return py_result(lambda: collabc_A.Mapping.__contains__(m, k))
     if op == "items":
         return py_result(lambda: [list(p) for p in m.items()])
     if op == "values":
         return py_result(lambda: list(m.values()))
     if op == "valuecontains":
-        m2 = collabc_self(collabc_Map, [(a, E(b)) for a, b in case["d"]], case["fail"], tail=case["selftail"])
+        m2 = collabc_self(cls, [(a, E(b)) for a, b in case["d"]], case["fail"], case["failkey"],
+                          tail=case["selftail"])
         return py_result(lambda: E(k) in m2.values())
     if op == "keyscontain":
         return py_result(lambda: k in m.keys())
-    item = {"tuple": (k, case["v"]), "list": [k, case["v"]], "short": (1,), "long": (1, 2, 3),
-            "none": 5}[case["ikind"]]
+    if op == "eq":
+        o = collabc_self(collabc_Map, case["d2"], None, tail=case["otail"])
+        return py_result(lambda: collabc_ret(m.__eq__(o)))
+    item = collabc_item(case)
     if case["who"] == "abc":
         return py_result(lambda: item in m.items())
     return py_result(lambda: item in dict(case["d"]).items())
+
+
+def collabc_pairitem(p):
+    if isinstance(p, list):
+        return tuple(p)
+    return {"short": (1,), "long": (1, 2, 3), "none": 5, "str3": "abc", "empty": ()}[p]
 
 
 def collabc_mmap(case):
@@ -1681,9 +2132,16 @@ def collabc_mmap(case):
     if op == "setdefault":
         return py_result(lambda: [m.setdefault(k, case["default"]), items()])
     if op == "update_map":
-        other = dict(tuple(p) for p in case["other"])
+        other = collabc_self(collabc_Map, [tuple(p) for p in case["other"]], case["ofail"], tail=case["otail"])
         return py_result(lambda: (m.update(other), items())[1])
-    return py_result(lambda: (m.update(iter(case["other"])), items())[1])
+    if op == "update_keys":
+        other = collabc_KeysLike([tuple(p) for p in case["other"]], case["ofail"], case["otail"])
+        return py_result(lambda: (m.update(other), items())[1])
+    if op == "update_hasattr":
+        return py_result(lambda: (m.update(collabc_BadAttr()), items())[1])
+    its = [collabc_pairitem(p) for p in case["items"]]
+    it = collabc_tail(its) if case["otail"] else iter(its)
+    return py_result(lambda: (m.update(it), items())[1])
 # ====== END AREA collabc ======
 
 # ====== BEGIN AREA functools (Lib/functools.py, Modules/_functoolsmodule.c) ======

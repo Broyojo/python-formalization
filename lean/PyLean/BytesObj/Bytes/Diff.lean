@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.BytesObj.Bytes.ByteArray
+import PyLean.BytesObj.Bytes.Slots
 
 /-!
 Differential-testing handler for bytes and bytearray: `fn` names start with
@@ -37,8 +38,7 @@ partial def decObj (j : Json) : Except String Obj := do
   | "int" => return .int (← (at' 1).getInt?)
   | "pow" => return .int ((← (at' 1).getInt?) ^ (← (at' 2).getNat?))
   | "float" =>
-    return .float ⟨← (at' 1).getBool?, ← (at' 2).getNat?, ← (at' 3).getNat?, ← (at' 4).getNat?,
-      ← (at' 5).getStr?⟩
+    return .float (Binary64.F64.ofBits (← (at' 7).getNat?))
   | "str" => return .str (← seqAt 1)
   | "bytes" => return .bytes (← seqAt 1)
   | "bytearray" => return .bytearray (← seqAt 1)
@@ -136,9 +136,12 @@ def runCommon (wrap : Seq → Json) (m : String) (s : Seq) (j : Json) :
     return some (pyB (bytesTailmatchObj s "endswith" (← fieldObj j "sub") (argStart st) (argEnd en) true))
   | "hex" =>
     return some (encPy jS (bytesHex s (← optObj j "sep") ((← getOptInt j "n").getD 1)))
-  | "decode" => return some (encPy jS (bytesDecode s (← getStr j "enc")))
+  | "decode" => return some (encPy jS (bytesDecode s (← optStr j "enc") (← optStr j "err")))
   | "getslice" => return none
   | _ => return none
+
+/-- A result with its class: `[type name, ["B", ints]]`. -/
+def jTB (p : String × Seq) : Json := Json.arr #[toJson p.1, jB p.2]
 
 def runBytes (m : String) (j : Json) : Except String Json := do
   let s ← getSeqK j "s"
@@ -149,6 +152,9 @@ def runBytes (m : String) (j : Json) : Except String Json := do
     let (data, ro) := bytesBufferInfo s
     return Json.mkObj [("ok", Json.arr #[toJson data, toJson ro])]
   | "mod" => return encPy jB (bytesMod s (← fieldObj j "arg"))
+  | "rmod" =>
+    let r := bytesModObj (← fieldObj j "x") (.bytes s)
+    return encPy (fun (o : Option Seq) => match o with | some b => jB b | none => "NotImplemented") r
   | "concat" => return encPy jB (bytesConcat (.bytes s) (← fieldObj j "arg"))
   | "mul" => return encPy jB (bytesMul s (← getInt j "n"))
   | "getitem" => return encPy toJson (bytesGetItem s (← getInt j "i"))
@@ -176,6 +182,67 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   | "new" =>
     return encPy jB (bytesNew (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
   | "fromhex" => return encPy jB (bytesFromHex (← fieldObj j "x"))
+  | "strw" =>
+    let r := bytesStrW (← getNat j "bw") s
+    return encPy (fun (p : Seq × List String) => Json.arr #[jS p.1, toJson p.2]) r
+  | "richw" =>
+    let r := bytesRichcompareW (← getNat j "bw") (.bytes s) (← fieldObj j "other") (← cmpOf (← getStr j "op"))
+    return encPy (fun (p : Option Bool × List String) =>
+      Json.arr #[(match p.1 with | some b => toJson b | none => "NotImplemented"), toJson p.2]) r
+  | "seqgetitem" => return encPy toJson (pySequenceGetItem s (← getInt j "i"))
+  | "getitemobj" => return encPy toJson (bytesSubscriptObj s (← fieldObj j "item"))
+  | "getbuffer" =>
+    return encPy (fun (p : Seq × Bool) => Json.arr #[toJson p.1, toJson p.2]) (bytesGetBuffer s (← getInt j "flags"))
+  | "escapew" =>
+    return encPy (fun (p : Seq × Option String) => Json.arr #[jB p.1, Json.null])
+      (bytesDecodeEscapeW s (← optStr j "err") true)
+  | "fromlistmut" =>
+    let items ← (← (← field j "items").getArr?).toList.mapM fun it => do
+      let a ← it.getArr?
+      match ← (a.getD 0 Json.null).getStr? with
+      | "plain" => return LItem.plain (← decObj (a.getD 1 Json.null))
+      | _ =>
+        let r : Py Int ← match a.getD 1 Json.null with
+          | .arr _ => pure (.error (← decExc (a.getD 1 Json.null)))
+          | v => pure (.ok (← v.getInt?))
+        let act ← (a.getD 2 Json.null).getArr?
+        let actK : ListAct ← match ← (act.getD 0 Json.null).getStr? with
+          | "append" => pure (.append (← (act.getD 1 Json.null).getInt?))
+          | "clear" => pure .clear
+          | "pop" => pure .popLast
+          | _ => pure .keep
+        return LItem.mut r actK
+    return encPy jB (bytesFromList items)
+  | "partitionobj" | "rpartitionobj" =>
+    let f := if m == "partitionobj" then bytesPartitionObj else bytesRPartitionObj
+    let enc (o : Obj) : Json := Json.arr #[toJson o.typeName, toJson ((o.buffer?).getD [])]
+    return encPy (fun (t : Obj × Obj × Obj) => Json.arr #[enc t.1, enc t.2.1, enc t.2.2])
+      (f s (← fieldObj j "sep"))
+  | "newsub" =>
+    return encPy jTB (bytesNewType "BSubB" (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
+  | "fromhexsub" => return encPy jTB (bytesFromHexType "BSubB" (← fieldObj j "x"))
+  | "fromhexcls" =>
+    -- type(result) for the test's classes: BSubB keeps bytes.__new__ and object.__init__,
+    -- BHexInit has `__init__(self, a, b)`, BHexNew has a `__new__` that returns 42
+    let call : Option (Seq → Py Json) ← match (← getStr j "cls") with
+      | "bytes" => pure none
+      | "BSubB" => pure (some fun r => (plainSubCall "BSubB" r).map jTB)
+      | "BHexInit" => pure (some fun _ =>
+          .error (.typeError "BHexInit.__init__() missing 1 required positional argument: 'b'"))
+      | "BHexNew" => pure (some fun _ => .ok (Json.arr #["obj", "int", "42"]))
+      | c => throw s!"cls {c}"
+    return encPy id (bytesFromHexT (fun r => jTB ("bytes", r)) call (← fieldObj j "x"))
+  | "getnewargs" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return Json.mkObj [("ok", Json.arr #["tuple", toJson (1 : Nat), toJson a.typeName,
+        jB ((a.buffer?).getD [])])]
+    | _ => throw "getnewargs"
+  | "pickle" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return encPy jTB (bytesNewType "BSubB" (some a) none none)
+    | _ => throw "pickle"
+  | "dunderbytes" => return encPy jTB (.ok (bytesDunderBytes "bytes" s) : Py (String × Seq))
+  | "dunderbytessub" => return encPy jTB (.ok (bytesDunderBytes "BSubB" s) : Py (String × Seq))
   | "maketrans" =>
     let ao ← fieldObj j "a"
     let bo ← fieldObj j "b"

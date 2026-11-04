@@ -59,7 +59,7 @@ def splitNames (s : String) : List String :=
   | .ok l => l.map (fun w => String.ofList (w.map Char.ofNat))
   | .error _ => []
 
-/-- @3.14.7:387-389. -/
+/-- `field_names` as a list, :387-388: a `str` is split on commas and whitespace. -/
 def fieldList : FieldNames → List String
   | .str s => splitNames s
   | .list l => l
@@ -211,9 +211,13 @@ def ntReplace (T : NT ν) (vals : List ν) (kwds : D String ν) : Py (List ν) :
       ", ".intercalate (left.map (fun p => pyStrRepr p.1)) ++ "]"))
   return result
 
-/-- `__repr__`, :472-474. -/
-def ntRepr (rv : ν → String) (T : NT ν) (vals : List ν) : String :=
-  T.typename ++ "(" ++ ", ".intercalate ((T.fields.zip vals).map (fun p => p.1 ++ "=" ++ rv p.2)) ++ ")"
+/-- `__repr__`, :472-474: `self.__class__.__name__ + repr_fmt % self`, `cls` being the instance's
+class name (a subclass's, not the typename). -/
+def ntRepr (rv : ν → String) (cls : String) (T : NT ν) (vals : List ν) : String :=
+  cls ++ "(" ++ ", ".intercalate ((T.fields.zip vals).map (fun p => p.1 ++ "=" ++ rv p.2)) ++ ")"
+
+/-- `__getnewargs__`, :480-482: `tuple(self)`, the values in field order. -/
+def ntGetnewargs (vals : List ν) : List ν := vals
 
 /-- `_asdict`, :476-478: `dict(zip(self._fields, self))`. -/
 def ntAsdict (T : NT ν) (vals : List ν) : D String ν := D.update [] (T.fields.zip vals)

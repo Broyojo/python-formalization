@@ -1,4 +1,4 @@
-import PyLean.BytesObj.Bytes.BasicProps3
+import PyLean.BytesObj.Bytes.FromListLemmas
 
 /-!
 Properties of the `bytes` methods, fourth part.
@@ -82,31 +82,81 @@ theorem findIdx_none_lt (s : Seq) (k : Nat) (h : ∀ c ∈ s, c < k) : s.findIdx
   simp
   omega
 
-/-- For every byte string `s`, `s.decode('latin-1')` is the code points of the bytes and
-`bytes(text, 'latin-1')` inverts it, and `decode` is the same for bytes and bytearray.
-`ascii` accepts exactly the strings below 128. -/
+/-- `bytes.decode` and `bytes(str, encoding, errors)` through the shortcut codecs:
+`s.decode('latin-1')` is the code points of the bytes whatever `errors` is, and
+`bytes(text, 'latin-1')` inverts it; `ascii` accepts a string below 128 and reports the first byte at
+or above it with its position; utf-8, the default (`encoding=NULL`, unicodeobject.c:3587-3589), and any
+spelling `_Py_normalize_encoding` folds to it, decodes what `bytes(text, 'utf-8')` wrote for every
+text without surrogates; and an empty input decodes to `''` before the encoding or the handler is
+looked at (:3480-3485), so even an unknown codec gives `''`. -/
 def DecodeRoundTrip : Prop :=
-  (∀ s : Seq, (∀ c ∈ s, c < 256) →
-    bytesDecode s "latin-1" = .ok s ∧ bytesNew (some (.str s)) (some "latin-1") none = .ok s) ∧
-  (∀ s : Seq, (∀ c ∈ s, c < 128) → bytesDecode s "ascii" = .ok s) ∧
-  (∀ (s : Seq) (i : Nat), s.findIdx? (· ≥ 128) = some i →
-    ∃ m, bytesDecode s "ascii" = .error (.named "UnicodeDecodeError" m))
+  (∀ (s : Seq) (err : Option String), (∀ c ∈ s, c < 256) → bytesDecode s (some "latin-1") err = .ok s) ∧
+  (∀ s : Seq, (∀ c ∈ s, c < 256) → bytesNew (some (.str s)) (some "latin-1") none = .ok s) ∧
+  (∀ (pre : Seq) (x : Nat) (post : Seq), (∀ c ∈ pre, c < 128) → x ≥ 128 →
+    bytesDecode pre (some "ascii") none = .ok pre ∧
+    bytesDecode (pre ++ x :: post) (some "ascii") none =
+      .error (UnicodeObj.decodeError "ascii" (pre ++ x :: post) pre.length (pre.length + 1)
+        "ordinal not in range(128)")) ∧
+  (∀ s : Seq, (∀ c ∈ s, c ≤ UnicodeObj.maxUnicode ∧ UnicodeObj.isSurrogate c = false) →
+    bytesNew (some (.str s)) (some "utf-8") none = .ok (s.flatMap UnicodeObj.utf8EncodeChar) ∧
+    bytesDecode (s.flatMap UnicodeObj.utf8EncodeChar) none none = .ok s ∧
+    bytesDecode (s.flatMap UnicodeObj.utf8EncodeChar) (some "UTF8") (some "strict") = .ok s) ∧
+  (∀ enc err : Option String, bytesDecode [] enc err = .ok [])
+
+theorem sc_latin1 : shortcutOfName (some "latin-1") = .latin1 := by decide
+theorem sc_ascii : shortcutOfName (some "ascii") = .ascii := by decide
+theorem sc_utf8 : shortcutOfName (some "utf-8") = .utf8 := by decide
+theorem sc_UTF8 : shortcutOfName (some "UTF8") = .utf8 := by decide
+theorem eh_strict : errHandlerOf (some "strict") = some .strict := by decide
+
+theorem flatMap_utf8_nil (s : Seq) (h : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0) : s = [] := by
+  cases s with
+  | nil => rfl
+  | cons c cs =>
+    exfalso
+    simp only [List.flatMap_cons, List.length_append] at h
+    have : (UnicodeObj.utf8EncodeChar c).length ≠ 0 := by
+      unfold UnicodeObj.utf8EncodeChar; split <;> (try split) <;> (try split) <;> simp
+    omega
 
 theorem decodeRoundTrip_proven : DecodeRoundTrip := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro s err hs
+    unfold bytesDecode unicodeDecode
+    rw [sc_latin1]
+    by_cases h0 : s.length = 0
+    · simp [h0, List.eq_nil_of_length_eq_zero h0]
+    · simp [h0, UnicodeObj.latin1Decode]
   · intro s hs
-    have := findIdx_none_lt s 256 hs
+    have := UnicodeObj.latin1RoundTrip_proven s .strict (fun _ => none) hs
+    simp only [UnicodeObj.latin1Decode] at this
+    simp [bytesNew, unicodeEncode, sc_latin1, errHandlerOf, this]
+  · intro pre x post hp hx
+    obtain ⟨h1, h2⟩ := UnicodeObj.asciiStrict_proven pre x post hp hx
     constructor
-    · simp [bytesDecode, decodeBytes, this]
-    · simp [bytesNew, encodeStr, this]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_ascii]
+      by_cases h0 : pre.length = 0
+      · simp [h0, List.eq_nil_of_length_eq_zero h0]
+      · simp [h0, errHandlerOf, h1]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_ascii]
+      simp [errHandlerOf, h2]
   · intro s hs
-    have := findIdx_none_lt s 128 hs
-    have h2 : ¬ ("ascii" = "latin-1") := by decide
-    simp [bytesDecode, decodeBytes, this, h2]
-  · intro s i h
-    have h2 : ¬ ("ascii" = "latin-1") := by decide
-    refine ⟨codecErrMsg "ascii" i, ?_⟩
-    simp only [bytesDecode, decodeBytes, h2, if_false, h]
+    obtain ⟨h1, h2⟩ := UnicodeObj.utf8RoundTrip_proven s hs
+    refine ⟨?_, ?_, ?_⟩
+    · simp [bytesNew, unicodeEncode, sc_utf8, errHandlerOf, h1]
+    · unfold bytesDecode unicodeDecode
+      by_cases h0 : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0
+      · simp [h0, flatMap_utf8_nil s h0]
+      · rw [if_neg h0]; simp [shortcutOfName, errHandlerOf, h2]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_UTF8, eh_strict]
+      by_cases h0 : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0
+      · simp [h0, flatMap_utf8_nil s h0]
+      · rw [if_neg h0]; simp [h2]
+  · intro enc err
+    simp [bytesDecode, unicodeDecode]
 
 /-! ## The constructor -/
 
@@ -125,9 +175,10 @@ theorem items_ok (vals : Seq) (h : ∀ c ∈ vals, c < 256) :
 /-- `bytes(x)`: a list, a tuple and a generator of ints in `range(256)` give those bytes
 (three separate C loops); an int `n ≥ 0` gives `n` zero bytes and a negative one
 `ValueError`; a `str` without an encoding is a `TypeError`; a buffer gives its contents;
-a bad item stops the loop with `ValueError`. -/
+a bad item stops the loop with `ValueError`. Hypothesis of the list cases: a list that can exist
+(fewer than `2^46` items), since `_PyBytes_FromList` allocates its writer for the list's size first. -/
 def BytesNewSpec : Prop :=
-  (∀ vals : Seq, (∀ c ∈ vals, c < 256) →
+  (∀ vals : Seq, (∀ c ∈ vals, c < 256) → (vals.length : Int) + 33 < 2 ^ 46 →
     let items := vals.map (fun (c : Nat) => Obj.int (c : Int))
     bytesNew (some (.list items)) none none = .ok vals ∧
     bytesNew (some (.tuple items)) none none = .ok vals ∧
@@ -141,18 +192,21 @@ def BytesNewSpec : Prop :=
   (∀ (s a : Seq), bytesNew (some (.memview s a)) none none = .ok s ∧
     bytesNew (some (.bytearray s)) none none = .ok s) ∧
   bytesNew none none none = .ok [] ∧
-  (∀ (rest : List Obj), bytesNew (some (.list (.int 256 :: rest))) none none =
+  (∀ (rest : List Obj), (rest.length : Int) + 34 < 2 ^ 46 →
+    bytesNew (some (.list (.int 256 :: rest))) none none =
     .error (.valueError "bytes must be in range(0, 256)"))
 
 theorem bytesNewSpec_proven : BytesNewSpec := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro vals h
+  · intro vals h hl
     have := items_ok vals h
     have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
+    have hfl := bytesFromList_plain (vals.map (fun (c : Nat) => Obj.int (c : Int))) (by simpa using hl)
+    rw [this, List.map_map] at hfl
     simp only
     refine ⟨?_, ?_, ?_⟩ <;>
       simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, this, getIterOr, lengthHint,
-        iterFinish, hw, bind, Except.bind, pure, Except.pure]
+        iterFinish, hw, hfl, bind, Except.bind, pure, Except.pure]
   · intro n h0 hs
     have h1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
       rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega
@@ -167,13 +221,15 @@ theorem bytesNewSpec_proven : BytesNewSpec := by
   · intro s a
     simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?]
   · simp [bytesNew, bytesFromStringAndSize]
-  · intro rest
+  · intro rest hr
+    have hfl := bytesFromList_plain (.int 256 :: rest) (by simp; omega)
     have c256 : clampSsize (256 : Int) = 256 := clamp_id 256 (by decide) (by decide)
     have h : byteItem (.int 256) = .error (.valueError "bytes must be in range(0, 256)") := by
       simp [byteItem, asSsizeClamp, Obj.index?, c256, bind, Except.bind]
       rfl
-    simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, bytesFromItems, h, bind,
-      Except.bind]
+    simp only [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, List.map_cons] at hfl ⊢
+    rw [hfl]
+    simp [bytesFromItems, h, bind, Except.bind]
 
 /-! ## The iterator -/
 

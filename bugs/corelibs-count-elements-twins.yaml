@@ -1,0 +1,73 @@
+id: corelibs-count-elements-twins
+title: "_count_elements: the C fast path ignores an instance `get` and reports unhashable elements without the dict message"
+priority: P5
+kind: twin-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py, Modules/_collectionsmodule.c]
+functions: ["_count_elements"]
+summary: |
+  Counter.update(iterable) calls _count_elements(self, iterable), whose C version replaces the pure-Python
+  one. The two differ twice.
+  (1) The Python twin binds `mapping.get` (Lib/collections/__init__.py:542), which finds a `get` stored in
+  the instance dict. The C function chooses its fast path by looking `get` and `__setitem__` up on the type
+  (Modules/_collectionsmodule.c:2566-2573) and then reads the dict storage directly, so an instance attribute
+  is never called: `c = Counter(); c.get = lambda k, d=0: 10; c.update('a')` stores 1 with the C helper and
+  11 with the Python one.
+  (2) For an unhashable element the fast path raises the bare hash error, `TypeError: unhashable type: 'list'`
+  (:2591-2594, `_PyObject_HashFast`), while the Python twin's `dict.get` and the C slow path go through
+  `dict_unhashable_type` (Objects/dictobject.c:2442-2460) and raise
+  `TypeError: cannot use 'list' as a dict key (unhashable type: 'list')`, the 3.15 message.
+likelihood: |
+  Very low for (1): shadowing a method with an instance attribute on a Counter is unusual, and the fast path
+  is a deliberate optimisation. (2) is visible to anyone who counts an iterable containing a list
+  (`Counter([[1]])`), but only as a different message.
+maybe_intended: |
+  (1) is almost certainly accepted: the fast-path test is about the type by design. (2) looks like an
+  oversight from the 3.15 message change (gh-132825), which wrapped the dict operations but not this C
+  caller that hashes the key itself; harmless.
+reproducer: |
+  import collections
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('collections', blocked=['_collections'])
+  def inst(m):
+      c = m.Counter()
+      c.get = lambda k, d=0: 10
+      c.update('a')
+      return c['a']
+  def unhashable(m):
+      try:
+          m.Counter().update([[1]])
+      except TypeError as e:
+          return str(e)
+  a, b = inst(collections), inst(py)
+  u, v = unhashable(collections), unhashable(py)
+  print('C:', a, repr(u), 'Python:', b, repr(v))
+  if a == 1 and b == 11 and u == "unhashable type: 'list'" and v.startswith("cannot use 'list' as a dict key"):
+      print('REPRODUCED corelibs-count-elements-twins')
+expected: |
+  The same counts and the same exception from both twins.
+observed: |
+  python3 3.15.2: C: 1 "unhashable type: 'list'" Python: 11 "cannot use 'list' as a dict key (unhashable
+  type: 'list')". REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit; the C function is a drop-in accelerator for the pure-Python helper
+  (Lib/collections/__init__.py:546-549).
+cause: |
+  (1) Modules/_collectionsmodule.c:2566-2573 tests `_PyType_LookupRef(Py_TYPE(mapping), "get")`; the Python
+  twin uses `mapping.get` at Lib/collections/__init__.py:542. (2) Modules/_collectionsmodule.c:2591-2594
+  returns on `_PyObject_HashFast` failure without the `dict_unhashable_type` wrapping that
+  `_PyDict_GetItem_KnownHash`'s callers in Objects/dictobject.c apply.
+possible_fix: |
+  (2): call the same wrapping (or let `_PyDict_GetItemRef_KnownHash` compute the hash) before returning. (1):
+  none needed; document that the fast path ignores instance attributes.
+duplicates:
+  issues: []
+  queries: ["gh search issues --repo python/cpython _count_elements get instance attribute",
+            "gh search issues --repo python/cpython Counter _count_elements fast path",
+            "gh search issues --repo python/cpython cannot use as a dict key unhashable",
+            "bugforge README: no match for _count_elements"]
+  related: ["python/cpython#132825 (introduced the 'cannot use ... as a dict key' message)",
+            "python/cpython#75767 (old SystemError with a bad mapping argument, fixed)"]
+lean:
+  property: PyLean.CoreLibs.Coll.CountElementsTwins
+  theorem: PyLean.CoreLibs.Coll.countElementsTwins_refuted

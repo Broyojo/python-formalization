@@ -165,7 +165,7 @@ def bytesCompareEq (a b : Seq) : Bool :=
   else decide (memcmp a.length a b = 0)
 
 /-- `bytes_richcompare`, bytesobject.c:1650-1711, for two bytes objects. The
-identity shortcut, :1606-1709, gives the same result as this code for equal
+identity shortcut, :1672-1687, gives the same result as this code for equal
 contents, so it is not a separate case. -/
 def bytesRichcompare (a b : Seq) (op : CmpOp) : Bool :=
   if op = .eq ∨ op = .ne then
@@ -214,11 +214,24 @@ def bytesResize (o : BytesSt) (newsize : Int) : Py BytesSt := do
   if newsize = o.data.length then return o
   return { data := o.data.take newsize.toNat ++ List.replicate (newsize.toNat - o.data.length) 0 }
 
-/-- `bytes_subtype_new`, bytesobject.c:3182-3199: the copy keeps the cached hash;
-`bytes_alloc`, :3171-3180, sets it to -1 before that. -/
+/-- `bytes_alloc(type, nitems)`, bytesobject.c:3171-3180: `PyType_GenericAlloc` (zeroed memory,
+so `ob_shash` would be 0) and then `set_ob_shash(obj, -1)`: a fresh object has no cached hash. The
+contents are left to the caller (read as zero). This is the `tp_alloc` of `bytes`, which a subclass
+that never runs `bytes_subtype_new` gets its instance from (gh-91020, :3166-3170). -/
+def bytesAlloc (nitems : Nat) : BytesSt := { data := List.replicate nitems 0, shash := -1 }
+
+/-- `bytes_subtype_new`, bytesobject.c:3182-3199: `type->tp_alloc` (`bytes_alloc`), the contents,
+then the cached hash of `tmp`. -/
 def bytesSubtypeNew (tmp : BytesSt) : BytesSt :=
-  let pnew : BytesSt := { data := tmp.data, shash := -1 }
+  let pnew : BytesSt := { bytesAlloc tmp.data.length with data := tmp.data }
   { pnew with shash := tmp.shash }
+
+/-- `_PyBytes_Resize(pv, newsize)`, bytesobject.c:3474-3484: `_PyBytes_ResizeKeepOnError`, and on
+failure `*pv = NULL` with the object released (:3478-3482). `(new *pv, exception)`. -/
+def pyBytesResize (o : BytesSt) (newsize : Int) : Option BytesSt × Option PyExc :=
+  match bytesResize o newsize with
+  | .ok o' => (some o', none)
+  | .error e => (none, some e)
 
 /-! ## Subscript -/
 
@@ -427,6 +440,26 @@ def striterLen (it : StrIter) : Int :=
 def striterReduce (it : StrIter) : Option (Seq × Int) :=
   it.seq.map (fun s => (s, it.index))
 
+/-- The result of `striter_reduce`: `(callable, (seq,), index)` or `(callable, ((),))`. -/
+inductive StrIterReduce (β : Type) where
+  | live (callable : β) (seq : Seq) (index : Int)
+  | empty (callable : β)
+  deriving Repr, DecidableEq
+
+/-- `striter_reduce(op)`, bytesobject.c:3549-3563, with the builtins lookup:
+`getBuiltin name it` is `_PyEval_GetBuiltin(&_Py_ID(name))` (Python/ceval.c), which can run user code
+(a key's `__eq__`) that changes the iterator, and fails with the lookup's exception. It comes first
+("call must be before access of iterator pointers", gh-101765, :3552-3556); `it_seq` and `it_index`
+are read from the iterator as it left it (:3557-3562). -/
+def striterReduceG {β : Type} (getBuiltin : String → StrIter → Py β × StrIter) (it : StrIter) :
+    Py (StrIterReduce β) × StrIter :=
+  match getBuiltin "iter" it with
+  | (.error e, it') => (.error e, it')
+  | (.ok c, it') =>
+    match it'.seq with
+    | some s => (.ok (.live c s it'.index), it')
+    | none => (.ok (.empty c), it')
+
 /-- `striter_setstate`, bytesobject.c:3567-3582. -/
 def striterSetstate (it : StrIter) (state : Int) : Py StrIter := do
   let index ← Sequences.asSsize state
@@ -480,9 +513,10 @@ def pyBytesConcat (pv : Option Seq) (w : Option Obj) (unique : Bool) : Option Se
       | some wb =>
         if (v.length : Int) > ssizeMax - wb.length then (none, some memoryError)
         else
-          match bytesResize { data := v } (v.length + wb.length) with
-          | .error e => (none, some e)
-          | .ok o => (some (o.data.take v.length ++ wb), none)
+          -- _PyBytes_Resize(pv, ...), :3301: on failure *pv is NULL
+          match pyBytesResize { data := v } (v.length + wb.length) with
+          | (some o, _) => (some (o.data.take v.length ++ wb), none)
+          | (none, e) => (none, e)
     else
       match bytesConcat (.bytes v) w with
       | .ok r => (some r, none)
@@ -572,8 +606,11 @@ def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
         let s : Seq := match arg with | .str s => s | _ => []
         fromFormatLoop f fuel (i + 1) rest (out ++ cStringPrec s prec)
       else if c = 112 then
+        -- glibc's `sprintf("%p")` is `0x` and the hex digits, and `(nil)` for NULL, which
+        -- :333-339 prefixes with `0x` (buffer[1] is not 'x')
         let v : Nat := match arg with | .ptr v => v | _ => 0
-        fromFormatLoop f fuel (i + 1) rest (out ++ asc "0x" ++ digitsBase 16 v)
+        fromFormatLoop f fuel (i + 1) rest
+          (out ++ (if v = 0 then asc "0x(nil)" else asc "0x" ++ digitsBase 16 v))
       else if c = 37 then
         fromFormatLoop f fuel (i + 1) args (out ++ [37])
       else

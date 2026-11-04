@@ -540,6 +540,33 @@ theorem encoderNew_proven : EncoderNew := by
   subst h
   cases ea <;> cases cc <;> rfl
 
+/-- `c_make_encoder` refuses a `key_separator` that is not a `str` with `TypeError`, whatever the
+other arguments and whatever the separator's type: `PyArg_ParseTupleAndKeywords` raises
+`TypeError` for an argument of the wrong type (`"must be str, not <type>"`, the `U` unit of
+`"OOOOUUppp:make_encoder"`, Modules/_json.c:1320). -/
+def EncoderNewSepTypeError : Prop :=
+  ∀ (markers : MarkersArg) (dflt : Nat → String → Except PyExc EVal) (dfltDepth : Nat)
+    (encoder : EncoderArg) (indent : Option PStr) (t : String) (itemSep : StrArg)
+    (sortKeys skipKeys allowNan : Bool),
+    ∃ m, encoderNew markers dflt dfltDepth encoder indent (.other t) itemSep sortKeys skipKeys allowNan
+      = .error (.typeError m)
+
+/-- The type `'a' + 'é' * 30` is 61 bytes; `converterr`'s `snprintf("%.50s")` keeps 50, which ends
+with the first byte of the 25th 'é', and `PyErr_SetString` cannot decode the message:
+`UnicodeDecodeError` at byte 92. -/
+theorem encoderNew_longSep :
+    uArgErr 5 ("a" ++ String.ofList (List.replicate 30 'é')) =
+      .named "UnicodeDecodeError"
+        "'utf-8' codec can't decode byte 0xc3 in position 92: unexpected end of data" := by
+  decide
+
+theorem encoderNewSepTypeError_refuted : ¬EncoderNewSepTypeError := by
+  intro h
+  obtain ⟨m, hm⟩ := h .none (fun _ _ => .error (.valueError "")) 0 .cAscii none
+    ("a" ++ String.ofList (List.replicate 30 'é')) (.str []) false false false
+  simp only [encoderNew, encoderNew_longSep] at hm
+  cases hm
+
 /-- `c_make_encoder(...)(o, 0)`, the 1-tuple `JSONEncoder.encode` joins. With the
 two C `encoder`s it is the text of `dumps`. -/
 def EncoderCallDumps : Prop :=

@@ -1,4 +1,5 @@
 import PyLean.CoreLibs.Coll.Counter
+import PyLean.UnicodeObj.Repr
 
 /-!
 `collections.ChainMap`, Lib/collections/__init__.py:1040-1168 (CPython 3.15.2).
@@ -20,10 +21,10 @@ open PyLean
 
 variable {κ ν : Type} [DecidableEq κ]
 
-/-- `repr` of a `str`, for the short keys and messages that reach it: double
-quotes when the text holds a single quote. -/
+/-- `repr` of a `str`: `unicode_repr` (Objects/unicodeobject.c:12707-12795, modelled in
+`UnicodeObj/Repr.lean`) on the code points, with its quote choice and escapes. -/
 def pyStrRepr (s : String) : String :=
-  if s.toList.contains '\'' then "\"" ++ s ++ "\"" else "'" ++ s ++ "'"
+  String.ofList ((UnicodeObj.unicodeRepr (s.toList.map Char.toNat)).map Char.ofNat)
 
 /-- `KeyError(msg)` with a `str` argument: `str(e)` is `repr(msg)`. -/
 def keyErrorStr (msg : String) : PyExc := .keyError (pyStrRepr msg)
@@ -118,7 +119,8 @@ def cmSetitem (c : CMap κ ν) (k : κ) (v : ν) : Py (CMap κ ν) :=
   | [] => .error noMap
   | m :: t => .ok ⟨D.set m k v :: t⟩
 
-/-- The `KeyError` of `__delitem__` and `pop`, :1131, @3.14.7:1103. -/
+/-- The `KeyError` of `__delitem__` and `pop`, :1131 and :1145: `KeyError(f'... {key!r}')`, whose
+`str` is the `repr` of that message. -/
 def notInFirst (rk : κ → String) (k : κ) : PyExc :=
   keyErrorStr ("Key not found in the first mapping: " ++ rk k)
 
