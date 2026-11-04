@@ -8,6 +8,7 @@ import PyLean.Decimal.MulProps
 import PyLean.Decimal.Ops
 import PyLean.Decimal.Quantize
 import PyLean.Decimal.ContextDiff
+import PyLean.Decimal.Convert
 
 /-! Differential-testing handler for `decimal` cases (`"mod": "decimal"`).
 
@@ -277,8 +278,45 @@ def evalR (c : Ctx) (name : String) (a : Dec) (b : Arg) (isC : Bool) : Option (D
       | none => Json.null))
   | _ => none
 
+/-- A comparison operand: `["dec", d]`, `["rat", n, d]`, `["float", bits]`,
+`["complex", rebits, imbits]` or `["other"]`. -/
+def cmpArgOf (j : Json) : Except String CmpArg := do
+  let a ← j.getArr?
+  match ← (a[0]!).getStr? with
+  | "dec" => return .dec (← decDec a[1]!)
+  | "rat" => return .rat ((← (a[1]!).getStr?).toInt?.getD 0) (natOfStr (← (a[2]!).getStr?))
+  | "float" => return .float (.ofBits (natOfStr (← (a[1]!).getStr?)))
+  | "complex" => return .complex (.ofBits (natOfStr (← (a[1]!).getStr?))) (.ofBits (natOfStr (← (a[2]!).getStr?)))
+  | _ => return .other
+
+def encObjStr (o : PyObj) : Json :=
+  match pyStrObj o with
+  | .ok s => encStr s
+  | .error _ => Json.null
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "rich" =>
+    let c ← getCtx j
+    let a ← getDec j "a"
+    let b ← cmpArgOf (← field j "b")
+    let r := match ← getStr j "op" with
+      | "eq" => richEq c a b | "lt" => richLt c a b | "le" => richLe c a b
+      | "gt" => richGt c a b | _ => richGe c a b
+    return encPy (fun (p : Option Bool × List Signal) =>
+      Json.arr #[(match p.1 with | some v => toJson v | none => Json.null), flagNames p.2]) (r.run [])
+  | "fromfloat" => return encPy encDec (fromFloat (.ofBits (natOfStr (← getStr j "bits"))))
+  | "new_py" =>
+    let c ← getCtx j
+    let arg ← match ← getStr j "k" with
+      | "str" => pure (NewArg.str (← getChars j "s"))
+      | "int" => pure (NewArg.int ((← getStr j "n").toInt?.getD 0))
+      | "float" => pure (NewArg.float (.ofBits (natOfStr (← getStr j "bits"))))
+      | _ => pure NewArg.other
+    return encPy (fun (p : PyObj × List Signal) => Json.arr #[encObjStr p.1, flagNames p.2]) ((pyNew c arg).run [])
+  | "pow10" =>
+    return encPy (fun (p : Bool × Bool) => Json.arr #[toJson p.1, toJson p.2])
+      (isLessThanPow10aUseStr (natOfStr (← getStr j "q")) (natOfStr (← getStr j "a")))
   | "parse_py" => return encPy encDec (pyParse (← getChars j "s"))
   | "parse_c" => return encPy encDec (cParse (← getChars j "s"))
   | "str_py" => return encPy encStr (pyStr (← getDec j "a"))

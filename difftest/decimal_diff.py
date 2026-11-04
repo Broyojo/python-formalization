@@ -11,7 +11,10 @@ and is rebuilt on the Python side from a tuple (which neither twin limits).
 Ints travel as hex(i). Strings and format specs travel as code point lists.
 """
 
+import fractions
 import math
+import random
+import struct
 import sys
 import warnings
 
@@ -499,6 +502,134 @@ def in_c_limits(j):
     return True
 
 
+
+# ---------------------------------------------------------------- conversions and comparisons
+
+FLOAT_EDGES = [0.0, -0.0, 1.0, -1.0, 0.1, 0.5, 1.5, 2.5, -2.5, 1e-300, 5e-324, -5e-324, 1.7976931348623157e308,
+               2.0 ** 53, 2.0 ** 63, -2.0 ** 64, 1e22, 1e23, 123.456, float("inf"), float("-inf"),
+               float("nan"), -float("nan")]
+
+
+def fbits(x):
+    return str(struct.unpack("<Q", struct.pack("<d", x))[0])
+
+
+def ffrom(b):
+    return struct.unpack("<d", struct.pack("<Q", int(b)))[0]
+
+
+def gen_float(rng):
+    r = rng.random()
+    if r < 0.5:
+        return fbits(rng.choice(FLOAT_EDGES))
+    if r < 0.8:
+        return fbits(rng.choice([1, -1]) * rng.random() * 10.0 ** rng.randint(-30, 30))
+    return str(rng.getrandbits(64))
+
+
+def gen_cmparg(rng, a):
+    r = rng.random()
+    if r < 0.2:
+        return ["dec", gen_dec(rng, wide=True)]
+    if r < 0.45:
+        n = rng.choice([0, 1, -1, 2, 5, 10, -7, 123, 10 ** 20, -10 ** 20, rng.randint(-10 ** 6, 10 ** 6)])
+        if a[0] == "F" and len(a[2]) < 40 and -1 < a[3] < 30 and rng.random() < 0.3:
+            n = (-1 if a[1] else 1) * int(a[2]) * 10 ** max(a[3], 0)
+        return ["rat", str(n), "1"]
+    if r < 0.65:
+        d = rng.choice([2, 3, 4, 7, 10, 1000, 3 ** 20])
+        n = rng.randint(-10 ** 6, 10 ** 6)
+        g = math.gcd(n, d)
+        return ["rat", str(n // g), str(d // g)]
+    if r < 0.85:
+        return ["float", gen_float(rng)]
+    if r < 0.95:
+        im = fbits(rng.choice([0.0, -0.0, 1.0, float("nan")]))
+        return ["complex", gen_float(rng), im]
+    return ["other"]
+
+
+def gen_rich(rng):
+    a = gen_dec(rng, wide=True, special=0.15)
+    ctx = gen_ctx(rng)
+    if rng.random() < 0.3:
+        ctx["traps"] = ctx["traps"] + ["FloatOperation"]
+    return {"mod": "decimal", "fn": "rich", "op": rng.choice(["eq", "lt", "le", "gt", "ge"]),
+            "ctx": ctx, "a": a, "b": gen_cmparg(rng, a)}
+
+
+def gen_new(rng):
+    ctx = gen_ctx(rng)
+    if rng.random() < 0.3:
+        ctx["traps"] = ctx["traps"] + ["FloatOperation"]
+    if rng.random() < 0.3:
+        ctx["traps"] = [t for t in ctx["traps"] if t != "InvalidOperation"]
+    k = rng.choice(["str", "str", "int", "float", "float", "other"])
+    c = {"mod": "decimal", "fn": "new_py", "ctx": ctx, "k": k}
+    if k == "str":
+        c["s"] = cps(gen_numeric_string(rng) if rng.random() < 0.7 else rng.choice(["xyz", "", "1e", "--1", "nan1x", " 1 2"]))
+    elif k == "int":
+        c["n"] = str(rng.choice([0, 1, -1, 10 ** 30, -12345, rng.randint(-10 ** 9, 10 ** 9)]))
+    elif k == "float":
+        c["bits"] = gen_float(rng)
+    return c
+
+
+LOG2_10 = math.log2(10)
+
+
+def gen_pow10(rng):
+    r = rng.random()
+    if r < 0.05:
+        a = rng.choice([2 ** 1024, 2 ** 1024 - 2 ** 970 - 1, 2 ** 1024 - 2 ** 970, 2 ** 1100])
+        return {"mod": "decimal", "fn": "pow10", "q": str(rng.choice([0, 1, 10 ** 30])), "a": str(a)}
+    a = rng.choice([1, 2, 3, rng.randint(1, 60), rng.randint(1, 3000)])
+    if r < 0.5:
+        q = 10 ** a + rng.randint(-3, 3)
+    elif r < 0.8:
+        bl = int(a * LOG2_10) + rng.randint(-2, 2)
+        q = (1 << max(bl, 0)) + rng.randint(0, 3)
+    else:
+        q = rng.getrandbits(rng.randint(0, int(a * 3.4) + 4))
+    return {"mod": "decimal", "fn": "pow10", "q": str(max(q, 0)), "a": str(a)}
+
+
+def build_cmparg(j):
+    if j[0] == "dec":
+        return build(P, j[1])
+    if j[0] == "rat":
+        n, d = int(j[1]), int(j[2])
+        return n if d == 1 else fractions.Fraction(n, d)
+    if j[0] == "float":
+        return ffrom(j[1])
+    if j[0] == "complex":
+        return complex(ffrom(j[1]), ffrom(j[2]))
+    return "x"
+
+
+def run_rich(case):
+    ctx = make_ctx(P, case["ctx"])
+    a = build(P, case["a"])
+    b = build_cmparg(case["b"])
+    with P.localcontext(ctx) as cx:
+        r = getattr(a, "__%s__" % case["op"])(b)
+        flags = sorted(s for s in ALL_SIGNALS if cx.flags[getattr(P, s)])
+    return [None if r is NotImplemented else r, flags]
+
+
+def run_new(case):
+    ctx = make_ctx(P, case["ctx"])
+    k = case["k"]
+    v = {"str": lambda: "".join(map(chr, case["s"])), "int": lambda: int(case["n"]),
+         "float": lambda: ffrom(case["bits"]), "other": lambda: object()}[k]()
+    d = P.Decimal(v, context=ctx)
+    try:
+        s = cps(str(d))
+    except ValueError:
+        s = None
+    return [s, sorted(s2 for s2 in ALL_SIGNALS if ctx.flags[getattr(P, s2)])]
+
+
 def gen_case(rng):
     while True:
         c = gen_case1(rng)
@@ -513,6 +644,15 @@ def gen_case(rng):
 def gen_case1(rng):
     if rng.random() < 0.04:
         return gen_div_band(rng)
+    r0 = rng.random()
+    if r0 < 0.05:
+        return gen_rich(rng)
+    if r0 < 0.07:
+        return {"mod": "decimal", "fn": "fromfloat", "bits": gen_float(rng)}
+    if r0 < 0.09:
+        return gen_new(rng)
+    if r0 < 0.11:
+        return gen_pow10(rng)
     if rng.random() < 0.01:
         # The clinic `unicode` converter of Decimal.__format__, new in 3.15.
         return {"mod": "decimal", "fn": "fmtarg_c", "arg": rng.choice(["int", "NoneType", "float", "bytes"])}
@@ -875,6 +1015,15 @@ def run_python(case):
         if fn == "copy_sign":
             M = MODS[case["impl"]]
             return enc_dec(build(M, case["a"]).copy_sign(build(M, case["b"])))
+        if fn == "rich":
+            return run_rich(case)
+        if fn == "fromfloat":
+            return enc_dec(P.Decimal.from_float(ffrom(case["bits"])))
+        if fn == "new_py":
+            return run_new(case)
+        if fn == "pow10":
+            v, st = P._is_less_than_pow10a_use_str(int(case["q"]), int(case["a"]))
+            return [v, st is not None]
         if fn == "op":
             return run_op(MODS[case["impl"]], case)
         if fn == "m":

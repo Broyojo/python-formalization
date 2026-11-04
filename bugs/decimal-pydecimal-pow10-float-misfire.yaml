@@ -1,0 +1,106 @@
+id: decimal-pydecimal-pow10-float-misfire
+title: "_pydecimal's _is_less_than_pow10a_use_str (new in 3.15) calls a quotient that fits too large, so //, % and divmod raise DivisionImpossible at prec 355861594"
+priority: P4
+kind: wrong-result
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["_is_less_than_pow10a_use_str", "Decimal._divide", "Decimal.__floordiv__", "Decimal.__mod__",
+            "Decimal.__divmod__", "Context.divide_int", "Context.remainder", "Context.divmod"]
+summary: |
+  3.15 replaced `q < 10**context.prec` in _divide by _is_less_than_pow10a_use_str(q, prec)
+  (gh-140036), which first tries two float tests on q.bit_length(). The second,
+      elif q.bit_length() >= 1 + a * _LOG_10_BASE_2_HI:   # "then q > 10**a"
+  is justified by "If z > log2(10) and q.bit_length() >= 1 + a*z, then q > 10**a", which holds
+  for the exact product, but `1 + a * _LOG_10_BASE_2_HI` is rounded to a double (twice). When
+  a*log2(10) is just above an integer N, the rounded value can be exactly N+1, and every q of bit
+  length N+1 with q < 10**a is called too large. Searching every a <= 4*10**9 with exact
+  arithmetic (log2(10) to 80 digits, the products evaluated in IEEE doubles), the first such a is
+  355861594:
+      355861594 * log2(10)              = 1182146627.0000000155687...
+      1 + 355861594 * _LOG_10_BASE_2_HI = 1182146628.0   (the double)
+  so for every q with 2**1182146627 <= q < 10**355861594 (q has 355861594 digits) the helper
+  returns (False, None). There are 131 such a below 4*10**9 (727115501 is another); the test with
+  _LOG_10_BASE_2_LO (:478), which errs in the other, more harmful direction (accepting a quotient
+  with prec+1 digits), never misfires in that range.
+  Consequence, with sys.set_int_max_str_digits(0):
+      c = _pydecimal.Context(prec=355861594, Emax=MAX_EMAX, Emin=MIN_EMIN, traps=[])
+      c.divide_int(_pydecimal.Decimal(2**1182146627), 1)   -> Decimal('NaN'), InvalidOperation
+      c.remainder(same, 1)                                 -> Decimal('NaN'), InvalidOperation
+      _decimal with the same context                       -> the operand itself, and 0
+  The quotient has 355861594 = prec digits, so the spec (and _decimal) returns it.
+likelihood: |
+  Very low. It needs _pydecimal, a precision of at least 355861594 and a quotient of a specific
+  bit length; the integer-string limit must also be lifted to build such operands at all. The
+  same inputs took minutes on 3.14 because of the exact `10 ** prec` this helper replaced.
+maybe_intended: |
+  No. The helper's comments state a claim it does not meet, and its docstring promises
+  `len(str(q)) <= a`. Tim Peters raised exactly this risk in gh-140036 ("the multiplies use
+  nearest/even rounding, not the -inf and +inf rounding appropriate for actual interval
+  arithmetic. Maybe that shortcut matters in some cases, maybe not.") without a case; this is one.
+reproducer: |
+  import sys
+  import _pydecimal as P
+  sys.set_int_max_str_digits(0)
+  prec = 355861594
+  q = 1 << 1182146627
+  verdict = P._is_less_than_pow10a_use_str(q, prec)
+  digits = len(str(q))          # about a minute: 355861594 digits
+  print('helper:', verdict, 'digits of q:', digits, 'prec:', prec)
+  if verdict == (False, None) and digits <= prec:
+      print('REPRODUCED decimal-pydecimal-pow10-float-misfire')
+public_api_reproducer: |
+  # Through Context.divide_int; about 4.5 minutes and 4.4 GB on the build pod.
+  import sys
+  import _pydecimal as P, _decimal as C
+  sys.set_int_max_str_digits(0)
+  prec = 355861594
+  q = 1 << 1182146627
+  s = str(q)
+  def ctx(M):
+      return M.Context(prec=prec, Emax=C.MAX_EMAX, Emin=C.MIN_EMIN, traps=[])
+  pc = ctx(P)
+  pr = pc.divide_int(P.Decimal(q), 1)
+  cc = ctx(C)
+  cx = C.Decimal(s)
+  cr = cc.divide_int(cx, 1)
+  if (len(s) <= prec and pr.is_nan() and pc.flags[P.InvalidOperation]
+          and cr == cx and not cc.flags[C.InvalidOperation]):
+      print('REPRODUCED decimal-pydecimal-pow10-float-misfire')
+expected: |
+  _is_less_than_pow10a_use_str(q, a)[0] == (q < 10**a), as its docstring says, and divide_int,
+  remainder and divmod return the integer quotient and remainder whenever the quotient has at most
+  prec digits (Doc/library/decimal.rst, divide_int and DivisionImpossible: "the integer result of
+  a divide-integer or remainder operation had too many digits (would be longer than precision)").
+promised_by: |
+  The helper's docstring and comments (Lib/_pydecimal.py:471-492); DivisionImpossible's
+  docstring (:190-196); twin agreement with _decimal.
+cause: |
+  Lib/_pydecimal.py:486 `elif q.bit_length() >= 1 + a * _LOG_10_BASE_2_HI:` compares with a
+  product rounded to nearest (and :478 likewise for _LOG_10_BASE_2_LO); the comment at :487-489
+  reasons about the exact product. Same code on main at Lib/_pydecimal.py:486.
+possible_fix: |
+  Leave a margin for the rounding: compare with `2 + a * _LOG_10_BASE_2_HI` and
+  `a * _LOG_10_BASE_2_LO - 1` (for a < 2**53 the rounding error is far below 1), or do the
+  comparison in integers, e.g. `q.bit_length() - 1 >= (a * 3402...) >> k` with a certified
+  rational bound on log2(10), and fall through to str(q) in the band between.
+tested:
+  python3 3.15.2: REPRODUCED (reproducer and public_api_reproducer)
+  python3 3.14.7: not affected (the helper does not exist; _divide computes 10 ** prec)
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED (public_api_reproducer)
+  lean_counterexample: "python3 3.15.2: _pydecimal.Decimal('1E+355861594')._divide(Decimal('1.000000001'), c), c = Context(prec=355861594, Emax=Emin=+-(10**18-1), traps=[]), returns (NaN, NaN) with InvalidOperation (2377 s, mostly 10**355861603): the exact instance of divideCorrect_refuted"
+duplicates:
+  issues: []
+  related: [140036]
+  queries: ["_is_less_than_pow10a_use_str", "_LOG_10_BASE_2_HI", "pydecimal divide_int DivisionImpossible large precision",
+            "decimal bit_length log2 float rounding", "pydecimal quotient too large float",
+            "decimal floor division hang", "_pydecimal is_less_than_pow10a"]
+  bugforge: "no _pydecimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.Pow10Correct
+  theorem: PyLean.Decimal.pow10Correct_refuted
+  also_refutes: PyLean.Decimal.DivideCorrect (PyLean.Decimal.divideCorrect_refuted)
+notes: |
+  The Lean refutation uses q = 10**355861603 // 1000000001, the quotient of
+  Decimal('1E+355861594') by Decimal('1.000000001'), and proves 2**1182146627 <= q < 10**355861594
+  with 128-bit interval arithmetic (the numbers are too large for the kernel). The search over
+  a <= 4*10**9 and the reproducers are in the agent's scratch notes, not in the repo.

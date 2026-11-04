@@ -1,34 +1,34 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pydecimal.py	119	120	DecimalException.handle	handle(self, context, *args)	todo		review: The only statement is `handle c (.plain s) = none`, `rfl` on a one-line constant (`pass`), which AGENTS.md says is not coverage; a `trivial:` exclusion fits this body better.
-Lib/_pydecimal.py	158	162	InvalidOperation.handle	handle(self, context, *args)	todo		review: RaiseErrorCorrect states `handle c (.invalidOperation (some a)) = some (quietOf c a)` by `rfl`, restating the model, and nothing pins what quietOf/_fix_nan returns (sign kept, payload cut to prec - clamp digits), so any quietOf passes.
-Lib/_pydecimal.py	171	172	ConversionSyntax.handle	handle(self, context, *args)	todo		review: `handle c .conversionSyntax = some nanD` is `rfl` on a one-line constant (`return _NaN`); not coverage under AGENTS.md, and the operation models (Parse.lean) never route through `handle`.
-Lib/_pydecimal.py	187	188	DivisionByZero.handle	handle(self, context, sign, *args)	todo		review: `handle c (.divisionByZero s) = some (.inf s)` is `rfl` on a one-line definition; the division models use their own `divByZero` (Division.lean:26) instead of `handle`, so the handler is pinned only by restating it.
-Lib/_pydecimal.py	198	199	DivisionImpossible.handle	handle(self, context, *args)	todo		review: `handle c .divisionImpossible = some nanD` is `rfl` on a one-line constant (`return _NaN`); not coverage under AGENTS.md.
-Lib/_pydecimal.py	209	210	DivisionUndefined.handle	handle(self, context, *args)	todo		review: `handle c .divisionUndefined = some nanD` is `rfl` on a one-line constant (`return _NaN`); not coverage under AGENTS.md.
-Lib/_pydecimal.py	236	237	InvalidContext.handle	handle(self, context, *args)	todo		review: `handle c .invalidContext = some nanD` is `rfl` on a one-line constant (`return _NaN`); not coverage under AGENTS.md.
-Lib/_pydecimal.py	284	297	Overflow.handle	handle(self, context, sign, *args)	todo		review: overflowResult (Arith.lean:128) mirrors :284-297, but RaiseErrorCorrect only states `handle c (.overflow s) = some (overflowResult c s)` by `rfl`; the docstring's per-mode table (infinity for HALF_*/UP, 9s*prec at Emax-prec+1 for DOWN, sign-dependent CEILING/FLOOR) is never compared, so any overflowResult passes.
+Lib/_pydecimal.py	119	120	DecimalException.handle	handle(self, context, *args)	excluded		trivial: the body is `pass`; it returns None for every signal without its own handler, which RaiseErrorCorrect states for _raise_error.
+Lib/_pydecimal.py	158	162	InvalidOperation.handle	handle(self, context, *args)	modelled	decimal-fix-nan-exact,decimal-check-nans-exact,decimal-compare-check-nans-exact	
+Lib/_pydecimal.py	171	172	ConversionSyntax.handle	handle(self, context, *args)	excluded		trivial: the body is `return _NaN`, one module constant with no branch; Decimal.__new__'s ConversionSyntax path (pyNew, Convert.lean) returns it.
+Lib/_pydecimal.py	187	188	DivisionByZero.handle	handle(self, context, sign, *args)	modelled	decimal-truediv-specials	
+Lib/_pydecimal.py	198	199	DivisionImpossible.handle	handle(self, context, *args)	excluded		trivial: the body is `return _NaN`, one module constant with no branch; the NaN _divide returns is stated by decimal-divide-correct.
+Lib/_pydecimal.py	209	210	DivisionUndefined.handle	handle(self, context, *args)	excluded		trivial: the body is `return _NaN`, one module constant with no branch; 0/0 giving NaN is stated by decimal-truediv-specials.
+Lib/_pydecimal.py	236	237	InvalidContext.handle	handle(self, context, *args)	excluded		trivial: the body is `return _NaN`, one module constant with no branch.
+Lib/_pydecimal.py	284	297	Overflow.handle	handle(self, context, sign, *args)	modelled	decimal-overflow-handle-table	
 Lib/_pydecimal.py	358	370	getcontext	getcontext()	todo		
 Lib/_pydecimal.py	372	377	setcontext	setcontext(context)	todo		
 Lib/_pydecimal.py	381	424	localcontext	localcontext(ctx=None, **kwargs)	todo		
 Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	todo		
 Lib/_pydecimal.py	465	467	_tento	_tento(n)	todo		changed-in-3.15: new function
-Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	todo		review: Pow10BandExact covers only the str(q) band (:499-501), which is len(str(q)) <= a by definition; the two float tests (:478-492), whose correctness is the docstring's claim and which the DivideCorrect note says misclassify q = 2**2415425411, a = 727115501, are neither proven nor refuted, so a function answering anything in those branches passes; DivideVerdict only names the decision. (Mirror nit: for a >= 2**1024 Python raises OverflowError in `a * _LOG_10_BASE_2_LO`, while F64.ofInt gives inf and toRat inf = 0 makes the model answer (false, false); citation :470-499 should be :470-501.)
+Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	modelled	decimal-pow10-correct,decimal-pow10-band-exact	
 Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	todo		changed-in-3.15: new function
-Lib/_pydecimal.py	552	700	Decimal.__new__	__new__(cls, value='0', context=None)	todo		review: The string, int and tuple branches are mirrored (Parse.lean, Tuple.lean) and the round trip, casefree twin agreement and the bool-digit/casefold refutations are real, but the float branch (:687-698: FloatOperation through _raise_error, then from_float) is not modelled at all, and pyParse assumes InvalidOperation is trapped, so the ConversionSyntax path under a non-trapping context (:582-585 returns NaN and sets the flag) is missing; also the docstring's Parse.lean citation :578-624 runs into the int branch.
+Lib/_pydecimal.py	552	700	Decimal.__new__	__new__(cls, value='0', context=None)	todo		model complete: pyNew (Convert.lean) adds the float branch (FloatOperation, then from_float) and ConversionSyntax under a non-trapping context, difftested (new_py); decimal-from-float-exact, which the float branch needs, is open.
 Lib/_pydecimal.py	703	715	Decimal.from_number	from_number(cls, number)	todo		
-Lib/_pydecimal.py	718	760	Decimal.from_float	from_float(cls, f)	todo		
+Lib/_pydecimal.py	718	760	Decimal.from_float	from_float(cls, f)	todo		model: fromFloat (Convert.lean), difftested; decimal-from-float-exact is open (missing the digit bound on n*5**k).
 Lib/_pydecimal.py	762	775	Decimal._isnan	_isnan(self)	modelled	decimal-classification-correct,decimal-compare-total-order	
-Lib/_pydecimal.py	777	788	Decimal._isinfinity	_isinfinity(self)	todo		review: Only `isinfinity d ≠ 0` reaches a property (is_infinite in ClassificationCorrect); the sign of the result (+1 / -1, read by _cmp, __add__ and number_class's '+Infinity'/'-Infinity') is never stated, so an _isinfinity returning 1 for -Infinity passes.
-Lib/_pydecimal.py	790	820	Decimal._check_nans	_check_nans(self, other=None, context=None)	todo		review: ComparisonsConsistent uses only the no-NaN case and `isSome` for a quiet NaN on the left; the sNaN branches (:810-815, InvalidOperation then the quieted operand), their precedence over quiet NaNs, and the NaN value returned are never stated.
-Lib/_pydecimal.py	822	853	Decimal._compare_check_nans	_compare_check_nans(self, other, context)	todo		review: Only a left quiet NaN with no sNaN is stated (flag set, `<` false); the docstring's point, sNaN taking precedence over qNaN on either side (:837-852), and the NaN returned are unstated, so an order-insensitive check passes.
-Lib/_pydecimal.py	855	860	Decimal.__bool__	__bool__(self)	todo		review: The only conjunct is `decBool d = !isZero d`, true by definition (decBool is defined as `!isZero`, Ops.lean:24); with is_zero itself unpinned, __bool__ ≡ True together with is_zero ≡ False passes.
-Lib/_pydecimal.py	862	907	Decimal._cmp	_cmp(self, other)	todo		review: No theorem relates cmpVal to the numeric values: ComparisonsConsistent states only antisymmetry and CompareTotalOrder only zero-iff-identical, so a reversed _cmp (and with it reversed <, max, min) passes both; citation :862-924 includes the comment block after the function (:909-924).
-Lib/_pydecimal.py	926	932	Decimal.__eq__	__eq__(self, other, context=None)	todo		review: _convert_for_comparison (:927; int, float, Rational, complex operands and NotImplemented) is not modelled, the result is pinned only to the unpinned _cmp, and the sNaN case (InvalidOperation, then False) is unstated.
-Lib/_pydecimal.py	934	941	Decimal.__lt__	__lt__(self, other, context=None)	todo		review: _convert_for_comparison (:935) is not modelled; `<` is stated as `cmpVal a b = .lt`, i.e. pinned only to _cmp, which is unpinned (a reversed _cmp passes), and the sNaN and right-hand NaN cases are unstated.
-Lib/_pydecimal.py	943	950	Decimal.__le__	__le__(self, other, context=None)	todo		review: _convert_for_comparison (:944) is not modelled; `<=` is pinned only to the unpinned _cmp and no NaN case is stated for it.
-Lib/_pydecimal.py	952	959	Decimal.__gt__	__gt__(self, other, context=None)	todo		review: _convert_for_comparison (:953) is not modelled; `>` is pinned only to the unpinned _cmp and no NaN case is stated for it.
-Lib/_pydecimal.py	961	968	Decimal.__ge__	__ge__(self, other, context=None)	todo		review: _convert_for_comparison (:962) is not modelled; `>=` is pinned only to the unpinned _cmp and no NaN case is stated for it.
-Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	todo		review: compareD mirrors :978-986 but the property pins it only to `decOfInt (cmpInt a b)`, i.e. to the unpinned _cmp, and the NaN branch (:981-984: the NaN returned, sNaN signalling) is not stated.
+Lib/_pydecimal.py	777	788	Decimal._isinfinity	_isinfinity(self)	modelled	decimal-classification-exact,decimal-cmp-exact	
+Lib/_pydecimal.py	790	820	Decimal._check_nans	_check_nans(self, other=None, context=None)	modelled	decimal-check-nans-exact,decimal-comparisons-exact	
+Lib/_pydecimal.py	822	853	Decimal._compare_check_nans	_compare_check_nans(self, other, context)	modelled	decimal-compare-check-nans-exact,decimal-comparisons-exact	
+Lib/_pydecimal.py	855	860	Decimal.__bool__	__bool__(self)	modelled	decimal-classification-exact,decimal-cmp-exact	
+Lib/_pydecimal.py	862	907	Decimal._cmp	_cmp(self, other)	modelled	decimal-cmp-exact,decimal-comparisons-exact	
+Lib/_pydecimal.py	926	932	Decimal.__eq__	__eq__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
+Lib/_pydecimal.py	934	941	Decimal.__lt__	__lt__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
+Lib/_pydecimal.py	943	950	Decimal.__le__	__le__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
+Lib/_pydecimal.py	952	959	Decimal.__gt__	__gt__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
+Lib/_pydecimal.py	961	968	Decimal.__ge__	__ge__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
+Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	modelled	decimal-comparisons-exact	
 Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	todo		review: The only entry is the int-limit refutation (hash(Decimal(10**4300))), a limitation upstream declined (python/cpython#96589; the record says do not file), so it is not a promised behaviour; nothing states the hash of an in-limit value (no narrowed twin agreement or Fraction-consistency for _pydecimal).
 Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
@@ -43,7 +43,7 @@ Lib/_pydecimal.py	1290	1302	Decimal.__sub__	__sub__(self, other, context=None)	t
 Lib/_pydecimal.py	1304	1310	Decimal.__rsub__	__rsub__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1312	1366	Decimal.__mul__	__mul__(self, other, context=None)	todo		review: MulCorrect holds only when `*` returns (an always-raising __mul__ satisfies it, and nothing states when it returns) and assumes the subnormal and overflow ranges away (decimal-mul-subnormal-correct, -overflow-correct open); the other entry is the declined int-limit refutation.
 Lib/_pydecimal.py	1369	1426	Decimal.__truediv__	__truediv__(self, other, context=None)	todo		review: TruedivSpecials pins the zero/infinity cases, but TruedivCoreCorrect is conditional on truedivFin returning and stops before _fix (the correctly rounded quotient is unstated), so a __truediv__ raising for every finite non-zero pair passes; 0/x and NaN operands are not stated.
-Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	todo		review: divideD mirrors :1434-1464, but DivideVerdict holds only when _divide returns (an always-raising _divide passes) and names the helper's decision instead of q < 10**prec (DivideCorrect open, and per its note false at prec 727115501); the floordiv refutation runs _divide but the defect it shows is __floordiv__'s missing _fix.
+Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	modelled	decimal-divide-correct	
 Lib/_pydecimal.py	1466	1471	Decimal.__rtruediv__	__rtruediv__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1473	1507	Decimal.__divmod__	__divmod__(self, other, context=None)	todo		review: DivmodConsistent is the finite-path body unfolded by `rfl` (divmodD = divideD then _fix of the remainder); the special branches (:1484-1503: NaNs, INF with InvalidOperation, x/0 giving DivisionByZero plus InvalidOperation, 0/0 DivisionUndefined) are unstated, and the twin disagreement recorded for its quotient (decimal-pydecimal-floordiv-no-finalize) is not an entry of this row.
 Lib/_pydecimal.py	1509	1514	Decimal.__rdivmod__	__rdivmod__(self, other, context=None)	modelled	decimal-reflected-operators	
@@ -53,12 +53,12 @@ Lib/_pydecimal.py	1550	1625	Decimal.remainder_near	remainder_near(self, other, c
 Lib/_pydecimal.py	1627	1653	Decimal.__floordiv__	__floordiv__(self, other, context=None)	modelled	decimal-divmod-consistent,decimal-floordiv-twins-agree	
 Lib/_pydecimal.py	1655	1660	Decimal.__rfloordiv__	__rfloordiv__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1662	1670	Decimal.__float__	__float__(self)	todo		
-Lib/_pydecimal.py	1672	1683	Decimal.__int__	__int__(self)	todo		review: pyInt (Arith.lean:309) mirrors :1672-1683, but no theorem runs it on a negative exponent: IntConversionsPyOrLimit is about `int(self._rescale(0, m))`, which feeds pyInt exponent 0, so the `_int[:self._exp] or '0'` truncation is never unfolded; that theorem's unconstrained `∨ ValueError` disjunct is also met by an always-raising function.
+Lib/_pydecimal.py	1672	1683	Decimal.__int__	__int__(self)	modelled	decimal-int-trunc-exact	
 Lib/_pydecimal.py	1688	1689	Decimal.real	real(self)	todo		
 Lib/_pydecimal.py	1692	1693	Decimal.imag	imag(self)	todo		
 Lib/_pydecimal.py	1695	1696	Decimal.conjugate	conjugate(self)	todo		
 Lib/_pydecimal.py	1698	1699	Decimal.__complex__	__complex__(self)	todo		
-Lib/_pydecimal.py	1701	1711	Decimal._fix_nan	_fix_nan(self, context)	todo		review: fixNan (Arith.lean:123) mirrors :1703-1711 (last prec - clamp digits, then lstrip), but no listed theorem states the truncation; it only appears inside quietOf/checkNans, whose results are never compared with anything.
+Lib/_pydecimal.py	1701	1711	Decimal._fix_nan	_fix_nan(self, context)	modelled	decimal-fix-nan-exact,decimal-check-nans-exact	
 Lib/_pydecimal.py	1713	1803	Decimal._fix	_fix(self, context)	todo		review: `fix` mirrors :1723-1803 branch by branch, but MulCorrect and QuantizeCorrect hold only when the operation returns (an always-raising _fix passes) and assume the Overflow (:1747-1752, :1774-1775), Underflow/Subnormal and Clamped-on-underflow branches away; those are the open decimal-mul-overflow-correct and -subnormal-correct.
 Lib/_pydecimal.py	1815	1820	Decimal._round_down	_round_down(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1822	1824	Decimal._round_up	_round_up(self, prec)	modelled	decimal-rounding-modes-correct	
@@ -69,8 +69,8 @@ Lib/_pydecimal.py	1850	1855	Decimal._round_ceiling	_round_ceiling(self, prec)	mo
 Lib/_pydecimal.py	1857	1862	Decimal._round_floor	_round_floor(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1864	1869	Decimal._round_05up	_round_05up(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	todo		review: IntConversionsPyOrLimit's `∨ ∃ msg, ValueError` is unconstrained, so a round() that always raises ValueError passes; the other entries are the declined int-limit refutation and QuantizeCorrect, which holds only when quantize returns; the n-argument TypeError (:1932-1933) is not modelled.
-Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	todo		review: pyToInt .floor mirrors :1953-1958, but IntConversionsPyOrLimit allows any ValueError (an always-raising floor passes) and the other entry is the declined int-limit refutation; nothing bounds the ValueError to results past 4300 digits.
-Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	todo		review: Same as __floor__: IntConversionsPyOrLimit's unconstrained ValueError disjunct is met by an always-raising ceil, and the refutation is the declined int limit.
+Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
+Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	todo		
 Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
 Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
@@ -79,34 +79,34 @@ Lib/_pydecimal.py	2568	2573	Decimal.__rpow__	__rpow__(self, other, modulo=None, 
 Lib/_pydecimal.py	2575	2598	Decimal.normalize	normalize(self, context=None)	todo		
 Lib/_pydecimal.py	2600	2659	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	todo		review: quantize/quantizeFin (Arith.lean:257-281) mirror :2605-2659 and QuantizeCorrect is a strong statement, but it holds only when quantize returns, so an always-raising quantize passes, and the special operands (:2612-2621: NaNs, both-infinite returns self, one INF gives InvalidOperation) are not stated.
 Lib/_pydecimal.py	2661	2674	Decimal.same_quantum	same_quantum(self, other, context=None)	todo		
-Lib/_pydecimal.py	2676	2708	Decimal._rescale	_rescale(self, exp, rounding)	todo		review: `rescale` mirrors :2687-2708, but RoundingModesCorrect's `∨ ∃ msg, ValueError` is unconstrained, so a _rescale that always raises ValueError passes; the zero and padding branches are stated only through QuantizeCorrect, which is conditional on returning.
+Lib/_pydecimal.py	2676	2708	Decimal._rescale	_rescale(self, exp, rounding)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	2710	2731	Decimal._round	_round(self, places, rounding)	todo		
 Lib/_pydecimal.py	2733	2760	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	todo		review: ToIntegralExactCorrect holds only when to_integral_exact returns (an always-raising one passes) and covers only finite non-zero values with exp < 0; the special, exp >= 0 and zero branches (:2743-2751) are not stated.
-Lib/_pydecimal.py	2762	2776	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	todo		review: ToIntegralValueCorrect pins exp >= 0 unconditionally, but for exp < 0 its `∨ ∃ msg, ValueError` is unconstrained (an always-raising rounding branch passes), and the NaN/infinity branch (:2768-2772) and zero coefficient are unstated.
+Lib/_pydecimal.py	2762	2776	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	modelled	decimal-to-integral-value-correct	
 Lib/_pydecimal.py	2781	2878	Decimal.sqrt	sqrt(self, context=None)	todo		
-Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	todo		review: MinMaxCorrect is stated through the model's own cmpVal (unpinned: a reversed _cmp makes max return the smaller operand and still satisfies it), leaves the tie-break direction open (only order independence), and states no sNaN, two-NaN or left-hand-qNaN case (:2891-2901).
-Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	todo		review: As for max: pinned only to the unpinned cmpVal, tie-break direction unstated, and the sNaN / left-qNaN branches (:2933-2943) unstated.
+Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
+Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
 Lib/_pydecimal.py	2956	2963	Decimal._isinteger	_isinteger(self)	todo		
 Lib/_pydecimal.py	2965	2969	Decimal._iseven	_iseven(self)	todo		
 Lib/_pydecimal.py	2971	2977	Decimal.adjusted	adjusted(self)	todo		review: Dec.adjusted/adjustedD mirror :2973-2977, but its only entry is QuantizeCorrect, which holds only when quantize returns, and the special-value result 0 (the except TypeError) is never stated.
 Lib/_pydecimal.py	2979	2985	Decimal.canonical	canonical(self)	todo		
-Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	todo		review: compareSignal mirrors :2993-2997, but only the no-NaN case is stated (equal to compare, i.e. the unpinned _cmp); the branch the method exists for, every NaN signalling with sNaN first, is unstated.
-Lib/_pydecimal.py	2999	3069	Decimal.compare_total	compare_total(self, other, context=None)	todo		review: compareTotal mirrors :3006-3069, but CompareTotalOrder states only antisymmetry and zero-iff-identical: the negation of the correct order, or any antisymmetric injective ranking, passes; transitivity, agreement with numeric order and the documented NaN placement are unstated.
-Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	todo		review: CopyOpsCorrect restates the definition `compareTotalMag a b = compareTotal (copyAbs a) (copyAbs b)` by `rfl` plus reflexivity and antisymmetry, inheriting compare_total's unpinned order.
-Lib/_pydecimal.py	3084	3086	Decimal.copy_abs	copy_abs(self)	todo		review: CopyOpsCorrect states only that copy_abs's sign is 0 and that it is idempotent (and absorbs copy_sign): a constant Decimal('0') satisfies all three, so the magnitude is unpinned.
-Lib/_pydecimal.py	3088	3093	Decimal.copy_negate	copy_negate(self)	todo		review: CopyOpsCorrect states only an involution that flips the sign, which `±c·10^e ↦ ∓c·10^-e` also satisfies; copyAbs (copyNegate a) = copyAbs a is not stated, and the other entry is the declined int-limit refutation.
+Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-compare-check-nans-exact	
+Lib/_pydecimal.py	2999	3069	Decimal.compare_total	compare_total(self, other, context=None)	modelled	decimal-compare-total-exact	
+Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	modelled	decimal-compare-total-exact	
+Lib/_pydecimal.py	3084	3086	Decimal.copy_abs	copy_abs(self)	modelled	decimal-copy-exact	
+Lib/_pydecimal.py	3088	3093	Decimal.copy_negate	copy_negate(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3095	3099	Decimal.copy_sign	copy_sign(self, other, context=None)	modelled	decimal-copy-ops-correct	
 Lib/_pydecimal.py	3101	3174	Decimal.exp	exp(self, context=None)	todo		
-Lib/_pydecimal.py	3176	3182	Decimal.is_canonical	is_canonical(self)	todo		review: `isCanonical d = true` is `rfl` on a constant (`return True`); nothing to prove, so a `trivial:` exclusion fits better than coverage.
+Lib/_pydecimal.py	3176	3182	Decimal.is_canonical	is_canonical(self)	excluded		trivial: the body is `return True`, one constant with no branch.
 Lib/_pydecimal.py	3184	3190	Decimal.is_finite	is_finite(self)	modelled	decimal-classification-correct	
 Lib/_pydecimal.py	3192	3194	Decimal.is_infinite	is_infinite(self)	modelled	decimal-classification-correct	
 Lib/_pydecimal.py	3196	3198	Decimal.is_nan	is_nan(self)	modelled	decimal-classification-correct	
-Lib/_pydecimal.py	3200	3206	Decimal.is_normal	is_normal(self, context=None)	todo		review: ClassificationCorrect states only `is_normal != is_subnormal` on finite non-zero values: the Emin threshold is never stated (any threshold shared with is_subnormal passes) and False for zeros and specials (:3202-3203) is unstated.
+Lib/_pydecimal.py	3200	3206	Decimal.is_normal	is_normal(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3208	3210	Decimal.is_qnan	is_qnan(self)	modelled	decimal-classification-correct	
 Lib/_pydecimal.py	3212	3214	Decimal.is_signed	is_signed(self)	todo		
 Lib/_pydecimal.py	3216	3218	Decimal.is_snan	is_snan(self)	modelled	decimal-classification-correct	
-Lib/_pydecimal.py	3220	3226	Decimal.is_subnormal	is_subnormal(self, context=None)	todo		review: Only the exclusive-or with is_normal on finite non-zero values is stated; the `adjusted() < Emin` threshold and False for zeros and specials are unstated.
-Lib/_pydecimal.py	3228	3230	Decimal.is_zero	is_zero(self)	todo		review: is_zero appears only in `decBool d = !isZero d`, true by definition; no statement says it is true exactly for a zero coefficient, so is_zero ≡ False with __bool__ ≡ True passes.
+Lib/_pydecimal.py	3220	3226	Decimal.is_subnormal	is_subnormal(self, context=None)	modelled	decimal-classification-exact	
+Lib/_pydecimal.py	3228	3230	Decimal.is_zero	is_zero(self)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3232	3254	Decimal._ln_exp_bound	_ln_exp_bound(self)	todo		
 Lib/_pydecimal.py	3257	3305	Decimal.ln	ln(self, context=None)	todo		
 Lib/_pydecimal.py	3307	3335	Decimal._log10_exp_bound	_log10_exp_bound(self)	todo		
@@ -118,12 +118,12 @@ Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context
 Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	todo		
 Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	todo		
 Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	todo		
-Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	todo		review: MinMaxCorrect states only operand-order independence for max_mag: which operand wins is never stated (min_mag ≡ max_mag passes), nor any NaN case (:3522-3532).
-Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	todo		review: Only operand-order independence is stated, so a min_mag returning the larger magnitude passes; no NaN case is stated.
+Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
+Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
 Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
 Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	todo		
 Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	todo		
-Lib/_pydecimal.py	3667	3707	Decimal.number_class	number_class(self, context=None)	todo		review: ClassificationCorrect pins only the \"sNaN\" and \"NaN\" answers: a number_class returning \"+Normal\" for every non-NaN (infinities, zeros, subnormals, negatives) passes.
+Lib/_pydecimal.py	3667	3707	Decimal.number_class	number_class(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3709	3711	Decimal.radix	radix(self)	todo		
 Lib/_pydecimal.py	3713	3744	Decimal.rotate	rotate(self, other, context=None)	todo		
 Lib/_pydecimal.py	3746	3769	Decimal.scaleb	scaleb(self, other, context=None)	todo		

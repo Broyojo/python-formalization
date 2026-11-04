@@ -3,7 +3,7 @@ import PyLean.Decimal.Basic
 /-!
 `Decimal(str)` in both twins.
 
-**`_pydecimal`** (_pydecimal.py:578-624): `_parser(value.strip().replace("_", ""))`
+**`_pydecimal`** (_pydecimal.py:578-611): `_parser(value.strip().replace("_", ""))`
 with the regex at :6200-6218, compiled with `re.VERBOSE | re.IGNORECASE`:
 
 ```
@@ -131,7 +131,7 @@ def pyNanVal (neg sig : Bool) (d : List Char) : Py Dec := do
   intLimit (if d = [] then 1 else d.length)
   return .nan neg sig (digitsValue d)
 
-/-- `_pydecimal.Decimal(value)` for a `str` value, _pydecimal.py:578-624,
+/-- `_pydecimal.Decimal(value)` for a `str` value, _pydecimal.py:578-611,
 with the default context (InvalidOperation trapped). -/
 def pyParse (s : List Char) : Py Dec :=
   match pyMatch ((strip s).filter (· ≠ '_')) with

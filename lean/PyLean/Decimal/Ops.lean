@@ -168,7 +168,7 @@ def compareTotalMag (a b : Dec) : Int := compareTotal (copyAbs a) (copyAbs b)
 
 /-! ## `max`, `min`, `max_mag`, `min_mag` -/
 
-/-- The NaN handling these four share, _pydecimal.py:2893-2906: `none` to go on. -/
+/-- The NaN handling these four share, _pydecimal.py:2891-2901: `none` to go on. -/
 def minmaxNans (c : Ctx) (a b : Dec) : DM (Option Dec) := do
   if isSpecial a || isSpecial b then
     let sn := isnan a
@@ -413,5 +413,53 @@ def roundPlaces (d : Dec) (places : Nat) (m : Rounding) : Py Dec := do
     if ans.adjusted ≠ d.adjusted then rescale ans (ans.adjusted + 1 - places) m
     else return ans
   | _ => return d
+
+/-! ## Conditions: `_raise_error` and the `handle` methods -/
+
+/-- A condition with the arguments `_raise_error` passes to its handler. -/
+inductive Cond where
+  | invalidOperation (arg : Option Dec)
+  | conversionSyntax
+  | divisionImpossible
+  | divisionUndefined
+  | invalidContext
+  | divisionByZero (sign : Bool)
+  | overflow (sign : Bool)
+  /-- Clamped, Inexact, Rounded, Subnormal, Underflow, FloatOperation: no `handle` of
+  their own. -/
+  | plain (s : Signal)
+  deriving Repr
+
+/-- `_condition_map.get(condition, condition)`, _pydecimal.py:336-339. -/
+def Cond.signal : Cond → Signal
+  | .invalidOperation _ | .conversionSyntax | .divisionImpossible
+  | .divisionUndefined | .invalidContext => .invalidOperation
+  | .divisionByZero _ => .divisionByZero
+  | .overflow _ => .overflow
+  | .plain s => s
+
+/-- `_NaN`, _pydecimal.py:6489. -/
+def nanD : Dec := .nan false false 0
+
+/-- The `handle` methods: `DecimalException.handle` (:119-120, `none`),
+`InvalidOperation.handle` (:158-162), `ConversionSyntax.handle` (:171-172),
+`DivisionByZero.handle` (:187-188), `DivisionImpossible.handle` (:198-199),
+`DivisionUndefined.handle` (:209-210), `InvalidContext.handle` (:236-237),
+`Overflow.handle` (:284-297, `overflowResult`). -/
+def handle (c : Ctx) : Cond → Option Dec
+  | .invalidOperation (some a) => some (quietOf c a)
+  | .invalidOperation none => some nanD
+  | .conversionSyntax | .divisionImpossible | .divisionUndefined | .invalidContext => some nanD
+  | .divisionByZero sign => some (.inf sign)
+  | .overflow sign => some (overflowResult c sign)
+  | .plain _ => none
+
+/-- `Context._raise_error`, _pydecimal.py:4105-4125. -/
+def raiseError (c : Ctx) (ignored : List Signal) (cnd : Cond) : DM (Option Dec) := do
+  let error := cnd.signal
+  if error ∈ ignored then return handle c cnd
+  modify (fun fl => if error ∈ fl then fl else fl ++ [error])
+  if error ∉ c.traps then return handle c cnd
+  throw (.named error.name "~")
 
 end PyLean.Decimal
