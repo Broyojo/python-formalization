@@ -612,4 +612,126 @@ theorem callBoundMethodGeneralRefines_proven : CallBoundMethodGeneralRefines := 
     rw [wd_deopt hspec]
 
 
+/-! ## `CALL_KW_PY`, `CALL_KW_BOUND_METHOD` -/
+
+/-- The `_KW` guards are the plain ones one stack slot deeper (`kwnames` on top). -/
+def kwEnv (e : Env) : Env := { e with oparg := e.oparg + 1 }
+
+theorem fvKw_eq (e : Env) : _CHECK_FUNCTION_VERSION_KW e = _CHECK_FUNCTION_VERSION (kwEnv e) := rfl
+theorem mvKw_eq (e : Env) : _CHECK_METHOD_VERSION_KW e = _CHECK_METHOD_VERSION (kwEnv e) := rfl
+theorem expKw_eq (e : Env) : _EXPAND_METHOD_KW e = _EXPAND_METHOD (kwEnv e) := rfl
+theorem cacheNat_kwEnv (e : Env) (i : Nat) : cacheNat (kwEnv e) i = cacheNat e i := rfl
+theorem methodPass_kwEnv (e : Env) (rt : Rt) (c self : Val) (b : Addr) (f s : Val) (fo : FuncObj) :
+    MethodPass (kwEnv e) rt c self b f s fo ↔ MethodPass e rt c self b f s fo := Iff.rfl
+
+theorem kwStack_eq (kwv self c : Val) (args rest : List Val) :
+    kwv :: (args.reverse ++ self :: c :: rest) = (args ++ [kwv]).reverse ++ self :: c :: rest := by simp
+
+theorem pyFrameKw_ok (e : Env) (regs : Regs) (c self kwv : Val) (args rest : List Val) (kw : List String)
+    (hlen : args.length = e.oparg) (hkw : kwNames kwv regs.rt = .ok kw regs.rt) (nf : Frame) (r : Regs)
+    (hp : pushInit e c (withSelf self args) kw regs = .ok nf r) :
+    _PY_FRAME_KW e ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ = .ok nf ⟨r, rest⟩ := by
+  simp only [_PY_FRAME_KW, bind, EStateM.bind, kwStack_pop e regs c self kwv args rest hlen, dropLast_snoc,
+    getLastD_snoc]
+  simp [BM.lift, RM.lift, hkw, hp, bind, EStateM.bind, liftM, monadLift, MonadLift.monadLift]
+
+theorem pyFrameKw_err (e : Env) (regs : Regs) (c self kwv : Val) (args rest : List Val) (kw : List String)
+    (hlen : args.length = e.oparg) (hkw : kwNames kwv regs.rt = .ok kw regs.rt) (x : Err) (r : Regs)
+    (hp : pushInit e c (withSelf self args) kw regs = .error x r) :
+    _PY_FRAME_KW e ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ = .error x ⟨r, rest⟩ := by
+  simp only [_PY_FRAME_KW, bind, EStateM.bind, kwStack_pop e regs c self kwv args rest hlen, dropLast_snoc,
+    getLastD_snoc]
+  simp [BM.lift, RM.lift, hkw, hp, bind, EStateM.bind, liftM, monadLift, MonadLift.monadLift]
+
+/-- `CALL_KW_PY` (`:5511-5519`: `_CHECK_PEP_523 + _CHECK_FUNCTION_VERSION_KW +
+_CHECK_RECURSION_REMAINING + _PY_FRAME_KW + _SAVE_RETURN_OFFSET + _PUSH_FRAME`) on
+`(callable, self_or_null, args[oparg], kwnames)` does what the generic `CALL_KW` does, for every live
+callable, every runtime and object model, `kwnames` being the compiler's tuple of names: it exits on
+a non-function, a stale `func_version` (`:5504-5509`) or a spent recursion budget, and otherwise
+builds the frame with `_PyEvalFramePushAndInit` and the keyword names (`:5474-5502`) and enters it as
+`CALL_KW`'s `DISPATCH_INLINED` does, or fails as it does. The check was added by
+python/cpython#137887. -/
+def CallKwPyRefines : Prop := ∀ (e : Env) (regs : Regs) (c self kwv : Val) (args rest : List Val) (kw : List String),
+  args.length = e.oparg → Live regs.rt c → kwNames kwv regs.rt = .ok kw regs.rt →
+  regs.next = e.this + instrSize e.opcode →
+  afterInstr e.P (execOp e .CALL_KW_PY ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩) =
+    afterInstr e.P (execOp e .CALL_KW ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩)
+
+theorem callKwPyRefines_proven : CallKwPyRefines := by
+  intro e regs c self kwv args rest kw hlen hc hkw hn
+  have hlen1 : (args ++ [kwv]).length = (kwEnv e).oparg := by simp [kwEnv, hlen]
+  simp only [execOp]
+  by_cases hf : ∃ a fo, c = .ref a ∧ regs.rt.heap[a]? = some (.func fo) ∧ fo.version = cacheNat e 0
+  · obtain ⟨a, fo, rfl, ho, hv⟩ := hf
+    have hgen := (callKwGenericRules_proven e regs (.ref a) self kwv args rest kw hlen hc hkw).2.1 a fo rfl ho
+    simp only [execOp] at hgen
+    have hfv : _CHECK_FUNCTION_VERSION_KW e ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ =
+        .ok () ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ := by
+      rw [fvKw_eq, kwStack_eq]
+      exact fnVersion_pass (kwEnv e) regs self (args ++ [kwv]) rest hlen1 a fo ho hv
+    by_cases hr : 1 < regs.rt.pyRecursionRemaining
+    · have hrs := recRemaining_pass ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ hr
+      cases hp : pushInit e (.ref a) (withSelf self args) kw regs with
+      | ok nf r =>
+        obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hp
+        have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
+        have hspec : CALL_KW_PY e ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ =
+            .ok () (enteredSt e nf r rest) := by
+          simp only [CALL_KW_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hfv]; simp only; rw [hrs]; simp only
+          rw [pyFrameKw_ok e regs _ self kwv args rest kw hlen hkw nf r hp]
+          simp only
+          have := pushFrame_entered e nf r rest hnext
+          simp only [bind, EStateM.bind] at this
+          exact this
+        rw [wd_ok hspec, hgen.1 nf r hp, dispatch_entered e nf r rest (by omega)]
+        rfl
+      | error x r =>
+        have hspec : CALL_KW_PY e ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ = .error x ⟨r, rest⟩ := by
+          simp only [CALL_KW_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hfv]; simp only; rw [hrs]; simp only
+          rw [pyFrameKw_err e regs _ self kwv args rest kw hlen hkw x r hp]
+        by_cases hx : x = .deopt
+        · subst hx; rw [wd_deopt hspec]
+        · rw [wd_err hspec hx, hgen.2 x r hp]
+    · have hspec : CALL_KW_PY e ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ =
+          .error .deopt ⟨regs, kwv :: (args.reverse ++ self :: .ref a :: rest)⟩ := by
+        simp only [CALL_KW_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hfv]; simp only
+        rw [recRemaining_fail _ (by simpa using hr)]
+      rw [wd_deopt hspec]
+  · have hb : ∀ a fo, c = .ref a → regs.rt.heap[a]? = some (.func fo) → fo.version ≠ cacheNat (kwEnv e) 0 :=
+      fun a fo h1 h2 h3 => hf ⟨a, fo, h1, h2, h3⟩
+    have hspec : CALL_KW_PY e ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ =
+        .error .deopt ⟨regs, kwv :: (args.reverse ++ self :: c :: rest)⟩ := by
+      simp only [CALL_KW_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [fvKw_eq, kwStack_eq, fnVersion_fail (kwEnv e) regs c self (args ++ [kwv]) rest hlen1 hc hb]
+    rw [wd_deopt hspec]
+
+/-- `CALL_KW_BOUND_METHOD` (`:5542-5551`: `_CHECK_PEP_523 + _CHECK_METHOD_VERSION_KW + _EXPAND_METHOD_KW +
+flush + _PY_FRAME_KW + _SAVE_RETURN_OFFSET + _PUSH_FRAME`) does what `CALL_KW` does, as
+`CALL_BOUND_METHOD_GENERAL` does what `CALL` does. False: the macro has no
+`_CHECK_RECURSION_REMAINING`, so with the budget spent it pushes the frame where `CALL_KW`'s
+`start_frame` raises `RecursionError` (python/cpython#155151). -/
+def CallKwBoundMethodRefines : Prop := ∀ (e : Env) (s : St),
+  completed (execOp e .CALL_KW_BOUND_METHOD s) = completed (execOp e .CALL_KW s)
+
+/-- `m(a=5)` with `m` bound to the function at 0 (version 9, `def f(self, a)`), `im_self` the int 1,
+from code 3, with `py_recursion_remaining = 0`. -/
+def kwBoundSt : St :=
+  { regs := { rt := { heap := #[.func { code := 2, version := 9 }, .method (.ref 0) (.int 1), .tuple #[.str "a"]],
+                      pyRecursionRemaining := 0 },
+              frame := { code := 3 }, next := 4 },
+    stack := [.ref 2, .int 5, .null, .ref 1] }
+
+def kwBoundEnv : Env :=
+  { P := #[{}, {}, { argcount := 2, nlocalsplus := 2, localsplusnames := #["self", "a"], flags := 1 }, {}],
+    om := Proto.mkOM #[] 0, ctx := ⟨fun _ _ => throw .fuel⟩,
+    opcode := .CALL_KW_BOUND_METHOD, oparg := 1, this := 0, cache := [.tagged 9] }
+
+theorem callKwBoundMethodRefines_refuted : ¬CallKwBoundMethodRefines := by
+  intro h
+  exact absurd (h kwBoundEnv kwBoundSt) (by decide)
+
+
 end PyLean.Bytecode
