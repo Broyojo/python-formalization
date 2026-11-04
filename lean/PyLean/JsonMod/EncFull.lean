@@ -145,10 +145,15 @@ def Note.typeC : Note → String
 def Note.typePy : Note → String
   | .item t _ | .key t _ | .obj t => t.name
 
-abbrev XErr := PyExc × List Note
+/-- An exception's `__context__` chain, the immediate context first: each one an exception and
+its notes. -/
+abbrev XCtx := List (PyExc × List Note)
+
+/-- An exception, its notes and its `__context__` chain. -/
+abbrev XErr := PyExc × List Note × XCtx
 abbrev XR := Except XErr PStr
 
-def xe (e : PyExc) : XErr := (e, [])
+def xe (e : PyExc) : XErr := (e, [], [])
 
 def liftE {α : Type} : Except PyExc α → Except XErr α
   | .ok a => .ok a
@@ -156,11 +161,17 @@ def liftE {α : Type} : Except PyExc α → Except XErr α
 
 /-- `_PyErr_FormatNote` / `exc.add_note`: appends a note to the exception passing by. -/
 def addNote {α : Type} (n : Note) : Except XErr α → Except XErr α
-  | .error (e, ns) => .error (e, ns ++ [n])
+  | .error (e, ns, cx) => .error (e, ns ++ [n], cx)
   | r => r
 
 def recEncC : PyExc := .named "RecursionError" "~Stack overflow (used N kB) while encoding a JSON object"
 def recEncPy : PyExc := .named "RecursionError" "maximum recursion depth exceeded"
+/-- The `RecursionError` of `PyObject_Repr`'s `_Py_EnterRecursiveCall(" while getting the repr
+of an object")` (Objects/object.c). -/
+def recRepr : PyExc := .named "RecursionError" "~Stack overflow (used N kB) while getting the repr of an object"
+/-- The `RecursionError` of entering a Python function with too little C stack left (the check of
+the interpreter's frame push, no `where` string). -/
+def recCall : PyExc := .named "RecursionError" "~Stack overflow (used N kB)"
 
 /-- The C recursion guards: before a list or tuple, a subclass of one, a dict or frozendict, a
 subclass of one, and before the value `default` returned. -/
@@ -170,6 +181,10 @@ inductive Guard where
   | map
   | mapSub
   | dflt
+  /-- `PyObject_Repr`'s check, run by the `%R` of a dict item's note (:1732). -/
+  | repr
+  /-- The check on entering a Python `default` (:1638). -/
+  | call
 
 /-- What a custom `encoder` returns: a `str` object or an object of another type. -/
 inductive XOut where
@@ -195,6 +210,9 @@ structure XCfg where
   /-- The stack room one level costs past each guard, minus one (C only; the platform's frame
   sizes, see the module docstring). -/
   stk : Guard → Nat := fun _ => 0
+  /-- `default` is a Python function (C checks the stack on entering it), not a C callable such as
+  `operator.attrgetter`. -/
+  dfltPy : Bool := true
 
 /-- The options the shared helpers of `Enc.lean` read. -/
 def XCfg.toE (cfg : XCfg) : ECfg :=
@@ -276,6 +294,20 @@ def XVal.guard : XVal → Guard
   | .mapSub .. => .mapSub
   | _ => .dflt
 
+/-- `_PyErr_FormatNote("when serializing %T item %R", dct, key)` (:1732) with room `c`: the note,
+or, when the `%R` repr's stack check fails, the repr's `RecursionError` with the exception passing by
+as its `__context__` (`_PyErr_ChainExceptions1`, Python/errors.c:1281-1292). The repr of a key of
+the modelled types fails only that way (a scope limit for keys of other types). -/
+def cFormatNoteR {α : Type} (cfg : XCfg) (c : Nat) (n : Note) : Except XErr α → Except XErr α
+  | .error (e, ns, cx) =>
+    if cfg.stk .repr + 1 ≤ c then .error (e, ns ++ [n], cx) else .error (recRepr, [], (e, ns) :: cx)
+  | r => r
+
+/-- `PyObject_CallOneArg(s->defaultfn, obj)` (:1638) with room `c`: a Python `default` is entered
+only with enough C stack. -/
+def cCallDflt (cfg : XCfg) (c n : Nat) (t : PyType) : Except PyExc XVal :=
+  if cfg.dfltPy then (if cfg.stk .call + 1 ≤ c then cfg.dflt n t else .error recCall) else cfg.dflt n t
+
 /-- The note key of C: the key object itself. -/
 def cNoteKey (k : XKey) : NoteKey := .orig k
 
@@ -321,7 +353,7 @@ def cObjX (cfg : XCfg) (c lvl : Nat) (seen : List Nat) (anc : List XVal) (v : XV
     -- :1619-1666: markers, `default`, `_Py_EnterRecursiveCall`, the note on failure
     if cfg.checkCircular ∧ n ∈ seen then .error (xe circularErr)
     else
-      match cfg.dflt n t with
+      match cCallDflt cfg c n t with
       | .error e => .error (xe e)
       | .ok v' => cEnterX c (cfg.stk .dflt) (fun c' _ => addNote (.obj t) (cObjX cfg c' lvl (n :: seen) anc v'))
 termination_by (2 * c, 0, 0)
@@ -426,7 +458,7 @@ def cMapItemsX (cfg : XCfg) (c lvl : Nat) (seen : List Nat) (anc : List XVal) (t
             | .error e => .error (xe e)
             | .ok ksep =>
               match cObjX cfg c lvl seen anc x with
-              | .error e => addNote (.key t (cNoteKey k)) (.error e)
+              | .error e => cFormatNoteR cfg c (.key t (cNoteKey k)) (.error e)
               | .ok tx =>
                 match cMapItemsX cfg c lvl seen anc t sep nl false rest with
                 | .error e => .error e

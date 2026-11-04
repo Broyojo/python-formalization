@@ -43,7 +43,11 @@ structure XCfg.Okx (cfg : XCfg) : Prop where
   ksep : cfg.keySep.exact = true
   dfl : ∀ n t v', cfg.dflt n t = .ok v' → v'.okx = true
 
-def IsRecCX {α : Type} (r : Except XErr α) : Prop := ∃ ns, r = .error (recEncC, ns)
+/-- C's stack-exhaustion `RecursionError`s: a guard's, the `%R` repr's in a note, entering a Python
+`default`. -/
+def IsRecExcC (e : PyExc) : Prop := e = recEncC ∨ e = recRepr ∨ e = recCall
+
+def IsRecCX {α : Type} (r : Except XErr α) : Prop := ∃ e ns, r = .error (e, ns) ∧ IsRecExcC e
 def IsRecPyX {α : Type} (r : Except XErr α) : Prop := ∃ ns, r = .error (recEncPy, ns)
 
 /-- Corresponding notes. -/
@@ -66,11 +70,11 @@ theorem NotesRel.snoc {cfg : XCfg} : ∀ {as bs : List Note}, NotesRel cfg as bs
   | [], _ :: _, h, _, _, _ => h.elim
   | _ :: _, [], h, _, _, _ => h.elim
 
-/-- Related outcomes: values related by `R`, or the same exception with corresponding notes, or
-one of the two is its model's `RecursionError`. -/
+/-- Related outcomes: values related by `R`, or the same exception with corresponding notes (and
+no `__context__` on either side), or one of the two is its model's `RecursionError`. -/
 def XRelW (cfg : XCfg) {α β : Type} (R : α → β → Prop) (rc : Except XErr α) (rp : Except XErr β) : Prop :=
   (∃ a b, rc = .ok a ∧ rp = .ok b ∧ R a b) ∨
-  (∃ e nsC nsP, rc = .error (e, nsC) ∧ rp = .error (e, nsP) ∧ NotesRel cfg nsC nsP) ∨
+  (∃ e nsC nsP, rc = .error (e, nsC, []) ∧ rp = .error (e, nsP, []) ∧ NotesRel cfg nsC nsP) ∨
   IsRecCX rc ∨ IsRecPyX rp
 
 theorem XRelW.ok {cfg : XCfg} {α : Type} (a : α) : XRelW cfg Eq (.ok a) (.ok a) := Or.inl ⟨a, a, rfl, rfl, rfl⟩
@@ -87,35 +91,60 @@ theorem XRelW.recPy {cfg : XCfg} {α β : Type} {R : α → β → Prop} {rc : E
 
 theorem IsRecCX.enter0 {α : Type} {c w : Nat} (h : c < w + 1) (k : (c' : Nat) → c' < c → Except XErr α) :
     IsRecCX (cEnterX c w k) :=
-  ⟨[], by simp [cEnterX, xe, show ¬ (w + 1 ≤ c) by omega]⟩
+  ⟨_, ([], []), by simp [cEnterX, xe, show ¬ (w + 1 ≤ c) by omega], Or.inl rfl⟩
 
 theorem IsRecPyX.call0 {α : Type} (k : (b' : Nat) → b' < 0 → Except XErr α) : IsRecPyX (pyCallX 0 k) :=
-  ⟨[], rfl⟩
+  ⟨([], []), rfl⟩
 
 theorem XRelW.addNote {cfg : XCfg} {α : Type} {rc rp : Except XErr α} (h : XRelW cfg Eq rc rp)
     {n1 n2 : Note} (hn : NoteRel cfg n1 n2) : XRelW cfg Eq (addNote n1 rc) (addNote n2 rp) := by
-  rcases h with ⟨a, b, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hf⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+  rcases h with ⟨a, b, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hf⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
   · exact XRelW.ok a
   · exact Or.inr (Or.inl ⟨e, nsC ++ [n1], nsP ++ [n2], rfl, rfl, NotesRel.snoc hf hn⟩)
-  · exact XRelW.recC ⟨ns ++ [n1], rfl⟩
-  · exact XRelW.recPy ⟨ns ++ [n2], rfl⟩
+  · exact XRelW.recC ⟨e', (ns ++ [n1], cx), rfl, he'⟩
+  · exact XRelW.recPy ⟨(ns ++ [n2], cx), rfl⟩
+
+/-- The `%R` note of C against Python's note: when C's repr check fails, C raises its
+`RecursionError`. -/
+theorem XRelW.fmtErr {cfg : XCfg} {α : Type} {c : Nat} {n1 n2 : Note} {e : PyExc} {nsC nsP : List Note}
+    (hf : NotesRel cfg nsC nsP) (hn : NoteRel cfg n1 n2) :
+    XRelW cfg Eq (cFormatNoteR cfg c n1 (.error (e, nsC, []) : Except XErr α))
+      (PyLean.JsonMod.addNote n2 (.error (e, nsP, []))) := by
+  by_cases h : cfg.stk .repr + 1 ≤ c
+  · simp only [cFormatNoteR, h, ↓reduceIte]; exact Or.inr (Or.inl ⟨e, nsC ++ [n1], nsP ++ [n2], rfl, rfl, NotesRel.snoc hf hn⟩)
+  · simp only [cFormatNoteR, h, ↓reduceIte]; exact XRelW.recC ⟨_, _, rfl, Or.inr (Or.inl rfl)⟩
+
+theorem IsRecCX.fmt {cfg : XCfg} {α : Type} {c : Nat} {n : Note} {e : PyExc} {ns : List Note} {cx : XCtx}
+    (he : IsRecExcC e) : IsRecCX (cFormatNoteR cfg c n (.error (e, ns, cx) : Except XErr α)) := by
+  by_cases h : cfg.stk .repr + 1 ≤ c
+  · simp only [cFormatNoteR, h, ↓reduceIte]; exact ⟨_, _, rfl, he⟩
+  · simp only [cFormatNoteR, h, ↓reduceIte]; exact ⟨_, _, rfl, Or.inr (Or.inl rfl)⟩
 
 /-- Errors pass through a `match` that propagates them, with a note added on both sides. -/
 theorem XRelW.bindN {cfg : XCfg} {α β γ δ : Type} {R : α → β → Prop} {S : γ → δ → Prop}
     {rc : Except XErr α} {rp : Except XErr β} (h : XRelW cfg R rc rp)
     (fc : XErr → Except XErr γ) (fp : XErr → Except XErr δ)
-    (hf : ∀ e nsC nsP, NotesRel cfg nsC nsP → XRelW cfg S (fc (e, nsC)) (fp (e, nsP)))
-    (hfc : ∀ ns, IsRecCX (fc (recEncC, ns))) (hfp : ∀ ns, IsRecPyX (fp (recEncPy, ns)))
+    (hf : ∀ e nsC nsP, NotesRel cfg nsC nsP → XRelW cfg S (fc (e, nsC, [])) (fp (e, nsP, [])))
+    (hfc : ∀ e ns, IsRecExcC e → IsRecCX (fc (e, ns))) (hfp : ∀ ns, IsRecPyX (fp (recEncPy, ns)))
     (kc : α → Except XErr γ) (kp : β → Except XErr δ) (hk : ∀ a b, R a b → XRelW cfg S (kc a) (kp b)) :
     XRelW cfg S (match rc with | .error e => fc e | .ok a => kc a)
       (match rp with | .error e => fp e | .ok b => kp b) := by
-  rcases h with ⟨a, b, rfl, rfl, hr⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+  rcases h with ⟨a, b, rfl, rfl, hr⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
   · exact hk a b hr
   · exact hf e nsC nsP hn
-  · exact XRelW.recC (hfc ns)
-  · exact XRelW.recPy (hfp ns)
+  · exact XRelW.recC (hfc e' (ns, cx) he')
+  · exact XRelW.recPy (hfp (ns, cx))
 
 /-! ### Leaves -/
+
+theorem cCallDflt_cases (cfg : XCfg) (c n : Nat) (t : PyType) :
+    cCallDflt cfg c n t = cfg.dflt n t ∨ cCallDflt cfg c n t = .error recCall := by
+  unfold cCallDflt
+  by_cases h1 : cfg.dfltPy = true
+  · by_cases h2 : cfg.stk .call + 1 ≤ c
+    · left; simp [h1, h2]
+    · right; simp [h1, h2]
+  · left; simp [h1]
 
 theorem cWriteStringX_std {cfg : XCfg} (h : cfg.customEnc = none) (s : PStr) :
     cWriteStringX cfg s = .ok (cStrEnc cfg.toE s) := by
@@ -126,13 +155,13 @@ theorem strLeaf {cfg : XCfg} (hO : cfg.Okx) (b : Nat) (s : PStr) (hs : strOk s =
   rw [cWriteStringX_std hO.cst]
   simp only [liftE, pyEncStrX]
   cases b with
-  | zero => exact XRelW.recPy ⟨[], rfl⟩
+  | zero => exact XRelW.recPy ⟨([], []), rfl⟩
   | succ b =>
     simp only [pyCallX]
     rw [← strEnc_twins cfg.toE s hs]
     split
     · cases b with
-      | zero => exact XRelW.recPy ⟨[], rfl⟩
+      | zero => exact XRelW.recPy ⟨([], []), rfl⟩
       | succ b => exact XRelW.ok _
     · exact XRelW.ok _
 
@@ -145,7 +174,7 @@ theorem fltLeaf {cfg : XCfg} (b bits : Nat) (r : PStr) :
     XRelW cfg Eq (liftE (cEncodeFloat cfg.toE bits r)) (pyFloatX cfg b bits r) := by
   simp only [pyFloatX]
   cases b with
-  | zero => exact XRelW.recPy ⟨[], rfl⟩
+  | zero => exact XRelW.recPy ⟨([], []), rfl⟩
   | succ b => simp only [pyCallX, floatStr_twins]; exact liftE_rel _
 
 theorem keyRel {cfg : XCfg} (b : Nat) (k : XKey) (hk : k.okx = true) :
@@ -157,7 +186,7 @@ theorem keyRel {cfg : XCfg} (b : Nat) (k : XKey) (hk : k.okx = true) :
   | none => left; rfl
   | flt bits r =>
     cases b with
-    | zero => right; exact ⟨[], rfl⟩
+    | zero => right; exact ⟨([], []), rfl⟩
     | succ b =>
       left
       simp only [pyKeyX, pyFloatX, pyCallX, cKeyX, floatStr_twins]
@@ -205,19 +234,19 @@ theorem seqLoop {cfg : XCfg} {c b : Nat} (H : ItemSim cfg c b) (lvl : Nat) (seen
     have h1 := H lvl seen anc x hanc hx.1
     generalize cObjX cfg c lvl seen anc x = X at h1 ⊢
     generalize pyItemX cfg b lvl seen anc x = Y at h1 ⊢
-    rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+    rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
     · simp only
       have h2 := ih (i + 1) hx.2 (by omega)
       generalize cSeqItemsX cfg c lvl seen anc t (.ok sep) (i + 1) xs = X2 at h2 ⊢
       generalize pyListItemsX cfg b lvl seen anc t buf0 sep (i + 1) xs = Y2 at h2 ⊢
-      rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+      rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
       · exact XRelW.ok _
       · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-      · exact XRelW.recC ⟨ns, rfl⟩
-      · exact XRelW.recPy ⟨ns, rfl⟩
+      · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+      · exact XRelW.recPy ⟨(ns, cx), rfl⟩
     · exact Or.inr (Or.inl ⟨e, _, _, rfl, rfl, NotesRel.snoc hn ⟨rfl, rfl⟩⟩)
-    · exact XRelW.recC ⟨ns ++ [_], rfl⟩
-    · exact XRelW.recPy ⟨ns ++ [_], rfl⟩
+    · exact XRelW.recC ⟨e', (ns ++ [_], cx), rfl, he'⟩
+    · exact XRelW.recPy ⟨(ns ++ [_], cx), rfl⟩
 
 /-- The first item: Python writes the opening bracket with it. -/
 theorem seqLoop0 {cfg : XCfg} {c b : Nat} (H : ItemSim cfg c b) (lvl : Nat) (seen : List Nat)
@@ -230,19 +259,19 @@ theorem seqLoop0 {cfg : XCfg} {c b : Nat} (H : ItemSim cfg c b) (lvl : Nat) (see
   have h1 := H lvl seen anc x hanc hx.1
   generalize cObjX cfg c lvl seen anc x = X at h1 ⊢
   generalize pyItemX cfg b lvl seen anc x = Y at h1 ⊢
-  rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+  rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
   · simp only
     have h2 := seqLoop H lvl seen anc hanc t sep buf0 xs 1 hx.2 (by omega)
     generalize cSeqItemsX cfg c lvl seen anc t (.ok sep) (0 + 1) xs = X2 at h2 ⊢
     generalize pyListItemsX cfg b lvl seen anc t buf0 sep (0 + 1) xs = Y2 at h2 ⊢
-    rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+    rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
     · exact Or.inl ⟨_, _, rfl, rfl, by simp⟩
     · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-    · exact XRelW.recC ⟨ns, rfl⟩
-    · exact XRelW.recPy ⟨ns, rfl⟩
+    · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+    · exact XRelW.recPy ⟨(ns, cx), rfl⟩
   · exact Or.inr (Or.inl ⟨e, _, _, rfl, rfl, NotesRel.snoc hn ⟨rfl, rfl⟩⟩)
-  · exact XRelW.recC ⟨ns ++ [_], rfl⟩
-  · exact XRelW.recPy ⟨ns ++ [_], rfl⟩
+  · exact XRelW.recC ⟨e', (ns ++ [_], cx), rfl, he'⟩
+  · exact XRelW.recPy ⟨(ns ++ [_], cx), rfl⟩
 
 /-- The items of an exact dict: 2-tuples with keys and values that satisfy the invariants. -/
 def ItemsOk (its : List (ItemShape × XKey × XVal)) : Prop :=
@@ -287,24 +316,23 @@ theorem mapLoop {cfg : XCfg} (hO : cfg.Okx) {c b : Nat} (H : ItemSim cfg c b) (l
             rw [cWriteStringX_std hO.cst] at hstr
             simp only [liftE] at hstr
             generalize pyEncStrX cfg b ks = Z at hstr ⊢
-            rcases hstr with ⟨a, _, h1, rfl, rfl⟩ | ⟨e, _, _, h1, _, _⟩ | ⟨ns, h1⟩ | ⟨ns, rfl⟩
+            rcases hstr with ⟨a, _, h1, rfl, rfl⟩ | ⟨e, _, _, h1, _, _⟩ | ⟨_, _, h1, _⟩ | ⟨ns, rfl⟩
             · cases h1
               have h1 := H lvl seen anc x hanc hx
               generalize cObjX cfg c lvl seen anc x = X at h1 ⊢
               generalize pyItemX cfg b lvl seen anc x = Y at h1 ⊢
-              rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+              rcases h1 with ⟨a, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
               · have h2 := ih false hrest
                 generalize cMapItemsX cfg c lvl seen anc t (.ok sep) nl false rest = X2 at h2 ⊢
                 generalize pyDictItemsX cfg b lvl seen anc t nl sep false rest = Y2 at h2 ⊢
-                rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+                rcases h2 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
                 · subst hpre'; exact XRelW.ok _
                 · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-                · exact XRelW.recC ⟨ns, rfl⟩
-                · exact XRelW.recPy ⟨ns, rfl⟩
-              · exact Or.inr (Or.inl ⟨e, _, _, rfl, rfl, NotesRel.snoc hn
-                  (show NoteRel cfg (.key t (.orig k)) (.key t (.conv ks)) from ⟨rfl, hc⟩)⟩)
-              · exact XRelW.recC ⟨ns ++ [_], rfl⟩
-              · exact XRelW.recPy ⟨ns ++ [_], rfl⟩
+                · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+                · exact XRelW.recPy ⟨(ns, cx), rfl⟩
+              · exact XRelW.fmtErr hn (show NoteRel cfg (.key t (.orig k)) (.key t (.conv ks)) from ⟨rfl, hc⟩)
+              · exact XRelW.recC (IsRecCX.fmt he')
+              · exact XRelW.recPy ⟨(ns ++ [_], cx), rfl⟩
             · cases h1
             · cases h1
             · exact XRelW.recPy ⟨ns, rfl⟩
@@ -391,7 +419,7 @@ theorem itemSim_of {cfg : XCfg} {c : Nat} (h : SimAt cfg c) (b : Nat) : ItemSim 
   | other n t =>
     simp only [pyItemX]
     cases b with
-    | zero => exact XRelW.recPy ⟨[], rfl⟩
+    | zero => exact XRelW.recPy ⟨([], []), rfl⟩
     | succ b => simp only [pyCallX]; exact h b lvl seen anc _ hanc hx
   | _ => simp only [pyItemX]; exact h b lvl seen anc _ hanc hx
 
@@ -427,21 +455,21 @@ theorem contSim {cfg : XCfg} (hO : cfg.Okx) {c : Nat} (h : SimAt cfg c) (b lvl :
           (.ok (cfg.itemSep.raw ++ cNewlineIndent ind (lvl + 1))) 0 (x :: xs) = X at h0 ⊢
         generalize pyListItemsX cfg b (lvl + 1) seen (XVal.seq t (x :: xs) :: anc) t ([91] ++ [10] ++ rep ind (lvl + 1))
           (cfg.itemSep.raw ++ cNewlineIndent ind (lvl + 1)) 0 (x :: xs) = Y at h0 ⊢
-        rcases h0 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+        rcases h0 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
         · exact Or.inl ⟨_, _, rfl, rfl, by simp [cNewlineIndent]⟩
         · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-        · exact XRelW.recC ⟨ns, rfl⟩
-        · exact XRelW.recPy ⟨ns, rfl⟩
+        · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+        · exact XRelW.recPy ⟨(ns, cx), rfl⟩
       | none =>
         simp only [writeStrObj, hO.isep, ↓reduceIte]
         have h0 := seqLoop0 H lvl seen _ hanc' t cfg.itemSep.raw [91] x xs ha
         generalize cSeqItemsX cfg c lvl seen (XVal.seq t (x :: xs) :: anc) t (.ok cfg.itemSep.raw) 0 (x :: xs) = X at h0 ⊢
         generalize pyListItemsX cfg b lvl seen (XVal.seq t (x :: xs) :: anc) t [91] cfg.itemSep.raw 0 (x :: xs) = Y at h0 ⊢
-        rcases h0 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+        rcases h0 with ⟨r, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
         · exact Or.inl ⟨_, _, rfl, rfl, by simp⟩
         · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-        · exact XRelW.recC ⟨ns, rfl⟩
-        · exact XRelW.recPy ⟨ns, rfl⟩
+        · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+        · exact XRelW.recPy ⟨(ns, cx), rfl⟩
   | map t kvs =>
     simp only [cContX, pyContX, pyExactItems]
     unfold cMapPart pyDictPart
@@ -469,21 +497,21 @@ theorem contSim {cfg : XCfg} (hO : cfg.Okx) {c : Nat} (h : SimAt cfg c) (b lvl :
             (.ok (cfg.itemSep.raw ++ cNewlineIndent ind (lvl + 1))) (cNewlineIndent ind (lvl + 1)) true its = X at h0 ⊢
           generalize pyDictItemsX cfg b (lvl + 1) seen (XVal.map t (p :: kvs) :: anc) t (cNewlineIndent ind (lvl + 1))
             (cfg.itemSep.raw ++ cNewlineIndent ind (lvl + 1)) true its = Y at h0 ⊢
-          rcases h0 with ⟨⟨r, f⟩, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+          rcases h0 with ⟨⟨r, f⟩, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
           · exact Or.inl ⟨_, _, rfl, rfl, by cases f <;> simp [cNewlineIndent]⟩
           · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-          · exact XRelW.recC ⟨ns, rfl⟩
-          · exact XRelW.recPy ⟨ns, rfl⟩
+          · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+          · exact XRelW.recPy ⟨(ns, cx), rfl⟩
         | none =>
           simp only [writeStrObj, hO.isep, ↓reduceIte]
           have h0 := mapLoop hO H lvl seen _ hanc' t cfg.itemSep.raw [] its true hok
           generalize cMapItemsX cfg c lvl seen (XVal.map t (p :: kvs) :: anc) t (.ok cfg.itemSep.raw) [] true its = X at h0 ⊢
           generalize pyDictItemsX cfg b lvl seen (XVal.map t (p :: kvs) :: anc) t [] cfg.itemSep.raw true its = Y at h0 ⊢
-          rcases h0 with ⟨⟨r, f⟩, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨ns, rfl⟩ | ⟨ns, rfl⟩
+          rcases h0 with ⟨⟨r, f⟩, _, rfl, rfl, rfl⟩ | ⟨e, nsC, nsP, rfl, rfl, hn⟩ | ⟨e', ⟨ns, cx⟩, rfl, he'⟩ | ⟨⟨ns, cx⟩, rfl⟩
           · exact XRelW.ok _
           · exact Or.inr (Or.inl ⟨e, nsC, nsP, rfl, rfl, hn⟩)
-          · exact XRelW.recC ⟨ns, rfl⟩
-          · exact XRelW.recPy ⟨ns, rfl⟩
+          · exact XRelW.recC ⟨e', (ns, cx), rfl, he'⟩
+          · exact XRelW.recPy ⟨(ns, cx), rfl⟩
   | seqSub => simp [XVal.okx] at ha
   | mapSub => simp [XVal.okx] at ha
   | _ => simp only [cContX, pyContX]; exact XRelW.err _
@@ -497,7 +525,7 @@ theorem simStep {cfg : XCfg} (hO : cfg.Okx) (c : Nat) (ih : ∀ c', c' < c → S
     intro cyc a w ha
     by_cases hw : w + 1 ≤ c
     · cases b with
-      | zero => exact XRelW.recPy ⟨[], rfl⟩
+      | zero => exact XRelW.recPy ⟨([], []), rfl⟩
       | succ b =>
         simp only [cEnterX, hw, ↓reduceDIte, pyCallX]
         exact contSim hO (ih _ (by omega)) b lvl seen anc hanc cyc a ha
@@ -523,9 +551,13 @@ theorem simStep {cfg : XCfg} (hO : cfg.Okx) (c : Nat) (ih : ∀ c', c' < c → S
     · simp only [hc, and_self, ↓reduceIte]; exact XRelW.err _
     simp only [hc, ↓reduceIte]
     cases b with
-    | zero => exact XRelW.recPy ⟨[], rfl⟩
+    | zero => exact XRelW.recPy ⟨([], []), rfl⟩
     | succ b =>
       simp only [pyCallX]
+      rcases cCallDflt_cases cfg c n t with hcd | hcd
+      rotate_left
+      · rw [hcd]; exact XRelW.recC ⟨_, _, rfl, Or.inr (Or.inr rfl)⟩
+      rw [hcd]
       cases hd : cfg.dflt n t with
       | error e => exact XRelW.err e
       | ok v' =>

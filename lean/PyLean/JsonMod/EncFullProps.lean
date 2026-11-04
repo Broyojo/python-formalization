@@ -64,11 +64,11 @@ def showPy : Note → NoteShown
 /-- The same text, or the same exception with the same printed notes. -/
 def SameShown (rc rp : XR) : Prop :=
   (∃ t, rc = .ok t ∧ rp = .ok t) ∨
-  (∃ e nsC nsP, rc = .error (e, nsC) ∧ rp = .error (e, nsP) ∧ nsC.map showC = nsP.map showPy)
+  (∃ e nsC nsP cxC cxP, rc = .error (e, nsC, cxC) ∧ rp = .error (e, nsP, cxP) ∧ nsC.map showC = nsP.map showPy)
 
 /-- The same text, or the same exception (class and message), whatever the notes. -/
 def SameExc (rc rp : XR) : Prop :=
-  (∃ t, rc = .ok t ∧ rp = .ok t) ∨ (∃ e nsC nsP, rc = .error (e, nsC) ∧ rp = .error (e, nsP))
+  (∃ t, rc = .ok t ∧ rp = .ok t) ∨ (∃ e xC xP, rc = .error (e, xC) ∧ rp = .error (e, xP))
 
 /-! ### Nested lists and the recursion limits -/
 
@@ -98,7 +98,7 @@ theorem cEnterX_pos {α : Type} {c w : Nat} {k : (c' : Nat) → c' < c → Excep
 
 theorem encNestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : List XVal),
     ((k + 1) * (cfg.stk .seq + 1) ≤ c → ∃ t, cObjX cfg c lvl seen anc (nestL k) = .ok t) ∧
-    (c < (k + 1) * (cfg.stk .seq + 1) → IsRecCX (cObjX cfg c lvl seen anc (nestL k))) := by
+    (c < (k + 1) * (cfg.stk .seq + 1) → ∃ ns, cObjX cfg c lvl seen anc (nestL k) = .error (recEncC, ns, [])) := by
   intro k
   induction k with
   | zero =>
@@ -107,7 +107,7 @@ theorem encNestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : Lis
     by_cases hw : cfg.stk .seq + 1 ≤ c
     · refine ⟨fun _ => ⟨cs "[]", ?_⟩, fun h => by omega⟩
       simp [nestL, cObjX, cEnterX_pos hw, cContX, cSeqPart]
-    · exact ⟨fun h => by omega, fun _ => by simp only [nestL, cObjX]; exact IsRecCX.enter0 (by omega) _⟩
+    · exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestL, cObjX, cEnterX, hw, xe]⟩⟩
   | succ k ih =>
     intro c lvl seen anc
     by_cases hw : cfg.stk .seq + 1 ≤ c
@@ -115,8 +115,8 @@ theorem encNestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : Lis
       have key : ∀ lvl' anc' sep,
           ((k + 1) * (cfg.stk .seq + 1) ≤ c - (cfg.stk .seq + 1) →
             ∃ t, cSeqItemsX cfg (c - (cfg.stk .seq + 1)) lvl' seen anc' tList sep 0 [nestL k] = .ok t) ∧
-          (c - (cfg.stk .seq + 1) < (k + 1) * (cfg.stk .seq + 1) →
-            IsRecCX (cSeqItemsX cfg (c - (cfg.stk .seq + 1)) lvl' seen anc' tList sep 0 [nestL k])) := by
+          (c - (cfg.stk .seq + 1) < (k + 1) * (cfg.stk .seq + 1) → ∃ ns,
+            cSeqItemsX cfg (c - (cfg.stk .seq + 1)) lvl' seen anc' tList sep 0 [nestL k] = .error (recEncC, ns, [])) := by
         intro lvl' anc' sep
         obtain ⟨h1, h2⟩ := ih (c - (cfg.stk .seq + 1)) lvl' seen anc'
         simp only [cSeqItemsX, ne_eq, not_true_eq_false, ↓reduceIte]
@@ -150,7 +150,7 @@ theorem encNestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : Lis
           simp only [hns]
           exact ⟨ns, rfl⟩
     · have hb := thr_big (k := k + 1) hw
-      exact ⟨fun h => by omega, fun _ => by simp only [nestL, cObjX]; exact IsRecCX.enter0 (by omega) _⟩
+      exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestL, cObjX, cEnterX, hw, xe]⟩⟩
 
 theorem encNestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : List XVal),
     (k + 1 ≤ b → ∃ t, pyIterX cfg b lvl seen anc (nestL k) = .ok t) ∧
@@ -160,14 +160,14 @@ theorem encNestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : Li
   | zero =>
     intro b lvl seen anc
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestL, pyIterX, pyCallX, xe]⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), by simp [nestL, pyIterX, pyCallX, xe]⟩⟩
     | succ b =>
       refine ⟨fun _ => ⟨cs "[]", ?_⟩, fun h => by omega⟩
       simp [nestL, pyIterX, pyCallX, pyContX, pyListPart]
   | succ k ih =>
     intro b lvl seen anc
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestL, pyIterX, pyCallX, xe]⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), by simp [nestL, pyIterX, pyCallX, xe]⟩⟩
     | succ b =>
       have key : ∀ lvl' anc' buf0 sep, (k + 1 ≤ b → ∃ t, pyListItemsX cfg b lvl' seen anc' tList buf0 sep 0 [nestL k] = .ok t) ∧
           (b < k + 1 → IsRecPyX (pyListItemsX cfg b lvl' seen anc' tList buf0 sep 0 [nestL k])) := by
@@ -180,9 +180,9 @@ theorem encNestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : Li
         · obtain ⟨t, ht⟩ := h1 h
           rw [ht]
           exact ⟨_, rfl⟩
-        · obtain ⟨ns, hns⟩ := h2 h
+        · obtain ⟨⟨ns, cx⟩, hns⟩ := h2 h
           rw [hns]
-          exact ⟨ns ++ [_], rfl⟩
+          exact ⟨(ns ++ [_], cx), rfl⟩
       simp only [nestL, pyIterX, pyCallX, pyContX, pyListPart, List.isEmpty_cons, Bool.not_false,
         Bool.not_true, Bool.false_eq_true, ↓reduceIte, Bool.and_false, and_false]
       cases hi : cfg.indent with
@@ -208,7 +208,7 @@ theorem encNestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : Li
 
 theorem dumpsCX_nest (cfg : XCfg) (c k : Nat) :
     ((k + 1) * (cfg.stk .seq + 1) ≤ c → ∃ t, dumpsCX cfg c (nestL k) = .ok t) ∧
-    (c < (k + 1) * (cfg.stk .seq + 1) → IsRecCX (dumpsCX cfg c (nestL k))) := by
+    (c < (k + 1) * (cfg.stk .seq + 1) → ∃ ns, dumpsCX cfg c (nestL k) = .error (recEncC, ns, [])) := by
   have : dumpsCX cfg c (nestL k) = cObjX cfg c 0 [] [] (nestL k) := by cases k <;> rfl
   rw [this]
   exact encNestC cfg k c 0 [] []
@@ -219,8 +219,8 @@ theorem dumpsPyX_nest (cfg : XCfg) (p k : Nat) :
   rw [this]
   unfold iterJoinPyX
   match p with
-  | 0 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
-  | 1 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
+  | 0 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
+  | 1 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
   | p + 2 =>
     simp only [pyCallX]
     obtain ⟨h1, h2⟩ := encNestPy cfg k p 0 [] []
@@ -240,9 +240,47 @@ theorem nestD_okx (k : Nat) : (nestD k).okx = true := by
     simp only [nestD, XVal.okx, XVal.okxItems, XKey.okx, ih, Bool.and_true]
     decide
 
+/-- What a dict nesting raises in C once a dict guard fails, seen from room `x`: the guard's
+`RecursionError` when the outermost guard failed or the innermost entered dict's `%R` note had its
+stack (`R <= x % W`); otherwise the repr's `RecursionError`, whose `__context__` chain is repr errors
+without notes ending in the guard's error without notes. Notes were added only where the repr had
+its stack. `W` is a dict level's cost, `R` the repr's. -/
+def DictFail {α : Type} (cfg : XCfg) (x : Nat) (r : Except XErr α) : Prop :=
+  ∃ e ns cx, r = .error (e, ns, cx) ∧ (ns ≠ [] → cfg.stk .repr + 1 + (cfg.stk .map + 1) ≤ x) ∧
+    ((e = recEncC ∧ cx = [] ∧ (x < cfg.stk .map + 1 ∨ cfg.stk .repr + 1 ≤ x % (cfg.stk .map + 1))) ∨
+     (e = recRepr ∧ cfg.stk .map + 1 ≤ x ∧ x % (cfg.stk .map + 1) < cfg.stk .repr + 1 ∧
+       ∃ m, cx = List.replicate m (recRepr, []) ++ [(recEncC, [])]))
+
+theorem dictFail_step {α : Type} {cfg : XCfg} {c' : Nat} {n : Note} {r : Except XErr α}
+    (h : DictFail cfg c' r) : DictFail cfg (c' + (cfg.stk .map + 1)) (cFormatNoteR cfg c' n r) := by
+  obtain ⟨e, ns, cx, rfl, hinv, hcase⟩ := h
+  have hmod : (c' + (cfg.stk .map + 1)) % (cfg.stk .map + 1) = c' % (cfg.stk .map + 1) := Nat.add_mod_right _ _
+  have hle : c' % (cfg.stk .map + 1) ≤ c' := Nat.mod_le _ _
+  unfold DictFail
+  rw [hmod]
+  by_cases hR : cfg.stk .repr + 1 ≤ c'
+  · simp only [cFormatNoteR, hR, ↓reduceIte]
+    refine ⟨e, ns ++ [n], cx, rfl, fun _ => by omega, ?_⟩
+    rcases hcase with ⟨rfl, rfl, h1 | h1⟩ | ⟨rfl, h1, h2, h3⟩
+    · left
+      refine ⟨rfl, rfl, Or.inr ?_⟩
+      rw [Nat.mod_eq_of_lt h1]; exact hR
+    · exact Or.inl ⟨rfl, rfl, Or.inr h1⟩
+    · exact Or.inr ⟨rfl, by omega, h2, h3⟩
+  · simp only [cFormatNoteR, hR, ↓reduceIte]
+    have hns : ns = [] := by
+      cases ns with
+      | nil => rfl
+      | cons a l => have := hinv (List.cons_ne_nil a l); omega
+    subst hns
+    refine ⟨recRepr, [], _, rfl, fun h => absurd rfl h, Or.inr ⟨rfl, by omega, by omega, ?_⟩⟩
+    rcases hcase with ⟨rfl, rfl, _⟩ | ⟨rfl, _, _, m, rfl⟩
+    · exact ⟨0, rfl⟩
+    · exact ⟨m + 1, rfl⟩
+
 theorem encNestDC {cfg : XCfg} (hO : cfg.Okx) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : List XVal),
     ((k + 1) * (cfg.stk .map + 1) ≤ c → ∃ t, cObjX cfg c lvl seen anc (nestD k) = .ok t) ∧
-    (c < (k + 1) * (cfg.stk .map + 1) → IsRecCX (cObjX cfg c lvl seen anc (nestD k))) := by
+    (c < (k + 1) * (cfg.stk .map + 1) → DictFail cfg c (cObjX cfg c lvl seen anc (nestD k))) := by
   intro k
   induction k with
   | zero =>
@@ -253,7 +291,8 @@ theorem encNestDC {cfg : XCfg} (hO : cfg.Okx) : ∀ (k c lvl : Nat) (seen : List
       simp only [nestD, cObjX, cEnterX_pos hw, cContX]
       unfold cMapPart
       simp
-    · exact ⟨fun h => by omega, fun _ => by simp only [nestD, cObjX]; exact IsRecCX.enter0 (by omega) _⟩
+    · refine ⟨fun h => by omega, fun _ => ⟨recEncC, [], [], ?_, fun h => absurd rfl h, Or.inl ⟨rfl, rfl, Or.inl (by omega)⟩⟩⟩
+      simp [nestD, cObjX, cEnterX, hw, xe]
   | succ k ih =>
     intro c lvl seen anc
     by_cases hw : cfg.stk .map + 1 ≤ c
@@ -261,7 +300,7 @@ theorem encNestDC {cfg : XCfg} (hO : cfg.Okx) : ∀ (k c lvl : Nat) (seen : List
       have key : ∀ lvl' anc' sep nl,
           ((k + 1) * (cfg.stk .map + 1) ≤ c - (cfg.stk .map + 1) → ∃ t,
             cMapItemsX cfg (c - (cfg.stk .map + 1)) lvl' seen anc' tDict sep nl true [(.tup, .str [97], nestD k)] = .ok t) ∧
-          (c - (cfg.stk .map + 1) < (k + 1) * (cfg.stk .map + 1) → IsRecCX
+          (c - (cfg.stk .map + 1) < (k + 1) * (cfg.stk .map + 1) → DictFail cfg c
             (cMapItemsX cfg (c - (cfg.stk .map + 1)) lvl' seen anc' tDict sep nl true [(.tup, .str [97], nestD k)])) := by
         intro lvl' anc' sep nl
         obtain ⟨h1, h2⟩ := ih (c - (cfg.stk .map + 1)) lvl' seen anc'
@@ -270,9 +309,12 @@ theorem encNestDC {cfg : XCfg} (hO : cfg.Okx) : ∀ (k c lvl : Nat) (seen : List
         · obtain ⟨t, ht⟩ := h1 h
           rw [ht]
           exact ⟨_, rfl⟩
-        · obtain ⟨ns, hns⟩ := h2 h
-          rw [hns]
-          exact ⟨ns ++ [_], rfl⟩
+        · obtain ⟨e, ns, cx, he, hrest⟩ := h2 h
+          have hd := dictFail_step (α := PStr × Bool) (n := .key tDict (cNoteKey (.str [97])))
+            (r := .error (e, ns, cx)) ⟨e, ns, cx, rfl, hrest⟩
+          rw [show c - (cfg.stk .map + 1) + (cfg.stk .map + 1) = c by omega] at hd
+          simp only [he]
+          exact hd
       have hI : cExactItems cfg [(.str [97], nestD k)] = .ok [(.tup, .str [97], nestD k)] := by
         cases hs : cfg.sortKeys <;> simp [cExactItems, hs, xSortItems, Except.map]
       simp only [nestD, cObjX, cEnterX_pos hw, cContX]
@@ -287,20 +329,21 @@ theorem encNestDC {cfg : XCfg} (hO : cfg.Okx) : ∀ (k c lvl : Nat) (seen : List
         · obtain ⟨⟨t, f⟩, ht⟩ := k1 h
           simp only [ht]
           exact ⟨_, rfl⟩
-        · obtain ⟨ns, hns⟩ := k2 h
-          simp only [hns]
-          exact ⟨ns, rfl⟩
+        · obtain ⟨e, ns, cx, he, hrest⟩ := k2 h
+          simp only [he]
+          exact ⟨e, ns, cx, rfl, hrest⟩
       | none =>
         obtain ⟨k1, k2⟩ := key lvl (XVal.map tDict [(.str [97], nestD k)] :: anc) (writeStrObj cfg.itemSep) []
         refine ⟨fun h => ?_, fun h => ?_⟩
         · obtain ⟨⟨t, f⟩, ht⟩ := k1 h
           simp only [ht]
           exact ⟨_, rfl⟩
-        · obtain ⟨ns, hns⟩ := k2 h
-          simp only [hns]
-          exact ⟨ns, rfl⟩
+        · obtain ⟨e, ns, cx, he, hrest⟩ := k2 h
+          simp only [he]
+          exact ⟨e, ns, cx, rfl, hrest⟩
     · have hb := thr_big (k := k + 1) hw
-      exact ⟨fun h => by omega, fun _ => by simp only [nestD, cObjX]; exact IsRecCX.enter0 (by omega) _⟩
+      refine ⟨fun h => by omega, fun _ => ⟨recEncC, [], [], ?_, fun h => absurd rfl h, Or.inl ⟨rfl, rfl, Or.inl (by omega)⟩⟩⟩
+      simp [nestD, cObjX, cEnterX, hw, xe]
 
 theorem needsReplace_a (ascii : Bool) : needsReplace ascii [97] = false := by
   cases ascii <;> decide
@@ -313,7 +356,7 @@ theorem encNestDPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : L
   | zero =>
     intro b lvl seen anc
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestD, pyIterX, pyCallX, xe]⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), by simp [nestD, pyIterX, pyCallX, xe]⟩⟩
     | succ b =>
       refine ⟨fun _ => ⟨cs "{}", ?_⟩, fun h => by omega⟩
       simp only [nestD, pyIterX, pyCallX, pyContX]
@@ -322,7 +365,7 @@ theorem encNestDPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : L
   | succ k ih =>
     intro b lvl seen anc
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], by simp [nestD, pyIterX, pyCallX, xe]⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), by simp [nestD, pyIterX, pyCallX, xe]⟩⟩
     | succ b =>
       have key : ∀ lvl' anc' nl sep,
           (k + 1 ≤ b → ∃ t, pyDictItemsX cfg b lvl' seen anc' tDict nl sep true [(.tup, .str [97], nestD k)] = .ok t) ∧
@@ -333,7 +376,7 @@ theorem encNestDPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : L
           cases k <;> simp [nestD, pyItemX]
         cases b with
         | zero =>
-          refine ⟨fun h => by omega, fun _ => ⟨[], ?_⟩⟩
+          refine ⟨fun h => by omega, fun _ => ⟨([], []), ?_⟩⟩
           simp [pyDictItemsX, pyKeyX, pyEncStrX, pyCallX, xe]
         | succ b =>
           simp only [pyDictItemsX, pyKeyX, pyEncStrX, pyCallX, needsReplace_a, Bool.false_eq_true,
@@ -342,9 +385,9 @@ theorem encNestDPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : L
           · obtain ⟨t, ht⟩ := h1 h
             rw [ht]
             exact ⟨_, rfl⟩
-          · obtain ⟨ns, hns⟩ := h2 h
+          · obtain ⟨⟨ns, cx⟩, hns⟩ := h2 h
             rw [hns]
-            exact ⟨ns ++ [_], rfl⟩
+            exact ⟨(ns ++ [_], cx), rfl⟩
       have hI : pyExactItems cfg [(.str [97], nestD k)] = .ok [(.tup, .str [97], nestD k)] := by
         cases hs : cfg.sortKeys <;> simp [pyExactItems, cExactItems, hs, xSortItems, Except.map]
       simp only [nestD, pyIterX, pyCallX, pyContX]
@@ -381,49 +424,112 @@ theorem chainCfg_okx {cfg : XCfg} (hO : cfg.Okx) (k : Nat) : (chainCfg cfg k).Ok
     simp only [chainCfg] at h
     split at h <;> (cases h; rfl)⟩
 
+/-- The room one `default` level needs to go on: the guard after `default` (:1644) and, for a
+Python `default`, the check on entering it. -/
+def chainNeed (cfg : XCfg) : Nat :=
+  if cfg.dfltPy then max (cfg.stk .call + 1) (cfg.stk .dflt + 1) else cfg.stk .dflt + 1
+
+/-- What a `default` chain raises in C when the room runs out: the guard's `RecursionError`, or
+the one of entering a Python `default` (always that one when entering costs at least the guard's
+level), without `__context__`. -/
+def ChainFail {α : Type} (cfg : XCfg) (r : Except XErr α) : Prop :=
+  ∃ e ns, r = .error (e, ns, []) ∧ (e = recEncC ∨ e = recCall) ∧ (cfg.dfltPy = false → e = recEncC) ∧
+    (cfg.dfltPy = true → cfg.stk .dflt ≤ cfg.stk .call → e = recCall)
+
+theorem chainNeed_ge (cfg : XCfg) : cfg.stk .dflt + 1 ≤ chainNeed cfg ∧
+    (cfg.dfltPy = true → cfg.stk .call + 1 ≤ chainNeed cfg) := by
+  unfold chainNeed
+  cases cfg.dfltPy <;> simp <;> omega
+
+theorem chainNeed_le {cfg : XCfg} {c : Nat} (h1 : cfg.dfltPy = true → cfg.stk .call + 1 ≤ c)
+    (h2 : cfg.stk .dflt + 1 ≤ c) : chainNeed cfg ≤ c := by
+  unfold chainNeed
+  cases hp : cfg.dfltPy
+  · simpa using h2
+  · have := h1 hp; simp; omega
+
+theorem ChainFail.note {α : Type} {cfg : XCfg} {r : Except XErr α} (n : Note) (h : ChainFail cfg r) :
+    ChainFail cfg (addNote n r) := by
+  obtain ⟨e, ns, rfl, h1, h2, h3⟩ := h
+  exact ⟨e, ns ++ [n], rfl, h1, h2, h3⟩
+
+theorem chainStep {cfg : XCfg} {c : Nat} {v : XVal} {n : Nat} {t : PyType} {lvl : Nat} {seen : List Nat}
+    {anc : List XVal} (hns : ¬ (cfg.checkCircular = true ∧ n ∈ seen)) (hd : cfg.dflt n t = .ok v) :
+    cObjX cfg c lvl seen anc (.other n t) =
+      if cfg.dfltPy = true ∧ c < cfg.stk .call + 1 then .error (xe recCall)
+      else if cfg.stk .dflt + 1 ≤ c then
+        addNote (.obj t) (cObjX cfg (c - (cfg.stk .dflt + 1)) lvl (n :: seen) anc v)
+      else .error (xe recEncC) := by
+  rw [cObjX]
+  simp only [hns, ↓reduceIte, cCallDflt]
+  by_cases hp : cfg.dfltPy = true
+  · by_cases hc : cfg.stk .call + 1 ≤ c
+    · simp only [hp, hc, ↓reduceIte, hd, show ¬ (c < cfg.stk .call + 1) by omega, and_false]
+      by_cases hw : cfg.stk .dflt + 1 ≤ c
+      · simp [cEnterX, hw]
+      · simp [cEnterX, hw]
+    · simp [hp, hc, show c < cfg.stk .call + 1 by omega]
+  · simp only [hp, Bool.false_eq_true, ↓reduceIte, hd, false_and]
+    by_cases hw : cfg.stk .dflt + 1 ≤ c
+    · simp [cEnterX, hw]
+    · simp [cEnterX, hw]
+
 theorem encChainC (cfg : XCfg) (k : Nat) (t : PyType) : ∀ (m n c lvl : Nat) (seen : List Nat) (anc : List XVal),
     n + m = k → (∀ x ∈ seen, x < n) →
-    ((m + 1) * (cfg.stk .dflt + 1) ≤ c → ∃ s, cObjX (chainCfg cfg k) c lvl seen anc (.other n t) = .ok s) ∧
-    (c < (m + 1) * (cfg.stk .dflt + 1) → IsRecCX (cObjX (chainCfg cfg k) c lvl seen anc (.other n t))) := by
+    (m * (cfg.stk .dflt + 1) + chainNeed cfg ≤ c → ∃ s, cObjX (chainCfg cfg k) c lvl seen anc (.other n t) = .ok s) ∧
+    (c < m * (cfg.stk .dflt + 1) + chainNeed cfg → ChainFail cfg (cObjX (chainCfg cfg k) c lvl seen anc (.other n t))) := by
   have hstk : (chainCfg cfg k).stk = cfg.stk := rfl
+  have hpy : (chainCfg cfg k).dfltPy = cfg.dfltPy := rfl
+  obtain ⟨hg1, hg2⟩ := chainNeed_ge cfg
   intro m
   induction m with
   | zero =>
     intro n c lvl seen anc hn hs
-    have hns : n ∉ seen := fun h => by have := hs n h; omega
+    have hns : ¬ ((chainCfg cfg k).checkCircular = true ∧ n ∈ seen) := fun h => by have := hs n h.2; omega
     have hd : (chainCfg cfg k).dflt n t = .ok .none := by simp [chainCfg]; omega
-    rw [cObjX]
-    simp only [hns, and_false, ↓reduceIte, hd, hstk]
-    rw [Nat.zero_add, Nat.one_mul]
-    by_cases hw : cfg.stk .dflt + 1 ≤ c
-    · refine ⟨fun _ => ⟨cs "null", ?_⟩, fun h => by omega⟩
-      simp [cEnterX_pos hw, cObjX, addNote]
-    · exact ⟨fun h => by omega, fun _ => IsRecCX.enter0 (by omega) _⟩
+    rw [chainStep hns hd, hstk, hpy]
+    simp only [Nat.zero_mul, Nat.zero_add]
+    by_cases h1 : cfg.dfltPy = true ∧ c < cfg.stk .call + 1
+    · rw [if_pos h1]
+      refine ⟨fun h => by have := hg2 h1.1; omega, fun _ => ⟨recCall, [], rfl, Or.inr rfl,
+        fun h => by simp [h1.1] at h, fun _ _ => rfl⟩⟩
+    · rw [if_neg h1]
+      by_cases h2 : cfg.stk .dflt + 1 ≤ c
+      · rw [if_pos h2]
+        refine ⟨fun _ => ⟨cs "null", by simp [cObjX, addNote]⟩, fun h => ?_⟩
+        have := chainNeed_le (cfg := cfg) (fun hp => Nat.le_of_not_lt (fun hc => h1 ⟨hp, hc⟩)) h2
+        omega
+      · rw [if_neg h2]
+        refine ⟨fun h => by omega, fun _ => ⟨recEncC, [], rfl, Or.inl rfl, fun _ => rfl, fun hp hle => ?_⟩⟩
+        exact absurd ⟨hp, by omega⟩ h1
   | succ m ih =>
     intro n c lvl seen anc hn hs
-    have hns : n ∉ seen := fun h => by have := hs n h; omega
+    have hns : ¬ ((chainCfg cfg k).checkCircular = true ∧ n ∈ seen) := fun h => by have := hs n h.2; omega
     have hd : (chainCfg cfg k).dflt n t = .ok (.other (n + 1) t) := by simp [chainCfg]; omega
-    rw [cObjX]
-    simp only [hns, and_false, ↓reduceIte, hd, hstk]
-    by_cases hw : cfg.stk .dflt + 1 ≤ c
-    · rw [thr_le hw, thr_lt hw]
-      have hs' : ∀ x ∈ n :: seen, x < n + 1 := by
-        intro x hx
-        simp only [List.mem_cons] at hx
-        rcases hx with rfl | hx
-        · omega
-        · have := hs x hx; omega
-      obtain ⟨h1, h2⟩ := ih (n + 1) (c - (cfg.stk .dflt + 1)) lvl (n :: seen) anc (by omega) hs'
-      rw [cEnterX_pos hw]
-      refine ⟨fun h => ?_, fun h => ?_⟩
-      · obtain ⟨s, hs2⟩ := h1 h
-        rw [hs2]
-        exact ⟨s, rfl⟩
-      · obtain ⟨ns, hns2⟩ := h2 h
-        rw [hns2]
-        exact ⟨ns ++ [.obj t], rfl⟩
-    · have hb := thr_big (k := m + 1) hw
-      exact ⟨fun h => by omega, fun _ => IsRecCX.enter0 (by omega) _⟩
+    have hs' : ∀ x ∈ n :: seen, x < n + 1 := by
+      intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · omega
+      · have := hs x hx; omega
+    rw [chainStep hns hd, hstk, hpy, Nat.succ_mul]
+    generalize hA : m * (cfg.stk .dflt + 1) = A at ih ⊢
+    by_cases h1 : cfg.dfltPy = true ∧ c < cfg.stk .call + 1
+    · rw [if_pos h1]
+      refine ⟨fun h => by have := hg2 h1.1; omega, fun _ => ⟨recCall, [], rfl, Or.inr rfl,
+        fun h => by simp [h1.1] at h, fun _ _ => rfl⟩⟩
+    · rw [if_neg h1]
+      by_cases h2 : cfg.stk .dflt + 1 ≤ c
+      · rw [if_pos h2]
+        obtain ⟨i1, i2⟩ := ih (n + 1) (c - (cfg.stk .dflt + 1)) lvl (n :: seen) anc (by omega) hs'
+        refine ⟨fun h => ?_, fun h => ?_⟩
+        · obtain ⟨s, hs2⟩ := i1 (by omega)
+          rw [hs2]
+          exact ⟨s, rfl⟩
+        · exact ChainFail.note _ (i2 (by omega))
+      · rw [if_neg h2]
+        refine ⟨fun h => by omega, fun _ => ⟨recEncC, [], rfl, Or.inl rfl, fun _ => rfl, fun hp hle => ?_⟩⟩
+        exact absurd ⟨hp, by omega⟩ h1
 
 theorem encChainPy (cfg : XCfg) (k : Nat) (t : PyType) : ∀ (m n b lvl : Nat) (seen : List Nat) (anc : List XVal),
     n + m = k → (∀ x ∈ seen, x < n) →
@@ -438,7 +544,7 @@ theorem encChainPy (cfg : XCfg) (k : Nat) (t : PyType) : ∀ (m n b lvl : Nat) (
     rw [pyIterX]
     simp only [hns, and_false, ↓reduceIte]
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
     | succ b =>
       refine ⟨fun _ => ⟨cs "null", ?_⟩, fun h => by omega⟩
       simp [pyCallX, hd, liftE, pyIterX, addNote]
@@ -449,7 +555,7 @@ theorem encChainPy (cfg : XCfg) (k : Nat) (t : PyType) : ∀ (m n b lvl : Nat) (
     rw [pyIterX]
     simp only [hns, and_false, ↓reduceIte]
     cases b with
-    | zero => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
+    | zero => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
     | succ b =>
       have hs' : ∀ x ∈ n :: seen, x < n + 1 := by
         intro x hx
@@ -463,13 +569,13 @@ theorem encChainPy (cfg : XCfg) (k : Nat) (t : PyType) : ∀ (m n b lvl : Nat) (
       · obtain ⟨s, hs2⟩ := h1 (by omega)
         rw [hs2]
         exact ⟨s, rfl⟩
-      · obtain ⟨ns, hns2⟩ := h2 (by omega)
+      · obtain ⟨⟨ns, cx⟩, hns2⟩ := h2 (by omega)
         rw [hns2]
-        exact ⟨ns ++ [.obj t], rfl⟩
+        exact ⟨(ns ++ [.obj t], cx), rfl⟩
 
 theorem dumpsCX_nestD {cfg : XCfg} (hO : cfg.Okx) (c k : Nat) :
     ((k + 1) * (cfg.stk .map + 1) ≤ c → ∃ t, dumpsCX cfg c (nestD k) = .ok t) ∧
-    (c < (k + 1) * (cfg.stk .map + 1) → IsRecCX (dumpsCX cfg c (nestD k))) := by
+    (c < (k + 1) * (cfg.stk .map + 1) → DictFail cfg c (dumpsCX cfg c (nestD k))) := by
   have : dumpsCX cfg c (nestD k) = cObjX cfg c 0 [] [] (nestD k) := by cases k <;> rfl
   rw [this]
   exact encNestDC hO k c 0 [] []
@@ -480,16 +586,16 @@ theorem dumpsPyX_nestD (cfg : XCfg) (p k : Nat) :
   rw [this]
   unfold iterJoinPyX
   match p with
-  | 0 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
-  | 1 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
+  | 0 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
+  | 1 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
   | p + 2 =>
     simp only [pyCallX]
     obtain ⟨h1, h2⟩ := encNestDPy cfg k p 0 [] []
     exact ⟨fun h => h1 (by omega), fun h => h2 (by omega)⟩
 
 theorem dumpsCX_chain (cfg : XCfg) (c k : Nat) (t : PyType) :
-    ((k + 1) * (cfg.stk .dflt + 1) ≤ c → ∃ s, dumpsCX (chainCfg cfg k) c (.other 0 t) = .ok s) ∧
-    (c < (k + 1) * (cfg.stk .dflt + 1) → IsRecCX (dumpsCX (chainCfg cfg k) c (.other 0 t))) :=
+    (k * (cfg.stk .dflt + 1) + chainNeed cfg ≤ c → ∃ s, dumpsCX (chainCfg cfg k) c (.other 0 t) = .ok s) ∧
+    (c < k * (cfg.stk .dflt + 1) + chainNeed cfg → ChainFail cfg (dumpsCX (chainCfg cfg k) c (.other 0 t))) :=
   encChainC cfg k t k 0 c 0 [] [] (by omega) (by simp)
 
 theorem dumpsPyX_chain (cfg : XCfg) (p k : Nat) (t : PyType) :
@@ -497,8 +603,8 @@ theorem dumpsPyX_chain (cfg : XCfg) (p k : Nat) (t : PyType) :
     (p < k + 3 → IsRecPyX (dumpsPyX (chainCfg cfg k) p (.other 0 t))) := by
   simp only [dumpsPyX, iterJoinPyX]
   match p with
-  | 0 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
-  | 1 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
+  | 0 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
+  | 1 => exact ⟨fun h => by omega, fun _ => ⟨([], []), rfl⟩⟩
   | p + 2 =>
     simp only [pyCallX]
     obtain ⟨h1, h2⟩ := encChainPy cfg k t k 0 p 0 [] [] (by omega) (by simp)
@@ -516,29 +622,40 @@ separators, no custom encoder, `default` returning such values, and key types wh
    same index; a dict item's note names the original key in C and the key's converted text in
    Python;
 2. `[[...[]...]]` `k + 1` deep is encoded by C exactly when `k + 1` list levels fit in the room
-   (`(k + 1) * cost <= c`, the guard of :1606) and by Python exactly when `k + 3 <= p` (two frames
-   for `_iterencode_once` and `_iterencode`), and otherwise raises the `RecursionError`;
-3. so is `{"a": {"a": ... {}}}` `k + 1` deep, with the dict level's own cost in C (the guard of
-   :1613);
-4. and an object that `default` turns into another one `k` times, then into `None`, with the cost
-   of the guard after `default` (:1644) in C, `k + 3` frames in Python.
-Each guard's cost is a parameter (`XCfg.stk`, the C frames between two guards): CPython 3.15.2
-encodes 47456 nested lists but 29001 nested dicts in the same stack, so no single room fits all
-three. -/
+   (`(k + 1) * cost <= c`, the guard of :1606), and otherwise raises that guard's `RecursionError`
+   ('... while encoding a JSON object') without `__context__`; by Python exactly when `k + 3 <= p`
+   (two frames for `_iterencode_once` and `_iterencode`), and otherwise `RecursionError`;
+3. `{"a": {"a": ... {}}}` `k + 1` deep is encoded by C exactly when `k + 1` dict levels fit (the
+   guard of :1613), and otherwise raises `DictFail`: the guard's `RecursionError` only when the
+   innermost entered dict's `%R` note (:1732) still has the repr's stack, else the repr's
+   `RecursionError` ('... while getting the repr of an object') whose `__context__` chain is repr
+   errors ending in the guard's error (`_PyErr_FormatNote`, Python/errors.c:1281-1292); Python as
+   in 2;
+4. an object that `default` turns into another one `k` times, then into `None`, is encoded by C
+   exactly when `k` levels of the guard after `default` (:1644) and the last one's need fit
+   (`chainNeed`: the guard's cost and, for a Python `default`, the cost of entering it), and
+   otherwise raises `ChainFail`: for a C `default` the guard's `RecursionError`, for a Python one
+   whose entering costs at least a guard's level `RecursionError('Stack overflow (used N kB)')` from
+   entering `default` (:1638); Python as in 2.
+Each check's cost is a parameter (`XCfg.stk`, the C frames between two checks). CPython 3.15.2 on
+x86-64 encodes 47456 nested lists, 29001 nested dicts and 47453 Python-`default` results in the main
+thread's stack; past the dict limit it raises the repr's `RecursionError` with a chain of three, and
+past the `default` limit the bare 'Stack overflow' one (operator.attrgetter as `default`: the
+guard's). -/
 def DumpsTwinsX : Prop :=
   ∀ (cfg : XCfg) (c p : Nat) (v : XVal), cfg.Okx → v.okx = true →
     (¬ IsRecCX (dumpsCX cfg c v) → ¬ IsRecPyX (dumpsPyX cfg p v) →
       (∃ t, dumpsCX cfg c v = .ok t ∧ dumpsPyX cfg p v = .ok t) ∨
-      (∃ e nsC nsP, dumpsCX cfg c v = .error (e, nsC) ∧ dumpsPyX cfg p v = .error (e, nsP) ∧
+      (∃ e nsC nsP, dumpsCX cfg c v = .error (e, nsC, []) ∧ dumpsPyX cfg p v = .error (e, nsP, []) ∧
         NotesRel cfg nsC nsP)) ∧
     (∀ k, ((k + 1) * (cfg.stk .seq + 1) ≤ c → ∃ t, dumpsCX cfg c (nestL k) = .ok t) ∧
-      (c < (k + 1) * (cfg.stk .seq + 1) → IsRecCX (dumpsCX cfg c (nestL k)))) ∧
+      (c < (k + 1) * (cfg.stk .seq + 1) → ∃ ns, dumpsCX cfg c (nestL k) = .error (recEncC, ns, []))) ∧
     (∀ k, (k + 3 ≤ p → ∃ t, dumpsPyX cfg p (nestL k) = .ok t) ∧ (p < k + 3 → IsRecPyX (dumpsPyX cfg p (nestL k)))) ∧
     (∀ k, ((k + 1) * (cfg.stk .map + 1) ≤ c → ∃ t, dumpsCX cfg c (nestD k) = .ok t) ∧
-      (c < (k + 1) * (cfg.stk .map + 1) → IsRecCX (dumpsCX cfg c (nestD k)))) ∧
+      (c < (k + 1) * (cfg.stk .map + 1) → DictFail cfg c (dumpsCX cfg c (nestD k)))) ∧
     (∀ k, (k + 3 ≤ p → ∃ t, dumpsPyX cfg p (nestD k) = .ok t) ∧ (p < k + 3 → IsRecPyX (dumpsPyX cfg p (nestD k)))) ∧
-    (∀ k t, ((k + 1) * (cfg.stk .dflt + 1) ≤ c → ∃ s, dumpsCX (chainCfg cfg k) c (.other 0 t) = .ok s) ∧
-      (c < (k + 1) * (cfg.stk .dflt + 1) → IsRecCX (dumpsCX (chainCfg cfg k) c (.other 0 t)))) ∧
+    (∀ k t, (k * (cfg.stk .dflt + 1) + chainNeed cfg ≤ c → ∃ s, dumpsCX (chainCfg cfg k) c (.other 0 t) = .ok s) ∧
+      (c < k * (cfg.stk .dflt + 1) + chainNeed cfg → ChainFail cfg (dumpsCX (chainCfg cfg k) c (.other 0 t)))) ∧
     (∀ k t, (k + 3 ≤ p → ∃ s, dumpsPyX (chainCfg cfg k) p (.other 0 t) = .ok s) ∧
       (p < k + 3 → IsRecPyX (dumpsPyX (chainCfg cfg k) p (.other 0 t))))
 
@@ -552,8 +669,8 @@ theorem dumpsX_rel {cfg : XCfg} (hO : cfg.Okx) (c p : Nat) (v : XVal) (hv : v.ok
   | _ =>
     simp only [dumpsCX, dumpsPyX, iterJoinPyX]
     match p with
-    | 0 => exact XRelW.recPy ⟨[], rfl⟩
-    | 1 => exact XRelW.recPy ⟨[], rfl⟩
+    | 0 => exact XRelW.recPy ⟨([], []), rfl⟩
+    | 1 => exact XRelW.recPy ⟨([], []), rfl⟩
     | p + 2 => simp only [pyCallX]; exact simX hO c p 0 [] [] _ (fun _ h => by simp at h) hv
 
 theorem dumpsTwinsX_proven : DumpsTwinsX := by
@@ -602,8 +719,8 @@ def EncoderCallX : Prop :=
       ¬ IsRecCX (cObjX cfg c level.toNat [] [] v) →
       ¬ IsRecPyX (iterencodePyX cfg p v level.toNat) →
       (∃ t, encoderCallX alloc cfg c v level = .ok [t] ∧ iterencodePyX cfg p v level.toNat = .ok t) ∨
-      (∃ e nsC nsP, encoderCallX alloc cfg c v level = .error (e, nsC) ∧
-        iterencodePyX cfg p v level.toNat = .error (e, nsP) ∧ NotesRel cfg nsC nsP))
+      (∃ e nsC nsP, encoderCallX alloc cfg c v level = .error (e, nsC, []) ∧
+        iterencodePyX cfg p v level.toNat = .error (e, nsP, []) ∧ NotesRel cfg nsC nsP))
 
 theorem encoderCallX_cacheErr {alloc : Alloc} {cfg : XCfg} {c : Nat} {v : XVal} {level : Int} {ind : PStr} {e : PyExc}
     (hi : cfg.indent = some ind) (hs : ¬ outOfSsize level) (he : createIndentCache alloc ind level = .error e) :
@@ -643,8 +760,8 @@ theorem encoderCallX_proven : EncoderCallX := by
     have hr : XRelW cfg Eq (cObjX cfg c level.toNat [] [] v) (iterencodePyX cfg p v level.toNat) := by
       unfold iterencodePyX
       match p with
-      | 0 => exact XRelW.recPy ⟨[], rfl⟩
-      | 1 => exact XRelW.recPy ⟨[], rfl⟩
+      | 0 => exact XRelW.recPy ⟨([], []), rfl⟩
+      | 1 => exact XRelW.recPy ⟨([], []), rfl⟩
       | p + 2 => simp only [pyCallX]; exact simX hO c p _ [] [] _ (fun _ h => by simp at h) hv
     rcases hr with ⟨a, b, ha, hb, rfl⟩ | ⟨e, nsC, nsP, ha, hb, hn⟩ | h | h
     · rw [ha]; exact Or.inl ⟨a, rfl, hb⟩

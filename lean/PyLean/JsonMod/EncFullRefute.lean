@@ -65,12 +65,12 @@ def tSet : PyType := { name := "set" }
 /-- `{1: set()}`. -/
 def wNotes : XVal := .map tDict [(.int 1, .other 0 tSet)]
 
-theorem wNotes_C : dumpsCX {} 10 wNotes = .error (defaultErr "set", [.key tDict (.orig (.int 1))]) := by
-  simp [wNotes, dumpsCX, cObjX, cEnterX, cContX, cMapPart, cExactItems, cMapItemsX, cKeyX, intRepr,
+theorem wNotes_C : dumpsCX {} 10 wNotes = .error (defaultErr "set", [Note.key tDict (.orig (.int 1))], []) := by
+  simp [wNotes, dumpsCX, cObjX, cEnterX, cContX, cMapPart, cExactItems, cMapItemsX, cKeyX, intRepr, cCallDflt, cFormatNoteR,
     decDigits, decDigitsF, maxStrDigits, cWriteStringX, cFastEncode, writeStrObj, SObj.ofStr, xe, addNote, cNoteKey,
     XCfg.toE, writeEscapedAscii, asciiEscapeSize, Except.map, tSet]
 
-theorem wNotes_Py : dumpsPyX {} 10 wNotes = .error (defaultErr "set", [.key tDict (.conv (cs "1"))]) := by
+theorem wNotes_Py : dumpsPyX {} 10 wNotes = .error (defaultErr "set", [Note.key tDict (.conv (cs "1"))], []) := by
   simp [wNotes, dumpsPyX, iterJoinPyX, pyCallX, pyIterX, pyContX, pyDictPart.eq_def, pyExactItems, Except.map,
     tSet, cExactItems, pyDictItemsX, pyKeyX, intRepr, decDigits, decDigitsF, maxStrDigits, pyEncStrX,
     needsReplace, xe, addNote, pyItemX, liftE, SObj.ofStr]
@@ -89,10 +89,10 @@ dict item '1'`. (So is a class outside `__main__`, `%T` printing `mymod.Foo` whe
 theorem dumpsTwinsNotes_refuted : ¬ DumpsTwinsNotes := by
   intro h
   have h1 := h {} 10 10 wNotes okx_default (by decide)
-    (by rw [wNotes_C]; rintro ⟨ns, h⟩; cases h)
+    (by rw [wNotes_C]; rintro ⟨_, _, h, he⟩; cases h; simp [IsRecExcC, recEncC, recRepr, recCall, defaultErr] at he)
     (by rw [wNotes_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wNotes_C, wNotes_Py] at h1
-  rcases h1 with ⟨_, h2, _⟩ | ⟨e, nsC, nsP, h2, h3, h4⟩
+  rcases h1 with ⟨_, h2, _⟩ | ⟨e, nsC, nsP, cxC, cxP, h2, h3, h4⟩
   · cases h2
   · cases h2; cases h3
     simp only [List.map_cons, List.map_nil, showC, showPy, NoteKey.shown, KeyShown.ofKey,
@@ -131,7 +131,7 @@ def DumpsTwinsSep : Prop :=
 theorem dumpsTwinsSep_refuted : ¬ DumpsTwinsSep := by
   intro h
   have h1 := h cfgSepX 10 10 wSep rfl (fun n t v' h => by simp [cfgSepX, defaultErr] at h) (by decide)
-    (by rw [wSep_C]; rintro ⟨ns, h⟩; cases h) (by rw [wSep_Py]; rintro ⟨ns, h⟩; cases h)
+    (by rw [wSep_C]; rintro ⟨_, _, h, _⟩; cases h) (by rw [wSep_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wSep_C, wSep_Py] at h1
   rcases h1 with ⟨t, h2, h3⟩ | ⟨_, _, _, h2, _⟩
   · exact absurd (Except.ok.inj (h2.trans h3.symm)) (by decide)
@@ -196,7 +196,7 @@ gh-71800; the dict counterparts are cpython#158731 and #158732. -/
 theorem dumpsTwinsSub_refuted : ¬ DumpsTwinsSub := by
   intro h
   have h1 := h {} 10 10 wSub okx_default (by decide)
-    (by rw [wSub_C]; rintro ⟨ns, h⟩; cases h) (by rw [wSub_Py]; rintro ⟨ns, h⟩; cases h)
+    (by rw [wSub_C]; rintro ⟨_, _, h, _⟩; cases h) (by rw [wSub_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wSub_C, wSub_Py] at h1
   rcases h1 with ⟨t, h2, h3⟩ | ⟨_, _, _, h2, _⟩
   · cases h2; cases h3
@@ -241,7 +241,7 @@ def DumpsTwinsDictSub : Prop :=
 theorem dumpsTwinsDictSub_refuted : ¬ DumpsTwinsDictSub := by
   intro h
   have h1 := h {} 10 10 tDF false [(.str (cs "z"), .int 1)] okx_default (by decide)
-    (by rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_C]; rintro ⟨ns, h⟩; cases h)
+    (by rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_C]; rintro ⟨_, _, h, _⟩; cases h)
     (by rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_Py]; rintro ⟨ns, h⟩; cases h)
   rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_C, wDictSub_Py] at h1
   rcases h1 with ⟨t, h2, h3⟩ | ⟨_, _, _, h2, _⟩
@@ -282,7 +282,7 @@ indent only inside a container (encoder.py:281, :340). Levels whose string `mall
 theorem encoderCallTwins_refuted : ¬ EncoderCallTwins := by
   intro h
   have h1 := h (fun _ => true) cfgIndent2 10 10 (.int 1) (2 ^ 62) okx_indent2 rfl (by decide) (by decide)
-    (by rw [wLevel_C]; rintro ⟨ns, h⟩; cases h) (by rw [wLevel_Py]; rintro ⟨ns, h⟩; cases h)
+    (by rw [wLevel_C]; rintro ⟨_, _, h, he⟩; cases h; simp [IsRecExcC, recEncC, recRepr, recCall] at he) (by rw [wLevel_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wLevel_C, wLevel_Py] at h1
   rcases h1 with ⟨t, h2, _⟩ | ⟨_, _, _, _, h3⟩
   · cases h2
