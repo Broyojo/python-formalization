@@ -210,6 +210,7 @@ theorem setattrExact_proven : SetattrExact := by
   · by_cases hl : maxStrDigits < numDigits n.natAbs <;>
       simp [pySetattr, invalidRoundingExc, intText, strLimit, limitOr, hl, bind, Except.bind, throw,
         throwThe, MonadExceptOf.throw, pure, Except.pure]
+    all_goals rfl
   · rfl
   · rfl
   · rfl
@@ -284,6 +285,11 @@ def SigArg.stored : SigArg → SigDict
   | .list l => pySignals.map (fun s => (s, l.contains (.sig s)))
   | .dict d => sigEntries d
 
+/-- The dict an optional argument leaves: `D` when it is not given. -/
+def SigArg.storedOr (D : SigDict) : Option SigArg → SigDict
+  | none => D
+  | some t => t.stored
+
 /-- `Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps, _ignored_flags)`
 (_pydecimal.py:3969-4003) with ints, rounding modes, `_ignored_flags` a list of signals, and
 `flags` and `traps` lists or dicts, for every `DefaultContext` (a context: its `traps` has every
@@ -316,12 +322,8 @@ def ContextInitExact : Prop :=
       pyContextNew dc a = .ok
         { prec := P, rounding := r.getD dc.rounding, emin := Em, emax := EM, capitals := Ca,
           clamp := Cl,
-          flags := (match fl with
-            | none => pySignals.map (fun s => (s, false))
-            | some f => f.stored),
-          traps := (match tr with
-            | none => dc.traps
-            | some t => t.stored),
+          flags := SigArg.storedOr (pySignals.map (fun s => (s, false))) fl,
+          traps := SigArg.storedOr dc.traps tr,
           ignored := ig.getD [],
           roundingObj := (match r with
             | none => dc.roundingObj
@@ -382,7 +384,7 @@ theorem sigArg_bad (dflt : List (SigKey × Bool)) (t : SigArg) (h : ¬ t.valid) 
     refine ⟨signalDictOf l, rfl, setSignalDict_bad _ (Or.inl ?_)⟩
     have hm : SigKey.other ∈ l := Classical.byContradiction h
     have h1 : l.contains .other = true := by simpa using hm
-    simp [signalDictOf, h1, hasKey]
+    simp [signalDictOf, hasKey, hm]
   | dict d =>
     refine ⟨d, rfl, setSignalDict_bad d ?_⟩
     by_cases ho : hasKey d .other = true
@@ -396,9 +398,7 @@ theorem sigArg_bad (dflt : List (SigKey × Bool)) (t : SigArg) (h : ¬ t.valid) 
 theorem sigStep (dflt : List (SigKey × Bool)) (D : SigDict) (o : Option SigArg)
     (hD : setSignalDict (.dict dflt) = .ok D) (hv : ∀ t, o = some t → t.valid) :
     ∃ d, signalArg dflt (optSig o) = .ok (.dict d) ∧
-      setSignalDict (.dict d) = .ok (match o with
-        | none => D
-        | some t => t.stored) := by
+      setSignalDict (.dict d) = .ok (SigArg.storedOr D o) := by
   cases o with
   | none => exact ⟨dflt, rfl, hD⟩
   | some t => exact sigArg_ok dflt t (hv t rfl)
@@ -433,7 +433,7 @@ theorem pySetattr_prec_type (c : PyContext) (v : CtxArg) (h : intValue v = none)
 theorem contextInitExact_proven : ContextInitExact := by
   intro dc p emin emax cap cl r ig fl tr htr hro
   dsimp only
-  have hR := pySetattr_rounding_init dc · r hro
+  have hR := fun c => pySetattr_rounding_init dc c r hro
   have hT0 := setSignalDict_keyed dc.traps htr
   refine ⟨fun hI hT hF => ?_, fun h => ?_, fun s hs h1 => ?_, fun h1 h2 => ?_, fun h1 h2 h3 => ?_,
     fun h1 h2 h3 h4 => ?_, fun h1 h2 h3 h4 h5 => ?_, fun hI t ht hb => ?_, fun hI hT f hf hb => ?_,
@@ -483,12 +483,14 @@ theorem contextInitExact_proven : ContextInitExact := by
     subst hf
     obtain ⟨dT, e1, e2⟩ := sigStep (keyed dc.traps) dc.traps tr hT0 hT
     obtain ⟨dF, e3, e4⟩ := sigArg_bad (keyed (pySignals.map (fun s => (s, false)))) f hb
+    have e3' : signalArg (keyed (pySignals.map (fun s => (s, false)))) (optSig (some f)) =
+      .ok (.dict dF) := e3
     have g4 : ¬ (cap.getD dc.capitals < 0 ∨ cap.getD dc.capitals > 1) := by omega
     have g5 : ¬ (cl.getD dc.clamp < 0 ∨ cl.getD dc.clamp > 1) := by omega
     simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
       hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
       if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
-      if_neg g5, pySetattr_ignored, e1, pySetattr_traps, e2, optSig, e3, pySetattr_flags, e4, bind,
+      if_neg g5, pySetattr_ignored, e1, pySetattr_traps, e2, e3', pySetattr_flags, e4, bind,
       Except.bind, pure, Except.pure]
   · simp only [pyContextNew, orElse_ne v _ hn, pySetattr_prec_type _ v hv, bind, Except.bind]
 

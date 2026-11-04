@@ -54,6 +54,8 @@ def build(M, j):
     if j[0] == "N":
         p = j[3] if j[3] != "0" else ""
         return M.Decimal((int(j[1]), tuple(map(int, p)), "N" if j[2] else "n"))
+    if j[0] == "Fh":
+        return M.Decimal((int(j[1]), tuple(map(int, j[2])), int(j[3], 16)))
     return M.Decimal((int(j[1]), tuple(map(int, j[2])), j[3]))
 
 
@@ -306,6 +308,13 @@ def gen_method(rng):
     if name in SMALL_INT and rng.random() < 0.9:
         n = rng.randint(-35, 35)
         b = ["F", n < 0, str(abs(n)), 0]
+    if name == "logb" and rng.random() < 0.3:
+        # Decimal(self.adjusted()) takes str(abs(adjusted)): the 4300-digit limit.
+        impl = "py"
+        d = a[2] if a[0] == "F" and a[2] != "0" else str(rng.randint(1, 10 ** rng.randint(1, 40)))
+        adj = rng.choice([1, -1]) * (10 ** 4300 + rng.choice([-2, -1, 0, 1]))
+        adj = rng.choice([adj, rng.choice(HUGE_INTS)])
+        a = ["Fh", rng.random() < 0.5, d, hex(adj - len(d) + 1)]
     return {"mod": "decimal", "fn": "m", "m": name, "impl": impl, "ctx": ctx, "a": a, "b": b, "t": t}
 
 
@@ -403,8 +412,25 @@ def gen_tmpl(rng):
     return t
 
 
+# Ints around the 4300-digit int/str limit: `%s` of one in an error message raises.
+HUGE_INTS = [10 ** 4299, -10 ** 4299, 10 ** 4300 - 1, -(10 ** 4300 - 1), 10 ** 4300, -10 ** 4300,
+             10 ** 5000, -10 ** 5000]
+
+
 def gen_int_arg(rng):
+    r = rng.random()
+    if r < 0.12:
+        return ["hint", hex(rng.choice(HUGE_INTS))]
+    if r < 0.2:
+        return ["bool", rng.random() < 0.5]
     return ["int", str(rng.choice(INT_EDGES))]
+
+
+def gen_eqobj(rng):
+    """An object whose __eq__ answers the eight modes of _rounding_modes: y(es), n(o), r(aise),
+    i (NotImplemented)."""
+    n = rng.choice([0, 1, 3, 5, 8, 8])
+    return ["eqobj", [rng.choice("nnnnyri") for _ in range(n)]]
 
 
 def gen_sig_list(rng):
@@ -438,7 +464,9 @@ def gen_attr(rng, name):
     if name == "rounding":
         if r < 0.8:
             return ["str", rng.choice(ROUNDINGS)]
-        return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"]])
+        return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"], gen_eqobj(rng), gen_eqobj(rng),
+                           ["hint", hex(rng.choice(HUGE_INTS))], ["bool", rng.random() < 0.5],
+                           ["tuple", str(rng.choice([0, 1, 2, 3]))], ["none"], gen_sig_dict(rng)])
     if name == "_ignored_flags":
         return gen_sig_list(rng)
     if r < 0.6:
@@ -833,6 +861,14 @@ def ctx_val(M, v):
     t = v[0]
     if t == "int":
         return int(v[1])
+    if t == "hint":
+        return int(v[1], 16)
+    if t == "bool":
+        return v[1]
+    if t == "none":
+        return None
+    if t == "eqobj":
+        return EqObj(v[1])
     if t == "str":
         return v[1]
     if t == "list":
@@ -848,6 +884,28 @@ def ctx_val(M, v):
     return object()
 
 
+class EqObj:
+    """Answers `mode == self` (the reflected __eq__) from a list indexed by _rounding_modes."""
+    MODES = ["ROUND_DOWN", "ROUND_HALF_UP", "ROUND_HALF_EVEN", "ROUND_CEILING", "ROUND_FLOOR",
+             "ROUND_UP", "ROUND_HALF_DOWN", "ROUND_05UP"]
+
+    def __init__(self, answers):
+        self.answers = answers
+
+    def __eq__(self, other):
+        if not isinstance(other, str) or other not in self.MODES:
+            return NotImplemented
+        i = self.MODES.index(other)
+        a = self.answers[i] if i < len(self.answers) else "n"
+        if a == "r":
+            raise RuntimeError("boom")
+        if a == "i":
+            return NotImplemented
+        return a == "y"
+
+    __hash__ = object.__hash__
+
+
 class Idx:
     def __init__(self, v):
         self.v = v
@@ -858,8 +916,9 @@ class Idx:
 
 def enc_ctx(M, c):
     names = lambda d: sorted(k.__name__ for k in ALL_SIG_OBJ[M] if d[k])
-    return {"prec": str(c.prec), "rounding": c.rounding, "Emin": str(c.Emin), "Emax": str(c.Emax),
-            "capitals": str(c.capitals), "clamp": str(c.clamp), "flags": names(c.flags),
+    return {"prec": hex(c.prec), "rounding": c.rounding if isinstance(c.rounding, str) else "obj",
+            "Emin": hex(c.Emin), "Emax": hex(c.Emax),
+            "capitals": hex(c.capitals), "clamp": hex(c.clamp), "flags": names(c.flags),
             "traps": names(c.traps)}
 
 

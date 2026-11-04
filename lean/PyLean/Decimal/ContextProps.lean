@@ -422,6 +422,7 @@ theorem sic_hi (name : String) (n hi : Int) :
   by_cases h : n > hi <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
     simp [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, bind, Except.bind, pure,
       Except.pure]
+  all_goals rfl
 
 theorem sic_lo (name : String) (n lo : Int) :
     setIntegerCheck name (.int n) (some lo) none =
@@ -430,13 +431,14 @@ theorem sic_lo (name : String) (n lo : Int) :
   by_cases h : n < lo <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
     simp [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, bind, Except.bind, pure,
       Except.pure]
+  all_goals rfl
 
 theorem sic_lohi (name : String) (n lo hi : Int) :
     setIntegerCheck name (.int n) (some lo) (some hi) =
       (if n < lo ∨ n > hi then .error (limitOr n (.valueError s!"{name} must be in [{lo}, {hi}]. got {n}"))
        else .ok n) := by
   by_cases h : n < lo ∨ n > hi <;> by_cases hl : maxStrDigits < numDigits n.natAbs <;>
-    simp only [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, if_true, if_false,
+    simp only [setIntegerCheck, intValue, intText, strLimit, limitOr, h, hl, ite_true, ite_false,
       gt_iff_lt, bind, Except.bind, pure, Except.pure] <;> rfl
 
 theorem pySetattr_prec (c : PyContext) (n : Int) :
@@ -445,6 +447,7 @@ theorem pySetattr_prec (c : PyContext) (n : Int) :
        else .ok { c with prec := n }) := by
   have := sic_lo "prec" n 1
   by_cases h : n < 1 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
 
 theorem pySetattr_emin (c : PyContext) (n : Int) :
     pySetattr c "Emin" (.int n) =
@@ -452,6 +455,7 @@ theorem pySetattr_emin (c : PyContext) (n : Int) :
        else .ok { c with emin := n }) := by
   have := sic_hi "Emin" n 0
   by_cases h : n > 0 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
 
 theorem pySetattr_emax (c : PyContext) (n : Int) :
     pySetattr c "Emax" (.int n) =
@@ -459,6 +463,7 @@ theorem pySetattr_emax (c : PyContext) (n : Int) :
        else .ok { c with emax := n }) := by
   have := sic_lo "Emax" n 0
   by_cases h : n < 0 <;> simp_all [pySetattr, bind, Except.bind, pure, Except.pure]
+  all_goals rfl
 
 theorem pySetattr_capitals (c : PyContext) (n : Int) :
     pySetattr c "capitals" (.int n) =
@@ -468,6 +473,7 @@ theorem pySetattr_capitals (c : PyContext) (n : Int) :
   by_cases h : n < 0 ∨ n > 1
   · rw [if_pos h] at this ⊢
     simp [pySetattr, this, bind, Except.bind]
+    all_goals rfl
   · rw [if_neg h] at this ⊢
     simp [pySetattr, this, bind, Except.bind, pure, Except.pure]
 
@@ -479,6 +485,7 @@ theorem pySetattr_clamp (c : PyContext) (n : Int) :
   by_cases h : n < 0 ∨ n > 1
   · rw [if_pos h] at this ⊢
     simp [pySetattr, this, bind, Except.bind]
+    all_goals rfl
   · rw [if_neg h] at this ⊢
     simp [pySetattr, this, bind, Except.bind, pure, Except.pure]
 
