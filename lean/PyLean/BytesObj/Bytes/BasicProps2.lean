@@ -248,7 +248,7 @@ theorem concatSpec_proven : ConcatSpec := by
       unfold pyBytesConcat
       simp only [hb, h1, if_false, if_true, hshared]
       have e : ((v.length : Int) + wb.length) = ((v.length + wb.length : Nat) : Int) := by omega
-      rw [e, ho]
-      simp [hdata]
+      have ho' : bytesResize { data := v } ((v.length : Int) + wb.length) = .ok o := by rw [e]; exact ho
+      simp [pyBytesResize, ho', hdata]
 
 end PyLean.BytesObj.Bytes

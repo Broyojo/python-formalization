@@ -44,8 +44,10 @@ def bufferError (msg : String) : PyExc := .named "BufferError" msg
 /-- `SystemError(msg)`. -/
 def systemError (msg : String) : PyExc := .named "SystemError" msg
 
-/-- `PyErr_BadInternalCall()`. -/
-def badInternalCall (f : String) : PyExc := systemError s!"{f}: bad internal call"
+/-- `PyErr_BadInternalCall()` at `file:line`: `_PyErr_BadInternalCall`, Python/errors.c:1196-1202,
+`"%s:%d: bad argument to internal function"` with `__FILE__` as the build passes it. -/
+def badInternalCall (file : String) (line : Nat) : PyExc :=
+  systemError s!"{file}:{line}: bad argument to internal function"
 
 /-- `(signed char)b`: what `c = *fmt++` stores in an `int`. -/
 def sgnChar (b : Nat) : Int := if b ≥ 128 then (b : Int) - 256 else b

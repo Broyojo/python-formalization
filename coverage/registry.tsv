@@ -1144,6 +1144,12 @@ bytesobj-bytes-partition-obj	proven	Objects/bytesobject.c	bytes_partition_impl,b
 bytesobj-bytes-private-rfind	proven	Objects/bytesobject.c	_PyBytes_ReverseFind
 bytesobj-bytes-getnewargs	proven	Objects/bytesobject.c	bytes_getnewargs
 bytesobj-bytes-fromhex-callback	proven	Objects/bytesobject.c	bytes_fromhex_impl
+bytesobj-bytes-fromlist-mut	proven	Objects/bytesobject.c	_PyBytes_FromList
+bytesobj-bytes-alloc	proven	Objects/bytesobject.c	bytes_alloc,bytes_subtype_new
+bytesobj-bytes-resize-pv	proven	Objects/bytesobject.c	_PyBytes_Resize
+bytesobj-bytes-iter-reduce	proven	Objects/bytesobject.c	striter_reduce
+bytesobj-bytes-iter-setstate	proven	Objects/bytesobject.c	striter_setstate
+bytesobj-bytes-writer-bytes	proven	Objects/bytesobject.c	byteswriter_resize
 bytesobj-bytes-escape-roundtrip	proven	Objects/bytesobject.c	_PyBytes_DecodeEscape2,PyBytes_DecodeEscape,PyBytes_Repr,bytearray_repr,bytearray_repr_lock_held
 bytesobj-bytes-escape-warning	proven	Objects/bytesobject.c	PyBytes_DecodeEscape,_PyBytes_DecodeEscape2
 bytesobj-bytes-repr-size	proven	Objects/bytesobject.c	PyBytes_Repr,_Py_bytes_repr
