@@ -7,7 +7,7 @@ Parser/action_helpers.c	74	82	_get_flattened_seq_size	_get_flattened_seq_size(as
 Parser/action_helpers.c	86	106	_PyPegen_seq_flatten	_PyPegen_seq_flatten(Parser *p, asdl_seq *seqs)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	109	113	_PyPegen_seq_last_item	_PyPegen_seq_last_item(asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	116	119	_PyPegen_seq_first_item	_PyPegen_seq_first_item(asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	123	139	_PyPegen_join_names_with_dot	_PyPegen_join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/action_helpers.c	123	139	_PyPegen_join_names_with_dot	_PyPegen_join_names_with_dot(Parser *p, expr_ty first_name, expr_ty second_name)	modelled	pygrammar-rule-join-names	
 Parser/action_helpers.c	143	161	_PyPegen_seq_count_dots	_PyPegen_seq_count_dots(asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	180	194	_PyPegen_map_names_to_ids	_PyPegen_map_names_to_ids(Parser *p, asdl_expr_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	198	208	_PyPegen_cmpop_expr_pair	_PyPegen_cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

@@ -1835,6 +1835,104 @@ def isSequenceImpl (v : Val) : RM Bool := do
 /-- `except*`: `exc.split(match_type)`. -/
 def egSplitImpl (_ _ : Val) : RM (Val × Val) := fault "exception group split not modelled"
 
+/-- `_PyObject_Call(callable, args, kwargs)`, `Objects/call.c:333-367`: with vectorcall
+(`_PyVectorcall_Call`, `:263-300`) the dict is unpacked into names and values first
+(`_PyStack_UnpackDict`, which refuses a non-str key); with only `tp_call` the dict goes into the
+slot. Of the model's callables, an instance of a Python class is the `tp_call` one: `slot_tp_call`
+(`Objects/typeobject.c`) looks `__call__` up and binds it before anything unpacks the dict, so a
+descriptor run by that lookup runs before the "keywords must be strings" check. Every other
+callable is taken as a vectorcall one; for a Python class (`type_call`) that unpacks one step
+early, which shows only through a metaclass `__call__` or a `__new__`/`__init__` reached through a
+descriptor with side effects. -/
+def callDictImpl (f callargs kwargs : Val) : RM Val := do
+  let pos := (← tupleItems callargs).toList
+  let slotCall ← match f with
+    | .ref a => do
+      match ← getObj a with
+      | .inst i => pure (some i)
+      | _ => pure none
+    | _ => pure none
+  match slotCall with
+  | some i =>
+    match ← userLookup i.cls "__call__" with
+    | some c =>
+      let b ← descrBind om ctx c f i.cls
+      om.callDict ctx b callargs kwargs
+    | none => typeError s!"'{← tpName f}' object is not callable"
+  | none =>
+    let (kw, kwvals) ← unpackKwargs kwargs
+    om.call ctx f (pos ++ kwvals) kw
+
+/-- `PyObject_LengthHint(o, defaultvalue)`, `Objects/abstract.c:95-152`. `_PyObject_HasLen` is
+asked through `PyObject_Length` itself: a type with no `__len__` raises `TypeError`, which the hint
+clears exactly as it clears a `TypeError` from a real `__len__` (`:104-107`). Then
+`__length_hint__` by special lookup: absent, raising `TypeError` or returning `NotImplemented` is
+the default; a non-int is a `TypeError`, past `Py_ssize_t` an `OverflowError`, negative a
+`ValueError`. -/
+def lengthHintImpl (o : Val) (dflt : Int) : RM Int := do
+  let r ← tryExc (some <$> om.length ctx o) fun e => do
+    if ← givenMatches e 8 (.cls "TypeError") then pure none else throw (.exc e)
+  match r with
+  | some n => pure n
+  | none =>
+    match ← om.lookupSpecial ctx o "__length_hint__" with
+    | none => pure dflt
+    | some (m, self) =>
+      let args := if self == .null then [] else [self]
+      let res? ← tryExc (some <$> om.call ctx m args []) fun e => do
+        if ← givenMatches e 8 (.cls "TypeError") then pure none else throw (.exc e)
+      match res? with
+      | none => pure dflt
+      | some .notImpl => pure dflt
+      | some res =>
+        match intOf (← payload res) with
+        | none =>
+          typeError s!"{← typeFullName o}.__length_hint__() must return an int, not {← typeFullName res}"
+        | some n =>
+          if n > 2 ^ 63 - 1 ∨ n < -(2 ^ 63) then
+            raiseS "OverflowError" "Python int too large to convert to C ssize_t"
+          if n < 0 then
+            valueError s!"{← typeFullName o}.__length_hint__() must return a non-negative int"
+          pure n
+
+/-- The loop of `list_extend_iter_lock_held`, `Objects/listobject.c:1337-1357`: `tp_iternext`
+until `NULL`, a `StopIteration` cleared, each item appended as it comes, so the items before a
+raising `__next__` stay in the list. -/
+def extendLoop (l it : Val) : Nat → RM Unit
+  | 0 => throw .fuel
+  | n + 1 => do
+    match ← iterNextOpt om ctx it with
+    | some v => listAppend l v; extendLoop l it n
+    | none => pure ()
+
+/-- `_list_extend(self, iterable)`, `Objects/listobject.c:1478-1532`. `self` itself is
+`list_inplace_repeat(self, 2)`; an exact list, tuple, set, frozenset, dict or dict view is copied
+with no Python code (`list_extend_fast`, `_set`, `_dict`, `_dictitems`), which the model reads off
+its own iterator; anything else is `list_extend_iter_lock_held` (`:1300-1366`):
+`PyObject_GetIter(iterable)`, then `PyObject_LengthHint(iterable, 8)` (on the iterable, not on the
+iterator it returned), then the loop. -/
+def listExtendImpl (l iterable : Val) : RM Unit := do
+  if l == iterable then
+    match l with
+    | .ref a =>
+      match ← getObj a with
+      | .list xs => setObj a (.list (xs ++ xs))
+      | _ => fault "not a list"
+    | _ => fault "not a list"
+  else
+    let fast ← match iterable with
+      | .ref a => do
+        match ← getObj a with
+        | .list _ | .tuple _ | .set .. | .dict _ | .dictView .. => pure true
+        | _ => pure false
+      | _ => pure false
+    if fast then
+      for v in ← drain om ctx (← om.getIter ctx iterable) 1000000 [] do listAppend l v
+    else
+      let it ← om.getIter ctx iterable
+      let _ ← lengthHintImpl om ctx iterable 8
+      extendLoop om ctx l it 1000000
+
 end
 
 /-- The record. `n` bounds the depth of purely C-level protocol nesting; Python
@@ -1848,11 +1946,13 @@ def mkOM (P : Program) : Nat → ObjModel
       getAttr := fun _ _ _ => bad, getMethod := fun _ _ _ => bad, setAttr := fun _ _ _ _ => bad
       delAttr := fun _ _ _ => bad, getIter := fun _ _ => bad, iterNext := fun _ _ => bad
       isIterator := fun _ => bad, isIterable := fun _ => bad, call := fun _ _ _ _ => bad
+      callDict := fun _ _ _ _ => bad
       str := fun _ _ => bad, repr := fun _ _ => bad, ascii := fun _ _ => bad
       format := fun _ _ _ => bad, length := fun _ _ => bad, hash := fun _ _ => bad
       lookupSpecial := fun _ _ _ => bad, superLookup := fun _ _ _ _ _ => bad
       genericGetattr := fun _ => bad, typeLookup := fun _ _ => bad, isInstance := fun _ _ _ => bad
       importName := fun _ _ _ _ _ => bad, importFrom := fun _ _ _ => bad, egSplit := fun _ _ _ => bad
+      lazyImportName := fun _ _ _ _ _ _ => bad, isLazyImport := fun _ => bad, lazyImportFrom := fun _ _ _ _ => bad
       egWrap := fun _ _ => bad, matchClass := fun _ _ _ _ _ => bad, matchKeys := fun _ _ _ => bad
       isMapping := fun _ => bad, isSequence := fun _ => bad, getAIter := fun _ _ => bad
       getANext := fun _ _ => bad, getAwaitable := fun _ _ _ => bad, dictUpdate := fun _ _ _ => bad
@@ -1879,6 +1979,7 @@ def mkOM (P : Program) : Nat → ObjModel
       isIterator := fun v => isIteratorImpl v
       isIterable := fun v => isIterableImpl v
       call := fun ctx f a k => callImpl P om ctx f a k
+      callDict := fun ctx f a k => callDictImpl om ctx f a k
       str := fun ctx v => strImpl om ctx v
       repr := fun ctx v => reprImpl om ctx v
       ascii := fun ctx v => reprImpl om ctx v
@@ -1893,6 +1994,13 @@ def mkOM (P : Program) : Nat → ObjModel
       isInstance := fun ctx i t => isInstanceImpl i t
       importName := fun _ _ n _ _ => raiseS "ModuleNotFoundError" s!"No module named '{n}'"
       importFrom := fun ctx v n => om.getAttr ctx v n
+      -- No module can be imported, so no import is ever lazy: an eager import is
+      -- `_PyEval_ImportName`, and a `lazy import` is not modelled.
+      lazyImportName := fun ctx f n fl lv lazy =>
+        if lazy then fault "lazy imports are not modelled"
+        else raiseS "ModuleNotFoundError" s!"No module named '{n}'"
+      isLazyImport := fun _ => pure false
+      lazyImportFrom := fun _ _ _ _ => fault "lazy imports are not modelled"
       egSplit := fun ctx a b => egSplitImpl a b
       egWrap := fun _ _ => fault "exception groups not modelled"
       matchClass := fun ctx s t n k => matchClassImpl om ctx s t n k
@@ -1904,9 +2012,7 @@ def mkOM (P : Program) : Nat → ObjModel
       getAwaitable := fun ctx o n => getAwaitableImpl P om ctx o n
       dictUpdate := fun ctx d o => do let _ ← dictMergeImpl om ctx 1 d o
       dictMerge := fun ctx d o => dictMergeImpl om ctx 2 d o
-      listExtend := fun ctx l o => do
-        let vals ← seqToList om ctx o
-        for v in vals do listAppend l v
+      listExtend := fun ctx l o => listExtendImpl om ctx l o
       setUpdate := fun ctx s o => do
         for v in ← seqToList om ctx o do
           setAdd om ctx s v

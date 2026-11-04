@@ -16,7 +16,10 @@ open PyLean
 /-- `_convert_other(other, raiseit)` (_pydecimal.py:6096-6113): a Decimal is returned as is; an
 int `n` becomes the exact `Decimal(n)`, sign `n < 0`, coefficient `|n|`, exponent 0, unless `|n|`
 has more than 4300 digits, where `Decimal(int)`'s `str(abs(value))` raises the int/str-limit
-`ValueError` (:620-624); anything else is `NotImplemented`, or `TypeError` with `raiseit`. -/
+`ValueError` (:622); anything else is `NotImplemented`, or with `raiseit` what
+`raise TypeError("Unable to convert %s to Decimal" % other)` (:6112) raises: the `TypeError` when
+`str(other)` prints, its own exception when it does not (`[10**5000]` and `Fraction(10**5000)`
+raise the int/str-limit `ValueError`); a tuple is `ConvertOtherTupleExact`. -/
 def ConvertOtherExact : Prop :=
   ∀ (raiseit : Bool),
     (∀ d : Dec, convertOther raiseit (.dec d) = .ok (some d)) ∧
@@ -24,13 +27,14 @@ def ConvertOtherExact : Prop :=
       convertOther raiseit (.int n) = .ok (some (.fin (decide (n < 0)) n.natAbs 0))) ∧
     (∀ n : Int, maxStrDigits < numDigits n.natAbs →
       convertOther raiseit (.int n) = .error (.valueError limitToStrMsg)) ∧
-    convertOther false .other = .ok none ∧
-    convertOther true .other = .error (.typeError unableMsg) ∧
-    (∀ n : Nat, convertOther false (.tuple n) = .ok none)
+    (∀ s, convertOther false (.other s) = .ok none) ∧
+    convertOther true (.other none) = .error (.typeError unableMsg) ∧
+    (∀ e, convertOther true (.other (some e)) = .error e) ∧
+    (∀ t, convertOther false (.tuple t) = .ok none)
 
 theorem convertOtherExact_proven : ConvertOtherExact := by
   intro r
-  refine ⟨fun d => rfl, fun n h => ?_, fun n h => ?_, rfl, rfl, fun n => rfl⟩
+  refine ⟨fun d => rfl, fun n h => ?_, fun n h => ?_, fun _ => rfl, rfl, fun _ => rfl, fun _ => rfl⟩
   · simp [convertOther, pyFromInt, strLimit, show ¬ numDigits n.natAbs > maxStrDigits by omega, bind,
       Except.bind, pure, Except.pure]
   · simp [convertOther, pyFromInt, strLimit, show numDigits n.natAbs > maxStrDigits by omega, bind,
@@ -46,8 +50,8 @@ def ConvertOtherTypeErrorMessage : Prop :=
 "not enough arguments for format string (got 0)". -/
 theorem convertOtherTypeErrorMessage_refuted : ¬ ConvertOtherTypeErrorMessage := by
   intro h
-  have hm := h (.tuple 0) (fun d hd => nomatch hd) (fun n hn => nomatch hn)
-  simp only [convertOther, unableMsgOf, unableMsgTuple, ↓reduceIte] at hm
+  have hm := h (.tuple []) (fun d hd => nomatch hd) (fun n hn => nomatch hn)
+  simp only [convertOther, unableExc, pctTupleExc, ↓reduceIte] at hm
   revert hm
   decide
 
@@ -235,7 +239,7 @@ theorem sameQuantumExact_proven : SameQuantumExact := by
 /-- `logb` (_pydecimal.py:3388-3416): for a finite non-zero operand, the adjusted exponent
 `A = e + digits - 1` (the exponent of its most significant digit) made into a Decimal by
 `Decimal(self.adjusted())` (:3415) and rounded into the context by `_fix`; `Decimal(int)` takes
-`str(abs(A))` (:621), so an `A` of more than 4300 digits raises the int/str-limit `ValueError`
+`str(abs(A))` (:622), so an `A` of more than 4300 digits raises the int/str-limit `ValueError`
 instead. `logb(0)` signals DivisionByZero and gives `-Infinity`; an infinity gives `Infinity`; a NaN
 goes through `_check_nans`. -/
 def LogbExact : Prop :=

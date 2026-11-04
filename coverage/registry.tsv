@@ -387,8 +387,13 @@ decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal._
 decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,_WorkRep.__init__
 decimal-add-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__add__,_WorkRep.__init__,_normalize
 decimal-sub-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,Decimal.copy_negate,_WorkRep.__init__,_normalize
-decimal-add-correct	open	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__,Decimal._fix
-decimal-sub-correct	open	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,Decimal._fix
+decimal-add-correct	proven	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__,Decimal._fix
+decimal-add-exact	proven	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__
+decimal-sub-correct	proven	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,Decimal._fix
+decimal-fma-fin-exact	proven	Lib/_pydecimal.py	Decimal.fma,Decimal.__add__,_normalize
+decimal-rotate-exact	proven	Lib/_pydecimal.py	Decimal.rotate
+decimal-shift-exact	proven	Lib/_pydecimal.py	Decimal.shift
+decimal-sub-exact	proven	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,_WorkRep.__init__
 decimal-mul-overflow-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix,Overflow.handle
 decimal-mul-subnormal-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
 decimal-parse-converse	open	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,numeric_as_ascii
@@ -471,7 +476,7 @@ decimal-abs-no-round-exact	proven	Lib/_pydecimal.py	Decimal.__abs__,Decimal.copy
 decimal-compare-total-mag-rest	proven	Lib/_pydecimal.py	Decimal.compare_total_mag
 decimal-convert-other-tuple-exact	proven	Lib/_pydecimal.py	_convert_other
 decimal-remainder-near-rest	proven	Lib/_pydecimal.py	Decimal.remainder_near,Decimal._check_nans,_WorkRep.__init__
-decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans
+decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans,Decimal.__round__,Context.quantize
 decimal-adjusted-exact	proven	Lib/_pydecimal.py	Decimal.adjusted
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
@@ -2274,6 +2279,7 @@ bytecode-gap-huge-shift	open	Objects/longobject.c
 bytecode-gap-huge-int-pow	open	Objects/longobject.c	
 bytecode-gap-huge-seq-repeat	open	Objects/abstract.c	
 bytecode-gap-is-on-immediates	open	Python/bytecodes.c	
+bytecode-is-op	proven	Python/bytecodes.c	opcode:IS_OP,opcode:_IS_OP
 bytecode-gap-set-iteration-order	open	Objects/setobject.c	
 bytecode-gap-refcount-finalizers	open	Objects/genobject.c	
 bytecode-unpack-sequence	proven	Python/bytecodes.c	opcode:UNPACK_SEQUENCE,opcode:_UNPACK_SEQUENCE,opcode:UNPACK_SEQUENCE_TWO_TUPLE,opcode:_UNPACK_SEQUENCE_TWO_TUPLE,opcode:UNPACK_SEQUENCE_TUPLE,opcode:_UNPACK_SEQUENCE_TUPLE,opcode:UNPACK_SEQUENCE_LIST,opcode:_UNPACK_SEQUENCE_LIST
@@ -2282,7 +2288,13 @@ bytecode-builders	proven	Python/bytecodes.c	opcode:LIST_EXTEND,opcode:_LIST_EXTE
 bytecode-get-iter	proven	Python/bytecodes.c	opcode:GET_ITER,opcode:_GET_ITER,opcode:GET_ITER_SELF,opcode:_GUARD_ITERATOR,opcode:GET_ITER_VIRTUAL,opcode:_GUARD_ITER_VIRTUAL,opcode:_PUSH_TAGGED_ZERO
 bytecode-format	proven	Python/bytecodes.c	opcode:CONVERT_VALUE,opcode:FORMAT_SIMPLE,opcode:FORMAT_WITH_SPEC
 bytecode-intrinsics	proven	Python/bytecodes.c	opcode:CALL_INTRINSIC_1,opcode:_CALL_INTRINSIC_1,opcode:CALL_INTRINSIC_2,opcode:_CALL_INTRINSIC_2
-bytecode-call-builtins	proven	Python/bytecodes.c	opcode:_CHECK_PERIODIC_AT_END,opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL,opcode:_GUARD_CALLABLE_TYPE_1,opcode:_CALL_TYPE_1,opcode:CALL_TYPE_1,opcode:_GUARD_CALLABLE_STR_1,opcode:_CALL_STR_1,opcode:CALL_STR_1,opcode:_GUARD_CALLABLE_TUPLE_1,opcode:_CALL_TUPLE_1,opcode:CALL_TUPLE_1,opcode:CALL_LEN,opcode:_GUARD_CALLABLE_LEN,opcode:_CALL_LEN,opcode:_GUARD_CALLABLE_ISINSTANCE,opcode:_CALL_ISINSTANCE,opcode:CALL_ISINSTANCE,opcode:CALL_LIST_APPEND,opcode:_GUARD_CALLABLE_LIST_APPEND,opcode:_CALL_LIST_APPEND
+bytecode-call-builtins	proven	Python/bytecodes.c	opcode:_CHECK_PERIODIC_AT_END,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL,opcode:_GUARD_CALLABLE_TYPE_1,opcode:_CALL_TYPE_1,opcode:CALL_TYPE_1,opcode:_GUARD_CALLABLE_STR_1,opcode:_CALL_STR_1,opcode:CALL_STR_1,opcode:_GUARD_CALLABLE_TUPLE_1,opcode:_CALL_TUPLE_1,opcode:CALL_TUPLE_1,opcode:CALL_LEN,opcode:_GUARD_CALLABLE_LEN,opcode:_CALL_LEN,opcode:_GUARD_CALLABLE_ISINSTANCE,opcode:_CALL_ISINSTANCE,opcode:CALL_ISINSTANCE,opcode:CALL_LIST_APPEND,opcode:_GUARD_CALLABLE_LIST_APPEND,opcode:_CALL_LIST_APPEND
+bytecode-call-generic	proven	Python/bytecodes.c	opcode:CALL,opcode:_MAYBE_EXPAND_METHOD,opcode:_DO_CALL,opcode:CALL_KW,opcode:_MAYBE_EXPAND_METHOD_KW,opcode:_DO_CALL_KW,opcode:CALL_FUNCTION_EX,opcode:_MAKE_CALLARGS_A_TUPLE,opcode:_DO_CALL_FUNCTION_EX
+bytecode-attr-specialized	proven	Python/bytecodes.c	opcode:LOAD_ATTR_SLOT,opcode:_LOAD_ATTR_SLOT,opcode:LOAD_ATTR_MODULE,opcode:_LOAD_ATTR_MODULE,opcode:LOAD_ATTR_CLASS,opcode:_CHECK_ATTR_CLASS,opcode:_LOAD_ATTR_CLASS,opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK,opcode:STORE_ATTR_SLOT,opcode:_STORE_ATTR_SLOT,opcode:_GUARD_TYPE_VERSION
+bytecode-property-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATTR_PROPERTY,opcode:_LOAD_ATTR_PROPERTY_FRAME
+bytecode-getattribute-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN,opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME
+bytecode-import	proven	Python/bytecodes.c	opcode:IMPORT_NAME,opcode:IMPORT_FROM
+bytecode-null-guards	proven	Python/bytecodes.c	opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_TOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL
 bytecode-match	proven	Python/bytecodes.c	opcode:MATCH_CLASS,opcode:_MATCH_CLASS,opcode:MATCH_MAPPING,opcode:MATCH_SEQUENCE,opcode:MATCH_KEYS
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
@@ -2408,6 +2420,38 @@ pygrammar-rule-shift-expr	proven	Grammar/python.gram	rule:shift_expr
 pygrammar-rule-invalid-assert-stmt	proven	Grammar/python.gram	rule:invalid_assert_stmt
 pygrammar-rule-match-stmt	proven	Grammar/python.gram	rule:match_stmt
 pygrammar-rule-decorators	proven	Grammar/python.gram	rule:decorators
+pygrammar-rule-primary	proven	Grammar/python.gram	rule:primary
+pygrammar-rule-t-primary	proven	Grammar/python.gram	rule:t_primary
+pygrammar-rule-t-lookahead	proven	Grammar/python.gram	rule:t_lookahead
+pygrammar-rule-atom	proven	Grammar/python.gram	rule:atom
+pygrammar-rule-slices	proven	Grammar/python.gram	rule:slices
+pygrammar-rule-slice	proven	Grammar/python.gram	rule:slice
+pygrammar-rule-star-targets	proven	Grammar/python.gram	rule:star_targets
+pygrammar-rule-star-target	proven	Grammar/python.gram	rule:star_target
+pygrammar-rule-target-with-star-atom	proven	Grammar/python.gram	rule:target_with_star_atom
+pygrammar-rule-del-targets	proven	Grammar/python.gram	rule:del_targets
+pygrammar-rule-del-target	proven	Grammar/python.gram	rule:del_target
+pygrammar-rule-dotted-name	proven	Grammar/python.gram	rule:dotted_name
+pygrammar-rule-join-names	proven	Parser/action_helpers.c	_PyPegen_join_names_with_dot
+pygrammar-rule-dotted-as-name	proven	Grammar/python.gram	rule:dotted_as_name
+pygrammar-rule-import-from-as-name	proven	Grammar/python.gram	rule:import_from_as_name
+pygrammar-rule-as-names	proven	Grammar/python.gram	rule:import_from_as_names,rule:dotted_as_names
+pygrammar-rule-closed-pattern	proven	Grammar/python.gram	rule:closed_pattern
+pygrammar-rule-pattern	proven	Grammar/python.gram	rule:pattern
+pygrammar-rule-maybe-star-pattern	proven	Grammar/python.gram	rule:maybe_star_pattern
+pygrammar-rule-or-pattern	proven	Grammar/python.gram	rule:or_pattern
+pygrammar-rule-capture-pattern	proven	Grammar/python.gram	rule:capture_pattern
+pygrammar-rule-wildcard-pattern	proven	Grammar/python.gram	rule:wildcard_pattern
+pygrammar-rule-group-pattern	proven	Grammar/python.gram	rule:group_pattern
+pygrammar-rule-sequence-pattern	proven	Grammar/python.gram	rule:sequence_pattern
+pygrammar-rule-patterns	proven	Grammar/python.gram	rule:patterns
+pygrammar-rule-subject-expr	proven	Grammar/python.gram	rule:subject_expr
+pygrammar-rule-invalid-del-stmt	proven	Grammar/python.gram	rule:invalid_del_stmt
+pygrammar-rule-invalid-ann-assign-target	proven	Grammar/python.gram	rule:invalid_ann_assign_target
+pygrammar-rule-invalid-assignment	proven	Grammar/python.gram	rule:invalid_assignment
+pygrammar-rule-sum-sub-sub	proven	Grammar/python.gram	rule:sum
+pygrammar-rule-dotted-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_dotted_as_name
+pygrammar-rule-import-from-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_import_from_as_name
 pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	

@@ -21,7 +21,7 @@ open Lexer
        CHECK_VERSION(stmt_ty, 5, "Async with statements are", _PyAST_AsyncWith(a, b, NEW_TYPE_COMMENT(p, tc), EXTRA)) }
     | invalid_with_stmt
 ```
-`','.with_item+` is the gather `_gather_33` (rule 311). First pass, with `t` the token under the
+`','.with_item+` is the gather `_gather_34` (rule 311). First pass, with `t` the token under the
 mark:
 * neither `with` nor `async`: `NULL`;
 * `with (items,?): tc? b` gives `With(items, b, tc)`;

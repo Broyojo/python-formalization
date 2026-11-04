@@ -136,7 +136,7 @@ Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_S
 Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
 Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
-Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		review: The model (stk) and SetMapAddRules pop set and the unused[oparg-1] items on both failure paths, but C keeps them: the non-set path does stack_pointer += -1 then error (generated_cases.c.h:11384-11389) and a failed _PySet_AddTakeRef is pop_1_error (:11396), so only v goes; the inlined set-comprehension cleanup handler (codegen.c:4946-4950, 'discard incomplete comprehension result') then finds the stack below its depth, e.g. def f(): return {[] for _ in range(1)}.
+Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
@@ -167,7 +167,7 @@ Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receive
 Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter	
-Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	todo		review: Credited only through CallListAppendRules, whose NULL-self case is also rejected by the model's _GUARD_NOS_LIST (notList .null exits, where C's PyList_CheckExact would dereference NULL), so _GUARD_NOS_NOT_NULL := pure () still satisfies the statement: the exit on NULL (:1753-1755) is unpinned.
+Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	modelled	bytecode-null-guards	
 Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1795	1795	opcode:SEND_VIRTUAL	macro(SEND_VIRTUAL) =	todo		changed-in-3.15: new function
@@ -202,7 +202,7 @@ Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_T
 Python/bytecodes.c	2114	2114	opcode:_UNPACK_SEQUENCE_UNIQUE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
-Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		review: The model's PySequence_List is a bare iterNextOpt loop, but C's PySequence_List(it) goes through _PyList_Extend -> list_extend_iter_lock_held, which first calls PyObject_GetIter(it) and PyObject_LengthHint(it, 8) (Objects/listobject.c:1303, :1310): an iterator whose __iter__ or __length_hint__ raises (or whose __iter__ returns another iterator) makes CPython raise or drain a different object where the model and UnpackExFull push the items; the ys.length < 1000000 hypothesis is a model-fuel bound, not a documented precondition.
+Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		review: PySequence_List is now PyList_New(0) + _PyList_Extend(L, it) through the object model's listExtend (Objects/abstract.c:2081-2101) and the million-item hypothesis is gone, but UnpackExFull has no clause for PyObject_GetIter(v) raising a TypeError: neither the 'cannot unpack non-iterable T object' rewrite (no tp_iter and not a sequence) nor the unchanged TypeError of an iterable value (Python/ceval.c:2369-2376) is stated, so an UNPACK_EX that dropped or always applied the rewrite passes (UnpackSeqRules states both clauses, but for UNPACK_SEQUENCE).
 Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	
@@ -243,9 +243,9 @@ Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -
 Python/bytecodes.c	2583	2583	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	modelled	bytecode-builders	
 Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	modelled	bytecode-builders	
-Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		review: The dupkey / KeyError split and the keys-probe __context__ are now right, but the duplicate-key message goes through the model's functionStr, which calls str(__qualname__) before looking up __module__ and comparing it with 'builtins', whereas _PyObject_FunctionStr (Objects/object.c:980-1004) does both lookups and the comparison first and formats module then qualname in PyUnicode_FromFormat; a __module__ property or __str__ with side effects, or a raising __module__ lookup (which in C skips str(qualname)), shows the different order.
-Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		review: _DICT_MERGE + POP_TOP (:2654); inherits the _DICT_MERGE defect: the functionStr mirror evaluates str(__qualname__) before the __module__ lookup and comparison, the reverse of Objects/object.c:980-1004.
-Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		review: The model (stk) and SetMapAddRules pop dict_st and the unused[oparg-1] items when _PyDict_SetItem_Take2 fails, but C pops only key and value (pop_2_error, generated_cases.c.h:10292-10293), leaving the dict for the inlined dict-comprehension cleanup handler (codegen.c:4946-4950), e.g. def f(): return {[]: 0 for _ in range(1)}.
+Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		review: functionStr now mirrors Objects/object.c:976-1009 (both lookups and the Py_NE comparison before str(module) then str(qualname)), but FunctionStrRules states the NULL result only for a raising __qualname__/__module__ lookup and a raising str(module); a raising comparison or truth test (:991-994), a raising str(qualname) in any branch and a raising str(x) with no __qualname__ are unstated, and DictMergeRules' dupkey clause assumes str(dupkey) succeeds, so a functionStr that let those exceptions out (DICT_MERGE then raising them instead of 'function got multiple values ...') passes.
+Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		review: _DICT_MERGE + POP_TOP (:2654), with the order defect fixed; inherits _DICT_MERGE's gap: FunctionStrRules leaves the comparison, truth-test, str(qualname) and str(x) exceptions (all NULL, hence 'function', in C) unstated, and DictMergeRules a raising str(dupkey).
+Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	2669	2669	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
 Python/bytecodes.c	2679	2679	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2692	2692	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		changed-in-3.15:
@@ -258,34 +258,34 @@ Python/bytecodes.c	2782	2782	opcode:_LOAD_SUPER_ATTR_METHOD	op(_LOAD_SUPER_ATTR_
 Python/bytecodes.c	2828	2828	opcode:_SPECIALIZE_LOAD_ATTR	specializing op(_SPECIALIZE_LOAD_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2841	2841	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2857	2857	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	modelled	bytecode-attr-dispatch	
-Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	todo		
+Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	2868	2868	opcode:_GUARD_TYPE_VERSION_LOCKED	op(_GUARD_TYPE_VERSION_LOCKED, (type_version/2, owner -- owner)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2878	2878	opcode:_GUARD_TYPE	op(_GUARD_TYPE, (type/4, owner -- owner)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2883	2883	opcode:_CHECK_MANAGED_OBJECT_HAS_VALUES	op(_CHECK_MANAGED_OBJECT_HAS_VALUES, (owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2890	2890	opcode:_LOAD_ATTR_INSTANCE_VALUE	op(_LOAD_ATTR_INSTANCE_VALUE, (offset/1, owner -- attr, o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2908	2908	opcode:LOAD_ATTR_INSTANCE_VALUE	macro(LOAD_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	2918	2918	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr, o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2943	2943	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	todo		changed-in-3.15:
+Python/bytecodes.c	2918	2918	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr, o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	2943	2943	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	2950	2950	opcode:_LOAD_ATTR_WITH_HINT	op(_LOAD_ATTR_WITH_HINT, (hint/1, owner -- attr, o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2990	2990	opcode:LOAD_ATTR_WITH_HINT	macro(LOAD_ATTR_WITH_HINT) =	todo		changed-in-3.15:
-Python/bytecodes.c	2999	2999	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr, o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3016	3016	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	todo		changed-in-3.15:
-Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	todo		
-Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	todo		changed-in-3.15:
-Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	todo		changed-in-3.15:
-Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	todo		changed-in-3.15:
-Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3098	3098	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	macro(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) =	todo		changed-in-3.15:
+Python/bytecodes.c	2999	2999	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr, o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3016	3016	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	modelled	bytecode-property-frame-recursion	
+Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	modelled	bytecode-property-frame-recursion	
+Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	modelled	bytecode-getattribute-frame-recursion	
+Python/bytecodes.c	3098	3098	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	macro(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) =	modelled	bytecode-getattribute-frame-recursion	
 Python/bytecodes.c	3107	3107	opcode:_GUARD_DORV_NO_DICT	op(_GUARD_DORV_NO_DICT, (owner -- owner)) {	todo		
 Python/bytecodes.c	3119	3119	opcode:_STORE_ATTR_INSTANCE_VALUE	op(_STORE_ATTR_INSTANCE_VALUE, (offset/1, value, owner -- o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3138	3138	opcode:_LOCK_OBJECT	op(_LOCK_OBJECT, (value -- value)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3142	3142	opcode:STORE_ATTR_INSTANCE_VALUE	macro(STORE_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	3151	3151	opcode:_STORE_ATTR_WITH_HINT	op(_STORE_ATTR_WITH_HINT, (hint/1, value, owner -- o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3186	3186	opcode:STORE_ATTR_WITH_HINT	macro(STORE_ATTR_WITH_HINT) =	todo		changed-in-3.15:
-Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	modelled	bytecode-attr-specialized	
+Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	modelled	bytecode-attr-specialized	
 Python/bytecodes.c	3220	3220	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	modelled	bytecode-compare-op	
 Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	modelled	bytecode-compare-op	
@@ -295,8 +295,8 @@ Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	model
 Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-compare-float	
 Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	modelled	bytecode-compare-int	
 Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	modelled	bytecode-compare-str	
-Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
-Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
+Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	modelled	bytecode-is-op	
+Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	modelled	bytecode-is-op	
 Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	3349	3349	opcode:_SPECIALIZE_CONTAINS_OP	specializing op(_SPECIALIZE_CONTAINS_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3361	3361	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;	modelled	bytecode-dispatch	
@@ -309,8 +309,8 @@ Python/bytecodes.c	3397	3397	opcode:CONTAINS_OP_DICT	macro(CONTAINS_OP_DICT) = _
 Python/bytecodes.c	3399	3399	opcode:_CONTAINS_OP_DICT	op(_CONTAINS_OP_DICT, (left, right -- b, l, r)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_value_st, match_type_st -- rest, match)) {	todo		
 Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
-Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	modelled	bytecode-import	
+Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	modelled	bytecode-import	
 Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3503	3503	opcode:_SPECIALIZE_JUMP_BACKWARD	specializing tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3515	3515	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		changed-in-3.15:
@@ -348,7 +348,7 @@ Python/bytecodes.c	3825	3825	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (i
 Python/bytecodes.c	3838	3838	opcode:_GUARD_TYPE_ITER	tier2 op(_GUARD_TYPE_ITER, (expected_type/4, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3843	3843	opcode:_ITER_NEXT_INLINE	tier2 op(_ITER_NEXT_INLINE, (iternext_fn/4, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3863	3863	opcode:_GUARD_NOS_ITER_VIRTUAL	op(_GUARD_NOS_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3868	3868	opcode:_GUARD_TOS_NOT_NULL	op(_GUARD_TOS_NOT_NULL, (null_or_index -- null_or_index)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3868	3868	opcode:_GUARD_TOS_NOT_NULL	op(_GUARD_TOS_NOT_NULL, (null_or_index -- null_or_index)) {	modelled	bytecode-null-guards	
 Python/bytecodes.c	3872	3872	opcode:_FOR_ITER_VIRTUAL	replaced op(_FOR_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3890	3890	opcode:FOR_ITER_VIRTUAL	macro(FOR_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
 Python/bytecodes.c	3895	3895	opcode:_FOR_ITER_VIRTUAL_TIER_TWO	op(_FOR_ITER_VIRTUAL_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
@@ -390,10 +390,10 @@ Python/bytecodes.c	4311	4311	opcode:_CHECK_ATTR_METHOD_LAZY_DICT	op(_CHECK_ATTR_
 Python/bytecodes.c	4318	4318	opcode:_LOAD_ATTR_METHOD_LAZY_DICT	op(_LOAD_ATTR_METHOD_LAZY_DICT, (descr/4, owner -- attr, self)) {	todo		
 Python/bytecodes.c	4328	4328	opcode:LOAD_ATTR_METHOD_LAZY_DICT	macro(LOAD_ATTR_METHOD_LAZY_DICT) =	todo		changed-in-3.15:
 Python/bytecodes.c	4361	4361	opcode:_SPECIALIZE_CALL	specializing op(_SPECIALIZE_CALL, (counter/1, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	4373	4373	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	4386	4386	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4373	4373	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	4386	4386	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	4436	4436	opcode:_MONITOR_CALL	op(_MONITOR_CALL, (func, maybe_self, args[oparg] -- func, maybe_self, args[oparg])) {	todo		
-Python/bytecodes.c	4457	4457	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
+Python/bytecodes.c	4457	4457	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC_AT_END;	modelled	bytecode-call-generic	
 Python/bytecodes.c	4458	4458	opcode:INSTRUMENTED_CALL	macro(INSTRUMENTED_CALL) = unused/3 + _MAYBE_EXPAND_METHOD + _MONITOR_CALL + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
 Python/bytecodes.c	4460	4460	opcode:_PY_FRAME_GENERAL	op(_PY_FRAME_GENERAL, (callable, self_or_null, args[oparg] -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4485	4485	opcode:_CHECK_FUNCTION_VERSION	op(_CHECK_FUNCTION_VERSION, (func_version/2, callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
@@ -415,8 +415,8 @@ Python/bytecodes.c	4615	4615	opcode:_INIT_CALL_PY_EXACT_ARGS	replicate(5) pure o
 Python/bytecodes.c	4628	4628	opcode:_PUSH_FRAME	op(_PUSH_FRAME, (new_frame -- )) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	4644	4644	opcode:CALL_BOUND_METHOD_EXACT_ARGS	macro(CALL_BOUND_METHOD_EXACT_ARGS) =	todo		changed-in-3.15:
 Python/bytecodes.c	4659	4659	opcode:CALL_PY_EXACT_ARGS	macro(CALL_PY_EXACT_ARGS) =	todo		changed-in-3.15:
-Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	modelled	bytecode-call-builtins	
-Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	modelled	bytecode-call-builtins,bytecode-null-guards	
+Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	modelled	bytecode-call-builtins,bytecode-null-guards	
 Python/bytecodes.c	4679	4679	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4684	4684	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res, a)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4694	4694	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	modelled	bytecode-call-builtins	
@@ -470,8 +470,8 @@ Python/bytecodes.c	5323	5323	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD
 Python/bytecodes.c	5352	5352	opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5372	5372	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	todo		changed-in-3.15:
 Python/bytecodes.c	5388	5388	opcode:_MONITOR_CALL_KW	op(_MONITOR_CALL_KW, (callable, self_or_null, args[oparg], unused -- callable, self_or_null, args[oparg], unused)) {	todo		
-Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	5474	5474	opcode:_PY_FRAME_KW	op(_PY_FRAME_KW, (callable, self_or_null, args[oparg], kwnames -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5504	5504	opcode:_CHECK_FUNCTION_VERSION_KW	op(_CHECK_FUNCTION_VERSION_KW, (func_version/2, callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5511	5511	opcode:CALL_KW_PY	macro(CALL_KW_PY) =	todo		changed-in-3.15:
@@ -479,15 +479,15 @@ Python/bytecodes.c	5521	5521	opcode:_CHECK_METHOD_VERSION_KW	op(_CHECK_METHOD_VE
 Python/bytecodes.c	5531	5531	opcode:_EXPAND_METHOD_KW	op(_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5542	5542	opcode:CALL_KW_BOUND_METHOD	macro(CALL_KW_BOUND_METHOD) =	todo		changed-in-3.15:
 Python/bytecodes.c	5553	5553	opcode:_SPECIALIZE_CALL_KW	specializing op(_SPECIALIZE_CALL_KW, (counter/1, callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5565	5565	opcode:CALL_KW	macro(CALL_KW) =	todo		
+Python/bytecodes.c	5565	5565	opcode:CALL_KW	macro(CALL_KW) =	modelled	bytecode-call-generic	
 Python/bytecodes.c	5571	5571	opcode:INSTRUMENTED_CALL_KW	macro(INSTRUMENTED_CALL_KW) =	todo		
 Python/bytecodes.c	5578	5578	opcode:_CHECK_IS_NOT_PY_CALLABLE_KW	op(_CHECK_IS_NOT_PY_CALLABLE_KW, (callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5585	5585	opcode:_CALL_KW_NON_PY	op(_CALL_KW_NON_PY, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5608	5608	opcode:CALL_KW_NON_PY	macro(CALL_KW_NON_PY) =	todo		changed-in-3.15:
-Python/bytecodes.c	5620	5620	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	todo		
-Python/bytecodes.c	5637	5637	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5620	5620	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	5637	5637	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		review: The inline path's unpackKwargs accepts only exact .str keys, but _PyEvalFramePushAndInit_Ex (Python/ceval.c:2083) calls _PyStack_UnpackDict, which accepts every key whose type has Py_TPFLAGS_UNICODE_SUBCLASS (Objects/call.c:1059-1075), so with class S(str) and def f(a), f(**{S('a'): 1}) runs f in CPython while the model, and CallFunctionExRules' unpackKwargs-error clause, raise 'keywords must be strings'; the PyObject_Call path through the new callDict slot is right.
 Python/bytecodes.c	5716	5716	opcode:_SPECIALIZE_CALL_FUNCTION_EX	specializing op(_SPECIALIZE_CALL_FUNCTION_EX, (counter/1, func, unused, unused, unused -- func, unused, unused, unused)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5728	5728	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	todo		changed-in-3.15:
+Python/bytecodes.c	5728	5728	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	todo		review: _MAKE_CALLARGS_A_TUPLE + _DO_CALL_FUNCTION_EX + _CHECK_PERIODIC_AT_END (:5728-5732); inherits the _DO_CALL_FUNCTION_EX defect: a str-subclass keyword key is refused by the model's unpackKwargs where _PyStack_UnpackDict (Objects/call.c:1059-1075) accepts it.
 Python/bytecodes.c	5734	5734	opcode:_CHECK_IS_PY_CALLABLE_EX	op(_CHECK_IS_PY_CALLABLE_EX, (func_st, unused, unused, unused -- func_st, unused, unused, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5740	5740	opcode:_PY_FRAME_EX	op(_PY_FRAME_EX, (func_st, null, callargs_st, kwargs_st -- ex_frame)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5763	5763	opcode:CALL_EX_PY	macro(CALL_EX_PY) =	todo		changed-in-3.15: new function

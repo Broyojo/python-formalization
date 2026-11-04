@@ -1,0 +1,110 @@
+id: bytecode-attr-frame-recursion
+title: "LOAD_ATTR_PROPERTY and LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN push the getter's frame with no recursion check, so a recursive property or __getattribute__ passes the recursion limit once its site has specialized"
+priority: P3
+kind: specialization-mismatch
+module: bytecode
+files: [Python/bytecodes.c]
+functions: ["LOAD_ATTR_PROPERTY", "_LOAD_ATTR_PROPERTY_FRAME", "LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN", "_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME", "_PUSH_FRAME"]
+summary: |
+  The generic `LOAD_ATTR` reaches a Python property getter through `property.__get__`, and an
+  overriding `__getattribute__` through `slot_tp_getattr_hook`; both call it from C, so the
+  recursion limit is enforced when its frame starts (`_Py_EnterRecursivePy`).
+  The specialized forms inline the call. `LOAD_ATTR_PROPERTY` (Python/bytecodes.c:3070-3077)
+  and `LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN` (:3098-3105) are `_GUARD_TYPE_VERSION +
+  _CHECK_PEP_523 + _LOAD_ATTR_*_FRAME + _SAVE_RETURN_OFFSET + _PUSH_FRAME`. `_PUSH_FRAME`
+  (:4628-4642) decrements `py_recursion_remaining` (:4637) and tests nothing, and neither macro
+  contains `_CHECK_RECURSION_REMAINING` (:4611-4613), which `CALL_PY_GENERAL`,
+  `CALL_PY_EXACT_ARGS`, `CALL_BOUND_METHOD_*` and `CALL_KW_PY` carry before their `_PUSH_FRAME`.
+  So a property (or `__getattribute__`) whose body reads the same attribute again keeps descending
+  past the limit once the `self.p` site has specialized. It stops only when the data-stack chunk is
+  full: `_PyThreadState_HasStackSpace` fails (:3062, :3087), the site exits to the generic form,
+  and the C call raises `RecursionError` because the counter has long gone below zero. How far past
+  the limit it gets depends on where the chunk boundary falls.
+likelihood: |
+  Low. It takes a property or `__getattribute__` that recurses through an attribute load deeper
+  than the recursion limit, which is a bug in the program anyway; the only difference is where the
+  `RecursionError` comes. The overshoot is bounded by one data-stack chunk, and the frames are
+  pushed inline, so no C stack is used: nothing crashed in any run. With limit 200 the
+  specialized forms got 237 and 223 levels deep where the generic form stops at 197; with limit
+  3000 the property case happened to stop at the limit and `__getattribute__` went to 3048.
+maybe_intended: |
+  Unknown. As for python/cpython#155151, the limit protects mainly the C stack and these frames use
+  none, so a maintainer may not mind. Against that, the CALL forms do check before `_PUSH_FRAME`,
+  `CALL_ALLOC_AND_ENTER_INIT` got the check for the same reason (python/cpython#149243), and the
+  recursion limit then depends on whether a site has warmed up.
+reproducer: |
+  import os, sys
+  LIMIT, DEPTH = 200, 1000
+  sys.setrecursionlimit(LIMIT)
+  state = {"d": 0, "max": 0}
+  BODY = ("        state['d'] += 1\n        state['max'] = max(state['max'], state['d'])\n"
+          "        try:\n            return {nxt}\n        finally:\n            state['d'] -= 1\n")
+  KINDS = {
+      "LOAD_ATTR_PROPERTY": "class {cls}:\n    @property\n    def p(self):\n" + BODY,
+      "LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN": "class {cls}:\n    def __getattribute__(self, n):\n" + BODY,
+  }
+  def depth(f):
+      state["d"] = state["max"] = 0
+      try:
+          f()
+          return None
+      except RecursionError:
+          return state["max"]
+  hit = False
+  for kind, tmpl in KINDS.items():
+      # Each level its own class and code object: every attribute site runs once, generic.
+      src = "".join(tmpl.format(cls=f"A{i}", nxt=(f"A{i + 1}().p" if i + 1 < DEPTH else "1"))
+                    for i in range(DEPTH))
+      ns = {"state": state}
+      exec(compile(src, "<generic>", "exec"), ns)
+      generic = depth(lambda: ns["A0"]().p)
+      # One class whose `self.p` site recurses into itself: it specializes after a few runs.
+      ns2 = {"state": state}
+      exec(compile(tmpl.format(cls="B", nxt="self.p"), "<shared>", "exec"), ns2)
+      specialized = depth(lambda: ns2["B"]().p)
+      print(kind, "levels before RecursionError: generic", generic, "specialized", specialized, flush=True)
+      if generic is not None and specialized is not None and generic <= LIMIT < specialized:
+          hit = True
+  if hit:
+      print("REPRODUCED bytecode-attr-frame-recursion", flush=True)
+  os._exit(0)
+expected: |
+  A property or `__getattribute__` that recurses through an attribute load raises `RecursionError`
+  at the same depth, the recursion limit, whether or not the attribute site has specialized.
+observed: |
+  python3 3.15.2: LOAD_ATTR_PROPERTY generic 197, specialized 237;
+  LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN generic 197, specialized 223 (limit 200). REPRODUCED.
+  main (vendor/cpython-main/python.exe): identical numbers. REPRODUCED. Main's
+  Python/bytecodes.c:3041-3048 and :3069-3076 still have no `_CHECK_RECURSION_REMAINING`.
+promised_by: |
+  invariant: a specialized opcode refines its generic form. The check was added to
+  `CALL_KW_PY` (python/cpython#137887) and `CALL_ALLOC_AND_ENTER_INIT` (python/cpython#149243) for
+  the same reason, and python/cpython#155151 asks for it in `CALL_EX_PY` and
+  `CALL_KW_BOUND_METHOD`.
+cause: |
+  Python/bytecodes.c:3070-3077 and :3098-3105: the macros have no `_CHECK_RECURSION_REMAINING`,
+  and `_PUSH_FRAME` (:4628-4642) decrements `tstate->py_recursion_remaining` (:4637) without
+  testing it. The only thing that stops the descent is the `_PyThreadState_HasStackSpace` exit in
+  `_LOAD_ATTR_PROPERTY_FRAME` (:3062) and `_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME` (:3087).
+possible_fix: |
+  Add `_CHECK_RECURSION_REMAINING` before the frame op in `LOAD_ATTR_PROPERTY` and
+  `LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN`, as in the `CALL_PY_*` macros, so a site at the limit exits
+  to the generic form. It belongs with python/cpython#155151 and bytecode-push-frame-gen-recursion
+  (SEND_GEN, FOR_ITER_GEN) in one report: every macro that ends in `_PUSH_FRAME`.
+duplicates:
+  issues:
+    - {number: 155151, state: open, relation: related, reason: "CALL_EX_PY and CALL_KW_BOUND_METHOD bypass RecursionError after specialization (marinelay); the same gap in other macros; it does not mention LOAD_ATTR_PROPERTY or LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN"}
+    - {number: 149243, state: closed, relation: related, reason: "CALL_ALLOC_AND_ENTER_INIT lacked _CHECK_RECURSION_REMAINING; fixed by PR 149310 for that macro only"}
+    - {number: 137883, state: closed, relation: related, reason: "runaway recursion with keyword arguments; PR 137887 added the check to CALL_KW_PY only"}
+  bugforge: "none: vendor/bugforge-results/README.md has no LOAD_ATTR or recursion-limit entry for the interpreter"
+  queries: ["gh search issues --repo python/cpython LOAD_ATTR_PROPERTY recursion (no results)",
+            "gh search issues --repo python/cpython _CHECK_RECURSION_REMAINING (155151, 149243)",
+            "gh search issues --repo python/cpython property recursion limit specialized (no relevant results)",
+            "gh search issues --repo python/cpython __getattribute__ recursion limit (none about specialization)",
+            "gh search issues --repo python/cpython LOAD_ATTR_PROPERTY (none about recursion)",
+            "gh search issues --repo python/cpython property RecursionError specialization (no results)",
+            "gh issue view 155151", "gh issue view 149243"]
+lean:
+  property: PyLean.Bytecode.PropertyFrameChecksRecursion
+  theorem: PyLean.Bytecode.propertyFrameChecksRecursion_refuted
+  also: [PyLean.Bytecode.GetattributeFrameChecksRecursion, PyLean.Bytecode.getattributeFrameChecksRecursion_refuted]

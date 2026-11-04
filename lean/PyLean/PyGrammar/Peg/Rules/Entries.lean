@@ -21,6 +21,16 @@ import PyLean.PyGrammar.Peg.Rules.LeftRec2
 import PyLean.PyGrammar.Peg.Rules.InvalidAssert
 import PyLean.PyGrammar.Peg.Rules.Match
 import PyLean.PyGrammar.Peg.Rules.Decorators
+import PyLean.PyGrammar.Peg.Rules.Primary
+import PyLean.PyGrammar.Peg.Rules.TPrimary
+import PyLean.PyGrammar.Peg.Rules.Atom
+import PyLean.PyGrammar.Peg.Rules.Targets
+import PyLean.PyGrammar.Peg.Rules.Targets2
+import PyLean.PyGrammar.Peg.Rules.Imports
+import PyLean.PyGrammar.Peg.Rules.Patterns
+import PyLean.PyGrammar.Peg.Rules.InvalidTargets
+import PyLean.PyGrammar.Peg.Rules.SumCompose
+import PyLean.PyGrammar.Peg.Rules.AsTarget
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -763,6 +773,355 @@ def ruleEntries : List Entry := [
     prop := ``DecoratorsRule
     thm := some ``decoratorsRule_proven
     notes := scheme },
+  { id := "pygrammar-rule-primary"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_primary
+    statement := "primary: the seed loop returns the last seed that grew; each round with seed v " ++
+      "gives Attribute(v, NAME.id, Load) after '.' NAME, Call(v, [genexp]) when a genexp follows " ++
+      "(an error in genexp ends the round with NULL), Call(v, args, keywords) after '(' " ++
+      "[arguments] ')' once genexp failed, Subscript(v, slices, Load) after '[' slices ']', and " ++
+      "atom from the start mark otherwise; the first round is atom (NULL when atom fails)."
+    source := "Grammar/python.gram:875-884"
+    status := .proven
+    prop := ``PrimaryRule
+    thm := some ``primaryRule_proven
+    notes := LR ++ " After a failed genexp call the state keeps the seed's memo entry and " ++
+      "p->level (SeedKept), as every rule function's return does." },
+  { id := "pygrammar-rule-t-primary"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_t_primary
+    statement := "t_primary: as primary, in the order '.', '[', genexp, '(' and with &t_lookahead " ++
+      "after every alternative: a trailer is taken only when another '(' '[' '.' follows it; " ++
+      "with '.' NAME and no trailer after it the round falls back to atom from the start mark (so " ++
+      "'a.b = 1' leaves the seed a); with no seed, atom with the lookahead holding, NULL without."
+    source := "Grammar/python.gram:1154-1164"
+    status := .proven
+    prop := ``TPrimaryRule
+    thm := some ``tPrimaryRule_proven
+    notes := LR ++ " The lookahead and genexp outcome states keep the seed (SeedKept) where a " ++
+      "later alternative calls t_primary again." },
+  { id := "pygrammar-rule-t-lookahead"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_t_lookahead
+    statement := "t_lookahead: at '(' '[' or '.' that token with the mark past it; NULL with the " ++
+      "state unchanged at any other token."
+    source := "Grammar/python.gram:1166"
+    status := .proven
+    prop := ``TLookahead
+    thm := some ``tLookahead_proven
+    notes := scheme },
+  { id := "pygrammar-rule-atom"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_atom
+    statement := "atom: NAME is the name token; True, False, None and '...' give their Constant; " ++
+      "past those, the string lookahead holding gives strings; NUMBER the number token; '(' '[' " ++
+      "'{' their group after the lookahead on that token; any other token NULL with the mark back."
+    source := "Grammar/python.gram:894-904"
+    status := .proven
+    prop := ``Atom
+    thm := some ``atom_proven
+    notes := scheme },
+  { id := "pygrammar-rule-slices"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_slices
+    statement := "slices: a slice not followed by ',' is the result; followed by ',', or with no " ++
+      "slice, Tuple(gather, Load) from the start mark with an optional trailing ','; an error in " ++
+      "slice gives NULL."
+    source := "Grammar/python.gram:886-888"
+    status := .proven
+    prop := ``Slices
+    thm := some ``slices_proven
+    notes := scheme },
+  { id := "pygrammar-rule-slice"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_slice
+    statement := "slice: [expression] ':' [expression] [':' [expression]] gives Slice(lower, " ++
+      "upper, step), each possibly NULL; no ':' gives named_expression from the start mark; an " ++
+      "error in the first optional expression gives NULL."
+    source := "Grammar/python.gram:890-892"
+    status := .proven
+    prop := ``Slice
+    thm := some ``slice_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_targets
+    statement := "star_targets: a star_target not followed by ',' is the result; followed by ',', " ++
+      "Tuple([a] + rest, Store) of star_target again, the (',' star_target)* loop and an optional " ++
+      "','; no star_target gives NULL."
+    source := "Grammar/python.gram:1118-1121"
+    status := .proven
+    prop := ``StarTargets
+    thm := some ``starTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_target
+    statement := "star_target (memo): '*' (!'*' star_target) gives Starred(a in Store context, " ++
+      "Store); otherwise target_with_star_atom from the start mark; memoized."
+    source := "Grammar/python.gram:1129-1132"
+    status := .proven
+    prop := ``StarTarget
+    thm := some ``starTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-target-with-star-atom"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_target_with_star_atom
+    statement := "target_with_star_atom (memo): t_primary '.' NAME with no trailer after it gives " ++
+      "Attribute(Store), t_primary '[' slices ']' with no trailer after it Subscript(Store); with " ++
+      "a trailer after either, or no t_primary, star_atom from the start mark; memoized."
+    source := "Grammar/python.gram:1134-1137"
+    status := .proven
+    prop := ``TargetWithStarAtom
+    thm := some ``targetWithStarAtom_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_targets
+    statement := "del_targets: the ','.del_target+ gather with an optional trailing ','; NULL " ++
+      "with the mark back when the gather fails."
+    source := "Grammar/python.gram:1171"
+    status := .proven
+    prop := ``DelTargets
+    thm := some ``delTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_target
+    statement := "del_target (memo): as target_with_star_atom with Del for Store and del_t_atom " ++
+      "for star_atom."
+    source := "Grammar/python.gram:1173-1176"
+    status := .proven
+    prop := ``DelTarget
+    thm := some ``delTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-dotted-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_name
+    statement := "dotted_name: the seed loop returns the last seed that grew; each round with seed " ++
+      "v gives the Name v.id + '.' + NAME.id from the start of v to the end of NAME after '.' " ++
+      "NAME, and NAME from the start mark otherwise; the first round is NAME."
+    source := "Grammar/python.gram:256-258"
+    status := .proven
+    prop := ``DottedNameRule
+    thm := some ``dottedNameRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-join-names"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.rule_join_names
+    statement := "_PyPegen_join_names_with_dot(p, a, b), as dotted_name's action: the Name " ++
+      "\"%U.%U\" of the two ids, Load, located from a's start to b's end (EXTRA_EXPR)."
+    source := "Parser/action_helpers.c:123-139"
+    status := .proven
+    prop := ``DottedNameStep
+    thm := some ``dottedNameStep_proven
+    notes := "The third conjunct of DottedNameStep evaluates the action through callHelper. " ++
+      "Allocation failure (PyUnicode_FromFormat, _PyArena_AddPyObject returning NULL) is not " ++
+      "modelled; interning has no observable effect on the tree." },
+  { id := "pygrammar-rule-dotted-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_as_name
+    statement := "dotted_as_name: dotted_name and an optional 'as' NAME give alias(name, asname or " ++
+      "NULL); no dotted_name gives NULL; in the second pass invalid_dotted_as_name runs first and " ++
+      "its error ends the rule."
+    source := "Grammar/python.gram:251-254"
+    status := .proven
+    prop := ``DottedAsName
+    thm := some ``dottedAsName_proven
+    notes := scheme },
+  { id := "pygrammar-rule-import-from-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from_as_name
+    statement := "import_from_as_name: NAME and an optional 'as' NAME give alias(name, asname or " ++
+      "NULL); no NAME gives NULL; in the second pass invalid_import_from_as_name runs first and " ++
+      "its error ends the rule."
+    source := "Grammar/python.gram:244-247"
+    status := .proven
+    prop := ``ImportFromAsName
+    thm := some ``importFromAsName_proven
+    notes := scheme },
+  { id := "pygrammar-rule-as-names"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_as_names
+    statement := "import_from_as_names and dotted_as_names: the ','.x+ gather is the result, no " ++
+      "trailing ','; NULL with the mark back without it."
+    source := "Grammar/python.gram:242-250"
+    status := .proven
+    prop := ``AsNames
+    thm := some ``asNames_proven
+    notes := scheme },
+  { id := "pygrammar-rule-closed-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_closed_pattern
+    statement := "closed_pattern (memo): the ordered choice of literal, capture, wildcard, value, " ++
+      "group, sequence, mapping and class patterns, in that order, from the start mark; an error " ++
+      "ends it; memoized."
+    source := "Grammar/python.gram:522-530"
+    status := .proven
+    prop := ``ClosedPattern
+    thm := some ``closedPattern_proven
+    notes := scheme ++ " choiceRes is the ordered choice of rule calls (choice_run proves the " ++
+      "generated alternatives run it)." },
+  { id := "pygrammar-rule-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_pattern
+    statement := "pattern: the ordered choice of as_pattern then or_pattern."
+    source := "Grammar/python.gram:509-511"
+    status := .proven
+    prop := ``PatternRule
+    thm := some ``patternRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-maybe-star-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_maybe_star_pattern
+    statement := "maybe_star_pattern: the ordered choice of star_pattern then pattern."
+    source := "Grammar/python.gram:607-609"
+    status := .proven
+    prop := ``MaybeStarPattern
+    thm := some ``maybeStarPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-or-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_or_pattern
+    statement := "or_pattern: the '|'.closed_pattern+ gather with one element is that element, " ++
+      "with more MatchOr(patterns); no gather gives NULL."
+    source := "Grammar/python.gram:518-520"
+    status := .proven
+    prop := ``OrPattern
+    thm := some ``orPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-capture-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_capture_pattern
+    statement := "capture_pattern: MatchAs(NULL, name) from pattern_capture_target; NULL without it."
+    source := "Grammar/python.gram:572-573"
+    status := .proven
+    prop := ``CapturePattern
+    thm := some ``capturePattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-wildcard-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_wildcard_pattern
+    statement := "wildcard_pattern: the soft keyword '_' gives MatchAs(NULL, NULL); NULL without it."
+    source := "Grammar/python.gram:579-580"
+    status := .proven
+    prop := ``WildcardPattern
+    thm := some ``wildcardPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-group-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_group_pattern
+    statement := "group_pattern: '(' pattern ')' is the inner pattern; any other token, or no " ++
+      "inner pattern, NULL with the mark back."
+    source := "Grammar/python.gram:593-594"
+    status := .proven
+    prop := ``GroupPattern
+    thm := some ``groupPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-sequence-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sequence_pattern
+    statement := "sequence_pattern: '[' [maybe_sequence_pattern] ']' and, after the first " ++
+      "alternative fails at '(', '(' [open_sequence_pattern] ')' give MatchSequence; other tokens " ++
+      "NULL."
+    source := "Grammar/python.gram:596-598"
+    status := .proven
+    prop := ``SequencePattern
+    thm := some ``sequencePattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-patterns"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_patterns
+    statement := "patterns: open_sequence_pattern gives MatchSequence; without it pattern from the " ++
+      "start mark; an error in open_sequence_pattern gives NULL."
+    source := "Grammar/python.gram:504-507"
+    status := .proven
+    prop := ``Patterns
+    thm := some ``patterns_proven
+    notes := scheme },
+  { id := "pygrammar-rule-subject-expr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_subject_expr
+    statement := "subject_expr: star_named_expression ',' [star_named_expressions] gives " ++
+      "Tuple([value] + values, Load); otherwise named_expression from the start mark."
+    source := "Grammar/python.gram:492-495"
+    status := .proven
+    prop := ``SubjectExpr
+    thm := some ``subjectExpr_proven
+    notes := scheme },
+  { id := "pygrammar-rule-invalid-del-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_del_stmt
+    statement := "invalid_del_stmt: other tokens than 'del' give NULL and no error; 'del' " ++
+      "star_expressions with no node _PyPegen_get_invalid_target(DEL_TARGETS) rejects gives NULL " ++
+      "and no error, and with one, t, raises \"cannot delete <name of t>\" over t; no " ++
+      "star_expressions gives NULL with the mark back."
+    source := "Grammar/python.gram:1326-1328"
+    status := .proven
+    prop := ``InvalidDelStmt
+    thm := some ``invalidDelStmt_proven
+    notes := scheme ++ " exprName t = some nm excludes only get_expr_name's default branch " ++
+      "(Slice), which get_invalid_target never returns from a star_expressions result." },
+  { id := "pygrammar-rule-invalid-ann-assign-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_ann_assign_target
+    statement := "invalid_ann_assign_target: list, else tuple, else '(' invalid_ann_assign_target " ++
+      "')' (the inner target), each from the start mark; NULL otherwise."
+    source := "Grammar/python.gram:1317-1320"
+    status := .proven
+    prop := ``InvalidAnnAssignTarget
+    thm := some ``invalidAnnAssignTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-invalid-assignment"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_assignment
+    statement := "invalid_assignment: a list/tuple target before ':' annotation raises \"only " ++
+      "single target (not <name>) can be annotated\"; a star_named_expression ',' ... ':' raises " ++
+      "the tuple message at the first element; an expression ':' annotation raises \"illegal " ++
+      "target for annotation\"; and after the annotation and '=' alternatives fail, " ++
+      "star_expressions augassign annotated_rhs raises \"'<name>' is an illegal expression for " ++
+      "augmented assignment\"; each raise over that expression, NULL with error_indicator set."
+    source := "Grammar/python.gram:1297-1316"
+    status := .proven
+    prop := ``InvalidAssignment
+    thm := some ``invalidAssignment_proven
+    notes := scheme ++ " The two '=' alternatives (INVALID_TARGET, yield) are stated only as " ++
+      "failing on the way to augassign." },
+  { id := "pygrammar-rule-sum-sub-sub"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sum_sub_sub
+    statement := "sum, composed: from entry, term a, then '-' term b, then '-' term c, then no " ++
+      "operator gives BinOp(BinOp(a, Sub, b), Sub, c), at the mark after c (LeaderLoop with " ++
+      "three growing rounds, each from SumStep)."
+    source := "Grammar/python.gram:842-845"
+    status := .proven
+    prop := ``SumSubSub
+    thm := some ``sumSubSub_proven
+    notes := LR ++ " RoundOK on each round's end state: no error, p->level restored, the start " ++
+      "mark within memo (memo.size = fill) and the tokens." },
+  { id := "pygrammar-rule-dotted-as-name-name-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_as_name_name_target
+    statement := "Whatever follows 'import a as b', the error is never \"cannot use name as " ++
+      "import target\" (a name is a valid as-target)."
+    source := "the implementation against itself: dotted_as_name takes 'as' NAME"
+    status := .refuted
+    prop := ``DottedAsNameNameTarget
+    thm := some ``dottedAsNameNameTarget_refuted
+    bug := some "pygrammar-import-as-name-target"
+    notes := "Counterexample run in the kernel: 'import a as b c\\n'. Duplicate of gh-146492." },
+  { id := "pygrammar-rule-import-from-as-name-name-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from_as_name_name_target
+    statement := "Whatever follows 'from x import a as b', the error is never \"cannot use name " ++
+      "as import target\"."
+    source := "the implementation against itself: import_from_as_name takes 'as' NAME"
+    status := .refuted
+    prop := ``ImportFromAsNameNameTarget
+    thm := some ``importFromAsNameNameTarget_refuted
+    bug := some "pygrammar-import-as-name-target"
+    notes := "Counterexample run in the kernel: 'from x import a as b c\\n'. Duplicate of " ++
+      "gh-146492." },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed
