@@ -293,8 +293,8 @@ def userListEntries : List Entry := [
     source := "Lib/collections/__init__.py:1383-1384"
     status := .proven, prop := ``UserListPop, thm := some ``userListPop_proven },
   { id := "coll-userlist-sort-p", pyFile := file, pyFns := ["UserList.sort"]
-    statement := "u.sort(key=k, reverse=r) leaves u.data and raises as list.sort does on it (raising < or key, list modified during sort); a positional argument is TypeError with u unchanged."
-    source := "Lib/collections/__init__.py:1404-1405; Objects/listobject.c:2965-3227"
+    statement := "u.sort(...) refuses more than 2 arguments, then any positional one, then a reverse whose truth test raises, each with u unchanged; otherwise it leaves u.data and raises as list.sort(key=k, reverse=r) does on it (raising < or key, list modified during sort)."
+    source := "Lib/collections/__init__.py:1404-1405; Objects/clinic/listobject.c.h:248-270; Python/getargs.c:2572-2593; Objects/listobject.c:2965-3227"
     status := .proven, prop := ``UserListSortP, thm := some ``userListSortP_proven },
   { id := "coll-userlist-len-after-prefix", pyFile := file
     pyFns := ["UserList.__lt__", "UserList.__le__", "UserList.__gt__", "UserList.__ge__"]
