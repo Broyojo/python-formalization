@@ -1,30 +1,30 @@
 file	line	endline	name	signature	status	entry	note
-Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	104	111	OrderedDict.__new__	__new__(cls, /, *args, **kwds)	todo		
-Lib/collections/__init__.py	113	117	OrderedDict.__init__	__init__(self, other=(), /, **kwds)	todo		
-Lib/collections/__init__.py	119	131	OrderedDict.__setitem__	__setitem__(self, key, value, dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link)	todo		
-Lib/collections/__init__.py	133	144	OrderedDict.__delitem__	__delitem__(self, key, dict_delitem=dict.__delitem__)	todo		
-Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	todo		
-Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
-Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	todo		
-Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	todo		candidates:coll-userdict-popitem-lifo
-Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		
-Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	todo		
-Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	todo		
-Lib/collections/__init__.py	234	236	OrderedDict.items	items(self)	todo		
-Lib/collections/__init__.py	238	240	OrderedDict.values	values(self)	todo		
-Lib/collections/__init__.py	246	266	OrderedDict.pop	pop(self, key, default=__marker)	todo		
-Lib/collections/__init__.py	268	276	OrderedDict.setdefault	setdefault(self, key, default=None)	todo		
-Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	todo		
-Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	todo		
-Lib/collections/__init__.py	309	315	OrderedDict.fromkeys	fromkeys(cls, iterable, value=None)	todo		
-Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo		
-Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		
-Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		changed-in-3.15:
-Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		changed-in-3.15:
+Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		todo: needs the __reversed__ theorem
+Lib/collections/__init__.py	104	111	OrderedDict.__new__	__new__(cls, /, *args, **kwds)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	113	117	OrderedDict.__init__	__init__(self, other=(), /, **kwds)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	119	131	OrderedDict.__setitem__	__setitem__(self, key, value, dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link)	modelled	coll-odict-setitem	
+Lib/collections/__init__.py	133	144	OrderedDict.__delitem__	__delitem__(self, key, dict_delitem=dict.__delitem__)	modelled	coll-odict-del-pop	
+Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	modelled	coll-odict-iter	
+Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		todo: mirrored (odGenNext rev) and difftested; the walk along prev links has no theorem yet
+Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	modelled	coll-odict-clear	
+Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	modelled	coll-odict-popitem	
+Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		todo: mirrored in ODictG.odMoveToEnd and difftested; the invariant proof (unlink, then append or prepend an existing link) is not done
+Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	excluded		platform: sums sys.getsizeof of the instance dict, __map, the links and their proxies; the value depends on the build's object layout, not on the mapping
+Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	excluded		trivial: the body is the single `return _OrderedDictKeysView(self)`; the view's behaviour is `KeysView`'s and `__reversed__`'s rows
+Lib/collections/__init__.py	234	236	OrderedDict.items	items(self)	excluded		trivial: the body is the single `return _OrderedDictItemsView(self)`
+Lib/collections/__init__.py	238	240	OrderedDict.values	values(self)	excluded		trivial: the body is the single `return _OrderedDictValuesView(self)`
+Lib/collections/__init__.py	246	266	OrderedDict.pop	pop(self, key, default=__marker)	modelled	coll-odict-del-pop	
+Lib/collections/__init__.py	268	276	OrderedDict.setdefault	setdefault(self, key, default=None)	modelled	coll-odict-setdefault	
+Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	todo		todo: odRepr follows link order (coll-odict-order-views states it) but the recursive_repr guard is not modelled
+Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	modelled	coll-odict-order-views	
+Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	309	315	OrderedDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-odict-update-order	
+Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	modelled	coll-odict-order-views	
+Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		todo: mirrored (odIor = update) and difftested; no theorem of its own yet
+Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		todo: mirrored (copy then update) and difftested; no theorem of its own yet
+Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		todo: mirrored and difftested; no theorem of its own yet
 Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-conversions,coll-namedtuple-defaults,coll-namedtuple-getnewargs,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-repr,coll-namedtuple-source-attribute,coll-namedtuple-validation	
 Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
 Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	

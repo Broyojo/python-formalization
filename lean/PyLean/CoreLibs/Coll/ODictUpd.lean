@@ -109,4 +109,48 @@ theorem odUpdateOrder_proven : ODUpdateOrder := by
       simp only [forIt, FIt.ofList, h, Out.toPy]
     · rw [hL']; simpa using firstSeen_nodup _ I.keys
 
+/-- Where the generator looks next from a state. -/
+def OGen.from_ : OGen → Nat
+  | .at_ i => i
+  | _ => 0
+
+theorem genRun_chain (o : OD κ ν) :
+    ∀ (L : List (Nat × κ)) (p fuel : Nat) (g : OGen), g ≠ .done → (∀ x ∈ L.map (·.1), x ≠ 0) →
+      L.length < fuel → Chain o.heap p L 0 → (o.link g.from_).next = some (nxt L 0) →
+      odGenRun o false fuel g = .ok (L.map (·.2))
+  | [], _, fuel + 1, g, hg, _, _, _, hn => by
+    cases g with
+    | done => exact absurd rfl hg
+    | fresh => simp [odGenRun, odGenNext, OGen.from_] at hn ⊢; simp [hn, nxt]
+    | at_ i => simp [odGenRun, odGenNext, OGen.from_] at hn ⊢; simp [hn, nxt]
+  | (i, k) :: t, p, fuel + 1, g, hg, hz, hlen, ⟨h1, h2⟩, hn => by
+    have hi : i ≠ 0 := hz i (by simp)
+    have hstep : odGenNext o false g = (.ok (some k), .at_ i) := by
+      cases g with
+      | done => exact absurd rfl hg
+      | fresh => simp only [OGen.from_, OD.link, nxt] at hn; simp [odGenNext, OD.link, hn, hi, h1]
+      | at_ j => simp only [OGen.from_, OD.link, nxt] at hn; simp [odGenNext, OD.link, hn, hi, h1]
+    simp only [odGenRun, hstep, List.map_cons]
+    rw [genRun_chain o t i fuel (.at_ i) (by simp) (fun x hx => hz x (by simp [hx])) (by simp at hlen; omega) h2
+      (by simp [OD.link, OGen.from_, h1])]
+    rfl
+
+/-- **`iter(od)` (the generator of :146-153) yields the keys in link order.** For every instance with
+list `L`, running the `__iter__` generator to the end yields the keys of `L` in order, which is
+`list(od)`; and if the key it has just yielded is deleted, resuming it raises
+`AttributeError` (the cleared `link.next` is `None`).
+
+Source: Lib/collections/__init__.py:146-153, :138-144. -/
+def ODIterGen : Prop :=
+  ∀ (κ ν : Type) [DecidableEq κ] (o : OD κ ν) (L : List (Nat × κ)) (i : Nat) (fuel : Nat), ODInv o L →
+    L.length < fuel →
+    odGenRun o false fuel .fresh = .ok (L.map (·.2)) ∧ o.keysList = L.map (·.2) ∧
+    ((o.link i).next = none → (odGenNext o false (.at_ i)).1 =
+      .error (.named "AttributeError" "'NoneType' object has no attribute 'key'"))
+
+theorem odIterGen_proven : ODIterGen := by
+  intro κ ν _ o L i fuel I hf
+  refine ⟨genRun_chain o L 0 fuel .fresh (by simp) (fun x hx => Nat.pos_iff_ne_zero.1 (I.pos x hx).1) hf I.chain
+      (by simp [OD.link, OGen.from_, I.root]), keysList_inv I, fun h => by simp [odGenNext, h]⟩
+
 end PyLean.CoreLibs.Coll

@@ -2707,8 +2707,17 @@ coll-counter-keep-positive	proven	Lib/collections/__init__.py	Counter._keep_posi
 coll-counter-inplace-operands	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__
 coll-counter-update-mapping-kw	proven	Lib/collections/__init__.py	Counter.update,Counter.subtract,Counter.__init__
 coll-counter-inplace-arith	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__
+coll-counter-total-sum	proven	Lib/collections/__init__.py	Counter.total
 coll-counter-total	open	Lib/collections/__init__.py	
 coll-counter-fromkeys	proven	Lib/collections/__init__.py	
+coll-odict-setitem	proven	Lib/collections/__init__.py	OrderedDict.__setitem__
+coll-odict-del-pop	proven	Lib/collections/__init__.py	OrderedDict.__delitem__,OrderedDict.pop
+coll-odict-clear	proven	Lib/collections/__init__.py	OrderedDict.clear
+coll-odict-popitem	proven	Lib/collections/__init__.py	OrderedDict.popitem
+coll-odict-setdefault	proven	Lib/collections/__init__.py	OrderedDict.setdefault
+coll-odict-order-views	proven	Lib/collections/__init__.py	OrderedDict.__reduce__,OrderedDict.__eq__
+coll-odict-update-order	proven	Lib/collections/__init__.py	OrderedDict.__new__,OrderedDict.__init__,OrderedDict.fromkeys,OrderedDict.copy
+coll-odict-iter	proven	Lib/collections/__init__.py	OrderedDict.__iter__
 coll-chainmap-flat-view	proven	Lib/collections/__init__.py	ChainMap.__missing__,ChainMap.get,ChainMap.__len__,ChainMap.__iter__,ChainMap.__contains__,ChainMap.__bool__
 coll-chainmap-writes-first	proven	Lib/collections/__init__.py	ChainMap.__setitem__,ChainMap.__delitem__,ChainMap.popitem,ChainMap.pop
 coll-chainmap-union-flat	proven	Lib/collections/__init__.py	ChainMap.__ror__
