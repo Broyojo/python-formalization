@@ -971,24 +971,31 @@ listsort-count-run-fail	proven	Objects/listobject.c	count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
-float-add-correct	proven	Objects/floatobject.c	float_add
-float-sub-correct	proven	Objects/floatobject.c	float_sub
-float-mul-correct	proven	Objects/floatobject.c	float_mul
-float-div-correct	proven	Objects/floatobject.c	float_div
+float-add-correct	proven	Objects/floatobject.c	float_add,_Py_convert_int_to_double
+float-sub-correct	proven	Objects/floatobject.c	float_sub,_Py_convert_int_to_double
+float-mul-correct	proven	Objects/floatobject.c	float_mul,_Py_convert_int_to_double
+float-div-correct	proven	Objects/floatobject.c	float_div,_Py_convert_int_to_double
 float-int-operand-correct	proven	Objects/floatobject.c	_Py_convert_int_to_double
+float-rem-correct	proven	Objects/floatobject.c	float_rem,_Py_convert_int_to_double
+float-divmod-wrappers	proven	Objects/floatobject.c	float_divmod,float_floor_div,_Py_convert_int_to_double
 float-int-conversions	proven	Objects/floatobject.c	float___trunc___impl,float___floor___impl,float___ceil___impl
 float-is-integer	proven	Objects/floatobject.c	float_is_integer_impl
 float-divmod-twins	proven	Objects/floatobject.c	float_rem,_float_div_mod,float_divmod,float_floor_div
 float-divmod-zero	proven	Objects/floatobject.c	float_rem,float_divmod,float_floor_div
 float-floordiv-exact-floor	refuted	Objects/floatobject.c	_float_div_mod,float_floor_div
 float-divmod-quotient-doc	refuted	Objects/floatobject.c	_float_div_mod,float_divmod
-float-pow-special-values	proven	Objects/floatobject.c	float_pow
+float-pow-special-values	proven	Objects/floatobject.c	float_pow,_Py_convert_int_to_double
 float-hash-basics	proven	Objects/floatobject.c	float_hash
 float-unary	proven	Objects/floatobject.c	float_neg,float_abs,float_bool
-float-identities	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal,float_getimag,float___getnewargs___impl,float_from_number_impl,float_new_impl,float_subtype_new,float_vectorcall
+float-float-identity	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal
+float-getnewargs	proven	Objects/floatobject.c	float___getnewargs___impl
+float-new	proven	Objects/floatobject.c	float_new_impl
+float-subtype-new	proven	Objects/floatobject.c	float_subtype_new
+float-vectorcall	proven	Objects/floatobject.c	float_vectorcall
+float-from-number	proven	Objects/floatobject.c	float_from_number_impl
 float-getformat	proven	Objects/floatobject.c	float___getformat___impl
 float-info	proven	Objects/floatobject.c	PyFloat_GetMax,PyFloat_GetMin,PyFloat_GetInfo
-float-hex-sign	proven	Objects/floatobject.c	float_hex_impl,char_from_hex
+float-hex-sign	proven	Objects/floatobject.c	
 float-fromhex-trailing-garbage	refuted	Objects/floatobject.c	float_fromhex_impl,hex_from_char
 float-pack8-roundtrip	proven	Objects/floatobject.c	PyFloat_Pack8,PyFloat_Unpack8
 float-pack2-roundtrip	open	Objects/floatobject.c	PyFloat_Pack2,PyFloat_Unpack2
@@ -998,6 +1005,14 @@ pystrtod-e-format-digit-count	open	Python/pystrtod.c	PyOS_double_to_string,forma
 pystrtod-precision-guard	proven	Python/pystrtod.c	PyOS_double_to_string
 float-int-compare-exact	proven	Objects/floatobject.c	float_richcompare
 float-as-double	proven	Objects/floatobject.c	PyFloat_AsDouble
+float-number-index	proven	Objects/floatobject.c	
+float-from-string-dispatch	proven	Objects/floatobject.c	
+float-compare-floats	proven	Objects/floatobject.c	float_richcompare
+float-hex-tables	proven	Objects/floatobject.c	char_from_hex,hex_from_char
+float-pack8-bytes	proven	Objects/floatobject.c	PyFloat_Pack8
+float-unpack4-widen	proven	Objects/floatobject.c	PyFloat_Unpack4
+float-fromhex-object	proven	Objects/floatobject.c	float_fromhex_impl
+float-round-object	proven	Objects/floatobject.c	
 float-blank-string	proven	Objects/floatobject.c	float_from_string_inner,PyFloat_FromString
 float-repr-special	proven	Objects/floatobject.c	float_repr
 float-round-extremes	proven	Objects/floatobject.c	float___round___impl,double_round
