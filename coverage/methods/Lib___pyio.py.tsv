@@ -152,7 +152,7 @@ Lib/_pyio.py	2034	2038	IncrementalNewlineDecoder.reset	reset(self)	modelled	pyio
 Lib/_pyio.py	2045	2054	IncrementalNewlineDecoder.newlines	newlines(self)	todo		
 Lib/_pyio.py	2090	2120	TextIOWrapper.__init__	__init__(self, buffer, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		review: TP.init models only StringIO's fixed call: text_encoding, 'locale', the isinstance and codecs.lookup checks of encoding and errors (:2093-2111), buffer.seekable() and _has_read1 (:2117-2118) are not mirrored, and PyStringIONewlineLegal states only which newline values succeed.
 Lib/_pyio.py	2122	2126	TextIOWrapper._check_newline	_check_newline(self, newline)	modelled	pyio-stringio-newline-check,pyio-stringio-py-newline-legal	
-Lib/_pyio.py	2128	2153	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	modelled	pyio-stringio-init-read	
+Lib/_pyio.py	2128	2153	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		review: pyio-stringio-init-read (proven) has no _configure of its own (the fields are inlined in TP.init.build, _writetranslate merged with StringIO's override) and the BOM branch (:2145-2153, reachable through reconfigure at a nonzero position) is not modelled; and read()/newlines never read _readnl (:2138) or _b2cratio (:2134), so a _configure that set _readnl = 'n' for every mode also satisfies StringIOInitRead (only readline in the 'r' and 'rn' modes would see it).
 Lib/_pyio.py	2164	2179	TextIOWrapper.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	2182	2183	TextIOWrapper.encoding	encoding(self)	todo		
 Lib/_pyio.py	2186	2187	TextIOWrapper.errors	errors(self)	todo		
@@ -188,7 +188,7 @@ Lib/_pyio.py	2629	2636	TextIOWrapper.__next__	__next__(self)	modelled	pyio-strin
 Lib/_pyio.py	2638	2729	TextIOWrapper.readline	readline(self, size=None)	todo		review: tell-after-reads only needs readline to return a non-empty line, so the newline search for each mode (:2660-2722), the size limit and the rewind are in no theorem; size is an Option Int (no __index__ path).
 Lib/_pyio.py	2732	2733	TextIOWrapper.newlines	newlines(self)	modelled	pyio-stringio-init-read,pyio-stringio-newlines-twins	
 Lib/_pyio.py	2735	2737	TextIOWrapper._dealloc_warn	_dealloc_warn(self, source)	todo		
-Lib/_pyio.py	2747	2761	StringIO.__init__	__init__(self, initial_value='', newline='\\n')	modelled	pyio-stringio-init-read,pyio-stringio-newline-check	
+Lib/_pyio.py	2747	2761	StringIO.__init__	__init__(self, initial_value='', newline='\\n')	modelled	pyio-stringio-init-read	
 Lib/_pyio.py	2763	2771	StringIO.getvalue	getvalue(self)	modelled	pyio-stringio-init-write-twins,pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	2773	2776	StringIO.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	2779	2780	StringIO.errors	errors(self)	excluded		trivial: the property is `return None` (:2780), one constant with no branch.

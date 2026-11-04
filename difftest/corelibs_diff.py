@@ -1185,9 +1185,11 @@ def coll_gen_od(rng):
         k = rng.choice(keys + (["#L"] if rng.random() < 0.05 else []))
         ops.append([op, k, rng.randint(-3, 3), rng.random() < 0.5])
     fin = rng.choice(["none", "eq_od", "eq_dict", "repr", "reduce", "copy", "or", "ror", "fromkeys",
-                      "iter_del"])
+                      "iter_del", "views", "views", "init_kw"])
     return {"fn": "coll.od", "ops": ops, "fin": fin, "perm": rng.random() < 0.5,
-            "xs": [rng.choice(keys) for _ in range(rng.randint(0, 4))]}
+            "xs": [rng.choice(keys) for _ in range(rng.randint(0, 4))],
+            "ps": [[rng.choice(keys), rng.randint(-3, 3)] for _ in range(rng.randint(0, 4))],
+            "kw": [[k, rng.randint(-3, 3)] for k in rng.sample(keys, rng.randint(0, 3))]}
 
 
 def coll_od_items(o):
@@ -1254,6 +1256,15 @@ def coll_run_od(case):
             out = coll_od_items({"c": 9, "a": 8} | od)
         elif fin == "fromkeys":
             out = coll_od_items(coll_POD.fromkeys(case["xs"], 1))
+        elif fin == "views":
+            def three(rev):
+                ks = list(reversed(od.keys())) if rev else list(od.keys())
+                its = [list(p) for p in (reversed(od.items()) if rev else od.items())]
+                vs = list(reversed(od.values())) if rev else list(od.values())
+                return [{"ok": ks}, {"ok": its}, {"ok": vs}]
+            out = [three(False), three(True)]
+        elif fin == "init_kw":
+            out = coll_od_items(coll_POD([tuple(p) for p in case["ps"]], **dict(map(tuple, case["kw"]))))
         elif fin == "iter_del":
             it = iter(od)
             got = []

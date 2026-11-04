@@ -148,15 +148,16 @@ def odMoveToEnd (K : KOps κ) (rk : κ → String) (o : OD κ ν) (key : κ) (la
   | some link =>
     let lp := ((o.link link).prev).getD 0                           -- :200
     let ln := ((o.link link).next).getD 0                           -- :201
+    let soft := ((o.link ln).prev).getD 0                           -- :202
     let o := (o.setNext lp ln).setPrev ln lp                        -- :203-204
     if last then
       let l := ((o.link 0).prev).getD 0                             -- :207
       let o := o.setLink link fun x => { x with prev := some l, next := some 0 }  -- :208-209
-      pure ((o.setPrev 0 link).setNext l link)                      -- :210-211
+      pure ((o.setPrev 0 soft).setNext l link)                      -- :210-211
     else
       let first := ((o.link 0).next).getD 0                         -- :213
       let o := o.setLink link fun x => { x with prev := some 0, next := some first }  -- :214-215
-      pure ((o.setPrev first link).setNext 0 link)                  -- :216-217
+      pure ((o.setPrev first soft).setNext 0 link)                  -- :216-217
 
 /-- `OrderedDict.pop`, :245-265: `dict.pop(self, key, marker)`; if a value came back, drop the link as
 `__delitem__` does; else the default, or `KeyError(key)` when none was given (the `__marker`). -/
@@ -287,5 +288,117 @@ def odGenRun (o : OD κ ν) (rev : Bool) : Nat → OGen → Py (List κ)
     | (.ok none, _) => .ok []
     | (.ok (some k), g') => (odGenRun o rev f g').map (k :: ·)
     | (.error e, _) => .error e
+
+/-! ### `__init__` with keywords, and the views -/
+
+/-- `OrderedDict.__init__`, :113-117: `self.__update(other, **kwds)`, `MutableMapping.update` storing the
+positional source and then `for key, value in kwds.items()` in keyword order (Lib/_collections_abc.py:983-984). -/
+def odInit (K : KOps κ) (src : Option (USrc κ ν)) (kwds : List (κ × ν)) : Py (OD κ ν) :=
+  let r : Out (OD κ ν) := match src with
+    | some s => odUpdate K OD.new s
+    | none => (OD.new, none)
+  (r.andThen (fun o => loopS (fun o (p : κ × ν) => odSet K o p.1 p.2) o kwds)).toPy
+
+/-- `list(od.keys())`: `KeysView.__iter__` is `yield from self._mapping`, the `__iter__` generator; with
+`rev`, `_OrderedDictKeysView.__reversed__` (:71-72), `yield from reversed(self._mapping)`. -/
+def odKeysView (o : OD κ ν) (rev : Bool) : Py (List κ) := odGenRun o rev (o.next + 1) .fresh
+
+/-- `self._mapping[key]` for a key the generator yields. -/
+def odGetitem (rk : κ → String) (o : OD κ ν) (k : κ) : Py ν :=
+  match D.get? o.d k with
+  | some v => .ok v
+  | none => .error (.keyError (rk k))
+
+/-- `list(od.items())`: `ItemsView.__iter__` (`for key in self._mapping: yield (key, self._mapping[key])`),
+or `_OrderedDictItemsView.__reversed__` (:76-78) over `reversed(self._mapping)`. -/
+def odItemsView (rk : κ → String) (o : OD κ ν) (rev : Bool) : Py (List (κ × ν)) := do
+  let ks ← odKeysView o rev
+  ks.mapM (fun k => do let v ← odGetitem rk o k; pure (k, v))
+
+/-- `list(od.values())`: `ValuesView.__iter__`, or `_OrderedDictValuesView.__reversed__` (:82-84). -/
+def odValuesView (rk : κ → String) (o : OD κ ν) (rev : Bool) : Py (List ν) := do
+  let ks ← odKeysView o rev
+  ks.mapM (odGetitem rk o)
+
+/-! ### Objects: `copy`, `__reduce__`, `__repr__` -/
+
+/-- The objects in scope: each id's class name and `OrderedDict` storage. -/
+abbrev ODHeap (κ ν : Type) := Nat → Option (String × OD κ ν)
+
+/-- `OrderedDict.copy`, :304-306, on the object `self`: `self.__class__(self)` allocates a new
+instance `fresh` of the same class (`__new__`, :104-111) and fills it by `__init__(self)`, i.e. `update`
+from `self` (:113-117; a subclass that overrides `__init__` is out of scope). `self` is left as it was. -/
+def odCopyH (K : KOps κ) (objs : ODHeap κ ν) (fresh self : Nat) : Py (Nat × ODHeap κ ν) :=
+  match objs self with
+  | none => .error (.named "NameError" "~no such object")
+  | some (cls, o) => do
+    let n ← odCopy K o
+    pure (fresh, fun j => if j = fresh then some (cls, n) else objs j)
+
+/-- What `self.__getstate__()` returns: `None`, a dict (`object.__getstate__` gives the instance
+`__dict__`), or a `(state, slots)` pair (a class with `__slots__` some of which are set; `state` may be
+`None` from an override); Objects/typeobject.c:7979-8101. Other shapes (a tuple of another length) are
+out of scope. -/
+inductive GState (α : Type) where
+  | none
+  | dict (s : List (String × α))
+  | pair (s : Option (List (String × α))) (slots : List (String × α))
+
+/-- The `state` slot of the reduce tuple. -/
+inductive RState (α : Type) where
+  | none
+  | dict (s : List (String × α))
+  | pair (s slots : List (String × α))
+
+/-- `vars(OrderedDict())`: the three private attributes `__new__` sets (:107-110). -/
+def odPriv : List String := ["_OrderedDict__hardroot", "_OrderedDict__root", "_OrderedDict__map"]
+
+/-- `OrderedDict.__reduce__`, :285-302: `state = self.__getstate__()` (which may raise); if it is
+truthy, split a tuple into `state, slots` (else `slots = {}`), copy both (`None.copy()` raises), pop the
+private names from each, and keep the pair if `slots` is non-empty, else `state or None`; a falsy
+`state` (`None` or `{}`) is passed as it is. The result is `(self.__class__, (), state, None,
+iter(self.items()))`, the last as the items the iterator yields, in link order. -/
+def odReduceG {α : Type} (cls : String) (getstate : Py (GState α)) (o : OD κ ν) :
+    Py (String × List Unit × RState α × Option Unit × List (κ × ν)) := do
+  let st ← getstate                                                 -- :287
+  let drop := fun (s : List (String × α)) => s.filter (fun p => !decide (p.1 ∈ odPriv))  -- :295-297
+  let state ← match st with
+    | .none => .ok .none                                            -- :288, falsy
+    | .dict [] => .ok (.dict [])                                    -- :288, falsy
+    | .dict s =>                                                    -- :292-294
+      let s := drop s
+      .ok (if s.isEmpty then .none else .dict s)                    -- :300-301
+    | .pair none _ => .error (.named "AttributeError" "'NoneType' object has no attribute 'copy'")  -- :293
+    | .pair (some s) sl =>                                          -- :289-290
+      let s := drop s
+      let sl := drop sl
+      .ok (if sl.isEmpty then (if s.isEmpty then .none else .dict s) else .pair s sl)  -- :298-301
+  pure (cls, [], state, none, o.keysList.filterMap (fun k => (D.get? o.d k).map (k, ·)))  -- :302
+
+/-- A value of an `OrderedDict`: an ordinary object, or an `OrderedDict` (by id). -/
+inductive ODRef (ν : Type) where
+  | plain (v : ν)
+  | od (id : Nat)
+
+/-- `OrderedDict.__repr__`, :278-283, under `reprlib.recursive_repr()`: `...` for an instance whose
+`repr` is in progress (`running`); `Cls()` when empty; else `Cls(%r)` of `dict(self.items())`, the
+values' `repr` free to raise. `heap i` is object `i`'s class name and items in link order. -/
+def odReprR (rk : κ → Py String) (rv : ν → Py String) (heap : Nat → Option (String × List (κ × ODRef ν))) :
+    Nat → List Nat → Nat → Py String
+  | 0, _, _ => .error .modelFuel
+  | fuel + 1, running, i =>
+    if i ∈ running then .ok "..."
+    else match heap i with
+      | none => .error (.named "NameError" "~no such object")
+      | some (cls, []) => .ok (cls ++ "()")
+      | some (cls, items) => do
+        let parts ← items.mapM (fun p => do
+          let a ← rk p.1
+          let b ← match p.2 with
+            | .plain v => rv v
+            | .od j => odReprR rk rv heap fuel (i :: running) j
+          pure (a ++ ": " ++ b))
+        let s := "{" ++ ", ".intercalate parts ++ "}"
+        pure (cls ++ "(" ++ s ++ ")")
 
 end PyLean.CoreLibs.Coll
