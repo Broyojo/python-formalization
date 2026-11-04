@@ -454,4 +454,162 @@ theorem callPyGeneralRefines_proven : CallPyGeneralRefines := by
     rw [wd_deopt hspec]
 
 
+/-! ## `CALL_BOUND_METHOD_GENERAL` -/
+
+/-- The well-formedness of a bound method object the call forms rely on: `PyMethod_New` refuses a
+`NULL` `im_self` (`Objects/classobject.c`), and `im_func` is a live object it holds a reference to. -/
+def MethodsWF (rt : Rt) (c : Val) : Prop :=
+  ∀ a f s, c = .ref a → rt.heap[a]? = some (.method f s) → s ≠ .null ∧ Live rt f
+
+/-- The bound-method guard passes: `c` is a method object whose `im_func` is a function with the
+cached version, and `self_or_null` is `NULL`. -/
+def MethodPass (e : Env) (rt : Rt) (c self : Val) (b : Addr) (f s : Val) (fo : FuncObj) : Prop :=
+  ∃ a, c = .ref a ∧ rt.heap[a]? = some (.method f s) ∧ f = .ref b ∧ rt.heap[b]? = some (.func fo) ∧
+    fo.version = cacheNat e 0 ∧ self = .null
+
+section
+variable (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+
+theorem methodVersion_pass (hlen : args.length = e.oparg) (b : Addr) (f s : Val) (fo : FuncObj)
+    (hp : MethodPass e regs.rt c self b f s fo) :
+    _CHECK_METHOD_VERSION e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+      .ok () ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+  simp only [_CHECK_METHOD_VERSION, guardTop, bind, EStateM.bind, callStack_peek regs c self args rest e.oparg hlen]
+  obtain ⟨a, rfl, ho, rfl, hb, hv, rfl⟩ := hp
+  simp [methodParts, isFunction, getFunc, getObj, ho, hb, hv, bind, EStateM.bind, RM.lift, BM.lift, pure,
+    EStateM.pure, liftM, monadLift, MonadLift.monadLift, deoptIf]
+
+theorem methodVersion_fail (hlen : args.length = e.oparg) (hc : Live regs.rt c) (hwf : MethodsWF regs.rt c)
+    (hn : ∀ b f s fo, ¬ MethodPass e regs.rt c self b f s fo) :
+    _CHECK_METHOD_VERSION e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+      .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+  simp only [_CHECK_METHOD_VERSION, guardTop, bind, EStateM.bind, callStack_peek regs c self args rest e.oparg hlen]
+  cases c with
+  | ref a =>
+    obtain ⟨o, ho⟩ := live_obj hc
+    cases o with
+    | method f s =>
+      obtain ⟨_, hf⟩ := hwf a f s rfl ho
+      cases f with
+      | ref b =>
+        obtain ⟨o2, ho2⟩ := live_obj hf
+        cases o2 with
+        | func fo =>
+          have hx : ¬ (fo.version = cacheNat e 0 ∧ self = .null) := fun ⟨h1, h2⟩ =>
+            hn b (.ref b) s fo ⟨a, rfl, ho, rfl, ho2, h1, h2⟩
+          by_cases h1 : fo.version = cacheNat e 0
+          · have h2 : self ≠ .null := fun h2 => hx ⟨h1, h2⟩
+            simp [methodParts, isFunction, getFunc, getObj, ho, ho2, h1, h2, bind, EStateM.bind, RM.lift, BM.lift,
+              pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift, deoptIf, throw, throwThe,
+              MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+          · simp [methodParts, isFunction, getFunc, getObj, ho, ho2, h1, bind, EStateM.bind, RM.lift, BM.lift,
+              pure, EStateM.pure, liftM, monadLift, MonadLift.monadLift, deoptIf, throw, throwThe,
+              MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+        | _ =>
+          simp [methodParts, isFunction, getObj, ho, ho2, bind, EStateM.bind, RM.lift, BM.lift, pure, EStateM.pure,
+            liftM, monadLift, MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw,
+            MonadExceptOf.throw]
+      | _ =>
+        simp [methodParts, isFunction, getObj, ho, bind, EStateM.bind, RM.lift, BM.lift, pure, EStateM.pure, liftM,
+          monadLift, MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw,
+          MonadExceptOf.throw]
+    | _ =>
+      simp [methodParts, getObj, ho, bind, EStateM.bind, RM.lift, BM.lift, pure, EStateM.pure, liftM, monadLift,
+        MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+  | _ =>
+    simp [methodParts, bind, EStateM.bind, RM.lift, BM.lift, pure, EStateM.pure, liftM, monadLift,
+      MonadLift.monadLift, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+theorem expandMethod_eq (hlen : args.length = e.oparg) (a : Addr) (f s : Val)
+    (ho : regs.rt.heap[a]? = some (.method f s)) :
+    _EXPAND_METHOD e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+      .ok () ⟨regs, args.reverse ++ s :: f :: rest⟩ := by
+  have hrev : (args.reverse ++ [self, .ref a]).reverse = .ref a :: self :: args := by simp
+  rw [callStack_split]
+  refine (stk_split_ok (outs := f :: s :: args) (r := regs) (by simp [hlen]) ?_ (by simp [hlen])).trans
+    (by simp)
+  rw [hrev]
+  bc_simp [methodParts, getObj, ho]
+
+end
+
+/-- `CALL_BOUND_METHOD_GENERAL` (`:4529-4539`: `_CHECK_PEP_523 + _CHECK_METHOD_VERSION + _EXPAND_METHOD +
+flush + _CHECK_RECURSION_REMAINING + _PY_FRAME_GENERAL + _SAVE_RETURN_OFFSET + _PUSH_FRAME`) does what
+`CALL` does, for every live callable with well-formed method objects, every runtime and object model:
+unless the callable is a method object whose `im_func` is a function with the cached version and
+`self_or_null` is `NULL` (`:4508-4516`), it exits to `CALL`; it exits too with the recursion budget
+down to 1; otherwise it splits the method into `im_func` and `im_self` (`:4518-4527`, what `CALL`'s
+`_MAYBE_EXPAND_METHOD` does) and builds and enters the same frame as `CALL`, or fails as it does. -/
+def CallBoundMethodGeneralRefines : Prop := ∀ (e : Env) (regs : Regs) (c self : Val) (args rest : List Val),
+  args.length = e.oparg → Live regs.rt c → MethodsWF regs.rt c → regs.next = e.this + instrSize e.opcode →
+  afterInstr e.P (execOp e .CALL_BOUND_METHOD_GENERAL ⟨regs, args.reverse ++ self :: c :: rest⟩) =
+    afterInstr e.P (execOp e .CALL ⟨regs, args.reverse ++ self :: c :: rest⟩)
+
+theorem callBoundMethodGeneralRefines_proven : CallBoundMethodGeneralRefines := by
+  intro e regs c self args rest hlen hc hwf hn
+  simp only [execOp]
+  by_cases hp : ∃ b f s fo, MethodPass e regs.rt c self b f s fo
+  · obtain ⟨b, f, s, fo, hp⟩ := hp
+    have hp' := hp
+    obtain ⟨a, rfl, ho, rfl, hb, hv, rfl⟩ := hp'
+    obtain ⟨hs, hfl⟩ := hwf a (.ref b) s rfl ho
+    -- the generic side: expansion, then the inlined call of `im_func`
+    have hexp := (callGenericRules_proven e regs (.ref a) .null args rest hlen hc).1 a (.ref b) s rfl ho hs rfl hfl
+    have hgen := (callGenericRules_proven e regs (.ref b) s args rest hlen hfl).2.1 b fo rfl hb
+    simp only [execOp] at hexp hgen
+    rw [hexp]
+    have hlen' := hlen
+    by_cases hr : 1 < regs.rt.pyRecursionRemaining
+    · have hrs := recRemaining_pass ⟨regs, args.reverse ++ s :: .ref b :: rest⟩ hr
+      cases hpi : pushInit e (.ref b) (withSelf s args) [] regs with
+      | ok nf r =>
+        obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hpi
+        have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
+        have hspec : CALL_BOUND_METHOD_GENERAL e ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ =
+            .ok () (enteredSt e nf r rest) := by
+          simp only [CALL_BOUND_METHOD_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [methodVersion_pass e regs (.ref a) .null args rest hlen b (.ref b) s fo hp]
+          simp only
+          rw [expandMethod_eq e regs .null args rest hlen a (.ref b) s ho]
+          simp only
+          rw [hrs]
+          simp only
+          rw [pyFrameGeneral_ok e regs _ s args rest hlen nf r hpi]
+          simp only
+          have := pushFrame_entered e nf r rest hnext
+          simp only [bind, EStateM.bind] at this
+          exact this
+        rw [wd_ok hspec, hgen.1 nf r hpi, dispatch_entered e nf r rest (by omega)]
+        rfl
+      | error x r =>
+        have hspec : CALL_BOUND_METHOD_GENERAL e ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ =
+            .error x ⟨r, rest⟩ := by
+          simp only [CALL_BOUND_METHOD_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [methodVersion_pass e regs (.ref a) .null args rest hlen b (.ref b) s fo hp]
+          simp only
+          rw [expandMethod_eq e regs .null args rest hlen a (.ref b) s ho]
+          simp only
+          rw [hrs]
+          simp only
+          rw [pyFrameGeneral_err e regs _ s args rest hlen x r hpi]
+        by_cases hx : x = .deopt
+        · subst hx; rw [wd_deopt hspec, hexp]
+        · rw [wd_err hspec hx, hgen.2 x r hpi]
+    · have hspec : CALL_BOUND_METHOD_GENERAL e ⟨regs, args.reverse ++ .null :: .ref a :: rest⟩ =
+          .error .deopt ⟨regs, args.reverse ++ s :: .ref b :: rest⟩ := by
+        simp only [CALL_BOUND_METHOD_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [methodVersion_pass e regs (.ref a) .null args rest hlen b (.ref b) s fo hp]
+        simp only
+        rw [expandMethod_eq e regs .null args rest hlen a (.ref b) s ho]
+        simp only
+        rw [recRemaining_fail _ (by simpa using hr)]
+      rw [wd_deopt hspec, hexp]
+  · have hn' : ∀ b f s fo, ¬ MethodPass e regs.rt c self b f s fo := fun b f s fo h => hp ⟨b, f, s, fo, h⟩
+    have hspec : CALL_BOUND_METHOD_GENERAL e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+        .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+      simp only [CALL_BOUND_METHOD_GENERAL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [methodVersion_fail e regs c self args rest hlen hc hwf hn']
+    rw [wd_deopt hspec]
+
+
 end PyLean.Bytecode
