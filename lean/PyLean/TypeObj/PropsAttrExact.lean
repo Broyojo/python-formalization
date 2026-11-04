@@ -108,30 +108,84 @@ theorem getattrHookExact_proven : GetattrHookExact := by
 
 /-! ## `do_super_lookup`, `super_getattro` -/
 
-/-- **`do_super_lookup` without the method shortcut, every branch.** `Objects/typeobject.c:12741-12790`
-with `method == NULL`: with no object type (an unbound `super`) or nothing found after
-`su->type` in the MRO of the object's type, the generic attribute lookup on the `super` object
-runs (`skip`, `:12773-12789`); a found value without `__get__` is returned; one with `__get__` is
-bound with `obj = NULL` when the `super` is class-bound (`su_obj == su_obj_type`, `:12761-12763`)
-and `obj = su_obj` otherwise, `type = su_obj_type`, and that result (or exception) is final. -/
+/-- **`do_super_lookup`, every branch.** `Objects/typeobject.c:12741-12790`, for any `su` (the
+`super` object, or NULL when `_PySuper_Lookup` calls it) and either `method`:
+* nothing to look in (no object type: an unbound `super`) or nothing found after `su->type` in the
+  MRO of the object's type goes to `skip`: the generic attribute lookup on `su`, or, for a NULL
+  `su`, on a new `super(su_type, su_obj)` made by calling `super` (`:12776-12782`), whose exception
+  propagates before any lookup; `*method` stays 0;
+* a found method descriptor, when `method` is asked for, is the result unbound with `*method = 1`;
+* otherwise a found value without `__get__` is returned as it is, and one with `__get__` is bound
+  with `obj = NULL` for a class-bound `super` (`su_obj == su_obj_type`, `:12761-12765`) and
+  `obj = su_obj` otherwise, `type = su_obj_type`; that result (or exception) is final, `*method`
+  0. -/
 def DoSuperLookupExact : Prop :=
-  ∀ (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val) (suObjType : Option Addr) (n : Name)
-    (w : World),
-    (suObjType = none → doSuperLookup rt self suType suObj suObjType n w = genericGetAttr rt self n w) ∧
-    (∀ ot, suObjType = some ot →
-      (superLookupDescr w suType ot n = none →
-        doSuperLookup rt self suType suObj suObjType n w = genericGetAttr rt self n w) ∧
-      (∀ res, superLookupDescr w suType ot n = some res → slotOf w (typeOf w res) .tp_descr_get = none →
-        doSuperLookup rt self suType suObj suObjType n w = .ok res w) ∧
-      (∀ res f, superLookupDescr w suType ot n = some res → slotOf w (typeOf w res) .tp_descr_get = some f →
-        doSuperLookup rt self suType suObj suObjType n w =
-          callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot)) w))
+  ∀ (rt : Rt) (su : Option Val) (suType : Addr) (suObj : Option Val) (suObjType : Option Addr)
+    (n : Name) (method : Bool) (w : World),
+    ((suObjType = none ∨ ∃ ot, suObjType = some ot ∧ superLookupDescr w suType ot n = none) →
+      (∀ s, su = some s →
+        (∀ r w1, genericGetAttr rt s n w = .ok r w1 →
+          doSuperLookupM rt su suType suObj suObjType n method w = .ok (r, false) w1) ∧
+        (∀ e w1, genericGetAttr rt s n w = .err e w1 →
+          doSuperLookupM rt su suType suObj suObjType n method w = .err e w1)) ∧
+      (su = none →
+        (∀ e w1, rt.call (.obj B.super) [.obj suType, suObj.getD .none] [] w = .err e w1 →
+          doSuperLookupM rt su suType suObj suObjType n method w = .err e w1) ∧
+        (∀ s w1, rt.call (.obj B.super) [.obj suType, suObj.getD .none] [] w = .ok s w1 →
+          (∀ r w2, genericGetAttr rt s n w1 = .ok r w2 →
+            doSuperLookupM rt su suType suObj suObjType n method w = .ok (r, false) w2) ∧
+          (∀ e w2, genericGetAttr rt s n w1 = .err e w2 →
+            doSuperLookupM rt su suType suObj suObjType n method w = .err e w2)))) ∧
+    (∀ ot res, suObjType = some ot → superLookupDescr w suType ot n = some res →
+      (method = true → (tdata w (typeOf w res)).methodDescriptor = true →
+        doSuperLookupM rt su suType suObj suObjType n method w = .ok (res, true) w) ∧
+      ((method && (tdata w (typeOf w res)).methodDescriptor) = false →
+        (slotOf w (typeOf w res) .tp_descr_get = none →
+          doSuperLookupM rt su suType suObj suObjType n method w = .ok (res, false) w) ∧
+        (∀ f, slotOf w (typeOf w res) .tp_descr_get = some f →
+          (∀ r w1, callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot)) w = .ok r w1 →
+            doSuperLookupM rt su suType suObj suObjType n method w = .ok (r, false) w1) ∧
+          (∀ e w1, callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot)) w = .err e w1 →
+            doSuperLookupM rt su suType suObj suObjType n method w = .err e w1))))
 
 theorem doSuperLookupExact_proven : DoSuperLookupExact := by
-  intro rt self suType suObj suObjType n w
-  refine ⟨fun h => by simp [doSuperLookup, h], fun ot h => ⟨fun hl => by simp [doSuperLookup, h, hl],
-    fun res hl hg => by simp [doSuperLookup, h, hl, hg], fun res f hl hg => ?_⟩⟩
-  simp only [doSuperLookup, M.bind_app, getW_app, h, hl, hg]
+  intro rt su suType suObj suObjType n method w
+  refine ⟨fun hskip => ⟨fun s hs => ?_, fun hs => ?_⟩, fun ot res hot hl => ⟨fun hm hd => ?_, fun hmd => ?_⟩⟩
+  · subst hs
+    rcases hskip with h | ⟨ot, h, hl⟩
+    · refine ⟨fun r w1 hg => ?_, fun e w1 hg => ?_⟩ <;> simp [doSuperLookupM, h, hg]
+    · refine ⟨fun r w1 hg => ?_, fun e w1 hg => ?_⟩ <;> simp [doSuperLookupM, h, hl, hg]
+  · subst hs
+    rcases hskip with h | ⟨ot, h, hl⟩
+    · refine ⟨fun e w1 hc => ?_, fun s w1 hc => ⟨fun r w2 hg => ?_, fun e w2 hg => ?_⟩⟩
+      · simp [doSuperLookupM, h, hc]
+      · simp [doSuperLookupM, h, hc, hg]
+      · simp [doSuperLookupM, h, hc, hg]
+    · refine ⟨fun e w1 hc => ?_, fun s w1 hc => ⟨fun r w2 hg => ?_, fun e w2 hg => ?_⟩⟩
+      · simp [doSuperLookupM, h, hl, hc]
+      · simp [doSuperLookupM, h, hl, hc, hg]
+      · simp [doSuperLookupM, h, hl, hc, hg]
+  · subst hm; simp [doSuperLookupM, hot, hl, hd]
+  · refine ⟨fun hg => ?_, fun f hg => ⟨fun r w1 hc => ?_, fun e w1 hc => ?_⟩⟩
+    · simp only [doSuperLookupM, M.bind_app, getW_app, hot, hl, hmd, Bool.false_eq_true, ite_false, hg]
+      rfl
+    · simp only [doSuperLookupM, M.bind_app, getW_app, hot, hl, hmd, Bool.false_eq_true, ite_false, hg, hc]
+      rfl
+    · simp only [doSuperLookupM, M.bind_app, getW_app, hot, hl, hmd, Bool.false_eq_true, ite_false, hg, hc]
+
+/-- **`_PySuper_Lookup`.** `Objects/typeobject.c:12874-12883`: `supercheck(su_type, su_obj)` first,
+its exception propagating; then `do_super_lookup` with a NULL `su`, the object and the type
+`supercheck` gave, so when nothing is found `supercheck` runs a second time inside the
+temporary `super(su_type, su_obj)` (`DoSuperLookupExact`). -/
+def PySuperLookupExact : Prop :=
+  ∀ (rt : Rt) (suType : Addr) (suObj : Val) (n : Name) (method : Bool) (w : World),
+    (∀ e w1, supercheck rt suType suObj w = .err e w1 → pySuperLookup rt suType suObj n method w = .err e w1) ∧
+    (∀ ot w1, supercheck rt suType suObj w = .ok ot w1 →
+      pySuperLookup rt suType suObj n method w = doSuperLookupM rt none suType (some suObj) (some ot) n method w1)
+
+theorem pySuperLookupExact_proven : PySuperLookupExact := by
+  intro rt suType suObj n method w
+  refine ⟨fun e w1 h => ?_, fun ot w1 h => ?_⟩ <;> simp [pySuperLookup, h]
 
 /-- **`super_getattro`, every branch.** `Objects/typeobject.c:12792-12805`: the name `__class__`
 goes to the generic lookup on the `super` object itself (so `super().__class__` is `super`);

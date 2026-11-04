@@ -59,21 +59,53 @@ theorem objectRichcompareExact_proven : ObjectRichcompareExact := by
 
 /-- **`object.__format__`, every branch.** `Objects/typeobject.c:8501-8513`: a non-empty format
 spec raises "unsupported format string passed to %.200s.__format__"; an empty one returns
-`str(self)`, and an exception from `str(self)` propagates. -/
+`PyObject_Str(self)` (`Objects/object.c:801-841`) as the object it is:
+* an exact `str` is returned itself;
+* otherwise `tp_str` is called; its exception propagates, a result that passes `PyUnicode_Check`
+  is returned as that object, so a `str` subclass instance from `__str__` stays one (checked on
+  3.15.2: `type(object.__format__(x, ''))` is the subclass), and any other result raises
+  "%T.__str__() must return a str, not %T";
+* with no `tp_str`, the repr. -/
 def ObjectFormatExact : Prop :=
   ∀ (rt : Rt) (self : Val) (spec : String) (w : World),
     (spec.length > 0 → objectFormat rt self spec w =
       (typeErr s!"unsupported format string passed to {trunc 200 (typeName w self)}.__format__" : M Val) w) ∧
     (spec = "" →
-      (∀ s w1, rt.str self w = .ok s w1 → objectFormat rt self spec w = .ok (.str s) w1) ∧
-      (∀ e w1, rt.str self w = .err e w1 → objectFormat rt self spec w = .err e w1))
+      (∀ s, self = .str s → objectFormat rt self spec w = .ok self w) ∧
+      ((∀ s, self ≠ .str s) →
+        (slotOf w (typeOf w self) .tp_str = none →
+          (∀ s w1, rt.repr self w = .ok s w1 → objectFormat rt self spec w = .ok (.str s) w1) ∧
+          (∀ e w1, rt.repr self w = .err e w1 → objectFormat rt self spec w = .err e w1)) ∧
+        (∀ f, slotOf w (typeOf w self) .tp_str = some f →
+          (∀ e w1, callStr rt f self w = .err e w1 → objectFormat rt self spec w = .err e w1) ∧
+          (∀ res w1, callStr rt f self w = .ok res w1 → (strOf w1 res).isSome = true →
+            objectFormat rt self spec w = .ok res w1) ∧
+          (∀ res w1, callStr rt f self w = .ok res w1 → strOf w1 res = none →
+            objectFormat rt self spec w =
+              (typeErr s!"{objFQN w1 self}.__str__() must return a str, not {objFQN w1 res}" : M Val) w1))))
 
 theorem objectFormatExact_proven : ObjectFormatExact := by
   intro rt self spec w
   refine ⟨fun h => by simp [objectFormat, h, typeErr, raiseC], fun h => ?_⟩
   subst h
-  exact ⟨fun s w1 hs => by simp [objectFormat, hs, Functor.map, M.bind, M.pure],
-    fun e w1 he => by simp [objectFormat, he, Functor.map, M.bind]⟩
+  refine ⟨fun s hs => by subst hs; simp [objectFormat, pyStrObj], fun hns => ?_⟩
+  have hpre : ∀ (k : M Val), (match self with | .str _ => pure self | _ => k) = k := by
+    intro k; cases self <;> first | rfl | exact absurd rfl (hns _)
+  refine ⟨fun hn => ⟨fun s w1 hr => ?_, fun e w1 hr => ?_⟩, fun f hf => ⟨fun e w1 hc => ?_,
+    fun res w1 hc hs => ?_, fun res w1 hc hs => ?_⟩⟩
+  · simp only [objectFormat, pyStrObj, hpre, M.bind_app, getW_app, String.length_empty,
+      gt_iff_lt, Nat.lt_irrefl, ite_false, M.pure_app, hn]
+    simp [Functor.map, M.bind, M.pure, hr]
+  · simp only [objectFormat, pyStrObj, hpre, M.bind_app, getW_app, String.length_empty,
+      gt_iff_lt, Nat.lt_irrefl, ite_false, M.pure_app, hn]
+    simp [Functor.map, M.bind, hr]
+  · simp only [objectFormat, pyStrObj, hpre, M.bind_app, getW_app, String.length_empty,
+      gt_iff_lt, Nat.lt_irrefl, ite_false, M.pure_app, hf, hc]
+  · obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp hs
+    simp only [objectFormat, pyStrObj, hpre, M.bind_app, getW_app, String.length_empty,
+      gt_iff_lt, Nat.lt_irrefl, ite_false, M.pure_app, hf, hc, hx]
+  · simp only [objectFormat, pyStrObj, hpre, M.bind_app, getW_app, String.length_empty,
+      gt_iff_lt, Nat.lt_irrefl, ite_false, M.pure_app, hf, hc, hs]
 
 /-! ## `_PyObject_GetNewArguments` -/
 

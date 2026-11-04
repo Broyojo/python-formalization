@@ -430,78 +430,223 @@ theorem dedupKeep_eq_loop : ∀ (l seen : List Addr),
 theorem dedupKeep_eraseDups (l : List Addr) : dedupKeep l [] = l.eraseDups := by
   rw [dedupKeep_eq_loop]; rfl
 
-theorem setMroErrorLoop_names (rt : Rt) (nm : Addr → String) (w : World)
-    (hn : ∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (.str (nm c))) w) :
-    ∀ (cands : List Addr) (off : Nat) (text : List Char), off = utf8Bytes text →
-      utf8Bytes text + utf8Bytes (commaJoin (cands.map (fun c => ' ' :: (nm c).toList))) ≤ 999 →
-      setMroErrorLoop rt cands off text w =
-        .ok (text ++ commaJoin (cands.map (fun c => ' ' :: (nm c).toList))) w := by
+/-- What `" %s"` writes for a class whose `__name__` is `v`: a space, then the text of a `str`
+(a subclass included) up to its first NUL, or `?` for anything else. -/
+def mroNameText (w : World) (v : Val) : List Char := ' ' :: (cStr ((strOf w v).getD "?")).toList
+
+theorem char_utf8Size_pos (c : Char) : 0 < c.utf8Size := Char.utf8Size_pos c
+
+/-- A cut at `n` bytes of `P ++ X` stops inside `P` when `P` has at least `n` bytes. -/
+theorem cutUtf8_append_of_ge : ∀ (P X : List Char) (n : Nat), n ≤ utf8Bytes P →
+    cutUtf8 n (P ++ X) = cutUtf8 n P := by
+  intro P
+  induction P with
+  | nil =>
+    intro X n h
+    simp only [utf8Bytes, List.map_nil, List.sum_nil, Nat.le_zero] at h
+    subst h
+    cases X with
+    | nil => rfl
+    | cons c cs =>
+      have := char_utf8Size_pos c
+      have h0 : ¬ c.utf8Size ≤ 0 := by omega
+      simp [cutUtf8, h0]
+  | cons c cs ih =>
+    intro X n h
+    simp only [utf8Bytes, List.map_cons, List.sum_cons] at h
+    simp only [List.cons_append, cutUtf8]
+    split
+    · rw [ih X (n - c.utf8Size) (by simp only [utf8Bytes]; omega)]
+    · rfl
+
+theorem cutUtf8_prefix_of_ge (P L : List Char) (n : Nat) (hp : P <+: L) (h : n ≤ utf8Bytes P) :
+    cutUtf8 n L = cutUtf8 n P := by
+  obtain ⟨X, rfl⟩ := hp
+  exact cutUtf8_append_of_ge P X n h
+
+theorem utf8Bytes_eq_zero (X : List Char) (h : utf8Bytes X = 0) : X = [] := by
+  cases X with
+  | nil => rfl
+  | cons c cs =>
+    have := char_utf8Size_pos c
+    simp only [utf8Bytes, List.map_cons, List.sum_cons] at h; omega
+
+theorem dedupKeep_head : ∀ (l seen : List Addr), ∃ ys, dedupKeep l seen = seen.reverse ++ ys := by
+  intro l
+  induction l with
+  | nil => intro seen; exact ⟨[], by simp [dedupKeep]⟩
+  | cons x xs ih =>
+    intro seen
+    simp only [dedupKeep]
+    split
+    · exact ih seen
+    · obtain ⟨ys, h⟩ := ih (x :: seen)
+      exact ⟨x :: ys, by rw [h]; simp⟩
+
+theorem setMroErrorLoop_extends (rt : Rt) (w : World) (nm : Addr → Val)
+    (hn : ∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (nm c)) w) :
+    ∀ (cands : List Addr) (off : Nat) (text : List Char),
+      ∃ X, setMroErrorLoop rt cands off text w = .ok (text ++ X) w := by
   intro cands
   induction cands with
-  | nil => intro off text _ _; simp [setMroErrorLoop, commaJoin]
+  | nil => intro off text; exact ⟨[], by simp [setMroErrorLoop]⟩
   | cons c cs ih =>
-    intro off text hoff hlen
-    have hcls : classNameOf rt (.obj c) w = .ok (some (nm c)) w := by
-      simp [classNameOf, hn c, strOf]
-    have hs : (" " ++ nm c).toList = ' ' :: (nm c).toList := by simp
-    cases cs with
-    | nil =>
-      simp only [List.map_cons, List.map_nil, commaJoin] at hlen ⊢
-      have hlt : off < 1000 := by omega
-      simp only [setMroErrorLoop, hlt, ite_true, M.bind_app, hcls, Option.getD_some, hs]
-      simp [setMroErrorLoop]
-    | cons d ds =>
-      have key : commaJoin ((c :: d :: ds).map (fun c => ' ' :: (nm c).toList)) =
-          (' ' :: (nm c).toList) ++ ',' :: commaJoin ((d :: ds).map (fun c => ' ' :: (nm c).toList)) :=
-        rfl
-      rw [key] at hlen ⊢
-      generalize commaJoin ((d :: ds).map (fun c => ' ' :: (nm c).toList)) = X at hlen ih ⊢
-      have hc1 : utf8Bytes (',' :: X) = 1 + utf8Bytes X := by simp [utf8Bytes]; rfl
-      rw [utf8Bytes_append, hc1] at hlen
-      have hlt : off < 1000 := by omega
-      have hfit : off + utf8Bytes (' ' :: (nm c).toList) + 1 < 1000 := by omega
-      have hne : (d :: ds) ≠ [] := by simp
-      rw [setMroErrorLoop]
-      simp only [hlt, ite_true, M.bind_app, hcls, Option.getD_some, hs]
-      rw [if_pos ⟨hne, hfit⟩]
-      have hc2 : utf8Bytes [','] = 1 := by simp [utf8Bytes]; rfl
-      rw [ih (off + utf8Bytes (' ' :: (nm c).toList) + 1)
-        (text ++ ' ' :: (nm c).toList ++ [','])
-        (by rw [utf8Bytes_append, utf8Bytes_append, hc2, hoff])
-        (by rw [utf8Bytes_append, utf8Bytes_append, hc2]; omega)]
-      simp
+    intro off text
+    have hcls : classNameOf rt (.obj c) w = .ok (strOf w (nm c)) w := by
+      simp [classNameOf, hn c]
+    rw [setMroErrorLoop]
+    by_cases hlt : off < 1000
+    · simp only [hlt, ite_true, M.bind_app, hcls]
+      split
+      · obtain ⟨X, hX⟩ := ih (off + utf8Bytes (" " ++ cStr ((strOf w (nm c)).getD "?")).toList + 1)
+          (text ++ (" " ++ cStr ((strOf w (nm c)).getD "?")).toList ++ [','])
+        exact ⟨(" " ++ cStr ((strOf w (nm c)).getD "?")).toList ++ [','] ++ X, by rw [hX]; simp⟩
+      · obtain ⟨X, hX⟩ := ih (off + utf8Bytes (" " ++ cStr ((strOf w (nm c)).getD "?")).toList)
+          (text ++ (" " ++ cStr ((strOf w (nm c)).getD "?")).toList)
+        exact ⟨(" " ++ cStr ((strOf w (nm c)).getD "?")).toList ++ X, by rw [hX]; simp⟩
+    · exact ⟨[], by simp [hlt]⟩
 
-/-- **The MRO conflict message.** `set_mro_error`, `Objects/typeobject.c:3350-3398`: the
-candidates are the heads of the remaining lists, once each, in first-seen order (a dict, keyed
-by class identity, `:3358-3366`), each named by `class_name`; when `__name__` of each is a
-`str` and the text fits the 1000-byte buffer, the `TypeError` is exactly
-`"Cannot create a consistent method resolution order (MRO) for bases"` followed by the names,
-each after a space, joined by `,`. Precondition: the `__name__` lookups return a string and
-run no code that changes the world (classes without a metaclass property for `__name__`).
-Scope: candidate hashing by identity; a metaclass `__hash__` that re-enters is the bug record
-`typeobj-set-mro-error-borrowed-mro`. -/
-def SetMroErrorMessage : Prop :=
-  ∀ (rt : Rt) (rests : List (List Addr)) (w : World) (nm : Addr → String),
-    (∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (.str (nm c))) w) →
+/-- The loop's text agrees with the whole text on its first 999 bytes: either it is the whole
+text, or both start with a common prefix of at least 999 bytes. -/
+theorem setMroErrorLoop_text (rt : Rt) (w : World) (nm : Addr → Val)
+    (hn : ∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (nm c)) w) :
+    ∀ (cands : List Addr) (off : Nat) (text r : List Char), off = utf8Bytes text →
+      setMroErrorLoop rt cands off text w = .ok r w →
+      r = text ++ commaJoin (cands.map (fun c => mroNameText w (nm c))) ∨
+        ∃ P, P <+: text ++ commaJoin (cands.map (fun c => mroNameText w (nm c))) ∧ P <+: r ∧
+          999 ≤ utf8Bytes P := by
+  intro cands
+  induction cands with
+  | nil =>
+    intro off text r _ h
+    simp only [setMroErrorLoop, M.pure_app, R.ok.injEq] at h
+    left; simp [h.1, commaJoin]
+  | cons c cs ih =>
+    intro off text r hoff h
+    have hcls : classNameOf rt (.obj c) w = .ok (strOf w (nm c)) w := by
+      simp [classNameOf, hn c]
+    have hs : (" " ++ cStr ((strOf w (nm c)).getD "?")).toList = mroNameText w (nm c) := by
+      simp [mroNameText]
+    rw [setMroErrorLoop] at h
+    by_cases hlt : off < 1000
+    · simp only [hlt, ite_true, M.bind_app, hcls, hs] at h
+      split at h
+      · rename_i hc
+        have hne := hc.1
+        obtain ⟨d, ds, rfl⟩ : ∃ d ds, cs = d :: ds := by
+          cases cs with
+          | nil => exact absurd rfl hne
+          | cons d ds => exact ⟨d, ds, rfl⟩
+        have key : text ++ commaJoin ((c :: d :: ds).map (fun c => mroNameText w (nm c))) =
+            text ++ mroNameText w (nm c) ++ [','] ++
+              commaJoin ((d :: ds).map (fun c => mroNameText w (nm c))) := by
+          simp [commaJoin]
+        rw [key]
+        have hc2 : utf8Bytes [','] = 1 := by simp [utf8Bytes]; rfl
+        exact ih _ _ r (by rw [utf8Bytes_append, utf8Bytes_append, hc2, hoff]) h
+      · rename_i hc
+        cases cs with
+        | nil =>
+          have key : text ++ commaJoin ([c].map (fun c => mroNameText w (nm c))) =
+              text ++ mroNameText w (nm c) ++
+                commaJoin (([] : List Addr).map (fun c => mroNameText w (nm c))) := by
+            simp [commaJoin]
+          rw [key]
+          exact ih _ _ r (by rw [utf8Bytes_append, hoff]) h
+        | cons d ds =>
+          have hge : 999 ≤ utf8Bytes (text ++ mroNameText w (nm c)) := by
+            rw [utf8Bytes_append, ← hoff]
+            exact Nat.le_of_not_lt (fun hcon => hc ⟨by simp, by omega⟩)
+          right
+          refine ⟨text ++ mroNameText w (nm c),
+            ⟨',' :: commaJoin ((d :: ds).map (fun c => mroNameText w (nm c))), ?_⟩, ?_, hge⟩
+          · simp [commaJoin]
+          · obtain ⟨X, hX⟩ := setMroErrorLoop_extends rt w nm hn (d :: ds)
+              (off + utf8Bytes (mroNameText w (nm c))) (text ++ mroNameText w (nm c))
+            rw [hX] at h
+            simp only [R.ok.injEq] at h
+            exact ⟨X, h.1⟩
+    · rw [if_neg hlt] at h
+      simp only [M.pure_app, R.ok.injEq] at h
+      right
+      refine ⟨text, ⟨_, rfl⟩, ⟨[], by simp [h.1]⟩, by omega⟩
+
+/-- **The MRO conflict message, exactly.** `set_mro_error`, `Objects/typeobject.c:3350-3398`:
+* the candidates are the heads of the remaining lists, once each, in first-seen order (a dict,
+  keyed by class identity, `:3358-3366`);
+* each is named by `class_name` (`:3373`): `" %s"` of a `str` `__name__` (a `str` subclass
+  included), which a NUL ends, and `" ?"` for a `__name__` that is not a `str` (`:3380-3382`;
+  checked on 3.15.2: a metaclass property `__name__` returning `42` gives `bases ?, B`, one
+  returning `'a\x00b'` gives `bases a, B3`); names are joined by `,`;
+* the `TypeError` is the first 999 bytes of `"Cannot create a consistent method resolution order
+  (MRO) for bases"` followed by those names (`char buf[1000]`, `:3353`; two 600-character names
+  give a 999-character message on 3.15.2), whenever that cut falls between characters;
+* an exception from the first candidate's `__name__` is what `set_mro_error` leaves raised, with
+  no `TypeError` (`:3384-3388`; a raising metaclass property gives that `KeyError` on 3.15.2).
+Precondition of the message clause: the `__name__` lookups run no code that changes the world.
+Scope: candidate hashing by identity (a metaclass `__hash__` that re-enters is the bug record
+`typeobj-set-mro-error-borrowed-mro`); a cut inside a multi-byte character, where CPython raises
+`UnicodeDecodeError`, is not modelled; a `str` with a lone surrogate, where `PyUnicode_AsUTF8`
+fails, cannot be a Lean `String`. -/
+def SetMroErrorExact : Prop :=
+  (∀ (rt : Rt) (rests : List (List Addr)) (w : World) (nm : Addr → Val),
+    (∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (nm c)) w) →
     let full := "Cannot create a consistent method resolution order (MRO) for bases".toList ++
-      commaJoin ((rests.filterMap List.head?).eraseDups.map (fun c => ' ' :: (nm c).toList))
-    utf8Bytes full ≤ 999 →
-    (setMroError rt rests : M Unit) w = (typeErr (String.ofList full) : M Unit) w
+      commaJoin ((rests.filterMap List.head?).eraseDups.map (fun c => mroNameText w (nm c)))
+    (utf8Bytes full ≤ 999 ∨ utf8Bytes (cutUtf8 999 full) = 999) →
+    (setMroError rt rests : M Unit) w = (typeErr (String.ofList (cutUtf8 999 full)) : M Unit) w) ∧
+  (∀ (rt : Rt) (rests : List (List Addr)) (w : World) (c : Addr) (e : PyErr) (w1 : World),
+    (rests.filterMap List.head?).head? = some c →
+    rt.getOptionalAttr (.obj c) "__name__" w = .err e w1 →
+    (setMroError rt rests : M Unit) w = .err e w1)
 
-theorem setMroErrorMessage_proven : SetMroErrorMessage := by
-  intro rt rests w nm hn
-  dsimp only
-  intro hlen
-  have hloop := setMroErrorLoop_names rt nm w hn ((rests.filterMap List.head?).eraseDups)
-    (utf8Bytes "Cannot create a consistent method resolution order (MRO) for bases".toList)
-    "Cannot create a consistent method resolution order (MRO) for bases".toList rfl
-    (by rw [← utf8Bytes_append]; exact hlen)
-  simp only [setMroError, M.bind_app, dedupKeep_eraseDups, hloop]
-  have hcut := cutUtf8_of_le _ 999 hlen
-  split
-  · rw [hcut]
-  · rename_i hneg
-    exact absurd (Or.inl hlen) hneg
+theorem setMroErrorExact_proven : SetMroErrorExact := by
+  refine ⟨?_, ?_⟩
+  · intro rt rests w nm hn
+    dsimp only
+    intro hlen
+    simp only [setMroError, dedupKeep_eraseDups]
+    revert hlen
+    generalize "Cannot create a consistent method resolution order (MRO) for bases".toList = pre
+    intro hlen
+    obtain ⟨X, hX⟩ := setMroErrorLoop_extends rt w nm hn ((rests.filterMap List.head?).eraseDups)
+      (utf8Bytes pre) pre
+    have htext := setMroErrorLoop_text rt w nm hn ((rests.filterMap List.head?).eraseDups)
+      _ _ _ rfl hX
+    simp only [M.bind_app, hX]
+    generalize hF : pre ++ commaJoin ((rests.filterMap List.head?).eraseDups.map
+      (fun c => mroNameText w (nm c))) = F at hlen htext ⊢
+    have hcut : cutUtf8 999 (pre ++ X) = cutUtf8 999 F ∧
+        (utf8Bytes (pre ++ X) ≤ 999 ∨ utf8Bytes (cutUtf8 999 (pre ++ X)) = 999) := by
+      rcases htext with h | ⟨P, hPF, hPr, hP⟩
+      · rw [h]; exact ⟨rfl, hlen⟩
+      · have e1 := cutUtf8_prefix_of_ge P (pre ++ X) 999 hPr hP
+        have e2 := cutUtf8_prefix_of_ge P F 999 hPF hP
+        refine ⟨by rw [e1, e2], Or.inr ?_⟩
+        rw [e1]
+        rcases hlen with hl | hl
+        · obtain ⟨Y, rfl⟩ := hPF
+          rw [utf8Bytes_append] at hl
+          have hl' : utf8Bytes P ≤ 999 := by omega
+          rw [cutUtf8_of_le _ 999 hl']; omega
+        · rw [e2] at hl; exact hl
+    have hc : ((pre ++ X).map Char.utf8Size).sum ≤ 999 ∨
+        ((cutUtf8 999 (pre ++ X)).map Char.utf8Size).sum = 999 := hcut.2
+    rw [if_pos hc, hcut.1]
+  · intro rt rests w c e w1 hc he
+    obtain ⟨ds, hds⟩ : ∃ ds, dedupKeep (rests.filterMap List.head?) [] = c :: ds := by
+      cases hl : rests.filterMap List.head? with
+      | nil => rw [hl] at hc; simp at hc
+      | cons x xs =>
+        rw [hl] at hc
+        simp only [List.head?_cons, Option.some.injEq] at hc
+        subst hc
+        obtain ⟨ys, h⟩ := dedupKeep_head xs [x]
+        exact ⟨ys, by simp [dedupKeep, h]⟩
+    have hcls : classNameOf rt (.obj c) w = .err e w1 := by simp [classNameOf, he]
+    have hlt : utf8Bytes "Cannot create a consistent method resolution order (MRO) for bases".toList < 1000 := by
+      decide
+    simp only [setMroError, M.bind_app, hds, setMroErrorLoop, hlt, ite_true, hcls]
 
 /-! ## `mro_implementation_unlocked` with `class_name` -/
 

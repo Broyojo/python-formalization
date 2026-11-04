@@ -645,20 +645,53 @@ def superBindObj (suObj : Option Val) (ot : Addr) : Option Val :=
   | some so => if so.is (.obj ot) then none else some so
   | none => none
 
-/-- `do_super_lookup`, `Objects/typeobject.c:12742`, without the method shortcut. -/
-def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
-    (suObjType : Option Addr) (n : Name) : M Val := do
+/-- `do_super_lookup`, `Objects/typeobject.c:12742-12790`. `su` is the `super` object, or `none`
+for NULL (the call from `_PySuper_Lookup`); `method` says the `method` pointer is non-NULL. The
+result is the attribute and `*method`:
+* with no object type, or nothing found after `su_type`, `skip` (`:12775-12789`): for a NULL `su`
+  a temporary `super(su_type, su_obj)` is made by calling `super` (`PyObject_Vectorcall`, so
+  `super_init` and `supercheck` run again, `:12776-12782`), and the generic attribute lookup runs
+  on the `super` object;
+* a found method descriptor, when `method` is asked for, is returned unbound with `*method = 1`
+  (`:12754-12756`);
+* otherwise a found value is bound by its `__get__` with `obj = NULL` for a class-bound `super`
+  (`su_obj == su_obj_type`) and `su_obj` otherwise, `type = su_obj_type` (`:12758-12767`).
+`_PySuper_Lookup` always passes an object, so `su_obj` is present when `su` is NULL. -/
+def doSuperLookupM (rt : Rt) (su : Option Val) (suType : Addr) (suObj : Option Val)
+    (suObjType : Option Addr) (n : Name) (method : Bool) : M (Val × Bool) := do
   let w ← getW
-  let skip : M Val := genericGetAttr rt self n
+  let skip : M (Val × Bool) := do
+    let s ← match su with
+      | some s => pure s
+      | none => rt.call (.obj B.super) [.obj suType, suObj.getD .none] []
+    let r ← genericGetAttr rt s n
+    pure (r, false)
   match suObjType with
   | none => skip
   | some ot =>
     match superLookupDescr w suType ot n with
     | none => skip
     | some res =>
+      if method && (tdata w (typeOf w res)).methodDescriptor then pure (res, true) else
       match slotOf w (typeOf w res) .tp_descr_get with
-      | none => pure res
-      | some f => callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot))
+      | none => pure (res, false)
+      | some f => do
+        let r ← callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot))
+        pure (r, false)
+
+/-- `do_super_lookup` as `super_getattro` calls it, `Objects/typeobject.c:12804`: `su` is the
+`super` object itself and `method` is NULL. -/
+def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
+    (suObjType : Option Addr) (n : Name) : M Val := do
+  let (r, _) ← doSuperLookupM rt (some self) suType suObj suObjType n false
+  pure r
+
+/-- `_PySuper_Lookup`, `Objects/typeobject.c:12874-12883`, which `LOAD_SUPER_ATTR_ATTR` and
+`LOAD_SUPER_ATTR_METHOD` call: `supercheck`, then `do_super_lookup` with a NULL `su`. -/
+def pySuperLookup (rt : Rt) (suType : Addr) (suObj : Val) (n : Name) (method : Bool) :
+    M (Val × Bool) := do
+  let ot ← supercheck rt suType suObj
+  doSuperLookupM rt none suType (some suObj) (some ot) n method
 
 /-- `super_getattro`, `Objects/typeobject.c:12793`. -/
 def superGetattro (rt : Rt) (self : Val) (n : Name) : M Val := do

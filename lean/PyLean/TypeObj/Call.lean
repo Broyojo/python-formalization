@@ -379,8 +379,13 @@ def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   match x, e, er with
   | none, _, _ => boxValue t B.str (.str "")
   | some o, none, none =>
-    let s ← rt.str o
-    boxValue t B.str (.str s)
+    -- `unicode_new_impl`, `Objects/unicodeobject.c:13902-13912`: `str(x)` is `PyObject_Str(x)`
+    -- itself, so a `str` subclass instance from `__str__` comes back as it is; a subclass of
+    -- `str` gets a copy of the text (`unicode_subtype_new`).
+    if t == B.str then pyStrObj rt o
+    else
+      let s ← rt.str o
+      boxValue t B.str (.str s)
   | some o, _, _ =>
     match strOf w o with
     | some _ => typeErr "decoding str is not supported"
@@ -945,12 +950,13 @@ over the static hierarchy. -/
 def classDictKeys (w : World) (t : Addr) : List Name :=
   ((tdata w t).mro.getD []).flatMap fun c => (tdata w c).dict.map (·.1)
 
-/-- `object___format___impl`, `Objects/typeobject.c:8501`. -/
+/-- `object___format___impl`, `Objects/typeobject.c:8501-8513`: `PyObject_Str(self)` for an empty
+spec, the object it returns (a `str` subclass instance stays one). -/
 def objectFormat (rt : Rt) (self : Val) (spec : String) : M Val := do
   let w ← getW
   if spec.length > 0 then
     typeErr s!"unsupported format string passed to {trunc 200 (typeName w self)}.__format__"
-  .str <$> rt.str self
+  pyStrObj rt self
 
 /-- `PyObject_Format`, `Objects/abstract.c:853`. -/
 def pyFormat (rt : Rt) (obj : Val) (spec : Option Val) : M Val := do

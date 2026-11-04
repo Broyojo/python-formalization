@@ -290,21 +290,21 @@ theorem setClassImmutable_proven : SetClassImmutable := by
     getW_app, h1, ha, M.pure_app, hmod, h2, Bool.not_false, Bool.true_and, ite_true]
   simp [typeErr, raiseC]
 
-/-- `object.__format__` refuses a non-empty spec and is `str()` otherwise,
+/-- `object.__format__` refuses a non-empty spec and is `PyObject_Str(self)` otherwise,
 `Objects/typeobject.c:8506-8512`. -/
 def ObjectFormatSpec : Prop :=
   ∀ (rt : Rt) (self : Val) (spec : String) (w : World),
     (spec.length > 0 → objectFormat rt self spec w =
       (typeErr s!"unsupported format string passed to {trunc 200 (typeName w self)}.__format__" : M Val) w) ∧
-    (spec = "" → ∀ s w1, rt.str self w = .ok s w1 → objectFormat rt self spec w = .ok (.str s) w1)
+    (spec = "" → objectFormat rt self spec w = pyStrObj rt self w)
 
 theorem objectFormatSpec_proven : ObjectFormatSpec := by
   intro rt self spec w
   constructor
   · intro h; simp [objectFormat, h, typeErr, raiseC]
-  · intro h s w1 hs
+  · intro h
     subst h
-    simp [objectFormat, hs]
+    simp [objectFormat]
 
 /-- `type.__init__` accepts one or three arguments, `Objects/typeobject.c:4187`. -/
 def TypeInitArity : Prop :=

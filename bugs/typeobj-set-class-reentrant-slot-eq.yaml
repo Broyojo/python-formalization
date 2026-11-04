@@ -77,9 +77,9 @@ observed: |
   the loop then dies with SIGSEGV in _Py_Dealloc (return code -11). REPRODUCED.
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): same deltas, SIGSEGV. REPRODUCED.
 promised_by: |
-  Undisputed invariant: pure Python must not crash the interpreter. The comment at
-  typeobject.c:7653-7666 and `same_slots_added` compare slots with a rich comparison, which can
-  run arbitrary code.
+  Undisputed invariant: pure Python must not crash the interpreter. `same_slots_added`
+  (typeobject.c:7644-7670) compares the slot tuples with PyObject_RichCompareBool (:7665), which
+  can run arbitrary code.
 cause: |
   Objects/typeobject.c:7881 captures `oldto` before :7882, which can run Python code through
   compatible_for_assignment -> same_slots_added -> PyObject_RichCompareBool (:7739, :7665);

@@ -34,7 +34,7 @@ likelihood: |
   Low. It needs a metaclass `__hash__` (or `__eq__`) with side effects on the hierarchy,
   running during a failing class statement. No real code is known to do this.
 maybe_intended: |
-  No. Pure Python must not read freed memory; `class_name` at :3296-3297 already carries the
+  No. Pure Python must not read freed memory; `class_name` at :3302 already carries the
   comment "Note that this is potentially re-entrant", but the dict insertion is too.
 reproducer: |
   import subprocess, sys

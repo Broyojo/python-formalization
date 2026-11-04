@@ -113,7 +113,7 @@ def getstateSlotStep (rt : Rt) (obj names : Val) (slots : Addr) (i : Nat) : M Un
   let name := ((listOf w names).getD [])[i]?.getD .none
   let value ← match strOf w name with
     | some n => rt.getOptionalAttr obj n
-    | none => typeErr s!"attribute name must be string, not '{typeName w name}'"
+    | none => typeErr s!"attribute name must be string, not '{trunc 200 (typeName w name)}'"
   match value with
   | none => pure ()
   | some v => dictSetAt rt slots name v
