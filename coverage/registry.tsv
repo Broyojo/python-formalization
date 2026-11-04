@@ -435,6 +435,7 @@ pyio-textio-c-tell-after-next-in-range	refuted	Modules/_io/textio.c	_io_TextIOWr
 pyio-stringio-init-read	proven	Lib/_pyio.py	StringIO.__init__,TextIOWrapper._configure,TextIOWrapper._get_decoder,TextIOWrapper.newlines,_io_StringIO___init___impl,_io_StringIO_newlines_get_impl
 pyio-stringio-newlines-twins	refuted	Lib/_pyio.py	TextIOWrapper.newlines,_io_StringIO_newlines_get_impl
 pyio-stringio-next-flush	proven	Lib/_pyio.py	TextIOWrapper.__next__,TextIOWrapper.flush
+pyio-stringio-seek-start-end	proven	Lib/_pyio.py	TextIOWrapper.seek
 pyio-nldec-chunks	proven	Lib/_pyio.py	IncrementalNewlineDecoder.decode,IncrementalNewlineDecoder.__init__
 pyio-nldec-state	proven	Lib/_pyio.py	IncrementalNewlineDecoder.getstate,IncrementalNewlineDecoder.setstate,IncrementalNewlineDecoder.reset
 pyio-bufferedreader-readinto-twins	refuted	Lib/_pyio.py	BufferedReader._readinto,BufferedIOBase.readinto

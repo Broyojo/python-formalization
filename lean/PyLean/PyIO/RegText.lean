@@ -4,6 +4,7 @@ import PyLean.PyIO.NewlineProps
 import PyLean.PyIO.TextTellStale
 import PyLean.PyIO.InitRead
 import PyLean.PyIO.TellNext
+import PyLean.PyIO.SeekStart
 
 /-! Registry entries for the argument and check-order differences of the BytesIO and
 StringIO twins (`PyIO/ArgTwins.lean`), and for TextIOWrapper, IncrementalNewlineDecoder,
@@ -109,6 +110,12 @@ def textEntries : List Entry := [
     source := "the bodies _pyio.py:2255-2257, :2409-2413, :2629-2636; Doc/library/io.rst (TextIOWrapper: 'tell() ... disabled during iteration')"
     status := .proven, prop := ``StringIONextFlush, thm := some ``stringIONextFlush_proven
     notes := "Smoke-tested on 3.15.2: 20000 random streams, all newline modes, reads before next(); every outcome as stated. Over every state, not only reachable ones; what tell() then returns after next() and flush() is the stale-snapshot case of pyio-textio-c-tell-after-next-in-range (C) and an AssertionError in _pyio." },
+  { id := "pyio-stringio-seek-start-end", pyFile := "Lib/_pyio.py"
+    pyFns := ["TextIOWrapper.seek"]
+    statement := "On every open _pyio.StringIO state, seek(0) returns 0 and a following read() returns getvalue(); seek(0, 2) returns the buffer's length and a following read() returns ''; seek refuses a closed stream with ValueError('tell on closed file'), a nonzero offset with whence 1 or 2 with UnsupportedOperation, another whence with ValueError('unsupported whence (w)') and a negative cookie with ValueError('negative seek position c'), each changing nothing."
+    source := "Doc/library/io.rst (TextIOBase.seek: 'seek(0, SEEK_END)', 'cookie ... previously returned by tell()'); the body _pyio.py:2522-2576"
+    status := .proven, prop := ``StringIOSeekStartEnd, thm := some ``stringIOSeekStartEnd_proven
+    notes := "Smoke-tested on 3.15.2: 20000 random streams after random reads, writes, next() and seeks, all newline modes. Scope: the cookie 0 and end branches; a cookie that replays chars_to_skip (:2577-2595) is not covered here, so the seek row stays open. seek(0, 2) returns a byte offset in the UTF-8 buffer (bugs/pyio-stringio-pyio-byte-positions.yaml)." },
   { id := "pyio-nldec-chunks", pyFile := "Lib/_pyio.py"
     pyFns := ["IncrementalNewlineDecoder.decode", "IncrementalNewlineDecoder.__init__"]
     statement := "For _pyio.IncrementalNewlineDecoder(None, translate) and every split of a text into chunks, decoded with final=False and then decode('', final=True): the outputs concatenate to the text with \\r\\n and \\r translated to \\n when translate is set, and to the text itself otherwise; the recorded newline kinds are exactly those of the whole text, so a \\r\\n cut between two chunks counts as \\r\\n and never as \\r and \\n; nothing is left pending."
