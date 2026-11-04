@@ -54,7 +54,7 @@ possible_fix: |
   Leave C as is and have _wrap_strftime use the tzinfo directly, or document the difference.
 reproduces:
   python3 (3.15.2): REPRODUCED (C ('||', ''), Python ('+0500|+05:00|FIVE', '+0500'))
-  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (same output)
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same output)
 duplicates:
   issues: []
   queries: ["gh search issues: strftime subclass utcoffset override", "strftime %z subclass utcoffset",

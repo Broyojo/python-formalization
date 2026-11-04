@@ -26,9 +26,14 @@ summary: |
   _pydatetime has no crash: `self - offset` goes through type(self).combine(...) and the next
   attribute access (`.year`, `.replace`) raises AttributeError or reads the object's own
   attributes.
-  Same root cause as gh-145166 (open; tzinfo_fromutc only). Its open PR #145181 adds a
-  PyDateTime_Check to add_datetime_timedelta itself, which would cover both callers here; the
-  PR's tests and NEWS entry name fromutc and utctimetuple, not astimezone.
+  Same root cause as gh-145166 (open; tzinfo_fromutc only). Its open PR #145181 (current diff,
+  last updated 2026-09-22, read 2026-11-04) adds a PyDateTime_Check to add_datetime_timedelta
+  itself, so it fixes every caller that reads the result as a struct (tzinfo_fromutc, astimezone,
+  utctimetuple); its tests and NEWS entry name fromutc and utctimetuple only, so astimezone is
+  the one caller new relative to the PR. This belongs upstream as an addition to gh-145166 (a
+  test for astimezone in PR #145181), not as a separate issue. A related astimezone defect the
+  PR does not fix (a subclass returning an existing instance is mutated in place) is
+  datetime-astimezone-mutates-subclass-result.
 likelihood: |
   Low: needs a datetime subclass whose __new__ returns a non-datetime for the 8-argument call.
   Such classes exist (proxy/wrapper classes, ORMs returning their own objects from __new__),
@@ -78,13 +83,14 @@ reproduces:
 duplicates:
   issues:
     - {number: 145166, state: open, relation: same root cause, reason: reports only tzinfo_fromutc; astimezone is not mentioned}
-    - {number: 145181, state: open (PR), relation: fix candidate, reason: adds PyDateTime_Check in add_datetime_timedelta, which covers astimezone and utctimetuple; tests cover fromutc and utctimetuple only}
+    - {number: 145181, state: open (PR), relation: fix candidate, reason: adds PyDateTime_Check in add_datetime_timedelta, which covers every struct-reading caller (fromutc, astimezone, utctimetuple); tests cover fromutc and utctimetuple only, so astimezone is the addition}
     - {number: 64570, state: closed, relation: unrelated, reason: replace bypassing __new__ (2014)}
   queries: ["gh search issues: astimezone subclass __new__ crash", "datetime subclass __new__ returns non-datetime",
             "utctimetuple subclass new", "astimezone segfault", "datetime subclass type confusion",
             "add_datetime_timedelta subclass", "datetime __new__ returns bytearray", "astimezone type confusion",
             "datetime subclass new returns different type crash", "gh search prs: 145166",
-            "bugforge-results/README.md: no astimezone/utctimetuple entry"]
+            "bugforge-results/README.md: no astimezone/utctimetuple entry",
+            "gh pr view 145181 / gh pr diff 145181 (2026-11-04): add_datetime_timedelta check, tests for fromutc and utctimetuple"]
 lean:
   property: PyLean.Datetime.AstimezoneObjDefined
   theorem: PyLean.Datetime.astimezoneObjDefined_refuted

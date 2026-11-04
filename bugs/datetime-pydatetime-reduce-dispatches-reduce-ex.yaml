@@ -57,7 +57,7 @@ possible_fix: |
   _pydatetime could return `(self.__class__, self._getstate(2))` as C does.
 reproduces:
   python3 (3.15.2): REPRODUCED (C ('T', 'pickled'), Python ('str', 'RecursionError'))
-  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (same output)
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same output)
 duplicates:
   issues: []
   queries: ["gh search issues: pydatetime __reduce__ __reduce_ex__ subclass", "datetime __reduce__ subclass override",
