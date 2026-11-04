@@ -344,11 +344,16 @@ def _MAYBE_EXPAND_METHOD (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) f
 def withSelf (self : Val) (args : List Val) : List Val :=
   if self != .null then self :: args else args
 
-/-- `_PyEvalFramePushAndInit` from a call site. -/
-def pushInit (e : Env) (callable : Val) (args : List Val) (kw : List String) : BM Frame := do
+/-- `_PyEvalFramePushAndInit` from a call site, with the keyword objects of `kwnames`. -/
+def pushInitV (e : Env) (callable : Val) (args : List Val) (kw : List Val) : BM Frame := do
   let func ← (getFunc callable : RM _)
   let co ← (getCodeR e.P func.code : RM _)
-  (framePushAndInit e.P callable (localsFor co func) args kw : RM _)
+  (framePushAndInit e.P (kwHooksOf e.om e.ctx) callable (localsFor co func) args kw : RM _)
+
+/-- `_PyEvalFramePushAndInit` from a call site whose `kwnames` is a tuple of exact `str`
+(`CALL`, `CALL_KW`: the compiler's constant tuple). -/
+def pushInit (e : Env) (callable : Val) (args : List Val) (kw : List String) : BM Frame :=
+  pushInitV e callable args (kw.map Val.str)
 
 /-- `:4386`. -/
 def _DO_CALL (e : Env) : M Unit := do
@@ -591,7 +596,7 @@ def _CREATE_INIT_FRAME (e : Env) : M Frame := do
   match ins with
   | init :: self :: args => do
     let nf ← BM.lift do
-      (framePushAndInit e.P init .null (self :: args) [] : RM _)
+      (framePushAndInit e.P (kwHooksOf e.om e.ctx) init .null (self :: args) [] : RM _)
     -- `frame->return_offset` belongs to the caller
     BM.lift (setReturnOffset (1 + 3))
     let shim : Frame := { code := initCleanupIdx, stack := [self], owner := .thread }
@@ -954,10 +959,7 @@ def _MAKE_CALLARGS_A_TUPLE (e : Env) : M Unit := stkK 4 4 fun
 
 /-- The keyword name a `_PyStack_UnpackDict` key stands for, when its type has
 `Py_TPFLAGS_UNICODE_SUBCLASS` (`Objects/call.c:1059-1061`): an exact `str`, or an instance of a
-`str` subclass, whose `str` payload is `base`. `none` for every other key. Scope limit: the model
-then matches and stores the keyword by that payload, so a subclass overriding `__eq__` (which
-`initialize_locals`' slow loop calls, `Python/ceval.c:1832`) and the subclass key object itself
-inside a `**kwargs` dict (`:1882`) are not modelled. -/
+`str` subclass, whose `str` payload is `base`. `none` for every other key. -/
 def kwKeyName (rt : Rt) : Val → Option String
   | .str s => some s
   | .ref a =>
@@ -969,17 +971,18 @@ def kwKeyName (rt : Rt) : Val → Option String
     | _ => none
   | _ => none
 
-/-- `_PyStack_UnpackDict` (`Objects/call.c:1013-1080`): names and values of a kwargs dict, in
-`PyDict_Next` order. `keys_are_strings &= Py_TYPE(key)->tp_flags` over every key, checked once
-after the loop (`:1059-1078`): any key whose type lacks `Py_TPFLAGS_UNICODE_SUBCLASS` gives
-`TypeError("keywords must be strings")`. The loop runs no Python code. -/
-def unpackKwargs : Val → RM (List String × List Val)
+/-- `_PyStack_UnpackDict` (`Objects/call.c:1013-1080`): the key objects (the new `kwnames`
+tuple) and values of a kwargs dict, in `PyDict_Next` order. `keys_are_strings &=
+Py_TYPE(key)->tp_flags` over every key, checked once after the loop (`:1059-1078`): any key whose
+type lacks `Py_TPFLAGS_UNICODE_SUBCLASS` gives `TypeError("keywords must be strings")`. The loop
+runs no Python code; a `str` subclass key stays the object it is. -/
+def unpackKwargs : Val → RM (List Val × List Val)
   | .null => pure ([], [])
   | dv => do
     let d ← getDict dv
     let rt ← get
     if d.entries.toList.all fun en => (kwKeyName rt en.key).isSome then
-      pure (d.entries.toList.filterMap (kwKeyName rt ·.key), d.entries.toList.map (·.value))
+      pure (d.entries.toList.map (·.key), d.entries.toList.map (·.value))
     else typeError "keywords must be strings"
 
 /-- `:5637`. -/
@@ -992,7 +995,7 @@ def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
       let nf ← BM.lift do
         let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
         let pos ← (tupleItems callargs : RM _)
-        pushInit e func (pos.toList ++ kwvals) kw
+        pushInitV e func (pos.toList ++ kwvals) kw
       BM.lift (setReturnOffset (instrSize e.opcode))
       dispatchInlined nf
     else
@@ -1016,7 +1019,7 @@ def _PY_FRAME_EX (e : Env) : M Frame := do
   | [func, _, callargs, kwargs] => BM.lift do
     let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
     let pos ← (tupleItems callargs : RM _)
-    pushInit e func (pos.toList ++ kwvals) kw
+    pushInitV e func (pos.toList ++ kwvals) kw
   | _ => fault "arity"
 /-- The uops of `CALL_EX_PY` after `_MAKE_CALLARGS_A_TUPLE` (`:5763-5771`). -/
 def CALL_EX_PY_TAIL (e : Env) : M Unit := do

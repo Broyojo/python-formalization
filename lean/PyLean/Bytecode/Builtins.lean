@@ -2142,7 +2142,10 @@ def callDictImpl (f callargs kwargs : Val) : RM Val := do
     | none => typeError s!"'{← tpName f}' object is not callable"
   | none =>
     let (kw, kwvals) ← unpackKwargs kwargs
-    om.call ctx f (pos ++ kwvals) kw
+    -- `PyObject_Vectorcall` takes the names as text here (`ObjModel.call`); the key objects
+    -- themselves reach `initialize_locals` through `CALL_FUNCTION_EX`'s inlined path.
+    let rt ← get
+    om.call ctx f (pos ++ kwvals) (kw.map fun k => (kwKeyName rt k).getD "")
 
 /-- `PyObject_LengthHint(o, defaultvalue)`, `Objects/abstract.c:95-152`. `_PyObject_HasLen` is
 asked through `PyObject_Length` itself: a type with no `__len__` raises `TypeError`, which the hint

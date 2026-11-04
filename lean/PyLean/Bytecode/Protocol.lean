@@ -285,7 +285,7 @@ variable (P : Program) (om : ObjModel) (ctx : Ctx)
 
 /-- `_PyEval_Vector`, `Python/ceval.c:2139-2183`. -/
 def evalVector (f : Val) (locals : Val) (args : List Val) (kw : List String) : RM Val := do
-  let nf ← framePushAndInit P f locals args kw
+  let nf ← framePushAndInit P strKwHooks f locals args (kw.map Val.str)
   ctx.evalFrame nf none
 
 /-- Call a function (or anything) with positional args. -/
