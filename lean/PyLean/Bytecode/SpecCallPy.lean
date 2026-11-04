@@ -167,37 +167,6 @@ theorem kr_dictGetStr (dv : Val) (name : String) : KeepsRec (dictGetStr dv name)
   exact kr_bind (kr_getDict _) fun d => kr_bind (kr_dictFind _ _ _) fun o => by
     split <;> exact kr_pure _
 
-theorem kr_posonly (co : Code) (kwnames : List String) (q : String) :
-    KeepsRec (posonlyPassedAsKeyword co kwnames q) := by
-  unfold posonlyPassedAsKeyword
-  dsimp only
-  exact kr_ite (kr_typeError _) (kr_pure _)
-
-theorem kr_unexpectedKeyword {α : Type} (co : Code) (q k : String) :
-    KeepsRec (unexpectedKeyword (α := α) co q k) := by
-  unfold unexpectedKeyword
-  split <;> exact kr_typeError _
-
-theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List String) :
-    ∀ (kws : List (String × Val)) (fast : Array Val), KeepsRec (bindKeywords co func kwdict kwnames kws fast) := by
-  intro kws
-  induction kws with
-  | nil => intro fast; exact kr_pure _
-  | cons kv rest ih =>
-    intro fast
-    obtain ⟨k, v⟩ := kv
-    simp only [bindKeywords]
-    split
-    · apply kr_ite
-      · exact kr_bind (kr_typeError _) fun _ => ih _
-      · exact ih _
-    · apply kr_ite
-      · apply kr_ite
-        · exact kr_bind (kr_posonly _ _ _) fun _ => kr_bind (kr_unexpectedKeyword _ _ _) fun _ =>
-            kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
-        · exact kr_bind (kr_unexpectedKeyword _ _ _) fun _ => kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
-      · exact kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
-
 theorem kr_forIn {β σ : Type} (l : List β) (f : β → σ → RM (ForInStep σ)) (hf : ∀ x b, KeepsRec (f x b)) :
     ∀ init, KeepsRec (forIn l init f) := by
   induction l with
@@ -221,10 +190,112 @@ theorem kr_missingArguments {α : Type} (co : Code) (d : Option Nat) (fast : Arr
   dsimp only
   split <;> exact kr_typeError _
 
+theorem kr_keepRecursion {α : Type} (m : RM α) : KeepsRec (keepRecursion m) := by
+  intro rt a rt' h
+  simp only [keepRecursion] at h
+  split at h
+  · cases h; rfl
+  · cases h
+
+/-- The keyword hooks give the recursion counter back, as every call into Python code does. -/
+def HooksKeepRec (hk : KwHooks) : Prop :=
+  (∀ a b, KeepsRec (hk.eq a b)) ∧ (∀ o, KeepsRec (hk.str o)) ∧ (∀ d k v, KeepsRec (hk.setItem d k v))
+
+theorem kwHooksOf_keepRec (om : ObjModel) (ctx : Ctx) : HooksKeepRec (kwHooksOf om ctx) :=
+  ⟨fun _ _ => kr_keepRecursion _, fun _ => kr_keepRecursion _, fun _ _ _ => kr_keepRecursion _⟩
+
+theorem kr_get : KeepsRec (get : RM Rt) := by
+  intro rt a rt' h
+  simp only [get, getThe, MonadStateOf.get, EStateM.get, EStateM.Result.ok.injEq] at h
+  rw [← h.2]
+
+section
+variable {hk : KwHooks} (hh : HooksKeepRec hk)
+include hh
+
+theorem kr_posonlyHits (n : String) : ∀ l : List Val, KeepsRec (posonlyHits hk n l) := by
+  intro l
+  induction l with
+  | nil => exact kr_pure _
+  | cons kw rest ih =>
+    simp only [posonlyHits]
+    split
+    · exact kr_bind (kr_pure _) fun _ => kr_bind ih fun _ => kr_pure _
+    · exact kr_bind (hh.1 _ _) fun _ => kr_bind ih fun _ => kr_pure _
+
+theorem kr_posonlyConflicts (kwnames : List Val) :
+    ∀ names : List String, KeepsRec (posonlyConflicts hk kwnames names) := by
+  intro names
+  induction names with
+  | nil => exact kr_pure _
+  | cons n ns ih =>
+    simp only [posonlyConflicts]
+    exact kr_bind (kr_posonlyHits hh _ _) fun _ => kr_bind ih fun _ => kr_pure _
+
+theorem kr_posonly (co : Code) (kwnames : List Val) (q : String) :
+    KeepsRec (posonlyPassedAsKeyword hk co kwnames q) := by
+  unfold posonlyPassedAsKeyword
+  exact kr_bind (kr_posonlyConflicts hh _ _) fun _ =>
+    kr_ite (kr_bind kr_get fun _ => kr_typeError _) (kr_pure _)
+
+theorem kr_kwSlotSlow (co : Code) (k : Val) : ∀ l : List Nat, KeepsRec (kwSlotSlow hk co k l) := by
+  intro l
+  induction l with
+  | nil => exact kr_pure _
+  | cons j js ih =>
+    simp only [kwSlotSlow]
+    exact kr_bind (hh.1 _ _) fun _ => kr_ite (kr_pure _) ih
+
+theorem kr_findKwSlot (co : Code) (k : Val) : KeepsRec (findKwSlot hk co k) := by
+  unfold findKwSlot
+  split
+  · exact kr_pure _
+  · exact kr_kwSlotSlow hh _ _ _
+
+theorem kr_fmtKw (k : Val) : KeepsRec (fmtKw hk k) := by
+  unfold fmtKw
+  split
+  · exact kr_pure _
+  · exact hh.2.1 _
+
+theorem kr_unexpectedKeyword {α : Type} (co : Code) (q : String) (k : Val) :
+    KeepsRec (unexpectedKeyword (α := α) hk co q k) := by
+  unfold unexpectedKeyword
+  exact kr_bind kr_get fun _ => kr_bind (kr_fmtKw hh _) fun _ => by
+    split <;> exact kr_typeError _
+
+theorem kr_bindKeywords (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List Val) :
+    ∀ (kws : List (Val × Val)) (fast : Array Val),
+      KeepsRec (bindKeywords hk co funcv kwdict kwnames kws fast) := by
+  intro kws
+  induction kws with
+  | nil => intro fast; exact kr_pure _
+  | cons kv rest ih =>
+    intro fast
+    obtain ⟨k, v⟩ := kv
+    simp only [bindKeywords]
+    refine kr_bind kr_get fun _ => ?_
+    repeat (first
+      | exact kr_pure _
+      | exact kr_typeError _
+      | exact ih _
+      | exact kr_findKwSlot hh _ _
+      | exact kr_getFunc _
+      | exact kr_fmtKw hh _
+      | exact kr_posonly hh _ _ _
+      | exact kr_unexpectedKeyword hh _ _ _
+      | exact kr_dictSetStr _ _ _
+      | exact hh.2.2 _ _ _
+      | refine kr_bind ?_ (fun _ => ?_)
+      | refine kr_ite ?_ ?_
+      | split)
+
+end
+
 /-- Walk a monadic body made of the primitives above, matching only up to reducible unfolding. -/
-syntax "kr_auto" : tactic
+syntax "kr_auto" term : tactic
 macro_rules
-  | `(tactic| kr_auto) => `(tactic| repeat (first
+  | `(tactic| kr_auto $hh) => `(tactic| repeat (first
       | with_reducible exact kr_pure _
       | with_reducible exact kr_typeError _
       | with_reducible exact kr_fault _
@@ -232,8 +303,8 @@ macro_rules
       | with_reducible exact kr_mkTuple _
       | with_reducible exact kr_tupleItems _
       | with_reducible exact kr_dictGetStr _ _
-      | with_reducible exact kr_posonly _ _ _
-      | with_reducible exact kr_bindKeywords _ _ _ _ _ _
+      | with_reducible exact kr_bindKeywords $hh _ _ _ _ _ _
+      | with_reducible exact kr_getFunc _
       | with_reducible exact kr_tooManyPositional _ _ _ _ _
       | with_reducible exact kr_missingArguments _ _ _ _
       | with_reducible refine kr_bind ?_ (fun _ => ?_)
@@ -242,25 +313,26 @@ macro_rules
       | split))
 
 set_option maxHeartbeats 2000000 in
-theorem kr_initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val) (args : List Val)
-    (kwargs : List (String × Val)) : KeepsRec (initializeLocals co func fast0 args kwargs) := by
+theorem kr_initializeLocals {hk : KwHooks} (hh : HooksKeepRec hk) (co : Code) (funcv : Val)
+    (fast0 : Array Val) (args : List Val) (kwargs : List (Val × Val)) :
+    KeepsRec (initializeLocals hk co funcv fast0 args kwargs) := by
   unfold initializeLocals
   dsimp only
-  kr_auto
+  kr_auto hh
 
-theorem kr_framePushAndInit (P : Program) (funcv locals : Val) (args : List Val) (kw : List String) :
-    KeepsRec (framePushAndInit P funcv locals args kw) := by
+theorem kr_framePushAndInit {hk : KwHooks} (hh : HooksKeepRec hk) (P : Program) (funcv locals : Val)
+    (args : List Val) (kw : List Val) : KeepsRec (framePushAndInit P hk funcv locals args kw) := by
   unfold framePushAndInit
   exact kr_bind (kr_getFunc _) fun func => kr_bind (kr_getCodeR _ _) fun co => by
     dsimp only
-    exact kr_bind (kr_initializeLocals _ _ _ _ _) fun _ => kr_pure _
+    exact kr_bind (kr_initializeLocals hh _ _ _ _ _) fun _ => kr_pure _
 
-/-- `pushInit` (`_PyEvalFramePushAndInit` from a call site) changes nothing but the runtime, and
+/-- `pushInitV` (`_PyEvalFramePushAndInit` from a call site) changes nothing but the runtime, and
 leaves its recursion counter as it was. -/
-theorem pushInit_ok (e : Env) (c : Val) (args : List Val) (kw : List String) (regs : Regs) (nf : Frame) (r : Regs)
-    (h : pushInit e c args kw regs = .ok nf r) :
+theorem pushInitV_ok (e : Env) (c : Val) (args : List Val) (kw : List Val) (regs : Regs) (nf : Frame) (r : Regs)
+    (h : pushInitV e c args kw regs = .ok nf r) :
     r = { regs with rt := r.rt } ∧ r.rt.pyRecursionRemaining = regs.rt.pyRecursionRemaining := by
-  simp only [pushInit, bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift] at h
+  simp only [pushInitV, bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift] at h
   split at h
   · rename_i func r1 h1
     split at h1
@@ -275,13 +347,19 @@ theorem pushInit_ok (e : Env) (c : Val) (args : List Val) (kw : List String) (re
           · rename_i nf' rt3 hf
             cases h
             refine ⟨rfl, ?_⟩
-            exact ((kr_framePushAndInit _ _ _ _ _ _ _ _ hf).trans (kr_getCodeR _ _ _ _ _ hc)).trans
-              (kr_getFunc _ _ _ _ hg)
+            exact ((kr_framePushAndInit (kwHooksOf_keepRec _ _) _ _ _ _ _ _ _ _ hf).trans
+              (kr_getCodeR _ _ _ _ _ hc)).trans (kr_getFunc _ _ _ _ hg)
           · cases h
         · cases h2
       · cases h
     · cases h1
   · cases h
+
+/-- `pushInit` changes nothing but the runtime, and leaves its recursion counter as it was. -/
+theorem pushInit_ok (e : Env) (c : Val) (args : List Val) (kw : List String) (regs : Regs) (nf : Frame) (r : Regs)
+    (h : pushInit e c args kw regs = .ok nf r) :
+    r = { regs with rt := r.rt } ∧ r.rt.pyRecursionRemaining = regs.rt.pyRecursionRemaining :=
+  pushInitV_ok e c args _ regs nf r h
 
 /-! ## Entering the callee: `_PUSH_FRAME` and `DISPATCH_INLINED` -/
 
@@ -822,7 +900,7 @@ theorem getDict_rt (v : Val) (rt : Rt) (d : DictObj) (rt' : Rt) (h : getDict v r
       exact h.2.symm
   | _ => simp [getDict, fault, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw] at h
 
-theorem unpackKwargs_rt (kw : Val) (rt : Rt) (p : List String × List Val) (rt' : Rt)
+theorem unpackKwargs_rt (kw : Val) (rt : Rt) (p : List Val × List Val) (rt' : Rt)
     (h : unpackKwargs kw rt = .ok p rt') : rt' = rt := by
   cases kw with
   | null => simp [unpackKwargs, pure, EStateM.pure] at h; exact h.2.symm
@@ -879,9 +957,9 @@ theorem pyFrameEx_kwerr (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List V
   simp [_PY_FRAME_EX, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, hu, liftM, monadLift, MonadLift.monadLift]
 
 theorem pyFrameEx_ok (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (t : Addr) (items : Array Val)
-    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List String) (vals : List Val)
+    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List Val) (vals : List Val)
     (hu : unpackKwargs kw regs.rt = .ok (names, vals) regs.rt) (nf : Frame) (r : Regs)
-    (hp : pushInit e f (items.toList ++ vals) names regs = .ok nf r) :
+    (hp : pushInitV e f (items.toList ++ vals) names regs = .ok nf r) :
     _PY_FRAME_EX e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok nf ⟨r, rest⟩ := by
   subst hct
   have hreg : ({ rt := regs.rt, frame := regs.frame, prev := regs.prev, next := regs.next } : Regs) = regs := rfl
@@ -889,9 +967,9 @@ theorem pyFrameEx_ok (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val)
     MonadLift.monadLift, tupleItems, getObj, ht, pure, EStateM.pure, hreg, hp]
 
 theorem pyFrameEx_err (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (t : Addr) (items : Array Val)
-    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List String) (vals : List Val)
+    (hct : ca = .ref t) (ht : regs.rt.heap[t]? = some (.tuple items)) (names : List Val) (vals : List Val)
     (hu : unpackKwargs kw regs.rt = .ok (names, vals) regs.rt) (x : Err) (r : Regs)
-    (hp : pushInit e f (items.toList ++ vals) names regs = .error x r) :
+    (hp : pushInitV e f (items.toList ++ vals) names regs = .error x r) :
     _PY_FRAME_EX e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩ := by
   subst hct
   have hreg : ({ rt := regs.rt, frame := regs.frame, prev := regs.prev, next := regs.next } : Regs) = regs := rfl
@@ -950,9 +1028,9 @@ theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
       have hrt := unpackKwargs_rt kw regs.rt _ rt hu
       subst hrt
       have hg2 := hg.2 names vals hu
-      cases hpi : pushInit e f (items.toList ++ vals) names regs with
+      cases hpi : pushInitV e f (items.toList ++ vals) names regs with
       | ok nf r =>
-        obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hpi
+        obtain ⟨hr1, hr2⟩ := pushInitV_ok e _ _ _ regs nf r hpi
         have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
         have hspec : CALL_EX_PY_TAIL e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () (enteredSt e nf r rest) := by
           simp only [CALL_EX_PY_TAIL, bind, EStateM.bind, pure, EStateM.pure]
@@ -1023,12 +1101,13 @@ theorem zipIdx_fold (L : List Val) :
     have : j - k = (j - (k + 1)) + 1 := by omega
     rw [this, List.getD_cons_succ]
 
-theorem initializeLocals_simple (co : Code) (func : FuncObj) (fast0 : Array Val) (L : List Val) (rt : Rt)
+theorem initializeLocals_simple (hk : KwHooks) (co : Code) (funcv : Val) (func : FuncObj) (fast0 : Array Val)
+    (L : List Val) (rt : Rt) (hg : getFunc funcv rt = .ok func rt)
     (hs : SimpleCode co) (hl : L.length = co.argcount) :
-    initializeLocals co func fast0 L [] rt =
+    initializeLocals hk co funcv fast0 L [] rt =
       .ok ((List.range L.length).foldl (fun f j => f.setIfInBounds j (L.getD j .null)) fast0) rt := by
   obtain ⟨hk, hva, hvk, _⟩ := hs
-  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind]
+  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind, hg]
 
 /-- The frame `_INIT_CALL_PY_EXACT_ARGS` builds (`:4615-4626`): `_PyFrame_PushUnchecked` with `NULL`
 locals and the arguments (`self` first when not `NULL`) copied into the first locals. -/
@@ -1040,9 +1119,12 @@ theorem pushInit_simple (e : Env) (regs : Regs) (a : Addr) (fo : FuncObj) (co : 
     (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co) (hs : SimpleCode co)
     (hl : L.length = co.argcount) :
     pushInit e (.ref a) L [] regs = .ok (exactFrame co fo (.ref a) L) regs := by
-  have hli := initializeLocals_simple co fo (frameInitialize co fo.code fo (.ref a) (localsFor co fo)).fast L regs.rt hs hl
+  have hg : getFunc (.ref a) regs.rt = .ok fo regs.rt := by
+    simp [getFunc, getObj, ho, bind, EStateM.bind, pure, EStateM.pure]
+  have hli := initializeLocals_simple (kwHooksOf e.om e.ctx) co (.ref a) fo
+    (frameInitialize co fo.code fo (.ref a) (localsFor co fo)).fast L regs.rt hg hs hl
   have hloc : localsFor co fo = .null := by simp [localsFor, hs.2.2.2]
-  simp only [pushInit, framePushAndInit, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, RM.lift, liftM,
+  simp only [pushInit, pushInitV, List.map_nil, framePushAndInit, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, RM.lift, liftM,
     monadLift, MonadLift.monadLift, pure, EStateM.pure, List.length_nil, Nat.sub_zero, List.take_length,
     List.zip_nil_left]
   rw [hli]

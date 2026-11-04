@@ -236,18 +236,25 @@ async def _closed():
     pass
 
 
-class BadAw:
-    def __init__(self, k):
-        self.k = k
+class Outer:
+    """Nested, so that `%T` (Outer.BadAw) and `tp_name` (NoAw) differ in the messages of
+    _PyCoro_GetAwaitableIter."""
 
-    def __await__(self):
-        if self.k == 1:
-            c = _closed()
-            c.close()
-            return c
-        if self.k == 2:
-            return 3
-        raise ValueError("aw")
+    class BadAw:
+        def __init__(self, k):
+            self.k = k
+
+        def __await__(self):
+            if self.k == 1:
+                c = _closed()
+                c.close()
+                return c
+            if self.k == 2:
+                return 3
+            raise ValueError("aw")
+
+    class NoAw:
+        pass
 
 
 def mk(spec, ctx):
@@ -266,7 +273,7 @@ def mk(spec, ctx):
         C.keep.append(it)
         return it if ctx == "gen" else Aw(it)
     else:
-        o = 3 if spec[1] == 0 else BadAw(spec[1])
+        o = 3 if spec[1] == 0 else Outer.NoAw() if spec[1] == 4 else Outer.BadAw(spec[1])
     C.keep.append(o)
     return o
 
@@ -609,7 +616,7 @@ def gen_act(rng, kind, d):
                 return ["yf", ["s", gen_body(rng, "coro", d + 1)]]
             if k < 0.75:
                 return ["yf", ["c", gen_body(rng, "gen", d + 1)]]
-            return ["yf", ["bad", rng.randint(0, 3)]]
+            return ["yf", ["bad", rng.randint(0, 4)]]
         return ["yf", gen_foreign(rng, kind)]
     if x < 0.55:
         return ["ret", None if kind == "agen" or rng.random() < 0.4 else val]

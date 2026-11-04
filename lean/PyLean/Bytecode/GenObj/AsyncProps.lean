@@ -294,7 +294,7 @@ def athrowIterWorld : World Unit Unit :=
     ext := () }
 
 def yieldWrappedHooks : Hooks Unit Unit :=
-  { noopHooks with resume := fun w _ _ _ => (w, .yielded false (.wrapped .none) false .none) }
+  { noopHooks with resume := fun w _ _ _ => (w, .yielded false (.wrapped .none) InstrPtr.other .none) }
 
 theorem aThrowErrorCloses_refuted : ¬ AThrowErrorCloses := by
   intro hp

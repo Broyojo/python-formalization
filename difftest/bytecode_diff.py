@@ -257,6 +257,20 @@ def p_binding(r):
              "f(ab=1, abc=2)", "f(1, 2, abcd=3)", "f(c=1)", "f(1, c=1)", "f(1, b=2, c=3)", "f(xx=1)",
              "f(1, 2, c=3, d=4)", "f(**{'abc': 1})", "f(1, **{'bta': 2})", "f(1, zz=2, yy=3)",
              "f(alpha=1, beta=2, gamma=3)", "f(beta=1)", "f(1, y=2, z=3)", "f(1, z=2)"]
+    if r.random() < 0.4:
+        # A str subclass key from a ** mapping: initialize_locals compares it with
+        # PyObject_RichCompareBool (Python/ceval.c:1697, :1832), running this __eq__.
+        # the last two run Python code that changes the function mid-binding: C reads
+        # func_defaults and func_qualname again after the keyword loop
+        mode = r.choice(["True", "False", "str.__eq__(self, o)", "1 // 0", "o == 'abc'", "[]", "[1]",
+                         "setattr(f, '__defaults__', (8, 9, 10)) or str.__eq__(self, o)",
+                         "setattr(f, '__qualname__', 'g') or str.__eq__(self, o)"])
+        out.append(f"class S(str):\n    def __eq__(self, o):\n        return {mode}\n"
+                   "    def __hash__(self):\n        return hash(str(self))")
+        calls = calls + ["f(**{S('zz'): 1})", "f(1, **{S('abc'): 2})", "f(**{S('abc'): 1})",
+                         "f(1, **{S('defg'): 2})", "f(1, **{S('xx'): 2})", "f(1, 2, 3, **{S('zz'): 2})",
+                         "f(**{S('a'): 1, 'b': 2})", "f(1, **{S('kw'): 3})", "f(**{S('ab'): 1})",
+                         "f(1, **{S('c'): 2})"]
     for c in r.sample(calls, r.randint(3, 8)):
         out.append(guarded(f"print({c})"))
     return "\n".join(out)

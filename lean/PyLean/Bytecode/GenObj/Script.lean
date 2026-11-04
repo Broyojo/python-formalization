@@ -76,7 +76,8 @@ mutual
     | iterCoro (body : List Act)
     | foreign (spec : FSpec)
     /-- `await` of an awaitable that misbehaves: 0 `int`, 1 `__await__` returns a
-    coroutine, 2 `__await__` returns an int, 3 `__await__` raises. -/
+    coroutine, 2 `__await__` returns an int, 3 `__await__` raises, 4 no `__await__`. Kinds 1-3
+    are instances of the nested class `Outer.BadAw`, kind 4 of `Outer.NoAw`. -/
     | badAwait (k : Nat)
 end
 
@@ -367,7 +368,8 @@ def runK (h : H) (n : Nat) : Nat → W → Ref → Mode → List K → W × Resu
     | .send recv v, k' =>
       let (w1, res) := doSend h w recv v
       match res with
-      | .ok y => (setFrame w1 r (.sending recv :: k'), .yielded true y false recv)
+      | .ok y => (setFrame w1 r (.sending recv :: k'),
+          .yielded true y { opcode := RESUME, oparg := 2 } recv)
       | .err e =>
         match fetchStopIterationValue e with
         | .ok val => runK h n s (log w1 ("yf:" ++ renderObj val)) r .run k'
@@ -381,7 +383,7 @@ def runK (h : H) (n : Nat) : Nat → W → Ref → Mode → List K → W × Resu
         let value : O := match kind with
           | .asyncGen => .wrapped (.other (.int v))
           | _ => .other (.int v)
-        (setFrame w r (.recv :: k1), .yielded false value (depth1 k1) .none)
+        (setFrame w r (.recv :: k1), .yielded false value (InstrPtr.resumeAfterYield (depth1 k1)) .none)
       | .yldFrom sub =>
         match startSub h w kind sub with
         | (w1, .ok recv) => runK h n s w1 r (.send recv .none) k1
@@ -418,7 +420,7 @@ def stepFuel : Nat := 400
 /-- The `resume` of a script frame. -/
 def runFrame (h : H) (n : Nat) (w : W) (r : Ref) (arg : O) (thrown : Option (Exc SV)) :
     W × ResumeOutcome SV :=
-  let w0 := w.set r { w.get r with instr := .other }
+  let w0 := w.set r { w.get r with instr := InstrPtr.other }
   let k := w.ext.frames r
   match thrown, k with
   | some e, .sending _ :: k' =>
@@ -457,9 +459,14 @@ def typeNameOf : O → String
   | .excInst _ c _ _ => c
   | .other (.int _) => "int"
   | .other (.foreign _) => "It"
-  | .other (.awaitable _ _) => "BadAw"
+  | .other (.awaitable _ k) => if k = 4 then "NoAw" else "BadAw"
   | .other (.meth _ _) => "method"
   | .other (.junk t) => t
+
+/-- `%T`: the difftest runs as `__main__`, so no module prefix. -/
+def typeFqNameOf : O → String
+  | .other (.awaitable _ k) => if k = 4 then "Outer.NoAw" else "Outer.BadAw"
+  | o => typeNameOf o
 
 def baseHooks : H where
   resume w _ _ _ := (w, .raised Exc.fuel)
@@ -474,6 +481,7 @@ def baseHooks : H where
   warnUnawaitedAgen w _ _ := w
   normalize := normalize
   typeName := typeNameOf
+  typeFqName := typeFqNameOf
   audit _ _ := none
   frameObject _ _ := .other (.junk "frame")
   isIter _ := false
@@ -561,6 +569,7 @@ def scriptHooks (inner : H) (n : Nat) : H :=
         let (w1, r) := allocGen w .coro []
         some (w1, .ok (.gen r))
       | .other (.awaitable _ 2) => some (w, .ok (.other (.int 3)))
+      | .other (.awaitable _ 4) => none
       | .other (.awaitable _ _) => some (w, .err (some (raised "ValueError" "aw")))
       | _ => none }
 

@@ -147,13 +147,38 @@ structure Code where
 
 def Code.hasFlag (c : Code) (flag : Nat) : Bool := c.flags &&& flag != 0
 
-/-- Where `frame->instr_ptr` points, as far as `is_resume` (:451-461) and the
-`RESUME_OPARG_DEPTH1_MASK` test (:504-505) can tell. `is_resume` accepts `RESUME`,
-`RESUME_CHECK`, `RESUME_CHECK_JIT` and `INSTRUMENTED_RESUME`; `depth1` is the mask bit. -/
-inductive InstrPtr where
-  | resume (depth1 : Bool)
-  | other
+/-- The opcodes `is_resume` (:452-461) accepts, `Include/opcode_ids.h:133`, `:205-206`, `:235`. -/
+def RESUME : Nat := 128
+def RESUME_CHECK : Nat := 200
+def RESUME_CHECK_JIT : Nat := 201
+def INSTRUMENTED_RESUME : Nat := 244
+/-- `RESUME_OPARG_DEPTH1_MASK`, `Include/internal/pycore_opcode_utils.h:93`. -/
+def RESUME_OPARG_DEPTH1_MASK : Nat := 0x8
+/-- `RESUME_AFTER_YIELD`, `pycore_opcode_utils.h:87`. -/
+def RESUME_AFTER_YIELD : Nat := 1
+
+/-- The code unit `frame->instr_ptr` points at: its opcode and oparg, all that `is_resume`
+(:452-461) and the `RESUME_OPARG_DEPTH1_MASK` test (:504-505) read. -/
+structure InstrPtr where
+  opcode : Nat := 0
+  oparg : Nat := 0
   deriving DecidableEq, Repr, Inhabited
+
+/-- `is_resume`, :452-461: the four `RESUME` opcodes, compared one by one. -/
+def InstrPtr.isResume (i : InstrPtr) : Bool :=
+  i.opcode == RESUME || i.opcode == RESUME_CHECK || i.opcode == RESUME_CHECK_JIT ||
+    i.opcode == INSTRUMENTED_RESUME
+
+/-- `oparg & RESUME_OPARG_DEPTH1_MASK` (:504-505). -/
+def InstrPtr.depth1 (i : InstrPtr) : Bool := i.oparg &&& RESUME_OPARG_DEPTH1_MASK != 0
+
+/-- A code unit that is not a `RESUME` (opcode 0 is `CACHE`). -/
+def InstrPtr.other : InstrPtr := {}
+
+/-- `RESUME` after a `yield` (`RESUME_AFTER_YIELD`), with the depth-1 bit `d`, as
+`Python/flowgraph.c:969-977` emits it. -/
+def InstrPtr.resumeAfterYield (d : Bool) : InstrPtr :=
+  { opcode := RESUME, oparg := RESUME_AFTER_YIELD ||| (if d then RESUME_OPARG_DEPTH1_MASK else 0) }
 
 /-- `PyGenObject`, with the `PyAsyncGenObject`/`PyCoroObject` tail. -/
 structure GenObj (V : Type) where
@@ -161,7 +186,7 @@ structure GenObj (V : Type) where
   /-- `gi_frame_state` -/
   state : FrameState := .cleared
   /-- `gi_iframe.instr_ptr` -/
-  instr : InstrPtr := .other
+  instr : InstrPtr := InstrPtr.other
   /-- `_PyFrame_StackPeek(frame, 2)`, meaningful when suspended in a `yield from`: the
   receiver, which on 3.15 lies under `index_or_null`. -/
   stackTop : Obj V := .none
@@ -261,10 +286,10 @@ end World
 
 /-- What `_PyEval_EvalFrame` left behind (:281). For `yielded`, `oparg` is
 `YIELD_VALUE`'s oparg (`false` is 0: `FRAME_SUSPENDED`, `true` is 1:
-`FRAME_SUSPENDED_YIELD_FROM`), `depth1` is `RESUME_OPARG_DEPTH1_MASK` of the
-`RESUME` that follows it, and `top` is what `_PyFrame_StackPeek` then sees. -/
+`FRAME_SUSPENDED_YIELD_FROM`), `next` is the code unit `frame->instr_ptr` then points at
+(the `RESUME` that follows the yield), and `top` is what `_PyFrame_StackPeek` then sees. -/
 inductive ResumeOutcome (V : Type) where
-  | yielded (oparg : Bool) (value : Obj V) (depth1 : Bool) (top : Obj V)
+  | yielded (oparg : Bool) (value : Obj V) (next : InstrPtr) (top : Obj V)
   | returned (value : Obj V)
   | raised (e : Exc V)
   deriving Inhabited
@@ -301,23 +326,27 @@ structure Hooks (V X : Type) where
   getThrow : World V X → Obj V → World V X × Except (Exc V) (Option (Obj V))
   /-- `_PyObject_CallNoArgs(meth)` (:441). -/
   callNoArgs : World V X → Obj V → World V X × Ret V
-  /-- `PyObject_CallOneArg` (:124, @3.14.7:1521). -/
+  /-- `PyObject_CallOneArg` (:124, :1693). -/
   callOneArg : World V X → Obj V → Obj V → World V X × Ret V
   /-- `PyObject_CallFunctionObjArgs(meth, typ, val, tb, NULL)` (:705). -/
   callThrow : World V X → Obj V → Obj V → Option (Obj V) → Option (Obj V) → World V X × Ret V
-  /-- `PyErr_FormatUnraisable` (:126, @3.14.7:132, @3.14.7:348). -/
+  /-- `PyErr_FormatUnraisable` (:126, :153, :437). -/
   unraisable : World V X → String → Exc V → World V X
-  /-- `PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1)` (:741, @3.14.7:1570): an exception
+  /-- `PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1)` (:741, :1742): an exception
   when warnings are errors. -/
   warn : World V X → String → World V X × Option (Exc V)
   /-- `_PyErr_WarnUnawaitedCoroutine` (:147). -/
   warnUnawaitedCoro : World V X → Ref → World V X
-  /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, @3.14.7:2343). -/
+  /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, :2533). -/
   warnUnawaitedAgen : World V X → Ref → String → World V X
   /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:488) for a class `typ`. -/
   normalize : Obj V → Option (Obj V) → Exc V
-  /-- `Py_TYPE(o)->tp_name`. -/
+  /-- `Py_TYPE(o)->tp_name`: for a class statement the bare `__name__`. -/
   typeName : Obj V → String
+  /-- `%T` of `PyErr_Format`: `_PyType_GetFullyQualifiedName(Py_TYPE(o), '.')`, the
+  `__qualname__` prefixed by `__module__` unless that is `builtins` or `__main__`
+  (`Objects/typeobject.c`). -/
+  typeFqName : Obj V → String
   /-- `PySys_Audit("object.__getattr__", "Os", gen, name)` (:956, @3.14.7:799). -/
   audit : World V X → String → Option (Exc V)
   /-- `_PyFrame_GetFrameObject` (:964). -/
@@ -326,6 +355,9 @@ structure Hooks (V X : Type) where
   isIter : Obj V → Bool
   /-- `ot->tp_as_async->am_await` (:1257-1261); `none` when there is no getter. -/
   amAwait : World V X → Obj V → Option (World V X × Ret V)
+  /-- `PyObject_ClearWeakRefs(o)` (`FT_CLEAR_WEAKREFS`, :212), which runs the callbacks of the
+  object's weak references. -/
+  clearWeakrefs : World V X → Obj V → World V X := fun w _ => w
 
 variable {V X : Type}
 
@@ -342,7 +374,7 @@ def cantSendMsg : GenKind → String
   | .coro => "can't send non-None value to a just-started coroutine"
   | .asyncGen => "can't send non-None value to a just-started async generator"
 
-/-- `gen_raise_already_executing_error`, :241-252. -/
+/-- `gen_raise_already_executing_error`, :242-252. -/
 def alreadyExecutingMsg : GenKind → String
   | .gen => "generator already executing"
   | .coro => "coroutine already executing"
@@ -359,10 +391,10 @@ def clearGenFrame (w : World V X) (r : Ref) : World V X :=
   w.setState r .cleared
 
 /-- What `_YIELD_VALUE` does to its generator, `Python/bytecodes.c:1856-1872`. -/
-def suspendFrame (w : World V X) (r : Ref) (oparg depth1 : Bool) (top : Obj V) : World V X :=
+def suspendFrame (w : World V X) (r : Ref) (oparg : Bool) (next : InstrPtr) (top : Obj V) : World V X :=
   w.set r { w.get r with
     state := FrameState.ofOparg oparg
-    instr := .resume depth1
+    instr := next
     stackTop := top }
 
 /-- The end of `gen_send_ex2`, :289-324, with the state write `_YIELD_VALUE` or
@@ -370,7 +402,7 @@ def suspendFrame (w : World V X) (r : Ref) (oparg depth1 : Bool) (top : Obj V) :
 of the two ran, and is here the shape of the outcome. -/
 def finishResume (w : World V X) (r : Ref) (kind : GenKind) (arg : Option (Obj V)) :
     ResumeOutcome V → World V X × SendResult V
-  | .yielded oparg v depth1 top => (suspendFrame w r oparg depth1 top, .next v)
+  | .yielded oparg v next top => (suspendFrame w r oparg next top, .next v)
   | .returned v =>
     if v.isNone = true ∧ kind ≠ .asyncGen ∧ arg.isNone = true then
       (clearGenFrame w r, .err none)
@@ -385,7 +417,7 @@ def genSendEx2 (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
   let res := h.resume w r (arg.getD .none) exc
   finishResume res.1 r (w.get r).kind arg res.2
 
-/-- `gen_send_ex`, :329-375: the state checks in source order, then `gen_send_ex2` with the
+/-- `gen_send_ex`, :330-375: the state checks in source order, then `gen_send_ex2` with the
 generator marked `FRAME_EXECUTING`. A coroutine that finished always raises here: the
 `closing` escape of 3.14 is gone, because `gen_close` no longer comes through this. -/
 def genSendEx (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
@@ -405,23 +437,23 @@ def genSendEx (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
   else
     genSendEx2 h (w.setState r .executing) r arg none
 
-/-- `PyGen_am_send`, :377-382. -/
+/-- `PyGen_am_send`, :378-382. -/
 def pyGenAmSend (h : Hooks V X) (w : World V X) (r : Ref) (arg : Obj V) :
     World V X × SendResult V :=
   genSendEx h w r (some arg)
 
-/-- `_PyGen_SetStopIterationValue`, :782-799: a tuple value stays a tuple. -/
+/-- `_PyGen_SetStopIterationValue`, :783-799: a tuple value stays a tuple. -/
 def setStopIterationValue (value : Obj V) : Exc V :=
   ⟨.stopIteration, "StopIteration", "", value⟩
 
-/-- `_PyGen_FetchStopIterationValue`, :810-826. `.ok v` is the 0 return with
+/-- `_PyGen_FetchStopIterationValue`, :811-826. `.ok v` is the 0 return with
 `*pvalue = v`; `.err` keeps the pending exception, the -1 return. -/
 def fetchStopIterationValue (pending : Option (Exc V)) : Ret V :=
   match pending with
   | some e => if e.isStopIteration then .ok e.value else .err (some e)
   | none => .ok .none
 
-/-- `gen_set_stop_iteration`, :384-399, on a `PYGEN_RETURN`. -/
+/-- `gen_set_stop_iteration`, :385-399, on a `PYGEN_RETURN`. -/
 def sendResultToRet (kind : GenKind) : SendResult V → Ret V
   | .ret v =>
     if kind = .asyncGen then .err (some Exc.stopAsyncIteration)
@@ -430,21 +462,21 @@ def sendResultToRet (kind : GenKind) : SendResult V → Ret V
   | .next v => .ok v
   | .err e => .err e
 
-/-- `gen_send`, :405-414. `arg` is `none` for the `async_gen_asend_send` call with
+/-- `gen_send`, :406-414. `arg` is `none` for the `async_gen_asend_send` call with
 `ags_sendval == NULL`. -/
 def genSend (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
     World V X × Ret V :=
   let s := genSendEx h w r arg
   (s.1, sendResultToRet (w.get r).kind s.2)
 
-/-- `gen_throw_current_exception`, :603-612: throw the pending exception into a frame that
+/-- `gen_throw_current_exception`, :604-613: throw the pending exception into a frame that
 is already `FRAME_EXECUTING`. -/
 def genThrowCurrent (h : Hooks V X) (w : World V X) (r : Ref) (e : Option (Exc V)) :
     World V X × Ret V :=
   let s := genSendEx2 h w r (some .none) e
   (s.1, sendResultToRet (w.get r).kind s.2)
 
-/-- `gen_iternext`, :760-774, on the result of `gen_send_ex`. -/
+/-- `gen_iternext`, :761-774, on the result of `gen_send_ex`. -/
 def iterResultToRet : SendResult V → Ret V
   | .ret v =>
     if v.isNone = true then .err none
@@ -452,7 +484,7 @@ def iterResultToRet : SendResult V → Ret V
   | .next v => .ok v
   | .err e => .err e
 
-/-- `gen_iternext`, :760-774. -/
+/-- `gen_iternext`, :761-774. -/
 def genIternext (h : Hooks V X) (w : World V X) (r : Ref) : World V X × Ret V :=
   let s := genSendEx h w r none
   (s.1, iterResultToRet s.2)
@@ -471,10 +503,8 @@ def nextCall (h : Hooks V X) (w : World V X) (r : Ref) : World V X × Ret V :=
 
 /-! ## Delegation: `gen_close`, `_gen_throw` -/
 
-/-- `is_resume` (:451-461) followed by the mask test at :505. -/
-def InstrPtr.isResumeDepth1 : InstrPtr → Bool
-  | .resume d => d
-  | .other => false
+/-- `is_resume(frame->instr_ptr)` (:500) followed by the mask test at :505. -/
+def InstrPtr.isResumeDepth1 (i : InstrPtr) : Bool := i.isResume && i.depth1
 
 /-- `frame_state == FRAME_SUSPENDED_YIELD_FROM` and `_PyFrame_StackPeek(frame, 2)`, which on
 3.15 stand where `_PyGen_yf` stood: :776-781 in `gen_getyieldfrom`. -/
@@ -505,7 +535,7 @@ def genCloseIterForeign (h : Hooks V X) (w : World V X) (yf : Obj V) :
     | .ok _ => (c.1, .ok)
   | none => (m.1, .ok)
 
-/-- `gen_close_iter`, :424-449. `close` is `gen_close` at the next recursion depth. -/
+/-- `gen_close_iter`, :425-449. `close` is `gen_close` at the next recursion depth. -/
 def genCloseIter (h : Hooks V X) (close : World V X → Ref → World V X × Ret V)
     (w : World V X) (yf : Obj V) : World V X × CStatus V :=
   match genOrCoro? w yf with
@@ -522,7 +552,7 @@ def ignoredExitMsg : GenKind → String
   | .coro => "coroutine ignored GeneratorExit"
   | .asyncGen => "async generator ignored GeneratorExit"
 
-/-- `gen_clear_frame`, :166-174: the state was written by the caller, and the frame's
+/-- `gen_clear_frame`, :167-175: the state was written by the caller, and the frame's
 contents go. What this model holds of them is the stack. -/
 def genClearFrame (w : World V X) (r : Ref) : World V X :=
   w.set r { w.get r with stackTop := .none }
@@ -562,7 +592,7 @@ def genCloseBody (h : Hooks V X) (close : World V X → Ref → World V X × Ret
   else
     genCloseFinish h p.1 r (closePending p.2)
 
-/-- `gen_close`, :463-541, with fuel for the C recursion through `gen_close_iter`. The checks
+/-- `gen_close`, :464-541, with fuel for the C recursion through `gen_close_iter`. The checks
 come first and the generator stays `FRAME_EXECUTING` from :489 on, so a running frame is
 refused and every reentrant call during the close sees it as running. -/
 def genCloseF (h : Hooks V X) : Nat → World V X → Ref → World V X × Ret V
@@ -621,7 +651,7 @@ def afterDelegate (h : Hooks V X) (w : World V X) (r : Ref) (state : FrameState)
   | .ok v => (w.setState r state, .ok v)
   | .err e => genThrowCurrent h w r e
 
-/-- `_gen_throw`, :624-726, with fuel for the C recursion along the delegation chain. The
+/-- `_gen_throw`, :625-726, with fuel for the C recursion along the delegation chain. The
 generator is `FRAME_EXECUTING` from :649 on, around everything it does with the
 sub-iterator, the lookup of `throw` included. -/
 def genThrowF (h : Hooks V X) : Nat → World V X → Ref → Bool → Obj V →
@@ -677,7 +707,7 @@ def unpackThrowArgs : List (Obj V) → Obj V × Option (Obj V) × Option (Obj V)
   | typ :: val :: tb :: _ => (typ, some val, some tb)
   | [] => (.none, none, none)
 
-/-- `gen_throw`, :729-757. -/
+/-- `gen_throw`, :730-757. -/
 def genThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (args : List (Obj V)) :
     World V X × Ret V :=
   match checkPositional "throw" args.length 1 3 with
@@ -695,7 +725,7 @@ def genThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (args : List
 
 /-! ## `gen_finalize` -/
 
-/-- `gen_finalize`, :107-164, called `_PyGen_Finalize` before 3.15. -/
+/-- `gen_finalize`, :108-164, called `_PyGen_Finalize` before 3.15. -/
 def genFinalize (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) : World V X :=
   let g := w.get r
   if g.state.finished = true then w
@@ -717,35 +747,49 @@ def genFinalize (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) : World V
           h.unraisable w1 "Exception ignored while closing generator" e
         | (w1, _) => w1
 
+/-- `gen_dealloc`, :206-239, as far as it is visible from Python: `FT_CLEAR_WEAKREFS` runs the
+weak reference callbacks (:212), then `PyObject_CallFinalizerFromDealloc` (:216) runs
+`gen_finalize` unless the collector already finalized the object (`finalized`, the
+`_PyGC_FINALIZED` bit `PyObject_CallFinalizer` tests, `Objects/object.c`). Resurrection by the
+finalizer (:216-217) and what follows, which only drops references and frees the frame, are
+under the finalization scope limit. -/
+def genDealloc (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (finalized : Bool) :
+    World V X :=
+  let w1 := h.clearWeakrefs w (.gen r)
+  if finalized then w1 else genFinalize h fuel w1 r
+
 /-! ## Getters and setters -/
 
-/-- `gen_get_name`, :836-842. -/
+/-- `gen_get_name`, :837-842. -/
 def genGetName (g : GenObj V) : Obj V := g.name
-/-- `gen_get_qualname`, :863-869. -/
+/-- `gen_get_qualname`, :864-869. -/
 def genGetQualname (g : GenObj V) : Obj V := g.qualname
 
-/-- `gen_set_name`, :844-860. `value` is `none` for `del gen.__name__`. -/
+/-- `gen_set_name`, :845-861. `value` is `none` for `del gen.__name__`. `Obj.str` stands for
+every object `PyUnicode_Check` accepts, `str` subclasses included, and the setter stores the
+value it was given (`Py_NewRef(value)`, :857); a value model has no object identity beyond
+that. -/
 def genSetName (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
-  | some (.str s) => (w.set r { w.get r with name := .str s }, .ok)
+  | some v@(.str _) => (w.set r { w.get r with name := v }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__name__ must be set to a string object")))
 
-/-- `gen_set_qualname`, :871-887. -/
+/-- `gen_set_qualname`, :872-888. -/
 def genSetQualname (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
-  | some (.str s) => (w.set r { w.get r with qualname := .str s }, .ok)
+  | some v@(.str _) => (w.set r { w.get r with qualname := v }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__qualname__ must be set to a string object")))
 
-/-- `gen_getyieldfrom`, :890-914, which on 3.15 is also `cr_await` and `ag_await`. -/
+/-- `gen_getyieldfrom`, :891-914, which on 3.15 is also `cr_await` and `ag_await`. -/
 def genGetYieldFrom (g : GenObj V) : Obj V := (genYf g).getD .none
 
-/-- `gen_getrunning`, :917-923, also `cr_running` on 3.15. -/
+/-- `gen_getrunning`, :918-923, also `cr_running` on 3.15. -/
 def genGetRunning (g : GenObj V) : Bool := decide (g.state = .executing)
 
-/-- `gen_getsuspended`, :925-931, also `cr_suspended` and `ag_suspended` on 3.15. -/
+/-- `gen_getsuspended`, :926-931, also `cr_suspended` and `ag_suspended` on 3.15. -/
 def genGetSuspended (g : GenObj V) : Bool := g.state.isSuspended
 
-/-- `_gen_getframe`, :953-965, for `gi_frame`, `cr_frame`, `ag_frame`. -/
+/-- `_gen_getframe`, :954-965, for `gi_frame`, `cr_frame`, `ag_frame`. -/
 def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret V :=
   match h.audit w name with
   | some e => .err (some e)
@@ -753,7 +797,7 @@ def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret 
     if (w.get r).state.finished = true then .ok .none
     else .ok (h.frameObject w r)
 
-/-- `_gen_getcode`, :974-981, for `gi_code`, `cr_code`, `ag_code`: `_PyGen_GetCode`
+/-- `_gen_getcode`, :975-981, for `gi_code`, `cr_code`, `ag_code`: `_PyGen_GetCode`
 (:68-71) and `PyGen_GetCode` (:73-79) are this read of `f_executable`. -/
 def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
     Except (Exc V) Code :=
@@ -761,14 +805,14 @@ def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
   | some e => .error e
   | none => .ok (w.get r).code
 
-/-- `gen_sizeof`, :1010-1019. `base` is
+/-- `gen_sizeof`, :1011-1019. `base` is
 `offsetof(PyGenObject, gi_iframe) + offsetof(_PyInterpreterFrame, localsplus)` and
 `_PyFrame_NumSlotsForCodeObject` is `co_nlocalsplus + co_stacksize`
 (`Include/internal/pycore_interpframe.h`). -/
 def genSizeof (base : Nat) (g : GenObj V) : Nat :=
   base + (g.code.nlocalsplus + g.code.stacksize) * 8
 
-/-- `gen_repr`, :828-834, `coro_repr`, :1286-1292, `async_gen_repr`, :1659-1665,
+/-- `gen_repr`, :829-834, `coro_repr`, :1287-1292, `async_gen_repr`, :1660-1665,
 without the trailing `%p`. -/
 def reprPrefix : GenKind → String
   | .gen => "<generator object "
@@ -780,7 +824,7 @@ def genRepr (g : GenObj V) (addr : String) (q : String) : String :=
 
 /-! ## Construction -/
 
-/-- `make_gen`, :1095-1115: the frame state is `FRAME_CLEARED` until the frame is
+/-- `make_gen`, :1096-1115: the frame state is `FRAME_CLEARED` until the frame is
 copied in (`RETURN_GENERATOR` then sets `FRAME_CREATED`). -/
 def makeGen (kind : GenKind) (code : Code) (funcName funcQualname : Obj V) : GenObj V :=
   { kind := kind, state := .cleared, code := code, name := funcName, qualname := funcQualname }
@@ -802,12 +846,12 @@ def crOriginCollect (frameCount : Nat) :
   | f :: rest, i =>
     if i < frameCount then f :: crOriginCollect frameCount rest (i + 1) else []
 
-/-- `_PyCoro_ComputeOrigin`, :1540-1570, frames innermost first. -/
+/-- `_PyCoro_ComputeOrigin`, :1541-1570, frames innermost first. -/
 def computeCrOrigin (originDepth : Nat) (frames : List (String × Nat × String)) :
     List (String × Nat × String) :=
   crOriginCollect (crOriginCount originDepth frames 0) frames 0
 
-/-- `_Py_MakeCoro`, :1117-1162. Which of the three types the code flags select, and
+/-- `_Py_MakeCoro`, :1118-1162. Which of the three types the code flags select, and
 the tail initialised for each. The masked flags are compared with `==`: exactly `CO_GENERATOR`
 is a generator, exactly `CO_ASYNC_GENERATOR` an async generator, and anything else a coroutine,
 since `assert(coro_flags)` and `assert (coro_flags == CO_COROUTINE)` (:1121, :1139) are compiled
@@ -827,38 +871,38 @@ def pyMakeCoro (w : World V X) (code : Code) (funcName funcQualname : Obj V) : O
     else
       some { g with origin := some (computeCrOrigin w.originDepth w.callStack) }
 
-/-- `gen_new_with_qualname`, :1164-1199: the frame is copied, the state is
+/-- `gen_new_with_qualname`, :1165-1199: the frame is copied, the state is
 `FRAME_CREATED`, and a NULL name or qualname falls back to the code object's. -/
 def genNewWithQualname (kind : GenKind) (code : Code) (name qualname : Option (Obj V)) :
     GenObj V :=
   { kind := kind
     state := .created
-    instr := .resume false
+    instr := { opcode := RESUME, oparg := 0 }
     code := code
     name := name.getD (.str code.name)
     qualname := qualname.getD (.str code.qualname) }
 
-/-- `PyGen_NewWithQualName`, :1201-1205. -/
+/-- `PyGen_NewWithQualName`, :1202-1205. -/
 def pyGenNewWithQualName (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   genNewWithQualname .gen code name qualname
 
-/-- `PyGen_New`, :1207-1211. -/
+/-- `PyGen_New`, :1208-1211. -/
 def pyGenNew (code : Code) : GenObj V := genNewWithQualname .gen code none none
 
-/-- `PyCoro_New`, :1572-1595. -/
+/-- `PyCoro_New`, :1573-1595. -/
 def pyCoroNew (w : World V X) (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   let g := genNewWithQualname .coro code name qualname
   if w.originDepth = 0 then { g with origin := none }
   else { g with origin := some (computeCrOrigin w.originDepth w.callStack) }
 
-/-- `PyAsyncGen_New`, :1894-1909. -/
+/-- `PyAsyncGen_New`, :1895-1909. -/
 def pyAsyncGenNew (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   { genNewWithQualname .asyncGen code name qualname with
     finalizer := none, agClosed := false, agHooksInited := false, agRunningAsync := false }
 
 /-! ## Coroutines -/
 
-/-- `gen_is_coroutine`, :1225-1235. -/
+/-- `gen_is_coroutine`, :1226-1235. -/
 def genIsCoroutine (w : World V X) : Obj V → Bool
   | .gen r =>
     (w.get r).kind = .gen ∧ (w.get r).code.hasFlag CO_ITERABLE_COROUTINE = true
@@ -869,8 +913,17 @@ def isCoro (w : World V X) : Obj V → Bool
   | .gen r => (w.get r).kind = .coro
   | _ => false
 
-/-- `_PyCoro_GetAwaitableIter`, :1245-1284. `%T` omits the module for `__main__` and
-`builtins`. -/
+/-- `%.Ns` of `PyUnicode_FromFormat` on a C string (`unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c`): the longest prefix of whole characters whose UTF-8 encoding fits
+in `n` bytes. The same definition as `PyLean.TypeObj.cutUtf8`. -/
+def cutUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: cutUtf8 (n - c.utf8Size) cs else []
+
+def trunc100 (s : String) : String := String.ofList (cutUtf8 100 s.toList)
+
+/-- `_PyCoro_GetAwaitableIter`, :1246-1284. The two `__await__` messages use `%T` (the
+fully qualified name), the last one `'%.100s'` of `tp_name`. -/
 def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V X × Ret V :=
   if isCoro w o = true ∨ genIsCoroutine w o = true then
     (w, .ok o)
@@ -879,31 +932,31 @@ def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V
     | some (w1, .ok res) =>
       if isCoro w1 res = true ∨ genIsCoroutine w1 res = true then
         (w1, .err (some (Exc.typeError
-          (h.typeName o ++ ".__await__() must return an iterator, not coroutine"))))
+          (h.typeFqName o ++ ".__await__() must return an iterator, not coroutine"))))
       else if h.isIter res = false then
         (w1, .err (some (Exc.typeError
-          (h.typeName o ++ ".__await__() must return an iterator, not " ++ h.typeName res))))
+          (h.typeFqName o ++ ".__await__() must return an iterator, not " ++ h.typeFqName res))))
       else
         (w1, .ok res)
     | some (w1, .err e) => (w1, .err e)
     | none =>
-      (w, .err (some (Exc.typeError ("'" ++ h.typeName o ++ "' object can't be awaited"))))
+      (w, .err (some (Exc.typeError ("'" ++ trunc100 (h.typeName o) ++ "' object can't be awaited"))))
 
-/-- `coro_wrapper_iternext`, :1454-1459. `coro_await` (:1142-1152) just pairs the
+/-- `coro_wrapper_iternext`, :1455-1459. `coro_await` (:1142-1152) just pairs the
 coroutine with a wrapper, so a wrapper is its coroutine's `Ref`. -/
 def coroWrapperIternext (h : Hooks V X) (w : World V X) (cw : Ref) : World V X × Ret V :=
   genIternext h w cw
 
-/-- `coro_wrapper_send`, :1461-1466. -/
+/-- `coro_wrapper_send`, :1462-1466. -/
 def coroWrapperSend (h : Hooks V X) (w : World V X) (cw : Ref) (arg : Obj V) : World V X × Ret V :=
   genSend h w cw (some arg)
 
-/-- `coro_wrapper_throw`, :1468-1473. -/
+/-- `coro_wrapper_throw`, :1469-1473. -/
 def coroWrapperThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref)
     (args : List (Obj V)) : World V X × Ret V :=
   genThrow h fuel w cw args
 
-/-- `coro_wrapper_close`, :1475-1480. -/
+/-- `coro_wrapper_close`, :1476-1480. -/
 def coroWrapperClose (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref) : World V X × Ret V :=
   genCloseF h fuel w cw
 

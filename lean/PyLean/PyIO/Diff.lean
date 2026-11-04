@@ -5,6 +5,9 @@ import PyLean.PyIO.StringPy
 import PyLean.PyIO.DiffText
 import PyLean.PyIO.DiffBuffered
 import PyLean.PyIO.DiffFile
+import PyLean.PyIO.BytesShare
+import PyLean.PyIO.BytesCallbacks
+import PyLean.PyIO.BytesState
 
 /-! Differential-testing handler for `pyio` cases (`"mod": "pyio"`).
 
@@ -52,6 +55,112 @@ def getBOp (j : Json) : Except String BOp := do
 def encResults (rs : List (Py Val)) : Json :=
   Json.mkObj [("ok", Json.arr (rs.map (encPy encVal)).toArray)]
 
+def getShareOp (j : Json) : Except String Share.SOp := do
+  match ← getStr j "op" with
+  | "write" => return .write (← getNats j "b")
+  | "getvalue" => return .getvalue
+  | "read" => return .read (← getOptInt j "n")
+  | "readline" => return .readline (← getOptInt j "n")
+  | "seek" => return .seek (← getInt j "pos") (← getInt j "whence")
+  | "tell" => return .tell
+  | "truncate" => return .truncate (← getOptInt j "n")
+  | "getbuffer" => return .getbuffer
+  | "viewset" => return .viewSet (← getNat j "v") (← getNat j "i") (← getNat j "x")
+  | "viewbytes" => return .viewBytes (← getNat j "v")
+  | "release" => return .release (← getNat j "v")
+  | "close" => return .close
+  | "closed" => return .closed
+  | "drop" => return .drop (← getNat j "h")
+  | "hash" => return .hash (← getNat j "h")
+  | "same" => return .same (← getNat j "h") (← getNat j "k")
+  | "sizeof" => return .sizeof
+  | o => throw s!"unknown op {o}"
+
+def runShare (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "share_c" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getShareOp
+    return encResults (Share.runS init (← getBool j "keep") ops).2
+  | _ => none
+
+/-- `{"kind": "data", "b": [...]}`, `{"kind": "hooked", "hook": [...], "r": [...] or null}`,
+`{"kind": "str", "s": [...]}` or `{"kind": "obj", "t": name}`. -/
+def getWItem (j : Json) : Except String WItem := do
+  match ← getStr j "kind" with
+  | "data" => return .data (← bNats (← field j "b"))
+  | "hooked" =>
+    let hook ← (← (← field j "hook").getArr?).toList.mapM getHook
+    match j.getObjVal? "r" with
+    | .ok .null | .error _ => return .hooked hook none
+    | .ok v => return .hooked hook (some (← bNats v))
+  | "str" => return .bad (.str (← bNats (← field j "s")))
+  | "obj" => return .bad (.obj (← getStr j "t"))
+  | k => throw s!"unknown item kind {k}"
+
+def getIStep (j : Json) : Except String IStep := do
+  let hook ← (← (← field j "hook").getArr?).toList.mapM getHook
+  match j.getObjVal? "item" with
+  | .ok x => return .item hook (← getWItem x)
+  | .error _ => return .raise hook
+
+def getCbOp (j : Json) : Except String (BOp ⊕ CBOp) := do
+  match ← getStr j "op" with
+  | "writeitem" => return .inr (.writeItem (← getWItem (← field j "x")))
+  | "reinititem" => return .inr (.reinitItem (← getWItem (← field j "x")))
+  | "writelinesit" =>
+    match j.getObjVal? "notiter" with
+    | .ok t => return .inr (.writelinesIt (.notIter (← t.getStr?)))
+    | .error _ => return .inr (.writelinesIt (.iter (← (← (← field j "steps").getArr?).toList.mapM getIStep)))
+  | _ => return .inl (← getBOp j)
+
+def runCallbacks (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "bytescb_c" | "bytescb_py" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getCbOp
+    return encResults (runOps (if fn = "bytescb_c" then stepCbC else stepCbP) (bInit init) ops).2
+  | _ => none
+
+/-- `{"k": "bytes" | "bytearray", "b": [...]}`, `{"k": "int", "v": n}`, `{"k": "bool", "v": b}`,
+`{"k": "none"}`, `{"k": "dict", "kv": [[key, n], ...]}` or `{"k": "other", "t": name}`. -/
+def getSItem (j : Json) : Except String SItem := do
+  match ← getStr j "k" with
+  | "bytes" => return .bytes (← bNats (← field j "b"))
+  | "bytearray" => return .bytearray (← bNats (← field j "b"))
+  | "int" => return .int (← getInt j "v")
+  | "bool" => return .bool (← getBool j "v")
+  | "none" => return .none
+  | "dict" =>
+    let kv ← (← (← field j "kv").getArr?).toList.mapM fun p => do
+      let a ← p.getArr?
+      match a.toList with
+      | [k, v] => return ((← k.getStr?), (← v.getInt?))
+      | _ => throw "bad dict item"
+    return .dict kv
+  | "other" => return .other (← getStr j "t")
+  | k => throw s!"unknown state item {k}"
+
+def getDOp (j : Json) : Except String DOp := do
+  match ← getStr j "op" with
+  | "setattr" => return .setattr (← getStr j "key") (← getInt j "v")
+  | "getdict" => return .getdict
+  | "getstate" => return .getstate
+  | "setstate" =>
+    let a ← field j "a"
+    match a.getObjVal? "tuple" with
+    | .ok items => return .setstate (.tuple (← (← items.getArr?).toList.mapM getSItem))
+    | .error _ => return .setstate (.other (← getStr a "other"))
+  | _ => return .base (← getBOp j)
+
+def runState (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "bytesstate_c" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getDOp
+    return encResults (runOps C.dstep ⟨bInit init, none⟩ ops).2
+  | _ => none
+
 def encRun : Py (List (Py Val)) → Json
   | .ok rs => encResults rs
   | .error e => encPy (fun (_ : Unit) => Json.null) (.error e)
@@ -80,6 +189,15 @@ def handler : Handler := fun fn j =>
     | none =>
       match runFile fn j with
       | some r => some r
-      | none => some (run fn j)
+      | none =>
+        match runShare fn j with
+        | some r => some r
+        | none =>
+          match runCallbacks fn j with
+          | some r => some r
+          | none =>
+            match runState fn j with
+            | some r => some r
+            | none => some (run fn j)
 
 end PyLean.PyIO

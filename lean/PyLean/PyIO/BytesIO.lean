@@ -7,9 +7,12 @@ inherits, `Lib/_pyio.py:307-740`), CPython 3.15.2.
 
 State: the buffer contents (`string_size` bytes in C, the `bytearray` in
 Python), the position, the closed flag and the number of live `getbuffer()`
-views. C's over-allocation, copy-on-write sharing and the free-threading
-critical sections are unobservable here and not modelled. C keeps
-`0 <= pos <= PY_SSIZE_T_MAX`; Python's position is an unbounded int.
+views. This is the stream by value: it assumes the program keeps no reference to
+the objects it passes in or gets back. C's copy-on-write sharing is observable once it
+does (object identity, and the cached hash of a returned `bytes`, gh-160181), and is
+modelled with object identity, over-allocation and live views in
+`PyIO/BytesShare.lean`. The free-threading critical sections are no-ops on the default
+build. C keeps `0 <= pos <= PY_SSIZE_T_MAX`; Python's position is an unbounded int.
 
 `_pyio.BytesIO` takes `self._lock` around its state in 3.15. An uncontended
 `Lock` changes nothing, and the only Python code that runs while it is held is

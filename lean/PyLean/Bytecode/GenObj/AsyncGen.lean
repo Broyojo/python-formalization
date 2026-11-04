@@ -11,7 +11,7 @@ namespace PyLean.Bytecode.GenObj
 
 variable {V X : Type}
 
-/-- `async_gen_init_hooks`, :1668-1702. Note the order: `ag_hooks_inited` is set
+/-- `async_gen_init_hooks`, :1669-1702. Note the order: `ag_hooks_inited` is set
 before `firstiter` runs, so a raising hook is not retried. -/
 def asyncGenInitHooks (h : Hooks V X) (w : World V X) (r : Ref) : World V X × CStatus V :=
   if (w.get r).agHooksInited = true then (w, .ok)
@@ -28,38 +28,38 @@ def asyncGenInitHooks (h : Hooks V X) (w : World V X) (r : Ref) : World V X × C
       | .ok _ => (c.1, .ok)
     | none => (w2, .ok)
 
-/-- `async_gen_asend_new`, :2160-2177. `a` is the freshly allocated object. -/
+/-- `async_gen_asend_new`, :2161-2177. `a` is the freshly allocated object. -/
 def asyncGenAsendNew (w : World V X) (a r : Ref) (sendval : Option (Obj V)) : World V X :=
   { w with asends := fun q => if q = a then { gen := r, sendval := sendval, state := .init }
                               else w.asends q }
 
-/-- `async_gen_athrow_new`, :2598-2621, past the `PyArg_UnpackTuple` that `asyncGenAthrow`
+/-- `async_gen_athrow_new`, :2599-2621, past the `PyArg_UnpackTuple` that `asyncGenAthrow`
 does: `args` is what it unpacked. -/
 def asyncGenAthrowNew (w : World V X) (a r : Ref)
     (args : Option (Obj V × Option (Obj V) × Option (Obj V))) : World V X :=
   { w with athrows := fun q => if q = a then { gen := r, args := args, state := .init }
                                else w.athrows q }
 
-/-- `async_gen_anext`, :1705-1713. -/
+/-- `async_gen_anext`, :1706-1713. -/
 def asyncGenAnext (h : Hooks V X) (w : World V X) (r a : Ref) : World V X × CStatus V :=
   match asyncGenInitHooks h w r with
   | (w1, .fail e) => (w1, .fail e)
   | (w1, .ok) => (asyncGenAsendNew w1 a r none, .ok)
 
-/-- `async_gen_asend`, :1716-1724. -/
+/-- `async_gen_asend`, :1717-1724. -/
 def asyncGenAsend (h : Hooks V X) (w : World V X) (r a : Ref) (arg : Obj V) :
     World V X × CStatus V :=
   match asyncGenInitHooks h w r with
   | (w1, .fail e) => (w1, .fail e)
   | (w1, .ok) => (asyncGenAsendNew w1 a r (some arg), .ok)
 
-/-- `async_gen_aclose`, :1727-1735. -/
+/-- `async_gen_aclose`, :1728-1735. -/
 def asyncGenAclose (h : Hooks V X) (w : World V X) (r a : Ref) : World V X × CStatus V :=
   match asyncGenInitHooks h w r with
   | (w1, .fail e) => (w1, .fail e)
   | (w1, .ok) => (asyncGenAthrowNew w1 a r none, .ok)
 
-/-- `async_gen_athrow`, :1737-1753, and `PyArg_UnpackTuple` at the top of
+/-- `async_gen_athrow`, :1738-1753, and `PyArg_UnpackTuple` at the top of
 `async_gen_athrow_new`, :2604-2606: since 3.15 a wrong argument count fails here, after the
 hooks ran and before any awaitable exists, not at the first `send`. -/
 def asyncGenAthrow (h : Hooks V X) (w : World V X) (r a : Ref) (args : List (Obj V)) :
@@ -78,7 +78,7 @@ def asyncGenAthrow (h : Hooks V X) (w : World V X) (r a : Ref) (args : List (Obj
       | some e => (w2, .fail (some e))
       | none => (asyncGenAthrowNew w2 a r (some (unpackThrowArgs args)), .ok)
 
-/-- `async_gen_unwrap_value`, :1911-1938. -/
+/-- `async_gen_unwrap_value`, :1912-1938. -/
 def asyncGenUnwrapValue (w : World V X) (r : Ref) : Ret V → World V X × Ret V
   | .err e =>
     let e' := e.getD Exc.stopAsyncIteration
@@ -102,8 +102,8 @@ def asendFinish (w : World V X) (a gen : Ref) (res : Ret V) : World V X × Ret V
   | .err e => (u.1.setAsendState a .closed, .err e)
   | .ok v => (u.1, .ok v)
 
-/-- `async_gen_asend_send`, :1973-2008 (`arg` is `none` from
-`async_gen_asend_iternext`, :2024-2028). -/
+/-- `async_gen_asend_send`, :1974-2008 (`arg` is `none` from
+`async_gen_asend_iternext`, :2025-2028). -/
 def asyncGenAsendSend (h : Hooks V X) (w : World V X) (a : Ref) (arg : Option (Obj V)) :
     World V X × Ret V :=
   let o := w.asends a
@@ -117,7 +117,7 @@ def asyncGenAsendSend (h : Hooks V X) (w : World V X) (a : Ref) (arg : Option (O
     let res := genSend h (w1.setRunning o.gen true) o.gen arg'
     asendFinish res.1 a o.gen res.2
 
-/-- `async_gen_asend_iternext`, :2024-2028. -/
+/-- `async_gen_asend_iternext`, :2025-2028. -/
 def asyncGenAsendIternext (h : Hooks V X) (w : World V X) (a : Ref) : World V X × Ret V :=
   asyncGenAsendSend h w a none
 
@@ -128,7 +128,7 @@ def asendThrowFinish (w : World V X) (a gen : Ref) (res : Ret V) : World V X × 
   | .err e => ((u.1.setRunning gen false).setAsendState a .closed, .err e)
   | .ok v => (u.1, .ok v)
 
-/-- `async_gen_asend_throw`, :2031-2065. -/
+/-- `async_gen_asend_throw`, :2032-2065. -/
 def asyncGenAsendThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref)
     (args : List (Obj V)) : World V X × Ret V :=
   let o := w.asends a
@@ -141,18 +141,18 @@ def asyncGenAsendThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref)
     let res := genThrow h fuel w1 o.gen args
     asendThrowFinish res.1 a o.gen res.2
 
-/-- The exception a `close()` of an awaitable passes on, :2078-2082 and @3.14.7:2321-2325. -/
+/-- The exceptions a `close()` of an awaitable swallows, :2078-2082 and :2511-2515. -/
 def swallowedByClose : Option (Exc V) → Bool
   | some e => e.isStopIteration || e.isStopAsyncIteration || e.isGeneratorExit
   | none => false
 
-/-- :2077-2090 and @3.14.7:2320-2333. -/
+/-- :2076-2090 and :2509-2523. -/
 def closeResult (res : Ret V) : Ret V :=
   match res with
   | .err e => if swallowedByClose e then .ok .none else .err e
   | .ok _ => .err (some (Exc.runtimeError "coroutine ignored GeneratorExit"))
 
-/-- `async_gen_asend_close`, :2068-2091. -/
+/-- `async_gen_asend_close`, :2069-2091. -/
 def asyncGenAsendClose (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) :
     World V X × Ret V :=
   if (w.asends a).state = .closed then (w, .ok .none)
@@ -160,13 +160,19 @@ def asyncGenAsendClose (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) :
     let t := asyncGenAsendThrow h fuel w a [.excClass .generatorExit "GeneratorExit"]
     (t.1, closeResult t.2)
 
-/-- `async_gen_asend_finalize`, :2093-2100. -/
+/-- `async_gen_asend_finalize`, :2094-2100. -/
 def asyncGenAsendFinalize (h : Hooks V X) (w : World V X) (a : Ref) : World V X :=
   if (w.asends a).state = .init then
     h.warnUnawaitedAgen w (w.asends a).gen "asend"
   else w
 
-/-- `_PyAsyncGenValueWrapperNew`, :2245-2262. -/
+/-- `async_gen_asend_dealloc`, :1945-1961: `PyObject_CallFinalizerFromDealloc` runs
+`async_gen_asend_finalize` unless the collector already did (`finalized`); the rest drops
+references and returns the object to the freelist. -/
+def asyncGenAsendDealloc (h : Hooks V X) (w : World V X) (a : Ref) (finalized : Bool) : World V X :=
+  if finalized then w else asyncGenAsendFinalize h w a
+
+/-- `_PyAsyncGenValueWrapperNew`, :2246-2262. -/
 def asyncGenValueWrapperNew (val : Obj V) : Obj V := .wrapped val
 
 def reuseAthrowMsg : String := "cannot reuse already awaited aclose()/athrow()"
@@ -191,7 +197,7 @@ def athrowRunningMsg : Option (Obj V × Option (Obj V) × Option (Obj V)) → St
 
 def nonInitCoroMsg : String := "can't send non-None value to a just-started coroutine"
 
-/-- :2359-2362 and @3.14.7:2192-2204: what `aclose()` mode does with a result. -/
+/-- :2356-2361 and :2384-2394: what `aclose()` mode does with a result. -/
 def acloseTail (w : World V X) (a gen : Ref) : Ret V → World V X × Ret V
   | .ok (.wrapped _) => athrowYieldClose w a gen
   | .ok v => (w, .ok v)
@@ -223,7 +229,7 @@ def athrowIter (h : Hooks V X) (w : World V X) (a gen : Ref)
   | some _ => asyncGenUnwrapValue t.1 gen t.2
   | none => acloseTail t.1 a gen t.2
 
-/-- `async_gen_athrow_send`, :2300-2421. -/
+/-- `async_gen_athrow_send`, :2301-2421. -/
 def asyncGenAthrowSend (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V) :
     World V X × Ret V :=
   let o := w.athrows a
@@ -246,7 +252,7 @@ def asyncGenAthrowSend (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (a
   else
     athrowIter h w a o.gen o.args arg
 
-/-- `async_gen_athrow_iternext`, :2494-2498. -/
+/-- `async_gen_athrow_iternext`, :2495-2498. -/
 def asyncGenAthrowIternext (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) :
     World V X × Ret V :=
   asyncGenAthrowSend h fuel w a .none
@@ -272,7 +278,7 @@ def athrowThrowFinish (w : World V X) (a gen : Ref)
       if matchesStopAsyncOrExit e = true then (w3, .err (some Exc.stopIterationNone))
       else (w3, .err e)
 
-/-- `async_gen_athrow_throw`, :2424-2491. -/
+/-- `async_gen_athrow_throw`, :2425-2491. -/
 def asyncGenAthrowThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref)
     (args : List (Obj V)) : World V X × Ret V :=
   let o := w.athrows a
@@ -285,7 +291,7 @@ def asyncGenAthrowThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref)
     let res := genThrow h fuel w1 o.gen args
     athrowThrowFinish res.1 a o.gen o.args res.2
 
-/-- `async_gen_athrow_close`, :2501-2524. -/
+/-- `async_gen_athrow_close`, :2502-2524. -/
 def asyncGenAthrowClose (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) :
     World V X × Ret V :=
   if (w.athrows a).state = .closed then (w, .ok .none)
@@ -293,11 +299,15 @@ def asyncGenAthrowClose (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) :
     let t := asyncGenAthrowThrow h fuel w a [.excClass .generatorExit "GeneratorExit"]
     (t.1, closeResult t.2)
 
-/-- `async_gen_athrow_finalize`, :2527-2535. -/
+/-- `async_gen_athrow_finalize`, :2528-2535. -/
 def asyncGenAthrowFinalize (h : Hooks V X) (w : World V X) (a : Ref) : World V X :=
   let o := w.athrows a
   if o.state = .init then
     h.warnUnawaitedAgen w o.gen (match o.args with | some _ => "athrow" | none => "aclose")
   else w
+
+/-- `async_gen_athrow_dealloc`, :2272-2285, as `async_gen_asend_dealloc`. -/
+def asyncGenAthrowDealloc (h : Hooks V X) (w : World V X) (a : Ref) (finalized : Bool) : World V X :=
+  if finalized then w else asyncGenAthrowFinalize h w a
 
 end PyLean.Bytecode.GenObj

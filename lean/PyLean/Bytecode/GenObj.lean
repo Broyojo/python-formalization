@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.Bytecode.GenObj.Legal
+import PyLean.Bytecode.GenObj.ExactAsync
 
 /-!
 `Objects/genobject.c`, CPython 3.15.2: generators, coroutines, async generators.
@@ -18,6 +18,96 @@ open PyLean.Registry
 private def src : String := "Objects/genobject.c"
 
 def entries : List Entry := [
+  { id := "gen-send-ex-outcomes", pyFile := src, pyFns := ["gen_send_ex", "gen_send_ex2"]
+    statement := "gen_send_ex for every state, argument and frame outcome: non-None to a just-started object is the TypeError of its type; a finished coroutine raises 'cannot reuse already awaited coroutine', a finished generator gives PYGEN_RETURN None to send and NULL with nothing set to next; otherwise the frame runs FRAME_EXECUTING with the value (or None) pushed and no exception, a yield is PYGEN_NEXT with the value and the frame suspended with the instruction and stack it left, a return is PYGEN_RETURN with the frame cleared (None returned to next of a generator or coroutine is NULL with nothing set), and an exception propagates with the frame cleared."
+    source := "genobject.c:260-325, :330-375", status := .proven
+    prop := ``GenSendExOutcomes, thm := some ``genSendExOutcomes_proven },
+  { id := "gen-send-stop-iteration", pyFile := src, pyFns := ["gen_send", "gen_set_stop_iteration"]
+    statement := "gen.send(arg) is gen_send_ex with a PYGEN_RETURN of v turned by gen_set_stop_iteration into StopAsyncIteration on an async generator and StopIteration(v) otherwise; a yield is the value and errors pass through, in the world gen_send_ex left."
+    source := "genobject.c:385-399, :406-414", status := .proven
+    prop := ``GenSendSetsStopIteration, thm := some ``genSendSetsStopIteration_proven },
+  { id := "gen-throw-current-outcomes", pyFile := src, pyFns := ["gen_throw_current_exception", "gen_set_stop_iteration"]
+    statement := "gen_throw_current_exception runs the FRAME_EXECUTING frame with None pushed and the pending exception thrown: a yield is the result with the frame suspended, a return of v is StopAsyncIteration (async generator) or StopIteration(v) with the frame cleared, and an exception propagates with the frame cleared."
+    source := "genobject.c:604-613", status := .proven
+    prop := ``GenThrowCurrentOutcomes, thm := some ``genThrowCurrentOutcomes_proven },
+  { id := "gen-close-outcomes", pyFile := src, pyFns := ["gen_close", "is_resume", "gen_clear_frame", "gen_send_ex2"]
+    statement := "gen_close for every state and frame outcome: created is cleared and gives None, finished gives None, running is the already-executing ValueError; a suspended object is marked FRAME_EXECUTING, closes its sub-iterator first when in a yield from, and then at a depth-1 RESUME, RESUME_CHECK, RESUME_CHECK_JIT or INSTRUMENTED_RESUME (mask 0x8) with no unwind tools is cleared without running and gives None; otherwise GeneratorExit (or the sub-iterator's error) is thrown in, a returned value is the result, a yield is the '<kind> ignored GeneratorExit' RuntimeError with the frame suspended, GeneratorExit is swallowed and anything else propagates."
+    source := "genobject.c:452-461, :464-541", status := .proven
+    prop := ``GenCloseOutcomes, thm := some ``genCloseOutcomes_proven },
+  { id := "gen-close-iter-outcomes", pyFile := src, pyFns := ["gen_close_iter"]
+    statement := "gen_close_iter: an exact generator or coroutine is closed with gen_close and its error is the -1 return; anything else has close looked up, a failed lookup reported as unraisable ('Exception ignored while closing generator') and ignored, no attribute is success, and otherwise close() is called and its error is the -1 return."
+    source := "genobject.c:425-449", status := .proven
+    prop := ``GenCloseIterOutcomes, thm := some ``genCloseIterOutcomes_proven },
+  { id := "gen-set-exception-cases", pyFile := src, pyFns := ["gen_set_exception"]
+    statement := "gen_set_exception: a traceback argument that is not None or a traceback is 'throw() third argument must be a traceback object' whatever typ is; then a class is normalized with its value, an instance with a value other than None is 'instance exception may not have a separate value', an instance with none is raised as it is, and anything else is 'exceptions must be classes or instances deriving from BaseException, not <tp_name>'."
+    source := "genobject.c:546-601", status := .proven
+    prop := ``GenSetExceptionCases, thm := some ``genSetExceptionCases_proven
+    notes := "Tracebacks are not modelled: the traceback restored with the exception is out of scope." },
+  { id := "gen-throw-outcomes", pyFile := src, pyFns := ["_gen_throw"]
+    statement := "_gen_throw for every state and every outcome of the code it runs: running and finished refusals first; not delegating, a gen_set_exception failure writes the state back and raises and a success is thrown into the frame; delegating with GeneratorExit and close_on_genexit, the sub-iterator is closed and its error thrown in, else throw_here; delegating otherwise, an exact generator or coroutine gets _gen_throw recursively, anything else has throw looked up (failure writes the state back and raises, no attribute is throw_here) and called with (typ, val, tb); a value from the sub-iterator writes the state back and is the result, an error is thrown into the frame."
+    source := "genobject.c:625-726", status := .proven
+    prop := ``GenThrowFOutcomes, thm := some ``genThrowFOutcomes_proven },
+  { id := "gen-throw-args", pyFile := src, pyFns := ["gen_throw"]
+    statement := "gen.throw(*args): no argument is 'throw expected at least 1 argument, got 0' and more than three 'throw expected at most 3 arguments, got n', with nothing run; two or three arguments first emit the DeprecationWarning, whose failure is the result; then _gen_throw with close_on_genexit set and the arguments in the typ, val, tb slots."
+    source := "genobject.c:730-757", status := .proven
+    prop := ``GenThrowArgs, thm := some ``genThrowArgs_proven },
+  { id := "gen-throw-arity", pyFile := src, pyFns := ["gen_throw"]
+    statement := "A wrong argument count for throw() is a TypeError and changes nothing."
+    source := "genobject.c:737-739", status := .proven
+    prop := ``GenThrowArity, thm := some ``genThrowArity_proven },
+  { id := "gen-finalize-outcomes", pyFile := src, pyFns := ["gen_finalize"]
+    statement := "gen_finalize: a finished object is left alone; an async generator with a finalizer and ag_closed clear has the finalizer called with it, a failure reported as 'Exception ignored while finalizing generator', and nothing else; otherwise a CO_COROUTINE code still FRAME_CREATED gets the never-awaited RuntimeWarning, and everything else is closed with gen_close, a failure with an exception reported as 'Exception ignored while closing generator'."
+    source := "genobject.c:108-164", status := .proven
+    prop := ``GenFinalizeOutcomes, thm := some ``genFinalizeOutcomes_proven },
+  { id := "gen-awaitable-iter-outcomes", pyFile := src, pyFns := ["_PyCoro_GetAwaitableIter", "gen_is_coroutine"]
+    statement := "gen_is_coroutine is true exactly for an exact generator whose code has CO_ITERABLE_COROUTINE; _PyCoro_GetAwaitableIter returns a coroutine or such a generator as it is, and otherwise a type with no am_await is the '<tp_name cut to 100 bytes>' object can't be awaited TypeError, a raising __await__ propagates, a coroutine-like result is '<%T>.__await__() must return an iterator, not coroutine', a non-iterator '<%T>.__await__() must return an iterator, not <%T>', and an iterator is the result."
+    source := "genobject.c:1226-1235, :1246-1284", status := .proven
+    prop := ``AwaitableIterOutcomes, thm := some ``awaitableIterOutcomes_proven },
+  { id := "gen-async-unwrap-outcomes", pyFile := src, pyFns := ["async_gen_unwrap_value", "_PyAsyncGenValueWrapperNew"]
+    statement := "async_gen_unwrap_value: NULL with nothing set becomes StopAsyncIteration and sets ag_closed, NULL with StopAsyncIteration or GeneratorExit sets ag_closed, any other NULL leaves it, all three clearing ag_running_async; the value _PyAsyncGenValueWrapperNew makes of v becomes StopIteration(v) with ag_running_async cleared; any other value passes through unchanged."
+    source := "genobject.c:1912-1938, :2246-2262", status := .proven
+    prop := ``AsyncGenUnwrapValueOutcomes, thm := some ``asyncGenUnwrapValueOutcomes_proven },
+  { id := "gen-async-init-hooks-outcomes", pyFile := src, pyFns := ["async_gen_init_hooks"]
+    statement := "async_gen_init_hooks does nothing once ag_hooks_inited is set; otherwise it sets the flag, stores the thread's finalizer if any, and calls firstiter with the generator in that world, its failure being the result."
+    source := "genobject.c:1669-1702", status := .proven
+    prop := ``AsyncGenInitHooksOutcomes, thm := some ``asyncGenInitHooksOutcomes_proven },
+  { id := "gen-async-methods-outcomes", pyFile := src, pyFns := ["async_gen_anext", "async_gen_asend", "async_gen_aclose", "async_gen_athrow", "async_gen_athrow_new"]
+    statement := "anext, asend and aclose propagate a hooks failure and otherwise create a fresh AWAITABLE_STATE_INIT awaitable holding NULL, the argument, or no exception; athrow warns first for more than one argument (a failing warning is the result, before the hooks), then runs the hooks, then 'athrow expected at least 1 argument, got 0' / 'athrow expected at most 3 arguments, got n', and otherwise stores its one to three arguments."
+    source := "genobject.c:1706-1753, :2599-2621", status := .proven
+    prop := ``AsyncGenMethodsOutcomes, thm := some ``asyncGenMethodsOutcomes_proven },
+  { id := "gen-asend-send-outcomes", pyFile := src, pyFns := ["async_gen_asend_send", "async_gen_asend_iternext"]
+    statement := "asend.send(arg) and __next__: closed is the cannot-reuse RuntimeError; a fresh awaitable on a running generator closes with the already-running RuntimeError; otherwise a fresh awaitable moves to ITER, None or NULL is replaced by ags_sendval, ag_running_async is set and gen_send runs; an async yield is StopIteration(value) and closes the awaitable, a bare value passes through, and NULL closes it with ag_closed set for StopAsyncIteration or GeneratorExit."
+    source := "genobject.c:1974-2008, :2025-2028", status := .proven
+    prop := ``AsendSendOutcomes, thm := some ``asyncGenAsendSendOutcomes_proven },
+  { id := "gen-asend-throw-outcomes", pyFile := src, pyFns := ["async_gen_asend_throw"]
+    statement := "asend.throw(*args): the same refusals as send; otherwise a fresh awaitable moves to ITER with ag_running_async set and gen_throw gets the arguments as they are, the result read as for send."
+    source := "genobject.c:2032-2065", status := .proven
+    prop := ``AsendThrowOutcomes, thm := some ``asendThrowOutcomes_proven },
+  { id := "gen-asend-close-outcomes", pyFile := src, pyFns := ["async_gen_asend_close"]
+    statement := "asend.close(): None when closed; otherwise asend.throw(GeneratorExit), with StopIteration, StopAsyncIteration and GeneratorExit swallowed, other exceptions propagated, and a value turned into 'coroutine ignored GeneratorExit'."
+    source := "genobject.c:2069-2091", status := .proven
+    prop := ``AsendCloseOutcomes, thm := some ``asendCloseOutcomes_proven },
+  { id := "gen-athrow-send-outcomes", pyFile := src, pyFns := ["async_gen_athrow_send"]
+    statement := "athrow/aclose awaitable send(arg): closed is the cannot-reuse RuntimeError; a finished generator closes it with StopIteration; when fresh, a running generator closes it with the mode's already-running RuntimeError, ag_closed with StopAsyncIteration, a non-None value is NON_INIT_CORO_MSG with nothing changed, and otherwise it moves to ITER with ag_running_async set and in aclose mode sets ag_closed and throws GeneratorExit (an async yield is 'async generator ignored GeneratorExit', StopAsyncIteration and GeneratorExit become StopIteration), in athrow mode throws the stored arguments, unwraps and closes on NULL; later steps send the value, aclose mode reading it the same way and athrow mode only unwrapping."
+    source := "genobject.c:2301-2421", status := .proven
+    prop := ``AthrowSendOutcomes, thm := some ``athrowSendOutcomes_proven },
+  { id := "gen-athrow-iternext-outcomes", pyFile := src, pyFns := ["async_gen_athrow_iternext"]
+    statement := "athrow/aclose awaitable __next__ is send(None): when fresh it always throws (aclose: GeneratorExit with ag_closed set; athrow: the stored arguments), never the NON_INIT_CORO_MSG refusal, and later it sends None."
+    source := "genobject.c:2495-2498", status := .proven
+    prop := ``AthrowIternextOutcomes, thm := some ``athrowIternextOutcomes_proven },
+  { id := "gen-athrow-throw-outcomes", pyFile := src, pyFns := ["async_gen_athrow_throw"]
+    statement := "athrow/aclose awaitable throw(*args): closed is the cannot-reuse RuntimeError; fresh on a running generator closes with the mode's already-running RuntimeError; otherwise (no finished or ag_closed check) it moves to ITER with ag_running_async set and gen_throw gets the arguments, athrow mode unwrapping and closing on NULL, aclose mode turning an async yield into 'async generator ignored GeneratorExit' and StopAsyncIteration or GeneratorExit into StopIteration."
+    source := "genobject.c:2425-2491", status := .proven
+    prop := ``AthrowThrowOutcomes, thm := some ``athrowThrowOutcomes_proven },
+  { id := "gen-athrow-close-outcomes", pyFile := src, pyFns := ["async_gen_athrow_close"]
+    statement := "athrow/aclose awaitable close(): None when closed; otherwise throw(GeneratorExit), with StopIteration, StopAsyncIteration and GeneratorExit swallowed, other exceptions propagated, and a value turned into 'coroutine ignored GeneratorExit'."
+    source := "genobject.c:2502-2524", status := .proven
+    prop := ``AthrowCloseOutcomes, thm := some ``athrowCloseOutcomes_proven },
+  { id := "gen-dealloc-finalizers", pyFile := src, pyFns := ["gen_dealloc", "async_gen_asend_dealloc", "async_gen_asend_finalize", "async_gen_athrow_dealloc", "async_gen_athrow_finalize"]
+    statement := "gen_dealloc runs the weak reference callbacks first and then, unless the collector already finalized the object, gen_finalize in the world they left; the asend and athrow deallocs run their finalizers likewise, which warn 'coroutine method asend/athrow/aclose ... was never awaited' exactly when the awaitable is still AWAITABLE_STATE_INIT."
+    source := "genobject.c:206-239, :1945-1961, :2094-2100, :2272-2285, :2528-2535", status := .proven
+    prop := ``DeallocOutcomes, thm := some ``deallocOutcomes_proven
+    notes := "Scope: resurrection by a finalizer and the reference drops and frame clearing after it are under the finalization scope limit; PyObject_ClearWeakRefs is the clearWeakrefs hook." },
   { id := "gen-send-rejected-no-effect", pyFile := src, pyFns := ["gen_send_ex", "PyGen_am_send"]
     statement := "For every generator, coroutine or async generator, every argument and every frame evaluator: a call gen_send_ex rejects (non-None to a just-started object, already executing, finished) changes nothing and gives the same result under any frame evaluator, so a finished or running frame is never resumed and each state check comes before any effect."
     source := "invariant: genobject.c:335-367 precede the first write at :368", status := .proven
@@ -182,10 +272,11 @@ def entries : List Entry := [
     prop := ``FrameNeverRaisesStopIteration, thm := some ``frameNeverRaisesStopIteration_refuted
     bug := some "bytecode-gen-throw-created-skips-pep479"
     notes := "Duplicate of python/cpython#152685; aborts debug builds. The counterexample runs the difftest script evaluator, so it covers no CPython function." },
-  { id := "gen-name-setters", pyFile := src, pyFns := ["gen_get_name", "gen_set_name", "gen_get_qualname", "gen_set_qualname"]
-    statement := "__name__ and __qualname__: anything but a str, or deletion, is a TypeError and changes nothing; a str reads back and only that attribute changes."
-    source := "genobject.c:848-854, :875-881", status := .proven
-    prop := ``GenNameSetters, thm := some ``genNameSetters_proven },
+  { id := "gen-name-setters", pyFile := src, pyFns := ["gen_set_name", "gen_set_qualname"]
+    statement := "gen.__name__ = v and gen.__qualname__ = v: deletion or a value that is not a str is the TypeError '__name__ must be set to a string object' (resp. '__qualname__ ...') and changes nothing; a str is stored as it is and only that attribute changes."
+    source := "genobject.c:845-861, :872-888", status := .proven
+    prop := ``GenNameSetterMessages, thm := some ``genNameSetterMessages_proven
+    notes := "Obj.str stands for every PyUnicode_Check object, subclasses included; the model has no object identity beyond the value. The getters are one-field reads, excluded as trivial." },
   { id := "gen-make-coro-kinds", pyFile := src, pyFns := ["make_gen", "_Py_MakeCoro"]
     statement := "_Py_MakeCoro always makes an object (allocation failure aside) and picks the type from the masked code flags: exactly CO_GENERATOR a generator, exactly CO_ASYNC_GENERATOR an async generator, anything else (no flag, or two at once, which a release build reaches through code.replace(co_flags=...)) a coroutine; it starts from a cleared frame with the function's names, and initialises the async generator flags and cr_origin."
     source := "genobject.c:1095-1162", status := .proven

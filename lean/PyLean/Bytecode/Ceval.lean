@@ -259,26 +259,120 @@ def tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast
     else ""
   typeError s!"{qualname}() takes {sig} positional argument{if plural then "s" else ""} but {gvn}{kwonlySig} {if gvn == 1 && kwonlyGiven == 0 then "was" else "were"} given"
 
-/-- `positional_only_passed_as_keyword`, lines 1674-1735: for each positional-only name in order,
-every keyword equal to it (`kwname == posonly_name`, else `PyObject_RichCompareBool`, which on two
-exact `str` is equality of the text), joined with `", "`; a `TypeError` when there is any. -/
-def posonlyPassedAsKeyword (co : Code) (kwnames : List String) (qualname : String) : RM Unit := do
-  let conflicts := (List.range co.posonlyargcount).flatMap fun k =>
-    let n := co.localsplusnames.getD k ""
-    kwnames.filter (· == n)
+/-- What the keyword binding of `initialize_locals` asks of the object model when a keyword is
+not an exact `str`, which only a `**` mapping can pass (`_PyStack_UnpackDict` keeps every key
+whose type has `Py_TPFLAGS_UNICODE_SUBCLASS`): Python code may run in each. -/
+structure KwHooks where
+  /-- `PyObject_RichCompareBool(a, b, Py_EQ)` (`Objects/object.c`). -/
+  eq : Val → Val → RM Bool
+  /-- The text of `PyObject_Str(o)`, for `'%S'`. -/
+  str : Val → RM String
+  /-- `PyDict_SetItem(d, k, v)` on the fresh `**kwargs` dict. -/
+  setItem : Val → Val → Val → RM Unit
+
+/-- `PyUnicode_Check(keyword)` and its `str` data: an exact `str`, or an instance of a `str`
+subclass, whose `str` payload is `base`. The same test as `kwKeyName` in `Uops3.lean`. -/
+def kwText (rt : Rt) : Val → Option String
+  | .str s => some s
+  | .ref a =>
+    match rt.heap[a]? with
+    | some (.inst i) =>
+      match i.base with
+      | .str s => some s
+      | _ => none
+    | _ => none
+  | _ => none
+
+/-- A call into Python code from C gives `py_recursion_remaining` back as it found it: each frame
+it enters takes a unit and returns it when it leaves, raising or not. -/
+def keepRecursion {α : Type} (m : RM α) : RM α := fun rt =>
+  match m rt with
+  | .ok a rt' => .ok a { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
+  | .error e rt' => .error e { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
+
+/-- The hooks of the machine's object model: `PyObject_RichCompareBool` is identity, else
+`PyObject_RichCompare` then `PyObject_IsTrue` (a `bool` result read as it is). -/
+def kwHooksOf (om : ObjModel) (ctx : Ctx) : KwHooks where
+  eq a b := keepRecursion do
+    if a == b then pure true else om.isTrue ctx (← om.richCompare ctx a b 2)
+  str o := keepRecursion do
+    let v ← om.str ctx o
+    match kwText (← get) v with
+    | some t => pure t
+    | none => fault "str() did not return a str"
+  setItem d k v := keepRecursion (om.setItem ctx d k v)
+
+/-- Hooks for a `kwnames` of exact `str` only, which never call them (`findKwSlot`, `fmtKw`,
+`posonlyHits` and the `**kwargs` store test for an exact `str` first). -/
+def strKwHooks : KwHooks where
+  eq _ _ := fault "keyword comparison on an exact str"
+  str _ := fault "keyword str() on an exact str"
+  setItem _ _ _ := fault "keyword store on an exact str"
+
+/-- `positional_only_passed_as_keyword`, lines 1674-1735, for one positional-only name `n`: every
+keyword equal to it, in keyword order. An exact `str` keyword is compared by text (the pointer
+test of line 1688 for an interned name, else `PyObject_RichCompareBool` of two exact `str`); any
+other keyword object goes through `PyObject_RichCompareBool(posonly_name, kwname, Py_EQ)`
+(line 1697), which for a `str` subclass overriding `__eq__` runs its reflected `__eq__` first, and
+whose error (`cmp < 0`, `goto fail`, lines 1704-1706) is the result. -/
+def posonlyHits (hk : KwHooks) (n : String) : List Val → RM (List Val)
+  | [] => pure []
+  | kw :: rest => do
+    let hit ← match kw with
+      | .str s => pure (s == n)
+      | _ => hk.eq (.str n) kw
+    let tl ← posonlyHits hk n rest
+    pure (if hit then kw :: tl else tl)
+
+/-- The outer loop of `positional_only_passed_as_keyword` (line 1684), positional-only name by
+name. -/
+def posonlyConflicts (hk : KwHooks) (kwnames : List Val) : List String → RM (List Val)
+  | [] => pure []
+  | n :: ns => do
+    let a ← posonlyHits hk n kwnames
+    let b ← posonlyConflicts hk kwnames ns
+    pure (a ++ b)
+
+/-- `positional_only_passed_as_keyword`, lines 1674-1735: the conflicting keyword objects joined
+with `", "` (`PyUnicode_Join`, which reads each one's `str` data) into the `TypeError`. -/
+def posonlyPassedAsKeyword (hk : KwHooks) (co : Code) (kwnames : List Val) (qualname : String) :
+    RM Unit := do
+  let conflicts ← posonlyConflicts hk kwnames
+    ((List.range co.posonlyargcount).map fun k => co.localsplusnames.getD k "")
   if !conflicts.isEmpty then
-    typeError s!"{qualname}() got some positional-only arguments passed as keyword arguments: '{joinStrs ", " conflicts}'"
+    let rt ← get
+    typeError s!"{qualname}() got some positional-only arguments passed as keyword arguments: '{joinStrs ", " (conflicts.map fun c => (kwText rt c).getD "")}'"
 
 /-- Index of `name` among the parameters that may be passed by keyword, the first of
-`co_varnames[co_posonlyargcount:total_args]` equal to it: the pointer loop (lines 1815-1822) and
-the `PyObject_RichCompareBool(keyword, varname, Py_EQ)` loop (lines 1824-1834) find the same one
-for an exact `str` keyword, whose names are interned. A `str` subclass with its own `__eq__`
-(possible through `**` and `_PyStack_UnpackDict`) is outside the machine's keyword model, which
-holds keyword names as text. -/
+`co_varnames[co_posonlyargcount:total_args]` with that text: for an exact `str` keyword the pointer
+loop (lines 1815-1822) and the `PyObject_RichCompareBool` loop (lines 1825-1835) find the same
+one, the names being interned. -/
 def kwSlot (co : Code) (name : String) : Option Nat :=
   let total := co.argcount + co.kwonlyargcount
   (List.range' co.posonlyargcount (total - co.posonlyargcount)).find?
     fun j => co.localsplusnames.getD j "" == name
+
+/-- The slow loop, lines 1825-1835, for a keyword object that is not an exact `str` (so no
+pointer in the first loop is it): `PyObject_RichCompareBool(keyword, varname, Py_EQ)` in order
+(line 1832), the first true one is the slot (`kw_found`), and an error is `kw_fail`
+(lines 1836-1838). -/
+def kwSlotSlow (hk : KwHooks) (co : Code) (keyword : Val) : List Nat → RM (Option Nat)
+  | [] => pure none
+  | j :: js => do
+    if ← hk.eq keyword (.str (co.localsplusnames.getD j "")) then pure (some j)
+    else kwSlotSlow hk co keyword js
+
+/-- Lines 1815-1835: the slot a keyword names, if any. -/
+def findKwSlot (hk : KwHooks) (co : Code) (keyword : Val) : RM (Option Nat) :=
+  match keyword with
+  | .str s => pure (kwSlot co s)
+  | _ => kwSlotSlow hk co keyword
+      (List.range' co.posonlyargcount (co.argcount + co.kwonlyargcount - co.posonlyargcount))
+
+/-- `'%S'` of a keyword (`PyObject_Str`): the text of an exact `str`, else the hook. -/
+def fmtKw (hk : KwHooks) : Val → RM String
+  | .str s => pure s
+  | k => hk.str k
 
 /-- `possible_keywords` (lines 1853-1861): the names that may be passed by keyword. -/
 def possibleKeywords (co : Code) : List String :=
@@ -287,58 +381,72 @@ def possibleKeywords (co : Code) : List String :=
 
 /-- The unexpected keyword `TypeError` of lines 1851-1876: `_Py_CalculateSuggestions` over
 `possible_keywords` when `total_args > co_posonlyargcount` (the same `Python/suggestions.c`
-model as `TypeObj.calcSuggestion`), then `"%U() got an unexpected keyword argument '%S'"` with
-`". Did you mean '%S'?"` when it found one. `PyUnicode_AsUTF8AndSize` cannot fail on a `String`
-(no surrogates), and the `PyList_New` failure is not modelled. -/
+model as `TypeObj.calcSuggestion`), on the keyword's `str` data, then
+`"%U() got an unexpected keyword argument '%S'"` with `". Did you mean '%S'?"` when it found one.
+`PyUnicode_AsUTF8AndSize` cannot fail on a `String` (no surrogates), and the `PyList_New` failure
+is not modelled. -/
 def kwSuggestion (co : Code) (keyword : String) : Option String :=
   if co.argcount + co.kwonlyargcount > co.posonlyargcount then
     PyLean.TypeObj.calcSuggestion (possibleKeywords co) keyword
   else none
 
-def unexpectedKeyword {α : Type} (co : Code) (qualname keyword : String) : RM α :=
-  match kwSuggestion co keyword with
-  | some sug => typeError s!"{qualname}() got an unexpected keyword argument '{keyword}'. Did you mean '{sug}'?"
-  | none => typeError s!"{qualname}() got an unexpected keyword argument '{keyword}'"
+def unexpectedKeyword {α : Type} (hk : KwHooks) (co : Code) (qualname : String) (keyword : Val) :
+    RM α := do
+  let txt := (kwText (← get) keyword).getD ""
+  let shown ← fmtKw hk keyword
+  match kwSuggestion co txt with
+  | some sug => typeError s!"{qualname}() got an unexpected keyword argument '{shown}'. Did you mean '{sug}'?"
+  | none => typeError s!"{qualname}() got an unexpected keyword argument '{shown}'"
 
 /-- The keyword loop of `initialize_locals`, lines 1803-1903, over the keywords in `kwnames`
-order; `kwnames` is all of them, for `positional_only_passed_as_keyword`. A keyword that names a
-parameter fills its local, or raises "got multiple values" if it is set; one that names none goes
-into `**kwargs` (`PyDict_SetItem`), or, with no `**kwargs`, raises the positional-only error when
-there are positional-only parameters and a keyword names one, else the unexpected keyword
-error. -/
-def bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List String) :
-    List (String × Val) → Array Val → RM (Array Val)
+order; `kwnames` is all of them, for `positional_only_passed_as_keyword`. A keyword that is not a
+`str` is the "keywords must be strings" `TypeError` (lines 1810-1815). One that names a parameter
+fills its local, or raises "got multiple values" if it is set (`kw_found`, lines 1894-1901); one
+that names none goes into `**kwargs` (`PyDict_SetItem` with the keyword object, line 1882), or,
+with no `**kwargs`, raises the positional-only error when there are positional-only parameters
+and a keyword names one, else the unexpected keyword error. An error in a comparison is the
+result (`kw_fail`). `func->func_qualname` is read from the function object where each message is
+made, since a comparison may have run Python code that assigned `__qualname__`; the one
+`positional_only_passed_as_keyword` gets is read before its comparisons (a borrowed pointer, line
+1846). -/
+def bindKeywords (hk : KwHooks) (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List Val) :
+    List (Val × Val) → Array Val → RM (Array Val)
   | [], fast => pure fast
   | (keyword, value) :: rest, fast => do
-    match kwSlot co keyword with
+    if (kwText (← get) keyword).isNone then
+      typeError s!"{(← getFunc funcv).qualname}() keywords must be strings"
+    match ← findKwSlot hk co keyword with
     | some j =>
-      -- `kw_found`, lines 1889-1897
       if fast.getD j .null != .null then
-        typeError s!"{func.qualname}() got multiple values for argument '{keyword}'"
-      bindKeywords co func kwdict kwnames rest (fast.setIfInBounds j value)
+        typeError s!"{(← getFunc funcv).qualname}() got multiple values for argument '{← fmtKw hk keyword}'"
+      bindKeywords hk co funcv kwdict kwnames rest (fast.setIfInBounds j value)
     | none =>
       if kwdict == .null then
         if co.posonlyargcount != 0 then
-          posonlyPassedAsKeyword co kwnames func.qualname
-        unexpectedKeyword co func.qualname keyword
-      dictSetStr kwdict keyword value
-      bindKeywords co func kwdict kwnames rest fast
+          posonlyPassedAsKeyword hk co kwnames (← getFunc funcv).qualname
+        unexpectedKeyword hk co (← getFunc funcv).qualname keyword
+      match keyword with
+      | .str s => dictSetStr kwdict s value
+      | k => hk.setItem kwdict k value
+      bindKeywords hk co funcv kwdict kwnames rest fast
 
-/-- `initialize_locals`, lines 1737-1984. `args` are the positional arguments,
-`kwargs` the keyword arguments in `kwnames` order. -/
-def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
-    (args : List Val) (kwargs : List (String × Val)) : RM (Array Val) := do
+/-- `initialize_locals`, lines 1738-1984. `args` are the positional arguments,
+`kwargs` the keyword objects and values in `kwnames` order. `co` is the code object read when the
+call began (the frame holds it); `func_defaults`, `func_kwdefaults` and `func_qualname` are read
+from the function object `funcv` after the keyword loop, which may have run Python code. -/
+def initializeLocals (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val)
+    (args : List Val) (kwargs : List (Val × Val)) : RM (Array Val) := do
   let totalArgs := co.argcount + co.kwonlyargcount
   let argcount := args.length
   let hasVarargs := flagSet co.flags coVarargs
   let hasVarkw := flagSet co.flags coVarkeywords
-  -- lines 1746-1760
+  -- lines 1747-1760
   let (kwdict, fast) ← if hasVarkw then do
       let kd ← mkDict
       let i := if hasVarargs then totalArgs + 1 else totalArgs
       pure (kd, fast0.setIfInBounds i kd)
     else pure (Val.null, fast0)
-  -- lines 1762-1773
+  -- lines 1763-1773
   let n := if argcount > co.argcount then co.argcount else argcount
   let fast := (List.range n).foldl (fun f j => f.setIfInBounds j (args.getD j .null)) fast
   -- lines 1775-1800
@@ -346,12 +454,13 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
       let u ← mkTuple (args.drop n)
       pure (fast.setIfInBounds totalArgs u)
     else pure fast
-  -- lines 1802-1899
-  let fast ← bindKeywords co func kwdict (kwargs.map (·.1)) kwargs fast
-  -- lines 1901-1906
+  -- lines 1802-1903
+  let fast ← bindKeywords hk co funcv kwdict (kwargs.map (·.1)) kwargs fast
+  let func ← getFunc funcv
+  -- lines 1905-1910
   if argcount > co.argcount && !hasVarargs then
     tooManyPositional co argcount func.defaults fast func.qualname
-  -- lines 1908-1940. `m = co_argcount - defcount` is a `Py_ssize_t`, negative when
+  -- lines 1912-1940. `m = co_argcount - defcount` is a `Py_ssize_t`, negative when
   -- `__defaults__` was replaced by a tuple longer than the parameters; then no positional
   -- is missing, `i = n - m` skips the first defaults, and the last `co_argcount - n` fill the
   -- unfilled slots from `n` on.
@@ -389,13 +498,13 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
 
 /-- `_PyEvalFramePushAndInit`, lines 2033-2068. `args` holds the positional
 arguments followed by the values of `kwnames`. -/
-def framePushAndInit (P : Program) (funcv locals : Val) (args : List Val)
-    (kwnames : List String) : RM Frame := do
+def framePushAndInit (P : Program) (hk : KwHooks) (funcv locals : Val) (args : List Val)
+    (kwnames : List Val) : RM Frame := do
   let func ← getFunc funcv
   let co ← getCodeR P func.code
   let f := frameInitialize co func.code func funcv locals
   let npos := args.length - kwnames.length
-  let fast ← initializeLocals co func f.fast (args.take npos) (kwnames.zip (args.drop npos))
+  let fast ← initializeLocals hk co funcv f.fast (args.take npos) (kwnames.zip (args.drop npos))
   pure { f with fast := fast }
 
 /-- `PyFunction_New`-time `locals`: `code_flags & CO_OPTIMIZED ? NULL : globals`

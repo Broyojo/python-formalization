@@ -60,11 +60,11 @@ def textEntries : List Entry := [
     source := "the bodies _pyio.py:896-902 and bytesio.c:909-945"
     status := .proven, prop := ``BytesIOGetstate, thm := some ``bytesIOGetstate_proven },
   { id := "pyio-bytesio-getbuffer", pyFile := "Lib/_pyio.py"
-    pyFns := ["BytesIO.getbuffer", "_io_BytesIO_getbuffer_impl", "bytesiobuf_getbuffer"]
+    pyFns := ["BytesIO.getbuffer", "_io_BytesIO_getbuffer_impl", "bytesiobuf_getbuffer", "_io_BytesIO_close_impl"]
     statement := "getbuffer() refuses a closed BytesIO (ValueError('getbuffer on closed file') in _pyio, ValueError('I/O operation on closed file.') in C); on an open one it returns a view that leaves contents and position unchanged and, while it lives, makes closing a non-empty stream, truncate(0) of it, and a write past the end raise BufferError, in both twins."
     source := "Doc/library/io.rst (BytesIO.getbuffer: 'As long as the view exists, the BytesIO object cannot be resized or closed'); the bodies _pyio.py:915-920, bytesio.c:386-403"
     status := .proven, prop := ``BytesIOGetbuffer, thm := some ``bytesIOGetbuffer_proven
-    notes := "Scope: the view is an export count; that it reads and writes the live buffer is not modelled. Releasing it is pyio-bytesio-release-exports." },
+    notes := "Here the view is an export count; that it reads and writes the live buffer is pyio-bytesio-getbuffer-live (PyIO/BytesShareProps.lean). C close_impl is CHECK_EXPORTS then Py_CLEAR (bytesio.c:886-892): the close clause pins the refusal under a view, and the core simulation the close without one. Releasing it is pyio-bytesio-release-exports." },
   { id := "pyio-stringio-write-refusals", pyFile := "Lib/_pyio.py"
     pyFns := ["TextIOWrapper.write", "_io_StringIO_write_impl"]
     statement := "The refusals of StringIO.write on every state: C raises TypeError(\"string argument expected, got 'T'\") for a non-str whether or not the stream is closed, and ValueError('I/O operation on closed file') for a str on a closed stream; _pyio raises ValueError('write to closed file') for every argument on a closed stream and TypeError(\"can't write T to text stream\") for a non-str on an open one. No refusal changes the stream."
