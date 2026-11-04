@@ -1,0 +1,90 @@
+id: json-twins-recursion-limit
+title: "json: the C and pure-Python twins stop at different nesting depths (C stack limit vs sys.getrecursionlimit())"
+priority: P4
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Lib/json/scanner.py, Lib/json/decoder.py, Lib/json/encoder.py]
+functions: ["C scan_once_unicode", "C encoder_listencode_obj", "py_make_scanner", "JSONObject", "JSONArray", "_make_iterencode"]
+summary: |
+  Since 3.14, `_Py_EnterRecursiveCall` in `_json` is a check of the machine stack pointer, not a
+  count, so the C decoder and encoder go as deep as the thread's C stack allows (about 100000
+  levels on Linux with an 8 MB stack), while the pure-Python twins push Python frames and stop at
+  `sys.getrecursionlimit()`: two frames per array or object level when decoding (`_scan_once` and
+  `JSONArray`/`JSONObject`), one per container level when encoding (a generator), plus the string
+  scanners and `default`. At the default limit of 1000, `json.loads('[' * 1000 + ']' * 1000)`
+  succeeds with `_json` and raises RecursionError without it; so does `json.dumps` of lists 1000
+  deep. Conversely, with a raised recursion limit the Python twins decode documents the C twin
+  rejects with "Stack overflow (used N kB) while decoding a JSON array from a unicode string".
+  The Lean model has both limits as parameters (the C stack room in levels, the Python frames
+  left): the decoder twins agree exactly when neither raises its RecursionError, C needs exactly
+  k levels for `'[' * k + ']' * k` and Python exactly 2k + 1 frames
+  (json-loads-twins-scan, json-raw-decode-twins-in-range); the encoder needs k + 1 levels and
+  k + 3 frames for lists k + 1 deep (json-dumps-twins). The statements for every limit are
+  refuted (json-loads-twins-rec, json-raw-decode-twins-rec, json-dumps-twins-rec).
+likelihood: |
+  Real documents 500-1000 levels deep are rare but do occur (machine-generated JSON, fuzzers,
+  JSON-encoded trees). Anyone who validates nesting with the pure-Python module, or runs without
+  `_json` (some embedded builds), sees different accept/reject behaviour from the default build.
+maybe_intended: |
+  Probably intended, or at least accepted: the C accelerator's limit has been stack-based since
+  3.14 and test_json's recursion tests only check that 100000-500000 levels raise RecursionError
+  in both (test_recursion.py:70-112). Recorded because the twin agreement the tests rely on does not
+  hold between 500 and about 100000 levels, which no test exercises.
+reproducer: |
+  import sys, json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  doc = '[' * 1000 + ']' * 1000
+  def run(f):
+      try:
+          f()
+          return 'ok'
+      except RecursionError as e:
+          return 'RecursionError: ' + str(e)
+  lst = []
+  for _ in range(999):
+      lst = [lst]
+  rows = {'loads C': run(lambda: json.loads(doc)), 'loads Python': run(lambda: pyjson.loads(doc)),
+          'dumps C': run(lambda: json.dumps(lst)), 'dumps Python': run(lambda: pyjson.dumps(lst))}
+  for k, v in rows.items():
+      print(f'{k:13s} {v}')
+  print('recursion limit', sys.getrecursionlimit())
+  if (rows['loads C'] == 'ok' and rows['loads Python'].startswith('RecursionError')
+          and rows['dumps C'] == 'ok' and rows['dumps Python'].startswith('RecursionError')):
+      print('REPRODUCED json-twins-recursion-limit')
+expected: |
+  Twins that accept the same documents and values, e.g. both raising RecursionError at the same
+  depth, or a documented statement that the pure-Python twins are limited by
+  sys.getrecursionlimit() and the accelerator by the C stack.
+observed: |
+  python3 3.15.2: REPRODUCED. loads C ok, loads Python RecursionError: maximum recursion depth
+  exceeded; dumps C ok, dumps Python RecursionError (limit 1000). Probe: the Python decoder fails
+  from 498 levels when raw_decode is called with 996 frames left (2k + 1 frames), C fails at
+  100000 levels with "Stack overflow (used 8152 kB) while decoding a JSON array from a unicode
+  string".
+promised_by: |
+  C/Python twin agreement: Lib/test/test_json runs every test against both (PyTest/CTest).
+  Nothing documents a depth limit for either.
+cause: |
+  Modules/_json.c:1132-1145 and :1606-1644: `_Py_EnterRecursiveCall`, which in 3.15 is
+  `_Py_MakeRecCheck` on the stack pointer (Include/internal/pycore_ceval.h:211-241) and
+  `_Py_CheckRecursiveCall` (Python/ceval.c:298-336). Lib/json/scanner.py:29-71 and
+  Lib/json/decoder.py:137-263 recurse through Python frames, checked by
+  `_Py_CheckRecursiveCallPy` (Python/ceval.c:1026-1045); Lib/json/encoder.py:265-449 through
+  generator frames.
+possible_fix: |
+  Document the difference, or make the Python twins iterative. Matching the limits exactly is not
+  realistic: one is in bytes of C stack, the other in Python frames.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 107263, state: closed, relation: "related (3.12 regression in json.dump of deeply nested dicts); not about the twins", reason: completed}
+    - {number: 137103, state: open, relation: "unrelated (check_circular design)", reason: open}
+  queries: ["json RecursionError accelerator", "json recursion limit decoder", "json deeply nested RecursionError",
+            "json encoder recursion stack overflow", "json nested loads RecursionError", "json recursion",
+            "bugforge-results/README.md: json entries (4: 158729-158732, none related)"]
+lean:
+  property: PyLean.JsonMod.LoadsTwinsRec
+  theorem: PyLean.JsonMod.loadsTwinsRec_refuted

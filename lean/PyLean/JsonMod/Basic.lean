@@ -258,7 +258,7 @@ def hexVal (c : Nat) : Option Nat :=
 
 /-- Four hex digits at `p`: `HEXDIGITS.match(s, p)` + `int(_, 16)` in
 `_decode_uXXXX` (decoder.py:60-68), and the digit loops of
-`scanstring_unicode` (Modules/_json.c:581-597, 506-521). -/
+`scanstring_unicode` (Modules/_json.c:581-599, 606-624). -/
 def hex4 (s : PStr) (p : Nat) : Option Nat :=
   match (s.drop p).take 4 with
   | [a, b, c, d] =>
