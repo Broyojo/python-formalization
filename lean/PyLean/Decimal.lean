@@ -585,7 +585,55 @@ def entries : List Entry := [
     pyFns := ["Decimal.compare_total", "Decimal._cmp", "Decimal._isnan"]
     statement := "For all decimals a, b (NaNs, infinities, signed zeros, any exponents), compare_total(b, a) == -compare_total(a, b), and compare_total(a, b) == 0 iff a and b are the same representation."
     source := "compare_total docs: 'the result gives a total ordering on Decimal instances' (Doc/library/decimal.rst:521-522)"
-    status := .proven, prop := ``CompareTotalOrder, thm := some ``compareTotalOrder_proven }
+    status := .proven, prop := ``CompareTotalOrder, thm := some ``compareTotalOrder_proven },
+  { id := "decimal-mul-nan-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__mul__", "Decimal._check_nans", "_convert_other"]
+    statement := "For every context: a product with a NaN operand is what _check_nans gives, whatever the other operand (an infinity included): a signaling NaN on the left, else on the right, signals InvalidOperation and is returned quiet with its payload cut to prec - clamp digits, else the left quiet NaN, else the right one, quieted, with no flag. __mul__'s prologue multiplies a Decimal operand as is and an int n as the exact Decimal(n), raising the int/str-limit ValueError when |n| has more than 4300 digits, and returns NotImplemented for any other operand with no flag."
+    source := "Lib/_pydecimal.py:1317-1329; _check_nans docstring (:791-798); General Decimal Arithmetic, 'multiply' (NaN operands)"
+    status := .proven, prop := ``MulNanExact, thm := some ``mulNanExact_proven
+    notes := "With decimal-mul-exact (finite, zero and infinite operands) every pair of operands is stated. Checked on 3.15.2: NaN12 * Inf = NaN12 with no flag; Inf * sNaN7 = NaN7 with InvalidOperation; NaN123456789 * 1 = NaN56789 at prec 5." },
+  { id := "decimal-normalize-nan-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.normalize", "Decimal._check_nans", "Decimal._fix_nan"]
+    statement := "For every context, normalize of a quiet NaN returns it with its payload cut to prec - clamp digits and no flag, and of a signaling NaN signals InvalidOperation (raising if trapped) and returns it quiet."
+    source := "Lib/_pydecimal.py:2581-2584; General Decimal Arithmetic, 'reduce' (NaN operands)"
+    status := .proven, prop := ``NormalizeNanExact, thm := some ``normalizeNanExact_proven
+    notes := "With decimal-normalize-exact (every non-NaN operand) normalize is stated for every operand." },
+  { id := "decimal-scaleb-rest-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.scaleb", "Decimal._check_nans"]
+    statement := "For every context: scaleb with a NaN operand is what _check_nans gives (a signaling NaN, left first, signals InvalidOperation and is returned quiet, else the quiet NaN); for an integral second operand whose digit string has more than 4300 digits, int(other) raises the int/str-limit ValueError ('value has N digits') whatever the non-NaN first operand; and an infinite first operand with an integral n outside [-2*(Emax+prec), 2*(Emax+prec)] signals InvalidOperation."
+    source := "Lib/_pydecimal.py:3751-3769; General Decimal Arithmetic, 'scaleb'"
+    status := .proven, prop := ``ScalebRestExact, thm := some ``scalebRestExact_proven
+    notes := "With decimal-scaleb-exact every operand pair is stated. Checked on 3.15.2: Context().scaleb(1, Decimal((0, (1,)+(0,)*5000, 0))) and the same with Infinity raise 'value has 5001 digits'; scaleb(Inf, 10**9) is NaN with InvalidOperation." },
+  { id := "decimal-fma-special-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.fma"]
+    statement := "For every context, with no signaling NaN among a and b: a quiet NaN a (else b) is the product, which __add__ returns quieted unless t is a signaling NaN (InvalidOperation, t returned quiet); an infinity times an infinity or a non-zero finite value is the infinity of the product's sign added to t: a NaN t goes through _check_nans, the opposite infinity is InvalidOperation, anything else gives the infinity."
+    source := "Decimal.fma docstring and Lib/_pydecimal.py:1986-2017, with __add__'s special branch (:1213-1225)"
+    status := .proven, prop := ``FmaSpecialExact, thm := some ``fmaSpecialExact_proven
+    notes := "Checked on 3.15.2: fma(NaN1, 2, sNaN2) = NaN2 with InvalidOperation; fma(Inf, -Inf, Inf) = NaN with InvalidOperation; fma(-Inf, 2, sNaN3) = NaN3 with InvalidOperation. The finite product's sum is still decimal-fma-exact's __add__ (decimal-add-correct, open)." },
+  { id := "decimal-abs-no-round-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__abs__", "Decimal.copy_abs"]
+    statement := "For every context, abs(x, round=False) is x with its sign cleared, unrounded and with no flag, a signaling NaN included (no _check_nans)."
+    source := "__abs__ docstring: 'self.__abs__(round=False) is equivalent to self.copy_abs()' (Lib/_pydecimal.py:1183-1188)"
+    status := .proven, prop := ``AbsNoRoundExact, thm := some ``absNoRoundExact_proven
+    notes := "Checked on 3.15.2: Decimal('-sNaN5').__abs__(round=False) is sNaN5 with no flag; Decimal('-1.23456789').__abs__(round=False) at prec 5 is 1.23456789." },
+  { id := "decimal-compare-total-mag-rest", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.compare_total_mag"]
+    statement := "compare_total_mag(b, a) == -compare_total_mag(a, b) for all decimals, and a number (finite or infinite) against a NaN of either sign and kind is -1."
+    source := "compare_total_mag docs: 'like compare_total, but ignoring the sign of each operand' (Doc/library/decimal.rst); total-order antisymmetry"
+    status := .proven, prop := ``CompareTotalMagRest, thm := some ``compareTotalMagRest_proven
+    notes := "With decimal-compare-total-exact's compare_total_mag conjuncts every pair is stated. Checked on 3.15.2: Decimal(5).compare_total_mag(Decimal('-NaN')) and Decimal('-Inf').compare_total_mag(Decimal('sNaN')) are -1." },
+  { id := "decimal-convert-other-tuple-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_convert_other"]
+    statement := "_convert_other(t, raiseit=True) for a tuple t raises TypeError with what 'Unable to convert %s to Decimal' % t gives: 'not enough arguments for format string (got 0)' for (), the formatted message for a 1-tuple, and 'not all arguments converted during string formatting (required 1, got k)' for k >= 2 elements."
+    source := "Lib/_pydecimal.py:6111-6112; PyUnicode_Format's argument-count errors"
+    status := .proven, prop := ``ConvertOtherTupleExact, thm := some ``convertOtherTupleExact_proven
+    notes := "What CPython 3.15.2 does (checked), which is the wrong message recorded in decimal-pydecimal-signal-dict-tuple-message; with decimal-convert-other-exact every operand and both raiseit values are stated." },
+  { id := "decimal-remainder-near-rest", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.remainder_near", "Decimal._check_nans", "_WorkRep.__init__"]
+    statement := "For every context and every math.log10: remainder_near with a NaN operand is what _check_nans gives, before the infinity and zero tests; a zero a is the zero of a's sign at min(ea, eb) through _fix for a non-zero finite b, and a through _fix for an infinite b; for non-zero finite operands whose adjusted exponents differ by prec + 1 or more the result is InvalidOperation (DivisionImpossible), and by -2 or less it is a, padded to exponent min(ea, eb), through _fix; in between, a coefficient of more than 4300 digits raises _WorkRep's int/str-limit ValueError, a's first."
+    source := "remainder_near docstring and Lib/_pydecimal.py:1559-1598; General Decimal Arithmetic, 'remainder-near'"
+    status := .proven, prop := ``RemainderNearRest, thm := some ``remainderNearRest_proven
+    notes := "With decimal-remainder-near-exact (the in-between case within the limit, a zero b, an infinite a or b) every operand pair is stated; the only remaining hypothesis there is a quotient of fewer than 2**40 digits (the domain on which math.log10's accuracy is assumed). Checked on 3.15.2 at prec 5: remainder_near(-0E+5, 3E-2) = -0.00; remainder_near(1E+5, 1) is NaN with InvalidOperation; remainder_near(0.0123456789, 7) = 0.012346 with Inexact, Rounded; a 4301-digit coefficient raises 'value has 4301 digits'." }
 ]
 
 end PyLean.Decimal

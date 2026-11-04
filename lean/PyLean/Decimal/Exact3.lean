@@ -255,4 +255,110 @@ def ConvertOtherTupleExact : Prop :=
 
 theorem convertOtherTupleExact_proven : ConvertOtherTupleExact := ⟨rfl, rfl, fun _ => rfl⟩
 
+/-! ## `remainder_near`: the branches `RemainderNearExact` leaves -/
+
+/-- `remainder_near(a, b)` (_pydecimal.py:1550-1625), every branch `RemainderNearExact` does not
+state, for every `math.log10` (none of them reaches `_is_less_than_pow10a`): a NaN operand goes
+through `_check_nans` (:1559-1561), `nanSpec2`, before the infinity and zero tests; a zero `a` with a
+non-zero finite `b` is the zero of `a`'s sign at the ideal exponent `min(ea, eb)` through `_fix`
+(:1580-1584), and with an infinite `b` it is `a` through `_fix` (:1576-1578); for non-zero finite
+operands whose adjusted exponents differ by `prec + 1` or more the result is InvalidOperation
+(DivisionImpossible, :1588-1590), and by `-2` or less (`|a/b| < 0.1`, so the nearest integer is 0)
+it is `a` itself, rescaled to the ideal exponent by padding zeros (exact), through `_fix`
+(:1591-1594); in between, `_WorkRep` (:1597-1598) takes `int(self._int)` and `int(other._int)`, which
+raise the int/str-limit `ValueError` for a coefficient of more than 4300 digits, `a`'s first. -/
+def RemainderNearRest : Prop :=
+  ∀ (lg : Nat → Binary64.F64) (c : Ctx) (fl : List Signal),
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (remainderNearL lg c a b).run fl = nanSpec2 c a b fl) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), cb ≠ 0 →
+      (remainderNearL lg c (.fin sa 0 ea) (.fin sb cb eb)).run fl = (fix c (.fin sa 0 (min ea eb))).run fl) ∧
+    (∀ (sa : Bool) (ea : Int) (nb : Bool),
+      (remainderNearL lg c (.fin sa 0 ea) (.inf nb)).run fl = (fix c (.fin sa 0 ea)).run fl) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      c.prec + 1 ≤ (ea + numDigits ca - 1) - (eb + numDigits cb - 1) →
+      (remainderNearL lg c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        afterSig c .invalidOperation fl (.nan false false 0)) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      (ea + numDigits ca - 1) - (eb + numDigits cb - 1) ≤ -2 →
+      (remainderNearL lg c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        (fix c (.fin sa (ca * 10 ^ (ea - min ea eb).toNat) (min ea eb))).run fl) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      -2 < (ea + numDigits ca - 1) - (eb + numDigits cb - 1) →
+      (ea + numDigits ca - 1) - (eb + numDigits cb - 1) < c.prec + 1 →
+      maxStrDigits < numDigits ca →
+      (remainderNearL lg c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        .error (.valueError (limitToIntMsg (numDigits ca)))) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      -2 < (ea + numDigits ca - 1) - (eb + numDigits cb - 1) →
+      (ea + numDigits ca - 1) - (eb + numDigits cb - 1) < c.prec + 1 →
+      numDigits ca ≤ maxStrDigits → maxStrDigits < numDigits cb →
+      (remainderNearL lg c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        .error (.valueError (limitToIntMsg (numDigits cb))))
+
+theorem remainderNearRest_proven : RemainderNearRest := by
+  intro lg c fl
+  have hz : ∀ (s : Bool) (co : Nat) (e : Int), co ≠ 0 → decBool (.fin s co e) = true := by
+    intro s co e hc; cases co with
+    | zero => exact absurd rfl hc
+    | succ n => rfl
+  refine ⟨fun a b h => ?_, fun sa ea sb cb eb hb => ?_, fun sa ea nb => ?_,
+    fun sa ca ea sb cb eb ha hb h1 => ?_, fun sa ca ea sb cb eb ha hb h1 => ?_,
+    fun sa ca ea sb cb eb ha hb h1 h2 hl => ?_, fun sa ca ea sb cb eb ha hb h1 h2 hl1 hl => ?_⟩
+  · unfold remainderNearL
+    exact checkNans_return c a b fl _ (fun d => rfl) h
+  · simp only [remainderNearL]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    have h0 : decBool (.fin sa 0 ea) = false := rfl
+    simp only [isinfinity, hz sb cb eb hb, h0, Bool.not_true, Bool.not_false,
+      Bool.false_eq_true, ↓reduceIte, ne_eq, not_true_eq_false, expOf, Dec.neg]
+    try rw [bind_pure]
+  · simp only [remainderNearL]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    simp only [isinfinity, decBool, isZero, Bool.not_true, Bool.not_false, ↓reduceIte, ne_eq,
+      not_true_eq_false, Bool.false_eq_true]
+    cases nb <;> simp only [Bool.false_eq_true, ↓reduceIte, Int.reduceNeg, Int.reduceEq, not_false_eq_true] <;>
+      (rw [bind_pure])
+  · simp only [remainderNearL, bind_assoc]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    simp only [isinfinity, hz sb cb eb hb, hz sa ca ea ha, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+      ne_eq, not_true_eq_false, expOf, Dec.adjusted, adjustedD]
+    simp only [show ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≥ c.prec + 1 by omega, ↓reduceIte]
+    try rw [bind_pure]
+    exact invalid_run c fl
+  · simp only [remainderNearL, bind_assoc]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    simp only [isinfinity, hz sb cb eb hb, hz sa ca ea ha, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+      ne_eq, not_true_eq_false, expOf, Dec.adjusted, adjustedD]
+    have hp : c.prec ≥ 0 := Nat.zero_le _
+    simp only [show ¬ (ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≥ c.prec + 1) by omega,
+      show ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≤ -2 from h1, ↓reduceIte]
+    have hr : rescale (.fin sa ca ea) (min ea eb) c.rounding =
+        .ok (.fin sa (ca * 10 ^ (ea - min ea eb).toNat) (min ea eb)) := by
+      simp only [rescale, ha, ↓reduceIte, show ea ≥ min ea eb by omega]
+    rw [liftPy_run, hr]
+    try simp only []
+    try rw [bind_pure]
+  · simp only [remainderNearL, bind_assoc]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    simp only [isinfinity, hz sb cb eb hb, hz sa ca ea ha, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+      ne_eq, not_true_eq_false, expOf, Dec.adjusted, adjustedD]
+    simp only [show ¬ (ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≥ c.prec + 1) by omega,
+      show ¬ (ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≤ -2) by omega, ↓reduceIte]
+    have w1 : workRep (.fin sa ca ea) = .error (.valueError (limitToIntMsg (numDigits ca))) := by
+      simp [workRep, intLimit, show numDigits ca > maxStrDigits from hl, bind, Except.bind]
+    rw [liftPy_run, w1]
+  · simp only [remainderNearL, bind_assoc]
+    rw [checkNans_none_bind c _ _ rfl rfl]
+    simp only [isinfinity, hz sb cb eb hb, hz sa ca ea ha, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+      ne_eq, not_true_eq_false, expOf, Dec.adjusted, adjustedD]
+    simp only [show ¬ (ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≥ c.prec + 1) by omega,
+      show ¬ (ea + numDigits ca - 1 - (eb + numDigits cb - 1) ≤ -2) by omega, ↓reduceIte]
+    have w1 : workRep (.fin sa ca ea) = .ok (sa, ca, ea) := by
+      simp [workRep, intLimit, show ¬ numDigits ca > maxStrDigits by omega, bind, Except.bind, pure, Except.pure]
+    have w2 : workRep (.fin sb cb eb) = .error (.valueError (limitToIntMsg (numDigits cb))) := by
+      simp [workRep, intLimit, show numDigits cb > maxStrDigits from hl, bind, Except.bind]
+    rw [liftPy_run, w1]
+    simp only []
+    rw [liftPy_run, w2]
+
 end PyLean.Decimal
