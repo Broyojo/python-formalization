@@ -93,7 +93,9 @@ def daysBeforeYearC (year : Int) : Int :=
   let y := year - 1
   y * 365 + y.tdiv 4 - y.tdiv 100 + y.tdiv 400
 
-/-- C `ymd_to_ord`, :571-574. -/
+/-- C `ymd_to_ord`, :571-574, with the shared `daysBeforeMonth` (equal to C's
+`daysBeforeMonthC` on the date range; `ymdToOrdCSrc` is the literal mirror and
+`YmdToOrdTwins` ties the two). -/
 def ymdToOrdC (y m d : Int) : Int := daysBeforeYearC y + daysBeforeMonth y m + d
 
 /-- The month search at the end of C `ord_to_ymd`, :487-567; the estimate
@@ -163,6 +165,20 @@ def checkTime (h mi s us : Int) : Py (Int × Int × Int × Int) :=
 def isLeapC (year : Int) : Bool :=
   let ayear := year % 4294967296
   ayear % 4 == 0 && (ayear % 100 != 0 || ayear % 400 == 0)
+
+/-- C `_days_before_month[]`, :418-421 (index 0 is unused and 0). -/
+def daysBeforeMonthTableC (m : Int) : Int :=
+  [0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334].getD m.toNat 0
+
+/-- C `days_before_month`, :451-461, with C's own table and `is_leap` (asserts
+`1 <= month <= 12`). `ymdToOrdC` uses the shared `daysBeforeMonth`, which equals this on
+the date range (`YmdToOrdTwins`). -/
+def daysBeforeMonthC (year month : Int) : Int :=
+  let days := daysBeforeMonthTableC month
+  if month > 2 ∧ isLeapC year then days + 1 else days
+
+/-- C `ymd_to_ord`, :571-574, from `days_before_year` and `days_before_month` as written. -/
+def ymdToOrdCSrc (y m d : Int) : Int := daysBeforeYearC y + daysBeforeMonthC y m + d
 
 /-- C `_days_in_month[]`, :413-416 (index 0 is unused and 0). -/
 def daysInMonthTableC (m : Int) : Int :=

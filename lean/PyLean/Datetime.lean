@@ -44,6 +44,7 @@ import PyLean.Datetime.Hollow0506Props
 import PyLean.Datetime.LocalZoneProps
 import PyLean.Datetime.TdFloat
 import PyLean.Datetime.DeltaObjProps
+import PyLean.Datetime.CalendarCProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -59,7 +60,7 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "datetime-ordinal-roundtrip", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromordinal", "date.toordinal", "_ymd2ord", "_ord2ymd", "_is_leap", "_days_before_year", "_days_in_month", "_days_before_month", "_check_date_fields", "C datetime_date_fromordinal_impl", "C date_toordinal", "C ord_to_ymd", "C ymd_to_ord", "C is_leap", "C days_in_month", "C days_before_month", "C days_before_year", "C check_date_args"]
+    pyFns := ["date.fromordinal", "date.toordinal", "_ymd2ord", "_ord2ymd", "_is_leap", "_days_before_year", "_days_in_month", "_days_before_month", "_check_date_fields", "C datetime_date_fromordinal_impl", "C date_toordinal", "C ord_to_ymd", "C ymd_to_ord", "C is_leap", "C days_in_month", "C check_date_args"]
     statement := "For every date d, date.fromordinal(d.toordinal()) == d, in both the C and the Python implementation."
     source := "date.toordinal docs (inverse of fromordinal); invariant", status := .proven
     prop := ``FromordinalToordinal, thm := some ``fromordinalToordinal_proven },
@@ -1444,7 +1445,12 @@ def entries : List Entry := [
     pyFns := ["timedelta.__reduce__", "C delta_reduce", "C delta_getstate"]
     statement := "t.__reduce__() is (type(t), (days, seconds, microseconds)) in both twins for every class, and calling that class on those arguments gives back an object of the same class and value (the zero_delta singleton for a zero timedelta in C)."
     source := "pickle contract (__reduce__); C/Python twins", status := .proven
-    prop := ``TimedeltaReduceCls, thm := some ``timedeltaReduceCls_proven }
+    prop := ``TimedeltaReduceCls, thm := some ``timedeltaReduceCls_proven },
+  { id := "datetime-ymd-to-ord-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C ymd_to_ord", "C days_before_year", "C days_before_month", "C is_leap", "_ymd2ord", "_days_before_year", "_days_before_month"]
+    statement := "For every year in 1..9999 and month in 1..12, C days_before_year, days_before_month and ymd_to_ord equal Python's _days_before_year, _days_before_month and _ymd2ord; at year 0 (unvalidated pickle state) days_before_year is -365 in C and -366 in Python."
+    source := "C/Python twins", status := .proven
+    prop := ``YmdToOrdTwins, thm := some ``ymdToOrdTwins_proven }
 ]
 
 end PyLean.Datetime
