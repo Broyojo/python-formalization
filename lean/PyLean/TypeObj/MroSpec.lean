@@ -3,7 +3,7 @@ import PyLean.TypeObj.TypeNew
 /-!
 The C3 linearization, stated as a specification independent of `pmerge`'s loop.
 
-The C3 rule, as `Objects/typeobject.c:3426-3436` states it and the C3 paper defines it: take
+The C3 rule, as `Objects/typeobject.c:3431-3436` states it and the C3 paper defines it: take
 the head of the *earliest* list whose head is in no list's tail, append it to the result,
 remove it from every list, and repeat; succeed when every list is empty, fail when lists
 remain and every head is in some tail. `C3Lin rests m` is that rule as an inductive relation:

@@ -96,7 +96,7 @@ def entries : List Entry := [
     ``C3DuplicateBaseRejected ``c3DuplicateBaseRejected_proven,
   p "typeobj-c3-exact" ty ["pmerge", "tail_contains"]
     "For all lists of classes, pmerge returns m exactly when the C3 rule (take the head of the earliest list whose head is in no tail, remove it from every list, repeat) linearizes them to m, and fails at remaining lists r exactly when that rule gets stuck at r."
-    "typeobject.c:3426-3436 (earliest direct superclass) and the C3 paper cited at :3259"
+    "typeobject.c:3431-3436 (earliest direct superclass) and the C3 paper cited at :3259"
     ``C3MergeExact ``c3MergeExact_proven,
   p "typeobj-check-duplicates-exact" ty ["check_duplicates"]
     "check_duplicates finds nothing exactly when the bases have no repeat, and otherwise reports the first base that occurs again later."
