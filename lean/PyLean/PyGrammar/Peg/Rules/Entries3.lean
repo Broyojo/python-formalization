@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Comps2
+import PyLean.PyGrammar.Peg.Rules.Args2
 
 /-! Registry entries for the parameter rules (`Peg/Rules/Params*.lean`) and `invalid_group`
 (`Peg/Rules/Invalid2.lean`), in the scheme of `Entries.lean`. -/
@@ -427,6 +427,140 @@ def compEntries : List Entry := [
     prop := ``ExpressionsRuleFull
     thm := some ``expressionsRuleFull_proven
     notes := scheme }
+]
+
+def argEntries : List Entry := [
+  { id := "pygrammar-rule-starred-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_starred_expression
+    statement := "starred_expression: in the second pass invalid_starred_expression_unpacking " ++
+      "first (its result; NULL on its error); then '*' expression gives Starred(a, Load); once " ++
+      "that fails, NULL with the mark back in the first pass and invalid_starred_expression from " ++
+      "the start mark in the second."
+    source := "Grammar/python.gram:1094-1097"
+    status := .proven
+    prop := ``StarredExpression
+    thm := some ``starredExpression_proven
+    notes := scheme },
+  { id := "pygrammar-rule-kwarg-or-starred"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_kwarg_or_starred
+    statement := "kwarg_or_starred: in the second pass invalid_kwarg first; then NAME '=' " ++
+      "expression gives KeywordOrStarred(keyword(name, value), 1); once that fails, " ++
+      "starred_expression gives KeywordOrStarred(it, 0); otherwise NULL with the mark back."
+    source := "Grammar/python.gram:1099-1103"
+    status := .proven
+    prop := ``KwargOrStarred
+    thm := some ``kwargOrStarred_proven
+    notes := scheme },
+  { id := "pygrammar-rule-kwarg-or-double-starred"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_kwarg_or_double_starred
+    statement := "kwarg_or_double_starred: as kwarg_or_starred, the last alternative '**' " ++
+      "expression giving KeywordOrStarred(keyword(NULL, value), 1)."
+    source := "Grammar/python.gram:1105-1110"
+    status := .proven
+    prop := ``KwargOrDoubleStarred
+    thm := some ``kwargOrDoubleStarred_proven
+    notes := scheme },
+  { id := "pygrammar-rule-kwargs"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_kwargs
+    statement := "kwargs: ','.kwarg_or_starred+ ',' ','.kwarg_or_double_starred+ gives the two " ++
+      "sequences joined; then the first gather alone; then the second; otherwise NULL with the " ++
+      "mark back; both gathers by induction."
+    source := "Grammar/python.gram:1089-1092"
+    status := .proven
+    prop := ``KwargsRule
+    thm := some ``kwargsRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-args"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_args
+    statement := "args: the positional gather and an optional ', kwargs' give " ++
+      "_PyPegen_collect_call_seqs(a, b, EXTRA); once that fails, kwargs alone gives the dummy " ++
+      "Call with its starred items as args and its keywords as keywords; otherwise NULL with the " ++
+      "mark back; the gather, its element groups (_tmp_167, _tmp_178) and ', kwargs' stated with it."
+    source := "Grammar/python.gram:1081-1087"
+    status := .proven
+    prop := ``ArgsRuleFull
+    thm := some ``argsRuleFull_proven
+    notes := scheme ++ " The kwargs clause assumes no exception pending (errOccurred = false), " ++
+      "under which CHECK_NULL_ALLOWED of an empty part raises nothing." },
+  { id := "pygrammar-rule-arguments"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_arguments
+    statement := "arguments (memo): args [','] followed by ')' (not consumed) gives args' Call; " ++
+      "once that fails, NULL in the first pass, invalid_arguments in the second; memoized at the " ++
+      "start mark."
+    source := "Grammar/python.gram:1077-1079"
+    status := .proven
+    prop := ``Arguments
+    thm := some ``arguments_proven
+    notes := scheme },
+  { id := "pygrammar-rule-type-params"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_params
+    statement := "type_params: in the second pass invalid_type_params first; then '[' " ++
+      "type_param_seq ']' gives the sequence behind CHECK_VERSION 12 (\"Type parameter lists are " ++
+      "only supported in Python 3.12 and greater\"); otherwise NULL with the mark back."
+    source := "Grammar/python.gram:688-691"
+    status := .proven
+    prop := ``TypeParams
+    thm := some ``typeParams_proven
+    notes := scheme },
+  { id := "pygrammar-rule-type-param-seq"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_param_seq
+    statement := "type_param_seq: ','.type_param+ [','] gives the gather's sequence; the gather " ++
+      "_gather_54 by induction."
+    source := "Grammar/python.gram:693"
+    status := .proven
+    prop := ``TypeParamSeqRule
+    thm := some ``typeParamSeqRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-type-param"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_param
+    statement := "type_param (memo): NAME [type_param_bound] [type_param_default] gives " ++
+      "TypeVar(name, bound, default); with no NAME, invalid_type_param in the second pass, then " ++
+      "'*' NAME [type_param_starred_default] gives TypeVarTuple(name, default), then '**' NAME " ++
+      "[type_param_default] ParamSpec(name, default); otherwise NULL with the mark back; memoized."
+    source := "Grammar/python.gram:695-699"
+    status := .proven
+    prop := ``TypeParam
+    thm := some ``typeParam_proven
+    notes := scheme },
+  { id := "pygrammar-rule-type-param-bound"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_param_bound
+    statement := "type_param_bound: ':' expression gives the expression; another token or no " ++
+      "expression NULL with the mark back."
+    source := "Grammar/python.gram:701"
+    status := .proven
+    prop := ``TypeParamBoundRule
+    thm := some ``typeParamBoundRule_proven
+    notes := scheme ++ " TokThen 105 11 109." },
+  { id := "pygrammar-rule-type-param-default"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_param_default
+    statement := "type_param_default: '=' expression gives the expression behind CHECK_VERSION 13 " ++
+      "(\"Type parameter defaults are only supported in Python 3.13 and greater\"); another token " ++
+      "or no expression NULL with the mark back."
+    source := "Grammar/python.gram:702-703"
+    status := .proven
+    prop := ``TypeParamDefaultRule
+    thm := some ``typeParamDefaultRule_proven
+    notes := scheme ++ " TokThenCV 106 22 109 13, proven against the rule's data." },
+  { id := "pygrammar-rule-type-param-starred-default"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_type_param_starred_default
+    statement := "type_param_starred_default: '=' star_expression, as type_param_default."
+    source := "Grammar/python.gram:704-705"
+    status := .proven
+    prop := ``TypeParamStarredDefaultRule
+    thm := some ``typeParamStarredDefaultRule_proven
+    notes := scheme ++ " TokThenCV 107 22 113 13." }
 ]
 
 end PyLean.PyGrammar.Peg

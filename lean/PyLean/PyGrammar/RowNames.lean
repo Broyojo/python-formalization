@@ -172,6 +172,12 @@ def peg_warn_lazy : List String := [
 def rule_annotation_default : List String := [
   "rule:annotation", "rule:star_annotation", "rule:default"]
 
+def rule_args : List String := [
+  "rule:args"]
+
+def rule_arguments : List String := [
+  "rule:arguments"]
+
 def rule_as_names : List String := [
   "rule:import_from_as_names", "rule:dotted_as_names"]
 
@@ -445,6 +451,15 @@ def rule_keyword_stmts : List String := [
 def rule_kvpair : List String := [
   "rule:kvpair"]
 
+def rule_kwarg_or_double_starred : List String := [
+  "rule:kwarg_or_double_starred"]
+
+def rule_kwarg_or_starred : List String := [
+  "rule:kwarg_or_starred"]
+
+def rule_kwargs : List String := [
+  "rule:kwargs"]
+
 def rule_kwds : List String := [
   "rule:kwds"]
 
@@ -646,6 +661,9 @@ def rule_star_target : List String := [
 def rule_star_targets : List String := [
   "rule:star_targets"]
 
+def rule_starred_expression : List String := [
+  "rule:starred_expression"]
+
 def rule_statement : List String := [
   "rule:statement"]
 
@@ -675,6 +693,24 @@ def rule_try_stmt : List String := [
 
 def rule_tuple : List String := [
   "rule:tuple"]
+
+def rule_type_param : List String := [
+  "rule:type_param"]
+
+def rule_type_param_bound : List String := [
+  "rule:type_param_bound"]
+
+def rule_type_param_default : List String := [
+  "rule:type_param_default"]
+
+def rule_type_param_seq : List String := [
+  "rule:type_param_seq"]
+
+def rule_type_param_starred_default : List String := [
+  "rule:type_param_starred_default"]
+
+def rule_type_params : List String := [
+  "rule:type_params"]
 
 def rule_value_pattern : List String := [
   "rule:value_pattern"]

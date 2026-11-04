@@ -613,6 +613,19 @@ RULE_FORMS = [
     "({e})", "(*{e})", "(**{e})", "(*{e}, {f})", "({e}, *{f})", "(yield {e})", "({e} := 1)", "(*{e} for x in y)",
     "[*{e}]", "[{e}, *{f},]", "{{*{e}, {f}}}", "({e},)", "(*{e},)", "[*{e} if x else y]", "{{*{e} or z}}",
     "(**{e} for x in y)", "f(**{e}, *{f})", "print((*{e}))", "x = (**{e})",
+    # displays, comprehensions, call arguments, type parameters
+    # (Peg/Rules/Comps*.lean, Args*.lean)
+    "{{{e}: {f}, **{e}}}", "{{**{e}, {f}: 1,}}", "{{{e}:}}", "{{{e}: {f} for x in y}}", "{{**{e} for x in y}}",
+    "{{**{e} for x in y if {f}}}", "[{e} for x in y if {f} if z]", "{{{e} for x in y}}", "({e} for x in y)",
+    "({e} async for x in y)", "[{e} async for x in y]", "[{e} for x in]", "[{e} for {f} in y]",
+    "[{e} for x in y for z in {f}]", "({e} := 1 for x in y)", "(*{e} for x in y)", "[*{e} for x in y]",
+    "{{*{e} for x in y}}", "async def g():\n [{e} async for x in y]", "{e}, {f}, {e}", "({e}, {f},)",
+    "f({e}, {f})", "f({e}, *{f})", "f({e}, x={f})", "f(**{e}, x={f})", "f(x={e}, *{f})", "f(*{e}, **{f})",
+    "f({e}, {f}=1)", "f({e} for x in y)", "f(x={e} for x in y)", "f({e},)", "f(x={e},)", "f(**{e}, *{f})",
+    "f(x=1, {e})", "f({e} := 1)", "f(x := {e})", "f(*{e} if x else y)",
+    "def f[{n}](): pass", "def f[{n}: {e}](): pass", "def f[{n} = {e}](): pass", "def f[*{n}](): pass",
+    "def f[*{n} = *{e}](): pass", "def f[**{n}](): pass", "def f[**{n} = {e}](): pass", "class C[{n},]: pass",
+    "type X[{n}: {e} = {f}] = int", "def f[{n}, *Ts, **P](): pass", "def f[](): pass", "def f[*{n}: {e}](): pass",
 ]
 RULE_PARAMS = ["a", "a, b", "a=1", "a, b=2", "a: int", "a: int = 1", "a=1, b", "*a", "**a", "a, *b",
                "a=1, /", "a, /", "*, a", "a, b, /, c", "a=1, b=2", "a=", "1", "(a)", "a:", "a b", ""]
