@@ -46,6 +46,18 @@ theorem stkK_split_err {p q : Nat} {f : List Val → BM (List Val)} {regs r : Re
   subst hL
   simp [stkK, peekN, bind, EStateM.bind, BM.lift, hf]
 
+theorem stkE_split_ok {p q k : Nat} {f : List Val → BM (List Val)} {regs r : Regs} {L below outs : List Val}
+    (hL : L.length = p) (hf : f L.reverse regs = .ok outs r) (hq : outs.length = q) :
+    stkE p q k f ⟨regs, L ++ below⟩ = .ok () ⟨r, outs.reverse ++ below⟩ := by
+  subst hL; subst hq
+  simp [stkE, stkK, peekN, popN, bind, EStateM.bind, BM.lift, hf, pushAll, pure, EStateM.pure]
+
+theorem stkE_split_err {p q k : Nat} {f : List Val → BM (List Val)} {regs r : Regs} {L below : List Val} {x : Err}
+    (hL : L.length = p) (hf : f L.reverse regs = .error x r) :
+    stkE p q k f ⟨regs, L ++ below⟩ = .error x ⟨r, (L ++ below).drop k⟩ := by
+  subst hL
+  simp [stkE, stkK, peekN, bind, EStateM.bind, BM.lift, hf]
+
 theorem dropLast_cons_snoc (a : Val) (xs : List Val) (t : Val) : (a :: (xs ++ [t])).dropLast = a :: xs := by
   rw [← List.cons_append, List.dropLast_concat]
 
@@ -248,22 +260,26 @@ theorem dictMergeRules_proven : DictMergeRules := by
 target, since 3.15 (gh-154902, user code can rebind `__conditional_annotations__`): anything but an
 exact set raises `TypeError("'T' object is not a set")` (`%T`) without touching the value; on an
 exact set it adds the value (`_PySet_AddTakeRef`) and pops it. `MAP_ADD` stores `dict[key] = value`
-(`_PyDict_SetItem_Take2`) and pops both. Either way a failure pops every operand (`ERROR_IF`). -/
+(`_PyDict_SetItem_Take2`) and pops both. A failure pops only what the instruction consumes: `v` for
+`SET_ADD` (`stack_pointer += -1` then `error`, `generated_cases.c.h:11384-11389`, and
+`pop_1_error`, `:11396`), `key` and `value` for `MAP_ADD` (`pop_2_error`, `:10292-10293`); the
+container and the `oparg - 1` items above it stay, for the comprehension's cleanup handler
+(`Python/codegen.c:4946-4950`) to unwind. -/
 def SetMapAddRules : Prop := ∀ (e : Env) (regs : Regs) (v c : Val) (mid below : List Val),
   mid.length + 1 = e.oparg →
   ((∃ a items, c = .ref a ∧ regs.rt.heap[a]? = some (.set false items)) →
     (∀ rt, setAdd e.om e.ctx c v regs.rt = .ok () rt →
       execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .ok () ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩) ∧
     (∀ x rt, setAdd e.om e.ctx c v regs.rt = .error x rt →
-      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, below⟩)) ∧
+      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩)) ∧
   (Live regs.rt c → (¬ ∃ a items, c = .ref a ∧ regs.rt.heap[a]? = some (.set false items)) →
     ∀ tn rt1 y rt2, typeFullName c regs.rt = .ok tn rt1 →
       typeError (α := Unit) s!"'{tn}' object is not a set" rt1 = .error y rt2 →
-      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error y ⟨{ regs with rt := rt2 }, below⟩) ∧
+      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error y ⟨{ regs with rt := rt2 }, (mid ++ [c]) ++ below⟩) ∧
   (∀ key rt, dictSet e.om e.ctx c key v regs.rt = .ok () rt →
     execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .ok () ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩) ∧
   (∀ key x rt, dictSet e.om e.ctx c key v regs.rt = .error x rt →
-    execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, below⟩)
+    execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩)
 
 theorem isExactSet_true {rt : Rt} {c : Val} (h : ∃ a items, c = .ref a ∧ rt.heap[a]? = some (.set false items)) :
     isExactSet c rt = .ok true rt := by
@@ -292,15 +308,15 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     fun key rt h => ?_, fun key x rt h => ?_⟩
   · have hx := isExactSet_true (rt := regs.rt) hs
     simp only [execOp, SET_ADD]
-    refine (stk_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL ?_ hq).trans (by simp)
+    refine (stkE_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL ?_ hq).trans (by simp)
     body_simp [hx, h]
   · have hx := isExactSet_true (rt := regs.rt) hs
     simp only [execOp, SET_ADD]
-    refine stk_split_err hL ?_
+    refine (stkE_split_err (x := x) (r := { regs with rt := rt }) hL ?_).trans (by simp)
     body_simp [hx, h]
   · have hx := isExactSet_false hl hs
     simp only [execOp, SET_ADD]
-    refine stk_split_err hL ?_
+    refine (stkE_split_err (x := y) (r := { regs with rt := rt2 }) hL ?_).trans (by simp)
     body_simp [hx, ht, hy]
   · have hL2 : (v :: key :: (mid ++ [c])).length = e.oparg + 2 := by simp; omega
     have hk : (c :: (mid.reverse ++ [key, v]))[e.oparg]? = some key := by
@@ -308,7 +324,7 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     have hv : (mid.reverse ++ [key, v])[e.oparg]? = some v := by
       rw [← hm]; simp [List.getElem?_append_right]
     simp only [execOp, MAP_ADD]
-    refine (stk_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL2 ?_ hq).trans (by simp)
+    refine (stkE_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL2 ?_ hq).trans (by simp)
     body_simp [h, hk, hv, dropLast2_cons_snoc]
   · have hL2 : (v :: key :: (mid ++ [c])).length = e.oparg + 2 := by simp; omega
     have hk : (c :: (mid.reverse ++ [key, v]))[e.oparg]? = some key := by
@@ -316,7 +332,7 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     have hv : (mid.reverse ++ [key, v])[e.oparg]? = some v := by
       rw [← hm]; simp [List.getElem?_append_right]
     simp only [execOp, MAP_ADD]
-    refine stk_split_err hL2 ?_
+    refine (stkE_split_err (x := x) (r := { regs with rt := rt }) hL2 ?_).trans (by simp)
     body_simp [h, hk, hv, dropLast2_cons_snoc]
 
 /-! ## `BUILD_SET`, `BUILD_MAP` -/

@@ -1835,6 +1835,76 @@ def isSequenceImpl (v : Val) : RM Bool := do
 /-- `except*`: `exc.split(match_type)`. -/
 def egSplitImpl (_ _ : Val) : RM (Val × Val) := fault "exception group split not modelled"
 
+/-- `PyObject_LengthHint(o, defaultvalue)`, `Objects/abstract.c:95-152`. `_PyObject_HasLen` is
+asked through `PyObject_Length` itself: a type with no `__len__` raises `TypeError`, which the hint
+clears exactly as it clears a `TypeError` from a real `__len__` (`:104-107`). Then
+`__length_hint__` by special lookup: absent, raising `TypeError` or returning `NotImplemented` is
+the default; a non-int is a `TypeError`, past `Py_ssize_t` an `OverflowError`, negative a
+`ValueError`. -/
+def lengthHintImpl (o : Val) (dflt : Int) : RM Int := do
+  let r ← tryExc (some <$> om.length ctx o) fun e => do
+    if ← givenMatches e 8 (.cls "TypeError") then pure none else throw (.exc e)
+  match r with
+  | some n => pure n
+  | none =>
+    match ← om.lookupSpecial ctx o "__length_hint__" with
+    | none => pure dflt
+    | some (m, self) =>
+      let args := if self == .null then [] else [self]
+      let res? ← tryExc (some <$> om.call ctx m args []) fun e => do
+        if ← givenMatches e 8 (.cls "TypeError") then pure none else throw (.exc e)
+      match res? with
+      | none => pure dflt
+      | some .notImpl => pure dflt
+      | some res =>
+        match intOf (← payload res) with
+        | none =>
+          typeError s!"{← typeFullName o}.__length_hint__() must return an int, not {← typeFullName res}"
+        | some n =>
+          if n > 2 ^ 63 - 1 ∨ n < -(2 ^ 63) then
+            raiseS "OverflowError" "Python int too large to convert to C ssize_t"
+          if n < 0 then
+            valueError s!"{← typeFullName o}.__length_hint__() must return a non-negative int"
+          pure n
+
+/-- The loop of `list_extend_iter_lock_held`, `Objects/listobject.c:1337-1357`: `tp_iternext`
+until `NULL`, a `StopIteration` cleared, each item appended as it comes, so the items before a
+raising `__next__` stay in the list. -/
+def extendLoop (l it : Val) : Nat → RM Unit
+  | 0 => throw .fuel
+  | n + 1 => do
+    match ← iterNextOpt om ctx it with
+    | some v => listAppend l v; extendLoop l it n
+    | none => pure ()
+
+/-- `_list_extend(self, iterable)`, `Objects/listobject.c:1478-1532`. `self` itself is
+`list_inplace_repeat(self, 2)`; an exact list, tuple, set, frozenset, dict or dict view is copied
+with no Python code (`list_extend_fast`, `_set`, `_dict`, `_dictitems`), which the model reads off
+its own iterator; anything else is `list_extend_iter_lock_held` (`:1300-1366`):
+`PyObject_GetIter(iterable)`, then `PyObject_LengthHint(iterable, 8)` (on the iterable, not on the
+iterator it returned), then the loop. -/
+def listExtendImpl (l iterable : Val) : RM Unit := do
+  if l == iterable then
+    match l with
+    | .ref a =>
+      match ← getObj a with
+      | .list xs => setObj a (.list (xs ++ xs))
+      | _ => fault "not a list"
+    | _ => fault "not a list"
+  else
+    let fast ← match iterable with
+      | .ref a => do
+        match ← getObj a with
+        | .list _ | .tuple _ | .set .. | .dict _ | .dictView .. => pure true
+        | _ => pure false
+      | _ => pure false
+    if fast then
+      for v in ← drain om ctx (← om.getIter ctx iterable) 1000000 [] do listAppend l v
+    else
+      let it ← om.getIter ctx iterable
+      let _ ← lengthHintImpl om ctx iterable 8
+      extendLoop om ctx l it 1000000
+
 end
 
 /-- The record. `n` bounds the depth of purely C-level protocol nesting; Python
@@ -1904,9 +1974,7 @@ def mkOM (P : Program) : Nat → ObjModel
       getAwaitable := fun ctx o n => getAwaitableImpl P om ctx o n
       dictUpdate := fun ctx d o => do let _ ← dictMergeImpl om ctx 1 d o
       dictMerge := fun ctx d o => dictMergeImpl om ctx 2 d o
-      listExtend := fun ctx l o => do
-        let vals ← seqToList om ctx o
-        for v in vals do listAppend l v
+      listExtend := fun ctx l o => listExtendImpl om ctx l o
       setUpdate := fun ctx s o => do
         for v in ← seqToList om ctx o do
           setAdd om ctx s v

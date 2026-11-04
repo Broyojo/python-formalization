@@ -221,16 +221,21 @@ def functionStr (e : Env) (f : Val) : RM (Option String) :=
     match ← optionalAttr e f "__qualname__" with
     | none => pure (some (← strText e f))
     | some q =>
-      let qs ← strText e q
+      -- `:987-1004`: both lookups and the comparison come before any formatting; `%S` calls
+      -- `PyObject_Str` while `PyUnicode_FromFormat` runs, the module first
       match ← optionalAttr e f "__module__" with
       | some m =>
-        if m == .none then pure (some s!"{qs}()")
-        else
+        if m != .none then
           -- `PyObject_RichCompareBool(module, "builtins", Py_NE)`: identity first
           let ne ← if m == .str "builtins" then pure false
             else e.om.isTrue e.ctx (← e.om.richCompare e.ctx m (.str "builtins") 3)
-          if ne then pure (some s!"{← strText e m}.{qs}()") else pure (some s!"{qs}()")
-      | none => pure (some s!"{qs}()"))
+          if ne then
+            let ms ← strText e m
+            let qs ← strText e q
+            pure (some s!"{ms}.{qs}()")
+          else pure (some s!"{← strText e q}()")
+        else pure (some s!"{← strText e q}()")
+      | none => pure (some s!"{← strText e q}()"))
     fun _ => pure none
 
 /-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`. With a `dupkey` it raises
@@ -263,8 +268,10 @@ def DICT_MERGE (e : Env) : M Unit := stkK (e.oparg + 4) (e.oparg + 3) fun ins =>
   match ← r with
   | none => pure rest
   | some k => (formatKwargsError e callable upd (some k) .null : RM _)
-/-- `:2656`. -/
-def MAP_ADD (e : Env) : M Unit := stk (e.oparg + 2) e.oparg fun ins => do
+/-- `:2656-2666`. A failed `_PyDict_SetItem_Take2` pops `key` and `value` only (`pop_2_error`,
+`generated_cases.c.h:10292-10293`): the dict and the items below it stay for the comprehension's
+cleanup handler (`Python/codegen.c:4946-4950`). -/
+def MAP_ADD (e : Env) : M Unit := stkE (e.oparg + 2) e.oparg 2 fun ins => do
   let rest := ins.dropLast.dropLast
   let key := ins.getD e.oparg .null
   let v := ins.getD (e.oparg + 1) .null
