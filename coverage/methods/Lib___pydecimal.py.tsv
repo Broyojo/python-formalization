@@ -69,8 +69,8 @@ Lib/_pydecimal.py	1850	1855	Decimal._round_ceiling	_round_ceiling(self, prec)	mo
 Lib/_pydecimal.py	1857	1862	Decimal._round_floor	_round_floor(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1864	1869	Decimal._round_05up	_round_05up(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	todo		review: IntConversionsPyOrLimit's `∨ ∃ msg, ValueError` is unconstrained, so a round() that always raises ValueError passes; the other entries are the declined int-limit refutation and QuantizeCorrect, which holds only when quantize returns; the n-argument TypeError (:1932-1933) is not modelled.
-Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
-Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
+Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	todo		review: IntConversionsPyOrLimit quantifies only finite values, so the documented exceptions for a NaN (ValueError) and an infinity (OverflowError) at :1953-1957 are unstated and a floor returning 0 for them passes; the finite case is pinned to _decimal's floor except for the int-limit ValueError.
+Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	todo		review: As for __floor__: IntConversionsPyOrLimit quantifies only finite values, so the NaN ValueError and infinity OverflowError (:1968-1972) are unstated and a ceil returning 0 for them passes.
 Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	todo		
 Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
 Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
@@ -84,15 +84,15 @@ Lib/_pydecimal.py	2710	2731	Decimal._round	_round(self, places, rounding)	todo
 Lib/_pydecimal.py	2733	2760	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	todo		review: ToIntegralExactCorrect holds only when to_integral_exact returns (an always-raising one passes) and covers only finite non-zero values with exp < 0; the special, exp >= 0 and zero branches (:2743-2751) are not stated.
 Lib/_pydecimal.py	2762	2776	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	modelled	decimal-to-integral-value-correct	
 Lib/_pydecimal.py	2781	2878	Decimal.sqrt	sqrt(self, context=None)	todo		
-Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
-Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
+Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	decimal-minmax-exact	
+Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	2956	2963	Decimal._isinteger	_isinteger(self)	todo		
 Lib/_pydecimal.py	2965	2969	Decimal._iseven	_iseven(self)	todo		
 Lib/_pydecimal.py	2971	2977	Decimal.adjusted	adjusted(self)	todo		review: Dec.adjusted/adjustedD mirror :2973-2977, but its only entry is QuantizeCorrect, which holds only when quantize returns, and the special-value result 0 (the except TypeError) is never stated.
 Lib/_pydecimal.py	2979	2985	Decimal.canonical	canonical(self)	todo		
-Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-compare-check-nans-exact	
+Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	modelled	decimal-comparisons-exact	
 Lib/_pydecimal.py	2999	3069	Decimal.compare_total	compare_total(self, other, context=None)	modelled	decimal-compare-total-exact	
-Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	modelled	decimal-compare-total-exact	
+Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	todo		review: CompareTotalExact pins compare_total_mag only for magnitudes of different value and for a negative NaN against a number: equal magnitudes (Decimal('1.0').compare_total_mag(Decimal('-1')) is -1, 1 against -1 is 0) and NaN pairs are unstated, so a numeric magnitude comparison returning 0 on ties passes.
 Lib/_pydecimal.py	3084	3086	Decimal.copy_abs	copy_abs(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3088	3093	Decimal.copy_negate	copy_negate(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3095	3099	Decimal.copy_sign	copy_sign(self, other, context=None)	modelled	decimal-copy-ops-correct	
@@ -118,8 +118,8 @@ Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context
 Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	todo		
 Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	todo		
 Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	todo		
-Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
-Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact,decimal-compare-total-exact	
+Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact	
+Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
 Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	todo		
 Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	todo		
@@ -234,7 +234,7 @@ Lib/_pydecimal.py	6007	6041	_dexp	_dexp(c, e, p)	todo
 Lib/_pydecimal.py	6043	6083	_dpower	_dpower(xc, xe, yc, ye, p)	todo		
 Lib/_pydecimal.py	6085	6092	_log10_lb	_log10_lb(c, correction={'1': 100, '2': 70, '3': 53, '4': 40, '5': 31, '6': 23, '7': 16, '8': 10, '9': 5})	todo		
 Lib/_pydecimal.py	6096	6113	_convert_other	_convert_other(other, raiseit=False, allow_float=False)	modelled	decimal-context-methods-match-decimal,decimal-reflected-operators	
-Lib/_pydecimal.py	6115	6149	_convert_for_comparison	_convert_for_comparison(self, other, equality_op=False)	todo		
+Lib/_pydecimal.py	6115	6149	_convert_for_comparison	_convert_for_comparison(self, other, equality_op=False)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	6261	6342	_parse_format_specifier	_parse_format_specifier(format_spec, _localeconv=None)	todo		
 Lib/_pydecimal.py	6344	6369	_format_align	_format_align(sign, body, spec)	todo		
 Lib/_pydecimal.py	6371	6392	_group_lengths	_group_lengths(grouping)	todo		
