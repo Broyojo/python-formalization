@@ -654,6 +654,10 @@ sequences-array-fromlist-guard	proven	Modules/arraymodule.c	array_array_fromlist
 sequences-array-exported-resize	proven	Modules/arraymodule.c	array_do_extend,array_inplace_concat,array_array_extend_impl,array_array_remove_impl,array_array_pop_impl,array_array_fromunicode_impl,array_inplace_repeat,array_del_slice
 sequences-array-alloc-limits	proven	Modules/arraymodule.c	newarrayobject_untracked,newarrayobject,array_repeat
 sequences-array-search-errors	proven	Modules/arraymodule.c	array_array_count_impl,array_contains,array_array_index_impl,array_array_remove_impl,getarrayitem
+sequences-array-get-slice	proven	Modules/arraymodule.c	array_subscr
+sequences-array-tolist	proven	Modules/arraymodule.c	array_array_tolist_impl,getarrayitem
+sequences-array-ass-slice-checks	proven	Modules/arraymodule.c	array_ass_subscr
+sequences-array-mformat-table	proven	Modules/arraymodule.c	typecode_to_mformat_code
 sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
 sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
 sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem

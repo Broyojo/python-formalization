@@ -181,4 +181,19 @@ def arrFromListRe {X : Type} (conv : X → Arr × List X → (Arr × List X) × 
 /-- The conversion of a list of plain values, which changes nothing. -/
 def pureConv : PyVal → Arr × List PyVal → (Arr × List PyVal) × PyVal := fun v s => (s, v)
 
+/-! ### Subscript keys -/
+
+/-- The key of `a[key]`: an object with `__index__` (its value), a slice, or anything else. -/
+inductive SubKey where
+  | int (i : Int)
+  | slice (s : PyLean.RangeSlice.Slice)
+  | other
+
+/-- `a[key]` (`array_subscr`, arraymodule.c:2730-2792): `PyIndex_Check` first, then
+`PySlice_Check`, else `TypeError`. -/
+def arrSubscr (a : Arr) : SubKey → Py (PyVal ⊕ Arr)
+  | .int i => Sum.inl <$> arrGetItem a i
+  | .slice s => Sum.inr <$> arrGetSlice a s
+  | .other => .error (.typeError "array indices must be integers")
+
 end PyLean.Sequences

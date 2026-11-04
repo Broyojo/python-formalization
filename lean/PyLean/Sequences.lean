@@ -20,6 +20,7 @@ import PyLean.Sequences.ArrayFile
 import PyLean.Sequences.ArrayRepr
 import PyLean.Sequences.ArrayReentrant
 import PyLean.Sequences.ArrayLimits
+import PyLean.Sequences.ArraySubscr
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
@@ -325,6 +326,26 @@ def entries : List Entry := [
     source := "invariant: same methods as list (Objects/listobject.c list_count/list_index/list_remove propagate the comparison's error)", status := .proven
     prop := ``ArraySearchErrors, thm := some ``arraySearchErrors_proven
     notes := "Scope: a comparison that mutates the array is not modelled (the loops re-read Py_SIZE)." },
+  { id := "sequences-array-get-slice", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_subscr"]
+    statement := "For every array and slice with a non-zero step, a[s] is a new array.array of the same typecode holding the items at start + k*step for the start, step and length slice.indices gives, through the step-1 memcpy and the size_t cursor loop alike; a zero step raises ValueError; an __index__ key is a[i]; any other key raises TypeError('array indices must be integers')."
+    source := "invariant: sequence slicing (Doc/library/stdtypes.rst common sequence operations); twin: memcpy fast path vs cursor loop", status := .proven
+    prop := ``ArrayGetSlice, thm := some ``arrayGetSlice_proven },
+  { id := "sequences-array-tolist", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_tolist_impl", "getarrayitem"]
+    statement := "For every array and typecode, a.tolist() is [a[0], ..., a[len(a)-1]], reading in order, so the first item that does not read (a u/w value outside [0, 0x10FFFF]) raises its ValueError."
+    source := "Doc/library/array.rst tolist; twin: tolist vs subscript", status := .proven
+    prop := ``ArrayToList, thm := some ``arrayToList_proven },
+  { id := "sequences-array-ass-slice-checks", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_ass_subscr"]
+    statement := "a[s] = value unpacks the slice first (zero step: ValueError for any value); a non-array value raises TypeError('can only assign array (not \"T\") to array slice'); a[s] = a is the assignment of a copy of a; an array of another typecode raises TypeError (PyErr_BadArgument); while exported, a deletion or a size-changing assignment raises BufferError before anything changes."
+    source := "Modules/arraymodule.c:2825-2878; invariant: an exported buffer is never moved", status := .proven
+    prop := ``ArrayAssSliceChecks, thm := some ``arrayAssSliceChecks_proven },
+  { id := "sequences-array-mformat-table", pyFile := "Modules/arraymodule.c"
+    pyFns := ["typecode_to_mformat_code"]
+    statement := "On a little-endian machine, every typecode's machine format code is in 0..27 and names a little-endian row, and for every typecode but u and w its mformat_descriptors row has the typecode's item size and signedness."
+    source := "twin: typecode_to_mformat_code vs the descriptor table (arraymodule.c:770-789, 2096-2129)", status := .proven
+    prop := ``ArrayMformatTable, thm := some ``arrayMformatTable_proven },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
     statement := "For every array and int n whose result fits: a * n and a *= n give n copies of the items (none for n <= 0), OverflowError outside Py_ssize_t included."

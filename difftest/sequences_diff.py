@@ -632,7 +632,7 @@ def gen_array_op(rng, a):
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
                      "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
                      "it_setstate", "append_m", "append_m", "insert_m", "setitem_m", "extend_m",
-                     "fromlist_m", "fromlist_m"])
+                     "fromlist_m", "fromlist_m", "getitem_bad"])
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
     if op.endswith("_m"):
@@ -691,6 +691,8 @@ def gen_array_op(rng, a):
     if op in ("add_other", "extend_arr_other"):
         tc2 = rng.choice([t for t in "bBhHiIlLqQ" if t != tc])
         return [op[:-6], tc2, [good_val(rng, tc2) for _ in range(rng.choice([0, 1, 2]))]]
+    if op == "getitem_bad":
+        return [op, rng.choice(["k", None, 1.5])]
     if op in ("add_bad", "iadd_bad", "iadd_self", "extend_bad", "extend_self", "fromlist_bad", "tolist",
               "tobytes", "tounicode", "byteswap", "reverse", "clear", "copy", "buffer_info",
               "typecode", "itemsize", "len", "repr", "mv_open", "mv_close", "it_new"):
@@ -1291,6 +1293,8 @@ def run_array_op(a, op, c, extra):
     if name == "remove":
         return a.remove(to_val(args[0]))
     if name == "getitem":
+        return from_val(a[args[0]])
+    if name == "getitem_bad":
         return from_val(a[args[0]])
     if name == "sqitem":
         return from_val(sq_get(a, args[0]))

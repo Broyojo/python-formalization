@@ -554,6 +554,8 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "fromlist" =>
     let (r, a') := arrFromList a (.inl (← jVals (← arg op 1)))
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
+  | "getitem_bad" =>
+    return same (pyJ (fun r => match r with | .inl v => v.toJ | .inr b => arrJ b) (arrSubscr a .other))
   | "append_m" => return optE (arrAppendRe a (← jReVal (← arg op 1)))
   | "insert_m" => return optE (arrInsertRe a (← jInt (← arg op 1)) (← jReVal (← arg op 2)))
   | "setitem_m" =>
