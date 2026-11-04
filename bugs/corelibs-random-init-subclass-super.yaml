@@ -1,0 +1,81 @@
+id: corelibs-random-init-subclass-super
+title: "random.Random.__init_subclass__ never calls super().__init_subclass__(**kwargs): later mixin hooks are skipped and class keywords are swallowed"
+priority: P4
+kind: logic-error
+module: corelibs
+files: [Lib/random.py]
+functions: ["Random.__init_subclass__"]
+summary: |
+  Random.__init_subclass__(cls, /, **kwargs) (Lib/random.py:225-243) runs its MRO loop to pick
+  _randbelow and returns. It does not call super().__init_subclass__(**kwargs). Two effects:
+  (1) In a class such as `class R(random.Random, Mixin)`, where Mixin defines a cooperative
+  __init_subclass__, Random's hook comes first in the MRO and Mixin's hook never runs; with
+  `class R(Mixin, random.Random)` it runs, so the result depends on base order. (2) Class keywords
+  are accepted and dropped: `class R(random.Random, flag=1)` succeeds silently, where any class
+  whose chain reaches object.__init_subclass__ raises TypeError ("takes no keyword arguments").
+likelihood: |
+  Low. It needs a Random subclass that also inherits from a mixin with its own __init_subclass__
+  listed after Random, or a class keyword passed by mistake. Registration mixins and
+  __init_subclass__-based plugin systems do exist, and the failure is silent: the mixin's hook
+  simply does not run.
+maybe_intended: |
+  Possibly not considered rather than intended. The hook exists only to choose _randbelow, and
+  its signature takes **kwargs, which suggests it was meant to be cooperative. A maintainer might
+  answer that mixing Random with other __init_subclass__ hooks is unsupported; the fix is one
+  line and changes nothing for classes without keywords or later hooks.
+reproducer: |
+  import random
+  ran = []
+  class Mixin:
+      def __init_subclass__(cls, **kw):
+          super().__init_subclass__(**kw)
+          ran.append(cls.__name__)
+  class After(random.Random, Mixin):
+      pass
+  class Before(Mixin, random.Random):
+      pass
+  swallowed = False
+  try:
+      class Kw(random.Random, flag=1):
+          pass
+      swallowed = True
+  except TypeError:
+      pass
+  rejected = False
+  try:
+      class Plain(flag=1):
+          pass
+  except TypeError:
+      rejected = True
+  print(ran, swallowed, rejected)
+  if ran == ['Before'] and swallowed and rejected:
+      print('REPRODUCED corelibs-random-init-subclass-super')
+expected: |
+  Both After and Before run Mixin.__init_subclass__ (ran == ['After', 'Before']), and
+  `class Kw(random.Random, flag=1)` raises TypeError as `class Plain(flag=1)` does.
+observed: |
+  python3 3.15.2: prints ['Before'] True True, REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical, REPRODUCED.
+promised_by: |
+  Doc/reference/datamodel.rst, "Customizing class creation": "Keyword arguments which are given
+  to a new class are passed to the parent class's __init_subclass__. For compatibility with
+  other classes using __init_subclass__, one should take out the needed keyword arguments and
+  pass the others over to the base class."
+cause: |
+  Lib/random.py:225-243: the body ends after the `for c in cls.__mro__` loop; there is no
+  `super().__init_subclass__(**kwargs)`.
+possible_fix: |
+  Add `super().__init_subclass__(**kwargs)` as the first (or last) statement of
+  Random.__init_subclass__.
+duplicates:
+  issues:
+    - {number: 131244, state: open, relation: "same method, what to override when subclassing", reason: "different bug: about getrandbits/randbytes consistency, not chaining"}
+    - {number: 84526, state: closed, relation: "random.BaseRandom proposal", reason: "not a duplicate"}
+    - {number: 77325, state: closed, relation: "_randbelow optimization", reason: "not a duplicate"}
+  queries: ["random __init_subclass__ super", "Random __init_subclass__ kwargs", "random init_subclass",
+            "_randbelow __init_subclass__", "__init_subclass__ super kwargs stdlib", "random subclass mixin",
+            "\"__init_subclass__\" random", "bugforge README: no entry for __init_subclass__"]
+lean:
+  property: PyLean.CoreLibs.Rand.InitSubclassChains
+  theorem: PyLean.CoreLibs.Rand.initSubclassChains_refuted
+  also_proven: "PyLean.CoreLibs.Rand.InitSubclassStops: the hooks before Random's run, Random's assigns _randbelow, nothing after it runs, whatever the keywords"
