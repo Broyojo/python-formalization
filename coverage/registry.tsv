@@ -132,9 +132,9 @@ datetime-fromordinal-range	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C
 datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp
 datetime-days-in-month	proven	Lib/_pydatetime.py	_days_in_month,C days_in_month,C is_leap
 datetime-check-date-fields	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args
-datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args,C datetime_date,C PyLong_AsInt
+datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,date.__new__,C check_date_args,C datetime_date,C PyLong_AsInt
 datetime-date-new-index-missing	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date
-datetime-check-time-fields-index	proven	Lib/_pydatetime.py	_check_time_fields,C check_time_args,C datetime_time,C PyLong_AsInt
+datetime-check-time-fields-index	proven	Lib/_pydatetime.py	_check_time_fields,time.__new__,C check_time_args,C datetime_time,C time_new,C PyLong_AsInt
 datetime-time-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time,C PyLong_AsInt
 datetime-datetime-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,datetime.__new__,C datetime_datetime,C PyLong_AsInt
 datetime-time-fold-arg	proven	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time
@@ -273,6 +273,18 @@ datetime-isocalendardate-new	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__
 datetime-isocalendardate-new-twins	refuted	Lib/_pydatetime.py	IsoCalendarDate.__new__
 datetime-strptime-time-datetime	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
 datetime-datetime-fromiso-body	proven	Lib/_pydatetime.py	datetime.fromisoformat,_find_isoformat_datetime_separator,_parse_isoformat_date,_parse_isoformat_time
+datetime-time-new-str-state	proven	Lib/_pydatetime.py	time.__new__,time.__setstate,C time_new,C time_from_pickle
+datetime-datetime-new-str-state	proven	Lib/_pydatetime.py	datetime.__new__,datetime.__setstate,C datetime_new,C datetime_from_pickle
+datetime-strptime-offset-range	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
+datetime-datetime-fromiso-rollover	proven	Lib/_pydatetime.py	datetime.fromisoformat
+datetime-time-repr-fallible	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr-fallible	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr-cls-twins	refuted	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr
+datetime-local-timezone-full	proven	Lib/_pydatetime.py	datetime._local_timezone,datetime._mktime,C local_timezone_from_local,C local_timezone,C local_timezone_from_timestamp,C local_to_seconds
+datetime-astimezone-local	proven	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone_from_local,C local_timezone
+datetime-astimezone-local-naive-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone
+datetime-astimezone-local-none-offset-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
+datetime-timedelta-float-ctor-twins	refuted	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C delta_new_impl,C accum
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
