@@ -7,6 +7,7 @@ import PyLean.Datetime.Diff2
 import PyLean.Datetime.Diff3
 import PyLean.Datetime.Diff4
 import PyLean.Datetime.Diff5
+import PyLean.Datetime.Diff6
 
 /-!
 Differential-testing handler for `datetime` cases (`"mod": "datetime"`).
@@ -170,6 +171,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     else if other.startsWith "x3_" then runX3 other j
     else if other.startsWith "x4_" then runX4 other j
     else if other.startsWith "x5_" then runX5 other j
+    else if other.startsWith "x6_" then runX6 other j
     else runObj other j
 
 /-- Results of `runObj` that are not already `{"ok": ...}` or `{"exc": ...}`. -/
