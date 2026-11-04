@@ -941,6 +941,7 @@ bool-twins	proven	Objects/boolobject.c	bool_new,bool_vectorcall
 bool-repr-invert	proven	Objects/boolobject.c	bool_invert
 bool-ops	proven	Objects/boolobject.c	bool_and,bool_or,bool_xor
 longobj-export-writer	proven	Objects/longobject.c	PyLongWriter_Create,PyLongWriter_Finish
+longobj-writer	proven	Objects/longobject.c	PyLongWriter_Create,PyLongWriter_Finish
 longobj-from-digits	proven	Objects/longobject.c	_PyLong_FromDigits
 longobj-native-bytes	proven	Objects/longobject.c	_fits_in_n_bits,_PyLong_NumBits
 longobj-int-new	proven	Objects/longobject.c	long_new_impl
@@ -1012,7 +1013,8 @@ longobj-pylong-decimal	proven	Lib/_pylong.py	int_to_decimal_string
 longobj-pylong-powers	proven	Lib/_pylong.py	compute_powers
 longobj-pylong-from-string	proven	Lib/_pylong.py	_str_to_int_inner
 longobj-pylong-divmod	proven	Lib/_pylong.py	_divmod_pos,_div2n1n,_div3n2n,_int2digits,_digits2int
-longobj-binary-methods	proven	Objects/longobject.c	long_add_method,long_sub_method,long_mul_method,long_div,long_mod,long_divmod,long_rshift,long_lshift_method,long_and,long_or,long_xor
+longobj-binary-methods	proven	Objects/longobject.c	long_add_method,long_sub_method,long_mul_method,long_div,long_mod,long_divmod,long_rshift,long_lshift_method,long_and,long_or,long_xor,l_mod
+longobj-pylong-divmod-paths	proven	Objects/longobject.c	pylong_int_divmod
 longobj-index-conversions	proven	Objects/longobject.c	PyLong_AsLongAndOverflow,PyLong_AsLong,PyLong_AsInt,PyLong_AsUnsignedLongMask,PyLong_AsUnsignedLongLongMask,PyLong_AsLongLong,unroll_digits_ulong
 longobj-as-long-long-and-overflow	proven	Objects/longobject.c	PyLong_AsLongLongAndOverflow,unroll_digits_ulong
 longobj-require-int	proven	Objects/longobject.c	PyLong_AsSsize_t,PyLong_AsUnsignedLong,PyLong_AsSize_t,PyLong_AsUnsignedLongLong,unroll_digits_ulong,unroll_digits_size_t
@@ -1020,6 +1022,8 @@ longobj-sign-api-agree	proven	Objects/longobject.c	PyLong_GetSign,PyLong_IsPosit
 longobj-compare	proven	Objects/longobject.c	long_compare
 longobj-richcompare	proven	Objects/longobject.c	long_richcompare,long_compare
 longobj-negate	proven	Objects/longobject.c	_PyLong_Negate
+longobj-divmod-near	proven	Objects/longobject.c	_PyLong_DivmodNear
+longobj-int-round	proven	Objects/longobject.c	int___round___impl
 longobj-as-byte-array-stores	open	Objects/longobject.c	_PyLong_AsByteArray
 bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
