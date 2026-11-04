@@ -257,6 +257,42 @@ def dateReprClsPy (c : ReprCls) (y m d : Int) : String :=
 def dateReprClsC (c : ReprCls) (y m d : Int) : String :=
   s!"{c.tpName}({fmtD y}, {fmtD m}, {fmtD d})"
 
+/-- `__qualname__` of `timedelta` or a subclass. -/
+def ReprCls.tdQualname : ReprCls → String
+  | .base => "timedelta"
+  | .sub _ q _ => q
+
+/-- `Py_TYPE(self)->tp_name` of `timedelta` or a heap subclass. -/
+def ReprCls.tdTpName : ReprCls → String
+  | .base => "datetime.timedelta"
+  | .sub _ _ n => n
+
+/-- The argument text of `timedelta.__repr__`, _pydatetime.py:771-779: the nonzero fields
+appended to a list, `'0'` if none, joined with `', '`. -/
+def Delta.reprArgsPy (t : Delta) : String :=
+  let args := (if t.days ≠ 0 then ["days=" ++ fmtD t.days] else []) ++
+    (if t.seconds ≠ 0 then ["seconds=" ++ fmtD t.seconds] else []) ++
+    (if t.us ≠ 0 then ["microseconds=" ++ fmtD t.us] else [])
+  let args := if args.isEmpty then ["0"] else args
+  ", ".intercalate args
+
+/-- `timedelta.__repr__`, _pydatetime.py:770-782, with the class's module and `__qualname__`. -/
+def Delta.reprClsPy (c : ReprCls) (t : Delta) : String :=
+  s!"{getClassModule c.module}{c.tdQualname}({t.reprArgsPy})"
+
+/-- The argument text of `delta_repr`, :2945-2981: built field by field with a separator
+that becomes `", "` after the first, `"0"` if empty. -/
+def Delta.reprArgsC (t : Delta) : String :=
+  let args := if t.days ≠ 0 then s!"days={fmtD t.days}" else ""
+  let sep := if t.days ≠ 0 then ", " else ""
+  let (args, sep) := if t.seconds ≠ 0 then (s!"{args}{sep}seconds={fmtD t.seconds}", ", ") else (args, sep)
+  let args := if t.us ≠ 0 then s!"{args}{sep}microseconds={fmtD t.us}" else args
+  if args.isEmpty then "0" else args
+
+/-- `delta_repr`, :2943-2989: `"%s(%S)"` with `Py_TYPE(self)->tp_name`. -/
+def Delta.reprClsC (c : ReprCls) (t : Delta) : String :=
+  s!"{c.tdTpName}({t.reprArgsC})"
+
 /-! ### `isoformat` text in C -/
 
 /-- C `date_isoformat`, :3627-3633: `PyUnicode_FromFormat("%04d-%02d-%02d", ...)`. -/

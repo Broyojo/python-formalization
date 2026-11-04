@@ -87,8 +87,8 @@ Modules/_datetimemodule.c	2685	2721	delta_divmod	delta_divmod(PyObject *left, Py
 Modules/_datetimemodule.c	2733	2811	accum	accum(const char* tag, PyObject *sofar, PyObject *num, PyObject *factor, double *leftover)	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	2832	2932	delta_new_impl	delta_new_impl(PyTypeObject *type, PyObject *days, PyObject *seconds, PyObject *microseconds, PyObject *milliseconds, PyObject *minutes, PyObject *hours, PyObject *weeks) /*[clinic end generated code: output=61d7e02a92a97700 input=e8cd54819295d34b]*/	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	2935	2940	delta_bool	delta_bool(PyObject *self)	modelled	datetime-timedelta-bool-hash	
-Modules/_datetimemodule.c	2943	2989	delta_repr	delta_repr(PyObject *self)	todo		
-Modules/_datetimemodule.c	2992	3018	delta_str	delta_str(PyObject *self)	todo		
+Modules/_datetimemodule.c	2943	2989	delta_repr	delta_repr(PyObject *self)	modelled	datetime-timedelta-repr-cls,datetime-timedelta-repr-twins,datetime-timedelta-str-repr	
+Modules/_datetimemodule.c	2992	3018	delta_str	delta_str(PyObject *self)	modelled	datetime-timedelta-str-repr	
 Modules/_datetimemodule.c	3024	3029	delta_getstate	delta_getstate(PyDateTime_Delta *self)	modelled	datetime-timedelta-reduce	
 Modules/_datetimemodule.c	3032	3053	delta_total_seconds	delta_total_seconds(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_datetimemodule.c	3056	3060	delta_reduce	delta_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	datetime-timedelta-reduce	

@@ -26,8 +26,8 @@ Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, s
 Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-check-tzinfo-arg	
 Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-divide-and-round,datetime-timedelta-float-ops	
 Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	todo		int path mirrored against 3.15.2 (:686-688, :699-701, :721-724, :740-745, :754-757, :763-764) and proven (datetime-timedelta-ctor-twins, -ctor-exact); still missing: the float branches (:692-746: math.modf, float divmod, round) and the type loop (:667-679). review: deltaPy models only int arguments: the float branches (:692-744) of the documented float support and the per-argument TypeError loop (:667-679) are absent (the entry's note defers floats to binary64); its six citations still read @3.14.7 (Delta.lean:46-66) and were not rechecked against the 3.15.2 lines (:686-761).
-Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	todo		
-Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	todo		
+Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	modelled	datetime-timedelta-repr-cls,datetime-timedelta-repr-twins,datetime-timedelta-str-repr	
+Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	modelled	datetime-timedelta-str-repr	
 Lib/_pydatetime.py	796	799	timedelta.total_seconds	total_seconds(self)	todo		
 Lib/_pydatetime.py	803	805	timedelta.days	days(self)	excluded		trivial: the property body is `return self._days`, one field and no branch (_pydatetime.py:803-805)
 Lib/_pydatetime.py	808	810	timedelta.seconds	seconds(self)	excluded		trivial: the property body is `return self._seconds`, one field and no branch (_pydatetime.py:808-810)

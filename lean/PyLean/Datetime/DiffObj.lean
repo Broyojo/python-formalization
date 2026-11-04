@@ -297,6 +297,13 @@ def runObj (fn : String) (j : Json) : Except String Json := do
       | 2 => .sub "__main__" "Outer.DSub" "DSub"
       | _ => .base
     return toJson ((if isC then dateReprClsC else dateReprClsPy) cls a.1 a.2.1 a.2.2)
+  | "td_repr_cls" =>
+    let a ← decDelta (← field j "a")
+    let cls : ReprCls := match (j.getObjValAs? Nat "cls").toOption.getD 0 with
+      | 1 => .sub "__main__" "TSub" "TSub"
+      | 2 => .sub "__main__" "Outer.TSub" "TSub"
+      | _ => .base
+    return toJson ((if isC then Delta.reprClsC else Delta.reprClsPy) cls a)
   | "td_float" =>
     let a ← decDelta (← field j "a")
     let x := Binary64.F64.ofBits (← getNat j "x")

@@ -4,7 +4,7 @@ priority: P5
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["date.__repr__", "_get_class_module"]
+functions: ["date.__repr__", "timedelta.__repr__", "_get_class_module"]
 summary: |
   For a date subclass defined inside a class (`class Outer: class D(date): pass`, or any
   class whose __qualname__ differs from __name__), `repr(D(2020, 1, 1))` is
@@ -25,9 +25,11 @@ reproducer: |
       class Outer:
           class D(m.date):
               pass
-      out.append(repr(Outer.D(2020, 1, 1)))
+          class TD(m.timedelta):
+              pass
+      out.append((repr(Outer.D(2020, 1, 1)), repr(Outer.TD(1))))
   print('C:', out[0], ' Python:', out[1])
-  if out[0] == 'D(2020, 1, 1)' and out[1] == 'Outer.D(2020, 1, 1)':
+  if out[0] == ('D(2020, 1, 1)', 'TD(days=1)') and out[1] == ('Outer.D(2020, 1, 1)', 'Outer.TD(days=1)'):
       print('REPRODUCED datetime-repr-qualname-vs-tp-name')
 expected: The same text from both implementations.
 promised_by: gh-107773 (closed as completed): "the two implementations ... share a common repr".
@@ -49,3 +51,5 @@ duplicates:
 lean:
   property: PyLean.Datetime.DateReprTwins
   theorem: PyLean.Datetime.dateReprTwins_refuted
+  also:
+    - {property: PyLean.Datetime.TimedeltaReprTwins, theorem: PyLean.Datetime.timedeltaReprTwins_refuted}

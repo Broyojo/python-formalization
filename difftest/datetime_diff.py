@@ -323,7 +323,7 @@ MORE_FNS = {"td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime", "strp_patter
             "strp_time", "strp_dt", "strp_julian", "strp_findall", "strp_seq"}
 OPS2 = ["lt", "le", "eq", "ne", "gt", "ge"]
 OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "date_cmp", "date_hash", "date_weekday",
-           "date_sub_date", "date_sub_delta", "date_replace", "date_timetuple", "date_ctime", "date_repr", "date_state",
+           "date_sub_date", "date_sub_delta", "date_replace", "date_timetuple", "date_ctime", "date_repr", "td_repr_cls", "date_state",
            "iso_repr", "date_strftime", "tz_str", "tz_repr", "tm_off", "dt_off", "tm_cmp", "tm_cmp", "tm_hash", "tm_repr",
            "tm_iso", "tm_state", "tm_strftime", "tm_replace", "dt_cmp", "dt_cmp", "dt_hash", "dt_repr", "dt_iso", "dt_ctime",
            "dt_add", "dt_sub_delta", "dt_sub", "dt_sub", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_combine",
@@ -511,6 +511,8 @@ def gen_obj_case(rng):
         c.update(a=rand_date(rng), f=rng.choice([None, []]))
     elif fn == "date_repr":
         c.update(a=rand_date(rng), cls=rng.choice([0, 1, 2]))
+    elif fn == "td_repr_cls":
+        c.update(a=rand_delta(rng) if rng.random() < 0.8 else [0, 0, 0], cls=rng.choice([0, 1, 2]))
     elif fn == "date_strftime":
         c.update(a=rng.choice([rand_date(rng), [rng.randint(1, 1100), 1, 1], [rng.randint(1, 1100), 12, 31]]),
                  f=[ord(x) for x in strf_format(rng)])
@@ -830,6 +832,15 @@ def run_obj(c):
         if fn == "date_timetuple": return list(m.date(*c["a"]).timetuple())
         if fn == "date_ctime": return m.date(*c["a"]).ctime()
         if fn == "date_repr": return repr(date_cls(c.get("cls", 0))(*c["a"]))
+        if fn == "td_repr_cls":
+            k = c.get("cls", 0)
+            cls = m.timedelta
+            if k:
+                class TSub(m.timedelta):
+                    pass
+                TSub.__qualname__ = "Outer.TSub" if k == 2 else "TSub"
+                cls = TSub
+            return repr(cls(*c["a"]))
         if fn == "td_float_sub":
             r = c["r"]
 

@@ -29,6 +29,7 @@ import PyLean.Datetime.IsoFormsProps
 import PyLean.Datetime.IndexProps
 import PyLean.Datetime.IsoTimeProps
 import PyLean.Datetime.WrapScanProps
+import PyLean.Datetime.DeltaStrProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -820,10 +821,21 @@ def entries : List Entry := [
     notes := "Both add dst in two steps; the intermediate overflow cases need care." },
   { id := "datetime-timedelta-str-repr", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__str__", "timedelta.__repr__", "C delta_str", "C delta_repr"]
-    statement := "str(t) and repr(t) are the same text in both twins."
-    source := "C/Python twins", status := .open
-    prop := ``TimedeltaStrRepr
-    notes := "String equalities between list concatenation and interpolation; the difftest shows no difference." },
+    statement := "For every timedelta, str(t) ('[D day[s], ]H:MM:SS[.ffffff]') and repr(t) of the base class are the same text in both twins."
+    source := "C/Python twins", status := .proven
+    prop := ``TimedeltaStrRepr, thm := some ``timedeltaStrRepr_proven },
+  { id := "datetime-timedelta-repr-cls", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__repr__", "_get_class_module", "C delta_repr"]
+    statement := "repr(t) agrees between the twins for timedelta and for every subclass whose __qualname__ is its __name__ and whose module is not named datetime, and for the base class it is datetime.timedelta(...) with the nonzero fields."
+    source := "C/Python twins (gh-107773)", status := .proven
+    prop := ``TimedeltaReprCls, thm := some ``timedeltaReprCls_proven },
+  { id := "datetime-timedelta-repr-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__repr__", "_get_class_module", "C delta_repr"]
+    statement := "repr(t) agrees between the twins for every timedelta subclass."
+    source := "C/Python twins (gh-107773)", status := .refuted
+    prop := ``TimedeltaReprTwins, thm := some ``timedeltaReprTwins_refuted
+    bug := some "datetime-repr-qualname-vs-tp-name"
+    notes := "class Outer: class TSub(timedelta): repr(Outer.TSub(1)) is Outer.TSub(days=1) in Python, TSub(days=1) in C." },
   { id := "datetime-zoneinfo-rule-date-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C calendarrule_year_to_timestamp", "C dayrule_year_to_timestamp", "C ymd_to_ord", "C is_leap_year", "_CalendarOffset.year_to_epoch", "_CalendarOffset._ymd2ord", "_DayOffset.year_to_epoch", "_post_epoch_days_before_year"]
     statement := "For every rule either TZ parser can build (Mm.w.d, Jn or n with a time of at most 167 hours) and every datetime year, C and Python compute the same local transition timestamp."
