@@ -851,11 +851,150 @@ def gen_x_case(rng, impl):
     return c
 
 
-def xexc(e, impl):
+def xmsg(e, impl):
     msg = str(e)
+    if type(e) is RecursionError and msg.startswith("Stack overflow (used "):
+        return "~" + msg[msg.index("kB)") + 3:]  # the part after the stack use, which varies
     if (type(e) is RecursionError and impl == "c") or msg.startswith("'<' not supported"):
-        msg = "~"
-    return {"exc": type(e).__name__, "msg": msg, "notes": list(getattr(e, "__notes__", []))}
+        return "~"
+    return msg
+
+
+def xexc(e, impl):
+    ctx = []
+    x = e.__context__
+    while x is not None:
+        ctx.append([type(x).__name__, xmsg(x, impl), list(getattr(x, "__notes__", []))])
+        x = x.__context__
+    return {"exc": type(e).__name__, "msg": xmsg(e, impl), "notes": list(getattr(e, "__notes__", [])), "ctx": ctx}
+
+
+# ---------------------------------------------------------------- the C stack checks at their limits
+# (EncFull.lean: XCfg.stk, cFormatNoteR, cCallDflt; DumpsTwinsX 2-4). The C encoder runs in a
+# thread with a small stack, at one fixed call depth, so that its limits are a few hundred levels.
+# The limits are measured there first, and the model's room and costs are chosen to give the same
+# limits (lists, dicts, Python and C default chains) and the same number of failing %R notes.
+
+import operator
+import queue
+import threading
+
+
+class XO:
+    pass
+
+
+def nx_build(kind, n):
+    if kind == "list":
+        o = []
+        for _ in range(n - 1):
+            o = [o]
+        return o, {}
+    if kind == "dict":
+        o = {}
+        for _ in range(n - 1):
+            o = {"a": o}
+        return o, {}
+    objs = [XO() for _ in range(n)]
+    for i, x in enumerate(objs):
+        x.nxt = objs[i + 1] if i + 1 < n else None
+    if kind == "chainpy":
+        def dflt(o):
+            return o.nxt
+        return objs[0], {"default": dflt}
+    return objs[0], {"default": operator.attrgetter("nxt")}
+
+
+def nx_job(kind, n):
+    o, kw = nx_build(kind, n)
+    try:
+        return {"ok": {"text": cps(json.dumps(o, **kw))}}
+    except Exception as ex:
+        return {"ok": xexc(ex, "c")}
+
+
+class NxWorker:
+    def __init__(self):
+        self.q = queue.Queue()
+        self.r = queue.Queue()
+        old = threading.stack_size(256 * 1024)
+        self.t = threading.Thread(target=self.loop, daemon=True)
+        self.t.start()
+        threading.stack_size(old)
+
+    def loop(self):
+        while True:
+            kind, n = self.q.get()
+            self.r.put(nx_job(kind, n))
+
+    def run(self, kind, n):
+        self.q.put((kind, n))
+        return self.r.get()
+
+
+NX = {}
+
+
+def nx_ok(kind, n):
+    return "text" in NX["w"].run(kind, n)["ok"]
+
+
+def nx_max(kind, guess=None):
+    if guess is not None and nx_ok(kind, guess) and not nx_ok(kind, guess + 1):
+        return guess
+    lo, hi = 1, 2
+    while nx_ok(kind, hi):
+        lo, hi = hi, hi * 2
+    while lo + 1 < hi:
+        mid = (lo + hi) // 2
+        if nx_ok(kind, mid):
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def nx_calibrate():
+    """Measures the limits in the worker and picks a room and costs that give them. Run right
+    before each case: the limits move by a level as the interpreter specialises the calls on the way
+    into the encoder."""
+    if "w" not in NX:
+        NX["w"] = NxWorker()
+        NX["lim"] = {}
+    g = NX["lim"]
+    L, D, Cp, Cc = (nx_max(k, g.get(k)) for k in ("list", "dict", "chainpy", "chainc"))
+    fail = NX["w"].run("dict", D + 1)["ok"]
+    F = 1 + sum(1 for x in fail["ctx"] if x[1] == "~ while getting the repr of an object") \
+        if fail["msg"] == "~ while getting the repr of an object" else 0
+    S = 1000
+    c = L * S + S // 2
+    Wm = next(w for w in range(c // (D + 1), c // D + 2) if w > 0 and c // w == D)
+    Wd = next(w for w in range(c // (Cc + 1), c // Cc + 2) if w > 0 and c // w == Cc)
+    r0 = c % Wm
+    R = r0 + F * Wm if F > 0 else 1
+    Rc = max(Wd, c - (Cp - 1) * Wd)
+    NX["room"] = c
+    NX["stk"] = {"seq": S - 1, "seqSub": S - 1, "map": Wm - 1, "mapSub": Wm - 1, "dflt": Wd - 1,
+                 "repr": R - 1, "call": Rc - 1}
+    NX["lim"] = {"list": L, "dict": D, "chainpy": Cp, "chainc": Cc}
+
+
+NX_RESULTS = {}
+
+
+def gen_nx_case(rng):
+    nx_calibrate()
+    kind = rng.choice(["list", "dict", "chainpy", "chainc"])
+    n = max(1, NX["lim"][kind] + rng.choice([-3, -1, 0, 0, 1, 1, 2, 5, 40]))
+    key = len(NX_RESULTS)
+    # run it now, right after measuring the limits it is compared with
+    NX_RESULTS[key] = NX["w"].run(kind, n)
+    return {"mod": "json", "fn": "nestx_c", "kind": kind, "n": n, "room": NX["room"], "stk": NX["stk"],
+            "dflt_py": kind == "chainpy", "key": key}
+
+
+def run_nx(c):
+    return NX_RESULTS[c["key"]]
 
 
 def run_x(c, impl):
@@ -902,6 +1041,8 @@ def run_x(c, impl):
 
 def gen_case(rng):
     impl = rng.choice(["py", "c"])
+    if rng.random() < 0.02:
+        return gen_nx_case(rng)
     if rng.random() < 0.25:
         return gen_x_case(rng, impl)
     r = rng.random()
@@ -1192,6 +1333,8 @@ def run_python(c):
     try:
         if base in ("loads_rec", "dumpsx"):
             return run_x(c, impl)
+        if base == "nestx":
+            return run_nx(c)
         if base in ("loads", "raw"):
             s = "".join(map(chr, c["s"]))
             dec = dec_of(m, c)
