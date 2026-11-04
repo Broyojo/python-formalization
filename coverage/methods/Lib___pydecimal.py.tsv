@@ -76,12 +76,12 @@ Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, mod
 Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
 Lib/_pydecimal.py	2352	2566	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		
 Lib/_pydecimal.py	2568	2573	Decimal.__rpow__	__rpow__(self, other, modulo=None, context=None)	todo		
-Lib/_pydecimal.py	2575	2598	Decimal.normalize	normalize(self, context=None)	todo		
+Lib/_pydecimal.py	2575	2598	Decimal.normalize	normalize(self, context=None)	modelled	decimal-normalize-exact	
 Lib/_pydecimal.py	2600	2659	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	todo		review: quantize/quantizeFin (Arith.lean:257-281) mirror :2605-2659 and QuantizeCorrect is a strong statement, but it holds only when quantize returns, so an always-raising quantize passes, and the special operands (:2612-2621: NaNs, both-infinite returns self, one INF gives InvalidOperation) are not stated.
 Lib/_pydecimal.py	2661	2674	Decimal.same_quantum	same_quantum(self, other, context=None)	modelled	decimal-same-quantum-exact	
 Lib/_pydecimal.py	2676	2708	Decimal._rescale	_rescale(self, exp, rounding)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	2710	2731	Decimal._round	_round(self, places, rounding)	todo		
-Lib/_pydecimal.py	2733	2760	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	todo		review: ToIntegralExactCorrect holds only when to_integral_exact returns (an always-raising one passes) and covers only finite non-zero values with exp < 0; the special, exp >= 0 and zero branches (:2743-2751) are not stated.
+Lib/_pydecimal.py	2733	2760	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	modelled	decimal-to-integral-exact-exact	
 Lib/_pydecimal.py	2762	2776	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	modelled	decimal-to-integral-value-correct	
 Lib/_pydecimal.py	2781	2878	Decimal.sqrt	sqrt(self, context=None)	todo		
 Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	decimal-minmax-exact	
@@ -199,7 +199,7 @@ Lib/_pydecimal.py	5026	5056	Context.multiply	multiply(self, a, b)	modelled	decim
 Lib/_pydecimal.py	5058	5076	Context.next_minus	next_minus(self, a)	todo		review: ctxUn nextMinus (Context.lean:130) is :5075-5076 and Equiv1 pins the wrapper, but Decimal.next_minus has no entry (part 1 HOLLOW), so the result is unstated.
 Lib/_pydecimal.py	5078	5096	Context.next_plus	next_plus(self, a)	todo		review: ctxUn nextPlus (Context.lean:131) is :5095-5096 and Equiv1 pins the wrapper, but Decimal.next_plus has no entry (part 1 HOLLOW), so the result is unstated.
 Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	todo		review: ctxBin nextToward (Context.lean:114) is :5130-5131 plus :3630 and Equiv2 pins the wrapper, but Decimal.next_toward has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	todo		review: ctxUn normalize (Context.lean:132) is :5154-5155 and Equiv1 pins the wrapper, but Decimal.normalize's entry decimal-normalize-correct is open (part 1 HOLLOW), so the result is unstated.
+Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	modelled	decimal-context-methods-match-decimal,decimal-normalize-exact,decimal-convert-other-exact	
 Lib/_pydecimal.py	5157	5205	Context.number_class	number_class(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-methods-match-decimal,decimal-unary-exact,decimal-convert-other-exact	
 Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		
@@ -215,7 +215,7 @@ Lib/_pydecimal.py	5544	5574	Context.sqrt	sqrt(self, a)	todo
 Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	todo		review: ctxOp sub (Context.lean:98) is :5592-5597 and Equiv2 pins the wrapper, but Decimal.__sub__'s only settled entry is the declined int-limit refutation (decimal-sub-correct open, part 1 HOLLOW).
 Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	todo		review: ctxUn of toEng a c.capitals (Context.lean:138) is :5624-5625 and Equiv1 pins the wrapper, but Decimal.to_eng_string has no entry (part 1 HOLLOW), so the engineering notation is stated nowhere.
 Lib/_pydecimal.py	5627	5633	Context.to_sci_string	to_sci_string(self, a)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	todo		review: ctxUn toIntegralExact (Context.lean:133) is :5662-5663 and Equiv1 pins the wrapper, but Decimal.to_integral_exact is part 1 HOLLOW (ToIntegralExactCorrect holds only when it returns and covers only finite non-zero values with exp < 0).
+Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	modelled	decimal-context-methods-match-decimal,decimal-to-integral-exact-exact,decimal-convert-other-exact	
 Lib/_pydecimal.py	5665	5692	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5703	5716	_WorkRep.__init__	__init__(self, value=None)	modelled	decimal-mul-exact	
 Lib/_pydecimal.py	5718	5719	_WorkRep.__repr__	__repr__(self)	todo		

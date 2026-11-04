@@ -15,6 +15,7 @@ import PyLean.Decimal.FixExact
 import PyLean.Decimal.ContextExact
 import PyLean.Decimal.DelegateExact
 import PyLean.Decimal.Pow10a
+import PyLean.Decimal.DelegateExact2
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -321,6 +322,18 @@ def entries : List Entry := [
     source := "decimal docs, remainder_near: 'Return the remainder from dividing self by other ... the nearest integer to the exact value of self / other, and if two integers are equally near then the even one is chosen'; General Decimal Arithmetic, 'remainder-near'"
     status := .proven, prop := ``RemainderNearExact, thm := some ``remainderNearExact_proven
     notes := "The model's remainderNear (and Context.remainder_near) runs with log10Stand, which log10Stand_accurate proves accurate, so the statement covers it. The quotient is assumed to have fewer than 2**40 digits." },
+  { id := "decimal-to-integral-exact-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.to_integral_exact", "Decimal._rescale", "Decimal._cmp", "Context._raise_error"]
+    statement := "For every context and rounding argument: to_integral_exact returns a finite value with exponent >= 0 unchanged, turns a zero with a negative exponent into the zero of its sign at exponent 0, and rounds a non-zero value with a negative exponent to the integer the mode prescribes at exponent 0, signalling Inexact (only when non-zero digits were dropped) and then Rounded, the first trapped one raising; the int/str-limit ValueError is raised exactly when the rounded integer is the truncated one plus one with more than 4300 digits; an infinity is returned unchanged and a NaN goes through _check_nans."
+    source := "decimal docs: 'Round to the nearest integer, signaling Inexact or Rounded as appropriate if rounding occurs' (Doc/library/decimal.rst:921-922)"
+    status := .proven, prop := ``ToIntegralExactExact, thm := some ``toIntegralExactExact_proven
+    notes := "Unconditional; supersedes decimal-to-integral-exact-correct (which holds only when it returns). Rounded is raised even when the dropped digits are zeros (:2759), as in libmpdec." },
+  { id := "decimal-normalize-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.normalize", "Decimal._fix", "Decimal._check_nans"]
+    statement := "For every context and every operand that is not a NaN, normalize first rounds it with _fix (decimal-fix-exact), raising what _fix raises; a zero result becomes the zero of its sign at exponent 0; a non-zero ±co·10^e loses as many trailing zeros as divide co, but none past the exponent Emax (Etop under clamp=1); an infinity is returned. NaNs go through _check_nans."
+    source := "decimal docs, normalize: 'Normalize the number by stripping the rightmost trailing zeros and converting any result equal to Decimal('0') to Decimal('0e0')'"
+    status := .proven, prop := ``NormalizeExact, thm := some ``normalizeExact_proven
+    notes := "The count k of stripped zeros is pinned by its three properties (10**k divides co; the exponent limit is reached or 10**(k+1) does not divide co; k = 0 or e + k <= the limit). Supersedes the open decimal-normalize-correct." },
   { id := "decimal-c-context-clean-template", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["context_new", "context_init_impl"]
     statement := "For a template whose flags are clear and whose capitals is 1, the state DefaultContext starts in, _decimal's Context() equals the template in every field."
