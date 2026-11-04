@@ -237,28 +237,43 @@ theorem tmp71_proven : Tmp71 := by
   simp only [show ruleOf 348 = r348 from rfl, r348]
   rw [← this]
 
+/-- The first alternative `'(' a=(yield_expr | named_expression) ')'` of `group` fails, ending in
+`s`: at a token other than `(` (7) (then `s = q`), with `_tmp_71` (348) `NULL` after `(`, or with
+no `)` (8) after it. -/
+def GroupA1Fails (f : Nat) (p q s : PS) : Prop :=
+  ((q.tokenAt p.mark).type ≠ 7 ∧ s = q) ∨
+  ((q.tokenAt p.mark).type = 7 ∧ callRule (f + 1) 348 { q with mark := p.mark + 1 } = (.null, s)) ∨
+  ((q.tokenAt p.mark).type = 7 ∧ ∃ (v : Ast) (s1 : PS),
+    callRule (f + 1) 348 { q with mark := p.mark + 1 } = (v, s1) ∧ v ≠ .null ∧
+    expectToken 8 s1 = (.null, s))
+
 /-- `group` (`Grammar/python.gram:906-909`):
 ```
     | '(' a=(yield_expr | named_expression) ')' { a }
     | invalid_group
 ```
-At `(` (7), the inner `yield_expr | named_expression` (`_tmp_71`, 348) and `)` (8) give the inner
-expression itself (parentheses leave no node); without them, in the first pass `NULL` with the
-mark back, in the second the result of `invalid_group` (236) from the start mark. -/
+No `EXTRA`. At `(` (7), the inner `yield_expr | named_expression` (`_tmp_71`, 348) and `)` (8) give
+the inner expression itself (parentheses leave no node). Once that alternative fails
+(`GroupA1Fails`, ending in `s`): in the first pass (`s.callInvalidRules = false`) `NULL` with the
+mark back; in the second, an error already set ends the rule with `NULL`, and otherwise
+`invalid_group` (236) runs from the start mark and its result is the rule's (`NULL` with the mark
+back when it gives `NULL`, which is what it gives after raising for `(*a)` and `(**not a)`; in
+3.15 `(**a)` raises earlier, in `tuple`'s `star_named_expression_sequence`). -/
 def Group : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
   (t.type = 7 → ∀ (v : Ast) (c : Token) (s1 s2 : PS),
     callRule (f + 1) 348 { q with mark := p.mark + 1 } = (v, s1) → v ≠ .null →
     expectToken 8 s1 = (.tok c, s2) → s2.errorIndicator = false → callRule (f + 7) 148 p = (v, s2.leave)) ∧
-  (t.type = 7 → ∀ (s1 : PS), callRule (f + 1) 348 { q with mark := p.mark + 1 } = (.null, s1) →
-    s1.callInvalidRules = false →
-    callRule (f + 7) 148 p = (.null, { s1 with mark := p.mark }.leave)) ∧
-  (t.type = 7 → ∀ (v : Ast) (s1 s2 : PS), callRule (f + 1) 348 { q with mark := p.mark + 1 } = (v, s1) →
-    v ≠ .null → expectToken 8 s1 = (.null, s2) → s2.callInvalidRules = false →
-    callRule (f + 7) 148 p = (.null, { s2 with mark := p.mark }.leave)) ∧
-  (t.type ≠ 7 → q.callInvalidRules = false → callRule (f + 7) 148 p = (.null, q.leave)) ∧
-  (t.type ≠ 7 → q.callInvalidRules = true → ∀ (v : Ast) (s' : PS), callRule (f + 1) 236 q = (v, s') →
-    v ≠ .null → callRule (f + 7) 148 p = (v, s'.leave))
+  (∀ (s : PS), GroupA1Fails f p q s → s.callInvalidRules = false →
+    callRule (f + 7) 148 p = (.null, { s with mark := p.mark }.leave)) ∧
+  (∀ (s : PS), GroupA1Fails f p q s → s.callInvalidRules = true → s.errorIndicator = true →
+    callRule (f + 7) 148 p = (.null, { s with mark := p.mark }.leave)) ∧
+  (∀ (s s' : PS) (v : Ast), GroupA1Fails f p q s → s.callInvalidRules = true →
+    s.errorIndicator = false → callRule (f + 1) 236 { s with mark := p.mark } = (v, s') → v ≠ .null →
+    callRule (f + 7) 148 p = (v, s'.leave)) ∧
+  (∀ (s s' : PS), GroupA1Fails f p q s → s.callInvalidRules = true →
+    s.errorIndicator = false → callRule (f + 1) 236 { s with mark := p.mark } = (.null, s') →
+    callRule (f + 7) 148 p = (.null, { s' with mark := p.mark }.leave))
 
 theorem group_proven : Group := by
   intro f p q h
@@ -267,8 +282,18 @@ theorem group_proven : Group := by
   have hq : { q with mark := p.mark } = q := by rw [← hm]
   rw [callRule_plain rfl rfl rfl rfl rfl h.ei h.level]
   simp only [show ruleOf 148 = r148 from rfl, r148]
-  refine ⟨fun ht v c s1 s2 h1 hv h2 h2e => ?_, fun ht s1 h1 hi => ?_, fun ht v s1 s2 h1 hv h2 hi => ?_,
-    fun ht hi => ?_, fun ht hi v s' h1 hv => ?_⟩
+  have hA : ∀ s, GroupA1Fails f p q s →
+      runItems (f + 4) [.call (.tok 7), .call (.rule 348), .call (.tok 8)] #[] false p.enter =
+        ((none, false), s) := by
+    intro s hs
+    rcases hs with ⟨ht, rfl⟩ | ⟨ht, h1⟩ | ⟨ht, v, s1, h1, hv, h2⟩
+    · rw [items_call_null (by rw [call_tok, expect_entered h, ite_f ht])]
+    · rw [items_call (by rw [call_tok, expect_entered h, ite_t ht]) (by simp),
+        items_call_null (by rw [call_rule, h1])]
+    · rw [items_call (by rw [call_tok, expect_entered h, ite_t ht]) (by simp),
+        items_call (by rw [call_rule, h1]) hv, items_call_null (by rw [call_tok, h2])]
+  refine ⟨fun ht v c s1 s2 h1 hv h2 h2e => ?_, fun s hs hi => ?_, fun s hs hi hse => ?_,
+    fun s s' v hs hi hse h1 hv => ?_, fun s s' hs hi hse h1 => ?_⟩
   · rw [alts_ok (by rfl) he' (by
       dsimp only
       rw [items_call (by rw [call_tok, expect_entered h, ite_t ht]) (by simp),
@@ -276,25 +301,19 @@ theorem group_proven : Group := by
         items_nil]), altResult_plain rfl rfl]
     simp only [evalA, pure, StateT.pure, h2e, Bool.or_false]
     cases v <;> simp_all [nonNull]
-  · rw [alts_fail (by rfl) he' (by
-      dsimp only
-      rw [items_call (by rw [call_tok, expect_entered h, ite_t ht]) (by simp),
-        items_call_null (by rw [call_rule, h1])]), alts_skip (by simp [hi]), alts_nil]
+  · rw [alts_fail (by rfl) he' (hA s hs), alts_skip (by simp [hi]), alts_nil]
     rfl
-  · rw [alts_fail (by rfl) he' (by
-      dsimp only
-      rw [items_call (by rw [call_tok, expect_entered h, ite_t ht]) (by simp),
-        items_call (by rw [call_rule, h1]) hv, items_call_null (by rw [call_tok, h2])]),
-      alts_skip (by simp [hi]), alts_nil]
+  · rw [alts_fail (by rfl) he' (hA s hs),
+      alts_err (by simp [hi]) (show ({ s with mark := p.mark } : PS).errorIndicator = true from hse)]
     rfl
-  · rw [alts_fail (by rfl) he' (by
-      dsimp only; rw [items_call_null (by rw [call_tok, expect_entered h, ite_f ht])]), hq,
-      alts_skip (by simp [hi]), alts_nil]
-    rfl
-  · rw [alts_fail (by rfl) he' (by
-      dsimp only; rw [items_call_null (by rw [call_tok, expect_entered h, ite_f ht])]), hq,
-      alts_ok (by simp [hi]) he (by dsimp only; rw [items_call (by rw [call_rule, h1]) hv, items_nil]),
+  · rw [alts_fail (by rfl) he' (hA s hs),
+      alts_ok (by simp [hi]) (show ({ s with mark := p.mark } : PS).errorIndicator = false from hse)
+        (by dsimp only; rw [items_call (by rw [call_rule, h1]) hv, items_nil]),
       altResult_none1 rfl rfl]
+    rfl
+  · rw [alts_fail (by rfl) he' (hA s hs),
+      alts_fail (by simp [hi]) (show ({ s with mark := p.mark } : PS).errorIndicator = false from hse)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h1])]), alts_nil]
     rfl
 
 /-- `lambdef` (`Grammar/python.gram:913-915`):
@@ -348,10 +367,10 @@ theorem lambdef_proven : Lambdef := by
   · rw [alts_fail (by rfl) he (items_call_null (by rw [ek, ite_f ht])), hq, alts_nil]
     rfl
 
-/-- `list: '[' a=[star_named_expressions] ']' { _PyAST_List(a, Load, EXTRA) }`
-(`Grammar/python.gram:1016-1017`): at `[` (9) the optional `star_named_expressions` (115) and `]`
-(10) give `List(a, Load)` (`[]` empty); at another token, or without `]`, `NULL` with the mark
-back. -/
+/-- `list: '[' a=[star_named_expressions_sequence] ']' { _PyAST_List(a, Load, EXTRA) }`
+(`Grammar/python.gram:1016-1017`, 3.15): at `[` (9) the optional `star_named_expressions_sequence`
+(115) and `]` (10) give `List(a, Load)` (`[]` empty); at another token, or without `]`, `NULL` with
+the mark back. -/
 def ListRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
   (t.type = 9 → ∀ (a : Ast) (c : Token) (s1 s2 : PS),
@@ -363,9 +382,9 @@ def ListRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
     expectToken 10 s1 = (.null, s2) → callRule (f + 7) 174 p = (.null, { s2 with mark := p.mark }.leave)) ∧
   (t.type ≠ 9 → callRule (f + 7) 174 p = (.null, q.leave))
 
-/-- `tuple: '(' a=[y=star_named_expression ',' z=[star_named_expressions] {
+/-- `tuple: '(' a=[y=star_named_expression_sequence ',' z=[star_named_expressions_sequence] {
 _PyPegen_seq_insert_in_front(p, y, z) } ] ')' { _PyAST_Tuple(a, Load, EXTRA) }`
-(`Grammar/python.gram:1019-1021`): at `(` the optional group (`_tmp_84`, 361) and `)` give
+(`Grammar/python.gram:1019-1021`, 3.15): at `(` the optional group (`_tmp_84`, 361) and `)` give
 `Tuple(a, Load)` (so `()` is empty and `(a,)` has one element); at another token, or without `)`,
 `NULL` with the mark back. -/
 def TupleRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
@@ -379,8 +398,9 @@ def TupleRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
     expectToken 8 s1 = (.null, s2) → callRule (f + 7) 175 p = (.null, { s2 with mark := p.mark }.leave)) ∧
   (t.type ≠ 7 → callRule (f + 7) 175 p = (.null, q.leave))
 
-/-- `set: '{' a=star_named_expressions '}' { _PyAST_Set(a, EXTRA) }`
-(`Grammar/python.gram:1023`): at `{` (25) the (mandatory) `star_named_expressions` (115) and `}`
+/-- `set: '{' a=star_named_expressions_sequence '}' { _PyAST_Set(a, EXTRA) }`
+(`Grammar/python.gram:1023`, 3.15): at `{` (25) the (mandatory) `star_named_expressions_sequence`
+(115) and `}`
 (26) give `Set(a)` (so `{}` is not a set); at another token, without elements or without `}`,
 `NULL` with the mark back. -/
 def SetRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
@@ -474,10 +494,11 @@ theorem setRule_proven : SetRule := by
   · rw [alts_fail (by rfl) he (items_call_null (by rw [ek, ite_f ht])), hq, alts_nil]
     rfl
 
-/-- `_tmp_84: y=star_named_expression ',' z=[star_named_expressions] {
-_PyPegen_seq_insert_in_front(p, y, z) }`, the inside of a `tuple`: a first element and `,` (12),
-then the optional rest, as one sequence; without the first element or the `,`, `NULL` with the
-mark back. -/
+/-- `_tmp_84: y=star_named_expression_sequence ',' z=[star_named_expressions_sequence] {
+_PyPegen_seq_insert_in_front(p, y, z) }`, the inside of a `tuple`: a first element
+(`star_named_expression_sequence`, 117) and `,` (12), then the optional rest
+(`star_named_expressions_sequence`, 115), as one sequence; without the first element or the `,`,
+`NULL` with the mark back. -/
 def Tmp84 : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false → p.level ≠ MAXSTACK →
   (∀ (y z : Ast) (c : Token) (s1 s2 s3 : PS), callRule (f + 2) 117 p.enter = (y, s1) → y ≠ .null →
     expectToken 12 s1 = (.tok c, s2) → callRule f 115 s2 = (z, s3) → s3.errorIndicator = false →

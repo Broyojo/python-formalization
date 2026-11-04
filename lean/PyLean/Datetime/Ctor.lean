@@ -1,5 +1,6 @@
 import PyLean.Datetime.Objects
 import PyLean.Binary64.Model
+import PyLean.Binary64.Float
 
 /-!
 The constructors `date(...)`, `time(...)`, `datetime(...)` on their full argument
@@ -141,14 +142,46 @@ def Arg.foldVal : Arg → Int
   | .float x => if x.isZero then 0 else 1
   | _ => 0
 
+/-- `_ord2ymd(n)` (Py:107-153) on a float `n`, then `cls(y, m, d)` (:1056-1057), with
+assertions enabled (the default): `n -= 1` and the float `divmod`s by the cycle lengths
+(:116-133); on `n1 == 4 or n100 == 4` the `assert n == 0` (:135) fails with `AssertionError`
+or the early return gives float fields, refused by `_check_date_fields`'s `_index` with
+`TypeError`; otherwise `assert leapyear == _is_leap(year)` (:141-142, `_is_leap` on the float
+year, :47-49) may fail, and then `(n + 50) >> 5` (:143) is a `TypeError` (no `>>` on floats). -/
+def fromordinalFloatPy (x : Binary64.F64) : Py (Int × Int × Int) :=
+  let c (k : Int) : Binary64.F64 := Binary64.F64.ofInt k
+  let n := Binary64.F64.sub x (c 1)
+  let (n400, n) := Binary64.float_div_mod n (c 146097)
+  let year := Binary64.F64.add (Binary64.F64.mul n400 (c 400)) (c 1)
+  let (n100, n) := Binary64.float_div_mod n (c 36524)
+  let (n4, n) := Binary64.float_div_mod n (c 1461)
+  let (n1, n) := Binary64.float_div_mod n (c 365)
+  let year := Binary64.F64.add year
+    (Binary64.F64.add (Binary64.F64.add (Binary64.F64.mul n100 (c 100)) (Binary64.F64.mul n4 (c 4))) n1)
+  if Binary64.F64.eq n1 (c 4) || Binary64.F64.eq n100 (c 4) then
+    if Binary64.F64.eq n (c 0) then .error (.typeError "~'float' object cannot be interpreted as an integer")
+    else .error (.assertionError "")
+  else do
+    let leap := Binary64.F64.eq n1 (c 3) && (Binary64.F64.ne n4 (c 24) || Binary64.F64.eq n100 (c 3))
+    let r4 ← Binary64.floatRemCore year (c 4)
+    let isLeap ← if Binary64.F64.eq r4 (c 0) then do
+        let r100 ← Binary64.floatRemCore year (c 100)
+        if Binary64.F64.ne r100 (c 0) then pure true
+        else do
+          let r400 ← Binary64.floatRemCore year (c 400)
+          pure (Binary64.F64.eq r400 (c 0))
+      else pure false
+    if leap != isLeap then throw (.assertionError "")
+    throw (.typeError "~unsupported operand type(s) for >>: 'float' and 'int'")
+
 /-- `date.fromordinal(n)`, _pydatetime.py:1050-1057, on any argument. There is no `_index`:
 `_ord2ymd` starts with `n -= 1` and then uses `divmod` and `(n + 50) >> 5` (:116-153), so an
-int goes on to `fromordinalPy`, and every other argument raises `TypeError` there: an
-object with only `__index__` (no arithmetic, the scope of `Arg.index`), `None`, a str, bytes,
-or a float (which survives `-=` and `divmod` but not `>>`, or reaches `cls(...)`'s `_index`
-first through the early return at :127-130). -/
+int goes on to `fromordinalPy`, a float to `fromordinalFloatPy`, and every other argument
+raises `TypeError` at `n -= 1`: an object with only `__index__` (no arithmetic, the scope of
+`Arg.index`), `None`, a str, bytes. -/
 def fromordinalArgPy : Arg → Py (Int × Int × Int)
   | .int n => fromordinalPy n
+  | .float x => fromordinalFloatPy x
   | _ => .error (.typeError "~unsupported operand type(s)")
 
 /-- `date.fromordinal(arg)` in C: the clinic wrapper `datetime_date_fromordinal`,

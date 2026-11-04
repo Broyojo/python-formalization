@@ -1,0 +1,96 @@
+id: pygrammar-genexp-star-precedence
+title: "PEP 798: `(*a or b for x in y)` parses but `[*a or b for x in y]` and `{*a or b for x in y}` are SyntaxErrors; the reference says generator expressions have list-comprehension syntax"
+priority: P5
+kind: grammar-inconsistency
+module: pygrammar
+files: [Grammar/python.gram, Doc/reference/expressions.rst]
+functions: ["genexp", "listcomp", "setcomp"]
+status: new
+summary: |
+  3.15 adds unpacking in comprehensions (PEP 798). `listcomp` and `setcomp` take
+  `star_named_expression` (python.gram:1058-1064), whose star form is `'*' bitwise_or`
+  (python.gram:745-747). `genexp` takes `( assignment_expression | expression !':=' |
+  starred_expression )` (python.gram:1066-1068), and `starred_expression` is the call-argument
+  rule `'*' expression` (python.gram:1094-1097). So a starred element that is not a `bitwise_or`
+  is accepted only in a generator expression:
+
+      (*a or b for x in y)       # GeneratorExp(elt=Starred(BoolOp(Or, [a, b])))
+      [*a or b for x in y]       # SyntaxError: invalid syntax
+      {*a or b for x in y}       # SyntaxError: invalid syntax
+      (*not a for x in y), (*a if c else d for x in y), (*lambda: a for x in y)  # all accepted
+
+  The language reference says "The syntax for generator expressions is the same as for list
+  comprehensions, except that they are enclosed in parentheses instead of brackets"
+  (Doc/reference/expressions.rst, "Generator expressions"), and its grammar for both is
+  `comprehension: flexible_expression for_if_clause+` with `starred_expression: "*" or_expr |
+  expression`, which rejects `*a or b`. Dict comprehensions have a similar split, but documented:
+  the reference gives `'{' '**' expression for_if_clause+ '}'`, so `{**a or b for x in y}` is
+  accepted while the display `{**a or b}` is not.
+likelihood: |
+  Very low impact: nothing crashes and no valid program changes meaning. It is a disagreement in
+  new syntax between the grammar, the reference, and the sibling comprehension forms; code that
+  relies on `(*a or b for ...)` would not port to `[*a or b for ...]`. Since 3.15.2 is released,
+  tightening the grammar would now break code that uses the form, so the realistic fix is in the
+  documentation.
+maybe_intended: |
+  Partly: PEP 798's Syntax section specifies exactly this grammar (listcomp/setcomp "use
+  star_named_expression"; genexp "modified to allow a starred_expression", which is the
+  call-argument rule), probably because a generator expression is also a call argument
+  (`f(*x for x in y)`). The PEP text does not say that the two accept different star operands,
+  and the reference's grammar and "same as for list comprehensions" sentence describe a stricter
+  genexp. The open docs issue gh-159061 ("Document unpacking in generator expressions") and its
+  closed PR gh-159268 add an example but do not touch the operand grammar. For dict
+  comprehensions the PEP's grammar (`'{' a=double_starred_kvpair b=for_if_clauses '}'`, i.e.
+  `'**' bitwise_or`) also differs from the implementation (`'**' expression`), while the
+  reference follows the implementation.
+reproducer: |
+  import ast
+  def ok(src):
+      try:
+          ast.parse(src)
+          return True
+      except SyntaxError:
+          return False
+  gen = [ok(f"({e} for x in y)") for e in ["*a or b", "*not a", "*a if c else d"]]
+  lst = [ok(f"[{e} for x in y]") for e in ["*a or b", "*not a", "*a if c else d"]]
+  st = [ok(f"{{{e} for x in y}}") for e in ["*a or b", "*not a", "*a if c else d"]]
+  print("genexp", gen, "listcomp", lst, "setcomp", st)
+  if all(gen) and not any(lst) and not any(st) and ok("[*a for x in y]") and ok("(*a for x in y)"):
+      print("REPRODUCED pygrammar-genexp-star-precedence")
+expected: |
+  One rule for the starred element of all three comprehension forms, or a reference grammar that
+  says generator expressions accept `"*" expression` where list and set comprehensions accept
+  `"*" or_expr`.
+promised_by: |
+  Doc/reference/expressions.rst, section "Generator expressions": "The syntax for generator
+  expressions is the same as for list comprehensions, except that they are enclosed in
+  parentheses instead of brackets"; section "Formal grammar for comprehensions": `comprehension:
+  flexible_expression for_if_clause+`, and `starred_expression: "*" or_expr | expression`. The
+  implementation also disagrees with itself (genexp against listcomp/setcomp).
+cause: |
+  Grammar/python.gram:1067: genexp's element group `( assignment_expression | expression !':=' |
+  starred_expression )` uses starred_expression (python.gram:1094-1097, `'*' a=expression`), where
+  listcomp and setcomp (python.gram:1059, 1063) use star_named_expression (python.gram:745-747,
+  `'*' a=bitwise_or`).
+possible_fix: |
+  Documentation: state in the reference that a generator expression's starred element takes any
+  expression (`"*" expression`), as a call argument does. Grammar (would break code accepted by
+  3.15.0-3.15.2): use `'*' bitwise_or` in genexp, e.g. replace `starred_expression` there by
+  `star_named_expression`'s star alternative.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  related: [159061, 143055]
+  queries: ["unpacking comprehension genexp starred precedence", "798 generator starred or_expr",
+            "dictcomp double starred expression bitwise_or", "PEP 798", "unpacking in comprehensions",
+            "generator expression unpacking star or precedence", "starred_expression genexp",
+            "gh search prs: unpacking comprehensions grammar 798",
+            "gh issue view 159061 (comments)", "gh pr diff 159268",
+            "gh issue view 143055 (comments)",
+            "gh api repos/python/peps/contents/peps/pep-0798.rst (Syntax section)"]
+  bugforge: "none (no comprehension or PEP 798 entries)"
+lean:
+  property: PyLean.PyGrammar.Peg.GenexpLikeListcomp
+  theorem: PyLean.PyGrammar.Peg.genexpLikeListcomp_refuted

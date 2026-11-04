@@ -132,9 +132,9 @@ datetime-fromordinal-range	proven	Lib/_pydatetime.py	date.fromordinal,_ord2ymd,C
 datetime-date-fromtimestamp	proven	Lib/_pydatetime.py	date.fromtimestamp,C date_fromtimestamp
 datetime-days-in-month	proven	Lib/_pydatetime.py	_days_in_month,C days_in_month,C is_leap
 datetime-check-date-fields	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args
-datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,C check_date_args,C datetime_date,C PyLong_AsInt
+datetime-check-date-fields-index	proven	Lib/_pydatetime.py	_check_date_fields,date.__new__,C check_date_args,C datetime_date,C PyLong_AsInt
 datetime-date-new-index-missing	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date
-datetime-check-time-fields-index	proven	Lib/_pydatetime.py	_check_time_fields,C check_time_args,C datetime_time,C PyLong_AsInt
+datetime-check-time-fields-index	proven	Lib/_pydatetime.py	_check_time_fields,time.__new__,C check_time_args,C datetime_time,C time_new,C PyLong_AsInt
 datetime-time-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time,C PyLong_AsInt
 datetime-datetime-fold-twins	refuted	Lib/_pydatetime.py	_check_time_fields,datetime.__new__,C datetime_datetime,C PyLong_AsInt
 datetime-time-fold-arg	proven	Lib/_pydatetime.py	_check_time_fields,time.__new__,C datetime_time
@@ -273,6 +273,18 @@ datetime-isocalendardate-new	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__
 datetime-isocalendardate-new-twins	refuted	Lib/_pydatetime.py	IsoCalendarDate.__new__
 datetime-strptime-time-datetime	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
 datetime-datetime-fromiso-body	proven	Lib/_pydatetime.py	datetime.fromisoformat,_find_isoformat_datetime_separator,_parse_isoformat_date,_parse_isoformat_time
+datetime-time-new-str-state	proven	Lib/_pydatetime.py	time.__new__,time.__setstate,C time_new,C time_from_pickle
+datetime-datetime-new-str-state	proven	Lib/_pydatetime.py	datetime.__new__,datetime.__setstate,C datetime_new,C datetime_from_pickle
+datetime-strptime-offset-range	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
+datetime-datetime-fromiso-rollover	proven	Lib/_pydatetime.py	datetime.fromisoformat
+datetime-time-repr-fallible	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr-fallible	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr-cls-twins	refuted	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr
+datetime-local-timezone-full	proven	Lib/_pydatetime.py	datetime._local_timezone,datetime._mktime,C local_timezone_from_local,C local_timezone,C local_timezone_from_timestamp,C local_to_seconds
+datetime-astimezone-local	proven	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone_from_local,C local_timezone
+datetime-astimezone-local-naive-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl,C local_timezone
+datetime-astimezone-local-none-offset-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
+datetime-timedelta-float-ctor-twins	refuted	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C delta_new_impl,C accum
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
@@ -2349,9 +2361,19 @@ bytecode-call-py-exact-args	proven	Python/bytecodes.c	opcode:CALL_PY_EXACT_ARGS,
 bytecode-call-bound-method-exact-args	proven	Python/bytecodes.c	opcode:CALL_BOUND_METHOD_EXACT_ARGS,opcode:_CHECK_CALL_BOUND_METHOD_EXACT_ARGS,opcode:_INIT_CALL_BOUND_METHOD_EXACT_ARGS
 bytecode-call-kw-py	proven	Python/bytecodes.c	opcode:CALL_KW_PY,opcode:_CHECK_FUNCTION_VERSION_KW,opcode:_PY_FRAME_KW
 bytecode-call-kw-bound-recursion	refuted	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW,opcode:_PY_FRAME_KW
-bytecode-call-kw-bound-budget	proven	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW
+bytecode-call-kw-bound-budget	proven	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW,opcode:_PY_FRAME_KW
 bytecode-call-ex-py-recursion	refuted	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
-bytecode-call-ex-py-budget	proven	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
+bytecode-call-ex-py-budget	proven	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX,opcode:_MAKE_CALLARGS_A_TUPLE
+bytecode-check-exc-match	proven	Python/bytecodes.c	opcode:CHECK_EXC_MATCH
+bytecode-check-eg-match	proven	Python/bytecodes.c	opcode:CHECK_EG_MATCH,_PyEval_ExceptionGroupMatch
+bytecode-eg-match-handled	refuted	Python/bytecodes.c	opcode:CHECK_EG_MATCH,_PyEval_ExceptionGroupMatch
+bytecode-reraise	proven	Python/bytecodes.c	opcode:RERAISE
+bytecode-cleanup-throw	proven	Python/bytecodes.c	opcode:CLEANUP_THROW
+bytecode-get-aiter	proven	Python/bytecodes.c	opcode:GET_AITER
+bytecode-get-anext	proven	Python/bytecodes.c	opcode:GET_ANEXT,_PyEval_GetANext
+bytecode-load-special	proven	Python/bytecodes.c	opcode:LOAD_SPECIAL,opcode:_LOAD_SPECIAL,opcode:_INSERT_NULL
+bytecode-attr-method-no-dict	proven	Python/bytecodes.c	opcode:LOAD_ATTR_METHOD_NO_DICT,opcode:_LOAD_ATTR_METHOD_NO_DICT,opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:LOAD_ATTR_METHOD_LAZY_DICT,opcode:_CHECK_ATTR_METHOD_LAZY_DICT,opcode:_LOAD_ATTR_METHOD_LAZY_DICT
+bytecode-get-awaitable	proven	Python/bytecodes.c	opcode:GET_AWAITABLE,_PyEval_GetAwaitable,_PyEval_FormatAwaitableError
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
@@ -2508,6 +2530,7 @@ pygrammar-rule-invalid-assignment	proven	Grammar/python.gram	rule:invalid_assign
 pygrammar-rule-sum-sub-sub	proven	Grammar/python.gram	rule:sum
 pygrammar-rule-dotted-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_dotted_as_name
 pygrammar-rule-import-from-as-name-name-target	refuted	Grammar/python.gram	rule:invalid_import_from_as_name
+pygrammar-rule-paren-name-target	refuted	Grammar/python.gram	rule:invalid_dotted_as_name
 pygrammar-rule-invalid-dotted-as-name	proven	Grammar/python.gram	rule:invalid_dotted_as_name
 pygrammar-rule-invalid-import-from-as-name	proven	Grammar/python.gram	rule:invalid_import_from_as_name
 pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
@@ -2547,6 +2570,70 @@ pygrammar-rule-set	proven	Grammar/python.gram	rule:set
 pygrammar-rule-single-target	proven	Grammar/python.gram	rule:single_target
 pygrammar-rule-disjunction	proven	Grammar/python.gram	rule:disjunction
 pygrammar-rule-conjunction	proven	Grammar/python.gram	rule:conjunction
+pygrammar-rule-invalid-group	proven	Grammar/python.gram	rule:invalid_group
+pygrammar-rule-param	proven	Grammar/python.gram	rule:param
+pygrammar-rule-param-star-annotation	proven	Grammar/python.gram	rule:param_star_annotation
+pygrammar-rule-lambda-param	proven	Grammar/python.gram	rule:lambda_param
+pygrammar-rule-lambda-param-no-default	proven	Grammar/python.gram	rule:lambda_param_no_default
+pygrammar-rule-param-no-default	proven	Grammar/python.gram	rule:param_no_default
+pygrammar-rule-param-no-default-star-annotation	proven	Grammar/python.gram	rule:param_no_default_star_annotation
+pygrammar-rule-param-with-default	proven	Grammar/python.gram	rule:param_with_default
+pygrammar-rule-param-maybe-default	proven	Grammar/python.gram	rule:param_maybe_default
+pygrammar-rule-lambda-param-with-default	proven	Grammar/python.gram	rule:lambda_param_with_default
+pygrammar-rule-lambda-param-maybe-default	proven	Grammar/python.gram	rule:lambda_param_maybe_default
+pygrammar-rule-slash-no-default	proven	Grammar/python.gram	rule:slash_no_default
+pygrammar-rule-lambda-slash-no-default	proven	Grammar/python.gram	rule:lambda_slash_no_default
+pygrammar-rule-slash-with-default	proven	Grammar/python.gram	rule:slash_with_default
+pygrammar-rule-lambda-slash-with-default	proven	Grammar/python.gram	rule:lambda_slash_with_default
+pygrammar-rule-kwds	proven	Grammar/python.gram	rule:kwds
+pygrammar-rule-lambda-kwds	proven	Grammar/python.gram	rule:lambda_kwds
+pygrammar-rule-star-etc	proven	Grammar/python.gram	rule:star_etc
+pygrammar-rule-lambda-star-etc	proven	Grammar/python.gram	rule:lambda_star_etc
+pygrammar-rule-parameters	proven	Grammar/python.gram	rule:parameters
+pygrammar-rule-lambda-parameters	proven	Grammar/python.gram	rule:lambda_parameters
+pygrammar-rule-params	proven	Grammar/python.gram	rule:params
+pygrammar-rule-lambda-params	proven	Grammar/python.gram	rule:lambda_params
+pygrammar-rule-star-named-expression-sequence	proven	Grammar/python.gram	rule:star_named_expression_sequence
+pygrammar-rule-star-named-expressions	proven	Grammar/python.gram	rule:star_named_expressions
+pygrammar-rule-star-named-expressions-sequence	proven	Grammar/python.gram	rule:star_named_expressions_sequence
+pygrammar-rule-double-starred-kvpairs	proven	Grammar/python.gram	rule:double_starred_kvpairs
+pygrammar-rule-kvpair	proven	Grammar/python.gram	rule:kvpair
+pygrammar-rule-double-starred-kvpair	proven	Grammar/python.gram	rule:double_starred_kvpair
+pygrammar-rule-dict	proven	Grammar/python.gram	rule:dict
+pygrammar-rule-listcomp	proven	Grammar/python.gram	rule:listcomp
+pygrammar-rule-setcomp	proven	Grammar/python.gram	rule:setcomp
+pygrammar-rule-genexp	proven	Grammar/python.gram	rule:genexp
+pygrammar-rule-dictcomp	proven	Grammar/python.gram	rule:dictcomp
+pygrammar-rule-for-if-clauses	proven	Grammar/python.gram	rule:for_if_clauses
+pygrammar-rule-for-if-clause	proven	Grammar/python.gram	rule:for_if_clause
+pygrammar-rule-expressions	proven	Grammar/python.gram	rule:expressions
+pygrammar-rule-starred-expression	proven	Grammar/python.gram	rule:starred_expression
+pygrammar-rule-kwarg-or-starred	proven	Grammar/python.gram	rule:kwarg_or_starred
+pygrammar-rule-kwarg-or-double-starred	proven	Grammar/python.gram	rule:kwarg_or_double_starred
+pygrammar-rule-kwargs	proven	Grammar/python.gram	rule:kwargs
+pygrammar-rule-args	proven	Grammar/python.gram	rule:args
+pygrammar-rule-arguments	proven	Grammar/python.gram	rule:arguments
+pygrammar-rule-type-params	proven	Grammar/python.gram	rule:type_params
+pygrammar-rule-type-param-seq	proven	Grammar/python.gram	rule:type_param_seq
+pygrammar-rule-type-param	proven	Grammar/python.gram	rule:type_param
+pygrammar-rule-type-param-bound	proven	Grammar/python.gram	rule:type_param_bound
+pygrammar-rule-type-param-default	proven	Grammar/python.gram	rule:type_param_default
+pygrammar-rule-type-param-starred-default	proven	Grammar/python.gram	rule:type_param_starred_default
+pygrammar-rule-genexp-like-listcomp	refuted	Grammar/python.gram	rule:listcomp,rule:genexp
+pygrammar-rule-compare-op-bitwise-or-pair	proven	Grammar/python.gram	rule:compare_op_bitwise_or_pair
+pygrammar-rule-eq-bitwise-or	proven	Grammar/python.gram	rule:eq_bitwise_or
+pygrammar-rule-lte-bitwise-or	proven	Grammar/python.gram	rule:lte_bitwise_or
+pygrammar-rule-lt-bitwise-or	proven	Grammar/python.gram	rule:lt_bitwise_or
+pygrammar-rule-gte-bitwise-or	proven	Grammar/python.gram	rule:gte_bitwise_or
+pygrammar-rule-gt-bitwise-or	proven	Grammar/python.gram	rule:gt_bitwise_or
+pygrammar-rule-notin-bitwise-or	proven	Grammar/python.gram	rule:notin_bitwise_or
+pygrammar-rule-in-bitwise-or	proven	Grammar/python.gram	rule:in_bitwise_or
+pygrammar-rule-isnot-bitwise-or	proven	Grammar/python.gram	rule:isnot_bitwise_or
+pygrammar-rule-is-bitwise-or	proven	Grammar/python.gram	rule:is_bitwise_or
+pygrammar-rule-noteq-bitwise-or	proven	Grammar/python.gram	rule:noteq_bitwise_or
+pygrammar-rule-invalid-starred-expression-unpacking	proven	Grammar/python.gram	rule:invalid_starred_expression_unpacking
+pygrammar-rule-invalid-starred-expression-unpacking-sequence	proven	Grammar/python.gram	rule:invalid_starred_expression_unpacking_sequence
+pygrammar-rule-invalid-default	proven	Grammar/python.gram	rule:invalid_default
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
 pygrammar-ast-splitlines	proven	Lib/ast.py	

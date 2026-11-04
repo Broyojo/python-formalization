@@ -35,10 +35,16 @@ maybe_intended: |
   `import a b c` falls back to the generic error. The PR is open, labelled "awaiting changes"
   and "stale" (no activity for 90 days). An earlier version of this record said the upstream
   fix missed `else`, `=` and `:`. That was wrong: it read only the sketch in the issue, not the
-  PR diff. One case the PR's rule still reaches, found while smoke-testing on 3.15.2:
-  `import a as (b)\n` also says "cannot use name as import target". `(` is not a NAME, so the
-  lookahead passes, `expression` parses `(b)` as the Name `b`, and NEWLINE follows. The error
-  there is the parentheses, not the name.
+  PR diff. One case the PR does not fix, found while smoke-testing on 3.15.2 and checked against
+  the PR diff (head 1fae8edb, read with `gh pr diff 146493`): `import a as (b)\n` (and
+  `from x import a as (b)\n`) also says "cannot use name as import target". In the PR's
+  grammar the new first alternative `dotted_name ['as' NAME] dotted_name (...)` fails at `(`
+  (no `NAME` after `as`, and `as` is not a `dotted_name`), and the second keeps
+  `!(NAME (',' | ')' | ';' | NEWLINE)) a=expression` and only adds `(',' | ')' | ';' |
+  NEWLINE)` after it: `(` is not a NAME, so the lookahead passes, `expression` parses `(b)` as
+  the Name `b`, and NEWLINE follows. The error there is the parentheses, not the name. This
+  case is new relative to gh-146492 and its PR; it belongs in a comment on that PR rather than
+  a separate issue.
 reproducer: |
   def msg(src):
       try:
@@ -46,7 +52,9 @@ reproducer: |
       except SyntaxError as e:
           return e.msg
   cases = ["import a as b c\n", "from x import a as b c\n", "if x: import a as b else: pass\n",
-           "import a as b = 1\n", "import a as b:\n"]
+           "import a as b = 1\n", "import a as b:\n",
+           # not fixed by gh-146493: '(' passes its lookahead and NEWLINE follows the expression
+           "import a as (b)\n", "from x import a as (b)\n"]
   got = [msg(s) for s in cases]
   print(got)
   ok = msg("import a as b\n") is None
@@ -83,3 +91,7 @@ duplicates:
 lean:
   property: PyLean.PyGrammar.Peg.DottedAsNameNameTarget
   theorem: PyLean.PyGrammar.Peg.dottedAsNameNameTarget_refuted
+  also:
+    - {property: PyLean.PyGrammar.Peg.ImportFromAsNameNameTarget, theorem: PyLean.PyGrammar.Peg.importFromAsNameNameTarget_refuted}
+    - {property: PyLean.PyGrammar.Peg.ParenNameTarget, theorem: PyLean.PyGrammar.Peg.parenNameTarget_refuted}
+  note: "ParenNameTarget is import a as (b), the case gh-146493 does not fix."

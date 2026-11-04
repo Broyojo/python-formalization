@@ -1,6 +1,6 @@
 import PyLean.PyGrammar.Peg.Rules.Exprs4
 
-/-! `disjunction` and `conjunction` (`Grammar/python.gram:763-771`), with their `+` loops of
+/-! `disjunction` and `conjunction` (`Grammar/python.gram:763-768`, `770-775`), with their `+` loops of
 `'or' conjunction` and `'and' inversion`, rule by rule. -/
 
 namespace PyLean.PyGrammar.Peg
@@ -98,7 +98,7 @@ def BoolA1Fails (f sub lp : Nat) (q s : PS) : Prop :=
   callRule (f + 3) sub q = (.null, s) ∨
   (∃ (a : Ast) (s1 : PS), callRule (f + 3) sub q = (a, s1) ∧ a ≠ .null ∧ callRule (f + 2) lp s1 = (.null, s))
 
-/-- `disjunction (memo)` / `conjunction (memo)` (`Grammar/python.gram:763-771`):
+/-- `disjunction (memo)` / `conjunction (memo)` (`Grammar/python.gram:763-768`, `770-775`):
 ```
     | a=sub b=('op' c=sub { c })+ { _PyAST_BoolOp(Op, CHECK(..., _PyPegen_seq_insert_in_front(p, a, b)), EXTRA) }
     | sub

@@ -23,6 +23,10 @@ likelihood: |
 maybe_intended: |
   Not intended, but leap-second zones are outside what the datetime module supports (it has
   no second 60, gh-67762 is the open request); C works by accident of not checking.
+upstream_note: |
+  Not for upstream. Leap-second zones are outside what datetime supports (no second 60;
+  gh-67762 is the open request), so the difference is kept in Lean (MktimeLocalTwinsAll,
+  LocalTimezoneTwinsAll) and on record here, but review 0506b7c0 judged it not worth a report.
 reproducer: |
   import datetime, _pydatetime, os, struct, tempfile, time
   LEAP = 78796800  # 1972-07-01T00:00:00 POSIX, the first leap second

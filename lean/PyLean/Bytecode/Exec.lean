@@ -16,13 +16,30 @@ namespace PyLean.Bytecode
 open Uop
 
 /-- `DEOPT_IF`/`EXIT_IF`: a guard that fails restarts the instruction in its
-generic form. The guards run before any effect Python can see (the only state
-change before a guard is the method expansion of `CALL_BOUND_METHOD_EXACT_ARGS`,
-which the generic `CALL` redoes), so restarting from the pre-instruction state
-is the same as continuing at `PREDICTED_<family>`. -/
+generic form, from the pre-instruction state. That is the same as continuing at
+`PREDICTED_<family>` with the stack the guard saw only when nothing before the
+guard changed anything the generic form would not redo: the method expansions of
+`CALL_BOUND_METHOD_EXACT_ARGS`/`_GENERAL` and `CALL_KW_BOUND_METHOD` (which the
+generic `CALL`/`CALL_KW` redoes in `_MAYBE_EXPAND_METHOD`) are such changes.
+`CALL_EX_PY` is not: its `_MAKE_CALLARGS_A_TUPLE` runs `PySequence_Tuple`, which
+can run Python code (`__iter__`, `__next__`), before `_CHECK_IS_PY_CALLABLE_EX`,
+and `JUMP_TO_PREDICTED(CALL_FUNCTION_EX)` keeps the tuple it wrote into the stack
+(`Python/generated_cases.c.h`, `CALL_EX_PY`); it runs as `execCallExPy`. -/
 def withDeopt (m g : M Unit) : M Unit := fun s =>
   match m s with
   | .error .deopt _ => g s
+  | r => r
+
+/-- `CALL_EX_PY` (`:5763-5771`) as dispatch runs it. `_MAKE_CALLARGS_A_TUPLE` writes its tuple
+into the stack before `_CHECK_IS_PY_CALLABLE_EX` can exit, and `JUMP_TO_PREDICTED(CALL_FUNCTION_EX)`
+keeps that stack (`Python/generated_cases.c.h`, `CALL_EX_PY`), so an exit of the guards after it
+restarts `CALL_FUNCTION_EX` on the converted stack, whose own `_MAKE_CALLARGS_A_TUPLE` then leaves
+the exact tuple alone: `PySequence_Tuple` (and the `__iter__`/`__next__` it runs) happens once. An
+exit of `_CHECK_PEP_523`, before anything ran, restarts from the instruction's state. -/
+def execCallExPy (e : Env) : M Unit := fun s =>
+  match (do _CHECK_PEP_523; _MAKE_CALLARGS_A_TUPLE e : M Unit) s with
+  | .ok _ s1 => withDeopt (CALL_EX_PY_TAIL e) (CALL_FUNCTION_EX e) s1
+  | .error .deopt _ => CALL_FUNCTION_EX e s
   | r => r
 
 /-- The descriptors of `BINARY_OP_EXTEND`, `Python/specialize.c:2282-2311`. A cache
@@ -262,7 +279,7 @@ def execOp (e : Env) : Op → M Unit
   | .CALL_KW_BOUND_METHOD => withDeopt (CALL_KW_BOUND_METHOD e) (CALL_KW e)
   | .CALL_KW_NON_PY => withDeopt (CALL_KW_NON_PY e) (CALL_KW e)
   | .CALL_FUNCTION_EX => CALL_FUNCTION_EX e
-  | .CALL_EX_PY => withDeopt (CALL_EX_PY e) (CALL_FUNCTION_EX e)
+  | .CALL_EX_PY => execCallExPy e
   | .CALL_EX_NON_PY_GENERAL => withDeopt (CALL_EX_NON_PY_GENERAL e) (CALL_FUNCTION_EX e)
   | .INSTRUMENTED_CALL_FUNCTION_EX => INSTRUMENTED_CALL_FUNCTION_EX e
   | .MAKE_FUNCTION => MAKE_FUNCTION e

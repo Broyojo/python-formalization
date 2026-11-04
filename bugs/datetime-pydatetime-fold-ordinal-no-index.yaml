@@ -23,7 +23,12 @@ summary: |
     the three objects as they are, while C's `iso_calendar_date_new_impl` takes clinic `int`
     arguments (Modules/_datetimemodule.c:3843-3870): `type(d.isocalendar())('a', 2, 3)` is
     `IsoCalendarDate(year=a, week=2, weekday=3)` in Python and `TypeError` in C (and 2**40 is an
-    OverflowError in C). The class is not public; `date.isocalendar()` always passes ints.
+    OverflowError in C). The signatures differ the other way for keywords: Python's `__new__`
+    has the positional-only marker `/` (:1381), C's clinic signature
+    (Modules/_datetimemodule.c:3836-3839) has none, so `IsoCalendarDate(year=2020, week=1,
+    weekday=3)` is a TypeError (`got some positional-only arguments passed as keyword
+    arguments`) in Python and builds the tuple in C. The class is not public;
+    `date.isocalendar()` always passes three ints positionally.
 likelihood: |
   Low. A float fold can come from arithmetic or from a JSON round trip; there it silently
   works on PyPy and _pydatetime and fails on CPython, and the stored fold keeps the float type.
@@ -33,6 +38,12 @@ maybe_intended: |
   Unlikely. The other fields were given `_index` calls precisely to match C's argument
   conversion; fold and fromordinal look like they were missed. The docs say fold is "in
   [0, 1]" and fromordinal takes an "ordinal", both integers.
+upstream_note: |
+  File the fold and date.fromordinal parts only. The IsoCalendarDate differences (unconverted
+  arguments, and keywords accepted by C but refused by Python's `/`) stay in this record and in
+  Lean (IsoCalendarDateNewTwins) but are not for upstream: the class is private, the library
+  constructs it only from date.isocalendar() with three ints, and review 0506b7c0 judged them
+  not worth a report.
 reproducer: |
   import datetime, _pydatetime
   class Idx:
@@ -47,13 +58,16 @@ reproducer: |
       ('time(fold=1.0).fold', lambda m: m.time(fold=1.0).fold),
       ('time(fold=Idx(1)).fold', lambda m: m.time(fold=Idx(1)).fold),
       ('date.fromordinal(Idx(5))', lambda m: m.date.fromordinal(Idx(5))),
-      ('IsoCalendarDate("a", 2, 3)', lambda m: tuple(type(m.date(2020, 1, 1).isocalendar())('a', 2, 3)))]}
+      ('IsoCalendarDate("a", 2, 3)', lambda m: tuple(type(m.date(2020, 1, 1).isocalendar())('a', 2, 3))),
+      ('IsoCalendarDate(year=2020, week=1, weekday=3)',
+       lambda m: tuple(type(m.date(2020, 1, 1).isocalendar())(year=2020, week=1, weekday=3)))]}
   for k, (c, p) in r.items():
       print(k, ' C:', c, ' Python:', p)
   if r['time(fold=1.0).fold'] == ('TypeError', '1.0') and \
      r['time(fold=Idx(1)).fold'] == ('1', 'ValueError') and \
      r['date.fromordinal(Idx(5))'] == ('datetime.date(1, 1, 5)', 'TypeError') and \
-     r['IsoCalendarDate("a", 2, 3)'] == ('TypeError', "('a', 2, 3)"):
+     r['IsoCalendarDate("a", 2, 3)'] == ('TypeError', "('a', 2, 3)") and \
+     r['IsoCalendarDate(year=2020, week=1, weekday=3)'] == ('(2020, 1, 3)', 'TypeError'):
       print('REPRODUCED datetime-pydatetime-fold-ordinal-no-index')
 expected: |
   The same outcome in both implementations, as in C: fold and the ordinal converted with
@@ -70,7 +84,8 @@ cause: |
   call PyLong_AsInt, i.e. `__index__`.
 possible_fix: |
   `fold = _index(fold)` before the test in `_check_time_fields`, and `n = _index(n)` at the
-  top of `date.fromordinal`.
+  top of `date.fromordinal`. (For IsoCalendarDate, if ever: `_index` the three arguments and
+  drop the `/`, or add `/` to the clinic signature.)
 reproduces:
   python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED

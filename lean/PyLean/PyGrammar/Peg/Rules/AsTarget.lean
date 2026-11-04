@@ -35,4 +35,19 @@ set_option maxRecDepth 100000 in
 theorem importFromAsNameNameTarget_refuted : ¬ ImportFromAsNameNameTarget := fun h =>
   h [32, 99, 10] (by decide +kernel)
 
+/-- `import a as (c)\n`: a one-letter name in parentheses after `as`, then `NEWLINE`. The target is
+wrong because of the parentheses, so the message never says that the name itself cannot be an
+import target. This is the case the fix proposed in gh-146493 still reaches: its rule keeps
+`!(NAME (',' | ')' | ';' | NEWLINE)) a=expression` and adds `(',' | ')' | ';' | NEWLINE)` after
+the expression, and here `(` is not a `NAME`, `expression` gives the `Name` inside, and
+`NEWLINE` follows. -/
+def ParenNameTarget : Prop := ∀ c : Nat, 97 ≤ c → c ≤ 122 →
+  errMsgOf (parseStr {} (importBytes ++ [32, 97, 32, 97, 115, 32, 40, c, 41, 10]) .file) ≠
+    some "cannot use name as import target"
+
+set_option maxRecDepth 100000 in
+/-- `import a as (b)\n`. -/
+theorem parenNameTarget_refuted : ¬ ParenNameTarget := fun h =>
+  h 98 (by decide) (by decide) (by decide +kernel)
+
 end PyLean.PyGrammar.Peg

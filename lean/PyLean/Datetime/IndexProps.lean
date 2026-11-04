@@ -199,23 +199,32 @@ theorem fromordinalIndexTwins_refuted : ¬FromordinalIndexTwins := by
 /-- `date.fromordinal(x)` on every argument: an int is the int-level `fromordinalPy` and
 `fromordinalC` (which `FromordinalRange` proves agree within a C `int`, with the ValueError
 and OverflowError outside); an object whose `__index__` returns `n` is `fromordinal(n)` in C
-and a `TypeError` in Python; an exception of `__index__` propagates in C; every argument
-without `__index__` (None, str, bytes, float, any other object) is a `TypeError` in both. -/
+and a `TypeError` in Python; an exception of `__index__` propagates in C; every other
+argument without `__index__` (None, str, bytes, any other object) is a `TypeError` in both; a
+float is a `TypeError` in C and in Python runs `_ord2ymd` on floats (`fromordinalFloatPy`),
+where `date.fromordinal(0.1)` fails `assert n == 0` with `AssertionError` and
+`date.fromordinal(1.5)` reaches `(n + 50) >> 5`, a `TypeError`. -/
 def FromordinalArg : Prop :=
   ∀ (n : Int) (e : PyExc) (a : Arg),
     fromordinalArgPy (.int n) = fromordinalPy n ∧ fromordinalArgC (.int n) = fromordinalC n ∧
     fromordinalArgC (.index (.ok (some n))) = fromordinalArgC (.int n) ∧
     (fromordinalArgPy (.index (.ok (some n)))).raises "TypeError" ∧
     fromordinalArgC (.index (.error e)) = .error e ∧
-    ((∀ m, a ≠ .int m) → (∀ r, a ≠ .index r) →
-      (fromordinalArgPy a).raises "TypeError" ∧ (fromordinalArgC a).raises "TypeError")
+    ((∀ m, a ≠ .int m) → (∀ r, a ≠ .index r) → (∀ x, a ≠ .float x) →
+      (fromordinalArgPy a).raises "TypeError" ∧ (fromordinalArgC a).raises "TypeError") ∧
+    (∀ x, (fromordinalArgC (.float x)).raises "TypeError") ∧
+    (fromordinalArgPy (.float (Binary64.F64.ofBits 0x3fb999999999999a))).raises "AssertionError" ∧
+    (fromordinalArgPy (.float (Binary64.F64.ofBits 0x3ff8000000000000))).raises "TypeError"
 
 theorem fromordinalArg_proven : FromordinalArg := by
   intro n e a
-  refine ⟨rfl, rfl, rfl, ⟨_, rfl, rfl⟩, rfl, fun h1 h2 => ?_⟩
+  refine ⟨rfl, rfl, rfl, ⟨_, rfl, rfl⟩, rfl, fun h1 h2 h3 => ?_, fun x => ⟨_, rfl, rfl⟩,
+    ⟨.assertionError "", by decide +kernel, rfl⟩,
+    ⟨.typeError "~unsupported operand type(s) for >>: 'float' and 'int'", by decide +kernel, rfl⟩⟩
   cases a with
   | int m => exact absurd rfl (h1 m)
   | index r => exact absurd rfl (h2 r)
+  | float x => exact absurd rfl (h3 x)
   | _ => exact ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩
 
 end PyLean.Datetime

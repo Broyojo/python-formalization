@@ -66,6 +66,9 @@ def gen_x2(rng, d):
         c.update(d=dd, t=t, tzp=tzp())
     elif fn == "x2_tz_meth":
         spec = ["tz", 1, rng.choice(d.OFFSETS + [[0, 0, 0]]), rng.choice(d.NAMES)]
+        if spec[2] == [0, 0, 0] and spec[3] is None:
+            # timezone(timedelta(0)) is timezone.utc itself (identity 0)
+            spec = ["tz", 0, [0, 0, 0], None]
         if rng.random() < 0.2:
             spec = ["tz", 0, [0, 0, 0], None]
         k = rng.random()

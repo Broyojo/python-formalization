@@ -191,10 +191,26 @@ def specialError (oparg : Nat) (t : String) (suggest : Bool) : String :=
   | _, false => s!"'{t}' object does not support the asynchronous context manager protocol (missed __aexit__ method)"
   | _, true => s!"'{t}' object does not support the asynchronous context manager protocol (missed __aexit__ method) but it supports the context manager protocol. Did you mean to use 'with'?"
 
-/-- `type_has_special_method`, `Python/ceval.c:3742-3749`. The binding test
-`tp_descr_get != NULL` holds for the functions the model puts in a class. -/
+/-- `Py_TYPE(r)->tp_descr_get != NULL`: functions, bound methods (`method_descr_get`,
+`Objects/classobject.c:333`), `staticmethod`, `classmethod`, `property`, method descriptors, and
+instances of a class that defines `__get__` (`slot_tp_descr_get`); not an `int`, a builtin function
+(`builtin_function_or_method` has no `tp_descr_get`), a type object, or other plain values. -/
+def hasDescrGet (e : Env) (r : Val) : RM Bool :=
+  match r with
+  | .methDescr .. => pure true
+  | .ref a => do
+    match ← getObj a with
+    | .func _ | .method .. | .staticMethod _ | .classMethod _ | .property .. => pure true
+    | .inst _ => return (← e.om.typeLookup (← typeOf r) "__get__").isSome
+    | _ => pure false
+  | _ => pure false
+
+/-- `type_has_special_method`, `Python/ceval.c:3742-3749`: `_PyType_Lookup` finds the name and
+what it finds has `tp_descr_get`, so `__aenter__ = 1` or `__aexit__ = len` does not count. -/
 def typeHasSpecial (e : Env) (tp : Val) (name : String) : RM Bool := do
-  return (← e.om.typeLookup tp name).isSome
+  match ← e.om.typeLookup tp name with
+  | some r => hasDescrGet e r
+  | none => pure false
 
 /-- `_PyEval_SpecialMethodCanSuggest`, `Python/ceval.c:3751-3768`. -/
 def specialCanSuggest (e : Env) (self : Val) (oparg : Nat) : RM Bool := do
@@ -204,14 +220,19 @@ def specialCanSuggest (e : Env) (self : Val) (oparg : Nat) : RM Bool := do
   else
     return (← typeHasSpecial e tp "__enter__") && (← typeHasSpecial e tp "__exit__")
 
-/-- `:4148`, `:3495`, `:3512`: `_INSERT_NULL` + `_LOAD_SPECIAL`. -/
+/-- `:4148-4151`: `_INSERT_NULL + _LOAD_SPECIAL` (`:4131-4146`). `_PyObject_LookupSpecialMethod`
+(`lookupSpecial`) gives the method and `self` (or a bound result and `NULL`); not found, the error
+is `_Py_SpecialMethods[oparg].error` or `.error_suggestion` (`_PyEval_SpecialMethodCanSuggest`) with
+`%T` of the owner, its fully qualified name (`typeFullName`: the `__qualname__` of a `__main__`
+class), raised with `ERROR_NO_POP`. C leaves `NULL, owner` in the two slots then, the model `owner`
+alone; the unwinding to the handler's depth, below both, pops them either way. -/
 def LOAD_SPECIAL (e : Env) : M Unit := stkK 1 2 fun
   | [owner] => do
     match ← e.om.lookupSpecial e.ctx owner (specialName e.oparg) with
     | some (m, s) => pure [m, s]
     | none =>
       let sug ← (specialCanSuggest e owner e.oparg : RM Bool)
-      let t ← (tpName owner : RM String)
+      let t ← (typeFullName owner : RM String)
       (typeError (specialError e.oparg t sug) : RM _)
   | _ => fault "arity"
 
@@ -873,14 +894,17 @@ def _PY_FRAME_EX (e : Env) : M Frame := do
     let pos ← (tupleItems callargs : RM _)
     pushInit e func (pos.toList ++ kwvals) kw
   | _ => fault "arity"
-/-- `:5763`. No `_CHECK_RECURSION_REMAINING` here either: python/cpython#155151. -/
-def CALL_EX_PY (e : Env) : M Unit := do
-  _CHECK_PEP_523
-  _MAKE_CALLARGS_A_TUPLE e
+/-- The uops of `CALL_EX_PY` after `_MAKE_CALLARGS_A_TUPLE` (`:5763-5771`). -/
+def CALL_EX_PY_TAIL (e : Env) : M Unit := do
   _CHECK_IS_PY_CALLABLE_EX
   let nf ← _PY_FRAME_EX e
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
+/-- `:5763`. No `_CHECK_RECURSION_REMAINING` here either: python/cpython#155151. -/
+def CALL_EX_PY (e : Env) : M Unit := do
+  _CHECK_PEP_523
+  _MAKE_CALLARGS_A_TUPLE e
+  CALL_EX_PY_TAIL e
 /-- `:5773`. -/
 def _CHECK_IS_NOT_PY_CALLABLE_EX : M Unit := guardTop 4 fun
   | [f, _, _, _] => (isFunction f : RM Bool)
