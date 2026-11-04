@@ -31,6 +31,7 @@ import PyLean.Bytecode.SpecExcMatch
 import PyLean.Bytecode.SpecAsync
 import PyLean.Bytecode.SpecCallBuiltin
 import PyLean.Bytecode.SpecGen
+import PyLean.Bytecode.KwDefaultsC
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -834,7 +835,14 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model, END_ASYNC_FOR on (awaitable, exc) drops both when exc matches StopAsyncIteration (PyErr_GivenExceptionMatches, a subclass included), and otherwise re-raises exc through exception_unwind, with no traceback entry."
     source := "Python/bytecodes.c:1931-1958"
     status := .proven, prop := ``EndAsyncForRules, thm := some ``endAsyncForRules_proven
-    notes := "The JUMPBY(0) is for monitoring only. On the re-raise the model drops the two before unwinding; the C unwinding to the handler's depth, below them, drops them." }
+    notes := "The JUMPBY(0) is for monitoring only. On the re-raise the model drops the two before unwinding; the C unwinding to the handler's depth, below them, drops them." },
+  { id := "bytecode-kwonly-defaults-borrowed", pyFile := "Python/ceval.c"
+    pyFns := ["initialize_locals"]
+    statement := "The keyword-only defaults loop of initialize_locals never reads freed memory, whatever the __eq__ of a key stored in __kwdefaults__ does to f.__kwdefaults__. It does not: func->func_kwdefaults is passed borrowed to PyDict_GetItemRef, so a non-str key with the parameter name's hash whose __eq__ sets f.__kwdefaults__ = None frees the dict, and compare_generic then reads mp->ma_keys of the freed dict."
+    source := "invariant: no crash from pure-Python code; Python/ceval.c:1942-1966, Objects/dictobject.c:1182-1207, Objects/funcobject.c:875-906"
+    status := .refuted, prop := ``KwDefC.KwonlyDefaultsNoCrash, thm := some ``KwDefC.kwonlyDefaultsNoCrash_refuted
+    bug := some "bytecode-kwonly-defaults-borrowed-dict"
+    notes := "Modelled in KwDefaultsC.lean over a reference-counted C heap (the machine's initializeLocals looks __kwdefaults__ up by string and never frees). KwonlyDefaultsFixedOnUaf: holding a strong reference across the lookup turns the same state into the missing-argument TypeError." }
 ]
 
 end PyLean.Bytecode
