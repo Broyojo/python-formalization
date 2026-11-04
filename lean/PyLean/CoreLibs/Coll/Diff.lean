@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
 import PyLean.CoreLibs.Coll.ChainMapG
 import PyLean.CoreLibs.Coll.UserDictG
+import PyLean.CoreLibs.Coll.UserListG
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
 import PyLean.CoreLibs.Coll.Namedtuple
@@ -442,6 +443,20 @@ def runUL (j : Json) : Except String Json := do
   | "reverse" => return okJ (encUL (ulReverse intOps u))
   | "sort" => return okJ (encUL (ulSort intOps u (← getBool j "r")))
   | "extend" => return enc (ulExtend u (← getLOpnd j))
+  | "gen_iadd" | "gen_extend" | "gen_add" | "gen_radd" | "gen_list_iadd" =>
+    let xs ← getInts j "o"
+    let fail := (j.getObjVal? "fail" >>= Json.getBool?).toOption.getD false
+    let o : LOpndP Int := .other "generator" (.ok ⟨xs, if fail then some (.valueError "boom") else none⟩)
+    match op with
+    | "gen_iadd" => return encOut encUL (ulIaddP u o)
+    | "gen_extend" => return encOut encUL (ulExtendP u o)
+    | "gen_list_iadd" => return encOut encInts (listExtendP u.data o)
+    | "gen_add" => return enc (ulAddP u o)
+    | _ => return enc (ulRaddP u o)
+  | "init_sub" =>
+    let l ← getInts j "o"
+    return encPy (fun (r : ULO Int) => encUL ⟨r.cls, r.data⟩)
+      (ulNewP 1 2 cls (some (.listSub l (.ok (FIt.ofList l.reverse)))))
   | _ => throw s!"unknown ul op {op}"
 
 /-! ### `UserString` -/

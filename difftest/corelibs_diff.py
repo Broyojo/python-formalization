@@ -619,12 +619,28 @@ def coll_slice_of(case, names=("st", "sp", "se")):
     return slice(*(case.get(n) for n in names))
 
 
+def coll_int_gen(xs, fail):
+    yield from xs
+    if fail:
+        raise ValueError("boom")
+
+
+class coll_RevList(list):
+    """A list subclass whose __iter__ yields the items reversed."""
+    def __iter__(self):
+        return iter(list.__reversed__(self))
+
+
 def coll_gen_ul(rng):
     op = rng.choice(["new", "repr", "lt", "le", "eq", "gt", "ge", "contains", "len", "getitem",
                      "getslice", "setitem", "setslice", "delitem", "delslice", "add", "radd",
                      "iadd", "mul", "imul", "copy", "copy_dunder", "append", "insert", "pop",
-                     "remove", "clear", "count", "index", "reverse", "sort", "extend"])
+                     "remove", "clear", "count", "index", "reverse", "sort", "extend",
+                     "gen_iadd", "gen_extend", "gen_add", "gen_radd", "gen_list_iadd", "init_sub"])
     case = {"fn": "coll.ul", "op": op, "sub": rng.choice([0, 1]), "a": coll_ints(rng)}
+    if op.startswith("gen_") or op == "init_sub":
+        case["o"] = coll_ints(rng)
+        case["fail"] = rng.random() < 0.5
     if op in ("contains", "setitem", "append", "insert", "remove", "count", "index"):
         case["x"] = rng.randint(-2, 5)
     if op in ("getitem", "setitem", "delitem", "insert", "mul", "imul"):
@@ -751,6 +767,24 @@ def coll_run_ul(case):
         if op == "extend":
             u.extend(coll_opnd(case))
             return coll_enc_ul(u)
+        if op in ("gen_iadd", "gen_extend", "gen_list_iadd"):
+            it = coll_int_gen(case["o"], case["fail"])
+            tgt = list(u.data) if op == "gen_list_iadd" else u
+            try:
+                if op == "gen_extend":
+                    tgt.extend(it)
+                else:
+                    tgt += it
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [list(tgt) if op == "gen_list_iadd" else coll_enc_ul(u), exc]
+        if op == "gen_add":
+            return coll_enc_ul(u + coll_int_gen(case["o"], case["fail"]))
+        if op == "gen_radd":
+            return coll_enc_ul(u.__radd__(coll_int_gen(case["o"], case["fail"])))
+        if op == "init_sub":
+            return coll_enc_ul(type(u)(coll_RevList(case["o"])))
         raise AssertionError(op)
     return py_result(body)
 
