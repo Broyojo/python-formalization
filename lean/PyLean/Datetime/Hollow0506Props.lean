@@ -176,4 +176,163 @@ theorem datetimeFromIsoRollover_proven : DatetimeFromIsoRollover := by
     rw [hmain, hr]
     rfl
 
+/-! ### `repr` with a tzinfo whose `__repr__` can fail -/
+
+/-- What `repr(obj)` gets back from a `tzinfo` subclass's `__repr__`: a `str` (a subclass
+included, whose text is used), or an object of another type, named as `type(x).__name__`. -/
+inductive ReprRet where
+  | str (s : String)
+  | other (ty : String)
+  deriving DecidableEq, Inhabited
+
+/-- The `__repr__` of each `tzinfo` subclass in play (indexed like `TzEnv`): it may return any
+object or raise. -/
+abbrev TzReprEnv := Nat → Py ReprRet
+
+/-- `PyObject_Repr(tz)` (Objects/object.c:779-820), which both `'%r' % tz` (Py:1619, :2214)
+and C's `%R` (`append_keyword_tzinfo`, :1642) call: a `timezone` gives `timezone.__repr__`
+(infallible); a subclass's method result is checked, a non-`str` being
+`TypeError("%T.__repr__() must return a str, not %T")`, and its exception propagates. -/
+def tzReprObj (renv : TzReprEnv) (tz : Tz) : Py String :=
+  match tz.kind with
+  | .timezone offset name => .ok (timezoneRepr tz.oid offset name)
+  | .custom i =>
+    match renv i with
+    | .ok (.str s) => .ok s
+    | .ok (.other ty) => .error (.typeError s!"~__repr__() must return a str, not {ty}")
+    | .error e => .error e
+
+/-- `s[:-1] + ", tzinfo=%r" % self._tzinfo + ")"` (Py:1617-1619, :2212-2214) and
+`append_keyword_tzinfo` (:1628-1645) with a fallible `repr`. -/
+def appendTzinfoF (renv : TzReprEnv) (s : String) (tz : Option Tz) : Py String :=
+  match tz with
+  | none => .ok s
+  | some t => do
+    let r ← tzReprObj renv t
+    return (s.dropEnd 1).toString ++ s!", tzinfo={r})"
+
+/-- `time.__repr__`, Py:1606-1623: the class prefix and fields, then `tzinfo=%r` (which may
+raise), then `fold=1`. -/
+def tmReprPyF (renv : TzReprEnv) (c : ReprCls) (t : TM) : Py String := do
+  let s ← appendTzinfoF renv (tmReprBodyPy (getClassModule c.module ++ c.tmQualname) t) t.tz
+  return appendFold s t.fold
+
+/-- `time_repr`, :4852-4876: `tp_name` and fields, `append_keyword_tzinfo` (NULL on a failed
+`%R`, :4872-4873), then `append_keyword_fold`. -/
+def tmReprCF (renv : TzReprEnv) (c : ReprCls) (t : TM) : Py String := do
+  let s ← appendTzinfoF renv (tmReprBodyC c.tmTpName t) t.tz
+  return appendFold s t.fold
+
+/-- `datetime.__repr__`, Py:2201-2218: tzinfo, then fold. -/
+def dtReprPyF (renv : TzReprEnv) (c : ReprCls) (dt : DT) : Py String := do
+  let s ← appendTzinfoF renv (dtReprBodyPy (getClassModule c.module ++ c.dtQualname) dt) dt.tz
+  return appendFold s dt.fold
+
+/-- `datetime_repr`, :6378-6413: fold (:6406-6407), then tzinfo (:6408-6410). -/
+def dtReprCF (renv : TzReprEnv) (c : ReprCls) (dt : DT) : Py String :=
+  appendTzinfoF renv (appendFold (dtReprBodyC c.dtTpName dt) dt.fold) dt.tz
+
+/-- The `__repr__` table of a `TzEnv`, every method returning a `str`. -/
+def TzEnv.reprEnv (env : TzEnv) : TzReprEnv := fun i => .ok (.str (env.repr i))
+
+theorem tzReprObj_env (env : TzEnv) (t : Tz) : tzReprObj env.reprEnv t = .ok (t.repr env) := by
+  unfold tzReprObj Tz.repr TzEnv.reprEnv
+  cases t.kind <;> rfl
+
+theorem appendTzinfoF_env (env : TzEnv) (s : String) (tz : Option Tz) :
+    appendTzinfoF env.reprEnv s tz = .ok (appendTzinfo env s tz) := by
+  cases tz with
+  | none => rfl
+  | some t => simp [appendTzinfoF, appendTzinfo, tzReprObj_env, bind, Except.bind, pure, Except.pure]
+
+/-- `repr(time)` with a `tzinfo` whose `__repr__` may raise or return a non-`str`: the twins
+agree on every outcome for the base class and every plain subclass; if the tzinfo's `__repr__`
+raises `e`, `repr(t)` raises `e` in both twins, and if it returns an object of another type
+both raise `TypeError`; if it returns a `str` `r`, both give the fields with `, tzinfo=r` and
+then `, fold=1` for fold 1; and for a table of `str` results it is exactly the text of
+`tmReprClsPy`/`tmReprClsC` (`TimeReprCls`). -/
+def TimeReprFallible : Prop :=
+  ∀ (renv : TzReprEnv) (c : ReprCls) (t : TM),
+    (c.Plain → tmReprPyF renv c t = tmReprCF renv c t) ∧
+    (∀ oid i e, t.tz = some ⟨oid, .custom i⟩ → renv i = .error e →
+      tmReprPyF renv c t = .error e ∧ tmReprCF renv c t = .error e) ∧
+    (∀ oid i ty, t.tz = some ⟨oid, .custom i⟩ → renv i = .ok (.other ty) →
+      (tmReprPyF renv c t).raises "TypeError" ∧ (tmReprCF renv c t).raises "TypeError") ∧
+    (∀ oid i r, t.tz = some ⟨oid, .custom i⟩ → renv i = .ok (.str r) →
+      tmReprPyF renv c t = .ok (appendFold
+        (((tmReprBodyPy (getClassModule c.module ++ c.tmQualname) t).dropEnd 1).toString ++ s!", tzinfo={r})") t.fold) ∧
+      tmReprCF renv c t = .ok (appendFold
+        (((tmReprBodyC c.tmTpName t).dropEnd 1).toString ++ s!", tzinfo={r})") t.fold)) ∧
+    (∀ env : TzEnv, tmReprPyF env.reprEnv c t = .ok (tmReprClsPy env c t) ∧
+      tmReprCF env.reprEnv c t = .ok (tmReprClsC env c t))
+
+theorem timeReprFallible_proven : TimeReprFallible := by
+  intro renv c t
+  refine ⟨fun hc => ?_, fun oid i e ht he => ?_, fun oid i ty ht he => ?_, fun oid i r ht he => ?_, fun env => ?_⟩
+  · unfold tmReprPyF tmReprCF
+    rw [tmReprBody_twin]
+    have hp : getClassModule c.module ++ c.tmQualname = c.tmTpName := by
+      rcases hc with rfl | ⟨mod, name, rfl, hm⟩
+      · rfl
+      · simp [getClassModule, hm, ReprCls.module, ReprCls.tmQualname, ReprCls.tmTpName]
+    rw [hp]
+  · simp [tmReprPyF, tmReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind]
+  · refine ⟨⟨.typeError s!"~__repr__() must return a str, not {ty}", ?_, rfl⟩,
+      ⟨.typeError s!"~__repr__() must return a str, not {ty}", ?_, rfl⟩⟩ <;>
+      simp [tmReprPyF, tmReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind]
+  · simp [tmReprPyF, tmReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind, pure, Except.pure]
+  · simp [tmReprPyF, tmReprCF, tmReprClsPy, tmReprClsC, appendTzinfoF_env, bind, Except.bind, pure, Except.pure]
+
+/-- `repr(datetime)` with a `tzinfo` whose `__repr__` may raise or return a non-`str`: the
+twins agree on every outcome for the base class and every plain subclass when the fold is 0,
+there is no tzinfo, or the tzinfo's `__repr__` fails (C appends the fold first, so only the
+order of a successful `fold=1, tzinfo=` differs, `datetime-repr-fold-tzinfo-twins`); a raising
+`__repr__` makes both raise the same exception, a non-`str` result is `TypeError` in both, a
+`str` result `r` gives the fields, `, tzinfo=r` and the fold in each twin's order, and for a
+table of `str` results it is exactly `dtReprClsPy`/`dtReprClsC`. -/
+def DatetimeReprFallible : Prop :=
+  ∀ (renv : TzReprEnv) (c : ReprCls) (dt : DT),
+    (c.Plain → dt.d ≠ 0 → (dt.fold = 0 ∨ dt.tz = none ∨ ∃ oid i, dt.tz = some ⟨oid, .custom i⟩ ∧ ¬ ∃ r, renv i = .ok (.str r)) →
+      dtReprPyF renv c dt = dtReprCF renv c dt) ∧
+    (∀ oid i e, dt.tz = some ⟨oid, .custom i⟩ → renv i = .error e →
+      dtReprPyF renv c dt = .error e ∧ dtReprCF renv c dt = .error e) ∧
+    (∀ oid i ty, dt.tz = some ⟨oid, .custom i⟩ → renv i = .ok (.other ty) →
+      (dtReprPyF renv c dt).raises "TypeError" ∧ (dtReprCF renv c dt).raises "TypeError") ∧
+    (∀ oid i r, dt.tz = some ⟨oid, .custom i⟩ → renv i = .ok (.str r) →
+      dtReprPyF renv c dt = .ok (appendFold
+        (((dtReprBodyPy (getClassModule c.module ++ c.dtQualname) dt).dropEnd 1).toString ++ s!", tzinfo={r})") dt.fold) ∧
+      dtReprCF renv c dt = .ok
+        (((appendFold (dtReprBodyC c.dtTpName dt) dt.fold).dropEnd 1).toString ++ s!", tzinfo={r})")) ∧
+    (∀ env : TzEnv, dtReprPyF env.reprEnv c dt = .ok (dtReprClsPy env c dt) ∧
+      dtReprCF env.reprEnv c dt = .ok (dtReprClsC env c dt))
+
+theorem datetimeReprFallible_proven : DatetimeReprFallible := by
+  intro renv c dt
+  refine ⟨fun hc hd hf => ?_, fun oid i e ht he => ?_, fun oid i ty ht he => ?_, fun oid i r ht he => ?_,
+    fun env => ?_⟩
+  · unfold dtReprPyF dtReprCF
+    rw [dtReprBody_twin _ _ hd]
+    have hp : getClassModule c.module ++ c.dtQualname = c.dtTpName := by
+      rcases hc with rfl | ⟨mod, name, rfl, hm⟩
+      · rfl
+      · simp [getClassModule, hm, ReprCls.module, ReprCls.dtQualname, ReprCls.dtTpName]
+    rw [hp]
+    rcases hf with h0 | h0 | ⟨oid, i, ht, hn⟩
+    · simp [appendFold, h0, bind, Except.bind, pure, Except.pure]
+      cases appendTzinfoF renv (dtReprBodyC c.dtTpName dt) dt.tz <;> rfl
+    · simp [appendTzinfoF, h0, bind, Except.bind, pure, Except.pure]
+    · rw [ht]
+      cases hr : renv i with
+      | error e => simp [appendTzinfoF, tzReprObj, hr, bind, Except.bind]
+      | ok v =>
+        cases v with
+        | str r => exact absurd ⟨r, hr⟩ hn
+        | other ty => simp [appendTzinfoF, tzReprObj, hr, bind, Except.bind]
+  · simp [dtReprPyF, dtReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind]
+  · refine ⟨⟨.typeError s!"~__repr__() must return a str, not {ty}", ?_, rfl⟩,
+      ⟨.typeError s!"~__repr__() must return a str, not {ty}", ?_, rfl⟩⟩ <;>
+      simp [dtReprPyF, dtReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind]
+  · simp [dtReprPyF, dtReprCF, appendTzinfoF, tzReprObj, ht, he, bind, Except.bind, pure, Except.pure]
+  · simp [dtReprPyF, dtReprCF, dtReprClsPy, dtReprClsC, appendTzinfoF_env, bind, Except.bind, pure, Except.pure]
+
 end PyLean.Datetime
