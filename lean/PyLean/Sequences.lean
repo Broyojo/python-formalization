@@ -19,6 +19,7 @@ import PyLean.Sequences.ArrayCmp
 import PyLean.Sequences.ArrayFile
 import PyLean.Sequences.ArrayRepr
 import PyLean.Sequences.ArrayReentrant
+import PyLean.Sequences.ArrayLimits
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
@@ -305,6 +306,25 @@ def entries : List Entry := [
     source := "Modules/arraymodule.c:1852-1883; Doc/library/array.rst:218-219 (unchanged on error)", status := .proven
     prop := ``ArrayFromListGuard, thm := some ``arrayFromListGuard_proven
     notes := "With items whose conversion changes nothing, the re-entrant model arrFromListRe is arrFromList (arrFromListRe_pure), so sequences-array-fromlist applies to it." },
+  { id := "sequences-array-exported-resize", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_do_extend", "array_inplace_concat", "array_array_extend_impl", "array_array_remove_impl",
+      "array_array_pop_impl", "array_array_fromunicode_impl", "array_inplace_repeat", "array_del_slice"]
+    statement := "While a buffer is exported: a.extend(b) and a += b for a non-empty same-typecode b raise BufferError after the overflow check; remove raises BufferError after finding the item; pop reads the item (its error first) then raises BufferError; fromunicode of a non-empty str raises BufferError (w: after its MemoryError check); a *= n (n != 1, non-empty) raises the MemoryError of its overflow checks, else BufferError."
+    source := "Doc/library/array.rst (buffer protocol); invariant: an exported buffer is never moved", status := .proven
+    prop := ``ArrayExportedResize, thm := some ``arrayExportedResize_proven },
+  { id := "sequences-array-alloc-limits", pyFile := "Modules/arraymodule.c"
+    pyFns := ["newarrayobject_untracked", "newarrayobject", "array_repeat"]
+    statement := "newarrayobject refuses exactly the sizes above PY_SSIZE_T_MAX / itemsize with MemoryError and otherwise gives size zeroed items; a * n (non-empty a, n in Py_ssize_t) raises MemoryError when n > PY_SSIZE_T_MAX / len(a), and else when len(a) * n > PY_SSIZE_T_MAX / itemsize."
+    source := "invariant: allocation sizes are checked (arraymodule.c:812-814, 1152-1154)", status := .proven
+    prop := ``ArrayAllocLimits, thm := some ``arrayAllocLimits_proven
+    notes := "A size that passes both checks can still fail in the allocator (array('b', [1]) * 2**62 asks for 4 EiB); the model has no allocator, so that MemoryError is outside it." },
+  { id := "sequences-array-search-errors", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_count_impl", "array_contains", "array_array_index_impl", "array_array_remove_impl",
+      "getarrayitem"]
+    statement := "For every array (items need not decode) and every comparison that may raise: count, in, index() and remove read and compare the items in order and raise the first exception, of a read or of a comparison, comparing no later item; count counts true comparisons, the others stop at the first, remove deleting it."
+    source := "invariant: same methods as list (Objects/listobject.c list_count/list_index/list_remove propagate the comparison's error)", status := .proven
+    prop := ``ArraySearchErrors, thm := some ``arraySearchErrors_proven
+    notes := "Scope: a comparison that mutates the array is not modelled (the loops re-read Py_SIZE)." },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
     statement := "For every array and int n whose result fits: a * n and a *= n give n copies of the items (none for n <= 0), OverflowError outside Py_ssize_t included."

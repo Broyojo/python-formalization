@@ -651,6 +651,9 @@ sequences-array-ins1-reentrant	refuted	Modules/arraymodule.c	ins1,ins,array_arra
 sequences-array-ins1-stale	proven	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_resize,array_array_clear_impl
 sequences-array-setitem-recheck	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem
 sequences-array-fromlist-guard	proven	Modules/arraymodule.c	array_array_fromlist_impl
+sequences-array-exported-resize	proven	Modules/arraymodule.c	array_do_extend,array_inplace_concat,array_array_extend_impl,array_array_remove_impl,array_array_pop_impl,array_array_fromunicode_impl,array_inplace_repeat,array_del_slice
+sequences-array-alloc-limits	proven	Modules/arraymodule.c	newarrayobject_untracked,newarrayobject,array_repeat
+sequences-array-search-errors	proven	Modules/arraymodule.c	array_array_count_impl,array_contains,array_array_index_impl,array_array_remove_impl,getarrayitem
 sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
 sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
 sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem
