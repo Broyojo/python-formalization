@@ -13,6 +13,7 @@ import PyLean.Decimal.ExactProps
 import PyLean.Decimal.Pow10Refute
 import PyLean.Decimal.FixExact
 import PyLean.Decimal.ContextExact
+import PyLean.Decimal.DelegateExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -257,6 +258,56 @@ def entries : List Entry := [
     statement := "For every DefaultContext whose traps is a signal dict, Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps) with ints, a rounding mode and lists of signals returns, when every int is in range, exactly the context with the given values, the DefaultContext's for the omitted ones, flags set exactly for the listed signals (all clear when omitted) and traps for the listed ones (DefaultContext's when omitted); a prec below 1, then an Emin above 0, then an Emax below 0 raises the ValueError of _set_integer_check in that order."
     source := "Doc/library/decimal.rst:1104-1120 (Context constructor)"
     status := .proven, prop := ``ContextInitExact, thm := some ``contextInitExact_proven },
+  { id := "decimal-convert-other-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_convert_other"]
+    statement := "_convert_other returns a Decimal unchanged and an int n as the exact Decimal(n) (sign n < 0, coefficient |n|, exponent 0), raising the int/str-limit ValueError exactly when |n| has more than 4300 digits; any other operand is NotImplemented, or TypeError('Unable to convert ... to Decimal') with raiseit."
+    source := "Lib/_pydecimal.py:6096-6113; decimal docs: 'Each Context method accepts a Python integer anywhere that a Decimal instance is accepted'"
+    status := .proven, prop := ``ConvertOtherExact, thm := some ``convertOtherExact_proven
+    notes := "With decimal-context-methods-match-decimal (each Context method is the Decimal method on the converted operands, the first failing conversion raising), this fixes what every Context method does with an int operand." },
+  { id := "decimal-convert-other-type-error-message", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_convert_other"]
+    statement := "_convert_other(x, raiseit=True) raises TypeError('Unable to convert <x> to Decimal') for every operand that is not a Decimal or an int."
+    source := "the message Lib/_pydecimal.py:6111 writes; twin agreement (_decimal: 'conversion from <type> to Decimal is not supported')"
+    status := .refuted, prop := ``ConvertOtherTypeErrorMessage, thm := some ``convertOtherTypeErrorMessage_refuted
+    bug := some "decimal-pydecimal-signal-dict-tuple-message"
+    notes := "Context().plus(()): '... %s ...' % () takes the empty tuple as the argument tuple and fails with 'not enough arguments for format string (got 0)'. Context.add and the other arithmetic wrappers format their second operand the same way (:4248)." },
+  { id := "decimal-unary-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__pos__", "Decimal.__neg__", "Decimal.__abs__", "Decimal._fix", "Decimal._check_nans"]
+    statement := "For every context with prec >= 1: +x, -x and abs(x) of a finite non-zero x are x, -x and |x| rounded into the context by _fix (decimal-fix-exact); of a zero, the zero _fix makes of +0 (of -0 for +(-0) and -(+0) under ROUND_FLOOR), abs giving +0 always; of an infinity, the same, the negated and the positive infinity; of a quiet NaN, the NaN quieted with its own sign (no negation), and a signaling NaN signals InvalidOperation."
+    source := "decimal docs, Context.plus/minus/abs ('the result is rounded to the context'); General Decimal Arithmetic, 'plus', 'minus', 'abs'"
+    status := .proven, prop := ``UnaryExact, thm := some ``unaryExact_proven },
+  { id := "decimal-mul-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__mul__", "_WorkRep.__init__", "Decimal._fix", "Context.Etiny", "Context.Etop"]
+    statement := "For every context with prec >= 1: the product of two finite non-zero decimals is the exact product rounded into the context by _fix (overflow and the subnormal range included, decimal-fix-exact), and the only other outcome is the int/str-limit ValueError, raised exactly when a coefficient or the product has more than 4300 digits and neither coefficient is 1; a zero operand gives the zero _fix makes of ±0·10^(ea+eb); an infinity times a non-zero finite value or an infinity is the infinity of the product's sign, times a zero InvalidOperation."
+    source := "General Decimal Arithmetic, 'multiply'; decimal docs, Context.multiply"
+    status := .proven, prop := ``MulExact, thm := some ``mulExact_proven
+    notes := "Unconditional equation for (mul c a b).run fl; supersedes the conditional decimal-mul-correctly-rounded, and decides the open decimal-mul-overflow-correct and decimal-mul-subnormal-correct through fixSpec (those statements are left as they were)." },
+  { id := "decimal-same-quantum-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.same_quantum"]
+    statement := "same_quantum of two finite values is True exactly when their exponents are equal; with a special operand it is True exactly when both are NaNs or both are infinities."
+    source := "decimal docs, same_quantum: 'Test whether self and other have the same exponent or whether both are NaN'; General Decimal Arithmetic, 'samequantum'"
+    status := .proven, prop := ``SameQuantumExact, thm := some ``sameQuantumExact_proven },
+  { id := "decimal-logb-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.logb", "Decimal.adjusted"]
+    statement := "For every context with prec >= 1, logb of a finite non-zero value is its adjusted exponent e + digits - 1 as a Decimal rounded into the context by _fix; logb(0) signals DivisionByZero and returns -Infinity; logb(±Infinity) is Infinity; a NaN goes through _check_nans."
+    source := "decimal docs, logb: 'the adjusted exponent of the operand ... If the operand is a zero then Decimal('-Infinity') is returned and the DivisionByZero flag is raised. If the operand is an infinity then Decimal('Infinity') is returned'"
+    status := .proven, prop := ``LogbExact, thm := some ``logbExact_proven },
+  { id := "decimal-scaleb-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.scaleb"]
+    statement := "For every context with prec >= 1, scaleb(±co·10^e, n) for an integral n (exponent 0, at most 4300 digits) with |n| <= 2·(Emax + prec) is ±co·10^(e+n) rounded into the context by _fix; an n outside that range, a non-integral n (non-zero exponent or infinity) signals InvalidOperation; an infinite first operand is returned unchanged; NaNs go through _check_nans."
+    source := "decimal docs, scaleb: 'Return the first operand with exponent adjusted by the second'; General Decimal Arithmetic, 'scaleb'"
+    status := .proven, prop := ``ScalebExact, thm := some ``scalebExact_proven },
+  { id := "decimal-fma-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.fma", "Context.fma", "_convert_other"]
+    statement := "Context.fma converts a, b and t in order, the first failing conversion raising; for finite a and b, fma is __add__ of the exact, unrounded product ±(ca·cb)·10^(ea+eb) and t, except for the int/str-limit ValueError when a coefficient or the product has more than 4300 digits; a signaling NaN a, else b, signals InvalidOperation and is returned quieted; an infinity times zero is InvalidOperation; an infinity times a non-zero finite value adds the signed infinity to t."
+    source := "Decimal.fma docstring: 'Returns self*other+third with no rounding of the intermediate product self*other'"
+    status := .proven, prop := ``FmaExact, thm := some ``fmaExact_proven
+    notes := "The single final rounding is __add__'s; __add__ itself is decimal-add-correct (open)." },
+  { id := "decimal-context-predicates-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Context.is_signed", "Context.canonical", "Context.is_canonical", "_convert_other"]
+    statement := "Context.is_signed(a) is the sign bit of a Decimal (True for -0) and n < 0 for an int within the int/str limit; Context.canonical and is_canonical return the Decimal itself and True for a Decimal and raise TypeError for every other operand, ints included."
+    source := "decimal docs, Context.is_signed, canonical, is_canonical"
+    status := .proven, prop := ``ContextPredicatesExact, thm := some ``contextPredicatesExact_proven },
   { id := "decimal-c-context-clean-template", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["context_new", "context_init_impl"]
     statement := "For a template whose flags are clear and whose capitals is 1, the state DefaultContext starts in, _decimal's Context() equals the template in every field."

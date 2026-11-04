@@ -199,6 +199,7 @@ def argOf (j : Json) : Except String Arg := do
   match ← (a[0]!).getStr? with
   | "dec" => return .dec (← decDec a[1]!)
   | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
+  | "tuple" => return .tuple ((← (a[1]!).getStr?).toNat?.getD 0)
   | _ => return .other
 
 def jOptD (m : DM (Option Dec)) : DM Json :=

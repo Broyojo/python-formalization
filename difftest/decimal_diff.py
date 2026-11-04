@@ -352,7 +352,13 @@ def gen_cm(rng):
         n = rng.choice([1, 2, 3, 5, 9])
         a = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
         b = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
-    return {"mod": "decimal", "fn": "cm", "m": name, "impl": rng.choice(["py", "c"]), "ctx": gen_ctx(rng),
+    impl = rng.choice(["py", "c"])
+    if impl == "py" and rng.random() < 0.05:
+        # "Unable to convert %s to Decimal" % () formats the tuple's items (_pydecimal only)
+        tup = ["tuple", str(rng.choice([0, 1, 2, 3]))]
+        k = rng.choice(["a", "b", "t"])
+        a, b, t = (tup if k == "a" else a), (tup if k == "b" else b), (tup if k == "t" else t)
+    return {"mod": "decimal", "fn": "cm", "m": name, "impl": impl, "ctx": gen_ctx(rng),
             "a": a, "b": b, "t": t}
 
 
@@ -791,6 +797,8 @@ def build_arg(M, j):
         return build(M, j[1])
     if j[0] == "int":
         return int(j[1])
+    if j[0] == "tuple":
+        return tuple(range(int(j[1])))
     return "x"
 
 

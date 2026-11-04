@@ -23,17 +23,34 @@ open PyLean
 inductive Arg where
   | dec (d : Dec)
   | int (n : Int)
+  /-- A tuple of `n` elements, which `"..." % other` takes as its argument tuple. -/
+  | tuple (n : Nat)
   | other
   deriving Repr, Inhabited
 
 /-- `"Unable to convert %s to Decimal" % other`, formatted text the model does not render. -/
 def unableMsg : String := "~Unable to convert to Decimal"
 
+/-- `"Unable to convert %s to Decimal" % other` for a tuple `other` (_pydecimal.py:6111): `%`
+takes the tuple as its arguments, so an empty one and one of two or more elements fail in the
+formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
+def unableMsgTuple : Nat → String
+  | 0 => "not enough arguments for format string (got 0)"
+  | 1 => unableMsg
+  | n + 2 => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
+
+/-- The text of `"Unable to convert %s to Decimal" % x` for an operand `x` that is not a
+Decimal or an int. -/
+def unableMsgOf : Arg → String
+  | .tuple n => unableMsgTuple n
+  | _ => unableMsg
+
 /-- `_convert_other(other, raiseit)`, _pydecimal.py:6096-6113, without `allow_float`,
 which nothing in the module passes. `none` is `NotImplemented`. -/
 def convertOther (raiseit : Bool) : Arg → Py (Option Dec)
   | .dec d => .ok (some d)
   | .int n => do return some (← pyFromInt n)
+  | .tuple n => if raiseit then .error (.typeError (unableMsgOf (.tuple n))) else .ok none
   | .other => if raiseit then .error (.typeError unableMsg) else .ok none
 
 /-- `_convert_other(other, raiseit=True)`, which never returns `NotImplemented`. -/
@@ -67,12 +84,12 @@ def rfloordiv := ropArg floordivD
 
 /-- `a = _convert_other(a, raiseit=True); r = a.__op__(b, context=self); if r is
 NotImplemented: raise TypeError(...); else: return r`: `Context.add`, `subtract`,
-`multiply`, `divide`, `divide_int`, `divmod`, `remainder`. -/
+`multiply`, `divide`, `divide_int`, `divmod`, `remainder` (the message formats `b`, :4248). -/
 def ctxOp {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a b : Arg) : DM α := do
   let x ← liftPy (convertRaise a)
   match ← opArg f c x b with
   | some r => return r
-  | none => throw (.typeError unableMsg)
+  | none => throw (.typeError (unableMsgOf b))
 
 /-- `a = _convert_other(a, raiseit=True); return a.m(b, context=self)`, where
 `a.m` starts with `other = _convert_other(other, raiseit=True)`. -/
