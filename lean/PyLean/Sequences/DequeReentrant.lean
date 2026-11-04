@@ -205,7 +205,7 @@ theorem extendleftRe_outcome (d : Deque α) (g : Deque α → Deque α) (ys fin 
 
 end Deque
 
-/-- `d.extend(it)`, `d.extendleft(it)` and `d += it` over an iterator that runs code on
+/-- `d.extend(it)` and `d.extendleft(it)` over an iterator that runs code on
 the deque (Python-level `__iter__`/`__next__`, re-entrant; type invariant `WF` of the
 deque). For every element type, every deque `d` and every iterator whose `__iter__` and
 `__next__` calls each keep the invariant and `maxlen` (any code acting on `d` through its
@@ -221,45 +221,41 @@ def DequeExtendRe : Prop :=
     (d.WF → ∀ (it : ReIter α), Deque.KeepsWF (fun d => (it.getIter d).2) →
       (∀ nx ∈ it.nexts, Deque.KeepsWF (fun d => (nx d).2)) →
       ((d.extendRe it).2.WF ∧ (d.extendRe it).2.maxlen = d.maxlen) ∧
-      ((d.extendleftRe it).2.WF ∧ (d.extendleftRe it).2.maxlen = d.maxlen) ∧
-      ((d.iaddRe it).2.WF ∧ (d.iaddRe it).2.maxlen = d.maxlen)) ∧
+      ((d.extendleftRe it).2.WF ∧ (d.extendleftRe it).2.maxlen = d.maxlen)) ∧
     (∀ (g : Deque α → Deque α) (ys : List (NextFn α)), (∀ y ∈ ys, Deque.Yields y) →
       (d.extendRe ⟨fun d => (.ok (), g d), ys⟩).1 = .ok () ∧
       (d.extendleftRe ⟨fun d => (.ok (), g d), ys⟩).1 = .ok () ∧
-      (d.iaddRe ⟨fun d => (.ok (), g d), ys⟩).1 = .ok () ∧
       ∀ (f : NextFn α) (e : PyExc), Deque.RaisesAlways f e →
         (e = .stopIteration →
           (d.extendRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .ok () ∧
-          (d.extendleftRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .ok () ∧
-          (d.iaddRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .ok ()) ∧
+          (d.extendleftRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .ok ()) ∧
         (e ≠ .stopIteration →
           (d.extendRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .error e ∧
-          (d.extendleftRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .error e ∧
-          (d.iaddRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .error e)) ∧
+          (d.extendleftRe ⟨fun d => (.ok (), g d), ys ++ [f]⟩).1 = .error e)) ∧
     (∀ (e : PyExc) (g : Deque α → Deque α) (nexts : List (NextFn α)),
       d.extendRe ⟨fun d => (.error e, g d), nexts⟩ = (.error e, g d) ∧
       d.extendleftRe ⟨fun d => (.error e, g d), nexts⟩ = (.error e, g d))
 
 theorem dequeExtendRe_proven : DequeExtendRe := by
   intro α _ d
-  refine ⟨fun h it hg hn => ⟨Deque.extendRe_wf d h it hg hn, Deque.extendleftRe_wf d h it hg hn,
-    Deque.extendRe_wf d h it hg hn⟩, fun g ys hy => ?_, fun e g nexts => ⟨rfl, rfl⟩⟩
+  refine ⟨fun h it hg hn => ⟨Deque.extendRe_wf d h it hg hn, Deque.extendleftRe_wf d h it hg hn⟩,
+    fun g ys hy => ?_, fun e g nexts => ⟨rfl, rfl⟩⟩
   have e0 : ∀ m (d : Deque α), (Deque.pushLoop Deque.appendM m [] d).1 = .ok () := fun _ _ => rfl
   have e1 : ∀ m (d : Deque α), (Deque.pushLoop Deque.appendleftM m [] d).1 = .ok () := fun _ _ => rfl
   have e2 : ∀ (d : Deque α), (Deque.consumeLoop [] d).1 = .ok () := fun _ => rfl
   have r0 := Deque.extendRe_outcome d g ys [] _ hy e0 e2
   have l0 := Deque.extendleftRe_outcome d g ys [] _ hy e1 e2
   rw [List.append_nil] at r0 l0
-  refine ⟨r0, l0, r0, fun f e hf => ?_⟩
+  refine ⟨r0, l0, fun f e hf => ?_⟩
   have r1 := Deque.extendRe_outcome d g ys [f] _ hy (fun m d => Deque.fin_push _ m f e hf d)
     (Deque.fin_consume f e hf)
   have l1 := Deque.extendleftRe_outcome d g ys [f] _ hy (fun m d => Deque.fin_push _ m f e hf d)
     (Deque.fin_consume f e hf)
   refine ⟨fun he => ?_, fun he => ?_⟩
   · subst he
-    exact ⟨r1, l1, r1⟩
+    exact ⟨r1, l1⟩
   · rw [Deque.finalize_some e he] at r1 l1
-    exact ⟨r1, l1, r1⟩
+    exact ⟨r1, l1⟩
 
 /-- `d.__init__(maxlen=m)` with no iterable, as Python code inside an iterator would call
 it: keeps the invariant for every deque, with the new bound. -/
@@ -298,7 +294,8 @@ once an iterator re-initialises the deque with `d.__init__(maxlen=1)`, and the l
 on appending under the old one. The property refuted: for every deque and every iterator
 whose `__iter__` and `__next__` calls each keep the deque's invariant (`len(d) <= maxlen`
 for a bounded deque) — `__init__` included — `extend` and `extendleft` leave a deque that
-satisfies it. -/
+satisfies it. Neither does: `dequeExtendKeepsBound_neither` breaks each with the same
+iterator, and the refutation goes through `extendleft`. -/
 def DequeExtendKeepsBound : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (it : ReIter α),
     (∀ d : Deque α, d.WF → (it.getIter d).2.WF) → (∀ nx ∈ it.nexts, ∀ d : Deque α, d.WF → (nx d).2.WF) →
@@ -308,22 +305,354 @@ def DequeExtendKeepsBound : Prop :=
 def reinitIter : ReIter Int :=
   ⟨fun d => (.ok (), (d.initRe none (.int 1)).2), [fun d => (.ok 1, d), fun d => (.ok 2, d), fun d => (.ok 3, d)]⟩
 
-theorem dequeExtendKeepsBound_refuted : ¬ DequeExtendKeepsBound := by
-  intro h
-  have hw : (Deque.new "deque" : Deque Int).WF := by
-    refine ⟨?_, ?_⟩
-    · rw [Deque.layout_iff]; decide
-    · rw [Deque.maxOk_iff]; decide
-  have := (h Int (Deque.new "deque") hw reinitIter
-    (fun d hd => (reinit_wf d hd 1 (by decide) (by decide)).1)
-    (fun nx hm d hd => by
-      simp only [reinitIter, List.mem_cons, List.mem_nil_iff, or_false] at hm
-      rcases hm with rfl | rfl | rfl <;> exact hd)).1
-  have h1 : ((Deque.new "deque" : Deque Int).extendRe reinitIter).2.items.length = 3 := by decide
-  have h2 : ((Deque.new "deque" : Deque Int).extendRe reinitIter).2.maxlen = 1 := by decide
-  have := this.2
-  rw [Deque.maxOk_iff, h1, h2] at this
-  omega
+theorem new_deque_wf : (Deque.new "deque" : Deque Int).WF := by
+  refine ⟨?_, ?_⟩
+  · rw [Deque.layout_iff]; decide
+  · rw [Deque.maxOk_iff]; decide
+
+/-- `deque().extend(X())` and `deque().extendleft(X())`, `X.__iter__` running
+`d.__init__(maxlen=1)` and returning `iter([1, 2, 3])`, both leave three items under
+`maxlen == 1`: `deque([1, 2, 3], maxlen=1)` and `deque([3, 2, 1], maxlen=1)`. -/
+theorem reinitIter_outcome :
+    ((Deque.new "deque" : Deque Int).extendRe reinitIter).2.items = [1, 2, 3] ∧
+    ((Deque.new "deque" : Deque Int).extendRe reinitIter).2.maxlen = 1 ∧
+    ((Deque.new "deque" : Deque Int).extendleftRe reinitIter).2.items = [3, 2, 1] ∧
+    ((Deque.new "deque" : Deque Int).extendleftRe reinitIter).2.maxlen = 1 := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
+
+theorem reinitIter_keeps :
+    (∀ d : Deque Int, d.WF → (reinitIter.getIter d).2.WF) ∧
+    (∀ nx ∈ reinitIter.nexts, ∀ d : Deque Int, d.WF → (nx d).2.WF) :=
+  ⟨fun d hd => (reinit_wf d hd 1 (by decide) (by decide)).1,
+   fun nx hm d hd => by
+    simp only [reinitIter, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl | rfl <;> exact hd⟩
+
+/-- Both halves fail on the same iterator: `extend` (`deque_extend_impl`) and `extendleft`
+(`deque_extendleft_impl`) each leave `len(d) == 3 > maxlen == 1`. -/
+theorem dequeExtendKeepsBound_neither :
+    ¬ (∀ (d : Deque Int), d.WF → ∀ (it : ReIter Int),
+        (∀ d : Deque Int, d.WF → (it.getIter d).2.WF) → (∀ nx ∈ it.nexts, ∀ d : Deque Int, d.WF → (nx d).2.WF) →
+        (d.extendRe it).2.WF) ∧
+    ¬ (∀ (d : Deque Int), d.WF → ∀ (it : ReIter Int),
+        (∀ d : Deque Int, d.WF → (it.getIter d).2.WF) → (∀ nx ∈ it.nexts, ∀ d : Deque Int, d.WF → (nx d).2.WF) →
+        (d.extendleftRe it).2.WF) := by
+  obtain ⟨i1, m1, i2, m2⟩ := reinitIter_outcome
+  refine ⟨fun h => ?_, fun h => ?_⟩
+  · have := (h _ new_deque_wf reinitIter reinitIter_keeps.1 reinitIter_keeps.2).2
+    rw [Deque.maxOk_iff, i1, m1] at this
+    simp at this
+  · have := (h _ new_deque_wf reinitIter reinitIter_keeps.1 reinitIter_keeps.2).2
+    rw [Deque.maxOk_iff, i2, m2] at this
+    simp at this
+
+theorem dequeExtendKeepsBound_refuted : ¬ DequeExtendKeepsBound :=
+  fun h => dequeExtendKeepsBound_neither.2 (fun d hd it hg hn => (h Int d hd it hg hn).2)
+
+/-! ### The bound applied after a re-initialisation, and the layout -/
+
+namespace Deque
+
+theorem appendM_layout (d : Deque α) (x : α) (m : Int) (h : d.Layout) : (d.appendM x m).Layout := by
+  have h' := h
+  rw [layout_iff] at h'
+  unfold appendM
+  simp only
+  generalize hd1 : ({ d with items := d.items ++ [x], right := (if d.right = 64 - 1 then -1 else d.right) + 1 } : Deque α) = d1
+  have hl1 : d1.Layout := by
+    rw [← hd1, layout_iff]; simp only [List.length_append, List.length_singleton]
+    split <;> omega
+  by_cases ht : d1.needsTrim m = true
+  · rw [iteT ht]
+    have hne : d1.items ≠ [] := by rw [← hd1]; simp
+    obtain ⟨d', hp, hl, _, _⟩ := popleft_spec d1 hl1 hne
+    rw [hp]; exact hl
+  · rw [iteF ht]
+    subst hd1
+    rw [layout_iff] at hl1 ⊢
+    exact hl1
+
+theorem appendleftM_layout (d : Deque α) (x : α) (m : Int) (h : d.Layout) : (d.appendleftM x m).Layout := by
+  have h' := h
+  rw [layout_iff] at h'
+  unfold appendleftM
+  simp only
+  generalize hd1 : ({ d with items := x :: d.items, left := (if d.left = 0 then 64 else d.left) - 1 } : Deque α) = d1
+  have hl1 : d1.Layout := by
+    rw [← hd1, layout_iff]; simp only [List.length_cons]
+    split <;> omega
+  by_cases ht : d1.needsTrim m = true
+  · rw [iteT ht]
+    have hne : d1.items ≠ [] := by rw [← hd1]; simp
+    obtain ⟨d', hp, hl, _, _⟩ := pop_spec d1 hl1 hne
+    rw [hp]; exact hl
+  · rw [iteF ht]
+    subst hd1
+    rw [layout_iff] at hl1 ⊢
+    exact hl1
+
+/-- A callback keeps the block layout (whatever it does to `maxlen`): Python code acting on
+the deque through any of its methods, `__init__` included. -/
+def KeepsLayout (f : Deque α → Deque α) : Prop := ∀ d : Deque α, d.Layout → (f d).Layout
+
+theorem pushLoop_layout (push : Deque α → α → Int → Deque α) (m : Int)
+    (hpush : ∀ (d : Deque α) (x : α), d.Layout → (push d x m).Layout) :
+    ∀ (nexts : List (NextFn α)) (d : Deque α),
+    (∀ nx ∈ nexts, KeepsLayout (fun d => (nx d).2)) → d.Layout → (pushLoop push m nexts d).2.Layout
+  | [], d, _, h => h
+  | nx :: rest, d, hk, h => by
+    have w1 : (nx d).2.Layout := hk nx (List.mem_cons_self ..) d h
+    rcases hc : nx d with ⟨r, d1⟩
+    rw [hc] at w1
+    cases r with
+    | error e => simp only [pushLoop, hc]; exact w1
+    | ok x =>
+      simp only [pushLoop, hc]
+      exact pushLoop_layout push m hpush rest _ (fun nx' h' => hk nx' (List.mem_cons_of_mem _ h')) (hpush d1 x w1)
+
+theorem consumeLoop_layout : ∀ (nexts : List (NextFn α)) (d : Deque α),
+    (∀ nx ∈ nexts, KeepsLayout (fun d => (nx d).2)) → d.Layout → (consumeLoop nexts d).2.Layout
+  | [], d, _, h => h
+  | nx :: rest, d, hk, h => by
+    have w1 : (nx d).2.Layout := hk nx (List.mem_cons_self ..) d h
+    rcases hc : nx d with ⟨r, d1⟩
+    rw [hc] at w1
+    cases r with
+    | error e => simp only [consumeLoop, hc]; exact w1
+    | ok x =>
+      simp only [consumeLoop, hc]
+      exact consumeLoop_layout rest d1 (fun nx' h' => hk nx' (List.mem_cons_of_mem _ h')) w1
+
+theorem heurR_layout (d : Deque α) (h : d.Layout) :
+    (if d.size = 0 then { d with left := 1, right := 0 } else d).Layout := by
+  split
+  · rename_i hs; rw [layout_iff]; rw [size_eq] at hs; simp only; omega
+  · exact h
+
+theorem heurL_layout (d : Deque α) (h : d.Layout) :
+    (if d.size = 0 then { d with left := 64 - 1, right := 64 - 2 } else d).Layout := by
+  split
+  · rename_i hs; rw [layout_iff]; rw [size_eq] at hs; simp only; omega
+  · exact h
+
+theorem extendRe_layout (d : Deque α) (h : d.Layout) (it : ReIter α) (hg : KeepsLayout (fun d => (it.getIter d).2))
+    (hn : ∀ nx ∈ it.nexts, KeepsLayout (fun d => (nx d).2)) : (d.extendRe it).2.Layout := by
+  have w1 : (it.getIter d).2.Layout := hg d h
+  unfold extendRe
+  rcases hc : it.getIter d with ⟨r, d1⟩
+  rw [hc] at w1
+  cases r with
+  | error e => exact w1
+  | ok u =>
+    simp only
+    split
+    · exact consumeLoop_layout it.nexts d1 hn w1
+    · exact pushLoop_layout appendM d.maxlen (fun d x h => appendM_layout d x _ h) it.nexts _ hn (heurR_layout d1 w1)
+
+theorem extendleftRe_layout (d : Deque α) (h : d.Layout) (it : ReIter α) (hg : KeepsLayout (fun d => (it.getIter d).2))
+    (hn : ∀ nx ∈ it.nexts, KeepsLayout (fun d => (nx d).2)) : (d.extendleftRe it).2.Layout := by
+  have w1 : (it.getIter d).2.Layout := hg d h
+  unfold extendleftRe
+  rcases hc : it.getIter d with ⟨r, d1⟩
+  rw [hc] at w1
+  cases r with
+  | error e => exact w1
+  | ok u =>
+    simp only
+    split
+    · exact consumeLoop_layout it.nexts d1 hn w1
+    · exact pushLoop_layout appendleftM d.maxlen (fun d x h => appendleftM_layout d x _ h) it.nexts _ hn (heurL_layout d1 w1)
+
+/-- The loops over an iterator that does not touch the deque, with the bound `m` fixed. -/
+theorem pushLoop_pure_fixed (push : Deque α → α → Int → Deque α) (m : Int) (e : Option PyExc) (xs : List α) :
+    ∀ d : Deque α, pushLoop push m (ReIter.ofList xs e).nexts d =
+      (finalizeIterator e, xs.foldl (fun d x => push d x m) d) := by
+  rw [ofList_nexts]
+  induction xs with
+  | nil => intro d; exact pushLoop_end _ _ _ _
+  | cons x xs ih =>
+    intro d
+    simp only [List.map_cons, List.cons_append, pushLoop, List.foldl_cons]
+    exact ih _
+
+theorem foldl_appendM_fixed (m : Int) (hm0 : m = -1 ∨ 0 < m) (xs : List α) : ∀ (d : Deque α), d.Layout →
+    (m < 0 ∨ (d.items.length : Int) ≤ m) →
+    (xs.foldl (fun d x => d.appendM x m) d).items = keepLast m (d.items ++ xs) ∧
+    (xs.foldl (fun d x => d.appendM x m) d).maxlen = d.maxlen := by
+  induction xs with
+  | nil => intro d _ hm; exact ⟨by rw [List.append_nil, keepLast_of_le _ _ hm]; rfl, rfl⟩
+  | cons x xs ih =>
+    intro d h hm
+    simp only [List.foldl_cons]
+    obtain ⟨hl, hi, hmx⟩ := appendM_spec d x m h hm
+    have hm' : m < 0 ∨ ((d.appendM x m).items.length : Int) ≤ m := by
+      rw [hi]
+      rcases hm0 with hp | hp
+      · left; omega
+      · right; exact length_keepLast_le _ _ (by omega)
+    obtain ⟨h2, h3⟩ := ih _ hl hm'
+    refine ⟨?_, by rw [h3, hmx]⟩
+    rw [h2, hi]
+    unfold keepLast
+    split
+    · simp
+    · rw [keepLast_keepLast]; simp
+
+theorem foldl_appendleftM_fixed (m : Int) (hm0 : m = -1 ∨ 0 < m) (xs : List α) : ∀ (d : Deque α), d.Layout →
+    (m < 0 ∨ (d.items.length : Int) ≤ m) →
+    (xs.foldl (fun d x => d.appendleftM x m) d).items = keepFirst m (xs.reverse ++ d.items) ∧
+    (xs.foldl (fun d x => d.appendleftM x m) d).maxlen = d.maxlen := by
+  induction xs with
+  | nil => intro d _ hm; exact ⟨by rw [List.reverse_nil, List.nil_append, keepFirst_of_le _ _ hm]; rfl, rfl⟩
+  | cons x xs ih =>
+    intro d h hm
+    simp only [List.foldl_cons]
+    obtain ⟨hl, hi, hmx⟩ := appendleftM_spec d x m h hm
+    have hm' : m < 0 ∨ ((d.appendleftM x m).items.length : Int) ≤ m := by
+      rw [hi]
+      rcases hm0 with hp | hp
+      · left; omega
+      · right; exact length_keepFirst_le _ _ (by omega)
+    obtain ⟨h2, h3⟩ := ih _ hl hm'
+    refine ⟨?_, by rw [h3, hmx]⟩
+    rw [h2, hi]
+    simp only [List.reverse_cons, List.append_assoc, List.singleton_append]
+    unfold keepFirst
+    split
+    · rfl
+    · exact take_append_take _ _ _
+
+end Deque
+
+/-- An iterator whose `__iter__` runs `d.__init__(maxlen=m')` and returns an iterator over
+`xs` that ends with `e` (`none`: exhaustion) and does not touch the deque. -/
+def reinitWith (m' : Int) (xs : List α) (e : Option PyExc) : ReIter α :=
+  ⟨fun d => (.ok (), (d.initRe none (.int m')).2), (ReIter.ofList xs e).nexts⟩
+
+/-- What `extend` and `extendleft` do when the iterable re-initialises the deque
+(`deque_extend_impl`, `deque_extendleft_impl`; type invariant `WF`, no hypothesis on the
+iterator beyond keeping the block layout). For every deque, every iterator whose `__iter__`
+and `__next__` calls keep the block layout — any change of `maxlen` included, so
+`d.__init__(maxlen=...)` is allowed — both leave a valid block layout (the length bound is
+what can break, `DequeExtendKeepsBound`). And for every `0 <= m' <= sys.maxsize`, every `xs`
+and every ending `e`, an `__iter__` that runs `d.__init__(maxlen=m')` and then yields `xs`
+makes them return `None` or raise `e` as usual, and leaves the deque with bound `m'` but
+holding the last (`extend`) or first (`extendleft`, reversed) `d.maxlen` items of `xs`, under
+the bound `d` had on entry (:484, :539), nothing at all if that bound was 0
+(`consume_iterator`); an unbounded entry keeps every item. -/
+def DequeExtendStaleBound : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF →
+    (∀ (it : ReIter α), Deque.KeepsLayout (fun d => (it.getIter d).2) →
+      (∀ nx ∈ it.nexts, Deque.KeepsLayout (fun d => (nx d).2)) →
+      (d.extendRe it).2.Layout ∧ (d.extendleftRe it).2.Layout) ∧
+    ∀ (m' : Int), 0 ≤ m' → m' ≤ ssizeMax → ∀ (xs : List α) (e : Option PyExc),
+      (d.extendRe (reinitWith m' xs e)).1 = finalizeIterator e ∧
+      (d.extendRe (reinitWith m' xs e)).2.items = (if d.maxlen = 0 then [] else keepLast d.maxlen xs) ∧
+      (d.extendRe (reinitWith m' xs e)).2.maxlen = m' ∧
+      (d.extendleftRe (reinitWith m' xs e)).1 = finalizeIterator e ∧
+      (d.extendleftRe (reinitWith m' xs e)).2.items =
+        (if d.maxlen = 0 then [] else keepFirst d.maxlen xs.reverse) ∧
+      (d.extendleftRe (reinitWith m' xs e)).2.maxlen = m'
+
+theorem dequeExtendStaleBound_proven : DequeExtendStaleBound := by
+  intro α _ d h
+  refine ⟨fun it hg hn => ⟨Deque.extendRe_layout d h.1 it hg hn, Deque.extendleftRe_layout d h.1 it hg hn⟩,
+    fun m' h0 h1 xs e => ?_⟩
+  obtain ⟨w1, mx1, _, it1, _⟩ := reinit_wf d h m' h0 h1
+  generalize hd1 : (d.initRe none (.int m')).2 = d1 at w1 mx1 it1
+  have er : d.extendRe (reinitWith m' xs e) =
+      if d.maxlen = 0 then Deque.consumeLoop (ReIter.ofList xs e).nexts d1
+      else Deque.pushLoop Deque.appendM d.maxlen (ReIter.ofList xs e).nexts
+        (if d1.size = 0 then { d1 with left := 1, right := 0 } else d1) := by
+    unfold Deque.extendRe reinitWith; simp only [hd1]
+  have el : d.extendleftRe (reinitWith m' xs e) =
+      if d.maxlen = 0 then Deque.consumeLoop (ReIter.ofList xs e).nexts d1
+      else Deque.pushLoop Deque.appendleftM d.maxlen (ReIter.ofList xs e).nexts
+        (if d1.size = 0 then { d1 with left := 64 - 1, right := 64 - 2 } else d1) := by
+    unfold Deque.extendleftRe reinitWith; simp only [hd1]
+  rw [er, el]
+  by_cases hz : d.maxlen = 0
+  · rw [iteT hz, iteT hz, iteT hz, iteT hz, Deque.ofList_nexts, Deque.consumeLoop_pure]
+    exact ⟨rfl, it1, mx1, rfl, it1, mx1⟩
+  · rw [iteF hz, iteF hz, iteF hz, iteF hz, Deque.pushLoop_pure_fixed, Deque.pushLoop_pure_fixed]
+    have hm0 : d.maxlen = -1 ∨ 0 < d.maxlen := by
+      rcases Deque.maxlen_cases d h with a | a | a
+      · exact Or.inl a
+      · exact absurd a hz
+      · exact Or.inr a
+    have lr := Deque.heurR_layout d1 w1.1
+    have ll := Deque.heurL_layout d1 w1.1
+    have ir : (if d1.size = 0 then { d1 with left := 1, right := 0 } else d1).items = [] := by
+      split <;> exact it1
+    have il : (if d1.size = 0 then { d1 with left := 64 - 1, right := 64 - 2 } else d1).items = [] := by
+      split <;> exact it1
+    have mr : (if d1.size = 0 then { d1 with left := 1, right := 0 } else d1).maxlen = m' := by
+      split <;> exact mx1
+    have ml : (if d1.size = 0 then { d1 with left := 64 - 1, right := 64 - 2 } else d1).maxlen = m' := by
+      split <;> exact mx1
+    obtain ⟨a1, a2⟩ := Deque.foldl_appendM_fixed d.maxlen hm0 xs _ lr (by rw [ir]; simp; omega)
+    obtain ⟨b1, b2⟩ := Deque.foldl_appendleftM_fixed d.maxlen hm0 xs _ ll (by rw [il]; simp; omega)
+    rw [ir, List.nil_append] at a1
+    rw [il, List.append_nil] at b1
+    exact ⟨rfl, a1, by rw [a2, mr], rfl, b1, by rw [b2, ml]⟩
+
+/-! ### `d += it` -/
+
+/-- `d += it` (`deque_inplace_concat`, _collectionsmodule.c:578-590), for every deque and
+every iterator, re-entrant ones included (no hypothesis): the deque is left exactly as
+`d.extend(it)` leaves it; when `extend` returns `None`, `+=` returns the deque itself (`d`,
+not `None`), and when it raises `e`, `+=` raises `e`. In particular, for every `WF` deque
+and an iterator over `xs` that does not touch it, `d += xs` returns `d` holding the last
+`maxlen` items of `list(d) + xs` (also when it ends with `StopIteration`), an iterator
+raising `e` after `xs` raises `e` with those items kept, and a non-iterable raises
+`TypeError` with the deque unchanged. -/
+def DequeIAdd : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α),
+    (∀ (it : ReIter α),
+      (d.iaddRe it).2 = (d.extendRe it).2 ∧
+      ((d.extendRe it).1 = .ok () → (d.iaddRe it).1 = .ok .self) ∧
+      (∀ e, (d.extendRe it).1 = .error e → (d.iaddRe it).1 = .error e)) ∧
+    (d.WF → ∀ (xs : List α),
+      (∀ e : Option PyExc, (e = none ∨ e = some .stopIteration) →
+        (d.iadd (.iter xs e)).1 = .ok .self ∧ (d.iadd (.iter xs e)).2.items = keepLast d.maxlen (d.items ++ xs)) ∧
+      (∀ e : PyExc, e ≠ .stopIteration →
+        (d.iadd (.iter xs (some e))).1 = .error e ∧
+        (d.iadd (.iter xs (some e))).2.items = keepLast d.maxlen (d.items ++ xs)) ∧
+      (∀ t, d.iadd (.notIterable t) = (.error (notIterableErr t), d)))
+
+theorem iaddRe_gen (d : Deque α) (it : ReIter α) :
+    (d.iaddRe it).2 = (d.extendRe it).2 ∧
+    ((d.extendRe it).1 = .ok () → (d.iaddRe it).1 = .ok .self) ∧
+    (∀ e, (d.extendRe it).1 = .error e → (d.iaddRe it).1 = .error e) := by
+  unfold Deque.iaddRe
+  rcases d.extendRe it with ⟨r, d'⟩
+  cases r with
+  | ok u =>
+    refine ⟨rfl, fun _ => rfl, fun e h => ?_⟩
+    cases h
+  | error e' =>
+    refine ⟨rfl, fun h => ?_, fun e h => ?_⟩
+    · cases h
+    · cases h; rfl
+
+theorem dequeIAdd_proven : DequeIAdd := by
+  intro α _ d
+  refine ⟨iaddRe_gen d, fun h xs => ⟨fun e he => ?_, fun e he => ?_, fun t => rfl⟩⟩
+  · have hx := Deque.extendRe_ofList d xs e
+    have hf : finalizeIterator e = .ok () := by rcases he with he | he <;> subst he <;> rfl
+    obtain ⟨g1, g2, _⟩ := iaddRe_gen d (.ofList xs e)
+    rw [hx, hf] at g2
+    refine ⟨g2 rfl, ?_⟩
+    show (d.iaddRe (.ofList xs e)).2.items = _
+    rw [g1, hx]
+    exact (Deque.extend_spec d xs h).2.1
+  · have hx := Deque.extendRe_ofList d xs (some e)
+    obtain ⟨g1, _, g3⟩ := iaddRe_gen d (.ofList xs (some e))
+    rw [hx, Deque.finalize_some e he] at g3
+    refine ⟨g3 e rfl, ?_⟩
+    show (d.iaddRe (.ofList xs (some e))).2.items = _
+    rw [g1, hx]
+    exact (Deque.extend_spec d xs h).2.1
 
 /-! ### `__init__` and `__new__` -/
 

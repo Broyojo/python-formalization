@@ -131,7 +131,7 @@ def dRichRe (op : CmpOp) : Cmp DElem := fun d a b =>
     | _, _ => (.error (.typeError "~not supported"), d)
 
 /-- The object `d += ...` returns: the deque itself or `None`. -/
-def slotJ : Deque.SlotRef → Json
+def slotJ : SlotRef → Json
   | .self => toJson "SELF"
   | .none => Json.null
 
@@ -337,14 +337,14 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
       | .error _ => throw "cmp: bad other deque"
     if name == "cmp" then
       -- `d OP other`: the `M` elements' `__eq__` acts on `d`, the left operand
-      let lift : Cmp DElem → RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
+      let lift : Cmp DElem → Deque.RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
         let (r, d') := c s.1 a b
         (r, (d', s.2))
       let (r, s') := Deque.richcompareRe Prod.fst Prod.snd (lift dCmp) (lift (dRichRe o)) o false (d, other)
       return (pyJ toJson r, { s with d := s'.1 })
     else
       -- `other OP d`: `d` is the right operand
-      let lift : Cmp DElem → RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
+      let lift : Cmp DElem → Deque.RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
         let (r, d') := c s.2 a b
         (r, (s.1, d'))
       let (r, s') := Deque.richcompareRe Prod.fst Prod.snd (lift dCmp) (lift (dRichRe o)) o false (other, d)
