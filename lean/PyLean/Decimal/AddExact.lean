@@ -322,4 +322,158 @@ theorem add_run_of_norm (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) 
   · simp only [ne_eq, not_true_eq_false, ↓reduceIte]
     exact fin true (n1 + n2) (by omega) (sgnI_add_same _ _ _)
 
+/-! ## `_normalize` -/
+
+/-- `exp = tmp.exp + min(-1, len(str(tmp.int)) - prec - 2)` (_pydecimal.py:5740). -/
+def normX (p : Nat) (ct : Nat) (T : Int) : Int := T + min (-1) ((numDigits ct : Int) - p - 2)
+
+/-- `other_len + other.exp - 1 < exp` (_pydecimal.py:5741): the other operand is below `10^exp`
+and is replaced by `1·10^exp`. -/
+def normSub (p : Nat) (ct : Nat) (T : Int) (co : Nat) (oe : Int) : Prop :=
+  (numDigits co : Int) + oe - 1 < normX p ct T
+
+instance (p ct T co oe) : Decidable (normSub p ct T co oe) := by unfold normSub; infer_instance
+
+/-- The exponent both operands end at (_pydecimal.py:5741-5747): `exp` after the substitution,
+else the other operand's own. -/
+def normExp (p : Nat) (ct : Nat) (T : Int) (co : Nat) (oe : Int) : Int :=
+  if normSub p ct T co oe then normX p ct T else oe
+
+/-- The exponent `__add__` adds at: `_normalize` takes the operand with the larger exponent (the
+first at equal exponents) as `tmp` (_pydecimal.py:5728-5733). -/
+def addWorkExp (prec : Nat) (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : Int :=
+  if ea < eb then normExp prec cb eb ca ea else normExp prec ca ea cb eb
+
+/-- `_normalize(tmp, other, prec)` with `tmp` the operand of larger (or equal) exponent first. -/
+theorem workNormalize_fst (p : Nat) (st so : Bool) (ct co : Nat) (T oe : Int)
+    (h1 : numDigits ct ≤ maxStrDigits) (h2 : numDigits co ≤ maxStrDigits) (hT : oe ≤ T) :
+    workNormalize p (st, ct, T) (so, co, oe) =
+      .ok ((st, ct * 10 ^ (T - normExp p ct T co oe).toNat, normExp p ct T co oe),
+        (so, if normSub p ct T co oe then 1 else co, normExp p ct T co oe)) := by
+  have g1 : ¬ numDigits ct > maxStrDigits := by omega
+  have g2 : ¬ numDigits co > maxStrDigits := by omega
+  have hs : ¬ T < oe := by omega
+  unfold normExp
+  by_cases hsub : normSub p ct T co oe
+  · have hsub' := hsub
+    unfold normSub normX at hsub'
+    simp [workNormalize, strLimit, g1, g2, hs, hsub, hsub', normX, bind, Except.bind, pure, Except.pure]
+  · have hsub' := hsub
+    unfold normSub normX at hsub'
+    simp [workNormalize, strLimit, g1, g2, hs, hsub, hsub', bind, Except.bind, pure, Except.pure]
+
+/-- `_normalize(other, tmp, prec)`: the operands swapped (`tmp` the second, of larger exponent). -/
+theorem workNormalize_snd (p : Nat) (st so : Bool) (ct co : Nat) (T oe : Int)
+    (h1 : numDigits ct ≤ maxStrDigits) (h2 : numDigits co ≤ maxStrDigits) (hT : oe < T) :
+    workNormalize p (so, co, oe) (st, ct, T) =
+      .ok ((so, if normSub p ct T co oe then 1 else co, normExp p ct T co oe),
+        (st, ct * 10 ^ (T - normExp p ct T co oe).toNat, normExp p ct T co oe)) := by
+  have g1 : ¬ numDigits ct > maxStrDigits := by omega
+  have g2 : ¬ numDigits co > maxStrDigits := by omega
+  unfold normExp
+  by_cases hsub : normSub p ct T co oe
+  · have hsub' := hsub
+    unfold normSub normX at hsub'
+    simp [workNormalize, strLimit, g1, g2, hT, hsub, hsub', normX, bind, Except.bind, pure, Except.pure]
+  · have hsub' := hsub
+    unfold normSub normX at hsub'
+    simp [workNormalize, strLimit, g1, g2, hT, hsub, hsub', bind, Except.bind, pure, Except.pure]
+
+theorem prec_lt_numDigits (p W : Nat) (hp : 1 ≤ p) (h : 10 ^ p ≤ W) : p < numDigits W := by
+  by_cases h1 : numDigits W ≤ p
+  · have := (numDigits_le_iff (by omega)).mp h1; omega
+  · omega
+
+/-- The sticky substitution, for one sign pattern: `±A` plus `±1` against `±A·10^d` plus `±o`,
+with `A` a multiple of ten of more than `prec + 1` digits and `0 < o < 10^d`. -/
+theorem sticky_pair (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (st so : Bool) (A o d : Nat) (E : Int)
+    (hA10 : A % 10 = 0) (hA : 10 ^ (c.prec + 1) ≤ A) (ho : o ≠ 0) (hod : o < 10 ^ d) :
+    ∃ (s : Bool) (W X : Nat), sgnI st A + sgnI so 1 = sgnI s W ∧
+      sgnI st (A * 10 ^ d) + sgnI so o = sgnI s X ∧ W ≠ 0 ∧ X ≠ 0 ∧
+      numDigits X = numDigits W + d ∧ fixSpec c s X (E - d) fl = fixSpec c s W E fl := by
+  have hp10 : 10 ^ c.prec * 10 = 10 ^ (c.prec + 1) := (Nat.pow_succ 10 c.prec).symm
+  have hp1 : 10 ≤ 10 ^ c.prec := by
+    have := Nat.pow_le_pow_right (show 0 < 10 by decide) hp; simpa using this
+  have hm0 : 0 < 10 ^ d := Nat.pow_pos (by decide)
+  have hAd : A ≤ A * 10 ^ d := Nat.le_mul_of_pos_right A hm0
+  have hod' : o ≤ A * 10 ^ d := by
+    have := Nat.mul_le_mul_right (10 ^ d) (show 1 ≤ A by omega); omega
+  by_cases hs : st = so
+  · subst hs
+    refine ⟨st, A + 1, (A + 1 - 1) * 10 ^ d + o, sgnI_add_same _ _ _, ?_, by omega, by omega, ?_, ?_⟩
+    · rw [Nat.add_sub_cancel]; exact sgnI_add_same _ _ _
+    · exact numDigits_sticky_plus (A + 1) o d (by omega) (by omega) hod
+    · exact fixSpec_sticky c st (A + 1) _ d E fl
+        (prec_lt_numDigits _ _ hp (by omega))
+        (numDigits_sticky_plus (A + 1) o d (by omega) (by omega) hod)
+        (fun k hk => sticky_plus (A + 1) o d k (by omega) hk (by omega) hod)
+  · have hso : so = !st := by cases st <;> cases so <;> simp_all
+    subst hso
+    refine ⟨st, A - 1, (A - 1 + 1) * 10 ^ d - o, sgnI_add_opp st A 1 (by omega), ?_, by omega, ?_, ?_, ?_⟩
+    · rw [Nat.sub_add_cancel (show 1 ≤ A by omega)]; exact sgnI_add_opp st _ o hod'
+    · rw [Nat.sub_add_cancel (show 1 ≤ A by omega)]
+      have := Nat.mul_le_mul_right (10 ^ d) (show 1 ≤ A by omega)
+      omega
+    · exact numDigits_sticky_minus (A - 1) o d (by omega) (by omega) hod
+    · exact fixSpec_sticky c st (A - 1) _ d E fl
+        (prec_lt_numDigits _ _ hp (by omega))
+        (numDigits_sticky_minus (A - 1) o d (by omega) (by omega) hod)
+        (fun k hk => sticky_minus (A - 1) o d k (by omega) hk (by omega) hod)
+
+/-- What `_normalize` leaves (`tmp` of exponent `T ≥ oe`): either the operands unchanged at the
+other's exponent, or, after the substitution, a working sum that `_fix` rounds exactly as it
+rounds the exact sum, with `E - oe` fewer digits. -/
+theorem norm_core (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (st so : Bool) (ct co : Nat)
+    (T oe : Int) (hct : ct ≠ 0) (hco : co ≠ 0) (hT : oe ≤ T) :
+    oe ≤ normExp c.prec ct T co oe ∧
+    (¬ normSub c.prec ct T co oe →
+      normExp c.prec ct T co oe = oe ∧
+      sgnI st (ct * 10 ^ (T - normExp c.prec ct T co oe).toNat) + sgnI so co =
+        sgnI st (ct * 10 ^ (T - oe).toNat) + sgnI so co) ∧
+    (normSub c.prec ct T co oe →
+      ∃ (s : Bool) (W X : Nat),
+        sgnI st (ct * 10 ^ (T - normExp c.prec ct T co oe).toNat) + sgnI so 1 = sgnI s W ∧
+        sgnI st (ct * 10 ^ (T - oe).toNat) + sgnI so co = sgnI s X ∧ W ≠ 0 ∧ X ≠ 0 ∧
+        numDigits X = numDigits W + (normExp c.prec ct T co oe - oe).toNat ∧
+        fixSpec c s X oe fl = fixSpec c s W (normExp c.prec ct T co oe) fl) := by
+  have hmin := Int.min_le_left (-1 : Int) ((numDigits ct : Int) - c.prec - 2)
+  have hmin2 := Int.min_le_right (-1 : Int) ((numDigits ct : Int) - c.prec - 2)
+  have hmin3 : min (-1 : Int) ((numDigits ct : Int) - c.prec - 2) = -1 ∨
+      min (-1 : Int) ((numDigits ct : Int) - c.prec - 2) = (numDigits ct : Int) - c.prec - 2 := by omega
+  have hco1 := numDigits_pos co
+  refine ⟨?_, fun hs => ?_, fun hs => ?_⟩
+  · unfold normExp; split
+    · rename_i h; unfold normSub at h; omega
+    · omega
+  · have hE : normExp c.prec ct T co oe = oe := by unfold normExp; simp [hs]
+    exact ⟨hE, by rw [hE]⟩
+  · have hE : normExp c.prec ct T co oe = normX c.prec ct T := by unfold normExp; simp [hs]
+    have hs' := hs
+    unfold normSub normX at hs'
+    rw [hE]
+    unfold normX
+    generalize hX : T + min (-1 : Int) ((numDigits ct : Int) - c.prec - 2) = X at hs' ⊢
+    -- d = X - oe ≥ len(co), t = T - X ≥ 1
+    obtain ⟨d, hd⟩ : ∃ d : Nat, (X - oe).toNat = d := ⟨_, rfl⟩
+    obtain ⟨t, ht⟩ : ∃ t : Nat, (T - X).toNat = t := ⟨_, rfl⟩
+    have hdge : numDigits co ≤ d := by omega
+    have ht1 : 1 ≤ t := by omega
+    have htd : (T - oe).toNat = t + d := by omega
+    have htp : c.prec + 2 ≤ numDigits ct + t := by omega
+    rw [hd, ht, htd]
+    have hcod : co < 10 ^ d :=
+      Nat.lt_of_lt_of_le (lt_pow_numDigits co) (Nat.pow_le_pow_right (by decide) hdge)
+    have hA10 : ct * 10 ^ t % 10 = 0 := by
+      rw [Nat.mul_mod, pow_mod_ten ht1]; simp
+    have hA : 10 ^ (c.prec + 1) ≤ ct * 10 ^ t := by
+      have h1 := pow_numDigits_le hct
+      have h2 : 10 ^ (c.prec + 1) ≤ 10 ^ (numDigits ct - 1) * 10 ^ t := by
+        rw [← Nat.pow_add]; exact Nat.pow_le_pow_right (by decide) (by omega)
+      exact Nat.le_trans h2 (Nat.mul_le_mul_right _ h1)
+    obtain ⟨s, W, X', h1, h2, h3, h4, h5, h6⟩ :=
+      sticky_pair c fl hp st so (ct * 10 ^ t) co d X hA10 hA hco hcod
+    refine ⟨s, W, X', h1, ?_, h3, h4, h5, ?_⟩
+    · rw [Nat.pow_add, ← Nat.mul_assoc]; exact h2
+    · rw [show oe = X - (d : Int) by omega]; exact h6
+
 end PyLean.Decimal
