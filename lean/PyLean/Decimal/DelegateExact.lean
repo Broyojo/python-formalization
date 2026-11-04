@@ -232,15 +232,21 @@ theorem sameQuantumExact_proven : SameQuantumExact := by
     simp_all [sameQuantum, isSpecial, isNanP, isnan, nanKind, isInfinite, isinfinity] <;>
     (try split) <;> simp_all
 
-/-- `logb` (_pydecimal.py:3388-3416): for a finite non-zero operand, the adjusted exponent (the
-exponent of its most significant digit) as a Decimal, rounded into the context by `_fix`; `logb(0)`
-signals DivisionByZero and gives `-Infinity`; an infinity gives `Infinity`; a NaN goes through
-`_check_nans`. -/
+/-- `logb` (_pydecimal.py:3388-3416): for a finite non-zero operand, the adjusted exponent
+`A = e + digits - 1` (the exponent of its most significant digit) made into a Decimal by
+`Decimal(self.adjusted())` (:3415) and rounded into the context by `_fix`; `Decimal(int)` takes
+`str(abs(A))` (:621), so an `A` of more than 4300 digits raises the int/str-limit `ValueError`
+instead. `logb(0)` signals DivisionByZero and gives `-Infinity`; an infinity gives `Infinity`; a NaN
+goes through `_check_nans`. -/
 def LogbExact : Prop :=
   ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec →
     (∀ (neg : Bool) (co : Nat) (e : Int), co ≠ 0 → e + numDigits co - 1 ≠ 0 →
+      numDigits (e + numDigits co - 1).natAbs ≤ maxStrDigits →
       (logb c (.fin neg co e)).run fl =
         fixSpec c (decide (e + numDigits co - 1 < 0)) (e + numDigits co - 1).natAbs 0 fl) ∧
+    (∀ (neg : Bool) (co : Nat) (e : Int), co ≠ 0 →
+      maxStrDigits < numDigits (e + numDigits co - 1).natAbs →
+      (logb c (.fin neg co e)).run fl = .error (.valueError limitToStrMsg)) ∧
     (∀ (neg : Bool) (co : Nat) (e : Int), co ≠ 0 → e + numDigits co - 1 = 0 →
       (logb c (.fin neg co e)).run fl = (fix c (.fin false 0 0)).run fl) ∧
     (∀ (neg : Bool) (e : Int), (logb c (.fin neg 0 e)).run fl = afterSig c .divisionByZero fl (.inf true)) ∧
@@ -255,12 +261,19 @@ theorem logbExact_proven : LogbExact := by
     intro neg co e hc; cases co with
     | zero => exact absurd rfl hc
     | succ n => rfl
-  refine ⟨fun neg co e hc ha => ?_, fun neg co e hc ha => ?_, fun neg e => ?_, fun neg => ?_, fun neg p => ?_⟩
+  refine ⟨fun neg co e hc ha hl => ?_, fun neg co e hc hl => ?_, fun neg co e hc ha => ?_,
+    fun neg e => ?_, fun neg => ?_, fun neg p => ?_⟩
   · simp only [logb, checkNans, isinfinity, hz neg co e hc, Bool.not_true, Bool.false_eq_true,
-      ↓reduceIte, Dec.adjusted, adjustedD, pure_bind, ne_eq, not_true_eq_false]
+      ↓reduceIte, Dec.adjusted, adjustedD, pure_bind, ne_eq, not_true_eq_false, liftPy_run,
+      pyFromInt, strLimit, show ¬ numDigits (e + numDigits co - 1).natAbs > maxStrDigits by omega]
     exact fixExact_fin c _ _ 0 fl hp (by omega)
   · simp only [logb, checkNans, isinfinity, hz neg co e hc, Bool.not_true, Bool.false_eq_true,
-      ↓reduceIte, Dec.adjusted, adjustedD, pure_bind, ne_eq, not_true_eq_false]
+      ↓reduceIte, Dec.adjusted, adjustedD, pure_bind, ne_eq, not_true_eq_false, liftPy_run,
+      pyFromInt, strLimit, show numDigits (e + numDigits co - 1).natAbs > maxStrDigits by omega]
+    rfl
+  · simp only [logb, checkNans, isinfinity, hz neg co e hc, Bool.not_true, Bool.false_eq_true,
+      ↓reduceIte, Dec.adjusted, adjustedD, pure_bind, ne_eq, not_true_eq_false, liftPy_run,
+      pyFromInt, strLimit]
     simp only [ha]; rfl
   · simp only [logb, checkNans, isinfinity, decBool, isZero, Bool.not_true, Bool.not_false,
       ↓reduceIte, pure_bind, ne_eq, not_true_eq_false]

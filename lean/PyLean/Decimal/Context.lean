@@ -200,10 +200,27 @@ inductive SigKey where
 /-- A valid signal dict, in insertion order. -/
 abbrev SigDict := List (Signal × Bool)
 
-/-- A value assigned to a context attribute or passed to `Context()`. -/
+/-- What `mode == value` gives, in `value in _rounding_modes`, for an object `value` of a class
+that is not `str` (or a subclass of it): `str.__eq__` returns `NotImplemented`, so the reflected
+`value.__eq__(mode)` runs (Objects/object.c:1122-1147, `PyObject_RichCompareBool`). `yes` is a
+true result (after `__bool__`), `no` a false one, `NotImplemented` included (the identity
+fallback), and `raises e` an exception from `__eq__` or from the result's `__bool__`. -/
+inductive EqAns where
+  | yes
+  | no
+  | raises (e : PyExc)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- A value assigned to a context attribute or passed to `Context()`. `int` is an object of
+exact type `int` (an `int` subclass that overrides `__str__` or `__eq__` is out of scope). -/
 inductive CtxArg where
   | none
   | int (n : Int)
+  /-- `True` or `False`: an `int` to `isinstance`, but `%s` prints its name. -/
+  | bool (b : Bool)
+  /-- An object `id` of a class that is not `str`, whose `__eq__` answers the eight mode names
+  of `_rounding_modes`, in that order, as `eq` says (a missing answer is `no`). -/
+  | eqObj (id : Nat) (eq : List EqAns)
   | str (s : String)
   | list (l : List SigKey)
   | dict (d : List (SigKey × Bool))
@@ -222,6 +239,11 @@ structure PyContext where
   flags : SigDict
   traps : SigDict
   ignored : List Signal
+  /-- The object stored in `rounding` when it is not a str (an `eqObj`, `rounding` then holding
+  the first mode it compared equal to); `none` when `rounding` holds the mode name itself. What
+  an operation does under such a context (`_pick_rounding_function[rounding]` hashes the object)
+  is out of scope. -/
+  roundingObj : Option (Nat × List EqAns) := none
   deriving Repr, DecidableEq, Inhabited
 
 def Rounding.name : Rounding → String
@@ -235,22 +257,37 @@ def roundingModes : List Rounding :=
 
 def roundingOfName (s : String) : Option Rounding := roundingModes.find? (fun r => r.name == s)
 
-/-- `Context._set_integer_check`, _pydecimal.py:4005-4017: `none` is `'-inf'` / `'inf'`. -/
+/-- `"%s" % value` for an int-valued `value` (an int or a bool): `str(value)`, which for an int
+of more than 4300 digits raises the int/str-limit `ValueError` (Objects/longobject.c:2207-2216). -/
+def intText : CtxArg → Py String
+  | .int n => do strLimit n.natAbs; return toString n
+  | .bool b => .ok (if b then "True" else "False")
+  | _ => .ok "~"
+
+/-- The int an `isinstance(value, int)` value holds. -/
+def intValue : CtxArg → Option Int
+  | .int n => some n
+  | .bool b => some (if b then 1 else 0)
+  | _ => none
+
+/-- `Context._set_integer_check`, _pydecimal.py:4005-4017: `none` is `'-inf'` / `'inf'`. The
+message is built only when the value is refused, and its `%s` of `value` can itself raise
+(`intText`). -/
 def setIntegerCheck (name : String) (v : CtxArg) (vmin vmax : Option Int) : Py Int :=
-  match v with
-  | .int value =>
+  match intValue v with
+  | some value =>
     match vmin, vmax with
     | none, some hi =>
-      if value > hi then .error (.valueError s!"{name} must be in [-inf, {hi}]. got: {value}")
+      if value > hi then do .error (.valueError s!"{name} must be in [-inf, {hi}]. got: {← intText v}")
       else .ok value
     | some lo, none =>
-      if value < lo then .error (.valueError s!"{name} must be in [{lo}, inf]. got: {value}")
+      if value < lo then do .error (.valueError s!"{name} must be in [{lo}, inf]. got: {← intText v}")
       else .ok value
     | some lo, some hi =>
-      if value < lo ∨ value > hi then .error (.valueError s!"{name} must be in [{lo}, {hi}]. got {value}")
+      if value < lo ∨ value > hi then do .error (.valueError s!"{name} must be in [{lo}, {hi}]. got {← intText v}")
       else .ok value
     | none, none => .ok value
-  | _ => .error (.typeError s!"{name} must be an integer")
+  | none => .error (.typeError s!"{name} must be an integer")
 
 def hasKey (d : List (SigKey × Bool)) (k : SigKey) : Bool := d.any (fun p => p.1 == k)
 
@@ -287,6 +324,30 @@ def ignoredOf : CtxArg → List Signal
     | .other => none)
   | _ => []
 
+/-- `value in _rounding_modes` (_pydecimal.py:4042) for an `eqObj`: `tuple_contains` compares the
+modes in order and stops at the first true answer or exception (Objects/tupleobject.c:424-432). -/
+def eqIn : List EqAns → List Rounding → Py (Option Rounding)
+  | _, [] => .ok none
+  | [], _ :: _ => .ok none
+  | a :: as, r :: rs =>
+    match a with
+    | .yes => .ok (some r)
+    | .no => eqIn as rs
+    | .raises e => .error e
+
+/-- `raise TypeError("%s: invalid rounding mode" % value)` (_pydecimal.py:4045) for a value
+`value in _rounding_modes` refuses without calling Python code: no mode equals an int, a bool,
+`None`, a list, a dict, a tuple or a plain object. `%s` of an int over the limit raises the
+int/str-limit `ValueError`; a tuple is the argument tuple of `%` (`PyUnicode_Format`). -/
+def invalidRoundingExc : CtxArg → Py PyExc
+  | .int n => do return .typeError s!"{← intText (.int n)}: invalid rounding mode"
+  | .bool b => .ok (.typeError s!"{if b then "True" else "False"}: invalid rounding mode")
+  | .none => .ok (.typeError "None: invalid rounding mode")
+  | .tuple 0 => .ok (.typeError "not enough arguments for format string (got 0)")
+  | .tuple (n + 2) =>
+    .ok (.typeError s!"not all arguments converted during string formatting (required 1, got {n + 2})")
+  | _ => .ok (.typeError "~: invalid rounding mode")
+
 /-- `Context.__setattr__`, _pydecimal.py:4030-4053. -/
 def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
   if name == "prec" then return { c with prec := ← setIntegerCheck name v (some 1) none }
@@ -298,9 +359,13 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
     match v with
     | .str s =>
       match roundingOfName s with
-      | some r => return { c with rounding := r }
+      | some r => return { c with rounding := r, roundingObj := none }
       | none => throw (.typeError s!"{s}: invalid rounding mode")
-    | _ => throw (.typeError "~: invalid rounding mode")
+    | .eqObj id eq =>
+      match ← eqIn eq roundingModes with
+      | some r => return { c with rounding := r, roundingObj := some (id, eq) }
+      | none => throw (.typeError "~: invalid rounding mode")
+    | v => throw (← invalidRoundingExc v)
   else if name == "flags" then return { c with flags := ← setSignalDict v }
   else if name == "traps" then return { c with traps := ← setSignalDict v }
   else if name == "_ignored_flags" then return { c with ignored := ignoredOf v }
@@ -344,11 +409,17 @@ def orElseArg (a dflt : CtxArg) : CtxArg :=
 
 def keyed (d : SigDict) : List (SigKey × Bool) := d.map (fun p => (.sig p.1, p.2))
 
+/-- The object a context's `rounding` attribute holds, as a value to assign again. -/
+def PyContext.roundingArg (c : PyContext) : CtxArg :=
+  match c.roundingObj with
+  | none => .str c.rounding.name
+  | some (id, eq) => .eqObj id eq
+
 /-- `Context.__init__(...)`, _pydecimal.py:3969-4003; `dc` is `DefaultContext`. -/
 def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c := dc
   let c ← pySetattr c "prec" (orElseArg a.prec (.int dc.prec))
-  let c ← pySetattr c "rounding" (orElseArg a.rounding (.str dc.rounding.name))
+  let c ← pySetattr c "rounding" (orElseArg a.rounding dc.roundingArg)
   let c ← pySetattr c "Emin" (orElseArg a.emin (.int dc.emin))
   let c ← pySetattr c "Emax" (orElseArg a.emax (.int dc.emax))
   let c ← pySetattr c "capitals" (orElseArg a.capitals (.int dc.capitals))
@@ -373,13 +444,13 @@ def clearTraps (c : PyContext) : PyContext := { c with traps := clearDict c.trap
 /-- `Context.copy`, _pydecimal.py:4096-4102, and `Context._shallow_copy`, :4089-4094. -/
 def contextCopy (dc c : PyContext) : Py PyContext :=
   pyContextNew dc
-    { prec := .int c.prec, rounding := .str c.rounding.name, emin := .int c.emin, emax := .int c.emax
+    { prec := .int c.prec, rounding := c.roundingArg, emin := .int c.emin, emax := .int c.emax
       capitals := .int c.capitals, clamp := .int c.clamp, flags := .dict (keyed c.flags)
       traps := .dict (keyed c.traps), ignored := some c.ignored }
 
 /-- `Context.__reduce__`, _pydecimal.py:4059-4064: the arguments to rebuild the context. -/
 def contextReduce (c : PyContext) : CtxInit :=
-  { prec := .int c.prec, rounding := .str c.rounding.name, emin := .int c.emin, emax := .int c.emax
+  { prec := .int c.prec, rounding := c.roundingArg, emin := .int c.emin, emax := .int c.emax
     capitals := .int c.capitals, clamp := .int c.clamp
     flags := .list ((c.flags.filter (·.2)).map (fun p => .sig p.1))
     traps := .list ((c.traps.filter (·.2)).map (fun p => .sig p.1)) }
