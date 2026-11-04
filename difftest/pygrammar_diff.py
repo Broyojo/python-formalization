@@ -19,6 +19,7 @@ Errors compare by class, message, lineno, offset, end_lineno, end_offset and tex
 
 import _tokenize
 import ast
+import builtins
 import copy
 import io
 import json
@@ -729,7 +730,45 @@ def gen_string_helpers(rng):
     return head + src + "\n"
 
 
+LAZY_FORMS = ["from {d} lazy import x\n", "from {d}lazy import x\n", "from {d} lazy import (a,\n b)\n",
+              "x = 1\nfrom {d} lazy import x\n", "from {d} lazy import x\ny = (\n",
+              "from {d} lazy import x\nfrom {d} lazy import y\n", "lazy from {d} import x\n",
+              "from {d} lazy import *\n", "def f():\n    from {d} lazy import x\n",
+              "from {d}  lazy import x as y, z\n", "from {d} lazy import x\n1 +\n",
+              "if x:\n  from {d} lazy import x\nelse:\n  pass\n", "from {d} lazy.b import x\n",
+              "from {d} lazy import x; from {d} lazy import y\n", "from {d} \\\n lazy import x\n",
+              "from {d}\tlazy import x\n", "from {d} lazy import x # c\n", "from {d} lazy import\n",
+              "from {d} lazy import x\n'\\d'\n", "lazy from {d} lazy import x\n"]
+LAZY_DOTS = [".", "..", "...", ". .", ". ...", "....", ".. .", "", "a"]
+
+
+def gen_lazy_case(rng):
+    """`_warn_relative_import_of_lazy` under a warnings filter that may turn it into an error."""
+    src = rng.choice(LAZY_FORMS).replace("{d}", rng.choice(LAZY_DOTS))
+    c = make_case(src, rng)
+    if c is None:
+        return None
+    c["fn"] = "peg.parse"
+    c["mode"] = rng.choice(["exec", "exec", "exec", "single"])
+    c.pop("flags", None)
+    c.pop("feature_version", None)
+    # Only warnings the model turns into errors may be present.
+    with warnings.catch_warnings(record=True) as seen:
+        warnings.simplefilter("always")
+        try:
+            compile(src, "<unknown>", c["mode"], flags=ast.PyCF_ONLY_AST, dont_inherit=True)
+        except Exception:
+            pass
+    if any(not str(w.message).startswith("'from ") for w in seen):
+        return c
+    c["warn_error"] = rng.choice([["SyntaxWarning"], ["SyntaxWarning", "DeprecationWarning"],
+                                  ["DeprecationWarning"], []])
+    return c
+
+
 def gen_case_peg(rng):
+    if rng.random() < 0.04:
+        return gen_lazy_case(rng)
     if rng.random() < 0.15:
         c = make_case(gen_string_helpers(rng), rng)
         if c is not None and rng.random() < 0.35:
@@ -787,7 +826,10 @@ def run_python_peg(c):
                 pass
         return {"ok": [[w.category.__name__, str(w.message), w.lineno] for w in seen]}
     try:
-        t = compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv, dont_inherit=True)
+        with warnings.catch_warnings():
+            for cat in c.get("warn_error", []):
+                warnings.simplefilter("error", getattr(builtins, cat))
+            t = compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv, dont_inherit=True)
         return {"ok": enc(t)}
     except SyntaxError as e:
         text = None if e.text is None else [ord(x) for x in e.text]

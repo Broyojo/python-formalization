@@ -33,7 +33,8 @@ def convCharMsg (p : PS) (id : List Nat) : String :=
   s!"{chStr (tokPrefix p)}-string: invalid conversion character {cpsStr (Unparse.strRepr id)}: expected 's', 'r', or 'a'"
 
 /-- `_PyPegen_check_fstring_conversion(p, conv_token, conv)` (`Parser/action_helpers.c:1005-1027`,
-`fstring_conversion` and `tstring_conversion` in `Grammar/python.gram:976-977,989-990`), for the
+the action of `fstring_conversion`, `Grammar/python.gram:976-977`, which the t-string replacement
+fields use too, `:987` and `:996`), for the
 `!` token `bang` and the `NAME` `conv` after it:
 * when `conv` does not start where `!` ends (another line, or a gap), `NULL` and "f-string:
   conversion type must come right after the exclamation mark" over `!` .. the name, checked first;

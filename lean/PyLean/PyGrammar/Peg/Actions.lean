@@ -563,21 +563,40 @@ def raiseErrorForMissingComma (a b : Ast) : PM Ast := do
     raiseErrorKnownLocation "SyntaxError" la.lineno la.colOffset lb.endLineno lb.endColOffset msg
   return .null
 
-/-- `_warn_relative_import_of_lazy`, `Parser/action_helpers.c:2032-2079`, with warnings not turned
-into errors, like `warnInvalidEscapeSeq`. -/
-def warnRelativeImportOfLazy (dots module : Ast) : PM Unit := do
+/-- `_PyErr_EmitSyntaxWarning`, `Python/errors.c:1980-1997`: `PyErr_WarnExplicitObject` with
+`SyntaxWarning`, 0 on success. When the filter makes the warning an exception, it is replaced by a
+`SyntaxError` with the warning's message at the given location (`_PyErr_RaiseSyntaxError`,
+`:1956-1973`) and -1 is returned. Its `text` is `PyErr_ProgramTextObject(filename, lineno)`, `None`
+here: `filename` never names a readable file in this model. -/
+def emitSyntaxWarning (msg : String) (lineno col endLineno endCol : Int) : PM Int := do
+  if (← get).cfg.warnErrors.contains "SyntaxWarning" then
+    setErr { cls := "SyntaxError", msg, lineno := some lineno, offset := some col,
+             endLineno := some endLineno, endOffset := some endCol, text := none }
+    return -1
+  modify fun p =>
+    { p with tok := { p.tok with warnings := ("SyntaxWarning", msg, lineno) :: p.tok.warnings } }
+  return 0
+
+/-- The message of `_warn_relative_import_of_lazy`, `Parser/action_helpers.c:2052-2065`: `buf` is
+`count` dots. -/
+def lazyMsg (dots : Ast) : String :=
+  let buf := String.ofList (List.replicate (countDots dots).toNat '.')
+  s!"'from {buf} lazy import' is the same as 'from {buf}lazy import'; "
+    ++ s!"did you mean 'lazy from {buf} import'?"
+
+/-- `_warn_relative_import_of_lazy`, `Parser/action_helpers.c:2031-2079`: 0, or the result of
+`_PyErr_EmitSyntaxWarning` (`:2071-2078`) at the module name, columns made one-based. The
+`PyMem_RawMalloc` and `PyUnicode_FromFormat` failures (`:2052-2068`) are allocation failure, outside
+the model. `dots` is never empty here (`level > 0`), and its elements are tokens. -/
+def warnRelativeImportOfLazy (dots module : Ast) : PM Int := do
   let p ← get
-  if p.callInvalidRules then return
+  if p.callInvalidRules then return 0
   let m := locOf module
   match (seqOf dots).getLast? with
   | some (.tok d) =>
-    if d.endLineno == m.lineno && d.endColOffset == m.colOffset then return
-    let buf := String.ofList (List.replicate (countDots dots).toNat '.')
-    let msg := s!"'from {buf} lazy import' is the same as 'from {buf}lazy import'; "
-      ++ s!"did you mean 'lazy from {buf} import'?"
-    modify fun p =>
-      { p with tok := { p.tok with warnings := ("SyntaxWarning", msg, m.lineno) :: p.tok.warnings } }
-  | _ => pure ()
+    if d.endLineno == m.lineno && d.endColOffset == m.colOffset then return 0
+    emitSyntaxWarning (lazyMsg dots) m.lineno (m.colOffset + 1) m.endLineno (m.endColOffset + 1)
+  | _ => return 0
 
 /-- `alias->name` is `barry_as_FLUFL`. -/
 def isBarryAlias (al : Ast) : Bool :=
@@ -602,7 +621,8 @@ def hasValue : Ast → Bool
   | .null => false
   | _ => true
 
-/-- `_PyPegen_checked_from_import`, `Parser/action_helpers.c:2082-2114`. Fails with `.null`. -/
+/-- `_PyPegen_checked_from_import`, `Parser/action_helpers.c:2081-2114`. Fails with `.null`: the
+`lazy from __future__` error (`:2089-2093`) and a failed warning (`:2108-2110`). -/
 def checkedFromImport (dots moduleName names lazy : Ast) (l c el ec : Int) : PM Ast := do
   let level := countDots dots
   if level == 0 && isFutureModule moduleName then
@@ -612,7 +632,7 @@ def checkedFromImport (dots moduleName names lazy : Ast) (l c el ec : Int) : PM 
     if (seqOf names).any isBarryAlias then
       modify fun p => { p with flagBarry := true, tok := { p.tok with barryAsBdfl := true } }
   else if level > 0 && !hasValue lazy && isLazyModule moduleName then
-    warnRelativeImportOfLazy dots moduleName
+    if (← warnRelativeImportOfLazy dots moduleName) < 0 then return .null
   return mkAst .ImportFrom
     [fieldOf moduleName "id", names, .int level, .int (if hasValue lazy then 1 else 0),
      .int l, .int c, .int el, .int ec]
@@ -735,6 +755,8 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
   | .seq_first_item => return (seqOf a0).headD .null
   | .seq_last_item => return (seqOf a0).getLastD .null
   | .join_names_with_dot =>
+    -- `_PyPegen_join_names_with_dot`, `Parser/action_helpers.c:123-139`: `"%U.%U"` of the two
+    -- ids, a `Load` `Name` from the first name's start to the second's end.
     let id (e : Ast) := match fieldOf e "id" with
       | .ident s => s
       | _ => []

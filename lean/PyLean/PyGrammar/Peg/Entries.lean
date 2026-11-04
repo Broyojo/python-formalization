@@ -3,6 +3,8 @@ import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
 import PyLean.PyGrammar.Peg.ImportProps
+import PyLean.PyGrammar.Peg.ReaderProps
+import PyLean.PyGrammar.Peg.ErrorArms
 import PyLean.PyGrammar.Peg.HelperProps
 import PyLean.PyGrammar.Peg.RuleFacts
 import PyLean.PyGrammar.Peg.Rules.Entries
@@ -112,6 +114,22 @@ def entries : List Entry := [
     status := .proven
     prop := ``MakeArgumentsDefaultsFit
     thm := some ``makeArgumentsDefaultsFit_proven },
+  { id := "pygrammar-peg-make-arguments-exact"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_make_arguments_exact
+    statement := "For each of its five arguments NULL or not, _PyPegen_make_arguments builds " ++
+      "arguments(posonlyargs = slash_without_default, else the plain names then the pair names " ++
+      "of slash_with_default; args = plain names then the names of names_with_default; vararg, " ++
+      "kwonlyargs = names of the keyword-only pairs, kw_defaults = their defaults, kwarg from " ++
+      "star_etc, empty or NULL without it; defaults = the defaults of slash_with_default's pairs " ++
+      "then those of names_with_default)."
+    source := "Parser/action_helpers.c:504-692"
+    status := .proven
+    prop := ``MakeArgumentsExact
+    thm := some ``makeArgumentsExact_proven
+    notes := "No hypothesis: when both slash forms are given, slash_without_default wins for " ++
+      "posonlyargs and slash_with_default's defaults are still used, as in the C. The " ++
+      "assert(0) branch of _make_posargs is included." },
   { id := "pygrammar-peg-concat"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_concat
@@ -211,6 +229,118 @@ def entries : List Entry := [
     status := .proven
     prop := ``TokenReaders
     thm := some ``tokenReaders_proven },
+  { id := "pygrammar-peg-tokenizer-error-arms"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_tokenizer_error_arms
+    statement := "_Pypegen_tokenizer_error returns -1 and, with no exception set before, sets " ++
+      "error_indicator and raises by tok->done: E_TOKEN 'invalid token', E_EOF the unclosed " ++
+      "bracket or 'unexpected EOF while parsing', E_DEDENT IndentationError 'unindent does not " ++
+      "match any outer indentation level', E_INTR KeyboardInterrupt, E_NOMEM MemoryError, " ++
+      "E_TABSPACE TabError, E_TOODEEP IndentationError 'too many levels of indentation', " ++
+      "E_LINECONT 'unexpected character after line continuation character', E_COLUMNOVERFLOW " ++
+      "OverflowError, anything else 'unknown parsing error'; the known-location arms on the " ++
+      "tokenizer's line. With an exception already set it changes nothing."
+    source := "Parser/pegen_errors.c:23-81"
+    status := .proven
+    prop := ``TokenizerErrorArms
+    thm := some ``tokenizerErrorArms_proven },
+  { id := "pygrammar-peg-set-syntax-error-arms"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_set_syntax_error_arms
+    statement := "_Pypegen_set_syntax_error keeps an existing exception (refined by the " ++
+      "full-source check only for a SyntaxError with the tokenizer fine), and otherwise raises " ++
+      "for the first pass's last token: the unclosed bracket or 'unexpected EOF while parsing' " ++
+      "for an ERRORTOKEN at EOF, 'unexpected indent'/'unexpected unindent' for INDENT/DEDENT, " ++
+      "and else 'invalid syntax' at that token's line followed by the full-source check."
+    source := "Parser/pegen_errors.c:383-424"
+    status := .proven
+    prop := ``SetSyntaxErrorArms
+    thm := some ``setSyntaxErrorArms_proven
+    notes := "p->fill == 0 is not stated: unreachable, the first pass always counts a token." },
+  { id := "pygrammar-peg-memo-frontier"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_memo_frontier
+    statement := "_PyPegen_is_memoized at mark == fill fills a token, returning -1 with " ++
+      "error_indicator set if that fails and a miss on the filled state otherwise; with the " ++
+      "token read and no entry of the rule's type it is a miss that leaves the parser alone."
+    source := "Parser/pegen.c:341-373"
+    status := .proven
+    prop := ``MemoFrontier
+    thm := some ``memoFrontier_proven
+    notes := "memo.size = fill is the invariant FillToken keeps." },
+  { id := "pygrammar-peg-raise-error-exact"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_raise_error_exact
+    statement := "_PyPegen_raise_error bails out on an earlier error, raises at line 0 with no " ++
+      "token read, and otherwise raises at known_err_token or else tokens[mark] (use_mark) or " ++
+      "tokens[fill - 1], one-based columns or the tokenizer's column for a token without one, " ++
+      "on that token's line; with use_mark at the frontier it fills a token first and on " ++
+      "failure only sets error_indicator."
+    source := "Parser/pegen_errors.c:197-241"
+    status := .proven
+    prop := ``RaiseErrorExact
+    thm := some ``raiseErrorExact_proven },
+  { id := "pygrammar-peg-tokenize-rest-stops"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_tokenize_rest_stops
+    statement := "The loop of _PyPegen_tokenize_full_source_to_check_for_errors reads tokens up " ++
+      "to the first ERRORTOKEN or ENDMARKER and stops there; at an ERRORTOKEN with no tokenizer " ++
+      "exception and a bracket still open on a line before the generic error's, it raises " ++
+      "\"'c' was never closed\" for it, and otherwise raises nothing."
+    source := "Parser/pegen_errors.c:154-177"
+    status := .proven
+    prop := ``TokenizeRestStops
+    thm := some ``tokenizeRestStops_proven
+    notes := "With pygrammar-peg-tokenize-full-source (the prompt check and which exception " ++
+      "survives) this covers the function." },
+  { id := "pygrammar-peg-run-parser-paths"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_run_parser_paths
+    statement := "_PyPegen_run_parser drops a result with an exception pending; with no result " ++
+      "raises _IncompleteInputError at the end of incomplete input, returns a non-SyntaxError " ++
+      "as is, and otherwise runs the second pass from the reset state (no recorded statement, " ++
+      "memo cleared, mark 0, invalid rules on) and sets the syntax error from the first pass's " ++
+      "last token; with a result it refuses a single input with more statements and otherwise " ++
+      "returns it."
+    source := "Parser/pegen.c:940-992"
+    status := .proven
+    prop := ``RunParserPaths
+    thm := some ``runParserPaths_proven
+    notes := "_PyAST_Validate under Py_DEBUG is not modelled; reset_parser_state_for_error_pass's " ++
+      "interactive_underflow is interactive-only." },
+  { id := "pygrammar-peg-token-readers-exact"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_token_readers_exact
+    statement := "With the token at the mark read: expect_forced_token bails out on an earlier " ++
+      "error, takes a token of the type and moves the mark, and otherwise raises SyntaxError " ++
+      "\"expected '<x>'\" at that token's line without moving; expect_soft_keyword takes a NAME " ++
+      "spelled kw as a Name, and leaves the parser untouched otherwise; name_token takes a NAME " ++
+      "as a Name, and leaves the parser untouched otherwise; soft_keyword_token takes a NAME " ++
+      "that is a soft keyword, returns NULL past any other NAME, and leaves other tokens alone."
+    source := "Parser/pegen.c:435-478, 585-612"
+    status := .proven
+    prop := ``TokenReadersExact
+    thm := some ``tokenReadersExact_proven },
+  { id := "pygrammar-peg-token-readers-frontier"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_token_readers_frontier
+    statement := "At the mark == fill frontier each token reader first fills a token: if that " ++
+      "fails it returns NULL with error_indicator set on the state the fill left, and " ++
+      "otherwise it reads the new token as when it was already there."
+    source := "Parser/pegen.c:407-411, 437-441, 459-463"
+    status := .proven
+    prop := ``TokenReadersFrontier
+    thm := some ``tokenReadersFrontier_proven },
+  { id := "pygrammar-peg-name-from-token"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_name_from_token
+    statement := "_PyPegen_name_from_token builds Name(id, Load) at the token's location from " ++
+      "the identifier _PyPegen_new_identifier makes of its bytes, and returns NULL with " ++
+      "error_indicator set when the identifier is refused."
+    source := "Parser/pegen.c:565-582"
+    status := .proven
+    prop := ``NameFromToken
+    thm := some ``nameFromToken_proven },
   { id := "pygrammar-peg-never-silent"
     pyFile := "Parser/pegen.c"
     pyFns := Rows.peg_never_silent
@@ -327,6 +457,18 @@ def entries : List Entry := [
     status := .proven
     prop := ``StripInterpolation
     thm := some ``stripInterpolation_proven },
+  { id := "pygrammar-peg-strip-continuations"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_strip_continuations
+    statement := "After a debug '=', whitespace followed by any number of explicit line " ++
+      "continuations (a backslash, then whitespace holding a line end) is removed with the '=', " ++
+      "and what precedes the '=' is kept."
+    source := "the comment in Parser/action_helpers.c:1548-1549"
+    status := .proven
+    prop := ``StripContinuations
+    thm := some ``stripContinuations_proven
+    notes := "Needs the outer loop of 1550-1568: a body that strips only one whitespace run " ++
+      "returns 'x=\\' plus newline unchanged and fails it." },
   { id := "pygrammar-peg-decode-known"
     pyFile := "Parser/pegen_errors.c"
     pyFns := Rows.peg_decode_known
@@ -360,18 +502,22 @@ def entries : List Entry := [
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_warn_lazy
     statement := "_warn_relative_import_of_lazy warns on `from . lazy import x` with the right " ++
-      "number of dots, and not on `from .lazy import x` or on the second pass."
+      "number of dots and returns 0, and does nothing on `from .lazy import x` or on the second " ++
+      "pass; when the warnings filter makes SyntaxWarning an error it raises SyntaxError with " ++
+      "the warning's message at the module name and returns -1."
     source := "the comments in Parser/action_helpers.c:2034-2037"
     status := .proven
     prop := ``WarnRelativeLazy
     thm := some ``warnRelativeLazy_proven
-    notes := "Warnings as errors are out of scope, as for warn_invalid_escape_sequence." },
+    notes := "The filter is Cfg.warnErrors, by category; filters on message, module or line " ++
+      "are out of scope. text is None: the model's filename names no file." },
   { id := "pygrammar-peg-checked-from-import"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_checked_from_import
-    statement := "_PyPegen_checked_from_import refuses lazy from __future__, otherwise builds " ++
-      "the ImportFrom of the module, names, dots and lazy flag, and only from __future__ import " ++
-      "barry_as_FLUFL turns on `<>`."
+    statement := "_PyPegen_checked_from_import refuses lazy from __future__, returns NULL when " ++
+      "the lazy-import warning fails (an error filter), otherwise builds the ImportFrom of the " ++
+      "module, names, dots and lazy flag, and only from __future__ import barry_as_FLUFL turns " ++
+      "on `<>`."
     source := "PEP 810 and Parser/action_helpers.c:2082-2114"
     status := .proven
     prop := ``CheckedFromImport
@@ -379,9 +525,10 @@ def entries : List Entry := [
   { id := "pygrammar-peg-register-stmts"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_register_stmts
-    statement := "_PyPegen_register_stmts does nothing in the first pass; in the second it " ++
-      "records the last statement unless a later one is recorded."
-    source := "invariant"
+    statement := "_PyPegen_register_stmts returns its statements unchanged; it leaves the " ++
+      "parser alone in the first pass and for no statements, and in the second records the " ++
+      "last statement's line and column unless the recorded one is on a later line."
+    source := "Parser/action_helpers.c:2116-2134; read by _PyPegen_set_syntax_error_metadata"
     status := .proven
     prop := ``RegisterStmts
     thm := some ``registerStmts_proven },
