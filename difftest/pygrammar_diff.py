@@ -524,6 +524,27 @@ RULE_FORMS = [
     "del {e}", "if {e}:\n pass\nelif {f}:\n pass\nelse:\n pass", "if {e}: pass\nelse pass",
     "if {e}:\npass", "while {e}:\n pass\nelse:\n pass", "while {e}: {f}", "if {e}: {f}; {e}",
     "{e}, {f}", "{e},", "{e}, {f},", "x = {e} if {f} else {e}", "lambda: {e}", "type X[T] = {e}",
+    # try / except / except* / finally / elif (Peg/Rules/Try.lean, Except.lean)
+    "try:\n pass\nexcept {e}:\n pass", "try:\n pass\nexcept {e} as {n}:\n pass",
+    "try:\n pass\nexcept {e}, {f}:\n pass", "try:\n pass\nexcept:\n pass\nelse:\n pass\nfinally:\n pass",
+    "try:\n pass\nexcept* {e}:\n pass", "try:\n pass\nexcept* {e} as {n}:\n pass",
+    "try:\n pass\nexcept* {e}, {f}:\n pass", "try:\n pass\nexcept*:\n pass", "try pass", "try:\n pass",
+    "try:\n pass\nfinally pass", "try:\n pass\nfinally:\n pass", "try:\n pass\nexcept {e}:\n pass\nexcept* {f}:\n pass",
+    "try:\n pass\nexcept {e} {f}:\n pass", "try:\n pass\nexcept* {e} as {f}:\n pass", "try:\n pass\nelse:\n pass",
+    "if {e}:\n pass\nelif {f}:\n pass\nelif {e}:\n pass", "if {e}:\n pass\nelif {f} pass", "if {e}:\n pass\nelif:\n pass",
+    # with (Peg/Rules/With.lean)
+    "with {e}:\n pass", "with {e} as {n}:\n pass", "with ({e}, {f}):\n pass", "with ({e} as x, {f} as y,):\n pass",
+    "with ({e}, {f}) as {n}:\n pass", "with ({e}): # type: int\n pass", "async with ({e}, {f}): # type: int\n pass",
+    "async with ({e} as x): # type: int\n pass", "async with {e} as {n}: # type: int\n pass",
+    "with {e} as {n}, {f}: # type: int\n pass", "async with ({e}):\n pass", "with {e} as {f} {e}:\n pass",
+    "with {e}\n pass", "with ({e} as {f}):\n pass", "async with {e}:\n pass", "with:\n pass",
+    # imports, definitions, annotations, defaults (Peg/Rules/Defs.lean)
+    "from x import ({n})", "from x import ({n},)", "from x import {n},", "from x import *", "from x import (*)",
+    "from x import {n} {m}", "@{e}\nclass C: pass", "@{e}\n@{f}\nclass C({e}): pass", "class C[T]({e}, x={f}): pass",
+    "class C(): pass", "class {n}: pass", "class C:\npass", "@{e}\ndef f(): pass", "@{e}\nasync def f(): pass",
+    "def f({n}) -> {e}: pass", "def f[T](x: {e} = {f}, *a: *{e}): pass", "async def f(x={e}): pass",
+    "def f(x=): pass", "def f(): # type: () -> int\n pass", "def f(*a: {e}): pass", "def f(x: {e}, y={f}): pass",
+    "@{e}\nx = 1", "def f({e}): pass", "lambda x={e}: x",
 ]
 
 
@@ -544,7 +565,14 @@ def gen_rule_target(rng):
 
 def gen_case_peg(rng):
     if rng.random() < 0.3:
-        return make_case(gen_rule_target(rng), rng)
+        c = make_case(gen_rule_target(rng), rng)
+        # the rule statements pin type comments and CHECK_VERSION paths: reach them more often
+        if c is not None and c["mode"] == "exec":
+            if rng.random() < 0.2:
+                c["type_comments"] = True
+            if rng.random() < 0.1:
+                c["feature_version"] = rng.choice([4, 9, 10, 13])
+        return c
     if rng.random() < 0.12:
         src = rng.choice(REPIN)
         if rng.random() < 0.3:

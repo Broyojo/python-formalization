@@ -169,6 +169,9 @@ def peg_tokenizer_error : List String := [
 def peg_warn_lazy : List String := [
   "_warn_relative_import_of_lazy"]
 
+def rule_annotation_default : List String := [
+  "rule:annotation", "rule:star_annotation", "rule:default"]
+
 def rule_assert_stmt : List String := [
   "rule:assert_stmt"]
 
@@ -187,6 +190,9 @@ def rule_assignment_invalid : List String := [
 def rule_assignment_more : List String := [
   "rule:assignment"]
 
+def rule_async_with_type_comment : List String := [
+  "rule:with_stmt"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 
@@ -195,6 +201,12 @@ def rule_await_primary : List String := [
 
 def rule_block : List String := [
   "rule:block"]
+
+def rule_class_def : List String := [
+  "rule:class_def"]
+
+def rule_class_def_raw : List String := [
+  "rule:class_def_raw"]
 
 def rule_comparison : List String := [
   "rule:comparison"]
@@ -214,11 +226,20 @@ def rule_del_stmt_invalid : List String := [
 def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
 
+def rule_elif_stmt : List String := [
+  "rule:elif_stmt"]
+
 def rule_else_block : List String := [
   "rule:else_block"]
 
 def rule_eval : List String := [
   "rule:eval"]
+
+def rule_except_block : List String := [
+  "rule:except_block"]
+
+def rule_except_star_block : List String := [
+  "rule:except_star_block"]
 
 def rule_expression : List String := [
   "rule:expression"]
@@ -229,11 +250,20 @@ def rule_factor : List String := [
 def rule_file : List String := [
   "rule:file"]
 
+def rule_finally_block : List String := [
+  "rule:finally_block"]
+
 def rule_for_stmt : List String := [
   "rule:for_stmt"]
 
 def rule_func_type : List String := [
   "rule:func_type"]
+
+def rule_function_def : List String := [
+  "rule:function_def"]
+
+def rule_function_def_raw : List String := [
+  "rule:function_def_raw"]
 
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
@@ -243,6 +273,9 @@ def rule_if_stmt : List String := [
 
 def rule_import_from : List String := [
   "rule:import_from"]
+
+def rule_import_from_targets : List String := [
+  "rule:import_from_targets"]
 
 def rule_import_name : List String := [
   "rule:import_name"]
@@ -295,8 +328,17 @@ def rule_star_expressions : List String := [
 def rule_statement : List String := [
   "rule:statement"]
 
+def rule_try_stmt : List String := [
+  "rule:try_stmt"]
+
 def rule_while_stmt : List String := [
   "rule:while_stmt"]
+
+def rule_with_item : List String := [
+  "rule:with_item"]
+
+def rule_with_stmt : List String := [
+  "rule:with_stmt"]
 
 def rule_yield_expr : List String := [
   "rule:yield_expr"]
