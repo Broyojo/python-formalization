@@ -1,0 +1,76 @@
+id: pyio-textio-tell-after-next-stale-snapshot
+title: "io.TextIOWrapper.tell() after next() and flush() returns a position past the end, reading past its stale snapshot"
+priority: P3
+kind: wrong-result
+module: pyio
+files: [Modules/_io/textio.c, Lib/_pyio.py]
+functions: ["_io_TextIOWrapper_tell_impl", "textiowrapper_iternext_lock_held", "_io_TextIOWrapper_flush_impl",
+            "textiowrapper_read_chunk", "TextIOWrapper.tell"]
+summary: |
+  next() on a TextIOWrapper clears `telling` (textio.c:3291), so read_chunk stops updating the
+  snapshot (:1957, :2036) but does update b2cratio (:2029-2032). flush() sets `telling` back
+  (:3223) without dropping the snapshot or the decoded characters. A tell() after next() and
+  flush() then rebuilds the position from a snapshot taken before the read, with the ratio of the
+  read: skip_bytes = b2cratio * decoded_chars_used (:2949) exceeds the snapshot, and only an
+  assert bounds it (:2951). Release builds hand the decoder bytes past the end of next_input
+  (:2957). With the empty snapshot that seek() leaves, one byte past is the bytes object's
+  terminating NUL, which decodes as a character; more is memory outside the object (the static
+  empty-bytes singleton here).
+
+  f = io.TextIOWrapper(io.BytesIO(b'\nb\xe2\x82\xac'), encoding='utf-8'); f.seek(f.tell());
+  next(f) == '\n'; f.flush(); f.tell() returns 6 for a 5-byte stream, and f.seek(f.tell()); f.read()
+  gives '' where 'b€' remains unread. b'a\n' + '€'.encode() * 20 (62 bytes) gives 64, an
+  over-read of 5 bytes. _pyio raises AssertionError('pending decoded text') in the same place.
+likelihood: |
+  Low to moderate. tell() inside a `for line in f` loop is refused ("telling position disabled by
+  next() call"), but any flush() (also from truncate(), reconfigure() or a write with
+  line_buffering) re-enables it, and the position is then silently wrong. A debug build aborts
+  on the assert.
+maybe_intended: |
+  No for the over-read and the position past EOF. Calling tell() during iteration is documented
+  as unsupported only through the OSError, which flush() lifts; the expected outcomes are the
+  position after the line, or that OSError.
+promised_by: |
+  Doc/library/io.rst TextIOBase.tell ("Return the current stream position as an opaque number"):
+  a cookie that seek() maps past the unread text loses data. Invariant: no read past a buffer.
+reproducer: |
+  import io
+  data = b'\nb\xe2\x82\xac'
+  f = io.TextIOWrapper(io.BytesIO(data), encoding='utf-8')
+  f.seek(f.tell())
+  line = next(f)
+  f.flush()
+  pos = f.tell()
+  f.seek(pos)
+  rest = f.read()
+  print('line', repr(line), 'tell', pos, 'len', len(data), 'rest', repr(rest))
+  if pos > len(data) and rest == '':
+      print('REPRODUCED pyio-textio-tell-after-next-stale-snapshot')
+expected: |
+  tell() returns 1 (after '\n') and read() then returns 'b€', or tell() raises OSError.
+observed: |
+  python3 3.15.2: line '\n' tell 6 len 5 rest ''. REPRODUCED. Larger cases from the probe:
+  b'a\nbc\xe2\x82\xac' gives 9 (7 bytes), b'a\nbcdefgh' 11 (9 bytes), b'a\n' + '€'*20 64 (62 bytes).
+  _pyio: AssertionError('pending decoded text') for every one.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same values. REPRODUCED.
+cause: |
+  Modules/_io/textio.c:3291 (iternext clears telling) and :3223 (flush sets it again) leave the
+  snapshot stale; :2949 scales chars_to_skip by the new b2cratio; :2951 is an assert, not a check;
+  :2957 decodes skip_bytes bytes from next_input whatever its size; :2995-3019 then advance
+  `input` past input_end, skip the final decode and build a cookie past the stream.
+possible_fix: |
+  Clear the snapshot (and so the decoded characters' claim to it) when next() disables telling,
+  or have flush() leave telling off while decoded characters from an untracked read remain; and
+  bound skip_bytes by len(next_input) in tell() (gh-161054 does the last part, which alone turns
+  the result into OSError "can't reconstruct logical file position").
+duplicates:
+  issues:
+    - {number: 161053, state: open, relation: "same unchecked skip_bytes and over-read (textio.c:2949-2957), reached through seek() to a cookie that skips characters", reason: "different trigger; its fix (gh-161054) bounds the read but leaves this path returning OSError on a valid stream"}
+    - {number: 160811, state: open, relation: "same assert, reached through a stale b2cratio after seek() past a \\r", reason: "different trigger"}
+    - {number: 81217, state: open, relation: "iterating disables tell(); the cause of the stale snapshot", reason: "feature discussion, not this wrong result"}
+  queries: ["TextIOWrapper tell next flush assertion (unquoted)", "textio tell skip_bytes (unquoted)",
+            "TextIOWrapper tell after next snapshot (unquoted)", "bugforge README: no TextIOWrapper entries"]
+lean:
+  property: PyLean.PyIO.TextCTellAfterNextInRange
+  theorem: PyLean.PyIO.textCTellAfterNextInRange_refuted
+  model: "PyLean.PyIO.TCm.snapBytes reads the terminating NUL one byte past the snapshot and calls a longer over-read undefined behaviour"

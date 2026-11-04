@@ -368,14 +368,27 @@ def parseCookie (c : Int) : Py (Int × Int × Int × Int × Bool) :=
 def decoderSetstate (start flags : Int) : TM Unit :=
   SM.mod fun t => if start = 0 ∧ flags = 0 then decReset t else decSet t ([], flags)
 
+/-- The `skip_bytes` bytes at the start of the snapshot's `next_input` that
+`DECODER_DECODE(input, skip_bytes, ...)` (textio.c:2957) hands the decoder. `skip_bytes`
+comes from `b2cratio` (:2949) and is bounded only by an `assert` (:2951), so a stale
+snapshot (one `next()` stopped updating, then `flush()` re-enabled `tell()`) or a stale
+ratio can ask for more than `next_input` holds. A `bytes` object keeps a NUL after its
+data (`ob_sval[ob_size] == 0`, Include/cpython/bytesobject.h:12), so one byte past the end reads `0`; further is outside
+the object, undefined behaviour. -/
+def snapBytes (next : List Nat) (skipBytes : Int) : TM (List Nat) :=
+  if skipBytes ≤ next.length then pure (next.take skipBytes.toNat)
+  else if skipBytes = next.length + 1 then pure (next ++ [0])
+  else thr ubErr
+
 /-- The fast search of `_io_TextIOWrapper_tell_impl`, textio.c:2949-2980. -/
 def tellSkip (next : List Nat) (start : Int) : Nat → Int → Int → Int → Int → TM (Int × Int × Int)
   | 0, _, _, _, _ => thr .modelFuel
   | fuel + 1, skipBytes, skipBack, flags, cts => do
     if skipBytes > 0 then
       decoderSetstate start flags
+      let input ← snapBytes next skipBytes
       let t ← SM.get
-      match decodeStep t (next.take skipBytes.toNat) false with
+      match decodeStep t input false with
       | .error e => thr e
       | .ok (d, out) =>
         SM.mod fun t => { t with dec := d }
@@ -430,6 +443,9 @@ def tell : TM Int := do
       let (skip, flags, cts) ← tellSkip next start (skip.toNat + 2) skip 1 flags cts
       let start := start + skip
       if cts = 0 then pure (buildCookie start flags 0 0 false) else
+      -- `input += skip_bytes` past `input_end` (:2995-2997): the byte loop does not run
+      -- and `input == input_end` (:3019) is false, so no final decode and no `need_eof`
+      if skip > next.length then pure (buildCookie start flags 0 cts false) else
       let (sp, fl, bf, cd, cts, broke) ← tellFeed (next.drop skip.toNat) start flags 0 0 cts
       if broke then pure (buildCookie sp fl bf cts false) else
       let t ← SM.get

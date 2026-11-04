@@ -59,7 +59,9 @@ def drop_stale_tell(ops):
 
     next() stops updating the snapshot and flush() (also via truncate and
     reconfigure) re-enables tell(), which then reads past the snapshot in C and
-    fails an assertion in _pyio. That outcome is not a function of the case.
+    fails an assertion in _pyio (bugs/pyio-textio-tell-after-next-stale-snapshot.yaml).
+    The model reads the one byte past it (the bytes object's NUL) and calls a longer
+    over-read undefined behaviour; most cases drop such a tell, some keep it.
     """
     out, nexted, stale = [], False, False
     for op in ops:
@@ -121,7 +123,11 @@ def gen_tiow(rng):
         ops += [{"op": "detach"}, {"op": "closed"}]
         ops += [{"op": rng.choice(UNATTACHED)} for _ in range(rng.randint(0, 3))]
     else:
-        ops = drop_stale_tell(ops + [{"op": "flush"}, {"op": "bufvalue"}, {"op": "tell"}, {"op": "newlines"}, {"op": "closed"}])
+        ops = ops + [{"op": "flush"}, {"op": "bufvalue"}, {"op": "tell"}, {"op": "newlines"}, {"op": "closed"}]
+        # mostly drop a tell() after next() and a flush: its snapshot is stale (see
+        # drop_stale_tell); the rest test the model of that case, over-read included
+        if rng.random() < 0.9:
+            ops = drop_stale_tell(ops)
     uninit = c_side and rng.random() < 0.04
     if uninit:
         ops = [{"op": rng.choice(UNATTACHED + ["tell", "chunkget"])} for _ in range(rng.randint(1, 6))]
@@ -317,5 +323,25 @@ def run_python(c):
     return {"ok": out}
 
 
+def agree(py, lean):
+    """As common.agree, except that the results stop at an operation the model calls
+    undefined behaviour (C TextIOWrapper.tell() reading more than one byte past its
+    snapshot): only the operations before it are compared."""
+    if "ok" in py and "ok" in lean and isinstance(lean["ok"], list) and isinstance(py["ok"], list):
+        ub = [i for i, r in enumerate(lean["ok"]) if isinstance(r, dict) and r.get("exc") == "UndefinedBehaviour"]
+        if ub:
+            UB[0] += 1
+            k = ub[0]
+            return len(py["ok"]) > k and all(common_agree(a, b) for a, b in zip(py["ok"][:k], lean["ok"][:k]))
+    return common_agree(py, lean)
+
+
+UB = [0]
+common_agree = common.agree
+
 if __name__ == "__main__":
-    common.main(gen_case, run_python, default_cases=20000)
+    common.agree = agree
+    try:
+        common.main(gen_case, run_python, default_cases=20000)
+    finally:
+        print(f"ub cases (compared up to the UB): {UB[0]}")
