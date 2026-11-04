@@ -21,6 +21,7 @@ import PyLean.Decimal.Exact4
 import PyLean.Decimal.AddExact
 import PyLean.Decimal.RotateShift
 import PyLean.Decimal.DivExact
+import PyLean.Decimal.LogicalExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -703,7 +704,14 @@ def entries : List Entry := [
     statement := "For every context: divmod with a NaN operand is _check_nans's NaN twice; divmod(INF, INF) and divmod(0, 0) are InvalidOperation with a NaN pair; divmod(INF, x) for finite x is the signed infinity and InvalidOperation's NaN; divmod(x, 0) for non-zero x is DivisionByZero's signed infinity then InvalidOperation's NaN, the first trapped of them raising; divmod(x, INF) is the signed zero and x through _fix; and for a finite non-zero divisor, _divide's quotient (decimal-divide-exact's cases) with its remainder through _fix."
     source := "Lib/_pydecimal.py:1473-1507; Doc/reference/datamodel.rst (__divmod__)"
     status := .proven, prop := ``DivmodExact, thm := some ``divmodExact_proven
-    notes := "Checked on 3.15.2 under the four trap sets: divmod(-3, 0) gives (-Infinity, NaN) with DivisionByZero and InvalidOperation, raises DivisionByZero when it is trapped and InvalidOperation (both flags set) when only that is; divmod(-Inf, 2) and divmod(-Inf, 0) give (-Infinity, NaN); divmod(-123456.7, -Inf) gives (0, -1.2346E+5)." }
+    notes := "Checked on 3.15.2 under the four trap sets: divmod(-3, 0) gives (-Infinity, NaN) with DivisionByZero and InvalidOperation, raises DivisionByZero when it is trapped and InvalidOperation (both flags set) when only that is; divmod(-Inf, 2) and divmod(-Inf, 0) give (-Infinity, NaN); divmod(-123456.7, -Inf) gives (0, -1.2346E+5)." },
+  { id := "decimal-logical-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.logical_and", "Decimal.logical_or", "Decimal.logical_xor", "Decimal.logical_invert",
+              "Decimal._islogical", "Decimal._fill_logical"]
+    statement := "For every context: logical_and, logical_or and logical_xor of two logical operands (finite, sign 0, exponent 0, every decimal digit 0 or 1) give the logical number whose digit at each of the low prec positions is the and / or / exclusive or of the operands' digits at that position (an operand's digits beyond prec are cut, missing ones are 0), with no flag; logical_invert of a logical operand gives the one whose low prec digits are its inverted digits; any other operand (a sign, an exponent, a digit above 1, an infinity or a NaN, quiet or signaling) is InvalidOperation with a NaN."
+    source := "Lib/_pydecimal.py:3418-3513 (the docstrings of _islogical and logical_*); General Decimal Arithmetic, 'Logical operations'"
+    status := .proven, prop := ``LogicalExact, thm := some ``logicalExact_proven
+    notes := "lspec reads the digits arithmetically (x / 10**i % 10); islogical_iff and fill_reverse connect them to _pydecimal's digit strings and _fill_logical's padding and cut. Checked on 3.15.2: 118,443 random operations (prec 1 to 14, operands of up to 18 digits, and -1, 2, 10E1, 1.0, -0, 0E-1, 102, NaN, sNaN, Inf) agree with this statement, value and flags." }
 ]
 
 end PyLean.Decimal

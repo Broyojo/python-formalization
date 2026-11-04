@@ -112,12 +112,12 @@ Lib/_pydecimal.py	3257	3305	Decimal.ln	ln(self, context=None)	todo
 Lib/_pydecimal.py	3307	3335	Decimal._log10_exp_bound	_log10_exp_bound(self)	todo		
 Lib/_pydecimal.py	3337	3386	Decimal.log10	log10(self, context=None)	todo		
 Lib/_pydecimal.py	3388	3416	Decimal.logb	logb(self, context=None)	modelled	decimal-logb-exact	
-Lib/_pydecimal.py	3418	3430	Decimal._islogical	_islogical(self)	todo		
-Lib/_pydecimal.py	3432	3443	Decimal._fill_logical	_fill_logical(self, context, opa, opb)	todo		
-Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context=None)	todo		
-Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	todo		
-Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	todo		
-Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	todo		
+Lib/_pydecimal.py	3418	3430	Decimal._islogical	_islogical(self)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3432	3443	Decimal._fill_logical	_fill_logical(self, context, opa, opb)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3445	3463	Decimal.logical_and	logical_and(self, other, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3465	3473	Decimal.logical_invert	logical_invert(self, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=None)	modelled	decimal-logical-exact	
+Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	modelled	decimal-logical-exact	
 Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
@@ -186,10 +186,10 @@ Lib/_pydecimal.py	4728	4743	Context.is_zero	is_zero(self, a)	modelled	decimal-co
 Lib/_pydecimal.py	4745	4765	Context.ln	ln(self, a)	todo		
 Lib/_pydecimal.py	4767	4793	Context.log10	log10(self, a)	todo		
 Lib/_pydecimal.py	4795	4819	Context.logb	logb(self, a)	modelled	decimal-context-methods-match-decimal,decimal-logb-exact	
-Lib/_pydecimal.py	4821	4846	Context.logical_and	logical_and(self, a, b)	todo		review: ctxBin logicalAnd (Context.lean:111) is :4845-4846 plus :3453 and Equiv2 pins the wrapper, but Decimal.logical_and has no entry (part 1 HOLLOW), so the digit-wise result and the InvalidOperation for non-logical operands are unstated.
-Lib/_pydecimal.py	4848	4865	Context.logical_invert	logical_invert(self, a)	todo		review: ctxUn logicalInvert (Context.lean:127) is :4864-4865 and Equiv1 pins the wrapper, but Decimal.logical_invert has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	4867	4892	Context.logical_or	logical_or(self, a, b)	todo		review: ctxBin logicalOr (Context.lean:112) is :4891-4892 plus :3483 and Equiv2 pins the wrapper, but Decimal.logical_or has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	4894	4919	Context.logical_xor	logical_xor(self, a, b)	todo		review: ctxBin logicalXor (Context.lean:113) is :4918-4919 plus :3503 and Equiv2 pins the wrapper, but Decimal.logical_xor has no entry (part 1 HOLLOW), so the result is unstated.
+Lib/_pydecimal.py	4821	4846	Context.logical_and	logical_and(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4848	4865	Context.logical_invert	logical_invert(self, a)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4867	4892	Context.logical_or	logical_or(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
+Lib/_pydecimal.py	4894	4919	Context.logical_xor	logical_xor(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-logical-exact	
 Lib/_pydecimal.py	4921	4946	Context.max	max(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4948	4963	Context.max_mag	max_mag(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4965	4990	Context.min	min(self, a, b)	modelled	decimal-context-methods-match-decimal	

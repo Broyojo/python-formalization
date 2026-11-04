@@ -520,6 +520,7 @@ decimal-truediv-exact	proven	Lib/_pydecimal.py	Decimal.__truediv__,_WorkRep.__in
 decimal-divide-exact	proven	Lib/_pydecimal.py	Decimal._divide,_WorkRep.__init__
 decimal-mod-exact	proven	Lib/_pydecimal.py	Decimal.__mod__
 decimal-divmod-exact	proven	Lib/_pydecimal.py	Decimal.__divmod__
+decimal-logical-exact	proven	Lib/_pydecimal.py	Decimal.logical_and,Decimal.logical_or,Decimal.logical_xor,Decimal.logical_invert,Decimal._islogical,Decimal._fill_logical
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
