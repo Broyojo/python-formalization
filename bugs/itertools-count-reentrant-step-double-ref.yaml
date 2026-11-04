@@ -9,7 +9,7 @@ files: [Modules/itertoolsmodule.c]
 functions: ["count_nextlong", "count_next"]
 summary: |
   In slow mode count_nextlong takes result = lz->long_cnt without a new reference (:3633; the
-  comment at :3630-3631 says the count's reference is either returned or kept), then calls
+  comment at :3631-3632 says the count's reference is either returned or kept), then calls
   PyNumber_Add(result, lz->long_step) (:3635). A step whose __radd__ calls next() on the same
   count re-enters: the inner call reads the same long_cnt, returns it with the count's
   reference and stores its own sum. The outer call then stores its sum over that one (whose
@@ -59,7 +59,7 @@ observed: |
   (Modules/itertoolsmodule.c:3608-3630 on main).
 promised_by: |
   Undisputed invariant: Python code must not be able to make the interpreter use freed memory.
-  The comment at Modules/itertoolsmodule.c:3630-3631 states the ownership rule the code relies
+  The comment at Modules/itertoolsmodule.c:3631-3632 states the ownership rule the code relies
   on.
 cause: |
   Modules/itertoolsmodule.c:3633 borrows lz->long_cnt and :3635 calls Python code before
@@ -78,8 +78,7 @@ duplicates:
     - {number: 154670, state: open, relation: "the same use-after-free, reported with a PYTHONMALLOC=debug segfault", reason: "duplicate"}
     - {number: 154671, state: open, relation: "fix PR for 154670", reason: "not merged"}
     - {number: 123471, state: open, relation: "concurrent iteration over itertools under free-threading", reason: "threads, not re-entry"}
-  queries: ["gh issue view 154670 --comments", "gh pr list --search 154670 --state all",
-            "itertools product NULL (word search, titles read)"]
+  queries: ["gh issue view 154670 --comments", "gh pr list --search 154670 --state all"]
   note: |
     Recorded as a duplicate on the caller's instruction: the model now expresses the path of
     gh-154670, and this record ties the refuted Lean property to it.

@@ -163,7 +163,7 @@ def entries : List Entry := [
   { id := "itertools-count-no-reentry", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["count_next", "count_nextlong"]
     statement := "For every number type whose add does not call next() on the count, the mirror of count_next/count_nextlong with a re-entrant add returns what cCountNext returns and leaves the same object, for every state; and along every sequence of next() calls from the constructor no reference to a value is handed over twice."
-    source := "invariant: the comment at Modules/itertoolsmodule.c:3630-3631 (the count's reference to long_cnt is either returned or kept)", status := .proven
+    source := "invariant: the comment at Modules/itertoolsmodule.c:3631-3632 (the count's reference to long_cnt is either returned or kept)", status := .proven
     prop := ``CountNextNoReentry, thm := some ``countNextNoReentry_proven
     notes := "References are modelled by name: the count's own, a new one for each PyLong_FromSsize_t and PyNumber_Add result. The first conjunct carries every count theorem above over to the re-entrant mirror when nothing re-enters." },
   { id := "itertools-count-reentry-twice", pyFile := "Modules/itertoolsmodule.c"
@@ -175,7 +175,7 @@ def entries : List Entry := [
   { id := "itertools-count-hands-out-once", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_count_impl", "count_next", "count_nextlong"]
     statement := "For every number type and add, along every sequence of next() calls from the constructor, no reference to a value is handed over twice."
-    source := "invariant: the comment at Modules/itertoolsmodule.c:3630-3631; no use-after-free from Python code", status := .refuted
+    source := "invariant: the comment at Modules/itertoolsmodule.c:3631-3632; no use-after-free from Python code", status := .refuted
     prop := ``CountHandsOutOnce, thm := some ``countHandsOutOnce_refuted
     bug := some "itertools-count-reentrant-step-double-ref"
     notes := "count(5, Step()) whose step's first __radd__ calls next(c): both calls return 5 with the count's reference. Already reported upstream as python/cpython#154670 (open, fix PR python/cpython#154671 open)." },

@@ -6,7 +6,7 @@ add that is Python code and can call `next()` on the same count object, which is
 path of python/cpython#154670.
 
 `count_nextlong` takes `result = lz->long_cnt` (:3633) without a new reference: the comment
-at :3630-3631 says the count's own reference is either returned or kept. It then calls
+at :3631-3632 says the count's own reference is either returned or kept. It then calls
 `PyNumber_Add(result, lz->long_step)` (:3635). If the step's `__radd__` calls `next()` on
 the same count, the inner call reads the same `long_cnt`, hands the count's reference to
 its caller and stores its own sum; the outer call then stores its sum over that one and
@@ -179,7 +179,7 @@ count's own (when it holds one) older too and not handed over, none handed over 
 def RefOk (H : List Nat) (fresh ref : Nat) (holds : Bool) : Prop :=
   (∀ r ∈ H, r < fresh) ∧ (holds = true → ref < fresh ∧ ref ∉ H) ∧ H.Nodup
 
-/-- What `count_nextlong` relies on (:3630-3631), for an object. -/
+/-- What `count_nextlong` relies on (:3631-3632), for an object. -/
 def RefInv (t : CountR ν) : Prop := RefOk t.handed t.fresh t.ref t.s.longCnt.isSome
 
 theorem nodup_snoc (H : List Nat) (x : Nat) (h : H.Nodup) (hx : x ∉ H) : (H ++ [x]).Nodup := by
@@ -272,7 +272,7 @@ theorem refInv_nexts {ν : Type} (N : NumOpsR ν) (hN : NoCallback N) (fuel : Na
 /-- With an add that does not call back into the count, for every number type, start,
 step, fuel and number of `next()` calls: the mirror with re-entry is `cCountNext` (result
 and object), and no reference to a value is handed over twice, which is what the comment at
-:3630-3631 relies on. -/
+:3631-3632 relies on. -/
 def CountNextNoReentry : Prop :=
   ∀ (ν : Type),
     (∀ (N : NumOps ν) (f : Nat) (t : CountR ν),
