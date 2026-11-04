@@ -7,6 +7,7 @@ import PyLean.PyIO.DiffBuffered
 import PyLean.PyIO.DiffFile
 import PyLean.PyIO.BytesShare
 import PyLean.PyIO.BytesCallbacks
+import PyLean.PyIO.BytesState
 
 /-! Differential-testing handler for `pyio` cases (`"mod": "pyio"`).
 
@@ -120,6 +121,45 @@ def runCallbacks (fn : String) (j : Json) : Option (Except String Json) :=
     return encResults (runOps (if fn = "bytescb_c" then stepCbC else stepCbP) (bInit init) ops).2
   | _ => none
 
+/-- `{"k": "bytes" | "bytearray", "b": [...]}`, `{"k": "int", "v": n}`, `{"k": "bool", "v": b}`,
+`{"k": "none"}`, `{"k": "dict", "kv": [[key, n], ...]}` or `{"k": "other", "t": name}`. -/
+def getSItem (j : Json) : Except String SItem := do
+  match ← getStr j "k" with
+  | "bytes" => return .bytes (← bNats (← field j "b"))
+  | "bytearray" => return .bytearray (← bNats (← field j "b"))
+  | "int" => return .int (← getInt j "v")
+  | "bool" => return .bool (← getBool j "v")
+  | "none" => return .none
+  | "dict" =>
+    let kv ← (← (← field j "kv").getArr?).toList.mapM fun p => do
+      let a ← p.getArr?
+      match a.toList with
+      | [k, v] => return ((← k.getStr?), (← v.getInt?))
+      | _ => throw "bad dict item"
+    return .dict kv
+  | "other" => return .other (← getStr j "t")
+  | k => throw s!"unknown state item {k}"
+
+def getDOp (j : Json) : Except String DOp := do
+  match ← getStr j "op" with
+  | "setattr" => return .setattr (← getStr j "key") (← getInt j "v")
+  | "getdict" => return .getdict
+  | "getstate" => return .getstate
+  | "setstate" =>
+    let a ← field j "a"
+    match a.getObjVal? "tuple" with
+    | .ok items => return .setstate (.tuple (← (← items.getArr?).toList.mapM getSItem))
+    | .error _ => return .setstate (.other (← getStr a "other"))
+  | _ => return .base (← getBOp j)
+
+def runState (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "bytesstate_c" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getDOp
+    return encResults (runOps C.dstep ⟨bInit init, none⟩ ops).2
+  | _ => none
+
 def encRun : Py (List (Py Val)) → Json
   | .ok rs => encResults rs
   | .error e => encPy (fun (_ : Unit) => Json.null) (.error e)
@@ -154,6 +194,9 @@ def handler : Handler := fun fn j =>
         | none =>
           match runCallbacks fn j with
           | some r => some r
-          | none => some (run fn j)
+          | none =>
+            match runState fn j with
+            | some r => some r
+            | none => some (run fn j)
 
 end PyLean.PyIO

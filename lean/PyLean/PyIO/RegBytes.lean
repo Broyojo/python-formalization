@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.PyIO.BytesShareProps
 import PyLean.PyIO.BytesCallbacks
+import PyLean.PyIO.BytesState
 
 /-! Registry entries for `io.BytesIO`'s shared buffer (`PyIO/BytesShare.lean`,
 `PyIO/BytesShareProps.lean`). -/
@@ -78,6 +79,21 @@ def bytesCallbackEntries : List Entry := [
     status := .refuted, prop := ``BytesIOSeekTwins, thm := some ``bytesIOSeekTwins_refuted
     bug := some "pyio-bytesio-twin-argument-handling"
     notes := "seek(sys.maxsize), seek(sys.maxsize, 1): C OverflowError('new position too large') (bytesio.c:789-793), _pyio 2 * sys.maxsize (_pyio.py:988-990)." }
+]
+
+def bytesStateEntries : List Entry := [
+  { id := "pyio-bytesio-setstate-checks", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["bytesio_setstate_lock_held", "bytesio_setstate"]
+    statement := "io.BytesIO.__setstate__(state) for every stream and every state object: a non-tuple or a tuple shorter than 3 raises TypeError('_io.BytesIO.__setstate__ argument should be 3-tuple, got T') and changes nothing, as does BufferError with a live view; otherwise the stream is emptied, a non-bytes-like first item raises its TypeError and leaves it empty, a bytes-like one becomes the contents; then a non-int second item raises TypeError('second item of state must be an integer, not T'), one outside Py_ssize_t OverflowError, a negative one ValueError('position value cannot be negative'), each with the position left at len(state[0]); a bool is an int; then the third item: None keeps the instance dict, a dict is merged into it or becomes it, anything else raises TypeError('third item of state should be a dict, got a T') with contents and position already set."
+    source := "the body bytesio.c:948-1023 (checks :963-968, :986-999, :1005-1010; the dict :1011-1019); invariant: pickle state validation"
+    status := .proven, prop := ``BytesIOSetstateChecks, thm := some ``bytesIOSetstateChecks_proven
+    notes := "Probed on 3.15.2: f.__setstate__((b'xy', 'bad', None)) raises the position TypeError with getvalue() == b'xy' and tell() == 2, and (b'xy', 1, 5) the dict TypeError with tell() == 1: a bad later item leaves the earlier ones applied. Not filed: __setstate__ is the pickle protocol's, which always passes a well-formed state, and the reset comment (:970-971) and the 'Set carefully the position value' comment (:982-984) show the order is deliberate. self->dict = dict (:1018) stores the caller's dict object; the model keeps its contents. Scope: an exact io.BytesIO (tp_name in the first message)." },
+  { id := "pyio-bytesio-pickle-dict", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["bytesio_getstate", "bytesio_getstate_lock_held", "bytesio_setstate_lock_held", "bytesio_setstate"]
+    statement := "io.BytesIO.__getstate__ on an open stream returns (contents, position, a copy of the instance dict or None while there is none) without changing the stream; __setstate__ of that state on any open io.BytesIO with no view restores contents and position and merges the dict into the target's, so into a fresh object it brings the dict over exactly."
+    source := "the bodies bytesio.c:909-935 (PyDict_Copy or None, :921-930) and :948-1023; invariant: pickle round trip"
+    status := .proven, prop := ``BytesIOPickleDict, thm := some ``bytesIOPickleDict_proven
+    notes := "A getstate that always returned None for the dict loses it in the round trip and fails. The returned dict is a copy: the difftest mutates it after every __getstate__ and a later f.__dict__ shows no change (difftest/pyio_state_diff.py). PyDict_Copy's NULL return (:926-929) is a MemoryError, outside the allocation model. Hypotheses: position in Py_ssize_t, contents below the allocation bound." }
 ]
 
 end PyLean.PyIO

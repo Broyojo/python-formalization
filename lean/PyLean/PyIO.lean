@@ -300,6 +300,6 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``BytesIOReadintoOverlap, thm := some ``bytesIOReadintoOverlap_proven }
 ]
 
-def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries ++ bytesShareEntries ++ bytesCallbackEntries
+def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries ++ bytesShareEntries ++ bytesCallbackEntries ++ bytesStateEntries
 
 end PyLean.PyIO
