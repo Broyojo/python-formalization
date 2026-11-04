@@ -687,7 +687,54 @@ def gen_rule_target(rng):
     return src + rng.choice(["\n", "\n", "", " \n", "\nx\n", ";\n", " # c\n"])
 
 
+# ---- the string helpers of Parser/action_helpers.c (Peg/HelperProps.lean): literal parts and
+# their escapes, conversions (repr of the name, ZWJ), debug fields, format specs (\N{...} splits a
+# spec into two constants), concatenation of u/U/b/B/r/f/t literals, invalid escapes in multi-line
+# strings (the warning lines)
+
+STR_BODIES = ["", "a", "ab", r"\d", r"\n", r"a\db", r"\x41", r"\N{DIGIT ONE}", r"\N{BEL}x",
+              r"\u00e9", r"\101", r"\777", r"\8", "é", r"é\d", "\\\n", "\n\\d\n", "a\nb",
+              r"\{", r"\xZ", r"\N{foo}", "''", r"\'", "\n\n\\d"]
+STR_FIELDS = ["{x}", "{x!r}", "{x!s}", "{x!a}", "{x!z}", "{x!ab}", "{x! r}", "{x!r }", "{x!\u200d}",
+              "{x!a\u200d}", "{x!\ufb01}", "{x=}", "{x = }", "{x=!r}", "{x=:>3}", "{x=!s:^{w}}",
+              "{x:}", "{x:>3}", "{x:{y}}", "{x:a{y}b}", r"{x:\N{DIGIT ONE}b}", r"{x:\N{DIGIT ONE}}",
+              r"{x:\N{DIGIT ONE}\N{DIGIT TWO}}", r"{x:a\N{BEL}}", r"{x:{y}\N{BEL}}", r"{x:\xZ}",
+              r"{x:\d}", "{x:{{}}}", "{{", "}}", "{x:{y=}}", "{ x }", "{x\n=}", "{x:{y:{z}}}"]
+STR_PREFIXES = ["", "u", "U", "r", "R", "b", "B", "rb", "Br", "f", "F", "rf", "fR", "t", "T", "rt",
+                "tR"]
+STR_QUOTES = ["'", '"', "'" * 3, '"' * 3]
+
+
+def gen_str_literal(rng):
+    pfx = rng.choice(STR_PREFIXES)
+    q = rng.choice(STR_QUOTES)
+    fields = "f" in pfx.lower() or "t" in pfx.lower()
+    parts = []
+    for _ in range(rng.choice([0, 1, 1, 2, 3])):
+        parts.append(rng.choice(STR_FIELDS if fields and rng.random() < 0.5 else STR_BODIES))
+    body = "".join(parts)
+    if len(q) == 1 and rng.random() < 0.9:
+        body = body.replace("\n", "")
+    return pfx + q + body + q
+
+
+def gen_string_helpers(rng):
+    lits = [gen_str_literal(rng) for _ in range(rng.choice([1, 1, 2, 2, 3]))]
+    src = rng.choice([" ", "", "\n "]).join(lits)
+    head = rng.choice(["x = ", "", "f(", "(", "print("])
+    if head.endswith("("):
+        return head + src + ")\n"
+    if "\n " in src:
+        src = "(" + src + ")"
+    return head + src + "\n"
+
+
 def gen_case_peg(rng):
+    if rng.random() < 0.15:
+        c = make_case(gen_string_helpers(rng), rng)
+        if c is not None and rng.random() < 0.35:
+            c["fn"] = "peg.warn"
+        return c
     if rng.random() < 0.3:
         c = make_case(gen_rule_target(rng), rng)
         # the rule statements pin type comments and CHECK_VERSION paths: reach them more often
