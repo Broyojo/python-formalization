@@ -575,9 +575,29 @@ def COMPARE_OP_INT (e : Env) : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _COM
 /-- `:3259`. -/
 def COMPARE_OP_STR (e : Env) : M Unit := do _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _COMPARE_OP_STR e
 
-/-- `:3320`. -/
+/-- Values of which the interpreter has one object per value: `None`, `NotImplemented`,
+`Ellipsis`, `True`, `False`, and the machine's stateless builtins (types, functions, method
+descriptors, code objects, by name or index). -/
+def singletonVal : Val → Bool
+  | .none | .notImpl | .ellipsis | .bool _ | .cls _ | .builtin _ | .methDescr .. | .code _ => true
+  | _ => false
+
+/-- The runtime itself. -/
+def getRt : RM Rt := fun rt => .ok rt rt
+
+/-- `Py_Is(left, right)` (`Include/object.h:187`), pointer equality. Heap objects are the same object
+exactly when they have the same address; values that differ are different objects; equal
+singletons are one object; for two equal ints, floats, strs or bytes the answer is the runtime's
+`sameImmediate` oracle. -/
+def pyIs (rt : Rt) : Val → Val → Bool
+  | .ref a, .ref b => a == b
+  | l, r => if l != r then false else if singletonVal l then true else rt.sameImmediate l r
+
+/-- `:3320-3328`: `_IS_OP + POP_TOP + POP_TOP`, `Py_Is(left, right) ^ oparg`. -/
 def IS_OP (e : Env) : M Unit := stk 2 1 fun
-  | [l, r] => pure [.bool (((if l == r then 1 else 0) ^^^ e.oparg) != 0)]
+  | [l, r] => do
+    let rt ← (getRt : RM _)
+    pure [.bool (((if pyIs rt l r then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
 /-- `:3335`. -/
 def _CONTAINS_OP (e : Env) : M Unit := stkK 2 1 fun

@@ -136,7 +136,7 @@ Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_S
 Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
 Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
-Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		review: The model (stk) and SetMapAddRules pop set and the unused[oparg-1] items on both failure paths, but C keeps them: the non-set path does stack_pointer += -1 then error (generated_cases.c.h:11384-11389) and a failed _PySet_AddTakeRef is pop_1_error (:11396), so only v goes; the inlined set-comprehension cleanup handler (codegen.c:4946-4950, 'discard incomplete comprehension result') then finds the stack below its depth, e.g. def f(): return {[] for _ in range(1)}.
+Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
@@ -167,7 +167,7 @@ Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receive
 Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter	
-Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	todo		review: Credited only through CallListAppendRules, whose NULL-self case is also rejected by the model's _GUARD_NOS_LIST (notList .null exits, where C's PyList_CheckExact would dereference NULL), so _GUARD_NOS_NOT_NULL := pure () still satisfies the statement: the exit on NULL (:1753-1755) is unpinned.
+Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	modelled	bytecode-null-guards	
 Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1795	1795	opcode:SEND_VIRTUAL	macro(SEND_VIRTUAL) =	todo		changed-in-3.15: new function
@@ -202,7 +202,7 @@ Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_T
 Python/bytecodes.c	2114	2114	opcode:_UNPACK_SEQUENCE_UNIQUE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
-Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		review: The model's PySequence_List is a bare iterNextOpt loop, but C's PySequence_List(it) goes through _PyList_Extend -> list_extend_iter_lock_held, which first calls PyObject_GetIter(it) and PyObject_LengthHint(it, 8) (Objects/listobject.c:1303, :1310): an iterator whose __iter__ or __length_hint__ raises (or whose __iter__ returns another iterator) makes CPython raise or drain a different object where the model and UnpackExFull push the items; the ys.length < 1000000 hypothesis is a model-fuel bound, not a documented precondition.
+Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	modelled	bytecode-unpack-ex	
 Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	
@@ -243,9 +243,9 @@ Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -
 Python/bytecodes.c	2583	2583	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	modelled	bytecode-builders	
 Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	modelled	bytecode-builders	
-Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		review: The dupkey / KeyError split and the keys-probe __context__ are now right, but the duplicate-key message goes through the model's functionStr, which calls str(__qualname__) before looking up __module__ and comparing it with 'builtins', whereas _PyObject_FunctionStr (Objects/object.c:980-1004) does both lookups and the comparison first and formats module then qualname in PyUnicode_FromFormat; a __module__ property or __str__ with side effects, or a raising __module__ lookup (which in C skips str(qualname)), shows the different order.
-Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		review: _DICT_MERGE + POP_TOP (:2654); inherits the _DICT_MERGE defect: the functionStr mirror evaluates str(__qualname__) before the __module__ lookup and comparison, the reverse of Objects/object.c:980-1004.
-Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		review: The model (stk) and SetMapAddRules pop dict_st and the unused[oparg-1] items when _PyDict_SetItem_Take2 fails, but C pops only key and value (pop_2_error, generated_cases.c.h:10292-10293), leaving the dict for the inlined dict-comprehension cleanup handler (codegen.c:4946-4950), e.g. def f(): return {[]: 0 for _ in range(1)}.
+Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	2669	2669	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
 Python/bytecodes.c	2679	2679	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2692	2692	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		changed-in-3.15:
@@ -295,8 +295,8 @@ Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	model
 Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-compare-float	
 Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	modelled	bytecode-compare-int	
 Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	modelled	bytecode-compare-str	
-Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
-Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
+Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	modelled	bytecode-is-op	
+Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	modelled	bytecode-is-op	
 Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	3349	3349	opcode:_SPECIALIZE_CONTAINS_OP	specializing op(_SPECIALIZE_CONTAINS_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3361	3361	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;	modelled	bytecode-dispatch	
@@ -348,7 +348,7 @@ Python/bytecodes.c	3825	3825	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (i
 Python/bytecodes.c	3838	3838	opcode:_GUARD_TYPE_ITER	tier2 op(_GUARD_TYPE_ITER, (expected_type/4, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3843	3843	opcode:_ITER_NEXT_INLINE	tier2 op(_ITER_NEXT_INLINE, (iternext_fn/4, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3863	3863	opcode:_GUARD_NOS_ITER_VIRTUAL	op(_GUARD_NOS_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3868	3868	opcode:_GUARD_TOS_NOT_NULL	op(_GUARD_TOS_NOT_NULL, (null_or_index -- null_or_index)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3868	3868	opcode:_GUARD_TOS_NOT_NULL	op(_GUARD_TOS_NOT_NULL, (null_or_index -- null_or_index)) {	modelled	bytecode-null-guards	
 Python/bytecodes.c	3872	3872	opcode:_FOR_ITER_VIRTUAL	replaced op(_FOR_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3890	3890	opcode:FOR_ITER_VIRTUAL	macro(FOR_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
 Python/bytecodes.c	3895	3895	opcode:_FOR_ITER_VIRTUAL_TIER_TWO	op(_FOR_ITER_VIRTUAL_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
@@ -415,8 +415,8 @@ Python/bytecodes.c	4615	4615	opcode:_INIT_CALL_PY_EXACT_ARGS	replicate(5) pure o
 Python/bytecodes.c	4628	4628	opcode:_PUSH_FRAME	op(_PUSH_FRAME, (new_frame -- )) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	4644	4644	opcode:CALL_BOUND_METHOD_EXACT_ARGS	macro(CALL_BOUND_METHOD_EXACT_ARGS) =	todo		changed-in-3.15:
 Python/bytecodes.c	4659	4659	opcode:CALL_PY_EXACT_ARGS	macro(CALL_PY_EXACT_ARGS) =	todo		changed-in-3.15:
-Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	modelled	bytecode-call-builtins	
-Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	modelled	bytecode-call-builtins,bytecode-null-guards	
+Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	modelled	bytecode-call-builtins,bytecode-null-guards	
 Python/bytecodes.c	4679	4679	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4684	4684	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res, a)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4694	4694	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	modelled	bytecode-call-builtins	

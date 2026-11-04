@@ -254,6 +254,53 @@ theorem dictMergeRules_proven : DictMergeRules := by
     refine stkK_split_err hL ?_
     body_simp [h, formatKwargsError, hm1, hk, hc, Functor.map, EStateM.map]
 
+/-- `_PyObject_FunctionStr(x)` (`Objects/object.c:976-1009`), the `F` of `DICT_MERGE`'s duplicate
+keyword message, for every object model, in the order the C does it: `__qualname__` is looked up
+first (`PyObject_GetOptionalAttr`); absent, the result is `str(x)`. Present (`q`), `__module__` is
+looked up next and, when present and not `None`, compared with `"builtins"` by
+`PyObject_RichCompareBool(..., Py_NE)` (identity first) — all before anything is formatted. Only
+then does `PyUnicode_FromFormat` run `str()`: of the module and then of `q` for `"%S.%S()"`, of `q`
+alone for `"%S()"`. Any exception (a lookup that raises something other than `AttributeError`,
+the comparison, either `str()`) makes the result `NULL` (`none`) at that point: in particular a
+raising `__module__` lookup means `str(q)` is never called, and a raising `str(module)` means
+`str(q)` is never called. Each clause threads the runtime through the calls in that order. -/
+def FunctionStrRules : Prop := ∀ (e : Env) (f : Val) (rt0 : Rt),
+  (∀ rt1, optionalAttr e f "__qualname__" rt0 = .ok none rt1 → ∀ s rt2, strText e f rt1 = .ok s rt2 →
+    functionStr e f rt0 = .ok (some s) rt2) ∧
+  (∀ x rt1, optionalAttr e f "__qualname__" rt0 = .error (.exc x) rt1 → functionStr e f rt0 = .ok none rt1) ∧
+  (∀ q rt1, optionalAttr e f "__qualname__" rt0 = .ok (some q) rt1 →
+    (∀ x rt2, optionalAttr e f "__module__" rt1 = .error (.exc x) rt2 → functionStr e f rt0 = .ok none rt2) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok none rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
+      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some .none) rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
+      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some (.str "builtins")) rt2 → ∀ qs rt3,
+      strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ m rt2, optionalAttr e f "__module__" rt1 = .ok (some m) rt2 → m ≠ .none → m ≠ .str "builtins" →
+      ∀ c rt3, e.om.richCompare e.ctx m (.str "builtins") 3 rt2 = .ok c rt3 →
+      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok true rt4 →
+        (∀ ms rt5 qs rt6, strText e m rt4 = .ok ms rt5 → strText e q rt5 = .ok qs rt6 →
+          functionStr e f rt0 = .ok (some s!"{ms}.{qs}()") rt6) ∧
+        (∀ x rt5, strText e m rt4 = .error (.exc x) rt5 → functionStr e f rt0 = .ok none rt5)) ∧
+      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok false rt4 → ∀ qs rt5, strText e q rt4 = .ok qs rt5 →
+        functionStr e f rt0 = .ok (some s!"{qs}()") rt5)))
+
+theorem functionStrRules_proven : FunctionStrRules := by
+  intro e f rt0
+  refine ⟨fun rt1 h1 s rt2 h2 => ?_, fun x rt1 h1 => ?_, fun q rt1 h1 => ⟨fun x rt2 h2 => ?_,
+    fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_,
+    fun m rt2 h2 hn hb c rt3 hc => ⟨fun rt4 ht => ⟨fun ms rt5 qs rt6 hm hq => ?_, fun x rt5 hm => ?_⟩,
+      fun rt4 ht qs rt5 hq => ?_⟩⟩⟩
+  · body_simp [functionStr, h1, h2]
+  · body_simp [functionStr, h1]
+  · body_simp [functionStr, h1, h2]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm, hq]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hq]
+
 /-! ## `SET_ADD`, `MAP_ADD` -/
 
 /-- `SET_ADD oparg` (`:1380-1392`) and `MAP_ADD oparg` (`:2656-2666`). `SET_ADD` first checks the
@@ -448,9 +495,10 @@ theorem buildSetMapRules_proven : BuildSetMapRules := by
       rw [← hv] at this
       body_simp [mkDict, freshVersion, alloc, this]
 
-def BuildersRules : Prop := ListExtendRules ∧ DictUpdateRules ∧ DictMergeRules ∧ SetMapAddRules ∧ BuildSetMapRules
+def BuildersRules : Prop :=
+  ListExtendRules ∧ DictUpdateRules ∧ DictMergeRules ∧ FunctionStrRules ∧ SetMapAddRules ∧ BuildSetMapRules
 theorem buildersRules_proven : BuildersRules :=
-  ⟨listExtendRules_proven, dictUpdateRules_proven, dictMergeRules_proven, setMapAddRules_proven,
-    buildSetMapRules_proven⟩
+  ⟨listExtendRules_proven, dictUpdateRules_proven, dictMergeRules_proven, functionStrRules_proven,
+    setMapAddRules_proven, buildSetMapRules_proven⟩
 
 end PyLean.Bytecode

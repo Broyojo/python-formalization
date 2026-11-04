@@ -180,7 +180,8 @@ def p_unpack(r):
     out = []
     srcs = ["[1, 2]", "(1, 2)", "[1, 2, 3]", "(1,)", "[]", "'ab'", "'abc'", "{1: 2, 3: 4}", "range(2)", "5", "None",
             "iter([1, 2])", "(i for i in range(2))", "{1: 2, 3: 4, 5: 6}", "It(1)", "It(2)", "It(3)", "It(4)",
-            "L([1, 2, 3])", "Q()", "D()", "(1, 2, 3)", "[1, 2, 3, 4]", "{1: 2}", "{}", "'abcd'"]
+            "L([1, 2, 3])", "Q()", "D()", "(1, 2, 3)", "[1, 2, 3, 4]", "{1: 2}", "{}", "'abcd'",
+            "V(0)", "V(1)", "V(2)", "V(3)", "V(4)", "V(5)", "V(6)"]
     for _ in range(r.randint(3, 6)):
         s = r.choice(srcs)
         tgt = r.choice(["a, b", "a, *b", "*a, b", "a, b, *c", "a, *b, c", "a,", "[a, b]", "(a, (b, c))", "*a,",
@@ -191,7 +192,16 @@ def p_unpack(r):
                "    it = It(n)\n    try:\n        a, *b, c = it\n        print(a, b, c)\n    except ValueError as e:\n        print(e)\n    print(it.calls)\n")
     head = ("class It:\n    def __init__(self, n):\n        self.n, self.calls = n, 0\n    def __iter__(self):\n        return self\n"
             "    def __next__(self):\n        self.calls += 1\n        if self.calls > self.n:\n            raise StopIteration\n        return self.calls\n"
-            "class L(list):\n    pass\nclass Q:\n    __iter__ = None\nclass D:\n    def __iter__(self):\n        raise TypeError('x')\n")
+            "class L(list):\n    pass\nclass Q:\n    __iter__ = None\nclass D:\n    def __iter__(self):\n        raise TypeError('x')\n"
+            # `PySequence_List(it)` goes through `_PyList_Extend`: `iter(it)` and `__length_hint__`
+            # of the iterator run before the drain (`list_extend_iter_lock_held`)
+            "class W:\n    def __init__(self, k):\n        self.k, self.n = k, 0\n    def __iter__(self):\n"
+            "        if self.k == 1:\n            raise ValueError('w-iter')\n        if self.k == 2:\n            return iter([7, 8, 9])\n        return self\n"
+            "    def __next__(self):\n        self.n += 1\n        if self.k == 6 and self.n == 3:\n            raise KeyError('w-next')\n"
+            "        if self.n > 3:\n            raise StopIteration\n        return self.n\n"
+            "    def __length_hint__(self):\n        if self.k == 3:\n            raise KeyError('w-lh')\n        if self.k == 4:\n            return 'x'\n"
+            "        if self.k == 5:\n            return -1\n        if self.k == 0:\n            raise TypeError('w-lh-type')\n        return NotImplemented\n"
+            "class V:\n    def __init__(self, k):\n        self.k = k\n    def __iter__(self):\n        return W(self.k)\n")
     return head + "\n".join(out)
 
 
@@ -566,6 +576,26 @@ def p_builders(r):
     out = [head]
     for x in r.sample(exprs, r.randint(4, 10)):
         out.append(guarded(f"print({x})"))
+    # `_PyObject_FunctionStr`: both lookups and the comparison come before `str()`, the module first
+    fs = r.choice(["raise ValueError('m')", "raise AttributeError('m')", "return QS('m')", "return 'builtins'",
+                   "return None", "return QS('builtins')"])
+    out.append("class QS:\n    def __init__(self, t):\n        self.t = t\n    def __str__(self):\n        print('str', self.t)\n"
+               "        return self.t\n"
+               "class FX:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            return QS('q')\n"
+               f"        if n == '__module__':\n            {fs}\n        return object.__getattribute__(self, n)\n"
+               "    def __call__(self, **k):\n        return k\n" + guarded("print(FX()(**{'a': 1}, **{'a': 2}))"))
+    # a failed SET_ADD / MAP_ADD / LIST_APPEND leaves the container for the cleanup handler
+    out.append(r.choice([
+        "def h():\n    x = 'keep'\n    try:\n        {[] for x in range(1)}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h():\n    x = 'keep'\n    try:\n        {x: [] for x in [1, []]}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h():\n    x = 'keep'\n    try:\n        {[]: x for x in range(2)}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h(n):\n    try:\n        return [{y for y in [x, []]} for x in range(n)]\n    except TypeError as e:\n        return str(e)\nprint(h(0), h(2))",
+        guarded("print({x for x in [1, [], 2]})"),
+        guarded("print({k: v for k, v in [(1, 2), ([], 3)]})"),
+        "class G:\n    def __init__(self):\n        self.n = 0\n    def __iter__(self):\n        return self\n    def __next__(self):\n"
+        "        self.n += 1\n        if self.n > 2:\n            raise ValueError('g')\n        return self.n\nl = [0]\n"
+        + guarded("l.extend(G())") + "\nprint(l)\nl += [5]\nl.extend(l)\nprint(l)\nl.extend((7,))\nl.extend({8: 9})\nl.extend({8: 9}.items())\nprint(l)",
+    ]))
     out.append(r.choice([
         "for _ in range(2):\n    try:\n        f(**T())\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
         "for _ in range(2):\n    try:\n        {**T()}\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
