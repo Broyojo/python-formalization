@@ -268,6 +268,9 @@ def rule_dotted_as_name_name_target : List String := [
 def rule_dotted_name : List String := [
   "rule:dotted_name"]
 
+def rule_double_star_pattern : List String := [
+  "rule:double_star_pattern"]
+
 def rule_elif_stmt : List String := [
   "rule:elif_stmt"]
 
@@ -312,6 +315,9 @@ def rule_global_nonlocal : List String := [
 
 def rule_group_pattern : List String := [
   "rule:group_pattern"]
+
+def rule_guard : List String := [
+  "rule:guard"]
 
 def rule_if_stmt : List String := [
   "rule:if_stmt"]
@@ -364,8 +370,20 @@ def rule_invalid_raise_stmt : List String := [
 def rule_inversion : List String := [
   "rule:inversion"]
 
+def rule_items_pattern : List String := [
+  "rule:items_pattern"]
+
 def rule_join_names : List String := [
   "_PyPegen_join_names_with_dot"]
+
+def rule_key_value_pattern : List String := [
+  "rule:key_value_pattern"]
+
+def rule_keyword_pattern : List String := [
+  "rule:keyword_pattern"]
+
+def rule_keyword_patterns : List String := [
+  "rule:keyword_patterns"]
 
 def rule_keyword_stmts : List String := [
   "rule:pass_stmt", "rule:break_stmt", "rule:continue_stmt"]
@@ -382,8 +400,14 @@ def rule_literal_pattern : List String := [
 def rule_match_stmt : List String := [
   "rule:match_stmt"]
 
+def rule_maybe_sequence_pattern : List String := [
+  "rule:maybe_sequence_pattern"]
+
 def rule_maybe_star_pattern : List String := [
   "rule:maybe_star_pattern"]
+
+def rule_open_sequence_pattern : List String := [
+  "rule:open_sequence_pattern"]
 
 def rule_or_pattern : List String := [
   "rule:or_pattern"]
@@ -391,8 +415,14 @@ def rule_or_pattern : List String := [
 def rule_pattern : List String := [
   "rule:pattern"]
 
+def rule_pattern_capture_target : List String := [
+  "rule:pattern_capture_target"]
+
 def rule_patterns : List String := [
   "rule:patterns"]
+
+def rule_positional_patterns : List String := [
+  "rule:positional_patterns"]
 
 def rule_power : List String := [
   "rule:power"]
@@ -439,6 +469,9 @@ def rule_slices : List String := [
 def rule_star_expressions : List String := [
   "rule:star_expressions"]
 
+def rule_star_pattern : List String := [
+  "rule:star_pattern"]
+
 def rule_star_target : List String := [
   "rule:star_target"]
 
@@ -471,6 +504,9 @@ def rule_term : List String := [
 
 def rule_try_stmt : List String := [
   "rule:try_stmt"]
+
+def rule_value_pattern : List String := [
+  "rule:value_pattern"]
 
 def rule_while_stmt : List String := [
   "rule:while_stmt"]
