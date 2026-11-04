@@ -175,6 +175,9 @@ def rule_annotation_default : List String := [
 def rule_as_names : List String := [
   "rule:import_from_as_names", "rule:dotted_as_names"]
 
+def rule_as_pattern : List String := [
+  "rule:as_pattern"]
+
 def rule_assert_stmt : List String := [
   "rule:assert_stmt"]
 
@@ -199,6 +202,9 @@ def rule_async_with_type_comment : List String := [
 def rule_atom : List String := [
   "rule:atom"]
 
+def rule_attr : List String := [
+  "rule:attr"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 
@@ -219,6 +225,9 @@ def rule_block : List String := [
 
 def rule_capture_pattern : List String := [
   "rule:capture_pattern"]
+
+def rule_case_block : List String := [
+  "rule:case_block"]
 
 def rule_class_def : List String := [
   "rule:class_def"]
@@ -405,6 +414,9 @@ def rule_maybe_sequence_pattern : List String := [
 
 def rule_maybe_star_pattern : List String := [
   "rule:maybe_star_pattern"]
+
+def rule_name_or_attr : List String := [
+  "rule:name_or_attr"]
 
 def rule_open_sequence_pattern : List String := [
   "rule:open_sequence_pattern"]

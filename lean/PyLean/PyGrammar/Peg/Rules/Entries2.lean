@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Patterns4
+import PyLean.PyGrammar.Peg.Rules.Patterns5
 
 /-! Registry entries for the pattern rules of `Peg/Rules/Patterns2.lean` and after, in the scheme
 of `Entries.lean`. -/
@@ -199,6 +199,53 @@ def patternEntries : List Entry := [
     status := .proven
     prop := ``Guard
     thm := some ``guard_proven
+    notes := scheme },
+  { id := "pygrammar-rule-attr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_attr
+    statement := "attr: the seed loop returns the last seed that grew; each round with seed v " ++
+      "gives Attribute(v, NAME.id, Load) after '.' NAME (name_or_attr returning the seed through " ++
+      "the memo), the first round Attribute(NAME, NAME.id, Load), so a.b.c groups as (a.b).c; " ++
+      "without '.' NAME the round is NULL with the mark back."
+    source := "Grammar/python.gram:585-587"
+    status := .proven
+    prop := ``AttrRule
+    thm := some ``attrRule_proven
+    notes := scheme ++ " Left-recursive leader: AttrStep is one round from a state whose memo " ++
+      "holds the seed, LeaderLoop the seed loop (GrowSeedChain)." },
+  { id := "pygrammar-rule-name-or-attr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_name_or_attr
+    statement := "name_or_attr inside a round of attr: with a seed in the memo, the seed, " ++
+      "resuming at its end (attr is tried first); with none, the NAME under the mark, NULL with " ++
+      "the mark back without one."
+    source := "Grammar/python.gram:589-591"
+    status := .proven
+    prop := ``NameOrAttr
+    thm := some ``nameOrAttr_proven
+    notes := scheme },
+  { id := "pygrammar-rule-as-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_as_pattern
+    statement := "as_pattern: or_pattern 'as' pattern_capture_target gives MatchAs(pattern, " ++
+      "name); once that fails, NULL with the mark back in the first pass, the result of " ++
+      "invalid_as_pattern from the start mark in the second."
+    source := "Grammar/python.gram:513-516"
+    status := .proven
+    prop := ``AsPattern
+    thm := some ``asPattern_proven
+    notes := scheme ++ " The pass flag is read from the state the failed alternative left." },
+  { id := "pygrammar-rule-case-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_case_block
+    statement := "case_block: \"case\" patterns [guard] ':' block gives match_case(pattern, " ++
+      "guard, body); without \"case\" NULL with the mark back; in the second pass " ++
+      "invalid_case_block first, its error ending the rule and its NULL leading to the same " ++
+      "alternative."
+    source := "Grammar/python.gram:497-500"
+    status := .proven
+    prop := ``CaseBlock
+    thm := some ``caseBlock_proven
     notes := scheme }
 ]
 
