@@ -1,76 +1,305 @@
 import PyLean.PyIO.Base
+import PyLean.PyIO.Spec
 
 /-! Properties of the abstract base classes `IOBase`/`RawIOBase` (iobase.c and
-`_pyio`), over the scripted `UObj` model of `PyIO/Base.lean`. These are the
-default-method behaviours that need no subclass callbacks, so they hold for
-every object and both twins. -/
+`_pyio`), over the scripted `UObj` model of `PyIO/Base.lean`: a user subclass that
+may override `seek`, the inquiries and the `closed` property, each able to answer any
+object or raise. -/
 
 namespace PyLean.PyIO
 
 open PyLean
 
-/-- Default inquiry methods: on every `IOBase` (both twins) `seekable()`,
-`readable()` and `writable()` return `False` and leave the object unchanged.
-Mirrors the C default slots and `_pyio` `IOBase.seekable/readable/writable`. -/
-def BaseInquiriesFalse : Prop := ∀ (u : UObj) (o : UOp),
+/-- Default inquiry methods: on every `IOBase` whose class does not override them (both
+twins) `seekable()`, `readable()` and `writable()` return `False` and leave the object
+unchanged. Mirrors the C default slots and `_pyio` `IOBase.seekable/readable/writable`. -/
+def BaseInquiriesFalse : Prop := ∀ (u : UObj) (o : UOp), u.inqs = none →
   (o = .seekable ∨ o = .readable ∨ o = .writable) →
   BC.step u o = (u, .ok (.bool false)) ∧ BP.step u o = (u, .ok (.bool false))
 
 theorem baseInquiriesFalse_proven : BaseInquiriesFalse := by
-  intro u o ho; rcases ho with rfl | rfl | rfl <;> exact ⟨rfl, rfl⟩
+  intro u o hi ho
+  rcases ho with rfl | rfl | rfl <;>
+    simp [BC.step, BP.step, UObj.callInq, hi, BC.answer, IRet.val]
 
-/-- `_checkSeekable`/`_checkReadable`/`_checkWritable` raise
-`io.UnsupportedOperation` with the same message in both twins and do not touch
-the object (iobase.c `check_seekable/readable/writable`; `_pyio`
-`IOBase._checkSeekable/_checkReadable/_checkWritable`, via `_unsupported`). -/
-def BaseChecksUnsupported : Prop := ∀ (u : UObj) (o : UOp),
-  (o = .checkSeekable ∨ o = .checkReadable ∨ o = .checkWritable) →
-  BC.step u o = BP.step u o ∧ ∃ m, BC.step u o = (u, .error (.named "UnsupportedOperation" m))
+/-- What `_pyio`'s `if not self.seekable(): raise UnsupportedOperation(...)` gives for an
+answer `r` of the inquiry: its exception, `None` for a truthy answer, else
+`UnsupportedOperation` with `msg` or the default message. -/
+def pyCheckOutcome (r : IRet) (dflt : String) (msg : Option String) : Py Val :=
+  match r with
+  | .raise c m => .error (excOf c m)
+  | r => if r.truthy then .ok .none else .error (unsup (msg.getD dflt))
 
-theorem baseChecksUnsupported_proven : BaseChecksUnsupported := by
-  intro u o ho; rcases ho with rfl | rfl | rfl <;> exact ⟨rfl, _, rfl⟩
+/-- What C's `_PyIOBase_check_*` gives for an answer `r`: its exception, the object
+`True` back for exactly `True`, else `UnsupportedOperation` with the default message. -/
+def cCheckOutcome (r : IRet) (dflt : String) : Py Val :=
+  match r with
+  | .raise c m => .error (excOf c m)
+  | .bool true => .ok (.bool true)
+  | _ => .error (unsup dflt)
 
-/-- `seek`, `tell`, `truncate` and `fileno` are unsupported on a bare `IOBase`:
-both twins raise `io.UnsupportedOperation` and leave the object unchanged. The
-message differs by implementation — C gives the bare method name, `_pyio` gives
-`"<Class>.<method>() not supported"` — so only the class is shared. Mirrors
-iobase.c `_io__IOBase_{seek,tell,truncate,fileno}_impl` and `_pyio`
-`IOBase.{seek,tell,truncate,fileno}`. -/
-def BaseUnsupportedOps : Prop := ∀ (u : UObj) (o : UOp),
-  (o = .seek ∨ o = .tell ∨ o = .truncate ∨ o = .fileno) →
-  (∃ m, BC.step u o = (u, .error (.named "UnsupportedOperation" m))) ∧
-  (∃ m, BP.step u o = (u, .error (.named "UnsupportedOperation" m)))
+/-- The three checks: the operation, the inquiry it calls and its default message. -/
+def checkTable : List ((Option String → UOp) × String × String) :=
+  [(.checkSeekable, "seekable", "File or stream is not seekable."),
+   (.checkReadable, "readable", "File or stream is not readable."),
+   (.checkWritable, "writable", "File or stream is not writable.")]
+
+/-- `_checkSeekable`, `_checkReadable` and `_checkWritable` over an inquiry that may be
+overridden, answer any object, or raise. Each twin calls the object's own inquiry once
+(logged) and propagates its exception. `_pyio` (_pyio.py:430-463) tests the answer's
+truth and returns `None`, raising `UnsupportedOperation(msg)` for a falsy answer, or the
+default message when `msg` is `None`. C (iobase.c:414-494) accepts only the object
+`True` and returns it, and as a `METH_NOARGS` method (iobase.c:845-848) refuses a `msg`
+argument with `TypeError` before asking. With the base inquiries (`False`) both raise the
+default `UnsupportedOperation` and change nothing. -/
+def BaseChecks : Prop := ∀ (u : UObj) (msg : Option String),
+  ∀ k ∈ checkTable,
+    (∀ m, BC.step u (k.1 (some m)) = (u, .error (.typeError s!"_IOBase._check{k.2.1.capitalize}() takes no arguments (1 given)"))) ∧
+    (u.inqs = none →
+      BC.step u (k.1 none) = (u, .error (unsup k.2.2)) ∧
+      BP.step u (k.1 msg) = (u, .error (unsup (msg.getD k.2.2)))) ∧
+    (∀ r rs, u.inqs = some (r :: rs) →
+      let u' := { u with log := u.log ++ [Call.inquiry k.2.1], inqs := some rs }
+      BC.step u (k.1 none) = (u', cCheckOutcome r k.2.2) ∧
+      BP.step u (k.1 msg) = (u', pyCheckOutcome r k.2.2 msg))
+
+theorem baseChecks_proven : BaseChecks := by
+  intro u msg k hk
+  simp only [checkTable, List.mem_cons, List.not_mem_nil, or_false] at hk
+  rcases hk with rfl | rfl | rfl <;>
+  · refine ⟨fun m => rfl, ?_, ?_⟩
+    · intro hi
+      simp [BC.step, BP.step, BC.checkInq, BP.checkInq, UObj.callInq, hi, IRet.truthy]
+    · intro r rs hi
+      cases r with
+      | bool b =>
+        cases b <;>
+          simp [BC.step, BP.step, BC.checkInq, BP.checkInq, UObj.callInq, hi, cCheckOutcome,
+            pyCheckOutcome, IRet.truthy]
+      | int n =>
+        by_cases hn : n = 0 <;>
+          simp [BC.step, BP.step, BC.checkInq, BP.checkInq, UObj.callInq, hi, cCheckOutcome,
+            pyCheckOutcome, IRet.truthy, hn]
+      | _ =>
+        simp [BC.step, BP.step, BC.checkInq, BP.checkInq, UObj.callInq, hi, cCheckOutcome,
+          pyCheckOutcome, IRet.truthy]
+
+/-- `_checkSeekable()` returns the same value or raises the same exception class in both
+twins, for every answer of the object's `seekable()`. -/
+def BaseChecksTwins : Prop := ∀ (u : UObj),
+  sameClass (BC.step u (.checkSeekable none)).2 (BP.step u (.checkSeekable none)).2 = true
+
+/-- `seekable()` returning `1`: C refuses anything but the object `True`
+(`UnsupportedOperation`); `_pyio` tests truth and returns `None`. -/
+theorem baseChecksTwins_refuted : ¬BaseChecksTwins := by
+  intro h
+  have := h { (default : UObj) with inqs := some [.int 1] }
+  revert this
+  decide
+
+/-- The exact `UnsupportedOperation` of `seek`, `truncate` and `fileno` on a bare `IOBase`
+(and of `tell` when `seek` is not overridden), on every object, which they leave
+unchanged: C passes the method name (iobase.c:119-125, :153-159, :528-533), `_pyio`'s
+`_unsupported` (_pyio.py:341-344) formats `"%s.%s() not supported"` with the class name. -/
+def BaseUnsupportedOps : Prop := ∀ (u : UObj),
+  BC.step u .seek = (u, .error (.named "UnsupportedOperation" "seek")) ∧
+  BP.step u .seek = (u, .error (.named "UnsupportedOperation" s!"{u.name}.seek() not supported")) ∧
+  BC.step u .truncate = (u, .error (.named "UnsupportedOperation" "truncate")) ∧
+  BP.step u .truncate = (u, .error (.named "UnsupportedOperation" s!"{u.name}.truncate() not supported")) ∧
+  BC.step u .fileno = (u, .error (.named "UnsupportedOperation" "fileno")) ∧
+  BP.step u .fileno = (u, .error (.named "UnsupportedOperation" s!"{u.name}.fileno() not supported")) ∧
+  (u.seeks = none →
+    BC.step u .tell = (u, .error (.named "UnsupportedOperation" "seek")) ∧
+    BP.step u .tell = (u, .error (.named "UnsupportedOperation" s!"{u.name}.seek() not supported")))
 
 theorem baseUnsupportedOps_proven : BaseUnsupportedOps := by
-  intro u o ho
-  rcases ho with rfl | rfl | rfl | rfl <;> exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩⟩
+  intro u
+  refine ⟨rfl, ?_, rfl, ?_, rfl, ?_, ?_⟩
+  · simp [BP.step, BP.unsupported, pyUnsupported, unsup, unsupportedOp, String.append_assoc]; decide
+  · simp [BP.step, BP.unsupported, pyUnsupported, unsup, unsupportedOp, String.append_assoc]; decide
+  · simp [BP.step, BP.unsupported, pyUnsupported, unsup, unsupportedOp, String.append_assoc]; decide
+  · intro h
+    simp [BC.step, BP.step, BC.tell, BP.tell, h, BP.unsupported, pyUnsupported, unsup, unsupportedOp, String.append_assoc]
+    decide
 
-/-- Closed-aware default methods. `closed` reflects the flag; on an open object
-(both twins) `__enter__`, `__iter__`, `_checkClosed` return `None` and
-`isatty()` returns `False`; on a closed object each of those four raises
-`ValueError('I/O operation on closed file.')`. Mirrors iobase.c
-`iobase_closed_get`, `iobase_check_closed`, `iobase_enter`, `iobase_iter`,
-`_io__IOBase_isatty_impl` and the `_pyio` equivalents. -/
-def BaseClosedProtocol : Prop := ∀ (u : UObj),
-  BC.step u .closed = (u, .ok (.bool u.isClosed)) ∧
-  BP.step u .closed = (u, .ok (.bool u.isClosed)) ∧
-  (∀ o, (o = .enter ∨ o = .iter ∨ o = .checkClosed) →
-    (if u.isClosed then
-        BC.step u o = (u, .error (.valueError "I/O operation on closed file.")) ∧
-        BP.step u o = (u, .error (.valueError "I/O operation on closed file."))
-     else BC.step u o = (u, .ok .none) ∧ BP.step u o = (u, .ok .none))) ∧
-  (if u.isClosed then
-      BC.step u .isatty = (u, .error (.valueError "I/O operation on closed file.")) ∧
-      BP.step u .isatty = (u, .error (.valueError "I/O operation on closed file."))
-   else BC.step u .isatty = (u, .ok (.bool false)) ∧ BP.step u .isatty = (u, .ok (.bool false)))
+/-- `tell()` is `self.seek(0, 1)` in both twins (iobase.c:134-138, _pyio.py:366-368): with
+an overriding `seek`, it calls that `seek` once with `(0, 1)` (logged), and returns what
+it returned or raises what it raised. -/
+def BaseTellDispatch : Prop := ∀ (u : UObj) (r : Ret) (rs : List Ret),
+  u.seeks = some (r :: rs) →
+  let u' := { u with log := u.log ++ [Call.seek 0 1], seeks := some rs }
+  let out : Py Val := match r with
+    | .raise c m => .error (excOf c m)
+    | .bytes b => .ok (.bytes b)
+    | .none => .ok .none
+    | .int n => .ok (.int n)
+  BC.step u .tell = (u', out) ∧ BP.step u .tell = (u', out)
+
+theorem baseTellDispatch_proven : BaseTellDispatch := by
+  intro u r rs h
+  cases r <;> simp [BC.step, BP.step, BC.tell, BP.tell, h, UObj.callSeek, BC.seekAnswer]
+
+/-- What `_checkClosed()` gives in C for the `closed` attribute's answer `r`
+(`iobase_check_closed`, iobase.c:197-214): an `AttributeError` counts as open, another
+exception propagates, a true value raises `ValueError`. -/
+def cClosedOutcome (r : IRet) : Py Unit :=
+  match r with
+  | .raise "AttributeError" _ => .ok ()
+  | .raise c m => .error (excOf c m)
+  | r => if r.truthy then .error (.valueError "I/O operation on closed file.") else .ok ()
+
+/-- What `_checkClosed(msg)` gives in `_pyio` (_pyio.py:473-478): every exception of
+`self.closed` propagates, a true value raises `ValueError(msg)`, or the default message. -/
+def pyClosedOutcome (r : IRet) (msg : Option String) : Py Unit :=
+  match r with
+  | .raise c m => .error (excOf c m)
+  | r => if r.truthy then .error (.valueError (msg.getD "I/O operation on closed file.")) else .ok ()
+
+/-- The closed checks over a `closed` that may be the base property (the flag) or an
+override answering any object or raising. `closed` returns the answer; `__enter__` and
+`__iter__` return `self` (encoded as `None`), `_checkClosed` `None` and `isatty()`
+`False` after the check, which is `cClosedOutcome` in C and `pyClosedOutcome` in
+`_pyio`, where `_checkClosed(msg)` raises `ValueError(msg)` and C's `METH_NOARGS`
+refuses the argument. None of them changes the object. -/
+def BaseClosedProtocol : Prop := ∀ (u : UObj) (msg : Option String),
+  BC.step u .closed = BC.answer u u.readClosed ∧
+  BP.step u .closed = BC.answer u u.readClosed ∧
+  (∀ o, (o = .enter ∨ o = .iter ∨ o = .checkClosed none) →
+    BC.step u o = (u, (cClosedOutcome u.readClosed).map (fun _ => .none)) ∧
+    BP.step u o = (u, (pyClosedOutcome u.readClosed none).map (fun _ => .none))) ∧
+  BP.step u (.checkClosed msg) = (u, (pyClosedOutcome u.readClosed msg).map (fun _ => .none)) ∧
+  (∀ m, BC.step u (.checkClosed (some m)) = (u, .error (.typeError "_IOBase._checkClosed() takes no arguments (1 given)"))) ∧
+  BC.step u .isatty = (u, (cClosedOutcome u.readClosed).map (fun _ => .bool false)) ∧
+  BP.step u .isatty = (u, (pyClosedOutcome u.readClosed none).map (fun _ => .bool false))
 
 theorem baseClosedProtocol_proven : BaseClosedProtocol := by
-  intro u
-  refine ⟨rfl, rfl, ?_, ?_⟩
+  intro u msg
+  have hc : BC.checkClosed u = cClosedOutcome u.readClosed := by
+    unfold BC.checkClosed cClosedOutcome; rfl
+  have hp : ∀ m, BP.checkClosed u m = pyClosedOutcome u.readClosed m := by
+    intro m; unfold BP.checkClosed pyClosedOutcome; rfl
+  refine ⟨rfl, rfl, ?_, ?_, fun _ => rfl, ?_, ?_⟩
   · intro o ho
     rcases ho with rfl | rfl | rfl <;>
-      (cases h : u.isClosed <;> simp [BC.step, BP.step, h, closedDotE])
-  · cases h : u.isClosed <;> simp [BC.step, BP.step, h, closedDotE]
+      (simp only [BC.step, BP.step, hc, hp]; constructor <;> split <;> simp_all [Except.map])
+  · simp only [BP.step, hp]; split <;> simp_all [Except.map]
+  · simp only [BC.step, hc]; split <;> simp_all [Except.map]
+  · simp only [BP.step, hp]; split <;> simp_all [Except.map]
+
+/-- Index of the first write answer that raises, with its exception. -/
+def raiseIdx : List Ret → Option (Nat × String × String)
+  | [] => none
+  | .raise c m :: _ => some (0, c, m)
+  | _ :: rs => (raiseIdx rs).map (fun (i, c, m) => (i + 1, c, m))
+
+/-- The answers of `n` calls of a scripted method: the script, then `None`. -/
+def scriptAnswers : List Ret → Nat → List Ret
+  | _, 0 => []
+  | [], n + 1 => Ret.none :: scriptAnswers [] n
+  | r :: rs, n + 1 => r :: scriptAnswers rs n
+
+/-- The outcome of the iterator after the last line. -/
+def stopResult : Option (String × String) → Py Val
+  | some (c, m) => .error (excOf c m)
+  | none => .ok .none
+
+/-- `writelines` raised the first raising write's exception after writing the lines up to
+it, or, with no raising write, wrote every line and ended as the iterator did. -/
+def WLSpec (stop : Option (String × String)) (ls : List (List Nat)) (u : UObj) (res : UObj × Py Val) : Prop :=
+  match raiseIdx (scriptAnswers u.writes ls.length) with
+  | some (i, c, m) => res.2 = .error (excOf c m) ∧ res.1.log = u.log ++ (ls.take (i + 1)).map Call.write
+  | none => res.2 = stopResult stop ∧ res.1.log = u.log ++ ls.map Call.write
+
+/-- `_pyio`'s `IOBase.writelines(lines)` (_pyio.py:583-591), over a fallible `closed`,
+fallible `write` calls and an iterator that may raise after its lines: if
+`_checkClosed()` fails, its exception is raised before any `write`; otherwise `write` is
+called with each line in order until one raises, whose exception propagates with no
+later line written; if none raises, the iterator's exception propagates, or the result is
+`None`. (A `write` past the end of the script answers `None`.) -/
+def BaseWritelines : Prop := ∀ (u : UObj) (ls : List (List Nat)) (stop : Option (String × String)),
+  (∀ e, BP.checkClosed u none = .error e → BP.step u (.writelines ls stop) = (u, .error e)) ∧
+  (BP.checkClosed u none = .ok () → WLSpec stop ls u (BP.step u (.writelines ls stop)))
+
+theorem raiseIdx_cons_ok (r : Ret) (rs : List Ret) (h : ∀ c m, r ≠ .raise c m) :
+    raiseIdx (r :: rs) = (raiseIdx rs).map (fun (i, c, m) => (i + 1, c, m)) := by
+  cases r with
+  | raise c m => exact absurd rfl (h c m)
+  | _ => rfl
+
+theorem wlSpec_cons (stop : Option (String × String)) (l : List Nat) (ls : List (List Nat))
+    (u u' : UObj) (r : Ret) (res : UObj × Py Val) (hr : ∀ c m, r ≠ .raise c m)
+    (hlog : u'.log = u.log ++ [Call.write l])
+    (hans : scriptAnswers u.writes (l :: ls).length = r :: scriptAnswers u'.writes ls.length)
+    (ih : WLSpec stop ls u' res) : WLSpec stop (l :: ls) u res := by
+  unfold WLSpec at ih ⊢
+  rw [hans, raiseIdx_cons_ok r _ hr]
+  revert ih
+  cases raiseIdx (scriptAnswers u'.writes ls.length) with
+  | none => intro ih; simp only [Option.map_none]; exact ⟨ih.1, by rw [ih.2, hlog]; simp⟩
+  | some x =>
+    obtain ⟨i, c, m⟩ := x
+    intro ih
+    simp only [Option.map_some]
+    exact ⟨ih.1, by rw [ih.2, hlog]; simp⟩
+
+theorem writelinesLoop_spec (stop : Option (String × String)) : ∀ (ls : List (List Nat)) (u : UObj),
+    WLSpec stop ls u (BP.writelinesLoop stop u ls) := by
+  intro ls
+  induction ls with
+  | nil =>
+    intro u
+    unfold WLSpec
+    simp only [List.length_nil, scriptAnswers, raiseIdx]
+    cases stop <;> simp [BP.writelinesLoop, stopResult]
+  | cons l ls ih =>
+    intro u
+    cases hw : u.writes with
+    | nil =>
+      have hu : u.callWrite l = ({ u with log := u.log ++ [Call.write l] }, Ret.none) := by
+        simp [UObj.callWrite, hw]
+      have e : BP.writelinesLoop stop u (l :: ls) =
+          BP.writelinesLoop stop { u with log := u.log ++ [Call.write l] } ls := by
+        simp only [BP.writelinesLoop, hu]
+      rw [e]
+      exact wlSpec_cons stop l ls u _ Ret.none _ (by intro c m h; cases h) rfl
+        (by simp [hw, scriptAnswers]) (ih _)
+    | cons r rs =>
+      have hu : u.callWrite l = ({ u with log := u.log ++ [Call.write l], writes := rs }, r) := by
+        simp [UObj.callWrite, hw]
+      cases r with
+      | raise c m =>
+        unfold WLSpec
+        simp [BP.writelinesLoop, hu, hw, scriptAnswers, raiseIdx]
+      | bytes b =>
+        have e : BP.writelinesLoop stop u (l :: ls) =
+            BP.writelinesLoop stop { u with log := u.log ++ [Call.write l], writes := rs } ls := by
+          simp only [BP.writelinesLoop, hu]
+        rw [e]
+        exact wlSpec_cons stop l ls u _ (.bytes b) _ (by intro c m h; cases h) rfl
+          (by simp [hw, scriptAnswers]) (ih _)
+      | none =>
+        have e : BP.writelinesLoop stop u (l :: ls) =
+            BP.writelinesLoop stop { u with log := u.log ++ [Call.write l], writes := rs } ls := by
+          simp only [BP.writelinesLoop, hu]
+        rw [e]
+        exact wlSpec_cons stop l ls u _ .none _ (by intro c m h; cases h) rfl
+          (by simp [hw, scriptAnswers]) (ih _)
+      | int n =>
+        have e : BP.writelinesLoop stop u (l :: ls) =
+            BP.writelinesLoop stop { u with log := u.log ++ [Call.write l], writes := rs } ls := by
+          simp only [BP.writelinesLoop, hu]
+        rw [e]
+        exact wlSpec_cons stop l ls u _ (.int n) _ (by intro c m h; cases h) rfl
+          (by simp [hw, scriptAnswers]) (ih _)
+
+theorem baseWritelines_proven : BaseWritelines := by
+  intro u ls stop
+  constructor
+  · intro e he
+    simp [BP.step, he]
+  · intro he
+    simp only [BP.step, he]
+    exact writelinesLoop_spec stop ls u
 
 theorem nlPrefix_cons (x : Nat) (xs : List Nat) :
     nlPrefix (x :: xs) = if x = 10 then 1 else 1 + nlPrefix xs := by

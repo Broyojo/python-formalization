@@ -237,11 +237,11 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``StringIOInquiries, thm := some ``stringIOInquiries_proven },
   { id := "pyio-stringio-unsupported", pyFile := "Modules/_io/textio.c"
     pyFns := ["_io__TextIOBase_detach_impl", "_io__TextIOBase_encoding_get_impl",
-      "_io__TextIOBase_errors_get_impl", "_io__IOBase_fileno_impl", "TextIOWrapper.fileno",
-      "StringIO.encoding", "StringIO.errors", "StringIO.detach"]
-    statement := "On a StringIO (both twins), detach() and fileno() raise io.UnsupportedOperation, while the encoding and errors attributes are None (an in-memory text buffer has no underlying binary buffer, encoding or error handler)."
-    source := "Doc/library/io.rst (TextIOBase.detach/fileno/encoding/errors: 'not supported by an in-memory text buffer')"
-    status := .proven, prop := ``StringIOUnsupported, thm := some ``stringIOUnsupported_proven },
+      "_io__TextIOBase_errors_get_impl", "_io__IOBase_fileno_impl", "TextIOWrapper.fileno", "StringIO.detach"]
+    statement := "On every StringIO state, detach() and fileno() raise io.UnsupportedOperation: in C with the method name ('detach', 'fileno'), in _pyio with _unsupported's message naming the refusing class, 'StringIO.detach() not supported' and 'BytesIO.fileno() not supported' (TextIOWrapper.fileno asks the underlying BytesIO). The C encoding and errors attributes are None."
+    source := "Doc/library/io.rst (TextIOBase.detach/fileno: 'not supported by an in-memory text buffer'); the bodies _pyio.py:341-344, :2274-2275, :2786-2788, textio.c:67-72, iobase.c:528-533"
+    status := .proven, prop := ``StringIOUnsupported, thm := some ``stringIOUnsupported_proven
+    notes := "Scope: an exact StringIO; a subclass changes the class name in the detach message. _pyio's StringIO.encoding and errors are `return None` and are excluded as trivial." },
   { id := "pyio-stringio-pickle-roundtrip", pyFile := "Modules/_io/stringio.c"
     pyFns := ["_io_StringIO___getstate___impl", "_io_StringIO___setstate___impl", "_io_StringIO___init___impl"]
     statement := "For a C StringIO, whenever __init__ accepts the saved value and newline, __setstate__(__getstate__()) restores contents and position verbatim, applying no newline translation a second time (position in Py_ssize_t)."

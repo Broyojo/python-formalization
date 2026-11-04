@@ -1,8 +1,12 @@
 import PyLean.PyIO.BytesDocs
+import PyLean.Binary64.Float
 
 /-!
 The remaining `BytesIO` methods of both twins: the inquiries, `flush`,
-`isatty`, `writelines`, and pickling (`bytesio.c`, `Lib/_pyio.py`).
+`isatty`, `writelines`, and pickling (`bytesio.c`, `Lib/_pyio.py`), and the
+arguments that are not `None` or an `int`: an object with or without `__index__` for
+`read`, `readline` and `seek`, a float hint for `readlines`, and a `str` or a
+non-buffer for `write`.
 -/
 
 namespace PyLean.PyIO
@@ -16,7 +20,9 @@ bytes; `getstate` is `__getstate__()` (the dict slot is `None`);
 `readintoSelf off n` is `readinto` of `getbuffer()[off:off+n]`, a view of the
 stream's own buffer; `reinit b` calls `__init__` again, with `b` or no argument;
 `reinitObj b` calls it with `bytearray(b)`, or with the int 1 for `none`;
-`truncateObj a` is `truncate` of an object that is not an `int`. -/
+`truncateObj a` is `truncate` of an object that is not an `int`; `readObj a`,
+`readlineObj a` and `seekObj a w` pass such an object as the size or position;
+`readlinesFloat x` passes the float `x` as the hint; `writeObj w` passes `w`. -/
 inductive XOp where
   | readable | writable | seekable | flush | isatty
   | writelines (ls : List (List Nat))
@@ -26,6 +32,11 @@ inductive XOp where
   | reinit (b : Option (List Nat))
   | reinitObj (b : Option (List Nat))
   | truncateObj (a : TArg)
+  | readObj (a : TArg)
+  | readlineObj (a : TArg)
+  | seekObj (a : TArg) (whence : Int)
+  | readlinesFloat (x : Binary64.F64)
+  | writeObj (w : WArg)
   deriving Repr, DecidableEq, Inhabited
 
 namespace C
@@ -124,6 +135,63 @@ def truncateObj (s : BState) (a : TArg) : BState × Py Val :=
         let s := if n < s.buf.length then { s with buf := s.buf.take n.toNat } else s
         (s, .ok (.int n))
 
+/-- `_Py_convert_optional_to_ssize_t`, Python/modsupport.c:15-35, on an object that is
+not `None` (the converter of `read`, `read1` and `readline`, clinic/bytesio.c.h:239,
+:278, :318): an object with no `__index__` is refused by type name (:27-31); otherwise
+`PyNumber_AsSsize_t(obj, PyExc_OverflowError)` (:21-25) calls `__index__`, whose actions
+on the stream run first, and refuses a result outside `Py_ssize_t`. Returns the state
+`__index__` left. -/
+def convOptSsize (s : BState) (a : TArg) : BState × Py Int :=
+  match a with
+  | .noIndex t _ => (s, .error (.typeError s!"argument should be integer or None, not '{t}'"))
+  | .index hook r =>
+    let s := hook.foldl hookStep s
+    match r with
+    | none => (s, .error boomErr)
+    | some v =>
+      -- `PyNumber_AsSsize_t` (Objects/abstract.c:1505-1510) names the argument's type, not `int`
+      if InSsize v then (s, .ok v)
+      else (s, .error (.overflowError s!"cannot fit '{indexTypeName}' into an index-sized integer"))
+
+/-- `read(a)`: the clinic conversion (clinic/bytesio.c.h `_io_BytesIO_read`), then
+`_io_BytesIO_read_impl` (bytesio.c:509-525), whose `CHECK_CLOSED` (:514) sees what
+`__index__` did. -/
+def readObj (s : BState) (a : TArg) : BState × Py Val :=
+  match convOptSsize s a with
+  | (s, .error e) => (s, .error e)
+  | (s, .ok v) => read s (some v)
+
+/-- `readline(a)`: the same converter, then `_io_BytesIO_readline_impl` (:561-571). -/
+def readlineObj (s : BState) (a : TArg) : BState × Py Val :=
+  match convOptSsize s a with
+  | (s, .error e) => (s, .error e)
+  | (s, .ok v) => readline s (some v)
+
+/-- `seek(a, whence)`: clinic/bytesio.c.h:471-482 calls `_PyNumber_Index` (which runs
+`__index__`, or refuses an object without it, Objects/abstract.c:1410-1424) and
+`PyLong_AsSsize_t`, then converts `whence` (:486) and runs `_io_BytesIO_seek_impl`
+(bytesio.c:774-815), whose `CHECK_CLOSED` (:777) comes after both. -/
+def seekObj (s : BState) (a : TArg) (whence : Int) : BState × Py Val :=
+  match a with
+  | .noIndex t _ => (s, .error (notIndexable t))
+  | .index hook r =>
+    let s := hook.foldl hookStep s
+    match r with
+    | none => (s, .error boomErr)
+    | some v => seek s v whence
+
+/-- `readlines(x)` for a float `x`: `CHECK_CLOSED` (bytesio.c:594), then a hint that is
+neither an `int` nor `None` is refused by type name (:605-608). -/
+def readlinesFloat (s : BState) : BState × Py Val :=
+  if s.closed then (s, .error closedErr)
+  else (s, .error (.typeError "integer argument expected, got 'float'"))
+
+/-- `write(w)` for a `str` or an object without the buffer interface:
+`write_bytes_lock_held` (bytesio.c:236-244) asks for the buffer before
+`check_closed` (:246), and `PyObject_GetBuffer` refuses it (Objects/abstract.c:447-453). -/
+def writeObj (s : BState) (w : WArg) : BState × Py Val :=
+  (s, .error (.typeError s!"a bytes-like object is required, not '{w.typeName}'"))
+
 /-- bytesio.c:323-328, :338-343, :353-358, :368-373, :445-450, :850-876,
 :938-945, :948-1023. -/
 def xstep (s : BState) : XOp → BState × Py Val
@@ -140,6 +208,11 @@ def xstep (s : BState) : XOp → BState × Py Val
   | .reinit b => reinit s b
   | .reinitObj b => reinitObj s b
   | .truncateObj a => truncateObj s a
+  | .readObj a => readObj s a
+  | .readlineObj a => readlineObj s a
+  | .seekObj a w => seekObj s a w
+  | .readlinesFloat _ => readlinesFloat s
+  | .writeObj w => writeObj s w
 
 end C
 
@@ -216,8 +289,127 @@ def truncateObj (s : BState) (a : TArg) : BState × Py Val :=
           else ({ s with buf := s.buf.take v.toNat }, .ok (.int v))
         else (s, .ok (.int v))
 
+/-- One action of an `__index__` that `read`, `readline` or `seek` calls: no lock is held
+then (`read` calls it at _pyio.py:938, before `with self._lock` at :940; `seek` at :983
+and `IOBase.readline` at :544 hold none), so each action is the method itself. An
+exception it raises is swallowed. -/
+def hookStepFree (s : BState) : Hook → BState
+  | .close => (close s).1
+  | .getbuffer => (step s .getbuffer).1
+  | .tell => s
+  | .seekAbs p => (seek s p 0).1
+  | .seekCur => (seek s 0 1).1
+  | .write b => (write s b).1
+
+/-- The body of `BytesIO.read` once `size` is an int, _pyio.py:940-948: nothing here
+looks at `closed`. -/
+def readBody (s : BState) (size : Int) : BState × Py (List Nat) :=
+  let size : Int := if size < 0 then s.buf.length else size
+  if s.buf.length ≤ s.pos then (s, .ok []) else
+  let newpos := min s.buf.length (s.pos + size.toNat)
+  ({ s with pos := newpos }, .ok (slice s.buf s.pos (newpos - s.pos)))
+
+/-- On an open stream `read(v)` of an int is the body: `readRaw` and `readBody` are the
+same code. -/
+theorem readRaw_eq_readBody (s : BState) (v : Int) (h : s.closed = false) :
+    readRaw s (some v) = readBody s v := by
+  simp [readRaw, readBody, h]
+
+/-- `BytesIO.read(a)` for an object `a`, _pyio.py:927-948: `closed` is checked first
+(:928-929), then `size.__index__` is looked up (:933-936, `TypeError(f"{size!r} is not an
+integer")` without it) and called (:938), and the body runs with no second look at
+`closed`. -/
+def readObj (s : BState) (a : TArg) : BState × Py Val :=
+  if s.closed then (s, .error (.valueError "read from closed file")) else
+  match a with
+  | .noIndex _ r => (s, .error (.typeError s!"{r} is not an integer"))
+  | .index hook r =>
+    let s := hook.foldl hookStepFree s
+    match r with
+    | none => (s, .error boomErr)
+    | some v =>
+      let (s, b) := readBody s v
+      (s, b.map .bytes)
+
+/-- The body of `BytesIO.seek` once `pos` is an int, _pyio.py:984-996: nothing here
+looks at `closed`. -/
+def seekBody (s : BState) (pos whence : Int) : BState × Py Val :=
+  let r : Py Int :=
+    if whence = 0 then
+      if pos < 0 then .error (.valueError s!"negative seek position {pos}") else .ok pos
+    else if whence = 1 then .ok (max 0 (s.pos + pos))
+    else if whence = 2 then .ok (max 0 (s.buf.length + pos))
+    else .error (.valueError "unsupported whence value")
+  match r with
+  | .error e => (s, .error e)
+  | .ok p => ({ s with pos := p.toNat }, .ok (.int p))
+
+theorem seek_eq_seekBody (s : BState) (p w : Int) (h : s.closed = false) :
+    seek s p w = seekBody s p w := by
+  have h' : ¬ s.closed = true := by simp [h]
+  unfold seek; rw [if_neg h']; rfl
+
+/-- `BytesIO.seek(a, whence)` for an object `a`, _pyio.py:975-996: `closed` first
+(:976-977), then `pos.__index__` looked up (:978-981) and called (:983), then the body,
+which sets `_pos` and returns it whether or not `__index__` closed the stream. -/
+def seekObj (s : BState) (a : TArg) (whence : Int) : BState × Py Val :=
+  if s.closed then (s, .error (.valueError "seek on closed file")) else
+  match a with
+  | .noIndex _ r => (s, .error (.typeError s!"{r} is not an integer"))
+  | .index hook r =>
+    let s := hook.foldl hookStepFree s
+    match r with
+    | none => (s, .error boomErr)
+    | some v => seekBody s v whence
+
+/-- `IOBase.readline(a)` for an object `a` on a `BytesIO`, _pyio.py:513-553: `BytesIO` has
+no `peek`, so `nreadahead` is 1 (:533-535); `size.__index__` is looked up and called
+(:539-544) before the loop, whose `read(1)` calls (:547) check `closed`. -/
+def readlineObj (s : BState) (a : TArg) : BState × Py Val :=
+  match a with
+  | .noIndex _ r => (s, .error (.typeError s!"{r} is not an integer"))
+  | .index hook r =>
+    let s := hook.foldl hookStepFree s
+    match r with
+    | none => (s, .error boomErr)
+    | some v => readline s (some v)
+
+/-- `hint <= n` for a float `hint` and an int `n`: `float_richcompare`
+(Objects/floatobject.c:372-532) with `Py_LE`. `n >= hint` is the same call: `int.__ge__`
+returns `NotImplemented` for a float and Python tries the reflected `hint.__le__(n)`. -/
+def floatLe (x : Binary64.F64) (n : Int) : Bool :=
+  Binary64.float_richcompare x (.int n) .le == some true
+
+/-- The `for line in self` loop of `IOBase.readlines` (_pyio.py:576-581) with a hint
+compared by `stop`: append, add the length, stop once `stop n` (`n >= hint`). -/
+def readlinesStopLoop (stop : Int → Bool) : BState → Int → List Atom → Nat → BState × Py Val
+  | s, _, _, 0 => (s, .error .modelFuel)
+  | s, n, acc, fuel + 1 =>
+    match readlineRaw s none with
+    | (s', .error e) => (s', .error e)
+    | (s', .ok l) =>
+      if l = [] then (s', .ok (.list acc.reverse)) else
+      let acc := Atom.bytes l :: acc
+      let n := n + l.length
+      if stop n then (s', .ok (.list acc.reverse)) else readlinesStopLoop stop s' n acc fuel
+
+/-- `IOBase.readlines(x)` for a float `x`, _pyio.py:565-581: `hint <= 0` (:572) is
+compared before `__iter__` (:555-557) checks `closed`; then `list(self)` or the loop. -/
+def readlinesFloat (s : BState) (x : Binary64.F64) : BState × Py Val :=
+  if floatLe x 0 then readlines s none else
+  if s.closed then (s, .error (.valueError "I/O operation on closed file.")) else
+  readlinesStopLoop (floatLe x) s 0 [] (s.buf.length - s.pos + 2)
+
+/-- `BytesIO.write(w)` for a `str` or a non-buffer, _pyio.py:955-960: a `str` is refused
+(:956-957), and `memoryview(b)` (:958) refuses an object without the buffer interface
+(Objects/memoryobject.c:821-823), both before `closed` is checked (:959-960). -/
+def writeObj (s : BState) (w : WArg) : BState × Py Val :=
+  match w with
+  | .str _ => (s, .error (.typeError "can't write str to binary stream"))
+  | .obj t => (s, .error (.typeError s!"memoryview: a bytes-like object is required, not '{t}'"))
+
 /-- `BytesIO.readable/writable/seekable` (_pyio.py:1022-1035), `IOBase.flush`
-(:380-386), `IOBase.isatty` (:503-509), `IOBase.writelines` (:583-590),
+(:380-385), `IOBase.isatty` (:503-509), `IOBase.writelines` (:583-591),
 `BytesIO.__getstate__` (:896-902, the instance dict without `_lock`, as
 `[buffer, pos]`). -/
 def xstep (s : BState) : XOp → BState × Py Val
@@ -236,6 +428,11 @@ def xstep (s : BState) : XOp → BState × Py Val
   -- `buf += initial_bytes` fails before `_buffer` is replaced
   | .reinitObj none => (s, .error (.typeError "can't concat int to bytearray"))
   | .truncateObj a => truncateObj s a
+  | .readObj a => readObj s a
+  | .readlineObj a => readlineObj s a
+  | .seekObj a w => seekObj s a w
+  | .readlinesFloat x => readlinesFloat s x
+  | .writeObj w => writeObj s w
 
 end P
 

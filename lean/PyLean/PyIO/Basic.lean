@@ -59,6 +59,9 @@ def bufferError : PyExc := .named "BufferError" "Existing exports of data: objec
 def memoryError : PyExc := .named "MemoryError" ""
 def osError (m : String) : PyExc := .named "OSError" m
 def unsupportedOp (m : String) : PyExc := .named "UnsupportedOperation" m
+/-- `IOBase._unsupported(name)` on an instance of class `cls`, _pyio.py:341-344:
+`"%s.%s() not supported" % (self.__class__.__name__, name)`. -/
+def pyUnsupported (cls name : String) : PyExc := unsupportedOp s!"{cls}.{name}() not supported"
 /-- `UnicodeDecodeError`; the message embeds byte values and positions. -/
 def unicodeDecodeError : PyExc := .named "UnicodeDecodeError" "~utf-8 decode error"
 /-- `UnicodeEncodeError` (a lone surrogate in a `newline` argument). -/
@@ -130,6 +133,21 @@ inductive TArg where
   deriving Repr, DecidableEq, Inhabited
 
 def boomErr : PyExc := .valueError "boom"
+
+/-- `type(a).__name__` of a `TArg.index` object: the harness's class `Idx`
+(difftest/pyio_diff.py), which `PyNumber_AsSsize_t` names when the result overflows. -/
+def indexTypeName : String := "Idx"
+
+/-- The argument of a binary `write` when it is not a bytes-like object: a `str`, or an
+object of the named type without the buffer interface. -/
+inductive WArg where
+  | str (s : List Nat)
+  | obj (typeName : String)
+  deriving Repr, DecidableEq, Inhabited
+
+def WArg.typeName : WArg → String
+  | .str _ => "str"
+  | .obj t => t
 
 /-- `_PyNumber_Index` on an object with no `__index__`, Objects/abstract.c:1410-1424. -/
 def notIndexable (typeName : String) : PyExc :=

@@ -13,13 +13,15 @@ namespace PyLean.PyIO
 open PyLean
 
 /-- `setstate v nl p` is `__setstate__((v, nl, p, None))`; `truncateObj a` is
-`truncate` of an object that is not an `int`, on a realized stream. -/
+`truncate` of an object that is not an `int`, on a realized stream; `writeObj ty` is
+`write` of an object of type `ty` that is not a `str`. -/
 inductive SXOp where
   | readable | writable | seekable | flush | isatty | fileno | detach
   | encoding | errors | lineBuffering | name
   | getstate
   | setstate (v : Option (List Nat)) (nl : Option (List Nat)) (pos : Int)
   | truncateObj (a : TArg)
+  | writeObj (ty : String)
   deriving Repr, DecidableEq, Inhabited
 
 namespace SC
@@ -103,6 +105,9 @@ def xstep (s : SCState) : SXOp → SCState × Py Val
       | none => .none), .int s.pos, .none]))
   | .setstate v nl p => setstate s v nl p
   | .truncateObj a => truncateObj false s a
+  -- `_io_StringIO_write_impl`, stringio.c:561-579: the type test (:567-571) comes
+  -- before `CHECK_CLOSED` (:572)
+  | .writeObj ty => (s, .error (.typeError s!"string argument expected, got '{ty}'"))
 
 end SC
 
@@ -120,14 +125,48 @@ def xstep (t : TState) : SXOp → TState × Py Val
     | .error e => (t, .error e)
     | .ok t => (t, .ok .none)
   | .isatty => if t.b.closed then (t, .error closedDot) else (t, .ok (.bool false))
-  | .fileno => (t, .error (unsupportedOp "BytesIO.fileno() not supported"))
-  | .detach => (t, .error (unsupportedOp "StringIO.detach() not supported"))
+  -- `return self.buffer.fileno()` (:2274-2275): `IOBase.fileno` on the `BytesIO`
+  | .fileno => (t, .error (pyUnsupported "BytesIO" "fileno"))
+  -- `StringIO.detach` (:2786-2788): `self._unsupported("detach")` on the `StringIO`
+  | .detach => (t, .error (pyUnsupported "StringIO" "detach"))
   | .encoding | .errors => (t, .ok .none)
   | .lineBuffering => (t, .ok (.bool false))
   | .name => (t, .error (.named "AttributeError" "'BytesIO' object has no attribute 'name'"))
   | .getstate | .setstate _ _ _ | .truncateObj _ => (t, .ok .none)
+  -- `TextIOWrapper.write`, _pyio.py:2280-2286: `closed` (:2282-2283) is checked
+  -- before the type (:2284-2286)
+  | .writeObj ty =>
+    if t.b.closed then (t, .error (.valueError "write to closed file"))
+    else (t, .error (.typeError s!"can't write {ty} to text stream"))
 
 end TP
+
+/-- `io.StringIO(value, newline)` with a `newline` of type `ty` that is neither a `str`
+nor `None`: `_io_StringIO___init___impl`, stringio.c:696-702. -/
+def SC.initNlObj (ty : String) : Py SCState :=
+  .error (.typeError s!"newline must be str or None, not {ty}")
+
+/-- `io.StringIO(value, newline)` with a `value` of type `ty` that is neither a `str` nor
+`None`: the newline checks (stringio.c:693-715) come first, then the value
+(:716-721). -/
+def SC.initValObj (nl : Option (List Nat)) (ty : String) : Py SCState :=
+  match SC.init none nl with
+  | .error e => .error e
+  | .ok _ => .error (.typeError s!"initial_value must be str or None, not {ty}")
+
+/-- `_pyio.StringIO(value, newline)` with a `newline` of type `ty` that is neither a `str`
+nor `None`: `TextIOWrapper.__init__` calls `_check_newline` first (_pyio.py:2092), which
+refuses it with the `repr` of its type (:2123-2124). -/
+def TP.initNlObj (ty : String) : Py TState :=
+  .error (.typeError s!"illegal newline type: <class '{ty}'>")
+
+/-- `_pyio.StringIO(value, newline)` with a `value` of type `ty` that is neither a `str`
+nor `None`: `TextIOWrapper.__init__` (with `_check_newline`, _pyio.py:2122-2126) runs
+first, then `StringIO.__init__` refuses the value (:2756-2759). -/
+def TP.initValObj (nl : Option (List Nat)) (ty : String) : Py TState :=
+  match TP.init none nl with
+  | .error e => .error e
+  | .ok _ => .error (.typeError s!"initial_value must be str or None, not {ty}")
 
 def stepSAnyC (s : SCState) : SOp ⊕ SXOp → SCState × Py Val
   | .inl o => SC.step s o
@@ -151,22 +190,28 @@ theorem stringIOInquiries_proven : StringIOInquiries := by
   rcases ho with rfl | rfl | rfl | rfl <;>
     simp +contextual [SC.xstep, TP.xstep, SC.closedErr, TP.closedDot]
 
-/-- `detach`, `fileno` raise `UnsupportedOperation`, and `encoding`, `errors` are
-`None`, in both twins on every state (`TextIOBase`: "not supported by an
-in-memory text buffer"). -/
+/-- `detach()` and `fileno()` raise `io.UnsupportedOperation` on every state of both
+twins, with the method name in C (`_io__TextIOBase_detach_impl`, textio.c:67-72; the inherited
+`_io__IOBase_fileno_impl`, iobase.c:528-533) and with `_pyio`'s `_unsupported` message
+naming the class that refuses: `'StringIO.detach() not supported'` from `StringIO.detach`
+(_pyio.py:2786-2788) and `'BytesIO.fileno() not supported'` from the underlying
+`BytesIO` (`TextIOWrapper.fileno`, :2274-2275, calls `self.buffer.fileno()`). The C
+`encoding` and `errors` attributes are `None`. Scope: an exact `StringIO`, not a
+subclass. -/
 def StringIOUnsupported : Prop := ∀ (s : SCState) (t : TState),
-  (∀ o, (o = SXOp.detach ∨ o = .fileno) →
-    (((SC.xstep s o).2.toBool = false) ∧ ((TP.xstep t o).2.toBool = false) ∧
-     ∃ m₁ m₂, (SC.xstep s o).2 = .error (unsupportedOp m₁) ∧ (TP.xstep t o).2 = .error (unsupportedOp m₂))) ∧
-  (∀ o, (o = SXOp.encoding ∨ o = .errors) → (SC.xstep s o).2 = .ok .none ∧ (TP.xstep t o).2 = .ok .none)
+  SC.xstep s .detach = (s, .error (unsupportedOp "detach")) ∧
+  SC.xstep s .fileno = (s, .error (unsupportedOp "fileno")) ∧
+  TP.xstep t .detach = (t, .error (unsupportedOp "StringIO.detach() not supported")) ∧
+  TP.xstep t .fileno = (t, .error (unsupportedOp "BytesIO.fileno() not supported")) ∧
+  (∀ o, (o = SXOp.encoding ∨ o = .errors) → (SC.xstep s o).2 = .ok .none)
 
 theorem stringIOUnsupported_proven : StringIOUnsupported := by
   intro s t
-  constructor
+  refine ⟨rfl, rfl, ?_, ?_, ?_⟩
+  · simp [TP.xstep, pyUnsupported]; decide
+  · simp [TP.xstep, pyUnsupported]; decide
   · intro o ho
-    rcases ho with rfl | rfl <;> exact ⟨rfl, rfl, _, _, rfl, rfl⟩
-  · intro o ho
-    rcases ho with rfl | rfl <;> simp [SC.xstep, TP.xstep]
+    rcases ho with rfl | rfl <;> simp [SC.xstep]
 
 /-- Pickling round trip (C): whenever `__init__` accepts the saved value and
 newline, `__setstate__(__getstate__())` restores contents and position verbatim
