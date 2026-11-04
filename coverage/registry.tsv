@@ -2286,6 +2286,17 @@ pygrammar-rule-assignment-ann-plain	proven	Grammar/python.gram	rule:assignment
 pygrammar-rule-assignment-invalid	proven	Grammar/python.gram	rule:assignment
 pygrammar-rule-import-stmt	proven	Grammar/python.gram	rule:import_stmt
 pygrammar-rule-import-from	proven	Grammar/python.gram	rule:import_from
+pygrammar-rule-assignment-more	proven	Grammar/python.gram	rule:assignment
+pygrammar-rule-compound-stmt-more	proven	Grammar/python.gram	rule:compound_stmt
+pygrammar-rule-simple-stmt-more	proven	Grammar/python.gram	rule:simple_stmt
+pygrammar-rule-del-stmt-targets	proven	Grammar/python.gram	rule:del_stmt
+pygrammar-rule-while-stmt	proven	Grammar/python.gram	rule:while_stmt
+pygrammar-rule-if-stmt	proven	Grammar/python.gram	rule:if_stmt
+pygrammar-rule-else-block	proven	Grammar/python.gram	rule:else_block
+pygrammar-rule-block	proven	Grammar/python.gram	rule:block
+pygrammar-rule-func-type	proven	Grammar/python.gram	rule:func_type
+pygrammar-rule-expression	proven	Grammar/python.gram	rule:expression
+pygrammar-rule-star-expressions	proven	Grammar/python.gram	rule:star_expressions
 pygrammar-rule-file	proven	Grammar/python.gram	rule:file
 pygrammar-rule-eval	proven	Grammar/python.gram	rule:eval
 pygrammar-rule-interactive	proven	Grammar/python.gram	rule:interactive
