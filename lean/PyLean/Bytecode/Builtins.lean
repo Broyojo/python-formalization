@@ -577,7 +577,7 @@ def filterNext (f i : Val) : Nat → RM (Option Val)
 
 /-! ### Async generators: `Objects/genobject.c:1660-2265` -/
 
-/-- `async_gen_init_hooks`, `Objects/genobject.c:1668-1702`: once per generator (`ag_hooks_inited`
+/-- `async_gen_init_hooks`, `Objects/genobject.c:1669-1702`: once per generator (`ag_hooks_inited`
 is set before anything runs, so a raising or reentrant hook does not run twice), call
 `tstate->async_gen_firstiter(o)` when it is set; its error is the `1` return. Storing the finalizer
 in `ag_origin_or_finalizer` (:1683-1686) is read only by `gen_finalize`, outside the machine's
@@ -590,8 +590,8 @@ def asyncGenInitHooks (g : Addr) : RM Unit := do
   if firstiter != .null then
     let _ ← om.call ctx firstiter [.ref g] []
 
-/-- `async_gen_anext`, `Objects/genobject.c:1705-1713`, the `am_anext` slot of `async_generator`
-(:1833-1838): the hooks, then `async_gen_asend_new(ag, NULL)` (:2160-2177), a fresh
+/-- `async_gen_anext`, `Objects/genobject.c:1706-1713`, the `am_anext` slot of `async_generator`
+(:1833-1838): the hooks, then `async_gen_asend_new(ag, NULL)` (:2161-2177), a fresh
 `AWAITABLE_STATE_INIT` awaitable with no send value. -/
 def asyncGenAnext (g : Addr) : RM Val := do
   asyncGenInitHooks om ctx g
@@ -640,7 +640,7 @@ def asyncGenUnwrap (g : Addr) (r : Except Val (Option Val)) : RM Val := do
     setRunningAsync g false
     throw (.exc e)
 
-/-- `async_gen_asend_send`, `Objects/genobject.c:1973-2011`, on the awaitable at `a`; `arg = none`
+/-- `async_gen_asend_send`, `Objects/genobject.c:1974-2008`, on the awaitable at `a`; `arg = none`
 is `NULL` (`async_gen_asend_iternext`, :2024-2028). A closed awaitable refuses; a fresh one fails
 and closes when the generator is already running an awaitable, else takes `ags_sendval` for a
 `NULL` or `None` argument and moves to `AWAITABLE_STATE_ITER`; then `ag_running_async` is set, the
@@ -665,7 +665,7 @@ def asendSend (a : Addr) (arg : Option Val) : RM Val := do
       throw (.exc e)
   | _ => fault "not an asend awaitable"
 
-/-- `_PyAsyncGenASend_Send`, `Objects/genobject.c:2013-2023`, the `am_send` of
+/-- `_PyAsyncGenASend_Send`, `Objects/genobject.c:2011-2021`, the `am_send` of
 `async_generator_asend` (:2110-2113): a value is `PYGEN_NEXT`; a `StopIteration` (or `NULL` with
 nothing set) is `PYGEN_RETURN` with its value (`_PyGen_FetchStopIterationValue`); anything else is
 `PYGEN_ERROR`. -/
@@ -822,7 +822,7 @@ def iterNextImpl (it : Val) : RM (Option Val) := do
     | .gen g =>
       if g.kind == .gen then genIterNext ctx a
       else typeError s!"'{← tpName it}' object is not an iterator"
-    -- `async_gen_asend_iternext`, `Objects/genobject.c:2024-2028`
+    -- `async_gen_asend_iternext`, `Objects/genobject.c:2025-2028`
     | .asend .. => some <$> asendSend ctx a none
     | .inst i =>
       match ← userLookup i.cls "__next__" with
@@ -1888,7 +1888,7 @@ def intrinsic1Impl (f : Frame) (n : Nat) (v : Val) : RM Val := do
     if v != .none then write (strOf (← om.repr ctx v) ++ "\n")
     pure .none
   | 3 => stopIterationError P f v
-  -- `_PyAsyncGenValueWrapperNew`, `Objects/genobject.c:2245-2262`
+  -- `_PyAsyncGenValueWrapperNew`, `Objects/genobject.c:2246-2262`
   | 4 => alloc (.agWrapped v)
   | 5 => positiveImpl om ctx v
   | 6 =>

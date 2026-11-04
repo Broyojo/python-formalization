@@ -623,7 +623,7 @@ def builtinGuard (e : Env) (bad : Val → List Val → BM Bool) : M Unit :=
 def _GUARD_CALLABLE_BUILTIN_CLASS (e : Env) : M Unit := builtinGuard e fun c _ => do
   if !(← (isType c : RM Bool)) then return true
   return !(e.om.hasTypeVectorcall (← (readRt : RM Rt)) c)
-/-- `:4842-4860`: `_Py_CallBuiltinClass_StackRef` (`Python/ceval.c:911-926`), `tp_vectorcall(tp, args,
+/-- `:4842-4860`: `_Py_CallBuiltinClass_StackRef` (`Python/ceval.c:912-926`), `tp_vectorcall(tp, args,
 total_args)`, `ERROR_NO_POP` on failure; on success the result replaces the callable and the
 `_POP_TOP_OPARG + POP_TOP` of the macro drop the rest, folded in here. The conversion of the
 stackrefs (`STACKREFS_TO_PYOBJECTS`) fails only when `PyMem_Malloc` does, which is not modelled. -/
@@ -673,7 +673,7 @@ def CALL_BUILTIN_O (e : Env) : M Unit := do
   _GUARD_CALLABLE_BUILTIN_O e; _CHECK_RECURSION_LIMIT; _CALL_BUILTIN_O e; _CHECK_PERIODIC_AT_END e
 /-- `:4916-4920`. -/
 def _GUARD_CALLABLE_BUILTIN_FAST (e : Env) : M Unit := cfuncGuard e methFastcall none
-/-- `:4922-4942`: `_Py_BuiltinCallFast_StackRef` (`Python/ceval.c:826-847`),
+/-- `:4922-4942`: `_Py_BuiltinCallFast_StackRef` (`Python/ceval.c:827-847`),
 `cfunc(PyCFunction_GET_SELF(callable), args, total_args)`, `ERROR_NO_POP` on failure; no recursion
 check. -/
 def _CALL_BUILTIN_FAST (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
@@ -685,7 +685,7 @@ def CALL_BUILTIN_FAST (e : Env) : M Unit := do
 /-- `:4954-4958`. -/
 def _GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit :=
   cfuncGuard e (methFastcall ||| methKeywords) none
-/-- `:4960-4976`: `_Py_BuiltinCallFastWithKeywords_StackRef` (`Python/ceval.c:849-867`),
+/-- `:4960-4976`: `_Py_BuiltinCallFastWithKeywords_StackRef` (`Python/ceval.c:850-867`),
 `cfunc(self, args, total_args, NULL)`. -/
 def _CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
   | c :: s :: args => do pure [← e.om.mlMeth e.ctx c (← cfuncSelf e c) (withSelf s args)]
@@ -771,7 +771,7 @@ def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do
 /-- `:5165-5179`. -/
 def _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit :=
   methDescrGuard e (methFastcall ||| methKeywords) (· != 0)
-/-- `:5181-5208`: `_PyCallMethodDescriptorFastWithKeywords_StackRef` (`Python/ceval.c:890-909`),
+/-- `:5181-5208`: `_PyCallMethodDescriptorFastWithKeywords_StackRef` (`Python/ceval.c:891-909`),
 `cfunc(self, args + 1, total_args - 1, NULL)`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
   | c :: s :: args => do
@@ -808,7 +808,7 @@ def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do
   _CHECK_PERIODIC_AT_END e
 /-- `:5307-5321`. -/
 def _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := methDescrGuard e methFastcall (· != 0)
-/-- `:5323-5350`: `_PyCallMethodDescriptorFast_StackRef` (`Python/ceval.c:869-888`),
+/-- `:5323-5350`: `_PyCallMethodDescriptorFast_StackRef` (`Python/ceval.c:870-888`),
 `cfunc(self, args + 1, total_args - 1)`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
   | c :: s :: args => do

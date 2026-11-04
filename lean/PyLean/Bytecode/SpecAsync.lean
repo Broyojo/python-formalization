@@ -87,7 +87,7 @@ slot's error propagates; the result `n` goes through `_PyCoro_GetAwaitableIter`,
 returned, and whose exception, any exception and not only a `TypeError` (`__await__` raising
 `ValueError` included), becomes the `__cause__` and `__context__` of a new `TypeError("'async for'
 received an invalid object from __anext__: U")` raised as it is (`_PyErr_FormatFromCause`). A
-non-generator's `am_anext` is its class's `__anext__`. `async_gen_anext` (`Objects/genobject.c:1705-1713`)
+non-generator's `am_anext` is its class's `__anext__`. `async_gen_anext` (`Objects/genobject.c:1706-1713`)
 runs `async_gen_init_hooks` (`:1668-1702`) and then makes a fresh `AWAITABLE_STATE_INIT` `asend` with
 no send value: once `ag_hooks_inited` is set it only allocates; the first time it sets the flag and,
 with `firstiter` unset, allocates; with `firstiter` set, it calls `firstiter(gen)` with the flag

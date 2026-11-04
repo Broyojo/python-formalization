@@ -741,7 +741,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-get-anext", pyFile := "Python/bytecodes.c"
     pyFns := [op "GET_ANEXT", "_PyEval_GetANext"]
     statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): an exact async generator takes the PyAsyncGen_CheckExact fast path, async_gen_anext with no awaitable check; otherwise no am_anext gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the slot's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause). async_gen_anext runs the hooks once (ag_hooks_inited set before firstiter is called, firstiter's error the result) and then makes a fresh AWAITABLE_STATE_INIT asend with no send value."
-    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; async_gen_anext, async_gen_init_hooks, Objects/genobject.c:1668-1713; _PyErr_FormatFromCause, Python/errors.c"
+    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; async_gen_anext, async_gen_init_hooks, Objects/genobject.c:1669-1713; _PyErr_FormatFromCause, Python/errors.c"
     status := .proven, prop := ``GetANextRules, thm := some ``getANextRules_proven
     notes := "async_gen_anext and async_gen_init_hooks are credited by gen-async-methods-create and gen-async-hooks-once of the GenObj model; the machine's own copy (Builtins.lean) is what the difftest runs under async for." },
   { id := "bytecode-load-special", pyFile := "Python/bytecodes.c"
@@ -772,7 +772,7 @@ def entries : List Entry := GenObj.entries ++ [
               op "_CALL_BUILTIN_CLASS", "_Py_BuiltinCallFast_StackRef", "_Py_BuiltinCallFastWithKeywords_StackRef",
               "_Py_CallBuiltinClass_StackRef"]
     statement := "For every object model and every (callable, self_or_null, args[oparg]) stack, with A the arguments with self in front when set: CALL_BUILTIN_O, when PyCFunction_CheckExact holds with ml_flags exactly METH_O and A has one item and the C stack is not past its soft limit, runs ml_meth(m_self, A[0]); CALL_BUILTIN_FAST with exactly METH_FASTCALL and CALL_BUILTIN_FAST_WITH_KEYWORDS with exactly METH_FASTCALL|METH_KEYWORDS run ml_meth(m_self, A) whatever the C stack; CALL_BUILTIN_CLASS on a type with tp_vectorcall runs it on A. The result replaces the operands and _CHECK_PERIODIC_AT_END follows; an exception keeps every operand (ERROR_NO_POP). On every other stack, and for CALL_BUILTIN_O past the C stack limit, each is the generic CALL."
-    source := "Python/bytecodes.c:4835-4986, :5130-5132; Python/ceval.c:826-867, :911-926; invariant: specialized opcode refines its generic form"
+    source := "Python/bytecodes.c:4835-4986, :5130-5132; Python/ceval.c:827-867, :912-926; invariant: specialized opcode refines its generic form"
     status := .proven, prop := ``CallBuiltinFnRules, thm := some ``callBuiltinFnRules_proven
     notes := "ml_meth is ObjModel.mlMeth, an arbitrary fallible callable; PyCFunction_CheckExact and ml_flags are ObjModel.cfuncOf, a read of the heap. _Py_ReachedRecursionLimit is the oracle Rt.cRecursionReached. _Py_LeaveRecursiveCallTstate is a no-op on 3.15. The generic path's cfunction_vectorcall_FASTCALL(_KEYWORDS) enters cfunction_enter_call, which checks the C stack (Objects/methodobject.c), and the specialized FAST forms do not: not stated as a twin property, since the difftest model's call has no C stack." },
   { id := "bytecode-call-method-descriptor", pyFile := "Python/bytecodes.c"
@@ -784,7 +784,7 @@ def entries : List Entry := GenObj.entries ++ [
               op "_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS", "_PyCallMethodDescriptorFast_StackRef",
               "_PyCallMethodDescriptorFastWithKeywords_StackRef"]
     statement := "For every object model and every (callable, self_or_null, args[oparg]) stack, with A the arguments with self in front when set: each CALL_METHOD_DESCRIPTOR_* form, when the callable's type is PyMethodDescr_Type with ml_flags exactly its convention (METH_O with two items in A, METH_NOARGS with one, METH_FASTCALL and METH_FASTCALL|METH_KEYWORDS with at least one) and A[0] has exactly the type d_type (Py_IS_TYPE: a subclass instance is refused), runs ml_meth(A[0], rest of A); the METH_O and METH_NOARGS forms are the generic CALL instead when the C stack is past its soft limit, the other two are not. The result replaces the operands and _CHECK_PERIODIC_AT_END follows; an exception keeps every operand. On every stack the guard rejects (not a method descriptor, other flags, a refused count, a self of another type) each is the generic CALL."
-    source := "Python/bytecodes.c:5090-5379; Python/ceval.c:869-909; invariant: specialized opcode refines its generic form"
+    source := "Python/bytecodes.c:5090-5379; Python/ceval.c:870-909; invariant: specialized opcode refines its generic form"
     status := .proven, prop := ``CallMethodDescrRules, thm := some ``callMethodDescrRules_proven
     notes := "d_type is compared as a type object (Val equality of typeOf), not by tp_name." },
   { id := "bytecode-call-method-descriptor-inline", pyFile := "Python/bytecodes.c"
@@ -797,7 +797,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-send-async-gen", pyFile := "Python/bytecodes.c"
     pyFns := [op "SEND_ASYNC_GEN", op "_GUARD_3OS_ASYNC_GEN_ASEND", op "_SEND_ASYNC_GEN", "_PyAsyncGenASend_Send"]
     statement := "For every object model, SEND_ASYNC_GEN on (iter, null_or_index, v) exits to the generic SEND unless iter is exactly an async_generator_asend, and otherwise runs its am_send on v: PYGEN_NEXT replaces v by the value, PYGEN_RETURN does too and jumps by oparg, and an exception keeps all three (ERROR_NO_POP). In the difftest object model, _PyAsyncGenASend_Send is async_gen_asend_send with a StopIteration (or nothing) read as PYGEN_RETURN with its value and any other exception as PYGEN_ERROR."
-    source := "Python/bytecodes.c:1801-1830; _PyAsyncGenASend_Send, Objects/genobject.c:2013-2023"
+    source := "Python/bytecodes.c:1801-1830; _PyAsyncGenASend_Send, Objects/genobject.c:2011-2021"
     status := .proven, prop := ``SendAsyncGenRules, thm := some ``sendAsyncGenRules_proven }
 ]
 

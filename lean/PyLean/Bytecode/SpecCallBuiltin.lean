@@ -456,7 +456,7 @@ theorem callBuiltinSpecRules_proven : CallBuiltinSpecRules :=
 exactly an `async_generator_asend` it runs `am_send(iter, v)`: `PYGEN_NEXT` replaces `v` by the value,
 `PYGEN_RETURN` does too and jumps by `oparg`, an exception keeps all three (`ERROR_NO_POP`); on every
 other live receiver it is the generic `SEND`. In the difftest object model, `am_send` of an `asend`
-is `_PyAsyncGenASend_Send` (`Objects/genobject.c:2013-2023`): `async_gen_asend_send(iter, v)`'s value is
+is `_PyAsyncGenASend_Send` (`Objects/genobject.c:2011-2021`): `async_gen_asend_send(iter, v)`'s value is
 `PYGEN_NEXT`, and its exception goes to `_PyGen_FetchStopIterationValue`, a `StopIteration`'s value being
 `PYGEN_RETURN` and anything else re-raised. -/
 def SendAsyncGenRules : Prop :=

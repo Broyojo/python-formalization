@@ -157,7 +157,7 @@ Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- r
 Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	modelled	bytecode-return-value	
 Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1602	1602	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		review: The instruction itself is only stk over om.getAIter and the body's own two slot tests (am_aiter NULL at :1613-1624, am_anext NULL on the result at :1630-1639) live in Proto.getAIterImpl, which replaces them by user-class dict lookups (callDunder/userLookup see only heap classes in the MRO), so an async generator object, which the model has (GenKind.asyncGen) and whose type has am_aiter = PyObject_SelfIter and am_anext = async_gen_anext (Objects/genobject.c:1833-1838), gets \"'async for' requires an object with __aiter__ method\" and an __aiter__ returning one gets the \"does not implement __anext__\" TypeError, both where CPython iterates; the stated scope limit removes the commonest operand of async for, not an exotic one.
+Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	modelled	bytecode-get-aiter	
 Python/bytecodes.c	1643	1643	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	modelled	bytecode-get-anext	
 Python/bytecodes.c	1651	1651	opcode:GET_AWAITABLE	inst(GET_AWAITABLE, (iterable -- iter)) {	modelled	bytecode-get-awaitable	
 Python/bytecodes.c	1664	1664	opcode:_SPECIALIZE_SEND	specializing op(_SPECIALIZE_SEND, (counter/1, receiver, unused, unused -- receiver, unused, unused)) {	todo		changed-in-3.15:
@@ -171,9 +171,9 @@ Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, 
 Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1795	1795	opcode:SEND_VIRTUAL	macro(SEND_VIRTUAL) =	todo		changed-in-3.15: new function
-Python/bytecodes.c	1801	1801	opcode:_GUARD_3OS_ASYNC_GEN_ASEND	op(_GUARD_3OS_ASYNC_GEN_ASEND, (iter, null_or_index, value -- iter, null_or_index, value)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1806	1806	opcode:_SEND_ASYNC_GEN	replaced op(_SEND_ASYNC_GEN, (iter, null_in, v -- asend, null_out, retval)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1827	1827	opcode:SEND_ASYNC_GEN	macro(SEND_ASYNC_GEN) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	1801	1801	opcode:_GUARD_3OS_ASYNC_GEN_ASEND	op(_GUARD_3OS_ASYNC_GEN_ASEND, (iter, null_or_index, value -- iter, null_or_index, value)) {	modelled	bytecode-send-async-gen	
+Python/bytecodes.c	1806	1806	opcode:_SEND_ASYNC_GEN	replaced op(_SEND_ASYNC_GEN, (iter, null_in, v -- asend, null_out, retval)) {	modelled	bytecode-send-async-gen	
+Python/bytecodes.c	1827	1827	opcode:SEND_ASYNC_GEN	macro(SEND_ASYNC_GEN) =	modelled	bytecode-send-async-gen	
 Python/bytecodes.c	1832	1832	opcode:_SEND_ASYNC_GEN_TIER_TWO	tier2 op(_SEND_ASYNC_GEN_TIER_TWO, (iter, null_in, v -- asend, null_out, retval)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1851	1851	opcode:_YIELD_VALUE	op(_YIELD_VALUE, (retval -- value)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1889	1889	opcode:YIELD_VALUE	macro(YIELD_VALUE) =	todo		changed-in-3.15:
@@ -431,18 +431,18 @@ Python/bytecodes.c	4766	4766	opcode:_ALLOCATE_OBJECT	op(_ALLOCATE_OBJECT, (calla
 Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	modelled	bytecode-create-init-frame,bytecode-call-alloc-abstract	
 Python/bytecodes.c	4815	4815	opcode:CALL_ALLOC_AND_ENTER_INIT	macro(CALL_ALLOC_AND_ENTER_INIT) =	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4825	4825	opcode:EXIT_INIT_CHECK	inst(EXIT_INIT_CHECK, (should_be_none -- )) {	todo		
-Python/bytecodes.c	4835	4835	opcode:_GUARD_CALLABLE_BUILTIN_CLASS	op(_GUARD_CALLABLE_BUILTIN_CLASS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	4842	4842	opcode:_CALL_BUILTIN_CLASS	op(_CALL_BUILTIN_CLASS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	4862	4862	opcode:CALL_BUILTIN_CLASS	macro(CALL_BUILTIN_CLASS) =	todo		changed-in-3.15:
-Python/bytecodes.c	4872	4872	opcode:_GUARD_CALLABLE_BUILTIN_O	op(_GUARD_CALLABLE_BUILTIN_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	4883	4883	opcode:_CALL_BUILTIN_O	op(_CALL_BUILTIN_O, (callable, self_or_null, args[oparg] -- res, c, s)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4905	4905	opcode:CALL_BUILTIN_O	macro(CALL_BUILTIN_O) =	todo		changed-in-3.15:
-Python/bytecodes.c	4916	4916	opcode:_GUARD_CALLABLE_BUILTIN_FAST	op(_GUARD_CALLABLE_BUILTIN_FAST, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	4922	4922	opcode:_CALL_BUILTIN_FAST	op(_CALL_BUILTIN_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	4944	4944	opcode:CALL_BUILTIN_FAST	macro(CALL_BUILTIN_FAST) =	todo		changed-in-3.15:
-Python/bytecodes.c	4954	4954	opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	4960	4960	opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS	op(_CALL_BUILTIN_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	4978	4978	opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS	macro(CALL_BUILTIN_FAST_WITH_KEYWORDS) =	todo		changed-in-3.15:
+Python/bytecodes.c	4835	4835	opcode:_GUARD_CALLABLE_BUILTIN_CLASS	op(_GUARD_CALLABLE_BUILTIN_CLASS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4842	4842	opcode:_CALL_BUILTIN_CLASS	op(_CALL_BUILTIN_CLASS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4862	4862	opcode:CALL_BUILTIN_CLASS	macro(CALL_BUILTIN_CLASS) =	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4872	4872	opcode:_GUARD_CALLABLE_BUILTIN_O	op(_GUARD_CALLABLE_BUILTIN_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4883	4883	opcode:_CALL_BUILTIN_O	op(_CALL_BUILTIN_O, (callable, self_or_null, args[oparg] -- res, c, s)) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4905	4905	opcode:CALL_BUILTIN_O	macro(CALL_BUILTIN_O) =	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4916	4916	opcode:_GUARD_CALLABLE_BUILTIN_FAST	op(_GUARD_CALLABLE_BUILTIN_FAST, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4922	4922	opcode:_CALL_BUILTIN_FAST	op(_CALL_BUILTIN_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4944	4944	opcode:CALL_BUILTIN_FAST	macro(CALL_BUILTIN_FAST) =	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4954	4954	opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4960	4960	opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS	op(_CALL_BUILTIN_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-builtin-fn	
+Python/bytecodes.c	4978	4978	opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS	macro(CALL_BUILTIN_FAST_WITH_KEYWORDS) =	modelled	bytecode-call-builtin-fn	
 Python/bytecodes.c	4988	4988	opcode:CALL_LEN	macro(CALL_LEN) =	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4997	4997	opcode:_GUARD_CALLABLE_LEN	op(_GUARD_CALLABLE_LEN, (callable, unused, unused -- callable, unused, unused)){	modelled	bytecode-call-builtins	
 Python/bytecodes.c	5003	5003	opcode:_CALL_LEN	op(_CALL_LEN, (callable, null, arg -- res, a, c)) {	modelled	bytecode-call-builtins	
@@ -452,23 +452,23 @@ Python/bytecodes.c	5046	5046	opcode:CALL_ISINSTANCE	macro(CALL_ISINSTANCE) =	mod
 Python/bytecodes.c	5053	5053	opcode:CALL_LIST_APPEND	macro(CALL_LIST_APPEND) =	modelled	bytecode-call-builtins	
 Python/bytecodes.c	5063	5063	opcode:_GUARD_CALLABLE_LIST_APPEND	op(_GUARD_CALLABLE_LIST_APPEND, (callable, unused, unused -- callable, unused, unused)){	modelled	bytecode-call-builtins	
 Python/bytecodes.c	5069	5069	opcode:_CALL_LIST_APPEND	op(_CALL_LIST_APPEND, (callable, self, arg -- none, c, s)) {	modelled	bytecode-call-builtins	
-Python/bytecodes.c	5090	5090	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5105	5105	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res, c, s, a)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5134	5134	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_O_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s, a)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5153	5153	opcode:CALL_METHOD_DESCRIPTOR_O	macro(CALL_METHOD_DESCRIPTOR_O) =	todo		changed-in-3.15:
-Python/bytecodes.c	5165	5165	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5181	5181	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	5210	5210	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5229	5229	opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	macro(CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS) =	todo		changed-in-3.15:
-Python/bytecodes.c	5239	5239	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5254	5254	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS	op(_CALL_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- res, c, s)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5278	5278	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5296	5296	opcode:CALL_METHOD_DESCRIPTOR_NOARGS	macro(CALL_METHOD_DESCRIPTOR_NOARGS) =	todo		changed-in-3.15:
-Python/bytecodes.c	5307	5307	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5323	5323	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	5352	5352	opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5372	5372	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	todo		changed-in-3.15:
+Python/bytecodes.c	5090	5090	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5105	5105	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res, c, s, a)) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	modelled	bytecode-call-builtin-fn,bytecode-call-method-descriptor	
+Python/bytecodes.c	5134	5134	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_O_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s, a)) {	modelled	bytecode-call-method-descriptor-inline	
+Python/bytecodes.c	5153	5153	opcode:CALL_METHOD_DESCRIPTOR_O	macro(CALL_METHOD_DESCRIPTOR_O) =	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5165	5165	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5181	5181	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5210	5210	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	modelled	bytecode-call-method-descriptor-inline	
+Python/bytecodes.c	5229	5229	opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	macro(CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS) =	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5239	5239	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5254	5254	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS	op(_CALL_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- res, c, s)) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5278	5278	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s)) {	modelled	bytecode-call-method-descriptor-inline	
+Python/bytecodes.c	5296	5296	opcode:CALL_METHOD_DESCRIPTOR_NOARGS	macro(CALL_METHOD_DESCRIPTOR_NOARGS) =	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5307	5307	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5323	5323	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
+Python/bytecodes.c	5352	5352	opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	modelled	bytecode-call-method-descriptor-inline	
+Python/bytecodes.c	5372	5372	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	modelled	bytecode-call-method-descriptor	
 Python/bytecodes.c	5388	5388	opcode:_MONITOR_CALL_KW	op(_MONITOR_CALL_KW, (callable, self_or_null, args[oparg], unused -- callable, self_or_null, args[oparg], unused)) {	todo		
 Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	modelled	bytecode-call-generic	
