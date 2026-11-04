@@ -1,4 +1,5 @@
 import PyLean.PyGrammar.Peg.Strings
+import PyLean.PyGrammar.Unparse.Repr
 
 /-!
 The action helpers: `Parser/action_helpers.c`, the macros of `Parser/pegen.h`, and the
@@ -164,6 +165,29 @@ def exprName (e : Ast) : Option String :=
     | .NamedExpr => some "named expression"
     | _ => none
   | _ => none
+
+/-- The C enum `_expr_kind`, `Include/internal/pycore_ast.h:361-369` (0 for a constructor that is
+not an expression, which `_PyPegen_get_expr_name` is never given). -/
+def exprKindNum : Ctor → Int
+  | .BoolOp => 1 | .NamedExpr => 2 | .BinOp => 3 | .UnaryOp => 4 | .Lambda => 5 | .IfExp => 6
+  | .Dict => 7 | .Set => 8 | .ListComp => 9 | .SetComp => 10 | .DictComp => 11
+  | .GeneratorExp => 12 | .Await => 13 | .Yield => 14 | .YieldFrom => 15 | .Compare => 16
+  | .Call => 17 | .FormattedValue => 18 | .Interpolation => 19 | .JoinedStr => 20
+  | .TemplateStr => 21 | .Constant => 22 | .Attribute => 23 | .Subscript => 24 | .Starred => 25
+  | .Name => 26 | .List => 27 | .Tuple => 28 | .Slice => 29
+  | _ => 0
+
+/-- `e->kind` as the C enum. -/
+def exprKindOf : Ast → Int
+  | .node c _ _ => exprKindNum c
+  | _ => 0
+
+/-- The `SystemError` of `_PyPegen_get_expr_name`'s default case,
+`Parser/action_helpers.c:1154-1157`: `PyErr_Format(PyExc_SystemError, "unexpected expression in
+assignment %d (line %d)", e->kind, e->lineno)`. -/
+def exprNameErr (e : Ast) : PyError :=
+  { cls := "SystemError",
+    msg := s!"unexpected expression in assignment {exprKindOf e} (line {(locOf e).lineno})" }
 
 /-- `_PyPegen_get_invalid_target`, `Parser/action_helpers.c`. `kind` is `TARGETS_TYPE`:
 0 `STAR_TARGETS`, 1 `DEL_TARGETS`, 2 `FOR_TARGETS`. -/
@@ -626,7 +650,10 @@ def checkBarry (t : Ast) : PM Ast := do
 def notAdjacent (a0 a1 : Ast) : Bool :=
   (locOf a0).lineno != (locOf a1).lineno || (locOf a0).endColOffset != (locOf a1).colOffset
 
-/-- `_PyPegen_check_fstring_conversion`, `Parser/action_helpers.c`. -/
+/-- `_PyPegen_check_fstring_conversion`, `Parser/action_helpers.c:1005-1027`: the adjacency check
+first, then the conversion name (one of `s`, `r`, `a`), whose `%R` is `repr` of the identifier
+(`'a\u200d'` for a name with a zero-width joiner); success is `result_token_with_metadata`
+(`:993-1003`) of the name and the `!` token's metadata. -/
 def checkFstringConversion (a0 a1 : Ast) : PM Ast := do
   let lt := locOf a0
   let lc := locOf a1
@@ -642,7 +669,7 @@ def checkFstringConversion (a0 a1 : Ast) : PM Ast := do
   let first := id.headD 0
   if id.length > 1 || !(first == ch! 's' || first == ch! 'r' || first == ch! 'a') then
     raiseErrorKnownLocation "SyntaxError" lc.lineno lc.colOffset lc.endLineno lc.endColOffset
-      s!"{chStr pfx}-string: invalid conversion character '{cpsStr id}': expected 's', 'r', or 'a'"
+      s!"{chStr pfx}-string: invalid conversion character {cpsStr (Unparse.strRepr id)}: expected 's', 'r', or 'a'"
     return .null
   let m := match a0 with
     | .tok t => (t.metadata.map Ast.str).getD .null
@@ -767,7 +794,7 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
     match exprName a0 with
     | some s => return .str (s.toList.map Char.toNat)
     | none =>
-      setErr { cls := "SystemError", msg := "unexpected expression in assignment" }
+      setErr (exprNameErr a0)
       return .null
   | .get_last_comprehension_item => return lastComprehensionItem a0
   | .collect_call_seqs => return collectCallSeqs a0 a1 (int 2) (int 3) (int 4) (int 5)
