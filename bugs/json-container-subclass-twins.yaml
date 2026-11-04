@@ -1,0 +1,89 @@
+id: json-container-subclass-twins
+title: "json: C and pure-Python encoders treat list and dict subclasses differently (known)"
+priority: P4
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Lib/json/encoder.py, Objects/abstract.c]
+functions: ["C encoder_listencode_list", "C encoder_listencode_dict", "C _encoder_iterate_mapping_lock_held", "_make_iterencode._iterencode_list", "_make_iterencode._iterencode_dict"]
+summary: |
+  For a subclass of list, tuple, dict or frozendict the C encoder materialises the container
+  first (`PySequence_Fast`, i.e. `list(seq)`; `PyMapping_Items`, i.e. `list(dct.items())`) and
+  tests emptiness by that list or by the stored size (`PyDict_GET_SIZE`), while the Python encoder
+  tests `not lst` / `not dct` (`__len__`, `__bool__`) and iterates lazily, writing `'['` only with
+  the first item. So: a non-empty list subclass whose `__iter__` yields nothing gives `[]` in C
+  and `]` in Python; a list subclass with `__len__` returning 0 gives `[1]` in C and `[]` in Python;
+  a dict subclass with `__len__` 0 but entries gives `{"z": 1}` in C and `{}` in Python; `items()`
+  yielding 2-element lists is a ValueError ('items must return 2-tuples') in C and accepted in
+  Python; `items()` returning a non-iterable is 'DN.items() must return an iterable, not int' vs
+  "'int' object is not iterable"; an iterator that raises after one bad item raises the
+  iterator's error in C and the item's error (with a note) in Python.
+  These are known and were reported before; recorded here because the Lean model now covers the
+  non-exact branches (EncFull.lean: seqSub, mapSub) and refutes the twin agreement with subclasses
+  (json-dumps-twins-subclass), the proven agreement being for exact containers (json-dumps-twins).
+likelihood: |
+  Needs a container subclass whose length, truth value, iteration or items() disagree with its
+  stored contents (lazy sequences, ORM result sets, custom mappings). Uncommon but real (gh-71800
+  was a database cursor).
+maybe_intended: |
+  Largely tolerated: gh-71800 was closed as "invalid" (a `__len__` that lies), and the dict
+  subclass reports cpython#158731 / #158732 were closed. #59091 and #110941 (C reads dict
+  internals of subclasses) are open.
+reproducer: |
+  import json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  class L(list):
+      def __iter__(self):
+          return iter([])
+  class LF(list):
+      def __len__(self):
+          return 0
+  class DF(dict):
+      def __len__(self):
+          return 0
+  class DL(dict):
+      def items(self):
+          return [['a', 1]]
+  def run(mod, v):
+      try:
+          return mod.dumps(v)
+      except Exception as e:
+          return f'{type(e).__name__}: {e}'
+  rows = [('L', L([1, 2])), ('LF', LF([1])), ('DF', DF(z=1)), ('DL', DL(z=1))]
+  res = [(n, run(json, v), run(pyjson, v)) for n, v in rows]
+  for n, c, p in res:
+      print(f'{n:3s} C {c!r:45s} Python {p!r}')
+  if all(c != p for _, c, p in res) and res[0][1:] == ('[]', ']'):
+      print('REPRODUCED json-container-subclass-twins')
+expected: |
+  The same text from both twins for the same object.
+observed: |
+  python3 3.15.2: REPRODUCED. L: '[]' vs ']'; LF: '[1]' vs '[]'; DF: '{"z": 1}' vs '{}'; DL:
+  'ValueError: items must return 2-tuples' vs '{"a": 1}'.
+promised_by: |
+  C/Python twin agreement; JSONEncoder docs: list, tuple and dict (and their subclasses, by
+  isinstance in encoder.py) encode as arrays and objects.
+cause: |
+  Modules/_json.c:1922-1928 (`PySequence_Fast` then its size), :1806 (`PyDict_GET_SIZE`),
+  :1838-1852 (`PyMapping_Items`, Objects/abstract.c:2433-2481), :1751-1755 (the 2-tuple check) vs
+  Lib/json/encoder.py:270-292 (`if not lst`, `buf = '['` yielded with the first item, `enumerate`),
+  :329-347 (`if not dct`, `dct.items()`), :351 (`for key, value in items` unpacking).
+possible_fix: |
+  None proposed here: the reports were closed. A fix would make the Python twin materialise like
+  C (or the reverse) and agree on the emptiness test.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 71800, state: closed, relation: "duplicate (list subclass with empty iteration gives ']'), closed as invalid", reason: not_planned}
+    - {number: 158731, state: closed, relation: "duplicate (dict subclass with false truthiness, json.dump)", reason: completed}
+    - {number: 158732, state: closed, relation: "duplicate (dict subclass with false truthiness, iterencode)", reason: completed}
+    - {number: 59091, state: open, relation: "related (json C vs pure-python implementation difference for dict subclasses)", reason: open}
+    - {number: 110941, state: open, relation: "related (C json.dumps accesses dict internals for dict subclasses)", reason: open}
+  queries: ["json dict subclass items", "json list subclass iter", "json subclass encoder C Python", "json frozendict subclass",
+            "gh issue view 71800", "gh issue view 158731", "gh issue view 158732", "gh issue view 59091", "gh issue view 110941",
+            "bugforge-results/README.md: 158731, 158732 (duplicates)"]
+lean:
+  property: PyLean.JsonMod.DumpsTwinsSub
+  theorem: PyLean.JsonMod.dumpsTwinsSub_refuted

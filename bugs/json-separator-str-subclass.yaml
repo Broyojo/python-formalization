@@ -1,0 +1,94 @@
+id: json-separator-str-subclass
+title: "json: the C encoder writes str() of str-subclass separators and custom-encoder results (gh-148241 fixed only the values)"
+priority: P3
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Objects/unicode_writer.c]
+functions: ["C encoder_encode_key_value", "C encoder_listencode_list", "C encoder_listencode_dict", "C _steal_accumulate", "C encoder_write_string"]
+summary: |
+  gh-148241 (3.15 regression: str-enum values serialized as `str(obj)`) was fixed by making
+  `write_escaped_ascii`/`write_escaped_unicode` write the characters of a str subclass instead of
+  calling `PyUnicodeWriter_WriteStr()`, which calls `str()` on anything but an exact str
+  (Objects/unicode_writer.c:313-331). The other `PyUnicodeWriter_WriteStr()` calls of the encoder
+  were left alone: `key_separator` (always), `item_separator` when `indent` is None (with an
+  indent the separator is a concatenation, an exact str), and `_steal_accumulate` of what a custom
+  `encoder` returns. So with `class S(str): __str__ = lambda s: 'X'`,
+  `json.dumps({'a': [1, 2]}, separators=(S(','), S(':')))` is `'{"a"X[1X2]}'` with `_json` and
+  `'{"a":[1,2]}'` without it (and with `''.join(JSONEncoder(...).iterencode(...))`, which always
+  uses the Python encoder). A `__str__` that raises makes `json.dumps` raise in C only; a str-enum
+  separator is written as `Sep.COMMA`. `c_make_encoder` with an encoder returning a str subclass
+  writes `X` where `_make_iterencode` with the same encoder writes the text.
+  The Lean model writes separators and encoder results as objects (SObj, EncFull.lean); the twins
+  agree on exact-str separators (json-dumps-twins) and differ with subclasses
+  (json-dumps-twins-separators, json-encoder-string-raw, both refuted).
+likelihood: |
+  Needs a str subclass with a different `__str__` as a separator (a str enum is the realistic case,
+  as in gh-148241) or a custom encoder (private API). Rare, but it is the same surprise gh-148241
+  fixed for values, and it is a C/Python divergence.
+maybe_intended: |
+  No: gh-148241 treated `str()` of a subclass as a regression for values and keys, and gh-148250 /
+  gh-150973 discuss the same pitfall of `PyUnicodeWriter_WriteStr()` ("The _json and _io were
+  impacted ... fixed by using the internal C API"). The separator and encoder-result call sites
+  were not changed by that fix (b7e1d51e).
+reproducer: |
+  import json, _json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  class S(str):
+      __str__ = lambda s: 'X'
+  v = {'a': [1, 2]}
+  c = json.dumps(v, separators=(S(','), S(':')))
+  p = pyjson.dumps(v, separators=(S(','), S(':')))
+  it = ''.join(json.JSONEncoder(separators=(S(','), S(':'))).iterencode(v))
+  ci = json.dumps(v, separators=(S(','), S(':')), indent=1)
+  enc = _json.make_encoder(None, None, lambda s: S('"' + s + '"'), None, ':', ',', False, False, True)
+  pyenc = pyjson.encoder._make_iterencode(None, None, lambda s: S('"' + s + '"'), None, float.__repr__,
+                                         ':', ',', False, False, True)
+  ce, pe = enc(['ab'], 0)[0], ''.join(pyenc(['ab'], 0))
+  print('dumps C        :', c)
+  print('dumps Python   :', p)
+  print('iterencode     :', it)
+  print('dumps C indent :', repr(ci))
+  print('encoder C      :', ce)
+  print('encoder Python :', pe)
+  if c == '{"a"X[1X2]}' and p == it == '{"a":[1,2]}' and ce == '[X]' and pe == '["ab"]':
+      print('REPRODUCED json-separator-str-subclass')
+expected: |
+  `'{"a":[1,2]}'` from json.dumps in both twins (the separator's characters, as for values and
+  keys since gh-148241), and `["ab"]` from both encoders.
+observed: |
+  python3 3.15.2: REPRODUCED. dumps C '{"a"X[1X2]}', dumps Python and iterencode '{"a":[1,2]}';
+  with indent=1 C still writes 'X' for the key separator ('{\n "a"X[\n  1,\n  2\n ]\n}');
+  c_make_encoder with the S-returning encoder '[X]', _make_iterencode '["ab"]'. A separator whose
+  __str__ raises KeyError makes json.dumps([1, 2], separators=(R(','), ':')) raise KeyError in C
+  and return '[1,2]' in Python.
+promised_by: |
+  C/Python twin agreement; the fix of gh-148241 (str subclasses are written by their characters,
+  test_json/test_dump.py's str-subclass tests); JSONEncoder docs: separators "should be an
+  (item_separator, key_separator) tuple" of strings.
+cause: |
+  Modules/_json.c:1716 `PyUnicodeWriter_WriteStr(writer, item_separator)` and :1728
+  `PyUnicodeWriter_WriteStr(writer, s->key_separator)` in encoder_encode_key_value, :1900
+  `PyUnicodeWriter_WriteStr(writer, separator)` in _encoder_iterate_fast_seq_lock_held (the raw
+  `s->item_separator` when `s->indent` is None, :1831, :1945), and :1563 in _steal_accumulate,
+  reached from encoder_write_string (:1556) with the custom encoder's result. The separators are
+  stored as given by the `U` converter (:1320-1323, which accepts subclasses).
+  Objects/unicode_writer.c:313-331: `PyObject_Str(obj)` unless the type is exactly str or int.
+possible_fix: |
+  Use `_PyUnicodeWriter_WriteStr()` (as write_escaped_unicode does since b7e1d51e) for the
+  separators and in _steal_accumulate, or convert the separators with `PyUnicode_FromObject()` in
+  encoder_new; or the proposed `PyUnicodeWriter_WriteRawStr()` (gh-150973).
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 148241, state: closed, relation: "same root cause (PyUnicodeWriter_WriteStr calls str() on str subclasses), fixed for values and keys only", reason: completed}
+    - {number: 148250, state: closed, relation: "same root cause, the C API documentation of PyUnicodeWriter_WriteStr", reason: completed}
+    - {number: 150973, state: open, relation: "proposed PyUnicodeWriter_WriteRawStr(); mentions _json as fixed, not these call sites", reason: open}
+  queries: ["json separators str subclass", "json str subclass __str__", "json key_separator subclass",
+            "PyUnicodeWriter_WriteStr subclass", "gh issue view 148241", "gh issue view 148250", "gh issue view 150973",
+            "bugforge-results/README.md: json entries (4: 158729-158732, none related)"]
+lean:
+  property: PyLean.JsonMod.DumpsTwinsSep
+  theorem: PyLean.JsonMod.dumpsTwinsSep_refuted

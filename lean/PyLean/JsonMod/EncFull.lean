@@ -68,7 +68,8 @@ def tDict : PyType := { name := "dict" }
 def tFrozendict : PyType := { name := "frozendict" }
 
 /-- A dict key. `obj t o` is a key of another type (a tuple, `bytes`, a date): its type and,
-for `sort_keys`, its rank among keys of that type. -/
+for `sort_keys`, its rank among keys of that type; such keys compare only with keys of their own
+type (a scope limit: a `decimal.Decimal` or `fractions.Fraction` key also compares with numbers). -/
 inductive XKey where
   | str (s : PStr)
   | int (n : Int)

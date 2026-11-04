@@ -82,7 +82,7 @@ theorem nestL_okx (k : Nat) : (nestL k).okx = true := by
   | zero => rfl
   | succ k ih => simp [nestL, XVal.okx, XVal.okxList, ih]
 
-theorem nestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : List XVal),
+theorem encNestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : List XVal),
     (k + 1 ≤ c → ∃ t, cObjX cfg c lvl seen anc (nestL k) = .ok t) ∧
     (c < k + 1 → IsRecCX (cObjX cfg c lvl seen anc (nestL k))) := by
   intro k
@@ -134,7 +134,7 @@ theorem nestC (cfg : XCfg) : ∀ (k c lvl : Nat) (seen : List Nat) (anc : List X
           simp only [hns]
           exact ⟨ns, rfl⟩
 
-theorem nestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : List XVal),
+theorem encNestPy (cfg : XCfg) : ∀ (k b lvl : Nat) (seen : List Nat) (anc : List XVal),
     (k + 1 ≤ b → ∃ t, pyIterX cfg b lvl seen anc (nestL k) = .ok t) ∧
     (b < k + 1 → IsRecPyX (pyIterX cfg b lvl seen anc (nestL k))) := by
   intro k
@@ -192,7 +192,7 @@ theorem dumpsCX_nest (cfg : XCfg) (c k : Nat) :
     (k + 1 ≤ c → ∃ t, dumpsCX cfg c (nestL k) = .ok t) ∧ (c < k + 1 → IsRecCX (dumpsCX cfg c (nestL k))) := by
   have : dumpsCX cfg c (nestL k) = cObjX cfg c 0 [] [] (nestL k) := by cases k <;> rfl
   rw [this]
-  exact nestC cfg k c 0 [] []
+  exact encNestC cfg k c 0 [] []
 
 theorem dumpsPyX_nest (cfg : XCfg) (p k : Nat) :
     (k + 3 ≤ p → ∃ t, dumpsPyX cfg p (nestL k) = .ok t) ∧ (p < k + 3 → IsRecPyX (dumpsPyX cfg p (nestL k))) := by
@@ -204,7 +204,7 @@ theorem dumpsPyX_nest (cfg : XCfg) (p k : Nat) :
   | 1 => exact ⟨fun h => by omega, fun _ => ⟨[], rfl⟩⟩
   | p + 2 =>
     simp only [pyCallX]
-    obtain ⟨h1, h2⟩ := nestPy cfg k p 0 [] []
+    obtain ⟨h1, h2⟩ := encNestPy cfg k p 0 [] []
     exact ⟨fun h => h1 (by omega), fun h => h2 (by omega)⟩
 
 /-! ### The narrowed twin theorem -/

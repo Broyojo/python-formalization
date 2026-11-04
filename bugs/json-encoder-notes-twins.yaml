@@ -1,0 +1,98 @@
+id: json-encoder-notes-twins
+title: "json: C and pure-Python encoders print different exception notes and key-type messages (original vs converted key, %T vs __name__)"
+priority: P3
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Lib/json/encoder.py]
+functions: ["C encoder_encode_key_value", "C encoder_listencode_obj", "_make_iterencode._iterencode_dict", "_make_iterencode._iterencode"]
+summary: |
+  The notes added by gh-122163 differ between the twins in three ways, and so does the TypeError
+  for a key of an unsupported type:
+  1. A failing dict value is noted with its key. C formats the original key with %R
+     (`_PyErr_FormatNote("when serializing %T item %R", dct, key)`), Python formats the key after
+     its conversion to str (`f'... item {key!r}'` after `key = int.__repr__(key)` etc.):
+     `json.dumps({1: set()})` notes `when serializing dict item 1` with `_json` and
+     `when serializing dict item '1'` without it; `{True: ...}` gives `True` vs `'true'`,
+     `{None: ...}` `None` vs `'null'`, `{1.5: ...}` `1.5` vs `'1.5'`.
+  2. C's %T prints the fully qualified name (`_PyType_GetFullyQualifiedName`: module and
+     __qualname__ unless the module is builtins or __main__), Python `type(o).__name__`: an object
+     of class `Foo` in module `mymod` whose default() result fails is noted `when serializing
+     mymod.Foo object` vs `when serializing Foo object`; the same for dict and list subclasses
+     and nested classes (`mymod.A.B` vs `B`).
+  3. `keys must be str, int, float, bool or None, not %.100s` uses `tp_name` in C and
+     `key.__class__.__name__` in Python: `not datetime.date` vs `not date`, `not decimal.Decimal`
+     vs `not Decimal`.
+  The Lean model records each note's kind, type and key (Note, EncFull.lean) and proves that on
+  exact containers, when neither twin hits its recursion limit, the notes correspond one to one
+  (json-dumps-twins); printed, they differ only as above (json-dumps-twins-notes, refuted).
+likelihood: |
+  Every failing dict value under a non-str key, every failure under an object from a module other
+  than __main__ (that is, almost every real default() use), and every unsupported key of a type
+  from an extension module. Visible to code and tests that read __notes__ or the key message, and
+  in tracebacks, which differ between the accelerated and pure-Python builds.
+maybe_intended: |
+  Unlikely: the notes were added in one change (gh-122163, Serhiy Storchaka) with tests that use
+  only str keys and builtin types (test_fail.py:105-124, test_default.py:20-28,
+  test_recursion.py:10-66), which agree. The key-type message difference is older and cosmetic.
+reproducer: |
+  import json, datetime
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  class Foo: pass
+  Foo.__module__ = 'mymod'
+  def default(o):
+      if isinstance(o, Foo):
+          return [set()]
+      raise TypeError(f'Object of type {type(o).__name__} is not JSON serializable')
+  def err(mod, v, **kw):
+      try:
+          mod.dumps(v, **kw)
+      except (TypeError, ValueError) as e:
+          return str(e), getattr(e, '__notes__', [])
+  rows = [({1: set()}, {}), (Foo(), {'default': default}), ({datetime.date(2020, 1, 1): 1}, {})]
+  out = [(err(json, v, **kw), err(pyjson, v, **kw)) for v, kw in rows]
+  for (c, p), (v, _) in zip(out, rows):
+      print(type(v).__name__)
+      print('   C     :', c)
+      print('   Python:', p)
+  if (out[0][0][1] == ['when serializing dict item 1'] and out[0][1][1] == ["when serializing dict item '1'"]
+          and 'when serializing mymod.Foo object' in out[1][0][1] and 'when serializing Foo object' in out[1][1][1]
+          and out[2][0][0].endswith('not datetime.date') and out[2][1][0].endswith('not date')):
+      print('REPRODUCED json-encoder-notes-twins')
+expected: |
+  The same notes and messages from both twins, e.g. `when serializing dict item 1` and
+  `when serializing Foo object` (or the qualified name) in both, and the same type name in the key
+  TypeError.
+observed: |
+  python3 3.15.2: REPRODUCED. {1: set()}: C ['when serializing dict item 1'], Python
+  ["when serializing dict item '1'"]. Foo in mymod: C [..., 'when serializing mymod.Foo object'],
+  Python [..., 'when serializing Foo object']. {date: 1}: C 'keys must be str, int, float, bool or
+  None, not datetime.date', Python '..., not date'.
+promised_by: |
+  C/Python twin agreement (test_json runs every test against both, including the exact __notes__
+  lists of test_fail.py and test_default.py); the notes were added to both twins in gh-122163 with
+  the same wording.
+cause: |
+  Modules/_json.c:1732 `_PyErr_FormatNote("when serializing %T item %R", dct, key)` with the
+  original `key` (the converted `keystr` is released at :1724) vs Lib/json/encoder.py:406
+  `exc.add_note(f'when serializing {type(dct).__name__} item {key!r}')`, where `key` was reassigned
+  to its str conversion at :353-366. Modules/_json.c:1654 and :1906 use %T (fully qualified,
+  Objects/typeobject.c:1694-1724) where encoder.py:316, :406, :446 use `type(...).__name__`.
+  Modules/_json.c:1700-1702 `%.100s` of `Py_TYPE(key)->tp_name` vs encoder.py:370-371
+  `key.__class__.__name__`.
+possible_fix: |
+  In C, format the note with `keystr` (the converted key) and %N or `__name__`
+  (`PyType_GetName`), or in Python use the original key and the qualified name; pick one for the
+  key-type message too. Add a non-str key and a class outside __main__ to the note tests.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 122163, state: closed, relation: "the change that added the notes (both twins); does not discuss these differences", reason: completed}
+  queries: ["json when serializing note", "json add_note serializing", "json notes key", "json qualified name note",
+            "json keys must be str type name", "gh issue view 122163",
+            "bugforge-results/README.md: json entries (4: 158729-158732, none related)"]
+lean:
+  property: PyLean.JsonMod.DumpsTwinsNotes
+  theorem: PyLean.JsonMod.dumpsTwinsNotes_refuted

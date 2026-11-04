@@ -1,5 +1,7 @@
 import PyLean.DiffCore
 import PyLean.JsonMod.Tool
+import PyLean.JsonMod.DecRecProps
+import PyLean.JsonMod.EncFullRefute
 
 /-!
 Differential-testing handler for `json` cases (`"mod": "json"`).
@@ -273,6 +275,132 @@ def getToolOpts (j : Json) : Except String ToolOpts := do
   return { sortKeys := ← getBool j "sort_keys", ensureAscii := ← getBool j "ensure_ascii"
            jsonLines := ← getBool j "json_lines", compact := ← getBool j "compact", indent }
 
+/-! ### The full encoder model (`EncFull.lean`) -/
+
+def decPyType (j : Json) : Except String PyType := do
+  return { name := ← getStr j "name", qualname := ← getStr j "qualname", module := ← getStr j "module",
+           tpName := ← getStr j "tpName", heap := ← getBool j "heap" }
+
+def decXKey (j : Json) : Except String XKey :=
+  match j with
+  | .null => pure .none
+  | _ =>
+    match j.getObjVal? "s", j.getObjVal? "i", j.getObjVal? "b", j.getObjVal? "o", j.getObjVal? "f" with
+    | .ok s, _, _, _, _ => .str <$> decStr s
+    | _, .ok i, _, _, _ => .int <$> decIntStr i
+    | _, _, .ok b, _, _ => .bool <$> b.getBool?
+    | _, _, _, .ok o, _ => do return .obj (← decPyType o) (← decIntStr (← field j "ord"))
+    | _, _, _, _, .ok f => do return .flt (← decNatStr f) (← decStr (← field j "r"))
+    | _, _, _, _, _ => throw "bad key"
+
+def decStop (j : Json) : Except String (Option PyExc) :=
+  match j.getObjVal? "stop" with
+  | .ok .null | .error _ => pure none
+  | .ok m => do return some (.valueError (← m.getStr?))
+
+mutual
+partial def decXVal (j : Json) : Except String XVal :=
+  match j with
+  | .null => pure .none
+  | .bool b => pure (.bool b)
+  | _ =>
+    match j.getObjVal? "s", j.getObjVal? "i", j.getObjVal? "l", j.getObjVal? "d" with
+    | .ok s, _, _, _ => .str <$> decStr s
+    | _, .ok i, _, _ => .int <$> decIntStr i
+    | _, _, .ok l, _ => do
+      let a ← l.getArr?
+      let xs ← a.toList.mapM decXVal
+      match j.getObjVal? "sub" with
+      | .ok sb => return .seqSub (← decPyType (← field j "t")) (← getBool sb "truth") xs (← decStop sb)
+      | .error _ => return .seq (← decPyType (← field j "t")) xs
+    | _, _, _, .ok d => do
+      let a ← d.getArr?
+      match j.getObjVal? "sub" with
+      | .ok sb =>
+        let its ← a.toList.mapM fun p => do
+          let q ← p.getArr?
+          let sh : ItemShape := match (q.getD 0 .null).getNat? with
+            | .ok 1 => .lst
+            | .ok 2 => .bad (.valueError "too many values to unpack (expected 2, got 3)")
+            | _ => .tup
+          return (sh, ← decXKey (q.getD 1 .null), ← decXVal (q.getD 2 .null))
+        let head : ItemsHead ← match mode sb "head" with
+          | 1 => pure (.raises (.valueError "items"))
+          | 2 => pure (.notIter { name := "int" })
+          | _ => pure .ok
+        return .mapSub (← decPyType (← field j "t")) (← getNat sb "used") (← getBool sb "truth") head its (← decStop sb)
+      | .error _ =>
+        let kvs ← a.toList.mapM fun p => do
+          let q ← p.getArr?
+          return (← decXKey (q.getD 0 .null), ← decXVal (q.getD 1 .null))
+        return .map (← decPyType (← field j "t")) kvs
+    | _, _, _, _ =>
+      match j.getObjVal? "back", j.getObjVal? "other", j.getObjVal? "f" with
+      | .ok k, _, _ => .back <$> k.getNat?
+      | _, .ok n, _ => do return .other (← n.getNat?) (← decPyType (← field j "t"))
+      | _, _, .ok f => do return .flt (← decNatStr f) (← decStr (← field j "r"))
+      | _, _, _ => throw "bad value"
+end
+
+/-- A separator: `0` an exact `str`, `1` a subclass whose `__str__` returns `'X'`, `2` one whose
+`__str__` raises `ValueError('sep')`. -/
+def decSObj (j : Json) : Except String SObj := do
+  let s ← decStr (← field j "s")
+  match mode j "sub" with
+  | 1 => return ⟨s, false, .ok (cs "X")⟩
+  | 2 => return ⟨s, false, .error (.valueError "sep")⟩
+  | _ => return SObj.ofStr s
+
+def getXCfg (j : Json) : Except String XCfg := do
+  let indent ← match j.getObjVal? "indent" with
+    | .ok .null | .error _ => pure none
+    | .ok v => some <$> decStr v
+  let a ← (← field j "dflt").getArr?
+  let tbl ← a.toList.mapM fun p => do
+    let q ← p.getArr?
+    let n ← (q.getD 0 .null).getNat?
+    match q.getD 1 .null with
+    | .null => return (n, none)
+    | v => return (n, some (← decXVal (v.getObjValD "v")))
+  return { ensureAscii := ← getBool j "ensure_ascii", checkCircular := ← getBool j "check_circular",
+           allowNan := ← getBool j "allow_nan", sortKeys := ← getBool j "sort_keys",
+           skipKeys := ← getBool j "skipkeys", indent,
+           itemSep := ← decSObj (← field j "item_sep"), keySep := ← decSObj (← field j "key_sep")
+           dflt := fun n t => match tbl.lookup n with
+             | some (some v) => .ok v
+             | some none => .error (.valueError "boom")
+             | none => .error (defaultErr t.name) }
+
+/-- `repr` of an ASCII `str` (`unicode_repr`): single quotes unless the text has one and no double
+quote; `\\`, the quote, `\t`, `\n`, `\r` and `\xNN` escaped. Other code points are not rendered. -/
+def reprAsciiStr (s : PStr) : String :=
+  let q : Nat := if 39 ∈ s ∧ 34 ∉ s then 34 else 39
+  let body := s.flatMap fun c =>
+    if c = 92 then [92, 92] else if c = q then [92, q] else if c = 10 then [92, 110]
+    else if c = 13 then [92, 114] else if c = 9 then [92, 116]
+    else if c < 32 ∨ c = 127 then [92, 120] ++ ((hex2 c).toList.map Char.toNat)
+    else if c < 127 then [c] else cs "?"
+  String.ofList ((q :: body ++ [q]).map Char.ofNat)
+
+def KeyShown.text : KeyShown → String
+  | .str s => reprAsciiStr s
+  | .int n => toString n
+  | .flt r => String.ofList (r.map Char.ofNat)
+  | .bool b => if b then "True" else "False"
+  | .none => "None"
+  | .obj t => s!"<{t}>"
+
+def NoteShown.text : NoteShown → String
+  | .item tn i => s!"when serializing {tn} item {i}"
+  | .key tn k => s!"when serializing {tn} item {k.text}"
+  | .obj tn => s!"when serializing {tn} object"
+
+def encXR (show_ : Note → NoteShown) : XR → Json
+  | .ok t => Json.mkObj [("ok", Json.mkObj [("text", encStr t)])]
+  | .error (e, ns) => Json.mkObj [("ok", Json.mkObj [("exc", toJson e.className),
+      ("msg", toJson (if e.message.startsWith "~" then "~" else e.message)),
+      ("notes", Json.arr (ns.toArray.map fun n => toJson (show_ n).text))])]
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "loads_py" | "loads_c" =>
@@ -378,6 +506,18 @@ def run (fn : String) (j : Json) : Except String Json := do
       (← getBool j "sort_keys") (← getBool j "skipkeys") (← getBool j "allow_nan")
     let level ← decIntStr (← field j "level")
     return encPy (fun l => Json.arr (l.toArray.map encStr)) (r.bind fun cfg => encoderCall cfg v level)
+  | "loads_rec_py" | "loads_rec_c" =>
+    let s ← decStr (← field j "s")
+    let cfg : DCfg := { strict := ← getBool j "strict" }
+    let n ← getNat j "budget"
+    let r := if fn = "loads_rec_py" then loadsPyR cfg n s else loadsCR cfg n s
+    return encDR s (encJVal true) r
+  | "dumpsx_py" | "dumpsx_c" =>
+    let v ← decXVal (← field j "v")
+    let cfg ← getXCfg j
+    let n ← getNat j "budget"
+    if fn = "dumpsx_py" then return encXR showPy (dumpsPyX cfg n v)
+    else return encXR showC (dumpsCX cfg n v)
   | "colorize" =>
     return Json.mkObj [("ok", encStr (colorizeJson testTheme (← decStr (← field j "s"))))]
   | "tool" =>
