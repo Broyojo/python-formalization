@@ -34,7 +34,7 @@ Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
 Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-fast-slow,coll-counter-update-mapping-kw	
-Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
+Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	todo		review: The Mapping branch `self.get(k, 0) - L[k]` is now pinned, but the `**kwds` path is not: UpdateMappingKw only says `subtract(src, **kw)` is `subtract(src)` followed by `subtract(.none, kw)`, and nothing pins that second call (unlike `update`, which `Counter(L, **kw)` ties down), so a `subtract` that drops its keywords satisfies every conjunct.
 Lib/collections/__init__.py	738	740	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	
 Lib/collections/__init__.py	742	743	Counter.__reduce__	__reduce__(self)	modelled	coll-counter-copy-reduce	
 Lib/collections/__init__.py	745	748	Counter.__delitem__	__delitem__(self, elem)	modelled	coll-counter-delitem	
