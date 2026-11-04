@@ -24,7 +24,7 @@ proof applies to this model.
 
 `groupby_step` re-reads nothing after the input and the key function return: it
 writes `currvalue` and `currkey` (:524-527) over whatever a re-entrant call left
-there. `_grouper_next` checks `currgrouper` (:669) and `currvalue` (:670) before
+there. `_grouper_next` checks `currgrouper` (:669) and `currvalue` (:671) before
 the step and neither after it, so a group whose callback re-entered still
 compares and returns the item it pulled, even when the re-entrant call made
 another group current, and the value that call left current is released unseen.
@@ -183,8 +183,8 @@ def gbGrouperCmp [Inhabited κ] (K : KeyEq κ) (run : List (GbOp κ) → GbState
   | (.ok false, s) => (.stop, s)
   | (.ok true, s) => (gbValue s.g.currvalue, { s with g := { s.g with currvalue := none, currkey := none } })
 
-/-- `_grouper_next` (:662-696). `currgrouper` (:669) and `currvalue` (:670) are
-checked before `groupby_step` (:671-672) and not after it, so what its callbacks
+/-- `_grouper_next` (:662-696). `currgrouper` (:669) and `currvalue` (:671) are
+checked before `groupby_step` (:672) and not after it, so what its callbacks
 did is not looked at: the comparison reads the group's own key and the live
 `currkey` (:681-682). The value the step released is `dropped`. `currkey` is not
 null at :682 (`assert` at :676): `groupby_step` sets it with `currvalue`, and
@@ -964,7 +964,7 @@ def gbDrops [Inhabited κ] (K : KeyEq κ) (key : α → Py κ) (iterable : Obj �
   | .ok s => s.dropped
   | .error _ => []
 
-/-- `_grouper_next` steps only when there is no current value (:670), to fill the
+/-- `_grouper_next` steps only when there is no current value (:671), to fill the
 slot: for every comparison, key function, input, re-entrant code and sequence of
 operations, its `groupby_step` never releases a value, so no item that was made
 current is lost without being returned. -/

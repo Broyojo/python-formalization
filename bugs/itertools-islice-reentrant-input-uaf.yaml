@@ -1,0 +1,85 @@
+id: itertools-islice-reentrant-input-uaf
+title: "itertools.islice pulls from a freed iterator when the input's __next__ re-enters the islice and exhausts it (duplicate of gh-142732)"
+priority: P2
+kind: memory-safety
+module: itertools
+status: duplicate
+duplicate_of: "python/cpython#142732 (open; its second proof of concept is this path)"
+files: [Modules/itertoolsmodule.c]
+functions: ["islice_next", "islice_new"]
+summary: |
+  islice_next copies lz->it into a local without a reference (:1701) and calls it through the
+  cached tp_iternext (:1709, :1711, :1719). If the input's __next__ calls next() on the same
+  islice and that inner call reaches `empty` (:1731-1733), Py_CLEAR(lz->it) drops the islice's
+  reference. When the islice held the only one, the iterator is freed as soon as the running
+  __next__ (whose self kept it alive) returns, and the outer call, still in its skip loop
+  (cnt < next), calls iternext on the freed object. Pure Python segfaults the interpreter.
+  With another reference to the iterator nothing is freed, and the outer call goes on pulling
+  from an iterator the islice has cleared.
+  Lean: IsliceNoUseAfterFree is refuted by islice(it, 2, None) over a one-item input whose
+  __next__ calls next() on the islice once; IsliceNoCrashShared proves no crash for every
+  input, arguments, re-entrant __next__ and number of calls when something else holds the
+  input. The difftest runs random re-entrant inputs, with and without the only reference, in
+  forked children: the model predicted the crash in every case where CPython died (3 seeds,
+  60000 cases each, 100%).
+likelihood: |
+  Low: it takes an iterator that advances the islice slicing it. It is memory corruption
+  from pure Python all the same.
+maybe_intended: |
+  No for the crash. In python/cpython#142732 rhettinger proposes blocking re-entrancy in
+  itertools; PR python/cpython#150675 does that for zip_longest only, so islice is still open.
+reproducer: |
+  import subprocess, sys
+  child = r"""
+  import itertools
+  class It:
+      def __init__(self):
+          self.n = 0
+      def __iter__(self):
+          return self
+      def __next__(self):
+          self.n += 1
+          if self.n == 1:
+              next(isl, None)   # inner call: input exhausted, Py_CLEAR(lz->it)
+              return 'a'
+          raise StopIteration
+  isl = itertools.islice(It(), 2, None)   # the islice holds the only reference
+  print(next(isl, 'STOP'))
+  print('survived')
+  """
+  r = subprocess.run([sys.executable, '-c', child], capture_output=True, text=True)
+  print('exit status', r.returncode, r.stdout.strip())
+  if r.returncode < 0 and 'survived' not in r.stdout:
+      print('REPRODUCED itertools-islice-reentrant-input-uaf')
+expected: |
+  No crash: either the re-entrant call is refused, or the outer call stops once lz->it has
+  been cleared.
+observed: |
+  python3 3.15.2 (Linux build pod): SIGSEGV, exit status -11. With a second reference to the
+  iterator (it = It(); isl = islice(it, 2, None)): the inner call stops, the outer returns
+  StopIteration, exit 0. REPRODUCED.
+  main (cpython-main/python.exe): SIGSEGV, exit status -11. REPRODUCED.
+promised_by: |
+  Undisputed invariant: Python code must not make the interpreter use freed memory.
+cause: |
+  Modules/itertoolsmodule.c:1701 borrows lz->it into `it`; :1710-1716 and :1719 keep calling
+  iternext(it) after Python code ran, and :1731-1733 in a re-entrant call can release the last
+  reference. Nothing holds a strong reference to `it` across the calls or re-checks lz->it.
+possible_fix: |
+  Hold a reference across the loop and stop if lz->it changed:
+      PyObject *it = Py_XNewRef(lz->it); ... and Py_DECREF(it) on every exit,
+  checking `lz->it != it` after each iternext; or a re-entrancy guard as proposed in
+  python/cpython#142732. Not tested against a CPython build.
+duplicates:
+  issues:
+    - {number: 142732, state: open, relation: "use-after-free in zip_longest_next/islice/batched via re-entrant iterator; its islice proof of concept is the same stale local it", reason: "duplicate"}
+    - {number: 150675, state: open, relation: "PR blocking re-entrancy in zip_longest", reason: "does not touch islice"}
+    - {number: 149557, state: open, relation: "re-entrancy segfault in pairwise_next", reason: "other iterator"}
+  queries: ["itertools reentrant", "itertools re-entrant", "itertools reentrancy", "prs: itertools reentrancy",
+            "gh issue view 142732 --comments", "gh pr list --search 142732 --state all"]
+  note: |
+    Recorded as a duplicate: the model expresses the path of gh-142732, and this record ties the
+    refuted Lean property to it.
+lean:
+  property: PyLean.Itertools.IsliceNoUseAfterFree
+  theorem: PyLean.Itertools.isliceNoUseAfterFree_refuted

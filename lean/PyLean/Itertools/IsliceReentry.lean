@@ -9,7 +9,7 @@ reads a plain list and cannot express that.
 `islice_next` reads `lz->it` once into a local (:1701), checks it (:1706-1707) and
 caches its `tp_iternext` (:1709); every pull goes through that local, which holds
 no reference of its own. `lz->cnt` and `lz->next` are re-read after every pull
-(:1710, :1716, :1718, :1721-1728), so the outer call carries on from whatever a
+(:1710, :1715, :1717, :1722-1728), so the outer call carries on from whatever a
 re-entrant call left there. `hooks` holds, for successive items the input hands
 out, how many `next()` calls on the islice its `__next__` makes after taking the
 item and before returning it (as a `map` function does). They run through
@@ -62,7 +62,7 @@ inductive IsPull (α : Type) where
   | fail (e : PyExc)
   | crash
 
-/-- `iternext(it)` (:1711, :1720) through the local `it`. On a freed iterator the
+/-- `iternext(it)` (:1711, :1719) through the local `it`. On a freed iterator the
 process dies. Otherwise the input takes its item, then runs its hook with one
 more `__next__` active; when that `__next__` returns and no other is running,
 an iterator the islice has let go and nobody else holds is freed. -/
@@ -99,7 +99,7 @@ def isSkip (run : Nat → IsS α → IsS α) : Nat → IsS α → IsSk × IsS α
       | (.crash, s) => (.crash, s)
     else (.cont, s)
 
-/-- :1722-1728: `lz->next += step` in `size_t` (two's complement wraparound), then
+/-- :1723-1728: `lz->next += step` in `size_t` (two's complement wraparound), then
 `next = stop` if that wrapped below the old value or passed `stop`. -/
 def isAdvance (next stop step : Int) : Int :=
   if wrapSsize (next + step) < next || (stop != -1 && wrapSsize (next + step) > stop) then stop
@@ -326,7 +326,7 @@ to skip (`cnt >= next`) and below `stop` takes the input's next item `v`, whose
 `__next__` then runs `h` calls of `next()` on the islice; `R` is the state they
 leave, whatever they did (consumed items, advanced `cnt` and `next`, or reached
 `empty` and cleared `lz->it`). Unless that freed the iterator, the outer call
-returns `v` and advances the counters `R` holds (:1721-1728), not the ones it
+returns `v` and advances the counters `R` holds (:1722-1728), not the ones it
 started with. Concretely, on 3.15.2, `islice(it, 5)` over 0..9 where taking `0`
 calls `next()` once gives `1` to the inner call and then `0, 2, 3, 4` and the
 end; `islice(it, 2, None)` gives `3` to the inner call and then `4, 5, ..., 9`. -/

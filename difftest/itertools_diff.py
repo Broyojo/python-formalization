@@ -423,7 +423,11 @@ class OwnedSource:
         return self
 
     def __next__(self):
-        if self.dead[0]:
+        try:  # on a freed object even reading the flag fails
+            dead = self.dead[0]
+        except BaseException:
+            dead = True
+        if dead:
             os.kill(os.getpid(), signal.SIGSEGV)
         if self.pos < len(self.items):
             self.pos += 1

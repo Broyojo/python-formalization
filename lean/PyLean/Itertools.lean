@@ -68,7 +68,7 @@ def entries : List Entry := [
   { id := "itertools-islice-reentry-rereads", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["islice_next"]
     statement := "For every state and re-entrant code: a next() with nothing to skip and below stop takes the input's item v; if the input's __next__ then calls next() on the islice and that does not free the iterator, the outer call returns v and advances the cnt and next the inner calls left, not its own. And on 3.15.2, islice(it, 5) over 0..9 whose __next__ calls next() once when taking 0 gives 1 to the inner call, then 0, 2, 3, 4 and the end; islice(it, 2, None) gives 3 to the inner call, then 4..9."
-    source := "Modules/itertoolsmodule.c:1710, :1716, :1718, :1721-1728 (lz->cnt and lz->next re-read after each pull)", status := .proven
+    source := "Modules/itertoolsmodule.c:1710, :1715, :1717, :1722-1728 (lz->cnt and lz->next re-read after each pull)", status := .proven
     prop := ``IsliceReentryRereads, thm := some ``isliceReentryRereads_proven
     notes := "The two runs are what CPython 3.15.2 prints, inner results first. The islice keeps no re-entry guard (python/cpython#142732 asks for one), so these values are what the code does, not a documented promise." },
   { id := "itertools-islice-no-use-after-free", pyFile := "Modules/itertoolsmodule.c"
@@ -323,14 +323,14 @@ def entries : List Entry := [
   { id := "itertools-grouper-step-keeps-items", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["_grouper_next", "groupby_step", "groupby_next", "_grouper_create"]
     statement := "For every comparison, key function, input, re-entrant code and sequence of operations, the groupby_step that _grouper_next calls to fill an empty current value never releases a value, so no item made current is lost without being returned."
-    source := "invariant: _grouper_next steps only when currvalue is NULL (:670), to fill it; no item is lost", status := .refuted
+    source := "invariant: _grouper_next steps only when currvalue is NULL (:671), to fill it; no item is lost", status := .refuted
     prop := ``GrouperStepKeepsItems, thm := some ``grouperStepKeepsItems_refuted
     bug := some "itertools-groupby-reentrant-key-drops-item"
     notes := "groupby([1, 1, 1, 2, 2, 3, 3], key) whose second key call runs next() on the groupby: the inner groupby_next leaves the first 2 current for the new group, and the old group's step stores its second 1 over it (:524-527), so the group of 2 never yields its first item. An input whose __next__ re-enters does the same." },
   { id := "itertools-grouper-step-keeps-items-no-reentry", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["_grouper_next", "groupby_step"]
     statement := "With an input and key function that do not re-enter, for every comparison (whose __eq__ may raise and re-enter), key function and input (which may raise) and every sequence of operations, the groupby_step that _grouper_next calls never releases a value."
-    source := "invariant: _grouper_next steps only when currvalue is NULL (:670)", status := .proven
+    source := "invariant: _grouper_next steps only when currvalue is NULL (:671)", status := .proven
     prop := ``GrouperStepKeepsItemsNoReentry, thm := some ``grouperStepKeepsItemsNoReentry_proven
     notes := "So the loss in itertools-grouper-step-keeps-items needs the input or the key function to re-enter; a re-entrant __eq__ alone cannot cause it, since the comparison runs after the step." },
   { id := "itertools-grouper-direct", pyFile := "Modules/itertoolsmodule.c"
@@ -369,7 +369,7 @@ def entries : List Entry := [
   { id := "itertools-tee-two-getiter", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_tee_impl", "tee_fromiterable"]
     statement := "tee(iterable, n) calls PyObject_GetIter on the iterable and again on the iterator it got, _tee(iterable) only once: for every input, n >= 1 in Py_ssize_t whose tuple fits, hooks and operations, an iterator whose __iter__ returns another iterator s2 makes tee behave exactly as tee of an object yielding s2, one whose __iter__ raises makes tee raise that exception, and n == 0 calls neither."
-    source := "Modules/itertoolsmodule.c:1171-1173, :1056", status := .proven
+    source := "Modules/itertoolsmodule.c:1170-1172, :1056", status := .proven
     prop := ``TeeTwoGetIter, thm := some ``teeTwoGetIter_proven
     notes := "Checked on 3.15.2: A.__iter__ returns b, b.__iter__ returns iter(['x', 'y']): tee(A(), 2) gives ['x', 'y'] twice and calls b.__iter__ once, _tee(A()) gives b's items and never calls it; b.__iter__ raising KeyError makes tee raise it; returning 5 makes tee raise TypeError. Intended or not, the iterator protocol says __iter__ returns the iterator itself, so no bug is claimed." },
   { id := "itertools-tee-clear", pyFile := "Modules/itertoolsmodule.c"

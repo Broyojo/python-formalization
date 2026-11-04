@@ -134,8 +134,8 @@ def reIter : ReIter α → Src α → Py (Src α)
 
 /-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
 `Py_ssize_t(allow_negative=False)` converter (Modules/clinic/itertoolsmodule.c.h:338-352),
-`n == 0` returns `()` without touching the iterable (:1171-1172), then
-`PyObject_GetIter(iterable)` (:1173), `tee_fromiterable` on that iterator, which
+`n == 0` returns `()` without touching the iterable (:1170-1171), then
+`PyObject_GetIter(iterable)` (:1172), `tee_fromiterable` on that iterator, which
 calls `PyObject_GetIter` on it again (:1056; `re` is what that second call gives,
 by default the iterator itself), and `n - 1` calls of `tee_copy`. The items pulled
 are counted on the iterator the tees read. -/
@@ -405,7 +405,7 @@ theorem teeWrapIsTeeOne_proven : TeeWrapIsTeeOne := by
     subst h
     rfl
 
-/-- `tee(iterable, n)` calls `PyObject_GetIter` twice (:1173, then :1056 inside
+/-- `tee(iterable, n)` calls `PyObject_GetIter` twice (:1172, then :1056 inside
 `tee_fromiterable`), `_tee(iterable)` once. For every input object, `n ≥ 1` in
 `Py_ssize_t` whose tuple fits, hooks and operations: when the iterator's own
 `__iter__` returns another iterator `s2`, `tee` reads `s2`, exactly as `tee` of
