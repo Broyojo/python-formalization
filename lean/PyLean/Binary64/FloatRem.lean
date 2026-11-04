@@ -241,4 +241,32 @@ theorem remIEEE_proven : RemIEEE := by
 
 theorem floatRemSpec_proven : FloatRemSpec := ⟨withDoubles_dispatch _, remIEEE_proven⟩
 
+/-! ## `float_divmod` and `float_floor_div` -/
+
+/-- `float_divmod` (floatobject.c:652-665) and `float_floor_div` (:667-680) on every pair of
+operands: the `CONVERT_TO_DOUBLE` dispatch (an int converts, `1e308 // 10**400` raises
+`OverflowError`, a non-number is `NotImplemented`), `ZeroDivisionError` for a zero divisor
+of either sign whatever the dividend, and otherwise `divmod(x, y)` is the pair
+`(x // y, x % y)`, the remainder being the one `RemIEEE` states. The quotient itself is
+pinned by the two refutations `FloorDivExactFloor` and `DivmodQuotientDoc`, which run these
+wrappers. -/
+def FloatDivmodSpec : Prop :=
+  BinDispatch float_divmod ∧ BinDispatch float_floor_div ∧
+  (∀ x y : F64, y.isZero = true →
+    float_divmod (.float x) (.float y) = .error (.zeroDivisionError "division by zero") ∧
+    float_floor_div (.float x) (.float y) = .error (.zeroDivisionError "division by zero")) ∧
+  (∀ x y : F64, y.isZero = false → ∃ q r,
+    float_divmod (.float x) (.float y) = .ok (some (q, r)) ∧
+    float_floor_div (.float x) (.float y) = .ok (some q) ∧
+    float_rem (.float x) (.float y) = .ok (some r)) ∧
+  float_floor_div (.float (ofBits 0x7fe1ccf385ebc8a0)) (.int (10 ^ 400)) =
+    .error (.overflowError "int too large to convert to float")
+
+theorem floatDivmodSpec_proven : FloatDivmodSpec := by
+  refine ⟨withDoubles_dispatch _, withDoubles_dispatch _, fun x y hz => ?_, fun x y hz => ?_, ?_⟩
+  · exact ⟨(divmodZero_proven x y hz).2.1, (divmodZero_proven x y hz).2.2⟩
+  · obtain ⟨h1, h2, h3⟩ := divmodTwins_proven x y (eq_d0_of_nonzero_any hz)
+    exact ⟨_, _, h1, h2, h3⟩
+  · decide +kernel
+
 end PyLean.Binary64
