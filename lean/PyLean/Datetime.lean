@@ -121,7 +121,7 @@ def entries : List Entry := [
     prop := ``TimedeltaReduce, thm := some ``timedeltaReduce_proven },
   { id := "datetime-timedelta-pos", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__pos__", "C delta_positive"]
-    statement := "For every valid timedelta t, Python's +t is t itself, and C's +t is a new timedelta equal to t."
+    statement := "For every valid timedelta t, Python's +t is t itself; C's +t is a new timedelta equal to t, except that a zero t is the zero_delta singleton and +t is t."
     source := "C/Python twins (identity is observable: +t is t)", status := .proven
     prop := ``TimedeltaPos, thm := some ``timedeltaPos_proven },
   { id := "datetime-timedelta-rsub", pyFile := "Lib/_pydatetime.py"

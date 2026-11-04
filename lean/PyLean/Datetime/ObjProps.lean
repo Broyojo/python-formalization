@@ -236,10 +236,12 @@ theorem timedeltaReduce_proven : TimedeltaReduce := by
         0 * 604800000000 = a.toUs := by unfold Delta.toUs; omega
     rw [deltaC, this]; exact usToDeltaC_of_valid a ha
 
-/-- `+t`: Python returns the receiver itself (`+t is t`); C `delta_positive` builds a new,
-equal timedelta after its day-range check, which a valid `t` passes. -/
+/-- `+t` for a valid `t` of the base type: Python returns the receiver itself (`+t is t`);
+C `delta_positive` passes its day-range check and returns a new, equal timedelta, except for
+the zero timedelta, which is the `zero_delta` singleton and so is the receiver. -/
 def TimedeltaPos : Prop :=
-  ∀ a : Delta, a.Valid → a.posPy = .self_ ∧ a.posC = .ok (.fresh a)
+  ∀ a : Delta, a.Valid → a.posPy = .self_ ∧
+    a.posC = .ok (if a.toUs = 0 then .self_ else .fresh a)
 
 theorem timedeltaPos_proven : TimedeltaPos := by
   intro a ha
@@ -247,7 +249,12 @@ theorem timedeltaPos_proven : TimedeltaPos := by
   unfold Delta.Valid at ha
   unfold Delta.posC checkDeltaDayRange
   have : -MAX_DELTA_DAYS ≤ a.days ∧ a.days ≤ MAX_DELTA_DAYS := ⟨ha.2.2.2.2.1, ha.2.2.2.2.2⟩
-  simp [this, bind, Except.bind, pure, Except.pure]
+  have hz : (a.days = 0 ∧ a.seconds = 0 ∧ a.us = 0) ↔ a.toUs = 0 := by
+    unfold Delta.toUs; unfold MAX_DELTA_DAYS at this; omega
+  simp only [this, and_self, ite_true, bind, Except.bind]
+  by_cases h0 : a.toUs = 0
+  · rw [if_pos (hz.mpr h0), if_pos h0]; rfl
+  · rw [if_neg (fun h => h0 (hz.mp h)), if_neg h0]; rfl
 
 /-- The reflected `a.__rsub__(b)` is `b - a` in both twins, for all valid operands. -/
 def TimedeltaRsubTwins : Prop :=

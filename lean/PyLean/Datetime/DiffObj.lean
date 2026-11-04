@@ -281,6 +281,35 @@ def runObj (fn : String) (j : Json) : Except String Json := do
       | 2 => .sub "__main__" "Outer.DSub" "DSub"
       | _ => .base
     return toJson ((if isC then dateReprClsC else dateReprClsPy) cls a.1 a.2.1 a.2.2)
+  | "td_float" =>
+    let a ← decDelta (← field j "a")
+    let x := Binary64.F64.ofBits (← getNat j "x")
+    let r := match (← getStr j "op"), isC with
+      | "mul", true => a.mulFloatC x
+      | "mul", false => a.mulFloatPy x
+      | _, true => a.truedivFloatC x
+      | _, false => a.truedivFloatPy x
+    return encPy encD r
+  | "date_sub_dt" =>
+    let a ← getYMD j "a"; let b ← getYMD j "b"
+    let r := binarySub ((if isC then dateSubC else dateSubPy) a.1 a.2.1 a.2.2 (.datetime b.1 b.2.1 b.2.2))
+    return encPy (fun (v : SubResult) => match v with
+      | .delta t => encD t
+      | .date y m d => encYMD' (y, m, d)) r
+  | "date_format" =>
+    let a ← getYMD j "a"
+    let fmt : FmtArg := match j.getObjVal? "f" with
+      | .ok .null => .other
+      | .error _ => .other
+      | .ok v => match v.getArr? with
+        | .ok arr => .str (arr.toList.map (fun x => Char.ofNat ((x.getNat?).toOption.getD 0)))
+        | .error _ => .other
+    let str : Py String := .ok (String.ofList ((if isC then dateIsoformatC else dateIsoformat) a.1 a.2.1 a.2.2))
+    let strf : List Char → Py String := fun _ => .error .modelFuel
+    let r := (if isC then dateFormatC else dateFormatPy) fmt str strf
+    return encPy (fun (v : Sum String String) => match v with
+      | .inl s => toJson s
+      | .inr s => toJson s) r
   | "date_state" =>
     let a ← getYMD j "a"
     return toJson (dateGetstate a.1 a.2.1 a.2.2)

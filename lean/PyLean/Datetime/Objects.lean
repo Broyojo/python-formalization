@@ -95,10 +95,13 @@ def bool (t : Delta) : Bool := t.days != 0 || t.seconds != 0 || t.us != 0
 /-- `timedelta.__pos__`, Py:849-850: `return self`, the receiver itself. -/
 def posPy (_a : Delta) : ObjRes Delta := .self_
 
-/-- `delta_positive`, :2486-2495: `new_delta(days, seconds, us, 0)`, a new object, through
-`new_delta_ex`'s day-range check (:1383-1411; no normalization). -/
+/-- `delta_positive`, :2486-2495: `new_delta(days, seconds, us, 0)` through `new_delta_ex`
+(:1383-1411: the day-range check, no normalization), which returns the static `zero_delta`
+for a zero `timedelta` (`look_up_delta`, :3173-3181) and a new object otherwise. Every zero
+`timedelta` of the base type is that singleton, so `+t is t` exactly for zero. -/
 def posC (a : Delta) : Py (ObjRes Delta) := do
   checkDeltaDayRange a.days
+  if a.days = 0 ∧ a.seconds = 0 ∧ a.us = 0 then return .self_
   return .fresh ⟨a.days, a.seconds, a.us⟩
 
 /-- `timedelta.__rsub__`, Py:837-840: `other - self` as `-self + other`. -/
