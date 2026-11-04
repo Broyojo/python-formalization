@@ -459,8 +459,10 @@ def setSignalDict (v : CtxArg) : Py (SigDict × List (SigKey × SigVal)) :=
 
 /-- The signals of a list assigned to `_ignored_flags`. `_raise_error` and `_regard_flags`
 only test signals for membership and remove them (_pydecimal.py:4113, :4141), so other
-elements change nothing they do. Any other object is stored as is in Python and is out of
-scope here: `_ignored_flags` is private, and the module only ever assigns a list. -/
+elements change nothing they do, unless their `__eq__` against a signal answers true or raises
+(`error in self._ignored_flags` runs it), which is out of scope with any other object: it is
+stored as is in Python, `_ignored_flags` is private, and the module only ever assigns a list of
+signals. -/
 def ignoredOf : CtxArg → List Signal
   | .list l => l.filterMap (fun k => match k with
     | .sig s => some s
