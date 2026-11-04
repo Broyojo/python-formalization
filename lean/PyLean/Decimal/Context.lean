@@ -31,7 +31,7 @@ inductive Arg where
 /-- `"Unable to convert %s to Decimal" % other`, formatted text the model does not render. -/
 def unableMsg : String := "~Unable to convert to Decimal"
 
-/-- `"Unable to convert %s to Decimal" % other` for a tuple `other` (_pydecimal.py:6111): `%`
+/-- `"Unable to convert %s to Decimal" % other` for a tuple `other` (_pydecimal.py:6112): `%`
 takes the tuple as its arguments, so an empty one and one of two or more elements fail in the
 formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
 def unableMsgTuple : Nat → String

@@ -37,7 +37,7 @@ theorem convertOtherExact_proven : ConvertOtherExact := by
       Except.bind]
 
 /-- `"Unable to convert %s to Decimal" % other` is the message for every operand that is not a
-Decimal or an int (_pydecimal.py:6111; `~` marks the formatted operand). -/
+Decimal or an int (_pydecimal.py:6112; `~` marks the formatted operand). -/
 def ConvertOtherTypeErrorMessage : Prop :=
   ∀ x : Arg, (∀ d, x ≠ .dec d) → (∀ n, x ≠ .int n) →
     convertOther true x = .error (.typeError unableMsg)
