@@ -801,4 +801,227 @@ theorem formatSpecIsJoinedStr_refuted : ¬ FormatSpecIsJoinedStr := by
   rw [h2] at this
   cases Option.some.inj this
 
+/-! ### `_get_interpolation_conversion`, `_PyPegen_formatted_value`, `_PyPegen_interpolation` -/
+
+/-- `_get_interpolation_conversion(p, debug, conversion, format)` (`Parser/action_helpers.c:1526-1541`):
+the first character of the conversion name when there is one (`!r` is 114); with none, `'r'`
+(114) for a debug `=` without a format spec; -1 otherwise. -/
+def InterpolationConversion : Prop := ∀ (debug fmt : Ast),
+  (∀ (nm : List Nat) (rest : List Ast) (l : Option Loc) (m : Ast) (x : Nat),
+    interpolationConversion debug
+      (rec_ .PResultTokenWithMetadata [.node .Name (.ident (x :: nm) :: rest) l, m]) fmt = x) ∧
+  (debug ≠ .null → fmt = .null → interpolationConversion debug .null fmt = 114) ∧
+  (debug = .null → interpolationConversion debug .null fmt = -1) ∧
+  (fmt ≠ .null → interpolationConversion debug .null fmt = -1)
+
+theorem interpolationConversion_proven : InterpolationConversion := by
+  intro debug fmt
+  refine ⟨fun nm rest l m x => rfl, fun hd hf => ?_, fun hd => ?_, fun hf => ?_⟩
+  · subst hf
+    cases debug <;> first | exact absurd rfl hd | rfl
+  · subst hd; rfl
+  · cases debug <;> cases fmt <;> first | exact absurd rfl hf | rfl
+
+/-- Where the debug text ends and which metadata it is, `Parser/action_helpers.c:1595-1609` and
+`:1656-1670`: the conversion's (its name's line and column), else the format spec's (its line,
+its column + 1), else the closing brace's (the end of the field). -/
+def DebugInfoSource : Prop := ∀ (conv fmt closing : Ast) (el ec : Int),
+  (conv ≠ .null → debugInfo conv fmt closing el ec =
+    ((locOf (recField conv 0)).lineno, (locOf (recField conv 0)).colOffset, recField conv 1)) ∧
+  (conv = .null → fmt ≠ .null → debugInfo conv fmt closing el ec =
+    ((locOf (recField fmt 0)).lineno, (locOf (recField fmt 0)).colOffset + 1, recField fmt 1)) ∧
+  (conv = .null → fmt = .null → debugInfo conv fmt closing el ec = (el, ec, tokMeta closing))
+
+theorem debugInfoSource_proven : DebugInfoSource := by
+  intro conv fmt closing el ec
+  refine ⟨fun hc => ?_, fun hc hf => ?_, fun hc hf => ?_⟩
+  · cases conv <;> first | exact absurd rfl hc | rfl
+  · subst hc
+    cases fmt <;> first | exact absurd rfl hf | rfl
+  · subst hc; subst hf; rfl
+
+/-- The wrapper both helpers put around a debug field (`f'{x=}'`): a `JoinedStr` of the debug text
+(a `Constant` of the metadata, from just after `{` to just before where the text ends) and the
+node, from `{` to where the text ends; no debug `=`, the node alone. -/
+def wrapDebug (debug inner : Ast) (l c : Int) (di : Int × Int × Ast) : Ast :=
+  match debug with
+  | .null => inner
+  | _ => mkAt .JoinedStr [.seq [mkAt .Constant [metaConst di.2.2, .null] ⟨l, c + 1, di.1, di.2.1 - 1⟩,
+      inner]] ⟨l, c, di.1, di.2.1⟩
+
+/-- `_PyPegen_formatted_value` (`Parser/action_helpers.c:1640-1687`) and `_PyPegen_interpolation`
+(`:1577-1638`), the f-string and t-string replacement fields, side by side through `callHelper`:
+the same conversion (`_get_interpolation_conversion`), the same format spec (the result of the
+format-spec record), the same location and the same debug wrapper (`wrapDebug`, with the same
+debug text and end); the `Interpolation` also keeps the expression's text, the metadata the debug
+text is made of, without the trailing `=` and the whitespace after it when there is a debug `=`
+(`_strip_interpolation_debug_expr`). State unchanged. -/
+def FormattedValueInterpolation : Prop := ∀ (e debug conv fmt closing : Ast) (l c el ec : Int)
+  (p : PS),
+  callHelper .formatted_value [e, debug, conv, fmt, closing, .int l, .int c, .int el, .int ec] p =
+    (wrapDebug debug (mkAt .FormattedValue [e, .int (interpolationConversion debug conv fmt),
+      recField fmt 0] ⟨l, c, el, ec⟩) l c (debugInfo conv fmt closing el ec), p) ∧
+  callHelper .interpolation [e, debug, conv, fmt, closing, .int l, .int c, .int el, .int ec] p =
+    (wrapDebug debug (mkAt .Interpolation [e,
+      (match (debugInfo conv fmt closing el ec).2.2 with
+       | .str s => .const (.str (match debug with
+          | .null => s
+          | _ => stripInterpolationDebugExpr s))
+       | _ => .null),
+      .int (interpolationConversion debug conv fmt), recField fmt 0] ⟨l, c, el, ec⟩) l c
+      (debugInfo conv fmt closing el ec), p)
+
+theorem formattedValueInterpolation_proven : FormattedValueInterpolation := by
+  intro e debug conv fmt closing l c el ec p
+  refine ⟨?_, ?_⟩
+  · show (formattedValue e debug conv fmt closing l c el ec, p) = _
+    unfold formattedValue wrapDebug
+    cases debug <;> rfl
+  · show (interpolation e debug conv fmt closing l c el ec, p) = _
+    unfold interpolation wrapDebug
+    generalize debugInfo conv fmt closing el ec = di
+    obtain ⟨dl, dc, md⟩ := di
+    cases debug <;> cases md <;> rfl
+
+/-! ### f-strings and t-strings: `_PyPegen_constant_from_token`, `_PyPegen_decode_fstring_part`,
+`_get_resized_exprs`, `_PyPegen_joined_str`, `_PyPegen_template_str`,
+`_PyPegen_constant_from_string` -/
+
+/-- The parts a value contributes to `_get_resized_exprs`'s result when it is not a constant: the
+two values of a debug `JoinedStr` (`:1384-1402`), the node itself otherwise. -/
+def pairParts : Ast → List Ast
+  | .node .JoinedStr (v :: _) _ => seqOf v
+  | e => [e]
+
+/-- The location `_PyPegen_joined_str` and `_PyPegen_template_str` give: from the start token to
+the end token. -/
+def jsLoc (a b : Token) : Loc := ⟨a.lineno, a.colOffset, b.endLineno, b.endColOffset⟩
+
+theorem pairParts_other (x : Ast) (h : ∀ v r l, x = .node .JoinedStr (v :: r) l → False) :
+    pairParts x = [x] := by
+  unfold pairParts
+  split
+  · rename_i v r l
+    exact absurd rfl (h v r l)
+  · rfl
+
+/-- `_get_resized_exprs`' loop (`Parser/action_helpers.c:1378-1416`) over parts that are not
+constants (nothing to decode): debug pairs spliced in, everything else kept, in order, no state
+change. -/
+theorem resizedLoop_noconst (isRaw tstr : Bool) (b : Ast) :
+    ∀ (items acc : List Ast), (∀ e ∈ items, isConstant e = false) →
+    (∀ e ∈ items, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2) →
+    resizedLoop isRaw tstr b items acc = pure (some (acc.reverse ++ items.flatMap pairParts)) := by
+  intro items
+  induction items with
+  | nil => intro acc _ _; simp [resizedLoop]
+  | cons x xs ih =>
+    intro acc hc hj
+    have hc' : ∀ e ∈ xs, isConstant e = false := fun e he => hc e (by simp [he])
+    have hj' : ∀ e ∈ xs, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2 :=
+      fun e he => hj e (by simp [he])
+    have hx := hc x (by simp)
+    have hjx := hj x (by simp)
+    rw [resizedLoop.eq_def]
+    dsimp only
+    split
+    · rename_i values r l
+      have h2 := hjx values r l rfl
+      split
+      · rename_i f s hv
+        rw [ih _ hc' hj']
+        simp [pairParts, hv]
+      · rename_i hv
+        match hq : seqOf values, h2 with
+        | [f, s], _ => exact absurd hq (hv f s)
+    · simp [isConstant] at hx
+    · rw [ih _ hc' hj']
+      simp [List.flatMap_cons, pairParts_other x (by assumption)]
+
+/-- The `SystemError` of `_get_resized_exprs`, `Parser/action_helpers.c:1389-1394`. -/
+def resizedErr (tstr : Bool) (line : Int) : PyError :=
+  { cls := "SystemError"
+    msg := if tstr then s!"unexpected TemplateStr node without debug data in t-string at line {line}"
+      else s!"unexpected JoinedStr node without debug data in f-string at line {line}" }
+
+/-- `_PyPegen_joined_str` and `_PyPegen_template_str` (`Parser/action_helpers.c:1433-1455`) over
+parts with nothing to decode (replacement fields, debug pairs): the parts in order, each debug
+`JoinedStr` (`f'{x=}'`: its text and its field) spliced in, as a `JoinedStr` (a `TemplateStr`)
+from the start token to the end token, state unchanged; and a `JoinedStr` part that is not a
+debug pair (two values) stops it with `SystemError` "unexpected JoinedStr node without debug data
+in f-string at line <n>" ("TemplateStr ... t-string" for a t-string). -/
+def JoinedStrParts : Prop := ∀ (a b : Token) (items : List Ast) (p : PS),
+  ((∀ e ∈ items, isConstant e = false) →
+    (∀ e ∈ items, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2) →
+    callHelper .joined_str [.tok a, .seq items, .tok b] p =
+      (mkAt .JoinedStr [.seq (items.flatMap pairParts)] (jsLoc a b), p) ∧
+    callHelper .template_str [.tok a, .seq items, .tok b] p =
+      (mkAt .TemplateStr [.seq (items.flatMap pairParts)] (jsLoc a b), p)) ∧
+  (∀ (pre post : List Ast) (v : Ast) (r : List Ast) (lb : Loc),
+    items = pre ++ .node .JoinedStr (v :: r) (some lb) :: post →
+    (∀ e ∈ pre, isConstant e = false) →
+    (∀ e ∈ pre, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2) →
+    (seqOf v).length ≠ 2 →
+    callHelper .joined_str [.tok a, .seq items, .tok b] p =
+      (.null, (setErr (resizedErr false lb.lineno) p).2) ∧
+    callHelper .template_str [.tok a, .seq items, .tok b] p =
+      (.null, (setErr (resizedErr true lb.lineno) p).2))
+
+theorem resizedLoop_append (isRaw tstr : Bool) (b : Ast) :
+    ∀ (pre rest acc : List Ast), (∀ e ∈ pre, isConstant e = false) →
+    (∀ e ∈ pre, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2) →
+    resizedLoop isRaw tstr b (pre ++ rest) acc =
+      resizedLoop isRaw tstr b rest ((pre.flatMap pairParts).reverse ++ acc) := by
+  intro pre
+  induction pre with
+  | nil => intro rest acc _ _; rfl
+  | cons x xs ih =>
+    intro rest acc hc hj
+    have hc' : ∀ e ∈ xs, isConstant e = false := fun e he => hc e (by simp [he])
+    have hj' : ∀ e ∈ xs, ∀ v r l, e = .node .JoinedStr (v :: r) l → (seqOf v).length = 2 :=
+      fun e he => hj e (by simp [he])
+    have hx := hc x (by simp)
+    have hjx := hj x (by simp)
+    rw [List.cons_append, resizedLoop.eq_def]
+    dsimp only
+    split
+    · rename_i values r l
+      have h2 := hjx values r l rfl
+      split
+      · rename_i f s hv
+        rw [ih _ _ hc' hj']
+        simp [pairParts, hv, List.reverse_append]
+      · rename_i hv
+        match hq : seqOf values, h2 with
+        | [f, s], _ => exact absurd hq (hv f s)
+    · simp [isConstant] at hx
+    · rw [ih _ _ hc' hj']
+      simp [List.flatMap_cons, pairParts_other x (by assumption), List.reverse_append]
+
+theorem joinedStrParts_proven : JoinedStrParts := by
+  intro a b items p
+  refine ⟨fun hc hj => ?_, fun pre post v r lb hi hc hj hv => ?_⟩
+  · have hl : ∀ t, getResizedExprs (.tok a) (.seq items) (.tok b) t =
+        pure (some (items.flatMap pairParts)) := by
+      intro t
+      simp only [getResizedExprs, seqOf]
+      rw [resizedLoop_noconst _ _ _ items [] hc hj]
+      simp
+    refine ⟨?_, ?_⟩
+    · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl, pure_bind]) <;> rfl
+    · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl, pure_bind]) <;> rfl
+  · have hl : ∀ t, getResizedExprs (.tok a) (.seq items) (.tok b) t =
+        (do setErr (resizedErr t lb.lineno); return none) := by
+      intro t
+      simp only [getResizedExprs, seqOf, hi]
+      rw [resizedLoop_append _ _ _ pre _ [] hc hj, resizedLoop.eq_def]
+      dsimp only
+      split
+      · rename_i hq
+        exact absurd (by rw [hq]; rfl) hv
+      · rfl
+    refine ⟨?_, ?_⟩
+    · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl]) <;> rfl
+    · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl]) <;> rfl
+
 end PyLean.PyGrammar.Peg
