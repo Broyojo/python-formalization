@@ -30,6 +30,7 @@ import PyLean.PyGrammar.Peg.Rules.Imports
 import PyLean.PyGrammar.Peg.Rules.Patterns
 import PyLean.PyGrammar.Peg.Rules.InvalidTargets
 import PyLean.PyGrammar.Peg.Rules.SumCompose
+import PyLean.PyGrammar.Peg.Rules.AsTarget
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -1098,6 +1099,29 @@ def ruleEntries : List Entry := [
     thm := some ``sumSubSub_proven
     notes := LR ++ " RoundOK on each round's end state: no error, p->level restored, the start " ++
       "mark within memo (memo.size = fill) and the tokens." },
+  { id := "pygrammar-rule-dotted-as-name-name-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_as_name_name_target
+    statement := "Whatever follows 'import a as b', the error is never \"cannot use name as " ++
+      "import target\" (a name is a valid as-target)."
+    source := "the implementation against itself: dotted_as_name takes 'as' NAME"
+    status := .refuted
+    prop := ``DottedAsNameNameTarget
+    thm := some ``dottedAsNameNameTarget_refuted
+    bug := some "pygrammar-import-as-name-target"
+    notes := "Counterexample run in the kernel: 'import a as b c\\n'. Duplicate of gh-146492." },
+  { id := "pygrammar-rule-import-from-as-name-name-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from_as_name_name_target
+    statement := "Whatever follows 'from x import a as b', the error is never \"cannot use name " ++
+      "as import target\"."
+    source := "the implementation against itself: import_from_as_name takes 'as' NAME"
+    status := .refuted
+    prop := ``ImportFromAsNameNameTarget
+    thm := some ``importFromAsNameNameTarget_refuted
+    bug := some "pygrammar-import-as-name-target"
+    notes := "Counterexample run in the kernel: 'from x import a as b c\\n'. Duplicate of " ++
+      "gh-146492." },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed

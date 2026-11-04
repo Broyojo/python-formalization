@@ -259,6 +259,9 @@ def rule_del_targets : List String := [
 def rule_dotted_as_name : List String := [
   "rule:dotted_as_name"]
 
+def rule_dotted_as_name_name_target : List String := [
+  "rule:invalid_dotted_as_name"]
+
 def rule_dotted_name : List String := [
   "rule:dotted_name"]
 
@@ -315,6 +318,9 @@ def rule_import_from : List String := [
 
 def rule_import_from_as_name : List String := [
   "rule:import_from_as_name"]
+
+def rule_import_from_as_name_name_target : List String := [
+  "rule:invalid_import_from_as_name"]
 
 def rule_import_from_targets : List String := [
   "rule:import_from_targets"]
