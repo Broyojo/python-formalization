@@ -696,9 +696,86 @@ def complex_string(rng):
     return s
 
 
+# Parts that reach the Annex G recoveries of _Py_c_prod and _Py_c_quot (complexobject.c:94-145,
+# :224-243, :294-301): infinities, NaNs of both signs, signed zeros, and values whose products
+# or sums overflow.
+ANNEX = [0x7ff0000000000000, 0xfff0000000000000, 0x7ff8000000000000, 0xfff8000000000000, 0, SIGN,
+         0x3ff0000000000000, 0xbff0000000000000, 0x7fe1ccf385ebc8a0, 0xffe1ccf385ebc8a0,
+         0x7fefffffffffffff, 0x4000000000000000, 0x3fe0000000000000, 0x01a56e1fc2f8f359, 1]
+
+
+def annex_part(rng):
+    return rng.choice(ANNEX) if rng.random() < 0.8 else part(rng)
+
+
+def pos_finite(rng):
+    x = abs(of_bits(edge_float(rng)))
+    if x != x or x == float("inf") or x == 0.0:
+        x = rng.choice([2.0, 0.5, 10.0, 1e-5, 3.7, 1e200, 1e-300, 1.0])
+    return to_bits(x)
+
+
+import ctypes
+
+LIBM = ctypes.CDLL("libm.so.6")
+for _name, _args in (("hypot", 2), ("atan2", 2), ("log", 1)):
+    getattr(LIBM, _name).restype = ctypes.c_double
+    getattr(LIBM, _name).argtypes = [ctypes.c_double] * _args
+LIBM.sincos.restype = None
+LIBM.sincos.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)]
+
+
+def as_complex(o):
+    try:
+        z = py_c(o)
+        return complex(z)
+    except (OverflowError, TypeError, ValueError):
+        return None
+
+
+def with_libm(c):
+    """Attach the platform hypot and sincos that the compiled _Py_c_pow and _Py_c_abs call."""
+    if c is None or c["fn"] not in ("c_abs", "c_pow"):
+        return c
+    a = as_complex(c["v"])
+    if a is None:
+        return c
+    vabs = LIBM.hypot(a.real, a.imag)
+    c["hy"] = to_bits(vabs)
+    if c["fn"] == "c_pow":
+        b = as_complex(c["w"])
+        if b is not None:
+            phase = LIBM.atan2(a.imag, a.real) * b.real
+            if b.imag != 0.0:
+                phase += b.imag * LIBM.log(vabs)
+            sn, cs = ctypes.c_double(), ctypes.c_double()
+            LIBM.sincos(phase, ctypes.byref(sn), ctypes.byref(cs))
+            c["sc"] = [to_bits(phase), to_bits(cs.value), to_bits(sn.value)]
+    return c
+
+
 def gen_complex_case(rng):
+    return with_libm(gen_complex_case_raw(rng))
+
+
+def gen_complex_case_raw(rng):
     m = {"mod": "binary64"}
     k = rng.random()
+    if k < 0.15:  # Annex G: infinite, NaN and overflowing parts in * and /
+        fn = rng.choice(["c_mul", "c_div", "c_div"])
+        v = {"c": [annex_part(rng), annex_part(rng)]}
+        w = {"c": [annex_part(rng), annex_part(rng)]} if rng.random() < 0.75 else {"f": annex_part(rng)}
+        if rng.random() < 0.3:
+            v, w = ({"f": annex_part(rng)} if rng.random() < 0.5 else w), v
+            if "c" not in v and "c" not in w:
+                w = {"c": [annex_part(rng), annex_part(rng)]}
+        return {**m, "fn": fn, "v": v, "w": w}
+    if k < 0.25:  # complex(x, 0) ** y for a positive x: the twin of float.__pow__
+        x = pos_finite(rng)
+        y = rng.choice([0x3fe0000000000000, 0xbfe0000000000000, to_bits(1000.5), to_bits(-0.25),
+                        to_bits(1e5 + 0.5), to_bits(150.0), to_bits(-200.0), edge_float(rng)])
+        w = {"f": y} if rng.random() < 0.5 else {"c": [y, rng.choice([0, SIGN])]}
+        return {**m, "fn": "c_pow", "v": {"c": [x, rng.choice([0, 0, SIGN])]}, "w": w}
     if k < 0.5:
         fn = rng.choice(["c_add", "c_sub", "c_mul", "c_div"])
         v, w = c_operand(rng), c_operand(rng)
@@ -1043,4 +1120,5 @@ def run_all(c):
     return run_python(c) if c["fn"] in LOW_LEVEL else run_float(c)
 
 
-common.main(gen_all, run_all, default_cases=50000)
+if __name__ == "__main__":
+    common.main(gen_all, run_all, default_cases=50000)

@@ -90,7 +90,7 @@ def tsOp (run : List TeeOp → TeeS α → TeeS α) : TeeOp → TeeS α → TeeS
   | .copy k, t =>
     if k < t.tees.length then { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } else t
   | .ctor k, t =>
-    -- `tee_fromiterable` on a tee copies it (@3.14.7:1063-1066)
+    -- `tee_fromiterable` on a tee copies it (:1059-1062)
     if k < t.tees.length then { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } else t
 
 def tsFold (run : List TeeOp → TeeS α → TeeS α) (ops : List TeeOp) (t : TeeS α) : TeeS α :=

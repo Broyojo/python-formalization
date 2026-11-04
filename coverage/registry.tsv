@@ -809,6 +809,9 @@ itertools-count-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_count_impl
 itertools-count-doc-agree-total-add	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next
 itertools-count-doc-agree-closed	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-failed-add	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-no-reentry	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-reentry-twice	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-hands-out-once	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-float	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-repeat-consistent	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next,repeat_len,repeat_repr
 itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new
@@ -820,12 +823,14 @@ itertools-product-doc-agree	refuted	Modules/itertoolsmodule.c	product_new,produc
 itertools-product-doc-agree-iterable	proven	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
 itertools-permutations-spec	proven	Modules/itertoolsmodule.c	itertools_permutations_impl,permutations_next,permutations_next_lock_held
 itertools-count-formulas	proven	Doc/library/itertools.rst	
-itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
-itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
+itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
 itertools-groupby-no-crash-no-reentry	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-groupby-eq-error	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-grouper-eq-false	proven	Modules/itertoolsmodule.c	_grouper_next
-itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	Py_LOCAL_INLINE
+itertools-groupby-next-step-error	proven	Modules/itertoolsmodule.c	groupby_next,groupby_step
+itertools-grouper-step-error	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
+itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	groupby_step
 itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
 itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl,itertools__tee_impl
@@ -988,7 +993,7 @@ float-pow-special-values	proven	Objects/floatobject.c	float_pow,_Py_convert_int_
 float-hash-basics	proven	Objects/floatobject.c	float_hash
 float-unary	proven	Objects/floatobject.c	float_neg,float_abs,float_bool
 float-float-identity	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal
-float-getnewargs	proven	Objects/floatobject.c	float___getnewargs___impl
+float-getnewargs	proven	Objects/floatobject.c	
 float-new	proven	Objects/floatobject.c	float_new_impl
 float-subtype-new	proven	Objects/floatobject.c	float_subtype_new
 float-vectorcall	proven	Objects/floatobject.c	float_vectorcall
@@ -1061,6 +1066,16 @@ complex-pow-edom-only-for-zero	refuted	Objects/complexobject.c	_Py_c_pow
 complex-real-operand	proven	Objects/complexobject.c	real_to_double,real_to_complex
 complex-repr	proven	Objects/complexobject.c	complex_repr
 complex-blank-string	proven	Objects/complexobject.c	complex_from_string_inner,complex_subtype_from_string
+complex-sum-diff-exact	proven	Objects/complexobject.c	_Py_c_sum,_Py_cr_sum,_Py_rc_sum,_Py_c_diff,_Py_cr_diff,_Py_rc_diff
+complex-neg-conj-exact	proven	Objects/complexobject.c	_Py_c_neg,complex_neg,complex_conjugate_impl
+complex-mixed-prod-exact	proven	Objects/complexobject.c	_Py_cr_prod,_Py_rc_prod
+complex-cr-quot-exact	proven	Objects/complexobject.c	_Py_cr_quot
+complex-real-operand-exact	proven	Objects/complexobject.c	real_to_double,real_to_complex
+complex-pow-real-twin	proven	Objects/complexobject.c	_Py_c_pow,complex_pow
+complex-prod-annex-g-binary64	proven	Objects/complexobject.c	_Py_c_prod
+complex-quot-annex-g-binary64	proven	Objects/complexobject.c	_Py_c_quot
+complex-rc-quot-zero	proven	Objects/complexobject.c	_Py_rc_quot
+complex-format-exact	proven	Objects/complexobject.c	complex___format___impl
 pystrtod-case-insensitive-match	proven	Python/pystrtod.c	case_insensitive_match
 pystrtod-parse-inf-or-nan	proven	Python/pystrtod.c	_Py_parse_inf_or_nan
 pystrtod-ascii-strtod-fallback	proven	Python/pystrtod.c	_PyOS_ascii_strtod
@@ -1251,7 +1266,7 @@ complex-prod-annex-g	open	Objects/complexobject.c	_Py_c_prod
 complex-ring-powu	proven	Objects/complexobject.c	c_powu
 complex-field-quot	proven	Objects/complexobject.c	_Py_c_quot
 complex-quot-branch-order	proven	Objects/complexobject.c	_Py_c_quot
-complex-quot-annex-g	open	Objects/complexobject.c	_Py_c_quot
+complex-quot-annex-g	refuted	Objects/complexobject.c	_Py_c_quot
 complex-field-mixed-quot	proven	Objects/complexobject.c	_Py_cr_quot,_Py_rc_quot
 complex-rc-quot-twin	refuted	Objects/complexobject.c	_Py_rc_quot,_Py_c_quot
 complex-rc-quot-finite	open	Objects/complexobject.c	_Py_rc_quot,_Py_c_quot
@@ -1268,11 +1283,11 @@ complex-abs-clean-errno	proven	Objects/complexobject.c	complex_abs,_Py_c_abs
 complex-abs-infinity	proven	Objects/complexobject.c	_Py_c_abs
 complex-constructors-store	proven	Objects/complexobject.c	
 complex-neg-conj	proven	Objects/complexobject.c	complex_neg,_Py_c_neg,complex_conjugate_impl
-complex-pos-identity	proven	Objects/complexobject.c	
+complex-pos-identity	proven	Objects/complexobject.c	complex_pos,complex___complex___impl
 longobj-complex-bool	proven	Objects/complexobject.c	
 complex-getnewargs-round-trip	proven	Objects/complexobject.c	complex___getnewargs___impl,actual_complex_new,complex_new_impl
 complex-hash-composition	proven	Objects/complexobject.c	complex_hash
-complex-repr-structure	proven	Objects/complexobject.c	complex_repr,complex___format___impl
+complex-repr-structure	proven	Objects/complexobject.c	complex_repr
 complex-repr-round-trip	proven	Objects/complexobject.c	complex_repr,complex_from_string_inner,complex_subtype_from_string
 complex-real-to-double	proven	Objects/complexobject.c	real_to_double,real_to_complex
 complex-mixed-mode-direct	proven	Objects/complexobject.c	_Py_cr_sum,_Py_rc_sum,_Py_cr_diff,_Py_rc_diff,_Py_cr_prod,_Py_rc_prod,real_to_double
@@ -1295,6 +1310,11 @@ complex-parse-transform-ascii	proven	Objects/complexobject.c	complex_subtype_fro
 complex-parse-leading-whitespace	proven	Objects/complexobject.c	complex_from_string_inner
 complex-parse-surroundings	proven	Objects/complexobject.c	complex_from_string_inner
 complex-parse-forms	proven	Objects/complexobject.c	complex_from_string_inner
+complex-hash-numeric-rule	proven	Objects/complexobject.c	complex_hash
+complex-actual-new-cases	proven	Objects/complexobject.c	actual_complex_new
+complex-new-impl-correction	proven	Objects/complexobject.c	complex_new_impl
+complex-from-number-cases	proven	Objects/complexobject.c	complex_from_number_impl
+complex-cabs-branches	proven	Objects/complexobject.c	_Py_c_abs
 complex-float-strings-are-complex-strings	proven	Objects/complexobject.c	complex_from_string_inner,complex_subtype_from_string
 longobj-as-double-rounds	open	Objects/longobject.c	PyLong_AsDouble,_PyLong_Frexp,long_float
 longobj-true-divide-rounds	open	Objects/longobject.c	long_true_divide

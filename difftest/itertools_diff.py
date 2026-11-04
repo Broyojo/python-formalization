@@ -457,13 +457,25 @@ class SubIslice(itertools.islice):
         pass
 
 
+BIG = 10 ** 4300
+
+
+def big(v):
+    """An int past the int/str limit travels as hex: json cannot print or read it."""
+    return {"x": hex(v)}
+
+
 def dec_val(v):
+    if isinstance(v, dict) and "x" in v:
+        return int(v["x"], 16)
     if isinstance(v, dict):
         return struct.unpack("<d", struct.pack("<Q", v["f"]))[0]
     return {"bad": Raising, "str": lambda: "a", "badint": lambda: RaisingInt(1)}[v]() if isinstance(v, str) else v
 
 
 def enc_val(v):
+    if type(v) is int and abs(v) >= BIG:
+        return big(v)
     if isinstance(v, float):
         return "nan" if math.isnan(v) else {"f": struct.unpack("<Q", struct.pack("<d", v))[0]}
     return "bad" if isinstance(v, Raising) else "badint" if isinstance(v, RaisingInt) else v
@@ -522,7 +534,7 @@ def gen_case(rng):
     fn = rng.choice(["islice", "islice", "islice", "islice_arity", "batched", "accumulate", "chain",
                      "chain_from", "compress", "cycle", "dropwhile", "takewhile", "filterfalse",
                      "pairwise", "pairwise_r", "starmap", "zip_longest", "product", "combinations", "cwr",
-                     "permutations", "sizeof", "count", "count", "count", "repeat", "groupby",
+                     "permutations", "sizeof", "count", "count", "count", "count_reentry", "repeat", "groupby",
                      "groupby", "groupby", "tee", "tee", "tee_wrap", "teedata", "teeweak"])
     impl = rng.choice(["c", "doc"])
     c = {"mod": "itertools", "fn": fn, "impl": impl}
@@ -609,7 +621,9 @@ def gen_case(rng):
             c.update(obj=spec(rng, l))
     elif fn == "count":
         ints = [0, 1, -1, 2, 5, M, M - 1, M - 2, M - 3, M + 1, -M - 1, -M - 2, 2**64, -2**64,
-                10**400, -10**400, 2**53, rng.randint(-10, 10)]
+                10**400, -10**400, 2**53, rng.randint(-10, 10),
+                # around the 4300-digit limit of %R
+                BIG - 1, -(BIG - 1), BIG - 2, big(BIG), big(-BIG), big(BIG + 1), big(10**5000)]
         floats = [f_val(x) for x in (0.5, -0.5, 1.0, 0.0, -0.0, 2.5, 0.1, 1e308, 1.7976931348623157e308,
                                      5e-324, 2.0**53, math.inf, -math.inf, math.nan)]
         others = [True, False, "bad", "badint"] + (["str"] if impl == "c" else [])
@@ -618,7 +632,8 @@ def gen_case(rng):
             return rng.choice(rng.choice([ints, floats, others]))
 
         def step():
-            return rng.choice(rng.choice([[1, 1, 0, -1, 2, 3, M, -M - 1, M + 1, 2**64, -2**64], floats, others]))
+            return rng.choice(rng.choice([[1, 1, 0, -1, 2, 3, M, -M - 1, M + 1, 2**64, -2**64,
+                                           BIG - 1, -(BIG - 1), big(BIG), big(-BIG)], floats, others]))
 
         ops = [rng.choice("nnr" if impl == "c" else "n") for _ in range(rng.randrange(8))]
         c.update(ops=ops, sub=impl == "c" and rng.random() < 0.1)
@@ -629,6 +644,14 @@ def gen_case(rng):
         if rng.random() < 0.15:
             # Fast mode up to sys.maxsize, where count_nextlong switches and the add fails.
             c.update(start=rng.choice([M, M - 1, M - 2]), step="badint", ops=ops + ["n", "r", "n"])
+    elif fn == "count_reentry":
+        # A step whose __radd__ calls next() on the count at the chosen add numbers. The values
+        # stay small ints, which are immortal, so the double hand-out of python/cpython#154670
+        # frees nothing.
+        c.update(impl="c", start=rng.randint(90, 110), d=rng.randint(-2, 2),
+                 reenter=sorted(rng.sample(range(12), rng.randrange(5))),
+                 k=rng.randrange(9))
+        c["raise"] = sorted(rng.sample(range(12), rng.choice([0, 0, 1, 2])))
     elif fn == "repeat":
         times = rng.choice([None, None, 0, 1, 2, 3, -1, -5, M, -M - 1, M + 1, 2**64, -2**64])
         c.update(elem=rng.randint(-3, 3), ops=[rng.choice("nrh") for _ in range(rng.randrange(8))])
@@ -768,6 +791,42 @@ def run_ops(obj_thunk, ops, enc=lambda v: v):
         except Exception as e:
             out.append(["exc"] + enc_exc(e))
     return out
+
+
+class ReStep:
+    """A number (by __index__) whose __radd__ answers other + d, raises ValueError('add') on
+    the add numbers in `bad`, and first calls next() on the count on those in `reenter`."""
+
+    def __init__(self, d, reenter, bad, log, cref):
+        self.d, self.reenter, self.bad, self.log, self.cref, self.n = d, reenter, bad, log, cref, 0
+
+    def __index__(self):
+        return self.d
+
+    def __radd__(self, other):
+        n = self.n
+        self.n += 1
+        if n in self.bad:
+            raise ValueError("add")
+        if n in self.reenter:
+            try:
+                self.log.append(next(self.cref[0]))
+            except Exception as e:
+                self.log.append(["exc"] + enc_exc(e))
+        return other + self.d
+
+
+def run_count_reentry(c):
+    """Every value next() returned or exception it raised, inner calls included, in the order
+    the calls returned."""
+    log, cref = [], [None]
+    cref[0] = itertools.count(c["start"], ReStep(c["d"], set(c["reenter"]), set(c["raise"]), log, cref))
+    for _ in range(c["k"]):
+        try:
+            log.append(next(cref[0]))
+        except Exception as e:
+            log.append(["exc"] + enc_exc(e))
+    return {"ok": log}
 
 
 def cmsg(f):
@@ -1001,6 +1060,8 @@ def run_python(c):
             return {"ok": run_ops(lambda: cls(**kw), c["ops"], enc_val)}
         k = c["ops"].count("n")
         return {"ok": [[], None] if k == 0 else drain(lambda: doc_count(**kw), enc_val, k)}
+    if fn == "count_reentry":
+        return run_count_reentry(c)
     if fn == "repeat":
         make = (lambda: F(c["elem"], c["times"])) if "times" in c else (lambda: F(c["elem"]))
         if impl == "c":

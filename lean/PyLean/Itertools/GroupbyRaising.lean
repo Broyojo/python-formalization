@@ -61,7 +61,7 @@ inductive GbStep where
   | fail (e : Option PyExc)
 
 /-- `groupby_step` (:505-529). `PyIter_Next` has taken the item before the key
-function runs, so a raising key loses that item (@3.14.7:519-523); `currvalue` and
+function runs, so a raising key loses that item (:517-521); `currvalue` and
 `currkey` are assigned only after both calls succeeded (:524-527). -/
 def gbStep (key : α → Py κ) (s : GbState α κ) : GbStep × GbState α κ :=
   match s.g.it with
@@ -75,7 +75,7 @@ def gbStep (key : α → Py κ) (s : GbState α κ) : GbStep × GbState α κ :=
     | .ok k => (.ok, { s with g := { s.g with it := rest, currvalue := some v, currkey := some k } })
 
 /-- `PyObject_RichCompareBool(a, b, Py_EQ)` with `__eq__` running its hook. The
-`Py_INCREF`ed snapshots of :549-553 and @3.14.7:685-686 are the arguments `a` and `b`,
+`Py_INCREF`ed snapshots of :549-553 and :681-682 are the arguments `a` and `b`,
 which the hook cannot change. -/
 def gbEq (K : KeyEq κ) (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ)
     (a b : κ) : Py Bool × GbState α κ :=
@@ -116,7 +116,7 @@ def gbFail {β : Type} : Option PyExc → GbRes β
 def gbCreate (g : CGroupby α κ) (tgtkey : κ) : CGroupby α κ :=
   { g with groupers := g.groupers ++ [tgtkey], currgrouper := some g.groupers.length }
 
-/-- `groupby_next` (:532-575). `currgrouper` is cleared first (:542), so the
+/-- `groupby_next` (:532-575). `currgrouper` is cleared first (:537), so the
 current group is invalidated even when this call then fails.
 
 After the loop's `break` the C code reads `gbo->currkey` unchecked (:567). The
@@ -137,7 +137,7 @@ def gbValue {β : Type} : Option β → GbRes β
   | none => .stop
   | some v => .val v
 
-/-- `_grouper_next` (:662-696). `currkey` is not null at :689 (`assert` at :683):
+/-- `_grouper_next` (:662-696). `currkey` is not null at :682 (`assert` at :676):
 `groupby_step` sets it with `currvalue`, and :692-693 clear them together.
 `rcmp <= 0` is :687-689: `-1` is the exception, `0` the end of the group. The
 hook may have taken `currvalue`, and then `r` is `NULL` at :691: a plain stop. -/
@@ -468,8 +468,8 @@ theorem gbGrouperNext_compare [Inhabited κ] (K : KeyEq κ) (key : α → Py κ)
 /-- For every comparison, key function and state: when the keys are not the same
 object, nothing re-enters and `__eq__` raises, `groupby_next` and `_grouper_next`
 propagate exactly that exception. `groupby_next` leaves every field but
-`currgrouper` as it was (@3.14.7:560-561), so the object stays usable; `_grouper_next`
-changes nothing at all (@3.14.7:691-693). -/
+`currgrouper` as it was (:558-559), so the object stays usable; `_grouper_next`
+changes nothing at all (:687-689). -/
 def GroupbyEqError : Prop :=
   ∀ (α κ : Type) [Inhabited κ] (K : KeyEq κ) (key : α → Py κ)
     (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ) (e : PyExc) (ck tk : κ),
@@ -501,23 +501,112 @@ theorem grouperEqFalseStops_proven : GrouperEqFalseStops := by
   intro α κ _ K key run s j v ck hh hj hv hc h1 h2
   exact gbGrouperNext_compare K key run s j v ck _ hh hj hv hc h1 h2
 
-/-- `itertools._grouper(groupby_obj, k)` makes the new group current: every
-group created before it stops at once and leaves the state alone, whatever the
-comparison, key function, input and hooks would do. -/
+/-- `itertools._grouper(groupby_obj, k)` (:617-622, `_grouper_create` :625-637) makes the
+new group current: every group created before it stops at once and leaves the state alone,
+whatever the comparison, key function, input and hooks would do; and `next()` on the new
+group compares `k` with `currkey` (:681-683): with a current value `v`, when they are not
+the same object and nothing re-enters, it returns `v` and clears the value if `__eq__`
+answers true, stops if false, and raises what `__eq__` raises, changing nothing in those two
+cases. For every comparison, key function and state. -/
 def GrouperDirectInvalidates : Prop :=
   ∀ (α κ : Type) [Inhabited κ] (K : KeyEq κ) (key : α → Py κ)
-    (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ) (k : κ) (j : Nat),
-    j < s.g.groupers.length →
-    gbGrouperNext K key run { s with g := gbCreate s.g k } j = (.stop, { s with g := gbCreate s.g k })
+    (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ) (k : κ),
+    (∀ j, j < s.g.groupers.length →
+      gbGrouperNext K key run { s with g := gbCreate s.g k } j = (.stop, { s with g := gbCreate s.g k })) ∧
+    (∀ (v : α) (ck : κ), s.hooks = [] → s.g.currvalue = some v → s.g.currkey = some ck →
+      K.same k ck = false →
+      gbGrouperNext K key run { s with g := gbCreate s.g k } s.g.groupers.length =
+        match K.eq k ck with
+        | .error e => (.exc e, { s with g := gbCreate s.g k })
+        | .ok false => (.stop, { s with g := gbCreate s.g k })
+        | .ok true => (.val v, { s with g := { gbCreate s.g k with currvalue := none, currkey := none } }))
 
 theorem grouperDirectInvalidates_proven : GrouperDirectInvalidates := by
-  intro α κ _ K key run s k j hj
-  have h : (gbCreate s.g k).currgrouper ≠ some j := by
-    simp only [gbCreate]
-    intro h
-    simp only [Option.some.injEq] at h
-    omega
-  simp [gbGrouperNext, h]
+  intro α κ _ K key run s k
+  refine ⟨fun j hj => ?_, fun v ck hh hv hc hs => ?_⟩
+  · have h : (gbCreate s.g k).currgrouper ≠ some j := by
+      simp only [gbCreate]
+      intro h
+      simp only [Option.some.injEq] at h
+      omega
+    simp [gbGrouperNext, h]
+  · have hg : (gbCreate s.g k).groupers.getD s.g.groupers.length default = k := by
+      simp [gbCreate]
+    have key_lemma := fun (r : Py Bool) (h2 : K.eq k ck = r) =>
+      gbGrouperNext_compare K key run { s with g := gbCreate s.g k } s.g.groupers.length v ck
+        r hh (by simp [gbCreate]) (by simp [gbCreate, hv]) (by simp [gbCreate, hc])
+        (by rw [hg]; exact hs) (by rw [hg]; exact h2)
+    cases hr : K.eq k ck with
+    | error e => rw [key_lemma _ hr]
+    | ok b => cases b <;> rw [key_lemma _ hr] <;> simp [gbValue, gbCreate, hv]
+
+/-- `groupby_step` failing inside `groupby_next` (:564-565), for every comparison, key
+function and state where the loop reaches it: no current key (:540-541), or a current key
+that compares equal to the target (:554-562) with nothing re-entering. When the key
+function raises on the next item `v`, `groupby_next` raises that exception; the item is
+consumed, `currgrouper` is cleared (:537), and every other field keeps its old value, so the
+next call carries on from the following item. When the input raises, that exception
+propagates and the input is used up. -/
+def GroupbyNextStepError : Prop :=
+  ∀ (α κ : Type) [Inhabited κ] (K : KeyEq κ) (key : α → Py κ)
+    (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ) (e : PyExc),
+    (s.g.currkey = none ∨ ∃ ck tk, s.g.currkey = some ck ∧ s.g.tgtkey = some tk ∧ s.hooks = [] ∧
+      (K.same tk ck = true ∨ K.eq tk ck = .ok true)) →
+    (∀ v rest, s.g.it = v :: rest → key v = .error e →
+      gbNext K key run s = (.exc e, { s with g := { s.g with currgrouper := none, it := rest } })) ∧
+    (s.g.it = [] → s.err = some e →
+      gbNext K key run s = (.exc e, { s with g := { s.g with currgrouper := none }, err := none }))
+
+theorem groupbyNextStepError_proven : GroupbyNextStepError := by
+  intro α κ _ K key run s e hpath
+  refine ⟨fun v rest hit hk => ?_, fun hit he => ?_⟩
+  · rcases hpath with hn | ⟨ck, tk, hc, ht, hh, hq⟩
+    · simp [gbNext, gbSkip, hn, gbThen, gbStep, hit, hk, gbFail]
+    · by_cases hs : K.same tk ck = true
+      · simp [gbNext, gbSkip, hc, ht, gbEq, hs, gbThen, gbStep, hit, hk, gbFail]
+      · have hq' : K.eq tk ck = .ok true := by simpa [hs] using hq
+        simp [gbNext, gbSkip, hc, ht, gbEq, hs, hh, hq', gbThen, gbStep, hit, hk, gbFail]
+  · rcases hpath with hn | ⟨ck, tk, hc, ht, hh, hq⟩
+    · simp [gbNext, gbSkip, hn, gbThen, gbStep, hit, he, gbFail]
+    · by_cases hs : K.same tk ck = true
+      · simp [gbNext, gbSkip, hc, ht, gbEq, hs, gbThen, gbStep, hit, he, gbFail]
+      · have hq' : K.eq tk ck = .ok true := by simpa [hs] using hq
+        simp [gbNext, gbSkip, hc, ht, gbEq, hs, hh, hq', gbThen, gbStep, hit, he, gbFail]
+
+/-- `groupby_step` failing inside `_grouper_next` (:671-673): for every comparison, key
+function and state, on the current group with no current value. When the key function
+raises on the next item `v`, `next()` on the group raises that exception, the item is
+consumed and nothing else changes: the group stays current, so a later `next()` on it reads
+the following item `w` and returns it when its key compares equal to the group's (here with
+nothing re-entering). When the input raises, that exception propagates and the group then
+stops. -/
+def GrouperStepError : Prop :=
+  ∀ (α κ : Type) [Inhabited κ] (K : KeyEq κ) (key : α → Py κ)
+    (run : List (GbOp κ) → GbState α κ → GbState α κ) (s : GbState α κ) (j : Nat) (e : PyExc),
+    s.g.currgrouper = some j → s.g.currvalue = none →
+    (∀ v rest, s.g.it = v :: rest → key v = .error e →
+      gbGrouperNext K key run s j = (.exc e, { s with g := { s.g with it := rest } }) ∧
+      ∀ w rest' kw, rest = w :: rest' → key w = .ok kw → s.hooks = [] →
+        (K.same (s.g.groupers.getD j default) kw = true ∨ K.eq (s.g.groupers.getD j default) kw = .ok true) →
+        gbGrouperNext K key run { s with g := { s.g with it := rest } } j =
+          (.val w, { s with g := { s.g with it := rest', currvalue := none, currkey := none } })) ∧
+    (s.g.it = [] → s.err = some e →
+      gbGrouperNext K key run s j = (.exc e, { s with err := none }) ∧
+      gbGrouperNext K key run { s with err := none } j = (.stop, { s with err := none }))
+
+theorem grouperStepError_proven : GrouperStepError := by
+  intro α κ _ K key run s j e hj hv
+  refine ⟨fun v rest hit hk => ⟨?_, fun w rest' kw hr hkw hh hq => ?_⟩, fun hit he => ⟨?_, ?_⟩⟩
+  · simp [gbGrouperNext, hj, hv, gbStep, hit, hk, gbFail]
+  · subst hr
+    generalize hT0 : s.g.groupers.getD j default = T at hq
+    have hT : s.g.groupers[j]?.getD default = T := by simpa using hT0
+    by_cases hs : K.same T kw = true
+    · simp [gbGrouperNext, hj, hv, gbStep, hkw, gbEq, hT, hs, gbValue]
+    · have hq' : K.eq T kw = .ok true := by simpa [hs] using hq
+      simp [gbGrouperNext, hj, hv, gbStep, hkw, gbEq, hT, hs, hh, hq', gbValue]
+  · simp [gbGrouperNext, hj, hv, gbStep, hit, he, gbFail]
+  · simp [gbGrouperNext, hj, hv, gbStep, hit, gbFail]
 
 /-- Without re-entrancy the process cannot die: for every comparison (which may
 raise), key function and input (which may raise) and every sequence of

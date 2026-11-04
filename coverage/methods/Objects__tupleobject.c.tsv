@@ -21,7 +21,7 @@ Objects/tupleobject.c	446	469	PyTuple_FromArray	PyTuple_FromArray(PyObject *cons
 Objects/tupleobject.c	472	494	_PyTuple_FromStackRefStealOnSuccess	_PyTuple_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	497	516	_PyTuple_FromArraySteal	_PyTuple_FromArraySteal(PyObject *const *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	519	532	tuple_slice	tuple_slice(PyTupleObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-tuple-slice-spec,bytesobj-tuple-getnewargs	
-Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	todo		review: The 3.15.2 body (new since 3.14.7) is mirrored, start converted before stop with __index__ and the TypeError, but TupleBinarySliceObj compares only r.items with t[slice(a, b)], so the identity branch istart == 0 && istop == len -> Py_NewRef(container) (:543-545) is unpinned: a _PyTuple_BinarySlice that always copies satisfies it (pin .arg 0 exactly for the full range, as TupleSliceSpec does for tuple_slice).
+Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	modelled	bytesobj-tuple-binary-slice-obj	
 Objects/tupleobject.c	554	561	PyTuple_GetSlice	PyTuple_GetSlice(PyObject *op, Py_ssize_t i, Py_ssize_t j)	modelled	bytesobj-tuple-slice-spec	
 Objects/tupleobject.c	564	608	_PyTuple_Concat	_PyTuple_Concat(PyObject *aa, PyObject *bb)	modelled	bytesobj-tuple-concat	
 Objects/tupleobject.c	611	657	tuple_repeat	tuple_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-repeat	

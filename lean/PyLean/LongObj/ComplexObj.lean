@@ -138,14 +138,14 @@ structure Made (R : Type) where
 `MemoryError`, which is not modelled. -/
 def complex_subtype_from_c_complex (type : TyArg) (cval : Cx R) : Made R := ⟨type, cval, false⟩
 
-/-- `PyComplex_FromCComplex`, lines 410-421. -/
+/-- `PyComplex_FromCComplex`, lines 410-425. -/
 def PyComplex_FromCComplex (cval : Cx R) : Made R := ⟨.complex, cval, false⟩
 
-/-- `complex_subtype_from_doubles`, lines 423-430. -/
+/-- `complex_subtype_from_doubles`, lines 439-446. -/
 def complex_subtype_from_doubles (type : TyArg) (real imag : R) : Made R :=
   complex_subtype_from_c_complex type ⟨real, imag⟩
 
-/-- `PyComplex_FromDoubles`, lines 432-439. -/
+/-- `PyComplex_FromDoubles`, lines 448-455. -/
 def PyComplex_FromDoubles (real imag : R) : Made R := PyComplex_FromCComplex ⟨real, imag⟩
 
 /-- What the object layer needs from its surroundings. -/
@@ -175,7 +175,7 @@ def liftPy {α : Type} : Py α → M α
   | .error e => throw e
 
 /-- Call a slot on `self`. A Python method logs its call. The built-ins are
-`complex___complex___impl` (lines 917-927), `float_float` and `long_float`. -/
+`complex___complex___impl` (lines 937-947), `float_float` and `long_float`. -/
 def callSlot (name : String) (s : Slot R) (self : Obj R) : M (Obj R) :=
   match s with
   | .absent => throw .modelFuel
@@ -273,7 +273,7 @@ def PyNumber_Float (E : Env R) (o : Obj R) : M R :=
       | _ => throw (.typeError
           s!"float() argument must be a string or a real number, not '{pct 200 o.ti.tpName}'")
 
-/-- Lines 513-532: what `try_complex_special_method` does with the method's result. -/
+/-- Lines 513-534: what `try_complex_special_method` does with the method's result. -/
 def complexResult (E : Env R) (op res : Obj R) : M (Option (Cx R)) :=
   match res.val with
   | .cplx c =>
@@ -286,7 +286,7 @@ def complexResult (E : Env R) (op res : Obj R) : M (Option (Cx R)) :=
   | _ => throw (.typeError
       s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}")
 
-/-- `try_complex_special_method`, lines 488-519. C returns `NULL` both when the
+/-- `try_complex_special_method`, lines 504-535. C returns `NULL` both when the
 method is absent and when it failed; here those are `none` and an exception. -/
 def try_complex_special_method (E : Env R) (op : Obj R) : M (Option (Cx R)) :=
   match op.dcomplex with
@@ -295,7 +295,7 @@ def try_complex_special_method (E : Env R) (op : Obj R) : M (Option (Cx R)) :=
     let res ← callSlot "__complex__" s op
     complexResult E op res
 
-/-- `PyComplex_RealAsDouble`, lines 443-462. -/
+/-- `PyComplex_RealAsDouble`, lines 459-478. -/
 def PyComplex_RealAsDouble (E : Env R) (op : Obj R) : M R :=
   match op.val with
   | .cplx c => pure c.real
@@ -304,7 +304,7 @@ def PyComplex_RealAsDouble (E : Env R) (op : Obj R) : M R :=
     | some c => pure c.real
     | none => PyFloat_AsDouble E op
 
-/-- `PyComplex_ImagAsDouble`, lines 464-486. -/
+/-- `PyComplex_ImagAsDouble`, lines 480-502. -/
 def PyComplex_ImagAsDouble (E : Env R) (op : Obj R) : M R :=
   match op.val with
   | .cplx c => pure c.imag
@@ -315,7 +315,7 @@ def PyComplex_ImagAsDouble (E : Env R) (op : Obj R) : M R :=
       let _ ← PyFloat_AsDouble E op
       pure zero
 
-/-- `PyComplex_AsCComplex`, lines 521-555. -/
+/-- `PyComplex_AsCComplex`, lines 537-571. -/
 def PyComplex_AsCComplex (E : Env R) (op : Obj R) : M (Cx R) :=
   match op.val with
   | .cplx c => pure c
@@ -326,7 +326,7 @@ def PyComplex_AsCComplex (E : Env R) (op : Obj R) : M (Cx R) :=
       let x ← PyFloat_AsDouble E op
       pure ⟨x, zero⟩
 
-/-- `complex_repr`, lines 557-612. `ds x sign` is
+/-- `complex_repr`, lines 573-628. `ds x sign` is
 `PyOS_double_to_string(x, 'r', 0, sign ? Py_DTSF_SIGN : 0, NULL)`. -/
 def complex_repr (ds : R → Bool → String) (v : Cx R) : String :=
   if v.real ==. zero && copysign one v.real ==. one then
@@ -343,7 +343,7 @@ def toHash (u : Nat) : Int := if u ≥ 2 ^ 63 then (u : Int) - 2 ^ 64 else u
 /-- `_PyHASH_IMAG`, `Include/cpython/pyhash.h:6,20`. -/
 def hashImag : Nat := 1000003
 
-/-- `complex_hash`, lines 614-635. `hd` is `_Py_HashDouble(op, ·)`. -/
+/-- `complex_hash`, lines 630-651. `hd` is `_Py_HashDouble(op, ·)`. -/
 def complex_hash (hd : R → Int) (v : Cx R) : Int :=
   let hashreal := toUhash (hd v.real)
   if hashreal == 2 ^ 64 - 1 then -1 else
@@ -353,7 +353,7 @@ def complex_hash (hd : R → Int) (v : Cx R) : Int :=
   let combined := if combined == 2 ^ 64 - 1 then 2 ^ 64 - 2 else combined
   toHash combined
 
-/-- `real_to_double`, lines 644-656, with `_Py_convert_int_to_double`,
+/-- `real_to_double`, lines 660-672, with `_Py_convert_int_to_double`,
 `Objects/floatobject.c:320-336`. `.ok none` is `NotImplemented`. -/
 def real_to_double (obj : Obj R) : Py (Option R) :=
   match obj.val with
@@ -364,14 +364,14 @@ def real_to_double (obj : Obj R) : Py (Option R) :=
     | .error e => .error e
   | _ => .ok none
 
-/-- `real_to_complex`, lines 658-663. -/
+/-- `real_to_complex`, lines 674-679. -/
 def real_to_complex (obj : Obj R) : Py (Option (Cx R)) :=
   match real_to_double obj with
   | .ok (some x) => .ok (some ⟨x, zero⟩)
   | .ok none => .ok none
   | .error e => .error e
 
-/-- `TO_COMPLEX`, lines 638-642. -/
+/-- `TO_COMPLEX`, lines 653-658. -/
 def TO_COMPLEX (obj : Obj R) : Py (Option (Cx R)) :=
   match obj.val with
   | .cplx c => .ok (some c)
@@ -379,7 +379,7 @@ def TO_COMPLEX (obj : Obj R) : Py (Option (Cx R)) :=
 
 def divZero : PyExc := .zeroDivisionError "division by zero"
 
-/-- `COMPLEX_BINOP`, lines 680-716. `.ok none` is `NotImplemented`. `errno` is
+/-- `COMPLEX_BINOP`, lines 696-732. `.ok none` is `NotImplemented`. `errno` is
 cleared on entry. -/
 def complex_binop (cc : Cx R → Cx R → Errno → Cx R × Errno)
     (rc : R → Cx R → Errno → Cx R × Errno)
@@ -405,26 +405,26 @@ def complex_binop (cc : Cx R → Cx R → Errno → Cx R × Errno)
       | .ok (some x) => finish (cr a x Errno.ok)
     | _ => .ok none
 
-/-- `complex_add`: `COMPLEX_BINOP(add, sum)`, line 718. -/
+/-- `complex_add`: `COMPLEX_BINOP(add, sum)`, line 734. -/
 def complex_add : Obj R → Obj R → Py (Option (Cx R)) :=
   complex_binop (fun a b e => (c_sum a b, e)) (fun a b e => (rc_sum a b, e))
     (fun a b e => (cr_sum a b, e))
 
-/-- `complex_mul`: `COMPLEX_BINOP(mul, prod)`, line 719. -/
+/-- `complex_mul`: `COMPLEX_BINOP(mul, prod)`, line 735. -/
 def complex_mul : Obj R → Obj R → Py (Option (Cx R)) :=
   complex_binop (fun a b e => (c_prod a b, e)) (fun a b e => (rc_prod a b, e))
     (fun a b e => (cr_prod a b, e))
 
-/-- `complex_sub`: `COMPLEX_BINOP(sub, diff)`, line 720. -/
+/-- `complex_sub`: `COMPLEX_BINOP(sub, diff)`, line 736. -/
 def complex_sub : Obj R → Obj R → Py (Option (Cx R)) :=
   complex_binop (fun a b e => (c_diff a b, e)) (fun a b e => (rc_diff a b, e))
     (fun a b e => (cr_diff a b, e))
 
-/-- `complex_div`: `COMPLEX_BINOP(div, quot)`, line 721. -/
+/-- `complex_div`: `COMPLEX_BINOP(div, quot)`, line 737. -/
 def complex_div : Obj R → Obj R → Py (Option (Cx R)) :=
   complex_binop c_quot rc_quot cr_quot
 
-/-- The part of `complex_pow` after the operands are complex, lines 735-756. -/
+/-- The part of `complex_pow` after the operands are complex, lines 751-772. -/
 def complex_pow_core (L : Libm R) (a b : Cx R) : Py (Cx R) :=
   let errno := Errno.ok
   let (p, errno) : Cx R × Errno :=
@@ -439,7 +439,7 @@ def complex_pow_core (L : Libm R) (a b : Cx R) : Py (Cx R) :=
     .error (.overflowError "complex exponentiation")
   else .ok p
 
-/-- `complex_pow`, lines 723-757. Both operands convert before `z` is looked at. -/
+/-- `complex_pow`, lines 739-773. Both operands convert before `z` is looked at. -/
 def complex_pow (L : Libm R) (v w z : Obj R) : Py (Option (Cx R)) :=
   match TO_COMPLEX v with
   | .error e => .error e
@@ -456,10 +456,10 @@ def complex_pow (L : Libm R) (v w z : Obj R) : Py (Option (Cx R)) :=
         | .error e => .error e
       | _ => .error (.valueError "complex modulo")
 
-/-- `complex_neg`, lines 759-767. -/
+/-- `complex_neg`, lines 775-783. -/
 def complex_neg (v : Cx R) : Cx R := ⟨⊖v.real, ⊖v.imag⟩
 
-/-- `complex_pos`, lines 769-777: an exact complex is returned as is. -/
+/-- `complex_pos`, lines 785-793: an exact complex is returned as is. -/
 def complex_pos (v : Obj R) (c : Cx R) : Made R :=
   if v.isComplexExact then ⟨.complex, c, true⟩ else PyComplex_FromCComplex c
 
@@ -472,7 +472,7 @@ def complex_abs (L : Libm R) (v : Cx R) (_stale : Errno) : Py R :=
   if errno = Errno.erange then .error (.overflowError "absolute value too large")
   else .ok result
 
-/-- `complex_bool`, lines 792-797. -/
+/-- `complex_bool`, lines 811-816. -/
 def complex_bool (v : Cx R) : Bool := ne v.real zero || ne v.imag zero
 
 /-- The six rich comparison opcodes. -/
@@ -480,7 +480,7 @@ inductive CmpOp where
   | lt | le | eq | ne | gt | ge
   deriving DecidableEq, Repr, Inhabited
 
-/-- `complex_richcompare`, lines 799-853. `none` is `NotImplemented`. For an int
+/-- `complex_richcompare`, lines 818-872. `none` is `NotImplemented`. For an int
 `w` with a zero imaginary part it defers to `float_richcompare`, here `eqInt`. -/
 def complex_richcompare (i : Cx R) (w : Obj R) (op : CmpOp) : Option Bool :=
   if op != CmpOp.eq && op != CmpOp.ne then none
@@ -496,24 +496,27 @@ def complex_richcompare (i : Cx R) (w : Obj R) (op : CmpOp) : Option Bool :=
     | .cplx j => conclude (i.real ==. j.real && i.imag ==. j.imag)
     | _ => none
 
-/-- `complex_conjugate_impl`, lines 861-868. -/
+/-- `complex_conjugate_impl`, lines 881-888. -/
 def complex_conjugate_impl (self : Cx R) : Cx R := ⟨self.real, ⊖self.imag⟩
 
-/-- `complex___getnewargs___impl`, lines 875-881. -/
+/-- `complex___getnewargs___impl`, lines 895-901. -/
 def complex___getnewargs___impl (self : Cx R) : R × R := (self.real, self.imag)
 
-/-- `complex___format___impl`, lines 893-909, with the empty-spec test of
-`_PyComplex_FormatAdvancedWriter`, `Objects/unicode_formatter.c:1929-1938`.
+/-- `complex___format___impl`, lines 913-929, with the empty-spec test of
+`_PyComplex_FormatAdvancedWriter`, `Objects/unicode_formatter.c:1929-1939`. The empty spec
+is `format_obj`, which writes `PyObject_Str(self)`; this generic model uses `complex_repr`
+for it, right only for an exact complex. `PyLean.Binary64.complex___format___impl` models it
+with `PyObject_Str` and the real format engine.
 `advanced` stands for the rest of that function, which is outside this file. -/
 def complex___format___impl (ds : R → Bool → String)
     (advanced : Cx R → List Nat → Py String) (self : Cx R) (spec : List Nat) : Py String :=
   if spec.isEmpty then .ok (complex_repr ds self) else advanced self spec
 
-/-- `complex___complex___impl`, lines 917-927. -/
+/-- `complex___complex___impl`, lines 937-947. -/
 def complex___complex___impl (self : Obj R) (c : Cx R) : Made R :=
   if self.isComplexExact then ⟨.complex, c, true⟩ else PyComplex_FromCComplex c
 
-/-- `complex_subtype_from_string`, lines 1053-1081. -/
+/-- `complex_subtype_from_string`, lines 1073-1101. -/
 def complex_subtype_from_string (E : Env R) (type : TyArg) (v : Obj R) : M (Made R) :=
   match v.val with
   | .str s repr =>
@@ -533,7 +536,7 @@ def cvalOf (o : Obj R) : Cx R :=
   | .cplx c => c
   | _ => ⟨zero, zero⟩
 
-/-- `complex_new_impl`, lines 1168-1297. `none` is a `NULL` argument. -/
+/-- `complex_new_impl`, lines 1188-1317. `none` is a `NULL` argument. -/
 def complex_new_impl (E : Env R) (type : TyArg) (r? i? : Option (Obj R)) : M (Made R) := do
   let orig_r : Obj R := r?.getD (mkLong 0)
   let tmp ← try_complex_special_method E orig_r
@@ -608,7 +611,7 @@ def complex_new (E : Env R) (type : TyArg) (args : List (Obj R))
       let i? := if nargs ≥ 2 then args[1]? else look "imag"
       complex_new_impl E type r? i?
 
-/-- `actual_complex_new`, lines 1093-1152, the `tp_new` slot. -/
+/-- `actual_complex_new`, lines 1113-1172, the `tp_new` slot. -/
 def actual_complex_new (E : Env R) (type : TyArg) (args : List (Obj R))
     (kwargs : List (String × Obj R)) : M (Made R) :=
   if args.length > 1 || !kwargs.isEmpty then
@@ -636,7 +639,7 @@ def actual_complex_new (E : Env R) (type : TyArg) (args : List (Obj R))
               throw (.typeError
                 s!"complex() argument must be a string or a number, not {arg.ti.fqName}")
 
-/-- `complex_from_number_impl`, lines 1309-1326. A subclass is built by calling
+/-- `complex_from_number_impl`, lines 1329-1346. A subclass is built by calling
 it on the exact result, which reaches `actual_complex_new` when the subclass
 does not override `__new__`, the case modelled here. -/
 def complex_from_number_impl (E : Env R) (type : TyArg) (number : Obj R) : M (Made R) :=
