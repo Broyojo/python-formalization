@@ -264,9 +264,9 @@ theorem kr_unexpectedKeyword {α : Type} (co : Code) (q : String) (k : Val) :
   exact kr_bind kr_get fun _ => kr_bind (kr_fmtKw hh _) fun _ => by
     split <;> exact kr_typeError _
 
-theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List Val) :
+theorem kr_bindKeywords (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List Val) :
     ∀ (kws : List (Val × Val)) (fast : Array Val),
-      KeepsRec (bindKeywords hk co func kwdict kwnames kws fast) := by
+      KeepsRec (bindKeywords hk co funcv kwdict kwnames kws fast) := by
   intro kws
   induction kws with
   | nil => intro fast; exact kr_pure _
@@ -280,6 +280,7 @@ theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : L
       | exact kr_typeError _
       | exact ih _
       | exact kr_findKwSlot hh _ _
+      | exact kr_getFunc _
       | exact kr_fmtKw hh _
       | exact kr_posonly hh _ _ _
       | exact kr_unexpectedKeyword hh _ _ _
@@ -303,6 +304,7 @@ macro_rules
       | with_reducible exact kr_tupleItems _
       | with_reducible exact kr_dictGetStr _ _
       | with_reducible exact kr_bindKeywords $hh _ _ _ _ _ _
+      | with_reducible exact kr_getFunc _
       | with_reducible exact kr_tooManyPositional _ _ _ _ _
       | with_reducible exact kr_missingArguments _ _ _ _
       | with_reducible refine kr_bind ?_ (fun _ => ?_)
@@ -311,9 +313,9 @@ macro_rules
       | split))
 
 set_option maxHeartbeats 2000000 in
-theorem kr_initializeLocals {hk : KwHooks} (hh : HooksKeepRec hk) (co : Code) (func : FuncObj)
+theorem kr_initializeLocals {hk : KwHooks} (hh : HooksKeepRec hk) (co : Code) (funcv : Val)
     (fast0 : Array Val) (args : List Val) (kwargs : List (Val × Val)) :
-    KeepsRec (initializeLocals hk co func fast0 args kwargs) := by
+    KeepsRec (initializeLocals hk co funcv fast0 args kwargs) := by
   unfold initializeLocals
   dsimp only
   kr_auto hh
@@ -1099,12 +1101,13 @@ theorem zipIdx_fold (L : List Val) :
     have : j - k = (j - (k + 1)) + 1 := by omega
     rw [this, List.getD_cons_succ]
 
-theorem initializeLocals_simple (hk : KwHooks) (co : Code) (func : FuncObj) (fast0 : Array Val) (L : List Val) (rt : Rt)
+theorem initializeLocals_simple (hk : KwHooks) (co : Code) (funcv : Val) (func : FuncObj) (fast0 : Array Val)
+    (L : List Val) (rt : Rt) (hg : getFunc funcv rt = .ok func rt)
     (hs : SimpleCode co) (hl : L.length = co.argcount) :
-    initializeLocals hk co func fast0 L [] rt =
+    initializeLocals hk co funcv fast0 L [] rt =
       .ok ((List.range L.length).foldl (fun f j => f.setIfInBounds j (L.getD j .null)) fast0) rt := by
   obtain ⟨hk, hva, hvk, _⟩ := hs
-  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind]
+  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind, hg]
 
 /-- The frame `_INIT_CALL_PY_EXACT_ARGS` builds (`:4615-4626`): `_PyFrame_PushUnchecked` with `NULL`
 locals and the arguments (`self` first when not `NULL`) copied into the first locals. -/
@@ -1116,8 +1119,10 @@ theorem pushInit_simple (e : Env) (regs : Regs) (a : Addr) (fo : FuncObj) (co : 
     (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co) (hs : SimpleCode co)
     (hl : L.length = co.argcount) :
     pushInit e (.ref a) L [] regs = .ok (exactFrame co fo (.ref a) L) regs := by
-  have hli := initializeLocals_simple (kwHooksOf e.om e.ctx) co fo
-    (frameInitialize co fo.code fo (.ref a) (localsFor co fo)).fast L regs.rt hs hl
+  have hg : getFunc (.ref a) regs.rt = .ok fo regs.rt := by
+    simp [getFunc, getObj, ho, bind, EStateM.bind, pure, EStateM.pure]
+  have hli := initializeLocals_simple (kwHooksOf e.om e.ctx) co (.ref a) fo
+    (frameInitialize co fo.code fo (.ref a) (localsFor co fo)).fast L regs.rt hg hs hl
   have hloc : localsFor co fo = .null := by simp [localsFor, hs.2.2.2]
   simp only [pushInit, pushInitV, List.map_nil, framePushAndInit, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, RM.lift, liftM,
     monadLift, MonadLift.monadLift, pure, EStateM.pure, List.length_nil, Nat.sub_zero, List.take_length,

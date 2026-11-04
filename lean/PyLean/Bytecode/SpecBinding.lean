@@ -52,51 +52,56 @@ empty one takes `v`. A keyword naming no parameter goes into `**kwargs` when the
 runs first when there are positional-only parameters, and its error is the one raised; otherwise
 the unexpected keyword error is. -/
 def BindKeywordsRules : Prop :=
-  ∀ (hk : KwHooks) (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List Val) (k v : Val)
+  ∀ (hk : KwHooks) (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List Val) (k v : Val)
     (rest : List (Val × Val)) (fast : Array Val) (rt : Rt),
-    (kwText rt k = none → ∀ y rt',
+    (kwText rt k = none → ∀ func, getFunc funcv rt = .ok func rt → ∀ y rt',
       typeError (α := Unit) s!"{func.qualname}() keywords must be strings" rt = .error y rt' →
-      bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
+      bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
     (∀ s, kwText rt k = some s →
       (∀ y rt', findKwSlot hk co k rt = .error y rt' →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
-      (∀ j rt1, findKwSlot hk co k rt = .ok (some j) rt1 → fast.getD j .null ≠ .null → ∀ y rt',
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
+      (∀ j rt1, findKwSlot hk co k rt = .ok (some j) rt1 → fast.getD j .null ≠ .null →
+        ∀ func, getFunc funcv rt1 = .ok func rt1 → ∀ y rt',
         (do let shown ← fmtKw hk k
             typeError (α := Unit) s!"{func.qualname}() got multiple values for argument '{shown}'") rt1
           = .error y rt' →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
       (∀ j rt1, findKwSlot hk co k rt = .ok (some j) rt1 → fast.getD j .null = .null →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt =
-          bindKeywords hk co func kwdict kwnames rest (fast.setIfInBounds j v) rt1) ∧
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt =
+          bindKeywords hk co funcv kwdict kwnames rest (fast.setIfInBounds j v) rt1) ∧
       (∀ rt1, findKwSlot hk co k rt = .ok none rt1 → kwdict = .null → co.posonlyargcount ≠ 0 →
+        ∀ func, getFunc funcv rt1 = .ok func rt1 →
         ∀ y rt', posonlyPassedAsKeyword hk co kwnames func.qualname rt1 = .error y rt' →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
-      (∀ rt1 rt2, findKwSlot hk co k rt = .ok none rt1 → kwdict = .null →
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
+      (∀ rt1 rt2 func, findKwSlot hk co k rt = .ok none rt1 → kwdict = .null →
+        getFunc funcv rt1 = .ok func rt1 →
         (co.posonlyargcount = 0 ∧ rt2 = rt1 ∨
-          posonlyPassedAsKeyword hk co kwnames func.qualname rt1 = .ok () rt2) → ∀ y rt',
-        unexpectedKeyword (α := Unit) hk co func.qualname k rt2 = .error y rt' →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
+          posonlyPassedAsKeyword hk co kwnames func.qualname rt1 = .ok () rt2) →
+        ∀ func2, getFunc funcv rt2 = .ok func2 rt2 → ∀ y rt',
+        unexpectedKeyword (α := Unit) hk co func2.qualname k rt2 = .error y rt' →
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
       (∀ rt1, findKwSlot hk co k rt = .ok none rt1 → kwdict ≠ .null →
-        bindKeywords hk co func kwdict kwnames ((k, v) :: rest) fast rt =
+        bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt =
           (do (match k with
                | .str s => dictSetStr kwdict s v
                | k => hk.setItem kwdict k v)
-              bindKeywords hk co func kwdict kwnames rest fast) rt1))
+              bindKeywords hk co funcv kwdict kwnames rest fast) rt1))
 
 theorem bindKeywordsRules_proven : BindKeywordsRules := by
-  intro hk co func kwdict kwnames k v rest fast rt
-  refine ⟨fun hn y rt' ht => ?_, fun s hs => ⟨fun y rt' he => ?_, fun j rt1 hf hset y rt' ht => ?_,
-    fun j rt1 hf hset => ?_, fun rt1 hf hd hp y rt' hpe => ?_, fun rt1 rt2 hf hd hp y rt' hu => ?_,
+  intro hk co funcv kwdict kwnames k v rest fast rt
+  refine ⟨fun hn func hg y rt' ht => ?_, fun s hs => ⟨fun y rt' he => ?_,
+    fun j rt1 hf hset func hg y rt' ht => ?_, fun j rt1 hf hset => ?_,
+    fun rt1 hf hd hp func hg y rt' hpe => ?_, fun rt1 rt2 func hf hd hg hp func2 hg2 y rt' hu => ?_,
     fun rt1 hf hd => ?_⟩⟩
   · simp only [bindKeywords, bind, EStateM.bind, get, getThe, MonadStateOf.get, EStateM.get, hn,
-      Option.isNone_none, if_true, ht]
+      Option.isNone_none, if_true, hg, ht]
   all_goals
     have hs' : (kwText rt k).isNone = false := by simp [hs]
     simp only [bindKeywords, bind, EStateM.bind, get, getThe, MonadStateOf.get, EStateM.get, hs',
       Bool.false_eq_true, if_false, pure, EStateM.pure]
   · simp only [he]
   · have hb : (fast.getD j .null != .null) = true := by simpa using hset
-    simp only [hf, hb, if_true, EStateM.bind]
+    simp only [hf, hb, if_true, EStateM.bind, hg]
     simp only [bind, EStateM.bind] at ht
     cases h2 : fmtKw hk k rt1 with
     | ok shown r2 => simp only [h2] at ht ⊢; simp only [ht]
@@ -104,12 +109,12 @@ theorem bindKeywordsRules_proven : BindKeywordsRules := by
   · have hb : (fast.getD j .null != .null) = false := by simpa using hset
     simp only [hf, hb, Bool.false_eq_true, if_false, EStateM.bind]
   · have hb : (co.posonlyargcount != 0) = true := by simpa using hp
-    simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hpe]
+    simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hg, hpe]
   · rcases hp with ⟨hp, hr⟩ | hp
     · subst hr
       have hb : (co.posonlyargcount != 0) = false := by simpa using hp
       simp only [hf, hd, beq_self_eq_true, if_true, hb, Bool.false_eq_true, if_false, EStateM.bind,
-        pure, EStateM.pure, hu]
+        pure, EStateM.pure, hg2, hu]
     · by_cases hz : co.posonlyargcount = 0
       · have hb : (co.posonlyargcount != 0) = false := by simpa using hz
         simp only [posonlyPassedAsKeyword, posonlyConflicts, hz, List.range_zero, List.map_nil,
@@ -117,9 +122,9 @@ theorem bindKeywordsRules_proven : BindKeywordsRules := by
           Bool.false_eq_true, if_false] at hp
         cases hp
         simp only [hf, hd, beq_self_eq_true, if_true, hb, Bool.false_eq_true, if_false, EStateM.bind,
-          pure, EStateM.pure, hu]
+          pure, EStateM.pure, hg2, hu]
       · have hb : (co.posonlyargcount != 0) = true := by simpa using hz
-        simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hp, hu]
+        simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hg, hp, hg2, hu]
   · have hb : (kwdict == .null) = false := by simpa using hd
     simp only [hf, hb, Bool.false_eq_true, if_false, EStateM.bind]
     cases k <;> rfl
@@ -323,62 +328,64 @@ the empty slots `m + i`; exactly `co_argcount` uses no default. With `*args`, th
 arguments are packed into a tuple at `localsplus[total_args]` before the keyword loop (lines
 1775-1794) and too many is no error. -/
 def InitializeLocalsRules : Prop :=
-  ∀ (hk : KwHooks) (co : Code) (func : FuncObj) (fast0 : Array Val) (args : List Val)
+  ∀ (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val) (args : List Val)
     (kwargs : List (Val × Val)) (rt : Rt),
     flagSet co.flags coVarkeywords = false →
     (flagSet co.flags coVarargs = false →
-      (∀ y rt', bindKeywords hk co func .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .error y rt' →
-        initializeLocals hk co func fast0 args kwargs rt = .error y rt') ∧
-      (∀ fast1 rt1, bindKeywords hk co func .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .ok fast1 rt1 →
+      (∀ y rt', bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .error y rt' →
+        initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
+      (∀ fast1 rt1, bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .ok fast1 rt1 →
+        ∀ func, getFunc funcv rt1 = .ok func rt1 →
         (args.length > co.argcount → ∀ y rt',
           tooManyPositional (α := Unit) co args.length func.defaults fast1 func.qualname rt1 = .error y rt' →
-          initializeLocals hk co func fast0 args kwargs rt = .error y rt') ∧
+          initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
         (args.length = co.argcount → co.kwonlyargcount = 0 →
-          initializeLocals hk co func fast0 args kwargs rt = .ok fast1 rt1) ∧
+          initializeLocals hk co funcv fast0 args kwargs rt = .ok fast1 rt1) ∧
         (args.length < co.argcount → co.kwonlyargcount = 0 → ∀ defs, tupleItems func.defaults rt1 = .ok defs rt1 →
           let m : Int := (co.argcount : Int) - defs.size
           let missing := ((List.range' args.length (m.toNat - args.length)).filter
             fun i => fast1.getD i .null == .null).length
           (missing ≠ 0 → ∀ y rt',
             missingArguments (α := Unit) co (some defs.size) fast1 func.qualname rt1 = .error y rt' →
-            initializeLocals hk co func fast0 args kwargs rt = .error y rt') ∧
+            initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
           (missing = 0 →
             let i0 : Nat := if (args.length : Int) > m then ((args.length : Int) - m).toNat else 0
-            initializeLocals hk co func fast0 args kwargs rt =
+            initializeLocals hk co funcv fast0 args kwargs rt =
               .ok ((List.range' i0 (defs.size - i0)).foldl
                 (fun f (i : Nat) => if f.getD (m + (i : Int)).toNat .null == .null
                   then f.setIfInBounds (m + (i : Int)).toNat (defs.getD i .null) else f) fast1) rt1)))) ∧
     (flagSet co.flags coVarargs = true → ∀ u rt0,
       mkTuple (args.drop (if args.length > co.argcount then co.argcount else args.length)) rt = .ok u rt0 →
-      (∀ y rt', bindKeywords hk co func .null (kwargs.map (·.1)) kwargs
+      (∀ y rt', bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs
           ((posFill co fast0 args).setIfInBounds (co.argcount + co.kwonlyargcount) u) rt0 = .error y rt' →
-        initializeLocals hk co func fast0 args kwargs rt = .error y rt') ∧
+        initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
       (args.length ≥ co.argcount → co.kwonlyargcount = 0 → ∀ fast1 rt1,
-        bindKeywords hk co func .null (kwargs.map (·.1)) kwargs
+        bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs
           ((posFill co fast0 args).setIfInBounds (co.argcount + co.kwonlyargcount) u) rt0 = .ok fast1 rt1 →
-        initializeLocals hk co func fast0 args kwargs rt = .ok fast1 rt1))
+        ∀ func, getFunc funcv rt1 = .ok func rt1 →
+        initializeLocals hk co funcv fast0 args kwargs rt = .ok fast1 rt1))
 
 theorem initializeLocalsRules_proven : InitializeLocalsRules := by
-  intro hk co func fast0 args kwargs rt hvk
+  intro hk co funcv fast0 args kwargs rt hvk
   refine ⟨fun hva => ⟨?_, ?_⟩, fun hva u rt0 hu => ⟨?_, ?_⟩⟩
   · intro y rt' hb
     simp only [posFill] at hb
     simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
       bind, EStateM.bind, pure, EStateM.pure, hb]
-  · intro fast1 rt1 hb
+  · intro fast1 rt1 hb func hg
     simp only [posFill] at hb
     refine ⟨?_, ?_, ?_⟩
     · intro hgt y rt' ht
       have hc : (decide (args.length > co.argcount) && !false) = true := by simp [hgt]
       simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-        bind, EStateM.bind, pure, EStateM.pure, hb, hc, ht]
+        bind, EStateM.bind, pure, EStateM.pure, hb, hg, hc, ht]
     · intro heq hk0
       have h1 : ¬ args.length > co.argcount := by omega
       have h2 : ¬ args.length < co.argcount := by omega
       have hk' : ¬ co.kwonlyargcount > 0 := by omega
       rw [if_neg h1] at hb
       simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-        bind, EStateM.bind, pure, EStateM.pure, h1, decide_false, Bool.false_and, h2, hk', hb]
+        bind, EStateM.bind, pure, EStateM.pure, h1, decide_false, Bool.false_and, h2, hk', hb, hg]
     · intro hlt hk0 defs hdefs
       intro m missing
       have h1 : ¬ args.length > co.argcount := by omega
@@ -386,14 +393,14 @@ theorem initializeLocalsRules_proven : InitializeLocalsRules := by
       refine ⟨?_, ?_⟩
       · intro hm y rt' hma
         simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-          bind, EStateM.bind, pure, EStateM.pure, hb, h1, decide_false, Bool.false_and, hlt,
+          bind, EStateM.bind, pure, EStateM.pure, hb, hg, h1, decide_false, Bool.false_and, hlt,
           decide_true, hdefs]
         have hm' : (missing != 0) = true := by simpa using hm
         simp only [missing, m] at hm'
         simp only [hm', if_true, EStateM.bind, hma]
       · intro hm i0
         simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-          bind, EStateM.bind, pure, EStateM.pure, hb, h1, decide_false, Bool.false_and, hlt,
+          bind, EStateM.bind, pure, EStateM.pure, hb, hg, h1, decide_false, Bool.false_and, hlt,
           decide_true, hdefs]
         have hm' : (missing != 0) = false := by simpa using hm
         simp only [missing, m] at hm'
@@ -404,12 +411,12 @@ theorem initializeLocalsRules_proven : InitializeLocalsRules := by
     simp only [posFill] at hb
     simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
       bind, EStateM.bind, pure, EStateM.pure, hu, hb]
-  · intro hge hk0 fast1 rt1 hb
+  · intro hge hk0 fast1 rt1 hb func hg
     simp only [posFill] at hb
     have h2 : ¬ args.length < co.argcount := by omega
     have hk' : ¬ co.kwonlyargcount > 0 := by omega
     simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-      bind, EStateM.bind, pure, EStateM.pure, hu, hb, h2, decide_false, Bool.not_true, Bool.and_false,
+      bind, EStateM.bind, pure, EStateM.pure, hu, hb, hg, h2, decide_false, Bool.not_true, Bool.and_false,
       hk']
 
 end PyLean.Bytecode

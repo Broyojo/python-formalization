@@ -630,6 +630,12 @@ def setAttrImpl (o : Val) (name : String) (v : Val) : RM Unit := do
       else if name == "__kwdefaults__" then
         if v' != .null && (← kindOf v') != "dict" then typeError "__kwdefaults__ must be set to a dict object"
         setObj a (.func { f with kwdefaults := v', version := clearVer })
+      else if name == "__qualname__" then
+        -- `func_set_qualname` (`Objects/funcobject.c:743-761`): deletion or a value failing
+        -- `PyUnicode_Check` is a `TypeError`; the version is kept
+        match ← payload v with
+        | .str q => setObj a (.func { f with qualname := q })
+        | _ => typeError "__qualname__ must be set to a string object"
       return ()
     | _ => pure ()
   | _ => pure ()

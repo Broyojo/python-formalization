@@ -405,31 +405,36 @@ fills its local, or raises "got multiple values" if it is set (`kw_found`, lines
 that names none goes into `**kwargs` (`PyDict_SetItem` with the keyword object, line 1882), or,
 with no `**kwargs`, raises the positional-only error when there are positional-only parameters
 and a keyword names one, else the unexpected keyword error. An error in a comparison is the
-result (`kw_fail`). -/
-def bindKeywords (hk : KwHooks) (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List Val) :
+result (`kw_fail`). `func->func_qualname` is read from the function object where each message is
+made, since a comparison may have run Python code that assigned `__qualname__`; the one
+`positional_only_passed_as_keyword` gets is read before its comparisons (a borrowed pointer, line
+1846). -/
+def bindKeywords (hk : KwHooks) (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List Val) :
     List (Val × Val) → Array Val → RM (Array Val)
   | [], fast => pure fast
   | (keyword, value) :: rest, fast => do
     if (kwText (← get) keyword).isNone then
-      typeError s!"{func.qualname}() keywords must be strings"
+      typeError s!"{(← getFunc funcv).qualname}() keywords must be strings"
     match ← findKwSlot hk co keyword with
     | some j =>
       if fast.getD j .null != .null then
-        typeError s!"{func.qualname}() got multiple values for argument '{← fmtKw hk keyword}'"
-      bindKeywords hk co func kwdict kwnames rest (fast.setIfInBounds j value)
+        typeError s!"{(← getFunc funcv).qualname}() got multiple values for argument '{← fmtKw hk keyword}'"
+      bindKeywords hk co funcv kwdict kwnames rest (fast.setIfInBounds j value)
     | none =>
       if kwdict == .null then
         if co.posonlyargcount != 0 then
-          posonlyPassedAsKeyword hk co kwnames func.qualname
-        unexpectedKeyword hk co func.qualname keyword
+          posonlyPassedAsKeyword hk co kwnames (← getFunc funcv).qualname
+        unexpectedKeyword hk co (← getFunc funcv).qualname keyword
       match keyword with
       | .str s => dictSetStr kwdict s value
       | k => hk.setItem kwdict k value
-      bindKeywords hk co func kwdict kwnames rest fast
+      bindKeywords hk co funcv kwdict kwnames rest fast
 
 /-- `initialize_locals`, lines 1738-1984. `args` are the positional arguments,
-`kwargs` the keyword objects and values in `kwnames` order. -/
-def initializeLocals (hk : KwHooks) (co : Code) (func : FuncObj) (fast0 : Array Val)
+`kwargs` the keyword objects and values in `kwnames` order. `co` is the code object read when the
+call began (the frame holds it); `func_defaults`, `func_kwdefaults` and `func_qualname` are read
+from the function object `funcv` after the keyword loop, which may have run Python code. -/
+def initializeLocals (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val)
     (args : List Val) (kwargs : List (Val × Val)) : RM (Array Val) := do
   let totalArgs := co.argcount + co.kwonlyargcount
   let argcount := args.length
@@ -450,7 +455,8 @@ def initializeLocals (hk : KwHooks) (co : Code) (func : FuncObj) (fast0 : Array 
       pure (fast.setIfInBounds totalArgs u)
     else pure fast
   -- lines 1802-1903
-  let fast ← bindKeywords hk co func kwdict (kwargs.map (·.1)) kwargs fast
+  let fast ← bindKeywords hk co funcv kwdict (kwargs.map (·.1)) kwargs fast
+  let func ← getFunc funcv
   -- lines 1905-1910
   if argcount > co.argcount && !hasVarargs then
     tooManyPositional co argcount func.defaults fast func.qualname
@@ -498,7 +504,7 @@ def framePushAndInit (P : Program) (hk : KwHooks) (funcv locals : Val) (args : L
   let co ← getCodeR P func.code
   let f := frameInitialize co func.code func funcv locals
   let npos := args.length - kwnames.length
-  let fast ← initializeLocals hk co func f.fast (args.take npos) (kwnames.zip (args.drop npos))
+  let fast ← initializeLocals hk co funcv f.fast (args.take npos) (kwnames.zip (args.drop npos))
   pure { f with fast := fast }
 
 /-- `PyFunction_New`-time `locals`: `code_flags & CO_OPTIMIZED ? NULL : globals`

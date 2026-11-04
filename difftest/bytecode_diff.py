@@ -260,7 +260,11 @@ def p_binding(r):
     if r.random() < 0.4:
         # A str subclass key from a ** mapping: initialize_locals compares it with
         # PyObject_RichCompareBool (Python/ceval.c:1697, :1832), running this __eq__.
-        mode = r.choice(["True", "False", "str.__eq__(self, o)", "1 // 0", "o == 'abc'", "[]", "[1]"])
+        # the last two run Python code that changes the function mid-binding: C reads
+        # func_defaults and func_qualname again after the keyword loop
+        mode = r.choice(["True", "False", "str.__eq__(self, o)", "1 // 0", "o == 'abc'", "[]", "[1]",
+                         "setattr(f, '__defaults__', (8, 9, 10)) or str.__eq__(self, o)",
+                         "setattr(f, '__qualname__', 'g') or str.__eq__(self, o)"])
         out.append(f"class S(str):\n    def __eq__(self, o):\n        return {mode}\n"
                    "    def __hash__(self):\n        return hash(str(self))")
         calls = calls + ["f(**{S('zz'): 1})", "f(1, **{S('abc'): 2})", "f(**{S('abc'): 1})",
