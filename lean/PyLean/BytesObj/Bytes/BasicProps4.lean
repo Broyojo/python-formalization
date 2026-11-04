@@ -82,31 +82,81 @@ theorem findIdx_none_lt (s : Seq) (k : Nat) (h : ∀ c ∈ s, c < k) : s.findIdx
   simp
   omega
 
-/-- For every byte string `s`, `s.decode('latin-1')` is the code points of the bytes and
-`bytes(text, 'latin-1')` inverts it, and `decode` is the same for bytes and bytearray.
-`ascii` accepts exactly the strings below 128. -/
+/-- `bytes.decode` and `bytes(str, encoding, errors)` through the shortcut codecs:
+`s.decode('latin-1')` is the code points of the bytes whatever `errors` is, and
+`bytes(text, 'latin-1')` inverts it; `ascii` accepts a string below 128 and reports the first byte at
+or above it with its position; utf-8, the default (`encoding=NULL`, unicodeobject.c:3587-3589), and any
+spelling `_Py_normalize_encoding` folds to it, decodes what `bytes(text, 'utf-8')` wrote for every
+text without surrogates; and an empty input decodes to `''` before the encoding or the handler is
+looked at (:3480-3485), so even an unknown codec gives `''`. -/
 def DecodeRoundTrip : Prop :=
-  (∀ s : Seq, (∀ c ∈ s, c < 256) →
-    bytesDecode s "latin-1" = .ok s ∧ bytesNew (some (.str s)) (some "latin-1") none = .ok s) ∧
-  (∀ s : Seq, (∀ c ∈ s, c < 128) → bytesDecode s "ascii" = .ok s) ∧
-  (∀ (s : Seq) (i : Nat), s.findIdx? (· ≥ 128) = some i →
-    ∃ m, bytesDecode s "ascii" = .error (.named "UnicodeDecodeError" m))
+  (∀ (s : Seq) (err : Option String), (∀ c ∈ s, c < 256) → bytesDecode s (some "latin-1") err = .ok s) ∧
+  (∀ s : Seq, (∀ c ∈ s, c < 256) → bytesNew (some (.str s)) (some "latin-1") none = .ok s) ∧
+  (∀ (pre : Seq) (x : Nat) (post : Seq), (∀ c ∈ pre, c < 128) → x ≥ 128 →
+    bytesDecode pre (some "ascii") none = .ok pre ∧
+    bytesDecode (pre ++ x :: post) (some "ascii") none =
+      .error (UnicodeObj.decodeError "ascii" (pre ++ x :: post) pre.length (pre.length + 1)
+        "ordinal not in range(128)")) ∧
+  (∀ s : Seq, (∀ c ∈ s, c ≤ UnicodeObj.maxUnicode ∧ UnicodeObj.isSurrogate c = false) →
+    bytesNew (some (.str s)) (some "utf-8") none = .ok (s.flatMap UnicodeObj.utf8EncodeChar) ∧
+    bytesDecode (s.flatMap UnicodeObj.utf8EncodeChar) none none = .ok s ∧
+    bytesDecode (s.flatMap UnicodeObj.utf8EncodeChar) (some "UTF8") (some "strict") = .ok s) ∧
+  (∀ enc err : Option String, bytesDecode [] enc err = .ok [])
+
+theorem sc_latin1 : shortcutOfName (some "latin-1") = .latin1 := by decide
+theorem sc_ascii : shortcutOfName (some "ascii") = .ascii := by decide
+theorem sc_utf8 : shortcutOfName (some "utf-8") = .utf8 := by decide
+theorem sc_UTF8 : shortcutOfName (some "UTF8") = .utf8 := by decide
+theorem eh_strict : errHandlerOf (some "strict") = some .strict := by decide
+
+theorem flatMap_utf8_nil (s : Seq) (h : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0) : s = [] := by
+  cases s with
+  | nil => rfl
+  | cons c cs =>
+    exfalso
+    simp only [List.flatMap_cons, List.length_append] at h
+    have : (UnicodeObj.utf8EncodeChar c).length ≠ 0 := by
+      unfold UnicodeObj.utf8EncodeChar; split <;> (try split) <;> (try split) <;> simp
+    omega
 
 theorem decodeRoundTrip_proven : DecodeRoundTrip := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro s err hs
+    unfold bytesDecode unicodeDecode
+    rw [sc_latin1]
+    by_cases h0 : s.length = 0
+    · simp [h0, List.eq_nil_of_length_eq_zero h0]
+    · simp [h0, UnicodeObj.latin1Decode]
   · intro s hs
-    have := findIdx_none_lt s 256 hs
+    have := UnicodeObj.latin1RoundTrip_proven s .strict (fun _ => none) hs
+    simp only [UnicodeObj.latin1Decode] at this
+    simp [bytesNew, unicodeEncode, sc_latin1, errHandlerOf, this]
+  · intro pre x post hp hx
+    obtain ⟨h1, h2⟩ := UnicodeObj.asciiStrict_proven pre x post hp hx
     constructor
-    · simp [bytesDecode, decodeBytes, this]
-    · simp [bytesNew, encodeStr, this]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_ascii]
+      by_cases h0 : pre.length = 0
+      · simp [h0, List.eq_nil_of_length_eq_zero h0]
+      · simp [h0, errHandlerOf, h1]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_ascii]
+      simp [errHandlerOf, h2]
   · intro s hs
-    have := findIdx_none_lt s 128 hs
-    have h2 : ¬ ("ascii" = "latin-1") := by decide
-    simp [bytesDecode, decodeBytes, this, h2]
-  · intro s i h
-    have h2 : ¬ ("ascii" = "latin-1") := by decide
-    refine ⟨codecErrMsg "ascii" i, ?_⟩
-    simp only [bytesDecode, decodeBytes, h2, if_false, h]
+    obtain ⟨h1, h2⟩ := UnicodeObj.utf8RoundTrip_proven s hs
+    refine ⟨?_, ?_, ?_⟩
+    · simp [bytesNew, unicodeEncode, sc_utf8, errHandlerOf, h1]
+    · unfold bytesDecode unicodeDecode
+      by_cases h0 : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0
+      · simp [h0, flatMap_utf8_nil s h0]
+      · rw [if_neg h0]; simp [shortcutOfName, errHandlerOf, h2]
+    · unfold bytesDecode unicodeDecode
+      rw [sc_UTF8, eh_strict]
+      by_cases h0 : (s.flatMap UnicodeObj.utf8EncodeChar).length = 0
+      · simp [h0, flatMap_utf8_nil s h0]
+      · rw [if_neg h0]; simp [h2]
+  · intro enc err
+    simp [bytesDecode, unicodeDecode]
 
 /-! ## The constructor -/
 

@@ -2,6 +2,7 @@ import PyLean.BytesObj.Bytes.Ctype
 import PyLean.BytesObj.Exc
 import PyLean.Fractions.Model
 import PyLean.Sequences.Common
+import PyLean.Binary64.Dtoa
 
 /-!
 The object universe of the bytes model, `repr`, and the numeric conversions the
@@ -16,10 +17,9 @@ C code calls.
 * `malloc(n)` fails for `n ≥ 2^47`, more than the user address space of an LP64
   system; below that memory is unbounded, and the difftest never asks for a size
   between `2^31` and `2^47`.
-* A float is its exact value (sign and fraction): `PyOS_double_to_string` for the
-  `%e %f %g` modes is correct rounding (half-even on the exact value) of that
-  value, so it is a function of the fraction. `repr` of a float (shortest
-  round-trip) is out of scope and is carried by the value.
+* A float is an IEEE binary64 value, `Binary64.F64` (its 64 bits). Its `repr`, its
+  `%e %f %g` text, `PyLong_AsDouble` and `PyLong_FromDouble` are the exact models in
+  `lean/PyLean/Binary64/` (`float_repr`, `PyOS_double_to_string`, `_Py_dg_dtoa`).
 -/
 
 namespace PyLean.BytesObj.Bytes
@@ -50,24 +50,13 @@ def badInternalCall (f : String) : PyExc := systemError s!"{f}: bad internal cal
 /-- `(signed char)b`: what `c = *fmt++` stores in an `int`. -/
 def sgnChar (b : Nat) : Int := if b ≥ 128 then (b : Int) - 256 else b
 
-/-! ## Floats -/
-
-/-- An IEEE double by value. `kind`: 0 finite, 1 infinity, 2 NaN. -/
-structure Flt where
-  neg : Bool
-  kind : Nat
-  num : Nat
-  den : Nat
-  repr : String
-  deriving Repr, Inhabited, DecidableEq
-
 /-! ## Objects -/
 
 inductive Obj where
   | none
   | bool (b : Bool)
   | int (v : Int)
-  | float (f : Flt)
+  | float (f : Binary64.F64)
   | str (cs : Seq)
   | bytes (s : Seq)
   | bytearray (s : Seq)
@@ -270,7 +259,10 @@ def asciiObj : Nat → Obj → Py Seq
   | _ + 1, .none => .ok (asc "None")
   | _ + 1, .bool b => .ok (asc (if b then "True" else "False"))
   | _ + 1, .int v => intRepr v
-  | _ + 1, .float f => .ok (asc f.repr)
+  | _ + 1, .float f =>
+    match Binary64.float_repr f with
+    | some r => .ok r
+    | none => .error memoryError
   | _ + 1, .str cs => .ok (asciiStr cs)
   | _ + 1, .bytes s => bytesRepr s true
   | _ + 1, .bytearray s => bytearrayRepr "bytearray" s
@@ -292,115 +284,21 @@ def asciiObj : Nat → Obj → Py Seq
 
 /-! ## Conversions to double -/
 
-/-- Half-even rounding of `n / d`. -/
-def roundDiv (n d : Nat) : Nat :=
-  let q := n / d
-  let r := n % d
-  if 2 * r > d then q + 1
-  else if 2 * r = d then (if q % 2 = 1 then q + 1 else q)
-  else q
-
-/-- `n` rounded half-even to 53 significant bits, as `PyLong_AsDouble` does. -/
-def round53 (n : Nat) : Nat :=
-  let bl := bitLength n
-  if bl ≤ 53 then n else
-    let sh := bl - 53
-    roundDiv n (2 ^ sh) * 2 ^ sh
-
-/-- `PyFloat_AsDouble` on an int (`PyLong_AsDouble`): `OverflowError` when the
-rounded value reaches `2^1024`. -/
-def intToFlt (v : Int) : Py Flt :=
-  let m := round53 v.natAbs
-  if m ≥ 2 ^ 1024 then .error (.overflowError "int too large to convert to float")
-  else .ok ⟨decide (v < 0), 0, m, 1, ""⟩
-
-/-- `PyFloat_AsDouble(o)`, Objects/floatobject.c:247-303. -/
-def asDouble (o : Obj) : Py Flt :=
+/-- `PyFloat_AsDouble(o)`, Objects/floatobject.c:250-303: a float is its value; an int or
+an object with `__index__` goes through `PyNumber_Index` and `PyLong_AsDouble`
+(`Binary64.PyLong_AsDouble`: round half-even, `OverflowError` at `2^1024`). -/
+def asDouble (o : Obj) : Py Binary64.F64 :=
   match o with
   | .float f => .ok f
   | .bool _ | .int _ | .index _ | .indexRaises _ =>
     match o.index? with
-    | some (.ok v) => intToFlt v
+    | some (.ok v) => Binary64.PyLong_AsDouble v
     | some (.error e) => .error e
     | none => .error (.typeError "unreachable")
   | _ => .error (.typeError s!"must be real number, not {o.typeName}")
 
-/-! ## `PyOS_double_to_string` for `e`, `f`, `g` -/
-
-/-- `x * 10^k` rounded half-even, for `x = num / den`. -/
-def scaled (num den : Nat) (k : Int) : Nat :=
-  if k ≥ 0 then roundDiv (num * 10 ^ k.toNat) den
-  else roundDiv num (den * 10 ^ (-k).toNat)
-
-def negLogLoop : Nat → Nat → Nat → Nat → Nat
-  | 0, k, _, _ => k
-  | fuel + 1, k, num, den =>
-    if num * 10 ^ k ≥ den then k else negLogLoop fuel (k + 1) num den
-
-/-- `⌊log10 x⌋` for `x = num / den > 0`. -/
-def floorLog10 (num den : Nat) : Int :=
-  if num ≥ den then ((Nat.toDigits 10 (num / den)).length : Int) - 1
-  else -(negLogLoop 400 1 num den : Nat)
-
+/-- Decimal digits of `n`. -/
 def digitsOf (n : Nat) : Seq := (Nat.toDigits 10 n).map Char.toNat
-
-/-- `digits` padded with zeros on the left to width `w`. -/
-def padZeros (w : Nat) (ds : Seq) : Seq := List.replicate (w - ds.length) 48 ++ ds
-
-/-- Trailing zeros removed. -/
-def stripZeros (ds : Seq) : Seq := (ds.reverse.dropWhile (· == 48)).reverse
-
-/-- `(digits, exponent)`: `x` rounded to `n ≥ 1` significant digits; exactly `n`
-digits. The zero value has exponent 0. -/
-def sigDigits (num den n : Nat) : Seq × Int :=
-  if num = 0 then (List.replicate n 48, 0) else
-    let e := floorLog10 num den
-    let m := scaled num den ((n : Int) - 1 - e)
-    if m ≥ 10 ^ n then (digitsOf (m / 10), e + 1) else (digitsOf m, e)
-
-/-- `%+.02d`. -/
-def expText (e : Int) : Seq :=
-  [if e < 0 then 45 else 43] ++ padZeros 2 (digitsOf e.natAbs)
-
-def fmtE (expChar : Nat) (num den prec : Nat) (alt : Bool) : Seq :=
-  let (ds, e) := sigDigits num den (prec + 1)
-  ds.take 1 ++ (if prec > 0 ∨ alt then [46] else []) ++ ds.drop 1 ++ [expChar] ++ expText e
-
-def fmtF (num den prec : Nat) (alt : Bool) : Seq :=
-  let ds := padZeros (prec + 1) (digitsOf (scaled num den prec))
-  let n := ds.length - prec
-  ds.take n ++ (if prec > 0 ∨ alt then [46] else []) ++ ds.drop n
-
-def fmtG (expChar : Nat) (num den prec : Nat) (alt : Bool) : Seq :=
-  let p := max prec 1
-  let (ds, x) := sigDigits num den p
-  let decpt : Int := x + 1
-  if decpt ≤ -4 ∨ decpt > p then
-    let body := if alt then ds else (let t := stripZeros ds; if t.isEmpty then [48] else t)
-    body.take 1 ++ (if body.length > 1 ∨ alt then [46] else []) ++ body.drop 1 ++ [expChar] ++ expText x
-  else if decpt ≤ 0 then
-    let fr := if alt then ds else stripZeros ds
-    asc "0." ++ List.replicate (-decpt).toNat 48 ++ fr
-  else
-    let n := decpt.toNat
-    let fr := if alt then ds.drop n else stripZeros (ds.drop n)
-    ds.take n ++ (if !fr.isEmpty ∨ alt then [46] else []) ++ fr
-
-/-- `PyOS_double_to_string(x, type, prec, alt ? Py_DTSF_ALT : 0, NULL)`,
-Python/pystrtod.c:1266-1359 with `format_float_short` (:948-1264), for type in
-`eEfFgG` and `prec ≥ 0`. -/
-def dtoa (x : Flt) (type : Nat) (prec : Nat) (alt : Bool) : Seq :=
-  let up := type = 69 ∨ type = 70 ∨ type = 71
-  if x.kind = 2 then asc (if up then "NAN" else "nan")
-  else
-    let sign := if x.neg then [45] else []
-    if x.kind = 1 then sign ++ asc (if up then "INF" else "inf")
-    else
-      let e : Nat := if up then 69 else 101
-      sign ++
-      (if type = 101 ∨ type = 69 then fmtE e x.num x.den prec alt
-       else if type = 102 ∨ type = 70 then fmtF x.num x.den prec alt
-       else fmtG e x.num x.den prec alt)
 
 /-! ## `int` to text -/
 
@@ -421,12 +319,7 @@ def numberToBase (val : Int) (base : Nat) : Py Seq :=
 /-- `PyNumber_Long(o)`, for a number. -/
 def numberLong (o : Obj) : Py Int :=
   match o with
-  | .float f =>
-    if f.kind = 2 then .error (.valueError "cannot convert float NaN to integer")
-    else if f.kind = 1 then .error (.overflowError "cannot convert float infinity to integer")
-    else
-      let t : Int := (f.num / f.den : Nat)
-      .ok (if f.neg then -t else t)
+  | .float f => Binary64.PyLong_FromDouble f
   | _ =>
     match o.index? with
     | some (.ok v) => .ok v
