@@ -1,0 +1,74 @@
+id: datetime-pydatetime-pep495-eager-flip
+title: "_pydatetime asks for the flipped-fold utcoffset on every inter-zone ==, so an exception there breaks comparisons C answers"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime._cmp", "datetime.__eq__"]
+summary: |
+  For `==` and `!=` between aware datetimes with different tzinfo objects, `datetime._cmp`
+  (allow_mixed=True) calls `self.replace(fold=not self.fold).utcoffset()` and the same for
+  `other` before it looks at the operands (Lib/_pydatetime.py:2315-2318), to implement the
+  PEP 495 rule that a datetime in a fold or gap never compares equal across zones. C's
+  `datetime_richcompare` asks for the flipped-fold offsets only when the operands are
+  otherwise equal (`pep495_eq_exception`, Modules/_datetimemodule.c:6560-6586, called at
+  :6619-6626 and :6640-6647).
+  So a tzinfo whose `utcoffset` raises for the other fold (for example one that refuses an
+  ambiguous or nonexistent time, or one that only implements fold=0) makes
+  `datetime(2020, 1, 1, tzinfo=TZ()) == datetime(2020, 1, 2, tzinfo=TZ())` (two TZ instances)
+  raise in Python and return False in C; `!=` likewise raises in Python and returns True in C.
+  Ordering (`<`) does not ask for the flipped offsets in either twin and agrees.
+likelihood: |
+  Low. It needs a tzinfo whose utcoffset raises for one fold value; zoneinfo and dateutil do
+  not, but a strict user tzinfo (raising on an impossible fold) can. The result then depends
+  on whether the C accelerator is available (PyPy and _pydatetime raise).
+maybe_intended: |
+  Possibly an optimization in C only: PEP 495 specifies the outcome (an exception to ==), not
+  when utcoffset is called. Calling a user method that raises is observable, and
+  _pydatetime's docstring promises the same behaviour as C.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      class TZ(m.tzinfo):
+          def utcoffset(self, dt):
+              if dt.fold:
+                  raise RuntimeError('fold=1 not supported')
+              return m.timedelta(hours=1)
+          def dst(self, dt):
+              return None
+      a = m.datetime(2020, 1, 1, tzinfo=TZ())
+      b = m.datetime(2020, 1, 2, tzinfo=TZ())
+      try:
+          return repr(a == b)
+      except RuntimeError:
+          return 'RuntimeError'
+  r = [run(m) for m in (datetime, _pydatetime)]
+  print('== C/Python:', r)
+  if r == ['False', 'RuntimeError']:
+      print('REPRODUCED datetime-pydatetime-pep495-eager-flip')
+expected: |
+  The same outcome in both implementations; most plausibly C's: the flipped-fold offsets are
+  needed only to decide whether two otherwise equal datetimes are an exception to ==.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; PEP 495 (the inter-zone == exception
+  concerns datetimes that would otherwise compare equal).
+cause: |
+  Lib/_pydatetime.py:2311-2318: `if allow_mixed: if myoff != self.replace(fold=not
+  self.fold).utcoffset(): return 2` (and the same for other), before the offsets and the
+  fields are compared (:2320-2338). C: datetime_richcompare, Modules/_datetimemodule.c:6589-6666,
+  calls pep495_eq_exception only when `diff == 0` (:6619-6622, :6640-6643).
+possible_fix: |
+  In datetime._cmp, compute the base comparison first and ask for the flipped-fold offsets
+  only when it says equal (as C does), or accept and document the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search issues: pep495 utcoffset exception comparison", "datetime eq fold utcoffset raises",
+            "fold utcoffset comparison pure python", "pep495 eq exception (exact phrase)",
+            "pep 495 comparison utcoffset (exact phrase)",
+            "bugforge-results/README.md: fold entries (plistlib only, unrelated)"]
+lean:
+  property: PyLean.Datetime.DatetimeCompareTwinsAll
+  theorem: PyLean.Datetime.datetimeCompareTwinsAll_refuted

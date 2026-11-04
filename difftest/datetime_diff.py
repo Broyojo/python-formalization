@@ -21,6 +21,8 @@ import _pydatetime
 import _strptime
 
 import common
+import datetime_x2
+import sys
 
 IMPL = {"py": _pydatetime, "c": _datetime}
 
@@ -466,6 +468,8 @@ def gen_strp_tail(rng, c):
 def gen_obj_case(rng):
     if rng.random() < 0.15:
         return gen_strptime(rng)
+    if rng.random() < 0.2:
+        return datetime_x2.gen_x2(rng, sys.modules[__name__])
     if rng.random() < 0.1:
         impl = rng.choice(["py", "c"])
         k = rng.choice(["td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime"])
@@ -1055,6 +1059,8 @@ def spec_arg(spec):
 
 
 def run_python(c):
+    if c["fn"].startswith("x2_"):
+        return datetime_x2.run_x2(c, sys.modules[__name__])
     if c["fn"] in OBJ_FNS:
         return run_obj(c)
     if c["fn"] in MORE_FNS:

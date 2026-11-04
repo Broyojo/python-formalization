@@ -1,0 +1,46 @@
+id: datetime-repr-fold-tzinfo-order
+title: "repr(datetime) with fold=1 and a tzinfo: C prints fold before tzinfo, _pydatetime after"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["datetime.__repr__"]
+summary: |
+  `repr(datetime(2020, 1, 1, fold=1, tzinfo=timezone.utc))` is
+  `datetime.datetime(2020, 1, 1, 0, 0, fold=1, tzinfo=datetime.timezone.utc)` in C and
+  `datetime.datetime(2020, 1, 1, 0, 0, tzinfo=datetime.timezone.utc, fold=1)` in _pydatetime:
+  `datetime_repr` appends the fold keyword before the tzinfo (Modules/_datetimemodule.c:6406-6410),
+  `datetime.__repr__` the tzinfo first (Lib/_pydatetime.py:2212-2217). `time` appends tzinfo then
+  fold in both twins (Modules/_datetimemodule.c:4872-4875), so C is also inconsistent with itself.
+  Both strings evaluate back to the same datetime.
+likelihood: Doctests or logs that print folded aware datetimes differ between CPython and PyPy.
+maybe_intended: |
+  Cosmetic; probably not intended (C's time_repr uses the Python order). The C order may be
+  relied on by doctests, so a fix would rather change _pydatetime or leave it.
+reproducer: |
+  import datetime, _pydatetime
+  r = [repr(m.datetime(2020, 1, 1, fold=1, tzinfo=m.timezone.utc)) for m in (datetime, _pydatetime)]
+  print('C:', r[0])
+  print('Python:', r[1])
+  if r[0].endswith('fold=1, tzinfo=datetime.timezone.utc)') and r[1].endswith('tzinfo=datetime.timezone.utc, fold=1)'):
+      print('REPRODUCED datetime-repr-fold-tzinfo-order')
+expected: The same text from both implementations.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; gh-107773 (the maintainers want the two
+  reprs to agree).
+cause: |
+  Modules/_datetimemodule.c:6406-6410: append_keyword_fold, then append_keyword_tzinfo.
+  Lib/_pydatetime.py:2212-2217: tzinfo, then fold.
+possible_fix: |
+  Swap the two blocks in one of the twins (most simply in _pydatetime, matching C's output).
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 107773, state: closed, relation: related (other repr differences of the twins)}
+  queries: ["gh search issues: datetime repr fold tzinfo order", "repr fold tzinfo pydatetime",
+            "datetime repr keyword order fold", "bugforge-results/README.md: datetime repr (none)"]
+lean:
+  property: PyLean.Datetime.DatetimeReprFoldTzTwins
+  theorem: PyLean.Datetime.datetimeReprFoldTzTwins_refuted
