@@ -181,6 +181,36 @@ theorem delStmtInvalid_proven : DelStmtInvalid := by
       (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]), alts_nil]
   rfl
 
+/-- `del_stmt` when `del_targets` fails after `del` (`del f()`): the first alternative fails with
+the mark back; in the first pass that ends the rule with `NULL`, and in the second pass
+`invalid_del_stmt` runs from the start mark and its outcome is the rule's. -/
+def DelStmtTargets : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (q.tokenAt p.mark).type = 634 → ∀ (s2 : PS),
+  callRule (f + 1) 203 { q with mark := p.mark + 1 } = (.null, s2) → s2.errorIndicator = false →
+  (s2.callInvalidRules = false → callRule (f + 7) 21 p = (.null, { s2 with mark := p.mark }.leave)) ∧
+  (s2.callInvalidRules = true → ∀ (s3 : PS), callRule (f + 1) 219 { s2 with mark := p.mark } = (.null, s3) →
+    callRule (f + 7) 21 p = (.null, { s3 with mark := p.mark }.leave))
+
+theorem delStmtTargets_proven : DelStmtTargets := by
+  intro f p q h ht s2 h1 h1e
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 21 = r21 from rfl, r21]
+  have e1 : runCall (f + 3) (.tok 634) q =
+      (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+    rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+  refine ⟨fun h1i => ?_, fun h1i s3 h3 => ?_⟩
+  · rw [alts_fail (by rfl) he (by
+        dsimp only; rw [items_call e1 (by simp), items_call_null (by rw [call_rule, h1])]),
+      alts_skip (by simp [h1i]), alts_nil]
+    rfl
+  · rw [alts_fail (by rfl) he (by
+        dsimp only; rw [items_call e1 (by simp), items_call_null (by rw [call_rule, h1])]),
+      alts_fail (by simp [h1i]) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]), alts_nil]
+    rfl
+
 /-! ### `assert_stmt` -/
 
 /-- `assert_stmt` (`Grammar/python.gram:215-217`) in the first pass:

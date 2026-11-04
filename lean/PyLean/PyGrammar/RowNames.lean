@@ -184,6 +184,9 @@ def rule_assignment_aug : List String := [
 def rule_assignment_invalid : List String := [
   "rule:assignment"]
 
+def rule_assignment_more : List String := [
+  "rule:assignment"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 
@@ -196,10 +199,16 @@ def rule_comparison : List String := [
 def rule_compound_stmt : List String := [
   "rule:compound_stmt"]
 
+def rule_compound_stmt_more : List String := [
+  "rule:compound_stmt"]
+
 def rule_del_stmt : List String := [
   "rule:del_stmt"]
 
 def rule_del_stmt_invalid : List String := [
+  "rule:del_stmt"]
+
+def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
 
 def rule_eval : List String := [
@@ -260,6 +269,9 @@ def rule_signed_number : List String := [
   "rule:signed_number"]
 
 def rule_simple_stmt : List String := [
+  "rule:simple_stmt"]
+
+def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
 def rule_statement : List String := [
