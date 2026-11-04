@@ -414,7 +414,7 @@ theorem isDigit_toNat (c : Char) : isDigitC c.toNat = isAsciiDigit c := by
   simp only [Char.le_def]
   rfl
 
-theorem takeWhile_digits (s : List Char) :
+theorem takeWhile_digitsC (s : List Char) :
     ((s.map Char.toNat).takeWhile isDigitC).length = (s.takeWhile isAsciiDigit).length := by
   induction s with
   | nil => rfl
@@ -451,7 +451,7 @@ theorem findSepTwins_proven : FindSepTwins := by
       ((s.drop 7).takeWhile isAsciiDigit).length := by
     rw [List.take_of_length_le (by simp)]
     have : List.drop 7 (List.map Char.toNat s) = List.map Char.toNat (List.drop 7 s) := by simp
-    rw [this, takeWhile_digits]
+    rw [this, takeWhile_digitsC]
   have e45 : ∀ c : Char, (c.toNat = 45) ↔ c = '-' := fun c => charEq c '-'
   have e87 : ∀ c : Char, (c.toNat = 87) ↔ c = 'W' := fun c => charEq c 'W'
   constructor
