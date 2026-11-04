@@ -51,7 +51,7 @@ Objects/floatobject.c	1854	1864	_PyFloat_InitTypes	_PyFloat_InitTypes(PyInterpre
 Objects/floatobject.c	1867	1870	_PyFloat_FiniType	_PyFloat_FiniType(PyInterpreterState *interp)	excluded		internal-bootstrap: destroys the sys.float_info type
 Objects/floatobject.c	1874	1880	_PyFloat_DebugMallocStats	_PyFloat_DebugMallocStats(FILE *out)	excluded		no-behaviour: prints allocator statistics for sys._debugmallocstats
 Objects/floatobject.c	1895	2000	PyFloat_Pack2	PyFloat_Pack2(double x, char *data, int le)	todo		open entry float-pack2-roundtrip
-Objects/floatobject.c	2003	2066	PyFloat_Pack4	PyFloat_Pack4(double x, char *data, int le)	todo		review: Pack4RoundTrip pins Pack4 only on doubles that come from a binary32 pattern, so the rounding of other doubles (0.1), the OverflowError for 1e300 (:2009-2013) and NaN payload bits below bit 29 are unconstrained; a Pack4 returning zero bytes for every double not exact in binary32 passes.
+Objects/floatobject.c	2003	2066	PyFloat_Pack4	PyFloat_Pack4(double x, char *data, int le)	modelled	float-pack4-spec,float-pack4-roundtrip	
 Objects/floatobject.c	2069	2087	PyFloat_Pack8	PyFloat_Pack8(double x, char *data, int le)	modelled	float-pack8-bytes,float-pack8-roundtrip	
 Objects/floatobject.c	2090	2143	PyFloat_Unpack2	PyFloat_Unpack2(const char *data, int le)	todo		changed-in-3.15: open entry float-pack2-roundtrip
 Objects/floatobject.c	2146	2201	PyFloat_Unpack4	PyFloat_Unpack4(const char *data, int le)	modelled	float-unpack4-widen,float-pack4-roundtrip,float-struct-f-orders-agree	

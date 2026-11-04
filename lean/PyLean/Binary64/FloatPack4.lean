@@ -167,10 +167,10 @@ def Pack4Spec : Prop :=
         z ≠ (PyFloat_Unpack4 (layout 4 v le) le).toRat → v % 2 = 0)) ∧
     (x.isInf = true →
       PyFloat_Pack4 x le = .ok (layout 4 (if x.sign then 0xff800000 else 0x7f800000) le)) ∧
-    (x.isNaN = true →
-      PyFloat_Pack4 x le = .ok (layout 4 ((if x.sign then 2 ^ 31 else 0) + 0x7f800000 +
-        (if (x.frac / 2 ^ 51) % 2 = 1 ∨ (x.frac / 2 ^ 29) % 2 ^ 22 = 0 then 2 ^ 22 else 0) +
-        (x.frac / 2 ^ 29) % 2 ^ 22) le))
+    (x.isNaN = true → ∃ v, PyFloat_Pack4 x le = .ok (layout 4 v le) ∧
+      (2 ^ 31 ≤ v ↔ x.sign = true) ∧ v < 2 ^ 32 ∧ (v / 2 ^ 23) % 256 = 255 ∧
+      v % 2 ^ 22 = (x.frac / 2 ^ 29) % 2 ^ 22 ∧
+      ((v / 2 ^ 22) % 2 = 0 ↔ ((x.frac / 2 ^ 51) % 2 = 0 ∧ (x.frac / 2 ^ 29) % 2 ^ 22 ≠ 0)))
 
 theorem rep32_neg {y : Rat} (h : Rep binary32 y) : Rep binary32 (-y) := by
   obtain ⟨M, E, hM, hE, hy⟩ := h
@@ -225,5 +225,167 @@ theorem view_encode32 (neg : Bool) {m : Nat} {e : Int} (hm : m < 2 ^ 24) (he : -
     have hk00 : k ≠ 0 := by omega
     simp only [hk255, hk00, ↓reduceIte, View.finite.injEq, true_and]
     exact ⟨by omega, by omega⟩
+
+theorem limit32_pos : 0 < limit32 := by
+  unfold limit32; exact Rat.mul_pos (natCast_pos' (by decide)) (pw_pos _)
+
+theorem pack4Spec_proven : Pack4Spec := by
+  intro x le
+  refine ⟨fun hx hge => ?_, fun hx hlt => ?_, fun hi => ?_, fun hn => ?_⟩
+  · -- overflow
+    have hz : x.isZero = false := by
+      cases hc : x.isZero
+      · rfl
+      · rw [toRat_of_isZero hc, abs_of_nonneg (a := 0) (by decide)] at hge
+        exact absurd hge (Rat.not_le.2 limit32_pos)
+    have hq0 : x.toRat ≠ 0 := fun h => by rw [(isZero_iff_toRat hx).2 h] at hz; cases hz
+    obtain ⟨hn, hd, hnd⟩ := natAbs_div_den hq0
+    rw [← abs_eq_ite] at hnd
+    have hnone : roundPos binary32 x.toRat.num.natAbs x.toRat.den = none :=
+      (roundPos32_none_iff hn hd).2 (by rw [hnd]; exact hge)
+    have hT : toFloat32Bits x = (if x.sign then 2 ^ 31 else 0) + 255 * 2 ^ 23 := by
+      simp only [toFloat32Bits, isNaN_false_of_finite hx, isInf_false_of_finite hx, hz,
+        Bool.false_eq_true, ↓reduceIte, hnone]
+      rfl
+    simp only [PyFloat_Pack4, hT, isInf_false_of_finite hx]
+    have : (((if x.sign = true then 2 ^ 31 else 0) + 255 * 2 ^ 23) % 2 ^ 31 == 0x7f800000) = true := by
+      split <;> decide
+    simp [this]
+  · -- in range
+    by_cases hz : x.isZero = true
+    · have hT : toFloat32Bits x = if x.sign then 2 ^ 31 else 0 := by
+        simp [toFloat32Bits, isNaN_false_of_finite hx, isInf_false_of_finite hx, hz]
+      have hv : (if x.sign then 2 ^ 31 else 0) < 2 ^ 32 := by split <;> decide
+      refine ⟨_, hv, ?_, by split <;> simp_all, ?_⟩
+      · simp only [PyFloat_Pack4, hT, isNaN_false_of_finite hx, isInf_false_of_finite hx]
+        have : ((if x.sign = true then 2 ^ 31 else 0) % 2 ^ 31 == 0x7f800000) = false := by
+          split <;> decide
+        simp [this]
+      · have hw := unpack4Widen_proven (if x.sign then 2 ^ 31 else 0) le hv
+        have hview : binary32.view (if x.sign then 2 ^ 31 else 0) = .finite x.sign 0 (-149) := by
+          cases x.sign <;> decide
+        rw [hview] at hw
+        simp only [] at hw
+        obtain ⟨w1, _, w3⟩ := hw
+        have hd0 : dyadic 0 (-149) = 0 := by decide
+        rw [hd0, Rat.neg_zero, ite_self] at w3
+        rw [w3, toRat_of_isZero hz]
+        refine ⟨w1, ⟨0, -149, by decide, by decide, Or.inl (by simp)⟩, fun z _ => ?_, fun z _ h hne => ?_⟩
+        · rw [Rat.sub_self, abs_of_nonneg (a := 0) (by decide)]; exact abs_nonneg _
+        · exfalso
+          rw [Rat.sub_self, abs_of_nonneg (a := 0) (by decide)] at h
+          have := abs_le_zero (a := 0 - z) (by rw [← h]; exact Rat.le_refl)
+          apply hne; grind
+    · have hz' : x.isZero = false := by simpa using hz
+      have hq0 : x.toRat ≠ 0 := fun h => by rw [(isZero_iff_toRat hx).2 h] at hz'; cases hz'
+      obtain ⟨hn, hd, hnd⟩ := natAbs_div_den hq0
+      rw [← abs_eq_ite] at hnd
+      generalize hN : x.toRat.num.natAbs = n at hn hnd
+      generalize hD : x.toRat.den = d at hd hnd
+      have hsome : roundPos binary32 n d ≠ none := by
+        intro h; have := (roundPos32_none_iff hn hd).1 h; rw [hnd] at this
+        exact absurd hlt (Rat.not_lt.2 this)
+      obtain ⟨⟨m, e⟩, hr⟩ : ∃ r, roundPos binary32 n d = some r := by
+        cases h : roundPos binary32 n d with
+        | none => exact absurd h hsome
+        | some r => exact ⟨r, rfl⟩
+      obtain ⟨hm, he, hc, hmax, hval, heven⟩ := roundPos_some binary32 (by decide) hn hd hr
+      have he' : -149 ≤ e := by simpa [Fmt.etiny, binary32] using he
+      have hc' : 2 ^ 23 ≤ m ∨ e = -149 := by simpa [Fmt.etiny, binary32] using hc
+      have hmax' : e ≤ 104 := by simp [binary32] at hmax; omega
+      obtain ⟨v1, v2, v3, v4, v5⟩ := view_encode32 x.sign (show m < 2 ^ 24 from hm) he' hc' hmax'
+      have hT : toFloat32Bits x = binary32.encode x.sign (some (m, e)) := by
+        simp only [toFloat32Bits, isNaN_false_of_finite hx, isInf_false_of_finite hx, hz',
+          Bool.false_eq_true, ↓reduceIte, hN, hD, hr]
+      generalize hV : binary32.encode x.sign (some (m, e)) = V at v1 v2 v3 v4 v5 hT
+      refine ⟨V, v1, ?_, v3, ?_⟩
+      · simp only [PyFloat_Pack4, hT, isNaN_false_of_finite hx, isInf_false_of_finite hx]
+        have : (V % 2 ^ 31 == 0x7f800000) = false := by simpa using v5
+        simp [this]
+      · have hw := unpack4Widen_proven V le v1
+        rw [v2] at hw
+        simp only [] at hw
+        obtain ⟨w1, _, w3⟩ := hw
+        rw [dyadic_eq] at w3
+        rw [w3]
+        have hR : (m : Rat) * pw e = (roundedInt binary32 n d : Rat) * pw (roundExp binary32 n d) := hval
+        have hrep : Rep binary32 ((m : Rat) * pw e) := ⟨m, e, hm, he, Or.inl rfl⟩
+        have ex := MathInt.sign_val hx
+        rw [← hnd] at ex
+        refine ⟨w1, ?_, fun z hzr => ?_, fun z hzr htie hne => ?_⟩
+        · split
+          · exact rep32_neg hrep
+          · exact hrep
+        · cases hs : x.sign
+          · simp only [hs, Bool.false_eq_true, ↓reduceIte] at ex ⊢
+            rw [ex, hR]
+            exact rounded_nearest binary32 (by decide) hn hd hzr
+          · simp only [hs, ↓reduceIte] at ex ⊢
+            rw [ex, hR]
+            have := rounded_nearest binary32 (by decide) hn hd (rep32_neg hzr)
+            have e1 : -((n : Rat) / d) - -((roundedInt binary32 n d : Rat) * pw (roundExp binary32 n d)) =
+                -((n : Rat) / d - (roundedInt binary32 n d : Rat) * pw (roundExp binary32 n d)) := by grind
+            have e2 : -((n : Rat) / d) - z = -((n : Rat) / d - -z) := by grind
+            rw [e1, e2, abs_neg, abs_neg]
+            unfold roundedInt at this ⊢
+            exact this
+        · rw [v4]
+          apply heven
+          cases hs : x.sign
+          · simp only [hs, Bool.false_eq_true, ↓reduceIte] at ex htie hne
+            rw [ex, hR] at htie
+            rw [hR] at hne
+            unfold roundedInt at htie hne ⊢
+            exact rounded_tie binary32 (by decide) hn hd hzr htie (fun h => hne h)
+          · simp only [hs, ↓reduceIte] at ex htie hne
+            rw [ex, hR] at htie
+            rw [hR] at hne
+            have e1 : -((n : Rat) / d) - -((roundedInt binary32 n d : Rat) * pw (roundExp binary32 n d)) =
+                -((n : Rat) / d - (roundedInt binary32 n d : Rat) * pw (roundExp binary32 n d)) := by grind
+            have e2 : -((n : Rat) / d) - z = -((n : Rat) / d - -z) := by grind
+            rw [e1, e2, abs_neg, abs_neg] at htie
+            unfold roundedInt at htie hne ⊢
+            exact rounded_tie binary32 (by decide) hn hd (rep32_neg hzr) htie
+              (fun h => hne (by rw [← Rat.neg_neg z, h]))
+  · -- infinity
+    have hT : toFloat32Bits x = if x.sign then 0xff800000 else 0x7f800000 := by
+      simp [toFloat32Bits, not_nan_of_inf hi, hi]
+    simp only [PyFloat_Pack4, hT, hi, not_nan_of_inf hi]
+    simp
+  · -- NaN
+    have hb : (x.bits / 2 ^ 51) % 2 = (x.frac / 2 ^ 51) % 2 := by
+      unfold F64.frac; omega
+    have hT0 : toFloat32Bits x = (if x.sign then 2 ^ 31 else 0) + 0x7fc00000 + (x.frac / 2 ^ 29) % 2 ^ 22 := by
+      simp [toFloat32Bits, hn]
+    have hSb : ((if x.sign = true then 2 ^ 31 else 0 : Nat) = 0 ∧ x.sign = false) ∨
+        ((if x.sign = true then 2 ^ 31 else 0 : Nat) = 2 ^ 31 ∧ x.sign = true) := by
+      cases x.sign
+      · left; exact ⟨rfl, rfl⟩
+      · right; exact ⟨rfl, rfl⟩
+    generalize hTdef : toFloat32Bits x = T at hT0
+    generalize hSdef : (if x.sign = true then 2 ^ 31 else 0 : Nat) = S at hT0 hSb
+    have hinf : (T % 2 ^ 31 == 0x7f800000) = false := by
+      have : T % 2 ^ 31 ≠ 0x7f800000 := by omega
+      simpa using this
+    have hP : PyFloat_Pack4 x le = .ok (layout 4
+        (if ((x.bits / 2 ^ 51) % 2 == 0 && T % 2 ^ 22 != 0) = true then T - 2 ^ 22 else T) le) := by
+      unfold PyFloat_Pack4
+      rw [hTdef]
+      simp only [hinf, Bool.false_and, Bool.false_eq_true, ↓reduceIte, hn, Bool.true_and]
+    refine ⟨_, hP, ?_⟩
+    have hp : x.frac / 2 ^ 29 % 2 ^ 22 < 4194304 := Nat.mod_lt _ (by decide)
+    have hb1 : x.bits / 2 ^ 51 % 2 < 2 := Nat.mod_lt _ (by decide)
+    generalize x.frac / 2 ^ 29 % 2 ^ 22 = p at hp hT0 ⊢
+    generalize x.bits / 2 ^ 51 % 2 = b1 at hb hb1 ⊢
+    generalize x.frac / 2 ^ 51 % 2 = b2 at hb ⊢
+    split
+    · rename_i h1
+      simp only [Bool.and_eq_true, beq_iff_eq, bne_iff_ne, ne_eq] at h1
+      rcases hSb with ⟨h, hs⟩ | ⟨h, hs⟩ <;> rw [hs] <;> simp only [Bool.false_eq_true, iff_false,
+        iff_true] <;> refine ⟨by omega, by omega, by omega, by omega, by constructor <;> intro <;> omega⟩
+    · rename_i h1
+      simp only [Bool.and_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, not_and, Decidable.not_not] at h1
+      rcases hSb with ⟨h, hs⟩ | ⟨h, hs⟩ <;> rw [hs] <;> simp only [Bool.false_eq_true, iff_false,
+        iff_true] <;> refine ⟨by omega, by omega, by omega, by omega, by constructor <;> intro <;> omega⟩
 
 end PyLean.Binary64

@@ -27,6 +27,7 @@ import PyLean.Binary64.FloatPow
 import PyLean.Binary64.FloatObj
 import PyLean.Binary64.FloatObjProps
 import PyLean.Binary64.FloatParse
+import PyLean.Binary64.FloatPack4
 import PyLean.Binary64.Diff
 
 /-!
@@ -258,6 +259,11 @@ def entries : List Entry := [
     statement := "PyFloat_Pack8 writes exactly eight bytes, byte i holding bits 8i..8i+7 of the double when le is set and byte 7 - i holding them otherwise, for every double."
     source := "floatobject.c:2069-2087; struct docs ('<d', '>d')"
     status := .proven, prop := ``Pack8Bytes, thm := some ``pack8Bytes_proven },
+  { id := "float-pack4-spec", pyFile := floatFile, pyFns := ["PyFloat_Pack4"]
+    statement := "PyFloat_Pack4 raises OverflowError for a finite double with |x| >= 2**128 - 2**103 and otherwise packs a finite double to a binary32 pattern with its sign whose value is a binary32 number at least as close to x as every binary32 number, with an even significand on a tie (round to nearest even, so 0.1 packs to 0x3dcccccd); an infinity packs to the infinity of its sign; a NaN packs to a NaN pattern with its sign that keeps fraction bits 51-29 as the payload, drops bits 28-0, and is signaling exactly when the double was signaling with a nonzero kept payload."
+    source := "floatobject.c:2003-2066 (overflow :2009-2013, signaling NaN :2015-2029); struct docs ('f' format, IEEE 754 binary32)"
+    status := .proven, prop := ``Pack4Spec, thm := some ``pack4Spec_proven
+    notes := "Smoke-tested on 3.15.2: struct.pack('>f', 0.1) is 3dcccccd, 1e300 and 3.4028235677973366e38 (2**128 - 2**103) raise OverflowError, 3.4028235677973362e38 packs to 7f7fffff. The conversion (float)x is taken as correctly rounded, as on x86-64 and AArch64." },
   { id := "float-unpack4-widen", pyFile := floatFile, pyFns := ["PyFloat_Unpack4"]
     statement := "PyFloat_Unpack4 widens every binary32 pattern exactly, in both byte orders: a finite value keeps its value and sign, signed zeros included, an infinity its sign, and a NaN its sign and all 23 fraction bits shifted up by 29, so a signaling NaN stays signaling."
     source := "floatobject.c:2146-2201 (comment at :2165)"
