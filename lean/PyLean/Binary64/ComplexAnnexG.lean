@@ -372,7 +372,8 @@ theorem prod_recov {a b c d : F64} (ha : a.isFinite = true) (hb : b.isFinite = t
 part, finite or infinite, the product is an infinity (a part is infinite). The plain product
 `(ac - bd) + (ad + bc)j` already has an infinite part, or it is `nan+nanj` and the boxing of
 :101-124 and the recomputation of :141-144 make one; for every such input, at binary64. A
-version without the recovery fails at `complex(inf, inf) * complex(1, 1)`. The overflow
+version without the recovery fails at `complex(inf, nan) * complex(1, 0)`, whose plain product
+is `nan+nanj` and whose result is `inf+nanj`. The overflow
 branch (:125-140) is not covered here. -/
 def ProdAnnexG : Prop :=
   ∀ z w : C,

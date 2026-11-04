@@ -1077,4 +1077,5 @@ def run_all(c):
     return run_python(c) if c["fn"] in LOW_LEVEL else run_float(c)
 
 
-common.main(gen_all, run_all, default_cases=50000)
+if __name__ == "__main__":
+    common.main(gen_all, run_all, default_cases=50000)
