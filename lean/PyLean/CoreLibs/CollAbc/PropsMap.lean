@@ -75,11 +75,10 @@ theorem lookup_isSome_any : ∀ (d : List (K × V)) (k : K),
 end
 
 /-- `Mapping.get`, `__contains__`, and the view methods `KeysView.__contains__`, `ItemsView.__iter__`,
-`ValuesView.__iter__`, `ValuesView.__contains__` and `MappingView.__repr__` agree with `dict` and its views, on `dict`
+`ValuesView.__iter__` and `ValuesView.__contains__` agree with `dict` and its views, on `dict`
 primitives. Type invariant: keys are distinct. `Mapping` docs. -/
 def MappingMatchesDict : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (d : List (K × V)) (k : K) (default value : V) (E : EqOps V)
-    (cls r : String),
+  ∀ (K V : Type) [DecidableEq K] (d : List (K × V)) (k : K) (default value : V) (E : EqOps V),
     (d.map Prod.fst).Nodup →
     let m := dictMap d
     m.get k default = .ok ((d.lookup k).getD default) ∧
@@ -87,13 +86,12 @@ def MappingMatchesDict : Prop :=
     m.keyIn k = .ok (d.lookup k).isSome ∧
     m.items = .ok d ∧
     m.values = .ok (d.map Prod.snd) ∧
-    m.valuesContain E value = listContains E value (d.map Prod.snd) ∧
-    viewRepr cls r = cls ++ "(" ++ r ++ ")"
+    m.valuesContain E value = listContains E value (d.map Prod.snd)
 
 theorem mappingMatchesDict_proven : MappingMatchesDict := by
-  intro K V _ d k default value E cls r hn m
+  intro K V _ d k default value E hn m
   have hi := dict_items d hn
-  refine ⟨?_, ?_, ?_, hi, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, hi, ?_, ?_⟩
   · cases h : d.lookup k <;> simp [m, MapV.get, dictMap, dictGet, h, isKeyError]
   · cases h : d.lookup k <;> simp [m, MapV.contains, dictMap, dictGet, h, isKeyError]
   · cases h : d.lookup k <;>
@@ -102,8 +100,6 @@ theorem mappingMatchesDict_proven : MappingMatchesDict := by
     exact valuesOf_dict d hn d (fun _ h => h)
   · simp only [m, MapV.valuesContain, dictMap, bind, Except.bind]
     exact contains_values E d hn value d (fun _ h => h)
-  · simp [viewRepr, String.append_assoc]
-    rfl
 
 /-- `ItemsView.__contains__` agrees with `dict_items.__contains__` on 2-tuples, with the same
 identity-then-`==` comparison. Narrowed twin property, over any mapping primitives. -/
@@ -174,6 +170,18 @@ theorem mappingEqIsDictEq_proven : MappingEqIsDictEq := by
   have i2 : (dictMap b).iter = .ok (b.map Prod.fst) := rfl
   simp only [mappingEq, i1, i2, h1, h2, bind, Except.bind, pure, Except.pure]
   cases dictEq a b <;> rfl
+
+/-- `MappingView.__repr__`: the view's class name, then `repr(self._mapping)` in parentheses; an exception from the
+mapping's repr is the outcome. Lib/_collections_abc.py:841-842. -/
+def ViewReprSpec : Prop :=
+  ∀ (cls r : String) (e : PyExc),
+    viewRepr cls (.ok r) = .ok (cls ++ "(" ++ r ++ ")") ∧ viewRepr cls (.error e) = .error e
+
+theorem viewReprSpec_proven : ViewReprSpec := by
+  intro cls r e
+  refine ⟨?_, rfl⟩
+  simp [viewRepr, bind, Except.bind, pure, Except.pure, String.append_assoc]
+  rfl
 
 /-! ### MutableMapping -/
 

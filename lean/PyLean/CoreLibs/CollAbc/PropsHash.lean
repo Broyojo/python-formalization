@@ -222,17 +222,37 @@ theorem setHashMatchesFrozenset_proven : SetHashMatchesFrozenset := by
     show shuffleBits 0 = nullBits from rfl, cancel]
   rfl
 
-/-- `_DeprecateByteStringMeta`: creating a class warns unless it is `ByteString` itself, so that
-the module's own definition is silent; `isinstance` warns every time and does not change the
-`ABCMeta` answer. The deprecation note in `collections.abc`. -/
+/-- `_DeprecateByteStringMeta`: creating a class shows the `DeprecationWarning` of `warnings._deprecated` unless it is
+`ByteString` itself, so that the module's own definition is silent; under an ignoring filter nothing is shown, and under
+an erroring one the warning is raised and the class is not made. `isinstance` warns the same way every time and then
+gives `ABCMeta`'s answer, or nothing under an erroring filter. Lib/_collections_abc.py:1069-1087. -/
 def ByteStringMeta : Prop :=
-  (∀ name : String, byteStringMetaWarns name = true ↔ name ≠ "ByteString") ∧
-  (∀ answer : Bool, byteStringInstanceCheck answer = (true, answer))
+  ∀ (γ : Type) (name : String) (make : Py γ) (act : WarnAction) (answer : Py Bool),
+    (name ≠ "ByteString" →
+      byteStringMetaNew .always name make = ([⟨"DeprecationWarning", "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"⟩], make) ∧
+      byteStringMetaNew .ignore name make = ([], make) ∧
+      byteStringMetaNew .error name make = ([], .error (.named "DeprecationWarning" "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"))) ∧
+    byteStringMetaNew act "ByteString" make = ([], make) ∧
+    byteStringInstanceCheck .always answer = ([⟨"DeprecationWarning", "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"⟩], answer) ∧
+    byteStringInstanceCheck .ignore answer = ([], answer) ∧
+    byteStringInstanceCheck .error answer = ([], .error (.named "DeprecationWarning" "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"))
 
 theorem byteStringMeta_proven : ByteStringMeta := by
-  refine ⟨?_, fun _ => rfl⟩
-  intro name
-  simp [byteStringMetaWarns]
+  intro γ name make act answer
+  refine ⟨?_, by simp [byteStringMetaNew], ?_, ?_, rfl⟩
+  · intro h
+    have h' : (name != "ByteString") = true := by simpa using h
+    refine ⟨?_, ?_, ?_⟩
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals (cases make <;> rfl)
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals (cases make <;> rfl)
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals rfl
+  · simp only [byteStringInstanceCheck, byteStringWarn, bind, Except.bind]
+    all_goals (cases answer <;> rfl)
+  · simp only [byteStringInstanceCheck, byteStringWarn, bind, Except.bind]
+    all_goals (cases answer <;> rfl)
 
 /-- `ByteString` is out of the module's globals until it is read. The first read warns, with the category and message
 of `warnings._deprecated`, and puts it back; under a filter that ignores the warning it is put back silently; under one
