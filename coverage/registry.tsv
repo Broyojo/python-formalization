@@ -2493,6 +2493,27 @@ pygrammar-peg-identifier-not-constant	open	Parser/pegen.c
 pygrammar-peg-decimal-value	open	Parser/pegen.c	
 pygrammar-peg-terminates	open	Parser/pegen.c	
 pygrammar-peg-parser-output-validates	open	Python/ast.c	
+pygrammar-peg-check-fstring-conversion	proven	Parser/action_helpers.c	result_token_with_metadata,_PyPegen_check_fstring_conversion
+pygrammar-peg-expr-name	proven	Parser/action_helpers.c	_PyPegen_get_expr_name
+pygrammar-peg-arguments-parsing-error	proven	Parser/action_helpers.c	_PyPegen_arguments_parsing_error
+pygrammar-peg-last-comprehension-item	proven	Parser/action_helpers.c	_PyPegen_get_last_comprehension_item
+pygrammar-peg-nonparen-genexp	proven	Parser/action_helpers.c	_PyPegen_nonparen_genexp_in_call
+pygrammar-peg-check-legacy-stmt	proven	Parser/action_helpers.c	_PyPegen_check_legacy_stmt
+pygrammar-peg-check-barry	proven	Parser/action_helpers.c	_PyPegen_check_barry_as_flufl
+pygrammar-peg-ensure-complex	proven	Parser/action_helpers.c	_PyPegen_ensure_imaginary,_PyPegen_ensure_real
+pygrammar-peg-concatenate-strings	proven	Parser/action_helpers.c	_build_concatenated_bytes,_build_concatenated_unicode,_build_concatenated_joined_str,_PyPegen_concatenate_strings
+pygrammar-peg-concatenate-tstrings	proven	Parser/action_helpers.c	_PyPegen_concatenate_tstrings
+pygrammar-peg-concat-folds	proven	Parser/action_helpers.c	_build_concatenated_str
+pygrammar-peg-setup-format-spec	proven	Parser/action_helpers.c	result_token_with_metadata,_PyPegen_setup_full_format_spec
+pygrammar-peg-format-spec-joinedstr	refuted	Parser/action_helpers.c	_PyPegen_setup_full_format_spec,_build_concatenated_unicode,_PyPegen_concatenate_strings
+pygrammar-peg-interpolation-conversion	proven	Parser/action_helpers.c	_get_interpolation_conversion
+pygrammar-peg-formatted-value-interpolation	proven	Parser/action_helpers.c	
+pygrammar-peg-debug-info-source	proven	Parser/action_helpers.c	
+pygrammar-peg-joined-str-parts	proven	Parser/action_helpers.c	_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str
+pygrammar-peg-joined-str-literal	proven	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str,_PyPegen_constant_from_token
+pygrammar-peg-fstring-literal-twin	proven	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str,_PyPegen_constant_from_token,_PyPegen_constant_from_string
+pygrammar-peg-escape-warning-line	refuted	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_joined_str,_PyPegen_constant_from_token
+pygrammar-peg-constant-from-string	proven	Parser/action_helpers.c	_PyPegen_constant_from_string
 pygrammar-rule-keyword-stmts	proven	Grammar/python.gram	rule:pass_stmt,rule:break_stmt,rule:continue_stmt
 pygrammar-rule-return-stmt	proven	Grammar/python.gram	rule:return_stmt
 pygrammar-rule-raise-stmt	proven	Grammar/python.gram	rule:raise_stmt

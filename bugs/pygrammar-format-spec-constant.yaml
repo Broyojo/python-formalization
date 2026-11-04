@@ -1,0 +1,72 @@
+id: pygrammar-format-spec-constant
+title: "A format spec with a \\N{...} escape followed by more text is a Constant in the AST, not a JoinedStr"
+priority: P4
+kind: ast-shape
+module: pygrammar
+files: [Parser/action_helpers.c]
+functions: ["_PyPegen_setup_full_format_spec", "_PyPegen_concatenate_strings"]
+summary: |
+  ast.FormattedValue.format_spec and ast.Interpolation.format_spec are documented as a JoinedStr
+  (Doc/library/ast.rst:319-320, 402-405), and python/cpython#122300 (3.13 regression) restored
+  that for `f'{e:.3}'`: gh-122308 added the branch at Parser/action_helpers.c:1069-1072 that wraps
+  zero or one constant in a JoinedStr. With two or more constants and no replacement field,
+  _PyPegen_setup_full_format_spec still calls _PyPegen_concatenate_strings, whose all-str branch
+  (_build_concatenated_unicode) returns a bare Constant, and that Constant becomes the format spec.
+  The lexer ends an FSTRING_MIDDLE at the closing brace of a \N{...} escape, so any format spec
+  with \N{...} followed by more text, or two \N{...} escapes, arrives as two constants:
+  ast.parse(r"f'{x:\N{DIGIT ONE}b}'") has format_spec=Constant('1b'), while f'{x:1b}' and
+  f'{x:\N{DIGIT ONE}}' have JoinedStr([Constant(...)]). The t-string twin is the same.
+likelihood: |
+  Low: \N{...} escapes in format specs are rare. The value at run time is right; what breaks is
+  code that walks the AST and expects format_spec.values, which is the downstream breakage
+  (astroid, rope, astor) python/cpython#122300 was reopened over. ast.parse(ast.unparse(tree))
+  also gives a different tree (JoinedStr) from the original (Constant).
+maybe_intended: |
+  Unlikely: the maintainer's fix for #122300 was to keep the JoinedStr shape "to preserve this"
+  for downstream tools, and its comment (:1037-1039) says the empty case must be "an *empty*
+  JoinedStr node"; the two-constant case was not considered because it needs the lexer to split
+  a format spec without a replacement field, which only \N{...} does. The maintainer also said
+  the docs are not prescriptive about AST shapes, so it may be judged low priority.
+reproducer: |
+  import ast
+
+  def spec(src):
+      return ast.parse(src).body[0].value.values[0].format_spec
+
+  a = spec(r"f'{x:\N{DIGIT ONE}b}'")
+  b = spec(r"f'{x:1b}'")
+  c = spec(r"t'{x:\N{DIGIT ONE}b}'")
+  d = spec(r"f'{x:\N{DIGIT ONE}}'")
+  print(ast.dump(a), ast.dump(b), ast.dump(c), ast.dump(d))
+  if (type(a).__name__ == 'Constant' and type(b).__name__ == 'JoinedStr'
+          and type(c).__name__ == 'Constant' and type(d).__name__ == 'JoinedStr'):
+      print("REPRODUCED pygrammar-format-spec-constant")
+expected: |
+  format_spec=JoinedStr(values=[Constant(value='1b')]), as for f'{x:1b}'.
+promised_by: |
+  Doc/library/ast.rst:319-320 ("format_spec is a JoinedStr node representing the formatting of
+  the value") and :402-405 for Interpolation; the implementation disagreeing with itself
+  (f'{x:1b}' and f'{x:\N{DIGIT ONE}b}' denote the same spec); the intent of gh-122308.
+cause: |
+  Parser/action_helpers.c:1069-1077: the JoinedStr branch covers n == 0 and n == 1 with a
+  Constant; otherwise _PyPegen_concatenate_strings (:1970-2029) takes its `!f_string_found`
+  branch (:2013-2025) for an all-constant spec and returns _build_concatenated_unicode's Constant.
+possible_fix: |
+  In _PyPegen_setup_full_format_spec, wrap the result in a JoinedStr when
+  _PyPegen_concatenate_strings returns a Constant (or call _build_concatenated_joined_str
+  directly for the non-simple case, as the f-string path of _PyPegen_concatenate_strings does).
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related: ["python/cpython#122300 (closed, completed): format_spec of f'{e:.3}' was a Constant in 3.13.0b4; fixed by gh-122308 for the single-constant case only",
+            "python/cpython#83941 (open): ast.FormattedValue.format_spec unnecessarily wrapped in JoinedStr (the opposite request)",
+            "python/cpython#111257 (open): unparsing FormattedValue without JoinedStr fails"]
+  queries: ["format_spec Constant JoinedStr", "format spec N escape f-string ast",
+            "setup_full_format_spec (issues and prs)", "format_spec Constant escape",
+            "f-string format spec Constant instead of JoinedStr", "gh api issues/122300 and comments"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Peg.FormatSpecIsJoinedStr
+  theorem: PyLean.PyGrammar.Peg.formatSpecIsJoinedStr_refuted
