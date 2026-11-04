@@ -120,8 +120,8 @@ def entries : List Entry := [
     "typeobject.c:3299-3307, :3316-3333, :3482-3491"
     ``MroImplementationErrors ``mroImplementationErrors_proven,
   p "typeobj-set-mro-error-message" ty ["set_mro_error"]
-    "The MRO conflict TypeError is the first 999 bytes of 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each as ' ' and its str __name__ up to a NUL, or ' ?' for a non-str __name__, joined by ','; an exception from the first candidate's __name__ is raised instead."
-    "typeobject.c:3350-3398; checked on 3.15.2 with metaclass properties returning 42, 'a\\x00b' and raising, and two 600-character names (999-character message)"
+    "The MRO conflict TypeError is the first 999 bytes of 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each as ' ' and its str __name__ up to a NUL, or ' ?' for a non-str __name__, joined by ','; the candidates' names are read in order only while the names before fit in 999 bytes, an exception from any name read is raised instead, and once they reach 1000 bytes no later name is read."
+    "typeobject.c:3350-3398; checked on 3.15.2 with metaclass properties returning 42, 'a\\x00b' and raising, two 600-character names (999-character message), and a 932- (933-) character first name before a raising one (read, KeyError; not read, TypeError)"
     ``SetMroErrorExact ``setMroErrorExact_proven
     "Scope: candidates are hashed by identity; a metaclass __hash__ or __name__ that re-enters can free the borrowed to_merge tuples (bugs/typeobj-set-mro-error-borrowed-mro.yaml).",
   p "typeobj-metaclass-exact" ty ["_PyType_CalculateMetaclass"]
@@ -281,7 +281,7 @@ def entries : List Entry := [
     "typeobject.c:9428-9449"
     ``TypeReadySetHashExact ``typeReadySetHashExact_proven,
   p "typeobj-getstate-default-exact" ty ["object_getstate_default"]
-    "For an instance: with required, a variable-size type, then an oversized basicsize, raise the exact 'cannot pickle' TypeErrors; the state is None or the __dict__; slot names come from _PyType_GetSlotNames (exceptions propagate); with no slot names the state is returned, otherwise each name in turn is read with PyObject_GetOptionalAttr (a non-str name raising 'attribute name must be string, not '%.200s'', an exception propagating, a missing attribute skipped) and a found value stored under the name object by PyDict_SetItem, a resized __slotnames__ raising the RuntimeError, and the result is the state, or (state, slots) when any was set."
+    "For an instance: with required, a variable-size type, then an oversized basicsize, raise the exact 'cannot pickle' TypeErrors; the state is None or the __dict__; slot names come from _PyType_GetSlotNames (exceptions propagate); with no slot names the state is returned, otherwise each name in turn is read with PyObject_GetOptionalAttr (a non-str name raising 'attribute name must be string, not '%.200s'', an exception propagating, a missing attribute skipped) and a found value stored under the name object by PyDict_SetItem, a resized __slotnames__ raising the RuntimeError, and the result is the state, or (state, slots) when any was set; with getters that leave __slotnames__'s length alone the loop is the rounds 0..n-1 in order, the first exception ending it."
     "typeobject.c:7979-8101"
     ``GetstateDefaultAll ``getstateDefaultAll_proven,
   -- metaclass

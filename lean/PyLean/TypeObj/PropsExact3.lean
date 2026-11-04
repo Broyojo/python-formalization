@@ -450,6 +450,42 @@ theorem getstateSlotStepExact_proven : GetstateSlotStepExact := by
       simp [getstateSlotStep, h, hg, name]
     exact ⟨hs, fun hsh w2 o hh ho hb => by rw [hs]; exact dictSetAt_empty rt slots name v hsh w1 w2 o hh ho hb⟩
 
+/-- **The slot loop of `object_getstate_default`, as a fold.** `Objects/typeobject.c:8043-8080`:
+when no getter changes the length of `__slotnames__` (the case `GetstateSlotsGuard` does not
+cover), the loop is the rounds `i, i+1, ..., size-1` in order, each as `GetstateSlotStepExact`
+states it, and the first round that raises ends the loop with its exception (`goto error`,
+`:8051`, `:8060`): `forM` over the indices. `fuel` is the model's loop bound, a model limit
+that is enough when it exceeds the rounds left. -/
+def GetstateSlotsLoopFold : Prop :=
+  ∀ (rt : Rt) (obj names : Val) (size : Nat) (slots : Addr) (fuel i : Nat) (w : World),
+    size - i < fuel →
+    (∀ j (w' w'' : World), i ≤ j → j < size → getstateSlotStep rt obj names slots j w' = .ok () w'' →
+      ((listOf w'' names).getD []).length = size) →
+    getstateSlotsLoop rt obj names size slots fuel i w =
+      ((List.range' i (size - i)).forM (fun j => getstateSlotStep rt obj names slots j)) w
+
+theorem getstateSlotsLoopFold_proven : GetstateSlotsLoopFold := by
+  intro rt obj names size slots fuel
+  induction fuel with
+  | zero => intro i w h; omega
+  | succ fuel ih =>
+    intro i w hf hlen
+    rw [getstateSlotsLoop]
+    by_cases hi : i ≥ size
+    · have : size - i = 0 := by omega
+      simp [hi, this]
+    · have hk : size - i = (size - (i + 1)) + 1 := by omega
+      have hcons : ∀ (xs : List Nat) (f : Nat → M Unit) (w : World),
+          (i :: xs).forM f w = (f i >>= fun _ => xs.forM f) w := fun _ _ _ => rfl
+      rw [hk, List.range'_succ, hcons]
+      simp only [hi, ite_false, M.bind_app]
+      cases hs : getstateSlotStep rt obj names slots i w with
+      | err e w1 => rfl
+      | ok u w1 =>
+        have hl := hlen i w w1 (Nat.le_refl i) (by omega) hs
+        simp only [getW_app, hl, bne_self_eq_false, Bool.false_eq_true, ite_false]
+        exact ih (i + 1) w1 (by omega) (fun j w' w'' h1 h2 h3 => hlen j w' w'' (by omega) h2 h3)
+
 /-! ## The rows, each with every branch -/
 
 def FindBestBaseAll : Prop := FindBestBaseExact ∧ FindBestBaseFirstFailure
@@ -472,8 +508,10 @@ def ObjectSetClassWorldStoppedAll : Prop := ObjectSetClassWorldStoppedExact ∧ 
 theorem objectSetClassWorldStoppedAll_proven : ObjectSetClassWorldStoppedAll :=
   ⟨objectSetClassWorldStoppedExact_proven, objectSetClassOnClass_proven⟩
 
-def GetstateDefaultAll : Prop := GetstateDefaultExact ∧ GetstateSlotStepExact ∧ GetstateSlotsGuard
+def GetstateDefaultAll : Prop :=
+  GetstateDefaultExact ∧ GetstateSlotStepExact ∧ GetstateSlotsGuard ∧ GetstateSlotsLoopFold
 theorem getstateDefaultAll_proven : GetstateDefaultAll :=
-  ⟨getstateDefaultExact_proven, getstateSlotStepExact_proven, getstateSlotsGuard_proven⟩
+  ⟨getstateDefaultExact_proven, getstateSlotStepExact_proven, getstateSlotsGuard_proven,
+    getstateSlotsLoopFold_proven⟩
 
 end PyLean.TypeObj
