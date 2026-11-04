@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.BytesObj.Bytes.ByteArray
+import PyLean.BytesObj.Bytes.Slots
 
 /-!
 Differential-testing handler for bytes and bytearray: `fn` names start with
@@ -181,6 +182,25 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   | "new" =>
     return encPy jB (bytesNew (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
   | "fromhex" => return encPy jB (bytesFromHex (← fieldObj j "x"))
+  | "strw" =>
+    let r := bytesStrW (← getNat j "bw") s
+    return encPy (fun (p : Seq × List String) => Json.arr #[jS p.1, toJson p.2]) r
+  | "richw" =>
+    let r := bytesRichcompareW (← getNat j "bw") (.bytes s) (← fieldObj j "other") (← cmpOf (← getStr j "op"))
+    return encPy (fun (p : Option Bool × List String) =>
+      Json.arr #[(match p.1 with | some b => toJson b | none => "NotImplemented"), toJson p.2]) r
+  | "seqgetitem" => return encPy toJson (pySequenceGetItem s (← getInt j "i"))
+  | "getitemobj" => return encPy toJson (bytesSubscriptObj s (← fieldObj j "item"))
+  | "getbuffer" =>
+    return encPy (fun (p : Seq × Bool) => Json.arr #[toJson p.1, toJson p.2]) (bytesGetBuffer s (← getInt j "flags"))
+  | "escapew" =>
+    return encPy (fun (p : Seq × Option String) => Json.arr #[jB p.1, Json.null])
+      (bytesDecodeEscapeW s (← optStr j "err") true)
+  | "partitionobj" | "rpartitionobj" =>
+    let f := if m == "partitionobj" then bytesPartitionObj else bytesRPartitionObj
+    let enc (o : Obj) : Json := Json.arr #[toJson o.typeName, toJson ((o.buffer?).getD [])]
+    return encPy (fun (t : Obj × Obj × Obj) => Json.arr #[enc t.1, enc t.2.1, enc t.2.2])
+      (f s (← fieldObj j "sep"))
   | "newsub" =>
     return encPy jTB (bytesNewType "BSubB" (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
   | "fromhexsub" => return encPy jTB (bytesFromHexType "BSubB" (← fieldObj j "x"))

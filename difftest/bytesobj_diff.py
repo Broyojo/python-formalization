@@ -1892,7 +1892,7 @@ def gen_bytes(rng):
             c["x"] = rng.choice([["bytes", fmt], ["bytes", list(b"%s|%b")], ["bytes", list(b"%r")], ["bytes", list(b"ab")],
                                  ["bytearray", list(b"%s")], ["str", list(b"%s")], ["int", 5], ["none"],
                                  ["memview", list(b"%s"), []], b_bflt(1.5)])
-    elif r < 0.615:
+    elif r < 0.612:
         # the shortcut codecs of PyUnicode_Decode with the handlers _Py_GetErrorHandler knows
         c["fn"] = ty + ".decode"
         c["s"] = rng.choice([c["s"], [], list("é€😀a".encode()), list(b"\xc3"), list(b"\xed\xa0\x80"),
@@ -1905,6 +1905,42 @@ def gen_bytes(rng):
         if not c["s"]:
             c["enc"] = rng.choice([c["enc"], "bogus-codec", "utf-16"])
             c["err"] = rng.choice([c["err"], "bogus"])
+    elif r < 0.625 and ty == "bytes":
+        k = rng.random()
+        if k < 0.3:
+            # -b / -bb in a child interpreter
+            c["fn"] = rng.choice(["bytes.strw", "bytes.richw"])
+            c["bw"] = rng.choice([0, 1, 2])
+            c["other"] = rng.choice([["str", [97]], ["str", []], ["int", 0], ["int", 97], ["bool", True],
+                                     ["bytes", c["s"]], ["bytes", [97]], ["none"], ["bytearray", c["s"]]])
+            c["op"] = rng.choice(["lt", "le", "eq", "ne", "gt", "ge"])
+        elif k < 0.5:
+            c["fn"] = "bytes.seqgetitem"
+            n = len(c["s"])
+            c["i"] = rng.choice([0, 1, -1, n, -n, n - 1, -n - 1, 2 ** 62, -2 ** 62])
+        elif k < 0.75:
+            c["fn"] = "bytes.getitemobj"
+            n = len(c["s"])
+            c["item"] = rng.choice([["int", rng.choice([0, -1, n, -n - 1, 2 ** 63, -2 ** 63 - 1])],
+                                    ["index", rng.choice([0, 1, -1, n, 2 ** 63, -2 ** 64])], ["bool", True],
+                                    ["indexraises", ["ValueError", "boom"]], ["str", [97]], ["none"], ["float", 1.5],
+                                    ["bytes", [1]], ["plain"]])
+            if c["item"][0] == "float":
+                c["item"] = b_bflt(1.5)
+        elif k < 0.82:
+            # the separator object itself comes back (partition.h:57)
+            c["fn"] = rng.choice(["bytes.partitionobj", "bytes.rpartitionobj"])
+            sub = c["s"][1:3] if len(c["s"]) > 2 else [97]
+            c["sep"] = rng.choice([["bytes", sub], ["bytearray", sub], ["memview", sub, [0]], ["bytes", [255, 254]],
+                                   ["bytes", []], ["str", [97]], ["int", 1]])
+        elif k < 0.88:
+            c["fn"] = "bytes.getbuffer"
+            c["flags"] = rng.choice([0, 1, 2, 3, 0x8, 0x9, 0x1c, 0x1d, 0x11c, 0x11d, 0x100, 0x200, 0x28, -2, -1])
+        else:
+            c["fn"] = "bytes.escapew"
+            pool = list(b"\\\\xnqa0777")
+            c["s"] = [rng.choice(pool) for _ in range(rng.randint(0, 6))]
+            c["err"] = rng.choice([None, "strict", "replace", "ignore"])
     elif r < 0.63:
         c["fn"] = ty + ".repr"
     elif r < 0.64:
@@ -2330,6 +2366,29 @@ def run_bytes(case):
             return b_benc(s.hex(*a))
         if m == "fromhex":
             return b_benc(mk.fromhex(b_build(c["x"])))
+        if m in ("partitionobj", "rpartitionobj"):
+            r = getattr(s, m[:-3])(b_build(c["sep"]))
+            return [[type(x).__name__, list(bytes(x))] for x in r]
+        if m == "seqgetitem":
+            api = ctypes.pythonapi
+            api.PySequence_GetItem.restype = ctypes.py_object
+            api.PySequence_GetItem.argtypes = [ctypes.py_object, ctypes.c_ssize_t]
+            return api.PySequence_GetItem(s, c["i"])
+        if m == "getitemobj":
+            return s[b_build(c["item"])]
+        if m == "getbuffer":
+            v = s.__buffer__(c["flags"])
+            res = [list(v), v.readonly]
+            v.release()
+            return res
+        if m == "escapew":
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", DeprecationWarning)
+                if c.get("err") is None:
+                    r, n = codecs.escape_decode(s)
+                else:
+                    r, n = codecs.escape_decode(s, c["err"])
+            return [b_benc(r), None]
         if m == "newsub":
             a = [] if c.get("x") is None else [b_build(c["x"])]
             kw = {}
@@ -2462,7 +2521,50 @@ def run_bytes(case):
 
     if m == "ops":
         return b_run_ba_ops(c)
+    if m in ("strw", "richw"):
+        return b_run_bytes_warning(c, m)
     return common.py_result(go)
+
+
+B_WARN_CHILD = r"""
+import json, sys, warnings
+c = json.loads(sys.argv[1])
+def build(o):
+    t = o[0]
+    if t == "none": return None
+    if t in ("int", "bool"): return o[1]
+    if t == "str": return "".join(map(chr, o[1]))
+    if t == "bytes": return bytes(o[1])
+    if t == "bytearray": return bytearray(o[1])
+    raise ValueError(t)
+s = bytes(c["s"])
+def go():
+    if c["fn"] == "bytes.strw":
+        return [["S", [ord(ch) for ch in str(s)]]]
+    r = getattr(s, "__" + c["op"] + "__")(build(c["other"]))
+    return ["NotImplemented" if r is NotImplemented else r]
+try:
+    if c["bw"] == 1:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            v = go()
+        out = {"ok": v + [[str(x.message) for x in w]]}
+    else:
+        out = {"ok": go() + [[]]}
+except Exception as e:
+    out = {"exc": type(e).__name__, "msg": str(e)}
+print(json.dumps(out))
+"""
+
+
+def b_run_bytes_warning(c, m):
+    """str(b) and b == x under -b / -bb: _Py_GetConfig()->bytes_warning is fixed at startup."""
+    import json
+    import subprocess
+    flags = ["-b"] * c["bw"]
+    proc = subprocess.run([sys.executable] + flags + ["-c", B_WARN_CHILD, json.dumps(c)],
+                          capture_output=True, text=True, check=True)
+    return json.loads(proc.stdout)
 
 
 # ===== end of family bytes ============================================
