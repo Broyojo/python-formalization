@@ -3,6 +3,7 @@ import PyLean.Datetime.IsoC
 import PyLean.Datetime.Format
 import PyLean.Datetime.DiffObj
 import PyLean.Datetime.ZoneDiff
+import PyLean.Datetime.Diff2
 
 /-!
 Differential-testing handler for `datetime` cases (`"mod": "datetime"`).
@@ -160,7 +161,10 @@ def run (fn : String) (j : Json) : Except String Json := do
         (do let t ← timeIsoformatC v.t sp; return dateIsoformatC v.y v.m v.d ++ [c] ++ t)
       else (do let s ← parseTimespecArgPy sp; return datetimeIsoformat v c s)
     return encPy (fun cs => toJson (String.ofList cs)) r
-  | other => if other.startsWith "zi_" then Zone.runZone other j else runObj other j
+  | other =>
+    if other.startsWith "zi_" then Zone.runZone other j
+    else if other.startsWith "x2_" then runX2 other j
+    else runObj other j
 
 /-- Results of `runObj` that are not already `{"ok": ...}` or `{"exc": ...}`. -/
 def wrapOk (r : Json) : Json :=

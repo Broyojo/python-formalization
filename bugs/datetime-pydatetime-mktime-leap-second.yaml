@@ -1,0 +1,70 @@
+id: datetime-pydatetime-mktime-leap-second
+title: "In a leap-second time zone, _pydatetime's naive timestamp()/astimezone() raise ValueError where C returns a value"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime._mktime", "datetime._local_timezone", "datetime.timestamp", "datetime.astimezone"]
+summary: |
+  `datetime._mktime` solves `t = local(u)` with `local(u)` defined as
+  `(datetime(*time.localtime(u)[:6]) - epoch) // timedelta(0, 1)` (Lib/_pydatetime.py:2034-2036).
+  Under a time zone with leap seconds (a TZif file with leap records, such as the `right/`
+  zones), `time.localtime` returns `tm_sec == 60` for the leap second, and
+  `datetime(y, m, d, hh, mm, 60)` raises `ValueError: second must be in 0..59, not 60`. C's
+  `local()` (Modules/_datetimemodule.c:5588-5607) feeds the fields to `utc_to_seconds`, which
+  checks only the year. So with TZ set to such a zone, `datetime(1972, 7, 1).timestamp()`
+  (naive, the second right after the first leap second) is `78796800.0` in C and raises
+  ValueError in Python, and `datetime(1972, 7, 1).astimezone()` returns an aware datetime in C
+  and raises in Python. Naive datetimes whose `_mktime` search does not pass through a leap
+  second agree.
+likelihood: |
+  Very low: leap-second zones are rarely used (POSIX time_t excludes leap seconds), and only
+  the timestamps next to a leap second are affected.
+maybe_intended: |
+  Not intended, but leap-second zones are outside what the datetime module supports (it has
+  no second 60, gh-67762 is the open request); C works by accident of not checking.
+reproducer: |
+  import datetime, _pydatetime, os, struct, tempfile, time
+  LEAP = 78796800  # 1972-07-01T00:00:00 POSIX, the first leap second
+  hdr = b'TZif' + b'\0' * 16 + struct.pack('>6l', 0, 0, 1, 0, 1, 4)
+  data = hdr + struct.pack('>lBB', 0, 0, 0) + b'UTC\0' + struct.pack('>ll', LEAP, 1)
+  path = os.path.join(tempfile.mkdtemp(), 'leapUTC')
+  with open(path, 'wb') as f:
+      f.write(data)
+  os.environ['TZ'] = path
+  time.tzset()
+  print('localtime(LEAP)[:6] =', tuple(time.localtime(LEAP))[:6])
+  def run(m):
+      try:
+          return repr(m.datetime(1972, 7, 1).timestamp())
+      except ValueError:
+          return 'ValueError'
+  r = [run(m) for m in (datetime, _pydatetime)]
+  print('timestamp() C/Python:', r)
+  if time.localtime(LEAP).tm_sec == 60 and r[1] == 'ValueError' and r[0] != 'ValueError':
+      print('REPRODUCED datetime-pydatetime-mktime-leap-second')
+expected: |
+  The same outcome in both implementations.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:2034-2036 builds a datetime from localtime's fields, so second 60 raises;
+  Modules/_datetimemodule.c:5600-5606 passes them to utc_to_seconds (:5571-5585), which checks
+  only the year range.
+possible_fix: |
+  Clamp or carry second 60 in _pydatetime's local() (e.g. compute the seconds arithmetically
+  from the fields, as C does), or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED (Linux, glibc reads the TZif leap records)
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 67762, state: open, relation: related (datetime has no leap-second support)}
+  queries: ["gh search issues: leap second localtime datetime", "leap second timestamp pydatetime",
+            "mktime leap second", "right UTC timestamp datetime", "datetime replace None keyword (found 67762)",
+            "bugforge-results/README.md: leap (dateutil leapdays only, unrelated)"]
+lean:
+  property: PyLean.Datetime.MktimeLocalTwinsAll
+  theorem: PyLean.Datetime.mktimeLocalTwinsAll_refuted
+  also:
+    - {property: PyLean.Datetime.LocalTimezoneTwinsAll, theorem: PyLean.Datetime.localTimezoneTwinsAll_refuted}

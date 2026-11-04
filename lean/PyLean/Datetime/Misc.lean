@@ -90,9 +90,6 @@ def timezoneRichC (op : CmpOp) (a b : Delta) : Option Bool :=
 /-- `timezone.__hash__`, Py:2498-2499, and `timezone_hash`, :4392-4396. -/
 def timezoneHashKey (offset : Delta) : HashKey := offset.hashKey
 
-/-- `timezone.__getinitargs__`, Py:2487-2491, and `timezone_getinitargs`, :4526-4532. -/
-def timezoneGetinitargs (offset : Delta) (name : Option String) : Delta × Option String := (offset, name)
-
 /-- `tzinfo.__reduce__`, Py:1370-1376, and `tzinfo_reduce`, :4257-4283: the
 constructor arguments (from `__getinitargs__` if there is one) and the state. -/
 def tzinfoReduce {α σ : Type} (getinitargs : Option (Unit → Py (List α))) (state : Py σ) :
