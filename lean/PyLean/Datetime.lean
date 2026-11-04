@@ -352,7 +352,7 @@ def entries : List Entry := [
     prop := ``FormatTimeText, thm := some ``formatTimeText_proven },
   { id := "datetime-format-offset-text", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_format_offset", "C format_utcoffset"]
-    statement := "For every valid offset strictly inside +-24h and every separator, _format_offset is +-HH sep MM, then sep SS when seconds or microseconds are nonzero, then .ffffff when microseconds are nonzero; C format_utcoffset gives the same text."
+    statement := "For every separator and every utcoffset() result (None, or a valid offset strictly inside +-24h), _format_offset is '' for None and otherwise +-HH sep MM, then sep SS when seconds or microseconds are nonzero, then .ffffff when microseconds are nonzero; C format_utcoffset gives the same text."
     source := "utcoffset/isoformat docs; C/Python twins", status := .proven
     prop := ``FormatOffsetText, thm := some ``formatOffsetText_proven },
   { id := "datetime-timespec-twins", pyFile := "Lib/_pydatetime.py"
@@ -405,11 +405,21 @@ def entries : List Entry := [
     statement := "For every string, _parse_isoformat_date raises 'Invalid isoformat string' when its length is not 7, 8 or 10, and when it is not ASCII."
     source := "_parse_isoformat_date", status := .proven
     prop := ``ParseIsoDateRefusals, thm := some ``parseIsoDateRefusals_proven },
+  { id := "datetime-is-ascii-digit", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_is_ascii_digit"]
+    statement := "For every character c, _is_ascii_digit(c) holds exactly when c is U+0030..U+0039, so no Unicode digit counts."
+    source := "the function's name and body (c in '0123456789')", status := .proven
+    prop := ``IsAsciiDigit, thm := some ``isAsciiDigit_proven },
   { id := "datetime-find-sep-forms", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_find_isoformat_datetime_separator", "_is_ascii_digit"]
-    statement := "For all digits, any separator x and any time text t, _find_isoformat_datetime_separator returns the length of the date part for YYYY-MM-DD, YYYYMMDD, YYYY-Www-D (x not a digit), YYYY-Www followed by -DD, YYYYWwwD, YYYY-Www and YYYYWww (x not a digit), and raises 'Invalid ISO string' for the nine characters YYYY-Www-."
+    statement := "For all digits, any separator x and any time text t, _find_isoformat_datetime_separator returns the length of the date part for YYYY-MM-DD, YYYYMMDD, YYYY-Www-D (x outside U+0030..U+0039), YYYY-Www followed by -DD and YYYY-Www (x not a digit or '-'), and raises 'Invalid ISO string' for the nine characters YYYY-Www-."
     source := "datetime.fromisoformat docs; the ambiguity rule at _pydatetime.py:315-323", status := .proven
     prop := ``FindSepForms, thm := some ``findSepForms_proven },
+  { id := "datetime-find-sep-week-digits", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_find_isoformat_datetime_separator", "_is_ascii_digit"]
+    statement := "For every YYYYWww followed by a run of n ASCII digits and then a non-digit or the end, _find_isoformat_datetime_separator returns 7 for n = 0, 8 for n = 1, and for n >= 2 returns 7 when n is odd and 8 when n is even (idx = 7 + n, :336-353)."
+    source := "datetime.fromisoformat docs (YYYYWww, YYYYWwwD); _pydatetime.py:336-353", status := .proven
+    prop := ``FindSepWeekDigits, thm := some ``findSepWeekDigits_proven },
   { id := "datetime-date-fromisoformat", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.fromisoformat", "_parse_isoformat_date"]
     statement := "For every string, date.fromisoformat refuses non-ASCII text ('Argument must be an ASCII str') and lengths other than 7, 8, 10 (ValueError), returns the checked date of an accepted parse, and raises ValueError for a refused parse or an invalid date."
@@ -420,6 +430,11 @@ def entries : List Entry := [
     statement := "For all ASCII digits, _parse_hh_mm_ss_ff parses HH, HH:MM, HHMMSS, HH:MM:SS.ffffff, HH:MM:SS,fff (times 1000) and truncates a seventh fraction digit; it raises 'Invalid time separator' for a non-colon after HH:MM, 'Invalid microsecond separator' for a separator other than . or ,, and 'Non-digit values in fraction'."
     source := "time.fromisoformat docs; _parse_hh_mm_ss_ff", status := .proven
     prop := ``ParseHHMMSSFFForms, thm := some ``parseHHMMSSFFForms_proven },
+  { id := "datetime-parse-hhmmssff-fraction", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_hh_mm_ss_ff", "_read_isoformat_component"]
+    statement := "For all ASCII digits, HH:MM:SS or HHMMSS followed by '.' or ',' and a nonempty run of k ASCII digits parses to the first min(k, 6) digits times 10**(6 - min(k, 6)) microseconds, which pins every _FRACTION_CORRECTION entry."
+    source := "time.fromisoformat docs (fractional seconds); _pydatetime.py:432-449", status := .proven
+    prop := ``ParseHHMMSSFFFraction, thm := some ``parseHHMMSSFFFraction_proven },
   { id := "datetime-date-ctor-args", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__new__", "_check_date_fields", "C date_new", "C datetime_date", "C datetime_date_impl", "C new_date_ex", "C check_date_args", "C date_from_pickle"]
     statement := "date(*args) agrees between the twins for every positional argument list whose second argument is not None and whose ints fit a C int: pickle state, int fields, non-int fields, missing or extra arguments."

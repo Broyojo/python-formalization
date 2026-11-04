@@ -109,10 +109,8 @@ def offsetText (sep : List Char) (neg : Bool) (a : Nat) : List Char :=
   (if neg then '-' else '+') :: d2 hh ++ sep ++ d2 mm ++
     (if ss ≠ 0 ∨ us ≠ 0 then sep ++ d2 ss ++ (if us ≠ 0 then '.' :: d6 us else []) else [])
 
-/-- `_format_offset(off, sep)` for every valid offset strictly inside ±24 hours is that text,
-and C `format_utcoffset` (which negates the timedelta and splits its seconds field by
-`divmod`) gives the same text. -/
-def FormatOffsetText : Prop :=
+/-- The `off is not None` branch of `FormatOffsetText`. -/
+def FormatOffsetSome : Prop :=
   ∀ (sep : List Char) (t : Delta), t.Valid → -86400000000 < t.toUs → t.toUs < 86400000000 →
     formatOffsetSep sep (some t.toUs) = offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs ∧
     formatUtcoffsetC sep (some t) = formatOffsetSep sep (some t.toUs)
@@ -120,7 +118,7 @@ def FormatOffsetText : Prop :=
 theorem padNat_d2 (n : Nat) (h : n < 100) : padNat 2 n = d2 n := padNat2 n h
 theorem padNat_d6 (n : Nat) (h : n < 1000000) : padNat 6 n = d6 n := padNat6 n h
 
-theorem formatOffsetText_proven : FormatOffsetText := by
+theorem formatOffsetSome_proven : FormatOffsetSome := by
   intro sep t hv hlo hhi
   have py : formatOffsetSep sep (some t.toUs) = offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs := by
     unfold formatOffsetSep offsetText
@@ -180,6 +178,29 @@ theorem formatOffsetText_proven : FormatOffsetText := by
   by_cases hu : u = 0 <;> by_cases hss : s % 60 = 0 <;>
     by_cases hu' : t.toUs.natAbs % 1000000 = 0 <;>
     by_cases hss' : t.toUs.natAbs % 60000000 / 1000000 = 0 <;> simp [hu, hss, hu', hss'] <;> omega
+
+/-- `_format_offset(off, sep)` for every `off` that `utcoffset()` can return (None, or a valid
+timedelta strictly inside ±24 hours, the range `_check_utc_offset` enforces) and every
+separator: None (a naive object) is the empty string, so `isoformat()` has no offset suffix;
+an offset is the text `±HH sep MM[sep SS[.ffffff]]` of `offsetText`; and C `format_utcoffset`
+(which writes `""` for `Py_None`, negates the timedelta and splits its seconds field by
+`divmod`) gives the same text. -/
+def FormatOffsetText : Prop :=
+  ∀ (sep : List Char) (off : Option Delta),
+    (∀ t ∈ off, t.Valid ∧ -86400000000 < t.toUs ∧ t.toUs < 86400000000) →
+    formatOffsetSep sep (off.map Delta.toUs) =
+      (match off with
+       | none => []
+       | some t => offsetText sep (decide (t.toUs < 0)) t.toUs.natAbs) ∧
+    formatUtcoffsetC sep off = formatOffsetSep sep (off.map Delta.toUs)
+
+theorem formatOffsetText_proven : FormatOffsetText := by
+  intro sep off h
+  cases off with
+  | none => exact ⟨rfl, rfl⟩
+  | some t =>
+    obtain ⟨hv, hlo, hhi⟩ := h t rfl
+    exact formatOffsetSome_proven sep t hv hlo hhi
 
 /-! ### The `timespec` argument -/
 
