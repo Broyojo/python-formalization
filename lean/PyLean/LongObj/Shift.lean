@@ -558,10 +558,15 @@ theorem lshift_value {ds : List Nat} {w r : Nat} (hd : IsDigits ds) (hr : r < 30
       ← hr0, h4, Nat.pow_add]
     grind
 
+/-- The size `long_lshift1` asks `long_alloc` for, longobject.c:5469-5473:
+`oldsize + wordshift`, plus one when `remshift` is non-zero. -/
+def lshiftNeed (a : Int) (s : Nat) : Nat :=
+  digitCount a.natAbs + s / 30 + (if s % 30 ≠ 0 then 1 else 0)
+
 /-- `long_lshift1` on `s / SHIFT`, `s % SHIFT` is the canonical `a * 2**s`. The
 hypothesis is exactly the room `long_alloc` needs. -/
 theorem longLshift1_spec (a : Int) (s : Nat)
-    (hs : digitCount a.natAbs + s / 30 + 1 ≤ maxLongDigits) :
+    (hs : lshiftNeed a s ≤ maxLongDigits) :
     longLshift1 (Long.ofInt a) (s / 30) (s % 30) = .ok (Long.ofInt (a * 2 ^ s)) := by
   unfold longLshift1
   by_cases hfast : s / 30 = 0 ∧ (Long.ofInt a).isCompact = true
@@ -592,7 +597,7 @@ theorem longLshift1_spec (a : Int) (s : Nat)
     have lA := length_digitsOf a.natAbs
     have hlen : (Long.ofInt a).ds.length + s / 30 + (if s % 30 ≠ 0 then 1 else 0) ≤ maxLongDigits := by
       simp only [Long.ofInt, lA]
-      split <;> omega
+      exact hs
     rw [longAlloc_ok hlen]
     simp only [bind_ok, pure_ok]
     have hv := lshift_value (w := s / 30) (r := s % 30) dA (by omega)
@@ -655,6 +660,63 @@ theorem longLshift_spec (a b : Int) :
         simp only [Long.ofInt, Ne, digitsOf_eq_nil]; omega
       simp only [longLshift, hneg, Bool.false_eq_true, ite_false, hne, asInt64, Long.toInt_ofInt,
         hb2, ite_true, longLshiftInt64]
-      exact longLshift1_spec a b.toNat hs
+      exact longLshift1_spec a b.toNat (by unfold lshiftNeed; split <;> omega)
+
+/-- When `long_alloc` refuses the size, `long_lshift1` raises its OverflowError
+(longobject.c:163-166 through :5473-5475). The compact shortcut (:5462-5467) cannot
+be taken: it needs `wordshift == 0`, and then the size is at most 2. -/
+theorem longLshift1_overflow (a : Int) (s : Nat) (hs : maxLongDigits < lshiftNeed a s) :
+    longLshift1 (Long.ofInt a) (s / 30) (s % 30) =
+      .error (.overflowError "too many digits in integer") := by
+  have hm : maxLongDigits = 307445734561825860 := by decide
+  unfold lshiftNeed at hs
+  have hfast : ¬ (s / 30 = 0 ∧ (Long.ofInt a).isCompact = true) := by
+    rintro ⟨h1, h2⟩
+    rw [Long.isCompact_ofInt] at h2
+    have := (digitCount_le_one_iff a.natAbs).2 (of_decide_eq_true h2)
+    split at hs <;> omega
+  unfold longLshift1
+  rw [if_neg hfast]
+  have hl : (Long.ofInt a).ds.length = digitCount a.natAbs := length_digitsOf _
+  have hal : longAlloc ((Long.ofInt a).ds.length + s / 30 + (if s % 30 ≠ 0 then 1 else 0)) =
+      .error (.overflowError "too many digits in integer") := by
+    unfold longAlloc
+    rw [if_pos (by rw [hl]; exact hs)]
+  rw [hal]
+  rfl
+
+/-- `long_lshift_int64(a, shiftby)` and `_PyLong_Lshift`, for every `shiftby >= 0`: `0`
+for `a == 0`, the canonical `a * 2**shiftby` when `long_alloc` accepts the size, and its
+OverflowError otherwise. CPython can still raise MemoryError where the size is accepted
+but the memory is not there; allocation failure is outside the model. -/
+theorem longLshiftInt64_spec (a : Int) (s : Nat) :
+    longLshiftInt64 (Long.ofInt a) s =
+      if a = 0 then .ok (Long.ofInt 0)
+      else if lshiftNeed a s ≤ maxLongDigits then .ok (Long.ofInt (a * 2 ^ s))
+      else .error (.overflowError "too many digits in integer") := by
+  by_cases ha : a = 0
+  · subst ha
+    simp [longLshiftInt64, Long.ofInt]
+  · have hne : (Long.ofInt a).ds ≠ [] := by
+      simp only [Long.ofInt, Ne, digitsOf_eq_nil]; omega
+    rw [if_neg ha]
+    unfold longLshiftInt64
+    rw [if_neg hne]
+    by_cases hs : lshiftNeed a s ≤ maxLongDigits
+    · rw [if_pos hs, longLshift1_spec a s hs]
+    · rw [if_neg hs, longLshift1_overflow a s (by omega)]
+
+/-- `long_lshift_method` on two ints with `0 <= b < 2**63` is `long_lshift_int64`. -/
+theorem longLshift_int64 (a b : Int) (hb : 0 ≤ b) (hb2 : b < 2 ^ 63) :
+    longLshift (Long.ofInt a) (Long.ofInt b) = longLshiftInt64 (Long.ofInt a) b.toNat := by
+  have hneg : (Long.ofInt b).neg = false := decide_eq_false (by omega)
+  by_cases ha : a = 0
+  · subst ha
+    simp [longLshift, longLshiftInt64, hneg, Long.ofInt]
+    exact hb
+  · have hne : (Long.ofInt a).ds ≠ [] := by
+      simp only [Long.ofInt, Ne, digitsOf_eq_nil]; omega
+    simp only [longLshift, hneg, Bool.false_eq_true, ite_false, hne, asInt64, Long.toInt_ofInt,
+      hb2, ite_true]
 
 end PyLean.LongObj

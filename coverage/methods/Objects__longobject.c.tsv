@@ -88,26 +88,26 @@ Objects/longobject.c	3749	3778	x_add	x_add(PyLongObject *a, PyLongObject *b)	mod
 Objects/longobject.c	3783	3834	x_sub	x_sub(PyLongObject *a, PyLongObject *b)	modelled	longobj-x-sub	
 Objects/longobject.c	3837	3867	long_add	long_add(PyLongObject *a, PyLongObject *b)	modelled	longobj-add-sub	
 Objects/longobject.c	3870	3875	_PyCompactLong_Add	_PyCompactLong_Add(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
-Objects/longobject.c	3878	3882	long_add_method	long_add_method(PyObject *a, PyObject *b)	todo		review: checkBinop mirrors CHECK_BINOP (:1843-1847) then long_add, but BinaryMethodsExact quantifies only over two ints, so the NotImplemented branch, the only code of the wrapper itself, is unpinned: a wrapper without the check passes. checkBinop_other proves it but is not part of the registry prop.
+Objects/longobject.c	3878	3882	long_add_method	long_add_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	3886	3912	long_sub	long_sub(PyLongObject *a, PyLongObject *b)	modelled	longobj-add-sub	
 Objects/longobject.c	3915	3920	_PyCompactLong_Subtract	_PyCompactLong_Subtract(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
-Objects/longobject.c	3923	3927	long_sub_method	long_sub_method(PyObject *a, PyObject *b)	todo		review: As long_add_method: BinaryMethodsExact only covers two int operands, so the CHECK_BINOP NotImplemented branch that is this wrapper's body is not stated.
+Objects/longobject.c	3923	3927	long_sub_method	long_sub_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	3934	4029	x_mul	x_mul(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	4039	4064	kmul_split	kmul_split(PyLongObject *n, Py_ssize_t size, PyLongObject **high, PyLongObject **low)	modelled	longobj-k-mul	
 Objects/longobject.c	4073	4231	k_mul	k_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-k-mul	
 Objects/longobject.c	4287	4339	k_lopsided_mul	k_lopsided_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-k-mul	
 Objects/longobject.c	4343	4357	long_mul	long_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-mul	
 Objects/longobject.c	4362	4367	_PyCompactLong_Multiply	_PyCompactLong_Multiply(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
-Objects/longobject.c	4370	4374	long_mul_method	long_mul_method(PyObject *a, PyObject *b)	todo		review: As long_add_method: only two-int operands are stated, so the NotImplemented branch of CHECK_BINOP is unpinned.
+Objects/longobject.c	4370	4374	long_mul_method	long_mul_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4378	4396	fast_mod	fast_mod(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
 Objects/longobject.c	4400	4418	fast_floor_div	fast_floor_div(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
-Objects/longobject.c	4423	4457	pylong_int_divmod	pylong_int_divmod(PyLongObject *v, PyLongObject *w, PyLongObject **pdiv, PyLongObject **pmod)	todo		review: The C body imports _pylong, calls int_divmod, and raises ValueError unless it returns a 2-tuple of ints (:4426-4456); lDivmod replaces the whole call by the total value MathInt.pylongIntDivmod, so the import failure, a raising int_divmod and both result checks are not expressed. LDivmodRefines is rfl on that branch, so it pins nothing about this function.
+Objects/longobject.c	4423	4457	pylong_int_divmod	pylong_int_divmod(PyLongObject *v, PyLongObject *w, PyLongObject **pdiv, PyLongObject **pmod)	modelled	longobj-pylong-divmod-paths,longobj-l-divmod-refines	
 Objects/longobject.c	4482	4553	l_divmod	l_divmod(PyLongObject *v, PyLongObject *w, PyLongObject **pdiv, PyLongObject **pmod)	modelled	mathint-divmod-floor	
-Objects/longobject.c	4560	4583	l_mod	l_mod(PyLongObject *v, PyLongObject *w, PyLongObject **pmod)	todo		review: lMod mirrors :4560-4583 (fast_mod, long_rem, the add-w fix-up), but DivisionFloor assumes w != 0, so the ZeroDivisionError from long_rem is not stated by the listed entry: an l_mod returning 0 for w == 0 passes. longobj-binary-methods states it for long_mod and could be added.
-Objects/longobject.c	4586	4599	long_div	long_div(PyObject *a, PyObject *b)	todo		review: longDiv mirrors :4586-4599 (the one-digit fast_floor_div, then l_divmod), but BinaryMethodsExact states // only for b != 0 and only on two ints, so neither the ZeroDivisionError nor the NotImplemented branch is pinned.
+Objects/longobject.c	4560	4583	l_mod	l_mod(PyLongObject *v, PyLongObject *w, PyLongObject **pmod)	modelled	longobj-division-floor,longobj-binary-methods	
+Objects/longobject.c	4586	4599	long_div	long_div(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4607	4861	long_true_divide	long_true_divide(PyObject *v, PyObject *w)	todo		
-Objects/longobject.c	4864	4873	long_mod	long_mod(PyObject *a, PyObject *b)	todo		review: longMod is l_mod, and BinaryMethodsExact pins % for b != 0 and the ZeroDivisionError for b == 0, but only on two ints: the NotImplemented branch of CHECK_BINOP is unstated.
-Objects/longobject.c	4876	4885	long_divmod	long_divmod(PyObject *a, PyObject *b)	todo		review: longDivmod is l_divmod; BinaryMethodsExact pins the floor pair for b != 0 on two ints, but states neither divmod(a, 0)'s ZeroDivisionError nor the NotImplemented branch.
+Objects/longobject.c	4864	4873	long_mod	long_mod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
+Objects/longobject.c	4876	4885	long_divmod	long_divmod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4909	4965	long_invmod	long_invmod(PyLongObject *a, PyLongObject *n)	modelled	mathint-pow-neg-exp-inverse	
 Objects/longobject.c	4970	5248	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	todo		review: The row's only entry, mathint-pow-neg-exp-inverse, uses MathInt.powMod, which replaces the three exponentiation paths (:5117-5225) by the specification modPow, and states only negative exponents with a modulus; positive exponents, the float hand-off for a negative exponent with no modulus (:5006-5014), and the NotImplemented branches are not stated. The row's own note says it was withdrawn, yet its status is still modelled.
 Objects/longobject.c	5251	5266	long_invert	long_invert(PyObject *self)	modelled	longobj-unary	
@@ -117,17 +117,17 @@ Objects/longobject.c	5289	5295	long_abs	long_abs(PyLongObject *v)	modelled	longo
 Objects/longobject.c	5298	5301	long_abs_method	long_abs_method(PyObject *v)	modelled	longobj-unary	
 Objects/longobject.c	5304	5307	long_bool	long_bool(PyObject *v)	modelled	longobj-unary	
 Objects/longobject.c	5314	5397	long_rshift1	long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	modelled	longobj-rshift	
-Objects/longobject.c	5400	5426	long_rshift	long_rshift(PyObject *a, PyObject *b)	todo		review: longRshift mirrors :5400-5426 (negative count ValueError, zero, PyLong_AsInt64 overflow giving 0 or -1), and BinaryMethodsExact pins every int case, but not the NotImplemented branch of CHECK_BINOP.
+Objects/longobject.c	5400	5426	long_rshift	long_rshift(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	5430	5453	_PyLong_Rshift	_PyLong_Rshift(PyObject *a, int64_t shiftby)	modelled	longobj-rshift	
-Objects/longobject.c	5456	5494	long_lshift1	long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	todo		review: longLshift1 mirrors :5456-5494 (the compact -(-m << r), the alloc of oldsize + wordshift (+1), the v_lshift loop and the top digit). LshiftExact assumes digitCount(a) + b/30 + 1 <= MAX_LONG_DIGITS for b < 2**63, which assumes away the reachable OverflowError('too many digits in integer') from long_alloc for b just below 2**63 (for example 1 << (2**63 - 1)): any result there passes.
-Objects/longobject.c	5498	5521	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	todo		review: longLshift mirrors :5498-5521, but BinaryMethodsExact (only two ints, and only when the result can be allocated) states neither the NotImplemented branch nor the OverflowError for a != 0 and b >= 2**63, nor the long_alloc refusal just below 2**63.
-Objects/longobject.c	5525	5544	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	todo		review: longLshiftInt64 correctly drops the 3.15 guard at :5532-5540 (compiled out on 64-bit), but that leaves long_alloc as the only check for a huge shiftby, and LshiftExact assumes it succeeds whenever b < 2**63: the OverflowError for shiftby near INT64_MAX, the case the 3.15 change is about, is not stated.
-Objects/longobject.c	5547	5550	_PyLong_Lshift	_PyLong_Lshift(PyObject *a, int64_t shiftby)	todo		review: The body is long_lshift_int64 on the cast argument, so it inherits that row's gap: for shiftby near INT64_MAX the long_alloc OverflowError is assumed away.
+Objects/longobject.c	5456	5494	long_lshift1	long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	modelled	longobj-lshift	
+Objects/longobject.c	5498	5521	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	modelled	longobj-binary-methods,longobj-lshift	
+Objects/longobject.c	5525	5544	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	modelled	longobj-lshift	
+Objects/longobject.c	5547	5550	_PyLong_Lshift	_PyLong_Lshift(PyObject *a, int64_t shiftby)	modelled	longobj-lshift	
 Objects/longobject.c	5558	5568	v_complement	v_complement(digit *z, digit *a, Py_ssize_t m)	modelled	longobj-v-complement	
 Objects/longobject.c	5573	5696	long_bitwise	long_bitwise(PyLongObject *a, char op, /* '&', '|', '^' */ PyLongObject *b)	modelled	longobj-bitwise	
-Objects/longobject.c	5699	5708	long_and	long_and(PyObject *a, PyObject *b)	todo		review: longBit .and mirrors :5699-5708, with the compact path on the int64 bit pattern, and BinaryMethodsExact pins every bit for two ints, but the NotImplemented branch of CHECK_BINOP is unstated.
-Objects/longobject.c	5711	5720	long_xor	long_xor(PyObject *a, PyObject *b)	todo		review: As long_and: the compact and long_bitwise paths are pinned bit by bit, but the CHECK_BINOP NotImplemented branch is not.
-Objects/longobject.c	5723	5732	long_or	long_or(PyObject *a, PyObject *b)	todo		review: As long_and: the compact and long_bitwise paths are pinned bit by bit, but the CHECK_BINOP NotImplemented branch is not.
+Objects/longobject.c	5699	5708	long_and	long_and(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
+Objects/longobject.c	5711	5720	long_xor	long_xor(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
+Objects/longobject.c	5723	5732	long_or	long_or(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	5735	5743	long_long	long_long(PyObject *v)	todo		
 Objects/longobject.c	5746	5951	_PyLong_GCD	_PyLong_GCD(PyObject *aarg, PyObject *barg)	todo		review: pyLongGCD mirrors the two-digit shortcut, the abs and swap, size_b == 0, the Lehmer inner loop with every int64_t intermediate checked, and the k == 0 Euclidean step, and GcdGeneral pins gcd for all ints. But lehmerNew (MathInt/Model.lean:326) replaces the digit loop at :5876-5898 by the value (A*a - B*b) mod 2**(30*size_a): the signed stwodigits carries c_carry and d_carry, their arithmetic right shifts and any int64_t overflow there are not modelled, which is the kind of check the inner loop gets.
 Objects/longobject.c	5954	5961	long_float	long_float(PyObject *v)	todo		
@@ -137,15 +137,15 @@ Objects/longobject.c	6066	6070	int___getnewargs___impl	int___getnewargs___impl(P
 Objects/longobject.c	6073	6076	long_get0	long_get0(PyObject *Py_UNUSED(self), void *Py_UNUSED(context))	todo		
 Objects/longobject.c	6079	6082	long_get1	long_get1(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6094	6110	int___format___impl	int___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=b4929dee9ae18689 input=d5e1254a47e8d1dc]*/	todo		
-Objects/longobject.c	6118	6193	_PyLong_DivmodNear	_PyLong_DivmodNear(PyObject *a, PyObject *b)	todo		review: divmodNear (MathInt/IntOps.lean:281) follows the fix-up of :6146-6185, but it is an Int-level model without the non-int TypeError (:6140-6144) or long_divrem's ZeroDivisionError (tdiv by 0 silently gives (0, a)). RoundIntHalfEven exercises it only for b = 10**k > 0, so negative divisors, which datetime passes, are not stated; divmodNear_spec covers b > 0 but is not a registry prop.
-Objects/longobject.c	6207	6265	int___round___impl	int___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=954fda6b18875998 input=30c2aec788263144]*/	todo		review: roundInt takes ndigits as Option Int, so _PyNumber_Index(o_ndigits) (:6227-6229), with its TypeError for a non-integer and an arbitrary raising __index__, is not modelled; AGENTS.md requires that failure path. RoundIntHalfEven otherwise pins the nearest multiple of 10**-d with ties to even, and x for d >= 0 or None.
+Objects/longobject.c	6118	6193	_PyLong_DivmodNear	_PyLong_DivmodNear(PyObject *a, PyObject *b)	modelled	longobj-divmod-near	
+Objects/longobject.c	6207	6265	int___round___impl	int___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=954fda6b18875998 input=30c2aec788263144]*/	modelled	longobj-int-round,mathint-round-half-even	
 Objects/longobject.c	6274	6281	int___sizeof___impl	int___sizeof___impl(PyObject *self) /*[clinic end generated code: output=3303f008eaa6a0a5 input=9b51620c76fc4507]*/	todo		
 Objects/longobject.c	6295	6302	int_bit_length_impl	int_bit_length_impl(PyObject *self) /*[clinic end generated code: output=fc1977c9353d6a59 input=e4eb7a587e849a32]*/	modelled	longobj-num-bits	
 Objects/longobject.c	6305	6311	popcount_digit	popcount_digit(digit d)	modelled	longobj-bit-count	
 Objects/longobject.c	6328	6343	int_bit_count_impl	int_bit_count_impl(PyObject *self) /*[clinic end generated code: output=2e571970daf1e5c3 input=f2510a306761db15]*/	modelled	longobj-bit-count	
 Objects/longobject.c	6361	6369	int_as_integer_ratio_impl	int_as_integer_ratio_impl(PyObject *self) /*[clinic end generated code: output=e60803ae1cc8621a input=384ff1766634bec2]*/	todo		changed-in-3.15:
 Objects/longobject.c	6395	6425	int_to_bytes_impl	int_to_bytes_impl(PyObject *self, Py_ssize_t length, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=89c801df114050a3 input=c74a93c07b2f6526]*/	modelled	mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-to-bytes-exact	
-Objects/longobject.c	6452	6504	int_from_bytes_impl	int_from_bytes_impl(PyTypeObject *type, PyObject *bytes_obj, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=efc5d68e31f9314f input=95801e50b942e164]*/	todo		review: fromBytesImpl mirrors :6459-6503, but the row's entries (from-bytes-value, bytes-roundtrip, bytes-arg-errors) use only fromBytes, the exact-bytes route with ctor = ok, so the buffer route, the PyObject_Bytes fallback and their failures, and the subclass constructor call at :6499-6501 are not stated. mathint-from-bytes-dispatch states them and should be added to this row.
+Objects/longobject.c	6452	6504	int_from_bytes_impl	int_from_bytes_impl(PyTypeObject *type, PyObject *bytes_obj, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=efc5d68e31f9314f input=95801e50b942e164]*/	modelled	mathint-from-bytes-value,mathint-bytes-roundtrip,mathint-bytes-arg-errors,mathint-from-bytes-dispatch	
 Objects/longobject.c	6507	6510	long_long_meth	long_long_meth(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6513	6516	long_long_getter	long_long_getter(PyObject *self, void *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6526	6530	int_is_integer_impl	int_is_integer_impl(PyObject *self) /*[clinic end generated code: output=90f8e794ce5430ef input=aacf01a2c81c0244]*/	todo		
@@ -166,6 +166,6 @@ Objects/longobject.c	6861	6864	PyLong_AsUInt64	int PyLong_AsUInt64(PyObject *obj
 Objects/longobject.c	6876	6879	PyLong_GetNativeLayout	PyLong_GetNativeLayout(void)	todo		
 Objects/longobject.c	6883	6922	PyLong_Export	PyLong_Export(PyObject *obj, PyLongExport *export_long)	todo		
 Objects/longobject.c	6926	6933	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	excluded		no-behaviour: drops the reference held by the export; no value is produced
-Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	todo		review: longWriter models Create and Finish together, but ExportRoundTrip feeds it only the non-empty digit lists PyLong_Export produces, so the 'ndigits must be positive' ValueError (:6941-6944) is not in the prop; WriterRejectsEmpty proves it but is not a registry entry.
+Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	modelled	longobj-writer,longobj-export-writer	
 Objects/longobject.c	6965	6974	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	excluded		no-behaviour: frees an unfinished writer; no value is produced
-Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	todo		review: longWriter normalizes the digits and clears the sign of zero, as maybe_small_long(long_normalize(obj)) does (:7006), but ExportRoundTrip only passes already-normalized digits, so a Finish that skipped normalization (leading zero digits, or negative zero) passes; the C API docs say Finish normalizes the digits.
+Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	modelled	longobj-writer,longobj-export-writer	
