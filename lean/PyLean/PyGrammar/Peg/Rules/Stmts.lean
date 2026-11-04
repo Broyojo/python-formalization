@@ -226,4 +226,136 @@ theorem raiseStmt_proven : RaiseStmt := by
       Bool.or_false, mkAt, tokLoc, locArgs]
     simp [mkAst, nonNull]
 
+/-- `raise_stmt` in the second pass (`Grammar/python.gram:188-192`): when the first alternative
+fails (no `expression` after `raise`), `invalid_raise_stmt` runs before the plain alternatives, and
+if it raises, `raise_stmt` fails with that error and no later alternative runs. -/
+def RaiseStmtInvalid : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (q.tokenAt p.mark).type = 632 → ∀ (s2 s3 : PS),
+  callRule (f + 2) 109 { q with mark := p.mark + 1 } = (.null, s2) → s2.errorIndicator = false →
+  s2.callInvalidRules = true →
+  callRule (f + 2) 218 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = true →
+  callRule (f + 8) 15 p = (.null, { s3 with mark := p.mark }.leave)
+
+theorem raiseStmtInvalid_proven : RaiseStmtInvalid := by
+  intro f p q h ht s2 s3 h1 h1e h1i h2 h2e
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 15 = r15 from rfl, r15]
+  have e1 : runCall (f + 4) (.tok 632) q =
+      (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+    rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+  rw [alts_fail (by rfl) he (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call_null (by rw [call_rule, h1])]),
+    alts_fail (by simp [h1i]) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h1e)
+      (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+    alts_err (by rfl) (show ({ s3 with mark := p.mark } : PS).errorIndicator = true from h2e)]
+  rfl
+
+/-- `invalid_raise_stmt` (`Grammar/python.gram:1321-1325`), new in 3.15, run in the second pass:
+```
+    | a='raise' b='from' {
+        RAISE_SYNTAX_ERROR_KNOWN_RANGE(a, b, "did you forget an expression between 'raise' and 'from'?") }
+    | 'raise' expression a='from' {
+        RAISE_SYNTAX_ERROR_KNOWN_LOCATION(a, "did you forget an expression after 'from'?") }
+```
+`raise from` raises the first message over the range from `raise` to `from`; `raise a from` (an
+`expression` between) raises the second at the `from` token. Both end the rule with `NULL` and
+`error_indicator` set. At any token but `raise`, `NULL` and no error. -/
+def InvalidRaiseStmt : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  let t := q.tokenAt p.mark
+  let s1 := { q with mark := p.mark + 1 }
+  (t.type ≠ 632 → callRule (f + 8) 218 p = (.null, q.leave)) ∧
+  (t.type = 632 → ∀ (tf : Token) (s2 : PS),
+    expectToken 650 s1 = (.tok tf, s2) → s2.errorIndicator = false →
+    callRule (f + 8) 218 p =
+      (.null, { (raiseErrorKnownLocation "SyntaxError" t.lineno t.colOffset tf.endLineno
+          tf.endColOffset "did you forget an expression between 'raise' and 'from'?" s2).2 with
+        errorIndicator := true }.leave)) ∧
+  (t.type = 632 → ∀ (a : Ast) (tf : Token) (s2 s3 s4 : PS),
+    expectToken 650 s1 = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 1) 109 { s2 with mark := p.mark + 1 } = (a, s3) → a ≠ .null →
+    expectToken 650 s3 = (.tok tf, s4) → s4.errorIndicator = false →
+    callRule (f + 8) 218 p =
+      (.null, { (raiseErrorKnownLocation "SyntaxError" tf.lineno tf.colOffset tf.endLineno
+          tf.endColOffset "did you forget an expression after 'from'?" s4).2 with
+        errorIndicator := true }.leave))
+
+theorem invalidRaiseStmt_proven : InvalidRaiseStmt := by
+  intro f p q h
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  rw [callRule_plain rfl rfl rfl rfl rfl h.ei h.level]
+  simp only [show ruleOf 218 = r218 from rfl, r218]
+  refine ⟨fun ht => ?_, fun ht tf s2 h2 h2e => ?_, fun ht a tf s2 s3 s4 h2 h2e h3 ha h4 h4e => ?_⟩
+  · have e1 : ∀ g, runCall (g + 1) (.tok 632) p.enter = (.null, q) := fun g => by
+      rw [call_tok, expect_entered h, ite_f ht]
+    have e2 : ∀ g, runCall (g + 1) (.tok 632) { q with mark := p.mark } = (.null, q) := fun g => by
+      rw [hq, call_tok, expectToken_at _ _ hlt', hm, ite_f ht]
+    rw [alts_fail (by rfl) he' (items_call_null (e1 _)),
+      alts_fail (by rfl) (show ({ q with mark := p.mark } : PS).errorIndicator = false from he)
+        (items_call_null (e2 _)), hq, alts_nil]
+    rfl
+  · have e1 : runCall (f + 4) (.tok 632) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    rw [alts_ok (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call (by rw [call_tok, h2]) (by simp), items_nil]),
+      altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper, raiseRange,
+      locOf, tokLoc]
+    have hmsg : msgOf [.str ("did you forget an expression between 'raise' and 'from'?".toList.map
+        Char.toNat)] = "did you forget an expression between 'raise' and 'from'?" := by
+      decide +kernel
+    simp only [List.drop_succ_cons, List.drop_zero]
+    rw [hmsg]
+    simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push,
+      Array.size_empty, List.getD, List.getElem?_cons_zero, List.getElem?_cons_succ]
+    simp only [Nat.zero_add, Nat.reduceEqDiff, ↓reduceIte, Option.getD_some]
+    have herr := raiseEKL_errOcc "SyntaxError"
+      "did you forget an expression between 'raise' and 'from'?" (q.tokenAt p.mark).lineno
+      (q.tokenAt p.mark).colOffset tf.endLineno tf.endColOffset s2 h2e
+    generalize raiseErrorKnownLocation "SyntaxError" (q.tokenAt p.mark).lineno
+      (q.tokenAt p.mark).colOffset tf.endLineno tf.endColOffset
+      "did you forget an expression between 'raise' and 'from'?" s2 = r at herr ⊢
+    obtain ⟨u, s'⟩ := r
+    simp only at herr
+    simp [nonNull, herr]
+  · have e1 : runCall (f + 4) (.tok 632) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    have g2 : TokGrows q s2 := tg_mark' (tg_expect h2) _
+    have e2 : runCall (f + 3) (.tok 632) { s2 with mark := p.mark } =
+        (.tok (q.tokenAt p.mark), { s2 with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_again g2 hlt, ite_t ht]
+    rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call_null (by rw [call_tok, h2])]),
+      alts_ok (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e) (by
+        dsimp only
+        rw [items_call e2 (by simp), items_call (by rw [call_rule, h3]) ha,
+          items_call (by rw [call_tok, h4]) (by simp), items_nil]),
+      altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper, raiseRange,
+      locOf, tokLoc]
+    have hmsg : msgOf [.str ("did you forget an expression after 'from'?".toList.map
+        Char.toNat)] = "did you forget an expression after 'from'?" := by
+      decide +kernel
+    simp only [List.drop_succ_cons, List.drop_zero]
+    rw [hmsg]
+    simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push,
+      Array.size_empty, List.getD, List.getElem?_cons_zero, List.getElem?_cons_succ]
+    simp only [Nat.zero_add, Nat.reduceEqDiff, ↓reduceIte, Option.getD_some]
+    have herr := raiseEKL_errOcc "SyntaxError" "did you forget an expression after 'from'?"
+      tf.lineno tf.colOffset tf.endLineno tf.endColOffset s4 h4e
+    generalize raiseErrorKnownLocation "SyntaxError" tf.lineno tf.colOffset tf.endLineno
+      tf.endColOffset "did you forget an expression after 'from'?" s4 = r at herr ⊢
+    obtain ⟨u, s'⟩ := r
+    simp only at herr
+    simp [nonNull, herr]
+
 end PyLean.PyGrammar.Peg

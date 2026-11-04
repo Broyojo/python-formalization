@@ -1,5 +1,6 @@
 import PyLean.PyGrammar.Peg.TokenProps
 import PyLean.PyGrammar.Peg.Sound
+import PyLean.PyGrammar.Peg.ErrorProps
 
 /-!
 Tools for the rule-by-rule statements of `Peg/Rules/`. Each statement there is about one rule
@@ -184,6 +185,35 @@ theorem callRule_extra {f id : Nat} {p q : PS}
   simp only [hg, h3, Bool.false_eq_true, ↓reduceIte]
   split <;> simp_all
 
+/-- The end of a `(memo)` rule function: `_PyPegen_insert_memo(p, _mark, type, _res)` at `done`,
+reached with a value (`NULL` included) but not on an error return. -/
+def memoDone (m id : Nat) (a : Option Ast × PS) : Ast × PS :=
+  match a.1 with
+  | none => (.null, a.2.leave)
+  | some v => (v, (insertMemo m (1000 + id) v a.2).2.leave)
+
+/-- Entry of a `(memo)` rule function that reads `EXTRA`, at a position with no memo entry for it
+yet: as `callRule_extra`, and the result is memoized. -/
+theorem callRule_memo_extra {f id : Nat} {p q : PS}
+    (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = false)
+    (h3 : (ruleOf id).memo = true) (h4 : (ruleOf id).kind = .normal) (h5 : (ruleOf id).extra = true)
+    (h : Entered p q) (hn : (q.memo.getD p.mark []).find? (fun m => m.1 == 1000 + id) = none) :
+    callRule (f + 2) id p =
+      memoDone p.mark id (runAlts f (ruleOf id).alts false p.mark
+        ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) q) := by
+  obtain ⟨-, -, -, -, hm, hlt, -⟩ := h.facts
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hq : ensureToken q = (true, q) := ensureToken_at q (hm ▸ hlt)
+  have hp : rulePrologue id (ruleOf id) p =
+      (.inr (p.mark, ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset)), q) := by
+    simp only [rulePrologue, addLevel_ok p h.level, he', h3, Bool.false_eq_true, ↓reduceIte,
+      isMemoized, h.read, memoLookup, hm, hn, ruleStart, h5, startLocation, hq, Bool.not_true]
+  simp only [callRule, h1, h2, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+  simp only [ruleBody, hp, h4, retLevel_eq]
+  have hg : (RuleKind.normal == RuleKind.gather) = false := rfl
+  simp only [hg, h3, ↓reduceIte, memoDone]
+  split <;> simp_all
+
 /-- Entry of a plain rule function that does not read `EXTRA`: no token is read on entry. -/
 theorem callRule_plain {f id : Nat} {p : PS}
     (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = false)
@@ -229,6 +259,33 @@ theorem expect_again {ty m : Nat} {q s : PS} (g : TokGrows q s) (hlt : m < q.fil
     g.same m hlt
   rw [e]
 
+/-- The first token read of a rule function without `EXTRA`, after `Entered`. -/
+theorem expect_entered {ty : Nat} {p q : PS} (h : Entered p q) :
+    expectToken ty p.enter =
+      if (q.tokenAt p.mark).type = ty then (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 })
+      else (.null, q) := by
+  obtain ⟨-, -, -, -, hm, hlt, -⟩ := h.facts
+  rw [expectToken_eq, h.read]
+  simp only [↓reduceIte, takeToken, hm, bne_iff_ne, ne_eq]
+  by_cases ht : (q.tokenAt p.mark).type = ty <;> simp [ht]
+
+/-- A raise with no error yet sets one. -/
+theorem raiseEKL_errOcc (cls msg : String) (a b c d : Int) (s : PS) (h : s.errorIndicator = false) :
+    (raiseErrorKnownLocation cls a b c d msg s).2.errOccurred = true := by
+  unfold raiseErrorKnownLocation
+  obtain ⟨e, he, -⟩ := raiseKnownLocation_err s cls msg a (if (b == -5) = true then -5 else b + 1) c
+    (if (d == -5) = true then -5 else d + 1) (by simp [h])
+  simp only [PS.errOccurred, he, Option.isSome_some]
+
+/-- `_PyPegen_number_token` at a token that is not a `NUMBER`. -/
+theorem numberToken_other {q : PS} (hlt : q.mark < q.fill) (ht : (q.tokenAt q.mark).type ≠ 2) :
+    numberToken q = (.null, q) := by
+  have : expectToken TokKind.NUMBER.num q = (.null, q) := by
+    rw [expectToken_at _ _ hlt]
+    exact ite_f ht
+  simp only [numberToken, bind, StateT.bind, this]
+  rfl
+
 /-! ### One step of `runItems` and `runAlts` -/
 
 theorem items_nil (f : Nat) (env : Array Ast) (cut : Bool) (s : PS) :
@@ -271,6 +328,9 @@ theorem items_cut (f : Nat) (rest : List Item) (env : Array Ast) (cut : Bool) (s
   simp [runItems]
 
 theorem call_tok (f t : Nat) (s : PS) : runCall (f + 1) (.tok t) s = expectToken t s := by
+  simp [runCall]
+
+theorem call_number (f : Nat) (s : PS) : runCall (f + 1) .number s = numberToken s := by
   simp [runCall]
 
 theorem call_rule (f r : Nat) (s : PS) : runCall (f + 1) (.rule r) s = callRule f r s := by
