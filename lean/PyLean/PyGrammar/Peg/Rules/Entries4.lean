@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.SpecInv2
+import PyLean.PyGrammar.Peg.Rules.SpecPos
 
 /-! Registry entries for the rules stated as equations (`Peg/Rules/Spec.lean` and the
 `Spec*.lean` files after it). -/
@@ -197,7 +197,65 @@ def specEntries : List Entry := [
   specEntry "pygrammar-rule-invalid-class-argument-pattern" Rows.rule_invalid_class_argument_pattern
     ("invalid_class_argument_pattern: [positional_patterns ','] keyword_patterns ',' " ++
      "positional_patterns gives the positional patterns after the keyword ones.")
-    "Grammar/python.gram:1529-1530" ``InvalidClassArgumentPatternRule ``invalidClassArgumentPatternRule_proven
+    "Grammar/python.gram:1529-1530" ``InvalidClassArgumentPatternRule ``invalidClassArgumentPatternRule_proven,
+  specEntry "pygrammar-rule-statements" Rows.rule_statements
+    "statements: statement+ (_loop1_2, pinned) gives the statements of each statement, flattened in order."
+    "Grammar/python.gram:97" ``StatementsRule ``statementsRule_proven,
+  specEntry "pygrammar-rule-single-compound-stmt" Rows.rule_single_compound_stmt
+    ("single_compound_stmt: compound_stmt gives the one-statement sequence, through " ++
+     "_PyPegen_register_stmts (which, in the second pass, records the statement's start).")
+    "Grammar/python.gram:105-107; Parser/action_helpers.c (_PyPegen_register_stmts)"
+    ``SingleCompoundStmt ``singleCompoundStmt_proven,
+  specEntry "pygrammar-rule-statement-newline" Rows.rule_statement_newline
+    ("statement_newline: single_compound_stmt NEWLINE, then simple_stmts, then a NEWLINE alone (one " ++
+     "Pass spanning it), then ENDMARKER (NULL from _PyPegen_interactive_exit), in that order.")
+    "Grammar/python.gram:109-113" ``StatementNewline ``statementNewline_proven,
+  specEntry "pygrammar-rule-simple-stmts" Rows.rule_simple_stmts
+    ("simple_stmts: simple_stmt not followed by ';' then NEWLINE gives the one-statement sequence; " ++
+     "otherwise ';'.simple_stmt+ [';'] NEWLINE gives the gathered statements.")
+    "Grammar/python.gram:115-117" ``SimpleStmts ``simpleStmts_proven
+    " The ';' gather _gather_4 is not restated (GatherSep is for ',').",
+  specEntry "pygrammar-rule-annotated-rhs" Rows.rule_annotated_rhs
+    "annotated_rhs: yield_expr, then star_expressions, each from the start mark."
+    "Grammar/python.gram:168" ``AnnotatedRhs ``annotatedRhs_proven,
+  specEntry "pygrammar-rule-type-alias" Rows.rule_type_alias
+    ("type_alias: \"type\" NAME [type_params] '=' expression gives TypeAlias(name in Store " ++
+     "context, params, value) with EXTRA; CHECK on the context, and below feature version 12 " ++
+     "\"Type statement is only supported in Python 3.12 and greater\" with error_indicator set.")
+    "Grammar/python.gram:680-683" ``TypeAlias ``typeAlias_proven,
+  specEntry "pygrammar-rule-star-targets-list-seq" Rows.rule_star_targets_list_seq
+    "star_targets_list_seq: ','.star_target+ [','] gives the gathered targets."
+    "Grammar/python.gram:1123" ``StarTargetsListSeqRule ``starTargetsListSeqRule_proven
+    " Gather99 pins the gather.",
+  specEntry "pygrammar-rule-star-targets-tuple-seq" Rows.rule_star_targets_tuple_seq
+    ("star_targets_tuple_seq: star_target (',' star_target)+ [','] gives all the targets; then " ++
+     "star_target ',' the one-target sequence.")
+    "Grammar/python.gram:1125-1127" ``StarTargetsTupleSeqRule ``starTargetsTupleSeqRule_proven,
+  specEntry "pygrammar-rule-star-atom" Rows.rule_star_atom
+    ("star_atom: NAME in Store context; '(' target_with_star_atom ')' in Store context; '(' " ++
+     "[star_targets_tuple_seq] ')' Tuple(Store); '[' [star_targets_list_seq] ']' List(Store), with EXTRA.")
+    "Grammar/python.gram:1139-1143" ``StarAtom ``starAtom_proven,
+  specEntry "pygrammar-rule-single-subscript-attribute-target" Rows.rule_single_subscript_attribute_target
+    ("single_subscript_attribute_target: t_primary '.' NAME and t_primary '[' slices ']', each not " ++
+     "followed by t_lookahead, give Attribute and Subscript in Store context with EXTRA.")
+    "Grammar/python.gram:1150-1152" ``SingleSubscriptAttributeTarget ``singleSubscriptAttributeTarget_proven,
+  specEntry "pygrammar-rule-del-t-atom" Rows.rule_del_t_atom
+    "del_t_atom: star_atom's four alternatives with del_target/del_targets and Del context."
+    "Grammar/python.gram:1178-1182" ``DelTAtom ``delTAtom_proven,
+  specEntry "pygrammar-rule-type-expressions" Rows.rule_type_expressions
+    ("type_expressions: the seven alternatives in order, the '*' and '**' expressions appended " ++
+     "to the gathered plain ones.")
+    "Grammar/python.gram:1188-1203" ``TypeExpressionsRule ``typeExpressionsRule_proven
+    " Gather105 pins the gather.",
+  specEntry "pygrammar-rule-func-type-comment" Rows.rule_func_type_comment
+    ("func_type_comment: NEWLINE TYPE_COMMENT followed by NEWLINE INDENT gives the comment; then, " ++
+     "in the second pass only, invalid_double_type_comments; then TYPE_COMMENT.")
+    "Grammar/python.gram:1205-1208" ``FuncTypeCommentRule ``funcTypeCommentRule_proven,
+  specEntry "pygrammar-rule-expression-without-invalid" Rows.rule_expression_without_invalid
+    ("expression_without_invalid: with call_invalid_rules off (restored after), disjunction 'if' " ++
+     "disjunction 'else' expression gives IfExp(test, body, orelse) with EXTRA; then disjunction; " ++
+     "then lambdef.")
+    "Grammar/python.gram:1242-1245" ``ExpressionWithoutInvalid ``expressionWithoutInvalid_proven
 ]
 
 end PyLean.PyGrammar.Peg

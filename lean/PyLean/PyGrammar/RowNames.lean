@@ -169,6 +169,9 @@ def peg_tokenizer_error : List String := [
 def peg_warn_lazy : List String := [
   "_warn_relative_import_of_lazy"]
 
+def rule_annotated_rhs : List String := [
+  "rule:annotated_rhs"]
+
 def rule_annotation_default : List String := [
   "rule:annotation", "rule:star_annotation", "rule:default"]
 
@@ -280,6 +283,9 @@ def rule_del_stmt_invalid : List String := [
 def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
 
+def rule_del_t_atom : List String := [
+  "rule:del_t_atom"]
+
 def rule_del_target : List String := [
   "rule:del_target"]
 
@@ -334,6 +340,9 @@ def rule_except_star_block : List String := [
 def rule_expression : List String := [
   "rule:expression"]
 
+def rule_expression_without_invalid : List String := [
+  "rule:expression_without_invalid"]
+
 def rule_expressions : List String := [
   "rule:expressions"]
 
@@ -357,6 +366,9 @@ def rule_for_stmt : List String := [
 
 def rule_func_type : List String := [
   "rule:func_type"]
+
+def rule_func_type_comment : List String := [
+  "rule:func_type_comment"]
 
 def rule_function_def : List String := [
   "rule:function_def"]
@@ -775,6 +787,15 @@ def rule_simple_stmt : List String := [
 def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
+def rule_simple_stmts : List String := [
+  "rule:simple_stmts"]
+
+def rule_single_compound_stmt : List String := [
+  "rule:single_compound_stmt"]
+
+def rule_single_subscript_attribute_target : List String := [
+  "rule:single_subscript_attribute_target"]
+
 def rule_single_target : List String := [
   "rule:single_target"]
 
@@ -789,6 +810,9 @@ def rule_slice : List String := [
 
 def rule_slices : List String := [
   "rule:slices"]
+
+def rule_star_atom : List String := [
+  "rule:star_atom"]
 
 def rule_star_etc : List String := [
   "rule:star_etc"]
@@ -820,11 +844,23 @@ def rule_star_target : List String := [
 def rule_star_targets : List String := [
   "rule:star_targets"]
 
+def rule_star_targets_list_seq : List String := [
+  "rule:star_targets_list_seq"]
+
+def rule_star_targets_tuple_seq : List String := [
+  "rule:star_targets_tuple_seq"]
+
 def rule_starred_expression : List String := [
   "rule:starred_expression"]
 
 def rule_statement : List String := [
   "rule:statement"]
+
+def rule_statement_newline : List String := [
+  "rule:statement_newline"]
+
+def rule_statements : List String := [
+  "rule:statements"]
 
 def rule_subject_expr : List String := [
   "rule:subject_expr"]
@@ -852,6 +888,12 @@ def rule_try_stmt : List String := [
 
 def rule_tuple : List String := [
   "rule:tuple"]
+
+def rule_type_alias : List String := [
+  "rule:type_alias"]
+
+def rule_type_expressions : List String := [
+  "rule:type_expressions"]
 
 def rule_type_param : List String := [
   "rule:type_param"]

@@ -506,6 +506,31 @@ theorem altResult_var {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {
   unfold oVar
   exact altResult_pure h1 (fun _ => rfl)
 
+theorem altResult_p {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {act : AE} {v : Array Ast → Ast} (h1 : a.action = some act) (h : ∀ ex, evalA env ex act s = (v env, s)) :
+    altResult a g env st s = oPure v env st s := by
+  unfold oPure
+  exact altResult_pure h1 h
+
+theorem altResult_x {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {act : AE} {v : Array Ast → Loc → Ast} (h1 : a.action = some act) (hx : a.extra = true)
+    (h : ∀ (el ec : Int), evalA env ⟨st.1, st.2, el, ec⟩ act s = (v env ⟨st.1, st.2, el, ec⟩, s)) :
+    altResult a g env st s = oPureX v env st s := by
+  unfold oPureX
+  exact altResult_pureX h1 hx h
+
+/-- An action that computes a value and a state: `emit_action`'s check on what it returned. -/
+theorem altResult_pure2 {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s s' : PS}
+    {act : AE} {v : Ast} (h1 : a.action = some act) (h : ∀ ex, evalA env ex act s = (v, s')) :
+    altResult a g env st s = pureRes v s' := by
+  cases hx : a.extra
+  · rw [altResult_plain h1 hx]
+    simp only [h]
+    rfl
+  · rw [altResult_extra h1 hx]
+    simp only [h]
+    rfl
+
 theorem altResult_none1' {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     (h1 : a.action = none) (h2 : a.nvars = 1) : altResult a g env st s = oVar0 env st s := by
   rw [altResult_none1 h1 h2]
@@ -619,6 +644,8 @@ macro "spec_alts" : tactic => `(tactic| (
     | (intro _ _ _; exact altResult_target rfl)
     | (intro _ _ _; exact altResult_dummy rfl (by decide))
     | (intro _ _ _; exact altResult_var rfl)
+    | (intro _ _ _; exact altResult_p rfl (fun _ => rfl))
+    | (intro _ _ _; exact altResult_x rfl rfl (fun _ _ => rfl))
     | skip))
 
 /-! ### Rules without `EXTRA` -/
@@ -642,5 +669,50 @@ macro "plain_spec" : tactic => `(tactic| (
   rw [callRule_plain rfl rfl rfl rfl rfl he hl]
   refine congrArg finish (runAlts_spec f _ _ ?_ _ _ _)
   spec_alts))
+
+/-! ### Rules with `EXTRA` -/
+
+/-- A rule function with `EXTRA`, not `(memo)`, not left-recursive: from an entry state where the
+token under the mark is read into `q`, the result of its alternatives `xs` from `q`, with the
+start location of that token. -/
+def ExtraSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  callRule (f + 2) id p =
+    finish (specAlts f xs p.mark ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) q)
+
+/-- Prove an `ExtraSpec`. -/
+macro "extra_spec" : tactic => `(tactic| (
+  intro f p q h
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  refine congrArg finish (runAlts_spec f _ _ ?_ _ _ _)
+  spec_alts))
+
+/-- A `_without_invalid` rule function with `EXTRA` (`callRule` turns `call_invalid_rules` off
+around it and puts it back): from an entry state with the flag off and the token under the mark
+read into `q`, the result of its alternatives, the flag restored. -/
+def NoInvExtraSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p q : PS),
+  Entered { p with callInvalidRules := false } q →
+  callRule (f + 2) id p =
+    let a := finish (specAlts f xs p.mark ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) q)
+    (a.1, { a.2 with callInvalidRules := p.callInvalidRules })
+
+theorem callRule_noinv_extra {f id : Nat} {p q : PS}
+    (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = true)
+    (h3 : (ruleOf id).memo = false) (h4 : (ruleOf id).kind = .normal) (h5 : (ruleOf id).extra = true)
+    (h : Entered { p with callInvalidRules := false } q) :
+    callRule (f + 2) id p =
+      let a := runAlts f (ruleOf id).alts false p.mark
+        ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) q
+      (a.1.getD .null, { a.2.leave with callInvalidRules := p.callInvalidRules }) := by
+  have he' : ({ p with callInvalidRules := false } : PS).enter.errorIndicator = false := h.ei
+  have hp : rulePrologue id (ruleOf id) { p with callInvalidRules := false } =
+      (.inr (p.mark, ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset)), q) := by
+    simp only [rulePrologue, addLevel_ok _ h.level, he', h3, Bool.false_eq_true, ↓reduceIte,
+      ruleStart, h5, startLocation, h.read, Bool.not_true]
+    rfl
+  simp only [callRule, h1, h2, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+  simp only [ruleBody, hp, h4, retLevel_eq]
+  have hg : (RuleKind.normal == RuleKind.gather) = false := rfl
+  simp only [hg, h3, Bool.false_eq_true, ↓reduceIte]
+  split <;> simp_all [PS.leave]
 
 end PyLean.PyGrammar.Peg
