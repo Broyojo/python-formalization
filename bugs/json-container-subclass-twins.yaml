@@ -19,7 +19,10 @@ summary: |
   iterator's error in C and the item's error (with a note) in Python.
   These are known and were reported before; recorded here because the Lean model now covers the
   non-exact branches (EncFull.lean: seqSub, mapSub) and refutes the twin agreement with subclasses
-  (json-dumps-twins-subclass), the proven agreement being for exact containers (json-dumps-twins).
+  twice: json-dumps-twins-subclass (the list subclass L) and json-dumps-twins-dict-subclass (DF,
+  which overrides only __len__: C tests PyDict_GET_SIZE and iterates PyMapping_Items through
+  _encoder_iterate_mapping_lock_held), the proven agreement being for exact containers
+  (json-dumps-twins).
 likelihood: |
   Needs a container subclass whose length, truth value, iteration or items() disagree with its
   stored contents (lazy sequences, ORM result sets, custom mappings). Uncommon but real (gh-71800
@@ -64,8 +67,8 @@ promised_by: |
   C/Python twin agreement; JSONEncoder docs: list, tuple and dict (and their subclasses, by
   isinstance in encoder.py) encode as arrays and objects.
 cause: |
-  Modules/_json.c:1922-1928 (`PySequence_Fast` then its size), :1806 (`PyDict_GET_SIZE`),
-  :1838-1852 (`PyMapping_Items`, Objects/abstract.c:2433-2481), :1751-1755 (the 2-tuple check) vs
+  Modules/_json.c:1923-1929 (`PySequence_Fast` then its size), :1806 (`PyDict_GET_SIZE`),
+  :1839-1851 (`PyMapping_Items`, Objects/abstract.c:2433-2481), :1751-1755 (the 2-tuple check) vs
   Lib/json/encoder.py:270-292 (`if not lst`, `buf = '['` yielded with the first item, `enumerate`),
   :329-347 (`if not dct`, `dct.items()`), :351 (`for key, value in items` unpacking).
 possible_fix: |
@@ -81,9 +84,10 @@ duplicates:
     - {number: 158732, state: closed, relation: "duplicate (dict subclass with false truthiness, iterencode)", reason: completed}
     - {number: 59091, state: open, relation: "related (json C vs pure-python implementation difference for dict subclasses)", reason: open}
     - {number: 110941, state: open, relation: "related (C json.dumps accesses dict internals for dict subclasses)", reason: open}
-  queries: ["json dict subclass items", "json list subclass iter", "json subclass encoder C Python", "json frozendict subclass",
+    - {number: 123183, state: closed, relation: "related (a bad JSON subclass can produce invalid JSON; closed as not planned)", reason: not_planned}
+  queries: ["gh issue view 123183", "json dict subclass items", "json list subclass iter", "json subclass encoder C Python", "json frozendict subclass",
             "gh issue view 71800", "gh issue view 158731", "gh issue view 158732", "gh issue view 59091", "gh issue view 110941",
             "bugforge-results/README.md: 158731, 158732 (duplicates)"]
 lean:
-  property: PyLean.JsonMod.DumpsTwinsSub
-  theorem: PyLean.JsonMod.dumpsTwinsSub_refuted
+  properties: [PyLean.JsonMod.DumpsTwinsSub, PyLean.JsonMod.DumpsTwinsDictSub]
+  theorems: [PyLean.JsonMod.dumpsTwinsSub_refuted, PyLean.JsonMod.dumpsTwinsDictSub_refuted]

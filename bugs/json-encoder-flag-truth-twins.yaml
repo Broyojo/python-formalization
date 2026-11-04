@@ -1,0 +1,66 @@
+id: json-encoder-flag-truth-twins
+title: "json: a sort_keys, skipkeys or allow_nan whose __bool__ raises fails every C encode, but only the Python encode that reads it"
+priority: P5
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Lib/json/encoder.py]
+functions: ["C encoder_new", "_make_iterencode", "JSONEncoder.iterencode"]
+summary: |
+  c_make_encoder converts sort_keys, skipkeys and allow_nan with the `p` format unit
+  (Modules/_json.c:1320, PyObject_IsTrue) when the encoder object is made, so a value whose
+  __bool__ raises makes JSONEncoder(sort_keys=X()).encode(v) raise for every v that is not a str.
+  The pure-Python encoder stores the objects and tests them only where they matter: sort_keys and
+  skipkeys inside _iterencode_dict for a non-empty dict (encoder.py:346, :367), allow_nan inside
+  floatstr for a non-finite float (:241). So with X.__bool__ raising ZeroDivisionError:
+  JSONEncoder(sort_keys=X()).encode([1]) raises in C and returns '[1]' in Python; the same for
+  skipkeys=X() and allow_nan=X() on [1], and for sort_keys=X() on 1 and on {}. A dict with items
+  (sort_keys, skipkeys with a bad key) or a NaN (allow_nan) raises in both. ensure_ascii and
+  check_circular are tested in iterencode itself (:217, :221) and raise in both twins.
+  Recorded from a probe only; the Lean model takes the three options as Bool (a stated type
+  invariant of encoder_new) and has no refutation for this.
+likelihood: |
+  Very low: the documented values are bools, and an object whose __bool__ raises is pathological.
+maybe_intended: |
+  Likely tolerated: the documented type is bool; the twins differ only in when a broken __bool__
+  is noticed.
+reproducer: |
+  import json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  class X:
+      def __bool__(self):
+          raise ZeroDivisionError('boom')
+  def run(mod, v, **kw):
+      try:
+          return mod.JSONEncoder(**kw).encode(v)
+      except Exception as e:
+          return type(e).__name__
+  rows = [({'sort_keys': X()}, [1]), ({'sort_keys': X()}, {}), ({'skipkeys': X()}, [1]),
+          ({'allow_nan': X()}, [1]), ({'sort_keys': X()}, {'b': 1, 'a': 2})]
+  out = [(kw, v, run(json, v, **kw), run(pyjson, v, **kw)) for kw, v in rows]
+  for kw, v, a, b in out:
+      print(f'{list(kw)[0]}=X(), {v!r}: C {a!r}  Python {b!r}')
+  if ([a for _, _, a, _ in out] == ['ZeroDivisionError'] * 5
+          and [b for _, _, _, b in out] == ['[1]', '{}', '[1]', '[1]', 'ZeroDivisionError']):
+      print('REPRODUCED json-encoder-flag-truth-twins')
+expected: |
+  The same result from both twins: either both convert the options up front or both when used.
+observed: |
+  python3 3.15.2: REPRODUCED. sort_keys=X() on [1]: ZeroDivisionError (C) vs '[1]' (Python); on
+  {}: ZeroDivisionError vs '{}'; skipkeys=X() and allow_nan=X() on [1]: ZeroDivisionError vs
+  '[1]'; sort_keys=X() on {'b': 1, 'a': 2}: ZeroDivisionError in both.
+promised_by: |
+  C/Python twin agreement.
+cause: |
+  Modules/_json.c:1320-1323 (the `ppp` units for sort_keys, skipkeys, allow_nan in encoder_new) vs
+  Lib/json/encoder.py:241 (`if not allow_nan`), :346 (`if _sort_keys`), :367 (`elif _skipkeys`).
+possible_fix: |
+  None needed; JSONEncoder.__init__ could store bool(sort_keys) etc. so that both twins fail
+  at construction.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["json sort_keys __bool__", "json c_make_encoder sort_keys truth", "json encoder skipkeys bool conversion",
+            "json skipkeys", "json allow_nan bool", "make_encoder", "bugforge-results/README.md: no json option-truth entry"]

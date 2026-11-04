@@ -223,8 +223,9 @@ def cAsciiEscapeChar (c : Nat) : PStr :=
 def cAsciiEscape (s : PStr) : PStr :=
   [34] ++ s.flatMap (fun c => if sChar c then [c] else cAsciiEscapeChar c) ++ [34]
 
-/-- The `d` of one character in `ascii_escape_size`, Modules/_json.c:169-182. The
-`OverflowError` of :183-186 needs more than 2^59 code points and is not modelled. -/
+/-- The `d` of one character in `ascii_escape_size`, Modules/_json.c:170-182. `asciiEscapeSize`
+is the size without its `OverflowError` (:183-186); `cAsciiEscapeSize` (EncSize.lean) is the
+loop with it. -/
 def asciiEscD (c : Nat) : Nat :=
   if sChar c then 1
   else if c = 92 ∨ c = 34 ∨ c = 8 ∨ c = 12 ∨ c = 10 ∨ c = 13 ∨ c = 9 then 2
@@ -531,7 +532,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             .ok ([123] ++ body ++ post ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
     | .other n t =>
-      -- :1617-1665, with `seen` as in `pyEnc`
+      -- :1619-1666, with `seen` as in `pyEnc`
       if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
       else
         match cfg.dflt n t with
