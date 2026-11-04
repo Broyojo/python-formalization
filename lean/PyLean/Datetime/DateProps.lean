@@ -317,7 +317,7 @@ theorem dateCtorInt_proven : DateCtorInt := by
     simp [dateNewPy, stateOf, pyIndex, bind, Except.bind]
   refine ⟨?_, fun hv => by rw [e]; exact checkDate_ok y m d hv⟩
   rw [e]
-  simp [dateNewC, datetimeDateClinicC, datetimeDateImplC, clinicArity, stateOf, parseI_int, h1, h2, h3, bind,
+  simp [dateNewC, datetimeDateClinicC, datetimeDateImplC, checkDateC_eq, clinicArity, stateOf, parseI_int, h1, h2, h3, bind,
     Except.bind, pure, Except.pure]
 
 /-- `IsoCalendarDate`: `year`, `week`, `weekday` are the three items of the tuple,

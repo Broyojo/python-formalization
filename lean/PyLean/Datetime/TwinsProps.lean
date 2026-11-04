@@ -29,19 +29,6 @@ def DaysInMonth : Prop :=
     daysBeforeMonth y 12 + daysInMonth y 12 =
       365 + (if y % 4 = 0 ∧ (y % 100 ≠ 0 ∨ y % 400 = 0) then 1 else 0)
 
-theorem isLeapC_eq (y : Int) (h0 : 0 ≤ y) (h1 : y < 2147483648) : isLeapC y = isLeap y := by
-  unfold isLeapC isLeap
-  have : y % 4294967296 = y := by omega
-  simp only [this]
-
-theorem daysInMonth_C (y m : Int) (h0 : 0 ≤ y) (h1 : y < 2147483648) (hm : 1 ≤ m ∧ m ≤ 12) :
-    daysInMonth y m = daysInMonthC y m := by
-  unfold daysInMonth daysInMonthC
-  rw [isLeapC_eq y h0 h1]
-  rcases (by omega : m = 1 ∨ m = 2 ∨ m = 3 ∨ m = 4 ∨ m = 5 ∨ m = 6 ∨ m = 7 ∨ m = 8 ∨ m = 9 ∨
-    m = 10 ∨ m = 11 ∨ m = 12) with h | h | h | h | h | h | h | h | h | h | h | h <;>
-    subst h <;> cases isLeap y <;> decide
-
 theorem leap_cond {α : Type} (y : Int) (a b : α) :
     (if y % 4 = 0 ∧ (y % 100 ≠ 0 ∨ y % 400 = 0) then a else b) = (if isLeap y then a else b) := by
   have hL := isLeap_iff y
@@ -73,28 +60,6 @@ def CheckDateFields : Prop :=
     ((∃ r, checkDate y m d = .ok r) ↔ ValidDate y m d) ∧
     (∀ r, checkDate y m d = .ok r → r = (y, m, d)) ∧
     (¬ ValidDate y m d → (checkDate y m d).raises "ValueError")
-
-theorem checkDate_eq_C (y m d : Int) :
-    checkDate y m d = (do checkDateArgsC y m d; return (y, m, d)) := by
-  unfold checkDate checkDateArgsC MINYEAR MAXYEAR
-  by_cases h1 : 1 ≤ y ∧ y ≤ 9999
-  · have h1' : ¬(y < 1 ∨ y > 9999) := by omega
-    rw [if_neg (not_not_intro h1), if_neg h1']
-    by_cases h2 : 1 ≤ m ∧ m ≤ 12
-    · have h2' : ¬(m < 1 ∨ m > 12) := by omega
-      rw [if_neg (not_not_intro h2), if_neg h2']
-      have e := daysInMonth_C y m (by omega) (by omega) h2
-      dsimp only
-      rw [e]
-      by_cases h3 : 1 ≤ d ∧ d ≤ daysInMonthC y m
-      · have h3' : ¬(d < 1 ∨ d > daysInMonthC y m) := by omega
-        rw [if_neg (not_not_intro h3), if_neg h3']; rfl
-      · have h3' : (d < 1 ∨ d > daysInMonthC y m) := by omega
-        rw [if_pos h3, if_pos h3']; rfl
-    · have h2' : (m < 1 ∨ m > 12) := by omega
-      rw [if_pos h2, if_pos h2']; rfl
-  · have h1' : (y < 1 ∨ y > 9999) := by omega
-    rw [if_pos h1, if_pos h1']; rfl
 
 theorem checkDate_err (y m d : Int) (h : ¬ ValidDate y m d) : (checkDate y m d).raises "ValueError" := by
   unfold ValidDate at h
@@ -366,5 +331,283 @@ theorem dateNewTwins_refuted : ¬DateNewTwins := by
   intro h
   have := h [.bytes [7, 208, 1, 1], .none_] (by intro n hn; simp at hn)
   exact not_sameOutcome_ok_err _ _ (2000, 1, 1) (by decide) (by decide) this
+
+/-! ### `date - x` -/
+
+/-- `date - x` agrees between the twins for every valid right operand: a timedelta, a date,
+a datetime or another object. -/
+def DateSubTwins : Prop :=
+  ∀ (a : Int × Int × Int) (x : SubOperand), ValidDate a.1 a.2.1 a.2.2 →
+    (∀ y m d, (x = .date y m d ∨ x = .datetime y m d) → ValidDate y m d) →
+    (∀ t, x = .delta t → t.Valid) →
+    SameOutcome (binarySub (dateSubPy a.1 a.2.1 a.2.2 x)) (binarySub (dateSubC a.1 a.2.1 a.2.2 x))
+
+/-- `date(2020, 1, 2) - datetime(2020, 1, 1)`: `isinstance(other, date)` holds for a
+`datetime`, so Python returns `timedelta(days=1)`; C `date_subtract` returns `NotImplemented`
+for any `datetime` operand and the subtraction raises `TypeError`. -/
+theorem dateSubTwins_refuted : ¬DateSubTwins := by
+  intro h
+  have := h (2020, 1, 2) (.datetime 2020 1 1) (by decide)
+    (by intro y m d hx; rcases hx with hx | hx <;> cases hx; decide) (by intro t ht; cases ht)
+  exact not_sameOutcome_ok_err _ _ (.delta ⟨1, 0, 0⟩) (by decide) (by decide) this
+
+theorem sameOutcome_map {α β : Type} (f : α → β) (x y : Py α) (h : SameOutcome x y) :
+    SameOutcome (f <$> x) (f <$> y) := by
+  cases x <;> cases y <;> simp_all [SameOutcome, Functor.map, Except.map]
+
+/-- `date - x` for every right operand other than a `datetime`: the twins agree (the ordinal
+difference for a date, the same date or `OverflowError` for a timedelta), and another
+object is `NotImplemented` in both. -/
+def DateSubOperand : Prop :=
+  ∀ (a : Int × Int × Int) (x : SubOperand), ValidDate a.1 a.2.1 a.2.2 →
+    (∀ y m d, x = .date y m d → ValidDate y m d) → (∀ t, x = .delta t → t.Valid) →
+    (∀ y m d, x ≠ .datetime y m d) →
+    SameOutcome (binarySub (dateSubPy a.1 a.2.1 a.2.2 x)) (binarySub (dateSubC a.1 a.2.1 a.2.2 x)) ∧
+    (x = .other → dateSubPy a.1 a.2.1 a.2.2 x = none ∧ dateSubC a.1 a.2.1 a.2.2 x = none)
+
+theorem dateSubOperand_proven : DateSubOperand := by
+  intro a x ha hd ht hdt
+  obtain ⟨y, m, d⟩ := a
+  simp only at ha ⊢
+  cases x with
+  | delta t =>
+    refine ⟨?_, fun h => by cases h⟩
+    have := (dateSubtract_proven (y, m, d) (y, m, d) t ha ha (ht t rfl)).2.2
+    simp only at this
+    simp only [dateSubPy, dateSubC, binarySub]
+    have e : ∀ r : Py (Int × Int × Int), (do let (y, m, d) ← r; return SubResult.date y m d) =
+        (fun p : Int × Int × Int => SubResult.date p.1 p.2.1 p.2.2) <$> r := by
+      intro r; cases r <;> rfl
+    rw [e, e]
+    exact sameOutcome_map _ _ _ this
+  | date y2 m2 d2 =>
+    refine ⟨?_, fun h => by cases h⟩
+    have := dateSubtract_proven (y, m, d) (y2, m2, d2) ⟨0, 0, 0⟩ ha (hd y2 m2 d2 rfl) (by decide)
+    simp only [dateSubPy, dateSubC, binarySub]
+    rw [this.1, this.2.1]
+    exact sameOutcome_refl _
+  | datetime y2 m2 d2 => exact absurd rfl (hdt y2 m2 d2)
+  | other => exact ⟨sameOutcome_refl _, fun _ => ⟨rfl, rfl⟩⟩
+
+/-! ### `date.fromordinal` out of range -/
+
+/-- `ord_decomp_exists` without the lower bound on `n`: the quotient by 400 years may be
+negative. -/
+theorem ord_decomp_any (n : Int) :
+    ∃ q a b c doy, q = (n - 1) / 146097 ∧ 0 ≤ a ∧ a < 4 ∧ 0 ≤ b ∧ b < 25 ∧ 0 ≤ c ∧ c < 4 ∧ 0 ≤ doy ∧
+      doy ≤ 364 + (if c = 3 ∧ (b ≠ 24 ∨ a = 3) then 1 else 0) ∧
+      n = 146097 * q + 36524 * a + 1461 * b + 365 * c + doy + 1 := by
+  by_cases hA : (n - 1) % 146097 / 36524 = 4
+  · refine ⟨(n - 1) / 146097, 3, 24, 3, 365, rfl, by omega, by omega, by omega, by omega, by omega,
+      by omega, by omega, ?_, by omega⟩
+    simp
+  · by_cases hC : (n - 1) % 146097 % 36524 % 1461 / 365 = 4
+    · refine ⟨(n - 1) / 146097, (n - 1) % 146097 / 36524, (n - 1) % 146097 % 36524 / 1461, 3, 365,
+        rfl, by omega, by omega, by omega, by omega, by omega, by omega, by omega, ?_, by omega⟩
+      have : (n - 1) % 146097 % 36524 / 1461 ≠ 24 := by omega
+      simp [this]
+    · refine ⟨(n - 1) / 146097, (n - 1) % 146097 / 36524, (n - 1) % 146097 % 36524 / 1461,
+        (n - 1) % 146097 % 36524 % 1461 / 365, (n - 1) % 146097 % 36524 % 1461 % 365,
+        rfl, by omega, by omega, by omega, by omega, by omega, by omega, by omega, ?_, by omega⟩
+      split <;> omega
+
+theorem ord2ymd_year_nonpos (n : Int) (h : n ≤ 0) : (ord2ymd n).1 ≤ 0 := by
+  obtain ⟨q, a, b, c, doy, hq, ha0, ha1, hb0, hb1, hc0, hc1, hd0, hd1, rfl⟩ := ord_decomp_any n
+  rw [ord2ymd_decomp q a b c doy ha0 ha1 hb0 hb1 hc0 hc1 hd0 hd1]
+  simp only
+  omega
+
+theorem ord2ymd_year_big (n : Int) (h : n > MAXORDINAL) : (ord2ymd n).1 > MAXYEAR := by
+  obtain ⟨hy, hm1, hm2, hd1, hd2, ho, -⟩ := ord2ymd_spec n (by unfold MAXORDINAL at h; omega)
+  apply Classical.byContradiction
+  intro hc
+  have hv : ValidDate (ord2ymd n).1 (ord2ymd n).2.1 (ord2ymd n).2.2 := by
+    unfold ValidDate MINYEAR MAXYEAR; unfold MAXYEAR at hc; omega
+  have := ymd2ord_range _ _ _ hv
+  omega
+
+/-- `date.fromordinal(n)` outside `1..date.max.toordinal()`: Python raises `ValueError` for
+every such int (the documented refusal); C raises `ValueError` for every such C `int` and
+`OverflowError` beyond it (gh-158778's class); for C ints the twins agree. -/
+def FromordinalRange : Prop :=
+  ∀ n : Int,
+    ((n < 1 ∨ n > MAXORDINAL) → (fromordinalPy n).raises "ValueError") ∧
+    (fitsCInt n → (n < 1 ∨ n > MAXORDINAL) → (fromordinalC n).raises "ValueError") ∧
+    (¬ fitsCInt n → (fromordinalC n).raises "OverflowError") ∧
+    (fitsCInt n → SameOutcome (fromordinalPy n) (fromordinalC n))
+
+theorem fromordinalPy_range (n : Int) (h : n < 1 ∨ n > MAXORDINAL) : (fromordinalPy n).raises "ValueError" := by
+  have e : fromordinalPy n = checkDate (ord2ymd n).1 (ord2ymd n).2.1 (ord2ymd n).2.2 := by
+    unfold fromordinalPy; rfl
+  rw [e]
+  apply checkDate_err
+  intro hv
+  unfold ValidDate MINYEAR MAXYEAR at hv
+  rcases h with h | h
+  · have := ord2ymd_year_nonpos n (by omega); omega
+  · have := ord2ymd_year_big n h; unfold MAXYEAR at this; omega
+
+theorem fromordinalRange_proven : FromordinalRange := by
+  intro n
+  have pc : fitsCInt n → (n < 1 ∨ n > MAXORDINAL) → (fromordinalC n).raises "ValueError" := by
+    intro hf h
+    unfold fromordinalC
+    rw [if_neg (not_not_intro hf)]
+    by_cases h1 : n < 1
+    · rw [if_pos h1]; exact ⟨_, rfl, rfl⟩
+    · rw [if_neg h1]
+      have hn : n > MAXORDINAL := by omega
+      rw [(ord2ymd_spec n (by omega)).2.2.2.2.2.2]
+      simp only [checkDateC_eq]
+      exact fromordinalPy_range n (Or.inr hn)
+  refine ⟨fromordinalPy_range n, pc, fun hf => ?_, fun hf => ?_⟩
+  · unfold fromordinalC; rw [if_pos hf]; exact ⟨_, rfl, rfl⟩
+  · by_cases hr : 1 ≤ n ∧ n ≤ MAXORDINAL
+    · obtain ⟨y, m, d, -, -, e1, e2⟩ := toordinalFromordinal_proven n hr.1 hr.2
+      rw [e1, e2]; exact sameOutcome_refl _
+    · obtain ⟨e1, he1, c1⟩ := fromordinalPy_range n (by omega)
+      obtain ⟨e2, he2, c2⟩ := pc hf (by omega)
+      rw [he1, he2]; simp only [SameOutcome]; rw [c1, c2]
+
+/-! ### `date.fromtimestamp` -/
+
+/-- `date.fromtimestamp(t)` against C `date_fromtimestamp`, for every clock and argument:
+`None` raises `TypeError` in Python whatever the clock (without the check at :1038-1039,
+`time.localtime(None)` would give today), and in C from the timestamp conversion; otherwise
+both take the date fields of `localtime` of the same `time_t` and check them, so they agree;
+and a successful conversion gives the checked `localtime` fields. -/
+def DateFromtimestamp : Prop :=
+  ∀ (k : Clock) (t : Arg),
+    (dateFromtimestampPy k .none_).raises "TypeError" ∧
+    (dateFromtimestampC k .none_).raises "TypeError" ∧
+    SameOutcome (dateFromtimestampPy k t) (dateFromtimestampC k t) ∧
+    (t ≠ .none_ → ∀ y m d, (do let tt ← objectToTimeT k t; k.localtime tt) = .ok (y, m, d) →
+      dateFromtimestampPy k t = checkDate y m d)
+
+theorem dateFromtimestamp_proven : DateFromtimestamp := by
+  intro k t
+  refine ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ?_, fun hn y m d hl => ?_⟩
+  · by_cases hn : t = .none_
+    · subst hn
+      simp [SameOutcome, PyExc.className, dateFromtimestampPy, dateFromtimestampC, objectToTimeT,
+        bind, Except.bind]
+    · have e : timeLocaltime k t = (do let tt ← objectToTimeT k t; k.localtime tt) := by
+        cases t <;> first | exact absurd rfl hn | rfl
+      unfold dateFromtimestampPy dateFromtimestampC
+      rw [if_neg hn, e]
+      cases h1 : objectToTimeT k t with
+      | error e => exact sameOutcome_refl _
+      | ok tt =>
+        simp only [bind, Except.bind]
+        cases h2 : k.localtime tt with
+        | error e => exact sameOutcome_refl _
+        | ok v =>
+          obtain ⟨y, m, d⟩ := v
+          simp only
+          rw [checkDate_eq_C]
+          exact sameOutcome_refl _
+  · have e : timeLocaltime k t = (do let tt ← objectToTimeT k t; k.localtime tt) := by
+      cases t <;> first | exact absurd rfl hn | rfl
+    unfold dateFromtimestampPy
+    rw [if_neg hn, e, hl]
+    rfl
+
+/-! ### `date.__new__` without a `None` second argument -/
+
+theorem pyIndex_parseI (a : Arg) (h : ∀ n, a = .int n → fitsCInt n) :
+    SameOutcome (pyIndex a) (parseI a) := by
+  cases a with
+  | int n => rw [parseI_int n (h n rfl)]; exact sameOutcome_refl _
+  | _ => exact sameOutcome_refl _
+
+theorem pyIndex_none_err {β : Type} (x : Py Int) (f : Int → Py β) :
+    (do let v ← x; let _ ← pyIndex .none_; f v).raises "TypeError" ∨ (∃ e, x = .error e) := by
+  cases x with
+  | error e => exact Or.inr ⟨e, rfl⟩
+  | ok v => exact Or.inl ⟨_, rfl, rfl⟩
+
+/-- `date(*args)` for every positional argument list whose second argument (if any) is not
+`None` and whose ints fit a C `int`: the twins agree, on the pickle state (one bytes or str
+argument), on int fields (the same date or `ValueError`) and on every `TypeError` (a non-int
+field, a missing field, too many arguments). -/
+def DateNewArgs : Prop :=
+  ∀ args : List Arg, (∀ n, Arg.int n ∈ args → fitsCInt n) → (∀ b, args[1]? = some b → b ≠ .none_) →
+    SameOutcome (dateCallPy args) (dateNewC args)
+
+theorem pyIndex_err (a : Arg) (e : PyExc) (h : pyIndex a = .error e) : e.className = "TypeError" := by
+  cases a <;> simp [pyIndex] at h <;> subst h <;> rfl
+
+theorem raises_typeError_three (a b : Arg) :
+    (do let y ← pyIndex a; let m ← pyIndex b; let d ← pyIndex .none_; checkDate y m d).raises "TypeError" := by
+  cases h1 : pyIndex a with
+  | error e => exact ⟨e, by simp [bind, Except.bind], pyIndex_err a e h1⟩
+  | ok y =>
+    cases h2 : pyIndex b with
+    | error e => exact ⟨e, by simp [bind, Except.bind, h2], pyIndex_err b e h2⟩
+    | ok m => exact ⟨.typeError "~object cannot be interpreted as an integer",
+        by simp [bind, Except.bind, h2, pyIndex], rfl⟩
+
+theorem sameOutcome_typeErrors {α : Type} (x y : Py α) (hx : x.raises "TypeError") (hy : y.raises "TypeError") :
+    SameOutcome x y := by
+  obtain ⟨e1, h1, c1⟩ := hx
+  obtain ⟨e2, h2, c2⟩ := hy
+  rw [h1, h2]; simp only [SameOutcome]; rw [c1, c2]
+
+theorem dateNewArgs_proven : DateNewArgs := by
+  intro args hfit hsec
+  match args, hfit, hsec with
+  | [], _, _ =>
+    apply sameOutcome_typeErrors
+    · exact ⟨_, rfl, rfl⟩
+    · exact ⟨_, rfl, rfl⟩
+  | [a], hf, _ =>
+    have hp : dateCallPy [a] = dateNewPy a .none_ .none_ := rfl
+    rw [hp]
+    cases a with
+    | bytes bs =>
+      by_cases hc : bs.length = 4 ∧ 1 ≤ bs.getD 2 0 ∧ bs.getD 2 0 ≤ 12
+      · simp only [dateNewPy, dateNewC, stateOf, hc, true_and, and_self, ↓reduceIte]
+        exact sameOutcome_refl _
+      · apply sameOutcome_typeErrors
+        · simp only [dateNewPy, stateOf, hc, and_false, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+        · simp only [dateNewC, stateOf, hc, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+    | str cs =>
+      by_cases hc : cs.length = 4 ∧ 1 ≤ cs.getD 2 0 ∧ cs.getD 2 0 ≤ 12
+      · simp only [dateNewPy, dateNewC, stateOf, hc, true_and, and_self, ↓reduceIte]
+        exact sameOutcome_refl _
+      · apply sameOutcome_typeErrors
+        · simp only [dateNewPy, stateOf, hc, and_false, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+        · simp only [dateNewC, stateOf, hc, ↓reduceIte]
+          exact ⟨_, rfl, rfl⟩
+    | int n =>
+      apply sameOutcome_typeErrors
+      · exact ⟨_, rfl, rfl⟩
+      · exact ⟨_, rfl, rfl⟩
+    | none_ => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
+    | tz t => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
+    | other => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
+  | [a, b], _, hs =>
+    have hb : b ≠ .none_ := hs b rfl
+    have hp : dateCallPy [a, b] = dateNewPy a b .none_ := rfl
+    rw [hp, dateNewPy_noPickle a b .none_ hb]
+    exact sameOutcome_typeErrors _ _ (raises_typeError_three a b) ⟨_, rfl, rfl⟩
+  | [a, b, c], hf, hs =>
+    have hb : b ≠ .none_ := hs b rfl
+    have hp : dateCallPy [a, b, c] = dateNewPy a b c := rfl
+    have hc : dateNewC [a, b, c] = (do
+        let y ← parseI a; let m ← parseI b; let d ← parseI c; datetimeDateImplC y m d) := rfl
+    rw [hp, dateNewPy_noPickle a b c hb, hc]
+    have f : ∀ x : Arg, x ∈ [a, b, c] → ∀ n, x = .int n → fitsCInt n := by
+      intro x hx n hn; subst hn; exact hf n hx
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI a (f a (by simp))) (fun y => ?_)
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI b (f b (by simp))) (fun m => ?_)
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI c (f c (by simp))) (fun d => ?_)
+    rw [datetimeDateImplC, checkDateC_eq]
+    exact sameOutcome_refl _
+  | a :: b :: c :: d :: rest, _, _ =>
+    exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
 
 end PyLean.Datetime

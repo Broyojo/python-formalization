@@ -18,42 +18,6 @@ open PyLean
 
 /-! ### Calendar and field checks in C -/
 
-/-- C `is_leap`, :425-435: the year is cast to `unsigned int` first. -/
-def isLeapC (year : Int) : Bool :=
-  let ayear := year % 4294967296
-  ayear % 4 == 0 && (ayear % 100 != 0 || ayear % 400 == 0)
-
-/-- C `_days_in_month[]`, :413-416 (index 0 is unused and 0). -/
-def daysInMonthTableC (m : Int) : Int :=
-  [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31].getD m.toNat 0
-
-/-- C `days_in_month`, :439-447 (asserts `1 <= month <= 12`). -/
-def daysInMonthC (year month : Int) : Int :=
-  if month = 2 ∧ isLeapC year then 29 else daysInMonthTableC month
-
-/-- C `check_date_args`, :659-680, on C ints: `0` or `ValueError`. -/
-def checkDateArgsC (year month day : Int) : Py Unit :=
-  if year < MINYEAR ∨ year > MAXYEAR then
-    -- "year must be in %d..%d, not %d" with MINYEAR, MAXYEAR
-    .error (.valueError s!"year must be in 1..9999, not {year}")
-  else if month < 1 ∨ month > 12 then
-    .error (.valueError s!"month must be in 1..12, not {month}")
-  else
-    let dim := daysInMonthC year month
-    if day < 1 ∨ day > dim then
-      .error (.valueError s!"day {day} must be in range 1..{dim} for month {month} in year {year}")
-    else .ok ()
-
-/-- C `check_time_args`, :686-711, on C ints. -/
-def checkTimeArgsC (h m s us fold : Int) : Py Unit :=
-  if h < 0 ∨ h > 23 then .error (.valueError s!"hour must be in 0..23, not {h}")
-  else if m < 0 ∨ m > 59 then .error (.valueError s!"minute must be in 0..59, not {m}")
-  else if s < 0 ∨ s > 59 then .error (.valueError s!"second must be in 0..59, not {s}")
-  else if us < 0 ∨ us > 999999 then
-    .error (.valueError s!"microsecond must be in 0..999999, not {us}")
-  else if fold ≠ 0 ∧ fold ≠ 1 then .error (.valueError s!"fold must be either 0 or 1, not {fold}")
-  else .ok ()
-
 /-- `_check_time_fields(hour, minute, second, microsecond, fold)`, _pydatetime.py:591-606,
 after the four `_index` calls. -/
 def checkTimeFieldsPy (h m s us fold : Int) : Py (Int × Int × Int × Int × Int) := do
