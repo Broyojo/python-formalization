@@ -125,7 +125,7 @@ def scanDiff (a b : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if a.getD i 0 = b.getD i 0 then scanDiff a b i else some i
 
-/-- Lines 3713-3734 of `x_sub`: subtract `b` from `a`, both already arranged. -/
+/-- Lines 3812-3833 of `x_sub`: subtract `b` from `a`, both already arranged. -/
 def xSubGo (neg : Bool) (a b : List Nat) : Py Long := do
   longAlloc a.length
   let (z, _) := xSubLoop a b 0

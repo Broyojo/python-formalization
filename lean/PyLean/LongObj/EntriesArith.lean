@@ -44,7 +44,7 @@ def entriesArith : List Entry := [
   { id := "longobj-k-mul", pyFile := "Objects/longobject.c"
     pyFns := ["k_mul", "k_lopsided_mul", "kmul_split"]
     statement := "k_mul is exact on all digit vectors, including the non-normalized slices of k_lopsided_mul, and every memcpy and v_iadd stays inside ret."
-    source := "comment at longobject.c:4068-4071 and the (*) comment at :4134-4177", status := .proven
+    source := "comment at longobject.c:4068-4071 and the (*) comment at :4233-4276", status := .proven
     prop := ``KMulExact, thm := some ``kMulExact_proven },
   { id := "longobj-mul", pyFile := "Objects/longobject.c"
     pyFns := ["long_mul"]
@@ -75,7 +75,7 @@ def entriesArith : List Entry := [
     statement := "The digit-level l_divmod returns the canonical objects of MathInt.divmod, discharging mathint-divmod-floor's assumption that long_divrem is exact."
     source := "invariant", status := .proven
     prop := ``LDivmodRefines, thm := some ``lDivmodRefines_proven
-    notes := "The _pylong branch still uses MathInt.pylongIntDivmod, which takes _divmod_pos as exact." },
+    notes := "The _pylong branch is pylong_int_divmod (pylongIntDivmodC) with the real _pylong.int_divmod, MathInt.pylongIntDivmod; its failure paths are longobj-pylong-divmod-paths." },
   { id := "longobj-division-floor", pyFile := "Objects/longobject.c"
     pyFns := ["l_mod"]
     statement := "divmod, // and % satisfy q*w + r == v with r taking the sign of w and abs(r) < abs(w), on the digit model."
@@ -88,9 +88,10 @@ def entriesArith : List Entry := [
     prop := ``RshiftExact, thm := some ``rshiftExact_proven },
   { id := "longobj-lshift", pyFile := "Objects/longobject.c"
     pyFns := ["long_lshift1", "long_lshift_int64", "_PyLong_Lshift"]
-    statement := "a << b raises ValueError for b < 0, is 0 for a == 0, raises OverflowError for a != 0 when b does not fit int64_t, and is a * 2**b whenever the result can be allocated."
+    statement := "a << b raises ValueError for b < 0, is 0 for a == 0, raises OverflowError for a != 0 when b does not fit int64_t; below 2**63 it is a * 2**b exactly when long_alloc accepts oldsize + b // 30 (+1 if b % 30), and OverflowError('too many digits in integer') otherwise; long_lshift_int64 and _PyLong_Lshift likewise for every count."
     source := "stdtypes: bitwise operations on integer types", status := .proven
-    prop := ``LshiftExact, thm := some ``lshiftExact_proven },
+    prop := ``LshiftExact, thm := some ``lshiftExact_proven
+    notes := "Smoke-tested on 3.15.2: 1 << (2**63 - 1), 1 << (30 * MAX_LONG_DIGITS - 1) and 2**31 << (30 * (MAX_LONG_DIGITS - 1)) raise OverflowError; 1 << (30 * (MAX_LONG_DIGITS - 1)), where long_alloc accepts the size, raises MemoryError, which is outside the model." },
   { id := "longobj-v-complement", pyFile := "Objects/longobject.c", pyFns := ["v_complement"]
     statement := "On a non-zero vector, v_complement computes 2**(30*m) - val(a) with no carry out."
     source := "comment at longobject.c:5553-5555", status := .proven

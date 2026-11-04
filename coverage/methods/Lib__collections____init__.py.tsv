@@ -25,140 +25,140 @@ Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo
 Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		
 Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		changed-in-3.15:
 Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		changed-in-3.15:
-Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	todo		review: The validation, rename, defaults and compile (NFKC) steps of :387-451 are mirrored well and NamedtupleValidation is a real iff, but no theorem quantifies over the `FieldNames.str` path (:387-388), `__getnewargs__` (:480-482) is not modelled at all, `ntRepr` (:472-474) uses the typename where the source uses `self.__class__.__name__` and has no theorem, `map(str, field_names)` and `tuple(defaults)` are infallible lists, and the `_replace` conjunct pins its message through `pyStrRepr`, which is wrong for a name holding a backslash or both quote kinds (`T._replace(**{'a\\b': 1})`); `fieldList` still carries an `@3.14.7` marker.
-Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	todo		review: The C fast/slow paths and the Python twin are modelled on Int counts over a plain list, so `PyNumber_Add` on any value, a raising `__add__`/`__hash__`/iterator and the partial-update-then-raise path are not expressible, and the fast-path dispatch (type-level `get`/`__setitem__` lookup, :2566-2573) is not modelled, so the twin divergence for an instance attribute `get` is invisible.
-Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	todo		review: Counts are Int and `Src` is an infallible list, so a raising iterable or mapping `.items()`, and non-int counts (documented: floats, Fractions), are out of reach; the row reduces to `update [] src kwds`, which inherits update's gaps.
-Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		review: The body is the constant `return 0`, mirrored as `getD 0` in `cGet`; no theorem is about the hook itself beyond that constant, so it is a hard-coded constant with nothing pinned.
+Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-conversions,coll-namedtuple-defaults,coll-namedtuple-getnewargs,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-repr,coll-namedtuple-source-attribute,coll-namedtuple-validation	
+Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
+Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
+Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
 Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		review: `sum(self.values())` on arbitrary values (float `sum` uses compensated summation, mixed types raise TypeError) is modelled as an Int fold, so the property holds only on the int-only domain the model picks.
-Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	todo		review: Counts are Int and `n` is Int, so the `sorted`/`heapq.nlargest` paths are never run on a non-total order or on uncomparable counts (TypeError, which `__repr__` catches), and it uses the int-only `Accel.nlargest` rather than the generic `nSelect` the heapq review accepted; the citation still reads `@3.14.7:628-645` though the 3.15.2 body is :628-640 with `_nlargest`.
-Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	todo		review: Modelled as an eager list over Int counts, so `repeat(elem, 2.5)` (TypeError), the lazy iterator's RuntimeError when the counter changes size mid-iteration, and any other failure path are not expressible.
+Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common,coll-counter-most-common-neg	
+Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
-Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	todo		review: Counts are Int and the source is an infallible list, so `count + self_get(elem, 0)` on non-commutative or non-numeric values, a raising `.items()`/iterator, and the fast path's `dict.update` (which reads `keys()`/`__getitem__`, not `.items()`) are not distinguished; UpdateFastEqSlow only compares two lists of pairs.
-Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	todo		review: Int counts over an infallible list: `self_get(elem, 0) - count` on arbitrary values and a raising iterator or mapping cannot be expressed, and SubtractUndoesUpdate relies on Int arithmetic that floats do not satisfy.
-Lib/collections/__init__.py	738	740	Counter.copy	copy(self)	todo		review: `counterCopy c = c` is equality on a value structure, so a `copy` that returns `self` passes, and `self.__class__` is dropped.
-Lib/collections/__init__.py	742	743	Counter.__reduce__	__reduce__(self)	todo		review: `counterReduce` returns only `dict(self)` and drops the `self.__class__` component of the tuple, and `counterReduce c = c` is value equality, which `(Counter, (self,))` or any constant class would also satisfy.
-Lib/collections/__init__.py	745	748	Counter.__delitem__	__delitem__(self, elem)	todo		review: `D.del` is already a no-op on an absent key, so the `if elem in self` guard is invisible: plain `dict.__delitem__` modelled the same way passes DelitemTotal, and the unhashable-key TypeError from `elem in self` is not modelled.
-Lib/collections/__init__.py	750	759	Counter.__repr__	__repr__(self)	todo		review: The `except TypeError: d = dict(self)` branch (:756-758) is unreachable with Int counts, so the documented fallback for unorderable values has no model or theorem.
-Lib/collections/__init__.py	799	803	Counter.__eq__	__eq__(self, other)	todo		review: `self[e] == other[e]` is forced to Int equality returning Bool, so a rich `__eq__` returning a non-bool or raising is out of reach, and the `isinstance(other, Counter)` NotImplemented guard (`guarded`) appears in no theorem for this row.
-Lib/collections/__init__.py	805	809	Counter.__ne__	__ne__(self, other)	todo		review: Same Int/Bool restriction as `__eq__`, and the NotImplemented guard is not in any theorem for this row.
-Lib/collections/__init__.py	811	815	Counter.__le__	__le__(self, other)	todo		review: `self[e] <= other[e]` is Int `≤`, so partial orders (floats with NaN, sets as counts) and raising comparisons are not modelled, and the NotImplemented guard has no theorem.
-Lib/collections/__init__.py	817	821	Counter.__lt__	__lt__(self, other)	todo		review: Inherits the Int-only `<=` and `!=`; the NotImplemented guard has no theorem.
-Lib/collections/__init__.py	823	827	Counter.__ge__	__ge__(self, other)	todo		review: `>=` on Int only, no failure path, NotImplemented guard not in a theorem.
-Lib/collections/__init__.py	829	833	Counter.__gt__	__gt__(self, other)	todo		review: Inherits the Int-only `>=` and `!=`; the NotImplemented guard has no theorem.
-Lib/collections/__init__.py	835	852	Counter.__add__	__add__(self, other)	todo		review: `count + other[elem]` and `newcount > 0` are Int operations, so non-int counts (documented for the multiset methods only as a design intent) and raising `__add__`/`__gt__` are not expressible, and the NotImplemented branch has no theorem for this row.
-Lib/collections/__init__.py	854	871	Counter.__sub__	__sub__(self, other)	todo		review: Int-only `count - other[elem]`, `> 0` and `0 - count`; no failure path and no theorem on the NotImplemented branch.
-Lib/collections/__init__.py	873	891	Counter.__or__	__or__(self, other)	todo		review: Int-only `count < other_count` selection, so which operand wins on incomparable or equal-but-distinct values is not modelled; NotImplemented branch has no theorem.
-Lib/collections/__init__.py	893	908	Counter.__and__	__and__(self, other)	todo		review: Int-only `count < other_count` and `> 0`; NotImplemented branch has no theorem.
+Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-fast-slow,coll-counter-update-mapping-kw	
+Lib/collections/__init__.py	711	736	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
+Lib/collections/__init__.py	738	740	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	
+Lib/collections/__init__.py	742	743	Counter.__reduce__	__reduce__(self)	modelled	coll-counter-copy-reduce	
+Lib/collections/__init__.py	745	748	Counter.__delitem__	__delitem__(self, elem)	modelled	coll-counter-delitem	
+Lib/collections/__init__.py	750	759	Counter.__repr__	__repr__(self)	modelled	coll-counter-repr	
+Lib/collections/__init__.py	799	803	Counter.__eq__	__eq__(self, other)	modelled	coll-counter-compare-pointwise,coll-counter-compare-raises	
+Lib/collections/__init__.py	805	809	Counter.__ne__	__ne__(self, other)	modelled	coll-counter-compare-pointwise	
+Lib/collections/__init__.py	811	815	Counter.__le__	__le__(self, other)	modelled	coll-counter-compare-pointwise,coll-counter-compare-raises	
+Lib/collections/__init__.py	817	821	Counter.__lt__	__lt__(self, other)	modelled	coll-counter-compare-pointwise	
+Lib/collections/__init__.py	823	827	Counter.__ge__	__ge__(self, other)	modelled	coll-counter-compare-pointwise,coll-counter-compare-raises	
+Lib/collections/__init__.py	829	833	Counter.__gt__	__gt__(self, other)	modelled	coll-counter-compare-pointwise	
+Lib/collections/__init__.py	835	852	Counter.__add__	__add__(self, other)	modelled	coll-counter-ops-pointwise	
+Lib/collections/__init__.py	854	871	Counter.__sub__	__sub__(self, other)	modelled	coll-counter-ops-pointwise	
+Lib/collections/__init__.py	873	891	Counter.__or__	__or__(self, other)	modelled	coll-counter-ops-pointwise	
+Lib/collections/__init__.py	893	908	Counter.__and__	__and__(self, other)	modelled	coll-counter-ops-pointwise	
 Lib/collections/__init__.py	910	935	Counter.__xor__	__xor__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any object; the model follows the 3.15.2 body on Int counts, and XorPointwise stands for those
-Lib/collections/__init__.py	937	943	Counter.__pos__	__pos__(self)	todo		review: `count > 0` on Int only, so a raising or non-bool `__gt__` and non-int counts are out of reach.
-Lib/collections/__init__.py	945	954	Counter.__neg__	__neg__(self)	todo		review: `count < 0` and `0 - count` on Int only.
-Lib/collections/__init__.py	956	961	Counter._keep_positive	_keep_positive(self)	todo		review: `not count > 0` on Int only, so NaN counts (removed, since `not nan > 0`) and raising comparisons are not modelled.
-Lib/collections/__init__.py	963	974	Counter.__iadd__	__iadd__(self, other)	todo		review: InplaceAgreesBinary only takes a Counter of Int counts; `dunderIadd` models dict and non-mapping operands but no theorem states them, and `self[elem] += count` on non-int values is out of reach.
-Lib/collections/__init__.py	976	987	Counter.__isub__	__isub__(self, other)	todo		review: Same as `__iadd__`: Int counts, Counter operand only in the theorem, the AttributeError of a non-mapping `other.items()` stated nowhere.
-Lib/collections/__init__.py	989	1002	Counter.__ior__	__ior__(self, other)	todo		review: Same as `__iadd__`: Int `other_count > count` only, and the non-Counter operands have no theorem.
-Lib/collections/__init__.py	1004	1017	Counter.__iand__	__iand__(self, other)	todo		review: `dunderIand` models the KeyError of a plain-dict `other[elem]` and the TypeError of a non-mapping, but InplaceAgreesBinary only uses the infallible Counter case on Int counts.
+Lib/collections/__init__.py	937	943	Counter.__pos__	__pos__(self)	modelled	coll-counter-keep-positive,coll-counter-unary	
+Lib/collections/__init__.py	945	954	Counter.__neg__	__neg__(self)	modelled	coll-counter-unary	
+Lib/collections/__init__.py	956	961	Counter._keep_positive	_keep_positive(self)	modelled	coll-counter-keep-positive	
+Lib/collections/__init__.py	963	974	Counter.__iadd__	__iadd__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	976	987	Counter.__isub__	__isub__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	989	1002	Counter.__ior__	__ior__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
+Lib/collections/__init__.py	1004	1017	Counter.__iand__	__iand__(self, other)	modelled	coll-counter-inplace-arith,coll-counter-inplace-operands	
 Lib/collections/__init__.py	1019	1033	Counter.__ixor__	__ixor__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any object; the model follows the 3.15.2 body on Int counts, and XorPointwise stands for those
-Lib/collections/__init__.py	1054	1059	ChainMap.__init__	__init__(self, *maps)	todo		review: For no maps ChainMapChildParents only says `maps ≠ []`, so `[{}, {}]` or `[{'k': v}]` passes; the `[{}]` pin is in coll-chainmap-repr, whose pyFns do not list `__init__`.
+Lib/collections/__init__.py	1054	1059	ChainMap.__init__	__init__(self, *maps)	modelled	coll-chainmap-init	
 Lib/collections/__init__.py	1061	1062	ChainMap.__missing__	__missing__(self, key)	modelled	coll-chainmap-flat-view	
-Lib/collections/__init__.py	1064	1070	ChainMap.__getitem__	__getitem__(self, key)	todo		review: Maps are plain dicts, so `mapping[key]` and `key in mapping` can never disagree: the defaultdict case the source comment at :1067 exists for, and a `mapping[key]` that raises a non-KeyError exception, are not expressible.
+Lib/collections/__init__.py	1064	1070	ChainMap.__getitem__	__getitem__(self, key)	modelled	coll-chainmap-getitem-any	
 Lib/collections/__init__.py	1072	1073	ChainMap.get	get(self, key, default=None)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1075	1076	ChainMap.__len__	__len__(self)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1078	1082	ChainMap.__iter__	__iter__(self)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1084	1088	ChainMap.__contains__	__contains__(self, key)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1090	1091	ChainMap.__bool__	__bool__(self)	modelled	coll-chainmap-flat-view	
-Lib/collections/__init__.py	1094	1095	ChainMap.__repr__	__repr__(self)	todo		review: The `@_recursive_repr()` guard of :1093 is not modelled, so a ChainMap holding itself (`cm.maps.append(cm)` prints `...`) is out of reach, and `rk`/`rv` cannot raise.
-Lib/collections/__init__.py	1098	1100	ChainMap.fromkeys	fromkeys(cls, iterable, value=None, /)	todo		review: The theorem only pins the flat view, so `cls(dict.fromkeys(...), {})` with an extra empty map passes; the iterable is an infallible list.
-Lib/collections/__init__.py	1102	1104	ChainMap.copy	copy(self)	todo		review: `flat r.maps = flat (m :: t)` is value equality, so a `copy` that returns `self` without copying `maps[0]` passes.
+Lib/collections/__init__.py	1094	1095	ChainMap.__repr__	__repr__(self)	modelled	coll-chainmap-repr-guard	
+Lib/collections/__init__.py	1098	1100	ChainMap.fromkeys	fromkeys(cls, iterable, value=None, /)	modelled	coll-chainmap-fromkeys	
+Lib/collections/__init__.py	1102	1104	ChainMap.copy	copy(self)	modelled	coll-chainmap-objects	
 Lib/collections/__init__.py	1108	1117	ChainMap.new_child	new_child(self, m=None, **kwargs)	modelled	coll-chainmap-child-parents	
 Lib/collections/__init__.py	1120	1122	ChainMap.parents	parents(self)	modelled	coll-chainmap-child-parents	
 Lib/collections/__init__.py	1124	1125	ChainMap.__setitem__	__setitem__(self, key, value)	modelled	coll-chainmap-writes-first	
-Lib/collections/__init__.py	1127	1131	ChainMap.__delitem__	__delitem__(self, key)	todo		review: The `KeyError(f'... {key!r}')` message goes through `pyStrRepr`, which neither escapes backslashes nor handles both quote kinds, so the theorem's error is false for a key whose repr holds a backslash (`'atb'`) or both quote kinds.
+Lib/collections/__init__.py	1127	1131	ChainMap.__delitem__	__delitem__(self, key)	modelled	coll-chainmap-writes-first	
 Lib/collections/__init__.py	1133	1138	ChainMap.popitem	popitem(self)	modelled	coll-chainmap-writes-first	
-Lib/collections/__init__.py	1140	1145	ChainMap.pop	pop(self, key, *args)	todo		review: Same `pyStrRepr` message defect as `__delitem__` on the no-default KeyError path, so the theorem states a wrong message for keys whose repr holds a backslash or both quote kinds.
-Lib/collections/__init__.py	1147	1149	ChainMap.clear	clear(self)	todo		review: The only conjunct is `cmClear ⟨m :: t⟩ = .ok ⟨[] :: t⟩` by `rfl`, restating the one-line definition, with no consequence (such as later maps now answering) stated.
-Lib/collections/__init__.py	1151	1153	ChainMap.__ior__	__ior__(self, other)	todo		review: Only the flat view is stated, with no `maps[1:]` clause, so a `|=` that collapses every map into one passes; the conjunct is `rfl`, and `return self` identity and a non-iterable `other` (TypeError) are not modelled.
-Lib/collections/__init__.py	1155	1160	ChainMap.__or__	__or__(self, other)	todo		review: `r.maps[0]` is not pinned (a result whose `maps[0]` is the whole `dict(cm) | other` satisfies both the flat and tail clauses), and the pure model cannot express that `self.copy()` keeps `self.maps[0]` unmutated.
-Lib/collections/__init__.py	1162	1168	ChainMap.__ror__	__ror__(self, other)	modelled	coll-chainmap-union-flat	
-Lib/collections/__init__.py	1178	1183	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	todo		review: `self.update(dict)` takes an infallible list of pairs (no TypeError for a non-iterable, no ValueError for a bad pair), and the theorem restates `udNew` as `D.update (D.update [] src) kw`.
+Lib/collections/__init__.py	1140	1145	ChainMap.pop	pop(self, key, *args)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1147	1149	ChainMap.clear	clear(self)	modelled	coll-chainmap-objects	
+Lib/collections/__init__.py	1151	1153	ChainMap.__ior__	__ior__(self, other)	modelled	coll-chainmap-objects	
+Lib/collections/__init__.py	1155	1160	ChainMap.__or__	__or__(self, other)	modelled	coll-chainmap-objects	
+Lib/collections/__init__.py	1162	1168	ChainMap.__ror__	__ror__(self, other)	modelled	coll-chainmap-ror-p,coll-chainmap-union-flat	
+Lib/collections/__init__.py	1178	1183	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	modelled	coll-userdict-init-p	
 Lib/collections/__init__.py	1185	1186	UserDict.__len__	__len__(self)	modelled	coll-userdict-matches-dict	
-Lib/collections/__init__.py	1188	1193	UserDict.__getitem__	__getitem__(self, key)	todo		review: `__missing__` is a pure total `κ → ν`, so one that raises (the model header wrongly says a raise equals having none; a ValueError propagates) or that mutates `self` is not expressible, and the `__missing__` path itself has no proven theorem, only the refuted pop case.
+Lib/collections/__init__.py	1188	1193	UserDict.__getitem__	__getitem__(self, key)	modelled	coll-userdict-getitem-p,coll-userdict-missing-like-dict	
 Lib/collections/__init__.py	1195	1196	UserDict.__setitem__	__setitem__(self, key, item)	modelled	coll-userdict-set-del	
 Lib/collections/__init__.py	1198	1199	UserDict.__delitem__	__delitem__(self, key)	modelled	coll-userdict-set-del	
-Lib/collections/__init__.py	1201	1202	UserDict.__iter__	__iter__(self)	todo		review: Only `udLen u = (udIter u).length` mentions it, so any permutation of the keys (for example reversed) passes, and the live iterator's size-change RuntimeError is not modelled.
-Lib/collections/__init__.py	1206	1207	UserDict.__contains__	__contains__(self, key)	todo		review: Both conjuncts that mention it (`udContains u k = D.mem u.data k`) are `rfl` on the one-line definition, and \"does not call `__missing__`\" holds by its signature, not by a theorem.
+Lib/collections/__init__.py	1201	1202	UserDict.__iter__	__iter__(self)	modelled	coll-userdict-iter-order	
+Lib/collections/__init__.py	1206	1207	UserDict.__contains__	__contains__(self, key)	modelled	coll-userdict-getitem-p,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
 Lib/collections/__init__.py	1209	1212	UserDict.get	get(self, key, default=None)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
-Lib/collections/__init__.py	1216	1217	UserDict.__repr__	__repr__(self)	todo		review: The theorem is `reprD` composed with `__init__`, and `repr(self.data)` for a UserDict that contains itself (dict's recursion guard prints `{...}`) and raising reprs are not modelled.
+Lib/collections/__init__.py	1216	1217	UserDict.__repr__	__repr__(self)	modelled	coll-userdict-repr-r	
 Lib/collections/__init__.py	1219	1224	UserDict.__or__	__or__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1226	1231	UserDict.__ror__	__ror__(self, other)	modelled	coll-userdict-constructors-union	
-Lib/collections/__init__.py	1233	1238	UserDict.__ior__	__ior__(self, other)	todo		review: The conjunct is `rfl` on `udIor`, the UserDict/else branches are merged, and the TypeError of `self.data |= other` for a non-iterable `other` is not modelled.
-Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	todo		review: `udCopyDunder u = u` is value equality, so returning `self` passes, and copying other `__dict__` attributes (:1242) is not modelled.
-Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	todo		review: `udCopy u = u` is value equality, so returning `self` passes, and the try/finally that restores `self.data` when `_copy` raises (:1251-1255) is not modelled.
+Lib/collections/__init__.py	1233	1238	UserDict.__ior__	__ior__(self, other)	modelled	coll-userdict-ior-p	
+Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	modelled	coll-userdict-copy-o	
+Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	modelled	coll-userdict-copy-o	
 Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	coll-userdict-popitem-lifo	
-Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	todo		review: Only `.data` is stated, so a result of the wrong class passes, and the iterable is an infallible list.
-Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	modelled	coll-userlist-observers	
-Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
-Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	
+Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-init-copy,coll-userlist-operands	
+Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	todo		review: `ListOps.repr : List α → String` can neither raise nor recurse, so an element `__repr__` that raises and the `[...]` of a UserList that holds itself cannot be expressed, and UserListObservers states only `ulRepr ops u = ops.repr u.data`, the definition (UserDict.__repr__ pins both cases).
+Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1323	1324	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1326	1330	UserList.__getitem__	__getitem__(self, i)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1332	1333	UserList.__setitem__	__setitem__(self, i, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1335	1336	UserList.__delitem__	__delitem__(self, i)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	modelled	coll-userlist-operands	
-Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
+Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	modelled	coll-userlist-list-operands	
+Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	modelled	coll-userlist-list-operands	
+Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-list-operands	
 Lib/collections/__init__.py	1361	1362	UserList.__mul__	__mul__(self, n)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1366	1368	UserList.__imul__	__imul__(self, n)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	modelled	coll-userlist-copies	withdrawn: = on a value structure: a copy returning self passes
+Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	modelled	coll-userlist-init-copy	
 Lib/collections/__init__.py	1377	1378	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1380	1381	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	todo		review: `ulPop` still cites `@3.14.7:1328-1329` (3.15.2 is :1383-1384), and UserListSimulatesList drops the popped value through `(·.2)`, so a `pop` that returned the wrong element passes; no entry states the return value.
 Lib/collections/__init__.py	1386	1387	UserList.remove	remove(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1389	1390	UserList.clear	clear(self)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-userlist-copies	withdrawn: = on a value structure: a copy returning self passes
-Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-observers	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-userlist-init-copy	
+Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1398	1399	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1401	1402	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
-Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	todo		review: `ListOps.sort : List α → Bool → List α` drops `key` and the positional `*args` and cannot raise, so a raising element `__lt__` or `key`, the TypeError for a positional argument, and `ValueError('list modified during sort')` (Objects/listobject.c:3197) cannot be expressed; UserListIntInstance only checks `ops.sort` on ints by rfl.
+Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-iadd-atomic	
+Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1428	1429	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	
 Lib/collections/__init__.py	1431	1432	UserString.__repr__	__repr__(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1434	1435	UserString.__int__	__int__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1437	1438	UserString.__float__	__float__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1440	1441	UserString.__complex__	__complex__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1443	1444	UserString.__hash__	__hash__(self)	modelled	coll-userstring-order-hash,coll-userstring-simulates	
-Lib/collections/__init__.py	1446	1447	UserString.__getnewargs__	__getnewargs__(self)	modelled	coll-userstring-construct-add	
-Lib/collections/__init__.py	1449	1452	UserString.__eq__	__eq__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1454	1457	UserString.__lt__	__lt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1459	1462	UserString.__le__	__le__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1464	1467	UserString.__gt__	__gt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
-Lib/collections/__init__.py	1469	1472	UserString.__ge__	__ge__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1446	1447	UserString.__getnewargs__	__getnewargs__(self)	modelled	coll-userstring-str-calls	
+Lib/collections/__init__.py	1449	1452	UserString.__eq__	__eq__(self, string)	modelled	coll-userstring-compare-p	
+Lib/collections/__init__.py	1454	1457	UserString.__lt__	__lt__(self, string)	modelled	coll-userstring-compare-p	
+Lib/collections/__init__.py	1459	1462	UserString.__le__	__le__(self, string)	modelled	coll-userstring-compare-p	
+Lib/collections/__init__.py	1464	1467	UserString.__gt__	__gt__(self, string)	modelled	coll-userstring-compare-p	
+Lib/collections/__init__.py	1469	1472	UserString.__ge__	__ge__(self, string)	modelled	coll-userstring-compare-p	
 Lib/collections/__init__.py	1474	1477	UserString.__contains__	__contains__(self, char)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1479	1480	UserString.__len__	__len__(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1482	1483	UserString.__getitem__	__getitem__(self, index)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1485	1490	UserString.__add__	__add__(self, other)	modelled	coll-userstring-construct-add	
-Lib/collections/__init__.py	1492	1495	UserString.__radd__	__radd__(self, other)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1485	1490	UserString.__add__	__add__(self, other)	modelled	coll-userstring-str-calls	
+Lib/collections/__init__.py	1492	1495	UserString.__radd__	__radd__(self, other)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1497	1498	UserString.__mul__	__mul__(self, n)	modelled	coll-userstring-mul,coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1505	1506	UserString.__rmod__	__rmod__(self, template)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	todo		review: `args` is a tuple of ints, so `u % mapping`, `u % 'x'` and `u % UserString(...)` (a non-tuple with `__getitem__`, which PyUnicode_Format takes as a mapping) cannot be expressed, and a body that did `self.data % tuple(args)` passes.
+Lib/collections/__init__.py	1505	1506	UserString.__rmod__	__rmod__(self, template)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1509	1510	UserString.capitalize	capitalize(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1512	1513	UserString.casefold	casefold(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1515	1516	UserString.center	center(self, width, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-center-balanced,strsearch-pad-str-bytes
-Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1515	1516	UserString.center	center(self, width, *args)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` (:1518) are not modelled: an omitted argument is `none` on both sides, so `u.count(x)` is compared with `str.count(x)`, not with the `str.count(x, 0, sys.maxsize)` the body calls, and a version with a wrong default such as `end=0` passes.
 Lib/collections/__init__.py	1523	1526	UserString.removeprefix	removeprefix(self, prefix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1528	1531	UserString.removesuffix	removesuffix(self, suffix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1533	1536	UserString.encode	encode(self, encoding='utf-8', errors='strict')	modelled	coll-userstring-construct-add,coll-userstring-simulates	
-Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	modelled	strsearch-tailmatch-str-bytes	
-Lib/collections/__init__.py	1541	1542	UserString.expandtabs	expandtabs(self, tabsize=8)	modelled	strsearch-expandtabs-str-bytes	
-Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-find-str-bytes
+Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), and the TypeError for a UserString suffix, which 3.15.2 still raises, is stated only in the siblings refutation, whose counterexample runs `partition`; the row's entry, strsearch-tailmatch-str-bytes, is about `str` and `bytes` and does not name UserString.
+Lib/collections/__init__.py	1541	1542	UserString.expandtabs	expandtabs(self, tabsize=8)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
+Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	todo		review: `usFormat` takes positional ints only and drops `**kwds`, so `u.format(name=...)` cannot be expressed, and a body that ignored `kwds` passes.
+Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	todo		review: The mapping is a list of (str, int) pairs, so a mapping with `__missing__` or a raising `__getitem__`, which is what distinguishes `format_map` from `format(**m)`, cannot be expressed, and a body `self.data.format(**mapping)` passes.
+Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
 Lib/collections/__init__.py	1560	1561	UserString.isalpha	isalpha(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1563	1564	UserString.isalnum	isalnum(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1566	1567	UserString.isascii	isascii(self)	modelled	coll-userstring-simulates	
@@ -171,24 +171,24 @@ Lib/collections/__init__.py	1584	1585	UserString.isprintable	isprintable(self)	m
 Lib/collections/__init__.py	1587	1588	UserString.isspace	isspace(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1590	1591	UserString.istitle	istitle(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1593	1594	UserString.isupper	isupper(self)	modelled	coll-userstring-simulates	
-Lib/collections/__init__.py	1596	1597	UserString.join	join(self, seq)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	
-Lib/collections/__init__.py	1599	1600	UserString.ljust	ljust(self, width, *args)	modelled	strsearch-pad-str-bytes	
+Lib/collections/__init__.py	1596	1597	UserString.join	join(self, seq)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1599	1600	UserString.ljust	ljust(self, width, *args)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1602	1603	UserString.lower	lower(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1605	1606	UserString.lstrip	lstrip(self, chars=None)	modelled	strsearch-strip-paths	
+Lib/collections/__init__.py	1605	1606	UserString.lstrip	lstrip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1610	1611	UserString.partition	partition(self, sep)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-partition-find
 Lib/collections/__init__.py	1613	1618	UserString.replace	replace(self, old, new, maxsplit=-1)	modelled	coll-userstring-replace-count,coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-replace-str-bytes
-Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-extreme,strsearch-find-str-bytes,strsearch-rfind-reverse	
-Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-str-bytes	
-Lib/collections/__init__.py	1630	1631	UserString.rjust	rjust(self, width, *args)	modelled	strsearch-pad-str-bytes	
-Lib/collections/__init__.py	1633	1634	UserString.rpartition	rpartition(self, sep)	modelled	strsearch-partition-find	
-Lib/collections/__init__.py	1636	1637	UserString.rstrip	rstrip(self, chars=None)	modelled	strsearch-strip-paths	
-Lib/collections/__init__.py	1639	1640	UserString.split	split(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
-Lib/collections/__init__.py	1642	1643	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
-Lib/collections/__init__.py	1645	1646	UserString.splitlines	splitlines(self, keepends=False)	modelled	strsearch-splitlines-str-bytes	
-Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	modelled	strsearch-find-slice-literal,strsearch-tailmatch-str-bytes	
-Lib/collections/__init__.py	1651	1652	UserString.strip	strip(self, chars=None)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-strip-paths
+Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); the row's strsearch entries are about `str` and do not name UserString.
+Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); strsearch-find-str-bytes, the row's entry, does not name UserString.
+Lib/collections/__init__.py	1630	1631	UserString.rjust	rjust(self, width, *args)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1633	1634	UserString.rpartition	rpartition(self, sep)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1636	1637	UserString.rstrip	rstrip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1639	1640	UserString.split	split(self, sep=None, maxsplit=-1)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1642	1643	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1645	1646	UserString.splitlines	splitlines(self, keepends=False)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled, and the TypeError for a UserString prefix, which 3.15.2 still raises (:1648-1649), is stated only in the `partition` refutation.
+Lib/collections/__init__.py	1651	1652	UserString.strip	strip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1654	1655	UserString.swapcase	swapcase(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1657	1658	UserString.title	title(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	todo		review: `*args` becomes one table of (int, int-or-None) pairs, so a sequence or str-valued table, a `__getitem__` that raises LookupError (keep the character) or anything else, and a wrong argument count cannot be expressed, and a body that did `self.data.translate(dict(table))` passes.
 Lib/collections/__init__.py	1663	1664	UserString.upper	upper(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1666	1667	UserString.zfill	zfill(self, width)	modelled	strsearch-pad-str-bytes,strsearch-zfill-spec	
+Lib/collections/__init__.py	1666	1667	UserString.zfill	zfill(self, width)	modelled	coll-userstring-result-class,coll-userstring-simulates	

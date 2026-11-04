@@ -172,7 +172,7 @@ def ulAppend (u : UL α) (x : α) : UL α := { u with data := u.data ++ [x] }
 def ulInsert (ops : ListOps α) (u : UL α) (i : Int) (x : α) : Py (UL α) :=
   withData u (ops.insert u.data i x)
 
-/-- `UserList.pop`, @3.14.7:1328-1329. -/
+/-- `UserList.pop`, :1383-1384: `self.data.pop(i)`, its value returned. -/
 def ulPop (ops : ListOps α) (u : UL α) (i : Option Int) : Py (α × UL α) :=
   (ops.pop u.data i).map (fun r => (r.1, { u with data := r.2 }))
 

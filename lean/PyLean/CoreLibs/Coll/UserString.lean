@@ -11,6 +11,11 @@ Unicode database or the format mini-languages (case mapping, `isalpha`, ..., `en
 `str.format`, `translate`, `hash`, `repr`, `int()`) is the abstract `UniOps`: for those the
 wrapper's dispatch is modelled and the delegate is a parameter.
 
+Scope: a `str` subclass is merged with `str` (`SArg.str`): `__init__` stores it as is
+(`isinstance(seq, str)`, :1421) and the methods see only its text, so a subclass overriding `str`
+methods or dunders is out of scope, as list subclasses overriding comparisons are in
+`UserListG.lean`.
+
 The point of the model is the first lines of each method: which argument is unwrapped with
 `if isinstance(x, UserString): x = x.data`, which result is wrapped in `self.__class__`. The
 arguments therefore carry their Python kind (`SArg`), and `str`'s own argument check is
@@ -90,7 +95,7 @@ def needFill : Option SArg → Py Nat
 def needArg (fn : String) (a : SArg) : Py Seq :=
   match a with
   | .str s => .ok s
-  | a => .error (.typeError s!"{fn} must be str, not {a.ty}")
+  | a => .error (.typeError s!"{fn} must be str, not {if a.ty = "NoneType" then "None" else a.ty}")  -- getargs.c:666-669
 
 /-- `prefix`/`suffix` of `startswith`/`endswith`: a `str` or a tuple of `str`. -/
 inductive AffixArg where
@@ -269,17 +274,33 @@ def usMod (ops : UniOps) (u : US) (args : List Int) : Py US := wrapIn u (ops.mod
 /-- `UserString.__rmod__`, :1505-1506: `self.__class__(str(template) % self)`. -/
 def usRmod (ops : UniOps) (u : US) (template : Seq) : Py US := wrapIn u (ops.modUser template u.data)
 
+/-- `str.center(width, fillchar)`: Argument Clinic converts `width` to `Py_ssize_t` first, then
+`fillchar` (Objects/clinic/unicodeobject.c.h:115-132). -/
+def strCenterA (s : Seq) (w : Int) (fill : Option SArg) : Py Seq := do
+  let _ ← argSsize w
+  let f ← needFill fill
+  strCenter s w f
+
+/-- `str.ljust`, the same clinic order. -/
+def strLjustA (s : Seq) (w : Int) (fill : Option SArg) : Py Seq := do
+  let _ ← argSsize w
+  let f ← needFill fill
+  strLjust s w f
+
+/-- `str.rjust`, the same clinic order. -/
+def strRjustA (s : Seq) (w : Int) (fill : Option SArg) : Py Seq := do
+  let _ ← argSsize w
+  let f ← needFill fill
+  strRjust s w f
+
 /-- `UserString.center`, :1515-1516. -/
-def usCenter (u : US) (w : Int) (fill : Option SArg) : Py US :=
-  wrapIn u (do let f ← needFill fill; strCenter u.data w f)
+def usCenter (u : US) (w : Int) (fill : Option SArg) : Py US := wrapIn u (strCenterA u.data w fill)
 
 /-- `UserString.ljust`, :1599-1600. -/
-def usLjust (u : US) (w : Int) (fill : Option SArg) : Py US :=
-  wrapIn u (do let f ← needFill fill; strLjust u.data w f)
+def usLjust (u : US) (w : Int) (fill : Option SArg) : Py US := wrapIn u (strLjustA u.data w fill)
 
 /-- `UserString.rjust`, :1630-1631. -/
-def usRjust (u : US) (w : Int) (fill : Option SArg) : Py US :=
-  wrapIn u (do let f ← needFill fill; strRjust u.data w f)
+def usRjust (u : US) (w : Int) (fill : Option SArg) : Py US := wrapIn u (strRjustA u.data w fill)
 
 /-- `str.count`. -/
 def strCountA (s : Seq) (a : SArg) (st en : Option Int) : Py Int := do
@@ -382,13 +403,16 @@ def strReplaceA (s : Seq) (o n : SArg) (count : Int) : Py Seq := do
 def usReplace (u : US) (o n : SArg) (count : Int) : Py US :=
   wrapIn u (strReplaceA u.data (unwrap o) (unwrap n) count)
 
-/-- `str.split(sep, maxsplit)`. -/
+/-- `str.split(sep, maxsplit)`: clinic converts `maxsplit` first, then `unicode_split_impl` tests
+`sep` (Objects/unicodeobject.c:12900-12912). -/
 def strSplitA (s : Seq) (sep : Option SArg) (m : Int) : Py (List Seq) := do
+  let _ ← argSsize m
   let t ← needSep sep
   strSplit s t m
 
-/-- `str.rsplit(sep, maxsplit)`. -/
+/-- `str.rsplit(sep, maxsplit)`, the same order. -/
 def strRSplitA (s : Seq) (sep : Option SArg) (m : Int) : Py (List Seq) := do
+  let _ ← argSsize m
   let t ← needSep sep
   strRSplit s t m
 
@@ -482,9 +506,9 @@ def strCall (ops : UniOps) (c : SCall) (s : Seq) : Py URes :=
   match c with
   | .case f => .ok (.str (ops.case f s))
   | .pred f => .ok (.bool (ops.pred f s))
-  | .center w fill => URes.str <$> (do let f ← needFill fill; strCenter s w f)
-  | .ljust w fill => URes.str <$> (do let f ← needFill fill; strLjust s w f)
-  | .rjust w fill => URes.str <$> (do let f ← needFill fill; strRjust s w f)
+  | .center w fill => URes.str <$> strCenterA s w fill
+  | .ljust w fill => URes.str <$> strLjustA s w fill
+  | .rjust w fill => URes.str <$> strRjustA s w fill
   | .zfill w => URes.str <$> strZfill s w
   | .expandtabs t => URes.str <$> strExpandtabs s t
   | .count a st en => URes.int <$> strCountA s a st en

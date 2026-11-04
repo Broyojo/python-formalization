@@ -31,38 +31,48 @@ def coll_items(rng, small=False):
     return [[k, rng.randint(-3, 5) if small else coll_int(rng)] for k in keys]
 
 
-def coll_xs(rng):
-    return [rng.choice(coll_KEYS) for _ in range(rng.randint(0, 10))]
+def coll_xs(rng, unhashable=False):
+    xs = [rng.choice(coll_KEYS) for _ in range(rng.randint(0, 10))]
+    if unhashable and xs and rng.random() < 0.1:
+        xs.insert(rng.randrange(len(xs) + 1), "#L")
+    return xs
 
 
 def coll_src(rng, case):
     case["src"] = rng.choice(["none", "mapping", "iter"])
     if case["src"] == "mapping":
         case["items"] = coll_items(rng)
+        case["mty"] = rng.choice(["dict", "dict", "mapping", "bad_items"])
     elif case["src"] == "iter":
-        case["xs"] = coll_xs(rng)
+        case["xs"] = coll_xs(rng, unhashable=True)
+        case["fail"] = rng.random() < 0.2
     case["kw"] = coll_items(rng) if rng.random() < 0.3 else []
 
 
 def coll_gen_ctr(rng):
-    op = rng.choice(["new", "update", "subtract", "count_py", "count_c", "count_slow", "total",
-                     "most_common", "most_common", "elements", "copy", "reduce", "delitem",
-                     "getitem", "repr", "fromkeys", "keep_positive", "pos", "neg", "add", "sub",
-                     "or", "and", "xor", "xor", "eq", "ne", "le", "lt", "ge", "gt", "iadd", "isub", "ior",
-                     "iand", "ixor", "ixor"])
+    op = rng.choice(["new", "update", "update", "subtract", "count_py", "count_c", "count_c", "most_common",
+                     "most_common", "elements", "copy", "reduce", "delitem", "getitem", "repr", "fromkeys",
+                     "keep_positive", "pos", "neg", "add", "sub", "or", "and", "xor", "xor", "eq", "ne", "le",
+                     "lt", "ge", "gt", "iadd", "isub", "ior", "iand", "ixor", "ixor"])
     case = {"fn": "coll.ctr", "op": op, "a": coll_items(rng)}
     if op in ("new", "update", "subtract"):
         coll_src(rng, case)
-    if op in ("count_py", "count_c", "count_slow", "fromkeys"):
+    if op in ("count_py", "count_c"):
+        case["xs"] = coll_xs(rng, unhashable=True)
+        case["fail"] = rng.random() < 0.2
+        case["inst"] = rng.random() < 0.3
+        case["slow"] = rng.random() < 0.3
+    if op == "fromkeys":
         case["xs"] = coll_xs(rng)
     if op in ("delitem", "getitem"):
-        case["e"] = rng.choice(coll_KEYS)
+        case["e"] = rng.choice(coll_KEYS + ["#L"])
     if op == "most_common":
         case["n"] = rng.choice([None, None, 0, 1, 2, 3, 4, 5, 6, 7, 100, -1, -2, 2**63, -2**63])
     if op == "elements":
         case["a"] = coll_items(rng, small=True)
         if rng.random() < 0.1:
-            case["a"].append(["z", rng.choice([2**63, -2**63 - 1, 2**64])])
+            case["a"].insert(rng.randrange(len(case["a"]) + 1),
+                             ["z", rng.choice([2**63, -2**63 - 1, 2**64])])
     if op in ("add", "sub", "or", "and", "xor", "eq", "ne", "le", "lt", "ge", "gt"):
         r = rng.random()
         if r < 0.9:
@@ -82,8 +92,8 @@ def coll_gen_ctr(rng):
     return case
 
 
-def coll_ctr(items):
-    c = coll_collections.Counter()
+def coll_ctr(items, cls=None):
+    c = (cls or coll_collections.Counter)()
     for k, v in items:
         dict.__setitem__(c, k, v)
     return c
@@ -93,24 +103,69 @@ def coll_enc(d):
     return [[k, v] for k, v in d.items()]
 
 
+def coll_el(x):
+    return [1] if x == "#L" else x
+
+
+def coll_iter(xs, fail):
+    for x in xs:
+        yield coll_el(x)
+    if fail:
+        raise ValueError("boom")
+
+
+class coll_Map(coll_abc.Mapping):
+    """A Mapping that is not a dict: dict.update reads keys() and [] (bad: items() raises)."""
+    def __init__(self, d, bad):
+        self._d = d
+        self._bad = bad
+
+    def __getitem__(self, k):
+        return self._d[k]
+
+    def __iter__(self):
+        return iter(self._d)
+
+    def __len__(self):
+        return len(self._d)
+
+    def items(self):
+        if self._bad:
+            raise RuntimeError("items")
+        return self._d.items()
+
+
 def coll_src_arg(case):
     if case["src"] == "none":
         return None
     if case["src"] == "mapping":
-        return dict(map(tuple, case["items"]))
-    return iter(case["xs"])
+        d = dict(map(tuple, case["items"]))
+        mty = case.get("mty", "dict")
+        return d if mty == "dict" else coll_Map(d, mty == "bad_items")
+    return coll_iter(case["xs"], case.get("fail", False))
 
 
-def coll_ipy_count(m, xs):
-    mapping_get = m.get
-    for elem in xs:
-        m[elem] = mapping_get(elem, 0) + 1
+def coll_ipy_count(mapping, iterable):
+    'Lib/collections/__init__.py:540-544, verbatim.'
+    mapping_get = mapping.get
+    for elem in iterable:
+        mapping[elem] = mapping_get(elem, 0) + 1
 
 
 class coll_SlowCounter(coll_collections.Counter):
     """Overrides `get`, which sends the C `_count_elements` down its slow path."""
     def get(self, *args):
         return super().get(*args)
+
+
+def coll_out(thunk, state):
+    """A mutating call: the state it leaves and the exception, as `[state, exc]`."""
+    try:
+        thunk()
+        exc = None
+    except Exception as e:
+        exc = [type(e).__name__, str(e)]
+    return [coll_enc(state), exc]
 
 
 def coll_run_ctr(case):
@@ -122,47 +177,44 @@ def coll_run_ctr(case):
         if op == "new":
             return coll_enc(Counter(coll_src_arg(case), **dict(map(tuple, case["kw"]))))
         if op == "update":
-            a.update(coll_src_arg(case), **dict(map(tuple, case["kw"])))
-            return coll_enc(a)
+            return coll_out(lambda: a.update(coll_src_arg(case), **dict(map(tuple, case["kw"]))), a)
         if op == "subtract":
-            a.subtract(coll_src_arg(case), **dict(map(tuple, case["kw"])))
-            return coll_enc(a)
-        if op == "count_py":
-            coll_ipy_count(a, case["xs"])
-            return coll_enc(a)
-        if op == "count_c":
-            coll_collections._count_elements(a, case["xs"])
-            return coll_enc(a)
-        if op == "count_slow":
-            s = coll_SlowCounter()
-            for k, v in case["a"]:
-                dict.__setitem__(s, k, v)
-            coll_collections._count_elements(s, case["xs"])
-            return coll_enc(s)
-        if op == "total":
-            return a.total()
+            return coll_out(lambda: a.subtract(coll_src_arg(case), **dict(map(tuple, case["kw"]))), a)
+        if op in ("count_py", "count_c"):
+            m = coll_ctr(case["a"], coll_SlowCounter if case["slow"] else None)
+            if case["inst"]:
+                m.get = lambda k, d: dict.get(m, k, d) + 10
+            f = coll_ipy_count if op == "count_py" else coll_collections._count_elements
+            return coll_out(lambda: f(m, coll_iter(case["xs"], case["fail"])), m)
         if op == "most_common":
             r = a.most_common(case["n"]) if case["n"] is not None else a.most_common()
             return [list(p) for p in r]
         if op == "elements":
-            return list(a.elements())
+            out = []
+
+            def drain():
+                for x in a.elements():
+                    out.append(x)
+            r = coll_out(drain, {})
+            return [out, r[1]]
         if op == "copy":
-            return coll_enc(a.copy())
+            c = a.copy()
+            return [type(c).__name__, c is not a, coll_enc(c)]
         if op == "reduce":
             cls, args = a.__reduce__()
-            assert cls is Counter and len(args) == 1 and type(args[0]) is dict
-            return coll_enc(args[0])
+            assert len(args) == 1
+            return [cls.__name__, type(args[0]).__name__, coll_enc(args[0])]
         if op == "delitem":
-            del a[case["e"]]
+            del a[coll_el(case["e"])]
             return coll_enc(a)
         if op == "getitem":
-            return a[case["e"]]
+            return a[coll_el(case["e"])]
         if op == "repr":
             return repr(a)
         if op == "fromkeys":
             return coll_enc(Counter.fromkeys(case["xs"]))
         if op == "keep_positive":
-            return coll_enc(a._keep_positive())
+            return coll_out(a._keep_positive, a)
         if op == "pos":
             return coll_enc(+a)
         if op == "neg":
@@ -180,18 +232,9 @@ def coll_run_ctr(case):
             ty = case["bty"]
             b = coll_ctr(case["b"]) if ty == "Counter" else (
                 dict(map(tuple, case["b"])) if ty == "dict" else 5)
-            nonlocal_a = a
-            if op == "iadd":
-                nonlocal_a += b
-            elif op == "isub":
-                nonlocal_a -= b
-            elif op == "ior":
-                nonlocal_a |= b
-            elif op == "ixor":
-                nonlocal_a ^= b
-            else:
-                nonlocal_a &= b
-            return coll_enc(nonlocal_a)
+            f = {"iadd": Counter.__iadd__, "isub": Counter.__isub__, "ior": Counter.__ior__,
+                 "iand": Counter.__iand__, "ixor": Counter.__ixor__}[op]
+            return coll_out(lambda: f(a, b), a)
         raise AssertionError(op)
     return py_result(body)
 
@@ -215,6 +258,31 @@ class coll_DictMiss(dict):
         return -1
 
 
+class coll_UDRaise(coll_collections.UserDict):
+    def __copy__(self):
+        raise RuntimeError("nocopy")
+
+
+class coll_UDRaiseMiss(coll_collections.UserDict):
+    def __missing__(self, key):
+        raise ValueError("miss")
+
+
+def coll_pairs(case):
+    for k, v in case["o"]:
+        yield (k, v)
+    if case.get("bad"):
+        yield (1,)
+    if case.get("fail"):
+        raise ValueError("boom")
+
+
+def coll_gen_pairs(items):
+    for k, v in items:
+        yield (k, v)
+    raise ValueError("boom")
+
+
 coll_UD_CLASSES = [coll_collections.UserDict, coll_UDPlain, coll_UDMiss]
 
 
@@ -222,12 +290,16 @@ def coll_d(items):
     return dict(map(tuple, items))
 
 
+coll_CM_ODD_KEYS = ["a\\b", "it's", "q\"'x", "\t"]
+
+
 def coll_gen_cm(rng):
-    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "fromkeys",
-                     "copy", "new_child", "parents", "setitem", "delitem", "popitem", "pop",
-                     "clear", "ior", "or", "ror"])
+    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "repr_self",
+                     "getitem_dd", "contains_dd", "fromkeys", "copy", "new_child", "parents", "setitem",
+                     "delitem", "popitem", "pop", "clear", "ior", "ior", "or", "ror", "ror_bad"])
     n = rng.choice([0, 1, 1, 2, 2, 3, 4])
-    case = {"fn": "coll.cm", "op": op, "k": rng.choice(coll_KEYS),
+    keys = coll_KEYS + (coll_CM_ODD_KEYS if op in ("getitem", "delitem", "pop") else [])
+    case = {"fn": "coll.cm", "op": op, "k": rng.choice(keys),
             "maps": [coll_items(rng, small=True) if rng.random() < 0.8 else [] for _ in range(n)]}
     if rng.random() < 0.4:
         case["d"] = rng.randint(-3, 3)
@@ -235,18 +307,37 @@ def coll_gen_cm(rng):
         case["sub"] = 1
     if op == "fromkeys":
         case["xs"] = coll_xs(rng)
-    if op in ("or", "ror", "new_child"):
+        case["fail"] = rng.random() < 0.2
+    if op in ("or", "ror", "new_child", "ior"):
         if rng.random() < 0.8:
             case["o"] = coll_items(rng, small=True)
-    if op == "ior":
-        case["o"] = coll_items(rng, small=True)
     if op == "new_child":
         case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+    if op == "ior":
+        case["gen"] = rng.random() < 0.3
     return case
 
 
 def coll_enc_cm(c):
     return [coll_enc(m) for m in c.maps]
+
+
+class coll_BadMap(coll_abc.Mapping):
+    """A Mapping whose [] raises, so dict(other) fails."""
+    def __getitem__(self, k):
+        raise LookupError("gi")
+
+    def __iter__(self):
+        return iter(["x"])
+
+    def __len__(self):
+        return 1
+
+
+def coll_copy_bits(r, c):
+    return [r is not c, r.maps[0] is not c.maps[0],
+            len(r.maps) == len(c.maps) and all(x is y for x, y in zip(r.maps[1:], c.maps[1:])),
+            coll_enc_cm(r)]
 
 
 def coll_run_cm(case):
@@ -264,6 +355,10 @@ def coll_run_cm(case):
             return coll_enc_cm(ChainMap(*maps))
         if op == "getitem":
             return c[k]
+        if op in ("getitem_dd", "contains_dd"):
+            if maps:
+                c.maps = [coll_collections.defaultdict(int, maps[0])] + maps[1:]
+            return c[k] if op == "getitem_dd" else (k in c)
         if op == "get":
             return c.get(k, d) if d is not None else c.get(k)
         if op == "len":
@@ -276,10 +371,13 @@ def coll_run_cm(case):
             return bool(c)
         if op == "repr":
             return repr(c)
+        if op == "repr_self":
+            c.maps.append(c)
+            return repr(c)
         if op == "fromkeys":
-            return coll_enc_cm(ChainMap.fromkeys(case["xs"], 0 if d is None else d))
+            return coll_enc_cm(ChainMap.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         if op == "copy":
-            return coll_enc_cm(c.copy())
+            return coll_copy_bits(c.copy(), c)
         if op == "new_child":
             m = coll_d(case["o"]) if "o" in case else None
             return coll_enc_cm(c.new_child(m, **coll_d(case["kw"])))
@@ -301,11 +399,24 @@ def coll_run_cm(case):
             c.clear()
             return coll_enc_cm(c)
         if op == "ior":
-            r = c
-            r |= coll_d(case["o"])
-            return coll_enc_cm(r)
+            m0 = c.maps[0] if c.maps else None
+            if "o" not in case:
+                other = 5
+            elif case.get("gen"):
+                other = coll_gen_pairs(case["o"])
+            else:
+                other = coll_d(case["o"])
+            try:
+                r = c
+                r |= other
+                bits, exc = [r is c, r.maps[0] is m0], None
+            except Exception as e:
+                bits, exc = None, [type(e).__name__, str(e)]
+            return [bits, coll_enc_cm(c), exc]
+        if op == "ror_bad":
+            return coll_enc_cm(ChainMap.__ror__(c, coll_BadMap()))
         if op == "or":
-            return coll_enc_cm(c | (coll_d(case["o"]) if "o" in case else 5))
+            return coll_copy_bits(c | (coll_d(case["o"]) if "o" in case else 5), c)
         if op == "ror":
             return coll_enc_cm((coll_d(case["o"]) if "o" in case else 5) | c)
         raise AssertionError(op)
@@ -317,9 +428,23 @@ def coll_gen_ud(rng):
                      "repr", "or", "ror", "ior", "copy", "copy_dunder", "fromkeys", "pop",
                      "popitem", "setdefault", "clear", "items_contains", "reversed",
                      "dict_reversed", "dict_getitem",
-                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains"])
+                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains",
+                     "new_p", "getitem_p", "repr_self", "ior_p", "ior_p", "copy_p", "copy_p", "fromkeys_p"])
     case = {"fn": "coll.ud", "op": op, "a": coll_items(rng, small=True),
             "sub": rng.choice([0, 1, 2]), "k": rng.choice(coll_KEYS)}
+    if op == "new_p":
+        case["o"] = coll_items(rng, small=True)
+        case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+        case["bad"] = rng.random() < 0.2
+        case["fail"] = rng.random() < 0.2
+    if op == "ior_p":
+        case["oty"] = rng.choice(["user", "dict", "gen", "int"])
+        case["o"] = coll_items(rng, small=True)
+    if op == "copy_p":
+        case["raise"] = rng.random() < 0.3
+    if op == "fromkeys_p":
+        case["xs"] = coll_xs(rng)
+        case["fail"] = rng.random() < 0.2
     if rng.random() < 0.5:
         case["d"] = rng.randint(-3, 3)
     if op in ("items_contains", "dict_items_contains") and rng.random() < 0.5:
@@ -428,6 +553,40 @@ def coll_run_ud(case):
             return [r, coll_enc(plain)]
         if op == "dict_items_contains":
             return (k, 0 if d is None else d) in plain.items()
+        if op == "new_p":
+            return coll_enc(cls(coll_pairs(case), **coll_d(case["kw"])).data)
+        if op == "getitem_p":
+            v = coll_UDRaiseMiss()
+            v.data = coll_d(case["a"])
+            return v[k]
+        if op == "repr_self":
+            u[k] = u
+            return repr(u)
+        if op == "ior_p":
+            ty = case["oty"]
+            o = {"user": lambda: coll_collections.UserDict(coll_d(case["o"])), "dict": lambda: coll_d(case["o"]),
+                 "gen": lambda: coll_gen_pairs(case["o"]), "int": lambda: 5}[ty]()
+            try:
+                r = u
+                r |= o
+                assert r is u
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [coll_enc_ud(u), exc]
+        if op == "copy_p":
+            v = (coll_UDRaise if case["raise"] else cls)()
+            v.data = coll_d(case["a"])
+            v.extra = 5
+            try:
+                c = v.copy()
+                res = {"ok": [type(c).__name__, c is not v, c.data is not v.data, coll_enc(c.data),
+                              len(vars(c)) - 1]}
+            except Exception as e:
+                res = {"exc": type(e).__name__, "msg": str(e)}
+            return [coll_enc(v.data), res]
+        if op == "fromkeys_p":
+            return coll_enc_ud(cls.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         raise AssertionError(op)
     return py_result(body)
 
@@ -460,12 +619,28 @@ def coll_slice_of(case, names=("st", "sp", "se")):
     return slice(*(case.get(n) for n in names))
 
 
+def coll_int_gen(xs, fail):
+    yield from xs
+    if fail:
+        raise ValueError("boom")
+
+
+class coll_RevList(list):
+    """A list subclass whose __iter__ yields the items reversed."""
+    def __iter__(self):
+        return iter(list.__reversed__(self))
+
+
 def coll_gen_ul(rng):
     op = rng.choice(["new", "repr", "lt", "le", "eq", "gt", "ge", "contains", "len", "getitem",
                      "getslice", "setitem", "setslice", "delitem", "delslice", "add", "radd",
                      "iadd", "mul", "imul", "copy", "copy_dunder", "append", "insert", "pop",
-                     "remove", "clear", "count", "index", "reverse", "sort", "extend"])
+                     "remove", "clear", "count", "index", "reverse", "sort", "extend",
+                     "gen_iadd", "gen_extend", "gen_add", "gen_radd", "gen_list_iadd", "init_sub"])
     case = {"fn": "coll.ul", "op": op, "sub": rng.choice([0, 1]), "a": coll_ints(rng)}
+    if op.startswith("gen_") or op == "init_sub":
+        case["o"] = coll_ints(rng)
+        case["fail"] = rng.random() < 0.5
     if op in ("contains", "setitem", "append", "insert", "remove", "count", "index"):
         case["x"] = rng.randint(-2, 5)
     if op in ("getitem", "setitem", "delitem", "insert", "mul", "imul"):
@@ -592,6 +767,24 @@ def coll_run_ul(case):
         if op == "extend":
             u.extend(coll_opnd(case))
             return coll_enc_ul(u)
+        if op in ("gen_iadd", "gen_extend", "gen_list_iadd"):
+            it = coll_int_gen(case["o"], case["fail"])
+            tgt = list(u.data) if op == "gen_list_iadd" else u
+            try:
+                if op == "gen_extend":
+                    tgt.extend(it)
+                else:
+                    tgt += it
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [list(tgt) if op == "gen_list_iadd" else coll_enc_ul(u), exc]
+        if op == "gen_add":
+            return coll_enc_ul(u + coll_int_gen(case["o"], case["fail"]))
+        if op == "gen_radd":
+            return coll_enc_ul(u.__radd__(coll_int_gen(case["o"], case["fail"])))
+        if op == "init_sub":
+            return coll_enc_ul(type(u)(coll_RevList(case["o"])))
         raise AssertionError(op)
     return py_result(body)
 
