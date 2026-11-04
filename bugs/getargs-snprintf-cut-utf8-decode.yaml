@@ -1,0 +1,130 @@
+id: getargs-snprintf-cut-utf8-decode
+title: "A non-ASCII type name cut by snprintf turns argument and MRO TypeErrors into UnicodeDecodeError"
+priority: P4
+kind: wrong-exception
+module: json
+files: [Python/getargs.c, Objects/typeobject.c]
+functions: ["converterr", "converttuple", "seterror", "set_mro_error", "encoder_new"]
+summary: |
+  Two error paths build their message with PyOS_snprintf into a char buffer and then call
+  PyErr_SetString, which decodes the buffer strictly as UTF-8. The C library's "%.50s" (and the
+  1000-byte buffer of set_mro_error) cut bytes, not characters, so a non-ASCII class name whose
+  cut falls inside a character leaves an incomplete UTF-8 sequence at the end of the buffer.
+  PyUnicode_FromString then fails and its UnicodeDecodeError is the exception that propagates.
+  The TypeError the code meant to raise is lost.
+  - getargs.c converterr: every PyArg_Parse* format unit that rejects an argument by type prints
+    "must be %.50s, not %.50s" with the argument's tp_name. Reached from Python by, for example,
+    json.dumps([1], separators=(T(), ':')), which passes the separator to c_make_encoder's "U"
+    unit, with type(T()).__name__ == 'a' + 'é' * 30. It raises "UnicodeDecodeError: 'utf-8' codec
+    can't decode byte 0xc3 in position 92: unexpected end of data" instead of "TypeError:
+    make_encoder() argument 6 must be str, not aéé...". With a 3-byte character cut after two
+    bytes ('中' * 30) the message is "can't decode bytes in position 91-92".
+  - typeobject.c set_mro_error: an MRO conflict whose message passes 999 bytes inside a character
+    of a candidate's name raises UnicodeDecodeError at position 998 instead of "TypeError: Cannot
+    create a consistent method resolution order (MRO) for bases ...".
+  PyErr_Format's own "%.50s" (unicode_fromformat_write_utf8) drops an incomplete final sequence,
+  which is why _PyArg_BadArgument, the Argument Clinic twin of converterr, gets this right:
+  heapq.heappush(T(), 1) prints 'a' and 24 'é'.
+likelihood: |
+  Low. It needs a type name with a non-ASCII character spanning byte 50 (getargs) or a class name
+  that makes the MRO message pass 999 bytes at a non-ASCII character. Non-ASCII identifiers are
+  legal and both paths are reachable from pure Python. Code that catches TypeError around a
+  call, or around class creation, sees an unexpected UnicodeDecodeError.
+maybe_intended: |
+  No. The message is meant to be a TypeError, and the PyErr_Format twins of the same messages
+  (_PyArg_BadArgument, Python/getargs.c:662-670) cut on character boundaries.
+reproducer: |
+  import json
+
+  def kind(f):
+      try:
+          f()
+      except Exception as e:
+          return type(e).__name__
+      return None
+
+  # Site 1, converterr: 'a' + 30 'é' is 61 bytes; byte 50 is the first byte of the 25th 'é'.
+  T = type('a' + 'é' * 30, (), {})
+  U = type('a' + 'é' * 23, (), {})  # 47 bytes, no cut: the TypeError
+  r1 = kind(lambda: json.dumps([1], separators=(T(), ':')))
+  r1_control = kind(lambda: json.dumps([1], separators=(U(), ':')))
+
+  # Site 2, set_mro_error: candidates 'a' + 500 'é' and B; byte 998 starts an 'é'.
+  def conflict(name):
+      A = type(name, (), {})
+      B = type('B', (), {})
+      X = type('X', (A, B), {})
+      Y = type('Y', (B, A), {})
+      return kind(lambda: type('Z', (X, Y), {}))
+  r2 = conflict('a' + 'é' * 500)
+  r2_control = conflict('é' * 500)  # byte 998 ends an 'é': the TypeError
+
+  print(r1, r1_control, r2, r2_control)
+  if (r1, r1_control, r2, r2_control) == ('UnicodeDecodeError', 'TypeError',
+                                          'UnicodeDecodeError', 'TypeError'):
+      print('REPRODUCED getargs-snprintf-cut-utf8-decode')
+expected: |
+  TypeError in all four calls: "make_encoder() argument 6 must be str, not a" followed by 24 'é',
+  and "Cannot create a consistent method resolution order (MRO) for bases a" followed by as many
+  whole 'é' as fit.
+promised_by: |
+  The implementation disagreeing with itself: _PyArg_BadArgument (PyErr_Format) and converterr
+  (PyOS_snprintf) format the same "must be %.50s, not %.50s" message and differ on non-ASCII
+  names. Also the documented contract of PyArg_ParseTuple*, which raises TypeError for an
+  argument of the wrong type.
+cause: |
+  Python/getargs.c:
+  - converterr, :673-687: PyOS_snprintf(msgbuf, bufsize, "must be %.50s, not %.50s", expected,
+    arg == Py_None ? "None" : Py_TYPE(arg)->tp_name) at :682-684.
+  - Its callers return msgbuf from convertsimple (for example the "U" unit at :1300-1307) through
+    convertitem (:632-653) to vgetargs1_impl (:363, :396), vgetargskeywords (:1851) and
+    vgetargskeywordsfast_impl (:2415).
+  - These call seterror, :440-479, which copies the message with " %.256s" into a second snprintf
+    buffer (:470) and calls PyErr_SetString(PyExc_TypeError, message) at :477.
+  - PyErr_SetString (Python/errors.c:293-301) calls PyUnicode_FromString, which is strict. When it
+    fails, it leaves its UnicodeDecodeError set and sets nothing else.
+  Objects/typeobject.c set_mro_error, :3350-3398:
+  - char buf[1000] (:3353). The header goes in at :3370, then " %s" of each candidate's __name__
+    at :3389, in a loop that stops once off reaches the buffer size (:3373).
+  - PyErr_SetString(PyExc_TypeError, buf) at :3396.
+  Other sites with the same pattern (snprintf of "%.Ns" of a type name into a buffer, then
+  PyErr_SetString):
+  - Python/getargs.c converttuple, :566-569: "must be %d-item tuple, not %.50s" with tp_name.
+    _testcapi.getargs_tuple(1, T()) raises UnicodeDecodeError at position 86. No stdlib caller on
+    Linux: the only "(...)" unit outside tests is socket.ioctl, which is Windows-only.
+  - converterr with an O! unit uses the expected type's tp_name as the first "%.50s" (:1321). Only
+    C extensions choose that type.
+  - The rest of getargs.c's snprintf calls print numbers or ASCII literals (:583, :597, :694 with
+    "bytes"/"bytearray"/"str"). seterror's "%.200s()" is fname from the format string, and
+    " %.256s" receives a message of at most about 115 bytes.
+  - In Objects/*.c, the other snprintf calls are obmalloc debug statistics, floatobject.c:936
+    (numbers), unicodeobject.c:884 ("&#%d;") and tupleobject.c:1320 (debug statistics). None of
+    them reaches PyErr_SetString.
+possible_fix: |
+  Build these messages with PyErr_Format and "%.50s", which cuts on character boundaries
+  (unicode_fromformat_write_utf8 drops an incomplete final sequence), as _PyArg_BadArgument
+  already does. For seterror, the converter could return the message as a str object, or seterror
+  could use PyErr_Format("%s", ...) on a buffer cut on a character boundary. Short of that, decode
+  the buffer with PyUnicode_DecodeUTF8(buf, strlen(buf), "replace") before raising, so that the
+  TypeError survives with U+FFFD at the cut. For set_mro_error, build the message with a
+  _PyUnicodeWriter, or with PyUnicode_FromFormat and %U, instead of a fixed char buffer.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["converterr UnicodeDecodeError", "PyOS_snprintf truncate utf-8 error message",
+            "set_mro_error unicode", "non-ascii type name error message UnicodeDecodeError",
+            "getargs truncated type name UnicodeDecodeError", "MRO error message UnicodeDecodeError",
+            "consistent method resolution order UnicodeDecodeError", "converterr non-ascii",
+            "seterror PyErr_SetString utf-8",
+            "must be str not UnicodeDecodeError unexpected end of data", "converterr",
+            "set_mro_error", "snprintf utf-8 truncate", "getargs non-ascii type name",
+            "tp_name truncated utf-8", "%.50s utf-8", "PRs: converterr", "PRs: set_mro_error",
+            "PRs: getargs PyErr_Format converterr"]
+  related: "python/cpython#139447 (PyErr_Format shadowing an existing exception) is a different issue."
+  bugforge: "none"
+lean:
+  property: PyLean.JsonMod.EncoderNewSepTypeError
+  theorem: PyLean.JsonMod.encoderNewSepTypeError_refuted
+  notes: "set_mro_error is a gap% in PyLean.TypeObj.setMroError (TypeObj/TypeNew.lean); the TypeObj model has no UnicodeDecodeError object to raise."

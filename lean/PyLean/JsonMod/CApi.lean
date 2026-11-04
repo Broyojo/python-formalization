@@ -126,15 +126,57 @@ inductive EncoderArg where
   | cPlain
   | custom (g : PStr → Except PyExc EncOut)
 
+/-- The first byte of the UTF-8 encoding of `c`. -/
+def utf8Lead (c : Char) : Nat :=
+  let v := c.toNat
+  if v < 0x80 then v else if v < 0x800 then 0xC0 + v / 0x40
+  else if v < 0x10000 then 0xE0 + v / 0x1000 else 0xF0 + v / 0x40000
+
+/-- Two lower-case hex digits, as `%02x` prints a byte. -/
+def hex2 (b : Nat) : String :=
+  let d (k : Nat) : Char := if k < 10 then Char.ofNat (48 + k) else Char.ofNat (87 + k)
+  String.ofList [d (b / 16 % 16), d (b % 16)]
+
+/-- `snprintf("%.Ns")` of a valid UTF-8 string, then a strict decode of the buffer, when the
+string ends the buffer and `pre` bytes come before it. `%.Ns` of the C library keeps exactly the
+first `n` bytes, so a character the cut splits is left as an incomplete sequence at the end.
+`.ok cs`: the characters kept, every one whole. `.error`: `PyUnicode_FromString` refuses the
+buffer with `UnicodeDecodeError`, "unexpected end of data" over the `n` bytes of the incomplete
+sequence; its `str` names the byte when there is one, the range of positions otherwise
+(`UnicodeDecodeError_str`, Objects/exceptions.c:3893-3909). -/
+def cCut : Nat → Nat → List Char → Except PyExc (List Char)
+  | _, _, [] => .ok []
+  | pre, n, c :: cs =>
+    if c.utf8Size ≤ n then (c :: ·) <$> cCut (pre + c.utf8Size) (n - c.utf8Size) cs
+    else if n = 0 then .ok []
+    else if n = 1 then .error (.named "UnicodeDecodeError"
+      s!"'utf-8' codec can't decode byte 0x{hex2 (utf8Lead c)} in position {pre}: unexpected end of data")
+    else .error (.named "UnicodeDecodeError"
+      s!"'utf-8' codec can't decode bytes in position {pre}-{pre + n - 1}: unexpected end of data")
+
+/-- A `U` argument that is not a `str`, refused by `PyArg_ParseTupleAndKeywords`, with `argn`
+its position: `convertsimple` calls `converterr("str", arg, ...)` (Python/getargs.c:1300-1307),
+which writes `"must be %.50s, not %.50s"` with `PyOS_snprintf` (`:682-684`, `None` for the None
+object); `seterror` (`:440-479`, from `vgetargskeywords`, `:1851`) prefixes `"%.200s() argument
+%zd "` in another `snprintf` buffer and passes it to `PyErr_SetString` (`:477`), which decodes it
+strictly (Python/errors.c:296). The cut is by bytes, so a type name whose 50th byte falls inside
+a character leaves an incomplete sequence, and the exception is `UnicodeDecodeError`, not
+`TypeError`. -/
+def uArgErr (argn : Nat) (t : String) : PyExc :=
+  let head := s!"make_encoder() argument {argn} must be str, not "
+  match cCut (head.toList.map Char.utf8Size).sum 50 (if t = "NoneType" then "None" else t).toList with
+  | .ok cs => .typeError (head ++ String.ofList cs)
+  | .error e => e
+
 /-- `encoder_new`, :1311-1359. The `U` conversions run before the `markers` check. -/
 def encoderNew (markers : MarkersArg) (dflt : Nat → String → Except PyExc EVal) (dfltDepth : Nat)
     (encoder : EncoderArg) (indent : Option PStr) (keySep itemSep : StrArg)
     (sortKeys skipKeys allowNan : Bool) : Except PyExc ECfg :=
   match keySep with
-  | .other t => .error (.typeError s!"make_encoder() argument 5 must be str, not {t}")
+  | .other t => .error (uArgErr 5 t)
   | .str keySep =>
     match itemSep with
-    | .other t => .error (.typeError s!"make_encoder() argument 6 must be str, not {t}")
+    | .other t => .error (uArgErr 6 t)
     | .str itemSep =>
       match markers with
       | .other t =>
