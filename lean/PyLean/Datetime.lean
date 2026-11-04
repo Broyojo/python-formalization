@@ -555,7 +555,7 @@ def entries : List Entry := [
     notes := "date.fromordinal(obj) with obj.__index__() == 5: date(1, 1, 5) in C, TypeError from n -= 1 in Python." },
   { id := "datetime-fromordinal-arg", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.fromordinal", "_ord2ymd", "C datetime_date_fromordinal", "C datetime_date_fromordinal_impl"]
-    statement := "date.fromordinal(x) for every argument: an int is the int-level model in each twin; an object whose __index__ returns n is fromordinal(n) in C and a TypeError in Python; an exception of __index__ propagates in C; every argument without __index__ (None, str, bytes, float, any other object) is a TypeError in both."
+    statement := "date.fromordinal(x) for every argument: an int is the int-level model in each twin; an object whose __index__ returns n is fromordinal(n) in C and a TypeError in Python; an exception of __index__ propagates in C; every argument without __index__ (None, str, bytes, any other object) is a TypeError in both; a float is a TypeError in C and runs _ord2ymd on floats in Python (date.fromordinal(0.1) is AssertionError, date.fromordinal(1.5) a TypeError from >>)."
     source := "C/Python twins", status := .proven
     prop := ``FromordinalArg, thm := some ``fromordinalArg_proven },
   { id := "datetime-check-time-fields", pyFile := "Lib/_pydatetime.py"
