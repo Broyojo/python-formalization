@@ -961,4 +961,200 @@ theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
     rw [wd_deopt hspec]
 
 
+/-! ## `CALL_PY_EXACT_ARGS`, `CALL_BOUND_METHOD_EXACT_ARGS` -/
+
+/-- `function_kind(code) == SIMPLE_FUNCTION` (`Python/specialize.c:1472-1481`): no `*args`, no
+`**kwargs`, no keyword-only parameters, and `CO_OPTIMIZED`. -/
+def SimpleCode (co : Code) : Prop :=
+  co.kwonlyargcount = 0 ∧ flagSet co.flags coVarargs = false ∧ flagSet co.flags coVarkeywords = false ∧
+    flagSet co.flags coOptimized = true
+
+/-- The specializer's invariant for the `EXACT_ARGS` forms, on the function a call site holds: its
+code object is in the program, and when its `func_version` is the one in the cache, that code is a
+simple function (`specialize_py_call` installs `CALL_PY_EXACT_ARGS` or
+`CALL_BOUND_METHOD_EXACT_ARGS` only for `SIMPLE_FUNCTION` code, `:1754-1792`, and a function's version
+changes with its code). -/
+def SimpleAtVersion (e : Env) (rt : Rt) (c : Val) : Prop :=
+  ∀ a fo, c = .ref a → rt.heap[a]? = some (.func fo) →
+    ∃ co, e.P[fo.code]? = some co ∧ (fo.version = cacheNat e 0 → SimpleCode co)
+
+theorem foldl_congr_mem {α β : Type} (f g : β → α → β) :
+    ∀ (l : List α) (b : β), (∀ x ∈ l, ∀ acc, f acc x = g acc x) → l.foldl f b = l.foldl g b := by
+  intro l
+  induction l with
+  | nil => intro b _; rfl
+  | cons x xs ih =>
+    intro b h
+    simp only [List.foldl_cons]
+    rw [h x (by simp)]
+    exact ih _ (fun y hy acc => h y (by simp [hy]) acc)
+
+theorem zipIdx_fold (L : List Val) :
+    ∀ (k : Nat) (a : Array Val), (L.zipIdx k).foldl (fun f p => f.setIfInBounds p.2 p.1) a =
+      (List.range' k L.length).foldl (fun f j => f.setIfInBounds j (L.getD (j - k) .null)) a := by
+  induction L with
+  | nil => intro k a; rfl
+  | cons x xs ih =>
+    intro k a
+    simp only [List.zipIdx_cons, List.foldl_cons, List.length_cons, List.range'_succ, Nat.sub_self,
+      List.getD_cons_zero]
+    rw [ih (k + 1)]
+    apply foldl_congr_mem
+    intro j hj acc
+    have hk : k + 1 ≤ j := (List.mem_range'_1.mp hj).1
+    have : j - k = (j - (k + 1)) + 1 := by omega
+    rw [this, List.getD_cons_succ]
+
+theorem initializeLocals_simple (co : Code) (func : FuncObj) (fast0 : Array Val) (L : List Val) (rt : Rt)
+    (hs : SimpleCode co) (hl : L.length = co.argcount) :
+    initializeLocals co func fast0 L [] rt =
+      .ok ((List.range L.length).foldl (fun f j => f.setIfInBounds j (L.getD j .null)) fast0) rt := by
+  obtain ⟨hk, hva, hvk, _⟩ := hs
+  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind]
+
+/-- The frame `_INIT_CALL_PY_EXACT_ARGS` builds (`:4615-4626`): `_PyFrame_PushUnchecked` with `NULL`
+locals and the arguments (`self` first when not `NULL`) copied into the first locals. -/
+def exactFrame (co : Code) (fo : FuncObj) (c : Val) (L : List Val) : Frame :=
+  let nf := frameInitialize co fo.code fo c .null
+  { nf with fast := L.zipIdx.foldl (fun f p => f.setIfInBounds p.2 p.1) nf.fast }
+
+theorem pushInit_simple (e : Env) (regs : Regs) (a : Addr) (fo : FuncObj) (co : Code) (L : List Val)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co) (hs : SimpleCode co)
+    (hl : L.length = co.argcount) :
+    pushInit e (.ref a) L [] regs = .ok (exactFrame co fo (.ref a) L) regs := by
+  have hli := initializeLocals_simple co fo (frameInitialize co fo.code fo (.ref a) (localsFor co fo)).fast L regs.rt hs hl
+  have hloc : localsFor co fo = .null := by simp [localsFor, hs.2.2.2]
+  simp only [pushInit, framePushAndInit, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, RM.lift, liftM,
+    monadLift, MonadLift.monadLift, pure, EStateM.pure, List.length_nil, Nat.sub_zero, List.take_length,
+    List.zip_nil_left]
+  rw [hli]
+  simp only [exactFrame, zipIdx_fold L 0, List.range_eq_range', Nat.sub_zero, hloc]
+
+section
+variable (e : Env) (regs : Regs) (c self : Val) (args rest : List Val)
+
+theorem exactArgs_pass (hlen : args.length = e.oparg) (a : Addr) (fo : FuncObj) (co : Code)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co)
+    (hx : co.argcount = (withSelf self args).length) :
+    _CHECK_FUNCTION_EXACT_ARGS e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+      .ok () ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ := by
+  simp only [_CHECK_FUNCTION_EXACT_ARGS, guardTop, bind, EStateM.bind,
+    callStack_peek regs (.ref a) self args rest e.oparg hlen]
+  by_cases hs : self = .null
+  · subst hs
+    simp [withSelf] at hx
+    simp [BM.lift, RM.lift, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, pure, EStateM.pure, liftM,
+      monadLift, MonadLift.monadLift, hx, hlen, deoptIf]
+  · simp [withSelf, hs] at hx
+    simp [BM.lift, RM.lift, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, pure, EStateM.pure, liftM,
+      monadLift, MonadLift.monadLift, hx, hlen, hs, deoptIf]
+
+theorem exactArgs_fail (hlen : args.length = e.oparg) (a : Addr) (fo : FuncObj) (co : Code)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co)
+    (hx : co.argcount ≠ (withSelf self args).length) :
+    _CHECK_FUNCTION_EXACT_ARGS e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+      .error .deopt ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ := by
+  simp only [_CHECK_FUNCTION_EXACT_ARGS, guardTop, bind, EStateM.bind,
+    callStack_peek regs (.ref a) self args rest e.oparg hlen]
+  by_cases hs : self = .null
+  · subst hs
+    simp [withSelf] at hx
+    rw [hlen] at hx
+    simp [BM.lift, RM.lift, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, pure, EStateM.pure, liftM,
+      monadLift, MonadLift.monadLift, hx, hlen, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw,
+      MonadExceptOf.throw]
+  · simp [withSelf, hs] at hx
+    rw [hlen] at hx
+    simp [BM.lift, RM.lift, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, pure, EStateM.pure, liftM,
+      monadLift, MonadLift.monadLift, hx, hlen, hs, deoptIf, throw, throwThe, MonadExcept.throw, EStateM.throw,
+      MonadExceptOf.throw]
+
+theorem stackSpace_eval (s : St) :
+    _CHECK_STACK_SPACE s = if s.regs.rt.stackSpace then .ok () s else .error .deopt s := by
+  cases h : s.regs.rt.stackSpace <;>
+    simp [_CHECK_STACK_SPACE, guardTop, peekN, BM.lift, hasStackSpace, h, deoptIf, bind, EStateM.bind, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+theorem initExact_eq (hlen : args.length = e.oparg) (a : Addr) (fo : FuncObj) (co : Code)
+    (ho : regs.rt.heap[a]? = some (.func fo)) (hco : e.P[fo.code]? = some co) :
+    _INIT_CALL_PY_EXACT_ARGS e ⟨regs, args.reverse ++ self :: .ref a :: rest⟩ =
+      .ok (exactFrame co fo (.ref a) (withSelf self args)) ⟨regs, rest⟩ := by
+  simp only [_INIT_CALL_PY_EXACT_ARGS, bind, EStateM.bind, callStack_pop regs (.ref a) self args rest e.oparg hlen]
+  simp [BM.lift, RM.lift, getFunc, getObj, ho, getCodeR, hco, bind, EStateM.bind, pure, EStateM.pure, liftM,
+    monadLift, MonadLift.monadLift, exactFrame]
+
+end
+
+theorem withSelf_length (self : Val) (args : List Val) :
+    (withSelf self args).length = args.length + (if self != .null then 1 else 0) := by
+  unfold withSelf; split <;> simp_all <;> omega
+
+/-- `CALL_PY_EXACT_ARGS` (`:4659-4669`: `_CHECK_PEP_523 + _CHECK_FUNCTION_VERSION +
+_CHECK_FUNCTION_EXACT_ARGS + _CHECK_STACK_SPACE + _CHECK_RECURSION_REMAINING + _INIT_CALL_PY_EXACT_ARGS
++ _SAVE_RETURN_OFFSET + _PUSH_FRAME`) does what `CALL` does, for every live callable, every runtime and
+object model, under the specializer's invariant `SimpleAtVersion`: it exits on a non-function or a
+stale version, when `co_argcount` is not the number of arguments with `self` (`:4596-4602`), when the
+data stack has no room (`:4604-4609`) and when the recursion budget is down to 1; otherwise the frame
+it fills by copying the arguments is the one `_PyEvalFramePushAndInit` builds, and it is entered as
+`CALL` enters it. Without `SimpleAtVersion` it is false: for a function with `*args` or a keyword-only
+parameter, the copy leaves those locals `NULL` where `initialize_locals` fills them. -/
+def CallPyExactArgsRefines : Prop := ∀ (e : Env) (regs : Regs) (c self : Val) (args rest : List Val),
+  args.length = e.oparg → Live regs.rt c → SimpleAtVersion e regs.rt c →
+  regs.next = e.this + instrSize e.opcode →
+  afterInstr e.P (execOp e .CALL_PY_EXACT_ARGS ⟨regs, args.reverse ++ self :: c :: rest⟩) =
+    afterInstr e.P (execOp e .CALL ⟨regs, args.reverse ++ self :: c :: rest⟩)
+
+theorem callPyExactArgsRefines_proven : CallPyExactArgsRefines := by
+  intro e regs c self args rest hlen hc hsv hn
+  simp only [execOp]
+  by_cases hf : ∃ a fo, c = .ref a ∧ regs.rt.heap[a]? = some (.func fo) ∧ fo.version = cacheNat e 0
+  · obtain ⟨a, fo, rfl, ho, hv⟩ := hf
+    obtain ⟨co, hco, hsimp⟩ := hsv a fo rfl ho
+    have hgen := (callGenericRules_proven e regs (.ref a) self args rest hlen hc).2.1 a fo rfl ho
+    simp only [execOp] at hgen
+    have hfv := fnVersion_pass e regs self args rest hlen a fo ho hv
+    let S : St := ⟨regs, args.reverse ++ self :: .ref a :: rest⟩
+    by_cases hx : co.argcount = (withSelf self args).length
+    · have hea' : _CHECK_FUNCTION_EXACT_ARGS e S = .ok () S :=
+        exactArgs_pass e regs self args rest hlen a fo co ho hco hx
+      by_cases hsp : regs.rt.stackSpace = true
+      · have hss : _CHECK_STACK_SPACE S = .ok () S := by rw [stackSpace_eval]; simp [S, hsp]
+        by_cases hr : 1 < regs.rt.pyRecursionRemaining
+        · have hrs := recRemaining_pass S hr
+          have hl : (withSelf self args).length = co.argcount := hx.symm
+          have hpi := pushInit_simple e regs a fo co (withSelf self args) ho hco (hsimp hv) hl
+          have hspec : CALL_PY_EXACT_ARGS e S = .ok () (enteredSt e (exactFrame co fo (.ref a) (withSelf self args)) regs rest) := by
+            simp only [CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+            rw [hfv]; simp only; rw [hea']; simp only; rw [hss]; simp only; rw [hrs]; simp only
+            rw [initExact_eq e regs self args rest hlen a fo co ho hco]
+            simp only
+            have := pushFrame_entered e (exactFrame co fo (.ref a) (withSelf self args)) regs rest hn
+            simp only [bind, EStateM.bind] at this
+            exact this
+          rw [wd_ok hspec, hgen.1 _ _ hpi, dispatch_entered e _ regs rest (by omega)]
+          rfl
+        · have hspec : CALL_PY_EXACT_ARGS e S = .error .deopt S := by
+            simp only [CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+            rw [hfv]; simp only; rw [hea']; simp only; rw [hss]; simp only
+            rw [recRemaining_fail _ (by simpa [S] using hr)]
+          rw [wd_deopt hspec]
+      · have hspec : CALL_PY_EXACT_ARGS e S = .error .deopt S := by
+          simp only [CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hfv]; simp only; rw [hea']; simp only
+          rw [stackSpace_eval]; simp [S, hsp]
+        rw [wd_deopt hspec]
+    · have hspec : CALL_PY_EXACT_ARGS e S = .error .deopt S := by
+        simp only [CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hfv]; simp only
+        rw [exactArgs_fail e regs self args rest hlen a fo co ho hco hx]
+      rw [wd_deopt hspec]
+  · have hb : ∀ a fo, c = .ref a → regs.rt.heap[a]? = some (.func fo) → fo.version ≠ cacheNat e 0 :=
+      fun a fo h1 h2 h3 => hf ⟨a, fo, h1, h2, h3⟩
+    have hspec : CALL_PY_EXACT_ARGS e ⟨regs, args.reverse ++ self :: c :: rest⟩ =
+        .error .deopt ⟨regs, args.reverse ++ self :: c :: rest⟩ := by
+      simp only [CALL_PY_EXACT_ARGS, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+      rw [fnVersion_fail e regs c self args rest hlen hc hb]
+    rw [wd_deopt hspec]
+
+
 end PyLean.Bytecode
