@@ -3,8 +3,8 @@ Objects/floatobject.c	33	36	PyFloat_GetMax	PyFloat_GetMax(void)	modelled	float-i
 Objects/floatobject.c	39	42	PyFloat_GetMin	PyFloat_GetMin(void)	modelled	float-info	
 Objects/floatobject.c	83	122	PyFloat_GetInfo	PyFloat_GetInfo(void)	modelled	float-info	
 Objects/floatobject.c	125	137	PyFloat_FromDouble	PyFloat_FromDouble(double fval)	excluded		no-behaviour: boxes a C double in a new object; the value passes through unchanged and every model carries the F64 directly
-Objects/floatobject.c	140	177	float_from_string_inner	float_from_string_inner(const char *s, Py_ssize_t len, void *obj)	todo		review: FloatBlankRaises only states that empty or all-space input raises ValueError, so an inner that raises ValueError for every string passes; the value of float(s) for a real numeral, the trailing-whitespace strip (:156-159) and the end != last check (:165) are never stated.
-Objects/floatobject.c	180	227	PyFloat_FromString	PyFloat_FromString(PyObject *v)	todo		float-from-string-dispatch states the str, bytes, bytearray, buffer and TypeError branches (:189-221); a statement of what an accepted string converts to is still missing beyond the blank-string ValueError (float-blank-string)
+Objects/floatobject.c	140	177	float_from_string_inner	float_from_string_inner(const char *s, Py_ssize_t len, void *obj)	modelled	float-from-string-infnan,float-blank-string	
+Objects/floatobject.c	180	227	PyFloat_FromString	PyFloat_FromString(PyObject *v)	modelled	float-from-string-infnan,float-from-string-dispatch,float-blank-string	
 Objects/floatobject.c	230	234	_PyFloat_ExactDealloc	_PyFloat_ExactDealloc(PyObject *obj)	excluded		no-behaviour: returns the object to the freelist
 Objects/floatobject.c	237	244	float_dealloc	float_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Objects/floatobject.c	247	303	PyFloat_AsDouble	PyFloat_AsDouble(PyObject *op)	modelled	float-as-double	

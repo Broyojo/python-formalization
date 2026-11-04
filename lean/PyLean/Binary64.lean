@@ -26,6 +26,7 @@ import PyLean.Binary64.FloatSmall
 import PyLean.Binary64.FloatPow
 import PyLean.Binary64.FloatObj
 import PyLean.Binary64.FloatObjProps
+import PyLean.Binary64.FloatParse
 import PyLean.Binary64.Diff
 
 /-!
@@ -235,7 +236,13 @@ def entries : List Entry := [
     source := "Objects/abstract.c:1410-1453"
     status := .proven, prop := ``NumberIndexSpec, thm := some ``numberIndexSpec_proven
     notes := "A helper from Objects/abstract.c; credits no row here." },
-  { id := "float-from-string-dispatch", pyFile := floatFile, pyFns := []
+  { id := "float-from-string-infnan", pyFile := floatFile
+    pyFns := ["float_from_string_inner", "PyFloat_FromString"]
+    statement := "float() of [spaces] [sign] word [spaces], as bytes or as an ASCII str, where word spells inf, infinity or nan in any mix of cases, is the infinity or the NaN with that sign; with one more non-space byte other than '_' right after the word (float('infx'), float('nan1'), float(b'-inf\\x00')) it raises ValueError from the end != last check."
+    source := "floatobject.c:140-177 (leading whitespace :145-148, trailing :156-159, end != last :165), :180-227; pystrtod.c:92-113 (inf and nan fallback)"
+    status := .proven, prop := ``FromStringInfNan, thm := some ``fromStringInfNan_proven
+    notes := "Smoke-tested on 3.15.2: float(' -InFiNiTy\\n') is -inf, float('-NaN') has bits 0xfff8000000000000, float(b'\\x0b+INFINITY\\x0c ') is inf, and 'infx', 'nan1', 'infi', '  infinityx  ' and b'-inf\\x00' raise ValueError. Real numerals go through _Py_dg_strtod, whose correct rounding is the open strtod-correctly-rounded." },
+  { id := "float-from-string-dispatch", pyFile := floatFile, pyFns := ["PyFloat_FromString"]
     statement := "PyFloat_FromString sends a str through the decimal and space transform, bytes, bytearray and any other buffer as bytes, and raises TypeError('float() argument must be a string or a real number, not T') for anything else."
     source := "floatobject.c:189-221"
     status := .proven, prop := ``FromStringDispatch, thm := some ``fromStringDispatch_proven },

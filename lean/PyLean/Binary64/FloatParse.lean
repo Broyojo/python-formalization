@@ -231,4 +231,272 @@ theorem parse_word (s : List Nat) (P S : Nat) (neg : Bool) (target : List Nat)
     · simp [lowerInfinity] <;> omega
     · exact absurd rfl hn
 
+/-! ## `float_from_string_inner` around the word -/
+
+theorem word_first {s : List Nat} {P S : Nat} {target : List Nat}
+    (ht : target = lowerInf ∨ target = lowerInfinity ∨ target = lowerNan)
+    (hw : ∀ j, j < target.length → toLower (at_ s (P + S + j)) = target.getD j 0) :
+    at_ s (P + S) = 105 ∨ at_ s (P + S) = 73 ∨ at_ s (P + S) = 110 ∨ at_ s (P + S) = 78 := by
+  have hw0 := hw 0 (by rcases ht with rfl | rfl | rfl <;> decide)
+  rcases ht with rfl | rfl | rfl
+  · have := toLower_cases (by simpa [lowerInf] using hw0) (by decide : 97 ≤ 105 ∧ 105 ≤ 122); omega
+  · have := toLower_cases (by simpa [lowerInfinity] using hw0) (by decide : 97 ≤ 105 ∧ 105 ≤ 122); omega
+  · have := toLower_cases (by simpa [lowerNan] using hw0) (by decide : 97 ≤ 110 ∧ 110 ≤ 122); omega
+
+theorem word_last {s : List Nat} {P S : Nat} {target : List Nat}
+    (ht : target = lowerInf ∨ target = lowerInfinity ∨ target = lowerNan)
+    (hw : ∀ j, j < target.length → toLower (at_ s (P + S + j)) = target.getD j 0) :
+    isSpace (at_ s (P + S + target.length - 1)) = false := by
+  rcases ht with rfl | rfl | rfl
+  · have h := hw 2 (by decide)
+    have := toLower_cases (by simpa [lowerInf] using h) (by decide : 97 ≤ 102 ∧ 102 ≤ 122)
+    simp only [lowerInf, List.length]
+    rw [show P + S + (0 + 1 + 1 + 1) - 1 = P + S + 2 by omega]
+    rcases this with h | h <;> rw [h] <;> decide
+  · have h := hw 7 (by decide)
+    have := toLower_cases (by simpa [lowerInfinity] using h) (by decide : 97 ≤ 121 ∧ 121 ≤ 122)
+    simp only [lowerInfinity, List.length]
+    rw [show P + S + (0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) - 1 = P + S + 7 by omega]
+    rcases this with h | h <;> rw [h] <;> decide
+  · have h := hw 2 (by decide)
+    have := toLower_cases (by simpa [lowerNan] using h) (by decide : 97 ≤ 110 ∧ 110 ≤ 122)
+    simp only [lowerNan, List.length]
+    rw [show P + S + (0 + 1 + 1 + 1) - 1 = P + S + 2 by omega]
+    rcases this with h | h <;> rw [h] <;> decide
+
+theorem target_len {target : List Nat}
+    (ht : target = lowerInf ∨ target = lowerInfinity ∨ target = lowerNan) : 3 ≤ target.length := by
+  rcases ht with rfl | rfl | rfl <;> decide
+
+/-- `float_from_string_inner` on a buffer holding spaces, `[sign] word`, and spaces from
+`last` on: the value when the word ends at `last`, and `ValueError` otherwise. -/
+theorem inner_word (s : List Nat) (P S : Nat) (neg : Bool) (target : List Nat) (last : Nat)
+    (hS : (S = 0 ∧ neg = false) ∨ (S = 1 ∧ at_ s P = if neg then 45 else 43))
+    (ht : target = lowerInf ∨ target = lowerInfinity ∨ target = lowerNan)
+    (hw : ∀ j, j < target.length → toLower (at_ s (P + S + j)) = target.getD j 0)
+    (hafter : target = lowerInf →
+      toLower (at_ s (P + S + 3)) ≠ 105 ∨ toLower (at_ s (P + S + 4)) ≠ 110)
+    (hpre : ∀ i, i < P → isSpace (at_ s i) = true)
+    (hlast : P + S + target.length ≤ last) (hlen : last ≤ s.length)
+    (hsp : ∀ i, last ≤ i → i < s.length → isSpace (at_ s i) = true)
+    (hstop : isSpace (at_ s (last - 1)) = false) :
+    float_from_string_inner s s.length =
+      if P + S + target.length = last then
+        .ok (if target = lowerNan then (if neg then qnan.neg else qnan) else F64.inf neg)
+      else strToFloatError := by
+  have h3 := target_len ht
+  have h0 := word_first ht hw
+  have hP : isSpace (at_ s P) = false := by
+    rcases hS with ⟨rfl, _⟩ | ⟨_, hc⟩
+    · simp only [Nat.add_zero] at h0; rcases h0 with h | h | h | h <;> rw [h] <;> decide
+    · rw [hc]; cases neg <;> decide
+  have hi0 := scanLimit_spaces s s.length P (by omega) hpre hP
+  have hlast' := trimEnd_spaces s P last (by omega) hsp hstop (s.length - P) s.length (by omega) (Nat.le_refl _)
+    (by omega)
+  unfold float_from_string_inner
+  simp only [hi0]
+  have hne : (P == s.length) = false := by simp; omega
+  simp only [hne, Bool.false_eq_true, ↓reduceIte, hlast', parse_word s P S neg target hS ht hw hafter]
+  by_cases he : P + S + target.length = last
+  · simp [he]
+  · have : (P + S + target.length != last) = true := by simp [he]
+    simp [this, he]
+
+/-! ## The property, proven -/
+
+theorem at_app_lt {l r : List Nat} {i : Nat} (h : i < l.length) : at_ (l ++ r) i = at_ l i := by
+  unfold at_; simp [List.getD_eq_getElem?_getD, List.getElem?_append_left h]
+
+theorem at_mem {l : List Nat} {i : Nat} (h : i < l.length) : at_ l i ∈ l := by
+  unfold at_; simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h]
+
+theorem at_map_toLower {l : List Nat} {j : Nat} (h : j < l.length) :
+    toLower (at_ l j) = (l.map toLower).getD j 0 := by
+  unfold at_; simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h]
+
+theorem space_or_zero_lower {c : Nat} (h : isSpace c = true ∨ c = 0) : toLower c ≠ 105 ∧ toLower c ≠ 110 := by
+  unfold toLower isSpace at *; rcases h with h | h
+  · simp at h; split <;> omega
+  · subst h; decide
+
+theorem at_post_lower (post : List Nat) (hpost : ∀ c ∈ post, isSpace c = true) (k : Nat) :
+    toLower (at_ post k) ≠ 105 ∧ toLower (at_ post k) ≠ 110 := by
+  apply space_or_zero_lower
+  by_cases hk : k < post.length
+  · left; exact hpost _ (at_mem hk)
+  · right; exact at_ge_length (by omega)
+
+theorem letter_of_lower {c : Nat} (h : toLower c ∈ [105, 110, 102, 116, 121, 97]) : c < 128 ∧ c ≠ 95 ∧ isSpace c = false := by
+  have h' : toLower c = 105 ∨ toLower c = 110 ∨ toLower c = 102 ∨ toLower c = 116 ∨ toLower c = 121 ∨
+      toLower c = 97 := by simpa using h
+  unfold toLower at h'
+  unfold isSpace
+  split at h'
+  · rename_i hc; simp at hc; refine ⟨by omega, by omega, ?_⟩; simp; omega
+  · rename_i hc; refine ⟨by omega, by omega, ?_⟩; simp; omega
+
+theorem no_underscore (s : List Nat) (h : ∀ c ∈ s, c ≠ 95) :
+    _Py_string_to_number_with_underscores s "float" float_from_string_inner =
+      float_from_string_inner s s.length := by
+  unfold _Py_string_to_number_with_underscores
+  have : ¬ (95 ∈ s.takeWhile (· != 0)) := fun hm => h 95 (List.takeWhile_subset _ hm) rfl
+  simp [this]
+
+theorem buf_facts (pre sgn word tail : List Nat) :
+    (∀ i, i < pre.length → at_ (pre ++ sgn ++ word ++ tail) i = at_ pre i) ∧
+    (∀ j, j < sgn.length → at_ (pre ++ sgn ++ word ++ tail) (pre.length + j) = at_ sgn j) ∧
+    (∀ j, j < word.length →
+      at_ (pre ++ sgn ++ word ++ tail) (pre.length + sgn.length + j) = at_ word j) ∧
+    (∀ k, at_ (pre ++ sgn ++ word ++ tail) (pre.length + sgn.length + word.length + k) = at_ tail k) ∧
+    (pre ++ sgn ++ word ++ tail).length = pre.length + sgn.length + word.length + tail.length := by
+  refine ⟨fun i h => ?_, fun j h => ?_, fun j h => ?_, fun k => ?_, by simp; omega⟩
+  · rw [at_app_lt (by simp <;> omega), at_app_lt (by simp <;> omega), at_app_lt h]
+  · rw [at_app_lt (by simp <;> omega), at_app_lt (by simp <;> omega), at_append_ge (by omega)]
+    congr 1 <;> omega
+  · rw [at_app_lt (by simp <;> omega), at_append_ge (by simp <;> omega)]
+    congr 1 <;> simp <;> omega
+  · rw [at_append_ge (by simp <;> omega)]
+    congr 1 <;> simp <;> omega
+
+theorem fromString_main (pre sgn word tail : List Nat) (neg : Bool) (target : List Nat)
+    (hpre : ∀ c ∈ pre, isSpace c = true)
+    (hsgn : (sgn = [] ∧ neg = false) ∨ (sgn = [43] ∧ neg = false) ∨ (sgn = [45] ∧ neg = true))
+    (ht : word.map toLower = target)
+    (ht' : target = lowerInf ∨ target = lowerInfinity ∨ target = lowerNan)
+    (hafter : target = lowerInf → toLower (at_ tail 0) ≠ 105 ∨ toLower (at_ tail 1) ≠ 110)
+    (last : Nat) (hlast : pre.length + sgn.length + word.length ≤ last)
+    (hlen : last ≤ (pre ++ sgn ++ word ++ tail).length)
+    (hsp : ∀ i, last ≤ i → i < (pre ++ sgn ++ word ++ tail).length →
+      isSpace (at_ (pre ++ sgn ++ word ++ tail) i) = true)
+    (hstop : isSpace (at_ (pre ++ sgn ++ word ++ tail) (last - 1)) = false) :
+    float_from_string_inner (pre ++ sgn ++ word ++ tail) (pre ++ sgn ++ word ++ tail).length =
+      if pre.length + sgn.length + word.length = last then
+        .ok (if target = lowerNan then (if neg then qnan.neg else qnan) else F64.inf neg)
+      else strToFloatError := by
+  obtain ⟨f1, f2, f3, f4, _⟩ := buf_facts pre sgn word tail
+  have hWlen : word.length = target.length := by rw [← ht, List.length_map]
+  have hw : ∀ j, j < target.length →
+      toLower (at_ (pre ++ sgn ++ word ++ tail) (pre.length + sgn.length + j)) = target.getD j 0 := by
+    intro j hj
+    rw [f3 j (by omega), at_map_toLower (by omega), ht]
+  have hS : (sgn.length = 0 ∧ neg = false) ∨
+      (sgn.length = 1 ∧ at_ (pre ++ sgn ++ word ++ tail) pre.length = if neg then 45 else 43) := by
+    rcases hsgn with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · left; exact ⟨rfl, rfl⟩
+    · right; refine ⟨rfl, ?_⟩; have := f2 0 (by decide); rw [Nat.add_zero] at this; rw [this]; rfl
+    · right; refine ⟨rfl, ?_⟩; have := f2 0 (by decide); rw [Nat.add_zero] at this; rw [this]; rfl
+  have hafter' : target = lowerInf →
+      toLower (at_ (pre ++ sgn ++ word ++ tail) (pre.length + sgn.length + 3)) ≠ 105 ∨
+      toLower (at_ (pre ++ sgn ++ word ++ tail) (pre.length + sgn.length + 4)) ≠ 110 := by
+    intro h
+    have hW3 : word.length = 3 := by rw [hWlen, h]; rfl
+    have a := f4 0
+    have b := f4 1
+    rw [hW3] at a b
+    rw [show pre.length + sgn.length + 3 = pre.length + sgn.length + 3 + 0 by omega, a,
+      show pre.length + sgn.length + 4 = pre.length + sgn.length + 3 + 1 by omega, b]
+    exact hafter h
+  have hpre' : ∀ i, i < pre.length → isSpace (at_ (pre ++ sgn ++ word ++ tail) i) = true := by
+    intro i hi; rw [f1 i hi]; exact hpre _ (at_mem hi)
+  have := inner_word (pre ++ sgn ++ word ++ tail) pre.length sgn.length neg target last hS ht' hw hafter'
+    hpre' (by omega) hlen hsp hstop
+  rw [this, hWlen]
+
+theorem fromStringInfNan_proven : FromStringInfNan := by
+  intro pre post sgn word hpre hpost hsgn hword
+  simp only []
+  generalize ht : word.map toLower = target at hword ⊢
+  have hletter : ∀ c ∈ word, c < 128 ∧ c ≠ 95 ∧ isSpace c = false := by
+    intro c hc
+    apply letter_of_lower
+    have : toLower c ∈ target := by rw [← ht]; exact List.mem_map_of_mem hc
+    rcases hword with rfl | rfl | rfl <;> simp [lowerInf, lowerInfinity, lowerNan] at this ⊢ <;> omega
+  have hWlen : word.length = target.length := by rw [← ht, List.length_map]
+  have h3 := target_len hword
+  obtain ⟨neg, hsgn', hneg⟩ : ∃ neg : Bool,
+      ((sgn = [] ∧ neg = false) ∨ (sgn = [43] ∧ neg = false) ∨ (sgn = [45] ∧ neg = true)) ∧
+      (decide (sgn = [45]) = neg) := by
+    rcases hsgn with rfl | rfl | rfl
+    · exact ⟨false, Or.inl ⟨rfl, rfl⟩, by decide⟩
+    · exact ⟨false, Or.inr (Or.inl ⟨rfl, rfl⟩), by decide⟩
+    · exact ⟨true, Or.inr (Or.inr ⟨rfl, rfl⟩), by decide⟩
+  have hsgnc : ∀ c ∈ sgn, c < 128 ∧ c ≠ 95 ∧ isSpace c = false := by
+    rcases hsgn with rfl | rfl | rfl <;> simp <;> decide
+  have hspc : ∀ c, isSpace c = true → c < 128 ∧ c ≠ 95 := by
+    intro c h; unfold isSpace at h; simp at h; omega
+  obtain ⟨f1, f2, f3, f4, flen⟩ := buf_facts pre sgn word post
+  have hstop0 : isSpace (at_ (pre ++ sgn ++ word ++ post) (pre.length + sgn.length + word.length - 1)) = false := by
+    have := f3 (word.length - 1) (by omega)
+    rw [show pre.length + sgn.length + word.length - 1 = pre.length + sgn.length + (word.length - 1) by omega,
+      this]
+    exact (hletter _ (at_mem (by omega))).2.2
+  have hsp0 : ∀ i, pre.length + sgn.length + word.length ≤ i → i < (pre ++ sgn ++ word ++ post).length →
+      isSpace (at_ (pre ++ sgn ++ word ++ post) i) = true := by
+    intro i h1 h2
+    have := f4 (i - (pre.length + sgn.length + word.length))
+    rw [show pre.length + sgn.length + word.length + (i - (pre.length + sgn.length + word.length)) = i by omega]
+      at this
+    rw [this]; exact hpost _ (at_mem (by rw [flen] at h2; omega))
+  have hafter0 : target = lowerInf → toLower (at_ post 0) ≠ 105 ∨ toLower (at_ post 1) ≠ 110 :=
+    fun _ => Or.inl (at_post_lower post hpost 0).1
+  have hmain := fromString_main pre sgn word post neg target hpre hsgn' ht hword hafter0
+    (pre.length + sgn.length + word.length) (Nat.le_refl _) (by rw [flen]; omega) hsp0 hstop0
+  simp only [↓reduceIte] at hmain
+  have hall : ∀ c ∈ pre ++ sgn ++ word ++ post, c < 128 ∧ c ≠ 95 := by
+    intro c hc
+    simp only [List.mem_append] at hc
+    rcases hc with ((h | h) | h) | h
+    · exact hspc c (hpre c h)
+    · exact ⟨(hsgnc c h).1, (hsgnc c h).2.1⟩
+    · exact ⟨(hletter c h).1, (hletter c h).2.1⟩
+    · exact hspc c (hpost c h)
+  have hstr : transformDecimalAndSpace (pre ++ sgn ++ word ++ post) = pre ++ sgn ++ word ++ post := by
+    unfold transformDecimalAndSpace
+    have : (pre ++ sgn ++ word ++ post).all (· < 128) = true := by
+      rw [List.all_eq_true]; intro c hc; simpa using (hall c hc).1
+    rw [if_pos this]
+  refine ⟨?_, ?_, fun c hc1 hc2 => ?_⟩
+  · show _Py_string_to_number_with_underscores _ "float" float_from_string_inner = _
+    rw [no_underscore _ (fun c hc => (hall c hc).2), hmain, hneg]
+    have hiff : (sgn = [45]) = (neg = true) := by rw [← hneg]; simp
+    simp only [hiff]
+  · show _Py_string_to_number_with_underscores (transformDecimalAndSpace _) "float" float_from_string_inner = _
+    rw [hstr, no_underscore _ (fun c hc => (hall c hc).2), hmain, hneg]
+    have hiff : (sgn = [45]) = (neg = true) := by rw [← hneg]; simp
+    simp only [hiff]
+  · show _Py_string_to_number_with_underscores _ "float" float_from_string_inner = _
+    obtain ⟨g1, g2, g3, g4, glen⟩ := buf_facts pre sgn word (c :: post)
+    have hall' : ∀ d ∈ pre ++ sgn ++ word ++ c :: post, d ≠ 95 := by
+      intro d hd
+      simp only [List.mem_append, List.mem_cons] at hd
+      rcases hd with ((h | h) | h) | h | h
+      · exact (hspc d (hpre d h)).2
+      · exact (hsgnc d h).2.1
+      · exact (hletter d h).2.1
+      · rw [h]; exact hc2
+      · exact (hspc d (hpost d h)).2
+    rw [no_underscore _ hall']
+    have hstop1 : isSpace (at_ (pre ++ sgn ++ word ++ c :: post) (pre.length + sgn.length + word.length + 1 - 1)) = false := by
+      rw [show pre.length + sgn.length + word.length + 1 - 1 = pre.length + sgn.length + word.length + 0 by omega, g4 0]
+      exact hc1
+    have hsp1 : ∀ i, pre.length + sgn.length + word.length + 1 ≤ i → i < (pre ++ sgn ++ word ++ c :: post).length →
+        isSpace (at_ (pre ++ sgn ++ word ++ c :: post) i) = true := by
+      intro i h1 h2
+      have := g4 (i - (pre.length + sgn.length + word.length))
+      rw [show pre.length + sgn.length + word.length + (i - (pre.length + sgn.length + word.length)) = i by omega]
+        at this
+      rw [this]
+      have hk : i - (pre.length + sgn.length + word.length) = (i - (pre.length + sgn.length + word.length) - 1) + 1 := by
+        omega
+      rw [hk]
+      show isSpace (at_ post _) = true
+      exact hpost _ (at_mem (by rw [glen] at h2; simp at h2; omega))
+    have hafter1 : target = lowerInf → toLower (at_ (c :: post) 0) ≠ 105 ∨ toLower (at_ (c :: post) 1) ≠ 110 :=
+      fun _ => Or.inr (at_post_lower post hpost 0).2
+    have hm := fromString_main pre sgn word (c :: post) neg target hpre hsgn' ht hword hafter1
+      (pre.length + sgn.length + word.length + 1) (by omega) (by rw [glen]; simp <;> omega) hsp1 hstop1
+    rw [hm]
+    have : ¬ (pre.length + sgn.length + word.length = pre.length + sgn.length + word.length + 1) := by omega
+    simp [this]
+
 end PyLean.Binary64
