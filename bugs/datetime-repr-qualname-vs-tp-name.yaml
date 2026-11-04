@@ -1,0 +1,51 @@
+id: datetime-repr-qualname-vs-tp-name
+title: "repr of a nested date subclass: _pydatetime prints __qualname__, C prints tp_name"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["date.__repr__", "_get_class_module"]
+summary: |
+  For a date subclass defined inside a class (`class Outer: class D(date): pass`, or any
+  class whose __qualname__ differs from __name__), `repr(D(2020, 1, 1))` is
+  `Outer.D(2020, 1, 1)` with _pydatetime and `D(2020, 1, 1)` with the C module: Python uses
+  `self.__class__.__qualname__`, C uses `Py_TYPE(self)->tp_name`, which for a heap type is
+  `__name__`. A subclass defined in a module named `datetime` also differs (Python prefixes
+  `datetime.`). gh-107773 made the two agree for top-level subclasses (gh-130308 added
+  _get_class_module); the qualname part remained. The same pattern is in the other reprs
+  (time, datetime, timedelta: `Outer.TD(days=1)` against `TD(days=1)`).
+likelihood: Doctests and logs that print nested subclasses differ between CPython and PyPy.
+maybe_intended: |
+  Cosmetic. gh-107773 shows the maintainers want the reprs to agree, so this is the residue
+  of that fix rather than a design choice; still low value.
+reproducer: |
+  import datetime, _pydatetime
+  out = []
+  for m in (datetime, _pydatetime):
+      class Outer:
+          class D(m.date):
+              pass
+      out.append(repr(Outer.D(2020, 1, 1)))
+  print('C:', out[0], ' Python:', out[1])
+  if out[0] == 'D(2020, 1, 1)' and out[1] == 'Outer.D(2020, 1, 1)':
+      print('REPRODUCED datetime-repr-qualname-vs-tp-name')
+expected: The same text from both implementations.
+promised_by: gh-107773 (closed as completed): "the two implementations ... share a common repr".
+cause: |
+  Lib/_pydatetime.py:1103-1104: `"%s%s(%d, %d, %d)" % (_get_class_module(self),
+  self.__class__.__qualname__, ...)`. Modules/_datetimemodule.c:3621-3622: `"%s(%d, %d, %d)"`
+  with `Py_TYPE(self)->tp_name`.
+possible_fix: |
+  Use `self.__class__.__name__` in the Python reprs (the C side cannot easily change), or leave it.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 107773, state: closed, relation: related (same repr divergence for top-level subclasses, fixed by gh-130308; the qualname case was not)}
+  queries: ["gh api search: datetime+repr+qualname", "timedelta+repr+qualname+subclass",
+            "datetime+repr+__qualname__", "datetime+subclass+repr+tp_name", "repr+nested+subclass+datetime",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.DateReprTwins
+  theorem: PyLean.Datetime.dateReprTwins_refuted

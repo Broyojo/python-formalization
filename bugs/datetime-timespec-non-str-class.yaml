@@ -1,0 +1,48 @@
+id: datetime-timespec-non-str-class
+title: "isoformat(timespec=<non-str>) raises ValueError in _pydatetime and TypeError in C"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["_format_time", "time.isoformat", "datetime.isoformat"]
+summary: |
+  `time(1).isoformat(timespec=1)` and `datetime(2020, 1, 1).isoformat(timespec=1)` raise
+  `ValueError: Unknown timespec value` with _pydatetime, because `specs[1]` raises KeyError,
+  and `TypeError: isoformat() argument 'timespec' must be str, not int` with the C module,
+  whose Argument Clinic `str` converter refuses the argument first. An unhashable timespec
+  (a list) is a TypeError in both.
+likelihood: Only code that passes a non-str timespec; it fails in both, with a different class.
+maybe_intended: |
+  The docs say "ValueError will be raised on an invalid timespec argument", which Python
+  follows; C's TypeError for a wrong type is the usual convention. Either way only the class
+  differs. Recorded for the twin property; not worth filing alone.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      try:
+          m.time(1).isoformat(timespec=1)
+          return 'ok'
+      except Exception as e:
+          return type(e).__name__
+  c, p = run(datetime), run(_pydatetime)
+  print('C:', c, ' Python:', p)
+  if c == 'TypeError' and p == 'ValueError':
+      print('REPRODUCED datetime-timespec-non-str-class')
+expected: The same exception class from both implementations.
+promised_by: PEP 399 equivalence; time.isoformat docs (ValueError on an invalid timespec).
+cause: |
+  Lib/_pydatetime.py:181-184: `specs[timespec]` and its KeyError handler accept any hashable
+  object. The clinic `str` converter of datetime_time_isoformat (and datetime.isoformat) runs
+  before Modules/_datetimemodule.c:4900-4952.
+possible_fix: Check `isinstance(timespec, str)` in _format_time, or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh api search: timespec+TypeError+isoformat", "isoformat+timespec+TypeError+ValueError",
+            "timespec+non-string", "timespec+not+str+pydatetime",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.TimespecTwins
+  theorem: PyLean.Datetime.timespecTwins_refuted
