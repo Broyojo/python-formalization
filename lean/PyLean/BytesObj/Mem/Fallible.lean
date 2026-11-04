@@ -222,7 +222,7 @@ theorem packFailures_proven : PackFailures := by
 /-- A failing `__index__` in a subscript, for a live view that is not 0-dimensional:
 `m[k]` and `m[k] = v` raise what `__index__` raised, or the `TypeError` for a non-int,
 and `m[k] = v` writes nothing. The key is converted before the item is looked up, so
-this is the failure at :2748-2749 and @3.14.7:2686-2687. -/
+this is the failure at :2748-2749 and :2766-2767. -/
 def KeyFailures : Prop :=
   ∀ (self : Nat) (r : Option Nat) (e : PyExc) (t : String) (v : Obj) (st st' : St),
     baseInaccessible st self = false → (st.mv self).view.ndim ≠ 0 →

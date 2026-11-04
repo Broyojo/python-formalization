@@ -128,7 +128,7 @@ theorem pathAddr_cons (m : Mem) (i : Nat) (is : List Nat) (st : List Int) (subs 
       pathAddr m (toI is) (st.drop 1) (subTail subs) (adjustPtr m (p + st.getD 0 0 * i) subs 0) := by
   simp only [toI, List.map_cons, pathAddr]
 
-/-- `copy_rec`, @3.14.7:374-401, into a destination with any strides and no suboffsets: one write per
+/-- `copy_rec`, :374-401, into a destination with any strides and no suboffsets: one write per
 item, in index order, of the item the source has there. Any destination, so `C`, `F` and strided. -/
 theorem copyRec_seq (it : Int) (hit : 0 ≤ it) (useMem : Bool) (sm : Mem) (sh : List Int) (hne : sh ≠ [])
     (hnn : ∀ x ∈ sh, 0 ≤ x) (dptr : Int) (dst : List Int) (sptr : Int) (sst : List Int)
@@ -369,7 +369,7 @@ theorem fortran_writes (it : Int) (hit : 0 < it) (sh : List Int) (hnn : ∀ x �
   rw [path_fortran [] it sh idx hidx hnn base] at hx
   exact hx
 
-/-- `m.tobytes('F')`-style copy, `buffer_to_contiguous` in order `'F'` (@3.14.7:495-534, `copy_rec` with
+/-- `m.tobytes('F')`-style copy, `buffer_to_contiguous` in order `'F'` (:495-534, `copy_rec` with
 `init_fortran_strides_from_shape`), for every view with full information, of any number of
 dimensions, any strides and any suboffsets: the `len` bytes hold each item at its place in
 column-major order, the first index running fastest. Docs of `tobytes`: "'F' ... the data of the
@@ -544,7 +544,7 @@ theorem prod_zero (sh : List Int) (h : (0 : Int) ∈ sh) : prod sh = 0 := by
     · simp
     · rw [ih h1, Int.mul_zero]
 
-/-- The two branches of `PyBuffer_ToContiguous`, @3.14.7:1062-1065 and @3.14.7:1084, for a C-contiguous view of
+/-- The two branches of `PyBuffer_ToContiguous`, :1062-1065 and :1084, for a C-contiguous view of
 any number of dimensions: `memcpy` gives the row-major walk. -/
 theorem tobytesContigND_proven : TobytesContigND := by
   intro m v sh st hsh hst hne hn hnn hit hlen hsub hc
@@ -651,10 +651,10 @@ theorem bufferToContiguous_A (sm : Mem) (v : Buf) : bufferToContiguous sm v 'A' 
   simp [bufferToContiguous]
 
 /-- `m.tobytes(order)` for every live view of any number of dimensions, strides and suboffsets, and
-the `order` of `memoryview_tobytes_impl`, @3.14.7:2286-2300. `'C'` and no order give the items in row-major
+the `order` of `memoryview_tobytes_impl`, :2363-2377. `'C'` and no order give the items in row-major
 order. `'F'` gives each item at its place in column-major order. `'A'` gives the memory as it is if
 that is contiguous in either order, and row-major order otherwise. The length check of
-`PyBuffer_ToContiguous`, @3.14.7:1056-1060, refuses any other length. Hypotheses: the type invariants of a
+`PyBuffer_ToContiguous`, :1056-1060, refuses any other length. Hypotheses: the type invariants of a
 buffer (`Full`, positive itemsize, `len == product(shape) * itemsize`). -/
 def TobytesOrders : Prop :=
   ∀ (st : St) (self : Nat) (sh strs : List Int), baseInaccessible st self = false →
@@ -749,9 +749,9 @@ theorem tobytesOrders_proven : TobytesOrders := by
   · rw [hto (some ['A']) 'A' rfl, hgo _ hc, bufferToContiguous_A, hC]
   · simp [pyBufferToContiguous, hne']
 
-/-- `memory_from_contiguous_copy` in order `'F'` (@3.14.7:888-946, @3.14.7:931-933): a new view over a new bytes
+/-- `memory_from_contiguous_copy` in order `'F'` (:888-946, :931-933): a new view over a new bytes
 object with the shape and format of the source, Fortran strides and no suboffsets, holding each
-item at its place in column-major order. `tolist(input) == tolist(output)`, the comment at @3.14.7:950-953.
+item at its place in column-major order. `tolist(input) == tolist(output)`, the comment at :950-953.
 `m` is the store including the new bytes. Hypotheses: the type invariants of a buffer. -/
 def FromContigCopyF : Prop :=
   ∀ (st : St) (src : Buf) (sh strs : List Int) (f : List Char), src.shape = some sh →
@@ -905,7 +905,7 @@ theorem writeItems_sub (it : Nat) (ds : Int) (subs : Option (List Int)) (p : Int
       exact hc a b (by omega) h2 (by omega)
 
 /-- `m[s] = x` on a view with suboffsets, `copy_single` with a destination array of pointers
-(`copy_base`, @3.14.7:345-371, reached with `mem != NULL` because `last_dim_is_contiguous`, @3.14.7:272-279, is
+(`copy_base`, :345-371, reached with `mem != NULL` because `last_dim_is_contiguous`, :272-279, is
 false there): each item of the source ends at the address its pointer gives, and the source may
 have suboffsets too. Hypotheses: `equiv_structure` passed; the items land apart from each other and
 from the pointers, inside the store, which is what a PIL array is. -/
@@ -1002,7 +1002,7 @@ theorem rdU_encLE (m : Mem) (p : Int) (n : Nat) (k : Nat) (hp : 0 ≤ p) (h : p 
 (`PackUnpackInt` is the integers): `?` stores the truth of the item, `c` one byte, `P` a pointer of 8
 bytes, `d` a double exactly, and `f` and `e` read back the pattern they stored, which is a float
 rounded to the format (`bytesobj-memoryview-float32-round-trip` is whether that is lossless). A
-released view refuses to unpack, the `CHECK_RELEASED_AGAIN` of @3.14.7:1788. Hypotheses: the item's space
+released view refuses to unpack, the `CHECK_RELEASED_AGAIN` of :1817. Hypotheses: the item's space
 is in the store; a live view; for `?`, an item whose truth runs no Python code (`PackFailures`). -/
 def PackUnpackOther : Prop :=
   ∀ (st : St) (self : Nat) (ptr : Int), 0 ≤ ptr → ptr + 8 ≤ st.mem.length →

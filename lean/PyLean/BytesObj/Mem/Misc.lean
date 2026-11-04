@@ -9,7 +9,7 @@ namespace PyLean.BytesObj.Mem
 
 open PyLean
 
-/-- The refusals of `memoryview.cast`, in the order of the source, @3.14.7:1458-1482, each leaving
+/-- The refusals of `memoryview.cast`, in the order of the source, :1487-1511, each leaving
 the state alone. Hypotheses: a live, unrestricted view. -/
 def CastRejections : Prop :=
   ∀ (st : St) (self : Nat) (f : List Char) (s : Option ShapeArg),
@@ -56,7 +56,7 @@ theorem castRejections_proven : CastRejections := by
 
 /-- `pack_single` on values of the wrong kind: a non-integer in an integer format raises
 `TypeError("memoryview: invalid type for format ...")`, and in the format `c` anything but
-`bytes` does, with `ValueError` for `bytes` of another length (@3.14.7:1995-1999). Nothing is written.
+`bytes` does, with `ValueError` for `bytes` of another length (:2071-2075). Nothing is written.
 Hypothesis: a live view. -/
 def PackTypeErrors : Prop :=
   ∀ (st : St) (self : Nat) (ptr : Int) (c : Char) (lo hi : Int) (k : Nat) (s : List Char),
@@ -76,7 +76,7 @@ theorem packTypeErrors_proven : PackTypeErrors := by
   all_goals simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLd, pylongAsLu,
     pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex, M.throw_app, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow]
 
-/-- A view in a reference cycle (`memory_clear`, @3.14.7:1171-1180) is released like any other if
+/-- A view in a reference cycle (`memory_clear`, :1171-1180) is released like any other if
 it has no exports, and left alone if it has. -/
 def ClearIsRelease : Prop :=
   ∀ (st : St) (i : Nat),
@@ -90,7 +90,7 @@ theorem clearIsRelease_proven : ClearIsRelease := by
   · simp [memoryClear, getExports, h]
   · simp [memoryClear, getExports, h]
 
-/-- `repr` says whether the view is released, by `self->flags` only (@3.14.7:2375-2383). -/
+/-- `repr` says whether the view is released, by `self->flags` only (:2455-2463). -/
 def ReprReleased : Prop :=
   ∀ (st : St) (i : Nat), (memoryRepr i st).1 =
     .ok (if (st.mv i).flags.released then "<released memory" else "<memory")
@@ -104,7 +104,7 @@ theorem fLoop_fStrides (l : List Int) (sd : Int) : fLoop l (fStrides sd l) sd = 
     simp only [fStrides, fLoop, ne_eq, not_true_eq_false, and_false, ↓reduceIte, ih]
 
 /-- Every array `init_fortran_strides_from_shape` lays out is Fortran-contiguous, for every
-shape (@3.14.7:480-490; `buffer_to_contiguous` with order `'F'`). Hypotheses: `len`, `shape` and
+shape (:480-490; `buffer_to_contiguous` with order `'F'`). Hypotheses: `len`, `shape` and
 `strides` as that function leaves them. -/
 def FortranStrides : Prop :=
   ∀ (v : Buf) (sh : List Int), v.shape = some sh → v.strides = some (fStrides v.itemsize sh) →
@@ -131,7 +131,7 @@ theorem fb_1d (v : Buf) (n d : Int) (f : List Char) (h1 : v.ndim = 1) (hsh : v.s
 /-- `m.tobytes()` of a 1-D view, for every stride, with or without a suboffset: the items in
 order, by `memcpy` when the view is contiguous and through `buffer_to_contiguous` when it is not.
 The two branches of
-`PyBuffer_ToContiguous` (@3.14.7:1062-1065, @3.14.7:1084) give the same bytes. Hypotheses: a live view with
+`PyBuffer_ToContiguous` (:1062-1065, :1084) give the same bytes. Hypotheses: a live view with
 `len == n * itemsize`, `itemsize > 0`. -/
 def Tobytes1D : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char),
@@ -229,9 +229,9 @@ theorem toReadonlySpec_proven : ToReadonlySpec := by
   · rw [St.mb_setMv]; exact hA.exports hL.mbuf
 
 /-- Constructing from a memoryview of any shape shares its managed buffer and checks it is usable,
-and `_from_flags` ignores the flags on that path, which is the source's own comment (@3.14.7:805-809); from
+and `_from_flags` ignores the flags on that path, which is the source's own comment (:805-809); from
 anything that is not a buffer the constructor raises `TypeError`, from `memoryview(obj)` to
-`_from_flags`, with the type's name in the message (@3.14.7:800-825). -/
+`_from_flags`, with the type's name in the message (:800-825). -/
 def NewViewRules : Prop :=
   ∀ (st : St) (self : Nat) (flags : Nat) (k : Int), LiveView st self →
     (let r := memoryviewNew (.view self) st

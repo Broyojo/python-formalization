@@ -140,7 +140,7 @@ theorem tupleLoop_ints (st : St) (v : Buf) (sh strs : List Int) (hsh : v.shape =
 /-- `m[i, j, ...]` with one index per dimension, each `-n <= i < n`, is the item of
 `m.tolist()` at those positions, a negative index counting from the end, for every view of a native
 format, any number of dimensions, any strides and suboffsets (`ptr_from_tuple`,
-`memory_item_multi`, `is_multiindex`, @3.14.7:2424-2448, @3.14.7:2484-2506). `TupleRefusals` is the rest. Hypotheses:
+`memory_item_multi`, `is_multiindex`, :2504-2528, :2564-2586). `TupleRefusals` is the rest. Hypotheses:
 a live view whose arrays have `ndim` entries, and indices a `Py_ssize_t` can hold. -/
 def TupleItem : Prop :=
   ∀ (st : St) (self : Nat) (c : Char) (sh strs idx : List Int),
@@ -254,7 +254,7 @@ theorem tupleLoop_out (st : St) (v : Buf) (sh strs : List Int) (hsh : v.shape = 
         (by rw [hdrop]; exact hr') (by rw [show dim + 1 + as.length = dim + (as.length + 1) by omega]; exact hi)]
       simp only [show dim + 1 + as.length + 1 = dim + (as.length + 1) + 1 by omega]
 
-/-- The refusals of `ptr_from_tuple`, @3.14.7:2429-2445, for a tuple of ints: more indices than dimensions is
+/-- The refusals of `ptr_from_tuple`, :2509-2525, for a tuple of ints: more indices than dimensions is
 a `TypeError` before any index is looked at; otherwise the first index out of bounds is an
 `IndexError` naming its dimension, whatever follows it. Hypotheses: a live view whose arrays have
 `ndim` entries, and ints a `Py_ssize_t` can hold; for the second case, one index per dimension

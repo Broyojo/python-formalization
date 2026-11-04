@@ -7,6 +7,7 @@ import PyLean.BytesObj.Mem.Fortran
 import PyLean.BytesObj.Mem.Contig
 import PyLean.BytesObj.Mem.Refuse
 import PyLean.BytesObj.Mem.Complex
+import PyLean.BytesObj.Mem.Spec
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
 
@@ -161,6 +162,57 @@ def entries : List Entry := [
     statement := "For every string, get_native_fmtchar accepts it exactly when get_native_fmtstr does, the two name the same character, and its size is the size of that code in struct's native table."
     source := "memoryobject.c:1345 (NOT_REACHED comment), :1297 (error message); struct native table", status := .proven
     prop := ``NativeFormatAgree, thm := some ``nativeFormatAgree_proven },
+  { id := "bytesobj-memoryview-fmtchar-table", pyFile := memFile
+    pyFns := ["get_native_fmtchar"]
+    statement := "get_native_fmtchar accepts a format exactly when its C string, after one optional @, is an entry of struct's native table (c b B h H i I l L q Q n N f d e ? P Zf Zd), and returns that entry and its size."
+    source := "memoryobject.c:1203-1241; struct.calcsize on 3.15.2", status := .proven
+    prop := ``NativeFmtcharSpec, thm := some ``nativeFmtcharSpec_proven },
+  { id := "bytesobj-memoryview-fmtstr-table", pyFile := memFile
+    pyFns := ["get_native_fmtstr"]
+    statement := "get_native_fmtstr accepts the same strings and returns the C string itself, with its @ kept."
+    source := "memoryobject.c:1243-1297", status := .proven
+    prop := ``NativeFmtstrSpec, thm := some ``nativeFmtstrSpec_proven },
+  { id := "bytesobj-memoryview-cast-keeps-format", pyFile := memFile
+    pyFns := ["get_native_fmtstr", "cast_to_1D", "memoryview_cast_impl"]
+    statement := "m.cast(format) gives a view whose format is the C string of format, @ included: m.cast('@B').format == '@B'."
+    source := "memoryobject.c:1343 (view->format = get_native_fmtstr(...))", status := .proven
+    prop := ``CastKeepsFormat, thm := some ``castKeepsFormat_proven },
+  { id := "bytesobj-memoryview-unpack-formats", pyFile := memFile
+    pyFns := ["unpack_single"]
+    statement := "unpack_single refuses a released view first, then raises NotImplementedError('memoryview: format w not supported') for every format outside its switch, and gives an item for every format in it."
+    source := "memoryobject.c:1817, :1825-1881, :1908-1911", status := .proven
+    prop := ``UnpackFormats, thm := some ``unpackFormats_proven },
+  { id := "bytesobj-memoryview-item-unsupported", pyFile := memFile
+    pyFns := ["memory_item", "unpack_single"]
+    statement := "m[i] on a live 1-D view of a format adjust_fmt accepts and unpack_single does not convert, such as memoryview(array.array('w', 'ab'))[0], raises the NotImplementedError of err_format."
+    source := "memoryobject.c:2533-2560, :1908-1911", status := .proven
+    prop := ``ItemUnsupported, thm := some ``itemUnsupported_proven },
+  { id := "bytesobj-memoryview-pack-unsupported", pyFile := memFile
+    pyFns := ["pack_single", "memory_ass_sub"]
+    statement := "pack_single on a format outside its switch raises NotImplementedError('memoryview: format w not supported') before converting the item, so no callback runs; m[i] = x on such a 1-D view raises it."
+    source := "memoryobject.c:2088-2101, :2758-2771", status := .proven
+    prop := ``PackUnsupported, thm := some ``packUnsupported_proven },
+  { id := "bytesobj-memoryview-pack-item-releases", pyFile := memFile
+    pyFns := ["pack_single", "pylong_as_ld", "pylong_as_lu", "pylong_as_lld", "pylong_as_llu", "pylong_as_zd",
+      "pylong_as_zu", "fix_error_int", "value_error_int"]
+    statement := "When the item's __index__, __float__, __bool__ or __len__ releases the view and returns, pack_single raises the released ValueError and writes nothing, in every format with a callback; a conversion error comes first, the range check of b/h/i and the overflow of e after."
+    source := "memoryobject.c:1947-2084 (CHECK_RELEASED_INT_AGAIN), gh-92888", status := .proven
+    prop := ``PackItemReleases, thm := some ``packItemReleases_proven },
+  { id := "bytesobj-memoryview-pack-complex-failures", pyFile := memFile
+    pyFns := ["pack_single", "fix_error_int", "type_error_int"]
+    statement := "On Zf and Zd a failing PyComplex_AsCComplex goes through fix_error_int: a ValueError from __float__ becomes 'invalid value for format', a non-float result or a str item 'invalid type for format', other classes pass unchanged; nothing is written."
+    source := "memoryobject.c:2036-2058, :2094-2095", status := .proven
+    prop := ``PackComplexFailures, thm := some ``packComplexFailures_proven },
+  { id := "bytesobj-memoryview-ass-sub-keys", pyFile := memFile
+    pyFns := ["memory_ass_sub"]
+    statement := "On a view of 2+ dimensions m[i] = x is NotImplementedError('sub-views are not implemented') before __index__ runs and m[a:b] = x is NotImplementedError('... restricted to ndim = 1') before the value is looked at; a key that is not an index, slice or tuple is TypeError('memoryview: invalid slice key')."
+    source := "memoryobject.c:2758-2764, :2812-2821", status := .proven
+    prop := ``AssSubKeyRefusals, thm := some ``assSubKeyRefusals_proven },
+  { id := "bytesobj-memoryview-cmp-no-buffer", pyFile := memFile
+    pyFns := ["memory_richcompare"]
+    statement := "v == w and v != w on a live v are NotImplemented when w has no buffer, or when its __buffer__ raises, returns a non-memoryview or gives more than 64 dimensions: the error is cleared, only the callback's release stays."
+    source := "memoryobject.c:3253-3257", status := .proven
+    prop := ``CompareNoBuffer, thm := some ``compareNoBuffer_proven },
   { id := "bytesobj-memoryview-cast-format-embedded-nul", pyFile := memFile
     pyFns := ["cast_to_1D", "get_native_fmtchar", "get_native_fmtstr"]
     statement := "memoryview.cast accepts only a format of the form [@]c."
@@ -469,7 +521,7 @@ def entries : List Entry := [
     source := "memoryobject.c:3319-3326", status := .proven
     prop := ``CompareReleases, thm := some ``compareReleases_proven },
   { id := "bytesobj-memoryview-eq-failures", pyFile := memFile
-    pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
+    pyFns := ["memoryview_count_impl", "memoryview_index_impl", "memoryiter_next"]
     statement := "An exception from __eq__ passes out of count and index at once; an __eq__ that calls self.release() succeeds, and the next step raises the released error, except on a view of one item, where count returns."
     source := "memoryobject.c:2877-2896, :2952-2975", status := .proven
     prop := ``EqFailures, thm := some ``eqFailures_proven },
@@ -576,7 +628,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cmp-import", pyFile := memFile
     pyFns := ["struct_get_unpacker", "fix_struct_error_int", "memory_richcompare"]
     statement := "With struct not importable, two views of one native format still compare by the switch, and any comparison needing struct raises ModuleNotFoundError out of ==."
-    source := "memoryobject.c:2160-2162, @3.14.7:3144-3158", status := .proven
+    source := "memoryobject.c:2160-2162, :3271-3285", status := .proven
     prop := ``CmpImportFails, thm := some ``cmpImportFails_proven },
   { id := "bytesobj-memoryview-rank-rules", pyFile := memFile
     pyFns := ["memory_length", "memory_iter", "memory_item", "memoryview_count_impl", "memoryview_index_impl"]

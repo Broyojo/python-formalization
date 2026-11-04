@@ -29,7 +29,7 @@ theorem any_take_zero (l : List Int) (n : Nat) :
         | zero => exact Or.inl (by simpa using e)
         | succ i => exact Or.inr ⟨i, by omega, by simpa using e⟩
 
-/-- `zero_in_shape`, @3.14.7:1412-1423: true exactly when a dimension has length 0. -/
+/-- `zero_in_shape`, :1441-1452: true exactly when a dimension has length 0. -/
 theorem zeroInShape_iff (v : Buf) : zeroInShape v = true ↔ HasZero v :=
   any_take_zero _ _
 
@@ -48,7 +48,7 @@ def castView (view : Buf) (fstr : List Char) (size : Int) : Buf :=
 byte size and the length is a multiple of the new item size, gives a new view registered
 with the same managed buffer: same memory, same byte length, 1-D, `shape * itemsize ==
 len` ("All casts must result in views that will have the exact byte size of the original
-input", @3.14.7:1435). `self` keeps its contents. Hypotheses: `self` and its managed buffer are
+input", :1464). `self` keeps its contents. Hypotheses: `self` and its managed buffer are
 live objects; the rest are the conditions the function checks. -/
 def Cast1DSpec : Prop :=
   ∀ (st : St) (self : Nat) (format : List Char) (c : Char) (size : Int) (fstr : List Char),
@@ -277,10 +277,10 @@ theorem isCContiguous_cStrides (v : Buf) (sh : List Int) (hs : v.shape = some sh
     simpa [cStrides] using this
 
 /-- A shape cast: if `cast_to_ND` succeeds on the 1-D view left by `cast_to_1D` (no
-suboffsets, by the assertion at @3.14.7:1387), then with `ndim == 0` the view has no shape or strides and
+suboffsets, by the assertion at :1416), then with `ndim == 0` the view has no shape or strides and
 one item, and otherwise it has `ndim == len(shape)`, the given shape, C strides,
 `product(shape) * itemsize == len` and positive dimensions; either way it reports `c_contiguous`.
-A shape of another byte size is refused, leaving the state alone (@3.14.7:1402-1406). Hypothesis: `i` is
+A shape of another byte size is refused, leaving the state alone (:1431-1435). Hypothesis: `i` is
 a live view. -/
 def CastNDSpec : Prop :=
   ∀ (st st' : St) (i ndim : Nat) (items : List Obj) (u : Unit),
