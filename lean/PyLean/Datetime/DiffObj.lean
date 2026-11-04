@@ -158,7 +158,23 @@ def decArg (j : Json) : Except String Arg := do
       match ← decTz (a.getD 1 .null) with
       | some t => return .tz t
       | none => return .none_
+    -- an object with `__index__`: `["x", ["i", n]]` returns n, `["x", ["s"]]` a str,
+    -- `["x", ["e", msg]]` raises `ValueError(msg)`
+    | "x" =>
+      let r ← (a.getD 1 .null).getArr?
+      match ← (r.getD 0 .null).getStr? with
+      | "i" => return .index (.ok (some (← (r.getD 1 .null).getInt?)))
+      | "e" => return .index (.error (.valueError (← (r.getD 1 .null).getStr?)))
+      | _ => return .index (.ok none)
+    | "f" => return .float (Binary64.F64.ofBits (← (a.getD 1 .null).getNat?))
     | _ => return .other
+
+/-- The `fold` argument: a JSON number is an int, anything else an encoded `Arg`. -/
+def getFoldArg (j : Json) : Except String Arg := do
+  let v ← field j "fold"
+  match v.getInt? with
+  | .ok n => return .int n
+  | .error _ => decArg v
 
 def getArgs (j : Json) (k : String) : Except String (List Arg) := do
   (← (← field j k).getArr?).toList.mapM decArg
@@ -425,11 +441,11 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return encPy encYMD' (if isC then dateNewC args else dateCallPy args)
   | "ctor_time" =>
     let args ← getArgs j "args"
-    let fold ← getInt j "fold"
+    let fold ← getFoldArg j
     return encPy encTMv (if isC then timeNewC args fold else timeCallPy args fold)
   | "ctor_datetime" =>
     let args ← getArgs j "args"
-    let fold ← getInt j "fold"
+    let fold ← getFoldArg j
     return encPy encDTv (if isC then datetimeNewC args fold else datetimeCallPy args fold)
   | "td_str2" =>
     let a ← decDelta (← field j "a")

@@ -26,6 +26,7 @@ import PyLean.Datetime.TwinsProps
 import PyLean.Datetime.FmtTwinsProps
 import PyLean.Datetime.FloatProps
 import PyLean.Datetime.IsoFormsProps
+import PyLean.Datetime.IndexProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
