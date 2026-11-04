@@ -799,9 +799,28 @@ def p_long_names(r):
     ])
 
 
+def p_genflags(r):
+    """`_Py_MakeCoro` (`Objects/genobject.c:1117-1162`) on code whose generator flags were
+    rewritten (`flags_<mask>_*`, see `mark_flags`): exactly CO_GENERATOR or exactly
+    CO_ASYNC_GENERATOR pick those types, anything else (no flag, two at once) a coroutine."""
+    mask = r.choice([0, 0x20, 0x80, 0x200, 0xa0, 0x220, 0x280, 0x2a0])
+    name = f"flags_{mask:x}_f"
+    body = r.choice([
+        f"def {name}():\n    x = yield 1\n    print('in', x)\n    return 2\n",
+        f"def {name}():\n    yield 1\n    yield 2\n",
+        f"async def {name}():\n    print('body')\n    return 3\n",
+    ])
+    ops = r.choices(["print(r.send(None))", "print(r.send(7))", "print(next(r))", "r.close()\nprint('closed')",
+                     "print(r.throw(ValueError('t')))", "print(list(r))", "print([*r])", "a, b = r\nprint(a, b)",
+                     "a, *b = r\nprint(a, b)", "for x in r:\n    print(x)", "print(iter(r) is r)"], k=r.randint(1, 4))
+    out = [body, f"r = {name}()", "print(type(r).__name__, r.__name__, r.__qualname__)"]
+    out += [guarded(o) for o in ops]
+    return "\n".join(out)
+
+
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
             p_agen, p_tb,
-            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic, p_genflags]
 
 
 def enc_const(c, table):
@@ -856,6 +875,10 @@ def mark_iterable_coroutines(co):
     does: these programs cannot import. Both sides run the marked code."""
     consts = tuple(mark_iterable_coroutines(c) if isinstance(c, types.CodeType) else c for c in co.co_consts)
     flags = co.co_flags | 0x100 if co.co_name.startswith("itercoro_") else co.co_flags
+    # `flags_<hex>_*`: the generator flags (CO_GENERATOR | CO_COROUTINE | CO_ASYNC_GENERATOR) set
+    # to exactly <hex>, as `code.replace(co_flags=...)` can
+    if co.co_name.startswith("flags_"):
+        flags = (flags & ~0x2a0) | int(co.co_name.split("_")[1], 16)
     return co.replace(co_consts=consts, co_flags=flags)
 
 
@@ -893,7 +916,8 @@ def run_python(case):
                 exc = [type(e).__name__, str(e)]
     # Finalizers of objects still alive at the end are not part of the program's
     # output, and must not run during a later case.
-    with contextlib.redirect_stdout(io.StringIO()):
+    with contextlib.redirect_stdout(io.StringIO()), warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         g.clear()
         e = None
         gc.collect(1)

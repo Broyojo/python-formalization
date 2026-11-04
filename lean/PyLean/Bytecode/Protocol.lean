@@ -1026,7 +1026,8 @@ def getIterImpl (v : Val) : RM Val := do
     | .set _ items => alloc (.setIter items 0)
     | .range start _ step len => alloc (.rangeIter start step len)
     | .gen g =>
-      if g.kind == .coro then notIter else pure v
+      -- `PyCoro_Type` and `PyAsyncGen_Type` have no `tp_iter` (`Objects/genobject.c`)
+      if g.kind == .gen then pure v else notIter
     | .listIter .. | .tupleIter .. | .rangeIter .. | .strIter .. | .seqIter .. | .callIter ..
     | .dictIter .. | .setIter .. | .enumerate .. | .zip .. | .map .. | .filter .. | .reversed .. =>
       pure v

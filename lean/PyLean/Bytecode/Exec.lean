@@ -65,11 +65,11 @@ def execOp (e : Env) : Op → M Unit
   | .RESERVED => fault "Executing RESERVED instruction."
   | .NOP => NOP
   | .NOT_TAKEN => NOT_TAKEN
-  | .RESUME => RESUME
-  | .RESUME_CHECK => RESUME_CHECK
-  | .RESUME_CHECK_JIT => RESUME_CHECK_JIT
+  | .RESUME => RESUME e
+  | .RESUME_CHECK => withDeopt RESUME_CHECK (RESUME e)
+  | .RESUME_CHECK_JIT => withDeopt RESUME_CHECK_JIT (RESUME e)
   | .TRACE_RECORD => TRACE_RECORD
-  | .INSTRUMENTED_RESUME => INSTRUMENTED_RESUME
+  | .INSTRUMENTED_RESUME => INSTRUMENTED_RESUME e
   | .LOAD_FAST_CHECK => LOAD_FAST_CHECK e
   | .LOAD_FAST => LOAD_FAST e
   | .LOAD_FAST_BORROW => LOAD_FAST_BORROW e
@@ -337,19 +337,6 @@ inductive Outcome where
   | raised (v : Val) (rt : Rt)
   /-- Fuel or undefined behaviour: not a Python outcome. -/
   | stop (e : Err) (rt : Rt)
-
-/-- `_PyFrame_IsIncomplete`, `Include/internal/pycore_interpframe.h:259-268`: a frame not owned by a
-generator whose `instr_ptr` is before `_co_firsttraceable`, the first `RESUME` that is not
-`RESUME_AT_GEN_EXPR_START` (`Objects/codeobject.c:576-585`; the location mask is 7 and that location
-is 4, `Include/internal/pycore_opcode_utils.h:90-92`). -/
-def frameIncomplete (P : Program) (f : Frame) : Bool :=
-  match f.owner with
-  | .interpreter => true
-  | .generator _ => false
-  | .thread =>
-    let instrs := ((P[f.code]?).map (·.instrs)).getD #[]
-    let first := (instrs.toList.findIdx? fun i => i.op.deopt == .RESUME && i.arg &&& 7 != 4).getD instrs.size
-    f.instrPtr < first
 
 /-- `PyTraceBack_Here(f)` at `label(error)` (`Python/bytecodes.c:6473-6480`, `Python/traceback.c`):
 unless the frame is incomplete, a new traceback object with `tb_next` the exception's traceback, the
