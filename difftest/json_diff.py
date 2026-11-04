@@ -533,6 +533,10 @@ def frame_depth():
 def rec_doc(rng):
     """Nested arrays and objects around a leaf, some with escapes (frames of py_scanstring and
     _decode_uXXXX), some invalid."""
+    if rng.random() < 0.15:
+        # objects nested through empty keys with nothing after the last colon, and lone errors at the
+        # frame limit (JSONDecodeError.__init__ takes a frame)
+        return rng.choice(['{"":' * rng.randint(1, 30), '"', '{', '{1', '[1', '"\\uzz"', '"\\x"', 'x', '1 2'])
     leaf = rng.choice(['1', '"a"', '"\\u0041"', '"\\ud834\\udd1e"', '{"\\u0041": 1}', '[]', '{}', 'null', '"x', '1.5', 'NaN'])
     s = leaf
     for _ in range(rng.randint(0, 40)):
@@ -804,6 +808,8 @@ def gen_x_case(rng, impl):
         s = rec_doc(rng)
         c = {"mod": "json", "fn": f"loads_rec_{impl}", "s": cps(s), "strict": rng.random() < 0.8}
         c["budget"] = rng.randint(0, 90) if impl == "py" else 100000
+        if impl == "c":
+            c["frames"] = rng.choice([0, 1, 2, 100000])
         return c
     g = XGen(rng)
     XJSON.clear()
@@ -856,7 +862,16 @@ def run_x(c, impl):
     if c["fn"].startswith("loads_rec"):
         s = "".join(map(chr, c["s"]))
         if impl == "c":
-            return {"ok": conv(json.JSONDecoder(strict=c["strict"]).decode(s))}
+            dec = json.JSONDecoder(strict=c["strict"])
+            d = frame_depth()
+            # as below: `frames` are left where raw_decode calls the C scan_once
+            old = sys.getrecursionlimit()
+            sys.setrecursionlimit(d + 2 + min(c["frames"], 10000))
+            try:
+                r = dec.decode(s)
+            finally:
+                sys.setrecursionlimit(old)
+            return {"ok": conv(r)}
         dec = pyjson.JSONDecoder(strict=c["strict"])
         d = frame_depth()
         # decode at d + 1, raw_decode at d + 2: `budget` frames are left when it calls scan_once
@@ -988,7 +1003,13 @@ def gen_case(rng):
             c["markers"] = 1 if kw["check_circular"] else 0
             c["indent"] = c["indent"] if kw["check_circular"] else None
         c["encoder"] = rng.choice([0, 1, 2, 3, 4, 5])
-        c["level"] = str(rng.choice([0, 0, 1, 3, 2**63, -2**63 - 1]))
+        # Huge levels: create_indent_cache fails before encoding (OverflowError from unicode_repeat,
+        # MemoryError from PyUnicode_New's size check or a malloc of 2**47 bytes or more). Never a
+        # level whose indent string would fall between this machine's memory and 2**47 bytes.
+        # (With indent '' the cache is built at every level; the model then writes '' * level, which
+        # it cannot evaluate at 2**61, so those levels are left to a non-empty indent.)
+        huge = [2**61, 2**62 - 1, 2**62, 2**63 - 1, 2**63 // 3, 2**63 // 3 + 1] if c["indent"] != [] else []
+        c["level"] = str(rng.choice([0, 0, 1, 3, -1, -5, 2**63, -2**63 - 1] + huge))
         # A non-str separator: `converterr` cuts its type name to 50 bytes with snprintf.
         c["key_sep"] = {"s": c["key_sep"]} if rng.random() < 0.95 else {"other": rng.choice(["int", *LONG_TYPES])}
         c["item_sep"] = {"s": c["item_sep"]} if rng.random() < 0.95 else {"other": rng.choice(["int", *LONG_TYPES])}

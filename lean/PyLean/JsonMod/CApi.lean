@@ -9,7 +9,9 @@ and the encoder type (`encoder_new`, `encoder_call`), with the indent cache.
 These wrappers see any Python object, so a `str` argument is a `StrArg`. An
 `indent` that is neither `None` nor a `str` cannot come from
 `JSONEncoder.iterencode` (encoder.py:249-252) and is out of scope, as are
-`__bool__` raising in the `p` conversions and a `markers` dict with entries.
+`__bool__` raising in the `p` conversions (bugs/json-encoder-flag-truth-twins.yaml), a `markers`
+dict with entries, and an `indent` that is a `str` subclass defining `__mul__`, which
+`PySequence_Repeat` would call instead of `unicode_repeat` (gh-143196).
 
 Allocation: `create_indent_cache` builds `'\n' + indent * level` at the call, before anything
 is written, so its failures are modelled: `unicode_repeat`'s `OverflowError`, and
