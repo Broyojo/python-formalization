@@ -165,19 +165,20 @@ theorem buildRules_proven : BuildRules := by
         EStateM.pure]
     · simp [hd]
 
-/-- `UNARY_NEGATIVE` and `UNARY_INVERT` push the result of `__neg__` and `__invert__`, and when
-that raises they pop the operand and propagate the exception, for any object model. On an int
+/-- `UNARY_NEGATIVE` and `UNARY_INVERT` replace the operand with the result of `__neg__` and
+`__invert__`, and when that raises they propagate the exception with the operand still on the
+stack (`ERROR_NO_POP`, `Python/bytecodes.c:456`, `:609`), for any object model. On an int
 with the builtin slots `~x` is `-(x+1)`, as the language reference states (`Doc/reference/
 expressions.rst`, "The bitwise inversion of x is defined as -(x+1)"). -/
 def UnaryRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val),
     (∀ r rt, e.om.negative e.ctx v regs.rt = .ok r rt →
       execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .ok () ⟨{ regs with rt := rt }, r :: rest⟩) ∧
     (∀ x rt, e.om.negative e.ctx v regs.rt = .error x rt →
-      execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+      execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, v :: rest⟩) ∧
     (∀ r rt, e.om.invert e.ctx v regs.rt = .ok r rt →
       execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .ok () ⟨{ regs with rt := rt }, r :: rest⟩) ∧
     (∀ x rt, e.om.invert e.ctx v regs.rt = .error x rt →
-      execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+      execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, v :: rest⟩) ∧
     (Lawful e.om → ∀ i : Int, v = .int i →
       execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .ok () ⟨regs, .int (-(i + 1)) :: rest⟩ ∧
       execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .ok () ⟨regs, .int (-i) :: rest⟩)
@@ -185,13 +186,13 @@ def UnaryRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val)
 theorem unaryRules_proven : UnaryRules := by
   intro e regs v rest
   refine ⟨fun r rt h => ?_, fun x rt h => ?_, fun r rt h => ?_, fun x rt h => ?_, fun hom i hv => ?_⟩
-  · simp [execOp, UNARY_NEGATIVE, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+  · simp [execOp, UNARY_NEGATIVE, stkK, peekN, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
-  · simp [execOp, UNARY_NEGATIVE, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+  · simp [execOp, UNARY_NEGATIVE, stkK, peekN, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
-  · simp [execOp, UNARY_INVERT, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+  · simp [execOp, UNARY_INVERT, stkK, peekN, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
-  · simp [execOp, UNARY_INVERT, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+  · simp [execOp, UNARY_INVERT, stkK, peekN, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
   · subst hv
     have hi := hom.invert_int e.ctx i regs.rt
@@ -199,9 +200,9 @@ theorem unaryRules_proven : UnaryRules := by
     have e1 : -i - 1 = -(i + 1) := by omega
     rw [e1] at hi
     constructor
-    · simp [execOp, UNARY_INVERT, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+    · simp [execOp, UNARY_INVERT, stkK, peekN, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
         monadLift, MonadLift.monadLift, pure, EStateM.pure, hi]
-    · simp [execOp, UNARY_NEGATIVE, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+    · simp [execOp, UNARY_NEGATIVE, stkK, peekN, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
         monadLift, MonadLift.monadLift, pure, EStateM.pure, hn]
 
 /-- `LIST_APPEND n` appends the top of the stack to the list `n` below it and pops only the value:

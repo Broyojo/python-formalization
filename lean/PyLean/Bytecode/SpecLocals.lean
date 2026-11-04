@@ -374,29 +374,47 @@ theorem swapRules_proven : SwapRules := by
 abbrev jumped (s : St) (d : Int) : St :=
   { s with regs := { s.regs with next := ((s.regs.next : Int) + d).toNat } }
 
-/-- `JUMP_FORWARD` adds `oparg` to `next_instr`, `JUMP_BACKWARD_NO_INTERRUPT` and `JUMP_BACKWARD`
-subtract it, none of them touches the stack, and a jump forward and back returns to the start.
-Pending signals and the JIT are outside the model, so a backward jump has no other effect
-here. `:3494-3496`, `:3544-3550`, `:3656`. A compiled backward jump never leaves the code, which
-is the hypothesis `oparg ≤ next`. -/
+/-- The eval breaker with its pending event consumed. -/
+abbrev consumed (regs : Regs) (rt : Rt) : Regs := { regs with rt := rt }
+
+/-- `JUMP_FORWARD` adds `oparg` to `next_instr` and `JUMP_BACKWARD_NO_INTERRUPT` subtracts it,
+neither touches the stack, and neither handles a pending event, whatever is pending: the
+`yield from` loop deliberately leaves it for the innermost generator (`:3657-3661`, bpo-30039).
+`JUMP_BACKWARD` is `_CHECK_PERIODIC + JUMP_BACKWARD_NO_INTERRUPT` (`:3544-3548`): with nothing
+pending it jumps back, and when `_Py_HandlePending` fails it leaves through `ERROR_IF` (`:157-160`)
+with the stack as it was and without jumping, raising what the handler raised (after the
+implicit chaining of `_PyErr_SetObject`). A jump forward and back returns to the start.
+`:3494-3496`. A compiled backward jump never leaves the code, the `assert(oparg <=
+INSTR_OFFSET())` of `:3662`, which is the hypothesis `oparg ≤ next`. -/
 def JumpRules : Prop := ∀ (e : Env) (s : St),
     execOp e .JUMP_FORWARD s = .ok () (jumped s e.oparg) ∧
     (e.oparg ≤ s.regs.next →
       execOp e .JUMP_BACKWARD_NO_INTERRUPT s = .ok () (jumped s (-(e.oparg : Int))) ∧
-      execOp e .JUMP_BACKWARD s = .ok () (jumped s (-(e.oparg : Int)))) ∧
+      (s.regs.rt.pendingExc = .null →
+        execOp e .JUMP_BACKWARD s = .ok () (jumped s (-(e.oparg : Int)))) ∧
+      (∀ x rt, s.regs.rt.pendingExc ≠ .null →
+        setObject s.regs.rt.pendingExc { s.regs.rt with pendingExc := .null } = .ok x rt →
+        execOp e .JUMP_BACKWARD s = .error (.exc x) ⟨consumed s.regs rt, s.stack⟩)) ∧
     (execOp e .JUMP_FORWARD *> execOp e .JUMP_BACKWARD_NO_INTERRUPT) s = .ok () s
 
 theorem jumpRules_proven : JumpRules := by
   intro e s
-  refine ⟨rfl, fun _ => ⟨rfl, rfl⟩, ?_⟩
-  cases s with
-  | mk regs stack =>
-    cases regs with
-    | mk rt frame prev next =>
-      show EStateM.Result.ok () _ = _
-      congr 2
-      simp only [Regs.mk.injEq, and_self, and_true, true_and]
-      omega
+  refine ⟨rfl, fun _ => ⟨rfl, fun hp => ?_, fun x rt hp hx => ?_⟩, ?_⟩
+  · simp [execOp, JUMP_BACKWARD, _SPECIALIZE_JUMP_BACKWARD, _CHECK_PERIODIC, checkPeriodics, hp,
+      JUMP_BACKWARD_NO_INTERRUPT, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, pure, EStateM.pure, jumpBy]
+  · have hb : (s.regs.rt.pendingExc == .null) = false := by simpa using hp
+    simp [execOp, JUMP_BACKWARD, _SPECIALIZE_JUMP_BACKWARD, _CHECK_PERIODIC, checkPeriodics, hb,
+      raiseVal, hx, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+  · cases s with
+    | mk regs stack =>
+      cases regs with
+      | mk rt frame prev next =>
+        show EStateM.Result.ok () _ = _
+        congr 2
+        simp only [Regs.mk.injEq, and_self, and_true, true_and]
+        omega
 
 /-- Where a conditional branch leaves `next_instr`: `oparg` further on if taken, otherwise one
 further if the next instruction is the `NOT_TAKEN` that marks the fall-through,

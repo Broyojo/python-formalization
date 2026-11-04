@@ -139,7 +139,7 @@ def _ITER_JUMP_RANGE (e : Env) : M Unit := do
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
-/-- `:4659`. -/
+/-- `:4082`. -/
 def _ITER_NEXT_RANGE : M Unit := stk 2 3 fun
   | [.ref a, index] => do
     match ← (getObj a : RM Obj) with
