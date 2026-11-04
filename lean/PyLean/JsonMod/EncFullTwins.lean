@@ -85,8 +85,9 @@ theorem XRelW.recC {cfg : XCfg} {α β : Type} {R : α → β → Prop} {rc : Ex
 theorem XRelW.recPy {cfg : XCfg} {α β : Type} {R : α → β → Prop} {rc : Except XErr α} {rp : Except XErr β}
     (h : IsRecPyX rp) : XRelW cfg R rc rp := Or.inr (Or.inr (Or.inr h))
 
-theorem IsRecCX.enter0 {α : Type} (k : (c' : Nat) → c' < 0 → Except XErr α) : IsRecCX (cEnterX 0 k) :=
-  ⟨[], rfl⟩
+theorem IsRecCX.enter0 {α : Type} {c w : Nat} (h : c < w + 1) (k : (c' : Nat) → c' < c → Except XErr α) :
+    IsRecCX (cEnterX c w k) :=
+  ⟨[], by simp [cEnterX, xe, show ¬ (w + 1 ≤ c) by omega]⟩
 
 theorem IsRecPyX.call0 {α : Type} (k : (b' : Nat) → b' < 0 → Except XErr α) : IsRecPyX (pyCallX 0 k) :=
   ⟨[], rfl⟩
@@ -490,33 +491,32 @@ theorem contSim {cfg : XCfg} (hO : cfg.Okx) {c : Nat} (h : SimAt cfg c) (b lvl :
 theorem simStep {cfg : XCfg} (hO : cfg.Okx) (c : Nat) (ih : ∀ c', c' < c → SimAt cfg c') : SimAt cfg c := by
   intro b lvl seen anc v hanc hv
   -- the containers: `_Py_EnterRecursiveCall` and a generator frame
-  have cont : ∀ (cyc : Bool) (a : XVal), a.okx = true →
-      XRelW cfg Eq (cEnterX c (fun c' _ => cContX cfg c' lvl seen anc cyc a))
+  have cont : ∀ (cyc : Bool) (a : XVal) (w : Nat), a.okx = true →
+      XRelW cfg Eq (cEnterX c w (fun c' _ => cContX cfg c' lvl seen anc cyc a))
         (pyCallX b (fun b' _ => pyContX cfg b' lvl seen anc cyc a)) := by
-    intro cyc a ha
-    cases c with
-    | zero => exact XRelW.recC ⟨[], rfl⟩
-    | succ c =>
-      cases b with
+    intro cyc a w ha
+    by_cases hw : w + 1 ≤ c
+    · cases b with
       | zero => exact XRelW.recPy ⟨[], rfl⟩
       | succ b =>
-        simp only [cEnterX, pyCallX]
-        exact contSim hO (ih c (by omega)) b lvl seen anc hanc cyc a ha
+        simp only [cEnterX, hw, ↓reduceDIte, pyCallX]
+        exact contSim hO (ih _ (by omega)) b lvl seen anc hanc cyc a ha
+    · exact XRelW.recC (IsRecCX.enter0 (by omega) _)
   cases v with
   | none => simp only [cObjX, pyIterX]; exact XRelW.ok _
   | bool bb => cases bb <;> simp only [cObjX, pyIterX] <;> exact XRelW.ok _
   | str s => simp only [cObjX, pyIterX]; exact strLeaf hO b s hv
   | int n => simp only [cObjX, pyIterX]; exact liftE_rel _
   | flt bits r => simp only [cObjX, pyIterX]; exact fltLeaf b bits r
-  | seq t xs => simp only [cObjX, pyIterX]; exact cont false _ hv
-  | map t kvs => simp only [cObjX, pyIterX]; exact cont false _ hv
+  | seq t xs => simp only [cObjX, pyIterX]; exact cont false _ _ hv
+  | map t kvs => simp only [cObjX, pyIterX]; exact cont false _ _ hv
   | seqSub => simp [XVal.okx] at hv
   | mapSub => simp [XVal.okx] at hv
   | back k =>
     simp only [cObjX, pyIterX]
     cases ha : anc[k]? with
     | none => exact XRelW.err _
-    | some a => exact cont true a (hanc a (List.mem_of_getElem? ha))
+    | some a => exact cont true a _ (hanc a (List.mem_of_getElem? ha))
   | other n t =>
     simp only [cObjX, pyIterX]
     by_cases hc : cfg.checkCircular = true ∧ n ∈ seen
@@ -530,12 +530,11 @@ theorem simStep {cfg : XCfg} (hO : cfg.Okx) (c : Nat) (ih : ∀ c', c' < c → S
       | error e => exact XRelW.err e
       | ok v' =>
         simp only [liftE]
-        cases c with
-        | zero => exact XRelW.recC ⟨[], rfl⟩
-        | succ c =>
-          simp only [cEnterX]
-          exact XRelW.addNote (ih c (by omega) b lvl (n :: seen) anc v' hanc (hO.dfl n t v' hd))
+        by_cases hw : cfg.stk .dflt + 1 ≤ c
+        · simp only [cEnterX, hw, ↓reduceDIte]
+          exact XRelW.addNote (ih _ (by omega) b lvl (n :: seen) anc v' hanc (hO.dfl n t v' hd))
             (show NoteRel cfg (.obj t) (.obj t) from rfl)
+        · exact XRelW.recC (IsRecCX.enter0 (by omega) _)
 
 theorem simX {cfg : XCfg} (hO : cfg.Okx) : ∀ c, SimAt cfg c := by
   intro c

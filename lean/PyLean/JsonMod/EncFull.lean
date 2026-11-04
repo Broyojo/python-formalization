@@ -17,7 +17,10 @@ fully qualified name (`_PyType_GetFullyQualifiedName`, Objects/typeobject.c:1694
 
 **Recursion.** C: `_Py_EnterRecursiveCall(" while encoding a JSON object")` before a list or
 tuple (:1606), a dict (:1613) and the value `default` returned (:1644), stack based as in
-`DecRec.lean`: `c` is the stack room in levels. Python: every call pushes a frame (generators
+`DecRec.lean`: `c` is the stack room, and each guard has its own cost in it (`XCfg.stk`), the C
+frames from that guard to the next one, which depend on the container: on 3.15.2 x86-64 the
+deepest encodable nesting is 47456 lists, 29001 dicts (sorted or not), 47453 `default` results,
+and 18001 list-in-dict pairs, so a dict level costs about 1.64 list levels and the costs add up. Python: every call pushes a frame (generators
 too, when they start and when they are resumed); `p` is the number of frames left. The frames
 are `_iterencode_once`, `_iterencode`, `_iterencode_list`, `_iterencode_dict`, `_default`,
 `floatstr` and the string encoder (`py_encode_basestring(_ascii)` and its `replace` callback when
@@ -159,6 +162,15 @@ def addNote {α : Type} (n : Note) : Except XErr α → Except XErr α
 def recEncC : PyExc := .named "RecursionError" "~Stack overflow (used N kB) while encoding a JSON object"
 def recEncPy : PyExc := .named "RecursionError" "maximum recursion depth exceeded"
 
+/-- The C recursion guards: before a list or tuple, a subclass of one, a dict or frozendict, a
+subclass of one, and before the value `default` returned. -/
+inductive Guard where
+  | seq
+  | seqSub
+  | map
+  | mapSub
+  | dflt
+
 /-- What a custom `encoder` returns: a `str` object or an object of another type. -/
 inductive XOut where
   | str (o : SObj)
@@ -180,6 +192,9 @@ structure XCfg where
   subSort : List (ItemShape × XKey × XVal) → Except PyExc (List (ItemShape × XKey × XVal)) := .ok
   /-- The `encoder` of `c_make_encoder` when it is not one of the two C functions (C only). -/
   customEnc : Option (PStr → Except PyExc XOut) := none
+  /-- The stack room one level costs past each guard, minus one (C only; the platform's frame
+  sizes, see the module docstring). -/
+  stk : Guard → Nat := fun _ => 0
 
 /-- The options the shared helpers of `Enc.lean` read. -/
 def XCfg.toE (cfg : XCfg) : ECfg :=
@@ -248,11 +263,18 @@ def cWriteStringX (cfg : XCfg) (s : PStr) : Except PyExc PStr :=
     | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {truncName 80 t}")
     | .ok (.str o) => writeStrObj o
 
-/-- `if (_Py_EnterRecursiveCall(" while encoding a JSON object")) return -1;` with room `c`. -/
-def cEnterX {α : Type} (c : Nat) (k : (c' : Nat) → c' < c → Except XErr α) : Except XErr α :=
-  match c with
-  | 0 => .error (xe recEncC)
-  | c' + 1 => k c' (Nat.lt_succ_self c')
+/-- `if (_Py_EnterRecursiveCall(" while encoding a JSON object")) return -1;` with room `c`, for
+a level that costs `w + 1`. -/
+def cEnterX {α : Type} (c w : Nat) (k : (c' : Nat) → c' < c → Except XErr α) : Except XErr α :=
+  if h : w + 1 ≤ c then k (c - (w + 1)) (by omega) else .error (xe recEncC)
+
+/-- The guard a container is entered with. -/
+def XVal.guard : XVal → Guard
+  | .seq .. => .seq
+  | .seqSub .. => .seqSub
+  | .map .. => .map
+  | .mapSub .. => .mapSub
+  | _ => .dflt
 
 /-- The note key of C: the key object itself. -/
 def cNoteKey (k : XKey) : NoteKey := .orig k
@@ -287,13 +309,13 @@ def cObjX (cfg : XCfg) (c lvl : Nat) (seen : List Nat) (anc : List XVal) (v : XV
   | .str s => liftE (cWriteStringX cfg s)
   | .int n => liftE (intRepr n)
   | .flt b r => liftE (cEncodeFloat cfg.toE b r)
-  | .seq t xs => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc false (.seq t xs))
-  | .seqSub t tr ys st => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc false (.seqSub t tr ys st))
-  | .map t kvs => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc false (.map t kvs))
-  | .mapSub t u tr h its st => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc false (.mapSub t u tr h its st))
+  | .seq t xs => cEnterX c (cfg.stk .seq) (fun c' _ => cContX cfg c' lvl seen anc false (.seq t xs))
+  | .seqSub t tr ys st => cEnterX c (cfg.stk .seqSub) (fun c' _ => cContX cfg c' lvl seen anc false (.seqSub t tr ys st))
+  | .map t kvs => cEnterX c (cfg.stk .map) (fun c' _ => cContX cfg c' lvl seen anc false (.map t kvs))
+  | .mapSub t u tr h its st => cEnterX c (cfg.stk .mapSub) (fun c' _ => cContX cfg c' lvl seen anc false (.mapSub t u tr h its st))
   | .back k =>
     match anc[k]? with
-    | some a => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc true a)
+    | some a => cEnterX c (cfg.stk a.guard) (fun c' _ => cContX cfg c' lvl seen anc true a)
     | none => .error (xe .modelFuel)
   | .other n t =>
     -- :1619-1666: markers, `default`, `_Py_EnterRecursiveCall`, the note on failure
@@ -301,7 +323,7 @@ def cObjX (cfg : XCfg) (c lvl : Nat) (seen : List Nat) (anc : List XVal) (v : XV
     else
       match cfg.dflt n t with
       | .error e => .error (xe e)
-      | .ok v' => cEnterX c (fun c' _ => addNote (.obj t) (cObjX cfg c' lvl (n :: seen) anc v'))
+      | .ok v' => cEnterX c (cfg.stk .dflt) (fun c' _ => addNote (.obj t) (cObjX cfg c' lvl (n :: seen) anc v'))
 termination_by (2 * c, 0, 0)
 
 /-- `encoder_listencode_list` (:1916-1992) and `encoder_listencode_dict` (:1798-1887) on the
@@ -425,12 +447,12 @@ is the result before anything is written; then `indent_level = 0` (:1472) with t
 entries at level `k` are `'\n' + indent * (copies + k)` (`IndentCacheSpec`), so `cObjX` runs at
 level `copies` (`cacheCopies`: none for a level below 1, the repeat's `''`). Without an indent
 the level is never read. -/
-def encoderCallX (cfg : XCfg) (c : Nat) (v : XVal) (level : Int) : Except XErr (List PStr) :=
+def encoderCallX (alloc : Alloc) (cfg : XCfg) (c : Nat) (v : XVal) (level : Int) : Except XErr (List PStr) :=
   if outOfSsize level then .error (xe ssizeErr)
   else
     match (match cfg.indent with
            | none => (Except.ok () : Except PyExc Unit)
-           | some ind => (createIndentCache ind level).map (fun _ => ())) with
+           | some ind => (createIndentCache alloc ind level).map (fun _ => ())) with
     | .error e => .error (xe e)
     | .ok () =>
       match cObjX cfg c (cacheCopies level) [] [] v with

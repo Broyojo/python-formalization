@@ -53,7 +53,7 @@ At the default recursion limit, `json.dumps` of lists 1000 deep. -/
 theorem dumpsTwinsRec_refuted : ¬ DumpsTwinsRec := by
   intro h
   have h1 := h {} 2 3 (nestL 1) okx_default (nestL_okx 1)
-  obtain ⟨t, ht⟩ := (dumpsCX_nest {} 2 1).1 (by omega)
+  obtain ⟨t, ht⟩ := (dumpsCX_nest {} 2 1).1 (by decide)
   obtain ⟨ns, hns⟩ := (dumpsPyX_nest {} 3 1).2 (by omega)
   rw [ht, hns] at h1
   rcases h1 with ⟨_, h2, h3⟩ | ⟨_, _, _, h2, _⟩ <;> cases h2 <;> cases h3
@@ -254,21 +254,21 @@ theorem dumpsTwinsDictSub_refuted : ¬ DumpsTwinsDictSub := by
 level)`, or the same exception, for every level `0 <= level <= sys.maxsize`, every value and option
 of `DumpsTwinsX`, when neither raises its `RecursionError` (`EncoderCallX` 4 without the cache). -/
 def EncoderCallTwins : Prop :=
-  ∀ (cfg : XCfg) (c p : Nat) (v : XVal) (level : Int), cfg.Okx → v.okx = true → 0 ≤ level →
-    ¬ outOfSsize level → ¬ IsRecCX (encoderCallX cfg c v level) →
+  ∀ (alloc : Alloc) (cfg : XCfg) (c p : Nat) (v : XVal) (level : Int), cfg.Okx → v.okx = true → 0 ≤ level →
+    ¬ outOfSsize level → ¬ IsRecCX (encoderCallX alloc cfg c v level) →
     ¬ IsRecPyX (iterencodePyX cfg p v level.toNat) →
-    (∃ t, encoderCallX cfg c v level = .ok [t] ∧ iterencodePyX cfg p v level.toNat = .ok t) ∨
-    (∃ e nsC nsP, encoderCallX cfg c v level = .error (e, nsC) ∧ iterencodePyX cfg p v level.toNat = .error (e, nsP))
+    (∃ t, encoderCallX alloc cfg c v level = .ok [t] ∧ iterencodePyX cfg p v level.toNat = .ok t) ∨
+    (∃ e nsC nsP, encoderCallX alloc cfg c v level = .error (e, nsC) ∧ iterencodePyX cfg p v level.toNat = .error (e, nsP))
 
 def cfgIndent2 : XCfg := { indent := some (cs "  ") }
 
 theorem okx_indent2 : cfgIndent2.Okx :=
   ⟨rfl, rfl, rfl, fun n t v' h => by simp [cfgIndent2, defaultErr] at h⟩
 
-theorem wLevel_C : encoderCallX cfgIndent2 10 (.int 1) (2 ^ 62) =
+theorem wLevel_C (alloc : Alloc) : encoderCallX alloc cfgIndent2 10 (.int 1) (2 ^ 62) =
     .error (xe (.overflowError "repeated string is too long")) :=
   encoderCallX_cacheErr (ind := cs "  ") rfl (by decide)
-    (createIndentCache_ovf _ (by decide) (by simp [ssizeMax]; decide))
+    (createIndentCache_ovf alloc _ (by decide) (by simp [ssizeMax]; decide))
 
 theorem wLevel_Py : iterencodePyX cfgIndent2 10 (.int 1) (2 ^ 62 : Int).toNat = .ok (cs "1") := by
   simp [iterencodePyX, pyCallX, pyIterX, liftE, intRepr, decDigits, decDigitsF, maxStrDigits]
@@ -281,7 +281,7 @@ indent only inside a container (encoder.py:281, :340). Levels whose string `mall
 `MemoryError` the same way (bugs/json-encoder-call-indent-level.yaml). -/
 theorem encoderCallTwins_refuted : ¬ EncoderCallTwins := by
   intro h
-  have h1 := h cfgIndent2 10 10 (.int 1) (2 ^ 62) okx_indent2 rfl (by decide) (by decide)
+  have h1 := h (fun _ => true) cfgIndent2 10 10 (.int 1) (2 ^ 62) okx_indent2 rfl (by decide) (by decide)
     (by rw [wLevel_C]; rintro ⟨ns, h⟩; cases h) (by rw [wLevel_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wLevel_C, wLevel_Py] at h1
   rcases h1 with ⟨t, h2, _⟩ | ⟨_, _, _, _, h3⟩

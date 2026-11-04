@@ -16,10 +16,11 @@ dict with entries, and an `indent` that is a `str` subclass defining `__mul__`, 
 Allocation: `create_indent_cache` builds `'\n' + indent * level` at the call, before anything
 is written, so its failures are modelled: `unicode_repeat`'s `OverflowError`, and
 `PyUnicode_New`'s `MemoryError` from its own size check (Objects/unicodeobject.c:1325-1326) or
-from a `malloc` of `mallocLimit = 2^47` bytes or more (no 64-bit Linux or macOS process has that
-much address space; the convention of `Itertools/Model.lean`). Smaller requests are assumed to
-succeed, and so is every later allocation (the writer, the other cache entries): the encoder
-models have no out-of-memory failure, a scope limit.
+from `malloc`. Whether `malloc` grants a request depends on the machine and the process limits
+(3.15.2 under a 32 GB address limit refuses `'  ' * 2**34`; nothing grants `'  ' * 2**43`, 16 TB,
+on an ordinary machine), so it is an oracle `alloc : Nat → Bool` on the byte count, and every
+statement quantifies over it. Every later allocation (the writer, the other cache entries) is
+assumed to succeed: the encoder models have no other out-of-memory failure, a scope limit.
 -/
 
 namespace PyLean.JsonMod
@@ -208,8 +209,9 @@ def encoderNew (markers : MarkersArg) (dflt : Nat → String → Except PyExc EV
 `2*k-1` holds `item_separator` followed by that. -/
 abbrev IndentCache := List PStr
 
-/-- `malloc` of this many bytes or more fails (see the module docstring). -/
-def mallocLimit : Nat := 2 ^ 47
+/-- What `malloc` grants: `alloc n` says that a request of `n` bytes succeeds (see the module
+docstring). -/
+abbrev Alloc := Nat → Bool
 
 def memoryError : PyExc := .named "MemoryError" ""
 
@@ -222,10 +224,10 @@ def ucsWidth (maxchar : Nat) : Nat := if maxchar < 256 then 1 else if maxchar < 
 /-- `PyUnicode_New(size, maxchar)` for `1 <= size` succeeds (Objects/unicodeobject.c:1269-1345):
 `struct_size` 40 for ASCII (`PyASCIIObject`), 56 otherwise (`PyCompactUnicodeObject`; 3.15.2,
 64-bit, checked with `sys.getsizeof`), the size check of :1325-1326, then
-`PyObject_Malloc(struct_size + (size + 1) * char_size)` (:1332). -/
-def unicodeNewOk (size maxchar : Nat) : Bool :=
+`PyObject_Malloc(struct_size + (size + 1) * char_size)` (:1332), granted or not by `alloc`. -/
+def unicodeNewOk (alloc : Alloc) (size maxchar : Nat) : Bool :=
   decide ((size : Int) ≤ (ssizeMax - ucsStruct maxchar) / ucsWidth maxchar - 1) &&
-    decide (ucsStruct maxchar + (size + 1) * ucsWidth maxchar < mallocLimit)
+    alloc (ucsStruct maxchar + (size + 1) * ucsWidth maxchar)
 
 /-- The largest code point of a string (`PyUnicode_MAX_CHAR_VALUE` picks the kind from it). -/
 def strMax (s : PStr) : Nat := s.foldl max 0
@@ -234,34 +236,34 @@ def strMax (s : PStr) : Nat := s.foldl max 0
 `PySequence_Repeat`, Objects/abstract.c:1747-1758, calls for a `str`): `''` below 1, the string
 itself at 1, `OverflowError` when `len(str) > PY_SSIZE_T_MAX / len`, otherwise
 `PyUnicode_New(len * len(str), maxchar)` (the empty singleton for size 0) and the copies. -/
-def unicodeRepeat (s : PStr) (len : Int) : Except PyExc PStr :=
+def unicodeRepeat (alloc : Alloc) (s : PStr) (len : Int) : Except PyExc PStr :=
   if len < 1 then .ok []
   else if len = 1 then .ok s
   else if (s.length : Int) > ssizeMax / len then .error (.overflowError "repeated string is too long")
   else if len.toNat * s.length = 0 then .ok []
-  else if unicodeNewOk (len.toNat * s.length) (strMax s) then .ok (rep s len.toNat)
+  else if unicodeNewOk alloc (len.toNat * s.length) (strMax s) then .ok (rep s len.toNat)
   else .error memoryError
 
 /-- `PyUnicode_Append(&left, right)` (Objects/unicodeobject.c:11408-11483) for two `str`s: the
 empty shortcuts, the `OverflowError` of :11440-11444, then a new string (`'\n'` from
 `PyUnicode_FromOrdinal` is a shared singleton, never resized in place). -/
-def unicodeAppend (l r : PStr) : Except PyExc PStr :=
+def unicodeAppend (alloc : Alloc) (l r : PStr) : Except PyExc PStr :=
   if l = [] then .ok r
   else if r = [] then .ok l
   else if (l.length : Int) > ssizeMax - r.length then .error (.overflowError "strings are too large to concat")
-  else if unicodeNewOk (l.length + r.length) (max (strMax l) (strMax r)) then .ok (l ++ r)
+  else if unicodeNewOk alloc (l.length + r.length) (max (strMax l) (strMax r)) then .ok (l ++ r)
   else .error memoryError
 
 /-- `create_indent_cache(s, indent_level)`, :1373-1390: `newline_indent = '\n'`, then, when
 `indent_level` is not 0, `PyUnicode_AppendAndDel(&newline_indent, PySequence_Repeat(indent,
 indent_level))` (Objects/unicodeobject.c:11485-11489; a `NULL` repeat leaves its exception and
 `NULL`, :11420-11424), and the 1-list of the result. -/
-def createIndentCache (ind : PStr) (level : Int) : Except PyExc IndentCache :=
+def createIndentCache (alloc : Alloc) (ind : PStr) (level : Int) : Except PyExc IndentCache :=
   if level ≠ 0 then
-    match unicodeRepeat ind level with
+    match unicodeRepeat alloc ind level with
     | .error e => .error e
     | .ok r =>
-      match unicodeAppend [10] r with
+      match unicodeAppend alloc [10] r with
       | .error e => .error e
       | .ok nl => .ok [nl]
   else .ok [[10]]
@@ -288,27 +290,27 @@ def writeNewlineIndent (k : Nat) (c : IndentCache) : PStr := c.getD (k * 2) []
 `indent` is not `None` (its failure is the result, before anything is written), then
 `indent_level = 0` with the cache, whose entries are `'\n' + indent * (copies + k)`
 (`IndentCacheSpec`); a 1-tuple. -/
-def encoderCall (cfg : ECfg) (v : EVal) (level : Int) : Except PyExc (List PStr) :=
+def encoderCall (alloc : Alloc) (cfg : ECfg) (v : EVal) (level : Int) : Except PyExc (List PStr) :=
   if outOfSsize level then .error ssizeErr
   else
     match (match cfg.indent with
            | none => (Except.ok () : Except PyExc Unit)
-           | some ind => (createIndentCache ind level).map (fun _ => ())) with
+           | some ind => (createIndentCache alloc ind level).map (fun _ => ())) with
     | .error e => .error e
     | .ok () =>
       match cEnc cfg (encFuel cfg v) (cacheCopies level) [] v with
       | .ok t => .ok [t]
       | .error e => .error e
 
-theorem createIndentCache_lt1 (ind : PStr) {level : Int} (h : level < 1) :
-    createIndentCache ind level = .ok [[10]] := by
+theorem createIndentCache_lt1 (alloc : Alloc) (ind : PStr) {level : Int} (h : level < 1) :
+    createIndentCache alloc ind level = .ok [[10]] := by
   by_cases h0 : level = 0
   · simp [createIndentCache, h0]
   · simp [createIndentCache, h0, unicodeRepeat, h, unicodeAppend]
 
-theorem createIndentCache_ovf (ind : PStr) {level : Int} (h2 : 2 ≤ level)
+theorem createIndentCache_ovf (alloc : Alloc) (ind : PStr) {level : Int} (h2 : 2 ≤ level)
     (hov : (ind.length : Int) > ssizeMax / level) :
-    createIndentCache ind level = .error (.overflowError "repeated string is too long") := by
+    createIndentCache alloc ind level = .error (.overflowError "repeated string is too long") := by
   have h0 : level ≠ 0 := by omega
   simp [createIndentCache, h0, unicodeRepeat, show ¬ level < 1 by omega, show level ≠ 1 by omega, hov]
 

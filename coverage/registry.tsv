@@ -2021,6 +2021,7 @@ typeobj-slot-sq-contains-exact	proven	Objects/typeobject.c	slot_sq_contains
 typeobj-slot-tp-init-exact	proven	Objects/typeobject.c	slot_tp_init
 typeobj-slot-tp-iter-exact	proven	Objects/typeobject.c	slot_tp_iter,has_dunder_getitem
 typeobj-slot-sq-length-exact	proven	Objects/typeobject.c	slot_sq_length
+typeobj-align-up-layout	proven	Objects/typeobject.c	_align_up,PyType_GetTypeDataSize
 typeobj-vectorcall-method-exact	proven	Objects/typeobject.c	vectorcall_method,vectorcall_unbound
 typeobj-slot-nb-index-exact	proven	Objects/typeobject.c	slot_nb_index
 typeobj-method-is-overloaded-exact	proven	Objects/typeobject.c	method_is_overloaded

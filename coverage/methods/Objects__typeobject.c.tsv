@@ -61,8 +61,8 @@ Objects/typeobject.c	1121	1129	PyType_ClearWatcher	PyType_ClearWatcher(int watch
 Objects/typeobject.c	1134	1151	PyType_Watch	PyType_Watch(int watcher_id, PyObject* obj)	todo		
 Objects/typeobject.c	1154	1167	PyType_Unwatch	PyType_Unwatch(int watcher_id, PyObject* obj)	todo		
 Objects/typeobject.c	1170	1199	set_version_unlocked	set_version_unlocked(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
-Objects/typeobject.c	1202	1276	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
-Objects/typeobject.c	1279	1289	PyType_Modified	PyType_Modified(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1202	1276	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	todo		todo: needs type watchers in the world model (PyType_AddWatcher callbacks, called only when tp_version_tag != 0, :1247-1266, a failing one reported through PyErr_FormatUnraisable and sys.unraisablehook) and version tags; the model has neither, so the row stays unmodelled rather than excluded.
+Objects/typeobject.c	1279	1289	PyType_Modified	PyType_Modified(PyTypeObject *type)	todo		todo: runs type_modified_unlocked when tp_version_tag != 0 (:1279-1289), so it waits on the same type-watcher and version-tag model.
 Objects/typeobject.c	1297	1312	has_custom_mro	has_custom_mro(PyTypeObject *tp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	1315	1360	type_mro_modified	type_mro_modified(PyTypeObject *type, PyObject *bases)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	1372	1377	_PyType_SetVersion	_PyType_SetVersion(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
@@ -112,7 +112,7 @@ Objects/typeobject.c	2625	2644	traverse_slots	traverse_slots(PyTypeObject *type,
 Objects/typeobject.c	2647	2697	subtype_traverse	subtype_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	2700	2717	clear_slots	clear_slots(PyTypeObject *type, PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	2720	2756	subtype_clear	subtype_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/typeobject.c	2759	2925	subtype_dealloc	subtype_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
+Objects/typeobject.c	2759	2925	subtype_dealloc	subtype_dealloc(PyObject *self)	todo		todo: calls the finalizer itself (PyObject_CallFinalizerFromDealloc, tp_del, with resurrection) and PyObject_ClearWeakRefs (weakref callbacks); the TypeObj world has no reference counts, finalizers or weakrefs yet. Bytecode/GenObj (DeallocOutcomes, clearWeakrefs) is the pattern to copy.
 Objects/typeobject.c	2932	2941	type_is_subtype_base_chain	type_is_subtype_base_chain(PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2944	2966	is_subtype_with_mro	is_subtype_with_mro(PyObject *a_mro, PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2969	2972	PyType_IsSubtype	PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)	todo		
@@ -186,7 +186,7 @@ Objects/typeobject.c	5001	5043	type_new_impl	type_new_impl(type_new_ctx *ctx)	to
 Objects/typeobject.c	5047	5114	type_new_get_bases	type_new_get_bases(type_new_ctx *ctx, PyObject **type)	todo		changed-in-3.15:
 Objects/typeobject.c	5118	5169	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	modelled	typeobj-type-new-exact,typeobj-type-new-args	
 Objects/typeobject.c	5173	5187	type_vectorcall	type_vectorcall(PyObject *metatype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/typeobject.c	5193	5196	_align_up	_align_up(Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
+Objects/typeobject.c	5193	5196	_align_up	_align_up(Py_ssize_t size)	modelled	typeobj-align-up-layout	
 Objects/typeobject.c	5199	5236	check_basicsize_includes_size_and_offsets	check_basicsize_includes_size_and_offsets(PyTypeObject* type)	todo		
 Objects/typeobject.c	5239	5261	check_immutable_bases	check_immutable_bases(const char *type_name, PyObject *bases, int skip_first)	todo		
 Objects/typeobject.c	5268	5297	special_offset_from_member	special_offset_from_member( const PyMemberDef *memb /* may be NULL */, Py_ssize_t type_data_offset, Py_ssize_t *dest /* not NULL */)	todo		
@@ -212,7 +212,7 @@ Objects/typeobject.c	6060	6112	PyType_GetBaseByToken_DuringGC	PyType_GetBaseByTo
 Objects/typeobject.c	6115	6136	PyType_GetBaseByToken	PyType_GetBaseByToken(PyTypeObject *type, void *token, PyTypeObject **result)	todo		changed-in-3.15:
 Objects/typeobject.c	6140	6144	PyObject_GetTypeData_DuringGC	PyObject_GetTypeData_DuringGC(PyObject *obj, PyTypeObject *cls)	todo		changed-in-3.15: new function
 Objects/typeobject.c	6147	6150	PyObject_GetTypeData	PyObject_GetTypeData(PyObject *obj, PyTypeObject *cls)	todo		changed-in-3.15:
-Objects/typeobject.c	6153	6160	PyType_GetTypeDataSize	PyType_GetTypeDataSize(PyTypeObject *cls)	todo		
+Objects/typeobject.c	6153	6160	PyType_GetTypeDataSize	PyType_GetTypeDataSize(PyTypeObject *cls)	modelled	typeobj-align-up-layout	
 Objects/typeobject.c	6163	6174	getitemdata	getitemdata(PyObject *obj, bool raise)	todo		changed-in-3.15: new function
 Objects/typeobject.c	6177	6180	PyObject_GetItemData_DuringGC	PyObject_GetItemData_DuringGC(PyObject *obj)	todo		changed-in-3.15: new function
 Objects/typeobject.c	6183	6186	PyObject_GetItemData	PyObject_GetItemData(PyObject *obj)	todo		changed-in-3.15:
@@ -252,7 +252,7 @@ Objects/typeobject.c	7134	7184	merge_class_dict	merge_class_dict(PyObject *dict,
 Objects/typeobject.c	7197	7208	type___dir___impl	type___dir___impl(PyTypeObject *self) /*[clinic end generated code: output=69d02fe92c0f15fa input=7733befbec645968]*/	todo		
 Objects/typeobject.c	7217	7231	type___sizeof___impl	type___sizeof___impl(PyTypeObject *self) /*[clinic end generated code: output=766f4f16cd3b1854 input=99398f24b9cf45d6]*/	todo		
 Objects/typeobject.c	7254	7282	type_traverse	type_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/typeobject.c	7285	7332	type_clear	type_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	7285	7332	type_clear	type_clear(PyObject *self)	todo		todo: calls PyType_Modified (type watchers) before PyDict_Clear of tp_dict (:7322-7326); needs the type-watcher model of type_modified_unlocked, and the GC call path that reaches it.
 Objects/typeobject.c	7335	7339	type_is_gc	type_is_gc(PyObject *tp)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	7435	7439	excess_args	excess_args(PyObject *args, PyObject *kwds)	modelled	typeobj-object-init-exact,typeobj-object-new-exact	
 Objects/typeobject.c	7442	7459	object_init	object_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-object-init-exact	
