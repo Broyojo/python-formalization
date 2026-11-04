@@ -39,6 +39,7 @@ import PyLean.Datetime.CmpProps2
 import PyLean.Datetime.ReprProps
 import PyLean.Datetime.Misc2Props
 import PyLean.Datetime.FromisoBodyProps
+import PyLean.Datetime.AstzProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -807,9 +808,8 @@ def entries : List Entry := [
   { id := "datetime-astimezone-to-timezone", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.astimezone", "timezone.fromutc", "C datetime_datetime_astimezone_impl", "C timezone_fromutc"]
     statement := "astimezone to a timezone agrees between the twins when utcoffset(self) is a timedelta in range."
-    source := "C/Python twins", status := .open
-    prop := ``AstimezoneToTimezone
-    notes := "Should follow from DatetimeSubTimedelta and TimezoneFromutc." },
+    source := "C/Python twins", status := .proven
+    prop := ``AstimezoneToTimezone, thm := some ``astimezoneToTimezone_proven },
   { id := "datetime-tzinfo-fromutc", pyFile := "Lib/_pydatetime.py"
     pyFns := ["tzinfo.fromutc", "C tzinfo_fromutc"]
     statement := "tzinfo.fromutc agrees between the twins for a subclass whose dst() is constant."
