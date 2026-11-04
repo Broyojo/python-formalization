@@ -1,10 +1,12 @@
 id: pyio-bytesio-twin-argument-handling
-title: "io.BytesIO and _pyio.BytesIO differ on int arguments outside Py_ssize_t, check order and error messages"
+title: "io and _pyio BytesIO/StringIO differ on arguments outside Py_ssize_t, non-int arguments, check order and error messages"
 priority: P4
 kind: twin-mismatch
 module: pyio
-files: [Modules/_io/bytesio.c, Modules/_io/clinic/bytesio.c.h, Lib/_pyio.py]
-functions: ["_io_BytesIO_seek_impl", "_io_BytesIO_readlines_impl", "_io_BytesIO_truncate_impl", "IOBase.readline"]
+files: [Modules/_io/bytesio.c, Modules/_io/clinic/bytesio.c.h, Modules/_io/stringio.c, Python/modsupport.c, Lib/_pyio.py]
+functions: ["_io_BytesIO_seek_impl", "_io_BytesIO_readlines_impl", "_io_BytesIO_truncate_impl", "IOBase.readline",
+            "BytesIO.read", "BytesIO.seek", "IOBase.readlines", "_io_BytesIO_read_impl", "_io_StringIO_write_impl",
+            "TextIOWrapper.write"]
 summary: |
   A collection of argument-handling differences, none of which corrupts data.
   (1) Int arguments outside Py_ssize_t: C raises OverflowError, Python proceeds: seek(2**63),
@@ -17,8 +19,19 @@ summary: |
   stream returns b'' where C raises ValueError.
   (4) Messages: 'read from closed file' vs 'I/O operation on closed file.', 'negative seek position
   -1' vs 'negative seek value -1', and so on.
+  (5) An __index__ that closes the stream: _pyio.BytesIO.read and .seek check closed and then call
+  size.__index__() / pos.__index__() with no second check (Lib/_pyio.py:928-938, :976-983); C runs
+  __index__ in the clinic converter first, so CHECK_CLOSED sees the closed stream. With
+  f = BytesIO(b'abc') and x.__index__ closing f: f.read(x) gives b'' in _pyio and ValueError in C;
+  f.seek(x) (returning 2) sets _pos on the closed _pyio stream and returns 2, C raises ValueError.
+  (6) A float readlines hint: C BytesIO refuses anything but an int or None ("integer argument
+  expected, got 'float'", bytesio.c:605-608); _pyio compares it (Lib/_pyio.py:572, :579), so
+  BytesIO(b'a\nb\n').readlines(0.5) is [b'a\n'] and readlines(-0.5) every line.
+  (7) StringIO.write check order: C type-checks before CHECK_CLOSED (stringio.c:567-572), _pyio
+  checks closed first (Lib/_pyio.py:2282-2286), so s.close(); s.write(1) raises TypeError in C and
+  ValueError in _pyio.
 likelihood: |
-  Very low; these need absurd arguments or a closed stream.
+  Very low; these need absurd arguments, an __index__ that closes the stream, or a closed stream.
 maybe_intended: |
   Yes: implementation details of a C type with Py_ssize_t fields. Maintainers have called such
   differences implementation details before, and IOBase's docstring says calling methods on a
@@ -27,6 +40,22 @@ maybe_intended: |
   has no reason to fit a C type.
 reproducer: |
   import io, _pyio, sys
+  class Closer:
+      def __init__(self, f, v):
+          self.f, self.v = f, v
+      def __index__(self):
+          self.f.close()
+          return self.v
+  def index_read(m):
+      b = m.BytesIO(b'abc')
+      return b.read(Closer(b, 1))
+  def index_seek(m):
+      b = m.BytesIO(b'abc')
+      return b.seek(Closer(b, 2))
+  def closed_text(m):
+      s = m.StringIO()
+      s.close()
+      return s.write(1)
   def attempt(f):
       try:
           return ('ok', f())
@@ -49,6 +78,10 @@ reproducer: |
       ('closed.seek(2**64)', lambda m: closed(m).seek(2 ** 64)),
       ('closed.readline(0)', lambda m: closed(m).readline(0)),
       ('closed.read()', lambda m: closed(m).read()),
+      ('read(x), x.__index__ closes', index_read),
+      ('seek(x), x.__index__ closes', index_seek),
+      ('readlines(0.5)', lambda m: m.BytesIO(b'a\nb\n').readlines(0.5)),
+      ('StringIO closed.write(1)', closed_text),
   ]
   differ = 0
   for name, f in cases:
@@ -60,24 +93,41 @@ reproducer: |
 expected: |
   The twins agree, or the differences are accepted as implementation details.
 observed: |
-  python3 3.15.2: all eight cases differ as listed in the summary. REPRODUCED.
-  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): all eight still differ; truncate(2**63)'s message is now "cannot fit 'int' into an
+  python3 3.15.2: all twelve cases differ as listed in the summary. REPRODUCED. The four added cases:
+  read(x): C ('ValueError', 'I/O operation on closed file.'), P ('ok', b''); seek(x): C ValueError,
+  P ('ok', 2); readlines(0.5): C ('TypeError', "integer argument expected, got 'float'"), P
+  ('ok', [b'a\n']); StringIO closed.write(1): C ('TypeError', "string argument expected, got
+  'int'"), P ('ValueError', 'write to closed file').
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): all eight still differ, and the four added cases too (rechecked 2026-11-03, REPRODUCED); truncate(2**63)'s message is now "cannot fit 'int' into an
   index-sized integer" (gh-160781). REPRODUCED.
 promised_by: |
   No documentation. Invariant: Lib/_pyio.py is a Python implementation of the same API.
 cause: |
   Argument Clinic conversions run before the impl bodies (Modules/_io/clinic/bytesio.c.h:239, :278,
   :318, :475, :486); Modules/_io/bytesio.c:597 (readlines) and :704 (truncate) narrow with
-  PyLong_AsSsize_t / PyLong_AsLong; Lib/_pyio.py:546 skips the read for size 0.
+  PyLong_AsSsize_t / PyLong_AsLong; Lib/_pyio.py:546 skips the read for size 0. (5) Lib/_pyio.py:928
+  and :976 check closed before :938 and :983 call __index__, and the bodies (:940-948, :984-996) do
+  not look again. (6) Modules/_io/bytesio.c:596-608 accepts only PyLong or None; Lib/_pyio.py:572 and
+  :579 compare whatever they get. (7) Modules/_io/stringio.c:567-571 runs before CHECK_CLOSED at
+  :572; Lib/_pyio.py:2282-2283 runs before :2284-2286.
 possible_fix: |
-  None needed. If anything: saturate the readlines hint in C.
+  None needed. If anything: saturate the readlines hint in C; in _pyio, convert size/pos with
+  operator.index before the closed check (as C does), which fixes (5) and puts (2) in C's order.
 duplicates:
   issues:
     - {number: 73927, state: closed, relation: "same area: BytesIO argument conversion (bpo-29741)", reason: "different bug, fixed"}
     - {number: 158952, state: open, relation: "same kind of twin mismatch: _pyio.BytesIO.readinto with a read-only buffer", reason: "different bug"}
   queries: ["BytesIO seek OverflowError", "BytesIO readlines OverflowError", "_pyio BytesIO", "BytesIO readlines",
-            "bugforge README: no io entries"]
+            "bugforge README: no io entries",
+            "_pyio BytesIO __index__ (unquoted; 155389, 73927: different)", "_pyio StringIO write closed (unquoted)",
+            "StringIO write TypeError closed (unquoted; 52629, 37443: different)", "readlines hint float (unquoted)",
+            "_pyio seek index closed (unquoted)", "pyio twin check order (unquoted)", "BytesIO read __index__ closes (unquoted)",
+            "bugforge README: no StringIO, BytesIO, _pyio or readlines entries"]
 lean:
-  properties: [PyLean.PyIO.BytesIOTwinsAgree, PyLean.PyIO.BytesIOTwinsSameClass, PyLean.PyIO.BytesIOTwinsSameClassNoAllocFail]
-  theorems: [PyLean.PyIO.bytesIOTwinsAgree_refuted, PyLean.PyIO.bytesIOTwinsSameClass_refuted, PyLean.PyIO.bytesIOTwinsSameClassNoAllocFail_refuted]
+  properties: [PyLean.PyIO.BytesIOTwinsAgree, PyLean.PyIO.BytesIOTwinsSameClass, PyLean.PyIO.BytesIOTwinsSameClassNoAllocFail,
+               PyLean.PyIO.BytesIOReadIndexTwins, PyLean.PyIO.BytesIOSeekIndexTwins, PyLean.PyIO.BytesIOReadlinesFloatTwins,
+               PyLean.PyIO.StringIOWriteCheckOrderTwins]
+  theorems: [PyLean.PyIO.bytesIOTwinsAgree_refuted, PyLean.PyIO.bytesIOTwinsSameClass_refuted, PyLean.PyIO.bytesIOTwinsSameClassNoAllocFail_refuted,
+             PyLean.PyIO.bytesIOReadIndexTwins_refuted, PyLean.PyIO.bytesIOSeekIndexTwins_refuted,
+             PyLean.PyIO.bytesIOReadlinesFloatTwins_refuted, PyLean.PyIO.stringIOWriteCheckOrderTwins_refuted]
   also_proven: "PyLean.PyIO.BytesIOTwinsSameClassCore: with every exclusion above in place, the twins agree on all values and exception classes"

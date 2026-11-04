@@ -11,7 +11,9 @@ The stream is a user subclass whose overridden methods replay a script
 the next `Ret`, and every call is logged, so the argument the base class passes
 is observable. An exhausted script answers `b''`, `b''`, `0`, `None`, and
 `flush` falls through to the base class. `InterruptedError` is raised with
-`errno == EINTR`.
+`errno == EINTR`. The class may also override `seek` (a script of `Ret`), the
+inquiries `seekable`/`readable`/`writable` (one shared script of `IRet`, any object or
+an exception, `False` when exhausted) and the `closed` property (one fixed `IRet`).
 -/
 
 namespace PyLean.PyIO
@@ -32,9 +34,33 @@ def Ret.typeName : Ret → String
   | .int _ => "int"
   | .raise _ _ => ""
 
+/-- What an overridden `seekable()`, `readable()`, `writable()` or `closed` answers: a
+bool, an int, `None`, or an exception. -/
+inductive IRet where
+  | bool (b : Bool)
+  | int (n : Int)
+  | none
+  | raise (cls msg : String)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- `PyObject_IsTrue` (C) and `bool()` (Python) of an answer that did not raise. -/
+def IRet.truthy : IRet → Bool
+  | .bool b => b
+  | .int n => n != 0
+  | .none => false
+  | .raise _ _ => false
+
+/-- The answer as a returned value. -/
+def IRet.val : IRet → Val
+  | .bool b => .bool b
+  | .int n => .int n
+  | .none => .none
+  | .raise _ _ => .none
+
 /-- A logged call of a user method. -/
 inductive Call where
   | read (n : Int) | peek (n : Int) | readinto (n : Int) | write (b : List Nat) | flush | read1 (n : Int)
+  | seek (pos whence : Int) | inquiry (name : String)
   deriving Repr, DecidableEq, Inhabited
 
 structure UObj where
@@ -53,6 +79,12 @@ structure UObj where
   log : List Call
   /-- `readinto` keeps a `memoryview` of the buffer it was given. -/
   keepView : Bool
+  /-- `none`: `seek` is not overridden. -/
+  seeks : Option (List Ret) := none
+  /-- `none`: `seekable`, `readable` and `writable` are not overridden. -/
+  inqs : Option (List IRet) := none
+  /-- `none`: `closed` is the base class's property. -/
+  closedProp : Option IRet := none
   deriving Repr, DecidableEq, Inhabited
 
 def excOf (cls msg : String) : PyExc := .named cls msg
@@ -83,6 +115,32 @@ def UObj.callInto (u : UObj) (n : Int) : UObj × (List Nat × Ret) :=
   | [] => (u, ([], .int 0))
   | r :: rs => ({ u with intos := rs }, r)
 
+/-- `self.seek(p, w)` of an overriding class; an exhausted script answers `0`. -/
+def UObj.callSeek (u : UObj) (p w : Int) (rs : List Ret) : UObj × Ret :=
+  let u := { u with log := u.log ++ [Call.seek p w] }
+  match rs with
+  | [] => (u, .int 0)
+  | r :: rs => ({ u with seeks := some rs }, r)
+
+/-- `self.seekable()`, `self.readable()` or `self.writable()`: the base methods return
+`False` (iobase.c:410, :442, :475; _pyio.py:428, :442, :456); an overriding
+class answers from its script. -/
+def UObj.callInq (u : UObj) (name : String) : UObj × IRet :=
+  match u.inqs with
+  | none => (u, .bool false)
+  | some rs =>
+    let u := { u with log := u.log ++ [Call.inquiry name] }
+    match rs with
+    | [] => (u, .bool false)
+    | r :: rs => ({ u with inqs := some rs }, r)
+
+/-- Reading `self.closed`: the base property reports the flag (`iobase_closed_get`,
+iobase.c:188-195; `IOBase.closed`, _pyio.py:466-471), or the class's property answers. -/
+def UObj.readClosed (u : UObj) : IRet :=
+  match u.closedProp with
+  | none => .bool u.isClosed
+  | some r => r
+
 def UObj.callWrite (u : UObj) (b : List Nat) : UObj × Ret :=
   let u := { u with log := u.log ++ [Call.write b] }
   match u.writes with
@@ -95,13 +153,16 @@ def nlPrefix (b : List Nat) : Nat :=
   | some i => i + 1
   | none => b.length
 
-/-- The scripted operations. -/
+/-- The scripted operations. `checkClosed msg` etc. call `_checkClosed()` or, with
+`some m`, `_checkClosed(m)`; `writelines ls stop` iterates over `ls`, and then the
+iterator raises `stop` if it is `some (cls, msg)`. -/
 inductive UOp where
   | seek | tell | truncate | flush | close | closed | seekable | readable | writable
-  | checkClosed | checkSeekable | checkReadable | checkWritable
+  | checkClosed (msg : Option String) | checkSeekable (msg : Option String)
+  | checkReadable (msg : Option String) | checkWritable (msg : Option String)
   | enter | exit | fileno | isatty
   | readline (n : Option Int) | iter | next | readlines (h : Option Int)
-  | writelines (ls : List (List Nat)) | del
+  | writelines (ls : List (List Nat)) (stop : Option (String × String)) | del
   | rawRead (n : Option Int) | rawReadall | rawReadinto | rawWrite
   | bRead | bRead1 | bReadinto (n : Nat) | bReadinto1 (n : Nat) | bWrite | bDetach
   | tRead | tReadline | tWrite | tTruncate | tDetach | tEncoding | tNewlines | tErrors
@@ -135,6 +196,27 @@ def close (u : UObj) : UObj × Py Val :=
   if u.isClosed then (u, .ok .none) else
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
+
+/-- `iobase_check_closed`, iobase.c:197-214: the derived `closed` attribute, looked up
+with `PyObject_GetOptionalAttr` (so an `AttributeError` means open), then
+`PyObject_IsTrue`. -/
+def checkClosed (u : UObj) : Py Unit :=
+  match u.readClosed with
+  | .raise "AttributeError" _ => .ok ()
+  | .raise c m => .error (excOf c m)
+  | r => if r.truthy then .error closedDotE else .ok ()
+
+/-- `METH_NOARGS` (iobase.c:845-848) refuses an argument before the function runs. -/
+def noArgs (name : String) : PyExc := .typeError s!"_IOBase.{name}() takes no arguments (1 given)"
+
+/-- `_PyIOBase_check_seekable` / `_readable` / `_writable`, iobase.c:414-428, :457-471,
+:480-494: call the method, propagate its exception, and accept only the object `True`
+(`res != Py_True`), which is returned. -/
+def checkInq (u : UObj) (name msg : String) : UObj × Py Val :=
+  match u.callInq name with
+  | (u, .raise c m) => (u, .error (excOf c m))
+  | (u, .bool true) => (u, .ok (.bool true))
+  | (u, _) => (u, .error (unsup msg))
 
 /-- `_io__RawIOBase_read_impl`, iobase.c:923-961, for `n >= 0`: `PyByteArray_Resize`
 (:953) and `take_bytes` (:956) each refuse while a view of the bytearray is alive. -/
@@ -238,18 +320,23 @@ def readlines (u : UObj) (hint : Option Int) : UObj × Py Val :=
   match optSsize (-1) hint with
   | .error e => (u, .error e)
   | .ok hint =>
-    if u.isClosed then (u, .error closedDotE) else
-    readlinesLoop hint u 0 [] (fuelOf u)
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => readlinesLoop hint u 0 [] (fuelOf u)
 
-/-- The loop of `_io__IOBase_writelines`, iobase.c:804-824. -/
-def writelinesLoop : UObj → List (List Nat) → Nat → UObj × Py Val
+/-- The loop of `_io__IOBase_writelines`, iobase.c:804-824: `PyIter_Next` raising
+`stop` at the end of the lines returns `NULL` (:806-811). -/
+def writelinesLoop (stop : Option (String × String)) : UObj → List (List Nat) → Nat → UObj × Py Val
   | u, _, 0 => (u, .error .modelFuel)
-  | u, [], _ => (u, .ok .none)
+  | u, [], _ =>
+    match stop with
+    | some (c, m) => (u, .error (excOf c m))
+    | none => (u, .ok .none)
   | u, l :: ls, fuel + 1 =>
     match u.callWrite l with
     | (u, .raise c m) =>
-      if trapEintr c then writelinesLoop u (l :: ls) fuel else (u, .error (excOf c m))
-    | (u, _) => writelinesLoop u ls fuel
+      if trapEintr c then writelinesLoop stop u (l :: ls) fuel else (u, .error (excOf c m))
+    | (u, _) => writelinesLoop stop u ls fuel
 
 /-- The loop of `_io__RawIOBase_readall_impl`, iobase.c:971-1020. -/
 def readallLoop : UObj → List Nat → Bool → Nat → UObj × Py Val
@@ -274,32 +361,79 @@ def bReadinto (u : UObj) (n : Nat) (one : Bool) : UObj × Py Val :=
     else (u, .ok (.list [.int d.length, .bytes (d ++ List.replicate (n - d.length) 255)]))
   | (u, _) => (u, .error (.typeError "read() should return bytes"))
 
+/-- `self.closed`, `self.seekable()` and the like, as a returned value. -/
+def answer (u : UObj) (r : IRet) : UObj × Py Val :=
+  match r with
+  | .raise c m => (u, .error (excOf c m))
+  | r => (u, .ok r.val)
+
+/-- What an overriding `seek` returned, as a value. -/
+def seekAnswer (p : UObj × Ret) : UObj × Py Val :=
+  match p with
+  | (u, .raise c m) => (u, .error (excOf c m))
+  | (u, .bytes b) => (u, .ok (.bytes b))
+  | (u, .none) => (u, .ok .none)
+  | (u, .int n) => (u, .ok (.int n))
+
+/-- `_io__IOBase_tell_impl`, iobase.c:134-138: `self.seek(0, 1)` through the method
+table; the base `seek` raises (iobase.c:119-125), an overriding one answers. -/
+def tell (u : UObj) : UObj × Py Val :=
+  match u.seeks with
+  | none => (u, .error (unsup "seek"))
+  | some rs => seekAnswer (u.callSeek 0 1 rs)
+
 def step (u : UObj) : UOp → UObj × Py Val
   | .seek => (u, .error (unsup "seek"))
-  | .tell => (u, .error (unsup "seek"))
+  | .tell => tell u
   | .truncate => (u, .error (unsup "truncate"))
   | .flush => flush u
   | .close => close u
-  | .closed => (u, .ok (.bool u.isClosed))
-  | .seekable | .readable | .writable => (u, .ok (.bool false))
-  | .checkClosed => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
-  | .checkSeekable => (u, .error (unsup "File or stream is not seekable."))
-  | .checkReadable => (u, .error (unsup "File or stream is not readable."))
-  | .checkWritable => (u, .error (unsup "File or stream is not writable."))
-  | .enter => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
+  | .closed => answer u u.readClosed
+  | .seekable => let (u, r) := u.callInq "seekable"; answer u r
+  | .readable => let (u, r) := u.callInq "readable"; answer u r
+  | .writable => let (u, r) := u.callInq "writable"; answer u r
+  -- `_PyIOBase_check_closed`, iobase.c:217-226
+  | .checkClosed (some _) => (u, .error (noArgs "_checkClosed"))
+  | .checkClosed none =>
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
+  | .checkSeekable (some _) => (u, .error (noArgs "_checkSeekable"))
+  | .checkSeekable none => checkInq u "seekable" "File or stream is not seekable."
+  | .checkReadable (some _) => (u, .error (noArgs "_checkReadable"))
+  | .checkReadable none => checkInq u "readable" "File or stream is not readable."
+  | .checkWritable (some _) => (u, .error (noArgs "_checkWritable"))
+  | .checkWritable none => checkInq u "writable" "File or stream is not writable."
+  -- `iobase_enter`, iobase.c:499-505, returns `self`, encoded as `None`
+  | .enter =>
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
   | .exit => close u
   | .fileno => (u, .error (unsup "fileno"))
-  | .isatty => if u.isClosed then (u, .error closedDotE) else (u, .ok (.bool false))
+  -- `_io__IOBase_isatty_impl`, iobase.c:544-550
+  | .isatty =>
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok (.bool false))
   | .readline n => readline u n
-  | .iter => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
+  -- `iobase_iter`, iobase.c:680-686, returns `self`, encoded as `None`
+  | .iter =>
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
   | .next => next u
   | .readlines h => readlines u h
-  | .writelines ls =>
-    if u.isClosed then (u, .error closedDotE)
-    else writelinesLoop u ls (ls.length + u.writes.length + 1)
+  | .writelines ls stop =>
+    match checkClosed u with
+    | .error e => (u, .error e)
+    | .ok () => writelinesLoop stop u ls (ls.length + u.writes.length + 1)
   | .del =>
-    -- iobase_finalize, iobase.c:296-333: errors of close() are unraisable
-    if u.isClosed then (u, .ok .none) else let (u, _) := close u; (u, .ok .none)
+    -- iobase_finalize, iobase.c:296-333: a `closed` that is missing or raises means
+    -- "do nothing", and errors of close() are unraisable
+    match u.readClosed with
+    | .raise _ _ => (u, .ok .none)
+    | r => if r.truthy then (u, .ok .none) else let (u, _) := close u; (u, .ok .none)
   | .rawRead n =>
     let n := n.getD (-1)
     if !InSsize n then (u, .error (.overflowError "Python int too large to convert to C ssize_t"))
@@ -330,9 +464,24 @@ end BC
 namespace BP
 
 /-- `_unsupported`, _pyio.py:341-344. -/
-def unsupported (u : UObj) (name : String) : PyExc := unsup s!"{u.name}.{name}() not supported"
+def unsupported (u : UObj) (name : String) : PyExc := pyUnsupported u.name name
 
-/-- `IOBase.flush`, _pyio.py:380-385, after the script. -/
+/-- `IOBase._checkClosed(msg)`, _pyio.py:473-478: `if self.closed:` reads the property
+(which may raise, `AttributeError` included) and tests its truth. -/
+def checkClosed (u : UObj) (msg : Option String) : Py Unit :=
+  match u.readClosed with
+  | .raise c m => .error (excOf c m)
+  | r => if r.truthy then .error (.valueError (msg.getD "I/O operation on closed file.")) else .ok ()
+
+/-- `IOBase._checkSeekable` / `_checkReadable` / `_checkWritable`, _pyio.py:430-435,
+:444-449, :458-463: `if not self.seekable():`, the default message or `msg`; `None` on
+success. -/
+def checkInq (u : UObj) (name dflt : String) (msg : Option String) : UObj × Py Val :=
+  match u.callInq name with
+  | (u, .raise c m) => (u, .error (excOf c m))
+  | (u, r) => if r.truthy then (u, .ok .none) else (u, .error (unsup (msg.getD dflt)))
+
+/-- `IOBase.flush`, _pyio.py:380-385 (`self._checkClosed()`), after the script. -/
 def flush (u : UObj) : UObj × Py Val :=
   let u' := { u with log := u.log ++ [Call.flush] }
   match u.flushes with
@@ -341,7 +490,10 @@ def flush (u : UObj) : UObj × Py Val :=
     match r with
     | .raise c m => (u', .error (excOf c m))
     | _ => (u', .ok .none)
-  | [] => if u.isClosed then (u', .error closedDotE) else (u', .ok .none)
+  | [] =>
+    match checkClosed u none with
+    | .error e => (u', .error e)
+    | .ok () => (u', .ok .none)
 
 /-- `IOBase.close`, _pyio.py:390-399. -/
 def close (u : UObj) : UObj × Py Val :=
@@ -433,20 +585,28 @@ def readlinesLoop (hint : Option Int) : UObj → Int → List Atom → Nat → U
       | some h => if n ≥ h then (u, .ok (.list acc.reverse)) else readlinesLoop hint u n acc fuel
       | none => readlinesLoop hint u n acc fuel
 
+/-- `IOBase.readlines`, _pyio.py:565-581: `list(self)` and `for line in self` both start
+with `__iter__` (:555-557), whose `_checkClosed()` reads `closed`. -/
 def readlines (u : UObj) (hint : Option Int) : UObj × Py Val :=
-  if u.isClosed then (u, .error closedDotE) else
+  match checkClosed u none with
+  | .error e => (u, .error e)
+  | .ok () =>
   let hint := match hint with
     | some h => if h ≤ 0 then none else some h
     | none => none
   readlinesLoop hint u 0 [] (BC.fuelOf u)
 
-/-- `IOBase.writelines`, _pyio.py:583-591. -/
-def writelinesLoop : UObj → List (List Nat) → UObj × Py Val
-  | u, [] => (u, .ok .none)
+/-- `for line in lines: self.write(line)`, _pyio.py:590-591: the first exception, from a
+`write` or from the iterator (`stop`, raised after the lines), propagates. -/
+def writelinesLoop (stop : Option (String × String)) : UObj → List (List Nat) → UObj × Py Val
+  | u, [] =>
+    match stop with
+    | some (c, m) => (u, .error (excOf c m))
+    | none => (u, .ok .none)
   | u, l :: ls =>
     match u.callWrite l with
     | (u, .raise c m) => (u, .error (excOf c m))
-    | (u, _) => writelinesLoop u ls
+    | (u, _) => writelinesLoop stop u ls
 
 /-- `RawIOBase.readall`, _pyio.py:629-638; `last` is the falsy `data`. -/
 def readallLoop : UObj → List Nat → Nat → UObj × Py Val
@@ -472,30 +632,63 @@ def bReadinto (u : UObj) (n : Nat) (one : Bool) : UObj × Py Val :=
   | (u, .none) => (u, .error (.typeError "object of type 'NoneType' has no len()"))
   | (u, .int _) => (u, .error (.typeError "object of type 'int' has no len()"))
 
+/-- `IOBase.tell`, _pyio.py:366-368: `return self.seek(0, 1)`, through the object's own
+`seek`: the base one is `self._unsupported("seek")` (:364). -/
+def tell (u : UObj) : UObj × Py Val :=
+  match u.seeks with
+  | none => (u, .error (unsupported u "seek"))
+  | some rs => BC.seekAnswer (u.callSeek 0 1 rs)
+
 def step (u : UObj) : UOp → UObj × Py Val
   | .seek => (u, .error (unsupported u "seek"))
-  | .tell => (u, .error (unsupported u "seek"))
+  | .tell => tell u
   | .truncate => (u, .error (unsupported u "truncate"))
   | .flush => flush u
   | .close => close u
-  | .closed => (u, .ok (.bool u.isClosed))
-  | .seekable | .readable | .writable => (u, .ok (.bool false))
-  | .checkClosed => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
-  | .checkSeekable => (u, .error (unsup "File or stream is not seekable."))
-  | .checkReadable => (u, .error (unsup "File or stream is not readable."))
-  | .checkWritable => (u, .error (unsup "File or stream is not writable."))
-  | .enter => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
+  | .closed => BC.answer u u.readClosed
+  | .seekable => let (u, r) := u.callInq "seekable"; BC.answer u r
+  | .readable => let (u, r) := u.callInq "readable"; BC.answer u r
+  | .writable => let (u, r) := u.callInq "writable"; BC.answer u r
+  | .checkClosed msg =>
+    match checkClosed u msg with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
+  | .checkSeekable msg => checkInq u "seekable" "File or stream is not seekable." msg
+  | .checkReadable msg => checkInq u "readable" "File or stream is not readable." msg
+  | .checkWritable msg => checkInq u "writable" "File or stream is not writable." msg
+  -- `IOBase.__enter__`, _pyio.py:482-485: `self._checkClosed(); return self`, and `self`
+  -- is encoded as `None` (the difftest maps `f.__enter__() is f` to `None`)
+  | .enter =>
+    match checkClosed u none with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
   | .exit => close u
   | .fileno => (u, .error (unsupported u "fileno"))
-  | .isatty => if u.isClosed then (u, .error closedDotE) else (u, .ok (.bool false))
+  -- `IOBase.isatty`, _pyio.py:503-509
+  | .isatty =>
+    match checkClosed u none with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok (.bool false))
   | .readline n => readline u n
-  | .iter => if u.isClosed then (u, .error closedDotE) else (u, .ok .none)
+  -- `IOBase.__iter__`, _pyio.py:555-557: `return self`, encoded as `None` as for `__enter__`
+  | .iter =>
+    match checkClosed u none with
+    | .error e => (u, .error e)
+    | .ok () => (u, .ok .none)
   | .next => next u
   | .readlines h => readlines u h
-  | .writelines ls => if u.isClosed then (u, .error closedDotE) else writelinesLoop u ls
+  -- `IOBase.writelines`, _pyio.py:583-591
+  | .writelines ls stop =>
+    match checkClosed u none with
+    | .error e => (u, .error e)
+    | .ok () => writelinesLoop stop u ls
   | .del =>
-    -- IOBase.__del__, _pyio.py:401-418: close() errors propagate from an explicit call
-    if u.isClosed then (u, .ok .none) else close u
+    -- IOBase.__del__, _pyio.py:401-418: only an `AttributeError` from `closed` means
+    -- "do nothing"; close() errors propagate from an explicit call
+    match u.readClosed with
+    | .raise "AttributeError" _ => (u, .ok .none)
+    | .raise c m => (u, .error (excOf c m))
+    | r => if r.truthy then (u, .ok .none) else close u
   | .rawRead n =>
     let n := n.getD (-1)
     if n < 0 then readallLoop u [] (u.intos.length + u.reads.length + 2)

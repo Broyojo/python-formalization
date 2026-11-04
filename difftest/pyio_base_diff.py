@@ -12,6 +12,7 @@ including `truncate` of an object whose `__index__` acts on the stream.
 
 import builtins
 import errno
+import struct
 import sys
 import warnings
 
@@ -27,6 +28,11 @@ M = sys.maxsize
 BIG = [M, M + 1, -M - 1, -M - 2, 2**64, -2**64]
 EXC = [("ValueError", "boom"), ("OSError", "bad"), ("KeyError", "'k'"), ("InterruptedError", "[Errno 4] x")]
 MODS = {"c": io, "py": _pyio}
+# hints for readlines: around 0, between line lengths, huge, infinite, NaN, subnormal
+FLOATS = [0.5, -0.5, 0.0, -0.0, 1.0, 1.5, 2.0, 2.5, 3.0, 4.5, 7.5, 1e300, -1e300, float("inf"), float("-inf"),
+          float("nan"), 5e-324, -5e-324, 2.0 ** 53, 2.0 ** 63, 0.9999999999999999]
+# objects without the buffer interface, by type name
+WOBJ = {"int": 1, "NoneType": None, "float": 1.5, "list": [1]}
 
 
 def raised(r):
@@ -76,6 +82,39 @@ class ReadMix:
         return ret(self.reads.pop(0)) if self.reads else b""
 
 
+class SeekMix:
+    def seek(self, pos, whence=0):
+        self.calls.append(["seek", pos, whence])
+        return ret(self.seeks.pop(0)) if self.seeks else 0
+
+
+def iret(r):
+    if isinstance(r, dict):
+        raised(r)
+    return r
+
+
+class InqMix:
+    def _inq(self, name):
+        self.calls.append(["inquiry", name])
+        return iret(self.inqs.pop(0)) if self.inqs else False
+
+    def seekable(self):
+        return self._inq("seekable")
+
+    def readable(self):
+        return self._inq("readable")
+
+    def writable(self):
+        return self._inq("writable")
+
+
+class ClosedMix:
+    @property
+    def closed(self):
+        return iret(self.closed_prop)
+
+
 class PeekMix:
     def peek(self, n=0):
         self.calls.append(["peek", n])
@@ -104,8 +143,16 @@ for key, mod in MODS.items():
     for kind, base in bases.items():
         for peek in (False, True):
             for raw in (False, True):
-                mix = [Mix] + ([PeekMix] if peek else []) + ([] if raw else [ReadMix]) + [IntoMix]
-                CLASSES[key, kind, peek, raw] = type("S", tuple(mix) + (base,), {})
+                for seek in (False, True):
+                    for inq in (False, True):
+                        for cl in (False, True):
+                            mix = ([Mix] + ([PeekMix] if peek else []) + ([] if raw else [ReadMix]) + [IntoMix]
+                                   + ([SeekMix] if seek else []) + ([InqMix] if inq else [])
+                                   + ([ClosedMix] if cl else []))
+                            CLASSES[key, kind, peek, raw, seek, inq, cl] = type("S", tuple(mix) + (base,), {})
+# what an overridden inquiry or `closed` answers
+IRETS = [True, False, True, False, 1, 0, 2, None, {"raise": "AttributeError", "msg": "nope"}] + [
+    {"raise": c, "msg": m} for c, m in EXC]
 
 
 def small(rng):
@@ -137,7 +184,8 @@ def gen_case(rng):
         for _ in range(rng.randint(1, 6)):
             k = rng.choice(["readable", "writable", "seekable", "flush", "isatty", "writelines", "getstate", "setstate",
                             "getstate", "setstate", "readinto_self", "readinto_self", "reinit", "reinit",
-                            "reinit_obj", "truncobj", "truncobj", "truncobj"])
+                            "reinit_obj", "truncobj", "truncobj", "truncobj", "readobj", "readobj",
+                            "readlineobj", "seekobj", "seekobj", "readlinesf", "readlinesf", "writeobj"])
             op = {"op": k}
             if k == "writelines":
                 op["ls"] = [pyio_diff.gen_bytes(rng) for _ in range(rng.randint(0, 4))]
@@ -149,8 +197,14 @@ def gen_case(rng):
                 op.update(off=rng.randint(0, 8), n=rng.randint(0, 8))
             if k in ("reinit", "reinit_obj"):
                 op["b"] = None if rng.random() < 0.3 else pyio_diff.gen_bytes(rng)
-            if k == "truncobj":
+            if k in ("truncobj", "readobj", "readlineobj", "seekobj"):
                 op["a"] = pyio_diff.gen_targ(rng, 8)
+            if k == "seekobj":
+                op["whence"] = rng.choice([0, 0, 0, 1, 1, 2, 2, 3])
+            if k == "readlinesf":
+                op["bits"] = struct.unpack("<Q", struct.pack("<d", rng.choice(FLOATS)))[0]
+            if k == "writeobj":
+                op["w"] = {"s": pyio_diff.gen_bytes(rng)} if rng.random() < 0.4 else {"t": rng.choice(list(WOBJ))}
             c["ops"].insert(rng.randint(0, len(c["ops"])), op)
         return c
     fn = rng.choice(["base_c", "base_py"])
@@ -164,6 +218,12 @@ def gen_case(rng):
          "writes": [script_ret(rng) for _ in range(rng.randint(0, 3))],
          "flushes": [rng.choice([None, script_ret(rng)]) for _ in range(rng.randint(0, 2))],
          "keep": rng.random() < 0.06}
+    if rng.random() < 0.3:
+        c["seeks"] = [script_ret(rng) for _ in range(rng.randint(0, 3))]
+    if rng.random() < 0.4:
+        c["inqs"] = [rng.choice(IRETS) for _ in range(rng.randint(0, 4))]
+    if rng.random() < 0.25:
+        c["closedprop"] = {"v": rng.choice(IRETS)}
     names = ["seek", "tell", "truncate", "flush", "close", "closed", "seekable", "readable", "writable",
              "checkClosed", "checkSeekable", "checkReadable", "checkWritable", "enter", "exit", "fileno",
              "isatty", "readline", "readline", "readline", "iter", "next", "next", "readlines", "writelines", "del"]
@@ -186,6 +246,11 @@ def gen_case(rng):
             op["n"] = rng.randint(0, 6)
         if k == "writelines":
             op["ls"] = [rbytes(rng) for _ in range(rng.randint(0, 3))]
+            if rng.random() < 0.3:
+                cls, msg = rng.choice(EXC)
+                op["stop"] = {"raise": cls, "msg": msg}
+        if k.startswith("check") and rng.random() < 0.3:
+            op["msg"] = rng.choice(["m", "peek of closed file", ""])
         ops.append(op)
     ops.append({"op": "closed"})
     c["ops"] = ops
@@ -200,7 +265,13 @@ def apply(f, op, mod):
     if k == "closed":
         return f.closed
     if k in ("checkClosed", "checkSeekable", "checkReadable", "checkWritable"):
-        return getattr(f, "_" + k)()
+        if op.get("msg") is None:
+            return getattr(f, "_" + k)()
+        # a method call, as the library writes it: C then reports the descriptor's
+        # qualified name ('_IOBase._checkClosed'), not the instance's class
+        m = op["msg"]
+        return {"checkClosed": lambda: f._checkClosed(m), "checkSeekable": lambda: f._checkSeekable(m),
+                "checkReadable": lambda: f._checkReadable(m), "checkWritable": lambda: f._checkWritable(m)}[k]()
     if k == "enter":
         return None if f.__enter__() is f else "?"
     if k == "exit":
@@ -214,7 +285,11 @@ def apply(f, op, mod):
     if k == "readlines":
         return mod.IOBase.readlines(f, op["n"])
     if k == "writelines":
-        return mod.IOBase.writelines(f, [bytes(x) for x in op["ls"]])
+        def lines():
+            yield from (bytes(x) for x in op["ls"])
+            if op.get("stop"):
+                raised(op["stop"])
+        return mod.IOBase.writelines(f, lines())
     if k == "del":
         return f.__del__()
     if k == "rawRead":
@@ -243,10 +318,14 @@ def apply(f, op, mod):
 def run_base(c):
     key = c["fn"].split("_")[1]
     mod = MODS[key]
-    cls = CLASSES[key, c["kind"], c["peek"], c["raw"]]
+    cls = CLASSES[key, c["kind"], c["peek"], c["raw"], "seeks" in c, "inqs" in c, "closedprop" in c]
     f = cls()
     f.setup(c)
     f.peeks = list(c["peeks"])
+    f.seeks = list(c.get("seeks", []))
+    f.inqs = list(c.get("inqs", []))
+    if "closedprop" in c:
+        f.closed_prop = c["closedprop"]["v"]
     out = []
     for op in c["ops"]:
         try:
@@ -297,6 +376,17 @@ def run_extra(c):
                 if key == "py":
                     f._lock = pyio_diff.WatchLock()
                 v = f.truncate(pyio_diff.make_targ(f, op["a"], views))
+            elif k == "readobj":
+                v = f.read(pyio_diff.make_targ(f, op["a"], views))
+            elif k == "readlineobj":
+                v = f.readline(pyio_diff.make_targ(f, op["a"], views))
+            elif k == "seekobj":
+                v = f.seek(pyio_diff.make_targ(f, op["a"], views), op["whence"])
+            elif k == "readlinesf":
+                v = f.readlines(struct.unpack("<d", struct.pack("<Q", op["bits"]))[0])
+            elif k == "writeobj":
+                w = op["w"]
+                v = f.write("".join(map(chr, w["s"])) if "s" in w else WOBJ[w["t"]])
             elif k in ("readable", "writable", "seekable", "flush", "isatty"):
                 v = getattr(f, k)()
             else:

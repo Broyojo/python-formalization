@@ -61,18 +61,37 @@ def getRet (j : Json) : Except String Ret :=
 def getRets (j : Json) (k : String) : Except String (List Ret) := do
   (← (← field j k).getArr?).toList.mapM getRet
 
+/-- An inquiry or `closed` answer: a JSON bool, int, `null`, or `{"raise": cls, "msg": m}`. -/
+def getIRet (j : Json) : Except String IRet :=
+  match j with
+  | .null => .ok .none
+  | .bool b => .ok (.bool b)
+  | .num _ => do return .int (← j.getInt?)
+  | _ => do return .raise (← (← j.getObjVal? "raise").getStr?) (← (← j.getObjVal? "msg").getStr?)
+
+def getOptStr (j : Json) (k : String) : Except String (Option String) :=
+  match j.getObjVal? k with
+  | .ok .null | .error _ => .ok none
+  | .ok v => some <$> v.getStr?
+
 def getUOp (j : Json) : Except String UOp := do
   match ← getStr j "op" with
   | "seek" => return .seek | "tell" => return .tell | "truncate" => return .truncate
   | "flush" => return .flush | "close" => return .close | "closed" => return .closed
   | "seekable" => return .seekable | "readable" => return .readable | "writable" => return .writable
-  | "checkClosed" => return .checkClosed | "checkSeekable" => return .checkSeekable
-  | "checkReadable" => return .checkReadable | "checkWritable" => return .checkWritable
+  | "checkClosed" => return .checkClosed (← getOptStr j "msg")
+  | "checkSeekable" => return .checkSeekable (← getOptStr j "msg")
+  | "checkReadable" => return .checkReadable (← getOptStr j "msg")
+  | "checkWritable" => return .checkWritable (← getOptStr j "msg")
   | "enter" => return .enter | "exit" => return .exit | "fileno" => return .fileno
   | "isatty" => return .isatty | "readline" => return .readline (← getOptInt j "n")
   | "iter" => return .iter | "next" => return .next
   | "readlines" => return .readlines (← getOptInt j "n")
-  | "writelines" => return .writelines (← (← (← field j "ls").getArr?).toList.mapM bNats)
+  | "writelines" =>
+    let stop : Option (String × String) ← match j.getObjVal? "stop" with
+      | .ok .null | .error _ => pure none
+      | .ok r => pure (some ((← (← r.getObjVal? "raise").getStr?), (← (← r.getObjVal? "msg").getStr?)))
+    return .writelines (← (← (← field j "ls").getArr?).toList.mapM bNats) stop
   | "del" => return .del | "rawRead" => return .rawRead (← getOptInt j "n")
   | "rawReadall" => return .rawReadall | "rawReadinto" => return .rawReadinto
   | "rawWrite" => return .rawWrite | "bRead" => return .bRead | "bRead1" => return .bRead1
@@ -91,6 +110,8 @@ def encCall : Call → Json
   | .readinto n => Json.arr #[toJson "readinto", toJson n]
   | .write b => Json.arr #[toJson "write", toJson b]
   | .flush => Json.arr #[toJson "flush"]
+  | .seek p w => Json.arr #[toJson "seek", toJson p, toJson w]
+  | .inquiry n => Json.arr #[toJson "inquiry", toJson n]
 
 def runUOps (step : UObj → UOp → UObj × Py Val) : UObj → List UOp → UObj × List (Py Val)
   | u, [] => (u, [])
@@ -111,7 +132,19 @@ def getUObj (j : Json) : Except String (UObj × List UOp) := do
   let peek ← getBool j "peek"
   let ops ← (← (← field j "ops").getArr?).toList.mapM getUOp
   let keep ← getBool j "keep"
-  return (⟨"S", reads, if peek then some peeks else none, intos, writes, flushes, raw, false, [], keep⟩, ops)
+  let seeks : Option (List Ret) ← match j.getObjVal? "seeks" with
+    | .ok .null | .error _ => pure none
+    | .ok v => some <$> (← v.getArr?).toList.mapM getRet
+  let inqs : Option (List IRet) ← match j.getObjVal? "inqs" with
+    | .ok .null | .error _ => pure none
+    | .ok v => some <$> (← v.getArr?).toList.mapM getIRet
+  let closedProp : Option IRet ← match j.getObjVal? "closedprop" with
+    | .error _ => pure none
+    | .ok v => match v.getObjVal? "v" with
+      | .ok w => some <$> getIRet w
+      | .error _ => pure none
+  return ({ name := "S", reads, peeks := if peek then some peeks else none, intos, writes, flushes,
+            rawRead := raw, isClosed := false, log := [], keepView := keep, seeks, inqs, closedProp }, ops)
 
 def getHook (j : Json) : Except String Hook := do
   match ← getStr j "h" with
@@ -146,6 +179,15 @@ def getXOp (j : Json) : Except String (BOp ⊕ XOp) := do
   | "reinit" => return .inr (.reinit (← getOptBytes j "b"))
   | "reinit_obj" => return .inr (.reinitObj (← getOptBytes j "b"))
   | "truncobj" => return .inr (.truncateObj (← getTArg (← field j "a")))
+  | "readobj" => return .inr (.readObj (← getTArg (← field j "a")))
+  | "readlineobj" => return .inr (.readlineObj (← getTArg (← field j "a")))
+  | "seekobj" => return .inr (.seekObj (← getTArg (← field j "a")) (← getInt j "whence"))
+  | "readlinesf" => return .inr (.readlinesFloat (Binary64.F64.ofBits (← getNat j "bits")))
+  | "writeobj" =>
+    let w ← field j "w"
+    match w.getObjVal? "s" with
+    | .ok _ => return .inr (.writeObj (.str (← getNats w "s")))
+    | .error _ => return .inr (.writeObj (.obj (← getStr w "t")))
   | "read" => return .inl (.read (← getOptInt j "n"))
   | "read1" => return .inl (.read1 (← getOptInt j "n"))
   | "readline" => return .inl (.readline (← getOptInt j "n"))
