@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Parser/tokenizer/string_tokenizer.c	8	27	tok_underflow_string	tok_underflow_string(struct tok_state *tok) {	modelled	pygrammar-lex-nextc-in-buffer	
+Parser/tokenizer/string_tokenizer.c	8	27	tok_underflow_string	tok_underflow_string(struct tok_state *tok) {	todo		review: underflow (Lexer/Get.lean:28) follows string_tokenizer.c:7-27 (next 'n' else the NUL, E_EOF at the end, buf reset when start is NULL, line_start, ADVANCE_LINENO, inp), but the only entry, pygrammar-lex-nextc-in-buffer (NextcStaysInBuffer, Lexer/Props.lean:228), states only that cur <= inp survives one tok_nextc: an underflow that always returns 0 (EOF) or advances inp to any later position satisfies it, so which line is read, the line count and E_EOF are unpinned.
 Parser/tokenizer/string_tokenizer.c	31	33	buf_getc	buf_getc(struct tok_state *tok) {	todo		
 Parser/tokenizer/string_tokenizer.c	37	40	buf_ungetc	buf_ungetc(int c, struct tok_state *tok) {	todo		
 Parser/tokenizer/string_tokenizer.c	45	48	buf_setreadl	buf_setreadl(struct tok_state *tok, const char* enc) {	todo		

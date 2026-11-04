@@ -245,7 +245,7 @@ def DT.utcoffsetPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "utcoffset" (← tzUtcoffsetRaw env tz (some dt))
 
-/-- `call_utcoffset(tzinfo, dt)` (:1593-1596) for `datetime_utcoffset`, :6216-6219. -/
+/-- `call_utcoffset(tzinfo, dt)` (:1571-1574) for `datetime_utcoffset`, :6216-6219. -/
 def DT.utcoffsetC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
@@ -257,7 +257,7 @@ def DT.dstPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "dst" (← tzDstRaw env tz (some dt))
 
-/-- `call_dst` (:1607-1610) for `datetime_dst`, :6222-6225. -/
+/-- `call_dst` (:1585-1588) for `datetime_dst`, :6222-6225. -/
 def DT.dstC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none

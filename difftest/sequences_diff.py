@@ -515,7 +515,8 @@ def gen_deque_op(rng, d):
                      "insert", "count", "remove", "contains", "getitem", "setitem", "delitem", "imul", "mul",
                      "extend_raise", "extendleft_raise", "extend_stop", "extend_bad", "extendleft_bad",
                      "iadd_bad", "len", "maxlen", "repr", "repr_nested", "reduce", "cmp", "cmp_self",
-                     "it_new", "it_new", "it_make", "it_next", "it_next", "it_next", "it_len", "it_reduce"])
+                     "it_new", "it_new", "it_make", "it_next", "it_next", "it_next", "it_len", "it_reduce",
+                     "cmp", "cmp_rev", "cmp_rev", "reduce_raise", "it_kw"])
     if op in ("append", "appendleft", "count", "remove", "contains"):
         return [op, x]
     if op in ("pop", "popleft", "extend_self", "extendleft_self", "iadd_self", "reverse", "copy",
@@ -552,9 +553,7 @@ def gen_deque_op(rng, d):
     if op == "add":
         k = rng.choice([0, 1, 2, 3, 70])
         return [op, de_items(rng, k), rng.choice([None, None, k, k + 2])]
-    if op in ("cmp", "cmp_self"):
-        if any(isinstance(e, Mut) for e in d):
-            return None
+    if op in ("cmp", "cmp_rev", "cmp_self"):
         o = rng.choice(list(OPS))
         if op == "cmp_self":
             return [op, o]
@@ -562,7 +561,14 @@ def gen_deque_op(rng, d):
         xs = [from_el(e) for e in list(d)[:k]] + [rng.randint(0, 5) for _ in range(k - n)]
         if xs and rng.random() < 0.5:
             xs[rng.randrange(len(xs))] = rng.randint(0, 5)
+        if xs and rng.random() < 0.3:
+            # an element whose __eq__ raises or acts on the deque under test
+            xs[rng.randrange(len(xs))] = rng.choice(["B", "M0", "M1", "M2", "M3", "M4"])
         return [op, o, xs]
+    if op == "reduce_raise":
+        return [op] if type(d) is not deque else None
+    if op == "it_kw":
+        return [op, rng.random() < 0.5, rng.choice([None, 0, 1, edge_index(rng, n)])]
     if op == "it_new":
         return [op, rng.random() < 0.5]
     if op == "it_make":
@@ -1077,7 +1083,7 @@ def gen_case(rng):
             continue
         if op[0] == "mv_close" and not extra["views"]:
             continue
-        if op[0].startswith("it_") and op[0] not in ("it_new", "it_make") and op[1] >= len(extra["its"]):
+        if op[0].startswith("it_") and op[0] not in ("it_new", "it_make", "it_kw") and op[1] >= len(extra["its"]):
             continue
         ops.append(op)
         if werr_in(op):
@@ -1255,8 +1261,8 @@ def run_deque_op(d, op, extra):
     if name in ("extend", "extendleft"):
         return getattr(d, name)([to_el(e) for e in args[0]])
     if name == "iadd":
-        d.__iadd__([to_el(e) for e in args[0]])
-        return None
+        r = d.__iadd__([to_el(e) for e in args[0]])
+        return "SELF" if r is d else r
     if name in ("extend_raise", "extendleft_raise"):
         return getattr(d, name[:-6])(RaisingIter([to_el(e) for e in args[0]], ValueError("iter")))
     if name == "extend_stop":
@@ -1264,13 +1270,13 @@ def run_deque_op(d, op, extra):
     if name in ("extend_bad", "extendleft_bad"):
         return getattr(d, name[:-4])(5)
     if name == "iadd_bad":
-        d.__iadd__(5)
-        return None
+        r = d.__iadd__(5)
+        return "SELF" if r is d else r
     if name in ("extend_re", "extendleft_re"):
         return getattr(d, name[:-3])(ReIt(d, args[0], args[1]))
     if name == "iadd_re":
-        d.__iadd__(ReIt(d, args[0], args[1]))
-        return None
+        r = d.__iadd__(ReIt(d, args[0], args[1]))
+        return "SELF" if r is d else r
     if name == "init_re":
         d.__init__(ReIt(d, args[0], args[1]), *args[2:])
         return None
@@ -1346,10 +1352,26 @@ def run_deque_op(d, op, extra):
         return [r[1][1] if r[1] else None, [from_el(e) for e in r[3]]]
     if name == "cmp":
         return OPS[args[0]](d, deque([to_el(e) for e in args[1]]))
+    if name == "cmp_rev":
+        # deque's own slot with the other deque on the left (a subclass on the right would
+        # otherwise get the reflected operation first)
+        return getattr(deque, "__%s__" % args[0])(deque([to_el(e) for e in args[1]]), d)
+    if name == "reduce_raise":
+        def gs():
+            raise ValueError("gs")
+        d.__getstate__ = gs
+        try:
+            return d.__reduce__() and None
+        finally:
+            del d.__getstate__
     if name == "cmp_self":
         return OPS[args[0]](d, d)
     if name == "it_new":
         its.append(reversed(d) if args[0] else iter(d))
+        return None
+    if name == "it_kw":
+        t = type(reversed(deque())) if args[0] else type(iter(deque()))
+        its.append(t(d, index=7) if args[1] is None else t(d, args[1], index=7))
         return None
     if name == "it_make":
         its.append((type(reversed(deque())) if args[0] else type(iter(deque())))(d, args[1]))

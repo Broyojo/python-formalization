@@ -6,7 +6,7 @@ module: sequences
 files: [Modules/_collectionsmodule.c]
 functions: ["deque_extend_impl", "deque_extendleft_impl"]
 summary: |
-  deque_extend_impl reads `Py_ssize_t maxlen = deque->maxlen` once on entry and passes that
+  deque_extend_impl and deque_extendleft_impl read `Py_ssize_t maxlen = deque->maxlen` once on entry and pass that
   local to deque_append_lock_held for every item. An iterator (its __iter__ or __next__)
   may call d.__init__(maxlen=m) on the deque being extended; __init__ clears the deque and
   stores the new bound, but the loop goes on trimming with the old one. Starting from an
@@ -20,20 +20,25 @@ summary: |
   holds only the last two items with maxlen None. extendleft is the same (:539). Nothing
   notices: unlike iteration, extend has no mutation check.
   Lean: DequeExtendKeepsBound ("for every iterator whose __iter__/__next__ calls each keep
-  the deque's invariant len(d) <= maxlen, __init__ included, extend leaves a deque that
-  satisfies it") is refuted with the __iter__ form below; DequeExtendRe (the invariant and
-  maxlen kept when the calls do not change maxlen, and the exact outcome) is proven.
+  the deque's invariant len(d) <= maxlen, __init__ included, extend and extendleft leave a
+  deque that satisfies it") is refuted with the __iter__ form below, and
+  dequeExtendKeepsBound_neither shows each of extend and extendleft fails on it
+  (deque([1, 2, 3], maxlen=1) and deque([3, 2, 1], maxlen=1)). DequeExtendStaleBound
+  (proven) states the exact outcome for every entry bound and every re-init bound m': the
+  items are cut to the entry bound, maxlen is m', and the block layout stays valid.
+  DequeExtendRe (the invariant and maxlen kept when the calls do not change maxlen, and
+  the exact outcome) is proven.
 likelihood: |
   Very low. It needs an iterator that re-initialises the very deque it is being consumed
   into. No memory-safety issue follows: the block structure stays consistent, only the
   documented length bound is broken.
 maybe_intended: |
-  Possibly tolerated: re-entrant mutation during extend is not checked anywhere, and the
-  local copy of maxlen is an optimisation. But the result is a deque that violates its own
-  documented invariant permanently (and whose copy differs from it), which is the kind of
-  inconsistency the deque code otherwise guards against with its `state` checks. A fix is
-  cheap (re-read deque->maxlen in the loop, or pass deque->maxlen as deque_append does),
-  so a maintainer could well accept it, at low priority.
+  Likely won't fix. Re-initialising an object from inside a method that is still running on
+  it is generally unsupported in CPython (the reply is usually "don't do that" unless it
+  crashes), re-entrant mutation during extend is not checked anywhere, and the local copy of
+  maxlen is an optimisation. Nothing unsafe follows. The case for a fix is only that the
+  result violates the deque's own documented invariant permanently (and its copy differs
+  from it), and that the fix is a one-line change per function.
 reproducer: |
   import copy
   from collections import deque
@@ -72,14 +77,23 @@ reproducer: |
       yield 4
   b.extend(k())
   r5 = (list(b), b.maxlen)
+  g2 = deque()
+  class Y:
+      def __iter__(self):
+          g2.__init__(maxlen=1)
+          return iter([1, 2, 3])
+  g2.extendleft(Y())
+  r6 = (list(g2), g2.maxlen)
   print('extend, __next__ re-inits to maxlen=1 :', r1)
   print('then append(4)                        :', r2)
   print('d.copy() == d                         :', c == d, list(c))
   print('extend, __iter__ re-inits to maxlen=0 :', r3)
   print('extendleft, __next__ re-inits         :', r4)
   print('bounded, __next__ re-inits unbounded  :', r5)
+  print('extendleft, __iter__ re-inits to 1    :', r6)
   if (r1 == ([2, 3], 1) and r2 == ([3, 4], 1) and c != d and len(c) == 1
-          and r3 == ([1, 2, 3], 0) and r4 == ([3, 2], 1) and r5 == ([3, 4], None)):
+          and r3 == ([1, 2, 3], 0) and r4 == ([3, 2], 1) and r5 == ([3, 4], None)
+          and r6 == ([3, 2, 1], 1)):
       print('REPRODUCED sequences-deque-extend-reinit-maxlen')
 expected: |
   Every deque satisfies len(d) <= d.maxlen when maxlen is not None: after the re-init the
@@ -90,9 +104,11 @@ observed: |
   python3 3.15.2: deque([2, 3], maxlen=1); after append(4) deque([3, 4], maxlen=1); its copy
   is deque([4], maxlen=1) != d; deque([1, 2, 3], maxlen=0); extendleft gives
   deque([3, 2], maxlen=1); the re-initialised unbounded deque holds [3, 4] (items 2 dropped
-  with maxlen None). REPRODUCED.
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): identical, REPRODUCED; the code is
-  unchanged there (Modules/_collectionsmodule.c:484, :539 on main).
+  with maxlen None); extendleft with the __iter__ re-init gives deque([3, 2, 1], maxlen=1).
+  REPRODUCED (re-run 2026-11-04 with the extendleft __iter__ case added).
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev ef1fce0): identical, REPRODUCED
+  (re-run 2026-11-04); the code is unchanged there (Modules/_collectionsmodule.c:484, :539
+  on main).
 promised_by: |
   Doc/library/collections.rst:479-485: "If maxlen is not specified or is None, deques may
   grow to an arbitrary length. Otherwise, the deque is bounded to the specified maximum

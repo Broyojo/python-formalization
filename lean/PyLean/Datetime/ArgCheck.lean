@@ -186,7 +186,7 @@ def timeFormatPy {α : Type} (fmt : FmtArg) (str : Py String) (strftime : List C
   | .str cs => if cs.length ≠ 0 then Sum.inr <$> strftime cs else Sum.inl <$> str
 
 /-- `datetime_time___format__`, clinic/_datetimemodule.c.h:1057-1071 (`PyUnicode_Check`), then
-`datetime_time___format___impl`, :5011-5019. -/
+`datetime_time___format___impl`, :5012-5020. -/
 def timeFormatC {α : Type} (fmt : FmtArg) (str : Py String) (strftime : List Char → Py α) :
     Py (Sum String α) :=
   match fmt with

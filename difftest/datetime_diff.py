@@ -24,6 +24,7 @@ import common
 import datetime_x2
 import datetime_x3
 import datetime_x4
+import datetime_x5
 import sys
 
 IMPL = {"py": _pydatetime, "c": _datetime}
@@ -478,6 +479,8 @@ def gen_obj_case(rng):
         return datetime_x3.gen_x3(rng, sys.modules[__name__])
     if rng.random() < 0.15:
         return datetime_x4.gen_x4(rng, sys.modules[__name__])
+    if rng.random() < 0.3:
+        return datetime_x5.gen_x5(rng, sys.modules[__name__])
     if rng.random() < 0.1:
         impl = rng.choice(["py", "c"])
         k = rng.choice(["td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime"])
@@ -1074,6 +1077,8 @@ def run_python(c):
         return datetime_x3.run_x3(c, sys.modules[__name__])
     if c["fn"].startswith("x4_"):
         return datetime_x4.run_x4(c, sys.modules[__name__])
+    if c["fn"].startswith("x5_"):
+        return datetime_x5.run_x5(c, sys.modules[__name__])
     if c["fn"] in OBJ_FNS:
         return run_obj(c)
     if c["fn"] in MORE_FNS:

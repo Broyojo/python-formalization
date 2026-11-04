@@ -43,9 +43,9 @@ def tzinfoReducePy {α σ : Type} (attr : Py (Option (InitArgsObj α))) (state :
     | some o => do if (← o.truth) then ReduceArgs.obj <$> o.call else pure .empty
   return (args, ← state)
 
-/-- `tzinfo_reduce`, :4256-4282: `PyObject_GetOptionalAttr` (:4261, `NULL` for a missing
-attribute), and a found object is called whatever its truth (:4264-4266), so `None` is a
-`TypeError`; then `_PyObject_GetState(self)` (:4275). -/
+/-- `tzinfo_reduce`, :4257-4283: `PyObject_GetOptionalAttr` (:4262, `NULL` for a missing
+attribute), and a found object is called whatever its truth (:4265-4268), so `None` is a
+`TypeError`; then `_PyObject_GetState(self)` (:4276). -/
 def tzinfoReduceC {α σ : Type} (attr : Py (Option (InitArgsObj α))) (state : Py σ) :
     Py (ReduceArgs α × σ) := do
   let g ← attr

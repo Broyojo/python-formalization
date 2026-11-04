@@ -367,13 +367,13 @@ of the node's kind, or `NULL` with a `SystemError` set (only a `Slice`, which no
 theorem callHelper_exprName (e : Ast) (s : PS) :
     callHelper .get_expr_name [e] s = match exprName e with
       | some nm => (.str (nm.toList.map Char.toNat), s)
-      | none => (.null, (setErr { cls := "SystemError", msg := "unexpected expression in assignment" } s).2) := by
+      | none => (.null, (setErr (exprNameErr e) s).2) := by
   simp only [callHelper, List.getD_cons_zero]
   cases exprName e <;> rfl
 
 /-- The state `_PyPegen_get_expr_name` leaves when it fails. -/
-def exprNameFail (s : PS) : PS :=
-  (setErr { cls := "SystemError", msg := "unexpected expression in assignment" } s).2
+def exprNameFail (e : Ast) (s : PS) : PS :=
+  (setErr (exprNameErr e) s).2
 
 theorem msg_pct_s (pre post : String) (hp : '%' ∉ pre.toList) (hq : '%' ∉ post.toList) (x : Ast) :
     msgOf [.str ((pre ++ "%s" ++ post).toList.map Char.toNat), x] = pre ++ fmtPiece 's' x ++ post := by
@@ -391,7 +391,7 @@ and the raise runs over the `SystemError`. -/
     Array Ast → Int × Int → PS → Option Ast × PS :=
   fun env _ s => match exprName (env.getD k .null) with
     | some nm => (none, raisedAt (env.getD i .null) (env.getD j .null) (pre ++ nm ++ post) s)
-    | none => (none, raisedAt (env.getD i .null) (env.getD j .null) (pre ++ post) (exprNameFail s))
+    | none => (none, raisedAt (env.getD i .null) (env.getD j .null) (pre ++ post) (exprNameFail (env.getD k .null) s))
 
 theorem altResult_krName {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     {i j k : Nat} {pre post : String}
@@ -423,7 +423,7 @@ theorem altResult_krName {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int
     Array Ast → Int × Int → PS → Option Ast × PS :=
   fun env _ s => match exprName (env.getD i .null) with
     | some nm => (none, raisedAt (env.getD i .null) (env.getD i .null) (pre ++ nm ++ post) s)
-    | none => (none, raisedAt (env.getD i .null) (env.getD i .null) (pre ++ post) (exprNameFail s))
+    | none => (none, raisedAt (env.getD i .null) (env.getD i .null) (pre ++ post) (exprNameFail (env.getD i .null) s))
 
 theorem altResult_klName {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     {i : Nat} {pre post : String}

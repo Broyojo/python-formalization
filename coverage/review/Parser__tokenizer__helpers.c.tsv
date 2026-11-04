@@ -1,0 +1,5 @@
+file	line	name	verdict	mirror	property	settled	reason
+Parser/tokenizer/helpers.c	15	byte_col_to_char_col	FAITHFUL	yes	yes	yes	byteColToCharCol (Lexer/State.lean:318) is the loop of helpers.c:14-24 over tok->line_start (its only caller, :53, :59) as 1 plus the count of non-continuation bytes before byte_col - 1; ByteColCounts (Lexer/Props.lean:172, proven) states column 1 and the per-byte step for every state and column, which determines the function, so counting every byte or the continuation bytes fails it; it is the comment's promise at :12-13.
+Parser/tokenizer/helpers.c	260	_PyTokenizer_new_string	FAITHFUL	-	-	-	no-behaviour applies: helpers.c:259-271 is a copy of len bytes plus a NUL; its only failure is the allocation (E_NOMEM and MemoryError).
+Parser/tokenizer/helpers.c	617	_PyTokenizer_print_escape	FAITHFUL	-	-	-	test-support applies: compiled only under #ifdef Py_DEBUG (helpers.c:615-650), writing tokenizer traces to a FILE.
+Parser/tokenizer/helpers.c	644	_PyTokenizer_tok_dump	FAITHFUL	-	-	-	test-support applies: Py_DEBUG-only token dump to stderr (helpers.c:615-650).

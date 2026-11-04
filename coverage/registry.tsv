@@ -49,6 +49,36 @@ ipaddress-v6-netmask-cache	refuted	Lib/ipaddress.py	_BaseV6._make_netmask
 ipaddress-v6-init-str	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._split_scope_id
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
 ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
+datetime-date-replace-cls	proven	Modules/_datetimemodule.c	C datetime_date_replace_impl,C new_date_subclass_ex,date.replace
+datetime-time-replace-cls	proven	Modules/_datetimemodule.c	C datetime_time_replace_impl,C new_time_subclass_fold_ex
+datetime-datetime-replace-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_replace_impl,C new_datetime_subclass_fold_ex
+datetime-combine-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_combine_impl,C new_datetime_subclass_fold_ex
+datetime-time-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_time_strptime_impl,time.strptime,_strptime_datetime_time
+datetime-datetime-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_strptime_impl,datetime.strptime,_strptime_datetime_datetime
+datetime-time-fromisoformat-cls	proven	Modules/_datetimemodule.c	C datetime_time_fromisoformat_impl,C tzinfo_from_isoformat_results
+datetime-datetime-fromisoformat-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_fromisoformat_impl,C _sanitize_isoformat_str,C new_datetime_subclass_ex
+datetime-sanitize-isoformat-full	proven	Modules/_datetimemodule.c	C _sanitize_isoformat_str
+datetime-find-sep-twins	proven	Modules/_datetimemodule.c	C _find_isoformat_datetime_separator,_find_isoformat_datetime_separator
+datetime-date-reduce-cls	proven	Modules/_datetimemodule.c	C date_reduce,date.__reduce__
+datetime-time-reduce-ex-cls	proven	Modules/_datetimemodule.c	C datetime_time___reduce_ex___impl,C datetime_time___reduce___impl,time.__reduce_ex__,time.__reduce__
+datetime-datetime-reduce-ex-cls	proven	Modules/_datetimemodule.c	C datetime_datetime___reduce_ex___impl,C datetime_datetime___reduce___impl,datetime.__reduce_ex__,datetime.__reduce__
+datetime-time-reduce-ex-all-int	refuted	Modules/_datetimemodule.c	C datetime_time___reduce_ex___impl,time.__reduce_ex__
+datetime-datetime-reduce-ex-all-int	refuted	Modules/_datetimemodule.c	C datetime_datetime___reduce_ex___impl,datetime.__reduce_ex__
+datetime-tzinfo-reduce-cls	proven	Modules/_datetimemodule.c	C tzinfo_reduce,tzinfo.__reduce__
+datetime-isocalendar-date-obj	proven	Modules/_datetimemodule.c	C iso_calendar_date_year,C iso_calendar_date_week,C iso_calendar_date_weekday,C iso_calendar_date_reduce,C iso_calendar_date_new_impl,C date_isocalendar
+datetime-date-toordinal-c	proven	Modules/_datetimemodule.c	C date_toordinal,C ymd_to_ord
+datetime-timezone-richcompare	proven	Modules/_datetimemodule.c	C timezone_richcompare,timezone.__eq__
+datetime-init-types-twins	proven	Modules/_datetimemodule.c	C _PyDateTime_InitTypes,C create_timezone_from_delta,C look_up_timezone,C create_timezone
+datetime-datetime-str-call	proven	Modules/_datetimemodule.c	C datetime_str,datetime.__str__
+datetime-datetime-str-twins	refuted	Modules/_datetimemodule.c	C datetime_str,datetime.__str__
+datetime-now-checks	proven	Modules/_datetimemodule.c	C datetime_datetime_now_impl
+datetime-add-timedelta-obj	proven	Modules/_datetimemodule.c	C add_datetime_timedelta,C new_datetime_subclass_ex,C new_datetime_subclass_fold_ex,C call_subclass_fold
+datetime-utctimetuple-obj	proven	Modules/_datetimemodule.c	C datetime_utctimetuple,C add_datetime_timedelta
+datetime-utctimetuple-obj-defined	refuted	Modules/_datetimemodule.c	C datetime_utctimetuple,C add_datetime_timedelta
+datetime-astimezone-obj	proven	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-astimezone-obj-defined	refuted	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-pep495-obj-same-kind	proven	Modules/_datetimemodule.c	C pep495_eq_exception,C delta_cmp
+datetime-pep495-obj-defined	refuted	Modules/_datetimemodule.c	C pep495_eq_exception,C delta_cmp
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord
@@ -796,9 +826,19 @@ itertools-tee-clear	proven	Modules/itertoolsmodule.c	tee_clear,tee_dealloc
 itertools-pairwise-doc-agree	proven	Modules/itertoolsmodule.c	pairwise_new_impl,pairwise_next
 itertools-pairwise-reentry	proven	Modules/itertoolsmodule.c	pairwise_next
 itertools-teedataobject-args	proven	Modules/itertoolsmodule.c	itertools_teedataobject_impl
-sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_append_impl,deque_appendleft_lock_held,deque_appendleft_impl,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl,deque_clear,deque_clearmethod_impl,deque_inplace_concat,finalize_iterator,consume_iterator
-sequences-deque-extend-reentrant	proven	Modules/_collectionsmodule.c	deque_extend_impl,deque_extendleft_impl,deque_inplace_concat,finalize_iterator,consume_iterator
-sequences-deque-extend-keeps-bound	refuted	Modules/_collectionsmodule.c	deque_extend_impl
+sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_append_impl,deque_appendleft_lock_held,deque_appendleft_impl,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl,deque_clear,deque_clearmethod_impl,finalize_iterator,consume_iterator
+sequences-deque-extend-reentrant	proven	Modules/_collectionsmodule.c	deque_extend_impl,deque_extendleft_impl,finalize_iterator,consume_iterator
+sequences-deque-extend-stale-bound	proven	Modules/_collectionsmodule.c	deque_extend_impl,deque_extendleft_impl,deque_append_lock_held,deque_appendleft_lock_held,consume_iterator,finalize_iterator
+sequences-deque-extend-keeps-bound	refuted	Modules/_collectionsmodule.c	deque_extend_impl,deque_extendleft_impl
+sequences-deque-iadd	proven	Modules/_collectionsmodule.c	deque_inplace_concat
+sequences-deque-iter-walk	proven	Modules/_collectionsmodule.c	deque_iter,dequeiter_next_lock_held,dequeiter_next,dequeiter_len,deque___reversed___impl,deque_reviter,dequereviter_next_lock_held,dequereviter_next
+sequences-deque-iter-new	proven	Modules/_collectionsmodule.c	dequeiter_new,dequereviter_new,dequeiter_len,dequeiter_reduce,deque_iter,deque_reviter
+sequences-deque-iter-new-kwargs	refuted	Modules/_collectionsmodule.c	dequeiter_new,dequereviter_new
+sequences-deque-reduce	proven	Modules/_collectionsmodule.c	deque___reduce___impl
+sequences-deque-repr	proven	Modules/_collectionsmodule.c	deque_repr
+sequences-deque-sizeof	proven	Modules/_collectionsmodule.c	deque___sizeof___impl
+sequences-deque-compare-reentrant	proven	Modules/_collectionsmodule.c	deque_richcompare
+sequences-deque-compare-seq	proven	Modules/_collectionsmodule.c	deque_richcompare
 sequences-deque-init	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl
 sequences-deque-search-reentrant	proven	Modules/_collectionsmodule.c	deque_count_impl,deque_contains_lock_held,deque_contains,deque_index_impl,deque_remove_impl
 sequences-deque-concat-args	proven	Modules/_collectionsmodule.c	deque_concat_lock_held,deque_concat
@@ -2483,6 +2523,27 @@ pygrammar-peg-identifier-not-constant	open	Parser/pegen.c
 pygrammar-peg-decimal-value	open	Parser/pegen.c	
 pygrammar-peg-terminates	open	Parser/pegen.c	
 pygrammar-peg-parser-output-validates	open	Python/ast.c	
+pygrammar-peg-check-fstring-conversion	proven	Parser/action_helpers.c	result_token_with_metadata,_PyPegen_check_fstring_conversion
+pygrammar-peg-expr-name	proven	Parser/action_helpers.c	_PyPegen_get_expr_name
+pygrammar-peg-arguments-parsing-error	proven	Parser/action_helpers.c	_PyPegen_arguments_parsing_error
+pygrammar-peg-last-comprehension-item	proven	Parser/action_helpers.c	_PyPegen_get_last_comprehension_item
+pygrammar-peg-nonparen-genexp	proven	Parser/action_helpers.c	_PyPegen_nonparen_genexp_in_call
+pygrammar-peg-check-legacy-stmt	proven	Parser/action_helpers.c	_PyPegen_check_legacy_stmt
+pygrammar-peg-check-barry	proven	Parser/action_helpers.c	_PyPegen_check_barry_as_flufl
+pygrammar-peg-ensure-complex	proven	Parser/action_helpers.c	_PyPegen_ensure_imaginary,_PyPegen_ensure_real
+pygrammar-peg-concatenate-strings	proven	Parser/action_helpers.c	_build_concatenated_bytes,_build_concatenated_unicode,_build_concatenated_joined_str,_PyPegen_concatenate_strings
+pygrammar-peg-concatenate-tstrings	proven	Parser/action_helpers.c	_PyPegen_concatenate_tstrings
+pygrammar-peg-concat-folds	proven	Parser/action_helpers.c	_build_concatenated_str
+pygrammar-peg-setup-format-spec	proven	Parser/action_helpers.c	result_token_with_metadata,_PyPegen_setup_full_format_spec
+pygrammar-peg-format-spec-joinedstr	refuted	Parser/action_helpers.c	_PyPegen_setup_full_format_spec,_build_concatenated_unicode,_PyPegen_concatenate_strings
+pygrammar-peg-interpolation-conversion	proven	Parser/action_helpers.c	_get_interpolation_conversion
+pygrammar-peg-formatted-value-interpolation	proven	Parser/action_helpers.c	
+pygrammar-peg-debug-info-source	proven	Parser/action_helpers.c	
+pygrammar-peg-joined-str-parts	proven	Parser/action_helpers.c	_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str
+pygrammar-peg-joined-str-literal	proven	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str,_PyPegen_constant_from_token
+pygrammar-peg-fstring-literal-twin	proven	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_template_str,_PyPegen_joined_str,_PyPegen_constant_from_token,_PyPegen_constant_from_string
+pygrammar-peg-escape-warning-line	refuted	Parser/action_helpers.c	_PyPegen_decode_fstring_part,_get_resized_exprs,_PyPegen_joined_str,_PyPegen_constant_from_token
+pygrammar-peg-constant-from-string	proven	Parser/action_helpers.c	_PyPegen_constant_from_string
 pygrammar-rule-keyword-stmts	proven	Grammar/python.gram	rule:pass_stmt,rule:break_stmt,rule:continue_stmt
 pygrammar-rule-return-stmt	proven	Grammar/python.gram	rule:return_stmt
 pygrammar-rule-raise-stmt	proven	Grammar/python.gram	rule:raise_stmt

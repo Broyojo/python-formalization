@@ -19,7 +19,7 @@ variable {α : Type} [Inhabited α]
 invariant (type invariant `Deque.WF`, preserved by every operation), of any
 element type, every `x` and every iterable `xs` (other than the deque itself,
 which is `extendSelf`):
-`append`/`extend`/`d += xs`/`extend(d)` keep the last `maxlen` items of
+`append`/`extend`/`extend(d)` keep the last `maxlen` items of
 `items + xs`, `appendleft`/`extendleft` keep the first `maxlen` of
 `reversed(xs) + items`, `pop`/`popleft` remove the last/first item (or raise
 `IndexError` on an empty deque), and `clear` empties it. An iterator that raises
@@ -48,14 +48,12 @@ def DequeEndsEvict : Prop :=
         d'.maxlen = d.maxlen)) ∧
     (d.clear.WF ∧ d.clear.items = [] ∧ d.clear.maxlen = d.maxlen) ∧
     (∀ e : Option PyExc, (e = none ∨ e = some .stopIteration) →
-      d.iadd (.iter xs e) = (.ok (), d.extend xs) ∧ d.extendIter (.iter xs e) = (.ok (), d.extend xs) ∧
+      d.extendIter (.iter xs e) = (.ok (), d.extend xs) ∧
       d.extendleftIter (.iter xs e) = (.ok (), d.extendleft xs)) ∧
     (∀ e : PyExc, e ≠ .stopIteration →
-      d.iadd (.iter xs (some e)) = (.error e, d.extend xs) ∧
       d.extendIter (.iter xs (some e)) = (.error e, d.extend xs) ∧
       d.extendleftIter (.iter xs (some e)) = (.error e, d.extendleft xs)) ∧
-    (∀ t, d.iadd (.notIterable t) = (.error (notIterableErr t), d) ∧
-      d.extendIter (.notIterable t) = (.error (notIterableErr t), d) ∧
+    (∀ t, d.extendIter (.notIterable t) = (.error (notIterableErr t), d) ∧
       d.extendleftIter (.notIterable t) = (.error (notIterableErr t), d))
 
 theorem clear_spec (d : Deque α) (h : d.WF) : d.clear.WF ∧ d.clear.items = [] ∧ d.clear.maxlen = d.maxlen := by
@@ -76,7 +74,7 @@ theorem dequeEndsEvict_proven : DequeEndsEvict := by
   intro α _ d h x xs
   refine ⟨Deque.append_spec d x h, Deque.appendleft_spec d x h, Deque.extend_spec d xs h,
     Deque.extendleft_spec d xs h, ?_, ?_, ?_, ?_, clear_spec d h,
-    fun e he => ?_, fun e he => ?_, fun t => ⟨rfl, rfl, rfl⟩⟩
+    fun e he => ?_, fun e he => ?_, fun t => ⟨rfl, rfl⟩⟩
   · obtain ⟨a, b, _⟩ := Deque.extend_spec d d.items h; exact ⟨a, b⟩
   · obtain ⟨a, b, _⟩ := Deque.extendleft_spec d d.items h; exact ⟨a, b⟩
   · intro he
@@ -85,12 +83,10 @@ theorem dequeEndsEvict_proven : DequeEndsEvict := by
   · intro hne
     exact ⟨Deque.pop_wf d h hne, Deque.popleft_wf d h hne⟩
   · have hf : finalizeIterator e = .ok () := by rcases he with he | he <;> subst he <;> rfl
-    refine ⟨?_, ?_, ?_⟩
-    · show d.extendIter _ = _; rw [Deque.extendIter_iter, hf]
+    refine ⟨?_, ?_⟩
     · rw [Deque.extendIter_iter, hf]
     · rw [Deque.extendleftIter_iter, hf]
-  · refine ⟨?_, ?_, ?_⟩
-    · show d.extendIter _ = _; rw [Deque.extendIter_iter, Deque.finalize_some e he]
+  · refine ⟨?_, ?_⟩
     · rw [Deque.extendIter_iter, Deque.finalize_some e he]
     · rw [Deque.extendleftIter_iter, Deque.finalize_some e he]
 

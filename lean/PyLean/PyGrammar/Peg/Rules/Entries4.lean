@@ -213,8 +213,9 @@ def specEntries : List Entry := [
   specEntry "pygrammar-rule-simple-stmts" Rows.rule_simple_stmts
     ("simple_stmts: simple_stmt not followed by ';' then NEWLINE gives the one-statement sequence; " ++
      "otherwise ';'.simple_stmt+ [';'] NEWLINE gives the gathered statements.")
-    "Grammar/python.gram:115-117" ``SimpleStmts ``simpleStmts_proven
-    " The ';' gather _gather_4 is not restated (GatherSep is for ',').",
+    "Grammar/python.gram:115-117" ``SimpleStmtsRule ``simpleStmtsRule_proven
+    (" Gather4 pins the ';' gather _gather_4 (r281) and its loop _loop0_3 (r280) with " ++
+     "GatherSepTok 13: the separator is token 13, the loop is unfolded round by round."),
   specEntry "pygrammar-rule-annotated-rhs" Rows.rule_annotated_rhs
     "annotated_rhs: yield_expr, then star_expressions, each from the start mark."
     "Grammar/python.gram:168" ``AnnotatedRhs ``annotatedRhs_proven,

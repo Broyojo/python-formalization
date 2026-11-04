@@ -1,0 +1,3 @@
+file	line	name	verdict	mirror	property	settled	reason
+Parser/lexer/state.c	71	_PyTokenizer_Free	FAITHFUL	-	-	-	no-behaviour applies under the tp_dealloc policy: state.c:70-91 only frees buffers and drops references (decoding_readline, decoding_buffer, readline, filename, module); it closes no file and calls no finalizer itself.
+Parser/lexer/state.c	94	_PyToken_Free	FAITHFUL	-	-	-	no-behaviour applies: state.c:93-96 is Py_XDECREF(token->metadata), a reference drop with no explicit effect.

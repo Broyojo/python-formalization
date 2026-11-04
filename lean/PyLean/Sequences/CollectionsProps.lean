@@ -109,26 +109,29 @@ theorem defDictGetitem_proven : DefDictGetitem := by
 /-- `dd.copy()` and `copy.copy(dd)`, for every defaultdict (type invariant: its keys are
 distinct): same items in the same order, same type, same factory, a `NULL` factory
 becoming `None`. `dd.__reduce__()` calls `dd.items()` (which a subclass may override):
-with `dict.items` it returns the 5-tuple `(type(dd), args, None, None, iterator over the
-items)`, with `args` empty for a `NULL` or `None` factory and `(factory,)` for a callable
-one; an `items()` that raises makes `__reduce__` raise the same exception, and one that
-returns a non-iterable raises `TypeError` from `iter()`. -/
+for whatever iterable `items()` returns (`dict.items`, or an override yielding any pairs `xs`
+and ending with any `e`), it returns the 5-tuple `(type(dd), args, None, None, iter(that))`,
+the iterator being over exactly what `items()` returned, with `args` empty for a `NULL` or
+`None` factory and `(factory,)` for a callable one; an `items()` that raises makes
+`__reduce__` raise the same exception, and one that returns a non-iterable raises
+`TypeError` from `iter()`. -/
 def DefDictCopyReduce : Prop :=
   ∀ (κ ν : Type) [DecidableEq κ] (dd : DefDict κ ν), (dd.items.map Prod.fst).Nodup →
     dd.copy.items = dd.items ∧ dd.copy.tname = dd.tname ∧
     (∀ r run, dd.factory = .call r run → dd.copy.factory = .call r run) ∧
     ((∀ r run, dd.factory ≠ .call r run) → dd.copy.factory = .none) ∧
-    ((∀ r run, dd.factory ≠ .call r run) →
-      dd.reduce (.ok (.iter dd.items none)) = .ok [.type dd.tname, .args [], .none, .none, .iter dd.items none]) ∧
-    (∀ r run, dd.factory = .call r run →
-      dd.reduce (.ok (.iter dd.items none)) =
-        .ok [.type dd.tname, .args [.call r run], .none, .none, .iter dd.items none]) ∧
+    ((∀ r run, dd.factory ≠ .call r run) → ∀ xs e,
+      dd.reduce (.ok (.iter xs e)) = .ok [.type dd.tname, .args [], .none, .none, .iter xs e]) ∧
+    (∀ r run, dd.factory = .call r run → ∀ xs e,
+      dd.reduce (.ok (.iter xs e)) =
+        .ok [.type dd.tname, .args [.call r run], .none, .none, .iter xs e]) ∧
     (∀ e, dd.reduce (.error e) = .error e) ∧
     (∀ t, dd.reduce (.ok (.notIterable t)) = .error (notIterableErr t))
 
 theorem defDictCopyReduce_proven : DefDictCopyReduce := by
   intro κ ν _ dd hn
-  refine ⟨?_, rfl, fun r run hf => ?_, fun hc => ?_, fun hc => ?_, fun r run hf => ?_, fun e => rfl, fun t => rfl⟩
+  refine ⟨?_, rfl, fun r run hf => ?_, fun hc => ?_, fun hc xs e => ?_, fun r run hf xs e => ?_, fun e => rfl,
+    fun t => rfl⟩
   · simp only [DefDict.copy, DefDict.newFrom]
     rw [dictUpdate_fresh [] _ (by simpa using hn)]
     simp

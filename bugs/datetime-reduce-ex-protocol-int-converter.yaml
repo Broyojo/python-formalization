@@ -1,0 +1,58 @@
+id: datetime-reduce-ex-protocol-int-converter
+title: "time/datetime.__reduce_ex__(protocol): C rejects a protocol outside C int or without __index__, _pydatetime accepts it"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Modules/_datetimemodule.c, Modules/clinic/_datetimemodule.c.h, Lib/_pydatetime.py]
+functions: ["C datetime_time___reduce_ex__", "C datetime_datetime___reduce_ex__", "time.__reduce_ex__", "datetime.__reduce_ex__"]
+summary: |
+  The C methods declare `proto: int` (Modules/_datetimemodule.c:5290-5292, :7222-7224), so the
+  clinic wrapper converts it with PyLong_AsInt (clinic/_datetimemodule.c.h:1239, :2068):
+  `time(1).__reduce_ex__(2**31)` and `datetime(2000, 1, 1).__reduce_ex__(2**31)` raise
+  OverflowError("Python int too large to convert to C int"), and `__reduce_ex__(2.5)` raises
+  TypeError. _pydatetime's `__reduce_ex__(self, protocol)` (Lib/_pydatetime.py:1779-1780,
+  :2432-2433) passes the object to `_getstate`, which compares `protocol > 3` only when fold is
+  set (:1757, :2407), so both calls return the state tuple.
+likelihood: |
+  Very low: pickle passes small int protocols. Only direct calls with huge or float protocols
+  see the difference.
+maybe_intended: |
+  Likely acceptable: the protocol is an int by contract (object.__reduce_ex__ takes an int too:
+  `object().__reduce_ex__(2**31)` is OverflowError as well). Recorded because a proven twin
+  statement ("for every int p") was false about CPython.
+reproducer: |
+  import datetime as C, _pydatetime as P
+  out = []
+  for m in (C, P):
+      row = []
+      for v in (m.time(1), m.datetime(2000, 1, 1)):
+          for p in (2**31, 2.5):
+              try:
+                  v.__reduce_ex__(p)
+                  row.append("ok")
+              except (OverflowError, TypeError) as e:
+                  row.append(type(e).__name__)
+      out.append(row)
+  print("C:", out[0], "Python:", out[1])
+  if out[0] != out[1]:
+      print("REPRODUCED datetime-reduce-ex-protocol-int-converter")
+expected: |
+  The same outcome in both implementations.
+promised_by: |
+  PEP 399 (C and Python twins behave alike).
+cause: |
+  Modules/_datetimemodule.c:5290-5292 and :7222-7224 declare `proto: int`; Lib/_pydatetime.py:1779-1780 and
+  :2432-2433 accept any object.
+possible_fix: |
+  None needed in C; _pydatetime could call operator.index(protocol) if exact agreement matters.
+reproduces:
+  python3 (3.15.2): REPRODUCED (C ['OverflowError', 'TypeError', 'OverflowError', 'TypeError'], Python ['ok', 'ok', 'ok', 'ok'])
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search issues: reduce_ex protocol OverflowError datetime", "pydatetime reduce_ex protocol",
+            "datetime __reduce_ex__ int converter", "bugforge-results/README.md: no reduce_ex entry"]
+lean:
+  property: PyLean.Datetime.TimeReduceExTwinsAllInt
+  theorem: PyLean.Datetime.timeReduceExTwinsAllInt_refuted
+  also: [PyLean.Datetime.datetimeReduceExTwinsAllInt_refuted]
