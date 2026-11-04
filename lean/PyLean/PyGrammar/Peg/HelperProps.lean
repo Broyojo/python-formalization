@@ -1024,4 +1024,179 @@ theorem joinedStrParts_proven : JoinedStrParts := by
     · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl]) <;> rfl
     · (simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, hl]) <;> rfl
 
+/-! ### The literal text of an f-string against a plain string -/
+
+theorem mkAt_const_str (s : List Nat) (l : Loc) :
+    mkAt .Constant [.const (.str s), .null] l = .node .Constant [.const (.str s), .null] (some l) := by
+  cases l; rfl
+
+/-- `_PyPegen_decode_string`'s value does not depend on the token it is given (that only says
+where an invalid-escape warning goes) or on the state beyond the Unicode name table. -/
+theorem decodeString_val (r : Bool) (s : List Nat) (t t' : Option Token) (p : PS) :
+    (decodeString r s t p).1 = (decodeString r s t' p).1 := by
+  cases r
+  · simp only [decodeString, Bool.false_eq_true, ↓reduceIte, decodeUnicodeWithEscapes, bind,
+      StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure]
+    cases h : decodeUnicodeEscape p.cfg.ucn (escapeNonAscii (s.length + 1) s).toArray
+      ((escapeNonAscii (s.length + 1) s).toArray.size + 1) 0 [] none with
+    | error e => simp only [h]
+    | ok vi =>
+      obtain ⟨v, inv⟩ := vi
+      simp only [h]
+      cases inv <;> cases t <;> cases t' <;> rfl
+  · rfl
+
+/-- `_PyPegen_parse_string` on `'''…'''` (or `r'''…'''`) around `bs`: no bytes check, the text
+between the quotes, raw for the `r` prefix or a text without a backslash
+(`Parser/string_parser.c:254-339`). -/
+theorem parseString_triple (t : Token) (bs : List Nat) (raw : Bool)
+    (ht : t.bytes = (if raw then [114] else []) ++ [39, 39, 39] ++ bs ++ [39, 39, 39]) (p : PS) :
+    parseString t p = match decodeString (raw || !bs.contains 92) bs (some t) p with
+      | (some v, q) => (.str v, q)
+      | (none, q) => (.fail, q) := by
+  have hp : stringParts t.bytes = (bs, bs ++ [39, 39, 39], false, raw || !bs.contains 92) := by
+    rw [ht]
+    cases raw <;> simp [stringParts, stringPfx, List.take_append_of_le_length]
+  simp only [parseString, hp, Bool.false_eq_true, ↓reduceIte, bind, StateT.bind]
+  cases decodeString (raw || !bs.contains 92) bs (some t) p with
+  | mk r q => cases r <;> rfl
+
+/-- `_PyPegen_joined_str` (`_PyPegen_template_str`) over one literal part, the `Constant`
+`_PyPegen_constant_from_token` makes of an `FSTRING_MIDDLE` token `m` (its text verbatim,
+`Parser/action_helpers.c:1483-1499`): `_PyPegen_decode_fstring_part` (`:1316-1345`) decodes the
+text, raw when the start token has `r`/`R` or the text has no backslash; a decode error becomes
+the `SyntaxError` of `_Pypegen_raise_decode_error_known_location` at the part; an empty result is
+dropped (`:1407-1412`). Hypotheses: the token's text is UTF-8 (the source was decoded) and is not
+the escaped brace `{{`/`}}` (which decodes to one brace). -/
+def JoinedStrLiteral : Prop := ∀ (a b m : Token) (p : PS),
+  utf8Encode (utf8Decode m.bytes) = m.bytes → m.bytes ≠ [123, 123] → m.bytes ≠ [125, 125] →
+  callHelper .joined_str [.tok a, .seq [(callHelper .constant_from_token [.tok m] p).1], .tok b] p =
+    (match decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+        m.bytes (some b) p with
+      | (none, q) => (.null, (raiseDecodeKnown (tokLoc m) q).2)
+      | (some v, q) => (mkAt .JoinedStr [.seq (if v = [] then [] else
+          [mkAt .Constant [.const (.str v), .null] (tokLoc m)])] (jsLoc a b), q)) ∧
+  callHelper .template_str [.tok a, .seq [(callHelper .constant_from_token [.tok m] p).1], .tok b] p =
+    (match decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+        m.bytes (some b) p with
+      | (none, q) => (.null, (raiseDecodeKnown (tokLoc m) q).2)
+      | (some v, q) => (mkAt .TemplateStr [.seq (if v = [] then [] else
+          [mkAt .Constant [.const (.str v), .null] (tokLoc m)])] (jsLoc a b), q))
+
+theorem resized_literal (a b m : Token) (tstr : Bool) (p : PS)
+    (h1 : utf8Encode (utf8Decode m.bytes) = m.bytes) (h2 : m.bytes ≠ [123, 123])
+    (h3 : m.bytes ≠ [125, 125]) :
+    getResizedExprs (.tok a) (.seq [mkAt .Constant [.const (.str (utf8Decode m.bytes)), .null] (tokLoc m)])
+      (.tok b) tstr p =
+    (match decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+        m.bytes (some b) p with
+      | (none, q) => (none, (raiseDecodeKnown (tokLoc m) q).2)
+      | (some v, q) => (some (if v = [] then [] else
+          [mkAt .Constant [.const (.str v), .null] (tokLoc m)]), q)) := by
+  have hb2 : (m.bytes == [123, 123] || m.bytes == [125, 125]) = false := by
+    simp [h2, h3]
+  rw [mkAt_const_str]
+  simp only [getResizedExprs, seqOf, resizedLoop, decodeFstringPart, locOf, h1, hb2,
+    Bool.false_eq_true, ↓reduceIte, bind, StateT.bind]
+  cases decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+      m.bytes (some b) p with
+  | mk r q =>
+    cases r with
+    | none => rfl
+    | some v =>
+      cases v with
+      | nil => rfl
+      | cons x xs => rfl
+
+theorem joinedStrLiteral_proven : JoinedStrLiteral := by
+  intro a b m p h1 h2 h3
+  have hc : (callHelper .constant_from_token [.tok m] p).1 =
+      mkAt .Constant [.const (.str (utf8Decode m.bytes)), .null] (tokLoc m) := rfl
+  rw [hc]
+  refine ⟨?_, ?_⟩
+  · simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, bind, StateT.bind,
+      resized_literal a b m false p h1 h2 h3]
+    cases decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+        m.bytes (some b) p with
+    | mk r q => cases r <;> rfl
+  · simp only [callHelper, List.getD_cons_zero, List.getD_cons_succ, bind, StateT.bind,
+      resized_literal a b m true p h1 h2 h3]
+    cases decodeString ((a.bytes.contains 114 || a.bytes.contains 82) || !m.bytes.contains 92)
+        m.bytes (some b) p with
+    | mk r q => cases r <;> rfl
+
+/-- f-strings and t-strings against plain strings (the implementation agreeing with itself): the
+literal text of `f'''…'''` (`rf'''…'''`, and the t-string twins) decodes to the value the plain
+string `'''…'''` (`r'''…'''`) with the same text has, through `_PyPegen_constant_from_string` and
+`_PyPegen_parse_string`: the same value (dropped when empty), and a decode failure on one side
+exactly when on the other. Hypotheses as for `JoinedStrLiteral`; `raw` is whether the f-string's
+prefix has `r`. -/
+def FstringLiteralTwin : Prop := ∀ (a b m t : Token) (raw : Bool) (p : PS),
+  utf8Encode (utf8Decode m.bytes) = m.bytes → m.bytes ≠ [123, 123] → m.bytes ≠ [125, 125] →
+  (a.bytes.contains 114 || a.bytes.contains 82) = raw →
+  t.bytes = (if raw then [114] else []) ++ [39, 39, 39] ++ m.bytes ++ [39, 39, 39] →
+  (∀ v, (parseString t p).1 = .str v →
+    (callHelper .joined_str [.tok a, .seq [(callHelper .constant_from_token [.tok m] p).1], .tok b] p).1 =
+      mkAt .JoinedStr [.seq (if v = [] then [] else [mkAt .Constant [.const (.str v), .null] (tokLoc m)])]
+        (jsLoc a b) ∧
+    (callHelper .template_str [.tok a, .seq [(callHelper .constant_from_token [.tok m] p).1], .tok b] p).1 =
+      mkAt .TemplateStr [.seq (if v = [] then [] else [mkAt .Constant [.const (.str v), .null] (tokLoc m)])]
+        (jsLoc a b)) ∧
+  ((parseString t p).1 = .fail ↔
+    (callHelper .joined_str [.tok a, .seq [(callHelper .constant_from_token [.tok m] p).1], .tok b] p).1 = .null)
+
+theorem fstringLiteralTwin_proven : FstringLiteralTwin := by
+  intro a b m t raw p h1 h2 h3 hr ht
+  have hj := joinedStrLiteral_proven a b m p h1 h2 h3
+  have hps := parseString_triple t m.bytes raw ht p
+  rw [hr] at hj
+  have hv := decodeString_val (raw || !m.bytes.contains 92) m.bytes (some t) (some b) p
+  rw [hj.1, hj.2, hps]
+  revert hv
+  cases decodeString (raw || !m.bytes.contains 92) m.bytes (some t) p with
+  | mk r1 q1 =>
+    cases decodeString (raw || !m.bytes.contains 92) m.bytes (some b) p with
+    | mk r2 q2 =>
+      intro hv
+      simp only at hv
+      subst hv
+      cases r1 with
+      | none =>
+        refine ⟨fun v hv => ?_, ?_⟩
+        · simp at hv
+        · simp
+      | some w =>
+        refine ⟨fun v hv => ?_, ?_⟩
+        · simp only [StrVal.str.injEq] at hv
+          subst hv
+          exact ⟨rfl, rfl⟩
+        · constructor
+          · intro h; simp at h
+          · intro h
+            exact absurd h (by cases w <;> simp [mkAt, mkAst])
+
+/-! ### Where an invalid escape is reported -/
+
+/-- The lines of the invalid-escape warnings a parse of `src` leaves, in order. -/
+def warnLines (src : List Nat) : List Int :=
+  ((parseRun {} src .file).2.tok.warnings.map (·.2.2)).reverse
+
+/-- `'''` -/
+def tripleQ : List Nat := [39, 39, 39]
+
+/-- The implementation agreeing with itself: an invalid escape sequence in the text of a plain
+string and in the same text of an f-string is warned about on the same line (the line the escape
+is on, which `warn_invalid_escape_sequence`, `Parser/string_parser.c:53-66`, counts from the
+token it is given). The bodies have no braces, so both strings are literal text only. -/
+def EscapeWarningLineTwin : Prop := ∀ body : List Nat, (∀ c ∈ body, c ≠ 123 ∧ c ≠ 125) →
+  warnLines (tripleQ ++ body ++ tripleQ ++ [10]) = warnLines ([102] ++ tripleQ ++ body ++ tripleQ ++ [10])
+
+set_option maxRecDepth 100000 in
+/-- The body `\n\d\n`: `'''\n\d\n'''` warns on line 2, where `\d` is; `f'''\n\d\n'''` on line 4,
+one past the last line of the source: `_get_resized_exprs` hands `_PyPegen_decode_fstring_part`
+the end token `b` (`Parser/action_helpers.c:1405`), so the count starts at the closing `'''`'s
+line (3) instead of the line the text starts on (1). -/
+theorem escapeWarningLineTwin_refuted : ¬ EscapeWarningLineTwin := fun h =>
+  absurd (h [10, 92, 100, 10] (by decide)) (by decide +kernel)
+
 end PyLean.PyGrammar.Peg
