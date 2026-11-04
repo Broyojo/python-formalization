@@ -1,0 +1,2 @@
+file	line	name	verdict	mirror	property	settled	reason
+Parser/tokenizer/utf8_tokenizer.c	8	tok_underflow_string	HOLLOW	yes	no	yes	The body (utf8_tokenizer.c:7-27) is the string tokenizer's, which the shared underflow model follows, but NextcStaysInBuffer (the only entry, pygrammar-lex-nextc-in-buffer) states only that cur <= inp survives one tok_nextc, which an underflow that always reports EOF also satisfies; nothing pins the line read, ADVANCE_LINENO or E_EOF.

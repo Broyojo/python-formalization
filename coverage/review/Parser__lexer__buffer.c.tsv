@@ -1,0 +1,4 @@
+file	line	name	verdict	mirror	property	settled	reason
+Parser/lexer/buffer.c	9	_PyLexer_remember_fstring_buffers	FAITHFUL	-	-	-	no-behaviour applies: buffer.c:8-21 only turns each mode's start, multi_line_start and last_expr_start pointers into offsets before a realloc; nothing Python-visible, and the model keeps offsets throughout.
+Parser/lexer/buffer.c	25	_PyLexer_restore_fstring_buffers	FAITHFUL	-	-	-	no-behaviour applies: buffer.c:24-37 turns the saved offsets back into pointers after the realloc, the inverse of the above, with no Python-visible effect.
+Parser/lexer/buffer.c	54	_PyLexer_tok_reserve_buf	FAITHFUL	-	-	-	no-behaviour applies: buffer.c:53-80 grows tok->buf and re-bases its pointers; the only observable outcome is PyMem_Realloc failing (E_NOMEM, a MemoryError), which is allocation.
