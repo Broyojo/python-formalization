@@ -151,6 +151,12 @@ structure GenObj where
   excValue : Val := .null
   name : String := ""
   qualname : String := ""
+  /-- `ag_hooks_inited` of an async generator (`Include/internal/pycore_genobject.h`). -/
+  hooksInited : Bool := false
+  /-- `ag_running_async`: an `asend`/`athrow` awaitable is running the generator. -/
+  runningAsync : Bool := false
+  /-- `ag_closed`. -/
+  agClosed : Bool := false
   deriving Inhabited
 
 /-- `PyDictKeyEntry`: the stored hash is what makes equality calls observable
@@ -247,6 +253,11 @@ inductive Obj where
   | classMethod (f : Val)
   /-- A builtin method bound to `self`. -/
   | boundBuiltin (tp name : String) (self : Val)
+  /-- `PyAsyncGenASend` (`Objects/genobject.c:1601-1615`): `ags_gen`, `ags_sendval` (`.null` for
+  `__anext__`) and `ags_state`, `AWAITABLE_STATE_INIT` 0, `_ITER` 1, `_CLOSED` 2. -/
+  | asend (gen : Addr) (sendval : Val) (state : Nat)
+  /-- `_PyAsyncGenWrappedValue`, the `agw_val` an async generator yields. -/
+  | agWrapped (v : Val)
   deriving Inhabited
 
 /-- The label a macro leaves through. -/
@@ -296,6 +307,12 @@ structure Rt where
   interning, constant merging, a variable copied), which the machine does not track, so it is an
   oracle, as `stackSpace` is. -/
   sameImmediate : Val → Val → Bool := fun _ _ => false
+  /-- `tstate->async_gen_firstiter`, `.null` when unset (`sys.set_asyncgen_hooks`). -/
+  asyncGenFirstiter : Val := .null
+  /-- `_Py_ReachedRecursionLimit(tstate)` (`Python/ceval.c`): whether the machine stack pointer is
+  past the soft limit. It depends on C stack use, which the machine does not track, so it is an
+  oracle, as `stackSpace` is. -/
+  cRecursionReached : Bool := false
   /-- Written only by the profiling loop of the difftest: per code object and
   instruction, the specialized form seen first. -/
   profile : Array (Array (Option Instr)) := #[]

@@ -575,6 +575,137 @@ def filterNext (f i : Val) : Nat → RM (Option Val)
         else om.isTrue ctx (← call1 om ctx f [v])
       if t then pure (some v) else filterNext f i n
 
+/-! ### Async generators: `Objects/genobject.c:1660-2265` -/
+
+/-- `async_gen_init_hooks`, `Objects/genobject.c:1668-1702`: once per generator (`ag_hooks_inited`
+is set before anything runs, so a raising or reentrant hook does not run twice), call
+`tstate->async_gen_firstiter(o)` when it is set; its error is the `1` return. Storing the finalizer
+in `ag_origin_or_finalizer` (:1683-1686) is read only by `gen_finalize`, outside the machine's
+finalization model. -/
+def asyncGenInitHooks (g : Addr) : RM Unit := do
+  let o ← getGen g
+  if o.hooksInited then return
+  setObj g (.gen { o with hooksInited := true })
+  let firstiter ← fun rt => EStateM.Result.ok rt.asyncGenFirstiter rt
+  if firstiter != .null then
+    let _ ← om.call ctx firstiter [.ref g] []
+
+/-- `async_gen_anext`, `Objects/genobject.c:1705-1713`, the `am_anext` slot of `async_generator`
+(:1833-1838): the hooks, then `async_gen_asend_new(ag, NULL)` (:2160-2177), a fresh
+`AWAITABLE_STATE_INIT` awaitable with no send value. -/
+def asyncGenAnext (g : Addr) : RM Val := do
+  asyncGenInitHooks om ctx g
+  alloc (.asend g .null 0)
+
+/-- `gen_send`, `Objects/genobject.c:404-412`, on an async generator, as `async_gen_asend_send`
+calls it with `arg` possibly `NULL`: `some v` a yielded value, `none` a `NULL` with no exception
+set (`gen_send_ex` on a finished generator with `arg == NULL`, :353-366); a return is
+`gen_set_stop_iteration`'s `StopAsyncIteration` (:384-399), set by `PyErr_SetNone`, so chained to
+the handled exception. -/
+def asyncGenSend (g : Addr) (arg : Option Val) : RM (Option Val) := do
+  match ← genSendExChecked ctx g arg with
+  | .next v => pure (some v)
+  | .ret _ => raiseVal (← newExc (.cls "StopAsyncIteration") [])
+  | .none => pure none
+
+/-- `ag_running_async = b`. -/
+def setRunningAsync (g : Addr) (b : Bool) : RM Unit := do
+  let o ← getGen g
+  setObj g (.gen { o with runningAsync := b })
+
+/-- `async_gen_unwrap_value`, `Objects/genobject.c:1911-1938`, on what `gen_send` gave: an
+exception (`.error`), `NULL` with none set (`.ok none`), or a value. On `NULL` it sets
+`StopAsyncIteration` when nothing is set, sets `ag_closed` when the exception is
+`StopAsyncIteration` or `GeneratorExit`, and clears `ag_running_async`; an
+`_PyAsyncGenWrappedValue` (an `async` yield) becomes `StopIteration(agw_val)` with the flag cleared;
+any other value, an `await` passing a value out, is returned with the flag left set. -/
+def asyncGenUnwrap (g : Addr) (r : Except Val (Option Val)) : RM Val := do
+  match r with
+  | .ok (some v) =>
+    match v with
+    | .ref w =>
+      match ← getObj w with
+      | .agWrapped x =>
+        setRunningAsync g false
+        stopIter x
+      | _ => pure v
+    | _ => pure v
+  | _ =>
+    let e ← match r with
+      | .error e => pure e
+      | _ => setObject (← newExc (.cls "StopAsyncIteration") [])
+    if (← givenMatches e 8 (.cls "StopAsyncIteration")) || (← givenMatches e 8 (.cls "GeneratorExit")) then
+      let o ← getGen g
+      setObj g (.gen { o with agClosed := true })
+    setRunningAsync g false
+    throw (.exc e)
+
+/-- `async_gen_asend_send`, `Objects/genobject.c:1973-2011`, on the awaitable at `a`; `arg = none`
+is `NULL` (`async_gen_asend_iternext`, :2024-2028). A closed awaitable refuses; a fresh one fails
+and closes when the generator is already running an awaitable, else takes `ags_sendval` for a
+`NULL` or `None` argument and moves to `AWAITABLE_STATE_ITER`; then `ag_running_async` is set, the
+generator is sent `arg` and the result unwrapped, and any `NULL` closes the awaitable. -/
+def asendSend (a : Addr) (arg : Option Val) : RM Val := do
+  match ← getObj a with
+  | .asend g sv st =>
+    if st == 2 then runtimeError "cannot reuse already awaited __anext__()/asend()"
+    let mut arg := arg
+    if st == 0 then
+      if (← getGen g).runningAsync then
+        setObj a (.asend g sv 2)
+        runtimeError "anext(): asynchronous generator is already running"
+      if arg.isNone || arg == some .none then arg := if sv == .null then none else some sv
+      setObj a (.asend g sv 1)
+    setRunningAsync g true
+    let r ← tryExc (Except.ok <$> asyncGenSend ctx g arg) fun e => pure (.error e)
+    tryExc (asyncGenUnwrap g r) fun e => do
+      match ← getObj a with
+      | .asend g' sv' _ => setObj a (.asend g' sv' 2)
+      | _ => pure ()
+      throw (.exc e)
+  | _ => fault "not an asend awaitable"
+
+/-- `_PyAsyncGenASend_Send`, `Objects/genobject.c:2013-2023`, the `am_send` of
+`async_generator_asend` (:2110-2113): a value is `PYGEN_NEXT`; a `StopIteration` (or `NULL` with
+nothing set) is `PYGEN_RETURN` with its value (`_PyGen_FetchStopIterationValue`); anything else is
+`PYGEN_ERROR`. -/
+def asendAmSend (a : Addr) (arg : Val) : RM (Val × Bool) :=
+  tryExc (do pure (← asendSend ctx a (some arg), false)) fun exc => do
+    pure (← fetchStopIterationValue exc, true)
+
+/-- `Py_TYPE(o)->tp_as_async->am_aiter`, called: `async_generator` has `PyObject_SelfIter`
+(`Objects/genobject.c:1835`), a class `slot_am_aiter` when `__aiter__` is in its MRO; `none` is a
+`NULL` slot. -/
+def amAIter (o : Val) : RM (Option Val) := do
+  if (← typeOf o) == .cls "async_generator" then return some o
+  callDunder om ctx o "__aiter__" []
+
+/-- `tp_as_async != NULL && tp_as_async->am_anext != NULL` of the type `T`: `async_generator`
+(`async_gen_anext`, :1836), or a class with `__anext__` in its MRO (`slot_am_anext`). -/
+def hasAmANext (T : Val) : RM Bool := do
+  if T == .cls "async_generator" then return true
+  return (← userLookup T "__anext__").isSome
+
+/-- `Py_TYPE(o)->tp_as_async->am_anext`, called. -/
+def amANext (o : Val) : RM (Option Val) := do
+  if (← typeOf o) == .cls "async_generator" then
+    match o with
+    | .ref g => return some (← asyncGenAnext om ctx g)
+    | _ => fault "async generator immediate"
+  callDunder om ctx o "__anext__" []
+
+/-- `tp_as_async->am_await != NULL` of the type `T`: `async_generator_asend` (`PyObject_SelfIter`,
+:2111), or a class with `__await__` (`slot_am_await`). Coroutines are tested before this slot by
+every caller. -/
+def hasAmAwait (T : Val) : RM Bool := do
+  if T == .cls "async_generator_asend" then return true
+  return (← userLookup T "__await__").isSome
+
+/-- `Py_TYPE(o)->tp_as_async->am_await`, called. -/
+def amAwait (o : Val) : RM (Option Val) := do
+  if (← typeOf o) == .cls "async_generator_asend" then return some o
+  callDunder om ctx o "__await__" []
+
 /-- `tp_iternext`. -/
 def iterNextImpl (it : Val) : RM (Option Val) := do
   match it with
@@ -691,6 +822,8 @@ def iterNextImpl (it : Val) : RM (Option Val) := do
     | .gen g =>
       if g.kind == .gen then genIterNext ctx a
       else typeError s!"'{← tpName it}' object is not an iterator"
+    -- `async_gen_asend_iternext`, `Objects/genobject.c:2024-2028`
+    | .asend .. => some <$> asendSend ctx a none
     | .inst i =>
       match ← userLookup i.cls "__next__" with
       | some _ =>
@@ -712,6 +845,7 @@ def isIteratorImpl (v : Val) : RM Bool := do
     | .dictIter .. | .setIter .. | .enumerate .. | .zip .. | .map .. | .filter .. | .reversed .. =>
       pure true
     | .gen g => pure (g.kind == .gen)
+    | .asend .. => pure true
     | .inst i => return (← userLookup i.cls "__next__").isSome
     | _ => pure false
   | _ => pure false
@@ -1554,6 +1688,99 @@ def callImpl (f : Val) (args : List Val) (kw : List String) : RM Val := do
     | _ => typeError s!"'{← tpName f}' object is not callable"
   | _ => typeError s!"'{← tpName f}' object is not callable"
 
+/-! ### `PyMethodDef` flags and `ml_meth` -/
+
+/-- `ml_flags` of the builtin functions of the model, from their `PyMethodDef`
+(`Python/clinic/bltinmodule.c.h`, `Python/bltinmodule.c:3446-3448`). -/
+def builtinFlags : String → Nat
+  | "len" | "repr" | "abs" | "any" | "all" | "callable" | "hash" | "ord" | "chr" | "id" => methO
+  | "iter" | "next" | "isinstance" | "issubclass" | "getattr" | "setattr" | "delattr" | "hasattr"
+  | "divmod" | "format" => methFastcall
+  | _ => methFastcall ||| methKeywords
+
+/-- `ml_flags` of the methods of builtin types the model has (`Objects/clinic/*.c.h`,
+`Objects/genobject.c:1025-1027`, `Objects/descrobject.c:1648-1650`), or `none` when the attribute is
+not a `method_descriptor` (the `object` dunders are slot wrappers, `__init_subclass__` a class
+method) or is `METH_VARARGS` (`dict.update`). -/
+def methodFlags : String → String → Option Nat
+  | "list", "append" | "list", "extend" | "list", "remove" | "list", "count" => some methO
+  | "list", "pop" | "list", "insert" | "list", "index" => some methFastcall
+  | "list", "reverse" | "list", "clear" | "list", "copy" => some methNoArgs
+  | "list", "sort" => some (methFastcall ||| methKeywords)
+  | "dict", "get" | "dict", "pop" | "dict", "setdefault" => some methFastcall
+  | "dict", "keys" | "dict", "values" | "dict", "items" | "dict", "clear" | "dict", "copy" => some methNoArgs
+  | "str", "join" => some methO
+  | "str", "upper" | "str", "lower" | "str", "isdigit" => some methNoArgs
+  | "str", "strip" | "str", "startswith" | "str", "endswith" | "str", "find" => some methFastcall
+  | "str", "split" | "str", "replace" => some (methFastcall ||| methKeywords)
+  | "tuple", "index" => some methFastcall
+  | "tuple", "count" => some methO
+  | "set", "add" | "set", "remove" | "set", "discard" => some methO
+  | "set", "pop" | "set", "clear" | "set", "copy" | "frozenset", "copy" => some methNoArgs
+  | "set", "union" | "set", "intersection" | "frozenset", "union" | "frozenset", "intersection" =>
+    some methFastcall
+  | "BaseException", "with_traceback" | "BaseException", "add_note" => some methO
+  | "generator", "send" | "coroutine", "send" => some methO
+  | "generator", "throw" | "coroutine", "throw" => some methFastcall
+  | "generator", "close" | "coroutine", "close" => some methNoArgs
+  | "property", "getter" | "property", "setter" | "property", "deleter" => some methO
+  | _, _ => none
+
+/-- `PyCFunction_CheckExact`, `PyCFunction_GET_FLAGS`, `PyCFunction_GET_SELF`. A builtin of the
+`builtins` module has the module as `m_self`, which the machine does not materialise (`.null`
+stands for it; no `ml_meth` of the model reads it). -/
+def cfuncOfImpl (rt : Rt) (v : Val) : Option (Nat × Val) :=
+  match v with
+  | .builtin n => some (builtinFlags n, .null)
+  | .ref a =>
+    match rt.heap[a]? with
+    | some (.boundBuiltin tp n s) => (methodFlags tp n).map fun f => (f, s)
+    | _ => none
+  | _ => none
+
+/-- `Py_IS_TYPE(v, &PyMethodDescr_Type)`, with `ml_flags` and `d_type`. -/
+def methDescrOfImpl (_ : Rt) (v : Val) : Option (Nat × Val) :=
+  match v with
+  | .methDescr tp n => (methodFlags tp n).map fun f => (f, .cls tp)
+  | _ => none
+
+/-- `ml_meth(self, args...)`: the C body of the builtin, without the argument checks of its
+vectorcall wrapper (`Objects/methodobject.c`, `Objects/descrobject.c`). -/
+def mlMethImpl (f self : Val) (args : List Val) : RM Val := do
+  match f with
+  | .builtin n => callBuiltin P om ctx n args []
+  | .methDescr tp n => callMethod P om ctx tp n self args []
+  | .ref a =>
+    match ← getObj a with
+    | .boundBuiltin tp n _ => callMethod P om ctx tp n self args []
+    | _ => fault "no ml_meth"
+  | _ => fault "no ml_meth"
+
+/-- `tp_vectorcall != NULL` of a type (`.tp_vectorcall =` in `Objects/*.c`: `range`, `bool`, `dict`,
+`enumerate`, `filter`, `float`, `frozenset`, `list`, `int`, `map`, `reversed`, `set`, `super`,
+`tuple`, `type`, `str`). A class has none: `type_new` does not set it. -/
+def hasTypeVectorcallImpl (_ : Rt) (v : Val) : Bool :=
+  match v with
+  | .cls n =>
+    ["range", "bool", "dict", "enumerate", "filter", "float", "frozenset", "list", "int", "map",
+      "reversed", "set", "super", "tuple", "type", "str"].contains n
+  | _ => false
+
+/-- `PyGen_am_send` (`Objects/genobject.c:377-382`, the `am_send` of generators, coroutines and
+async generators) and `_PyAsyncGenASend_Send`; `none` when the type has no `am_send`. -/
+def amSendImpl (v arg : Val) : RM (Option (Val × Bool)) := do
+  match v with
+  | .ref a =>
+    match ← getObj a with
+    | .gen _ =>
+      match ← genSendExChecked ctx a (some arg) with
+      | .next r => pure (some (r, false))
+      | .ret r => pure (some (r, true))
+      | .none => fault "PYGEN_ERROR with no exception"
+    | .asend .. => some <$> asendAmSend ctx a arg
+    | _ => pure none
+  | _ => pure none
+
 /-- `_PyObject_LookupSpecialMethod`, `Objects/typeobject.c`. -/
 def lookupSpecialImpl (o : Val) (name : String) : RM (Option (Val × Val)) := do
   let tp ← typeOf o
@@ -1661,6 +1888,8 @@ def intrinsic1Impl (f : Frame) (n : Nat) (v : Val) : RM Val := do
     if v != .none then write (strOf (← om.repr ctx v) ++ "\n")
     pure .none
   | 3 => stopIterationError P f v
+  -- `_PyAsyncGenValueWrapperNew`, `Objects/genobject.c:2245-2262`
+  | 4 => alloc (.agWrapped v)
   | 5 => positiveImpl om ctx v
   | 6 =>
     match v with
@@ -1690,7 +1919,7 @@ first. `%T` is the fully qualified name (`typeFullName`: the `__qualname__` of a
 the last message has `%.100s` of `tp_name`. -/
 def awaitableIter (o : Val) : RM Val := do
   if ← isCoroutineLike P o then return o
-  match ← callDunder om ctx o "__await__" [] with
+  match ← amAwait om ctx o with
   | some r =>
     if ← isCoroutineLike P r then
       typeError s!"{← typeFullName o}.__await__() must return an iterator, not coroutine"
@@ -1703,7 +1932,7 @@ def awaitableIter (o : Val) : RM Val := do
 (no `__await__`, and not a coroutine), the `'async with'` messages of `oparg` 1 and 2 replace the
 error (`_PyErr_Format` clears it first), `%.100s` of `tp_name`. -/
 def formatAwaitableError (o : Val) (oparg : Nat) : RM Unit := do
-  if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
+  if !(← hasAmAwait (← typeOf o)) && (← genKindOf o) != some .coro then
     let t ← tpName o
     if oparg == 1 then
       typeError s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}"
@@ -1723,27 +1952,31 @@ def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
         runtimeError "coroutine is being awaited already"
   pure r
 
-/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`: `tp_as_async->am_aiter` of a class is
-`slot_am_aiter`, which looks `__aiter__` up on the type and calls it; the result's type must have
-`am_anext`. Scope limit: the builtin async iterators (`async_generator`) have no slots here, so
-`async for` over an async generator object is a `TypeError` in the model. -/
+/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`: `am_aiter` of `Py_TYPE(obj)` (`amAIter`), a `NULL`
+slot being `TypeError("'async for' requires an object with __aiter__ method, got T")`; its error
+propagates; the result's type must have `am_anext` (`hasAmANext`), else
+`TypeError("'async for' received an object from __aiter__ that does not implement __anext__: U")`. -/
 def getAIterImpl (o : Val) : RM Val := do
-  match ← callDunder om ctx o "__aiter__" [] with
+  match ← amAIter om ctx o with
   | none =>
     typeError s!"'async for' requires an object with __aiter__ method, got {trunc100 (← tpName o)}"
   | some it =>
-    if (← userLookup (← typeOf it) "__anext__").isNone then
+    if !(← hasAmANext (← typeOf it)) then
       typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {trunc100 (← tpName it)}"
     pure it
 
-/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`: `am_anext` (`slot_am_anext`: `__anext__` looked
-up on the type and called), then `_PyCoro_GetAwaitableIter` on its result, whose failure, whatever
-the exception, becomes `TypeError("'async for' received an invalid object from __anext__: T")` by
-`_PyErr_FormatFromCause` (`Python/errors.c`), which sets both `__cause__` and `__context__` of the new
-error to the old one and raises it as it is (`_PyErr_SetRaisedException`, no further chaining). The
-`PyAsyncGen_CheckExact` fast path (`:3563-3565`) is the scope limit of `getAIterImpl`. -/
+/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`: an exact async generator takes the fast path
+(`:3563-3565`), `async_gen_anext` with no awaitable check; otherwise `am_anext` (`amANext`), then
+`_PyCoro_GetAwaitableIter` on its result, whose failure, whatever the exception, becomes
+`TypeError("'async for' received an invalid object from __anext__: T")` by `_PyErr_FormatFromCause`
+(`Python/errors.c`), which sets both `__cause__` and `__context__` of the new error to the old one and
+raises it as it is (`_PyErr_SetRaisedException`, no further chaining). -/
 def getANextImpl (o : Val) : RM Val := do
-  match ← callDunder om ctx o "__anext__" [] with
+  if (← genKindOf o) == some .asyncGen then
+    match o with
+    | .ref g => return ← asyncGenAnext om ctx g
+    | _ => fault "async generator immediate"
+  match ← amANext om ctx o with
   | none =>
     typeError s!"'async for' requires an iterator with __anext__ method, got {trunc100 (← tpName o)}"
   | some n =>
@@ -1970,6 +2203,9 @@ def mkOM (P : Program) : Nat → ObjModel
       lazyImportName := fun _ _ _ _ _ _ => bad, isLazyImport := fun _ => bad, lazyImportFrom := fun _ _ _ _ => bad
       egWrap := fun _ _ => bad, matchClass := fun _ _ _ _ _ => bad, matchKeys := fun _ _ _ => bad
       isMapping := fun _ => bad, isSequence := fun _ => bad, getAIter := fun _ _ => bad
+      hasAmSend := fun _ => bad, amSend := fun _ _ _ => bad
+      cfuncOf := fun _ _ => none, methDescrOf := fun _ _ => none, mlMeth := fun _ _ _ _ => bad
+      hasTypeVectorcall := fun _ _ => false, typeVectorcall := fun _ _ _ => bad
       getANext := fun _ _ => bad, getAwaitable := fun _ _ _ => bad, dictUpdate := fun _ _ _ => bad
       dictMerge := fun _ _ _ => bad, listExtend := fun _ _ _ => bad, setUpdate := fun _ _ _ => bad
       intrinsic1 := fun _ _ _ _ => bad, intrinsic2 := fun _ _ _ _ _ => bad
@@ -2025,6 +2261,22 @@ def mkOM (P : Program) : Nat → ObjModel
       getAIter := fun ctx o => getAIterImpl om ctx o
       getANext := fun ctx o => getANextImpl P om ctx o
       getAwaitable := fun ctx o n => getAwaitableImpl P om ctx o n
+      hasAmSend := fun v => do
+        match v with
+        | .ref a =>
+          match ← getObj a with
+          | .gen _ | .asend .. => pure true
+          | _ => pure false
+        | _ => pure false
+      amSend := fun ctx v arg => do
+        match ← amSendImpl ctx v arg with
+        | some r => pure r
+        | none => fault "no am_send"
+      cfuncOf := cfuncOfImpl
+      methDescrOf := methDescrOfImpl
+      mlMeth := fun ctx f s a => mlMethImpl P om ctx f s a
+      hasTypeVectorcall := hasTypeVectorcallImpl
+      typeVectorcall := fun ctx t a => callImpl P om ctx t a []
       dictUpdate := fun ctx d o => do let _ ← dictMergeImpl om ctx 1 d o
       dictMerge := fun ctx d o => dictMergeImpl om ctx 2 d o
       listExtend := fun ctx l o => listExtendImpl om ctx l o

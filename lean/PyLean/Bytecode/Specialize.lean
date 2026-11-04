@@ -200,6 +200,7 @@ def suggestSend (i : Instr) : Tops → RM (Option Instr)
     | .ref a =>
       match ← getObj a with
       | .gen g => pure (if g.kind != .asyncGen then specInstr i .SEND_GEN else none)
+      | .asend .. => pure (specInstr i .SEND_ASYNC_GEN)
       | _ => pure none
     | _ => pure none
   | _ => pure none
@@ -375,6 +376,18 @@ def suggestCall (P : Program) (i : Instr) : Tops → RM (Option Instr)
         pure (specInstr i exact [.tagged fo.version])
       else pure (specInstr i general [.tagged fo.version])
     let _ := args
+    -- `specialize_c_call`, `Python/specialize.c:1826-1870`
+    let cCall (n : String) (fl : Nat) : RM (Option Instr) :=
+      if fl == methO then
+        if total != 1 then pure none
+        else if callable == .builtin "len" && a == 1 then pure (specInstr i .CALL_LEN)
+        else pure (specInstr i .CALL_BUILTIN_O)
+      else if fl == methFastcall then
+        if total == 2 && callable == .builtin "isinstance" && a == 2 then pure (specInstr i .CALL_ISINSTANCE)
+        else pure (specInstr i .CALL_BUILTIN_FAST)
+      else if fl == methFastcall ||| methKeywords then pure (specInstr i .CALL_BUILTIN_FAST_WITH_KEYWORDS)
+      else pure (specInstr i .CALL_NON_PY_GENERAL)
+    let _ := cCall
     match callable with
     | .cls "type" =>
       if a == 1 && selfOrNull == .null then pure (specInstr i .CALL_TYPE_1) else pure none
@@ -382,18 +395,28 @@ def suggestCall (P : Program) (i : Instr) : Tops → RM (Option Instr)
       if a == 1 && selfOrNull == .null then pure (specInstr i .CALL_STR_1) else pure none
     | .cls "tuple" =>
       if a == 1 && selfOrNull == .null then pure (specInstr i .CALL_TUPLE_1) else pure none
-    | .cls _ => pure (specInstr i .CALL_BUILTIN_CLASS)
-    | .builtin "len" =>
-      if a == 1 && selfOrNull == .null then pure (specInstr i .CALL_LEN)
-      else pure (specInstr i .CALL_BUILTIN_O)
-    | .builtin "isinstance" =>
-      if total == 2 && a == 2 then pure (specInstr i .CALL_ISINSTANCE)
-      else pure (specInstr i .CALL_BUILTIN_FAST_WITH_KEYWORDS)
-    | .builtin _ => pure (specInstr i .CALL_BUILTIN_FAST_WITH_KEYWORDS)
-    | .methDescr "list" "append" =>
-      if a == 1 && (← isList selfOrNull) then pure (specInstr i .CALL_LIST_APPEND)
-      else pure (specInstr i .CALL_METHOD_DESCRIPTOR_O)
-    | .methDescr .. => pure (specInstr i .CALL_METHOD_DESCRIPTOR_FAST)
+    | .cls n =>
+      -- `specialize_class_call`, `Python/specialize.c:1655-1680`: builtin types are immutable
+      if hasTypeVectorcallImpl {} (.cls n) then pure (specInstr i .CALL_BUILTIN_CLASS)
+      else pure (specInstr i .CALL_NON_PY_GENERAL)
+    | .builtin n => cCall n (builtinFlags n)
+    | .methDescr tp n =>
+      -- `specialize_method_descriptor`, `Python/specialize.c:1707-1751`
+      match methodFlags tp n with
+      | some fl =>
+        if fl == methNoArgs then
+          pure (if total != 1 then none else specInstr i .CALL_METHOD_DESCRIPTOR_NOARGS)
+        else if fl == methO then
+          if total != 2 then pure none
+          else if tp == "list" && n == "append" && a == 1 && (← isList selfOrNull) then
+            pure (specInstr i .CALL_LIST_APPEND)
+          else pure (specInstr i .CALL_METHOD_DESCRIPTOR_O)
+        else if fl == methFastcall then pure (specInstr i .CALL_METHOD_DESCRIPTOR_FAST)
+        else if fl == methFastcall ||| methKeywords then
+          pure (specInstr i .CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS)
+        else pure (specInstr i .CALL_NON_PY_GENERAL)
+      -- a slot wrapper or class method: not `PyMethodDescr_Type`
+      | none => pure (specInstr i .CALL_NON_PY_GENERAL)
     | .ref c =>
       match ← getObj c with
       | .func _ => pyFunc callable total .CALL_PY_EXACT_ARGS .CALL_PY_GENERAL
@@ -416,6 +439,10 @@ def suggestCall (P : Program) (i : Instr) : Tops → RM (Option Instr)
               return specInstr i .CALL_ALLOC_AND_ENTER_INIT [.tagged k.version, ini]
           pure none
         | none => pure none
+      | .boundBuiltin tp n _ =>
+        match methodFlags tp n with
+        | some fl => cCall n fl
+        | none => pure (specInstr i .CALL_NON_PY_GENERAL)
       | _ => pure (specInstr i .CALL_NON_PY_GENERAL)
     | _ => pure (specInstr i .CALL_NON_PY_GENERAL)
 

@@ -116,6 +116,27 @@ structure ObjModel where
   getAIter : Ctx → Val → RM Val
   getANext : Ctx → Val → RM Val
   getAwaitable : Ctx → Val → Nat → RM Val
+  /-- `Py_TYPE(o)->tp_as_async && Py_TYPE(o)->tp_as_async->am_send` (`Objects/abstract.c:2935`). -/
+  hasAmSend : Val → RM Bool
+  /-- `Py_TYPE(o)->tp_as_async->am_send(o, arg, &result)`: `(result, PYGEN_RETURN?)`, an exception
+  being `PYGEN_ERROR`. -/
+  amSend : Ctx → Val → Val → RM (Val × Bool)
+  /-- `PyCFunction_CheckExact(o)` (`Include/cpython/methodobject.h`): `some (ml_flags, m_self)`,
+  `PyCFunction_GET_FLAGS(o)` and `PyCFunction_GET_SELF(o)`, or `none` when `o` is not exactly a
+  `builtin_function_or_method`. A read of the object, so a function of the heap. -/
+  cfuncOf : Rt → Val → Option (Nat × Val)
+  /-- `Py_IS_TYPE(o, &PyMethodDescr_Type)`: `some (d_method->ml_flags, d_common.d_type)`. -/
+  methDescrOf : Rt → Val → Option (Nat × Val)
+  /-- `f->ml_meth` of a builtin function or method descriptor `f` called on `self` and the
+  arguments its calling convention passes (`_PyCFunction_TrampolineCall`, or the
+  `PyCFunctionFast[WithKeywords]` cast): `[]` for `METH_NOARGS` (the `NULL`), `[arg]` for `METH_O`,
+  the array for `METH_FASTCALL` and `METH_FASTCALL | METH_KEYWORDS` (with `kwnames = NULL`). An
+  arbitrary fallible callable: C code that may run Python code and raise. -/
+  mlMeth : Ctx → Val → Val → List Val → RM Val
+  /-- `PyType_Check(o) && ((PyTypeObject *)o)->tp_vectorcall != NULL`. -/
+  hasTypeVectorcall : Rt → Val → Bool
+  /-- `tp->tp_vectorcall((PyObject *)tp, args, nargs, NULL)`. -/
+  typeVectorcall : Ctx → Val → List Val → RM Val
   /-- `PyDict_Update(d, update)`, used by `DICT_UPDATE`. -/
   dictUpdate : Ctx → Val → Val → RM Unit
   /-- `_PyDict_MergeUniq(d, update, &dupkey)`, used by `DICT_MERGE`: `some k` is the `-2` return
@@ -132,6 +153,15 @@ structure ObjModel where
   /-- `_PyInterpolation_Build`, `_PyTemplate_Build`. -/
   buildInterpolation : Ctx → Val → Val → Nat → Val → RM Val
   buildTemplate : Ctx → Val → Val → RM Val
+
+/-- `METH_NOARGS`, `METH_O`, `METH_FASTCALL`, `METH_KEYWORDS`, `Include/methodobject.h:96-117`. -/
+def methNoArgs : Nat := 0x0004
+def methO : Nat := 0x0008
+def methFastcall : Nat := 0x0080
+def methKeywords : Nat := 0x0002
+
+/-- The whole runtime state, for the heap reads `ObjModel.cfuncOf` and friends. -/
+def readRt : RM Rt := fun rt => .ok rt rt
 
 /-! ## Builtin exceptions -/
 
@@ -241,6 +271,8 @@ def typeOf : Val → RM Val
     | .staticMethod _ => pure (.cls "staticmethod")
     | .classMethod _ => pure (.cls "classmethod")
     | .boundBuiltin .. => pure (.cls "builtin_function_or_method")
+    | .asend .. => pure (.cls "async_generator_asend")
+    | .agWrapped _ => pure (.cls "async_generator_wrapped_value")
   | .null => fault "Py_TYPE(NULL)"
   | .tagged _ => fault "Py_TYPE(tagged int)"
   | v =>

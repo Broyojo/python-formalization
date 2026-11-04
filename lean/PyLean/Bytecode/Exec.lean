@@ -137,7 +137,7 @@ def execOp (e : Env) : Op → M Unit
   | .SEND => SEND e
   | .SEND_GEN => withDeopt (SEND_GEN e) (SEND e)
   | .SEND_VIRTUAL => withDeopt (SEND_VIRTUAL e) (SEND e)
-  | .SEND_ASYNC_GEN => withDeopt SEND_ASYNC_GEN (SEND e)
+  | .SEND_ASYNC_GEN => withDeopt (SEND_ASYNC_GEN e) (SEND e)
   | .YIELD_VALUE => YIELD_VALUE e
   | .INSTRUMENTED_YIELD_VALUE => INSTRUMENTED_YIELD_VALUE e
   | .POP_EXCEPT => POP_EXCEPT
