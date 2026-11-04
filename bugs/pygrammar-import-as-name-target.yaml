@@ -35,7 +35,10 @@ maybe_intended: |
   `import a b c` falls back to the generic error. The PR is open, labelled "awaiting changes"
   and "stale" (no activity for 90 days). An earlier version of this record said the upstream
   fix missed `else`, `=` and `:`. That was wrong: it read only the sketch in the issue, not the
-  PR diff.
+  PR diff. One case the PR's rule still reaches, found while smoke-testing on 3.15.2:
+  `import a as (b)\n` also says "cannot use name as import target". `(` is not a NAME, so the
+  lookahead passes, `expression` parses `(b)` as the Name `b`, and NEWLINE follows. The error
+  there is the parentheses, not the name.
 reproducer: |
   def msg(src):
       try:
