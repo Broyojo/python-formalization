@@ -1,7 +1,7 @@
 id: corelibs-suppress-group-virtual-subclass
 title: "contextlib.suppress honours __subclasscheck__ for a bare exception but not inside an ExceptionGroup"
 priority: P4
-kind: inconsistency
+kind: sibling-mismatch
 module: corelibs
 files: [Lib/contextlib.py, Objects/exceptions.c]
 functions: ["suppress.__exit__"]
