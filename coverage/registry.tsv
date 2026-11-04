@@ -2007,7 +2007,8 @@ typeobj-slot-sq-contains-exact	proven	Objects/typeobject.c	slot_sq_contains
 typeobj-slot-tp-init-exact	proven	Objects/typeobject.c	slot_tp_init
 typeobj-slot-tp-iter-exact	proven	Objects/typeobject.c	slot_tp_iter,has_dunder_getitem
 typeobj-slot-sq-length-exact	proven	Objects/typeobject.c	slot_sq_length
-typeobj-slot-nb-index-exact	proven	Objects/typeobject.c	slot_nb_index,vectorcall_method
+typeobj-vectorcall-method-exact	proven	Objects/typeobject.c	vectorcall_method,vectorcall_unbound
+typeobj-slot-nb-index-exact	proven	Objects/typeobject.c	slot_nb_index
 typeobj-method-is-overloaded-exact	proven	Objects/typeobject.c	method_is_overloaded
 typeobj-wrap-binary-exact	proven	Objects/typeobject.c	wrap_binaryfunc_l,wrap_binaryfunc_r
 typeobj-type-call-exact	proven	Objects/typeobject.c	type_call
@@ -2030,6 +2031,7 @@ typeobj-find-name-in-mro-exact	proven	Objects/typeobject.c	find_name_in_mro
 typeobj-call-attribute-exact	proven	Objects/typeobject.c	call_attribute
 typeobj-getattr-hook-exact	proven	Objects/typeobject.c	_Py_slot_tp_getattr_hook
 typeobj-do-super-lookup-exact	proven	Objects/typeobject.c	do_super_lookup
+typeobj-py-super-lookup-exact	proven	Objects/typeobject.c	_PySuper_Lookup
 typeobj-super-getattro-exact	proven	Objects/typeobject.c	super_getattro
 typeobj-supercheck-exact	proven	Objects/typeobject.c	supercheck
 typeobj-type-getattro-exact	proven	Objects/typeobject.c	_Py_type_getattro_stackref,_Py_type_getattro_impl

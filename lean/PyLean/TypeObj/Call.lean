@@ -379,8 +379,13 @@ def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   match x, e, er with
   | none, _, _ => boxValue t B.str (.str "")
   | some o, none, none =>
-    let s ← rt.str o
-    boxValue t B.str (.str s)
+    -- `unicode_new_impl`, `Objects/unicodeobject.c:13902-13912`: `str(x)` is `PyObject_Str(x)`
+    -- itself, so a `str` subclass instance from `__str__` comes back as it is; a subclass of
+    -- `str` gets a copy of the text (`unicode_subtype_new`).
+    if t == B.str then pyStrObj rt o
+    else
+      let s ← rt.str o
+      boxValue t B.str (.str s)
   | some o, _, _ =>
     match strOf w o with
     | some _ => typeErr "decoding str is not supported"

@@ -2452,12 +2452,119 @@ def fam_exact(g):
         g.probes(["setattr", name("oa"), "__class__", name("A")])
         g.probe(call(name("type"), name("oa")))
 
+def fam_exact3(g):
+    """The re-reviewed typeobject.c rows: set_mro_error's names (non-str, NUL, str subclass,
+    raising, AttributeError, long), find_best_base's first failure, object.__ne__'s slot,
+    object.__format__ with a str subclass from __str__, the getstate slot-name message,
+    __bases__ assignment layouts and __class__ assignment on a class."""
+    r = g.rng
+    k = r.randrange(6)
+    if k == 0:
+        cls(g, "S", ["str"], None)
+        cls(g, "R", (), [g.method("__get__", "R.__get__", ["s", "o", "t"],
+                                  [["log", "R.__get__"],
+                                   ["raise", call(name(r.choice(["ValueError", "AttributeError", "KeyError"])), lit("nm"))]])])
+        cls(g, "M", ["type"], [g.method("_nm", "M._nm", ["cls"],
+                                        [["log", "M._nm"], ["ret", attr(name("cls"), "nm")]]),
+                               ["assign", "__name__", call(name("property"), name("_nm"))]])
+        def nmval():
+            c = r.randrange(9)
+            if c == 0:
+                return lit(42)
+            if c == 1:
+                return lit("a\u0000b")
+            if c == 2:
+                return call(name("S"), lit("sub"))
+            if c == 3:
+                return call(name("R"))
+            if c == 4:
+                return lit(r.choice(["N", "Q", "x"]) * r.choice([300, 470, 480, 600, 999]))
+            if c == 5:
+                return lit("é" * r.choice([10, 100, 200]))
+            if c == 6:
+                return NONE
+            return lit(r.choice(["X", "Y", "Zed", ""]))
+        cls(g, "X", (), [["assign", "nm", nmval()]], kw=[["metaclass", name("M")]])
+        cls(g, "Y", ["X"], [["assign", "nm", nmval()]])
+        cls(g, "Z", (), [["assign", "nm", nmval()]], kw=[["metaclass", name("M")]])
+        cls(g, "W", ["Z", "X"], [["assign", "nm", nmval()]])
+        bases = r.choice([["X", "Y"], ["Y", "X", "X"], ["Z", "W", "X"], ["X", "W"], ["Z", "X", "W"],
+                          ["W", "Z", "Y", "X"]])
+        cls(g, "C", bases)
+        g.probe(call(name("type"), lit("C2"), ["tuple", [name(b) for b in bases]], ["dict", []]))
+    elif k == 1:
+        cls(g, "P", ())
+        cls(g, "I", ["int"])
+        cls(g, "Sl", (), [["assign", "__slots__", ["tuple", [lit("a")]]]])
+        pool = [name("int"), name("str"), name("bool"), name("list"), name("dict"), name("tuple"),
+                name("P"), name("I"), name("Sl"), name("object"), call(name("object")), lit(1),
+                name("type"), name("BaseException"), name("float")]
+        for _ in range(r.randrange(2, 6)):
+            bs = [r.choice(pool) for _ in range(r.randrange(1, 5))]
+            g.probe(attr(call(name("type"), lit("C"), ["tuple", bs], ["dict", []]), "__base__"))
+    elif k == 2:
+        ret = r.choice([lit(True), lit(False), NOTIMPL, lit(0), lit(""), lit("s"), None])
+        body = [["log", "E.__eq__"]]
+        body.append(["raise", call(name("ValueError"), lit("eq"))] if ret is None else ["ret", ret])
+        cls(g, "E", (), [g.method("__eq__", "E.__eq__", ["s", "o"], body)])
+        cls(g, "F", ())
+        cls(g, "G", ["E"], [["assign", "__eq__", attr(name("object"), "__eq__")]])
+        for x, y in [("E", "F"), ("F", "E"), ("E", "E"), ("G", "E"), ("E", "G"), ("F", "F")]:
+            g.probe(call(attr(name("object"), "__ne__"), call(name(x)), call(name(y))))
+            g.probe(["cmp", "!=", call(name(x)), call(name(y))])
+    elif k == 3:
+        cls(g, "S", ["str"], None)
+        ret = r.choice([call(name("S"), lit("a")), lit("b"), lit(1), call(name("S"), lit("")), None])
+        body = [["log", "Z.__str__"]]
+        body.append(["raise", call(name("ValueError"), lit("st"))] if ret is None else ["ret", ret])
+        cls(g, "Z", (), [g.method("__str__", "Z.__str__", ["s"], body)])
+        for spec in [lit(""), lit("x"), call(name("S"), lit(""))]:
+            g.probe(call(attr(name("object"), "__format__"), call(name("Z")), spec))
+        g.probe(call(name("format"), call(name("Z")), lit("")))
+        g.probe(call(name("format"), call(name("Z"))))
+        g.probe(call(name("str"), call(name("Z"))))
+        g.probe(call(name("type"), call(attr(name("object"), "__format__"), call(name("Z")), lit(""))))
+    elif k == 4:
+        ln = r.choice(["L" * 250, "L" * 199, "é" * 120, "Lq"])
+        cls(g, ln, ())
+        cls(g, "A", (), [["assign", "__slots__", ["tuple", [lit("a"), lit("b")]]]])
+        g.main.append(["assign", "a", call(name("A"))])
+        g.probes(["setattr", name("a"), "a", lit(1)])
+        g.probes(["setattr", name("A"), "__slotnames__",
+                  ["list", r.choice([[lit("a"), call(name(ln))], [call(name(ln))], [lit("b"), lit("a")],
+                                     [lit("zz"), lit("a")], [lit(5)]])]])
+        g.probe(call(attr(name("a"), "__getstate__")))
+        g.probe(call(attr(name("a"), "__reduce_ex__"), lit(2)))
+    else:
+        spec = {"B1": ((), None), "B2": ((), None), "SB": ((), ("z",)), "SB2": ((), ("z",)),
+                "WD": ((), ("__weakref__",)), "DD": ((), ("__dict__",)), "LD": (("list",), None),
+                "E0": ((), ())}
+        for n, (bases, slots) in spec.items():
+            body = []
+            if slots is not None:
+                body.append(["assign", "__slots__", ["tuple", [lit(x) for x in slots]]])
+            cls(g, n, bases, body)
+        cls(g, "D", [r.choice(list(spec))])
+        pool = list(spec) + ["list", "object", "int"]
+        for _ in range(r.randrange(2, 6)):
+            nb = [name(r.choice(pool)) for _ in range(r.randrange(1, 3))]
+            g.probes(["setattr", name("D"), "__bases__", ["tuple", nb]])
+            g.probe(attr(name("D"), "__mro__"))
+        cls(g, "MA", ["type"])
+        cls(g, "MB", ["type"])
+        cls(g, "MS", ["type"], [["assign", "__slots__", ["tuple", [lit("q")]]]])
+        cls(g, "CC", (), None, kw=[["metaclass", name("MA")]])
+        for _ in range(r.randrange(1, 4)):
+            g.probes(["setattr", name("CC"), "__class__", name(r.choice(["MA", "MB", "MS", "type", "object", "D"]))])
+            g.probe(call(name("type"), name("CC")))
+            g.probe(attr(name("CC"), "__mro__"))
+
 
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
             fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs, fam_float, fam_methods,
-            fam_funcattrs, fam_repin, fam_exact, fam_exact, fam_exact]
+            fam_funcattrs, fam_repin, fam_exact, fam_exact, fam_exact, fam_exact3, fam_exact3]
 
 
 def gen_case(rng):
