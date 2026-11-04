@@ -1603,6 +1603,16 @@ bytesobj-memoryview-key-failures	proven	Objects/memoryobject.c	memory_subscript,
 bytesobj-memoryview-tuple-failures	proven	Objects/memoryobject.c	ptr_from_tuple
 bytesobj-memoryview-buffer-failures	proven	Objects/memoryobject.c	memoryview_impl,PyMemoryView_FromObject,PyMemoryView_FromObjectAndFlags,memoryview__from_flags_impl,_PyManagedBuffer_FromObject
 bytesobj-memoryview-format-native	proven	Objects/memoryobject.c	get_native_fmtchar,get_native_fmtstr,memoryview_cast_impl
+bytesobj-memoryview-fmtchar-table	proven	Objects/memoryobject.c	get_native_fmtchar
+bytesobj-memoryview-fmtstr-table	proven	Objects/memoryobject.c	get_native_fmtstr
+bytesobj-memoryview-cast-keeps-format	proven	Objects/memoryobject.c	get_native_fmtstr,cast_to_1D,memoryview_cast_impl
+bytesobj-memoryview-unpack-formats	proven	Objects/memoryobject.c	unpack_single
+bytesobj-memoryview-item-unsupported	proven	Objects/memoryobject.c	memory_item,unpack_single
+bytesobj-memoryview-pack-unsupported	proven	Objects/memoryobject.c	pack_single,memory_ass_sub
+bytesobj-memoryview-pack-item-releases	proven	Objects/memoryobject.c	pack_single,pylong_as_ld,pylong_as_lu,pylong_as_lld,pylong_as_llu,pylong_as_zd,pylong_as_zu,fix_error_int,value_error_int
+bytesobj-memoryview-pack-complex-failures	proven	Objects/memoryobject.c	pack_single,fix_error_int,type_error_int
+bytesobj-memoryview-ass-sub-keys	proven	Objects/memoryobject.c	memory_ass_sub
+bytesobj-memoryview-cmp-no-buffer	proven	Objects/memoryobject.c	memory_richcompare
 bytesobj-memoryview-cast-format-embedded-nul	refuted	Objects/memoryobject.c	cast_to_1D,get_native_fmtchar,get_native_fmtstr
 bytesobj-memoryview-cast-1d	proven	Objects/memoryobject.c	memoryview_cast_impl,cast_to_1D,mbuf_add_incomplete_view,memory_alloc,init_shared_values,zero_in_shape
 bytesobj-memoryview-cast-nd	proven	Objects/memoryobject.c	cast_to_ND,copy_shape,init_strides_from_shape,init_flags
@@ -1661,7 +1671,7 @@ bytesobj-memoryview-mbuf-release	proven	Objects/memoryobject.c	mbuf_release,mbuf
 bytesobj-memoryview-hex-holds-export	proven	Objects/memoryobject.c	memoryview_hex_impl
 bytesobj-memoryview-hash-holds-export	proven	Objects/memoryobject.c	memory_hash
 bytesobj-memoryview-compare-releases	proven	Objects/memoryobject.c	memory_richcompare
-bytesobj-memoryview-eq-failures	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl
+bytesobj-memoryview-eq-failures	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl,memoryiter_next
 bytesobj-memoryview-slice-tolist	proven	Objects/memoryobject.c	memory_subscript,init_slice,init_len
 bytesobj-memoryview-tuple-refusals	proven	Objects/memoryobject.c	ptr_from_tuple,memory_item_multi,lookup_dimension
 bytesobj-memoryview-zero-dim	proven	Objects/memoryobject.c	memoryview_tolist_impl,memory_subscript
