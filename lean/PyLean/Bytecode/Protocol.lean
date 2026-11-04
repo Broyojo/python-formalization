@@ -22,7 +22,7 @@ def methodNames : String → List String
                "clear", "copy"]
   | "dict" => ["get", "keys", "values", "items", "pop", "setdefault", "update", "clear", "copy"]
   | "str" => ["join", "upper", "lower", "strip", "split", "replace", "startswith", "endswith",
-              "find", "isdigit"]
+              "find", "isdigit", "__eq__", "__ne__"]
   | "tuple" => ["index", "count"]
   | "set" => ["add", "remove", "discard", "pop", "union", "intersection", "clear", "copy"]
   | "frozenset" => ["union", "intersection", "copy"]

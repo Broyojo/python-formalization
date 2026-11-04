@@ -1192,6 +1192,15 @@ def callMethod (tp name : String) (self0 : Val) (args : List Val) (kw : List Str
     let d ← mkDict
     om.dictUpdate ctx d self
     pure d
+  | "str", "__eq__" | "str", "__ne__" =>
+    -- the slot wrapper of `unicode_richcompare` (`Objects/unicodeobject.c`): `NotImplemented`
+    -- unless both operands pass `PyUnicode_Check`, else the comparison of the text
+    match args with
+    | [o] =>
+      match self, ← payload o with
+      | .str a, .str b => pure (.bool (if name == "__eq__" then a == b else a != b))
+      | _, _ => pure .notImpl
+    | _ => typeError s!"expected 1 argument, got {args.length}"
   | "str", _ =>
     let s := match self with
       | .str x => x
