@@ -7,7 +7,7 @@ Grammar/python.gram	97	97	rule:statements	statements[asdl_stmt_seq*]: a=statemen
 Grammar/python.gram	99	99	rule:statement	statement[asdl_stmt_seq*]:	modelled	pygrammar-rule-statement	
 Grammar/python.gram	105	105	rule:single_compound_stmt	single_compound_stmt[asdl_stmt_seq*]:	modelled	pygrammar-rule-single-compound-stmt	
 Grammar/python.gram	109	109	rule:statement_newline	statement_newline[asdl_stmt_seq*]:	modelled	pygrammar-rule-statement-newline	
-Grammar/python.gram	115	115	rule:simple_stmts	simple_stmts[asdl_stmt_seq*]:	modelled	pygrammar-rule-simple-stmts	
+Grammar/python.gram	115	115	rule:simple_stmts	simple_stmts[asdl_stmt_seq*]:	todo		review: SimpleStmts (Peg/Rules/SpecPos.lean:69) pins both alternatives of r8 and the !';' lookahead, but the gather ';'.simple_stmt+ (_gather_4, r281, and its loop _loop0_3, r280) is left as an unpinned callRule (the entry's own stated limit: GatherSep only covers ','), so a gather with ',' or any other separator, or one that stops after one statement, satisfies the statement; the main multi-statement alternative's behaviour is not pinned.
 Grammar/python.gram	121	121	rule:simple_stmt	simple_stmt[stmt_ty] (memo):	modelled	pygrammar-rule-simple-stmt-more,pygrammar-rule-simple-stmt	
 Grammar/python.gram	137	137	rule:compound_stmt	compound_stmt[stmt_ty]:	modelled	pygrammar-rule-compound-stmt-more,pygrammar-rule-compound-stmt	
 Grammar/python.gram	151	151	rule:assignment	assignment[stmt_ty]:	modelled	pygrammar-rule-assignment-more,pygrammar-rule-assignment-aug,pygrammar-rule-assignment-ann-plain,pygrammar-rule-assignment-invalid	
