@@ -48,6 +48,8 @@ import PyLean.Datetime.CalendarCProps
 import PyLean.Datetime.IsoDateCProps
 import PyLean.Datetime.SubclassCtor
 import PyLean.Datetime.IsoformatCProps
+import PyLean.Datetime.FromtimestampProps
+import PyLean.Datetime.StrptimeImpl
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -424,7 +426,7 @@ def entries : List Entry := [
     source := "date.__format__ docs; C/Python twins", status := .proven
     prop := ``DateFormat, thm := some ``dateFormat_proven },
   { id := "datetime-date-strptime", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.strptime", "C datetime_date_strptime_impl"]
+    pyFns := ["date.strptime"]
     statement := "For every parse, date.strptime(s, fmt) is date(*(time.strptime(s, fmt)[0:3])) through the date constructor, exceptions included; for a parse with a valid date, no offset and second 60 or 61 it returns the date while datetime.strptime raises ValueError; and '2024 1 2 60' with %Y %m %d %S is such a parse."
     source := "date.strptime docs; _strptime_datetime_date", status := .proven
     prop := ``DateStrptime, thm := some ``dateStrptime_proven },
@@ -502,7 +504,7 @@ def entries : List Entry := [
     source := "date.fromordinal docs (ValueError unless 1 <= ordinal <= date.max.toordinal())", status := .proven
     prop := ``FromordinalRange, thm := some ``fromordinalRange_proven },
   { id := "datetime-date-fromtimestamp", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromtimestamp", "C date_fromtimestamp"]
+    pyFns := ["date.fromtimestamp", "C date_fromtimestamp", "C datetime_date_fromtimestamp_impl"]
     statement := "For every clock and argument, date.fromtimestamp(None) raises TypeError in both twins without consulting the clock, and otherwise both return the checked localtime date of the same time_t."
     source := "date.fromtimestamp docs; C/Python twins", status := .proven
     prop := ``DateFromtimestamp, thm := some ``dateFromtimestamp_proven
@@ -662,7 +664,7 @@ def entries : List Entry := [
     source := "invariant", status := .proven
     prop := ``UtcToSeconds, thm := some ``utcToSeconds_proven },
   { id := "datetime-packed-accessors", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.year", "date.month", "date.day", "time.hour", "time.minute", "time.second", "time.microsecond", "datetime.hour", "datetime.minute", "datetime.second", "datetime.microsecond", "C date_year", "C date_month", "C date_day", "C time_hour", "C time_minute", "C py_time_second", "C time_microsecond", "C datetime_hour", "C datetime_minute", "C datetime_second", "C datetime_microsecond", "C set_date_fields"]
+    pyFns := ["date.year", "date.month", "date.day", "time.hour", "time.minute", "time.second", "time.microsecond", "datetime.hour", "datetime.minute", "datetime.second", "datetime.microsecond", "C date_year", "C time_hour", "C time_minute", "C py_time_second", "C time_microsecond", "C datetime_hour", "C datetime_minute", "C datetime_second", "C datetime_microsecond", "C set_date_fields"]
     statement := "For every valid object, each C accessor reads back from the packed bytes the field the Python class keeps as an attribute."
     source := "C/Python twins", status := .proven
     prop := ``PackedAccessors, thm := some ``packedAccessors_proven },
@@ -692,7 +694,7 @@ def entries : List Entry := [
     source := "no internal error leaking", status := .proven
     prop := ``StrptimeCompileErrors, thm := some ``strptimeCompileErrors_proven },
   { id := "strptime-methods", pyFile := "Lib/_strptime.py"
-    pyFns := ["_strptime", "_strptime_datetime_date", "_strptime_datetime_time", "_strptime_datetime_datetime", "_parse_tz", "C datetime_date_strptime_impl", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
+    pyFns := ["_strptime", "_strptime_datetime_date", "_strptime_datetime_time", "_strptime_datetime_datetime", "_parse_tz", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "When datetime.strptime succeeds, date.strptime gives its date and time.strptime its time and tzinfo, for the same match."
     source := "method vs equivalent method", status := .proven
     prop := ``StrptimeMethods, thm := some ``strptimeMethods_proven },
@@ -1328,7 +1330,8 @@ def entries : List Entry := [
     pyFns := ["time.strptime", "datetime.strptime", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "time.strptime and datetime.strptime for every parse: a _strptime exception propagates; without an offset they are the naive time/datetime of the parsed fields through the constructor; with one they attach _parse_tz's timezone; and '%H:%M' on 12:30 is time(12, 30), '%Y %m %d %H %M' on 2024 1 2 12 30 is datetime(2024, 1, 2, 12, 30)."
     source := "time.strptime/datetime.strptime docs", status := .proven
-    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven },
+    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven
+    notes := "Scope: the class and _strptime's datetime module are one implementation (Lib/datetime.py's setup); a _pydatetime class with the C _strptime refuses a parsed offset, datetime-strptime-class-impl." },
   { id := "datetime-datetime-fromiso-body", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.fromisoformat", "_find_isoformat_datetime_separator", "_parse_isoformat_date", "_parse_isoformat_time"]
     statement := "datetime.fromisoformat(s) for every string, by its parsers' results: short strings and refused date parts are 'Invalid isoformat string'; no time part is midnight of the date; a time-part ValueError is 'Invalid isoformat string', error_from_tz is raised, hour 24 with other fields is the hour-24 ValueError, and 24:00 on a valid date other than 9999-12-31 is midnight of the next day (ordinal + 1, a valid date)."
@@ -1497,7 +1500,28 @@ def entries : List Entry := [
     pyFns := ["C append_keyword_fold"]
     statement := "C append_keyword_fold (', fold=%d)') and Python's s[:-1] + ', fold=1)' agree for folds 0 and 1: no change for 0, ', fold=1)' for 1."
     source := "C/Python twins", status := .proven
-    prop := ``AppendFoldTwins, thm := some ``appendFoldTwins_proven }
+    prop := ``AppendFoldTwins, thm := some ``appendFoldTwins_proven },
+  { id := "datetime-timestamp-conversion", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_fromtimestamp", "C datetime_date_fromtimestamp_impl", "date.fromtimestamp"]
+    statement := "date.fromtimestamp(t) in both twins: an int outside the 64-bit time_t range is OverflowError (an int inside it goes to localtime as is), a NaN ValueError, an infinity OverflowError, a str TypeError."
+    source := "_PyTime_ObjectToTime_t (Python/pytime.c:484-520); messages checked on CPython 3.15.2", status := .proven
+    prop := ``TimestampConversion, thm := some ``timestampConversion_proven },
+  { id := "datetime-timestamp-floor", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_fromtimestamp"]
+    statement := "For a finite float t, date.fromtimestamp(t) uses floor(t) when it lies in [-2**63, 2**63) and raises OverflowError otherwise, in both twins."
+    source := "date.fromtimestamp docs; _PyTime_ObjectToTime_t with _PyTime_ROUND_FLOOR", status := .open
+    prop := ``TimestampConversion
+    notes := "Needs F64.floor's value (ofIntS of floorInt) and the comparison of ofInt(+-2**63) with it through toRat; the model (objectToTimeT) has the branch." },
+  { id := "datetime-date-strptime-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_date_strptime_impl", "date.strptime", "_strptime_datetime_date"]
+    statement := "date.strptime in both twins passes its class to _strptime_datetime_date: for date the checked parsed date, a subclass is called with the parsed year, month and day, and a parse error propagates."
+    source := "C/Python twins", status := .proven
+    prop := ``DateStrptimeCls, thm := some ``dateStrptimeCls_proven },
+  { id := "datetime-strptime-class-impl", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.strptime", "datetime.strptime", "_strptime_datetime_time", "_strptime_datetime_datetime", "_check_tzinfo_arg"]
+    statement := "time.strptime and datetime.strptime give the StrptimeTimeDatetime results when the class and _strptime's datetime module are one implementation; when they differ (a _pydatetime class with the C _strptime), a parsed %z offset is TypeError from the class's tzinfo check and a format without %z gives the same value."
+    source := "Lib/datetime.py:7-10 and _strptime.py:22-24 (configuration); _check_tzinfo_arg", status := .proven
+    prop := ``StrptimeClassImpl, thm := some ``strptimeClassImpl_proven }
 ]
 
 end PyLean.Datetime
