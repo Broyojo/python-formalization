@@ -203,6 +203,20 @@ CREDIT = {
     "pygrammar-rule-lambda-params": {GRAM: ["rule:lambda_params"]},
     "pygrammar-rule-star-named-expression-sequence": {
         GRAM: ["rule:star_named_expression_sequence"]},
+    "pygrammar-rule-star-named-expressions": {GRAM: ["rule:star_named_expressions"]},
+    "pygrammar-rule-star-named-expressions-sequence": {
+        GRAM: ["rule:star_named_expressions_sequence"]},
+    "pygrammar-rule-double-starred-kvpairs": {GRAM: ["rule:double_starred_kvpairs"]},
+    "pygrammar-rule-kvpair": {GRAM: ["rule:kvpair"]},
+    "pygrammar-rule-double-starred-kvpair": {GRAM: ["rule:double_starred_kvpair"]},
+    "pygrammar-rule-dict": {GRAM: ["rule:dict"]},
+    "pygrammar-rule-listcomp": {GRAM: ["rule:listcomp"]},
+    "pygrammar-rule-setcomp": {GRAM: ["rule:setcomp"]},
+    "pygrammar-rule-genexp": {GRAM: ["rule:genexp"]},
+    "pygrammar-rule-dictcomp": {GRAM: ["rule:dictcomp"]},
+    "pygrammar-rule-for-if-clauses": {GRAM: ["rule:for_if_clauses"]},
+    "pygrammar-rule-for-if-clause": {GRAM: ["rule:for_if_clause"]},
+    "pygrammar-rule-expressions": {GRAM: ["rule:expressions"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],

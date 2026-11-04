@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Invalid2
+import PyLean.PyGrammar.Peg.Rules.Comps2
 
 /-! Registry entries for the parameter rules (`Peg/Rules/Params*.lean`) and `invalid_group`
 (`Peg/Rules/Invalid2.lean`), in the scheme of `Entries.lean`. -/
@@ -282,6 +282,151 @@ def paramEntries : List Entry := [
     prop := ``StarNamedExpressionSequenceRule
     thm := some ``starNamedExpressionSequenceRule_proven
     notes := scheme ++ " InvOr 117 267 116, the statement params uses." }
+]
+
+def compEntries : List Entry := [
+  { id := "pygrammar-rule-star-named-expressions"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_named_expressions
+    statement := "star_named_expressions: ','.star_named_expression+ [','] gives the gather's " ++
+      "sequence (a trailing ',' read and dropped); no element NULL with the mark back; the gather " ++
+      "_gather_58 by induction (every element in order, a trailing ',' left unread by the loop)."
+    source := "Grammar/python.gram:741"
+    status := .proven
+    prop := ``StarNamedExpressionsRule
+    thm := some ``starNamedExpressionsRule_proven
+    notes := scheme ++ " GatherOptComma 114 335 and GatherSep." },
+  { id := "pygrammar-rule-star-named-expressions-sequence"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_named_expressions_sequence
+    statement := "star_named_expressions_sequence (3.15): as star_named_expressions over " ++
+      "star_named_expression_sequence (_gather_60)."
+    source := "Grammar/python.gram:743"
+    status := .proven
+    prop := ``StarNamedExpressionsSequenceRule
+    thm := some ``starNamedExpressionsSequenceRule_proven
+    notes := scheme ++ " GatherOptComma 115 337 and GatherSep." },
+  { id := "pygrammar-rule-double-starred-kvpairs"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_double_starred_kvpairs
+    statement := "double_starred_kvpairs: ','.double_starred_kvpair+ [','] gives the gather's " ++
+      "sequence; no pair NULL with the mark back; the gather _gather_86 by induction."
+    source := "Grammar/python.gram:1036"
+    status := .proven
+    prop := ``DoubleStarredKvpairsRule
+    thm := some ``doubleStarredKvpairsRule_proven
+    notes := scheme ++ " GatherOptComma 178 363 and GatherSep." },
+  { id := "pygrammar-rule-kvpair"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_kvpair
+    statement := "kvpair: expression ':' expression gives the KeyValuePair record (key, value); " ++
+      "a missing key, ':' or value gives NULL with the mark back."
+    source := "Grammar/python.gram:1042"
+    status := .proven
+    prop := ``Kvpair
+    thm := some ``kvpair_proven
+    notes := scheme },
+  { id := "pygrammar-rule-double-starred-kvpair"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_double_starred_kvpair
+    statement := "double_starred_kvpair: '**' bitwise_or gives the record (NULL, value); once " ++
+      "that fails, kvpair from the start mark."
+    source := "Grammar/python.gram:1038-1040"
+    status := .proven
+    prop := ``DoubleStarredKvpair
+    thm := some ``doubleStarredKvpair_proven
+    notes := scheme },
+  { id := "pygrammar-rule-dict"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dict
+    statement := "dict: '{' [double_starred_kvpairs] '}' gives Dict(keys, values) (NULL keys for " ++
+      "'**' items, {} empty); once that fails, '{' invalid_double_starred_kvpairs '}' from the " ++
+      "start mark (not guarded by call_invalid_rules, so it runs in the first pass) gives the " ++
+      "dummy name; another token NULL with the mark back."
+    source := "Grammar/python.gram:1028-1034"
+    status := .proven
+    prop := ``DictRule
+    thm := some ``dictRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-listcomp"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_listcomp
+    statement := "listcomp: '[' star_named_expression for_if_clauses ']' gives ListComp(elt, " ++
+      "generators); once that fails, NULL with the mark back in the first pass; in the second an " ++
+      "error already set gives NULL, otherwise invalid_comprehension from the start mark."
+    source := "Grammar/python.gram:1058-1060"
+    status := .proven
+    prop := ``ListcompRule
+    thm := some ``listcompRule_proven
+    notes := scheme ++ " CompRule 183 9 116 10 ListComp; one statement for listcomp, setcomp, " ++
+      "genexp, each proven against its rule's data." },
+  { id := "pygrammar-rule-setcomp"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_setcomp
+    statement := "setcomp: as listcomp with '{' '}' and SetComp."
+    source := "Grammar/python.gram:1062-1064"
+    status := .proven
+    prop := ``SetcompRule
+    thm := some ``setcompRule_proven
+    notes := scheme ++ " CompRule 184 25 116 26 SetComp." },
+  { id := "pygrammar-rule-genexp"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_genexp
+    statement := "genexp: as listcomp with '(' ')' and GeneratorExp, the element " ++
+      "_tmp_89 = assignment_expression | expression !':=' | starred_expression (so '*' takes any " ++
+      "expression here, as in a call argument)."
+    source := "Grammar/python.gram:1066-1068"
+    status := .proven
+    prop := ``GenexpRule
+    thm := some ``genexpRule_proven
+    notes := scheme ++ " CompRule 185 7 366 8 GeneratorExp and Tmp89." },
+  { id := "pygrammar-rule-dictcomp"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dictcomp
+    statement := "dictcomp: '{' kvpair for_if_clauses '}' gives DictComp(key, value, generators) " ++
+      "from the pair; once that fails, '{' '**' expression for_if_clauses '}' from the start mark " ++
+      "gives DictComp(a, NULL, generators); otherwise NULL with the mark back."
+    source := "Grammar/python.gram:1070-1072"
+    status := .proven
+    prop := ``Dictcomp
+    thm := some ``dictcomp_proven
+    notes := scheme },
+  { id := "pygrammar-rule-for-if-clauses"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_for_if_clauses
+    statement := "for_if_clauses: the for_if_clause+ loop's sequence; no clause NULL with the mark " ++
+      "back; the loop _loop1_87 by induction."
+    source := "Grammar/python.gram:1047-1048"
+    status := .proven
+    prop := ``ForIfClausesRule
+    thm := some ``forIfClausesRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-for-if-clause"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_for_if_clause
+    statement := "for_if_clause: 'async' 'for' star_targets 'in' ~ disjunction ('if' " ++
+      "disjunction)* gives comprehension(target, iter, ifs, 1) behind CHECK_VERSION 6 (\"Async " ++
+      "comprehensions are only supported in Python 3.6 and greater\"); a failure after the cut " ++
+      "ends the rule with NULL; then the same without 'async' gives comprehension(..., 0), same " ++
+      "cut; once both fail before their cuts, NULL in the first pass, invalid_for_if_clause then " ++
+      "invalid_for_target in the second; the 'if' loop and its group stated with it."
+    source := "Grammar/python.gram:1050-1056"
+    status := .proven
+    prop := ``ForIfClauseRule
+    thm := some ``forIfClauseRule_proven
+    notes := scheme ++ " The pass flag of the second invalid_ alternative is read from the state " ++
+      "the first left." },
+  { id := "pygrammar-rule-expressions"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_expressions
+    statement := "expressions: expression (',' expression)+ [','] gives Tuple([a] + rest, Load); " ++
+      "once that fails, expression ',' gives Tuple([a], Load); then expression alone; otherwise " ++
+      "NULL with the mark back; the + loop _loop1_55 and its group stated with it."
+    source := "Grammar/python.gram:710-714"
+    status := .proven
+    prop := ``ExpressionsRuleFull
+    thm := some ``expressionsRuleFull_proven
+    notes := scheme }
 ]
 
 end PyLean.PyGrammar.Peg

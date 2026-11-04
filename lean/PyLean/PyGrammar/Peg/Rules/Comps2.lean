@@ -364,4 +364,10 @@ def ExpressionsRuleFull : Prop := ExpressionsRule ∧ Loop1Over 332 293 ∧ TokT
 theorem expressionsRuleFull_proven : ExpressionsRuleFull :=
   ⟨expressionsRule_proven, loop1Over_of rfl, tokThen_of rfl⟩
 
+
+def ListcompRule : Prop := CompRule 183 9 116 10 .ListComp
+theorem listcompRule_proven : ListcompRule := listcomp_proven
+def SetcompRule : Prop := CompRule 184 25 116 26 .SetComp
+theorem setcompRule_proven : SetcompRule := setcomp_proven
+
 end PyLean.PyGrammar.Peg
