@@ -9,7 +9,7 @@ summary: |
   With `tz=None`, `_pydatetime`'s `datetime.astimezone` computes the target zone first,
   `tz = self._local_timezone()` (Lib/_pydatetime.py:2138-2139), from `self` as it is. C's
   `datetime_datetime_astimezone_impl` converts `self` to UTC first and only then takes the zone
-  of the UTC result, `local_timezone(result)` (Modules/_datetimemodule.c:6985-6991). Two
+  of the UTC result, `local_timezone(result)` (Modules/_datetimemodule.c:6987-6993). Two
   observable differences follow:
   - A naive `self` in a spring-forward gap: Python's `_local_timezone` uses the `_mktime`
     timestamp of the wall time and its offset, so `datetime(2021, 3, 14, 2, 30).astimezone()`
@@ -20,7 +20,7 @@ summary: |
   - An aware `self` whose tzinfo's `utcoffset()` returns `None`: Python's
     `self._local_timezone()` takes the aware branch, `(self - _EPOCH) // timedelta(seconds=1)`,
     which raises `TypeError: cannot mix naive and timezone-aware time`; C treats `self` as
-    naive (`goto naive`, :6944-6947) and returns the local time.
+    naive (`goto naive`, :6946-6949) and returns the local time.
   `astimezone(tz)` with an explicit tz, and aware datetimes with an offset, agree (proven in
   Lean, AstimezoneLocal).
 likelihood: |
@@ -67,8 +67,8 @@ promised_by: |
 cause: |
   Lib/_pydatetime.py:2138-2139 `tz = self._local_timezone()` before the conversion; the naive
   branch of `_local_timezone` (:2122-2128) picks the `_mktime` timestamp of the wall time, the
-  aware branch (:2130) subtracts `_EPOCH`. Modules/_datetimemodule.c:6985-6991 calls
-  `local_timezone(result)` on the UTC result (:6831-6870), and :6944-6947 sends a None offset
+  aware branch (:2130) subtracts `_EPOCH`. Modules/_datetimemodule.c:6987-6993 calls
+  `local_timezone(result)` on the UTC result (:6832-6870), and :6946-6949 sends a None offset
   to `naive:`.
 possible_fix: |
   In `_pydatetime.astimezone`, compute `utc = (self - myoffset)` first and, for `tz is None`,

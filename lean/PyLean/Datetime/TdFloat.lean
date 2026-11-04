@@ -21,7 +21,7 @@ inductive TdNum where
   | other (ty : String)
   deriving DecidableEq, Inhabited
 
-/-- C `modf(x, &intpart)` and Python's `math.modf` (Modules/mathmodule.c:2186-2209, which
+/-- C `modf(x, &intpart)` and Python's `math.modf` (Modules/mathmodule.c:1556-1570, which
 returns `(copysign(0., x), x)` for an infinity first): `(fractional part, integral part)`,
 both with the sign of `x`; exact. A NaN gives NaN twice. -/
 def modfF (x : F64) : F64 × F64 :=
@@ -133,7 +133,7 @@ def accumC (tag : String) (sofar : Int) (num : TdNum) (factor : Int) (leftover :
 /-- `delta_new_impl`, :2832-2932: `accum` for each argument given, in the order microseconds,
 milliseconds, seconds, minutes, hours, days, weeks; then a nonzero `leftover_us` rounded to
 the nearest integer (`round`, halfway away from zero) with the round-half-to-even fix-up when
-it is exactly halfway (:2903-2921, using `x & 1`), added in; then
+it is exactly halfway (:2887-2922, using `x & 1`), added in; then
 `microseconds_to_delta_ex`. An omitted argument is `none`. -/
 def deltaNumC (days seconds microseconds milliseconds minutes hours weeks : Option TdNum) : Py Delta := do
   let step (acc : Int × F64) (a : Option TdNum × String × Int) : Py (Int × F64) :=

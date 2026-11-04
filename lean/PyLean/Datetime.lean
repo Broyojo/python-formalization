@@ -1347,7 +1347,7 @@ def entries : List Entry := [
   { id := "datetime-strptime-offset-range", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time.strptime", "datetime.strptime", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "When the parse has a UTC offset that _parse_tz refuses, time.strptime and datetime.strptime raise its exception; '+9900' with '%z' passes the %z regex and both raise the timezone range ValueError, whatever the locale."
-    source := "_strptime.py:375, :706-711, :821-851; timezone docs (offset strictly inside a day)", status := .proven
+    source := "_strptime.py:375, :706-711, :822-851; timezone docs (offset strictly inside a day)", status := .proven
     prop := ``StrptimeOffsetRange, thm := some ``strptimeOffsetRange_proven },
   { id := "datetime-datetime-fromiso-rollover", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.fromisoformat"]

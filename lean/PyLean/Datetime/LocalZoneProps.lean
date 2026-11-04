@@ -279,7 +279,7 @@ theorem localTzFromTsPy_shape (ltz : Int → Py LocalTmZ) (oid : Nat) (ts : Int)
 
 /-- The end of `astimezone` to a `timezone` `tz`: `(self - o).replace(tzinfo=tz)` and
 `tz.fromutc` (Py:2157-2160) against `self - offset` with `tz` attached and `fromutc`
-(:6955-6998), for every valid `self` and valid offset `o`. -/
+(:6957-7002), for every valid `self` and valid offset `o`. -/
 theorem astz_tail (env : TzEnv) (self : DT) (o : Delta) (tz : Tz) (off : Delta) (name : Option String)
     (hv : self.Valid) (ov : o.Valid) (htz : tz.Ok) (hk : tz.kind = .timezone off name) :
     SameOutcome
@@ -357,7 +357,7 @@ theorem raw_of_utcoffset (env : TzEnv) (self : DT) (z : Tz) (hz : self.tz = some
         subst e
         exact ⟨rfl, by omega, by omega⟩
 
-/-- `local_timezone` of the UTC datetime `self - offset` (:6985-6991): the zone of
+/-- `local_timezone` of the UTC datetime `self - offset` (:6987-6993): the zone of
 `floor((T - epoch) / 1 s)`. -/
 theorem localTimezoneC_utc (env : TzEnv) (ltz : Int → Py LocalTmZ) (oid : Nat) (T : Int)
     (h1 : 1 ≤ T / 86400000000) (h2 : T / 86400000000 ≤ MAXORDINAL) :

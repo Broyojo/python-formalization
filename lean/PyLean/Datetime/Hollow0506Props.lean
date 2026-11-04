@@ -94,7 +94,7 @@ theorem datetimeNewStrState_proven : DatetimeNewStrState := by
 /-! ### `strptime` with an offset `_parse_tz` refuses -/
 
 /-- `time.strptime` and `datetime.strptime` when the parse has a UTC offset that
-`_parse_tz` (_strptime.py:821-826) refuses: its exception is the result of both, nothing is
+`_parse_tz` (_strptime.py:822-827) refuses: its exception is the result of both, nothing is
 returned; and the `%z` group (_strptime.py:375) accepts any two digits for the hours, so
 `'+9900'` with `'%z'` parses (99 hours, :706-711) and both raise the `timezone` range
 `ValueError` (`offset must be a timedelta strictly between ...`), whatever the locale. -/
@@ -189,7 +189,7 @@ inductive ReprRet where
 object or raise. -/
 abbrev TzReprEnv := Nat → Py ReprRet
 
-/-- `PyObject_Repr(tz)` (Objects/object.c:779-820), which both `'%r' % tz` (Py:1619, :2214)
+/-- `PyObject_Repr(tz)` (Objects/object.c:760-798), which both `'%r' % tz` (Py:1619, :2214)
 and C's `%R` (`append_keyword_tzinfo`, :1642) call: a `timezone` gives `timezone.__repr__`
 (infallible); a subclass's method result is checked, a non-`str` being
 `TypeError("%T.__repr__() must return a str, not %T")`, and its exception propagates. -/

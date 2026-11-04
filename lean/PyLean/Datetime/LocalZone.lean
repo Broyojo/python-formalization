@@ -39,9 +39,9 @@ def localTzFromTsPy (ltz : Int → Py LocalTmZ) (oid : Nat) (ts : Int) : Py Tz :
   let delta ← deltaPy 0 gmtoff 0 0 0 0 0
   timezoneNewPy oid delta (.str zone)
 
-/-- `local_timezone_from_timestamp`, :6764-6823 with `HAVE_STRUCT_TM_TM_ZONE`:
+/-- `local_timezone_from_timestamp`, :6765-6823 with `HAVE_STRUCT_TM_TM_ZONE`:
 `_PyTime_localtime(timestamp)` (:6776), `new_delta(0, tm_gmtoff, 0, 1)` (:6780), the zone
-decoded (:6815-6819), and `new_timezone(delta, nameo)` (:6820), the range check and
+decoded (:6818-6822), and `new_timezone(delta, nameo)` (:6824), the range check and
 `create_timezone` that `timezone_new_impl` also reaches with a `str` name. -/
 def localTzFromTsC (ltz : Int → Py LocalTmZ) (oid : Nat) (ts : Int) : Py Tz := do
   let (_, gmtoff, zone) ← ltz ts
@@ -69,9 +69,9 @@ def localTimezoneFromLocalC (ltz : Int → Py LocalTmZ) (oid : Nat) (self : DT) 
   let ts ← localTimezoneTsC (ltFields ltz) { self with tz := none } 0
   localTzFromTsC ltz oid ts
 
-/-- `local_timezone(utc_time)`, :6831-6870: `utc_time - CONST_EPOCH` (:6843),
+/-- `local_timezone(utc_time)`, :6832-6870: `utc_time - CONST_EPOCH` (:6845),
 `divide_timedelta_timedelta` by one second (floor division of the microseconds, :2407),
-`_PyLong_AsTime_t` (:6859), then `local_timezone_from_timestamp`. -/
+`_PyLong_AsTime_t` (:6861), then `local_timezone_from_timestamp`. -/
 def localTimezoneC (env : TzEnv) (ltz : Int → Py LocalTmZ) (oid : Nat) (utc : DT) : Py Tz := do
   let d ← dtSubC env utc epochDT
   let secs := d.toUs / 1000000
@@ -117,9 +117,9 @@ def dtAstimezoneFullPy (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (
       astzPyTail env self tz z' (← tzUtcoffsetRaw env z' (some self))
     | _ => astzPyTail env self tz z o
 
-/-- :6955-6998 once the offset `o` is known: `self - offset` (`add_datetime_timedelta`), made
-UTC (:6962-6982); for `tz` `None` the zone `local_timezone(result)` of the UTC result
-(:6985-6991); then `tz.fromutc(result)` with `tz` attached (:6992-6998). -/
+/-- :6957-7002 once the offset `o` is known: `self - offset` (`add_datetime_timedelta`), made
+UTC (:6963-6984); for `tz` `None` the zone `local_timezone(result)` of the UTC result
+(:6987-6993); then `tz.fromutc(result)` with `tz` attached (:6996-7002). -/
 def astzCFinish (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self : DT) (tzinfo : Option Tz) (o : Delta) :
     Py DT := do
   let r ← addDatetimeTimedeltaC self o (-1)
@@ -129,7 +129,7 @@ def astzCFinish (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self : DT)
     | none => localTimezoneC env ltz o1 r
   tzFromutcC env t { r with tz := some t }
 
-/-- :6934-6955 once `self_tzinfo` is the local zone `z` (the `naive:` path): the identity
+/-- :6936-6957 once `self_tzinfo` is the local zone `z` (the `naive:` path): the identity
 test, then `call_utcoffset` (checked), which a `timezone` never answers with `None`. -/
 def astzCAfterLocal (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self : DT) (tzinfo : Option Tz) (z : Tz) :
     Py DT := do
@@ -139,9 +139,9 @@ def astzCAfterLocal (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self :
   | none => throw .modelFuel
 
 /-- `datetime_datetime_astimezone_impl`, :6914-7004, every branch: `check_tzinfo_subclass`
-(:6922); a naive `self` takes `local_timezone_from_local(self)` (`naive:`, :6925-6928); an
-aware one the identity test (:6934-6937) and `call_utcoffset` (:6940), a `None` going to
-`naive:` (:6944-6947). -/
+(:6923); a naive `self` takes `local_timezone_from_local(self)` (`naive:`, :6926-6930); an
+aware one the identity test (:6936-6939) and `call_utcoffset` (:6942), a `None` going to
+`naive:` (:6946-6949). -/
 def dtAstimezoneFullC (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT) (arg : AstzArg) :
     Py DT := do
   let tzinfo : Option Tz ← match arg with
