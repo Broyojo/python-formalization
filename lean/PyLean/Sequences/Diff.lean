@@ -684,10 +684,21 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
       { s with its := s.its.set! k it' })
   | "it_reduce" =>
     let it ← its (← (← arg op 1).getNat?)
-    return same (okJ (match arrIterReduce it with | some i => toJson i | none => Json.null))
+    return same (okJ (match arrIterReduce a it with
+      | .live f arr i => Json.arr #[toJson "live", toJson (f == "iter"), toJson (decide (arr = a)), toJson i]
+      | .exhausted f => Json.arr #[toJson "exhausted", toJson (f == "iter"), toJson true]))
+  | "it_roundtrip" =>
+    let it ← its (← (← arg op 1).getNat?)
+    match arrIterReduce a it with
+    | .exhausted _ => return same (okJ (Json.arr #[]))
+    | .live _ _ i =>
+      match arrIterSetstate a arrIter (.int i) with
+      | .error e => return same (errJ e)
+      | .ok it2 => return same (okJ (Json.arr ((arrDrain a (a.items.length + 1) it2).map
+          (fun r => pyJ (·.toJ) r)).toArray))
   | "it_setstate" =>
     let k ← (← arg op 1).getNat?
-    match arrIterSetstate a (← its k) (← jInt (← arg op 2)) with
+    match arrIterSetstate a (← its k) (← jVal (← arg op 2)) with
     | .ok it' => return (okJ unitJ, { s with its := s.its.set! k it' })
     | .error e => return (errJ e, s)
   | other => throw s!"unknown array op {other}"

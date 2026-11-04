@@ -23,6 +23,8 @@ import PyLean.Sequences.ArrayLimits
 import PyLean.Sequences.ArraySubscr
 import PyLean.Sequences.ArraySearchRe
 import PyLean.Sequences.ArrayFromListRe
+import PyLean.Sequences.ArrayAssItem
+import PyLean.Sequences.ArrayPickle
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
@@ -303,6 +305,24 @@ def entries : List Entry := [
     statement := "For every integer typecode, index i >= 0 and item whose __index__ runs code leaving the array a' and returns x: if i is no longer inside a' (or a' has no buffer) setitem raises the conversion's own OverflowError when x fails a check that precedes CHECK_ARRAY_BOUNDS, else IndexError('array assignment index out of range') (also for x that b's later signed-char check refuses), storing nothing; inside a' it stores the converted x into a'."
     source := "invariant: CHECK_ARRAY_BOUNDS after the conversion (arraymodule.c:217-238); Python/getargs.c, Objects/longobject.c for the conversion's messages", status := .proven
     prop := ``ArraySetitemRecheck, thm := some ``arraySetitemRecheck_proven },
+  { id := "sequences-array-fromlist-live", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromlist_impl"]
+    statement := "For every array without exports and every two-item list whose first item's conversion leaves any array b with a buffer and more than len(a) items (the second changing nothing): item 0 is stored at len(a), the index computed before its conversion, and item 1 at len(b) - 1, the live Py_SIZE - n + i; so a grown array keeps never-written cells between them (python/cpython#152166)."
+    source := "Modules/arraymodule.c:1867-1880 (what the code does)", status := .proven
+    prop := ``ArrayFromListLive, thm := some ``arrayFromListLive_proven
+    notes := "array('q', [1, 2]) with an __index__ that appends a zero item gives [1, 2, 5, <uninitialised>, 6] on 3.15.2 (0xCDCD... under PYTHONMALLOC=debug); that is open gh-152166, not a new record." },
+  { id := "sequences-array-fromlist-clear", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromlist_impl", "array_resize", "array_array_clear_impl"]
+    statement := "For every integer typecode, array of old items without exports and list of n items with old + n >= 16 whose first item's conversion clears the array and returns any int x: fromlist raises the conversion's OverflowError (a check before CHECK_ARRAY_BOUNDS) or IndexError('array assignment index out of range'), and the restore array_resize(self, old) leaves old items reallocated from a NULL buffer (uninitialised in CPython, 0 in the model)."
+    source := "Modules/arraymodule.c:1852-1883, 140-199, 217-238 (what the code does)", status := .proven
+    prop := ``ArrayFromListClear, thm := some ``arrayFromListClear_proven },
+  { id := "sequences-array-fromlist-restore", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromlist_impl", "array_resize"]
+    statement := "For every array without exports and every list whose first item's conversion may change the array, a fromlist whose first store fails leaves no more items than the conversion left."
+    source := "invariant: the restore only undoes fromlist's growth; Doc/library/array.rst fromlist (unchanged on error); no read of uninitialised memory", status := .refuted
+    prop := ``ArrayFromListRestore, thm := some ``arrayFromListRestore_refuted
+    bug := some "sequences-array-fromlist-restore-stale"
+    notes := "array('q', range(16)) and an item whose __index__ clears it: IndexError and 16 never-written items. Reproduces on main." },
   { id := "sequences-array-fromlist-guard", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_array_fromlist_impl"]
     statement := "For every integer typecode and array without exports: a first item whose conversion appends to the list is stored, then fromlist raises RuntimeError('list changed size during iteration') and the array gets its old items back; a first item whose conversion fails raises its exception with the old items back; while a buffer is exported, a non-empty list raises BufferError before any conversion."
@@ -327,7 +347,14 @@ def entries : List Entry := [
     statement := "For every array (items need not decode) and every comparison that may raise: count, in, index() and remove read and compare the items in order and raise the first exception, of a read or of a comparison, comparing no later item; count counts true comparisons, the others stop at the first, remove deleting it."
     source := "invariant: same methods as list (Objects/listobject.c list_count/list_index/list_remove propagate the comparison's error)", status := .proven
     prop := ``ArraySearchErrors, thm := some ``arraySearchErrors_proven
-    notes := "Scope: a comparison that mutates the array is not modelled (the loops re-read Py_SIZE)." },
+    notes := "For a pure comparison; arrCountRe/arrIndexRe/arrContainsRe/arrRemoveRe with ReCmp.pure equal these (arrCountRe_pure etc.), and sequences-array-search-reentrant covers a comparison that changes the array." },
+  { id := "sequences-array-search-reentrant", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_count_impl", "array_array_index_impl", "array_contains", "array_array_remove_impl",
+      "getarrayitem", "array_del_slice"]
+    statement := "For every array a, index j < len(a) and comparison (__eq__) that may raise and leaves the array alone except at item j, where its code leaves any array b: count, index(), in and remove compare a's items before j, item j, then b's items after j, as many as b has (the size is re-read before every item), so a clearing or shrinking __eq__ ends the loop and a growing one makes it compare the new items; count counts the true comparisons, index and in stop at the first, remove then deletes item j of b with array_del_slice (nothing when b has <= j items, BufferError while b is exported); an exception ends each with the array the code left."
+    source := "Modules/arraymodule.c:1399-1400 (\"Use Py_SIZE() for every iteration in case the array is mutated during PyObject_RichCompareBool()\"); invariant: no read outside the array", status := .proven
+    prop := ``ArraySearchReentrant, thm := some ``arraySearchReentrant_proven
+    notes := "Smoke-tested on 3.15.2: a.count(e) with an __eq__ that clears at call 1 and returns True gives 1 after 2 calls; remove with a clearing __eq__ that returns True returns None and deletes nothing. Difftested with scripted __eq__ (count_eq etc. in sequences_diff.py)." },
   { id := "sequences-array-get-slice", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_subscr"]
     statement := "For every array and slice with a non-zero step, a[s] is a new array.array of the same typecode holding the items at start + k*step for the start, step and length slice.indices gives, through the step-1 memcpy and the size_t cursor loop alike; a zero step raises ValueError; an __index__ key is a[i]; any other key raises TypeError('array indices must be integers')."
@@ -343,6 +370,23 @@ def entries : List Entry := [
     statement := "a[s] = value unpacks the slice first (zero step: ValueError for any value); a non-array value raises TypeError('can only assign array (not \"T\") to array slice'); a[s] = a is the assignment of a copy of a; an array of another typecode raises TypeError (PyErr_BadArgument); while exported, a deletion or a size-changing assignment raises BufferError before anything changes."
     source := "Modules/arraymodule.c:2825-2878; invariant: an exported buffer is never moved", status := .proven
     prop := ``ArrayAssSliceChecks, thm := some ``arrayAssSliceChecks_proven },
+  { id := "sequences-array-mformat-slow", pyFile := "Modules/arraymodule.c"
+    pyFns := ["typecode_to_mformat_code"]
+    statement := "For every typecode but u and w, every array a of it (items in range) and every typecode t with another machine format code: _array_reconstructor(type(a), t, typecode_to_mformat_code(a.typecode), a.tobytes()) takes the slow path and decodes each item's bytes as the value a stores: the integer (rebuilt with the widest typecode of that size and signedness) for an integer typecode, the binary16/32/64 value for e/f/d, and the two binary32/64 parts for Zf/Zd."
+    source := "twin: typecode_to_mformat_code vs the reconstructor's decoding of mformat_descriptors rows (arraymodule.c:2138-2233, 2339-2544); invariant: pickles load across machine layouts", status := .proven
+    prop := ``ArrayMformatSlow, thm := some ``arrayMformatSlow_proven
+    notes := "Unfolds reconstruct's slow path too, but array__array_reconstructor_impl is not listed: its type checks and the UTF rows (sequences-array-reconstruct-utf) are not all pinned. u and w are bugs/sequences-array-mformat-utf-sizes.yaml." },
+  { id := "sequences-array-ass-item", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_ass_item"]
+    statement := "array_ass_item for every array, index and value: outside 0 <= i < len(a) IndexError('array assignment index out of range') for a store and a deletion alike, before the value is looked at; inside, a deletion is array_del_slice(a, i, i+1) and a store raises the setitem's conversion error or sets item i to the converted value."
+    source := "Modules/arraymodule.c:1208-1219 (sq_ass_item; reachable through PySequence_SetItem)", status := .proven
+    prop := ``ArrayAssItem, thm := some ``arrayAssItem_proven
+    notes := "Smoke-tested on 3.15.2 with ctypes PySequence_SetItem/DelItem: indexes 5 and -3 on a 2-item array raise IndexError, 1000 into 'b' OverflowError('signed char is greater than maximum'), 'x' TypeError, array unchanged." },
+  { id := "sequences-array-new-fill", pyFile := "Modules/arraymodule.c"
+    pyFns := ["setarrayitem", "array_ass_item"]
+    statement := "array(typecode, list) and array(typecode, tuple), for every typecode and every list or tuple newarrayobject accepts, fill the new array item by item with setarrayitem from index 0: the first item the setitem refuses raises its exception (array('b', [1000]) raises OverflowError('signed char is greater than maximum')), otherwise the items are the converted values."
+    source := "Modules/arraymodule.c:3069-3098, 1222-1229", status := .proven
+    prop := ``ArrayNewFill, thm := some ``arrayNewFill_proven },
   { id := "sequences-array-mformat-table", pyFile := "Modules/arraymodule.c"
     pyFns := ["typecode_to_mformat_code"]
     statement := "On a little-endian machine, every typecode's machine format code is in 0..27 and names a little-endian row, and for every typecode but u and w its mformat_descriptors row has the typecode's item size and signedness."
@@ -390,11 +434,17 @@ def entries : List Entry := [
     source := "Doc/library/array.rst; invariant", status := .proven
     prop := ``ArrayBuffer, thm := some ``arrayBuffer_proven },
   { id := "sequences-array-iterator", pyFile := "Modules/arraymodule.c"
-    pyFns := ["array_iter", "arrayiter_next", "array_arrayiterator___reduce___impl",
-      "array_arrayiterator___setstate___impl"]
-    statement := "iter(a) yields the items in order, stays exhausted once exhausted, and __reduce__ and __setstate__ restore the position, clipped to the array."
+    pyFns := ["array_iter", "arrayiter_next", "array_arrayiterator___setstate___impl"]
+    statement := "iter(a) yields the items in order, stays exhausted once exhausted, and __setstate__ of an int clips it to 0 <= i <= len(a) (OverflowError outside Py_ssize_t), ignored once exhausted."
     source := "invariant: iterator protocol", status := .proven
     prop := ``ArrayIterator, thm := some ``arrayIterator_proven },
+  { id := "sequences-array-iter-pickle", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_arrayiterator___reduce___impl", "array_arrayiterator___setstate___impl", "array_iter",
+      "arrayiter_next"]
+    statement := "For every array a and live iterator position 0 <= i <= PY_SSIZE_T_MAX, it.__reduce__() is (iter, (a,), i) and iter(a) then __setstate__(i) yields exactly what it yields; an exhausted iterator reduces to (iter, ((),)); __setstate__ converts its state with PyLong_AsSsize_t before testing ao, so for a live and an exhausted iterator alike a non-int state raises TypeError('an integer is required') and an int outside Py_ssize_t OverflowError, and an int subclass counts by its value."
+    source := "invariant: pickle round trip of an iterator; Modules/arraymodule.c:3386-3426; Objects/longobject.c:708-720", status := .proven
+    prop := ``ArrayIterPickle, thm := some ``arrayIterPickle_proven
+    notes := "Smoke-tested on 3.15.2: __setstate__(1.5), (X with __index__), None raise TypeError on live and exhausted iterators; 2**63 OverflowError on both; True and an int subclass are accepted. Difftested (it_reduce shape, it_roundtrip, it_setstate with non-int states)." },
   { id := "sequences-array-reduce", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_array___reduce_ex___impl", "array__array_reconstructor_impl", "make_array",
       "typecode_to_mformat_code"]

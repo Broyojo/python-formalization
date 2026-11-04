@@ -36,6 +36,7 @@ steered to small values unless the C code's explicit overflow check rejects them
 """
 
 import array as array_mod
+import builtins
 import collections
 import ctypes
 import copy
@@ -661,7 +662,7 @@ def gen_array_op(rng, a):
                      "tolist", "frombytes", "frombytes_wide", "tobytes", "fromfile", "fromfile_notbytes",
                      "fromfile_raise", "tofile", "fromunicode", "tounicode", "byteswap", "reverse", "clear",
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
-                     "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
+                     "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce", "it_roundtrip",
                      "it_setstate", "append_m", "append_m", "insert_m", "setitem_m", "extend_m",
                      "fromlist_m", "fromlist_m", "getitem_bad", "count_eq", "index_eq", "contains_eq",
                      "remove_eq"])
@@ -784,7 +785,11 @@ def gen_array_op(rng, a):
     if op == "it_reduce":
         return [op, rng.randrange(3)]
     if op == "it_setstate":
-        return [op, rng.randrange(3), rng.choice([0, 1, -1, n, n + 1, 2 ** 63, -2 ** 64, rng.randint(-2, n + 2)])]
+        return [op, rng.randrange(3), rng.choice([0, 1, -1, n, n + 1, 2 ** 63, -2 ** 64, rng.randint(-2, n + 2),
+                                                  rng.randint(-2, n + 2), {"f": fbits(rng)},
+                                                  {"o": "Idx", "i": 1}, {"o": "NoneType"}])]
+    if op == "it_roundtrip":
+        return [op, rng.randrange(3)]
     raise AssertionError(op)
 
 
@@ -1521,9 +1526,27 @@ def run_array_op(a, op, c, extra):
         return "STOP" if x is its else from_val(x)
     if name == "it_reduce":
         r = its[args[0]].__reduce__()
-        return r[2] if len(r) == 3 else None
+        if len(r) == 3:
+            return ["live", r[0] is builtins.iter, len(r[1]) == 1 and r[1][0] is a, r[2]]
+        return ["exhausted", r[0] is builtins.iter, r[1] == ((),)]
+    if name == "it_roundtrip":
+        r = its[args[0]].__reduce__()
+        it2 = r[0](*r[1])
+        if len(r) == 3:
+            it2.__setstate__(r[2])
+        out = []
+        while True:
+            try:
+                x = next(it2)
+            except StopIteration:
+                break
+            except Exception as e:
+                out.append({"exc": type(e).__name__, "msg": str(e)})
+                continue
+            out.append({"ok": from_val(x)})
+        return out
     if name == "it_setstate":
-        return its[args[0]].__setstate__(args[1])
+        return its[args[0]].__setstate__(to_val(args[1]))
     raise AssertionError(name)
 
 

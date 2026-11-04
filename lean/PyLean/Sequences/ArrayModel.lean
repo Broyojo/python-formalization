@@ -21,8 +21,9 @@ here (`arrIns1S`, bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml).
 
 The element comparison `PyObject_RichCompareBool(item, v, Py_EQ)` of `count`,
 `index`, `remove` and `in` is a parameter `eqv : PyVal → Py Bool` (the object `v`
-is closed over, and may raise). A `v` that mutates the array during comparison
-is out of scope; `pvEq` is the comparison for ints, floats, complex numbers and strs.
+is closed over, and may raise); `pvEq` is the comparison for ints, floats, complex numbers
+and strs. A `v` whose `__eq__` changes the array is `ReCmp` in `ArrayReModel`
+(`arrCountRe`, ...), which equals these for a comparison that changes nothing.
 -/
 
 namespace PyLean.Sequences
@@ -1324,14 +1325,43 @@ def arrIterNext (a : Arr) (it : ArrIter) : Py (Option PyVal) × ArrIter :=
     | .error e => (.error e, { it with index := it.index + 1 })
   else (.ok none, { it with live := false })
 
-/-- `it.__reduce__()` (`array_arrayiterator___reduce___impl`, arraymodule.c:3386-3397):
-`(iter, ((),))` once exhausted, else `(iter, (a,), index)`. -/
-def arrIterReduce (it : ArrIter) : Option Int := if it.live then some it.index else none
+/-- What `next(it)` gives until `StopIteration`: values and raised exceptions. -/
+def arrDrain (a : Arr) : Nat → ArrIter → List (Py PyVal)
+  | 0, _ => []
+  | fuel + 1, it =>
+    match arrIterNext a it with
+    | (.ok none, _) => []
+    | (.ok (some v), it') => .ok v :: arrDrain a fuel it'
+    | (.error e, it') => .error e :: arrDrain a fuel it'
+
+/-- The result of `it.__reduce__()`. `func` is `_PyEval_GetBuiltin(state->str_iter)`, the
+builtin `iter` (named `"iter"`). -/
+inductive IterReduced where
+  /-- `Py_BuildValue("N(O)n", func, self->ao, self->index)`: `(iter, (a,), index)`. -/
+  | live (func : String) (arr : Arr) (index : Int)
+  /-- `Py_BuildValue("N(())", func)`: `(iter, ((),))`, once exhausted (`ao == NULL`). -/
+  | exhausted (func : String)
+  deriving Repr, DecidableEq
+
+/-- `it.__reduce__()` (`array_arrayiterator___reduce___impl`, arraymodule.c:3386-3397) for
+an iterator over `a`. -/
+def arrIterReduce (a : Arr) (it : ArrIter) : IterReduced :=
+  if it.live then .live "iter" a it.index else .exhausted "iter"
+
+/-- `PyLong_AsSsize_t(state)` (Objects/longobject.c:708-760): an int or an int subclass
+(`PyLong_Check`, no `__index__`), else `TypeError("an integer is required")`; outside
+`Py_ssize_t`, `OverflowError`. -/
+def iterStateIndex (state : PyVal) : Py Int :=
+  match state with
+  | .int n => asSsize n
+  | .user _ (.int n) _ _ _ => asSsize n
+  | _ => .error (.typeError "an integer is required")
 
 /-- `it.__setstate__(state)` (`array_arrayiterator___setstate___impl`,
-arraymodule.c:3409-3426). -/
-def arrIterSetstate (a : Arr) (it : ArrIter) (state : Int) : Py ArrIter := do
-  let index ← asSsize state
+arraymodule.c:3409-3426): the state is converted (:3412-3414) before `ao` is tested (:3415), so
+an exhausted iterator refuses a bad state too. -/
+def arrIterSetstate (a : Arr) (it : ArrIter) (state : PyVal) : Py ArrIter := do
+  let index ← iterStateIndex state
   if it.live then
     let n : Int := a.items.length
     let index := if index < 0 then 0 else if index > n then n else index
