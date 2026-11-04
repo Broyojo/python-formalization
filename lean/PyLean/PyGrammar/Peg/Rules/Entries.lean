@@ -4,6 +4,8 @@ import PyLean.PyGrammar.Peg.Rules.Stmts
 import PyLean.PyGrammar.Peg.Rules.Stmts2
 import PyLean.PyGrammar.Peg.Rules.Exprs
 import PyLean.PyGrammar.Peg.Rules.Lazy
+import PyLean.PyGrammar.Peg.Rules.Start
+import PyLean.PyGrammar.Peg.Rules.Aug
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -156,6 +158,67 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``InvalidImport
     thm := some ``invalidImport_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_stmt
+    statement := "del_stmt, first pass: 'del targets' followed by ';' or NEWLINE (a lookahead, " ++
+      "nothing consumed) gives Delete(targets); followed by anything else the rule fails with " ++
+      "the mark back although del_targets matched."
+    source := "Grammar/python.gram:209-211"
+    status := .proven
+    prop := ``DelStmt
+    thm := some ``delStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-augassign"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_augassign
+    statement := "augassign: each of the 13 augmented assignment tokens gives " ++
+      "_PyPegen_augoperator(p, Op) for its operator (+= Add ... //= FloorDiv) and is taken; '@=' " ++
+      "with feature_version < 5 fails CHECK_VERSION with an error; any other token NULL."
+    source := "Grammar/python.gram:170-183"
+    status := .proven
+    prop := ``AugAssign
+    thm := some ``augAssign_proven
+    notes := scheme },
+  { id := "pygrammar-rule-file"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_file
+    statement := "file: after the optional statements the next token must be ENDMARKER, giving " ++
+      "Module(a, type_ignores); another token, or an error in statements, fails the rule."
+    source := "Grammar/python.gram:89"
+    status := .proven
+    prop := ``FileRule
+    thm := some ``fileRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-eval"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_eval
+    statement := "eval: expressions, newlines, then ENDMARKER gives Expression(a); without " ++
+      "ENDMARKER the rule fails."
+    source := "Grammar/python.gram:91"
+    status := .proven
+    prop := ``EvalRule
+    thm := some ``evalRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-interactive"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_interactive
+    statement := "interactive: Interactive(a) around statement_newline, NULL if it fails."
+    source := "Grammar/python.gram:90"
+    status := .proven
+    prop := ``InteractiveRule
+    thm := some ``interactiveRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-statement"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_statement
+    statement := "statement: compound_stmt first, its one-statement sequence through " ++
+      "_PyPegen_register_stmts; only if it fails, simple_stmts from the same mark."
+    source := "Grammar/python.gram:99-101"
+    status := .proven
+    prop := ``StatementRule
+    thm := some ``statementRule_proven
     notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"

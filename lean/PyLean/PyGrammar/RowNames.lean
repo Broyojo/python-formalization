@@ -172,11 +172,26 @@ def peg_warn_lazy : List String := [
 def rule_assert_stmt : List String := [
   "rule:assert_stmt"]
 
+def rule_augassign : List String := [
+  "rule:augassign"]
+
+def rule_del_stmt : List String := [
+  "rule:del_stmt"]
+
+def rule_eval : List String := [
+  "rule:eval"]
+
 def rule_factor : List String := [
   "rule:factor"]
 
+def rule_file : List String := [
+  "rule:file"]
+
 def rule_import_name : List String := [
   "rule:import_name"]
+
+def rule_interactive : List String := [
+  "rule:interactive"]
 
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
@@ -204,6 +219,9 @@ def rule_return_stmt : List String := [
 
 def rule_signed_number : List String := [
   "rule:signed_number"]
+
+def rule_statement : List String := [
+  "rule:statement"]
 
 def rule_yield_expr : List String := [
   "rule:yield_expr"]

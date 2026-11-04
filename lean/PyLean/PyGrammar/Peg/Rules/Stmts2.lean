@@ -98,6 +98,62 @@ theorem yieldStmt_proven : YieldStmt := by
       alts_nil]
     rfl
 
+/-! ### `del_stmt` -/
+
+/-- `del_stmt` (`Grammar/python.gram:209-211`) in the first pass:
+```
+    | 'del' a=del_targets &(';' | NEWLINE) { _PyAST_Delete(a, EXTRA) }
+    | invalid_del_stmt
+```
+The positive lookahead (the artificial rule `_tmp_15` for `';' | NEWLINE`) consumes nothing: when
+it matches, the result is `Delete(a)` ending at the targets; when it does not (`del x y`), the rule
+fails with the mark back, although `del_targets` matched. -/
+def DelStmt : Prop := ∀ (f : Nat) (p q : PS), Entered p q → p.callInvalidRules = false →
+  let t := q.tokenAt p.mark
+  (t.type ≠ 634 → callRule (f + 7) 21 p = (.null, q.leave)) ∧
+  (t.type = 634 → ∀ (a v : Ast) (s2 s3 : PS),
+    callRule (f + 1) 203 { q with mark := p.mark + 1 } = (a, s2) → a ≠ .null →
+    callRule f 292 s2 = (v, s3) → s3.errorIndicator = false →
+    (v ≠ .null → callRule (f + 7) 21 p =
+      (mkAt .Delete [a] (extraLoc t { s3 with mark := s2.mark }), { s3 with mark := s2.mark }.leave)) ∧
+    (v = .null → s3.callInvalidRules = false →
+      callRule (f + 7) 21 p = (.null, { s3 with mark := p.mark }.leave)))
+
+theorem delStmt_proven : DelStmt := by
+  intro f p q h hinv
+  obtain ⟨he, -, hci, -, hm, hlt, -⟩ := h.facts
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 21 = r21 from rfl, r21]
+  refine ⟨fun ht => ?_, fun ht a v s2 s3 h1 ha h2 h2e => ⟨fun hv => ?_, fun hv h3i => ?_⟩⟩
+  · have e1 : runCall (f + 3) (.tok 634) q = (.null, q) := by
+      rw [call_tok, expectToken_at _ _ hlt', hm, ite_f ht]
+    rw [alts_fail (by rfl) he (items_call_null e1), hq,
+      alts_skip (by simp [hci, hinv]), alts_nil]
+    rfl
+  · have e1 : runCall (f + 3) (.tok 634) q =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+    have hv' : nonNull v = true := by cases v <;> simp_all [nonNull]
+    rw [alts_ok (by rfl) he (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call (by rw [call_rule, h1]) ha,
+        items_look (by rw [call_rule, h2]) hv', items_nil]), altResult_extra rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, mkExtra, h2e,
+      Bool.or_false, mkAt, extraLoc, locArgs]
+    simp [mkAst, nonNull, h2e]
+  · subst hv
+    have e1 : runCall (f + 3) (.tok 634) q =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expectToken_at _ _ hlt', hm, ite_t ht]
+    rw [alts_fail (by rfl) he (by
+      dsimp only
+      rw [items_call e1 (by simp), items_call (by rw [call_rule, h1]) ha,
+        items_look_fail (b := true) (by rw [call_rule, h2]) rfl]),
+      alts_skip (by simp [h3i]), alts_nil]
+    rfl
+
 /-! ### `assert_stmt` -/
 
 /-- `assert_stmt` (`Grammar/python.gram:215-217`) in the first pass:

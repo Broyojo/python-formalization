@@ -6,9 +6,6 @@ namespace PyLean.PyGrammar.Peg
 
 open Lexer
 
-/-- An operator constant, `.ctor` in an action. -/
-abbrev opNode (c : Ctor) : Ast := .node c [] none
-
 /-! ### `factor` -/
 
 /-- `factor (memo)` (`Grammar/python.gram:856-860`):

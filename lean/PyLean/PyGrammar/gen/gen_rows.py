@@ -51,6 +51,12 @@ CREDIT = {
     "pygrammar-rule-import-name": {GRAM: ["rule:import_name"]},
     "pygrammar-rule-invalid-import": {GRAM: ["rule:invalid_import"]},
     "pygrammar-rule-lazy-import-diagnosed": {GRAM: ["rule:invalid_import"]},
+    "pygrammar-rule-file": {GRAM: ["rule:file"]},
+    "pygrammar-rule-del-stmt": {GRAM: ["rule:del_stmt"]},
+    "pygrammar-rule-augassign": {GRAM: ["rule:augassign"]},
+    "pygrammar-rule-eval": {GRAM: ["rule:eval"]},
+    "pygrammar-rule-interactive": {GRAM: ["rule:interactive"]},
+    "pygrammar-rule-statement": {GRAM: ["rule:statement"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],

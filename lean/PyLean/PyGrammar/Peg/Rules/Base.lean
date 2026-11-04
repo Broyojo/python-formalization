@@ -32,6 +32,9 @@ def PS.enter (p : PS) : PS := { p with level := p.level + 1 }
 /-- `p->level--`, on the way out. -/
 def PS.leave (q : PS) : PS := { q with level := q.level - 1 }
 
+/-- An operator constant, `.ctor` in an action. -/
+abbrev opNode (c : Ctor) : Ast := .node c [] none
+
 /-- `EXTRA` of an alternative that started at token `t` and ended with `q.mark`. -/
 def extraLoc (t : Token) (q : PS) : Loc :=
   let e := lastNonWhitespaceToken q
