@@ -236,14 +236,19 @@ def LOAD_SPECIAL (e : Env) : M Unit := stkK 1 2 fun
       (typeError (specialError e.oparg t sug) : RM _)
   | _ => fault "arity"
 
-/-- `:4153`. -/
+/-- `:4153-4187`: `(exit_func, exit_self, lasti, unused, val -- ..., res)`: `exit_func` called with
+`exit_self` (when not `NULL`), `type(val)`, `val` and `PyException_GetTraceback(val)` or `None`; the
+result is pushed above the five, which stay, and an error leaves them (`ERROR_IF` with no inputs
+consumed). -/
 def WITH_EXCEPT_START (e : Env) : M Unit := do
   let ins ← peekN 5
   match ins with
   | [exitFunc, exitSelf, _, _, val] =>
     let res ← BM.lift do
       let exc ← (typeOf val : RM Val)
-      let args := if exitSelf != .null then [exitSelf, exc, val, .none] else [exc, val, .none]
+      let tb := (← (excData val : RM ExcData)).traceback
+      let tb := if tb == .null then .none else tb
+      let args := if exitSelf != .null then [exitSelf, exc, val, tb] else [exc, val, tb]
       e.om.call e.ctx exitFunc args []
     pushAll [res]
   | _ => fault "arity"
@@ -619,28 +624,81 @@ def builtinGuard (e : Env) (bad : Val → List Val → BM Bool) : M Unit :=
     | c :: s :: args => bad c (withSelf s args)
     | _ => fault "arity"
 
-/-- `:4842`: `tp->tp_vectorcall == NULL` deopts, `specialCalls` decides. -/
-def _CALL_BUILTIN_CLASS (e : Env) : M Unit := do
-  builtinGuard e fun c _ => do return !(← (isType c : RM Bool))
-  callNonPy e
-/-- `:4862`. -/
-def CALL_BUILTIN_CLASS (e : Env) : M Unit := do _CALL_BUILTIN_CLASS e; _CHECK_PERIODIC_AT_END e
-/-- `:4883`. -/
-def _CALL_BUILTIN_O (e : Env) : M Unit := do
-  builtinGuard e fun c args => pure (args.length != 1 || !(match c with | .builtin _ => true | _ => false))
-  callNonPy e
-/-- `:4905`. -/
-def CALL_BUILTIN_O (e : Env) : M Unit := do _CALL_BUILTIN_O e; _CHECK_PERIODIC_AT_END e
-/-- `:4922`. -/
-def _CALL_BUILTIN_FAST (e : Env) : M Unit := do
-  builtinGuard e fun c _ => pure !(match c with | .builtin _ => true | _ => false)
-  callNonPy e
-/-- `:4944`. -/
-def CALL_BUILTIN_FAST (e : Env) : M Unit := do _CALL_BUILTIN_FAST e; _CHECK_PERIODIC_AT_END e
-/-- `:4960`. -/
-def _CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := _CALL_BUILTIN_FAST e
-/-- `:4978`. -/
-def CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := do _CALL_BUILTIN_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC_AT_END e
+/-- `:4835-4840`: exits unless the callable is a type (`PyType_Check`) with `tp_vectorcall`. -/
+def _GUARD_CALLABLE_BUILTIN_CLASS (e : Env) : M Unit := builtinGuard e fun c _ => do
+  if !(← (isType c : RM Bool)) then return true
+  return !(e.om.hasTypeVectorcall (← (readRt : RM Rt)) c)
+/-- `:4842-4860`: `_Py_CallBuiltinClass_StackRef` (`Python/ceval.c:912-926`), `tp_vectorcall(tp, args,
+total_args)`, `ERROR_NO_POP` on failure; on success the result replaces the callable and the
+`_POP_TOP_OPARG + POP_TOP` of the macro drop the rest, folded in here. The conversion of the
+stackrefs (`STACKREFS_TO_PYOBJECTS`) fails only when `PyMem_Malloc` does, which is not modelled. -/
+def _CALL_BUILTIN_CLASS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do pure [← e.om.typeVectorcall e.ctx c (withSelf s args)]
+  | _ => fault "arity"
+/-- `:4862-4870`. -/
+def CALL_BUILTIN_CLASS (e : Env) : M Unit := do
+  _GUARD_CALLABLE_BUILTIN_CLASS e; _CALL_BUILTIN_CLASS e; _CHECK_PERIODIC_AT_END e
+
+/-- The guard of the `CALL_BUILTIN_*` forms: exits unless the callable is exactly a
+`builtin_function_or_method` (`PyCFunction_CheckExact`) whose `ml_flags` are `flags`, and (for
+`METH_O`) the argument count with `self` is `arity`. -/
+def cfuncGuard (e : Env) (flags : Nat) (arity : Option Nat) : M Unit := builtinGuard e fun c args => do
+  match e.om.cfuncOf (← (readRt : RM Rt)) c with
+  | none => pure true
+  | some (fl, _) =>
+    if fl != flags then pure true
+    else match arity with
+      | some n => pure (args.length != n)
+      | none => pure false
+
+/-- `:5130-5132`: exits when `_Py_ReachedRecursionLimit(tstate)`, the C stack check. -/
+def _CHECK_RECURSION_LIMIT : M Unit := guardTop 0 fun _ => do
+  return (← (readRt : RM Rt)).cRecursionReached
+
+/-- `PyCFunction_GET_SELF` of a callable the guard accepted. -/
+def cfuncSelf (e : Env) (c : Val) : BM Val := do
+  match e.om.cfuncOf (← (readRt : RM Rt)) c with
+  | some (_, m) => pure m
+  | none => fault "not a builtin function"
+
+/-- `:4872-4881`. -/
+def _GUARD_CALLABLE_BUILTIN_O (e : Env) : M Unit := cfuncGuard e methO (some 1)
+/-- `:4883-4903`: `cfunc(PyCFunction_GET_SELF(callable), args[0])` with `args[0]` the one argument
+(`self_or_null` when it is set), `ERROR_NO_POP` on failure; `_Py_LeaveRecursiveCallTstate` is a
+no-op on 3.15 (`Include/internal/pycore_ceval.h:243-245`). The two `POP_TOP`s of the macro are
+folded in. -/
+def _CALL_BUILTIN_O (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do
+    match withSelf s args with
+    | [a] => pure [← e.om.mlMeth e.ctx c (← cfuncSelf e c) [a]]
+    | _ => fault "METH_O with other than one argument"
+  | _ => fault "arity"
+/-- `:4905-4914`. -/
+def CALL_BUILTIN_O (e : Env) : M Unit := do
+  _GUARD_CALLABLE_BUILTIN_O e; _CHECK_RECURSION_LIMIT; _CALL_BUILTIN_O e; _CHECK_PERIODIC_AT_END e
+/-- `:4916-4920`. -/
+def _GUARD_CALLABLE_BUILTIN_FAST (e : Env) : M Unit := cfuncGuard e methFastcall none
+/-- `:4922-4942`: `_Py_BuiltinCallFast_StackRef` (`Python/ceval.c:827-847`),
+`cfunc(PyCFunction_GET_SELF(callable), args, total_args)`, `ERROR_NO_POP` on failure; no recursion
+check. -/
+def _CALL_BUILTIN_FAST (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do pure [← e.om.mlMeth e.ctx c (← cfuncSelf e c) (withSelf s args)]
+  | _ => fault "arity"
+/-- `:4944-4952`. -/
+def CALL_BUILTIN_FAST (e : Env) : M Unit := do
+  _GUARD_CALLABLE_BUILTIN_FAST e; _CALL_BUILTIN_FAST e; _CHECK_PERIODIC_AT_END e
+/-- `:4954-4958`. -/
+def _GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit :=
+  cfuncGuard e (methFastcall ||| methKeywords) none
+/-- `:4960-4976`: `_Py_BuiltinCallFastWithKeywords_StackRef` (`Python/ceval.c:850-867`),
+`cfunc(self, args, total_args, NULL)`. -/
+def _CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do pure [← e.om.mlMeth e.ctx c (← cfuncSelf e c) (withSelf s args)]
+  | _ => fault "arity"
+/-- `:4978-4986`. -/
+def CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := do
+  _GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS e; _CALL_BUILTIN_FAST_WITH_KEYWORDS e
+  _CHECK_PERIODIC_AT_END e
 /-- `:4997-5001`: `callable_cache.len`, the builtin `len`. -/
 def _GUARD_CALLABLE_LEN : M Unit := guardCallable (.builtin "len")
 /-- `:5003-5020`: `PyObject_Length(arg)` as an int, `ERROR_NO_POP` on failure; the two `POP_TOP`s of
@@ -679,31 +737,97 @@ def _CALL_LIST_APPEND : M Unit := stk 3 1 fun
 def CALL_LIST_APPEND : M Unit := do
   _GUARD_CALLABLE_LIST_APPEND; _GUARD_NOS_NOT_NULL; _GUARD_NOS_LIST; _CALL_LIST_APPEND
 
-/-- The receiver guard of `_CALL_METHOD_DESCRIPTOR_*`. -/
-def methDescrGuard (e : Env) (min : Nat) : M Unit :=
+/-- The guard of the `CALL_METHOD_DESCRIPTOR_*` forms: exits unless the callable's type is exactly
+`PyMethodDescr_Type`, its `ml_flags` are `flags`, the argument count with `self` passes `arity`, and
+the first argument (`self`) has exactly the descriptor's `d_type` (`Py_IS_TYPE`, identity of the type
+object, not its name). -/
+def methDescrGuard (e : Env) (flags : Nat) (arity : Nat → Bool) : M Unit :=
   builtinGuard e fun c args => do
-    match c, args with
-    | .methDescr tp _, a :: _ =>
-      if args.length < min then pure true
-      else return (← (tpName a : RM String)) != tp
-    | _, _ => pure true
-/-- `:5105`. -/
-def _CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do methDescrGuard e 2; callNonPy e
-/-- `:5153`. -/
-def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_O e; _CHECK_PERIODIC_AT_END e
-/-- `:5839`. -/
-def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:5229`. -/
+    match e.om.methDescrOf (← (readRt : RM Rt)) c with
+    | none => pure true
+    | some (fl, dt) =>
+      if fl != flags then pure true
+      else if !(arity args.length) then pure true
+      else
+        match args with
+        | self :: _ => return (← (typeOf self : RM Val)) != dt
+        | [] => fault "no self"
+
+/-- `:5090-5103`. -/
+def _GUARD_CALLABLE_METHOD_DESCRIPTOR_O (e : Env) : M Unit := methDescrGuard e methO (· == 2)
+/-- `:5105-5128`: `ml_meth(arguments[0], arguments[1])`, `ERROR_NO_POP` on failure; the three
+`POP_TOP`s of the macro are folded in. -/
+def _CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do
+    match withSelf s args with
+    | [self, a] => pure [← e.om.mlMeth e.ctx c self [a]]
+    | _ => fault "METH_O descriptor with other than two arguments"
+  | _ => fault "arity"
+/-- `:5134-5151`, tier 2 only: `(callable, args[2], cfunc/4 -- res, c, s, a)`, the optimizer having
+put `self` in the `self_or_null` slot and counted it in `oparg`; `cfunc` is the `ml_meth` read at
+trace time, the operand standing for it here being the descriptor it was read from. -/
+def _CALL_METHOD_DESCRIPTOR_O_INLINE (e : Env) (cfunc : Val) : M Unit := stkK (e.oparg + 1) 1 fun
+  | _ :: [self, a] => do pure [← e.om.mlMeth e.ctx cfunc self [a]]
+  | _ => fault "oparg is 2"
+/-- `:5153-5163`. -/
+def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do
+  _GUARD_CALLABLE_METHOD_DESCRIPTOR_O e; _CHECK_RECURSION_LIMIT; _CALL_METHOD_DESCRIPTOR_O e
+  _CHECK_PERIODIC_AT_END e
+/-- `:5165-5179`. -/
+def _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit :=
+  methDescrGuard e (methFastcall ||| methKeywords) (· != 0)
+/-- `:5181-5208`: `_PyCallMethodDescriptorFastWithKeywords_StackRef` (`Python/ceval.c:891-909`),
+`cfunc(self, args + 1, total_args - 1, NULL)`. -/
+def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do
+    match withSelf s args with
+    | self :: rest => pure [← e.om.mlMeth e.ctx c self rest]
+    | [] => fault "no self"
+  | _ => fault "arity"
+/-- `:5210-5227`, tier 2 only: `(callable, self_st, args[oparg], cfunc/4 -- ...)`, `self` in the
+`self_or_null` slot and not counted in `oparg`. -/
+def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE (e : Env) (cfunc : Val) : M Unit :=
+  stkK (e.oparg + 2) 1 fun
+    | _ :: self :: args => do pure [← e.om.mlMeth e.ctx cfunc self args]
+    | _ => fault "arity"
+/-- `:5229-5237`. -/
 def CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do
-  _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC_AT_END e
-/-- `:5254`. -/
-def _CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:5296`. -/
-def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_NOARGS e; _CHECK_PERIODIC_AT_END e
-/-- `:5323`. -/
-def _CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:5372`. -/
-def CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_FAST e; _CHECK_PERIODIC_AT_END e
+  _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e; _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e
+  _CHECK_PERIODIC_AT_END e
+/-- `:5239-5252`. -/
+def _GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := methDescrGuard e methNoArgs (· == 1)
+/-- `:5254-5276`: `ml_meth(self, NULL)`. -/
+def _CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do
+    match withSelf s args with
+    | [self] => pure [← e.om.mlMeth e.ctx c self []]
+    | _ => fault "METH_NOARGS descriptor with other than one argument"
+  | _ => fault "arity"
+/-- `:5278-5294`, tier 2 only: `(callable, args[1], cfunc/4 -- res, c, s)`. -/
+def _CALL_METHOD_DESCRIPTOR_NOARGS_INLINE (e : Env) (cfunc : Val) : M Unit := stkK (e.oparg + 1) 1 fun
+  | _ :: [self] => do pure [← e.om.mlMeth e.ctx cfunc self []]
+  | _ => fault "oparg is 1"
+/-- `:5296-5305`. -/
+def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do
+  _GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS e; _CHECK_RECURSION_LIMIT; _CALL_METHOD_DESCRIPTOR_NOARGS e
+  _CHECK_PERIODIC_AT_END e
+/-- `:5307-5321`. -/
+def _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := methDescrGuard e methFastcall (· != 0)
+/-- `:5323-5350`: `_PyCallMethodDescriptorFast_StackRef` (`Python/ceval.c:870-888`),
+`cfunc(self, args + 1, total_args - 1)`. -/
+def _CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := stkK (e.oparg + 2) 1 fun
+  | c :: s :: args => do
+    match withSelf s args with
+    | self :: rest => pure [← e.om.mlMeth e.ctx c self rest]
+    | [] => fault "no self"
+  | _ => fault "arity"
+/-- `:5352-5370`, tier 2 only. -/
+def _CALL_METHOD_DESCRIPTOR_FAST_INLINE (e : Env) (cfunc : Val) : M Unit := stkK (e.oparg + 2) 1 fun
+  | _ :: self :: args => do pure [← e.om.mlMeth e.ctx cfunc self args]
+  | _ => fault "arity"
+/-- `:5372-5379`. -/
+def CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do
+  _GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST e; _CALL_METHOD_DESCRIPTOR_FAST e; _CHECK_PERIODIC_AT_END e
 
 /-! ### Lines 4591-4840: `CALL_KW` -/
 

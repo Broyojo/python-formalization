@@ -943,10 +943,12 @@ def virtualNext (e : Env) (iter index : Val) : RM (Option (Val × Val)) :=
     | some v => pure (some (v, index))
     | none => pure none
 
-/-- `PyIter_Send`, `Objects/abstract.c:2925-2953`, as `_PyIter_Send` returns it: the value and
-whether it is `PYGEN_RETURN`. The receiver of a virtual iterator is the sequence itself, so a
+/-- `PyIter_Send`, `Objects/abstract.c:2930-2953`, as `_PyIter_Send` returns it: the value and
+whether it is `PYGEN_RETURN`. A type with `am_send` (generators, coroutines, async generators and
+their `asend` awaitables) answers through it, its exception being `PYGEN_ERROR`. The receiver of a virtual iterator is the sequence itself, so a
 non-`None` value looks up `send` on the list. -/
 def iterSend (e : Env) (receiver v : Val) : RM (Val × Bool) := do
+  if ← e.om.hasAmSend receiver then return ← e.om.amSend e.ctx receiver v
   let isIt ← e.om.isIterator receiver
   let attempt : RM (Option Val) :=
     if v == .none && isIt then e.om.iterNext e.ctx receiver
@@ -1039,11 +1041,28 @@ def _SEND_VIRTUAL (e : Env) : M Unit := do
   | _ => fault "SEND_VIRTUAL without a tagged index"
 /-- `:1795`. -/
 def SEND_VIRTUAL (e : Env) : M Unit := do _GUARD_TOS_IS_NONE; _GUARD_NOS_NOT_NULL; _SEND_VIRTUAL e
-/-- `:1801`. The machine's async generators have no `asend` object: those awaitables live in
-`GenObj/AsyncGen.lean`. So no receiver here passes this guard. -/
-def _GUARD_3OS_ASYNC_GEN_ASEND : M Unit := guardTop 3 fun _ => pure true
-/-- `:1827`. -/
-def SEND_ASYNC_GEN : M Unit := _GUARD_3OS_ASYNC_GEN_ASEND
+/-- `:1801-1804`: exits unless the receiver is exactly an `async_generator_asend`
+(`PyAsyncGenASend_CheckExact`). -/
+def _GUARD_3OS_ASYNC_GEN_ASEND : M Unit := guardTop 3 fun
+  | [it, _, _] => do
+    match it with
+    | .ref a =>
+      match ← (getObj a : RM Obj) with
+      | .asend .. => pure false
+      | _ => pure true
+    | _ => pure true
+  | _ => fault "arity"
+/-- `:1806-1825`: `(iter, null_in, v -- asend, null_out, retval)`, `_PyAsyncGenASend_Send(iter, v)`
+(the `am_send` of the type the guard checked), `ERROR_NO_POP` on `PYGEN_ERROR`; the value replaces
+`v`, and `PYGEN_RETURN` jumps by `oparg`. -/
+def _SEND_ASYNC_GEN (e : Env) : M Unit := stkK 3 3 fun
+  | [it, n, v] => do
+    let (r, ret) ← (e.om.amSend e.ctx it v : RM _)
+    if ret then jumpBy e.oparg
+    pure [it, n, r]
+  | _ => fault "arity"
+/-- `:1827-1830`. -/
+def SEND_ASYNC_GEN (e : Env) : M Unit := do _GUARD_3OS_ASYNC_GEN_ASEND; _SEND_ASYNC_GEN e
 
 /-- `:1889`: `_MAKE_HEAP_SAFE + _YIELD_VALUE` (`:1851`). -/
 def YIELD_VALUE (e : Env) : M Unit := do

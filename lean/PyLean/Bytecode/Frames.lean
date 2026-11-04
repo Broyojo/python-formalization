@@ -53,14 +53,16 @@ theorem unwindToHandler_proven : UnwindToHandler := by
   cases lasti <;> simp
 
 /-- With no handler the frame is popped and the search goes on in the caller at its
-`instr_ptr`; the frame's stack is simply dropped. -/
+`instr_ptr`, after the caller's traceback entry (`goto error` there); the frame's stack is simply
+dropped. -/
 def UnwindNoHandler : Prop :=
   ∀ (P : Program) (n : Nat) (v : Val) (s : St) (caller : Frame) (rest : List Frame),
     (s.regs.next = 0 ∨ getExceptionHandler ((P[s.regs.frame.code]?.map (·.exceptiontable)).getD #[])
       (s.regs.next - 1) = none) →
     s.regs.prev = caller :: rest → s.regs.frame.owner = .thread → caller.owner ≠ .interpreter →
     unwind P (n + 1) v s =
-      unwind P n v ⟨{ rt := { s.regs.rt with pyRecursionRemaining := s.regs.rt.pyRecursionRemaining + 1 }
+      unwind P n v ⟨{ rt := tracebackHere P { caller with returnOffset := 0 } v
+                              { s.regs.rt with pyRecursionRemaining := s.regs.rt.pyRecursionRemaining + 1 }
                       frame := { caller with returnOffset := 0 }, prev := rest,
                       next := caller.instrPtr }, caller.stack⟩
 
@@ -155,21 +157,5 @@ theorem forIterNext_proven : ForIterNext := by
   intro e regs it index index' v rest rt h
   simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, popN, pushAll, bind, EStateM.bind, BM.lift,
     RM.lift, h, pure, EStateM.pure, monadLift, liftM, MonadLift.monadLift]
-
-/-- `YIELD_VALUE` suspends: the generator records `FRAME_SUSPENDED + oparg`, the frame
-is stored with `instr_ptr` on the next instruction and the saved stack, the caller
-resumes after the `SEND`/`FOR_ITER` that entered it, and the handled exception of
-the generator goes back into the generator. -/
-def YieldSuspends : Prop :=
-  ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val) (a : Addr) (g : GenObj) (ev : Val)
-    (chain : List Val) (caller : Frame) (prev : List Frame),
-    regs.frame.owner = .generator a → regs.rt.heap[a]? = some (.gen g) →
-    regs.rt.excInfo = ev :: chain → regs.prev = caller :: prev →
-    ∃ s', YIELD_VALUE e ⟨regs, v :: rest⟩ = .ok () s' ∧
-      s'.stack = v :: caller.stack ∧ s'.regs.next = caller.instrPtr + 2 ∧
-      s'.regs.rt.excInfo = chain ∧ s'.regs.frame = caller ∧
-      s'.regs.rt.heap[a]? = some (.gen { g with
-        frameState := 1 + (e.oparg : Int), excValue := ev,
-        frame := { regs.frame with instrPtr := regs.frame.instrPtr + 1, stack := rest } })
 
 end PyLean.Bytecode

@@ -381,7 +381,7 @@ def excAttr (o : Val) (name : String) : RM (Option Val) := do
   | "__cause__" => pure (some (if d.cause == .null then .none else d.cause))
   | "__context__" => pure (some (if d.context == .null then .none else d.context))
   | "__suppress_context__" => pure (some (.bool d.suppressContext))
-  | "__traceback__" => pure (some .none)
+  | "__traceback__" => pure (some (if d.traceback == .null then .none else d.traceback))
   | "value" => if ← isSubtype (← typeOf o) (.cls "StopIteration") then pure (some d.value) else pure none
   /- `NameError_members`, `Objects/exceptions.c:2631-2634`: a member, `None` while unset. -/
   | "name" =>
@@ -413,6 +413,12 @@ def getAttrImpl (o : Val) (name : String) : RM Val := do
       | "__mro__" => return ← mkTuple c.mro
       | "__bases__" => return ← mkTuple c.bases
       | "__dict__" => return .ref c.dict
+      | _ => pure ()
+    -- `tb_memberlist` and `tb_next_get`, `Python/traceback.c`
+    | .traceback nx _ lasti =>
+      match name with
+      | "tb_next" => return (if nx == .null then .none else nx)
+      | "tb_lasti" => return .int (2 * lasti)
       | _ => pure ()
     | .module _ d =>
       match ← dictGetStr (.ref d) name with

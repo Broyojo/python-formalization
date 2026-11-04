@@ -455,6 +455,7 @@ decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal._
 decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
 decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
+decimal-str-spell-exact	proven	Lib/_pydecimal.py	Decimal.__str__
 decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__,_dec_hash
 decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal._rescale,Decimal.__int__,dec_as_long,_decimal_Decimal___floor___impl,_decimal_Decimal___ceil___impl,_decimal_Decimal___round___impl
@@ -562,6 +563,10 @@ decimal-next-minus-exact	proven	Lib/_pydecimal.py	Decimal.next_minus
 decimal-next-toward-exact	proven	Lib/_pydecimal.py	Decimal.next_toward
 decimal-eng-string-exact	proven	Lib/_pydecimal.py	Decimal.to_eng_string
 decimal-repr-exact	proven	Lib/_pydecimal.py	Decimal.__repr__
+decimal-hash-exact-py	proven	Lib/_pydecimal.py	Decimal.__hash__
+decimal-as-tuple-exact-py	proven	Lib/_pydecimal.py	Decimal.as_tuple
+decimal-ieee-context-exact	proven	Lib/_pydecimal.py	IEEEContext
+decimal-ratio-exact-py	proven	Lib/_pydecimal.py	Decimal.as_integer_ratio
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
@@ -2354,7 +2359,7 @@ bytecode-iter-len-reduce	open	Objects/iterobject.c	iter_len,iter_reduce
 bytecode-anext-coroutine	open	Objects/iterobject.c	anextawaitable_iternext,anextawaitable_getiter
 bytecode-enum-reduce	open	Objects/enumobject.c	enum_reduce
 bytecode-reversed-setstate	open	Objects/enumobject.c	reversed_setstate,reversed_len
-bytecode-yield-suspends	open	Python/bytecodes.c	opcode:YIELD_VALUE
+bytecode-yield-suspends	proven	Python/bytecodes.c	opcode:YIELD_VALUE,opcode:_YIELD_VALUE
 bytecode-frame-push-pop	open	Objects/frameobject.c	push_value,pop_value,top_of_stack
 bytecode-lawful-builtin	proven	Python/bytecodes.c	
 bytecode-gap-str-percent	open	Objects/unicodeobject.c	
@@ -2399,6 +2404,16 @@ bytecode-get-anext	proven	Python/bytecodes.c	opcode:GET_ANEXT,_PyEval_GetANext
 bytecode-load-special	proven	Python/bytecodes.c	opcode:LOAD_SPECIAL,opcode:_LOAD_SPECIAL,opcode:_INSERT_NULL
 bytecode-attr-method-no-dict	proven	Python/bytecodes.c	opcode:LOAD_ATTR_METHOD_NO_DICT,opcode:_LOAD_ATTR_METHOD_NO_DICT,opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:LOAD_ATTR_METHOD_LAZY_DICT,opcode:_CHECK_ATTR_METHOD_LAZY_DICT,opcode:_LOAD_ATTR_METHOD_LAZY_DICT
 bytecode-get-awaitable	proven	Python/bytecodes.c	opcode:GET_AWAITABLE,_PyEval_GetAwaitable,_PyEval_FormatAwaitableError
+bytecode-call-builtin-fn	proven	Python/bytecodes.c	opcode:CALL_BUILTIN_O,opcode:_GUARD_CALLABLE_BUILTIN_O,opcode:_CALL_BUILTIN_O,opcode:_CHECK_RECURSION_LIMIT,opcode:CALL_BUILTIN_FAST,opcode:_GUARD_CALLABLE_BUILTIN_FAST,opcode:_CALL_BUILTIN_FAST,opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS,opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:CALL_BUILTIN_CLASS,opcode:_GUARD_CALLABLE_BUILTIN_CLASS,opcode:_CALL_BUILTIN_CLASS,_Py_BuiltinCallFast_StackRef,_Py_BuiltinCallFastWithKeywords_StackRef,_Py_CallBuiltinClass_StackRef
+bytecode-call-method-descriptor	proven	Python/bytecodes.c	opcode:CALL_METHOD_DESCRIPTOR_O,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O,opcode:_CALL_METHOD_DESCRIPTOR_O,opcode:CALL_METHOD_DESCRIPTOR_NOARGS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS,opcode:CALL_METHOD_DESCRIPTOR_FAST,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST,opcode:_CALL_METHOD_DESCRIPTOR_FAST,opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,_PyCallMethodDescriptorFast_StackRef,_PyCallMethodDescriptorFastWithKeywords_StackRef
+bytecode-call-method-descriptor-inline	proven	Python/bytecodes.c	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE
+bytecode-send-async-gen	proven	Python/bytecodes.c	opcode:SEND_ASYNC_GEN,opcode:_GUARD_3OS_ASYNC_GEN_ASEND,opcode:_SEND_ASYNC_GEN,_PyAsyncGenASend_Send
+bytecode-return-generator	proven	Python/bytecodes.c	opcode:RETURN_GENERATOR
+bytecode-send	proven	Python/bytecodes.c	opcode:SEND,opcode:_SEND
+bytecode-iter-send	proven	Objects/abstract.c	
+bytecode-traceback-here	proven	Python/bytecodes.c	
+bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
+bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	

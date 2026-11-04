@@ -88,6 +88,9 @@ def getCtx (j : Json) : Except String Ctx := do
     emin := ← (← c.getObjVal? "emin").getInt?
     emax := ← (← c.getObjVal? "emax").getInt?
     clamp := (← (← c.getObjVal? "clamp").getNat?) == 1
+    capitals := (match c.getObjVal? "capitals" with
+      | .ok v => (match v.getNat? with | .ok n => n == 1 | .error _ => true)
+      | .error _ => true)
     traps := ← traps.toList.mapM (fun t => do signalOf (← t.getStr?)) }
 
 def flagNames (fl : List Signal) : Json :=
@@ -194,7 +197,7 @@ def evalM (c : Ctx) (name : String) (a b t : Dec) (isC : Bool := false) : Option
   | "divmod" => some (jDec ((if isC then divmodC else divmodD) c a b) (fun p => Json.arr #[encDec p.1, encDec p.2]))
   | "remainder_near" => some (jD (remainderNear c a b))
   | "to_eng_string" => some (if isC then pureJ (encStr (toEng a c.capitals)) else jDec (liftPy (pyEng a c.capitals)) encStr)
-  | "repr" => some (if isC then pureJ (encStr (reprD a)) else jDec (liftPy (pyRepr a)) encStr)
+  | "repr" => some (if isC then pureJ (encStr (reprD a c.capitals)) else jDec (liftPy (pyRepr a c.capitals)) encStr)
   | _ => none
 
 def argOf (j : Json) : Except String Arg := do

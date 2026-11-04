@@ -72,7 +72,7 @@ Objects/genobject.c	1912	1938	async_gen_unwrap_value	async_gen_unwrap_value(PyAs
 Objects/genobject.c	1945	1961	async_gen_asend_dealloc	async_gen_asend_dealloc(PyObject *self)	excluded		no-behaviour: memory release; the finalizer call is async_gen_asend_finalize, which is modelled
 Objects/genobject.c	1964	1970	async_gen_asend_traverse	async_gen_asend_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Objects/genobject.c	1974	2008	async_gen_asend_send	async_gen_asend_send(PyObject *self, PyObject *arg)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
-Objects/genobject.c	2011	2021	_PyAsyncGenASend_Send	_PyAsyncGenASend_Send(PyObject *iter, PyObject *arg, PyObject **result)	todo		changed-in-3.15: new function
+Objects/genobject.c	2011	2021	_PyAsyncGenASend_Send	_PyAsyncGenASend_Send(PyObject *iter, PyObject *arg, PyObject **result)	modelled	bytecode-send-async-gen	
 Objects/genobject.c	2025	2028	async_gen_asend_iternext	async_gen_asend_iternext(PyObject *ags)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-awaitable-closed-terminal	
 Objects/genobject.c	2032	2065	async_gen_asend_throw	async_gen_asend_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
 Objects/genobject.c	2069	2091	async_gen_asend_close	async_gen_asend_close(PyObject *self, PyObject *args)	modelled	gen-awaitable-close-idempotent,gen-awaitable-closed-terminal	

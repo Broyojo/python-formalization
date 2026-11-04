@@ -30,6 +30,7 @@ import contextlib
 import dis
 import gc
 import io
+import os
 import random
 import struct
 import sys
@@ -458,6 +459,64 @@ def p_async(r):
     ])
 
 
+def p_agen(r):
+    """Async generators under `async for`: `GET_AITER` (`am_aiter = PyObject_SelfIter`),
+    `GET_ANEXT` (the `PyAsyncGen_CheckExact` fast path, `async_gen_anext`), the `asend` awaitable
+    driven by `SEND` (`am_send = _PyAsyncGenASend_Send`), `INTRINSIC_ASYNC_GEN_WRAP` and
+    `async_gen_unwrap_value`, `END_ASYNC_FOR`. Nothing here is left suspended with a `finally`
+    that prints, since when a finalizer runs depends on reference counts."""
+    drv = ("def drive(c):\n    try:\n        while True:\n            x = c.send(None)\n            print('y', x)\n    except StopIteration as e:\n        return e.value\n"
+           "class A:\n    def __await__(self):\n        x = yield 'aw'\n        return 5\n")
+    body = r.choice([
+        "    yield 1\n    yield 2\n",
+        "    yield 1\n    x = await A()\n    print('got', x)\n    yield x\n",
+        "    for i in range(" + r.choice(["0", "1", "3"]) + "):\n        yield i * " + r.choice(["1", "10", "'s'"]) + "\n",
+        "    yield 1\n    raise " + r.choice(["ValueError('v')", "StopIteration(3)", "StopAsyncIteration", "KeyError(2)"]) + "\n",
+        "    return\n    yield\n",
+        "    try:\n        yield 1\n        raise ValueError('in')\n    except ValueError as e:\n        yield str(e)\n    yield None\n",
+        "    yield await A()\n",
+    ])
+    gen = "async def ag():\n" + body
+    use = r.choice([
+        "async def f():\n    async for x in ag():\n        print(x)\n    return 'd'\n" + guarded("print(drive(f()))"),
+        "async def f():\n    return [x async for x in ag()]\n" + guarded("print(drive(f()))"),
+        "async def f():\n    g = ag()\n    async for x in g:\n        print('a', x)\n        break\n    async for x in g:\n        print('b', x)\n    async for x in g:\n        print('c', x)\n    return 'e'\n" + guarded("print(drive(f()))"),
+        "class C:\n    def __aiter__(self):\n        return ag()\nasync def f():\n    async for x in C():\n        print(x)\n" + guarded("drive(f())"),
+        "async def ag2():\n    async for x in ag():\n        yield (x, x)\nasync def f():\n    async for x in ag2():\n        print(x)\n" + guarded("drive(f())"),
+        "async def f():\n    async for x in ag():\n        print(x)\n        if x == " + r.choice(["1", "2", "None"]) + ":\n            raise OSError('body')\n" + guarded("drive(f())"),
+        "async def f():\n    for k in range(2):\n        async for x in ag():\n            print(k, x)\n" + guarded("drive(f())"),
+        "print(type(ag()).__name__)\n",
+    ])
+    return drv + gen + use
+
+
+def p_tb(r):
+    """Tracebacks: `PyTraceBack_Here` at `label(error)` for each frame an exception passes through
+    (not for `RERAISE`, which goes to `exception_unwind`), `__traceback__`, `tb_next`, `tb_lasti`,
+    `with_traceback`, and the traceback `WITH_EXCEPT_START` hands to `__exit__`."""
+    head = ("def f():\n    raise ValueError('x')\n"
+            "def g():\n    f()\n"
+            "def depth(tb):\n    n = 0\n    while tb is not None:\n        n += 1\n        tb = tb.tb_next\n    return n\n"
+            "class CM:\n    def __enter__(self):\n        return self\n"
+            "    def __exit__(self, t, v, tb):\n        print(t.__name__, tb is None, type(tb).__name__, tb is v.__traceback__, depth(tb)"
+            + r.choice(["", ", tb.tb_lasti"]) + ")\n        return " + r.choice(["True", "False", "None"]) + "\n")
+    body = r.choice([
+        "raise ValueError('a')", "f()", "g()", "1 / 0", "[][1]",
+        "raise ValueError('b').with_traceback(None)",
+        "try:\n        f()\n    except ValueError as e:\n        raise e.with_traceback(None)",
+        "try:\n        g()\n    except ValueError:\n        raise",
+    ])
+    use = r.choice([
+        "with CM():\n    " + body + "\nprint('after')\n",
+        "def h():\n    with CM():\n        " + body.replace("\n", "\n    ") + "\n    return 'r'\nprint(h())\n",
+        "try:\n    " + body.replace("\n    ", "\n        ").replace("\n        ", "\n        ") + "\nexcept Exception as e:\n    print(type(e).__name__, depth(e.__traceback__)"
+        + r.choice(["", ", e.__traceback__.tb_lasti"]) + ")\n",
+        "e = ValueError('n')\nprint(e.__traceback__ is None)\n" + guarded("e.with_traceback(" + r.choice(["5", "None", "'s'"]) + ")\nprint(e.__traceback__)"),
+        "def gen():\n    yield 1\n    " + body.replace("\n    ", "\n    ") + "\ntry:\n    list(gen())\nexcept Exception as e:\n    print(type(e).__name__, depth(e.__traceback__))\n",
+    ])
+    return head + use
+
+
 def p_virtual(r):
     """`GET_ITER` on 3.15: the sequence and a tagged index for exact list, tuple, str and bytes
     (`_tp_iteritem`), the iterator and NULL for the rest, and the opcodes that read the two
@@ -741,6 +800,7 @@ def p_long_names(r):
 
 
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
+            p_agen, p_tb,
             p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
 
 
@@ -800,7 +860,9 @@ def mark_iterable_coroutines(co):
 
 
 def gen_case(rng):
-    fam = rng.choice(FAMILIES)
+    # `BYTECODE_FAMILIES=p_agen,p_calls` draws from those families only (for debugging a family)
+    only = [f for f in FAMILIES if f.__name__ in os.environ.get("BYTECODE_FAMILIES", "").split(",")]
+    fam = rng.choice(only or FAMILIES)
     src = fam(rng)
     try:
         import warnings
