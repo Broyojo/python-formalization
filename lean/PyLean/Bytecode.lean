@@ -26,6 +26,9 @@ import PyLean.Bytecode.SpecLoadAttr
 import PyLean.Bytecode.AttrRecursion
 import PyLean.Bytecode.SpecImport
 import PyLean.Bytecode.SpecCallPy
+import PyLean.Bytecode.SpecCallPyFast
+import PyLean.Bytecode.SpecExcMatch
+import PyLean.Bytecode.SpecAsync
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -651,33 +654,33 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-call-py-general", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_PY_GENERAL", op "_CHECK_FUNCTION_VERSION", op "_CHECK_RECURSION_REMAINING",
       op "_PY_FRAME_GENERAL", op "_SAVE_RETURN_OFFSET", op "_PUSH_FRAME"]
-    statement := "For every live callable, self_or_null, argument list, runtime and object model, and next_instr = this_instr + INSTRUCTION_SIZE: what the machine does after CALL_PY_GENERAL (carry on, raise, return, stop) is what it does after the generic CALL. It exits to CALL on a non-function or a stale func_version and when py_recursion_remaining <= 1; otherwise _PyEvalFramePushAndInit builds the same frame (or fails the same way, operands consumed) and _SAVE_RETURN_OFFSET + _PUSH_FRAME leave exactly the state CALL's return_offset = INSTRUCTION_SIZE + DISPATCH_INLINED + start_frame leave, recursion counter decremented once. _PyEvalFramePushAndInit is proven to leave py_recursion_remaining alone (KeepsRec), so the check before it and start_frame's after it see the same budget."
+    statement := "For every live callable, self_or_null, argument list, runtime and object model, and next_instr = this_instr + INSTRUCTION_SIZE: what the machine does after CALL_PY_GENERAL (carry on, raise, return, stop) is what it does after the generic CALL. It exits to CALL on a non-function or a stale func_version and when py_recursion_remaining <= 1; otherwise _PyEvalFramePushAndInit builds the same frame (or fails the same way, operands consumed) and _SAVE_RETURN_OFFSET + _PUSH_FRAME leave exactly the state CALL's return_offset = INSTRUCTION_SIZE + DISPATCH_INLINED + start_frame leave, recursion counter decremented once. _PyEvalFramePushAndInit is proven to leave py_recursion_remaining alone (KeepsRec), so the check before it and start_frame's after it see the same budget. The body on its own (before execOp's withDeopt restart, CallPyGeneralFast): a non-function or a function whose func_version differs from the cached one exits with the stack unchanged; a matching version with py_recursion_remaining <= 1 exits; otherwise it is .ok in exactly enteredSt of the frame _PyEvalFramePushAndInit builds, or that builder's error with the operands consumed."
     source := "Python/bytecodes.c:4460-4506, :4611-4613, :4628-4642, :6136-6140; DISPATCH_INLINED, Python/ceval_macros.h; _PyEvalFramePushAndInit, Python/ceval.c:2033-2068"
-    status := .proven, prop := ``CallPyGeneralRefines, thm := some ``callPyGeneralRefines_proven
+    status := .proven, prop := ``CallPyGeneralSpec, thm := some ``callPyGeneralSpec_proven
     notes := "No PEP 523 eval-frame hook is modelled, so _CHECK_PEP_523 never exits; it is not listed." },
   { id := "bytecode-call-bound-method-general", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_BOUND_METHOD_GENERAL", op "_CHECK_METHOD_VERSION", op "_EXPAND_METHOD"]
-    statement := "For every live callable whose method objects are well formed (im_self not NULL, im_func live), every runtime and object model: what the machine does after CALL_BOUND_METHOD_GENERAL is what it does after CALL. It exits unless the callable is a method object whose im_func is a function with the cached version and self_or_null is NULL, and with py_recursion_remaining <= 1; otherwise it splits the method into im_func and im_self as CALL's _MAYBE_EXPAND_METHOD does and builds and enters the same frame."
+    statement := "For every live callable whose method objects are well formed (im_self not NULL, im_func live), every runtime and object model: what the machine does after CALL_BOUND_METHOD_GENERAL is what it does after CALL. It exits unless the callable is a method object whose im_func is a function with the cached version and self_or_null is NULL, and with py_recursion_remaining <= 1; otherwise it splits the method into im_func and im_self as CALL's _MAYBE_EXPAND_METHOD does and builds and enters the same frame. The body on its own (CallBoundMethodGeneralFast): every stack _CHECK_METHOD_VERSION rejects, a method whose im_func has another func_version included, exits with the stack unchanged; past it, with py_recursion_remaining <= 1 it exits on the split stack (im_func, im_self), and otherwise it is .ok in exactly enteredSt of the frame built on im_func, or that builder's error with the operands consumed."
     source := "Python/bytecodes.c:4508-4539"
-    status := .proven, prop := ``CallBoundMethodGeneralRefines, thm := some ``callBoundMethodGeneralRefines_proven },
+    status := .proven, prop := ``CallBoundMethodGeneralSpec, thm := some ``callBoundMethodGeneralSpec_proven },
   { id := "bytecode-call-py-exact-args", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_PY_EXACT_ARGS", op "_CHECK_FUNCTION_EXACT_ARGS", op "_CHECK_STACK_SPACE",
       op "_INIT_CALL_PY_EXACT_ARGS"]
-    statement := "For every live callable, runtime and object model, when the function the version guard lets through has SIMPLE_FUNCTION code (no *args, **kwargs or keyword-only parameters, CO_OPTIMIZED: the invariant specialize_py_call maintains): what the machine does after CALL_PY_EXACT_ARGS is what it does after CALL. It exits on a non-function, a stale version, co_argcount != oparg + (self_or_null != NULL), no data-stack space and py_recursion_remaining <= 1; otherwise the frame _INIT_CALL_PY_EXACT_ARGS fills by copying the arguments (NULL locals) is the frame _PyEvalFramePushAndInit/initialize_locals builds, entered the same way."
+    statement := "For every live callable, runtime and object model, when the function the version guard lets through has SIMPLE_FUNCTION code (no *args, **kwargs or keyword-only parameters, CO_OPTIMIZED: the invariant specialize_py_call maintains): what the machine does after CALL_PY_EXACT_ARGS is what it does after CALL. It exits on a non-function, a stale version, co_argcount != oparg + (self_or_null != NULL), no data-stack space and py_recursion_remaining <= 1; otherwise the frame _INIT_CALL_PY_EXACT_ARGS fills by copying the arguments (NULL locals) is the frame _PyEvalFramePushAndInit/initialize_locals builds, entered the same way. The body on its own, for any code (CallPyExactArgsFast): each of the four guards exits with the stack unchanged on exactly the stacks it rejects, in that order, and with all passing it is .ok in exactly enteredSt of exactFrame (_PyFrame_PushUnchecked, NULL locals, self then the arguments copied)."
     source := "Python/bytecodes.c:4596-4626, :4659-4669; function_kind and specialize_py_call, Python/specialize.c:1472-1481, :1754-1792"
-    status := .proven, prop := ``CallPyExactArgsRefines, thm := some ``callPyExactArgsRefines_proven
+    status := .proven, prop := ``CallPyExactArgsSpec, thm := some ``callPyExactArgsSpec_proven
     notes := "The SIMPLE_FUNCTION hypothesis is necessary: the copy leaves a *args or keyword-only local NULL where initialize_locals fills it." },
   { id := "bytecode-call-bound-method-exact-args", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_BOUND_METHOD_EXACT_ARGS", op "_CHECK_CALL_BOUND_METHOD_EXACT_ARGS",
       op "_INIT_CALL_BOUND_METHOD_EXACT_ARGS"]
-    statement := "For every live callable with well-formed method objects whose im_func satisfies the SIMPLE_FUNCTION invariant: what the machine does after CALL_BOUND_METHOD_EXACT_ARGS is what it does after CALL. It exits unless the callable is a method object and self_or_null is NULL; otherwise it splits the method and is then CALL_PY_EXACT_ARGS on im_func and im_self, its later exits restarting CALL on the split stack (the flush), which CALL would have made itself."
+    statement := "For every live callable with well-formed method objects whose im_func satisfies the SIMPLE_FUNCTION invariant: what the machine does after CALL_BOUND_METHOD_EXACT_ARGS is what it does after CALL. It exits unless the callable is a method object and self_or_null is NULL; otherwise it splits the method and is then CALL_PY_EXACT_ARGS on im_func and im_self, its later exits restarting CALL on the split stack (the flush), which CALL would have made itself. The body on its own (CallBoundMethodExactArgsFast with CallPyExactArgsFast): a non-method or a non-NULL self_or_null exits with the stack unchanged, and a method object makes it the CALL_PY_EXACT_ARGS body on im_func, im_self, whose guard and completion clauses are stated."
     source := "Python/bytecodes.c:4577-4590, :4644-4657"
-    status := .proven, prop := ``CallBoundMethodExactArgsRefines, thm := some ``callBoundMethodExactArgsRefines_proven },
+    status := .proven, prop := ``CallBoundMethodExactArgsSpec, thm := some ``callBoundMethodExactArgsSpec_proven },
   { id := "bytecode-call-kw-py", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_KW_PY", op "_CHECK_FUNCTION_VERSION_KW", op "_PY_FRAME_KW"]
-    statement := "For every live callable, argument list and kwnames tuple of names, every runtime and object model: what the machine does after CALL_KW_PY is what it does after CALL_KW. It exits on a non-function, a stale version and py_recursion_remaining <= 1 (the check python/cpython#137887 added); otherwise it builds the frame with the keyword names and enters it as CALL_KW does, or fails as it does."
+    statement := "For every live callable, argument list and kwnames tuple of names, every runtime and object model: what the machine does after CALL_KW_PY is what it does after CALL_KW. It exits on a non-function, a stale version and py_recursion_remaining <= 1 (the check python/cpython#137887 added); otherwise it builds the frame with the keyword names and enters it as CALL_KW does, or fails as it does. The body on its own (CallKwPyFast): a non-function or a stale func_version exits with the stack unchanged, a matching one with py_recursion_remaining <= 1 exits, and otherwise it is .ok in exactly enteredSt of _PY_FRAME_KW's frame, or its error with the operands consumed."
     source := "Python/bytecodes.c:5474-5519"
-    status := .proven, prop := ``CallKwPyRefines, thm := some ``callKwPyRefines_proven },
+    status := .proven, prop := ``CallKwPySpec, thm := some ``callKwPySpec_proven },
   { id := "bytecode-call-kw-bound-recursion", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_KW_BOUND_METHOD", op "_CHECK_METHOD_VERSION_KW", op "_EXPAND_METHOD_KW", op "_PY_FRAME_KW"]
     statement := "CALL_KW_BOUND_METHOD completes exactly when CALL_KW does. False: it has no _CHECK_RECURSION_REMAINING, so with py_recursion_remaining = 0 it pushes the method's frame where CALL_KW's start_frame raises RecursionError (python/cpython#155151, fix in PR 156346)."
@@ -685,10 +688,10 @@ def entries : List Entry := GenObj.entries ++ [
     status := .refuted, prop := ``CallKwBoundMethodRefines, thm := some ``callKwBoundMethodRefines_refuted
     bug := some "bytecode-call-ex-kw-bound-recursion" },
   { id := "bytecode-call-kw-bound-budget", pyFile := "Python/bytecodes.c"
-    pyFns := [op "CALL_KW_BOUND_METHOD", op "_CHECK_METHOD_VERSION_KW", op "_EXPAND_METHOD_KW"]
-    statement := "The narrowing of bytecode-call-kw-bound-recursion: with py_recursion_remaining > 0, for every live callable with well-formed method objects, every argument list and kwnames tuple, runtime and object model, what the machine does after CALL_KW_BOUND_METHOD is what it does after CALL_KW: it exits unless the callable is a method object with a function im_func of the cached version and a NULL self_or_null, and otherwise splits it and builds and enters CALL_KW's frame."
+    pyFns := [op "CALL_KW_BOUND_METHOD", op "_CHECK_METHOD_VERSION_KW", op "_EXPAND_METHOD_KW", op "_PY_FRAME_KW"]
+    statement := "The narrowing of bytecode-call-kw-bound-recursion: with py_recursion_remaining > 0, for every live callable with well-formed method objects, every argument list and kwnames tuple, runtime and object model, what the machine does after CALL_KW_BOUND_METHOD is what it does after CALL_KW: it exits unless the callable is a method object with a function im_func of the cached version and a NULL self_or_null, and otherwise splits it and builds and enters CALL_KW's frame. The body on its own, at any budget (CallKwBoundMethodFast): every stack _CHECK_METHOD_VERSION_KW rejects (a stale im_func version included) exits with the stack unchanged, and past it the body is .ok in exactly enteredSt of the frame built on im_func, im_self and the keyword names, with no recursion check, or that builder's error with the operands consumed."
     source := "Python/bytecodes.c:5521-5551"
-    status := .proven, prop := ``CallKwBoundMethodRefinesWithBudget, thm := some ``callKwBoundMethodRefinesWithBudget_proven },
+    status := .proven, prop := ``CallKwBoundMethodSpec, thm := some ``callKwBoundMethodSpec_proven },
   { id := "bytecode-call-ex-py-recursion", pyFile := "Python/bytecodes.c"
     pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX"]
     statement := "CALL_EX_PY completes exactly when CALL_FUNCTION_EX does. False: it has no _CHECK_RECURSION_REMAINING, so with py_recursion_remaining = 0 it pushes the function's frame where CALL_FUNCTION_EX's start_frame raises RecursionError (python/cpython#155151, fix in PR 156346)."
@@ -696,11 +699,71 @@ def entries : List Entry := GenObj.entries ++ [
     status := .refuted, prop := ``CallExPyRefines, thm := some ``callExPyRefines_refuted
     bug := some "bytecode-call-ex-kw-bound-recursion" },
   { id := "bytecode-call-ex-py-budget", pyFile := "Python/bytecodes.c"
-    pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX"]
-    statement := "The narrowing of bytecode-call-ex-py-recursion: with an exact tuple as callargs and py_recursion_remaining > 0, for every live callable, every kwargs (NULL or a dict), runtime and object model, what the machine does after CALL_EX_PY is what it does after CALL_FUNCTION_EX: it exits on anything but a Python function; on one it unpacks the dict with _PyStack_UnpackDict (refusing non-str keys the same way) and builds and enters CALL_FUNCTION_EX's frame with _PyEvalFramePushAndInit_Ex, or fails as it does."
+    pyFns := [op "CALL_EX_PY", op "_CHECK_IS_PY_CALLABLE_EX", op "_PY_FRAME_EX", op "_MAKE_CALLARGS_A_TUPLE"]
+    statement := "The narrowing of bytecode-call-ex-py-recursion: with an exact tuple as callargs and py_recursion_remaining > 0, for every live callable, every kwargs (NULL or a dict), runtime and object model, what the machine does after CALL_EX_PY is what it does after CALL_FUNCTION_EX: it exits on anything but a Python function; on one it unpacks the dict with _PyStack_UnpackDict (refusing non-str keys the same way) and builds and enters CALL_FUNCTION_EX's frame with _PyEvalFramePushAndInit_Ex, or fails as it does. Every other callargs goes through CALL_EX_PY's own _MAKE_CALLARGS_A_TUPLE first (CallExPyFast): the 'Value after * must be an iterable, not T' TypeError and a failing tuple() keep every operand and are what CALL_FUNCTION_EX raises, and a successful conversion makes the body and the dispatch exactly themselves on the stack with that tuple, so tuple(callargs) runs once even when _CHECK_IS_PY_CALLABLE_EX then exits (JUMP_TO_PREDICTED keeps the converted stack). The body on its own: on an exact tuple anything but a Python function exits with the stack unchanged; a function gets _PyStack_UnpackDict's error with the operands consumed, or the frame entered (enteredSt) at any budget, or the builder's error."
     source := "Python/bytecodes.c:5734-5771; _PyEvalFramePushAndInit_Ex, Python/ceval.c:2074-2125"
-    status := .proven, prop := ``CallExPyRefinesWithBudget, thm := some ``callExPyRefinesWithBudget_proven
-    notes := "A non-tuple callargs goes through the same _MAKE_CALLARGS_A_TUPLE on both paths (stated for CALL_FUNCTION_EX in bytecode-call-generic); this entry does not state the CALL_EX_PY side of that step." }
+    status := .proven, prop := ``CallExPySpec, thm := some ``callExPySpec_proven },
+  -- The exception-handling instructions (SpecExcMatch.lean).
+  { id := "bytecode-check-exc-match", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EXC_MATCH"]
+    statement := "For every object model: CHECK_EXC_MATCH on (left, right) raises _PyEval_CheckExceptTypeValid(right)'s error with both operands kept (ERROR_NO_POP), and otherwise replaces right by the bool of PyErr_GivenExceptionMatches(left, right), keeping left; the type check comes first. Both use PyTuple_Check, so an instance of a tuple subclass is checked and matched exactly as the exact tuple of its items (except T((KeyError, ValueError)) catches a ValueError)."
+    source := "Python/bytecodes.c:3441-3453; _PyEval_CheckExceptTypeValid, Python/ceval.c:3340-3363; PyErr_GivenExceptionMatches, Python/errors.c:331-370"
+    status := .proven, prop := ``CheckExcMatchSpec, thm := some ``checkExcMatchSpec_proven },
+  { id := "bytecode-check-eg-match", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EG_MATCH", "_PyEval_ExceptionGroupMatch"]
+    statement := "For every object model: CHECK_EG_MATCH on (exc_value, match_type) raises _PyEval_CheckExceptStarTypeValid's error, then _PyEval_ExceptionGroupMatch's, with both operands popped; otherwise (match, rest) replace them, match on top, and a match that is not None becomes tstate->exc_info->exc_value, whatever it is. _PyEval_ExceptionGroupMatch gives (None, None) for None; on a full PyErr_GivenExceptionMatches match, the group itself or the naked exception wrapped by _PyExc_CreateExceptionGroup, rest None; for a group that does not match, it calls the group's split attribute with match_type and requires an exact tuple (TypeError 'T.split must return a tuple, not U') of at least two items (TypeError 'T.split must return a 2-tuple, got tuple of size n'), whose first two items are (match, rest) unchecked; the attribute's and the call's errors propagate; anything else gives (None, exc_value)."
+    source := "Python/bytecodes.c:3415-3439; _PyEval_ExceptionGroupMatch, Python/ceval.c:2263-2348; _PyErr_SetHandledException, Python/errors.c:619-622"
+    status := .proven, prop := ``CheckEgMatchSpec, thm := some ``checkEgMatchSpec_proven
+    notes := "The wrapping of a naked exception (PyTuple_Pack, _PyExc_CreateExceptionGroup, the traceback from the frame) is the egWrap oracle." },
+  { id := "bytecode-eg-match-handled", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CHECK_EG_MATCH", "_PyEval_ExceptionGroupMatch"]
+    statement := "CHECK_EG_MATCH keeps the handled exception (tstate->exc_info->exc_value) NULL or an exception instance. False: for an ExceptionGroup subclass whose split() returns (1, None) the int 1 is installed by PyErr_SetHandledException, sys.exception() returns it, and the next raise in the handler crashes in PyException_GetContext."
+    source := "invariant: sys.exception() returns the exception instance being handled; Python/ceval.c:2339-2340, Python/bytecodes.c:3434-3436"
+    status := .refuted, prop := ``EgMatchHandledIsException, thm := some ``egMatchHandledIsException_refuted
+    bug := some "bytecode-eg-match-split-items-unchecked" },
+  { id := "bytecode-reraise", pyFile := "Python/bytecodes.c"
+    pyFns := [op "RERAISE"]
+    statement := "For every stack (values[oparg], exc): RERAISE re-raises exc through exception_unwind (no traceback entry for this instruction), leaving the oparg values; with oparg != 0 it first sets frame->instr_ptr to the offset tagged in values[0] (lasti), with oparg = 0 it leaves the frame alone."
+    source := "Python/bytecodes.c:1918-1929"
+    status := .proven, prop := ``ReraiseRules, thm := some ``reraiseRules_proven },
+  { id := "bytecode-cleanup-throw", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CLEANUP_THROW"]
+    statement := "For every object model: CLEANUP_THROW on (sub_iter, null_in, last_sent_val, exc_value) replaces the four by (None, null_in, exc_value.value) when PyErr_GivenExceptionMatches(exc_value, StopIteration) (a subclass included), and otherwise re-raises exc_value through exception_unwind (the model pops the four first; in C the unwinding to the handler's depth, below them, pops them)."
+    source := "Python/bytecodes.c:1960-1978"
+    status := .proven, prop := ``CleanupThrowRules, thm := some ``cleanupThrowRules_proven },
+  -- `async for` (SpecAsync.lean).
+  { id := "bytecode-get-aiter", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_AITER"]
+    statement := "For every object model, GET_AITER replaces obj by am_aiter's result and pops it on failure; and for every inner object model, the protocol the difftest model installs (getAIterImpl): no __aiter__ on the type gives TypeError \"'async for' requires an object with __aiter__ method, got T\" (%.100s), the lookup's or call's error propagates, a result whose type has no __anext__ gives TypeError \"'async for' received an object from __aiter__ that does not implement __anext__: U\", and otherwise the result is pushed as it is."
+    source := "Python/bytecodes.c:1607-1641; slot_am_aiter, Objects/typeobject.c"
+    status := .proven, prop := ``GetAIterRules, thm := some ``getAIterRules_proven
+    notes := "Scope limit: the builtin async iterators (async_generator and its asend objects) have no am_aiter/am_anext in the difftest object model, so async for over an async generator object is a TypeError there; the instruction statement holds for every object model." },
+  { id := "bytecode-get-anext", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_ANEXT", "_PyEval_GetANext"]
+    statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): no __anext__ gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the lookup's or call's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause)."
+    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; _PyErr_FormatFromCause, Python/errors.c"
+    status := .proven, prop := ``GetANextRules, thm := some ``getANextRules_proven
+    notes := "The PyAsyncGen_CheckExact fast path (:3563-3565) is outside the difftest model (see bytecode-get-aiter); the model previously wrapped only a TypeError and chained __context__ to the handled exception." },
+  { id := "bytecode-load-special", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_SPECIAL", op "_LOAD_SPECIAL", op "_INSERT_NULL"]
+    statement := "For every object model, LOAD_SPECIAL replaces owner by the (method, self) _PyObject_LookupSpecialMethod finds, self on top; keeps owner and raises its error (ERROR_NO_POP); and when nothing is found raises TypeError with _Py_SpecialMethods[oparg].error, or .error_suggestion when _PyEval_SpecialMethodCanSuggest holds, formatted with %T of owner (the __qualname__ of a __main__ class). type_has_special_method counts a name only when what _PyType_Lookup finds has tp_descr_get: a function does, an int or a builtin function does not."
+    source := "Python/bytecodes.c:4125-4151; _Py_SpecialMethods, Python/ceval.c:375-422; type_has_special_method, _PyEval_SpecialMethodCanSuggest, Python/ceval.c:3742-3769"
+    status := .proven, prop := ``LoadSpecialRules, thm := some ``loadSpecialRules_proven
+    notes := "On a failed lookup C leaves NULL, owner in the two slots and the model owner alone; exception_unwind pops to the handler's depth, below both. The model used tp_name for %T and counted any attribute as a special method before." },
+  { id := "bytecode-attr-method-no-dict", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_METHOD_NO_DICT", op "_LOAD_ATTR_METHOD_NO_DICT", op "LOAD_ATTR_NONDESCRIPTOR_NO_DICT",
+      op "_LOAD_ATTR_NONDESCRIPTOR_NO_DICT", op "LOAD_ATTR_METHOD_LAZY_DICT", op "_CHECK_ATTR_METHOD_LAZY_DICT",
+      op "_LOAD_ATTR_METHOD_LAZY_DICT"]
+    statement := "For every object model, with cache [type_version, descr]: on another tp_version_tag each of LOAD_ATTR_METHOD_NO_DICT, LOAD_ATTR_NONDESCRIPTOR_NO_DICT and LOAD_ATTR_METHOD_LAZY_DICT is the generic LOAD_ATTR on the same state; under the cached version the method forms leave the cached descriptor with owner above it as self and the non-descriptor form replaces owner by it, LOAD_ATTR_METHOD_LAZY_DICT only while the instance's __dict__ has not been created (otherwise, or on a non-instance, it is LOAD_ATTR)."
+    source := "Python/bytecodes.c:4261-4333"
+    status := .proven, prop := ``MethodLoadNoDictRules, thm := some ``methodLoadNoDictRules_proven
+    notes := "That the cached descriptor is what the generic lookup finds under that version is the specializer's invariant (Python/specialize.c), as for bytecode-attr-specialized; the dict pointer at MANAGED_DICT_OFFSET + dictoffset is the instance's dict field." },
+  { id := "bytecode-get-awaitable", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_AWAITABLE", "_PyEval_GetAwaitable", "_PyEval_FormatAwaitableError"]
+    statement := "For every object model, GET_AWAITABLE replaces iterable by _PyEval_GetAwaitable(iterable, oparg) and pops it on failure; and for every inner object model, _PyEval_GetAwaitable (getAwaitableImpl): a non-coroutine result of _PyCoro_GetAwaitableIter is returned, a coroutine too unless it is suspended in a yield from (FRAME_SUSPENDED_YIELD_FROM), which raises RuntimeError 'coroutine is being awaited already'; on its exception _PyEval_FormatAwaitableError's TypeError, if it raises one, replaces it, else the original is raised. _PyEval_FormatAwaitableError raises nothing for a type with __await__ or a coroutine, and otherwise the 'async with' received an object from __aenter__ (oparg 1) or __aexit__ (oparg 2) that does not implement __await__ TypeError with %.100s of tp_name, nothing for another oparg."
+    source := "Python/bytecodes.c:1651-1656; _PyEval_GetAwaitable, Python/ceval.c:3645-3667; _PyEval_FormatAwaitableError, Python/ceval.c:3495-3511"
+    status := .proven, prop := ``GetAwaitableRules, thm := some ``getAwaitableRules_proven
+    notes := "_PyCoro_GetAwaitableIter itself is gen-awaitable-iter-result; its %T messages now use the qualified name (O.R.__await__() ...), its last message %.100s of tp_name." }
 ]
 
 end PyLean.Bytecode

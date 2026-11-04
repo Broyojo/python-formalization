@@ -22,6 +22,7 @@ import _strptime
 
 import common
 import datetime_x2
+import datetime_x3
 import sys
 
 IMPL = {"py": _pydatetime, "c": _datetime}
@@ -403,6 +404,8 @@ def strp_input(rng, fmt):
 def gen_strptime(rng):
     c = {"mod": "datetime", "impl": "py", "lt": LOCALE}
     k = rng.random()
+    if rng.random() < 0.1:
+        return datetime_x3.gen_strp_z(rng, c, _strptime._TimeRE_cache.compile)
     if k < 0.15:
         fmt = strp_format(rng) if rng.random() < 0.5 else rng.choice(["%", "% d", "%Q", "%E", "%Ez", "%-d", "%\\", "a%", "%%%", "%5Y", "%_d", "%^a"])
         if rng.random() < 0.4:
@@ -470,6 +473,8 @@ def gen_obj_case(rng):
         return gen_strptime(rng)
     if rng.random() < 0.2:
         return datetime_x2.gen_x2(rng, sys.modules[__name__])
+    if rng.random() < 0.15:
+        return datetime_x3.gen_x3(rng, sys.modules[__name__])
     if rng.random() < 0.1:
         impl = rng.choice(["py", "c"])
         k = rng.choice(["td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime"])
@@ -968,7 +973,8 @@ def gen_case(rng):
     kind = rng.random()
     if kind < 0.55:
         fn = rng.choice(ISO_FNS)
-        return {"mod": "datetime", "fn": f"{fn}_{impl}", "s": [ord(ch) for ch in iso_string(rng)]}
+        s = datetime_x3.iso_midnight(rng) if fn == "datetime_fromiso" and rng.random() < 0.1 else iso_string(rng)
+        return {"mod": "datetime", "fn": f"{fn}_{impl}", "s": [ord(ch) for ch in s]}
     if kind < 0.57:
         return {"mod": "datetime", "fn": f"date_fromiso_arg_{impl}", "arg": rng.choice("bnu"),
                 "s": [ord(ch) for ch in iso_string(rng)]}
@@ -1061,6 +1067,8 @@ def spec_arg(spec):
 def run_python(c):
     if c["fn"].startswith("x2_"):
         return datetime_x2.run_x2(c, sys.modules[__name__])
+    if c["fn"].startswith("x3_"):
+        return datetime_x3.run_x3(c, sys.modules[__name__])
     if c["fn"] in OBJ_FNS:
         return run_obj(c)
     if c["fn"] in MORE_FNS:

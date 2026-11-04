@@ -1,0 +1,55 @@
+id: datetime-pydatetime-timedelta-float-precision
+title: "_pydatetime timedelta() rounds large float arguments before splitting off the fraction, unlike C"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["timedelta.__new__"]
+status: duplicate
+duplicate_of: "python/cpython#160806 (fixed on main by gh-160807; not in 3.15.2)"
+summary: |
+  `_pydatetime.timedelta.__new__` first combines the arguments with float arithmetic
+  (`days += weeks*7`, `seconds += minutes*60 + hours*3600`, `microseconds +=
+  milliseconds*1000`, Lib/_pydatetime.py:686-688) and only then splits off the fractions with
+  `math.modf` (:692-746), so the sub-second part of a large float is already rounded away. C's
+  `accum` (Modules/_datetimemodule.c:2733-2811) converts each argument's integral part exactly
+  and keeps only the fractional microseconds as a double. `timedelta(hours=10000000.1)` is
+  `416666 days, 57959 s, 999999 us` in C (the exactly rounded value) and `416666 days, 57960 s,
+  0 us` in Python; `timedelta(weeks=100000.1)` differs by 2 us. (Also, not filed: Python checks
+  every argument's type first, C converts in its own order, so `timedelta(days='x',
+  microseconds=float('inf'))` is TypeError in Python and OverflowError in C.)
+likelihood: |
+  Any large float argument with a fraction; about one in twenty random arguments up to 1e7.
+maybe_intended: |
+  No: the docs describe C's behaviour, and gh-160806 was accepted and fixed.
+reproducer: |
+  import datetime, _pydatetime
+  c = datetime.timedelta(hours=10000000.1)
+  p = _pydatetime.timedelta(hours=10000000.1)
+  print('C:', repr(c), ' Python:', repr(p))
+  if (c.days, c.seconds, c.microseconds) == (416666, 57959, 999999) and \
+     (p.days, p.seconds, p.microseconds) == (416666, 57960, 0):
+      print('REPRODUCED datetime-pydatetime-timedelta-float-precision')
+expected: |
+  The same timedelta in both implementations, C's (the fractional microseconds of all
+  arguments combined and rounded half to even, as the docs say).
+promised_by: |
+  PEP 399 equivalence; the timedelta docs ("If any argument is a float and there are fractional
+  microseconds, the fractional microseconds left over from all arguments are combined and their
+  sum is rounded to the nearest microsecond").
+cause: |
+  Lib/_pydatetime.py:686-688 forms the float sums before the modf calls of :692-746;
+  Modules/_datetimemodule.c:2768-2805 converts each integral part with PyLong_FromDouble.
+possible_fix: |
+  As gh-160807: accumulate the integral parts as ints, as accum() does.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): not reproduced (fixed by gh-160807)
+duplicates:
+  issues:
+    - {number: 160806, state: closed, relation: duplicate (fixed on main, gh-160807; backports gh-160889, gh-160890 not in 3.15.2)}
+  queries: ["gh search issues: timedelta float pydatetime rounding (found 160806)",
+            "bugforge-results/README.md: timedelta (no entries)"]
+lean:
+  property: PyLean.Datetime.TimedeltaFloatCtorTwins
+  theorem: PyLean.Datetime.timedeltaFloatCtorTwins_refuted

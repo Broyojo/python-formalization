@@ -268,7 +268,10 @@ def p_exc(r):
     kinds = ["ValueError('v')", "KeyError('k')", "TypeError", "ZeroDivisionError('z')", "StopIteration(5)", "RuntimeError()",
              "1", "'x'", "None", "Exception('a', 'b')", "AttributeError('at')"]
     e = r.choice(kinds)
-    h = r.choice(["ValueError", "(KeyError, TypeError)", "Exception", "BaseException", "ArithmeticError", "1", "(1, 2)", "()", "LookupError"])
+    # `T(...)`: a tuple subclass, which `_PyEval_CheckExceptTypeValid` and
+    # `PyErr_GivenExceptionMatches` take item by item (`PyTuple_Check`)
+    h = r.choice(["ValueError", "(KeyError, TypeError)", "Exception", "BaseException", "ArithmeticError", "1", "(1, 2)", "()", "LookupError",
+                  "T((KeyError, ValueError))", "T((ValueError,))", "T(())", "T((1,))", "T((KeyError, T((ValueError,))))"])
     t = r.choice([
         f"try:\n    raise {e}\nexcept {h} as x:\n    print('h', repr(x))\nelse:\n    print('else')\nfinally:\n    print('f')\n",
         f"def f():\n    try:\n        raise {e}\n    finally:\n        return 1\nprint(f())\n",
@@ -286,6 +289,7 @@ def p_exc(r):
         "class E(ValueError):\n    pass\nclass F(E):\n    pass\ntry:\n    raise F('x')\nexcept (KeyError, E) as x:\n    print(type(x).__name__, x)\n",
         "assert 1 == 1\n" + guarded("assert 1 == 2, 'msg'") + "\n" + guarded("assert False"),
     ])
+    t = "class T(tuple):\n    pass\n" + t
     return guarded(t) if r.random() < 0.7 else t
 
 
@@ -303,6 +307,13 @@ def p_with(r):
                       "class D:\n    def __enter__(self):\n        return 1\n" + guarded("with D():\n    pass"),
                       "class A:\n    async def __aenter__(self):\n        pass\n    async def __aexit__(self, *a):\n        pass\n" + guarded("with A():\n    pass"),
                       "class E:\n    __enter__ = 1\n    __exit__ = 2\n" + guarded("with E():\n    pass"),
+                      # `%T` is the qualified name; the suggestion needs `tp_descr_get` on both
+                      "class O:\n    class I:\n        pass\n" + guarded("with O.I():\n    pass"),
+                      "def mk():\n    class L:\n        pass\n    return L\n" + guarded("with mk()():\n    pass"),
+                      "class NS:\n    __aenter__ = " + r.choice(["1", "len", "staticmethod(len)", "lambda s: 1"]) + "\n"
+                      "    async def __aexit__(self, *a):\n        pass\n" + guarded("with NS():\n    pass"),
+                      "class NA:\n    __enter__ = " + r.choice(["1", "len", "lambda s: 1"]) + "\n"
+                      "    def __exit__(self, *a):\n        pass\n" + guarded("async def f():\n    async with NA():\n        pass\nf().send(None)"),
                       cls + guarded("with C() as a, C() as b:\n    print('both')\n"),
                       ])
     return t + "\n" + extra
@@ -425,6 +436,25 @@ def p_async(r):
         # `yield from` on a coroutine, and `await` on a coroutine that is already being awaited
         "async def co():\n    return 1\ndef g():\n    yield from co()\n" + guarded("next(g())"),
         "async def f():\n    await A()\nc = f()\nc.send(None)\nasync def g():\n    await c\n" + guarded("drive(g())") + "\n" + guarded("c.close()"),
+        # `_PyEval_GetANext`: whatever `_PyCoro_GetAwaitableIter` raises becomes the cause and the
+        # context of the TypeError, also inside a handler (`_PyErr_FormatFromCause`)
+        "class W:\n    def __await__(self):\n        raise " + r.choice(["ValueError('w')", "TypeError('t')", "KeyError(1)"]) + "\n"
+        "class AI:\n    def __aiter__(self):\n        return self\n    def __anext__(self):\n        return " + r.choice(["W()", "5", "None", "iter([1])"]) + "\n"
+        "async def f():\n    async for x in AI():\n        pass\n"
+        "def show():\n    try:\n        drive(f())\n    except Exception as e:\n"
+        "        print(type(e).__name__, e, repr(e.__cause__), repr(e.__context__), e.__suppress_context__)\n"
+        "show()\ntry:\n    raise OSError('handled')\nexcept OSError:\n    show()\n",
+        "class NA:\n    def __aiter__(self):\n        return " + r.choice(["1", "self", "[]"]) + "\nasync def f():\n    async for x in NA():\n        pass\n" + guarded("drive(f())"),
+        # `%T` (qualified name) in `_PyCoro_GetAwaitableIter`, `%.100s` of `tp_name` in the rest
+        "class O:\n    class R:\n        def __await__(self):\n            return " + r.choice(["1", "co()", "iter([])"]) + "\n"
+        "    class Q:\n        pass\n"
+        "    class CM:\n        async def __aenter__(self):\n            return 1\n        def __aexit__(self, *a):\n            return " + r.choice(["2", "O.Q()", "None"]) + "\n"
+        "    class CM2:\n        def __aenter__(self):\n            return " + r.choice(["O.Q()", "3", "O.R()"]) + "\n        async def __aexit__(self, *a):\n            return 2\n"
+        "async def co():\n    return 1\n"
+        "async def f(x):\n    await x\n"
+        + guarded("drive(f(O." + r.choice(["R()", "Q()"]) + "))") + "\n"
+        "async def g(cm):\n    async with cm:\n        pass\n"
+        + guarded("drive(g(O." + r.choice(["CM()", "CM2()"]) + "))"),
     ])
 
 
@@ -667,6 +697,12 @@ def p_call_generic(r):
                "    print(x2(1, 2), xd(1), xd(1, 2), xk(1), xk(1, b=4), xv(1), xv(1, 2), xo.m(5), xo.n(5), xo.n(a=5, b=6),\n"
                "          x2(*(1, 2)), xd(*[1], **{'b': 9}), xo.m(*(3,)), xk(*(1,), **{S('b'): 8}))\n")
     out.append(guarded("for _ in range(3):\n    print(x2(1))") + "\n" + guarded("for _ in range(3):\n    print(xo.m(a=1, z=2))"))
+    # a site that specialized to CALL_EX_PY, then gets a non-function: `_MAKE_CALLARGS_A_TUPLE` has
+    # already converted the iterable when `_CHECK_IS_PY_CALLABLE_EX` exits, and CALL_FUNCTION_EX
+    # does not iterate it again
+    out.append("def site(h, x):\n    return h(*x)\n"
+               "for _ in range(4):\n    print(site(x2, It()), site(x2, [3, 4]))\n"
+               + guarded("print(site(" + r.choice(["E()", "max", "bm", "P().m"]) + ", " + r.choice(["It()", "[5, 6]", "Bad()", "5", "(7, 8)"]) + "))"))
     out.append(guarded("print(dict(**{S('a'): 1}), sorted(dict(**{S('b'): 2, 'c': 3}).items()))"))
     out.append(guarded("print(dict(**{S('a'): 1, 2: 3}))"))
     out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}), h(1, **{S('k'): 3}))\n"

@@ -4,7 +4,7 @@ priority: P5
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["date.__repr__", "timedelta.__repr__", "time.__repr__", "_get_class_module"]
+functions: ["date.__repr__", "timedelta.__repr__", "time.__repr__", "datetime.__repr__", "_get_class_module"]
 summary: |
   For a date subclass defined inside a class (`class Outer: class D(date): pass`, or any
   class whose __qualname__ differs from __name__), `repr(D(2020, 1, 1))` is
@@ -29,16 +29,21 @@ reproducer: |
               pass
           class T(m.time):
               pass
-      out.append((repr(Outer.D(2020, 1, 1)), repr(Outer.TD(1)), repr(Outer.T(1, 2))))
+          class DT(m.datetime):
+              pass
+      out.append((repr(Outer.D(2020, 1, 1)), repr(Outer.TD(1)), repr(Outer.T(1, 2)),
+                  repr(Outer.DT(2020, 1, 1))))
   print('C:', out[0], ' Python:', out[1])
-  if out[0] == ('D(2020, 1, 1)', 'TD(days=1)', 'T(1, 2)') and out[1] == ('Outer.D(2020, 1, 1)', 'Outer.TD(days=1)', 'Outer.T(1, 2)'):
+  if out[0] == ('D(2020, 1, 1)', 'TD(days=1)', 'T(1, 2)', 'DT(2020, 1, 1, 0, 0)') and \
+     out[1] == ('Outer.D(2020, 1, 1)', 'Outer.TD(days=1)', 'Outer.T(1, 2)', 'Outer.DT(2020, 1, 1, 0, 0)'):
       print('REPRODUCED datetime-repr-qualname-vs-tp-name')
 expected: The same text from both implementations.
 promised_by: gh-107773 (closed as completed): "the two implementations ... share a common repr".
 cause: |
   Lib/_pydatetime.py:1103-1104: `"%s%s(%d, %d, %d)" % (_get_class_module(self),
   self.__class__.__qualname__, ...)`. Modules/_datetimemodule.c:3621-3622: `"%s(%d, %d, %d)"`
-  with `Py_TYPE(self)->tp_name`.
+  with `Py_TYPE(self)->tp_name`. The same for time (Py:1614-1616, C time_repr :4856-4871) and
+  datetime (Py:2209-2211, C datetime_repr :6382-6405).
 possible_fix: |
   Use `self.__class__.__name__` in the Python reprs (the C side cannot easily change), or leave it.
 reproduces:
@@ -56,3 +61,4 @@ lean:
   also:
     - {property: PyLean.Datetime.TimedeltaReprTwins, theorem: PyLean.Datetime.timedeltaReprTwins_refuted}
     - {property: PyLean.Datetime.TimeReprClsTwins, theorem: PyLean.Datetime.timeReprClsTwins_refuted}
+    - {property: PyLean.Datetime.DatetimeReprClsTwins, theorem: PyLean.Datetime.datetimeReprClsTwins_refuted}

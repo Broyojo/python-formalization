@@ -1686,27 +1686,36 @@ def isCoroutineLike (o : Val) : RM Bool := do
   | _, _ => pure false
 
 /-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1245-1284`. The coroutine test comes
-first. `%T` omits the module for `__main__` and `builtins`, the only modules here. -/
+first. `%T` is the fully qualified name (`typeFullName`: the `__qualname__` of a `__main__` class);
+the last message has `%.100s` of `tp_name`. -/
 def awaitableIter (o : Val) : RM Val := do
   if ← isCoroutineLike P o then return o
   match ← callDunder om ctx o "__await__" [] with
   | some r =>
     if ← isCoroutineLike P r then
-      typeError s!"{← tpName o}.__await__() must return an iterator, not coroutine"
+      typeError s!"{← typeFullName o}.__await__() must return an iterator, not coroutine"
     if !(← om.isIterator r) then
-      typeError s!"{← tpName o}.__await__() must return an iterator, not {← tpName r}"
+      typeError s!"{← typeFullName o}.__await__() must return an iterator, not {← typeFullName r}"
     pure r
-  | none => typeError s!"'{← tpName o}' object can't be awaited"
+  | none => typeError s!"'{trunc100 (← tpName o)}' object can't be awaited"
 
-/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`. -/
+/-- `_PyEval_FormatAwaitableError`, `Python/ceval.c:3495-3511`: when the type has no `am_await`
+(no `__await__`, and not a coroutine), the `'async with'` messages of `oparg` 1 and 2 replace the
+error (`_PyErr_Format` clears it first), `%.100s` of `tp_name`. -/
+def formatAwaitableError (o : Val) (oparg : Nat) : RM Unit := do
+  if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
+    let t ← tpName o
+    if oparg == 1 then
+      typeError s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}"
+    if oparg == 2 then
+      typeError s!"'async with' received an object from __aexit__ that does not implement __await__: {trunc100 t}"
+
+/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`: a coroutine being awaited
+(`FRAME_SUSPENDED_YIELD_FROM`, the frame state with a delegate, `genYf`) is refused with
+`RuntimeError("coroutine is being awaited already")`. -/
 def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
   let r ← tryExc (awaitableIter P om ctx o) fun e => do
-    if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
-      let t ← tpName o
-      if oparg == 1 then
-        typeError s!"'async with' received an object from __aenter__ that does not implement __await__: {t}"
-      if oparg == 2 then
-        typeError s!"'async with' received an object from __aexit__ that does not implement __await__: {t}"
+    formatAwaitableError o oparg
     throw (.exc e)
   if (← genKindOf r) == some .coro then
     if let .ref a := r then
@@ -1714,30 +1723,36 @@ def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
         runtimeError "coroutine is being awaited already"
   pure r
 
-/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`. -/
+/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`: `tp_as_async->am_aiter` of a class is
+`slot_am_aiter`, which looks `__aiter__` up on the type and calls it; the result's type must have
+`am_anext`. Scope limit: the builtin async iterators (`async_generator`) have no slots here, so
+`async for` over an async generator object is a `TypeError` in the model. -/
 def getAIterImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__aiter__" [] with
   | none =>
-    typeError s!"'async for' requires an object with __aiter__ method, got {← tpName o}"
+    typeError s!"'async for' requires an object with __aiter__ method, got {trunc100 (← tpName o)}"
   | some it =>
     if (← userLookup (← typeOf it) "__anext__").isNone then
-      typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {← tpName it}"
+      typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {trunc100 (← tpName it)}"
     pure it
 
-/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`. -/
+/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`: `am_anext` (`slot_am_anext`: `__anext__` looked
+up on the type and called), then `_PyCoro_GetAwaitableIter` on its result, whose failure, whatever
+the exception, becomes `TypeError("'async for' received an invalid object from __anext__: T")` by
+`_PyErr_FormatFromCause` (`Python/errors.c`), which sets both `__cause__` and `__context__` of the new
+error to the old one and raises it as it is (`_PyErr_SetRaisedException`, no further chaining). The
+`PyAsyncGen_CheckExact` fast path (`:3563-3565`) is the scope limit of `getAIterImpl`. -/
 def getANextImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__anext__" [] with
   | none =>
-    typeError s!"'async for' requires an iterator with __anext__ method, got {← tpName o}"
+    typeError s!"'async for' requires an iterator with __anext__ method, got {trunc100 (← tpName o)}"
   | some n =>
     tryExc (awaitableIter P om ctx n) fun e => do
-      if ← givenMatches e 8 (.cls "TypeError") then
-        let err ← newExc (.cls "TypeError")
-          [.str s!"'async for' received an invalid object from __anext__: {← tpName n}"]
-        setCause err e
-        setContext err e
-        raiseVal err
-      else throw (.exc e)
+      let err ← newExc (.cls "TypeError")
+        [.str s!"'async for' received an invalid object from __anext__: {trunc100 (← tpName n)}"]
+      setCause err e
+      setContext err e
+      throw (.exc err)
 
 /-- `_PyEval_MatchKeys`, `Python/ceval.c:439-523`. -/
 def matchKeysImpl (m keys : Val) : RM Val := do
