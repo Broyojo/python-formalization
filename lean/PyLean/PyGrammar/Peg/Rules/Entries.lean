@@ -534,7 +534,7 @@ def ruleEntries : List Entry := [
       "for Try(b, handlers, orelse, final); with no except either, TryStar under " ++
       "CHECK_VERSION(11) with the exact message below 11; the forced ':' failing ends the rule " ++
       "with its error; second pass: invalid_try_stmt first."
-    source := "Grammar/python.gram:441-448"
+    source := "Grammar/python.gram:441-447"
     status := .proven
     prop := ``TryStmt
     thm := some ``tryStmt_proven
@@ -645,7 +645,7 @@ def ruleEntries : List Entry := [
     statement := "function_def_raw: 'def n[tp](params) -> r: tc b' gives FunctionDef with empty " ++
       "arguments for '()'; 'async def' gives AsyncFunctionDef under CHECK_VERSION(5) with the exact " ++
       "message; NULL at any other token; second pass: invalid_def_raw first."
-    source := "Grammar/python.gram:295-310"
+    source := "Grammar/python.gram:295-309"
     status := .proven
     prop := ``FunctionDefRaw
     thm := some ``functionDefRaw_proven
@@ -731,7 +731,7 @@ def ruleEntries : List Entry := [
       "t, a = b' the same about a; then 'assert a := b' and 'assert t, a := b' raise \"cannot use " ++
       "named expression without parentheses here\" over a..b; each in order after the ones before " ++
       "fail; any other token: NULL, no error."
-    source := "Grammar/python.gram:1329-1348"
+    source := "Grammar/python.gram:1329-1347"
     status := .proven
     prop := ``InvalidAssertStmt
     thm := some ``invalidAssertStmt_proven

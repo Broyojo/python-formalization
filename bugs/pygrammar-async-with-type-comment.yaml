@@ -6,7 +6,7 @@ module: pygrammar
 files: [Grammar/python.gram, Parser/parser.c]
 functions: ["with_stmt"]
 summary: |
-  gh-111420 (PR #111468, 3.13) found that `ast.parse(..., type_comments=True)` rejected
+  gh-111420 (PR #111468, merged 2023-10-31) found that `ast.parse(..., type_comments=True)` rejected
   `with (a as b): # type: T` and read `with (a, b): # type: T` as one withitem holding a Tuple, and
   fixed it by adding `tc=[TYPE_COMMENT]` to the parenthesized `with` alternative of with_stmt. The
   parenthesized `async with` alternative right below it (python.gram:427-428) was left without it,

@@ -308,7 +308,7 @@ theorem classDefRaw_proven : ClassDefRaw := by
 
 /-! ### `function_def_raw` -/
 
-/-- `function_def_raw` (`Grammar/python.gram:295-310`):
+/-- `function_def_raw` (`Grammar/python.gram:295-309`):
 ```
     | invalid_def_raw
     | 'def' n=NAME t=[type_params] '(' params=[params] ')' a=['->' z=expression { z }] ':' tc=[func_type_comment] b=block {

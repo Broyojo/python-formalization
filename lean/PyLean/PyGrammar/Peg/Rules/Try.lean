@@ -184,7 +184,7 @@ theorem finallyBlock_proven : FinallyBlock := by
 
 /-! ### `try_stmt` -/
 
-/-- `try_stmt` (`Grammar/python.gram:441-448`):
+/-- `try_stmt` (`Grammar/python.gram:441-447`):
 ```
     | invalid_try_stmt
     | 'try' &&':' b=block f=finally_block { _PyAST_Try(b, NULL, NULL, f, EXTRA) }

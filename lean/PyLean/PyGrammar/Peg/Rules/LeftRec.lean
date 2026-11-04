@@ -4,15 +4,15 @@ import PyLean.PyGrammar.Peg.Rules.Base2
 the left-recursive binary-operator rules `sum` and `bitwise_or` (`Grammar/python.gram:821-845`),
 rule by rule.
 
-A left-recursive leader `name_rule` (`Parser/parser.c`, e.g. `sum_rule`, 13163-13197) is
+A left-recursive leader `name_rule` (`Parser/parser.c`, e.g. `sum_rule`, 14089-14122) is, after `add_level`,
 
 ```
     if (_PyPegen_is_memoized(p, sum_type, &_res)) { p->level--; return _res; }
     int _mark = p->mark;
     int _resmark = p->mark;
     while (1) {
-        int tmpvar_8 = _PyPegen_update_memo(p, _mark, sum_type, _res);
-        if (tmpvar_8) { p->level--; return _res; }
+        int tmpvar_6 = _PyPegen_update_memo(p, _mark, sum_type, _res);
+        if (tmpvar_6) { p->level--; return _res; }
         p->mark = _mark;
         void *_raw = sum_raw(p);
         if (p->error_indicator) { p->level--; return NULL; }
@@ -22,7 +22,7 @@ A left-recursive leader `name_rule` (`Parser/parser.c`, e.g. `sum_rule`, 13163-1
         _res = _raw;
     }
     p->mark = _resmark;
-    _res = _res; p->level--; return _res;
+    p->level--; return _res;
 ```
 
 `growSeed` (`Interp.lean`) is that loop. Each round stores the last seed in the memo at `_mark`,

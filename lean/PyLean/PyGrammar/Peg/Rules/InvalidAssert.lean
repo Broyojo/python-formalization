@@ -1,6 +1,6 @@
 import PyLean.PyGrammar.Peg.Rules.Base2
 
-/-! `invalid_assert_stmt` (`Grammar/python.gram:1329-1348`) and the names
+/-! `invalid_assert_stmt` (`Grammar/python.gram:1329-1347`) and the names
 `_PyPegen_get_expr_name` puts in its message, rule by rule. -/
 
 namespace PyLean.PyGrammar.Peg
@@ -31,7 +31,7 @@ theorem assignMsg (nm : String) (h : nm ∈ exprNames) :
   revert nm
   decide +kernel
 
-/-- `invalid_assert_stmt` (`Grammar/python.gram:1329-1348`):
+/-- `invalid_assert_stmt` (`Grammar/python.gram:1329-1347`):
 ```
     | 'assert' a=expression '=' b=expression {
         RAISE_SYNTAX_ERROR_KNOWN_RANGE(
