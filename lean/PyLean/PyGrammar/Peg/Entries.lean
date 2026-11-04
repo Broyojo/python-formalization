@@ -4,6 +4,7 @@ import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
 import PyLean.PyGrammar.Peg.ImportProps
 import PyLean.PyGrammar.Peg.RuleFacts
+import PyLean.PyGrammar.Peg.Rules.Entries
 
 /-! Registry entries for the `Peg` part of `PyGrammar`. -/
 
@@ -169,7 +170,8 @@ def entries : List Entry := [
     prop := ``CallRuleSound
     thm := some ``callRuleSound_proven
     notes := "One direction only: lookaheads and alternative order are not in RuleM, and what " ++
-      "an action computes is not claimed. Peg/RuleFacts.lean has the per-rule statements." },
+      "an action computes is not claimed, so it credits no rule row; the rule-specific " ++
+      "statements are the pygrammar-rule-* entries of Peg/Rules/." },
   { id := "pygrammar-grammar-rule-starts"
     pyFile := "Grammar/python.gram"
     pyFns := []
@@ -422,6 +424,6 @@ def entries : List Entry := [
       "action expressions in the grammar, that the node built meets validate_expr and " ++
       "validate_stmt, plus VALIDATE_POSITIONS, which needs lexer facts that token positions " ++
       "increase. CallRuleSound says nothing about what actions compute, so it does not help." }
-]
+] ++ ruleEntries
 
 end PyLean.PyGrammar.Peg

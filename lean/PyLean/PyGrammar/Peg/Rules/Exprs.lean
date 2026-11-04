@@ -1,6 +1,6 @@
 import PyLean.PyGrammar.Peg.Rules.Base
 
-/-! Arithmetic expression rules of `Grammar/python.gram:853-879`, rule by rule. -/
+/-! Expression rules of `Grammar/python.gram`, rule by rule. -/
 
 namespace PyLean.PyGrammar.Peg
 
@@ -11,7 +11,7 @@ abbrev opNode (c : Ctor) : Ast := .node c [] none
 
 /-! ### `factor` -/
 
-/-- `factor (memo)` (`Grammar/python.gram:864-868`):
+/-- `factor (memo)` (`Grammar/python.gram:856-860`):
 ```
     | '+' a=factor { _PyAST_UnaryOp(UAdd, a, EXTRA) }
     | '-' a=factor { _PyAST_UnaryOp(USub, a, EXTRA) }
@@ -94,7 +94,7 @@ theorem factor_proven : Factor := by
 
 /-! ### `power` -/
 
-/-- `power` (`Grammar/python.gram:870-872`):
+/-- `power` (`Grammar/python.gram:862-864`):
 ```
     | a=await_primary '**' b=factor { _PyAST_BinOp(a, Pow, b, EXTRA) }
     | await_primary

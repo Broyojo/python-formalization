@@ -1,0 +1,66 @@
+id: pygrammar-lazy-import-diagnostics
+title: "`lazy import` with no names, or `lazy import a.b from c`, gets 'invalid syntax' instead of the messages `import` gets"
+priority: P5
+kind: diagnostic
+module: pygrammar
+files: [Grammar/python.gram]
+functions: ["invalid_import"]
+summary: |
+  3.15 lets `import_name` start with the soft keyword `lazy` (PEP 810), python.gram:227-228. The
+  error rule for it, `invalid_import` (python.gram:1433-1437), starts with `'import'` and has no
+  `"lazy"?`, so at a `lazy` token it fails at once and the second pass falls back to the generic
+  message. `import` alone says "Expected one or more names after 'import'"; `lazy import` alone
+  says "invalid syntax". `import a.b from c` says "Did you mean to use 'from ... import ...'
+  instead?"; `lazy import a.b from c` says "invalid syntax". The `from` forms are consistent:
+  `lazy from x import` gets "Expected one or more names after 'import'" from
+  `invalid_import_from_targets`, which is reached through `import_from_targets` whatever came
+  before.
+likelihood: |
+  Low impact: a worse error message for a malformed statement, nothing more. It is visible to
+  anyone who types `lazy import` and stops, which is a plausible typing state in an editor or the
+  REPL.
+maybe_intended: |
+  Probably an oversight: invalid_import predates PEP 810 and was not extended when "lazy"? was
+  added to import_name and import_from, while invalid_import_from was given a lazy-specific
+  alternative. A maintainer could also call it not worth the grammar change.
+reproducer: |
+  def msg(src):
+      try:
+          compile(src, "<s>", "exec")
+      except SyntaxError as e:
+          return e.msg
+  a, b = msg("import\n"), msg("lazy import\n")
+  c, d = msg("import a.b from c\n"), msg("lazy import a.b from c\n")
+  print(repr(a), repr(b))
+  print(repr(c), repr(d))
+  if a == "Expected one or more names after 'import'" and b == "invalid syntax" and \
+     c.startswith("Did you mean") and d == "invalid syntax":
+      print("REPRODUCED pygrammar-lazy-import-diagnostics")
+expected: |
+  `lazy import` alone gives "Expected one or more names after 'import'", and `lazy import a.b
+  from c` gives the "Did you mean to use 'from ... import ...' instead?" message, as without
+  `lazy`.
+promised_by: |
+  No documentation sentence; the implementation disagreeing with itself. The same statement with
+  and without the optional `lazy` prefix of import_name gets different diagnostics, while the
+  `lazy from` forms get the same ones as `from`.
+cause: |
+  Grammar/python.gram:1433-1437: both alternatives of invalid_import begin with 'import', with no
+  `"lazy"?` before it as in import_name (line 228) and import_from (lines 233, 235).
+possible_fix: |
+  Start both alternatives of invalid_import with `"lazy"?`:
+      | "lazy"? a='import' ','.dotted_name+ 'from' dotted_name { ... }
+      | "lazy"? 'import' token=NEWLINE { ... }
+  (and keep `a` bound to the 'import' token so the error location does not change).
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["lazy import invalid syntax", "lazy import error message", "invalid_import lazy",
+            "lazy import Expected names", "lazy import did you mean from", "PEP 810 SyntaxError",
+            "lazy imports grammar error"]
+  bugforge: "none (no lazy-import entries)"
+lean:
+  property: PyLean.PyGrammar.Peg.LazyImportDiagnosed
+  theorem: PyLean.PyGrammar.Peg.lazyImportDiagnosed_refuted

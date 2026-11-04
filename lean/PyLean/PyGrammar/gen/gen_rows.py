@@ -20,6 +20,8 @@ OUT = Path(__file__).resolve().parent.parent / "RowNames.lean"
 GENERATED = ("generated: emitted by pegen from Grammar/python.gram; Peg/GrammarData.lean holds the "
              "same rules, checked byte for byte against this file by gen/gen_grammar.py --check")
 
+GRAM = "Grammar__python.gram"
+
 STEMS = [
     "Grammar__python.gram", "Parser__lexer__lexer.c", "Parser__lexer__state.c",
     "Parser__lexer__buffer.c", "Parser__token.c", "Parser__tokenizer__helpers.c",
@@ -33,6 +35,22 @@ STEMS = [
 
 # entry -> {file stem: [row names]}
 CREDIT = {
+    # Rule-specific statements of `Peg/Rules/`.
+    "pygrammar-rule-keyword-stmts": {GRAM: ["rule:pass_stmt", "rule:break_stmt",
+                                            "rule:continue_stmt"]},
+    "pygrammar-rule-return-stmt": {GRAM: ["rule:return_stmt"]},
+    "pygrammar-rule-raise-stmt": {GRAM: ["rule:raise_stmt"]},
+    "pygrammar-rule-raise-stmt-invalid": {GRAM: ["rule:raise_stmt"]},
+    "pygrammar-rule-invalid-raise-stmt": {GRAM: ["rule:invalid_raise_stmt"]},
+    "pygrammar-rule-factor": {GRAM: ["rule:factor"]},
+    "pygrammar-rule-power": {GRAM: ["rule:power"]},
+    "pygrammar-rule-signed-number": {GRAM: ["rule:signed_number"]},
+    "pygrammar-rule-yield-expr": {GRAM: ["rule:yield_expr"]},
+    "pygrammar-rule-yield-stmt": {GRAM: ["rule:yield_stmt"]},
+    "pygrammar-rule-assert-stmt": {GRAM: ["rule:assert_stmt"]},
+    "pygrammar-rule-import-name": {GRAM: ["rule:import_name"]},
+    "pygrammar-rule-invalid-import": {GRAM: ["rule:invalid_import"]},
+    "pygrammar-rule-lazy-import-diagnosed": {GRAM: ["rule:invalid_import"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],
@@ -126,8 +144,12 @@ NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error
            "check-try-twin", "check-names-always", "check-target-legal",
            "check-set-context-last", "check-set-context-restores"]
 
-CREDITED = {(stem, name): entry for entry, files in CREDIT.items()
-            for stem, names in files.items() for name in names}
+# A row may be credited by several entries; the tsv lists them comma-separated.
+CREDITED = {}
+for _entry, _files in CREDIT.items():
+    for _stem, _names in _files.items():
+        for _name in _names:
+            CREDITED.setdefault((_stem, _name), []).append(_entry)
 
 WITHDRAWN = ("withdrawn: the model and difftest exist, but no theorem yet depends on this body")
 
@@ -205,13 +227,15 @@ def main():
                 r.update(status="excluded", entry="", note=GENERATED)
             elif key in EXCLUDE:
                 r.update(status="excluded", entry="", note=EXCLUDE[key])
-            elif stem == "Grammar__python.gram":
-                # Every rule, through `CallRuleSound` and `Peg/RuleFacts.lean`.
-                r.update(status="modelled", entry="pygrammar-grammar-call-rule-sound", note="")
-                per_entry["pygrammar-grammar-call-rule-sound"].append(r["name"])
             elif key in CREDITED:
-                r.update(status="modelled", entry=CREDITED[key], note="")
-                per_entry[CREDITED[key]].append(r["name"])
+                r.update(status="modelled", entry=",".join(CREDITED[key]), note="")
+                for e in CREDITED[key]:
+                    per_entry[e].append(r["name"])
+            elif stem == "Grammar__python.gram":
+                # A rule row is credited only by a rule-specific entry in `CREDIT` (`Peg/Rules/`).
+                # `CallRuleSound` holds for any grammar data, so it credits none; the other rows
+                # keep their status and review note.
+                pass
             elif r["entry"].startswith("pygrammar-") or r["note"].startswith("withdrawn:"):
                 r.update(status="todo", entry="", note=WITHDRAWN)
             if was == "modelled" and r["status"] != "modelled":

@@ -13,7 +13,7 @@ theorem notWs {s : PS} {m ty : Nat} (h : (s.tokenAt m).type = ty) (hk : 6 < ty) 
 
 /-! ### `yield_expr`, `yield_stmt` -/
 
-/-- `yield_expr` (`Grammar/python.gram:908-910`):
+/-- `yield_expr` (`Grammar/python.gram:727-729`):
 ```
     | 'yield' 'from' a=expression { _PyAST_YieldFrom(a, EXTRA) }
     | 'yield' a=[star_expressions] { _PyAST_Yield(a, EXTRA) }

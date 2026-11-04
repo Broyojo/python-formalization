@@ -56,9 +56,14 @@ theorem keywordStmt_of {id kw : Nat} {c : Ctor} {name : String} (hr : ruleOf id 
     rw [← hm]
     rfl
 
-theorem passStmt_proven : KeywordStmt 16 527 .Pass := keywordStmt_of (name := _) rfl (by decide) rfl
-theorem breakStmt_proven : KeywordStmt 17 528 .Break := keywordStmt_of (name := _) rfl (by decide) rfl
-theorem continueStmt_proven : KeywordStmt 18 529 .Continue := keywordStmt_of (name := _) rfl (by decide) rfl
+/-- The three rules: `pass` (527) builds `Pass`, `break` (528) `Break`, `continue` (529)
+`Continue`. -/
+def KeywordStmts : Prop :=
+  KeywordStmt 16 527 .Pass ∧ KeywordStmt 17 528 .Break ∧ KeywordStmt 18 529 .Continue
+
+theorem keywordStmts_proven : KeywordStmts :=
+  ⟨keywordStmt_of (name := _) rfl (by decide) rfl, keywordStmt_of (name := _) rfl (by decide) rfl,
+    keywordStmt_of (name := _) rfl (by decide) rfl⟩
 
 /-! ### `return_stmt` -/
 
