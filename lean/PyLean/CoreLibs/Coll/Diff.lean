@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
 import PyLean.CoreLibs.Coll.ChainMapG
+import PyLean.CoreLibs.Coll.UserDictG
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
 import PyLean.CoreLibs.Coll.Namedtuple
@@ -329,6 +330,38 @@ def runUD (j : Json) : Except String Json := do
     let r := dictSetdefault u.data k (dflt.getD 0)
     return okJ (Json.arr #[toJson r.1, encItems r.2])
   | "dict_items_contains" => return okJ (toJson (dictItemsContains u.data k (dflt.getD 0)))
+  | "new_p" =>
+    let ps ← getItems j "o"
+    let bad := (j.getObjVal? "bad" >>= Json.getBool?).toOption.getD false
+    let fail := (j.getObjVal? "fail" >>= Json.getBool?).toOption.getD false
+    let items : List (Py (String × Int)) := ps.map .ok ++
+      (if bad then [.error (.valueError "not enough values to unpack (expected 2, got 1)")] else [])
+    let src : USrc String Int := .pairs (.ok ⟨items, if fail then some (.valueError "boom") else none⟩)
+    return encPy encItems (udNewP kStr (some src) (← getItems j "kw"))
+  | "getitem_p" =>
+    return encPy toJson (udGetitemP kStr pyStrRepr (some (fun _ => .error (.valueError "miss"))) u k)
+  | "repr_self" =>
+    let heap : Nat → Option (D String (VRef Int)) := fun i =>
+      if i = 0 then some (D.set (u.data.map (fun p => (p.1, .plain p.2))) k (.ud 0)) else none
+    return encPy toJson (udReprR (fun s => .ok (pyStrRepr s)) (fun v => .ok (toString v)) heap 10 [] 0)
+  | "ior_p" =>
+    let o ← getItems j "o"
+    let r := match ← getStr j "oty" with
+      | "user" => udIorP kStr u (.user o)
+      | "gen" => udIorP kStr u (.other (.ok ⟨o, some (.valueError "boom")⟩))
+      | "int" => udIorP kStr u (.other (.error (.typeError "'int' object is not iterable")))
+      | _ => udIorP kStr u (.other (.ok (FIt.ofList o)))
+    return encOut encUD r
+  | "copy_p" =>
+    let raising := (j.getObjVal? "raise" >>= Json.getBool?).toOption.getD false
+    let uo : UDO String Int Int := ⟨0, if raising then "coll_UDRaise" else cls, u.data, [("extra", 5)]⟩
+    let copyFn : UDO String Int Int → Py (UDO String Int Int) := fun t =>
+      if raising then .error (.named "RuntimeError" "nocopy") else .ok (udCopyDunderO 1 t)
+    let r := udCopyO kStr copyFn 1 uo
+    return okJ (Json.arr #[encItems r.1.data, encPy (fun (c : UDO String Int Int) =>
+      Json.arr #[toJson c.cls, toJson (c.id != uo.id), encItems c.data, toJson (c.attrs.length)]) r.2])
+  | "fromkeys_p" =>
+    return encPy encUD (udFromkeysP kStr cls (← getIt j "xs") (dflt.getD 0))
   | _ => throw s!"unknown ud op {op}"
 
 /-! ### `UserList` -/
@@ -786,7 +819,7 @@ def runNT (j : Json) : Except String Json := do
     | "call" => return encPy encInts (ntCall T vals (← getItems j "kw"))
     | "make" => return encPy encInts (ntMake T vals)
     | "replace" => return encPy encInts (ntReplace T vals (← getItems j "kw"))
-    | "repr" => return okS (ntRepr rvInt T vals)
+    | "repr" => return okS (ntRepr rvInt T.typename T vals)
     | "asdict" => return okJ (encItems (ntAsdict T vals))
     | "getnewargs" => return okJ (encInts vals)
     | "getattr" =>

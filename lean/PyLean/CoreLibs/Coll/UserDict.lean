@@ -7,7 +7,7 @@ are copied here because `UserDict` differs from `dict` through them.
 
 `miss` is the subclass hook: `none` when the class has no `__missing__`, `some f`
 when `self.__class__.__missing__(self, key)` returns `f key`. A `__missing__` that
-raises is a `KeyError` path equal to having none.
+raises, and the other fallible paths, are modelled in `UserDictG.lean`.
 -/
 
 namespace PyLean.CoreLibs.Coll
@@ -62,7 +62,7 @@ def udIter (u : UD κ ν) : List κ := D.keys u.data
 /-- `UserDict.__contains__`, :1206-1207. -/
 def udContains (u : UD κ ν) (k : κ) : Bool := D.mem u.data k
 
-/-- `UserDict.get`, @3.14.7:1167-1170. -/
+/-- `UserDict.get`, :1209-1212. -/
 def udGet (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : κ) (default : Option ν) :
     Py (Option ν) :=
   if udContains u k then (udGetitem rk miss u k).map some else .ok default

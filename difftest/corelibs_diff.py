@@ -258,6 +258,31 @@ class coll_DictMiss(dict):
         return -1
 
 
+class coll_UDRaise(coll_collections.UserDict):
+    def __copy__(self):
+        raise RuntimeError("nocopy")
+
+
+class coll_UDRaiseMiss(coll_collections.UserDict):
+    def __missing__(self, key):
+        raise ValueError("miss")
+
+
+def coll_pairs(case):
+    for k, v in case["o"]:
+        yield (k, v)
+    if case.get("bad"):
+        yield (1,)
+    if case.get("fail"):
+        raise ValueError("boom")
+
+
+def coll_gen_pairs(items):
+    for k, v in items:
+        yield (k, v)
+    raise ValueError("boom")
+
+
 coll_UD_CLASSES = [coll_collections.UserDict, coll_UDPlain, coll_UDMiss]
 
 
@@ -377,9 +402,23 @@ def coll_gen_ud(rng):
                      "repr", "or", "ror", "ior", "copy", "copy_dunder", "fromkeys", "pop",
                      "popitem", "setdefault", "clear", "items_contains", "reversed",
                      "dict_reversed", "dict_getitem",
-                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains"])
+                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains",
+                     "new_p", "getitem_p", "repr_self", "ior_p", "ior_p", "copy_p", "copy_p", "fromkeys_p"])
     case = {"fn": "coll.ud", "op": op, "a": coll_items(rng, small=True),
             "sub": rng.choice([0, 1, 2]), "k": rng.choice(coll_KEYS)}
+    if op == "new_p":
+        case["o"] = coll_items(rng, small=True)
+        case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+        case["bad"] = rng.random() < 0.2
+        case["fail"] = rng.random() < 0.2
+    if op == "ior_p":
+        case["oty"] = rng.choice(["user", "dict", "gen", "int"])
+        case["o"] = coll_items(rng, small=True)
+    if op == "copy_p":
+        case["raise"] = rng.random() < 0.3
+    if op == "fromkeys_p":
+        case["xs"] = coll_xs(rng)
+        case["fail"] = rng.random() < 0.2
     if rng.random() < 0.5:
         case["d"] = rng.randint(-3, 3)
     if op in ("items_contains", "dict_items_contains") and rng.random() < 0.5:
@@ -488,6 +527,39 @@ def coll_run_ud(case):
             return [r, coll_enc(plain)]
         if op == "dict_items_contains":
             return (k, 0 if d is None else d) in plain.items()
+        if op == "new_p":
+            return coll_enc(cls(coll_pairs(case), **coll_d(case["kw"])).data)
+        if op == "getitem_p":
+            v = coll_UDRaiseMiss()
+            v.data = coll_d(case["a"])
+            return v[k]
+        if op == "repr_self":
+            u[k] = u
+            return repr(u)
+        if op == "ior_p":
+            ty = case["oty"]
+            o = {"user": lambda: coll_collections.UserDict(coll_d(case["o"])), "dict": lambda: coll_d(case["o"]),
+                 "gen": lambda: coll_gen_pairs(case["o"]), "int": lambda: 5}[ty]()
+            try:
+                r = u
+                r |= o
+                assert r is u
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [coll_enc_ud(u), exc]
+        if op == "copy_p":
+            v = (coll_UDRaise if case["raise"] else cls)()
+            v.data = coll_d(case["a"])
+            v.extra = 5
+            try:
+                c = v.copy()
+                res = {"ok": [type(c).__name__, c is not v, coll_enc(c.data), len(vars(c)) - 1]}
+            except Exception as e:
+                res = {"exc": type(e).__name__, "msg": str(e)}
+            return [coll_enc(v.data), res]
+        if op == "fromkeys_p":
+            return coll_enc_ud(cls.fromkeys(coll_iter(case["xs"], case["fail"]), 0 if d is None else d))
         raise AssertionError(op)
     return py_result(body)
 

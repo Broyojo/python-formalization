@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterProps4
 import PyLean.CoreLibs.Coll.ChainMapGProps
+import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
@@ -152,7 +153,7 @@ def chainMapEntries : List Entry := [
 
 def userDictEntries : List Entry := [
   { id := "coll-userdict-matches-dict", pyFile := file
-    pyFns := ["UserDict.__len__", "UserDict.__getitem__", "UserDict.__iter__", "UserDict.__contains__", "UserDict.get"]
+    pyFns := ["UserDict.__len__", "UserDict.get"]
     statement := "Without __missing__, subscript, get, in, len, iter, pop, setdefault and (k, v) in items() give what the wrapped dict gives, on every dict."
     source := "Doc/library/collections.rst, UserDict: 'simulates a dictionary'"
     status := .proven, prop := ``UserDictMatchesDict, thm := some ``userDictMatchesDict_proven },
@@ -161,12 +162,11 @@ def userDictEntries : List Entry := [
     source := "invariant of a mapping"
     status := .proven, prop := ``UserDictSetDel, thm := some ``userDictSetDel_proven },
   { id := "coll-userdict-constructors-union", pyFile := file
-    pyFns := ["UserDict.__init__", "UserDict.__or__", "UserDict.__ror__", "UserDict.__ior__", "UserDict.__copy__",
-      "UserDict.copy", "UserDict.fromkeys"]
+    pyFns := ["UserDict.__or__", "UserDict.__ror__"]
     statement := "|, |= and the constructors agree with dict's and keep the class, for dict and UserDict operands alike; copy and copy.copy preserve items, order and class."
     source := "Doc/library/collections.rst, UserDict; PEP 584"
     status := .proven, prop := ``UserDictConstructorsUnion, thm := some ``userDictConstructorsUnion_proven },
-  { id := "coll-userdict-clear-repr", pyFile := file, pyFns := ["UserDict.__repr__"]
+  { id := "coll-userdict-clear-repr", pyFile := file, pyFns := []
     statement := "clear() empties any UserDict through its popitem loop, and repr(UserDict(d)) == repr(d)."
     source := "invariant; Lib/collections/__init__.py:1216-1217"
     status := .proven, prop := ``UserDictClearRepr, thm := some ``userDictClearRepr_proven },
@@ -187,7 +187,35 @@ def userDictEntries : List Entry := [
   { id := "coll-userdict-missing-narrow", pyFile := file, pyFns := ["UserDict.__contains__", "UserDict.get"]
     statement := "With __missing__, get and in never call it, and on a present key pop, setdefault and items() agree with dict."
     source := "narrowing of coll-userdict-missing-like-dict; gh-83445"
-    status := .proven, prop := ``UserDictMissingNarrow, thm := some ``userDictMissingNarrow_proven }
+    status := .proven, prop := ``UserDictMissingNarrow, thm := some ``userDictMissingNarrow_proven },
+  { id := "coll-userdict-init-p", pyFile := file, pyFns := ["UserDict.__init__"]
+    statement := "UserDict(src, **kw) holds dict(src, **kw)'s items for a dict or an iterable of the same pairs; an argument whose iter(), next(), pair unpacking or [] raises makes it raise."
+    source := "Doc/library/collections.rst, UserDict; Lib/collections/__init__.py:1177-1182; Lib/_collections_abc.py:965-984"
+    status := .proven, prop := ``UserDictInitP, thm := some ``userDictInitP_proven },
+  { id := "coll-userdict-getitem-p", pyFile := file, pyFns := ["UserDict.__getitem__", "UserDict.__contains__"]
+    statement := "u[k] is the value of a present key, else exactly what __missing__ returns or raises, else KeyError(k); k in u is k in u.data, false for an absent key even when __missing__ answers; an unhashable key raises the dict's error from both."
+    source := "Lib/collections/__init__.py:1188-1193, :1204-1207"
+    status := .proven, prop := ``UserDictGetitemP, thm := some ``userDictGetitemP_proven },
+  { id := "coll-userdict-iter-order", pyFile := file, pyFns := ["UserDict.__iter__"]
+    statement := "iter(u) follows insertion order: u[k] = v keeps a present key in place and appends a new one, del u[k] removes k from the order."
+    source := "Doc/library/stdtypes.rst, dict; Lib/collections/__init__.py:1201-1202"
+    status := .proven, prop := ``UserDictIterOrder, thm := some ``userDictIterOrder_proven },
+  { id := "coll-userdict-repr-r", pyFile := file, pyFns := ["UserDict.__repr__"]
+    statement := "repr(u) is repr(u.data): the dict's repr for ordinary values, {...} where u holds itself, and the exception of a raising key repr."
+    source := "Lib/collections/__init__.py:1216-1217; Objects/dictobject.c:3647-3650"
+    status := .proven, prop := ``UserDictReprR, thm := some ``userDictReprR_proven },
+  { id := "coll-userdict-ior-p", pyFile := file, pyFns := ["UserDict.__ior__"]
+    statement := "u |= other merges other's items into u.data from either branch (UserDict or anything dict |= reads); a non-iterable raises TypeError with u unchanged, an iterable failing part way raises with its earlier pairs merged."
+    source := "PEP 584; Lib/collections/__init__.py:1233-1238"
+    status := .proven, prop := ``UserDictIorP, thm := some ``userDictIorP_proven },
+  { id := "coll-userdict-copy-o", pyFile := file, pyFns := ["UserDict.__copy__", "UserDict.copy"]
+    statement := "copy.copy(u) and u.copy() are new objects of u's class with u's items (and, for __copy__ and subclasses, u's other attributes); when a subclass's copy.copy raises, copy raises it and u.data is restored."
+    source := "Lib/collections/__init__.py:1240-1257"
+    status := .proven, prop := ``UserDictCopyO, thm := some ``userDictCopyO_proven },
+  { id := "coll-userdict-fromkeys-p", pyFile := file, pyFns := ["UserDict.fromkeys"]
+    statement := "cls.fromkeys(xs, v) is an instance of cls with dict.fromkeys(xs, v)'s items; an exception from the iterable propagates."
+    source := "Lib/collections/__init__.py:1272-1277"
+    status := .proven, prop := ``UserDictFromkeysP, thm := some ``userDictFromkeysP_proven }
 ]
 
 def userListEntries : List Entry := [
