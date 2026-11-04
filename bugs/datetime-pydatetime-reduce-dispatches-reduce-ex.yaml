@@ -1,0 +1,68 @@
+id: datetime-pydatetime-reduce-dispatches-reduce-ex
+title: "time/datetime.__reduce__(): _pydatetime calls self.__reduce_ex__(2), so a subclass override runs; C does not look it up"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["time.__reduce__", "datetime.__reduce__", "C datetime_time___reduce___impl", "C datetime_datetime___reduce___impl"]
+summary: |
+  _pydatetime defines `time.__reduce__` and `datetime.__reduce__` as `return
+  self.__reduce_ex__(2)` (Lib/_pydatetime.py:1782-1783, :2435-2436), an attribute lookup on the
+  instance, so a subclass's own `__reduce_ex__` runs. C's datetime_time___reduce___impl and
+  datetime_datetime___reduce___impl (Modules/_datetimemodule.c:5308-5312, :7241-7246) return
+  `(Py_TYPE(self), time_getstate(self, 2))` / `datetime_getstate(self, 2)` directly. So for a
+  subclass whose `__reduce_ex__` returns `(str, ('custom', proto))`, `T(1, 2, 3).__reduce__()` is
+  `(str, ('custom', 2))` in Python and `(T, (b'\x01\x02\x03\x00\x00\x00',))` in C; and a subclass
+  whose `__reduce_ex__` delegates with `return self.__reduce__()` (which works with the C class,
+  and makes `pickle.dumps` work there) recurses until RecursionError in _pydatetime, in
+  `__reduce__()` and in `pickle.dumps(obj, 2)` alike. date.__reduce__ is `(self.__class__,
+  self._getstate())` in both twins and does not differ.
+likelihood: |
+  Very low: needs a subclass that overrides __reduce_ex__ and code that calls __reduce__ directly
+  (or an override that delegates to __reduce__).
+maybe_intended: |
+  Probably harmless; datetimetester's test_pickling asserts `orig.__reduce__() ==
+  orig.__reduce_ex__(2)`, which both twins satisfy for the base classes. Recorded because a twin
+  statement about __reduce__ for every subclass is false about CPython.
+reproducer: |
+  import pickle
+  import datetime as C
+  import _pydatetime as P
+  out = {}
+  for name, m in (("C", C), ("Python", P)):
+      class T(m.time):
+          def __reduce_ex__(self, proto):
+              return (str, ("custom", proto))
+      class T2(m.time):
+          def __reduce_ex__(self, proto):
+              return self.__reduce__()
+      r = T(1, 2, 3).__reduce__()[0].__name__
+      try:
+          pickle.dumps(T2(1, 2, 3), 2)
+          r2 = "pickled"
+      except RecursionError:
+          r2 = "RecursionError"
+      out[name] = (r, r2)
+      print(name, out[name])
+  if out["C"] != out["Python"]:
+      print("REPRODUCED datetime-pydatetime-reduce-dispatches-reduce-ex")
+expected: |
+  The same result in both implementations.
+promised_by: |
+  PEP 399 (C and Python twins behave alike).
+cause: |
+  Lib/_pydatetime.py:1782-1783 and :2435-2436 call self.__reduce_ex__(2);
+  Modules/_datetimemodule.c:5308-5312 and :7241-7246 compute the state themselves.
+possible_fix: |
+  _pydatetime could return `(self.__class__, self._getstate(2))` as C does.
+reproduces:
+  python3 (3.15.2): REPRODUCED (C ('T', 'pickled'), Python ('str', 'RecursionError'))
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same output)
+duplicates:
+  issues: []
+  queries: ["gh search issues: pydatetime __reduce__ __reduce_ex__ subclass", "datetime __reduce__ subclass override",
+            "time __reduce__ reduce_ex recursion", "datetime reduce_ex override pickle subclass",
+            "bugforge-results/README.md: no reduce entry"]
+lean:
+  property: PyLean.Datetime.ReduceDispatchTwins
+  theorem: PyLean.Datetime.reduceDispatchTwins_refuted

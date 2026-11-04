@@ -174,7 +174,7 @@ theorem tzinfoUTC_ok_of_newDT {v r : DT} (h : newDT v = .ok r) :
   subst hrv
   exact implC_utc h1 h2 h3
 
-/-- The UTC step of `astimezone` (:6963-6984) on a valid result: either branch gives the result
+/-- The UTC step of `astimezone` (:6964-6984) on a valid result: either branch gives the result
 with tzinfo `utc`. -/
 theorem astzUtcStep {v r : DT} (h : newDT v = .ok r) : astzUtcC r = .ok { r with tz := some tzUTC } := by
   unfold astzUtcC

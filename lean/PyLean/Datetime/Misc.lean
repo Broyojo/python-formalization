@@ -65,7 +65,7 @@ def timezoneNewPy (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
     | .ok _ => .ok ⟨oid, .timezone offset (some s)⟩
     | .error e => .error e
 
-/-- `look_up_timezone`, :4603-4610: `timezone.utc` when `offset` is `utc_timezone`'s offset
+/-- `look_up_timezone`, :4603-4609: `timezone.utc` when `offset` is `utc_timezone`'s offset
 object (the static `zero_delta`) and there is no name, else `NULL` (`none`). A zero
 `timedelta` of the base class is that object (`new_delta_ex` hands out `zero_delta`,
 `NewDeltaEx`), so a zero value stands for it here; a zero subclass instance reaches
