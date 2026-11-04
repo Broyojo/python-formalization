@@ -209,7 +209,7 @@ def tupleConcat (a : Tup α) (bb : ConcatArg α) : Py (TRes α) :=
   else
     match bb with
     | .other name =>
-      .error (.typeError s!"can only concatenate tuple (not \"{name}\") to tuple")
+      .error (.typeError s!"can only concatenate tuple (not \"{trunc200 name}\") to tuple")
     | .tuple b =>
       if b.items.length = 0 ∧ a.exact then .ok (.arg 0)
       else

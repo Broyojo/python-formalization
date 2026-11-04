@@ -1,0 +1,89 @@
+id: corelibs-operator-twin-lookups
+title: "operator twins differ where the pure twin does a Python-level lookup: index on an int subclass, length_hint on a metaclass and with a bool default, methodcaller repr of a str-subclass key, concat when hasattr raises"
+priority: P5
+kind: twin-mismatch
+module: corelibs
+files: [Lib/operator.py, Modules/_operator.c, Objects/abstract.c]
+functions: ["index", "_operator_index", "length_hint", "_operator_length_hint_impl", "methodcaller.__repr__", "methodcaller_repr", "concat", "iconcat"]
+summary: |
+  Five differences between Modules/_operator.c and Lib/operator.py, each because the pure twin does an
+  ordinary attribute lookup or keeps an object where C reads a type slot or converts. C's result is given first:
+  * index: `_PyNumber_Index` answers `PyLong_Check` first (Objects/abstract.c:1416-1418); `a.__index__()`
+    (Lib/operator.py:97) runs an int subclass's own override. `class I(int): __index__ = lambda s: 7`:
+    `index(I(3))` is 3 vs 7.
+  * length_hint, metaclass: `_PyObject_LookupSpecial` reads only the class's MRO; `type(obj).__length_hint__`
+    (Lib/operator.py:213) also finds a metaclass attribute. 0 vs 3.
+  * length_hint, default object: C converts `default` to `Py_ssize_t`; Python returns it as given.
+    `length_hint(object(), True)` is 1 vs True.
+  * methodcaller repr: `%U` writes a str-subclass key's characters (Modules/_operator.c:1838); `'%s=%r' % (k, v)`
+    (Lib/operator.py:332) runs its `__str__`. `methodcaller('f', **{K('k'): 1})` with `K.__str__` returning 'X':
+    `k=1` vs `X=1`. (The Python repr's dict iteration is also stricter than C's size check; see
+    PyLean.CoreLibs.Operator.McShare.McReprPyMutations against McReprMutations.)
+  * concat/iconcat: `hasattr(a, '__getitem__')` (Lib/operator.py:156, :359) passes on any exception but
+    AttributeError, so a `__getattr__` raising ValueError gives ValueError, where C says "'X' object can't be
+    concatenated" (TypeError).
+likelihood: |
+  Very low: the pure twin only runs without _operator, and each case needs an unusual class.
+maybe_intended: |
+  Yes in practice. The index difference is the subject of python/cpython#61776 (C ignores an int subclass's
+  `__index__`; the pure twin's behaviour is what that issue asks for). Recorded so the differences are on file,
+  as the model keeps the twins apart. Not worth a report.
+reproducer: |
+  import operator
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('operator', blocked=['_operator'])
+  def t(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  class I(int):
+      __index__ = lambda s: 7
+  idx = operator.index(I(3)), py.index(I(3))
+  class M(type):
+      def __length_hint__(cls, obj):
+          return 3
+  class O(metaclass=M):
+      pass
+  meta = operator.length_hint(O()), py.length_hint(O())
+  dflt = operator.length_hint(object(), True), py.length_hint(object(), True)
+  class K(str):
+      def __str__(self):
+          return 'X'
+  key = repr(operator.methodcaller('f', **{K('k'): 1})), repr(py.methodcaller('f', **{K('k'): 1}))
+  class G:
+      def __getattr__(self, name):
+          raise ValueError('getattr')
+  cat = t(lambda: operator.concat(G(), [1])), t(lambda: py.concat(G(), [1]))
+  icat = t(lambda: operator.iconcat(G(), [1])), t(lambda: py.iconcat(G(), [1]))
+  print(idx, meta, dflt, key, cat, icat)
+  if (idx == (3, 7) and meta == (0, 3) and dflt[0] == 1 and dflt[1] is True
+          and key == ("operator.methodcaller('f', k=1)", "operator.methodcaller('f', X=1)")
+          and cat == ('TypeError', 'ValueError') and icat == ('TypeError', 'ValueError')):
+      print('REPRODUCED corelibs-operator-twin-lookups')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.15.2: as in the reproducer, REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit; the twins are meant to agree.
+cause: |
+  Objects/abstract.c:1416-1418 against Lib/operator.py:97; Objects/abstract.c:113 against Lib/operator.py:213;
+  Modules/_operator.c:826-831 (Py_ssize_t default) against Lib/operator.py:203-216; Modules/_operator.c:1838
+  against Lib/operator.py:332; Modules/_operator.c:461-478 against Lib/operator.py:156, :359.
+possible_fix: |
+  None needed.
+duplicates:
+  issues:
+    - {number: 61776, state: open, relation: "the index item: PyNumber_Index is not int-subclass friendly; known"}
+    - {number: 73325, state: open, relation: "about concat's sequence check in general; not the hasattr exception"}
+  queries: ["operator index int subclass __index__ pure python (61776)", "length_hint metaclass (0 results)",
+            "length_hint bool default (64385, unrelated)", "methodcaller repr keyword str subclass (61005, unrelated)",
+            "operator concat hasattr getitem (73325 related, 66955 unrelated)",
+            "gh issue view 61776",
+            "bugforge README: only operator.iconcat (#158733), unrelated"]
+lean:
+  property: PyLean.CoreLibs.Operator.IndexIntSubclass
+  theorem: PyLean.CoreLibs.Operator.indexIntSubclass_refuted
+  related: ["PyLean.CoreLibs.Operator.lengthHintMetaTwins_refuted", "PyLean.CoreLibs.Operator.lengthHintDefaultTwins_refuted",
+            "PyLean.CoreLibs.Operator.McShare.mcReprKeyTwins_refuted", "PyLean.CoreLibs.Operator.concatRefuseTwins_refuted"]

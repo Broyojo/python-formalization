@@ -245,6 +245,7 @@ def encFn (m : Nat) : EncoderArg :=
   | 1 => .cPlain
   | 2 => .custom fun s => .ok (.str ([60] ++ s ++ [62]))
   | 3 => .custom fun _ => .ok (.nonstr "int")
+  | 5 => .custom fun _ => .ok (.nonstr (String.ofList (List.replicate 41 'é')))
   | _ => .custom fun _ => .error (.valueError "boom")
 
 def isSurrChunk (c : PStr) : Bool := c.any fun x => 0xd800 ≤ x && x ≤ 0xdfff

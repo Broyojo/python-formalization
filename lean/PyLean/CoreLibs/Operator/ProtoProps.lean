@@ -10,44 +10,90 @@ open PyLean
 
 /-! ### `binary_op1` -/
 
-/-- `binary_op1`, for every operator, so the body of `operator.sub` and the others in both twins. The right slot
-is dropped for the same type and for the same slot. With a right operand of a subclass, the right slot goes
-first; otherwise the left, and `NotImplemented` moves to the other; an exception stops the search; with nothing
+/-- `binary_op1`, Objects/abstract.c:940-990, for every operator, so the body of `operator.sub` and the others in
+both twins, through `binary_op`, :1010-1019. The right slot is dropped for the same type and for the same slot
+(:954-963), and kept for a right type whose slot differs. With only the left slot (`int - int`), its result, its
+`NotImplemented` (the `TypeError`) and its exception are the outcome; with only the right slot, the same for it.
+With both, a right operand of a subclass goes first (:967-973), its `NotImplemented` moves to the left slot and its
+exception stops the search; otherwise the left goes first and its `NotImplemented` moves to the right. With nothing
 left, `TypeError` names the operator and both types. Language reference, data model. -/
 def BinaryDispatch : Prop :=
   ∀ (α : Type) (A : BinArgs α) (sym : String) (v w x : α) (sv sw : Slot α) (e : PyExc),
     (A.sv = none → A.slotw = none → binaryOp A sym v w = .error (binopError sym A.lt A.rt)) ∧
     (A.sameType = true → A.slotw = none) ∧
     (A.sv = some sv → A.sw = some sw → sw.id = sv.id → A.slotw = none) ∧
+    (A.sameType = false → A.sw = some sw → (∀ s, A.sv = some s → s.id ≠ sw.id) → A.slotw = some sw) ∧
     (A.sv = some sv → A.slotw = some sw → A.subtype = true → sw.run v w = .ok (.val x) →
       binaryOp A sym v w = .ok x) ∧
     (A.sv = some sv → A.slotw = some sw → A.subtype = true → sw.run v w = .ok .notImplemented →
       binaryOp1 A v w = sv.run v w) ∧
+    (A.sv = some sv → A.slotw = some sw → A.subtype = true → sw.run v w = .error e →
+      binaryOp A sym v w = .error e) ∧
+    (A.sv = some sv → A.slotw = some sw → A.subtype = true → sw.run v w = .ok .notImplemented →
+      sv.run v w = .ok .notImplemented → binaryOp A sym v w = .error (binopError sym A.lt A.rt)) ∧
     (A.sv = some sv → A.slotw = some sw → A.subtype = false → sv.run v w = .ok (.val x) →
       binaryOp A sym v w = .ok x) ∧
     (A.sv = some sv → A.slotw = some sw → A.subtype = false → sv.run v w = .ok .notImplemented →
       binaryOp1 A v w = sw.run v w) ∧
-    (A.sv = some sv → sv.run v w = .error e → A.subtype = false → binaryOp A sym v w = .error e)
+    (A.sv = some sv → A.slotw = some sw → A.subtype = false → sv.run v w = .ok .notImplemented →
+      sw.run v w = .ok (.val x) → binaryOp A sym v w = .ok x) ∧
+    (A.sv = some sv → A.slotw = some sw → A.subtype = false → sv.run v w = .ok .notImplemented →
+      sw.run v w = .error e → binaryOp A sym v w = .error e) ∧
+    (A.sv = some sv → A.slotw = some sw → A.subtype = false → sv.run v w = .ok .notImplemented →
+      sw.run v w = .ok .notImplemented → binaryOp A sym v w = .error (binopError sym A.lt A.rt)) ∧
+    (A.sv = some sv → sv.run v w = .error e → A.subtype = false → binaryOp A sym v w = .error e) ∧
+    (A.sv = some sv → A.slotw = none →
+      binaryOp1 A v w = sv.run v w ∧
+      (sv.run v w = .ok (.val x) → binaryOp A sym v w = .ok x) ∧
+      (sv.run v w = .ok .notImplemented → binaryOp A sym v w = .error (binopError sym A.lt A.rt)) ∧
+      (sv.run v w = .error e → binaryOp A sym v w = .error e)) ∧
+    (A.sv = none → A.slotw = some sw →
+      binaryOp1 A v w = sw.run v w ∧
+      (sw.run v w = .ok (.val x) → binaryOp A sym v w = .ok x) ∧
+      (sw.run v w = .ok .notImplemented → binaryOp A sym v w = .error (binopError sym A.lt A.rt)) ∧
+      (sw.run v w = .error e → binaryOp A sym v w = .error e))
 
 theorem binaryDispatch_proven : BinaryDispatch := by
   intro α A sym v w x sv sw e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro h1 h2
     simp [binaryOp, binaryOp1, h1, h2]
   · intro h
     simp [BinArgs.slotw, h]
   · intro h1 h2 h3
     simp [BinArgs.slotw, h1, h2, h3]
+  · intro h1 h2 h3
+    cases hv : A.sv with
+    | none => simp [BinArgs.slotw, h1, h2, hv]
+    | some s =>
+      have := h3 s hv
+      simp [BinArgs.slotw, h1, h2, hv, Ne.symm this]
   · intro h1 h2 h3 h4
     simp [binaryOp, binaryOp1, h1, h2, h3, h4]
   · intro h1 h2 h3 h4
     simp [binaryOp1, h1, h2, h3, h4]
   · intro h1 h2 h3 h4
     simp [binaryOp, binaryOp1, h1, h2, h3, h4]
+  · intro h1 h2 h3 h4 h5
+    simp [binaryOp, binaryOp1, h1, h2, h3, h4, h5]
+  · intro h1 h2 h3 h4
+    simp [binaryOp, binaryOp1, h1, h2, h3, h4]
   · intro h1 h2 h3 h4
     simp [binaryOp1, h1, h2, h3, h4]
+  · intro h1 h2 h3 h4 h5
+    simp [binaryOp, binaryOp1, h1, h2, h3, h4, h5]
+  · intro h1 h2 h3 h4 h5
+    simp [binaryOp, binaryOp1, h1, h2, h3, h4, h5]
+  · intro h1 h2 h3 h4 h5
+    simp [binaryOp, binaryOp1, h1, h2, h3, h4, h5]
   · intro h1 h2 h3
     cases hw : A.slotw <;> simp [binaryOp, binaryOp1, h1, h2, h3, hw]
+  · intro h1 h2
+    have hb : binaryOp1 A v w = sv.run v w := by simp [binaryOp1, h1, h2]
+    refine ⟨hb, ?_, ?_, ?_⟩ <;> intro h3 <;> simp [binaryOp, hb, h3]
+  · intro h1 h2
+    have hb : binaryOp1 A v w = sw.run v w := by simp [binaryOp1, h1, h2]
+    refine ⟨hb, ?_, ?_, ?_⟩ <;> intro h3 <;> simp [binaryOp, hb, h3]
 
 /-- `SLOT1BINFULL`, the slot of every Python class: a subclass that overrides `__rop__` runs first, its
 `NotImplemented` moves to `__op__`, and then `__rop__` is not tried again; for operands of one type `__rop__` is
@@ -98,11 +144,22 @@ def SequenceFallback : Prop :=
     (Q.repeatV = some g → Q.index w = none → (numberMul A Q v w).raises "TypeError") ∧
     (Q.repeatV = some g → Q.index w = some (.ok n) → n > ssizeMax →
       (numberMul A Q v w).raises "OverflowError") ∧
+    (Q.repeatV = some g → Q.index w = some (.ok n) → n < ssizeMin →
+      numberMul A Q v w = .error (.overflowError s!"cannot fit '{Q.tn w}' into an index-sized integer")) ∧
+    (Q.repeatV = none → Q.repeatW = some g → Q.index v = some (.ok n) → (n > ssizeMax ∨ n < ssizeMin) →
+      numberMul A Q v w = .error (.overflowError s!"cannot fit '{Q.tn v}' into an index-sized integer")) ∧
     (Q.repeatV = none → Q.repeatW = none → numberMul A Q v w = .error (binopError "*" A.lt A.rt))
 
 theorem sequenceFallback_proven : SequenceFallback := by
   intro α A Q v w x n e f g h
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 7
+  · intro h1 h2 h3
+    have : n > ssizeMax ∨ n < ssizeMin := Or.inr h3
+    simp [numberMul, h, h1, sequenceRepeat, h2, fitSsize, this]
+  · intro h1 h2 h3 h4
+    simp [numberMul, h, h1, h2, sequenceRepeat, h3, fitSsize, h4]
+  rotate_left 1
   · intro h1; simp [numberAdd, h, h1]
   · intro h1; simp [numberAdd, h, h1]
   · intro h1 h2 h3 h4
@@ -148,23 +205,30 @@ message then has the `=`. Language reference on augmented assignment. The same h
 slots, and `sq_inplace_concat` goes before `sq_concat`. -/
 def InplaceFallback : Prop :=
   ∀ (α : Type) (A : BinArgs α) (Q : SeqArgs α) (sym : String) (v w x : α) (f : α → α → Py (Ret α))
-    (c d : α → α → Py α),
+    (c d : α → α → Py α) (e : PyExc),
     (f v w = .ok (.val x) → inplaceOp (some f) A sym v w = .ok x) ∧
+    (f v w = .error e → inplaceOp (some f) A sym v w = .error e) ∧
     (f v w = .ok .notImplemented → inplaceOp (some f) A sym v w = inplaceOp none A sym v w) ∧
+    (f v w = .ok .notImplemented → inplaceOp (some f) A sym v w = binaryOp A sym v w) ∧
     (inplaceOp none A sym v w = binaryOp A sym v w) ∧
     (f v w = .ok (.val x) → inplaceAdd (some f) A Q v w = .ok x) ∧
     (binaryOp1 A v w = .ok .notImplemented → Q.hasV = true → Q.iconcat = some c →
       inplaceAdd none A Q v w = c v w) ∧
     (binaryOp1 A v w = .ok .notImplemented → Q.hasV = true → Q.iconcat = none → Q.concat = some d →
-      inplaceAdd none A Q v w = d v w)
+      inplaceAdd none A Q v w = d v w) ∧
+    (f v w = .ok .notImplemented → binaryOp1 A v w = .ok .notImplemented → Q.hasV = true → Q.iconcat = some c →
+      inplaceAdd (some f) A Q v w = c v w)
 
 theorem inplaceFallback_proven : InplaceFallback := by
-  intro α A Q sym v w x f c d
-  refine ⟨?_, ?_, rfl, ?_, ?_, ?_⟩
+  intro α A Q sym v w x f c d e
+  refine ⟨?_, ?_, ?_, ?_, rfl, ?_, ?_, ?_, ?_⟩
   · intro h; simp [inplaceOp, binaryIop1, h]
   · intro h; simp [inplaceOp, binaryIop1, h]
+  · intro h; simp [inplaceOp, binaryIop1, h]
+  · intro h; simp [inplaceOp, binaryOp, binaryIop1, h]
   · intro h; simp [inplaceAdd, binaryIop1, h]
   · intro h h1 h2; simp [inplaceAdd, binaryIop1, h, h1, h2]
+  · intro h h1 h2 h3; simp [inplaceAdd, binaryIop1, h, h1, h2, h3]
   · intro h h1 h2 h3; simp [inplaceAdd, binaryIop1, h, h1, h2, h3]
 
 /-- `a *= b` is `a = a * b` when `a` has no `__imul__`, whatever `b` is. The language reference: "An augmented
@@ -225,12 +289,22 @@ def RichCompareOrder : Prop :=
     (A.subtype = false → l op v w = .ok .notImplemented → r op.swapped w v = .ok .notImplemented →
       (op = .eq → richCompare A op v w = .ok (A.ofBool A.identical)) ∧
       (op = .ne → richCompare A op v w = .ok (A.ofBool (!A.identical))) ∧
-      (op = .lt → (richCompare A op v w).raises "TypeError"))
+      (op = .lt → (richCompare A op v w).raises "TypeError")) ∧
+    (A.subtype = false → l op v w = .ok .notImplemented → r op.swapped w v = .error e →
+      richCompare A op v w = .error e) ∧
+    (A.sameType = false → A.subtype = true → r op.swapped w v = .ok .notImplemented → l op v w = .error e →
+      richCompare A op v w = .error e) ∧
+    (A.sameType = false → A.subtype = true → r op.swapped w v = .ok .notImplemented →
+      l op v w = .ok .notImplemented →
+      (op = .eq → richCompare A op v w = .ok (A.ofBool A.identical)) ∧
+      (op = .ne → richCompare A op v w = .ok (A.ofBool (!A.identical))) ∧
+      (op ≠ .eq → op ≠ .ne → richCompare A op v w = .error (.typeError
+        s!"'{op.sym}' not supported between instances of '{A.lt}' and '{A.rt}'")))
 
 theorem richCompareOrder_proven : RichCompareOrder := by
   intro α A op v w x l r e h1 h2
   have hs : A.rw.isSome = true := by simp [h2]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro h3 h4 h5; simp [richCompare, h1, h2, h3, h4, h5]
   · intro h3 h4 h5 h6; simp [richCompare, h1, h2, h3, h4, h5, h6]
   · intro h3 h4; simp [richCompare, h1, h2, h3, h4]
@@ -243,6 +317,14 @@ theorem richCompareOrder_proven : RichCompareOrder := by
     · intro h
       subst h
       exact ⟨_, by simp [richCompare, h1, h2, h3, h4, h5]; rfl, rfl⟩
+  · intro h3 h4 h5; simp [richCompare, h1, h2, h3, h4, h5]
+  · intro h3 h4 h5 h6; simp [richCompare, h1, h2, h3, h4, h5, h6]
+  · intro h3 h4 h5 h6
+    refine ⟨?_, ?_, ?_⟩
+    · intro h; subst h; simp [richCompare, h1, h2, h3, h4, h5, h6]
+    · intro h; subst h; simp [richCompare, h1, h2, h3, h4, h5, h6]
+    · intro h7 h8
+      cases op <;> first | exact absurd rfl h7 | exact absurd rfl h8 | simp [richCompare, h1, h2, h3, h4, h5, h6]
 
 /-- The default `__eq__` and `__ne__`: `==` answers only for one object, and `!=` delegates to `__eq__` and inverts
 the truth of its result, keeping `NotImplemented`. The data model's "By default, `__ne__()` delegates to
@@ -278,11 +360,17 @@ def TruthProtocol : Prop :=
     (n < 0 → (truthOp (.len (.ok n))).raises "ValueError") ∧
     (n > ssizeMax → (truthOp (.len (.ok n))).raises "OverflowError") ∧
     (truthOp (.badBool tn tn)).raises "TypeError" ∧ (truthOp (.noneBool tn)).raises "TypeError" ∧
-    truthOp .plain = .ok true ∧ truthOp .none = .ok false
+    truthOp .plain = .ok true ∧ truthOp .none = .ok false ∧
+    truthOp .tru = .ok true ∧ truthOp .fals = .ok false ∧
+    notOp .tru = .ok false ∧ notOp .fals = .ok true ∧ notOp .none = .ok true ∧ notOp .plain = .ok false ∧
+    (∀ b : Bool, truthOp (.bool (.ok b)) = .ok b ∧ notOp (.bool (.ok b)) = .ok (!b)) ∧
+    truthOp (.bool (.error e)) = .error e ∧ notOp (.bool (.error e)) = .error e ∧
+    truthOp (.len (.error e)) = .error e ∧ notOp (.len (.error e)) = .error e
 
 theorem truthProtocol_proven : TruthProtocol := by
   intro o n tn e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, rfl, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+    fun b => ⟨rfl, rfl⟩, rfl, rfl, rfl, rfl⟩
   · intro b h
     simp only [truthOp] at h
     simp [notOp, h]
@@ -310,20 +398,22 @@ theorem truthProtocol_proven : TruthProtocol := by
 
 /-! ### `index`, unary operators -/
 
-/-- `operator.index` agrees in the twins on an `int`, and on an object whose type's `__index__` returns an exact
-`int` or raises, with nothing in the instance. The cases left out are refuted next. -/
+/-- `operator.index` agrees in the twins on an `int` whose class does not override `__index__` (so `a.__index__()` is
+`int.__index__`, the value), and on an object whose type's `__index__` returns an exact `int` or raises, with nothing
+in the instance. The cases left out are refuted: `IndexTwinsAlways`, and `IndexIntSubclass` for an override. -/
 def IndexTwinsLawful : Prop :=
   ∀ o : IndexObj, o.inst = none → (∀ n, o.slot ≠ some (.ok (.sub n))) → (∀ tn, o.slot ≠ some (.ok (.other tn))) →
-    o.slot.isSome = true ∨ o.isInt.isSome = true → indexC o = indexPy o
+    (∀ n, o.isInt = some n → o.slot = some (.ok (.exact n))) →
+    o.slot.isSome = true → indexC o = indexPy o
 
 theorem indexTwinsLawful_proven : IndexTwinsLawful := by
-  intro o h1 h2 h3 h4
+  intro o h1 h2 h3 hint h4
   simp only [indexC, indexPy, h1]
   cases hi : o.isInt with
-  | some n => rfl
+  | some n => simp [hint n hi]
   | none =>
     cases hs : o.slot with
-    | none => simp [hi, hs] at h4
+    | none => simp [hs] at h4
     | some r =>
       cases r with
       | error e => rfl
@@ -332,6 +422,19 @@ theorem indexTwinsLawful_proven : IndexTwinsLawful := by
         | exact n => rfl
         | sub n => exact absurd hs (h2 n)
         | other tn => exact absurd hs (h3 tn)
+
+/-- `operator.index` agrees in the twins on every `int`, subclasses included. False: C answers `PyLong_Check` first
+(Objects/abstract.c:1416-1418) with the value, Python calls `a.__index__()` (Lib/operator.py:97), which for
+`class I(int): __index__ = lambda s: 7` is 7, so `index(I(3))` is 3 in C and 7 in Python
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def IndexIntSubclass : Prop :=
+  ∀ (o : IndexObj) (n : Int), o.isInt = some n → o.inst = none → indexC o = indexPy o
+
+theorem indexIntSubclass_refuted : ¬IndexIntSubclass := by
+  intro h
+  have := h ⟨some 3, some (.ok (.exact 7)), none, "I", none⟩ 3 rfl rfl
+  revert this
+  simp [indexC, indexPy]
 
 /-- `operator.index` is one function, whichever twin runs. False, four ways, all of which follow from the Python
 twin being the literal `a.__index__()`: no `__index__` is `AttributeError` against `TypeError`; a result that is
@@ -372,11 +475,24 @@ def GetItemProtocol : Prop :=
       (getItem A).raises "IndexError") ∧
     (A.mp = none → A.sqItem = some f → A.keyIndex = none → (getItem A).raises "TypeError") ∧
     (A.mp = none → A.sqItem = none → A.asType = none → (getItem A).raises "TypeError") ∧
-    (A.mp = none → A.sqItem = none → A.asType = some (.ok none) → (getItem A).raises "TypeError")
+    (A.mp = none → A.sqItem = none → A.asType = some (.ok none) → (getItem A).raises "TypeError") ∧
+    (∀ x : α, A.mp = none → A.sqItem = none → A.asType = some (.ok (some x)) → getItem A = .ok x) ∧
+    (A.mp = none → A.sqItem = none → A.asType = some (.error e) → getItem A = .error e) ∧
+    (A.mp = none → A.sqItem = some f → A.keyIndex = some (.error e) → getItem A = .error e) ∧
+    (A.mp = none → A.sqItem = some f → A.keyIndex = some (.ok i) → i < 0 → ssizeMin ≤ i →
+      A.sqLen = none → getItem A = f i) ∧
+    (A.mp = none → A.sqItem = some f → A.keyIndex = none →
+      getItem A = .error (.typeError s!"sequence index must be integer, not '{A.keyTn}'")) ∧
+    (A.mp = none → A.sqItem = none → A.asType = none →
+      getItem A = .error (.typeError s!"'{A.tn}' object is not subscriptable")) ∧
+    (A.mp = none → A.sqItem = some f → A.keyIndex = some (.ok i) → (i > ssizeMax ∨ i < ssizeMin) →
+      getItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer"))
 
 theorem getItemProtocol_proven : GetItemProtocol := by
   intro α A f i n r e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 14
+  · intro h1 h2 h3 h4; simp [getItem, h1, h2, h3, fitSsize, h4]
   · intro h; simp [getItem, h]
   · intro h1 h2 h3 h4 h5
     have h6 : ¬ (i > ssizeMax ∨ i < ssizeMin) := by
@@ -406,13 +522,24 @@ theorem getItemProtocol_proven : GetItemProtocol := by
     exact ⟨_, by simp [getItem, h1, h2, h3]; rfl, rfl⟩
   · intro h1 h2 h3
     exact ⟨_, by simp [getItem, h1, h2, h3]; rfl, rfl⟩
+  · intro x h1 h2 h3; simp [getItem, h1, h2, h3]
+  · intro h1 h2 h3; simp [getItem, h1, h2, h3]
+  · intro h1 h2 h3; simp [getItem, h1, h2, h3]
+  · intro h1 h2 h3 h4 h5 h6
+    have h7 : ¬ (i > ssizeMax ∨ i < ssizeMin) := by
+      unfold ssizeMin at *
+      unfold ssizeMax at *
+      omega
+    simp [getItem, h1, h2, h3, fitSsize, h7, sequenceGetItem, h4, h6]
+  · intro h1 h2 h3; simp [getItem, h1, h2, h3]
+  · intro h1 h2 h3; simp [getItem, h1, h2, h3]
 
 /-- `a[b] = c` and `del a[b]`: `mp_ass_subscript` wins; a sequence takes the key through `__index__` and adjusts a
 negative one; a sequence without assignment, as `tuple`, says that it does not support it, in the wording of the
 function that noticed. The two differ in that wording: `PyObject_DelItem` says "does not support item deletion"
 and `PySequence_DelItem` "doesn't". -/
 def SetDelProtocol : Prop :=
-  ∀ (σ : Type) (A : SetArgs σ) (f : Int → Py σ) (r : Py σ) (i n : Int),
+  ∀ (σ : Type) (A : SetArgs σ) (f : Int → Py σ) (r : Py σ) (i n : Int) (e : PyExc),
     (A.mp = some r → setItem A = r ∧ delItem A = r) ∧
     (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = some (.ok i) → 0 ≤ i → i ≤ ssizeMax →
       setItem A = f i ∧ delItem A = f i) ∧
@@ -424,10 +551,30 @@ def SetDelProtocol : Prop :=
     (A.mp = none → A.hasSeq = true → A.sqAss = none → A.keyIndex = some (.ok i) → ssizeMin ≤ i → i ≤ ssizeMax →
       delItem A = .error (objMsg A.tn "doesn't support item deletion")) ∧
     (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = none →
-      (setItem A).raises "TypeError" ∧ (delItem A).raises "TypeError")
+      (setItem A).raises "TypeError" ∧ (delItem A).raises "TypeError") ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = none →
+      setItem A = .error (.typeError s!"sequence index must be integer, not '{A.keyTn}'") ∧
+      delItem A = .error (.typeError s!"sequence index must be integer, not '{A.keyTn}'")) ∧
+    (A.mp = none → A.hasSeq = true → A.keyIndex = some (.error e) → setItem A = .error e ∧ delItem A = .error e) ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = some (.ok i) → i < 0 → ssizeMin ≤ i →
+      A.sqLen = some (.ok n) → delItem A = f (i + n)) ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = some (.ok i) → i < 0 → ssizeMin ≤ i →
+      A.sqLen = some (.error e) → setItem A = .error e ∧ delItem A = .error e) ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = some f → A.keyIndex = some (.ok i) → i < 0 → ssizeMin ≤ i →
+      A.sqLen = none → setItem A = f i ∧ delItem A = f i) ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = none → A.keyIndex = some (.ok i) → ssizeMin ≤ i → i ≤ ssizeMax →
+      setItem A = .error (objMsg A.tn "does not support item assignment")) ∧
+    (A.mp = none → A.hasSeq = true → A.sqAss = none → A.keyIndex = none →
+      setItem A = .error (objMsg A.tn "does not support item assignment") ∧
+      delItem A = .error (objMsg A.tn "does not support item deletion")) ∧
+    (A.mp = none → A.hasSeq = true → A.keyIndex = some (.ok i) → i > ssizeMax →
+      (setItem A).raises "IndexError" ∧ (delItem A).raises "IndexError") ∧
+    (A.mp = none → A.hasSeq = true → A.keyIndex = some (.ok i) → (i > ssizeMax ∨ i < ssizeMin) →
+      setItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer") ∧
+      delItem A = .error (.indexError s!"cannot fit '{A.keyTn}' into an index-sized integer"))
 
 theorem setDelProtocol_proven : SetDelProtocol := by
-  intro σ A f r i n
+  intro σ A f r i n e
   have fit : ∀ (mk : String → PyExc) (t : String), ssizeMin ≤ i → i ≤ ssizeMax → fitSsize mk t i = .ok i := by
     intro mk t h1 h2
     have : ¬ (i > ssizeMax ∨ i < ssizeMin) := by
@@ -435,7 +582,12 @@ theorem setDelProtocol_proven : SetDelProtocol := by
       unfold ssizeMax at *
       omega
     simp [fitSsize, this]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  have hmax : i < 0 → i ≤ ssizeMax := by intro h; unfold ssizeMax; omega
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 14
+  · intro h1 h2 h3 h4
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, fitSsize, h4],
+      by simp [delItem, assignItem, h1, h2, h3, fitSsize, h4]⟩
   · intro h; simp [setItem, delItem, assignItem, h]
   · intro h1 h2 h3 h4 h5 h6
     have h7 : ssizeMin ≤ i := by
@@ -456,6 +608,26 @@ theorem setDelProtocol_proven : SetDelProtocol := by
   · intro h1 h2 h3 h4
     exact ⟨⟨_, by simp [setItem, assignItem, h1, h2, h3, h4]; rfl, rfl⟩,
       ⟨_, by simp [delItem, assignItem, h1, h2, h3, h4]; rfl, rfl⟩⟩
+  · intro h1 h2 h3 h4
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, h4], by simp [delItem, assignItem, h1, h2, h3, h4]⟩
+  · intro h1 h2 h3
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3], by simp [delItem, assignItem, h1, h2, h3]⟩
+  · intro h1 h2 h3 h4 h5 h6 h7
+    simp [delItem, assignItem, h1, h2, h3, h4, fit _ _ h6 (hmax h5), sequenceSet, h5, h7]
+  · intro h1 h2 h3 h4 h5 h6 h7
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, h4, fit _ _ h6 (hmax h5), sequenceSet, h5, h7],
+      by simp [delItem, assignItem, h1, h2, h3, h4, fit _ _ h6 (hmax h5), sequenceSet, h5, h7]⟩
+  · intro h1 h2 h3 h4 h5 h6 h7
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, h4, fit _ _ h6 (hmax h5), sequenceSet, h5, h7],
+      by simp [delItem, assignItem, h1, h2, h3, h4, fit _ _ h6 (hmax h5), sequenceSet, h5, h7]⟩
+  · intro h1 h2 h3 h4 h5 h6
+    simp only [setItem, assignItem, h1, h2, h3, h4, fit _ _ h5 h6, sequenceSet, ite_true]
+  · intro h1 h2 h3 h4
+    exact ⟨by simp [setItem, assignItem, h1, h2, h3, h4], by simp [delItem, assignItem, h1, h2, h3, h4]⟩
+  · intro h1 h2 h3 h4
+    have h7 : i > ssizeMax ∨ i < ssizeMin := Or.inl h4
+    exact ⟨⟨_, by simp [setItem, assignItem, h1, h2, h3, fitSsize, h7]; rfl, rfl⟩,
+      ⟨_, by simp [delItem, assignItem, h1, h2, h3, fitSsize, h7]; rfl, rfl⟩⟩
 
 /-! ### `concat` -/
 
@@ -464,7 +636,7 @@ Objects/abstract.c:1734-1742 exists for: neither has a sequence slot and both op
 so both call `nb_add`; both raise `TypeError` without an answer. -/
 def ConcatTwinsOnUserSequences : Prop :=
   ∀ (α : Type) (A : ConcatArgs α) (lt rt : String) (a b : α) (x : α),
-    A.sqConcat = none → A.hasGetitem = true → A.seqA = true → A.seqB = true →
+    A.sqConcat = none → A.hasGetitem = .ok true → A.seqA = true → A.seqB = true →
     A.nbAdd a b = .ok (.val x) → concatC A lt a b = .ok x ∧ concatPy A lt rt a b = .ok x
 
 theorem concatTwinsOnUserSequences_proven : ConcatTwinsOnUserSequences := by
@@ -485,10 +657,34 @@ def ConcatIsPlus : Prop :=
 theorem concatIsPlus_refuted : ¬ConcatIsPlus := by
   intro h
   let A : ConcatArgs Nat :=
-    ⟨true, some (fun _ _ => .error (.typeError "x")), none, true, true,
+    ⟨.ok true, some (fun _ _ => .error (.typeError "x")), none, true, true,
       fun _ _ => .ok (.val 7), fun _ _ => .ok (.val 7)⟩
   have := h A "list" "X" 0 0 rfl rfl
   simp [A, concatC, plus, bind, Except.bind, pure, Except.pure] at this
+
+/-- `concat` and `iconcat` fail alike in the twins on an operand that is no sequence: both refuse it. False when
+looking up `__getitem__` raises something other than `AttributeError`: `hasattr` (Lib/operator.py:156, :359) passes
+that exception on, while C, which reads the type's slots, says the object can't be concatenated
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def ConcatRefuseTwins : Prop :=
+  ∀ (A : ConcatArgs Nat) (lt rt : String) (a b : Nat), A.sqConcat = none → A.sqInplace = none → A.seqA = false →
+    (concatC A lt a b = concatPy A lt rt a b ∧ iconcatC A lt a b = iconcatPy A lt rt a b)
+
+theorem concatRefuseTwins_refuted : ¬ConcatRefuseTwins := by
+  intro h
+  have := (h ⟨.error (.valueError "getattr"), none, none, false, false,
+      fun _ _ => .ok .notImplemented, fun _ _ => .ok .notImplemented⟩ "G" "int" 0 0 rfl rfl rfl).1
+  revert this
+  decide
+
+/-- `concat` and `iconcat` in Python when `hasattr` raises: that exception, before anything else. -/
+def ConcatHasattrRaises : Prop :=
+  ∀ (α : Type) (A : ConcatArgs α) (lt rt : String) (a b : α) (e : PyExc), A.hasGetitem = .error e →
+    concatPy A lt rt a b = .error e ∧ iconcatPy A lt rt a b = .error e
+
+theorem concatHasattrRaises_proven : ConcatHasattrRaises := by
+  intro α A lt rt a b e h
+  exact ⟨by simp [concatPy, h], by simp [iconcatPy, h]⟩
 
 
 /-! ### Iteration -/
@@ -568,12 +764,16 @@ a non-`TypeError` from `__iter__` comes through unchanged in both twins. `__cont
 def IterErrors : Prop :=
   ∀ (α : Type) (same : Same α) (tn m : String) (b : α) (e : PyExc) (r : Py Bool) (a : IterArg α),
     countOfC same tn b (.fail (.typeError m)) = .error (.typeError s!"argument of type '{tn}' is not iterable") ∧
+    indexOfC same tn b (.fail (.typeError m)) = .error (.typeError s!"argument of type '{tn}' is not iterable") ∧
+    countOfPy same b (.fail (.typeError m)) = .error (.typeError m) ∧
+    indexOfPy same b (.fail (.typeError m)) = .error (.typeError m) ∧
     indexOfC same tn b (.fail (.valueError m)) = indexOfPy same b (.fail (.valueError m)) ∧
     containsOp none same tn b (.fail (.typeError m)) =
       .error (.typeError s!"argument of type '{tn}' is not a container or iterable") ∧
-    containsOp (some r) same tn b a = r
+    containsOp (some r) same tn b a = r ∧
+    containsOp (some (.ok true)) same tn b (.fail e) = .ok true
 
-theorem iterErrors_proven : IterErrors := fun _ _ _ _ _ _ _ _ => ⟨rfl, rfl, rfl, rfl⟩
+theorem iterErrors_proven : IterErrors := fun _ _ _ _ _ _ _ _ => ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- `contains` by iteration stops at the first match, so it does not read the rest, nor notice a later failure; it
 says true exactly when `indexOf` finds something, for any comparison. -/
@@ -606,22 +806,26 @@ theorem callTwins_proven : CallTwins := fun _ _ _ _ _ _ => ⟨rfl, rfl, ⟨_, rf
 
 /-! ### `length_hint` -/
 
-/-- `length_hint` agrees between the twins for an `int` default and hint that fit in `Py_ssize_t`, and a hint that is not
-an `int`: the result, or the same exception. A negative hint is a `ValueError` in both, but since 3.15 the two say it
-differently, and that is the only difference: Objects/abstract.c:147-148 against Lib/operator.py:228. Outside that range C
-raises `OverflowError` where Python returns the value, and C accepts an `__index__` default Python rejects; these follow
-from the C signature and are recorded here in the hypotheses. -/
+/-- `length_hint` agrees between the twins for an exact `int` default and hint that fit in `Py_ssize_t`, and a hint
+that is not an `int`: the result (an exact `int` in both), or the same exception. A negative hint is a `ValueError`
+in both, but since 3.15 the two say it differently, and that is the only difference: Objects/abstract.c:147-148
+against Lib/operator.py:228. Outside that range C raises `OverflowError` where Python returns the value, and C
+accepts an `__index__` default Python rejects; these follow from the C signature and are recorded here in the
+hypotheses. `__length_hint__` is a function in the class (`r` is its call, `none` without one), which both twins call
+with the object, and the metaclass has none; other descriptors, the metaclass and `int` subclasses are refuted
+next. -/
 def LengthHintTwins : Prop :=
-  ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax →
-    (∀ h, o.hint = some h → ∀ v, h = .ok (.int v) → ssizeMin ≤ v ∧ v ≤ ssizeMax) →
-    (∀ h, o.hint = some h → ∀ tn, h ≠ .ok (.other tn)) →
-    ((∀ v, o.hint = some (.ok (.int v)) → 0 ≤ v) → lengthHintC o (.int d) = lengthHintPy o (.int d)) ∧
-    (∀ v e, o.hint = some (.ok (.int v)) → v < 0 → o.len = .error e → isTypeError e = true →
+  ∀ (o : HintObj) (d : Int) (r : Option (Py HintRet)), ssizeMin ≤ d → d ≤ ssizeMax →
+    o.hint = r.map HintDesc.func → o.metaHint = none →
+    (∀ v, r = some (.ok (.int v)) → ssizeMin ≤ v ∧ v ≤ ssizeMax) →
+    (∀ tn, r ≠ some (.ok (.other tn))) → (∀ v tn, r ≠ some (.ok (.intSub v tn))) →
+    ((∀ v, r = some (.ok (.int v)) → 0 ≤ v) → (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)) ∧
+    (∀ v e, r = some (.ok (.int v)) → v < 0 → o.len = .error e → isTypeError e = true →
       lengthHintC o (.int d) = .error (.valueError (negativeHintC o)) ∧
       lengthHintPy o (.int d) = .error (.valueError negativeHint))
 
 theorem lengthHintTwins_proven : LengthHintTwins := by
-  intro o d h1 h2 hr hn
+  intro o d r h1 h2 ho hm hr hn hs
   have hd : toSsize d = .ok d := by
     unfold toSsize ssizeMax ssizeMin at *
     rw [if_neg (by omega)]
@@ -632,36 +836,95 @@ theorem lengthHintTwins_proven : LengthHintTwins := by
     | ok n => rfl
     | error e =>
       cases ht : isTypeError e with
-      | false => simp [hl, ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
+      | false => simp [ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, Except.map]
       | true =>
-        simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false]
-        cases hh : o.hint with
+        simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false, ho, hm]
+        cases r with
         | none => rfl
         | some h =>
+          simp only [Option.map, hintLookupC, hintLookupPy]
           cases h with
-          | error e2 => rfl
+          | error e2 =>
+            cases ht2 : isTypeError e2 <;> simp [ht2, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, Except.map]
           | ok v =>
             cases v with
             | notImplemented => rfl
-            | other tn => exact absurd rfl (hn _ hh tn)
+            | other tn => exact absurd rfl (hn tn)
+            | intSub v tn => exact absurd rfl (hs v tn)
             | int v =>
-              have hv := hr _ hh v rfl
-              have hp' := hp v hh
+              have hv := hr v rfl
+              have hp' := hp v rfl
               have : toSsize v = .ok v := by
                 unfold toSsize ssizeMax ssizeMin at *
                 rw [if_neg (by omega)]
               have hn0 : ¬v < 0 := by omega
-              simp [this, hn0, bind, Except.bind]
+              simp [this, hn0, bind, Except.bind, Except.map]
   · intro v e hh hlt hl ht
-    have hv := hr _ hh v rfl
+    subst hh
+    have hv := hr v rfl
     have this : toSsize v = .ok v := by
       unfold toSsize ssizeMax ssizeMin at *
       rw [if_neg (by omega)]
     constructor
-    · simp [lengthHintC, hd, hl, ht, hh, this, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
+    · simp [lengthHintC, hd, hl, ht, ho, hintLookupC, this, hlt, bind, Except.bind, pure, Except.pure, throw,
+        throwThe, MonadExcept.throw, MonadExceptOf.throw]
+    · simp [lengthHintPy, hl, ht, ho, hintLookupPy, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
         MonadExcept.throw, MonadExceptOf.throw]
-    · simp [lengthHintPy, hl, ht, hh, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
-        MonadExcept.throw, MonadExceptOf.throw]
+
+/-- `length_hint` agrees between the twins for any `__length_hint__` the class holds, when the hint is an `int`
+that fits and is not negative and the default fits. False: the twins bind it differently. C's
+`_PyObject_LookupSpecial` runs the descriptor's `__get__` with the object and calls the result with no argument;
+Python reads `type(obj).__length_hint__` and calls it with `obj`. A `staticmethod` returning 5 gives 5 in C and,
+since Python's call with `obj` is a `TypeError`, the default in Python; a `property` whose getter raises
+`TypeError` is that exception in C and the default in Python (bugs/corelibs-operator-length-hint-descriptor.yaml). -/
+def LengthHintDescTwins : Prop :=
+  ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax →
+    (∀ h, o.hint = some h → ∀ v, (hintLookupC h = .ok (.ok (.int v)) ∨ hintCallPy h = .ok (.int v)) →
+      0 ≤ v ∧ v ≤ ssizeMax) →
+    (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)
+
+theorem lengthHintDescTwins_refuted : ¬LengthHintDescTwins := by
+  intro h
+  have := h ⟨.error (.typeError "no len"), some (.static (.ok (.int 5)) (.error (.typeError "takes 0"))), "O", none⟩ 0
+    (by decide) (by decide) (by
+      intro hd hh v hv
+      simp only [Option.some.injEq] at hh
+      subst hh
+      simp only [hintLookupC, hintCallPy, hintLookupPy] at hv
+      rcases hv with hv | hv
+      · simp only [Except.ok.injEq, HintRet.int.injEq] at hv
+        subst hv
+        decide
+      · simp at hv)
+  revert this
+  decide
+
+/-- `length_hint` of an object whose class has no `__length_hint__` is the default in both twins, when `len` does not
+answer. False: Python's `type(obj).__length_hint__` (Lib/operator.py:213) also finds one on the metaclass, which
+`_PyObject_LookupSpecial` never reads, so a metaclass hint of 3 gives 3 in Python and the default 0 in C
+(bugs/corelibs-operator-twin-lookups.yaml). -/
+def LengthHintMetaTwins : Prop :=
+  ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax → o.hint = none →
+    (lengthHintC o (.int d)).map .exact = lengthHintPy o (.int d)
+
+theorem lengthHintMetaTwins_refuted : ¬LengthHintMetaTwins := by
+  intro h
+  have := h ⟨.error (.typeError "no len"), none, "O", some (.ok (.int 3))⟩ 0 (by decide) (by decide) rfl
+  revert this
+  decide
+
+/-- `length_hint` gives the same object in both twins when only the default answers. False for an `int` subclass:
+Python returns the default as given (Lib/operator.py:203-204, :216), C converts it to `Py_ssize_t`, so
+`length_hint(object(), True)` is `True` in Python and `1` in C (bugs/corelibs-operator-twin-lookups.yaml). -/
+def LengthHintDefaultTwins : Prop :=
+  ∀ (o : HintObj) (dflt : HintDefault), o.hint = none → o.metaHint = none →
+    (lengthHintC o dflt).map .exact = lengthHintPy o dflt
+
+theorem lengthHintDefaultTwins_refuted : ¬LengthHintDefaultTwins := by
+  intro h
+  have := h ⟨.error (.typeError "no len"), none, "object", none⟩ (.intSub 1 "bool") rfl rfl
+  revert this
+  decide
 
 /-! ### `_compare_digest` -/
 
@@ -693,7 +956,7 @@ path starting from a nonzero result so it cannot answer `True`. `compare_digest`
 Non-ASCII `str` arguments raise `TypeError`. -/
 def CompareDigestCorrect : Prop :=
   ∀ (a b : List Nat), tscmp a b = decide (a = b) ∧
-    (compareDigest (.str false a) (.str true b)).raises "TypeError"
+    (compareDigest (.str false a "str") (.str true b "str")).raises "TypeError"
 
 theorem compareDigestCorrect_proven : CompareDigestCorrect := by
   intro a b

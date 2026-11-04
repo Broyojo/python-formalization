@@ -1061,12 +1061,14 @@ def run_fmt_intern(c):
 # ==== join (fn name fmt_join) ====
 
 JN_STRS = ["", "", "a", "abc", "\xe9", "a\xff", "€", "a€", "\U0001f600", "x\U0001f600y", "\ud800"]
+# Type names for `%.80s`, which cuts UTF-8 bytes: 41 'é' (82 bytes), and a cut inside a character.
+JN_NAMES = ["int", "Thing", "T" * 100, "\xe9" * 41, "a" + "\xe9" * 40, "\u4e2d" * 27, "ab" + "\U00010000" * 20]
 
 
 def jn_item(rng, other=0.08):
     r = rng.random()
     if r < other:
-        return {"t": "other", "n": rng.choice(["int", "Thing", "T" * 100])}
+        return {"t": "other", "n": rng.choice(JN_NAMES)}
     s = cps_of(rng.choice(JN_STRS))
     return {"t": "sub" if rng.random() < 0.15 else "exact", "s": s}
 
@@ -1074,7 +1076,7 @@ def jn_item(rng, other=0.08):
 @gen("format", 4)
 def gen_fmt_join(rng):
     r = rng.random()
-    sep = {"t": "null"} if r < 0.1 else {"t": "other", "n": rng.choice(["int", "T" * 100])} if r < 0.16 else \
+    sep = {"t": "null"} if r < 0.1 else {"t": "other", "n": rng.choice(["int", "T" * 100] + JN_NAMES[3:])} if r < 0.16 else \
         {"t": "str", "s": cps_of(rng.choice(JN_STRS + [" ", ", "]))}
     n = rng.choice([0, 1, 1, 2, 2, 3, 4, 6])
     bad = rng.choice([0, 0.08, 0.3])

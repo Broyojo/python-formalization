@@ -140,7 +140,7 @@ theorem reduceKeepsNameImportAttr_proven : ReduceKeepsNameImportAttr := by
     simp only [attributeErrorGetstate, M.bind_app, getW_app, h, alloc_app]
     refine ⟨_, _, rfl, ?_, ?_⟩
     · rw [dictOf_alloc]
-      simp [dictLookup_setEntry_ne, dictLookup_setEntry_same]
+      simp [optSetEntry, dictLookup_setEntry_ne, dictLookup_setEntry_same]
     · rw [dictOf_alloc]
       simp [dictLookup_setEntry_same, excArgs]
 
@@ -635,6 +635,8 @@ theorem memoryErrorFreelistBound_proven : MemoryErrorFreelistBound := by
   · rfl
   · rfl
   · intro s
-    rfl
+    induction s with
+    | nil => rfl
+    | cons _ _ ih => exact ih
 
 end PyLean.TypeObj

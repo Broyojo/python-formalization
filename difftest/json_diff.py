@@ -468,12 +468,14 @@ def load_arg(rng):
     return {"other": rng.choice(["int", "NoneType", "list", "float"])}
 
 
-LONG_TYPE = "L" * 60  # `_PyArg_BadArgument` prints 50 characters of the type name
+LONG_TYPE = "L" * 60  # `_PyArg_BadArgument` prints 50 bytes of the type name
+# `%.50s` and `%.80s` cut UTF-8 bytes, dropping a character the cut splits.
+LONG_TYPES = [LONG_TYPE, "\u00e9" * 41, "a" + "\u00e9" * 30, "\u4e2d" * 30, "ab" + "\U00010000" * 20]
 
 
 def gen_scan_arg(rng):
     if rng.random() < 0.05:
-        return {"other": rng.choice(["int", "bytes", "NoneType", LONG_TYPE])}, ""
+        return {"other": rng.choice(["int", "bytes", "NoneType", *LONG_TYPES])}, ""
     s = gen_doc(rng)
     return {"s": cps(s)}, s
 
@@ -597,7 +599,7 @@ def gen_case(rng):
             return {"mod": "json", "fn": f"encstr_{impl}", "ascii": ascii_, "s": cps(s),
                     "x": {"s": cps(s), "sub": rng.random() < 0.3}}
         return {"mod": "json", "fn": "encstr_c", "ascii": ascii_,
-                "x": {"other": rng.choice(["int", "bytes", "NoneType", LONG_TYPE])}}
+                "x": {"other": rng.choice(["int", "bytes", "NoneType", *LONG_TYPES])}}
     if r < 0.95:
         x, s = gen_scan_arg(rng)
         return {"mod": "json", "fn": "scan_once", "x": x, "idx": str(gen_idx(rng, s)), "strict": rng.random() < 0.7,
@@ -612,7 +614,7 @@ def gen_case(rng):
         if has_cycle(v):
             c["markers"] = 1 if kw["check_circular"] else 0
             c["indent"] = c["indent"] if kw["check_circular"] else None
-        c["encoder"] = rng.choice([0, 1, 2, 3, 4])
+        c["encoder"] = rng.choice([0, 1, 2, 3, 4, 5])
         c["level"] = str(rng.choice([0, 0, 1, 3, 2**63, -2**63 - 1]))
         c["key_sep"] = {"s": c["key_sep"]} if rng.random() < 0.95 else {"other": "int"}
         c["item_sep"] = {"s": c["item_sep"]} if rng.random() < 0.95 else {"other": "int"}
@@ -777,14 +779,14 @@ def yield_result(chunks, exc):
     return {"ok": {"chunks": [cps(x) for x in chunks], "exc": exc}}
 
 
-LONG_OBJ = type(LONG_TYPE, (), {})()
+LONG_OBJS = {t: type(t, (), {})() for t in LONG_TYPES}
 
 
 def str_arg(x):
     if "s" in x:
         s = "".join(map(chr, x["s"]))
         return StrSub(s) if x.get("sub") else s
-    return {"int": 1, "bytes": b"", "NoneType": None, LONG_TYPE: LONG_OBJ}[x["other"]]
+    return {"int": 1, "bytes": b"", "NoneType": None, **LONG_OBJS}[x["other"]]
 
 
 def run_python(c):
@@ -880,11 +882,14 @@ def run_python(c):
             def nonstr(s):
                 return 1
 
+            def nonstr_long(s):
+                return LONG_OBJS["\u00e9" * 41]
+
             def boom(s):
                 raise ValueError("boom")
 
             enc = {0: json.encoder.c_encode_basestring_ascii, 1: json.encoder.c_encode_basestring,
-                   2: custom, 3: nonstr, 4: boom}[c["encoder"]]
+                   2: custom, 3: nonstr, 4: boom, 5: nonstr_long}[c["encoder"]]
             ks = str_arg(c["key_sep"]) if "s" in c["key_sep"] else 1
             its = str_arg(c["item_sep"]) if "s" in c["item_sep"] else 1
             indent = None if c["indent"] is None else "".join(map(chr, c["indent"]))

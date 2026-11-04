@@ -28,7 +28,12 @@ def dedupKeep : List Addr → List Addr → List Addr
   | [], seen => seen.reverse
   | x :: xs, seen => if seen.contains x then dedupKeep xs seen else dedupKeep xs (x :: seen)
 
-/-- `set_mro_error`, `Objects/typeobject.c:3350`. -/
+/-- `set_mro_error`, `Objects/typeobject.c:3350-3398`. The message is built with `PyOS_snprintf`
+in `char buf[1000]` (`:3353`, `:3370-3394`), so it is the first 999 bytes of the UTF-8 of the
+whole text (a `,` is added only while it fits, `:3391`, and a cut name ends the loop, `:3373`),
+and `PyErr_SetString` decodes it strictly (`:3396`). When byte 999 falls inside a character of a
+non-ASCII class name, that decoding fails and CPython raises `UnicodeDecodeError` instead of the
+`TypeError`; the model leaves that case out (`gap%`). -/
 def setMroError {α : Type} (rt : Rt) (rests : List (List Addr)) : M α := do
   let heads := rests.filterMap List.head?
   let cands := dedupKeep heads []
@@ -37,7 +42,11 @@ def setMroError {α : Type} (rt : Rt) (rests : List (List Addr)) : M α := do
     let n ← classNameOf rt (.obj c)
     names := names ++ [n.getD "?"]
   let body := ",".intercalate (names.map (" " ++ ·))
-  typeErr (trunc 999 ("Cannot create a consistent method resolution order (MRO) for bases" ++ body))
+  let full := ("Cannot create a consistent method resolution order (MRO) for bases" ++ body).toList
+  let cut := cutUtf8 999 full
+  if (full.map Char.utf8Size).sum ≤ 999 ∨ (cut.map Char.utf8Size).sum = 999 then
+    typeErr (String.ofList cut)
+  else gap%
 
 /-- `mro_implementation_unlocked` on type `t`, `Objects/typeobject.c:3471`. -/
 def mroImplementation (rt : Rt) (t : Addr) : M (List Addr) := do
@@ -369,7 +378,7 @@ def typeNewSetCell (key : Name) (value : Val) (dict : NameDict) : M NameDict := 
       modObj c fun o => { o with body := .cell (some value) }
       pure (NameDict.erase dict key)
     | _, _ =>
-      typeErr s!"{key} must be a nonlocal cell, not {trunc 200 (typeRepr w (typeOf w cell))}"
+      typeErr s!"{key} must be a nonlocal cell, not {truncChars 200 (typeRepr w (typeOf w cell))}"
 
 /-! ## `PyType_Ready` for heap types -/
 

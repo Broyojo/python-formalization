@@ -199,7 +199,7 @@ def EncoderString : Prop :=
     (∀ g, cfg.customEnc = some g →
       (∀ r, g s = .ok (.str r) → cEncStr cfg s = .ok r) ∧
       (∀ t, g s = .ok (.nonstr t) →
-        cEncStr cfg s = .error (.typeError s!"encoder() must return a string, not {String.ofList (t.toList.take 80)}")) ∧
+        cEncStr cfg s = .error (.typeError s!"encoder() must return a string, not {truncName 80 t}")) ∧
       (∀ e, g s = .error e → cEncStr cfg s = .error e))
 
 theorem encoderString_proven : EncoderString := by
