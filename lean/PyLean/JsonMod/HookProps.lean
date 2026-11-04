@@ -222,11 +222,6 @@ theorem dumpsApiTwins_proven : DumpsApiTwins := by
 
 /-! ### The size of the indent cache -/
 
-theorem rep_length (t : PStr) (n : Nat) : (rep t n).length = n * t.length := by
-  induction n with
-  | zero => simp [rep]
-  | succ n ih => simp only [rep, List.length_append, ih]; rw [Nat.succ_mul]; omega
-
 /-- Entry `2*k` of the indent cache is `1 + (k + i) * len(indent)` characters
 long, for every level the cache has reached; entry `2*k-1` is longer by
 `len(item_separator)`. The cache therefore holds about `n^2 * len(indent)`

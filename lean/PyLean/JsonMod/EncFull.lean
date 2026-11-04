@@ -419,16 +419,23 @@ def dumpsCX (cfg : XCfg) (c : Nat) (v : XVal) : XR :=
   | .str s => .ok (cStrEnc cfg.toE s)
   | _ => cObjX cfg c 0 [] [] v
 
-/-- `c_make_encoder(...)(o, level)`, `encoder_call` (:1448-1488): `create_indent_cache(level)`
-then `indent_level = 0`, so the cache's level-0 entry is `'\n' + indent * level` (`''` for a
-negative level, `PySequence_Repeat`) and every level is shifted by `level`; `n` conversion of
-the level first. -/
+/-- `c_make_encoder(...)(o, level)`, `encoder_call` (:1448-1488): the `n` conversion of the
+level, then `create_indent_cache(level)` when `indent` is not `None` (:1465-1471), whose failure
+is the result before anything is written; then `indent_level = 0` (:1472) with the cache, whose
+entries at level `k` are `'\n' + indent * (copies + k)` (`IndentCacheSpec`), so `cObjX` runs at
+level `copies` (`cacheCopies`: none for a level below 1, the repeat's `''`). Without an indent
+the level is never read. -/
 def encoderCallX (cfg : XCfg) (c : Nat) (v : XVal) (level : Int) : Except XErr (List PStr) :=
   if outOfSsize level then .error (xe ssizeErr)
   else
-    match cObjX cfg c level.toNat [] [] v with
-    | .ok t => .ok [t]
-    | .error e => .error e
+    match (match cfg.indent with
+           | none => (Except.ok () : Except PyExc Unit)
+           | some ind => (createIndentCache ind level).map (fun _ => ())) with
+    | .error e => .error (xe e)
+    | .ok () =>
+      match cObjX cfg c (cacheCopies level) [] [] v with
+      | .ok t => .ok [t]
+      | .error e => .error e
 
 /-! ### Python: `_make_iterencode`, Lib/json/encoder.py:259-459 -/
 

@@ -10,8 +10,14 @@ These wrappers see any Python object, so a `str` argument is a `StrArg`. An
 `indent` that is neither `None` nor a `str` cannot come from
 `JSONEncoder.iterencode` (encoder.py:249-252) and is out of scope, as are
 `__bool__` raising in the `p` conversions and a `markers` dict with entries.
-`MemoryError` from `PySequence_Repeat(indent, level)` with a huge level is out of
-scope too.
+
+Allocation: `create_indent_cache` builds `'\n' + indent * level` at the call, before anything
+is written, so its failures are modelled: `unicode_repeat`'s `OverflowError`, and
+`PyUnicode_New`'s `MemoryError` from its own size check (Objects/unicodeobject.c:1325-1326) or
+from a `malloc` of `mallocLimit = 2^47` bytes or more (no 64-bit Linux or macOS process has that
+much address space; the convention of `Itertools/Model.lean`). Smaller requests are assumed to
+succeed, and so is every later allocation (the writer, the other cache entries): the encoder
+models have no out-of-memory failure, a scope limit.
 -/
 
 namespace PyLean.JsonMod
@@ -200,10 +206,68 @@ def encoderNew (markers : MarkersArg) (dflt : Nat → String → Except PyExc EV
 `2*k-1` holds `item_separator` followed by that. -/
 abbrev IndentCache := List PStr
 
-/-- `create_indent_cache`, :1372-1390. `PySequence_Repeat` gives `''` for a
-negative level. -/
-def createIndentCache (ind : PStr) (level : Int) : IndentCache :=
-  [[10] ++ (if level ≠ 0 then rep ind level.toNat else [])]
+/-- `malloc` of this many bytes or more fails (see the module docstring). -/
+def mallocLimit : Nat := 2 ^ 47
+
+def memoryError : PyExc := .named "MemoryError" ""
+
+/-- `struct_size` of `PyUnicode_New`: `PyASCIIObject` (40 bytes) or `PyCompactUnicodeObject` (56). -/
+def ucsStruct (maxchar : Nat) : Nat := if maxchar < 128 then 40 else 56
+
+/-- `char_size` of `PyUnicode_New`. -/
+def ucsWidth (maxchar : Nat) : Nat := if maxchar < 256 then 1 else if maxchar < 65536 then 2 else 4
+
+/-- `PyUnicode_New(size, maxchar)` for `1 <= size` succeeds (Objects/unicodeobject.c:1269-1345):
+`struct_size` 40 for ASCII (`PyASCIIObject`), 56 otherwise (`PyCompactUnicodeObject`; 3.15.2,
+64-bit, checked with `sys.getsizeof`), the size check of :1325-1326, then
+`PyObject_Malloc(struct_size + (size + 1) * char_size)` (:1332). -/
+def unicodeNewOk (size maxchar : Nat) : Bool :=
+  decide ((size : Int) ≤ (ssizeMax - ucsStruct maxchar) / ucsWidth maxchar - 1) &&
+    decide (ucsStruct maxchar + (size + 1) * ucsWidth maxchar < mallocLimit)
+
+/-- The largest code point of a string (`PyUnicode_MAX_CHAR_VALUE` picks the kind from it). -/
+def strMax (s : PStr) : Nat := s.foldl max 0
+
+/-- `unicode_repeat(str, len)`, Objects/unicodeobject.c:12560-12612 (the `sq_repeat` that
+`PySequence_Repeat`, Objects/abstract.c:1747-1758, calls for a `str`): `''` below 1, the string
+itself at 1, `OverflowError` when `len(str) > PY_SSIZE_T_MAX / len`, otherwise
+`PyUnicode_New(len * len(str), maxchar)` (the empty singleton for size 0) and the copies. -/
+def unicodeRepeat (s : PStr) (len : Int) : Except PyExc PStr :=
+  if len < 1 then .ok []
+  else if len = 1 then .ok s
+  else if (s.length : Int) > ssizeMax / len then .error (.overflowError "repeated string is too long")
+  else if len.toNat * s.length = 0 then .ok []
+  else if unicodeNewOk (len.toNat * s.length) (strMax s) then .ok (rep s len.toNat)
+  else .error memoryError
+
+/-- `PyUnicode_Append(&left, right)` (Objects/unicodeobject.c:11408-11483) for two `str`s: the
+empty shortcuts, the `OverflowError` of :11440-11444, then a new string (`'\n'` from
+`PyUnicode_FromOrdinal` is a shared singleton, never resized in place). -/
+def unicodeAppend (l r : PStr) : Except PyExc PStr :=
+  if l = [] then .ok r
+  else if r = [] then .ok l
+  else if (l.length : Int) > ssizeMax - r.length then .error (.overflowError "strings are too large to concat")
+  else if unicodeNewOk (l.length + r.length) (max (strMax l) (strMax r)) then .ok (l ++ r)
+  else .error memoryError
+
+/-- `create_indent_cache(s, indent_level)`, :1373-1390: `newline_indent = '\n'`, then, when
+`indent_level` is not 0, `PyUnicode_AppendAndDel(&newline_indent, PySequence_Repeat(indent,
+indent_level))` (Objects/unicodeobject.c:11485-11489; a `NULL` repeat leaves its exception and
+`NULL`, :11420-11424), and the 1-list of the result. -/
+def createIndentCache (ind : PStr) (level : Int) : Except PyExc IndentCache :=
+  if level ≠ 0 then
+    match unicodeRepeat ind level with
+    | .error e => .error e
+    | .ok r =>
+      match unicodeAppend [10] r with
+      | .error e => .error e
+      | .ok nl => .ok [nl]
+  else .ok [[10]]
+
+/-- The number of copies of `indent` in the cache's first entry, which the encoders then shift
+every level by (`IndentCacheSpec` ties the strings to it): `PySequence_Repeat` gives `''` below
+1, so 0 copies for a negative level as for level 0. -/
+def cacheCopies (level : Int) : Nat := if level < 1 then 0 else level.toNat
 
 /-- `update_indent_cache`, :1395-1422. -/
 def updateIndentCache (cfg : ECfg) (ind : PStr) (k : Nat) (c : IndentCache) : IndentCache :=
@@ -218,14 +282,32 @@ def getItemSeparator (cfg : ECfg) (ind : PStr) (k : Nat) (c : IndentCache) : PSt
 /-- `write_newline_indent`, :1438-1444. -/
 def writeNewlineIndent (k : Nat) (c : IndentCache) : PStr := c.getD (k * 2) []
 
-/-- `encoder_call`, :1447-1488: a 1-tuple. The level starts the indent cache
-(`indent_level = 0` afterwards); a negative one behaves like 0 because the cache
-starts from `'\n'`. -/
+/-- `encoder_call`, :1448-1488: the `n` conversion of the level, `create_indent_cache` when
+`indent` is not `None` (its failure is the result, before anything is written), then
+`indent_level = 0` with the cache, whose entries are `'\n' + indent * (copies + k)`
+(`IndentCacheSpec`); a 1-tuple. -/
 def encoderCall (cfg : ECfg) (v : EVal) (level : Int) : Except PyExc (List PStr) :=
   if outOfSsize level then .error ssizeErr
   else
-    match cEnc cfg (encFuel cfg v) level.toNat [] v with
-    | .ok t => .ok [t]
+    match (match cfg.indent with
+           | none => (Except.ok () : Except PyExc Unit)
+           | some ind => (createIndentCache ind level).map (fun _ => ())) with
     | .error e => .error e
+    | .ok () =>
+      match cEnc cfg (encFuel cfg v) (cacheCopies level) [] v with
+      | .ok t => .ok [t]
+      | .error e => .error e
+
+theorem createIndentCache_lt1 (ind : PStr) {level : Int} (h : level < 1) :
+    createIndentCache ind level = .ok [[10]] := by
+  by_cases h0 : level = 0
+  · simp [createIndentCache, h0]
+  · simp [createIndentCache, h0, unicodeRepeat, h, unicodeAppend]
+
+theorem createIndentCache_ovf (ind : PStr) {level : Int} (h2 : 2 ≤ level)
+    (hov : (ind.length : Int) > ssizeMax / level) :
+    createIndentCache ind level = .error (.overflowError "repeated string is too long") := by
+  have h0 : level ≠ 0 := by omega
+  simp [createIndentCache, h0, unicodeRepeat, show ¬ level < 1 by omega, show level ≠ 1 by omega, hov]
 
 end PyLean.JsonMod
