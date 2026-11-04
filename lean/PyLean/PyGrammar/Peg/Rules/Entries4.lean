@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.SpecPos
+import PyLean.PyGrammar.Peg.Rules.SpecInv4
 
 /-! Registry entries for the rules stated as equations (`Peg/Rules/Spec.lean` and the
 `Spec*.lean` files after it). -/
@@ -204,7 +204,7 @@ def specEntries : List Entry := [
   specEntry "pygrammar-rule-single-compound-stmt" Rows.rule_single_compound_stmt
     ("single_compound_stmt: compound_stmt gives the one-statement sequence, through " ++
      "_PyPegen_register_stmts (which, in the second pass, records the statement's start).")
-    "Grammar/python.gram:105-107; Parser/action_helpers.c (_PyPegen_register_stmts)"
+    "Grammar/python.gram:105-107; Parser/action_helpers.c:2116-2134"
     ``SingleCompoundStmt ``singleCompoundStmt_proven,
   specEntry "pygrammar-rule-statement-newline" Rows.rule_statement_newline
     ("statement_newline: single_compound_stmt NEWLINE, then simple_stmts, then a NEWLINE alone (one " ++
@@ -255,7 +255,86 @@ def specEntries : List Entry := [
     ("expression_without_invalid: with call_invalid_rules off (restored after), disjunction 'if' " ++
      "disjunction 'else' expression gives IfExp(test, body, orelse) with EXTRA; then disjunction; " ++
      "then lambdef.")
-    "Grammar/python.gram:1242-1245" ``ExpressionWithoutInvalid ``expressionWithoutInvalid_proven
+    "Grammar/python.gram:1242-1245" ``ExpressionWithoutInvalid ``expressionWithoutInvalid_proven,
+  specEntry "pygrammar-rule-invalid-arguments" Rows.rule_invalid_arguments
+    ("invalid_arguments: the seven alternatives in order: '**' unpacking then ',' starred " ++
+     "arguments (from the ',' on), an unparenthesized generator before ',' (over the expression .. " ++
+     "the last comprehension item), NAME '=' expression for_if_clauses, NAME '=' before ',' or ')', " ++
+     "_PyPegen_nonparen_genexp_in_call (more than one positional argument), args ',' a generator, " ++
+     "and args ',' args (_PyPegen_arguments_parsing_error: positional argument follows keyword " ++
+     "argument [unpacking]).")
+    "Grammar/python.gram:1217-1229; Parser/action_helpers.c:1271-1312"
+    ``InvalidArgumentsRule ``invalidArgumentsRule_proven
+    " The groups _tmp_107, _tmp_169, _gather_109, _tmp_170, _tmp_110, _tmp_111, _tmp_112 are pinned.",
+  specEntry "pygrammar-rule-invalid-kwarg" Rows.rule_invalid_kwarg
+    ("invalid_kwarg: ('True'|'False'|'None') '=' raises \"cannot assign to <keyword>\"; NAME '=' " ++
+     "expression for_if_clauses the '==' / ':=' hint; an expression that is not NAME '=' followed by " ++
+     "'=' \"expression cannot contain assignment, perhaps you meant \\\"==\\\"?\"; '**' expression " ++
+     "'=' expression \"cannot assign to keyword argument unpacking\".")
+    "Grammar/python.gram:1230-1240" ``InvalidKwargRule ``invalidKwargRule_proven,
+  specEntry "pygrammar-rule-invalid-legacy-expression" Rows.rule_invalid_legacy_expression
+    ("invalid_legacy_expression: NAME not followed by '(' then star_expressions: for print and exec " ++
+     "\"Missing parentheses in call to 'X'. Did you mean X(...)?\" over the name .. the arguments; " ++
+     "for another name NULL without an exception.")
+    "Grammar/python.gram:1246-1249; Parser/action_helpers.c:950-962" ``InvalidLegacyExpression
+    ``invalidLegacyExpression_proven,
+  specEntry "pygrammar-rule-invalid-type-param" Rows.rule_invalid_type_param
+    ("invalid_type_param: '*' NAME ':' expression raises \"cannot use constraints with " ++
+     "TypeVarTuple\" for a tuple bound and \"cannot use bound with TypeVarTuple\" otherwise, from " ++
+     "the ':' on; '**' NAME ':' expression the same for ParamSpec.")
+    "Grammar/python.gram:1251-1261" ``InvalidTypeParam ``invalidTypeParam_proven,
+  specEntry "pygrammar-rule-invalid-expression" Rows.rule_invalid_expression
+    ("invalid_expression: the seven alternatives in order: code between two strings, a missing " ++
+     "comma (_PyPegen_raise_error_for_missing_comma), 'if' without 'else', 'else' followed by a " ++
+     "statement, a statement before 'if', and lambda before FSTRING_MIDDLE / TSTRING_MIDDLE, each " ++
+     "with its message and location.")
+    "Grammar/python.gram:1263-1279" ``InvalidExpressionRule ``invalidExpressionRule_proven
+    " The groups _loop1_115, _tmp_171, _tmp_116, _tmp_117, _tmp_118 are pinned.",
+  specEntry "pygrammar-rule-invalid-named-expression" Rows.rule_invalid_named_expression
+    ("invalid_named_expression (memo): expression ':=' expression \"cannot use assignment " ++
+     "expressions with <name>\"; NAME '=' bitwise_or not followed by '=' or ':=' the '==' / ':=' " ++
+     "hint; a bitwise_or that is not a list, tuple, genexp, True, None or False, '=' bitwise_or " ++
+     "\"cannot assign to <name> here. Maybe you meant '==' instead of '='?\"; memoized.")
+    "Grammar/python.gram:1287-1295" ``InvalidNamedExpressionRule ``invalidNamedExpressionRule_proven,
+  specEntry "pygrammar-rule-invalid-comprehension" Rows.rule_invalid_comprehension
+    ("invalid_comprehension: '[' / '(' '**' expression for_if_clauses raise the dict unpacking " ++
+     "messages over '**' .. the expression; ('['|'{') star_named_expression ',' then " ++
+     "star_named_expressions or nothing before for_if_clauses \"did you forget parentheses around " ++
+     "the comprehension target?\".")
+    "Grammar/python.gram:1350-1359" ``InvalidComprehensionRule ``invalidComprehensionRule_proven,
+  specEntry "pygrammar-rule-invalid-parameters" Rows.rule_invalid_parameters
+    ("invalid_parameters: the six alternatives in order with their messages: '/' first, a second " ++
+     "'/', a parameter without a default after one with, parenthesized parameters, '/' after '*', " ++
+     "and '/' '*' without a comma.")
+    "Grammar/python.gram:1360-1372" ``InvalidParameters ``invalidParameters_proven
+    " One statement (InvalidParametersOf) covers the twin; ParamGroups pins the groups and loops.",
+  specEntry "pygrammar-rule-invalid-lambda-parameters" Rows.rule_invalid_lambda_parameters
+    ("invalid_lambda_parameters: invalid_parameters with the lambda rules; its parenthesized " ++
+     "alternative takes ','.lambda_param+ and says \"Lambda expression parameters cannot be " ++
+     "parenthesized\".")
+    "Grammar/python.gram:1388-1400" ``InvalidLambdaParameters ``invalidLambdaParameters_proven,
+  specEntry "pygrammar-rule-invalid-parameters-helper" Rows.rule_invalid_parameters_helper
+    "invalid_parameters_helper: slash_with_default as a one-element sequence, then param_with_default+."
+    "Grammar/python.gram:1385-1387" ``InvalidParametersHelper ``invalidParametersHelper_proven,
+  specEntry "pygrammar-rule-invalid-lambda-parameters-helper" Rows.rule_invalid_lambda_parameters_helper
+    "invalid_lambda_parameters_helper: the lambda twin of invalid_parameters_helper."
+    "Grammar/python.gram:1401-1403" ``InvalidLambdaParametersHelper ``invalidLambdaParametersHelper_proven,
+  specEntry "pygrammar-rule-invalid-star-etc" Rows.rule_invalid_star_etc
+    ("invalid_star_etc: '*' then ')' or ',' (')' | '**') raises \"named parameters must follow bare " ++
+     "*\" at the '*'; '*' ',' TYPE_COMMENT \"bare * has associated type comment\"; '*' param '=' " ++
+     "\"var-positional parameter cannot have default value\"; a second '*' \"* may appear only once\".")
+    "Grammar/python.gram:1375-1380" ``InvalidStarEtcRule ``invalidStarEtcRule_proven,
+  specEntry "pygrammar-rule-invalid-lambda-star-etc" Rows.rule_invalid_lambda_star_etc
+    ("invalid_lambda_star_etc: '*' then ':' or ',' (':' | '**') raises \"named parameters must " ++
+     "follow bare *\" at the last token read (not at the '*', unlike invalid_star_etc); then the " ++
+     "default and second-'*' messages.")
+    "Grammar/python.gram:1404-1408" ``InvalidLambdaStarEtcRule ``invalidLambdaStarEtcRule_proven,
+  specEntry "pygrammar-rule-invalid-double-starred-kvpairs" Rows.rule_invalid_double_starred_kvpairs
+    ("invalid_double_starred_kvpairs: invalid_kvpair_unpacking [','], then pairs ',' " ++
+     "(invalid_kvpair | invalid_kvpair_unpacking) (second pass), both the dummy result when their " ++
+     "rule does not raise; then expression ':' before '}' or ',' \"expression expected after " ++
+     "dictionary key and ':'\".")
+    "Grammar/python.gram:1560-1563" ``InvalidDoubleStarredKvpairsRule ``invalidDoubleStarredKvpairsRule_proven
 ]
 
 end PyLean.PyGrammar.Peg

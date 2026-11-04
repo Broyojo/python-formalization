@@ -531,6 +531,19 @@ theorem altResult_pure2 {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int}
     simp only [h]
     rfl
 
+/-- `RAISE_SYNTAX_ERROR_KNOWN_RANGE(a, b, msg)` over two computed endpoints. -/
+theorem altResult_krv {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {ea eb : AE} {va vb : Ast} {m : String}
+    (h1 : a.action = some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [ea, eb, .str m]))
+    (ha : ∀ ex, evalA env ex ea s = (va, s)) (hb : ∀ ex, evalA env ex eb s = (vb, s))
+    (hm : msgOf [.str (m.toList.map Char.toNat)] = m) :
+    altResult a g env st s = (none, raisedAt va vb m s) := by
+  rw [altResult_raise h1 (fun ex => by
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, ha, hb, callHelper,
+      raiseRange, List.drop_succ_cons, List.drop_zero, hm, List.getD_cons_zero, List.getD_cons_succ]
+    rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+  rfl
+
 theorem altResult_none1' {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     (h1 : a.action = none) (h2 : a.nvars = 1) : altResult a g env st s = oVar0 env st s := by
   rw [altResult_none1 h1 h2]
@@ -646,6 +659,8 @@ macro "spec_alts" : tactic => `(tactic| (
     | (intro _ _ _; exact altResult_var rfl)
     | (intro _ _ _; exact altResult_p rfl (fun _ => rfl))
     | (intro _ _ _; exact altResult_x rfl rfl (fun _ _ => rfl))
+    | (intro _ _ _; exact altResult_krv rfl (fun _ => rfl) (fun _ => rfl) (by decide +kernel))
+    | (intro _ _ _; exact altResult_pure2 rfl (fun _ => rfl))
     | skip))
 
 /-! ### Rules without `EXTRA` -/
@@ -714,5 +729,20 @@ theorem callRule_noinv_extra {f id : Nat} {p q : PS}
   have hg : (RuleKind.normal == RuleKind.gather) = false := rfl
   simp only [hg, h3, Bool.false_eq_true, ↓reduceIte]
   split <;> simp_all [PS.leave]
+
+/-! ### `(memo)` rules without `EXTRA` -/
+
+/-- A `(memo)` rule function without `EXTRA`, at a position with no memo entry for it yet: the
+memo lookup reads the token under the mark into `q`; the result of the alternatives from `q` is
+memoized (`memoDone`). -/
+def MemoSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (q.memo.getD p.mark []).find? (fun m => m.1 == 1000 + id) = none →
+  callRule (f + 2) id p = memoDone p.mark id (specAlts f xs p.mark (0, 0) q)
+
+macro "memo_spec" : tactic => `(tactic| (
+  intro f p q h hn
+  rw [callRule_memo_plain rfl rfl rfl rfl rfl h hn]
+  refine congrArg (memoDone p.mark _) (runAlts_spec f _ _ ?_ _ _ _)
+  spec_alts))
 
 end PyLean.PyGrammar.Peg

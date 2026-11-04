@@ -433,6 +433,9 @@ def rule_interactive : List String := [
 def rule_invalid_ann_assign_target : List String := [
   "rule:invalid_ann_assign_target"]
 
+def rule_invalid_arguments : List String := [
+  "rule:invalid_arguments"]
+
 def rule_invalid_arithmetic : List String := [
   "rule:invalid_arithmetic"]
 
@@ -460,6 +463,9 @@ def rule_invalid_class_def_raw : List String := [
 def rule_invalid_class_pattern : List String := [
   "rule:invalid_class_pattern"]
 
+def rule_invalid_comprehension : List String := [
+  "rule:invalid_comprehension"]
+
 def rule_invalid_def_raw : List String := [
   "rule:invalid_def_raw"]
 
@@ -471,6 +477,9 @@ def rule_invalid_del_stmt : List String := [
 
 def rule_invalid_dotted_as_name : List String := [
   "rule:invalid_dotted_as_name"]
+
+def rule_invalid_double_starred_kvpairs : List String := [
+  "rule:invalid_double_starred_kvpairs"]
 
 def rule_invalid_double_type_comments : List String := [
   "rule:invalid_double_type_comments"]
@@ -492,6 +501,9 @@ def rule_invalid_except_stmt : List String := [
 
 def rule_invalid_except_stmt_indent : List String := [
   "rule:invalid_except_stmt_indent"]
+
+def rule_invalid_expression : List String := [
+  "rule:invalid_expression"]
 
 def rule_invalid_factor : List String := [
   "rule:invalid_factor"]
@@ -535,11 +547,26 @@ def rule_invalid_kvpair : List String := [
 def rule_invalid_kvpair_unpacking : List String := [
   "rule:invalid_kvpair_unpacking"]
 
+def rule_invalid_kwarg : List String := [
+  "rule:invalid_kwarg"]
+
 def rule_invalid_kwds : List String := [
   "rule:invalid_kwds"]
 
 def rule_invalid_lambda_kwds : List String := [
   "rule:invalid_lambda_kwds"]
+
+def rule_invalid_lambda_parameters : List String := [
+  "rule:invalid_lambda_parameters"]
+
+def rule_invalid_lambda_parameters_helper : List String := [
+  "rule:invalid_lambda_parameters_helper"]
+
+def rule_invalid_lambda_star_etc : List String := [
+  "rule:invalid_lambda_star_etc"]
+
+def rule_invalid_legacy_expression : List String := [
+  "rule:invalid_legacy_expression"]
 
 def rule_invalid_mapping_pattern : List String := [
   "rule:invalid_mapping_pattern"]
@@ -547,11 +574,23 @@ def rule_invalid_mapping_pattern : List String := [
 def rule_invalid_match_stmt : List String := [
   "rule:invalid_match_stmt"]
 
+def rule_invalid_named_expression : List String := [
+  "rule:invalid_named_expression"]
+
 def rule_invalid_noteq : List String := [
   "rule:invalid_noteq"]
 
+def rule_invalid_parameters : List String := [
+  "rule:invalid_parameters"]
+
+def rule_invalid_parameters_helper : List String := [
+  "rule:invalid_parameters_helper"]
+
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]
+
+def rule_invalid_star_etc : List String := [
+  "rule:invalid_star_etc"]
 
 def rule_invalid_starred_expression : List String := [
   "rule:invalid_starred_expression"]
@@ -564,6 +603,9 @@ def rule_invalid_starred_expression_unpacking_sequence : List String := [
 
 def rule_invalid_try_stmt : List String := [
   "rule:invalid_try_stmt"]
+
+def rule_invalid_type_param : List String := [
+  "rule:invalid_type_param"]
 
 def rule_invalid_type_params : List String := [
   "rule:invalid_type_params"]
