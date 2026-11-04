@@ -196,29 +196,33 @@ theorem checkDate_val (a b c : Int) (x : Int × Int × Int) (h : checkDate a b c
 theorem checkTzinfo_twin (a : Arg) : checkTzinfoSubclassC a = checkTzinfoArgPy a := by
   cases a <;> rfl
 
+theorem tzParam_ofOpt (old : Option Tz) (tz : Option Arg) :
+    tzParamC old (TzParam.ofOpt tz) = tzParamPy old (TzParam.ofOpt tz) := by
+  cases tz <;> rfl
+
 /-- `time.replace` agrees between the twins for every combination of omitted, `None`, int and
 other arguments, on every valid time. -/
 def TimeReplaceTwins : Prop :=
-  ∀ (t : TM) (h mi s us tz fold : Option Arg), t.Valid →
+  ∀ (t : TM) (h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg), t.Valid →
     SameOutcome (tmReplaceArgPy t h mi s us tz fold) (tmReplaceArgC t h mi s us tz fold)
 
 /-- `time(1, 2, 3).replace(hour=None)`: Python keeps the hour (`if hour is None`), C's `int`
 converter raises `TypeError`. -/
 theorem timeReplaceTwins_refuted : ¬TimeReplaceTwins := by
   intro h
-  have := h ⟨1, 2, 3, 0, 0, none⟩ (some .none_) none none none none none (by simp [TM.Valid, OptTzOk])
+  have := h ⟨1, 2, 3, 0, 0, none⟩ (some .none_) none none none .omitted none (by simp [TM.Valid, OptTzOk])
   exact this
 
 /-- `datetime.replace` agrees between the twins for every combination of omitted, `None`, int
 and other arguments, on every valid datetime. -/
 def DatetimeReplaceTwins : Prop :=
-  ∀ (dt : DT) (y m d h mi s us tz fold : Option Arg), dt.Valid →
+  ∀ (dt : DT) (y m d h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg), dt.Valid →
     SameOutcome (dtReplaceArgPy dt y m d h mi s us tz fold) (dtReplaceArgC dt y m d h mi s us tz fold)
 
 /-- `datetime(2020, 2, 3).replace(year=None)`: Python keeps the year, C raises `TypeError`. -/
 theorem datetimeReplaceTwins_refuted : ¬DatetimeReplaceTwins := by
   intro h
-  have := h ⟨2020, 2, 3, 0, 0, 0, 0, 0, none⟩ (some .none_) none none none none none none none none
+  have := h ⟨2020, 2, 3, 0, 0, 0, 0, 0, none⟩ (some .none_) none none none none none none .omitted none
     (by refine ⟨by decide, ?_⟩; simp [OptTzOk])
   exact this
 
@@ -234,10 +238,10 @@ def TimeReplaceInt : Prop :=
     let r : Py TM := do
       let _ ← checkTime (h.getD t.h) (mi.getD t.mi) (s.getD t.s) (us.getD t.us)
       checkFold (fold.getD t.fold)
-      let z ← checkTzinfoArgPy (tzKeep t.tz tz)
+      let z ← checkTzinfoArgPy (tzParamPy t.tz (TzParam.ofOpt tz))
       return ⟨h.getD t.h, mi.getD t.mi, s.getD t.s, us.getD t.us, fold.getD t.fold, z⟩
-    tmReplaceArgPy t (h.map .int) (mi.map .int) (s.map .int) (us.map .int) tz (fold.map .int) = r ∧
-    tmReplaceArgC t (h.map .int) (mi.map .int) (s.map .int) (us.map .int) tz (fold.map .int) = r
+    tmReplaceArgPy t (h.map .int) (mi.map .int) (s.map .int) (us.map .int) (TzParam.ofOpt tz) (fold.map .int) = r ∧
+    tmReplaceArgC t (h.map .int) (mi.map .int) (s.map .int) (us.map .int) (TzParam.ofOpt tz) (fold.map .int) = r
 
 theorem timeReplaceInt_proven : TimeReplaceInt := by
   intro t h mi s us fold tz hfit r
@@ -255,7 +259,7 @@ theorem timeReplaceInt_proven : TimeReplaceInt := by
       replConv_int t.s s (fun n hn => hfit n (Or.inr (Or.inr (Or.inl hn)))),
       replConv_int t.us us (fun n hn => hfit n (Or.inr (Or.inr (Or.inr (Or.inl hn))))),
       replConv_int t.fold fold (fun n hn => hfit n (Or.inr (Or.inr (Or.inr (Or.inr hn))))),
-      datetimeTimeImplC, checkTzinfo_twin, bind, Except.bind, r]
+      datetimeTimeImplC, checkTzinfo_twin, tzParam_ofOpt, bind, Except.bind, r]
 
 /-- `datetime.replace(...)` with int arguments (each omitted or an int within C `int`) and any
 `tzinfo` argument, on any datetime: both twins give exactly the datetime built from the new
@@ -269,13 +273,13 @@ def DatetimeReplaceInt : Prop :=
       let _ ← checkDate (y.getD dt.y) (m.getD dt.m) (d.getD dt.d)
       let _ ← checkTime (h.getD dt.h) (mi.getD dt.mi) (s.getD dt.s) (us.getD dt.us)
       checkFold (fold.getD dt.fold)
-      let z ← checkTzinfoArgPy (tzKeep dt.tz tz)
+      let z ← checkTzinfoArgPy (tzParamPy dt.tz (TzParam.ofOpt tz))
       return ⟨y.getD dt.y, m.getD dt.m, d.getD dt.d, h.getD dt.h, mi.getD dt.mi, s.getD dt.s,
         us.getD dt.us, fold.getD dt.fold, z⟩
     dtReplaceArgPy dt (y.map .int) (m.map .int) (d.map .int) (h.map .int) (mi.map .int) (s.map .int)
-      (us.map .int) tz (fold.map .int) = r ∧
+      (us.map .int) (TzParam.ofOpt tz) (fold.map .int) = r ∧
     dtReplaceArgC dt (y.map .int) (m.map .int) (d.map .int) (h.map .int) (mi.map .int) (s.map .int)
-      (us.map .int) tz (fold.map .int) = r
+      (us.map .int) (TzParam.ofOpt tz) (fold.map .int) = r
 
 theorem datetimeReplaceInt_proven : DatetimeReplaceInt := by
   intro dt y m d h mi s us fold tz hfit r
@@ -303,7 +307,7 @@ theorem datetimeReplaceInt_proven : DatetimeReplaceInt := by
       replConv_int dt.s s (fun n hn => hfit n (by simp [hn])),
       replConv_int dt.us us (fun n hn => hfit n (by simp [hn])),
       replConv_int dt.fold fold (fun n hn => hfit n (by simp [hn])),
-      datetimeDatetimeImplC, checkTzinfo_twin, bind, Except.bind, r]
+      datetimeDatetimeImplC, checkTzinfo_twin, tzParam_ofOpt, bind, Except.bind, r]
 
 /-! ### `_mktime` and `local_to_seconds` -/
 

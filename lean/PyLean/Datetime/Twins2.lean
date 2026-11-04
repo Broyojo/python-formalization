@@ -110,18 +110,40 @@ def tzArg : Option Tz → Arg
   | none => .none_
   | some z => .tz z
 
-/-- `if tzinfo is True: tzinfo = self.tzinfo`: `none` is the default `True` (omitted, or
-`True` passed). -/
-def tzKeep (old : Option Tz) : Option Arg → Arg
-  | none => tzArg old
-  | some a => a
+/-- The `tzinfo` parameter of `replace` and `combine`: omitted, the object `True` passed
+explicitly (Python's default value), or another object. -/
+inductive TzParam where
+  | omitted
+  | true_
+  | obj (a : Arg)
+  deriving DecidableEq, Inhabited
+
+/-- `if tzinfo is True: tzinfo = self.tzinfo` (Py:1743-1744, :2111-2112, :1957-1958): an omitted
+argument and an explicit `True` both keep the old tzinfo. -/
+def tzParamPy (old : Option Tz) : TzParam → Arg
+  | .omitted => tzArg old
+  | .true_ => tzArg old
+  | .obj a => a
+
+/-- The clinic default `unchanged` (or `NULL` for `combine`): only an omitted argument keeps the
+old tzinfo; `True` is an object like any other, which `check_tzinfo_subclass` refuses (a `bool`
+is neither `None` nor a `tzinfo`, so it is `Arg.other` here). -/
+def tzParamC (old : Option Tz) : TzParam → Arg
+  | .omitted => tzArg old
+  | .true_ => .other
+  | .obj a => a
+
+/-- An `Option Arg` tzinfo argument (`none` omitted) as a parameter that is not `True`. -/
+def TzParam.ofOpt : Option Arg → TzParam
+  | none => .omitted
+  | some a => .obj a
 
 /-- `time.replace(hour, minute, second, microsecond, tzinfo, *, fold)`, Py:1732-1747: each
 `None` or omitted field keeps the old value (:1735-1746), then
 `type(self)(hour, minute, second, microsecond, tzinfo, fold=fold)` (:1747), i.e.
 `time.__new__` with its pickle test, `_check_time_fields` and `_check_tzinfo_arg`. -/
-def tmReplaceArgPy (t : TM) (h mi s us : Option Arg) (tz : Option Arg) (fold : Option Arg) : Py TM :=
-  timeNewPy (replKeep t.h h) (replKeep t.mi mi) (replKeep t.s s) (replKeep t.us us) (tzKeep t.tz tz)
+def tmReplaceArgPy (t : TM) (h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg) : Py TM :=
+  timeNewPy (replKeep t.h h) (replKeep t.mi mi) (replKeep t.s s) (replKeep t.us us) (tzParamPy t.tz tz)
     (replKeep t.fold fold)
 
 /-- `datetime_time_replace`, clinic/_datetimemodule.c.h:1089-1191: an omitted argument keeps
@@ -129,25 +151,25 @@ def tmReplaceArgPy (t : TM) (h mi s us : Option Arg) (tz : Option Arg) (fold : O
 order hour, minute, second, microsecond, fold (`tzinfo` is any object); then
 `datetime_time_replace_impl`, :5171-5178, `new_time_subclass_fold_ex` (:1358-1373), for the
 base class `new_time` and `new_time_ex2` (`check_time_args`, `check_tzinfo_subclass`). -/
-def tmReplaceArgC (t : TM) (h mi s us : Option Arg) (tz : Option Arg) (fold : Option Arg) : Py TM := do
+def tmReplaceArgC (t : TM) (h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg) : Py TM := do
   let hh ← replConv t.h h
   let mm ← replConv t.mi mi
   let ss ← replConv t.s s
   let uu ← replConv t.us us
   let f ← replConv t.fold fold
-  datetimeTimeImplC hh mm ss uu (tzKeep t.tz tz) f
+  datetimeTimeImplC hh mm ss uu (tzParamC t.tz tz) f
 
 /-- `datetime.replace(...)`, Py:2094-2117: as `time.replace`, then
 `type(self)(year, month, day, hour, minute, second, microsecond, tzinfo, fold=fold)`. -/
-def dtReplaceArgPy (dt : DT) (y m d h mi s us : Option Arg) (tz : Option Arg) (fold : Option Arg) :
+def dtReplaceArgPy (dt : DT) (y m d h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg) :
     Py DT :=
   datetimeNewPy (replKeep dt.y y) (replKeep dt.m m) (replKeep dt.d d) (replKeep dt.h h)
-    (replKeep dt.mi mi) (replKeep dt.s s) (replKeep dt.us us) (tzKeep dt.tz tz) (replKeep dt.fold fold)
+    (replKeep dt.mi mi) (replKeep dt.s s) (replKeep dt.us us) (tzParamPy dt.tz tz) (replKeep dt.fold fold)
 
 /-- `datetime_datetime_replace`, clinic/_datetimemodule.c.h:1853-1985 (`int` converters for every field
 and fold, `PyLong_AsInt`), then `datetime_datetime_replace_impl`, :6753-6762,
 `new_datetime_subclass_fold_ex` (:1288-1305), for the base class `new_datetime_ex2`. -/
-def dtReplaceArgC (dt : DT) (y m d h mi s us : Option Arg) (tz : Option Arg) (fold : Option Arg) :
+def dtReplaceArgC (dt : DT) (y m d h mi s us : Option Arg) (tz : TzParam) (fold : Option Arg) :
     Py DT := do
   let yy ← replConv dt.y y
   let mo ← replConv dt.m m
@@ -157,7 +179,7 @@ def dtReplaceArgC (dt : DT) (y m d h mi s us : Option Arg) (tz : Option Arg) (fo
   let ss ← replConv dt.s s
   let uu ← replConv dt.us us
   let f ← replConv dt.fold fold
-  datetimeDatetimeImplC yy mo dd hh mm ss uu (tzKeep dt.tz tz) f
+  datetimeDatetimeImplC yy mo dd hh mm ss uu (tzParamC dt.tz tz) f
 
 /-! ### `_mktime` and `local_to_seconds` over `localtime` -/
 

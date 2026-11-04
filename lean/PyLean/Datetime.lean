@@ -33,6 +33,7 @@ import PyLean.Datetime.DeltaStrProps
 
 import PyLean.Datetime.EdgeProps
 import PyLean.Datetime.Twins2Props
+import PyLean.Datetime.ArgCheckProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -160,8 +161,8 @@ def entries : List Entry := [
     source := "tzinfo docs", status := .proven
     prop := ``TzinfoBase, thm := some ``tzinfoBase_proven },
   { id := "datetime-timezone-methods", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timezone.utcoffset", "timezone.dst", "timezone.__eq__", "timezone.__hash__", "timezone.__getinitargs__", "C timezone_utcoffset", "C timezone_dst", "C timezone_richcompare", "C timezone_hash", "C timezone_getinitargs"]
-    statement := "For every timezone: utcoffset is its offset, dst is None, == compares offsets only and agrees between the twins, ordering is NotImplemented, equal timezones hash alike, __getinitargs__ is (offset, name)."
+    pyFns := ["timezone.utcoffset", "timezone.dst", "timezone.__eq__", "timezone.__hash__", "C timezone_utcoffset", "C timezone_dst", "C timezone_richcompare", "C timezone_hash"]
+    statement := "For every timezone: utcoffset is its offset, dst is None, == compares offsets only and agrees between the twins, ordering is NotImplemented, equal timezones hash alike."
     source := "timezone docs; C/Python twins", status := .proven
     prop := ``TimezoneMethods, thm := some ``timezoneMethods_proven },
   { id := "datetime-timezone-new", pyFile := "Lib/_pydatetime.py"
@@ -1202,7 +1203,59 @@ def entries : List Entry := [
     source := "C/Python twins", status := .refuted
     prop := ``LocalTimezoneTwinsAll, thm := some ``localTimezoneTwinsAll_refuted
     bug := some "datetime-pydatetime-mktime-leap-second"
-    notes := "datetime(1972, 7, 1).astimezone() in a leap-second zone: Python raises ValueError, C returns." }
+    notes := "datetime(1972, 7, 1).astimezone() in a leap-second zone: Python raises ValueError, C returns." },
+  { id := "datetime-timezone-method-args", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timezone.utcoffset", "timezone.tzname", "timezone.dst", "timezone.fromutc", "C timezone_utcoffset", "C timezone_tzname", "C timezone_dst", "C timezone_fromutc", "C _timezone_check_argument"]
+    statement := "For every valid timezone and every argument: one that is neither a datetime nor None is a TypeError in both twins for utcoffset, tzname and dst; otherwise utcoffset is the offset, dst None and tzname the name, the same in both; fromutc refuses None and other objects with TypeError in both and agrees on valid datetimes."
+    source := "timezone docs; C/Python twins", status := .proven
+    prop := ``TimezoneMethodArgs, thm := some ``timezoneMethodArgs_proven },
+  { id := "datetime-timezone-new-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timezone.__new__", "C timezone_new_impl"]
+    statement := "timezone(offset, name) on every offset object: a non-timedelta offset is a TypeError in both twins whatever the name; a timedelta agrees between the twins."
+    source := "timezone docs; C/Python twins", status := .proven
+    prop := ``TimezoneNewArg, thm := some ``timezoneNewArg_proven },
+  { id := "datetime-timezone-getinitargs", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timezone.__getinitargs__", "C timezone_getinitargs"]
+    statement := "For every valid timezone, __getinitargs__ is the same in both twins, the one-tuple (offset,) exactly when there is no name, and timezone(*args) rebuilds a timezone with the same offset and name (timezone.utc itself for timezone.utc)."
+    source := "pickle contract; C/Python twins", status := .proven
+    prop := ``TimezoneGetinitargs, thm := some ``timezoneGetinitargs_proven },
+  { id := "datetime-timezone-hash", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timezone.__hash__", "C timezone_hash"]
+    statement := "hash(timezone) uses the same key in both twins, the key of its offset, and two timezones hash alike exactly when their offsets are equal."
+    source := "C/Python twins; hash/eq contract", status := .proven
+    prop := ``TimezoneHash, thm := some ``timezoneHash_proven },
+  { id := "datetime-combine-args", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.combine", "C datetime_datetime_combine_impl"]
+    statement := "datetime.combine on every argument: a non-date first argument, then a non-time second argument, is a TypeError in both twins; for a valid date and time and a tzinfo omitted or given (not True), both give exactly the datetime of their fields with the time's fold and the time's (or the given) tzinfo."
+    source := "datetime.combine docs; C/Python twins", status := .proven
+    prop := ``CombineArgs, thm := some ``combineArgs_proven },
+  { id := "datetime-combine-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.combine", "C datetime_datetime_combine_impl"]
+    statement := "datetime.combine agrees between the twins for every valid date and time and every tzinfo argument."
+    source := "C/Python twins", status := .refuted
+    prop := ``CombineTwins, thm := some ``combineTwins_refuted
+    bug := some "datetime-pydatetime-none-as-omitted"
+    notes := "tzinfo=True: Python's `if tzinfo is True` keeps the time's tzinfo, C passes True to check_tzinfo_subclass and raises TypeError." },
+  { id := "datetime-astimezone-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.astimezone", "C datetime_datetime_astimezone_impl"]
+    statement := "datetime.astimezone(tz) with tz neither None nor a tzinfo is a TypeError in both twins for every datetime and tzinfo environment, before any tzinfo method or the local zone is consulted."
+    source := "datetime.astimezone docs; C/Python twins", status := .proven
+    prop := ``AstimezoneArg, thm := some ``astimezoneArg_proven },
+  { id := "datetime-time-format", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__format__", "C datetime_time___format___impl"]
+    statement := "format(t, fmt) agrees between the twins for every fmt and every result of str and strftime: a non-str fmt is a TypeError in both, '' gives str(t) and a nonempty format t.strftime(fmt)."
+    source := "time.__format__ docs; C/Python twins", status := .proven
+    prop := ``TimeFormat, thm := some ``timeFormat_proven },
+  { id := "datetime-fromiso-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.fromisoformat", "datetime.fromisoformat", "C datetime_time_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl"]
+    statement := "time.fromisoformat and datetime.fromisoformat raise TypeError in both twins for a non-str argument and ValueError for a str with a lone surrogate."
+    source := "fromisoformat docs; C/Python twins", status := .proven
+    prop := ``FromisoArg, thm := some ``fromisoArg_proven },
+  { id := "datetime-time-fromiso-body", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.fromisoformat"]
+    statement := "time.fromisoformat(s), by what _parse_isoformat_time returns for s without a leading T: a parser ValueError becomes 'Invalid isoformat string', another exception propagates, error_from_tz is raised, error_from_components is the hour-24 ValueError, otherwise the parsed time checked by the constructor."
+    source := "_pydatetime.py:1653-1670", status := .proven
+    prop := ``TimeFromIsoBody, thm := some ``timeFromIsoBody_proven }
 ]
 
 end PyLean.Datetime

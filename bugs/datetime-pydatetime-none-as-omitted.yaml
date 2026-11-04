@@ -1,10 +1,10 @@
 id: datetime-pydatetime-none-as-omitted
-title: "_pydatetime treats an explicit None as an omitted argument in date.replace, time.replace and datetime.replace"
+title: "_pydatetime treats an explicit None (or tzinfo=True) as an omitted argument in replace and combine"
 priority: P4
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["date.replace", "time.replace", "datetime.replace"]
+functions: ["date.replace", "time.replace", "datetime.replace", "datetime.combine"]
 summary: |
   _pydatetime uses None as the "not given" default and tests `is None`, so an explicit None
   behaves like an omitted argument; C uses Argument Clinic defaults and treats None as an
@@ -16,7 +16,12 @@ summary: |
   `datetime(2020, 2, 3).replace(year=None, fold=None)` keep the fields in Python and raise the
   same TypeError in C (the clinic `int` converters of datetime_time_replace and
   datetime_datetime_replace, Modules/clinic/_datetimemodule.c.h:1089-1191 and :1853-1985).
-  `tzinfo=None` is a real value in both (it removes the tzinfo). (The related pickle test
+  `tzinfo=None` is a real value in both (it removes the tzinfo), but the tzinfo default is
+  the object True in Python (`if tzinfo is True`, :1743-1744, :2111-2112, :1957-1958), so
+  `t.replace(tzinfo=True)`, `d.replace(tzinfo=True)` and
+  `datetime.combine(d, t, tzinfo=True)` keep the tzinfo in Python and raise `TypeError:
+  tzinfo argument must be None or of a tzinfo subclass, not type 'bool'` in C, whose default
+  is a clinic `unchanged`/NULL (Modules/_datetimemodule.c:5891-5911 for combine). (The related pickle test
   `date(state, None)` is recorded separately, at P5, as datetime-date-pickle-test-month-none.)
 likelihood: |
   replace(year=None) can come from code that forwards optional fields as None, which then
@@ -35,16 +40,19 @@ reproducer: |
   r = [run(lambda: m.date(2020, 1, 1).replace(year=None)) for m in (datetime, _pydatetime)]
   t = [run(lambda: m.time(1, 2, 3).replace(hour=None)) for m in (datetime, _pydatetime)]
   d = [run(lambda: m.datetime(2020, 2, 3).replace(year=None, fold=None)) for m in (datetime, _pydatetime)]
+  c = [run(lambda: m.datetime.combine(m.date(2020, 1, 1), m.time(1), tzinfo=True)) for m in (datetime, _pydatetime)]
   print('date.replace C/Python:', r)
   print('time.replace C/Python:', t)
   print('datetime.replace C/Python:', d)
+  print('combine(tzinfo=True) C/Python:', c)
   if (r[0] == 'TypeError' and r[1].endswith('date(2020, 1, 1)') and t[0] == 'TypeError'
           and t[1].endswith('time(1, 2, 3)') and d[0] == 'TypeError'
-          and d[1].endswith('datetime(2020, 2, 3, 0, 0)')):
+          and d[1].endswith('datetime(2020, 2, 3, 0, 0)') and c[0] == 'TypeError'
+          and c[1].endswith('datetime(2020, 1, 1, 1, 0)')):
       print('REPRODUCED datetime-pydatetime-none-as-omitted')
 expected: |
   The same outcome in both implementations: TypeError for replace(year=None) (and for any
-  other field or fold given as None), as in C.
+  other field or fold given as None, and for tzinfo=True), as in C.
 promised_by: |
   PEP 399 equivalence of _pydatetime and _datetime; the documented replace signature has no
   None default.
@@ -74,3 +82,4 @@ lean:
   also:
     - {property: PyLean.Datetime.TimeReplaceTwins, theorem: PyLean.Datetime.timeReplaceTwins_refuted}
     - {property: PyLean.Datetime.DatetimeReplaceTwins, theorem: PyLean.Datetime.datetimeReplaceTwins_refuted}
+    - {property: PyLean.Datetime.CombineTwins, theorem: PyLean.Datetime.combineTwins_refuted}

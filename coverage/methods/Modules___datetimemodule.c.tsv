@@ -140,18 +140,18 @@ Modules/_datetimemodule.c	4160	4163	tzinfo_utcoffset	tzinfo_utcoffset(PyObject *
 Modules/_datetimemodule.c	4166	4169	tzinfo_dst	tzinfo_dst(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(dt))	modelled	datetime-tzinfo-base	
 Modules/_datetimemodule.c	4179	4249	tzinfo_fromutc	tzinfo_fromutc(PyObject *self, PyObject *dt)	todo		
 Modules/_datetimemodule.c	4257	4283	tzinfo_reduce	tzinfo_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	modelled	datetime-tzinfo-reduce-body,datetime-tzinfo-reduce-twins,datetime-tzinfo-reduce-twins-truthy	
-Modules/_datetimemodule.c	4363	4367	timezone_new_impl	timezone_new_impl(PyTypeObject *type, PyObject *offset, PyObject *name) /*[clinic end generated code: output=41a2dda500424187 input=d51255afe60382cd]*/	modelled	datetime-timezone-new	
+Modules/_datetimemodule.c	4363	4367	timezone_new_impl	timezone_new_impl(PyTypeObject *type, PyObject *offset, PyObject *name) /*[clinic end generated code: output=41a2dda500424187 input=d51255afe60382cd]*/	modelled	datetime-timezone-new,datetime-timezone-new-arg	
 Modules/_datetimemodule.c	4370	4376	timezone_dealloc	timezone_dealloc(PyObject *op)	excluded		no-behaviour: allocation, reference counting and GC traversal, with no Python-visible effect
 Modules/_datetimemodule.c	4379	4389	timezone_richcompare	timezone_richcompare(PyObject *self, PyObject *other, int op)	modelled	datetime-timezone-methods	
-Modules/_datetimemodule.c	4392	4396	timezone_hash	timezone_hash(PyObject *op)	modelled	datetime-timezone-methods	
-Modules/_datetimemodule.c	4403	4410	_timezone_check_argument	_timezone_check_argument(PyObject *dt, const char *meth)	todo		
+Modules/_datetimemodule.c	4392	4396	timezone_hash	timezone_hash(PyObject *op)	modelled	datetime-timezone-hash,datetime-timezone-methods	
+Modules/_datetimemodule.c	4403	4410	_timezone_check_argument	_timezone_check_argument(PyObject *dt, const char *meth)	modelled	datetime-timezone-method-args	
 Modules/_datetimemodule.c	4413	4429	timezone_repr	timezone_repr(PyObject *op)	todo		
 Modules/_datetimemodule.c	4432	4476	timezone_str	timezone_str(PyObject *op)	modelled	datetime-timezone-name	
-Modules/_datetimemodule.c	4479	4485	timezone_tzname	timezone_tzname(PyObject *op, PyObject *dt)	modelled	datetime-timezone-name	
-Modules/_datetimemodule.c	4488	4495	timezone_utcoffset	timezone_utcoffset(PyObject *op, PyObject *dt)	modelled	datetime-timezone-methods	
-Modules/_datetimemodule.c	4498	4504	timezone_dst	timezone_dst(PyObject *op, PyObject *dt)	modelled	datetime-timezone-methods	
-Modules/_datetimemodule.c	4507	4523	timezone_fromutc	timezone_fromutc(PyObject *op, PyObject *arg)	modelled	datetime-timezone-fromutc	
-Modules/_datetimemodule.c	4526	4532	timezone_getinitargs	timezone_getinitargs(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	datetime-timezone-methods	
+Modules/_datetimemodule.c	4479	4485	timezone_tzname	timezone_tzname(PyObject *op, PyObject *dt)	modelled	datetime-timezone-method-args,datetime-timezone-name	
+Modules/_datetimemodule.c	4488	4495	timezone_utcoffset	timezone_utcoffset(PyObject *op, PyObject *dt)	modelled	datetime-timezone-method-args,datetime-timezone-methods	
+Modules/_datetimemodule.c	4498	4504	timezone_dst	timezone_dst(PyObject *op, PyObject *dt)	modelled	datetime-timezone-method-args,datetime-timezone-methods	
+Modules/_datetimemodule.c	4507	4523	timezone_fromutc	timezone_fromutc(PyObject *op, PyObject *arg)	modelled	datetime-timezone-fromutc,datetime-timezone-method-args	
+Modules/_datetimemodule.c	4526	4532	timezone_getinitargs	timezone_getinitargs(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	datetime-timezone-getinitargs	
 Modules/_datetimemodule.c	4603	4609	look_up_timezone	look_up_timezone(PyObject *offset, PyObject *name)	excluded		no-behaviour: internal lookup of the singleton object (timedelta.resolution, timezone.utc); the values are constants in the model
 Modules/_datetimemodule.c	4620	4624	time_hour	time_hour(PyObject *op, void *Py_UNUSED(closure))	modelled	datetime-packed-accessors	
 Modules/_datetimemodule.c	4627	4631	time_minute	time_minute(PyObject *op, void *Py_UNUSED(closure))	modelled	datetime-packed-accessors	
@@ -171,11 +171,11 @@ Modules/_datetimemodule.c	4852	4876	time_repr	time_repr(PyObject *op)	modelled	d
 Modules/_datetimemodule.c	4879	4882	time_str	time_str(PyObject *op)	modelled	datetime-time-isoformat-twins	
 Modules/_datetimemodule.c	4900	4959	datetime_time_isoformat_impl	datetime_time_isoformat_impl(PyDateTime_Time *self, const char *timespec) /*[clinic end generated code: output=2bcc7cab65c35545 input=0efae103081060f4]*/	modelled	datetime-time-isoformat-twins	
 Modules/_datetimemodule.c	4976	4999	datetime_time_strftime_impl	datetime_time_strftime_impl(PyDateTime_Time *self, PyObject *format) /*[clinic end generated code: output=10f65af20e2a78c7 input=184e1c0d7d356c5d]*/	todo		changed-in-3.15: not modelled before 3.15 either: no entry covers time.strftime itself, only wrap_strftime through tmStrftimeC
-Modules/_datetimemodule.c	5012	5020	datetime_time___format___impl	datetime_time___format___impl(PyObject *self, PyObject *format) /*[clinic end generated code: output=4646451f7a5d2156 input=6a858ae787d20230]*/	modelled	datetime-format-via-strftime	
+Modules/_datetimemodule.c	5012	5020	datetime_time___format___impl	datetime_time___format___impl(PyObject *self, PyObject *format) /*[clinic end generated code: output=4646451f7a5d2156 input=6a858ae787d20230]*/	modelled	datetime-format-via-strftime,datetime-time-format	
 Modules/_datetimemodule.c	5027	5095	time_richcompare	time_richcompare(PyObject *self, PyObject *other, int op)	modelled	datetime-time-compare-base,datetime-time-compare-twins,datetime-time-eq-hash	
 Modules/_datetimemodule.c	5098	5154	time_hash	time_hash(PyObject *op)	modelled	datetime-time-eq-hash	
 Modules/_datetimemodule.c	5171	5178	datetime_time_replace_impl	datetime_time_replace_impl(PyDateTime_Time *self, int hour, int minute, int second, int microsecond, PyObject *tzinfo, int fold) /*[clinic end generated code: output=0b89a44c299e4f80 input=abf23656e8df4e97]*/	modelled	datetime-replace-combine,datetime-time-replace-int,datetime-time-replace-twins	
-Modules/_datetimemodule.c	5191	5258	datetime_time_fromisoformat_impl	datetime_time_fromisoformat_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=97c57e896e7f2535 input=bdb4b8abea9cd688]*/	modelled	datetime-fromiso-offset-range,datetime-time-fromiso-twins	
+Modules/_datetimemodule.c	5191	5258	datetime_time_fromisoformat_impl	datetime_time_fromisoformat_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=97c57e896e7f2535 input=bdb4b8abea9cd688]*/	modelled	datetime-fromiso-arg,datetime-fromiso-offset-range,datetime-time-fromiso-twins	
 Modules/_datetimemodule.c	5269	5287	time_getstate	time_getstate(PyDateTime_Time *self, int proto)	modelled	datetime-time-pickle	
 Modules/_datetimemodule.c	5297	5301	datetime_time___reduce_ex___impl	datetime_time___reduce_ex___impl(PyDateTime_Time *self, int proto) /*[clinic end generated code: output=ccfab65f5c320c1b input=4cd06bb3ac3657bb]*/	modelled	datetime-time-pickle	
 Modules/_datetimemodule.c	5308	5312	datetime_time___reduce___impl	datetime_time___reduce___impl(PyDateTime_Time *self) /*[clinic end generated code: output=9a2fcc87e64ce300 input=0fb8dd14d275857f]*/	modelled	datetime-time-pickle	
@@ -199,10 +199,10 @@ Modules/_datetimemodule.c	5783	5803	datetime_datetime_fromtimestamp_impl	datetim
 Modules/_datetimemodule.c	5807	5818	datetime_datetime_fromtimestamp_capi	datetime_datetime_fromtimestamp_capi(PyObject *cls, PyObject *args, PyObject *kw)	excluded		internal-bootstrap: the C API capsule entry point, unreachable from Python; it parses its arguments and calls datetime_datetime_fromtimestamp_impl
 Modules/_datetimemodule.c	5831	5844	datetime_datetime_utcfromtimestamp_impl	datetime_datetime_utcfromtimestamp_impl(PyTypeObject *type, PyObject *timestamp) /*[clinic end generated code: output=66d0b1741d788fd2 input=13fabd4296b1c206]*/	todo		changed-in-3.15: not modelled before 3.15 either: the float timestamp path needs binary64 rounding
 Modules/_datetimemodule.c	5862	5877	datetime_datetime_strptime_impl	datetime_datetime_strptime_impl(PyTypeObject *type, PyObject *string, PyObject *format) /*[clinic end generated code: output=af2c2d024f3203f5 input=ef7807589f1d50e7]*/	modelled	strptime-methods	
-Modules/_datetimemodule.c	5891	5911	datetime_datetime_combine_impl	datetime_datetime_combine_impl(PyTypeObject *type, PyObject *date, PyObject *time, PyObject *tzinfo) /*[clinic end generated code: output=a10f3cbb90f4d0aa input=4fcf0743288d0bab]*/	modelled	datetime-replace-combine	
+Modules/_datetimemodule.c	5891	5911	datetime_datetime_combine_impl	datetime_datetime_combine_impl(PyTypeObject *type, PyObject *date, PyObject *time, PyObject *tzinfo) /*[clinic end generated code: output=a10f3cbb90f4d0aa input=4fcf0743288d0bab]*/	modelled	datetime-combine-args,datetime-combine-twins,datetime-replace-combine	
 Modules/_datetimemodule.c	5914	5966	_sanitize_isoformat_str	_sanitize_isoformat_str(PyObject *dtstr)	modelled	datetime-sanitize-isoformat	
 Modules/_datetimemodule.c	5970	6066	_find_isoformat_datetime_separator	_find_isoformat_datetime_separator(const char *dtstr, Py_ssize_t len) {	modelled	datetime-date-isoformat-roundtrip	
-Modules/_datetimemodule.c	6079	6194	datetime_datetime_fromisoformat_impl	datetime_datetime_fromisoformat_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=1800a952fcab79d9 input=d517b158209ded42]*/	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins	
+Modules/_datetimemodule.c	6079	6194	datetime_datetime_fromisoformat_impl	datetime_datetime_fromisoformat_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=1800a952fcab79d9 input=d517b158209ded42]*/	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins,datetime-fromiso-arg	
 Modules/_datetimemodule.c	6201	6208	datetime_dealloc	datetime_dealloc(PyObject *op)	excluded		no-behaviour: allocation, reference counting and GC traversal, with no Python-visible effect
 Modules/_datetimemodule.c	6216	6219	datetime_utcoffset	datetime_utcoffset(PyObject *op, PyObject *Py_UNUSED(dummy)) {	modelled	datetime-datetime-offsets	
 Modules/_datetimemodule.c	6222	6225	datetime_dst	datetime_dst(PyObject *op, PyObject *Py_UNUSED(dummy)) {	modelled	datetime-datetime-offsets	
@@ -223,7 +223,7 @@ Modules/_datetimemodule.c	6753	6762	datetime_datetime_replace_impl	datetime_date
 Modules/_datetimemodule.c	6765	6829	local_timezone_from_timestamp	local_timezone_from_timestamp(time_t timestamp)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Modules/_datetimemodule.c	6832	6866	local_timezone	local_timezone(PyDateTime_DateTime *utc_time)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Modules/_datetimemodule.c	6873	6903	local_timezone_from_local	local_timezone_from_local(PyDateTime_DateTime *local_dt)	modelled	datetime-local-timezone-twins,datetime-local-timezone-twins-all	
-Modules/_datetimemodule.c	6914	7004	datetime_datetime_astimezone_impl	datetime_datetime_astimezone_impl(PyDateTime_DateTime *self, PyObject *tzinfo) /*[clinic end generated code: output=ae2263d04e944537 input=9c675c8595009935]*/	modelled	datetime-astimezone-twins	
+Modules/_datetimemodule.c	6914	7004	datetime_datetime_astimezone_impl	datetime_datetime_astimezone_impl(PyDateTime_DateTime *self, PyObject *tzinfo) /*[clinic end generated code: output=ae2263d04e944537 input=9c675c8595009935]*/	modelled	datetime-astimezone-arg,datetime-astimezone-twins	
 Modules/_datetimemodule.c	7007	7030	datetime_timetuple	datetime_timetuple(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	datetime-datetime-timetuple	
 Modules/_datetimemodule.c	7033	7077	local_to_seconds	local_to_seconds(int year, int month, int day, int hour, int minute, int second, int fold)	modelled	datetime-local-timezone-twins,datetime-mktime-fixed,datetime-mktime-local-twins,datetime-mktime-local-twins-all	
 Modules/_datetimemodule.c	7083	7118	datetime_timestamp	datetime_timestamp(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
