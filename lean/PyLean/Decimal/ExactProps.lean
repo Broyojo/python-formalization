@@ -484,4 +484,184 @@ theorem fixNanExact_proven : FixNanExact := by
   intro c n s p
   exact ⟨fixNan_spec c n s p, by simp [handle, quietOf, fixNan_spec], rfl⟩
 
+/-! ## `__int__` -/
+
+/-- `int(d)` (`__int__`, _pydecimal.py:1672-1683) truncates toward zero, as `_decimal` does
+(`cToInt .down`, pinned by `IntConversionsC`): `int(self._int) * 10**exp` for `exp >= 0` and
+`int(self._int[:exp] or '0')` otherwise. The int/str limit raises ValueError exactly when that
+digit string is longer than 4300: the coefficient for `exp >= 0`, its integer part (at least one
+digit) otherwise. NaN gives ValueError, an infinity OverflowError. -/
+def IntTruncExact : Prop :=
+  ∀ (neg : Bool) (c : Nat) (e : Int),
+    let mag := if e ≥ 0 then c * 10 ^ e.toNat else c / 10 ^ e.natAbs
+    let digits : Nat := if e ≥ 0 then numDigits c else max 1 ((numDigits c : Int) + e).toNat
+    (digits ≤ maxStrDigits →
+      pyInt (.fin neg c e) = .ok (if neg then -(mag : Int) else mag) ∧
+      cToInt .down (.fin neg c e) = pyInt (.fin neg c e)) ∧
+    (maxStrDigits < digits → ∃ msg, pyInt (.fin neg c e) = .error (.valueError msg)) ∧
+    (∀ s p, pyInt (.nan neg s p) = .error (.valueError "Cannot convert NaN to integer")) ∧
+    pyInt (.inf neg) = .error (.overflowError "Cannot convert infinity to integer")
+
+theorem intTruncExact_proven : IntTruncExact := by
+  intro neg c e mag digits
+  refine ⟨fun hd => ?_, fun hd => ?_, fun s p => rfl, rfl⟩
+  · by_cases he : e ≥ 0
+    · have hl : ¬ numDigits c > maxStrDigits := by simp only [digits, if_pos he] at hd; omega
+      simp [pyInt, he, intLimit, hl, mag, truncDiv, cToInt, roundToIntExact, bind, Except.bind, pure,
+        Except.pure]
+    · have hl : ¬ (if (numDigits c : Int) + e ≤ 0 then 1 else ((numDigits c : Int) + e).toNat) > maxStrDigits := by
+        simp only [digits, if_neg he] at hd; split <;> omega
+      have hr : ∀ r : Nat, ¬ ((if r = 0 then (0 : Int) else -1) = 1) := by intro r; split <;> omega
+      simp only [pyInt, he, ↓reduceIte, intLimit, hl, mag, cToInt, roundToIntExact, roundDir, hr]
+      simp [bind, Except.bind, pure, Except.pure, truncDiv, Int.natCast_ediv, Int.natCast_pow]
+  · by_cases he : e ≥ 0
+    · have hl : numDigits c > maxStrDigits := by simp only [digits, if_pos he] at hd; omega
+      exact ⟨limitToIntMsg (numDigits c), by simp [pyInt, he, intLimit, hl, bind, Except.bind]⟩
+    · have hl : (if (numDigits c : Int) + e ≤ 0 then 1 else ((numDigits c : Int) + e).toNat) > maxStrDigits := by
+        simp only [digits, if_neg he] at hd; split <;> omega
+      exact ⟨limitToIntMsg (if (numDigits c : Int) + e ≤ 0 then 1 else ((numDigits c : Int) + e).toNat),
+        by simp [pyInt, he, intLimit, hl, bind, Except.bind]⟩
+
+/-! ## Comparisons with ints, Fractions, floats, complex numbers and other objects -/
+
+/-- `self` as `_convert_for_comparison` rescales it for a Rational with denominator `d`. -/
+def scaleBy (a : Dec) (d : Nat) : Dec :=
+  match a with
+  | .fin s co e => .fin s (co * d) e
+  | x => x
+
+/-- The digit limits `_convert_for_comparison` meets for a Rational `n / d`:
+`int(self._int)`, `str(... * d)` and `Decimal(n)`. -/
+def RatLimitsOk (a : Dec) (n : Int) (d : Nat) : Prop :=
+  (match a with
+   | .fin _ co _ => numDigits co ≤ maxStrDigits ∧ numDigits (co * d) ≤ maxStrDigits
+   | _ => True) ∧ numDigits n.natAbs ≤ maxStrDigits
+
+theorem liftPy_pure {α : Type} {x : Py α} {v : α} (h : x = .ok v) : liftPy x = pure v := by
+  subst h; rfl
+
+theorem run_setFlag_bind {β : Type} (s : Signal) (f : Unit → DM β) (fl : List Signal) :
+    (setFlag s >>= f).run fl = (f ()).run (addFlag s fl) := rfl
+
+theorem run_raiseSig_bind {β : Type} (c : Ctx) (s : Signal) (f : Unit → DM β) (fl : List Signal) :
+    (raiseSig c s >>= f).run fl =
+      if s ∈ c.traps then .error (.named s.name "~") else (f ()).run (addFlag s fl) := by
+  unfold addFlag
+  by_cases h : s ∈ c.traps <;>
+    simp [raiseSig, h, StateT.run, bind, StateT.bind, Except.bind, modify, modifyGet,
+      MonadStateOf.modifyGet, StateT.modifyGet, pure, StateT.pure, Except.pure, throw, throwThe,
+      MonadExceptOf.throw, StateT.lift]
+
+/-- `_convert_for_comparison` (_pydecimal.py:6115-6149) with the rich comparisons: against a
+Rational `n / d` (an int has `d = 1`; `d > 0` is `numbers.Rational`'s invariant) the result is
+the comparison of `self * d` with `Decimal(n)`, so for a finite `self = ±co·10^e` it is the
+exact order of `±co·d·10^e` and `n`, which is the order of `self` and `n / d`; past the
+4300-digit limit it raises ValueError. A float is compared as `Decimal.from_float(f)` after
+FloatOperation, which `==` only flags and the orderings signal (raising when trapped). A complex
+with zero imaginary part compares under `==` as its real part; any other complex, and any other
+object, gives NotImplemented with no flag. -/
+def ConvertComparisonsCorrect : Prop :=
+  ∀ (c : Ctx) (a : Dec) (fl : List Signal),
+    (∀ n d, RatLimitsOk a n d →
+      richEq c a (.rat n d) = richEq c (scaleBy a d) (.dec (.fin (decide (n < 0)) n.natAbs 0)) ∧
+      ∀ t, richOrd t c a (.rat n d) = richOrd t c (scaleBy a d) (.dec (.fin (decide (n < 0)) n.natAbs 0))) ∧
+    (∀ (s : Bool) (co : Nat) (e : Int) (n : Int) (d : Nat), a = .fin s co e → RatLimitsOk a n d →
+      (richEq c a (.rat n d)).run fl =
+        .ok (some (decide (finOrder s (co * d) e (decide (n < 0)) n.natAbs 0 = .eq)), fl) ∧
+      (richLt c a (.rat n d)).run fl =
+        .ok (some (decide (finOrder s (co * d) e (decide (n < 0)) n.natAbs 0 = .lt)), fl)) ∧
+    (∀ n d, ¬ RatLimitsOk a n d →
+      (∃ msg, (richEq c a (.rat n d)).run fl = .error (.valueError msg)) ∧
+      ∀ t, ∃ msg, (richOrd t c a (.rat n d)).run fl = .error (.valueError msg)) ∧
+    (∀ f x, fromFloat f = .ok x →
+      (richEq c a (.float f)).run fl = (richEq c a (.dec x)).run (addFlag .floatOperation fl) ∧
+      ∀ t, (richOrd t c a (.float f)).run fl =
+        if Signal.floatOperation ∈ c.traps then .error (.named "FloatOperation" "~")
+        else (richOrd t c a (.dec x)).run (addFlag .floatOperation fl)) ∧
+    (∀ re im, richEq c a (.complex re im) =
+      if Binary64.F64.eq im (Binary64.F64.zero false) then richEq c a (.float re) else pure none) ∧
+    (∀ t re im, richOrd t c a (.complex re im) = pure none) ∧
+    richEq c a .other = pure none ∧ (∀ t, richOrd t c a .other = pure none)
+
+theorem convert_rat (c : Ctx) (eqOp : Bool) (a : Dec) (n : Int) (d : Nat) (h : RatLimitsOk a n d) :
+    convertForComparison c eqOp a (.rat n d) = pure (some (scaleBy a d, .fin (decide (n < 0)) n.natAbs 0)) := by
+  obtain ⟨ha, hn⟩ := h
+  have hb : pyFromInt n = .ok (.fin (decide (n < 0)) n.natAbs 0) := by
+    simp [pyFromInt, strLimit, show ¬ numDigits n.natAbs > maxStrDigits by omega, bind, Except.bind,
+      pure, Except.pure]
+  rcases a with ⟨s, co, e⟩ | s | ⟨s, t, p⟩
+  · obtain ⟨h1, h2⟩ := ha
+    have e1 : intLimit (numDigits co) = .ok () := by simp [intLimit, show ¬ numDigits co > maxStrDigits by omega]
+    have e2 : strLimit (co * d) = .ok () := by simp [strLimit, show ¬ numDigits (co * d) > maxStrDigits by omega]
+    simp [convertForComparison, liftPy_pure e1, liftPy_pure e2, liftPy_pure hb, scaleBy]
+  · simp [convertForComparison, liftPy_pure hb, scaleBy]
+  · simp [convertForComparison, liftPy_pure hb, scaleBy]
+
+theorem convert_dec (c : Ctx) (eqOp : Bool) (a d : Dec) :
+    convertForComparison c eqOp a (.dec d) = pure (some (a, d)) := rfl
+
+theorem convertComparisonsCorrect_proven : ConvertComparisonsCorrect := by
+  intro c a fl
+  refine ⟨fun n d h => ⟨?_, fun t => ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [richEq, convert_rat c true a n d h, convert_dec]
+  · simp [richOrd, convert_rat c false a n d h, convert_dec]
+  · intro s co e n d ha h
+    have h1 : richEq c a (.rat n d) = richEq c (scaleBy a d) (.dec (.fin (decide (n < 0)) n.natAbs 0)) := by
+      simp [richEq, convert_rat c true a n d h, convert_dec]
+    have h2 : richLt c a (.rat n d) = richLt c (scaleBy a d) (.dec (.fin (decide (n < 0)) n.natAbs 0)) := by
+      simp [richLt, richOrd, convert_rat c false a n d h, convert_dec]
+    have hx := (comparisonsExact_proven c (scaleBy a d) (.fin (decide (n < 0)) n.natAbs 0) fl).1
+    subst ha
+    obtain ⟨q1, q2, _⟩ := hx rfl rfl
+    exact ⟨by rw [h1, q1]; rfl, by rw [h2, q2]; rfl⟩
+  · intro n d h
+    unfold RatLimitsOk at h
+    have key : ∀ eqOp, ∃ msg, (convertForComparison c eqOp a (.rat n d)).run fl = .error (.valueError msg) := by
+      intro eqOp
+      rcases a with ⟨s, co, e⟩ | s | ⟨s, t, p⟩
+      · by_cases h1 : numDigits co > maxStrDigits
+        · exact ⟨limitToIntMsg (numDigits co), by
+            simp [convertForComparison, liftPy, intLimit, h1, StateT.run, bind, StateT.bind, Except.bind,
+              Functor.map, Except.map]⟩
+        by_cases h2 : numDigits (co * d) > maxStrDigits
+        · exact ⟨limitToStrMsg, by
+            simp [convertForComparison, liftPy, intLimit, strLimit, h1, h2, StateT.run, bind, StateT.bind,
+              Except.bind, Functor.map, Except.map, pure, Except.pure, StateT.pure]⟩
+        have h3 : numDigits n.natAbs > maxStrDigits := by simp at h; omega
+        exact ⟨limitToStrMsg, by
+          simp [convertForComparison, liftPy, intLimit, strLimit, pyFromInt, h1, h2, h3, StateT.run, bind,
+            StateT.bind, Except.bind, Functor.map, Except.map, pure, Except.pure, StateT.pure]⟩
+      · have h3 : numDigits n.natAbs > maxStrDigits := by simp at h; omega
+        exact ⟨limitToStrMsg, by
+          simp [convertForComparison, liftPy, strLimit, pyFromInt, h3, StateT.run, bind,
+            StateT.bind, Except.bind, Functor.map, Except.map, pure, Except.pure, StateT.pure]⟩
+      · have h3 : numDigits n.natAbs > maxStrDigits := by simp at h; omega
+        exact ⟨limitToStrMsg, by
+          simp [convertForComparison, liftPy, strLimit, pyFromInt, h3, StateT.run, bind,
+            StateT.bind, Except.bind, Functor.map, Except.map, pure, Except.pure, StateT.pure]⟩
+    have hb : ∀ {β : Type} (x : DM (Option (Dec × Dec))) (g : Option (Dec × Dec) → DM β) (msg : String),
+        x.run fl = .error (.valueError msg) → (x >>= g).run fl = .error (.valueError msg) := by
+      intro β x g msg hx
+      simp only [StateT.run, bind, StateT.bind, Except.bind] at hx ⊢
+      rw [hx]
+    refine ⟨?_, fun t => ?_⟩
+    · obtain ⟨msg, hm⟩ := key true
+      exact ⟨msg, hb _ _ msg hm⟩
+    · obtain ⟨msg, hm⟩ := key false
+      exact ⟨msg, hb _ _ msg hm⟩
+  · intro f x hx
+    refine ⟨?_, fun t => ?_⟩
+    · have : richEq c a (.float f) = (setFlag .floatOperation >>= fun _ => richEq c a (.dec x)) := by
+        simp [richEq, convertForComparison, convertForComparison.floatCase, liftPy_pure hx]
+      rw [this, run_setFlag_bind]
+    · have : richOrd t c a (.float f) = (raiseSig c .floatOperation >>= fun _ => richOrd t c a (.dec x)) := by
+        simp [richOrd, convertForComparison, convertForComparison.floatCase, liftPy_pure hx]
+      rw [this, run_raiseSig_bind]; rfl
+  · intro re im
+    by_cases h : Binary64.F64.eq im (Binary64.F64.zero false) = true <;>
+      simp [richEq, convertForComparison, h]
+  · intro t re im; simp [richOrd, convertForComparison]
+  · simp [richEq, convertForComparison]
+  · intro t; simp [richOrd, convertForComparison]
+
 end PyLean.Decimal

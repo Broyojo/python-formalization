@@ -1,4 +1,4 @@
-import PyLean.Decimal.Compare
+import PyLean.Decimal.CmpProps
 import PyLean.Fractions.Hash
 
 /-!
@@ -11,26 +11,62 @@ open PyLean
 
 /-! ## Rounding modes (`_rescale`) -/
 
-/-- For every rounding mode, every finite non-zero value `c·10^e` and every
-target exponent `x > e`, `_pydecimal`'s `_rescale` returns the coefficient
-the mode prescribes for the dropped digits (`roundSpec`), at exponent `x`;
-the only other outcome is the int/str-limit `ValueError`. -/
+theorem numDigits_mono {a b : Nat} (h : a ≤ b) : numDigits a ≤ numDigits b :=
+  (numDigits_le_iff (numDigits_pos b)).mpr (Nat.lt_of_le_of_lt h (lt_pow_numDigits b))
+
+theorem incr_ok {q d : Nat} (h1 : ¬ max d 1 > maxStrDigits) (h2 : ¬ numDigits (q + 1) > maxStrDigits) :
+    incr q d = .ok (q + 1) := by
+  simp [incr, intLimit, strLimit, h1, h2, bind, Except.bind, pure, Except.pure]
+
+/-- `_rescale` to a larger exponent cannot hit the int/str limit when the coefficient is
+within it: the kept prefix plus one has no more digits than the coefficient. -/
+theorem rescale_noerr (m : Rounding) (neg : Bool) (c : Nat) (e x : Int) (hc : c ≠ 0) (hx : e < x)
+    (hd : numDigits c ≤ maxStrDigits) (err : PyExc) : rescale (.fin neg c e) x m ≠ .error err := by
+  unfold rescale
+  simp only [hc, ↓reduceIte, show ¬(e ≥ x) by omega]
+  by_cases hneg : (numDigits c : Int) + e - x < 0
+  · simp only [hneg, ↓reduceIte, roundKeep]
+    have hi : incr (1 / 10 ^ (numDigits 1 - 0)) 0 = .ok (1 / 10 ^ (numDigits 1 - 0) + 1) :=
+      incr_ok (by decide) (by decide)
+    split <;> simp_all [bind, Except.bind, pure, Except.pure]
+  · simp only [hneg, ↓reduceIte, roundKeep]
+    have hk : 1 ≤ numDigits c - ((numDigits c : Int) + e - x).toNat := by omega
+    have hq : c / 10 ^ (numDigits c - ((numDigits c : Int) + e - x).toNat) + 1 ≤ c := by
+      have h10 : 10 ≤ 10 ^ (numDigits c - ((numDigits c : Int) + e - x).toNat) :=
+        Nat.le_trans (by decide) (Nat.pow_le_pow_right (by decide) hk)
+      have := Nat.div_le_div_left (a := c) h10 (by decide)
+      omega
+    have hi := incr_ok (q := c / 10 ^ (numDigits c - ((numDigits c : Int) + e - x).toNat))
+      (d := ((numDigits c : Int) + e - x).toNat) (by simp only [maxStrDigits] at hd ⊢; omega)
+      (by have := numDigits_mono hq; simp only [maxStrDigits] at hd ⊢; omega)
+    split <;> simp_all [bind, Except.bind, pure, Except.pure]
+
+/-- For every rounding mode, every finite non-zero value `c·10^e` and every target exponent
+`x > e`, `_pydecimal`'s `_rescale` returns the coefficient the mode prescribes for the dropped
+digits (`roundSpec`), at exponent `x`; the only other outcome is the int/str-limit
+`ValueError`, and only for a coefficient of more than 4300 digits. -/
 def RoundingModesCorrect : Prop :=
   ∀ (m : Rounding) (neg : Bool) (c : Nat) (e x : Int), c ≠ 0 → e < x →
     rescale (.fin neg c e) x m = .ok (.fin neg
         (roundSpec m neg (c / 10 ^ (x - e).toNat) (c % 10 ^ (x - e).toNat) (10 ^ (x - e).toNat)) x) ∨
-    ∃ msg, rescale (.fin neg c e) x m = .error (.valueError msg)
+    (maxStrDigits < numDigits c ∧ ∃ msg, rescale (.fin neg c e) x m = .error (.valueError msg))
 
-theorem roundingModesCorrect_proven : RoundingModesCorrect :=
-  fun m neg c e x hc hx => rescale_round m neg c e x hc hx
+theorem roundingModesCorrect_proven : RoundingModesCorrect := by
+  intro m neg c e x hc hx
+  rcases rescale_round m neg c e x hc hx with h | ⟨msg, h⟩
+  · exact Or.inl h
+  · by_cases hd : numDigits c ≤ maxStrDigits
+    · exact absurd h (rescale_noerr m neg c e x hc hx hd _)
+    · exact Or.inr ⟨by omega, msg, h⟩
 
 /-! ## `to_integral_value` -/
 
-/-- For every context, rounding argument and finite value `c·10^e` with
-`e < 0`, `to_integral_value` returns the integer `roundSpec` prescribes (at
-exponent 0) and leaves the flags untouched (docs: "without signaling
-Inexact or Rounded", Doc/library/decimal.rst:929), or raises the int/str-limit `ValueError`; values with
-`e ≥ 0` are returned unchanged. -/
+/-- For every context, rounding argument and finite value `c·10^e` with `e < 0`,
+`to_integral_value` (_pydecimal.py:2762-2776) returns the integer `roundSpec` prescribes (at
+exponent 0) and leaves the flags untouched (docs: "without signaling Inexact or Rounded",
+Doc/library/decimal.rst:929), except for the int/str-limit `ValueError` on a coefficient of
+more than 4300 digits; a zero coefficient gives the signed zero at exponent 0; values with
+`e ≥ 0` and infinities are returned unchanged; a NaN goes through `_check_nans`. -/
 def ToIntegralValueCorrect : Prop :=
   ∀ (ctx : Ctx) (r : Option Rounding) (neg : Bool) (c : Nat) (e : Int) (fl : List Signal),
     let m := r.getD ctx.rounding
@@ -39,21 +75,28 @@ def ToIntegralValueCorrect : Prop :=
     (e < 0 → c ≠ 0 →
       (toIntegralValue ctx (.fin neg c e) r).run fl =
         .ok (.fin neg (roundSpec m neg (c / 10 ^ k) (c % 10 ^ k) (10 ^ k)) 0, fl) ∨
-      ∃ msg, (toIntegralValue ctx (.fin neg c e) r).run fl = .error (.valueError msg))
+      (maxStrDigits < numDigits c ∧ ∃ msg, (toIntegralValue ctx (.fin neg c e) r).run fl = .error (.valueError msg))) ∧
+    (e < 0 → (toIntegralValue ctx (.fin neg 0 e) r).run fl = .ok (.fin neg 0 0, fl)) ∧
+    (toIntegralValue ctx (.inf neg) r).run fl = .ok (.inf neg, fl) ∧
+    (toIntegralValue ctx (.nan neg false c) r).run fl = .ok (.nan neg false (c % 10 ^ nanDigits ctx), fl)
 
 theorem toIntegralValueCorrect_proven : ToIntegralValueCorrect := by
   intro ctx r neg c e fl m k
-  refine ⟨fun he => ?_, fun he hc => ?_⟩
+  refine ⟨fun he => ?_, fun he hc => ?_, fun he => ?_, by cases neg <;> rfl, ?_⟩
   · simp [toIntegralValue, he, StateT.run, pure, StateT.pure, Except.pure]
   · have hk : (0 - e).toNat = k := by simp only [k]; omega
-    rcases rescale_round m neg c e 0 hc he with h | ⟨msg, h⟩
+    rcases roundingModesCorrect_proven m neg c e 0 hc he with h | ⟨hd, msg, h⟩
     · left
       rw [hk] at h
       simp [toIntegralValue, show ¬ e ≥ 0 by omega, liftPy, h, StateT.run, Functor.map,
         Except.map, m]
     · right
-      exact ⟨msg, by simp [toIntegralValue, show ¬ e ≥ 0 by omega, liftPy, h, StateT.run, Functor.map,
+      exact ⟨hd, msg, by simp [toIntegralValue, show ¬ e ≥ 0 by omega, liftPy, h, StateT.run, Functor.map,
         Except.map, m]⟩
+  · simp [toIntegralValue, show ¬ e ≥ 0 by omega, liftPy, rescale, StateT.run, Functor.map, Except.map]
+  · have h := fixNan_spec ctx neg false c
+    simp [toIntegralValue, checkNans, StateT.run, pure, StateT.pure, Except.pure, bind, StateT.bind,
+      Except.bind, h]
 
 /-! ## Integer conversions -/
 
@@ -84,11 +127,14 @@ theorem intConversionsC_proven : IntConversionsC := by
 is the only other outcome. -/
 def IntConversionsPyOrLimit : Prop :=
   ∀ (m : Rounding) (neg : Bool) (c : Nat) (e : Int),
+    let k := e.natAbs
+    let mag := if e ≥ 0 then c * 10 ^ e.toNat else roundSpec m neg (c / 10 ^ k) (c % 10 ^ k) (10 ^ k)
     pyToInt m (.fin neg c e) = cToInt m (.fin neg c e) ∨
-    ∃ msg, pyToInt m (.fin neg c e) = .error (.valueError msg)
+    ((maxStrDigits < numDigits c ∨ maxStrDigits < numDigits mag) ∧
+      ∃ msg, pyToInt m (.fin neg c e) = .error (.valueError msg))
 
 theorem intConversionsPyOrLimit_proven : IntConversionsPyOrLimit := by
-  intro m neg c e
+  intro m neg c e k mag
   have hC := intConversionsC_proven m neg c e
   simp only at hC
   rw [hC]
@@ -107,19 +153,22 @@ theorem intConversionsPyOrLimit_proven : IntConversionsPyOrLimit := by
       simp [rescale, hc, he]
     simp only [hres, bind, Except.bind, pyInt, ge_iff_le, Int.le_refl, ↓reduceIte, he]
     by_cases hl : maxStrDigits < numDigits (c * 10 ^ e.toNat)
-    · right; exact ⟨limitToIntMsg (numDigits (c * 10 ^ e.toNat)), by simp [intLimit, hl]⟩
+    · right; exact ⟨Or.inr (by simp only [mag, if_pos he]; exact hl),
+        limitToIntMsg (numDigits (c * 10 ^ e.toNat)), by simp [intLimit, hl]⟩
     · left
       simp [intLimit, hl, pure, Except.pure, truncDiv]
   · have hk : (0 - e).toNat = e.natAbs := by omega
-    rcases rescale_round m neg c e 0 hc (by omega) with h | ⟨msg, h⟩
+    rcases roundingModesCorrect_proven m neg c e 0 hc (by omega) with h | ⟨hd, msg, h⟩
     · rw [hk] at h
       simp only [h, bind, Except.bind, pyInt, ge_iff_le, Int.le_refl, ↓reduceIte, he]
-      generalize roundSpec m neg (c / 10 ^ e.natAbs) (c % 10 ^ e.natAbs) (10 ^ e.natAbs) = q
-      by_cases hl : maxStrDigits < numDigits q
-      · right; exact ⟨limitToIntMsg (numDigits q), by simp [intLimit, hl]⟩
+      have hm : mag = roundSpec m neg (c / 10 ^ e.natAbs) (c % 10 ^ e.natAbs) (10 ^ e.natAbs) := by
+        simp only [mag, k, if_neg he]
+      rw [← hm]
+      by_cases hl : maxStrDigits < numDigits mag
+      · right; exact ⟨Or.inr hl, limitToIntMsg (numDigits mag), by simp [intLimit, hl]⟩
       · left
         simp [intLimit, hl, pure, Except.pure, truncDiv]
-    · right; exact ⟨msg, by simp [h, bind, Except.bind]⟩
+    · right; exact ⟨Or.inl hd, msg, by simp [h, bind, Except.bind]⟩
 
 /-! ## Hashing -/
 
