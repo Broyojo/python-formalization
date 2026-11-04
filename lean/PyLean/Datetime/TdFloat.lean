@@ -63,6 +63,41 @@ def tdTypeCheckPy : List (String × TdNum) → Py Unit
   | (name, .other ty) :: _ => .error (.typeError s!"~unsupported type for timedelta {name} component: {ty}")
   | _ :: rest => tdTypeCheckPy rest
 
+/-- `if isinstance(days, float): ... else: ...`, Py:692-701: `(d, s, daysecondsfrac)`. -/
+def tdDaysSplitPy : TdNum → Py (Int × Int × F64)
+  | .float x => do
+    let (dayfrac, days) := modfF x
+    let (daysecondsfrac, daysecondswhole) := modfF (F64.mul dayfrac f86400)
+    let s ← PyLong_FromDouble daysecondswhole
+    let d ← PyLong_FromDouble days
+    pure (d, s, daysecondsfrac)
+  | .int n => pure (n, (0 : Int), F64.zero false)
+  | .other _ => throw .modelFuel
+
+/-- `if isinstance(seconds, float): ... else: ...`, Py:708-715: `(seconds, secondsfrac)`. -/
+def tdSecondsSplitPy (daysecondsfrac : F64) : TdNum → Py (Int × F64)
+  | .float x => do
+    let (secondsfrac, seconds) := modfF x
+    let seconds ← PyLong_FromDouble seconds
+    pure (seconds, F64.add secondsfrac daysecondsfrac)
+  | .int n => pure (n, daysecondsfrac)
+  | .other _ => throw .modelFuel
+
+/-- `if isinstance(microseconds, float): ... else: ...`, Py:732-744: the new `d`, `s` and
+`microseconds`. -/
+def tdMicroPy (d s : Int) (usdouble : F64) : TdNum → Py (Int × Int × Int)
+  | .float x => do
+    let m ← float_round_int (F64.add x usdouble)
+    let sec := m / 1000000
+    let m := m % 1000000
+    pure (d + sec / 86400, s + sec % 86400, m)
+  | .int n => do
+    let sec := n / 1000000
+    let m := n % 1000000
+    let m ← float_round_int (F64.add (← tdToFloat m) usdouble)
+    pure (d + sec / 86400, s + sec % 86400, m)
+  | .other _ => throw .modelFuel
+
 /-- `timedelta.__new__`, Py:657-768, for every argument. -/
 def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdNum) : Py Delta := do
   -- :667-679, in this order
@@ -73,40 +108,16 @@ def deltaNumPy (days seconds microseconds milliseconds minutes hours weeks : TdN
   let seconds ← tdAdd seconds (← tdAdd (← tdMul minutes 60) (← tdMul hours 3600))
   let microseconds ← tdAdd microseconds (← tdMul milliseconds 1000)
   -- :692-701
-  let (d, s, daysecondsfrac) ← match days with
-    | .float x => do
-      let (dayfrac, days) := modfF x
-      let (daysecondsfrac, daysecondswhole) := modfF (F64.mul dayfrac f86400)
-      let s ← PyLong_FromDouble daysecondswhole
-      let d ← PyLong_FromDouble days
-      pure (d, s, daysecondsfrac)
-    | .int n => pure (n, (0 : Int), F64.zero false)
-    | .other _ => throw .modelFuel
-  -- :708-723
-  let (seconds, secondsfrac) ← match seconds with
-    | .float x => do
-      let (secondsfrac, seconds) := modfF x
-      let seconds ← PyLong_FromDouble seconds
-      pure (seconds, F64.add secondsfrac daysecondsfrac)
-    | .int n => pure (n, daysecondsfrac)
-    | .other _ => throw .modelFuel
+  let (d, s, daysecondsfrac) ← tdDaysSplitPy days
+  -- :708-715
+  let (seconds, secondsfrac) ← tdSecondsSplitPy daysecondsfrac seconds
+  -- :721-723
   let d := d + seconds / 86400
   let s := s + seconds % 86400
   -- :728
   let usdouble := F64.mul secondsfrac f1e6
   -- :732-744
-  let (d, s, microseconds) ← match microseconds with
-    | .float x => do
-      let m ← float_round_int (F64.add x usdouble)
-      let sec := m / 1000000
-      let m := m % 1000000
-      pure (d + sec / 86400, s + sec % 86400, m)
-    | .int n => do
-      let sec := n / 1000000
-      let m := n % 1000000
-      let m ← float_round_int (F64.add (← tdToFloat m) usdouble)
-      pure (d + sec / 86400, s + sec % 86400, m)
-    | .other _ => throw .modelFuel
+  let (d, s, microseconds) ← tdMicroPy d s usdouble microseconds
   -- :751-754
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
@@ -135,19 +146,22 @@ def accumC (tag : String) (sofar : Int) (num : TdNum) (factor : Int) (leftover :
     return (sum + x2, F64.add leftover fracpart)
   | .other ty => .error (.typeError s!"~unsupported type for timedelta {tag} component: {ty}")
 
+/-- One argument of `delta_new_impl` (:2859-2886, one `if (arg)` block each): `accum` when it was given, nothing when
+omitted. -/
+def tdAccumStepC (acc : Int × F64) (a : Option TdNum × String × Int) : Py (Int × F64) :=
+  match a.1 with
+  | none => .ok acc
+  | some v => accumC a.2.1 acc.1 v a.2.2 acc.2
+
 /-- `delta_new_impl`, :2832-2932: `accum` for each argument given, in the order microseconds,
 milliseconds, seconds, minutes, hours, days, weeks; then a nonzero `leftover_us` rounded to
 the nearest integer (`round`, halfway away from zero) with the round-half-to-even fix-up when
 it is exactly halfway (:2887-2922, using `x & 1`), added in; then
 `microseconds_to_delta_ex`. An omitted argument is `none`. -/
 def deltaNumC (days seconds microseconds milliseconds minutes hours weeks : Option TdNum) : Py Delta := do
-  let step (acc : Int × F64) (a : Option TdNum × String × Int) : Py (Int × F64) :=
-    match a.1 with
-    | none => .ok acc
-    | some v => accumC a.2.1 acc.1 v a.2.2 acc.2
   let (x, leftover) ← [(microseconds, "microseconds", 1), (milliseconds, "milliseconds", 1000),
       (seconds, "seconds", 1000000), (minutes, "minutes", 60000000), (hours, "hours", 3600000000),
-      (days, "days", 86400000000), (weeks, "weeks", 604800000000)].foldlM step (0, F64.zero false)
+      (days, "days", 86400000000), (weeks, "weeks", 604800000000)].foldlM tdAccumStepC (0, F64.zero false)
   let x ← if F64.ne leftover (F64.zero false) then do
       let wholeUs := F64.roundAway leftover
       let wholeUs :=
