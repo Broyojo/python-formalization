@@ -112,6 +112,22 @@ def entries : List Entry := [
     status := .proven
     prop := ``MakeArgumentsDefaultsFit
     thm := some ``makeArgumentsDefaultsFit_proven },
+  { id := "pygrammar-peg-make-arguments-exact"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_make_arguments_exact
+    statement := "For each of its five arguments NULL or not, _PyPegen_make_arguments builds " ++
+      "arguments(posonlyargs = slash_without_default, else the plain names then the pair names " ++
+      "of slash_with_default; args = plain names then the names of names_with_default; vararg, " ++
+      "kwonlyargs = names of the keyword-only pairs, kw_defaults = their defaults, kwarg from " ++
+      "star_etc, empty or NULL without it; defaults = the defaults of slash_with_default's pairs " ++
+      "then those of names_with_default)."
+    source := "Parser/action_helpers.c:504-692"
+    status := .proven
+    prop := ``MakeArgumentsExact
+    thm := some ``makeArgumentsExact_proven
+    notes := "No hypothesis: when both slash forms are given, slash_without_default wins for " ++
+      "posonlyargs and slash_with_default's defaults are still used, as in the C. The " ++
+      "assert(0) branch of _make_posargs is included." },
   { id := "pygrammar-peg-concat"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_concat
@@ -327,6 +343,18 @@ def entries : List Entry := [
     status := .proven
     prop := ``StripInterpolation
     thm := some ``stripInterpolation_proven },
+  { id := "pygrammar-peg-strip-continuations"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_strip_continuations
+    statement := "After a debug '=', whitespace followed by any number of explicit line " ++
+      "continuations (a backslash, then whitespace holding a line end) is removed with the '=', " ++
+      "and what precedes the '=' is kept."
+    source := "the comment in Parser/action_helpers.c:1548-1549"
+    status := .proven
+    prop := ``StripContinuations
+    thm := some ``stripContinuations_proven
+    notes := "Needs the outer loop of 1550-1568: a body that strips only one whitespace run " ++
+      "returns 'x=\\' plus newline unchanged and fails it." },
   { id := "pygrammar-peg-decode-known"
     pyFile := "Parser/pegen_errors.c"
     pyFns := Rows.peg_decode_known
@@ -360,18 +388,22 @@ def entries : List Entry := [
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_warn_lazy
     statement := "_warn_relative_import_of_lazy warns on `from . lazy import x` with the right " ++
-      "number of dots, and not on `from .lazy import x` or on the second pass."
+      "number of dots and returns 0, and does nothing on `from .lazy import x` or on the second " ++
+      "pass; when the warnings filter makes SyntaxWarning an error it raises SyntaxError with " ++
+      "the warning's message at the module name and returns -1."
     source := "the comments in Parser/action_helpers.c:2034-2037"
     status := .proven
     prop := ``WarnRelativeLazy
     thm := some ``warnRelativeLazy_proven
-    notes := "Warnings as errors are out of scope, as for warn_invalid_escape_sequence." },
+    notes := "The filter is Cfg.warnErrors, by category; filters on message, module or line " ++
+      "are out of scope. text is None: the model's filename names no file." },
   { id := "pygrammar-peg-checked-from-import"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_checked_from_import
-    statement := "_PyPegen_checked_from_import refuses lazy from __future__, otherwise builds " ++
-      "the ImportFrom of the module, names, dots and lazy flag, and only from __future__ import " ++
-      "barry_as_FLUFL turns on `<>`."
+    statement := "_PyPegen_checked_from_import refuses lazy from __future__, returns NULL when " ++
+      "the lazy-import warning fails (an error filter), otherwise builds the ImportFrom of the " ++
+      "module, names, dots and lazy flag, and only from __future__ import barry_as_FLUFL turns " ++
+      "on `<>`."
     source := "PEP 810 and Parser/action_helpers.c:2082-2114"
     status := .proven
     prop := ``CheckedFromImport
@@ -379,9 +411,10 @@ def entries : List Entry := [
   { id := "pygrammar-peg-register-stmts"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_register_stmts
-    statement := "_PyPegen_register_stmts does nothing in the first pass; in the second it " ++
-      "records the last statement unless a later one is recorded."
-    source := "invariant"
+    statement := "_PyPegen_register_stmts returns its statements unchanged; it leaves the " ++
+      "parser alone in the first pass and for no statements, and in the second records the " ++
+      "last statement's line and column unless the recorded one is on a later line."
+    source := "Parser/action_helpers.c:2116-2134; read by _PyPegen_set_syntax_error_metadata"
     status := .proven
     prop := ``RegisterStmts
     thm := some ``registerStmts_proven },

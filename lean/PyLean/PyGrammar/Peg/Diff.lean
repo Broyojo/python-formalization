@@ -38,7 +38,12 @@ def getCfg (j : Json) : Except String Cfg := do
         let a ← it.getArr?
         return (← fromJson? a[0]!, ← fromJson? a[1]!)
     | .error _ => pure []
-  return { ucn := ucn.map (fun (n, c) => (n.toList.map Char.toNat, c)), nfkc }
+  let warnErrors : List String ← match j.getObjVal? "warn_error" with
+    | .ok v => do
+      let items ← v.getArr?
+      items.toList.mapM fun it => it.getStr?
+    | .error _ => pure []
+  return { ucn := ucn.map (fun (n, c) => (n.toList.map Char.toNat, c)), nfkc, warnErrors }
 
 /-- The arguments of a `compile` case. -/
 def parseArgs (j : Json) : Except String (List Nat × StartRule × Bool × Nat × Nat × Cfg) := do

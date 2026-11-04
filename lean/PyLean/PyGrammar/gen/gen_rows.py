@@ -332,12 +332,6 @@ CREDIT = {
     "pygrammar-rule-invalid-if-expression": {GRAM: ["rule:invalid_if_expression"]},
     "pygrammar-rule-invalid-kvpair-unpacking": {GRAM: ["rule:invalid_kvpair_unpacking"]},
     "pygrammar-rule-invalid-kvpair": {GRAM: ["rule:invalid_kvpair"]},
-    "pygrammar-lex-nextc-in-buffer": {
-        "Parser__lexer__lexer.c": ["tok_nextc"],
-        "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],
-        "Parser__tokenizer__utf8_tokenizer.c": ["tok_underflow_string"],
-    },
-    "pygrammar-lex-comment-loops": {"Parser__lexer__lexer.c": ["set_ftstring_expr"]},
     "pygrammar-lex-byte-col": {"Parser__tokenizer__helpers.c": ["byte_col_to_char_col"]},
     "pygrammar-peg-decode-known": {
         "Parser__pegen_errors.c": ["_Pypegen_raise_decode_error_known_location"]},
@@ -348,12 +342,7 @@ CREDIT = {
     "pygrammar-peg-warn-lazy": {"Parser__action_helpers.c": ["_warn_relative_import_of_lazy"]},
     "pygrammar-peg-checked-from-import": {
         "Parser__action_helpers.c": ["_PyPegen_checked_from_import"]},
-    "pygrammar-lex-stacks": {
-        "Parser__lexer__lexer.c": ["tok_get_normal_mode", "tok_get_fstring_mode", "tok_get",
-                                   "_PyTokenizer_Get"]},
     "pygrammar-unparse-str-repr": {
-        "Parser__string_parser.c": ["_PyPegen_parse_string", "decode_unicode_with_escapes",
-                                    "_PyPegen_decode_string"],
         "Lib___ast_unparse.py": ["Unparser._write_constant"]},
     "pygrammar-lex-untokenize-lossless": {
         "Lib__tokenize.py": ["Untokenizer.add_whitespace",
@@ -380,6 +369,14 @@ CREDIT = {
             "_PyPegen_set_expr_context", "_set_seq_context", "_set_name_context",
             "_set_tuple_context", "_set_list_context", "_set_subscript_context",
             "_set_attribute_context", "_set_starred_context", "_PyPegen_get_invalid_target"]},
+    "pygrammar-check-set-context-exact": {
+        "Parser__action_helpers.c": [
+            "_PyPegen_set_expr_context", "_set_seq_context", "_set_name_context",
+            "_set_tuple_context", "_set_list_context", "_set_subscript_context",
+            "_set_attribute_context", "_set_starred_context"]},
+    "pygrammar-check-invalid-target-first": {
+        "Parser__action_helpers.c": ["_PyPegen_get_invalid_target"]},
+    "pygrammar-check-target-legal": {"Parser__action_helpers.c": ["_PyPegen_get_invalid_target"]},
     "pygrammar-check-fold-reaches": {"Python__ast_preprocess.c": ["astfold_pattern"]},
     "pygrammar-check-fold-reaches-narrow": {
         "Python__ast_preprocess.c": [
@@ -393,6 +390,8 @@ CREDIT = {
         "Python__ast_preprocess.c": ["parse_format", "optimize_format"]},
     "pygrammar-check-docstring-body": {"Python__ast_preprocess.c": ["remove_docstring"]},
     "pygrammar-peg-make-arguments": {
+        "Parser__action_helpers.c": ["_PyPegen_make_arguments", "_get_names", "_get_defaults"]},
+    "pygrammar-peg-make-arguments-exact": {
         "Parser__action_helpers.c": ["_PyPegen_make_arguments", "_get_names", "_get_defaults"]},
     "pygrammar-peg-concat": {"Parser__action_helpers.c": ["_build_concatenated_str"]},
     "pygrammar-peg-check-fstring-conversion": {"Parser__action_helpers.c": ["_PyPegen_check_fstring_conversion",
@@ -430,32 +429,26 @@ CREDIT = {
     "pygrammar-peg-constant-from-string": {"Parser__action_helpers.c": ["_PyPegen_constant_from_string"]},
     "pygrammar-peg-strip-interpolation": {
         "Parser__action_helpers.c": ["_strip_interpolation_debug_expr"]},
+    "pygrammar-peg-strip-continuations": {
+        "Parser__action_helpers.c": ["_strip_interpolation_debug_expr"]},
     "pygrammar-peg-register-stmts": {"Parser__action_helpers.c": ["_PyPegen_register_stmts"]},
-    "pygrammar-peg-never-silent": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
-    "pygrammar-peg-token-readers": {
-        "Parser__pegen.c": ["_PyPegen_name_token", "_PyPegen_soft_keyword_token",
-                            "_PyPegen_expect_soft_keyword", "_PyPegen_expect_forced_token"]},
-    "pygrammar-peg-fill-token": {"Parser__pegen.c": ["_PyPegen_fill_token"]},
     "pygrammar-peg-expect-token": {"Parser__pegen.c": ["_PyPegen_expect_token"]},
     "pygrammar-peg-memo-cache": {
-        "Parser__pegen.c": ["_PyPegen_insert_memo", "_PyPegen_update_memo", "_PyPegen_is_memoized"]},
+        "Parser__pegen.c": ["_PyPegen_insert_memo", "_PyPegen_update_memo"]},
     "pygrammar-peg-last-token": {"Parser__pegen.c": ["_PyPegen_get_last_nonnwhitespace_token"]},
     "pygrammar-peg-raise-unclosed": {"Parser__pegen_errors.c": ["raise_unclosed_parentheses_error"]},
-    "pygrammar-peg-tokenizer-error": {"Parser__pegen_errors.c": ["_Pypegen_tokenizer_error"]},
     "pygrammar-peg-decode-error": {"Parser__pegen_errors.c": ["_Pypegen_raise_decode_error"]},
-    "pygrammar-peg-tokenize-full-source": {
-        "Parser__pegen_errors.c": ["_PyPegen_tokenize_full_source_to_check_for_errors"]},
-    "pygrammar-peg-raise-error": {"Parser__pegen_errors.c": ["_PyPegen_raise_error"]},
-    "pygrammar-peg-raise-known-location": {
-        "Parser__pegen_errors.c": ["_PyPegen_raise_error_known_location"]},
-    "pygrammar-peg-set-syntax-error": {"Parser__pegen_errors.c": ["_Pypegen_set_syntax_error"]},
 }
 
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
 NO_ROWS = ["peg-formatted-value-interpolation", "peg-debug-info-source", "grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error",
            "check-syntax-only-identity", "check-no-null-deref", "peg-roundtrip-parser",
            "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty", "check-table-covers",
-           "check-try-twin", "check-names-always", "check-target-legal",
+           "check-try-twin", "check-names-always",
+           "lex-nextc-in-buffer", "lex-comment-loops", "lex-stacks", "peg-never-silent",
+           "peg-token-readers", "peg-fill-token", "peg-tokenizer-error",
+           "peg-tokenize-full-source", "peg-raise-error", "peg-raise-known-location",
+           "peg-set-syntax-error",
            "check-set-context-last", "check-set-context-restores"]
 
 # A row may be credited by several entries; the tsv lists them comma-separated.
@@ -495,7 +488,6 @@ EXCLUDE = {
     ("Parser__pegen.c", "growable_comment_array_deallocate"): NOBEH + "frees comments",
     ("Parser__pegen.c", "_resize_tokens_array"): NOBEH + "grows the token array; only allocation failure is observable",
     ("Parser__pegen.c", "_PyPegen_Parser_Free"): NOBEH + "frees the parser",
-    ("Parser__pegen.c", "init_normalization"): NOBEH + "imports unicodedata.normalize once; Cfg.nfkc stands for its result",
     ("Python__Python-tokenize.c", "get_tokenize_state"): NOBEH + "module state accessor",
     ("Python__Python-tokenize.c", "tokenizeriter_dealloc"): NOBEH + "frees the iterator",
     ("Python__Python-tokenize.c", "tokenizemodule_exec"): "internal-bootstrap: module init",
@@ -503,10 +495,7 @@ EXCLUDE = {
     ("Python__Python-tokenize.c", "tokenizemodule_clear"): NOBEH + "GC clear",
     ("Python__Python-tokenize.c", "tokenizemodule_free"): NOBEH + "GC free",
     ("Python__Python-tokenize.c", "PyInit__tokenize"): "internal-bootstrap: module init",
-    ("Parser__myreadline.c", "my_fgets"): "platform: terminal line input",
     ("Parser__myreadline.c", "_PyOS_WindowsConsoleReadline"): "platform: Windows console input",
-    ("Parser__myreadline.c", "PyOS_StdioReadline"): "platform: terminal line input",
-    ("Parser__myreadline.c", "PyOS_Readline"): "platform: terminal line input",
 }
 
 
