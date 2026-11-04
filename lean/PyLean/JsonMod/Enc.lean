@@ -531,7 +531,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             .ok ([123] ++ body ++ post ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
     | .other n t =>
-      -- @3.14.7:1542-1579, with `seen` as in `pyEnc`
+      -- :1617-1665, with `seen` as in `pyEnc`
       if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
       else
         match cfg.dflt n t with

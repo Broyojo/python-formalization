@@ -44,7 +44,7 @@ def pyScanstringCall (s : PStr) (e : Int) (strict : Bool) : DR (PStr × Int) :=
   if outOfSsize e then .error (.exc ssizeErr) else pyScanstring s e strict
 
 /-- `scanstring(pystr, end, strict)`: the clinic wrapper `py_scanstring`
-(`Modules/clinic/_json.c.h:30-70`) checks `pystr` before it converts `end`, then
+(`Modules/clinic/_json.c.h:30-69`) checks `pystr` before it converts `end`, then
 `py_scanstring_impl`, Modules/_json.c:665-672, with the check of
 `scanstring_unicode` on a negative `end` (:494-497). -/
 def cPyScanstring (x : StrArg) (e : Int) (strict : Bool) : DR (PStr × Int) :=
@@ -59,13 +59,13 @@ def cPyScanstring (x : StrArg) (e : Int) (strict : Bool) : DR (PStr × Int) :=
       | .error err => .error err
 
 /-- `encode_basestring_ascii(pystr)`: the clinic wrapper
-(`Modules/clinic/_json.c.h:86-98`), then `py_encode_basestring_ascii_impl`, :683-687. -/
+(`Modules/clinic/_json.c.h:84-98`), then `py_encode_basestring_ascii_impl`, :683-687. -/
 def cPyEncodeBasestringAscii : StrArg → ER
   | .str s => .ok (cAsciiEscape s)
   | .other t => .error (badArgErr "encode_basestring_ascii" "argument" t)
 
 /-- `encode_basestring(pystr)`: the clinic wrapper
-(`Modules/clinic/_json.c.h:115-127`), then `py_encode_basestring_impl`, :698-702. -/
+(`Modules/clinic/_json.c.h:113-127`), then `py_encode_basestring_impl`, :698-702. -/
 def cPyEncodeBasestring : StrArg → ER
   | .str s => .ok (cEscape s)
   | .other t => .error (badArgErr "encode_basestring" "argument" t)
