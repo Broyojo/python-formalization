@@ -68,9 +68,9 @@ Lib/_pydecimal.py	1842	1848	Decimal._round_half_even	_round_half_even(self, prec
 Lib/_pydecimal.py	1850	1855	Decimal._round_ceiling	_round_ceiling(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1857	1862	Decimal._round_floor	_round_floor(self, prec)	modelled	decimal-rounding-modes-correct	
 Lib/_pydecimal.py	1864	1869	Decimal._round_05up	_round_05up(self, prec)	modelled	decimal-rounding-modes-correct	
-Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	todo		review: IntConversionsPyOrLimit's `∨ ∃ msg, ValueError` is unconstrained, so a round() that always raises ValueError passes; the other entries are the declined int-limit refutation and QuantizeCorrect, which holds only when quantize returns; the n-argument TypeError (:1932-1933) is not modelled.
-Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	todo		review: IntConversionsPyOrLimit quantifies only finite values, so the documented exceptions for a NaN (ValueError) and an infinity (OverflowError) at :1953-1957 are unstated and a floor returning 0 for them passes; the finite case is pinned to _decimal's floor except for the int-limit ValueError.
-Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	todo		review: As for __floor__: IntConversionsPyOrLimit quantifies only finite values, so the NaN ValueError and infinity OverflowError (:1968-1972) are unstated and a ceil returning 0 for them passes.
+Lib/_pydecimal.py	1882	1943	Decimal.__round__	__round__(self, n=None)	modelled	decimal-int-conversions-py-or-limit,decimal-quantize-correct	
+Lib/_pydecimal.py	1945	1958	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py-or-limit	
+Lib/_pydecimal.py	1960	1973	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1975	2017	Decimal.fma	fma(self, other, third, context=None)	todo		
 Lib/_pydecimal.py	2019	2102	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
 Lib/_pydecimal.py	2104	2350	Decimal._power_exact	_power_exact(self, other, p)	todo		
@@ -92,7 +92,7 @@ Lib/_pydecimal.py	2971	2977	Decimal.adjusted	adjusted(self)	todo		review: Dec.ad
 Lib/_pydecimal.py	2979	2985	Decimal.canonical	canonical(self)	todo		
 Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	modelled	decimal-comparisons-exact	
 Lib/_pydecimal.py	2999	3069	Decimal.compare_total	compare_total(self, other, context=None)	modelled	decimal-compare-total-exact	
-Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	todo		review: CompareTotalExact pins compare_total_mag only for magnitudes of different value and for a negative NaN against a number: equal magnitudes (Decimal('1.0').compare_total_mag(Decimal('-1')) is -1, 1 against -1 is 0) and NaN pairs are unstated, so a numeric magnitude comparison returning 0 on ties passes.
+Lib/_pydecimal.py	3072	3082	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	modelled	decimal-compare-total-exact	
 Lib/_pydecimal.py	3084	3086	Decimal.copy_abs	copy_abs(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3088	3093	Decimal.copy_negate	copy_negate(self)	modelled	decimal-copy-exact	
 Lib/_pydecimal.py	3095	3099	Decimal.copy_sign	copy_sign(self, other, context=None)	modelled	decimal-copy-ops-correct	

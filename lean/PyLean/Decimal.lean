@@ -279,7 +279,7 @@ def entries : List Entry := [
     source := "Docstring of _is_less_than_pow10a_use_str, _pydecimal.py:471-476"
     status := .proven, prop := ``Pow10BandExact, thm := some ``pow10BandExact_proven },
   { id := "decimal-divide-correct", pyFile := "Lib/_pydecimal.py"
-    pyFns := ["Decimal._divide", "Decimal._rescale", "_WorkRep.__init__", "_is_less_than_pow10a_use_str"]
+    pyFns := ["Decimal._divide", "_WorkRep.__init__", "_is_less_than_pow10a_use_str"]
     statement := "For finite non-zero operands, a returning _divide gives the integer quotient and remainder of the operands scaled to their lower exponent, the quotient at exponent 0 with the sign of the product and the remainder at min(ea, eb) with the sign of the dividend, or NaN for both with InvalidOperation exactly when the quotient has more than prec digits."
     source := "Doc/library/decimal.rst:441: 'the usual identity x == (x // y) * y + x % y'; General Decimal Arithmetic, 'divide-integer' and 'remainder'; DivisionImpossible docstring, _pydecimal.py:190-196"
     status := .refuted, prop := ``DivideCorrect, thm := some ``divideCorrect_refuted
@@ -345,13 +345,13 @@ def entries : List Entry := [
     pyFns := ["Decimal._rescale", "Decimal._round_down", "Decimal._round_up", "Decimal._round_half_up",
               "Decimal._round_half_down", "Decimal._round_half_even", "Decimal._round_ceiling",
               "Decimal._round_floor", "Decimal._round_05up"]
-    statement := "For all 8 rounding modes, every finite non-zero value and every larger target exponent, _rescale returns the coefficient the mode prescribes (roundSpec: truncate / away from zero / toward ±inf / nearest with ties up, down, even / 05up), except for the int-limit ValueError, which needs a coefficient of more than 4300 digits; to a smaller or equal exponent it pads with zeros, and a zero coefficient just takes the new exponent."
+    statement := "For all 8 rounding modes, every finite non-zero value and every larger target exponent, _rescale returns the coefficient the mode prescribes (roundSpec: truncate / away from zero / toward ±inf / nearest with ties up, down, even / 05up), and raises the int-limit ValueError exactly when that coefficient is the truncated prefix plus one and has more than 4300 digits (a 5000-digit coefficient that is only truncated rounds without error); to a smaller or equal exponent it pads with zeros, and a zero coefficient just takes the new exponent."
     source := "decimal docs, 'Rounding modes'; General Decimal Arithmetic, 'Rounding'"
     status := .proven, prop := ``RoundingModesCorrect, thm := some ``roundingModesCorrect_proven
     notes := "Covers the digits-below-zero substitution (_pydecimal.py:2700-2702). The ValueError branch is decimal-pydecimal-int-max-str-digits." },
   { id := "decimal-to-integral-value-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.to_integral_value", "Decimal._rescale"]
-    statement := "For every context, rounding argument and value, to_integral_value returns a finite value unchanged if its exponent is >= 0, and otherwise the correctly rounded integer at exponent 0 without setting any flag (a zero gives the signed zero), except for the int-limit ValueError on a coefficient of more than 4300 digits; an infinity is returned unchanged, a quiet NaN quieted, and a signaling NaN signals InvalidOperation."
+    statement := "For every context, rounding argument and value, to_integral_value returns a finite value unchanged if its exponent is >= 0, and otherwise the correctly rounded integer at exponent 0 without setting any flag (a zero gives the signed zero); it raises the int-limit ValueError exactly when that integer is the truncated one plus one with more than 4300 digits; an infinity is returned unchanged, a quiet NaN quieted, and a signaling NaN signals InvalidOperation."
     source := "to_integral_value docstring ('without raising inexact, rounded'), decimal docs"
     status := .proven, prop := ``ToIntegralValueCorrect, thm := some ``toIntegralValueCorrect_proven },
   { id := "decimal-quantize-correct", pyFile := "Lib/_pydecimal.py"
@@ -380,7 +380,7 @@ def entries : List Entry := [
     status := .proven, prop := ``IntConversionsC, thm := some ``intConversionsC_proven },
   { id := "decimal-int-conversions-py-or-limit", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__floor__", "Decimal.__ceil__", "Decimal.__round__", "Decimal.__int__", "Decimal._rescale"]
-    statement := "For every finite decimal and rounding mode, _pydecimal's integer conversion returns the same int as _decimal's, except for the int-limit ValueError, which needs the coefficient or the result to have more than 4300 digits."
+    statement := "For every finite decimal and rounding mode, _pydecimal's int(), math.floor, math.ceil and round() return the same int as _decimal's when that int has at most 4300 digits, and raise the int-limit ValueError exactly when it has more (math.floor(Decimal((0, (1,)*5000, -4999))) is 1); a NaN raises ValueError('cannot round a NaN') and an infinity OverflowError('cannot round an infinity'); round(d, n) with a non-int n raises TypeError, and with an int n is quantize(Decimal((0, (1,), -n)))."
     source := "twin agreement (narrowed version of decimal-int-conversions-py)"
     status := .proven, prop := ``IntConversionsPyOrLimit, thm := some ``intConversionsPyOrLimit_proven },
   { id := "decimal-hash-consistent-c", pyFile := "Modules/_decimal/_decimal.c"
@@ -439,7 +439,7 @@ def entries : List Entry := [
     status := .proven, prop := ``MinMaxExact, thm := some ``minMaxExact_proven },
   { id := "decimal-compare-total-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.compare_total", "Decimal.compare_total_mag"]
-    statement := "compare_total is antisymmetric and 0 only for identical representations; for numbers of different value it is the numeric order; equal values put the negative sign first, and then the lower exponent first when positive and last when negative; a positive NaN is above every number and a negative one below, sNaN below qNaN for positive NaNs and above for negative, NaNs of one kind by payload. compare_total_mag is that order of the magnitudes, NaNs above every number."
+    statement := "compare_total is antisymmetric and 0 only for identical representations; for numbers of different value it is the numeric order; equal values put the negative sign first, and then the lower exponent first when positive and last when negative; a positive NaN is above every number and a negative one below, sNaN below qNaN for positive NaNs and above for negative, NaNs of one kind by payload; operands of opposite signs (NaNs included) put the negative one first. compare_total_mag is that order of the magnitudes: different magnitudes by value, equal magnitudes by exponent (Decimal('1.0').compare_total_mag(Decimal('-1')) is -1, 1 against -1 is 0), every NaN above every number, sNaN below qNaN and NaNs of one kind by payload whatever their signs."
     source := "Doc/library/decimal.rst:518-545 (Decimal('12.0').compare_total(Decimal('12')) == Decimal('-1')); General Decimal Arithmetic, 'compare-total'"
     status := .proven, prop := ``CompareTotalExact, thm := some ``compareTotalExact_proven },
   { id := "decimal-classification-exact", pyFile := "Lib/_pydecimal.py"
