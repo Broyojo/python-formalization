@@ -4,7 +4,7 @@ priority: P4
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["_check_time_fields", "time.__new__", "datetime.__new__", "date.fromordinal", "_ord2ymd"]
+functions: ["_check_time_fields", "time.__new__", "datetime.__new__", "date.fromordinal", "_ord2ymd", "IsoCalendarDate.__new__"]
 summary: |
   `_check_date_fields` and `_check_time_fields` pass every field through `operator.index`
   (as C's `PyLong_AsInt` does), but two integer arguments are used without it:
@@ -19,6 +19,11 @@ summary: |
     `__index__` raises `TypeError: unsupported operand type(s) for -=` in Python, while C
     converts it and returns the date (`date.fromordinal(obj)` with `obj.__index__()` returning
     5 is `date(1, 1, 5)`).
+  - `IsoCalendarDate.__new__(cls, year, week, weekday)` (Lib/_pydatetime.py:1381-1382) stores
+    the three objects as they are, while C's `iso_calendar_date_new_impl` takes clinic `int`
+    arguments (Modules/_datetimemodule.c:3843-3870): `type(d.isocalendar())('a', 2, 3)` is
+    `IsoCalendarDate(year=a, week=2, weekday=3)` in Python and `TypeError` in C (and 2**40 is an
+    OverflowError in C). The class is not public; `date.isocalendar()` always passes ints.
 likelihood: |
   Low. A float fold can come from arithmetic or from a JSON round trip; there it silently
   works on PyPy and _pydatetime and fails on CPython, and the stored fold keeps the float type.
@@ -41,12 +46,14 @@ reproducer: |
   r = {name: (run(lambda: f(datetime)), run(lambda: f(_pydatetime))) for name, f in [
       ('time(fold=1.0).fold', lambda m: m.time(fold=1.0).fold),
       ('time(fold=Idx(1)).fold', lambda m: m.time(fold=Idx(1)).fold),
-      ('date.fromordinal(Idx(5))', lambda m: m.date.fromordinal(Idx(5)))]}
+      ('date.fromordinal(Idx(5))', lambda m: m.date.fromordinal(Idx(5))),
+      ('IsoCalendarDate("a", 2, 3)', lambda m: tuple(type(m.date(2020, 1, 1).isocalendar())('a', 2, 3)))]}
   for k, (c, p) in r.items():
       print(k, ' C:', c, ' Python:', p)
   if r['time(fold=1.0).fold'] == ('TypeError', '1.0') and \
      r['time(fold=Idx(1)).fold'] == ('1', 'ValueError') and \
-     r['date.fromordinal(Idx(5))'] == ('datetime.date(1, 1, 5)', 'TypeError'):
+     r['date.fromordinal(Idx(5))'] == ('datetime.date(1, 1, 5)', 'TypeError') and \
+     r['IsoCalendarDate("a", 2, 3)'] == ('TypeError', "('a', 2, 3)"):
       print('REPRODUCED datetime-pydatetime-fold-ordinal-no-index')
 expected: |
   The same outcome in both implementations, as in C: fold and the ordinal converted with
@@ -79,3 +86,4 @@ lean:
   also:
     - {property: PyLean.Datetime.DatetimeFoldTwins, theorem: PyLean.Datetime.datetimeFoldTwins_refuted}
     - {property: PyLean.Datetime.FromordinalIndexTwins, theorem: PyLean.Datetime.fromordinalIndexTwins_refuted}
+    - {property: PyLean.Datetime.IsoCalendarDateNewTwins, theorem: PyLean.Datetime.isoCalendarDateNewTwins_refuted}

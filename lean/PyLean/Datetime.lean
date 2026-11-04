@@ -37,6 +37,7 @@ import PyLean.Datetime.ArgCheckProps
 import PyLean.Datetime.PickleProps
 import PyLean.Datetime.CmpProps2
 import PyLean.Datetime.ReprProps
+import PyLean.Datetime.Misc2Props
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -1301,7 +1302,29 @@ def entries : List Entry := [
     source := "C/Python twins", status := .refuted
     prop := ``DatetimeReprFoldTzTwins, thm := some ``datetimeReprFoldTzTwins_refuted
     bug := some "datetime-repr-fold-tzinfo-order"
-    notes := "C appends fold before tzinfo, Python after." }
+    notes := "C appends fold before tzinfo, Python after." },
+  { id := "datetime-tzinfo-base-dispatch", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["tzinfo.tzname", "tzinfo.utcoffset", "tzinfo.dst", "C tzinfo_nogo", "C tzinfo_tzname", "C tzinfo_utcoffset", "C tzinfo_dst"]
+    statement := "For a tzinfo subclass that does not override utcoffset, dst or tzname, datetime.utcoffset()/dst()/tzname() and time.utcoffset()/dst()/tzname() run the base method and raise NotImplementedError in both twins, with each twin's message."
+    source := "tzinfo docs (subclasses must override); C/Python twins", status := .proven
+    prop := ``TzinfoBaseDispatch, thm := some ``tzinfoBaseDispatch_proven },
+  { id := "datetime-isocalendardate-new", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["IsoCalendarDate.__new__"]
+    statement := "IsoCalendarDate(year, week, weekday) with ints within C int holds the same three items in both twins, unchecked; Python stores any three objects as they are."
+    source := "IsoCalendarDate (date.isocalendar docs); C/Python twins", status := .proven
+    prop := ``IsoCalendarDateNew, thm := some ``isoCalendarDateNew_proven },
+  { id := "datetime-isocalendardate-new-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["IsoCalendarDate.__new__"]
+    statement := "IsoCalendarDate(year, week, weekday) agrees between the twins for every argument."
+    source := "C/Python twins", status := .refuted
+    prop := ``IsoCalendarDateNewTwins, thm := some ``isoCalendarDateNewTwins_refuted
+    bug := some "datetime-pydatetime-fold-ordinal-no-index"
+    notes := "IsoCalendarDate('a', 2, 3): Python stores the str, C's int converter raises TypeError." },
+  { id := "datetime-strptime-time-datetime", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.strptime", "datetime.strptime", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
+    statement := "time.strptime and datetime.strptime for every parse: a _strptime exception propagates; without an offset they are the naive time/datetime of the parsed fields through the constructor; with one they attach _parse_tz's timezone; and '%H:%M' on 12:30 is time(12, 30), '%Y %m %d %H %M' on 2024 1 2 12 30 is datetime(2024, 1, 2, 12, 30)."
+    source := "time.strptime/datetime.strptime docs", status := .proven
+    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven }
 ]
 
 end PyLean.Datetime
