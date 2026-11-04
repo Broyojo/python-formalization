@@ -28,6 +28,7 @@ import PyLean.PyGrammar.Peg.Rules.Targets
 import PyLean.PyGrammar.Peg.Rules.Targets2
 import PyLean.PyGrammar.Peg.Rules.Imports
 import PyLean.PyGrammar.Peg.Rules.Patterns
+import PyLean.PyGrammar.Peg.Rules.InvalidTargets
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -1046,6 +1047,44 @@ def ruleEntries : List Entry := [
     prop := ``SubjectExpr
     thm := some ``subjectExpr_proven
     notes := scheme },
+  { id := "pygrammar-rule-invalid-del-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_del_stmt
+    statement := "invalid_del_stmt: other tokens than 'del' give NULL and no error; 'del' " ++
+      "star_expressions with no node _PyPegen_get_invalid_target(DEL_TARGETS) rejects gives NULL " ++
+      "and no error, and with one, t, raises \"cannot delete <name of t>\" over t; no " ++
+      "star_expressions gives NULL with the mark back."
+    source := "Grammar/python.gram:1326-1328"
+    status := .proven
+    prop := ``InvalidDelStmt
+    thm := some ``invalidDelStmt_proven
+    notes := scheme ++ " exprName t = some nm excludes only get_expr_name's default branch " ++
+      "(Slice), which get_invalid_target never returns from a star_expressions result." },
+  { id := "pygrammar-rule-invalid-ann-assign-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_ann_assign_target
+    statement := "invalid_ann_assign_target: list, else tuple, else '(' invalid_ann_assign_target " ++
+      "')' (the inner target), each from the start mark; NULL otherwise."
+    source := "Grammar/python.gram:1317-1320"
+    status := .proven
+    prop := ``InvalidAnnAssignTarget
+    thm := some ``invalidAnnAssignTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-invalid-assignment"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_assignment
+    statement := "invalid_assignment: a list/tuple target before ':' annotation raises \"only " ++
+      "single target (not <name>) can be annotated\"; a star_named_expression ',' ... ':' raises " ++
+      "the tuple message at the first element; an expression ':' annotation raises \"illegal " ++
+      "target for annotation\"; and after the annotation and '=' alternatives fail, " ++
+      "star_expressions augassign annotated_rhs raises \"'<name>' is an illegal expression for " ++
+      "augmented assignment\"; each raise over that expression, NULL with error_indicator set."
+    source := "Grammar/python.gram:1297-1316"
+    status := .proven
+    prop := ``InvalidAssignment
+    thm := some ``invalidAssignment_proven
+    notes := scheme ++ " The two '=' alternatives (INVALID_TARGET, yield) are stated only as " ++
+      "failing on the way to augassign." },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed
