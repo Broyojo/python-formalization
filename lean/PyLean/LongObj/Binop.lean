@@ -41,8 +41,20 @@ def requireInt {α β : Type} (f : Long → Py β) : Obj α → Py β
   | .int v => f v
   | .other _ => .error (.typeError "an integer is required")
 
-/-- `+ - * // % divmod >> << & | ^` at the slot: the exact result for two ints, and
-`NotImplemented` for any other operand. Hypotheses: room in `long_alloc`. -/
+/-- A non-int operand on either side gives `NotImplemented`, before any digit is read. -/
+theorem checkBinop_other {α β : Type} (f : Long → Long → Py β) (o : α) (x : Obj α) :
+    checkBinop f (.other o) x = .ok none ∧ checkBinop f x (.other o) = .ok none := by
+  cases x <;> exact ⟨rfl, rfl⟩
+
+/-- A slot wrapper returns `NotImplemented` whenever either operand is not an int. -/
+def NotImplementedOn {α β : Type} (m : Obj α → Obj α → Py (Option β)) : Prop :=
+  ∀ (o : α) (x : Obj α), m (.other o) x = .ok none ∧ m x (.other o) = .ok none
+
+/-- `+ - * // % divmod >> << & | ^` at the slot: the exact result for two ints, the
+documented errors (ZeroDivisionError for `//`, `%` and `divmod` by zero, ValueError for a
+negative shift, OverflowError when `<<` cannot allocate its result), and `NotImplemented`
+from `CHECK_BINOP` (longobject.c:1843-1847) for any other operand on either side.
+Hypotheses: room in `long_alloc` for the operands and for the arithmetic results. -/
 def BinaryMethodsExact : Prop :=
   ∀ (α : Type) (a b : Int), Sized a → Sized b →
     digitCount a.natAbs + digitCount b.natAbs + 2 ≤ maxLongDigits → DivSized a b →
@@ -55,14 +67,29 @@ def BinaryMethodsExact : Prop :=
       (∃ q r, checkBinop longDivmod A B = .ok (some (.ofInt q, .ofInt r)) ∧ IsFloorDivmod a b q r) ∧
       (∃ q r, checkBinop longDiv A B = .ok (some (.ofInt q)) ∧ IsFloorDivmod a b q r) ∧
       (∃ q r, checkBinop longMod A B = .ok (some (.ofInt r)) ∧ IsFloorDivmod a b q r)) ∧
-    (b = 0 → checkBinop longMod A B = .error (.zeroDivisionError "division by zero")) ∧
+    (b = 0 → checkBinop longMod A B = .error (.zeroDivisionError "division by zero") ∧
+      checkBinop longDiv A B = .error (.zeroDivisionError "division by zero") ∧
+      checkBinop longDivmod A B = .error (.zeroDivisionError "division by zero")) ∧
     (b < 0 → checkBinop longRshift A B = .error (.valueError "negative shift count")) ∧
     (0 ≤ b → checkBinop longRshift A B = .ok (some (.ofInt (a / 2 ^ b.toNat)))) ∧
     (b < 0 → checkBinop longLshift A B = .error (.valueError "negative shift count")) ∧
-    (0 ≤ b → b < 2 ^ 63 → digitCount a.natAbs + b.toNat / 30 + 1 ≤ maxLongDigits →
-      checkBinop longLshift A B = .ok (some (.ofInt (a * 2 ^ b.toNat)))) ∧
+    (0 ≤ b → b < 2 ^ 63 → checkBinop longLshift A B =
+      if a = 0 then .ok (some (.ofInt 0))
+      else if lshiftNeed a b.toNat ≤ maxLongDigits then .ok (some (.ofInt (a * 2 ^ b.toNat)))
+      else .error (.overflowError "too many digits in integer")) ∧
+    (a ≠ 0 → 2 ^ 63 ≤ b →
+      checkBinop longLshift A B = .error (.overflowError "too many digits in integer")) ∧
     (∀ op : BitOp, ∃ r, checkBinop (longBit op) A B = .ok (some (.ofInt r)) ∧
-      ∀ i, bitZ r i = op.bool (bitZ a i) (bitZ b i))
+      ∀ i, bitZ r i = op.bool (bitZ a i) (bitZ b i)) ∧
+    NotImplementedOn (checkBinop longAdd : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop longSub : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop (longMul false) : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop longDiv : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop longMod : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop longDivmod : Obj α → Obj α → Py (Option (Long × Long))) ∧
+    NotImplementedOn (checkBinop longRshift : Obj α → Obj α → Py (Option Long)) ∧
+    NotImplementedOn (checkBinop longLshift : Obj α → Obj α → Py (Option Long)) ∧
+    (∀ op : BitOp, NotImplementedOn (checkBinop (longBit op) : Obj α → Obj α → Py (Option Long)))
 
 theorem binaryMethodsExact_proven : BinaryMethodsExact := by
   intro α a b h1 h2 h3 h4
@@ -70,7 +97,10 @@ theorem binaryMethodsExact_proven : BinaryMethodsExact := by
     simp only [Sized] at h1; omega
   have hs : digitCount a.natAbs ≤ maxLongDigits := by
     simp only [Sized] at h1; omega
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  have ni : ∀ {β : Type} (f : Long → Long → Py β), NotImplementedOn (checkBinop f : Obj α → Obj α → Py (Option β)) :=
+    fun f o x => checkBinop_other f o x
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ni _, ni _, ni _, ni _, ni _, ni _, ni _, ni _,
+    fun op => ni _⟩
   · simp only [checkBinop, longAdd_spec a b h1 h2]
   · simp only [checkBinop, longSub_spec a b h1 h2]
   · simp only [checkBinop, longMul_spec false a b (by simp) h3]
@@ -95,25 +125,44 @@ theorem binaryMethodsExact_proven : BinaryMethodsExact := by
         .error (.zeroDivisionError "division by zero") := by
       unfold longMod lMod
       rw [if_neg hne, e1]
-    simp only [checkBinop, e2]
+    have e3 : lDivmod (Long.ofInt a) (Long.ofInt 0) =
+        .error (.zeroDivisionError "division by zero") := by
+      have hd : longDivrem (Long.ofInt a) (Long.ofInt 0) =
+          .error (.zeroDivisionError "division by zero") := by
+        unfold longDivrem
+        rw [if_pos hz]
+      unfold lDivmod
+      rw [if_neg hne, if_neg (by rw [hz]; omega), hd]
+    have e4 : longDiv (Long.ofInt a) (Long.ofInt 0) =
+        .error (.zeroDivisionError "division by zero") := by
+      unfold longDiv
+      rw [if_neg hne, e3]
+    refine ⟨?_, ?_, ?_⟩
+    · simp only [checkBinop, e2]
+    · simp only [checkBinop, e4]
+    · simp only [checkBinop, longDivmod, e3]
   · intro h0
     simp only [checkBinop, longRshift_spec a b hs, if_pos h0]
   · intro h0
     simp only [checkBinop, longRshift_spec a b hs, if_neg (show ¬ b < 0 by omega)]
   · intro h0
     simp only [checkBinop, (longLshift_spec a b).1 h0]
-  · intro h0 h5 h6
-    simp only [checkBinop, (longLshift_spec a b).2.2.2 h0 h5 h6]
+  · intro h0 h5
+    simp only [checkBinop]
+    rw [longLshift_int64 a b h0 h5, longLshiftInt64_spec]
+    by_cases ha : a = 0
+    · rw [if_pos ha, if_pos ha]
+    · rw [if_neg ha, if_neg ha]
+      by_cases hs : lshiftNeed a b.toNat ≤ maxLongDigits
+      · rw [if_pos hs, if_pos hs]
+      · rw [if_neg hs, if_neg hs]
+  · intro ha hb2
+    simp only [checkBinop, (longLshift_spec a b).2.2.1 ha hb2]
   · intro op
     have ha : digitCount a.natAbs + 1 ≤ maxLongDigits := by simpa only [Sized] using h1
     have hb' : digitCount b.natAbs + 1 ≤ maxLongDigits := by simpa only [Sized] using h2
     obtain ⟨r, e, f⟩ := longBit_spec op a b ha hb'
     exact ⟨r, by simp only [checkBinop, e], f⟩
-
-/-- A non-int operand on either side gives `NotImplemented`, before any digit is read. -/
-theorem checkBinop_other {α β : Type} (f : Long → Long → Py β) (o : α) (x : Obj α) :
-    checkBinop f (.other o) x = .ok none ∧ checkBinop f x (.other o) = .ok none := by
-  cases x <;> exact ⟨rfl, rfl⟩
 
 /-- The conversions that accept `__index__`: an int converts exactly; another object takes
 the value `__index__` returns, and `__index__`'s exception passes through. -/
@@ -221,14 +270,65 @@ theorem requireIntExact_proven : RequireIntExact := by
   · exact (asUnsignedLongLong_spec a).1
   · exact (asUnsignedLongLong_spec a).2
 
+/-- `pylong_int_divmod` (longobject.c:4422-4457) passes an import failure and an
+exception from `_pylong.int_divmod` through, rejects anything but a 2-tuple with
+"tuple of length 2 is required from int_divmod()" and a 2-tuple with a non-int item with
+"tuple of int is required from int_divmod()", and otherwise returns the two items. For an
+arbitrary (replaced) `_pylong`. With the real `_pylong.int_divmod` it gives the floor
+quotient and remainder, the `l_divmod` contract. -/
+def PylongDivmodPaths : Prop :=
+  ∀ (imp : Py Unit) (call : Long → Long → Py PylongDivmodRes) (v w : Long),
+    (∀ e, imp = .error e → pylongIntDivmodC imp call v w = .error e) ∧
+    (imp = .ok () → ∀ e, call v w = .error e → pylongIntDivmodC imp call v w = .error e) ∧
+    (imp = .ok () → call v w = .ok .other → pylongIntDivmodC imp call v w =
+      .error (.valueError "tuple of length 2 is required from int_divmod()")) ∧
+    (imp = .ok () → ∀ items, call v w = .ok (.tuple items) → items.length ≠ 2 →
+      pylongIntDivmodC imp call v w =
+        .error (.valueError "tuple of length 2 is required from int_divmod()")) ∧
+    (imp = .ok () → ∀ x y, call v w = .ok (.tuple [x, y]) → (x = none ∨ y = none) →
+      pylongIntDivmodC imp call v w =
+        .error (.valueError "tuple of int is required from int_divmod()")) ∧
+    (imp = .ok () → ∀ q r, call v w = .ok (.tuple [some q, some r]) →
+      pylongIntDivmodC imp call v w = .ok (q, r)) ∧
+    (∀ a b : Int, b ≠ 0 →
+      pylongIntDivmodC (.ok ()) pylongCallDivmod (.ofInt a) (.ofInt b) =
+        .ok (.ofInt (pylongIntDivmod a b).1, .ofInt (pylongIntDivmod a b).2) ∧
+      IsFloorDivmod a b (pylongIntDivmod a b).1 (pylongIntDivmod a b).2)
+
+theorem pylongDivmodPaths_proven : PylongDivmodPaths := by
+  intro imp call v w
+  refine ⟨fun e h => by subst h; rfl, fun h e hc => ?_, fun h hc => ?_, fun h items hc hl => ?_,
+    fun h x y hc hn => ?_, fun h q r hc => ?_, fun a b hb => ?_⟩
+  · subst h; unfold pylongIntDivmodC; rw [hc]; rfl
+  · subst h; unfold pylongIntDivmodC; rw [hc]; rfl
+  · subst h; unfold pylongIntDivmodC; rw [hc]
+    match items, hl with
+    | [], _ => rfl
+    | [a], _ => cases a <;> rfl
+    | [_, _], hl => exact absurd rfl hl
+    | a :: b :: _ :: _, _ => cases a <;> cases b <;> rfl
+  · subst h; unfold pylongIntDivmodC; rw [hc]
+    rcases hn with hn | hn <;> subst hn
+    · rfl
+    · cases x <;> rfl
+  · subst h; unfold pylongIntDivmodC; rw [hc]; rfl
+  · refine ⟨?_, pylongIntDivmod_floor a b hb⟩
+    rw [pylongIntDivmodC_real, toInt_ofInt_eq, toInt_ofInt_eq]
+
 def entriesBinop : List Entry := [
   { id := "longobj-binary-methods", pyFile := "Objects/longobject.c"
     pyFns := ["long_add_method", "long_sub_method", "long_mul_method", "long_div", "long_mod", "long_divmod",
-      "long_rshift", "long_lshift_method", "long_and", "long_or", "long_xor"]
-    statement := "At the number slots, two ints give the exact result and the documented errors, for all operands with room in long_alloc."
-    source := "stdtypes: numeric types", status := .proven
+      "long_rshift", "long_lshift_method", "long_and", "long_or", "long_xor", "l_mod"]
+    statement := "At the number slots, two ints give the exact result and the documented errors (ZeroDivisionError for //, % and divmod by zero, ValueError for a negative shift, OverflowError when << cannot allocate), and any non-int operand on either side gives NotImplemented."
+    source := "stdtypes: numeric types; CHECK_BINOP at longobject.c:1843-1847", status := .proven
     prop := ``BinaryMethodsExact, thm := some ``binaryMethodsExact_proven
-    notes := "`checkBinop_other` gives NotImplemented for any non-int operand. MemoryError is not modelled." },
+    notes := "Smoke-tested on 3.15.2: int.__add__ ... int.__xor__ with a float or str operand return NotImplemented; 1 // 0, 1 % 0, divmod(1, 0) raise 'division by zero'. MemoryError is not modelled." },
+  { id := "longobj-pylong-divmod-paths", pyFile := "Objects/longobject.c"
+    pyFns := ["pylong_int_divmod"]
+    statement := "pylong_int_divmod passes an import failure and an exception from _pylong.int_divmod through, raises ValueError for a result that is not a 2-tuple or has a non-int item, and otherwise returns the two items; with the real _pylong it gives the floor quotient and remainder."
+    source := "longobject.c:4426-4448; divmod() docs", status := .proven
+    prop := ``PylongDivmodPaths, thm := some ``pylongDivmodPaths_proven
+    notes := "Smoke-tested on 3.15.2 by replacing _pylong.int_divmod (returning (1, 2.0), ('a', 2), (1, 2, 3), [1, 2], 5, raising KeyError) and by sys.modules['_pylong'] = None, on operands of more than 300 and 450 digits." },
   { id := "longobj-index-conversions", pyFile := "Objects/longobject.c"
     pyFns := ["PyLong_AsLongAndOverflow", "PyLong_AsLong", "PyLong_AsInt",
       "PyLong_AsUnsignedLongMask", "PyLong_AsUnsignedLongLongMask", "PyLong_AsLongLong", "unroll_digits_ulong"]
