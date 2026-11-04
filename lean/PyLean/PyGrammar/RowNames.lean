@@ -199,6 +199,15 @@ def rule_augassign : List String := [
 def rule_await_primary : List String := [
   "rule:await_primary"]
 
+def rule_bitwise_and : List String := [
+  "rule:bitwise_and"]
+
+def rule_bitwise_or : List String := [
+  "rule:bitwise_or"]
+
+def rule_bitwise_xor : List String := [
+  "rule:bitwise_xor"]
+
 def rule_block : List String := [
   "rule:block"]
 
@@ -327,6 +336,9 @@ def rule_star_expressions : List String := [
 
 def rule_statement : List String := [
   "rule:statement"]
+
+def rule_sum : List String := [
+  "rule:sum"]
 
 def rule_try_stmt : List String := [
   "rule:try_stmt"]

@@ -95,6 +95,10 @@ CREDIT = {
     "pygrammar-rule-function-def": {GRAM: ["rule:function_def"]},
     "pygrammar-rule-class-def-raw": {GRAM: ["rule:class_def_raw"]},
     "pygrammar-rule-function-def-raw": {GRAM: ["rule:function_def_raw"]},
+    "pygrammar-rule-sum": {GRAM: ["rule:sum"]},
+    "pygrammar-rule-bitwise-or": {GRAM: ["rule:bitwise_or"]},
+    "pygrammar-rule-bitwise-xor": {GRAM: ["rule:bitwise_xor"]},
+    "pygrammar-rule-bitwise-and": {GRAM: ["rule:bitwise_and"]},
     "pygrammar-rule-annotation-default": {GRAM: ["rule:annotation", "rule:star_annotation",
                                                  "rule:default"]},
     "pygrammar-lex-nextc-in-buffer": {

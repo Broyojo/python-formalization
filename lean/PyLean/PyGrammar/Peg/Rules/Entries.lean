@@ -16,6 +16,7 @@ import PyLean.PyGrammar.Peg.Rules.Except
 import PyLean.PyGrammar.Peg.Rules.With
 import PyLean.PyGrammar.Peg.Rules.Defs
 import PyLean.PyGrammar.Peg.Rules.AsyncWith
+import PyLean.PyGrammar.Peg.Rules.LeftRec
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -30,6 +31,9 @@ private def scheme : String :=
   "mark within the tokens, token under the mark read), for every result of the sub-rule calls " ++
   "and token reads, given as equations. Written from the rule text, not the data, so another " ++
   "order of alternatives, a dropped lookahead or another action fails it."
+
+private def LR : String :=
+  "Left-recursive leader: GrowSeedChain is the seed loop of the generated leader (_PyPegen_update_memo, then the _raw function, then the growth test), proven by induction on the rounds; the round theorem unfolds the _raw function on this rule's data from any state whose memo holds the seed, the recursive call returning the seed through _PyPegen_is_memoized. Hypotheses: the token at the start mark is read, the seed ends within the tokens read, below MAXSTACK; and for the whole rule, no memo entry yet at the start."
 
 def ruleEntries : List Entry := [
   { id := "pygrammar-rule-keyword-stmts"
@@ -655,6 +659,45 @@ def ruleEntries : List Entry := [
     prop := ``AnnotationDefault
     thm := some ``annotationDefault_proven
     notes := scheme },
+  { id := "pygrammar-rule-sum"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sum
+    statement := "sum: the seed loop returns the last seed that grew; each round with seed v gives " ++
+      "BinOp(v, Add, term) after '+', BinOp(v, Sub, term) after '-' (after the '+' alternative fails " ++
+      "and the seed is found again), and term from the start mark otherwise; the first round, with " ++
+      "no seed, is term. So a - b - c is BinOp(BinOp(a, Sub, b), Sub, c)."
+    source := "Grammar/python.gram:842-845"
+    status := .proven
+    prop := ``SumRule
+    thm := some ``sumRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-or"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_or
+    statement := "bitwise_or: as sum with the one operator '|' (BitOr) over bitwise_xor."
+    source := "Grammar/python.gram:821-823"
+    status := .proven
+    prop := ``BitwiseOrRule
+    thm := some ``bitwiseOrRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-xor"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_xor
+    statement := "bitwise_xor: as sum with the one operator '^' (BitXor) over bitwise_and."
+    source := "Grammar/python.gram:825-827"
+    status := .proven
+    prop := ``BitwiseXorRule
+    thm := some ``bitwiseXorRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-and"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_and
+    statement := "bitwise_and: as sum with the one operator '&' (BitAnd) over shift_expr."
+    source := "Grammar/python.gram:829-831"
+    status := .proven
+    prop := ``BitwiseAndRule
+    thm := some ``bitwiseAndRule_proven
+    notes := LR },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed
