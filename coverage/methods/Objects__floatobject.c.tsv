@@ -3,8 +3,8 @@ Objects/floatobject.c	33	36	PyFloat_GetMax	PyFloat_GetMax(void)	modelled	float-i
 Objects/floatobject.c	39	42	PyFloat_GetMin	PyFloat_GetMin(void)	modelled	float-info	
 Objects/floatobject.c	83	122	PyFloat_GetInfo	PyFloat_GetInfo(void)	modelled	float-info	
 Objects/floatobject.c	125	137	PyFloat_FromDouble	PyFloat_FromDouble(double fval)	excluded		no-behaviour: boxes a C double in a new object; the value passes through unchanged and every model carries the F64 directly
-Objects/floatobject.c	140	177	float_from_string_inner	float_from_string_inner(const char *s, Py_ssize_t len, void *obj)	modelled	float-from-string-infnan,float-blank-string	
-Objects/floatobject.c	180	227	PyFloat_FromString	PyFloat_FromString(PyObject *v)	modelled	float-from-string-infnan,float-from-string-dispatch,float-blank-string	
+Objects/floatobject.c	140	177	float_from_string_inner	float_from_string_inner(const char *s, Py_ssize_t len, void *obj)	todo		review: FromStringInfNan and FloatBlankRaises pin only blank input and [spaces][sign](inf|infinity|nan)[spaces] with the end != last error after such a word, so an inner that raises ValueError (or returns 0.0) for every real numeral passes; the finite-decimal branch through PyOS_string_to_double/_Py_dg_strtod (:164, pystrtod.c:92-113) is never stated (strtod-correctly-rounded is open).
+Objects/floatobject.c	180	227	PyFloat_FromString	PyFloat_FromString(PyObject *v)	todo		review: FromStringDispatch now pins the str/bytes/bytearray/buffer dispatch and the TypeError (:188-221), but the value comes only from FromStringInfNan and FloatBlankRaises, so float('1.5'), float(b'1e5') and the underscore handling of _Py_string_to_number_with_underscores (pystrtod.c:344-402) are unconstrained and a version raising ValueError for every numeral passes.
 Objects/floatobject.c	230	234	_PyFloat_ExactDealloc	_PyFloat_ExactDealloc(PyObject *obj)	excluded		no-behaviour: returns the object to the freelist
 Objects/floatobject.c	237	244	float_dealloc	float_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Objects/floatobject.c	247	303	PyFloat_AsDouble	PyFloat_AsDouble(PyObject *op)	modelled	float-as-double	
@@ -12,8 +12,8 @@ Objects/floatobject.c	320	336	_Py_convert_int_to_double	_Py_convert_int_to_doubl
 Objects/floatobject.c	339	354	float_repr	float_repr(PyObject *op)	todo		review: ReprSpecial pins only NaNs, infinities and zeros, so a repr returning '0.0' for every other finite float passes; the round-trip entry float-repr-roundtrip that would pin finite values is open.
 Objects/floatobject.c	372	532	float_richcompare	float_richcompare(PyObject *v, PyObject *w, int op)	modelled	float-compare-floats,float-int-compare-exact	
 Objects/floatobject.c	535	539	float_hash	float_hash(PyObject *op)	todo		review: FloatHashBasics pins infinities, NaN-by-identity, never -1 and hash(0.0) == hash(-0.0), so a version hashing every finite float to 0 passes; the exact modular rule (float-hash-numeric-tower) is open.
-Objects/floatobject.c	542	549	float_add	float_add(PyObject *v, PyObject *w)	modelled	float-add-correct	
-Objects/floatobject.c	552	559	float_sub	float_sub(PyObject *v, PyObject *w)	modelled	float-sub-correct	
+Objects/floatobject.c	542	549	float_add	float_add(PyObject *v, PyObject *w)	todo		review: BinDispatch and the NaN/infinity clauses are now pinned, but for two finite operands AddIEEE only asks IsRounding (x + y) z plus a sign for an exact zero sum, and IsRounding does not fix the sign of an infinite result, so a float_add returning +inf for -1e308 + -1e308 passes.
+Objects/floatobject.c	552	559	float_sub	float_sub(PyObject *v, PyObject *w)	todo		review: As for float_add: SubIEEE's finite clause is IsRounding (x - y) z plus the sign of an exact zero, and IsRounding leaves the sign of an overflowed result free, so a float_sub returning +inf for -1e308 - 1e308 passes.
 Objects/floatobject.c	562	569	float_mul	float_mul(PyObject *v, PyObject *w)	modelled	float-mul-correct	
 Objects/floatobject.c	572	584	float_div	float_div(PyObject *v, PyObject *w)	modelled	float-div-correct	
 Objects/floatobject.c	587	612	float_rem	float_rem(PyObject *v, PyObject *w)	modelled	float-rem-correct,float-divmod-twins,float-divmod-zero	
@@ -42,7 +42,7 @@ Objects/floatobject.c	1567	1585	float_new_impl	float_new_impl(PyTypeObject *type
 Objects/floatobject.c	1593	1610	float_subtype_new	float_subtype_new(PyTypeObject *type, PyObject *x)	modelled	float-subtype-new	
 Objects/floatobject.c	1613	1627	float_vectorcall	float_vectorcall(PyObject *type, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	float-vectorcall	
 Objects/floatobject.c	1641	1657	float_from_number_impl	float_from_number_impl(PyTypeObject *type, PyObject *number) /*[clinic end generated code: output=dda7e4466ab7068d input=1f8424d9bc11866a]*/	modelled	float-from-number	
-Objects/floatobject.c	1665	1669	float___getnewargs___impl	float___getnewargs___impl(PyObject *self) /*[clinic end generated code: output=873258c9d206b088 input=002279d1d77891e6]*/	modelled	float-getnewargs	
+Objects/floatobject.c	1665	1669	float___getnewargs___impl	float___getnewargs___impl(PyObject *self) /*[clinic end generated code: output=873258c9d206b088 input=002279d1d77891e6]*/	todo		review: The body is the single line Py_BuildValue(\"(d)\", ob_fval) and GetnewargsSpec is proven by rfl on the one-line definition [x] (through float() of an exact float), which AGENTS.md says is not coverage; the row is a candidate for a trivial: exclusion (one field, no branch).
 Objects/floatobject.c	1690	1701	float___getformat___impl	float___getformat___impl(PyTypeObject *type, const char *typestr) /*[clinic end generated code: output=2bfb987228cc9628 input=eb1cf45e9bddab72]*/	modelled	float-getformat	
 Objects/floatobject.c	1704	1707	float_getreal	float_getreal(PyObject *v, void *Py_UNUSED(closure))	modelled	float-float-identity	
 Objects/floatobject.c	1710	1713	float_getimag	float_getimag(PyObject *Py_UNUSED(v), void *Py_UNUSED(closure))	excluded		trivial: the body is return PyFloat_FromDouble(0.0), a constant with no branch that never reads self, so there is nothing to prove
