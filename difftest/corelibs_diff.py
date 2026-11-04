@@ -1170,11 +1170,118 @@ def coll_run_nt(case):
 
 
 coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud, coll_gen_ul, coll_gen_us, coll_gen_nt]
-coll_RUNS = {"coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud,
+from test.support import import_helper as coll_import_helper  # noqa: E402
+coll_pycoll = coll_import_helper.import_fresh_module('collections', blocked=['_collections'])
+coll_POD = coll_pycoll.OrderedDict
+assert hasattr(coll_POD.__setitem__, "__code__") and coll_POD is not coll_collections.OrderedDict
+
+
+def coll_gen_od(rng):
+    keys = coll_KEYS[:4]
+    ops = []
+    for _ in range(rng.randint(0, 9)):
+        op = rng.choice(["set", "set", "set", "del", "pop", "popd", "popitem", "move", "setdefault",
+                         "clear", "update"])
+        k = rng.choice(keys + (["#L"] if rng.random() < 0.05 else []))
+        ops.append([op, k, rng.randint(-3, 3), rng.random() < 0.5])
+    fin = rng.choice(["none", "eq_od", "eq_dict", "repr", "reduce", "copy", "or", "ror", "fromkeys",
+                      "iter_del"])
+    return {"fn": "coll.od", "ops": ops, "fin": fin, "perm": rng.random() < 0.5,
+            "xs": [rng.choice(keys) for _ in range(rng.randint(0, 4))]}
+
+
+def coll_od_items(o):
+    return [[k, dict.__getitem__(o, k)] for k in o]
+
+
+def coll_run_od(case):
+    od = coll_POD()
+    results = []
+    exc = None
+    for op, k, v, flag in case["ops"]:
+        key = coll_el(k)
+        try:
+            if op == "set":
+                od[key] = v
+                r = None
+            elif op == "del":
+                del od[key]
+                r = None
+            elif op == "pop":
+                r = od.pop(key)
+            elif op == "popd":
+                r = od.pop(key, v)
+            elif op == "popitem":
+                r = list(od.popitem(last=flag))
+            elif op == "move":
+                od.move_to_end(key, last=flag)
+                r = None
+            elif op == "setdefault":
+                r = od.setdefault(key, v)
+            elif op == "clear":
+                od.clear()
+                r = None
+            else:
+                od.update([(key, v), ("b", v + 1)])
+                r = None
+            results.append(r)
+        except Exception as e:
+            exc = [type(e).__name__, str(e)]
+            break
+    fin = case["fin"]
+    try:
+        if fin == "eq_od":
+            items = coll_od_items(od)
+            if case["perm"] and len(items) > 1:
+                items = items[1:] + items[:1]
+            out = od == coll_POD(items)
+        elif fin == "eq_dict":
+            items = coll_od_items(od)
+            if case["perm"]:
+                items = items[::-1]
+            out = od == dict(items)
+        elif fin == "repr":
+            out = repr(od)
+        elif fin == "reduce":
+            cls, args, state, lst, it = od.__reduce__()
+            out = [cls.__name__, list(args), state, lst, [list(p) for p in it]]
+        elif fin == "copy":
+            c = od.copy()
+            out = [c is not od, type(c).__name__, coll_od_items(c)]
+        elif fin == "or":
+            out = coll_od_items(od | {"c": 9, "a": 8})
+        elif fin == "ror":
+            out = coll_od_items({"c": 9, "a": 8} | od)
+        elif fin == "fromkeys":
+            out = coll_od_items(coll_POD.fromkeys(case["xs"], 1))
+        elif fin == "iter_del":
+            it = iter(od)
+            got = []
+            try:
+                k = next(it)
+                got.append(k)
+                del od[k]
+                got.extend(it)
+                out = [got, None]
+            except StopIteration:
+                out = [got, None]
+            except Exception as e:
+                out = [got, [type(e).__name__, str(e)]]
+        else:
+            out = None
+        fin_res = {"ok": out}
+    except Exception as e:
+        fin_res = {"exc": type(e).__name__, "msg": str(e)}
+    return {"ok": [list(od), list(reversed(od)), coll_od_items(od), results, exc, fin_res]}
+
+
+coll_RUNS = {"coll.od": coll_run_od, "coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud,
              "coll.ul": coll_run_ul, "coll.us": coll_run_us, "coll.nt": coll_run_nt}
 
 
 def coll_gen(rng):
+    if rng.random() < 1 / 7:
+        return coll_gen_od(rng)
     return rng.choice(coll_GENS)(rng)
 
 
