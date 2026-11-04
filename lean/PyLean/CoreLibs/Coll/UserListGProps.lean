@@ -114,8 +114,9 @@ theorem userListListOperands_proven : UserListListOperands := by
 /-- **Comparisons are `list_richcompare` on `data`, with the elements' own results and the
 operand's reflected method.** For every element type and every pair of element comparisons
 (which may raise or return any object): a `UserList` operand compares by its data, like the
-equal `list`; two lists of different length are unequal without any element comparison; the
-first non-identical pair whose `==` is false decides, `==` giving `False` and the orderings
+equal `list`; two lists of different length are unequal without any element comparison; after a
+prefix of pairs that are identical or whose `==` is true (two distinct `1000.5` floats), the
+first pair whose `==` is false decides, `==` giving `False` and the orderings
 returning whatever that pair's own comparison returns (or raises), whatever the lengths
 (`UserList([1, 5]) < [2]` is `True`); equal lists (identical items, or items whose `==` is true,
 of the same length) are `==`; an element `==` that raises
@@ -131,12 +132,16 @@ def UserListCompareP : Prop :=
     (ty : String) (refl : CmpOp → Option (Py β)),
     ulCmpP E op u (.user l) = ulCmpP E op u (.list l) ∧
     (u.data.length ≠ l.length → ulCmpP E .eq u (.list l) = .ok (.bool false)) ∧
-    (u.data = pre ++ x :: s → l = pre ++ y :: t → x ≠ y → E.eqB x y = .ok false →
+    (∀ P : List (α × α), (∀ p ∈ P, eqId E p.1 p.2 = .ok true) →
+      u.data = P.map (·.1) ++ x :: s → l = P.map (·.2) ++ y :: t → x ≠ y → E.eqB x y = .ok false →
       (op ≠ .eq → ulCmpP E op u (.list l) = CRes.obj <$> E.rich op x y) ∧
       (u.data.length = l.length → ulCmpP E .eq u (.list l) = .ok (.bool false))) ∧
+    (∀ P : List (α × α), (∀ p ∈ P, eqId E p.1 p.2 = .ok true) →
+      u.data = P.map (·.1) → l = P.map (·.2) → ulCmpP E op u (.list l) = .ok (.bool (cmpLen op P.length P.length))) ∧
     (u.data = pre → l = pre → ulCmpP E op u (.list l) = .ok (.bool (cmpLen op pre.length pre.length))) ∧
     ((∀ a b, E.eqB a b = .ok true) → u.data.length = l.length → ulCmpP E .eq u (.list l) = .ok (.bool true)) ∧
-    (∀ ex, u.data = x :: s → l = y :: t → x ≠ y → E.eqB x y = .error ex →
+    (∀ ex (P : List (α × α)), (∀ p ∈ P, eqId E p.1 p.2 = .ok true) →
+      u.data = P.map (·.1) ++ x :: s → l = P.map (·.2) ++ y :: t → x ≠ y → E.eqB x y = .error ex →
       (op ≠ .eq ∨ u.data.length = l.length) → ulCmpP E op u (.list l) = .error ex) ∧
     (u.data = pre → l = pre ++ t → op ≠ .eq → ulCmpP E op u (.list l) = .ok (.bool (cmpLen op pre.length l.length))) ∧
     (∀ r, refl op = some r → ulCmpP E op u (.other ty refl) = CRes.obj <$> r) ∧
@@ -150,6 +155,14 @@ theorem firstDiff_prefix {β : Type} [DecidableEq α] (E : ElemOps α β) :
   | p :: pre, a, b => by
     simp only [List.cons_append, firstDiff, eqId, if_pos rfl, ok_bind, if_true]
     exact firstDiff_prefix E pre a b
+
+theorem firstDiff_eqPrefix {β : Type} [DecidableEq α] (E : ElemOps α β) :
+    ∀ (P : List (α × α)) (a b : List α), (∀ p ∈ P, eqId E p.1 p.2 = .ok true) →
+      firstDiff E (P.map (·.1) ++ a) (P.map (·.2) ++ b) = firstDiff E a b
+  | [], _, _, _ => rfl
+  | p :: P, a, b, h => by
+    simp only [List.map_cons, List.cons_append, firstDiff, h p (by simp), ok_bind, if_true]
+    exact firstDiff_eqPrefix E P a b (fun q hq => h q (by simp [hq]))
 
 theorem firstDiff_self {β : Type} [DecidableEq α] (E : ElemOps α β) :
     ∀ (pre : List α), firstDiff E pre pre = .ok none
@@ -169,11 +182,11 @@ theorem firstDiff_allTrue {β : Type} [DecidableEq α] (E : ElemOps α β) (h : 
 
 theorem userListCompareP_proven : UserListCompareP := by
   intro α β _ E op u l pre s t x y ty refl
-  refine ⟨rfl, fun h => ?_, fun hu hl hxy he => ?_, fun hu hl => ?_, fun hall hlen => ?_,
-    fun ex hu hl hxy he hop => ?_, fun hu hl hop => ?_, fun r hr => ?_, fun hr => ?_⟩
+  refine ⟨rfl, fun h => ?_, fun P hP hu hl hxy he => ?_, fun P hP hu hl => ?_, fun hu hl => ?_, fun hall hlen => ?_,
+    fun ex P hP hu hl hxy he hop => ?_, fun hu hl hop => ?_, fun r hr => ?_, fun hr => ?_⟩
   · simp [ulCmpP, listRichP, h]
   · have hd : firstDiff E u.data l = .ok (some (x, y)) := by
-      rw [hu, hl, firstDiff_prefix]
+      rw [hu, hl, firstDiff_eqPrefix E P _ _ hP]
       simp [firstDiff, eqId, hxy, he]
     refine ⟨fun ho => ?_, fun hlen => ?_⟩
     · simp only [ulCmpP, listRichP]
@@ -181,12 +194,23 @@ theorem userListCompareP_proven : UserListCompareP := by
       rw [if_neg this, hd]
       simp [ho]
     · simp [ulCmpP, listRichP, hlen, hd]
+  · have hd : firstDiff E u.data l = .ok none := by
+      rw [hu, hl]
+      have := firstDiff_eqPrefix E P [] [] hP
+      simp only [List.append_nil] at this
+      rw [this]; rfl
+    have hlen : u.data.length = l.length := by rw [hu, hl]; simp
+    simp only [ulCmpP, listRichP]
+    rw [if_neg (fun h => h.1 hlen), hd]
+    show Except.ok (CRes.bool (cmpLen op u.data.length l.length)) = _
+    rw [hu, hl]
+    simp
   · subst hu; subst hl
     simp [ulCmpP, listRichP, firstDiff_self]
   · have hd : firstDiff E u.data l = .ok none := firstDiff_allTrue E hall u.data l
     simp [ulCmpP, listRichP, hlen, hd, cmpLen]
   · have hd : firstDiff E u.data l = .error ex := by
-      rw [hu, hl]
+      rw [hu, hl, firstDiff_eqPrefix E P _ _ hP]
       simp [firstDiff, eqId, hxy, he]
     simp only [ulCmpP, listRichP]
     have : ¬ (u.data.length ≠ l.length ∧ op = .eq) := by

@@ -281,7 +281,7 @@ def userListEntries : List Entry := [
   { id := "coll-userlist-compare-p", pyFile := file
     pyFns := ["UserList.__lt__", "UserList.__le__", "UserList.__eq__", "UserList.__gt__", "UserList.__ge__",
       "UserList.__cast"]
-    statement := "Comparisons are list_richcompare on data with the elements' own results: lengths shortcut ==, the first non-identical pair whose == is false decides (== False, orderings return that pair's object), a raising element == raises; a UserList compares by its data; any other operand's reflected method answers (UserList([1]) == mock.ANY), else == is False and orderings raise TypeError."
+    statement := "Comparisons are list_richcompare on data with the elements' own results: lengths shortcut ==, after a prefix of identical or ==-true pairs the first pair whose == is false decides (== False, orderings return that pair's object), a raising element == raises; a UserList compares by its data; any other operand's reflected method answers (UserList([1]) == mock.ANY), else == is False and orderings raise TypeError."
     source := "Lib/collections/__init__.py:1302-1318; Objects/listobject.c:3459-3519"
     status := .proven, prop := ``UserListCompareP, thm := some ``userListCompareP_proven },
   { id := "coll-userlist-contains-count", pyFile := file, pyFns := ["UserList.__contains__", "UserList.count"]
