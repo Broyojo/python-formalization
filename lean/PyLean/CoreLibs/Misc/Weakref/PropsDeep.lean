@@ -25,7 +25,7 @@ def DeepcopyKeepsSharing : Prop :=
 /-- Keys compared by identity, hashed by id. -/
 def idOps : KOps Nat := ⟨fun k => .ok k, fun _ _ => .ok false, fun _ => "B"⟩
 
-def idQ : ROps := ⟨fun k => .ok k, fun a b => .ok (a == b)⟩
+def idQ : ROps := ⟨fun k => .ok k, fun a b => .ok (a == b), fun _ => "B"⟩
 
 /-- `d = WeakValueDictionary(); k = B(d); d[k] = v; deepcopy(d)`: object 0 is `d`, 1 the key whose
 attribute is `d`, 2 the value. -/

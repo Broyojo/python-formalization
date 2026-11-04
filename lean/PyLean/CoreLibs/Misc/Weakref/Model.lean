@@ -514,6 +514,8 @@ Objects/weakrefobject.c:249-273, and the dict's `PyObject_RichCompareBool` do. B
 structure ROps where
   hash : Nat → Py Int
   eq : Nat → Nat → Py Bool
+  /-- `%T` of a referent. -/
+  tn : Nat → String
 
 /-- A key of `WeakKeyDictionary.data`: a `ref` with an identity `rid`, its referent, its cached hash
 (`self->hash`, Objects/weakrefobject.c:190-202, which is also the dict's `me_hash`) and whether its
@@ -751,7 +753,7 @@ def pvOps (q : ROps) : KOps PV where
     | .int a, .int b => .ok (a == b)
     | _, _ => .ok false
   tn := fun
-    | .obj _ => "object"
+    | .obj o => q.tn o
     | .int _ => "int"
 
 /-- The `other` of `WeakKeyDictionary.update`. -/

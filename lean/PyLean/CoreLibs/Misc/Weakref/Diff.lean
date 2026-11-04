@@ -239,6 +239,9 @@ def wkdQ (vals : List Int) : ROps where
     if a < 4 then .ok (b < 4 && vals.getD a 0 == vals.getD b 0)
     else if a == 7 || a == 8 then .error (.valueError "eqv")
     else .ok false
+  tn := fun o =>
+    if o < 4 then "MiscW" else if o == 4 then "MiscU" else if o == 5 then "MiscHK"
+    else if o == 6 then "MiscHV" else if o < 9 then "MiscEV" else "MiscN"
 
 def pKItems (j : Json) : Except String (List (PV × Int)) := do
   (← jArr j).mapM (fun kv => do return ((← pPV (← jGetI kv 0)), (← jIntAt kv 1)))
