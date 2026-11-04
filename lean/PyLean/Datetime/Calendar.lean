@@ -17,7 +17,7 @@ open PyLean
 
 def MINYEAR : Int := 1
 def MAXYEAR : Int := 9999
-/-- `date.max.toordinal()`, `_MAXORDINAL` (_pydatetime.py:20), C `MAXORDINAL`. -/
+/-- `date.max.toordinal()`, `_MAXORDINAL` (_pydatetime.py:26), C `MAXORDINAL`. -/
 def MAXORDINAL : Int := 3652059
 
 /-- `_is_leap`, _pydatetime.py:47-49; C `is_leap` (:425-435) casts to
@@ -157,6 +157,49 @@ def checkTime (h mi s us : Int) : Py (Int × Int × Int × Int) :=
     .error (.valueError s!"microsecond must be in 0..999999, not {us}")
   else .ok (h, mi, s, us)
 
+/-! ### Field checks in C -/
+
+/-- C `is_leap`, :425-435: the year is cast to `unsigned int` first. -/
+def isLeapC (year : Int) : Bool :=
+  let ayear := year % 4294967296
+  ayear % 4 == 0 && (ayear % 100 != 0 || ayear % 400 == 0)
+
+/-- C `_days_in_month[]`, :413-416 (index 0 is unused and 0). -/
+def daysInMonthTableC (m : Int) : Int :=
+  [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31].getD m.toNat 0
+
+/-- C `days_in_month`, :439-447 (asserts `1 <= month <= 12`). -/
+def daysInMonthC (year month : Int) : Int :=
+  if month = 2 ∧ isLeapC year then 29 else daysInMonthTableC month
+
+/-- C `check_date_args`, :659-680, on C ints: `0` or `ValueError`. -/
+def checkDateArgsC (year month day : Int) : Py Unit :=
+  if year < MINYEAR ∨ year > MAXYEAR then
+    -- "year must be in %d..%d, not %d" with MINYEAR, MAXYEAR
+    .error (.valueError s!"year must be in 1..9999, not {year}")
+  else if month < 1 ∨ month > 12 then
+    .error (.valueError s!"month must be in 1..12, not {month}")
+  else
+    let dim := daysInMonthC year month
+    if day < 1 ∨ day > dim then
+      .error (.valueError s!"day {day} must be in range 1..{dim} for month {month} in year {year}")
+    else .ok ()
+
+/-- C `check_time_args`, :686-711, on C ints. -/
+def checkTimeArgsC (h m s us fold : Int) : Py Unit :=
+  if h < 0 ∨ h > 23 then .error (.valueError s!"hour must be in 0..23, not {h}")
+  else if m < 0 ∨ m > 59 then .error (.valueError s!"minute must be in 0..59, not {m}")
+  else if s < 0 ∨ s > 59 then .error (.valueError s!"second must be in 0..59, not {s}")
+  else if us < 0 ∨ us > 999999 then
+    .error (.valueError s!"microsecond must be in 0..999999, not {us}")
+  else if fold ≠ 0 ∧ fold ≠ 1 then .error (.valueError s!"fold must be either 0 or 1, not {fold}")
+  else .ok ()
+
+/-- `new_date_ex`'s check, :1168-1187: `check_date_args`, then the fields. -/
+def checkDateC (year month day : Int) : Py (Int × Int × Int) := do
+  checkDateArgsC year month day
+  return (year, month, day)
+
 /-! ### Ordinals and arithmetic -/
 
 /-- `PyArg_ParseTuple` format `i`: a C `int`. -/
@@ -175,7 +218,7 @@ def fromordinalPy (n : Int) : Py (Int × Int × Int) :=
 def fromordinalC (n : Int) : Py (Int × Int × Int) :=
   if ¬fitsCInt n then .error (.overflowError "Python int too large to convert to C int")
   else if n < 1 then .error (.valueError "ordinal must be >= 1")
-  else let (y, m, d) := ordToYmdC n; checkDate y m d
+  else let (y, m, d) := ordToYmdC n; checkDateC y m d
 
 /-- `date.toordinal()`, _pydatetime.py:1176-1182. -/
 def toordinal (y m d : Int) : Int := ymd2ord y m d

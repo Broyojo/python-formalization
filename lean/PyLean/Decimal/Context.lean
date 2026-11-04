@@ -23,17 +23,34 @@ open PyLean
 inductive Arg where
   | dec (d : Dec)
   | int (n : Int)
+  /-- A tuple of `n` elements, which `"..." % other` takes as its argument tuple. -/
+  | tuple (n : Nat)
   | other
   deriving Repr, Inhabited
 
 /-- `"Unable to convert %s to Decimal" % other`, formatted text the model does not render. -/
 def unableMsg : String := "~Unable to convert to Decimal"
 
+/-- `"Unable to convert %s to Decimal" % other` for a tuple `other` (_pydecimal.py:6111): `%`
+takes the tuple as its arguments, so an empty one and one of two or more elements fail in the
+formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
+def unableMsgTuple : Nat → String
+  | 0 => "not enough arguments for format string (got 0)"
+  | 1 => unableMsg
+  | n + 2 => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
+
+/-- The text of `"Unable to convert %s to Decimal" % x` for an operand `x` that is not a
+Decimal or an int. -/
+def unableMsgOf : Arg → String
+  | .tuple n => unableMsgTuple n
+  | _ => unableMsg
+
 /-- `_convert_other(other, raiseit)`, _pydecimal.py:6096-6113, without `allow_float`,
 which nothing in the module passes. `none` is `NotImplemented`. -/
 def convertOther (raiseit : Bool) : Arg → Py (Option Dec)
   | .dec d => .ok (some d)
   | .int n => do return some (← pyFromInt n)
+  | .tuple n => if raiseit then .error (.typeError (unableMsgOf (.tuple n))) else .ok none
   | .other => if raiseit then .error (.typeError unableMsg) else .ok none
 
 /-- `_convert_other(other, raiseit=True)`, which never returns `NotImplemented`. -/
@@ -67,12 +84,12 @@ def rfloordiv := ropArg floordivD
 
 /-- `a = _convert_other(a, raiseit=True); r = a.__op__(b, context=self); if r is
 NotImplemented: raise TypeError(...); else: return r`: `Context.add`, `subtract`,
-`multiply`, `divide`, `divide_int`, `divmod`, `remainder`. -/
+`multiply`, `divide`, `divide_int`, `divmod`, `remainder` (the message formats `b`, :4248). -/
 def ctxOp {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a b : Arg) : DM α := do
   let x ← liftPy (convertRaise a)
   match ← opArg f c x b with
   | some r => return r
-  | none => throw (.typeError unableMsg)
+  | none => throw (.typeError (unableMsgOf b))
 
 /-- `a = _convert_other(a, raiseit=True); return a.m(b, context=self)`, where
 `a.m` starts with `other = _convert_other(other, raiseit=True)`. -/
@@ -190,6 +207,8 @@ inductive CtxArg where
   | str (s : String)
   | list (l : List SigKey)
   | dict (d : List (SigKey × Bool))
+  /-- A tuple of `n` elements, which `"%s ..." % d` treats as the format arguments. -/
+  | tuple (n : Nat)
   | obj
   deriving Repr, Inhabited
 
@@ -241,6 +260,14 @@ def sigEntries (d : List (SigKey × Bool)) : SigDict :=
     | .sig s => some (s, p.2)
     | .other => none)
 
+/-- `"%s must be a signal dict" % d` for a non-dict `d`, _pydecimal.py:4021: a tuple is
+taken as the argument tuple of `%`, so an empty one and one of two or more elements fail in
+the formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
+def notSignalDictMsg : CtxArg → String
+  | .tuple 0 => "not enough arguments for format string (got 0)"
+  | .tuple (n + 2) => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
+  | _ => "~must be a signal dict"
+
 /-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. -/
 def setSignalDict (v : CtxArg) : Py SigDict :=
   match v with
@@ -248,7 +275,17 @@ def setSignalDict (v : CtxArg) : Py SigDict :=
     if hasKey d .other then .error (.keyError "~is not a valid signal dict")
     else if !pySignals.all (fun s => hasKey d (.sig s)) then .error (.keyError "~is not a valid signal dict")
     else .ok (sigEntries d)
-  | _ => .error (.typeError "~must be a signal dict")
+  | v => .error (.typeError (notSignalDictMsg v))
+
+/-- The signals of a list assigned to `_ignored_flags`. `_raise_error` and `_regard_flags`
+only test signals for membership and remove them (_pydecimal.py:4113, :4141), so other
+elements change nothing they do. Any other object is stored as is in Python and is out of
+scope here: `_ignored_flags` is private, and the module only ever assigns a list. -/
+def ignoredOf : CtxArg → List Signal
+  | .list l => l.filterMap (fun k => match k with
+    | .sig s => some s
+    | .other => none)
+  | _ => []
 
 /-- `Context.__setattr__`, _pydecimal.py:4030-4053. -/
 def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
@@ -266,6 +303,7 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
     | _ => throw (.typeError "~: invalid rounding mode")
   else if name == "flags" then return { c with flags := ← setSignalDict v }
   else if name == "traps" then return { c with traps := ← setSignalDict v }
+  else if name == "_ignored_flags" then return { c with ignored := ignoredOf v }
   else throw (.named "AttributeError" s!"'decimal.Context' object has no attribute '{name}'")
 
 /-- `Context.__delattr__`, _pydecimal.py:4055-4056. -/
@@ -315,7 +353,7 @@ def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c ← pySetattr c "Emax" (orElseArg a.emax (.int dc.emax))
   let c ← pySetattr c "capitals" (orElseArg a.capitals (.int dc.capitals))
   let c ← pySetattr c "clamp" (orElseArg a.clamp (.int dc.clamp))
-  let c := { c with ignored := a.ignored.getD [] }
+  let c ← pySetattr c "_ignored_flags" (.list ((a.ignored.getD []).map .sig))
   let c ← pySetattr c "traps" (← signalArg (keyed dc.traps) a.traps)
   pySetattr c "flags" (← signalArg (keyed (pySignals.map (fun s => (s, false)))) a.flags)
 

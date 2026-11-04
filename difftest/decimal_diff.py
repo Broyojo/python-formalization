@@ -352,7 +352,13 @@ def gen_cm(rng):
         n = rng.choice([1, 2, 3, 5, 9])
         a = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
         b = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
-    return {"mod": "decimal", "fn": "cm", "m": name, "impl": rng.choice(["py", "c"]), "ctx": gen_ctx(rng),
+    impl = rng.choice(["py", "c"])
+    if impl == "py" and rng.random() < 0.05:
+        # "Unable to convert %s to Decimal" % () formats the tuple's items (_pydecimal only)
+        tup = ["tuple", str(rng.choice([0, 1, 2, 3]))]
+        k = rng.choice(["a", "b", "t"])
+        a, b, t = (tup if k == "a" else a), (tup if k == "b" else b), (tup if k == "t" else t)
+    return {"mod": "decimal", "fn": "cm", "m": name, "impl": impl, "ctx": gen_ctx(rng),
             "a": a, "b": b, "t": t}
 
 
@@ -370,7 +376,8 @@ def gen_div_band(rng):
     b = ["F", False, "1", 0]
     impl = rng.choice(["py", "c"])
     # The model has no C remainder of its own: past the limit it would apply _pydecimal's.
-    names = ["divide_int", "divmod", "remainder"] if impl == "py" or ctx["prec"] < 4000 else ["divide_int", "divmod"]
+    names = (["divide_int", "divmod", "remainder", "remainder_near"] if impl == "py" or ctx["prec"] < 4000
+             else ["divide_int", "divmod"])
     return {"mod": "decimal", "fn": "cm", "m": rng.choice(names), "impl": impl, "ctx": ctx,
             "a": ["dec", a], "b": ["dec", b], "t": ["dec", b]}
 
@@ -432,9 +439,13 @@ def gen_attr(rng, name):
         if r < 0.8:
             return ["str", rng.choice(ROUNDINGS)]
         return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"]])
+    if name == "_ignored_flags":
+        return gen_sig_list(rng)
     if r < 0.6:
         return gen_sig_dict(rng)
-    return gen_sig_list(rng) if r < 0.9 else ["obj"]
+    if r < 0.85:
+        return gen_sig_list(rng)
+    return ["tuple", str(rng.choice([0, 1, 2, 3]))] if r < 0.93 else ["obj"]
 
 
 def gen_ctxobj(rng):
@@ -450,7 +461,8 @@ def gen_ctxobj(rng):
                 init[n] = frozen(v, impl)
         return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
     if k < 0.5:
-        name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"])
+        name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope",
+                           "_ignored_flags"])
         val = gen_attr(rng, name) if name != "nope" else ["int", "1"]
         if name in ("flags", "traps") and val[0] == "list":
             val = gen_sig_dict(rng)
@@ -786,6 +798,8 @@ def build_arg(M, j):
         return build(M, j[1])
     if j[0] == "int":
         return int(j[1])
+    if j[0] == "tuple":
+        return tuple(range(int(j[1])))
     return "x"
 
 
@@ -829,6 +843,8 @@ def ctx_val(M, v):
         return frozendict({key_obj(M, k): b for k, b in v[1]})
     if t == "idx":
         return Idx(int(v[1]))
+    if t == "tuple":
+        return tuple(range(int(v[1])))
     return object()
 
 

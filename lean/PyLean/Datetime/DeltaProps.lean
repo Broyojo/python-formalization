@@ -199,6 +199,123 @@ theorem mul_total (a : Delta) (k : Int) :
   unfold totalUs Delta.toUs
   grind
 
+theorem fmod_bounds (a b : Int) (hb : b ≠ 0) :
+    (0 < b → 0 ≤ a.fmod b ∧ a.fmod b < b) ∧ (b < 0 → b < a.fmod b ∧ a.fmod b ≤ 0) := by
+  refine ⟨fun h => ⟨Int.fmod_nonneg_of_pos a h, Int.fmod_lt_of_pos a h⟩, fun h => ?_⟩
+  rw [Int.fmod_eq_emod]
+  have h0 := Int.emod_nonneg a hb
+  have h1 := Int.emod_lt a hb
+  by_cases hd : b ∣ a
+  · have : a % b = 0 := Int.emod_eq_zero_of_dvd hd
+    simp [hd]; omega
+  · have : a % b ≠ 0 := fun h' => hd (Int.dvd_of_emod_eq_zero h')
+    have hn : ¬(0 ≤ b ∨ b ∣ a) := by omega
+    simp only [hn, ite_false]
+    omega
+
+/-! ### `_divide_and_round` and C `divide_nearest` -/
+
+/-- `q` is `a / b` rounded to the nearest integer, ties to even: `|a - q*b| <= |b|/2`, with
+equality only for even `q`. -/
+def RoundsHalfEven (a b q : Int) : Prop :=
+  2 * (a - q * b).natAbs ≤ b.natAbs ∧ (2 * (a - q * b).natAbs = b.natAbs → q % 2 = 0)
+
+theorem roundsHalfEven_unique (a b q1 q2 : Int) (hb : b ≠ 0) (h1 : RoundsHalfEven a b q1)
+    (h2 : RoundsHalfEven a b q2) : q1 = q2 := by
+  apply Classical.byContradiction
+  intro hne
+  have e : (a - q1 * b) - (a - q2 * b) = (q2 - q1) * b := by rw [Int.sub_mul]; omega
+  have habs : ((q2 - q1) * b).natAbs = (q2 - q1).natAbs * b.natAbs := Int.natAbs_mul _ _
+  have tri : ((a - q1 * b) - (a - q2 * b)).natAbs ≤ (a - q1 * b).natAbs + (a - q2 * b).natAbs := by
+    omega
+  rw [e, habs] at tri
+  obtain ⟨h1a, h1b⟩ := h1
+  obtain ⟨h2a, h2b⟩ := h2
+  have hq : (q2 - q1).natAbs = 1 := by
+    apply Classical.byContradiction
+    intro hq
+    have : 2 * b.natAbs ≤ (q2 - q1).natAbs * b.natAbs := Nat.mul_le_mul_right _ (by omega)
+    omega
+  rw [hq, Nat.one_mul] at tri
+  have := h1b (by omega)
+  have := h2b (by omega)
+  omega
+
+theorem divideAndRound_spec (a b : Int) (hb : b ≠ 0) :
+    ∃ q, divideAndRound a b = .ok q ∧ RoundsHalfEven a b q := by
+  have hfb := fmod_bounds a b hb
+  have hdm := Int.fdiv_mul_add_fmod a b
+  unfold divideAndRound pyDivmod
+  rw [if_neg hb]
+  generalize a.fdiv b = q at hdm ⊢
+  generalize a.fmod b = r at hdm hfb ⊢
+  have e1 : (q + 1) * b = q * b + b := by rw [Int.add_mul, Int.one_mul]
+  simp only [bind, Except.bind, pure, Except.pure]
+  rcases Int.lt_or_gt_of_ne hb with h | h
+  · have := hfb.2 h
+    have hgt : ¬ b > 0 := by omega
+    simp only [hgt, if_false]
+    by_cases hc : r * 2 < b ∨ r * 2 = b ∧ q % 2 = 1
+    · rw [if_pos hc]; refine ⟨_, rfl, ?_⟩; unfold RoundsHalfEven; rw [e1]; omega
+    · rw [if_neg hc]; refine ⟨_, rfl, ?_⟩; unfold RoundsHalfEven; omega
+  · have := hfb.1 h
+    have hgt : b > 0 := h
+    simp only [hgt, if_true]
+    by_cases hc : r * 2 > b ∨ r * 2 = b ∧ q % 2 = 1
+    · rw [if_pos hc]; refine ⟨_, rfl, ?_⟩; unfold RoundsHalfEven; rw [e1]; omega
+    · rw [if_neg hc]; refine ⟨_, rfl, ?_⟩; unfold RoundsHalfEven; omega
+
+theorem divideNearestC_spec (a b : Int) (hb : b ≠ 0) :
+    ∃ q, divideNearestC a b = .ok q ∧ RoundsHalfEven a b q := by
+  have hdm := Int.tmod_add_tdiv_mul a b
+  have hab : (a.tmod b).natAbs = a.natAbs % b.natAbs := Int.natAbs_tmod a b
+  have hlt : a.natAbs % b.natAbs < b.natAbs := Nat.mod_lt _ (by omega)
+  have hsg : (0 ≤ a → 0 ≤ a.tmod b) ∧ (a < 0 → a.tmod b ≤ 0) := by
+    refine ⟨fun h => Int.tmod_nonneg b h, fun h => ?_⟩
+    have := Int.neg_tmod (-a) b
+    rw [Int.neg_neg] at this
+    have := Int.tmod_nonneg b (by omega : 0 ≤ -a)
+    omega
+  unfold divideNearestC
+  rw [if_neg hb]
+  generalize a.tdiv b = q at hdm ⊢
+  generalize a.tmod b = r at hdm hab hsg ⊢
+  have e1 : (q + 1) * b = q * b + b := by rw [Int.add_mul, Int.one_mul]
+  have e2 : (q - 1) * b = q * b - b := by rw [Int.sub_mul, Int.one_mul]
+  dsimp only
+  rcases Int.lt_or_gt_of_ne hb with hb' | hb' <;> by_cases ha : a < 0
+  · by_cases h1 : 2 * r < b <;> by_cases h2 : 2 * r = b <;> by_cases h3 : q.natAbs % 2 = 1 <;>
+      simp [ha, hb', h1, h2, h3] <;> unfold RoundsHalfEven <;> (try simp only [e1, e2]) <;> omega
+  · have hn : ¬ (b > 0) := by omega
+    by_cases h1 : -(2 * r) < b <;> by_cases h2 : -(2 * r) = b <;> by_cases h3 : q.natAbs % 2 = 1 <;>
+      simp [ha, hb', hn, h1, h2, h3] <;> unfold RoundsHalfEven <;> (try simp only [e1, e2]) <;> omega
+  · have hn : ¬ (b < 0) := by omega
+    by_cases h1 : -(2 * r) < b <;> by_cases h2 : -(2 * r) = b <;> by_cases h3 : q.natAbs % 2 = 1 <;>
+      simp [ha, hn, h1, h2, h3] <;> unfold RoundsHalfEven <;> (try simp only [e1, e2]) <;> omega
+  · have hn : ¬ (b < 0) := by omega
+    by_cases h1 : 2 * r < b <;> by_cases h2 : 2 * r = b <;> by_cases h3 : q.natAbs % 2 = 1 <;>
+      simp [ha, hn, h1, h2, h3] <;> unfold RoundsHalfEven <;> (try simp only [e1, e2]) <;> omega
+
+/-- `_divide_and_round(a, b)` is C `divide_nearest(a, b)` (`_PyLong_DivmodNear`) for all ints;
+for `b != 0` it is `a / b` rounded to the nearest integer with ties to even, and for `b == 0`
+it raises `ZeroDivisionError`. Floor division in its place fails at `a = 3, b = 2`, rounding
+half up at `a = 1, b = 2`. -/
+def DivideAndRound : Prop :=
+  ∀ a b : Int,
+    divideAndRound a b = divideNearestC a b ∧
+    (b = 0 → (divideAndRound a b).raises "ZeroDivisionError") ∧
+    (b ≠ 0 → ∃ q, divideAndRound a b = .ok q ∧ RoundsHalfEven a b q)
+
+theorem divideAndRound_proven : DivideAndRound := by
+  intro a b
+  by_cases hb : b = 0
+  · subst hb
+    refine ⟨rfl, fun _ => ⟨_, rfl, rfl⟩, fun h => absurd rfl h⟩
+  · obtain ⟨q1, e1, r1⟩ := divideAndRound_spec a b hb
+    obtain ⟨q2, e2, r2⟩ := divideNearestC_spec a b hb
+    refine ⟨?_, fun h => absurd h hb, fun _ => ⟨q1, e1, r1⟩⟩
+    rw [e1, e2, roundsHalfEven_unique a b q1 q2 hb r1 r2]
+
 /-- The number methods of `timedelta` with timedelta and int operands: C and
 Python agree on the result and the exception class, for all valid operands and
 all ints `k`. -/
@@ -243,6 +360,7 @@ theorem timedeltaOpsTwins_proven : TimedeltaOpsTwins := by
     apply sameOutcome_bind
     intro ⟨q, r⟩; simp only; rw [usToDeltaPy_eq]; exact sameOutcome_mk _
   · unfold Delta.truedivIntPy Delta.truedivIntC
+    rw [← (divideAndRound_proven a.toUs k).1]
     apply sameOutcome_bind
     intro v; rw [usToDeltaPy_eq]; exact sameOutcome_mk _
   · unfold Delta.modPy Delta.modC
@@ -256,20 +374,6 @@ theorem timedeltaOpsTwins_proven : TimedeltaOpsTwins := by
     have h := sameOutcome_mk r
     revert h
     cases mkDeltaPy r <;> cases usToDeltaC r <;> simp [SameOutcome, bind, Except.bind, pure, Except.pure]
-
-theorem fmod_bounds (a b : Int) (hb : b ≠ 0) :
-    (0 < b → 0 ≤ a.fmod b ∧ a.fmod b < b) ∧ (b < 0 → b < a.fmod b ∧ a.fmod b ≤ 0) := by
-  refine ⟨fun h => ⟨Int.fmod_nonneg_of_pos a h, Int.fmod_lt_of_pos a h⟩, fun h => ?_⟩
-  rw [Int.fmod_eq_emod]
-  have h0 := Int.emod_nonneg a hb
-  have h1 := Int.emod_lt a hb
-  by_cases hd : b ∣ a
-  · have : a % b = 0 := Int.emod_eq_zero_of_dvd hd
-    simp [hd]; omega
-  · have : a % b ≠ 0 := fun h' => hd (Int.dvd_of_emod_eq_zero h')
-    have hn : ¬(0 ≤ b ∨ b ∣ a) := by omega
-    simp only [hn, ite_false]
-    omega
 
 /-- `divmod(a, b)` for timedeltas: for `b != 0` it returns
 `(a // b, a % b)` with `q * b + r == a` and `r` zero or of the sign of `b`

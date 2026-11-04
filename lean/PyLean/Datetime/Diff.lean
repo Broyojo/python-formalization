@@ -51,6 +51,26 @@ def getSpec (j : Json) : Except String TimeSpec := do
 
 def getOptTz (j : Json) : Except String (Option Int) := getOptInt j "tz"
 
+/-- The `timespec` argument: a string, or (a JSON number) a hashable non-`str`. -/
+def getSpecArg (j : Json) : Except String SpecArg := do
+  match (← field j "spec").getStr? with
+  | .ok s => return .str s
+  | .error _ => return .other true
+
+/-- The valid timedelta of `us` microseconds (an offset from the difftest). -/
+def deltaOfUs (us : Int) : Delta := ⟨us / 86400000000, us / 1000000 % 86400, us % 1000000⟩
+
+/-- `time.isoformat(timespec)` in C: the clinic `str` converter and the spec search, the C
+time formatter, then `format_utcoffset`. -/
+def timeIsoformatC (t : TimeV) (spec : SpecArg) : Py (List Char) := do
+  let sp ← parseTimespecArgC spec
+  return formatTimeC t.h t.mi t.s t.us sp ++ formatUtcoffsetC [':'] (t.tz.map deltaOfUs)
+
+/-- `time.isoformat(timespec)` in Python, with the spec lookup of `_format_time`. -/
+def timeIsoformatPyArg (t : TimeV) (spec : SpecArg) : Py (List Char) := do
+  let sp ← parseTimespecArgPy spec
+  return timeIsoformat t sp
+
 def run (fn : String) (j : Json) : Except String Json := do
   let ints (k : String) := getIntArr j k
   match fn with
@@ -107,17 +127,28 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "datetime_fromiso_c" => return encPy encDT (datetimeFromIsoC (← getChars j "s"))
   | "date_isoformat" =>
     let a ← ints "date"
-    return encPy toJson (.ok (String.ofList (dateIsoformat (a.getD 0 0) (a.getD 1 0) (a.getD 2 0))) : Py String)
+    let isC := (j.getObjValAs? String "impl").toOption == some "c"
+    let f := if isC then dateIsoformatC else dateIsoformat
+    return encPy toJson (.ok (String.ofList (f (a.getD 0 0) (a.getD 1 0) (a.getD 2 0))) : Py String)
   | "time_isoformat" =>
     let a ← ints "time"
+    let isC := (j.getObjValAs? String "impl").toOption == some "c"
     let t : TimeV := ⟨a.getD 0 0, a.getD 1 0, a.getD 2 0, a.getD 3 0, ← getOptTz j⟩
-    return encPy toJson (.ok (String.ofList (timeIsoformat t (← getSpec j))) : Py String)
+    let sp ← getSpecArg j
+    return encPy (fun cs => toJson (String.ofList cs))
+      (if isC then timeIsoformatC t sp else timeIsoformatPyArg t sp)
   | "datetime_isoformat" =>
     let a ← ints "dt"
     let sep ← getInt j "sep"
+    let isC := (j.getObjValAs? String "impl").toOption == some "c"
     let v : DateTimeV := ⟨a.getD 0 0, a.getD 1 0, a.getD 2 0,
       ⟨a.getD 3 0, a.getD 4 0, a.getD 5 0, a.getD 6 0, ← getOptTz j⟩⟩
-    return encPy toJson (.ok (String.ofList (datetimeIsoformat v (Char.ofNat sep.toNat) (← getSpec j))) : Py String)
+    let sp ← getSpecArg j
+    let c := Char.ofNat sep.toNat
+    let r : Py (List Char) := if isC then
+        (do let t ← timeIsoformatC v.t sp; return dateIsoformatC v.y v.m v.d ++ [c] ++ t)
+      else (do let s ← parseTimespecArgPy sp; return datetimeIsoformat v c s)
+    return encPy (fun cs => toJson (String.ofList cs)) r
   | other => if other.startsWith "zi_" then Zone.runZone other j else runObj other j
 
 /-- Results of `runObj` that are not already `{"ok": ...}` or `{"exc": ...}`. -/

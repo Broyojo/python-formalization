@@ -179,12 +179,20 @@ def p_seq(r):
 def p_unpack(r):
     out = []
     srcs = ["[1, 2]", "(1, 2)", "[1, 2, 3]", "(1,)", "[]", "'ab'", "'abc'", "{1: 2, 3: 4}", "range(2)", "5", "None",
-            "iter([1, 2])", "(i for i in range(2))", "{1: 2, 3: 4, 5: 6}"]
+            "iter([1, 2])", "(i for i in range(2))", "{1: 2, 3: 4, 5: 6}", "It(1)", "It(2)", "It(3)", "It(4)",
+            "L([1, 2, 3])", "Q()", "D()", "(1, 2, 3)", "[1, 2, 3, 4]", "{1: 2}", "{}", "'abcd'"]
     for _ in range(r.randint(3, 6)):
         s = r.choice(srcs)
-        tgt = r.choice(["a, b", "a, *b", "*a, b", "a, b, *c", "a, *b, c", "a,", "[a, b]", "(a, (b, c))", "*a,"])
+        tgt = r.choice(["a, b", "a, *b", "*a, b", "a, b, *c", "a, *b, c", "a,", "[a, b]", "(a, (b, c))", "*a,",
+                        "a, b, c", "a, *b, c, d", "a, b, *c, d"])
         out.append(guarded(f"{tgt} = {s}\nprint(a)"))
-    return "\n".join(out)
+    # How many times `__next__` ran, the exhausting call included
+    out.append("for n in range(4):\n    it = It(n)\n    try:\n        a, b = it\n    except ValueError as e:\n        print(e)\n    print(it.calls)\n"
+               "    it = It(n)\n    try:\n        a, *b, c = it\n        print(a, b, c)\n    except ValueError as e:\n        print(e)\n    print(it.calls)\n")
+    head = ("class It:\n    def __init__(self, n):\n        self.n, self.calls = n, 0\n    def __iter__(self):\n        return self\n"
+            "    def __next__(self):\n        self.calls += 1\n        if self.calls > self.n:\n            raise StopIteration\n        return self.calls\n"
+            "class L(list):\n    pass\nclass Q:\n    __iter__ = None\nclass D:\n    def __iter__(self):\n        raise TypeError('x')\n")
+    return head + "\n".join(out)
 
 
 def p_loops(r):
@@ -529,6 +537,45 @@ def p_messages(r):
     return r.choice(pool)
 
 
+def p_builders(r):
+    """`DICT_MERGE`/`DICT_UPDATE`/`LIST_EXTEND`/`SET_ADD` on 3.15: the `dupkey` of
+    `_PyDict_MergeUniq` and `_PyObject_FunctionStr` (a `KeyError` from the mapping is no longer a
+    duplicate), the `keys` probe that decides whether an `AttributeError` becomes the `TypeError`,
+    the `__context__` it leaves, and the exact-set check of `SET_ADD` (gh-154902)."""
+    head = (
+        "def f(**k):\n    return sorted(k.items())\n"
+        "class C:\n    def m(self, **k):\n        return k\n"
+        "class M:\n    def keys(self):\n        return ['a']\n    def __getitem__(self, k):\n        raise KeyError('zz')\n"
+        "class N:\n    def keys(self):\n        raise AttributeError('inner')\n"
+        "class P:\n    @property\n    def keys(self):\n        raise ValueError('vk')\n"
+        "class Q:\n    def __getattr__(self, n):\n        raise AttributeError(n)\n"
+        "class T:\n    n = 0\n    @property\n    def keys(self):\n        T.n += 1\n        if T.n % 2:\n            raise AttributeError('first')\n        raise ValueError('second')\n"
+        "class G:\n    def keys(self):\n        return ['a', 'b']\n    def __getitem__(self, k):\n        return k * 2\n"
+        "class FQ:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            raise ValueError('q')\n        return object.__getattribute__(self, n)\n    def __call__(self, **k):\n        return k\n"
+        "class NoQ:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            raise AttributeError('q')\n        return object.__getattribute__(self, n)\n    def __call__(self, **k):\n        return k\n    def __str__(self):\n        return 'NOQ'\n"
+        "class StrQ:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            return 5\n        if n == '__module__':\n            return 'builtins'\n        return object.__getattribute__(self, n)\n    def __call__(self, **k):\n        return k\n"
+        "class Inner:\n    class K:\n        pass\n"
+    )
+    exprs = ["f(a=1, **{'a': 2})", "f(**{'a': 1}, **{'a': 2})", "C().m(**{'a': 1}, **{'a': 2})",
+             "(lambda **k: k)(**{'a': 1}, **{'a': 2})", "print(**{'sep': 1}, **{'sep': 2})",
+             "f(**M())", "f(a=1, **M())", "f(**N())", "f(**P())", "f(**Q())", "f(**1)", "f(**Inner.K())",
+             "{**1}", "{**N()}", "{**P()}", "{**Inner.K()}", "{**M()}", "[*1]", "{*1}", "f(**G())",
+             "f(**G(), **{'c': 1})", "f(**G(), **{'a': 1})", "{**G(), 'z': 0}", "FQ()(**{'a': 1}, **{'a': 2})",
+             "NoQ()(**{'a': 1}, **{'a': 2})", "StrQ()(**{'a': 1}, **{'a': 2})", "f(**{'a': 1}, b=2, **{'b': 3})",
+             "[*[1], *(2,), *'ab', *range(2)]", "{*[1], *{2: 3}, *(1,)}"]
+    out = [head]
+    for x in r.sample(exprs, r.randint(4, 10)):
+        out.append(guarded(f"print({x})"))
+    out.append(r.choice([
+        "for _ in range(2):\n    try:\n        f(**T())\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
+        "for _ in range(2):\n    try:\n        {**T()}\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
+        "__conditional_annotations__ = " + r.choice(["[]", "{}", "1", "frozenset()", "set()"]) + "\n"
+        + guarded("if True:\n    x: int = 1\nprint('annotated')"),
+        "print({x for x in [1, 2, 1]} == {1, 2}, {k: v for k, v in [(1, 2), (1, 3)]})",
+    ]))
+    return "\n".join(out)
+
+
 def p_float_repr(r):
     """`repr` around powers of two, where the rounding interval is uneven."""
     lines = []
@@ -560,7 +607,7 @@ def p_long_names(r):
 
 
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders]
 
 
 def enc_const(c, table):

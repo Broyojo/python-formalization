@@ -1,0 +1,49 @@
+id: datetime-pydatetime-rsub-negate-overflow
+title: "_pydatetime timedelta.__rsub__ negates first and overflows where C does not"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["timedelta.__rsub__"]
+summary: |
+  `timedelta.max.__rsub__(timedelta.max)` is `timedelta(0)` in C, whose reflected slot
+  computes `other - self` (delta_subtract), and raises `OverflowError: timedelta # of days is
+  too large: -1000000000` in _pydatetime, which computes `-self + other` and `-timedelta.max`
+  is out of range. Every self with days == 999999999 and a nonzero seconds or microseconds
+  field overflows the same way, whatever `other` is.
+likelihood: |
+  Very low. The binary operator calls __rsub__ with a timedelta left operand only when the
+  right operand's class is a timedelta subclass that overrides __rsub__ and delegates to the
+  base; a direct call is the other way.
+maybe_intended: |
+  Not intended, but harmless in practice; recorded because it refutes the twin property, not
+  because anyone is affected. Do not file on its own.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      try:
+          return repr(m.timedelta.max.__rsub__(m.timedelta.max))
+      except OverflowError:
+          return 'OverflowError'
+  c, p = run(datetime), run(_pydatetime)
+  print('C:', c, ' Python:', p)
+  if c.endswith('timedelta(0)') and p == 'OverflowError':
+      print('REPRODUCED datetime-pydatetime-rsub-negate-overflow')
+expected: timedelta(0) from both, as other - self.
+promised_by: PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:838-839: `return -self + other`. Modules/_datetimemodule.c:2514-2533:
+  delta_subtract(left, right) builds `new_delta(left - right)` directly.
+possible_fix: |
+  Lib/_pydatetime.py:839: `return timedelta(other._days - self._days, other._seconds -
+  self._seconds, other._microseconds - self._microseconds)`, as __sub__ does.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh api search: timedelta+__rsub__", "timedelta+__rsub__+overflow", "timedelta.max+rsub",
+            "timedelta+pos+identity", "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.TimedeltaRsubTwins
+  theorem: PyLean.Datetime.timedeltaRsubTwins_refuted

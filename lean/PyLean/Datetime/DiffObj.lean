@@ -3,6 +3,7 @@ import PyLean.Datetime.Ctor
 import PyLean.Datetime.Strftime
 import PyLean.Datetime.Strptime
 import PyLean.Datetime.Misc
+import PyLean.Datetime.Twins
 
 /-!
 Differential-testing handler for the object layer: `time`, `datetime`, `timezone`,
@@ -169,6 +170,16 @@ def getYMD (j : Json) (k : String) : Except String (Int × Int × Int) := do
 
 def getOptField (j : Json) (k : String) : Except String (Option Int) := getOptInt j k
 
+/-- A `replace` argument: absent or `null` is omitted, `["n"]` an explicit `None`, otherwise
+an `Arg`. -/
+def getReplArg (j : Json) (k : String) : Except String (Option Arg) :=
+  match j.getObjVal? k with
+  | .error _ => .ok none
+  | .ok .null => .ok none
+  | .ok v => match v.getArr? with
+    | .ok a => if (a.getD 0 .null).getStr?.toOption == some "n" then .ok (some .none_) else some <$> decArg v
+    | .error _ => some <$> decArg v
+
 /-- `tz` field semantics of `replace`/`combine`: absent is the default `tzinfo=True`. -/
 def getOptTzArg (j : Json) : Except String (Option (Option Tz)) :=
   match j.getObjVal? "tzarg" with
@@ -227,11 +238,14 @@ def runObj (fn : String) (j : Json) : Except String Json := do
   | "td_bool" => return toJson (← decDelta (← field j "a")).bool
   | "td_pos" =>
     let a ← decDelta (← field j "a")
-    return encPy encD (if isC then a.posC else .ok a.posPy)
+    let enc (r : ObjRes Delta) : Json := Json.arr #[encD (r.value a), toJson (r == .self_)]
+    return encPy enc (if isC then a.posC else .ok a.posPy)
   | "td_rsub" =>
     let a ← decDelta (← field j "a"); let b ← decDelta (← field j "b")
     return encPy encD (if isC then a.rsubC b else a.rsubPy b)
-  | "td_hash" => return encKey (← decDelta (← field j "a")).hashKey
+  | "td_hash" =>
+    let a ← decDelta (← field j "a")
+    return encKey (if isC then a.hashKeyC else a.hashKey)
   | "td_state" => return toJson (← decDelta (← field j "a")).getstate
   | "date_cmp" =>
     let a ← getYMD j "a"; let b ← getYMD j "b"; let op ← getOp j
@@ -253,7 +267,7 @@ def runObj (fn : String) (j : Json) : Except String Json := do
   | "date_replace" =>
     let a ← getYMD j "a"
     let f := if isC then dateReplaceC else dateReplacePy
-    return encPy encYMD' (f a.1 a.2.1 a.2.2 (← getOptField j "ny") (← getOptField j "nm") (← getOptField j "nd"))
+    return encPy encYMD' (f a.1 a.2.1 a.2.2 (← getReplArg j "ny") (← getReplArg j "nm") (← getReplArg j "nd"))
   | "date_timetuple" =>
     let a ← getYMD j "a"
     return encTT ((if isC then dateTimetupleC else dateTimetuplePy) a.1 a.2.1 a.2.2)
@@ -262,7 +276,40 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return toJson ((if isC then ctimeC else ctimePy) a.1 a.2.1 a.2.2 0 0 0)
   | "date_repr" =>
     let a ← getYMD j "a"
-    return toJson ((if isC then dateReprC else dateReprPy) a.1 a.2.1 a.2.2)
+    let cls : ReprCls := match (j.getObjValAs? Nat "cls").toOption.getD 0 with
+      | 1 => .sub "__main__" "DSub" "DSub"
+      | 2 => .sub "__main__" "Outer.DSub" "DSub"
+      | _ => .base
+    return toJson ((if isC then dateReprClsC else dateReprClsPy) cls a.1 a.2.1 a.2.2)
+  | "td_float" =>
+    let a ← decDelta (← field j "a")
+    let x := Binary64.F64.ofBits (← getNat j "x")
+    let r := match (← getStr j "op"), isC with
+      | "mul", true => a.mulFloatC x
+      | "mul", false => a.mulFloatPy x
+      | _, true => a.truedivFloatC x
+      | _, false => a.truedivFloatPy x
+    return encPy encD r
+  | "date_sub_dt" =>
+    let a ← getYMD j "a"; let b ← getYMD j "b"
+    let r := binarySub ((if isC then dateSubC else dateSubPy) a.1 a.2.1 a.2.2 (.datetime b.1 b.2.1 b.2.2))
+    return encPy (fun (v : SubResult) => match v with
+      | .delta t => encD t
+      | .date y m d => encYMD' (y, m, d)) r
+  | "date_format" =>
+    let a ← getYMD j "a"
+    let fmt : FmtArg := match j.getObjVal? "f" with
+      | .ok .null => .other
+      | .error _ => .other
+      | .ok v => match v.getArr? with
+        | .ok arr => .str (arr.toList.map (fun x => Char.ofNat ((x.getNat?).toOption.getD 0)))
+        | .error _ => .other
+    let str : Py String := .ok (String.ofList ((if isC then dateIsoformatC else dateIsoformat) a.1 a.2.1 a.2.2))
+    let strf : List Char → Py String := fun _ => .error .modelFuel
+    let r := (if isC then dateFormatC else dateFormatPy) fmt str strf
+    return encPy (fun (v : Sum String String) => match v with
+      | .inl s => toJson s
+      | .inr s => toJson s) r
   | "date_state" =>
     let a ← getYMD j "a"
     return toJson (dateGetstate a.1 a.2.1 a.2.2)

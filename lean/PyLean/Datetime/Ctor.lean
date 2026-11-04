@@ -98,8 +98,9 @@ def dateNewPy (year month day : Arg) : Py (Int × Int × Int) :=
     let d ← pyIndex day
     checkDate y m d
 
-/-- `datetime_date_impl`, _datetimemodule.c:3284-3288: `new_date_ex`, which checks the fields. -/
-def datetimeDateImplC (y m d : Int) : Py (Int × Int × Int) := checkDate y m d
+/-- `datetime_date_impl`, _datetimemodule.c:3284-3288: `new_date_ex`, which checks the fields
+with `check_date_args`. -/
+def datetimeDateImplC (y m d : Int) : Py (Int × Int × Int) := checkDateC y m d
 
 /-- The clinic wrapper `datetime_date`, clinic/_datetimemodule.c.h:131-183: arity, then
 `year`, `month`, `day` in turn, then the impl. -/

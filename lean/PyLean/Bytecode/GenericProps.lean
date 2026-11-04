@@ -83,6 +83,64 @@ theorem forIterRaises_proven : ForIterRaises := by
       fun r => jumpBy_succ r e.oparg
     bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterStep, tryExc, h, hm, hj]
 
+/-- `FOR_ITER` over an iterator object (`NULL` in the index slot), `_FOR_ITER`
+(`Python/bytecodes.c:3810-3821`) with the `tp_iternext` branch of `_PyForIter_VirtualIteratorNext`
+(`Python/ceval.c:3725-3738`), for every object model, so for a `__next__` that changes the heap,
+runs Python code, or is a generator: when `tp_iternext` returns an item, that item is pushed above
+the two slots, which are kept, and the runtime is the one that single call left; when it returns
+`NULL` with no exception set, the loop ends, jumping over `END_FOR` with both slots kept, again with
+the runtime of that one call. A `FOR_ITER` that called `__next__` twice and kept the first item, or
+that rolled back what the call did, fails the first conjunct. -/
+def ForIterObj : Prop := ∀ (e : Env) (regs : Regs) (it : Val) (rest : List Val),
+  (∀ v rt, e.om.iterNext e.ctx it regs.rt = .ok (some v) rt →
+    execOp e .FOR_ITER ⟨regs, .null :: it :: rest⟩ = .ok () ⟨{ regs with rt := rt }, v :: .null :: it :: rest⟩) ∧
+  (∀ rt, e.om.iterNext e.ctx it regs.rt = .ok none rt →
+    execOp e .FOR_ITER ⟨regs, .null :: it :: rest⟩ =
+      .error .dispatch ⟨{ regs with rt := rt, next := regs.next + e.oparg + 1 }, .null :: it :: rest⟩)
+
+theorem forIterObj_proven : ForIterObj := by
+  intro e regs it rest
+  constructor
+  · intro v rt h
+    bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterStep, tryExc, h]
+  · intro rt h
+    have hj : ∀ (r : Regs), jumpBy ((e.oparg : Int) + 1) r = .ok () { r with next := r.next + e.oparg + 1 } :=
+      fun r => jumpBy_succ r e.oparg
+    bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterStep, tryExc, h, hj]
+
+/-- `FOR_ITER` with a tagged index over an exact list or tuple (what `GET_ITER` leaves for them on
+3.15), `_FOR_ITER` (`Python/bytecodes.c:3810-3821`) with the `_tp_iteritem` branch of
+`_PyForIter_VirtualIteratorNext` (`Python/ceval.c:3713-3724`; `list_iteritem`,
+`Objects/listobject.c`, `tuple_iteritem`, `Objects/tupleobject.c`): item `i` of the sequence as it is
+now is pushed and the slot becomes `i + 1`; past the end the loop ends with both slots kept. The
+list is read afresh at each step, so an append inside the loop is seen. -/
+def ForIterSeqGen : Prop := ∀ (e : Env) (regs : Regs) (a : Addr) (o : Obj) (items : Array Val) (i : Nat)
+    (rest : List Val),
+  regs.rt.heap[a]? = some o → (o = .list items ∨ o = .tuple items) →
+  (∀ v, items[i]? = some v →
+    execOp e .FOR_ITER ⟨regs, .tagged i :: .ref a :: rest⟩ = .ok () ⟨regs, v :: .tagged (i + 1) :: .ref a :: rest⟩) ∧
+  (items.size ≤ i →
+    execOp e .FOR_ITER ⟨regs, .tagged i :: .ref a :: rest⟩ =
+      .error .dispatch ⟨{ regs with next := regs.next + e.oparg + 1 }, .tagged i :: .ref a :: rest⟩)
+
+theorem forIterSeqGen_proven : ForIterSeqGen := by
+  intro e regs a o items i rest h ho
+  have hj : ∀ (r : Regs), jumpBy ((e.oparg : Int) + 1) r = .ok () { r with next := r.next + e.oparg + 1 } :=
+    fun r => jumpBy_succ r e.oparg
+  rcases ho with rfl | rfl
+  · constructor
+    · intro v hv
+      bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterItem, h, hv]
+    · intro hle
+      have hn : items[i]? = none := by simp [hle]
+      bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterItem, h, hn, hj]
+  · constructor
+    · intro v hv
+      bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterItem, h, hv]
+    · intro hle
+      have hn : items[i]? = none := by simp [hle]
+      bc_simp [execOp, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterItem, h, hn, hj]
+
 /-- `PUSH_EXC_INFO` (`Python/bytecodes.c:4213-4226`): the handled exception becomes the one on top
 of the stack (`exc_info->exc_value = exc`), and below it goes the previous handled exception, or
 `None` when there was none, for `POP_EXCEPT` to restore. -/
@@ -231,9 +289,9 @@ theorem createInitFrameRules_proven : CreateInitFrameRules := by
 def ReturnValueRules : Prop := ReturnValue ∧ ReturnValueGen
 theorem returnValueRules_proven : ReturnValueRules := ⟨returnValue_proven, returnValueGen_proven⟩
 
-def ForIterRules : Prop := ForIterExhausted ∧ ForIterNext ∧ ForIterRaises
+def ForIterRules : Prop := ForIterExhausted ∧ ForIterNext ∧ ForIterObj ∧ ForIterSeqGen ∧ ForIterRaises
 theorem forIterRules_proven : ForIterRules :=
-  ⟨forIterExhausted_proven, forIterNext_proven, forIterRaises_proven⟩
+  ⟨forIterExhausted_proven, forIterNext_proven, forIterObj_proven, forIterSeqGen_proven, forIterRaises_proven⟩
 
 def CompareOpFull : Prop := CompareFused ∧ CompareOpRules
 theorem compareOpFull_proven : CompareOpFull := ⟨compareFused_proven, compareOpRules_proven⟩

@@ -1,0 +1,62 @@
+id: datetime-pydatetime-date-sub-datetime
+title: "_pydatetime date - datetime returns a timedelta where C raises TypeError"
+priority: P3
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["date.__sub__"]
+summary: |
+  `_pydatetime.date(2020, 1, 2) - _pydatetime.datetime(2020, 1, 1)` returns
+  `timedelta(days=1)`: date.__sub__ tests `isinstance(other, date)`, which is true for a
+  datetime, and subtracts the ordinals, dropping the datetime's time and tzinfo. The C
+  date_subtract returns NotImplemented whenever either operand is a datetime, and
+  datetime has no reflected method for a date left operand, so the C module raises
+  `TypeError: unsupported operand type(s) for -: 'datetime.date' and 'datetime.datetime'`.
+  The Python comparisons of date already exclude datetime (`isinstance(other, date) and
+  not isinstance(other, datetime)`, Lib/_pydatetime.py:1199), the subtraction does not.
+  The result is also wrong on its own terms: date(2020, 1, 2) - datetime(2020, 1, 1, 23, 59)
+  gives one day.
+likelihood: |
+  Code that mixes date and datetime operands and runs on an implementation that uses
+  _pydatetime (PyPy, or CPython without the C accelerator) gets a silently truncated
+  difference instead of the TypeError that CPython users see.
+maybe_intended: |
+  No: the C module and the documentation define only date - date and date - timedelta, and
+  the Python comparisons were already changed to refuse datetime operands.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      try:
+          return repr(m.date(2020, 1, 2) - m.datetime(2020, 1, 1))
+      except TypeError as e:
+          return 'TypeError'
+  c, p = run(datetime), run(_pydatetime)
+  print('C:', c, ' Python:', p)
+  if c == 'TypeError' and p.endswith('timedelta(days=1)'):
+      print('REPRODUCED datetime-pydatetime-date-sub-datetime')
+expected: |
+  TypeError in both implementations (date - datetime is not a supported operation).
+promised_by: |
+  The datetime docs list date2 - date1 and date - timedelta only; PEP 399 equivalence of
+  _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:1253: `if isinstance(other, date):` accepts a datetime.
+  Modules/_datetimemodule.c:3591-3592: `if (PyDateTime_Check(left) || PyDateTime_Check(right))
+  Py_RETURN_NOTIMPLEMENTED;`.
+possible_fix: |
+  Lib/_pydatetime.py:1253: `if isinstance(other, date) and not isinstance(other, datetime):`,
+  as in date.__eq__ and the other comparisons.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search: date subtract datetime pure python", "_pydatetime date minus datetime",
+            "date __sub__ datetime NotImplemented", "date - datetime timedelta pure python implementation",
+            "subtracting datetime from date", "gh api search: date+minus+datetime",
+            "_pydatetime+date+__sub__", "date+subtraction+datetime+subclass", "datetime+date+sub+NotImplemented",
+            "pydatetime+date+datetime+timedelta", "date.__sub__", "subtract+datetime+from+date",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.DateSubTwins
+  theorem: PyLean.Datetime.dateSubTwins_refuted

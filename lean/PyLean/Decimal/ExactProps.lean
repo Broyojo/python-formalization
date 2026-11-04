@@ -307,7 +307,11 @@ numbers of different value it is the numeric order; equal values with different 
 negative first; equal values with the same sign are ordered by exponent, the lower exponent
 first when positive and last when negative; a positive NaN is above every number and a negative
 one below, a signaling NaN is between the numbers and the quiet NaNs, and NaNs of one kind and
-sign are ordered by payload. `compare_total_mag` is the same order of the magnitudes. -/
+sign are ordered by payload. Opposite signs decide first, NaNs included (:3008-3012).
+`compare_total_mag` (:3072-3082) is the same order of the magnitudes: numerically different
+magnitudes by value, equal ones by exponent (`Decimal('1.0').compare_total_mag(Decimal('-1'))` is
+-1, `1` against `-1` is 0), every NaN above every number, a signaling NaN below a quiet one, and
+NaNs of one kind by payload, whatever the signs. -/
 def CompareTotalExact : Prop :=
   (∀ a b : Dec, compareTotal b a = -compareTotal a b ∧ (compareTotal a b = 0 ↔ a = b)) ∧
   (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → numOrder a b ≠ .eq →
@@ -323,7 +327,41 @@ def CompareTotalExact : Prop :=
     compareTotalMag (.nan true s p) x = 1) ∧
   (∀ p q : Nat, compareTotal (.nan false true p) (.nan false false q) = -1 ∧
     compareTotal (.nan true true p) (.nan true false q) = 1) ∧
-  (∀ (n s : Bool) (p q : Nat), p < q → compareTotal (.nan n s p) (.nan n s q) = if n then 1 else -1)
+  (∀ (n s : Bool) (p q : Nat), p < q → compareTotal (.nan n s p) (.nan n s q) = if n then 1 else -1) ∧
+  (∀ a b : Dec, a.neg = true → b.neg = false → compareTotal a b = -1) ∧
+  (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 → numOrder (copyAbs a) (copyAbs b) = .eq →
+    compareTotalMag a b = if expOf a < expOf b then -1 else if expOf a > expOf b then 1 else 0) ∧
+  (∀ (n s : Bool) (p : Nat) (x : Dec), nanKind x = 0 → compareTotalMag (.nan n s p) x = 1) ∧
+  (∀ (n1 n2 s1 s2 : Bool) (p q : Nat), compareTotalMag (.nan n1 s1 p) (.nan n2 s2 q) =
+    if s1 = s2 then (if p < q then -1 else if p > q then 1 else 0) else if s1 then -1 else 1)
+
+theorem compareTotal_signs (a b : Dec) (ha : a.neg = true) (hb : b.neg = false) :
+    compareTotal a b = -1 := by
+  simp [compareTotal, ha, hb]
+
+theorem compareTotalMag_tie (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0)
+    (h : numOrder (copyAbs a) (copyAbs b) = .eq) :
+    compareTotalMag a b = if expOf a < expOf b then -1 else if expOf a > expOf b then 1 else 0 := by
+  have hc := cmpVal_exact (copyAbs a) (copyAbs b) (by rw [nanKind_copyAbs]; exact ha)
+    (by rw [nanKind_copyAbs]; exact hb)
+  rw [h] at hc
+  have e1 : expOf (copyAbs a) = expOf a := by cases a <;> rfl
+  have e2 : expOf (copyAbs b) = expOf b := by cases b <;> rfl
+  have n1 : (copyAbs a).neg = false := by cases a <;> rfl
+  have n2 : (copyAbs b).neg = false := by cases b <;> rfl
+  simp only [compareTotalMag, compareTotal, n1, n2, compareTotalSame, nanKind_copyAbs, ha, hb, ne_eq,
+    not_true_eq_false, or_self, ↓reduceIte, hc, e1, e2, Bool.false_eq_true]
+
+theorem compareTotalMag_nan_num (n s : Bool) (p : Nat) (x : Dec) (hx : nanKind x = 0) :
+    compareTotalMag (.nan n s p) x = 1 := by
+  rcases x with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;> (try cases s2) <;> (try simp [nanKind] at hx) <;>
+    cases s <;> simp [compareTotalMag, compareTotal, compareTotalSame, copyAbs, Dec.withSign, Dec.neg, nanKind]
+
+theorem compareTotalMag_nans (n1 n2 s1 s2 : Bool) (p q : Nat) :
+    compareTotalMag (.nan n1 s1 p) (.nan n2 s2 q) =
+      if s1 = s2 then (if p < q then -1 else if p > q then 1 else 0) else if s1 then -1 else 1 := by
+  cases s1 <;> cases s2 <;>
+    simp [compareTotalMag, compareTotal, compareTotalSame, copyAbs, Dec.withSign, Dec.neg, nanKind, payloadOf]
 
 theorem compareTotal_num (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) (h : numOrder a b ≠ .eq) :
     compareTotal a b = ordInt (numOrder a b) := by
@@ -341,7 +379,7 @@ theorem compareTotalExact_proven : CompareTotalExact := by
   refine ⟨fun a b => ⟨compareTotal_antisymm a b, compareTotal_eq_zero a b⟩,
     fun a b ha hb h => compareTotal_num a b ha hb h,
     fun a b ha hb h => compareTotal_num _ _ (by rw [nanKind_copyAbs]; exact ha) (by rw [nanKind_copyAbs]; exact hb) h,
-    ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, compareTotal_signs, compareTotalMag_tie, compareTotalMag_nan_num, compareTotalMag_nans⟩
   · intro a b ha hb _ hs
     rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
       (try cases s1) <;> (try cases s2) <;> (try simp [nanKind] at ha hb) <;>

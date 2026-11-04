@@ -1,0 +1,69 @@
+id: datetime-pydatetime-none-as-omitted
+title: "_pydatetime treats an explicit None as an omitted argument in date.replace and date(state, None)"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["date.replace", "date.__new__"]
+summary: |
+  _pydatetime uses None as the "not given" default and tests `is None`, so an explicit None
+  behaves like an omitted argument; C uses Argument Clinic defaults and treats None as an
+  object to convert.
+  - `date(2020, 1, 1).replace(year=None)` returns date(2020, 1, 1) in Python and raises
+    `TypeError: 'NoneType' object cannot be interpreted as an integer` in C (same for month
+    and day).
+  - `date(b'\x07\xd0\x01\x01', None)` unpickles date(2000, 1, 1) in Python, whose pickle test
+    is `month is None`; C's test is "exactly one positional argument", so the state goes to
+    the int converter and the call raises `TypeError: date() missing required argument 'day'`.
+    `date(year=b'\x07\xd0\x01\x01')` behaves the same way.
+likelihood: |
+  replace(year=None) can come from code that forwards optional fields as None, which then
+  works on PyPy and _pydatetime and fails on CPython. The constructor case needs hand-made
+  pickle state.
+maybe_intended: |
+  The None defaults are an implementation device; the documented signature is
+  replace(year=self.year, month=self.month, day=self.day) and the C module rejects None.
+  gh-89979 is the related, open difference in which parameters are positional-only.
+reproducer: |
+  import datetime, _pydatetime
+  def run(f):
+      try:
+          return repr(f())
+      except TypeError:
+          return 'TypeError'
+  r = [run(lambda: m.date(2020, 1, 1).replace(year=None)) for m in (datetime, _pydatetime)]
+  s = [run(lambda: m.date(b'\x07\xd0\x01\x01', None)) for m in (datetime, _pydatetime)]
+  print('replace C/Python:', r, ' ctor C/Python:', s)
+  if r[0] == 'TypeError' and r[1].endswith('date(2020, 1, 1)') and \
+     s[0] == 'TypeError' and s[1].endswith('date(2000, 1, 1)'):
+      print('REPRODUCED datetime-pydatetime-none-as-omitted')
+expected: |
+  The same outcome in both implementations: TypeError for replace(year=None) and for
+  date(state, None), as in C.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; the documented replace signature has no
+  None default.
+cause: |
+  Lib/_pydatetime.py:1186-1191: `if year is None: year = self._year` (and month, day).
+  Lib/_pydatetime.py:1008-1010: the pickle test `month is None and isinstance(year, (bytes, str))`.
+  Modules/clinic/_datetimemodule.c.h:631-653: replace converts every given argument with
+  PyLong_AsInt. Modules/_datetimemodule.c:3238: `if (PyTuple_GET_SIZE(args) == 1)`.
+possible_fix: |
+  Use a private sentinel instead of None for the omitted defaults of date.replace (and of
+  time.replace and datetime.replace if they share the pattern), and test the number of
+  arguments rather than `month is None` in date.__new__; or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 89979, state: open, relation: related (other signature differences of the twins)}
+  queries: ["gh api search: date+replace+None", "replace+year+None+pydatetime", "date.replace+None+year",
+            "replace+year=None+datetime", "pydatetime+replace+None+TypeError", "_pydatetime+replace+None",
+            "date.replace+None+keeps", "date+pickle+state+None+month", "date+constructor+bytes+state+None",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.DateReplaceTwins
+  theorem: PyLean.Datetime.dateReplaceTwins_refuted
+  also:
+    - {property: PyLean.Datetime.DateNewTwins, theorem: PyLean.Datetime.dateNewTwins_refuted}

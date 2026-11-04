@@ -44,6 +44,19 @@ def diffToBool (diff : Int) : CmpOp → Bool
   | .gt => decide (diff > 0)
   | .ge => decide (diff ≥ 0)
 
+/-- A method result that is either the receiver itself (`return self`, the same object)
+or a newly built object with the given value. Object identity is observable (`+t is t`),
+so it is not a value. -/
+inductive ObjRes (α : Type) where
+  | self_ : ObjRes α
+  | fresh : α → ObjRes α
+  deriving Repr, DecidableEq
+
+/-- The value of a result, given the receiver's value. -/
+def ObjRes.value {α : Type} (recv : α) : ObjRes α → α
+  | .self_ => recv
+  | .fresh v => v
+
 /-! ### `timedelta` -/
 
 namespace Delta
@@ -62,8 +75,16 @@ def cmpC (a b : Delta) : Int :=
     if diff = 0 then a.us - b.us else diff
   else diff
 
-/-- `timedelta.__eq__`..`__gt__`, Py:913-941 (`__ne__` is the default inverse of `__eq__`). -/
-def richPy (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpPy b) op
+/-- `timedelta.__eq__`..`__gt__`, Py:913-941, each operator on its own line of the source
+(`__ne__` is the default inverse of `__eq__`). -/
+def richPy (op : CmpOp) (a b : Delta) : Bool :=
+  match op with
+  | .eq => decide (a.cmpPy b = 0) -- :913-915
+  | .ne => !decide (a.cmpPy b = 0) -- object.__ne__ inverts __eq__
+  | .le => decide (a.cmpPy b ≤ 0) -- :919-921
+  | .lt => decide (a.cmpPy b < 0) -- :925-927
+  | .ge => decide (a.cmpPy b ≥ 0) -- :931-933
+  | .gt => decide (a.cmpPy b > 0) -- :937-939
 
 /-- `delta_richcompare`, :2549-2558. -/
 def richC (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpC b) op
@@ -71,13 +92,17 @@ def richC (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpC b) op
 /-- `timedelta.__bool__`, Py:952-955; C `delta_bool`, :2935-2940. -/
 def bool (t : Delta) : Bool := t.days != 0 || t.seconds != 0 || t.us != 0
 
-/-- `timedelta.__pos__`, Py:849-850. -/
-def posPy (a : Delta) : Delta := a
+/-- `timedelta.__pos__`, Py:849-850: `return self`, the receiver itself. -/
+def posPy (_a : Delta) : ObjRes Delta := .self_
 
-/-- `delta_positive`, :2486-2495 (no normalization, range already valid). -/
-def posC (a : Delta) : Py Delta := do
+/-- `delta_positive`, :2486-2495: `new_delta(days, seconds, us, 0)` through `new_delta_ex`
+(:1383-1411: the day-range check, no normalization), which returns the static `zero_delta`
+for a zero `timedelta` (`look_up_delta`, :3173-3181) and a new object otherwise. Every zero
+`timedelta` of the base type is that singleton, so `+t is t` exactly for zero. -/
+def posC (a : Delta) : Py (ObjRes Delta) := do
   checkDeltaDayRange a.days
-  return ⟨a.days, a.seconds, a.us⟩
+  if a.days = 0 ∧ a.seconds = 0 ∧ a.us = 0 then return .self_
+  return .fresh ⟨a.days, a.seconds, a.us⟩
 
 /-- `timedelta.__rsub__`, Py:837-840: `other - self` as `-self + other`. -/
 def rsubPy (self other : Delta) : Py Delta := do
@@ -112,8 +137,15 @@ inductive HashKey where
   | ints (xs : List Int)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timedelta.__hash__`, Py:947-950, and `delta_hash`, :2563-2576. -/
+/-- `timedelta.__hash__`, Py:947-950: `hash(self._getstate())` (cached in `_hashcode`; a
+Python hash is never -1, so the cache only saves the recomputation). -/
 def Delta.hashKey (t : Delta) : HashKey := .ints t.getstate
+
+/-- C `delta_getstate`, :3024-3029: `Py_BuildValue("iii", days, seconds, microseconds)`. -/
+def Delta.getstateC (t : Delta) : List Int := [t.days, t.seconds, t.us]
+
+/-- `delta_hash`, :2563-2576: `PyObject_Hash(delta_getstate(self))`, cached in `hashcode`. -/
+def Delta.hashKeyC (t : Delta) : HashKey := .ints t.getstateC
 
 /-! ### `date` -/
 
@@ -121,9 +153,17 @@ def Delta.hashKey (t : Delta) : HashKey := .ints t.getstate
 def dateCmpPy (a b : Int × Int × Int) : Int :=
   cmpTuple [a.1, a.2.1, a.2.2] [b.1, b.2.1, b.2.2]
 
-/-- `date.__eq__`..`__gt__`, Py:1198-1221: `none` is `NotImplemented` (a `datetime` operand). -/
+/-- `date.__eq__`..`__gt__`, Py:1198-1221, each operator on its own line of the source:
+`none` is `NotImplemented` (a `datetime` operand). -/
 def dateRichPy (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : Option Bool :=
-  if otherIsDatetime then none else some (diffToBool (dateCmpPy a b) op)
+  if otherIsDatetime then none else
+  match op with
+  | .eq => some (decide (dateCmpPy a b = 0))  -- :1198-1201
+  | .ne => some (!decide (dateCmpPy a b = 0)) -- object.__ne__ inverts __eq__
+  | .le => some (decide (dateCmpPy a b ≤ 0))  -- :1203-1206
+  | .lt => some (decide (dateCmpPy a b < 0))  -- :1208-1211
+  | .ge => some (decide (dateCmpPy a b ≥ 0))  -- :1213-1216
+  | .gt => some (decide (dateCmpPy a b > 0))  -- :1218-1221
 
 /-- `date_richcompare`, :3916-3934. -/
 def dateRichC (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : Option Bool :=
@@ -168,19 +208,6 @@ def dateSubDeltaPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
 def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
   let (y, m, d) ← normalizeYMDC y m (d + -t.days)
   checkDate y m d
-
-/-- `date.replace`, Py:1184-1192. -/
-def dateReplacePy (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
-  checkDate (ny.getD y) (nm.getD m) (nd.getD d)
-
-/-- `datetime_date_replace_impl`, :3956-3961, through `new_date_subclass_ex`
-(:1191-1206) and `new_date_ex` (:1168-1187). The clinic `int` conversion is modelled by
-`fitsCInt`. -/
-def dateReplaceC (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
-  let (y, m, d) := (ny.getD y, nm.getD m, nd.getD d)
-  if ¬(fitsCInt y ∧ fitsCInt m ∧ fitsCInt d) then
-    .error (.overflowError "Python int too large to convert to C int")
-  else checkDate y m d
 
 /-! ### Time tuples -/
 
@@ -230,13 +257,6 @@ def ctimeC (y m d hh mm ss : Int) : String :=
 /-- `_get_class_module(self)`, Py:17-22. -/
 def getClassModule (moduleName : String) : String :=
   if moduleName = "datetime" then "datetime." else ""
-
-/-- `date.__repr__`, Py:1096-1107. -/
-def dateReprPy (y m d : Int) : String :=
-  s!"{getClassModule "datetime"}date({fmtD y}, {fmtD m}, {fmtD d})"
-
-/-- `date_repr`, :3619-3625. -/
-def dateReprC (y m d : Int) : String := s!"datetime.date({fmtD y}, {fmtD m}, {fmtD d})"
 
 /-- `s[:-1] + ", tzinfo=%r" % tz + ")"`, and C `append_keyword_tzinfo`, :1628-1645. -/
 def appendTzinfo (env : TzEnv) (s : String) (tz : Option Tz) : String :=
