@@ -797,7 +797,14 @@ itertools-pairwise-doc-agree	proven	Modules/itertoolsmodule.c	pairwise_new_impl,
 itertools-pairwise-reentry	proven	Modules/itertoolsmodule.c	pairwise_next
 itertools-teedataobject-args	proven	Modules/itertoolsmodule.c	itertools_teedataobject_impl
 sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_append_impl,deque_appendleft_lock_held,deque_appendleft_impl,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl,deque_clear,deque_clearmethod_impl,deque_inplace_concat,finalize_iterator,consume_iterator
-sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl,deque_len,deque_get_maxlen
+sequences-deque-extend-reentrant	proven	Modules/_collectionsmodule.c	deque_extend_impl,deque_extendleft_impl,deque_inplace_concat,finalize_iterator,consume_iterator
+sequences-deque-extend-keeps-bound	refuted	Modules/_collectionsmodule.c	deque_extend_impl
+sequences-deque-init	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl
+sequences-deque-search-reentrant	proven	Modules/_collectionsmodule.c	deque_count_impl,deque_contains_lock_held,deque_contains,deque_index_impl,deque_remove_impl
+sequences-deque-concat-args	proven	Modules/_collectionsmodule.c	deque_concat_lock_held,deque_concat
+sequences-deque-mul	refuted	Modules/_collectionsmodule.c	deque_repeat
+sequences-deque-mul-checked	proven	Modules/_collectionsmodule.c	deque_repeat
+sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_init_impl,deque_get_maxlen
 sequences-deque-rotate-loop	proven	Modules/_collectionsmodule.c	_deque_rotate,deque_rotate_impl
 sequences-subscript-agree	proven	Modules/_collectionsmodule.c	deque_item_lock_held,deque_item,deque_ass_item_lock_held,deque_ass_item,deque_del_item,valid_index,list_subscript,list_ass_item_lock_held
 sequences-index-agree	proven	Objects/listobject.c	list_index_impl,deque_index_impl
@@ -875,8 +882,8 @@ sequences-defdict-repr-init-or	proven	Modules/_collectionsmodule.c	defdict_repr,
 sequences-count-agree	proven	Modules/_collectionsmodule.c	_collections__count_elements_impl
 sequences-count-elements	proven	Modules/_collectionsmodule.c	_collections__count_elements_impl
 sequences-tuplegetter	proven	Modules/_collectionsmodule.c	tuplegetter_new_impl,tuplegetter_descr_get,tuplegetter_descr_set,tuplegetter_reduce,tuplegetter_repr
-sequences-deque-irepeat	refuted	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
-sequences-deque-irepeat-checked	proven	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
+sequences-deque-irepeat	refuted	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat
+sequences-deque-irepeat-checked	proven	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat
 sequences-list-repeat	proven	Objects/listobject.c	list_inplace_repeat_lock_held,list_repeat_lock_held
 sequences-deque-copy-concat	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
 sequences-deque-copy-concat-checked	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
@@ -2338,9 +2345,9 @@ bytecode-iter-step	proven	Objects/iterobject.c	iter_iternext
 bytecode-calliter-ends	proven	Objects/iterobject.c	calliter_iternext,PyCallIter_New,calliter_reduce
 bytecode-enum-counts	proven	Objects/enumobject.c	enum_new_impl,enumerate_vectorcall,enum_next,enum_next_long,increment_longindex_lock_held
 bytecode-cell-new	proven	Objects/cellobject.c	cell_new,PyCell_New
-bytecode-return-value	proven	Python/bytecodes.c	opcode:RETURN_VALUE,opcode:_RETURN_VALUE
+bytecode-return-value	proven	Python/bytecodes.c	opcode:RETURN_VALUE,opcode:_RETURN_VALUE,_PyEval_FrameClearAndPop,clear_thread_frame,clear_gen_frame
 bytecode-unwind-to-handler	proven	Python/bytecodes.c	get_exception_handler,scan_back_to_entry_start,skip_to_next_entry
-bytecode-unwind-no-handler	proven	Python/bytecodes.c	_PyEval_FrameClearAndPop,clear_thread_frame
+bytecode-unwind-no-handler	proven	Python/bytecodes.c	
 bytecode-unwind-exit	proven	Python/bytecodes.c	
 bytecode-exc-info-nests	proven	Python/bytecodes.c	opcode:POP_EXCEPT
 bytecode-for-iter-exhausted	proven	Python/bytecodes.c	
@@ -2414,6 +2421,11 @@ bytecode-iter-send	proven	Objects/abstract.c
 bytecode-traceback-here	proven	Python/bytecodes.c	
 bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
 bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
+bytecode-bind-keywords	proven	Python/ceval.c	initialize_locals
+bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
+bytecode-unexpected-keyword	proven	Python/ceval.c	
+bytecode-resume	proven	Python/bytecodes.c	opcode:RESUME,opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM,opcode:RESUME_CHECK,opcode:_RESUME_CHECK,opcode:RESUME_CHECK_JIT
+bytecode-kwonly-defaults-borrowed	refuted	Python/ceval.c	initialize_locals
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	

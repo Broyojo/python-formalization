@@ -164,7 +164,7 @@ def _FOR_ITER_GEN_FRAME (e : Env) : M Frame := do
       pure gf
   | none => throw .deopt
 
-/-- `@3.14.7:3490`. -/
+/-- `:4118-4123`; `_RECORD_NOS_GEN_FUNC` only records for the tier-2 trace. -/
 def FOR_ITER_GEN (e : Env) : M Unit := do
   _CHECK_PEP_523
   let gf ← _FOR_ITER_GEN_FRAME e
@@ -1068,11 +1068,63 @@ def SET_FUNCTION_ATTRIBUTE (e : Env) : M Unit := stk 2 1 fun
     | _ => fault "not a function"
   | _ => fault "not a function"
 
-/-- `_Py_MakeCoro`'s choice of type, `Objects/genobject.c`. -/
+/-- `_PyFrame_IsIncomplete`, `Include/internal/pycore_interpframe.h:259-268`: a frame not owned by a
+generator whose `instr_ptr` is before `_co_firsttraceable`, the first `RESUME` that is not
+`RESUME_AT_GEN_EXPR_START` (`Objects/codeobject.c:576-585`; the location mask is 7 and that location
+is 4, `Include/internal/pycore_opcode_utils.h:90-92`). -/
+def _root_.PyLean.Bytecode.frameIncomplete (P : Program) (f : Frame) : Bool :=
+  match f.owner with
+  | .interpreter => true
+  | .generator _ => false
+  | .thread =>
+    let instrs := ((P[f.code]?).map (·.instrs)).getD #[]
+    let first := (instrs.toList.findIdx? fun i => i.op.deopt == .RESUME && i.arg &&& 7 != 4).getD instrs.size
+    f.instrPtr < first
+
+/-- `_Py_MakeCoro`'s choice of type, `Objects/genobject.c:1120-1140`: the three flags are masked
+and compared with `==`, so exactly `CO_GENERATOR` makes a generator, exactly `CO_ASYNC_GENERATOR` an
+async generator, and anything else a coroutine (`assert(coro_flags)` and
+`assert (coro_flags == CO_COROUTINE)` are compiled out of a release build, so no flags or two of them,
+reachable through `code.replace(co_flags=...)`, make a coroutine too). -/
 def genKindOfFlags (flags : Nat) : GenKind :=
-  if flagSet flags coCoroutine then .coro
-  else if flagSet flags coAsyncGenerator then .asyncGen
-  else .gen
+  let coroFlags := flags &&& (coGenerator ||| coCoroutine ||| coAsyncGenerator)
+  if coroFlags == coGenerator then .gen
+  else if coroFlags == coAsyncGenerator then .asyncGen
+  else .coro
+
+/-- The first loop of `_PyCoro_ComputeOrigin` (`Objects/genobject.c:1544-1549`) over the frames
+`current_frame`, `_PyFrame_GetFirstComplete(frame->previous)`, ... (`frames`, the complete frames of
+the chain in order): count up to `origin_depth` of them. -/
+def crOriginCount (originDepth : Nat) : List Frame → Nat → Nat
+  | [], frameCount => frameCount
+  | _ :: rest, frameCount =>
+    if frameCount < originDepth then crOriginCount originDepth rest (frameCount + 1) else frameCount
+
+/-- The second loop (`:1555-1567`): one `(code, lasti)` for each of the first `frame_count` frames. -/
+def crOriginCollect (frameCount : Nat) : List Frame → Nat → List (Nat × Nat)
+  | [], _ => []
+  | f :: rest, i => if i < frameCount then (f.code, f.instrPtr) :: crOriginCollect frameCount rest (i + 1) else []
+
+/-- `_PyFrame_GetFirstComplete` applied along `previous` (`Include/internal/pycore_interpframe.h:270-277`):
+the complete frames of a chain, in order. -/
+def completeFrames (P : Program) (frames : List Frame) : List Frame :=
+  frames.filter fun f => !frameIncomplete P f
+
+/-- `_PyCoro_ComputeOrigin(origin_depth, _PyFrame_GetFirstComplete(frame->previous))`
+(`Objects/genobject.c:1150-1154`, `:1540-1570`) for the chain `prev` below the current frame. The
+`PyTuple_New` and `Py_BuildValue` allocation failures are not modelled. -/
+def computeCrOrigin (P : Program) (originDepth : Nat) (prev : List Frame) : List (Nat × Nat) :=
+  let frames := completeFrames P prev
+  crOriginCollect (crOriginCount originDepth frames 0) frames 0
+
+/-- `cr_origin_or_finalizer` as `_Py_MakeCoro` leaves it (`:1122-1160`): NULL for a generator and an
+async generator (`ag_origin_or_finalizer = NULL`), NULL for a coroutine when
+`coroutine_origin_tracking_depth` is 0, else the computed origin. -/
+def makeCoroOrigin (P : Program) (kind : GenKind) (originDepth : Nat) (prev : List Frame) :
+    Option (List (Nat × Nat)) :=
+  match kind with
+  | .coro => if originDepth == 0 then none else some (computeCrOrigin P originDepth prev)
+  | _ => none
 
 /-- `:5839`. -/
 def RETURN_GENERATOR (e : Env) : M Unit := do
@@ -1081,13 +1133,15 @@ def RETURN_GENERATOR (e : Env) : M Unit := do
   let (gen) ← BM.lift do
     let func ← (getFunc f.funcobj : RM _)
     let co ← getCode e.P
-    let gv ← (alloc (.gen { kind := genKindOfFlags co.flags, name := func.name,
-                            qualname := func.qualname }) : RM Val)
+    let kind := genKindOfFlags co.flags
+    let origin := makeCoroOrigin e.P kind s.regs.rt.coroOriginDepth s.regs.prev
+    let gv ← (alloc (.gen { kind := kind, name := func.name, qualname := func.qualname,
+                            origin := origin }) : RM Val)
     match gv with
     | .ref a =>
       let gf := { f with instrPtr := f.instrPtr + 1, owner := .generator a, stack := s.stack }
-      (setObj a (.gen { kind := genKindOfFlags co.flags, frame := gf, frameState := 0,
-                        name := func.name, qualname := func.qualname }) : RM Unit)
+      (setObj a (.gen { kind := kind, frame := gf, frameState := 0,
+                        name := func.name, qualname := func.qualname, origin := origin }) : RM Unit)
       pure gv
     | _ => fault "alloc"
   BM.lift (leaveRecursivePy : RM Unit)

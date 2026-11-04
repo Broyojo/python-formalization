@@ -62,26 +62,37 @@ def checkPeriodicsAtEnd (e : Env) : BM Unit := fun r =>
     else RM.lift checkPeriodics r
 /-- `:163-166`: `ERROR_IF(err != 0)` with nothing popped; it ends the `CALL` family's macros. -/
 def _CHECK_PERIODIC_AT_END (e : Env) : M Unit := BM.lift (checkPeriodicsAtEnd e)
-/-- `@3.14.7:164`. -/
-def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
+/-- `:168-173`: `check_periodics` unless the location bits of the oparg
+(`oparg & RESUME_OPARG_LOCATION_MASK`, 7) are `RESUME_AFTER_YIELD_FROM` (2) or above
+(`Include/internal/pycore_opcode_utils.h:86-92`), with `ERROR_IF(err != 0)` popping nothing. -/
+def _CHECK_PERIODIC_IF_NOT_YIELD_FROM (e : Env) : M Unit :=
+  if e.oparg &&& 7 < 2 then _CHECK_PERIODIC else pure ()
 /-- `:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/
 def _QUICKEN_RESUME : M Unit := pure ()
-/-- `@3.14.7:183`. No monitoring tool is active in the model. -/
+/-- `:179-200`. No monitoring tool is active in the model, so the code's instrumentation version
+equals the global one and nothing is instrumented. -/
 def _MAYBE_INSTRUMENT : M Unit := pure ()
 /-- `:202`. Thread-local bytecode exists only on the free-threaded build. -/
 def _LOAD_BYTECODE : M Unit := pure ()
-/-- `@3.14.7:224`. -/
-def RESUME : M Unit := do
-  _LOAD_BYTECODE; _MAYBE_INSTRUMENT; _QUICKEN_RESUME; _CHECK_PERIODIC_IF_NOT_YIELD_FROM
-/-- `:226`: deopts when the eval breaker differs from the code's version. -/
-def RESUME_CHECK : M Unit := pure ()
+/-- `:220-224`. -/
+def RESUME (e : Env) : M Unit := do
+  _LOAD_BYTECODE; _MAYBE_INSTRUMENT; _QUICKEN_RESUME; _CHECK_PERIODIC_IF_NOT_YIELD_FROM e
+/-- `:230-243`: `DEOPT_IF(eval_breaker != version)`. With no monitoring tool the code's
+instrumentation version is the global one, the version bits of `eval_breaker`, so the two differ
+exactly when an event bit is set (`_PY_EVAL_EVENTS_MASK`). An event whose handlers succeed is
+`pendingExc = .null`, and deopting to `RESUME`, which handles it and goes on, has the same effect
+as not deopting, so the guard fails exactly when `pendingExc` is set. The Emscripten signal clock
+and the free-threaded `tlbc_index` check are not on this build. -/
+def _RESUME_CHECK : M Unit := BM.lift fun r => deoptIf (r.rt.pendingExc != .null) r
+/-- `:226-228`: `unused/1 + _RESUME_CHECK`; a failed guard runs `RESUME` (dispatch's `withDeopt`). -/
+def RESUME_CHECK : M Unit := _RESUME_CHECK
 /-- `:245`: `_RESUME_CHECK + _JIT`, and `_JIT` does nothing with tier 2 not built. -/
 def RESUME_CHECK_JIT : M Unit := RESUME_CHECK
-/-- `@3.14.7:245`. Tools are the identity without a registered callback. -/
+/-- `:250-258`. Tools are the identity without a registered callback. -/
 def _MONITOR_RESUME : M Unit := pure ()
-/-- `@3.14.7:255`. -/
-def INSTRUMENTED_RESUME : M Unit := do
-  _LOAD_BYTECODE; _MAYBE_INSTRUMENT; _CHECK_PERIODIC_IF_NOT_YIELD_FROM; _MONITOR_RESUME
+/-- `:260-265`. -/
+def INSTRUMENTED_RESUME (e : Env) : M Unit := do
+  _LOAD_BYTECODE; _MAYBE_INSTRUMENT; _CHECK_PERIODIC_IF_NOT_YIELD_FROM e; _MONITOR_RESUME
 
 /-! ### Lines 265-406: locals and constants -/
 
@@ -864,7 +875,7 @@ def GET_ANEXT (e : Env) : M Unit := stkK 1 2 fun
 def GET_AWAITABLE (e : Env) : M Unit := stk 1 1 fun
   | [o] => do pure [← e.om.getAwaitable e.ctx o e.oparg]
   | _ => fault "arity"
-/-- `@3.14.7:1651`. -/
+/-- `:1664-1674`: the adaptive counter and `_Py_Specialize_Send`, the quickening relation. -/
 def _SPECIALIZE_SEND : M Unit := pure ()
 
 /-- Exact `generator` or `coroutine` object with `gi_frame_state < FRAME_EXECUTING`:
@@ -1081,7 +1092,8 @@ def YIELD_VALUE (e : Env) : M Unit := do
   BM.lift (loadIp 2)
   pushAll [retval]
 
-/-- `@3.14.7:1836`. -/
+/-- `:1893-1904`: `_Py_call_instrumentation_arg(PY_MONITORING_EVENT_PY_YIELD)`, the identity without
+a registered callback (no tool is active in the model). -/
 def _YIELD_VALUE_EVENT : M Unit := pure ()
 /-- `:1906`. -/
 def INSTRUMENTED_YIELD_VALUE (e : Env) : M Unit := do _YIELD_VALUE_EVENT; YIELD_VALUE e

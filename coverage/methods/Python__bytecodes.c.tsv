@@ -3,14 +3,14 @@ Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	excluded		no-behavi
 Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
 Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	modelled	bytecode-call-builtins	
-Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	modelled	bytecode-resume	
 Python/bytecodes.c	175	175	opcode:_QUICKEN_RESUME	tier1 op(_QUICKEN_RESUME, (counter/1 --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	179	179	opcode:_MAYBE_INSTRUMENT	tier1 op(_MAYBE_INSTRUMENT, (--)) {	todo		
 Python/bytecodes.c	202	202	opcode:_LOAD_BYTECODE	replaced op(_LOAD_BYTECODE, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	220	220	opcode:RESUME	macro(RESUME) =	todo		
-Python/bytecodes.c	226	226	opcode:RESUME_CHECK	macro(RESUME_CHECK) =	todo		changed-in-3.15:
-Python/bytecodes.c	230	230	opcode:_RESUME_CHECK	op(_RESUME_CHECK, (--)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	245	245	opcode:RESUME_CHECK_JIT	macro(RESUME_CHECK_JIT) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	220	220	opcode:RESUME	macro(RESUME) =	modelled	bytecode-resume	
+Python/bytecodes.c	226	226	opcode:RESUME_CHECK	macro(RESUME_CHECK) =	modelled	bytecode-resume	
+Python/bytecodes.c	230	230	opcode:_RESUME_CHECK	op(_RESUME_CHECK, (--)) {	modelled	bytecode-resume	
+Python/bytecodes.c	245	245	opcode:RESUME_CHECK_JIT	macro(RESUME_CHECK_JIT) =	modelled	bytecode-resume	
 Python/bytecodes.c	250	250	opcode:_MONITOR_RESUME	op(_MONITOR_RESUME, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	260	260	opcode:INSTRUMENTED_RESUME	macro(INSTRUMENTED_RESUME) =	todo		changed-in-3.15:
 Python/bytecodes.c	271	271	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	modelled	bytecode-load-fast-check	
@@ -498,7 +498,7 @@ Python/bytecodes.c	5801	5801	opcode:INSTRUMENTED_CALL_FUNCTION_EX	macro(INSTRUME
 Python/bytecodes.c	5807	5807	opcode:_MAKE_FUNCTION	op(_MAKE_FUNCTION, (codeobj_st -- func, co)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_FUNCTION + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		review: The machine's genKindOfFlags (Bytecode/Uops3.lean:1072-1075) tests CO_COROUTINE first and falls back to a generator, while _Py_MakeCoro (Objects/genobject.c:1120-1140), which the GenObj model mirrors exactly, compares the masked flags with == and makes a coroutine otherwise, so code with none of the three flags or with CO_GENERATOR|CO_ASYNC_GENERATOR (reachable through code.replace(co_flags=...) on a release build) gets a generator or async generator in the model and a coroutine in CPython; cr_origin (sys.set_coroutine_origin_tracking_depth) is also absent.
+Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	modelled	bytecode-return-generator	
 Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	modelled	bytecode-build-slice	
 Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	modelled	bytecode-format	
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	modelled	bytecode-format	

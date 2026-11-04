@@ -167,8 +167,19 @@ theorem kr_dictGetStr (dv : Val) (name : String) : KeepsRec (dictGetStr dv name)
   exact kr_bind (kr_getDict _) fun d => kr_bind (kr_dictFind _ _ _) fun o => by
     split <;> exact kr_pure _
 
-theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) :
-    ∀ (kws : List (String × Val)) (fast : Array Val), KeepsRec (bindKeywords co func kwdict kws fast) := by
+theorem kr_posonly (co : Code) (kwnames : List String) (q : String) :
+    KeepsRec (posonlyPassedAsKeyword co kwnames q) := by
+  unfold posonlyPassedAsKeyword
+  dsimp only
+  exact kr_ite (kr_typeError _) (kr_pure _)
+
+theorem kr_unexpectedKeyword {α : Type} (co : Code) (q k : String) :
+    KeepsRec (unexpectedKeyword (α := α) co q k) := by
+  unfold unexpectedKeyword
+  split <;> exact kr_typeError _
+
+theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List String) :
+    ∀ (kws : List (String × Val)) (fast : Array Val), KeepsRec (bindKeywords co func kwdict kwnames kws fast) := by
   intro kws
   induction kws with
   | nil => intro fast; exact kr_pure _
@@ -181,7 +192,10 @@ theorem kr_bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) :
       · exact kr_bind (kr_typeError _) fun _ => ih _
       · exact ih _
     · apply kr_ite
-      · exact kr_bind (kr_typeError _) fun _ => kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
+      · apply kr_ite
+        · exact kr_bind (kr_posonly _ _ _) fun _ => kr_bind (kr_unexpectedKeyword _ _ _) fun _ =>
+            kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
+        · exact kr_bind (kr_unexpectedKeyword _ _ _) fun _ => kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
       · exact kr_bind (kr_dictSetStr _ _ _) fun _ => ih _
 
 theorem kr_forIn {β σ : Type} (l : List β) (f : β → σ → RM (ForInStep σ)) (hf : ∀ x b, KeepsRec (f x b)) :
@@ -195,12 +209,6 @@ theorem kr_forIn {β σ : Type} (l : List β) (f : β → σ → RM (ForInStep �
       split
       · exact kr_pure _
       · exact ih _
-
-theorem kr_posonly (co : Code) (kwnames : List String) (q : String) :
-    KeepsRec (posonlyPassedAsKeyword co kwnames q) := by
-  unfold posonlyPassedAsKeyword
-  dsimp only
-  exact kr_ite (kr_typeError _) (kr_pure _)
 
 theorem kr_tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast : Array Val) (q : String) :
     KeepsRec (tooManyPositional (α := α) co gvn defaults fast q) := by
@@ -225,7 +233,7 @@ macro_rules
       | with_reducible exact kr_tupleItems _
       | with_reducible exact kr_dictGetStr _ _
       | with_reducible exact kr_posonly _ _ _
-      | with_reducible exact kr_bindKeywords _ _ _ _ _
+      | with_reducible exact kr_bindKeywords _ _ _ _ _ _
       | with_reducible exact kr_tooManyPositional _ _ _ _ _
       | with_reducible exact kr_missingArguments _ _ _ _
       | with_reducible refine kr_bind ?_ (fun _ => ?_)

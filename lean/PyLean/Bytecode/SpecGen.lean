@@ -17,45 +17,110 @@ open Uop
 def movedFrame (f : Frame) (a : Addr) (stack : List Val) : Frame :=
   { f with instrPtr := f.instrPtr + 1, owner := FrameOwner.generator a, stack := stack }
 
+/-- `cr_origin` as `RETURN_GENERATOR` leaves it, stated without the machine's loops: `None` unless the
+object is a coroutine and `coroutine_origin_tracking_depth` is not 0, else the first `depth` complete
+frames of the caller chain (`_PyFrame_IsIncomplete` frames skipped), innermost first, each as the
+`(code, lasti)` its `(co_filename, lineno, co_name)` is read from. -/
+def expectedOrigin (P : Program) (kind : GenKind) (depth : Nat) (callers : List Frame) :
+    Option (List (Nat × Nat)) :=
+  if kind = .coro ∧ depth ≠ 0 then
+    some (((callers.filter fun f => !frameIncomplete P f).take depth).map fun f => (f.code, f.instrPtr))
+  else none
+
 /-- What `_Py_MakeCoro` and `RETURN_GENERATOR` leave in the heap. -/
-def madeGen (co : Code) (func : FuncObj) (gf : Frame) : GenObj :=
-  { kind := genKindOfFlags co.flags, name := func.name, qualname := func.qualname, frameState := 0, frame := gf }
+def madeGen (co : Code) (func : FuncObj) (gf : Frame) (origin : Option (List (Nat × Nat))) : GenObj :=
+  { kind := genKindOfFlags co.flags, name := func.name, qualname := func.qualname, frameState := 0, frame := gf,
+    origin := origin }
 
 /-- The object `_Py_MakeCoro` allocates, before the frame is copied in. -/
-def bareGen (co : Code) (func : FuncObj) : GenObj :=
-  { kind := genKindOfFlags co.flags, name := func.name, qualname := func.qualname }
+def bareGen (co : Code) (func : FuncObj) (origin : Option (List (Nat × Nat))) : GenObj :=
+  { kind := genKindOfFlags co.flags, name := func.name, qualname := func.qualname, origin := origin }
+
+/-- `_Py_MakeCoro`'s choice of type (`Objects/genobject.c:1120-1140`), for every `co_flags`: the
+masked flags `co_flags & (CO_GENERATOR | CO_COROUTINE | CO_ASYNC_GENERATOR)` (`0x20 | 0x80 | 0x200`)
+equal to `CO_GENERATOR` make a generator, equal to `CO_ASYNC_GENERATOR` an async generator, and every
+other value a coroutine, including 0 and two or three flags at once (the asserts are compiled out of
+a release build; checked on 3.15.2 with `code.replace(co_flags=...)`). -/
+def GenKindRules : Prop :=
+  ∀ flags : Nat,
+    (genKindOfFlags flags = .gen ↔ flags &&& 0x2a0 = 0x20) ∧
+    (genKindOfFlags flags = .asyncGen ↔ flags &&& 0x2a0 = 0x200) ∧
+    (genKindOfFlags flags = .coro ↔ flags &&& 0x2a0 ≠ 0x20 ∧ flags &&& 0x2a0 ≠ 0x200)
 
 /-- `RETURN_GENERATOR` (`:5839-5861`) in the frame of a function `func` (`f_funcobj`) whose code is
 `co`, called from `caller`: `_Py_MakeCoro` makes a generator, coroutine or async generator by
-`co_flags` with the function's `__name__` and `__qualname__`, the frame is copied into it with
-`instr_ptr` past this instruction, its stack as it is (3.15 allows up to two values,
-`assert(STACK_LEVEL() <= 2)`), `owner = FRAME_OWNED_BY_GENERATOR` and `gi_frame_state = FRAME_CREATED`
-(0), with the async generator flags clear; the frame is popped without being cleared (its references
-moved), the recursion counter given back, and the caller resumes at its `return_offset` with the new
-object on top. The allocation failure of `_Py_MakeCoro` (`ERROR_IF`) and `cr_origin` tracking
-(`sys.set_coroutine_origin_tracking_depth`) are not modelled. -/
+`co_flags` (`GenKindRules`) with the function's `__name__` and `__qualname__` and, for a coroutine
+while `sys.set_coroutine_origin_tracking_depth` is not 0, `cr_origin` from the first `depth` complete
+frames of the caller chain (`expectedOrigin`, `Objects/genobject.c:1143-1160`, `:1540-1570`); the
+frame is copied into it with `instr_ptr` past this instruction, its stack as it is (3.15 allows up to
+two values, `assert(STACK_LEVEL() <= 2)`), `owner = FRAME_OWNED_BY_GENERATOR` and
+`gi_frame_state = FRAME_CREATED` (0), with the async generator flags clear; the frame is popped without
+being cleared (its references moved), the recursion counter given back, and the caller resumes at its
+`return_offset` with the new object on top. The allocation failures of `_Py_MakeCoro` (`ERROR_IF`) and
+of `_PyCoro_ComputeOrigin` are not modelled. -/
 def ReturnGeneratorRules : Prop :=
+  GenKindRules ∧
   ∀ (e : Env) (regs : Regs) (stack : List Val) (fa : Addr) (func : FuncObj) (co : Code) (caller : Frame)
     (prev : List Frame),
     regs.frame.funcobj = .ref fa → regs.rt.heap[fa]? = some (.func func) → e.P[regs.frame.code]? = some co →
     regs.prev = caller :: prev →
     let a := regs.rt.heap.size
-    let g := madeGen co func (movedFrame regs.frame a stack)
+    let origin := expectedOrigin e.P (genKindOfFlags co.flags) regs.rt.coroOriginDepth (caller :: prev)
+    let g := madeGen co func (movedFrame regs.frame a stack) origin
     execOp e .RETURN_GENERATOR ⟨regs, stack⟩ =
       .ok () ⟨{ rt := { regs.rt with
-                  heap := (regs.rt.heap.push (.gen (bareGen co func))).setIfInBounds a (.gen g)
+                  heap := (regs.rt.heap.push (.gen (bareGen co func origin))).setIfInBounds a (.gen g)
                   pyRecursionRemaining := regs.rt.pyRecursionRemaining + 1 }
                 frame := caller, prev := prev, next := caller.instrPtr + caller.returnOffset },
               .ref a :: caller.stack⟩
 
+theorem genKindRules_proven : GenKindRules := by
+  intro flags
+  have hm : genKindOfFlags flags =
+      if flags &&& 0x2a0 = 0x20 then .gen else if flags &&& 0x2a0 = 0x200 then .asyncGen else .coro := by
+    have h672 : (32 ||| 128 ||| 512 : Nat) = 0x2a0 := by decide
+    simp only [genKindOfFlags, coGenerator, coCoroutine, coAsyncGenerator, h672, beq_iff_eq]
+  rw [hm]
+  by_cases h1 : flags &&& 0x2a0 = 0x20 <;> by_cases h2 : flags &&& 0x2a0 = 0x200 <;> simp_all
+
+theorem crOriginCount_eq (d : Nat) : ∀ (l : List Frame) (n : Nat), n ≤ d →
+    crOriginCount d l n = min d (n + l.length)
+  | [], n, h => by simp [crOriginCount]; omega
+  | _ :: rest, n, h => by
+    unfold crOriginCount
+    by_cases hn : n < d
+    · rw [if_pos hn, crOriginCount_eq d rest (n + 1) hn]; simp; omega
+    · rw [if_neg hn]; simp; omega
+
+theorem crOriginCollect_eq (c : Nat) : ∀ (l : List Frame) (i : Nat),
+    crOriginCollect c l i = (l.take (c - i)).map fun f => (f.code, f.instrPtr)
+  | [], i => by simp [crOriginCollect]
+  | f :: rest, i => by
+    unfold crOriginCollect
+    by_cases hi : i < c
+    · rw [if_pos hi, crOriginCollect_eq c rest (i + 1)]
+      have : c - i = (c - (i + 1)) + 1 := by omega
+      rw [this]; simp
+    · rw [if_neg hi]; have : c - i = 0 := by omega
+      rw [this]; simp
+
+theorem makeCoroOrigin_eq (P : Program) (kind : GenKind) (d : Nat) (prev : List Frame) :
+    makeCoroOrigin P kind d prev = expectedOrigin P kind d prev := by
+  cases kind <;> simp [makeCoroOrigin, expectedOrigin]
+  by_cases hd : d = 0
+  · simp [hd]
+  · simp [hd, computeCrOrigin, completeFrames, crOriginCount_eq d _ 0 (Nat.zero_le _), crOriginCollect_eq]
+
 theorem returnGeneratorRules_proven : ReturnGeneratorRules := by
-  intro e regs stack fa func co caller prev hf hfo hco hp a g
+  refine ⟨genKindRules_proven, ?_⟩
+  intro e regs stack fa func co caller prev hf hfo hco hp a origin g
   obtain ⟨rt, frame, pv, next⟩ := regs
   simp only at hf hfo hco hp
   subst hp
   simp [execOp, RETURN_GENERATOR, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift,
     pure, EStateM.pure, get, getThe, MonadStateOf.get, EStateM.get, getFunc, getObj, hf, hfo, getCode, hco,
-    alloc, setObj, leaveRecursivePy, popToPrevious, loadIp, getFrame, pushAll, a, g, madeGen, movedFrame, bareGen]
+    alloc, setObj, leaveRecursivePy, popToPrevious, loadIp, getFrame, pushAll, a, g, madeGen, movedFrame, bareGen,
+    origin, makeCoroOrigin_eq]
 
 /-! ## `YIELD_VALUE` -/
 
