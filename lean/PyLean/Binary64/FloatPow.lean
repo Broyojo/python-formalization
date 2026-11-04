@@ -287,4 +287,130 @@ theorem libm_step (libm : F64 → F64 → F64 × Nat) (a y : F64) (neg : Bool) :
     · have : (e == ERANGE) = false := by simpa using h34
       simp [this, he, h34]
 
+theorem eq_d1_any {x : F64} (hn : x.isNaN = false) :
+    F64.eq x d1 = decide (x.isFinite = true ∧ x.toRat = 1) := by
+  rcases classify x with hx | hx | hx
+  · rw [eq_d1_val hx]; simp [hx]
+  · have : F64.eq x d1 = false := by
+      cases hc : F64.eq x d1
+      · rfl
+      · have := (eq_finite_right d1_facts.2.2.1 hc).1
+        rw [not_finite_of_inf hx] at this; cases this
+    rw [this, not_finite_of_inf hx]; simp
+  · rw [hn] at hx; cases hx
+
+theorem abs_inf_eq {x : F64} (hx : x.isInf = true) : x.abs = F64.inf false := by
+  rw [eq_inf_of_isInf hx]
+  cases x.sign <;> decide +kernel
+
+theorem gt_d1_abs {x : F64} (hn : x.isNaN = false) :
+    F64.gt x.abs d1 = (x.isInf || decide (1 < Rat.abs x.toRat)) := by
+  rcases classify x with hx | hx | hx
+  · unfold F64.gt
+    have hfa : x.abs.isFinite = true := by rw [MathInt.abs_isFinite]; exact hx
+    rw [lt_of_finite d1_facts.2.2.1 hfa, MathInt.abs_toRat, isInf_false_of_finite hx]
+    have : d1.toRat = 1 := by decide +kernel
+    rw [this]; simp
+  · rw [abs_inf_eq hx, hx, Bool.true_or]; decide +kernel
+  · rw [hn] at hx; cases hx
+
+theorem gt_inf_d0 {y : F64} (hy : y.isInf = true) : F64.gt y d0 = !y.sign := by
+  rw [eq_inf_of_isInf hy]; cases y.sign <;> decide +kernel
+
+theorem abs_inf_self {y : F64} (hy : y.isInf = true) : y.abs = F64.inf false := abs_inf_eq hy
+
+open Classical in
+theorem powSpec_proven : PowSpec := by
+  intro libm x y
+  refine ⟨fun hz => ?_, fun hz hxn => ?_, fun hyn hxn => ?_, fun hyi hxn => ?_, fun hxi hy hz => ?_,
+    fun hxz hy hz => ?_, fun hx hxz hs hy hz hni => ?_, fun hx hxz hs hy hz hi => ?_,
+    fun hx hxz hs hy hz => ?_⟩
+  · simp [floatPowCoreE, eq_d0_of_zero hz]
+  · simp [floatPowCoreE, eq_d0_of_nonzero_any hz, hxn]
+  · have hz : y.isZero = false := by
+      cases hc : y.isZero
+      · rfl
+      · rw [isNaN_false_of_finite (isFinite_of_isZero hc)] at hyn; cases hyn
+    simp only [floatPowCoreE, eq_d0_of_nonzero_any hz, hxn, hyn, eq_d1_any hxn, Bool.false_eq_true,
+      ↓reduceIte]
+    by_cases h : x.isFinite = true ∧ x.toRat = 1 <;> simp [h]
+  · have hz := inf_not_zero hyi
+    simp only [floatPowCoreE, eq_d0_of_nonzero_any hz, hxn, not_nan_of_inf hyi, hyi,
+      Bool.false_eq_true, ↓reduceIte]
+    have hfa : x.abs.isNaN = false := by rw [MathInt.abs_isNaN]; exact hxn
+    rw [eq_d1_any hfa, MathInt.abs_isFinite, MathInt.abs_toRat,
+      gt_inf_d0 hyi, gt_d1_abs hxn, abs_inf_self hyi]
+    by_cases h1 : x.isFinite = true ∧ Rat.abs x.toRat = 1
+    · simp [h1]
+    · simp only [h1, decide_false, Bool.false_eq_true, ↓reduceIte]
+      cases hs : y.sign <;> cases hi : x.isInf <;> by_cases h2 : 1 < Rat.abs x.toRat <;>
+        simp [h2] <;> rfl
+  · have hn := not_nan_of_inf hxi
+    simp only [floatPowCoreE, eq_d0_of_not_zero hy hz, hn, isNaN_false_of_finite hy,
+      isInf_false_of_finite hy, hxi, Bool.false_eq_true, ↓reduceIte, gt_d0_sign hy hz,
+      abs_inf_eq hxi, zero_copysign]
+    have ho := isOddInteger_iff hy
+    cases hs : y.sign <;> by_cases h : IsOddInt y <;> simp [h, ho.2, ho] <;>
+      first | rfl | (rw [show isOddInteger y = false by
+        cases hc : isOddInteger y
+        · rfl
+        · exact absurd (ho.1 hc) h]; rfl)
+  · have hfx := isFinite_of_isZero hxz
+    have hio := isOddInteger_iff hy
+    have hodd : isOddInteger y = decide (IsOddInt y) := by
+      by_cases h : IsOddInt y
+      · rw [hio.2 h]; simp [h]
+      · cases hc : isOddInteger y
+        · simp [h]
+        · exact absurd (hio.1 hc) h
+    simp only [floatPowCoreE, eq_d0_of_not_zero hy hz, isNaN_false_of_finite hfx,
+      isNaN_false_of_finite hy, isInf_false_of_finite hy, isInf_false_of_finite hfx, eq_d0_of_zero hxz,
+      lt_d0_sign hy hz, hodd, Bool.false_eq_true, ↓reduceIte]
+    cases y.sign <;> by_cases h : IsOddInt y <;> simp [h] <;> rfl
+  · have hint : F64.ne y (F64.floor y) = true := by
+      cases hc : F64.ne y (F64.floor y)
+      · exact absurd ((isInt_iff hy).1 hc) hni
+      · rfl
+    simp only [floatPowCoreE, eq_d0_of_not_zero hy hz, isNaN_false_of_finite hx,
+      isNaN_false_of_finite hy, isInf_false_of_finite hy, isInf_false_of_finite hx,
+      eq_d0_of_not_zero hx hxz, lt_d0_sign hx hxz, hs, hint, Bool.false_eq_true, ↓reduceIte]
+  · have hint : F64.ne y (F64.floor y) = false := (isInt_iff hy).2 hi
+    have hio := isOddInteger_iff hy
+    have hodd : isOddInteger y = decide (IsOddInt y) := by
+      by_cases h : IsOddInt y
+      · rw [hio.2 h]; simp [h]
+      · cases hc : isOddInteger y
+        · simp [h]
+        · exact absurd (hio.1 hc) h
+    have hfn : x.neg.isFinite = true := by rw [neg_isFinite]; exact hx
+    have hm1 : F64.eq x.neg d1 = decide (x.toRat = -1) := by
+      rw [eq_d1_val hfn, toRat_neg]
+      by_cases h : x.toRat = -1
+      · simp [h]
+      · have : ¬ -x.toRat = 1 := fun h' => h (by grind)
+        simp [h, this]
+    simp only [floatPowCoreE, eq_d0_of_not_zero hy hz, isNaN_false_of_finite hx,
+      isNaN_false_of_finite hy, isInf_false_of_finite hy, isInf_false_of_finite hx,
+      eq_d0_of_not_zero hx hxz, lt_d0_sign hx hxz, hs, hint, Bool.false_eq_true, ↓reduceIte,
+      hm1, hodd, Bool.not_false]
+    rw [libm_step]
+    by_cases h1 : x.toRat = -1
+    · by_cases h2 : IsOddInt y <;> simp [h1, h2]
+    · simp [h1]
+  · have hm1 := eq_d1_val hx
+    simp only [floatPowCoreE, eq_d0_of_not_zero hy hz, isNaN_false_of_finite hx,
+      isNaN_false_of_finite hy, isInf_false_of_finite hy, isInf_false_of_finite hx,
+      eq_d0_of_not_zero hx hxz, lt_d0_sign hx hxz, hs, Bool.false_eq_true, ↓reduceIte, hm1]
+    have hl := libm_step libm x y false
+    simp only [Bool.false_eq_true, ↓reduceIte] at hl
+    rw [hl]
+    by_cases h1 : x.toRat = 1 <;> simp [h1]
+
+theorem floatPowSpec_proven : FloatPowSpec := by
+  refine ⟨fun _ _ _ _ => rfl, fun libm => withDoubles_dispatch _, fun libm x y => ?_, powSpec_proven,
+    floatPowCore_eq⟩
+  show withDoubles (.float x) (.float y) (floatPowCoreE libm) = _
+  simp only [withDoubles, convertToDouble, bind, Except.bind]
+  rcases floatPowCoreE libm x y with e | r <;> rfl
+
 end PyLean.Binary64
