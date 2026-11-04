@@ -431,6 +431,7 @@ decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal._
 decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
 decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
+decimal-str-spell-exact	proven	Lib/_pydecimal.py	Decimal.__str__
 decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__,_dec_hash
 decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal._rescale,Decimal.__int__,dec_as_long,_decimal_Decimal___floor___impl,_decimal_Decimal___ceil___impl,_decimal_Decimal___round___impl
@@ -538,6 +539,10 @@ decimal-next-minus-exact	proven	Lib/_pydecimal.py	Decimal.next_minus
 decimal-next-toward-exact	proven	Lib/_pydecimal.py	Decimal.next_toward
 decimal-eng-string-exact	proven	Lib/_pydecimal.py	Decimal.to_eng_string
 decimal-repr-exact	proven	Lib/_pydecimal.py	Decimal.__repr__
+decimal-hash-exact-py	proven	Lib/_pydecimal.py	Decimal.__hash__
+decimal-as-tuple-exact-py	proven	Lib/_pydecimal.py	Decimal.as_tuple
+decimal-ieee-context-exact	proven	Lib/_pydecimal.py	IEEEContext
+decimal-ratio-exact-py	proven	Lib/_pydecimal.py	Decimal.as_integer_ratio
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
