@@ -657,4 +657,91 @@ theorem quot_recov {x y c d : F64} (ux : Unit x) (uy : Unit y) (hc : c.isFinite 
   rw [toRat_neg, v3, v4] at e2
   exact hcd (lin_zero2 (sq_ne_of hxy) e1 (by grind))
 
+theorem add_fin_small {u v : F64} (hu : u.isFinite = true) (hv : v.isFinite = true)
+    (h : Rat.abs (u.toRat + v.toRat) < overflowLimit) : (F64.add u v).isFinite = true := by
+  have hr := (add_spec u v).round hu hv
+  rcases classify (F64.add u v) with h' | h' | h'
+  · exact h'
+  · exact absurd (hr.inf.1 h') (Rat.not_le.2 h)
+  · rw [hr.notNaN] at h'; cases h'
+
+theorem zero_notNaN (t : Bool) : (F64.zero t).isNaN = false := isNaN_false_of_finite (zero_isFinite t)
+
+theorem zero_div_inf {y : F64} (hy : y.isInf = true) (t : Bool) :
+    (F64.div (F64.zero t) y).isZero = true := by
+  rw [div_fin_inf (zero_isFinite t) hy]; exact zero_isZero _
+
+theorem fin_div_inf_zero {x y : F64} (hx : x.isFinite = true) (hy : y.isInf = true) :
+    (F64.div x y).isZero = true := by
+  rw [div_fin_inf hx hy]; exact zero_isZero _
+
+theorem isZero_notNaN {x : F64} (h : x.isZero = true) : x.isNaN = false :=
+  isNaN_false_of_finite (isFinite_of_isZero h)
+
+theorem box_fin_toRat {x : F64} (h : x.isInf = false) : (boxInf x).toRat = 0 := boxInf_fin h
+
+/-- C11 Annex G.5.2 for `_Py_rc_quot` (complexobject.c:265-304): a finite float over a complex
+with an infinite part gives a zero in both parts, for every such divisor: through Smith's
+branches when the other part is finite, through the recovery of :294-301 when it is infinite
+or a NaN. `errno` is left alone. -/
+def RcQuotZero : Prop :=
+  ∀ (a : F64) (b : C), a.isFinite = true → (b.re.isInf || b.im.isInf) = true →
+    (_Py_rc_quot a b).1.re.isZero = true ∧ (_Py_rc_quot a b).1.im.isZero = true ∧
+      (_Py_rc_quot a b).2 = false
+
+theorem rcQuotZero_proven : RcQuotZero := by
+  intro a b ha hb
+  obtain ⟨br, bi⟩ := b
+  simp only at hb ⊢
+  have han : a.neg.isFinite = true := by rw [neg_isFinite]; exact ha
+  -- the recovery: both parts are `0.0 * (finite)`
+  have hrec : ∀ x y : F64, Unit x → Unit y →
+      (F64.mul d0 (F64.mul a x)).isZero = true ∧ (F64.mul d0 (F64.mul a.neg y)).isZero = true :=
+    fun x y ux uy => ⟨d0_mul_zero (mul_unit_r ha ux).1, d0_mul_zero (mul_unit_r han uy).1⟩
+  unfold _Py_rc_quot
+  dsimp only
+  simp only [fdiv, fmul, fadd, fsub]
+  by_cases hri : br.isInf = true
+  · rw [absLt_inf hri]
+    rcases classify bi with hif | hii | hin
+    · obtain ⟨fi, _⟩ := absLt_fin hif
+      simp only [ge_inf_fin fi, ite_true, eq_inf_d0, Bool.false_eq_true, ite_false]
+      rw [div_fin_inf hif hri, mul_zero_of_finite hif, add_inf_fin hri (zero_isFinite _),
+        mul_zero_of_finite han]
+      have z1 := fin_div_inf_zero ha hri
+      have z2 := zero_div_inf hri (a.neg.sign != (bi.sign != br.sign))
+      simp only [isZero_notNaN z1, Bool.false_and, Bool.false_eq_true, ite_false]
+      exact ⟨z1, z2, by simp⟩
+    · rw [absLt_inf hii]
+      simp only [ge_inf_inf, ite_true, eq_inf_d0, Bool.false_eq_true, ite_false]
+      have hr : (F64.div bi br).isNaN = true := div_inf_inf hii hri
+      have hd : (F64.add br (F64.mul bi (F64.div bi br))).isNaN = true :=
+        add_nan_r (mul_nan_r hr)
+      simp only [div_nan_r hd, ha, inf_isInf, Bool.true_and, Bool.true_or, ite_true]
+      exact ⟨(hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).1,
+        (hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).2, by simp⟩
+    · rw [absLt_nan hin]
+      simp only [ge_nan_r hin, ge_nan_l hin, Bool.false_eq_true, ite_false, qnan_isNaN, ha,
+        inf_isInf, Bool.true_and, Bool.true_or, ite_true]
+      exact ⟨(hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).1,
+        (hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).2, by simp⟩
+  · have hri' : br.isInf = false := by simpa using hri
+    have hii : bi.isInf = true := by simpa [hri'] using hb
+    rw [absLt_inf hii]
+    rcases classify br with hrf | hrr | hrn
+    · obtain ⟨fr, _⟩ := absLt_fin hrf
+      simp only [ge_fin_inf fr, Bool.false_eq_true, ite_false, ge_inf_fin fr, ite_true]
+      rw [div_fin_inf hrf hii, mul_zero_of_finite hrf, add_fin_inf (zero_isFinite _) hii,
+        mul_zero_of_finite ha]
+      have z1 := zero_div_inf hii (a.sign != (br.sign != bi.sign))
+      have z2 := fin_div_inf_zero han hii
+      simp only [isZero_notNaN z1, Bool.false_and, Bool.false_eq_true, ite_false]
+      exact ⟨z1, z2, by simp⟩
+    · rw [hri'] at hrr; cases hrr
+    · rw [absLt_nan hrn]
+      simp only [ge_nan_l hrn, ge_nan_r hrn, Bool.false_eq_true, ite_false, qnan_isNaN, ha,
+        inf_isInf, Bool.true_and, Bool.or_true, ite_true]
+      exact ⟨(hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).1,
+        (hrec (boxInf br) (boxInf bi) (boxInf_unit br) (boxInf_unit bi)).2, by simp⟩
+
 end PyLean.Binary64
