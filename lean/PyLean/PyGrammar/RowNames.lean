@@ -322,6 +322,9 @@ def rule_raise_stmt_invalid : List String := [
 def rule_return_stmt : List String := [
   "rule:return_stmt"]
 
+def rule_shift_expr : List String := [
+  "rule:shift_expr"]
+
 def rule_signed_number : List String := [
   "rule:signed_number"]
 
@@ -339,6 +342,9 @@ def rule_statement : List String := [
 
 def rule_sum : List String := [
   "rule:sum"]
+
+def rule_term : List String := [
+  "rule:term"]
 
 def rule_try_stmt : List String := [
   "rule:try_stmt"]

@@ -137,9 +137,9 @@ Grammar/python.gram	816	816	rule:is_bitwise_or	is_bitwise_or[CmpopExprPair*]: 'i
 Grammar/python.gram	821	821	rule:bitwise_or	bitwise_or[expr_ty]:	modelled	pygrammar-rule-bitwise-or	
 Grammar/python.gram	825	825	rule:bitwise_xor	bitwise_xor[expr_ty]:	modelled	pygrammar-rule-bitwise-xor	
 Grammar/python.gram	829	829	rule:bitwise_and	bitwise_and[expr_ty]:	modelled	pygrammar-rule-bitwise-and	
-Grammar/python.gram	833	833	rule:shift_expr	shift_expr[expr_ty]:	todo		review: CallRuleSound (Peg/Sound.lean:1186) is one theorem over all grammar data with no hypothesis on the rule, so it holds vacuously for a rule that accepts nothing, survives swapped alternatives, dropped lookaheads and cuts (RuleM ignores them), never instantiates this rule, and claims nothing about the AST or SyntaxError the rule produces; left recursion is covered but invalid_arithmetic and the left-associative BinOp tree are not reflected.
+Grammar/python.gram	833	833	rule:shift_expr	shift_expr[expr_ty]:	modelled	pygrammar-rule-shift-expr	
 Grammar/python.gram	842	842	rule:sum	sum[expr_ty]:	modelled	pygrammar-rule-sum	
-Grammar/python.gram	847	847	rule:term	term[expr_ty]:	todo		review: Only entry is pygrammar-grammar-call-rule-sound (Peg/Sound.lean:1186), a soundness theorem about the PEG interpreter that holds for any grammar data: a rule accepting nothing, with reordered alternatives, or with dropped lookaheads/cuts still satisfies it, and error runs (invalid_* SyntaxErrors) and actions are excluded; no rule-specific property (extended from the part-1 review, 335d9b9f, whose reason applies identically to every row on this entry).
+Grammar/python.gram	847	847	rule:term	term[expr_ty]:	modelled	pygrammar-rule-term	
 Grammar/python.gram	856	856	rule:factor	factor[expr_ty] (memo):	modelled	pygrammar-rule-factor	
 Grammar/python.gram	862	862	rule:power	power[expr_ty]:	modelled	pygrammar-rule-power	
 Grammar/python.gram	871	871	rule:await_primary	await_primary[expr_ty] (memo):	modelled	pygrammar-rule-await-primary	

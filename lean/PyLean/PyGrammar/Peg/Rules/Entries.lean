@@ -17,6 +17,7 @@ import PyLean.PyGrammar.Peg.Rules.With
 import PyLean.PyGrammar.Peg.Rules.Defs
 import PyLean.PyGrammar.Peg.Rules.AsyncWith
 import PyLean.PyGrammar.Peg.Rules.LeftRec
+import PyLean.PyGrammar.Peg.Rules.LeftRec2
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -697,6 +698,29 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``BitwiseAndRule
     thm := some ``bitwiseAndRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-term"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_term
+    statement := "term: the seed loop returns the last seed that grew; a round with seed v tries '*', " ++
+      "'/', '//', '%', '@' in that order, each after the ones before fail at their token, giving " ++
+      "BinOp(v, op, factor), '@' under CHECK_VERSION(5) with the exact message; with no seed or no " ++
+      "operator, factor from the start mark, in the second pass after invalid_factor, whose error " ++
+      "ends the round."
+    source := "Grammar/python.gram:847-854"
+    status := .proven
+    prop := ``TermRule
+    thm := some ``termRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-shift-expr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_shift_expr
+    statement := "shift_expr: as term with '<<' then '>>' over sum, and invalid_arithmetic before the " ++
+      "operand alternative in the second pass."
+    source := "Grammar/python.gram:833-837"
+    status := .proven
+    prop := ``ShiftExprRule
+    thm := some ``shiftExprRule_proven
     notes := LR },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
