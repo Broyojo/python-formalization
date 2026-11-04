@@ -27,6 +27,9 @@ def check_fold_value : List String := [
 def check_format_args : List String := [
   "parse_format", "optimize_format"]
 
+def check_invalid_target_first : List String := [
+  "_PyPegen_get_invalid_target"]
+
 def check_names_always : List String := [
   ]
 
@@ -45,6 +48,10 @@ def check_rejects : List String := [
   "validate_assignlist", "validate_body", "validate_stmt", "validate_stmts", "validate_exprs", "validate_typeparam",
   "validate_type_params"]
 
+def check_set_context_exact : List String := [
+  "_set_seq_context", "_set_name_context", "_set_tuple_context", "_set_list_context", "_set_subscript_context", "_set_attribute_context",
+  "_set_starred_context", "_PyPegen_set_expr_context"]
+
 def check_set_context_last : List String := [
   ]
 
@@ -58,7 +65,7 @@ def check_table_covers : List String := [
   ]
 
 def check_target_legal : List String := [
-  ]
+  "_PyPegen_get_invalid_target"]
 
 def check_targets : List String := [
   "_set_seq_context", "_set_name_context", "_set_tuple_context", "_set_list_context", "_set_subscript_context", "_set_attribute_context",
@@ -80,16 +87,16 @@ def lex_byte_col : List String := [
   "byte_col_to_char_col"]
 
 def lex_comment_loops : List String := [
-  "set_ftstring_expr"]
+  ]
 
 def lex_exact_tokens : List String := [
   ]
 
 def lex_nextc_in_buffer : List String := [
-  "tok_nextc", "tok_underflow_string"]
+  ]
 
 def lex_stacks : List String := [
-  "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]
+  ]
 
 def lex_untokenize_lossless : List String := [
   "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
@@ -149,7 +156,7 @@ def peg_expr_name : List String := [
   "_PyPegen_get_expr_name"]
 
 def peg_fill_token : List String := [
-  "_PyPegen_fill_token"]
+  ]
 
 def peg_first_error : List String := [
   ]
@@ -181,11 +188,20 @@ def peg_last_token : List String := [
 def peg_make_arguments : List String := [
   "_get_names", "_get_defaults", "_PyPegen_make_arguments"]
 
+def peg_make_arguments_exact : List String := [
+  "_get_names", "_get_defaults", "_PyPegen_make_arguments"]
+
 def peg_memo_cache : List String := [
-  "_PyPegen_insert_memo", "_PyPegen_update_memo", "_PyPegen_is_memoized"]
+  "_PyPegen_insert_memo", "_PyPegen_update_memo"]
+
+def peg_memo_frontier : List String := [
+  "_PyPegen_is_memoized"]
 
 def peg_missing_comma : List String := [
   "_PyPegen_raise_error_for_missing_comma"]
+
+def peg_name_from_token : List String := [
+  "_PyPegen_name_from_token"]
 
 def peg_never_silent : List String := [
   "_PyPegen_run_parser"]
@@ -194,10 +210,13 @@ def peg_nonparen_genexp : List String := [
   "_PyPegen_nonparen_genexp_in_call"]
 
 def peg_raise_error : List String := [
+  ]
+
+def peg_raise_error_exact : List String := [
   "_PyPegen_raise_error"]
 
 def peg_raise_known_location : List String := [
-  "_PyPegen_raise_error_known_location"]
+  ]
 
 def peg_raise_unclosed : List String := [
   "raise_unclosed_parentheses_error"]
@@ -211,22 +230,43 @@ def peg_roundtrip_actions : List String := [
 def peg_roundtrip_parser : List String := [
   ]
 
+def peg_run_parser_paths : List String := [
+  "_PyPegen_run_parser"]
+
 def peg_set_syntax_error : List String := [
+  ]
+
+def peg_set_syntax_error_arms : List String := [
   "_Pypegen_set_syntax_error"]
 
 def peg_setup_format_spec : List String := [
   "result_token_with_metadata", "_PyPegen_setup_full_format_spec"]
 
+def peg_strip_continuations : List String := [
+  "_strip_interpolation_debug_expr"]
+
 def peg_strip_interpolation : List String := [
   "_strip_interpolation_debug_expr"]
 
 def peg_token_readers : List String := [
+  ]
+
+def peg_token_readers_exact : List String := [
+  "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
+
+def peg_token_readers_frontier : List String := [
   "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
 
 def peg_tokenize_full_source : List String := [
   "_PyPegen_tokenize_full_source_to_check_for_errors"]
 
+def peg_tokenize_rest_stops : List String := [
+  "_PyPegen_tokenize_full_source_to_check_for_errors"]
+
 def peg_tokenizer_error : List String := [
+  ]
+
+def peg_tokenizer_error_arms : List String := [
   "_Pypegen_tokenizer_error"]
 
 def peg_warn_lazy : List String := [
@@ -1106,6 +1146,6 @@ def unparse_roundtrip : List String := [
   "Unparser._write_ftstring_inner", "unparse"]
 
 def unparse_str_repr : List String := [
-  "decode_unicode_with_escapes", "_PyPegen_decode_string", "_PyPegen_parse_string", "Unparser._write_constant"]
+  "Unparser._write_constant"]
 
 end PyLean.PyGrammar.Rows
