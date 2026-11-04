@@ -8603,7 +8603,7 @@ class misc_BadTruth:
         raise ValueError("truth")
 
 
-class MiscE:
+class MiscWME:
     def __init__(self, i, val, eqm, nem):
         self.i, self.val, self.eqm, self.nem = i, val, eqm, nem
 
@@ -8616,7 +8616,7 @@ class MiscE:
             return "yes"
         if self.eqm == 4:
             return misc_BadTruth()
-        return isinstance(other, MiscE) and self.val == other.val
+        return isinstance(other, MiscWME) and self.val == other.val
 
     def __ne__(self, other):
         if self.nem == 1:
@@ -8640,7 +8640,7 @@ def misc_enc_rv(v):
 
 def misc_run_wm(case):
     vals = case["vals"]
-    objs = {i: MiscE(i, vals[i], case["eqm"][i], case["nem"][i]) for i in range(4)}
+    objs = {i: MiscWME(i, vals[i], case["eqm"][i], case["nem"][i]) for i in range(4)}
     funcs = {10: (lambda self: None), 11: (lambda self: None)}
     ids = {id(f): i for i, f in funcs.items()}
     ms = []
