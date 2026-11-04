@@ -54,6 +54,31 @@ CREDIT = {
     "pygrammar-rule-file": {GRAM: ["rule:file"]},
     "pygrammar-rule-del-stmt": {GRAM: ["rule:del_stmt"]},
     "pygrammar-rule-augassign": {GRAM: ["rule:augassign"]},
+    "pygrammar-rule-del-stmt-invalid": {GRAM: ["rule:del_stmt"]},
+    "pygrammar-rule-assert-stmt-invalid": {GRAM: ["rule:assert_stmt"]},
+    "pygrammar-rule-for-stmt": {GRAM: ["rule:for_stmt"]},
+    "pygrammar-rule-while-stmt": {GRAM: ["rule:while_stmt"]},
+    "pygrammar-rule-if-stmt": {GRAM: ["rule:if_stmt"]},
+    "pygrammar-rule-else-block": {GRAM: ["rule:else_block"]},
+    "pygrammar-rule-block": {GRAM: ["rule:block"]},
+    "pygrammar-rule-func-type": {GRAM: ["rule:func_type"]},
+    "pygrammar-rule-expression": {GRAM: ["rule:expression"]},
+    "pygrammar-rule-star-expressions": {GRAM: ["rule:star_expressions"]},
+    "pygrammar-rule-assignment-more": {GRAM: ["rule:assignment"]},
+    "pygrammar-rule-compound-stmt-more": {GRAM: ["rule:compound_stmt"]},
+    "pygrammar-rule-simple-stmt-more": {GRAM: ["rule:simple_stmt"]},
+    "pygrammar-rule-del-stmt-targets": {GRAM: ["rule:del_stmt"]},
+    "pygrammar-rule-import-stmt": {GRAM: ["rule:import_stmt"]},
+    "pygrammar-rule-import-from": {GRAM: ["rule:import_from"]},
+    "pygrammar-rule-assignment-aug": {GRAM: ["rule:assignment"]},
+    "pygrammar-rule-assignment-ann-plain": {GRAM: ["rule:assignment"]},
+    "pygrammar-rule-assignment-invalid": {GRAM: ["rule:assignment"]},
+    "pygrammar-rule-compound-stmt": {GRAM: ["rule:compound_stmt"]},
+    "pygrammar-rule-simple-stmt": {GRAM: ["rule:simple_stmt"]},
+    "pygrammar-rule-global-nonlocal": {GRAM: ["rule:global_stmt", "rule:nonlocal_stmt"]},
+    "pygrammar-rule-inversion": {GRAM: ["rule:inversion"]},
+    "pygrammar-rule-comparison": {GRAM: ["rule:comparison"]},
+    "pygrammar-rule-await-primary": {GRAM: ["rule:await_primary"]},
     "pygrammar-rule-eval": {GRAM: ["rule:eval"]},
     "pygrammar-rule-interactive": {GRAM: ["rule:interactive"]},
     "pygrammar-rule-statement": {GRAM: ["rule:statement"]},
@@ -229,6 +254,9 @@ def main():
         for r in rows:
             key = (stem, r["name"])
             was = r["status"]
+            if r["note"].startswith("changed-in-3.15:"):
+                # Left for whoever rechecks the body against 3.15.2 (AGENTS.md).
+                continue
             if stem == "Parser__parser.c":
                 r.update(status="excluded", entry="", note=GENERATED)
             elif key in EXCLUDE:

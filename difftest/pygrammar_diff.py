@@ -512,6 +512,18 @@ RULE_FORMS = [
     "match x:\n case {s}{k}: pass", "match x:\n case {s}{k} | {s}{k}j: pass",
     "{u}{u}{e}", "{e} ** {u}{f}", "{e} ** {f} ** {e}", "{u}{e} ** {f}", "await {e} ** {f}",
     "pass", "break", "continue", "pass; break", "x += {e}", "x @= {e}", "x **= {e}", "x //= {e}",
+    "for {n} in {e}:\n pass", "for {n} in {e}:\n pass\nelse:\n pass", "for {n} in :\n pass",
+    "for {n} in {e} pass", "async for {n} in {e}:\n pass", "@{n}\nclass C: pass", "@{n}\ndef f(): pass",
+    "class C({e}): pass", "while {e}:\n pass", "try:\n pass\nfinally:\n pass", "match {e}:\n case {k}: pass",
+    "match = {e}", "type = {e}", "type X = {e}", "global {n}", "nonlocal {n}", "global",
+    "not {e}", "not not {e}", "{e} < {f}", "{e} < {f} <= {e}", "{e} not in {f}", "{e} is not {f}",
+    "x: {e}", "x: {e} = {f}", "(x): {e}", "x.y: {e} = {f}", "{n} = {e}", "a = b = {e}", "{e} = {f}",
+    "x = {e} = {f}", "x += ", "x += {e} = {f}", "{n} += {e}", "from {n} import {m}", "from . import {m}",
+    "from .. {n} import {m}", "lazy from . import {m}", "from {n} import", "from import {m}",
+    "async def f():\n async for {n} in {e}:\n  pass", "x = {e} = {f} = 2", "f() = {e}", "del f()",
+    "del {e}", "if {e}:\n pass\nelif {f}:\n pass\nelse:\n pass", "if {e}: pass\nelse pass",
+    "if {e}:\npass", "while {e}:\n pass\nelse:\n pass", "while {e}: {f}", "if {e}: {f}; {e}",
+    "{e}, {f}", "{e},", "{e}, {f},", "x = {e} if {f} else {e}", "lambda: {e}", "type X[T] = {e}",
 ]
 
 
