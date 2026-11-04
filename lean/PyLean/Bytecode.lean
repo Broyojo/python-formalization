@@ -16,6 +16,7 @@ import PyLean.Bytecode.SpecCells
 import PyLean.Bytecode.SpecForIter
 import PyLean.Bytecode.SpecDict
 import PyLean.Bytecode.GenericProps
+import PyLean.Bytecode.SpecJumps
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -50,7 +51,7 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``GlobalRoundTrip, thm := some ``globalRoundTrip_proven },
   { id := "bytecode-load-global", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_GLOBAL", op "_LOAD_GLOBAL", op "_PUSH_NULL_CONDITIONAL"]
-    statement := "LOAD_GLOBAL looks the name up in the globals then the builtins with PyMapping_GetOptionalItem (any mapping, a dict subclass from exec included) and pushes the value, with a NULL after it for the call form; when neither has the name it raises NameError with the stack unchanged, and that NameError carries the name in .name (UnboundLocalError does not); a raising lookup propagates with the stack unchanged."
+    statement := "LOAD_GLOBAL looks the name up in the globals then the builtins with PyMapping_GetOptionalItem (any mapping, a dict subclass from exec included) and pushes the value, with a NULL after it for the call form; when neither has the name it raises NameError with the stack unchanged, and, when no exception is being handled (the case NameErrorName states), that NameError carries the name in .name (UnboundLocalError does not); a raising lookup propagates with the stack unchanged."
     source := "Python/bytecodes.c:2270-2289; _PyEval_LoadGlobalStackRef, Python/ceval.c:3597-3630; _PyEval_FormatExcCheckArg, Python/ceval.c:3449-3475"
     status := .proven, prop := ``LoadGlobalFull, thm := some ``loadGlobalFull_proven },
   { id := "bytecode-attr-dispatch", pyFile := "Python/bytecodes.c"
@@ -227,9 +228,9 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``SwapRules, thm := some ``swapRules_proven },
   { id := "bytecode-jumps", pyFile := "Python/bytecodes.c"
     pyFns := [op "JUMP_FORWARD", op "JUMP_BACKWARD_NO_INTERRUPT", op "JUMP_BACKWARD", op "_CHECK_PERIODIC"]
-    statement := "JUMP_FORWARD and JUMP_BACKWARD_NO_INTERRUPT move next_instr by oparg and touch nothing else, a pending signal included (it is left for the innermost generator, bpo-30039); JUMP_BACKWARD runs _CHECK_PERIODIC first: with nothing pending it jumps back, and when the pending handler raises it propagates that exception with the stack unchanged and without jumping. A jump forward then back returns to the start."
-    source := "Python/bytecodes.c:157-160, :3494-3496, :3544-3548, :3656-3664; check_periodics, Python/ceval_macros.h:541-548"
-    status := .proven, prop := ``JumpRules, thm := some ``jumpRules_proven },
+    statement := "Fetched by the dispatch loop, JUMP_FORWARD and JUMP_BACKWARD_NO_INTERRUPT at offset p continue at the target Lib/dis.py's _get_jump_target reports (p + 1 + caches +/- the oparg dis accumulates over EXTENDED_ARG prefixes), with only instr_ptr and next_instr changed: stack, heap and a pending eval-breaker event (left for the innermost generator, bpo-30039) are untouched. JUMP_BACKWARD runs _CHECK_PERIODIC first: with nothing pending it jumps back, and when the pending handler raises it propagates that exception with the stack unchanged and without jumping."
+    source := "Python/bytecodes.c:158-161, :3494-3496, :3544-3548, :3656-3664, :6054-6060; check_periodics, Python/ceval_macros.h:540-548; _get_jump_target and _unpack_opargs, Lib/dis.py"
+    status := .proven, prop := ``JumpFull, thm := some ``jumpFull_proven },
   { id := "bytecode-branches", pyFile := "Python/bytecodes.c"
     pyFns := [op "POP_JUMP_IF_TRUE", op "POP_JUMP_IF_FALSE", op "POP_JUMP_IF_NONE", op "POP_JUMP_IF_NOT_NONE", op "_POP_JUMP_IF_TRUE", op "_POP_JUMP_IF_FALSE", op "_IS_NONE"]
     statement := "Each conditional branch jumps exactly when its condition holds, skips a NOT_TAKEN on fall-through, and pops the value it tested."
@@ -385,23 +386,23 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-exc-info-nests", pyFile := "Python/bytecodes.c"
     pyFns := [op "POP_EXCEPT"]
     statement := "PUSH_EXC_INFO then POP_EXCEPT restores tstate->exc_info->exc_value, so except blocks nest: the handled exception after a block is the one before it."
-    source := "PUSH_EXC_INFO/POP_EXCEPT, Python/bytecodes.c:1911-1916, 3579-3592"
+    source := "PUSH_EXC_INFO/POP_EXCEPT, Python/bytecodes.c:1911-1916, :4213-4226"
     status := .proven, prop := ``ExcInfoNests, thm := some ``excInfoNests_proven },
   { id := "bytecode-for-iter-exhausted", pyFile := "Python/bytecodes.c"
     pyFns := []
-    statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with iter and index_or_null left on the stack for the POP_ITER at the target, for every iterator and both forms of the slot."
+    statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with iter and index_or_null left on the stack for the POP_ITER at the target, with the runtime the last step left, for every iterator and both forms of the slot."
     source := "_FOR_ITER, Python/bytecodes.c:3810-3821"
     status := .proven, prop := ``ForIterExhausted, thm := some ``forIterExhausted_proven
     notes := "Credits no row by itself: FOR_ITER and _FOR_ITER are credited through bytecode-for-iter, which includes this statement." },
   { id := "bytecode-for-iter-next", pyFile := "Python/bytecodes.c"
     pyFns := []
-    statement := "FOR_ITER with a next item writes the new index_or_null back to its slot and pushes the item above it, for every iterator."
+    statement := "FOR_ITER with a next item writes the new index_or_null back to its slot and pushes the item above it, with the runtime the step left, for every iterator."
     source := "_FOR_ITER, Python/bytecodes.c:3810-3821; _PyForIter_VirtualIteratorNext, Python/ceval.c:3709-3739"
     status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven
     notes := "Credits no row by itself: FOR_ITER is credited through bytecode-for-iter, which includes this statement." },
   { id := "bytecode-for-iter", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER", op "_FOR_ITER"]
-    statement := "FOR_ITER pushes the next item above the updated index slot, at the end jumps over END_FOR with both slots kept, and when tp_iternext raises anything but StopIteration propagates it with both slots kept (ERROR_NO_POP), where a StopIteration ends the loop like exhaustion; for every iterator and object model."
+    statement := "FOR_ITER over an iterator object (NULL slot) calls tp_iternext once: an item is pushed above both slots with the runtime that one call left, NULL with no exception ends the loop (jump over END_FOR, both slots kept), StopIteration ends it the same way after clearing, and any other exception propagates with both slots kept (ERROR_NO_POP); over an exact list or tuple with a tagged index it pushes item i of the sequence as it is now and tags i + 1, or ends past the end; for every object model, so for stateful and Python-level __next__."
     source := "_FOR_ITER, Python/bytecodes.c:3810-3823; _PyForIter_VirtualIteratorNext, Python/ceval.c:3709-3739"
     status := .proven, prop := ``ForIterRules, thm := some ``forIterRules_proven },
   { id := "bytecode-binary-op", pyFile := "Python/bytecodes.c"

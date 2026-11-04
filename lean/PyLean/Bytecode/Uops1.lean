@@ -48,7 +48,7 @@ and the event is consumed either way. -/
 def checkPeriodics : RM Unit := fun rt =>
   if rt.pendingExc == .null then .ok () rt
   else raiseVal rt.pendingExc { rt with pendingExc := .null }
-/-- `:157`: `ERROR_IF(err != 0)` with nothing popped. -/
+/-- `:158-161`: `ERROR_IF(err != 0)` (`:160`) with nothing popped. -/
 def _CHECK_PERIODIC : M Unit := BM.lift (checkPeriodics : RM Unit)
 /-- `@3.14.7:164`. -/
 def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
