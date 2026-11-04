@@ -38,14 +38,16 @@ def fromFloat (f : F64) : Py Dec := do
 /-! ## `Decimal.__new__` -/
 
 /-- An argument of `Decimal(value)`: a str, an int (or bool), a Decimal, a tuple
-`(sign, digits, exp)` (`digits = none`: not iterable), a float, or anything else. -/
+`(sign, digits, exp)` (`digits = none`: not iterable), a float, or anything else, with what
+`repr()` of it raises (`none`: it returns; a set holding an int of more than 4300 digits raises
+the limit `ValueError`, a `__repr__` that raises its own exception). -/
 inductive NewArg where
   | str (s : List Char)
   | int (n : Int)
   | dec (d : Dec)
   | tuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal)
   | float (f : F64)
-  | other
+  | other (repr : StrErr := none)
   deriving Inhabited
 
 /-- `Decimal(value, context)`, _pydecimal.py:552-700, with `c` the context argument or
@@ -66,14 +68,17 @@ def pyNew (c : Ctx) : NewArg → DM PyObj
   | .float f => do
     let _ ← raiseError c [] (.plain .floatOperation)
     return (← liftPy (fromFloat f)).toPyObj
-  | .other => throw (.typeError "~Cannot convert to Decimal")
+  | .other r => throw (pctExc r (.typeError "~Cannot convert to Decimal"))
 
 /-- `Decimal.from_number(number)`, _pydecimal.py:703-715: `cls(number)` for an int,
-Decimal or float, else TypeError. -/
+Decimal or float, else what `raise TypeError("Cannot convert %r to Decimal" % number)` raises:
+`repr()`'s own exception for an object whose `repr()` raises. A tuple `number` is `%`'s argument
+tuple, so its message differs (not modelled: `~`). -/
 def fromNumber (c : Ctx) : NewArg → DM PyObj
   | .int n => pyNew c (.int n)
   | .dec d => pyNew c (.dec d)
   | .float f => pyNew c (.float f)
+  | .other r => throw (pctExc r (.typeError "~Cannot convert to Decimal"))
   | _ => throw (.typeError "~Cannot convert to Decimal")
 
 /-! ## `_convert_for_comparison` and the rich comparisons -/

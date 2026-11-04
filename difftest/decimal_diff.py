@@ -682,7 +682,9 @@ def gen_new(rng):
         ctx["traps"] = ctx["traps"] + ["FloatOperation"]
     if rng.random() < 0.3:
         ctx["traps"] = [t for t in ctx["traps"] if t != "InvalidOperation"]
-    k = rng.choice(["str", "str", "int", "float", "float", "other"])
+    # other: object(); badrepr: a __repr__ that raises; hugeset: {10**5000}, whose repr raises the
+    # int/str limit, both in "Cannot convert %r to Decimal" (_pydecimal.py:700)
+    k = rng.choice(["str", "str", "int", "float", "float", "other", "badrepr", "hugeset"])
     c = {"mod": "decimal", "fn": "new_py", "ctx": ctx, "k": k}
     if k == "str":
         c["s"] = cps(gen_numeric_string(rng) if rng.random() < 0.7 else rng.choice(["xyz", "", "1e", "--1", "nan1x", " 1 2"]))
@@ -739,7 +741,8 @@ def run_new(case):
     ctx = make_ctx(P, case["ctx"])
     k = case["k"]
     v = {"str": lambda: "".join(map(chr, case["s"])), "int": lambda: int(case["n"]),
-         "float": lambda: ffrom(case["bits"]), "other": lambda: object()}[k]()
+         "float": lambda: ffrom(case["bits"]), "other": lambda: object(), "badrepr": lambda: BadStr(),
+         "hugeset": lambda: {10 ** 5000}}[k]()
     d = P.Decimal(v, context=ctx)
     try:
         s = cps(str(d))
