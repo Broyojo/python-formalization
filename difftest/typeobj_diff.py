@@ -529,6 +529,9 @@ class G:
         r = self.rng
         n = r.choice([2, 3, 3, 4, 5])
         names = ["A", "B", "C", "E", "F"][:n]
+        if r.random() < 0.1:
+            # `%.100s`/`%.200s` of `tp_name` cut UTF-8 bytes, not characters.
+            names[-1] = r.choice(LONG_CLASS_NAMES)
         metas = []
         if r.random() < 0.3:
             body = []
@@ -652,6 +655,12 @@ class G:
 
 
 # Targeted scenario families: each exercises one protocol with edge cases.
+
+# Class names around the byte limits of `%.50s`, `%.100s` and `%.200s`: 2-, 3- and 4-byte
+# characters, and cuts that fall inside one.
+LONG_CLASS_NAMES = ["\u00e9" * 101, "a" + "\u00e9" * 50, "\u4e2d" * 34, "ab" + "\U00010000" * 50,
+                    "X" * 99 + "\u00e9"]
+
 
 def cls(g, name_, bases=(), body=None, kw=(), cell=True):
     g.main.append(["probes", g.next_tag(),

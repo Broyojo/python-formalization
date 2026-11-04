@@ -2329,7 +2329,8 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
     match strOf w ob with
     | some t => pure (strContains ((strOf w seq).getD "").toList t.toList)
     | none =>
-      typeErr s!"'in <string>' requires string as left operand, not {trunc 200 (typeName w ob)}"
+      -- `PyUnicode_Contains`, `Objects/unicodeobject.c:11305-11309`: `%.100s`.
+      typeErr s!"'in <string>' requires string as left operand, not {trunc 100 (typeName w ob)}"
   | _ => gap%
 
 /-- `PySequence_Contains`, `Objects/abstract.c:2240`. -/

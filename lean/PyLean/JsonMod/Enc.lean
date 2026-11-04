@@ -24,6 +24,18 @@ namespace PyLean.JsonMod
 
 open PyLean
 
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: at most `n` bytes, and an incomplete UTF-8 sequence at the
+cut is dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in
+`n` bytes. `tp_name` is valid UTF-8 without NUL (`type()` refuses both). The same cut as
+`TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
+/-- `%.Ns` of a type name (`PyErr_Format`). -/
+def truncName (n : Nat) (t : String) : String := String.ofList (truncUtf8 n t.toList)
+
 /-- A dict key: `str`, `int`, `bool`, `None`, or a 1-tuple of ints (not a valid
 JSON key: skipped with `skipkeys`, otherwise `TypeError`). -/
 inductive EKey where
@@ -450,7 +462,7 @@ def cEncStr (cfg : ECfg) (s : PStr) : ER :=
     match g s with
     | .error e => .error e
     | .ok (.str t) => .ok t
-    | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {(String.ofList (t.toList.take 80))}")
+    | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {truncName 80 t}")
 
 /-- `_encoded_const`, :1491-1507: `None`, `True`, `False` as text. -/
 def encodedConst : Option Bool → PStr
