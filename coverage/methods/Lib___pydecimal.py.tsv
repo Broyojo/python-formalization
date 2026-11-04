@@ -125,9 +125,9 @@ Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	todo
 Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	todo		
 Lib/_pydecimal.py	3667	3707	Decimal.number_class	number_class(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3709	3711	Decimal.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:3709-3711), one constant with no branch.
-Lib/_pydecimal.py	3713	3744	Decimal.rotate	rotate(self, other, context=None)	todo		
+Lib/_pydecimal.py	3713	3744	Decimal.rotate	rotate(self, other, context=None)	modelled	decimal-rotate-exact	
 Lib/_pydecimal.py	3746	3769	Decimal.scaleb	scaleb(self, other, context=None)	modelled	decimal-scaleb-exact,decimal-scaleb-rest-exact	
-Lib/_pydecimal.py	3771	3807	Decimal.shift	shift(self, other, context=None)	todo		
+Lib/_pydecimal.py	3771	3807	Decimal.shift	shift(self, other, context=None)	modelled	decimal-shift-exact	
 Lib/_pydecimal.py	3810	3811	Decimal.__reduce__	__reduce__(self)	todo		
 Lib/_pydecimal.py	3813	3816	Decimal.__copy__	__copy__(self)	todo		
 Lib/_pydecimal.py	3818	3821	Decimal.__deepcopy__	__deepcopy__(self, memo)	todo		
@@ -207,10 +207,10 @@ Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	modelled	decim
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
 Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	todo		review: ctxOp modD (Context.lean:103) is :5401-5406 and Equiv2 pins the wrapper, but Decimal.__mod__ is part 1 HOLLOW (rfl on the finite path; the INF % x, x % 0, 0 % 0 and NaN branches are unstated).
 Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-remainder-near-exact,decimal-remainder-near-rest	
-Lib/_pydecimal.py	5442	5469	Context.rotate	rotate(self, a, b)	todo		review: ctxBin rotate (Context.lean:117) is :5468-5469 plus :3718 and Equiv2 pins the wrapper, but Decimal.rotate has no entry (todo), so the result is unstated.
+Lib/_pydecimal.py	5442	5469	Context.rotate	rotate(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-rotate-exact	
 Lib/_pydecimal.py	5471	5493	Context.same_quantum	same_quantum(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-same-quantum-exact	
 Lib/_pydecimal.py	5495	5512	Context.scaleb	scaleb(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-scaleb-exact,decimal-scaleb-rest-exact	
-Lib/_pydecimal.py	5514	5542	Context.shift	shift(self, a, b)	todo		review: ctxBin shift (Context.lean:119) is :5541-5542 plus :3776 and Equiv2 pins the wrapper, but Decimal.shift has no entry (todo), so the result is unstated.
+Lib/_pydecimal.py	5514	5542	Context.shift	shift(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-shift-exact	
 Lib/_pydecimal.py	5544	5574	Context.sqrt	sqrt(self, a)	todo		
 Lib/_pydecimal.py	5576	5597	Context.subtract	subtract(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-sub-exact	
 Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	todo		review: ctxUn of toEng a c.capitals (Context.lean:138) is :5624-5625 and Equiv1 pins the wrapper, but Decimal.to_eng_string has no entry (part 1 HOLLOW), so the engineering notation is stated nowhere.

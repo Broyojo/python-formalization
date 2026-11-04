@@ -19,6 +19,7 @@ import PyLean.Decimal.DelegateExact2
 import PyLean.Decimal.Exact3
 import PyLean.Decimal.Exact4
 import PyLean.Decimal.AddExact
+import PyLean.Decimal.RotateShift
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -148,6 +149,18 @@ def entries : List Entry := [
     source := "Decimal.fma docstring: 'Returns self*other+third with no rounding of the intermediate product self*other'"
     status := .proven, prop := ``FmaFinExact, thm := some ``fmaFinExact_proven
     notes := "decimal-fma-exact's finite conjunct (fma is __add__ of the unrounded product) composed with decimal-add-exact. Checked on 3.15.2 (100,000 random contexts and operands, subnormal and overflow ranges and clamp included): _pydecimal's fma equals _decimal's correctly rounded fma with the same flags." },
+  { id := "decimal-rotate-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.rotate"]
+    statement := "For every context with prec >= 1, on every operand pair: a NaN operand goes through _check_nans; a second operand that is not integral (non-zero exponent, infinity) is InvalidOperation; int(other) raises the int/str-limit ValueError for more than 4300 digits; n outside [-prec, prec] is InvalidOperation; an infinite first operand is returned; a finite one keeps its sign and exponent and gets a coefficient below 10**prec whose digit i (from the right, i < prec) is digit (i - n) mod prec of the operand's coefficient mod 10**prec."
+    source := "rotate docs: 'The coefficient of the result is a rotated copy of the digits in the coefficient of the first operand. The amount of rotation is taken from the absolute value of the second operand'; General Decimal Arithmetic, 'rotate'; Lib/_pydecimal.py:3713-3744"
+    status := .proven, prop := ``RotateExact, thm := some ``rotateExact_proven
+    notes := "The source works on the digit string and the model on the integer; the statement fixes every digit position, so a wrong slice or direction fails it. Checked on 3.15.2 (100,000 random cases, prec 1 to 28, n in [-prec, prec]): both twins agree with the digit formula." },
+  { id := "decimal-shift-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.shift"]
+    statement := "For every context with prec >= 1, on every operand pair: the operand checks of rotate (NaNs, a non-integral second operand, the int/str limit, n outside [-prec, prec], an infinite first operand); a finite first operand keeps its sign and exponent and gets a coefficient below 10**prec whose digit i (i < prec) is digit i - n of the operand's coefficient mod 10**prec when 0 <= i - n < prec, and 0 otherwise."
+    source := "shift docs: 'Return the result of shifting the digits of the first operand by an amount specified by the second operand'; General Decimal Arithmetic, 'shift'; Lib/_pydecimal.py:3771-3807"
+    status := .proven, prop := ``ShiftExact, thm := some ``shiftExact_proven
+    notes := "Checked on 3.15.2 alongside decimal-rotate-exact (100,000 cases, both twins)." },
   { id := "decimal-sub-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__sub__", "Decimal.__add__", "_normalize", "_WorkRep.__init__"]
     statement := "For every context with prec >= 1, on every operand pair: a NaN operand goes through _check_nans on the operands as given; on finite operands a - b is decimal-add-exact with the sign of b flipped (the exact difference rounded by _fix, the same int/str-limit ValueErrors, x - x the zero of sign ROUND_FLOOR); an infinity minus a non-NaN t is the infinity added to -t; a finite value minus an infinity is the opposite infinity."
