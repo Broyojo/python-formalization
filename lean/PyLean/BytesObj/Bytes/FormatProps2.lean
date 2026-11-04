@@ -213,7 +213,7 @@ def FormatLongTypes : Prop :=
     formatLong st (.bool b) fl prec t = unicodeFormatLong (if b then 1 else 0) fl.alt prec t) ∧
   (∀ (st : FS) (v : Int) (fl : Fl) (prec : Int) (t : Nat),
     formatLong st (.index v) fl prec t = unicodeFormatLong v fl.alt prec t) ∧
-  (∀ (st : FS) (f : Flt) (fl : Fl) (prec : Int) (t : Nat), (t = 111 ∨ t = 120 ∨ t = 88) →
+  (∀ (st : FS) (f : Binary64.F64) (fl : Fl) (prec : Int) (t : Nat), (t = 111 ∨ t = 120 ∨ t = 88) →
     formatLong st (.float f) fl prec t = .error
       (formatError .typeError st (requiresMsg t "an integer" "float"))) ∧
   (∀ (st : FS) (s : Seq) (fl : Fl) (prec : Int) (t : Nat), (t ≠ 111 ∧ t ≠ 120 ∧ t ≠ 88) →

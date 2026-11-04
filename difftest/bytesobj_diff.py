@@ -1241,15 +1241,32 @@ def b_map_raises(xs, e):
     return map(f, itertools.count())
 
 
+def b_rdouble(rng):
+    """A random finite double: random bits, or a short decimal, or a scaled integer."""
+    import struct
+    r = rng.random()
+    if r < 0.4:
+        while True:
+            x = struct.unpack("<d", struct.pack("<Q", rng.getrandbits(64)))[0]
+            if x == x and x not in (float("inf"), float("-inf")):
+                return x
+    if r < 0.7:
+        return float(f"{rng.randint(-10**6, 10**6)}e{rng.randint(-30, 30)}")
+    return rng.randint(-2**60, 2**60) * 2.0 ** rng.randint(-80, 40)
+
+
 def b_bflt(x):
+    """A float: the Lean side reads its 64 bits (field 7), b_build its hex (field 6)."""
     import math
+    import struct
+    bits = struct.unpack("<Q", struct.pack("<d", x))[0]
     if math.isnan(x):
-        return ["float", False, 2, 0, 1, repr(x), x.hex()]
+        return ["float", False, 2, 0, 1, repr(x), x.hex(), bits]
     neg = math.copysign(1.0, x) < 0
     if math.isinf(x):
-        return ["float", neg, 1, 0, 1, repr(x), x.hex()]
+        return ["float", neg, 1, 0, 1, repr(x), x.hex(), bits]
     n, d = abs(x).as_integer_ratio()
-    return ["float", neg, 0, n, d, repr(x), x.hex()]
+    return ["float", neg, 0, n, d, repr(x), x.hex(), bits]
 
 
 def b_build(o):
@@ -1473,6 +1490,12 @@ def b_rfmt(rng):
             parts.append(sp + rng.choice([b"d", b"x", b"s", b"a"]))
             args.append(rng.choice([["int", 5], ["bytes", [97]]]))
             continue
+        elif pk < 0.30:
+            # past DOUBLE_TO_STRING_PRECISION_MAX (INT_MAX - 1024): "precision too big", pystrtod.c:1246
+            sp += b"." + str(rng.choice([2 ** 31 - 1, 2 ** 31 - 1024, 2 ** 31 - 1025 + 1])).encode()
+            parts.append(sp + rng.choice([b"e", b"f", b"g", b"E", b"F", b"G"]))
+            args.append(rng.choice([b_bflt(1.5), ["int", 3]]))
+            continue
         elif pk < 0.35:
             sp += b".*"
             args.append(["int", rng.choice([0, 1, 5, -1, -7, 2 ** 31, -2 ** 31 - 1, 2 ** 40])])
@@ -1488,7 +1511,11 @@ def b_rfmt(rng):
             args.append(rng.choice([["int", b_rint(rng)], ["pow", 10, 4400], ["pow", 10, 4299], ["pow", 10, 4300], ["pow", 2, 15000],
                                     ["bool", True], ["index", b_rint(rng)], b_robj(rng, 1)]))
         elif conv in (b"e", b"E", b"f", b"F", b"g", b"G"):
-            args.append(rng.choice([b_bflt(rng.choice([0.0, 1.5, -2.25, 1e100, 1e-5, 123456.789, 0.1, float("inf"), float("nan")])),
+            args.append(rng.choice([b_bflt(rng.choice([0.0, -0.0, 1.5, -2.25, 1e100, 1e-5, 123456.789, 0.1, float("inf"),
+                                                       float("-inf"), float("nan"), 5e-324, 2.2250738585072014e-308,
+                                                       1.7976931348623157e308, 0.5, 2.5, 1e16, 1e22, 1e23, 9.5, 0.125,
+                                                       999999.5, 1e-7, 123e-310])),
+                                    b_bflt(b_rdouble(rng)), b_bflt(b_rdouble(rng)),
                                     ["int", b_rint(rng)], ["pow", 2, 1024], ["pow", 2, 1023], ["index", 7], b_robj(rng, 1)]))
         elif conv == b"c":
             args.append(rng.choice([["int", rng.randint(-1, 300)], ["bytes", b_rbytes(rng, rng.choice([0, 1, 1, 2]))],
@@ -1859,6 +1886,25 @@ def gen_bytes(rng):
         c["fn"] = ty + ".mod"
         fmt, arg = b_rfmt(rng)
         c["s"], c["arg"] = fmt, (b_noaddr(arg) if 97 in fmt or 114 in fmt else arg)
+        if ty == "bytes" and rng.random() < 0.15:
+            # bytes.__rmod__(s, x) is bytes_mod(x, s): NotImplemented unless x is a bytes
+            c["fn"] = "bytes.rmod"
+            c["x"] = rng.choice([["bytes", fmt], ["bytes", list(b"%s|%b")], ["bytes", list(b"%r")], ["bytes", list(b"ab")],
+                                 ["bytearray", list(b"%s")], ["str", list(b"%s")], ["int", 5], ["none"],
+                                 ["memview", list(b"%s"), []], b_bflt(1.5)])
+    elif r < 0.615:
+        # the shortcut codecs of PyUnicode_Decode with the handlers _Py_GetErrorHandler knows
+        c["fn"] = ty + ".decode"
+        c["s"] = rng.choice([c["s"], [], list("é€😀a".encode()), list(b"\xc3"), list(b"\xed\xa0\x80"),
+                             list(b"ab\xffcd\x80"), list(b"\xf0\x9f\x98"), [0xe2, 0x82], [0xc0, 0xaf],
+                             [rng.randrange(256) for _ in range(rng.randint(0, 8))]])
+        c["enc"] = rng.choice([None, "utf-8", "UTF8", "utf_8", "U8" if False else "utf8", "ascii", "us-ascii",
+                               "latin-1", "latin1", "ISO-8859-1", "iso8859_1"])
+        c["err"] = rng.choice([None, "strict", "ignore", "replace", "surrogateescape", "backslashreplace",
+                               "surrogatepass"])
+        if not c["s"]:
+            c["enc"] = rng.choice([c["enc"], "bogus-codec", "utf-16"])
+            c["err"] = rng.choice([c["err"], "bogus"])
     elif r < 0.63:
         c["fn"] = ty + ".repr"
     elif r < 0.64:
@@ -1869,11 +1915,25 @@ def gen_bytes(rng):
                              ["iter", b_rbyteobjs(rng)], ["int", rng.choice([0, 1, 5, -1, sys.maxsize, sys.maxsize - 32,
                                                                            sys.maxsize - 33, 2 ** 47, 2 ** 63])], None,
                              ["str", [97, 233]]])
-        if c["x"] is None or rng.random() < 0.3:
-            c["enc"] = rng.choice([None, "latin-1", "ascii"])
-            c["err"] = rng.choice([None, "strict"])
+        if ty == "bytes" and rng.random() < 0.25:
+            c["x"] = ["str", rng.choice([[97, 233], [0x20ac, 98], [0x1f600], [0xd800, 97], [0xdc80, 0xdcff],
+                                         [127, 128, 255, 256], []])]
+        if c["x"] is None or rng.random() < 0.3 or (ty == "bytes" and c["x"][0] == "str"):
+            # bytes() goes through the shortcut codecs of PyUnicode_AsEncodedString; bytearray keeps
+            # its own two-codec model
+            more = ty == "bytes"
+            c["enc"] = rng.choice([None, "latin-1", "ascii"] + (["utf-8", "UTF8", "latin1", "us-ascii"] if more else []))
+            c["err"] = rng.choice([None, "strict"] + (["ignore", "replace", "backslashreplace", "xmlcharrefreplace",
+                                                       "surrogateescape", "surrogatepass"] if more else []))
         if c["x"] is not None and c["x"][0] in ("int", "index") and 2000 < c["x"][1] < 2 ** 47:
             c["x"] = [c["x"][0], c["x"][1] % 1000]
+        if ty == "bytes" and rng.random() < 0.2:
+            # bytes_new_impl for a subtype: bytes_subtype_new
+            c["fn"] = "bytes.newsub"
+    elif r < 0.685 and ty == "bytes":
+        c["fn"] = rng.choice(["bytes.fromhexsub", "bytes.dunderbytes", "bytes.dunderbytessub"])
+        c["x"] = rng.choice([["str", list(b"61 62 ff")], ["str", list(b"6")], ["bytes", list(b"0a")], ["int", 1],
+                             ["str", [0x20ac]], ["str", []]])
     elif r < 0.72:
         c["fn"] = ty + ".join"
         c["it"] = rng.choice([["list", [["bytes", b_rbytes(rng)] for _ in range(rng.randint(0, 4))]],
@@ -1947,7 +2007,8 @@ def gen_bytes(rng):
             elif k == "s":
                 args.append(["s", [rng.randint(97, 122) for _ in range(rng.randint(0, 6))]])
             elif k == "p":
-                args.append(["p", rng.randint(1, 2 ** 40)])
+                # 0 is NULL: glibc's "%p" gives "(nil)", which bytes_fromformat prefixes with "0x"
+                args.append(["p", rng.choice([0, rng.randint(1, 2 ** 40), rng.randint(1, 15)])])
         c["s"] = list(fmt + rng.choice([b"", b"", b"%", b"%q", b"%l"]))
         c["args"] = args
     elif r < 0.97 and ty == "bytes":
@@ -2158,6 +2219,10 @@ def b_run_ba_ops(c):
     return {"ok": out}
 
 
+class BSubB(bytes):
+    """A bytes subclass that keeps bytes.__new__ and object.__init__."""
+
+
 class BSub(bytearray):
     pass
 
@@ -2265,8 +2330,34 @@ def run_bytes(case):
             return b_benc(s.hex(*a))
         if m == "fromhex":
             return b_benc(mk.fromhex(b_build(c["x"])))
+        if m == "newsub":
+            a = [] if c.get("x") is None else [b_build(c["x"])]
+            kw = {}
+            if c.get("enc") is not None:
+                kw["encoding"] = c["enc"]
+            if c.get("err") is not None:
+                kw["errors"] = c["err"]
+            r = BSubB(*a, **kw)
+            return [type(r).__name__, b_benc(bytes(r))]
+        if m == "fromhexsub":
+            r = BSubB.fromhex(b_build(c["x"]))
+            return [type(r).__name__, b_benc(bytes(r))]
+        if m in ("dunderbytes", "dunderbytessub"):
+            o = BSubB(bytes(c["s"])) if m == "dunderbytessub" else bytes(c["s"])
+            r = o.__bytes__()
+            return [type(r).__name__, b_benc(bytes(r))]
+        if m == "decode":
+            kw = {}
+            if c.get("enc") is not None:
+                kw["encoding"] = c["enc"]
+            if c.get("err") is not None:
+                kw["errors"] = c["err"]
+            return b_benc(s.decode(**kw))
         if m == "mod":
             return b_benc(s % b_build(c["arg"]))
+        if m == "rmod":
+            r = bytes.__rmod__(s, b_build(c["x"]))
+            return "NotImplemented" if r is NotImplemented else b_benc(r)
         if m == "repr":
             return b_benc(repr(s))
         if m == "reprsub":

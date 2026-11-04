@@ -134,8 +134,18 @@ def formatLong (st : FS) (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq 
       | .error e => if isTypeError e then .error unsupported else .error e
     else .error unsupported
 
-/-- The conversion part of `formatfloat`, bytesobject.c:441-457. Only a `TypeError` of
-`PyFloat_AsDouble` is replaced. -/
+/-- `PyOS_double_to_string(x, type, prec, dtoa_flags, NULL)`, Python/pystrtod.c:1237-1308
+(`Binary64.PyOS_double_to_string_checked`): the 3.15 `precision too big` guard, then the
+text. A NULL from `_Py_dg_dtoa` is its `MemoryError`. -/
+def doubleToString (x : Binary64.F64) (type : Nat) (prec : Int) (alt : Bool) : Py Seq :=
+  match Binary64.PyOS_double_to_string_checked x type prec { alt } with
+  | .error e => .error e
+  | .ok none => .error memoryError
+  | .ok (some (ps, _)) => .ok (Binary64.render ps)
+
+/-- `formatfloat`, bytesobject.c:430-479, with the writer path (:461-470) and the
+`PyBytes` path (:472-476) merged: both hand back the text of `PyOS_double_to_string`.
+Only a `TypeError` of `PyFloat_AsDouble` is replaced (:441-448). -/
 def formatFloatText (st : FS) (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
   match asDouble v with
   | .error e =>
@@ -143,8 +153,9 @@ def formatFloatText (st : FS) (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py
       .error (formatError .typeError st (requiresMsg type "a real number" v.typeName))
     else .error e
   | .ok x =>
+    -- :451-456
     let prec := if prec < 0 then 6 else prec
-    .ok (dtoa x type prec.toNat fl.alt)
+    doubleToString x type prec fl.alt
 
 /-- `byte_converter`, bytesobject.c:512-557. The last message is for an object with no `__index__`:
 one whose `__index__` fails keeps its exception, :540-542. -/
@@ -483,7 +494,7 @@ def formatSpec (format : Seq) (dict : Option Obj) (useBytearray : Bool) (st : FS
     throw (unsupportedChar c at' ((st.pos : Int) - 1))
 
 /-- `_PyBytes_FormatEx`'s main loop, bytesobject.c:661-1143. A literal run,
-lines 641-656; a specifier otherwise. Every iteration consumes at least one byte. -/
+lines 662-677; a specifier otherwise. Every iteration consumes at least one byte. -/
 def formatLoop (format : Seq) (dict : Option Obj) (useBytearray : Bool) : Nat → FS → Py FS
   | 0, _ => .error .modelFuel
   | fuel + 1, st =>
@@ -526,7 +537,15 @@ def bytesFormatEx (format : Seq) (args : Obj) (useBytearray : Bool) : Py Seq := 
       s!"(required {if st.arglen < 0 then 0 else st.argidx}, got {if st.arglen < 0 then 1 else st.arglen})"))
   writerFinish st.w st.out
 
-/-- `bytes_mod`, bytesobject.c:2842-2850. -/
+/-- `bytes_mod(self, arg)`, bytesobject.c:2842-2850. `none` is `NotImplemented`, the answer
+when `self` fails `PyBytes_Check` (:2845-2847): the `nb_remainder` slot is also called for
+`x % b` with the bytes on the right, as `bytes.__rmod__` does. -/
+def bytesModObj (self arg : Obj) : Py (Option Seq) :=
+  match self with
+  | .bytes s => some <$> bytesFormatEx s arg false
+  | _ => .ok none
+
+/-- `bytes_mod` on a bytes `self`. -/
 def bytesMod (format : Seq) (args : Obj) : Py Seq := bytesFormatEx format args false
 
 /-- `bytearray_mod`, bytearrayobject.c:2913-2945. -/
