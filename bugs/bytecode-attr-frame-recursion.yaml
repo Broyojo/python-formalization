@@ -76,6 +76,9 @@ observed: |
   LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN generic 197, specialized 223 (limit 200). REPRODUCED.
   main (vendor/cpython-main/python.exe): identical numbers. REPRODUCED. Main's
   Python/bytecodes.c:3041-3048 and :3069-3076 still have no `_CHECK_RECURSION_REMAINING`.
+  Re-run 2026-11-04 with scripts/check_bugs.py: REPRODUCED on python3 3.15.2 and on main
+  (3.16.0a1+dev). The open PR python/cpython#156346 would not change this: it adds the check to
+  CALL_EX_PY and CALL_KW_BOUND_METHOD only.
 promised_by: |
   invariant: a specialized opcode refines its generic form. The check was added to
   `CALL_KW_PY` (python/cpython#137887) and `CALL_ALLOC_AND_ENTER_INIT` (python/cpython#149243) for
@@ -96,6 +99,10 @@ duplicates:
     - {number: 155151, state: open, relation: related, reason: "CALL_EX_PY and CALL_KW_BOUND_METHOD bypass RecursionError after specialization (marinelay); the same gap in other macros; it does not mention LOAD_ATTR_PROPERTY or LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN"}
     - {number: 149243, state: closed, relation: related, reason: "CALL_ALLOC_AND_ENTER_INIT lacked _CHECK_RECURSION_REMAINING; fixed by PR 149310 for that macro only"}
     - {number: 137883, state: closed, relation: related, reason: "runaway recursion with keyword arguments; PR 137887 added the check to CALL_KW_PY only"}
+  prs:
+    - {number: 156346, state: open, relation: related, reason: "gh-155151: Check recursion limits in specialized Python calls; adds _CHECK_RECURSION_REMAINING to CALL_EX_PY and CALL_KW_BOUND_METHOD only (Python/bytecodes.c, generated_cases.c.h, opcode metadata, two tests in Lib/test/test_call.py); it does not touch LOAD_ATTR_PROPERTY or LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN"}
+    - {number: 155405, state: closed, relation: related, reason: "earlier gh-155151 PR for CALL_EX_PY and CALL_KW_BOUND_METHOD only, closed unmerged"}
+    - {number: 155272, state: closed, relation: related, reason: "earlier gh-155151 PR for CALL_EX_PY and CALL_KW_BOUND_METHOD only, closed unmerged"}
   bugforge: "none: vendor/bugforge-results/README.md has no LOAD_ATTR or recursion-limit entry for the interpreter"
   queries: ["gh search issues --repo python/cpython LOAD_ATTR_PROPERTY recursion (no results)",
             "gh search issues --repo python/cpython _CHECK_RECURSION_REMAINING (155151, 149243)",
@@ -103,7 +110,10 @@ duplicates:
             "gh search issues --repo python/cpython __getattribute__ recursion limit (none about specialization)",
             "gh search issues --repo python/cpython LOAD_ATTR_PROPERTY (none about recursion)",
             "gh search issues --repo python/cpython property RecursionError specialization (no results)",
-            "gh issue view 155151", "gh issue view 149243"]
+            "gh issue view 155151", "gh issue view 149243",
+            "gh search prs --repo python/cpython _CHECK_RECURSION_REMAINING (156346 open, 155405 and 155272 closed, 144394, 137887)",
+            "gh search prs --repo python/cpython 155151 (156346, 155405, 155272)",
+            "gh pr view 156346; gh pr diff 156346 (CALL_EX_PY and CALL_KW_BOUND_METHOD only)"]
 lean:
   property: PyLean.Bytecode.PropertyFrameChecksRecursion
   theorem: PyLean.Bytecode.propertyFrameChecksRecursion_refuted
