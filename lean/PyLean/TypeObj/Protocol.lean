@@ -641,6 +641,23 @@ def descrRepr (w : World) (kind : String) (o : Addr) (n : Name) : String :=
   if o == B.object then s!"<{kind} '{n}'>"
   else s!"<{kind} '{n}' of '{tpName w o}' objects>"
 
+/-- `sys.flags.int_max_str_digits`, the default `_PY_LONG_DEFAULT_MAX_STR_DIGITS` (4300). -/
+def intMaxStrDigits : Nat := 4300
+
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, `Objects/longobject.c:33`, at the default limit. -/
+def intStrLimitMsg : String :=
+  "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
+
+/-- Does `str(i)` exceed the digit limit? `long_to_decimal_string_internal`,
+`Objects/longobject.c:2125-2134` and `:2207-2216`: the pre-check only fires for values that also
+fail the exact check, which compares the digit count without the sign to the limit. -/
+def intStrTooLong (i : Int) : Bool := decide ((Nat.toDigits 10 i.natAbs).length > intMaxStrDigits)
+
+/-- `long_to_decimal_string`, `Objects/longobject.c:2116-2290`: `repr`/`str` of an `int`, which
+raises `ValueError` above 4300 digits. -/
+def intDecimalString (i : Int) : M String :=
+  if intStrTooLong i then valueErr intStrLimitMsg else pure (toString i)
+
 /-- Call the `tp_repr` function `f`. -/
 def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   let w ← getW
@@ -653,8 +670,8 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   | .c .bool =>
     match v with
     | .bool b => pure (.str (if b then "True" else "False"))
-    | _ => pure (.str (toString ((intOf w v).getD 0)))
-  | .c .int => pure (.str (toString ((intOf w v).getD 0)))
+    | _ => .str <$> intDecimalString ((intOf w v).getD 0)
+  | .c .int => .str <$> intDecimalString ((intOf w v).getD 0)
   | .c .str => pure (.str (reprStr ((strOf w v).getD "")))
   | .c .type =>
     match v with
