@@ -80,30 +80,10 @@ def localTimezoneC (env : TzEnv) (ltz : Int → Py LocalTmZ) (oid : Nat) (utc : 
 
 /-! ### `astimezone` with the local zone -/
 
-/-- `datetime.astimezone(tz)`, Py:2137-2160, every branch: `tz is None` takes
-`self._local_timezone()` first (:2138-2139), a non-`tzinfo` is `TypeError` (:2140-2141); a
-naive `self` uses `self._local_timezone()` as `mytz` (:2144-2146); an aware one asks
-`mytz.utcoffset(self)` (unchecked, :2148) and on `None` uses
-`self.replace(tzinfo=None)._local_timezone()` (:2149-2151); then the identity shortcut
-(:2153-2154), `(self - myoffset).replace(tzinfo=tz)` (:2157) and `tz.fromutc` (:2160). -/
-def dtAstimezoneFullPy (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT) (arg : AstzArg) :
-    Py DT := do
-  let tz ← match arg with
-    | .none_ => localTimezonePy env ltz o1 self
-    | .other => throw (.typeError "tz argument must be an instance of tzinfo")
-    | .tz t => pure t
-  let (mytz, myoffset) ← match self.tz with
-    | none => do
-      let z ← localTimezonePy env ltz o2 self
-      pure (z, ← tzUtcoffsetRaw env z (some self))
-    | some z => do
-      let o ← tzUtcoffsetRaw env z (some self)
-      match o with
-      | .none => do
-        let naive ← dtReplace self none none none none none none none none (some none)
-        let z' ← localTimezonePy env ltz o2 naive
-        pure (z', ← tzUtcoffsetRaw env z' (some self))
-      | _ => pure (z, o)
+/-- Py:2153-2160 once `tz`, `mytz` and `myoffset` are known: the identity shortcut, then
+`(self - myoffset).replace(tzinfo=tz)` and `tz.fromutc(utc)`; `self - x` for a non-timedelta
+`x` is the binary-operator `TypeError`. -/
+def astzPyTail (env : TzEnv) (self : DT) (tz mytz : Tz) (myoffset : OffRet) : Py DT := do
   if tz.oid = mytz.oid then return self
   match myoffset with
   | .delta o =>
@@ -113,37 +93,68 @@ def dtAstimezoneFullPy (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (
   | .other ty => throw (.typeError s!"~unsupported operand type(s) for -: 'datetime' and '{ty}'")
   | .none => throw (.typeError "~unsupported operand type(s) for -: 'datetime' and 'NoneType'")
 
+/-- `datetime.astimezone(tz)`, Py:2137-2160, every branch: `tz is None` takes
+`self._local_timezone()` first (:2138-2139), a non-`tzinfo` is `TypeError` (:2140-2141); a
+naive `self` uses `self._local_timezone()` as `mytz` (:2144-2146); an aware one asks
+`mytz.utcoffset(self)` (unchecked, :2148) and on `None` uses
+`self.replace(tzinfo=None)._local_timezone()` (:2149-2151); then `astzPyTail`. -/
+def dtAstimezoneFullPy (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT) (arg : AstzArg) :
+    Py DT := do
+  let tz ← match arg with
+    | .none_ => localTimezonePy env ltz o1 self
+    | .other => throw (.typeError "tz argument must be an instance of tzinfo")
+    | .tz t => pure t
+  match self.tz with
+  | none =>
+    let z ← localTimezonePy env ltz o2 self
+    astzPyTail env self tz z (← tzUtcoffsetRaw env z (some self))
+  | some z =>
+    let o ← tzUtcoffsetRaw env z (some self)
+    match o with
+    | .none =>
+      let naive ← dtReplace self none none none none none none none none (some none)
+      let z' ← localTimezonePy env ltz o2 naive
+      astzPyTail env self tz z' (← tzUtcoffsetRaw env z' (some self))
+    | _ => astzPyTail env self tz z o
+
+/-- :6955-6998 once the offset `o` is known: `self - offset` (`add_datetime_timedelta`), made
+UTC (:6962-6982); for `tz` `None` the zone `local_timezone(result)` of the UTC result
+(:6985-6991); then `tz.fromutc(result)` with `tz` attached (:6992-6998). -/
+def astzCFinish (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self : DT) (tzinfo : Option Tz) (o : Delta) :
+    Py DT := do
+  let r ← addDatetimeTimedeltaC self o (-1)
+  let r : DT := { r with tz := some tzUTC }
+  let t ← match tzinfo with
+    | some t => pure t
+    | none => localTimezoneC env ltz o1 r
+  tzFromutcC env t { r with tz := some t }
+
+/-- :6934-6955 once `self_tzinfo` is the local zone `z` (the `naive:` path): the identity
+test, then `call_utcoffset` (checked), which a `timezone` never answers with `None`. -/
+def astzCAfterLocal (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (self : DT) (tzinfo : Option Tz) (z : Tz) :
+    Py DT := do
+  if tzinfo.map (·.oid) = some z.oid then return self
+  match ← callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env z (some self)) with
+  | some o => astzCFinish env ltz o1 self tzinfo o
+  | none => throw .modelFuel
+
 /-- `datetime_datetime_astimezone_impl`, :6914-7004, every branch: `check_tzinfo_subclass`
-(:6922); a naive `self` takes `local_timezone_from_local(self)` (`naive:`, :6925-6928); the
-identity test (:6934-6937); `call_utcoffset` (checked, :6940), a `None` going back to `naive:`
-(:6944-6947, where the local `timezone` never answers `None`); `self - offset` (:6955),
-made UTC (:6962-6982); for `tz` `None` the zone `local_timezone(result)` of the UTC result
-(:6985-6991); then `tz.fromutc` (:6996-6998). -/
+(:6922); a naive `self` takes `local_timezone_from_local(self)` (`naive:`, :6925-6928); an
+aware one the identity test (:6934-6937) and `call_utcoffset` (:6940), a `None` going to
+`naive:` (:6944-6947). -/
 def dtAstimezoneFullC (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT) (arg : AstzArg) :
     Py DT := do
   let tzinfo : Option Tz ← match arg with
     | .other => throw (.typeError "~tzinfo argument must be None or of a tzinfo subclass")
     | .none_ => pure none
     | .tz t => pure (some t)
-  let finish : Delta → Py DT := fun o => do
-    let r ← addDatetimeTimedeltaC self o (-1)
-    let r : DT := { r with tz := some tzUTC }
-    let t ← match tzinfo with
-      | some t => pure t
-      | none => localTimezoneC env ltz o1 r
-    tzFromutcC env t { r with tz := some t }
-  let naive : Py DT := do
-    let z ← localTimezoneFromLocalC ltz o2 self
-    if tzinfo.map (·.oid) = some z.oid then return self
-    match ← callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env z (some self)) with
-    | some o => finish o
-    | none => throw .modelFuel
   match self.tz with
-  | none => naive
+  | none => astzCAfterLocal env ltz o1 self tzinfo (← localTimezoneFromLocalC ltz o2 self)
   | some z =>
     if tzinfo.map (·.oid) = some z.oid then return self
     match ← callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env z (some self)) with
-    | some o => finish o
-    | none => naive
+    | some o => astzCFinish env ltz o1 self tzinfo o
+    | none => astzCAfterLocal env ltz o1 self tzinfo (← localTimezoneFromLocalC ltz o2 self)
 
 end PyLean.Datetime
+
