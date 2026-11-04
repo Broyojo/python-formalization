@@ -1686,27 +1686,36 @@ def isCoroutineLike (o : Val) : RM Bool := do
   | _, _ => pure false
 
 /-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1245-1284`. The coroutine test comes
-first. `%T` omits the module for `__main__` and `builtins`, the only modules here. -/
+first. `%T` is the fully qualified name (`typeFullName`: the `__qualname__` of a `__main__` class);
+the last message has `%.100s` of `tp_name`. -/
 def awaitableIter (o : Val) : RM Val := do
   if ← isCoroutineLike P o then return o
   match ← callDunder om ctx o "__await__" [] with
   | some r =>
     if ← isCoroutineLike P r then
-      typeError s!"{← tpName o}.__await__() must return an iterator, not coroutine"
+      typeError s!"{← typeFullName o}.__await__() must return an iterator, not coroutine"
     if !(← om.isIterator r) then
-      typeError s!"{← tpName o}.__await__() must return an iterator, not {← tpName r}"
+      typeError s!"{← typeFullName o}.__await__() must return an iterator, not {← typeFullName r}"
     pure r
-  | none => typeError s!"'{← tpName o}' object can't be awaited"
+  | none => typeError s!"'{trunc100 (← tpName o)}' object can't be awaited"
 
-/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`. -/
+/-- `_PyEval_FormatAwaitableError`, `Python/ceval.c:3495-3511`: when the type has no `am_await`
+(no `__await__`, and not a coroutine), the `'async with'` messages of `oparg` 1 and 2 replace the
+error (`_PyErr_Format` clears it first), `%.100s` of `tp_name`. -/
+def formatAwaitableError (o : Val) (oparg : Nat) : RM Unit := do
+  if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
+    let t ← tpName o
+    if oparg == 1 then
+      typeError s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}"
+    if oparg == 2 then
+      typeError s!"'async with' received an object from __aexit__ that does not implement __await__: {trunc100 t}"
+
+/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`: a coroutine being awaited
+(`FRAME_SUSPENDED_YIELD_FROM`, the frame state with a delegate, `genYf`) is refused with
+`RuntimeError("coroutine is being awaited already")`. -/
 def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
   let r ← tryExc (awaitableIter P om ctx o) fun e => do
-    if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
-      let t ← tpName o
-      if oparg == 1 then
-        typeError s!"'async with' received an object from __aenter__ that does not implement __await__: {t}"
-      if oparg == 2 then
-        typeError s!"'async with' received an object from __aexit__ that does not implement __await__: {t}"
+    formatAwaitableError o oparg
     throw (.exc e)
   if (← genKindOf r) == some .coro then
     if let .ref a := r then

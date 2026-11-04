@@ -445,6 +445,16 @@ def p_async(r):
         "        print(type(e).__name__, e, repr(e.__cause__), repr(e.__context__), e.__suppress_context__)\n"
         "show()\ntry:\n    raise OSError('handled')\nexcept OSError:\n    show()\n",
         "class NA:\n    def __aiter__(self):\n        return " + r.choice(["1", "self", "[]"]) + "\nasync def f():\n    async for x in NA():\n        pass\n" + guarded("drive(f())"),
+        # `%T` (qualified name) in `_PyCoro_GetAwaitableIter`, `%.100s` of `tp_name` in the rest
+        "class O:\n    class R:\n        def __await__(self):\n            return " + r.choice(["1", "co()", "iter([])"]) + "\n"
+        "    class Q:\n        pass\n"
+        "    class CM:\n        async def __aenter__(self):\n            return 1\n        def __aexit__(self, *a):\n            return " + r.choice(["2", "O.Q()", "None"]) + "\n"
+        "    class CM2:\n        def __aenter__(self):\n            return " + r.choice(["O.Q()", "3", "O.R()"]) + "\n        async def __aexit__(self, *a):\n            return 2\n"
+        "async def co():\n    return 1\n"
+        "async def f(x):\n    await x\n"
+        + guarded("drive(f(O." + r.choice(["R()", "Q()"]) + "))") + "\n"
+        "async def g(cm):\n    async with cm:\n        pass\n"
+        + guarded("drive(g(O." + r.choice(["CM()", "CM2()"]) + "))"),
     ])
 
 

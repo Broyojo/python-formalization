@@ -757,7 +757,13 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model, with cache [type_version, descr]: on another tp_version_tag each of LOAD_ATTR_METHOD_NO_DICT, LOAD_ATTR_NONDESCRIPTOR_NO_DICT and LOAD_ATTR_METHOD_LAZY_DICT is the generic LOAD_ATTR on the same state; under the cached version the method forms leave the cached descriptor with owner above it as self and the non-descriptor form replaces owner by it, LOAD_ATTR_METHOD_LAZY_DICT only while the instance's __dict__ has not been created (otherwise, or on a non-instance, it is LOAD_ATTR)."
     source := "Python/bytecodes.c:4261-4333"
     status := .proven, prop := ``MethodLoadNoDictRules, thm := some ``methodLoadNoDictRules_proven
-    notes := "That the cached descriptor is what the generic lookup finds under that version is the specializer's invariant (Python/specialize.c), as for bytecode-attr-specialized; the dict pointer at MANAGED_DICT_OFFSET + dictoffset is the instance's dict field." }
+    notes := "That the cached descriptor is what the generic lookup finds under that version is the specializer's invariant (Python/specialize.c), as for bytecode-attr-specialized; the dict pointer at MANAGED_DICT_OFFSET + dictoffset is the instance's dict field." },
+  { id := "bytecode-get-awaitable", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_AWAITABLE", "_PyEval_GetAwaitable", "_PyEval_FormatAwaitableError"]
+    statement := "For every object model, GET_AWAITABLE replaces iterable by _PyEval_GetAwaitable(iterable, oparg) and pops it on failure; and for every inner object model, _PyEval_GetAwaitable (getAwaitableImpl): a non-coroutine result of _PyCoro_GetAwaitableIter is returned, a coroutine too unless it is suspended in a yield from (FRAME_SUSPENDED_YIELD_FROM), which raises RuntimeError 'coroutine is being awaited already'; on its exception _PyEval_FormatAwaitableError's TypeError, if it raises one, replaces it, else the original is raised. _PyEval_FormatAwaitableError raises nothing for a type with __await__ or a coroutine, and otherwise the 'async with' received an object from __aenter__ (oparg 1) or __aexit__ (oparg 2) that does not implement __await__ TypeError with %.100s of tp_name, nothing for another oparg."
+    source := "Python/bytecodes.c:1651-1656; _PyEval_GetAwaitable, Python/ceval.c:3645-3667; _PyEval_FormatAwaitableError, Python/ceval.c:3495-3511"
+    status := .proven, prop := ``GetAwaitableRules, thm := some ``getAwaitableRules_proven
+    notes := "_PyCoro_GetAwaitableIter itself is gen-awaitable-iter-result; its %T messages now use the qualified name (O.R.__await__() ...), its last message %.100s of tp_name." }
 ]
 
 end PyLean.Bytecode

@@ -168,4 +168,88 @@ theorem methodLoadNoDictRules_proven : MethodLoadNoDictRules := by
   · bc_simp [execOp, withDeopt, LOAD_ATTR_METHOD_LAZY_DICT, _GUARD_TYPE_VERSION, _CHECK_ATTR_METHOD_LAZY_DICT,
       hv, h, hi]
 
+/-! ## `GET_AWAITABLE` -/
+
+/-- `GET_AWAITABLE` (`:1651-1656`) on `iterable`: `_PyEval_GetAwaitable(iterable, oparg)` replaces it,
+and on failure it is popped (`PyStackRef_CLOSE` before `ERROR_IF`), for every object model; and
+`_PyEval_GetAwaitable` (`getAwaitableImpl`), for every inner object model: a result of
+`_PyCoro_GetAwaitableIter` that is not a coroutine is returned; a coroutine is returned unless it is
+being awaited (`FRAME_SUSPENDED_YIELD_FROM`), which raises `RuntimeError("coroutine is being awaited
+already")`; on `_PyCoro_GetAwaitableIter`'s exception, `_PyEval_FormatAwaitableError` runs and its
+error, if any, is raised, else the original one. `_PyEval_FormatAwaitableError` raises nothing when
+the type has `__await__` or the value is a coroutine, and otherwise the `'async with' ... __aenter__`
+or `__aexit__` `TypeError` for `oparg` 1 or 2, nothing for other `oparg`s. -/
+def GetAwaitableRules : Prop :=
+  (∀ (e : Env) (regs : Regs) (o : Val) (rest : List Val),
+    (∀ it rt, e.om.getAwaitable e.ctx o e.oparg regs.rt = .ok it rt →
+      execOp e .GET_AWAITABLE ⟨regs, o :: rest⟩ = .ok () ⟨{ regs with rt := rt }, it :: rest⟩) ∧
+    (∀ x rt, e.om.getAwaitable e.ctx o e.oparg regs.rt = .error x rt →
+      execOp e .GET_AWAITABLE ⟨regs, o :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩)) ∧
+  (∀ (P : Program) (om : ObjModel) (ctx : Ctx) (o : Val) (oparg : Nat) (rt : Rt),
+    (∀ r rt1 k rt2, Proto.awaitableIter P om ctx o rt = .ok r rt1 → genKindOf r rt1 = .ok k rt2 → k ≠ some .coro →
+      Proto.getAwaitableImpl P om ctx o oparg rt = .ok r rt2) ∧
+    (∀ a rt1 g, Proto.awaitableIter P om ctx o rt = .ok (.ref a) rt1 → rt1.heap[a]? = some (.gen g) →
+      g.kind = .coro →
+      ((Proto.genYf g).isSome → ∀ y rt2, runtimeError (α := Unit) "coroutine is being awaited already" rt1 = .error y rt2 →
+        Proto.getAwaitableImpl P om ctx o oparg rt = .error y rt2) ∧
+      ((Proto.genYf g).isNone → Proto.getAwaitableImpl P om ctx o oparg rt = .ok (.ref a) rt1)) ∧
+    (∀ x rt1, Proto.awaitableIter P om ctx o rt = .error (.exc x) rt1 →
+      (∀ y rt2, Proto.formatAwaitableError o oparg rt1 = .error y rt2 →
+        Proto.getAwaitableImpl P om ctx o oparg rt = .error y rt2) ∧
+      (∀ rt2, Proto.formatAwaitableError o oparg rt1 = .ok () rt2 →
+        Proto.getAwaitableImpl P om ctx o oparg rt = .error (.exc x) rt2))) ∧
+  (∀ (o : Val) (oparg : Nat) (rt : Rt) (T : Val) (rt1 : Rt),
+    typeOf o rt = .ok T rt1 →
+    (∀ f rt2 k rt3, Proto.userLookup T "__await__" rt1 = .ok (some f) rt2 → genKindOf o rt2 = .ok k rt3 →
+      Proto.formatAwaitableError o oparg rt = .ok () rt3) ∧
+    (∀ rt2 rt3, Proto.userLookup T "__await__" rt1 = .ok none rt2 → genKindOf o rt2 = .ok (some .coro) rt3 →
+      Proto.formatAwaitableError o oparg rt = .ok () rt3) ∧
+    (∀ rt2 k rt3 t rt4, Proto.userLookup T "__await__" rt1 = .ok none rt2 → genKindOf o rt2 = .ok k rt3 →
+      k ≠ some .coro → tpName o rt3 = .ok t rt4 →
+      (oparg = 1 → Proto.formatAwaitableError o oparg rt = typeError
+        s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}" rt4) ∧
+      (oparg = 2 → Proto.formatAwaitableError o oparg rt = typeError
+        s!"'async with' received an object from __aexit__ that does not implement __await__: {trunc100 t}" rt4) ∧
+      (oparg ≠ 1 → oparg ≠ 2 → Proto.formatAwaitableError o oparg rt = .ok () rt4)))
+
+theorem getAwaitableRules_proven : GetAwaitableRules := by
+  refine ⟨fun e regs o rest => ⟨fun it rt h => ?_, fun x rt h => ?_⟩, fun P om ctx o oparg rt => ?_,
+    fun o oparg rt T rt1 hT => ?_⟩
+  · bc_simp [execOp, GET_AWAITABLE, h]
+  · bc_simp [execOp, GET_AWAITABLE, h]
+  · refine ⟨fun r rt1 k rt2 h1 h2 h3 => ?_, fun a rt1 g h1 hg hk => ⟨fun hy y rt2 hre => ?_, fun hy => ?_⟩,
+      fun x rt1 h1 => ⟨fun y rt2 h2 => ?_, fun rt2 h2 => ?_⟩⟩
+    · have h3' : (k == some GenKind.coro) = false := by simpa using h3
+      simp [Proto.getAwaitableImpl, tryExc, h1, h2, h3', bind, EStateM.bind, pure, EStateM.pure]
+    · have hk' : genKindOf (.ref a) rt1 = .ok (some .coro) rt1 := by
+        simp [genKindOf, getObj, hg, hk, bind, EStateM.bind, pure, EStateM.pure]
+      have hy' : ∃ v, Proto.genYf g = some v := Option.isSome_iff_exists.mp hy
+      obtain ⟨v, hv⟩ := hy'
+      simp [Proto.getAwaitableImpl, tryExc, h1, hk', getGen, getObj, hg, hv, hre, bind, EStateM.bind, pure,
+        EStateM.pure]
+    · have hk' : genKindOf (.ref a) rt1 = .ok (some .coro) rt1 := by
+        simp [genKindOf, getObj, hg, hk, bind, EStateM.bind, pure, EStateM.pure]
+      have hy' : Proto.genYf g = none := by simpa using hy
+      simp [Proto.getAwaitableImpl, tryExc, h1, hk', getGen, getObj, hg, hy', bind, EStateM.bind, pure,
+        EStateM.pure]
+    · simp [Proto.getAwaitableImpl, tryExc, h1, h2, bind, EStateM.bind]
+    · simp [Proto.getAwaitableImpl, tryExc, h1, h2, bind, EStateM.bind, throw, throwThe, MonadExcept.throw,
+        EStateM.throw, MonadExceptOf.throw]
+  · refine ⟨fun f rt2 k rt3 h1 h2 => ?_, fun rt2 rt3 h1 h2 => ?_, fun rt2 k rt3 t rt4 h1 h2 h3 h4 =>
+      ⟨fun ho => ?_, fun ho => ?_, fun ho1 ho2 => ?_⟩⟩
+    · simp [Proto.formatAwaitableError, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
+    · simp [Proto.formatAwaitableError, hT, h1, h2, bind, EStateM.bind, pure, EStateM.pure]
+    · have h3' : (k != some GenKind.coro) = true := by simpa using h3
+      subst ho
+      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
+      cases hte : (typeError (α := Unit)
+        s!"'async with' received an object from __aenter__ that does not implement __await__: {trunc100 t}" : RM Unit) rt4 with
+      | ok u s => exact absurd hte (typeError_ne_ok _ _ _ _)
+      | error y s => simp [hte]
+    · have h3' : (k != some GenKind.coro) = true := by simpa using h3
+      subst ho
+      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, bind, EStateM.bind, pure, EStateM.pure]
+    · have h3' : (k != some GenKind.coro) = true := by simpa using h3
+      simp [Proto.formatAwaitableError, hT, h1, h2, h3', h4, ho1, ho2, bind, EStateM.bind, pure, EStateM.pure]
+
 end PyLean.Bytecode

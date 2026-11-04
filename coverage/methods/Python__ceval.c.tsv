@@ -102,13 +102,13 @@ Python/ceval.c	3403	3412	_Py_Check_ArgsIterable	_Py_Check_ArgsIterable(PyThreadS
 Python/ceval.c	3415	3446	_PyEval_FormatKwargsError	_PyEval_FormatKwargsError(PyThreadState *tstate, PyObject *func, PyObject *kwargs, PyObject *dupkey)	todo		changed-in-3.15:
 Python/ceval.c	3449	3475	_PyEval_FormatExcCheckArg	_PyEval_FormatExcCheckArg(PyThreadState *tstate, PyObject *exc, const char *format_str, PyObject *obj)	todo		
 Python/ceval.c	3478	3492	_PyEval_FormatExcUnbound	_PyEval_FormatExcUnbound(PyThreadState *tstate, PyCodeObject *co, int oparg)	todo		
-Python/ceval.c	3495	3511	_PyEval_FormatAwaitableError	_PyEval_FormatAwaitableError(PyThreadState *tstate, PyTypeObject *type, int oparg)	todo		
+Python/ceval.c	3495	3511	_PyEval_FormatAwaitableError	_PyEval_FormatAwaitableError(PyThreadState *tstate, PyTypeObject *type, int oparg)	modelled	bytecode-get-awaitable	
 Python/ceval.c	3515	3542	PyUnstable_Eval_RequestCodeExtraIndex	PyUnstable_Eval_RequestCodeExtraIndex(freefunc free)	todo		
 Python/ceval.c	3547	3550	Py_EnterRecursiveCall	int Py_EnterRecursiveCall(const char *where)	todo		
 Python/ceval.c	3552	3555	Py_LeaveRecursiveCall	void Py_LeaveRecursiveCall(void)	todo		
 Python/ceval.c	3558	3594	_PyEval_GetANext	_PyEval_GetANext(PyObject *aiter)	modelled	bytecode-get-anext	
 Python/ceval.c	3597	3643	_PyEval_LoadGlobalStackRef	_PyEval_LoadGlobalStackRef(PyObject *globals, PyObject *builtins, PyObject *name, _PyStackRef *writeto)	todo		changed-in-3.15:
-Python/ceval.c	3646	3667	_PyEval_GetAwaitable	_PyEval_GetAwaitable(PyObject *iterable, int oparg)	todo		changed-in-3.15:
+Python/ceval.c	3646	3667	_PyEval_GetAwaitable	_PyEval_GetAwaitable(PyObject *iterable, int oparg)	modelled	bytecode-get-awaitable	
 Python/ceval.c	3670	3707	_PyEval_LoadName	_PyEval_LoadName(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *name)	todo		changed-in-3.15:
 Python/ceval.c	3709	3739	_PyForIter_VirtualIteratorNext	_PyStackRef _PyForIter_VirtualIteratorNext(PyThreadState* tstate, _PyInterpreterFrame* frame, _PyStackRef iter, _PyStackRef* index_ptr)	todo		changed-in-3.15: new function
 Python/ceval.c	3743	3749	type_has_special_method	type_has_special_method(PyTypeObject *cls, PyObject *name)	todo		

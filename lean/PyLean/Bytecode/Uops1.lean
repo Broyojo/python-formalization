@@ -860,7 +860,7 @@ def GET_AITER (e : Env) : M Unit := stk 1 1 fun
 def GET_ANEXT (e : Env) : M Unit := stkK 1 2 fun
   | [a] => do pure [a, ← e.om.getANext e.ctx a]
   | _ => fault "arity"
-/-- `@3.14.7:1638`. -/
+/-- `:1651-1656`: `_PyEval_GetAwaitable`, then `iterable` closed before `ERROR_IF`. -/
 def GET_AWAITABLE (e : Env) : M Unit := stk 1 1 fun
   | [o] => do pure [← e.om.getAwaitable e.ctx o e.oparg]
   | _ => fault "arity"
