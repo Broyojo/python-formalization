@@ -22,6 +22,7 @@ import PyLean.Decimal.AddExact
 import PyLean.Decimal.RotateShift
 import PyLean.Decimal.DivExact
 import PyLean.Decimal.LogicalExact
+import PyLean.Decimal.NextExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -711,7 +712,25 @@ def entries : List Entry := [
     statement := "For every context: logical_and, logical_or and logical_xor of two logical operands (finite, sign 0, exponent 0, every decimal digit 0 or 1) give the logical number whose digit at each of the low prec positions is the and / or / exclusive or of the operands' digits at that position (an operand's digits beyond prec are cut, missing ones are 0), with no flag; logical_invert of a logical operand gives the one whose low prec digits are its inverted digits; any other operand (a sign, an exponent, a digit above 1, an infinity or a NaN, quiet or signaling) is InvalidOperation with a NaN."
     source := "Lib/_pydecimal.py:3418-3513 (the docstrings of _islogical and logical_*); General Decimal Arithmetic, 'Logical operations'"
     status := .proven, prop := ``LogicalExact, thm := some ``logicalExact_proven
-    notes := "lspec reads the digits arithmetically (x / 10**i % 10); islogical_iff and fill_reverse connect them to _pydecimal's digit strings and _fill_logical's padding and cut. Checked on 3.15.2: 118,443 random operations (prec 1 to 14, operands of up to 18 digits, and -1, 2, 10E1, 1.0, -0, 0E-1, 102, NaN, sNaN, Inf) agree with this statement, value and flags." }
+    notes := "lspec reads the digits arithmetically (x / 10**i % 10); islogical_iff and fill_reverse connect them to _pydecimal's digit strings and _fill_logical's padding and cut. Checked on 3.15.2: 118,443 random operations (prec 1 to 14, operands of up to 18 digits, and -1, 2, 10E1, 1.0, -0, 0E-1, 102, NaN, sNaN, Inf) agree with this statement, value and flags." },
+  { id := "decimal-next-plus-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.next_plus"]
+    statement := "For every context (prec >= 1, Emin <= Emax) and flag state: next_plus of a finite value x, when it returns, is the smallest number representable in the context that is larger than x (finite, at most prec digits, exponent in [Etiny, Etop], above x and at most every representable value above x), or Infinity when no representable value is above x, and it leaves the flags as they were; it returns for every finite x whose coefficient has at most 4300 - prec - 3 digits; Infinity gives Infinity, -Infinity the most negative finite value -(10**prec - 1)E(Etop); a quiet NaN gives itself (payload cut to prec - clamp digits), a signaling NaN InvalidOperation and that quiet NaN."
+    source := "Decimal.next_plus docstring (Lib/_pydecimal.py:3599, 'Returns the smallest representable number larger than itself'); decimal docs, next_plus; Lib/_pydecimal.py:3598-3619"
+    status := .proven, prop := ``NextPlusExact, thm := some ``nextPlusExact_proven
+    notes := "The proof goes through fixSpec: _fix under ROUND_CEILING in a context that traps nothing is the least representable value at or above its operand (ceil_fixSpec; overflow to Infinity or the largest negative finite value, the subnormal range, clamp folding), and when that leaves the value unchanged the operand is on the grid of 10**Etiny, so x + 1E(Etiny-1) rounded up (AddExact) is the least representable value above x. Checked on 3.15.2: 4,000 random contexts (prec 1-3, Emin -4..0, Emax 0..4, clamp 0/1) and operands of up to 6 digits against a brute-force list of every representable value; Decimal((0, (1,) + (0,)*4299, -4299)).next_plus() raises the int/str-limit ValueError (the python/cpython#96589 class), as does Decimal(1).next_plus(Context(prec=5000))." },
+  { id := "decimal-next-minus-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.next_minus"]
+    statement := "For every context (prec >= 1, Emin <= Emax), operand and flag state, x.next_minus() is x.copy_negate().next_plus().copy_negate(), flags and exceptions included; so next_minus of a finite value x, when it returns, is the largest number representable in the context that is smaller than x, or -Infinity when none is, with the flags unchanged, and it returns for every finite x whose coefficient has at most 4300 - prec - 3 digits; -Infinity gives -Infinity, Infinity the largest finite value; NaNs as for next_plus."
+    source := "Decimal.next_minus docstring (Lib/_pydecimal.py:3576, 'Returns the largest representable number smaller than itself'); decimal docs, next_minus; Lib/_pydecimal.py:3575-3596"
+    status := .proven, prop := ``NextMinusExact, thm := some ``nextMinusExact_proven
+    notes := "The twin step: fixSpec under ROUND_FLOOR is fixSpec under ROUND_CEILING of the negated value, negated (fixSpec_floor, overflow values included), and x - 1E(Etiny-1) under ROUND_FLOOR is -((-x) + 1E(Etiny-1)) under ROUND_CEILING (add_floor, the zero sum's sign included). Checked on 3.15.2: the same 4,000 cases (largest representable below, and repr(x.next_minus()) == repr(x.copy_negate().next_plus().copy_negate())), and NaN, -sNaN12, ±Infinity, -0 and 0E+5 with their flags." },
+  { id := "decimal-next-toward-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.next_toward"]
+    statement := "For every context and flag state: next_toward with a NaN operand is _check_nans of the pair; for numerically equal operands it is self.copy_sign(other) with no flag; otherwise it is next_plus(self) when self < other and next_minus(self) when self > other (decimal-next-plus-exact, decimal-next-minus-exact), after which an infinite result raises Overflow, Inexact, Rounded, and a result whose adjusted exponent is below Emin raises Underflow, Subnormal, Inexact, Rounded and, for a zero, Clamped, in that order on the caller's context, the first trapped one raising."
+    source := "Decimal.next_toward docstring (Lib/_pydecimal.py:3622-3629); Lib/_pydecimal.py:3621-3665"
+    status := .proven, prop := ``NextTowardExact, thm := some ``nextTowardExact_proven
+    notes := "The comparison is numOrder (cmpVal_exact), the order of the values; with the two next_* statements this fixes the value, the flags and the exceptions of next_toward for every operand pair." }
 ]
 
 end PyLean.Decimal

@@ -1,4 +1,5 @@
 import PyLean.Decimal.AddExact
+import PyLean.Decimal.DelegateExact
 
 /-!
 `next_plus`, `next_minus` and `next_toward`: the smallest representable number above (largest
@@ -968,5 +969,264 @@ theorem nextMinus_twin_fin (c : Ctx) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (
       | ok p => rfl
     · have hc' : ¬ cmpVal (negate v) (.fin s co e) = .eq := fun h => hc (hcm.mp h)
       simp only [hc, hc', ne_eq, not_false_eq_true, ↓reduceIte]
+
+/-! ## Infinities and NaNs -/
+
+theorem nextPlus_inf (c : Ctx) (fl : List Signal) :
+    (nextPlus c (.inf false)).run fl = .ok (.inf false, fl) ∧
+    (nextPlus c (.inf true)).run fl = .ok (.fin true (10 ^ c.prec - 1) c.etop, fl) := by
+  constructor <;> simp [nextPlus, checkNans, isinfinity] <;> rfl
+
+theorem nextMinus_inf (c : Ctx) (fl : List Signal) :
+    (nextMinus c (.inf true)).run fl = .ok (.inf true, fl) ∧
+    (nextMinus c (.inf false)).run fl = .ok (.fin false (10 ^ c.prec - 1) c.etop, fl) := by
+  constructor <;> simp [nextMinus, checkNans, isinfinity] <;> rfl
+
+theorem nextPlus_nan (c : Ctx) (fl : List Signal) (neg : Bool) (p : Nat) :
+    (nextPlus c (.nan neg false p)).run fl = .ok (.nan neg false (p % 10 ^ nanDigits c), fl) ∧
+    (nextPlus c (.nan neg true p)).run fl = afterSig c .invalidOperation fl (.nan neg false (p % 10 ^ nanDigits c)) := by
+  refine ⟨?_, ?_⟩
+  · simp [nextPlus, checkNans, fixNan_spec]; rfl
+  · rw [← sNaN_run]; simp [nextPlus, checkNans]
+
+theorem nextMinus_nan (c : Ctx) (fl : List Signal) (neg : Bool) (p : Nat) :
+    (nextMinus c (.nan neg false p)).run fl = .ok (.nan neg false (p % 10 ^ nanDigits c), fl) ∧
+    (nextMinus c (.nan neg true p)).run fl = afterSig c .invalidOperation fl (.nan neg false (p % 10 ^ nanDigits c)) := by
+  refine ⟨?_, ?_⟩
+  · simp [nextMinus, checkNans, fixNan_spec]; rfl
+  · rw [← sNaN_run]; simp [nextMinus, checkNans]
+
+theorem negRes_afterSig (c : Ctx) (s : Signal) (fl : List Signal) (v : Dec) :
+    negRes (afterSig c s fl v) = afterSig c s fl (negate v) := by
+  unfold afterSig; split <;> rfl
+
+/-- `x.next_minus()` is `x.copy_negate().next_plus().copy_negate()`, flags and exceptions included,
+for every operand. -/
+theorem nextMinus_twin (c : Ctx) (hp : 1 ≤ c.prec) (a : Dec) (fl : List Signal) :
+    (nextMinus c a).run fl = negRes ((nextPlus c (copyNegate a)).run fl) := by
+  cases a with
+  | fin s co e => exact nextMinus_twin_fin c hp s co e fl
+  | inf n =>
+    cases n
+    · show _ = negRes ((nextPlus c (.inf true)).run fl)
+      rw [(nextMinus_inf c fl).2, (nextPlus_inf c fl).2]; rfl
+    · show _ = negRes ((nextPlus c (.inf false)).run fl)
+      rw [(nextMinus_inf c fl).1, (nextPlus_inf c fl).1]; rfl
+  | nan n sg p =>
+    show _ = negRes ((nextPlus c (.nan (!n) sg p)).run fl)
+    cases sg
+    · rw [(nextMinus_nan c fl n p).1, (nextPlus_nan c fl (!n) p).1]
+      cases n <;> rfl
+    · rw [(nextMinus_nan c fl n p).2, (nextPlus_nan c fl (!n) p).2, negRes_afterSig]
+      cases n <;> rfl
+
+/-! ## `next_minus` is the largest representable value below -/
+
+/-- What `next_minus` gives for the value `X` (scaled to `L`): `-Infinity` when no representable
+value is below `X`, otherwise the largest representable value below it. -/
+def PrevGoal (c : Ctx) (L X : Int) (y : Dec) : Prop :=
+  (y = .inf true ∧ ∀ Z, RepAt c L Z → X ≤ Z) ∨
+  (∃ sy cy ey, y = .fin sy cy ey ∧ cy < 10 ^ c.prec ∧ c.etiny ≤ ey ∧ ey ≤ c.etop ∧
+     scl sy cy ey L < X ∧ ∀ Z, RepAt c L Z → Z < X → Z ≤ scl sy cy ey L)
+
+theorem scl_not (b : Bool) (cz : Nat) (ez L : Int) : scl (!b) cz ez L = -scl b cz ez L := by
+  cases b <;> simp [scl]
+
+theorem repAt_neg {c : Ctx} {L Z : Int} (h : RepAt c L Z) : RepAt c L (-Z) := by
+  obtain ⟨b, cz, ez, h1, h2, h3, rfl⟩ := h
+  exact ⟨!b, cz, ez, h1, h2, h3, (scl_not b cz ez L).symm⟩
+
+theorem prev_of_next {c : Ctx} {L X : Int} {y : Dec} (h : NextGoal c L (-X) (negate y)) : PrevGoal c L X y := by
+  rcases h with ⟨h1, h2⟩ | ⟨sy, cy, ey, h1, h2, h3, h4, h5, h6⟩
+  · left
+    refine ⟨?_, fun Z hZ => ?_⟩
+    · cases y with
+      | inf n => cases n <;> simp_all [negate, Dec.withSign, Dec.neg]
+      | fin _ _ _ => simp [negate, Dec.withSign] at h1
+      | nan _ _ _ => simp [negate, Dec.withSign] at h1
+    · have := h2 (-Z) (repAt_neg hZ); omega
+  · right
+    have hy : y = .fin (!sy) cy ey := by
+      cases y with
+      | fin n c1 e1 =>
+        simp only [negate, Dec.withSign, Dec.neg, Dec.fin.injEq] at h1
+        obtain ⟨rfl, rfl, rfl⟩ := h1
+        simp
+      | inf _ => simp [negate, Dec.withSign] at h1
+      | nan _ _ _ => simp [negate, Dec.withSign] at h1
+    refine ⟨!sy, cy, ey, hy, h2, h3, h4, ?_, fun Z hZ hZX => ?_⟩
+    · rw [scl_not]; omega
+    · have := h6 (-Z) (repAt_neg hZ) (by omega)
+      rw [scl_not]; omega
+
+/-- `next_minus` of every finite operand, when it returns, is the largest representable value below
+it (`-Infinity` when there is none), and leaves the flags unchanged. -/
+theorem nextMinus_correct_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (hE : c.emin ≤ c.emax)
+    (s : Bool) (co : Nat) (e : Int) (y : Dec) (fl' : List Signal)
+    (h : (nextMinus c (.fin s co e)).run fl = .ok (y, fl')) :
+    fl' = fl ∧ PrevGoal c (min e (c.etiny - 1)) (scl s co e (min e (c.etiny - 1))) y := by
+  rw [nextMinus_twin_fin c hp] at h
+  cases hn : (nextPlus c (.fin (!s) co e)).run fl with
+  | error x => rw [hn] at h; exact absurd h (by simp [negRes])
+  | ok p =>
+    obtain ⟨y', fl2⟩ := p
+    rw [hn] at h
+    simp only [negRes, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨h1, h2⟩ := nextPlus_correct_fin c fl hp hE (!s) co e y' fl2 hn
+    refine ⟨h1, prev_of_next ?_⟩
+    rw [negate_negate, ← scl_not]
+    exact h2
+
+theorem nextMinus_ok_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (e : Int)
+    (hd : numDigits co + c.prec + 3 ≤ maxStrDigits) :
+    ∃ y, (nextMinus c (.fin s co e)).run fl = .ok (y, fl) := by
+  obtain ⟨y, hy⟩ := nextPlus_ok_fin c fl hp (!s) co e hd
+  exact ⟨negate y, by rw [nextMinus_twin_fin c hp, hy]; rfl⟩
+
+/-! ## `next_toward` -/
+
+/-- The signals `next_toward` raises for its result (_pydecimal.py:3647-3663): `Overflow`,
+`Inexact`, `Rounded` for an infinity; `Underflow`, `Subnormal`, `Inexact`, `Rounded` (and `Clamped`
+for a zero) for a result whose adjusted exponent is below `Emin`; none otherwise. -/
+def towardSigs (c : Ctx) (y : Dec) : List Signal :=
+  if isinfinity y ≠ 0 then [.overflow, .inexact, .rounded]
+  else if y.adjusted < c.emin then
+    [.underflow, .subnormal, .inexact, .rounded] ++ (if isZero y then [.clamped] else [])
+  else []
+
+theorem toward_tail (c : Ctx) (y : Dec) (fl : List Signal) :
+    ((do
+      if isinfinity y ≠ 0 then
+        raiseSig c .overflow
+        raiseSig c .inexact
+        raiseSig c .rounded
+      else if y.adjusted < c.emin then
+        raiseSig c .underflow
+        raiseSig c .subnormal
+        raiseSig c .inexact
+        raiseSig c .rounded
+        if isZero y then raiseSig c .clamped
+      return y) : DM Dec).run fl = sigRun c (towardSigs c y) fl y := by
+  unfold towardSigs
+  by_cases h1 : isinfinity y ≠ 0
+  · rw [if_pos h1, if_pos h1]
+    simp only [bind_assoc, raiseSig_bind, pure_run, sigRun_cons, sigRun]
+  · rw [if_neg h1, if_neg h1]
+    by_cases h2 : y.adjusted < c.emin
+    · rw [if_pos h2, if_pos h2]
+      by_cases h3 : isZero y = true
+      · rw [if_pos h3, if_pos h3]
+        simp only [bind_assoc, raiseSig_bind, pure_run, sigRun_cons, sigRun, List.cons_append,
+          List.nil_append]
+      · rw [if_neg h3, if_neg h3]
+        simp only [bind_assoc, raiseSig_bind, pure_run, sigRun_cons, sigRun, List.append_nil, pure_bind]
+    · rw [if_neg h2, if_neg h2]
+      rfl
+
+/-- `next_toward` (_pydecimal.py:3621-3665): NaN operands go through `_check_nans`; numerically
+equal operands give `self.copy_sign(other)`; otherwise the result of `next_plus` (when
+`self < other`) or `next_minus` (when `self > other`), with `towardSigs` raised on the caller's
+context in order, the first trapped one raising. -/
+def NextTowardExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal),
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (nextToward c a b).run fl = nanSpec2 c a b fl) ∧
+    (∀ a b : Dec, nanKind a = 0 → nanKind b = 0 →
+      (nextToward c a b).run fl =
+        if numOrder a b = .eq then .ok (copySign a b, fl)
+        else match (if numOrder a b = .lt then nextPlus c a else nextMinus c a).run fl with
+          | .error x => .error x
+          | .ok (y, fl2) => sigRun c (towardSigs c y) fl2 y)
+
+theorem nextTowardExact_proven : NextTowardExact := by
+  intro c fl
+  refine ⟨fun a b h => ?_, fun a b ha hb => ?_⟩
+  · exact checkNans_return c a b fl _ (fun d => rfl) h
+  · have hcmp := cmpVal_exact a b ha hb
+    unfold nextToward
+    rw [checkNans_none_bind c a b ha hb]
+    simp only [cmpInt, hcmp]
+    cases ho : numOrder a b with
+    | eq => rfl
+    | lt =>
+      simp only [reduceCtorEq, ↓reduceIte, show ¬ ((-1 : Int) = 0) by decide]
+      rw [bind_run]
+      cases (nextPlus c a).run fl with
+      | error x => rfl
+      | ok p => obtain ⟨y, fl2⟩ := p; exact toward_tail c y fl2
+    | gt =>
+      simp only [reduceCtorEq, ↓reduceIte, show ¬ ((1 : Int) = 0) by decide,
+        show ¬ ((1 : Int) = -1) by decide]
+      rw [bind_run]
+      cases (nextMinus c a).run fl with
+      | error x => rfl
+      | ok p => obtain ⟨y, fl2⟩ := p; exact toward_tail c y fl2
+
+/-! ## The statements -/
+
+/-- `Decimal.next_plus` (_pydecimal.py:3598-3619; docstring "Returns the smallest representable
+number larger than itself"), for every context (`prec ≥ 1`, `Emin ≤ Emax`) and flag state:
+
+* a finite `±co·10^e`, when `next_plus` returns, gives the least representable value above it
+  (`NextGoal`: finite with at most `prec` digits and an exponent in `[Etiny, Etop]`, above the
+  operand, and at most every representable value above the operand; `+Infinity` when every
+  representable value is at most the operand), and leaves the caller's flags as they were (it
+  works in a copy that ignores every flag, so no trap fires);
+* it does return for every finite operand whose coefficient has at most `4300 - prec - 3` digits;
+  past that, `__add__`'s `str(result.int)` can raise the int/str-limit `ValueError`
+  (`Decimal((0, (1,) + (0,)*4299, -4299)).next_plus()` does, on 3.15.2);
+* `+Infinity` stays; `-Infinity` gives the most negative finite value `-(10^prec-1)·10^Etop`;
+* a quiet NaN gives itself with its payload cut to `prec - clamp` digits; a signaling NaN
+  signals InvalidOperation and gives that quiet NaN. -/
+def NextPlusExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec → c.emin ≤ c.emax →
+    (∀ (s : Bool) (co : Nat) (e : Int) (y : Dec) (fl' : List Signal),
+      (nextPlus c (.fin s co e)).run fl = .ok (y, fl') →
+      fl' = fl ∧ NextGoal c (min e (c.etiny - 1)) (scl s co e (min e (c.etiny - 1))) y) ∧
+    (∀ (s : Bool) (co : Nat) (e : Int), numDigits co + c.prec + 3 ≤ maxStrDigits →
+      ∃ y, (nextPlus c (.fin s co e)).run fl = .ok (y, fl)) ∧
+    (nextPlus c (.inf false)).run fl = .ok (.inf false, fl) ∧
+    (nextPlus c (.inf true)).run fl = .ok (.fin true (10 ^ c.prec - 1) c.etop, fl) ∧
+    (∀ (neg : Bool) (p : Nat),
+      (nextPlus c (.nan neg false p)).run fl = .ok (.nan neg false (p % 10 ^ nanDigits c), fl) ∧
+      (nextPlus c (.nan neg true p)).run fl =
+        afterSig c .invalidOperation fl (.nan neg false (p % 10 ^ nanDigits c)))
+
+theorem nextPlusExact_proven : NextPlusExact := by
+  intro c fl hp hE
+  exact ⟨fun s co e y fl' h => nextPlus_correct_fin c fl hp hE s co e y fl' h,
+    fun s co e hd => nextPlus_ok_fin c fl hp s co e hd, (nextPlus_inf c fl).1, (nextPlus_inf c fl).2,
+    fun neg p => nextPlus_nan c fl neg p⟩
+
+/-- `Decimal.next_minus` (_pydecimal.py:3575-3596; docstring "Returns the largest representable
+number smaller than itself"), for every context (`prec ≥ 1`, `Emin ≤ Emax`) and flag state:
+
+* it is `next_plus` mirrored: `x.next_minus()` is `x.copy_negate().next_plus().copy_negate()`
+  for every operand, the flags and any exception included (`ROUND_FLOOR` is `ROUND_CEILING`
+  mirrored, and `x - 1E(Etiny-1)` is `-((-x) + 1E(Etiny-1))`);
+* so a finite operand, when `next_minus` returns, gives the largest representable value below it
+  (`PrevGoal`; `-Infinity` when every representable value is at least the operand), with the flags
+  unchanged, and it returns for every coefficient of at most `4300 - prec - 3` digits;
+* `-Infinity` stays, `+Infinity` gives the largest finite value; NaNs as in `next_plus`. -/
+def NextMinusExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec → c.emin ≤ c.emax →
+    (∀ a : Dec, (nextMinus c a).run fl = negRes ((nextPlus c (copyNegate a)).run fl)) ∧
+    (∀ (s : Bool) (co : Nat) (e : Int) (y : Dec) (fl' : List Signal),
+      (nextMinus c (.fin s co e)).run fl = .ok (y, fl') →
+      fl' = fl ∧ PrevGoal c (min e (c.etiny - 1)) (scl s co e (min e (c.etiny - 1))) y) ∧
+    (∀ (s : Bool) (co : Nat) (e : Int), numDigits co + c.prec + 3 ≤ maxStrDigits →
+      ∃ y, (nextMinus c (.fin s co e)).run fl = .ok (y, fl)) ∧
+    (nextMinus c (.inf true)).run fl = .ok (.inf true, fl) ∧
+    (nextMinus c (.inf false)).run fl = .ok (.fin false (10 ^ c.prec - 1) c.etop, fl) ∧
+    (∀ (neg : Bool) (p : Nat),
+      (nextMinus c (.nan neg false p)).run fl = .ok (.nan neg false (p % 10 ^ nanDigits c), fl) ∧
+      (nextMinus c (.nan neg true p)).run fl =
+        afterSig c .invalidOperation fl (.nan neg false (p % 10 ^ nanDigits c)))
+
+theorem nextMinusExact_proven : NextMinusExact := by
+  intro c fl hp hE
+  exact ⟨fun a => nextMinus_twin c hp a fl, fun s co e y fl' h => nextMinus_correct_fin c fl hp hE s co e y fl' h,
+    fun s co e hd => nextMinus_ok_fin c fl hp s co e hd, (nextMinus_inf c fl).1, (nextMinus_inf c fl).2,
+    fun neg p => nextMinus_nan c fl neg p⟩
 
 end PyLean.Decimal

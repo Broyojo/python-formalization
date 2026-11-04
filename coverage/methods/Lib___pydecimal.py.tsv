@@ -120,9 +120,9 @@ Lib/_pydecimal.py	3475	3493	Decimal.logical_or	logical_or(self, other, context=N
 Lib/_pydecimal.py	3495	3513	Decimal.logical_xor	logical_xor(self, other, context=None)	modelled	decimal-logical-exact	
 Lib/_pydecimal.py	3515	3543	Decimal.max_mag	max_mag(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	3545	3573	Decimal.min_mag	min_mag(self, other, context=None)	modelled	decimal-minmax-exact	
-Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	todo		
-Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	todo		
-Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	todo		
+Lib/_pydecimal.py	3575	3596	Decimal.next_minus	next_minus(self, context=None)	modelled	decimal-next-minus-exact	
+Lib/_pydecimal.py	3598	3619	Decimal.next_plus	next_plus(self, context=None)	modelled	decimal-next-plus-exact	
+Lib/_pydecimal.py	3621	3665	Decimal.next_toward	next_toward(self, other, context=None)	modelled	decimal-next-toward-exact	
 Lib/_pydecimal.py	3667	3707	Decimal.number_class	number_class(self, context=None)	modelled	decimal-classification-exact	
 Lib/_pydecimal.py	3709	3711	Decimal.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:3709-3711), one constant with no branch.
 Lib/_pydecimal.py	3713	3744	Decimal.rotate	rotate(self, other, context=None)	modelled	decimal-rotate-exact	
@@ -196,9 +196,9 @@ Lib/_pydecimal.py	4965	4990	Context.min	min(self, a, b)	modelled	decimal-context
 Lib/_pydecimal.py	4992	5007	Context.min_mag	min_mag(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5009	5024	Context.minus	minus(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5026	5056	Context.multiply	multiply(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5058	5076	Context.next_minus	next_minus(self, a)	todo		review: ctxUn nextMinus (Context.lean:130) is :5075-5076 and Equiv1 pins the wrapper, but Decimal.next_minus has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	5078	5096	Context.next_plus	next_plus(self, a)	todo		review: ctxUn nextPlus (Context.lean:131) is :5095-5096 and Equiv1 pins the wrapper, but Decimal.next_plus has no entry (part 1 HOLLOW), so the result is unstated.
-Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	todo		review: ctxBin nextToward (Context.lean:114) is :5130-5131 plus :3630 and Equiv2 pins the wrapper, but Decimal.next_toward has no entry (part 1 HOLLOW), so the result is unstated.
+Lib/_pydecimal.py	5058	5076	Context.next_minus	next_minus(self, a)	modelled	decimal-context-methods-match-decimal,decimal-next-minus-exact	
+Lib/_pydecimal.py	5078	5096	Context.next_plus	next_plus(self, a)	modelled	decimal-context-methods-match-decimal,decimal-next-plus-exact	
+Lib/_pydecimal.py	5098	5131	Context.next_toward	next_toward(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-next-toward-exact	
 Lib/_pydecimal.py	5133	5155	Context.normalize	normalize(self, a)	modelled	decimal-context-methods-match-decimal,decimal-normalize-exact,decimal-normalize-nan-exact	
 Lib/_pydecimal.py	5157	5205	Context.number_class	number_class(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-methods-match-decimal	
