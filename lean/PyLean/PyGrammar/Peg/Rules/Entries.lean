@@ -9,6 +9,8 @@ import PyLean.PyGrammar.Peg.Rules.Aug
 import PyLean.PyGrammar.Peg.Rules.Compound
 import PyLean.PyGrammar.Peg.Rules.Simple
 import PyLean.PyGrammar.Peg.Rules.Exprs2
+import PyLean.PyGrammar.Peg.Rules.Exprs3
+import PyLean.PyGrammar.Peg.Rules.Blocks
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -380,6 +382,78 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``DelStmtTargets
     thm := some ``delStmtTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-while-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_while_stmt
+    statement := "while_stmt: While(a, b, else) after 'while a: b'; NULL at any other token; second " ++
+      "pass: invalid_while_stmt's error ends the rule, its NULL leads on to the while alternative."
+    source := "Grammar/python.gram:403-405"
+    status := .proven
+    prop := ``WhileStmt
+    thm := some ``whileStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-if-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_if_stmt
+    statement := "if_stmt: If(a, b, [elif]) with an elif chain; without one, backs up and gives If(a, b, " ++
+      "else); NULL at any other token; second pass: invalid_if_stmt first, its error ending the rule."
+    source := "Grammar/python.gram:386-390"
+    status := .proven
+    prop := ``IfStmt
+    thm := some ``ifStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-else-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_else_block
+    statement := "else_block: 'else: b' gives b; after 'else' the forced ':' either matches or fails " ++
+      "the rule in its error state; NULL at any other token; second pass: invalid_else_stmt's " ++
+      "error ends the rule."
+    source := "Grammar/python.gram:396-398"
+    status := .proven
+    prop := ``ElseBlock
+    thm := some ``elseBlock_proven
+    notes := scheme },
+  { id := "pygrammar-rule-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_block
+    statement := "block (memo): NEWLINE INDENT statements DEDENT gives the statements; another first " ++
+      "token gives simple_stmts' result; second pass: NEWLINE without INDENT and no simple_stmts " ++
+      "leaves invalid_block to decide; memoized."
+    source := "Grammar/python.gram:266-269"
+    status := .proven
+    prop := ``Block
+    thm := some ``block_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-func-type"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_func_type
+    statement := "func_type: '(' [types] ')' '->' expression NEWLINE* ENDMARKER gives " ++
+      "FunctionType(types, returns); without ENDMARKER, or at any token but '(', NULL."
+    source := "Grammar/python.gram:92"
+    status := .proven
+    prop := ``FuncTypeRule
+    thm := some ``funcTypeRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_expression
+    statement := "expression (memo): first pass if_expression, then disjunction, then lambdef; second " ++
+      "pass the three invalid_ rules first, an error from any ending the rule unmemoized."
+    source := "Grammar/python.gram:716-722"
+    status := .proven
+    prop := ``ExpressionRule
+    thm := some ``expressionRule_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-star-expressions"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_expressions
+    statement := "star_expressions: 'a, b, ...' gives a Load Tuple of all elements; 'a,' backs up and " ++
+      "gives a one-element Tuple; with no comma, backs up again and gives the star_expression."
+    source := "Grammar/python.gram:731-737"
+    status := .proven
+    prop := ``StarExpressions
+    thm := some ``starExpressions_proven
     notes := scheme },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"

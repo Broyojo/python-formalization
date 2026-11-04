@@ -193,6 +193,9 @@ def rule_augassign : List String := [
 def rule_await_primary : List String := [
   "rule:await_primary"]
 
+def rule_block : List String := [
+  "rule:block"]
+
 def rule_comparison : List String := [
   "rule:comparison"]
 
@@ -211,8 +214,14 @@ def rule_del_stmt_invalid : List String := [
 def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
 
+def rule_else_block : List String := [
+  "rule:else_block"]
+
 def rule_eval : List String := [
   "rule:eval"]
+
+def rule_expression : List String := [
+  "rule:expression"]
 
 def rule_factor : List String := [
   "rule:factor"]
@@ -223,8 +232,14 @@ def rule_file : List String := [
 def rule_for_stmt : List String := [
   "rule:for_stmt"]
 
+def rule_func_type : List String := [
+  "rule:func_type"]
+
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
+
+def rule_if_stmt : List String := [
+  "rule:if_stmt"]
 
 def rule_import_from : List String := [
   "rule:import_from"]
@@ -274,8 +289,14 @@ def rule_simple_stmt : List String := [
 def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
+def rule_star_expressions : List String := [
+  "rule:star_expressions"]
+
 def rule_statement : List String := [
   "rule:statement"]
+
+def rule_while_stmt : List String := [
+  "rule:while_stmt"]
 
 def rule_yield_expr : List String := [
   "rule:yield_expr"]
