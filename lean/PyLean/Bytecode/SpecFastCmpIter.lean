@@ -44,8 +44,8 @@ theorem cmpStr_arith (e : Env) : KindArith (COMPARE_OP_STR e) IsStr (cmpStrBit e
   rintro regs rest _ _ ⟨a, rfl⟩ ⟨b, rfl⟩
   bc_simp [_COMPARE_OP_STR, cmpStrBit]
 
-/-- `COMPARE_OP_INT` (`Python/bytecodes.c:3256`, `:3280-3300`), `COMPARE_OP_FLOAT` (`:3253`,
-`:3262-3278`) and `COMPARE_OP_STR` (`:3259`, `:3302-3318`): on two compact ints, two floats, or
+/-- `COMPARE_OP_INT` (`Python/bytecodes.c:3256`, `:3280-3299`), `COMPARE_OP_FLOAT` (`:3253`,
+`:3262-3277`) and `COMPARE_OP_STR` (`:3259`, `:3302-3318`): on two compact ints, two floats, or
 two strs they answer the comparison `oparg >> 5` of `left` (the second value) with `right`, as a
 bool: the order of `int`, the IEEE-754 relations of `float` (every comparison with a NaN false,
 except `!=`), and equality of `str` for `==` and `!=`, the only two the specializer picks; on

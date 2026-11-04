@@ -407,8 +407,8 @@ theorem binaryKindFast_proven : BinaryKindFast := by
 
 /-! ## Subscripts -/
 
-/-- `if (index < 0) index += PyList_GET_SIZE(list)`, `Python/bytecodes.c:1145-1147` and
-`:1431-1434`. -/
+/-- `if (index < 0) index += PyList_GET_SIZE(list)`, `Python/bytecodes.c:1144-1146` and
+`:1434-1436`. -/
 def normIndex (i : Int) (n : Nat) : Int := if i < 0 then i + n else i
 
 /-- `BINARY_OP_SUBSCR_LIST_INT`, `Python/bytecodes.c:1134-1162`: on an exact list and a compact

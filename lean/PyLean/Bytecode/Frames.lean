@@ -127,29 +127,32 @@ theorem excInfoNests_proven : ExcInfoNests := by
 /-- `FOR_ITER` on an exhausted iterator jumps over `END_FOR` with `iter` and `index_or_null`
 left on the stack, which is the `(iter, null_or_index -- iter, null_or_index, next)` signature
 with the `END_FOR` that would have popped `next` already applied: the `POP_ITER` at the target
-takes the two slots. This holds for both forms of the slot, the tagged index and `NULL`. -/
+takes the two slots. This holds for both forms of the slot, the tagged index and `NULL`, and for
+whatever the step did to the heap on the way to the end (a stateful `__next__` that records its
+last call, say): the runtime after the instruction is exactly the runtime that one step left. -/
 def ForIterExhausted : Prop :=
-  ∀ (e : Env) (regs : Regs) (it index : Val) (rest : List Val),
-    virtualNext e it index regs.rt = .ok none regs.rt →
+  ∀ (e : Env) (regs : Regs) (it index : Val) (rest : List Val) (rt : Rt),
+    virtualNext e it index regs.rt = .ok none rt →
     FOR_ITER e ⟨regs, index :: it :: rest⟩ =
       .error .dispatch
-        ⟨{ regs with next := (regs.next + ((e.oparg : Int) + 1)).toNat }, index :: it :: rest⟩
+        ⟨{ regs with rt := rt, next := (regs.next + ((e.oparg : Int) + 1)).toNat }, index :: it :: rest⟩
 
 theorem forIterExhausted_proven : ForIterExhausted := by
-  intro e regs it index rest h
+  intro e regs it index rest rt h
   simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, bind, EStateM.bind, BM.lift, RM.lift, h,
     jumpBy, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
     MonadExceptOf.throw, monadLift, liftM, MonadLift.monadLift]
 
 /-- `FOR_ITER` with a next item writes the new `index_or_null` back to its slot and pushes
-the item above it. -/
+the item above it, with the runtime the one step left (a `__next__` that changes state, a
+`list_iterator` advancing or a generator running to its next `yield`, included). -/
 def ForIterNext : Prop :=
-  ∀ (e : Env) (regs : Regs) (it index index' v : Val) (rest : List Val),
-    virtualNext e it index regs.rt = .ok (some (v, index')) regs.rt →
-    FOR_ITER e ⟨regs, index :: it :: rest⟩ = .ok () ⟨regs, v :: index' :: it :: rest⟩
+  ∀ (e : Env) (regs : Regs) (it index index' v : Val) (rest : List Val) (rt : Rt),
+    virtualNext e it index regs.rt = .ok (some (v, index')) rt →
+    FOR_ITER e ⟨regs, index :: it :: rest⟩ = .ok () ⟨{ regs with rt := rt }, v :: index' :: it :: rest⟩
 
 theorem forIterNext_proven : ForIterNext := by
-  intro e regs it index index' v rest h
+  intro e regs it index index' v rest rt h
   simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, popN, pushAll, bind, EStateM.bind, BM.lift,
     RM.lift, h, pure, EStateM.pure, monadLift, liftM, MonadLift.monadLift]
 

@@ -103,9 +103,11 @@ structure ObjModel where
   getAIter : Ctx → Val → RM Val
   getANext : Ctx → Val → RM Val
   getAwaitable : Ctx → Val → Nat → RM Val
-  /-- `_PyDict_MergeEx(d, update, 2)` used by `DICT_MERGE`; `DICT_UPDATE` is `PyDict_Update`. -/
+  /-- `PyDict_Update(d, update)`, used by `DICT_UPDATE`. -/
   dictUpdate : Ctx → Val → Val → RM Unit
-  dictMerge : Ctx → Val → Val → RM Unit
+  /-- `_PyDict_MergeUniq(d, update, &dupkey)`, used by `DICT_MERGE`: `some k` is the `-2` return
+  with `*dupkey = k`, a key already in `d`; an exception is the `-1` return. -/
+  dictMerge : Ctx → Val → Val → RM (Option Val)
   /-- `_PyList_Extend`. -/
   listExtend : Ctx → Val → Val → RM Unit
   /-- `_PySet_Update`. -/

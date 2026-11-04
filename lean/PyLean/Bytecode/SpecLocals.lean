@@ -383,7 +383,7 @@ abbrev consumed (regs : Regs) (rt : Rt) : Regs := { regs with rt := rt }
 neither touches the stack, and neither handles a pending event, whatever is pending: the
 `yield from` loop deliberately leaves it for the innermost generator (`:3657-3661`, bpo-30039).
 `JUMP_BACKWARD` is `_CHECK_PERIODIC + JUMP_BACKWARD_NO_INTERRUPT` (`:3544-3548`): with nothing
-pending it jumps back, and when `_Py_HandlePending` fails it leaves through `ERROR_IF` (`:157-160`)
+pending it jumps back, and when `_Py_HandlePending` fails it leaves through `ERROR_IF` (`_CHECK_PERIODIC`, `:158-161`, `ERROR_IF` at `:160`)
 with the stack as it was and without jumping, raising what the handler raised (after the
 implicit chaining of `_PyErr_SetObject`). A jump forward and back returns to the start.
 `:3494-3496`. A compiled backward jump never leaves the code, the `assert(oparg <=

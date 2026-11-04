@@ -118,33 +118,44 @@ def BUILD_TEMPLATE (e : Env) : M Unit := stk 2 1 fun
 def BUILD_TUPLE (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkTuple vs : RM Val)]
 /-- `:2502`. -/
 def BUILD_LIST (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkList vs : RM Val)]
-/-- `:2533`. -/
-def LIST_EXTEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
+/-- `:2511-2533`: `_LIST_EXTEND + POP_TOP`, `ERROR_NO_POP` on failure. A `TypeError` from
+`_PyList_Extend` on a value with neither `tp_iter` nor the sequence protocol is replaced
+(`_PyErr_Clear`, then `_PyErr_Format`); the `&&` reads the slots only after the match. -/
+def LIST_EXTEND (e : Env) : M Unit := stkK (e.oparg + 1) e.oparg fun ins => do
   let it := ins.getLastD .null
   let rest := ins.dropLast
   let ext : RM Unit := tryExc (e.om.listExtend e.ctx (rest.headD .null) it) fun exc => do
-    if (← givenMatches exc 8 (.cls "TypeError")) && !(← e.om.isIterable it) then
-      typeError s!"Value after * must be an iterable, not {trunc200 (← tpName it)}"
+    if ← givenMatches exc 8 (.cls "TypeError") then
+      if !(← e.om.isIterable it) then
+        typeError s!"Value after * must be an iterable, not {trunc200 (← tpName it)}"
+      else throw (.exc exc)
     else throw (.exc exc)
   ext
   pure rest
-/-- `:2545`. -/
-def SET_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
+/-- `:2535-2545`: `_SET_UPDATE + POP_TOP`, `ERROR_NO_POP` on failure. -/
+def SET_UPDATE (e : Env) : M Unit := stkK (e.oparg + 1) e.oparg fun ins => do
   let it := ins.getLastD .null
   let rest := ins.dropLast
   e.om.setUpdate e.ctx (rest.headD .null) it
   pure rest
-/-- `@3.14.7:2033`. -/
+/-- The loop of `BUILD_SET`: `_PySet_AddTakeRef` on `values[0]`, `values[1]`, ... in order,
+stopping at the first failure (`err` is set and the remaining values are only closed). -/
+def setAddAll (e : Env) (s : Val) : List Val → RM Unit
+  | [] => pure ()
+  | v :: vs => do setAdd e.om e.ctx s v; setAddAll e s vs
+/-- `:2547-2573`: `PySet_New(NULL)`, then the values from the bottom up. -/
 def BUILD_SET (e : Env) : M Unit := stk e.oparg 1 fun vs => do
   let s ← (alloc (.set false #[]) : RM Val)
-  for v in vs do
-    (setAdd e.om e.ctx s v : RM Unit)
+  (setAddAll e s vs : RM Unit)
   pure [s]
-/-- `_PyDict_FromItems`. -/
+/-- `_PyDict_FromItems` (`Objects/dictobject.c`) over `keys = values`, `values = values + 1`, both
+with stride 2: `setitem_lock_held(dict, key, value)` pair by pair from the bottom up, stopping at
+the first failure. -/
 def dictFromItems (e : Env) : List Val → Val → RM Unit
   | k :: v :: rest, d => do dictSet e.om e.ctx d k v; dictFromItems e rest d
   | _, _ => pure ()
-/-- `@3.14.7:2061`. -/
+/-- `:2575-2581`: `_Py_BuildMap_StackRefSteal` (`Python/ceval.c:955-981`), `_PyDict_FromItems` of
+the `oparg` pairs into a new dict. -/
 def BUILD_MAP (e : Env) : M Unit := stk (e.oparg * 2) 1 fun vs => do
   let d ← (mkDict : RM Val)
   (dictFromItems e vs d : RM Unit)
@@ -158,66 +169,100 @@ def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
     let d ← (mkDict : RM Val)
     e.om.setItem e.ctx l (.str "__annotations__") d
   pure []
-/-- `:2636`. The refusal is `"'%T' object is not a mapping"` (`:2621-2623`): `%T` has no
-precision, so the name is not cut. `%T` prints the fully qualified name, which is `tp_name` for
-the builtin types and the classes of `__main__` that the model's programs define. The model raises
-it on any `AttributeError`; CPython does only when `update` has no `keys` (`:2619-2620`), and otherwise
-keeps the `AttributeError`. -/
-def DICT_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
+/-- `PyObject_GetOptionalAttr`: the attribute, `none` when the lookup raised `AttributeError`
+(which is cleared), and any other exception propagates. -/
+def optionalAttr (e : Env) (o : Val) (n : String) : RM (Option Val) :=
+  tryExc (some <$> e.om.getAttr e.ctx o n) fun x => do
+    if ← givenMatches x 8 (.cls "AttributeError") then pure none else throw (.exc x)
+
+/-- `PyObject_HasAttrWithError(o, name)`: `1`, `0` or `-1` with an exception set. -/
+def hasAttrWithError (e : Env) (o : Val) (n : String) : RM Bool := do
+  pure (← optionalAttr e o n).isSome
+
+/-- The text `%S` puts in a message: `PyObject_Str`. A `__str__` that raises propagates. `__str__`
+returning a str subclass is not modelled. -/
+def strText (e : Env) (v : Val) : RM String := do
+  match ← e.om.str e.ctx v with
+  | .str t => pure t
+  | _ => fault "PyObject_Str returned a str subclass"
+
+/-- `_PyErr_ChainExceptions1Tstate(tstate, exc)` after a call that raised `x`: `x` gets `exc` as
+its `__context__` (`PyException_SetContext`) and propagates. -/
+def chainAndRaise {α : Type} (x exc : Val) : RM α := do
+  let d ← excData x
+  setExcData x { d with context := exc }
+  throw (.exc x)
+
+/-- `:2610-2636`: `_DICT_UPDATE + POP_TOP`, `ERROR_NO_POP` on failure. When `PyDict_Update` raises
+`AttributeError`, the exception is taken out and `PyObject_HasAttrWithError(update, "keys")` asked:
+with no `keys`, `TypeError("'%T' object is not a mapping")` replaces it; with `keys` the original
+`AttributeError` is restored as it was; when that lookup itself raises, its exception propagates with
+the `AttributeError` as `__context__`. -/
+def DICT_UPDATE (e : Env) : M Unit := stkK (e.oparg + 1) e.oparg fun ins => do
   let upd := ins.getLastD .null
   let rest := ins.dropLast
   let u : RM Unit := tryExc (e.om.dictUpdate e.ctx (rest.headD .null) upd) fun exc => do
     if ← givenMatches exc 8 (.cls "AttributeError") then
-      typeError s!"'{← tpName upd}' object is not a mapping"
+      let hk ← tryExc ((some <$> hasAttrWithError e upd "keys") : RM (Option Bool)) fun x =>
+        chainAndRaise x exc
+      match hk with
+      | some false => typeError s!"'{← typeFullName upd}' object is not a mapping"
+      | _ => throw (.exc exc)
     else throw (.exc exc)
   u
   pure rest
 
-/-- `_PyObject_FunctionStr`: `qualname()`, with the module for non-builtins. -/
-def functionStr (e : Env) (f : Val) : RM String := do
-  let q ← tryExc (e.om.getAttr e.ctx f "__qualname__") fun _ => pure .null
-  match q with
-  | .str qn =>
-    let m ← tryExc (e.om.getAttr e.ctx f "__module__") fun _ => pure .null
-    match m with
-    | .str "builtins" => pure s!"{qn}()"
-    | .str mn => pure s!"{mn}.{qn}()"
-    | _ => pure s!"{qn}()"
-  | _ =>
-    match ← e.om.str e.ctx f with
-    | .str s => pure s
-    | _ => pure ""
+/-- `_PyObject_FunctionStr`, `Objects/object.c:976-1009`: `qualname()`, or `module.qualname()` when
+`__module__` is present, not `None` and `!= "builtins"`; `str(x)` when there is no `__qualname__`.
+`none` is the `NULL` return: an exception other than `AttributeError` from either lookup, from the
+comparison, or from `str()`. -/
+def functionStr (e : Env) (f : Val) : RM (Option String) :=
+  tryExc (do
+    match ← optionalAttr e f "__qualname__" with
+    | none => pure (some (← strText e f))
+    | some q =>
+      let qs ← strText e q
+      match ← optionalAttr e f "__module__" with
+      | some m =>
+        if m == .none then pure (some s!"{qs}()")
+        else
+          -- `PyObject_RichCompareBool(module, "builtins", Py_NE)`: identity first
+          let ne ← if m == .str "builtins" then pure false
+            else e.om.isTrue e.ctx (← e.om.richCompare e.ctx m (.str "builtins") 3)
+          if ne then pure (some s!"{← strText e m}.{qs}()") else pure (some s!"{qs}()")
+      | none => pure (some s!"{qs}()"))
+    fun _ => pure none
 
-/-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`: since 3.15 an `AttributeError`
-is rewritten only when `kwargs` really has no `keys` attribute. The model's `dictMerge`
-reports a duplicate key as a `KeyError`, which is `dupkey != NULL` here. -/
-def formatKwargsError {α : Type} (e : Env) (kwargs exc : Val) (func : Val) : RM α := do
-  if ← givenMatches exc 8 (.cls "AttributeError") then
-    let hasKeys ← tryExc (do let _ ← e.om.getAttr e.ctx kwargs "keys"; pure true) fun x => do
-      if ← givenMatches x 8 (.cls "AttributeError") then pure false else throw (.exc x)
-    if hasKeys then throw (.exc exc)
-    typeError s!"Value after ** must be a mapping, not {← tpName kwargs}"
-  else if ← givenMatches exc 8 (.cls "KeyError") then
-    let d ← excData exc
-    let args ← tupleItems d.args
-    if args.size == 1 then
-      let fs ← functionStr e func
-      match ← e.om.str e.ctx (args.getD 0 .null) with
-      | .str k => typeError s!"{fs} got multiple values for keyword argument '{k}'"
+/-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`. With a `dupkey` it raises
+`TypeError("%V got multiple values for keyword argument '%S'")`, `%V` being `_PyObject_FunctionStr`
+or `"function"` when that failed (`_PyErr_Format` clears its error first); otherwise an
+`AttributeError` is rewritten only when `kwargs` has no `keys` attribute, as in `DICT_UPDATE`, and
+any other exception stays. -/
+def formatKwargsError {α : Type} (e : Env) (func kwargs : Val) (dupkey : Option Val) (exc : Val) : RM α := do
+  match dupkey with
+  | some k =>
+    let fs := (← functionStr e func).getD "function"
+    typeError s!"{fs} got multiple values for keyword argument '{← strText e k}'"
+  | none =>
+    if ← givenMatches exc 8 (.cls "AttributeError") then
+      let hk ← tryExc ((some <$> hasAttrWithError e kwargs "keys") : RM (Option Bool)) fun x =>
+        chainAndRaise x exc
+      match hk with
+      | some false => typeError s!"Value after ** must be a mapping, not {← typeFullName kwargs}"
       | _ => throw (.exc exc)
     else throw (.exc exc)
-  else throw (.exc exc)
 
-/-- `:2654`. -/
-def DICT_MERGE (e : Env) : M Unit := stk (e.oparg + 4) (e.oparg + 3) fun ins => do
+/-- `:2638-2654`: `_DICT_MERGE + POP_TOP`, `ERROR_NO_POP` on failure. -/
+def DICT_MERGE (e : Env) : M Unit := stkK (e.oparg + 4) (e.oparg + 3) fun ins => do
   let upd := ins.getLastD .null
   let rest := ins.dropLast
   let callable := rest.headD .null
   let d := rest.getD 3 .null
-  let u : RM Unit := tryExc (e.om.dictMerge e.ctx d upd) fun exc =>
-    formatKwargsError e upd exc callable
-  u
-  pure rest
+  let r : RM (Option Val) := tryExc (e.om.dictMerge e.ctx d upd) fun exc =>
+    formatKwargsError e callable upd none exc
+  match ← r with
+  | none => pure rest
+  | some k => (formatKwargsError e callable upd (some k) .null : RM _)
 /-- `:2656`. -/
 def MAP_ADD (e : Env) : M Unit := stk (e.oparg + 2) e.oparg fun ins => do
   let rest := ins.dropLast.dropLast
@@ -586,7 +631,9 @@ def CHECK_EXC_MATCH : M Unit := stkK 2 2 fun
 /-- `:3456`. -/
 def IMPORT_NAME (e : Env) : M Unit := stk 2 1 fun
   | [level, fromlist] => do
-    let name ← getName e e.oparg
+    -- 3.15: the name is `co_names[oparg >> 2]`; bit 1 picks the eager `_PyEval_ImportName` over
+    -- `_PyEval_LazyImportName` (PEP 810), which the model does not distinguish
+    let name ← getName e (e.oparg >>> 2)
     let f ← getFrame
     pure [← e.om.importName e.ctx f name fromlist level]
   | _ => fault "arity"
@@ -658,22 +705,24 @@ def POP_JUMP_IF_NOT_NONE (e : Env) : M Unit := do _IS_NONE; _POP_JUMP_IF_FALSE e
 def GET_LEN (e : Env) : M Unit := stkK 1 2 fun
   | [o] => do pure [o, .int (← e.om.length e.ctx o)]
   | _ => fault "arity"
-/-- `:3699`. -/
-def MATCH_CLASS (e : Env) : M Unit := stk 3 1 fun
+/-- `:3675-3699`: `_MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP`. `_PyEval_MatchClass` gives the tuple of
+attributes on a match and `NULL` otherwise; `NULL` with an exception set leaves through
+`ERROR_NO_POP` (new in 3.15) with the three operands kept, `NULL` without one is `None`. -/
+def MATCH_CLASS (e : Env) : M Unit := stkK 3 1 fun
   | [s, t, names] => do
     match ← e.om.matchClass e.ctx s t e.oparg names with
     | some a => pure [a]
     | none => pure [.none]
   | _ => fault "arity"
-/-- `:3701`. -/
+/-- `:3701-3704`. -/
 def MATCH_MAPPING (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isMapping s)]
   | _ => fault "arity"
-/-- `:3706`. -/
+/-- `:3706-3709`. -/
 def MATCH_SEQUENCE (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isSequence s)]
   | _ => fault "arity"
-/-- `:3711`. -/
+/-- `:3711-3717`. -/
 def MATCH_KEYS (e : Env) : M Unit := stkK 2 3 fun
   | [s, k] => do pure [s, k, ← e.om.matchKeys e.ctx s k]
   | _ => fault "arity"
@@ -717,10 +766,11 @@ def getIterStack (e : Env) (co : Code) (iterable : Val) : RM (List Val) := do
   if ← hasIterItem iterable then return [iterable, .tagged 0]
   if ← isSelfIter iterable then return [iterable, .null]
   let yieldFrom := fixupGetIter e.oparg co.flags
-  if yieldFrom != 0 && (← genKindOf iterable) == some .coro then
-    if yieldFrom == getIterYieldFromCoroCheck then
-      typeError "cannot 'yield from' a coroutine object in a non-coroutine generator"
-    return [iterable, .null]
+  if yieldFrom != 0 then
+    if (← genKindOf iterable) == some .coro then
+      if yieldFrom == getIterYieldFromCoroCheck then
+        typeError "cannot 'yield from' a coroutine object in a non-coroutine generator"
+      return [iterable, .null]
   return [← e.om.getIter e.ctx iterable, .null]
 
 /-- `:3736`: `(iterable -- iter, index_or_null)`. -/

@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
 Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
-Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	todo		review: The checkPeriodics/_CHECK_PERIODIC model cites ':157', a blank line (the op is :158-161, ERROR_IF at :160), and JumpRules and the registry cite :157-160; the property itself is sound (Rt.pendingExc is quantified over in JumpRules, null jumps and non-null raises, so neither a never-raising nor an always-raising check passes), but the citation is wrong.
-Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	modelled	bytecode-jumps	
+Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	175	175	opcode:_QUICKEN_RESUME	tier1 op(_QUICKEN_RESUME, (counter/1 --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	179	179	opcode:_MAYBE_INSTRUMENT	tier1 op(_MAYBE_INSTRUMENT, (--)) {	todo		
@@ -25,7 +25,7 @@ Python/bytecodes.c	323	323	opcode:STORE_FAST	macro(STORE_FAST) = _SWAP_FAST + PO
 Python/bytecodes.c	325	325	opcode:_SWAP_FAST	replicate(8) op(_SWAP_FAST, (value -- trash)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	336	336	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	modelled	bytecode-store-superinstructions	
 Python/bytecodes.c	346	346	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	modelled	bytecode-store-superinstructions	
-Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	excluded		no-behaviour: PyStackRef_XCLOSE(value) (:359-361) only drops a reference; a finalizer it may trigger is outside the model by the stated finalization scope limit, and its stack effect is the DSL signature that bytecode-stack-effects checks
+Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	excluded		no-behaviour: PyStackRef_XCLOSE(value) (:359-361) only drops a reference; a finalizer it may trigger is outside the model by the stated finalization scope limit, and the pop itself is the DSL signature (value --), not the body
 Python/bytecodes.c	363	363	opcode:_POP_TOP_NOP	op(_POP_TOP_NOP, (value --)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	369	369	opcode:_POP_TOP_INT	op(_POP_TOP_INT, (value --)) {	excluded		no-behaviour: an assert and PyStackRef_CLOSE_SPECIALIZED with _PyLong_ExactDealloc (:369-372); an exact int has no finalizer, so dropping it has no Python-visible effect
 Python/bytecodes.c	374	374	opcode:_POP_TOP_FLOAT	op(_POP_TOP_FLOAT, (value --)) {	excluded		no-behaviour: an assert and PyStackRef_CLOSE_SPECIALIZED with _PyFloat_ExactDealloc (:374-377); an exact float has no finalizer, so dropping it has no Python-visible effect
@@ -136,7 +136,7 @@ Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_S
 Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
 Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
-Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		changed-in-3.15:
+Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
@@ -146,10 +146,10 @@ Python/bytecodes.c	1454	1454	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =
 Python/bytecodes.c	1458	1458	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1473	1473	opcode:_STORE_SUBSCR_DICT_KNOWN_HASH	tier2 op(_STORE_SUBSCR_DICT_KNOWN_HASH, (value, dict_st, sub, hash/4 -- st)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1490	1490	opcode:DELETE_SUBSCR	inst(DELETE_SUBSCR, (container, sub --)) {	modelled	bytecode-dispatch	
-Python/bytecodes.c	1498	1498	opcode:_CALL_INTRINSIC_1	op(_CALL_INTRINSIC_1, (value -- res, v)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1509	1509	opcode:CALL_INTRINSIC_1	macro(CALL_INTRINSIC_1) = _CALL_INTRINSIC_1 + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (value2_st, value1_st -- res, vs1, vs2)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _CALL_INTRINSIC_2 + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	1498	1498	opcode:_CALL_INTRINSIC_1	op(_CALL_INTRINSIC_1, (value -- res, v)) {	modelled	bytecode-intrinsics	
+Python/bytecodes.c	1509	1509	opcode:CALL_INTRINSIC_1	macro(CALL_INTRINSIC_1) = _CALL_INTRINSIC_1 + POP_TOP;	modelled	bytecode-intrinsics	
+Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (value2_st, value1_st -- res, vs1, vs2)) {	modelled	bytecode-intrinsics	
+Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _CALL_INTRINSIC_2 + POP_TOP + POP_TOP;	modelled	bytecode-intrinsics	
 Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-raise-varargs	
 Python/bytecodes.c	1544	1544	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	todo		changed-in-3.15: new function
@@ -166,8 +166,8 @@ Python/bytecodes.c	1722	1722	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;
 Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receiver, null, v -- receiver, null, gen_frame)) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	todo		review: ForIterRaises now pins the raising and StopIteration paths, but ForIterNext and ForIterExhausted assume virtualNext leaves the runtime unchanged (= .ok _ regs.rt), which excludes every stateful __next__ (a list_iterator, a generator): for those the pushed item and the normal end are unstated, so a FOR_ITER that called __next__ twice and kept the first item, or rolled back its heap effect, passes. (This is the duplicate macro(FOR_ITER) at :1751.)
-Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter	
+Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1795	1795	opcode:SEND_VIRTUAL	macro(SEND_VIRTUAL) =	todo		changed-in-3.15: new function
@@ -191,18 +191,18 @@ Python/bytecodes.c	1986	1986	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( --
 Python/bytecodes.c	1998	1998	opcode:STORE_NAME	inst(STORE_NAME, (v -- )) {	todo		
 Python/bytecodes.c	2018	2018	opcode:DELETE_NAME	inst(DELETE_NAME, (--)) {	todo		
 Python/bytecodes.c	2043	2043	opcode:_SPECIALIZE_UNPACK_SEQUENCE	specializing op(_SPECIALIZE_UNPACK_SEQUENCE, (counter/1, seq -- seq)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2057	2057	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	todo		
-Python/bytecodes.c	2064	2064	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	todo		
-Python/bytecodes.c	2066	2066	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	todo		
-Python/bytecodes.c	2069	2069	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2057	2057	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2064	2064	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2066	2066	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2069	2069	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2080	2080	opcode:_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2089	2089	opcode:_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE, (seq -- val2, val1, val0)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2099	2099	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	todo		
-Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	2099	2099	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2114	2114	opcode:_UNPACK_SEQUENCE_UNIQUE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	todo		
-Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	todo		
-Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		
+Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	modelled	bytecode-unpack-ex	
 Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	
@@ -234,18 +234,18 @@ Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION
 Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
 Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	modelled	bytecode-build-seq	
 Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	modelled	bytecode-build-seq	
-Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2545	2545	opcode:SET_UPDATE	macro(SET_UPDATE) = _SET_UPDATE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2547	2547	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	todo		
-Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2545	2545	opcode:SET_UPDATE	macro(SET_UPDATE) = _SET_UPDATE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2547	2547	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	modelled	bytecode-builders	
 Python/bytecodes.c	2583	2583	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		
+Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	2669	2669	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
 Python/bytecodes.c	2679	2679	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2692	2692	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		changed-in-3.15:
@@ -311,7 +311,7 @@ Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_val
 Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
 Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	todo		review: The body is one branch-free JUMPBY(oparg) (:3494-3496) and JumpRules' conjunct for it closes by rfl; the added 'pending signal included' is automatic since the definition never reads it, and the forward-then-back conjunct is arithmetic: rfl on a one-line definition, which AGENTS.md says is not coverage.
+Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3503	3503	opcode:_SPECIALIZE_JUMP_BACKWARD	specializing tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3515	3515	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	modelled	bytecode-jumps	
@@ -325,25 +325,25 @@ Python/bytecodes.c	3648	3648	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = u
 Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
 Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	modelled	bytecode-branches	
 Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
-Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	todo		review: The body is an assert and one JUMPBY(-oparg) (:3656-3664); JumpRules' conjunct closes by rfl, and its 'a pending event is left alone' half holds of any definition that does not read Rt.pendingExc: rfl on a one-line definition, which AGENTS.md says is not coverage.
+Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	modelled	bytecode-get-len	
-Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	3701	3701	opcode:MATCH_MAPPING	inst(MATCH_MAPPING, (subject -- subject, res)) {	todo		
-Python/bytecodes.c	3706	3706	opcode:MATCH_SEQUENCE	inst(MATCH_SEQUENCE, (subject -- subject, res)) {	todo		
-Python/bytecodes.c	3711	3711	opcode:MATCH_KEYS	inst(MATCH_KEYS, (subject, keys -- subject, keys, values_or_none)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	modelled	bytecode-match	
+Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	modelled	bytecode-match	
+Python/bytecodes.c	3701	3701	opcode:MATCH_MAPPING	inst(MATCH_MAPPING, (subject -- subject, res)) {	modelled	bytecode-match	
+Python/bytecodes.c	3706	3706	opcode:MATCH_SEQUENCE	inst(MATCH_SEQUENCE, (subject -- subject, res)) {	modelled	bytecode-match	
+Python/bytecodes.c	3711	3711	opcode:MATCH_KEYS	inst(MATCH_KEYS, (subject, keys -- subject, keys, values_or_none)) {	modelled	bytecode-match	
 Python/bytecodes.c	3724	3724	opcode:_SPECIALIZE_GET_ITER	specializing op(_SPECIALIZE_GET_ITER, (counter/1, iterable -- iterable)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3736	3736	opcode:_GET_ITER	op(_GET_ITER, (iterable -- iter, index_or_null)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3743	3743	opcode:GET_ITER	macro(GET_ITER) =	todo		changed-in-3.15:
-Python/bytecodes.c	3748	3748	opcode:_GUARD_ITERATOR	op(_GUARD_ITERATOR, (iterable -- iterable)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3754	3754	opcode:GET_ITER_SELF	macro(GET_ITER_SELF) =	todo		changed-in-3.15: new function
-Python/bytecodes.c	3760	3760	opcode:_GUARD_ITER_VIRTUAL	op(_GUARD_ITER_VIRTUAL, (iterable -- iterable)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3766	3766	opcode:_PUSH_TAGGED_ZERO	op(_PUSH_TAGGED_ZERO, ( -- zero)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3770	3770	opcode:GET_ITER_VIRTUAL	macro(GET_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	3736	3736	opcode:_GET_ITER	op(_GET_ITER, (iterable -- iter, index_or_null)) {	modelled	bytecode-get-iter	
+Python/bytecodes.c	3743	3743	opcode:GET_ITER	macro(GET_ITER) =	modelled	bytecode-get-iter	
+Python/bytecodes.c	3748	3748	opcode:_GUARD_ITERATOR	op(_GUARD_ITERATOR, (iterable -- iterable)) {	modelled	bytecode-get-iter	
+Python/bytecodes.c	3754	3754	opcode:GET_ITER_SELF	macro(GET_ITER_SELF) =	modelled	bytecode-get-iter	
+Python/bytecodes.c	3760	3760	opcode:_GUARD_ITER_VIRTUAL	op(_GUARD_ITER_VIRTUAL, (iterable -- iterable)) {	modelled	bytecode-get-iter	
+Python/bytecodes.c	3766	3766	opcode:_PUSH_TAGGED_ZERO	op(_PUSH_TAGGED_ZERO, ( -- zero)) {	modelled	bytecode-get-iter	
+Python/bytecodes.c	3770	3770	opcode:GET_ITER_VIRTUAL	macro(GET_ITER_VIRTUAL) =	modelled	bytecode-get-iter	
 Python/bytecodes.c	3776	3776	opcode:_GET_ITER_TRAD	op(_GET_ITER_TRAD, (iterable -- iter, index_or_null)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3798	3798	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter, null_or_index -- iter, null_or_index)) {	todo		review: no-behaviour: does not apply: the note concedes dis(adaptive=True), a documented API, observes the counter-driven in-place rewrite by _Py_Specialize_ForIter (:3798-3808), and which specialized form gets installed decides which body runs later (the project's SEND_GEN and CALL_ALLOC_AND_ENTER_INIT refutations live in such forms); AGENTS.md reserves no-behaviour: for effects with no Python-visible result, and no stated scope limit covers quickening as one covers GC traversal.
-Python/bytecodes.c	3810	3810	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter, null_or_index -- iter, null_or_index, next)) {	todo		review: ForIterRaises now pins the raising and StopIteration paths, but ForIterNext and ForIterExhausted assume virtualNext leaves the runtime unchanged (= .ok _ regs.rt), which excludes every stateful __next__ (a list_iterator, a generator): for those the pushed item and the normal end are unstated, so a FOR_ITER that called __next__ twice and kept the first item, or rolled back its heap effect, passes.
-Python/bytecodes.c	3823	3823	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;	todo		review: ForIterRaises now pins the raising and StopIteration paths, but ForIterNext and ForIterExhausted assume virtualNext leaves the runtime unchanged (= .ok _ regs.rt), which excludes every stateful __next__ (a list_iterator, a generator): for those the pushed item and the normal end are unstated, so a FOR_ITER that called __next__ twice and kept the first item, or rolled back its heap effect, passes.
+Python/bytecodes.c	3798	3798	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter, null_or_index -- iter, null_or_index)) {	todo		todo: needs a mutable code model. The body is the adaptive counter (ADAPTIVE_COUNTER_TRIGGERS, ADVANCE_ADAPTIVE_COUNTER) and an in-place rewrite by _Py_Specialize_* followed by DISPATCH_SAME_OPARG; the model keeps Program immutable and applies Specialize.suggest between two runs (runProfiled/applyProfile), so neither the counter nor re-dispatching the rewritten instruction can be stated in one step. Agreement of each installed form with the generic one is stated per form. review: no-behaviour: does not apply: the note concedes dis(adaptive=True), a documented API, observes the counter-driven in-place rewrite by _Py_Specialize_ForIter (:3798-3808), and which specialized form gets installed decides which body runs later (the project's SEND_GEN and CALL_ALLOC_AND_ENTER_INIT refutations live in such forms); AGENTS.md reserves no-behaviour: for effects with no Python-visible result, and no stated scope limit covers quickening as one covers GC traversal.
+Python/bytecodes.c	3810	3810	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter	
+Python/bytecodes.c	3823	3823	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;	modelled	bytecode-for-iter	
 Python/bytecodes.c	3825	3825	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3838	3838	opcode:_GUARD_TYPE_ITER	tier2 op(_GUARD_TYPE_ITER, (expected_type/4, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3843	3843	opcode:_ITER_NEXT_INLINE	tier2 op(_ITER_NEXT_INLINE, (iternext_fn/4, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
@@ -415,17 +415,17 @@ Python/bytecodes.c	4615	4615	opcode:_INIT_CALL_PY_EXACT_ARGS	replicate(5) pure o
 Python/bytecodes.c	4628	4628	opcode:_PUSH_FRAME	op(_PUSH_FRAME, (new_frame -- )) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	4644	4644	opcode:CALL_BOUND_METHOD_EXACT_ARGS	macro(CALL_BOUND_METHOD_EXACT_ARGS) =	todo		changed-in-3.15:
 Python/bytecodes.c	4659	4659	opcode:CALL_PY_EXACT_ARGS	macro(CALL_PY_EXACT_ARGS) =	todo		changed-in-3.15:
-Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	4679	4679	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4684	4684	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4694	4694	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	todo		changed-in-3.15:
-Python/bytecodes.c	4702	4702	opcode:_GUARD_CALLABLE_STR_1	op(_GUARD_CALLABLE_STR_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4707	4707	opcode:_CALL_STR_1	op(_CALL_STR_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4721	4721	opcode:CALL_STR_1	macro(CALL_STR_1) =	todo		changed-in-3.15:
-Python/bytecodes.c	4730	4730	opcode:_GUARD_CALLABLE_TUPLE_1	op(_GUARD_CALLABLE_TUPLE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4735	4735	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4749	4749	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	todo		changed-in-3.15:
+Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4679	4679	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4684	4684	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res, a)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4694	4694	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4702	4702	opcode:_GUARD_CALLABLE_STR_1	op(_GUARD_CALLABLE_STR_1, (callable, unused, unused -- callable, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4707	4707	opcode:_CALL_STR_1	op(_CALL_STR_1, (callable, null, arg -- res, a)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4721	4721	opcode:CALL_STR_1	macro(CALL_STR_1) =	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4730	4730	opcode:_GUARD_CALLABLE_TUPLE_1	op(_GUARD_CALLABLE_TUPLE_1, (callable, unused, unused -- callable, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4735	4735	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, null, arg -- res, a)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4749	4749	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	modelled	bytecode-call-builtins	
 Python/bytecodes.c	4758	4758	opcode:_CHECK_OBJECT	op(_CHECK_OBJECT, (type_version/2, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4766	4766	opcode:_ALLOCATE_OBJECT	op(_ALLOCATE_OBJECT, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	modelled	bytecode-create-init-frame,bytecode-call-alloc-abstract	
@@ -443,15 +443,15 @@ Python/bytecodes.c	4944	4944	opcode:CALL_BUILTIN_FAST	macro(CALL_BUILTIN_FAST) =
 Python/bytecodes.c	4954	4954	opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	4960	4960	opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS	op(_CALL_BUILTIN_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
 Python/bytecodes.c	4978	4978	opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS	macro(CALL_BUILTIN_FAST_WITH_KEYWORDS) =	todo		changed-in-3.15:
-Python/bytecodes.c	4988	4988	opcode:CALL_LEN	macro(CALL_LEN) =	todo		changed-in-3.15:
-Python/bytecodes.c	4997	4997	opcode:_GUARD_CALLABLE_LEN	op(_GUARD_CALLABLE_LEN, (callable, unused, unused -- callable, unused, unused)){	todo		changed-in-3.15:
-Python/bytecodes.c	5003	5003	opcode:_CALL_LEN	op(_CALL_LEN, (callable, null, arg -- res, a, c)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5022	5022	opcode:_GUARD_CALLABLE_ISINSTANCE	op(_GUARD_CALLABLE_ISINSTANCE, (callable, unused, unused, unused -- callable, unused, unused, unused)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5028	5028	opcode:_CALL_ISINSTANCE	op(_CALL_ISINSTANCE, (callable, null, instance, cls -- res)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5046	5046	opcode:CALL_ISINSTANCE	macro(CALL_ISINSTANCE) =	todo		changed-in-3.15:
-Python/bytecodes.c	5053	5053	opcode:CALL_LIST_APPEND	macro(CALL_LIST_APPEND) =	todo		changed-in-3.15:
-Python/bytecodes.c	5063	5063	opcode:_GUARD_CALLABLE_LIST_APPEND	op(_GUARD_CALLABLE_LIST_APPEND, (callable, unused, unused -- callable, unused, unused)){	todo		changed-in-3.15: new function
-Python/bytecodes.c	5069	5069	opcode:_CALL_LIST_APPEND	op(_CALL_LIST_APPEND, (callable, self, arg -- none, c, s)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4988	4988	opcode:CALL_LEN	macro(CALL_LEN) =	modelled	bytecode-call-builtins	
+Python/bytecodes.c	4997	4997	opcode:_GUARD_CALLABLE_LEN	op(_GUARD_CALLABLE_LEN, (callable, unused, unused -- callable, unused, unused)){	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5003	5003	opcode:_CALL_LEN	op(_CALL_LEN, (callable, null, arg -- res, a, c)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5022	5022	opcode:_GUARD_CALLABLE_ISINSTANCE	op(_GUARD_CALLABLE_ISINSTANCE, (callable, unused, unused, unused -- callable, unused, unused, unused)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5028	5028	opcode:_CALL_ISINSTANCE	op(_CALL_ISINSTANCE, (callable, null, instance, cls -- res)) {	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5046	5046	opcode:CALL_ISINSTANCE	macro(CALL_ISINSTANCE) =	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5053	5053	opcode:CALL_LIST_APPEND	macro(CALL_LIST_APPEND) =	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5063	5063	opcode:_GUARD_CALLABLE_LIST_APPEND	op(_GUARD_CALLABLE_LIST_APPEND, (callable, unused, unused -- callable, unused, unused)){	modelled	bytecode-call-builtins	
+Python/bytecodes.c	5069	5069	opcode:_CALL_LIST_APPEND	op(_CALL_LIST_APPEND, (callable, self, arg -- none, c, s)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	5090	5090	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5105	5105	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res, c, s, a)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	todo		changed-in-3.15: new function
@@ -500,11 +500,11 @@ Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_F
 Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	modelled	bytecode-build-slice	
-Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	todo		
-Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
-Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	modelled	bytecode-format	
+Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	modelled	bytecode-format	
+Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	modelled	bytecode-format	
 Python/bytecodes.c	5906	5906	opcode:COPY	pure replicate(1:4) inst(COPY, (bottom, unused[oparg-1] -- bottom, unused[oparg-1], top)) {	modelled	bytecode-copy	
-Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	todo		review: no-behaviour: does not apply: the note concedes dis(adaptive=True), a documented API, observes the counter-driven in-place rewrite by _Py_Specialize_BinaryOp (:5910-5922), and which specialized form gets installed decides which body runs later (the project's SEND_GEN and CALL_ALLOC_AND_ENTER_INIT refutations live in such forms); AGENTS.md reserves no-behaviour: for effects with no Python-visible result, and no stated scope limit covers quickening as one covers GC traversal.
+Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	todo		todo: needs a mutable code model. The body is the adaptive counter (ADAPTIVE_COUNTER_TRIGGERS, ADVANCE_ADAPTIVE_COUNTER) and an in-place rewrite by _Py_Specialize_* followed by DISPATCH_SAME_OPARG; the model keeps Program immutable and applies Specialize.suggest between two runs (runProfiled/applyProfile), so neither the counter nor re-dispatching the rewritten instruction can be stated in one step. Agreement of each installed form with the generic one is stated per form. review: no-behaviour: does not apply: the note concedes dis(adaptive=True), a documented API, observes the counter-driven in-place rewrite by _Py_Specialize_BinaryOp (:5910-5922), and which specialized form gets installed decides which body runs later (the project's SEND_GEN and CALL_ALLOC_AND_ENTER_INIT refutations live in such forms); AGENTS.md reserves no-behaviour: for effects with no Python-visible result, and no stated scope limit covers quickening as one covers GC traversal.
 Python/bytecodes.c	5924	5924	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res, l, r)) {	modelled	bytecode-binary-op	
 Python/bytecodes.c	5940	5940	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + _RECORD_TOS_TYPE + _RECORD_NOS_TYPE + unused/4 + _BINARY_OP + POP_TOP + POP_TOP;	modelled	bytecode-binary-op	
 Python/bytecodes.c	5942	5942	opcode:SWAP	pure replicate(2:4) inst(SWAP, (bottom, unused[oparg-2], top --	modelled	bytecode-swap	

@@ -502,8 +502,11 @@ def drain (it : Val) : Nat → List Val → RM (List Val)
 of `*--sp`: first the value that ends up deepest. `argcntafter = none` is `-1`. -/
 def unpackIterable (v : Val) (argcnt : Nat) (argcntafter : Option Nat) : RM (List Val) := do
   let it ← tryExc (om.getIter ctx v) fun e => do
-    if (← givenMatches e 8 (.cls "TypeError")) && !(← om.isIterable v) then
-      typeError s!"cannot unpack non-iterable {trunc200 (← tpName v)} object"
+    -- `&&` short-circuits in C: the slots are read only after a `TypeError`
+    if ← givenMatches e 8 (.cls "TypeError") then
+      if !(← om.isIterable v) then
+        typeError s!"cannot unpack non-iterable {trunc200 (← tpName v)} object"
+      else throw (.exc e)
     else throw (.exc e)
   let rec first : Nat → Nat → List Val → RM (List Val)
     | 0, _, acc => pure acc.reverse

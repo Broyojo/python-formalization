@@ -48,8 +48,20 @@ and the event is consumed either way. -/
 def checkPeriodics : RM Unit := fun rt =>
   if rt.pendingExc == .null then .ok () rt
   else raiseVal rt.pendingExc { rt with pendingExc := .null }
-/-- `:157`: `ERROR_IF(err != 0)` with nothing popped. -/
+/-- `:158-161`: `ERROR_IF(err != 0)` (`:160`) with nothing popped. -/
 def _CHECK_PERIODIC : M Unit := BM.lift (checkPeriodics : RM Unit)
+/-- `check_periodics_at_end`, `Python/ceval_macros.h:550-563`: as `check_periodics`, except that
+nothing is handled when the code unit before this instruction is `LOAD_SPECIAL`
+(`frame->instr_ptr[-1].op.code == LOAD_SPECIAL`), so that the `__enter__`/`__exit__` call of a
+`with` block runs without an interrupt in between. -/
+def checkPeriodicsAtEnd (e : Env) : BM Unit := fun r =>
+  if r.rt.pendingExc == .null then .ok () r
+  else
+    let prev := ((e.P[r.frame.code]?).bind fun c => c.instrs[r.frame.instrPtr - 1]?).map (·.op)
+    if r.frame.instrPtr != 0 && prev == some .LOAD_SPECIAL then .ok () r
+    else RM.lift checkPeriodics r
+/-- `:163-166`: `ERROR_IF(err != 0)` with nothing popped; it ends the `CALL` family's macros. -/
+def _CHECK_PERIODIC_AT_END (e : Env) : M Unit := BM.lift (checkPeriodicsAtEnd e)
 /-- `@3.14.7:164`. -/
 def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
 /-- `:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/
@@ -691,11 +703,36 @@ def LIST_APPEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   (listAppend (rest.headD .null) v : RM Unit)
   pure rest
-/-- `:1380`. -/
+/-- `%T` of `PyUnicode_FromFormat` (`_PyType_GetFullyQualifiedName`, `Objects/typeobject.c`): the
+qualified name, without the module for `builtins` and `__main__`. The model's classes all live in
+`__main__`, so this is the class's `__qualname__`, and the name of a builtin type. -/
+def typeFullName (v : Val) : RM String := do
+  match ← typeOf v with
+  | .ref a =>
+    match ← getObj a with
+    | .cls c => pure c.qualname
+    | _ => fault "not a type"
+  | t => typeNameOf t
+
+/-- `PySet_CheckExact`. -/
+def isExactSet : Val → RM Bool
+  | .ref a => do
+    match ← getObj a with
+    | .set false _ => pure true
+    | _ => pure false
+  | _ => pure false
+
+/-- `:1380-1392`. Since 3.15 (gh-154902: user code can rebind `__conditional_annotations__`) the
+target is checked first: anything but an exact set raises `TypeError("'%T' object is not a set")`
+with both operands popped (`PyStackRef_CLOSE(v); ERROR_IF(true)`). `%T` is the qualified type name,
+which for the model's builtin types and `__main__` classes is the `__qualname__`. -/
 def SET_ADD (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
-  (setAdd e.om e.ctx (rest.headD .null) v : RM Unit)
+  let set := rest.headD .null
+  if !(← (isExactSet set : RM Bool)) then
+    (typeError s!"'{← typeFullName set}' object is not a set" : RM Unit)
+  (setAdd e.om e.ctx set v : RM Unit)
   pure rest
 /-- `:1399`. -/
 def _SPECIALIZE_STORE_SUBSCR : M Unit := pure ()
@@ -729,14 +766,16 @@ def STORE_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT_STORE_SUBSCRIPT; 
 def DELETE_SUBSCR (e : Env) : M Unit := stk 2 0 fun
   | [c, sub] => do e.om.delItem e.ctx c sub; pure []
   | _ => fault "arity"
-/-- `@3.14.7:1496`. -/
-def CALL_INTRINSIC_1 (e : Env) : M Unit := stk 1 1 fun
+/-- `:1498-1509`: `_CALL_INTRINSIC_1 + POP_TOP`; since 3.15 a failing intrinsic leaves through
+`ERROR_NO_POP` with the operand kept. -/
+def CALL_INTRINSIC_1 (e : Env) : M Unit := stkK 1 1 fun
   | [v] => do
     let f ← getFrame
     pure [← e.om.intrinsic1 e.ctx f e.oparg v]
   | _ => fault "arity"
-/-- `:1529`. -/
-def CALL_INTRINSIC_2 (e : Env) : M Unit := stk 2 1 fun
+/-- `:1511-1529`: `_CALL_INTRINSIC_2 + POP_TOP + POP_TOP`, `func(tstate, value2, value1)` with
+`value2` the deeper operand; `ERROR_NO_POP` on failure. -/
+def CALL_INTRINSIC_2 (e : Env) : M Unit := stkK 2 1 fun
   | [v2, v1] => do
     let f ← getFrame
     pure [← e.om.intrinsic2 e.ctx f e.oparg v2 v1]
@@ -1136,7 +1175,7 @@ def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
 
 /-- `:2043`. -/
 def _SPECIALIZE_UNPACK_SEQUENCE : M Unit := pure ()
-/-- `:2057`. -/
+/-- `:2057-2062`. -/
 def _UNPACK_SEQUENCE (e : Env) : M Unit := stk 1 e.oparg fun
   | [seq] => do
     let l ← (unpackIterable e.om e.ctx seq e.oparg none : RM _)
@@ -1144,17 +1183,19 @@ def _UNPACK_SEQUENCE (e : Env) : M Unit := stk 1 e.oparg fun
   | _ => fault "arity"
 /-- `:2064`. -/
 def UNPACK_SEQUENCE (e : Env) : M Unit := do _SPECIALIZE_UNPACK_SEQUENCE; _UNPACK_SEQUENCE e
-/-- `:2069`. -/
+/-- `:2069-2078`: `EXIT_IF(PyTuple_GET_SIZE(seq_o) != 2)`, then `val0` is item 0 and `val1` item 1,
+in the order `(seq -- val1, val0)`. -/
 def _UNPACK_SEQUENCE_TWO_TUPLE : M Unit := stk 1 2 fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
-    | .tuple #[x, y] => pure [y, x]
-    | .tuple _ => throw .deopt
+    | .tuple items =>
+      if items.size != 2 then throw .deopt
+      pure [items.getD 1 .null, items.getD 0 .null]
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:2066`. -/
+/-- `:2066-2067`. -/
 def UNPACK_SEQUENCE_TWO_TUPLE : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TWO_TUPLE
-/-- `:2102`. -/
+/-- `:2102-2112`. -/
 def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1163,9 +1204,9 @@ def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:2099`. -/
+/-- `:2099-2100`. -/
 def UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TUPLE e
-/-- `:2131`. -/
+/-- `:2131-2146`. -/
 def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1174,9 +1215,9 @@ def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a list"
   | _ => fault "not a list"
-/-- `:2128`. -/
+/-- `:2128-2129`. -/
 def UNPACK_SEQUENCE_LIST (e : Env) : M Unit := do _GUARD_TOS_LIST; _UNPACK_SEQUENCE_LIST e
-/-- `:2148`. -/
+/-- `:2148-2153`. -/
 def UNPACK_EX (e : Env) : M Unit :=
   stk 1 ((e.oparg &&& 255) + 1 + (e.oparg >>> 8)) fun
     | [seq] => do
