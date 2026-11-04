@@ -574,6 +574,31 @@ RULE_FORMS = [
     "match {e}:\n case [{k}, (a, b)]: pass", "match {e}:\n case _ | _: pass", "match *{e}, {f}:\n case _: pass",
     "({e}, {f}): int", "[{e}]: int", "(({e}, {f})): int", "{e}, {f}: int", "{e}: int", "{e} += 1",
     "({e}) += 1", "{e}, {f} += 1", "del {e}, f()", "del ({e}, {e} + 1)", "{e} = yield = 1",
+    # invalid_assignment '=' alternatives, t_primary fallbacks, import-as targets
+    # (Peg/Rules/InvalidTargets.lean, TPrimary.lean, AsTarget2.lean)
+    "x = {e} = 1", "x = y = {e} = 1", "a, {e} = 1", "x = yield {e} = 1", "yield = {e}", "x = (yield) = {e}",
+    "[a, {e}] = 1", "x = {e}, {f} = 1", "{e}[0] = 1", "{e}(x) = 1", "{e}(x for x in y) = 1",
+    "{e}[0](1) = 2", "a.b[{e}].c = 1", "for {e}(x)[0] in y: pass", "del {e}(x)[0]", "{e}.b(c)[d] = 1",
+    "import a as {e}", "from x import a as {e}", "import a.b as {e}, c", "from x import (a as {e})",
+    "import a as {n} {m}", "from x import a as {n}; y", "import a as b{u}", "import a as ({n})",
+    "if x: import a as b else: pass", "import a as b = {e}", "from x import a as b, c as {e}",
+    # patterns (Peg/Rules/Patterns2.lean)
+    "match x:\n case {s}{k} {s}{k}j: pass", "match x:\n case {s}1.5 + 2j: pass", "match x:\n case -1 - 1j: pass",
+    "match x:\n case 1 + 1: pass", "match x:\n case 1j + 1j: pass", "match x:\n case -{k}: pass",
+    "match x:\n case None | True | False: pass", "match x:\n case 'a' 'b' | f'{e}': pass",
+    "match x:\n case a.b.c: pass", "match x:\n case a.b(): pass", "match x:\n case a.b = 1: pass",
+    "match x:\n case a.b as {n}: pass", "match x:\n case {k} as _: pass", "match x:\n case {k} as y.z: pass",
+    "match x:\n case {{}}: pass", "match x:\n case {{**r}}: pass", "match x:\n case {{**r,}}: pass",
+    "match x:\n case {{{k}: a}}: pass", "match x:\n case {{{k}: a, **r}}: pass", "match x:\n case {{{k}: a,}}: pass",
+    "match x:\n case {{a.b: c, 'k': d, None: e, -1: f, 1+2j: g}}: pass", "match x:\n case {{**_}}: pass",
+    "match x:\n case {{{k}: a, **r, }}: pass", "match x:\n case {{**r, {k}: a}}: pass", "match x:\n case {{x: 1}}: pass",
+    "match x:\n case C(): pass", "match x:\n case C({k}): pass", "match x:\n case C({k},): pass",
+    "match x:\n case C(a={k}): pass", "match x:\n case C(a={k},): pass", "match x:\n case C({k}, a={k}): pass",
+    "match x:\n case a.b.C({k}, *r): pass", "match x:\n case C(a=1, {k}): pass", "match x:\n case C(a.b=1): pass",
+    "match x:\n case [*_, *r]: pass", "match x:\n case [*{n}]: pass", "match x:\n case (*a, b): pass",
+    "match x:\n case *a: pass", "match x:\n case {k} if {e}: pass", "match x:\n case {k} if {e} := 1: pass",
+    "match x:\n case {k} if: pass", "match x:\n case {k}:\n  pass\n case _:\n  pass",
+    "match x:\n case {k} if {e}:\n  {f}", "match x:\n case a, b if {e}: pass",
 ]
 
 
