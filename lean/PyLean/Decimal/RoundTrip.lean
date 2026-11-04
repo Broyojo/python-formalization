@@ -43,14 +43,36 @@ theorem sciExp_part (x : Int) : expPart (sciExp x) = 'E' :: fmtSigned x := by
   simp only [expPart, sciExp, fmtSigned]
   rfl
 
+/-- The exponent part `str()` writes, with the indicator `capitals` selects. -/
+def sciExpC (caps : Bool) (x : Int) : ExPart :=
+  some (if caps then 'E' else 'e', [if x < 0 then '-' else '+'], Nat.toDigits 10 x.natAbs)
+
+theorem sciExpC_ok (caps : Bool) (x : Int) : ExOk (sciExpC caps x) := by
+  refine ⟨by cases caps <;> simp, ?_, Nat.toDigits_ne_nil, toDigits_AD _⟩
+  by_cases h : x < 0 <;> simp [h]
+
+theorem sciExpC_val (caps : Bool) (x : Int) : exVal (sciExpC caps x) = x := by
+  simp only [exVal, sciExpC, digitsValue_toDigits]
+  by_cases h : x < 0
+  · simp only [h, ↓reduceIte]; omega
+  · have : ¬ (['+'] : List Char) = ['-'] := by decide
+    simp only [h, ↓reduceIte, this]; omega
+
+theorem sciExpC_part (caps : Bool) (x : Int) :
+    expPart (sciExpC caps x) = (if caps then 'E' else 'e') :: fmtSigned x := by
+  simp only [expPart, sciExpC, fmtSigned]
+  rfl
+
+theorem sciExpC_true (x : Int) : sciExpC true x = sciExp x := rfl
+
 /-- `str(d)` of a finite decimal has the shape `[-] digits [. digits] [E sign digits]`. -/
-theorem sci_shape (neg : Bool) (c : Nat) (e : Int) :
-    ∃ I fr ex, sciFinite neg (Nat.toDigits 10 c) e true =
+theorem sci_shape (neg : Bool) (c : Nat) (e : Int) (caps : Bool := true) :
+    ∃ I fr ex, sciFinite neg (Nat.toDigits 10 c) e caps =
         (if neg then ['-'] else []) ++ numBody I fr ++ expPart ex ∧
       I ≠ [] ∧ AD I ∧ AD (fr.getD []) ∧ ExOk ex ∧
       digitsValue (I ++ fr.getD []) = c ∧ exVal ex - ((fr.getD []).length : Int) = e ∧
       ((fr.getD []).length ≤ numDigits c + 5) ∧ (I ++ fr.getD []).length ≤ numDigits c + 6 ∧
-      (ex = none ∨ ex = sciExp (e + numDigits c - 1)) := by
+      (ex = none ∨ ex = sciExpC caps (e + numDigits c - 1)) := by
   have hn := numDigits_pos c
   have hds := toDigits_AD c
   have hlen := toDigits_len c
@@ -115,26 +137,26 @@ theorem sci_shape (neg : Bool) (c : Nat) (e : Int) :
     by_cases h3 : n = 1
     · subst h3
       have hne1' : ¬ e + 1 = 1 := by simpa using hne1
-      refine ⟨ds, none, sciExp (e + (1 : Nat) - 1), ?_, ?_, hds, (fun _ hx => by simp at hx), sciExp_ok _, ?_, ?_, ?_, ?_⟩
-      · simp [numBody, sciExp_part, hne1']
+      refine ⟨ds, none, sciExpC caps (e + (1 : Nat) - 1), ?_, ?_, hds, (fun _ hx => by simp at hx), sciExpC_ok _ _, ?_, ?_, ?_, ?_⟩
+      · simp [numBody, sciExpC_part, hne1']
       · intro h0; subst h0; simp at hlen
       · simpa using hval
-      · simp [sciExp_val]
+      · simp [sciExpC_val]
       · simp
       · exact ⟨by simp; omega, by simp⟩
     · have hk : ds.take 1 ++ ds.drop 1 = ds := List.take_append_drop _ _
       have ht := take_drop_AD hds 1
-      refine ⟨ds.take 1, some (ds.drop 1), sciExp (e + (n : Int) - 1), ?_, ?_, ht.1, ht.2,
-        sciExp_ok _, ?_, ?_, ?_, ?_⟩
+      refine ⟨ds.take 1, some (ds.drop 1), sciExpC caps (e + (n : Int) - 1), ?_, ?_, ht.1, ht.2,
+        sciExpC_ok _ _, ?_, ?_, ?_, ?_⟩
       · have hn1 : ¬ (1 : Int) ≥ n := by omega
-        simp [numBody, sciExp_part, hne1, hn1]
+        simp [numBody, sciExpC_part, hne1, hn1]
       · intro h0
         have hl := @List.length_take _ 1 ds
         rw [h0] at hl
         simp only [List.length_nil] at hl
         omega
       · simp only [Option.getD_some, hk, hval]
-      · simp only [sciExp_val, Option.getD_some, List.length_drop, hlen]
+      · simp only [sciExpC_val, Option.getD_some, List.length_drop, hlen]
         omega
       · simp only [Option.getD_some, List.length_drop, hlen]
         omega
@@ -547,15 +569,18 @@ theorem pyFilter_plain (s : List Char) (h : ∀ c ∈ s, Plain c) :
   intro c hc
   simpa using (h c hc).2.2.1
 
-/-- `Decimal(str(d)) == d` in `_pydecimal`, for every value within the C limits
-such that `str(d)` stays inside `int()`'s digit limit: the coefficient, plus the
-up to six zeros of `0.00000ddd`, has at most 4300 digits, and so does a NaN
-payload. The limit itself is `decimal-str-roundtrip-py`. -/
+/-- `Decimal(str(d)) == d` in `_pydecimal`, for every value such that `str(d)` stays inside
+the int/str digit limit (the only bound `_pydecimal` has: exponents are Python ints, so
+`Context(Emax=10**20)` and `Decimal((0, (1,), 10**19))` are fine): the coefficient, plus the up
+to six zeros of `0.00000ddd`, has at most 4300 digits, so does the adjusted exponent that `"%+d"`
+formats (_pydecimal.py:1124), and so does a NaN payload. Past those bounds `str()` raises or
+`int()` refuses the digits: `decimal-str-roundtrip-py` and `decimal-str-spell-exact`. -/
 def StrRoundTripPyBounded : Prop :=
-  ∀ d : Dec, InCLimits d →
-    (∀ neg c e, d = .fin neg c e → numDigits c + 6 ≤ maxStrDigits) →
+  ∀ (d : Dec) (caps : Bool),
+    (∀ neg c e, d = .fin neg c e →
+      numDigits c + 6 ≤ maxStrDigits ∧ numDigits (e + numDigits c - 1).natAbs ≤ maxStrDigits) →
     (∀ neg s p, d = .nan neg s p → numDigits p ≤ maxStrDigits) →
-    (pyStr d >>= pyParse) = .ok d
+    (pyStr d caps >>= pyParse) = .ok d
 
 theorem pyParse_nan (neg sig : Bool) (p : Nat) (hd : numDigits p ≤ maxStrDigits) :
     pyParse ((if neg then ['-'] else []) ++ (if sig then "sNaN" else "NaN").toList ++ payDigits p) =
@@ -606,9 +631,9 @@ theorem pyParse_nan (neg sig : Bool) (p : Nat) (hd : numDigits p ≤ maxStrDigit
   rw [pyFilter_plain _ (nan_plain neg sig p), hm]
   exact hnv
 
-theorem pyStrObj_num (neg : Bool) (I : List Char) (x : Int)
+theorem pyStrObj_num (neg : Bool) (I : List Char) (x : Int) (caps : Bool)
     (h : strLimit (x + (I.length : Int) - 1).natAbs = .ok ()) :
-    pyStrObj ⟨neg, I, .num x⟩ = .ok (sciFinite neg I x true) := by
+    pyStrObj ⟨neg, I, .num x⟩ caps = .ok (sciFinite neg I x caps) := by
   simp only [pyStrObj]
   split <;> split <;> first
     | rfl
@@ -616,32 +641,24 @@ theorem pyStrObj_num (neg : Bool) (I : List Char) (x : Int)
     | (exfalso; simp_all)
 
 theorem strRoundTripPyBounded_proven : StrRoundTripPyBounded := by
-  intro d hlim hb1 hb2
+  intro d caps hb1 hb2
   cases d with
-  | inf neg => cases neg <;> decide
+  | inf neg => cases neg <;> cases caps <;> decide
   | nan neg sig p =>
-    have hs : pyStr (.nan neg sig p) =
+    have hs : pyStr (.nan neg sig p) caps =
         .ok ((if neg then ['-'] else []) ++ (if sig then "sNaN" else "NaN").toList ++ payDigits p) := by
       cases sig <;> simp only [pyStr, Dec.toPyObj, pyStrObj, payDigits] <;> rfl
     rw [hs]
     exact pyParse_nan neg sig p (hb2 neg sig p rfl)
   | fin neg c e =>
-    obtain ⟨I, fr, ex, h1, hI0, hI, hF, hx, hv, he, hfl, hl, hex⟩ := sci_shape neg c e
-    obtain ⟨hl1, hl2, hl3⟩ := hlim
-    have hb := hb1 neg c e rfl
+    obtain ⟨I, fr, ex, h1, hI0, hI, hF, hx, hv, he, hfl, hl, hex⟩ := sci_shape neg c e caps
+    obtain ⟨hb, hadj⟩ := hb1 neg c e rfl
     simp only [maxStrDigits] at hb
     have hn := numDigits_pos c
-    simp only [mpdMaxEmax, mpdMinEtiny, mpdMinEmin, mpdMaxPrec] at hl2 hl3
-    have hsl : ∀ m : Nat, m < 10 ^ 20 → numDigits m ≤ maxStrDigits := by
-      intro m hm
-      have := (numDigits_le_iff (n := m) (k := 20) (by decide)).mpr hm
-      simp only [maxStrDigits]; omega
-    have hsz : ∀ m : Nat, m < 10 ^ 20 → strLimit m = .ok () := by
-      intro m hm
+    have hs : pyStr (.fin neg c e) caps = .ok (sciFinite neg (Nat.toDigits 10 c) e caps) := by
+      apply pyStrObj_num neg _ e caps
       unfold strLimit
-      rw [if_neg (Nat.not_lt.mpr (hsl m hm))]
-    have hs : pyStr (.fin neg c e) = .ok (sciFinite neg (Nat.toDigits 10 c) e true) :=
-      pyStrObj_num neg _ e (hsz _ (by simp only [toDigits_len]; omega))
+      rw [toDigits_len, if_neg (Nat.not_lt.mpr hadj)]
     rw [hs, h1]
     show pyParse _ = _
     simp only [pyParse]
@@ -651,8 +668,8 @@ theorem strRoundTripPyBounded_proven : StrRoundTripPyBounded := by
     intro ind sg D hD
     rcases hex with rfl | rfl
     · cases hD
-    · simp only [sciExp, Option.some.injEq, Prod.mk.injEq] at hD
+    · simp only [sciExpC, Option.some.injEq, Prod.mk.injEq] at hD
       rw [← hD.2.2]
-      exact hsl _ (by omega)
+      exact hadj
 
 end PyLean.Decimal
