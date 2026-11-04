@@ -121,7 +121,9 @@ class ReInit(Exception):
     the top object: Python code inside gen_set_exception (Objects/genobject.c:566)."""
 
     def __init__(self, *a):
-        rop(["next"], C.top)
+        t = C.top
+        rop(["anext"] if isinstance(t, types.AsyncGeneratorType)
+            else ["send", 1] if isinstance(t, types.CoroutineType) else ["next"], t)
         super().__init__(*a)
 
 
@@ -446,6 +448,10 @@ def run_drive(c):
     C.trace = []
     C.held = []
     C.keep = []
+    # finalize the cyclic garbage of earlier cases now, into a trace that is thrown away, so
+    # that the collection at "del" below finalizes only this case's objects
+    gc.collect()
+    C.trace = []
     C.fib, C.finb = c["firstiter"], c["finalizer"]
     kind = c["kind"]
     if kind == "agen":
@@ -463,6 +469,10 @@ def run_drive(c):
             C.top = None
             cw = None
             o = None
+            # A frame suspended in a handler holds the exception it is handling, whose traceback
+            # holds the frame: such a generator is reached by the collector, not by its reference
+            # count, and gen_finalize (the tp_finalize the model runs at "del") runs then.
+            gc.collect()
             C.trace = log_trace
             steps.append([["ok", "None"], "gone"])
             break

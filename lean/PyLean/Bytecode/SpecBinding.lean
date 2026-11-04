@@ -11,7 +11,7 @@ object model, which may run its `__eq__`, raise, or say true for other text.
 
 namespace PyLean.Bytecode
 
-/-- **The slot a keyword names** (lines 1815-1835): an exact `str` is found by its text, with no
+/-- **The slot a keyword names** (lines 1819-1839: the pointer loop :1822-1827, the slow loop :1830-1839): an exact `str` is found by its text, with no
 Python code run and nothing changed; any other keyword object goes through
 `PyObject_RichCompareBool(keyword, varname, Py_EQ)` (line 1832) against
 `co_varnames[co_posonlyargcount:total_args]` in order: an error is the result (`kw_fail`,
@@ -44,11 +44,11 @@ theorem findKwSlotRules_proven : FindKwSlotRules := by
 
 /-- **The keyword loop** (`initialize_locals`, lines 1803-1903), one keyword `k = v` at a time,
 for every object model, code object, function, `**kwargs` dict, keyword list and runtime: a keyword
-that is not a `str` is "Q() keywords must be strings"; otherwise its slot is looked up
+that is not a `str` is "Q() keywords must be strings" (:1812-1817); otherwise its slot is looked up
 (`findKwSlot`), whose error is the result; a slot already set is "Q() got multiple values for
 argument '%S'" (`kw_found`, lines 1894-1901, `'%S'` being `PyObject_Str` of the keyword) and an
 empty one takes `v`. A keyword naming no parameter goes into `**kwargs` when there is one
-(`PyDict_SetItem` with the keyword object); with no `**kwargs`, `positional_only_passed_as_keyword`
+(`PyDict_SetItem` with the keyword object, line 1882, whose hashing and comparisons with the keys already there may run Python code, so every keyword, an exact `str` too, goes through `KwHooks.setItem`); with no `**kwargs`, `positional_only_passed_as_keyword`
 runs first when there are positional-only parameters, and its error is the one raised; otherwise
 the unexpected keyword error is. -/
 def BindKeywordsRules : Prop :=
@@ -82,9 +82,7 @@ def BindKeywordsRules : Prop :=
         bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
       (∀ rt1, findKwSlot hk co k rt = .ok none rt1 → kwdict ≠ .null →
         bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt =
-          (do (match k with
-               | .str s => dictSetStr kwdict s v
-               | k => hk.setItem kwdict k v)
+          (do hk.setItem kwdict k v
               bindKeywords hk co funcv kwdict kwnames rest fast) rt1))
 
 theorem bindKeywordsRules_proven : BindKeywordsRules := by
@@ -127,11 +125,10 @@ theorem bindKeywordsRules_proven : BindKeywordsRules := by
         simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hg, hp, hg2, hu]
   · have hb : (kwdict == .null) = false := by simpa using hd
     simp only [hf, hb, Bool.false_eq_true, if_false, EStateM.bind]
-    cases k <;> rfl
 
 /-- **`positional_only_passed_as_keyword`** (lines 1674-1735), for every object model, code
 object, keyword list and runtime: for each positional-only name in order and each keyword in
-order, an exact `str` keyword counts when its text is the name (the pointer test of line 1688, or
+order, an exact `str` keyword counts when its text is the name (the pointer test of line 1689, or
 `PyObject_RichCompareBool` of two exact `str`), and any other keyword object when
 `PyObject_RichCompareBool(posonly_name, kwname, Py_EQ)` (line 1697, which runs a subclass's
 reflected `__eq__`) is true, whose error is the result (`cmp < 0`, `goto fail`, lines 1704-1706);

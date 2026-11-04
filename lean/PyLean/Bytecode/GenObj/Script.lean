@@ -488,11 +488,17 @@ def baseHooks : H where
   isIter _ := false
   amAwait _ _ := none
 
-/-- The constructor of the script's exception classes: `ReInit.__init__` first runs `next` on
-the top object (a reentrant call, logged), then `BaseException.__init__`. -/
+/-- The constructor of the script's exception classes: `ReInit.__init__` first makes a
+reentrant call on the top object (logged): `anext` on an async generator, `send(1)` on a
+coroutine, `next` on a generator; then `BaseException.__init__`. -/
 def scriptNormalize (inner : H) (n : Nat) (w : W) (typ : O) (val : Option O) : W × Exc SV :=
   match typ with
-  | .excClass _ "ReInit" => (logReOp inner n w w.ext.top .next, normalize typ val)
+  | .excClass _ "ReInit" =>
+    let op : ReOp := match (w.get w.ext.top).kind with
+      | .asyncGen => .anext
+      | .coro => .send 1
+      | .gen => .next
+    (logReOp inner n w w.ext.top op, normalize typ val)
   | _ => (w, normalize typ val)
 
 def scriptNormalizeHooks (inner : H) (n : Nat) : H :=

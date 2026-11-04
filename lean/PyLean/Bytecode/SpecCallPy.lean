@@ -199,10 +199,12 @@ theorem kr_keepRecursion {α : Type} (m : RM α) : KeepsRec (keepRecursion m) :=
 
 /-- The keyword hooks give the recursion counter back, as every call into Python code does. -/
 def HooksKeepRec (hk : KwHooks) : Prop :=
-  (∀ a b, KeepsRec (hk.eq a b)) ∧ (∀ o, KeepsRec (hk.str o)) ∧ (∀ d k v, KeepsRec (hk.setItem d k v))
+  (∀ a b, KeepsRec (hk.eq a b)) ∧ (∀ o, KeepsRec (hk.str o)) ∧ (∀ d k v, KeepsRec (hk.setItem d k v)) ∧
+    (∀ d k, KeepsRec (hk.dictGet d k))
 
 theorem kwHooksOf_keepRec (om : ObjModel) (ctx : Ctx) : HooksKeepRec (kwHooksOf om ctx) :=
-  ⟨fun _ _ => kr_keepRecursion _, fun _ => kr_keepRecursion _, fun _ _ _ => kr_keepRecursion _⟩
+  ⟨fun _ _ => kr_keepRecursion _, fun _ => kr_keepRecursion _, fun _ _ _ => kr_keepRecursion _,
+    fun _ _ => kr_keepRecursion _⟩
 
 theorem kr_get : KeepsRec (get : RM Rt) := by
   intro rt a rt' h
@@ -285,7 +287,24 @@ theorem kr_bindKeywords (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List
       | exact kr_posonly hh _ _ _
       | exact kr_unexpectedKeyword hh _ _ _
       | exact kr_dictSetStr _ _ _
-      | exact hh.2.2 _ _ _
+      | exact hh.2.2.1 _ _ _
+      | refine kr_bind ?_ (fun _ => ?_)
+      | refine kr_ite ?_ ?_
+      | split)
+
+theorem kr_kwonlyFill (co : Code) (funcv : Val) :
+    ∀ (l : List Nat) (fast : Array Val) (m : Nat), KeepsRec (kwonlyFill hk co funcv l fast m) := by
+  intro l
+  induction l with
+  | nil => intro fast m; exact kr_pure _
+  | cons i is ih =>
+    intro fast m
+    simp only [kwonlyFill]
+    repeat (first
+      | exact kr_pure _
+      | exact ih _ _
+      | exact kr_getFunc _
+      | exact hh.2.2.2 _ _
       | refine kr_bind ?_ (fun _ => ?_)
       | refine kr_ite ?_ ?_
       | split)
@@ -304,6 +323,7 @@ macro_rules
       | with_reducible exact kr_tupleItems _
       | with_reducible exact kr_dictGetStr _ _
       | with_reducible exact kr_bindKeywords $hh _ _ _ _ _ _
+      | with_reducible exact kr_kwonlyFill $hh _ _ _ _ _
       | with_reducible exact kr_getFunc _
       | with_reducible exact kr_tooManyPositional _ _ _ _ _
       | with_reducible exact kr_missingArguments _ _ _ _

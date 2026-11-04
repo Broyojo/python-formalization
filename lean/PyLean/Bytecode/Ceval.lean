@@ -267,8 +267,12 @@ structure KwHooks where
   eq : Val → Val → RM Bool
   /-- The text of `PyObject_Str(o)`, for `'%S'`. -/
   str : Val → RM String
-  /-- `PyDict_SetItem(d, k, v)` on the fresh `**kwargs` dict. -/
+  /-- `PyDict_SetItem(d, k, v)` on the fresh `**kwargs` dict: hashing and comparing with the keys
+  already there may run Python code (a `str` subclass key's `__hash__`/`__eq__`). -/
   setItem : Val → Val → Val → RM Unit
+  /-- `PyDict_GetItemRef(d, k)` on `__kwdefaults__`, `none` when absent: a stored key that is not
+  a `str` and has the same hash gets its `__eq__` run (`compare_generic`). -/
+  dictGet : Val → Val → RM (Option Val)
 
 /-- `PyUnicode_Check(keyword)` and its `str` data: an exact `str`, or an instance of a `str`
 subclass, whose `str` payload is `base`. The same test as `kwKeyName` in `Uops3.lean`. -/
@@ -290,28 +294,10 @@ def keepRecursion {α : Type} (m : RM α) : RM α := fun rt =>
   | .ok a rt' => .ok a { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
   | .error e rt' => .error e { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
 
-/-- The hooks of the machine's object model: `PyObject_RichCompareBool` is identity, else
-`PyObject_RichCompare` then `PyObject_IsTrue` (a `bool` result read as it is). -/
-def kwHooksOf (om : ObjModel) (ctx : Ctx) : KwHooks where
-  eq a b := keepRecursion do
-    if a == b then pure true else om.isTrue ctx (← om.richCompare ctx a b 2)
-  str o := keepRecursion do
-    let v ← om.str ctx o
-    match kwText (← get) v with
-    | some t => pure t
-    | none => fault "str() did not return a str"
-  setItem d k v := keepRecursion (om.setItem ctx d k v)
-
-/-- Hooks for a `kwnames` of exact `str` only, which never call them (`findKwSlot`, `fmtKw`,
-`posonlyHits` and the `**kwargs` store test for an exact `str` first). -/
-def strKwHooks : KwHooks where
-  eq _ _ := fault "keyword comparison on an exact str"
-  str _ := fault "keyword str() on an exact str"
-  setItem _ _ _ := fault "keyword store on an exact str"
 
 /-- `positional_only_passed_as_keyword`, lines 1674-1735, for one positional-only name `n`: every
 keyword equal to it, in keyword order. An exact `str` keyword is compared by text (the pointer
-test of line 1688 for an interned name, else `PyObject_RichCompareBool` of two exact `str`); any
+test of line 1689 for an interned name, else `PyObject_RichCompareBool` of two exact `str`); any
 other keyword object goes through `PyObject_RichCompareBool(posonly_name, kwname, Py_EQ)`
 (line 1697), which for a `str` subclass overriding `__eq__` runs its reflected `__eq__` first, and
 whose error (`cmp < 0`, `goto fail`, lines 1704-1706) is the result. -/
@@ -345,14 +331,14 @@ def posonlyPassedAsKeyword (hk : KwHooks) (co : Code) (kwnames : List Val) (qual
 
 /-- Index of `name` among the parameters that may be passed by keyword, the first of
 `co_varnames[co_posonlyargcount:total_args]` with that text: for an exact `str` keyword the pointer
-loop (lines 1815-1822) and the `PyObject_RichCompareBool` loop (lines 1825-1835) find the same
+loop (lines 1822-1827) and the `PyObject_RichCompareBool` loop (lines 1830-1839) find the same
 one, the names being interned. -/
 def kwSlot (co : Code) (name : String) : Option Nat :=
   let total := co.argcount + co.kwonlyargcount
   (List.range' co.posonlyargcount (total - co.posonlyargcount)).find?
     fun j => co.localsplusnames.getD j "" == name
 
-/-- The slow loop, lines 1825-1835, for a keyword object that is not an exact `str` (so no
+/-- The slow loop, lines 1830-1839, for a keyword object that is not an exact `str` (so no
 pointer in the first loop is it): `PyObject_RichCompareBool(keyword, varname, Py_EQ)` in order
 (line 1832), the first true one is the slot (`kw_found`), and an error is `kw_fail`
 (lines 1836-1838). -/
@@ -362,7 +348,7 @@ def kwSlotSlow (hk : KwHooks) (co : Code) (keyword : Val) : List Nat → RM (Opt
     if ← hk.eq keyword (.str (co.localsplusnames.getD j "")) then pure (some j)
     else kwSlotSlow hk co keyword js
 
-/-- Lines 1815-1835: the slot a keyword names, if any. -/
+/-- Lines 1819-1839: the slot a keyword names, if any. -/
 def findKwSlot (hk : KwHooks) (co : Code) (keyword : Val) : RM (Option Nat) :=
   match keyword with
   | .str s => pure (kwSlot co s)
@@ -400,9 +386,11 @@ def unexpectedKeyword {α : Type} (hk : KwHooks) (co : Code) (qualname : String)
 
 /-- The keyword loop of `initialize_locals`, lines 1803-1903, over the keywords in `kwnames`
 order; `kwnames` is all of them, for `positional_only_passed_as_keyword`. A keyword that is not a
-`str` is the "keywords must be strings" `TypeError` (lines 1810-1815). One that names a parameter
+`str` is the "keywords must be strings" `TypeError` (lines 1812-1817). One that names a parameter
 fills its local, or raises "got multiple values" if it is set (`kw_found`, lines 1894-1901); one
-that names none goes into `**kwargs` (`PyDict_SetItem` with the keyword object, line 1882), or,
+that names none goes into `**kwargs` (`PyDict_SetItem` with the keyword object, line 1882, through
+`KwHooks.setItem` for every keyword, since comparing with the keys already there may run a
+`str` subclass key's `__eq__`), or,
 with no `**kwargs`, raises the positional-only error when there are positional-only parameters
 and a keyword names one, else the unexpected keyword error. An error in a comparison is the
 result (`kw_fail`). `func->func_qualname` is read from the function object where each message is
@@ -425,10 +413,25 @@ def bindKeywords (hk : KwHooks) (co : Code) (funcv : Val) (kwdict : Val) (kwname
         if co.posonlyargcount != 0 then
           posonlyPassedAsKeyword hk co kwnames (← getFunc funcv).qualname
         unexpectedKeyword hk co (← getFunc funcv).qualname keyword
-      match keyword with
-      | .str s => dictSetStr kwdict s value
-      | k => hk.setItem kwdict k value
+      hk.setItem kwdict keyword value
       bindKeywords hk co funcv kwdict kwnames rest fast
+
+/-- The keyword-only defaults loop of `initialize_locals`, lines 1944-1960: an unset slot
+takes `__kwdefaults__[varname]` (`func->func_kwdefaults` read again each time, since a key's
+`__eq__` may assign it), else counts as missing; an error of the lookup is the result
+(`goto fail_post_args`, :1951-1953). -/
+def kwonlyFill (hk : KwHooks) (co : Code) (funcv : Val) :
+    List Nat → Array Val → Nat → RM (Array Val × Nat)
+  | [], fast, missing => pure (fast, missing)
+  | i :: is, fast, missing => do
+    if fast.getD i .null != .null then kwonlyFill hk co funcv is fast missing
+    else
+      let kd := (← getFunc funcv).kwdefaults
+      if kd != .null then
+        match ← hk.dictGet kd (.str (co.localsplusnames.getD i "")) with
+        | some d => kwonlyFill hk co funcv is (fast.setIfInBounds i d) missing
+        | none => kwonlyFill hk co funcv is fast (missing + 1)
+      else kwonlyFill hk co funcv is fast (missing + 1)
 
 /-- `initialize_locals`, lines 1738-1984. `args` are the positional arguments,
 `kwargs` the keyword objects and values in `kwnames` order. `co` is the code object read when the
@@ -479,20 +482,9 @@ def initializeLocals (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val
     else pure fast
   -- lines 1942-1966
   if co.kwonlyargcount > 0 then
-    let mut fast := fast
-    let mut missing := 0
-    for i in List.range' co.argcount (totalArgs - co.argcount) do
-      if fast.getD i .null != .null then continue
-      let varname := co.localsplusnames.getD i ""
-      if func.kwdefaults != .null then
-        match ← dictGetStr func.kwdefaults varname with
-        | some def_ =>
-          fast := fast.setIfInBounds i def_
-          continue
-        | none => pure ()
-      missing := missing + 1
+    let (fast, missing) ← kwonlyFill hk co funcv (List.range' co.argcount (totalArgs - co.argcount)) fast 0
     if missing != 0 then
-      missingArguments co none fast func.qualname
+      missingArguments co none fast (← getFunc funcv).qualname
     pure fast
   else pure fast
 
@@ -723,6 +715,20 @@ def dictSet (dv key v : Val) : RM Unit := do
 /-- `PyDict_Contains`. -/
 def dictContains (dv key : Val) : RM Bool := do
   return (← dictGet om ctx dv key).isSome
+
+/-- The keyword hooks of the machine's object model: `PyObject_RichCompareBool` is identity,
+else `PyObject_RichCompare` then `PyObject_IsTrue` (a `bool` result read as it is); the dict
+operations are `PyDict_SetItem` and `PyDict_GetItemRef` with the generic comparison. -/
+def kwHooksOf : KwHooks where
+  eq a b := keepRecursion do
+    if a == b then pure true else om.isTrue ctx (← om.richCompare ctx a b 2)
+  str o := keepRecursion do
+    let v ← om.str ctx o
+    match kwText (← get) v with
+    | some t => pure t
+    | none => fault "str() did not return a str"
+  setItem d k v := keepRecursion (dictSet om ctx d k v)
+  dictGet d k := keepRecursion (dictGet om ctx d k)
 
 /-- `_PySet_AddTakeRef` on a set address. -/
 def setAdd (sv key : Val) : RM Unit := do
