@@ -655,6 +655,18 @@ def p_call_generic(r):
     for _ in range(r.randint(4, 10)):
         c, a = r.choice(callees), r.choice(argss)
         out.append(guarded(f"print(K({a}).a if {c!r} == 'K' else {c}({a}))"))
+    # the specialized Python calls: exact-args functions and methods, defaults, keyword-only
+    # parameters (never EXACT_ARGS), *args, keywords to a bound method, f(*t, **d)
+    out.append("def x2(a, b):\n    return (a, b)\n"
+               "def xd(a, b=7):\n    return (a, b)\n"
+               "def xk(a, *, b=3):\n    return (a, b)\n"
+               "def xv(a, *r):\n    return (a, r)\n"
+               "class XM:\n    def m(self, a):\n        return ('m', a)\n    def n(self, a, b=1):\n        return ('n', a, b)\n"
+               "xo = XM()\n"
+               "for _ in range(4):\n"
+               "    print(x2(1, 2), xd(1), xd(1, 2), xk(1), xk(1, b=4), xv(1), xv(1, 2), xo.m(5), xo.n(5), xo.n(a=5, b=6),\n"
+               "          x2(*(1, 2)), xd(*[1], **{'b': 9}), xo.m(*(3,)), xk(*(1,), **{S('b'): 8}))\n")
+    out.append(guarded("for _ in range(3):\n    print(x2(1))") + "\n" + guarded("for _ in range(3):\n    print(xo.m(a=1, z=2))"))
     out.append(guarded("print(dict(**{S('a'): 1}), sorted(dict(**{S('b'): 2, 'c': 3}).items()))"))
     out.append(guarded("print(dict(**{S('a'): 1, 2: 3}))"))
     out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}), h(1, **{S('k'): 3}))\n"
