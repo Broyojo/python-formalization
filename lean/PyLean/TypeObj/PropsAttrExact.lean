@@ -283,4 +283,31 @@ theorem typeGetattroExact_proven : TypeGetattroExact := by
   · simp [typeGetattroImpl, mt, hm, ha, hs] at hm ⊢
   · simp [typeGetattroImpl, mt, hm, ha, hs, attrErr, raiseC] at hm ⊢
 
+/-! ## `type_ready_set_hash` -/
+
+/-- **`type_ready_set_hash`, every branch.** `Objects/typeobject.c:9428-9449`: a type with a
+`tp_hash` is left alone; a type without one whose dict has `__hash__` (every class body that
+defines `__hash__`, since `inherit_slots` leaves `tp_hash` NULL then) is left alone too, so that
+`__hash__` is kept; otherwise `__hash__ = None` goes into the dict and `tp_hash` becomes
+`PyObject_HashNotImplemented`, and nothing else changes. (The dict has string keys, so
+`PyDict_Contains` cannot fail.) -/
+def TypeReadySetHashExact : Prop :=
+  ∀ (t : Addr) (w : World),
+    ((slotOf w t .tp_hash).isSome = true → typeReadySetHash t w = .ok () w) ∧
+    (slotOf w t .tp_hash = none → NameDict.contains (tdata w t).dict "__hash__" = true →
+      typeReadySetHash t w = .ok () w) ∧
+    (∀ c d, slotOf w t .tp_hash = none → NameDict.contains (tdata w t).dict "__hash__" = false →
+      w.get t = .ty c d →
+      typeReadySetHash t w = .ok () (w.setCell t (.ty c { d with
+        dict := NameDict.set d.dict "__hash__" .none
+        slots := setSlot d.slots .tp_hash (some .hashNotImpl) })))
+
+theorem typeReadySetHashExact_proven : TypeReadySetHashExact := by
+  intro t w
+  refine ⟨fun h => ?_, fun h hc => ?_, fun c d h hc hg => ?_⟩
+  · obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp h
+    simp [typeReadySetHash, hx]
+  · simp [typeReadySetHash, h, hc]
+  · simp [typeReadySetHash, h, hc, modType, hg]
+
 end PyLean.TypeObj

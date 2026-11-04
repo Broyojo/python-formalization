@@ -29,7 +29,7 @@ def dedupKeep : List Addr → List Addr → List Addr
   | x :: xs, seen => if seen.contains x then dedupKeep xs seen else dedupKeep xs (x :: seen)
 
 /-- Bytes of the UTF-8 encoding. -/
-def utf8Len (cs : List Char) : Nat := (cs.map Char.utf8Size).sum
+def utf8Bytes (cs : List Char) : Nat := (cs.map Char.utf8Size).sum
 
 /-- The `PyDict_Next` loop of `set_mro_error`, `Objects/typeobject.c:3371-3394`. `off` is the
 C `off`: the bytes `PyOS_snprintf` would have written so far, so the loop stops calling
@@ -42,7 +42,7 @@ def setMroErrorLoop (rt : Rt) : List Addr → Nat → List Char → M (List Char
     if off < 1000 then do
       let n ← classNameOf rt (.obj c)
       let s := (" " ++ n.getD "?").toList
-      let off := off + utf8Len s
+      let off := off + utf8Bytes s
       let text := text ++ s
       if cs ≠ [] ∧ off + 1 < 1000 then setMroErrorLoop rt cs (off + 1) (text ++ [','])
       else setMroErrorLoop rt cs off text
@@ -59,7 +59,7 @@ def setMroError {α : Type} (rt : Rt) (rests : List (List Addr)) : M α := do
   let heads := rests.filterMap List.head?
   let cands := dedupKeep heads []
   let pre := "Cannot create a consistent method resolution order (MRO) for bases".toList
-  let full ← setMroErrorLoop rt cands (utf8Len pre) pre
+  let full ← setMroErrorLoop rt cands (utf8Bytes pre) pre
   let cut := cutUtf8 999 full
   if (full.map Char.utf8Size).sum ≤ 999 ∨ (cut.map Char.utf8Size).sum = 999 then
     typeErr (String.ofList cut)

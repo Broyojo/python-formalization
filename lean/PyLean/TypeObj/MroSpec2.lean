@@ -397,19 +397,19 @@ def commaJoin : List (List Char) → List Char
   | [x] => x
   | x :: y :: r => x ++ ',' :: commaJoin (y :: r)
 
-theorem utf8Len_append (a b : List Char) : utf8Len (a ++ b) = utf8Len a + utf8Len b := by
-  simp [utf8Len]
+theorem utf8Bytes_append (a b : List Char) : utf8Bytes (a ++ b) = utf8Bytes a + utf8Bytes b := by
+  simp [utf8Bytes]
 
-theorem cutUtf8_of_le : ∀ (l : List Char) (n : Nat), utf8Len l ≤ n → cutUtf8 n l = l := by
+theorem cutUtf8_of_le : ∀ (l : List Char) (n : Nat), utf8Bytes l ≤ n → cutUtf8 n l = l := by
   intro l
   induction l with
   | nil => intro n _; simp [cutUtf8]
   | cons c cs ih =>
     intro n h
-    simp only [utf8Len, List.map_cons, List.sum_cons] at h
+    simp only [utf8Bytes, List.map_cons, List.sum_cons] at h
     have h1 : c.utf8Size ≤ n := by omega
     simp only [cutUtf8, h1, ite_true]
-    rw [ih (n - c.utf8Size) (by simp only [utf8Len]; omega)]
+    rw [ih (n - c.utf8Size) (by simp only [utf8Bytes]; omega)]
 
 theorem dedupKeep_eq_loop : ∀ (l seen : List Addr),
     dedupKeep l seen = List.eraseDupsBy.loop (· == ·) l seen := by
@@ -432,8 +432,8 @@ theorem dedupKeep_eraseDups (l : List Addr) : dedupKeep l [] = l.eraseDups := by
 
 theorem setMroErrorLoop_names (rt : Rt) (nm : Addr → String) (w : World)
     (hn : ∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (.str (nm c))) w) :
-    ∀ (cands : List Addr) (off : Nat) (text : List Char), off = utf8Len text →
-      utf8Len text + utf8Len (commaJoin (cands.map (fun c => ' ' :: (nm c).toList))) ≤ 999 →
+    ∀ (cands : List Addr) (off : Nat) (text : List Char), off = utf8Bytes text →
+      utf8Bytes text + utf8Bytes (commaJoin (cands.map (fun c => ' ' :: (nm c).toList))) ≤ 999 →
       setMroErrorLoop rt cands off text w =
         .ok (text ++ commaJoin (cands.map (fun c => ' ' :: (nm c).toList))) w := by
   intro cands
@@ -456,19 +456,19 @@ theorem setMroErrorLoop_names (rt : Rt) (nm : Addr → String) (w : World)
         rfl
       rw [key] at hlen ⊢
       generalize commaJoin ((d :: ds).map (fun c => ' ' :: (nm c).toList)) = X at hlen ih ⊢
-      have hc1 : utf8Len (',' :: X) = 1 + utf8Len X := by simp [utf8Len]; rfl
-      rw [utf8Len_append, hc1] at hlen
+      have hc1 : utf8Bytes (',' :: X) = 1 + utf8Bytes X := by simp [utf8Bytes]; rfl
+      rw [utf8Bytes_append, hc1] at hlen
       have hlt : off < 1000 := by omega
-      have hfit : off + utf8Len (' ' :: (nm c).toList) + 1 < 1000 := by omega
+      have hfit : off + utf8Bytes (' ' :: (nm c).toList) + 1 < 1000 := by omega
       have hne : (d :: ds) ≠ [] := by simp
       rw [setMroErrorLoop]
       simp only [hlt, ite_true, M.bind_app, hcls, Option.getD_some, hs]
       rw [if_pos ⟨hne, hfit⟩]
-      have hc2 : utf8Len [','] = 1 := by simp [utf8Len]; rfl
-      rw [ih (off + utf8Len (' ' :: (nm c).toList) + 1)
+      have hc2 : utf8Bytes [','] = 1 := by simp [utf8Bytes]; rfl
+      rw [ih (off + utf8Bytes (' ' :: (nm c).toList) + 1)
         (text ++ ' ' :: (nm c).toList ++ [','])
-        (by rw [utf8Len_append, utf8Len_append, hc2, hoff])
-        (by rw [utf8Len_append, utf8Len_append, hc2]; omega)]
+        (by rw [utf8Bytes_append, utf8Bytes_append, hc2, hoff])
+        (by rw [utf8Bytes_append, utf8Bytes_append, hc2]; omega)]
       simp
 
 /-- **The MRO conflict message.** `set_mro_error`, `Objects/typeobject.c:3350-3398`: the
@@ -485,7 +485,7 @@ def SetMroErrorMessage : Prop :=
     (∀ c, rt.getOptionalAttr (.obj c) "__name__" w = .ok (some (.str (nm c))) w) →
     let full := "Cannot create a consistent method resolution order (MRO) for bases".toList ++
       commaJoin ((rests.filterMap List.head?).eraseDups.map (fun c => ' ' :: (nm c).toList))
-    utf8Len full ≤ 999 →
+    utf8Bytes full ≤ 999 →
     (setMroError rt rests : M Unit) w = (typeErr (String.ofList full) : M Unit) w
 
 theorem setMroErrorMessage_proven : SetMroErrorMessage := by
@@ -493,9 +493,9 @@ theorem setMroErrorMessage_proven : SetMroErrorMessage := by
   dsimp only
   intro hlen
   have hloop := setMroErrorLoop_names rt nm w hn ((rests.filterMap List.head?).eraseDups)
-    (utf8Len "Cannot create a consistent method resolution order (MRO) for bases".toList)
+    (utf8Bytes "Cannot create a consistent method resolution order (MRO) for bases".toList)
     "Cannot create a consistent method resolution order (MRO) for bases".toList rfl
-    (by rw [← utf8Len_append]; exact hlen)
+    (by rw [← utf8Bytes_append]; exact hlen)
   simp only [setMroError, M.bind_app, dedupKeep_eraseDups, hloop]
   have hcut := cutUtf8_of_le _ 999 hlen
   split
