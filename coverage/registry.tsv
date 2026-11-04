@@ -431,6 +431,7 @@ pyio-bytesio-getbuffer	proven	Lib/_pyio.py	BytesIO.getbuffer,_io_BytesIO_getbuff
 pyio-stringio-write-refusals	proven	Lib/_pyio.py	TextIOWrapper.write,_io_StringIO_write_impl
 pyio-stringio-write-check-order-twins	refuted	Lib/_pyio.py	TextIOWrapper.write,_io_StringIO_write_impl
 pyio-stringio-newline-check	proven	Lib/_pyio.py	TextIOWrapper._check_newline
+pyio-textio-c-tell-after-next-in-range	refuted	Modules/_io/textio.c	_io_TextIOWrapper_tell_impl
 pyio-nldec-chunks	proven	Lib/_pyio.py	IncrementalNewlineDecoder.decode,IncrementalNewlineDecoder.__init__
 pyio-nldec-state	proven	Lib/_pyio.py	IncrementalNewlineDecoder.getstate,IncrementalNewlineDecoder.setstate,IncrementalNewlineDecoder.reset
 pyio-bufferedreader-readinto-twins	refuted	Lib/_pyio.py	BufferedReader._readinto,BufferedIOBase.readinto
