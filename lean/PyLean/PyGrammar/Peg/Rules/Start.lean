@@ -122,7 +122,7 @@ theorem registerStmts_val (a : Ast) (s : PS) :
       · exact ⟨rfl, rfl, rfl⟩
       · exact ⟨rfl, rfl, rfl⟩
 
-/-- `statement` (`Grammar/python.gram:99-101`):
+/-- `statement` (`Grammar/python.gram:99-103`):
 ```
     | a=compound_stmt { (asdl_stmt_seq*)_PyPegen_register_stmts(p, (asdl_stmt_seq*)_PyPegen_singleton_seq(p, a)) }
     | a[asdl_stmt_seq*]=simple_stmts { a }

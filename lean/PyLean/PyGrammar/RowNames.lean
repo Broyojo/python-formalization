@@ -101,13 +101,13 @@ def peg_concat : List String := [
   "_build_concatenated_str"]
 
 def peg_decode_error : List String := [
-  "_Pypegen_raise_decode_error"]
+  ]
 
 def peg_decode_format_spec : List String := [
   "_PyPegen_decoded_constant_from_token"]
 
 def peg_decode_known : List String := [
-  "_Pypegen_raise_decode_error_known_location"]
+  ]
 
 def peg_expect_token : List String := [
   "_PyPegen_expect_token"]
@@ -172,10 +172,16 @@ def peg_warn_lazy : List String := [
 def rule_assert_stmt : List String := [
   "rule:assert_stmt"]
 
+def rule_assert_stmt_invalid : List String := [
+  "rule:assert_stmt"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 
 def rule_del_stmt : List String := [
+  "rule:del_stmt"]
+
+def rule_del_stmt_invalid : List String := [
   "rule:del_stmt"]
 
 def rule_eval : List String := [

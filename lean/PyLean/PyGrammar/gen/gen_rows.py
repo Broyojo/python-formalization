@@ -54,6 +54,8 @@ CREDIT = {
     "pygrammar-rule-file": {GRAM: ["rule:file"]},
     "pygrammar-rule-del-stmt": {GRAM: ["rule:del_stmt"]},
     "pygrammar-rule-augassign": {GRAM: ["rule:augassign"]},
+    "pygrammar-rule-del-stmt-invalid": {GRAM: ["rule:del_stmt"]},
+    "pygrammar-rule-assert-stmt-invalid": {GRAM: ["rule:assert_stmt"]},
     "pygrammar-rule-eval": {GRAM: ["rule:eval"]},
     "pygrammar-rule-interactive": {GRAM: ["rule:interactive"]},
     "pygrammar-rule-statement": {GRAM: ["rule:statement"]},
@@ -229,6 +231,9 @@ def main():
         for r in rows:
             key = (stem, r["name"])
             was = r["status"]
+            if r["note"].startswith("changed-in-3.15:"):
+                # Left for whoever rechecks the body against 3.15.2 (AGENTS.md).
+                continue
             if stem == "Parser__parser.c":
                 r.update(status="excluded", entry="", note=GENERATED)
             elif key in EXCLUDE:

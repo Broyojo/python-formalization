@@ -142,7 +142,8 @@ def ruleEntries : List Entry := [
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_import_name
     statement := "import_name: '\"lazy\"? import names' gives Import(names, is_lazy), is_lazy 1 " ++
-      "exactly when the soft keyword read returned a non-NULL value."
+      "exactly when the soft keyword read returned a non-NULL value; an error in that read, a " ++
+      "missing 'import', or a failing dotted_as_names fails the rule with the mark back."
     source := "Grammar/python.gram:227-228"
     status := .proven
     prop := ``ImportName
@@ -175,11 +176,33 @@ def ruleEntries : List Entry := [
     pyFns := Rows.rule_augassign
     statement := "augassign: each of the 13 augmented assignment tokens gives " ++
       "_PyPegen_augoperator(p, Op) for its operator (+= Add ... //= FloorDiv) and is taken; '@=' " ++
-      "with feature_version < 5 fails CHECK_VERSION with an error; any other token NULL."
+      "with feature_version < 5 fails CHECK_VERSION with the exception for \"The '@' operator " ++
+      "is only supported in Python 3.5 and greater\"; any other token NULL."
     source := "Grammar/python.gram:170-183"
     status := .proven
     prop := ``AugAssign
     thm := some ``augAssign_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-stmt-invalid"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_stmt_invalid
+    statement := "del_stmt, second pass: when the first alternative fails at its lookahead, " ++
+      "invalid_del_stmt runs from the start mark and the rule ends in its outcome."
+    source := "Grammar/python.gram:209-211"
+    status := .proven
+    prop := ``DelStmtInvalid
+    thm := some ``delStmtInvalid_proven
+    notes := scheme },
+  { id := "pygrammar-rule-assert-stmt-invalid"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assert_stmt_invalid
+    statement := "assert_stmt, second pass: invalid_assert_stmt (first in 3.15) runs before " ++
+      "anything else; if it raises, the rule fails with its error and the assert alternative " ++
+      "is not tried; if it returns NULL with no error, 'assert a [, b]' gives Assert(a, b)."
+    source := "Grammar/python.gram:215-217"
+    status := .proven
+    prop := ``AssertStmtInvalid
+    thm := some ``assertStmtInvalid_proven
     notes := scheme },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"
@@ -215,7 +238,7 @@ def ruleEntries : List Entry := [
     pyFns := Rows.rule_statement
     statement := "statement: compound_stmt first, its one-statement sequence through " ++
       "_PyPegen_register_stmts; only if it fails, simple_stmts from the same mark."
-    source := "Grammar/python.gram:99-101"
+    source := "Grammar/python.gram:99-103"
     status := .proven
     prop := ``StatementRule
     thm := some ``statementRule_proven

@@ -43,7 +43,7 @@ def extraLoc (t : Token) (q : PS) : Loc :=
 /-- What a rule function needs on entry to run its alternatives: no error yet, the stack below
 `MAXSTACK`, a mark within the tokens, and the token under the mark read (by `ensureToken`, which
 may run the tokenizer) into state `q`. The other outcome of `ensureToken`, a tokenizer error, is
-`ruleEntry_fail`. -/
+`callRule_extra_fail`. -/
 structure Entered (p q : PS) : Prop where
   ei : p.errorIndicator = false
   level : p.level ≠ MAXSTACK
@@ -216,6 +216,21 @@ theorem callRule_memo_extra {f id : Nat} {p q : PS}
   have hg : (RuleKind.normal == RuleKind.gather) = false := rfl
   simp only [hg, h3, ↓reduceIte, memoDone]
   split <;> simp_all
+
+/-- Entry of a rule function that reads `EXTRA`, when reading the token under the mark fails (a
+tokenizer error): `NULL`, with the state `ensureToken` left and `p->level` back. -/
+theorem callRule_extra_fail {f id : Nat} {p q : PS}
+    (h1 : (ruleOf id).leftRec = false) (h2 : (ruleOf id).withoutInvalid = false)
+    (h3 : (ruleOf id).memo = false) (h5 : (ruleOf id).extra = true)
+    (he : p.errorIndicator = false) (hl : p.level ≠ MAXSTACK)
+    (hq : ensureToken p.enter = (false, q)) :
+    callRule (f + 2) id p = (.null, q.leave) := by
+  have he' : p.enter.errorIndicator = false := he
+  have hp : rulePrologue id (ruleOf id) p = (.inl .null, q) := by
+    simp only [rulePrologue, addLevel_ok p hl, he', h3, Bool.false_eq_true, ↓reduceIte,
+      ruleStart, h5, startLocation, hq, Bool.not_false]
+  simp only [callRule, h1, h2, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+  simp only [ruleBody, hp, retLevel_eq]
 
 /-- Entry of a plain rule function that does not read `EXTRA`: no token is read on entry. -/
 theorem callRule_plain {f id : Nat} {p : PS}
