@@ -346,8 +346,14 @@ def rule_invalid_assignment : List String := [
 def rule_invalid_del_stmt : List String := [
   "rule:invalid_del_stmt"]
 
+def rule_invalid_dotted_as_name : List String := [
+  "rule:invalid_dotted_as_name"]
+
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
+
+def rule_invalid_import_from_as_name : List String := [
+  "rule:invalid_import_from_as_name"]
 
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]

@@ -31,6 +31,7 @@ import PyLean.PyGrammar.Peg.Rules.Patterns
 import PyLean.PyGrammar.Peg.Rules.InvalidTargets
 import PyLean.PyGrammar.Peg.Rules.SumCompose
 import PyLean.PyGrammar.Peg.Rules.AsTarget
+import PyLean.PyGrammar.Peg.Rules.AsTarget2
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -792,8 +793,10 @@ def ruleEntries : List Entry := [
     pyFns := Rows.rule_t_primary
     statement := "t_primary: as primary, in the order '.', '[', genexp, '(' and with &t_lookahead " ++
       "after every alternative: a trailer is taken only when another '(' '[' '.' follows it; " ++
-      "with '.' NAME and no trailer after it the round falls back to atom from the start mark (so " ++
-      "'a.b = 1' leaves the seed a); with no seed, atom with the lookahead holding, NULL without."
+      "with '.' NAME, '[' slices ']', a genexp or '(' [arguments] ')' and no trailer after it, " ++
+      "that alternative fails and the round falls through the later ones to atom &t_lookahead " ++
+      "from the start mark (so 'a.b = 1', 'a[0] = 1' and 'f(x) = 1' leave the seed a or f); " ++
+      "with no seed, atom with the lookahead holding, NULL without."
     source := "Grammar/python.gram:1154-1164"
     status := .proven
     prop := ``TPrimaryRule
@@ -1128,6 +1131,34 @@ def ruleEntries : List Entry := [
     bug := some "pygrammar-import-as-name-target"
     notes := "Counterexample run in the kernel: 'from x import a as b c\\n'. Duplicate of " ++
       "gh-146492." },
+  { id := "pygrammar-rule-invalid-dotted-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_dotted_as_name
+    statement := "invalid_dotted_as_name: dotted_name 'as', the lookahead group _tmp_139 failing, " ++
+      "and an expression a raise \"cannot use <name of a> as import target\" over a (\"literal\" " ++
+      "for 'import a as 1'), NULL with error_indicator set; with _tmp_139 matching (a NAME " ++
+      "followed by ',' ')' ';' or NEWLINE, as in a valid target) NULL with the mark back and no " ++
+      "error; a missing dotted_name, 'as' or expression gives NULL with the mark back. _tmp_139 " ++
+      "is NAME then _tmp_175, and _tmp_175 takes exactly ',' ')' ';' NEWLINE."
+    source := "Grammar/python.gram:1438-1441"
+    status := .proven
+    prop := ``InvalidAsNameRules
+    thm := some ``invalidAsNameRules_proven
+    notes := scheme ++ " Shared with invalid_import_from_as_name; the refutation " ++
+      "pygrammar-rule-dotted-as-name-name-target is the case where the lookahead passes over a " ++
+      "valid name." },
+  { id := "pygrammar-rule-invalid-import-from-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_import_from_as_name
+    statement := "invalid_import_from_as_name: NAME 'as', the lookahead group _tmp_139 failing, " ++
+      "and an expression a raise \"cannot use <name of a> as import target\" over a, NULL with " ++
+      "error_indicator set; with _tmp_139 matching NULL with the mark back and no error; a " ++
+      "missing NAME, 'as' or expression gives NULL with the mark back."
+    source := "Grammar/python.gram:1442-1445"
+    status := .proven
+    prop := ``InvalidAsNameRules
+    thm := some ``invalidAsNameRules_proven
+    notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed

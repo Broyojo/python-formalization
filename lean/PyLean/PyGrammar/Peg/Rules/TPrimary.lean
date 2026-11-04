@@ -367,8 +367,218 @@ theorem tPrimaryStep_proven : TPrimaryStep := by
         alts_nil]
       rfl
 
-/-- `t_primary`: one round (`TPrimaryStep`) and the loop (`LeaderLoop`). -/
-def TPrimaryRule : Prop := TPrimaryStep ∧ LeaderLoop 201
-theorem tPrimaryRule_proven : TPrimaryRule := ⟨tPrimaryStep_proven, leaderLoop_of rfl rfl⟩
+/-! ### `t_primary` when the lookahead after a trailer fails -/
+
+/-- The fourth alternative of `t_primary_raw`, `a=t_primary '(' b=[arguments] ')' &t_lookahead`,
+run after the seed (ending at `e`) from state `y`, fails with no error and leaves `z`: no `(` (7);
+or `(`, `arguments` (187, an optional, no error) and no `)` (8); or `(` `arguments` `)` and the
+lookahead `t_lookahead` (202) failing, as in `f(x) = 1`, where the state is the lookahead's with
+the mark after the `)`. -/
+def TPCallFails (f e : Nat) (y z : PS) : Prop :=
+  (expectToken 7 { y with mark := e } = (.null, z) ∧ z.errorIndicator = false) ∨
+  (∃ (to : Token) (a : Ast) (z1 z2 : PS), expectToken 7 { y with mark := e } = (.tok to, z1) ∧
+    callRule (f + 2) 187 z1 = (a, z2) ∧ z2.errorIndicator = false ∧ expectToken 8 z2 = (.null, z) ∧
+    z.errorIndicator = false) ∨
+  (∃ (to tc : Token) (a x : Ast) (z1 z2 z3 z4 : PS), expectToken 7 { y with mark := e } = (.tok to, z1) ∧
+    callRule (f + 2) 187 z1 = (a, z2) ∧ z2.errorIndicator = false ∧ expectToken 8 z2 = (.tok tc, z3) ∧
+    callRule f 202 z3 = (x, z4) ∧ nonNull x = false ∧ z = { z4 with mark := z3.mark } ∧
+    z.errorIndicator = false)
+
+theorem TPCallFails.ei {f e : Nat} {y z : PS} (h : TPCallFails f e y z) : z.errorIndicator = false := by
+  rcases h with ⟨-, h⟩ | ⟨-, -, -, -, -, -, -, -, h⟩ | ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, h⟩ <;>
+    exact h
+
+/-- The last alternative of `t_primary_raw`, `a=atom &t_lookahead { a }`, as the round's result
+`r`, from the state `z` the alternatives before it left (mark back at the start): `atom` (147)
+with the lookahead holding gives the atom; with it failing, or without an atom, `NULL` with the
+mark back at the start. -/
+def TPAtomTail (f : Nat) (σ z : PS) (r : Ast × PS) : Prop :=
+  (∀ (b x : Ast) (w w' : PS), callRule (f + 3) 147 { z with mark := σ.mark } = (b, w) → b ≠ .null →
+    callRule (f + 2) 202 w = (x, w') →
+    (nonNull x = true → w'.errorIndicator = false → r = (b, { w' with mark := w.mark }.leave)) ∧
+    (nonNull x = false → r = (.null, { w' with mark := σ.mark }.leave))) ∧
+  (∀ (w : PS), callRule (f + 3) 147 { z with mark := σ.mark } = (.null, w) →
+    r = (.null, { w with mark := σ.mark }.leave))
+
+/-- `a=atom &t_lookahead { a }`, the last alternative of `t_primary_raw`. -/
+def tpAtomAlt : Alt :=
+  { items := [(.call (.rule 147)), (.look true (.rule 202))], action := some (.var 0), nvars := 1,
+    guardInvalid := false, extra := false }
+
+theorem tpAtomTail_of {f : Nat} {σ z : PS} {st : Int × Int} (hze : z.errorIndicator = false) :
+    TPAtomTail f σ z ((runAlts (f + 6) [tpAtomAlt] false σ.mark st { z with mark := σ.mark }).1.getD .null,
+      (runAlts (f + 6) [tpAtomAlt] false σ.mark st { z with mark := σ.mark }).2.leave) := by
+  have E : ({ z with mark := σ.mark } : PS).errorIndicator = false := hze
+  simp only [tpAtomAlt]
+  refine ⟨fun b x w w' hat hb hla => ⟨fun hx hw'e => ?_, fun hx => ?_⟩, fun w hat => ?_⟩
+  · rw [alts_ok (by rfl) E (by
+        dsimp only
+        rw [items_call (by rw [call_rule, hat]) hb, items_look (by rw [call_rule, hla]) hx, items_nil]),
+      altResult_plain rfl rfl]
+    simp only [evalA, pure, StateT.pure, hw'e, Bool.or_false]
+    simp [nonNull]
+    try (cases b <;> simp_all)
+  · rw [alts_fail (by rfl) E (by
+        dsimp only
+        rw [items_call (by rw [call_rule, hat]) hb, items_look_fail (by rw [call_rule, hla]) hx]),
+      alts_nil]
+    rfl
+  · rw [alts_fail (by rfl) E (by dsimp only; rw [items_call_null (by rw [call_rule, hat])]), alts_nil]
+    rfl
+
+/-- The `'(' [arguments] ')' &t_lookahead` alternative failing as `TPCallFails` says, from the
+start mark with the seed found. -/
+theorem tpCall_items {f e : Nat} {σ y z : PS} {v : Ast} (hv : v ≠ .null)
+    (hS : Seeded 201 σ.mark v e { y with mark := σ.mark }) (h : TPCallFails f e y z) :
+    runItems (f + 6) [(.call (.rule 201)), (.call (.tok 7)), (.opt (.rule 187)), (.call (.tok 8)),
+      (.look true (.rule 202))] #[] false { y with mark := σ.mark } = ((none, false), z) := by
+  have hit : runCall (f + 5) (.rule 201) { y with mark := σ.mark } = (v, { y with mark := e }) := by
+    rw [call_rule]
+    exact callRule_leader_hit rfl rfl hS.level hS.lt hS.find
+  rcases h with ⟨h1, -⟩ | ⟨to, a, z1, z2, h1, h2, h2e, h3, -⟩ |
+      ⟨to, tc, a, x, z1, z2, z3, z4, h1, h2, h2e, h3, h4, hx, rfl, -⟩
+  · rw [items_call hit hv, items_call_null (by rw [call_tok, h1])]
+  · rw [items_call hit hv, items_call (by rw [call_tok, h1]) (by simp),
+      items_opt (by rw [call_rule, h2]) h2e, items_call_null (by rw [call_tok, h3])]
+  · rw [items_call hit hv, items_call (by rw [call_tok, h1]) (by simp),
+      items_opt (by rw [call_rule, h2]) h2e, items_call (by rw [call_tok, h3]) (by simp),
+      items_look_fail (by rw [call_rule, h4]) hx]
+
+/-- A round of `t_primary_raw` with a seed `v` where a trailer matched but `&t_lookahead` after
+it failed (no further `(`, `[` or `.`: the trailer is the assignment's own last target):
+* `[` slices `]` with the lookahead failing (`a[0] = 1`): the subscript alternative fails, the
+  mark goes back, `genexp` (which needs `(`) gives `NULL`, the call alternative fails
+  (`TPCallFails`), and the round is `atom &t_lookahead` from the start mark (`TPAtomTail`);
+* a `genexp` with the lookahead failing (`f(x for x in y) = 1`): likewise, through the call
+  alternative to `atom`;
+* `(` [arguments] `)` with the lookahead failing (`f(x) = 1`, inside `TPCallFails`): to `atom`.
+So a trailer never ends a `t_primary`: `target_with_star_atom` takes the last one. Hypotheses: as
+`TPrimaryStep`; the outcome states keep the seed (`SeedKept`) where a later alternative calls
+`t_primary` again. -/
+def TPrimaryFallback : Prop := ∀ (f : Nat) (σ : PS) (v : Ast) (e : Nat),
+  σ.errorIndicator = false → σ.level + 1 < MAXSTACK → σ.mark < σ.fill →
+  (σ.memo.getD σ.mark []).find? (fun x => x.1 == 1201) = some (1201, v, e) → e ≤ σ.fill → v ≠ .null →
+  let u : PS := { σ.enter with mark := e }
+  (∀ (sl x : Ast) (to tc : Token) (x0 x1 x2 x3 x4 y z : PS),
+    expectToken 23 u = (.null, x0) → x0.errorIndicator = false →
+    expectToken 9 { x0 with mark := e } = (.tok to, x1) → callRule (f + 4) 145 x1 = (sl, x2) →
+    sl ≠ .null → expectToken 10 x2 = (.tok tc, x3) → callRule (f + 2) 202 x3 = (x, x4) →
+    nonNull x = false → x4.errorIndicator = false → SeedKept 201 σ.mark v e (σ.level + 1) x4 →
+    callRule (f + 4) 185 { x4 with mark := e } = (.null, y) → y.errorIndicator = false →
+    SeedKept 201 σ.mark v e (σ.level + 1) y → TPCallFails f e y z →
+    TPAtomTail f σ z (ruleBody (f + 11) 201 (ruleOf 201) σ)) ∧
+  (∀ (g x : Ast) (x0 x1 y y2 z : PS),
+    expectToken 23 u = (.null, x0) → x0.errorIndicator = false →
+    expectToken 9 { x0 with mark := e } = (.null, x1) → x1.errorIndicator = false →
+    callRule (f + 4) 185 { x1 with mark := e } = (g, y) → g ≠ .null →
+    callRule (f + 3) 202 y = (x, y2) → nonNull x = false → y2.errorIndicator = false →
+    SeedKept 201 σ.mark v e (σ.level + 1) y2 → TPCallFails f e y2 z →
+    TPAtomTail f σ z (ruleBody (f + 11) 201 (ruleOf 201) σ)) ∧
+  (∀ (x0 x1 y z : PS),
+    expectToken 23 u = (.null, x0) → x0.errorIndicator = false →
+    expectToken 9 { x0 with mark := e } = (.null, x1) → x1.errorIndicator = false →
+    callRule (f + 4) 185 { x1 with mark := e } = (.null, y) → y.errorIndicator = false →
+    SeedKept 201 σ.mark v e (σ.level + 1) y → TPCallFails f e y z →
+    TPAtomTail f σ z (ruleBody (f + 11) 201 (ruleOf 201) σ))
+
+theorem tPrimaryFallback_proven : TPrimaryFallback := by
+  intro f σ v e he hlv hlt hf hef hv
+  have hσl : σ.level ≠ MAXSTACK := by omega
+  have hl1 : σ.level + 1 ≠ MAXSTACK := by omega
+  have he' : σ.enter.errorIndicator = false := he
+  have hS : Seeded 201 σ.mark v e σ.enter := ⟨hf, hlt, hl1⟩
+  have hit : ∀ g (S : PS), Seeded 201 σ.mark v e S → S.mark = σ.mark →
+      runCall (g + 2) (.rule 201) S = (v, { S with mark := e }) := by
+    intro g S hS' hm
+    rw [call_rule]
+    exact callRule_leader_hit rfl rfl hS'.level (hm ▸ hS'.lt) (hm ▸ hS'.find)
+  have E : ∀ x : PS, x.errorIndicator = false → ({ x with mark := σ.mark } : PS).errorIndicator = false :=
+    fun x hx => hx
+  have fillE : ∀ {x y : PS} {ty : Nat} {a : Ast}, expectToken ty x = (a, y) → x.fill ≤ y.fill :=
+    fun hx => (tg_expect hx).le
+  have fillC : ∀ {x y : PS} {g r : Nat} {a : Ast}, callRule g r x = (a, y) → x.fill ≤ y.fill :=
+    fun hx => (tg_call hx).le
+  have hSu : Seeded 201 σ.mark v e { σ.enter with mark := e } := ⟨hf, hlt, hS.level⟩
+  rw [ruleBody_extra rfl rfl rfl he hσl hlt]
+  simp only [show ruleOf 201 = r201 from rfl, r201]
+  refine ⟨fun sl x to tc x0 x1 x2 x3 x4 y z k0 k0e k1 hsl hsln k2 hla hx h4e hk4 hg hye hky hz => ?_,
+    fun g x x0 x1 y y2 z k0 k0e k1 k1e hg hgn hla hx h2e hk2 hz => ?_,
+    fun x0 x1 y z k0 k0e k1 k1e hg hye hky hz => ?_⟩
+  · have a0 : ({ σ.enter with mark := e } : PS).fill ≤ x0.fill := fillE k0
+    have a1 : ({ x0 with mark := e } : PS).fill ≤ x1.fill := fillE k1
+    have f4 : σ.fill ≤ x4.fill := Nat.le_trans a0 (Nat.le_trans a1 (Nat.le_trans (fillC hsl)
+      (Nat.le_trans (fillE k2) (fillC hla))))
+    have hS4 : Seeded 201 σ.mark v e { x4 with mark := σ.mark } :=
+      hk4.seeded hl1 (Nat.lt_of_lt_of_le hlt f4) σ.mark
+    have fy : σ.fill ≤ y.fill :=
+      Nat.le_trans f4 (show ({ x4 with mark := e } : PS).fill ≤ y.fill from fillC hg)
+    have hSy : Seeded 201 σ.mark v e { y with mark := σ.mark } :=
+      hky.seeded hl1 (Nat.lt_of_lt_of_le hlt fy) σ.mark
+    rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call (hit _ _ hS rfl) hv, items_call_null (by rw [call_tok, k0])]),
+      alts_fail (by rfl) (E x0 k0e) (by
+      dsimp only
+      rw [items_call (hit _ _ (hSu.after_expect k0 k0e hef) rfl) hv,
+        items_call (by rw [call_tok, k1]) (by simp), items_call (by rw [call_rule, hsl]) hsln,
+        items_call (by rw [call_tok, k2]) (by simp), items_look_fail (by rw [call_rule, hla]) hx]),
+      alts_fail (by rfl) (E x4 h4e) (by
+      dsimp only
+      rw [items_call (hit _ _ hS4 rfl) hv, items_call_null (by rw [call_rule, hg])]),
+      alts_fail (by rfl) (E y hye) (by exact tpCall_items hv hSy hz)]
+    exact tpAtomTail_of hz.ei
+  · have hS0 : Seeded 201 σ.mark v e { x0 with mark := σ.mark } := hSu.after_expect k0 k0e hef
+    have f0 : e ≤ x0.fill :=
+      Nat.le_trans (show e ≤ ({ σ.enter with mark := e } : PS).fill from hef) (fillE k0)
+    have hS1 : Seeded 201 σ.mark v e { x1 with mark := σ.mark } :=
+      (show Seeded 201 σ.mark v e { x0 with mark := e } from ⟨hS0.find, hS0.lt, hS0.level⟩).after_expect
+        k1 k1e f0
+    have a0 : ({ σ.enter with mark := e } : PS).fill ≤ x0.fill := fillE k0
+    have a1 : ({ x0 with mark := e } : PS).fill ≤ x1.fill := fillE k1
+    have a2 : ({ x1 with mark := e } : PS).fill ≤ y.fill := fillC hg
+    have fy2 : σ.fill ≤ y2.fill := Nat.le_trans a0 (Nat.le_trans a1 (Nat.le_trans a2 (fillC hla)))
+    have hSy2 : Seeded 201 σ.mark v e { y2 with mark := σ.mark } :=
+      hk2.seeded hl1 (Nat.lt_of_lt_of_le hlt fy2) σ.mark
+    rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call (hit _ _ hS rfl) hv, items_call_null (by rw [call_tok, k0])]),
+      alts_fail (by rfl) (E x0 k0e) (by
+      dsimp only
+      rw [items_call (hit _ _ hS0 rfl) hv, items_call_null (by rw [call_tok, k1])]),
+      alts_fail (by rfl) (E x1 k1e) (by
+      dsimp only
+      rw [items_call (hit _ _ hS1 rfl) hv, items_call (by rw [call_rule, hg]) hgn,
+        items_look_fail (by rw [call_rule, hla]) hx]),
+      alts_fail (by rfl) (E y2 h2e) (by exact tpCall_items hv hSy2 hz)]
+    exact tpAtomTail_of hz.ei
+  · have hS0 : Seeded 201 σ.mark v e { x0 with mark := σ.mark } := hSu.after_expect k0 k0e hef
+    have f0 : e ≤ x0.fill :=
+      Nat.le_trans (show e ≤ ({ σ.enter with mark := e } : PS).fill from hef) (fillE k0)
+    have hS1 : Seeded 201 σ.mark v e { x1 with mark := σ.mark } :=
+      (show Seeded 201 σ.mark v e { x0 with mark := e } from ⟨hS0.find, hS0.lt, hS0.level⟩).after_expect
+        k1 k1e f0
+    have a0 : ({ σ.enter with mark := e } : PS).fill ≤ x0.fill := fillE k0
+    have a1 : ({ x0 with mark := e } : PS).fill ≤ x1.fill := fillE k1
+    have a2 : ({ x1 with mark := e } : PS).fill ≤ y.fill := fillC hg
+    have fy : σ.fill ≤ y.fill := Nat.le_trans a0 (Nat.le_trans a1 a2)
+    have hSy : Seeded 201 σ.mark v e { y with mark := σ.mark } :=
+      hky.seeded hl1 (Nat.lt_of_lt_of_le hlt fy) σ.mark
+    rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call (hit _ _ hS rfl) hv, items_call_null (by rw [call_tok, k0])]),
+      alts_fail (by rfl) (E x0 k0e) (by
+      dsimp only
+      rw [items_call (hit _ _ hS0 rfl) hv, items_call_null (by rw [call_tok, k1])]),
+      alts_fail (by rfl) (E x1 k1e) (by
+      dsimp only
+      rw [items_call (hit _ _ hS1 rfl) hv, items_call_null (by rw [call_rule, hg])]),
+      alts_fail (by rfl) (E y hye) (by exact tpCall_items hv hSy hz)]
+    exact tpAtomTail_of hz.ei
+
+/-- `t_primary`: one round (`TPrimaryStep`), the rounds where the lookahead after a trailer fails
+(`TPrimaryFallback`), and the loop (`LeaderLoop`). -/
+def TPrimaryRule : Prop := TPrimaryStep ∧ TPrimaryFallback ∧ LeaderLoop 201
+theorem tPrimaryRule_proven : TPrimaryRule :=
+  ⟨tPrimaryStep_proven, tPrimaryFallback_proven, leaderLoop_of rfl rfl⟩
 
 end PyLean.PyGrammar.Peg
