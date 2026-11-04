@@ -226,6 +226,9 @@ def rule_compound_stmt : List String := [
 def rule_compound_stmt_more : List String := [
   "rule:compound_stmt"]
 
+def rule_decorators : List String := [
+  "rule:decorators"]
+
 def rule_del_stmt : List String := [
   "rule:del_stmt"]
 
@@ -312,6 +315,9 @@ def rule_keyword_stmts : List String := [
 
 def rule_lazy_import_diagnosed : List String := [
   "rule:invalid_import"]
+
+def rule_match_stmt : List String := [
+  "rule:match_stmt"]
 
 def rule_power : List String := [
   "rule:power"]

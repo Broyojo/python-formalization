@@ -102,6 +102,8 @@ CREDIT = {
     "pygrammar-rule-term": {GRAM: ["rule:term"]},
     "pygrammar-rule-shift-expr": {GRAM: ["rule:shift_expr"]},
     "pygrammar-rule-invalid-assert-stmt": {GRAM: ["rule:invalid_assert_stmt"]},
+    "pygrammar-rule-match-stmt": {GRAM: ["rule:match_stmt"]},
+    "pygrammar-rule-decorators": {GRAM: ["rule:decorators"]},
     "pygrammar-rule-annotation-default": {GRAM: ["rule:annotation", "rule:star_annotation",
                                                  "rule:default"]},
     "pygrammar-lex-nextc-in-buffer": {

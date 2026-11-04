@@ -550,6 +550,10 @@ RULE_FORMS = [
     "{e} << {f} >> {e}", "{e} | {f} ^ {e} & {f}", "{e} | {f} | {e}", "{e} + not {f}", "{e} * not {f}",
     "{e} << not {f}", "{e} -", "{e} & & {f}", "assert {e}, {f} := {e}", "assert {e} = {f}, {e}",
     "assert ({e}) = {f}", "assert {e}, ({f}) = {e}",
+    # match_stmt and decorators (Peg/Rules/Match.lean, Decorators.lean)
+    "match {e}:\n case 1: pass", "match {e}\n case 1: pass", "match {e}:\ncase 1: pass", "match {e}, {f}:\n case _: pass",
+    "match:\n case 1: pass", "@{e}\n@{f}\n@{e}\ndef g(): pass", "@{e} @{f}\ndef g(): pass", "@\ndef g(): pass",
+    "@{e}\n\ndef g(): pass", "@{e}\nclass C: pass",
 ]
 
 

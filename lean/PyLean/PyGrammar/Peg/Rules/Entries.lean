@@ -19,6 +19,8 @@ import PyLean.PyGrammar.Peg.Rules.AsyncWith
 import PyLean.PyGrammar.Peg.Rules.LeftRec
 import PyLean.PyGrammar.Peg.Rules.LeftRec2
 import PyLean.PyGrammar.Peg.Rules.InvalidAssert
+import PyLean.PyGrammar.Peg.Rules.Match
+import PyLean.PyGrammar.Peg.Rules.Decorators
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -737,6 +739,30 @@ def ruleEntries : List Entry := [
     thm := some ``invalidAssertStmt_proven
     notes := scheme ++ " Hypothesis exprName a = some nm: every node expression returns has a " ++
       "name (only Slice lacks one, and only a subscript holds a Slice)." },
+  { id := "pygrammar-rule-match-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_match_stmt
+    statement := "match_stmt: soft keyword 'match', subject, ':' NEWLINE INDENT case_block+ DEDENT " ++
+      "gives Match(subject, cases) under CHECK_VERSION(10) with the exact message below 10; no " ++
+      "soft keyword: NULL in the first pass; second pass, with no soft keyword or no ':' after " ++
+      "the subject, invalid_match_stmt decides."
+    source := "Grammar/python.gram:487-490"
+    status := .proven
+    prop := ``MatchStmt
+    thm := some ``matchStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-decorators"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_decorators
+    statement := "decorators: each line '@' named_expression NEWLINE gives the expression (NULL " ++
+      "without the NEWLINE or the '@'); the rule is the lines in source order as one sequence, " ++
+      "ending after the last NEWLINE, and NULL with no line (the + loop, proven by induction on " ++
+      "the rounds of handle_alt_loop)."
+    source := "Grammar/python.gram:271"
+    status := .proven
+    prop := ``DecoratorsRule
+    thm := some ``decoratorsRule_proven
+    notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed
