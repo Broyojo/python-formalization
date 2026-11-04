@@ -161,6 +161,10 @@ def entries : List Entry := [
     "slot_sq_length returns __len__()'s result through _PyNumber_Index when it is in [0, PY_SSIZE_T_MAX], raises ValueError for a negative one and OverflowError naming the result's type for a larger one, and propagates exceptions of __len__ and __index__."
     "typeobject.c:10718-10745; len() of I(2**70) for an int subclass I names 'I' on 3.15.2"
     ``SlotSqLengthExact ``slotSqLengthExact_proven,
+  p "typeobj-align-up-layout" ty ["_align_up", "PyType_GetTypeDataSize"]
+    "_align_up is the least multiple of ALIGNOF_MAX_ALIGN_T (16) at or above its argument; a type made from a spec with basicsize -n puts its data at the base size rounded up and has tp_basicsize that plus n rounded up (PyType_GetTypeDataSize n rounded up); a positive basicsize is kept and 0 inherits the base's."
+    "typeobject.c:5193-5196, :5339-5344, :5626-5643, :6153-6160; _testlimitedcapi.make_sized_heaptypes(1, -1) gives __basicsize__ 48, data at 32, 16 bytes on 3.15.2"
+    ``AlignUpLayout ``alignUpLayout_proven,
   p "typeobj-vectorcall-method-exact" ty ["vectorcall_method", "vectorcall_unbound"]
     "vectorcall_method looks the name up on type(args[0]): missing raises AttributeError(name); an unbound method descriptor is called with all the arguments, self first; anything else is bound by __get__ (its exception propagating) or taken as it is and called with the arguments after self, whatever their number."
     "typeobject.c:3086-3098, :3156-3172"

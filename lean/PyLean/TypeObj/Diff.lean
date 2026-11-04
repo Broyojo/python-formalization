@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.TypeObj.Harness
 import PyLean.TypeObj.StructSeqDiff
+import PyLean.TypeObj.FromSpec
 
 /-! Differential-testing handler for `typeobj` cases (`"mod": "typeobj"`).
 
@@ -152,6 +153,10 @@ def run (fn : String) (j : Json) : Except String Json := do
       (← b.getArr?).toList.mapM parseStmt
     let main ← (← (← field j "main").getArr?).toList.mapM parseStmt
     pure (Json.mkObj [("ok", toJson (runScenario codes main))])
+  | "fromspec_sizes" =>
+    let e ← getInt j "extra"
+    let sp ← getInt j "spec"
+    pure (Json.mkObj [("ok", toJson (sizedHeaptypes e sp))])
   | "ss_newtype" | "ss_inittype" | "ss_repr" | "ss_capi" | "ss_new" | "ss_reduce" | "ss_replace" =>
     StructSeq.Diff.run fn j
   | _ => throw s!"unknown fn {fn}"

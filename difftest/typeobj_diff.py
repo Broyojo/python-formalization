@@ -215,13 +215,23 @@ def canon(v, depth=12):
     return f"<{tn}>"
 
 
-ADDR = re.compile(r"0x[0-9a-f]+")
+# Object addresses only: " at 0x7f..." in reprs. A bare hex number elsewhere ("can't decode byte
+# 0xc3") is part of the message and is compared as it is.
+ADDR = re.compile(r" at 0x[0-9a-f]+")
 
 
 warnings.simplefilter("ignore")
 
 
+def run_sized(case):
+    import _testlimitedcapi
+    _, sub, _, _, off, size = _testlimitedcapi.make_sized_heaptypes(case["extra"], case["spec"])
+    return {"ok": [sub.__basicsize__, off, size]}
+
+
 def run_python(case):
+    if case["fn"] == "fromspec_sizes":
+        return run_sized(case)
     src_lines = []
     block_src(case["main"], case["codes"], 0, src_lines)
     trace = []
@@ -231,14 +241,14 @@ def run_python(case):
             s = str(e)
         except BaseException:
             s = "<str failed>"
-        return f"!{type(e).__name__}: {ADDR.sub('0x0', s)}"
+        return f"!{type(e).__name__}: {ADDR.sub(' at 0x0', s)}"
 
     def probe(tag, f):
         try:
             out = canon(f())
         except BaseException as e:
             out = text(e)
-        trace.append(f"{tag}={ADDR.sub('0x0', out)}")
+        trace.append(f"{tag}={ADDR.sub(' at 0x0', out)}")
 
     def note(tag, out):
         trace.append(f"{tag}={out}")
@@ -2567,7 +2577,23 @@ FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_cla
             fam_funcattrs, fam_repin, fam_exact, fam_exact, fam_exact, fam_exact3, fam_exact3]
 
 
+def gen_sized(rng):
+    """PyType_FromMetaclass's layout (_align_up): a base of 16 + extra bytes and a subclass spec
+    of a negative (extend), zero (inherit) or large enough positive basicsize."""
+    extra = rng.choice([0, 1, 7, 8, 15, 16, 17, 31, 32, 33, 100, rng.randrange(0, 5000)])
+    k = rng.randrange(3)
+    if k == 0:
+        spec = -rng.choice([1, 8, 15, 16, 17, 32, 33, 100, rng.randrange(1, 5000)])
+    elif k == 1:
+        spec = 0
+    else:
+        spec = 16 + extra + rng.choice([0, 1, 15, 16, rng.randrange(0, 1000)])
+    return {"mod": "typeobj", "fn": "fromspec_sizes", "extra": extra, "spec": spec}
+
+
 def gen_case(rng):
+    if rng.random() < 0.03:
+        return gen_sized(rng)
     g = G(rng)
     if rng.random() < 0.5:
         g.descr_classes()
