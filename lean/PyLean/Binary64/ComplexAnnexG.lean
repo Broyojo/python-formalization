@@ -489,4 +489,172 @@ theorem prodAnnexG_proven : ProdAnnexG := by
       simp only [hb', Bool.false_eq_true, ite_false]
       exact inf_of_nonfin n1 n2 hb'
 
+/-! ## Division -/
+
+theorem inf_notZero {x : F64} (h : x.isInf = true) : x.isZero = false := by
+  cases hz : x.isZero
+  · rfl
+  · rw [isInf_false_of_finite (isFinite_of_isZero hz)] at h; cases h
+
+theorem absLt_inf {x : F64} (h : x.isInf = true) : absLt x = F64.inf false := by
+  unfold absLt
+  have hl : F64.lt x d0 = x.sign := by
+    have hn := not_nan_of_inf h
+    have h0 : d0.isNaN = false := isNaN_false_of_finite d0_isFinite
+    have h0i : d0.isInf = false := isInf_false_of_finite d0_isFinite
+    simp [F64.lt, hn, h0, h, h0i]
+  rw [hl]
+  have hx := eq_inf_of_isInf h
+  cases hs : x.sign
+  · simp only [Bool.false_eq_true, ite_false]; rw [hx, hs]
+  · simp only [ite_true]; rw [hx, hs, MathInt.neg_inf]; rfl
+
+theorem absLt_nan {x : F64} (h : x.isNaN = true) : absLt x = x := by
+  unfold absLt
+  simp [F64.lt, h]
+
+theorem absLt_fin {x : F64} (h : x.isFinite = true) :
+    (absLt x).isFinite = true ∧ (absLt x).toRat = Rat.abs x.toRat := by
+  unfold absLt
+  rw [lt_of_finite h d0_isFinite, d0_toRat]
+  by_cases hl : x.toRat < 0
+  · simp only [hl, decide_true, ite_true]
+    rw [neg_isFinite, toRat_neg, abs_of_nonpos (Rat.le_of_lt hl)]
+    exact ⟨h, rfl⟩
+  · simp only [hl, decide_false, Bool.false_eq_true, ite_false]
+    exact ⟨h, (abs_of_nonneg (by grind)).symm⟩
+
+theorem ge_fin {x y : F64} (hx : x.isFinite = true) (hy : y.isFinite = true) :
+    F64.ge x y = decide (y.toRat ≤ x.toRat) := by
+  unfold F64.ge F64.le
+  rw [lt_of_finite hy hx, eq_of_finite hy hx]
+  by_cases h : y.toRat < x.toRat
+  · simp [h, Rat.le_of_lt h]
+  · by_cases h' : y.toRat = x.toRat
+    · simp [h', Rat.le_refl]
+    · simp only [h, h', decide_false, Bool.or_false]
+      symm
+      simp only [decide_eq_false_iff_not]
+      intro hle
+      rcases Rat.le_iff_lt_or_eq.1 hle with h2 | h2
+      · exact h h2
+      · exact h' h2
+
+theorem ge_inf_fin {y : F64} (hy : y.isFinite = true) : F64.ge (F64.inf false) y = true := by
+  have hn := isNaN_false_of_finite hy
+  have hi := isInf_false_of_finite hy
+  simp [F64.ge, F64.le, F64.lt, hn, hi, inf_isNaN, inf_isInf, (MathInt.inf_bits false).2]
+
+theorem ge_fin_inf {y : F64} (hy : y.isFinite = true) : F64.ge y (F64.inf false) = false := by
+  have hn := isNaN_false_of_finite hy
+  have hi := isInf_false_of_finite hy
+  simp [F64.ge, F64.le, F64.lt, F64.eq, hn, hi, inf_isNaN, inf_isInf, (MathInt.inf_bits false).2]
+
+theorem ge_nan_l {x y : F64} (h : x.isNaN = true) : F64.ge x y = false := by
+  simp [F64.ge, F64.le, F64.lt, F64.eq, h]
+
+theorem ge_nan_r {x y : F64} (h : y.isNaN = true) : F64.ge x y = false := by
+  simp [F64.ge, F64.le, F64.lt, F64.eq, h]
+
+theorem ge_inf_inf : F64.ge (F64.inf false) (F64.inf false) = true := by decide +kernel
+
+theorem eq_inf_d0 : F64.eq (F64.inf false) d0 = false := by decide +kernel
+
+theorem div_fin_inf {x y : F64} (hx : x.isFinite = true) (hy : y.isInf = true) :
+    F64.div x y = F64.zero (x.sign != y.sign) := (div_spec x y (inf_notZero hy)).infR hx hy
+
+theorem add_inf_fin {x y : F64} (hx : x.isInf = true) (hy : y.isFinite = true) : F64.add x y = x :=
+  (add_spec x y).infL hx (isNaN_false_of_finite hy) (fun h => by
+    rw [isInf_false_of_finite hy] at h; cases h)
+
+theorem add_fin_inf {x y : F64} (hx : x.isFinite = true) (hy : y.isInf = true) : F64.add x y = y :=
+  (add_spec x y).infR hx hy
+
+theorem add_zero_fin {x : F64} (hx : x.isFinite = true) (t : Bool) :
+    (F64.add x (F64.zero t)).isFinite = true := by
+  rw [add_of_finite hx (zero_isFinite t), zero_toRat, Rat.add_zero]
+  split
+  · exact zero_isFinite _
+  · rename_i h
+    have hz : x.isZero = false := by
+      cases hh : x.isZero
+      · rfl
+      · exact absurd (toRat_of_isZero hh) h
+    rw [ofRat_toRat hx hz]; exact hx
+
+theorem zero_add_fin {x : F64} (hx : x.isFinite = true) (t : Bool) :
+    (F64.add (F64.zero t) x).isFinite = true := by
+  rw [add_of_finite (zero_isFinite t) hx, zero_toRat, Rat.zero_add]
+  split
+  · exact zero_isFinite _
+  · rename_i h
+    have hz : x.isZero = false := by
+      cases hh : x.isZero
+      · rfl
+      · exact absurd (toRat_of_isZero hh) h
+    rw [ofRat_toRat hx hz]; exact hx
+
+theorem neg_zero' (t : Bool) : (F64.zero t).neg = F64.zero (!t) := by cases t <;> decide +kernel
+
+theorem div_nan_l {x y : F64} (h : x.isNaN = true) : (F64.div x y).isNaN = true := by
+  simp [F64.div, h, qnan_isNaN]
+
+theorem div_nan_r {x y : F64} (h : y.isNaN = true) : (F64.div x y).isNaN = true := by
+  simp [F64.div, h, qnan_isNaN]
+
+theorem mul_nan_r {x y : F64} (h : y.isNaN = true) : (F64.mul x y).isNaN = true := by
+  simp [F64.mul, h, qnan_isNaN]
+
+theorem add_nan_r {x y : F64} (h : y.isNaN = true) : (F64.add x y).isNaN = true := by
+  simp [F64.add, h, qnan_isNaN]
+
+theorem add_nan_l {x y : F64} (h : x.isNaN = true) : (F64.add x y).isNaN = true := by
+  simp [F64.add, h, qnan_isNaN]
+
+theorem div_inf_inf {x y : F64} (hx : x.isInf = true) (hy : y.isInf = true) :
+    (F64.div x y).isNaN = true := (div_spec x y (inf_notZero hy)).infInf hx hy
+
+/-- `0.0 * e` is a zero for every finite `e`. -/
+theorem d0_mul_zero {e : F64} (he : e.isFinite = true) : (F64.mul d0 e).isZero = true := by
+  rw [mul_of_finite d0_isFinite he, d0_toRat, Rat.zero_mul, if_pos rfl]
+  exact zero_isZero _
+
+theorem lin_zero2 {x y c d : Rat} (hxy : x * x + y * y ≠ 0) (h1 : x * c + y * d = 0)
+    (h2 : y * c - x * d = 0) : c = 0 ∧ d = 0 := by
+  have e1 : (x * x + y * y) * c = 0 := by grind
+  have e2 : (x * x + y * y) * d = 0 := by grind
+  rcases Rat.mul_eq_zero.1 e1 with h | h
+  · exact absurd h hxy
+  rcases Rat.mul_eq_zero.1 e2 with h' | h'
+  · exact absurd h' hxy
+  exact ⟨h, h'⟩
+
+/-- The recomputation of `_Py_c_quot` for an infinite dividend (:230-233). -/
+theorem quot_recov {x y c d : F64} (ux : Unit x) (uy : Unit y) (hc : c.isFinite = true)
+    (hd : d.isFinite = true) (hxy : ¬ (x.toRat = 0 ∧ y.toRat = 0)) (hcd : ¬ (c.toRat = 0 ∧ d.toRat = 0)) :
+    ((F64.mul (F64.inf false) (F64.add (F64.mul x c) (F64.mul y d))).isInf ||
+      (F64.mul (F64.inf false) (F64.sub (F64.mul y c) (F64.mul x d))).isInf) = true := by
+  obtain ⟨f1, v1⟩ := mul_unit_l ux hc
+  obtain ⟨f2, v2⟩ := mul_unit_l uy hd
+  obtain ⟨f3, v3⟩ := mul_unit_l uy hc
+  obtain ⟨f4, v4⟩ := mul_unit_l ux hd
+  have f4n : (F64.mul x d).neg.isFinite = true := by rw [neg_isFinite]; exact f4
+  have n1 : (F64.add (F64.mul x c) (F64.mul y d)).isNaN = false := add_fin_notNaN f1 f2
+  have n2 : (F64.sub (F64.mul y c) (F64.mul x d)).isNaN = false := add_fin_notNaN f3 f4n
+  apply Classical.byContradiction
+  intro hno
+  have hz1 : (F64.add (F64.mul x c) (F64.mul y d)).isZero = true := by
+    cases hz : (F64.add (F64.mul x c) (F64.mul y d)).isZero
+    · exact absurd (by simp [inf_mul_isInf n1 hz]) hno
+    · rfl
+  have hz2 : (F64.sub (F64.mul y c) (F64.mul x d)).isZero = true := by
+    cases hz : (F64.sub (F64.mul y c) (F64.mul x d)).isZero
+    · exact absurd (by simp [inf_mul_isInf n2 hz]) hno
+    · rfl
+  have e1 := add_isZero_exact f1 f2 hz1
+  have e2 := add_isZero_exact f3 f4n hz2
+  rw [v1, v2] at e1
+  rw [toRat_neg, v3, v4] at e2
+  exact hcd (lin_zero2 (sq_ne_of hxy) e1 (by grind))
+
 end PyLean.Binary64
