@@ -809,6 +809,9 @@ itertools-count-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_count_impl
 itertools-count-doc-agree-total-add	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next
 itertools-count-doc-agree-closed	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-failed-add	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-no-reentry	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-reentry-twice	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-hands-out-once	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-float	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-repeat-consistent	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next,repeat_len,repeat_repr
 itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new
@@ -820,12 +823,14 @@ itertools-product-doc-agree	refuted	Modules/itertoolsmodule.c	product_new,produc
 itertools-product-doc-agree-iterable	proven	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
 itertools-permutations-spec	proven	Modules/itertoolsmodule.c	itertools_permutations_impl,permutations_next,permutations_next_lock_held
 itertools-count-formulas	proven	Doc/library/itertools.rst	
-itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
-itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
+itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
 itertools-groupby-no-crash-no-reentry	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-groupby-eq-error	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-grouper-eq-false	proven	Modules/itertoolsmodule.c	_grouper_next
-itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	Py_LOCAL_INLINE
+itertools-groupby-next-step-error	proven	Modules/itertoolsmodule.c	groupby_next,groupby_step
+itertools-grouper-step-error	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
+itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	groupby_step
 itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
 itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl,itertools__tee_impl
