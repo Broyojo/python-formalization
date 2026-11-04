@@ -45,6 +45,8 @@ import PyLean.Datetime.LocalZoneProps
 import PyLean.Datetime.TdFloat
 import PyLean.Datetime.DeltaObjProps
 import PyLean.Datetime.CalendarCProps
+import PyLean.Datetime.IsoDateCProps
+import PyLean.Datetime.SubclassCtor
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -663,11 +665,6 @@ def entries : List Entry := [
     statement := "For every valid object, each C accessor reads back from the packed bytes the field the Python class keeps as an attribute."
     source := "C/Python twins", status := .proven
     prop := ``PackedAccessors, thm := some ``packedAccessors_proven },
-  { id := "datetime-subclass-construction", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["C new_date_subclass_ex", "C new_datetime_ex", "C new_datetime_subclass_fold_ex", "C call_subclass_fold", "C new_time_ex", "C new_time_subclass_fold_ex"]
-    statement := "The base classes take the fast path, which checks the fields; a subclass constructor whose fold keyword defaults to 0 sees the object's fold."
-    source := "invariant", status := .proven
-    prop := ``SubclassConstruction, thm := some ``subclassConstruction_proven },
   { id := "datetime-format-via-strftime", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__format__", "time.__format__", "C datetime_date___format___impl", "C datetime_time___format___impl"]
     statement := "format(x, '') is str(x) and format(x, f) is x.strftime(f) for nonempty f, for date and time, in both twins."
@@ -704,12 +701,12 @@ def entries : List Entry := [
     source := "method vs equivalent method", status := .proven
     prop := ``StrptimeMethods, thm := some ``strptimeMethods_proven },
   { id := "datetime-date-isoformat-roundtrip", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C date_str", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C parse_digits", "C is_digit", "C _find_isoformat_datetime_separator"]
+    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C date_str", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C _find_isoformat_datetime_separator"]
     statement := "For every date d, date.fromisoformat(d.isoformat()) == d and datetime.fromisoformat(d.isoformat()) == datetime(d.year, d.month, d.day), in both twins."
     source := "date.fromisoformat docs (\"the output of date.isoformat()\" is accepted)", status := .proven
     prop := ``DateIsoformatRoundtrip, thm := some ``dateIsoformatRoundtrip_proven },
   { id := "datetime-date-fromiso-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromisoformat", "C datetime_date_fromisoformat_impl", "C parse_isoformat_date", "C parse_digits"]
+    pyFns := ["date.fromisoformat", "C datetime_date_fromisoformat_impl", "C parse_isoformat_date"]
     statement := "For every string s, C and Python date.fromisoformat(s) return the same date or both raise the same exception class."
     source := "C/Python twins", status := .refuted
     prop := ``DateFromisoTwins, thm := some ``dateFromisoTwins_refuted
@@ -1450,7 +1447,39 @@ def entries : List Entry := [
     pyFns := ["C ymd_to_ord", "C days_before_year", "C days_before_month", "C is_leap", "_ymd2ord", "_days_before_year", "_days_before_month"]
     statement := "For every year in 1..9999 and month in 1..12, C days_before_year, days_before_month and ymd_to_ord equal Python's _days_before_year, _days_before_month and _ymd2ord; at year 0 (unvalidated pickle state) days_before_year is -365 in C and -366 in Python."
     source := "C/Python twins", status := .proven
-    prop := ``YmdToOrdTwins, thm := some ``ymdToOrdTwins_proven }
+    prop := ``YmdToOrdTwins, thm := some ``ymdToOrdTwins_proven },
+  { id := "datetime-date-subclass-ctor", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_date_subclass_ex", "C new_date_ex", "C new_datetime_ex", "date.fromordinal"]
+    statement := "new_date_subclass_ex(y, m, d, cls) is Python's cls(y, m, d) for every class and all C-int fields: date and datetime check the fields as their constructors do (ValueError, the same text; midnight for datetime), another class is called with (y, m, d) and no keyword."
+    source := "C/Python twins", status := .proven
+    prop := ``DateSubclassCtor, thm := some ``dateSubclassCtor_proven },
+  { id := "datetime-new-datetime-ex-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_datetime_ex", "C new_time_ex"]
+    statement := "new_datetime_ex (DateTime_FromDateAndTime) is datetime(y, m, d, hh, mm, ss, us, tzinfo) and new_time_ex (Time_FromTime) is time(hh, mm, ss, us, tzinfo) for all C-int fields and a None or tzinfo tzinfo, with fold 0."
+    source := "C/Python twins (C API constructors against the Python constructors)", status := .proven
+    prop := ``NewDatetimeExTwins, thm := some ``newDatetimeExTwins_proven },
+  { id := "datetime-subclass-fold-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C call_subclass_fold", "C new_datetime_subclass_fold_ex", "C new_time_subclass_fold_ex", "datetime.replace", "time.replace"]
+    statement := "For every class whose constructor treats an omitted fold like fold=0, new_datetime_subclass_fold_ex and new_time_subclass_fold_ex agree with replace's type(self)(..., fold=fold): the base classes run the same checks, a subclass gets the fields positionally in order and fold as a keyword, which C passes only when nonzero."
+    source := "C/Python twins", status := .proven
+    prop := ``SubclassFoldTwins, thm := some ``subclassFoldTwins_proven },
+  { id := "datetime-replace-subclass-fold-any", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C call_subclass_fold", "C new_datetime_subclass_fold_ex", "datetime.replace"]
+    statement := "datetime.replace on a subclass agrees between the twins for every subclass constructor."
+    source := "C/Python twins", status := .refuted
+    prop := ``DtReplaceSubclassAnyTwins, thm := some ``dtReplaceSubclassAnyTwins_refuted
+    bug := some "datetime-pydatetime-replace-fold-keyword"
+    notes := "A subclass whose __new__ takes no fold keyword: Python's replace always passes fold=0 and raises TypeError; C's call_subclass_fold leaves a zero fold out and succeeds." },
+  { id := "datetime-parse-digits-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C parse_digits", "C is_digit"]
+    statement := "parse_digits(p, var, n) fails exactly when one of the n bytes from p is not an ASCII digit (is_digit is the 0x30..0x39 test), and otherwise returns p + n and the value the C loop accumulates."
+    source := "invariant (no read past the NUL terminator; the value of the digits)", status := .proven
+    prop := ``ParseDigitsSpec, thm := some ``parseDigitsSpec_proven },
+  { id := "datetime-parse-isoformat-date-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C parse_isoformat_date", "C parse_digits", "C is_digit"]
+    statement := "parse_isoformat_date returns -1 unless the first four bytes are digits; YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww give iso_to_ymd's date or -3 + its code; a wrong separator is -2 in both branches, a missing day digit -4, a missing week digit -3; YYYY-MM-DD and YYYYMMDD give their fields."
+    source := "code comment (return codes, :946-955); invariant", status := .proven
+    prop := ``ParseIsoDateCSpec, thm := some ``parseIsoDateCSpec_proven }
 ]
 
 end PyLean.Datetime

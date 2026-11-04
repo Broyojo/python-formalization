@@ -206,7 +206,7 @@ def dateSubDeltaPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
 
 /-- `add_date_timedelta` with `negate = 1`, :3547-3559. -/
 def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
-  let (y, m, d) ← normalizeYMDC y m (d + -t.days)
+  let (y, m, d) ← normalizeDateC y m (d + -t.days)
   checkDate y m d
 
 /-! ### Time tuples -/
@@ -532,7 +532,7 @@ def normalizeDatetimeC (y m d hh mi s us : Int) : Py DT :=
   let (mi, s) := normalizePair mi s 60
   let (hh, mi) := normalizePair hh mi 60
   let (d, hh) := normalizePair d hh 24
-  normalizeTailC hh mi s us (normalizeYMDC y m d)
+  normalizeTailC hh mi s us (normalizeDateC y m d)
 
 /-- `add_datetime_timedelta`, :6241-6266, with the `factor` of the caller. -/
 def addDatetimeTimedeltaC (dt : DT) (delta : Delta) (factor : Int) : Py DT := do

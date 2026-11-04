@@ -339,7 +339,7 @@ theorem normalizeDatetimeC_eq (y m d hh mi s us : Int) :
       normalizeTailC ((hh + (mi + (s + us / 1000000) / 60) / 60) % 24) ((mi + (s + us / 1000000) / 60) % 60)
         ((s + us / 1000000) % 60) (us % 1000000)
         (normalizeYMDC y m (d + (hh + (mi + (s + us / 1000000) / 60) / 60) / 24)) := by
-  unfold normalizeDatetimeC
+  unfold normalizeDatetimeC normalizeDateC
   rw [np_us]
   dsimp only
   rw [np_60]

@@ -267,11 +267,15 @@ def normalizeYMDC (y m d : Int) : Py (Int × Int × Int) :=
     else .error (.overflowError "date value out of range")
   | none => .error (.overflowError "date value out of range")
 
-/-- `add_date_timedelta`, _datetimemodule.c:3547-3559 (`negate = 0`), then
-`new_date_subclass_ex` (whose `check_date_args` cannot fail after
-normalization). -/
+/-- `normalize_date`, _datetimemodule.c:837-841: `normalize_y_m_d`, used by
+`add_date_timedelta` and `normalize_datetime`. -/
+def normalizeDateC (y m d : Int) : Py (Int × Int × Int) := normalizeYMDC y m d
+
+/-- `add_date_timedelta`, _datetimemodule.c:3547-3559 (`negate = 0`): `normalize_date`
+(:3556), then `new_date_subclass_ex` for the base class, i.e. `new_date_ex`, whose
+`check_date_args` cannot fail after normalization. -/
 def dateAddC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
-  let (y, m, d) ← normalizeYMDC y m (d + t.days)
+  let (y, m, d) ← normalizeDateC y m (d + t.days)
   checkDate y m d
 
 /-! ### ISO calendar -/
