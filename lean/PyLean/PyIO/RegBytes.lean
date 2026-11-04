@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.PyIO.BytesShareProps
+import PyLean.PyIO.BytesCallbacks
 
 /-! Registry entries for `io.BytesIO`'s shared buffer (`PyIO/BytesShare.lean`,
 `PyIO/BytesShareProps.lean`). -/
@@ -43,6 +44,40 @@ def bytesShareEntries : List Entry := [
     status := .refuted, prop := ``Share.BytesIOHashConsistent, thm := some ``Share.bytesIOHashConsistent_refuted
     bug := some "pyio-bytesio-stale-shared-hash"
     notes := "b = BytesIO(); b.write(b'abcd'); hash(b.getvalue()); b.seek(0); b.write(b'efgh'); v = b.getvalue(): v == b'efgh' and v not in {b'efgh'} on 3.15.2 (SHARED_BUF tests only the reference count, bytesio.c:81); fixed on main by HASHED_BUF. Duplicate of gh-160181 (closed)." }
+]
+
+def bytesCallbackEntries : List Entry := [
+  { id := "pyio-bytesio-write-callback", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["write_bytes_lock_held", "_io_BytesIO_write_impl", "check_closed", "check_exports", "BytesIO.write"]
+    statement := "write(x) where x.__buffer__ runs arbitrary stream actions (close, getbuffer, tell, seek, write) and then returns a buffer or raises: in both twins a raising __buffer__ propagates with its actions' effects kept and nothing written; the closed check (C ValueError('I/O operation on closed file.'), _pyio ValueError('write to closed file')), C's export check (BufferError) and the write position all come from the state the actions left; otherwise the data is written exactly as write(bytes) writes it on that state."
+    source := "the bodies bytesio.c:236-297 (PyObject_GetBuffer at :242 before the checks at :246 and the position at :257) and _pyio.py:955-973 (memoryview(b) at :958 before :959 and :967); invariant: no operation on a closed or exported buffer"
+    status := .proven, prop := ``BytesIOWriteCallback, thm := some ``bytesIOWriteCallback_proven
+    notes := "A write that checked closed or read pos before asking for the buffer fails it. The actions are the Hook type with exceptions swallowed; difftest/pyio_callback_diff.py runs them through a class with __buffer__." },
+  { id := "pyio-bytesio-writelines-iter", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_writelines_impl", "IOBase.writelines"]
+    statement := "writelines(it) on every BytesIO and every iterator (whose __next__ may act on the stream and then yield an item or raise) is next(it) and write(item) one after another, stopping at the first exception, in both twins: an exception from __next__ propagates, a refused item (str, non-buffer, raising __buffer__) or a stream closed or exported by an earlier callback stops it with write's exception; a non-iterable raises TypeError(\"'T' object is not iterable\") and changes nothing; a closed stream raises the closed-file ValueError before iter() is called. For plain bytes items it is the list-based model of pyio-bytesio-writelines."
+    source := "bytesio.c:845-846 ('This is equivalent to calling write() for each element'), Doc/library/io.rst IOBase.writelines; the bodies bytesio.c:850-876 and _pyio.py:583-591"
+    status := .proven, prop := ``BytesIOWritelinesIter, thm := some ``bytesIOWritelinesIter_proven
+    notes := "A writelines that swallowed the iterator's exception, kept going after a failed write, or called iter() before the closed check fails it. Smoke-tested on 3.15.2: writelines(it) and the next/write loop gave the same outcome, contents, position and closed flag on 10000 generated iterators, both twins." },
+  { id := "pyio-bytesio-reinit-obj", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO___init___impl", "BytesIO.__init__"]
+    statement := "__init__(v) on an io.BytesIO with no view, for a bytes-like v that is not an exact bytes: on an open stream the contents become v, the position 0 and the stream stays open; on a closed one it raises the closed-file ValueError after emptying it, even for an empty v. With a __buffer__ that acts on the stream, C runs it on the reset stream, writes v where it left the position and rewinds; _pyio runs it on the old stream and then replaces the buffer and position, closed or not, dropping old views."
+    source := "the bodies bytesio.c:1084-1114 (write then self->pos = 0 at :1103-1110) and _pyio.py:884-894"
+    status := .proven, prop := ``BytesIOReinitObj, thm := some ``bytesIOReinitObj_proven
+    notes := "An __init__ that forgot self->pos = 0 fails the open-stream clause. _pyio's bytearray += turns a raising __buffer__ into TypeError(\"can't concat Buf to bytearray\"); __init__(None) is the no-value path in both (bytesio.c:1097, _pyio.py:890). Smoke-tested on 3.15.2 (scratch probes, and the callback difftest's reinititem op)." },
+  { id := "pyio-bytesio-seek-spec", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_seek_impl"]
+    statement := "For every io.BytesIO whose position and size fit Py_ssize_t and every pos and whence in C range, seek raises OverflowError('new position too large') exactly when pos + position (whence 1) or pos + size (whence 2) exceeds sys.maxsize, and otherwise moves to that sum (pos for whence 0) clamped at 0 and returns it; the closed check, the negative whence-0 refusal and the bad whence refusal come in source order."
+    source := "the body bytesio.c:774-815 (guards :789-793, :797-801); invariant: no silent wraparound of a Py_ssize_t position"
+    status := .proven, prop := ``BytesIOSeekSpec, thm := some ``bytesIOSeekSpec_proven
+    notes := "Stated with the mathematical sum, so a seek that wrapped pos instead of raising fails it. Smoke-tested on 3.15.2 over 20000 seeks with positions and offsets at sys.maxsize boundaries. The clinic conversions before it are pyio-bytesio-twins-same-class." },
+  { id := "pyio-bytesio-seek-twins", pyFile := "Lib/_pyio.py"
+    pyFns := ["_io_BytesIO_seek_impl", "BytesIO.seek"]
+    statement := "For every open BytesIO and every pos and whence in C range, io.BytesIO.seek and _pyio.BytesIO.seek agree on the value or the exception class."
+    source := "invariant: C accelerator vs pure-Python twin"
+    status := .refuted, prop := ``BytesIOSeekTwins, thm := some ``bytesIOSeekTwins_refuted
+    bug := some "pyio-bytesio-twin-argument-handling"
+    notes := "seek(sys.maxsize), seek(sys.maxsize, 1): C OverflowError('new position too large') (bytesio.c:789-793), _pyio 2 * sys.maxsize (_pyio.py:988-990)." }
 ]
 
 end PyLean.PyIO

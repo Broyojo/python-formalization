@@ -6,6 +6,7 @@ import PyLean.PyIO.DiffText
 import PyLean.PyIO.DiffBuffered
 import PyLean.PyIO.DiffFile
 import PyLean.PyIO.BytesShare
+import PyLean.PyIO.BytesCallbacks
 
 /-! Differential-testing handler for `pyio` cases (`"mod": "pyio"`).
 
@@ -81,6 +82,44 @@ def runShare (fn : String) (j : Json) : Option (Except String Json) :=
     return encResults (Share.runS init (← getBool j "keep") ops).2
   | _ => none
 
+/-- `{"kind": "data", "b": [...]}`, `{"kind": "hooked", "hook": [...], "r": [...] or null}`,
+`{"kind": "str", "s": [...]}` or `{"kind": "obj", "t": name}`. -/
+def getWItem (j : Json) : Except String WItem := do
+  match ← getStr j "kind" with
+  | "data" => return .data (← bNats (← field j "b"))
+  | "hooked" =>
+    let hook ← (← (← field j "hook").getArr?).toList.mapM getHook
+    match j.getObjVal? "r" with
+    | .ok .null | .error _ => return .hooked hook none
+    | .ok v => return .hooked hook (some (← bNats v))
+  | "str" => return .bad (.str (← bNats (← field j "s")))
+  | "obj" => return .bad (.obj (← getStr j "t"))
+  | k => throw s!"unknown item kind {k}"
+
+def getIStep (j : Json) : Except String IStep := do
+  let hook ← (← (← field j "hook").getArr?).toList.mapM getHook
+  match j.getObjVal? "item" with
+  | .ok x => return .item hook (← getWItem x)
+  | .error _ => return .raise hook
+
+def getCbOp (j : Json) : Except String (BOp ⊕ CBOp) := do
+  match ← getStr j "op" with
+  | "writeitem" => return .inr (.writeItem (← getWItem (← field j "x")))
+  | "reinititem" => return .inr (.reinitItem (← getWItem (← field j "x")))
+  | "writelinesit" =>
+    match j.getObjVal? "notiter" with
+    | .ok t => return .inr (.writelinesIt (.notIter (← t.getStr?)))
+    | .error _ => return .inr (.writelinesIt (.iter (← (← (← field j "steps").getArr?).toList.mapM getIStep)))
+  | _ => return .inl (← getBOp j)
+
+def runCallbacks (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "bytescb_c" | "bytescb_py" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getCbOp
+    return encResults (runOps (if fn = "bytescb_c" then stepCbC else stepCbP) (bInit init) ops).2
+  | _ => none
+
 def encRun : Py (List (Py Val)) → Json
   | .ok rs => encResults rs
   | .error e => encPy (fun (_ : Unit) => Json.null) (.error e)
@@ -112,6 +151,9 @@ def handler : Handler := fun fn j =>
       | none =>
         match runShare fn j with
         | some r => some r
-        | none => some (run fn j)
+        | none =>
+          match runCallbacks fn j with
+          | some r => some r
+          | none => some (run fn j)
 
 end PyLean.PyIO

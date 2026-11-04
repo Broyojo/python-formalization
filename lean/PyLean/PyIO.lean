@@ -214,7 +214,7 @@ def coreEntries : List Entry := [
   { id := "pyio-bytesio-writelines", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_writelines_impl", "IOBase.writelines"]
     statement := "writelines(ls) on an open BytesIO equals calling write() for each element in turn, stopping at the first failure: it reaches the same state and returns None when every write succeeds (both twins)."
-    source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:846-847"
+    source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:845-846"
     status := .proven, prop := ``BytesIOWritelines, thm := some ``bytesIOWritelines_proven },
   { id := "pyio-bytesio-pickle-roundtrip", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["bytesio_getstate", "bytesio_setstate", "bytesio_setstate_lock_held", "BytesIO.__getstate__",
@@ -259,9 +259,9 @@ def coreEntries : List Entry := [
   { id := "pyio-truncate-result", pyFile := "Modules/_io/stringio.c"
     pyFns := ["_io_StringIO_truncate_impl", "_io_BytesIO_truncate_impl", "BytesIO.truncate"]
     statement := "On an open stream, truncate(v) with an int v >= 0 cuts the contents to v and returns v (C and Python BytesIO with no views, C StringIO). On a closed C stream it raises the closed-file ValueError whatever the int."
-    source := "Doc/library/io.rst:431-434 (IOBase.truncate: 'Resize the stream to the given size in bytes ... The new file size is returned'); stringio.c:464-465 check closed before converting the argument"
+    source := "Doc/library/io.rst:431-438 (IOBase.truncate: 'Resize the stream to the given size in bytes ... The new file size is returned'); stringio.c:464-465 check closed before converting the argument. Doc wording: for v past the end both twins return v while the size stays (bytesio.c:717, :726; _pyio.py:1019-1020), so the result is the requested size, not 'the new file size' of io.rst:437-438; the statement says 'returns v'"
     status := .proven, prop := ``TruncateResult, thm := some ``truncateResult_proven
-    notes := "Hypotheses: an int in C range, and no views for BytesIO, where views are the documented refusal (getbuffer note). Truncate never extends these streams." },
+    notes := "Hypotheses: an int in C range, and no views for BytesIO, where views are the documented refusal (getbuffer note). Truncate never extends these streams: io.BytesIO(b'abcd').truncate(10) returns 10 and getvalue() stays b'abcd' in both twins (3.15.2), a doc-wording gap, not a defect worth a report (io.rst:435 allows a resize that 'can extend', and BytesIO's docstring says 'at most size bytes')." },
   { id := "pyio-bytesio-truncate-recheck", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_truncate_impl"]
     statement := "With an argument whose __index__ runs arbitrary stream operations and returns an int in C range and >= 0, io.BytesIO.truncate raises the closed-file ValueError if they closed the stream, BufferError if they left a view alive, and otherwise cuts the contents the operations left. With no operations it is truncate(v)."
@@ -300,6 +300,6 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``BytesIOReadintoOverlap, thm := some ``bytesIOReadintoOverlap_proven }
 ]
 
-def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries ++ bytesShareEntries
+def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries ++ bytesShareEntries ++ bytesCallbackEntries
 
 end PyLean.PyIO

@@ -298,7 +298,7 @@ def truncArg (st : St) : Option Int → Py Int
   | some v => asLong v
 
 /-- `_io_BytesIO_truncate_impl`, bytesio.c:692-727, for `None` or an int: `string_size` is
-set before `resize_buffer_lock_held` (:716-722), which may shrink or replace the object,
+set before `resize_buffer_lock_held` (:717-723), which may shrink or replace the object,
 and restored if it fails. -/
 def truncate (st : St) (size : Option Int) : St × Py Val :=
   if st.buf.isNone then (st, .error C.closedErr) else
