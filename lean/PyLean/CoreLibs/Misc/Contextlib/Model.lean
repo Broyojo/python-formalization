@@ -20,14 +20,6 @@ variable {σ V : Type}
 
 /-! ### Abstract base classes -/
 
-/-- `AbstractContextManager.__enter__`, Lib/contextlib.py:31-33, and
-`AbstractAsyncContextManager.__aenter__`, :55-57. -/
-def absEnter {O : Type} (self : O) : O := self
-
-/-- `AbstractContextManager.__exit__`, Lib/contextlib.py:35-38, and
-`AbstractAsyncContextManager.__aexit__`, :59-62: `None`, so the exception propagates. -/
-def absExit {O : Type} (_self : O) (_excInfo : Option ExcId) : Option Bool := none
-
 /-- A class as `_check_methods` reads it: its `__mro__`, each entry the names in `__dict__` with
 `true` for a `None` value. -/
 abbrev MroDicts := List (List (String × Bool))
@@ -74,11 +66,7 @@ def withStmt {R : Type} (cm : CM σ V) (body : V → St σ → St σ × Res R) (
 
 /-! ### `ContextDecorator` -/
 
-/-- `ContextDecorator._recreate_cm`, Lib/contextlib.py:75-85, and
-`AsyncContextDecorator._recreate_cm`, :124-127. -/
-def ContextDecorator.recreateCm {C : Type} (self : C) : C := self
-
-/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py:113-116, and of `AsyncContextDecorator.__call__`, :160-163:
+/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py:114-116, and of `AsyncContextDecorator.__call__`, :160-162:
 the branch for a plain function; `recreate` builds the context manager for this call. The branches for generator,
 coroutine and async generator functions, new in 3.15, are not modelled. -/
 def ContextDecorator.call {R C : Type} (recreate : St σ → St σ × Res C) (toCM : C → CM σ V)
@@ -121,25 +109,39 @@ structure GCM where
   live : Bool
   deriving Repr, DecidableEq
 
-/-- `_GeneratorContextManagerBase.__init__`, Lib/contextlib.py:170-177: `func(*args, **kwds)` has
-run when `make` returns. `doc` is `getattr(func, "__doc__", None)`; `classDoc` is
-`type(self).__doc__`. The result is the object's `__doc__` beside the state. -/
-def gcmDoc (doc classDoc : Option String) : Option String :=
-  match doc with
-  | some d => some d
-  | none => classDoc
+/-- `getattr(obj, name, None)`: `r` is the lookup, whose `AttributeError` gives the default `None`
+(`.ok none`); any other exception propagates. -/
+def getattrDefault {α : Type} (s : St σ) (r : Res (Option α)) : Res (Option α) :=
+  match r with
+  | .error e => if s.h.isInst e "AttributeError" then .ok none else .error e
+  | .ok v => .ok v
+
+/-- `_GeneratorContextManagerBase.__init__`, Lib/contextlib.py:170-177. `call` is
+`func(*args, **kwds)`, :171, whose generator is kept in `St.g`; `getDoc` is the lookup of
+`func.__doc__` at :174, `none` for a `None` value; `classDoc` is `type(self).__doc__`, :176. The
+attributes of :172 make the object `live`; the second component is the `__doc__` set at :177. -/
+def gcmInit {D : Type} (call : St σ → St σ × Res Unit) (getDoc : St σ → St σ × Res (Option D))
+    (classDoc : Option D) (s : St σ) : St σ × Res (GCM × Option D) :=
+  match call s with
+  | (s, .error e) => (s, .error e)
+  | (s, .ok ()) =>
+    match getDoc s with
+    | (s, d) =>
+      match getattrDefault s d with
+      | .error e => (s, .error e)
+      | .ok none => (s, .ok ({ live := true }, classDoc))
+      | .ok (some d) => (s, .ok ({ live := true }, some d))
 
 /-- `_GeneratorContextManagerBase._recreate_cm`, Lib/contextlib.py:184-188:
-`self.__class__(self.func, self.args, self.kwds)`, an `AttributeError` once `__enter__` deleted the
-attributes. `fresh` is the state of a new generator from `func`. -/
-def gcmRecreate (className : String) (self : GCM) (fresh : St σ → St σ × Res Unit) (s : St σ) :
-    St σ × Res GCM :=
-  if self.live then
-    match fresh s with
-    | (s, .error e) => (s, .error e)
-    | (s, .ok ()) => (s, .ok { live := true })
+`self.__class__(self.func, self.args, self.kwds)`. `init` is the `__init__` of the class with the
+stored arguments. Once `__enter__` deleted the attributes, reading `self.func` is an
+`AttributeError`, raised while `handled` is being handled. -/
+def gcmRecreate {D : Type} (className : String) (self : GCM)
+    (init : St σ → St σ × Res (GCM × Option D)) (handled : Option ExcId) (s : St σ) :
+    St σ × Res (GCM × Option D) :=
+  if self.live then init s
   else
-    let (s, e) := s.raiseNew clsAttr s!"'{className}' object has no attribute 'func'"
+    let (s, e) := s.raiseNew clsAttr s!"'{className}' object has no attribute 'func'" handled
     (s, .error e)
 
 /-- `_GeneratorContextManager.__enter__`, Lib/contextlib.py:198-205, and
@@ -200,8 +202,11 @@ def gcmExit (cfg : Cfg) (ops : GenOps σ V) (inst : Instantiate σ) (s : St σ)
         else if exc ≠ value then (s, .error exc)
         else ({ s with h := s.h.setTb exc tb }, .ok false)
 
-/-- What leaving an `async def` does to a `StopIteration`: the coroutine's frame turns it into
-`RuntimeError("coroutine raised StopIteration")`, `gen_send_ex2`, Objects/genobject.c. -/
+/-- What leaving an `async def` does to an exception: the handler that wraps a coroutine's body
+calls `INTRINSIC_STOPITERATION_ERROR` (Python/codegen.c:1259), `stopiteration_error`,
+Python/intrinsics.c:141-182, which turns a `StopIteration` (a subclass too) into a new
+`RuntimeError("coroutine raised StopIteration")` whose `__cause__` and `__context__` are the
+`StopIteration` (:176-178); anything else, `StopAsyncIteration` included, passes. -/
 def coBoundary {α : Type} (s : St σ) (r : Res α) : St σ × Res α :=
   match r with
   | .ok v => (s, .ok v)
@@ -227,28 +232,38 @@ def agcmEnter (ops : GenOps σ V) (self : GCM) (s : St σ) : GCM × St σ × Res
   let (s, r) := coBoundary s r
   (g, s, r)
 
-/-- `contextmanager(func)(*args, **kwds)`, Lib/contextlib.py:338-368, and `asynccontextmanager`,
-:371-401: `helper` returns a `_GeneratorContextManager` whose state is ready. As a context manager,
-it is `gcmEnter` and `gcmExit` on the shared state. -/
-def contextmanager : GCM := { live := true }
+/-- `helper(*args, **kwds)` of `contextmanager(func)`, Lib/contextlib.py:365-367, and of
+`asynccontextmanager(func)`, :398-400: `_GeneratorContextManager(func, args, kwds)`, resp. the async
+class, built by `gcmInit` when the decorated function is called. `@wraps(func)` (:365, :398) copies
+`func`'s metadata onto `helper`; that is `functools.update_wrapper`, outside this model. -/
+def contextmanagerCall {D : Type} (call : St σ → St σ × Res Unit)
+    (getDoc : St σ → St σ × Res (Option D)) (classDoc : Option D) (s : St σ) :
+    St σ × Res (GCM × Option D) :=
+  gcmInit call getDoc classDoc s
 
 /-! ### `closing`, `aclosing`, `nullcontext`, `_RedirectStream`, `chdir` -/
 
-/-- `closing.__enter__`, Lib/contextlib.py:423-424, `aclosing.__aenter__`, :449-450. -/
+/-- `closing.__enter__`, Lib/contextlib.py:423-424, `aclosing.__aenter__`, :449-450: `self.thing`. -/
 def closingEnter {T : Type} (thing : T) : T := thing
 
-/-- `closing.__exit__`, Lib/contextlib.py:425-426, `aclosing.__aexit__`, :451-452: the result of
-`close()` is dropped, and the method returns `None`, so an exception is never suppressed. -/
+/-- `closing.__exit__`, Lib/contextlib.py:425-426: `self.thing.close()`, where `close` is the lookup
+and the call, either of which can raise. Its result is dropped and the method returns `None`
+(`.ok false`), so an exception is never suppressed. -/
 def closingExit (close : St σ → St σ × Res Unit) (s : St σ) : St σ × Res Bool :=
   match close s with
   | (s, .error e) => (s, .error e)
   | (s, .ok ()) => (s, .ok false)
 
-/-- `nullcontext.__init__`, Lib/contextlib.py:831-832, `__enter__`, :834-835, `__aenter__`, :840-841:
-the object is its `enter_result`. -/
+/-- `aclosing.__aexit__`, Lib/contextlib.py:451-452: `await self.thing.aclose()` inside an
+`async def`. `aclose` is the lookup, the call and the await. -/
+def aclosingExit (aclose : St σ → St σ × Res Unit) (s : St σ) : St σ × Res Bool :=
+  let r := closingExit aclose s
+  coBoundary r.1 r.2
+
+/-- `nullcontext.__enter__`, Lib/contextlib.py:834-835 (difftest only). -/
 def nullEnter {T : Type} (enterResult : T) : T := enterResult
 
-/-- `nullcontext.__exit__`, Lib/contextlib.py:837-838, `__aexit__`, :843-844. -/
+/-- `nullcontext.__exit__`, Lib/contextlib.py:837-838 (difftest only). -/
 def nullExit (_excInfo : Option ExcId) : Bool := false
 
 /-- `_RedirectStream`, Lib/contextlib.py:455-470, against the module attribute `cur`. -/
@@ -260,9 +275,14 @@ structure Redirect (S : Type) where
 /-- `_RedirectStream.__init__`, Lib/contextlib.py:459-462. -/
 def Redirect.init {S : Type} (t : S) : Redirect S := { newTarget := t, oldTargets := [] }
 
-/-- `_RedirectStream.__enter__`, Lib/contextlib.py:464-467: state, new `sys.stream`, result. -/
-def Redirect.enter {S : Type} (r : Redirect S) (cur : S) : Redirect S × S × S :=
-  ({ r with oldTargets := r.oldTargets ++ [cur] }, r.newTarget, r.newTarget)
+/-- `_RedirectStream.__enter__`, Lib/contextlib.py:464-467. `cur` is `getattr(sys, self._stream)`,
+which fails when the stream attribute is missing; then nothing is appended and nothing is set. The
+result is the state, the new `sys.<stream>`, and the return value. -/
+def Redirect.enter {S E : Type} (r : Redirect S) (cur : Except E S) :
+    Redirect S × Except E (S × S) :=
+  match cur with
+  | .error e => (r, .error e)
+  | .ok cur => ({ r with oldTargets := r.oldTargets ++ [cur] }, .ok (r.newTarget, r.newTarget))
 
 /-- `list.pop` on an empty list. -/
 def popEmpty : String := "pop from empty list"
@@ -283,14 +303,18 @@ structure Chdir (P : Type) where
 /-- `chdir.__init__`, Lib/contextlib.py:850-852. -/
 def Chdir.init {P : Type} (p : P) : Chdir P := { path := p, oldCwd := [] }
 
-/-- `chdir.__enter__`, Lib/contextlib.py:854-856. `osChdir p cwd` is the new cwd, or the failure. The
-old directory is on the stack before `os.chdir` can fail. -/
-def Chdir.enter {P E : Type} (osChdir : P → P → Except E P) (c : Chdir P) (cwd : P) :
-    Chdir P × P × Except E Unit :=
-  let c := { c with oldCwd := c.oldCwd ++ [cwd] }
-  match osChdir c.path cwd with
+/-- `chdir.__enter__`, Lib/contextlib.py:854-856. `getcwd` is `os.getcwd()`, which fails when the
+working directory was removed; then nothing is pushed. `osChdir p cwd` is the new cwd, or the
+failure. The old directory is on the stack before `os.chdir` can fail. -/
+def Chdir.enter {P E : Type} (osChdir : P → P → Except E P) (c : Chdir P) (getcwd : Except E P)
+    (cwd : P) : Chdir P × P × Except E Unit :=
+  match getcwd with
   | .error e => (c, cwd, .error e)
-  | .ok cwd => (c, cwd, .ok ())
+  | .ok old =>
+    let c := { c with oldCwd := c.oldCwd ++ [old] }
+    match osChdir c.path cwd with
+    | .error e => (c, cwd, .error e)
+    | .ok cwd => (c, cwd, .ok ())
 
 /-- `chdir.__exit__`, Lib/contextlib.py:858-859. `none` is `IndexError`. -/
 def Chdir.exit {P E : Type} (osChdir : P → P → Except E P) (c : Chdir P) (cwd : P) :
@@ -305,69 +329,188 @@ def Chdir.exit {P E : Type} (osChdir : P → P → Except E P) (c : Chdir P) (cw
 
 /-! ### `suppress` -/
 
-/-- `exc` matches the tuple of classes in `except`-clause terms. -/
-def matches' (h : Heap) (e : ExcId) (cs : List String) : Bool := h.isInstAny e cs
+/-- The `exctype` argument of `suppress.__exit__`: a class by its concrete MRO, or an object that is
+no class, with no tuple `__bases__` (`check_class`, Objects/abstract.c:2587-2600). -/
+inductive Derived where
+  | cls (c : Cls)
+  | other
+  deriving Repr, DecidableEq
 
-/-- The class `BaseExceptionGroup.derive` produces: Objects/exceptions.c:1136-1148 calls
-`BaseExceptionGroup(msg, excs)`, and `BaseExceptionGroup_new` turns that into `ExceptionGroup` when
-every member is an `Exception`. -/
+/-- One element of `self._exceptions` as `object_issubclass`, Objects/abstract.c:2732-2789, treats
+it. -/
+inductive SupItem (σ : Type) where
+  /-- A class whose metaclass is exactly `type`, by its concrete MRO: the quick test of :2737-2742
+  and `PyType_IsSubtype` in `recursive_issubclass`, :2715-2717. -/
+  | cls (c : Cls)
+  /-- An object whose type has `__subclasscheck__`, :2770-2783: an ABC, a class with another
+  metaclass. `check` is calling it on `exctype` and taking the truth value, which can run any code
+  and raise. A nested tuple, which :2749-2766 loops over, is a `hook` whose `check` is that loop.
+  `excCls` is the item's MRO when it is an exception class (`PyExceptionClass_Check`). -/
+  | hook (check : Derived → St σ → St σ × Res Bool) (excCls : Option Cls)
+  /-- Anything else: neither `__subclasscheck__` nor `__bases__`. -/
+  | other
+
+/-- The concrete subclass test, `PyType_IsSubtype`: `d`'s MRO holds `c`. -/
+def subOf (d c : Cls) : Bool :=
+  match c with
+  | [] => false
+  | n :: _ => d.contains n
+
+/-- `issubclass(exctype, item)` for one item, Objects/abstract.c:2732-2789: the concrete test for a
+plain class, the `__subclasscheck__` call, or the `TypeError` of `check_class` in
+`recursive_issubclass`, :2719-2726, for the first argument and then the second. -/
+def issubItem (d : Derived) (handled : Option ExcId) (i : SupItem σ) (s : St σ) : St σ × Res Bool :=
+  let typeErr (msg : String) : St σ × Res Bool :=
+    let (s, e) := s.raiseNew clsType msg handled
+    (s, .error e)
+  match i, d with
+  | .cls c, .cls dc => (s, .ok (subOf dc c))
+  | .cls _, .other => typeErr "issubclass() arg 1 must be a class"
+  | .hook check _, d => check d s
+  | .other, .cls _ => typeErr "issubclass() arg 2 must be a class, a tuple of classes, or a union"
+  | .other, .other => typeErr "issubclass() arg 1 must be a class"
+
+/-- `issubclass(exctype, self._exceptions)`, the tuple branch Objects/abstract.c:2749-2766: the items
+in order, stopping at the first that is true or raises. -/
+def issubTuple (d : Derived) (handled : Option ExcId) : List (SupItem σ) → St σ → St σ × Res Bool
+  | [], s => (s, .ok false)
+  | i :: is, s =>
+    match issubItem d handled i s with
+    | (s, .ok false) => issubTuple d handled is s
+    | r => r
+
+/-- `get_matcher_type`, Objects/exceptions.c:1245-1276, on the tuple `self._exceptions` (:1260-1269):
+it is a type matcher when every item is an exception class, and `none`, the `TypeError` of
+:1271-1275, otherwise. -/
+def matcherClasses : List (SupItem σ) → Option (List Cls)
+  | [] => some []
+  | .cls c :: is => if c.contains "BaseException" then (c :: ·) <$> matcherClasses is else none
+  | .hook _ (some c) :: is => (c :: ·) <$> matcherClasses is
+  | _ :: _ => none
+
+/-- `PyErr_GivenExceptionMatches(exc, tuple)`, Python/errors.c:332-367: the concrete subclass test of
+the class of `e` against each class; no `__subclasscheck__`. -/
+def matchBy (h : Heap) (ms : List Cls) (e : ExcId) : Bool := ms.any (subOf (h.get e).cls)
+
+/-- `orig.derive(excs)`: the method of the group's class, which can raise or return anything. -/
+abbrev Derive (σ : Type) := ExcId → List ExcId → St σ → St σ × Res ExcId
+
+/-- The class `BaseExceptionGroup(msg, excs)` gets from `BaseExceptionGroup_new`: `ExceptionGroup`
+when every member is an `Exception`. -/
 def deriveCls (h : Heap) (excs : List ExcId) : Cls :=
   if excs.all (fun e => h.isInst e "Exception") then clsEG else clsBEG
 
-/-- `exceptiongroup_subset`, Objects/exceptions.c:1151-1230: a new group of `excs` with the
-metadata of `orig`; `none` for an empty `excs`. The class comes from `derive`. -/
-def subset (h : Heap) (orig : ExcId) (excs : List ExcId) : Heap × Option ExcId :=
-  if excs.isEmpty then (h, none)
+/-- The builtin `BaseExceptionGroup.derive`, Objects/exceptions.c:1136-1148:
+`BaseExceptionGroup(self.message, excs)`. -/
+def builtinDerive : Derive σ := fun orig excs s =>
+  let (h, e) := s.h.alloc
+    { cls := deriveCls s.h excs, msg := (s.h.get orig).msg, children := some excs }
+  ({ s with h := h }, .ok e)
+
+/-- `exceptiongroup_subset`, Objects/exceptions.c:1151-1230: `none` for an empty `excs` (:1169-1171);
+else `orig.derive(excs)` (:1173-1177), refused unless it is a `BaseExceptionGroup` (:1179-1183),
+then `__traceback__` when `orig` has one (:1187-1194), `__context__` and `__cause__` from `orig`
+(:1195-1196). The copy of `__notes__`, :1198-1223, is outside the model. -/
+def subsetM (derive : Derive σ) (handled : Option ExcId) (s : St σ) (orig : ExcId)
+    (excs : List ExcId) : St σ × Res (Option ExcId) :=
+  if excs.isEmpty then (s, .ok none)
   else
-    let o := h.get orig
-    let (h, e) := h.alloc
-      { cls := deriveCls h excs, msg := o.msg, context := o.context, cause := o.cause, tb := o.tb,
-        children := some excs }
-    (h, some e)
+    match derive orig excs s with
+    | (s, .error e) => (s, .error e)
+    | (s, .ok eg) =>
+      if s.h.isInst eg "BaseExceptionGroup" then
+        let o := s.h.get orig
+        let h := match o.tb with
+          | some t => s.h.setTb eg (some t)
+          | none => s.h
+        let h := (h.setContext eg o.context).modify eg (fun x => { x with cause := o.cause })
+        ({ s with h := h }, .ok (some eg))
+      else
+        let (s, e) := s.raiseNew clsType "derive must return an instance of BaseExceptionGroup" handled
+        (s, .error e)
 
-/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1322-1430. `cs` is the matcher. The fold
-is the `for` loop over `eg->excs`, :1374-1407; the result is `(match, rest)`. -/
-def splitRec (cs : List String) : Nat → Heap → ExcId → Heap × Option ExcId × Option ExcId
-  | 0, h, _ => (h, none, none)
-  | fuel + 1, h, exc =>
-    if matches' h exc cs then (h, some exc, none)
+/-- What `splitRec` gives for one exception: the state and `(match, rest)`, or `none` out of fuel. -/
+abbrev SplitRes (σ : Type) := Option (St σ × Res (Option ExcId × Option ExcId))
+
+/-- One turn of the loop over `eg->excs`, Objects/exceptions.c:1374-1407: the recursive call `rec`
+on member `e`, its parts appended to `match_list` and `rest_list`; a failure stops the loop. -/
+def splitStep (rec : St σ → ExcId → SplitRes σ)
+    (acc : Option (St σ × Res (List ExcId × List ExcId))) (e : ExcId) :
+    Option (St σ × Res (List ExcId × List ExcId)) :=
+  match acc with
+  | none => none
+  | some (s, .error x) => some (s, .error x)
+  | some (s, .ok (ml, rl)) =>
+    match rec s e with
+    | none => none
+    | some (s, .error x) => some (s, .error x)
+    | some (s, .ok (m, r)) => some (s, .ok (ml ++ m.toList, rl ++ r.toList))
+
+/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1322-1430, with the type matcher `ms`: a
+full match (:1337-1341), an unmatched leaf (:1342-1348; a group of the heap always has members), or
+the loop over `eg->excs` (:1374-1407) and the two subsets, match first (:1409-1420). `none` is out
+of fuel. -/
+def splitRec (ms : List Cls) (derive : Derive σ) (handled : Option ExcId) :
+    Nat → St σ → ExcId → SplitRes σ
+  | 0, _, _ => none
+  | fuel + 1, s, exc =>
+    if matchBy s.h ms exc then some (s, .ok (some exc, none))
     else
-      match (h.get exc).children with
-      | none => (h, none, some exc)
+      match (s.h.get exc).children with
+      | none => some (s, .ok (none, some exc))
       | some excs =>
-        let (h, ms, rs) := excs.foldl
-          (fun (st : Heap × List ExcId × List ExcId) e =>
-            let x := splitRec cs fuel st.1 e
-            (x.1, st.2.1 ++ x.2.1.toList, st.2.2 ++ x.2.2.toList))
-          (h, [], [])
-        let (h, m) := subset h exc ms
-        let (h, r) := subset h exc rs
-        (h, m, r)
+        match excs.foldl (splitStep (splitRec ms derive handled fuel)) (some (s, .ok ([], []))) with
+        | none => none
+        | some (s, .error x) => some (s, .error x)
+        | some (s, .ok (ml, rl)) =>
+          match subsetM derive handled s exc ml with
+          | (s, .error x) => some (s, .error x)
+          | (s, .ok m) =>
+            match subsetM derive handled s exc rl with
+            | (s, .error x) => some (s, .error x)
+            | (s, .ok r) => some (s, .ok (m, r))
 
-/-- `BaseExceptionGroup.split`, Objects/exceptions.c:1440-1463, with a tuple of classes. -/
-def split (cs : List String) (h : Heap) (e : ExcId) : Heap × Option ExcId × Option ExcId :=
-  splitRec cs (2 * h.length + 2) h e
-
-/-- `suppress.__enter__`, Lib/contextlib.py:509-510, returns `None`; `__init__`, :506-507, stores
-the classes. -/
-def suppressEnter : Unit := ()
-
-/-- `suppress.__exit__`, Lib/contextlib.py:512-531, for `self._exceptions = cs`, classes.
-`handled` is the exception being handled at the call, which `raise rest` chains to. `.ok none` is
-the bare `return` of `exctype is None`. -/
-def suppressExit (cs : List String) (s : St σ) (handled : Option ExcId) (excinst : Option ExcId) :
-    St σ × Res (Option Bool) :=
+/-- `excinst.split(self._exceptions)`, Lib/contextlib.py:527, with the builtin `split`,
+Objects/exceptions.c:1440-1463: `None` or a non-group has no `split` (`AttributeError`); a tuple
+with an item that is no exception class is the `TypeError` of `get_matcher_type`. -/
+def egSplit (items : List (SupItem σ)) (derive : Derive σ) (handled : Option ExcId) (s : St σ)
+    (excinst : Option ExcId) : SplitRes σ :=
+  let raise (c : Cls) (msg : String) : SplitRes σ :=
+    let (s, e) := s.raiseNew c msg handled
+    some (s, .error e)
   match excinst with
-  | none => (s, .ok none)
+  | none => raise clsAttr "'NoneType' object has no attribute 'split'"
   | some e =>
-    if s.h.isInstAny e cs then (s, .ok (some true))
-    else if s.h.isInst e "BaseExceptionGroup" then
-      let (h, _, rest) := split cs s.h e
-      let s := { s with h := h }
-      match rest with
-      | none => (s, .ok (some true))
-      | some r => ({ s with h := s.h.raiseCtx r handled }, .error r)
-    else (s, .ok (some false))
+    if !s.h.isInst e "BaseExceptionGroup" then
+      raise clsAttr s!"'{(s.h.get e).cls.headD ""}' object has no attribute 'split'"
+    else
+      match matcherClasses items with
+      | none => raise clsType
+          "expected an exception type, a tuple of exception types, or a callable (other than a class)"
+      | some ms => splitRec ms derive handled (s.h.length + 1) s e
+
+/-- `suppress.__exit__`, Lib/contextlib.py:512-531, with `self._exceptions = items`. `exctype` is
+the class argument and `excinst` the instance, `none` for `None`; `handled` is `sys.exception()` at
+the call, which an exception raised here chains to. `.ok none` is the bare `return` of :523. A group
+class that overrides `split` is outside the model; one that overrides `derive` is `derive`. -/
+def suppressExit (items : List (SupItem σ)) (derive : Derive σ) (s : St σ) (handled : Option ExcId)
+    (exctype : Option Derived) (excinst : Option ExcId) : PyLean.Py (St σ × Res (Option Bool)) :=
+  match exctype with
+  | none => .ok (s, .ok none)
+  | some d =>
+    match issubTuple d handled items s with
+    | (s, .error e) => .ok (s, .error e)
+    | (s, .ok true) => .ok (s, .ok (some true))
+    | (s, .ok false) =>
+      match issubItem d handled (.cls clsBEG) s with
+      | (s, .error e) => .ok (s, .error e)
+      | (s, .ok false) => .ok (s, .ok (some false))
+      | (s, .ok true) =>
+        match egSplit items derive handled s excinst with
+        | none => .error .modelFuel
+        | some (s, .error e) => .ok (s, .error e)
+        | some (s, .ok (_, none)) => .ok (s, .ok (some true))
+        | some (s, .ok (_, some r)) => .ok ({ s with h := s.h.raiseCtx r handled }, .error r)
 
 /-! ### `ExitStack` and `AsyncExitStack` -/
 
@@ -411,11 +554,20 @@ def Cb.call (c : Calls σ F O A) (cb : Cb F O A) (x : Xs σ F O A) (d : Option E
     | (x, .error e) => (x, .error e)
     | (x, .ok ()) => (x, .ok false)
 
-/-- `_BaseExitStack.__init__`, Lib/contextlib.py:557-558. -/
-def Stack.init : Stack F O A := []
+/-- The `_exit_wrapper` of `_create_cb_wrapper`, Lib/contextlib.py:552-555, has `__wrapped__`
+set to the callback (:607, :750); other entries are what was pushed. -/
+def Cb.wrappedAttr : Cb F O A → Option F
+  | .wrapped f _ => some f
+  | _ => none
 
-/-- `_BaseExitStack.pop_all`, Lib/contextlib.py:560-565: the new stack, then what `self` keeps. -/
-def popAll (st : Stack F O A) : Stack F O A × Stack F O A := (st, [])
+/-- `_BaseExitStack.pop_all`, Lib/contextlib.py:560-565. `mk` is `type(self)()`, which runs the
+class's `__init__` and can raise; only then is the deque moved (:563-564). The result is the state,
+what `self` keeps, and the new stack object with its deque. -/
+def popAll {N : Type} (mk : St σ → St σ × Res N) (s : St σ) (st : Stack F O A) :
+    St σ × Stack F O A × Res (N × Stack F O A) :=
+  match mk s with
+  | (s, .error e) => (s, st, .error e)
+  | (s, .ok n) => (s, [], .ok (n, st))
 
 /-- `_BaseExitStack._push_exit_callback`, Lib/contextlib.py:611-612. -/
 def pushExitCallback (st : Stack F O A) (cb : Cb F O A) (isSync : Bool := true) : Stack F O A :=
@@ -450,29 +602,52 @@ def lookupSentinel (d : Option (Descr T)) : Res (Option T) :=
     | .error e => .error e
     | .ok v => .ok (some v)
 
+/-- A class's `__dict__` as a lookup. -/
+abbrev ClsDict (T : Type) := String → Option T
+
+/-- `getattr_static(cls, name)` for a class `cls` with MRO `mro` and metaclass MRO `metaMro`,
+Lib/inspect.py:1759-1806: `cls` is a type, so `klass = cls` (:1779-1780) and no instance dict is
+read; the first entry of the MRO that has `name` (`_check_class`, :1719-1723); failing that, "for
+types we check the metaclass too" (:1796-1803); `none` is the `AttributeError` of :1806. Classes with
+a shadowing `__dict__` (`_shadowed_dict`) are outside the model. -/
+def getattrStaticType {T : Type} (mro metaMro : List (ClsDict T)) (name : String) : Option T :=
+  match mro.findSome? (· name) with
+  | some v => some v
+  | none => metaMro.findSome? (· name)
+
+/-- `_PyType_LookupRef(Py_TYPE(self), attr)` in `_PyObject_LookupSpecial`, Objects/typeobject.c:2994,
+the lookup of the `with` statement and of the interpreter's special methods: the MRO of the type
+only. -/
+def specialLookupType {T : Type} (mro : List (ClsDict T)) (name : String) : Option T :=
+  mro.findSome? (· name)
+
 /-- `getattr_static(type(obj), '__exit__')`, for one object. -/
 abbrev ExitLookup (F O A : Type) := O → Option (Descr (Cb F O A))
 
-/-- `_BaseExitStack.push`, Lib/contextlib.py:567-576: `asF exit` is `exit` as a plain callable. -/
-def push (lookup : ExitLookup F O A) (asF : O → F) (st : Stack F O A) (exit : O) : Stack F O A × Res Unit :=
+/-- `_BaseExitStack.push`, Lib/contextlib.py:567-576: `asF exit` is `exit` as a plain callable.
+`exit` itself is returned (:576). -/
+def push (lookup : ExitLookup F O A) (asF : O → F) (st : Stack F O A) (exit : O) :
+    Stack F O A × Res O :=
   match lookupSpecial (lookup exit) (.raw (asF exit)) with
-  | .ok cb => (pushExitCallback st cb, .ok ())
+  | .ok cb => (pushExitCallback st cb, .ok exit)
   | .error e => (st, .error e)
 
-/-- `AsyncExitStack.push_async_exit`, Lib/contextlib.py:729-739. -/
+/-- `AsyncExitStack.push_async_exit`, Lib/contextlib.py:729-739; `exit` is returned (:739). -/
 def pushAsyncExit (lookup : ExitLookup F O A) (asF : O → F) (st : Stack F O A) (exit : O) :
-    Stack F O A × Res Unit :=
+    Stack F O A × Res O :=
   match lookupSpecial (lookup exit) (.raw (asF exit)) with
-  | .ok cb => (pushExitCallback st cb false, .ok ())
+  | .ok cb => (pushExitCallback st cb false, .ok exit)
   | .error e => (st, .error e)
 
-/-- `_BaseExitStack.callback`, Lib/contextlib.py:598-609. -/
-def callback (st : Stack F O A) (f : F) (args : A) : Stack F O A :=
-  pushExitCallback st (.wrapped f args) true
+/-- `_BaseExitStack.callback`, Lib/contextlib.py:598-609: the wrapper of `_create_cb_wrapper`
+(:603), whose `__wrapped__` is `callback` (:607), is pushed, and `callback` is returned (:609). -/
+def callback (st : Stack F O A) (f : F) (args : A) : Stack F O A × F :=
+  (pushExitCallback st (.wrapped f args) true, f)
 
-/-- `AsyncExitStack.push_async_callback`, Lib/contextlib.py:741-752. -/
-def pushAsyncCallback (st : Stack F O A) (f : F) (args : A) : Stack F O A :=
-  pushExitCallback st (.wrapped f args) false
+/-- `AsyncExitStack.push_async_callback`, Lib/contextlib.py:741-752: the same with the wrapper of
+`_create_async_cb_wrapper` and `is_sync=False`. -/
+def pushAsyncCallback (st : Stack F O A) (f : F) (args : A) : Stack F O A × F :=
+  (pushExitCallback st (.wrapped f args) false, f)
 
 /-- `_BaseExitStack.enter_context`, Lib/contextlib.py:578-596, and `AsyncExitStack.enter_async_context`, :709-727. Both
 lookups run first, `__enter__` before `__exit__`, and a missing one is a `TypeError` with the source's message `msg`. The
@@ -547,7 +722,7 @@ def exit (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (exc frameE
     | none => .error .modelFuel
   else return (x, .ok (receivedExc && suppressedExc))
 
-/-- `ExitStack.close`, Lib/contextlib.py:684-686, and `AsyncExitStack.aclose`, :754-756. -/
+/-- `ExitStack.close`, Lib/contextlib.py:684-686: the result of `__exit__` is dropped. -/
 def close (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frameExc : Option ExcId) :
     Py (Xs σ F O A × Res Unit) := do
   let (x, r) ← exit c fuel fixFuel x none frameExc
@@ -555,12 +730,23 @@ def close (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frameExc 
   | .ok _ => return (x, .ok ())
   | .error e => return (x, .error e)
 
-/-- `ExitStack.__enter__`, Lib/contextlib.py:627-628, and `AsyncExitStack.__aenter__`, :758-759. -/
-def stackEnter {T : Type} (self : T) : T := self
+/-- `await cb(*exc_details)`, Lib/contextlib.py:796, for an entry with `is_sync=False`. The
+`_exit_wrapper` of `_create_async_cb_wrapper`, :704-707, is an `async def`: `await
+callback(*args, **kwds)` raising `StopIteration` leaves it as `RuntimeError`, and the result is
+dropped. Any other entry is what `ac` says awaiting it does. -/
+def Cb.acall (ac : Calls σ F O A) (cb : Cb F O A) (x : Xs σ F O A) (d : Option ExcId) :
+    Xs σ F O A × Res Bool :=
+  match cb with
+  | .wrapped f args =>
+    let r : Xs σ F O A × Res Bool := match ac.wrapped f args x with
+      | (x, .error e) => (x, .error e)
+      | (x, .ok ()) => (x, .ok false)
+    let (s, res) := coBoundary r.1.1 r.2
+    ((s, r.1.2), res)
+  | cb => cb.call ac x d
 
-/-- The loop of `AsyncExitStack.__aexit__`, Lib/contextlib.py:786-806. The `is_sync` branch of
-:793-796 picks `cb(...)` or `await cb(...)`, which have the same effect here because the async
-callbacks are given by `ac`. -/
+/-- The loop of `AsyncExitStack.__aexit__`, Lib/contextlib.py:786-806: `cb(...)` for a sync entry
+(:793-794), `await cb(...)` for an async one (:795-796). -/
 def aexitLoop (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) :
     Nat → Xs σ F O A → Option ExcId → Bool → Bool → Py (Xs σ F O A × Option ExcId × Bool × Bool)
   | 0, _, _, _, _ => .error .modelFuel
@@ -568,7 +754,7 @@ def aexitLoop (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) 
     match x.2 with
     | [] => .ok (x, exc, suppressed, pending)
     | (isSync, cb) :: rest =>
-      match cb.call (if isSync then c else ac) (x.1, rest) exc with
+      match (if isSync then cb.call c (x.1, rest) exc else cb.acall ac (x.1, rest) exc) with
       | (x, .ok true) => aexitLoop c ac frameExc fixFuel fuel x none true false
       | (x, .ok false) => aexitLoop c ac frameExc fixFuel fuel x exc suppressed pending
       | (x, .error newExc) =>
@@ -577,7 +763,8 @@ def aexitLoop (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) 
         | some h =>
           aexitLoop c ac frameExc fixFuel fuel ({ x.1 with h := h }, x.2) (some newExc) suppressed true
 
-/-- `AsyncExitStack.__aexit__`, Lib/contextlib.py:761-817. -/
+/-- `AsyncExitStack.__aexit__`, Lib/contextlib.py:761-817, an `async def`: the exception it raises
+passes `coBoundary`. -/
 def aexit (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (exc frameExc : Option ExcId) :
     Py (Xs σ F O A × Res Bool) := do
   let receivedExc := exc.isSome
@@ -590,5 +777,25 @@ def aexit (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (exc fr
       return ((s, x.2), r)
     | none => .error .modelFuel
   else return (x, .ok (receivedExc && suppressedExc))
+
+/-- `AsyncExitStack.aclose`, Lib/contextlib.py:754-756: `await self.__aexit__(None, None, None)`
+inside an `async def`, the result dropped. -/
+def aclose (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frameExc : Option ExcId) :
+    Py (Xs σ F O A × Res Unit) := do
+  let (x, r) ← aexit c ac fuel fixFuel x none frameExc
+  let r : Res Unit := match r with
+    | .ok _ => .ok ()
+    | .error e => .error e
+  let (s, r) := coBoundary x.1 r
+  return ((s, x.2), r)
+
+/-- `AsyncExitStack.enter_async_context`, Lib/contextlib.py:709-727: the steps of `enterContext` with
+`is_sync=False`, inside an `async def`, so a `StopIteration` from a lookup or from `await _enter()`
+leaves as `RuntimeError`. -/
+def aenterContext (enterOf : O → Option (Descr (Xs σ F O A → Xs σ F O A × Res V)))
+    (exitOf : ExitLookup F O A) (msg : String) (x : Xs σ F O A) (cm : O) : Xs σ F O A × Res V :=
+  let (x, r) := enterContext enterOf exitOf msg false x cm
+  let (s, r) := coBoundary x.1 r
+  ((s, x.2), r)
 
 end PyLean.CoreLibs.Misc.Contextlib

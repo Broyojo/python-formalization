@@ -20,7 +20,9 @@ summary: |
   ones", Python/errors.c:203-205, using Floyd's algorithm since bpo-25782).
 
   Together: an exception that went through one `ExitStack` makes a later `ExitStack.__exit__` spin at
-  100% CPU if a callback raises that exception while no exception is being handled. `AsyncExitStack.__aexit__` has a copy of the same function.
+  100% CPU if a callback raises that exception while no exception is being handled.
+  `AsyncExitStack.__aexit__` has a copy of the same function (Lib/contextlib.py:768-780) and both
+  defects with it: awaited callbacks give the same cycle, and a later `aclose()` hangs the same way.
 likelihood: |
   Low. It takes a callback that re-raises a saved exception, inside another exception's chain, in a
   stack with an active exception, and then that exception raised again through a second stack. A
@@ -91,7 +93,47 @@ reproducer: |
       pass
   signal.alarm(0)
   print('second ExitStack hangs:', hang)
-  if hang and len(chain) == 5 and len(chain2) == 2:
+  def run(co):
+      try:
+          co.send(None)
+      except StopIteration as e:
+          return e.value
+      raise AssertionError('suspended')
+  async def afirst(*exc):
+      first(*exc)
+  async def asecond(*exc):
+      second(*exc)
+  async def body():
+      async with contextlib.AsyncExitStack() as astack:
+          astack.push_async_exit(asecond)
+          astack.push_async_exit(afirst)
+          raise RuntimeError('F')
+  saved.clear()
+  try:
+      run(body())
+  except KeyError as e:
+      agot = e
+  achain = []
+  c = agot
+  while c is not None and len(achain) < 5:
+      achain.append(type(c).__name__)
+      c = c.__context__
+  print('AsyncExitStack chain:', achain)
+  async def athird(*exc):
+      raise agot
+  astack = contextlib.AsyncExitStack()
+  astack.push_async_exit(athird)
+  signal.alarm(3)
+  ahang = False
+  try:
+      run(astack.aclose())
+  except TimeoutError:
+      ahang = True
+  except KeyError:
+      pass
+  signal.alarm(0)
+  print('second AsyncExitStack hangs:', ahang)
+  if hang and len(chain) == 5 and len(chain2) == 2 and ahang and len(achain) == 5:
       print('REPRODUCED corelibs-exitstack-context-cycle-hang')
 expected: |
   The chain of nested `with` statements, `KeyError -> ValueError`, and `close()` raising `KeyError`.
@@ -101,9 +143,14 @@ observed: |
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
   python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  With the AsyncExitStack part added (2026-11-04): python3 3.15.2: AsyncExitStack chain KeyError,
+  ValueError, KeyError, ValueError, KeyError; the second stack's aclose() does not return.
+  REPRODUCED. main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
   The comments at Lib/contextlib.py:634-635 ("We manipulate the exception state so it behaves as
-  though we were actually nesting multiple with statements") and :602-603. Not hanging is an
+  though we were actually nesting multiple with statements") and :651-652 ("Callbacks are invoked
+  in LIFO order to match the behaviour of nested context managers"), and their copies at :765-766
+  and :782-783 in AsyncExitStack.__aexit__. Not hanging is an
   invariant, and Python/errors.c:203-205 states it for the same walk.
 cause: |
   Lib/contextlib.py:637-649, and the copy at :768-780: `while 1` with no bound and no cycle check,
@@ -130,3 +177,5 @@ lean:
   theorem: PyLean.CoreLibs.Misc.Contextlib.exitStackTerminates_refuted
   also:
     - {property: PyLean.CoreLibs.Misc.Contextlib.ExitKeepsContextAcyclic, theorem: PyLean.CoreLibs.Misc.Contextlib.exitKeepsContextAcyclic_refuted}
+    - {property: PyLean.CoreLibs.Misc.Contextlib.AExitTerminates, theorem: PyLean.CoreLibs.Misc.Contextlib.aExitTerminates_refuted}
+    - {property: PyLean.CoreLibs.Misc.Contextlib.AExitKeepsContextAcyclic, theorem: PyLean.CoreLibs.Misc.Contextlib.aExitKeepsContextAcyclic_refuted}

@@ -13,20 +13,18 @@ variable {σ V : Type}
 
 /-! ### Abstract base classes -/
 
-/-- `AbstractContextManager`: `__enter__` returns `self`, `__exit__` returns `None` so an exception
-propagates, and `__subclasshook__` on the class itself is `True` exactly when both methods are found
-along the MRO and the nearest definition is not `None`; on a subclass it is `NotImplemented`.
-`AbstractAsyncContextManager` is the same with its method names. -/
+/-- `AbstractContextManager.__subclasshook__` on the class itself is `True` exactly when both
+methods are found along the MRO and the nearest definition is not `None`; otherwise, and on a
+subclass, it is `NotImplemented`. `AbstractAsyncContextManager` is the same with its method names. -/
 def AbstractBases : Prop :=
-  ∀ (O : Type) (self : O) (e : Option ExcId) (ms : List String) (mro : MroDicts),
-    absEnter self = self ∧ absExit self e = none ∧
+  ∀ (ms : List String) (mro : MroDicts),
     (subclasshook true ms mro = some true ↔ ∀ m ∈ ms, checkMethod mro m = true) ∧
     (¬(∀ m ∈ ms, checkMethod mro m = true) → subclasshook true ms mro = none) ∧
     subclasshook false ms mro = none
 
 theorem abstractBases_proven : AbstractBases := by
-  intro O self e ms mro
-  refine ⟨rfl, rfl, ?_, ?_, rfl⟩
+  intro ms mro
+  refine ⟨?_, ?_, rfl⟩
   · simp [subclasshook]
   · intro h
     have : ¬ (ms.all (checkMethod mro) = true) := by simpa using h
@@ -44,16 +42,15 @@ theorem subclassHookNone_proven : SubclassHookNone := by
 
 /-! ### `ContextDecorator` -/
 
-/-- A `ContextDecorator` "enables context managers to work as decorators": `_recreate_cm` returns
-`self`, and the decorated function behaves as its body in `with self._recreate_cm():`. Its value comes
+/-- A `ContextDecorator` "enables context managers to work as decorators": the decorated plain
+function behaves as its body in `with self._recreate_cm():`. Its value comes
 back after `__exit__`; an exception comes back when `__exit__` is false and gives `None` when it is
 true; `__exit__` failing replaces the result; and when `__enter__` or creating the manager fails, the
 function does not run. -/
 def DecoratorIsWith : Prop :=
   ∀ (σ V R C : Type) (c : C) (toCM : C → CM σ V) (func : St σ → St σ × Res R)
     (s s1 s2 s3 : St σ) (v : V) (r : R) (e e2 : ExcId),
-    let rec_ : St σ → St σ × Res C := fun s => (s, .ok (ContextDecorator.recreateCm c))
-    ContextDecorator.recreateCm c = c ∧
+    let rec_ : St σ → St σ × Res C := fun s => (s, .ok c)
     (ContextDecorator.call (C := C) (R := R) (fun s => (s, .error e)) toCM func s = (s, .error e)) ∧
     ((toCM c).enter s = (s1, .error e) →
       ContextDecorator.call rec_ toCM func s = (s1, .error e)) ∧
@@ -71,38 +68,66 @@ def DecoratorIsWith : Prop :=
 
 theorem decoratorIsWith_proven : DecoratorIsWith := by
   intro σ V R C c toCM func s s1 s2 s3 v r e e2 rec_
-  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · intro h; simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h]
+  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [ContextDecorator.call, rec_, withStmt, h]
   · intro h1 h2 b h3
-    cases b <;> simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+    cases b <;> simp [ContextDecorator.call, rec_, withStmt, h1, h2, h3]
   · intro h1 h2 h3
-    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+    simp [ContextDecorator.call, rec_, withStmt, h1, h2, h3]
   · intro h1 h2 h3
-    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+    simp [ContextDecorator.call, rec_, withStmt, h1, h2, h3]
   · intro h1 h2 h3
-    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+    simp [ContextDecorator.call, rec_, withStmt, h1, h2, h3]
 
 /-! ### `@contextmanager` -/
 
-/-- `_recreate_cm` of a generator context manager: while `func`, `args`, `kwds` are there it makes a
-fresh one, which is what lets the decorated function run many times. After `__enter__` deleted them
-it is `AttributeError`, not a second use of an exhausted generator. `__init__` takes `__doc__` from
-`func` when it has one and from the class otherwise. `contextmanager` starts live. -/
+/-- `__init__` of a generator context manager: `func(*args, **kwds)` runs first and its failure is
+the result; then `__doc__` is `func.__doc__` unless that is `None` or missing (`AttributeError`),
+when it is the class's; any other exception from the lookup propagates. The object starts live:
+`func`, `args` and `kwds` are stored. -/
+def GcmInitCases : Prop :=
+  ∀ (σ D : Type) (call : St σ → St σ × Res Unit) (getDoc : St σ → St σ × Res (Option D))
+    (cdoc : Option D) (s s1 s2 : St σ) (e : ExcId) (d : D),
+    (call s = (s1, .error e) → gcmInit call getDoc cdoc s = (s1, .error e)) ∧
+    (call s = (s1, .ok ()) → getDoc s1 = (s2, .ok (some d)) →
+      gcmInit call getDoc cdoc s = (s2, .ok ({ live := true }, some d))) ∧
+    (call s = (s1, .ok ()) → getDoc s1 = (s2, .ok none) →
+      gcmInit call getDoc cdoc s = (s2, .ok ({ live := true }, cdoc))) ∧
+    (call s = (s1, .ok ()) → getDoc s1 = (s2, .error e) → s2.h.isInst e "AttributeError" = true →
+      gcmInit call getDoc cdoc s = (s2, .ok ({ live := true }, cdoc))) ∧
+    (call s = (s1, .ok ()) → getDoc s1 = (s2, .error e) → s2.h.isInst e "AttributeError" = false →
+      gcmInit call getDoc cdoc s = (s2, .error e))
+
+theorem gcmInitCases_proven : GcmInitCases := by
+  intro σ D call getDoc cdoc s s1 s2 e d
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [gcmInit, h]
+  · intro h1 h2; simp [gcmInit, getattrDefault, h1, h2]
+  · intro h1 h2; simp [gcmInit, getattrDefault, h1, h2]
+  · intro h1 h2 h3; simp [gcmInit, getattrDefault, h1, h2, h3]
+  · intro h1 h2 h3; simp [gcmInit, getattrDefault, h1, h2, h3]
+
+/-- `_recreate_cm` of a generator context manager: while `func`, `args` and `kwds` are there it is
+the class's `__init__` with them, which is what lets the decorated function run many times. After
+`__enter__` deleted them, whatever `__enter__` did, it is `AttributeError` for `func`, raised while
+`handled` is handled, and nothing else runs. -/
 def RecreateFresh : Prop :=
-  ∀ (σ : Type) (name : String) (fresh : St σ → St σ × Res Unit) (s s' : St σ)
-    (doc cdoc : Option String) (d : String),
-    (fresh s = (s', .ok ()) → gcmRecreate name contextmanager fresh s = (s', .ok contextmanager)) ∧
-    (∀ e, fresh s = (s', .error e) → gcmRecreate name contextmanager fresh s = (s', .error e)) ∧
-    ((gcmRecreate name { live := false } fresh s).2 =
-      .error (s.raiseNew clsAttr s!"'{name}' object has no attribute 'func'").2) ∧
-    gcmDoc (some d) cdoc = some d ∧ gcmDoc none cdoc = cdoc ∧
-    contextmanager.live = true
+  ∀ (σ V D : Type) (cfg : Cfg) (ops : GenOps σ V) (name ename : String)
+    (init : St σ → St σ × Res (GCM × Option D)) (handled : Option ExcId) (self : GCM) (s s0 : St σ),
+    gcmRecreate name { live := true } init handled s = init s ∧
+    gcmRecreate name (gcmEnter cfg ops ename self s0).1 init handled s =
+      (let (s', e) := s.raiseNew clsAttr s!"'{name}' object has no attribute 'func'" handled
+       (s', .error e))
 
 theorem recreateFresh_proven : RecreateFresh := by
-  intro σ name fresh s s' doc cdoc d
-  refine ⟨?_, ?_, rfl, rfl, rfl, rfl⟩
-  · intro h; simp [gcmRecreate, contextmanager, h]
-  · intro e h; simp [gcmRecreate, contextmanager, h]
+  intro σ V D cfg ops name ename init handled self s s0
+  refine ⟨rfl, ?_⟩
+  have : (gcmEnter cfg ops ename self s0).1.live = false := by
+    unfold gcmEnter
+    split
+    · rename_i h; simpa using h
+    · split <;> (try split) <;> rfl
+  simp only [gcmRecreate, this, Bool.false_eq_true, if_false]
 
 /-- `__enter__`: the value the generator yields is the value of the `with` target; a generator that
 stops at once gives `RuntimeError("generator didn't yield")` with the `StopIteration` as context; any
@@ -110,22 +135,22 @@ other exception comes through; a second `__enter__` raises `AttributeError`, bec
 one-shot. -/
 def EnterCases : Prop :=
   ∀ (σ V : Type) (cfg : Cfg) (ops : GenOps σ V) (name : String) (s s' : St σ) (v : V) (e : ExcId),
-    (ops.next s = (s', .ok v) → gcmEnter cfg ops name contextmanager s = ({ live := false }, s', .ok v)) ∧
+    (ops.next s = (s', .ok v) → gcmEnter cfg ops name { live := true } s = ({ live := false }, s', .ok v)) ∧
     (ops.next s = (s', .error e) → s'.h.isInst e cfg.stop = true →
-      gcmEnter cfg ops name contextmanager s =
+      gcmEnter cfg ops name { live := true } s =
         let (s2, x) := s'.raiseNew clsRuntime "generator didn't yield" (some e)
         ({ live := false }, s2, .error x)) ∧
     (ops.next s = (s', .error e) → s'.h.isInst e cfg.stop = false →
-      gcmEnter cfg ops name contextmanager s = ({ live := false }, s', .error e)) ∧
+      gcmEnter cfg ops name { live := true } s = ({ live := false }, s', .error e)) ∧
     (gcmEnter cfg ops name { live := false } s).1 = { live := false } ∧
     (gcmEnter cfg ops name { live := false } s).2.1.g = s.g
 
 theorem enterCases_proven : EnterCases := by
   intro σ V cfg ops name s s' v e
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · intro h; simp [gcmEnter, contextmanager, h]
-  · intro h1 h2; simp [gcmEnter, contextmanager, h1, h2]
-  · intro h1 h2; simp [gcmEnter, contextmanager, h1, h2]
+  · intro h; simp [gcmEnter, h]
+  · intro h1 h2; simp [gcmEnter, h1, h2]
+  · intro h1 h2; simp [gcmEnter, h1, h2]
   · simp [gcmEnter]
   · simp [gcmEnter, St.raiseNew]
 
@@ -248,34 +273,73 @@ theorem exitNeverRaisesValue_proven : ExitNeverRaisesValue := by
           · simpa using hev
         · simpa using hev
 
-/-- The docstring of `contextmanager`: with a generator that yields once and then finishes,
-`with g(): body` behaves as `<setup>; try: body finally: <cleanup>`: a normal body gives its result,
-and a body that raises `e` lets the generator re-raise it after cleanup, and the `with` statement
-raises the same object `e`. -/
+theorem gcmInit_live {σ D : Type} {call : St σ → St σ × Res Unit}
+    {getDoc : St σ → St σ × Res (Option D)} {cdoc : Option D} {s0 s : St σ} {g : GCM}
+    {doc : Option D} (h : gcmInit call getDoc cdoc s0 = (s, .ok (g, doc))) : g = { live := true } := by
+  unfold gcmInit at h
+  split at h
+  · simp at h
+  · split at h
+    split at h
+    · simp at h
+    · simp only [Prod.mk.injEq, Except.ok.injEq] at h; exact h.2.1.symm
+    · simp only [Prod.mk.injEq, Except.ok.injEq] at h; exact h.2.1.symm
+
+/-- The docstring of `contextmanager`: calling the decorated function calls `func` at once, and its
+failure is the call's; the manager it returns behaves, with a generator that yields once and then
+finishes, as `<setup>; try: body finally: <cleanup>`: a normal body gives its result, and a body
+that raises `e` lets the generator re-raise it after cleanup, and the `with` statement raises the
+same object `e`. -/
 def ContextmanagerTryFinally : Prop :=
-  ∀ (σ V R : Type) (cfg : Cfg) (ops : GenOps σ V) (inst : Instantiate σ) (name : String)
-    (body : V → St σ → St σ × Res R) (s s1 s2 s3 : St σ) (v : V) (r : R) (e stop : ExcId),
+  ∀ (σ V R D : Type) (ops : GenOps σ V) (inst : Instantiate σ) (call : St σ → St σ × Res Unit)
+    (getDoc : St σ → St σ × Res (Option D)) (cdoc : Option D) (body : V → St σ → St σ × Res R)
+    (s0 s s1 s2 s3 : St σ) (v : V) (r : R) (e stop : ExcId),
+    (call s0 = (s, .error e) → contextmanagerCall call getDoc cdoc s0 = (s, .error e)) ∧
+    ∀ (g : GCM) (doc : Option D), contextmanagerCall call getDoc cdoc s0 = (s, .ok (g, doc)) →
     let cm : CM σ V :=
-      { enter := fun s => (gcmEnter cfg ops name contextmanager s).2
+      { enter := fun s => (gcmEnter syncCfg ops "_GeneratorContextManager" g s).2
         exit := fun s x => match x with
-          | none => gcmExit cfg ops inst s none none none
-          | some ex => gcmExit cfg ops inst s (some (s.h.get ex).cls) (some ex) (s.h.get ex).tb }
+          | none => gcmExit syncCfg ops inst s none none none
+          | some ex => gcmExit syncCfg ops inst s (some (s.h.get ex).cls) (some ex) (s.h.get ex).tb }
     ops.next s = (s1, .ok v) →
-    (body v s1 = (s2, .ok r) → ops.next s2 = (s3, .error stop) → s3.h.isInst stop cfg.stop = true →
+    (body v s1 = (s2, .ok r) → ops.next s2 = (s3, .error stop) →
+      s3.h.isInst stop "StopIteration" = true →
       withStmt cm body s = (s3, .ok (some r))) ∧
     (body v s1 = (s2, .error e) → ops.throw s2 e = (s3, .error e) →
-      s3.h.isInst e cfg.stop = false →
+      s3.h.isInst e "StopIteration" = false →
       (withStmt cm body s).2 = .error e)
 
 theorem contextmanagerTryFinally_proven : ContextmanagerTryFinally := by
-  intro σ V R cfg ops inst name body s s1 s2 s3 v r e stop cm h1
+  intro σ V R D ops inst call getDoc cdoc body s0 s s1 s2 s3 v r e stop
+  refine ⟨?_, ?_⟩
+  · intro h; simp [contextmanagerCall, gcmInit, h]
+  intro g doc hg cm h1
+  have hl : g = { live := true } := gcmInit_live hg
+  subst hl
   constructor
   · intro h2 h3 h4
-    simp [withStmt, cm, gcmEnter, contextmanager, h1, h2, gcmExit, h3, h4]
+    simp [withStmt, cm, gcmEnter, h1, h2, gcmExit, h3, h4, syncCfg]
   · intro h2 h3 h4
-    simp only [withStmt, cm, gcmEnter, contextmanager, h1, Bool.not_true, Bool.false_eq_true,
-      if_false, h2, gcmExit, h3, h4]
+    simp only [withStmt, cm, gcmEnter, h1, Bool.not_true, Bool.false_eq_true,
+      if_false, h2, gcmExit, h3, syncCfg, h4]
     cases hr : s3.h.isInst e "RuntimeError" <;> simp
+
+/-- `__exit__(typ, None, tb)`: `value = typ()` runs first (Lib/contextlib.py:219-222). When the
+instantiation raises, that exception is the result and the generator is not touched; otherwise
+`__exit__` is what it is with the new instance as `value`, so the cases of `ExitThrowCases` apply
+to it. -/
+def ExitValueNone : Prop :=
+  ∀ (σ V : Type) (cfg : Cfg) (ops : GenOps σ V) (inst : Instantiate σ) (s s' : St σ) (c : Cls)
+    (tb : Option Nat) (e : ExcId),
+    (inst s c = (s', .error e) → gcmExit cfg ops inst s (some c) none tb = (s', .error e)) ∧
+    (inst s c = (s', .ok e) →
+      gcmExit cfg ops inst s (some c) none tb = gcmExit cfg ops inst s' (some c) (some e) tb)
+
+theorem exitValueNone_proven : ExitValueNone := by
+  intro σ V cfg ops inst s s' c tb e
+  constructor
+  · intro h; simp [gcmExit, h]
+  · intro h; simp [gcmExit, h]
 
 /-- The async twin. For the same generator behaviour, `__aexit__` and `__exit__` differ only by
 `Cfg`: when neither `value` nor what the generator raises is a stop exception, they do the same, and
@@ -308,287 +372,78 @@ theorem asyncTwinExit_proven : AsyncTwinExit := by
       simp [hrt, coBoundary]
     · simp [hrt, hev, coBoundary, h2]
 
-/-! ### `closing`, `nullcontext`, `_RedirectStream`, `chdir` -/
+/-! ### `closing`, `_RedirectStream`, `chdir` -/
 
-/-- `closing`, `aclosing`: `with closing(x) as y` binds `x` itself, calls `close()` exactly once
-whatever the body does, and suppresses nothing: "`f = ...; try: <block> finally: f.close()`". -/
-def ClosingOnce : Prop :=
-  ∀ (R T : Type) (thing : T) (body : T → St Nat → St Nat × Res R) (s s1 : St Nat) (e : ExcId) (r : R),
-    let closeF : St Nat → St Nat × Res Unit := fun s => ({ s with g := s.g + 1 }, .ok ())
-    let cm : CM Nat T :=
-      { enter := fun s => (s, .ok (closingEnter thing)), exit := fun s _ => closingExit closeF s }
-    (body thing s = (s1, .ok r) → withStmt cm body s = ({ s1 with g := s1.g + 1 }, .ok (some r))) ∧
-    (body thing s = (s1, .error e) → withStmt cm body s = ({ s1 with g := s1.g + 1 }, .error e))
-
-theorem closingOnce_proven : ClosingOnce := by
-  intro R T thing body s s1 e r closeF cm
-  constructor
-  · intro h; simp [withStmt, cm, closingEnter, closeF, closingExit, h]
-  · intro h; simp [withStmt, cm, closingEnter, closeF, closingExit, h]
-
-/-- `nullcontext` "does no additional processing": `with nullcontext(v) as x: body` is `body` with
-`x = v`, value or exception, in the sync and the async form. -/
-def NullcontextTransparent : Prop :=
-  ∀ (σ T R : Type) (v : T) (body : T → St σ → St σ × Res R) (s : St σ),
+/-- `closing`: "`with closing(f) as x: <block>` is equivalent to `f = ...; try: <block> finally:
+f.close()`", for every behaviour of `close()`, which gets the exception in flight as the one being
+handled. The target is `f` itself; `close` runs once, after the block; its exception replaces the
+block's outcome; otherwise the block's value or exception (the same object) comes out, so nothing
+is suppressed. -/
+def ClosingTryFinally : Prop :=
+  ∀ (σ R T : Type) (thing : T) (close : Option ExcId → St σ → St σ × Res Unit)
+    (body : T → St σ → St σ × Res R) (s s1 s2 : St σ) (e e2 : ExcId) (r : R),
     let cm : CM σ T :=
-      { enter := fun s => (s, .ok (nullEnter v)), exit := fun s e => (s, .ok (nullExit e)) }
-    withStmt cm body s =
-      (match body v s with
-       | (s, .ok r) => (s, .ok (some r))
-       | (s, .error e) => (s, .error e))
+      { enter := fun s => (s, .ok (closingEnter thing)), exit := fun s x => closingExit (close x) s }
+    (body thing s = (s1, .ok r) → close none s1 = (s2, .ok ()) →
+      withStmt cm body s = (s2, .ok (some r))) ∧
+    (body thing s = (s1, .ok r) → close none s1 = (s2, .error e2) →
+      withStmt cm body s = (s2, .error e2)) ∧
+    (body thing s = (s1, .error e) → close (some e) s1 = (s2, .ok ()) →
+      withStmt cm body s = (s2, .error e)) ∧
+    (body thing s = (s1, .error e) → close (some e) s1 = (s2, .error e2) →
+      withStmt cm body s = (s2, .error e2))
 
-theorem nullcontextTransparent_proven : NullcontextTransparent := by
-  intro σ T R v body s cm
-  simp only [withStmt, cm, nullEnter, nullExit]
-  generalize body v s = r
-  obtain ⟨s', x⟩ := r
-  cases x <;> rfl
+theorem closingTryFinally_proven : ClosingTryFinally := by
+  intro σ R T thing close body s s1 s2 e e2 r cm
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro h1 h2; simp [withStmt, cm, closingEnter, closingExit, h1, h2]
+  · intro h1 h2; simp [withStmt, cm, closingEnter, closingExit, h1, h2]
+  · intro h1 h2; simp [withStmt, cm, closingEnter, closingExit, h1, h2]
+  · intro h1 h2; simp [withStmt, cm, closingEnter, closingExit, h1, h2]
 
 /-- `redirect_stdout` and `redirect_stderr` are re-entrant: `__enter__` installs the new target and
 returns it, and the matching `__exit__` restores exactly the stream that was current and the state of
-the object. `__exit__` without `__enter__` is `IndexError` from the empty list. -/
+the object. When `getattr(sys, stream)` fails, `__enter__` raises that, appends nothing and sets
+nothing. `__exit__` without `__enter__` is `IndexError` from the empty list. -/
 def RedirectRestores : Prop :=
-  ∀ (S : Type) (r : Redirect S) (cur : S),
-    (r.enter cur).2.1 = r.newTarget ∧ (r.enter cur).2.2 = r.newTarget ∧
-    (r.enter cur).1.exit = some (r, cur) ∧
-    ((Redirect.init cur).exit = none) ∧ (Redirect.init cur).oldTargets = []
+  ∀ (S E : Type) (r : Redirect S) (cur : S) (e : E) (t : S),
+    (r.enter (.ok cur : Except E S)).2 = .ok (r.newTarget, r.newTarget) ∧
+    ((r.enter (.ok cur : Except E S)).1.exit = some (r, cur)) ∧
+    r.enter (.error e : Except E S) = (r, .error e) ∧
+    ((Redirect.init t).exit = none)
 
 theorem redirectRestores_proven : RedirectRestores := by
-  intro S r cur
-  refine ⟨rfl, rfl, ?_, rfl, rfl⟩
+  intro S E r cur e t
+  refine ⟨rfl, ?_, rfl, rfl⟩
   simp [Redirect.enter, Redirect.exit]
 
 /-- `chdir`: the matching `__exit__` goes back to the directory `__enter__` found, also when several
-`__enter__` calls on one object nest, as long as that directory still works. When `os.chdir` fails in
-`__enter__`, the exception propagates, the cwd stays, and the saved directory stays on the stack,
-because it was pushed first. -/
+`__enter__` calls on one object nest, as long as that directory still works. When `os.getcwd()`
+fails, `__enter__` raises that and pushes nothing. When `os.chdir` fails in `__enter__`, the
+exception propagates, the cwd stays, and the saved directory stays on the stack, because it was
+pushed first. `__exit__` pops before it calls `os.chdir`, so a failing `os.chdir` there leaves the
+cwd and drops the entry; with an empty stack it is `IndexError`. -/
 def ChdirRestores : Prop :=
-  ∀ (P E : Type) (f : P → P → Except E P) (c : Chdir P) (cwd new : P) (e : E),
+  ∀ (P E : Type) (f : P → P → Except E P) (c : Chdir P) (cwd new old : P) (e : E),
     (f c.path cwd = .ok new → f cwd new = .ok cwd →
-      (c.enter f cwd).1.exit f (c.enter f cwd).2.1 = some (c, cwd, .ok ())) ∧
+      (c.enter f (.ok cwd) cwd).1.exit f (c.enter f (.ok cwd) cwd).2.1 = some (c, cwd, .ok ())) ∧
+    (c.enter f (.error e) cwd = (c, cwd, .error e)) ∧
     (f c.path cwd = .error e →
-      c.enter f cwd = ({ c with oldCwd := c.oldCwd ++ [cwd] }, cwd, .error e)) ∧
-    (Chdir.init c.path).oldCwd = []
+      c.enter f (.ok old) cwd = ({ c with oldCwd := c.oldCwd ++ [old] }, cwd, .error e)) ∧
+    (c.oldCwd = [] → c.exit f cwd = none) ∧
+    (c.oldCwd.getLast? = some old → f old cwd = .error e →
+      c.exit f cwd = some ({ c with oldCwd := c.oldCwd.dropLast }, cwd, .error e))
 
 theorem chdirRestores_proven : ChdirRestores := by
-  intro P E f c cwd new e
-  refine ⟨?_, ?_, rfl⟩
+  intro P E f c cwd new old e
+  refine ⟨?_, rfl, ?_, ?_, ?_⟩
   · intro h1 h2
     simp [Chdir.enter, Chdir.exit, h1, h2]
   · intro h
     simp [Chdir.enter, h]
-
-/-! ### `suppress` -/
-
-/-- `suppress.__exit__` on a plain exception, or no exception: nothing to do for `None`, `True` for a
-listed class, `False` otherwise. `__enter__` returns `None`. -/
-def SuppressPlain : Prop :=
-  ∀ (σ : Type) (cs : List String) (s : St σ) (handled : Option ExcId) (e : ExcId),
-    suppressExit cs s handled none = (s, .ok none) ∧
-    (s.h.isInstAny e cs = true → suppressExit cs s handled (some e) = (s, .ok (some true))) ∧
-    (s.h.isInstAny e cs = false → s.h.isInst e "BaseExceptionGroup" = false →
-      suppressExit cs s handled (some e) = (s, .ok (some false))) ∧
-    suppressEnter = ()
-
-theorem suppressPlain_proven : SuppressPlain := by
-  intro σ cs s handled e
-  refine ⟨rfl, ?_, ?_, rfl⟩
-  · intro h; simp [suppressExit, h]
-  · intro h1 h2; simp [suppressExit, h1, h2]
-
-/-- A group's members being leaves: no nested group. -/
-def Flat (h : Heap) (excs : List ExcId) : Prop := ∀ e ∈ excs, (h.get e).children = none
-
-theorem split_fold_flat (cs : List String) (fuel : Nat) (h : Heap) (excs : List ExcId)
-    (hf : Flat h excs) : ∀ (ms rs : List ExcId),
-    excs.foldl
-      (fun (st : Heap × List ExcId × List ExcId) e =>
-        let x := splitRec cs fuel st.1 e
-        (x.1, st.2.1 ++ x.2.1.toList, st.2.2 ++ x.2.2.toList)) (h, ms, rs) =
-    (h, ms ++ excs.filter (fun e => h.isInstAny e cs),
-      rs ++ excs.filter (fun e => !h.isInstAny e cs)) ∨ fuel = 0 := by
-  intro ms rs
-  cases fuel with
-  | zero => exact .inr rfl
-  | succ f =>
-    left
-    induction excs generalizing ms rs with
-    | nil => simp
-    | cons e rest ih =>
-      have hc : (h.get e).children = none := hf e (by simp)
-      have hr : Flat h rest := fun x hx => hf x (by simp [hx])
-      simp only [List.foldl_cons]
-      by_cases hm : h.isInstAny e cs = true
-      · have : splitRec cs (f + 1) h e = (h, some e, none) := by
-          simp [splitRec, matches', hm]
-        simp only [this, Option.toList_some, Option.toList_none, List.append_nil]
-        rw [ih hr (ms ++ [e]) rs]
-        simp [hm]
-      · have hm' : h.isInstAny e cs = false := by simpa using hm
-        have : splitRec cs (f + 1) h e = (h, none, some e) := by
-          simp [splitRec, matches', hm', hc]
-        simp only [this, Option.toList_some, Option.toList_none, List.append_nil]
-        rw [ih hr ms (rs ++ [e])]
-        simp [hm']
-
-/-- `suppress` on a flat exception group, as documented ("suppressed exceptions are removed from the
-group. Any exceptions of the group which are not suppressed are re-raised in a new group which is
-created using the original group's derive() method"). When every member matches, the group is
-suppressed. Otherwise a new group object is raised, whose members are the unsuppressed ones in order
-and whose message, cause and traceback are the original's. That holds when no member matches: the
-exception that leaves the `with` is then a new object, not the original. -/
-def SuppressGroup : Prop :=
-  ∀ (σ : Type) (cs : List String) (s : St σ) (e : ExcId) (excs : List ExcId) (handled : Option ExcId),
-    e < s.h.length → s.h.isInstAny e cs = false → s.h.isInst e "BaseExceptionGroup" = true →
-    (s.h.get e).children = some excs → Flat s.h excs →
-    (excs.all (fun x => s.h.isInstAny x cs) = true →
-      (suppressExit cs s handled (some e)).2 = .ok (some true)) ∧
-    (excs.all (fun x => s.h.isInstAny x cs) = false →
-      ∃ r, (suppressExit cs s handled (some e)).2 = .error r ∧ r ≠ e ∧
-        ((suppressExit cs s handled (some e)).1.h.get r).children =
-          some (excs.filter (fun x => !s.h.isInstAny x cs)) ∧
-        ((suppressExit cs s handled (some e)).1.h.get r).msg = (s.h.get e).msg ∧
-        ((suppressExit cs s handled (some e)).1.h.get r).cause = (s.h.get e).cause ∧
-        ((suppressExit cs s handled (some e)).1.h.get r).tb = (s.h.get e).tb)
-
-/-- Two exception objects with the same class data; only `__context__` may differ. -/
-def SameData (a b : ExcObj) : Prop :=
-  a.children = b.children ∧ a.msg = b.msg ∧ a.cause = b.cause ∧ a.tb = b.tb
-
-theorem SameData.refl (a : ExcObj) : SameData a a := ⟨rfl, rfl, rfl, rfl⟩
-
-theorem SameData.trans {a b c : ExcObj} (h1 : SameData a b) (h2 : SameData b c) : SameData a c :=
-  ⟨h1.1.trans h2.1, h1.2.1.trans h2.2.1, h1.2.2.1.trans h2.2.2.1, h1.2.2.2.trans h2.2.2.2⟩
-
-theorem setContext_same (h : Heap) (a : ExcId) (c : Option ExcId) (r : ExcId) :
-    SameData ((h.setContext a c).get r) (h.get r) := by
-  simp only [Heap.setContext, Heap.modify, Heap.get]
-  by_cases har : a = r
-  · subst har
-    by_cases hl : a < h.length
-    · rw [List.getD_eq_getElem?_getD, List.getElem?_set_self (by omega)]
-      exact ⟨rfl, rfl, rfl, rfl⟩
-    · rw [List.set_eq_of_length_le (Nat.le_of_not_lt hl)]
-      exact SameData.refl _
-  · rw [List.getD_eq_getElem?_getD, List.getElem?_set_ne har, ← List.getD_eq_getElem?_getD]
-    exact SameData.refl _
-
-theorem breakCycle_same (value : ExcId) (r : ExcId) :
-    ∀ (fuel : Nat) (h : Heap) (o slow : ExcId) (t : Bool),
-      SameData ((Heap.breakCycle value fuel h o slow t).get r) (h.get r) := by
-  intro fuel
-  induction fuel with
-  | zero => intro h o slow t; exact SameData.refl _
-  | succ f ih =>
-    intro h o slow t
-    simp only [Heap.breakCycle]
-    split
-    · exact SameData.refl _
-    · split
-      · exact setContext_same _ _ _ _
-      · split
-        · exact SameData.refl _
-        · exact ih _ _ _ _
-
-theorem raiseCtx_same (h : Heap) (value : ExcId) (handled : Option ExcId) (r : ExcId) :
-    SameData ((h.raiseCtx value handled).get r) (h.get r) := by
-  unfold Heap.raiseCtx
-  split
-  · exact SameData.refl _
-  · split
-    · exact SameData.refl _
-    · exact (setContext_same _ _ _ _).trans (breakCycle_same _ _ _ _ _ _ _)
-
-theorem get_alloc_lt (h : Heap) (o : ExcObj) (r : ExcId) (hr : r < h.length) :
-    (h.alloc o).1.get r = h.get r := by
-  simp [Heap.alloc, Heap.get, List.getD_eq_getElem?_getD, List.getElem?_append_left hr]
-
-theorem get_alloc_last (h : Heap) (o : ExcObj) : (h.alloc o).1.get (h.alloc o).2 = o := by
-  simp [Heap.alloc, Heap.get, List.getD_eq_getElem?_getD]
-
-theorem subset_get (h : Heap) (orig : ExcId) (excs : List ExcId) (r : ExcId) (hr : r < h.length) :
-    (subset h orig excs).1.get r = h.get r ∧ h.length ≤ (subset h orig excs).1.length := by
-  unfold subset
-  split
-  · exact ⟨rfl, Nat.le_refl _⟩
-  · refine ⟨get_alloc_lt _ _ _ hr, ?_⟩
-    simp [Heap.alloc]
-
-theorem suppressGroup_proven : SuppressGroup := by
-  intro σ cs s e excs handled hl hm hg hc hf
-  have hfold := split_fold_flat cs (2 * s.h.length + 1) s.h excs hf [] []
-  have hfold' := hfold.resolve_right (by omega)
-  simp only [List.nil_append] at hfold'
-  let ms := excs.filter (fun x => s.h.isInstAny x cs)
-  let rs := excs.filter (fun x => !s.h.isInstAny x cs)
-  have hsplit : split cs s.h e =
-      (let (h1, m) := subset s.h e ms
-       let (h2, r) := subset h1 e rs
-       (h2, m, r)) := by
-    show splitRec cs ((2 * s.h.length + 1) + 1) s.h e = _
-    rw [splitRec]
-    have hm' : matches' s.h e cs = false := hm
-    simp only [hm', Bool.false_eq_true, if_false, hc]
-    rw [hfold']
-  have hrun : suppressExit cs s handled (some e) =
-      (match (subset (subset s.h e ms).1 e rs).2 with
-       | none => ({ s with h := (subset (subset s.h e ms).1 e rs).1 }, .ok (some true))
-       | some r =>
-        ({ s with h := (subset (subset s.h e ms).1 e rs).1.raiseCtx r handled }, .error r)) := by
-    simp only [suppressExit, hm, Bool.false_eq_true, if_false, hg, if_true, hsplit]
-    cases (subset (subset s.h e ms).1 e rs).2 <;> rfl
-  constructor
-  · intro hall
-    have hrs : rs = [] := by
-      apply List.filter_eq_nil_iff.2
-      intro x hx
-      have := List.all_eq_true.1 hall x hx
-      simp [this]
-    rw [hrun, hrs]
-    simp [subset]
-  · intro hnot
-    have hrs : rs ≠ [] := by
-      intro hrs
-      have h0 := List.filter_eq_nil_iff.1 hrs
-      have : excs.all (fun x => s.h.isInstAny x cs) = true := by
-        apply List.all_eq_true.2
-        intro x hx
-        simpa using h0 x hx
-      rw [this] at hnot
-      cases hnot
-    let h1 := (subset s.h e ms).1
-    have hg1 : h1.get e = s.h.get e := (subset_get s.h e ms e hl).1
-    have hlen1 : s.h.length ≤ h1.length := (subset_get s.h e ms e hl).2
-    have hne : rs.isEmpty = false := by
-      cases hr : rs with
-      | nil => exact absurd hr hrs
-      | cons a b => rfl
-    let o : ExcObj :=
-      { cls := deriveCls h1 rs, msg := (h1.get e).msg, context := (h1.get e).context,
-        cause := (h1.get e).cause, tb := (h1.get e).tb, children := some rs }
-    have hr2 : (subset h1 e rs).2 = some h1.length := by
-      simp [subset, hne, Heap.alloc]
-    have hh2 : (subset h1 e rs).1 = (h1.alloc o).1 := by
-      simp [subset, hne, Heap.alloc, o]
-    have hres : suppressExit cs s handled (some e) =
-        ({ s with h := (h1.alloc o).1.raiseCtx h1.length handled }, .error h1.length) := by
-      rw [hrun]
-      simp only [show (subset s.h e ms).1 = h1 from rfl, hr2, hh2]
-    rw [hres]
-    have hs := raiseCtx_same (h1.alloc o).1 h1.length handled h1.length
-    have hlast : (h1.alloc o).1.get h1.length = o := get_alloc_last h1 o
-    rw [hlast] at hs
-    obtain ⟨a1, a2, a3, a4⟩ := hs
-    have hne' : h1.length ≠ e := Nat.ne_of_gt (Nat.lt_of_lt_of_le hl hlen1)
-    refine ⟨h1.length, rfl, hne', a1, ?_, ?_, ?_⟩
-    · simp only
-      rw [a2]
-      simp [o, hg1]
-    · simp only
-      rw [a3]
-      simp [o, hg1]
-    · simp only
-      rw [a4]
-      simp [o, hg1]
+  · intro h
+    simp [Chdir.exit, h]
+  · intro h1 h2
+    simp [Chdir.exit, h1, h2]
 
 end PyLean.CoreLibs.Misc.Contextlib
