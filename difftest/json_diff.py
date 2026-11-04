@@ -616,8 +616,9 @@ def gen_case(rng):
             c["indent"] = c["indent"] if kw["check_circular"] else None
         c["encoder"] = rng.choice([0, 1, 2, 3, 4, 5])
         c["level"] = str(rng.choice([0, 0, 1, 3, 2**63, -2**63 - 1]))
-        c["key_sep"] = {"s": c["key_sep"]} if rng.random() < 0.95 else {"other": "int"}
-        c["item_sep"] = {"s": c["item_sep"]} if rng.random() < 0.95 else {"other": "int"}
+        # A non-str separator: `converterr` cuts its type name to 50 bytes with snprintf.
+        c["key_sep"] = {"s": c["key_sep"]} if rng.random() < 0.95 else {"other": rng.choice(["int", *LONG_TYPES])}
+        c["item_sep"] = {"s": c["item_sep"]} if rng.random() < 0.95 else {"other": rng.choice(["int", *LONG_TYPES])}
         return c
     if r < 0.99:
         s = rng.choice([gen_doc(rng), tool_text(rng), rand_text(rng, 5)])
@@ -890,8 +891,8 @@ def run_python(c):
 
             enc = {0: json.encoder.c_encode_basestring_ascii, 1: json.encoder.c_encode_basestring,
                    2: custom, 3: nonstr, 4: boom, 5: nonstr_long}[c["encoder"]]
-            ks = str_arg(c["key_sep"]) if "s" in c["key_sep"] else 1
-            its = str_arg(c["item_sep"]) if "s" in c["item_sep"] else 1
+            ks = str_arg(c["key_sep"])
+            its = str_arg(c["item_sep"])
             indent = None if c["indent"] is None else "".join(map(chr, c["indent"]))
             e = json.encoder.c_make_encoder(markers, py_default, enc, indent, ks, its, c["sort_keys"], c["skipkeys"],
                                             c["allow_nan"])

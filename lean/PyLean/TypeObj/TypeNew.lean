@@ -33,7 +33,8 @@ in `char buf[1000]` (`:3353`, `:3370-3394`), so it is the first 999 bytes of the
 whole text (a `,` is added only while it fits, `:3391`, and a cut name ends the loop, `:3373`),
 and `PyErr_SetString` decodes it strictly (`:3396`). When byte 999 falls inside a character of a
 non-ASCII class name, that decoding fails and CPython raises `UnicodeDecodeError` instead of the
-`TypeError`; the model leaves that case out (`gap%`). -/
+`TypeError` (bug record `getargs-snprintf-cut-utf8-decode`); the model leaves that case out
+(`gap%`), since it has no `UnicodeDecodeError` object to raise. -/
 def setMroError {α : Type} (rt : Rt) (rests : List (List Addr)) : M α := do
   let heads := rests.filterMap List.head?
   let cands := dedupKeep heads []
