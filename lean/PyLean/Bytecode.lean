@@ -30,6 +30,7 @@ import PyLean.Bytecode.SpecCallPyFast
 import PyLean.Bytecode.SpecExcMatch
 import PyLean.Bytecode.SpecAsync
 import PyLean.Bytecode.SpecCallBuiltin
+import PyLean.Bytecode.SpecGen
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -489,11 +490,11 @@ def entries : List Entry := GenObj.entries ++ [
     status := .open, prop := ``IterObj.RevSetstate
     notes := "Proof did not survive; needs the clamp arithmetic of reversed_setstate." },
   { id := "bytecode-yield-suspends", pyFile := "Python/bytecodes.c"
-    pyFns := [op "YIELD_VALUE"]
-    statement := "YIELD_VALUE sets gi_frame_state to FRAME_SUSPENDED + oparg, stores the frame with instr_ptr advanced and its stack saved, resumes the caller after the SEND/FOR_ITER, and moves the generator's handled exception back into the generator, for every state."
-    source := "YIELD_VALUE, Python/bytecodes.c:1851-1891"
-    status := .open, prop := ``YieldSuspends
-    notes := "Proof did not survive: excInfo and prev are projections of regs, so they cannot be substituted; needs rewriting with the hypotheses instead." },
+    pyFns := [op "YIELD_VALUE", op "_YIELD_VALUE"]
+    statement := "For every object model and state in the frame of generator a called from caller, with the generator's handled-exception item on top of exc_info: YIELD_VALUE saves the frame in the generator with instr_ptr advanced and its stack below the value, sets gi_frame_state to FRAME_SUSPENDED + oparg, puts exc_info back to the previous item with the generator's exc_value kept in the generator, gives the recursion counter back, and resumes the caller at instr_ptr + 2 (after the SEND or FOR_ITER and its cache) with the value on top; nothing raises."
+    source := "Python/bytecodes.c:1851-1891"
+    status := .proven, prop := ``YieldSuspends, thm := some ``yieldSuspends_proven
+    notes := "_MAKE_HEAP_SAFE (:1566-1568) only changes the stackref's ownership tag, outside the model. generator_return_kind = GENERATOR_YIELD is what gen_send_ex2 reads; the model's genSendEx2 reads the frame state, which on one thread says the same." },
   -- frameobject stack analysis facts.,
   { id := "bytecode-frame-push-pop", pyFile := "Objects/frameobject.c"
     pyFns := ["push_value", "pop_value", "top_of_stack"]
@@ -798,7 +799,36 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := [op "SEND_ASYNC_GEN", op "_GUARD_3OS_ASYNC_GEN_ASEND", op "_SEND_ASYNC_GEN", "_PyAsyncGenASend_Send"]
     statement := "For every object model, SEND_ASYNC_GEN on (iter, null_or_index, v) exits to the generic SEND unless iter is exactly an async_generator_asend, and otherwise runs its am_send on v: PYGEN_NEXT replaces v by the value, PYGEN_RETURN does too and jumps by oparg, and an exception keeps all three (ERROR_NO_POP). In the difftest object model, _PyAsyncGenASend_Send is async_gen_asend_send with a StopIteration (or nothing) read as PYGEN_RETURN with its value and any other exception as PYGEN_ERROR."
     source := "Python/bytecodes.c:1801-1830; _PyAsyncGenASend_Send, Objects/genobject.c:2011-2021"
-    status := .proven, prop := ``SendAsyncGenRules, thm := some ``sendAsyncGenRules_proven }
+    status := .proven, prop := ``SendAsyncGenRules, thm := some ``sendAsyncGenRules_proven },
+  { id := "bytecode-return-generator", pyFile := "Python/bytecodes.c"
+    pyFns := [op "RETURN_GENERATOR"]
+    statement := "For every object model, RETURN_GENERATOR in the frame of a function called from caller allocates a generator, coroutine or async generator (by co_flags) with the function's __name__ and __qualname__, copies the frame into it with instr_ptr past the instruction, its stack as it is, owner FRAME_OWNED_BY_GENERATOR and gi_frame_state FRAME_CREATED, pops the frame without clearing it, gives the recursion counter back, and resumes the caller at instr_ptr + return_offset with the new object on top."
+    source := "Python/bytecodes.c:5839-5861; _Py_MakeCoro, Objects/genobject.c"
+    status := .proven, prop := ``ReturnGeneratorRules, thm := some ``returnGeneratorRules_proven
+    notes := "3.15 relaxed the stack assert to STACK_LEVEL() <= 2; the model copies whatever is there. Not modelled: the allocation failure of _Py_MakeCoro (ERROR_IF) and cr_origin, which sys.set_coroutine_origin_tracking_depth turns on (off by default)." },
+  { id := "bytecode-send", pyFile := "Python/bytecodes.c"
+    pyFns := [op "SEND", op "_SEND"]
+    statement := "For every object model, the generic SEND on (receiver, null_or_index, v): an exact generator or coroutine that is not running gets v on its frame, FRAME_EXECUTING, its exc_info item on top, return_offset = INSTRUCTION_SIZE + oparg, and runs inline with the other two left; otherwise with an index and v None (a virtual iterator) the next item and index replace them, the end jumps by oparg with the stack unchanged, an error keeps it; otherwise _PyIter_Send: the value replaces v, PYGEN_RETURN also jumps by oparg, an error keeps the stack. PyIter_Send answers through am_send when the type has one, else tp_iternext for None to an iterator and receiver.send(v) otherwise, a StopIteration (or NULL with nothing set) being PYGEN_RETURN with its value and any other exception PYGEN_ERROR."
+    source := "Python/bytecodes.c:1676-1722; PyIter_Send, Objects/abstract.c:2930-2953; _PyForIter_VirtualIteratorNext, Python/ceval.c"
+    status := .proven, prop := ``SendRules, thm := some ``sendRules_proven
+    notes := "PyIter_Send itself is bytecode-iter-send. No PEP 523 hook is modelled (IS_PEP523_HOOKED is false)." },
+  { id := "bytecode-iter-send", pyFile := "Objects/abstract.c"
+    pyFns := []
+    statement := "PyIter_Send, as SEND uses it, for every object model: am_send when the type has it; otherwise tp_iternext for None to an iterator, else the send method; a value is PYGEN_NEXT, NULL with nothing set or a StopIteration (a subclass included) PYGEN_RETURN with its value, anything else PYGEN_ERROR."
+    source := "Objects/abstract.c:2930-2953"
+    status := .proven, prop := ``IterSendRules, thm := some ``iterSendRules_proven
+    notes := "Credits no row: Objects/abstract.c belongs to another module's inventory." },
+  { id := "bytecode-traceback-here", pyFile := "Python/bytecodes.c"
+    pyFns := []
+    statement := "label(error) adds the frame's traceback entry (PyTraceBack_Here) before exception_unwind, and RERAISE goes to exception_unwind without one; PyTraceBack_Here on an exception instance in a complete frame makes a new traceback object (tb_next the old traceback, the frame's code and instr_ptr) its __traceback__, and in an incomplete frame (before _co_firsttraceable, not a generator's) adds none."
+    source := "Python/bytecodes.c:6460-6482; _PyFrame_IsIncomplete, Include/internal/pycore_interpframe.h:259-268; PyTraceBack_Here, Python/traceback.c"
+    status := .proven, prop := ``TracebackRules, thm := some ``tracebackRules_proven
+    notes := "Credits no row: the labels have no inventory rows, and PyTraceBack_Here is in Python/traceback.c. tb_frame is the frame's code only; frame objects are not modelled." },
+  { id := "bytecode-with-except-start", pyFile := "Python/bytecodes.c"
+    pyFns := [op "WITH_EXCEPT_START"]
+    statement := "For every object model, WITH_EXCEPT_START on (exit_func, exit_self, lasti, prev_exc, val) with val an exception instance calls exit_func with exit_self first when it is not NULL, then type(val), val and val.__traceback__ (None for NULL), pushes the result above the five, and on an error leaves the stack as it was."
+    source := "Python/bytecodes.c:4153-4187"
+    status := .proven, prop := ``WithExceptStartRules, thm := some ``withExceptStartRules_proven }
 ]
 
 end PyLean.Bytecode

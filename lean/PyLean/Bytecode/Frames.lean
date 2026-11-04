@@ -158,20 +158,4 @@ theorem forIterNext_proven : ForIterNext := by
   simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, popN, pushAll, bind, EStateM.bind, BM.lift,
     RM.lift, h, pure, EStateM.pure, monadLift, liftM, MonadLift.monadLift]
 
-/-- `YIELD_VALUE` suspends: the generator records `FRAME_SUSPENDED + oparg`, the frame
-is stored with `instr_ptr` on the next instruction and the saved stack, the caller
-resumes after the `SEND`/`FOR_ITER` that entered it, and the handled exception of
-the generator goes back into the generator. -/
-def YieldSuspends : Prop :=
-  ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val) (a : Addr) (g : GenObj) (ev : Val)
-    (chain : List Val) (caller : Frame) (prev : List Frame),
-    regs.frame.owner = .generator a → regs.rt.heap[a]? = some (.gen g) →
-    regs.rt.excInfo = ev :: chain → regs.prev = caller :: prev →
-    ∃ s', YIELD_VALUE e ⟨regs, v :: rest⟩ = .ok () s' ∧
-      s'.stack = v :: caller.stack ∧ s'.regs.next = caller.instrPtr + 2 ∧
-      s'.regs.rt.excInfo = chain ∧ s'.regs.frame = caller ∧
-      s'.regs.rt.heap[a]? = some (.gen { g with
-        frameState := 1 + (e.oparg : Int), excValue := ev,
-        frame := { regs.frame with instrPtr := regs.frame.instrPtr + 1, stack := rest } })
-
 end PyLean.Bytecode

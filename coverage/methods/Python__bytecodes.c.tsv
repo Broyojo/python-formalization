@@ -152,7 +152,7 @@ Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (val
 Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _CALL_INTRINSIC_2 + POP_TOP + POP_TOP;	modelled	bytecode-intrinsics	
 Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-raise-varargs	
 Python/bytecodes.c	1544	1544	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	excluded		no-behaviour: value = PyStackRef_MakeHeapSafe(value) (:1566-1568) turns a deferred or borrowed stackref into an owned one; the object is the same, and reference ownership has no Python-visible effect
 Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	modelled	bytecode-return-value	
 Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	modelled	bytecode-return-value	
 Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
@@ -161,8 +161,8 @@ Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	m
 Python/bytecodes.c	1643	1643	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	modelled	bytecode-get-anext	
 Python/bytecodes.c	1651	1651	opcode:GET_AWAITABLE	inst(GET_AWAITABLE, (iterable -- iter)) {	modelled	bytecode-get-awaitable	
 Python/bytecodes.c	1664	1664	opcode:_SPECIALIZE_SEND	specializing op(_SPECIALIZE_SEND, (counter/1, receiver, unused, unused -- receiver, unused, unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1676	1676	opcode:_SEND	tier1 op(_SEND, (receiver, null_or_index, v -- receiver, null_or_index, retval)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1722	1722	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;	todo		
+Python/bytecodes.c	1676	1676	opcode:_SEND	tier1 op(_SEND, (receiver, null_or_index, v -- receiver, null_or_index, retval)) {	modelled	bytecode-send	
+Python/bytecodes.c	1722	1722	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;	modelled	bytecode-send	
 Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receiver, null, v -- receiver, null, gen_frame)) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
@@ -175,8 +175,8 @@ Python/bytecodes.c	1801	1801	opcode:_GUARD_3OS_ASYNC_GEN_ASEND	op(_GUARD_3OS_ASY
 Python/bytecodes.c	1806	1806	opcode:_SEND_ASYNC_GEN	replaced op(_SEND_ASYNC_GEN, (iter, null_in, v -- asend, null_out, retval)) {	modelled	bytecode-send-async-gen	
 Python/bytecodes.c	1827	1827	opcode:SEND_ASYNC_GEN	macro(SEND_ASYNC_GEN) =	modelled	bytecode-send-async-gen	
 Python/bytecodes.c	1832	1832	opcode:_SEND_ASYNC_GEN_TIER_TWO	tier2 op(_SEND_ASYNC_GEN_TIER_TWO, (iter, null_in, v -- asend, null_out, retval)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1851	1851	opcode:_YIELD_VALUE	op(_YIELD_VALUE, (retval -- value)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1889	1889	opcode:YIELD_VALUE	macro(YIELD_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	1851	1851	opcode:_YIELD_VALUE	op(_YIELD_VALUE, (retval -- value)) {	modelled	bytecode-yield-suspends	
+Python/bytecodes.c	1889	1889	opcode:YIELD_VALUE	macro(YIELD_VALUE) =	modelled	bytecode-yield-suspends	
 Python/bytecodes.c	1893	1893	opcode:_YIELD_VALUE_EVENT	tier1 op(_YIELD_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1906	1906	opcode:INSTRUMENTED_YIELD_VALUE	macro(INSTRUMENTED_YIELD_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1911	1911	opcode:POP_EXCEPT	inst(POP_EXCEPT, (exc_value -- )) {	modelled	bytecode-exc-info-nests	
@@ -374,7 +374,7 @@ Python/bytecodes.c	4118	4118	opcode:FOR_ITER_GEN	macro(FOR_ITER_GEN) =	todo		cha
 Python/bytecodes.c	4125	4125	opcode:_INSERT_NULL	op(_INSERT_NULL, (self -- method_and_self[2])) {	modelled	bytecode-load-special	
 Python/bytecodes.c	4131	4131	opcode:_LOAD_SPECIAL	op(_LOAD_SPECIAL, (method_and_self[2] -- method_and_self[2])) {	modelled	bytecode-load-special	
 Python/bytecodes.c	4148	4148	opcode:LOAD_SPECIAL	macro(LOAD_SPECIAL) =	modelled	bytecode-load-special	
-Python/bytecodes.c	4153	4153	opcode:WITH_EXCEPT_START	inst(WITH_EXCEPT_START, (exit_func, exit_self, lasti, unused, val -- exit_func, exit_self, lasti, unused, val, res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4153	4153	opcode:WITH_EXCEPT_START	inst(WITH_EXCEPT_START, (exit_func, exit_self, lasti, unused, val -- exit_func, exit_self, lasti, unused, val, res)) {	modelled	bytecode-with-except-start	
 Python/bytecodes.c	4213	4213	opcode:PUSH_EXC_INFO	inst(PUSH_EXC_INFO, (exc -- prev_exc, new_exc)) {	modelled	bytecode-push-exc-info	
 Python/bytecodes.c	4228	4228	opcode:_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT	op(_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT, (owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4235	4235	opcode:_GUARD_KEYS_VERSION	op(_GUARD_KEYS_VERSION, (keys_version/2, owner -- owner)) {	todo		changed-in-3.15:
@@ -498,7 +498,7 @@ Python/bytecodes.c	5801	5801	opcode:INSTRUMENTED_CALL_FUNCTION_EX	macro(INSTRUME
 Python/bytecodes.c	5807	5807	opcode:_MAKE_FUNCTION	op(_MAKE_FUNCTION, (codeobj_st -- func, co)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_FUNCTION + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	modelled	bytecode-return-generator	
 Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	modelled	bytecode-build-slice	
 Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	modelled	bytecode-format	
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	modelled	bytecode-format	
