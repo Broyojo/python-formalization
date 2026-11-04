@@ -132,8 +132,8 @@ duplicates:
     array('q', range(64)), an item whose __index__ clears the array and raises leaves 64 items of fresh
     memory under PYTHONMALLOC=debug. That is the same function and symptom as open gh-152166 (whose PR
     #152167 still calls array_resize(self, old_size) on its new error path, so it would not fix the
-    restore), so no separate record was written; it belongs in a comment on gh-152166 if a human decides
-    to report it. It is modelled by arrFromListRe (ArrayReModel.lean).
+    restore). It now has its own record, bugs/sequences-array-fromlist-restore-stale.yaml (refutation
+    ArrayFromListRestore), which notes it may go upstream as a comment on gh-152166.
 lean:
   property: PyLean.Sequences.ArrayIns1Reentrant
   theorem: PyLean.Sequences.arrayIns1Reentrant_refuted

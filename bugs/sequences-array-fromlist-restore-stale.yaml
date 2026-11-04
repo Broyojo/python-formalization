@@ -1,0 +1,96 @@
+id: sequences-array-fromlist-restore-stale
+title: "array.fromlist: after an item's __index__ clears the array, the error path's array_resize(self, old_size) re-grows it, exposing old_size items of uninitialised memory"
+priority: P2
+priority_note: |
+  Same class and reach as sequences-array-ins1-stale-size (pure Python, a conversion method that
+  mutates the array being filled, uninitialised heap memory becomes readable array items), but
+  through the error path of a less common method, and the call raises, so code that catches the
+  exception and keeps using the array is needed to read the memory. P2 rather than P1 for that
+  reason.
+kind: memory-safety
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["array_array_fromlist_impl", "array_resize"]
+summary: |
+  array_array_fromlist_impl (Modules/arraymodule.c:1852-1883) grows the array to old_size + n
+  (:1864), then stores item i with `setitem(self, Py_SIZE(self) - n + i, v)` (:1869-1870). The
+  setitem converts v first (__index__ for the integer typecodes), and that code may clear the array.
+  CHECK_ARRAY_BOUNDS (:217-225) then refuses the store with IndexError, and fromlist restores with
+  `array_resize(self, old_size)` (:1871). That call does not undo fromlist's growth: it resizes
+  whatever array the code left. When the array had 16 or more items at the clear (old_size + n >= 16),
+  array_resize(self, 0) freed the buffer (:163-169), so the restore reallocates a NULL buffer to
+  old_size items (:183-198) that nobody writes. fromlist raises IndexError and the array holds
+  old_size items of uninitialised memory. With fewer than 16 items the buffer is kept (:156-161) and
+  the "cleared" items come back instead.
+  Lean (lean/PyLean/Sequences/ArrayFromListRe.lean): ArrayFromListRestore (a fromlist whose first
+  store fails leaves no more items than the conversion code left) is refuted by a 16-item 'q' array
+  and an item whose __index__ clears it; ArrayFromListClear states the exact outcome for every
+  integer typecode and every array and list with old_size + n >= 16; ArrayFromListLive states the
+  live-size store index for every conversion that leaves a larger array (python/cpython#152166).
+likelihood: |
+  Low in ordinary code: it needs an item whose conversion method clears the array being filled.
+  Easy to reach on purpose from pure Python; fuzzers that mutate containers from callbacks find
+  this class of bug (gh-142555, gh-142882, gh-152166 are siblings in the same file).
+maybe_intended: |
+  No. The restore is meant to make fromlist all or nothing (Doc/library/array.rst: "if there is a
+  type error, the array is unchanged"); turning a cleared array into old_size never-written items is
+  neither the old state nor the state the code left.
+reproducer: |
+  from array import array
+  a = array('q', range(100, 164))
+  class V:
+      def __index__(self):
+          a.clear()
+          return 7
+  try:
+      a.fromlist([V()])
+  except IndexError as e:
+      print("IndexError:", e)
+  print("len", len(a), "first items", list(a[:4]))
+  # Expected: the array the conversion left (empty), or the 64 old items; not 64 never-written cells.
+  if len(a) == 64 and list(a) != list(range(100, 164)):
+      print("REPRODUCED sequences-array-fromlist-restore-stale")
+expected: |
+  fromlist raises IndexError (the conversion emptied the array under the store) and leaves either
+  the empty array the conversion left or the old items; it never creates items nobody wrote.
+observed: |
+  python3 3.15.2 (pod): IndexError: array assignment index out of range; len 64, the items heap-address
+  values (e.g. 134979994222352). REPRODUCED. Under PYTHONMALLOC=debug every item is
+  -3617008641903833651 (0xCDCD... fill of fresh memory), which confirms they were never written.
+  With array('q', range(100, 115)) and one item (15 + 1 = 16 items at the clear) the same happens;
+  with array('q', range(100, 108)) the old items come back unchanged.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): identical. REPRODUCED (scripts/check_bugs.py on both).
+promised_by: |
+  Invariant: no read of uninitialised memory from pure Python. Doc/library/array.rst fromlist:
+  "if there is a type error, the array is unchanged" (all or nothing).
+cause: |
+  Modules/arraymodule.c:1871 (and :1877 on the list-size path) calls array_resize(self, old_size)
+  without checking that the array still has at least old_size items whose first old_size are the old
+  ones; after a clear, array_resize (:140-199) grows a NULL buffer and does not initialise it.
+possible_fix: |
+  Hold an export (or a "resizing" flag) on self while fromlist converts items, so the conversion's
+  clear() raises BufferError, as Serhiy suggested for tofile (gh-142884); or convert every item into a
+  temporary buffer first and resize/copy only once all conversions succeeded, which also removes the
+  live-size store index of gh-152166. Merely re-checking Py_SIZE(self) before the restore is not
+  enough: the old items are gone after a clear, so the only consistent states are "empty" or "error
+  before any user code".
+duplicates:
+  issues:
+    - {number: 152166, state: open, relation: "closest sibling, same function, different path: there a growing __index__ makes the live-size store index skip reserved slots on a successful call; here a clearing __index__ makes the store fail and the restore re-grow the array. Its open PR #152167 stores at old_size + i and adds a RuntimeError when Py_SIZE changed, but keeps array_resize(self, old_size) on every error path, so this path still reproduces with the PR. A human may prefer to report this as a comment on gh-152166 (related findings for a module go upstream as one issue)."}
+    - {number: 142555, state: closed, relation: "sibling: setitem stored through a stale buffer after __index__ cleared the array; fixed by CHECK_ARRAY_BOUNDS, which is what makes the store fail here before the restore"}
+    - {number: 142884, state: open, relation: "sibling (tofile, a write() that clears the array); same remedy discussed (hold an export)"}
+  queries: ["gh search issues --repo python/cpython (unquoted words): array fromlist __index__",
+            "array fromlist clear", "array fromlist uninitialized (152166)", "array fromlist IndexError",
+            "array_resize old_size fromlist", "gh issue view 152166; gh pr view 152167; gh pr diff 152167",
+            "bugforge README: no array fromlist entry"]
+  note: |
+    Different from bugs/sequences-array-ins1-stale-size.yaml (append/insert/extend through ins1, where the
+    stale value is ins1's own n and the call succeeds) and from gh-152166 (the live-size store index on a
+    successful call, stated here as ArrayFromListLive and recorded as that open issue rather than as a new
+    finding). This record is the error-path restore only.
+lean:
+  property: PyLean.Sequences.ArrayFromListRestore
+  theorem: PyLean.Sequences.arrayFromListRestore_refuted
+  related: ["PyLean.Sequences.arrayFromListClear_proven (the exact outcome for every integer typecode and old_size + n >= 16)",
+            "PyLean.Sequences.arrayFromListLive_proven (the store index Py_SIZE - n + i read from the live size; gh-152166)"]
+  note: "ArrayReModel.lean: arrFromListRe mirrors :1852-1883 with a conversion that may change the array and the list. The model pads new items with 0 where CPython has uninitialised memory."

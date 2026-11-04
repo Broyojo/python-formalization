@@ -36,6 +36,7 @@ steered to small values unless the C code's explicit overflow check rejects them
 """
 
 import array as array_mod
+import builtins
 import collections
 import ctypes
 import copy
@@ -130,6 +131,37 @@ class Mut:
 
     def __repr__(self):
         return "M%d" % self.k
+
+
+class EqScript:
+    """A value whose __eq__ runs a script against the array under test: call k does sc[k][0]
+    (1 clear, 2 append a zero item, 3 del a[-1], 4 del a[0]) then returns False (0), True (1)
+    or raises ValueError('eq') (2); past the script it returns False."""
+    __hash__ = None
+
+    def __init__(self, a, sc):
+        self.a, self.sc, self.k = a, sc, 0
+
+    def __eq__(self, other):
+        k = self.k
+        self.k += 1
+        if k >= len(self.sc):
+            return False
+        act, res = self.sc[k]
+        a = self.a
+        if act == 1:
+            a.clear()
+        elif act == 2:
+            a.frombytes(bytes(a.itemsize))
+        elif act == 3:
+            if len(a):
+                del a[-1]
+        elif act == 4:
+            if len(a):
+                del a[0]
+        if res == 2:
+            raise ValueError("eq")
+        return res == 1
 
 
 BOMB = Bomb()
@@ -630,9 +662,10 @@ def gen_array_op(rng, a):
                      "tolist", "frombytes", "frombytes_wide", "tobytes", "fromfile", "fromfile_notbytes",
                      "fromfile_raise", "tofile", "fromunicode", "tounicode", "byteswap", "reverse", "clear",
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
-                     "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
+                     "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce", "it_roundtrip",
                      "it_setstate", "append_m", "append_m", "insert_m", "setitem_m", "extend_m",
-                     "fromlist_m", "fromlist_m", "getitem_bad"])
+                     "fromlist_m", "fromlist_m", "getitem_bad", "count_eq", "index_eq", "contains_eq",
+                     "remove_eq"])
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
     if op.endswith("_m"):
@@ -649,6 +682,11 @@ def gen_array_op(rng, a):
         return [op, vs]
     if op == "append":
         return [op, store_val(rng, tc)]
+    if op in ("count_eq", "index_eq", "contains_eq", "remove_eq"):
+        # a value whose __eq__ changes the array (EqScript): call k runs action sc[k][0] and
+        # returns False, True or raises (sc[k][1])
+        return [op, [[rng.choice([0, 0, 0, 1, 2, 2, 3, 4]), rng.choice([0, 0, 0, 1, 2])]
+                     for _ in range(rng.randint(0, n + 3))]]
     if op in ("count", "contains", "remove", "index"):
         v = rng.choice([good_val(rng, tc), any_val(rng, tc), {"o": "Bomb"}])
         if n and rng.random() < 0.5:
@@ -747,7 +785,11 @@ def gen_array_op(rng, a):
     if op == "it_reduce":
         return [op, rng.randrange(3)]
     if op == "it_setstate":
-        return [op, rng.randrange(3), rng.choice([0, 1, -1, n, n + 1, 2 ** 63, -2 ** 64, rng.randint(-2, n + 2)])]
+        return [op, rng.randrange(3), rng.choice([0, 1, -1, n, n + 1, 2 ** 63, -2 ** 64, rng.randint(-2, n + 2),
+                                                  rng.randint(-2, n + 2), {"f": fbits(rng)},
+                                                  {"o": "Idx", "i": 1}, {"o": "NoneType"}])]
+    if op == "it_roundtrip":
+        return [op, rng.randrange(3)]
     raise AssertionError(op)
 
 
@@ -1288,6 +1330,14 @@ def run_array_op(a, op, c, extra):
         return a.index(to_val(args[0]), *args[1:])
     if name == "count":
         return a.count(to_val(args[0]))
+    if name == "count_eq":
+        return a.count(EqScript(a, args[0]))
+    if name == "index_eq":
+        return a.index(EqScript(a, args[0]))
+    if name == "contains_eq":
+        return EqScript(a, args[0]) in a
+    if name == "remove_eq":
+        return a.remove(EqScript(a, args[0]))
     if name == "contains":
         return to_val(args[0]) in a
     if name == "remove":
@@ -1476,9 +1526,27 @@ def run_array_op(a, op, c, extra):
         return "STOP" if x is its else from_val(x)
     if name == "it_reduce":
         r = its[args[0]].__reduce__()
-        return r[2] if len(r) == 3 else None
+        if len(r) == 3:
+            return ["live", r[0] is builtins.iter, len(r[1]) == 1 and r[1][0] is a, r[2]]
+        return ["exhausted", r[0] is builtins.iter, r[1] == ((),)]
+    if name == "it_roundtrip":
+        r = its[args[0]].__reduce__()
+        it2 = r[0](*r[1])
+        if len(r) == 3:
+            it2.__setstate__(r[2])
+        out = []
+        while True:
+            try:
+                x = next(it2)
+            except StopIteration:
+                break
+            except Exception as e:
+                out.append({"exc": type(e).__name__, "msg": str(e)})
+                continue
+            out.append({"ok": from_val(x)})
+        return out
     if name == "it_setstate":
-        return its[args[0]].__setstate__(args[1])
+        return its[args[0]].__setstate__(to_val(args[1]))
     raise AssertionError(name)
 
 

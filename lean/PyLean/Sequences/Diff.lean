@@ -493,6 +493,39 @@ def jFItem (j : Json) : Except String FItem :=
   | .ok m => do return .inr (← m.getNat?, ← jVal (← field j "v"))
   | .error _ => Sum.inl <$> jVal j
 
+/-- What call `k` of the difftest's `EqScript.__eq__` does to the array (`act`): 1 clears it, 2
+appends a zero item (`a.frombytes(bytes(a.itemsize))`), 3 deletes the last item, 4 the first
+(`del a[-1]`, `del a[0]`, when there is one). A failure raises out of `__eq__`. -/
+def eqAct (act : Nat) (a : Arr) : Py Arr :=
+  match act with
+  | 1 => arrClear a
+  | 2 => arrFromBytes a (List.replicate a.tc.itemsize.toNat 0) 1
+  | 3 => if a.items.length > 0 then arrAssIndex a (-1) none else .ok a
+  | 4 => if a.items.length > 0 then arrAssIndex a 0 none else .ok a
+  | _ => .ok a
+
+/-- The comparison of the difftest's `EqScript`: call `i` (the loops start at 0) runs
+`eqAct` and returns False (0), True (1) or raises `ValueError("eq")` (2); past the script it
+returns False. -/
+def scriptCmp (sc : List (Nat × Nat)) : ReCmp := fun i a _ =>
+  match sc[i.toNat]? with
+  | none => (a, .ok false)
+  | some (act, res) =>
+    match eqAct act a with
+    | .error e => (a, .error e)
+    | .ok a' => (a', match res with
+        | 1 => .ok true
+        | 2 => .error (.valueError "eq")
+        | _ => .ok false)
+
+def jScript (j : Json) : Except String (List (Nat × Nat)) := do
+  let arr ← j.getArr?
+  arr.toList.mapM fun e => do
+    let p ← e.getArr?
+    let some x := p[0]? | throw "script"
+    let some y := p[1]? | throw "script"
+    return (← x.getNat?, ← y.getNat?)
+
 structure AState where
   a : Arr
   its : Array ArrIter
@@ -515,10 +548,30 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "append" => return optE (arrAppendS a (← jVal (← arg op 1)))
   | "insert" => return optE (arrInsertS a (← jInt (← arg op 1)) (← jVal (← arg op 2)))
   | "pop" => return keep (arrPop a (← optArg op 1)) (fun p => p.1.toJ) (·.2)
-  | "index" => return same (pyJ toJson (arrIndex a (eqOf (← jVal (← arg op 1))) (← optArg op 2) (← optArg op 3)))
-  | "count" => return same (pyJ toJson (arrCount a (eqOf (← jVal (← arg op 1)))))
-  | "contains" => return same (pyJ toJson (arrContains a (eqOf (← jVal (← arg op 1)))))
-  | "remove" => return keep (arrRemove a (eqOf (← jVal (← arg op 1)))) (fun _ => unitJ) id
+  | "index" =>
+    let (a', r) := arrIndexRe (ReCmp.pure (eqOf (← jVal (← arg op 1)))) a (← optArg op 2) (← optArg op 3)
+    return (pyJ toJson r, { s with a := a' })
+  | "count" =>
+    let (a', r) := arrCountRe (ReCmp.pure (eqOf (← jVal (← arg op 1)))) a
+    return (pyJ toJson r, { s with a := a' })
+  | "contains" =>
+    let (a', r) := arrContainsRe (ReCmp.pure (eqOf (← jVal (← arg op 1)))) a
+    return (pyJ toJson r, { s with a := a' })
+  | "remove" =>
+    let (a', r) := arrRemoveRe (ReCmp.pure (eqOf (← jVal (← arg op 1)))) a
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
+  | "index_eq" =>
+    let (a', r) := arrIndexRe (scriptCmp (← jScript (← arg op 1))) a none none
+    return (pyJ toJson r, { s with a := a' })
+  | "count_eq" =>
+    let (a', r) := arrCountRe (scriptCmp (← jScript (← arg op 1))) a
+    return (pyJ toJson r, { s with a := a' })
+  | "contains_eq" =>
+    let (a', r) := arrContainsRe (scriptCmp (← jScript (← arg op 1))) a
+    return (pyJ toJson r, { s with a := a' })
+  | "remove_eq" =>
+    let (a', r) := arrRemoveRe (scriptCmp (← jScript (← arg op 1))) a
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "getitem" => return same (pyJ (·.toJ) (arrGetItem a (← jInt (← arg op 1))))
   | "sqitem" =>
     let i ← jInt (← arg op 1)
@@ -631,10 +684,21 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
       { s with its := s.its.set! k it' })
   | "it_reduce" =>
     let it ← its (← (← arg op 1).getNat?)
-    return same (okJ (match arrIterReduce it with | some i => toJson i | none => Json.null))
+    return same (okJ (match arrIterReduce a it with
+      | .live f arr i => Json.arr #[toJson "live", toJson (f == "iter"), toJson (decide (arr = a)), toJson i]
+      | .exhausted f => Json.arr #[toJson "exhausted", toJson (f == "iter"), toJson true]))
+  | "it_roundtrip" =>
+    let it ← its (← (← arg op 1).getNat?)
+    match arrIterReduce a it with
+    | .exhausted _ => return same (okJ (Json.arr #[]))
+    | .live _ _ i =>
+      match arrIterSetstate a arrIter (.int i) with
+      | .error e => return same (errJ e)
+      | .ok it2 => return same (okJ (Json.arr ((arrDrain a (a.items.length + 1) it2).map
+          (fun r => pyJ (·.toJ) r)).toArray))
   | "it_setstate" =>
     let k ← (← arg op 1).getNat?
-    match arrIterSetstate a (← its k) (← jInt (← arg op 2)) with
+    match arrIterSetstate a (← its k) (← jVal (← arg op 2)) with
     | .ok it' => return (okJ unitJ, { s with its := s.its.set! k it' })
     | .error e => return (errJ e, s)
   | other => throw s!"unknown array op {other}"
