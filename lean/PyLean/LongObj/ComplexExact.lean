@@ -284,4 +284,17 @@ theorem cAbsBranches_proven : CAbsBranches := by
   · simp only [c_abs, h1, h2, Bool.not_true, Bool.or_false, Bool.false_eq_true, ite_false]
     cases hf : isfinite (L.hypot z.real z.imag).1 <;> simp
 
+/-! ## Annex G.5.2 with two infinite divisor parts -/
+
+/-- `complex(1e308, 1e308) / complex(inf, inf)`: Smith's ratio is `inf/inf`, a NaN, so the
+recovery of complexobject.c:235-241 runs with `x = y = 1.0`, and `0.0 * (1e308 + 1e308)` is
+`0.0 * inf`, a NaN. The quotient is `nan+0j`, not a zero: C11 Annex G.5.2 asks for a zero, and
+its reference `_Cdivd` computes the same overflowing sum. -/
+theorem cQuotAnnexG_refuted : ¬ CQuotAnnexG := by
+  intro h
+  have := (h ⟨Dbl.d1e308, Dbl.d1e308⟩ ⟨Dbl.pinf, Dbl.pinf⟩ (by unfold Dbl.Valid; decide)
+    (by unfold Dbl.Valid; decide) (by unfold Dbl.Valid; decide) (by unfold Dbl.Valid; decide)).2 (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  revert this
+  decide +kernel
+
 end PyLean.LongObj.Cplx
