@@ -178,7 +178,8 @@ def loadName (env : Env) (rt : Rt) (fr : Frame) (n : Name) : M Val := do
       | none =>
         match NameDict.get? env.builtins n with
         | some v => pure v
-        | none => raiseC B.NameError s!"name '{n}' is not defined"
+        -- `NAME_ERROR_MSG`, `"name '%.200s' is not defined"` (`Python/ceval_macros.h:404`).
+        | none => raiseC B.NameError s!"name '{trunc 200 n}' is not defined"
 
 /-- Store a name in the current scope. -/
 def storeName (env : Env) (rt : Rt) (fr : Frame) (inFunc : Bool) (n : Name) (v : Val) : M Frame := do

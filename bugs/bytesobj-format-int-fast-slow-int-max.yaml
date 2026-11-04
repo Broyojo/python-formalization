@@ -1,0 +1,75 @@
+id: bytesobj-format-int-fast-slow-int-max
+title: "b'%x' % n succeeds but b'%5x' % n raises 'string too large in _PyUnicode_FormatLong' once the text passes INT_MAX"
+priority: P5
+kind: inconsistency
+module: bytesobj
+files: [Objects/bytesobject.c, Objects/unicode_format.c]
+functions: ["_PyBytes_FormatEx", "formatlong", "_PyUnicode_FormatLong"]
+summary: |
+  printf-style formatting of an exact int takes one of two paths. With no width, precision, '+' or ' '
+  flag and a conversion other than X, _PyBytes_FormatEx calls _PyLong_FormatBytesWriter directly
+  (Objects/bytesobject.c:924-957); otherwise it goes through formatlong (:959-968), which calls
+  _PyUnicode_FormatLong. That function first builds PyNumber_ToBase(v, base) and refuses a result of
+  more than INT_MAX characters with ValueError('string too large in _PyUnicode_FormatLong')
+  (Objects/unicode_format.c:247-251), because the rest of it works in int. The fast path has no such
+  limit. So for an int whose hex text has 2**31 + 1 digits, b'%x' % v returns the 2 GiB result while
+  b'%5x' % v (a width of 5, which changes nothing in the output) raises ValueError. str % has the same
+  two paths (unicode_format.c:354-375) and the same split; format(v, '5x') succeeds.
+  Lean: FastSlowLong (fast path and formatlong agree for %d %i %u %o %x) is proven only under the
+  hypothesis that the text has at most INT_MAX bytes; FastSlowLongAll, the same without that
+  hypothesis, is refuted at v = 16 ** 2**31 (fastSlowLongAll_refuted).
+likelihood: |
+  Very low: it needs an int of 2**33 bits or more (1 GiB) formatted in hex or octal (in decimal the
+  4300-digit limit of int-to-str fires first, on both paths), and several GiB of memory. The outcome is
+  an exception, not wrong output or a crash.
+maybe_intended: |
+  Probably tolerated rather than intended: the INT_MAX check guards the int arithmetic that follows in
+  _PyUnicode_FormatLong, and the fast path writes through a Py_ssize_t-sized writer that never needed
+  it. Nobody promises that a width of 5 can turn a working conversion into an error, but
+  the sizes involved make this a corner case; maintainers may well prefer to document it or leave it.
+reproducer: |
+  v = 1 << (4 * 2**31)          # 16 ** 2**31: 2**31 + 1 hex digits (a 1 GiB int)
+  got = {}
+  for name, f in [("b'%x' % v", lambda: b'%x' % v), ("b'%5x' % v", lambda: b'%5x' % v),
+                  ("'%x' % v", lambda: '%x' % v), ("'%5x' % v", lambda: '%5x' % v),
+                  ("format(v, '5x')", lambda: format(v, '5x'))]:
+      try:
+          r = f()
+          got[name] = "ok, %d characters" % len(r)
+          del r
+      except ValueError as e:
+          got[name] = "ValueError: %s" % e
+  for k, x in got.items():
+      print(k, "->", x)
+  if got["b'%x' % v"].startswith("ok") and got["b'%5x' % v"] == "ValueError: string too large in _PyUnicode_FormatLong":
+      print("REPRODUCED bytesobj-format-int-fast-slow-int-max")
+expected: |
+  b'%5x' % v gives the same 2**31 + 1 hex digits as b'%x' % v (the width is smaller than the text), as
+  format(v, '5x') does; or both refuse it.
+observed: |
+  python3 3.15.2: b'%x' % v and '%x' % v: ok, 2147483649 characters; b'%5x' % v and '%5x' % v:
+  ValueError: string too large in _PyUnicode_FormatLong; format(v, '5x'): ok. REPRODUCED (about 6 GiB peak, 6 s).
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Implementation agreeing with itself: the fast path is an optimisation of the general path of the same
+  conversion (bytesobject.c:924-968), so it should not change which inputs are accepted. Doc/library/
+  stdtypes.rst (printf-style formatting) describes the width as a minimum field width only.
+cause: |
+  Objects/unicode_format.c:247-251: `if (llen > INT_MAX) { ... "string too large in _PyUnicode_FormatLong" }`
+  in _PyUnicode_FormatLong, reached through formatlong (Objects/bytesobject.c:486-487) from the general
+  integer path at :959-968; the fast path at :924-957 (_PyLong_FormatBytesWriter, Objects/longobject.c)
+  has no corresponding check.
+possible_fix: |
+  Make _PyUnicode_FormatLong work in Py_ssize_t (llen, numdigits, numnondigits, prec are the only int
+  quantities) and drop the INT_MAX check; or, when no padding or precision change the digits, route the
+  width case through the fast writer and pad afterwards.
+duplicates:
+  issues: []
+  prs: []
+  queries: ["string too large FormatLong", "_PyUnicode_FormatLong", "FormatLong INT_MAX", "bytes formatting huge int",
+    "percent format large int ValueError width", "\"%x\" fast path formatting",
+    "string too large in _PyUnicode_FormatLong (exact phrase)", "_PyLong_FormatBytesWriter"]
+  bugforge: "no entry (vendor/bugforge-results/README.md has no FormatLong, 'string too large' or %-formatting finding)"
+lean:
+  property: PyLean.BytesObj.Bytes.FastSlowLongAll
+  theorem: PyLean.BytesObj.Bytes.fastSlowLongAll_refuted

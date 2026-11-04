@@ -165,7 +165,7 @@ def bytesCompareEq (a b : Seq) : Bool :=
   else decide (memcmp a.length a b = 0)
 
 /-- `bytes_richcompare`, bytesobject.c:1650-1711, for two bytes objects. The
-identity shortcut, :1606-1709, gives the same result as this code for equal
+identity shortcut, :1672-1687, gives the same result as this code for equal
 contents, so it is not a separate case. -/
 def bytesRichcompare (a b : Seq) (op : CmpOp) : Bool :=
   if op = .eq ∨ op = .ne then
@@ -572,8 +572,11 @@ def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
         let s : Seq := match arg with | .str s => s | _ => []
         fromFormatLoop f fuel (i + 1) rest (out ++ cStringPrec s prec)
       else if c = 112 then
+        -- glibc's `sprintf("%p")` is `0x` and the hex digits, and `(nil)` for NULL, which
+        -- :333-339 prefixes with `0x` (buffer[1] is not 'x')
         let v : Nat := match arg with | .ptr v => v | _ => 0
-        fromFormatLoop f fuel (i + 1) rest (out ++ asc "0x" ++ digitsBase 16 v)
+        fromFormatLoop f fuel (i + 1) rest
+          (out ++ (if v = 0 then asc "0x(nil)" else asc "0x" ++ digitsBase 16 v))
       else if c = 37 then
         fromFormatLoop f fuel (i + 1) args (out ++ [37])
       else

@@ -280,6 +280,13 @@ def entries : List Entry := [
     statement := "c_make_encoder as JSONEncoder.iterencode calls it keeps every option."
     source := "invariant; Lib/json/encoder.py:254-257", status := .proven
     prop := ``EncoderNew, thm := some ``encoderNew_proven },
+  { id := "json-encoder-new-sep-typeerror", pyFile := "Modules/_json.c"
+    pyFns := ["encoder_new"]
+    statement := "c_make_encoder refuses a key_separator that is not a str with TypeError, whatever its type."
+    source := "invariant: PyArg_ParseTupleAndKeywords raises TypeError for an argument of the wrong type", status := .refuted
+    prop := ``EncoderNewSepTypeError, thm := some ``encoderNewSepTypeError_refuted
+    bug := some "getargs-snprintf-cut-utf8-decode"
+    notes := "Witness: a type named 'a' + 'é' * 30. converterr (Python/getargs.c:682-684) cuts the name to 50 bytes with PyOS_snprintf, inside a character, and PyErr_SetString (seterror, :477) raises UnicodeDecodeError at byte 92. The model mirrors only the U unit's refusal path of convertsimple, converterr and seterror, so those rows are not claimed. The record's second site, set_mro_error, is a gap% in TypeObj/TypeNew.lean (setMroError): the TypeObj model has no UnicodeDecodeError object to raise." },
   { id := "json-encoder-call", pyFile := "Modules/_json.c"
     pyFns := ["encoder_call"]
     statement := "c_make_encoder(...)(o, 0) is the 1-tuple whose item is the text of dumps, or the same exception, with the two C encoders."

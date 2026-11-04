@@ -158,7 +158,7 @@ def ClassCellChecked : Prop :=
   ∀ (key : Name) (value cell : Val) (dict : NameDict) (w : World),
     NameDict.get? dict key = some cell → (∀ c, payloadOf w cell ≠ some (.cell c)) →
     typeNewSetCell key value dict w =
-      (typeErr s!"{key} must be a nonlocal cell, not {trunc 200 (typeRepr w (typeOf w cell))}" : M NameDict) w
+      (typeErr s!"{key} must be a nonlocal cell, not {truncChars 200 (typeRepr w (typeOf w cell))}" : M NameDict) w
 
 theorem classCellChecked_proven : ClassCellChecked := by
   intro key value cell dict w h1 h2

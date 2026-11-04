@@ -30,6 +30,8 @@ for _name, _res in [("PyLong_AsLong", ctypes.c_long), ("PyLong_AsInt", ctypes.c_
     getattr(API, _name).argtypes = [ctypes.py_object]
 API.PyLong_AsLongAndOverflow.restype = ctypes.c_long
 API.PyLong_AsLongAndOverflow.argtypes = [ctypes.py_object, ctypes.POINTER(ctypes.c_int)]
+API.PyLong_AsLongLongAndOverflow.restype = ctypes.c_longlong
+API.PyLong_AsLongLongAndOverflow.argtypes = [ctypes.py_object, ctypes.POINTER(ctypes.c_int)]
 API.PyLong_FromLongLong.restype = ctypes.py_object
 API.PyLong_FromLongLong.argtypes = [ctypes.c_longlong]
 API.PyLong_FromUnsignedLongLong.restype = ctypes.py_object
@@ -145,7 +147,8 @@ def gen_case(rng):
                      "true_div", "true_div", "true_div", "as_double", "as_double", "from_double",
                      "true_div_round", "as_double_round",
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
-                     "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
+                     "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op",
+                     "as_longlong_overflow", "richcmp", "richcmp", "byte_array_w"])
     c = {"mod": "longobj", "fn": fn}
     if fn == "compact":
         # Compact operands, and results on both sides of the medium range.
@@ -232,8 +235,33 @@ def gen_case(rng):
         k = 8 * n + rng.choice([-2, -1, 0, 1])
         v = (1 << k) + rng.choice([-1, 0, 1])
         c["a"] = rng.choice([v, -v, edge_int(rng, ("small", "digits"))])
+    elif fn == "byte_array_w":
+        # PyLong_AsNativeBytes on a non-compact int calls _PyLong_AsByteArray(v, buffer,
+        # n, 1, 1, 0) on the caller's buffer (:1406), which starts as 0xAA bytes.
+        x = edge_int(rng, ("digits", "digits", "kara"))
+        if abs(x) < B:
+            x = (B + rng.randrange(0, 3)) * rng.choice([1, -1])
+        c["a"] = x
+        nb = abs(x).bit_length() // 8
+        c["n"] = max(1, rng.choice([1, 2, 7, 8, 9, 16, nb - 1, nb, nb + 1, nb + 2, rng.randrange(1, nb + 3)]))
+    elif fn == "richcmp":
+        # Equal digit counts with a difference in the top, middle or bottom digit,
+        # differing counts, both signs, the compact path, and the same object.
+        x = edge_int(rng)
+        k = rng.random()
+        if k < 0.3:
+            y = x + rng.choice([1, -1]) * (1 << (30 * rng.randrange(0, max(1, abs(x).bit_length() // 30 + 1))))
+        elif k < 0.5:
+            y = rng.choice([x, -x, x + 1, x - 1])
+        else:
+            y = edge_int(rng)
+        c["a"], c["b"] = x, y
+        c["same"] = rng.random() < 0.15
+        if c["same"]:
+            c["b"] = x
+        c["other"] = rng.random() < 0.1
     elif fn in ("as_long_overflow", "as_long", "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask",
-                "as_longlong", "as_ulonglong", "void_ptr"):
+                "as_longlong", "as_ulonglong", "void_ptr", "as_longlong_overflow"):
         # Two digits and three: the unrolled digits, then the first test of the loop.
         base = rng.choice([0, 1, B - 1, B, 1 << 31, (1 << 31) - 1, P63, P63 - 1, P64, P64 - 1, 1 << 90,
                            1 << 60, (1 << 60) - 1, 1 << 94, 1 << 120, (1 << 34) << 30, ((1 << 34) - 1) << 30,
@@ -351,6 +379,22 @@ def run_python(c):
             o = ctypes.c_int(0)
             r = API.PyLong_AsLongAndOverflow(a, ctypes.byref(o))
             return [r, o.value]
+        if fn == "as_longlong_overflow":
+            o = ctypes.c_int(0)
+            r = API.PyLong_AsLongLongAndOverflow(a, ctypes.byref(o))
+            return [r, o.value]
+        if fn == "byte_array_w":
+            n = c["n"]
+            buf = (ctypes.c_ubyte * n)(*([0xAA] * n))
+            API.PyLong_AsNativeBytes(a, buf, n, 1)
+            return int.from_bytes(bytes(buf), "little")
+        if fn == "richcmp":
+            y = "s" if c["other"] else (a if c["same"] else b)
+            ops = (int.__lt__, int.__le__, int.__eq__, int.__ne__, int.__gt__, int.__ge__)
+            rs = [f(a, y) for f in ops]
+            if c["same"] and not c["other"]:
+                assert y is a
+            return ["NI" if r is NotImplemented else r for r in rs]
         if fn == "as_long":
             return API.PyLong_AsLong(a)
         if fn == "as_int":
