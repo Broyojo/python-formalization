@@ -201,21 +201,43 @@ inductive PredFn where
   | isprintable | isspace | istitle | isupper
   deriving Repr, DecidableEq
 
+/-- The right operand of `%`: a tuple of ints, a single object (an int), a mapping, or a
+`UserString` (a non-tuple with `__getitem__`, which `PyUnicode_Format` takes as a mapping). -/
+inductive ModArg where
+  | tuple (l : List Int)
+  | single (v : Int)
+  | mapping (m : List (String × Int))
+  | user (s : Seq)
+
+/-- A mapping for `format_map`: a dict's items and its class's `__missing__` (Python code, which
+may raise), if it has one. -/
+structure FMap where
+  items : List (String × Int)
+  missing : Option (String → Py Int) := none
+
+/-- What `table[ord(c)]` gives `str.translate`: delete, a code point, or a `str`. -/
+inductive TEntry where
+  | del
+  | cp (n : Nat)
+  | str (s : Seq)
+
+/-- A translation table, a mapping or a sequence, as `table[ord(c)]`: Python code; a raised
+`LookupError` (or subclass) means "keep the character" (Objects/unicodeobject.c `charmaptranslate_lookup`). -/
+abbrev TTable := Nat → Py TEntry
+
 /-- `str` behaviour that depends on the Unicode database or a mini-language. -/
 structure UniOps where
   case : CaseFn → Seq → Seq
   pred : PredFn → Seq → Bool
   encode : Seq → String → String → Py (List Nat)
-  /-- `s.format(*args)`. -/
-  format : Seq → List Int → Py Seq
+  /-- `s.format(*args, **kwds)`. -/
+  format : Seq → List Int → List (String × Int) → Py Seq
   /-- `s.format_map(mapping)`. -/
-  formatMap : Seq → List (String × Int) → Py Seq
-  /-- `s % args`, `args` a tuple of ints. -/
-  mod : Seq → List Int → Py Seq
-  /-- `s % u` for a `UserString` `u`, a non-tuple with `__getitem__`. -/
-  modUser : Seq → Seq → Py Seq
+  formatMap : Seq → FMap → Py Seq
+  /-- `s % arg`. -/
+  mod : Seq → ModArg → Py Seq
   /-- `s.translate(table)`. -/
-  translate : Seq → List (Nat × Option Nat) → Py Seq
+  translate : Seq → TTable → Py Seq
   hash : Seq → Int
   repr : Seq → String
   toInt : Seq → Py Int
@@ -268,11 +290,12 @@ def usRadd (u : US) : SArg → US
 /-- `UserString.__mul__`, :1497-1498; `__rmul__` is the same function, :1500. -/
 def usMul (u : US) (n : Int) : Py US := wrapIn u (strRepeat u.data n)
 
-/-- `UserString.__mod__`, :1502-1503. -/
-def usMod (ops : UniOps) (u : US) (args : List Int) : Py US := wrapIn u (ops.mod u.data args)
+/-- `UserString.__mod__`, :1502-1503: `self.__class__(self.data % args)`, `args` passed as it is
+(a `UserString` included). -/
+def usMod (ops : UniOps) (u : US) (args : ModArg) : Py US := wrapIn u (ops.mod u.data args)
 
 /-- `UserString.__rmod__`, :1505-1506: `self.__class__(str(template) % self)`. -/
-def usRmod (ops : UniOps) (u : US) (template : Seq) : Py US := wrapIn u (ops.modUser template u.data)
+def usRmod (ops : UniOps) (u : US) (template : Seq) : Py US := wrapIn u (ops.mod template (.user u.data))
 
 /-- `str.center(width, fillchar)`: Argument Clinic converts `width` to `Py_ssize_t` first, then
 `fillchar` (Objects/clinic/unicodeobject.c.h:115-132). -/
@@ -317,16 +340,24 @@ def strIndexA (s : Seq) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
   let t ← needArg (if fwd then "index() argument 1" else "rindex() argument 1") a
   strIndex s t st en fwd
 
-/-- `UserString.count`, :1518-1521. -/
-def usCount (u : US) (a : SArg) (st en : Option Int) : Py Int := strCountA u.data (unwrap a) st en
+/-- The default `start=0` of `count`, `find`, `index`, `rfind`, `rindex`, `startswith`,
+`endswith` (:1518, :1538, ...): an omitted argument is passed as `0`. -/
+def dflt0 (st : Option Int) : Option Int := some (st.getD 0)
+
+/-- The default `end=_sys.maxsize`. -/
+def dfltMax (en : Option Int) : Option Int := some (en.getD ssizeMax)
+
+/-- `UserString.count`, :1518-1521: `self.data.count(sub, start, end)`, the defaults passed. -/
+def usCount (u : US) (a : SArg) (st en : Option Int) : Py Int :=
+  strCountA u.data (unwrap a) (dflt0 st) (dfltMax en)
 
 /-- `UserString.find`, :1544-1547, and `rfind`, :1620-1623. -/
 def usFind (u : US) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
-  strFindA u.data (unwrap a) st en fwd
+  strFindA u.data (unwrap a) (dflt0 st) (dfltMax en) fwd
 
 /-- `UserString.index`, :1555-1558, and `rindex`, :1625-1628. -/
 def usIndex (u : US) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
-  strIndexA u.data (unwrap a) st en fwd
+  strIndexA u.data (unwrap a) (dflt0 st) (dfltMax en) fwd
 
 /-- `str.removeprefix`. -/
 def strRemoveprefixA (s : Seq) (a : SArg) : Py Seq := do
@@ -359,20 +390,22 @@ def strEndswithA (s : Seq) (a : AffixArg) (st en : Option Int) : Py Bool := do
   return strEndswith s p st en
 
 /-- `UserString.endswith`, Lib/collections/__init__.py:1538-1539. No unwrapping. -/
-def usEndswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool := strEndswithA u.data a st en
+def usEndswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool :=
+  strEndswithA u.data a (dflt0 st) (dfltMax en)
 
 /-- `UserString.startswith`, Lib/collections/__init__.py:1648-1649. No unwrapping. -/
 def usStartswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool :=
-  strStartswithA u.data a st en
+  strStartswithA u.data a (dflt0 st) (dfltMax en)
 
 /-- `UserString.expandtabs`, :1541-1542. -/
 def usExpandtabs (u : US) (t : Int) : Py US := wrapIn u (strExpandtabs u.data t)
 
 /-- `UserString.format`, :1549-1550. Returns a plain `str`. -/
-def usFormat (ops : UniOps) (u : US) (args : List Int) : Py Seq := ops.format u.data args
+def usFormat (ops : UniOps) (u : US) (args : List Int) (kwds : List (String × Int)) : Py Seq :=
+  ops.format u.data args kwds
 
 /-- `UserString.format_map`, :1552-1553. Returns a plain `str`. -/
-def usFormatMap (ops : UniOps) (u : US) (m : List (String × Int)) : Py Seq := ops.formatMap u.data m
+def usFormatMap (ops : UniOps) (u : US) (m : FMap) : Py Seq := ops.formatMap u.data m
 
 /-- `UserString.join`, :1596-1597. Returns a plain `str`; the items are not unwrapped. -/
 def usJoin (u : US) (items : List SArg) : Py Seq := strJoin u.data items
@@ -438,9 +471,14 @@ def strStripA (s : Seq) (chars : Option SArg) (t : StripType) : Py Seq := do
 def usStrip (u : US) (chars : Option SArg) (t : StripType) : Py US :=
   wrapIn u (strStripA u.data chars t)
 
-/-- `UserString.translate`, :1660-1661. -/
-def usTranslate (ops : UniOps) (u : US) (table : List (Nat × Option Nat)) : Py US :=
-  wrapIn u (ops.translate u.data table)
+/-- `str.translate(*args)`: exactly one argument (`METH_O`). -/
+def strTranslateA (ops : UniOps) (s : Seq) : List TTable → Py Seq
+  | [t] => ops.translate s t
+  | args => .error (.typeError s!"str.translate() takes exactly one argument ({args.length} given)")
+
+/-- `UserString.translate`, :1660-1661: `self.__class__(self.data.translate(*args))`. -/
+def usTranslate (ops : UniOps) (u : US) (args : List TTable) : Py US :=
+  wrapIn u (strTranslateA ops u.data args)
 
 /-- `UserString.zfill`, :1666-1667. -/
 def usZfill (u : US) (w : Int) : Py US := wrapIn u (strZfill u.data w)
@@ -488,10 +526,10 @@ inductive SCall where
   | mul (n : Int)
   | getitem (i : Int)
   | getslice (s : Slice)
-  | format (args : List Int)
-  | formatMap (m : List (String × Int))
-  | mod (args : List Int)
-  | translate (t : List (Nat × Option Nat))
+  | format (args : List Int) (kwds : List (String × Int))
+  | formatMap (m : FMap)
+  | mod (a : ModArg)
+  | translate (args : List TTable)
   | encode (enc err : String)
   | len
   | hash
@@ -499,7 +537,6 @@ inductive SCall where
   | toInt
   | toFloat
   | toComplex
-  deriving Repr
 
 /-- The same call on a `str`: `str`'s own method. -/
 def strCall (ops : UniOps) (c : SCall) (s : Seq) : Py URes :=
@@ -531,10 +568,10 @@ def strCall (ops : UniOps) (c : SCall) (s : Seq) : Py URes :=
   | .mul n => URes.str <$> strRepeat s n
   | .getitem i => URes.str <$> strGetItem s i
   | .getslice sl => URes.str <$> strGetSlice s sl
-  | .format args => URes.str <$> ops.format s args
+  | .format args kw => URes.str <$> ops.format s args kw
   | .formatMap m => URes.str <$> ops.formatMap s m
-  | .mod args => URes.str <$> ops.mod s args
-  | .translate t => URes.str <$> ops.translate s t
+  | .mod a => URes.str <$> ops.mod s a
+  | .translate t => URes.str <$> strTranslateA ops s t
   | .encode enc err => URes.bytes <$> ops.encode s enc err
   | .len => .ok (.int s.length)
   | .hash => .ok (.int (ops.hash s))
@@ -573,7 +610,7 @@ def usCall (ops : UniOps) (c : SCall) (u : US) : Py URes :=
   | .mul n => URes.us <$> usMul u n
   | .getitem i => URes.us <$> usGetitem u i
   | .getslice sl => URes.us <$> usGetslice u sl
-  | .format args => URes.str <$> usFormat ops u args
+  | .format args kw => URes.str <$> usFormat ops u args kw
   | .formatMap m => URes.str <$> usFormatMap ops u m
   | .mod args => URes.us <$> usMod ops u args
   | .translate t => URes.us <$> usTranslate ops u t

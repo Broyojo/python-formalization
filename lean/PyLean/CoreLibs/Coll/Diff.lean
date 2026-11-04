@@ -536,7 +536,7 @@ def asciiInt (s : Seq) : Option Int :=
   (digits 0 false t).map (fun n => if neg then -(n : Int) else n)
 
 /-- `str.format` for the templates `x`, `{}`, `{}{}`, `{0}`, `{1}`. -/
-def asciiFormat (s : Seq) (args : List Int) : Py Seq :=
+def asciiFormat (s : Seq) (args : List Int) (kw : List (String × Int)) : Py Seq :=
   let at_ (i : Nat) : Py Seq :=
     match args[i]? with
     | some v => .ok ((toString v).toList.map Char.toNat)
@@ -549,7 +549,11 @@ def asciiFormat (s : Seq) (args : List Int) : Py Seq :=
       let t ← go (auto + 1) r
       return v ++ t
     | 123 :: d :: 125 :: r => do
-      let v ← at_ (d - 48)
+      let v ← if 48 ≤ d ∧ d ≤ 57 then at_ (d - 48) else
+        let key := String.singleton (Char.ofNat d)
+        match D.get? kw key with
+        | some v => .ok ((toString v).toList.map Char.toNat)
+        | none => .error (.keyError (rkStr key))
       let t ← go auto r
       return v ++ t
     | c :: r => do
@@ -558,7 +562,8 @@ def asciiFormat (s : Seq) (args : List Int) : Py Seq :=
   go 0 s
 
 /-- `str.format_map` for the templates `x`, `{a}`. -/
-def asciiFormatMap (s : Seq) (m : List (String × Int)) : Py Seq :=
+def asciiFormatMap (s : Seq) (fm : FMap) : Py Seq :=
+  let m := fm.items
   let rec go : Seq → Py Seq
     | [] => .ok []
     | 123 :: k :: 125 :: r => do
@@ -567,14 +572,20 @@ def asciiFormatMap (s : Seq) (m : List (String × Int)) : Py Seq :=
       | some v =>
         let t ← go r
         return (toString v).toList.map Char.toNat ++ t
-      | none => .error (.keyError (rkStr key))
+      | none =>
+        match fm.missing with
+        | some f => do
+          let v ← f key
+          let t ← go r
+          return (toString v).toList.map Char.toNat ++ t
+        | none => .error (.keyError (rkStr key))
     | c :: r => do
       let t ← go r
       return c :: t
   go s
 
 /-- `s % args` for a tuple of ints, `%d`, `%s`, `%%`. -/
-def asciiMod (s : Seq) (args : List Int) : Py Seq :=
+def asciiModTuple (s : Seq) (args : List Int) : Py Seq :=
   let got := args.length
   let rec go (args : List Int) : Seq → Py Seq
     | [] => if args.isEmpty then .ok []
@@ -609,11 +620,43 @@ def asciiModUser (s self : Seq) : Py Seq :=
       return c :: t
   go false s
 
-def asciiTranslate (s : Seq) (t : List (Nat × Option Nat)) : Py Seq :=
-  .ok (s.filterMap (fun c =>
-    match D.get? t c with
-    | some r => r
-    | none => some c))
+/-- `s % mapping` for the templates `x`, `%(a)s`, `%(a)d`, `%%`. -/
+def asciiModMap (s : Seq) (m : List (String × Int)) : Py Seq :=
+  let rec go : Seq → Py Seq
+    | [] => .ok []
+    | 37 :: 37 :: r => do
+      let t ← go r
+      return 37 :: t
+    | 37 :: 40 :: k :: 41 :: _ :: r => do
+      let key := String.singleton (Char.ofNat k)
+      match D.get? m key with
+      | some v =>
+        let t ← go r
+        return (toString v).toList.map Char.toNat ++ t
+      | none => .error (.keyError (rkStr key))
+    | c :: r => do
+      let t ← go r
+      return c :: t
+  go s
+
+def asciiMod (s : Seq) : ModArg → Py Seq
+  | .tuple l => asciiModTuple s l
+  | .single v => asciiModTuple s [v]
+  | .mapping m => asciiModMap s m
+  | .user u => asciiModUser s u
+
+/-- `str.translate` over a table that answers each code point, keeping the character on a
+`LookupError`. -/
+def asciiTranslate (s : Seq) (t : TTable) : Py Seq := do
+  let parts ← s.mapM (fun c =>
+    match t c with
+    | .ok .del => .ok []
+    | .ok (.cp n) => .ok [n]
+    | .ok (.str q) => .ok q
+    | .error e =>
+      if e.className = "LookupError" ∨ e.className = "KeyError" ∨ e.className = "IndexError" then .ok [c]
+      else .error e)
+  return parts.flatten
 
 def asciiEncode (s : Seq) (enc err : String) : Py (List Nat) :=
   if enc == "utf-8" || enc == "ascii" then
@@ -628,7 +671,6 @@ def asciiOps : UniOps where
   format := asciiFormat
   formatMap := asciiFormatMap
   mod := asciiMod
-  modUser := asciiModUser
   translate := asciiTranslate
   hash _ := 0
   repr := asciiRepr
@@ -748,15 +790,39 @@ def getCall (op : String) (j : Json) : Except String SCall := do
   | "mul" => return .mul w
   | "getitem" => return .getitem w
   | "getslice" => return .getslice ⟨st, en, ← getOptInt j "se"⟩
-  | "format" => return .format (← getInts j "args")
-  | "format_map" => return .formatMap (← getItems j "m")
-  | "mod" => return .mod (← getInts j "args")
+  | "format" => return .format (← getInts j "args") (← getItems j "kw")
+  | "format_map" =>
+    let miss := (j.getObjVal? "miss" >>= Json.getBool?).toOption.getD false
+    return .formatMap ⟨← getItems j "m", if miss then some (fun _ => .ok (-1)) else none⟩
+  | "mod" =>
+    match ← getStr j "mk" with
+    | "tuple" => return .mod (.tuple (← getInts j "args"))
+    | "single" => return .mod (.single ((← getOptInt j "v").getD 0))
+    | "mapping" => return .mod (.mapping (← getItems j "m"))
+    | _ => return .mod (.user ((← jArr (← field j "us")).filterMap (fun x => (x.getNat?).toOption)))
   | "translate" =>
-    let t ← (← jArr (← field j "t")).mapM (fun p => do
+    let entries ← (← jArr (← field j "t")).mapM (fun p => do
       match ← jArr p with
-      | [k, v] => return ((← k.getNat?), (v.getNat?).toOption)
+      | [k, v] =>
+        let e : TEntry := match v with
+          | .null => .del
+          | .str q => .str (q.toList.map Char.toNat)
+          | v => .cp ((v.getNat?).toOption.getD 0)
+        return ((← k.getNat?), e)
       | _ => throw "bad table")
-    return .translate t
+    let tk ← getStr j "tk"
+    let table : TTable := fun c =>
+      if tk = "bad" then .error (.valueError "t")
+      else if tk = "list" then
+        match entries[c]? with
+        | some (_, e) => .ok e
+        | none => .error (.indexError "list index out of range")
+      else
+        match entries.find? (·.1 = c) with
+        | some (_, e) => .ok e
+        | none => .error (.keyError (toString c))
+    let n := (← getOptInt j "n").getD 1
+    return .translate (List.replicate n.toNat table)
   | "encode" => return .encode (← getStr j "enc") (← getStr j "err")
   | "len" => return .len
   | "hash" => return .hash
