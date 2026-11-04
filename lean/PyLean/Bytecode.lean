@@ -29,6 +29,7 @@ import PyLean.Bytecode.SpecCallPy
 import PyLean.Bytecode.SpecCallPyFast
 import PyLean.Bytecode.SpecExcMatch
 import PyLean.Bytecode.SpecAsync
+import PyLean.Bytecode.SpecCallBuiltin
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -734,16 +735,15 @@ def entries : List Entry := GenObj.entries ++ [
   -- `async for` (SpecAsync.lean).
   { id := "bytecode-get-aiter", pyFile := "Python/bytecodes.c"
     pyFns := [op "GET_AITER"]
-    statement := "For every object model, GET_AITER replaces obj by am_aiter's result and pops it on failure; and for every inner object model, the protocol the difftest model installs (getAIterImpl): no __aiter__ on the type gives TypeError \"'async for' requires an object with __aiter__ method, got T\" (%.100s), the lookup's or call's error propagates, a result whose type has no __anext__ gives TypeError \"'async for' received an object from __aiter__ that does not implement __anext__: U\", and otherwise the result is pushed as it is."
-    source := "Python/bytecodes.c:1607-1641; slot_am_aiter, Objects/typeobject.c"
-    status := .proven, prop := ``GetAIterRules, thm := some ``getAIterRules_proven
-    notes := "Scope limit: the builtin async iterators (async_generator and its asend objects) have no am_aiter/am_anext in the difftest object model, so async for over an async generator object is a TypeError there; the instruction statement holds for every object model." },
+    statement := "For every object model, GET_AITER replaces obj by am_aiter's result and pops it on failure; and for every inner object model, the protocol (getAIterImpl): a type with no am_aiter gives TypeError \"'async for' requires an object with __aiter__ method, got T\" (%.100s), the slot's error propagates, a result whose type has no am_anext gives TypeError \"'async for' received an object from __aiter__ that does not implement __anext__: U\", and otherwise the result is pushed as it is. An async generator's am_aiter is PyObject_SelfIter, with no call and no effect, and its type has am_anext, so GET_AITER gives it back unchanged; for anything else am_aiter is the class's __aiter__ (slot_am_aiter) and am_anext is there exactly when the class defines __anext__."
+    source := "Python/bytecodes.c:1607-1641; async_gen_as_async, Objects/genobject.c:1833-1838; slot_am_aiter, Objects/typeobject.c"
+    status := .proven, prop := ``GetAIterRules, thm := some ``getAIterRules_proven },
   { id := "bytecode-get-anext", pyFile := "Python/bytecodes.c"
     pyFns := [op "GET_ANEXT", "_PyEval_GetANext"]
-    statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): no __anext__ gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the lookup's or call's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause)."
-    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; _PyErr_FormatFromCause, Python/errors.c"
+    statement := "For every object model, GET_ANEXT pushes _PyEval_GetANext(aiter) above aiter and keeps aiter when it fails (ERROR_NO_POP); and for every inner object model, _PyEval_GetANext (getANextImpl): an exact async generator takes the PyAsyncGen_CheckExact fast path, async_gen_anext with no awaitable check; otherwise no am_anext gives TypeError \"'async for' requires an iterator with __anext__ method, got T\", the slot's error propagates, the result goes through _PyCoro_GetAwaitableIter and any exception it raises (not only a TypeError) becomes __cause__ and __context__ of TypeError \"'async for' received an invalid object from __anext__: U\", raised without further chaining (_PyErr_FormatFromCause). async_gen_anext runs the hooks once (ag_hooks_inited set before firstiter is called, firstiter's error the result) and then makes a fresh AWAITABLE_STATE_INIT asend with no send value."
+    source := "Python/bytecodes.c:1643-1649; _PyEval_GetANext, Python/ceval.c:3557-3594; async_gen_anext, async_gen_init_hooks, Objects/genobject.c:1668-1713; _PyErr_FormatFromCause, Python/errors.c"
     status := .proven, prop := ``GetANextRules, thm := some ``getANextRules_proven
-    notes := "The PyAsyncGen_CheckExact fast path (:3563-3565) is outside the difftest model (see bytecode-get-aiter); the model previously wrapped only a TypeError and chained __context__ to the handled exception." },
+    notes := "async_gen_anext and async_gen_init_hooks are credited by gen-async-methods-create and gen-async-hooks-once of the GenObj model; the machine's own copy (Builtins.lean) is what the difftest runs under async for." },
   { id := "bytecode-load-special", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_SPECIAL", op "_LOAD_SPECIAL", op "_INSERT_NULL"]
     statement := "For every object model, LOAD_SPECIAL replaces owner by the (method, self) _PyObject_LookupSpecialMethod finds, self on top; keeps owner and raises its error (ERROR_NO_POP); and when nothing is found raises TypeError with _Py_SpecialMethods[oparg].error, or .error_suggestion when _PyEval_SpecialMethodCanSuggest holds, formatted with %T of owner (the __qualname__ of a __main__ class). type_has_special_method counts a name only when what _PyType_Lookup finds has tp_descr_get: a function does, an int or a builtin function does not."
@@ -763,7 +763,42 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model, GET_AWAITABLE replaces iterable by _PyEval_GetAwaitable(iterable, oparg) and pops it on failure; and for every inner object model, _PyEval_GetAwaitable (getAwaitableImpl): a non-coroutine result of _PyCoro_GetAwaitableIter is returned, a coroutine too unless it is suspended in a yield from (FRAME_SUSPENDED_YIELD_FROM), which raises RuntimeError 'coroutine is being awaited already'; on its exception _PyEval_FormatAwaitableError's TypeError, if it raises one, replaces it, else the original is raised. _PyEval_FormatAwaitableError raises nothing for a type with __await__ or a coroutine, and otherwise the 'async with' received an object from __aenter__ (oparg 1) or __aexit__ (oparg 2) that does not implement __await__ TypeError with %.100s of tp_name, nothing for another oparg."
     source := "Python/bytecodes.c:1651-1656; _PyEval_GetAwaitable, Python/ceval.c:3645-3667; _PyEval_FormatAwaitableError, Python/ceval.c:3495-3511"
     status := .proven, prop := ``GetAwaitableRules, thm := some ``getAwaitableRules_proven
-    notes := "_PyCoro_GetAwaitableIter itself is gen-awaitable-iter-result; its %T messages now use the qualified name (O.R.__await__() ...), its last message %.100s of tp_name." }
+    notes := "_PyCoro_GetAwaitableIter itself is gen-awaitable-iter-result; its %T messages now use the qualified name (O.R.__await__() ...), its last message %.100s of tp_name." },
+  { id := "bytecode-call-builtin-fn", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_BUILTIN_O", op "_GUARD_CALLABLE_BUILTIN_O", op "_CALL_BUILTIN_O", op "_CHECK_RECURSION_LIMIT",
+              op "CALL_BUILTIN_FAST", op "_GUARD_CALLABLE_BUILTIN_FAST", op "_CALL_BUILTIN_FAST",
+              op "CALL_BUILTIN_FAST_WITH_KEYWORDS", op "_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS",
+              op "_CALL_BUILTIN_FAST_WITH_KEYWORDS", op "CALL_BUILTIN_CLASS", op "_GUARD_CALLABLE_BUILTIN_CLASS",
+              op "_CALL_BUILTIN_CLASS", "_Py_BuiltinCallFast_StackRef", "_Py_BuiltinCallFastWithKeywords_StackRef",
+              "_Py_CallBuiltinClass_StackRef"]
+    statement := "For every object model and every (callable, self_or_null, args[oparg]) stack, with A the arguments with self in front when set: CALL_BUILTIN_O, when PyCFunction_CheckExact holds with ml_flags exactly METH_O and A has one item and the C stack is not past its soft limit, runs ml_meth(m_self, A[0]); CALL_BUILTIN_FAST with exactly METH_FASTCALL and CALL_BUILTIN_FAST_WITH_KEYWORDS with exactly METH_FASTCALL|METH_KEYWORDS run ml_meth(m_self, A) whatever the C stack; CALL_BUILTIN_CLASS on a type with tp_vectorcall runs it on A. The result replaces the operands and _CHECK_PERIODIC_AT_END follows; an exception keeps every operand (ERROR_NO_POP). On every other stack, and for CALL_BUILTIN_O past the C stack limit, each is the generic CALL."
+    source := "Python/bytecodes.c:4835-4986, :5130-5132; Python/ceval.c:826-867, :911-926; invariant: specialized opcode refines its generic form"
+    status := .proven, prop := ``CallBuiltinFnRules, thm := some ``callBuiltinFnRules_proven
+    notes := "ml_meth is ObjModel.mlMeth, an arbitrary fallible callable; PyCFunction_CheckExact and ml_flags are ObjModel.cfuncOf, a read of the heap. _Py_ReachedRecursionLimit is the oracle Rt.cRecursionReached. _Py_LeaveRecursiveCallTstate is a no-op on 3.15. The generic path's cfunction_vectorcall_FASTCALL(_KEYWORDS) enters cfunction_enter_call, which checks the C stack (Objects/methodobject.c), and the specialized FAST forms do not: not stated as a twin property, since the difftest model's call has no C stack." },
+  { id := "bytecode-call-method-descriptor", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_METHOD_DESCRIPTOR_O", op "_GUARD_CALLABLE_METHOD_DESCRIPTOR_O", op "_CALL_METHOD_DESCRIPTOR_O",
+              op "CALL_METHOD_DESCRIPTOR_NOARGS", op "_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS",
+              op "_CALL_METHOD_DESCRIPTOR_NOARGS", op "CALL_METHOD_DESCRIPTOR_FAST",
+              op "_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST", op "_CALL_METHOD_DESCRIPTOR_FAST",
+              op "CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS", op "_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS",
+              op "_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS", "_PyCallMethodDescriptorFast_StackRef",
+              "_PyCallMethodDescriptorFastWithKeywords_StackRef"]
+    statement := "For every object model and every (callable, self_or_null, args[oparg]) stack, with A the arguments with self in front when set: each CALL_METHOD_DESCRIPTOR_* form, when the callable's type is PyMethodDescr_Type with ml_flags exactly its convention (METH_O with two items in A, METH_NOARGS with one, METH_FASTCALL and METH_FASTCALL|METH_KEYWORDS with at least one) and A[0] has exactly the type d_type (Py_IS_TYPE: a subclass instance is refused), runs ml_meth(A[0], rest of A); the METH_O and METH_NOARGS forms are the generic CALL instead when the C stack is past its soft limit, the other two are not. The result replaces the operands and _CHECK_PERIODIC_AT_END follows; an exception keeps every operand. On every stack the guard rejects (not a method descriptor, other flags, a refused count, a self of another type) each is the generic CALL."
+    source := "Python/bytecodes.c:5090-5379; Python/ceval.c:869-909; invariant: specialized opcode refines its generic form"
+    status := .proven, prop := ``CallMethodDescrRules, thm := some ``callMethodDescrRules_proven
+    notes := "d_type is compared as a type object (Val equality of typeOf), not by tp_name." },
+  { id := "bytecode-call-method-descriptor-inline", pyFile := "Python/bytecodes.c"
+    pyFns := [op "_CALL_METHOD_DESCRIPTOR_O_INLINE", op "_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE",
+              op "_CALL_METHOD_DESCRIPTOR_FAST_INLINE", op "_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE"]
+    statement := "The tier-2 _INLINE forms, whose ml_meth is an operand read at trace time: with the operand read from the callable itself and self in the self_or_null slot (counted in oparg by the O and NOARGS forms, which assert oparg 2 and 1), each is exactly the tier-1 body on the same stack, in result and in what an error keeps."
+    source := "Python/bytecodes.c:5134-5151, :5210-5227, :5278-5294, :5352-5370"
+    status := .proven, prop := ``CallDescrInlineRules, thm := some ``callDescrInlineRules_proven
+    notes := "That the optimizer only emits these after the guards, with the operand from the guarded callable, is the tier-2 optimizer's invariant (Python/optimizer_bytecodes.c), not stated here." },
+  { id := "bytecode-send-async-gen", pyFile := "Python/bytecodes.c"
+    pyFns := [op "SEND_ASYNC_GEN", op "_GUARD_3OS_ASYNC_GEN_ASEND", op "_SEND_ASYNC_GEN", "_PyAsyncGenASend_Send"]
+    statement := "For every object model, SEND_ASYNC_GEN on (iter, null_or_index, v) exits to the generic SEND unless iter is exactly an async_generator_asend, and otherwise runs its am_send on v: PYGEN_NEXT replaces v by the value, PYGEN_RETURN does too and jumps by oparg, and an exception keeps all three (ERROR_NO_POP). In the difftest object model, _PyAsyncGenASend_Send is async_gen_asend_send with a StopIteration (or nothing) read as PYGEN_RETURN with its value and any other exception as PYGEN_ERROR."
+    source := "Python/bytecodes.c:1801-1830; _PyAsyncGenASend_Send, Objects/genobject.c:2013-2023"
+    status := .proven, prop := ``SendAsyncGenRules, thm := some ``sendAsyncGenRules_proven }
 ]
 
 end PyLean.Bytecode
