@@ -98,9 +98,9 @@ theorem itemAccess_proven : ItemAccess := by
 /-- The constructors and slice getters of the C API, in full: `PyList_New` and
 `PyTuple_New` for every size (`SystemError` when negative, `NULL` slots otherwise);
 `_PyList_FromStackRefStealOnSuccess`; `_PyList_AsTupleAndClear`, which moves the items
-into a tracked tuple and leaves an empty list with its array; `PyTuple_SetItem` on a uniquely referenced
-tuple; `PyList_GetSlice` and `PyTuple_GetSlice`; and the argument checks of
-`list_vectorcall`, keywords first. -/
+into a tracked tuple and leaves an empty list with its array; `PyList_GetSlice`; and the argument
+checks of `list_vectorcall`, keywords first. `PyTuple_New`, `PyTuple_SetItem` and `PyTuple_GetSlice`
+on every branch are `CApiTupleObj` and `TupleSliceSpec`. -/
 def CApiConstruct : Prop :=
   ∀ (α : Type) (l : List α) (o : LObj α) (n i j : Int) (v : α) (mt : α → Bool) (a b : ExtArg α) (m : Nat),
     (n < 0 → pyListNew n = (.error systemError : Py (LObj (Option α)))) ∧
@@ -116,12 +116,7 @@ def CApiConstruct : Prop :=
     (o.hasItems = true → o.items ≠ [] → (o.items.length : Int) ≤ tupleLimit →
       listAsTupleAndClear o =
         .ok (.fresh { items := o.items, tracked := true }, { o with items := [] })) ∧
-    (0 ≤ i → i < l.length → pyTupleSetItem (some l) true i v = .ok (l.set i.toNat v)) ∧
-    ((i < 0 ∨ i ≥ l.length) →
-      pyTupleSetItem (some l) true i v = .error (.indexError "tuple assignment index out of range")) ∧
     (pyListGetSlice (none : Option (List α)) i j = .error systemError) ∧
-    (pyTupleGetSlice mt (none : Option (Tup α)) i j = .error systemError) ∧
-    (∀ t : Tup α, pyTupleGetSlice mt (some t) i j = tupleSlice mt t i j) ∧
     (0 ≤ i → i ≤ j → j ≤ l.length →
       (pyListGetSlice (some l) i j).map LObj.items = .ok ((l.drop i.toNat).take (j - i).toNat)) ∧
     (listVectorcall ([] : List (ExtArg α)) 0 = .ok LObj.empty) ∧
@@ -130,8 +125,7 @@ def CApiConstruct : Prop :=
 
 theorem cApiConstruct_proven : CApiConstruct := by
   intro α l o n i j v mt a b m
-  refine ⟨?_, ?_, ?_, ?_, ⟨by simp [listFromStack], ?_⟩, ?_, ?_, ?_, ?_, rfl, rfl, fun _ => rfl, ?_,
-    rfl, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ⟨by simp [listFromStack], ?_⟩, ?_, ?_, rfl, ?_, rfl, ?_, ?_⟩
   · intro h
     unfold pyListNew
     rw [if_pos h]
@@ -158,12 +152,6 @@ theorem cApiConstruct_proven : CApiConstruct := by
       unfold tupleFromArraySteal
       rw [if_neg h0, hal]
     rw [hs]
-  · intro h0 h1
-    simp only [pyTupleSetItem, Bool.not_true, Bool.false_eq_true, if_false]
-    rw [if_neg (by omega)]
-  · intro h
-    simp only [pyTupleSetItem, Bool.not_true, Bool.false_eq_true, if_false]
-    rw [if_pos h]
   · intro h0 h1 h2
     simp only [pyListGetSlice]
     have c1 : ¬ i < 0 := by omega

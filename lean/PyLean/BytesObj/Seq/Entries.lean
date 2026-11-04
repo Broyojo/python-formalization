@@ -22,6 +22,7 @@ import PyLean.BytesObj.Seq.ListRows7
 import PyLean.BytesObj.Seq.ListRows8
 import PyLean.BytesObj.Seq.ListRows9
 import PyLean.BytesObj.Seq.ListRows10
+import PyLean.BytesObj.Seq.TupleRows2
 
 /-! Registry entries for tuple (Objects/tupleobject.c) and list (Objects/listobject.c). -/
 
@@ -30,9 +31,9 @@ namespace PyLean.BytesObj.Seq
 open PyLean.Registry
 
 def entries : List Entry := [
-  { id := "bytesobj-tuple-hash-empty", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash", "tuple_get_empty"]
+  { id := "bytesobj-tuple-hash-empty", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
     statement := "hash(()) is 5740354900026072187, the value of _PyTuple_HASH_EMPTY, for every element type."
-    source := "Include/internal/pycore_tuple.h:76; tupleobject.c:404 (the length mangling keeps the historical value)", status := .proven
+    source := "Include/internal/pycore_tuple.h:76; tupleobject.c:404-405 (the length mangling keeps the historical value)", status := .proven
     prop := ``TupleHashEmpty, thm := some ``tupleHashEmpty_proven },
   { id := "bytesobj-tuple-hash-not-minus-one", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
     statement := "For every element type and every tuple with no cached hash, a successful hash(t) is not -1, is stored in ob_hash, and leaves the items alone."
@@ -80,7 +81,7 @@ def entries : List Entry := [
     statement := "iter(t) yields each item once in order and then stops for good, for every tuple."
     source := "iterator protocol, Doc/library/stdtypes.rst", status := .proven
     prop := ``TupleIterYields, thm := some ``tupleIterYields_proven },
-  { id := "bytesobj-tuple-iter-reduce", pyFile := "Objects/tupleobject.c", pyFns := ["tupleiter_len", "tupleiter_reduce", "tupleiter_setstate"]
+  { id := "bytesobj-tuple-iter-reduce", pyFile := "Objects/tupleobject.c", pyFns := ["tupleiter_len"]
     statement := "For every iterator state, __length_hint__ counts what is left and rebuilding from __reduce__ gives an iterator with the same items left."
     source := "invariant: __reduce__/__setstate__ round trip", status := .proven
     prop := ``TupleIterReduce, thm := some ``tupleIterReduce_proven },
@@ -122,7 +123,7 @@ def entries : List Entry := [
     statement := "Every mutating list method keeps the invariant: allocated covers the items, an array exists when anything is allocated, and its byte size fits Py_ssize_t."
     source := "invariant of PyListObject, Include/cpython/listobject.h", status := .proven
     prop := ``ListOpsWF, thm := some ``listOpsWF_proven },
-  { id := "bytesobj-tuple-concat", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_Concat", "tuple_alloc", "tuple_get_empty"]
+  { id := "bytesobj-tuple-concat", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_Concat", "tuple_alloc"]
     statement := "a + b on tuples is a's items then b's for every pair that fits, returns an argument in the two sharing cases, and raises TypeError with the source's message for a non-tuple."
     source := "common sequence s + t, Doc/library/stdtypes.rst", status := .proven
     prop := ``TupleConcatSpec, thm := some ``tupleConcatSpec_proven },
@@ -130,20 +131,20 @@ def entries : List Entry := [
     statement := "t * n and l * n: the sharing cases, the empty cases, n copies of the items, and MemoryError exactly when the result cannot be allocated, for every Py_ssize_t count."
     source := "common sequence s * n, Doc/library/stdtypes.rst", status := .proven
     prop := ``RepeatSpec, thm := some ``repeatSpec_proven },
-  { id := "bytesobj-tuple-construct", pyFile := "Objects/tupleobject.c", pyFns := ["maybe_tracked", "PyTuple_FromArray", "_PyTuple_FromStackRefStealOnSuccess", "_PyTuple_FromArraySteal", "PyTuple_Pack", "_PyTuple_MaybeUntrack", "tuple_new_impl", "tuple_vectorcall", "tuple_subtype_new", "tuple___getnewargs___impl", "tuple_slice"]
-    statement := "The tuple construction paths and their GC tracking decisions, as gc.is_tracked shows them; tuple(t) is t for an exact tuple; a subclass instance starts with no cached hash; keyword arguments are rejected first."
+  { id := "bytesobj-tuple-construct", pyFile := "Objects/tupleobject.c", pyFns := ["PyTuple_FromArray", "_PyTuple_FromStackRefStealOnSuccess", "_PyTuple_FromArraySteal", "PyTuple_Pack", "_PyTuple_MaybeUntrack"]
+    statement := "The tuple construction paths of the C code and their GC tracking decisions, as gc.is_tracked shows them."
     source := "tupleobject.c:445-516; Doc/library/gc.rst (is_tracked)", status := .proven
     prop := ``TupleConstruct, thm := some ``tupleConstruct_proven },
-  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize", "list_ass_slice", "valid_index"]
-    statement := "Each C API entry point refuses an object of another type with its own error; PyList_GetItem and friends take no negative index, unlike l[i], and the others act on the contents as described, for every argument; _PyTuple_Resize keeps the prefix and pads with NULL."
+  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "list_ass_slice", "valid_index"]
+    statement := "Each C API entry point refuses an object of another type with its own error; PyList_GetItem and friends take no negative index, unlike l[i], and the others act on the contents as described, for every argument."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiAgree, thm := some ``cApiAgree_proven },
-  { id := "bytesobj-item-access", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_item", "tuple_length", "list_item", "list_length", "tuple_subscript"]
+  { id := "bytesobj-item-access", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_item", "list_item", "list_length"]
     statement := "t[i] and l[i] for every int i of any size: a negative index counts from the end, both return the item there, and outside [-len, len) both raise IndexError; inside, the position is in the object."
     source := "Doc/library/stdtypes.rst common sequence operations, notes (3), (4)", status := .proven
     prop := ``ItemAccess, thm := some ``itemAccess_proven },
-  { id := "bytesobj-capi-construct", pyFile := "Objects/listobject.c", pyFns := ["PyList_New", "PyTuple_New", "_PyList_FromStackRefStealOnSuccess", "_PyList_AsTupleAndClear", "PyTuple_SetItem", "PyList_GetSlice", "PyTuple_GetSlice", "list_vectorcall"]
-    statement := "The C API constructors and slice getters for every argument: PyList_New and PyTuple_New for every size, the stack-reference and tuple-and-clear paths, PyTuple_SetItem on a uniquely referenced tuple, PyList_GetSlice, PyTuple_GetSlice, and list_vectorcall's argument checks."
+  { id := "bytesobj-capi-construct", pyFile := "Objects/listobject.c", pyFns := ["PyList_New", "_PyList_FromStackRefStealOnSuccess", "_PyList_AsTupleAndClear", "PyList_GetSlice", "list_vectorcall"]
+    statement := "The C API constructors and slice getters for every argument: PyList_New for every size, the stack-reference and tuple-and-clear paths, PyList_GetSlice, and list_vectorcall's argument checks."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiConstruct, thm := some ``cApiConstruct_proven },
   { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "_PyList_Concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
@@ -206,6 +207,50 @@ def entries : List Entry := [
     statement := "The stack test of tuple_hash comes after the cache and leaves it alone; past it tuple_hash is the xxHash loop."
     source := "tupleobject.c:372-393", status := .proven
     prop := ``TupleHashGuard, thm := some ``tupleHashGuard_proven },
+  { id := "bytesobj-tuple-new-iterable", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_new_impl", "tuple_vectorcall", "tuple_subtype_new"]
+    statement := "tuple(x) and tuple.__new__(type, x) for every argument: the singleton without one, x itself for an exact tuple, TypeError for a non-iterable, the exception of a raising __iter__ or __next__ at any call, otherwise a tracked tuple of what the iterator yields; __length_hint__ is never asked; a subclass gets a fresh instance (also when empty) with no cached hash, or tuple(x)'s exception; tuple(...) refuses keywords, then more than one argument."
+    source := "Doc/library/stdtypes.rst (tuple([iterable])); tupleobject.c:807-876; Objects/abstract.c:2004-2078", status := .proven
+    prop := ``TupleNewIterable, thm := some ``tupleNewIterable_proven },
+  { id := "bytesobj-tuple-richcompare-any", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_richcompare"]
+    statement := "tuple's rich comparison returns NotImplemented when either operand is not a tuple, and compares the items of two tuples, subclass instances included."
+    source := "tupleobject.c:744-745; Doc/library/constants.rst (NotImplemented)", status := .proven
+    prop := ``TupleRichcompareAny, thm := some ``tupleRichcompareAny_proven },
+  { id := "bytesobj-tuple-subscript-dispatch", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_subscript", "tuple_item"]
+    statement := "t[item] for every item: __index__ runs first and its exception is the result; a value outside Py_ssize_t is IndexError naming the type; otherwise the item at the (end-relative) index or IndexError; a slice is the slice arm; anything else is TypeError naming the type."
+    source := "Doc/reference/datamodel.rst (__getitem__); tupleobject.c:900-954", status := .proven
+    prop := ``TupleSubscriptDispatch, thm := some ``tupleSubscriptDispatch_proven },
+  { id := "bytesobj-tuple-iter-reduce-form", pyFile := "Objects/tupleobject.c", pyFns := ["tupleiter_reduce", "tupleiter_setstate", "tuple_iter"]
+    statement := "iter(t).__reduce__() looks up iter first and reads the iterator as the lookup left it: (iter, (t,), index) while live, (iter, ((),)) once exhausted, the lookup's exception if it fails; __setstate__ clips an int to [0, len] on a live iterator, ignores it on an exhausted one, and refuses a non-int with TypeError; unpickling rebuilds the same iterator state."
+    source := "Doc/library/pickle.rst (__reduce__, __setstate__); tupleobject.c:1195-1231 (gh-101765)", status := .proven
+    prop := ``TupleIterReduceForm, thm := some ``tupleIterReduceForm_proven },
+  { id := "bytesobj-tuple-hash-loop", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
+    statement := "hash(t) with no cached value is the xxHash rounds over the element hashes when every element hashes, the first element's exception otherwise (nothing cached, later elements not asked), an error when an element reports -1, and the cached value when there is one."
+    source := "tupleobject.c:371-414; Doc/reference/datamodel.rst (__hash__)", status := .proven
+    prop := ``TupleHashLoop, thm := some ``tupleHashLoop_proven },
+  { id := "bytesobj-tuple-repr-errors", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_repr"]
+    statement := "repr(t) is () for the empty tuple, (...) for a tuple being printed, the exception of a failing Py_ReprEnter, and the exception of the first element whose __repr__ raises, whatever follows it."
+    source := "tupleobject.c:285-353", status := .proven
+    prop := ``TupleReprErrors, thm := some ``tupleReprErrors_proven },
+  { id := "bytesobj-tuple-index-result", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_index_impl"]
+    statement := "t.index(x, start, stop) is the first position in the clipped range whose item compares equal, the exception of a comparison that raises before that, and ValueError('tuple.index(x): x not in tuple') when no item in the range compares equal."
+    source := "tuple.index docstring ('Raises ValueError if the value is not present'); tupleobject.c:672-699", status := .proven
+    prop := ``TupleIndexResult, thm := some ``tupleIndexResult_proven },
+  { id := "bytesobj-tuple-slice-spec", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_slice", "PyTuple_GetSlice", "PyTuple_FromArray"]
+    statement := "tuple_slice(a, i, j) clamps i at 0 and j into [i, len], returns a itself for the whole of an exact tuple, and otherwise the items at i..j-1 (the singleton when none); PyTuple_GetSlice refuses a non-tuple, does not count negative indices from the end, and for non-negative ones has the items of a[i:j]."
+    source := "Doc/c-api/tuple.rst (PyTuple_GetSlice: 'the equivalent of the Python expression p[low:high]. Indexing from the end of the tuple is not supported.')", status := .proven
+    prop := ``TupleSliceSpec, thm := some ``tupleSliceSpec_proven },
+  { id := "bytesobj-tuple-getnewargs", pyFile := "Objects/tupleobject.c", pyFns := ["tuple___getnewargs___impl", "tuple_slice"]
+    statement := "t.__getnewargs__() is a fresh 1-tuple holding t itself for an exact tuple and a new exact tuple of t's items for a subclass instance."
+    source := "Doc/library/pickle.rst (__getnewargs__); tupleobject.c:960-965", status := .proven
+    prop := ``TupleGetnewargs, thm := some ``tupleGetnewargs_proven },
+  { id := "bytesobj-capi-tuple-obj", pyFile := "Objects/tupleobject.c", pyFns := ["PyTuple_New", "PyTuple_SetItem", "_PyTuple_Resize", "tuple_alloc"]
+    statement := "PyTuple_New, PyTuple_SetItem and _PyTuple_Resize on every branch: the singleton for size 0, the SystemError and MemoryError refusals, the item replaced with type, GC flag and ob_hash kept, and the resized tuple keeping its prefix, NULL padding and ob_hash."
+    source := "Doc/c-api/tuple.rst", status := .proven
+    prop := ``CApiTupleObj, thm := some ``cApiTupleObj_proven },
+  { id := "bytesobj-tuple-setitem-hash-fresh", pyFile := "Objects/tupleobject.c", pyFns := ["PyTuple_SetItem", "tuple_hash"]
+    statement := "After PyTuple_SetItem on a uniquely referenced tuple, hash agrees with that of a fresh tuple of the same items."
+    source := "invariant: ob_hash is a cache of the hash of the items (Include/cpython/tupleobject.h, 'Cached hash')", status := .refuted
+    prop := ``TupleSetItemHashFresh, thm := some ``tupleSetItemHashFresh_refuted, bug := some "bytesobj-tuple-capi-stale-hash" },
   { id := "bytesobj-list-binary-slice", pyFile := "Objects/listobject.c", pyFns := []
     statement := "l[a:b] under BINARY_SLICE gives what l[slice(a, b)] gives, for every pair of indices of any size."
     source := "twin: list_subscript", status := .proven

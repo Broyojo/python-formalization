@@ -3,6 +3,7 @@ import PyLean.ListSort.Model
 import PyLean.BytesObj.Seq.Repr
 import PyLean.BytesObj.Seq.SortAux
 import PyLean.BytesObj.Seq.Release
+import PyLean.BytesObj.Seq.TupleCall
 
 /-! Differential-testing handler for tuple and list: `fn` names start with `tuple.` or `list.`.
 
@@ -492,7 +493,23 @@ def runIter (j : Json) : Except String Json := do
     l := l'
   return okJ (Json.arr out)
 
-/-- Tuple iterators: `next`, `hint`, `reduce`, `setstate`. -/
+/-- `for _ in it: pass`: `next` until it stops. -/
+def exhaustT : Nat → TupleIter DEl → TupleIter DEl
+  | 0, it => it
+  | n + 1, it =>
+    match tupleIterNext it with
+    | (some _, it') => exhaustT n it'
+    | (none, it') => it'
+
+/-- `it.__reduce__()` as `[seq, index or null]`, with the iterator the lookup left. -/
+def tReduceJ (r : Py (TIterReduce Unit DEl) × TupleIter DEl) : Json × TupleIter DEl :=
+  match r with
+  | (.ok (.live _ s i), it') => (okJ (Json.arr #[enEls s, toJson i]), it')
+  | (.ok (.empty _), it') => (okJ (Json.arr #[enEls [], Json.null]), it')
+  | (.error e, it') => (errJ e, it')
+
+/-- Tuple iterators: `next`, `hint`, `reduce` (also with a builtins lookup that exhausts the iterator
+or finds no `iter`), `setstate` (an int or the string `"x"`). -/
 def runTupleIter (j : Json) : Except String Json := do
   let t ← jEls (← field j "items")
   let mut it := tupleIter t
@@ -507,10 +524,19 @@ def runTupleIter (j : Json) : Except String Json := do
     | "hint" => out := out.push (okJ (toJson (tupleIterLen it)))
     | "refs" => out := out.push (okJ (toJson (tupleIterTraverse it).length))
     | "reduce" =>
-      let (a, st) := tupleIterReduce it
-      out := out.push (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]))
+      let (r, it') := tReduceJ (tupleIterReduce (fun i => (.ok (), i)) it)
+      it := it'
+      out := out.push r
+    | "reduce_exhaust" =>
+      let (r, it') := tReduceJ (tupleIterReduce (fun i => (.ok (), exhaustT (t.length + 2) i)) it)
+      it := it'
+      out := out.push r
+    | "reduce_missing" =>
+      let (r, it') := tReduceJ (tupleIterReduce (fun i => (.error (.named "AttributeError" "iter"), i)) it)
+      it := it'
+      out := out.push r
     | "setstate" =>
-      match tupleIterSetstate it (← (← argAt op 1).getInt?) with
+      match tupleIterSetstateObj it ((← argAt op 1).getInt?).toOption with
       | .ok it' => it := it'; out := out.push (okJ unitJ)
       | .error e => out := out.push (errJ e)
     | k => throw s!"tuple iter op {k}"
@@ -538,14 +564,69 @@ def enTRes (a b : Tup DEl) : TRes DEl → Json
 
 def noTup : Tup DEl := { items := [] }
 
-def jSrc (j : Json) : Except String (TupleSrc DEl × Tup DEl) := do
+/-- An iterator yielding `items`, then stopping or raising `err`. -/
+def streamOf (items : List DEl) (err : Option PyExc) (hint : Py Int := .ok 0) : TIter DEl where
+  next k := match items[k]? with
+    | some x => some (.ok x)
+    | none => err.map .error
+  hint := hint
+
+/-- The argument of `tuple(x)`, by the twin's `mk_src`: `none` for no argument. -/
+def jSrc (j : Json) : Except String (Option (TupArg DEl) × Tup DEl) := do
   let items ← jEls (← field j "items")
   match ← getStr j "k" with
+  | "none" => return (none, noTup)
   | "tuple" => let t := { items := items, tracked := items.any mayTrack : Tup DEl }
-               return (.exactTuple t, t)
-  | "list" => return (.exactList items, noTup)
-  | "iter" => return (.iterable items, noTup)
+               return (some (.exactTuple t), t)
+  | "list" => return (some (.exactList items), noTup)
+  | "iter" => return (some (.iter (.ok (streamOf items none))), noTup)
+  | "raise_next" => return (some (.iter (.ok (streamOf items (some (.valueError "gen"))))), noTup)
+  | "hinted" => return (some (.iter (.ok (streamOf items none (.error (.valueError "hint"))))), noTup)
+  | "raise_iter" => return (some (.iter (.error (.valueError "iter"))), noTup)
+  | "noniter" => return (some (.notIterable "int"), noTup)
+  | "uni" => return (some (.notIterable uName), noTup)
+  | "tsub" => return (some (.iter (.ok (streamOf items none))), noTup)
+  | "lsub" => return (some (.iter (.ok (streamOf items.reverse none))), noTup)
   | k => throw s!"src {k}"
+
+/-- A tuple result as `[items, type is tuple, is the singleton, tracked]`. -/
+def enTup4 (self : Tup DEl) : TRes DEl → Json
+  | .arg _ => Json.arr #[enEls self.items, toJson self.exact, toJson (self.exact && self.items.isEmpty),
+      toJson self.tracked]
+  | .empty => Json.arr #[enEls [], toJson true, toJson true, toJson false]
+  | .fresh t => Json.arr #[enEls t.items, toJson t.exact, toJson false, toJson t.tracked]
+
+/-- `t[item]`: `{"s": slice}` or an index argument as in `jSubItem`. -/
+def jTSub (j : Json) : Except String TSubItem := do
+  match j.getObjVal? "s" with
+  | .ok s => return .slice (← jSlice s)
+  | .error _ =>
+    let ixr := fun (v : Int) (eff : String) => if eff = "bad" then (.error (.valueError "idx") : Py Int) else .ok v
+    match ← getStr j "ix" with
+    | "int" => return .int (← (← field j "v").getInt?)
+    | "obj" => return .index "Ix" (ixr (← (← field j "v").getInt?) (← getStr j "eff"))
+    | "uniobj" => return .index uName (ixr (← (← field j "v").getInt?) (← getStr j "eff"))
+    | "uni" => return .other uName
+    | k => return .other k
+
+/-- `hash` of a slot that may be `NULL`. -/
+def dHashO : Option DEl → Py Int
+  | some x => dHash x
+  | none => .error (cUB "hash of a NULL slot")
+
+def enO (x : Option DEl) : Json := match x with | some v => enEl v | none => Json.null
+
+/-- The hash of a resized tuple when the twin asks for it: no `NULL` slot and at least one item. -/
+def hAfter (hashed : Bool) (t : Tup (Option DEl)) : Json :=
+  if hashed && !t.items.isEmpty && t.items.all Option.isSome then
+    encPy (fun p => toJson p.1) (tupleHash dHashO t)
+  else Json.null
+
+/-- `_PyTuple_Resize` result: `[slots, is the singleton, hash after or null]`. -/
+def enResize (u : Tup (Option DEl)) (hashed : Bool) : TRes (Option DEl) → Json
+  | .arg _ => Json.arr #[Json.arr (u.items.map enO).toArray, toJson (u.exact && u.items.isEmpty), hAfter hashed u]
+  | .empty => Json.arr #[Json.arr #[], toJson true, Json.null]
+  | .fresh t => Json.arr #[Json.arr (t.items.map enO).toArray, toJson false, hAfter hashed t]
 
 def cmpOpOf : String → Except String CmpOp
   | "lt" => .ok .lt | "le" => .ok .le | "eq" => .ok .eq
@@ -616,18 +697,35 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
     return encPy enRes (tupleRichcompare E op (← jEls (← field j "a")) (← jEls (← field j "b")))
   | "tuple.new" =>
     let (src, t) ← jSrc (← field j "src")
-    return encPy (enTRes t noTup) (tupleNew mayTrack (some src))
+    let fuel := (← jEls (← field (← field j "src") "items")).length + 4
+    return encPy (enTup4 t) (tupleNewImpl mayTrack fuel true src)
   | "tuple.sub_new" =>
-    let (src, _) ← jSrc (← field j "src")
-    return encPy (fun (t : Tup DEl) => Json.arr #[enEls t.items, toJson t.exact]) (tupleSubtypeNew mayTrack (some src))
+    let (src, t) ← jSrc (← field j "src")
+    let fuel := (← jEls (← field (← field j "src") "items")).length + 4
+    return encPy (enTup4 t) (tupleNewImpl mayTrack fuel false src)
   | "tuple.call" =>
     let nargs ← getNat j "nargs"
     let nkw ← getNat j "nkw"
-    let args := List.replicate nargs (TupleSrc.exactTuple noTup)
-    return encPy (fun _ => Json.null) (tupleVectorcall mayTrack args nkw)
+    let args := List.replicate nargs (TupArg.exactTuple noTup)
+    return encPy (fun _ => Json.null) (tupleVectorcall mayTrack 4 args nkw)
   | "tuple.getnewargs" =>
     let t ← jTup (← field j "t")
-    return encPy (enTRes t noTup) (tupleGetnewargs mayTrack t)
+    return encPy (fun (o : Tup (TRes DEl)) => Json.arr #[toJson o.items.length, toJson o.exact,
+      Json.arr (o.items.map (enTRes t noTup)).toArray]) (tupleGetnewargs mayTrack t)
+  | "tuple.cmpany" =>
+    let op ← cmpOpOf (← getStr j "op")
+    let a ← jEls (← field j "a")
+    let b : Option (List DEl) ← if (← getStr j "other") == "tuple" then pure (some (← jEls (← field j "b")))
+      else pure none
+    match tupleRichcompareAny E op (some a) b with
+    | none => return okJ (toJson "NotImplemented")
+    | some r => return encPy enRes r
+  | "tuple.subscript" =>
+    let t ← jTup (← field j "t")
+    let item ← jTSub (← field j "item")
+    return encPy (fun (r : DEl ⊕ TRes DEl) => match r with
+      | .inl x => Json.arr #[toJson "item", enEl x]
+      | .inr r => Json.arr #[toJson "slice", enTRes t noTup r]) (tupleSubscript t item)
   | "tuple.iter" => runTupleIter j
   | "tuple.referents" =>
     return okJ (Json.arr ((tupleTraverse (← jEls (← field j "items"))).map enOpt).toArray)
@@ -642,7 +740,24 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
     return encPy enEl (pyTupleGetItem op (← getInt j "i"))
   | "tuple.c_setitem" =>
     let op := (jEls (← field j "items")).toOption
-    return encPy enEls (pyTupleSetItem op (← getBool j "unique") (← getInt j "i") (← jEl (← field j "x")))
+    let x ← jEl (← field j "x")
+    let i ← getInt j "i"
+    let hashed := (j.getObjValAs? Bool "hashed").toOption.getD false
+    match op with
+    | some items =>
+      if hashed then
+        match tupleHash dHash { items := items } with
+        | .error e => return errJ e
+        | .ok (h1, t1) =>
+          match pyTupleSetItem (some t1) true i x with
+          | .error e => return errJ e
+          | .ok t' =>
+            return okJ (Json.arr #[toJson h1, encPy (fun p => toJson p.1) (tupleHash dHash t'),
+              encPy (fun p => toJson p.1) (tupleHash dHash { items := t'.items }), enEls t'.items])
+      else
+        return encPy (fun (t : Tup DEl) => enEls t.items)
+          (pyTupleSetItem (some { items := items }) (← getBool j "unique") i x)
+    | none => return encPy (fun (t : Tup DEl) => enEls t.items) (pyTupleSetItem (none : Option (Tup DEl)) true i x)
   | "tuple.c_getslice" =>
     let items ← jEls (← field j "items")
     let t : Tup DEl := { items := items, tracked := items.any mayTrack }
@@ -654,9 +769,16 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
     return encPy (enTRes noTup noTup) (tuplePack mayTrack items.length items)
   | "tuple.c_resize" =>
     let items ← jEls (← field j "items")
-    let enO : Option DEl → Json := fun x => match x with | some v => enEl v | none => Json.null
-    return encPy (fun (l : List (Option DEl)) => Json.arr (l.map enO).toArray)
-      (tupleResize (some (items.map some)) true true (← getInt j "n"))
+    let kind := (j.getObjValAs? String "kind").toOption.getD "unique"
+    let hashed := (j.getObjValAs? Bool "hashed").toOption.getD false
+    let base : Tup (Option DEl) :=
+      { items := if kind = "empty" then [] else items.map some, exact := kind != "sub", tracked := true }
+    let u ← if hashed && kind = "unique" then
+        match tupleHash dHashO base with
+        | .ok (_, u) => pure u
+        | .error _ => throw "hash of ints failed"
+      else pure base
+    return encPy (enResize u hashed) (tupleResize (some u) (kind = "unique") (← getInt j "n"))
   | "tuple.untrack" =>
     let items ← jEls (← field j "items")
     return okJ (toJson (tupleMaybeUntrack mayTrack true true (items.map some)))
