@@ -510,7 +510,10 @@ def run (fn : String) (j : Json) : Except String Json := do
     let s ← decStr (← field j "s")
     let cfg : DCfg := { strict := ← getBool j "strict" }
     let n ← getNat j "budget"
-    let r := if fn = "loads_rec_py" then loadsPyR cfg n s else loadsCR cfg n s
+    let r := if fn = "loads_rec_py" then loadsPyR cfg n s
+      else loadsCR cfg n (match getNat j "frames" with
+        | .ok m => m
+        | .error _ => 100000) s
     return encDR s (encJVal true) r
   | "dumpsx_py" | "dumpsx_c" =>
     let v ← decXVal (← field j "v")
