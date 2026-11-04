@@ -17,6 +17,7 @@ summary: |
   Lean: DequeIRepeat (keepLast maxlen (items * n) for every bounded deque) is refuted by this
   input; DequeIRepeatChecked (same statement when len(d) <= 1 or len(d) * n <= sys.maxsize)
   is proven, including the ceil(maxlen / size) reduction and the block-filling fast path.
+  The same pair for `d * n` (deque_repeat): DequeMul refuted, DequeMulChecked proven.
 likelihood: |
   Low. It needs a bounded deque and a repeat factor above sys.maxsize // len(d) (about 4.6e18
   for two items). Such factors are only plausible as "repeat a lot, maxlen will cut it"
@@ -77,3 +78,4 @@ duplicates:
 lean:
   property: PyLean.Sequences.DequeIRepeat
   theorem: PyLean.Sequences.dequeIRepeat_refuted
+  related: ["PyLean.Sequences.dequeMul_refuted (the same counterexample for d * n, deque_repeat)"]
