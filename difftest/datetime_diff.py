@@ -25,6 +25,7 @@ import datetime_x2
 import datetime_x3
 import datetime_x4
 import datetime_x5
+import datetime_x6
 import sys
 
 IMPL = {"py": _pydatetime, "c": _datetime}
@@ -471,6 +472,8 @@ def gen_strp_tail(rng, c):
 
 
 def gen_obj_case(rng):
+    if rng.random() < 0.2:
+        return datetime_x6.gen_x6(rng, sys.modules[__name__])
     if rng.random() < 0.15:
         return gen_strptime(rng)
     if rng.random() < 0.2:
@@ -1079,6 +1082,8 @@ def run_python(c):
         return datetime_x4.run_x4(c, sys.modules[__name__])
     if c["fn"].startswith("x5_"):
         return datetime_x5.run_x5(c, sys.modules[__name__])
+    if c["fn"].startswith("x6_"):
+        return datetime_x6.run_x6(c, sys.modules[__name__])
     if c["fn"] in OBJ_FNS:
         return run_obj(c)
     if c["fn"] in MORE_FNS:

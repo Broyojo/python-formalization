@@ -333,12 +333,22 @@ datetime-str-via-isoformat	proven	Modules/_datetimemodule.c	C date_str,C time_st
 datetime-str-isoformat-override-twins	refuted	Modules/_datetimemodule.c	C date_str,date.__str__
 datetime-append-fold-twins	proven	Modules/_datetimemodule.c	C append_keyword_fold
 datetime-timestamp-conversion	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
-datetime-timestamp-floor	open	Modules/_datetimemodule.c	C date_fromtimestamp
+datetime-timestamp-floor	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
 datetime-date-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_date_strptime_impl,date.strptime,_strptime_datetime_date
 datetime-strptime-class-impl	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,_strptime_datetime_time,_strptime_datetime_datetime,_check_tzinfo_arg
 datetime-timedelta-type-loop	proven	Lib/_pydatetime.py	timedelta.__new__
-datetime-timedelta-num-py-int	open	Lib/_pydatetime.py	timedelta.__new__
+datetime-timedelta-num-py-int	proven	Lib/_pydatetime.py	timedelta.__new__
 datetime-astimezone-local-aware-edge-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
+datetime-tzinfo-member-replacements	proven	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C make_Zreplacement
+datetime-strftime-z-twins	proven	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C make_Zreplacement,C format_utcoffset
+datetime-strftime-z-override-twins	refuted	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C wrap_strftime,_wrap_strftime
+datetime-reduce-dispatch-twins	refuted	Lib/_pydatetime.py	time.__reduce__,datetime.__reduce__,C datetime_time___reduce___impl,C datetime_datetime___reduce___impl
+datetime-reduce-dispatch-inherited	proven	Lib/_pydatetime.py	time.__reduce__,datetime.__reduce__,C datetime_time___reduce___impl,C datetime_datetime___reduce___impl
+datetime-date-fromtimestamp-cls	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
+datetime-timedelta-integral-float-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum
+datetime-time-fromiso-hour24-c	proven	Modules/_datetimemodule.c	C datetime_time_fromisoformat_impl
+datetime-astimezone-keeps-objects	refuted	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-astimezone-keeps-objects-py	proven	Lib/_pydatetime.py	datetime.astimezone
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
