@@ -79,6 +79,59 @@ theorem evalRule_proven : EvalRule := by
         items_call_null (by rw [call_tok, h3])]), alts_nil]
     rfl
 
+/-! ### `func_type` -/
+
+/-- `func_type: '(' a=[type_expressions] ')' '->' b=expression NEWLINE* ENDMARKER
+{ _PyAST_FunctionType(a, b, p->arena) }` (`Grammar/python.gram:92`), the start rule of
+`compile(..., 'func_type')`: at any token but `(`, `NULL`; with the whole sequence,
+`FunctionType(a, b)` (`a` `NULL`, an empty list, when there are no argument types); without
+`ENDMARKER` at the end, the rule fails. -/
+def FuncTypeRule : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  ((q.tokenAt p.mark).type ≠ 7 → callRule (f + 11) 3 p = (.null, q.leave)) ∧
+  ((q.tokenAt p.mark).type = 7 → ∀ (a b nl : Ast) (tr ta : Token) (s2 s3 s4 s5 s6 s7 : PS),
+    callRule (f + 5) 206 { q with mark := p.mark + 1 } = (a, s2) → s2.errorIndicator = false →
+    expectToken 8 s2 = (.tok tr, s3) → expectToken 51 s3 = (.tok ta, s4) →
+    callRule (f + 2) 109 s4 = (b, s5) → b ≠ .null → callRule (f + 1) 278 s5 = (nl, s6) → nl ≠ .null →
+    (∀ (te : Token), expectToken 0 s6 = (.tok te, s7) → s7.errorIndicator = false →
+      callRule (f + 11) 3 p = (mkAst .FunctionType [a, b], s7.leave)) ∧
+    (expectToken 0 s6 = (.null, s7) →
+      callRule (f + 11) 3 p = (.null, { s7 with mark := p.mark }.leave)))
+
+theorem funcTypeRule_proven : FuncTypeRule := by
+  intro f p q h
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  rw [callRule_plain rfl rfl rfl rfl rfl h.ei h.level]
+  simp only [show ruleOf 3 = r3 from rfl, r3]
+  refine ⟨fun ht => ?_, fun ht a b nl tr ta s2 s3 s4 s5 s6 s7 h2 h2e h3 h4 h5 hb h6 hn =>
+    ⟨fun te h7 h7e => ?_, fun h7 => ?_⟩⟩
+  · have e1 : runCall (f + 7) (.tok 7) p.enter = (.null, q) := by
+      rw [call_tok, expect_entered h, ite_f ht]
+    rw [alts_fail (by rfl) he' (items_call_null e1), hq, alts_nil]
+    rfl
+  · have e1 : runCall (f + 7) (.tok 7) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    rw [alts_ok (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_opt (by rw [call_rule, h2]) h2e,
+        items_call (by rw [call_tok, h3]) (by simp), items_call (by rw [call_tok, h4]) (by simp),
+        items_call (by rw [call_rule, h5]) hb, items_call (by rw [call_rule, h6]) hn,
+        items_call (by rw [call_tok, h7]) (by simp), items_nil]), altResult_plain rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure]
+    simp [mkAst, nonNull, h7e]
+  · have e1 : runCall (f + 7) (.tok 7) p.enter =
+        (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) := by
+      rw [call_tok, expect_entered h, ite_t ht]
+    rw [alts_fail (by rfl) he' (by
+      dsimp only
+      rw [items_call e1 (by simp), items_opt (by rw [call_rule, h2]) h2e,
+        items_call (by rw [call_tok, h3]) (by simp), items_call (by rw [call_tok, h4]) (by simp),
+        items_call (by rw [call_rule, h5]) hb, items_call (by rw [call_rule, h6]) hn,
+        items_call_null (by rw [call_tok, h7])]), alts_nil]
+    rfl
+
 /-! ### `interactive` -/
 
 /-- `interactive: a=statement_newline { _PyAST_Interactive(a, p->arena) }`

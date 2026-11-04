@@ -73,7 +73,7 @@ Modules/_datetimemodule.c	2414	2434	truedivide_timedelta_timedelta	truedivide_ti
 Modules/_datetimemodule.c	2437	2452	truedivide_timedelta_int	truedivide_timedelta_int(PyDateTime_Delta *delta, PyObject *i)	modelled	datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2455	2474	delta_add	delta_add(PyObject *left, PyObject *right)	modelled	datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2477	2483	delta_negative	delta_negative(PyObject *self)	modelled	datetime-timedelta-ops-twins	
-Modules/_datetimemodule.c	2486	2495	delta_positive	delta_positive(PyObject *self)	modelled	datetime-timedelta-pos-rsub	
+Modules/_datetimemodule.c	2486	2495	delta_positive	delta_positive(PyObject *self)	modelled	datetime-timedelta-pos	
 Modules/_datetimemodule.c	2498	2511	delta_abs	delta_abs(PyObject *self)	modelled	datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2514	2533	delta_subtract	delta_subtract(PyObject *left, PyObject *right)	modelled	datetime-datetime-sub-twins,datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2536	2546	delta_cmp	delta_cmp(PyObject *self, PyObject *other)	modelled	datetime-datetime-sub-twins,datetime-timedelta-compare	

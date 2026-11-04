@@ -302,7 +302,36 @@ OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "dat
            "iso_repr", "date_strftime", "tz_str", "tz_repr", "tm_off", "dt_off", "tm_cmp", "tm_cmp", "tm_hash", "tm_repr",
            "tm_iso", "tm_state", "tm_strftime", "tm_replace", "dt_cmp", "dt_cmp", "dt_hash", "dt_repr", "dt_iso", "dt_ctime",
            "dt_add", "dt_sub_delta", "dt_sub", "dt_sub", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_combine",
-           "dt_replace", "dt_fromutc", "dt_astimezone", "dt_state", "dt_strftime", "ctor_date", "ctor_time", "ctor_datetime"]
+           "dt_replace", "dt_fromutc", "dt_astimezone", "dt_state", "dt_strftime", "ctor_date", "ctor_time", "ctor_datetime",
+           "td_float", "td_float", "date_sub_dt", "date_format"]
+
+FLOATS = [0.0, -0.0, 0.5, -0.5, 1.5, -2.5, 2.0, 1e-7, -1e-7, 1e-300, 3.3, 0.1, 1e6, 1e12, 1e18, 1e300, -1e300,
+          float("inf"), float("-inf"), float("nan"), 5e-324, 1.7976931348623157e308]
+
+
+def rand_float(rng):
+    import struct
+    if rng.random() < 0.6:
+        return rng.choice(FLOATS)
+    if rng.random() < 0.5:
+        return rng.uniform(-1e3, 1e3)
+    return struct.unpack("<d", struct.pack("<Q", rng.getrandbits(64)))[0]
+
+
+def float_bits(x):
+    import struct
+    return struct.unpack("<Q", struct.pack("<d", x))[0]
+
+
+def repl_field(rng):
+    k = rng.random()
+    if k < 0.45:
+        return None
+    if k < 0.6:
+        return ["n"]
+    if k < 0.65:
+        return rng.choice([["b", [7, 208, 1, 1]], ["s", [7, 208, 1, 1]], ["o"]])
+    return ["i", small_field(rng) or 0]
 
 
 def locale_json():
@@ -443,7 +472,15 @@ def gen_obj_case(rng):
     elif fn == "date_sub_delta":
         c.update(a=rand_date(rng), td=rand_delta_small(rng))
     elif fn == "date_replace":
-        c.update(a=rand_date(rng), ny=small_field(rng), nm=small_field(rng), nd=small_field(rng))
+        c.update(a=rand_date(rng), ny=repl_field(rng), nm=repl_field(rng), nd=repl_field(rng))
+    elif fn == "td_float":
+        c.update(a=rand_delta(rng), x=float_bits(rand_float(rng)), op=rng.choice(["mul", "div"]))
+    elif fn == "date_sub_dt":
+        c.update(a=rand_date(rng), b=rand_date(rng) + [rng.randint(0, 23), rng.randint(0, 59)])
+    elif fn == "date_format":
+        c.update(a=rand_date(rng), f=rng.choice([None, []]))
+    elif fn == "date_repr":
+        c.update(a=rand_date(rng), cls=rng.choice([0, 1, 2]))
     elif fn == "date_strftime":
         c.update(a=rng.choice([rand_date(rng), [rng.randint(1, 1100), 1, 1], [rng.randint(1, 1100), 12, 31]]),
                  f=[ord(x) for x in strf_format(rng)])
@@ -695,10 +732,31 @@ def run_obj(c):
     def kw(c, *names):
         return {py: c[k] for k, py in names if c.get(k) is not None}
 
+    def rkw(c, *names):
+        out = {}
+        for k, py in names:
+            v = c.get(k)
+            if v is None:
+                continue
+            out[py] = None if v == ["n"] else arg(v)
+        return out
+
+    def date_cls(k):
+        if k == 0:
+            return m.date
+
+        class DSub(m.date):
+            pass
+        DSub.__qualname__ = "Outer.DSub" if k == 2 else "DSub"
+        return DSub
+
     def thunk():
         if fn == "td_cmp": return rich(m.timedelta(*c["a"]), m.timedelta(*c["b"]), c["op"])
         if fn == "td_bool": return bool(m.timedelta(*c["a"]))
-        if fn == "td_pos": return deltaenc(+m.timedelta(*c["a"]))
+        if fn == "td_pos":
+            t = m.timedelta(*c["a"])
+            p = +t
+            return [deltaenc(p), p is t]
         if fn == "td_rsub": return deltaenc(m.timedelta(*c["a"]).__rsub__(m.timedelta(*c["b"])))
         if fn == "td_hash":
             a = m.timedelta(*c["a"])
@@ -715,10 +773,22 @@ def run_obj(c):
         if fn == "date_sub_date": return deltaenc(m.date(*c["a"]) - m.date(*c["b"]))
         if fn == "date_sub_delta": return ymd(m.date(*c["a"]) - m.timedelta(*c["td"]))
         if fn == "date_replace":
-            return ymd(m.date(*c["a"]).replace(**kw(c, ("ny", "year"), ("nm", "month"), ("nd", "day"))))
+            return ymd(m.date(*c["a"]).replace(**rkw(c, ("ny", "year"), ("nm", "month"), ("nd", "day"))))
         if fn == "date_timetuple": return list(m.date(*c["a"]).timetuple())
         if fn == "date_ctime": return m.date(*c["a"]).ctime()
-        if fn == "date_repr": return repr(m.date(*c["a"]))
+        if fn == "date_repr": return repr(date_cls(c.get("cls", 0))(*c["a"]))
+        if fn == "td_float":
+            import struct
+            x = struct.unpack("<d", struct.pack("<Q", c["x"]))[0]
+            t = m.timedelta(*c["a"])
+            return deltaenc(t * x if c["op"] == "mul" else t / x)
+        if fn == "date_sub_dt":
+            b = c["b"]
+            r = m.date(*c["a"]) - m.datetime(*b)
+            return deltaenc(r)
+        if fn == "date_format":
+            d = m.date(*c["a"])
+            return d.__format__(1 if c["f"] is None else "".join(map(chr, c["f"])))
         if fn == "date_state": return state(m.date(*c["a"]), 2)
         if fn == "iso_repr": return repr(m.date(*c["a"]).isocalendar())
         if fn == "date_strftime":
@@ -851,6 +921,8 @@ def gen_case(rng):
         c.update(fn=f"timezone_{impl}", td=t)
     else:
         spec = rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"])
+        if rng.random() < 0.03:
+            spec = rng.choice([1, 0, "AUTO", "", "minute"])
         tz = None if rng.random() < 0.3 else rng.choice([0, 1, -1, 999999, -999999, 86399999999, -86399999999,
                                                         3600 * 10**6, -19800 * 10**6, rng.randint(-86399999999, 86399999999)])
         t = [rng.randint(0, 23), rng.randint(0, 59), rng.randint(0, 59), rng.choice([0, 1, 999, 1000, 999999, rng.randrange(10**6)])]

@@ -326,6 +326,20 @@ def pyToInt (m : Rounding) : Dec → Py Int
   | .inf _ => .error (.overflowError "cannot round an infinity")
   | d => do pyInt (← rescale d 0 m)
 
+/-- The second argument of `round(d, n)`: absent, an int, or anything else. -/
+inductive RoundArg where
+  | none
+  | int (n : Int)
+  | other
+  deriving Repr, Inhabited
+
+/-- `Decimal.__round__(n)`, _pydecimal.py:1882-1943: `.inl` is the Decimal of the
+two-argument form, `.inr` the int of the one-argument form. -/
+def pyRound (c : Ctx) (a : Dec) : RoundArg → DM (Dec ⊕ Int)
+  | .int n => do return .inl (← roundN c a n)
+  | .other => throw (.typeError "Second argument to round should be integral")
+  | .none => do return .inr (← liftPy (pyToInt .halfEven a))
+
 /-! ## normalize, copy_sign, compare_total -/
 
 /-- `Decimal.normalize(context)`, _pydecimal.py:2575-2598. -/

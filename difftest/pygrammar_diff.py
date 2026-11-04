@@ -520,6 +520,10 @@ RULE_FORMS = [
     "x: {e}", "x: {e} = {f}", "(x): {e}", "x.y: {e} = {f}", "{n} = {e}", "a = b = {e}", "{e} = {f}",
     "x = {e} = {f}", "x += ", "x += {e} = {f}", "{n} += {e}", "from {n} import {m}", "from . import {m}",
     "from .. {n} import {m}", "lazy from . import {m}", "from {n} import", "from import {m}",
+    "async def f():\n async for {n} in {e}:\n  pass", "x = {e} = {f} = 2", "f() = {e}", "del f()",
+    "del {e}", "if {e}:\n pass\nelif {f}:\n pass\nelse:\n pass", "if {e}: pass\nelse pass",
+    "if {e}:\npass", "while {e}:\n pass\nelse:\n pass", "while {e}: {f}", "if {e}: {f}; {e}",
+    "{e}, {f}", "{e},", "{e}, {f},", "x = {e} if {f} else {e}", "lambda: {e}", "type X[T] = {e}",
 ]
 
 

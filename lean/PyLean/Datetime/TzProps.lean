@@ -205,11 +205,14 @@ def TimezoneMethods : Prop :=
 theorem timezoneMethods_proven : TimezoneMethods := by
   intro env oid off off2 name name2 a h1 h2
   refine ⟨rfl, rfl, ?_, by simp [timezoneRichC], ?_, rfl⟩
-  · have := (timedeltaCompare_proven off off2 .eq h1 h2).1
-    simp only [timezoneRichC, timezoneEqPy, this]
+  · have := timedeltaCompare_proven off off2 .eq h1 h2
+    simp only [timezoneRichC, timezoneEqPy, this.1, this.2]
     simp
   · intro h
-    exact (timedeltaBoolHash_proven off off2 h1 h2).2 h
+    have e := (timedeltaCompare_proven off off2 .eq h1 h2).1
+    rw [timezoneEqPy, e] at h
+    simp only [CmpOp.holds, decide_eq_true_eq] at h
+    exact (timedeltaBoolHash_proven off off2 h1 h2).2.1.mpr h
 
 /-- `timezone(offset, name)`: the twins agree on the outcome for every valid
 offset, and zero with no name is the `timezone.utc` singleton. -/

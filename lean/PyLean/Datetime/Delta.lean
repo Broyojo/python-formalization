@@ -39,31 +39,31 @@ instance (t : Delta) : Decidable t.Valid := by unfold Delta.Valid; infer_instanc
 /-! ### Pure Python -/
 
 /-- `timedelta(days, seconds, microseconds, milliseconds, minutes, hours,
-weeks)` with int arguments, _pydatetime.py:657-767. The float branches are not
-taken; `round(microseconds + usdouble)` (:742) is the identity because
+weeks)` with int arguments, _pydatetime.py:657-768. The type loop (:667-679) passes and the
+float branches are not taken; `round(microseconds + usdouble)` (:746) is the identity because
 `usdouble == 0.0` and `|microseconds| < 10**6` there. -/
 def deltaPy (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
-  -- @3.14.7:662-668
+  -- :686-688
   let days := days + weeks * 7
   let seconds := seconds + minutes * 60 + hours * 3600
   let microseconds := microseconds + milliseconds * 1000
-  -- @3.14.7:682-683 (int branch)
+  -- :699-701 (int branch of :692-701: `daysecondsfrac = 0.0`, `d = days`)
   let d := days
   let s : Int := 0
-  -- @3.14.7:699-702
+  -- :721-724 (`seconds` is an int: :715-716)
   let d := d + seconds / 86400
   let s := s + seconds % 86400
-  -- @3.14.7:717-723 (int branch)
+  -- :740-745 (int branch of :733-746)
   let sec2 := microseconds / 1000000
   let microseconds := microseconds % 1000000
   let d := d + sec2 / 86400
   let s := s + sec2 % 86400
-  -- @3.14.7:731-735
+  -- :754-757
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
   let d := d + s / 86400
   let s := s % 86400
-  -- @3.14.7:741-742
+  -- :763-764
   if d.natAbs > 999999999 then .error (.overflowError s!"timedelta # of days is too large: {d}")
   else .ok ⟨d, s, us⟩
 
@@ -81,6 +81,23 @@ def divideAndRound (a b : Int) : Py Int := do
   let r := r * 2
   let greaterThanHalf := if b > 0 then r > b else r < b
   if greaterThanHalf ∨ (r = b ∧ q % 2 = 1) then return q + 1 else return q
+
+/-- C `divide_nearest`, :392-403, which is `_PyLong_DivmodNear(m, n)[0]`,
+Objects/longobject.c:6118-6187: truncating `long_divrem`, then twice the remainder (negated
+when the quotient is negative) compared with the divisor, then the quotient moved one away
+from zero. The `PyLong_Check` refusals cannot happen: both callers pass ints. -/
+def divideNearestC (a b : Int) : Py Int :=
+  if b = 0 then .error (.zeroDivisionError "division by zero")
+  else
+    let quoIsNeg := decide (a < 0) != decide (b < 0)
+    let quo := a.tdiv b
+    let rem := a.tmod b
+    let twiceRem := if quoIsNeg then -(2 * rem) else 2 * rem
+    let cmp : Int := if twiceRem < b then -1 else if twiceRem = b then 0 else 1
+    let quoIsOdd := quo.natAbs % 2 = 1
+    if (if b < 0 then cmp < 0 else cmp > 0) ∨ (cmp = 0 ∧ quoIsOdd) then
+      .ok (if quoIsNeg then quo - 1 else quo + 1)
+    else .ok quo
 
 namespace Delta
 
@@ -170,9 +187,8 @@ def mulC (a : Delta) (k : Int) : Py Delta := usToDeltaC (k * a.toUs)
 def floordivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← pyDivmod a.toUs k).1
 /-- `delta_divide` with a timedelta, :2605-2624 and `divide_timedelta_timedelta`, :2391-2411. -/
 def floordivC (a b : Delta) : Py Int := do return (← pyDivmod a.toUs b.toUs).1
-/-- `truedivide_timedelta_int`, :2437-2452 (`divide_nearest`, :392-403, i.e.
-`_PyLong_DivmodNear`, which also rounds half to even). -/
-def truedivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← divideAndRound a.toUs k)
+/-- `truedivide_timedelta_int`, :2437-2452: `divide_nearest`, then `microseconds_to_delta`. -/
+def truedivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← divideNearestC a.toUs k)
 /-- `delta_remainder`, :2650-2682. -/
 def modC (a b : Delta) : Py Delta := do usToDeltaC (← pyDivmod a.toUs b.toUs).2
 /-- `delta_divmod`, :2685-2721. -/

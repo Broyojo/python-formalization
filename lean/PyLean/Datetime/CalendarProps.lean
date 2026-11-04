@@ -56,6 +56,44 @@ theorem validDate_iff (y m d : Int) :
     ValidDate y m d ↔ (MINYEAR ≤ y ∧ y ≤ MAXYEAR ∧ 1 ≤ m ∧ m ≤ 12 ∧ 1 ≤ d ∧ d ≤ dimL (isLeap y) m) := by
   unfold ValidDate; rw [daysInMonth_eq]
 
+theorem isLeapC_eq (y : Int) (h0 : 0 ≤ y) (h1 : y < 2147483648) : isLeapC y = isLeap y := by
+  unfold isLeapC isLeap
+  have : y % 4294967296 = y := by omega
+  simp only [this]
+
+theorem daysInMonth_C (y m : Int) (h0 : 0 ≤ y) (h1 : y < 2147483648) (hm : 1 ≤ m ∧ m ≤ 12) :
+    daysInMonth y m = daysInMonthC y m := by
+  unfold daysInMonth daysInMonthC
+  rw [isLeapC_eq y h0 h1]
+  rcases (by omega : m = 1 ∨ m = 2 ∨ m = 3 ∨ m = 4 ∨ m = 5 ∨ m = 6 ∨ m = 7 ∨ m = 8 ∨ m = 9 ∨
+    m = 10 ∨ m = 11 ∨ m = 12) with h | h | h | h | h | h | h | h | h | h | h | h <;>
+    subst h <;> cases isLeap y <;> decide
+
+theorem checkDate_eq_C (y m d : Int) :
+    checkDate y m d = (do checkDateArgsC y m d; return (y, m, d)) := by
+  unfold checkDate checkDateArgsC MINYEAR MAXYEAR
+  by_cases h1 : 1 ≤ y ∧ y ≤ 9999
+  · have h1' : ¬(y < 1 ∨ y > 9999) := by omega
+    rw [if_neg (not_not_intro h1), if_neg h1']
+    by_cases h2 : 1 ≤ m ∧ m ≤ 12
+    · have h2' : ¬(m < 1 ∨ m > 12) := by omega
+      rw [if_neg (not_not_intro h2), if_neg h2']
+      have e := daysInMonth_C y m (by omega) (by omega) h2
+      dsimp only
+      rw [e]
+      by_cases h3 : 1 ≤ d ∧ d ≤ daysInMonthC y m
+      · have h3' : ¬(d < 1 ∨ d > daysInMonthC y m) := by omega
+        rw [if_neg (not_not_intro h3), if_neg h3']; rfl
+      · have h3' : (d < 1 ∨ d > daysInMonthC y m) := by omega
+        rw [if_pos h3, if_pos h3']; rfl
+    · have h2' : (m < 1 ∨ m > 12) := by omega
+      rw [if_pos h2, if_pos h2']; rfl
+  · have h1' : (y < 1 ∨ y > 9999) := by omega
+    rw [if_pos h1, if_pos h1']; rfl
+
+theorem checkDateC_eq (y m d : Int) : checkDateC y m d = checkDate y m d := by
+  rw [checkDate_eq_C]; rfl
+
 /-- The ordinal of a valid date is in `1..MAXORDINAL`. -/
 theorem ymd2ord_range (y m d : Int) (h : ValidDate y m d) : 1 ≤ ymd2ord y m d ∧ ymd2ord y m d ≤ MAXORDINAL := by
   have hv := h
@@ -97,7 +135,7 @@ theorem fromordinalToordinal_proven : FromordinalToordinal := by
     rw [ymdToOrdC_eq y m d (by omega)] at h2
     have hf : fitsCInt (ymd2ord y m d) := by unfold fitsCInt; omega
     have hn : ¬ (ymd2ord y m d < 1) := by omega
-    simp only [hf, not_true_eq_false, ite_false, hn, h2]
+    simp only [hf, not_true_eq_false, ite_false, hn, h2, checkDateC_eq]
     exact checkDate_ok y m d hv
 
 /-- `date.fromordinal(n).toordinal() == n` for every `1 <= n <= MAXORDINAL`,
@@ -116,7 +154,7 @@ theorem toordinalFromordinal_proven : ToordinalFromordinal := by
     have hf : fitsCInt n := by unfold fitsCInt; omega
     have hn : ¬ (n < 1) := by omega
     unfold fromordinalC
-    simp only [hf, not_true_eq_false, ite_false, hn, hc]
+    simp only [hf, not_true_eq_false, ite_false, hn, hc, checkDateC_eq]
     exact checkDate_ok _ _ _ hv
 
 theorem dateAddPy_eq (y m d : Int) (t : Delta) (h : ValidDate y m d)

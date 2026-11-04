@@ -9,6 +9,8 @@ import PyLean.PyGrammar.Peg.Rules.Aug
 import PyLean.PyGrammar.Peg.Rules.Compound
 import PyLean.PyGrammar.Peg.Rules.Simple
 import PyLean.PyGrammar.Peg.Rules.Exprs2
+import PyLean.PyGrammar.Peg.Rules.Exprs3
+import PyLean.PyGrammar.Peg.Rules.Blocks
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -210,9 +212,10 @@ def ruleEntries : List Entry := [
   { id := "pygrammar-rule-for-stmt"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_for_stmt
-    statement := "for_stmt: 'for t in ex: body [else]' gives For(t, ex, b, el, type_comment); a " ++
-      "failure of star_expressions after 'in' hits the cut: NULL with the mark back, and in the " ++
-      "second pass invalid_for_target, the last alternative, is not run."
+    statement := "for_stmt: For(...) for 'for'; AsyncFor under CHECK_VERSION(5) for 'async for' " ++
+      "(with the error message below 5); NULL at any other token; the cut after 'in' ends the " ++
+      "rule in both passes; second pass: invalid_for_stmt's error ends the rule, and a failure " ++
+      "before the cut lets invalid_for_target decide."
     source := "Grammar/python.gram:410-416"
     status := .proven
     prop := ``ForStmt
@@ -228,7 +231,7 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``CompoundStmt
     thm := some ``compoundStmt_proven
-    notes := scheme ++ " Lookaheads are the rule calls _tmp_4 to _tmp_7 and token reads." },
+    notes := scheme ++ " Lookaheads are the rule calls _tmp_6 to _tmp_9 and token reads." },
   { id := "pygrammar-rule-simple-stmt"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_simple_stmt
@@ -337,6 +340,121 @@ def ruleEntries : List Entry := [
     prop := ``ImportFrom
     thm := some ``importFrom_proven
     notes := scheme ++ " _PyPegen_checked_from_import itself is pygrammar-peg-checked-from-import." },
+  { id := "pygrammar-rule-assignment-more"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assignment_more
+    statement := "assignment: CHECK_VERSION(6) failing for both annotated forms, with their " ++
+      "messages; the !'=' lookahead failing (x = v = w) makes the Assign alternative fail; second " ++
+      "pass after a NAME (f() = 1): invalid_assignment decides."
+    source := "Grammar/python.gram:151-166"
+    status := .proven
+    prop := ``AssignmentMore
+    thm := some ``assignmentMore_proven
+    notes := scheme },
+  { id := "pygrammar-rule-compound-stmt-more"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_compound_stmt_more
+    statement := "compound_stmt: class_def, with_stmt, for_stmt (for 'for', and for 'async' after " ++
+      "function_def and with_stmt fail), try_stmt and while_stmt, each behind its lookahead with " ++
+      "the earlier ones failing."
+    source := "Grammar/python.gram:137-145"
+    status := .proven
+    prop := ``CompoundStmtMore
+    thm := some ``compoundStmtMore_proven
+    notes := scheme },
+  { id := "pygrammar-rule-simple-stmt-more"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_simple_stmt_more
+    statement := "simple_stmt: type_alias behind \"type\"; import_stmt behind (import|from|lazy) " ++
+      "before star_expressions; and each of the ten keyword statements behind its keyword, in " ++
+      "grammar order, when the earlier keyword lookaheads fail; memoized."
+    source := "Grammar/python.gram:121-135"
+    status := .proven
+    prop := ``SimpleStmtMore
+    thm := some ``simpleStmtMore_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-stmt-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_stmt_targets
+    statement := "del_stmt: del_targets failing after 'del' gives NULL with the mark back in the " ++
+      "first pass, and in the second pass invalid_del_stmt's outcome."
+    source := "Grammar/python.gram:209-211"
+    status := .proven
+    prop := ``DelStmtTargets
+    thm := some ``delStmtTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-while-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_while_stmt
+    statement := "while_stmt: While(a, b, else) after 'while a: b'; NULL at any other token; second " ++
+      "pass: invalid_while_stmt's error ends the rule, its NULL leads on to the while alternative."
+    source := "Grammar/python.gram:403-405"
+    status := .proven
+    prop := ``WhileStmt
+    thm := some ``whileStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-if-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_if_stmt
+    statement := "if_stmt: If(a, b, [elif]) with an elif chain; without one, backs up and gives If(a, b, " ++
+      "else); NULL at any other token; second pass: invalid_if_stmt first, its error ending the rule."
+    source := "Grammar/python.gram:386-390"
+    status := .proven
+    prop := ``IfStmt
+    thm := some ``ifStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-else-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_else_block
+    statement := "else_block: 'else: b' gives b; after 'else' the forced ':' either matches or fails " ++
+      "the rule in its error state; NULL at any other token; second pass: invalid_else_stmt's " ++
+      "error ends the rule."
+    source := "Grammar/python.gram:396-398"
+    status := .proven
+    prop := ``ElseBlock
+    thm := some ``elseBlock_proven
+    notes := scheme },
+  { id := "pygrammar-rule-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_block
+    statement := "block (memo): NEWLINE INDENT statements DEDENT gives the statements; another first " ++
+      "token gives simple_stmts' result; second pass: NEWLINE without INDENT and no simple_stmts " ++
+      "leaves invalid_block to decide; memoized."
+    source := "Grammar/python.gram:266-269"
+    status := .proven
+    prop := ``Block
+    thm := some ``block_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-func-type"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_func_type
+    statement := "func_type: '(' [types] ')' '->' expression NEWLINE* ENDMARKER gives " ++
+      "FunctionType(types, returns); without ENDMARKER, or at any token but '(', NULL."
+    source := "Grammar/python.gram:92"
+    status := .proven
+    prop := ``FuncTypeRule
+    thm := some ``funcTypeRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-expression"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_expression
+    statement := "expression (memo): first pass if_expression, then disjunction, then lambdef; second " ++
+      "pass the three invalid_ rules first, an error from any ending the rule unmemoized."
+    source := "Grammar/python.gram:716-722"
+    status := .proven
+    prop := ``ExpressionRule
+    thm := some ``expressionRule_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-star-expressions"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_expressions
+    statement := "star_expressions: 'a, b, ...' gives a Load Tuple of all elements; 'a,' backs up and " ++
+      "gives a one-element Tuple; with no comma, backs up again and gives the star_expression."
+    source := "Grammar/python.gram:731-737"
+    status := .proven
+    prop := ``StarExpressions
+    thm := some ``starExpressions_proven
+    notes := scheme },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_file

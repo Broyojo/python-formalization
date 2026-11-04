@@ -10,7 +10,7 @@ open Lexer
 
 /-- `kw_stmt: 'kw' a=','.NAME+ { _PyAST_C(CHECK(..., _PyPegen_map_names_to_ids(p, a)), EXTRA) }`
 (`Grammar/python.gram:203-207`): at the keyword, the comma-separated names (the artificial gather
-rule `_gather_23`) become the node's identifier list, the `id` of each `Name`; if the names fail,
+rule `_gather_14`) become the node's identifier list, the `id` of each `Name`; if the names fail,
 `NULL` with the mark back; at any other token, `NULL`. -/
 def NamesStmt (id kw : Nat) (c : Ctor) : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
