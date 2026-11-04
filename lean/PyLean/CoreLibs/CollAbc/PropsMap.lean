@@ -43,14 +43,24 @@ theorem dict_items (d : List (K × V)) (hn : (d.map Prod.fst).Nodup) :
 
 theorem contains_values (E : EqOps V) (d : List (K × V)) (hn : (d.map Prod.fst).Nodup)
     (value : V) : ∀ suf : List (K × V), (∀ p ∈ suf, p ∈ d) →
-    MapV.valuesContain.go (dictMap d) E value (suf.map Prod.fst) =
+    (dictMap d).valuesLoop E value (suf.map Prod.fst) =
       listContains E value (suf.map Prod.snd)
-  | [], _ => by simp [MapV.valuesContain.go, listContains, raiseTail, dictMap]
+  | [], _ => by simp [MapV.valuesLoop, listContains, raiseTail, dictMap]
   | (a, b) :: rest, h => by
     have hg : (dictMap d).getitem a = .ok b := by
       simp [dictMap, dictGet, lookup_of_mem d a b hn (h _ (by simp))]
     have ih := contains_values E d hn value rest (fun p hp => h p (by simp [hp]))
-    simp only [List.map_cons, MapV.valuesContain.go, hg, listContains, bind, Except.bind, ih]
+    simp only [List.map_cons, MapV.valuesLoop, hg, listContains, bind, Except.bind, ih]
+
+theorem valuesOf_dict (d : List (K × V)) (hn : (d.map Prod.fst).Nodup) :
+    ∀ suf : List (K × V), (∀ p ∈ suf, p ∈ d) →
+    (dictMap d).valuesOf (suf.map Prod.fst) = .ok (suf.map Prod.snd)
+  | [], _ => by simp [MapV.valuesOf, raiseTail, dictMap]
+  | (a, b) :: rest, h => by
+    have hg : (dictMap d).getitem a = .ok b := by
+      simp [dictMap, dictGet, lookup_of_mem d a b hn (h _ (by simp))]
+    have ih := valuesOf_dict d hn rest (fun p hp => h p (by simp [hp]))
+    simp only [List.map_cons, MapV.valuesOf, hg, ih, bind, Except.bind, pure, Except.pure]
 
 theorem lookup_isSome_any : ∀ (d : List (K × V)) (k : K),
     (d.lookup k).isSome = d.any (fun p => decide (p.1 = k))
@@ -64,10 +74,9 @@ theorem lookup_isSome_any : ∀ (d : List (K × V)) (k : K),
 
 end
 
-/-- `Mapping.get`, `__contains__`, `keys`, `items`, `values`, and the view methods
-`MappingView.__len__`, `__repr__`, `KeysView.__contains__`, `__iter__`, `ItemsView.__iter__`,
-`ValuesView.__contains__`, `__iter__` agree with `dict` and its views, on `dict` primitives. Type
-invariant: keys are distinct. `Mapping` docs. -/
+/-- `Mapping.get`, `__contains__`, and the view methods `KeysView.__contains__`, `ItemsView.__iter__`,
+`ValuesView.__iter__`, `ValuesView.__contains__` and `MappingView.__repr__` agree with `dict` and its views, on `dict`
+primitives. Type invariant: keys are distinct. `Mapping` docs. -/
 def MappingMatchesDict : Prop :=
   ∀ (K V : Type) [DecidableEq K] (d : List (K × V)) (k : K) (default value : V) (E : EqOps V)
     (cls r : String),
@@ -75,9 +84,7 @@ def MappingMatchesDict : Prop :=
     let m := dictMap d
     m.get k default = .ok ((d.lookup k).getD default) ∧
     m.contains k = .ok (d.lookup k).isSome ∧
-    m.keysView.contains k = .ok (d.lookup k).isSome ∧
-    m.keysView.iter = .ok (d.map Prod.fst) ∧
-    m.keysView.len = .ok d.length ∧
+    m.keyIn k = .ok (d.lookup k).isSome ∧
     m.items = .ok d ∧
     m.values = .ok (d.map Prod.snd) ∧
     m.valuesContain E value = listContains E value (d.map Prod.snd) ∧
@@ -86,26 +93,27 @@ def MappingMatchesDict : Prop :=
 theorem mappingMatchesDict_proven : MappingMatchesDict := by
   intro K V _ d k default value E cls r hn m
   have hi := dict_items d hn
-  refine ⟨?_, ?_, ?_, rfl, ?_, hi, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, hi, ?_, ?_, ?_⟩
   · cases h : d.lookup k <;> simp [m, MapV.get, dictMap, dictGet, h, isKeyError]
   · cases h : d.lookup k <;> simp [m, MapV.contains, dictMap, dictGet, h, isKeyError]
   · cases h : d.lookup k <;>
-      simp [m, MapV.keysView, MapV.contains, dictMap, dictGet, h, isKeyError]
-  · simp [m, MapV.keysView, dictMap]
-  · simp only [m, MapV.values, hi, bind, Except.bind, pure, Except.pure]
+      simp [m, MapV.keyIn, MapV.contains, dictMap, dictGet, h, isKeyError]
+  · simp only [m, MapV.values, dictMap, bind, Except.bind]
+    exact valuesOf_dict d hn d (fun _ h => h)
   · simp only [m, MapV.valuesContain, dictMap, bind, Except.bind]
     exact contains_values E d hn value d (fun _ h => h)
   · simp [viewRepr, String.append_assoc]
     rfl
 
 /-- `ItemsView.__contains__` agrees with `dict_items.__contains__` on 2-tuples, with the same
-identity-then-`==` comparison; `Mapping.__eq__` compares the two item dictionaries, and is
-`NotImplemented` for a non-`Mapping`. Narrowed twin property, over any mapping primitives. -/
+identity-then-`==` comparison. Narrowed twin property, over any mapping primitives. -/
 def ItemsContainMatchesOnTuples : Prop :=
   ∀ (K V : Type) (m : MapV K V) (E : EqOps V) (k : K) (v : V),
-    m.itemsContain E (.pair k v true) = dictItemsContain m E (.pair k v true)
+    m.itemsContain E (.two k v none) = dictItemsContain m E true (.two k v none)
 
-theorem itemsContainMatchesOnTuples_proven : ItemsContainMatchesOnTuples := fun _ _ _ _ _ _ => rfl
+theorem itemsContainMatchesOnTuples_proven : ItemsContainMatchesOnTuples := by
+  intro K V m E k v
+  simp [MapV.itemsContain, dictItemsContain, unpack2, bind, Except.bind]
 
 /-- `x in mapping.items()` agrees with `x in dict.items()` for every `x`. False: `dict_items`
 answers `False` for a non-tuple or a tuple of the wrong length, while `ItemsView.__contains__` runs
@@ -113,27 +121,58 @@ answers `False` for a non-tuple or a tuple of the wrong length, while `ItemsView
 iterable raises `ValueError`, and a 2-element list can be `True`. This propagates to every `Set`
 mixin that calls `__contains__`. -/
 def ItemsContainMatchesDictItems : Prop :=
-  ∀ (K V : Type) (m : MapV K V) (E : EqOps V) (x : ItemArg K V),
-    m.itemsContain E x = dictItemsContain m E x
+  ∀ (K V : Type) (m : MapV K V) (E : EqOps V) (isTuple : Bool) (x : ItemArg K V),
+    m.itemsContain E x = dictItemsContain m E isTuple x
 
 theorem itemsContainMatchesDictItems_refuted : ¬ItemsContainMatchesDictItems := by
   intro h
-  have := h Nat Nat ⟨fun _ => .ok 0, .ok [], .ok 0, none⟩ ⟨fun _ _ => true, fun _ _ => .ok true⟩ .notIterable
-  simp [MapV.itemsContain, dictItemsContain] at this
+  have := h Nat Nat { getitem := fun _ => .ok 0, iter := .ok [], len := .ok 0 } ⟨fun _ _ => true, fun _ _ => .ok true⟩
+    false (.notIterable "int")
+  simp [MapV.itemsContain, dictItemsContain, unpack2, bind, Except.bind] at this
 
-/-- `Mapping.__eq__` on two `dict`-backed mappings is the `dict` comparison of their item lists,
-whatever that comparison is; anything that is not a `Mapping` gives `NotImplemented`.
+theorem dictSet_fresh {K V : Type} [DecidableEq K] (acc : List (K × V)) (k : K) (v : V)
+    (h : k ∉ acc.map Prod.fst) : dictSet acc k v = acc ++ [(k, v)] := by
+  have : acc.any (fun p => decide (p.1 = k)) = false := by
+    simp only [List.any_eq_false, decide_eq_true_eq]
+    intro p hp e
+    exact h (List.mem_map.mpr ⟨p, hp, e⟩)
+  simp [dictSet, this]
+
+theorem dictOfItems_dict {K V : Type} [DecidableEq K] (hk : K → Py Unit) (hok : ∀ k, hk k = .ok ())
+    (d : List (K × V)) (hn : (d.map Prod.fst).Nodup) :
+    ∀ (suf acc : List (K × V)), (∀ p ∈ suf, p ∈ d) → ((acc ++ suf).map Prod.fst).Nodup →
+    dictOfItems hk (dictMap d) acc (suf.map Prod.fst) = .ok (acc ++ suf)
+  | [], acc, _, _ => by simp [dictOfItems, raiseTail, dictMap]
+  | (a, b) :: rest, acc, h, hu => by
+    have hg : (dictMap d).getitem a = .ok b := by
+      simp [dictMap, dictGet, lookup_of_mem d a b hn (h _ (by simp))]
+    have hfresh : a ∉ acc.map Prod.fst := by
+      intro ha
+      simp only [List.map_append, List.map_cons] at hu
+      exact (List.nodup_append.mp hu).2.2 a ha a (by simp) rfl
+    have ih := dictOfItems_dict hk hok d hn rest (acc ++ [(a, b)]) (fun p hp => h p (by simp [hp]))
+      (by simpa using hu)
+    simp only [List.map_cons, dictOfItems, hg, hok, dictSet_fresh acc a b hfresh, bind, Except.bind]
+    simpa using ih
+
+/-- `Mapping.__eq__` on two `dict`-backed mappings whose keys hash without error is the `dict` comparison of their
+item lists, whatever that comparison is; anything that is not a `Mapping` gives `NotImplemented`.
 Type invariant: keys are distinct. -/
 def MappingEqIsDictEq : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (dictEq : List (K × V) → List (K × V) → Py Bool)
-    (a b : List (K × V)), (a.map Prod.fst).Nodup → (b.map Prod.fst).Nodup →
-    mappingEq dictEq (dictMap a) (some (dictMap b)) = (Ret.val <$> dictEq a b) ∧
-    mappingEq dictEq (dictMap a) none = .ok .notImplemented
+  ∀ (K V : Type) [DecidableEq K] (hashKey : K → Py Unit) (dictEq : List (K × V) → List (K × V) → Py Bool)
+    (a b : List (K × V)), (∀ k, hashKey k = .ok ()) → (a.map Prod.fst).Nodup → (b.map Prod.fst).Nodup →
+    mappingEq hashKey dictEq (dictMap a) (some (dictMap b)) = (Ret.val <$> dictEq a b) ∧
+    mappingEq hashKey dictEq (dictMap a) none = .ok .notImplemented
 
 theorem mappingEqIsDictEq_proven : MappingEqIsDictEq := by
-  intro K V _ dictEq a b ha hb
+  intro K V _ hashKey dictEq a b hk ha hb
   refine ⟨?_, rfl⟩
-  simp only [mappingEq, dict_items a ha, dict_items b hb, bind, Except.bind, pure, Except.pure]
+  have h1 := dictOfItems_dict hashKey hk a ha a [] (fun _ h => h) (by simpa using ha)
+  have h2 := dictOfItems_dict hashKey hk b hb b [] (fun _ h => h) (by simpa using hb)
+  simp only [List.nil_append] at h1 h2
+  have i1 : (dictMap a).iter = .ok (a.map Prod.fst) := rfl
+  have i2 : (dictMap b).iter = .ok (b.map Prod.fst) := rfl
+  simp only [mappingEq, i1, i2, h1, h2, bind, Except.bind, pure, Except.pure]
   cases dictEq a b <;> rfl
 
 /-! ### MutableMapping -/
@@ -166,7 +205,7 @@ theorem setAll_dict : ∀ (xs d : List (K × V)),
 
 theorem updateKeys_dict (o : List (K × V)) (hn : (o.map Prod.fst).Nodup) :
     ∀ (suf d : List (K × V)), (∀ p ∈ suf, p ∈ o) →
-    (dictMMap (K := K) (V := V)).updateKeys (dictMap o) d (suf.map Prod.fst) =
+    (dictMMap (K := K) (V := V)).updateKeys (dictMap o).getitem none d (suf.map Prod.fst) =
       .ok (builtinDictUpdate d suf)
   | [], d, _ => rfl
   | (k, v) :: rest, d, h => by
@@ -175,6 +214,17 @@ theorem updateKeys_dict (o : List (K × V)) (hn : (o.map Prod.fst).Nodup) :
     simp only [List.map_cons, MMap.updateKeys, hg, dictMMap, bind, Except.bind, builtinDictUpdate,
       List.foldl_cons]
     exact updateKeys_dict o hn rest (dictSet d k v) (fun p hp => h p (by simp [hp]))
+
+/-- Pairs as `key, value = item` sees 2-tuples. -/
+def pairArgs {K V : Type} (xs : List (K × V)) : List (ItemArg K V) := xs.map (fun p => .two p.1 p.2 none)
+
+theorem setPairs_dict : ∀ (xs d : List (K × V)),
+    (dictMMap (K := K) (V := V)).setPairs none d (pairArgs xs) = .ok (builtinDictUpdate d xs)
+  | [], d => rfl
+  | (k, v) :: xs, d => by
+    simp only [pairArgs, List.map_cons, MMap.setPairs, unpack2, dictMMap, bind, Except.bind, builtinDictUpdate,
+      List.foldl_cons]
+    exact setPairs_dict xs (dictSet d k v)
 
 theorem mmap_popitem_cons (a : K) (b : V) (rest : List (K × V))
     (hn : (((a, b) :: rest).map Prod.fst).Nodup) :
@@ -212,15 +262,20 @@ def MMapMatchesDict : Prop :=
     let M : MMap (List (K × V)) K V := dictMMap
     M.pop d k dflt = builtinDictPop d k dflt ∧
     M.setdefault d k default = .ok (builtinDictSetdefault d k default) ∧
-    M.update d (.pairs xs) kwds = .ok (builtinDictUpdate (builtinDictUpdate d xs) kwds) ∧
+    (∀ gi : K → Py V, M.update d (.other (.ok false) (.ok []) none gi (.ok (pairArgs xs)) none) kwds =
+      .ok (builtinDictUpdate (builtinDictUpdate d xs) kwds)) ∧
     M.update d (.mapping (dictMap o)) kwds = .ok (builtinDictUpdate (builtinDictUpdate d o) kwds) ∧
+    (∀ ps : Py (List (ItemArg K V)), M.update d (.other (.ok true) (.ok (o.map Prod.fst)) none (dictMap o).getitem ps none)
+      kwds = .ok (builtinDictUpdate (builtinDictUpdate d o) kwds)) ∧
     M.clear fuel d = .ok [] ∧
     (d = [] → (M.popitem d).raises "KeyError") ∧
     (∀ a b rest, d = (a, b) :: rest → M.popitem d = .ok ((a, b), rest))
 
 theorem mMapMatchesDict_proven : MMapMatchesDict := by
   intro K V _ d o xs kwds k default dflt fuel hd ho hf M
-  refine ⟨?_, ?_, ?_, ?_, mmap_clear fuel d hd hf, ?_, ?_⟩
+  have h1 : (dictMMap (K := K) (V := V)).updateKeys (dictMap o).getitem none d (o.map Prod.fst) =
+      .ok (builtinDictUpdate d o) := updateKeys_dict o ho o d (fun _ h => h)
+  refine ⟨?_, ?_, ?_, ?_, ?_, mmap_clear fuel d hd hf, ?_, ?_⟩
   · cases h : d.lookup k with
     | none =>
       cases dflt <;> simp [M, MMap.pop, builtinDictPop, dictMMap, dictMap, dictGet, h, isKeyError]
@@ -240,11 +295,13 @@ theorem mMapMatchesDict_proven : MMapMatchesDict := by
         hs, bind, Except.bind, pure, Except.pure]
     | some v =>
       simp [M, MMap.setdefault, builtinDictSetdefault, dictMMap, dictMap, dictGet, h]
-  · simp only [M, MMap.update, setAll_dict, bind, Except.bind]
-  · have h1 : (dictMMap (K := K) (V := V)).updateKeys (dictMap o) d (o.map Prod.fst) =
-        .ok (builtinDictUpdate d o) := updateKeys_dict o ho o d (fun _ h => h)
-    simp only [M, MMap.update, dictMap, bind, Except.bind] at h1 ⊢
-    simp only [h1, setAll_dict]
+  · intro gi
+    simp only [M, MMap.update, setPairs_dict, setAll_dict, bind, Except.bind, Bool.false_eq_true, ite_false]
+  · have i : (dictMap o).iter = .ok (o.map Prod.fst) := rfl
+    have t : (dictMap o).tail = none := rfl
+    simp only [M, MMap.update, i, t, h1, setAll_dict, bind, Except.bind]
+  · intro ps
+    simp only [M, MMap.update, h1, setAll_dict, bind, Except.bind, ite_true]
   · intro h
     subst h
     refine ⟨bareKeyError, ?_, rfl⟩

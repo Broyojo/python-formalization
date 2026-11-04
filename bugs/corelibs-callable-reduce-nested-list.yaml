@@ -1,0 +1,61 @@
+id: corelibs-callable-reduce-nested-list
+title: "collections.abc.Callable[[[int]], str] does not survive copy or pickle: __reduce__ skips the re-listing for a list first argument"
+priority: P5
+kind: round-trip
+module: corelibs
+files: [Lib/_collections_abc.py]
+functions: ["_CallableGenericAlias.__reduce__", "_CallableGenericAlias.__new__", "_is_param_expr"]
+summary: |
+  _CallableGenericAlias flattens the argument list into __args__, so Callable[[[int]], str] has
+  __args__ ([int], str). __reduce__ re-lists the arguments unless there are two of them and the
+  first is a parameter expression, and _is_param_expr counts any list as one. So for this alias
+  __reduce__ returns the flat ([int], str) and rebuilding it flattens once more: copy.copy, deepcopy
+  and pickle give an alias with __args__ (int, str), which is not equal to the original, though
+  both reprs read "collections.abc.Callable[[int], str]".
+likelihood: |
+  Very low. A list as a parameter type is not a valid type expression (typing.Callable rejects it);
+  it only arises from hand-built aliases or from substitution that puts a list where a type is
+  expected.
+maybe_intended: |
+  The list case in _is_param_expr exists for PEP 612 substitution (Z[[int, str, bool]]), where a
+  list at position 0 stands for a parameter list, not for a single list-typed parameter. A
+  maintainer could reasonably say that a nested list is garbage in, garbage out.
+reproducer: |
+  import copy, pickle
+  from collections.abc import Callable
+  c = Callable[[[int]], str]
+  copied = copy.copy(c)
+  pickled = pickle.loads(pickle.dumps(c))
+  print(c.__args__, copied.__args__, pickled.__args__, repr(c), repr(copied))
+  if c.__args__ == ([int], str) and copied.__args__ == (int, str) and copied != c and pickled != c:
+      print('REPRODUCED corelibs-callable-reduce-nested-list')
+expected: |
+  copy.copy(c) == c and pickle round-trips the alias, as for every other Callable alias.
+observed: |
+  python3 3.15.2: ([int], str) (int, str) (int, str); both reprs collections.abc.Callable[[int], str].
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  The pickle protocol's __reduce__ contract (an object rebuilt from it should equal the original), and
+  the _CallableGenericAlias docstring: __args__ is "the flattened argtypes followed by resulttype".
+cause: |
+  Lib/_collections_abc.py:495 `if not (len(args) == 2 and _is_param_expr(args[0]))` treats the
+  first flattened argument [int] as a parameter expression because of :522-523 (`isinstance(obj,
+  list)`), so :496 does not wrap the arguments in a list again, and :478-479 flattens [int] when the
+  alias is rebuilt.
+possible_fix: |
+  In __reduce__, test the parameter-expression case without the list branch (obj is Ellipsis or a
+  ParamSpec/Concatenate), or always return (list(args[:-1]), args[-1]) unless the alias was made
+  from a non-list first argument.
+duplicates:
+  issues:
+    - {number: 124496, state: open, relation: "lists as a parameters expression, but about hashing of typing aliases", reason: "different defect"}
+    - {number: 102615, state: closed, relation: "repr of ParamSpec in Callable", reason: "different defect"}
+  queries: ["gh search issues --repo python/cpython _CallableGenericAlias reduce",
+    "gh search issues --repo python/cpython collections.abc.Callable pickle",
+    "gh search issues --repo python/cpython Callable nested list args",
+    "gh search issues --repo python/cpython _is_param_expr",
+    "bugforge README: no match for Callable or _collections_abc"]
+lean:
+  property: PyLean.CoreLibs.CollAbc.CallableReduceRoundTrip
+  theorem: PyLean.CoreLibs.CollAbc.callableReduceRoundTrip_refuted

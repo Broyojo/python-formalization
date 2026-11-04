@@ -9,9 +9,18 @@ supplies, so the primitives are parameters: the structures `Seq`, `MSeq`, `SetV`
 a subclass may raise from any of them, and the order in which they are called is
 observable. Mutation is explicit state passing over an abstract `σ`.
 
+Iteration is one finite pass: the elements an iterator yields, as a list, and the
+exception its `__next__` raises after them (`tail`), which a loop that stops early
+never sees. A failing `iter()` is the `.error` of the list.
+
 Identity and equality of elements are abstract (`EqOps`): the source's
 `v is value or v == value` tests identity first and only then calls `__eq__`,
 which may raise.
+
+Scope limits, stated once: a primitive is a function of the object's state, so a
+loop does not see its operand change under it except through the explicit state;
+`self.method(...)` calls reach the mixin method, not an override, except where a
+parameter says otherwise; and classes are compared by identity (`cls is X`).
 
 Classes are data for `_check_methods`: an MRO is a list of class dictionaries.
 -/
@@ -36,6 +45,11 @@ def isIndexError : PyExc → Bool
   | .indexError _ => true
   | _ => false
 
+/-- `except TypeError`. -/
+def isTypeError : PyExc → Bool
+  | .typeError _ => true
+  | _ => false
+
 /-- `raise KeyError` without arguments: `str(e)` is empty. -/
 def bareKeyError : PyExc := .keyError ""
 
@@ -44,9 +58,15 @@ structure EqOps (α : Type) where
   is_ : α → α → Bool
   eq : α → α → Py Bool
 
-/-- `v is value or v == value` (Lib/_collections_abc.py:897, 1027, 1053, 1060). -/
+/-- `v is value or v == value` (Lib/_collections_abc.py:880, 897, 1028, 1054, 1061). -/
 def EqOps.same {α : Type} (E : EqOps α) (v w : α) : Py Bool :=
   if E.is_ v w then pure true else E.eq v w
+
+/-- The end of a loop: `StopIteration`, or the exception of the iterator. -/
+def raiseTail {β : Type} (tail : Option PyExc) (v : β) : Py β :=
+  match tail with
+  | none => .ok v
+  | some e => .error e
 
 /-! ### One-trick ponies: `_check_methods` and the `__subclasshook__` family -/
 
@@ -72,9 +92,9 @@ def checkMethods (mro : List ClassDict) : List String → Ret Bool
     | .notImplemented => .notImplemented
     | .val () => checkMethods mro ms
 
-/-- The ABCs with a `__subclasshook__`, with the method lists of their hooks,
-Lib/_collections_abc.py:131, 146, 189, 207, 228, 275, 295, 316, 348, 395, 414, 429,
-442, 457, 540, and the `Hashable` hook at :131. -/
+/-- The ABCs with a `__subclasshook__`, with the method lists their hooks pass to
+`_check_methods`: Lib/_collections_abc.py:131, 146, 189, 207, 228, 275-276, 295, 316,
+348, 395-396, 414, 429, 442, 457, 540. -/
 def hookMethods : String → List String
   | "Hashable" => ["__hash__"]
   | "Awaitable" => ["__await__"]
@@ -111,73 +131,121 @@ inductive Stub where
 
 /-- The body of each abstract method, by inventory name. -/
 def stubBody : String → Option Stub
-  | "Hashable.__hash__" => some (.returnsInt 0)                -- @3.14.7:126
-  | "Sized.__len__" => some (.returnsInt 0)                    -- @3.14.7:409
-  | "Container.__contains__" => some (.returnsBool false)      -- @3.14.7:424
-  | "Callable.__call__" => some (.returnsBool false)           -- @3.14.7:535
-  | "Awaitable.__await__" => some (.yieldsNones 1)             -- @3.14.7:141
-  | "Iterable.__iter__" => some (.yieldsNones 0)               -- @3.14.7:289-290
-  | "Reversible.__reversed__" => some (.yieldsNones 0)         -- @3.14.7:342-343
-  | "Iterator.__next__" => some (.raises "StopIteration")      -- @3.14.7:308
-  | "Generator.send" => some (.raises "StopIteration")         -- @3.14.7:367
-  | "Coroutine.send" => some (.raises "StopIteration")         -- @3.14.7:161
-  | "AsyncIterator.__anext__" => some (.raises "StopAsyncIteration")  -- @3.14.7:220
-  | "AsyncGenerator.asend" => some (.raises "StopAsyncIteration")     -- @3.14.7:247
+  | "Hashable.__hash__" => some (.returnsInt 0)                -- :126
+  | "Sized.__len__" => some (.returnsInt 0)                    -- :409
+  | "Container.__contains__" => some (.returnsBool false)      -- :424
+  | "Callable.__call__" => some (.returnsBool false)           -- :535
+  | "Awaitable.__await__" => some (.yieldsNones 1)             -- :141
+  | "Iterable.__iter__" => some (.yieldsNones 0)               -- :289-290
+  | "Reversible.__reversed__" => some (.yieldsNones 0)         -- :342-343
+  | "Iterator.__next__" => some (.raises "StopIteration")      -- :308
+  | "Generator.send" => some (.raises "StopIteration")         -- :367
+  | "Coroutine.send" => some (.raises "StopIteration")         -- :161
+  | "AsyncIterator.__anext__" => some (.raises "StopAsyncIteration")  -- :220
+  | "AsyncGenerator.asend" => some (.raises "StopAsyncIteration")     -- :247
   | "AsyncIterable.__aiter__" => some (.raises "TypeError")    -- :202, AsyncIterator() is abstract
-  | "Buffer.__buffer__" => some (.raises "NotImplementedError")  -- @3.14.7:452
-  | "MutableSet.add" => some (.raises "NotImplementedError")     -- @3.14.7:707
-  | "MutableSet.discard" => some (.raises "NotImplementedError") -- @3.14.7:712
-  | "Mapping.__getitem__" => some (.raises "KeyError")           -- @3.14.7:790
-  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- @3.14.7:921
-  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- @3.14.7:925
-  | "Sequence.__getitem__" => some (.raises "IndexError")        -- @3.14.7:1013
-  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- @3.14.7:1115
-  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- @3.14.7:1119
-  | "MutableSequence.insert" => some (.raises "IndexError")      -- @3.14.7:1124
+  | "Buffer.__buffer__" => some (.raises "NotImplementedError")  -- :452
+  | "MutableSet.add" => some (.raises "NotImplementedError")     -- :707
+  | "MutableSet.discard" => some (.raises "NotImplementedError") -- :712
+  | "Mapping.__getitem__" => some (.raises "KeyError")           -- :790
+  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- :922
+  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- :926
+  | "Sequence.__getitem__" => some (.raises "IndexError")        -- :1014
+  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- :1116
+  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- :1120
+  | "MutableSequence.insert" => some (.raises "IndexError")      -- :1125
   | _ => none
 
 /-! ### Generator, Coroutine, AsyncGenerator mixins -/
 
-/-- An exception argument of `throw(typ, val, tb)`. -/
-inductive ExcArg where
-  | cls (name : String)
-  | inst (name : String)
-  /-- Something that is not an exception. -/
+mutual
+/-- An object passed to `throw(typ, val, tb)` as `typ` or `val`, as `raise`, a call with no arguments and
+`.with_traceback(tb)` see it. -/
+inductive TObj where
+  /-- An exception class. `make` is what calling it with no arguments does (`__new__`, then `__init__`): the
+  object made, or the exception raised, as `TypeError` for `UnicodeDecodeError`, whose constructor needs five
+  arguments. -/
+  | excClass (name : String) (make : TMade)
+  /-- An exception instance of class `name`, with the builtin `with_traceback`; `tb` says whether the traceback
+  given to `throw` is attached to it. -/
+  | excInst (name : String) (tb : Bool)
+  /-- Any other object, of type `tname`: `call` is what calling it with no arguments does (`none`: it is not
+  callable), and `withTb` what `obj.with_traceback(tb)` does (`none`: it has no such attribute). -/
+  | other (tname : String) (call : Option TMade) (withTb : Option TMade)
+
+/-- The outcome of a call: an object, or an exception. -/
+inductive TMade where
+  | obj (o : TObj)
+  | raises (e : PyExc)
+end
+
+def TMade.toPy : TMade → Py TObj
+  | .obj o => .ok o
+  | .raises e => .error e
+
+/-- The `tb` argument of `throw`: `None`, a traceback object, or anything else. -/
+inductive TbArg where
+  | absent
+  | traceback
   | other
   deriving Repr, DecidableEq
 
-/-- What `throw` ended up raising: the class, and whether `with_traceback` ran. -/
+/-- What `throw` raised when it raised the exception it was asked to: the class, and whether the traceback given
+is attached. -/
 structure Raised where
   name : String
   tracebackSet : Bool
   deriving Repr, DecidableEq
 
-/-- `raise x`. -/
-def raiseArg (x : ExcArg) (tb : Bool) : Except String Raised :=
-  match x with
-  | .cls n | .inst n => .ok ⟨n, tb⟩
-  | .other => .error "TypeError"
+/-- `raise x`, Python/ceval.h:541-566 `do_raise`: a class is called with no arguments and must give an instance, an
+instance is raised as it is, anything else is a `TypeError`. -/
+def raiseObj : TObj → Except PyExc Raised
+  | .excClass _ make =>
+    match make with
+    | .raises e => .error e
+    | .obj (.excInst n t) => .ok ⟨n, t⟩
+    | .obj _ => .error (.typeError "~calling the class should have returned an instance of BaseException")
+  | .excInst n t => .ok ⟨n, t⟩
+  | .other .. => .error (.typeError "exceptions must derive from BaseException")
+
+/-- `typ()`: calling an object with no arguments. -/
+def callNoArgs : TObj → Py TObj
+  | .excClass _ make => make.toPy
+  | .excInst n _ => .error (.typeError s!"'{n}' object is not callable")
+  | .other t none _ => .error (.typeError s!"'{t}' object is not callable")
+  | .other _ (some r) _ => r.toPy
+
+/-- `val.with_traceback(tb)` for a `tb` that is not `None`: on an instance the builtin method, which stores a traceback
+and refuses anything else (Objects/exceptions.c:271-277, 399-411); on a class the unbound method descriptor, which does
+not apply to `tb`; on another object whatever its attribute does. -/
+def withTraceback (tb : TbArg) : TObj → Py TObj
+  | .excInst n _ =>
+    match tb with
+    | .traceback => .ok (.excInst n true)
+    | .absent => .ok (.excInst n false)
+    | .other => .error (.typeError "__traceback__ must be a traceback or None")
+  | .excClass .. => .error (.typeError "~descriptor 'with_traceback' for 'BaseException' objects doesn't apply")
+  | .other t _ none => .error (.named "AttributeError" s!"'{t}' object has no attribute 'with_traceback'")
+  | .other _ _ (some r) => r.toPy
 
 /-- The body of `Generator.throw`, `Coroutine.throw` and `AsyncGenerator.athrow`
-(Lib/_collections_abc.py:374-380, 168-174, 254-260). The error side is the class
-name of an exception that is not the requested one. -/
-def throwBody (typ : ExcArg) (val : Option ExcArg) (tb : Bool) : Except String Raised :=
+(Lib/_collections_abc.py:374-380, 168-174, 254-260). `val = none` is `val is None`. The `.ok` side is the exception
+that was asked for; `.error` is any other exception, from the misuse or from the code `throw` called. -/
+def throwBody (typ : TObj) (val : Option TObj) (tb : TbArg) : Except PyExc Raised :=
   match val with
   | none =>
-    if !tb then raiseArg typ false
-    else
-      -- `val = typ()`, then `val.with_traceback(tb)`
-      match typ with
-      | .cls n => .ok ⟨n, true⟩
-      | .inst _ | .other => .error "TypeError"
+    match tb with
+    | .absent => raiseObj typ
+    | _ => do
+      let v ← callNoArgs typ
+      let v ← withTraceback tb v
+      raiseObj v
   | some v =>
-    if tb then
-      match v with
-      | .inst n => .ok ⟨n, true⟩
-      -- `ValueError.with_traceback(tb)` is an unbound descriptor call
-      | .cls _ => .error "TypeError"
-      | .other => .error "AttributeError"
-    else raiseArg v false
+    match tb with
+    | .absent => raiseObj v
+    | _ => do
+      let v ← withTraceback tb v
+      raiseObj v
 
 /-- The outcome of one resumption of a generator. -/
 inductive GenStep (V : Type) where
@@ -190,7 +258,7 @@ inductive GenStep (V : Type) where
 /-- The two primitives of a `Generator` subclass. -/
 structure Gen (σ V : Type) where
   send : σ → V → GenStep V × σ
-  /-- `self.throw(GeneratorExit)`. -/
+  /-- `self.throw(GeneratorExit)`; in the async family, what awaiting `self.athrow(GeneratorExit)` gives. -/
   throwExit : σ → GenStep V × σ
 
 def generatorExit : PyExc := .named "GeneratorExit" ""
@@ -205,93 +273,114 @@ Lib/_collections_abc.py:360, 240. -/
 def Gen.next {σ V : Type} (G : Gen σ V) (none : V) (s : σ) : GenStep V × σ := G.send s none
 
 /-- `Generator.close`, `Coroutine.close`, `AsyncGenerator.aclose`,
-Lib/_collections_abc.py:385-390, 179-184, 265-270. Returns `None`. -/
+Lib/_collections_abc.py:385-390, 179-184, 265-270, with the message of each. Returns `None`. -/
 def Gen.close {σ V : Type} (G : Gen σ V) (msg : String) (s : σ) : Py Unit × σ :=
   match G.throwExit s with
   | (.yielded _, s') => (.error (.named "RuntimeError" msg), s')
   | (.stopped _, s') => (.ok (), s')
   | (.raised e, s') => (if isGeneratorExit e then .ok () else .error e, s')
 
+/-- Lib/_collections_abc.py:390. -/
 def genCloseMsg := "generator ignored GeneratorExit"
+/-- Lib/_collections_abc.py:184. -/
 def coroCloseMsg := "coroutine ignored GeneratorExit"
+/-- Lib/_collections_abc.py:270. -/
 def asyncCloseMsg := "asynchronous generator ignored GeneratorExit"
+/-- `ASYNC_GEN_IGNORED_EXIT_MSG`, Objects/genobject.c:64-65. -/
+def builtinAsyncCloseMsg := "async generator ignored GeneratorExit"
+/-- `gen_close` for a generator, Objects/genobject.c:524. -/
+def builtinGenCloseMsg := "generator ignored GeneratorExit"
+/-- `gen_close` for a coroutine, Objects/genobject.c:525-526. -/
+def builtinCoroCloseMsg := "coroutine ignored GeneratorExit"
 
-/-- The builtin `generator.close()` after the frame has started and not finished,
-Objects/genobject.c:464 `gen_close`: a value returned while closing is the result. -/
-def builtinClose {σ V : Type} (G : Gen σ V) (s : σ) : Py (Option V) × σ :=
+/-- The builtin `generator.close()` and `coroutine.close()` after the frame has started and not finished,
+Objects/genobject.c:464-545 `gen_close`, with the message of :524-526: a value returned while closing is the result. -/
+def builtinClose {σ V : Type} (G : Gen σ V) (msg : String) (s : σ) : Py (Option V) × σ :=
   match G.throwExit s with
-  | (.yielded _, s') => (.error (.named "RuntimeError" genCloseMsg), s')
+  | (.yielded _, s') => (.error (.named "RuntimeError" msg), s')
   | (.stopped v, s') => (.ok (some v), s')
   | (.raised e, s') => (if isGeneratorExit e then .ok none else .error e, s')
 
+/-- The builtin `async_generator.aclose()` awaited, after the frame has started and not finished, for a generator that
+does not await while closing: `async_gen_athrow_send` in aclose mode, Objects/genobject.c:2350-2362, 2398-2421. An
+async yield is `RuntimeError(ASYNC_GEN_IGNORED_EXIT_MSG)`; `StopAsyncIteration` or `GeneratorExit` end it. -/
+def builtinAclose {σ V : Type} (G : Gen σ V) (s : σ) : Py Unit × σ :=
+  match G.throwExit s with
+  | (.yielded _, s') => (.error (.named "RuntimeError" builtinAsyncCloseMsg), s')
+  | (.stopped _, s') => (.ok (), s')
+  | (.raised e, s') => (if isGeneratorExit e then .ok () else .error e, s')
+
 /-! ### Callable -/
 
-/-- `Callable[...]`'s first argument, as `_is_param_expr` and `__new__` see it. -/
-inductive CallArg where
-  | tupleOrList (items : List String)
+/-- An object in `Callable[...]`'s arguments, as `_is_param_expr`, `__new__` and `__getitem__` see it. -/
+inductive CArg where
   | ellipsis
-  /-- A `typing.ParamSpec` or a `Concatenate` alias. -/
-  | paramExpr (repr : String)
-  /-- Anything else. -/
-  | other (repr : String)
-  deriving Repr, DecidableEq
+  /-- An instance of `list` or a subclass. -/
+  | list (items : List CArg)
+  /-- An instance of `tuple` or a subclass; scope: its type is not one named `ParamSpec` in a module `typing`. -/
+  | tuple (items : List CArg)
+  /-- Anything else: the `__module__` and `__name__` of its type. -/
+  | obj (tmod tname : String) (repr : String)
+  deriving Repr, Inhabited
 
-/-- `_is_param_expr(obj)`, Lib/_collections_abc.py:516-526. `list` is a param expression;
-a tuple is not. The Boolean says whether `tupleOrList` here is a list. -/
-def isParamExpr (isList : Bool) : CallArg → Bool
+/-- `_is_param_expr(obj)`, Lib/_collections_abc.py:516-526. -/
+def isParamExpr : CArg → Bool
   | .ellipsis => true
-  | .tupleOrList _ => isList
-  | .paramExpr _ => true
-  | .other _ => false
+  | .list _ => true
+  | .tuple _ => false
+  | .obj m n _ => m == "typing" && ["ParamSpec", "_ConcatenateGenericAlias"].any (n == ·)
 
-/-- `_CallableGenericAlias.__new__`, Lib/_collections_abc.py:473-483: the flattened
-`__args__`. The first argument is the shape `(t_args, t_result)` when it is a 2-tuple. -/
-def callableNew (args : Option (CallArg × String)) : Py (List String) :=
+/-- `isinstance(x, (tuple, list))`. -/
+def CArg.isSeq : CArg → Bool
+  | .list _ | .tuple _ => true
+  | _ => false
+
+/-- `args` as `isinstance(args, tuple) and len(args) == 2` and `t_args, t_result = args` see it: `none` is anything
+that is not a tuple of two. -/
+def asPair : List CArg → Option (CArg × CArg)
+  | [a, b] => some (a, b)
+  | _ => none
+
+/-- `_CallableGenericAlias.__new__`, Lib/_collections_abc.py:473-483: the `__args__` of the alias. -/
+def callableNew (args : Option (CArg × CArg)) : Py (List CArg) :=
   match args with
   | none => .error (.typeError "Callable must be used as Callable[[arg, ...], result].")
-  | some (.tupleOrList items, r) => .ok (items ++ [r])
-  | some (a, r) =>
-    if isParamExpr false a then
-      .ok [match a with | .ellipsis => "..." | .paramExpr p => p | _ => "", r]
-    else
-      .error (.typeError s!"~Expected a list of types, an ellipsis, ParamSpec, or Concatenate.")
+  | some (tArgs, tResult) =>
+    match tArgs with
+    | .list items | .tuple items => .ok (items ++ [tResult])
+    | _ =>
+      if !isParamExpr tArgs then
+        .error (.typeError "~Expected a list of types, an ellipsis, ParamSpec, or Concatenate. Got ")
+      else .ok [tArgs, tResult]
 
-/-- `_CallableGenericAlias.__repr__`, Lib/_collections_abc.py:485-491, on the `__args__`,
-each already through `type_repr`. The default `GenericAlias` repr applies to `(..., r)`. -/
-def callableRepr (args : List String) (paramExprFirst : Bool) : String :=
-  match args, paramExprFirst with
-  | [a, r], true => s!"collections.abc.Callable[{a}, {r}]"
-  | _, _ =>
-    s!"collections.abc.Callable[[{", ".intercalate args.dropLast}], {(args.getLast? |>.getD "")}]"
+/-- `_CallableGenericAlias.__repr__`, Lib/_collections_abc.py:485-491. `gaRepr` is `GenericAlias.__repr__`
+(Objects/genericaliasobject.c) and `typeRepr` is `annotationlib.type_repr`, both outside this file. -/
+def callableRepr (typeRepr : CArg → String) (gaRepr : List CArg → String) (args : List CArg) : Py String :=
+  if args.length = 2 ∧ isParamExpr (args.headD .ellipsis) then .ok (gaRepr args)
+  else
+    match args.getLast? with
+    | none => .error (.indexError "tuple index out of range")
+    | some r =>
+      .ok s!"collections.abc.Callable[[{", ".intercalate (args.dropLast.map typeRepr)}], {typeRepr r}]"
 
-/-- `_CallableGenericAlias.__reduce__`, Lib/_collections_abc.py:493-497: the argument the
-reconstruction gets; the flat form only for the single-param-expression case. -/
-def callableReduceArgs (args : List String) (paramExprFirst : Bool) : CallArg × String :=
-  match args, paramExprFirst with
-  | [a, r], true => (if a = "..." then .ellipsis else .paramExpr a, r)
-  | _, _ => (.tupleOrList args.dropLast, (args.getLast? |>.getD ""))
+/-- `_CallableGenericAlias.__reduce__`, Lib/_collections_abc.py:493-497: the `args` of the returned
+`(_CallableGenericAlias, (Callable, args))`, as the tuple it is. -/
+def callableReduce (args : List CArg) : Py (List CArg) :=
+  if args.length = 2 ∧ isParamExpr (args.headD .ellipsis) then .ok args
+  else
+    match args.getLast? with
+    | none => .error (.indexError "tuple index out of range")
+    | some r => .ok [.list args.dropLast, r]
 
-/-- An entry of `new_args` in `_CallableGenericAlias.__getitem__`. -/
-inductive SubstArg where
-  | typ (repr : String)
-  /-- `args[0]` from something like `Z[[int, str, bool]]` (PEP 612). -/
-  | seq (items : List String)
-  deriving Repr, DecidableEq
-
-def SubstArg.repr : SubstArg → String
-  | .typ r => r
-  | .seq _ => ""
-
-/-- `_CallableGenericAlias.__getitem__`, Lib/_collections_abc.py:499-514, after the
-inherited substitution produced `new_args`: `__args__` of the result. -/
-def callableGetitem (newArgs : List SubstArg) : Py (List String) :=
+/-- `_CallableGenericAlias.__getitem__`, Lib/_collections_abc.py:499-514, from `new_args`, the `__args__` that the
+inherited substitution (`GenericAlias.__getitem__`, Objects/genericaliasobject.c) produced: the `__args__` of the
+result. -/
+def callableGetitem (newArgs : List CArg) : Py (List CArg) :=
   match newArgs with
-  | [.seq items, .typ r] => callableNew (some (.tupleOrList items, r))
-  | .seq _ :: _ =>
-    .error (.typeError "Callable must be used as Callable[[arg, ...], result].")
-  | _ =>
-    let names := newArgs.map SubstArg.repr
-    callableNew (some (.tupleOrList names.dropLast, names.getLast?.getD ""))
+  | [] => .error (.indexError "tuple index out of range")
+  | a :: _ =>
+    let newArgs := if !a.isSeq then [.tuple newArgs.dropLast, newArgs.getLastD a] else newArgs
+    callableNew (asPair newArgs)
 
 /-! ### Sequence -/
 
@@ -322,7 +411,7 @@ def Seq.containsFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
       if ← E.same v value then return true
       s.containsFrom E value fuel (i + 1)
 
-/-- `Sequence.count`, Lib/_collections_abc.py:1059-1061. -/
+/-- `Sequence.count`, Lib/_collections_abc.py:1059-1061: `sum(1 for v in self if ...)` over `__iter__`. -/
 def Seq.countFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
     (fuel : Nat) → Int → Py Nat
   | 0, _ => .error .modelFuel
@@ -334,7 +423,7 @@ def Seq.countFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
       let rest ← s.countFrom E value fuel (i + 1)
       pure ((if hit then 1 else 0) + rest)
 
-/-- The loop `for i in reversed(range(n)): yield self[i]`, from `i = n - 1` down. -/
+/-- The loop `for i in reversed(range(n)): yield self[i]`, from `i = n - 1` down. No exception is caught. -/
 def Seq.reversedFrom {α : Type} (s : Seq α) : Nat → Py (List α)
   | 0 => .ok []
   | n + 1 => do
@@ -342,12 +431,12 @@ def Seq.reversedFrom {α : Type} (s : Seq α) : Nat → Py (List α)
     let rest ← s.reversedFrom n
     pure (v :: rest)
 
-/-- `Sequence.__reversed__`, Lib/_collections_abc.py:1032-1034. -/
+/-- `Sequence.__reversed__`, Lib/_collections_abc.py:1032-1034, drained. -/
 def Seq.reversed {α : Type} (s : Seq α) : Py (List α) := do
   let n ← s.len
   s.reversedFrom n
 
-/-- The `while` loop of `Sequence.index`, Lib/_collections_abc.py:1049-1057. -/
+/-- The `while` loop of `Sequence.index`, Lib/_collections_abc.py:1048-1057. -/
 def Seq.indexLoop {α : Type} (s : Seq α) (E : EqOps α) (value : α) (stop : Option Int) :
     (fuel : Nat) → Int → Py Int
   | 0, _ => .error .modelFuel
@@ -362,7 +451,7 @@ def Seq.indexLoop {α : Type} (s : Seq α) (E : EqOps α) (value : α) (stop : O
 
 /-- `Sequence.index(value, start, stop)` for an `int` `start`,
 Lib/_collections_abc.py:1036-1057. `start=None` and non-`int` arguments fall through to
-`__getitem__` and to `<`, which is the subclass's business. -/
+`__getitem__` and to `<`, which is the subclass's business. Each negative bound calls `len(self)`. -/
 def Seq.index {α : Type} (s : Seq α) (E : EqOps α) (value : α) (start : Int)
     (stop : Option Int) (fuel : Nat) : Py Int := do
   let start ← if start < 0 then do pure (max ((← s.len : Nat) + start) 0) else pure start
@@ -384,7 +473,7 @@ structure MSeq (σ α : Type) where
 /-- The `Sequence` mixins of the current state. -/
 def MSeq.view {σ α : Type} (M : MSeq σ α) (s : σ) : Seq α := ⟨M.getitem s, M.len s⟩
 
-/-- `MutableSequence.append`, Lib/_collections_abc.py:1127-1129. -/
+/-- `MutableSequence.append`, Lib/_collections_abc.py:1127-1129: `self.insert(len(self), value)`. -/
 def MSeq.append {σ α : Type} (M : MSeq σ α) (s : σ) (v : α) : Py σ := do
   M.insert s (← M.len s : Nat) v
 
@@ -422,23 +511,40 @@ def MSeq.reverse {σ α : Type} (M : MSeq σ α) (s : σ) : Py σ := do
   let n ← M.len s
   M.swapLoop n (n / 2) 0 s
 
-/-- `for v in values: self.append(v)`. -/
-def MSeq.extendList {σ α : Type} (M : MSeq σ α) (s : σ) : List α → Py σ
-  | [] => .ok s
+/-- `for v in values: self.append(v)`, over an iterator that may raise after its items. -/
+def MSeq.extendList {σ α : Type} (M : MSeq σ α) (tail : Option PyExc) (s : σ) : List α → Py σ
+  | [] => raiseTail tail s
   | v :: vs => do
     let s' ← M.append s v
-    M.extendList s' vs
+    M.extendList tail s' vs
 
-/-- `MutableSequence.extend(values)`, Lib/_collections_abc.py:1145-1151, and
-`MutableSequence.__iadd__`, :1167-1169. `none` is `values is self`, which first takes
-`list(values)` through `Sequence.__iter__`. -/
-def MSeq.extend {σ α : Type} (M : MSeq σ α) (s : σ) (values : Option (List α)) (fuel : Nat) :
-    Py σ := do
+/-- The argument of `extend`: `self`, or another iterable (`iter()` and its elements, and the exception after them). -/
+inductive ExtendArg (α : Type) where
+  | self_
+  | iter (xs : Py (List α)) (tail : Option PyExc := none)
+
+/-- `MutableSequence.extend(values)`, Lib/_collections_abc.py:1145-1151. For `values is self`, `list(values)` is
+`list_extend_iter_lock_held`, Objects/listobject.c:1300-1340: `iter(self)` (a generator, which runs nothing yet), then
+`PyObject_LengthHint(self, 8)` (Objects/abstract.c:95-118), which calls `len(self)` and falls back to 8 only after a
+`TypeError` (scope: the class has no `__length_hint__`), then preallocation of the hint, `MemoryError` when `alloc`
+refuses it (Objects/listobject.c:219-235, 1324), then `Sequence.__iter__`. -/
+def MSeq.extend {σ α : Type} (M : MSeq σ α) (alloc : Nat → Bool) (s : σ) (values : ExtendArg α) (fuel : Nat) :
+    Py σ :=
   match values with
-  | some vs => M.extendList s vs
-  | none =>
+  | .iter xs t => do M.extendList t s (← xs)
+  | .self_ => do
+    let hint ← match M.len s with
+      | .ok n => pure n
+      | .error e => if isTypeError e then pure 8 else throw e
+    if hint ≠ 0 ∧ alloc hint = false then throw (.named "MemoryError" "")
     let vs ← (M.view s).iterFrom fuel 0
-    M.extendList s vs
+    M.extendList none s vs
+
+/-- `MutableSequence.__iadd__`, Lib/_collections_abc.py:1167-1169: `self.extend(values)`, whatever `extend` the class
+has, then `self`, which is the state the call left. -/
+def MSeq.iadd {σ β : Type} (extend : σ → β → Py σ) (s : σ) (values : β) : Py σ := do
+  let s' ← extend s values
+  pure s'
 
 /-- `MutableSequence.remove`, Lib/_collections_abc.py:1161-1165. -/
 def MSeq.remove {σ α : Type} (M : MSeq σ α) (E : EqOps α) (s : σ) (value : α) (fuel : Nat) :
@@ -448,42 +554,53 @@ def MSeq.remove {σ α : Type} (M : MSeq σ α) (E : EqOps α) (s : σ) (value :
 
 /-! ### Set -/
 
-/-- The primitives of a `Set` subclass. Iteration is one finite pass: an `iter` that raises is a failing `__iter__`, and
-`tail` is the exception of a `__next__` that raises after the items, which a loop that stops early never sees. -/
+/-- The primitives of a `Set` subclass. -/
 structure SetV (α : Type) where
   len : Py Nat
   iter : Py (List α)
   contains : α → Py Bool
   tail : Option PyExc := none
 
-/-- The other operand of a set operator, as `isinstance` sees it. -/
+/-- `cls(it)`, `_from_iterable` (Lib/_collections_abc.py:598-604, or `set(it)` in `KeysView` and `ItemsView`, :852-853,
+870-871), as a consumer of what it is given: `start` runs before the first element is asked for, `push` takes each
+element as the generator produces it and may raise (as `set()` does for an unhashable element), `done` after the end.
+Scope: the constructor drains its argument. -/
+structure FromIter (ρ α β : Type) where
+  start : Py ρ
+  push : ρ → α → Py ρ
+  done : ρ → Py β
+
+/-- The other operand of a set operator. `iterable abc xs tail` is anything that is not a `Set`: `abc` says whether
+`isinstance(other, Iterable)` (an `__iter__` along the MRO, Lib/_collections_abc.py:293-296), and `xs` is what
+`iter(other)` gives, which also accepts an object with only `__getitem__`, and refuses others with `TypeError`. -/
 inductive Operand (α : Type) where
   | set (s : SetV α)
-  | iterable (xs : Py (List α)) (tail : Option PyExc := none)
-  | other
+  | iterable (abc : Bool) (xs : Py (List α)) (tail : Option PyExc := none)
 
-/-- The end of a loop: `StopIteration`, or the exception of the iterator. -/
-def raiseTail {β : Type} (tail : Option PyExc) (v : β) : Py β :=
-  match tail with
-  | none => .ok v
-  | some e => .error e
+/-- An operand that `iter()` refuses, such as `5`. -/
+def Operand.other {α : Type} : Operand α := .iterable false (.error (.typeError "~object is not iterable"))
 
-/-- `for elem in xs: if elem not in other: return False`, then `return True`. -/
-def allIn {α : Type} (contains : α → Py Bool) : List α → Py Bool
-  | [] => .ok true
-  | x :: xs => do
-    if ← contains x then allIn contains xs else return false
+/-- `isinstance(other, Iterable)`. -/
+def Operand.isIterable {α : Type} : Operand α → Bool
+  | .set _ => true
+  | .iterable abc _ _ => abc
 
-/-- The same loop over an iterator that may raise after its items: a `False` before that returns first. -/
+/-- `iter(other)` and the elements. -/
+def Operand.items {α : Type} : Operand α → Py (List α)
+  | .set s => s.iter
+  | .iterable _ xs _ => xs
+
+/-- What the operand's iterator raises after its elements. -/
+def Operand.tail {α : Type} : Operand α → Option PyExc
+  | .set s => s.tail
+  | .iterable _ _ t => t
+
+/-- `for elem in xs: if elem not in other: return False`, then `return True`, over an iterator that may raise after
+its items: a `False` before that returns first. -/
 def allInT {α : Type} (contains : α → Py Bool) (tail : Option PyExc) : List α → Py Bool
   | [] => raiseTail tail true
   | x :: xs => do
     if ← contains x then allInT contains tail xs else return false
-
-@[simp] theorem allInT_none {α : Type} (contains : α → Py Bool) : ∀ xs : List α,
-    allInT contains none xs = allIn contains xs
-  | [] => rfl
-  | x :: xs => by simp only [allInT, allIn, allInT_none contains xs]
 
 /-- `Set.__le__`, Lib/_collections_abc.py:562-570. -/
 def SetV.le {α : Type} (self : SetV α) : Operand α → Py (Ret Bool)
@@ -519,131 +636,107 @@ def SetV.eq {α : Type} (self : SetV α) : Operand α → Py (Ret Bool)
     if (← self.len) = (← o.len) then self.le (.set o) else return .val false
   | _ => .ok .notImplemented
 
-/-- `value for value in xs if keep(value)`, consumed by the constructor. -/
-def filterPy {α : Type} (keep : α → Py Bool) : List α → Py (List α)
-  | [] => .ok []
-  | x :: xs => do
+/-- A generator `value for value in xs if keep(value)` consumed by the constructor: each element is tested, and pushed
+when it is kept, before the next is asked for; then the iterator's end. -/
+def feedIf {ρ α β : Type} (B : FromIter ρ α β) (keep : α → Py Bool) (tail : Option PyExc) : ρ → List α → Py ρ
+  | r, [] => raiseTail tail r
+  | r, x :: xs => do
     let k ← keep x
-    let rest ← filterPy keep xs
-    pure (if k then x :: rest else rest)
+    if k then do
+      let r' ← B.push r x
+      feedIf B keep tail r' xs
+    else feedIf B keep tail r xs
 
-/-- `filterPy` over an iterator that may raise after its items. -/
-def filterT {α : Type} (keep : α → Py Bool) (tail : Option PyExc) : List α → Py (List α)
-  | [] => raiseTail tail []
-  | x :: xs => do
-    let k ← keep x
-    let rest ← filterT keep tail xs
-    pure (if k then x :: rest else rest)
+/-- Every element of an iterator pushed into the constructor, then the iterator's end. -/
+def feedAll {ρ α β : Type} (B : FromIter ρ α β) (tail : Option PyExc) : ρ → List α → Py ρ
+  | r, [] => raiseTail tail r
+  | r, x :: xs => do
+    let r' ← B.push r x
+    feedAll B tail r' xs
 
-@[simp] theorem filterT_none {α : Type} (keep : α → Py Bool) : ∀ xs : List α,
-    filterT keep none xs = filterPy keep xs
-  | [] => rfl
-  | x :: xs => by simp only [filterT, filterPy, filterT_none keep xs]
+/-- `cls(other)` on an iterable: the constructor starts, calls `iter(other)` and drains it. -/
+def build {ρ α β : Type} (B : FromIter ρ α β) (xs : Py (List α)) (tail : Option PyExc) : Py β := do
+  let r ← B.start
+  let xs ← xs
+  let r ← feedAll B tail r xs
+  B.done r
 
-/-- The elements of an operand when `isinstance(other, Iterable)`. -/
-def Operand.items? {α : Type} : Operand α → Option (Py (List α))
-  | .set s => some s.iter
-  | .iterable xs _ => some xs
-  | .other => none
+/-- `Set.__and__` and `__rand__`, Lib/_collections_abc.py:606-611. `iter(other)` runs when the generator is made,
+before `_from_iterable` is called. -/
+def SetV.and {ρ α β : Type} (self : SetV α) (B : FromIter ρ α β) (other : Operand α) : Py (Ret β) :=
+  if !other.isIterable then .ok .notImplemented
+  else do
+    let xs ← other.items
+    let r ← B.start
+    let r ← feedIf B self.contains other.tail r xs
+    pure (.val (← B.done r))
 
-/-- What the operand's iterator raises after its elements. -/
-def Operand.tail {α : Type} : Operand α → Option PyExc
-  | .set s => s.tail
-  | .iterable _ t => t
-  | .other => none
+/-- The loop of `Set.isdisjoint`. -/
+def disjointLoop {α : Type} (contains : α → Py Bool) (tail : Option PyExc) : List α → Py Bool
+  | [] => raiseTail tail true
+  | x :: rest => do
+    if ← contains x then return false else disjointLoop contains tail rest
 
-/-- `Set.__and__` and `__rand__`, Lib/_collections_abc.py:606-611. `fromIter` is
-`_from_iterable`. -/
-def SetV.and {α β : Type} (self : SetV α) (fromIter : List α → β) (other : Operand α) :
-    Py (Ret β) :=
-  match other.items? with
-  | none => .ok .notImplemented
-  | some xs => do
-    let xs ← xs
-    let kept ← filterT self.contains other.tail xs
-    pure (.val (fromIter kept))
+/-- `Set.isdisjoint`, Lib/_collections_abc.py:613-618: `for value in other` with no `isinstance` test. -/
+def SetV.isdisjoint {α : Type} (self : SetV α) (other : Operand α) : Py Bool := do
+  disjointLoop self.contains other.tail (← other.items)
 
-/-- `Set.isdisjoint`, Lib/_collections_abc.py:613-618. -/
-def SetV.isdisjoint {α : Type} (self : SetV α) (other : Operand α) : Py Bool :=
-  match other.items? with
-  | none => .error (.typeError "~object is not iterable")
-  | some xs => do
-    let xs ← xs
-    let rec go : List α → Py Bool
-      | [] => raiseTail other.tail true
-      | x :: rest => do
-        if ← self.contains x then return false else go rest
-    go xs
-
-/-- `Set.__or__` and `__ror__`, Lib/_collections_abc.py:620-626. -/
-def SetV.or {α β : Type} (self : SetV α) (fromIter : List α → β) (other : Operand α) :
-    Py (Ret β) :=
-  match other.items? with
-  | none => .ok .notImplemented
-  | some xs => do
+/-- `Set.__or__` and `__ror__`, Lib/_collections_abc.py:620-626: the chain generator calls `iter(self)` at its first
+step, inside the constructor, and `iter(other)` once `self` is exhausted. -/
+def SetV.or {ρ α β : Type} (self : SetV α) (B : FromIter ρ α β) (other : Operand α) : Py (Ret β) :=
+  if !other.isIterable then .ok .notImplemented
+  else do
+    let r ← B.start
     let ys ← self.iter
-    let _ ← raiseTail self.tail ()
-    let xs ← xs
-    let _ ← raiseTail other.tail ()
-    pure (.val (fromIter (ys ++ xs)))
+    let r ← feedAll B self.tail r ys
+    let xs ← other.items
+    let r ← feedAll B other.tail r xs
+    pure (.val (← B.done r))
 
-/-- `isinstance(other, Set)`, else `other = self._from_iterable(other)`, shared by
-`__sub__`, `__rsub__` and `__xor__`. -/
-def Operand.asSet? {α : Type} (fromIter : List α → SetV α) : Operand α → Option (Py (SetV α))
+/-- `isinstance(other, Set)`, else `isinstance(other, Iterable)` and `other = self._from_iterable(other)`, else
+`NotImplemented` (`none`), shared by `__sub__`, `__rsub__` and `__xor__`. -/
+def Operand.asSet? {ρ α : Type} (B : FromIter ρ α (SetV α)) : Operand α → Option (Py (SetV α))
   | .set s => some (.ok s)
-  | .iterable xs t => some (do
-      let l ← xs
-      raiseTail t (fromIter l))
-  | .other => none
+  | .iterable abc xs t => if abc then some (build B xs t) else none
 
-/-- `value for value in xs if value not in s`. -/
-def notIn {α : Type} (s : SetV α) (xs : List α) : Py (List α) :=
-  filterPy (fun x => do pure (!(← s.contains x))) xs
-
-/-- The same over an iterator that may raise after its items. -/
-def notInT {α : Type} (s : SetV α) (tail : Option PyExc) (xs : List α) : Py (List α) :=
-  filterT (fun x => do pure (!(← s.contains x))) tail xs
-
-@[simp] theorem notInT_none {α : Type} (s : SetV α) (xs : List α) : notInT s none xs = notIn s xs := by
-  simp [notInT, notIn]
+/-- `value not in s`. -/
+def notIn {α : Type} (s : SetV α) (x : α) : Py Bool := do pure (!(← s.contains x))
 
 /-- `Set.__sub__`, Lib/_collections_abc.py:628-634. -/
-def SetV.sub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (other : Operand α) :
+def SetV.sub {ρ α : Type} (self : SetV α) (B : FromIter ρ α (SetV α)) (other : Operand α) :
     Py (Ret (SetV α)) :=
-  match other.asSet? fromIter with
+  match other.asSet? B with
   | none => .ok .notImplemented
   | some o => do
     let o ← o
     let xs ← self.iter
-    pure (.val (fromIter (← notInT o self.tail xs)))
+    let r ← B.start
+    let r ← feedIf B (notIn o) self.tail r xs
+    pure (.val (← B.done r))
 
 /-- `Set.__rsub__`, Lib/_collections_abc.py:636-642. -/
-def SetV.rsub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (other : Operand α) :
+def SetV.rsub {ρ α : Type} (self : SetV α) (B : FromIter ρ α (SetV α)) (other : Operand α) :
     Py (Ret (SetV α)) :=
-  match other.asSet? fromIter with
+  match other.asSet? B with
   | none => .ok .notImplemented
   | some o => do
     let o ← o
     let xs ← o.iter
-    pure (.val (fromIter (← notInT self o.tail xs)))
+    let r ← B.start
+    let r ← feedIf B (notIn self) o.tail r xs
+    pure (.val (← B.done r))
 
-/-- `Set.__xor__` and `__rxor__`, Lib/_collections_abc.py:644-651:
-`(self - other) | (other - self)`. -/
-def SetV.xor {α : Type} (self : SetV α) (fromIter : List α → SetV α) (other : Operand α) :
-    Py (Ret (SetV α)) :=
-  match other.asSet? fromIter with
+/-- `Set.__xor__` and `__rxor__`, Lib/_collections_abc.py:644-651: `(self - other) | (other - self)`, where `minus a b`
+is Python's `a - b` and `bor` its `|`, each dispatched on the operands' own classes. -/
+def SetV.xor {ρ α δ γ : Type} (self : SetV α) (B : FromIter ρ α (SetV α)) (minus : SetV α → SetV α → Py δ)
+    (bor : δ → δ → Py γ) (other : Operand α) : Py (Ret γ) :=
+  match other.asSet? B with
   | none => .ok .notImplemented
   | some o => do
     let o ← o
-    let xs ← self.iter
-    let a ← notInT o self.tail xs
-    let ys ← o.iter
-    let b ← notInT self o.tail ys
-    let aSet := fromIter a
-    let bSet := fromIter b
-    let aItems ← aSet.iter
-    let bItems ← bSet.iter
-    pure (.val (fromIter (aItems ++ bItems)))
+    let a ← minus self o
+    let b ← minus o self
+    pure (.val (← bor a b))
 
 /-! ### `Set._hash` and `frozenset_hash` -/
 
@@ -658,7 +751,7 @@ def hashMask : Nat := 2 ^ 64 - 1
 def hashMax : Int := 2 ^ 63 - 1
 
 /-- One round of the loop: `h ^= (hx ^ (hx << 16) ^ 89869747) * 3644798167; h &= MASK`,
-Lib/_collections_abc.py:674-676. `& MASK` on a Python `int` is reduction mod `2**64`. -/
+Lib/_collections_abc.py:675-676. `& MASK` on a Python `int` is reduction mod `2**64`. -/
 def hashRound (h : Nat) (hx : Int) : Nat :=
   (pyXor h ((pyXor (pyXor hx (hx * 2 ^ 16)) 89869747) * 3644798167) % (2 ^ 64 : Int)).toNat
 
@@ -669,10 +762,25 @@ def hashFinish (h : Nat) : Int :=
   let h : Int := if (h : Int) > hashMax then (h : Int) - 2 ^ 64 else h
   if h = -1 then 590923713 else h
 
-/-- `Set._hash`, Lib/_collections_abc.py:653-684, for a set of `n` elements with the
-element hashes `hashes` in iteration order. -/
+/-- The arithmetic of `Set._hash` for a set of `n` elements with the element hashes `hashes` in iteration order. -/
 def setHash (n : Nat) (hashes : List Int) : Int :=
   hashFinish (hashes.foldl hashRound ((1927868237 * (n + 1)) % 2 ^ 64))
+
+/-- `for x in self: hx = hash(x); ...`, Lib/_collections_abc.py:673-676. -/
+def hashLoop {α : Type} (hash : α → Py Int) (tail : Option PyExc) : Nat → List α → Py Nat
+  | h, [] => raiseTail tail h
+  | h, x :: xs => do
+    let hx ← hash x
+    hashLoop hash tail (hashRound h hx) xs
+
+/-- `Set._hash`, Lib/_collections_abc.py:653-684: `len(self)`, then the loop over `iter(self)` with the builtin
+`hash()` of each element, which may raise (`TypeError` for an unhashable one). -/
+def SetV.hash {α : Type} (self : SetV α) (hash : α → Py Int) : Py Int := do
+  let n ← self.len
+  let h := (1927868237 * (n + 1)) % 2 ^ 64
+  let xs ← self.iter
+  let h ← hashLoop hash self.tail h xs
+  pure (hashFinish h)
 
 /-- A slot of a C set table: `entry->hash` is 0 in a null slot, -1 in a dummy. -/
 inductive Slot where
@@ -712,20 +820,20 @@ def frozensetHash (table : List Slot) : Int :=
 
 /-! ### MutableSet -/
 
-/-- The primitives of a `MutableSet` subclass. -/
-structure MSet (σ α : Type) where
+/-- The primitives of a `MutableSet` subclass, with its `_from_iterable`. -/
+structure MSet (σ ρ α : Type) where
   view : σ → SetV α
   add : σ → α → Py σ
   discard : σ → α → Py σ
-  fromIter : List α → SetV α
+  fromIter : FromIter ρ α (SetV α)
 
 /-- `MutableSet.remove`, Lib/_collections_abc.py:714-718. -/
-def MSet.remove {σ α : Type} (M : MSet σ α) (s : σ) (value : α) : Py σ := do
+def MSet.remove {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (value : α) : Py σ := do
   if !(← (M.view s).contains value) then throw (.keyError "~value")
   M.discard s value
 
 /-- `MutableSet.pop`, Lib/_collections_abc.py:720-728. -/
-def MSet.pop {σ α : Type} (M : MSet σ α) (s : σ) : Py (α × σ) := do
+def MSet.pop {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) : Py (α × σ) := do
   match ← (M.view s).iter with
   | [] =>
     -- `next(it)`, whose `StopIteration` becomes `KeyError`; another exception goes through
@@ -737,73 +845,67 @@ def MSet.pop {σ α : Type} (M : MSet σ α) (s : σ) : Py (α × σ) := do
     pure (v, s')
 
 /-- `MutableSet.clear`, Lib/_collections_abc.py:730-736. -/
-def MSet.clear {σ α : Type} (M : MSet σ α) : (fuel : Nat) → σ → Py σ
+def MSet.clear {σ ρ α : Type} (M : MSet σ ρ α) : (fuel : Nat) → σ → Py σ
   | 0, _ => .error .modelFuel
   | fuel + 1, s =>
     match M.pop s with
     | .error e => if isKeyError e then .ok s else .error e
     | .ok (_, s') => M.clear fuel s'
 
-def forAdd {σ α : Type} (f : σ → α → Py σ) (s : σ) : List α → Py σ
-  | [] => .ok s
-  | x :: xs => do
-    let s' ← f s x
-    forAdd f s' xs
-
-/-- The same over an iterator that may raise after its items. -/
+/-- A loop calling `f` on each element of an iterator that may raise after its items. -/
 def forAddT {σ α : Type} (f : σ → α → Py σ) (tail : Option PyExc) (s : σ) : List α → Py σ
   | [] => raiseTail tail s
   | x :: xs => do
     let s' ← f s x
     forAddT f tail s' xs
 
-@[simp] theorem forAddT_none {σ α : Type} (f : σ → α → Py σ) : ∀ (xs : List α) (s : σ),
-    forAddT f none s xs = forAdd f s xs
-  | [], _ => rfl
-  | x :: xs, s => by
-    simp only [forAddT, forAdd]
-    cases f s x with
-    | error e => rfl
-    | ok t => exact forAddT_none f xs t
+/-- `MutableSet.__ior__`, Lib/_collections_abc.py:738-741: `for value in it`, with no `isinstance` test. -/
+def MSet.ior {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (it : Operand α) : Py σ := do
+  forAddT M.add it.tail s (← it.items)
 
-/-- `MutableSet.__ior__`, Lib/_collections_abc.py:738-741. -/
-def MSet.ior {σ α : Type} (M : MSet σ α) (s : σ) (it : Operand α) : Py σ :=
-  match it.items? with
-  | none => .error (.typeError "~object is not iterable")
-  | some xs => do forAddT M.add it.tail s (← xs)
+/-- `x` when it is a value, else `k`. -/
+def retOr {γ : Type} (x : Py (Ret γ)) (k : Py γ) : Py γ := do
+  match ← x with
+  | .val v => pure v
+  | .notImplemented => k
 
-/-- `MutableSet.__iand__`, Lib/_collections_abc.py:743-746: `for value in (self - it)`. A
-non-iterable `it` makes `self - it` raise the operator's `TypeError`. -/
-def MSet.iand {σ α : Type} (M : MSet σ α) (s : σ) (it : Operand α) : Py σ := do
-  match ← (M.view s).sub M.fromIter it with
-  | .notImplemented => throw (.typeError "~unsupported operand type(s) for -")
-  | .val d => forAddT M.discard d.tail s (← d.iter)
+/-- Python's binary operator, Objects/abstract.c:940-990 `binary_op1`, when the left operand's method gives `l` and
+the right one's reflected method gives `r` (`none`: it has none); `rfirst` is the case where the right operand's class
+is a proper subclass of the left one's with its own reflected method, which is then tried first. Both
+`NotImplemented` is `err`. -/
+def binaryOp {γ : Type} (l : Py (Ret γ)) (r : Option (Py (Ret γ))) (rfirst : Bool) (err : PyExc) : Py γ :=
+  match r, rfirst with
+  | some r, true => retOr r (retOr l (.error err))
+  | some r, false => retOr l (retOr r (.error err))
+  | none, _ => retOr l (.error err)
+
+/-- `MutableSet.__iand__`, Lib/_collections_abc.py:743-746: `for value in (self - it): self.discard(value)`. The
+subtraction is the operator: `Set.__sub__`, then `it.__rsub__(self)`, which `rsub` gives (`none`: it has none). -/
+def MSet.iand {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (it : Operand α) (rsub : Option (Py (Ret (SetV α))))
+    (rfirst : Bool) : Py σ := do
+  let d ← binaryOp ((M.view s).sub M.fromIter it) rsub rfirst
+    (.typeError "~unsupported operand type(s) for -")
+  forAddT M.discard d.tail s (← d.iter)
 
 /-- One step of the `__ixor__` loop. -/
-def MSet.toggle {σ α : Type} (M : MSet σ α) (s : σ) (value : α) : Py σ := do
+def MSet.toggle {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (value : α) : Py σ := do
   if ← (M.view s).contains value then M.discard s value else M.add s value
 
-/-- `MutableSet.__ixor__`, Lib/_collections_abc.py:748-759. `none` is `it is self`. -/
-def MSet.ixor {σ α : Type} (M : MSet σ α) (s : σ) (it : Option (Operand α)) (fuel : Nat) :
-    Py σ :=
+/-- `MutableSet.__ixor__`, Lib/_collections_abc.py:748-759. `none` is `it is self`. A non-`Set` goes through
+`self._from_iterable(it)` with no `isinstance(it, Iterable)` test, and the loop is over the set that made. -/
+def MSet.ixor {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (it : Option (Operand α)) (fuel : Nat) : Py σ :=
   match it with
   | none => M.clear fuel s
   | some (.set o) => do forAddT M.toggle o.tail s (← o.iter)
-  | some (.iterable xs t) => do
-    let l ← xs
-    let _ ← raiseTail t ()
-    forAdd M.toggle s (← (M.fromIter l).iter)
-  | some .other => .error (.typeError "~object is not iterable")
+  | some (.iterable _ xs t) => do
+    let o ← build M.fromIter xs t
+    forAddT M.toggle o.tail s (← o.iter)
 
 /-- `MutableSet.__isub__`, Lib/_collections_abc.py:761-767. `none` is `it is self`. -/
-def MSet.isub {σ α : Type} (M : MSet σ α) (s : σ) (it : Option (Operand α)) (fuel : Nat) :
-    Py σ :=
+def MSet.isub {σ ρ α : Type} (M : MSet σ ρ α) (s : σ) (it : Option (Operand α)) (fuel : Nat) : Py σ :=
   match it with
   | none => M.clear fuel s
-  | some it =>
-    match it.items? with
-    | none => .error (.typeError "~object is not iterable")
-    | some xs => do forAddT M.discard it.tail s (← xs)
+  | some it => do forAddT M.discard it.tail s (← it.items)
 
 /-! ### Mapping and the views -/
 
@@ -814,6 +916,8 @@ structure MapV (K V : Type) where
   len : Py Nat
   /-- The exception of a `__next__` that raises after the keys. -/
   tail : Option PyExc := none
+  /-- The class's own `__contains__`, when it overrides `Mapping.__contains__`. -/
+  containsOverride : Option (K → Py Bool) := none
 
 /-- `Mapping.get`, Lib/_collections_abc.py:792-797. -/
 def MapV.get {K V : Type} (m : MapV K V) (key : K) (default : V) : Py V :=
@@ -821,15 +925,21 @@ def MapV.get {K V : Type} (m : MapV K V) (key : K) (default : V) : Py V :=
   | .ok v => .ok v
   | .error e => if isKeyError e then .ok default else .error e
 
-/-- `Mapping.__contains__`, Lib/_collections_abc.py:799-805, also
-`KeysView.__contains__`, :855-856. -/
+/-- `Mapping.__contains__`, Lib/_collections_abc.py:799-805. -/
 def MapV.contains {K V : Type} (m : MapV K V) (key : K) : Py Bool :=
   match m.getitem key with
   | .ok _ => .ok true
   | .error e => if isKeyError e then .ok false else .error e
 
+/-- `KeysView.__contains__`, Lib/_collections_abc.py:855-856: `key in self._mapping`, the mapping's own
+`__contains__`, which is `Mapping.__contains__` unless the class overrides it. -/
+def MapV.keyIn {K V : Type} (m : MapV K V) (key : K) : Py Bool :=
+  match m.containsOverride with
+  | some f => f key
+  | none => m.contains key
+
 /-- `for key in self._mapping: yield (key, self._mapping[key])`, ItemsView.__iter__,
-Lib/_collections_abc.py:882-884, drained. -/
+Lib/_collections_abc.py:882-884, drained. No exception is caught. -/
 def MapV.itemsOf {K V : Type} (m : MapV K V) : List K → Py (List (K × V))
   | [] => raiseTail m.tail []
   | k :: ks => do
@@ -840,57 +950,108 @@ def MapV.itemsOf {K V : Type} (m : MapV K V) : List K → Py (List (K × V))
 /-- `ItemsView.__iter__`. -/
 def MapV.items {K V : Type} (m : MapV K V) : Py (List (K × V)) := do m.itemsOf (← m.iter)
 
-/-- `ValuesView.__iter__`, Lib/_collections_abc.py:901-903, drained. -/
-def MapV.values {K V : Type} (m : MapV K V) : Py (List V) := do
-  let it ← m.items
-  pure (it.map Prod.snd)
+/-- `for key in self._mapping: yield self._mapping[key]`, ValuesView.__iter__, Lib/_collections_abc.py:901-903,
+drained. -/
+def MapV.valuesOf {K V : Type} (m : MapV K V) : List K → Py (List V)
+  | [] => raiseTail m.tail []
+  | k :: ks => do
+    let v ← m.getitem k
+    let rest ← m.valuesOf ks
+    pure (v :: rest)
+
+/-- `ValuesView.__iter__`. -/
+def MapV.values {K V : Type} (m : MapV K V) : Py (List V) := do m.valuesOf (← m.iter)
+
+/-- The loop of `ValuesView.__contains__`, Lib/_collections_abc.py:895-899. -/
+def MapV.valuesLoop {K V : Type} (m : MapV K V) (E : EqOps V) (value : V) : List K → Py Bool
+  | [] => raiseTail m.tail false
+  | k :: ks => do
+    let v ← m.getitem k
+    if ← E.same v value then return true
+    m.valuesLoop E value ks
 
 /-- `ValuesView.__contains__`, Lib/_collections_abc.py:894-899. -/
 def MapV.valuesContain {K V : Type} (m : MapV K V) (E : EqOps V) (value : V) : Py Bool := do
-  let rec go : List K → Py Bool
-    | [] => raiseTail m.tail false
-    | k :: ks => do
-      let v ← m.getitem k
-      if ← E.same v value then return true
-      go ks
-  go (← m.iter)
+  m.valuesLoop E value (← m.iter)
 
-/-- The item as `key, value = item` sees it. -/
+/-- An object as `key, value = item` sees it: Python/ceval.c:2359-2427 `_PyEval_UnpackIterable` with two targets. -/
 inductive ItemArg (K V : Type) where
-  /-- An iterable of exactly two elements; `tuple` says whether it is a tuple. -/
-  | pair (k : K) (v : V) (tuple : Bool)
-  /-- An iterable of `n ≠ 2` elements. -/
-  | wrongLen (n : Nat) (tuple : Bool)
-  /-- Not iterable. -/
-  | notIterable
-  deriving Repr, DecidableEq
+  /-- `iter()` refuses it: a type with neither `__iter__` nor `__getitem__`. -/
+  | notIterable (tname : String)
+  /-- `iter()` raises `e` otherwise. -/
+  | iterFails (e : PyExc)
+  /-- The iterator ends (`none`) or raises after no element. -/
+  | zero (tail : Option PyExc)
+  | one (k : K) (tail : Option PyExc)
+  /-- Two elements, then the third `next()` ends (`none`) or raises. -/
+  | two (k : K) (v : V) (tail : Option PyExc)
+  /-- At least three elements; `size` is the length when the object is exactly a `list`, `tuple` or `dict`. -/
+  | many (k : K) (v : V) (size : Option Nat)
 
-/-- `ItemsView.__contains__`, Lib/_collections_abc.py:873-880. The unpack is outside the
-`try`, so a non-pair raises. -/
-def MapV.itemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V → Py Bool
-  | .notIterable => .error (.typeError "~cannot unpack non-iterable object")
-  | .wrongLen n _ =>
-    if n < 2 then .error (.valueError s!"not enough values to unpack (expected 2, got {n})")
-    else .error (.valueError s!"too many values to unpack (expected 2, got {n})")
-  | .pair k value _ =>
-    match m.getitem k with
-    | .error e => if isKeyError e then .ok false else .error e
-    | .ok v => E.same v value
+/-- `key, value = item`, Python/ceval.c:2368-2427: the count read before the end is in "not enough values", and the
+length only for an exact `list`, `tuple` or `dict` (:2413-2420). -/
+def unpack2 {K V : Type} : ItemArg K V → Py (K × V)
+  | .notIterable t => .error (.typeError s!"cannot unpack non-iterable {t} object")
+  | .iterFails e => .error e
+  | .zero none => .error (.valueError "not enough values to unpack (expected 2, got 0)")
+  | .zero (some e) => .error e
+  | .one _ none => .error (.valueError "not enough values to unpack (expected 2, got 1)")
+  | .one _ (some e) => .error e
+  | .two k v none => .ok (k, v)
+  | .two _ _ (some e) => .error e
+  | .many _ _ (some n) =>
+    if n > 2 then .error (.valueError s!"too many values to unpack (expected 2, got {n})")
+    else .error (.valueError "too many values to unpack (expected 2)")
+  | .many _ _ none => .error (.valueError "too many values to unpack (expected 2)")
 
-/-- `dictitems_contains`, Objects/dictobject.c:7039-7056: a non-tuple or a tuple of the wrong
-length is `False`. `getitem` stands for `PyDict_GetItemRef`. -/
-def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V → Py Bool
-  | .notIterable | .wrongLen .. | .pair _ _ false => .ok false
-  | .pair k value true =>
-    match m.getitem k with
-    | .error e => if isKeyError e then .ok false else .error e
-    | .ok v => E.same v value
+/-- `ItemsView.__contains__`, Lib/_collections_abc.py:873-880. The unpack is outside the `try`. -/
+def MapV.itemsContain {K V : Type} (m : MapV K V) (E : EqOps V) (item : ItemArg K V) : Py Bool := do
+  let (key, value) ← unpack2 item
+  match m.getitem key with
+  | .error e => if isKeyError e then .ok false else .error e
+  | .ok v => E.same v value
+
+/-- `dictitems_contains`, Objects/dictobject.c:7039-7056: an object that is not a tuple (`isTuple`, subclasses
+included) of two is `False`. `getitem` stands for `PyDict_GetItemRef`. -/
+def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) (isTuple : Bool) : ItemArg K V → Py Bool
+  | .two k value none =>
+    if !isTuple then .ok false
+    else
+      match m.getitem k with
+      | .error e => if isKeyError e then .ok false else .error e
+      | .ok v => E.same v value
+  | _ => .ok false
 
 /-- `MappingView.__repr__`, Lib/_collections_abc.py:841-842. -/
 def viewRepr (cls mappingRepr : String) : String := s!"{cls}({mappingRepr})"
 
-/-- The `Set`-mixin primitives of `KeysView(m)`, Lib/_collections_abc.py:847-859. -/
-def MapV.keysView {K V : Type} (m : MapV K V) : SetV K := ⟨m.len, m.iter, m.contains, m.tail⟩
+/-- `d[k] = v` on a `dict` kept as its item list: an existing key keeps its position. -/
+def dictSet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (v : V) : List (K × V) :=
+  if d.any (fun p => p.1 = k) then d.map (fun p => if p.1 = k then (k, v) else p)
+  else d ++ [(k, v)]
+
+/-- `dict(m.items())`: `PyDict_MergeFromSeq2` (Objects/dictobject.c:4152-4220) over `ItemsView.__iter__`. Each item is
+made (`self._mapping[key]`) and then inserted, which hashes the key (`hashKey`, which may raise) before the next item is
+made. Key equality is `DecidableEq`, standing for hash and `__eq__` that agree. -/
+def dictOfItems {K V : Type} [DecidableEq K] (hashKey : K → Py Unit) (m : MapV K V) :
+    List (K × V) → List K → Py (List (K × V))
+  | acc, [] => raiseTail m.tail acc
+  | acc, k :: ks => do
+    let v ← m.getitem k
+    hashKey k
+    dictOfItems hashKey m (dictSet acc k v) ks
+
+/-- `Mapping.__eq__`, Lib/_collections_abc.py:819-822: `dict(self.items()) == dict(other.items())`: the left dict is
+built in full before `other.items()` is iterated, and `dictEq` is the builtin comparison of the two dicts
+(Objects/dictobject.c `dict_richcompare`). `none` is an `other` that is not a `Mapping`. -/
+def mappingEq {K V : Type} [DecidableEq K] (hashKey : K → Py Unit)
+    (dictEq : List (K × V) → List (K × V) → Py Bool) (self : MapV K V) (other : Option (MapV K V)) : Py (Ret Bool) :=
+  match other with
+  | none => .ok .notImplemented
+  | some o => do
+    let a ← dictOfItems hashKey self [] (← self.iter)
+    let b ← dictOfItems hashKey o [] (← o.iter)
+    pure (.val (← dictEq a b))
 
 /-! ### MutableMapping -/
 
@@ -935,23 +1096,34 @@ def MMap.clear {σ K V : Type} (M : MMap σ K V) : (fuel : Nat) → σ → Py σ
     | .error e => if isKeyError e then .ok s else .error e
     | .ok (_, s') => M.clear fuel s'
 
-/-- The argument of `update`, as the three branches see it. -/
+/-- The positional argument of `update`, as its three branches see it. -/
 inductive UpdateArg (K V : Type) where
-  /-- `isinstance(other, Mapping)`, or `hasattr(other, "keys")`: its keys and values. -/
+  /-- `isinstance(other, Mapping)`: its keys, `__getitem__` and iterator end. -/
   | mapping (m : MapV K V)
-  /-- Pairs from an iterable. -/
-  | pairs (xs : List (K × V))
+  /-- Not a `Mapping`. `hasKeys` is `hasattr(other, "keys")` (an exception other than `AttributeError` from the
+  lookup propagates). With keys: `keys` is `other.keys()` iterated, `ktail` its end, `getitem` is `other[key]`.
+  Without: `items` is `iter(other)`'s elements, each unpacked by `key, value = item`, and `tail` its end. -/
+  | other (hasKeys : Py Bool) (keys : Py (List K)) (ktail : Option PyExc) (getitem : K → Py V)
+      (items : Py (List (ItemArg K V))) (tail : Option PyExc)
 
-/-- `for key in other: self[key] = other[key]`. -/
-def MMap.updateKeys {σ K V : Type} (M : MMap σ K V) (other : MapV K V) (s : σ) :
+/-- `for key in keys: self[key] = other[key]`. -/
+def MMap.updateKeys {σ K V : Type} (M : MMap σ K V) (getitem : K → Py V) (tail : Option PyExc) (s : σ) :
     List K → Py σ
-  | [] => raiseTail other.tail s
+  | [] => raiseTail tail s
   | k :: ks => do
-    let v ← other.getitem k
+    let v ← getitem k
     let s' ← M.setitem s k v
-    M.updateKeys other s' ks
+    M.updateKeys getitem tail s' ks
 
-/-- `for key, value in other: self[key] = value`. -/
+/-- `for key, value in other: self[key] = value`, each item unpacked before its assignment. -/
+def MMap.setPairs {σ K V : Type} (M : MMap σ K V) (tail : Option PyExc) (s : σ) : List (ItemArg K V) → Py σ
+  | [] => raiseTail tail s
+  | x :: xs => do
+    let (k, v) ← unpack2 x
+    let s' ← M.setitem s k v
+    M.setPairs tail s' xs
+
+/-- `for key, value in kwds.items(): self[key] = value`. -/
 def MMap.setAll {σ K V : Type} (M : MMap σ K V) (s : σ) : List (K × V) → Py σ
   | [] => .ok s
   | (k, v) :: xs => do
@@ -962,8 +1134,10 @@ def MMap.setAll {σ K V : Type} (M : MMap σ K V) (s : σ) : List (K × V) → P
 def MMap.update {σ K V : Type} (M : MMap σ K V) (s : σ) (other : UpdateArg K V)
     (kwds : List (K × V)) : Py σ := do
   let s' ← match other with
-    | .mapping m => do M.updateKeys m s (← m.iter)
-    | .pairs xs => M.setAll s xs
+    | .mapping m => do M.updateKeys m.getitem m.tail s (← m.iter)
+    | .other hasKeys keys ktail getitem items tail => do
+      if ← hasKeys then M.updateKeys getitem ktail s (← keys)
+      else M.setPairs tail s (← items)
   M.setAll s' kwds
 
 /-- `MutableMapping.setdefault`, Lib/_collections_abc.py:986-992. -/
@@ -977,19 +1151,7 @@ def MMap.setdefault {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (defaul
       pure (default, s')
     else .error e
 
-/-- `Mapping.__eq__`, Lib/_collections_abc.py:819-822: `dict(self.items()) ==
-dict(other.items())`, where `dictEq` is the builtin comparison of the two item lists,
-last occurrence of a key winning. `none` is an `other` that is not a `Mapping`. -/
-def mappingEq {K V : Type} (dictEq : List (K × V) → List (K × V) → Py Bool) (self : MapV K V)
-    (other : Option (MapV K V)) : Py (Ret Bool) :=
-  match other with
-  | none => .ok .notImplemented
-  | some o => do
-    let a ← self.items
-    let b ← o.items
-    pure (.val (← dictEq a b))
-
-/-! ### `ByteString` deprecation metaclass -/
+/-! ### `ByteString` deprecation -/
 
 /-- `_DeprecateByteStringMeta.__new__`, Lib/_collections_abc.py:1070-1078: a
 `DeprecationWarning` for any class name but `ByteString`. -/
@@ -999,20 +1161,37 @@ def byteStringMetaWarns (name : String) : Bool := name != "ByteString"
 always warns, then the `ABCMeta` answer. -/
 def byteStringInstanceCheck (abcAnswer : Bool) : Bool × Bool := (true, abcAnswer)
 
-/-- `warnings._deprecated("collections.abc.ByteString", remove=(3, 17))`, Lib/_py_warnings.py:876-893, on 3.15. -/
+/-- `warnings._deprecated("collections.abc.ByteString", remove=(3, 17))` on 3.15, Lib/_py_warnings.py:873, 876-892:
+the formatted `_DEPRECATED_MSG`, warned with `DeprecationWarning`. -/
 def byteStringDeprecated : String :=
   "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"
 
-/-- Reading an attribute of the module, Lib/_collections_abc.py:1177-1183: `loaded` says that `ByteString` is in the
-module's globals, where the normal lookup finds it and `__getattr__` is not called. `warn` is the exception of the warning
-under a filter that makes it one; the name is put back only after the warning. `attr` is a name with no quote in it. -/
-def moduleGetattr (warn : Option PyExc) (loaded : Bool) (attr : String) : Bool × Py Unit :=
+/-- The action of the warnings filter that matches the warning. Scope: `default`, `once` and `module` differ from
+`always` only through the registry of earlier warnings, which is not modelled. -/
+inductive WarnAction where
+  | ignore
+  | always
+  | error
+  deriving Repr, DecidableEq
+
+/-- A warning shown: its category and message. -/
+structure Warned where
+  category : String
+  message : String
+  deriving Repr, DecidableEq
+
+/-- Reading an attribute of the module, Lib/_collections_abc.py:1175-1183: `loaded` says that `ByteString` is in the
+module's globals, where the normal lookup finds it and `__getattr__` is not called. The result is the warnings shown,
+whether `ByteString` is in the globals afterwards, and the outcome; the name is put back only after the warning.
+`attr` is a name whose `repr` is itself in single quotes (no quote, backslash or unprintable character). -/
+def moduleGetattr (act : WarnAction) (loaded : Bool) (attr : String) : List Warned × Bool × Py Unit :=
   if attr == "ByteString" then
-    if loaded then (true, .ok ())
+    if loaded then ([], true, .ok ())
     else
-      match warn with
-      | some e => (false, .error e)
-      | none => (true, .ok ())
-  else (loaded, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'"))
+      match act with
+      | .ignore => ([], true, .ok ())
+      | .always => ([⟨"DeprecationWarning", byteStringDeprecated⟩], true, .ok ())
+      | .error => ([], false, .error (.named "DeprecationWarning" byteStringDeprecated))
+  else ([], loaded, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'"))
 
 end PyLean.CoreLibs.CollAbc

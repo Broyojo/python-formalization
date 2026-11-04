@@ -324,30 +324,35 @@ theorem append_list {α : Type} (xs : List α) (v : α) :
   rw [listInsert_len]
 
 theorem extendList_list {α : Type} (s vs : List α) :
-    (listMSeq (α := α)).extendList s vs = .ok (s ++ vs) := by
+    (listMSeq (α := α)).extendList none s vs = .ok (s ++ vs) := by
   induction vs generalizing s with
-  | nil => simp [MSeq.extendList]
+  | nil => simp [MSeq.extendList, raiseTail]
   | cons v vs ih =>
     simp only [MSeq.extendList, append_list, bind, Except.bind, ih]
     simp
 
 /-- `append`, `extend`, `__iadd__` (also with `values is self`, which must not loop) and `clear`
-on `list` primitives give `list`'s results. `MutableSequence` docs. -/
+on `list` primitives give `list`'s results. `MutableSequence` docs. Resource assumption: preallocating `len(self)`
+slots for `list(self)` succeeds (`alloc`), as it does below `sys.maxsize // 8`. -/
 def MSeqGrowMatchesList : Prop :=
-  ∀ (α : Type) (xs vs : List α) (v : α) (fuel : Nat), xs.length < fuel →
+  ∀ (α : Type) (alloc : Nat → Bool) (xs vs : List α) (v : α) (fuel : Nat), xs.length < fuel →
+    alloc xs.length = true →
     listMSeq.append xs v = .ok (xs ++ [v]) ∧
-    listMSeq.extend xs (some vs) fuel = .ok (xs ++ vs) ∧
-    listMSeq.extend xs none fuel = .ok (xs ++ xs) ∧
+    listMSeq.extend alloc xs (.iter (.ok vs)) fuel = .ok (xs ++ vs) ∧
+    listMSeq.extend alloc xs .self_ fuel = .ok (xs ++ xs) ∧
+    MSeq.iadd (fun s a => listMSeq.extend alloc s a fuel) xs (.iter (.ok vs)) = .ok (xs ++ vs) ∧
     listMSeq.clear fuel xs = .ok []
 
 theorem mseqGrowMatchesList_proven : MSeqGrowMatchesList := by
-  intro α xs vs v fuel h
-  refine ⟨?_, ?_, ?_, clear_list fuel xs h⟩
-  · exact append_list xs v
-  · simp [MSeq.extend, extendList_list]
+  intro α alloc xs vs v fuel h ha
+  have he : listMSeq.extend alloc xs (.iter (.ok vs)) fuel = .ok (xs ++ vs) := by
+    simp [MSeq.extend, extendList_list, bind, Except.bind]
+  refine ⟨append_list xs v, he, ?_, ?_, clear_list fuel xs h⟩
   · have hi : (listMSeq.view xs).iterFrom fuel 0 = .ok xs := by
       simpa [listSeq, MSeq.view, listMSeq] using iterFrom_list xs fuel 0 (by omega) (by omega)
-    simp [MSeq.extend, hi, bind, Except.bind, extendList_list]
+    have hl : (listMSeq (α := α)).len xs = .ok xs.length := rfl
+    simp [MSeq.extend, hl, hi, ha, bind, Except.bind, extendList_list, pure, Except.pure]
+  · simp [MSeq.iadd, he, bind, Except.bind, pure, Except.pure]
 
 /-! ### `reverse` and `remove` -/
 
