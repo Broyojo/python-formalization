@@ -2666,41 +2666,50 @@ textlibs-plist-loads-str	proven	Lib/plistlib.py	loads
 textlibs-plist-write-succeeds	proven	Lib/plistlib.py	dumps,dump,_BinaryPlistWriter.write,_BinaryPlistWriter._flatten,_BinaryPlistWriter._getrefnum,_BinaryPlistWriter._write_size,_BinaryPlistWriter._write_object
 textlibs-plist-write-errors	proven	Lib/plistlib.py	dumps,dump,_BinaryPlistWriter._write_object,_BinaryPlistWriter.write
 textlibs-plist-date-whole-seconds	proven	Lib/plistlib.py	_BinaryPlistWriter._write_object,_BinaryPlistParser._read_object
-coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
+coll-count-elements-twins	refuted	Lib/collections/__init__.py	_count_elements
+coll-count-elements-twins-hashable	refuted	Lib/collections/__init__.py	_count_elements
+coll-count-elements-twins-narrow	proven	Lib/collections/__init__.py	_count_elements
+coll-counter-count-iter-int	proven	Lib/collections/__init__.py	Counter.__init__,Counter.update,Counter.subtract,_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
-coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
-coll-counter-first-seen-order	proven	Lib/collections/__init__.py	Counter.__init__,_count_elements
-coll-counter-subtract	proven	Lib/collections/__init__.py	Counter.subtract,Counter.update
-coll-counter-total	proven	Lib/collections/__init__.py	Counter.total
 coll-counter-copy-reduce	proven	Lib/collections/__init__.py	Counter.copy,Counter.__reduce__
 coll-counter-delitem	proven	Lib/collections/__init__.py	Counter.__delitem__
-coll-counter-compare-pointwise	proven	Lib/collections/__init__.py	Counter.__eq__,Counter.__ne__,Counter.__le__,Counter.__lt__,Counter.__ge__,Counter.__gt__
-coll-counter-compare-order	proven	Lib/collections/__init__.py	Counter.__eq__,Counter.__le__,Counter.__lt__,Counter.__ge__,Counter.__gt__
-coll-counter-fromkeys	proven	Lib/collections/__init__.py	
-coll-counter-ops-pointwise	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__,Counter.__pos__,Counter.__neg__
-coll-counter-ops-contract	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__,Counter.__pos__,Counter.__neg__
-coll-counter-unary-binary	proven	Lib/collections/__init__.py	Counter.__pos__,Counter.__neg__
-coll-counter-inplace	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__,Counter._keep_positive
-coll-counter-xor	proven	Lib/collections/__init__.py	
-coll-counter-keep-positive	proven	Lib/collections/__init__.py	Counter._keep_positive
-coll-counter-set-correspondence	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__,Counter.__eq__,Counter.__ne__,Counter.__le__,Counter.__lt__,Counter.__ge__,Counter.__gt__
-coll-counter-most-common-prefix	proven	Lib/collections/__init__.py	Counter.most_common
-coll-counter-most-common-sorted	proven	Lib/collections/__init__.py	Counter.most_common
-coll-counter-elements	proven	Lib/collections/__init__.py	Counter.elements
+coll-counter-most-common	proven	Lib/collections/__init__.py	Counter.most_common
+coll-counter-most-common-neg	proven	Lib/collections/__init__.py	Counter.most_common
 coll-counter-repr	proven	Lib/collections/__init__.py	Counter.__repr__
-coll-chainmap-flat-view	proven	Lib/collections/__init__.py	ChainMap.__getitem__,ChainMap.__missing__,ChainMap.get,ChainMap.__len__,ChainMap.__iter__,ChainMap.__contains__,ChainMap.__bool__
-coll-chainmap-writes-first	proven	Lib/collections/__init__.py	ChainMap.__setitem__,ChainMap.__delitem__,ChainMap.popitem,ChainMap.pop,ChainMap.clear
-coll-chainmap-union-flat	proven	Lib/collections/__init__.py	ChainMap.__ior__,ChainMap.__or__,ChainMap.__ror__,ChainMap.copy
-coll-chainmap-child-parents	proven	Lib/collections/__init__.py	ChainMap.__init__,ChainMap.new_child,ChainMap.parents,ChainMap.fromkeys
-coll-chainmap-repr	proven	Lib/collections/__init__.py	ChainMap.__repr__
-coll-userdict-matches-dict	proven	Lib/collections/__init__.py	UserDict.__len__,UserDict.__getitem__,UserDict.__iter__,UserDict.__contains__,UserDict.get
+coll-counter-elements	proven	Lib/collections/__init__.py	Counter.elements
+coll-counter-compare-pointwise	proven	Lib/collections/__init__.py	Counter.__eq__,Counter.__ne__,Counter.__le__,Counter.__lt__,Counter.__ge__,Counter.__gt__
+coll-counter-compare-raises	proven	Lib/collections/__init__.py	Counter.__eq__,Counter.__le__,Counter.__ge__
+coll-counter-ops-pointwise	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__
+coll-counter-unary	proven	Lib/collections/__init__.py	Counter.__pos__,Counter.__neg__
+coll-counter-keep-positive	proven	Lib/collections/__init__.py	Counter._keep_positive,Counter.__pos__
+coll-counter-inplace-operands	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__
+coll-counter-total	open	Lib/collections/__init__.py	
+coll-counter-fromkeys	proven	Lib/collections/__init__.py	
+coll-chainmap-flat-view	proven	Lib/collections/__init__.py	ChainMap.__missing__,ChainMap.get,ChainMap.__len__,ChainMap.__iter__,ChainMap.__contains__,ChainMap.__bool__
+coll-chainmap-writes-first	proven	Lib/collections/__init__.py	ChainMap.__setitem__,ChainMap.__delitem__,ChainMap.popitem,ChainMap.pop
+coll-chainmap-union-flat	proven	Lib/collections/__init__.py	ChainMap.__ror__
+coll-chainmap-child-parents	proven	Lib/collections/__init__.py	ChainMap.new_child,ChainMap.parents
+coll-chainmap-repr	proven	Lib/collections/__init__.py	
+coll-chainmap-init	proven	Lib/collections/__init__.py	ChainMap.__init__
+coll-chainmap-getitem-any	proven	Lib/collections/__init__.py	ChainMap.__getitem__
+coll-chainmap-repr-guard	proven	Lib/collections/__init__.py	ChainMap.__repr__
+coll-chainmap-fromkeys	proven	Lib/collections/__init__.py	ChainMap.fromkeys
+coll-chainmap-objects	proven	Lib/collections/__init__.py	ChainMap.copy,ChainMap.__or__,ChainMap.__ior__,ChainMap.clear
+coll-userdict-matches-dict	proven	Lib/collections/__init__.py	UserDict.__len__,UserDict.get
 coll-userdict-set-del	proven	Lib/collections/__init__.py	UserDict.__setitem__,UserDict.__delitem__
-coll-userdict-constructors-union	proven	Lib/collections/__init__.py	UserDict.__init__,UserDict.__or__,UserDict.__ror__,UserDict.__ior__,UserDict.__copy__,UserDict.copy,UserDict.fromkeys
-coll-userdict-clear-repr	proven	Lib/collections/__init__.py	UserDict.__repr__
+coll-userdict-constructors-union	proven	Lib/collections/__init__.py	UserDict.__or__,UserDict.__ror__
+coll-userdict-clear-repr	proven	Lib/collections/__init__.py	
 coll-userdict-popitem-lifo	proven	Lib/collections/__init__.py	UserDict.popitem
 coll-userdict-reversible	refuted	Lib/collections/__init__.py	UserDict.__reversed__
 coll-userdict-missing-like-dict	refuted	Lib/collections/__init__.py	UserDict.__getitem__,UserDict.__contains__,UserDict.get
 coll-userdict-missing-narrow	proven	Lib/collections/__init__.py	UserDict.__contains__,UserDict.get
+coll-userdict-init-p	proven	Lib/collections/__init__.py	UserDict.__init__
+coll-userdict-getitem-p	proven	Lib/collections/__init__.py	UserDict.__getitem__,UserDict.__contains__
+coll-userdict-iter-order	proven	Lib/collections/__init__.py	UserDict.__iter__
+coll-userdict-repr-r	proven	Lib/collections/__init__.py	UserDict.__repr__
+coll-userdict-ior-p	proven	Lib/collections/__init__.py	UserDict.__ior__
+coll-userdict-copy-o	proven	Lib/collections/__init__.py	UserDict.__copy__,UserDict.copy
+coll-userdict-fromkeys-p	proven	Lib/collections/__init__.py	UserDict.fromkeys
 coll-userlist-simulates	proven	Lib/collections/__init__.py	UserList.append,UserList.insert,UserList.pop,UserList.remove,UserList.clear,UserList.extend,UserList.reverse,UserList.sort,UserList.__setitem__,UserList.__delitem__,UserList.__iadd__,UserList.__imul__
 coll-userlist-observers	proven	Lib/collections/__init__.py	UserList.__repr__,UserList.__contains__,UserList.__len__,UserList.__getitem__,UserList.__mul__,UserList.count,UserList.index
 coll-userlist-operands	proven	Lib/collections/__init__.py	UserList.__init__,UserList.__lt__,UserList.__le__,UserList.__eq__,UserList.__gt__,UserList.__ge__,UserList.__cast,UserList.__add__,UserList.__radd__,UserList.__iadd__,UserList.extend
@@ -2723,6 +2732,8 @@ coll-namedtuple-asdict-narrow	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-source-attribute	refuted	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-instance-methods	proven	Lib/collections/__init__.py	namedtuple
 coll-namedtuple-defaults	proven	Lib/collections/__init__.py	namedtuple
+coll-namedtuple-conversions	proven	Lib/collections/__init__.py	namedtuple
+coll-namedtuple-getnewargs	proven	Lib/collections/__init__.py	namedtuple
 corelibs-collabc-check-methods	proven	Lib/_collections_abc.py	_check_methods
 corelibs-collabc-subclasshooks	proven	Lib/_collections_abc.py	Hashable.__subclasshook__,Awaitable.__subclasshook__,Coroutine.__subclasshook__,AsyncIterable.__subclasshook__,AsyncIterator.__subclasshook__,AsyncGenerator.__subclasshook__,Iterable.__subclasshook__,Iterator.__subclasshook__,Reversible.__subclasshook__,Generator.__subclasshook__,Sized.__subclasshook__,Container.__subclasshook__,Collection.__subclasshook__,Buffer.__subclasshook__,Callable.__subclasshook__
 corelibs-collabc-abstract-bodies	proven	Lib/_collections_abc.py	
