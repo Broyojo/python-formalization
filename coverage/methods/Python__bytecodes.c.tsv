@@ -390,10 +390,10 @@ Python/bytecodes.c	4311	4311	opcode:_CHECK_ATTR_METHOD_LAZY_DICT	op(_CHECK_ATTR_
 Python/bytecodes.c	4318	4318	opcode:_LOAD_ATTR_METHOD_LAZY_DICT	op(_LOAD_ATTR_METHOD_LAZY_DICT, (descr/4, owner -- attr, self)) {	todo		
 Python/bytecodes.c	4328	4328	opcode:LOAD_ATTR_METHOD_LAZY_DICT	macro(LOAD_ATTR_METHOD_LAZY_DICT) =	todo		changed-in-3.15:
 Python/bytecodes.c	4361	4361	opcode:_SPECIALIZE_CALL	specializing op(_SPECIALIZE_CALL, (counter/1, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		changed-in-3.15:
-Python/bytecodes.c	4373	4373	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	4386	4386	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4373	4373	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	4386	4386	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	4436	4436	opcode:_MONITOR_CALL	op(_MONITOR_CALL, (func, maybe_self, args[oparg] -- func, maybe_self, args[oparg])) {	todo		
-Python/bytecodes.c	4457	4457	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
+Python/bytecodes.c	4457	4457	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC_AT_END;	modelled	bytecode-call-generic	
 Python/bytecodes.c	4458	4458	opcode:INSTRUMENTED_CALL	macro(INSTRUMENTED_CALL) = unused/3 + _MAYBE_EXPAND_METHOD + _MONITOR_CALL + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
 Python/bytecodes.c	4460	4460	opcode:_PY_FRAME_GENERAL	op(_PY_FRAME_GENERAL, (callable, self_or_null, args[oparg] -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4485	4485	opcode:_CHECK_FUNCTION_VERSION	op(_CHECK_FUNCTION_VERSION, (func_version/2, callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
@@ -470,8 +470,8 @@ Python/bytecodes.c	5323	5323	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD
 Python/bytecodes.c	5352	5352	opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5372	5372	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	todo		changed-in-3.15:
 Python/bytecodes.c	5388	5388	opcode:_MONITOR_CALL_KW	op(_MONITOR_CALL_KW, (callable, self_or_null, args[oparg], unused -- callable, self_or_null, args[oparg], unused)) {	todo		
-Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	5474	5474	opcode:_PY_FRAME_KW	op(_PY_FRAME_KW, (callable, self_or_null, args[oparg], kwnames -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5504	5504	opcode:_CHECK_FUNCTION_VERSION_KW	op(_CHECK_FUNCTION_VERSION_KW, (func_version/2, callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5511	5511	opcode:CALL_KW_PY	macro(CALL_KW_PY) =	todo		changed-in-3.15:
@@ -479,15 +479,15 @@ Python/bytecodes.c	5521	5521	opcode:_CHECK_METHOD_VERSION_KW	op(_CHECK_METHOD_VE
 Python/bytecodes.c	5531	5531	opcode:_EXPAND_METHOD_KW	op(_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5542	5542	opcode:CALL_KW_BOUND_METHOD	macro(CALL_KW_BOUND_METHOD) =	todo		changed-in-3.15:
 Python/bytecodes.c	5553	5553	opcode:_SPECIALIZE_CALL_KW	specializing op(_SPECIALIZE_CALL_KW, (counter/1, callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5565	5565	opcode:CALL_KW	macro(CALL_KW) =	todo		
+Python/bytecodes.c	5565	5565	opcode:CALL_KW	macro(CALL_KW) =	modelled	bytecode-call-generic	
 Python/bytecodes.c	5571	5571	opcode:INSTRUMENTED_CALL_KW	macro(INSTRUMENTED_CALL_KW) =	todo		
 Python/bytecodes.c	5578	5578	opcode:_CHECK_IS_NOT_PY_CALLABLE_KW	op(_CHECK_IS_NOT_PY_CALLABLE_KW, (callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
 Python/bytecodes.c	5585	5585	opcode:_CALL_KW_NON_PY	op(_CALL_KW_NON_PY, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5608	5608	opcode:CALL_KW_NON_PY	macro(CALL_KW_NON_PY) =	todo		changed-in-3.15:
-Python/bytecodes.c	5620	5620	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	todo		
-Python/bytecodes.c	5637	5637	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5620	5620	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	modelled	bytecode-call-generic	
+Python/bytecodes.c	5637	5637	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	modelled	bytecode-call-generic	
 Python/bytecodes.c	5716	5716	opcode:_SPECIALIZE_CALL_FUNCTION_EX	specializing op(_SPECIALIZE_CALL_FUNCTION_EX, (counter/1, func, unused, unused, unused -- func, unused, unused, unused)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	5728	5728	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	todo		changed-in-3.15:
+Python/bytecodes.c	5728	5728	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	modelled	bytecode-call-generic	
 Python/bytecodes.c	5734	5734	opcode:_CHECK_IS_PY_CALLABLE_EX	op(_CHECK_IS_PY_CALLABLE_EX, (func_st, unused, unused, unused -- func_st, unused, unused, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5740	5740	opcode:_PY_FRAME_EX	op(_PY_FRAME_EX, (func_st, null, callargs_st, kwargs_st -- ex_frame)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5763	5763	opcode:CALL_EX_PY	macro(CALL_EX_PY) =	todo		changed-in-3.15: new function

@@ -111,7 +111,7 @@ end
 /-- `CALL oparg` (`:4457`: `_SPECIALIZE_CALL + _MAYBE_EXPAND_METHOD + _DO_CALL +
 _CHECK_PERIODIC_AT_END`) on `(callable, self_or_null, args)`, `args` in call order with
 `len(args) = oparg`, for every object model. The expansion of a method object (`:4373-4383`); the
-inlined call of a function object (`:4398-4419`: `Py_TYPE(callable) == &PyFunction_Type` with the
+inlined call of a function object (`:4397-4419`: `Py_TYPE(callable) == &PyFunction_Type` with the
 model's `vectorcall == _PyFunction_Vectorcall` and no PEP 523 hook, `_PyEvalFramePushAndInit` on
 `self` (when not `NULL`) then the arguments, no keyword names, `frame->return_offset =
 INSTRUCTION_SIZE`, `DISPATCH_INLINED`, and `ERROR_NO_POP` after `SYNC_SP` when the frame cannot be
@@ -245,9 +245,9 @@ end
 `(callable, self_or_null, args, kwnames)`, `args` in call order with `len(args) = oparg`, the last
 `len(kwnames)` of them the keyword values, for every object model. As `CALL`, with the names of the
 `kwnames` tuple passed on: the expansion (`:5407-5417`); the inlined call of a function object
-(`:5430-5451`, `_PyEvalFramePushAndInit` with `kwnames`, `return_offset` set, `DISPATCH_INLINED`,
+(`:5432-5455`, `_PyEvalFramePushAndInit` with `kwnames`, `return_offset` set, `DISPATCH_INLINED`,
 operands consumed on failure); and `PyObject_Vectorcall` with `kwnames` for every other live callable
-(`:5452-5466`), whose result replaces the operands and whose error pops them. Unlike `CALL`, the
+(`:5457-5471`), whose result replaces the operands and whose error pops them. Unlike `CALL`, the
 macro has no `_CHECK_PERIODIC_AT_END`. -/
 def CallKwGenericRules : Prop := ∀ (e : Env) (regs : Regs) (c self kwv : Val) (args rest : List Val)
     (kw : List String),
@@ -315,5 +315,135 @@ theorem callKwGenericRules_proven : CallKwGenericRules := by
       dropLast_snoc, getLastD_snoc]
     simp [bind, EStateM.bind, BM.lift, hkw, hf, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
       EStateM.pure, stk, kwStack_pop e regs c self kwv args rest hlen, hx]
+
+/-! ## `CALL_FUNCTION_EX` -/
+
+theorem isExactTuple_of {rt : Rt} {v : Val} (h : IsTuple rt v) : isExactTuple v rt = .ok true rt := by
+  obtain ⟨a, items, rfl, ho⟩ := h
+  simp [isExactTuple, getObj, ho, bind, EStateM.bind, pure, EStateM.pure]
+
+theorem isExactTuple_not {rt : Rt} {v : Val} (hl : Live rt v) (h : ¬ IsTuple rt v) :
+    isExactTuple v rt = .ok false rt := by
+  cases v with
+  | ref a =>
+    obtain ⟨o, ho⟩ := live_obj hl
+    cases o with
+    | tuple items => exact absurd ⟨a, items, rfl, ho⟩ h
+    | _ => simp [isExactTuple, getObj, ho, bind, EStateM.bind, pure, EStateM.pure]
+  | _ => simp [isExactTuple, pure, EStateM.pure]
+
+theorem exStack_peek (regs : Regs) (kw ca n f : Val) (rest : List Val) :
+    peekN 4 ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok [f, n, ca, kw] ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+  simp [peekN]
+
+theorem exStack_pop (regs : Regs) (kw ca n f : Val) (rest : List Val) :
+    popN 4 ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok [f, n, ca, kw] ⟨regs, rest⟩ := by
+  simp [popN]
+
+/-- `CALL_FUNCTION_EX` (`:5728`: `_SPECIALIZE_CALL_FUNCTION_EX + _MAKE_CALLARGS_A_TUPLE +
+_DO_CALL_FUNCTION_EX + _CHECK_PERIODIC_AT_END`) on `(func, NULL, callargs, kwargs)`, `kwargs` a dict
+or `NULL`, for every object model. `_MAKE_CALLARGS_A_TUPLE` (`:5620-5635`) leaves an exact tuple
+alone; anything else is first checked by `_Py_Check_ArgsIterable` (`Python/ceval.c:3403-3412`: no
+`tp_iter` and not a sequence is `TypeError("Value after * must be an iterable, not T")`, `T` cut by
+`%.200s`) and then made a tuple (`PySequence_Tuple`, which is what calling the exact `tuple` type
+does, `tuple_new_impl`), after which the instruction is exactly the instruction on the stack with
+that tuple; both failures keep every operand (`ERROR_NO_POP`). With an exact tuple,
+`_DO_CALL_FUNCTION_EX` (`:5637-5711`) inlines a function object (`_PyEvalFramePushAndInit_Ex`:
+the dict unpacked by `_PyStack_UnpackDict` into names and values after the positional items,
+`return_offset` set, `DISPATCH_INLINED`, operands consumed when that fails) and gives anything else
+to `PyObject_Call(func, callargs, kwargs)` with the dict itself, whose result replaces the operands
+before `_CHECK_PERIODIC_AT_END` and whose error pops them. -/
+def CallFunctionExRules : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val),
+  Live regs.rt ca →
+  (¬ IsTuple regs.rt ca → ∀ rt0 tn rt1 y rt2, e.om.isIterable ca regs.rt = .ok false rt0 →
+    tpName ca rt0 = .ok tn rt1 →
+    typeError (α := Unit) s!"Value after * must be an iterable, not {trunc200 tn}" rt1 = .error y rt2 →
+    execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+      .error y ⟨{ regs with rt := rt2 }, kw :: ca :: n :: f :: rest⟩) ∧
+  (¬ IsTuple regs.rt ca → ∀ rt0, e.om.isIterable ca regs.rt = .ok true rt0 →
+    (∀ x rt1, e.om.call e.ctx (.cls "tuple") [ca] [] rt0 = .error x rt1 →
+      execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+        .error x ⟨{ regs with rt := rt1 }, kw :: ca :: n :: f :: rest⟩) ∧
+    (∀ t rt1, e.om.call e.ctx (.cls "tuple") [ca] [] rt0 = .ok t rt1 → IsTuple rt1 t →
+      execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+        execOp e .CALL_FUNCTION_EX ⟨{ regs with rt := rt1 }, kw :: t :: n :: f :: rest⟩)) ∧
+  (∀ t items, ca = .ref t → regs.rt.heap[t]? = some (.tuple items) →
+    (∀ a fo, f = .ref a → regs.rt.heap[a]? = some (.func fo) →
+      (∀ x rt, unpackKwargs kw regs.rt = .error x rt →
+        execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+      (∀ names vals, unpackKwargs kw regs.rt = .ok (names, vals) regs.rt →
+        (∀ nf r, pushInit e f (items.toList ++ vals) names regs = .ok nf r →
+          execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+            (dispatchInlined nf : M Unit) ⟨{ r with frame := { r.frame with returnOffset := instrSize e.opcode } }, rest⟩) ∧
+        (∀ x r, pushInit e f (items.toList ++ vals) names regs = .error x r →
+          execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩))) ∧
+    (Live regs.rt f → (¬ ∃ a fo, f = .ref a ∧ regs.rt.heap[a]? = some (.func fo)) →
+      (∀ v rt, e.om.callDict e.ctx f ca kw regs.rt = .ok v rt →
+        execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+          _CHECK_PERIODIC_AT_END e ⟨{ regs with rt := rt }, v :: rest⟩) ∧
+      (∀ x rt, e.om.callDict e.ctx f ca kw regs.rt = .error x rt →
+        execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩)))
+
+theorem makeCallargs_keep (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (h : IsTuple regs.rt ca) :
+    _MAKE_CALLARGS_A_TUPLE e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+  have ht := isExactTuple_of h
+  simp [_MAKE_CALLARGS_A_TUPLE, stkK, peekN, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+    MonadLift.monadLift, ht, pure, EStateM.pure, pushAll]
+
+theorem callFunctionExRules_proven : CallFunctionExRules := by
+  intro e regs f n ca kw rest hca
+  refine ⟨fun hnt rt0 tn rt1 y rt2 hi htn hy => ?_, fun hnt rt0 hi => ⟨fun x rt1 hx => ?_, fun t rt1 ht htt => ?_⟩,
+    fun t items hct ho => ⟨fun a fo hfa hf => ⟨fun x rt hx => ?_, fun names vals hu => ⟨fun nf r hp => ?_,
+      fun x r hp => ?_⟩⟩, fun hlf hnf => ⟨fun v rt hv => ?_, fun x rt hx => ?_⟩⟩⟩
+  · have hn := isExactTuple_not hca hnt
+    simp [execOp, CALL_FUNCTION_EX, _MAKE_CALLARGS_A_TUPLE, stkK, peekN, bind, EStateM.bind, BM.lift, RM.lift,
+      liftM, monadLift, MonadLift.monadLift, hn, checkArgsIterable, hi, htn, hy, pure, EStateM.pure]
+  · have hn := isExactTuple_not hca hnt
+    simp [execOp, CALL_FUNCTION_EX, _MAKE_CALLARGS_A_TUPLE, stkK, peekN, bind, EStateM.bind, BM.lift, RM.lift,
+      liftM, monadLift, MonadLift.monadLift, hn, checkArgsIterable, hi, hx, pure, EStateM.pure]
+  · have hn := isExactTuple_not hca hnt
+    have hk := makeCallargs_keep e { regs with rt := rt1 } f n t kw rest htt
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_MAKE_CALLARGS_A_TUPLE, stkK, peekN, popN, bind, EStateM.bind, BM.lift, RM.lift,
+      liftM, monadLift, MonadLift.monadLift, hn, checkArgsIterable, hi, ht, pure, EStateM.pure, pushAll]
+  · have hk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ho⟩
+    subst hfa hct
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_DO_CALL_FUNCTION_EX, exStack_peek, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, isFunction, getObj, hf, hx, pure, EStateM.pure]
+  · have hk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ho⟩
+    subst hfa hct
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_DO_CALL_FUNCTION_EX, exStack_peek, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, isFunction, getObj, hf, hu, tupleItems, ho, hp, setReturnOffset,
+      modifyFrame, pure, EStateM.pure]
+    split
+    · rename_i heq; exact absurd heq (dispatchInlined_ne_ok _ _ _ _)
+    · rename_i heq; exact heq.symm
+  · have hk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ho⟩
+    subst hfa hct
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_DO_CALL_FUNCTION_EX, exStack_peek, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, isFunction, getObj, hf, hu, tupleItems, ho, hp, pure, EStateM.pure]
+  · have hk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ho⟩
+    have hff := isFunction_false regs f hlf hnf
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_DO_CALL_FUNCTION_EX, exStack_peek, stk, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, hff, hv, pure, EStateM.pure, pushAll]
+  · have hk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ho⟩
+    have hff := isFunction_false regs f hlf hnf
+    simp only [execOp, CALL_FUNCTION_EX, bind, EStateM.bind]
+    rw [hk]
+    simp [_DO_CALL_FUNCTION_EX, exStack_peek, stk, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, hff, hx, pure, EStateM.pure]
+
+def CallGenericFull : Prop := CallGenericRules ∧ CallKwGenericRules ∧ CallFunctionExRules
+theorem callGenericFull_proven : CallGenericFull :=
+  ⟨callGenericRules_proven, callKwGenericRules_proven, callFunctionExRules_proven⟩
 
 end PyLean.Bytecode
