@@ -53,14 +53,16 @@ theorem unwindToHandler_proven : UnwindToHandler := by
   cases lasti <;> simp
 
 /-- With no handler the frame is popped and the search goes on in the caller at its
-`instr_ptr`; the frame's stack is simply dropped. -/
+`instr_ptr`, after the caller's traceback entry (`goto error` there); the frame's stack is simply
+dropped. -/
 def UnwindNoHandler : Prop :=
   ∀ (P : Program) (n : Nat) (v : Val) (s : St) (caller : Frame) (rest : List Frame),
     (s.regs.next = 0 ∨ getExceptionHandler ((P[s.regs.frame.code]?.map (·.exceptiontable)).getD #[])
       (s.regs.next - 1) = none) →
     s.regs.prev = caller :: rest → s.regs.frame.owner = .thread → caller.owner ≠ .interpreter →
     unwind P (n + 1) v s =
-      unwind P n v ⟨{ rt := { s.regs.rt with pyRecursionRemaining := s.regs.rt.pyRecursionRemaining + 1 }
+      unwind P n v ⟨{ rt := tracebackHere P { caller with returnOffset := 0 } v
+                              { s.regs.rt with pyRecursionRemaining := s.regs.rt.pyRecursionRemaining + 1 }
                       frame := { caller with returnOffset := 0 }, prev := rest,
                       next := caller.instrPtr }, caller.stack⟩
 

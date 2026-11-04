@@ -236,14 +236,19 @@ def LOAD_SPECIAL (e : Env) : M Unit := stkK 1 2 fun
       (typeError (specialError e.oparg t sug) : RM _)
   | _ => fault "arity"
 
-/-- `:4153`. -/
+/-- `:4153-4187`: `(exit_func, exit_self, lasti, unused, val -- ..., res)`: `exit_func` called with
+`exit_self` (when not `NULL`), `type(val)`, `val` and `PyException_GetTraceback(val)` or `None`; the
+result is pushed above the five, which stay, and an error leaves them (`ERROR_IF` with no inputs
+consumed). -/
 def WITH_EXCEPT_START (e : Env) : M Unit := do
   let ins ← peekN 5
   match ins with
   | [exitFunc, exitSelf, _, _, val] =>
     let res ← BM.lift do
       let exc ← (typeOf val : RM Val)
-      let args := if exitSelf != .null then [exitSelf, exc, val, .none] else [exc, val, .none]
+      let tb := (← (excData val : RM ExcData)).traceback
+      let tb := if tb == .null then .none else tb
+      let args := if exitSelf != .null then [exitSelf, exc, val, tb] else [exc, val, tb]
       e.om.call e.ctx exitFunc args []
     pushAll [res]
   | _ => fault "arity"

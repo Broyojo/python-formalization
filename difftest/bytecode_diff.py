@@ -490,6 +490,33 @@ def p_agen(r):
     return drv + gen + use
 
 
+def p_tb(r):
+    """Tracebacks: `PyTraceBack_Here` at `label(error)` for each frame an exception passes through
+    (not for `RERAISE`, which goes to `exception_unwind`), `__traceback__`, `tb_next`, `tb_lasti`,
+    `with_traceback`, and the traceback `WITH_EXCEPT_START` hands to `__exit__`."""
+    head = ("def f():\n    raise ValueError('x')\n"
+            "def g():\n    f()\n"
+            "def depth(tb):\n    n = 0\n    while tb is not None:\n        n += 1\n        tb = tb.tb_next\n    return n\n"
+            "class CM:\n    def __enter__(self):\n        return self\n"
+            "    def __exit__(self, t, v, tb):\n        print(t.__name__, tb is None, type(tb).__name__, tb is v.__traceback__, depth(tb)"
+            + r.choice(["", ", tb.tb_lasti"]) + ")\n        return " + r.choice(["True", "False", "None"]) + "\n")
+    body = r.choice([
+        "raise ValueError('a')", "f()", "g()", "1 / 0", "[][1]",
+        "raise ValueError('b').with_traceback(None)",
+        "try:\n        f()\n    except ValueError as e:\n        raise e.with_traceback(None)",
+        "try:\n        g()\n    except ValueError:\n        raise",
+    ])
+    use = r.choice([
+        "with CM():\n    " + body + "\nprint('after')\n",
+        "def h():\n    with CM():\n        " + body.replace("\n", "\n    ") + "\n    return 'r'\nprint(h())\n",
+        "try:\n    " + body.replace("\n    ", "\n        ").replace("\n        ", "\n        ") + "\nexcept Exception as e:\n    print(type(e).__name__, depth(e.__traceback__)"
+        + r.choice(["", ", e.__traceback__.tb_lasti"]) + ")\n",
+        "e = ValueError('n')\nprint(e.__traceback__ is None)\n" + guarded("e.with_traceback(" + r.choice(["5", "None", "'s'"]) + ")\nprint(e.__traceback__)"),
+        "def gen():\n    yield 1\n    " + body.replace("\n    ", "\n    ") + "\ntry:\n    list(gen())\nexcept Exception as e:\n    print(type(e).__name__, depth(e.__traceback__))\n",
+    ])
+    return head + use
+
+
 def p_virtual(r):
     """`GET_ITER` on 3.15: the sequence and a tagged index for exact list, tuple, str and bytes
     (`_tp_iteritem`), the iterator and NULL for the rest, and the opcodes that read the two
@@ -773,7 +800,7 @@ def p_long_names(r):
 
 
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_agen,
+            p_agen, p_tb,
             p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
 
 

@@ -273,6 +273,7 @@ def typeOf : Val → RM Val
     | .boundBuiltin .. => pure (.cls "builtin_function_or_method")
     | .asend .. => pure (.cls "async_generator_asend")
     | .agWrapped _ => pure (.cls "async_generator_wrapped_value")
+    | .traceback .. => pure (.cls "traceback")
   | .null => fault "Py_TYPE(NULL)"
   | .tagged _ => fault "Py_TYPE(tagged int)"
   | v =>

@@ -338,6 +338,38 @@ inductive Outcome where
   /-- Fuel or undefined behaviour: not a Python outcome. -/
   | stop (e : Err) (rt : Rt)
 
+/-- `_PyFrame_IsIncomplete`, `Include/internal/pycore_interpframe.h:259-268`: a frame not owned by a
+generator whose `instr_ptr` is before `_co_firsttraceable`, the first `RESUME` that is not
+`RESUME_AT_GEN_EXPR_START` (`Objects/codeobject.c:576-585`; the location mask is 7 and that location
+is 4, `Include/internal/pycore_opcode_utils.h:90-92`). -/
+def frameIncomplete (P : Program) (f : Frame) : Bool :=
+  match f.owner with
+  | .interpreter => true
+  | .generator _ => false
+  | .thread =>
+    let instrs := ((P[f.code]?).map (·.instrs)).getD #[]
+    let first := (instrs.toList.findIdx? fun i => i.op.deopt == .RESUME && i.arg &&& 7 != 4).getD instrs.size
+    f.instrPtr < first
+
+/-- `PyTraceBack_Here(f)` at `label(error)` (`Python/bytecodes.c:6473-6480`, `Python/traceback.c`):
+unless the frame is incomplete, a new traceback object with `tb_next` the exception's traceback, the
+frame and its `instr_ptr` becomes the exception's `__traceback__` (`PyException_SetTraceback`). The
+allocation failures of `_PyFrame_GetFrameObject` and `tb_create_raw` are not modelled. -/
+def tracebackHere (P : Program) (f : Frame) (v : Val) (rt : Rt) : Rt :=
+  if frameIncomplete P f then rt else
+  match v with
+  | .ref a =>
+    match rt.heap[a]? with
+    | some (.inst i) =>
+      match i.exc with
+      | some d =>
+        let tb := Val.ref rt.heap.size
+        let heap := rt.heap.push (.traceback d.traceback f.code f.instrPtr)
+        { rt with heap := heap.setIfInBounds a (.inst { i with exc := some { d with traceback := tb } }) }
+      | none => rt
+    | _ => rt
+  | _ => rt
+
 /-- `label(exception_unwind)` and `label(exit_unwind)`, `Python/bytecodes.c:6485-6577`.
 `next_instr` is what the handler lookup uses; `frame->instr_ptr` is what is pushed
 as `lasti`. Fuel bounds the number of frames unwound. -/
@@ -367,15 +399,18 @@ def unwind (P : Program) : Nat → Val → St → Outcome
             let caller := { caller with returnOffset := 0 }
             if caller.owner == .interpreter then .raised v rt
             else
+              -- `next_instr = frame->instr_ptr; goto error;` (`:6574-6576`) in the caller
               unwind P n v
-                { regs := { rt := rt, frame := caller, prev := rest, next := caller.instrPtr },
+                { regs := { rt := tracebackHere P caller v rt, frame := caller, prev := rest, next := caller.instrPtr },
                   stack := caller.stack }
 
 /-- Handle what an instruction left behind. -/
 def afterInstr (P : Program) : EStateM.Result Err St Unit → Outcome
   | .ok () s => .cont s
   | .error .dispatch s => .cont s
-  | .error (.exc v) s => unwind P (s.regs.prev.length + 2) v s
+  | .error (.exc v) s =>
+    -- `label(error)`: the traceback entry of this frame, then `exception_unwind`
+    unwind P (s.regs.prev.length + 2) v { s with regs := { s.regs with rt := tracebackHere P s.regs.frame v s.regs.rt } }
   | .error (.unwind v) s => unwind P (s.regs.prev.length + 2) v s
   | .error (.exitUnwind v) s =>
     -- `start_frame` failed: the new frame goes away without a handler search
@@ -392,7 +427,7 @@ def afterInstr (P : Program) : EStateM.Result Err St Unit → Outcome
           if caller.owner == .interpreter then .raised v rt
           else
             unwind P (rest.length + 2) v
-              { regs := { rt := rt, frame := caller, prev := rest, next := caller.instrPtr },
+              { regs := { rt := tracebackHere P caller v rt, frame := caller, prev := rest, next := caller.instrPtr },
                 stack := caller.stack }
   | .error (.leave v) s => .ret v s.regs.rt
   | .error e s => .stop e s.regs.rt
@@ -409,7 +444,8 @@ def enterEval (P : Program) (f : Frame) (exc : Option Val) (rt : Rt) : Outcome :
   match exc with
   | some v =>
     match enterRecursivePy rt with
-    | .ok () rt => unwind P 3 v { s with regs := { s.regs with rt := rt } }
+    -- `throwflag`: `goto error` (`Python/ceval.c:1311-1340`)
+    | .ok () rt => unwind P 3 v { s with regs := { s.regs with rt := tracebackHere P f v rt } }
     | .error (.exc e) rt => afterInstr P (.error (.exitUnwind e) { s with regs := { s.regs with rt := rt } })
     | .error e rt => .stop e rt
   | none => afterInstr P (startFrame s)

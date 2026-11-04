@@ -183,6 +183,8 @@ structure ExcData where
   value : Val := .none
   /-- `PyNameErrorObject.name`, `NULL` until set. -/
   name : Val := .null
+  /-- `PyBaseExceptionObject.traceback`, a traceback object or `.null`. -/
+  traceback : Val := .null
   deriving Inhabited
 
 structure ClassObj where
@@ -258,6 +260,10 @@ inductive Obj where
   | asend (gen : Addr) (sendval : Val) (state : Nat)
   /-- `_PyAsyncGenWrappedValue`, the `agw_val` an async generator yields. -/
   | agWrapped (v : Val)
+  /-- `PyTracebackObject` (`Include/internal/pycore_traceback.h`): `tb_next` (`.null` for none), the
+  code of `tb_frame`, and `tb_lasti` as a code unit index (the attribute is twice it). The frame object
+  itself is not modelled. -/
+  | traceback (next : Val) (code : Nat) (lasti : Nat)
   deriving Inhabited
 
 /-- The label a macro leaves through. -/

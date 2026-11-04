@@ -1286,7 +1286,19 @@ def callMethod (tp name : String) (self0 : Val) (args : List Val) (kw : List Str
     match self, args with
     | .ref a, typ :: _ => genThrow 32 a typ
     | _, _ => typeError "throw expected at least 1 argument, got 0"
-  | "BaseException", "with_traceback" => pure self
+  -- `BaseException_with_traceback` and `BaseException_set_tb`, `Objects/exceptions.c`
+  | "BaseException", "with_traceback" =>
+    match args with
+    | [tb] =>
+      let tbv ← if tb == .none then pure Val.null else match tb with
+        | .ref t =>
+          match ← getObj t with
+          | .traceback .. => pure tb
+          | _ => typeError "__traceback__ must be a traceback or None"
+        | _ => typeError "__traceback__ must be a traceback or None"
+      setExcData self { ← excData self with traceback := tbv }
+      pure self
+    | _ => typeError s!"BaseException.with_traceback() takes exactly one argument ({args.length} given)"
   | "object", "__init__" => pure .none
   | "object", "__repr__" => pure (.str s!"<{← tpName self} object>")
   | "object", "__str__" => om.str ctx self
