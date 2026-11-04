@@ -393,8 +393,12 @@ def FmaExact : Prop :=
     numDigits ca ≤ maxStrDigits → numDigits cb ≤ maxStrDigits → numDigits (ca * cb) ≤ maxStrDigits →
     (fma c (.fin sa ca ea) (.fin sb cb eb) t).run fl = (add c (.fin (sa != sb) (ca * cb) (ea + eb)) t).run fl) ∧
   (∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int) (t : Dec) (fl : List Signal),
-    (maxStrDigits < numDigits ca ∨ maxStrDigits < numDigits cb ∨ maxStrDigits < numDigits (ca * cb)) →
-    ∃ m, (fma c (.fin sa ca ea) (.fin sb cb eb) t).run fl = .error (.valueError m)) ∧
+    (maxStrDigits < numDigits ca →
+      (fma c (.fin sa ca ea) (.fin sb cb eb) t).run fl = .error (.valueError (limitToIntMsg (numDigits ca)))) ∧
+    (numDigits ca ≤ maxStrDigits → maxStrDigits < numDigits cb →
+      (fma c (.fin sa ca ea) (.fin sb cb eb) t).run fl = .error (.valueError (limitToIntMsg (numDigits cb)))) ∧
+    (numDigits ca ≤ maxStrDigits → numDigits cb ≤ maxStrDigits → maxStrDigits < numDigits (ca * cb) →
+      (fma c (.fin sa ca ea) (.fin sb cb eb) t).run fl = .error (.valueError limitToStrMsg))) ∧
   (∀ (c : Ctx) (n : Bool) (p : Nat) (b t : Dec) (fl : List Signal),
     (fma c (.nan n true p) b t).run fl = afterSig c .invalidOperation fl (.nan n false (p % 10 ^ nanDigits c))) ∧
   (∀ (c : Ctx) (a : Dec) (n : Bool) (p : Nat) (t : Dec) (fl : List Signal), isSnan a = false →
@@ -408,7 +412,7 @@ def FmaExact : Prop :=
 
 theorem fmaExact_proven : FmaExact := by
   refine ⟨fun c a b t fl => ?_, fun c sa ca ea sb cb eb t fl h1 h2 h3 => ?_,
-    fun c sa ca ea sb cb eb t fl hl => ?_, fun c n p b t fl => ?_, fun c a n p t fl ha => ?_,
+    fun c sa ca ea sb cb eb t fl => ?_, fun c n p b t fl => ?_, fun c a n p t fl ha => ?_,
     fun c na sb eb t fl => ?_, fun c na sb cb eb t fl hc => ?_⟩
   · cases ha : convertRaise a with
     | error e => simp only [contextFma]; exact liftPy_err_run _ fl ha
@@ -425,12 +429,11 @@ theorem fmaExact_proven : FmaExact := by
       show ¬ numDigits cb > maxStrDigits by omega, show ¬ numDigits (ca * cb) > maxStrDigits by omega,
       ↓reduceIte]
   · simp only [fma, liftPy_run, intLimit, strLimit]
-    by_cases g1 : numDigits ca > maxStrDigits
-    · exact ⟨limitToIntMsg (numDigits ca), by simp [g1]⟩
-    by_cases g2 : numDigits cb > maxStrDigits
-    · exact ⟨limitToIntMsg (numDigits cb), by simp [g1, g2]⟩
-    have g3 : numDigits (ca * cb) > maxStrDigits := by omega
-    exact ⟨limitToStrMsg, by simp [g1, g2, g3]⟩
+    refine ⟨fun g1 => ?_, fun g1 g2 => ?_, fun g1 g2 g3 => ?_⟩
+    · simp [show numDigits ca > maxStrDigits from g1]
+    · simp [show ¬ numDigits ca > maxStrDigits by omega, show numDigits cb > maxStrDigits from g2]
+    · simp [show ¬ numDigits ca > maxStrDigits by omega, show ¬ numDigits cb > maxStrDigits by omega,
+        show numDigits (ca * cb) > maxStrDigits from g3]
   · rw [← sNaN_run]
     cases b <;> simp [fma, isSnan, isnan, nanKind, quietOf]
   · have hq : quietOf c (.nan n true p) = fixNan c n false p := rfl

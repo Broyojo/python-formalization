@@ -525,8 +525,37 @@ def gen_obj(rng):
     return ["obj", rng.choice("hr")]
 
 
+def gen_sig_focus(rng, impl):
+    """Context(flags=..., traps=...) or an assignment to flags/traps, with valid ints, heavy on
+    elements and keys whose __eq__ answers the signals (_pydecimal.py:3994, :4023)."""
+    def arg():
+        if rng.random() < 0.55:
+            names = [x for x in ALL_SIGNALS if rng.random() < 0.3]
+            for _ in range(rng.choice([1, 1, 2, 3])):
+                names.insert(rng.randrange(len(names) + 1), gen_eqkey(rng))
+            if rng.random() < 0.2:
+                names.insert(rng.randrange(len(names) + 1), rng.choice(["unhash", "badrepr", "hugeint"]))
+            return ["list", names]
+        keys = list(ALL_SIGNALS)
+        for _ in range(rng.choice([0, 1, 1, 2])):
+            keys.insert(rng.randrange(len(keys) + 1), gen_eqkey(rng))
+        if rng.random() < 0.15:
+            keys.remove(rng.choice([x for x in keys if isinstance(x, str)]))
+        return ["dict", [[x, rng.random() < 0.3] for x in keys]]
+    if rng.random() < 0.6:
+        init = {n: arg() for n in ("flags", "traps") if rng.random() < 0.7}
+        return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
+    val = arg()
+    if val[0] == "list":
+        val = ["dict", [[x, True] for x in val[1] if x != "unhash"]]
+    return {"mod": "decimal", "fn": "ctxset", "impl": impl, "tmpl": gen_tmpl(rng),
+            "name": rng.choice(["flags", "traps"]), "val": val}
+
+
 def gen_ctxobj(rng):
     impl = rng.choice(["py", "c"])
+    if rng.random() < 0.2:
+        return gen_sig_focus(rng, impl)
     k = rng.random()
     if k < 0.3:
         init = {}
