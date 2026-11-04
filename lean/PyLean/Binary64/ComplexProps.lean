@@ -141,7 +141,7 @@ def ComplexBool : Prop :=
   ∀ z : C, complex_bool z = false ↔ z.re.isZero = true ∧ z.im.isZero = true
 
 theorem float_bool_ne (x : F64) : F64.ne x d0 = false ↔ x.isZero = true := by
-  have := (floatUnary_proven x).2.2.2.2.2
+  have := (floatUnary_proven x).2.2.2.2.2.2.2
   exact this
 
 theorem complexBool_proven : ComplexBool := by

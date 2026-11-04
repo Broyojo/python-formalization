@@ -252,18 +252,20 @@ theorem floatHashBasics_proven : FloatHashBasics := by
 
 /-! ## Small methods -/
 
-/-- `-x` flips only the sign, `abs(x)` clears it, and `bool(x)` is false exactly for
-the two zeros. -/
+/-- `-x` flips the sign bit and keeps the 11 exponent bits and the 52 fraction bits, so it
+changes only bit 63, NaN payloads included; `abs(x)` clears the sign bit and keeps the
+rest; and `bool(x)` is false exactly for the two zeros. -/
 def FloatUnary : Prop :=
   ∀ x : F64,
     float_neg (float_neg x) = x ∧ (float_neg x).sign = !x.sign ∧
+    (float_neg x).bexp = x.bexp ∧ (float_neg x).frac = x.frac ∧
     (float_abs x).sign = false ∧ (float_abs x).bexp = x.bexp ∧ (float_abs x).frac = x.frac ∧
     (float_bool x = false ↔ x.isZero = true)
 
 theorem floatUnary_proven : FloatUnary := by
   intro x
   obtain ⟨h1, h2, h3⟩ := neg_fields x
-  refine ⟨neg_neg x, h1, ?_, ?_, ?_, ?_⟩
+  refine ⟨neg_neg x, h1, h2, h3, ?_, ?_, ?_, ?_⟩
   · simp only [float_abs, F64.abs]
     cases hs : x.sign
     · simp [hs]
@@ -342,10 +344,28 @@ def FloatInfoCorrect : Prop :=
   PyFloat_GetInfo.max = PyFloat_GetMax ∧ PyFloat_GetInfo.min = PyFloat_GetMin ∧
   PyFloat_GetMin.toRat = pw (-1022) ∧ PyFloat_GetMin.bexp = 1 ∧ PyFloat_GetMin.frac = 0 ∧
   PyFloat_GetInfo.epsilon = F64.sub (F64.ofBits 0x3ff0000000000001) d1 ∧
-  PyFloat_GetInfo.mant_dig = 53 ∧ PyFloat_GetInfo.max_exp = 1024 ∧ PyFloat_GetInfo.min_exp = -1021
+  PyFloat_GetInfo.mant_dig = 53 ∧ PyFloat_GetInfo.max_exp = 1024 ∧ PyFloat_GetInfo.min_exp = -1021 ∧
+  -- max_exp: 2 ** (max_exp - 1) is finite and 2 ** max_exp is not
+  pw (PyFloat_GetInfo.max_exp - 1) ≤ PyFloat_GetMax.toRat ∧ PyFloat_GetMax.toRat < pw PyFloat_GetInfo.max_exp ∧
+  -- min_exp: 2 ** (min_exp - 1) is the smallest normal
+  pw (PyFloat_GetInfo.min_exp - 1) = PyFloat_GetMin.toRat ∧
+  -- max_10_exp: the largest n with 10 ** n finite
+  ((10 ^ PyFloat_GetInfo.max_10_exp.toNat : Nat) : Rat) ≤ PyFloat_GetMax.toRat ∧
+  PyFloat_GetMax.toRat < ((10 ^ (PyFloat_GetInfo.max_10_exp.toNat + 1) : Nat) : Rat) ∧
+  -- min_10_exp: the smallest n with 10 ** n normal (n is negative)
+  0 < -PyFloat_GetInfo.min_10_exp ∧
+  PyFloat_GetMin.toRat ≤ mkRat 1 (10 ^ (-PyFloat_GetInfo.min_10_exp).toNat) ∧
+  mkRat 1 (10 ^ ((-PyFloat_GetInfo.min_10_exp).toNat + 1)) < PyFloat_GetMin.toRat ∧
+  -- dig: floor((mant_dig - 1) * log10(2)), as DBL_DIG is defined for radix 2
+  10 ^ PyFloat_GetInfo.dig.toNat ≤ 2 ^ (PyFloat_GetInfo.mant_dig.toNat - 1) ∧
+  2 ^ (PyFloat_GetInfo.mant_dig.toNat - 1) < 10 ^ (PyFloat_GetInfo.dig.toNat + 1) ∧
+  -- radix and rounds: binary, round to nearest (the rounding `RoundToNearestEven` proves)
+  PyFloat_GetInfo.radix = 2 ∧ PyFloat_GetInfo.rounds = 1 ∧
+  PyFloat_GetInfo.max_10_exp = 308 ∧ PyFloat_GetInfo.min_10_exp = -307 ∧ PyFloat_GetInfo.dig = 15
 
 theorem floatInfoCorrect_proven : FloatInfoCorrect := by
-  refine ⟨?_, rfl, rfl, ?_, by decide +kernel, by decide +kernel, by decide +kernel, rfl, rfl, rfl⟩
+  refine ⟨?_, rfl, rfl, ?_, by decide +kernel, by decide +kernel, by decide +kernel, rfl, rfl, rfl,
+    ?_, ?_, ?_, ?_, ?_, by decide, ?_, ?_, by decide +kernel, by decide +kernel, rfl, rfl, rfl, rfl, rfl⟩
   · intro x hx
     have h1 : x.mant ≤ 9007199254740991 := by have := mant_lt x; omega
     have h2 : (x.mant : Rat) ≤ 9007199254740991 := by
@@ -366,6 +386,6 @@ theorem floatInfoCorrect_proven : FloatInfoCorrect := by
     split
     · rw [abs_neg, abs_of_nonneg (mantVal_nonneg x)]; exact h4
     · rw [abs_of_nonneg (mantVal_nonneg x)]; exact h4
-  · decide +kernel
+  all_goals decide +kernel
 
 end PyLean.Binary64

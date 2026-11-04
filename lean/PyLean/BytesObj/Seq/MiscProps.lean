@@ -142,9 +142,8 @@ theorem repeatSpec_proven : RepeatSpec := by
 `gc.is_tracked` shows. `_PyTuple_FromArray` and `PyTuple_Pack` track a tuple only if
 some item may be tracked; `_PyTuple_FromArraySteal` always tracks; `_PyTuple_MaybeUntrack`
 untracks an exact tracked tuple exactly when no item may be tracked and none is `NULL`;
-`tuple(t) is t` for an exact tuple; `tuple()` is the singleton; `tuple_subtype_new`
-gives a tracked subclass instance with an empty hash cache; the argument checks of
-`tuple_vectorcall` run keywords first. `len <= tupleLimit` is the type invariant. -/
+`len <= tupleLimit` is the type invariant. The constructors that run Python code
+(`tuple(iterable)`, `tuple.__new__`) are `TupleNewIterable`. -/
 def TupleConstruct : Prop :=
   ∀ (α : Type) (mt mb : α → Bool) (l : List α) (t : Tup α) (exact tracked : Bool)
     (items : List (Option α)) (n : Nat),
@@ -157,17 +156,7 @@ def TupleConstruct : Prop :=
     tuplePack mt 0 l = .ok .empty ∧
     (tupleMaybeUntrack mb exact tracked items = false ↔
       (exact = true ∧ tracked = true ∧
-        ∀ e ∈ items, ∃ x, e = some x ∧ mb x = false) ∨ tracked = false) ∧
-    tupleNew mt (none : Option (TupleSrc α)) = .ok .empty ∧
-    tupleNew mt (some (.exactTuple t)) = .ok (.arg 0) ∧
-    tupleNew mt (some (.exactList l)) = tupleFromArray mt l ∧
-    tupleNew mt (some (.iterable l)) = tupleFromArraySteal l ∧
-    (∃ o, tupleSubtypeNew mt (some (.iterable l)) = .ok o ∧
-      o.items = l ∧ o.exact = false ∧ o.tracked = true ∧ o.hash = -1) ∧
-    tupleVectorcall mt ([] : List (TupleSrc α)) 0 = .ok .empty ∧
-    tupleVectorcall mt [TupleSrc.iterable l] (n + 1) =
-      .error (.typeError "tuple() takes no keyword arguments") ∧
-    (t.exact = true → tupleGetnewargs mt t = .ok (.arg 0))
+        ∀ e ∈ items, ∃ x, e = some x ∧ mb x = false) ∨ tracked = false)
 
 theorem tupleConstruct_proven : TupleConstruct := by
   intro α mt mb l t exact tracked items n hne hlim
@@ -182,8 +171,7 @@ theorem tupleConstruct_proven : TupleConstruct := by
   have hsteal : tupleFromArraySteal l = .ok (.fresh { items := l, tracked := true }) := by
     unfold tupleFromArraySteal
     rw [if_neg h0, hal]
-  refine ⟨hfrom, hfrom, hsteal, ?_, by simp [tupleFromArray], by simp [tuplePack], ?_, rfl, rfl,
-    rfl, rfl, ?_, rfl, ?_, ?_⟩
+  refine ⟨hfrom, hfrom, hsteal, ?_, by simp [tupleFromArray], by simp [tuplePack], ?_⟩
   · unfold tuplePack
     rw [if_neg hint, hal]
   · unfold tupleMaybeUntrack
@@ -198,18 +186,6 @@ theorem tupleConstruct_proven : TupleConstruct := by
       cases e with
       | none => simpa using h none he
       | some x => simpa using h (some x) he
-  · refine ⟨{ items := l, exact := false, tracked := true, hash := -1 }, ?_, rfl, rfl, rfl, rfl⟩
-    unfold tupleSubtypeNew
-    simp only [tupleNew, pySequenceTuple, hsteal]
-    rfl
-  · simp [tupleVectorcall]
-  · intro he
-    unfold tupleGetnewargs tupleSlice
-    have h1 : ¬ (0 : Int) < 0 := by omega
-    have h2 : ¬ ((t.items.length : Int) > t.items.length) := by omega
-    have h3 : ¬ ((t.items.length : Int) < 0) := by omega
-    simp only [h1, h2, h3, if_false]
-    rw [if_pos ⟨trivial, trivial, he⟩]
 
 /-- `_PyTuple_FromPair` is `PyTuple_Pack(2, ...)`, which it replaced in `list_extend_dictitems`, GC
 flag included. -/

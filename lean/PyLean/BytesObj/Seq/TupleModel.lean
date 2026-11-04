@@ -85,13 +85,22 @@ def toUhash (x : Int) : Nat := (x % (U64 : Int)).toNat
 /-- `(Py_hash_t)acc` on return. -/
 def toHash (acc : Nat) : Int := if acc ≥ 2 ^ 63 then (acc : Int) - U64 else acc
 
-/-- The hash loop, tupleobject.c:392-401. `PyObject_Hash` failing is the `.error`
-case (`lane == (Py_uhash_t)-1`). -/
+/-- What the caller of `tp_hash` raises when it returns `-1` with no exception set: the result
+check of the calling function (`_Py_CheckFunctionResult`, Objects/call.c) turns it into a
+`SystemError` whose text names that caller. -/
+def hashNoExc : PyExc := .named "SystemError" "~error return without exception set"
+
+/-- The hash loop, tupleobject.c:391-401. `PyObject_Hash` failing is the `.error` case; the C
+test is `lane == (Py_uhash_t)-1` (:394), so an element hash of `-1` reported as a success, which
+only a broken C `tp_hash` can give (`slot_tp_hash` maps a Python `-1` to `-2`), is a failure too,
+with no exception set (`hashNoExc`). -/
 def hashLoop (hashE : α → Py Int) : List α → Nat → Py Nat
   | [], acc => .ok acc
   | x :: xs, acc =>
     match hashE x with
-    | .ok lane => hashLoop hashE xs (hashRound acc (toUhash lane))
+    | .ok lane =>
+      if toUhash lane = U64 - 1 then .error hashNoExc
+      else hashLoop hashE xs (hashRound acc (toUhash lane))
     | .error e => .error e
 
 /-- `acc += len ^ (_PyTuple_HASH_XXPRIME_5 ^ 3527539UL)` and the `-1` remap,
@@ -112,11 +121,13 @@ def tupleHash (hashE : α → Py Int) (t : Tup α) : Py (Int × Tup α) :=
     | .error e => .error e
 
 /-- `tuple_hash`, tupleobject.c:371-414, with the stack test: `stackFull` is
-`_Py_EnterRecursiveCall(" while hashing a tuple")` failing, which comes after the cache, so a cached
-tuple never fails it. Its text names the stack used. -/
+`_Py_EnterRecursiveCall(" while hashing a tuple")` failing (:387), which comes after the cache, so a
+cached tuple never fails it. The text is `"Stack overflow (used %d kB)%s"` (Python/ceval.c:328-331),
+which embeds the stack used. -/
 def tupleHashGuarded (hashE : α → Py Int) (t : Tup α) (stackFull : Bool) : Py (Int × Tup α) :=
   if toUhash t.hash ≠ U64 - 1 then .ok (t.hash, t)
-  else if stackFull then .error (.named "RecursionError" "~Stack overflow while hashing a tuple")
+  else if stackFull then
+    .error (.named "RecursionError" "~Stack overflow (used %d kB) while hashing a tuple")
   else tupleHash hashE t
 
 /-! ## Item access -/
@@ -168,7 +179,7 @@ def tuplePack (mayTrack : α → Bool) (n : Int) (args : List α) : Py (TRes α)
     | .ok () => .ok (.fresh { items := args, tracked := args.any mayTrack })
     | .error e => .error e
 
-/-- `_PyTuple_FromPairSteal(first, second)`, tupleobject.c:214-231, and `_PyTuple_FromPair`, :205-212. -/
+/-- `_PyTuple_FromPairSteal(first, second)`, tupleobject.c:214-233, and `_PyTuple_FromPair`, :205-212. -/
 def tupleFromPair (mayTrack : α → Bool) (first second : α) : Py (TRes α) :=
   match tupleAlloc 2 with
   | .ok () => .ok (.fresh { items := [first, second], tracked := mayTrack first || mayTrack second })
@@ -182,7 +193,9 @@ def tupleMaybeUntrack (mayBeTracked : α → Bool) (exact : Bool) (tracked : Boo
   else if items.any (fun e => match e with | none => true | some x => mayBeTracked x) then tracked
   else false
 
-/-- `tuple_slice(a, ilow, ihigh)`, tupleobject.c:518-551. -/
+/-- `tuple_slice(a, ilow, ihigh)`, tupleobject.c:518-532: `ilow` clamped below at 0, `ihigh` above
+at the size and below at `ilow` (:522-527), the tuple itself for the whole of an exact tuple
+(:528-530), otherwise `PyTuple_FromArray` of the range (:531). -/
 def tupleSlice (mayTrack : α → Bool) (a : Tup α) (ilow ihigh : Int) : Py (TRes α) :=
   let n : Int := a.items.length
   let ilow := if ilow < 0 then 0 else ilow
@@ -202,7 +215,7 @@ inductive ConcatArg (α : Type) where
   | tuple (t : Tup α)
   | other (typeName : String)
 
-/-- `_PyTuple_Concat(aa, bb)`, tupleobject.c:563-605. -/
+/-- `_PyTuple_Concat(aa, bb)`, tupleobject.c:563-608. -/
 def tupleConcat (a : Tup α) (bb : ConcatArg α) : Py (TRes α) :=
   let exactB : Bool := match bb with | .tuple t => t.exact | .other _ => false
   if a.items.length = 0 ∧ exactB then .ok (.arg 1)
@@ -297,55 +310,6 @@ def tupleRichcompare (E : ElemOps α ρ) (op : CmpOp) (v w : List α) : Py ρ :=
     else if op = .ne then .ok (E.ofBool true)
     else E.rich op x y
 
-/-! ## Construction -/
-
-/-- `PySequence_Tuple(v)` on a sequence argument (Objects/abstract.c:2005-2079), with
-`tuple_new_impl` and `tuple_vectorcall`. The argument is what the type does:
-an exact tuple is returned, a list goes through `PyList_AsTuple`
-(`_PyTuple_FromArray`), other iterables through a buffer or a list and
-`_PyTuple_FromArraySteal`. -/
-inductive TupleSrc (α : Type) where
-  | exactTuple (t : Tup α)
-  | exactList (l : List α)
-  | iterable (items : List α)
-
-def pySequenceTuple (mayTrack : α → Bool) : TupleSrc α → Py (TRes α)
-  | .exactTuple _ => .ok (.arg 0)
-  | .exactList l => tupleFromArray mayTrack l
-  | .iterable items => tupleFromArraySteal items
-
-/-- `tuple_new_impl(type, iterable)`, tupleobject.c:807-820 for `type == tuple`. -/
-def tupleNew (mayTrack : α → Bool) (iterable : Option (TupleSrc α)) : Py (TRes α) :=
-  match iterable with
-  | none => .ok .empty
-  | some src => pySequenceTuple mayTrack src
-
-/-- `tuple_subtype_new(type, iterable)`, tupleobject.c:843-876: a fresh subclass
-instance holding the items of `tuple(iterable)`, tracked, with no cached hash. -/
-def tupleSubtypeNew (mayTrack : α → Bool) (iterable : Option (TupleSrc α)) : Py (Tup α) :=
-  let items := fun (r : TRes α) (src : Option (TupleSrc α)) =>
-    match src with
-    | some (.exactTuple t) => r.items t.items []
-    | _ => r.items [] []
-  match tupleNew mayTrack iterable with
-  | .ok r => .ok { items := items r iterable, exact := false, tracked := true, hash := -1 }
-  | .error e => .error e
-
-/-- `tuple_vectorcall(type, args, nargsf, kwnames)`, tupleobject.c:822-841:
-keyword names and the argument count are checked in that order. -/
-def tupleVectorcall (mayTrack : α → Bool) (args : List (TupleSrc α)) (nkw : Nat) : Py (TRes α) :=
-  if nkw ≠ 0 then .error (.typeError "tuple() takes no keyword arguments")
-  else if args.length > 1 then
-    .error (.typeError s!"tuple expected at most 1 argument, got {args.length}")
-  else
-    match args with
-    | src :: _ => tupleNew mayTrack (some src)
-    | [] => .ok .empty
-
-/-- `tuple.__getnewargs__`, tupleobject.c:960-965: `(tuple_slice(self, 0, n),)`. -/
-def tupleGetnewargs (mayTrack : α → Bool) (a : Tup α) : Py (TRes α) :=
-  tupleSlice mayTrack a 0 a.items.length
-
 /-! ## Subscript -/
 
 /-- `tuple_subscript(op, item)` for an int item, tupleobject.c:904-910. -/
@@ -376,7 +340,7 @@ def unpackIndices (len : Int) (s : Slice) : Int × Int :=
   let (a, b, _) := adjustIndices len a b 1
   (a, b)
 
-/-- `_PyTuple_BinarySlice(container, start, stop)`, tupleobject.c:534-549, for an exact tuple. -/
+/-- `_PyTuple_BinarySlice(container, start, stop)`, tupleobject.c:534-551, for an exact tuple. -/
 def tupleBinarySlice (mayTrack : α → Bool) (t : Tup α) (s : Slice) : Py (TRes α) :=
   let len : Int := t.items.length
   let (istart, istop) := unpackIndices len s
@@ -385,13 +349,15 @@ def tupleBinarySlice (mayTrack : α → Bool) (t : Tup α) (s : Slice) : Py (TRe
     let istop := if istop < istart then istart else istop
     tupleFromArray mayTrack ((t.items.drop istart.toNat).take (istop - istart).toNat)
 
-/-- `tuple_iteritem(obj, index)`, tupleobject.c:889-897: the `_tp_iteritem` of a `for` loop. -/
+/-- `tuple_iteritem(obj, index)`, tupleobject.c:889-898: the `_tp_iteritem` of a `for` loop. -/
 def tupleIterItem (t : List α) (index : Int) : Option α × Int :=
   if index ≥ t.length then (none, index) else (slot t index, index + 1)
 
 /-! ## C API -/
 
-/-- `PyTuple_New(size)`, tupleobject.c:74-90: `NULL` items, tracked. -/
+/-- `PyTuple_New(size)`, tupleobject.c:74-90: the singleton for size 0 (:78-80), before `tuple_alloc`
+refuses a negative size or one past `tupleLimit` (:81-84); otherwise `NULL` items, tracked, with no
+cached hash (`_PyTuple_RESET_HASH_CACHE` in `tuple_alloc`). -/
 def pyTupleNew (size : Int) : Py (TRes (Option α)) :=
   if size = 0 then .ok .empty
   else
@@ -415,34 +381,44 @@ def pyTupleGetItem (op : Option (List α)) (i : Int) : Py α :=
       | some v => .ok v
       | none => .error (cUB "read outside the items array")
 
-/-- `PyTuple_SetItem(op, i, newitem)`, tupleobject.c:117-135; `unique` is
-`_PyObject_IsUniquelyReferenced(op)`. The cached hash is not reset. -/
-def pyTupleSetItem (op : Option (List α)) (unique : Bool) (i : Int) (v : α) : Py (List α) :=
+/-- `PyTuple_SetItem(op, i, newitem)`, tupleobject.c:117-135. `none` is an object that is not a
+tuple (`PyTuple_Check`, so a subclass instance is `some`); `unique` is
+`_PyObject_IsUniquelyReferenced(op)`, tested in the same condition, so both refusals are the one
+`SystemError` (:121-125). Then the index test (:126-131) and `Py_XSETREF` of the slot (:132-133), and
+nothing else: `ob_hash` keeps a hash computed before, as do the type and the GC flag. `newitem` may be
+`NULL`, an `Option` element type's `none`. -/
+def pyTupleSetItem (op : Option (Tup α)) (unique : Bool) (i : Int) (v : α) : Py (Tup α) :=
   match op with
   | none => .error systemError
-  | some a =>
+  | some t =>
     if !unique then .error systemError
-    else if i < 0 ∨ i ≥ a.length then .error (.indexError "tuple assignment index out of range")
-    else .ok (a.set i.toNat v)
+    else if i < 0 ∨ i ≥ t.items.length then .error (.indexError "tuple assignment index out of range")
+    else .ok { t with items := t.items.set i.toNat v }
 
-/-- `_PyTuple_Resize(pv, newsize)`, tupleobject.c:1045-1123, on the items. The
-checks at :1054-1055 fail with an internal error, and the size past what `tuple_alloc` can give with
-`MemoryError`; `NULL` items pad a growing tuple (`memset`). -/
-def tupleResize (v : Option (List (Option α))) (isExact unique : Bool) (newsize : Int) :
-    Py (List (Option α)) :=
+/-- `_PyTuple_Resize(pv, newsize)`, tupleobject.c:1045-1123, on the object `*pv`: `none` is `NULL`,
+and `exact` is `Py_IS_TYPE(v, &PyTuple_Type)` (:1054), so an object of any other type, a subclass
+instance included, has `exact = false`. `unique` is `_PyObject_IsUniquelyReferenced(*pv)`, which is
+not asked of an empty tuple, the shared singleton (:1055). The refusals of :1054-1059 are one
+`SystemError`. Then, in order: the same size leaves `*pv` as it is (`.arg 0`, :1063-1065); size 0
+makes `*pv` the singleton (:1066-1070); the empty tuple is never resized in place but replaced by
+`PyTuple_New(newsize)` (:1071-1080); a size past what `tuple_alloc` can give is `MemoryError`
+(:1081-1088); otherwise the object is reallocated (`PyObject_GC_Resize`, :1101), the items past
+`newsize` dropped (:1097-1099), the new slots `NULL` (:1117-1119), and it is tracked again (:1121),
+with `ob_hash` as it was, since nothing resets it. That object, which `*pv` now points to, is the
+`.fresh` result. A failed reallocation is out of memory, outside the model. -/
+def tupleResize (v : Option (Tup (Option α))) (unique : Bool) (newsize : Int) :
+    Py (TRes (Option α)) :=
   match v with
   | none => .error systemError
-  | some items =>
-    let oldsize : Int := items.length
-    if !isExact || newsize < 0 || (oldsize ≠ 0 && !unique) then .error systemError
-    else if oldsize = newsize then .ok items
-    else if newsize = 0 then .ok []
-    else if oldsize = 0 then
-      match tupleAlloc newsize with
-      | .ok () => .ok (List.replicate newsize.toNat none)
-      | .error e => .error e
+  | some t =>
+    let oldsize : Int := t.items.length
+    if !t.exact || newsize < 0 || (oldsize ≠ 0 && !unique) then .error systemError
+    else if oldsize = newsize then .ok (.arg 0)
+    else if newsize = 0 then .ok .empty
+    else if oldsize = 0 then pyTupleNew newsize
     else if newsize > (ssizeMax - tupleBase) / 8 then .error memoryError
-    else .ok (items.take newsize.toNat ++ List.replicate (newsize - oldsize).toNat none)
+    else .ok (.fresh { t with items := t.items.take newsize.toNat ++
+                                List.replicate (newsize - oldsize).toNat none, tracked := true })
 
 /-! ## Iterator -/
 
@@ -469,14 +445,33 @@ def tupleIterLen (it : TupleIter α) : Int :=
   | some s => (s.length : Int) - it.index
   | none => 0
 
-/-- `tupleiter_reduce(self)`, tupleobject.c:1195-1214, as `(args, state)`:
-`iter(seq)` plus the index, or `iter(())` when exhausted. -/
-def tupleIterReduce (it : TupleIter α) : List α × Option Int :=
-  match it.seq with
-  | some s => (s, some it.index)
-  | none => ([], none)
+/-- The value of `it.__reduce__()`: `(callable, (it_seq,), index)` for a live iterator
+(`Py_BuildValue("N(O)n", ...)`, tupleobject.c:1210-1211) and `(callable, ((),))` for an exhausted one
+(`"N(())"`, :1213). -/
+inductive TIterReduce (β α : Type) where
+  | live (callable : β) (seq : List α) (index : Int)
+  | empty (callable : β)
+  deriving Repr, DecidableEq
 
-/-- `tupleiter_setstate(self, state)`, tupleobject.c:1216-1231. -/
+/-- `tupleiter_reduce(self)`, tupleobject.c:1195-1214. `getBuiltin it` is
+`_PyEval_GetBuiltin(&_Py_ID(iter))` (Python/ceval.c), a lookup in the frame's builtins that can run
+user code (a key's `__eq__`) which may advance or exhaust this very iterator, and that fails with
+`AttributeError("iter")` when the name is missing. The lookup comes first ("call must be before access
+of iterator pointers", gh-101765, :1198-1203); `it_seq` and `it_index` are then read from the iterator
+as the lookup left it (:1210-1213). A failed lookup hands `NULL` to `N`, so `Py_BuildValue` returns
+`NULL` with the lookup's exception. -/
+def tupleIterReduce {β : Type} (getBuiltin : TupleIter α → Py β × TupleIter α) (it : TupleIter α) :
+    Py (TIterReduce β α) × TupleIter α :=
+  match getBuiltin it with
+  | (.error e, it') => (.error e, it')
+  | (.ok c, it') =>
+    match it'.seq with
+    | some s => (.ok (.live c s it'.index), it')
+    | none => (.ok (.empty c), it')
+
+/-- `tupleiter_setstate(self, state)`, tupleobject.c:1216-1231, for an int `state`: `PyLong_AsSsize_t`
+(:1220-1222) refuses one outside `Py_ssize_t` with `OverflowError`; a live iterator takes the index
+clipped to `[0, len]` (:1223-1228), an exhausted one is left alone. -/
 def tupleIterSetstate (it : TupleIter α) (state : Int) : Py (TupleIter α) := do
   let index ← PyLean.Sequences.asSsize state
   match it.seq with
@@ -485,10 +480,17 @@ def tupleIterSetstate (it : TupleIter α) (state : Int) : Py (TupleIter α) := d
     .ok { it with index := index }
   | none => .ok it
 
-/-- Rebuild from `__reduce__`: `iter(args)`, then `__setstate__(state)`. -/
-def tupleIterRebuild (r : List α × Option Int) : Py (TupleIter α) :=
-  match r.2 with
-  | some st => tupleIterSetstate (tupleIter r.1) st
-  | none => .ok (tupleIter r.1)
+/-- `tupleiter_setstate(self, state)` for any object: `PyLong_AsSsize_t(state)` refuses one that is
+not an int (`none`) with `TypeError("an integer is required")` (Objects/longobject.c:717-719), before
+the iterator is looked at. -/
+def tupleIterSetstateObj (it : TupleIter α) : Option Int → Py (TupleIter α)
+  | none => .error (.typeError "an integer is required")
+  | some s => tupleIterSetstate it s
+
+/-- Unpickling a `__reduce__` value whose callable is `iter`: `iter(seq)`, then `__setstate__(index)`
+for the live form; `iter(())` for the exhausted one. -/
+def tupleIterRebuild {β : Type} : TIterReduce β α → Py (TupleIter α)
+  | .live _ s i => tupleIterSetstate (tupleIter s) i
+  | .empty _ => .ok (tupleIter [])
 
 end PyLean.BytesObj.Seq
