@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.SpecInv1
+import PyLean.PyGrammar.Peg.Rules.SpecInv2
 
 /-! Registry entries for the rules stated as equations (`Peg/Rules/Spec.lean` and the
 `Spec*.lean` files after it). -/
@@ -80,7 +80,124 @@ def specEntries : List Entry := [
      "from the star to the end of the line; expression ':' followed by '}' or ',' raises " ++
      "\"expression expected after dictionary key and ':'\" at the ':'.")
     "Grammar/python.gram:1571-1576; Parser/pegen.h:187-200" ``InvalidKvpair ``invalidKvpair_proven
-    " Tmp151 pins the lookahead group to '}' | ','."
+    " Tmp151 pins the lookahead group to '}' | ','.",
+  specEntry "pygrammar-rule-invalid-if-stmt" Rows.rule_invalid_if_stmt
+    ("invalid_if_stmt: 'if' named_expression NEWLINE raises \"expected ':'\"; 'if' named_expression " ++
+     "':' NEWLINE not followed by INDENT raises IndentationError \"expected an indented block after " ++
+     "'if' statement on line N\", N the line of the 'if'.")
+    "Grammar/python.gram:1531-1534" ``InvalidIfStmt ``invalidIfStmt_proven,
+  specEntry "pygrammar-rule-invalid-elif-stmt" Rows.rule_invalid_elif_stmt
+    "invalid_elif_stmt: as invalid_if_stmt with 'elif' and \"... after 'elif' statement on line N\"."
+    "Grammar/python.gram:1535-1538" ``InvalidElifStmt ``invalidElifStmt_proven,
+  specEntry "pygrammar-rule-invalid-else-stmt" Rows.rule_invalid_else_stmt
+    ("invalid_else_stmt: 'else' ':' NEWLINE without INDENT raises the IndentationError with the " ++
+     "line of 'else'; 'else' ':' block 'elif' raises \"'elif' block follows an 'else' block\".")
+    "Grammar/python.gram:1539-1542" ``InvalidElseStmt ``invalidElseStmt_proven,
+  specEntry "pygrammar-rule-invalid-while-stmt" Rows.rule_invalid_while_stmt
+    "invalid_while_stmt: as invalid_if_stmt with 'while' and \"... after 'while' statement on line N\"."
+    "Grammar/python.gram:1543-1546" ``InvalidWhileStmt ``invalidWhileStmt_proven,
+  specEntry "pygrammar-rule-invalid-for-stmt" Rows.rule_invalid_for_stmt
+    ("invalid_for_stmt: ['async'] 'for' star_targets 'in' star_expressions NEWLINE raises " ++
+     "\"expected ':'\"; with ':' NEWLINE and no INDENT the IndentationError with the line of 'for'.")
+    "Grammar/python.gram:1547-1550" ``InvalidForStmt ``invalidForStmt_proven,
+  specEntry "pygrammar-rule-invalid-def-raw" Rows.rule_invalid_def_raw
+    ("invalid_def_raw: a def header ending in ':' NEWLINE without INDENT raises \"expected an " ++
+     "indented block after function definition on line N\" (N of 'def'); otherwise a def with " ++
+     "forced '(' and ':' and a block gives the dummy result.")
+    "Grammar/python.gram:1551-1554" ``InvalidDefRawRule ``invalidDefRawRule_proven
+    " Tmp26 pins ['->' expression].",
+  specEntry "pygrammar-rule-invalid-class-def-raw" Rows.rule_invalid_class_def_raw
+    ("invalid_class_def_raw: 'class' NAME [type_params] ['(' [arguments] ')'] NEWLINE raises " ++
+     "\"expected ':'\"; with ':' NEWLINE and no INDENT \"expected an indented block after class " ++
+     "definition on line N\".")
+    "Grammar/python.gram:1555-1558" ``InvalidClassDefRawRule ``invalidClassDefRawRule_proven
+    " Tmp25 pins ['(' [arguments] ')'].",
+  specEntry "pygrammar-rule-invalid-try-stmt" Rows.rule_invalid_try_stmt
+    ("invalid_try_stmt: the four alternatives in order: no indented block after 'try' " ++
+     "(IndentationError with its line), a block followed by neither 'except' nor 'finally', " ++
+     "except_block+ then 'except' '*' (range 'except' .. '*'), except_star_block+ then a plain " ++
+     "'except' (at the 'except'), the last two \"cannot have both 'except' and 'except*' on the " ++
+     "same 'try'\".")
+    "Grammar/python.gram:1469-1476" ``InvalidTryStmtRule ``invalidTryStmtRule_proven
+    " The groups, block* and the except loops are pinned (Tmp144, Loop0_145, Loop1_36, Loop1_37, Tmp21, Tmp146).",
+  specEntry "pygrammar-rule-invalid-except-stmt" Rows.rule_invalid_except_stmt
+    ("invalid_except_stmt: 'except' expression ',' expressions 'as' NAME ':' raises \"multiple " ++
+     "exception types must be parenthesized when using 'as'\" from the first type on; a missing ':' " ++
+     "(with or without a type) \"expected ':'\"; 'except' expression 'as' expression ':' block " ++
+     "\"cannot use except statement with <name of target>\" at the target.")
+    "Grammar/python.gram:1477-1484" ``InvalidExceptStmtRule ``invalidExceptStmtRule_proven,
+  specEntry "pygrammar-rule-invalid-except-star-stmt" Rows.rule_invalid_except_star_stmt
+    ("invalid_except_star_stmt: the except* twins of invalid_except_stmt, and 'except' '*' " ++
+     "followed by NEWLINE or ':' raises \"expected one or more exception types\".")
+    "Grammar/python.gram:1485-1492" ``InvalidExceptStarStmtRule ``invalidExceptStarStmtRule_proven,
+  specEntry "pygrammar-rule-invalid-finally-stmt" Rows.rule_invalid_finally_stmt
+    "invalid_finally_stmt: 'finally' ':' NEWLINE without INDENT raises the IndentationError with its line."
+    "Grammar/python.gram:1493-1495" ``InvalidFinallyStmt ``invalidFinallyStmt_proven,
+  specEntry "pygrammar-rule-invalid-except-stmt-indent" Rows.rule_invalid_except_stmt_indent
+    ("invalid_except_stmt_indent: 'except' expression ['as' NAME] ':' NEWLINE, then 'except' ':' " ++
+     "NEWLINE, without INDENT raise the IndentationError with the line of 'except'.")
+    "Grammar/python.gram:1496-1499" ``InvalidExceptStmtIndentRule ``invalidExceptStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-except-star-stmt-indent" Rows.rule_invalid_except_star_stmt_indent
+    "invalid_except_star_stmt_indent: as invalid_except_stmt_indent for 'except' '*' expression."
+    "Grammar/python.gram:1500-1502" ``InvalidExceptStarStmtIndentRule ``invalidExceptStarStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-match-stmt" Rows.rule_invalid_match_stmt
+    ("invalid_match_stmt: \"match\" subject_expr NEWLINE raises \"expected ':'\" and CHECK_VERSION's " ++
+     "NULL sets error_indicator; a match header without INDENT raises the IndentationError; " ++
+     "\"case\" patterns guard? ':' block outside a match raises \"case statement must be inside " ++
+     "match statement\" over \"case\" .. ':'.")
+    "Grammar/python.gram:1503-1510" ``InvalidMatchStmt ``invalidMatchStmt_proven,
+  specEntry "pygrammar-rule-invalid-case-block" Rows.rule_invalid_case_block
+    ("invalid_case_block: \"case\" patterns guard? NEWLINE raises \"expected ':'\"; with ':' " ++
+     "NEWLINE and no INDENT the IndentationError with the line of \"case\".")
+    "Grammar/python.gram:1511-1514" ``InvalidCaseBlock ``invalidCaseBlock_proven,
+  specEntry "pygrammar-rule-invalid-with-stmt" Rows.rule_invalid_with_stmt
+    ("invalid_with_stmt: items then ',' ':' raises \"the last 'with' item has a trailing comma\" " ++
+     "at the comma; items, or a parenthesized list, then NEWLINE raise \"expected ':'\".")
+    "Grammar/python.gram:1458-1462" ``InvalidWithStmtRule ``invalidWithStmtRule_proven
+    " The item gathers and groups are pinned (WithGathers).",
+  specEntry "pygrammar-rule-invalid-with-stmt-indent" Rows.rule_invalid_with_stmt_indent
+    ("invalid_with_stmt_indent: a with header, plain or parenthesized, ending ':' NEWLINE without " ++
+     "INDENT raises the IndentationError with the line of 'with'.")
+    "Grammar/python.gram:1463-1467" ``InvalidWithStmtIndentRule ``invalidWithStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-with-item" Rows.rule_invalid_with_item
+    ("invalid_with_item: expression 'as' expression followed by ',' ')' or ':' runs " ++
+     "RAISE_SYNTAX_ERROR_INVALID_TARGET(STAR_TARGETS) on the target: \"cannot assign to <name>\" " ++
+     "over its first invalid part, or NULL without an exception when it is a valid target.")
+    "Grammar/python.gram:1416-1418; Parser/pegen.h:245-264" ``InvalidWithItemRule ``invalidWithItemRule_proven,
+  specEntry "pygrammar-rule-invalid-for-target" Rows.rule_invalid_for_target
+    ("invalid_for_target: 'async'? 'for' star_expressions runs " ++
+     "RAISE_SYNTAX_ERROR_INVALID_TARGET(FOR_TARGETS) on the target.")
+    "Grammar/python.gram:1424-1426; Parser/pegen.h:245-264" ``InvalidForTarget ``invalidForTarget_proven,
+  specEntry "pygrammar-rule-invalid-for-if-clause" Rows.rule_invalid_for_if_clause
+    ("invalid_for_if_clause: 'async'? 'for' (bitwise_or (',' bitwise_or)* [',']) not followed by " ++
+     "'in' raises \"'in' expected after for-loop variables\".")
+    "Grammar/python.gram:1420-1422" ``InvalidForIfClauseRule ``invalidForIfClauseRule_proven,
+  specEntry "pygrammar-rule-invalid-import-from" Rows.rule_invalid_import_from
+    ("invalid_import_from (3.15): 'from' dots dotted_name \"lazy\" 'import' import_from_targets " ++
+     "raises \"use 'lazy from ... ' instead of 'from ... lazy import'\" at \"lazy\".")
+    "Grammar/python.gram:1447-1450" ``InvalidImportFromRule ``invalidImportFromRule_proven,
+  specEntry "pygrammar-rule-invalid-import-from-targets" Rows.rule_invalid_import_from_targets
+    ("invalid_import_from_targets: import_from_as_names ',' NEWLINE raises \"trailing comma not " ++
+     "allowed without surrounding parentheses\"; a bare NEWLINE \"Expected one or more names after " ++
+     "'import'\" from the NEWLINE on.")
+    "Grammar/python.gram:1452-1456" ``InvalidImportFromTargets ``invalidImportFromTargets_proven,
+  specEntry "pygrammar-rule-invalid-as-pattern" Rows.rule_invalid_as_pattern
+    ("invalid_as_pattern: or_pattern 'as' \"_\" raises \"cannot use '_' as a target\"; or_pattern " ++
+     "'as' expression \"cannot use <name> as pattern target\", both at the target.")
+    "Grammar/python.gram:1515-1519" ``InvalidAsPattern ``invalidAsPattern_proven,
+  specEntry "pygrammar-rule-invalid-class-pattern" Rows.rule_invalid_class_pattern
+    ("invalid_class_pattern: name_or_attr '(' invalid_class_argument_pattern raises \"positional " ++
+     "patterns follow keyword patterns\" from the first to the last of those positional patterns.")
+    "Grammar/python.gram:1520-1524" ``InvalidClassPattern ``invalidClassPattern_proven,
+  specEntry "pygrammar-rule-invalid-mapping-pattern" Rows.rule_invalid_mapping_pattern
+    ("invalid_mapping_pattern (3.15): '{' (items_pattern ',')? double_star_pattern ',' " ++
+     "items_pattern ','? '}' raises \"double star pattern must be the last (right-most) subpattern " ++
+     "in the mapping pattern\" at the '**' pattern.")
+    "Grammar/python.gram:1525-1528" ``InvalidMappingPatternRule ``invalidMappingPatternRule_proven,
+  specEntry "pygrammar-rule-invalid-class-argument-pattern" Rows.rule_invalid_class_argument_pattern
+    ("invalid_class_argument_pattern: [positional_patterns ','] keyword_patterns ',' " ++
+     "positional_patterns gives the positional patterns after the keyword ones.")
+    "Grammar/python.gram:1529-1530" ``InvalidClassArgumentPatternRule ``invalidClassArgumentPatternRule_proven
 ]
 
 end PyLean.PyGrammar.Peg

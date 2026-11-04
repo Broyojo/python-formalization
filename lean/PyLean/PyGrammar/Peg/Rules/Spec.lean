@@ -312,6 +312,200 @@ theorem altResult_indLine {a : Alt} {g : Bool} {env : Array Ast} {st : Int × In
     rw [e, formatMsg_d _ _ hp, String.ofList_toList]
     rfl)
 
+/-! ### Messages with `_PyPegen_get_expr_name`, invalid targets, default actions -/
+
+theorem formatMsg_plainc (c : Char) (cs : List Char) (as : List Ast) (hc : c ≠ '%') :
+    formatMsg (c :: cs) as = String.singleton c ++ formatMsg cs as := by
+  rw [formatMsg.eq_def]
+  split
+  all_goals simp_all
+
+theorem formatMsg_plain : ∀ (cs : List Char), '%' ∉ cs → ∀ as, formatMsg cs as = String.ofList cs
+  | [], _, as => by cases as <;> simp [formatMsg]
+  | c :: cs, h, as => by
+    have hc : c ≠ '%' := fun e => h (e ▸ List.mem_cons_self ..)
+    rw [formatMsg_plainc c cs as hc, formatMsg_plain cs (fun e => h (List.mem_cons_of_mem _ e)) as]
+    simp [String.ofList_cons]
+
+/-- The piece `PyUnicode_FromFormatV` writes for one conversion. -/
+def fmtPiece (k : Char) (a : Ast) : String :=
+  match a with
+  | .str cs | .ident cs => if k == 'R' then "'" ++ cpsStr cs ++ "'" else cpsStr cs
+  | .int i => if k == 'c' then chStr i.toNat else toString i
+  | _ => ""
+
+theorem formatMsg_pct : ∀ (cs : List Char) (k : Char) (rest : List Char) (a : Ast) (as : List Ast),
+    '%' ∉ cs → k ≠ '%' →
+    formatMsg (cs ++ '%' :: k :: rest) (a :: as) =
+      String.ofList cs ++ fmtPiece k a ++ formatMsg rest as
+  | [], k, rest, a, as, _, hk => by
+    simp only [List.nil_append, String.ofList_nil, String.empty_append]
+    rw [formatMsg.eq_def]
+    split
+    · simp_all
+    · simp_all
+    · rename_i c r a' as' _ h1 h2
+      obtain ⟨rfl, rfl⟩ := h1
+      obtain ⟨rfl, rfl⟩ := h2
+      rfl
+    · rename_i h1 h2
+      obtain ⟨rfl, rfl⟩ := h1
+      first | simp_all | exact absurd rfl (h2 _ _ _ _ rfl rfl) | exact absurd rfl (h2 _ _ _ _ rfl)
+  | c :: cs, k, rest, a, as, h, hk => by
+    have hc : c ≠ '%' := fun e => h (e ▸ List.mem_cons_self ..)
+    rw [List.cons_append, formatMsg_plainc c _ _ hc,
+      formatMsg_pct cs k rest a as (fun e => h (List.mem_cons_of_mem _ e)) hk]
+    simp [String.ofList_cons, String.append_assoc]
+
+theorem cpsStr_toList (nm : String) : cpsStr (nm.toList.map Char.toNat) = nm := by
+  simp [cpsStr, map_ofNat_toNat]
+
+/-- `_PyPegen_get_expr_name` (`Parser/action_helpers.c:1084-1159`) through `callHelper`: the name
+of the node's kind, or `NULL` with a `SystemError` set (only a `Slice`, which no rule passes). -/
+theorem callHelper_exprName (e : Ast) (s : PS) :
+    callHelper .get_expr_name [e] s = match exprName e with
+      | some nm => (.str (nm.toList.map Char.toNat), s)
+      | none => (.null, (setErr { cls := "SystemError", msg := "unexpected expression in assignment" } s).2) := by
+  simp only [callHelper, List.getD_cons_zero]
+  cases exprName e <;> rfl
+
+/-- The state `_PyPegen_get_expr_name` leaves when it fails. -/
+def exprNameFail (s : PS) : PS :=
+  (setErr { cls := "SystemError", msg := "unexpected expression in assignment" } s).2
+
+theorem msg_pct_s (pre post : String) (hp : '%' ∉ pre.toList) (hq : '%' ∉ post.toList) (x : Ast) :
+    msgOf [.str ((pre ++ "%s" ++ post).toList.map Char.toNat), x] = pre ++ fmtPiece 's' x ++ post := by
+  simp only [msgOf]
+  have e : (cpsStr ((pre ++ "%s" ++ post).toList.map Char.toNat)).toList =
+      pre.toList ++ '%' :: 's' :: post.toList := by
+    simp [cpsStr, String.toList_append, map_ofNat_toNat]
+  rw [e, formatMsg_pct _ _ _ _ _ hp (by decide), formatMsg_plain _ hq, String.ofList_toList,
+    String.ofList_toList]
+
+/-- `RAISE_SYNTAX_ERROR_KNOWN_RANGE(a, b, "pre%spost", _PyPegen_get_expr_name(c))` over the
+values `i`, `j`, with the name of value `k`; when the name fails, the message has an empty name
+and the raise runs over the `SystemError`. -/
+@[irreducible] def oKRName (i j k : Nat) (pre post : String) :
+    Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env _ s => match exprName (env.getD k .null) with
+    | some nm => (none, raisedAt (env.getD i .null) (env.getD j .null) (pre ++ nm ++ post) s)
+    | none => (none, raisedAt (env.getD i .null) (env.getD j .null) (pre ++ post) (exprNameFail s))
+
+theorem altResult_krName {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {i j k : Nat} {pre post : String}
+    (h1 : a.action = some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE
+      [.var i, .var j, .str (pre ++ "%s" ++ post), .call .get_expr_name [.var k]]))
+    (hp : '%' ∉ pre.toList) (hq : '%' ∉ post.toList) :
+    altResult a g env st s = oKRName i j k pre post env st s := by
+  unfold oKRName
+  cases hn : exprName (env.getD k .null) with
+  | some nm =>
+    rw [altResult_raise h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper_exprName,
+        hn]
+      simp only [callHelper, raiseRange, List.drop_succ_cons, List.drop_zero, List.getD_cons_zero,
+        List.getD_cons_succ, msg_pct_s pre post hp hq, fmtPiece, cpsStr_toList]
+      rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+    rfl
+  | none =>
+    rw [altResult_raise h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper_exprName,
+        hn]
+      simp only [callHelper, raiseRange, List.drop_succ_cons, List.drop_zero, List.getD_cons_zero,
+        List.getD_cons_succ, msg_pct_s pre post hp hq, fmtPiece, String.append_empty]
+      rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+    rfl
+
+/-- `RAISE_SYNTAX_ERROR_KNOWN_LOCATION(a, "pre%spost", _PyPegen_get_expr_name(a))`. -/
+@[irreducible] def oKLName (i : Nat) (pre post : String) :
+    Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env _ s => match exprName (env.getD i .null) with
+    | some nm => (none, raisedAt (env.getD i .null) (env.getD i .null) (pre ++ nm ++ post) s)
+    | none => (none, raisedAt (env.getD i .null) (env.getD i .null) (pre ++ post) (exprNameFail s))
+
+theorem altResult_klName {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {i : Nat} {pre post : String}
+    (h1 : a.action = some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION
+      [.var i, .str (pre ++ "%s" ++ post), .call .get_expr_name [.var i]]))
+    (hp : '%' ∉ pre.toList) (hq : '%' ∉ post.toList) :
+    altResult a g env st s = oKLName i pre post env st s := by
+  unfold oKLName
+  cases hn : exprName (env.getD i .null) with
+  | some nm =>
+    rw [altResult_raise h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper_exprName,
+        hn]
+      simp only [callHelper, raiseRange, List.drop_succ_cons, List.drop_zero, List.getD_cons_zero,
+        List.getD_cons_succ, msg_pct_s pre post hp hq, fmtPiece, cpsStr_toList]
+      rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+    rfl
+  | none =>
+    rw [altResult_raise h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper_exprName,
+        hn]
+      simp only [callHelper, raiseRange, List.drop_succ_cons, List.drop_zero, List.getD_cons_zero,
+        List.getD_cons_succ, msg_pct_s pre post hp hq, fmtPiece, String.append_empty]
+      rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+    rfl
+
+/-- `RAISE_SYNTAX_ERROR_INVALID_TARGET(type, e)` (`Parser/pegen.h:245-264`) on the value `i`, `k`
+the `TARGETS_TYPE` (0 `STAR_TARGETS`, 1 `DEL_TARGETS`, 2 `FOR_TARGETS`): the first invalid
+target `t` of `e` (`_PyPegen_get_invalid_target`) gives "cannot assign to <name of t>" (or
+"cannot delete" for `DEL_TARGETS`) over `t`; with none, the action's `NULL` without an exception
+is the result. -/
+def targetMsg (k : Nat) (t : Ast) : String :=
+  if k == 0 || k == 2 then s!"cannot assign to {(exprName t).getD ""}"
+  else s!"cannot delete {(exprName t).getD ""}"
+
+@[irreducible] def oTarget (k i : Nat) : Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env _ s => match invalidTarget k 100000 (env.getD i .null) with
+    | .null => pureRes .null s
+    | t => (none, raisedAt t t (targetMsg k t) s)
+
+theorem altResult_target {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {k i : Nat} (h1 : a.action = some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [.int k, .var i])) :
+    altResult a g env st s = oTarget k i env st s := by
+  unfold oTarget
+  have hk : ((k : Int) == 0 || (k : Int) == 2) = (k == 0 || k == 2) := by
+    by_cases h0 : k = 0
+    · subst h0; rfl
+    · by_cases h2 : k = 2
+      · subst h2; rfl
+      · rw [show ((k : Int) == 0) = false by simp; omega, show ((k : Int) == 2) = false by simp; omega,
+          show (k == 0) = false by simp; omega, show (k == 2) = false by simp; omega]
+  generalize ht : invalidTarget k 100000 (env.getD i .null) = t
+  by_cases hn : t = .null
+  · subst hn
+    rw [altResult_pure h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper,
+        List.getD_cons_zero, List.getD_cons_succ, Int.toNat_natCast, ht]
+      rfl)]
+  · rw [altResult_raise (s' := (raiseRange "SyntaxError" t t (targetMsg k t) s).2) h1 (fun ex => by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper,
+        List.getD_cons_zero, List.getD_cons_succ, Int.toNat_natCast, hk, ht]
+      cases t <;> first | contradiction | rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
+    cases t <;> first | contradiction | rfl
+
+/-- The default action of an alternative with several items: the dummy `_PyPegen_dummy_name`
+result (`(void*)1` in `emit_default_action`). -/
+@[irreducible] def oDummy : Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun _ _ s => (some (rec_ .PDummy []), s)
+
+theorem altResult_dummy {a : Alt} {env : Array Ast} {st : Int × Int} {s : PS}
+    (h1 : a.action = none) (h2 : 1 < a.nvars) : altResult a false env st s = oDummy env st s := by
+  unfold oDummy
+  simp only [altResult, h1, h2, ↓reduceIte, Bool.false_eq_true]
+  rfl
+
+/-- An action that is one of the values: `{ a }`. -/
+@[irreducible] def oVar (i : Nat) : Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env _ s => pureRes (env.getD i .null) s
+
+theorem altResult_var {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS} {i : Nat}
+    (h1 : a.action = some (.var i)) : altResult a g env st s = oVar i env st s := by
+  unfold oVar
+  exact altResult_pure h1 (fun _ => rfl)
+
 theorem altResult_none1' {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     (h1 : a.action = none) (h2 : a.nvars = 1) : altResult a g env st s = oVar0 env st s := by
   rw [altResult_none1 h1 h2]
@@ -420,6 +614,33 @@ macro "spec_alts" : tactic => `(tactic| (
     | (intro _ _ _; exact altResult_ind rfl (by decide +kernel))
     | (intro _ _ _; exact altResult_indLine rfl (by decide +kernel))
     | (intro _ _ _; exact altResult_none1' rfl rfl)
+    | (intro _ _ _; exact altResult_krName rfl (by decide +kernel) (by decide +kernel))
+    | (intro _ _ _; exact altResult_klName rfl (by decide +kernel) (by decide +kernel))
+    | (intro _ _ _; exact altResult_target rfl)
+    | (intro _ _ _; exact altResult_dummy rfl (by decide))
+    | (intro _ _ _; exact altResult_var rfl)
     | skip))
+
+/-! ### Rules without `EXTRA` -/
+
+/-- A rule function without `EXTRA`, not `(memo)`, not left-recursive: from any entry state (no
+error, below `MAXSTACK`), its result is that of its alternatives `xs`, run from the state after
+`p->level++`, with `p->level--` at the end. -/
+def PlainSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false →
+  p.level ≠ MAXSTACK → callRule (f + 2) id p = finish (specAlts f xs p.mark (0, 0) p.enter)
+
+/-- `RAISE_SYNTAX_ERROR(msg)` with a fixed message. -/
+abbrev oSyn (m : String) := oMsg "SyntaxError" false (fun _ => m)
+
+/-- `RAISE_INDENTATION_ERROR("<pre>%d", a->lineno)`, `a` the value `i`. -/
+abbrev oIndent (pre : String) (i : Nat) :=
+  oMsg "IndentationError" false (fun env => pre ++ toString (locOf (env.getD i .null)).lineno)
+
+/-- Prove a `PlainSpec`: the entry, then each alternative against the data. -/
+macro "plain_spec" : tactic => `(tactic| (
+  intro f p he hl
+  rw [callRule_plain rfl rfl rfl rfl rfl he hl]
+  refine congrArg finish (runAlts_spec f _ _ ?_ _ _ _)
+  spec_alts))
 
 end PyLean.PyGrammar.Peg
