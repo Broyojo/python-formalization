@@ -152,6 +152,7 @@ datetime-datetime-hash	proven	Lib/_pydatetime.py	datetime.__hash__,C datetime_ha
 datetime-datetime-timetuple	proven	Lib/_pydatetime.py	datetime.timetuple,C datetime_timetuple
 datetime-datetime-utctimetuple	proven	Lib/_pydatetime.py	datetime.utctimetuple,C datetime_utctimetuple
 datetime-datetime-compare	proven	Lib/_pydatetime.py	datetime.__eq__,datetime.__le__,datetime.__lt__,datetime.__ge__,datetime.__gt__,datetime._cmp,_cmp,C datetime_richcompare,C diff_to_bool,C flip_fold,C get_flip_fold_offset,C pep495_eq_exception
+datetime-wrap-scan-directives	proven	Lib/_pydatetime.py	_wrap_strftime
 datetime-strftime-twins	refuted	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime
 datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datetime_datetime_astimezone_impl
 datetime-time-pickle-ctor-twins	refuted	Lib/_pydatetime.py	time.__new__,C time_new
@@ -188,7 +189,9 @@ datetime-strftime-twins-narrow	open	Lib/_pydatetime.py	_wrap_strftime,C wrap_str
 datetime-time-compare-whole-minutes	open	Lib/_pydatetime.py	time._cmp,C time_richcompare
 datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,timezone.fromutc,C datetime_datetime_astimezone_impl,C timezone_fromutc
 datetime-tzinfo-fromutc	open	Lib/_pydatetime.py	tzinfo.fromutc,C tzinfo_fromutc
-datetime-timedelta-str-repr	open	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
+datetime-timedelta-str-repr	proven	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
+datetime-timedelta-repr-cls	proven	Lib/_pydatetime.py	timedelta.__repr__,_get_class_module,C delta_repr
+datetime-timedelta-repr-twins	refuted	Lib/_pydatetime.py	timedelta.__repr__,_get_class_module,C delta_repr
 datetime-zoneinfo-rule-date-twins	proven	Modules/_zoneinfo.c	C calendarrule_year_to_timestamp,C dayrule_year_to_timestamp,C ymd_to_ord,C is_leap_year,_CalendarOffset.year_to_epoch,_CalendarOffset._ymd2ord,_DayOffset.year_to_epoch,_post_epoch_days_before_year
 datetime-zoneinfo-calendar-rule-meaning	proven	Lib/zoneinfo/_zoneinfo.py	_CalendarOffset.year_to_epoch,_CalendarOffset._ymd2ord,_post_epoch_days_before_year
 datetime-zoneinfo-julian-rule-meaning	proven	Lib/zoneinfo/_zoneinfo.py	_DayOffset.year_to_epoch,_post_epoch_days_before_year
