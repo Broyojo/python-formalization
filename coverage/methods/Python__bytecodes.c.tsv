@@ -181,10 +181,10 @@ Python/bytecodes.c	1893	1893	opcode:_YIELD_VALUE_EVENT	tier1 op(_YIELD_VALUE_EVE
 Python/bytecodes.c	1906	1906	opcode:INSTRUMENTED_YIELD_VALUE	macro(INSTRUMENTED_YIELD_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1911	1911	opcode:POP_EXCEPT	inst(POP_EXCEPT, (exc_value -- )) {	modelled	bytecode-exc-info-nests	
 Python/bytecodes.c	1918	1918	opcode:RERAISE	tier1 inst(RERAISE, (values[oparg], exc_st -- values[oparg])) {	modelled	bytecode-reraise	
-Python/bytecodes.c	1931	1931	opcode:_END_ASYNC_FOR	tier1 op(_END_ASYNC_FOR, (awaitable_st, exc_st -- )) {	todo		
+Python/bytecodes.c	1931	1931	opcode:_END_ASYNC_FOR	tier1 op(_END_ASYNC_FOR, (awaitable_st, exc_st -- )) {	modelled	bytecode-end-async-for	
 Python/bytecodes.c	1949	1949	opcode:_MONITOR_END_ASYNC_FOR	tier1 op(_MONITOR_END_ASYNC_FOR, ( -- )) {	todo		
 Python/bytecodes.c	1954	1954	opcode:INSTRUMENTED_END_ASYNC_FOR	macro(INSTRUMENTED_END_ASYNC_FOR) =	todo		
-Python/bytecodes.c	1958	1958	opcode:END_ASYNC_FOR	macro(END_ASYNC_FOR) = _END_ASYNC_FOR;	todo		
+Python/bytecodes.c	1958	1958	opcode:END_ASYNC_FOR	macro(END_ASYNC_FOR) = _END_ASYNC_FOR;	modelled	bytecode-end-async-for	
 Python/bytecodes.c	1960	1960	opcode:CLEANUP_THROW	tier1 inst(CLEANUP_THROW, (sub_iter, null_in, last_sent_val, exc_value_st -- none, null_out, value)) {	modelled	bytecode-cleanup-throw	
 Python/bytecodes.c	1980	1980	opcode:LOAD_COMMON_CONSTANT	inst(LOAD_COMMON_CONSTANT, ( -- value)) {	todo		
 Python/bytecodes.c	1986	1986	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( -- bc)) {	todo		changed-in-3.15:

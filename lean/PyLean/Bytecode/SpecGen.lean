@@ -249,6 +249,24 @@ theorem iterSendRules_proven : IterSendRules := by
   · simp [fetchStopIterationValue, h, bind, EStateM.bind, throw, throwThe, MonadExcept.throw, EStateM.throw,
       MonadExceptOf.throw]
 
+/-! ## `END_ASYNC_FOR` -/
+
+/-- `END_ASYNC_FOR` (`:1958`, `_END_ASYNC_FOR`, `:1931-1947`) on `(awaitable, exc)`, for every object
+model: when `PyErr_GivenExceptionMatches(exc, StopAsyncIteration)` (a subclass included) both are
+dropped and the loop ends; otherwise `exc` is re-raised through `exception_unwind` (no traceback entry),
+the two dropped by the unwinding (the model drops them first, as for `CLEANUP_THROW`). -/
+def EndAsyncForRules : Prop := ∀ (e : Env) (regs : Regs) (aw exc : Val) (rest : List Val) (rt : Rt),
+  (givenMatches exc 8 (.cls "StopAsyncIteration") regs.rt = .ok true rt →
+    execOp e .END_ASYNC_FOR ⟨regs, exc :: aw :: rest⟩ = .ok () ⟨{ regs with rt := rt }, rest⟩) ∧
+  (givenMatches exc 8 (.cls "StopAsyncIteration") regs.rt = .ok false rt →
+    execOp e .END_ASYNC_FOR ⟨regs, exc :: aw :: rest⟩ = .error (.unwind exc) ⟨{ regs with rt := rt }, rest⟩)
+
+theorem endAsyncForRules_proven : EndAsyncForRules := by
+  intro e regs aw exc rest rt
+  refine ⟨fun h => ?_, fun h => ?_⟩
+  · bc_simp [execOp, END_ASYNC_FOR, _END_ASYNC_FOR, h]
+  · bc_simp [execOp, END_ASYNC_FOR, _END_ASYNC_FOR, h]
+
 def GenFrameRules : Prop := ReturnGeneratorRules ∧ YieldSuspends ∧ TracebackRules ∧ WithExceptStartRules
 
 end PyLean.Bytecode

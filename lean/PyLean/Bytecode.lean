@@ -828,7 +828,13 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := [op "WITH_EXCEPT_START"]
     statement := "For every object model, WITH_EXCEPT_START on (exit_func, exit_self, lasti, prev_exc, val) with val an exception instance calls exit_func with exit_self first when it is not NULL, then type(val), val and val.__traceback__ (None for NULL), pushes the result above the five, and on an error leaves the stack as it was."
     source := "Python/bytecodes.c:4153-4187"
-    status := .proven, prop := ``WithExceptStartRules, thm := some ``withExceptStartRules_proven }
+    status := .proven, prop := ``WithExceptStartRules, thm := some ``withExceptStartRules_proven },
+  { id := "bytecode-end-async-for", pyFile := "Python/bytecodes.c"
+    pyFns := [op "END_ASYNC_FOR", op "_END_ASYNC_FOR"]
+    statement := "For every object model, END_ASYNC_FOR on (awaitable, exc) drops both when exc matches StopAsyncIteration (PyErr_GivenExceptionMatches, a subclass included), and otherwise re-raises exc through exception_unwind, with no traceback entry."
+    source := "Python/bytecodes.c:1931-1958"
+    status := .proven, prop := ``EndAsyncForRules, thm := some ``endAsyncForRules_proven
+    notes := "The JUMPBY(0) is for monitoring only. On the re-raise the model drops the two before unwinding; the C unwinding to the handler's depth, below them, drops them." }
 ]
 
 end PyLean.Bytecode
