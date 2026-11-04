@@ -319,7 +319,7 @@ theorem lookupSpecialFollowsDescriptor_proven : LookupSpecialFollowsDescriptor :
 /-- `_lookup_special` "Follow[s] the standard lookup behaviour for special methods"
 (Lib/contextlib.py:535): `getattr_static(type(obj), name)` finds what the interpreter's special
 lookup finds on `type(obj)`. Refuted: when `type(obj)` is a class whose metaclass defines `name`,
-`getattr_static` falls back to the metaclass (Lib/inspect.py:1795-1801), and `_descriptor_get`
+`getattr_static` falls back to the metaclass (Lib/inspect.py:1796-1803), and `_descriptor_get`
 binds that metaclass method to `obj`, while the `with` statement finds nothing and raises
 `TypeError`. -/
 def LookupSpecialIsSpecial : Prop :=

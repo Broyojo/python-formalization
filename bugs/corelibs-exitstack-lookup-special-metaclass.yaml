@@ -10,7 +10,7 @@ summary: |
   "the standard lookup behaviour for special methods" (:535) and does
   `getattr_static(type(obj), name)`. But `getattr_static` on a class also searches the class's
   metaclass when the class's own MRO has no such attribute ("for types we check the metaclass too",
-  Lib/inspect.py:1795-1801). The interpreter's special lookup, `_PyObject_LookupSpecial` and
+  Lib/inspect.py:1796-1803). The interpreter's special lookup, `_PyObject_LookupSpecial` and
   `_PyObject_LookupSpecialMethod` (Objects/typeobject.c:2990-3002, :3009), looks at the MRO of
   `type(obj)` only.
 
@@ -75,7 +75,7 @@ promised_by: |
   the consistency of `with` and ExitStack was the point of the change.
 cause: |
   Lib/contextlib.py:539 calls `getattr_static(cls, name)` with `cls = type(obj)` a class, and
-  Lib/inspect.py:1795-1801 then looks in the metaclass's MRO as well.
+  Lib/inspect.py:1796-1803 then looks in the metaclass's MRO as well.
 possible_fix: |
   Look `name` up in the MRO of `type(obj)` only, for example with `inspect._check_class(cls, name)`
   (Lib/inspect.py:1719-1723) and the sentinel, instead of `getattr_static`.

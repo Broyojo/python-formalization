@@ -66,7 +66,7 @@ def withStmt {R : Type} (cm : CM σ V) (body : V → St σ → St σ × Res R) (
 
 /-! ### `ContextDecorator` -/
 
-/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py:113-116, and of `AsyncContextDecorator.__call__`, :160-163:
+/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py:114-116, and of `AsyncContextDecorator.__call__`, :160-162:
 the branch for a plain function; `recreate` builds the context manager for this call. The branches for generator,
 coroutine and async generator functions, new in 3.15, are not modelled. -/
 def ContextDecorator.call {R C : Type} (recreate : St σ → St σ × Res C) (toCM : C → CM σ V)
@@ -606,9 +606,9 @@ def lookupSentinel (d : Option (Descr T)) : Res (Option T) :=
 abbrev ClsDict (T : Type) := String → Option T
 
 /-- `getattr_static(cls, name)` for a class `cls` with MRO `mro` and metaclass MRO `metaMro`,
-Lib/inspect.py:1759-1805: `cls` is a type, so `klass = cls` (:1780-1781) and no instance dict is
+Lib/inspect.py:1759-1806: `cls` is a type, so `klass = cls` (:1779-1780) and no instance dict is
 read; the first entry of the MRO that has `name` (`_check_class`, :1719-1723); failing that, "for
-types we check the metaclass too" (:1795-1801); `none` is the `AttributeError` of :1804. Classes with
+types we check the metaclass too" (:1796-1803); `none` is the `AttributeError` of :1806. Classes with
 a shadowing `__dict__` (`_shadowed_dict`) are outside the model. -/
 def getattrStaticType {T : Type} (mro metaMro : List (ClsDict T)) (name : String) : Option T :=
   match mro.findSome? (· name) with

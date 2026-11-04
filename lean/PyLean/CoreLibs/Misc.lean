@@ -473,7 +473,7 @@ def contextlibEntries : List Entry := [
     status := .refuted, prop := ``Contextlib.LookupSpecialIsSpecial,
     thm := some ``Contextlib.lookupSpecialIsSpecial_refuted
     bug := some "corelibs-exitstack-lookup-special-metaclass"
-    notes := "getattr_static also searches the metaclass of a type (Lib/inspect.py:1795-1801)." },
+    notes := "getattr_static also searches the metaclass of a type (Lib/inspect.py:1796-1803)." },
   { id := "misc-ctx-exit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
     statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements."
