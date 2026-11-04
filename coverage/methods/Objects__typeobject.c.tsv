@@ -61,8 +61,8 @@ Objects/typeobject.c	1121	1129	PyType_ClearWatcher	PyType_ClearWatcher(int watch
 Objects/typeobject.c	1134	1151	PyType_Watch	PyType_Watch(int watcher_id, PyObject* obj)	todo		
 Objects/typeobject.c	1154	1167	PyType_Unwatch	PyType_Unwatch(int watcher_id, PyObject* obj)	todo		
 Objects/typeobject.c	1170	1199	set_version_unlocked	set_version_unlocked(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
-Objects/typeobject.c	1202	1276	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
-Objects/typeobject.c	1279	1289	PyType_Modified	PyType_Modified(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1202	1276	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	todo		review: Besides clearing version tags it notifies registered type watchers (:1247-1266, calling each callback and PyErr_FormatUnraisable with sys.unraisablehook on failure), and only when tp_version_tag != 0: an observable effect (PyType_AddWatcher, a todo row; reachable from Python through _testcapi), not a transparent cache.
+Objects/typeobject.c	1279	1289	PyType_Modified	PyType_Modified(PyTypeObject *type)	todo		review: Calls type_modified_unlocked when tp_version_tag != 0 (:1279-1289), so it runs the type-watcher callbacks; the 'transparent cache' reason does not cover that effect.
 Objects/typeobject.c	1297	1312	has_custom_mro	has_custom_mro(PyTypeObject *tp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	1315	1360	type_mro_modified	type_mro_modified(PyTypeObject *type, PyObject *bases)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	1372	1377	_PyType_SetVersion	_PyType_SetVersion(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
@@ -112,7 +112,7 @@ Objects/typeobject.c	2625	2644	traverse_slots	traverse_slots(PyTypeObject *type,
 Objects/typeobject.c	2647	2697	subtype_traverse	subtype_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	2700	2717	clear_slots	clear_slots(PyTypeObject *type, PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	2720	2756	subtype_clear	subtype_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/typeobject.c	2759	2925	subtype_dealloc	subtype_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
+Objects/typeobject.c	2759	2925	subtype_dealloc	subtype_dealloc(PyObject *self)	todo		review: Calls the finalizer itself (PyObject_CallFinalizerFromDealloc for __del__, tp_del, with resurrection checks) and PyObject_ClearWeakRefs (weakref callbacks); AGENTS.md keeps such explicit effects out of the 'drops references' exclusion.
 Objects/typeobject.c	2932	2941	type_is_subtype_base_chain	type_is_subtype_base_chain(PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2944	2966	is_subtype_with_mro	is_subtype_with_mro(PyObject *a_mro, PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2969	2972	PyType_IsSubtype	PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)	todo		
@@ -134,7 +134,7 @@ Objects/typeobject.c	3252	3255	_PyObject_MaybeCallSpecialOneArg	_PyObject_MaybeC
 Objects/typeobject.c	3286	3296	tail_contains	tail_contains(PyObject *tuple, Py_ssize_t whence, PyObject *o)	modelled	typeobj-c3-exact,typeobj-mro-impl-exact	
 Objects/typeobject.c	3299	3307	class_name	class_name(PyObject *cls)	modelled	typeobj-mro-impl-errors	
 Objects/typeobject.c	3310	3338	check_duplicates	check_duplicates(PyObject *tuple)	modelled	typeobj-check-duplicates-exact,typeobj-mro-impl-exact,typeobj-mro-impl-errors	
-Objects/typeobject.c	3350	3398	set_mro_error	set_mro_error(PyObject **to_merge, Py_ssize_t to_merge_size, Py_ssize_t *remain)	modelled	typeobj-set-mro-error-message	
+Objects/typeobject.c	3350	3398	set_mro_error	set_mro_error(PyObject **to_merge, Py_ssize_t to_merge_size, Py_ssize_t *remain)	todo		review: setMroError/setMroErrorLoop mirror :3350-3398 (identity dict, ' %s' cut at NUL by cStr, '?' for a non-str name, the off < 1000 guard, the ',' rule, the 999-byte cut, gap% for a cut inside a character, covered by bugs/getargs-snprintf-cut-utf8-decode.yaml), but SetMroErrorExact pins a class_name exception only for the first candidate and its message clause assumes every lookup succeeds without effects, so the exception of a later candidate reached before the buffer fills and the guard that stops calling class_name once off >= 1000 (:3371) are unstated: a set_mro_error that read every __name__ to the end, or turned a later candidate's exception into '?', passes; on 3.15.2 a first name of 932 chars then a raising second __name__ gives that KeyError, a first name of 999 chars gives the TypeError without calling the second.
 Objects/typeobject.c	3401	3468	pmerge	pmerge(PyObject *acc, PyObject **to_merge, Py_ssize_t to_merge_size)	modelled	typeobj-c3-exact,typeobj-mro-impl-exact,typeobj-c3-example-earliest,typeobj-c3-example-conflict	
 Objects/typeobject.c	3471	3556	mro_implementation_unlocked	mro_implementation_unlocked(PyTypeObject *type)	modelled	typeobj-mro-impl-exact,typeobj-mro-impl-errors,typeobj-c3-fast-path,typeobj-c3-example-earliest	
 Objects/typeobject.c	3559	3566	mro_implementation	mro_implementation(PyTypeObject *type)	todo		
@@ -142,7 +142,7 @@ Objects/typeobject.c	3575	3584	type_mro_impl	type_mro_impl(PyTypeObject *self) /
 Objects/typeobject.c	3587	3614	mro_check	mro_check(PyTypeObject *type, PyObject *mro)	todo		changed-in-3.15:
 Objects/typeobject.c	3631	3670	mro_invoke	mro_invoke(PyTypeObject *type)	todo		
 Objects/typeobject.c	3695	3741	mro_internal	mro_internal(PyTypeObject *type, int initial, PyObject **p_old_mro)	todo		changed-in-3.15:
-Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	modelled	typeobj-best-base-exact	
+Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	todo		review: bestBaseLoop mirrors :3757-3795 and FindBestBaseFirstFailure now orders the failures, but both lay-out conflict clauses (here and FindBestBaseExact's third) assume TreeOrder (MroSpec2.lean:138), 'for all a b c, c <= a and c <= b imply a, b comparable' over every class, which is false in any world holding a class with two unrelated bases (class C(A, B)): it is not the type invariant its docstring claims, so the conflict branch (:3788-3794) is stated only for single-inheritance worlds; restricting TreeOrder to solid bases would keep the proof (win, solidOf y, solidOf x are all solid bases) and make it an invariant.
 Objects/typeobject.c	3802	3808	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	todo		
 Objects/typeobject.c	3811	3827	solid_base	solid_base(PyTypeObject *type)	todo		
 Objects/typeobject.c	3876	3886	slot_update_new_chunk	slot_update_new_chunk(void)	todo		changed-in-3.15: new function
@@ -186,7 +186,7 @@ Objects/typeobject.c	5001	5043	type_new_impl	type_new_impl(type_new_ctx *ctx)	to
 Objects/typeobject.c	5047	5114	type_new_get_bases	type_new_get_bases(type_new_ctx *ctx, PyObject **type)	todo		changed-in-3.15:
 Objects/typeobject.c	5118	5169	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	modelled	typeobj-type-new-exact,typeobj-type-new-args	
 Objects/typeobject.c	5173	5187	type_vectorcall	type_vectorcall(PyObject *metatype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/typeobject.c	5193	5196	_align_up	_align_up(Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
+Objects/typeobject.c	5193	5196	_align_up	_align_up(Py_ssize_t size)	todo		review: Not an allocator: it rounds the base size and the spec's extra size to ALIGNOF_MAX_ALIGN_T in PyType_FromMetaclass (:5632-5633), which sets tp_basicsize (visible as __basicsize__) and the PyObject_GetTypeData offset; a layout computation with an observable result.
 Objects/typeobject.c	5199	5236	check_basicsize_includes_size_and_offsets	check_basicsize_includes_size_and_offsets(PyTypeObject* type)	todo		
 Objects/typeobject.c	5239	5261	check_immutable_bases	check_immutable_bases(const char *type_name, PyObject *bases, int skip_first)	todo		
 Objects/typeobject.c	5268	5297	special_offset_from_member	special_offset_from_member( const PyMemberDef *memb /* may be NULL */, Py_ssize_t type_data_offset, Py_ssize_t *dest /* not NULL */)	todo		
@@ -252,7 +252,7 @@ Objects/typeobject.c	7134	7184	merge_class_dict	merge_class_dict(PyObject *dict,
 Objects/typeobject.c	7197	7208	type___dir___impl	type___dir___impl(PyTypeObject *self) /*[clinic end generated code: output=69d02fe92c0f15fa input=7733befbec645968]*/	todo		
 Objects/typeobject.c	7217	7231	type___sizeof___impl	type___sizeof___impl(PyTypeObject *self) /*[clinic end generated code: output=766f4f16cd3b1854 input=99398f24b9cf45d6]*/	todo		
 Objects/typeobject.c	7254	7282	type_traverse	type_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/typeobject.c	7285	7332	type_clear	type_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	7285	7332	type_clear	type_clear(PyObject *self)	todo		review: Not only dropping references: it calls PyType_Modified (type-watcher callbacks) before PyDict_Clear of tp_dict (:7322-7326), an explicit effect the GC-clearing policy does not exempt.
 Objects/typeobject.c	7335	7339	type_is_gc	type_is_gc(PyObject *tp)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	7435	7439	excess_args	excess_args(PyObject *args, PyObject *kwds)	modelled	typeobj-object-init-exact,typeobj-object-new-exact	
 Objects/typeobject.c	7442	7459	object_init	object_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-object-init-exact	
@@ -271,7 +271,7 @@ Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_w
 Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	modelled	typeobj-set-class-exact,typeobj-set-class-checks	
 Objects/typeobject.c	7912	7927	import_copyreg	import_copyreg(void)	todo		
 Objects/typeobject.c	7930	7976	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	modelled	typeobj-slot-names-exact	
-Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	modelled	typeobj-getstate-default-exact	
+Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	todo		review: GetstateSlotStepExact now pins one round (the %.200s name TypeError, the lookup exception, a missing attribute skipped, PyDict_SetItem under the name object), but the loop between rounds is still stated only by GetstateSlotsGuard, whose clauses are a resized list at any round, the last index ending, and a completed loop keeping the size: that round i is followed by round i + 1 (:8043) and that a round's exception ends the loop (:8047-8050, :8056-8061) are in no clause, so a getstateSlotsLoop that ran only the first slot name and stopped satisfies GetstateDefaultAll.
 Objects/typeobject.c	8104	8124	object_getstate	object_getstate(PyObject *obj, int required)	todo		
 Objects/typeobject.c	8127	8130	_PyObject_GetState	_PyObject_GetState(PyObject *obj)	todo		
 Objects/typeobject.c	8139	8143	object___getstate___impl	object___getstate___impl(PyObject *self) /*[clinic end generated code: output=5a2500dcb6217e9e input=692314d8fbe194ee]*/	todo		
@@ -366,7 +366,7 @@ Objects/typeobject.c	10818	10837	slot_mp_ass_subscript	slot_mp_ass_subscript(PyO
 Objects/typeobject.c	10851	10897	slot_nb_power	slot_nb_power(PyObject *self, PyObject *other, PyObject *modulus)	todo		
 Objects/typeobject.c	10904	10944	slot_nb_bool	slot_nb_bool(PyObject *self)	modelled	typeobj-slot-nb-bool-exact	
 Objects/typeobject.c	10948	10952	slot_nb_index	slot_nb_index(PyObject *self)	modelled	typeobj-slot-nb-index-exact	
-Objects/typeobject.c	10971	10975	slot_nb_inplace_power	slot_nb_inplace_power(PyObject *self, PyObject * arg1, PyObject *arg2)	modelled	typeobj-inplace-pow	
+Objects/typeobject.c	10971	10975	slot_nb_inplace_power	slot_nb_inplace_power(PyObject *self, PyObject * arg1, PyObject *arg2)	todo		review: ternaryIop's .generic arm is vectorcall_method('__ipow__', [self, arg1]) (:10971-10975), but InplacePowerTwoArgs is stated only for an __ipow__ that returns a value other than NotImplemented: an exception from looking up or calling __ipow__ is in no clause, so a slot that swallowed it as NotImplemented (falling back to **) passes; adding the .err clause would pin the one-line body.
 Objects/typeobject.c	10988	10999	slot_tp_repr	slot_tp_repr(PyObject *self)	todo		
 Objects/typeobject.c	11004	11039	slot_tp_hash	slot_tp_hash(PyObject *self)	modelled	typeobj-slot-tp-hash-exact	
 Objects/typeobject.c	11042	11045	slot_tp_call	slot_tp_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
