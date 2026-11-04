@@ -2,7 +2,7 @@ import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
 import PyLean.CoreLibs.Coll.ChainMapG
 import PyLean.CoreLibs.Coll.UserDictG
-import PyLean.CoreLibs.Coll.UserListG
+import PyLean.CoreLibs.Coll.UserListG2
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
 import PyLean.CoreLibs.Coll.Namedtuple
@@ -453,6 +453,18 @@ def runUL (j : Json) : Except String Json := do
     | "gen_list_iadd" => return encOut encInts (listExtendP u.data o)
     | "gen_add" => return enc (ulAddP u o)
     | _ => return enc (ulRaddP u o)
+  | "sort_p" =>
+    let npos := (← getOptInt j "npos").getD 0
+    let rev : Option Json := match j.getObjVal? "rev" with
+      | .ok v => some v
+      | .error _ => none
+    let truth : Json → Py Bool := fun v => match v with
+      | .bool b => .ok b
+      | _ => .error (.valueError "b")
+    let hasKey := (j.getObjVal? "keynone" >>= Json.getBool?).toOption.getD false
+    let a : SortArgs Int Int Json := ⟨npos.toNat, if hasKey then some none else none, rev⟩
+    return encOut encUL (ulSortP truth (fun x y => .ok (decide (x < y))) (fun x y => .ok (decide (x < y)))
+      (fun _ v => v) u a)
   | "init_sub" =>
     let l ← getInts j "o"
     return encPy (fun (r : ULO Int Int) => encUL ⟨r.cls, r.data⟩)

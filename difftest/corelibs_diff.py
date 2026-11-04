@@ -619,6 +619,11 @@ def coll_slice_of(case, names=("st", "sp", "se")):
     return slice(*(case.get(n) for n in names))
 
 
+class coll_BadBool:
+    def __bool__(self):
+        raise ValueError("b")
+
+
 def coll_int_gen(xs, fail):
     yield from xs
     if fail:
@@ -636,8 +641,14 @@ def coll_gen_ul(rng):
                      "getslice", "setitem", "setslice", "delitem", "delslice", "add", "radd",
                      "iadd", "mul", "imul", "copy", "copy_dunder", "append", "insert", "pop",
                      "remove", "clear", "count", "index", "reverse", "sort", "extend",
-                     "gen_iadd", "gen_extend", "gen_add", "gen_radd", "gen_list_iadd", "init_sub"])
+                     "gen_iadd", "gen_extend", "gen_add", "gen_radd", "gen_list_iadd", "init_sub",
+                     "sort_p", "sort_p"])
     case = {"fn": "coll.ul", "op": op, "sub": rng.choice([0, 1]), "a": coll_ints(rng)}
+    if op == "sort_p":
+        case["npos"] = rng.choice([0, 0, 0, 1, 2, 3])
+        if rng.random() < 0.6:
+            case["rev"] = rng.choice([True, False, "bad"])
+        case["keynone"] = rng.random() < 0.4
     if op.startswith("gen_") or op == "init_sub":
         case["o"] = coll_ints(rng)
         case["fail"] = rng.random() < 0.5
@@ -783,6 +794,18 @@ def coll_run_ul(case):
             return coll_enc_ul(u + coll_int_gen(case["o"], case["fail"]))
         if op == "gen_radd":
             return coll_enc_ul(u.__radd__(coll_int_gen(case["o"], case["fail"])))
+        if op == "sort_p":
+            kw = {}
+            if case.get("keynone"):
+                kw["key"] = None
+            if "rev" in case:
+                kw["reverse"] = coll_BadBool() if case["rev"] == "bad" else case["rev"]
+            try:
+                u.sort(*[1] * case["npos"], **kw)
+                exc = None
+            except Exception as e:
+                exc = [type(e).__name__, str(e)]
+            return [coll_enc_ul(u), exc]
         if op == "init_sub":
             return coll_enc_ul(type(u)(coll_RevList(case["o"])))
         raise AssertionError(op)

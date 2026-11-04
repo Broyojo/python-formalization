@@ -123,7 +123,7 @@ Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-use
 Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1398	1399	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1401	1402	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	todo		review: `ulSortP` delegates to the ListSort mirrors (raising `<` and key, \"list modified during sort\"), but its argument check is wrong: `_PyArg_UnpackKeywords` (Python/getargs.c:2572-2590) first tests `nargs + nkwargs > 2`, so `u.sort(1, 2, 3)` or `u.sort(1, key=f, reverse=True)` raises \"sort() takes at most 2 arguments (3 given)\", while UserListSortP's first conjunct proves \"sort() takes no positional arguments\" for every `npos ≠ 0`, a statement false about CPython; `reverse` is a `Bool`, so a raising `__bool__` (PyObject_IsTrue, Objects/clinic/listobject.c.h) cannot be expressed either.
+Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-sort-p	
 Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-iadd-atomic	
 Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1428	1429	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	
