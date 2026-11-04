@@ -104,8 +104,8 @@ Lib/_pydatetime.py	1488	1490	time.hour	hour(self)	modelled	datetime-packed-acces
 Lib/_pydatetime.py	1493	1495	time.minute	minute(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1498	1500	time.second	second(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1503	1505	time.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1508	1510	time.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1513	1514	time.fold	fold(self)	todo		
+Lib/_pydatetime.py	1508	1510	time.tzinfo	tzinfo(self)	excluded		trivial: the property body is `return self._tzinfo`, one field and no branch (_pydatetime.py:1508-1510)
+Lib/_pydatetime.py	1513	1514	time.fold	fold(self)	excluded		trivial: the property body is `return self._fold`, one field and no branch (_pydatetime.py:1513-1514)
 Lib/_pydatetime.py	1520	1524	time.__eq__	__eq__(self, other)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
 Lib/_pydatetime.py	1526	1530	time.__le__	__le__(self, other)	modelled	datetime-time-compare-base	
 Lib/_pydatetime.py	1532	1536	time.__lt__	__lt__(self, other)	modelled	datetime-time-compare-base	
@@ -132,8 +132,8 @@ Lib/_pydatetime.py	1837	1839	datetime.hour	hour(self)	modelled	datetime-packed-a
 Lib/_pydatetime.py	1842	1844	datetime.minute	minute(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1847	1849	datetime.second	second(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1852	1854	datetime.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1857	1859	datetime.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1862	1863	datetime.fold	fold(self)	todo		
+Lib/_pydatetime.py	1857	1859	datetime.tzinfo	tzinfo(self)	excluded		trivial: the property body is `return self._tzinfo`, one field and no branch (_pydatetime.py:1857-1859)
+Lib/_pydatetime.py	1862	1863	datetime.fold	fold(self)	excluded		trivial: the property body is `return self._fold`, one field and no branch (_pydatetime.py:1862-1863)
 Lib/_pydatetime.py	1866	1907	datetime._fromtimestamp	_fromtimestamp(cls, t, utc, tz)	todo		
 Lib/_pydatetime.py	1910	1917	datetime.fromtimestamp	fromtimestamp(cls, timestamp, tz=None)	todo		
 Lib/_pydatetime.py	1920	1929	datetime.utcfromtimestamp	utcfromtimestamp(cls, t)	todo		
