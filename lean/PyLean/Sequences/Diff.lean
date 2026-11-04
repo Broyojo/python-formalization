@@ -113,12 +113,27 @@ def dCmp : Cmp DElem := fun d a b =>
     | _, .bomb => (.error (.valueError "boom"), d)
     | _, .mut k => mutate k d
 
-def dEq (a b : DElem) : Py Bool := (dCmp default a b).1
+/-- `PyObject_RichCompareBool(a, b, op)` for the elements, on the deque `M<k>` acts on: for
+`==` the `__eq__` again (identity first), for `!=` the inverted `__eq__` (`object.__ne__`),
+for an ordering two ints compare and anything else raises `TypeError`. -/
+def dRichRe (op : CmpOp) : Cmp DElem := fun d a b =>
+  match op with
+  | .eq => dCmp d a b
+  | .ne =>
+    if a = b then (.ok false, d)
+    else
+      match dCmp d a b with
+      | (.ok c, d) => (.ok !c, d)
+      | (.error e, d) => (.error e, d)
+  | _ =>
+    match a, b with
+    | .int x, .int y => (.ok (opHolds op (compare x y)), d)
+    | _, _ => (.error (.typeError "~not supported"), d)
 
-def dRich (op : CmpOp) (a b : DElem) : Py Bool :=
-  match a, b with
-  | .int x, .int y => .ok (opHolds op (compare x y))
-  | _, _ => .error (.typeError "unorderable")
+/-- The object `d += ...` returns: the deque itself or `None`. -/
+def slotJ : Deque.SlotRef → Json
+  | .self => toJson "SELF"
+  | .none => Json.null
 
 def jOp (j : Json) : Except String CmpOp := do
   match ← j.getStr? with
@@ -254,16 +269,16 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
   | "popleft" => return keep d.popleft (fun p => p.1.toJ) (·.2)
   | "extend" => return pair (d.extendIter (.iter (← jElems (← arg op 1)) none)) (fun _ => unitJ)
   | "extendleft" => return pair (d.extendleftIter (.iter (← jElems (← arg op 1)) none)) (fun _ => unitJ)
-  | "iadd" => return pair (d.iadd (.iter (← jElems (← arg op 1)) none)) (fun _ => unitJ)
+  | "iadd" => return pair (d.iadd (.iter (← jElems (← arg op 1)) none)) slotJ
   | "extend_raise" => return pair (d.extendIter (.iter (← jElems (← arg op 1)) (some (.valueError "iter")))) (fun _ => unitJ)
   | "extendleft_raise" => return pair (d.extendleftIter (.iter (← jElems (← arg op 1)) (some (.valueError "iter")))) (fun _ => unitJ)
   | "extend_stop" => return pair (d.extendIter (.iter (← jElems (← arg op 1)) (some .stopIteration))) (fun _ => unitJ)
   | "extend_bad" => return pair (d.extendIter (.notIterable "int")) (fun _ => unitJ)
   | "extendleft_bad" => return pair (d.extendleftIter (.notIterable "int")) (fun _ => unitJ)
-  | "iadd_bad" => return pair (d.iadd (.notIterable "int")) (fun _ => unitJ)
+  | "iadd_bad" => return pair (d.iadd (.notIterable "int")) slotJ
   | "extend_re" => return pair (d.extendRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
   | "extendleft_re" => return pair (d.extendleftRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
-  | "iadd_re" => return pair (d.iaddRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
+  | "iadd_re" => return pair (d.iaddRe (← jReIter (← arg op 1) (← arg op 2))) slotJ
   | "init_re" => return pair (d.initRe (some (← jReIter (← arg op 1) (← arg op 2))) (← jMaxlen op 3)) (fun _ => unitJ)
   | "init_noarg" => return pair (d.initRe none (← jMaxlen op 1)) (fun _ => unitJ)
   | "add_odd" => return same (pyJ dequeJ (d.concat (← jConcatArg op)))
@@ -305,18 +320,39 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
     | .ok c => return same (pyJ toJson ((c.append (.mut 99)).repr r false))
     | .error e => return same (errJ e)
   | "reduce" =>
-    let (m, _) := d.reduce
-    return same (okJ (Json.arr #[(match m with | none => Json.null | some v => toJson v),
-      toJson (d.items.map DElem.toJ)]))
-  | "cmp" =>
+    match d.reduceRe (.ok ()) with
+    | .ok (_, m, _, it) =>
+      -- the harness drains the returned iterator over the unchanged deque
+      let xs ← match d.drain Deque.iterNext (d.items.length + 1) it with
+        | .ok xs => pure (xs.map DElem.toJ)
+        | .error _ => throw "reduce: iterator"
+      return same (okJ (Json.arr #[(match m with | none => Json.null | some v => toJson v), toJson xs]))
+    | .error e => return same (errJ e)
+  | "reduce_raise" =>
+    return same (pyJ (fun _ => Json.null) (d.reduceRe (σ := Unit) (.error (.valueError "gs"))))
+  | "cmp" | "cmp_rev" =>
     let o ← jOp (← arg op 1)
     let other ← match Deque.make (← jElems (← arg op 2)) .absent with
       | .ok o => pure o
       | .error _ => throw "cmp: bad other deque"
-    return same (pyJ toJson (Deque.richcompare dEq (dRich o) o false d other))
+    if name == "cmp" then
+      -- `d OP other`: the `M` elements' `__eq__` acts on `d`, the left operand
+      let lift : Cmp DElem → RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
+        let (r, d') := c s.1 a b
+        (r, (d', s.2))
+      let (r, s') := Deque.richcompareRe Prod.fst Prod.snd (lift dCmp) (lift (dRichRe o)) o false (d, other)
+      return (pyJ toJson r, { s with d := s'.1 })
+    else
+      -- `other OP d`: `d` is the right operand
+      let lift : Cmp DElem → RCmp (Deque DElem × Deque DElem) DElem := fun c s a b =>
+        let (r, d') := c s.2 a b
+        (r, (s.1, d'))
+      let (r, s') := Deque.richcompareRe Prod.fst Prod.snd (lift dCmp) (lift (dRichRe o)) o false (other, d)
+      return (pyJ toJson r, { s with d := s'.2 })
   | "cmp_self" =>
     let o ← jOp (← arg op 1)
-    return same (pyJ toJson (Deque.richcompare dEq (dRich o) o true d d))
+    let (r, d') := Deque.richcompareRe id id dCmp (dRichRe o) o true d
+    return (pyJ toJson r, { s with d := d' })
   | "it_new" =>
     let rev ← (← arg op 1).getBool?
     return ((okJ unitJ), { s with its := s.its.push ((if rev then d.reviter else d.iter), rev) })
@@ -331,6 +367,14 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
     let (r, it') := (if rev then d.reviterNext else d.iterNext) it
     return (pyJ (fun o => match o with | some x => x.toJ | none => toJson "STOP") r,
       { s with its := s.its.set! k (it', rev) })
+  | "it_kw" =>
+    let rev ← (← arg op 1).getBool?
+    let idx ← match ← arg op 2 with
+      | .null => pure none
+      | j => some <$> jInt j
+    match (if rev then d.reviterNewArgs else d.iterNewArgs) idx ["index"] with
+    | .ok it => return ((okJ unitJ), { s with its := s.its.push (it, rev) })
+    | .error e => return (errJ e, s)
   | "it_len" => return same (okJ (toJson (Deque.iterLen (← its (← (← arg op 1).getNat?)).1)))
   | "it_reduce" => return same (okJ (toJson (d.iterReduce (← its (← (← arg op 1).getNat?)).1)))
   | other => throw s!"unknown deque op {other}"

@@ -98,6 +98,13 @@ inductive MaxlenArg where
   | other
   deriving Repr, DecidableEq
 
+/-- The object a slot returns, by identity: `Py_None`, or the receiver itself (the
+`dequeobject *` the slot was called on). -/
+inductive SlotRef where
+  | none
+  | self
+  deriving Repr, DecidableEq
+
 /-- `PyObject_RichCompareBool(a, b, Py_EQ)` run on behalf of a method of deque
 `d`: a truth value or an exception, and `d` as the comparison left it. -/
 abbrev Cmp (α : Type) := Deque α → α → α → Py Bool × Deque α
@@ -251,9 +258,13 @@ def extendleftRe (d : Deque α) (it : ReIter α) : Py Unit × Deque α :=
       let d := if d.size = 0 then { d with left := 64 - 1, right := 64 - 2 } else d
       pushLoop appendleftM maxlen it.nexts d
 
-/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:578-590): `deque_extend`,
-then `d` itself on success. -/
-def iaddRe (d : Deque α) (it : ReIter α) : Py Unit × Deque α := d.extendRe it
+/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:578-590): `deque_extend`
+(:584), whose `NULL` is returned as is (:585-586); otherwise its result (`None`) is dropped
+and the deque itself is returned (:587-589). -/
+def iaddRe (d : Deque α) (it : ReIter α) : Py SlotRef × Deque α :=
+  match d.extendRe it with
+  | (.error e, d) => (.error e, d)
+  | (.ok (), d) => (.ok .self, d)
 
 /-- What `extendRe` does with an iterator yielding `xs` that does not touch the deque
 (`extendRe_ofList` in `DequeOps` proves it): nothing when `maxlen == 0`, otherwise
@@ -276,7 +287,7 @@ that does not touch the deque. -/
 def extendIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.extendRe (.ofIterable src)
 def extendleftIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α :=
   d.extendleftRe (.ofIterable src)
-def iadd (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.iaddRe (.ofIterable src)
+def iadd (d : Deque α) (src : PyIterable α) : Py SlotRef × Deque α := d.iaddRe (.ofIterable src)
 
 /-- `d.extend(d)` / `d += d` (_collectionsmodule.c:487-495): `PySequence_List(d)`, then
 `deque_extend` over that private list, which no Python code can reach; `d.extendleft(d)`
@@ -752,6 +763,19 @@ def reviterNew (d : Deque α) (index : Int) : Py Iter := do
   let index ← asSsize index
   iterAdvance reviterNext d (min index.toNat (d.items.length + 1)) d.reviter
 
+/-- `list(it)` over a deque that nothing changes meanwhile: `__next__` until it returns
+`NULL` without an exception, at most `n` calls. -/
+def drain (next : Deque α → Iter → Py (Option α) × Iter) (d : Deque α) : Nat → Iter → Py (List α)
+  | 0, _ => .error .modelFuel
+  | n + 1, it =>
+    match next d it with
+    | (.error e, _) => .error e
+    | (.ok none, _) => .ok []
+    | (.ok (some x), it') =>
+      match drain next d n it' with
+      | .ok xs => .ok (x :: xs)
+      | .error e => .error e
+
 /-- `it.__length_hint__()` (`dequeiter_len`, _collectionsmodule.c:2046-2051). -/
 def iterLen (it : Iter) : Int := it.counter
 
@@ -759,68 +783,128 @@ def iterLen (it : Iter) : Int := it.counter
 _collectionsmodule.c:2056-2069): `(type(it), (d, len(d) - it.counter))`. -/
 def iterReduce (d : Deque α) (it : Iter) : Int := d.size - it.counter
 
+/-- `type(iter(d))(d, index, **kwds)` / `type(reversed(d))(...)`: `PyArg_ParseTuple(args,
+"O!|n", ...)` reads only the positional arguments (:2017, :2167); `kwds` is never looked
+at, so keyword arguments (`kwds`: their names) are dropped. `index` is the optional
+second positional argument. -/
+def iterNewArgs (d : Deque α) (index : Option Int) (_kwds : List String) : Py Iter :=
+  d.iterNew (index.getD 0)
+
+def reviterNewArgs (d : Deque α) (index : Option Int) (_kwds : List String) : Py Iter :=
+  d.reviterNew (index.getD 0)
+
 /-! ### Comparison, repr, pickling -/
 
-/-- `PyList` repr of the items (`%R` of `PySequence_List(d)`), with the element
-repr `r`, which may raise. -/
-def listRepr (r : α → Py String) (xs : List α) : Py String := do
-  let ss ← xs.mapM r
-  return "[" ++ ", ".intercalate ss ++ "]"
+/-- `list_repr` (Objects/listobject.c:602-668) of the private list `PySequence_List(d)`
+made by `deque_repr`: `"["`, each item's `repr` from left to right separated by `", "`,
+then `"]"` (`"[]"` for an empty list). An item's `repr` may run any code on the deque
+(it cannot reach the private list) and may raise, which ends the repr. `acc` holds the
+pieces written so far, newest first. -/
+def listReprRe (r : Deque α → α → Py String × Deque α) :
+    List α → List String → Deque α → Py String × Deque α
+  | [], acc, d => (.ok ("[" ++ ", ".intercalate acc.reverse ++ "]"), d)
+  | x :: xs, acc, d =>
+    match r d x with
+    | (.error e, d) => (.error e, d)
+    | (.ok s, d) => listReprRe r xs (s :: acc) d
 
-/-- `deque_repr` (_collectionsmodule.c:1633-1661). `entered` is `Py_ReprEnter`
-having found this deque already being printed. -/
-def repr (d : Deque α) (r : α → Py String) (entered : Bool) : Py String := do
-  if entered then return "[...]"
-  let s ← listRepr r d.items
-  if d.maxlen ≥ 0 then return s!"{d.tname}({s}, maxlen={d.maxlen})"
-  else return s!"{d.tname}({s})"
+/-- `deque_repr` (_collectionsmodule.c:1633-1661). `enter` is `Py_ReprEnter(deque)`
+(:1639): an error (`i < 0`, :1641-1642), `true` when this deque is already being printed
+(`"[...]"`, :1643), `false` otherwise. Then the snapshot `aslist = PySequence_List(deque)`
+(:1646), `maxlen` read (:1651) and the type's name taken before `%R` runs the item reprs
+(:1652-1658), so the text uses the items and bound the deque had then, whatever the reprs
+do to it. -/
+def reprRe (d : Deque α) (r : Deque α → α → Py String × Deque α) (enter : Py Bool) :
+    Py String × Deque α :=
+  match enter with
+  | .error e => (.error e, d)
+  | .ok true => (.ok "[...]", d)
+  | .ok false =>
+    let aslist := d.items
+    let maxlen := d.maxlen
+    let tname := d.tname
+    match listReprRe r aslist [] d with
+    | (.error e, d') => (.error e, d')
+    | (.ok s, d') =>
+      if maxlen ≥ 0 then (.ok s!"{tname}({s}, maxlen={maxlen})", d')
+      else (.ok s!"{tname}({s})", d')
 
-/-- `deque___reduce___impl` (_collectionsmodule.c:1604-1628):
-`(type(d), (), state, iter(d))` or `(type(d), ((), maxlen), state, iter(d))`;
-the part that depends on the deque is the optional `maxlen` and the iterator. -/
-def reduce (d : Deque α) : Option Int × Iter :=
-  (if d.maxlen < 0 then none else some d.maxlen, d.iter)
+/-- `repr(d)` with an element `repr` that does not touch the deque. -/
+def repr (d : Deque α) (r : α → Py String) (entered : Bool) : Py String :=
+  (d.reprRe (fun d x => (r x, d)) (.ok entered)).1
 
-/-- The search loop of `deque_richcompare` (_collectionsmodule.c:1696-1721) over two
-iterators; `eq` and `rich` are `PyObject_RichCompareBool` for `Py_EQ` and for
-`op`, assumed not to mutate the deques. The result for exhausted iterators
-is the `switch` at :1724-1731. -/
-def richLoop (eq : α → α → Py Bool) (rich : α → α → Py Bool) (op : CmpOp) (v w : Deque α) :
-    Nat → Iter → Iter → Py Bool
-  | 0, _, _ => .error .modelFuel
-  | fuel + 1, it1, it2 =>
-    match iterNext v it1 with
-    | (.error e, _) => .error e
+/-- `deque___reduce___impl` (_collectionsmodule.c:1604-1628). `state` is
+`_PyObject_GetState(deque)` (:1609-1612: `__getstate__`, which a subclass or an instance
+attribute may override and which may raise; the instance `__dict__` or `None` by default).
+Then `PyObject_GetIter(deque)` (:1614-1618), the deque's own iterator, and the tuple
+`(type(d), (), state, it)` for an unbounded deque or `(type(d), ((), maxlen), state, it)`
+(:1622-1627). The result is `(type name, maxlen argument, state, iterator)`. -/
+def reduceRe {σ : Type} (d : Deque α) (state : Py σ) : Py (String × Option Int × σ × Iter) :=
+  match state with
+  | .error e => .error e
+  | .ok st =>
+    let it := d.iter
+    if d.maxlen < 0 then .ok (d.tname, none, st, it)
+    else .ok (d.tname, some d.maxlen, st, it)
+
+/-- `PyObject_RichCompareBool(x, y, op)` called from `deque_richcompare`: it sees the world
+`S` that holds both deques, may run any code on them, and may raise. -/
+abbrev RCmp (S α : Type) := S → α → α → Py Bool × S
+
+/-- The `switch` of `deque_richcompare` (_collectionsmodule.c:1724-1731) once one iterator
+or both ran out: `more1`/`more2` say whether `x`/`y` is an item (not `NULL`). -/
+def endCmp (op : CmpOp) (more1 more2 : Bool) : Bool :=
+  match op with
+  | .lt => more2
+  | .le => !more1
+  | .eq => !more1 && !more2
+  | .ne => more1 || more2
+  | .gt => more1
+  | .ge => !more2
+
+/-- The search loop of `deque_richcompare` (_collectionsmodule.c:1696-1721) over the
+deques' own iterators `it1` (of `gv s`) and `it2` (of `gw s`): `PyIter_Next(it1)`, an error
+ends the compare (:1697-1699); `PyIter_Next(it2)` (:1700), whose error (`y == NULL`, then
+`PyErr_Occurred()` at :1721-1722) also ends it; exhaustion of either gives `endCmp`;
+otherwise `b = PyObject_RichCompareBool(x, y, Py_EQ)` (:1703): `0` returns
+`PyObject_RichCompareBool(x, y, op)` (:1704-1708), `-1` returns NULL (:1711-1712), `1`
+goes on. Every callback sees the deques as the previous one left them, and the next
+`PyIter_Next` calls read the deques as they then are (`dequeiter_next`'s state check). -/
+def richLoopRe {S : Type} (gv gw : S → Deque α) (eq rich : RCmp S α) (op : CmpOp) :
+    Nat → Iter → Iter → S → Py Bool × S
+  | 0, _, _, s => (.error .modelFuel, s)
+  | fuel + 1, it1, it2, s =>
+    match iterNext (gv s) it1 with
+    | (.error e, _) => (.error e, s)
     | (.ok x, it1) =>
-      match iterNext w it2 with
-      | (.error e, _) => .error e
+      match iterNext (gw s) it2 with
+      | (.error e, _) => (.error e, s)
       | (.ok y, it2) =>
         match x, y with
         | some x, some y =>
-          match eq x y with
-          | .error e => .error e
-          | .ok false => rich x y
-          | .ok true => richLoop eq rich op v w fuel it1 it2
-        | _, _ =>
-          match op with
-          | .lt => .ok y.isSome
-          | .le => .ok x.isNone
-          | .eq => .ok (x.isNone && y.isNone)
-          | .ne => .ok (x.isSome || y.isSome)
-          | .gt => .ok x.isSome
-          | .ge => .ok y.isNone
+          match eq s x y with
+          | (.error e, s) => (.error e, s)
+          | (.ok false, s) => rich s x y
+          | (.ok true, s) => richLoopRe gv gw eq rich op fuel it1 it2 s
+        | _, _ => (.ok (endCmp op x.isSome y.isSome), s)
 
-/-- `deque_richcompare` (_collectionsmodule.c:1664-1740) for two deques: `same`
-says `v is w`. A non-deque operand gives `NotImplemented` (:1672-1675), which
-the difftest checks separately. -/
-def richcompare (eq rich : α → α → Py Bool) (op : CmpOp) (same : Bool) (v w : Deque α) : Py Bool :=
+/-- `deque_richcompare(v, w, op)` (_collectionsmodule.c:1664-1740) for two deques
+`v = gv s`, `w = gw s` (`same`: `v is w`). A non-deque operand gives `NotImplemented`
+(:1670-1675; the difftest checks it separately). The shortcuts on `Py_SIZE` (:1678-1691),
+then both iterators are made (:1694-1699) before any callback runs, then the loop. Its
+fuel `len(v) + 1` is enough: each `PyIter_Next(it1)` that yields lowers `it1`'s counter,
+which starts at `len(v)`. -/
+def richcompareRe {S : Type} (gv gw : S → Deque α) (eq rich : RCmp S α) (op : CmpOp)
+    (same : Bool) (s : S) : Py Bool × S :=
+  let v := gv s
+  let w := gw s
   let vs := v.size
   let ws := w.size
-  if op = .eq ∧ same then .ok true
-  else if op = .eq ∧ vs ≠ ws then .ok false
-  else if op = .ne ∧ same then .ok false
-  else if op = .ne ∧ vs ≠ ws then .ok true
-  else richLoop eq rich op v w (v.items.length + 1) v.iter w.iter
+  if op = .eq ∧ same then (.ok true, s)
+  else if op = .eq ∧ vs ≠ ws then (.ok false, s)
+  else if op = .ne ∧ same then (.ok false, s)
+  else if op = .ne ∧ vs ≠ ws then (.ok true, s)
+  else richLoopRe gv gw eq rich op (v.items.length + 1) v.iter w.iter s
 
 end Deque
 
