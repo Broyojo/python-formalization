@@ -231,4 +231,95 @@ theorem fixSpec_sticky (c : Ctx) (neg : Bool) (W X d : Nat) (E : Int) (fl : List
   rw [hq, roundSpec_congr c.rounding neg (W / 10 ^ fixK c W E) _ _ _ _ hr' hr h1.symm h2.symm h3.symm]
   simp only [hr, hr', ne_eq, not_false_eq_true, decide_true]
 
+/-! ## Signed coefficients -/
+
+/-- `±n` as an int: `-n` when the sign bit is set. -/
+def sgnI (s : Bool) (n : Nat) : Int := if s then -(n : Int) else n
+
+theorem sgnI_natAbs (s : Bool) (n : Nat) : (sgnI s n).natAbs = n := by
+  cases s <;> simp [sgnI]
+
+theorem sgnI_lt (s : Bool) (n : Nat) (h : n ≠ 0) : decide (sgnI s n < 0) = s := by
+  cases s <;> simp [sgnI] <;> omega
+
+theorem sgnI_eq_zero (s : Bool) (n : Nat) : sgnI s n = 0 ↔ n = 0 := by
+  cases s <;> simp [sgnI]
+
+theorem sgnI_add_same (s : Bool) (a b : Nat) : sgnI s a + sgnI s b = sgnI s (a + b) := by
+  cases s <;> simp [sgnI] <;> omega
+
+theorem sgnI_add_opp (s : Bool) (a b : Nat) (h : b ≤ a) : sgnI s a + sgnI (!s) b = sgnI s (a - b) := by
+  cases s <;> simp [sgnI] <;> omega
+
+theorem exactSum_sgn (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int) :
+    exactSum sa ca ea sb cb eb =
+      sgnI sa (ca * 10 ^ (ea - min ea eb).toNat) + sgnI sb (cb * 10 ^ (eb - min ea eb).toNat) := by
+  unfold exactSum; cases sa <;> cases sb <;> simp [sgnI] <;> omega
+
+/-! ## `__add__` after `_normalize` -/
+
+theorem strLimit_fix_run (c : Ctx) (rint : Nat) (s : Bool) (E : Int) (fl : List Signal) :
+    (liftPy (strLimit rint) >>= fun _ => fix c (.fin s rint E)).run fl =
+      if maxStrDigits < numDigits rint then .error (.valueError limitToStrMsg)
+      else (fix c (.fin s rint E)).run fl := by
+  rw [liftPy_run]
+  by_cases h : numDigits rint > maxStrDigits
+  · simp [strLimit, h]
+  · simp [strLimit, h, show ¬ maxStrDigits < numDigits rint by omega]
+
+/-- `__add__` of two non-zero finite operands once `_normalize` has brought them to one exponent `E`
+(_pydecimal.py:1255-1286): opposite signs and equal coefficients give the zero of the
+`negativezero` sign at `min(ea, eb)`; otherwise the signed sum of the working coefficients, whose
+`str()` (:1285 for `result.int`) is subject to the int/str limit, goes through `_fix`. -/
+theorem add_run_of_norm (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
+    (fl : List Signal) (ha : ca ≠ 0) (hb : cb ≠ 0) (hl1 : numDigits ca ≤ maxStrDigits)
+    (hl2 : numDigits cb ≤ maxStrDigits) (s1 s2 : Bool) (n1 n2 : Nat) (E : Int)
+    (hw : workNormalize c.prec (sa, ca, ea) (sb, cb, eb) = .ok ((s1, n1, E), (s2, n2, E)))
+    (h1 : n1 ≠ 0) (h2 : n2 ≠ 0) :
+    (add c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+      if sgnI s1 n1 + sgnI s2 n2 = 0 then
+        (fix c (.fin (decide (c.rounding = .floor ∧ sa ≠ sb)) 0 (min ea eb))).run fl
+      else if maxStrDigits < numDigits (sgnI s1 n1 + sgnI s2 n2).natAbs then .error (.valueError limitToStrMsg)
+      else (fix c (.fin (decide (sgnI s1 n1 + sgnI s2 n2 < 0)) (sgnI s1 n1 + sgnI s2 n2).natAbs E)).run fl := by
+  have g1 : ¬ numDigits ca > maxStrDigits := by omega
+  have g2 : ¬ numDigits cb > maxStrDigits := by omega
+  simp only [add, ha, hb, and_self, ↓reduceIte, liftPy_run, intLimit, g1, g2, hw]
+  -- the signed sum is `sgnI s n` with `n ≠ 0`, and the model reached `str(n)` then `_fix`
+  have fin : ∀ (s : Bool) (n : Nat), n ≠ 0 → sgnI s1 n1 + sgnI s2 n2 = sgnI s n →
+      StateT.run (do liftPy (strLimit n); fix c (Dec.fin s n E)) fl =
+      if sgnI s1 n1 + sgnI s2 n2 = 0 then
+        StateT.run (fix c (Dec.fin (decide (c.rounding = Rounding.floor ∧ sa ≠ sb)) 0 (min ea eb))) fl
+      else if maxStrDigits < numDigits (sgnI s1 n1 + sgnI s2 n2).natAbs then
+        Except.error (PyExc.valueError limitToStrMsg)
+      else StateT.run (fix c (Dec.fin (decide (sgnI s1 n1 + sgnI s2 n2 < 0))
+        (sgnI s1 n1 + sgnI s2 n2).natAbs E)) fl := by
+    intro s n hn hs
+    rw [hs, if_neg (by rw [sgnI_eq_zero]; exact hn), sgnI_natAbs, sgnI_lt s n hn]
+    exact strLimit_fix_run c n s E fl
+  cases s1 <;> cases s2
+  · simp only [ne_eq, not_true_eq_false, ↓reduceIte]
+    exact fin false (n1 + n2) (by omega) (sgnI_add_same _ _ _)
+  · by_cases heq : n1 = n2
+    · subst heq
+      have h0 : sgnI false n1 + sgnI true n1 = 0 := by simp [sgnI]; omega
+      simp only [ne_eq, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, h0]
+    · by_cases hlt : n1 < n2
+      · simp only [ne_eq, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, heq, hlt]
+        refine fin true (n2 - n1) (by omega) ?_
+        rw [Int.add_comm]; exact sgnI_add_opp true n2 n1 (by omega)
+      · simp only [ne_eq, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, heq, hlt]
+        exact fin false (n1 - n2) (by omega) (sgnI_add_opp false n1 n2 (by omega))
+  · by_cases heq : n1 = n2
+    · subst heq
+      have h0 : sgnI true n1 + sgnI false n1 = 0 := by simp [sgnI]; omega
+      simp only [ne_eq, Bool.true_eq_false, not_false_eq_true, ↓reduceIte, h0]
+    · by_cases hlt : n1 < n2
+      · simp only [ne_eq, Bool.true_eq_false, not_false_eq_true, ↓reduceIte, heq, hlt]
+        refine fin false (n2 - n1) (by omega) ?_
+        rw [Int.add_comm]; exact sgnI_add_opp false n2 n1 (by omega)
+      · simp only [ne_eq, Bool.true_eq_false, not_false_eq_true, ↓reduceIte, heq, hlt]
+        exact fin true (n1 - n2) (by omega) (sgnI_add_opp true n1 n2 (by omega))
+  · simp only [ne_eq, not_true_eq_false, ↓reduceIte]
+    exact fin true (n1 + n2) (by omega) (sgnI_add_same _ _ _)
+
 end PyLean.Decimal
