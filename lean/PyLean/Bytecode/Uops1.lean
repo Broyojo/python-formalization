@@ -1136,7 +1136,7 @@ def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
 
 /-- `:2043`. -/
 def _SPECIALIZE_UNPACK_SEQUENCE : M Unit := pure ()
-/-- `:2057`. -/
+/-- `:2057-2062`. -/
 def _UNPACK_SEQUENCE (e : Env) : M Unit := stk 1 e.oparg fun
   | [seq] => do
     let l ← (unpackIterable e.om e.ctx seq e.oparg none : RM _)
@@ -1144,17 +1144,19 @@ def _UNPACK_SEQUENCE (e : Env) : M Unit := stk 1 e.oparg fun
   | _ => fault "arity"
 /-- `:2064`. -/
 def UNPACK_SEQUENCE (e : Env) : M Unit := do _SPECIALIZE_UNPACK_SEQUENCE; _UNPACK_SEQUENCE e
-/-- `:2069`. -/
+/-- `:2069-2078`: `EXIT_IF(PyTuple_GET_SIZE(seq_o) != 2)`, then `val0` is item 0 and `val1` item 1,
+in the order `(seq -- val1, val0)`. -/
 def _UNPACK_SEQUENCE_TWO_TUPLE : M Unit := stk 1 2 fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
-    | .tuple #[x, y] => pure [y, x]
-    | .tuple _ => throw .deopt
+    | .tuple items =>
+      if items.size != 2 then throw .deopt
+      pure [items.getD 1 .null, items.getD 0 .null]
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:2066`. -/
+/-- `:2066-2067`. -/
 def UNPACK_SEQUENCE_TWO_TUPLE : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TWO_TUPLE
-/-- `:2102`. -/
+/-- `:2102-2112`. -/
 def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1163,9 +1165,9 @@ def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:2099`. -/
+/-- `:2099-2100`. -/
 def UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TUPLE e
-/-- `:2131`. -/
+/-- `:2131-2146`. -/
 def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1174,9 +1176,9 @@ def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a list"
   | _ => fault "not a list"
-/-- `:2128`. -/
+/-- `:2128-2129`. -/
 def UNPACK_SEQUENCE_LIST (e : Env) : M Unit := do _GUARD_TOS_LIST; _UNPACK_SEQUENCE_LIST e
-/-- `:2148`. -/
+/-- `:2148-2153`. -/
 def UNPACK_EX (e : Env) : M Unit :=
   stk 1 ((e.oparg &&& 255) + 1 + (e.oparg >>> 8)) fun
     | [seq] => do

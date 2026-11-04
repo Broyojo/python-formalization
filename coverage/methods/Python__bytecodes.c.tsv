@@ -191,18 +191,18 @@ Python/bytecodes.c	1986	1986	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( --
 Python/bytecodes.c	1998	1998	opcode:STORE_NAME	inst(STORE_NAME, (v -- )) {	todo		
 Python/bytecodes.c	2018	2018	opcode:DELETE_NAME	inst(DELETE_NAME, (--)) {	todo		
 Python/bytecodes.c	2043	2043	opcode:_SPECIALIZE_UNPACK_SEQUENCE	specializing op(_SPECIALIZE_UNPACK_SEQUENCE, (counter/1, seq -- seq)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2057	2057	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	todo		
-Python/bytecodes.c	2064	2064	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	todo		
-Python/bytecodes.c	2066	2066	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	todo		
-Python/bytecodes.c	2069	2069	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2057	2057	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2064	2064	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2066	2066	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2069	2069	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2080	2080	opcode:_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2089	2089	opcode:_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE, (seq -- val2, val1, val0)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2099	2099	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	todo		
-Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	2099	2099	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
 Python/bytecodes.c	2114	2114	opcode:_UNPACK_SEQUENCE_UNIQUE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	todo		
-Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	todo		
-Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		
+Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	modelled	bytecode-unpack-sequence	
+Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	modelled	bytecode-unpack-ex	
 Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	

@@ -17,6 +17,7 @@ import PyLean.Bytecode.SpecForIter
 import PyLean.Bytecode.SpecDict
 import PyLean.Bytecode.GenericProps
 import PyLean.Bytecode.SpecJumps
+import PyLean.Bytecode.SpecUnpack
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -541,7 +542,21 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "Finalizers run when CPython runs them."
     source := "_PyGen_Finalize; reference counting"
     status := .open, prop := ``NotYetStated
-    notes := "The machine has no reference counts. bytecode_diff.py exclusion: refcount-finalizer-order." }
+    notes := "The machine has no reference counts. bytecode_diff.py exclusion: refcount-finalizer-order." },
+  -- Unpacking.
+  { id := "bytecode-unpack-sequence", pyFile := "Python/bytecodes.c"
+    pyFns := [op "UNPACK_SEQUENCE", op "_UNPACK_SEQUENCE", op "UNPACK_SEQUENCE_TWO_TUPLE",
+      op "_UNPACK_SEQUENCE_TWO_TUPLE", op "UNPACK_SEQUENCE_TUPLE", op "_UNPACK_SEQUENCE_TUPLE",
+      op "UNPACK_SEQUENCE_LIST", op "_UNPACK_SEQUENCE_LIST"]
+    statement := "UNPACK_SEQUENCE n, for every object model, calls PyIter_Next on iter(v) one item at a time: with exactly n items and then the end it replaces v by them, item 0 on top, in the runtime the exhausting call left; fewer gives ValueError 'not enough values to unpack (expected n, got k)'; one more gives 'too many values to unpack (expected n, got len)' for an exact list, tuple or dict longer than n (its size read after the extra call) and '(expected n)' otherwise; an exception from __next__ propagates; a TypeError from iter() on a value with neither tp_iter nor the sequence protocol becomes 'cannot unpack non-iterable T object'; v is popped on every error. UNPACK_SEQUENCE_TUPLE, _LIST and _TWO_TUPLE unpack an exact tuple or list of exactly n (2) items the same way and on every other value are the generic UNPACK_SEQUENCE."
+    source := "Python/bytecodes.c:2057-2146; _PyEval_UnpackIterableStackRef, Python/ceval.c:2357-2459"
+    status := .proven, prop := ``UnpackRules, thm := some ``unpackRules_proven },
+  { id := "bytecode-unpack-ex", pyFile := "Python/bytecodes.c"
+    pyFns := [op "UNPACK_EX"]
+    statement := "UNPACK_EX (before | after << 8), for every object model: the first `before` items come one PyIter_Next call at a time, PySequence_List drains the rest, and the stack gets the first items (item 0 on top), a new list of all but the last `after` of the rest, and those last items in order; too few items gives 'not enough values to unpack (expected at least before+after, got k)' with k counted as CPython counts it in each loop; exceptions from __next__ and non-TypeError exceptions from iter() propagate; v is popped on every error."
+    source := "Python/bytecodes.c:2148-2153; _PyEval_UnpackIterableStackRef, Python/ceval.c:2357-2459"
+    status := .proven, prop := ``UnpackExFull, thm := some ``unpackExFull_proven
+    notes := "The model's PySequence_List stops at a million items with fuel; the statement assumes fewer." }
 ]
 
 end PyLean.Bytecode
