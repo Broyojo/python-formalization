@@ -27,6 +27,7 @@ import PyLean.Datetime.FmtTwinsProps
 import PyLean.Datetime.FloatProps
 import PyLean.Datetime.IsoFormsProps
 import PyLean.Datetime.IndexProps
+import PyLean.Datetime.IsoTimeProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -448,6 +449,11 @@ def entries : List Entry := [
     statement := "For all ASCII digits, _parse_hh_mm_ss_ff parses HH, HH:MM, HHMMSS, HH:MM:SS.ffffff, HH:MM:SS,fff (times 1000) and truncates a seventh fraction digit; it raises 'Invalid time separator' for a non-colon after HH:MM, 'Invalid microsecond separator' for a separator other than . or ,, and 'Non-digit values in fraction'."
     source := "time.fromisoformat docs; _parse_hh_mm_ss_ff", status := .proven
     prop := ``ParseHHMMSSFFForms, thm := some ``parseHHMMSSFFForms_proven },
+  { id := "datetime-parse-isotime-forms", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_isoformat_time"]
+    statement := "For every ASCII time part t (no -, + or Z, at least 2 characters) and offset text tz: t alone is naive; t + 'Z' is UTC; t + sign + tz is Malformed for len(tz) in (0, 1, 3), UTC for an all-zero offset, sign * ((a*3600 + b*60 + d)*10**6 + u) microseconds for a valid one, and an error_from_tz ValueError with no tzinfo for an out-of-range one; t + 'Z' + nonempty tz is Malformed; hour 24 becomes 0 with became_next_day only for 24:00[:00[.0]], otherwise error_from_components; parse errors of t propagate."
+    source := "time.fromisoformat docs; _pydatetime.py:453-519", status := .proven
+    prop := ``ParseIsoTimeForms, thm := some ``parseIsoTimeForms_proven },
   { id := "datetime-parse-hhmmssff-fraction", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_parse_hh_mm_ss_ff", "_read_isoformat_component"]
     statement := "For all ASCII digits, HH:MM:SS or HHMMSS followed by '.' or ',' and a nonempty run of k ASCII digits parses to the first min(k, 6) digits times 10**(6 - min(k, 6)) microseconds, which pins every _FRACTION_CORRECTION entry."
