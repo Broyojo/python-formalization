@@ -241,6 +241,11 @@ CREDIT = {
     "pygrammar-rule-in-bitwise-or": {GRAM: ["rule:in_bitwise_or"]},
     "pygrammar-rule-isnot-bitwise-or": {GRAM: ["rule:isnot_bitwise_or"]},
     "pygrammar-rule-is-bitwise-or": {GRAM: ["rule:is_bitwise_or"]},
+    "pygrammar-rule-invalid-starred-expression-unpacking": {
+        GRAM: ["rule:invalid_starred_expression_unpacking"]},
+    "pygrammar-rule-invalid-starred-expression-unpacking-sequence": {
+        GRAM: ["rule:invalid_starred_expression_unpacking_sequence"]},
+    "pygrammar-rule-invalid-default": {GRAM: ["rule:invalid_default"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],

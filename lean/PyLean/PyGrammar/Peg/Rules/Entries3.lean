@@ -2,7 +2,7 @@ import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Rules.Args2
 import PyLean.PyGrammar.Peg.Rules.GenexpStar
-import PyLean.PyGrammar.Peg.Rules.Cmp
+import PyLean.PyGrammar.Peg.Rules.Invalid3
 
 /-! Registry entries for the parameter rules (`Peg/Rules/Params*.lean`) and `invalid_group`
 (`Peg/Rules/Invalid2.lean`), in the scheme of `Entries.lean`. -/
@@ -636,6 +636,45 @@ def cmpEntries : List Entry := [
     prop := ``NoteqBitwiseOrRule
     thm := some ``noteqBitwiseOrRule_proven
     notes := scheme ++ " The '<>' without barry clause assumes no exception pending." }
+]
+
+def invalid3Entries : List Entry := [
+  { id := "pygrammar-rule-invalid-starred-expression-unpacking"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_starred_expression_unpacking
+    statement := "invalid_starred_expression_unpacking (3.15): '*' if_expression raises \"invalid " ++
+      "starred expression. Did you forget to wrap the conditional expression in parentheses?\" " ++
+      "over '*' .. the conditional; once that fails, '*' expression '=' expression raises " ++
+      "\"cannot assign to iterable argument unpacking\" over '*' .. the value; both end with NULL " ++
+      "and error_indicator set; otherwise NULL with the mark back."
+    source := "Grammar/python.gram:1577-1580"
+    status := .proven
+    prop := ``InvalidStarredExpressionUnpacking
+    thm := some ``invalidStarredExpressionUnpacking_proven
+    notes := scheme ++ " raisedAt: RAISE_SYNTAX_ERROR_KNOWN_RANGE's exception state and error return." },
+  { id := "pygrammar-rule-invalid-starred-expression-unpacking-sequence"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_starred_expression_unpacking_sequence
+    statement := "invalid_starred_expression_unpacking_sequence (3.15): '**' bitwise_or raises " ++
+      "\"cannot use dict unpacking here\" at the '**' token; once that fails, " ++
+      "invalid_starred_expression_unpacking from the start mark in the second pass; otherwise " ++
+      "NULL with the mark back."
+    source := "Grammar/python.gram:1581-1584"
+    status := .proven
+    prop := ``InvalidStarredExpressionUnpackingSequence
+    thm := some ``invalidStarredExpressionUnpackingSequence_proven
+    notes := scheme },
+  { id := "pygrammar-rule-invalid-default"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_default
+    statement := "invalid_default: '=' followed by ')' or ',' (not consumed) raises \"expected " ++
+      "default value expression\" at the '='; otherwise NULL with the mark back (so a lambda's " ++
+      "'a=:' is not diagnosed: ':' is neither)."
+    source := "Grammar/python.gram:1373-1374"
+    status := .proven
+    prop := ``InvalidDefault
+    thm := some ``invalidDefault_proven
+    notes := scheme }
 ]
 
 end PyLean.PyGrammar.Peg

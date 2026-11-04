@@ -1185,6 +1185,6 @@ def ruleEntries : List Entry := [
     thm := some ``lazyImportDiagnosed_refuted
     bug := some "pygrammar-lazy-import-diagnostics"
     notes := "Counterexample run in the kernel: 'lazy import\\n' gives 'invalid syntax'." }
-] ++ patternEntries ++ paramEntries ++ compEntries ++ argEntries ++ findingEntries ++ cmpEntries
+] ++ patternEntries ++ paramEntries ++ compEntries ++ argEntries ++ findingEntries ++ cmpEntries ++ invalid3Entries
 
 end PyLean.PyGrammar.Peg

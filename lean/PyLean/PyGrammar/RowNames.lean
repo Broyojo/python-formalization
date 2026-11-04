@@ -427,6 +427,9 @@ def rule_invalid_assert_stmt : List String := [
 def rule_invalid_assignment : List String := [
   "rule:invalid_assignment"]
 
+def rule_invalid_default : List String := [
+  "rule:invalid_default"]
+
 def rule_invalid_del_stmt : List String := [
   "rule:invalid_del_stmt"]
 
@@ -444,6 +447,12 @@ def rule_invalid_import_from_as_name : List String := [
 
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]
+
+def rule_invalid_starred_expression_unpacking : List String := [
+  "rule:invalid_starred_expression_unpacking"]
+
+def rule_invalid_starred_expression_unpacking_sequence : List String := [
+  "rule:invalid_starred_expression_unpacking_sequence"]
 
 def rule_inversion : List String := [
   "rule:inversion"]
