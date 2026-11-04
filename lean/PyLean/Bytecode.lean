@@ -21,6 +21,7 @@ import PyLean.Bytecode.SpecUnpack
 import PyLean.Bytecode.SpecBuild
 import PyLean.Bytecode.SpecMisc
 import PyLean.Bytecode.SpecCall
+import PyLean.Bytecode.SpecCallGeneric
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,

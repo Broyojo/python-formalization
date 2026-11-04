@@ -1835,6 +1835,34 @@ def isSequenceImpl (v : Val) : RM Bool := do
 /-- `except*`: `exc.split(match_type)`. -/
 def egSplitImpl (_ _ : Val) : RM (Val × Val) := fault "exception group split not modelled"
 
+/-- `_PyObject_Call(callable, args, kwargs)`, `Objects/call.c:333-367`: with vectorcall
+(`_PyVectorcall_Call`, `:263-300`) the dict is unpacked into names and values first
+(`_PyStack_UnpackDict`, which refuses a non-str key); with only `tp_call` the dict goes into the
+slot. Of the model's callables, an instance of a Python class is the `tp_call` one: `slot_tp_call`
+(`Objects/typeobject.c`) looks `__call__` up and binds it before anything unpacks the dict, so a
+descriptor run by that lookup runs before the "keywords must be strings" check. Every other
+callable is taken as a vectorcall one; for a Python class (`type_call`) that unpacks one step
+early, which shows only through a metaclass `__call__` or a `__new__`/`__init__` reached through a
+descriptor with side effects. -/
+def callDictImpl (f callargs kwargs : Val) : RM Val := do
+  let pos := (← tupleItems callargs).toList
+  let slotCall ← match f with
+    | .ref a => do
+      match ← getObj a with
+      | .inst i => pure (some i)
+      | _ => pure none
+    | _ => pure none
+  match slotCall with
+  | some i =>
+    match ← userLookup i.cls "__call__" with
+    | some c =>
+      let b ← descrBind om ctx c f i.cls
+      om.callDict ctx b callargs kwargs
+    | none => typeError s!"'{← tpName f}' object is not callable"
+  | none =>
+    let (kw, kwvals) ← unpackKwargs kwargs
+    om.call ctx f (pos ++ kwvals) kw
+
 /-- `PyObject_LengthHint(o, defaultvalue)`, `Objects/abstract.c:95-152`. `_PyObject_HasLen` is
 asked through `PyObject_Length` itself: a type with no `__len__` raises `TypeError`, which the hint
 clears exactly as it clears a `TypeError` from a real `__len__` (`:104-107`). Then
@@ -1918,6 +1946,7 @@ def mkOM (P : Program) : Nat → ObjModel
       getAttr := fun _ _ _ => bad, getMethod := fun _ _ _ => bad, setAttr := fun _ _ _ _ => bad
       delAttr := fun _ _ _ => bad, getIter := fun _ _ => bad, iterNext := fun _ _ => bad
       isIterator := fun _ => bad, isIterable := fun _ => bad, call := fun _ _ _ _ => bad
+      callDict := fun _ _ _ _ => bad
       str := fun _ _ => bad, repr := fun _ _ => bad, ascii := fun _ _ => bad
       format := fun _ _ _ => bad, length := fun _ _ => bad, hash := fun _ _ => bad
       lookupSpecial := fun _ _ _ => bad, superLookup := fun _ _ _ _ _ => bad
@@ -1949,6 +1978,7 @@ def mkOM (P : Program) : Nat → ObjModel
       isIterator := fun v => isIteratorImpl v
       isIterable := fun v => isIterableImpl v
       call := fun ctx f a k => callImpl P om ctx f a k
+      callDict := fun ctx f a k => callDictImpl om ctx f a k
       str := fun ctx v => strImpl om ctx v
       repr := fun ctx v => reprImpl om ctx v
       ascii := fun ctx v => reprImpl om ctx v

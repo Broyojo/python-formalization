@@ -832,10 +832,8 @@ def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
       BM.lift (setReturnOffset (instrSize e.opcode))
       dispatchInlined nf
     else
-      stk 4 1 fun _ => do
-        let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
-        let pos ← (tupleItems callargs : RM _)
-        pure [← e.om.call e.ctx func (pos.toList ++ kwvals) kw]
+      -- `PyObject_Call(func, callargs, kwargs)` (`:5706`)
+      stk 4 1 fun _ => do pure [← e.om.callDict e.ctx func callargs kwargs]
   | _ => fault "arity"
 
 /-- `:5728`. -/
@@ -870,10 +868,7 @@ def _CHECK_IS_NOT_PY_CALLABLE_EX : M Unit := guardTop 4 fun
   | _ => fault "arity"
 /-- `:5778`. -/
 def _CALL_FUNCTION_EX_NON_PY_GENERAL (e : Env) : M Unit := stk 4 1 fun
-  | [func, _, callargs, kwargs] => do
-    let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
-    let pos ← (tupleItems callargs : RM _)
-    pure [← e.om.call e.ctx func (pos.toList ++ kwvals) kw]
+  | [func, _, callargs, kwargs] => do pure [← e.om.callDict e.ctx func callargs kwargs]
   | _ => fault "arity"
 /-- `:5794`. -/
 def CALL_EX_NON_PY_GENERAL (e : Env) : M Unit := do

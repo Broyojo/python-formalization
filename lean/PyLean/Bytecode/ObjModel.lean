@@ -60,6 +60,10 @@ structure ObjModel where
   isIterable : Val → RM Bool
   /-- `PyObject_Vectorcall`. `args` ends with the values of `kwnames`. -/
   call : Ctx → Val → List Val → List String → RM Val
+  /-- `PyObject_Call(callable, args, kwargs)` (`Objects/call.c:333-373`): `args` a tuple, `kwargs` a
+  dict or `NULL`. A callable with vectorcall gets the dict unpacked first (`_PyVectorcall_Call`), one
+  with only `tp_call` gets the dict itself. -/
+  callDict : Ctx → Val → Val → Val → RM Val
   /-- `PyObject_Str`. -/
   str : Ctx → Val → RM Val
   /-- `PyObject_Repr`. -/

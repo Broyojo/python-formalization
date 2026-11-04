@@ -606,6 +606,36 @@ def p_builders(r):
     return "\n".join(out)
 
 
+def p_call_generic(r):
+    """`CALL`, `CALL_KW`, `CALL_FUNCTION_EX` on every kind of callable: a bound method object
+    (expanded by `_MAYBE_EXPAND_METHOD`), a function (inlined, the frame failing on bad arguments),
+    a builtin, a class, an instance with `__call__` (`tp_call`: `PyObject_Call` hands it the dict),
+    `*` of a non-tuple iterable (`_MAKE_CALLARGS_A_TUPLE`), and `**` with a non-str key."""
+    head = ("class P:\n    def __init__(self):\n        self.v = 1\n    def m(self, a=0, *r, k=0, **kw):\n"
+            "        return (self.v, a, r, k, sorted(kw.items()))\n"
+            "class D:\n    @property\n    def __call__(self):\n        print('lookup')\n        return lambda *a, **k: (a, sorted(k.items()))\n"
+            "class E:\n    def __call__(self, *a, **k):\n        return ('E', a, sorted(k.items()))\n"
+            "class It:\n    def __iter__(self):\n        print('iter')\n        return iter([1, 2])\n"
+            "class Bad:\n    def __iter__(self):\n        raise " + r.choice(["TypeError('inner')", "ValueError('v')"]) + "\n"
+            "def f(a, b=2, *c, d=4, **e):\n    return (a, b, c, d, sorted(e.items()))\n"
+            "def g(x, /, y):\n    return (x, y)\n"
+            "class K:\n    def __init__(self, *a, **k):\n        self.a = (a, sorted(k.items()))\n")
+    # builtins only where the model's argument parsing is CPython's: their messages for bad
+    # arguments belong to the builtins, not to the call instructions
+    callees = ["P().m", "bm", "f", "g", "D()", "E()", "K", "(lambda *a, **k: (a, k))", "P.m"]
+    argss = ["", "1", "1, 2", "1, 2, 3", "a=1", "k=5", "1, k=5", "1, d=5", "x=1", "1, y=2", "*[1, 2]", "*It()",
+             "*(1,)", "*Bad()", "*5", "**{'a': 1}", "**{1: 2}", "*[1], **{'k': 3}", "*It(), **{'zz': 0}",
+             "1, *[2], **{'b': 3}", "**{'d': 1, 'k': 2}"]
+    out = [head, "bm = P().m", guarded("print(*It(), sep='-')"), guarded("print(len(*[[1, 2]]), dict(**{'a': 1}))"),
+           guarded("print(*Bad())"), guarded("print(**{1: 2})")]
+    for _ in range(r.randint(4, 10)):
+        c, a = r.choice(callees), r.choice(argss)
+        out.append(guarded(f"print(K({a}).a if {c!r} == 'K' else {c}({a}))"))
+    out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}))\n"
+               + guarded("loop(" + r.choice(["bm", "P().m", "E()", "f", "(lambda *a, **k: (a, sorted(k.items())))"]) + ")"))
+    return "\n".join(out)
+
+
 def p_float_repr(r):
     """`repr` around powers of two, where the rounding interval is uneven."""
     lines = []
@@ -637,7 +667,7 @@ def p_long_names(r):
 
 
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
 
 
 def enc_const(c, table):
