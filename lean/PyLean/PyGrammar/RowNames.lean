@@ -514,6 +514,9 @@ def rule_parameters : List String := [
 def rule_params : List String := [
   "rule:params"]
 
+def rule_paren_name_target : List String := [
+  "rule:invalid_dotted_as_name"]
+
 def rule_pattern : List String := [
   "rule:pattern"]
 

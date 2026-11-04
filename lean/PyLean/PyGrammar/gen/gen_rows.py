@@ -134,6 +134,7 @@ CREDIT = {
     "pygrammar-rule-sum-sub-sub": {GRAM: ["rule:sum"]},
     "pygrammar-rule-dotted-as-name-name-target": {GRAM: ["rule:invalid_dotted_as_name"]},
     "pygrammar-rule-import-from-as-name-name-target": {GRAM: ["rule:invalid_import_from_as_name"]},
+    "pygrammar-rule-paren-name-target": {GRAM: ["rule:invalid_dotted_as_name"]},
     "pygrammar-rule-invalid-dotted-as-name": {GRAM: ["rule:invalid_dotted_as_name"]},
     "pygrammar-rule-invalid-import-from-as-name": {GRAM: ["rule:invalid_import_from_as_name"]},
     "pygrammar-rule-literal-pattern": {GRAM: ["rule:literal_pattern"]},

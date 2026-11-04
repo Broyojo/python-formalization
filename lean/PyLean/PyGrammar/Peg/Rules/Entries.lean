@@ -1133,6 +1133,19 @@ def ruleEntries : List Entry := [
     bug := some "pygrammar-import-as-name-target"
     notes := "Counterexample run in the kernel: 'from x import a as b c\\n'. Duplicate of " ++
       "gh-146492." },
+  { id := "pygrammar-rule-paren-name-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_paren_name_target
+    statement := "'import a as (c)' followed by NEWLINE, c a one-letter name, never gives " ++
+      "\"cannot use name as import target\" (the defect is the parentheses, not the name)."
+    source := "the implementation against itself: dotted_as_name takes 'as' NAME"
+    status := .refuted
+    prop := ``ParenNameTarget
+    thm := some ``parenNameTarget_refuted
+    bug := some "pygrammar-import-as-name-target"
+    notes := "Counterexample run in the kernel: 'import a as (b)\\n'. The case the fix proposed " ++
+      "in gh-146493 (open) still reaches: '(' passes the lookahead, expression gives Name b, " ++
+      "NEWLINE follows." },
   { id := "pygrammar-rule-invalid-dotted-as-name"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_invalid_dotted_as_name
