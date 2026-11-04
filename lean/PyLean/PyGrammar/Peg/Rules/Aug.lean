@@ -50,8 +50,9 @@ def augOp : Nat → Option Ctor
   | 48 => some .FloorDiv | _ => none
 
 /-- `augassign`: at an augmented assignment token, `_PyPegen_augoperator(p, Op)` for its operator
-and the token taken; `@=` under a `feature_version` below 5 fails `CHECK_VERSION` with an error;
-at any other token `NULL`. -/
+and the token taken; `@=` under a `feature_version` below 5 fails `CHECK_VERSION`: `NULL`,
+`error_indicator` set, and the exception `_PyPegen_raise_error` sets for "The '@' operator is only
+supported in Python 3.5 and greater"; at any other token `NULL`. -/
 def AugAssign : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
   let s1 := { q with mark := p.mark + 1 }
@@ -59,7 +60,10 @@ def AugAssign : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   (∀ c, augOp t.type = some c → (c = .MatMult → 5 ≤ p.featureVersion) →
     callRule (f + 18) 13 p = (rec_ .PAugOperator [opNode c], s1.leave)) ∧
   (augOp t.type = some .MatMult → p.featureVersion < 5 →
-    (callRule (f + 18) 13 p).1 = .null ∧ (callRule (f + 18) 13 p).2.errorIndicator = true)
+    (callRule (f + 18) 13 p).1 = .null ∧ (callRule (f + 18) 13 p).2.errorIndicator = true ∧
+    (callRule (f + 18) 13 p).2.tok = (raiseError0 "SyntaxError"
+      "The '@' operator is only supported in Python 3.5 and greater"
+      { s1 with errorIndicator := true }).2.tok)
 
 /-- The alternatives of `augassign` in the grammar data's order, as a table. -/
 def augTable : List (Nat × AE) :=
@@ -146,23 +150,27 @@ theorem augAssign_proven : AugAssign := by
     have h5 : (({ q with mark := p.mark + 1 } : PS).featureVersion : Int) < 5 := by
       show (q.featureVersion : Int) < 5
       omega
-    have hE : ∃ m, evalA #[.tok (q.tokenAt p.mark)] {}
+    have hE : evalA #[.tok (q.tokenAt p.mark)] {}
         (.checkVersion (.int 5) (.str "The '@' operator is") (.call .augoperator [.ctor .MatMult]))
         { q with mark := p.mark + 1 } =
-        (.null, (raiseError0 "SyntaxError" m
+        (.null, (raiseError0 "SyntaxError"
+        "The '@' operator is only supported in Python 3.5 and greater"
           { ({ q with mark := p.mark + 1 } : PS) with errorIndicator := true }).2) := by
-      refine ⟨toString (cpsStr ("The '@' operator is".toList.map Char.toNat)) ++
-        toString " only supported in Python 3." ++ toString (5 : Int) ++ toString " and greater", ?_⟩
+      have hmsg : toString (cpsStr ("The '@' operator is".toList.map Char.toNat)) ++
+          toString " only supported in Python 3." ++ toString (5 : Int) ++ toString " and greater" =
+          "The '@' operator is only supported in Python 3.5 and greater" := by decide +kernel
       simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, callHelper, rec_,
         get, getThe, MonadStateOf.get, StateT.get]
       rw [ite_t h5]
+      simp only [hmsg]
       rfl
-    obtain ⟨m, hE⟩ := hE
     simp only [tokAlt] at hE
     rw [hE]
-    have hei := (frame_raiseError0 "SyntaxError" m
+    have hei := (frame_raiseError0 "SyntaxError"
+        "The '@' operator is only supported in Python 3.5 and greater"
       { ({ q with mark := p.mark + 1 } : PS) with errorIndicator := true }).grows.err rfl
-    generalize raiseError0 "SyntaxError" m
+    generalize raiseError0 "SyntaxError"
+        "The '@' operator is only supported in Python 3.5 and greater"
       { ({ q with mark := p.mark + 1 } : PS) with errorIndicator := true } = r at hei ⊢
     dsimp only
     split <;> simp [hei, PS.leave]
