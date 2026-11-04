@@ -585,4 +585,204 @@ theorem add_fin_exact (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Boo
     · obtain ⟨hE', hσ⟩ := hns hsub
       exact Or.inl ⟨by rw [if_neg hsub]; exact hσ, hE'⟩
 
+/-- `0 + b` for a non-zero finite `b` (_pydecimal.py:1236-1240): `b` padded with zeros to the
+exponent `max(min(ea, eb), eb - prec - 1)` (`_rescale` only pads here), through `_fix`. -/
+theorem add_zero_left (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bool) (ea : Int) (sb : Bool)
+    (cb : Nat) (eb : Int) (hb : cb ≠ 0) :
+    (add c (.fin sa 0 ea) (.fin sb cb eb)).run fl =
+      fixSpec c sb (cb * 10 ^ (eb - max (min ea eb) (eb - c.prec - 1)).toNat)
+        (max (min ea eb) (eb - c.prec - 1)) fl := by
+  have hle : eb ≥ max (min ea eb) (eb - c.prec - 1) := by omega
+  have hr : rescale (.fin sb cb eb) (max (min ea eb) (eb - c.prec - 1)) c.rounding =
+      .ok (.fin sb (cb * 10 ^ (eb - max (min ea eb) (eb - c.prec - 1)).toNat)
+        (max (min ea eb) (eb - c.prec - 1))) := by
+    simp only [rescale, hb, ↓reduceIte, hle]
+  have hne : cb * 10 ^ (eb - max (min ea eb) (eb - c.prec - 1)).toNat ≠ 0 :=
+    Nat.mul_ne_zero hb (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide)))
+  rw [← fixExact_fin c _ _ _ fl hp hne]
+  simp only [add, hb, and_false, ↓reduceIte, liftPy_run, hr, bind_pure]
+
+/-- `a + 0` for a non-zero finite `a` (_pydecimal.py:1241-1245). -/
+theorem add_zero_right (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bool) (ca : Nat) (ea : Int)
+    (sb : Bool) (eb : Int) (ha : ca ≠ 0) :
+    (add c (.fin sa ca ea) (.fin sb 0 eb)).run fl =
+      fixSpec c sa (ca * 10 ^ (ea - max (min ea eb) (ea - c.prec - 1)).toNat)
+        (max (min ea eb) (ea - c.prec - 1)) fl := by
+  have hle : ea ≥ max (min ea eb) (ea - c.prec - 1) := by omega
+  have hr : rescale (.fin sa ca ea) (max (min ea eb) (ea - c.prec - 1)) c.rounding =
+      .ok (.fin sa (ca * 10 ^ (ea - max (min ea eb) (ea - c.prec - 1)).toNat)
+        (max (min ea eb) (ea - c.prec - 1))) := by
+    simp only [rescale, ha, ↓reduceIte, hle]
+  have hne : ca * 10 ^ (ea - max (min ea eb) (ea - c.prec - 1)).toNat ≠ 0 :=
+    Nat.mul_ne_zero ha (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide)))
+  rw [← fixExact_fin c _ _ _ fl hp hne]
+  simp only [add, ha, false_and, ↓reduceIte, liftPy_run, hr, bind_pure]
+
+/-- `0 + 0` (_pydecimal.py:1231-1235). -/
+theorem add_zero_zero (c : Ctx) (fl : List Signal) (sa : Bool) (ea : Int) (sb : Bool) (eb : Int) :
+    (add c (.fin sa 0 ea) (.fin sb 0 eb)).run fl =
+      (fix c (.fin ((sa && sb) || decide (c.rounding = .floor ∧ sa ≠ sb)) 0 (min ea eb))).run fl := by
+  simp only [add, and_self, ↓reduceIte, bind_pure]
+
+theorem add_nan_run (c : Ctx) (fl : List Signal) (a b : Dec) (h : nanKind a ≠ 0 ∨ nanKind b ≠ 0) :
+    (add c a b).run fl = nanSpec2 c a b fl := by
+  rcases a with ⟨sa, ca, ea⟩ | na | ⟨na, ssa, pa⟩ <;> rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, ssb, pb⟩ <;>
+    first
+    | (simp [nanKind] at h; done)
+    | (simp only [add]; exact checkNans_return c _ _ fl _ (fun d => rfl) h)
+
+theorem add_fin_inf (c : Ctx) (fl : List Signal) (s sa : Bool) (ca : Nat) (ea : Int) :
+    (add c (.fin sa ca ea) (.inf s)).run fl = .ok (.inf s, fl) := by
+  simp [add, checkNans]; rfl
+
+/-- `__add__` (_pydecimal.py:1202-1286) on every operand pair, for every context with `prec ≥ 1`
+(the invariant `_set_integer_check` keeps):
+
+* two non-zero finite operands: `_WorkRep`'s int/str-limit `ValueError` (`value has N digits`) for
+  a coefficient of more than 4300 digits, the first operand's first; an exact sum of zero is the
+  zero `_fix` makes of `+0`, or of `-0` under `ROUND_FLOOR`, at `min(ea, eb)`; the int/str-limit
+  `ValueError` of `str(result.int)` when `_normalize`'s working sum has more than 4300 digits
+  (it has the exact sum's digit count plus `min(ea, eb)` less the working exponent
+  `addWorkExp`); and otherwise the exact sum `x`, `±|x|·10^min(ea, eb)`, rounded into the context
+  by `_fix` (`fixSpec`: overflow, the subnormal range, clamping and the signals in order, the first
+  trapped one raising, with its own int/str limit on the incremented coefficient);
+* a zero and a non-zero operand: the non-zero one at the exponent `max(min(ea, eb), e - prec - 1)`
+  through `_fix`;
+* two zeros: the zero of sign `sa and sb`, or negative under `ROUND_FLOOR` when the signs differ, at
+  `min(ea, eb)` through `_fix`;
+* a NaN operand: `_check_nans` (`nanSpec2`); an infinity plus anything: `addInfSpec` (the opposite
+  infinity is InvalidOperation); a finite value plus an infinity: that infinity. -/
+def AddExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec →
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      (add c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        if maxStrDigits < numDigits ca then .error (.valueError (limitToIntMsg (numDigits ca)))
+        else if maxStrDigits < numDigits cb then .error (.valueError (limitToIntMsg (numDigits cb)))
+        else if exactSum sa ca ea sb cb eb = 0 then
+          (fix c (.fin (decide (c.rounding = .floor)) 0 (min ea eb))).run fl
+        else if (maxStrDigits : Int) < (numDigits (exactSum sa ca ea sb cb eb).natAbs : Int) +
+            min ea eb - addWorkExp c.prec ca ea cb eb then .error (.valueError limitToStrMsg)
+        else fixSpec c (decide (exactSum sa ca ea sb cb eb < 0)) (exactSum sa ca ea sb cb eb).natAbs
+          (min ea eb) fl) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), cb ≠ 0 →
+      (add c (.fin sa 0 ea) (.fin sb cb eb)).run fl =
+        fixSpec c sb (cb * 10 ^ (eb - max (min ea eb) (eb - c.prec - 1)).toNat)
+          (max (min ea eb) (eb - c.prec - 1)) fl) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (eb : Int), ca ≠ 0 →
+      (add c (.fin sa ca ea) (.fin sb 0 eb)).run fl =
+        fixSpec c sa (ca * 10 ^ (ea - max (min ea eb) (ea - c.prec - 1)).toNat)
+          (max (min ea eb) (ea - c.prec - 1)) fl) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (eb : Int),
+      (add c (.fin sa 0 ea) (.fin sb 0 eb)).run fl =
+        (fix c (.fin ((sa && sb) || decide (c.rounding = .floor ∧ sa ≠ sb)) 0 (min ea eb))).run fl) ∧
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (add c a b).run fl = nanSpec2 c a b fl) ∧
+    (∀ (s : Bool) (t : Dec), (add c (.inf s) t).run fl = addInfSpec c s t fl) ∧
+    (∀ (s sa : Bool) (ca : Nat) (ea : Int), (add c (.fin sa ca ea) (.inf s)).run fl = .ok (.inf s, fl))
+
+theorem addExact_proven : AddExact := fun c fl hp =>
+  ⟨fun sa ca ea sb cb eb ha hb => add_fin_exact c fl hp sa ca ea sb cb eb ha hb,
+   fun sa ea sb cb eb hb => add_zero_left c fl hp sa ea sb cb eb hb,
+   fun sa ca ea sb eb ha => add_zero_right c fl hp sa ca ea sb eb ha,
+   fun sa ea sb eb => add_zero_zero c fl sa ea sb eb,
+   fun a b h => add_nan_run c fl a b h,
+   fun s t => add_inf_run c s t fl,
+   fun s sa ca ea => add_fin_inf c fl s sa ca ea⟩
+
+/-! ## `__sub__` -/
+
+theorem sub_fin_run (c : Ctx) (fl : List Signal) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat)
+    (eb : Int) : (sub c (.fin sa ca ea) (.fin sb cb eb)).run fl = (add c (.fin sa ca ea) (.fin (!sb) cb eb)).run fl := by
+  simp only [sub, negate, Dec.withSign, Dec.neg, pure_bind]
+
+theorem sub_nan_run (c : Ctx) (fl : List Signal) (a b : Dec) (h : nanKind a ≠ 0 ∨ nanKind b ≠ 0) :
+    (sub c a b).run fl = nanSpec2 c a b fl := by
+  rcases a with ⟨sa, ca, ea⟩ | na | ⟨na, ssa, pa⟩ <;> rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, ssb, pb⟩ <;>
+    first
+    | (simp [nanKind] at h; done)
+    | (simp only [sub]; exact checkNans_return c _ _ fl _ (fun d => rfl) h)
+
+theorem sub_nonnan_run (c : Ctx) (fl : List Signal) (a b : Dec) (ha : nanKind a = 0) (hb : nanKind b = 0) :
+    (sub c a b).run fl = (add c a (negate b)).run fl := by
+  rcases a with ⟨sa, ca, ea⟩ | na | ⟨na, _ | _, pa⟩ <;> rcases b with ⟨sb, cb, eb⟩ | nb | ⟨nb, _ | _, pb⟩ <;>
+    simp [nanKind] at ha hb <;> simp [sub, checkNans]
+
+/-- `__sub__` (_pydecimal.py:1290-1302) on every operand pair, for every context with `prec ≥ 1`:
+a NaN operand goes through `_check_nans` on the operands as given (`nanSpec2`); otherwise
+`a - b` is `a + b.copy_negate()`, so on finite operands it is `AddExact` with the sign of `b`
+flipped: the exact difference rounded into the context by `_fix`, with the same int/str-limit
+`ValueError`s and zero signs (`x - x` is `+0`, `-0` under `ROUND_FLOOR`); an infinity minus a
+non-NaN `t` is `addInfSpec` of `-t`, and a finite value minus an infinity is the opposite
+infinity. -/
+def SubExact : Prop :=
+  ∀ (c : Ctx) (fl : List Signal), 1 ≤ c.prec →
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), ca ≠ 0 → cb ≠ 0 →
+      (sub c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+        if maxStrDigits < numDigits ca then .error (.valueError (limitToIntMsg (numDigits ca)))
+        else if maxStrDigits < numDigits cb then .error (.valueError (limitToIntMsg (numDigits cb)))
+        else if exactSum sa ca ea (!sb) cb eb = 0 then
+          (fix c (.fin (decide (c.rounding = .floor)) 0 (min ea eb))).run fl
+        else if (maxStrDigits : Int) < (numDigits (exactSum sa ca ea (!sb) cb eb).natAbs : Int) +
+            min ea eb - addWorkExp c.prec ca ea cb eb then .error (.valueError limitToStrMsg)
+        else fixSpec c (decide (exactSum sa ca ea (!sb) cb eb < 0)) (exactSum sa ca ea (!sb) cb eb).natAbs
+          (min ea eb) fl) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int), cb ≠ 0 →
+      (sub c (.fin sa 0 ea) (.fin sb cb eb)).run fl =
+        fixSpec c (!sb) (cb * 10 ^ (eb - max (min ea eb) (eb - c.prec - 1)).toNat)
+          (max (min ea eb) (eb - c.prec - 1)) fl) ∧
+    (∀ (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (eb : Int), ca ≠ 0 →
+      (sub c (.fin sa ca ea) (.fin sb 0 eb)).run fl =
+        fixSpec c sa (ca * 10 ^ (ea - max (min ea eb) (ea - c.prec - 1)).toNat)
+          (max (min ea eb) (ea - c.prec - 1)) fl) ∧
+    (∀ (sa : Bool) (ea : Int) (sb : Bool) (eb : Int),
+      (sub c (.fin sa 0 ea) (.fin sb 0 eb)).run fl =
+        (fix c (.fin ((sa && !sb) || decide (c.rounding = .floor ∧ sa ≠ !sb)) 0 (min ea eb))).run fl) ∧
+    (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (sub c a b).run fl = nanSpec2 c a b fl) ∧
+    (∀ (s : Bool) (t : Dec), nanKind t = 0 → (sub c (.inf s) t).run fl = addInfSpec c s (negate t) fl) ∧
+    (∀ (s sa : Bool) (ca : Nat) (ea : Int), (sub c (.fin sa ca ea) (.inf s)).run fl = .ok (.inf (!s), fl))
+
+theorem subExact_proven : SubExact := by
+  intro c fl hp
+  have hA := addExact_proven c fl hp
+  refine ⟨fun sa ca ea sb cb eb ha hb => ?_, fun sa ea sb cb eb hb => ?_, fun sa ca ea sb eb ha => ?_,
+    fun sa ea sb eb => ?_, fun a b h => sub_nan_run c fl a b h, fun s t ht => ?_, fun s sa ca ea => ?_⟩
+  · rw [sub_fin_run]; exact hA.1 sa ca ea (!sb) cb eb ha hb
+  · rw [sub_fin_run]; exact hA.2.1 sa ea (!sb) cb eb hb
+  · rw [sub_fin_run]; exact hA.2.2.1 sa ca ea (!sb) eb ha
+  · rw [sub_fin_run]; exact hA.2.2.2.1 sa ea (!sb) eb
+  · rw [sub_nonnan_run c fl _ _ (by simp [nanKind]) ht]; exact hA.2.2.2.2.2.1 s (negate t)
+  · rw [sub_nonnan_run c fl _ _ (by simp [nanKind]) (by simp [nanKind])]
+    exact hA.2.2.2.2.2.2 (!s) sa ca ea
+
+/-! ## The earlier conditional statements, now consequences -/
+
+theorem addCorrect_proven : AddCorrect := by
+  intro c sa ca ea sb cb eb fl fl' d hp ha hb x S e neg r hS hmin hover h
+  rw [add_fin_exact c fl hp sa ca ea sb cb eb ha hb] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  split at h
+  · rename_i hx
+    exact absurd (show (exactSum sa ca ea sb cb eb).natAbs = 0 by rw [hx]; rfl) hS
+  split at h
+  · cases h
+  rw [← fixExact_fin c _ _ _ fl hp hS] at h
+  exact fix_normal c neg S e fl fl' d hS hp hmin hover h
+
+theorem subCorrect_proven : SubCorrect := by
+  intro c sa ca ea sb cb eb fl fl' d hp ha hb x S e neg r hS hmin hover h
+  rw [sub_fin_run, add_fin_exact c fl hp sa ca ea (!sb) cb eb ha hb] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  split at h
+  · rename_i hx
+    exact absurd (show (exactSum sa ca ea (!sb) cb eb).natAbs = 0 by rw [hx]; rfl) hS
+  split at h
+  · cases h
+  rw [← fixExact_fin c _ _ _ fl hp hS] at h
+  exact (fix_normal c neg S e fl fl' d hS hp hmin hover h).1
+
 end PyLean.Decimal
