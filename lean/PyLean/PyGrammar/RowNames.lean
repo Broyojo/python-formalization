@@ -427,6 +427,9 @@ def rule_subject_expr : List String := [
 def rule_sum : List String := [
   "rule:sum"]
 
+def rule_sum_sub_sub : List String := [
+  "rule:sum"]
+
 def rule_t_lookahead : List String := [
   "rule:t_lookahead"]
 

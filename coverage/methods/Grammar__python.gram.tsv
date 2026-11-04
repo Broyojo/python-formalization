@@ -138,7 +138,7 @@ Grammar/python.gram	821	821	rule:bitwise_or	bitwise_or[expr_ty]:	modelled	pygram
 Grammar/python.gram	825	825	rule:bitwise_xor	bitwise_xor[expr_ty]:	modelled	pygrammar-rule-bitwise-xor	
 Grammar/python.gram	829	829	rule:bitwise_and	bitwise_and[expr_ty]:	modelled	pygrammar-rule-bitwise-and	
 Grammar/python.gram	833	833	rule:shift_expr	shift_expr[expr_ty]:	modelled	pygrammar-rule-shift-expr	
-Grammar/python.gram	842	842	rule:sum	sum[expr_ty]:	modelled	pygrammar-rule-sum	
+Grammar/python.gram	842	842	rule:sum	sum[expr_ty]:	modelled	pygrammar-rule-sum,pygrammar-rule-sum-sub-sub	
 Grammar/python.gram	847	847	rule:term	term[expr_ty]:	modelled	pygrammar-rule-term	
 Grammar/python.gram	856	856	rule:factor	factor[expr_ty] (memo):	modelled	pygrammar-rule-factor	
 Grammar/python.gram	862	862	rule:power	power[expr_ty]:	modelled	pygrammar-rule-power	

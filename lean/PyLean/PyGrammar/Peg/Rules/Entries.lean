@@ -29,6 +29,7 @@ import PyLean.PyGrammar.Peg.Rules.Targets2
 import PyLean.PyGrammar.Peg.Rules.Imports
 import PyLean.PyGrammar.Peg.Rules.Patterns
 import PyLean.PyGrammar.Peg.Rules.InvalidTargets
+import PyLean.PyGrammar.Peg.Rules.SumCompose
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -1085,6 +1086,18 @@ def ruleEntries : List Entry := [
     thm := some ``invalidAssignment_proven
     notes := scheme ++ " The two '=' alternatives (INVALID_TARGET, yield) are stated only as " ++
       "failing on the way to augassign." },
+  { id := "pygrammar-rule-sum-sub-sub"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sum_sub_sub
+    statement := "sum, composed: from entry, term a, then '-' term b, then '-' term c, then no " ++
+      "operator gives BinOp(BinOp(a, Sub, b), Sub, c), at the mark after c (LeaderLoop with " ++
+      "three growing rounds, each from SumStep)."
+    source := "Grammar/python.gram:842-845"
+    status := .proven
+    prop := ``SumSubSub
+    thm := some ``sumSubSub_proven
+    notes := LR ++ " RoundOK on each round's end state: no error, p->level restored, the start " ++
+      "mark within memo (memo.size = fill) and the tokens." },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_lazy_import_diagnosed
