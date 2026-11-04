@@ -391,4 +391,206 @@ theorem raiseErrorExact_proven : RaiseErrorExact := by
     simp only [hfl, Bool.false_eq_true, ↓reduceIte, ↓reduceIte]
     exact raiseAtToken_eq cls _ msg s
 
+/-- The tokenizer state after `k` more calls of `_PyTokenizer_Get`. -/
+def tokIter (s : TokState) : Nat → TokState
+  | 0 => s
+  | k + 1 => tokIter (tokenizerGet s).1 k
+
+/-- The type of the token the `k`-th next call returns (from 0). -/
+def tokTypeAt (s : TokState) (k : Nat) : Nat := (tokenizerGet (tokIter s k)).2.1
+
+/-- The loop of `_PyPegen_tokenize_full_source_to_check_for_errors`, `Parser/pegen_errors.c:154-177`,
+by where it stops. It reads tokens up to the first `ERRORTOKEN` or `ENDMARKER`, the `n`-th, and
+leaves the tokenizer after it. At an `ENDMARKER` nothing is raised. At an `ERRORTOKEN` with an
+exception set by the tokenizer, that exception stays; with none, and a bracket still open whose line
+is before `current_err_line`, it raises "'c' was never closed" there (`:161-167`); otherwise nothing.
+The fuel bounds the number of tokens, which the source length does. -/
+def TokenizeRestStops : Prop := ∀ (curLine : Int) (q : PS) (n fuel : Nat), n < fuel →
+  (∀ i < n, tokTypeAt q.tok i ≠ TokKind.ERRORTOKEN.num ∧ tokTypeAt q.tok i ≠ TokKind.ENDMARKER.num) →
+  let s := tokIter q.tok (n + 1)
+  let r := (tokenizeRest curLine fuel q).2
+  (tokTypeAt q.tok n = TokKind.ENDMARKER.num → r = { q with tok := s }) ∧
+  (tokTypeAt q.tok n = TokKind.ERRORTOKEN.num → s.err.isSome = true → r = { q with tok := s }) ∧
+  (tokTypeAt q.tok n = TokKind.ERRORTOKEN.num → s.err = none → s.level ≠ 0 →
+    curLine > (s.parenstack.headD (0, 0, 0)).2.1 → r = (raiseUnclosed { q with tok := s }).2) ∧
+  (tokTypeAt q.tok n = TokKind.ERRORTOKEN.num → s.err = none →
+    ¬(s.level ≠ 0 ∧ curLine > (s.parenstack.headD (0, 0, 0)).2.1) → r = { q with tok := s })
+
+theorem tokenizeRest_step (curLine : Int) (f : Nat) (q : PS) :
+    tokenizeRest curLine (f + 1) q =
+      let s := (tokenizerGet q.tok).1
+      let ty := (tokenizerGet q.tok).2.1
+      if ty == TokKind.ERRORTOKEN.num then
+        if s.err.isSome then ((), { q with tok := s })
+        else if s.level != 0 then
+          (if curLine > (s.parenstack.headD (0, 0, 0)).2.1 then raiseUnclosed { q with tok := s }
+           else ((), { q with tok := s }))
+        else ((), { q with tok := s })
+      else if ty == TokKind.ENDMARKER.num then ((), { q with tok := s })
+      else tokenizeRest curLine f { q with tok := s } := by
+  simp only [tokenizeRest, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, set,
+    StateT.set, MonadStateOf.set, pure, StateT.pure]
+  generalize tokenizerGet q.tok = g
+  obtain ⟨s, ty, t⟩ := g
+  simp only []
+  split <;> split <;> (try split) <;> (try split) <;> rfl
+
+theorem tokenizeRestStops_proven : TokenizeRestStops := by
+  intro curLine q n
+  induction n generalizing q with
+  | zero =>
+    intro fuel hf _
+    obtain ⟨f, rfl⟩ : ∃ g, fuel = g + 1 := ⟨fuel - 1, by omega⟩
+    simp only [tokTypeAt, tokIter]
+    rw [tokenizeRest_step]
+    simp only []
+    refine ⟨fun h => ?_, fun h he => ?_, fun h he hl hc => ?_, fun h he hn => ?_⟩
+    · have e0 : ((tokenizerGet q.tok).2.1 == TokKind.ERRORTOKEN.num) = false := by rw [h]; decide
+      have e1 : ((tokenizerGet q.tok).2.1 == TokKind.ENDMARKER.num) = true := by rw [h]; decide
+      simp only [e0, e1, Bool.false_eq_true, ↓reduceIte]
+    · have e0 : ((tokenizerGet q.tok).2.1 == TokKind.ERRORTOKEN.num) = true := by rw [h]; decide
+      simp only [e0, he, ↓reduceIte]
+    · have e0 : ((tokenizerGet q.tok).2.1 == TokKind.ERRORTOKEN.num) = true := by rw [h]; decide
+      have he' : (tokenizerGet q.tok).1.err.isSome = false := by rw [he]; rfl
+      have hl' : ((tokenizerGet q.tok).1.level != 0) = true := by simpa using hl
+      simp only [e0, he', hl', Bool.false_eq_true, ↓reduceIte]
+      rw [if_pos hc]
+    · have e0 : ((tokenizerGet q.tok).2.1 == TokKind.ERRORTOKEN.num) = true := by rw [h]; decide
+      have he' : (tokenizerGet q.tok).1.err.isSome = false := by rw [he]; rfl
+      simp only [e0, he', Bool.false_eq_true, ↓reduceIte]
+      by_cases hl : (tokenizerGet q.tok).1.level = 0
+      · have hl' : ((tokenizerGet q.tok).1.level != 0) = false := by simpa using hl
+        simp only [hl', Bool.false_eq_true, ↓reduceIte]
+      · have hc : ¬ curLine > ((tokenizerGet q.tok).1.parenstack.headD (0, 0, 0)).2.1 :=
+          fun hc => hn ⟨hl, hc⟩
+        have hl' : ((tokenizerGet q.tok).1.level != 0) = true := by simpa using hl
+        simp only [hl', ↓reduceIte]
+        rw [if_neg hc]
+  | succ n ih =>
+    intro fuel hf hb
+    obtain ⟨f, rfl⟩ : ∃ g, fuel = g + 1 := ⟨fuel - 1, by omega⟩
+    have h0 := hb 0 (by omega)
+    simp only [tokTypeAt, tokIter] at h0
+    have e1 : ((tokenizerGet q.tok).2.1 == TokKind.ERRORTOKEN.num) = false := by simpa using h0.1
+    have e2 : ((tokenizerGet q.tok).2.1 == TokKind.ENDMARKER.num) = false := by simpa using h0.2
+    rw [tokenizeRest_step]
+    simp only [e1, e2, Bool.false_eq_true, ↓reduceIte]
+    have := ih { q with tok := (tokenizerGet q.tok).1 } f (by omega)
+      (fun i hi => by simpa [tokTypeAt, tokIter] using hb (i + 1) (by omega))
+    simpa [tokTypeAt, tokIter] using this
+
+/-- The state `reset_parser_state_for_error_pass` (`Parser/pegen.c:872-886`) leaves: no recorded
+statement, every memo dropped, the mark at 0, and the `invalid_*` rules on. -/
+def errorPassState (q : PS) : PS :=
+  { q with lastStmt := (0, 0), memo := q.memo.map (fun _ => []), mark := 0, callInvalidRules := true }
+
+/-- `_PyPegen_run_parser`, `Parser/pegen.c:940-992`, path by path, after the first pass returns
+`res` in state `q`. A result with an exception pending is dropped (`:944-948`). With no result:
+under `PyPARSE_ALLOW_INCOMPLETE_INPUT` at the end of the source the exception is cleared and
+`_IncompleteInputError: incomplete input` raised (`:950-953`); an exception that is not a
+`SyntaxError` is returned as is (`:954-956`); otherwise the second pass runs from the reset state
+and `_Pypegen_set_syntax_error` gets the last token of the first pass (`:960-967`). With a result:
+a single-input source with more statements is "multiple statements found while compiling a single
+statement" (`:977-980`), and anything else is the result with the first pass's state. -/
+def RunParserPaths : Prop := ∀ (fuel : Nat) (p : PS),
+  let res := (parseStart fuel p).1
+  let q := (parseStart fuel p).2
+  (nonNull res = true → q.errOccurred = true → runParser fuel p = (.null, q)) ∧
+  (nonNull res = false → q.flagIncomplete = true → isEndOfSource q = true →
+    runParser fuel p = (.null, (raiseError "_IncompleteInputError" false "incomplete input"
+      { q with tok := { q.tok with err := none } }).2)) ∧
+  (nonNull res = false → ¬(q.flagIncomplete = true ∧ isEndOfSource q = true) →
+    q.errOccurred = true → ((q.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false = false →
+    runParser fuel p = (.null, q)) ∧
+  (nonNull res = false → ¬(q.flagIncomplete = true ∧ isEndOfSource q = true) →
+    ¬(q.errOccurred = true ∧ ((q.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false = false) →
+    runParser fuel p = (.null, (setSyntaxError (q.tokenAt (q.fill - 1))
+      (parseStart fuel (errorPassState q)).2).2)) ∧
+  (nonNull res = true → q.errOccurred = false → q.startRule = .single →
+    badSingleStatement ((q.tok.src.extract q.tok.cur q.tok.src.size).toList.length + 1)
+      (q.tok.src.extract q.tok.cur q.tok.src.size).toList = true →
+    runParser fuel p = (.null, (raiseError "SyntaxError" false
+      "multiple statements found while compiling a single statement" q).2)) ∧
+  (nonNull res = true → q.errOccurred = false →
+    ¬(q.startRule = .single ∧ badSingleStatement
+      ((q.tok.src.extract q.tok.cur q.tok.src.size).toList.length + 1)
+      (q.tok.src.extract q.tok.cur q.tok.src.size).toList = true) →
+    runParser fuel p = (res, q))
+
+theorem runParserPaths_proven : RunParserPaths := by
+  intro fuel p
+  simp only []
+  have e : runParser fuel p = (fun (r : Ast × PS) => (do
+      let p ← get
+      if nonNull r.1 && p.errOccurred then return .null
+      if !nonNull r.1 then
+        if p.flagIncomplete && isEndOfSource p then
+          set { p with tok := { p.tok with err := none } }
+          raiseError "_IncompleteInputError" false "incomplete input"
+          return .null
+        if p.errOccurred && !((p.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false then
+          return .null
+        let last := p.tokenAt (p.fill - 1)
+        resetForErrorPass
+        let _ ← parseStart fuel
+        setSyntaxError last
+        return .null
+      if p.startRule == .single then
+        let rest := (p.tok.src.extract p.tok.cur p.tok.src.size).toList
+        if badSingleStatement (rest.length + 1) rest then
+          raiseError "SyntaxError" false "multiple statements found while compiling a single statement"
+          return .null
+      return r.1 : PM Ast) r.2) (parseStart fuel p) := by
+    simp only [runParser, bind, StateT.bind]
+    cases parseStart fuel p
+    rfl
+  rw [e]
+  generalize parseStart fuel p = r
+  obtain ⟨res, q⟩ := r
+  simp only []
+  refine ⟨fun h1 h2 => ?_, fun h1 h2 h3 => ?_, fun h1 h2 h3 h4 => ?_, fun h1 h2 h3 => ?_,
+    fun h1 h2 h3 h4 => ?_, fun h1 h2 h3 => ?_⟩
+  · simp [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1, h2]
+  · simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+      h2, h3, Bool.false_and, Bool.false_eq_true, ↓reduceIte, Bool.not_false, Bool.and_self,
+      set, StateT.set, MonadStateOf.set]
+    cases raiseError "_IncompleteInputError" false "incomplete input"
+      { q with tok := { q.tok with err := none } }
+    rfl
+  · have hi : (q.flagIncomplete && isEndOfSource q) = false := by
+      cases a : q.flagIncomplete <;> cases b : isEndOfSource q <;> simp_all
+    simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+      hi, h3, h4, Bool.false_and, Bool.false_eq_true, ↓reduceIte, Bool.not_false, Bool.and_self]
+  · have hi : (q.flagIncomplete && isEndOfSource q) = false := by
+      cases a : q.flagIncomplete <;> cases b : isEndOfSource q <;> simp_all
+    have hs : (q.errOccurred && !((q.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false) = false := by
+      cases a : q.errOccurred <;>
+        cases b : ((q.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false <;> simp_all
+    simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+      hi, hs, Bool.false_and, Bool.false_eq_true, ↓reduceIte, Bool.not_false]
+    rw [show resetForErrorPass q = ((), errorPassState q) from rfl]
+    simp only []
+    cases parseStart fuel (errorPassState q)
+    simp only []
+    cases setSyntaxError (q.tokenAt (q.fill - 1)) _
+    rfl
+  · have hb : (q.startRule == .single) = true := by simp [h3]
+    simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+      h2, hb, h4, Bool.and_false, Bool.false_eq_true, ↓reduceIte, Bool.not_true]
+    cases raiseError "SyntaxError" false "multiple statements found while compiling a single statement" q
+    rfl
+  · by_cases hs : q.startRule = .single
+    · have hb : (q.startRule == .single) = true := by simp [hs]
+      have hn : badSingleStatement ((q.tok.src.extract q.tok.cur q.tok.src.size).toList.length + 1)
+          (q.tok.src.extract q.tok.cur q.tok.src.size).toList = false := by
+        cases a : badSingleStatement ((q.tok.src.extract q.tok.cur q.tok.src.size).toList.length + 1)
+          (q.tok.src.extract q.tok.cur q.tok.src.size).toList
+        · rfl
+        · exact absurd ⟨hs, a⟩ h3
+      simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+        h2, hb, hn, Bool.and_false, Bool.false_eq_true, ↓reduceIte, Bool.not_true]
+    · have hb : (q.startRule == .single) = false := by simpa using hs
+      simp only [bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get, pure, StateT.pure, h1,
+        h2, hb, Bool.and_false, Bool.false_eq_true, ↓reduceIte, Bool.not_true]
+
 end PyLean.PyGrammar.Peg

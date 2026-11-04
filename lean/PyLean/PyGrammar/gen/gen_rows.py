@@ -444,6 +444,12 @@ CREDIT = {
     "pygrammar-peg-set-syntax-error-arms": {"Parser__pegen_errors.c": ["_Pypegen_set_syntax_error"]},
     "pygrammar-peg-memo-frontier": {"Parser__pegen.c": ["_PyPegen_is_memoized"]},
     "pygrammar-peg-raise-error-exact": {"Parser__pegen_errors.c": ["_PyPegen_raise_error"]},
+    "pygrammar-peg-tokenize-full-source": {
+        "Parser__pegen_errors.c": ["_PyPegen_tokenize_full_source_to_check_for_errors"]},
+    "pygrammar-peg-tokenize-rest-stops": {
+        "Parser__pegen_errors.c": ["_PyPegen_tokenize_full_source_to_check_for_errors"]},
+    "pygrammar-peg-never-silent": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
+    "pygrammar-peg-run-parser-paths": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
     "pygrammar-peg-memo-cache": {
         "Parser__pegen.c": ["_PyPegen_insert_memo", "_PyPegen_update_memo"]},
     "pygrammar-peg-last-token": {"Parser__pegen.c": ["_PyPegen_get_last_nonnwhitespace_token"]},
@@ -456,9 +462,9 @@ NO_ROWS = ["peg-formatted-value-interpolation", "peg-debug-info-source", "gramma
            "check-syntax-only-identity", "check-no-null-deref", "peg-roundtrip-parser",
            "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty", "check-table-covers",
            "check-try-twin", "check-names-always",
-           "lex-nextc-in-buffer", "lex-comment-loops", "lex-stacks", "peg-never-silent",
+           "lex-nextc-in-buffer", "lex-comment-loops", "lex-stacks",
            "peg-token-readers", "peg-fill-token", "peg-tokenizer-error",
-           "peg-tokenize-full-source", "peg-raise-error", "peg-raise-known-location",
+           "peg-raise-error", "peg-raise-known-location",
            "peg-set-syntax-error",
            "check-set-context-last", "check-set-context-restores"]
 

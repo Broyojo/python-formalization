@@ -280,6 +280,34 @@ def entries : List Entry := [
     status := .proven
     prop := ``RaiseErrorExact
     thm := some ``raiseErrorExact_proven },
+  { id := "pygrammar-peg-tokenize-rest-stops"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_tokenize_rest_stops
+    statement := "The loop of _PyPegen_tokenize_full_source_to_check_for_errors reads tokens up " ++
+      "to the first ERRORTOKEN or ENDMARKER and stops there; at an ERRORTOKEN with no tokenizer " ++
+      "exception and a bracket still open on a line before the generic error's, it raises " ++
+      "\"'c' was never closed\" for it, and otherwise raises nothing."
+    source := "Parser/pegen_errors.c:154-177"
+    status := .proven
+    prop := ``TokenizeRestStops
+    thm := some ``tokenizeRestStops_proven
+    notes := "With pygrammar-peg-tokenize-full-source (the prompt check and which exception " ++
+      "survives) this covers the function." },
+  { id := "pygrammar-peg-run-parser-paths"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_run_parser_paths
+    statement := "_PyPegen_run_parser drops a result with an exception pending; with no result " ++
+      "raises _IncompleteInputError at the end of incomplete input, returns a non-SyntaxError " ++
+      "as is, and otherwise runs the second pass from the reset state (no recorded statement, " ++
+      "memo cleared, mark 0, invalid rules on) and sets the syntax error from the first pass's " ++
+      "last token; with a result it refuses a single input with more statements and otherwise " ++
+      "returns it."
+    source := "Parser/pegen.c:940-992"
+    status := .proven
+    prop := ``RunParserPaths
+    thm := some ``runParserPaths_proven
+    notes := "_PyAST_Validate under Py_DEBUG is not modelled; reset_parser_state_for_error_pass's " ++
+      "interactive_underflow is interactive-only." },
   { id := "pygrammar-peg-token-readers-exact"
     pyFile := "Parser/pegen.c"
     pyFns := Rows.peg_token_readers_exact

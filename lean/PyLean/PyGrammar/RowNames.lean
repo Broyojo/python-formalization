@@ -204,7 +204,7 @@ def peg_name_from_token : List String := [
   "_PyPegen_name_from_token"]
 
 def peg_never_silent : List String := [
-  ]
+  "_PyPegen_run_parser"]
 
 def peg_nonparen_genexp : List String := [
   "_PyPegen_nonparen_genexp_in_call"]
@@ -229,6 +229,9 @@ def peg_roundtrip_actions : List String := [
 
 def peg_roundtrip_parser : List String := [
   ]
+
+def peg_run_parser_paths : List String := [
+  "_PyPegen_run_parser"]
 
 def peg_set_syntax_error : List String := [
   ]
@@ -255,7 +258,10 @@ def peg_token_readers_frontier : List String := [
   "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
 
 def peg_tokenize_full_source : List String := [
-  ]
+  "_PyPegen_tokenize_full_source_to_check_for_errors"]
+
+def peg_tokenize_rest_stops : List String := [
+  "_PyPegen_tokenize_full_source_to_check_for_errors"]
 
 def peg_tokenizer_error : List String := [
   ]

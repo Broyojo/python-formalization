@@ -755,6 +755,8 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
   | .seq_first_item => return (seqOf a0).headD .null
   | .seq_last_item => return (seqOf a0).getLastD .null
   | .join_names_with_dot =>
+    -- `_PyPegen_join_names_with_dot`, `Parser/action_helpers.c:123-139`: `"%U.%U"` of the two
+    -- ids, a `Load` `Name` from the first name's start to the second's end.
     let id (e : Ast) := match fieldOf e "id" with
       | .ident s => s
       | _ => []
