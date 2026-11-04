@@ -647,12 +647,16 @@ sequences-array-iter-extend	refuted	Modules/arraymodule.c	array_iter_extend,arra
 sequences-array-iter-extend-exact	proven	Modules/arraymodule.c	array_iter_extend,array_array_extend_impl
 sequences-array-ins1-atomic	refuted	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_array_insert_impl,e_setitem
 sequences-array-ins1-failure	proven	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_array_insert_impl
+sequences-array-ins1-reentrant	refuted	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_resize
+sequences-array-ins1-stale	proven	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_resize,array_array_clear_impl
+sequences-array-setitem-recheck	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem
+sequences-array-fromlist-guard	proven	Modules/arraymodule.c	array_array_fromlist_impl
 sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
 sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
 sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem
 sequences-array-reverse	proven	Modules/arraymodule.c	array_array_reverse_impl
 sequences-array-attrs	proven	Modules/arraymodule.c	array_resize,newarrayobject,newarrayobject_untracked,array_length,array_array___sizeof___impl,array_array_buffer_info_impl,array_get_typecode,array_get_itemsize
-sequences-array-buffer	proven	Modules/arraymodule.c	array_buffer_getbuf,array_buffer_relbuf,array_resize
+sequences-array-buffer	proven	Modules/arraymodule.c	array_buffer_getbuf,array_buffer_relbuf,array_resize,ins1,array_array_append_impl,array_del_slice,array_array_clear_impl
 sequences-array-iterator	proven	Modules/arraymodule.c	array_iter,arrayiter_next,array_arrayiterator___reduce___impl,array_arrayiterator___setstate___impl
 sequences-array-reduce	proven	Modules/arraymodule.c	array_array___reduce_ex___impl,array__array_reconstructor_impl,make_array,typecode_to_mformat_code
 sequences-array-reconstruct-utf	refuted	Modules/arraymodule.c	array__array_reconstructor_impl

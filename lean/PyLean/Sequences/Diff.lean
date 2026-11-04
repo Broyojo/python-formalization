@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.Sequences.ArrayModel
+import PyLean.Sequences.ArrayReModel
 import PyLean.Sequences.DequeModel
 import PyLean.Sequences.DefaultDict
 
@@ -449,6 +449,50 @@ def reducedJ : Reduced → Json
   | .asList t c vs => Json.arr #[toJson t, toJson c, toJson (vs.map PyVal.toJ)]
   | .asBytes t c m b => Json.arr #[toJson t, toJson c, toJson m, natsJ b]
 
+/-- A value whose conversion raised `e`: every conversion method raises it. -/
+def raisingVal (e : PyExc) : PyVal := .user "M" .plain (some (.raises e)) (some (.raises e)) (some (.raises e))
+
+/-- What the first conversion call of a difftest `M` object does to the array (`k`): 1 clears
+it, 2 appends one zero item (`a.frombytes(bytes(a.itemsize))`), 3 appends twenty, 4 opens a
+`memoryview` of it that stays open. A failure raises out of the conversion method. -/
+def mutArr (k : Nat) (a : Arr) (inner : PyVal) : Arr × PyVal :=
+  let res : Py Arr :=
+    match k with
+    | 1 => arrClear a
+    | 2 => arrFromBytes a (List.replicate a.tc.itemsize.toNat 0) 1
+    | 3 => arrFromBytes a (List.replicate (20 * a.tc.itemsize.toNat) 0) 1
+    | 4 => .ok { a with exports := a.exports + 1 }
+    | _ => .ok a
+  match res with
+  | .ok a' => (a', inner)
+  | .error e => (a, raisingVal e)
+
+/-- `{"m": k, "v": inner}`: an item whose first conversion call runs `mutArr k`; anything else
+is a plain value. -/
+def jReVal (j : Json) : Except String ReVal :=
+  match j.getObjVal? "m" with
+  | .ok m => do
+    let k ← m.getNat?
+    let inner ← jVal (← field j "v")
+    return fun c a => if c = 0 then mutArr k a inner else (a, inner)
+  | .error _ => ReVal.pure <$> jVal j
+
+/-- A `fromlist` item: plain, or an `M` object; `k = 5` appends `0` to the list being read. -/
+def FItem := PyVal ⊕ (Nat × PyVal)
+
+def fConv (x : FItem) (s : Arr × List FItem) : (Arr × List FItem) × PyVal :=
+  match x with
+  | .inl v => (s, v)
+  | .inr (5, inner) => ((s.1, s.2 ++ [.inl (.int 0)]), inner)
+  | .inr (k, inner) =>
+    let (a', pv) := mutArr k s.1 inner
+    ((a', s.2), pv)
+
+def jFItem (j : Json) : Except String FItem :=
+  match j.getObjVal? "m" with
+  | .ok m => do return .inr (← m.getNat?, ← jVal (← field j "v"))
+  | .error _ => Sum.inl <$> jVal j
+
 structure AState where
   a : Arr
   its : Array ArrIter
@@ -509,6 +553,18 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "extend_self" => return optE (arrExtend a (.inl a))
   | "fromlist" =>
     let (r, a') := arrFromList a (.inl (← jVals (← arg op 1)))
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
+  | "append_m" => return optE (arrAppendRe a (← jReVal (← arg op 1)))
+  | "insert_m" => return optE (arrInsertRe a (← jInt (← arg op 1)) (← jReVal (← arg op 2)))
+  | "setitem_m" =>
+    let (a', r) := arrAssIndexRe a (← jInt (← arg op 1)) (← jReVal (← arg op 2))
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
+  | "extend_m" =>
+    let vs ← (← (← arg op 1).getArr?).toList.mapM jReVal
+    return optE (arrIterExtendRe a (.iter vs none))
+  | "fromlist_m" =>
+    let xs ← (← (← arg op 1).getArr?).toList.mapM jFItem
+    let (r, a') := arrFromListRe fConv a (.inl xs)
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "fromlist_bad" =>
     let (r, a') := arrFromList a (.inr "tuple")
