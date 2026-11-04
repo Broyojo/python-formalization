@@ -633,4 +633,83 @@ theorem dequeSearchRe_proven : DequeSearchRe := by
     rw [ec, ei, ex, er, s1, s2, s3]
     cases c <;> simp [hst'] <;> rfl
 
+/-! ### `d + other` and `d * n` -/
+
+/-- `d + other` for every kind of right operand (`deque_concat_lock_held`, `deque_concat`),
+for every deque `d` (type invariants: `WF`, `maxlen` a `Py_ssize_t`): an operand that is
+not a deque instance raises `TypeError("can only concatenate deque (not \"T\") to deque")`
+with its type's name; an instance check that raises (a `__class__` property raising
+something other than `AttributeError`) raises that; an instance (a deque, or an object
+whose `__class__` claims to be one) is iterated into a copy of `d`: an iteration yielding
+`xs` gives the last `d.maxlen` items of `list(d) + xs`, with `d`'s bound and type and the
+invariant (the same when it ends with `StopIteration`), an iteration that raises `e`
+after `xs` raises `e`, and a non-iterable instance raises `TypeError` from `iter()`. -/
+def DequeConcatArgs : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → d.maxlen ≤ ssizeMax →
+    (∀ t, d.concat (.notInst t) =
+      .error (.typeError s!"can only concatenate deque (not \"{t}\") to deque")) ∧
+    (∀ e, d.concat (.raises e) = .error e) ∧
+    (∀ xs, ∃ n, d.concat (.inst (.iter xs none)) = .ok n ∧ n.WF ∧
+      n.items = keepLast d.maxlen (d.items ++ xs) ∧ n.maxlen = d.maxlen ∧ n.tname = d.tname) ∧
+    (∀ xs, d.concat (.inst (.iter xs (some .stopIteration))) = d.concat (.inst (.iter xs none))) ∧
+    (∀ xs e, e ≠ .stopIteration → d.concat (.inst (.iter xs (some e))) = .error e) ∧
+    (∀ t, d.concat (.inst (.notIterable t)) = .error (notIterableErr t))
+
+theorem dequeConcatArgs_proven : DequeConcatArgs := by
+  intro α _ d h hm
+  obtain ⟨c, h1, w, i, m, t⟩ := copy_spec d h (Or.inr hm)
+  have hx := Deque.extend_spec c
+  refine ⟨fun t => rfl, fun e => rfl, fun xs => ?_, fun xs => ?_, fun xs e he => ?_, fun t => ?_⟩
+  · obtain ⟨w2, i2, m2⟩ := hx xs w
+    refine ⟨c.extend xs, ?_, w2, by rw [i2, m, i], by rw [m2, m], by rw [extend_tname, t]⟩
+    unfold Deque.concat; rw [h1]; simp only; rw [Deque.extendIter_iter]; rfl
+  · unfold Deque.concat; rw [h1]; simp only; rw [Deque.extendIter_iter, Deque.extendIter_iter]; rfl
+  · unfold Deque.concat; rw [h1]; simp only; rw [Deque.extendIter_iter, Deque.finalize_some e he]
+  · unfold Deque.concat; rw [h1]; rfl
+
+/-- `d * n` (`deque_repeat`: copy, then repeat the copy in place) holds the last `maxlen`
+items of `list(d) * n`, for every deque (type invariants: `WF`, `maxlen` a `Py_ssize_t`)
+and every `n` in `Py_ssize_t`, when `d` has at most one item or `len(d) * n <= sys.maxsize`;
+the result keeps the invariant and `d`'s bound. An `n` outside `Py_ssize_t` raises
+`OverflowError` (`sequence_repeat`). -/
+def DequeMulChecked : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → d.maxlen ≤ ssizeMax → ∀ (n : Int),
+    ((ssizeMin ≤ n → n ≤ ssizeMax → (d.items.length ≤ 1 ∨ (d.items.length : Int) * n ≤ ssizeMax) →
+      ∃ d', d.mul n = .ok d' ∧ d'.items = keepLast d.maxlen (rep n.toNat d.items) ∧ d'.WF ∧
+        d'.maxlen = d.maxlen) ∧
+    ((n < ssizeMin ∨ ssizeMax < n) →
+      d.mul n = .error (.overflowError "cannot fit 'int' into an index-sized integer")))
+
+theorem dequeMulChecked_proven : DequeMulChecked := by
+  intro α _ d h hm n
+  refine ⟨fun hn0 hn1 hsmall => ?_, fun hn => ?_⟩
+  · obtain ⟨c, h1, w, i, m, _⟩ := copy_spec d h (Or.inr hm)
+    obtain ⟨d', e1, e2, e3, e4⟩ := dequeIRepeatChecked_proven α c w n hn0 hn1 (by rw [i]; exact hsmall)
+    have hrc : repeatCount n = .ok n := by unfold repeatCount asSsizeExc; rw [iteT ⟨hn0, hn1⟩]
+    have e : d.mul n = c.irepeat n := by
+      unfold Deque.mul Deque.irepeat
+      rw [hrc]
+      simp only [bind, Except.bind]
+      rw [h1]
+    exact ⟨d', by rw [e, e1], by rw [e2, i, m], e3, by rw [e4, m]⟩
+  · have hrc : repeatCount n = .error (.overflowError "cannot fit 'int' into an index-sized integer") := by
+      unfold repeatCount asSsizeExc; rw [iteF (by omega)]
+    unfold Deque.mul
+    rw [hrc]
+    rfl
+
+/-- `d * n` keeps the last `maxlen` items of `list(d) * n` whenever that result has at most
+`sys.maxsize` items (always for a bounded deque), the analogue of `DequeIRepeat` for `*`. -/
+def DequeMul : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
+    (0 ≤ d.maxlen ∨ (d.items.length : Int) * n ≤ ssizeMax) →
+    ∃ d', d.mul n = .ok d' ∧ d'.items = keepLast d.maxlen (rep n.toNat d.items)
+
+theorem dequeMul_refuted : ¬ DequeMul := by
+  intro h
+  obtain ⟨d', h1, _⟩ := h Int d12 d12_wf (2 ^ 62) (by decide) (by decide) (Or.inl (by decide))
+  have : d12.mul (2 ^ 62) = .error memoryError := by decide
+  rw [this] at h1
+  exact nomatch h1
+
 end PyLean.Sequences
