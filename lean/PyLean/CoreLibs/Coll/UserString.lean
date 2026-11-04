@@ -11,6 +11,11 @@ Unicode database or the format mini-languages (case mapping, `isalpha`, ..., `en
 `str.format`, `translate`, `hash`, `repr`, `int()`) is the abstract `UniOps`: for those the
 wrapper's dispatch is modelled and the delegate is a parameter.
 
+Scope: a `str` subclass is merged with `str` (`SArg.str`): `__init__` stores it as is
+(`isinstance(seq, str)`, :1421) and the methods see only its text, so a subclass overriding `str`
+methods or dunders is out of scope, as list subclasses overriding comparisons are in
+`UserListG.lean`.
+
 The point of the model is the first lines of each method: which argument is unwrapped with
 `if isinstance(x, UserString): x = x.data`, which result is wrapped in `self.__class__`. The
 arguments therefore carry their Python kind (`SArg`), and `str`'s own argument check is

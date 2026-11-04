@@ -8,7 +8,7 @@ of `__init__`, object identities for `__init__`, `copy` and `__copy__`, element 
 raise or return any object, and the reflected method of a non-list operand.
 
 Elements `α` are objects by identity (`DecidableEq α` is `is`). A `list` subclass is taken not to
-override the comparison dunders.
+override the comparison dunders or `__add__`; its `__iter__` is modelled (`.listSub`).
 -/
 
 namespace PyLean.CoreLibs.Coll
@@ -48,32 +48,37 @@ def listExtendP (l : List α) : LOpndP α → Out (List α)
   | .list _ m => (l ++ m, none)
   | .listSub _ it | .other _ it => forPy (fun l (x : α) => .ok (l ++ [x])) l it
 
-/-- A `UserList` object: id, class, the id and items of its `data` list. -/
-structure ULO (α : Type) where
+/-- A `UserList` object: id, class, the id and items of its `data` list, and the rest of its
+`__dict__`. -/
+structure ULO (α β : Type) where
   id : Nat
   cls : String
   dataId : Nat
   data : List α
+  attrs : List (String × β)
   deriving Repr, DecidableEq
 
 /-- `UserList.__init__`, :1288-1297: `self.data = []` (the new list `freshD`); then
 `self.data[:] = initlist` for an exact `list` (:1292-1293), `self.data[:] = initlist.data[:]` for a
 `UserList` (:1294-1295), else `self.data = list(initlist)` (:1296-1297), a list subclass through its
-`__iter__`. The object is the new `fresh`. -/
-def ulNewP (fresh freshD : Nat) (cls : String) : Option (LOpndP α) → Py (ULO α)
-  | none => .ok ⟨fresh, cls, freshD, []⟩
-  | some (.list _ l) => .ok ⟨fresh, cls, freshD, l⟩
-  | some (.user l) => .ok ⟨fresh, cls, freshD, l⟩
+`__iter__`. The object is the new `fresh`, with no other attribute. -/
+def ulNewP {β : Type} (fresh freshD : Nat) (cls : String) : Option (LOpndP α) → Py (ULO α β)
+  | none => .ok ⟨fresh, cls, freshD, [], []⟩
+  | some (.list _ l) => .ok ⟨fresh, cls, freshD, l, []⟩
+  | some (.user l) => .ok ⟨fresh, cls, freshD, l, []⟩
   | some o => do
     let l ← listOfP o
-    pure ⟨fresh, cls, freshD, l⟩
+    pure ⟨fresh, cls, freshD, l, []⟩
 
-/-- `UserList.__copy__`, :1370-1375: a new instance `fresh`, `__dict__` copied from `self`, then
-`data` replaced by `self.data[:]`, the new list `freshD`. -/
-def ulCopyDunderO (fresh freshD : Nat) (u : ULO α) : ULO α := ⟨fresh, u.cls, freshD, u.data.take u.data.length⟩
+/-- `UserList.__copy__`, :1370-1375: a new instance `fresh` (`__new__`, :1371), its `__dict__`
+updated from `self`'s (:1372), then `data` replaced by `self.data[:]`, the new list `freshD`
+(:1374). -/
+def ulCopyDunderO {β : Type} (fresh freshD : Nat) (u : ULO α β) : ULO α β :=
+  ⟨fresh, u.cls, freshD, u.data.take u.data.length, u.attrs⟩
 
 /-- `UserList.copy`, :1392-1393: `self.__class__(self)`. -/
-def ulCopyO (fresh freshD : Nat) (u : ULO α) : Py (ULO α) := ulNewP fresh freshD u.cls (some (.user u.data))
+def ulCopyO {β : Type} (fresh freshD : Nat) (u : ULO α β) : Py (ULO α β) :=
+  ulNewP fresh freshD u.cls (some (.user u.data))
 
 /-! ### `+`, `+=`, `extend` -/
 

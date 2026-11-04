@@ -269,8 +269,13 @@ def userListEntries : List Entry := [
     statement := "For an iterator that yields xs then raises e, u += it raises e with u unchanged while u.extend(it) and list += it keep xs; u + it and it + u raise e; without the failure all append xs, and a non-iterable's TypeError leaves u unchanged."
     source := "Lib/collections/__init__.py:1338-1359, :1407-1411; Objects/listobject.c list_extend"
     status := .proven, prop := ``UserListIaddAtomic, thm := some ``userListIaddAtomic_proven },
+  { id := "coll-userlist-list-operands", pyFile := file
+    pyFns := ["UserList.__add__", "UserList.__radd__", "UserList.__iadd__"]
+    statement := "+ and radd concatenate a list subclass by its storage whatever its __iter__ does; += with an exact list appends its items, with a subclass goes through its __iter__ (list_extend), keeping the items read before an exception."
+    source := "Lib/collections/__init__.py:1338-1359; Objects/listobject.c:1478-1520"
+    status := .proven, prop := ``UserListListOperands, thm := some ``userListListOperands_proven },
   { id := "coll-userlist-init-copy", pyFile := file, pyFns := ["UserList.__init__", "UserList.copy", "UserList.__copy__"]
-    statement := "UserList(x) holds a new list: an exact list's items copied (not aliased), a UserList's data, a list subclass's __iter__ items, another iterable's items or its exception; copy() and copy.copy() are new objects with a new data list."
+    statement := "UserList(x) holds a new list: an exact list's items copied (not aliased), a UserList's data, a list subclass's __iter__ items, another iterable's items or its exception (UserList(5) is TypeError); copy() is a new object with a new data list and no other attribute, copy.copy() a new object with a new data list and self's other attributes."
     source := "Lib/collections/__init__.py:1288-1297, :1370-1375, :1392-1393"
     status := .proven, prop := ``UserListInitCopy, thm := some ``userListInitCopy_proven },
   { id := "coll-userlist-compare-p", pyFile := file

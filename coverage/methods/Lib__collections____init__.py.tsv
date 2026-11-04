@@ -97,23 +97,23 @@ Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	co
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	
 Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-init-copy,coll-userlist-operands	
 Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	todo		review: `ListOps.repr : List α → String` can neither raise nor recurse, so an element `__repr__` that raises and the `[...]` of a UserList that holds itself cannot be expressed, and UserListObservers states only `ulRepr ops u = ops.repr u.data`, the definition (UserDict.__repr__ pins both cases).
-Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	todo		review: `ulCmpP`/`listRichP` now mirror Objects/listobject.c:3459-3519 with fallible element `==`, any-object results and the reflected operand, but UserListCompareP's decisive-pair conjunct carries `(op = .eq ∨ u.data.length = l.length)`, which the proof does not need for orderings, so operands of different lengths with a differing pair are unstated: a `<` that let the lengths decide there (`UserList([1, 5]) < [2]` False) passes.
-Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	todo		review: As `__lt__`: a differing pair between operands of different lengths is excluded by the unneeded length hypothesis, so a `<=` deciding by lengths there passes.
-Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	todo		review: UserListCompareP states `==` only for different lengths (False), a decisive unequal pair (False), a raising pair and the other-operand path; the equal-prefix conjunct requires `op ≠ .eq`, so `==` on lists whose items are all equal is never stated and a `==` that returned False there (raising only when an element raises) passes.
-Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	todo		review: As `__lt__`: a differing pair between operands of different lengths is excluded by the unneeded length hypothesis.
-Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	todo		review: As `__lt__`: a differing pair between operands of different lengths is excluded by the unneeded length hypothesis.
+Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-compare-p	
 Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	todo		review: `ulContainsP` mirrors list_contains (identity, then fallible `==`, stop at the first true or exception), but UserListContainsCount states the raising case only for the head element, so an `in` computed as `count(x) > 0`, which raises for `[x, y]` where `y == x` raises while CPython returns True, passes.
+Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1323	1324	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1326	1330	UserList.__getitem__	__getitem__(self, i)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1332	1333	UserList.__setitem__	__setitem__(self, i, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1335	1336	UserList.__delitem__	__delitem__(self, i)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	todo		review: `ulAddP` mirrors the three branches, a list subclass concatenated by its storage (`isinstance`, :1341), and UserListIaddAtomic pins the `list(other)` branch with its exceptions; but no theorem states `ulAddP` on `.listSub` (UserListOperandsAgree is on the old `ulAdd`, which has no subclass), so an `__add__` testing `type(other) == list`, which reads a subclass through `__iter__`, passes.
-Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	todo		review: As `__add__`: the `isinstance(other, list)` branch on a list subclass (storage, not `__iter__`) is mirrored in `ulRaddP` but never stated.
-Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	todo		review: UserListIaddAtomic pins the atomic `self.data += list(other)` branch (unchanged on a raise, unlike `extend` and `list +=`), but `ulIaddP` on `.list` and `.listSub` (`self.data += other`, list_extend, partial through a subclass's raising `__iter__`) is stated nowhere, so an `__iadd__` testing `type(other) == list`, which makes `+=` on such a subclass atomic, passes.
+Lib/collections/__init__.py	1338	1343	UserList.__add__	__add__(self, other)	modelled	coll-userlist-list-operands	
+Lib/collections/__init__.py	1345	1350	UserList.__radd__	__radd__(self, other)	modelled	coll-userlist-list-operands	
+Lib/collections/__init__.py	1352	1359	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-list-operands	
 Lib/collections/__init__.py	1361	1362	UserList.__mul__	__mul__(self, n)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1366	1368	UserList.__imul__	__imul__(self, n)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	todo		review: `ULO` now has ids and UserListInitCopy pins a new object with a new data list, but it has no other attributes, so `inst.__dict__.update(self.__dict__)` (:1372) is not modelled and `ulCopyDunderO` equals `ulCopyO`: a `__copy__` written as `self.__class__(self)`, which drops a subclass's instance attributes, passes (UserDictCopyO pins them).
+Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	modelled	coll-userlist-init-copy	
 Lib/collections/__init__.py	1377	1378	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1380	1381	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	todo		review: `ulPop` still cites `@3.14.7:1328-1329` (3.15.2 is :1383-1384), and UserListSimulatesList drops the popped value through `(·.2)`, so a `pop` that returned the wrong element passes; no entry states the return value.

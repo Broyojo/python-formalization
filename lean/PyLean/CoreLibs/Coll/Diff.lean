@@ -455,7 +455,7 @@ def runUL (j : Json) : Except String Json := do
     | _ => return enc (ulRaddP u o)
   | "init_sub" =>
     let l ← getInts j "o"
-    return encPy (fun (r : ULO Int) => encUL ⟨r.cls, r.data⟩)
+    return encPy (fun (r : ULO Int Int) => encUL ⟨r.cls, r.data⟩)
       (ulNewP 1 2 cls (some (.listSub l (.ok (FIt.ofList l.reverse)))))
   | _ => throw s!"unknown ul op {op}"
 

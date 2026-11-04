@@ -2723,6 +2723,7 @@ coll-userlist-operands	proven	Lib/collections/__init__.py	UserList.__init__,User
 coll-userlist-copies	proven	Lib/collections/__init__.py	UserList.copy,UserList.__copy__
 coll-userlist-int-instance	proven	Lib/collections/__init__.py	UserList.reverse,UserList.sort,UserList.__eq__,UserList.__le__,UserList.__lt__
 coll-userlist-iadd-atomic	proven	Lib/collections/__init__.py	UserList.__iadd__,UserList.extend,UserList.__add__,UserList.__radd__
+coll-userlist-list-operands	proven	Lib/collections/__init__.py	UserList.__add__,UserList.__radd__,UserList.__iadd__
 coll-userlist-init-copy	proven	Lib/collections/__init__.py	UserList.__init__,UserList.copy,UserList.__copy__
 coll-userlist-compare-p	proven	Lib/collections/__init__.py	UserList.__lt__,UserList.__le__,UserList.__eq__,UserList.__gt__,UserList.__ge__,UserList.__cast
 coll-userlist-contains-count	proven	Lib/collections/__init__.py	UserList.__contains__,UserList.count

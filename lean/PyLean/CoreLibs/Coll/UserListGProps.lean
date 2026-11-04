@@ -69,20 +69,45 @@ objects of `u`'s class with a new data list holding `u`'s items.
 Source: Lib/collections/__init__.py:1288-1297, :1370-1375, :1392-1393; Doc/library/collections.rst
 ('the instance's contents are kept in a regular list ... initially set to a copy of list'). -/
 def UserListInitCopy : Prop :=
-  ∀ (α : Type) (fresh freshD lid : Nat) (cls ty : String) (l xs : List α) (e : PyExc) (u : ULO α),
-    ulNewP fresh freshD cls (some (.list lid l)) = .ok ⟨fresh, cls, freshD, l⟩ ∧
-    ulNewP fresh freshD cls (some (.user l)) = .ok ⟨fresh, cls, freshD, l⟩ ∧
-    ulNewP fresh freshD cls (some (.listSub l (.ok ⟨xs, none⟩))) = .ok ⟨fresh, cls, freshD, xs⟩ ∧
-    ulNewP fresh freshD cls (some (.other ty (.ok ⟨xs, none⟩))) = .ok ⟨fresh, cls, freshD, xs⟩ ∧
-    ulNewP fresh freshD cls (some (.other ty (.ok ⟨xs, some e⟩))) = .error e ∧
-    ulNewP (α := α) fresh freshD cls none = .ok ⟨fresh, cls, freshD, []⟩ ∧
-    ulCopyO fresh freshD u = .ok ⟨fresh, u.cls, freshD, u.data⟩ ∧
-    ulCopyDunderO fresh freshD u = ⟨fresh, u.cls, freshD, u.data⟩
+  ∀ (α β : Type) (fresh freshD lid : Nat) (cls ty : String) (l xs : List α) (e : PyExc) (u : ULO α β),
+    ulNewP (β := β) fresh freshD cls (some (.list lid l)) = .ok ⟨fresh, cls, freshD, l, []⟩ ∧
+    ulNewP (β := β) fresh freshD cls (some (.user l)) = .ok ⟨fresh, cls, freshD, l, []⟩ ∧
+    ulNewP (β := β) fresh freshD cls (some (.listSub l (.ok ⟨xs, none⟩))) = .ok ⟨fresh, cls, freshD, xs, []⟩ ∧
+    ulNewP (β := β) fresh freshD cls (some (.other ty (.ok ⟨xs, none⟩))) = .ok ⟨fresh, cls, freshD, xs, []⟩ ∧
+    ulNewP (β := β) fresh freshD cls (some (.other ty (.ok ⟨xs, some e⟩))) = .error e ∧
+    ulNewP (α := α) (β := β) fresh freshD cls (some (.other ty (.error e))) = .error e ∧
+    ulNewP (α := α) (β := β) fresh freshD cls none = .ok ⟨fresh, cls, freshD, [], []⟩ ∧
+    ulCopyO fresh freshD u = .ok ⟨fresh, u.cls, freshD, u.data, []⟩ ∧
+    ulCopyDunderO fresh freshD u = ⟨fresh, u.cls, freshD, u.data, u.attrs⟩
 
 theorem userListInitCopy_proven : UserListInitCopy := by
-  intro α fresh freshD lid cls ty l xs e u
-  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
+  intro α β fresh freshD lid cls ty l xs e u
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
   simp [ulCopyDunderO]
+
+/-- **`+` and `+=` with `list` operands.** For every `UserList` and every iterator outcome: a `list`
+subclass is concatenated by `+` and radd through its storage (`isinstance(other, list)`, :1340-1341,
+`list_concat`), whatever its `__iter__` does; `+=` with an exact `list` appends its items, while with
+a subclass it goes through `list_extend`'s generic path, the subclass's `__iter__`, keeping the items
+read before an exception.
+
+Source: Lib/collections/__init__.py:1338-1359; Objects/listobject.c:1478-1520. -/
+def UserListListOperands : Prop :=
+  ∀ (α : Type) (u : UL α) (lid : Nat) (l xs : List α) (it : Py (FIt α)) (e : PyExc),
+    ulAddP u (.listSub l it) = .ok ⟨u.cls, u.data ++ l⟩ ∧
+    ulRaddP u (.listSub l it) = .ok ⟨u.cls, l ++ u.data⟩ ∧
+    ulAddP u (.list lid l) = .ok ⟨u.cls, u.data ++ l⟩ ∧
+    ulIaddP u (.list lid l) = (⟨u.cls, u.data ++ l⟩, none) ∧
+    ulIaddP u (.listSub l (.ok ⟨xs, none⟩)) = (⟨u.cls, u.data ++ xs⟩, none) ∧
+    ulIaddP u (.listSub l (.ok ⟨xs, some e⟩)) = (⟨u.cls, u.data ++ xs⟩, some e) ∧
+    ulIaddP u (.listSub l (.error e)) = (u, some e)
+
+theorem userListListOperands_proven : UserListListOperands := by
+  intro α u lid l xs it e
+  have hl := loop_append_items u.data xs
+  refine ⟨rfl, rfl, rfl, rfl, ?_, ?_, rfl⟩
+  · simp [ulIaddP, listExtendP, forPy, forIt, hl]
+  · simp [ulIaddP, listExtendP, forPy, forIt, hl]
 
 /-! ### Comparisons -/
 
@@ -91,7 +116,9 @@ operand's reflected method.** For every element type and every pair of element c
 (which may raise or return any object): a `UserList` operand compares by its data, like the
 equal `list`; two lists of different length are unequal without any element comparison; the
 first non-identical pair whose `==` is false decides, `==` giving `False` and the orderings
-returning whatever that pair's own comparison returns (or raises); an element `==` that raises
+returning whatever that pair's own comparison returns (or raises), whatever the lengths
+(`UserList([1, 5]) < [2]` is `True`); equal lists (identical items, or items whose `==` is true,
+of the same length) are `==`; an element `==` that raises
 makes the comparison raise; past the end the lengths decide. Against any other object (a tuple, or
 `mock.ANY`) the operand's reflected method answers if it does not return `NotImplemented`
 (`UserList([1]) == mock.ANY` is `True`); otherwise `==` is `False` and the orderings raise
@@ -105,8 +132,10 @@ def UserListCompareP : Prop :=
     ulCmpP E op u (.user l) = ulCmpP E op u (.list l) ∧
     (u.data.length ≠ l.length → ulCmpP E .eq u (.list l) = .ok (.bool false)) ∧
     (u.data = pre ++ x :: s → l = pre ++ y :: t → x ≠ y → E.eqB x y = .ok false →
-      (op = .eq ∨ u.data.length = l.length) →
-      ulCmpP E op u (.list l) = (if op = .eq then .ok (.bool false) else CRes.obj <$> E.rich op x y)) ∧
+      (op ≠ .eq → ulCmpP E op u (.list l) = CRes.obj <$> E.rich op x y) ∧
+      (u.data.length = l.length → ulCmpP E .eq u (.list l) = .ok (.bool false))) ∧
+    (u.data = pre → l = pre → ulCmpP E op u (.list l) = .ok (.bool (cmpLen op pre.length pre.length))) ∧
+    ((∀ a b, E.eqB a b = .ok true) → u.data.length = l.length → ulCmpP E .eq u (.list l) = .ok (.bool true)) ∧
     (∀ ex, u.data = x :: s → l = y :: t → x ≠ y → E.eqB x y = .error ex →
       (op ≠ .eq ∨ u.data.length = l.length) → ulCmpP E op u (.list l) = .error ex) ∧
     (u.data = pre → l = pre ++ t → op ≠ .eq → ulCmpP E op u (.list l) = .ok (.bool (cmpLen op pre.length l.length))) ∧
@@ -129,21 +158,33 @@ theorem firstDiff_self {β : Type} [DecidableEq α] (E : ElemOps α β) :
     simp only [firstDiff, eqId, if_pos rfl, ok_bind, if_true]
     exact firstDiff_self E pre
 
+theorem firstDiff_allTrue {β : Type} [DecidableEq α] (E : ElemOps α β) (h : ∀ a b, E.eqB a b = .ok true) :
+    ∀ (v w : List α), firstDiff E v w = .ok none
+  | x :: xs, y :: ys => by
+    have hk : eqId E x y = .ok true := by unfold eqId; split <;> simp [h]
+    simp only [firstDiff, hk, ok_bind, if_true]
+    exact firstDiff_allTrue E h xs ys
+  | [], _ => rfl
+  | _ :: _, [] => rfl
+
 theorem userListCompareP_proven : UserListCompareP := by
   intro α β _ E op u l pre s t x y ty refl
-  refine ⟨rfl, fun h => ?_, fun hu hl hxy he hop => ?_, fun ex hu hl hxy he hop => ?_,
-    fun hu hl hop => ?_, fun r hr => ?_, fun hr => ?_⟩
+  refine ⟨rfl, fun h => ?_, fun hu hl hxy he => ?_, fun hu hl => ?_, fun hall hlen => ?_,
+    fun ex hu hl hxy he hop => ?_, fun hu hl hop => ?_, fun r hr => ?_, fun hr => ?_⟩
   · simp [ulCmpP, listRichP, h]
   · have hd : firstDiff E u.data l = .ok (some (x, y)) := by
       rw [hu, hl, firstDiff_prefix]
       simp [firstDiff, eqId, hxy, he]
-    simp only [ulCmpP, listRichP]
-    by_cases ho : op = .eq
-    · subst ho
-      by_cases hlen : u.data.length = l.length <;> simp [hlen, hd]
-    · have : ¬ (u.data.length ≠ l.length ∧ op = .eq) := fun h => ho h.2
+    refine ⟨fun ho => ?_, fun hlen => ?_⟩
+    · simp only [ulCmpP, listRichP]
+      have : ¬ (u.data.length ≠ l.length ∧ op = .eq) := fun h => ho h.2
       rw [if_neg this, hd]
       simp [ho]
+    · simp [ulCmpP, listRichP, hlen, hd]
+  · subst hu; subst hl
+    simp [ulCmpP, listRichP, firstDiff_self]
+  · have hd : firstDiff E u.data l = .ok none := firstDiff_allTrue E hall u.data l
+    simp [ulCmpP, listRichP, hlen, hd, cmpLen]
   · have hd : firstDiff E u.data l = .error ex := by
       rw [hu, hl]
       simp [firstDiff, eqId, hxy, he]
@@ -171,7 +212,7 @@ theorem userListCompareP_proven : UserListCompareP := by
 /-- **`in` and `count` use each element's `==`, which may raise.** For every element type and
 pure `==` `P` (identity first): `x in u` is whether some element is `x` or `==` it, and
 `u.count(x)` is how many are; an element whose `==` raises (before any match, for `in`) makes
-both raise.
+both raise, while a match before it makes `in` true (and `count` still raise).
 
 Source: Lib/collections/__init__.py:1320-1321, :1395-1396; Objects/listobject.c:677-690, :3387-3410. -/
 def UserListContainsCount : Prop :=
@@ -181,11 +222,13 @@ def UserListContainsCount : Prop :=
       (ulContainsP E u x = .ok (u.data.any (fun z => decide (z = x) || P z x)) ∧
        ulCountP E u x = .ok (u.data.countP (fun z => decide (z = x) || P z x)))) ∧
     (u.data = y :: rest → y ≠ x → E.eqB y x = .error ex →
-      ulContainsP E u x = .error ex ∧ ulCountP E u x = .error ex)
+      ulContainsP E u x = .error ex ∧ ulCountP E u x = .error ex) ∧
+    (u.data = x :: y :: rest → y ≠ x → E.eqB y x = .error ex →
+      ulContainsP E u x = .ok true ∧ ulCountP E u x = .error ex)
 
 theorem userListContainsCount_proven : UserListContainsCount := by
   intro α β _ E P u x y rest ex
-  refine ⟨fun hE => ⟨?_, ?_⟩, fun hu hyx he => ⟨?_, ?_⟩⟩
+  refine ⟨fun hE => ⟨?_, ?_⟩, fun hu hyx he => ⟨?_, ?_⟩, fun hu hyx he => ⟨?_, ?_⟩⟩
   · unfold ulContainsP
     generalize u.data = l
     induction l with
@@ -210,6 +253,12 @@ theorem userListContainsCount_proven : UserListContainsCount := by
   · unfold ulContainsP
     rw [hu]
     simp [ulContainsP.go, eqId, hyx, he]
+  · unfold ulCountP
+    rw [hu]
+    simp [ulCountP.go, eqId, hyx, he]
+  · unfold ulContainsP
+    rw [hu]
+    simp [ulContainsP.go, eqId]
   · unfold ulCountP
     rw [hu]
     simp [ulCountP.go, eqId, hyx, he]
