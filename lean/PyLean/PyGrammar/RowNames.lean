@@ -193,6 +193,9 @@ def rule_assignment_more : List String := [
 def rule_async_with_type_comment : List String := [
   "rule:with_stmt"]
 
+def rule_atom : List String := [
+  "rule:atom"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 
@@ -237,6 +240,12 @@ def rule_del_stmt_invalid : List String := [
 
 def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
+
+def rule_del_target : List String := [
+  "rule:del_target"]
+
+def rule_del_targets : List String := [
+  "rule:del_targets"]
 
 def rule_elif_stmt : List String := [
   "rule:elif_stmt"]
@@ -322,6 +331,9 @@ def rule_match_stmt : List String := [
 def rule_power : List String := [
   "rule:power"]
 
+def rule_primary : List String := [
+  "rule:primary"]
+
 def rule_raise_stmt : List String := [
   "rule:raise_stmt"]
 
@@ -343,14 +355,35 @@ def rule_simple_stmt : List String := [
 def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
+def rule_slice : List String := [
+  "rule:slice"]
+
+def rule_slices : List String := [
+  "rule:slices"]
+
 def rule_star_expressions : List String := [
   "rule:star_expressions"]
+
+def rule_star_target : List String := [
+  "rule:star_target"]
+
+def rule_star_targets : List String := [
+  "rule:star_targets"]
 
 def rule_statement : List String := [
   "rule:statement"]
 
 def rule_sum : List String := [
   "rule:sum"]
+
+def rule_t_lookahead : List String := [
+  "rule:t_lookahead"]
+
+def rule_t_primary : List String := [
+  "rule:t_primary"]
+
+def rule_target_with_star_atom : List String := [
+  "rule:target_with_star_atom"]
 
 def rule_term : List String := [
   "rule:term"]

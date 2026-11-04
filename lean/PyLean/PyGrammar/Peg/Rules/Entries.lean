@@ -21,6 +21,11 @@ import PyLean.PyGrammar.Peg.Rules.LeftRec2
 import PyLean.PyGrammar.Peg.Rules.InvalidAssert
 import PyLean.PyGrammar.Peg.Rules.Match
 import PyLean.PyGrammar.Peg.Rules.Decorators
+import PyLean.PyGrammar.Peg.Rules.Primary
+import PyLean.PyGrammar.Peg.Rules.TPrimary
+import PyLean.PyGrammar.Peg.Rules.Atom
+import PyLean.PyGrammar.Peg.Rules.Targets
+import PyLean.PyGrammar.Peg.Rules.Targets2
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -762,6 +767,128 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``DecoratorsRule
     thm := some ``decoratorsRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-primary"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_primary
+    statement := "primary: the seed loop returns the last seed that grew; each round with seed v " ++
+      "gives Attribute(v, NAME.id, Load) after '.' NAME, Call(v, [genexp]) when a genexp follows " ++
+      "(an error in genexp ends the round with NULL), Call(v, args, keywords) after '(' " ++
+      "[arguments] ')' once genexp failed, Subscript(v, slices, Load) after '[' slices ']', and " ++
+      "atom from the start mark otherwise; the first round is atom (NULL when atom fails)."
+    source := "Grammar/python.gram:875-884"
+    status := .proven
+    prop := ``PrimaryRule
+    thm := some ``primaryRule_proven
+    notes := LR ++ " After a failed genexp call the state keeps the seed's memo entry and " ++
+      "p->level (SeedKept), as every rule function's return does." },
+  { id := "pygrammar-rule-t-primary"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_t_primary
+    statement := "t_primary: as primary, in the order '.', '[', genexp, '(' and with &t_lookahead " ++
+      "after every alternative: a trailer is taken only when another '(' '[' '.' follows it; " ++
+      "with '.' NAME and no trailer after it the round falls back to atom from the start mark (so " ++
+      "'a.b = 1' leaves the seed a); with no seed, atom with the lookahead holding, NULL without."
+    source := "Grammar/python.gram:1154-1164"
+    status := .proven
+    prop := ``TPrimaryRule
+    thm := some ``tPrimaryRule_proven
+    notes := LR ++ " The lookahead and genexp outcome states keep the seed (SeedKept) where a " ++
+      "later alternative calls t_primary again." },
+  { id := "pygrammar-rule-t-lookahead"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_t_lookahead
+    statement := "t_lookahead: at '(' '[' or '.' that token with the mark past it; NULL with the " ++
+      "state unchanged at any other token."
+    source := "Grammar/python.gram:1166"
+    status := .proven
+    prop := ``TLookahead
+    thm := some ``tLookahead_proven
+    notes := scheme },
+  { id := "pygrammar-rule-atom"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_atom
+    statement := "atom: NAME is the name token; True, False, None and '...' give their Constant; " ++
+      "past those, the string lookahead holding gives strings; NUMBER the number token; '(' '[' " ++
+      "'{' their group after the lookahead on that token; any other token NULL with the mark back."
+    source := "Grammar/python.gram:894-904"
+    status := .proven
+    prop := ``Atom
+    thm := some ``atom_proven
+    notes := scheme },
+  { id := "pygrammar-rule-slices"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_slices
+    statement := "slices: a slice not followed by ',' is the result; followed by ',', or with no " ++
+      "slice, Tuple(gather, Load) from the start mark with an optional trailing ','; an error in " ++
+      "slice gives NULL."
+    source := "Grammar/python.gram:886-888"
+    status := .proven
+    prop := ``Slices
+    thm := some ``slices_proven
+    notes := scheme },
+  { id := "pygrammar-rule-slice"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_slice
+    statement := "slice: [expression] ':' [expression] [':' [expression]] gives Slice(lower, " ++
+      "upper, step), each possibly NULL; no ':' gives named_expression from the start mark; an " ++
+      "error in the first optional expression gives NULL."
+    source := "Grammar/python.gram:890-892"
+    status := .proven
+    prop := ``Slice
+    thm := some ``slice_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_targets
+    statement := "star_targets: a star_target not followed by ',' is the result; followed by ',', " ++
+      "Tuple([a] + rest, Store) of star_target again, the (',' star_target)* loop and an optional " ++
+      "','; no star_target gives NULL."
+    source := "Grammar/python.gram:1118-1121"
+    status := .proven
+    prop := ``StarTargets
+    thm := some ``starTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-star-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_star_target
+    statement := "star_target (memo): '*' (!'*' star_target) gives Starred(a in Store context, " ++
+      "Store); otherwise target_with_star_atom from the start mark; memoized."
+    source := "Grammar/python.gram:1129-1132"
+    status := .proven
+    prop := ``StarTarget
+    thm := some ``starTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-target-with-star-atom"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_target_with_star_atom
+    statement := "target_with_star_atom (memo): t_primary '.' NAME with no trailer after it gives " ++
+      "Attribute(Store), t_primary '[' slices ']' with no trailer after it Subscript(Store); with " ++
+      "a trailer after either, or no t_primary, star_atom from the start mark; memoized."
+    source := "Grammar/python.gram:1134-1137"
+    status := .proven
+    prop := ``TargetWithStarAtom
+    thm := some ``targetWithStarAtom_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_targets
+    statement := "del_targets: the ','.del_target+ gather with an optional trailing ','; NULL " ++
+      "with the mark back when the gather fails."
+    source := "Grammar/python.gram:1171"
+    status := .proven
+    prop := ``DelTargets
+    thm := some ``delTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-del-target"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_del_target
+    statement := "del_target (memo): as target_with_star_atom with Del for Store and del_t_atom " ++
+      "for star_atom."
+    source := "Grammar/python.gram:1173-1176"
+    status := .proven
+    prop := ``DelTarget
+    thm := some ``delTarget_proven
     notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
