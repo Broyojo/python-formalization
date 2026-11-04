@@ -23,6 +23,10 @@ tables of `Modules/unicodedata*`, not parser behaviour. Identifiers absent from
 structure Cfg where
   ucn : List (List Nat × Nat) := []
   nfkc : List (List Nat × List Nat) := []
+  /-- The warning categories the active warnings filter turns into exceptions (`-W error`,
+  `warnings.simplefilter('error', SyntaxWarning)`): `PyErr_WarnExplicitObject` then returns -1 with
+  the warning raised. A filter that matches on message, module or line is out of scope. -/
+  warnErrors : List String := []
   deriving Repr, Inhabited
 
 /-- `Parser` in `Parser/pegen.h`. Memos are by token index; `PyErr_Occurred()` is

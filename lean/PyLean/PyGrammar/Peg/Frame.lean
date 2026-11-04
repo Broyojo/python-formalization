@@ -345,6 +345,13 @@ theorem frame_raiseErrorForMissingComma (a b : Ast) : Frame (raiseErrorForMissin
   unfold raiseErrorForMissingComma
   frame
 
+theorem frame_emitSyntaxWarning (msg : String) (a b c d : Int) :
+    Frame (emitSyntaxWarning msg a b c d) := by
+  unfold emitSyntaxWarning
+  frame
+
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_emitSyntaxWarning _ _ _ _ _)
+
 theorem frame_warnRelativeImportOfLazy (d m : Ast) : Frame (warnRelativeImportOfLazy d m) := by
   unfold warnRelativeImportOfLazy
   frame

@@ -301,7 +301,7 @@ def cCycleNew (iterable : Obj α) : Py (CycleState α) :=
   | .error e => .error e
   | .ok it => .ok { it := some it, saved := [], index := -1 }
 
-/-- The part of `cycle_next` after the first pass (@3.14.7:1302-1316). -/
+/-- The part of `cycle_next` after the first pass (:1300-1309). -/
 def cCycleSaved [Inhabited α] (s : CycleState α) : Step (CycleState α) α :=
   if s.saved.length = 0 then .stop s
   else
@@ -351,7 +351,7 @@ def docCycle (iterable : Obj α) (k : Nat) : Run α :=
       | some e => (first, some e)
       | none => Run.ok (first ++ docCycleSaved l (k - first.length) [])
 
-/-! ## dropwhile, takewhile, filterfalse (:1333-1573, @3.14.7:3362-3482) -/
+/-! ## dropwhile, takewhile, filterfalse (:1333-1575, :3352-3472) -/
 
 /-- The constructors share one shape: `PyObject_GetIter(seq)`, then the flag
 (`itertools_dropwhile_impl`, :1356-1378; `itertools_takewhile_impl`,

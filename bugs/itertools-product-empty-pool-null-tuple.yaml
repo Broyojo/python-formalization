@@ -1,0 +1,74 @@
+id: itertools-product-empty-pool-null-tuple
+title: "itertools.product with an empty pool keeps a half-filled result tuple with NULL items, reachable through gc.get_referents (segfault on access)"
+priority: P4
+kind: invalid-state
+module: itertools
+status: new
+files: [Modules/itertoolsmodule.c]
+functions: ["product_next_lock_held", "product_traverse"]
+summary: |
+  On the first next(), product_next_lock_held allocates the result tuple and stores it in
+  lz->result at once (:2203-2206), then fills it pool by pool; at the first empty pool it
+  jumps to `empty` (:2209-2210) and sets stopped, leaving lz->result with NULL items for that
+  pool and every later one. The object keeps that tuple for its whole life, and
+  product_traverse (:2176-2183) visits it, so gc.get_referents(p) (and gc.get_objects())
+  return it. Reading it from Python then fails: repr shows ('a', <NULL>), t[1], list(t),
+  hash(t) and t[::-1] segfault, and t == ('a', 'b'), 'b' in t and t.count('a') raise
+  SystemError "bad argument to internal function".
+  Unlike the general "objects under construction" caveat of gc.get_objects/get_referrers
+  (gh-59313, gh-39117), this tuple is not temporary: the iterator is finished and the
+  half-filled tuple stays reachable until the product is freed. Only product does this;
+  combinations, permutations and combinations_with_replacement fill their first tuple
+  completely before any `goto empty`.
+  No Lean model: GC traversal rows are no-behaviour by policy (no heap model), so this is a
+  probe record only.
+likelihood: |
+  Very low: it needs gc introspection of an exhausted product with an empty pool, and then
+  touching the tuple's missing items.
+maybe_intended: |
+  Probably treated as unsupported. Maintainers have treated tuples reached half-built through
+  the gc module as a known hazard of debugging APIs (gh-59313 closed; pablogsal: "by design
+  these APIs can potentially access half-initialized objects"; the gc docs warn for
+  get_objects and get_referrers, not get_referents). The fix is also trivial (build the tuple
+  only once every pool is known to be non-empty, or Py_CLEAR(lz->result) at `empty`).
+reproducer: |
+  import subprocess, sys
+  child = r"""
+  import itertools, gc
+  p = itertools.product('ab', '')
+  assert next(p, None) is None
+  t = [r for r in gc.get_referents(p) if isinstance(r, tuple) and len(r) == 2 and r[0] == 'a'][0]
+  print(repr(t), flush=True)
+  t[1]
+  print("survived")
+  """
+  r = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print(r.stdout.strip(), "exit status", r.returncode)
+  if "<NULL>" in r.stdout and r.returncode < 0:
+      print("REPRODUCED itertools-product-empty-pool-null-tuple")
+expected: |
+  gc.get_referents(p) of a finished product returns only fully built objects (or no result
+  tuple at all).
+observed: |
+  python3 3.15.2 (Linux build pod): ('a', <NULL>), then SIGSEGV on t[1], exit status -11.
+  REPRODUCED. product('ab', 'xy', '') leaves ('a', 'x', <NULL>); product('', 'ab') leaves
+  (<NULL>, <NULL>).
+  main (cpython-main/python.exe): same, exit status -11. REPRODUCED.
+promised_by: |
+  Undisputed invariant: Python code does not crash the interpreter; weakened here by the gc
+  module being a debugging interface.
+cause: |
+  Modules/itertoolsmodule.c:2206 stores the tuple before the loop at :2207-2214 knows every
+  pool is non-empty; `empty` (:2267-2269) sets stopped but keeps lz->result.
+possible_fix: |
+  Check for an empty pool before PyTuple_New, or Py_CLEAR(lz->result) at `empty`. Not tested
+  against a CPython build.
+duplicates:
+  issues:
+    - {number: 59313, state: closed, relation: "incomplete tuple from PyTuple_New reached through the gc module crashes", reason: "general hazard, temporary tuples; this one is permanent"}
+    - {number: 39117, state: closed, relation: "gc.get_referrers() is inherently dangerous", reason: "led to the docs warning, which does not cover get_referents"}
+    - {number: 123471, state: open, relation: "product and others under free-threading", reason: "threads"}
+  queries: ["product get_referents", "itertools product NULL", "get_referents NULL tuple",
+            "get_referents crash", "get_referents segfault", "gc get_objects tuple NULL",
+            "(word searches, titles read; 59313 and 39117 read)",
+            "bugforge README: no itertools product entries"]

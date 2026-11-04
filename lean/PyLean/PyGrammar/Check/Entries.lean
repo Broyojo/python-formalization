@@ -82,7 +82,36 @@ def entries : List Entry := [
     thm := some ``targetValidates_proven
     notes := "TShape is the type invariant of parser output. FOR_TARGETS is out: it looks through " ++
       "`in`, which the rewrite does not. Vacuous alone for a get_invalid_target that blames " ++
-      "everything; pygrammar-check-target-legal closes that." },
+      "everything; pygrammar-check-target-legal and pygrammar-check-invalid-target-first close " ++
+      "that, and pygrammar-check-set-context-exact says what the rewrite computes." },
+  { id := "pygrammar-check-set-context-exact"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_set_context_exact
+    statement := "_PyPegen_set_expr_context returns its argument with ctx on every position of " ++
+      "the target spine (Name, Attribute, Subscript, Starred and the elements of Tuple and List, " ++
+      "recursively) and every id, attr, value, slice, element (in order) and location kept; any " ++
+      "other expression comes back as it was."
+    source := "Parser/action_helpers.c:318 'equivalent to expr but with ctx as context'"
+    status := .proven
+    prop := ``SetContextExact
+    thm := some ``setContextExact_proven
+    notes := "The fuel is above the nesting of the tree; the call site passes 100000, and " ++
+      "MAXSTACK keeps parser trees far below it. Recontext determines its result, so a body " ++
+      "that drops an element or changes an id, slice or location fails it." },
+  { id := "pygrammar-check-invalid-target-first"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_invalid_target_first
+    statement := "_PyPegen_get_invalid_target returns the leftmost subexpression of the target " ++
+      "that cannot be a target, or NULL when there is none: names, attributes and subscripts " ++
+      "are good, tuples and lists are looked into, a star is bad under del and looked through " ++
+      "otherwise, a comparison is bad except that for a for target one whose first operator " ++
+      "is in is looked through on its left and any other is not blamed, and everything else is " ++
+      "bad."
+    source := "Parser/action_helpers.c:1214-1269 and its comments at 1232-1236 and 1250-1252"
+    status := .proven
+    prop := ``InvalidTargetFirst
+    thm := some ``invalidTargetFirst_proven
+    notes := "The fuel is above the nesting of the tree, as for pygrammar-check-target-legal." },
   { id := "pygrammar-check-target-legal"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.check_target_legal

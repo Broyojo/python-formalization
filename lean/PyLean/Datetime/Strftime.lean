@@ -99,23 +99,69 @@ def wrapStrftimePy (env : TzEnv) (obj : StrfObj) (format : List Char) (tt : Time
 /-- `make_freplacement`, :1863-1874. -/
 def makeFreplacementC (obj : StrfObj) : List Char := padInt 6 obj.microsecond
 
-/-- `make_somezreplacement`, :1799-1817. -/
-def makeSomezreplacementC (env : TzEnv) (sep : List Char) : StrfObj → Py (List Char)
-  | .date => .ok []
-  | .time t => do return formatUtcoffsetC sep (← t.utcoffsetC env)
-  | .dt d => do return formatUtcoffsetC sep (← d.utcoffsetC env)
+/-- What `get_tzinfo_member` reads of the object `wrap_strftime` was called on:
+`PyDateTime_Check(self)`, `PyTime_Check(self)`, the `hastzinfo` byte (`HASTZINFO`) and the
+`tzinfo` member (`none`: `Py_None`). -/
+structure TzMemberView where
+  isDatetime : Bool
+  isTime : Bool
+  hastzinfo : Bool
+  tzinfo : Option Tz
+  deriving Repr, DecidableEq
 
-/-- `make_Zreplacement`, :1820-1860. -/
-def makeZreplacementC (env : TzEnv) : StrfObj → Py (List Char)
-  | .date => .ok []
-  | .time t => do
-    match ← t.tznameC env with
+/-- `get_tzinfo_member(self)`, :1505-1515: the `tzinfo` member of a `datetime` with
+`HASTZINFO` (:1509-1510), else of a `time` with `HASTZINFO` (:1511-1512), else `NULL` (the outer
+`none`). A borrowed reference; no error path. -/
+def getTzinfoMemberC (o : TzMemberView) : Option (Option Tz) :=
+  if o.isDatetime && o.hastzinfo then some o.tzinfo
+  else if o.isTime && o.hastzinfo then some o.tzinfo
+  else none
+
+/-- The struct of each object `strftime` runs on: a `date` passes neither check (its
+`hastzinfo` byte is 0); `new_time_ex2` and `new_datetime_ex2` set `hastzinfo = aware`, i.e.
+`tzinfo != Py_None` (:1333, :1228). A `datetime` is not a `time`. -/
+def StrfObj.cView : StrfObj → TzMemberView
+  | .date => ⟨false, false, false, none⟩
+  | .time t => ⟨false, true, t.tz.isSome, t.tz⟩
+  | .dt d => ⟨true, false, d.tz.isSome, d.tz⟩
+
+/-- The `tzinfoarg` `wrap_strftime` is given: `self` from `datetime_date_strftime_impl`
+(:3676, which `datetime` inherits), `Py_None` from `datetime_time_strftime_impl` (:4995-4996).
+For a `date` it is never used. -/
+def StrfObj.tzinfoArg : StrfObj → Option DT
+  | .dt d => some d
+  | _ => none
+
+/-- `make_somezreplacement(object, sep, tzinfoarg)`, :1799-1817, on the struct: `""` when
+`get_tzinfo_member` gives `NULL` or `Py_None` (:1803-1806), else `format_utcoffset` (:1809-1813),
+whose `call_utcoffset(tzinfo, tzinfoarg)` (:1740, :1571-1574) is checked by
+`call_tzinfo_method`. -/
+def makeSomezreplacementViewC (env : TzEnv) (sep : List Char) (o : TzMemberView) (arg : Option DT) :
+    Py (List Char) :=
+  match getTzinfoMemberC o with
+  | none | some none => .ok []
+  | some (some tz) => do
+    return formatUtcoffsetC sep (← callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env tz arg))
+
+/-- `make_somezreplacement` for the object `wrap_strftime` runs on. -/
+def makeSomezreplacementC (env : TzEnv) (sep : List Char) (obj : StrfObj) : Py (List Char) :=
+  makeSomezreplacementViewC env sep obj.cView obj.tzinfoArg
+
+/-- `make_Zreplacement(object, tzinfoarg)`, :1820-1860, on the struct: `""` for a `NULL` or
+`Py_None` member (:1828-1829); `call_tzname(tzinfo, tzinfoarg)` (:1832), `None` giving `""`
+(:1835-1838), and a string's `replace('%', '%%')` (:1846; an exact `str`, so the method is
+`str.replace` and the `PyUnicode_Check` of :1850-1854 passes). -/
+def makeZreplacementViewC (env : TzEnv) (o : TzMemberView) (arg : Option DT) : Py (List Char) :=
+  match getTzinfoMemberC o with
+  | none | some none => .ok []
+  | some (some tz) => do
+    match ← callTznameCheckC (← tzTznameRawC env tz arg) with
     | none => return []
     | some s => return escapePercent s.toList
-  | .dt d => do
-    match ← d.tznameC env with
-    | none => return []
-    | some s => return escapePercent s.toList
+
+/-- `make_Zreplacement` for the object `wrap_strftime` runs on. -/
+def makeZreplacementC (env : TzEnv) (obj : StrfObj) : Py (List Char) :=
+  makeZreplacementViewC env obj.cView obj.tzinfoArg
 
 /-- Scan state of `wrap_strftime`: read position, start of the pending literal, output. -/
 structure WrapState where

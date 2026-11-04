@@ -475,7 +475,7 @@ theorem ratFieldCompat : FieldCompat Rat where
 /-! ## The closed statements -/
 
 /-- Over any commutative ring, the mixed-mode sums and differences are the complex
-ones with the real operand given a zero imaginary part: the rules on lines 673-674.
+ones with the real operand given a zero imaginary part: the rules on lines 689-690.
 `_Py_c_diff` is `_Py_c_sum` with `_Py_c_neg`, and `_Py_c_sum` is commutative. -/
 def RingSumDiff : Prop :=
   ∀ (R : Type) [CommRing R] [CDouble R], RingCompat R → ∀ (a b : Cx R) (x : R),

@@ -1,0 +1,117 @@
+id: bytesobj-tuple-capi-stale-hash
+title: "PyTuple_SetItem() and _PyTuple_Resize() keep a cached hash: a tuple hashed before the change keeps the old hash"
+priority: P4
+kind: wrong-result
+module: bytesobj
+files: [Objects/tupleobject.c]
+functions: ["PyTuple_SetItem", "_PyTuple_Resize", "tuple_hash"]
+summary: |
+  Since tuple hashes are cached in ob_hash (gh-131525, PR 131529, 3.14), tuple_hash() returns the cached
+  value whenever ob_hash != -1 (tupleobject.c:376-379). PyTuple_SetItem() (:117-135) replaces an item of a
+  uniquely referenced tuple without resetting ob_hash, and _PyTuple_Resize() (:1045-1123) reallocates the
+  tuple in place without resetting it either. So C code that hashes a refcount-1 tuple and then stores a
+  different item gets a tuple that compares equal to (2,) but hashes like (1,): `t in {(2,)}` is False and
+  a dict keyed by (2,) does not find it. Same for a resize: (1, 2) hashed, then resized to one item, still
+  hashes as (1, 2).
+  Lean: TupleSetItemHashFresh (after SetItem, hash agrees with a fresh tuple of the same items) is refuted
+  with the reproducer's tuple; CApiTupleObj states the kept ob_hash of both functions as proven behaviour.
+likelihood: |
+  Low. PyTuple_SetItem is documented for filling brand-new tuples, and _PyTuple_Resize is for tuples nobody
+  else knows about; hashing such a tuple before it is finished is unusual. It needs C code (a compiled
+  extension, Cython output) that hashes and then mutates a refcount-1 tuple, e.g. a tuple reused as a
+  lookup-key buffer. CPython itself resets the cache where it reuses tuples (_PyTuple_Recycle). The failure
+  is silent: wrong dict/set lookups, no crash.
+maybe_intended: |
+  Likely partly intended. In gh-161226 vstinner notes that "PyTuple_SetItem() and PyTuple_SET_ITEM() accept
+  modifying a tuple with a reference count greater than 1 and/or with cached hash value", and gvanrossum
+  says a computed hash at resize time "would always be a bug" of the caller. The _PyTuple_Resize half is
+  exactly gh-161226 (open; PRs 161227 and 161293 copy or fail when the hash is cached). The PyTuple_SetItem
+  half is only mentioned there in passing; maintainers may consider the caller at fault.
+reproducer: |
+  import importlib.machinery, importlib.util, os, subprocess, sys, sysconfig, tempfile
+  SRC = r'''
+  #include <Python.h>
+  static PyObject *
+  probe(PyObject *self, PyObject *noargs)
+  {
+      PyObject *t = PyTuple_New(1);
+      if (t == NULL) return NULL;
+      if (PyTuple_SetItem(t, 0, PyLong_FromLong(1)) < 0) return NULL;
+      Py_hash_t h1 = PyObject_Hash(t);
+      if (PyTuple_SetItem(t, 0, PyLong_FromLong(2)) < 0) { Py_DECREF(t); return NULL; }
+      Py_hash_t h2 = PyObject_Hash(t);
+      return Py_BuildValue("nnN", (Py_ssize_t)h1, (Py_ssize_t)h2, t);
+  }
+  static PyObject *
+  probe_resize(PyObject *self, PyObject *noargs)
+  {
+      PyObject *t = PyTuple_New(2);
+      if (t == NULL) return NULL;
+      PyTuple_SetItem(t, 0, PyLong_FromLong(1));
+      PyTuple_SetItem(t, 1, PyLong_FromLong(2));
+      Py_hash_t h1 = PyObject_Hash(t);
+      if (_PyTuple_Resize(&t, 1) < 0) return NULL;
+      Py_hash_t h2 = PyObject_Hash(t);
+      return Py_BuildValue("nnN", (Py_ssize_t)h1, (Py_ssize_t)h2, t);
+  }
+  static PyMethodDef methods[] = {{"probe", probe, METH_NOARGS, NULL},
+    {"probe_resize", probe_resize, METH_NOARGS, NULL}, {NULL}};
+  static struct PyModuleDef mod = {PyModuleDef_HEAD_INIT, "_th_probe", NULL, -1, methods};
+  PyMODINIT_FUNC PyInit__th_probe(void) { return PyModule_Create(&mod); }
+  '''
+  d = tempfile.mkdtemp()
+  src = os.path.join(d, "thp.c")
+  out = os.path.join(d, "_th_probe" + importlib.machinery.EXTENSION_SUFFIXES[0])
+  open(src, "w").write(SRC)
+  cc = (sysconfig.get_config_var("CC") or "cc").split()
+  incs = {sysconfig.get_paths()["include"], os.path.dirname(sysconfig.get_config_h_filename())}
+  link = ["-bundle", "-undefined", "dynamic_lookup"] if sys.platform == "darwin" else ["-shared", "-fPIC"]
+  subprocess.run(cc + [f"-I{i}" for i in incs] + link + [src, "-o", out], check=True)
+  spec = importlib.util.spec_from_file_location("_th_probe", out)
+  m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+  print(sys.version)
+  h1, h2, t = m.probe()
+  print("SetItem: hash((1,)) =", hash((1,)), " h1 =", h1, " after SetItem t =", t, " h2 =", h2, " hash((2,)) =", hash((2,)))
+  print("  t == (2,):", t == (2,), " hash(t) == hash((2,)):", hash(t) == hash((2,)),
+        " {(2,): 'v'}.get(t):", {(2,): 'v'}.get(t), " t in {(2,)}:", t in {(2,)})
+  r1, r2, r = m.probe_resize()
+  print("Resize: hash((1,2)) =", hash((1, 2)), " r1 =", r1, " after resize r =", r, " r2 =", r2, " hash((1,)) =", hash((1,)))
+  print("  {(1,): 'v'}.get(r):", {(1,): 'v'}.get(r))
+  if h2 == h1 and h2 != hash((2,)) and {(2,): 'v'}.get(t) is None:
+      print("REPRODUCED bytesobj-tuple-capi-stale-hash")
+expected: |
+  After t[0] = 2 (refcount 1), hash(t) == hash((2,)) and {(2,): 'v'}.get(t) == 'v'; after resizing (1, 2) to
+  one item, its hash equals hash((1,)). (Or, for the resize, a copy or a SystemError, as PRs 161227 / 161293
+  propose.)
+observed: |
+  python3 3.15.2 (tags/v3.15.2:5e58eaa): SetItem: h1 = h2 = -6644214454873602895 = hash((1,)), t == (2,) True,
+  hash(t) == hash((2,)) False, {(2,): 'v'}.get(t) None, t in {(2,)} False; Resize: hash after the resize is
+  -3550055125485641917 = hash((1, 2)), {(1,): 'v'}.get(r) None. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical output. REPRODUCED.
+promised_by: |
+  Include/cpython/tupleobject.h ("Cached hash" of the items); Doc/reference/datamodel.rst (__hash__: objects
+  that compare equal must have the same hash value). Doc/c-api/tuple.rst restricts PyTuple_SetItem to
+  filling brand-new tuples, which weakens the claim for that half.
+cause: |
+  Objects/tupleobject.c:118-135: PyTuple_SetItem checks PyTuple_Check and _PyObject_IsUniquelyReferenced
+  (:121), then Py_XSETREF of the slot (:132-133), with no _PyTuple_RESET_HASH_CACHE. :1046-1123: the in-place
+  path of _PyTuple_Resize (PyObject_GC_Resize, :1101) keeps ob_hash. tuple_hash returns the cache first
+  (:376-379). Same code on main.
+possible_fix: |
+  Reset the cache (`_PyTuple_RESET_HASH_CACHE(op)`) in PyTuple_SetItem after the store, and in the in-place
+  branch of _PyTuple_Resize (or take gh-161226's PR for the resize). Cost: one store.
+duplicates:
+  issues:
+    - {number: 161226, state: open, relation: "same defect for _PyTuple_Resize; PRs 161227 and 161293 open; PyTuple_SetItem only mentioned in a comment"}
+    - {number: 131525, state: closed, relation: "introduced the ob_hash cache (PR 131529, merged)"}
+    - {number: 154318, state: closed, relation: "tuple_hash recursion guard; unrelated"}
+  queries: ["tuple hash cache", "PyTuple_SetItem hash", "PyTuple_SetItem ob_hash", "_PyTuple_Resize hash",
+            "ob_hash tuple", "cache tuple hash", "tuple hash cached SetItem", "stale tuple hash",
+            "(each as gh search issues and gh search prs, --repo python/cpython)",
+            "gh issue view 161226, 154318; gh pr view 161227, 161293",
+            "bugforge README: no tuple entries"]
+  note: |
+    Report, if at all, as a comment-sized addition to gh-161226 (covering PyTuple_SetItem), not a new issue.
+lean:
+  property: PyLean.BytesObj.Seq.TupleSetItemHashFresh
+  theorem: PyLean.BytesObj.Seq.tupleSetItemHashFresh_refuted

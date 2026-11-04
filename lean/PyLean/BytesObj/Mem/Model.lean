@@ -197,7 +197,7 @@ def memoryDealloc (i : Nat) : M Unit := fun st =>
     | none => (r, s)
 
 /-- `mbuf_dealloc`, :119-128: `mbuf_release` and the frees. A released managed buffer is
-left alone, so this is the release of a buffer no view ever kept: :826-827, @3.14.7:845-846. -/
+left alone, so this is the release of a buffer no view ever kept: :816-817, :845-846. -/
 def mbufDealloc (k : Nat) : M Unit := mbufRelease k
 
 /-- `memory_clear`, :1171-1180: a view in a reference cycle. -/
@@ -492,7 +492,7 @@ def memoryViewGetContiguous (obj : Obj) (writable : Bool) (order : Char) : M Nat
 /-! ## Casting -/
 
 /-- The test `get_native_fmtchar(&srcchar, view->format) >= 0 && IS_BYTE_FORMAT(srcchar)`
-of @3.14.7:1302-1303. -/
+of :1331-1332. -/
 def srcIsByte (view : Buf) : Bool :=
   match getNativeFmtchar (view.format.getD ['B']) with
   | some (c, _) => isByteFormat c
@@ -609,7 +609,7 @@ def memoryviewToreadonly (self : Nat) : M Nat := do
     st.setMv i { y with view := { y.view with readonly := true } }
   return i
 
-/-! ## Pack and unpack (:1620-1928) -/
+/-! ## Pack and unpack (:1653-2102) -/
 
 /-- `type_error_int`, :1663-1669. -/
 def typeErrorInt (fmt : List Char) : PyExc :=
@@ -731,8 +731,8 @@ def asVoidPtr (item : Obj) : Py Int :=
 def memWrite (ptr : Int) (bs : List Nat) : M Unit := fun st =>
   (.ok (), { st with mem := wrBytes st.mem ptr bs })
 
-/-- `pack_single`, :1837-1928. `fmt` is the format after `adjust_fmt`. Note the arm for
-`c` (@3.14.7:1995-2001): unlike every other arm and unlike `unpack_single`, it has no
+/-- `pack_single`, :1923-2102. `fmt` is the format after `adjust_fmt`. Note the arm for
+`c` (:2071-2077): unlike every other arm and unlike `unpack_single`, it has no
 `CHECK_RELEASED_INT_AGAIN`. -/
 def packSingle (self : Nat) (ptr : Int) (item : Obj) (fmt : List Char) : M Unit :=
   let fixed {α : Type} (x : M α) : M α := M.mapErr (fixErrorInt fmt) x
@@ -908,7 +908,7 @@ def strhexWithSepM (arg : M (List Nat)) (sep : Option Obj) (bps : Int) : M (List
     M.lift (strhexBody (← arg) c group)
 
 /-- The export count held around a call that runs Python code, so that the view cannot
-be released under it: @3.14.7:2352-2354, @3.14.7:3231-3233. -/
+be released under it: :2429-2431, :3358-3360. -/
 def withExport {α : Type} (i : Nat) (x : M α) : M α := fun st =>
   let bump (d : Int) (s : St) : St := s.setMv i { s.mv i with exports := (s.mv i).exports + d }
   match x (bump 1 st) with
@@ -964,7 +964,7 @@ def elemIndex : KeyElem → M Int
     M.lift (keyAsSsize o n)
   | .slice .. => throw (.typeError "slice indices must be integers")
 
-/-- The loop of `ptr_from_tuple`, @3.14.7:2437-2446. -/
+/-- The loop of `ptr_from_tuple`, :2517-2526. -/
 def tupleLoop (v : Buf) : Nat → List KeyElem → Int → M Int
   | _, [], ptr => pure ptr
   | dim, e :: es, ptr => do
@@ -1174,13 +1174,13 @@ def memoryLength (self : Nat) : M Int := do
   if view.ndim = 0 then throw (.typeError "0-dim memory has no length")
   return (view.shape.getD []).getD 0 0
 
-/-! ## Iteration (@3.14.7:3460-3555) -/
+/-! ## Iteration (:3587-3682) -/
 
 /-- `PyObject_GC_New(memoryiterobject, ...)`: a new iterator, by number. -/
 def iterAlloc (x : MIter) : M Nat := fun st =>
   (.ok st.iters.length, { st with iters := st.iters ++ [x] })
 
-/-- `memory_iter`, :3602-3638: the iterator's number. -/
+/-- `memory_iter`, :3646-3682: the iterator's number. -/
 def memoryIter (self : Nat) : M Nat := do
   checkReleased self
   let st ← M.get
@@ -1263,7 +1263,7 @@ def selfEqualFormat : Option (List Char) → Bool
     cc g 0 != '\x00' && "bBchHiIlLnNqQ?".toList.contains (cc g 0) && cc g 1 == '\x00'
 
 /-- The part of `memory_richcompare` before the label `result:`, :3210-3305: `equal`,
-with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3195 comes before
+with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3216 comes before
 `PyObject_GetBuffer(w)` at :3254, which runs Python code; nothing looks at `v` again. -/
 def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
   let st ← M.get
@@ -1288,6 +1288,7 @@ def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
       -- `PyBuffer_Release(ww)`, :3319-3320, after the result is known
       pyBufferRelease ww
       return some (← M.lift r)
+  -- no `bf_getbuffer`: `PyObject_GetBuffer` fails, `PyErr_Clear`, `NotImplemented` (:3253-3257)
   | _ => return Option.none
 
 /-- `memory_richcompare`, :3201-3326. `none` is `NotImplemented`. -/
@@ -1331,7 +1332,7 @@ def itemEqM (x : Item) : Obj → M Bool
     | _ => pure false
   | o => pure (itemEqObj x o)
 
-/-- The loop of `memoryview_count_impl`, @3.14.7:2797-2816. -/
+/-- The loop of `memoryview_count_impl`, :2877-2896. -/
 def countLoop (it : Nat) (value : Obj) : Nat → Int → M Int
   | 0, _ => throw .modelFuel
   | fuel + 1, count => do
@@ -1415,9 +1416,9 @@ def memoryHashF : Nat → Nat → M (List Nat)
 
 def memoryHash (self : Nat) : M (List Nat) := fun st => memoryHashF (st.mvs.length + 1) self st
 
-/-! ## Getters (@3.14.7:3267-3390) -/
+/-! ## Getters (:3394-3517) -/
 
-/-- `_IntTupleFromSsizet`, :3408-3430: NULL gives the empty tuple. -/
+/-- `_IntTupleFromSsizet`, :3394-3416: NULL gives the empty tuple. -/
 def intTupleFromSsizet (len : Nat) (vals : Option (List Int)) : List Int :=
   match vals with
   | Option.none => []

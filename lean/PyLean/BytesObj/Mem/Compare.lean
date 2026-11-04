@@ -11,7 +11,7 @@ open PyLean
 
 /-- `==`, `!=` and the orderings are one computation: `!=` is the negation of `==` in every
 state, with the same effects, and an ordering is `NotImplemented` with no effect
-(memory_richcompare, @3.14.7:3109-3110, @3.14.7:3180-3190). -/
+(memory_richcompare, :3212-3213, :3307-3317). -/
 def CmpEqNe : Prop :=
   ∀ (st : St) (v : Nat) (w : Obj),
     (memoryRichcompare v w .ne st).2 = (memoryRichcompare v w .eq st).2 ∧
@@ -45,7 +45,7 @@ theorem cmpEqNe_proven : CmpEqNe := by
   · simp only [memoryRichcompare, M.bind_app, ↓reduceIte, M.pure_app]
 
 /-- The comparison with a released view is identity and a non-buffer is `NotImplemented`
-(@3.14.7:3113-3116, @3.14.7:3119-3130), for all states. -/
+(:3216-3219, :3246-3257), for all states. -/
 def CmpSpecialCases : Prop :=
   ∀ (st : St) (v i : Nat),
     (baseInaccessible st v = true →

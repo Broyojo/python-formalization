@@ -363,7 +363,7 @@ end stop
 
 /-- Every string holding a NUL is rejected with a `ValueError`, on any `strtod`,
 whether or not it has underscores or non-ASCII characters. The C code works on a
-NUL-terminated buffer, so this is the check at line 1042 doing its job. -/
+NUL-terminated buffer, so this is the check at line 1062 doing its job. -/
 def ParseRejectsNul : Prop :=
   ∀ (R : Type) [CDouble R] (sd : Strtod R), StrtodSpec sd →
     ∀ (db : UniDB) (v : List Nat) (r : String), 0 ∈ v →
@@ -405,7 +405,7 @@ theorem parseRaisesOnlyValueError_proven : ParseRaisesOnlyValueError := by
         · simp only [Except.error.injEq] at h; rw [← h]; rfl
         · rw [inner_error sd _ _ _ h]; rfl
 
-/-- The buffer the parser sees is ASCII, the assert on line 1065, when
+/-- The buffer the parser sees is ASCII, the assert on line 1085, when
 `Py_UNICODE_TODECIMAL` gives a digit; ASCII input is untouched; a non-ASCII
 whitespace becomes a space and a decimal digit its ASCII digit. -/
 def TransformAscii : Prop :=
@@ -630,7 +630,7 @@ theorem leadingWhitespace_proven : LeadingWhitespace := by
 
 /-! ## The documented forms -/
 
-/-- The forms of the comment on lines 950-969, read off `parseBody`: `f` is a
+/-- The forms of the comment on lines 970-989, read off `parseBody`: `f` is a
 `<float>`, `g` a `<signed-float>`, and `z`, `y` what `strtod` makes of them. With
 `f` read up to the text that follows it, each form gives the parts the comment
 names. Here `rest` is whatever follows the form. -/

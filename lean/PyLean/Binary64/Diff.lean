@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.Binary64.Model
 import PyLean.Binary64.Dtoa
 import PyLean.Binary64.Complex
+import PyLean.Binary64.FloatObj
 
 /-! Differential-testing handler for `binary64` cases (`"mod": "binary64"`). -/
 
@@ -81,7 +82,9 @@ def runFloat (fn : String) (j : Json) : Except String Json := do
   | "f_rem" => return encPy encOptF (float_rem (← v) (← w))
   | "f_floordiv" => return encPy encOptF (float_floor_div (← v) (← w))
   | "f_divmod" => return encPy encPair (float_divmod (← v) (← w))
-  | "f_pow" => return encPy encPow (float_pow libmPow (← v) (← w) none)
+  | "f_pow" =>
+    let z : Option Obj := if (getBool j "z").toOption.getD false then some (.int 5) else none
+    return encPy encPow (float_powE (fun a b => (libmPow a b, 0)) (← v) (← w) z)
   | "f_cmp" =>
     let r := float_richcompare (← x) (← w) (← getOp j)
     return Json.mkObj [("ok", match r with | none => Json.str "NotImplemented" | some b => toJson b)]
@@ -231,7 +234,27 @@ def encOptCPow : Option C → Json
     let u (x : F64) := if x.isZero then F64.zero false else x
     encC ⟨u z.re, u z.im⟩
 
+/-- The platform library as CPython's compiled code calls it: `hy` is its `hypot` of the base,
+and `sc` the phase with the `sincos` GCC merges `cos` and `sin` into (complexobject.c:333-334),
+when the case carries them. Neither is correctly rounded, so a correctly rounded stand-in
+differs from CPython by an ulp now and then. -/
+def caseLibm (j : Json) : Libm :=
+  let hy := (getNat j "hy").toOption
+  let sc : Option (Nat × Nat × Nat) := (do
+    let a ← (← field j "sc").getArr?
+    return ((← (a.getD 0 Json.null).getNat?), (← (a.getD 1 Json.null).getNat?),
+      (← (a.getD 2 Json.null).getNat?))).toOption
+  { libm with
+    hypot := fun x y => match hy with | some h => F64.ofBits h | none => libm.hypot x y
+    cos := fun p => match sc with
+      | some (ph, c, _) => if p.bits == ph then F64.ofBits c else libm.cos p
+      | none => libm.cos p
+    sin := fun p => match sc with
+      | some (ph, _, s') => if p.bits == ph then F64.ofBits s' else libm.sin p
+      | none => libm.sin p }
+
 def runComplex (fn : String) (j : Json) : Except String Json := do
+  let libm := caseLibm j
   let v := getCObj j "v"
   let w := getCObj j "w"
   let z : Except String C := do
@@ -258,8 +281,101 @@ def runComplex (fn : String) (j : Json) : Except String Json := do
   | "c_parse" => return encPy encC (complex_subtype_from_string (← getNats j "cps"))
   | _ => throw s!"unknown fn {fn}"
 
+/-! ## Object-level float paths -/
+
+def getExc (j : Json) : Except String PyExc := do
+  let a ← j.getArr?
+  let c ← (a.getD 0 Json.null).getStr?
+  let m ← (a.getD 1 Json.null).getStr?
+  return .named c m
+
+partial def getFObjJ (o : Json) : Except String FObj := do
+  let id ← o.getObjValAs? Nat "id"
+  let k ← o.getObjVal? "k"
+  let kind : FKind ←
+    match k.getObjVal? "f", k.getObjVal? "i", k.getObjVal? "s", k.getObjVal? "b", k.getObjVal? "ba",
+        k.getObjVal? "mv" with
+    | .ok v, _, _, _, _, _ => pure (.float (F64.ofBits (← v.getNat?)))
+    | _, .ok v, _, _, _, _ => pure (.int (← v.getInt?))
+    | _, _, .ok v, _, _, _ => pure (.str ((← v.getArr?).toList.filterMap (·.getNat?.toOption)))
+    | _, _, _, .ok v, _, _ => pure (.bytes ((← v.getArr?).toList.filterMap (·.getNat?.toOption)))
+    | _, _, _, _, .ok v, _ => pure (.bytearray ((← v.getArr?).toList.filterMap (·.getNat?.toOption)))
+    | _, _, _, _, _, .ok v => pure (.buffer ((← v.getArr?).toList.filterMap (·.getNat?.toOption)))
+    | _, _, _, _, _, _ => pure .plain
+  let ex ← o.getObjValAs? Bool "ex"
+  let tp ← o.getObjValAs? String "tp"
+  let fq ← o.getObjValAs? String "fq"
+  let slot (key : String) : Except String (Option (Except PyExc FObj)) :=
+    match o.getObjVal? key with
+    | .error _ => pure none
+    | .ok sj =>
+      match sj.getObjVal? "err", sj.getObjVal? "ok" with
+      | .ok e, _ => do return some (.error (← getExc e))
+      | _, .ok r => do return some (.ok (← getFObjJ r))
+      | _, _ => throw "bad slot"
+  return .mk id kind ex tp fq (← slot "nf") (← slot "ni")
+
+/-- A float subclass as the difftest builds it: `call` says what `cls(x)` does. -/
+def getCls (j : Json) : Except String (Option FCls) := do
+  match j.getObjVal? "cls" with
+  | .error _ => return none
+  | .ok c =>
+    let name ← c.getObjValAs? String "name"
+    let call ← c.getObjValAs? String "call"
+    let f : F64 → Py FObj := match call with
+      | "str" => fun _ => .ok (.mk 0 (.str [71, 33]) true "str" "str" none none)
+      | "err" => fun _ => .error (.named "KeyError" "'new'")
+      | _ => fun x => .ok (.mk 0 (.float x) false name ("m." ++ name) none none)
+    return some { name, call := f }
+
+def encFKind (o : FObj) : Json :=
+  match o.kind with
+  | .float x => Json.mkObj [("tp", toJson o.tp), ("f", toJson x.bits)]
+  | _ => Json.mkObj [("tp", toJson o.tp)]
+
+/-- A slot result with `id` 0 is an object the slot made itself (the inherited `float_float`
+or `long_float`), which the Python side cannot tell from any other new float, so it
+travels as `fresh`. -/
+def encFRes : FRes → Json
+  | .same x => Json.mkObj [("same", toJson x.bits)]
+  | .obj o x => if o.id == 0 then Json.mkObj [("fresh", toJson x.bits)] else Json.mkObj [("obj", toJson o.id)]
+  | .fresh x => Json.mkObj [("fresh", toJson x.bits)]
+  | .freshSub c x => Json.mkObj [("sub", Json.arr #[toJson c, toJson x.bits])]
+  | .called o => Json.mkObj [("called", encFKind o)]
+
+def encRound : RoundRes → Json
+  | .int n => Json.mkObj [("int", toJson n)]
+  | .float x => Json.mkObj [("float", encF x)]
+
+def runObj (fn : String) (j : Json) : Except String Json := do
+  let w ← getBool j "warn"
+  match fn with
+  | "o_asdouble" => return encPy encF (asDoubleO w (← getFObjJ (← field j "v")))
+  | "o_new" =>
+    let args ← (← field j "args").getArr?
+    let args ← args.toList.mapM getFObjJ
+    let kw ← (← field j "kw").getArr?
+    let kw ← kw.toList.mapM (·.getStr?)
+    return encPy encFRes (floatVectorcall w (← getCls j) args kw)
+  | "o_from_number" => return encPy encFRes (floatFromNumber w (← getCls j) (← getFObjJ (← field j "v")))
+  | "o_fromhex" => return encPy encFRes (floatFromhexO (← getCls j) (← getFObjJ (← field j "v")))
+  | "o_round" =>
+    let o : Option FObj ← match j.getObjVal? "v" with
+      | .ok v => (getFObjJ v).map some
+      | .error _ => pure none
+    return encPy encRound (floatRoundO w (F64.ofBits (← getNat j "x")) o)
+  | "o_float" =>
+    let x := F64.ofBits (← getNat j "x")
+    let e ← getBool j "exact"
+    return Json.mkObj [("ok", Json.arr #[encFRes (floatFloatO x e), encFRes (floatConjugateO x e),
+      encFRes (floatGetrealO x e)])]
+  | "o_getnewargs" =>
+    return Json.mkObj [("ok", Json.arr ((floatGetnewargsO (F64.ofBits (← getNat j "x"))).map (fun y => toJson y.bits)).toArray)]
+  | _ => throw s!"unknown fn {fn}"
+
 def run (fn : String) (j : Json) : Except String Json := do
-  if fn.startsWith "c_" then runComplex fn j
+  if fn.startsWith "o_" then runObj fn j
+  else if fn.startsWith "c_" then runComplex fn j
   else if fn.startsWith "f_" || ["pack2", "pack4", "pack8", "unpack2", "unpack4", "unpack8", "st_unpack", "repr", "fmt_big",
       "fmt", "parse", "getformat", "asdouble", "info"].contains fn then
     runFloat fn j

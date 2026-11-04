@@ -16,6 +16,7 @@ would show if a writer called it. Exits non-zero on any mismatch. See
 difftest/common.py.
 """
 
+import datetime
 import io
 import json
 import json.tool
@@ -516,8 +517,378 @@ def float_table(text):
 CTX_ATTRS = ["strict", "object_hook", "object_pairs_hook", "array_hook", "parse_float", "parse_int", "parse_constant"]
 
 
+# ---------------------------------------------------------------- recursion limits and the full encoder
+# (lean/PyLean/JsonMod/DecRec.lean, EncFull.lean)
+
+def frame_depth():
+    """The depth of the caller's frame."""
+    f = sys._getframe(1)
+    n = 0
+    while f is not None:
+        n += 1
+        f = f.f_back
+    return n
+
+
+def rec_doc(rng):
+    """Nested arrays and objects around a leaf, some with escapes (frames of py_scanstring and
+    _decode_uXXXX), some invalid."""
+    leaf = rng.choice(['1', '"a"', '"\\u0041"', '"\\ud834\\udd1e"', '{"\\u0041": 1}', '[]', '{}', 'null', '"x', '1.5', 'NaN'])
+    s = leaf
+    for _ in range(rng.randint(0, 40)):
+        r = rng.random()
+        bad = rng.random() < 0.03
+        if r < 0.6:
+            s = "[" + s + (rng.choice(["", ","]) if bad else rng.choice(["]", "]", ", 2]"]))
+        else:
+            s = '{"k' + rng.choice(["", "\\u0042"]) + '": ' + s + (rng.choice(["", "]"]) if bad else rng.choice(["}", ', "z": 0}']))
+    return s
+
+
+def tjson(name, qualname=None, module="builtins", tp_name=None, heap=False):
+    return {"name": name, "qualname": qualname or name, "module": module, "tpName": tp_name or name, "heap": heap}
+
+
+T_LIST, T_TUPLE, T_DICT, T_FDICT = tjson("list"), tjson("tuple"), tjson("dict"), tjson("frozendict")
+
+
+class LSub(list):
+    """A list subclass: `bool()` and iteration are given."""
+
+    def __len__(self):
+        return 1 if self._truth else 0
+
+    def __iter__(self):
+        yield from list(self._yields)
+        if self._stop is not None:
+            raise ValueError(self._stop)
+
+
+class LSubM(LSub):
+    pass
+
+
+LSubM.__module__, LSubM.__qualname__ = "mymod", "Outer.LSubM"
+
+
+class DSub(dict):
+    """A dict subclass: stored entries, `bool()` and `items()` are given."""
+
+    def __len__(self):
+        return 1 if self._truth else 0
+
+    def items(self):
+        if self._head == 1:
+            raise ValueError("items")
+        if self._head == 2:
+            return 5
+        return self._gen()
+
+    def _gen(self):
+        for sh, k, v in self._items:
+            yield (k, v) if sh == 0 else ([k, v] if sh == 1 else (k, v, 0))
+        if self._stop is not None:
+            raise ValueError(self._stop)
+
+
+class XObj:
+    def __init__(self, n):
+        self.n, self.ret = n, BOOM
+
+
+class XObjM(XObj):
+    pass
+
+
+XObjM.__module__, XObjM.__qualname__ = "mymod", "Outer.XObjM"
+
+TYPES = {LSub: tjson("LSub", module="__main__", heap=True), LSubM: tjson("LSubM", "Outer.LSubM", "mymod", heap=True),
+         DSub: tjson("DSub", module="__main__", heap=True), XObj: tjson("XObj", module="__main__", heap=True),
+         XObjM: tjson("XObjM", "Outer.XObjM", "mymod", heap=True)}
+
+XKEY_STRS = ["", "a", "b", "'", '"', "\\", "\n", "k'q", 'k"q', "true", "1"]
+XOBJS = {}
+
+
+class XGen:
+    def __init__(self, rng):
+        self.rng, self.sub, self.cyc = rng, False, False
+
+    def key(self):
+        rng = self.rng
+        r = rng.random()
+        if r < 0.55:
+            s = rng.choice(XKEY_STRS)
+            return s, {"s": cps(s)}
+        if r < 0.7:
+            n = rng.choice([0, 1, -1, 7, 10**20, 10**4300])
+            return n, {"i": istr(n)}
+        if r < 0.77:
+            b = rng.random() < 0.5
+            return b, {"b": b}
+        if r < 0.81:
+            return None, None
+        if r < 0.9:
+            x = rng.choice([0.0, -1.5, 1e22, math.inf, -math.inf])
+            return x, {"f": str(fbits(x)), "r": cps(repr(x))}
+        k = rng.randint(1, 3)
+        # (a `decimal.Decimal` key would compare with int and float keys under sort_keys, which the
+        # model's sort does not do; its message is that of a date key)
+        o, t = rng.choice([((k,), tjson("tuple")),
+                           (datetime.date(2000, 1, k), tjson("date", module="datetime", tp_name="datetime.date"))])
+        return o, {"o": t, "ord": str(k)}
+
+    def leaf(self, depth):
+        rng = self.rng
+        r = rng.random()
+        if r < 0.25:
+            s = "".join(rng.choice(["a", "\n", '"', "\\", "é", "\U0001d11e", "\x01", " "]) for _ in range(rng.randint(0, 3)))
+            return (StrSub(s) if rng.random() < 0.2 else s), {"s": cps(s)}
+        if r < 0.45:
+            n = rng.choice([0, 1, -1, 2**63, 10**4300])
+            return n, {"i": istr(n)}
+        if r < 0.55:
+            x = rng.choice([0.0, -1.5, 1e22, math.inf, math.nan])
+            return x, {"f": str(fbits(x)), "r": cps(repr(x))}
+        if r < 0.65:
+            o = rng.choice([None, True, False])
+            return o, o
+        if r < 0.72:
+            o, t = rng.choice([(set(), tjson("set")), (b"x", tjson("bytes"))])
+            return o, {"other": 10**6, "t": t}
+        if depth < 4:
+            n = len(XOBJS)
+            o = (XObjM if rng.random() < 0.3 else XObj)(n)
+            XOBJS[n] = o
+            q = rng.random()
+            if q < 0.25:
+                o.ret = BOOM
+            elif q < 0.4:
+                o.ret = [o]
+                XJSON[id(o.ret)] = {"l": [{"other": n, "t": TYPES[type(o)]}], "t": T_LIST}
+                self.cyc = True
+            else:
+                o.ret = self.val(depth + 1, [], allow_sub=False)[0]
+            return o, {"other": n, "t": TYPES[type(o)]}
+        return None, None
+
+    def val(self, depth, anc, allow_sub=True):
+        """`anc`: (object, mutable) for the enclosing containers, innermost last."""
+        rng = self.rng
+        k = rng.random()
+        targets = [i for i, (_, mut) in enumerate(reversed(anc)) if mut]
+        if targets and k < 0.05:
+            self.cyc = True
+            i = rng.choice(targets)
+            return anc[-1 - i][0], {"back": i}
+        if depth > 3 or k < 0.45:
+            return self.leaf(depth)
+        r = rng.random()
+        n = rng.randint(0, 3)
+        if r < 0.3:
+            lst = []
+            items = [self.val(depth + 1, anc + [(lst, True)], allow_sub) for _ in range(n)]
+            lst.extend(o for o, _ in items)
+            return lst, {"l": [j for _, j in items], "t": T_LIST}
+        if r < 0.4:
+            items = [self.val(depth + 1, anc + [(None, False)], allow_sub) for _ in range(n)]
+            return tuple(o for o, _ in items), {"l": [j for _, j in items], "t": T_TUPLE}
+        if r < 0.65:
+            d = {}
+            pairs = []
+            for _ in range(n):
+                ko, kj = self.key()
+                vo, vj = self.val(depth + 1, anc + [(d, True)], allow_sub)
+                if ko in d:
+                    continue
+                d[ko] = vo
+                pairs.append([kj, vj])
+            return d, {"d": pairs, "t": T_DICT}
+        if r < 0.75 or not allow_sub:
+            d = {}
+            pairs = []
+            for _ in range(n):
+                ko, kj = self.key()
+                vo, vj = self.val(depth + 1, anc + [(None, False)], allow_sub)
+                if ko in d:
+                    continue
+                d[ko] = vo
+                pairs.append([kj, vj])
+            return frozendict(d), {"d": pairs, "t": T_FDICT}
+        self.sub = True
+        stop = rng.choice([None, None, "it"])
+        truth = rng.random() < 0.7
+        if r < 0.87:
+            cls = LSubM if rng.random() < 0.3 else LSub
+            lst = cls()
+            lst._truth, lst._stop = truth, stop
+            items = [self.val(depth + 1, anc + [(lst, True)], allow_sub) for _ in range(n)]
+            lst._yields = [o for o, _ in items]
+            return lst, {"l": [j for _, j in items], "t": TYPES[cls], "sub": {"truth": truth, "stop": stop}}
+        d = DSub()
+        stored = rng.randint(0, 2)
+        for i in range(stored):
+            dict.__setitem__(d, f"s{i}", i)
+        d._truth, d._stop, d._head = truth, stop, rng.choice([0, 0, 0, 0, 1, 2])
+        its = []
+        js = []
+        for _ in range(n):
+            sh = rng.choice([0, 0, 0, 1, 2])
+            ko, kj = self.key()
+            vo, vj = self.val(depth + 1, anc + [(d, True)], allow_sub)
+            its.append((sh, ko, vo))
+            js.append([sh, kj, vj])
+        d._items = its
+        return d, {"d": js, "t": TYPES[DSub],
+                   "sub": {"used": stored, "truth": truth, "head": d._head, "stop": stop}}
+
+
+def xdefault(o):
+    if isinstance(o, XObj):
+        if o.ret is BOOM:
+            raise ValueError("boom")
+        return o.ret
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+
+def xdflt_table(v):
+    out = []
+    seen = set()
+
+    def go(x):
+        if id(x) in seen:
+            return
+        seen.add(id(x))
+        if isinstance(x, XObj):
+            out.append([x.n, None if x.ret is BOOM else {"v": XJSON[id(x.ret)]}])
+            if x.ret is not BOOM:
+                go(x.ret)
+        elif isinstance(x, LSub):
+            for y in x._yields:
+                go(y)
+        elif isinstance(x, DSub):
+            for _, _, y in x._items:
+                go(y)
+        elif isinstance(x, (list, tuple)):
+            for y in x:
+                go(y)
+        elif isinstance(x, (dict, frozendict)):
+            for y in x.values():
+                go(y)
+
+    go(v)
+    return out
+
+
+XJSON = {}  # id(default result) -> its JSON
+XVALUES = {}
+
+
+def sep_json(rng, s):
+    m = rng.choice([0, 0, 0, 1, 2])
+    return m, {"s": cps(s), "sub": m}
+
+
+class SepX(str):
+    def __str__(self):
+        return "X"
+
+
+class SepR(str):
+    def __str__(self):
+        raise ValueError("sep")
+
+
+def gen_x_case(rng, impl):
+    if rng.random() < 0.3:
+        s = rec_doc(rng)
+        c = {"mod": "json", "fn": f"loads_rec_{impl}", "s": cps(s), "strict": rng.random() < 0.8}
+        c["budget"] = rng.randint(0, 90) if impl == "py" else 100000
+        return c
+    g = XGen(rng)
+    XJSON.clear()
+    orig_val = g.val
+
+    def val(depth, anc, allow_sub=True):
+        o, j = orig_val(depth, anc, allow_sub)
+        XJSON[id(o)] = j
+        return o, j
+
+    g.val = val
+    v, vj = g.val(0, [])
+    indent = rng.choice([None, None, None, "  ", "\t"])
+    item, key = rng.choice([(", ", ": "), (",", ":"), (";", "=")])
+    if indent is not None and rng.random() < 0.5:
+        item = ","
+    im, ij = sep_json(rng, item)
+    km, kj = sep_json(rng, key)
+    kw = dict(ensure_ascii=rng.random() < 0.5, check_circular=rng.random() < 0.7, allow_nan=rng.random() < 0.7,
+              sort_keys=rng.random() < 0.3 and not g.sub, skipkeys=rng.random() < 0.4, indent=indent)
+    if g.cyc and (impl == "c" or g.sub):
+        kw["check_circular"] = True  # without it C recurses until its stack runs out
+    seps = ({0: str, 1: SepX, 2: SepR}[im](item), {0: str, 1: SepX, 2: SepR}[km](key))
+    if impl == "py":
+        # the methods of the subclasses take frames the model does not count
+        if g.sub:
+            budget = 10000
+        elif g.cyc and not kw["check_circular"]:
+            budget = rng.randint(0, 60)
+        else:
+            budget = rng.choice([rng.randint(0, 30), 10000])
+    else:
+        budget = 100000
+    key_ = len(XVALUES)
+    XVALUES[key_] = (v, kw, seps)
+    c = {"mod": "json", "fn": f"dumpsx_{impl}", "v": vj, "dflt": xdflt_table(v), "key": key_, "budget": budget,
+         "indent": None if indent is None else cps(indent), "item_sep": ij, "key_sep": kj}
+    c.update({k: kw[k] for k in ("ensure_ascii", "check_circular", "allow_nan", "sort_keys", "skipkeys")})
+    return c
+
+
+def xexc(e, impl):
+    msg = str(e)
+    if (type(e) is RecursionError and impl == "c") or msg.startswith("'<' not supported"):
+        msg = "~"
+    return {"exc": type(e).__name__, "msg": msg, "notes": list(getattr(e, "__notes__", []))}
+
+
+def run_x(c, impl):
+    if c["fn"].startswith("loads_rec"):
+        s = "".join(map(chr, c["s"]))
+        if impl == "c":
+            return {"ok": conv(json.JSONDecoder(strict=c["strict"]).decode(s))}
+        dec = pyjson.JSONDecoder(strict=c["strict"])
+        d = frame_depth()
+        # decode at d + 1, raw_decode at d + 2: `budget` frames are left when it calls scan_once
+        old = sys.getrecursionlimit()
+        sys.setrecursionlimit(d + 2 + c["budget"])
+        try:
+            r = dec.decode(s)
+        finally:
+            sys.setrecursionlimit(old)
+        return {"ok": conv(r)}
+    v, kw, seps = XVALUES[c["key"]]
+    try:
+        if impl == "c":
+            return {"ok": {"text": cps(json.JSONEncoder(default=xdefault, separators=seps, **kw).encode(v))}}
+        e = pyjson.JSONEncoder(default=xdefault, separators=seps, **kw)
+        d = frame_depth()
+        # encode at d + 1: `budget` frames are left there
+        old = sys.getrecursionlimit()
+        sys.setrecursionlimit(d + 1 + c["budget"])
+        try:
+            r = e.encode(v)
+        finally:
+            sys.setrecursionlimit(old)
+        return {"ok": {"text": cps(r)}}
+    except Exception as ex:
+        return {"ok": xexc(ex, impl)}
+
+
 def gen_case(rng):
     impl = rng.choice(["py", "c"])
+    if rng.random() < 0.25:
+        return gen_x_case(rng, impl)
     r = rng.random()
     if r < 0.32:
         s = gen_doc(rng)
@@ -606,7 +977,9 @@ def gen_case(rng):
                 "pfloat": 0, "pconst": 0, "ahook": rng.choice([0, 0, 1, 2, 3])}
     if r < 0.96:
         attrs = [a for a in CTX_ATTRS if rng.random() < 0.9]
-        return {"mod": "json", "fn": "scanner_new", "tp": "Ctx", "attrs": attrs, "strict_mode": rng.choice([0, 1, 2])}
+        raising = [a for a in CTX_ATTRS if rng.random() < 0.1]
+        return {"mod": "json", "fn": "scanner_new", "tp": "Ctx", "attrs": attrs, "raising": raising,
+                "strict_mode": rng.choice([0, 1, 2])}
     if r < 0.98:
         v, kw = enc_opts(rng)
         c = base_case("make_enc", v, kw)
@@ -795,6 +1168,8 @@ def run_python(c):
     base, impl = fn.rsplit("_", 1) if "_" in fn else (fn, "c")
     m = IMPL.get(impl, json)
     try:
+        if base in ("loads_rec", "dumpsx"):
+            return run_x(c, impl)
         if base in ("loads", "raw"):
             s = "".join(map(chr, c["s"]))
             dec = dec_of(m, c)
@@ -868,9 +1243,16 @@ def run_python(c):
                 def __bool__(self):
                     raise ValueError("boom")
 
+            def raiser(a):
+                def get(self):
+                    raise ValueError(a)
+                return property(get)
+
             ns = {a: None for a in c["attrs"]}
             if "strict" in ns:
                 ns["strict"] = {0: True, 1: False, 2: Bad()}[c["strict_mode"]]
+            for a in c.get("raising", []):
+                ns[a] = raiser(a)
             Ctx = type("Ctx", (), ns)
             return {"ok": bool(json.scanner.c_make_scanner(Ctx()).strict)}
         if fn == "make_enc":

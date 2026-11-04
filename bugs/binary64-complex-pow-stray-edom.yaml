@@ -3,6 +3,8 @@ title: "complex ** raises ZeroDivisionError with a nonzero base when the phase i
 priority: P3
 kind: wrong-exception
 module: binary64
+status: duplicate
+duplicate_of: longobj-complex-pow-infinite-phase-edom (the same EDOM from cos(inf); gh-156886, fixed on main)
 files: [Objects/complexobject.c]
 functions: ["_Py_c_pow", "complex_pow"]
 summary: |
@@ -51,3 +53,4 @@ duplicates:
 lean:
   property: PyLean.Binary64.ComplexPowEdomOnlyForZero
   theorem: PyLean.Binary64.complexPowEdomOnlyForZero_refuted
+  note: the registry entry complex-pow-edom-only-for-zero names longobj-complex-pow-infinite-phase-edom

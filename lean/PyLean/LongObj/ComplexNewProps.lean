@@ -25,10 +25,13 @@ end
 
 /-! ## `try_complex_special_method` -/
 
-/-- The four outcomes of `__complex__`: absent, and nothing runs; returning an
-exact complex, and its value is the result; returning a subclass instance, which
-warns; returning anything else, which is the `TypeError` on line 517, with the
-call on the log. An exception from the method propagates. -/
+/-- The outcomes of `__complex__`, complexobject.c:505-535: absent, and nothing runs;
+returning an exact complex, and its value is the result; returning a subclass instance,
+which warns, and when the warning filter makes `DeprecationWarning` an error, that error is
+the result (:524-531); returning anything else, which is the `TypeError` of :517-521, with
+the call on the log. An exception from the method propagates. The inherited
+`complex.__complex__` of a complex (or subclass) instance gives its value, with no Python
+code run. -/
 def TrySpecialOutcomes : Prop :=
   ∀ (R : Type) [CDouble R] (E : Env R) (op : Obj R) (s : List Ev),
     (op.dcomplex = .absent → try_complex_special_method E op s = .ok none s) ∧
@@ -43,6 +46,15 @@ def TrySpecialOutcomes : Prop :=
           "The ability to return an instance of a strict subclass of complex " ++
           "is deprecated, and may be removed in a future version of Python.") ::
           Ev.call "__complex__" :: s)) ∧
+    (∀ res c, op.dcomplex = .returns res → res.val = .cplx c → res.exact = false →
+      E.warnErr = true →
+      try_complex_special_method E op s =
+        .error (.named "DeprecationWarning" (s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}.  " ++
+          "The ability to return an instance of a strict subclass of complex " ++
+          "is deprecated, and may be removed in a future version of Python."))
+          (Ev.call "__complex__" :: s)) ∧
+    (∀ c, op.dcomplex = .builtin → op.val = .cplx c →
+      try_complex_special_method E op s = .ok (some c) s) ∧
     (∀ res, op.dcomplex = .returns res → (∀ c, res.val ≠ .cplx c) →
       try_complex_special_method E op s =
         .error (.typeError s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}")
@@ -56,7 +68,7 @@ theorem try_special_returns {R : Type} [CDouble R] (E : Env R) (op res : Obj R) 
 
 theorem trySpecialOutcomes_proven : TrySpecialOutcomes := by
   intro R _ E op s
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro h
     rw [try_special_absent E op h]
     rfl
@@ -71,6 +83,16 @@ theorem trySpecialOutcomes_proven : TrySpecialOutcomes := by
     rw [try_special_returns E op res s h1]
     simp only [complexResult, h2, h3, Bool.false_eq_true, ite_false, warnDep, hw]
     rfl
+  · intro res c h1 h2 h3 hw
+    rw [try_special_returns E op res s h1]
+    simp only [complexResult, h2, h3, Bool.false_eq_true, ite_false, warnDep, hw, ite_true]
+    rfl
+  · intro c h1 h2
+    cases op with
+    | mk ti ex val dc nf ni =>
+      simp only [Obj.dcomplex, Obj.val] at h1 h2
+      subst h1 h2
+      cases ex <;> rfl
   · intro res h1 h2
     rw [try_special_returns E op res s h1]
     unfold complexResult
@@ -117,7 +139,7 @@ theorem try_special_not_none {R : Type} [CDouble R] (E : Env R) (op : Obj R) (s 
 
 /-! ## `complex_new_impl` check order -/
 
-/-- `realNumberLike`, unfolded: the test of lines 1196-1197 and 1209-1210. -/
+/-- `realNumberLike`, unfolded: the test of lines 1216-1217 and 1229-1230. -/
 theorem realNumberLike_false_iff {R : Type} [CDouble R] (o : Obj R) :
     realNumberLike o = false ↔
       (o.ti.hasNumber = false ∨

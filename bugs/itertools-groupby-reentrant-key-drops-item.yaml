@@ -1,0 +1,110 @@
+id: itertools-groupby-reentrant-key-drops-item
+title: "itertools.groupby: a key function (or input) that advances the groupby from inside a group silently drops the new group's first item"
+priority: P4
+kind: wrong-result
+module: itertools
+status: new
+files: [Modules/itertoolsmodule.c]
+functions: ["_grouper_next", "groupby_step", "groupby_next"]
+summary: |
+  _grouper_next checks that its group is current (:669) and that there is no current value
+  (:671), then calls groupby_step (:672), which runs the input's __next__ (:510) and the key
+  function (:517). Neither check is repeated after them. If that Python code calls next() on
+  the groupby object, groupby_next makes a new group current and leaves that group's first item
+  as currvalue. groupby_step then stores the item it pulled over it (:524-527, the old value is
+  released), and the old group compares and returns its item as if nothing had happened.
+  With groupby([1, 1, 1, 2, 2, 3, 3]) and a key whose second call runs next(gb): the old group
+  gives 1, 1; the inner next(gb) returns key 2; the new group then yields only [2]. The first 2
+  was made current for that group and released unseen. An input whose __next__ re-enters the
+  same way loses items too. No crash, no memory error: the released item is a value the
+  groupby owned.
+  The doc's pure Python groupby raises ValueError('generator already executing') on the same
+  re-entry, so the doc gives no behaviour to match.
+  Lean: GrouperStepKeepsItems ("the step _grouper_next takes to fill an empty value never
+  releases one") is refuted by the run above, run through the model's own operations;
+  GrouperStepKeepsItemsNoReentry proves it for every comparison (re-entrant __eq__ included),
+  key function and input that do not re-enter, and GrouperReentrantStep states exactly what
+  the step does after any re-entrant code. The difftest runs random key and input hooks
+  (3 seeds, 60000 cases each, 100%).
+likelihood: |
+  Very low. It takes a key function or an input iterator that advances the groupby it is
+  feeding, which ordinary code does not do.
+maybe_intended: |
+  Likely, in the maintainers' view. python/cpython#154570 (itertools.accumulate silently
+  corrupting its total on re-entry) was closed by picnixz: "The current approach is not to
+  block re-entrancy. It's to avoid hard crashes because of re-entrency ... Unless there is a
+  real crash happening this is working as intended", with pochmann agreeing that the caller
+  dropped the value. rhettinger's proposal in python/cpython#142732 to block re-entrancy in
+  itertools entirely would remove this along with the crashes, but it is not decided.
+  The overwrite at :524-527 is itself a deliberate crash fix: python/cpython#74532
+  (bpo-30347, closed 2017) reported an assertion failure in _grouper_next when a key function
+  iterated a group inside groupby, and the fix replaced the assert and plain assignment with
+  Py_XSETREF. The dropped item is a side effect of that fix (found by the itertools review,
+  ff84f8fd).
+  Recorded to keep the refuted property on file, not for filing on its own.
+reproducer: |
+  import itertools
+  calls = [0]
+  inner = []
+  def key(x):
+      calls[0] += 1
+      if calls[0] == 2:
+          inner.append(next(gb))   # re-enter while the first group pulls its second item
+      return x
+  gb = itertools.groupby([1, 1, 1, 2, 2, 3, 3], key)
+  k1, g1 = next(gb)
+  a = next(g1)
+  b = next(g1)                     # the key call for the second 1 runs next(gb)
+  k2, g2 = inner[0]
+  c = next(g1, 'STOP')
+  d = list(g2)
+  rest = [(k, list(g)) for k, g in gb]
+  print('first group', a, b, c, '| inner key', k2, 'its group', d, '| rest', rest)
+  if (k1, a, b, c, k2, d) == (1, 1, 1, 'STOP', 2, [2]) and rest == [(3, [3, 3])]:
+      print('REPRODUCED itertools-groupby-reentrant-key-drops-item')
+expected: |
+  The group of 2 yields both 2s (the item groupby_next made current is the first one
+  returned), or the re-entrant next() is refused with an exception, as the pure Python
+  equivalent does.
+observed: |
+  python3 3.15.2 (Linux build pod): first group 1 1 STOP | inner key 2 its group [2] |
+  rest [(3, [3, 3])]. REPRODUCED.
+  main (cpython-main/python.exe): same output. REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst groupby: "It generates a break or new group every time the value
+  of the key function changes" and the "Roughly equivalent to" code, where every item of a
+  group is yielded by that group. Read in context the docs do not cover re-entrant key
+  functions.
+cause: |
+  Modules/itertoolsmodule.c:669-672 check currgrouper and currvalue only before groupby_step;
+  groupby_step stores currvalue/currkey at :524-527 without looking at what the key function
+  or __next__ left there.
+possible_fix: |
+  In groupby_step, re-check after the calls and keep the item another call made current, or
+  in _grouper_next re-check `gbo->currgrouper != igo` after the step and stop. Either changes
+  behaviour only for re-entrant code. A re-entrancy guard on the groupby (as tee has, :791-795)
+  would cover this and the crash in itertools-groupby-eq-reentry-null-currkey. Not tested
+  against a CPython build.
+duplicates:
+  issues:
+    - {number: 154570, state: closed, relation: "same class (silent wrong result on itertools re-entry, accumulate)", reason: "closed as working as intended; sets the precedent"}
+    - {number: 142732, state: open, relation: "re-entrant use-after-free in zip_longest, islice, batched; rhettinger proposes blocking re-entrancy", reason: "other iterators, crash only"}
+    - {number: 143543, state: closed, relation: "re-entrant __eq__ use-after-free in groupby_next", reason: "different path (comparison), crash"}
+    - {number: 146613, state: closed, relation: "re-entrant __eq__ use-after-free in _grouper_next", reason: "different path (comparison), crash"}
+    - {number: 145678, state: closed, relation: "use-after-free in _grouper_next", reason: "different path (comparison), crash"}
+    - {number: 74532, state: closed, relation: "bpo-30347: key function iterating a group inside groupby tripped an assert in _grouper_next; fixed with Py_XSETREF, the overwrite that now drops the item", reason: "the fix that introduced this behaviour"}
+  queries: ["groupby key reentrant", "groupby key function next", "groupby re-entrant key", "groupby reentrancy",
+            "groupby lost item", "groupby drops item", "groupby _grouper_next", "groupby currgrouper",
+            "groupby groupby_step", "groupby key next groupby", "itertools reentrant", "itertools re-entrant",
+            "itertools reentrancy", "prs: groupby reentrant", "prs: itertools reentrancy",
+            "(word searches, titles read; 154570 and 142732 read with comments)",
+            "bugforge README: no itertools entries"]
+  note: |
+    Not the same as itertools-groupby-eq-reentry-null-currkey: that one is the comparison
+    (__eq__) re-entering groupby_next and a NULL dereference; this one is the key function or
+    input re-entering groupby_step from _grouper_next, and nothing crashes. A guard against
+    re-entry would fix both.
+lean:
+  property: PyLean.Itertools.GrouperStepKeepsItems
+  theorem: PyLean.Itertools.grouperStepKeepsItems_refuted
+  also: [PyLean.Itertools.GrouperReentrantStep, PyLean.Itertools.grouperReentrantStep_proven]

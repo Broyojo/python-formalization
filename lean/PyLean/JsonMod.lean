@@ -8,6 +8,9 @@ import PyLean.JsonMod.Strict
 import PyLean.JsonMod.DocProps
 import PyLean.JsonMod.HookProps
 import PyLean.JsonMod.ToolProps
+import PyLean.JsonMod.EncSize
+import PyLean.JsonMod.DecRecProps
+import PyLean.JsonMod.EncFullRefute
 
 /-!
 `Lib/json/` against `Modules/_json.c`, CPython 3.15.2.
@@ -30,9 +33,16 @@ surface of `_json` (`make_scanner`, `make_encoder`, the indent cache) and
 
 A float value is its IEEE-754 bits, which decide every branch, and the text of
 `float.__repr__`, which is data: `float()` and `repr()` belong to the binary64
-model, and what depends on them stays open. Recursion limits, `cls=`, and
-container subclasses are out of scope, as is mutating a container from `default`
-or a hook while it is being encoded.
+model, and what depends on them stays open.
+
+The recursion limits are modelled in `DecRec.lean` (both decoders) and `EncFull.lean`
+(both encoders, with exception notes, `str`-subclass separators and custom-encoder results,
+and `list`/`tuple`/`dict` subclasses); the C stack room and the Python frames left are
+parameters. The models of `DecC.lean`, `DecPy.lean` and `Enc.lean` are the same code without
+those limits (and, for `Enc.lean`, without notes and subclasses): the entries built on them
+(round trips, the API layer, `dump`) hold within the limits, as `json-loads-twins-scan` and
+`json-dumps-twins` state. `cls=`, and mutating a container from `default` or a hook while it is
+being encoded, are out of scope.
 -/
 
 namespace PyLean.JsonMod
@@ -56,10 +66,17 @@ def entries : List Entry := [
     notes := "Witness '\"\\\\x\"': C reports the backslash (pos 1), Python the escaped character (pos 2)." },
   { id := "json-loads-twins-scan", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONDecoder.decode", "JSONDecoder.raw_decode", "py_scanstring", "_decode_uXXXX", "JSONObject", "JSONArray", "py_make_scanner", "scanstring_unicode", "_parse_object_unicode", "_parse_array_unicode", "_parse_constant", "_match_number_unicode", "scan_once_unicode", "scanner_call", "raise_errmsg", "raise_stop_iteration"]
-    statement := "For every str s (len(s) <= sys.maxsize) and every decoder setting, for arbitrary object_hook, object_pairs_hook, array_hook, parse_float, parse_int and parse_constant, JSONDecoder.decode(s) agrees exactly (value, or exception class, msg, pos, lineno, colno) between the twins, except that an invalid control character is reported with a different message at the same position, and an invalid escape \\c at backslash q is reported by C at q and by Python at q+1 with a different message."
+    statement := "For every str s (len(s) <= sys.maxsize), every decoder setting and arbitrary object_hook, object_pairs_hook, array_hook, parse_float, parse_int and parse_constant, every C stack room c (in nested arrays and objects) and every number p of Python frames left at the scan_once call: each twin returns what it returns without a limit or its own RecursionError (C 'Stack overflow ... while decoding a JSON object/array from a unicode string', Python 'maximum recursion depth exceeded'), and the unlimited result when the room covers its fuel; when neither raises its RecursionError, JSONDecoder.decode agrees exactly (value, or exception class, msg, pos, lineno, colno) between the twins, except that an invalid control character is reported with a different message at the same position, and an invalid escape \\c at backslash q is reported by C at q and by Python at q+1 with a different message; and '[' * k + ']' * k (k >= 1, no array_hook) decodes in C exactly when k <= c and in Python exactly when 2k + 1 <= p."
     source := "invariant: C/Python twins", status := .proven
-    prop := ``LoadsTwinsScan, thm := some ``loadsTwinsScan_proven
-    notes := "Covers NUMBER_RE vs _match_number_unicode (leading zeros, '-', exponents and backtracking, the 4300-digit limit), NaN/Infinity/-Infinity, white space, surrogate pairs (valid, lone, reversed, truncated, C's `end + 6 < len`), every error position, duplicate keys, hooks that raise (StopIteration included), and C's fast path for a string without escapes (_PyUnicodeWriter_IsEmpty, cScanLoop_none)." },
+    prop := ``LoadsTwinsScanRec, thm := some ``loadsTwinsScanRec_proven
+    notes := "Covers NUMBER_RE vs _match_number_unicode (leading zeros, '-', exponents and backtracking, the 4300-digit limit), NaN/Infinity/-Infinity, white space, surrogate pairs (valid, lone, reversed, truncated, C's `end + 6 < len`), every error position, duplicate keys, hooks that raise (StopIteration included), and C's fast path for a string without escapes (_PyUnicodeWriter_IsEmpty, cScanLoop_none). The recursion checks: _Py_EnterRecursiveCall at :1132 and :1140 (stack based in 3.15), Python frames for _scan_once, JSONObject, JSONArray, py_scanstring and _decode_uXXXX (DecRec.lean); the hooks run as if frames were free (a scope limit). Without the limits: LoadsTwinsScan." },
+  { id := "json-loads-twins-rec", pyFile := "Lib/json/decoder.py"
+    pyFns := ["JSONDecoder.decode", "JSONDecoder.raw_decode", "py_make_scanner", "JSONArray", "scan_once_unicode", "_parse_array_unicode", "scanner_call"]
+    statement := "For every str s, every decoder setting, every C stack room and every number of Python frames left, json.loads agrees between the twins up to the two string-error differences of json-loads-twins-scan."
+    source := "invariant: C/Python twins", status := .refuted
+    prop := ``LoadsTwinsRec, thm := some ``loadsTwinsRec_refuted
+    bug := some "json-twins-recursion-limit"
+    notes := "Witness '[[]]' with two levels of stack room and four frames: C returns [[]], Python needs five frames. At the default limit: '[' * 1000 + ']' * 1000." },
   { id := "json-raw-decode-twins", pyFile := "Lib/json/scanner.py"
     pyFns := ["JSONDecoder.raw_decode", "py_make_scanner", "scan_once_unicode", "scanner_call"]
     statement := "For every str s and every int idx, JSONDecoder().raw_decode(s, idx) agrees between the twins up to the two string-error differences of json-loads-twins-scan."
@@ -69,19 +86,54 @@ def entries : List Entry := [
     notes := "raw_decode('12', -1) is (12, 2) in Python, ValueError in C. idx > sys.maxsize: OverflowError (C) vs JSONDecodeError (Python)." },
   { id := "json-raw-decode-twins-in-range", pyFile := "Lib/json/scanner.py"
     pyFns := ["JSONDecoder.raw_decode", "py_make_scanner", "JSONObject", "JSONArray", "scan_once_unicode", "scanner_call", "_build_rval_index_tuple", "_parse_object_unicode", "_parse_array_unicode", "_match_number_unicode"]
-    statement := "For every str s, 0 <= idx <= sys.maxsize and every decoder setting, raw_decode(s, idx) agrees between the twins up to the two string-error differences (in particular the same end index and the same JSONDecodeError positions)."
+    statement := "For every str s, 0 <= idx <= sys.maxsize, every decoder setting, C stack room and number of Python frames left: each twin returns its unlimited result or its own RecursionError, and the unlimited one when the room covers its fuel; when neither raises its RecursionError, raw_decode(s, idx) agrees between the twins up to the two string-error differences (in particular the same end index and the same JSONDecodeError positions)."
     source := "invariant: C/Python twins", status := .proven
-    prop := ``RawDecodeTwinsInRange, thm := some ``rawDecodeTwinsInRange_proven
-    notes := "The bounds on idx are exactly the refuted cases of json-raw-decode-twins." },
+    prop := ``RawDecodeTwinsInRangeRec, thm := some ``rawDecodeTwinsInRangeRec_proven
+    notes := "The bounds on idx are exactly the refuted cases of json-raw-decode-twins; the RecursionError hypothesis is json-raw-decode-twins-rec." },
+  { id := "json-raw-decode-twins-rec", pyFile := "Lib/json/scanner.py"
+    pyFns := ["JSONDecoder.raw_decode", "py_make_scanner", "JSONArray", "scan_once_unicode", "_parse_array_unicode", "scanner_call"]
+    statement := "For every str s, 0 <= idx <= sys.maxsize, every decoder setting, C stack room and number of Python frames left, raw_decode(s, idx) agrees between the twins up to the two string-error differences."
+    source := "invariant: C/Python twins", status := .refuted
+    prop := ``RawDecodeTwinsRec, thm := some ``rawDecodeTwinsRec_refuted
+    bug := some "json-twins-recursion-limit"
+    notes := "Witness raw_decode('[[]]', 0) with room 2 and 4 frames." },
   { id := "json-dumps-twins", pyFile := "Lib/json/encoder.py"
-    pyFns := ["JSONEncoder.encode", "JSONEncoder.iterencode", "_make_iterencode", "py_encode_basestring", "py_encode_basestring_ascii", "ascii_escape_unicode", "ascii_escape_unichar", "escape_unicode", "encoder_listencode_obj", "encoder_listencode_list", "encoder_listencode_dict", "encoder_encode_key_value", "encoder_encode_float", "encoder_write_string", "_encoded_const", "_steal_accumulate", "write_escaped_ascii", "write_escaped_unicode", "ascii_escape_size", "escape_size", "ascii_escape_unicode_and_size", "escape_unicode_and_size"]
-    statement := "For every value built from None, bool, int, float, str (code points <= 0x10FFFF), list, dict or frozendict with str/int/float/bool/None/tuple keys, reference cycles and unknown objects, every default() returning such values, and every ensure_ascii, check_circular, allow_nan, sort_keys, skipkeys, indent and separators, JSONEncoder.encode with c_make_encoder and with _make_iterencode return the same text or raise the same exception."
+    pyFns := ["JSONEncoder.encode", "JSONEncoder.iterencode", "_make_iterencode", "py_encode_basestring", "py_encode_basestring_ascii", "ascii_escape_unicode", "ascii_escape_unichar", "escape_unicode", "encoder_listencode_obj", "encoder_listencode_list", "encoder_listencode_dict", "encoder_encode_key_value", "encoder_encode_float", "encoder_write_string", "_encoded_const", "write_escaped_ascii", "write_escaped_unicode", "_encoder_iterate_mapping_lock_held", "_encoder_iterate_dict_lock_held", "_encoder_iterate_fast_seq_lock_held"]
+    statement := "For every value built from None, bool, int, float, str, exact list, tuple, dict and frozendict with str/int/float/bool/None keys and keys of types whose tp_name is their __name__, reference cycles and unknown objects, every default() returning such values, every option (ensure_ascii, check_circular, allow_nan, sort_keys, skipkeys, indent) and exact-str separators, every C stack room c and number p of Python frames left: when neither twin raises its RecursionError, JSONEncoder.encode with c_make_encoder and without _json returns the same text, or the same exception (class and message) with corresponding __notes__ (the same kind of note on the same type with the same index; a dict item's note names the original key in C and its converted text in Python); and lists k + 1 deep are encoded by C exactly when k + 1 <= c and by Python exactly when k + 3 <= p."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
-    prop := ``DumpsTwins, thm := some ``dumpsTwins_proven
-    notes := "Exception messages agree exactly except TypeError from sort_keys with mixed key types, which both take from list.sort (modelled with '~'). The text of float.__repr__ is a parameter (ASCII, a type invariant); NaN keys with sort_keys are out of scope because the order then depends on the sort." },
+    prop := ``DumpsTwinsX, thm := some ``dumpsTwinsX_proven
+    notes := "EncFull.lean: notes (:1654, :1732, :1906 vs encoder.py:316, :406, :446), _Py_EnterRecursiveCall (:1606, :1613, :1644) vs Python frames (generators, _default, floatstr, the string encoder and its replace callback), the markers, sort_keys, skipkeys and the 4300-digit limit. Each hypothesis is needed: json-dumps-twins-rec, -notes, -separators, -subclass (refuted). Mutating a container from default (gh-142831, gh-145244) is out of scope; the methods of subclasses run as if frames were free." },
+  { id := "json-dumps-twins-rec", pyFile := "Lib/json/encoder.py"
+    pyFns := ["JSONEncoder.encode", "_make_iterencode", "encoder_listencode_obj", "encoder_listencode_list"]
+    statement := "On the values of json-dumps-twins, for every C stack room and number of Python frames left, JSONEncoder.encode with and without _json returns the same text or raises the same exception (class and message)."
+    source := "invariant: C/Python twins", status := .refuted
+    prop := ``DumpsTwinsRec, thm := some ``dumpsTwinsRec_refuted
+    bug := some "json-twins-recursion-limit"
+    notes := "Witness [[]] with room 2 and 3 frames; at the default limit, lists 1000 deep." },
+  { id := "json-dumps-twins-notes", pyFile := "Lib/json/encoder.py"
+    pyFns := ["JSONEncoder.encode", "_make_iterencode", "encoder_listencode_obj", "encoder_listencode_dict", "encoder_encode_key_value"]
+    statement := "On exact containers with keys of every type, when neither twin raises its RecursionError, JSONEncoder.encode with and without _json returns the same text or the same exception with the same __notes__ as printed."
+    source := "invariant: C/Python twins; the notes of gh-122163", status := .refuted
+    prop := ``DumpsTwinsNotes, thm := some ``dumpsTwinsNotes_refuted
+    bug := some "json-encoder-notes-twins"
+    notes := "Witness {1: set()}: 'when serializing dict item 1' (C) vs \"when serializing dict item '1'\" (Python). Also %T vs __name__ for a class outside __main__, and 'not datetime.date' vs 'not date' in the key TypeError." },
+  { id := "json-dumps-twins-separators", pyFile := "Modules/_json.c"
+    pyFns := ["encoder_encode_key_value", "encoder_listencode_list", "encoder_listencode_dict", "encoder_listencode_obj", "_encoder_iterate_fast_seq_lock_held", "_encoder_iterate_dict_lock_held", "JSONEncoder.encode", "_make_iterencode"]
+    statement := "With separators that may be str subclasses (everything else as in json-dumps-twins), when neither twin raises its RecursionError, JSONEncoder.encode with and without _json returns the same text or the same exception."
+    source := "invariant: C/Python twins; gh-148241 (str subclasses are written by their characters)", status := .refuted
+    prop := ``DumpsTwinsSep, thm := some ``dumpsTwinsSep_refuted
+    bug := some "json-separator-str-subclass"
+    notes := "Witness {'a': [1, 2]} with both separators S whose __str__ is 'X': C writes X for both (PyUnicodeWriter_WriteStr at :1728 and :1900), Python the raw ':' and ','. key_separator goes through str() with or without indent." },
+  { id := "json-dumps-twins-subclass", pyFile := "Modules/_json.c"
+    pyFns := ["encoder_listencode_list", "encoder_listencode_obj", "JSONEncoder.encode", "_make_iterencode"]
+    statement := "With subclasses of list, tuple, dict and frozendict (exact separators, no custom encoder), when neither twin raises its RecursionError, JSONEncoder.encode with and without _json returns the same text or the same exception."
+    source := "invariant: C/Python twins", status := .refuted
+    prop := ``DumpsTwinsSub, thm := some ``dumpsTwinsSub_refuted
+    bug := some "json-container-subclass-twins"
+    notes := "Witness: a non-empty list subclass iterating as empty, '[]' (C, PySequence_Fast) vs ']' (Python). Known: gh-71800, cpython#158731/158732, #59091, #110941. The dict-subclass paths (PyMapping_Items, the 2-tuple check, PyDict_GET_SIZE) are modelled in cContX/cMapItemsX and run by the difftest." },
   { id := "json-dumps-api-twins", pyFile := "Lib/json/__init__.py"
     pyFns := ["dumps"]
-    statement := "json.dumps with _json and without it, for every keyword argument (with the type invariants of json-dumps-twins): the same text or the same exception."
+    statement := "json.dumps with _json and without it, for every keyword argument (with the type invariants of json-dumps-twins), within the recursion limits and with exact containers and str separators (the models of Enc.lean have no limits, notes or subclasses): the same text or the same exception class and message."
     source := "invariant: C/Python twins", status := .proven
     prop := ``DumpsApiTwins, thm := some ``dumpsApiTwins_proven },
   { id := "json-dumps-fast-path", pyFile := "Lib/json/__init__.py"
@@ -91,7 +143,7 @@ def entries : List Entry := [
     prop := ``DumpsFastPath, thm := some ``dumpsFastPath_proven },
   { id := "json-dump-is-dumps", pyFile := "Lib/json/__init__.py"
     pyFns := ["dump", "dumps", "_make_iterencode", "JSONEncoder.iterencode"]
-    statement := "json.dump writes what json.dumps returns: with a write that does not fail, the chunks join to the text of dumps, or the generator raises what dumps raises, for every option and value of json-dumps-twins."
+    statement := "json.dump writes what json.dumps returns: with a write that does not fail, the chunks join to the text of dumps, or the generator raises what dumps raises, for every option and value of json-dumps-twins. Within the recursion limits: the models this is proved on (Enc.lean, DecC.lean, DecPy.lean) have none (see json-dumps-twins, json-loads-twins-scan)."
     source := "json docs (dump and dumps); invariant: dump uses the Python generator even with _json", status := .proven
     prop := ``DumpIsDumps, thm := some ``dumpIsDumps_proven },
   { id := "json-dump-prefix", pyFile := "Lib/json/__init__.py"
@@ -101,7 +153,7 @@ def entries : List Entry := [
     prop := ``DumpPrefix, thm := some ``dumpPrefix_proven },
   { id := "json-iterencode-join", pyFile := "Lib/json/encoder.py"
     pyFns := ["JSONEncoder.iterencode", "_make_iterencode"]
-    statement := "For every value and option, ''.join(JSONEncoder().iterencode(o)) is JSONEncoder().encode(o) with the pure-Python encoder, or the generator ends with the same exception."
+    statement := "For every value and option, ''.join(JSONEncoder().iterencode(o)) is JSONEncoder().encode(o) with the pure-Python encoder, or the generator ends with the same exception. Within the recursion limits: the models this is proved on (Enc.lean, DecC.lean, DecPy.lean) have none (see json-dumps-twins, json-loads-twins-scan)."
     source := "JSONEncoder.iterencode docstring, invariant: _one_shot only changes speed", status := .proven
     prop := ``IterencodeJoin, thm := some ``iterencodeJoin_proven },
   { id := "json-allow-nan", pyFile := "Lib/json/encoder.py"
@@ -127,11 +179,17 @@ def entries : List Entry := [
     source := "invariant: C/Python twins", status := .proven
     prop := ``EncodeBasestringTwins, thm := some ``encodeBasestringTwins_proven },
   { id := "json-c-encode-basestring", pyFile := "Modules/_json.c"
-    pyFns := ["py_encode_basestring_impl", "py_encode_basestring_ascii_impl", "ascii_escape_unichar", "ascii_escape_unicode", "ascii_escape_unicode_and_size", "escape_unicode", "escape_unicode_and_size"]
+    pyFns := ["py_encode_basestring_impl", "py_encode_basestring_ascii_impl", "ascii_escape_unichar", "ascii_escape_unicode", "escape_unicode"]
     statement := "As json-encode-basestring-twins, for the C wrappers, with the type check and message of their Argument Clinic signature."
     source := "invariant: C/Python twins", status := .proven
     prop := ``EncodeBasestringTwins, thm := some ``encodeBasestringTwins_proven
-    notes := "The OverflowError for a string too long to escape needs more than 2^59 code points and is not modelled." },
+    notes := "The escaped text the C functions return is pinned to their allocation by json-escape-size." },
+  { id := "json-escape-size", pyFile := "Modules/_json.c"
+    pyFns := ["ascii_escape_size", "escape_size", "ascii_escape_unicode_and_size", "escape_unicode_and_size", "ascii_escape_unicode", "escape_unicode", "write_escaped_ascii", "write_escaped_unicode", "ascii_escape_unichar"]
+    statement := "For every str, ascii_escape_size and escape_size are the length of what the fill loops write; ascii_escape_unicode_and_size and escape_unicode_and_size (PyUnicode_New(output_size, maxchar), the reads and writes with the output's kind) return the escaped text exactly when given that size, a smaller one writing past the allocation and a larger one leaving units unwritten; so ascii_escape_unicode, escape_unicode and both write_escaped_* return the escaped text, or OverflowError 'string is too long to escape' when the size passes PY_SSIZE_T_MAX."
+    source := "invariant: memory safety of the allocation, Modules/_json.c:162-419", status := .proven
+    prop := ``EscapeSize, thm := some ``escapeSize_proven
+    notes := "EncSize.lean. The buffer is the units written; an overflow or an unwritten unit is `none`. Type invariant: the input str is canonical (its kind is that of its largest code point)." },
   { id := "json-write-escaped", pyFile := "Modules/_json.c"
     pyFns := ["write_escaped_ascii", "write_escaped_unicode", "ascii_escape_size", "escape_size"]
     statement := "write_escaped_ascii and write_escaped_unicode write what ascii_escape_unicode and escape_unicode return, for every str: their direct path, taken on output_size == input_chars + 2, is taken exactly when no character needs escaping."
@@ -147,13 +205,13 @@ def entries : List Entry := [
     notes := "'\\ud834\\udd1e' (two code points) comes back as '\\U0001d11e' with ensure_ascii=True. Known: gh-94527 (open)." },
   { id := "json-roundtrip", pyFile := "Lib/json/encoder.py"
     pyFns := ["JSONEncoder.encode", "encoder_listencode_obj", "encoder_listencode_list", "encoder_listencode_dict", "JSONObject", "JSONArray", "scan_once_unicode"]
-    statement := "loads(dumps(v)) == v for every JSON-representable v (None, bool, int, str, list, dict with str keys), both encoders and decoders, every strict, every default, every white-space indent and every separators built from ',' and ':' with white space, provided that with ensure_ascii=True no string holds a high surrogate immediately followed by a low surrogate."
+    statement := "loads(dumps(v)) == v for every JSON-representable v (None, bool, int, str, list, dict with str keys), both encoders and decoders, every strict, every default, every white-space indent and every separators built from ',' and ':' with white space, provided that with ensure_ascii=True no string holds a high surrogate immediately followed by a low surrogate. Within the recursion limits: the models this is proved on (Enc.lean, DecC.lean, DecPy.lean) have none (see json-dumps-twins, json-loads-twins-scan)."
     source := "round trip (json docs); the proviso is exactly json-roundtrip-str", status := .proven
     prop := ``RoundTrip, thm := some ``roundTrip_proven
     notes := "Hypotheses: Layout (the output is JSON at all), DCfg.Rec (hooks build the items), sort_keys=False (with it dict items come back reordered, which dict equality ignores; objects are compared as item lists here), default parse_int, Python value invariants (str code points, distinct dict keys). Ints of more than 4300 digits: dumps raises, so the statement is about values dumps accepts." },
   { id := "json-dumps-accepted", pyFile := "Lib/json/encoder.py"
     pyFns := ["JSONEncoder.encode", "encoder_listencode_obj", "scan_once_unicode"]
-    statement := "If dumps(v) returns a text, for any value without float values, every default, ensure_ascii, sort_keys, skipkeys and check_circular, a white-space indent and separators built from ',' and ':', then loads accepts that text, in both decoders, for every strict and for hooks that return."
+    statement := "If dumps(v) returns a text, for any value without float values, every default, ensure_ascii, sort_keys, skipkeys and check_circular, a white-space indent and separators built from ',' and ':', then loads accepts that text, in both decoders, for every strict and for hooks that return. Within the recursion limits: the models this is proved on (Enc.lean, DecC.lean, DecPy.lean) have none (see json-dumps-twins, json-loads-twins-scan)."
     source := "json docs: dumps serializes to a JSON formatted str; invariant", status := .proven
     prop := ``DumpsAccepted, thm := some ``dumpsAccepted_proven
     notes := "Includes non-str keys (int, float, bool, None), skipped keys, lone surrogates and surrogate pairs. Float values: json-dumps-accepted-float." },
@@ -162,7 +220,7 @@ def entries : List Entry := [
     statement := "For every str s, every decoder setting and 0 <= idx <= sys.maxsize, raw_decode(s, idx) ends with a value or a Python exception in both twins (the models never exhaust their fuel, so the twin theorems are about real outcomes)."
     source := "invariant: no hang", status := .proven
     prop := ``DecodeTerminates, thm := some ``decodeTerminates_proven
-    notes := "RecursionError on deep nesting is out of scope." },
+    notes := "About the models without recursion limits; the limited ones give the same results or RecursionError (json-loads-twins-scan)." },
   { id := "json-strict-only-control", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONDecoder.__init__", "py_scanstring", "scanstring_unicode"]
     statement := "For every document, loads with strict=True gives the same result as with strict=False, or an 'Invalid control character' error at a character of code 0-31, in both twins."
@@ -185,7 +243,7 @@ def entries : List Entry := [
     prop := ``IntLiteral, thm := some ``intLiteral_proven },
   { id := "json-loads-api-twins", pyFile := "Lib/json/__init__.py"
     pyFns := ["loads", "load", "detect_encoding"]
-    statement := "json.loads with _json and without it, for every keyword argument and every str, bytes or other argument: the same value, or exceptions of the same class."
+    statement := "json.loads with _json and without it, for every keyword argument and every str, bytes or other argument: the same value, or exceptions of the same class. Within the recursion limits: the models this is proved on (Enc.lean, DecC.lean, DecPy.lean) have none (see json-dumps-twins, json-loads-twins-scan)."
     source := "invariant: C/Python twins", status := .proven
     prop := ``LoadsApiTwins, thm := some ``loadsApiTwins_proven
     notes := "Type invariant: the document has at most sys.maxsize characters. Messages differ only as in json-loads-twins-scan. bytes.decode with surrogatepass is modelled for the eight encodings detect_encoding returns; UnicodeDecodeError matches on class." },
@@ -248,7 +306,7 @@ def entries : List Entry := [
     prop := ``ArrayHook, thm := some ``arrayHook_proven
     notes := "Agreement of the twins for an arbitrary hook on every document is json-loads-twins-scan." },
   { id := "json-scanstring-twins", pyFile := "Lib/json/decoder.py"
-    pyFns := ["py_scanstring"]
+    pyFns := ["py_scanstring", "scanstring_unicode", "py_scanstring_impl"]
     statement := "scanstring(s, end, strict): the C function and py_scanstring agree up to the two string-error differences, for every int end."
     source := "invariant: C/Python twins", status := .refuted
     prop := ``ScanstringTwins, thm := some ``scanstringTwins_refuted
@@ -272,14 +330,16 @@ def entries : List Entry := [
     prop := ``ScannerCallRaw, thm := some ``scannerCallRaw_proven },
   { id := "json-scanner-new", pyFile := "Modules/_json.c"
     pyFns := ["scanner_new"]
-    statement := "make_scanner accepts an object with the seven attributes, reading strict by truth value, and one without strict raises AttributeError naming it."
-    source := "Modules/_json.c:1255-1280", status := .proven
-    prop := ``ScannerNew, thm := some ``scannerNew_proven },
+    statement := "make_scanner(ctx) for every context object: when strict and the six other attributes can be read and bool(ctx.strict) returns, the scanner has every hook and strict by truth value; otherwise it raises the first failure in the order strict, bool(strict), object_hook, object_pairs_hook, array_hook, parse_float, parse_int, parse_constant, whatever exception that is."
+    source := "Modules/_json.c:1239-1287", status := .proven
+    prop := ``ScannerNew, thm := some ``scannerNew_proven
+    notes := "A lookup is an abstract outcome (a missing attribute, a property or __getattr__ that raises); the difftest runs missing attributes, raising properties and a raising __bool__." },
   { id := "json-encoder-new", pyFile := "Modules/_json.c"
     pyFns := ["encoder_new"]
-    statement := "c_make_encoder as JSONEncoder.iterencode calls it keeps every option."
-    source := "invariant; Lib/json/encoder.py:254-257", status := .proven
-    prop := ``EncoderNew, thm := some ``encoderNew_proven },
+    statement := "c_make_encoder as JSONEncoder.iterencode calls it keeps every option (check_circular being markers is not None); with str separators, markers that is neither a dict nor None is refused with \"make_encoder() argument 1 must be dict or None, not <tp_name>\" (%.200s), whatever the other arguments."
+    source := "invariant; Lib/json/encoder.py:254-257; Modules/_json.c:1327-1331", status := .proven
+    prop := ``EncoderNew, thm := some ``encoderNew_proven
+    notes := "The U conversions of the separators come first: json-encoder-new-sep-typeerror." },
   { id := "json-encoder-new-sep-typeerror", pyFile := "Modules/_json.c"
     pyFns := ["encoder_new"]
     statement := "c_make_encoder refuses a key_separator that is not a str with TypeError, whatever its type."
@@ -289,14 +349,22 @@ def entries : List Entry := [
     notes := "Witness: a type named 'a' + 'é' * 30. converterr (Python/getargs.c:682-684) cuts the name to 50 bytes with PyOS_snprintf, inside a character, and PyErr_SetString (seterror, :477) raises UnicodeDecodeError at byte 92. The model mirrors only the U unit's refusal path of convertsimple, converterr and seterror, so those rows are not claimed. The record's second site, set_mro_error, is a gap% in TypeObj/TypeNew.lean (setMroError): the TypeObj model has no UnicodeDecodeError object to raise." },
   { id := "json-encoder-call", pyFile := "Modules/_json.c"
     pyFns := ["encoder_call"]
-    statement := "c_make_encoder(...)(o, 0) is the 1-tuple whose item is the text of dumps, or the same exception, with the two C encoders."
-    source := "invariant; Lib/json/encoder.py:202-205", status := .proven
-    prop := ``EncoderCallDumps, thm := some ``encoderCallDumps_proven },
+    statement := "c_make_encoder(...)(o, level) for every int level: OverflowError outside Py_ssize_t; a negative level gives what level 0 gives; for level >= 0, on the values of json-dumps-twins, when neither twin raises its RecursionError, the 1-tuple of the text of _make_iterencode(...)(o, level), or the same exception with corresponding notes."
+    source := "invariant: C/Python twins; Lib/json/encoder.py:202-205, 254-262", status := .proven
+    prop := ``EncoderCallX, thm := some ``encoderCallX_proven
+    notes := "The level starts the indent cache (create_indent_cache, then indent_level = 0, :1466-1473); json-indent-cache ties the cache to the strings the model writes. _make_iterencode with a negative level indents differently (Python's `indent * level` is '' up to level 0); the model's Python level is a Nat." },
   { id := "json-encoder-string", pyFile := "Modules/_json.c"
-    pyFns := ["encoder_write_string"]
-    statement := "encoder_write_string: with fast_encode what the C escape returns; otherwise the result of encoder, which must be a str, and its exception propagates."
-    source := "Modules/_json.c:1537-1557", status := .proven
-    prop := ``EncoderString, thm := some ``encoderString_proven },
+    pyFns := ["encoder_write_string", "_steal_accumulate"]
+    statement := "encoder_write_string for every string and encoder: with fast_encode the C escape (the text of a str subclass, without str()); with a custom encoder, its exception, TypeError naming a non-str result's type (%.80s), and for a str result PyUnicodeWriter_WriteStr: its text if it is exactly a str, str() of it otherwise."
+    source := "Modules/_json.c:1537-1566, Objects/unicode_writer.c:313-331", status := .proven
+    prop := ``EncoderStringX, thm := some ``encoderStringX_proven },
+  { id := "json-encoder-string-raw", pyFile := "Modules/_json.c"
+    pyFns := ["encoder_write_string", "_steal_accumulate"]
+    statement := "With a custom encoder, c_make_encoder writes the text of the str the encoder returns, as _make_iterencode with the same encoder does."
+    source := "invariant: C/Python twins; gh-148241", status := .refuted
+    prop := ``EncoderStringRaw, thm := some ``encoderStringRaw_refuted
+    bug := some "json-separator-str-subclass"
+    notes := "Witness: an encoder returning S(s) with S.__str__ returning 'X'; C writes 'X'." },
   { id := "json-indent-cache", pyFile := "Modules/_json.c"
     pyFns := ["create_indent_cache", "update_indent_cache", "get_item_separator", "write_newline_indent"]
     statement := "From create_indent_cache at any level i >= 0, at every level k reached one at a time, get_item_separator returns item_separator + '\\n' + indent * (k + i), write_newline_indent returns '\\n' + indent * (k + i), and the invariant of the comment holds."

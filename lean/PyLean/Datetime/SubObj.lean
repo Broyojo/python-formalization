@@ -10,7 +10,7 @@ import PyLean.Datetime.SubclassCtor
 `call_subclass_fold` with `fold = 0`, :1308-1314, :1254-1285) and returns whatever that call
 returns. The callers then read the result as a `PyDateTime_DateTime` without checking its type:
 `datetime_utctimetuple` reads `GET_YEAR(utcself)`..`DATE_GET_SECOND(utcself)` (:7182-7187),
-`astimezone` reads `HASTZINFO(result)` (:6963) and writes `result->tzinfo` (:6983, :6996).
+`astimezone` reads `HASTZINFO(result)` (:6964) and writes `result->tzinfo` (:6983, :6996).
 
 So a result is modelled as an object (`DtAny`): an instance of some `datetime` type, holding a
 `DT`, or an object of an unrelated type. A C computation that reads or writes a datetime field
@@ -85,8 +85,8 @@ def dtUtctimetupleObjC (env : TzEnv) (cls : DtType) (self : DT) : Option (Py Tim
 
 /-! ### `astimezone` -/
 
-/-- :6963-6984: a naive result is rebuilt aware in UTC by
-`new_datetime_ex2(..., CONST_UTC, DATE_GET_FOLD(result), Py_TYPE(result))` (:6964-6978, the
+/-- :6964-6984: a naive result is rebuilt aware in UTC by
+`new_datetime_ex2(..., CONST_UTC, DATE_GET_FOLD(result), Py_TYPE(result))` (:6965-6977, the
 type's own allocation, no constructor call); an aware one gets `result->tzinfo = utc`
 (:6981-6984). -/
 def astzUtcC (r : DT) : Py DT :=
@@ -100,7 +100,7 @@ def astzTargetC (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (tzinfo : O
   | none => localTimezoneC env ltz o1 r
 
 /-- :6957-7002 once the offset `o` is known: `result = add_datetime_timedelta(self, offset, -1)`
-(:6957-6961); `HASTZINFO(result)` (:6963) and the UTC step `astzUtcC`; the target zone;
+(:6957-6961); `HASTZINFO(result)` (:6964) and the UTC step `astzUtcC`; the target zone;
 `result->tzinfo = tzinfo` (:6996) and `tzinfo.fromutc(result)` (:6998-7002), a method call
 (`fromutc`). `none`: the result of the subtraction is not a datetime. -/
 def astzObjFinishC (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 : Nat) (fromutc : Tz → DtAny → Py DtAny)
@@ -182,15 +182,15 @@ def deltaCmpObjC : OffObj → OffObj → Option Int
   | _, _ => none
 
 /-- One test of `pep495_eq_exception`: `flip_offset != offset && delta_cmp(flip_offset,
-offset)` (:6569-6570, :6579-6580), the pointer test first. `none`: `delta_cmp` read a
+offset)` (:6569-6570, :6580-6581), the pointer test first. `none`: `delta_cmp` read a
 non-`timedelta` as one. -/
 def pep495StepC (f o : OffObj) : Option Bool :=
   if f.ptrNe o then (deltaCmpObjC f o).map (fun c => decide (c ≠ 0)) else some false
 
 /-- `pep495_eq_exception(self, other, offset_self, offset_other)`, :6560-6586, given what
-`get_flip_fold_offset` returns for `self` (`flip1`, :6567) and `other` (`flip2`, :6576, called
+`get_flip_fold_offset` returns for `self` (`flip1`, :6566) and `other` (`flip2`, :6577, called
 only when the first test does not fire): the test for `self` (:6569-6574, `result = 1`), then
-the one for `other` (:6579-6581). -/
+the one for `other` (:6578-6582). -/
 def pep495EqExceptionObjC (flip1 flip2 : Py OffObj) (o1 o2 : OffObj) : Option (Py Bool) :=
   match flip1 with
   | .error e => some (.error e)

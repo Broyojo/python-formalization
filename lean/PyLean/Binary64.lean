@@ -20,7 +20,18 @@ import PyLean.Binary64.Pack4Props
 import PyLean.Binary64.OpenProps
 import PyLean.Binary64.Complex
 import PyLean.Binary64.ComplexProps
+import PyLean.Binary64.FloatArith
+import PyLean.Binary64.FloatRem
+import PyLean.Binary64.FloatSmall
+import PyLean.Binary64.FloatPow
+import PyLean.Binary64.FloatObj
+import PyLean.Binary64.FloatObjProps
+import PyLean.Binary64.FloatParse
+import PyLean.Binary64.FloatPack4
 import PyLean.Binary64.Diff
+import PyLean.Binary64.ComplexExact
+import PyLean.Binary64.ComplexAnnexG
+import PyLean.Binary64.ComplexFormat
 
 /-!
 Shared exact IEEE-754 binary64 model, and `Objects/floatobject.c`, `Python/dtoa.c`,
@@ -57,27 +68,40 @@ def entries : List Entry := [
     source := "IEEE 754-2019 section 5.4.1 (fusedMultiplyAdd); math.fma docs"
     status := .proven, prop := ``FmaCorrect, thm := some ``fmaCorrect_proven
     notes := "Foundation, for math.fma." },
-  { id := "float-add-correct", pyFile := floatFile, pyFns := ["float_add"]
-    statement := "For finite floats x and y, x + y is the exact sum rounded to nearest even, and an exact zero is -0.0 only when both operands are negative."
-    source := "IEEE 754 addition; floatobject.c:541-549 performs C double addition"
-    status := .proven, prop := ``FloatAddCorrect, thm := some ``floatAddCorrect_proven },
-  { id := "float-sub-correct", pyFile := floatFile, pyFns := ["float_sub"]
-    statement := "For finite floats x and y, x - y is the exact difference rounded to nearest even."
-    source := "IEEE 754 subtraction; floatobject.c:551-559"
-    status := .proven, prop := ``FloatSubCorrect, thm := some ``floatSubCorrect_proven },
-  { id := "float-mul-correct", pyFile := floatFile, pyFns := ["float_mul"]
-    statement := "For finite floats x and y, x * y is the exact product rounded to nearest even, and a zero product carries the exclusive or of the signs."
-    source := "IEEE 754 multiplication; floatobject.c:561-569"
-    status := .proven, prop := ``FloatMulCorrect, thm := some ``floatMulCorrect_proven },
-  { id := "float-div-correct", pyFile := floatFile, pyFns := ["float_div"]
-    statement := "x / y raises ZeroDivisionError for a zero y, whatever x is, and for finite x and nonzero finite y it is the exact quotient rounded to nearest even."
-    source := "floatobject.c:577-582; IEEE 754 division"
-    status := .proven, prop := ``FloatDivCorrect, thm := some ``floatDivCorrect_proven },
+  { id := "float-add-correct", pyFile := floatFile, pyFns := ["float_add", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, float_add converts the left operand first (a float or float subclass gives its value, an int its rounded value or OverflowError, anything else NotImplemented) and then the right one; on floats, a NaN operand or infinities of opposite signs give a NaN, an infinity otherwise wins, and finite operands give the exact sum rounded to nearest even, -0.0 only for two negative operands, and any other result, an overflow to infinity included, has the sign of the exact sum (-1e308 + -1e308 is -inf)."
+    source := "floatobject.c:311-315, :541-549; IEEE 754-2019 6.1, 6.3 (addition, infinities, sign of an exact zero sum)"
+    status := .proven, prop := ``FloatAddSpec, thm := some ``floatAddSpec_proven
+    notes := "Smoke-tested on 3.15.2: inf + 1.0 is inf, inf + -inf is nan, 1.0 + 10**400 and 10**400 + 1.0 raise OverflowError, float.__add__(1.0, 'a') is NotImplemented, -1e308 + -1e308 is -inf and 1e308 + 1e308 is inf." },
+  { id := "float-sub-correct", pyFile := floatFile, pyFns := ["float_sub", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, float_sub has the same conversion dispatch as float_add; on floats, a NaN operand or infinities of the same sign give a NaN, a left infinity otherwise wins, a finite left operand minus an infinity is the opposite infinity, and finite operands give the exact difference rounded, -0.0 only for -0.0 - 0.0, and any other result, an overflow to infinity included, has the sign of the exact difference (-1e308 - 1e308 is -inf)."
+    source := "floatobject.c:551-559; IEEE 754-2019 6.1, 6.3"
+    status := .proven, prop := ``FloatSubSpec, thm := some ``floatSubSpec_proven
+    notes := "Smoke-tested on 3.15.2: -1e308 - 1e308 is -inf, 1e308 - -1e308 is inf." },
+  { id := "float-mul-correct", pyFile := floatFile, pyFns := ["float_mul", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, float_mul has the CONVERT_TO_DOUBLE dispatch; on floats, a NaN operand or an infinity times a zero gives a NaN, an infinity times anything else the infinity of the exclusive or of the signs, and finite operands the exact product rounded with that sign, zero included."
+    source := "floatobject.c:561-569; IEEE 754-2019 6.1, 6.3"
+    status := .proven, prop := ``FloatMulSpec, thm := some ``floatMulSpec_proven },
+  { id := "float-div-correct", pyFile := floatFile, pyFns := ["float_div", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, float_div has the CONVERT_TO_DOUBLE dispatch; on floats, a zero divisor of either sign raises ZeroDivisionError whatever the dividend, NaN included; otherwise a NaN operand or inf / inf gives a NaN, an infinite dividend an infinity, an infinite divisor a zero, finite operands the exact quotient rounded, every non-NaN result with the exclusive or of the signs."
+    source := "floatobject.c:571-584; IEEE 754-2019 6.1, 6.3"
+    status := .proven, prop := ``FloatDivSpec, thm := some ``floatDivSpec_proven },
   { id := "float-int-operand-correct", pyFile := floatFile
     pyFns := ["_Py_convert_int_to_double"]
-    statement := "An int operand converts to its exact value rounded to nearest even, and OverflowError is raised exactly for the ints at or past DBL_MAX + 2^970."
-    source := "PyLong_AsDouble documentation; float(int) docs (OverflowError)"
-    status := .proven, prop := ``IntToFloatCorrect, thm := some ``intToFloatCorrect_proven },
+    statement := "CONVERT_TO_DOUBLE with _Py_convert_int_to_double gives a float's value, an int's value rounded to nearest even below DBL_MAX + 2**970 and OverflowError('int too large to convert to float') from there on (10**400 and -10**400 raise), and NotImplemented, not an error, for anything else."
+    source := "floatobject.c:305-336; PyLong_AsDouble documentation"
+    status := .proven, prop := ``ConvertToDoubleSpec, thm := some ``convertToDoubleSpec_proven },
+  { id := "float-rem-correct", pyFile := floatFile, pyFns := ["float_rem", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, float_rem has the CONVERT_TO_DOUBLE dispatch; on floats, a zero divisor raises ZeroDivisionError whatever the dividend, a NaN operand or an infinite dividend gives a NaN, an infinite divisor gives the dividend when the signs agree, the divisor when they do not and a zero with the divisor's sign for a zero dividend, and finite operands give x - y * floor(x / y) exactly, rounded to nearest even, always with the sign of y."
+    source := "floatobject.c:586-612 (comments at :601 and :605-607); Doc/library/stdtypes.rst, x % y"
+    status := .proven, prop := ``FloatRemSpec, thm := some ``floatRemSpec_proven
+    notes := "Smoke-tested on 3.15.2: -1.0 % inf is inf, 1.0 % -inf is -inf, 0.0 % -inf is -0.0, -1e-300 % 1e300 is 1e300 (the exact value rounds up to y), 1.0 % 10**400 raises OverflowError." },
+  { id := "float-divmod-wrappers", pyFile := floatFile
+    pyFns := ["float_divmod", "float_floor_div", "_Py_convert_int_to_double"]
+    statement := "On every pair of operands, divmod and // have the CONVERT_TO_DOUBLE dispatch (1e308 // 10**400 raises OverflowError), raise ZeroDivisionError for a zero divisor whatever the dividend, and otherwise divmod(x, y) is (x // y, x % y)."
+    source := "floatobject.c:652-680; divmod docs"
+    status := .proven, prop := ``FloatDivmodSpec, thm := some ``floatDivmodSpec_proven
+    notes := "The quotient itself is pinned by float-floordiv-exact-floor and float-divmod-quotient-doc, whose counterexamples run these wrappers." },
   { id := "float-int-conversions", pyFile := floatFile
     pyFns := ["float___trunc___impl", "float___floor___impl", "float___ceil___impl"]
     statement := "math.floor and math.ceil of a finite float are its exact floor and ceiling, int(x) truncates toward zero, a NaN raises ValueError and an infinity raises OverflowError."
@@ -111,26 +135,49 @@ def entries : List Entry := [
     status := .refuted, prop := ``DivmodQuotientDoc, thm := some ``divmodQuotientDoc_refuted
     bug := some "binary64-floordiv-not-exact-floor"
     notes := "The quotient can be one more than the floor, and for quotients above 2**52 two less." },
-  { id := "float-pow-special-values", pyFile := floatFile, pyFns := ["float_pow"]
-    statement := "For any C library pow: x ** 0 and 1 ** y are 1.0, even for NaNs; nan ** y is nan for y != 0; 0.0 ** y raises ZeroDivisionError for finite y < 0; a negative base with a finite non-integer exponent goes to complex; two positive finite operands call pow, and an infinite result raises OverflowError."
-    source := "Comments at floatobject.c:701-787; C99 Annex F"
-    status := .proven, prop := ``PowSpecialValues, thm := some ``powSpecialValues_proven },
+  { id := "float-pow-special-values", pyFile := floatFile, pyFns := ["float_pow", "_Py_convert_int_to_double"]
+    statement := "For every C library pow and every errno it leaves: a third argument raises TypeError before conversion, the operands go through CONVERT_TO_DOUBLE, x ** 0 is 1.0 even for NaN x, nan ** y is that NaN, x ** nan is that NaN unless x == 1.0, x ** +-inf is 1.0 for |x| == 1, +inf when y > 0 and |x| > 1 agree and +0.0 otherwise, (+-inf) ** y and (+-0.0) ** y keep the sign of x exactly for odd integer y (and 0.0 ** y raises ZeroDivisionError for y < 0), a negative base with a non-integer exponent goes to complex and with an integer exponent is pow(-x, y) negated for odd y ((-2.0) ** 3 == -8.0), and pow's result becomes OverflowError for an infinity with no errno, is kept for ERANGE with a zero result, and raises for any other errno."
+    source := "Comments at floatobject.c:701-787; C99 Annex F.10.4.4; _Py_ADJUST_ERANGE1, pycore_pymath.h:33-43"
+    status := .proven, prop := ``FloatPowSpec, thm := some ``floatPowSpec_proven
+    notes := "Smoke-tested on 3.15.2 (glibc): (-2.0)**3 == -8.0, 0.5**inf == 0.0, (-inf)**-3 is -0.0, (-0.0)**3 is -0.0, 0.0**-inf is inf, (-1.0)**inf is 1.0, (-2.0)**1025.0 raises OverflowError. Probe: 2.0 ** -1074.5 and 0.5 ** 1074.2 both give 5e-324 (bits 0x1) with no error on the pod's glibc, which leaves errno at 0 for these inexact subnormal results. A C library that set ERANGE on a nonzero subnormal result would make float_pow raise OverflowError for an underflow, since _Py_ADJUST_ERANGE1 clears ERANGE only for a zero result; PowSpec states that case for every libm. Not recorded as a bug: it does not reproduce on 3.15.2." },
   { id := "float-hash-basics", pyFile := floatFile, pyFns := ["float_hash"]
     statement := "hash(x) is never -1, infinities hash to +-314159, a NaN hashes by identity, and floats that compare equal hash equal."
     source := "tp_hash contract; Doc/library/stdtypes.rst, hashing of numeric types"
     status := .proven, prop := ``FloatHashBasics, thm := some ``floatHashBasics_proven
     notes := "The hash of a finite float against the exact rational rule is the separate open entry." },
   { id := "float-unary", pyFile := floatFile, pyFns := ["float_neg", "float_abs", "float_bool"]
-    statement := "-x flips only the sign bit, abs(x) clears it, and bool(x) is false exactly for the two zeros."
+    statement := "-x flips the sign bit and keeps the exponent and fraction bits (so a NaN keeps its payload), abs(x) clears the sign bit and keeps the rest, and bool(x) is false exactly for the two zeros."
     source := "IEEE 754 sign-bit operations; float_bool, floatobject.c:825"
     status := .proven, prop := ``FloatUnary, thm := some ``floatUnary_proven },
-  { id := "float-identities", pyFile := floatFile
-    pyFns := ["float_float", "float_conjugate_impl", "float_getreal", "float_getimag",
-      "float___getnewargs___impl", "float_from_number_impl", "float_new_impl",
-      "float_subtype_new", "float_vectorcall"]
-    statement := "conjugate, real, __float__, __getnewargs__, from_number, float(x) and its subclass path keep a float's value, imag is 0.0, and float() is 0.0."
-    source := "docstrings; floatobject.c:1068-1090, :1566-1585, :1703-1713"
-    status := .proven, prop := ``FloatIdentities, thm := some ``floatIdentities_proven },
+  { id := "float-float-identity", pyFile := floatFile
+    pyFns := ["float_float", "float_conjugate_impl", "float_getreal"]
+    statement := "x.__float__(), x.conjugate() and x.real are always an exact float with all 64 bits of x, the object x itself exactly when x is an exact float, and a new float for a subclass instance."
+    source := "floatobject.c:1069-1090, :1704-1707; conjugate docstring (:1082)"
+    status := .proven, prop := ``FloatFloatSpec, thm := some ``floatFloatSpec_proven
+    notes := "Smoke-tested on 3.15.2: x.conjugate() is x and x.real is x for x = 1.5; for an instance f of a float subclass, f.real is not f and type(f.real) is float." },
+  { id := "float-getnewargs", pyFile := floatFile, pyFns := []
+    statement := "x.__getnewargs__() is the 1-tuple (x,), and float(*x.__getnewargs__()) gives back all 64 bits of x, NaN payload included, whatever identity the new float gets."
+    source := "floatobject.c:1665-1669; copy and pickle protocol (__getnewargs__)"
+    status := .proven, prop := ``GetnewargsSpec, thm := some ``getnewargsSpec_proven
+    notes := "Credits no row: float___getnewargs___impl is excluded (trivial: one field in a 1-tuple, no branch); the round trip is float_new's." },
+  { id := "float-new", pyFile := floatFile, pyFns := ["float_new_impl"]
+    statement := "float() is a new 0.0; float(s) for an exact str goes straight to PyFloat_FromString; float(x) for an exact float is x itself; anything else goes through PyNumber_Float, which calls nb_float first (an exception propagates, an exact float result is returned as that object, a float subclass result raises the DeprecationWarning under an error filter and is copied otherwise, anything else is TypeError), then nb_index through PyLong_AsDouble, then a float subclass's own value, then PyFloat_FromString."
+    source := "floatobject.c:1567-1585; Objects/abstract.c:1602-1657"
+    status := .proven, prop := ``FloatNewSpec, thm := some ``floatNewSpec_proven
+    notes := "Smoke-tested on 3.15.2: float(1.5) is the same object, a float subclass overriding __float__ to return 9.0 gives 9.0, a str subclass with __float__ gives its __float__, a str subclass without parses, a __float__ raising KeyError propagates, and under warnings.simplefilter('error') a __float__ returning a float subclass raises DeprecationWarning." },
+  { id := "float-subtype-new", pyFile := floatFile, pyFns := ["float_subtype_new"]
+    statement := "F(x) for a float subclass F computes float(x) exactly as float would, its exceptions propagating unchanged, and returns a new F instance holding that value; F() holds 0.0."
+    source := "floatobject.c:1587-1610 (comment at :1587-1591), :1573-1578"
+    status := .proven, prop := ``FloatSubtypeNewSpec, thm := some ``floatSubtypeNewSpec_proven },
+  { id := "float-vectorcall", pyFile := floatFile, pyFns := ["float_vectorcall"]
+    statement := "float(...) through vectorcall raises TypeError('float() takes no keyword arguments') for any keyword argument, before the positional ones are looked at, TypeError('float expected at most 1 argument, got n') for n > 1 arguments, and is float_new_impl otherwise."
+    source := "floatobject.c:1613-1627; Python/getargs.c:2979-2993, :2836-2870"
+    status := .proven, prop := ``FloatVectorcallSpec, thm := some ``floatVectorcallSpec_proven },
+  { id := "float-from-number", pyFile := floatFile, pyFns := ["float_from_number_impl"]
+    statement := "float.from_number(x) is x itself for an exact float, a new float of the value for a float subclass instance (its __float__ is not called), PyFloat_AsDouble's value or exception for anything else (a str raises TypeError), and for a subclass F, F.from_number(x) returns whatever F(value) returns."
+    source := "floatobject.c:1631-1657"
+    status := .proven, prop := ``FloatFromNumberSpec, thm := some ``floatFromNumberSpec_proven
+    notes := "Smoke-tested on 3.15.2: float.from_number(1.5) is the same object; a subclass G whose __new__ returns 'G!' gives 'G!'; float.from_number(FO(1.0)) is 1.0 though FO.__float__ returns 9.0." },
   { id := "float-getformat", pyFile := floatFile, pyFns := ["float___getformat___impl"]
     statement := "float.__getformat__ answers for 'double' and 'float' and raises ValueError for any other string."
     source := "float.__getformat__ docstring, floatobject.c:1672-1688"
@@ -140,10 +187,11 @@ def entries : List Entry := [
     statement := "sys.float_info.max bounds every finite float, min is 2**-1022 and the smallest normal, epsilon is the gap above 1.0, and the digit and exponent fields have their IEEE values."
     source := "floatinfo_fields, floatobject.c:53-73"
     status := .proven, prop := ``FloatInfoCorrect, thm := some ``floatInfoCorrect_proven },
-  { id := "float-hex-sign", pyFile := floatFile, pyFns := ["float_hex_impl", "char_from_hex"]
+  { id := "float-hex-sign", pyFile := floatFile, pyFns := []
     statement := "(-x).hex() is '-' + x.hex() for every positive finite x."
     source := "float.hex docstring, floatobject.c:1145-1150"
-    status := .proven, prop := ``FloatHexSign, thm := some ``floatHexSign_proven },
+    status := .proven, prop := ``FloatHexSign, thm := some ``floatHexSign_proven
+    notes := "Holds for any digit table, so it credits no row." },
   { id := "float-fromhex-trailing-garbage", pyFile := floatFile
     pyFns := ["float_fromhex_impl", "hex_from_char"]
     statement := "float.fromhex raises ValueError for every string that ends in 'x', since no valid hexadecimal float does."
@@ -185,9 +233,56 @@ def entries : List Entry := [
     source := "Comment at floatobject.c:356-369; Doc/library/stdtypes.rst: comparisons between numbers of different types behave as though the exact values were compared"
     status := .proven, prop := ``FloatIntCompareExact, thm := some ``floatIntCompareExact_proven },
   { id := "float-as-double", pyFile := floatFile, pyFns := ["PyFloat_AsDouble"]
-    statement := "PyFloat_AsDouble returns a float's value, converts ints and __index__ results exactly as PyLong_AsDouble does, and raises TypeError for an object with neither __float__ nor __index__ and for a __float__ that returns a non-float."
-    source := "Doc/c-api/float.rst, PyFloat_AsDouble; floatobject.c:246-303"
-    status := .proven, prop := ``FloatAsDouble, thm := some ``floatAsDouble_proven },
+    statement := "For every object and every slot result: PyFloat_AsDouble returns a float's value (a subclass too, whatever its __float__); otherwise a __float__ that raises propagates, an exact float result is taken, a float subclass result raises the DeprecationWarning under an error filter and is taken otherwise, any other result is TypeError; with no __float__, __index__ goes through _PyNumber_Index (its exception, a non-int result or an int subclass under an error filter raising) and PyLong_AsDouble; with neither it is TypeError('must be real number, not T')."
+    source := "Doc/c-api/float.rst, PyFloat_AsDouble; floatobject.c:247-303; abstract.c:1410-1453"
+    status := .proven, prop := ``AsDoubleSpec, thm := some ``asDoubleSpec_proven
+    notes := "Smoke-tested on 3.15.2 through math.nextafter: a __float__ raising KeyError propagates; under warnings.simplefilter('error') a __float__ returning a float subclass raises DeprecationWarning." },
+  { id := "float-number-index", pyFile := floatFile, pyFns := []
+    statement := "_PyNumber_Index, as PyFloat_AsDouble, PyNumber_Float and round use it: an int gives its value; otherwise no __index__ is TypeError, an exception from __index__ propagates, an exact int result is taken, an int subclass result raises the DeprecationWarning under an error filter and is taken otherwise, and any other result is TypeError."
+    source := "Objects/abstract.c:1410-1453"
+    status := .proven, prop := ``NumberIndexSpec, thm := some ``numberIndexSpec_proven
+    notes := "A helper from Objects/abstract.c; credits no row here." },
+  { id := "float-from-string-infnan", pyFile := floatFile
+    pyFns := ["float_from_string_inner", "PyFloat_FromString"]
+    statement := "float() of [spaces] [sign] word [spaces], as bytes or as an ASCII str, where word spells inf, infinity or nan in any mix of cases, is the infinity or the NaN with that sign; with one more non-space byte other than '_' right after the word (float('infx'), float('nan1'), float(b'-inf\\x00')) it raises ValueError from the end != last check."
+    source := "floatobject.c:140-177 (leading whitespace :145-148, trailing :156-159, end != last :165), :180-227; pystrtod.c:92-113 (inf and nan fallback)"
+    status := .proven, prop := ``FromStringInfNan, thm := some ``fromStringInfNan_proven
+    notes := "Smoke-tested on 3.15.2: float(' -InFiNiTy\\n') is -inf, float('-NaN') has bits 0xfff8000000000000, float(b'\\x0b+INFINITY\\x0c ') is inf, and 'infx', 'nan1', 'infi', '  infinityx  ' and b'-inf\\x00' raise ValueError. Real numerals go through _Py_dg_strtod, whose correct rounding is the open strtod-correctly-rounded." },
+  { id := "float-from-string-dispatch", pyFile := floatFile, pyFns := ["PyFloat_FromString"]
+    statement := "PyFloat_FromString sends a str through the decimal and space transform, bytes, bytearray and any other buffer as bytes, and raises TypeError('float() argument must be a string or a real number, not T') for anything else."
+    source := "floatobject.c:189-221"
+    status := .proven, prop := ``FromStringDispatch, thm := some ``fromStringDispatch_proven },
+  { id := "float-compare-floats", pyFile := floatFile, pyFns := ["float_richcompare"]
+    statement := "Comparing a float with a float or float subclass gives the IEEE 754 relation for each of the six operators (every one false on a NaN except !=, -inf below and +inf above everything else, 0.0 == -0.0), and comparing with anything that is neither a float nor an int is NotImplemented, for finite and non-finite floats alike."
+    source := "floatobject.c:371-532 (comment at :356-358: x == y as the platform C x == y)"
+    status := .proven, prop := ``FloatCompareFloats, thm := some ``floatCompareFloats_proven },
+  { id := "float-hex-tables", pyFile := floatFile, pyFns := ["char_from_hex", "hex_from_char"]
+    statement := "char_from_hex maps 0..15 to the characters 0-9a-f in order, hex_from_char reads each of them and the capitals A-F back to its value, and maps every other byte to -1."
+    source := "floatobject.c:1094-1134 (comment at :1100-1105)"
+    status := .proven, prop := ``HexDigitTables, thm := some ``hexDigitTables_proven },
+  { id := "float-pack8-bytes", pyFile := floatFile, pyFns := ["PyFloat_Pack8"]
+    statement := "PyFloat_Pack8 writes exactly eight bytes, byte i holding bits 8i..8i+7 of the double when le is set and byte 7 - i holding them otherwise, for every double."
+    source := "floatobject.c:2069-2087; struct docs ('<d', '>d')"
+    status := .proven, prop := ``Pack8Bytes, thm := some ``pack8Bytes_proven },
+  { id := "float-pack4-spec", pyFile := floatFile, pyFns := ["PyFloat_Pack4"]
+    statement := "PyFloat_Pack4 raises OverflowError for a finite double with |x| >= 2**128 - 2**103 and otherwise packs a finite double to a binary32 pattern with its sign whose value is a binary32 number at least as close to x as every binary32 number, with an even significand on a tie (round to nearest even, so 0.1 packs to 0x3dcccccd); an infinity packs to the infinity of its sign; a NaN packs to a NaN pattern with its sign that keeps fraction bits 51-29 as the payload, drops bits 28-0, and is signaling exactly when the double was signaling with a nonzero kept payload."
+    source := "floatobject.c:2003-2066 (overflow :2009-2013, signaling NaN :2015-2029); struct docs ('f' format, IEEE 754 binary32)"
+    status := .proven, prop := ``Pack4Spec, thm := some ``pack4Spec_proven
+    notes := "Smoke-tested on 3.15.2: struct.pack('>f', 0.1) is 3dcccccd, 1e300 and 3.4028235677973366e38 (2**128 - 2**103) raise OverflowError, 3.4028235677973362e38 packs to 7f7fffff. The conversion (float)x is taken as correctly rounded, as on x86-64 and AArch64." },
+  { id := "float-unpack4-widen", pyFile := floatFile, pyFns := ["PyFloat_Unpack4"]
+    statement := "PyFloat_Unpack4 widens every binary32 pattern exactly, in both byte orders: a finite value keeps its value and sign, signed zeros included, an infinity its sign, and a NaN its sign and all 23 fraction bits shifted up by 29, so a signaling NaN stays signaling."
+    source := "floatobject.c:2146-2201 (comment at :2165)"
+    status := .proven, prop := ``Unpack4Widen, thm := some ``unpack4Widen_proven },
+  { id := "float-fromhex-object", pyFile := floatFile, pyFns := ["float_fromhex_impl"]
+    statement := "float.fromhex raises TypeError for a non-str argument and UnicodeEncodeError for a str holding a surrogate, parses the UTF-8 of any other str with its parse and overflow errors raised before any class is called, and returns a new float for float and whatever cls(x) returns for a subclass cls."
+    source := "floatobject.c:1225-1463, :1280-1282, :1444-1446"
+    status := .proven, prop := ``FloatFromhexObjSpec, thm := some ``floatFromhexObjSpec_proven
+    notes := "Smoke-tested on 3.15.2: float.fromhex(b'1') raises TypeError('bad argument type for built-in operation'), a lone surrogate raises UnicodeEncodeError, F.fromhex('1') is an F, and G.fromhex('1') is 'G!' for a G whose __new__ returns 'G!'." },
+  { id := "float-round-object", pyFile := floatFile, pyFns := []
+    statement := "round(x, ndigits): ndigits=None rounds to an int; otherwise PyNumber_AsSsize_t runs first, so a non-integer ndigits, an __index__ that raises or returns a non-int, or an int subclass under an error filter raises before x is used; an ndigits beyond Py_ssize_t is clipped, so a huge positive one returns x and a huge negative one 0.0 * x."
+    source := "floatobject.c:1024-1066; abstract.c:1468-1510"
+    status := .proven, prop := ``FloatRoundObjSpec, thm := some ``floatRoundObjSpec_proven
+    notes := "Credits no row yet: round(x) to an int (float-round-half-even) and double_round for ordinary x and n (dtoa-fixed-correct) are open." },
   { id := "float-blank-string", pyFile := floatFile
     pyFns := ["float_from_string_inner", "PyFloat_FromString"]
     statement := "float() of an empty string, or of a str or bytes that is only spaces, raises ValueError."
@@ -317,7 +412,7 @@ def entries : List Entry := [
     notes := "New in 3.15: gh-145633 removed the float exception in init_endian_tables, so '<f' reaches nu_float, whose (double)x quiets a signaling NaN." },
   { id := "float-pack4-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack4", "PyFloat_Unpack4"]
     statement := "PyFloat_Pack4 inverts PyFloat_Unpack4 on every binary32 pattern, in both byte orders."
-    source := "struct docs; floatobject.c:2015-2036 and :2165-2172"
+    source := "struct docs; floatobject.c:2015-2029 and :2165-2172"
     status := .proven, prop := ``Pack4RoundTrip, thm := some ``pack4RoundTrip_proven },
   { id := "dtoa-quorem", pyFile := dtoaFile, pyFns := ["quorem"]
     statement := "quorem(b, S) is the quotient digit and the remainder, given b < 10 * S and a normalized S."
@@ -382,7 +477,7 @@ def entries : List Entry := [
     statement := "With a nonzero base, _Py_c_pow never leaves EDOM set, for any C library."
     source := "complex_pow, complexobject.c:762-765: EDOM is reported as zero to a negative or complex power"
     status := .refuted, prop := ``ComplexPowEdomOnlyForZero, thm := some ``complexPowEdomOnlyForZero_refuted
-    bug := some "binary64-complex-pow-stray-edom"
+    bug := some "longobj-complex-pow-infinite-phase-edom"
     notes := "On glibc, cos(inf) sets EDOM, so (1+1j) ** complex(1, inf) raises ZeroDivisionError with a nonzero base." },
   { id := "complex-real-operand", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
     statement := "A float operand keeps its value and gets imaginary part 0.0, and an int goes through the float conversion."
@@ -397,6 +492,53 @@ def entries : List Entry := [
     statement := "complex() of an empty string, or of one that is only spaces, raises ValueError."
     source := "parse_error label, complexobject.c:1067-1070"
     status := .proven, prop := ``ComplexBlankRaises, thm := some ``complexBlankRaises_proven },
+  { id := "complex-sum-diff-exact", pyFile := complexFile
+    pyFns := ["_Py_c_sum", "_Py_cr_sum", "_Py_rc_sum", "_Py_c_diff", "_Py_cr_diff", "_Py_rc_diff"]
+    statement := "For every pair of complex numbers and every float, each part of _Py_c_sum and _Py_c_diff is the IEEE 754 sum or difference of the matching parts (NaN for a NaN or opposite infinities, the infinity otherwise, the exact result rounded to nearest even with its sign, -0.0 only for two negative operands); the mixed forms do that to the real part only, keep the complex operand's imaginary part bit for bit, and _Py_rc_diff flips its sign bit."
+    source := "IEEE 754 6.3 and 5.4.1; complexobject.c:32-78, the mixed-mode rules of :681-694"
+    status := .proven, prop := ``ComplexSumDiffExact, thm := some ``complexSumDiffExact_proven
+    notes := "AddSpec, SubSpec and NegSpec fix a part bit for bit except for which NaN." },
+  { id := "complex-neg-conj-exact", pyFile := complexFile
+    pyFns := ["_Py_c_neg", "complex_neg", "complex_conjugate_impl"]
+    statement := "-z flips the sign bit of both parts and nothing else, NaNs included, through _Py_c_neg and through complex_neg's own negation; z.conjugate() keeps the real part bit for bit and flips the sign bit of the imaginary part."
+    source := "IEEE 754 5.5.1; complexobject.c:81-87, :776-783, :882-888"
+    status := .proven, prop := ``ComplexNegConjExact, thm := some ``complexNegConjExact_proven },
+  { id := "complex-mixed-prod-exact", pyFile := complexFile
+    pyFns := ["_Py_cr_prod", "_Py_rc_prod"]
+    statement := "complex * float and float * complex multiply each part by the float, each an IEEE 754 product (NaN for a NaN or an infinity times a zero, the signed infinity otherwise, the exact product rounded with the exclusive or of the signs), so 2.0 * complex(inf, 0.0) is inf+0j."
+    source := "IEEE 754 6.3; complexobject.c:151-163 and the mixed-mode rules of :681-694"
+    status := .proven, prop := ``ComplexMixedProdExact, thm := some ``complexMixedProdExact_proven },
+  { id := "complex-cr-quot-exact", pyFile := complexFile, pyFns := ["_Py_cr_quot"]
+    statement := "complex / float with a zero float of either sign sets EDOM and gives 0; with any other float, a NaN included, each part is the IEEE 754 quotient by it and errno is untouched."
+    source := "complexobject.c:249-261 (if (b) is b != 0)"
+    status := .proven, prop := ``ComplexCrQuotExact, thm := some ``complexCrQuotExact_proven },
+  { id := "complex-real-operand-exact", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
+    statement := "real_to_double on every object: a float or float subclass instance gives its value, an int its value rounded to nearest even or OverflowError from DBL_MAX + 2**970 on, anything else NotImplemented; real_to_complex adds a +0.0 imaginary part."
+    source := "complexobject.c:661-679; floatobject.c:319-336"
+    status := .proven, prop := ``ComplexRealOperandExact, thm := some ``complexRealOperandExact_proven },
+  { id := "complex-pow-real-twin", pyFile := complexFile, pyFns := ["_Py_c_pow", "complex_pow"]
+    statement := "For a C library with the C99 Annex F values at +-0 and for pow of a positive base, complex(x, 0) ** complex(y, +-0) with x > 0 finite and y finite, nonzero and not a small integer takes the general branch of _Py_c_pow and gives pow(x, y) with a zero imaginary part of the sign of y, or OverflowError when pow(x, y) is infinite: exactly when float.__pow__ gives pow(x, y) or raises OverflowError."
+    source := "twin of float_pow (floatobject.c:686-803); complexobject.c:325-336, :752-770"
+    status := .proven, prop := ``ComplexPowRealTwin, thm := some ``complexPowRealTwin_proven
+    notes := "The libm hypotheses are AnnexFPow. The general branch overflows in its intermediate pow(|a|, b.real) before exp(-arg*b.imag) can bring it back: complex(-1e200, 0) ** complex(2, 100) raises OverflowError for a value near 1e263, and complex(2, 300) as the exponent gives nan+nanj for one near 1e-9 (bugs/binary64-complex-pow-intermediate-overflow.yaml, a duplicate of gh-60200)." },
+  { id := "complex-prod-annex-g-binary64", pyFile := complexFile, pyFns := ["_Py_c_prod"]
+    statement := "At binary64, for every input: if one factor of _Py_c_prod has an infinite part and the other has no NaN part and is not zero, the product has an infinite part (C11 Annex G.5.1), through the plain product or through the boxing and recomputation of the recovery."
+    source := "C11 Annex G.5.1; complexobject.c:94-145"
+    status := .proven, prop := ``ProdAnnexG, thm := some ``prodAnnexG_proven
+    notes := "The overflow branch of :125-140 is not stated." },
+  { id := "complex-quot-annex-g-binary64", pyFile := complexFile, pyFns := ["_Py_c_quot"]
+    statement := "At binary64, for every input: an infinite dividend over a nonzero finite divisor gives an infinite part and no EDOM, and a finite dividend over a divisor with exactly one infinite part gives zero parts and no EDOM (C11 Annex G.5.2), through Smith's branches or the recoveries."
+    source := "C11 Annex G.5.2; complexobject.c:195-243"
+    status := .proven, prop := ``QuotAnnexG, thm := some ``quotAnnexG_proven
+    notes := "Both divisor parts infinite is left out: 0.0 * (a.real*x + a.imag*y) at :239 overflows, so complex(1e308, 1e308) / complex(inf, inf) is nan+0j, as in the C11 reference _Cdivd." },
+  { id := "complex-rc-quot-zero", pyFile := complexFile, pyFns := ["_Py_rc_quot"]
+    statement := "At binary64, a finite float over a complex with an infinite part gives zero parts and no EDOM, for every such divisor, through Smith's branches or the recovery of :294-301."
+    source := "C11 Annex G.5.2; complexobject.c:265-304"
+    status := .proven, prop := ``RcQuotZero, thm := some ``rcQuotZero_proven },
+  { id := "complex-format-exact", pyFile := complexFile, pyFns := ["complex___format___impl"]
+    statement := "format(z, '') is str(z) whatever str does for z's type; any other spec written from its fields is parsed with default alignment '>' and formatted by format_complex_internal for the types '' e E f F g G n, and raises the unknown-type ValueError otherwise; and a spec with no type, precision, sign or width gives repr(z)."
+    source := "complexobject.c:914-929; Objects/unicode_formatter.c:1778-1790, :1929-1964"
+    status := .proven, prop := ``ComplexFormatExact, thm := some ``complexFormatExact_proven },
   { id := "pystrtod-case-insensitive-match", pyFile := strtodFile, pyFns := ["case_insensitive_match"]
     statement := "case_insensitive_match(s, t) is true exactly when the lowered prefix of s spells t."
     source := "Comment at pystrtod.c:9-10"

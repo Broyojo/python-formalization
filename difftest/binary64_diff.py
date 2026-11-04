@@ -445,6 +445,11 @@ def decimal_string(rng):
 
 def run_float(c):
     fn = c["fn"]
+    if fn == "f_pow" and c.get("z"):
+        v, w = py_obj(c["v"]), py_obj(c["w"])
+        if isinstance(v, float):
+            return common.py_result(lambda: enc_any(float.__pow__(v, w, 5)))
+        return common.py_result(lambda: enc_any(float.__rpow__(w, v, 5)))
     if fn in BIN_NAMES:
         v, w = py_obj(c["v"]), py_obj(c["w"])
         r = common.py_result(lambda: enc_any(bin_call(fn, v, w)))
@@ -550,6 +555,8 @@ def gen_float_case(rng):
         v, w = enc_obj(rng), enc_obj(rng)
         if "f" not in v and "f" not in w:
             v = {"f": edge_float(rng)}
+        if fn == "f_pow" and rng.random() < 0.05:
+            return {**m, "fn": fn, "v": v, "w": w, "z": True}
         return {**m, "fn": fn, "v": v, "w": w}
     if k < 0.3:
         x = edge_float(rng)
@@ -689,9 +696,86 @@ def complex_string(rng):
     return s
 
 
+# Parts that reach the Annex G recoveries of _Py_c_prod and _Py_c_quot (complexobject.c:94-145,
+# :224-243, :294-301): infinities, NaNs of both signs, signed zeros, and values whose products
+# or sums overflow.
+ANNEX = [0x7ff0000000000000, 0xfff0000000000000, 0x7ff8000000000000, 0xfff8000000000000, 0, SIGN,
+         0x3ff0000000000000, 0xbff0000000000000, 0x7fe1ccf385ebc8a0, 0xffe1ccf385ebc8a0,
+         0x7fefffffffffffff, 0x4000000000000000, 0x3fe0000000000000, 0x01a56e1fc2f8f359, 1]
+
+
+def annex_part(rng):
+    return rng.choice(ANNEX) if rng.random() < 0.8 else part(rng)
+
+
+def pos_finite(rng):
+    x = abs(of_bits(edge_float(rng)))
+    if x != x or x == float("inf") or x == 0.0:
+        x = rng.choice([2.0, 0.5, 10.0, 1e-5, 3.7, 1e200, 1e-300, 1.0])
+    return to_bits(x)
+
+
+import ctypes
+
+LIBM = ctypes.CDLL("libm.so.6")
+for _name, _args in (("hypot", 2), ("atan2", 2), ("log", 1)):
+    getattr(LIBM, _name).restype = ctypes.c_double
+    getattr(LIBM, _name).argtypes = [ctypes.c_double] * _args
+LIBM.sincos.restype = None
+LIBM.sincos.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)]
+
+
+def as_complex(o):
+    try:
+        z = py_c(o)
+        return complex(z)
+    except (OverflowError, TypeError, ValueError):
+        return None
+
+
+def with_libm(c):
+    """Attach the platform hypot and sincos that the compiled _Py_c_pow and _Py_c_abs call."""
+    if c is None or c["fn"] not in ("c_abs", "c_pow"):
+        return c
+    a = as_complex(c["v"])
+    if a is None:
+        return c
+    vabs = LIBM.hypot(a.real, a.imag)
+    c["hy"] = to_bits(vabs)
+    if c["fn"] == "c_pow":
+        b = as_complex(c["w"])
+        if b is not None:
+            phase = LIBM.atan2(a.imag, a.real) * b.real
+            if b.imag != 0.0:
+                phase += b.imag * LIBM.log(vabs)
+            sn, cs = ctypes.c_double(), ctypes.c_double()
+            LIBM.sincos(phase, ctypes.byref(sn), ctypes.byref(cs))
+            c["sc"] = [to_bits(phase), to_bits(cs.value), to_bits(sn.value)]
+    return c
+
+
 def gen_complex_case(rng):
+    return with_libm(gen_complex_case_raw(rng))
+
+
+def gen_complex_case_raw(rng):
     m = {"mod": "binary64"}
     k = rng.random()
+    if k < 0.15:  # Annex G: infinite, NaN and overflowing parts in * and /
+        fn = rng.choice(["c_mul", "c_div", "c_div"])
+        v = {"c": [annex_part(rng), annex_part(rng)]}
+        w = {"c": [annex_part(rng), annex_part(rng)]} if rng.random() < 0.75 else {"f": annex_part(rng)}
+        if rng.random() < 0.3:
+            v, w = ({"f": annex_part(rng)} if rng.random() < 0.5 else w), v
+            if "c" not in v and "c" not in w:
+                w = {"c": [annex_part(rng), annex_part(rng)]}
+        return {**m, "fn": fn, "v": v, "w": w}
+    if k < 0.25:  # complex(x, 0) ** y for a positive x: the twin of float.__pow__
+        x = pos_finite(rng)
+        y = rng.choice([0x3fe0000000000000, 0xbfe0000000000000, to_bits(1000.5), to_bits(-0.25),
+                        to_bits(1e5 + 0.5), to_bits(150.0), to_bits(-200.0), edge_float(rng)])
+        w = {"f": y} if rng.random() < 0.5 else {"c": [y, rng.choice([0, SIGN])]}
+        return {**m, "fn": "c_pow", "v": {"c": [x, rng.choice([0, 0, SIGN])]}, "w": w}
     if k < 0.5:
         fn = rng.choice(["c_add", "c_sub", "c_mul", "c_div"])
         v, w = c_operand(rng), c_operand(rng)
@@ -755,20 +839,286 @@ def run_complex(c):
     raise ValueError(fn)
 
 
+# ---------------------------------------------------------------------------
+# object-level paths: PyFloat_AsDouble, float(), F(), float.from_number,
+# float.fromhex on objects, round(x, ndigits), __float__/conjugate/real,
+# __getnewargs__ (see FloatObj.lean)
+# ---------------------------------------------------------------------------
+
+import warnings
+
+FLOAT_LIMIT = 2 ** 1024 - 2 ** 970
+
+
+def long_float_slot(n):
+    """What int's inherited nb_float (long_float) returns: a new float, id 0."""
+    if abs(n) >= FLOAT_LIMIT:
+        return {"err": ["OverflowError", "int too large to convert to float"], "inh": True}
+    return {"ok": {"id": 0, "k": {"f": to_bits(float(n))}, "ex": True, "tp": "float", "fq": "float"}}
+
+
+class ObjGen:
+    """Builds a case object and, from it, the live Python object."""
+
+    def __init__(self, rng):
+        self.rng = rng
+        self.next_id = 10
+
+    def fresh_id(self):
+        self.next_id += 1
+        return self.next_id
+
+    def slot_result(self, depth):
+        rng = self.rng
+        k = rng.random()
+        if k < 0.12:
+            return {"err": ["KeyError", "'slot'"]}
+        if k < 0.42:
+            return {"ok": self.obj(depth + 1, "f", True)}
+        if k < 0.55:
+            return {"ok": self.obj(depth + 1, "f", False)}
+        if k < 0.72:
+            return {"ok": self.obj(depth + 1, "i", rng.random() < 0.6)}
+        if k < 0.8:
+            return {"ok": self.obj(depth + 1, "s", True)}
+        return {"ok": self.obj(depth + 1, "p", True)}
+
+    def obj(self, depth=0, kind=None, exact=None):
+        rng = self.rng
+        if kind is None:
+            kind = rng.choice(["f", "f", "i", "i", "s", "b", "ba", "mv", "p", "p", "p"])
+        if exact is None:
+            exact = rng.random() < 0.5
+        o = {"id": self.fresh_id(), "ex": exact}
+        slots = depth < 2
+        if kind == "f":
+            o["k"] = {"f": edge_float(rng)}
+            if exact:
+                o.update(tp="float", fq="float")
+            else:
+                o.update(tp="FS", fq="m.FS")
+                if slots and rng.random() < 0.4:
+                    o["nf"] = self.slot_result(depth)
+                else:  # float_float, inherited
+                    o["nf"] = {"ok": {"id": 0, "k": o["k"], "ex": True, "tp": "float", "fq": "float"}}
+                if slots and rng.random() < 0.2:
+                    o["ni"] = self.slot_result(depth)
+        elif kind == "i":
+            n = edge_int(rng) if rng.random() < 0.7 else rng.randrange(-400, 400)
+            o["k"] = {"i": n}
+            if exact:
+                o.update(tp="int", fq="int")
+                o["nf"] = long_float_slot(n)
+            else:
+                o.update(tp="IS", fq="m.IS")
+                o["nf"] = self.slot_result(depth) if slots and rng.random() < 0.3 else long_float_slot(n)
+        elif kind == "s":
+            o["k"] = {"s": [ord(c) for c in decimal_string(rng)]}
+            if exact:
+                o.update(tp="str", fq="str")
+            else:
+                o.update(tp="SS", fq="m.SS")
+                if slots and rng.random() < 0.5:
+                    o["nf"] = self.slot_result(depth)
+        elif kind in ("b", "ba", "mv"):
+            o["k"] = {kind: list(decimal_string(rng).encode("utf-8"))}
+            o["ex"] = True
+            o.update({"b": dict(tp="bytes", fq="bytes"), "ba": dict(tp="bytearray", fq="bytearray"),
+                      "mv": dict(tp="memoryview", fq="memoryview")}[kind])
+        else:
+            o["k"] = {"p": 1}
+            o.update(tp="C", fq="m.C")
+            if slots and rng.random() < 0.6:
+                o["nf"] = self.slot_result(depth)
+            if slots and rng.random() < 0.5:
+                o["ni"] = self.slot_result(depth)
+        return o
+
+
+def build(o, tracked):
+    """The live object for a case object; slot results are tracked by id."""
+    k = o["k"]
+    ns = {"__module__": "m"}
+
+    def slot_fn(slot):
+        if slot.get("inh"):
+            return None  # inherited long_float
+        if "err" in slot:
+            def raiser(self):
+                raise KeyError("slot")
+            return raiser
+        r = slot["ok"]
+        if r["id"] == 0:
+            return None  # inherited
+        val = build(r, tracked)
+        return lambda self: val
+
+    for key, dunder in (("nf", "__float__"), ("ni", "__index__")):
+        if key in o:
+            f = slot_fn(o[key])
+            if f is not None:
+                ns[dunder] = f
+    if "f" in k:
+        x = of_bits(k["f"])
+        v = x if o["ex"] else type("FS", (float,), ns)(x)
+    elif "i" in k:
+        v = k["i"] if o["ex"] else type("IS", (int,), ns)(k["i"])
+    elif "s" in k:
+        s = "".join(map(chr, k["s"]))
+        v = s if o["ex"] else type("SS", (str,), ns)(s)
+    elif "b" in k:
+        v = bytes(k["b"])
+    elif "ba" in k:
+        v = bytearray(k["ba"])
+    elif "mv" in k:
+        v = memoryview(bytes(k["mv"]))
+    else:
+        v = type("C", (), ns)()
+    tracked[o["id"]] = v
+    return v
+
+
+def make_float_cls(c):
+    ns = {"__module__": "m"}
+    if c["call"] == "str":
+        ns["__new__"] = lambda cls, x: "G!"
+    elif c["call"] == "err":
+        def boom(cls, x):
+            raise KeyError("new")
+        ns["__new__"] = boom
+    return type(c["name"], (float,), ns)
+
+
+def gen_cls(rng, plain=False):
+    if rng.random() < 0.5:
+        return {}
+    call = "new" if plain else rng.choice(["new", "new", "str", "err"])
+    return {"cls": {"name": "F", "call": call}}
+
+
+def classify(r, arg, tracked, cls, sub):
+    if isinstance(r, float) and r is arg and type(r) is float:
+        return {"same": to_bits(r)}
+    for oid, obj in tracked.items():
+        if r is obj:
+            return {"obj": oid}
+    if type(r) is float:
+        return {"fresh": to_bits(r)}
+    if sub and cls is not None and type(r) is cls:
+        return {"sub": [cls.__name__, to_bits(r)]}
+    d = {"tp": type(r).__name__}
+    if isinstance(r, float):
+        d["f"] = to_bits(r)
+    return {"called": d}
+
+
+def gen_obj_case(rng):
+    m = {"mod": "binary64", "warn": rng.random() < 0.3}
+    g = ObjGen(rng)
+    k = rng.random()
+    if k < 0.2:
+        return {**m, "fn": "o_asdouble", "v": g.obj()}
+    if k < 0.45:
+        n = rng.choice([0, 1, 1, 1, 1, 2])
+        kw = [] if rng.random() < 0.9 else rng.choice([["x"], ["base"]])
+        return {**m, "fn": "o_new", "args": [g.obj() for _ in range(n)], "kw": kw, **gen_cls(rng, True)}
+    if k < 0.6:
+        return {**m, "fn": "o_from_number", "v": g.obj(), **gen_cls(rng)}
+    if k < 0.72:
+        if rng.random() < 0.8:
+            s = hex_string(rng)
+            if rng.random() < 0.1:
+                s = s + "\ud800"
+            v = {"id": g.fresh_id(), "k": {"s": [ord(c) for c in s]}, "ex": True, "tp": "str", "fq": "str"}
+        else:
+            v = g.obj()
+        return {**m, "fn": "o_fromhex", "v": v, **gen_cls(rng)}
+    if k < 0.87:
+        c = {**m, "fn": "o_round", "x": edge_float(rng)}
+        if rng.random() < 0.85:
+            q = rng.random()
+            if q < 0.5:
+                n = rng.choice([0, 1, 2, -1, 5, 15, 17, 22, 300, 323, 324, -308, -309, 2 ** 63, -2 ** 63,
+                                2 ** 70, -2 ** 70, rng.randrange(-330, 330)])
+                c["v"] = {"id": g.fresh_id(), "k": {"i": n}, "ex": True, "tp": "int", "fq": "int"}
+            else:
+                c["v"] = g.obj()
+        return c
+    if k < 0.95:
+        return {**m, "fn": "o_float", "x": edge_float(rng), "exact": rng.random() < 0.5}
+    return {**m, "fn": "o_getnewargs", "x": edge_float(rng)}
+
+
+def run_obj(c):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error" if c["warn"] else "ignore")
+        return run_obj_inner(c)
+
+
+def run_obj_inner(c):
+    fn = c["fn"]
+    tracked = {}
+    if fn == "o_asdouble":
+        o = build(c["v"], tracked)
+        return common.py_result(lambda: enc(math.nextafter(o, o)))
+    if fn == "o_new":
+        args = [build(a, tracked) for a in c["args"]]
+        kw = {name: 1 for name in c["kw"]}
+        cls = make_float_cls(c["cls"]) if "cls" in c else None
+        f = cls if cls is not None else float
+        arg = args[0] if args else None
+        return common.py_result(lambda: classify(f(*args, **kw), arg, tracked, cls, True))
+    if fn == "o_from_number":
+        o = build(c["v"], tracked)
+        cls = make_float_cls(c["cls"]) if "cls" in c else None
+        f = cls if cls is not None else float
+        return common.py_result(lambda: classify(f.from_number(o), o, tracked, cls, False))
+    if fn == "o_fromhex":
+        o = build(c["v"], tracked)
+        cls = make_float_cls(c["cls"]) if "cls" in c else None
+        f = cls if cls is not None else float
+        return common.py_result(lambda: classify(f.fromhex(o), o, tracked, cls, False))
+    if fn == "o_round":
+        x = of_bits(c["x"])
+        if "v" not in c:
+            return common.py_result(lambda: {"int": round(x)})
+        o = build(c["v"], tracked)
+        return common.py_result(lambda: {"float": enc(round(x, o))})
+    if fn == "o_float":
+        x = of_bits(c["x"])
+        v = x if c["exact"] else type("FS", (float,), {"__module__": "m"})(x)
+        out = []
+        for r in (v.__float__(), v.conjugate(), v.real):
+            if r is v:
+                out.append({"same": to_bits(r)})
+            else:
+                assert type(r) is float
+                out.append({"fresh": to_bits(r)})
+        return {"ok": out}
+    if fn == "o_getnewargs":
+        return {"ok": [to_bits(y) for y in of_bits(c["x"]).__getnewargs__()]}
+    raise ValueError(fn)
+
+
 LOW_LEVEL = set(UNARY + BINARY + ["fma", "ldexp", "ofInt", "ratio"])
 
 
 def gen_all(rng):
     k = rng.random()
-    if k < 0.25:
+    if k < 0.22:
         return gen_case(rng)
+    if k < 0.32:
+        return gen_obj_case(rng)
     return gen_float_case(rng) if k < 0.85 else gen_complex_case(rng)
 
 
 def run_all(c):
+    if c["fn"].startswith("o_"):
+        return run_obj(c)
     if c["fn"].startswith("c_"):
         return run_complex(c)
     return run_python(c) if c["fn"] in LOW_LEVEL else run_float(c)
 
 
-common.main(gen_all, run_all, default_cases=50000)
+if __name__ == "__main__":
+    common.main(gen_all, run_all, default_cases=50000)

@@ -219,7 +219,7 @@ structure LiveN (st : St) (i : Nat) (n d : Int) (rest rs : List Int) (f : List C
 a new view on the same memory whose row `k` is row `range(*s.indices(n))[k]` of `m`, for every
 slice with a non-zero step. Dimension 0 has the length of that range, the others are unchanged, every
 position is in `[0, n)`, and `nbytes` is the product of the new shape times `itemsize`
-(`init_slice`, `init_len`, :2589-2610, @3.14.7:597-606). `SliceTolist` says the same of `tolist`. The bound
+(`init_slice`, `init_len`, :2589-2610, :597-606). `SliceTolist` says the same of `tolist`. The bound
 `|stride| * n <= sys.maxsize` is a type invariant of a buffer in the address space. -/
 def SliceItems : Prop :=
   ∀ (st : St) (self : Nat) (s : Slice) (n d : Int) (rest rs : List Int) (f : List Char),

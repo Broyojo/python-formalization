@@ -144,7 +144,7 @@ theorem memoryIter_spec (st : St) (self : Nat) (n d : Int) (f fmt : List Char)
   rfl
 
 /-- `list(m)` is `m.tolist()` for every 1-D view of a native format, for every stride, with or
-without a suboffset (`memory_iter`, `memoryiter_next`, `memory_length`, @3.14.7:3491-3555): each item in
+without a suboffset (`memory_iter`, `memoryiter_next`, `memory_length`, :3618-3682): each item in
 order, then `StopIteration`. Hypotheses: a live view; `NoNull`, a type invariant. -/
 def IterYields : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char),
@@ -292,7 +292,7 @@ theorem indexLoop_spec (self : Nat) (n d : Int) (f fmt : List Char) (g : Int →
 /-- `m.index(x, start, stop)` on a 1-D view of a native format searches exactly
 `range(start', stop')`, where a negative bound counts from the end and both are clipped to
 `[0, n]`: the first position whose item equals `x`, or `ValueError`, like `list.index` on
-`tolist()` (@3.14.7:2852-2898). Hypotheses: a live view; `start` and `stop` are `Py_ssize_t`, as
+`tolist()` (:2932-2978). Hypotheses: a live view; `start` and `stop` are `Py_ssize_t`, as
 `slice_index` leaves them; `x` has no Python `__eq__`, the case `EqFailures` is about; `x` is not
 a memoryview compared with the `bytes` items of format `c`, which `ItemEqView` is about. -/
 def IndexIsSearch : Prop :=

@@ -1,0 +1,62 @@
+id: binary64-complex-pow-intermediate-overflow
+title: "complex ** overflows or gives nan+nanj in pow(|a|, b.real) when the true power is finite (duplicate of gh-60200)"
+priority: P4
+kind: wrong-exception
+module: binary64
+status: duplicate
+duplicate_of: python/cpython#60200 (open, enhancement)
+files: [Objects/complexobject.c]
+functions: [_Py_c_pow, complex_pow]
+summary: |
+  The general branch of _Py_c_pow computes len = pow(|a|, b.real) and then multiplies by
+  exp(-arg(a)*b.imag). The first factor can overflow when the product is in range. With
+  a = -1e200 (arg = pi): a ** complex(2, 100) has modulus about 3.7e263, but pow(1e200, 2)
+  is inf and inf * exp(-100*pi) is inf, so complex_pow raises OverflowError("complex
+  exponentiation"). a ** complex(2, 300) has modulus about 4.9e-10, but inf * exp(-300*pi)
+  is inf * 0.0, a NaN, so the result is nan+nanj with no exception.
+likelihood: |
+  Low: needs a base modulus and real exponent whose power overflows while a large imaginary
+  exponent brings the result back into range.
+maybe_intended: |
+  A known accuracy limit of the naive formula. gh-60200 ("pow() for complex numbers is rough
+  around the edges", open, reclassified as an enhancement) discusses computing
+  exp(w * log(z)) properly, and a maintainer said complex_pow should not be rewritten in
+  bugfix releases.
+reproducer: |
+  out = []
+  for e in (complex(2, 300), complex(2, 100)):
+      try:
+          out.append(repr(complex(-1e200, 0) ** e))
+      except OverflowError as ex:
+          out.append('OverflowError: %s' % ex)
+  print(out)
+  if out[0] == '(nan+nanj)' and out[1].startswith('OverflowError'):
+      print('REPRODUCED binary64-complex-pow-intermediate-overflow')
+expected: |
+  Finite results: modulus about 4.9e-10 for complex(2, 300) and about 3.7e263 for
+  complex(2, 100), as exp(b * log(a)) gives without the intermediate overflow.
+promised_by: |
+  Nothing explicit; the docs promise a complex power, and the 3.14 mixed-mode work tries to
+  avoid spurious nan+nanj results.
+cause: |
+  Objects/complexobject.c:326-331: len = pow(vabs, b.real) is formed before
+  len *= exp(-at*b.imag), so the product overflows in its first factor.
+possible_fix: |
+  Form the log of the modulus, b.real*log(vabs) - at*b.imag, and exponentiate once.
+tested:
+  python3 3.15.2: REPRODUCED ((nan+nanj) and OverflowError)
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues:
+    - {number: 60200, state: open, relation: "duplicate: the rough edges of complex pow, an enhancement"}
+  related:
+    - {number: 137746, state: open, relation: "specialize complex power for real exponents"}
+    - {number: 156695, state: open, relation: "accuracy of small negative integer exponents"}
+  queries: ["complex power overflow intermediate", "complex pow spurious OverflowError",
+            "complex exponentiation OverflowError large", "_Py_c_pow overflow",
+            "complex pow nan large base", "complex power inaccurate", "complex pow hypot overflow",
+            "complex pow overflow", "complex power", "complex exponentiation", "complex pow accuracy",
+            "c_pow", "complex pow"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: none. The general branch of _Py_c_pow is mirrored over an abstract C library, so its values are not fixed; complex-pow-real-twin states it for a real positive base.

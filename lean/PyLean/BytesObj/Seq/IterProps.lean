@@ -71,25 +71,32 @@ theorem tupleIterYields_proven : TupleIterYields := by
   have := tupleIterTake_drop t 0 n (by omega) (by omega)
   simpa [tupleIter] using this
 
+/-- The value of `__reduce__` when the builtins lookup runs no code. -/
+def tupleIterReducePure (it : TupleIter α) : Py (TIterReduce Unit α) :=
+  (tupleIterReduce (fun it => (.ok (), it)) it).1
+
 /-- `tupleiter_len`, `__reduce__` and `__setstate__`, for every iterator state with
 `0 <= index <= len(t)` (the invariant `tuple_iter`, `tupleiter_next` and
 `tupleiter_setstate` keep; `len(t) <= sys.maxsize` is the tuple's): the length hint
 counts what is left, and rebuilding from `__reduce__` gives an iterator with the same
-items left. `setstate` clips any `Py_ssize_t` into that range. -/
+items left. The exact form of `__reduce__` and `__setstate__` on every branch is
+`TupleIterReduceForm`. -/
 def TupleIterReduce : Prop :=
   ∀ (α : Type) (it : TupleIter α),
     (match it.seq with
       | some s => 0 ≤ it.index ∧ it.index ≤ s.length ∧ (s.length : Int) ≤ ssizeMax
       | none => True) →
     tupleIterLen it = it.rest.length ∧
-    ∃ it', tupleIterRebuild (tupleIterReduce it) = .ok it' ∧ it'.rest = it.rest
+    ∃ it', (match tupleIterReducePure it with
+      | .ok r => tupleIterRebuild r
+      | .error e => .error e) = .ok it' ∧ it'.rest = it.rest
 
 theorem tupleIterReduce_proven : TupleIterReduce := by
   intro α it h
   cases hs : it.seq with
   | none =>
     refine ⟨by simp [tupleIterLen, TupleIter.rest, hs], tupleIter [], ?_, ?_⟩
-    · simp [tupleIterRebuild, tupleIterReduce, hs]
+    · simp [tupleIterReducePure, tupleIterRebuild, tupleIterReduce, hs]
     · simp [tupleIter, TupleIter.rest, hs]
   | some s =>
     rw [hs] at h
@@ -104,7 +111,7 @@ theorem tupleIterReduce_proven : TupleIterReduce := by
         rw [if_pos]
         unfold ssizeMin ssizeMax at *
         constructor <;> omega
-      simp only [tupleIterRebuild, tupleIterReduce, hs, tupleIterSetstate, tupleIter, ha,
+      simp only [tupleIterReducePure, tupleIterRebuild, tupleIterReduce, hs, tupleIterSetstate, tupleIter, ha,
         bind, Except.bind]
       have h3 : ¬ it.index < 0 := by omega
       have h4 : ¬ it.index > (s.length : Int) := by omega

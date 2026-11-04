@@ -84,6 +84,10 @@ structure Frame where
   handling : Option Val := none
   deriving Inhabited
 
+/-- What `canon` writes for an `int` above the `str()` digit limit. The Python side's `str(v)` and
+`int.__repr__(v)` raise there, so the probe reports that `ValueError` (see `.probe`). -/
+def canonIntLimit : String := "\u0000int-str-limit\u0000"
+
 /-- `repr`-independent canonical text for a value; the difftest compares these. -/
 def canon (w : World) : Nat → Val → String
   | 0, _ => "<deep>"
@@ -93,7 +97,7 @@ def canon (w : World) : Nat → Val → String
     | .notImpl => "NotImplemented"
     | .ellipsis => "Ellipsis"
     | .bool b => if b then "True" else "False"
-    | .int i => toString i
+    | .int i => if intStrTooLong i then canonIntLimit else toString i
     | .float b => (PyLean.Binary64.float_repr (PyLean.Binary64.F64.ofBits b)).elim "<float>"
         (fun cs => String.ofList (cs.map Char.ofNat))
     | .str s => reprStr s
@@ -471,7 +475,9 @@ mutual
       let out ← tryM (do
           let v ← evalExpr env rt fr fuel e
           let w ← getW
-          pure (canon w 12 v))
+          let c := canon w 12 v
+          if (c.splitOn canonIntLimit).length > 1 then valueErr intStrLimitMsg
+          pure c)
         (errText rt)
       logEvent s!"{tag}={out}"
       pure (fr, none)

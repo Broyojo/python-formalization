@@ -1,0 +1,132 @@
+id: corelibs-suppress-group-virtual-subclass
+title: "contextlib.suppress honours __subclasscheck__ and unions for a bare exception but not inside an ExceptionGroup"
+priority: P3
+priority_note: |
+  Raised from P4 (2026-11-04): the union witness needs no ABC. `suppress(KeyError | ValueError)` reads
+  naturally since isinstance/issubclass took unions (3.10), works for a bare exception, and turns any
+  ExceptionGroup, as asyncio.TaskGroup raises, into a TypeError that replaces the user's exception.
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/contextlib.py, Objects/exceptions.c]
+functions: ["suppress.__exit__"]
+summary: |
+  `suppress.__exit__` (Lib/contextlib.py:512-531) decides with `issubclass(exctype,
+  self._exceptions)` (:524), and its comment (:513-521) says it chooses "the simpler issubclass based
+  semantics" on purpose, over the interpreter's concrete matching. For a group it calls
+  `excinst.split(self._exceptions)` (:527), and `BaseExceptionGroup.split` matches with
+  `PyErr_GivenExceptionMatches` (Objects/exceptions.c:1284-1287, Python/errors.c:365-366), the
+  concrete subclass test, after `get_matcher_type` (:1260-1275) refuses any item of the tuple that is
+  no exception class. So the classes `suppress` was given mean different things for a bare exception
+  and for the same exception in a group:
+
+  - `class E(Exception, metaclass=ABCMeta)` with `E.register(KeyError)`: `suppress(E)` suppresses
+    `raise KeyError()`, but `raise ExceptionGroup('x', [KeyError()])` comes out as a new
+    `ExceptionGroup('x', [KeyError()])`.
+  - `class A(ABC)` with `A.register(ValueError)`: `suppress(A)` suppresses `raise ValueError()`, and
+    turns `raise ExceptionGroup('x', [ValueError()])` into `TypeError: expected an exception type, a
+    tuple of exception types, or a callable (other than a class)`, raised from `__exit__`.
+  - `suppress((ValueError, KeyError))`, a nested tuple, which `issubclass` accepts: the same
+    TypeError for any group.
+  - `suppress(KeyError | ValueError)`, a union, which `issubclass` takes as the tuple of its
+    arguments (Objects/abstract.c:2744-2746): `raise KeyError()` is suppressed, `raise
+    ExceptionGroup('x', [KeyError()])` becomes the same TypeError, with the group as `__context__`.
+    For comparison, the interpreter refuses unions in both forms: `except KeyError | ValueError:` and
+    `except* KeyError | ValueError:` raise `TypeError: catching classes that do not inherit from
+    BaseException is not allowed`, for the bare exception and the group alike (unions in `except`
+    were rejected in python/cpython#91123 and #102414). `suppress` is the only one of the three that
+    accepts the union for one and refuses it for the other.
+
+  The docs say "If the code within the with block raises a BaseExceptionGroup, suppressed exceptions
+  are removed from the group."
+likelihood: |
+  Low to moderate. The ABC case takes an ABC or a class with a custom `__subclasscheck__` given to
+  `suppress`, which the comment at :513-521 explicitly supports. The union case takes only
+  `suppress(A | B)`, which works for bare exceptions and so passes ordinary tests, and an exception
+  group, which asyncio TaskGroup and `except*` code produce routinely. The TypeError cases replace
+  the user's exception with an internal error.
+maybe_intended: |
+  Possibly in part: `except*` also matches concretely (python/cpython#56238 documents that `except`
+  ignores virtual subclasses), so a maintainer may say groups follow the interpreter; and since
+  `except` refuses unions (#91123, rejected), one may say a union was never a valid argument to
+  `suppress`. Guido van Rossum, rejecting unions in `except` (python/cpython#91123, comment of
+  2022-03-09): "Exception matching is its own special thing (e.g. it doesn't honor virtual
+  subclasses) and we shouldn't hyper-generalize." A maintainer may read the group path, which uses
+  that interpreter matching, as the intended one. But `suppress` documents the opposite choice for
+  bare exceptions (the issubclass comment at :513-521), accepts the union there without complaint,
+  and the TypeError for arguments that work for bare exceptions is hard to call intended.
+reproducer: |
+  import abc, contextlib
+  class E(Exception, metaclass=abc.ABCMeta):
+      pass
+  E.register(KeyError)
+  class A(abc.ABC):
+      pass
+  A.register(ValueError)
+  def outcome(cls, exc):
+      try:
+          with contextlib.suppress(cls):
+              raise exc
+          return 'suppressed'
+      except BaseException as e:
+          return repr(e)
+  bare_e = outcome(E, KeyError())
+  group_e = outcome(E, ExceptionGroup('x', [KeyError()]))
+  bare_a = outcome(A, ValueError())
+  group_a = outcome(A, ExceptionGroup('x', [ValueError()]))
+  bare_u = outcome(KeyError | ValueError, KeyError())
+  group_u = outcome(KeyError | ValueError, ExceptionGroup('x', [KeyError()]))
+  print('suppress(E), KeyError():', bare_e)
+  print('suppress(E), ExceptionGroup([KeyError()]):', group_e)
+  print('suppress(A), ValueError():', bare_a)
+  print('suppress(A), ExceptionGroup([ValueError()]):', group_a)
+  print('suppress(KeyError | ValueError), KeyError():', bare_u)
+  print('suppress(KeyError | ValueError), ExceptionGroup([KeyError()]):', group_u)
+  if (bare_e == 'suppressed' and group_e.startswith('ExceptionGroup') and bare_a == 'suppressed'
+          and group_a.startswith('TypeError') and bare_u == 'suppressed'
+          and group_u.startswith('TypeError')):
+      print('REPRODUCED corelibs-suppress-group-virtual-subclass')
+expected: |
+  Members that `suppress` would suppress raised alone are removed from the group: both groups are
+  suppressed.
+observed: |
+  python3 3.15.2: KeyError() suppressed; ExceptionGroup([KeyError()]) re-raised as a new group;
+  ValueError() suppressed; ExceptionGroup([ValueError()]) becomes TypeError("expected an exception
+  type, a tuple of exception types, or a callable (other than a class)"); with KeyError | ValueError,
+  KeyError() suppressed and ExceptionGroup([KeyError()]) the same TypeError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+  Comparison on both: `except KeyError | ValueError` and `except* KeyError | ValueError` raise
+  TypeError("catching classes that do not inherit from BaseException is not allowed");
+  `except* (KeyError, ValueError)` catches the group.
+promised_by: |
+  Doc/library/contextlib.rst, suppress: "If the code within the with block raises a
+  BaseExceptionGroup, suppressed exceptions are removed from the group"; the comment at
+  Lib/contextlib.py:513-521 on issubclass semantics.
+cause: |
+  Lib/contextlib.py:524 tests with issubclass, which calls `__subclasscheck__` and takes a union as
+  the tuple of its arguments (Objects/abstract.c:2744-2764, :2766-2784); :527 hands the same tuple to
+  BaseExceptionGroup.split, whose matcher is concrete (Objects/exceptions.c:1284-1287) and accepts
+  only exception classes in a tuple (:1260-1269), refusing anything else at :1271-1275.
+possible_fix: |
+  Pass split a predicate that applies the same test as :524, for example
+  `excinst.split(lambda e: isinstance(e, self._exceptions))` (a callable matcher,
+  Objects/exceptions.c:1250-1253, :1289-1298), so groups and bare exceptions agree.
+duplicates:
+  issues:
+    - {number: 103791, state: closed, relation: "the feature that made suppress act on ExceptionGroup members (gh-103792)", reason: "no mention of ABCs or __subclasscheck__"}
+    - {number: 56238, state: closed, relation: "except does not match virtual subclasses (bpo-12029, cited at :521)", reason: "about except clauses; suppress documents the issubclass choice"}
+    - {number: 119287, state: closed, relation: "suppress turns ExceptionGroup subclasses into ExceptionGroup", reason: "derive behaviour, docs"}
+    - {number: 102414, state: closed, relation: "Allow `except X | Y:` (duplicate of #91123)", reason: "about except clauses, which refuse unions for bare exceptions and groups alike; nothing on suppress"}
+    - {number: 91123, state: closed, relation: "PEP 604 type union for except, rejected", reason: "about except; suppress accepts the union for bare exceptions"}
+  queries: ["suppress ExceptionGroup", "suppress virtual subclass", "suppress issubclass split",
+            "contextlib suppress ABC", "gh api issues/103791 comments: no abc/virtual/subclasscheck",
+            "bugforge README: no contextlib entries",
+            "suppress union ExceptionGroup", "contextlib suppress UnionType", "split union exception group TypeError",
+            "except union types", "except star union", "suppress ExceptionGroup TypeError",
+            "ExceptionGroup split union", "suppress tuple exception group", "except UnionType",
+            "union except clause (found 102414)", "suppress union", "get_matcher_type",
+            "expected an exception type tuple of exception types callable",
+            "gh issue view 102414 comments: duplicate of 91123",
+            "gh api issues/91123/comments: gvanrossum 2022-03-09, 'doesn't honor virtual subclasses'"]
+lean:
+  property: PyLean.CoreLibs.Misc.Contextlib.SuppressGroupConsistent
+  theorem: PyLean.CoreLibs.Misc.Contextlib.suppressGroupConsistent_refuted

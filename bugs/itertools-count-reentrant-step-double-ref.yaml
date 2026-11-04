@@ -1,0 +1,87 @@
+id: itertools-count-reentrant-step-double-ref
+title: "itertools.count hands the same long_cnt reference to two callers when the step's __radd__ re-enters next() (duplicate of gh-154670)"
+priority: P2
+kind: memory-safety
+module: itertools
+status: duplicate
+duplicate_of: "python/cpython#154670 (open), fix in PR python/cpython#154671 (open)"
+files: [Modules/itertoolsmodule.c]
+functions: ["count_nextlong", "count_next"]
+summary: |
+  In slow mode count_nextlong takes result = lz->long_cnt without a new reference (:3633; the
+  comment at :3631-3632 says the count's reference is either returned or kept), then calls
+  PyNumber_Add(result, lz->long_step) (:3635). A step whose __radd__ calls next() on the same
+  count re-enters: the inner call reads the same long_cnt, returns it with the count's
+  reference and stores its own sum. The outer call then stores its sum over that one (whose
+  reference is never released) and returns result again (:3639-3641), a reference it does not
+  own. When the inner caller drops its value, the outer caller holds a freed object: the
+  use-after-free reported as gh-154670, with a reproducer that segfaults under
+  PYTHONMALLOC=debug.
+  This record does not reproduce the memory corruption. Its reproducer runs the same path with
+  the immortal small int 5 as start, so nothing is freed, and shows the double hand-out: the
+  inner and the outer next() both return 5, and the inner sum is lost.
+  Lean: CountReentryTwice (proven) states exactly what the path does for every number type,
+  value and step: both calls return v with the count's own reference, and the outer sum
+  replaces the inner one. CountHandsOutOnce ("no reference is handed over twice") is refuted
+  by count(5, Step()); CountNextNoReentry proves it for every add that does not call back.
+likelihood: |
+  Low: it takes a step object whose __add__/__radd__ advances the count being stepped. The
+  result is memory corruption from pure Python, though.
+maybe_intended: |
+  No for the crash. In gh-154670 rhettinger proposes blocking re-entrancy in itertools
+  entirely, and picnixz and pochmann ask for wider discussion before forbidding it; the
+  issue is open.
+reproducer: |
+  import itertools
+  class Step:
+      armed = True
+      def __index__(self):       # passes PyNumber_Check, so count() accepts it
+          return 1
+      def __radd__(self, other):
+          if Step.armed:
+              Step.armed = False
+              inner.append(next(c))  # re-enter the same count
+          return other + 1
+  inner = []
+  c = itertools.count(5, Step())   # 5 is immortal: nothing is freed
+  outer = next(c)
+  after = next(c)
+  print("inner", inner, "outer", outer, "next", after, repr(c))
+  if inner == [5] and outer == 5 and inner[0] is outer and after == 6:
+      print("REPRODUCED itertools-count-reentrant-step-double-ref")
+expected: |
+  Either the re-entrant next() is refused (RuntimeError, as tee does), or the two calls return
+  successive values (5 and 6) with the count owning its references throughout.
+observed: |
+  python3 3.15.2 (Linux build pod): inner [5] outer 5 next 6 count(7, <Step object>).
+  REPRODUCED.
+  main (cpython-main/python.exe): same output. REPRODUCED. count_nextlong is unchanged there
+  (Modules/itertoolsmodule.c:3608-3630 on main).
+promised_by: |
+  Undisputed invariant: Python code must not be able to make the interpreter use freed memory.
+  The comment at Modules/itertoolsmodule.c:3631-3632 states the ownership rule the code relies
+  on.
+cause: |
+  Modules/itertoolsmodule.c:3633 borrows lz->long_cnt and :3635 calls Python code before
+  :3639 overwrites it; nothing re-checks lz->long_cnt after the add or holds a reference to
+  result across it.
+possible_fix: |
+  Hold a strong reference across the add and take the count's reference only after it:
+      PyObject *result = Py_NewRef(lz->long_cnt);
+      PyObject *stepped_up = PyNumber_Add(result, lz->long_step);
+      if (stepped_up == NULL) { Py_DECREF(result); return NULL; }
+      Py_SETREF(lz->long_cnt, stepped_up);
+      return result;
+  This is the shape of PR gh-154671. Not tested against a CPython build here.
+duplicates:
+  issues:
+    - {number: 154670, state: open, relation: "the same use-after-free, reported with a PYTHONMALLOC=debug segfault", reason: "duplicate"}
+    - {number: 154671, state: open, relation: "fix PR for 154670", reason: "not merged"}
+    - {number: 123471, state: open, relation: "concurrent iteration over itertools under free-threading", reason: "threads, not re-entry"}
+  queries: ["gh issue view 154670 --comments", "gh pr list --search 154670 --state all"]
+  note: |
+    Recorded as a duplicate on the caller's instruction: the model now expresses the path of
+    gh-154670, and this record ties the refuted Lean property to it.
+lean:
+  property: PyLean.Itertools.CountHandsOutOnce
+  theorem: PyLean.Itertools.countHandsOutOnce_refuted

@@ -56,7 +56,7 @@ section parse
 
 variable {R : Type} [CDouble R]
 
-/-- `y = *s == '+' ? 1.0 : -1.0;`, lines 997 and 1017. -/
+/-- `y = *s == '+' ? 1.0 : -1.0;`, lines 1017 and 1037. -/
 def signOne (c : Nat) : R := if c == chPlus then one else neg one
 
 /-- Lines 971-1026: `x`, `y`, the rest of the string and the offset, or `none`
@@ -91,9 +91,9 @@ def parseBody (sd : Strtod R) (p : List Nat) (i : Nat) :
 
 def malformed : PyExc := .valueError "complex() arg is a malformed string"
 
-/-- `complex_from_string_inner`, lines 930-1051, up to the allocation of the
+/-- `complex_from_string_inner`, lines 950-1071, up to the allocation of the
 result. `PyOS_string_to_double` reports failure as `end == s` with a `ValueError`
-that the caller clears (lines 972-978, 985-991), so only `n = 0` is visible. -/
+that the caller clears (lines 992-998, 1005-1011), so only `n = 0` is visible. -/
 def complex_from_string_inner (sd : Strtod R) (s : List Nat) (len : Nat) : Py (Cx R) :=
   let (p, i) := skipSpace s 0
   let (p, i, got_bracket) : List Nat × Nat × Bool :=
@@ -158,7 +158,7 @@ structure UniDB where
   /-- `Py_UNICODE_TODECIMAL`; `none` is `-1`. -/
   toDecimal : Nat → Option Nat
 
-/-- The loop of `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9635-9653.
+/-- The loop of `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9536-9554.
 An unconvertible character becomes `?` and ends the string. -/
 def transformLoop (db : UniDB) : List Nat → List Nat
   | [] => []
@@ -170,7 +170,7 @@ def transformLoop (db : UniDB) : List Nat → List Nat
       | none => [63]
       | some d => (48 + d) :: transformLoop db t
 
-/-- `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9614-9657: an ASCII
+/-- `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9514-9558: an ASCII
 string comes back unchanged. -/
 def transformDecimalAndSpace (db : UniDB) (s : List Nat) : List Nat :=
   if s.all (· < 128) then s else transformLoop db s
@@ -179,9 +179,9 @@ section parse2
 
 variable {R : Type} [CDouble R]
 
-/-- `complex_subtype_from_string` on a `str`, lines 1053-1069 and 1077-1080. The
-`TypeError` branch on lines 1070-1075 is dead: the only caller,
-`actual_complex_new`, has already checked `PyUnicode_Check` on line 1116. It is
+/-- `complex_subtype_from_string` on a `str`, lines 1080-1088 and 1097-1100. The
+`TypeError` branch on lines 1089-1095 is dead: the only caller,
+`actual_complex_new`, has already checked `PyUnicode_Check` on line 1136. It is
 mirrored in `complex_subtype_from_string` in `ComplexObj.lean`. -/
 def complex_from_str (db : UniDB) (sd : Strtod R) (v : List Nat) (objRepr : String) :
     Py (Cx R) :=

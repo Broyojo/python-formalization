@@ -117,14 +117,14 @@ theorem hashRounds_inj (lanes : List Nat) {a b : Nat} (ha : a < U64) (hb : b < U
     exact hashRound_inj_acc ha hb (ih (hashRound_lt _ _) (hashRound_lt _ _) h)
 
 theorem hashLoop_ok_map {α : Type} (hashE : α → Py Int) (lanes : α → Int) (xs : List α) (acc : Nat)
-    (h : ∀ x ∈ xs, hashE x = .ok (lanes x)) :
+    (h : ∀ x ∈ xs, hashE x = .ok (lanes x)) (hm : ∀ x ∈ xs, toUhash (lanes x) ≠ U64 - 1) :
     hashLoop hashE xs acc = .ok (hashRounds (xs.map (fun x => toUhash (lanes x))) acc) := by
   induction xs generalizing acc with
   | nil => simp [hashLoop, hashRounds_nil]
   | cons x xs ih =>
     have hx := h x (by simp)
-    simp only [hashLoop, hx, List.map_cons, hashRounds_cons]
-    exact ih _ (fun y hy => h y (List.mem_cons_of_mem _ hy))
+    simp only [hashLoop, hx, List.map_cons, hashRounds_cons, if_neg (hm x (by simp))]
+    exact ih _ (fun y hy => h y (List.mem_cons_of_mem _ hy)) (fun y hy => hm y (List.mem_cons_of_mem _ hy))
 
 theorem toUhash_lt (x : Int) : toUhash x < U64 := by
   unfold toUhash
@@ -155,7 +155,7 @@ theorem toHash_ne_minus_one {x : Nat} (h : x < U64) (h' : x ≠ U64 - 1) : toHas
 
 /-- `hash(())` for every element type: the value of `_PyTuple_HASH_EMPTY`
 (pycore_tuple.h:76), `5740354900026072187`, the historical hash of the empty
-tuple that line 346 of tupleobject.c mangles the length to keep. -/
+tuple that tupleobject.c:404-405 mangles the length to keep. -/
 def TupleHashEmpty : Prop :=
   ∀ (α : Type) (hashE : α → Py Int) (t : Tup α), t.items = [] → t.hash = -1 →
     (tupleHash hashE t).map (·.1) = .ok 5740354900026072187
@@ -295,7 +295,7 @@ def TupleHashGuard : Prop :=
     tupleHashGuarded hashE t false = tupleHash hashE t ∧
     (toUhash t.hash ≠ U64 - 1 → tupleHashGuarded hashE t true = .ok (t.hash, t)) ∧
     (toUhash t.hash = U64 - 1 → tupleHashGuarded hashE t true =
-      .error (.named "RecursionError" "~Stack overflow while hashing a tuple"))
+      .error (.named "RecursionError" "~Stack overflow (used %d kB) while hashing a tuple"))
 
 theorem tupleHashGuard_proven : TupleHashGuard := by
   intro α hashE t

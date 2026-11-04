@@ -333,12 +333,22 @@ datetime-str-via-isoformat	proven	Modules/_datetimemodule.c	C date_str,C time_st
 datetime-str-isoformat-override-twins	refuted	Modules/_datetimemodule.c	C date_str,date.__str__
 datetime-append-fold-twins	proven	Modules/_datetimemodule.c	C append_keyword_fold
 datetime-timestamp-conversion	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
-datetime-timestamp-floor	open	Modules/_datetimemodule.c	C date_fromtimestamp
+datetime-timestamp-floor	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
 datetime-date-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_date_strptime_impl,date.strptime,_strptime_datetime_date
 datetime-strptime-class-impl	proven	Lib/_pydatetime.py	time.strptime,datetime.strptime,_strptime_datetime_time,_strptime_datetime_datetime,_check_tzinfo_arg
 datetime-timedelta-type-loop	proven	Lib/_pydatetime.py	timedelta.__new__
-datetime-timedelta-num-py-int	open	Lib/_pydatetime.py	timedelta.__new__
+datetime-timedelta-num-py-int	proven	Lib/_pydatetime.py	timedelta.__new__
 datetime-astimezone-local-aware-edge-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,datetime._local_timezone,C datetime_datetime_astimezone_impl
+datetime-tzinfo-member-replacements	proven	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C make_Zreplacement
+datetime-strftime-z-twins	proven	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C make_Zreplacement,C format_utcoffset
+datetime-strftime-z-override-twins	refuted	Modules/_datetimemodule.c	C get_tzinfo_member,C make_somezreplacement,C wrap_strftime,_wrap_strftime
+datetime-reduce-dispatch-twins	refuted	Lib/_pydatetime.py	time.__reduce__,datetime.__reduce__,C datetime_time___reduce___impl,C datetime_datetime___reduce___impl
+datetime-reduce-dispatch-inherited	proven	Lib/_pydatetime.py	time.__reduce__,datetime.__reduce__,C datetime_time___reduce___impl,C datetime_datetime___reduce___impl
+datetime-date-fromtimestamp-cls	proven	Modules/_datetimemodule.c	C date_fromtimestamp,C datetime_date_fromtimestamp_impl,date.fromtimestamp
+datetime-timedelta-integral-float-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum
+datetime-time-fromiso-hour24-c	proven	Modules/_datetimemodule.c	C datetime_time_fromisoformat_impl
+datetime-astimezone-keeps-objects	refuted	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-astimezone-keeps-objects-py	proven	Lib/_pydatetime.py	datetime.astimezone
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
@@ -681,9 +691,15 @@ pyio-iobase-readline-readahead	proven	Lib/_pyio.py	IOBase.readline
 json-loads-twins	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_make_scanner,py_scanstring,scanstring_unicode,scan_once_unicode,scanner_call,raise_errmsg
 json-loads-twins-pos	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,scanstring_unicode,scan_once_unicode
 json-loads-twins-scan	proven	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,_decode_uXXXX,JSONObject,JSONArray,py_make_scanner,scanstring_unicode,_parse_object_unicode,_parse_array_unicode,_parse_constant,_match_number_unicode,scan_once_unicode,scanner_call,raise_errmsg,raise_stop_iteration
+json-loads-twins-rec	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_make_scanner,JSONArray,scan_once_unicode,_parse_array_unicode,scanner_call
 json-raw-decode-twins	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,scan_once_unicode,scanner_call
 json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,scan_once_unicode,scanner_call,_build_rval_index_tuple,_parse_object_unicode,_parse_array_unicode,_match_number_unicode
-json-dumps-twins	proven	Lib/json/encoder.py	JSONEncoder.encode,JSONEncoder.iterencode,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unicode,ascii_escape_unichar,escape_unicode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,encoder_encode_key_value,encoder_encode_float,encoder_write_string,_encoded_const,_steal_accumulate,write_escaped_ascii,write_escaped_unicode,ascii_escape_size,escape_size,ascii_escape_unicode_and_size,escape_unicode_and_size
+json-raw-decode-twins-rec	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONArray,scan_once_unicode,_parse_array_unicode,scanner_call
+json-dumps-twins	proven	Lib/json/encoder.py	JSONEncoder.encode,JSONEncoder.iterencode,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unicode,ascii_escape_unichar,escape_unicode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,encoder_encode_key_value,encoder_encode_float,encoder_write_string,_encoded_const,write_escaped_ascii,write_escaped_unicode,_encoder_iterate_mapping_lock_held,_encoder_iterate_dict_lock_held,_encoder_iterate_fast_seq_lock_held
+json-dumps-twins-rec	refuted	Lib/json/encoder.py	JSONEncoder.encode,_make_iterencode,encoder_listencode_obj,encoder_listencode_list
+json-dumps-twins-notes	refuted	Lib/json/encoder.py	JSONEncoder.encode,_make_iterencode,encoder_listencode_obj,encoder_listencode_dict,encoder_encode_key_value
+json-dumps-twins-separators	refuted	Modules/_json.c	encoder_encode_key_value,encoder_listencode_list,encoder_listencode_dict,encoder_listencode_obj,_encoder_iterate_fast_seq_lock_held,_encoder_iterate_dict_lock_held,JSONEncoder.encode,_make_iterencode
+json-dumps-twins-subclass	refuted	Modules/_json.c	encoder_listencode_list,encoder_listencode_obj,JSONEncoder.encode,_make_iterencode
 json-dumps-api-twins	proven	Lib/json/__init__.py	dumps
 json-dumps-fast-path	proven	Lib/json/__init__.py	dumps,dump,JSONEncoder.__init__
 json-dump-is-dumps	proven	Lib/json/__init__.py	dump,dumps,_make_iterencode,JSONEncoder.iterencode
@@ -693,7 +709,8 @@ json-allow-nan	proven	Lib/json/encoder.py	JSONEncoder.iterencode,encoder_encode_
 json-default-typeerror	proven	Lib/json/encoder.py	JSONEncoder.default
 json-default-separators	proven	Lib/json/encoder.py	JSONEncoder.__init__
 json-encode-basestring-twins	proven	Lib/json/encoder.py	py_encode_basestring,py_encode_basestring_ascii
-json-c-encode-basestring	proven	Modules/_json.c	py_encode_basestring_impl,py_encode_basestring_ascii_impl,ascii_escape_unichar,ascii_escape_unicode,ascii_escape_unicode_and_size,escape_unicode,escape_unicode_and_size
+json-c-encode-basestring	proven	Modules/_json.c	py_encode_basestring_impl,py_encode_basestring_ascii_impl,ascii_escape_unichar,ascii_escape_unicode,escape_unicode
+json-escape-size	proven	Modules/_json.c	ascii_escape_size,escape_size,ascii_escape_unicode_and_size,escape_unicode_and_size,ascii_escape_unicode,escape_unicode,write_escaped_ascii,write_escaped_unicode,ascii_escape_unichar
 json-write-escaped	proven	Modules/_json.c	write_escaped_ascii,write_escaped_unicode,ascii_escape_size,escape_size
 json-roundtrip-str	refuted	Lib/json/encoder.py	py_encode_basestring_ascii,ascii_escape_unicode,scanstring_unicode
 json-roundtrip	proven	Lib/json/encoder.py	JSONEncoder.encode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,JSONObject,JSONArray,scan_once_unicode
@@ -715,7 +732,7 @@ json-decode-uxxxx	proven	Lib/json/decoder.py	_decode_uXXXX
 json-decoder-init	proven	Lib/json/decoder.py	JSONDecoder.__init__
 json-pairs-hook-priority	proven	Lib/json/decoder.py	JSONObject,_parse_object_unicode,JSONDecoder.__init__
 json-array-hook	proven	Lib/json/decoder.py	JSONArray,_parse_array_unicode,JSONDecoder.__init__,py_make_scanner
-json-scanstring-twins	refuted	Lib/json/decoder.py	py_scanstring
+json-scanstring-twins	refuted	Lib/json/decoder.py	py_scanstring,scanstring_unicode,py_scanstring_impl
 json-scanstring-twins-in-range	proven	Lib/json/decoder.py	py_scanstring
 json-c-scanstring	proven	Modules/_json.c	py_scanstring_impl,scanstring_unicode,_build_rval_index_tuple
 json-scanner-call-raw	proven	Modules/_json.c	scanner_call,raise_stop_iteration,_build_rval_index_tuple
@@ -723,7 +740,8 @@ json-scanner-new	proven	Modules/_json.c	scanner_new
 json-encoder-new	proven	Modules/_json.c	encoder_new
 json-encoder-new-sep-typeerror	refuted	Modules/_json.c	encoder_new
 json-encoder-call	proven	Modules/_json.c	encoder_call
-json-encoder-string	proven	Modules/_json.c	encoder_write_string
+json-encoder-string	proven	Modules/_json.c	encoder_write_string,_steal_accumulate
+json-encoder-string-raw	refuted	Modules/_json.c	encoder_write_string,_steal_accumulate
 json-indent-cache	proven	Modules/_json.c	create_indent_cache,update_indent_cache,get_item_separator,write_newline_indent
 json-indent-cache-size	proven	Modules/_json.c	update_indent_cache
 json-tool-colorize	proven	Lib/json/tool.py	_colorize_json
@@ -782,6 +800,10 @@ itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,is
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-consumes-max-start-stop	proven	Modules/itertoolsmodule.c	islice_next
 itertools-islice-step-message	refuted	Modules/itertoolsmodule.c	islice_new
+itertools-islice-reentry-pure	proven	Modules/itertoolsmodule.c	islice_next
+itertools-islice-reentry-rereads	proven	Modules/itertoolsmodule.c	islice_next
+itertools-islice-no-use-after-free	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-no-crash-shared	proven	Modules/itertoolsmodule.c	islice_next
 itertools-combinatorics-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
 itertools-combinatorics-doc-agree-nonneg	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
 itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
@@ -799,6 +821,9 @@ itertools-count-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_count_impl
 itertools-count-doc-agree-total-add	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next
 itertools-count-doc-agree-closed	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-failed-add	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-no-reentry	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-reentry-twice	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-hands-out-once	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-count-float	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-repeat-consistent	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next,repeat_len,repeat_repr
 itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new
@@ -810,18 +835,24 @@ itertools-product-doc-agree	refuted	Modules/itertoolsmodule.c	product_new,produc
 itertools-product-doc-agree-iterable	proven	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
 itertools-permutations-spec	proven	Modules/itertoolsmodule.c	itertools_permutations_impl,permutations_next,permutations_next_lock_held
 itertools-count-formulas	proven	Doc/library/itertools.rst	
-itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
-itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
+itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,groupby_step,_grouper_next,_grouper_create
 itertools-groupby-no-crash-no-reentry	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-groupby-eq-error	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
 itertools-grouper-eq-false	proven	Modules/itertoolsmodule.c	_grouper_next
-itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	Py_LOCAL_INLINE
+itertools-groupby-next-step-error	proven	Modules/itertoolsmodule.c	groupby_next,groupby_step
+itertools-grouper-step-error	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
+itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	groupby_step
+itertools-grouper-reentrant-step	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
+itertools-grouper-step-keeps-items	refuted	Modules/itertoolsmodule.c	_grouper_next,groupby_step,groupby_next,_grouper_create
+itertools-grouper-step-keeps-items-no-reentry	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
 itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
 itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl,itertools__tee_impl
 itertools-tee-reentry-guard	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable
 itertools-tee-running-balanced	proven	Modules/itertoolsmodule.c	tee_next,teedataobject_getitem,teedataobject_getitem_lock_held
 itertools-tee-wrap	proven	Modules/itertoolsmodule.c	itertools__tee_impl,tee_fromiterable,teedataobject_newinternal
+itertools-tee-two-getiter	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_fromiterable
 itertools-tee-clear	proven	Modules/itertoolsmodule.c	tee_clear,tee_dealloc
 itertools-pairwise-doc-agree	proven	Modules/itertoolsmodule.c	pairwise_new_impl,pairwise_next
 itertools-pairwise-reentry	proven	Modules/itertoolsmodule.c	pairwise_next
@@ -961,24 +992,31 @@ listsort-count-run-fail	proven	Objects/listobject.c	count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
-float-add-correct	proven	Objects/floatobject.c	float_add
-float-sub-correct	proven	Objects/floatobject.c	float_sub
-float-mul-correct	proven	Objects/floatobject.c	float_mul
-float-div-correct	proven	Objects/floatobject.c	float_div
+float-add-correct	proven	Objects/floatobject.c	float_add,_Py_convert_int_to_double
+float-sub-correct	proven	Objects/floatobject.c	float_sub,_Py_convert_int_to_double
+float-mul-correct	proven	Objects/floatobject.c	float_mul,_Py_convert_int_to_double
+float-div-correct	proven	Objects/floatobject.c	float_div,_Py_convert_int_to_double
 float-int-operand-correct	proven	Objects/floatobject.c	_Py_convert_int_to_double
+float-rem-correct	proven	Objects/floatobject.c	float_rem,_Py_convert_int_to_double
+float-divmod-wrappers	proven	Objects/floatobject.c	float_divmod,float_floor_div,_Py_convert_int_to_double
 float-int-conversions	proven	Objects/floatobject.c	float___trunc___impl,float___floor___impl,float___ceil___impl
 float-is-integer	proven	Objects/floatobject.c	float_is_integer_impl
 float-divmod-twins	proven	Objects/floatobject.c	float_rem,_float_div_mod,float_divmod,float_floor_div
 float-divmod-zero	proven	Objects/floatobject.c	float_rem,float_divmod,float_floor_div
 float-floordiv-exact-floor	refuted	Objects/floatobject.c	_float_div_mod,float_floor_div
 float-divmod-quotient-doc	refuted	Objects/floatobject.c	_float_div_mod,float_divmod
-float-pow-special-values	proven	Objects/floatobject.c	float_pow
+float-pow-special-values	proven	Objects/floatobject.c	float_pow,_Py_convert_int_to_double
 float-hash-basics	proven	Objects/floatobject.c	float_hash
 float-unary	proven	Objects/floatobject.c	float_neg,float_abs,float_bool
-float-identities	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal,float_getimag,float___getnewargs___impl,float_from_number_impl,float_new_impl,float_subtype_new,float_vectorcall
+float-float-identity	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal
+float-getnewargs	proven	Objects/floatobject.c	
+float-new	proven	Objects/floatobject.c	float_new_impl
+float-subtype-new	proven	Objects/floatobject.c	float_subtype_new
+float-vectorcall	proven	Objects/floatobject.c	float_vectorcall
+float-from-number	proven	Objects/floatobject.c	float_from_number_impl
 float-getformat	proven	Objects/floatobject.c	float___getformat___impl
 float-info	proven	Objects/floatobject.c	PyFloat_GetMax,PyFloat_GetMin,PyFloat_GetInfo
-float-hex-sign	proven	Objects/floatobject.c	float_hex_impl,char_from_hex
+float-hex-sign	proven	Objects/floatobject.c	
 float-fromhex-trailing-garbage	refuted	Objects/floatobject.c	float_fromhex_impl,hex_from_char
 float-pack8-roundtrip	proven	Objects/floatobject.c	PyFloat_Pack8,PyFloat_Unpack8
 float-pack2-roundtrip	open	Objects/floatobject.c	PyFloat_Pack2,PyFloat_Unpack2
@@ -988,6 +1026,16 @@ pystrtod-e-format-digit-count	open	Python/pystrtod.c	PyOS_double_to_string,forma
 pystrtod-precision-guard	proven	Python/pystrtod.c	PyOS_double_to_string
 float-int-compare-exact	proven	Objects/floatobject.c	float_richcompare
 float-as-double	proven	Objects/floatobject.c	PyFloat_AsDouble
+float-number-index	proven	Objects/floatobject.c	
+float-from-string-infnan	proven	Objects/floatobject.c	float_from_string_inner,PyFloat_FromString
+float-from-string-dispatch	proven	Objects/floatobject.c	PyFloat_FromString
+float-compare-floats	proven	Objects/floatobject.c	float_richcompare
+float-hex-tables	proven	Objects/floatobject.c	char_from_hex,hex_from_char
+float-pack8-bytes	proven	Objects/floatobject.c	PyFloat_Pack8
+float-pack4-spec	proven	Objects/floatobject.c	PyFloat_Pack4
+float-unpack4-widen	proven	Objects/floatobject.c	PyFloat_Unpack4
+float-fromhex-object	proven	Objects/floatobject.c	float_fromhex_impl
+float-round-object	proven	Objects/floatobject.c	
 float-blank-string	proven	Objects/floatobject.c	float_from_string_inner,PyFloat_FromString
 float-repr-special	proven	Objects/floatobject.c	float_repr
 float-round-extremes	proven	Objects/floatobject.c	float___round___impl,double_round
@@ -1034,6 +1082,16 @@ complex-pow-edom-only-for-zero	refuted	Objects/complexobject.c	_Py_c_pow
 complex-real-operand	proven	Objects/complexobject.c	real_to_double,real_to_complex
 complex-repr	proven	Objects/complexobject.c	complex_repr
 complex-blank-string	proven	Objects/complexobject.c	complex_from_string_inner,complex_subtype_from_string
+complex-sum-diff-exact	proven	Objects/complexobject.c	_Py_c_sum,_Py_cr_sum,_Py_rc_sum,_Py_c_diff,_Py_cr_diff,_Py_rc_diff
+complex-neg-conj-exact	proven	Objects/complexobject.c	_Py_c_neg,complex_neg,complex_conjugate_impl
+complex-mixed-prod-exact	proven	Objects/complexobject.c	_Py_cr_prod,_Py_rc_prod
+complex-cr-quot-exact	proven	Objects/complexobject.c	_Py_cr_quot
+complex-real-operand-exact	proven	Objects/complexobject.c	real_to_double,real_to_complex
+complex-pow-real-twin	proven	Objects/complexobject.c	_Py_c_pow,complex_pow
+complex-prod-annex-g-binary64	proven	Objects/complexobject.c	_Py_c_prod
+complex-quot-annex-g-binary64	proven	Objects/complexobject.c	_Py_c_quot
+complex-rc-quot-zero	proven	Objects/complexobject.c	_Py_rc_quot
+complex-format-exact	proven	Objects/complexobject.c	complex___format___impl
 pystrtod-case-insensitive-match	proven	Python/pystrtod.c	case_insensitive_match
 pystrtod-parse-inf-or-nan	proven	Python/pystrtod.c	_Py_parse_inf_or_nan
 pystrtod-ascii-strtod-fallback	proven	Python/pystrtod.c	_PyOS_ascii_strtod
@@ -1224,7 +1282,7 @@ complex-prod-annex-g	open	Objects/complexobject.c	_Py_c_prod
 complex-ring-powu	proven	Objects/complexobject.c	c_powu
 complex-field-quot	proven	Objects/complexobject.c	_Py_c_quot
 complex-quot-branch-order	proven	Objects/complexobject.c	_Py_c_quot
-complex-quot-annex-g	open	Objects/complexobject.c	_Py_c_quot
+complex-quot-annex-g	refuted	Objects/complexobject.c	_Py_c_quot
 complex-field-mixed-quot	proven	Objects/complexobject.c	_Py_cr_quot,_Py_rc_quot
 complex-rc-quot-twin	refuted	Objects/complexobject.c	_Py_rc_quot,_Py_c_quot
 complex-rc-quot-finite	open	Objects/complexobject.c	_Py_rc_quot,_Py_c_quot
@@ -1241,11 +1299,11 @@ complex-abs-clean-errno	proven	Objects/complexobject.c	complex_abs,_Py_c_abs
 complex-abs-infinity	proven	Objects/complexobject.c	_Py_c_abs
 complex-constructors-store	proven	Objects/complexobject.c	
 complex-neg-conj	proven	Objects/complexobject.c	complex_neg,_Py_c_neg,complex_conjugate_impl
-complex-pos-identity	proven	Objects/complexobject.c	
+complex-pos-identity	proven	Objects/complexobject.c	complex_pos,complex___complex___impl
 longobj-complex-bool	proven	Objects/complexobject.c	
 complex-getnewargs-round-trip	proven	Objects/complexobject.c	complex___getnewargs___impl,actual_complex_new,complex_new_impl
 complex-hash-composition	proven	Objects/complexobject.c	complex_hash
-complex-repr-structure	proven	Objects/complexobject.c	complex_repr,complex___format___impl
+complex-repr-structure	proven	Objects/complexobject.c	complex_repr
 complex-repr-round-trip	proven	Objects/complexobject.c	complex_repr,complex_from_string_inner,complex_subtype_from_string
 complex-real-to-double	proven	Objects/complexobject.c	real_to_double,real_to_complex
 complex-mixed-mode-direct	proven	Objects/complexobject.c	_Py_cr_sum,_Py_rc_sum,_Py_cr_diff,_Py_rc_diff,_Py_cr_prod,_Py_rc_prod,real_to_double
@@ -1268,6 +1326,11 @@ complex-parse-transform-ascii	proven	Objects/complexobject.c	complex_subtype_fro
 complex-parse-leading-whitespace	proven	Objects/complexobject.c	complex_from_string_inner
 complex-parse-surroundings	proven	Objects/complexobject.c	complex_from_string_inner
 complex-parse-forms	proven	Objects/complexobject.c	complex_from_string_inner
+complex-hash-numeric-rule	proven	Objects/complexobject.c	complex_hash
+complex-actual-new-cases	proven	Objects/complexobject.c	actual_complex_new
+complex-new-impl-correction	proven	Objects/complexobject.c	complex_new_impl
+complex-from-number-cases	proven	Objects/complexobject.c	complex_from_number_impl
+complex-cabs-branches	proven	Objects/complexobject.c	_Py_c_abs
 complex-float-strings-are-complex-strings	proven	Objects/complexobject.c	complex_from_string_inner,complex_subtype_from_string
 longobj-as-double-rounds	open	Objects/longobject.c	PyLong_AsDouble,_PyLong_Frexp,long_float
 longobj-true-divide-rounds	open	Objects/longobject.c	long_true_divide
@@ -1298,7 +1361,7 @@ longobj-divmod-near	proven	Objects/longobject.c	_PyLong_DivmodNear
 longobj-int-round	proven	Objects/longobject.c	int___round___impl
 longobj-pow-obj	proven	Objects/longobject.c	long_pow
 longobj-as-byte-array-stores	open	Objects/longobject.c	_PyLong_AsByteArray
-bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
+bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-cached	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-one-lane	proven	Objects/tupleobject.c	tuple_hash
@@ -1310,7 +1373,7 @@ bytesobj-count-agree	proven	Objects/tupleobject.c	tuple_count_impl,list_count_im
 bytesobj-compare-agree	proven	Objects/listobject.c	list_richcompare_impl,list_richcompare,tuple_richcompare
 bytesobj-compare-reflexive	proven	Objects/tupleobject.c	tuple_richcompare
 bytesobj-tuple-iter-yields	proven	Objects/tupleobject.c	tuple_iter,tupleiter_next
-bytesobj-tuple-iter-reduce	proven	Objects/tupleobject.c	tupleiter_len,tupleiter_reduce,tupleiter_setstate
+bytesobj-tuple-iter-reduce	proven	Objects/tupleobject.c	tupleiter_len
 bytesobj-list-iter-safe	proven	Objects/listobject.c	list_iter,listiter_next,listiter_setstate,list___reversed___impl,listreviter_next,listreviter_setstate
 bytesobj-list-iter-yields	proven	Objects/listobject.c	list_iter,listiter_next,list___reversed___impl,listreviter_next
 bytesobj-list-iter-hint	proven	Objects/listobject.c	listiter_len,listreviter_len,listiter_reduce,listreviter_reduce,listiter_reduce_general,listiter_setstate,listreviter_setstate
@@ -1320,12 +1383,12 @@ bytesobj-slice-reads	proven	Objects/tupleobject.c	tuple_subscript,list_slice_loc
 bytesobj-list-resize	proven	Objects/listobject.c	list_resize,py_list_resize
 bytesobj-list-growth-pattern	proven	Objects/listobject.c	list_resize,_PyList_AppendTakeRefListResize,list_append_impl
 bytesobj-list-ops-wf	proven	Objects/listobject.c	list_resize,list_preallocate_exact,list_new_prealloc,list_clear_impl,list_clear,list_clear_slot,py_list_clear_impl,list_append_impl,list_extend_fast,list_extend_lock_held,list_extend_set,list_extend_dict,list_inplace_repeat,list_ass_item,list_ass_slice,reverse_slice,list_reverse_impl,PyList_Clear
-bytesobj-tuple-concat	proven	Objects/tupleobject.c	_PyTuple_Concat,tuple_alloc,tuple_get_empty
+bytesobj-tuple-concat	proven	Objects/tupleobject.c	_PyTuple_Concat,tuple_alloc
 bytesobj-repeat	proven	Objects/tupleobject.c	tuple_repeat,list_repeat,tuple_alloc
-bytesobj-tuple-construct	proven	Objects/tupleobject.c	maybe_tracked,PyTuple_FromArray,_PyTuple_FromStackRefStealOnSuccess,_PyTuple_FromArraySteal,PyTuple_Pack,_PyTuple_MaybeUntrack,tuple_new_impl,tuple_vectorcall,tuple_subtype_new,tuple___getnewargs___impl,tuple_slice
-bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,_PyTuple_Resize,list_ass_slice,valid_index
-bytesobj-item-access	proven	Objects/tupleobject.c	tuple_item,tuple_length,list_item,list_length,tuple_subscript
-bytesobj-capi-construct	proven	Objects/listobject.c	PyList_New,PyTuple_New,_PyList_FromStackRefStealOnSuccess,_PyList_AsTupleAndClear,PyTuple_SetItem,PyList_GetSlice,PyTuple_GetSlice,list_vectorcall
+bytesobj-tuple-construct	proven	Objects/tupleobject.c	PyTuple_FromArray,_PyTuple_FromStackRefStealOnSuccess,_PyTuple_FromArraySteal,PyTuple_Pack,_PyTuple_MaybeUntrack
+bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,list_ass_slice,valid_index
+bytesobj-item-access	proven	Objects/tupleobject.c	tuple_item,list_item,list_length
+bytesobj-capi-construct	proven	Objects/listobject.c	PyList_New,_PyList_FromStackRefStealOnSuccess,_PyList_AsTupleAndClear,PyList_GetSlice,list_vectorcall
 bytesobj-list-contents	proven	Objects/listobject.c	list_append_impl,PyList_Insert,list_clear_impl,reverse_slice,list_reverse_impl,PyList_Reverse,list_extend_fast,list_extend_set,list_extend_dict,_list_extend,list_extend_impl,_PyList_Extend,list_inplace_concat,list_concat_lock_held,_PyList_Concat,list_copy_impl,list___init___impl,list_inplace_repeat,list_inplace_repeat_lock_held
 bytesobj-list-extend-iter	proven	Objects/listobject.c	list_extend_iter_lock_held,_list_extend
 bytesobj-sortslice-parallel	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance,sortslice_reverse
@@ -1341,6 +1404,18 @@ bytesobj-list-hint-inert	refuted	Objects/listobject.c	list_extend_iter_lock_held
 bytesobj-list-hint-ignored	proven	Objects/listobject.c	list_extend_iter_lock_held
 bytesobj-tuple-from-pair	proven	Objects/tupleobject.c	_PyTuple_FromPair,_PyTuple_FromPairSteal
 bytesobj-tuple-hash-guard	proven	Objects/tupleobject.c	tuple_hash
+bytesobj-tuple-new-iterable	proven	Objects/tupleobject.c	tuple_new_impl,tuple_vectorcall,tuple_subtype_new
+bytesobj-tuple-richcompare-any	proven	Objects/tupleobject.c	tuple_richcompare
+bytesobj-tuple-subscript-dispatch	proven	Objects/tupleobject.c	tuple_subscript,tuple_item
+bytesobj-tuple-iter-reduce-form	proven	Objects/tupleobject.c	tupleiter_reduce,tupleiter_setstate,tuple_iter
+bytesobj-tuple-hash-loop	proven	Objects/tupleobject.c	tuple_hash
+bytesobj-tuple-repr-errors	proven	Objects/tupleobject.c	tuple_repr
+bytesobj-tuple-index-result	proven	Objects/tupleobject.c	tuple_index_impl
+bytesobj-tuple-slice-spec	proven	Objects/tupleobject.c	tuple_slice,PyTuple_GetSlice,PyTuple_FromArray
+bytesobj-tuple-getnewargs	proven	Objects/tupleobject.c	tuple___getnewargs___impl,tuple_slice
+bytesobj-capi-tuple-obj	proven	Objects/tupleobject.c	PyTuple_New,PyTuple_SetItem,_PyTuple_Resize,tuple_alloc
+bytesobj-tuple-binary-slice-obj	proven	Objects/tupleobject.c	_PyTuple_BinarySlice
+bytesobj-tuple-setitem-hash-fresh	refuted	Objects/tupleobject.c	PyTuple_SetItem,tuple_hash
 bytesobj-list-binary-slice	proven	Objects/listobject.c	
 bytesobj-tuple-binary-slice	proven	Objects/tupleobject.c	
 bytesobj-iteritem-agrees	proven	Objects/tupleobject.c	tuple_iteritem,list_iteritem
@@ -1603,6 +1678,16 @@ bytesobj-memoryview-key-failures	proven	Objects/memoryobject.c	memory_subscript,
 bytesobj-memoryview-tuple-failures	proven	Objects/memoryobject.c	ptr_from_tuple
 bytesobj-memoryview-buffer-failures	proven	Objects/memoryobject.c	memoryview_impl,PyMemoryView_FromObject,PyMemoryView_FromObjectAndFlags,memoryview__from_flags_impl,_PyManagedBuffer_FromObject
 bytesobj-memoryview-format-native	proven	Objects/memoryobject.c	get_native_fmtchar,get_native_fmtstr,memoryview_cast_impl
+bytesobj-memoryview-fmtchar-table	proven	Objects/memoryobject.c	get_native_fmtchar
+bytesobj-memoryview-fmtstr-table	proven	Objects/memoryobject.c	get_native_fmtstr
+bytesobj-memoryview-cast-keeps-format	proven	Objects/memoryobject.c	get_native_fmtstr,cast_to_1D,memoryview_cast_impl
+bytesobj-memoryview-unpack-formats	proven	Objects/memoryobject.c	unpack_single
+bytesobj-memoryview-item-unsupported	proven	Objects/memoryobject.c	memory_item,unpack_single
+bytesobj-memoryview-pack-unsupported	proven	Objects/memoryobject.c	pack_single,memory_ass_sub
+bytesobj-memoryview-pack-item-releases	proven	Objects/memoryobject.c	pack_single,pylong_as_ld,pylong_as_lu,pylong_as_lld,pylong_as_llu,pylong_as_zd,pylong_as_zu,fix_error_int,value_error_int
+bytesobj-memoryview-pack-complex-failures	proven	Objects/memoryobject.c	pack_single,fix_error_int,type_error_int
+bytesobj-memoryview-ass-sub-keys	proven	Objects/memoryobject.c	memory_ass_sub
+bytesobj-memoryview-cmp-no-buffer	proven	Objects/memoryobject.c	memory_richcompare
 bytesobj-memoryview-cast-format-embedded-nul	refuted	Objects/memoryobject.c	cast_to_1D,get_native_fmtchar,get_native_fmtstr
 bytesobj-memoryview-cast-1d	proven	Objects/memoryobject.c	memoryview_cast_impl,cast_to_1D,mbuf_add_incomplete_view,memory_alloc,init_shared_values,zero_in_shape
 bytesobj-memoryview-cast-nd	proven	Objects/memoryobject.c	cast_to_ND,copy_shape,init_strides_from_shape,init_flags
@@ -1661,7 +1746,7 @@ bytesobj-memoryview-mbuf-release	proven	Objects/memoryobject.c	mbuf_release,mbuf
 bytesobj-memoryview-hex-holds-export	proven	Objects/memoryobject.c	memoryview_hex_impl
 bytesobj-memoryview-hash-holds-export	proven	Objects/memoryobject.c	memory_hash
 bytesobj-memoryview-compare-releases	proven	Objects/memoryobject.c	memory_richcompare
-bytesobj-memoryview-eq-failures	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl
+bytesobj-memoryview-eq-failures	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl,memoryiter_next
 bytesobj-memoryview-slice-tolist	proven	Objects/memoryobject.c	memory_subscript,init_slice,init_len
 bytesobj-memoryview-tuple-refusals	proven	Objects/memoryobject.c	ptr_from_tuple,memory_item_multi,lookup_dimension
 bytesobj-memoryview-zero-dim	proven	Objects/memoryobject.c	memoryview_tolist_impl,memory_subscript
@@ -1906,6 +1991,50 @@ typeobj-c3-complete	proven	Objects/typeobject.c	pmerge
 typeobj-c3-fast-path	proven	Objects/typeobject.c	mro_implementation_unlocked
 typeobj-c3-failure-rule	proven	Objects/typeobject.c	pmerge,set_mro_error
 typeobj-c3-duplicate-bases	proven	Objects/typeobject.c	check_duplicates
+typeobj-c3-exact	proven	Objects/typeobject.c	pmerge,tail_contains
+typeobj-check-duplicates-exact	proven	Objects/typeobject.c	check_duplicates
+typeobj-mro-impl-exact	proven	Objects/typeobject.c	mro_implementation_unlocked,check_duplicates,pmerge,tail_contains
+typeobj-c3-example-earliest	proven	Objects/typeobject.c	mro_implementation_unlocked,pmerge,tail_contains
+typeobj-c3-example-conflict	proven	Objects/typeobject.c	mro_implementation_unlocked,pmerge
+typeobj-mro-impl-errors	proven	Objects/typeobject.c	mro_implementation_unlocked,class_name,check_duplicates,set_mro_error
+typeobj-set-mro-error-message	proven	Objects/typeobject.c	set_mro_error
+typeobj-metaclass-exact	proven	Objects/typeobject.c	_PyType_CalculateMetaclass
+typeobj-best-base-exact	proven	Objects/typeobject.c	find_best_base
+typeobj-maybe-call-special-exact	proven	Objects/typeobject.c	maybe_call_special_no_args,maybe_call_special_one_arg,lookup_maybe_method,lookup_method_ex
+typeobj-slot-tp-hash-exact	proven	Objects/typeobject.c	slot_tp_hash
+typeobj-slot-nb-bool-exact	proven	Objects/typeobject.c	slot_nb_bool
+typeobj-slot-sq-contains-exact	proven	Objects/typeobject.c	slot_sq_contains
+typeobj-slot-tp-init-exact	proven	Objects/typeobject.c	slot_tp_init
+typeobj-slot-tp-iter-exact	proven	Objects/typeobject.c	slot_tp_iter,has_dunder_getitem
+typeobj-slot-sq-length-exact	proven	Objects/typeobject.c	slot_sq_length
+typeobj-slot-nb-index-exact	proven	Objects/typeobject.c	slot_nb_index,vectorcall_method
+typeobj-method-is-overloaded-exact	proven	Objects/typeobject.c	method_is_overloaded
+typeobj-wrap-binary-exact	proven	Objects/typeobject.c	wrap_binaryfunc_l,wrap_binaryfunc_r
+typeobj-type-call-exact	proven	Objects/typeobject.c	type_call
+typeobj-object-init-exact	proven	Objects/typeobject.c	object_init,excess_args
+typeobj-object-new-exact	proven	Objects/typeobject.c	object_new,excess_args
+typeobj-abstract-names-exact	proven	Objects/typeobject.c	object_new
+typeobj-object-richcompare-exact	proven	Objects/typeobject.c	object_richcompare,_Py_BaseObject_RichCompare
+typeobj-object-format-exact	proven	Objects/typeobject.c	object___format___impl
+typeobj-get-new-arguments-exact	proven	Objects/typeobject.c	_PyObject_GetNewArguments
+typeobj-check-newargs-ex-exact	proven	Objects/typeobject.c	_PyObject_GetNewArguments
+typeobj-slot-names-exact	proven	Objects/typeobject.c	_PyType_GetSlotNames
+typeobj-wrap-in-dict-exact	proven	Objects/typeobject.c	type_new_staticmethod,type_new_classmethod
+typeobj-set-cell-exact	proven	Objects/typeobject.c	type_new_set_classcell,type_new_set_classdictcell
+typeobj-type-new-exact	proven	Objects/typeobject.c	type_new
+typeobj-same-slots-added-exact	proven	Objects/typeobject.c	same_slots_added
+typeobj-compatible-for-assignment-exact	proven	Objects/typeobject.c	compatible_for_assignment
+typeobj-set-class-world-stopped-exact	proven	Objects/typeobject.c	object_set_class_world_stopped
+typeobj-set-class-exact	proven	Objects/typeobject.c	object_set_class
+typeobj-find-name-in-mro-exact	proven	Objects/typeobject.c	find_name_in_mro
+typeobj-call-attribute-exact	proven	Objects/typeobject.c	call_attribute
+typeobj-getattr-hook-exact	proven	Objects/typeobject.c	_Py_slot_tp_getattr_hook
+typeobj-do-super-lookup-exact	proven	Objects/typeobject.c	do_super_lookup
+typeobj-super-getattro-exact	proven	Objects/typeobject.c	super_getattro
+typeobj-supercheck-exact	proven	Objects/typeobject.c	supercheck
+typeobj-type-getattro-exact	proven	Objects/typeobject.c	_Py_type_getattro_stackref,_Py_type_getattro_impl
+typeobj-type-ready-set-hash-exact	proven	Objects/typeobject.c	type_ready_set_hash
+typeobj-getstate-default-exact	proven	Objects/typeobject.c	object_getstate_default
 typeobj-metaclass-winner	proven	Objects/typeobject.c	_PyType_CalculateMetaclass
 typeobj-metaclass-conflict	proven	Objects/typeobject.c	_PyType_CalculateMetaclass
 typeobj-hash-none-eq	proven	Objects/typeobject.c	type_ready_set_hash
@@ -2491,13 +2620,13 @@ bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
 bytecode-unexpected-keyword	proven	Python/ceval.c	
 bytecode-resume	proven	Python/bytecodes.c	opcode:RESUME,opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM,opcode:RESUME_CHECK,opcode:_RESUME_CHECK,opcode:RESUME_CHECK_JIT
 bytecode-kwonly-defaults-borrowed	refuted	Python/ceval.c	initialize_locals
-pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
+pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
 pygrammar-lex-byte-col	proven	Parser/tokenizer/helpers.c	byte_col_to_char_col
-pygrammar-lex-comment-loops	proven	Parser/lexer/lexer.c	set_ftstring_expr
+pygrammar-lex-comment-loops	proven	Parser/lexer/lexer.c	
 pygrammar-lex-exact-tokens	proven	Parser/token.c	
-pygrammar-lex-nextc-in-buffer	proven	Parser/lexer/lexer.c	tok_nextc,tok_underflow_string
+pygrammar-lex-nextc-in-buffer	proven	Parser/lexer/lexer.c	
 pygrammar-lex-translate-newlines	proven	Parser/tokenizer/helpers.c	_PyTokenizer_translate_newlines
 pygrammar-lex-token-predicates	proven	Lib/token.py	
 pygrammar-lex-exact-type	proven	Lib/tokenize.py	
@@ -2515,6 +2644,7 @@ pygrammar-grammar-invalid-first-pass	refuted	Grammar/python.gram
 pygrammar-grammar-invalid-but-dict	proven	Grammar/python.gram	
 pygrammar-peg-first-error	proven	Parser/pegen_errors.c	
 pygrammar-peg-make-arguments	proven	Parser/action_helpers.c	_get_names,_get_defaults,_PyPegen_make_arguments
+pygrammar-peg-make-arguments-exact	proven	Parser/action_helpers.c	_get_names,_get_defaults,_PyPegen_make_arguments
 pygrammar-peg-concat	proven	Parser/action_helpers.c	_build_concatenated_str
 pygrammar-peg-roundtrip-parser	refuted	Parser/pegen.c	
 pygrammar-peg-roundtrip-actions	refuted	Parser/action_helpers.c	
@@ -2524,20 +2654,30 @@ pygrammar-grammar-call-rule-sound	proven	Grammar/python.gram
 pygrammar-grammar-rule-starts	proven	Grammar/python.gram	
 pygrammar-peg-progress	proven	Parser/parser.c	
 pygrammar-peg-actions-frame	proven	Parser/action_helpers.c	
-pygrammar-peg-token-readers	proven	Parser/pegen.c	_PyPegen_expect_forced_token,_PyPegen_expect_soft_keyword,_PyPegen_name_token,_PyPegen_soft_keyword_token
+pygrammar-peg-token-readers	proven	Parser/pegen.c	
+pygrammar-peg-tokenizer-error-arms	proven	Parser/pegen_errors.c	_Pypegen_tokenizer_error
+pygrammar-peg-set-syntax-error-arms	proven	Parser/pegen_errors.c	_Pypegen_set_syntax_error
+pygrammar-peg-memo-frontier	proven	Parser/pegen.c	_PyPegen_is_memoized
+pygrammar-peg-raise-error-exact	proven	Parser/pegen_errors.c	_PyPegen_raise_error
+pygrammar-peg-tokenize-rest-stops	proven	Parser/pegen_errors.c	_PyPegen_tokenize_full_source_to_check_for_errors
+pygrammar-peg-run-parser-paths	proven	Parser/pegen.c	_PyPegen_run_parser
+pygrammar-peg-token-readers-exact	proven	Parser/pegen.c	_PyPegen_expect_forced_token,_PyPegen_expect_soft_keyword,_PyPegen_name_token,_PyPegen_soft_keyword_token
+pygrammar-peg-token-readers-frontier	proven	Parser/pegen.c	_PyPegen_expect_forced_token,_PyPegen_expect_soft_keyword,_PyPegen_name_token,_PyPegen_soft_keyword_token
+pygrammar-peg-name-from-token	proven	Parser/pegen.c	_PyPegen_name_from_token
 pygrammar-peg-never-silent	proven	Parser/pegen.c	_PyPegen_run_parser
-pygrammar-peg-tokenizer-error	proven	Parser/pegen_errors.c	_Pypegen_tokenizer_error
-pygrammar-peg-set-syntax-error	proven	Parser/pegen_errors.c	_Pypegen_set_syntax_error
+pygrammar-peg-tokenizer-error	proven	Parser/pegen_errors.c	
+pygrammar-peg-set-syntax-error	proven	Parser/pegen_errors.c	
 pygrammar-peg-tokenize-full-source	proven	Parser/pegen_errors.c	_PyPegen_tokenize_full_source_to_check_for_errors
-pygrammar-peg-raise-known-location	proven	Parser/pegen_errors.c	_PyPegen_raise_error_known_location
-pygrammar-peg-raise-error	proven	Parser/pegen_errors.c	_PyPegen_raise_error
+pygrammar-peg-raise-known-location	proven	Parser/pegen_errors.c	
+pygrammar-peg-raise-error	proven	Parser/pegen_errors.c	
 pygrammar-peg-raise-unclosed	proven	Parser/pegen_errors.c	raise_unclosed_parentheses_error
 pygrammar-peg-decode-error	proven	Parser/pegen_errors.c	
-pygrammar-peg-fill-token	proven	Parser/pegen.c	_PyPegen_fill_token
+pygrammar-peg-fill-token	proven	Parser/pegen.c	
 pygrammar-peg-expect-token	proven	Parser/pegen.c	_PyPegen_expect_token
-pygrammar-peg-memo-cache	proven	Parser/pegen.c	_PyPegen_insert_memo,_PyPegen_update_memo,_PyPegen_is_memoized
+pygrammar-peg-memo-cache	proven	Parser/pegen.c	_PyPegen_insert_memo,_PyPegen_update_memo
 pygrammar-peg-last-token	proven	Parser/pegen.c	_PyPegen_get_last_nonnwhitespace_token
 pygrammar-peg-strip-interpolation	proven	Parser/action_helpers.c	_strip_interpolation_debug_expr
+pygrammar-peg-strip-continuations	proven	Parser/action_helpers.c	_strip_interpolation_debug_expr
 pygrammar-peg-decode-known	proven	Parser/pegen_errors.c	
 pygrammar-peg-decode-format-spec	refuted	Parser/action_helpers.c	_PyPegen_decoded_constant_from_token
 pygrammar-peg-missing-comma	proven	Parser/action_helpers.c	_PyPegen_raise_error_for_missing_comma
@@ -2858,7 +2998,7 @@ pygrammar-rule-invalid-tstring-replacement-field	proven	Grammar/python.gram	rule
 pygrammar-rule-invalid-tstring-conversion-character	proven	Grammar/python.gram	rule:invalid_tstring_conversion_character
 pygrammar-rule-invalid-string-tstring-concat	proven	Grammar/python.gram	rule:invalid_string_tstring_concat
 pygrammar-rule-tstring-field-messages	refuted	Grammar/python.gram	rule:invalid_tstring_replacement_field
-pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
+pygrammar-unparse-str-repr	proven	Parser/string_parser.c	Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
 pygrammar-ast-splitlines	proven	Lib/ast.py	
 pygrammar-ast-pad-whitespace	proven	Lib/ast.py	_pad_whitespace
@@ -2870,7 +3010,9 @@ pygrammar-check-null-sites	proven	Python/ast.c	validate_pattern,validate_pattern
 pygrammar-check-rejects	proven	Python/ast.c	validate_comprehension,validate_keywords,validate_args,validate_arguments,validate_expr,ensure_literal_number,ensure_literal_signed,ensure_literal_complex,validate_pattern_match_value,validate_capture,_validate_nonempty_seq,validate_import_names,validate_assignlist,validate_body,validate_stmt,validate_stmts,validate_exprs,validate_typeparam,validate_type_params
 pygrammar-check-table-covers	proven	Python/ast.c	
 pygrammar-check-targets	proven	Parser/action_helpers.c	_set_seq_context,_set_name_context,_set_tuple_context,_set_list_context,_set_subscript_context,_set_attribute_context,_set_starred_context,_PyPegen_set_expr_context,_PyPegen_get_invalid_target
-pygrammar-check-target-legal	proven	Parser/action_helpers.c	
+pygrammar-check-set-context-exact	proven	Parser/action_helpers.c	_set_seq_context,_set_name_context,_set_tuple_context,_set_list_context,_set_subscript_context,_set_attribute_context,_set_starred_context,_PyPegen_set_expr_context
+pygrammar-check-invalid-target-first	proven	Parser/action_helpers.c	_PyPegen_get_invalid_target
+pygrammar-check-target-legal	proven	Parser/action_helpers.c	_PyPegen_get_invalid_target
 pygrammar-check-set-context-last	proven	Parser/action_helpers.c	
 pygrammar-check-set-context-restores	proven	Parser/action_helpers.c	
 pygrammar-check-names-always	refuted	Python/ast.c	
@@ -3860,30 +4002,52 @@ misc-types-generator-wrapper	proven	Lib/types.py	_GeneratorWrapper.__init__,_Gen
 misc-types-generator-states	proven	Lib/types.py	_GeneratorWrapper.gi_state,_GeneratorWrapper.cr_state
 misc-types-coroutine	proven	Lib/types.py	coroutine
 misc-types-coroutine-wrapped	proven	Lib/types.py	coroutine
-misc-ctx-abstract-bases	proven	Lib/contextlib.py	AbstractContextManager.__enter__,AbstractContextManager.__exit__,AbstractContextManager.__subclasshook__,AbstractAsyncContextManager.__aenter__,AbstractAsyncContextManager.__aexit__,AbstractAsyncContextManager.__subclasshook__
+misc-ctx-abstract-bases	proven	Lib/contextlib.py	AbstractContextManager.__subclasshook__,AbstractAsyncContextManager.__subclasshook__
 misc-ctx-subclasshook-none	proven	Lib/contextlib.py	AbstractContextManager.__subclasshook__,AbstractAsyncContextManager.__subclasshook__
-misc-ctx-decorator	proven	Lib/contextlib.py	ContextDecorator._recreate_cm,AsyncContextDecorator._recreate_cm
-misc-ctx-recreate	proven	Lib/contextlib.py	_GeneratorContextManagerBase.__init__,_GeneratorContextManagerBase._recreate_cm,contextmanager,asynccontextmanager
-misc-ctx-enter	proven	Lib/contextlib.py	_GeneratorContextManager.__enter__,_AsyncGeneratorContextManager.__aenter__
-misc-ctx-exit-no-exception	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__,_AsyncGeneratorContextManager.__aexit__
-misc-ctx-exit-throw-cases	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__,_AsyncGeneratorContextManager.__aexit__
-misc-ctx-exit-never-raises-value	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__,_AsyncGeneratorContextManager.__aexit__
-misc-ctx-try-finally	proven	Lib/contextlib.py	contextmanager,asynccontextmanager,_GeneratorContextManager.__enter__,_GeneratorContextManager.__exit__
+misc-ctx-decorator	proven	Lib/contextlib.py	
+misc-ctx-gcm-init	proven	Lib/contextlib.py	_GeneratorContextManagerBase.__init__
+misc-ctx-recreate	proven	Lib/contextlib.py	_GeneratorContextManagerBase._recreate_cm
+misc-ctx-enter	proven	Lib/contextlib.py	_GeneratorContextManager.__enter__
+misc-ctx-exit-no-exception	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
+misc-ctx-exit-throw-cases	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
+misc-ctx-exit-value-none	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
+misc-ctx-exit-never-raises-value	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__
+misc-ctx-try-finally	proven	Lib/contextlib.py	contextmanager,_GeneratorContextManagerBase.__init__,_GeneratorContextManager.__enter__,_GeneratorContextManager.__exit__
+misc-ctx-wraps	proven	Lib/contextlib.py	contextmanager,asynccontextmanager
 misc-ctx-async-twin	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__,_GeneratorContextManager.__exit__
-misc-ctx-closing	proven	Lib/contextlib.py	closing.__init__,closing.__enter__,closing.__exit__,aclosing.__init__,aclosing.__aenter__,aclosing.__aexit__
-misc-ctx-nullcontext	proven	Lib/contextlib.py	nullcontext.__init__,nullcontext.__enter__,nullcontext.__exit__,nullcontext.__aenter__,nullcontext.__aexit__
+misc-ctx-aenter	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aenter__
+misc-ctx-aexit-no-exception	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__
+misc-ctx-aexit-throw-cases	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__
+misc-ctx-aexit-value-none	proven	Lib/contextlib.py	_AsyncGeneratorContextManager.__aexit__
+misc-ctx-async-try-finally	proven	Lib/contextlib.py	asynccontextmanager,_GeneratorContextManagerBase.__init__,_AsyncGeneratorContextManager.__aenter__,_AsyncGeneratorContextManager.__aexit__
+misc-ctx-closing	proven	Lib/contextlib.py	closing.__exit__
+misc-ctx-aclosing	proven	Lib/contextlib.py	aclosing.__aexit__
 misc-ctx-redirect	proven	Lib/contextlib.py	_RedirectStream.__init__,_RedirectStream.__enter__,_RedirectStream.__exit__
 misc-ctx-chdir	proven	Lib/contextlib.py	chdir.__init__,chdir.__enter__,chdir.__exit__
-misc-ctx-suppress-plain	proven	Lib/contextlib.py	suppress.__init__,suppress.__enter__,suppress.__exit__
-misc-ctx-suppress-group	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-issubclass	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-issubtuple	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-derive	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-group-consistent	refuted	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-split-refusals	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-suppress-nested	proven	Lib/contextlib.py	suppress.__exit__
+misc-ctx-lookup-special-is-special	refuted	Lib/contextlib.py	_lookup_special
 misc-ctx-exit-matches-nested	proven	Lib/contextlib.py	ExitStack.__exit__
 misc-ctx-exit-lifo	proven	Lib/contextlib.py	ExitStack.__exit__
-misc-ctx-exit-terminates	refuted	Lib/contextlib.py	ExitStack.__exit__,AsyncExitStack.__aexit__
-misc-ctx-exit-keeps-context-acyclic	refuted	Lib/contextlib.py	ExitStack.__exit__,AsyncExitStack.__aexit__
-misc-ctx-stack-registration	proven	Lib/contextlib.py	_BaseExitStack.__init__,_BaseExitStack.pop_all,_BaseExitStack.push,_BaseExitStack.enter_context,_BaseExitStack.callback,_BaseExitStack._push_exit_callback,ExitStack.__enter__,AsyncExitStack.__aenter__,AsyncExitStack.enter_async_context,AsyncExitStack.push_async_exit,AsyncExitStack.push_async_callback
+misc-ctx-exit-runs-lifo	proven	Lib/contextlib.py	_BaseExitStack._push_exit_callback,ExitStack.__exit__
+misc-ctx-exit-terminates	refuted	Lib/contextlib.py	ExitStack.__exit__
+misc-ctx-exit-keeps-context-acyclic	refuted	Lib/contextlib.py	ExitStack.__exit__
+misc-ctx-aexit-terminates	refuted	Lib/contextlib.py	AsyncExitStack.__aexit__
+misc-ctx-aexit-keeps-context-acyclic	refuted	Lib/contextlib.py	AsyncExitStack.__aexit__
+misc-ctx-stack-registration	proven	Lib/contextlib.py	_BaseExitStack.push,_BaseExitStack.enter_context,_BaseExitStack.callback,_BaseExitStack._push_exit_callback,AsyncExitStack.push_async_exit,AsyncExitStack.push_async_callback
+misc-ctx-pop-all	proven	Lib/contextlib.py	_BaseExitStack.pop_all
 misc-ctx-lookup-special	proven	Lib/contextlib.py	_lookup_special
-misc-ctx-callback-cannot-suppress	proven	Lib/contextlib.py	_BaseExitStack._create_cb_wrapper,AsyncExitStack._create_async_cb_wrapper
-misc-ctx-async-exit-matches	proven	Lib/contextlib.py	AsyncExitStack.__aexit__,AsyncExitStack.aclose,ExitStack.close
+misc-ctx-callback-cannot-suppress	proven	Lib/contextlib.py	_BaseExitStack._create_cb_wrapper,_BaseExitStack.callback
+misc-ctx-async-callback-cannot-suppress	proven	Lib/contextlib.py	AsyncExitStack._create_async_cb_wrapper,AsyncExitStack.push_async_callback
+misc-ctx-aenter-context	proven	Lib/contextlib.py	AsyncExitStack.enter_async_context
+misc-ctx-enter-context-refusals	proven	Lib/contextlib.py	_BaseExitStack.enter_context,AsyncExitStack.enter_async_context
+misc-ctx-close-matches-nested	proven	Lib/contextlib.py	ExitStack.close
+misc-ctx-aexit-matches-nested	proven	Lib/contextlib.py	AsyncExitStack.__aexit__
+misc-ctx-aclose-matches-nested	proven	Lib/contextlib.py	AsyncExitStack.aclose
 misc-wvd-iters	proven	Lib/weakref.py	WeakValueDictionary.items,WeakValueDictionary.keys,WeakValueDictionary.itervaluerefs,WeakValueDictionary.values,WeakValueDictionary.valuerefs
 misc-wvd-popitem	proven	Lib/weakref.py	WeakValueDictionary.popitem
 misc-wvd-copy	proven	Lib/weakref.py	WeakValueDictionary.copy

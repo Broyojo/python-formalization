@@ -222,7 +222,7 @@ theorem releasedKeyNoWriteNotC_proven : ReleasedKeyNoWriteNotC := by
 /-! ## A release in `__buffer__` of the other operand -/
 
 /-- A view released while `==` obtains the other operand's buffer compares like a released
-view: by identity (@3.14.7:3113-3116), so not equal to that operand. Quantified over all views
+view: by identity (:3216-3219), so not equal to that operand. Quantified over all views
 with no exports and all exporters of at most 64 dimensions. -/
 def CmpReleasedIdentity : Prop :=
   ∀ (st : St) (v : Nat) (b : Buf),

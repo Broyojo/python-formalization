@@ -187,8 +187,8 @@ def plainEnv : Env Dbl :=
   { warnErr := false, db := ⟨fun _ => false, fun _ => none⟩, sd := Dbl.asciiStrtod }
 
 /-- `complex(x)` and `complex(x, 0)` take the same real part from a `float`
-instance. The first goes through `PyFloat_AsDouble` (line 1141), the second
-through `PyNumber_Float` (line 1256). -/
+instance. The first goes through `PyFloat_AsDouble` (line 1161), the second
+through `PyNumber_Float` (line 1276). -/
 def OneArgMatchesTwoArgOnFloats : Prop :=
   ∀ (x : Obj Dbl), (∃ v, x.val = .flt v) →
     realPart (actual_complex_new plainEnv .complex [x] []) =

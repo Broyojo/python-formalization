@@ -6,34 +6,60 @@ Modules/itertoolsmodule.c	138	batched_new_impl	FAITHFUL	yes	yes	yes
 Modules/itertoolsmodule.c	171	batched_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	182	batched_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	191	batched_next	FAITHFUL	yes	yes	yes	Loop is summarised as take/drop, equal to the C loop on a list-backed source; the null_item branches (:218-249) are mirrored in order.
+Modules/itertoolsmodule.c	297	pairwise_new_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	323	pairwise_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	336	pairwise_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	347	pairwise_next	FAITHFUL	yes	yes	yes	pwNext mirrors both pulls, the po->it re-read (:364-368) and the po->old overwrite (:396) with a re-entering input; the registry statement of itertools-pairwise-reentry still cites :363-367, the 3.14.7 numbering.
+Modules/itertoolsmodule.c	456	itertools_groupby_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	478	groupby_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	493	groupby_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	505	groupby_step	FAITHFUL	yes	yes	yes	gbStep now runs the input's code after it takes the item (:510) and the key function's before it answers (:517), then reads currvalue and writes currvalue/currkey over whatever that code left (:524-527); grouper-reentrant-step pins that overwrite for any re-entrant code (a step that re-read or kept the other value fails it), keeps-items-no-reentry pins that no value is released without re-entry, and failed-step and next-step-error are now stated for an input and key that do not re-enter, the only domain the doc equivalent defines (it raises 'generator already executing' on re-entry); a key raising after re-entrant code ran is mirrored but has no statement beyond the definition, and nothing is promised there.
+Modules/itertoolsmodule.c	532	groupby_next	FAITHFUL	yes	yes	yes	Citations (:537, :539-566, :549-553, :558-559, :564-565, :567) match 3.15.2; gbNext runs the re-entrant gbStep inside its loop and re-reads currkey/tgtkey each iteration (:540-550); next-step-error is now restricted to an input and key that do not re-enter (the doc's domain), and the refuted keeps-items counterexample runs gbNext both at top level and re-entered from the key function, the path the restriction leaves out; no-crash with a re-entrant key or input (rather than __eq__) is not stated, though by the code it holds.
+Modules/itertoolsmodule.c	617	itertools__grouper_impl	FAITHFUL	yes	yes	yes	GrouperDirectInvalidates now calls next() on the new grouper and its result is the match on K.eq k ck, so a _grouper(gb, k) that ignored k or stored another key fails it; the subclass_of check is in the clinic wrapper, stated as not modelled.
+Modules/itertoolsmodule.c	625	_grouper_create	FAITHFUL	yes	yes	yes	gbCreate (:631-633: new grouper current, tgtkey stored) is unchanged; the keeps-items counterexample runs it through the re-entrant groupby_next that makes the group of 2 current.
 Modules/itertoolsmodule.c	640	_grouper_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	652	_grouper_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	662	_grouper_next	FAITHFUL	yes	yes	yes	The key function and input now re-enter through keyHooks/iterHooks run by gbRun, and gbGrouperNext checks currgrouper (:669) and currvalue (:671) only before the step (:672), then compares the group's own key with the live currkey (:681-683) and returns currvalue (:691-693); grouper-reentrant-step pins the missing re-check for any re-entrant code (a version that re-checked currgrouper after the step fails it) and its concrete run matches the bug reproducer traced by hand; keeps-items is refuted with a bug record and keeps-items-no-reentry pins :671; step-error, eq-error and eq-false cover the failure branches; all citations check out against 3.15.2.
+Modules/itertoolsmodule.c	752	teedataobject_newinternal	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	769	teedataobject_jumplink	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	781	teedataobject_getitem_lock_held	FAITHFUL	yes	yes	yes	tsGetitem mirrors the running guard (:791-795) and the set/clear around PyIter_Next (:796-798); hooks run only on a successful pull, which changes no branch here because the failure path reads nothing after PyIter_Next.
+Modules/itertoolsmodule.c	808	teedataobject_getitem	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	818	teedataobject_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	832	teedataobject_safe_decref	FAITHFUL	yes	-	-	Iterative release only; its one effect is that freeing a long chain cannot overflow the C stack, which is not a Python-level result.
 Modules/itertoolsmodule.c	847	teedataobject_clear	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	865	teedataobject_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	885	itertools_teedataobject_impl	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	949	tee_next	FAITHFUL	yes	yes	yes	GIL build (:954-970) only; the Py_GIL_DISABLED loop (:971-1012) is not modelled, and single-threaded it takes the same branches.
 Modules/itertoolsmodule.c	1016	tee_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	1025	tee_copy_impl	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1042	tee_copy	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1051	tee_fromiterable	FAITHFUL	yes	yes	yes	teeFromIterable (for _tee) mirrors :1056-1078, and cTeeR now models both PyObject_GetIter calls of tee(), the second being this function's :1056 through ReIter (self, another iterator, or an exception); tee-two-getiter pins that the tees read what the second call returns and that its exception propagates, so a model dropping :1056 fails it; the tee branch (:1059-1062) is tsOp .ctor; allocation failure and an __iter__ returning a tee are stated as not modelled.
+Modules/itertoolsmodule.c	1093	itertools__tee_impl	FAITHFUL	yes	yes	yes	cTeeWrap is tee_fromiterable after one GetIter; tee-wrap now claims equality with tee(x, 1) only for an iterator whose __iter__ returns itself (the iterator protocol), and tee-two-getiter proves where the two differ (_tee reads the first iterator, tee the second), so the earlier fold of the second GetIter is gone.
+Modules/itertoolsmodule.c	1101	tee_clear	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1111	tee_dealloc	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1161	itertools_tee_impl	FAITHFUL	yes	yes	yes	cTeeR mirrors the converter (clinic :338-352, 'n cannot be negative'), PyTuple_New, n == 0 returning before any GetIter (:1170-1171), PyObject_GetIter (:1172) and tee_fromiterable's second GetIter (:1056), then n - 1 copies (:1187-1194); tee-two-getiter pins both calls and the n == 0 early return, and tee-doc-agree and reentry-guard are unchanged with re = self.
 Modules/itertoolsmodule.c	1220	itertools_cycle_impl	FAITHFUL	yes	yes	yes	Passes on the error branch of cCycleNew only; saved and index = -1 are exercised by itertools-simple-doc-agree, which the row does not list.
 Modules/itertoolsmodule.c	1253	cycle_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1265	cycle_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1275	cycle_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1356	itertools_dropwhile_impl	FAITHFUL	yes	yes	yes	PyObject_GetIter is cIterNew and start = 0 is the false that cDropwhile passes; simple-doc-agree drains from the constructor, so both are pinned.
 Modules/itertoolsmodule.c	1381	dropwhile_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1393	dropwhile_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1403	dropwhile_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1479	itertools_takewhile_impl	FAITHFUL	yes	yes	yes	PyObject_GetIter is cIterNew and stop = 0 is the false that cTakewhile passes; simple-doc-agree drains from the constructor, so both are pinned.
 Modules/itertoolsmodule.c	1504	takewhile_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1516	takewhile_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1526	takewhile_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1590	islice_new	FAITHFUL	yes	yes	yes	cIsliceArgs citations (:1600-1602, :1604, :1607-1635, :1637-1642, :1644-1654) check out; isInit stores it/next/stop/step/cnt as :1667-1671, and the refuted no-use-after-free counterexample builds islice(it, 2, None) through cIsliceNew.
 Modules/itertoolsmodule.c	1677	islice_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1688	islice_traverse	FAITHFUL	yes	-	-	
-Modules/itertoolsmodule.c	1697	islice_next	FAITHFUL	yes	yes	yes	Passes on -nowrap, -ssize and consumes-max-start-stop; the -doc-agree refutation stops in argument parsing and never reaches this function.
+Modules/itertoolsmodule.c	1697	islice_next	FAITHFUL	yes	yes	yes	isNext now mirrors the borrowed local it (:1701) checked once (:1706-1707), every pull through it (:1711, :1719), lz->cnt and lz->next re-read after each pull (:1710, :1715, :1717, :1722-1728) and empty clearing lz->it (:1731-1733), with an input that may raise and re-enter and a freed flag for an iterator nobody else holds; reentry-pure carries the -nowrap, -ssize and consumes theorems to this mirror, reentry-rereads pins that the outer call advances the counters the inner calls left (a model caching cnt/next fails it), no-use-after-free is refuted with a bug record (duplicate of gh-142732), and no-crash-shared shows the crash needs the sole reference.
+Modules/itertoolsmodule.c	1789	itertools_starmap_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	1813	starmap_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1825	starmap_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1835	starmap_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1889	chain_new_internal	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	1905	chain_new	FAITHFUL	yes	yes	yes	The tp_init condition (:1911) is now customInit; the registry statement of itertools-constructor-errors still cites :1916.
 Modules/itertoolsmodule.c	1932	itertools_chain_from_iterable_impl	FAITHFUL	yes	yes	yes	Passes on the error branch of cChainFromIterable only; the success path is exercised by itertools-simple-doc-agree, which the row does not list.
 Modules/itertoolsmodule.c	1945	chain_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	1957	chain_traverse	FAITHFUL	yes	-	-	
@@ -43,18 +69,25 @@ Modules/itertoolsmodule.c	2069	product_new	FAITHFUL	yes	yes	yes
 Modules/itertoolsmodule.c	2152	product_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	2165	product_sizeof	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2176	product_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	2186	product_next_lock_held	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2273	product_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	2348	itertools_combinations_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2393	combinations_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	2406	combinations_sizeof	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2415	combinations_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	2425	combinations_next_lock_held	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2511	combinations_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	2599	itertools_combinations_with_replacement_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2645	cwr_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	2658	cwr_sizeof	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2667	cwr_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	2677	cwr_next_lock_held	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2757	cwr_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	2844	itertools_permutations_impl	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2912	permutations_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	2926	permutations_sizeof	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	2936	permutations_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	2946	permutations_next_lock_held	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	3037	permutations_next	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	3097	itertools_accumulate_impl	FAITHFUL	yes	yes	yes	Passes on the error branch of cAccumulateNew only; the success state is exercised by itertools-simple-doc-agree, which the row does not list.
 Modules/itertoolsmodule.c	3127	accumulate_dealloc	FAITHFUL	yes	-	-	
@@ -65,11 +98,16 @@ Modules/itertoolsmodule.c	3245	itertools_compress_impl	FAITHFUL	yes	yes	yes	Pass
 Modules/itertoolsmodule.c	3273	compress_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3285	compress_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3295	compress_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	3374	itertools_filterfalse_impl	FAITHFUL	yes	yes	yes	Its own citation (:3374-3395) is right; the Simple.lean section header above it still cites @3.14.7:3362-3482.
 Modules/itertoolsmodule.c	3398	filterfalse_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3410	filterfalse_traverse	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3420	filterfalse_next	FAITHFUL	yes	yes	yes	
+Modules/itertoolsmodule.c	3520	itertools_count_impl	FAITHFUL	yes	yes	yes	Pinned by count-new-modes and count-doc-agree-closed; count-fast-slow is now true for huge ints (repr raises the limit ValueError), and the hands-out-once counterexample runs this constructor (cCountR calls cCountNew).
 Modules/itertoolsmodule.c	3598	count_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3610	count_traverse	FAITHFUL	yes	-	-	
+Modules/itertoolsmodule.c	3620	count_nextlong	FAITHFUL	yes	yes	yes	The ownership comment is now cited as :3631-3632 in CountReentry.lean (three docstrings) and in the count-no-reentry and hands-out-once sources; cNextR with AddProg mirrors the slow switch (:3622-3628), the borrowed result (:3633), the re-entrant add (:3635), the failure return (:3636-3637) and the store over the inner call's sum (:3639-3641), pinned by count-reentry-twice, failed-add and the refuted hands-out-once.
+Modules/itertoolsmodule.c	3645	count_next	FAITHFUL	yes	yes	yes	Its dispatch (:3649-3651) is mirrored in cCountNext and in cNextR, which cNextR_lift ties together; the re-entry entries run this dispatch in both modes.
+Modules/itertoolsmodule.c	3675	count_repr	FAITHFUL	yes	yes	yes	pyRepr of an exact int is now intRepr, which raises the TO_STR ValueError (Objects/longobject.c:33) exactly for abs(a) >= 10**4300, matching the exact check (:2207-2217) and the pre-check (:2125-2135, from 481 digits, before the _pylong path at :2138) under the default limit; a changed sys.set_int_max_str_digits is a stated interpreter-setting scope, not a hypothesis on inputs, and count-fast-slow and count-consistent now state the failing repr.
 Modules/itertoolsmodule.c	3734	repeat_new	FAITHFUL	yes	yes	yes	
 Modules/itertoolsmodule.c	3760	repeat_dealloc	FAITHFUL	yes	-	-	
 Modules/itertoolsmodule.c	3771	repeat_traverse	FAITHFUL	yes	-	-	

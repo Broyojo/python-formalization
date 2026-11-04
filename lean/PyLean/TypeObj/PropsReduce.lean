@@ -123,14 +123,25 @@ theorem slotNamesWellTyped_proven : SlotNamesWellTyped := by
       simpa using h1
     · simp [h1, typeErr, raiseC] at h
   | none =>
-    cases hc : copyregSlotnames rt cls w with
-    | err e w1 => simp [hd, hc] at h
-    | ok r w1 =>
-      by_cases h1 : r.is .none = true ∨ (listOf w1 r).isSome = true
-      · simp [hd, hc, h1] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact h1
-      · simp [hd, hc, h1, typeErr, raiseC] at h
+    cases hcr : w.copyregSlotnames with
+    | none =>
+      cases hc : copyregSlotnames rt cls w with
+      | err e w1 => simp [hd, hcr, hc] at h
+      | ok r w1 =>
+        by_cases h1 : r.is .none = true ∨ (listOf w1 r).isSome = true
+        · simp [hd, hcr, hc, h1] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact h1
+        · simp [hd, hcr, hc, h1, typeErr, raiseC] at h
+    | some f =>
+      cases hc : rt.call f [.obj cls] [] w with
+      | err e w1 => simp [hd, hcr, hc] at h
+      | ok r w1 =>
+        by_cases h1 : r.is .none = true ∨ (listOf w1 r).isSome = true
+        · simp [hd, hcr, hc, h1] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact h1
+        · simp [hd, hcr, hc, h1, typeErr, raiseC] at h
 
 /-- **The guard on `__slotnames__` holds.** After a round of the loop of
 `object_getstate_default` at `i`, for every getter: a list of another size is the exact

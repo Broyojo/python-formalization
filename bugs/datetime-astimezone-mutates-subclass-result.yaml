@@ -1,0 +1,82 @@
+id: datetime-astimezone-mutates-subclass-result
+title: "datetime.astimezone() writes tzinfo in place into whatever datetime a subclass's __new__ returned (a cached instance changes, its hash goes stale)"
+priority: P3
+kind: correctness
+module: datetime
+files: [Modules/_datetimemodule.c]
+functions: ["C datetime_datetime_astimezone_impl", "C add_datetime_timedelta"]
+summary: |
+  datetime_datetime_astimezone_impl computes `result = self - offset` with
+  add_datetime_timedelta (Modules/_datetimemodule.c:6957-6961), which for a subclass calls
+  cls(y, m, d, hh, mm, ss, us, tzinfo) through new_datetime_subclass_ex (:6262-6265) and returns
+  what that call returns. For an aware result it then does Py_SETREF(result->tzinfo, utc)
+  (:6981-6984) and Py_SETREF(result->tzinfo, tzinfo) (:6996) on that object, treating it as a
+  fresh object it owns. When the subclass's __new__ hands back an existing instance (an interning
+  or flyweight cache, `if len(args) == 8: return D.cache`), the cached datetime is mutated: with
+  `D.cache = D(2000, 1, 1, 11, tzinfo=timezone.utc)`,
+  `D(2000, 1, 1, 12, tzinfo=timezone(timedelta(hours=1))).astimezone(timezone(timedelta(hours=2)))`
+  leaves `D.cache` as `D(2000, 1, 1, 11, 0, tzinfo=timezone(timedelta(seconds=7200)))`; it now
+  compares equal to `datetime(2000, 1, 1, 11, tzinfo=+02:00)` but keeps the hash it cached at UTC,
+  so `hash(D.cache) != hash(datetime(2000, 1, 1, 11, tzinfo=+02:00))` and dicts and sets that hold
+  it are inconsistent. _pydatetime never writes: `(self - myoffset).replace(tzinfo=tz)`
+  (Lib/_pydatetime.py:2157) gets the cached object back twice, and `tz.fromutc` raises
+  ValueError('fromutc: dt.tzinfo is not self'). A naive result is rebuilt with new_datetime_ex2
+  (:6964-6980) and not affected.
+  Related to datetime-subclass-arith-result-type-confusion (same call, same writes), but not fixed
+  by PR #145181: its PyDateTime_Check in add_datetime_timedelta passes for a real D instance.
+likelihood: |
+  Low: needs a datetime subclass whose __new__ returns an existing instance for the 8-argument
+  call. Interning subclasses exist, but are rare.
+maybe_intended: |
+  No: datetime objects are immutable, and a hash that disagrees with == breaks dict and set
+  invariants.
+reproducer: |
+  from datetime import datetime, timezone, timedelta
+  utc = timezone.utc
+  plus1 = timezone(timedelta(hours=1))
+  plus2 = timezone(timedelta(hours=2))
+  class D(datetime):
+      cache = None
+      def __new__(cls, *args, **kwargs):
+          if len(args) == 8 and D.cache is not None:
+              return D.cache
+          return super().__new__(cls, *args, **kwargs)
+  shared = D(2000, 1, 1, 11, tzinfo=utc)
+  before = repr(shared)
+  hash(shared)
+  D.cache = shared
+  D(2000, 1, 1, 12, tzinfo=plus1).astimezone(plus2)
+  twin = datetime(2000, 1, 1, 11, tzinfo=plus2)
+  print("before:", before)
+  print("after: ", repr(shared), "== twin:", shared == twin, "hash equal:", hash(shared) == hash(twin))
+  if repr(shared) != before:
+      print("REPRODUCED datetime-astimezone-mutates-subclass-result")
+expected: |
+  astimezone leaves every existing datetime unchanged (as _pydatetime does), e.g. by building the
+  UTC and target values with new_datetime_ex2 instead of writing into the call's result, or by
+  writing only when the result is a new object (Py_REFCNT(result) == 1 and of the exact type).
+promised_by: |
+  datetime docs ("Objects of these types are immutable"); the __hash__ contract (equal objects
+  have equal hashes).
+cause: |
+  Modules/_datetimemodule.c:6983 and :6996 write result->tzinfo into the object returned by
+  add_datetime_timedelta (:6957-6961), which for a subclass is the return value of cls(...)
+  (:6262-6265).
+possible_fix: |
+  Rebuild the result with new_datetime_ex2(..., Py_TYPE(result)) in both branches instead of
+  Py_SETREF on the returned object.
+reproduces:
+  python3 (3.15.2): REPRODUCED (after: D(2000, 1, 1, 11, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), == twin True, hash equal False)
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same output)
+duplicates:
+  issues:
+    - {number: 145166, state: open, relation: related, reason: same add_datetime_timedelta call, reports only the non-datetime result in tzinfo_fromutc}
+    - {number: 145181, state: open (PR), relation: does not fix, reason: its PyDateTime_Check passes for a cached instance of the subclass}
+  queries: ["gh search issues: astimezone mutates datetime subclass", "astimezone tzinfo in place subclass __new__",
+            "datetime immutable astimezone subclass cached", "astimezone hash changes",
+            "datetime subclass __new__ returns existing instance", "astimezone subclass", "datetime subclass __new__ astimezone",
+            "astimezone mutation", "datetime astimezone Py_SETREF", "astimezone (30 results read)",
+            "bugforge-results/README.md: no astimezone entry"]
+lean:
+  property: PyLean.Datetime.AstimezoneKeepsObjects
+  theorem: PyLean.Datetime.astimezoneKeepsObjects_refuted

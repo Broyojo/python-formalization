@@ -8,7 +8,7 @@ functions: ["C pep495_eq_exception", "C datetime_richcompare", "C delta_cmp"]
 summary: |
   pep495_eq_exception (Modules/_datetimemodule.c:6560-6586) tests
   `flip_offset != offset_self && delta_cmp(flip_offset, offset_self)` (:6569-6570, again at
-  :6579-6580). Both offsets come from datetime_utcoffset, so each is a timedelta or Py_None, and
+  :6580-6581). Both offsets come from datetime_utcoffset, so each is a timedelta or Py_None, and
   there is no PyDelta_Check: when one of them is None and the other a timedelta, delta_cmp
   (:2536-2546) reads GET_TD_DAYS/SECONDS/MICROSECONDS of Py_None, 12 bytes at offsets 24..35 of
   the 16-byte _Py_NoneStruct (Objects/object.c:2400), i.e. whatever static data follows it.
@@ -53,7 +53,7 @@ promised_by: |
   PEP 495 (inter-zone comparison of datetimes whose offset depends on fold is unequal); C/Python
   twin agreement (PEP 399); no reads outside an object.
 cause: |
-  Modules/_datetimemodule.c:6569-6570 and :6579-6580 call delta_cmp without PyDelta_Check on
+  Modules/_datetimemodule.c:6569-6570 and :6580-6581 call delta_cmp without PyDelta_Check on
   either argument; delta_cmp (:2536-2546) assumes timedeltas.
 possible_fix: |
   Treat a None/timedelta mix as "exception applies": e.g.

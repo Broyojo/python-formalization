@@ -67,11 +67,36 @@ def strCompare : List Char → List Char → Int
   | a :: as, b :: bs =>
     if a.toNat < b.toNat then -1 else if b.toNat < a.toNat then 1 else strCompare as bs
 
-/-- `object_richcompare`, `Objects/typeobject.c:7577`, for the cases that do not recurse
-into the slot. `eqSlot` is `tp_richcompare(self, other, Py_EQ)`. -/
+/-- The value has one object in CPython 3.15.2, so equal values are the same object: `None`,
+`NotImplemented`, `Ellipsis`, the bools, the small ints `-5..256` (`_PyLong_SMALL_INTS`), the empty
+string and the one-character Latin-1 strings (`_Py_LATIN1_CHR`), the empty tuple, and heap objects
+(by address). -/
+def identityDetermined : Val → Bool
+  | .obj _ | .none | .notImpl | .ellipsis | .bool _ => true
+  | .int i => decide (-5 ≤ i) && decide (i ≤ 256)
+  | .str s => decide (s.toList.length ≤ 1) && s.toList.all (fun c => decide (c.toNat < 256))
+  | .tuple [] => true
+  | _ => false
+
+/-- `self == other` on `PyObject *`, where the model knows it. Different values are different
+objects (`Val.is` is implied by identity). Equal values of a kind without a unique object (a big
+`int`, a `float`, a longer `str`, a non-empty tuple) may or may not be one object in CPython:
+`object.__eq__(int('1'*30), int('1'*30))` is `NotImplemented` there, while `x = 10**30;
+object.__eq__(x, x)` is `True`. The model does not track that identity, so it answers `none`. -/
+def identityKnown (v w : Val) : Option Bool :=
+  if !v.is w then some false else if identityDetermined v then some true else none
+
+/-- `object_richcompare`, `Objects/typeobject.c:7577-7618`, for the cases that do not recurse
+into the slot. `eqSlot` is `tp_richcompare(self, other, Py_EQ)` of the type of `self`, and is
+`NotImplemented` when that slot is NULL (`:7593-7596`, `callRichcompare`). `Py_EQ` compares
+pointers (`:7587`); where the model cannot tell (`identityKnown`), it stops (`gap%`). -/
 def objectRichcompare (rt : Rt) (eqSlot : M Val) (self other : Val) (op : CmpOp) : M Val :=
   match op with
-  | .eq => pure (if self.is other then .bool true else .notImpl)
+  | .eq =>
+    match identityKnown self other with
+    | some true => pure (.bool true)
+    | some false => pure .notImpl
+    | none => gap%
   | .ne => do
     let res ← eqSlot
     match res with
@@ -616,6 +641,23 @@ def descrRepr (w : World) (kind : String) (o : Addr) (n : Name) : String :=
   if o == B.object then s!"<{kind} '{n}'>"
   else s!"<{kind} '{n}' of '{tpName w o}' objects>"
 
+/-- `sys.flags.int_max_str_digits`, the default `_PY_LONG_DEFAULT_MAX_STR_DIGITS` (4300). -/
+def intMaxStrDigits : Nat := 4300
+
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, `Objects/longobject.c:33`, at the default limit. -/
+def intStrLimitMsg : String :=
+  "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
+
+/-- Does `str(i)` exceed the digit limit? `long_to_decimal_string_internal`,
+`Objects/longobject.c:2125-2134` and `:2207-2216`: the pre-check only fires for values that also
+fail the exact check, which compares the digit count without the sign to the limit. -/
+def intStrTooLong (i : Int) : Bool := decide ((Nat.toDigits 10 i.natAbs).length > intMaxStrDigits)
+
+/-- `long_to_decimal_string`, `Objects/longobject.c:2116-2290`: `repr`/`str` of an `int`, which
+raises `ValueError` above 4300 digits. -/
+def intDecimalString (i : Int) : M String :=
+  if intStrTooLong i then valueErr intStrLimitMsg else pure (toString i)
+
 /-- Call the `tp_repr` function `f`. -/
 def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   let w ← getW
@@ -628,8 +670,8 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   | .c .bool =>
     match v with
     | .bool b => pure (.str (if b then "True" else "False"))
-    | _ => pure (.str (toString ((intOf w v).getD 0)))
-  | .c .int => pure (.str (toString ((intOf w v).getD 0)))
+    | _ => .str <$> intDecimalString ((intOf w v).getD 0)
+  | .c .int => .str <$> intDecimalString ((intOf w v).getD 0)
   | .c .str => pure (.str (reprStr ((strOf w v).getD "")))
   | .c .type =>
     match v with
@@ -885,12 +927,15 @@ def numberAsSsize (rt : Rt) (item : Val) (err : Option Addr) : M Int := do
 
 /-! ## Sizes -/
 
-/-- `slot_sq_length`, `Objects/typeobject.c:10720`. -/
+/-- `slot_sq_length`, `Objects/typeobject.c:10720-10745`. -/
 def slotSqLength (rt : Rt) (self : Val) : M Int := do
   let res ← vectorcallMethod rt "__len__" [self]
-  let idx ← pyNumberIndex rt res
+  -- `Py_SETREF(res, _PyNumber_Index(res))`, `:10729`: an `int` subclass result is kept as is.
+  let v ← numberIndex rt res
+  let w ← getW
+  let idx := (intOf w v).getD 0
   if idx < 0 then valueErr "__len__() should return >= 0"
-  else numberAsSsize rt (.int idx) (some B.OverflowError)
+  else numberAsSsize rt v (some B.OverflowError)
 
 /-- Call `sq_length` or `mp_length`. -/
 def callLen (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
@@ -2052,7 +2097,21 @@ def pySetItem (rt : Rt) (o key : Val) (value : Option Val) : M Unit := do
 /-- `PySeqIter_New`, `Objects/iterobject.c`. -/
 def pySeqIterNew (seq : Val) : M Val := alloc B.seqIter (.seqIter (some seq) 0)
 
-/-- `slot_tp_iter`, `Objects/typeobject.c:11197`. -/
+/-- `has_dunder_getitem`, `Objects/typeobject.c:11184-11194`: whether `lookup_maybe_method` found
+`__getitem__`. An exception from the lookup (a raising `__get__`) is left set and the result is
+`0`; its only caller, `slot_tp_iter`, then replaces it with its own `TypeError`
+(`PyErr_Format` clears the pending error, `Python/errors.c:1226`), so here it is dropped. -/
+def hasDunderGetitem (rt : Rt) (self : Val) : M Bool :=
+  tryM (do
+      match ← lookupMethodEx rt self "__getitem__" false with
+      | .missing => pure false
+      | _ => pure true)
+    fun e => match e with
+      | .exc _ _ _ => pure false
+      | e => raise e
+
+/-- `slot_tp_iter`, `Objects/typeobject.c:11197-11216`. `attr_is_none` is tested before
+`has_dunder_getitem` (`:11208`), so `__iter__ = None` never looks up `__getitem__`. -/
 def slotTpIter (rt : Rt) (self : Val) : M Val := do
   let m ← maybeCallSpecial rt self "__iter__" [] true
   match m with
@@ -2061,13 +2120,11 @@ def slotTpIter (rt : Rt) (self : Val) : M Val := do
     let attrIsNone := match m with
       | .isNone => true
       | _ => false
-    let hasGetitem ← do
-      match ← lookupMethodEx rt self "__getitem__" false with
-      | .missing => pure false
-      | _ => pure true
-    if attrIsNone || !hasGetitem then
+    let notIter : M Val := do
       let w ← getW
       typeErr s!"'{trunc 200 (typeName w self)}' object is not iterable"
+    if attrIsNone then notIter
+    else if !(← hasDunderGetitem rt self) then notIter
     else pySeqIterNew self
 
 /-- Call the `tp_iter` function `f`. -/

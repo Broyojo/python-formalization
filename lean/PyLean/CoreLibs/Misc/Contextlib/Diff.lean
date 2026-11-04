@@ -27,6 +27,8 @@ def clsOf : String → Cls
   | "ExceptionGroup" => clsEG
   | "BaseExceptionGroup" => clsBEG
   | "MiscEG" => ["MiscEG", "ExceptionGroup", "BaseExceptionGroup", "Exception", "BaseException"]
+  | "MiscDerEG" => ["MiscDerEG", "ExceptionGroup", "BaseExceptionGroup", "Exception", "BaseException"]
+  | "MiscBadEG" => ["MiscBadEG", "ExceptionGroup", "BaseExceptionGroup", "Exception", "BaseException"]
   | n => [n, "Exception", "BaseException"]
 
 /-- `typ()`: class `BadInit` raises in `__init__`. -/
@@ -216,7 +218,7 @@ def runGcm (j : Json) : Except String Json := do
   let a ← getBool j "async"
   let script ← (← jArr (← field j "script")).mapM parseStep
   let mut s := initGS script a
-  let mut self := contextmanager
+  let mut self : GCM := { live := true }
   let mut out : Array Json := #[]
   let mut labels : List (ExcId × String) := []
   let mut vals : List (ExcId × Option Nat) := []
@@ -246,6 +248,11 @@ def runGcm (j : Json) : Except String Json := do
       let (s', r) := exitOf a s (some (clsOf (← jStrAt op 1))) none none
       s := s'
       out := out.push (encRes labels s.h jBool r)
+    | "recreate" =>
+      let init : St GS → St GS × Res (GCM × Option String) := fun s => (s, .ok ({ live := true }, none))
+      let (s', r) := gcmRecreate (nameOf a) self init none s
+      s := s'
+      out := out.push (encRes labels s.h (fun _ => jStr "new") r)
     | o => throw s!"bad op {o}"
   return Json.mkObj [("ok", Json.arr (out.push (jBool s.g.finished)))]
 
@@ -266,7 +273,7 @@ def runWith (j : Json) : Except String Json := do
   let a ← getBool j "async"
   let script ← (← jArr (← field j "script")).mapM parseStep
   let body ← jBody (← field j "body")
-  let (s, r) := withStmt (gcmCM a contextmanager) (bodyOf body) (initGS script a)
+  let (s, r) := withStmt (gcmCM a { live := true }) (bodyOf body) (initGS script a)
   let (s, r) := if a then coBoundary s r else (s, r)
   return Json.mkObj [("ok", Json.arr #[encRes [] s.h (jOpt jInt) r, jBool s.g.finished])]
 
@@ -279,7 +286,9 @@ def runDeco (j : Json) : Except String Json := do
   let call (s : St GS) : St GS × Res (Option Int) :=
     let s := { s with g := (initGS script a).g }
     ContextDecorator.call
-      (gcmRecreate (nameOf a) contextmanager (fun s => (s, .ok ()))) (gcmCM a)
+      (gcmRecreate (nameOf a) { live := true }
+        (fun s => (s, .ok (({ live := true } : GCM), (none : Option String)))) none)
+      (fun c => gcmCM a c.1)
       (fun s =>
         let (s, r) := bodyOf body 0 s
         if a then coBoundary s r else (s, r)) s
@@ -287,6 +296,115 @@ def runDeco (j : Json) : Except String Json := do
   let j1 := encRes [] s.h (jOpt jInt) r1
   let (s, r2) := call s
   return Json.mkObj [("ok", Json.arr #[j1, encRes [] s.h (jOpt jInt) r2])]
+
+/-- `_GeneratorContextManager(func, (), {})` and the async class, built directly. `func` raises at
+the call, or returns a generator; its `__doc__` is a string, `None`, or a property raising
+`AttributeError` or `ValueError`. -/
+def runInit (j : Json) : Except String Json := do
+  let a ← getBool j "async"
+  let fk ← getStr j "func"
+  let call : St Unit → St Unit × Res Unit := fun s =>
+    if fk == "raise" then
+      let (s, e) := s.raiseNew (clsOf "ValueError") "call"
+      (s, .error e)
+    else (s, .ok ())
+  let getDoc : St Unit → St Unit × Res (Option String) := fun s =>
+    match fk with
+    | "docattr" =>
+      let (s, e) := s.raiseNew clsAttr "doc"
+      (s, .error e)
+    | "docval" =>
+      let (s, e) := s.raiseNew (clsOf "ValueError") "doc"
+      (s, .error e)
+    | "nodoc" => (s, .ok none)
+    | _ => (s, .ok (some "D"))
+  let cdoc : Option String :=
+    some (if a then "Helper for @asynccontextmanager decorator." else "Helper for @contextmanager decorator.")
+  let (s, r) := contextmanagerCall call getDoc cdoc { h := [], g := () }
+  return Json.mkObj [("ok", encRes [] s.h (fun (x : GCM × Option String) => jOpt jStr x.2) r)]
+
+/-- A raw step of an object used as `gen` that is no async generator: `__anext__`, `athrow` and
+`aclose` either return an awaitable that gives a value, or raise at the call. -/
+inductive RStep where
+  | val (v : Int)
+  | stop
+  | stopA
+  | raiseNew (c : String)
+  | reraise
+  deriving Repr, DecidableEq
+
+def parseRStep (j : Json) : Except String RStep := do
+  match ← jStrAt j 0 with
+  | "val" => return .val (← jIntAt j 1)
+  | "stop" => return .stop
+  | "stopa" => return .stopA
+  | "raise" => return .raiseNew (← jStrAt j 1)
+  | "reraise" => return .reraise
+  | o => throw s!"bad raw step {o}"
+
+def rawDo (s : St (List RStep)) (thrown handled : Option ExcId) : St (List RStep) × Res Int :=
+  let (step, rest) := match s.g with
+    | [] => (RStep.stopA, [])
+    | x :: xs => (x, xs)
+  let s := { s with g := rest }
+  match step with
+  | .val v => (s, .ok v)
+  | .stop =>
+    let (s, e) := s.raiseNew clsStop "" handled
+    (s, .error e)
+  | .stopA =>
+    let (s, e) := s.raiseNew clsStopAsync "" handled
+    (s, .error e)
+  | .raiseNew c =>
+    let (s, e) := s.raiseNew (clsOf c) "raw" handled
+    (s, .error e)
+  | .reraise =>
+    match thrown with
+    | some t => ({ s with h := s.h.raiseCtx t handled }, .error t)
+    | none =>
+      let (s, e) := s.raiseNew clsRuntime "raw" handled
+      (s, .error e)
+
+def rawOps : GenOps (List RStep) Int :=
+  { next := fun s => rawDo s none none
+    throw := fun s v => rawDo s (some v) none
+    close := fun s hd =>
+      match rawDo s none hd with
+      | (s, .ok _) => (s, .ok ())
+      | (s, .error e) => (s, .error e)
+    handled := fun _ => none }
+
+def runAgRaw (j : Json) : Except String Json := do
+  let steps ← (← jArr (← field j "steps")).mapM parseRStep
+  let mut s : St (List RStep) := { h := [], g := steps }
+  let mut self : GCM := { live := true }
+  let mut out : Array Json := #[]
+  let mut labels : List (ExcId × String) := []
+  for op in (← jArr (← field j "ops")) do
+    match ← jStrAt op 0 with
+    | "enter" =>
+      let (g, s', r) := agcmEnter rawOps self s
+      self := g
+      s := s'
+      out := out.push (encRes labels s.h jInt r)
+    | "exit_none" =>
+      let (s', r) := agcmExit rawOps instantiate s none none none
+      s := s'
+      out := out.push (encRes labels s.h jBool r)
+    | "exit_inst" =>
+      let c := clsOf (← jStrAt op 1)
+      let (h, v) := s.h.alloc { cls := c, msg := "body" }
+      s := { s with h := h }
+      labels := labels ++ [(v, "value")]
+      let (s', r) := agcmExit rawOps instantiate s (some c) (some v) none
+      s := s'
+      out := out.push (encRes labels s.h jBool r)
+    | "exit_type" =>
+      let (s', r) := agcmExit rawOps instantiate s (some (clsOf (← jStrAt op 1))) none none
+      s := s'
+      out := out.push (encRes labels s.h jBool r)
+    | o => throw s!"bad op {o}"
+  return Json.mkObj [("ok", Json.arr out)]
 
 /-! ### `suppress` -/
 
@@ -318,17 +436,53 @@ partial def treeJson (h : Heap) (orig : List (ExcId × String)) (e : ExcId) : Js
     | some cs =>
       Json.arr #[jStr (o.cls.headD ""), jStr o.msg, Json.arr (cs.map (treeJson h orig)).toArray]
 
+/-- The classes and objects a `suppress` case can be given. `MiscAbc` is an ABC with `ValueError`
+registered, `MiscAbcExc` an exception class with metaclass `ABCMeta` and `KeyError` registered,
+`tuple` is `(ValueError, KeyError)`, `three` the int `3`. -/
+def supItem (handled : Option ExcId) (n : String) : SupItem Unit :=
+  let hook (test : Cls → Bool) (exc : Option Cls) : SupItem Unit :=
+    .hook (fun d s => match d with
+      | .cls c => (s, .ok (test c))
+      | .other =>
+        let (s, e) := s.raiseNew clsType "issubclass() arg 1 must be a class" handled
+        (s, .error e)) exc
+  match n with
+  | "MiscAbc" => hook (fun c => c.contains "ValueError" || c.contains "MiscAbc") none
+  | "MiscAbcExc" => hook (fun c => c.contains "KeyError" || c.contains "MiscAbcExc")
+      (some ["MiscAbcExc", "Exception", "BaseException"])
+  | "tuple" => hook (fun c => c.contains "ValueError" || c.contains "KeyError") none
+  | "three" => .other
+  | c => .cls (clsOf c)
+
+/-- `derive` of the group classes of the cases: `MiscDerEG` makes a `MiscDerEG("d:" + message)`,
+`MiscBadEG` returns the int `5`, the others are the builtin. -/
+def caseDerive : Derive Unit := fun orig excs s =>
+  match (s.h.get orig).cls.head? with
+  | some "MiscDerEG" =>
+    let (h, e) := s.h.alloc
+      { cls := clsOf "MiscDerEG", msg := "d:" ++ (s.h.get orig).msg, children := some excs }
+    ({ s with h := h }, .ok e)
+  | some "MiscBadEG" =>
+    let (h, e) := s.h.alloc { cls := ["int", "object"] }
+    ({ s with h := h }, .ok e)
+  | _ => builtinDerive orig excs s
+
 def runSuppress (j : Json) : Except String Json := do
   let cs ← (← jArr (← field j "classes")).mapM (fun x => x.getStr?)
-  let cs := cs.flatMap (fun c => [c])
   let (h, e) ← buildTree (← field j "tree") []
   let leafLabels : List (ExcId × String) := [(e, "orig")]
   let s : St Unit := { h, g := () }
   let handled : Option ExcId := if (← getBool j "with") then some e else none
-  let (s, r) := suppressExit cs s handled (some e)
-  match r with
-  | .ok v => return Json.mkObj [("ok", Json.arr #["ok", jOpt jBool v])]
-  | .error x =>
+  let items := cs.map (supItem handled)
+  let exctype : Option Derived := match (← getStr j "exctype") with
+    | "none" => none
+    | "int" => some .other
+    | _ => some (.cls (h.get e).cls)
+  let excinst : Option ExcId := if (← getBool j "noinst") then none else some e
+  match suppressExit items caseDerive s handled exctype excinst with
+  | .error err => throw s!"model error {err.className}"
+  | .ok (s, .ok v) => return Json.mkObj [("ok", Json.arr #["ok", jOpt jBool v])]
+  | .ok (s, .error x) =>
     let ctx := (s.h.get x).context
     return Json.mkObj [("ok", Json.arr #["exc", treeJson s.h leafLabels x,
       jOpt (fun c => treeJson s.h leafLabels c) ctx, jBool (x == e)])]
@@ -340,6 +494,11 @@ inductive Beh where
   | raiseNew (c : String)
   | reraise
   | pushCb (b : Beh) (id : Nat)
+  /-- `StopIteration("cb")` -/
+  | stop
+  /-- the behaviour of a plain function used where an awaitable is expected: it raises at the
+  call, so no frame of its own turns a `StopIteration` into `RuntimeError` -/
+  | plain (b : Beh)
   deriving Repr, DecidableEq, Inhabited
 
 /-- The world of a stack case. -/
@@ -350,8 +509,12 @@ structure SW where
 
 abbrev XF := Nat × Beh
 
-def behRun (bh : Beh) (x : Xs SW XF XF Unit) (d : Option ExcId) :
-    Xs SW XF XF Unit × Res Bool :=
+def behRun : Beh → Xs SW XF XF Unit → Option ExcId → Xs SW XF XF Unit × Res Bool
+  | .plain b, x, d => behRun b x d
+  | .stop, x, _ =>
+    let (s, e) := x.1.raiseNew clsStop "cb" x.1.g.frame
+    ((s, x.2), .error e)
+  | bh, x, d =>
   match bh with
   | .ret b => (x, .ok b)
   | .raiseNew c =>
@@ -364,6 +527,7 @@ def behRun (bh : Beh) (x : Xs SW XF XF Unit) (d : Option ExcId) :
       let (s, e) := x.1.raiseNew clsRuntime "nothing" x.1.g.frame
       ((s, x.2), .error e)
   | .pushCb b i => ((x.1, (true, .raw (i, b)) :: x.2), .ok false)
+  | _ => (x, .ok false)
 
 def stackLog (x : Xs SW XF XF Unit) (i : Nat) (d : Option ExcId) (tag : String) : Xs SW XF XF Unit :=
   let w := x.1.g
@@ -371,17 +535,21 @@ def stackLog (x : Xs SW XF XF Unit) (i : Nat) (d : Option ExcId) (tag : String) 
   ({ x.1 with g := { w with log := w.log ++ [Json.arr #[toJson i, jStr tag, e]] } }, x.2)
 
 /-- An `async def` callback's frame converts `StopIteration`. -/
-def behBoundary (tag : String) (r : Xs SW XF XF Unit × Res Bool) : Xs SW XF XF Unit × Res Bool :=
-  if tag == "a" then
+def behBoundary (tag : String) (b : Beh) (r : Xs SW XF XF Unit × Res Bool) :
+    Xs SW XF XF Unit × Res Bool :=
+  let plain := match b with
+    | .plain _ => true
+    | _ => false
+  if tag == "a" && !plain then
     let (s, res) := coBoundary r.1.1 r.2
     ((s, r.1.2), res)
   else r
 
 def mkCalls (tag : String) : Calls SW XF XF Unit where
-  raw := fun f x d => behBoundary tag (behRun f.2 (stackLog x f.1 d tag) d)
-  bound := fun m _ x d => behBoundary tag (behRun m.2 (stackLog x m.1 d tag) d)
+  raw := fun f x d => behBoundary tag f.2 (behRun f.2 (stackLog x f.1 d tag) d)
+  bound := fun m _ x d => behBoundary tag m.2 (behRun m.2 (stackLog x m.1 d tag) d)
   wrapped := fun f _ x =>
-    match behBoundary tag (behRun f.2 (stackLog x f.1 none tag) none) with
+    match behBoundary tag f.2 (behRun f.2 (stackLog x f.1 none tag) none) with
     | (x, .error e) => (x, .error e)
     | (x, .ok _) => (x, .ok ())
 
@@ -392,6 +560,8 @@ def parseBeh : Nat → Json → Except String Beh
     | "ret" => return .ret (← jBoolAt j 1)
     | "raise" => return .raiseNew (← jStrAt j 1)
     | "reraise" => return .reraise
+    | "stop" => return .stop
+    | "plain" => return .plain (← parseBeh d (← jGetI j 1))
     | "pushcb" => return .pushCb (← parseBeh d (← jGetI j 1)) (← jNatAt j 2)
     | o => throw s!"bad beh {o}"
 
@@ -407,19 +577,19 @@ def runStack (j : Json) : Except String Json := do
     match ← jStrAt op 0 with
     | "push_fn" =>
       let f ← beh 2
-      let ret : Stack XF XF Unit := if ← jBoolAt op 3
-        then (pushAsyncExit (fun _ => none) id x.2 f).1
-        else (push (fun _ => none) id x.2 f).1
+      let (ret, r) := if ← jBoolAt op 3
+        then pushAsyncExit (fun _ => none) id x.2 f
+        else push (fun _ => none) id x.2 f
       x := (x.1, ret)
-      out := out.push (toJson f.1)
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_cm" =>
       let f ← beh 2
       let look : ExitLookup XF XF Unit := fun o => some (.get (.ok (.bound o o)))
-      let ret : Stack XF XF Unit := if ← jBoolAt op 3
-        then (pushAsyncExit look id x.2 f).1
-        else (push look id x.2 f).1
+      let (ret, r) := if ← jBoolAt op 3
+        then pushAsyncExit look id x.2 f
+        else push look id x.2 f
       x := (x.1, ret)
-      out := out.push (toJson f.1)
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_static" =>
       let f ← beh 2
       let kind ← jStrAt op 4
@@ -428,11 +598,11 @@ def runStack (j : Json) : Except String Json := do
           | "class" => .isClass (.raw o)
           | "noget" => .noGet (.raw o)
           | _ => .get (.ok (.raw o)))
-      let ret : Stack XF XF Unit := if ← jBoolAt op 3
-        then (pushAsyncExit look id x.2 f).1
-        else (push look id x.2 f).1
+      let (ret, r) := if ← jBoolAt op 3
+        then pushAsyncExit look id x.2 f
+        else push look id x.2 f
       x := (x.1, ret)
-      out := out.push (toJson f.1)
+      out := out.push (Json.arr #[toJson f.1, jBool (match r with | .ok o => o == f | .error _ => false)])
     | "push_descfail" =>
       let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
       let isAsync ← jBoolAt op 1
@@ -442,45 +612,71 @@ def runStack (j : Json) : Except String Json := do
       out := out.push (encRes x.1.g.labels x.1.h (fun _ => Json.null) r)
     | "callback" =>
       let f ← beh 2
-      x := (x.1, if ← jBoolAt op 3 then pushAsyncCallback x.2 f () else callback x.2 f ())
-      out := out.push (toJson f.1)
+      let (st, ret) := if ← jBoolAt op 3 then pushAsyncCallback x.2 f () else callback x.2 f ()
+      x := (x.1, st)
+      out := out.push (Json.arr #[toJson f.1, jBool (ret == f)])
     | "enter_ctx" =>
       let f ← beh 2
       let en : Int ← jIntAt op 3
-      let en2 ← jBoolAt op 4
+      let en2 ← jStrAt op 4
       let isAsync ← jBoolAt op 5
       let m : XF → Option (Descr (Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int)) := fun _ =>
         some (.get (.ok (fun x =>
-          if en2 then
+          if en2 == "fail" then
             let (s, e) := x.1.raiseNew (clsOf "ValueError") "enter"
             ((s, x.2), .error e)
+          else if en2 == "stop" then
+            let (s, e) := x.1.raiseNew clsStop "enter"
+            ((s, x.2), .error e)
           else (x, .ok en))))
-      let (x', r) := enterContext m (fun o => some (.get (.ok (.bound o o)))) "" (!isAsync) x f
+      let (x', r) := if isAsync
+        then aenterContext m (fun o => some (.get (.ok (.bound o o)))) "" none x f
+        else enterContext m (fun o => some (.get (.ok (.bound o o)))) "" true none x f
       x := x'
       out := out.push (encRes x.1.g.labels x.1.h jInt r)
     | "enter_bad" =>
       let isAsync ← jBoolAt op 1
       let kind ← jStrAt op 2
+      let inExc ← jBoolAt op 3
       let tail := if isAsync then "asynchronous context manager protocol" else "context manager protocol"
       let msg := s!"'__main__.{if kind == "noexit" then "MiscNoExit" else "MiscNoCM"}' object does not support the {tail}"
       let body : Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int := fun x => (x, .ok 0)
+      -- inside `except KeyError:` for a `KeyError("handled")`
+      let (x0, handled) : Xs SW XF XF Unit × Option ExcId :=
+        if inExc then
+          let (h, e) := x.1.h.alloc { cls := clsOf "KeyError", msg := "handled" }
+          (({ x.1 with h := h }, x.2), some e)
+        else (x, none)
       let (x', r) ← match kind with
-        | "none" => pure (enterContext (fun _ => none) (fun _ => none) msg true x ((0, .ret false) : XF))
-        | "noexit" => pure (enterContext (fun _ => some (.noGet body)) (fun _ => none) msg true x ((0, .ret false) : XF))
+        | "none" => pure (enterContext (fun _ => none) (fun _ => none) msg true handled x0 ((0, .ret false) : XF))
+        | "noexit" => pure (enterContext (fun _ => some (.noGet body)) (fun _ => none) msg true handled x0 ((0, .ret false) : XF))
         | "enterfail" =>
-          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
-          let y : Xs SW XF XF Unit := (s, x.2)
-          pure (enterContext (fun _ => some (.get (.error e))) (fun _ => none) msg true y ((0, .ret false) : XF))
+          let (s, e) := x0.1.raiseNew (clsOf "ValueError") "descr" handled
+          let y : Xs SW XF XF Unit := (s, x0.2)
+          pure (enterContext (fun _ => some (.get (.error e))) (fun _ => none) msg true handled y ((0, .ret false) : XF))
         | _ =>
-          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
-          let y : Xs SW XF XF Unit := (s, x.2)
-          pure (enterContext (fun _ => some (.noGet body)) (fun _ => some (.get (.error e))) msg true y ((0, .ret false) : XF))
+          let (s, e) := x0.1.raiseNew (clsOf "ValueError") "descr" handled
+          let y : Xs SW XF XF Unit := (s, x0.2)
+          pure (enterContext (fun _ => some (.noGet body)) (fun _ => some (.get (.error e))) msg true handled y ((0, .ret false) : XF))
+      let (s', r) := if isAsync then coBoundary x'.1 r else (x'.1, r)
+      let x' := (s', x'.2)
       x := x'
       out := out.push (encRes x.1.g.labels x.1.h jInt r)
     | "pop_all" =>
-      let (new, kept) := popAll x.2
-      out := out.push (toJson kept.length)
-      x := (x.1, new)
+      let fails ← jBoolAt op 1
+      let mk : St SW → St SW × Res Unit := fun s =>
+        if fails then
+          let (s, e) := s.raiseNew (clsOf "ValueError") "init"
+          (s, .error e)
+        else (s, .ok ())
+      let (s', kept, r) := popAll mk x.1 x.2
+      match r with
+      | .ok (_, new) =>
+        out := out.push (toJson kept.length)
+        x := (s', new)
+      | .error e =>
+        out := out.push (Json.arr #[encRes x.1.g.labels s'.h jUnit (.error e), toJson kept.length])
+        x := (s', kept)
     | "exit" =>
       let excSpec ← jGetI op 1
       let frame ← jBoolAt op 2
@@ -507,17 +703,14 @@ def runStack (j : Json) : Except String Json := do
     | "close" =>
       let c := mkCalls "s"
       let ac := mkCalls "a"
-      let r : Py (Xs SW XF XF Unit × Res Bool) :=
-        if a then aexit c ac 64 (fixFuel x.1.h + 40) x none none
-        else exit c 64 (fixFuel x.1.h + 40) x none none
+      let r : Py (Xs SW XF XF Unit × Res Unit) :=
+        if a then aclose c ac 64 (fixFuel x.1.h + 40) x none
+        else close c 64 (fixFuel x.1.h + 40) x none
       match r with
       | .error e => throw s!"model error {e.className}"
       | .ok (x', res) =>
         x := x'
-        let res' : Res Unit := match res with
-          | .ok _ => .ok ()
-          | .error e => .error e
-        out := out.push (encRes x.1.g.labels x.1.h jUnit res')
+        out := out.push (encRes x.1.g.labels x.1.h jUnit res)
     | o => throw s!"bad op {o}"
   return Json.mkObj [("ok", Json.arr #[Json.arr out, Json.arr x.1.g.log.toArray, toJson x.2.length])]
 
@@ -528,32 +721,46 @@ instance : Inhabited (Chdir String) := ⟨Chdir.init ""⟩
 
 def runRedirect (j : Json) : Except String Json := do
   let mut rs : Array (Redirect Int) := #[Redirect.init 1, Redirect.init 2]
-  let mut cur : Int := 0
+  let mut cur : Option Int := some 0
   let mut out : Array Json := #[]
   for op in (← jArr (← field j "ops")) do
     let i ← jNatAt op 1
     let r := rs[i]!
     match ← jStrAt op 0 with
     | "enter" =>
-      let (r', c, v) := r.enter cur
+      let got : Except String Int := match cur with
+        | some c => .ok c
+        | none => .error "module 'sys' has no attribute 'stdout'"
+      let (r', res) := r.enter got
       rs := rs.set! i r'
-      cur := c
-      out := out.push (jInt v)
+      match res with
+      | .ok (c, v) =>
+        cur := some c
+        out := out.push (jInt v)
+      | .error m => out := out.push (Json.arr #["exc", "AttributeError", jStr m])
     | "exit" =>
       match r.exit with
       | none => out := out.push (Json.arr #["exc", "IndexError", jStr popEmpty])
       | some (r', c) =>
         rs := rs.set! i r'
-        cur := c
+        cur := some c
         out := out.push (jInt c)
+    | "del" =>
+      cur := none
+      out := out.push Json.null
     | o => throw s!"bad op {o}"
-    out := out.push (Json.arr #[jInt cur, jList jInt rs[0]!.oldTargets, jList jInt rs[1]!.oldTargets])
+    out := out.push (Json.arr #[jInt (cur.getD (-1)), jList jInt rs[0]!.oldTargets,
+      jList jInt rs[1]!.oldTargets])
   return Json.mkObj [("ok", Json.arr out)]
 
 def fsChdir (p _cwd : String) : Except String String :=
   if p == "/nonexistent" then .error s!"[Errno 2] No such file or directory: '{p}'"
   else if p == "." then .ok _cwd
   else .ok p
+
+/-- `os.getcwd()`; `<gone>` is a removed directory. -/
+def fsGetcwd (cwd : String) : Except String String :=
+  if cwd == "<gone>" then .error "[Errno 2] No such file or directory" else .ok cwd
 
 def runChdir (j : Json) : Except String Json := do
   let paths ← (← jArr (← field j "paths")).mapM (fun x => x.getStr?)
@@ -565,7 +772,7 @@ def runChdir (j : Json) : Except String Json := do
     let c := cs[i]!
     match ← jStrAt op 0 with
     | "enter" =>
-      let (c', cwd, r) := c.enter fsChdir cur
+      let (c', cwd, r) := c.enter fsChdir (fsGetcwd cur) cur
       cs := cs.set! i c'
       cur := cwd
       out := out.push (match r with
@@ -580,6 +787,9 @@ def runChdir (j : Json) : Except String Json := do
         out := out.push (match r with
           | .ok () => Json.arr #["ok", Json.null]
           | .error m => Json.arr #["exc", "FileNotFoundError", jStr m])
+    | "gone" =>
+      cur := "<gone>"
+      out := out.push Json.null
     | o => throw s!"bad op {o}"
     out := out.push (jStr cur)
   return Json.mkObj [("ok", Json.arr out)]
@@ -614,6 +824,32 @@ def runClosing (j : Json) : Except String Json := do
   let (s, r) := withStmt cm bodyF { h := [], g := 0 }
   return Json.mkObj [("ok", Json.arr #[encRes [] s.h (jOpt jInt) r, toJson s.g])]
 
+def runAclosing (j : Json) : Except String Json := do
+  let kind ← getStr j "aclose"
+  let body ← jBody (← field j "body")
+  let acloseF (handled : Option ExcId) (s : St Nat) : St Nat × Res Unit :=
+    let s := { s with g := s.g + 1 }
+    match kind with
+    | "raise" =>
+      let (s, e) := s.raiseNew (clsOf "ValueError") "close" handled
+      (s, .error e)
+    | "stop" =>
+      let (s, e) := s.raiseNew clsStop "" handled
+      (s, .error e)
+    | _ => (s, .ok ())
+  let cm : CM Nat Int :=
+    { enter := fun s => (s, .ok (closingEnter (5 : Int)))
+      exit := fun s e => aclosingExit (acloseF e) s }
+  let bodyF (_ : Int) (s : St Nat) : St Nat × Res Int :=
+    match body with
+    | none => (s, .ok 1)
+    | some c =>
+      let (s, e) := s.raiseNew (clsOf c) "body"
+      (s, .error e)
+  let (s, r) := withStmt cm bodyF { h := [], g := 0 }
+  let (s, r) := coBoundary s r
+  return Json.mkObj [("ok", Json.arr #[encRes [] s.h (jOpt jInt) r, toJson s.g])]
+
 def runNull (j : Json) : Except String Json := do
   let v ← getInt j "v"
   let body ← jBody (← field j "body")
@@ -629,6 +865,114 @@ def runNull (j : Json) : Except String Json := do
   let (s, r) := withStmt cm bodyF { h := [], g := () }
   return Json.mkObj [("ok", encRes [] s.h (jOpt jInt) r)]
 
+/-! ### `@wraps(func)` -/
+
+/-- The values of a `wraps` case: strings, ints, `None`, tuples by length, a list, a function, the
+decorated object itself, and `functools.Placeholder`. -/
+inductive WV where
+  | s (x : String)
+  | i (n : Int)
+  | none
+  | t (n : Nat)
+  | l
+  | fn
+  | self
+  | ph
+  deriving Repr, DecidableEq, Inhabited
+
+def wvOps : ValOps WV where
+  isStr := fun | .s _ => true | _ => false
+  isTuple := fun | .t _ => true | _ => false
+  isNone := fun | .none => true | _ => false
+  callable := fun | .fn => true | .self => true | _ => false
+  isPlaceholder := fun | .ph => true | _ => false
+  ofStr := .s
+  none := .none
+  unit := .t 0
+
+def parseWV (j : Json) : Except String WV := do
+  match ← jStrAt j 0 with
+  | "s" => return .s (← jStrAt j 1)
+  | "i" => return .i (← jIntAt j 1)
+  | "none" => return .none
+  | "t" => return .t (← jNatAt j 1)
+  | "l" => return .l
+  | "fn" => return .fn
+  | o => throw s!"bad value {o}"
+
+def encWV : WV → Json
+  | .s x => Json.arr #[jStr "s", jStr x]
+  | .i n => Json.arr #[jStr "i", jInt n]
+  | .none => Json.arr #[jStr "none"]
+  | .t n => Json.arr #[jStr "t", toJson n]
+  | .l => Json.arr #[jStr "l"]
+  | .fn => Json.arr #[jStr "fn"]
+  | .self => Json.arr #[jStr "self"]
+  | .ph => Json.arr #[jStr "ph"]
+
+/-- How the decorated object answers `getattr` for one name. -/
+inductive WSpec where
+  | attr
+  | raise
+  | val (v : WV)
+
+def parseWSpec (j : Json) : Except String WSpec := do
+  match ← jStrAt j 0 with
+  | "attr" => return .attr
+  | "raise" => return .raise
+  | "val" => return .val (← parseWV (← jGetI j 1))
+  | o => throw s!"bad spec {o}"
+
+def wRaise {α : Type} (handled : Option ExcId) (s : St (List String)) (c : Cls) (m : String) :
+    St (List String) × Res α :=
+  let (s, e) := s.raiseNew c m handled
+  (s, .error e)
+
+/-- `contextmanager(obj)` or `asynccontextmanager(obj)`, where `obj.__getattribute__` answers each
+name of `WRAPPER_ASSIGNMENTS` and `__dict__` by the case and logs it; `__dict__` is a dict, missing,
+raising, or the int `5`. -/
+def runWraps (j : Json) : Except String Json := do
+  let isAsync ← getBool j "async"
+  let ph ← getBool j "ph"
+  let withH ← getBool j "with"
+  let attrs ← (← jArr (← field j "attrs")).mapM
+    (fun p => do return ((← jStrAt p 0), ← parseWSpec (← jGetI p 1)))
+  let dj ← field j "dict"
+  let dk ← jStrAt dj 0
+  let pairs ← if dk == "dict" then
+      (← jArr (← jGetI dj 1)).mapM (fun p => do return ((← jStrAt p 0), ← parseWV (← jGetI p 1)))
+    else pure []
+  let base : St (List String) := { h := [], g := [] }
+  let (s0, handled, labels) : St (List String) × Option ExcId × List (ExcId × String) :=
+    if withH then
+      let (h, e) := base.h.alloc { cls := clsOf "KeyError", msg := "handled" }
+      ({ base with h := h }, some e, [(e, "handled")])
+    else (base, none, [])
+  let fn : FuncView (List String) WV (Option (List (String × WV))) :=
+    { read := fun a s =>
+        let s := { s with g := s.g ++ [a] }
+        match attrs.lookup a with
+        | some .attr => wRaise handled s clsAttr a
+        | some .raise => wRaise handled s (clsOf "ValueError") a
+        | some (.val v) => (s, .ok v)
+        | none => wRaise handled s clsAttr a
+      getDict := fun s =>
+        let s := { s with g := s.g ++ ["__dict__"] }
+        if dk == "attr" then wRaise handled s clsAttr "__dict__"
+        else if dk == "raise" then wRaise handled s (clsOf "ValueError") "__dict__"
+        else if dk == "int" then (s, .ok none)
+        else (s, .ok (some pairs))
+      items := fun d s =>
+        match d with
+        | some ps => (s, .ok ps)
+        | none => wRaise handled s clsType "'int' object is not iterable" }
+  let self : WV := if ph then .ph else .self
+  let (s, r) := contextmanagerDeco wvOps fn self isAsync handled s0
+  let enc (w : FnAttrs WV) : Json :=
+    Json.arr #[encWV w.name, encWV w.qualname, encWV w.module, encWV w.doc, encWV w.annotate,
+      encWV w.typeParams, Json.arr (w.dict.map (fun p => Json.arr #[jStr p.1, encWV p.2])).toArray]
+  return Json.mkObj [("ok", Json.arr #[encRes labels s.h enc r, Json.arr (s.g.map jStr).toArray])]
+
 def runCase (j : Json) : Except String Json := do
   match ← getStr j "k" with
   | "gcm" => runGcm j
@@ -641,6 +985,10 @@ def runCase (j : Json) : Except String Json := do
   | "hook" => runHook j
   | "closing" => runClosing j
   | "null" => runNull j
+  | "init" => runInit j
+  | "agraw" => runAgRaw j
+  | "aclosing" => runAclosing j
+  | "wraps" => runWraps j
   | k => throw s!"bad kind {k}"
 
 end PyLean.CoreLibs.Misc.Contextlib

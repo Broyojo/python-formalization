@@ -328,14 +328,20 @@ integers, where the float result could be exact. -/
 def FloorDivExactFloor : Prop :=
   ∀ x y : F64, x.isFinite = true → y.isFinite = true → y.isZero = false →
     (x.toRat / y.toRat).floor.natAbs < 2 ^ 53 →
-    (float_div_mod x y).1.toRat = ((x.toRat / y.toRat).floor : Rat)
+    ∃ q, float_floor_div (.float x) (.float y) = .ok (some q) ∧
+      q.toRat = ((x.toRat / y.toRat).floor : Rat)
 
-/-- `574432016605032.2 // 0.24012708848409187`: the exact floor is 2392199981398965. -/
+/-- `574432016605032.2 // 0.24012708848409187` is 2392199981398964.0, through `float_floor_div`
+and `_float_div_mod`; the exact floor is 2392199981398965. -/
 theorem floorDivExactFloor_refuted : ¬ FloorDivExactFloor := by
   intro h
-  have := h (ofBits 0x4300538b0260fb42) (ofBits 0x3fcebc7c03f620b2)
+  obtain ⟨q, hq, hv⟩ := h (ofBits 0x4300538b0260fb42) (ofBits 0x3fcebc7c03f620b2)
     (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
-  revert this
+  have h0 : float_floor_div (.float (ofBits 0x4300538b0260fb42)) (.float (ofBits 0x3fcebc7c03f620b2)) =
+      .ok (some (ofBits 0x4320ff62ec3ef768)) := by decide +kernel
+  rw [h0] at hq
+  cases hq
+  revert hv
   decide +kernel
 
 /-- For finite floats, `divmod(a, b)[0]` is `math.floor(a / b)` or one less, as the
@@ -343,16 +349,21 @@ documentation of `divmod` says. -/
 def DivmodQuotientDoc : Prop :=
   ∀ x y : F64, x.isFinite = true → y.isFinite = true → y.isZero = false →
     (F64.div x y).isFinite = true →
-    let q := (float_div_mod x y).1.toRat
-    let f := ((F64.div x y).toRat.floor : Rat)
-    q = f ∨ q = f - 1
+    ∃ q r, float_divmod (.float x) (.float y) = .ok (some (q, r)) ∧
+      (q.toRat = ((F64.div x y).toRat.floor : Rat) ∨ q.toRat = ((F64.div x y).toRat.floor : Rat) - 1)
 
-/-- `-0x1.765b303d50491p+51 // 0x1.b92103f617877p-2` is one *more* than the floor. -/
+/-- `divmod(-0x1.765b303d50491p+51, 0x1.b92103f617877p-2)[0]`, through `float_divmod` and
+`_float_div_mod`, is one *more* than the floor of the rounded quotient. -/
 theorem divmodQuotientDoc_refuted : ¬ DivmodQuotientDoc := by
   intro h
-  have := h (ofBits 0xc32765b303d50491) (ofBits 0x3fdb92103f617877)
+  obtain ⟨q, r, hq, hv⟩ := h (ofBits 0xc32765b303d50491) (ofBits 0x3fdb92103f617877)
     (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
-  revert this
+  have h0 : float_divmod (.float (ofBits 0xc32765b303d50491)) (.float (ofBits 0x3fdb92103f617877)) =
+      .ok (some (float_div_mod (ofBits 0xc32765b303d50491) (ofBits 0x3fdb92103f617877))) := by
+    decide +kernel
+  rw [h0] at hq
+  cases hq
+  revert hv
   decide +kernel
 
 end PyLean.Binary64

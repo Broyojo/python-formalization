@@ -247,10 +247,10 @@ def DatetimeStrTwins : Prop := ∀ meth : IsoformatMeth, datetimeStrC meth = dat
 
 /-! ### `datetime.now` -/
 
-/-- `datetime_datetime_now_impl(type, tz)`, :5721-5743: `check_tzinfo_subclass(tz)` (:5730-5731)
-before the clock is read; `datetime_best_possible` (:5733-5736, the clock, `localtime` for
+/-- `datetime_datetime_now_impl(type, tz)`, :5721-5743: `check_tzinfo_subclass(tz)` (:5729-5730)
+before the clock is read; `datetime_best_possible` (:5732-5735, the clock, `localtime` for
 `None` and `gmtime` otherwise, building through `type`) is the parameter `best`; for a `tzinfo`,
-`tz.fromutc(self)` (:5737-5741), a method call (`fromutc`). -/
+`tz.fromutc(self)` (:5736-5740), a method call (`fromutc`). -/
 def datetimeNowC {α : Type} (best : Option Tz → Py α) (fromutc : Tz → α → Py α) (tz : Arg) : Py α := do
   let t ← checkTzinfoSubclassC tz
   let self ← best t

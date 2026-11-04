@@ -32,7 +32,7 @@ inductive Errno where
 class CDouble (R : Type) where
   zero : R
   one : R
-  /-- The literal `100.0` of line 738. -/
+  /-- The literal `100.0` of line 754. -/
   hundred : R
   /-- `Py_INFINITY`. -/
   inf : R
@@ -53,7 +53,7 @@ class CDouble (R : Type) where
   copysign : R → R → R
   fabs : R → R
   floor : R → R
-  /-- The cast `(long)x` of line 739, used only on integral `|x| <= 100`. -/
+  /-- The cast `(long)x` of line 755, used only on integral `|x| <= 100`. -/
   toLong : R → Int
   /-- `PyLong_AsDouble` on an exact integer; `none` is the overflow case. -/
   ofInt : Int → Option R

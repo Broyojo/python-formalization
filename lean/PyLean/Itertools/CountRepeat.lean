@@ -12,9 +12,10 @@ or Decimal", :3500): a `CVal ν` says what the C code can see of one, and `NumOp
 gives `PyNumber_Add` and `%R` for everything but exact ints, so the model is
 generic in the number types. `CountFloat.lean` instantiates it with `float`.
 
-`NumOps.add` cannot call back into the count object, so the re-entrant `__radd__` of
-python/cpython#154670 (a use-after-free of the `long_cnt` that `count_nextlong` does
-not hold across the add) is out of this model's reach.
+`NumOps.add` here cannot call back into the count object. `CountReentry.lean` mirrors
+`count_nextlong` with an add that can (the re-entrant `__radd__` of python/cpython#154670,
+a use-after-free of the `long_cnt` that `count_nextlong` does not hold across the add), and
+shows that without re-entry it is `cCountNext`.
 -/
 
 namespace PyLean.Itertools
@@ -74,9 +75,23 @@ def pyAdd (N : NumOps ν) : CVal ν → CVal ν → Py (CVal ν)
   | .int a, .int b => .ok (.int (a + b))
   | a, b => N.add a b
 
-/-- `%R`: of an exact int, its decimal form. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR` (Objects/longobject.c:33) with the default limit. -/
+def intStrLimitMsg : String :=
+  "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
+
+/-- `%R` of an exact int is `long_to_decimal_string` (Objects/longobject.c:2321-2327), which
+raises `ValueError` for more than `sys.get_int_max_str_digits()` digits. Under the default
+limit of 4300 (`_PY_LONG_DEFAULT_MAX_STR_DIGITS`, Include/internal/pycore_long.h:29) that is
+exactly `|a| ≥ 10**4300`: the exact check at :2207-2217 counts the digits without the sign,
+and the pre-check at :2125-2135 fires only from 481 30-bit digits, past `10**4334`, so it
+also refuses every int before the `_pylong` path at :2138-2146 (more than 1000 digits), which
+has no exact check. A limit changed by `sys.set_int_max_str_digits()` is out of scope. -/
+def intRepr (a : Int) : Py String :=
+  if 10 ^ 4300 ≤ a.natAbs then .error (.valueError intStrLimitMsg) else .ok (toString a)
+
+/-- `%R`: of an exact int, `intRepr`. -/
 def pyRepr (N : NumOps ν) : CVal ν → Py String
-  | .int a => .ok (toString a)
+  | .int a => intRepr a
   | v => N.repr v
 
 /-- `countobject` (:3477-3482): `longCnt = none` is `long_cnt == NULL`. -/
