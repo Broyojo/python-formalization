@@ -138,17 +138,24 @@ def SET_UPDATE (e : Env) : M Unit := stkK (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   e.om.setUpdate e.ctx (rest.headD .null) it
   pure rest
-/-- `@3.14.7:2033`. -/
+/-- The loop of `BUILD_SET`: `_PySet_AddTakeRef` on `values[0]`, `values[1]`, ... in order,
+stopping at the first failure (`err` is set and the remaining values are only closed). -/
+def setAddAll (e : Env) (s : Val) : List Val → RM Unit
+  | [] => pure ()
+  | v :: vs => do setAdd e.om e.ctx s v; setAddAll e s vs
+/-- `:2547-2573`: `PySet_New(NULL)`, then the values from the bottom up. -/
 def BUILD_SET (e : Env) : M Unit := stk e.oparg 1 fun vs => do
   let s ← (alloc (.set false #[]) : RM Val)
-  for v in vs do
-    (setAdd e.om e.ctx s v : RM Unit)
+  (setAddAll e s vs : RM Unit)
   pure [s]
-/-- `_PyDict_FromItems`. -/
+/-- `_PyDict_FromItems` (`Objects/dictobject.c`) over `keys = values`, `values = values + 1`, both
+with stride 2: `setitem_lock_held(dict, key, value)` pair by pair from the bottom up, stopping at
+the first failure. -/
 def dictFromItems (e : Env) : List Val → Val → RM Unit
   | k :: v :: rest, d => do dictSet e.om e.ctx d k v; dictFromItems e rest d
   | _, _ => pure ()
-/-- `@3.14.7:2061`. -/
+/-- `:2575-2581`: `_Py_BuildMap_StackRefSteal` (`Python/ceval.c:955-981`), `_PyDict_FromItems` of
+the `oparg` pairs into a new dict. -/
 def BUILD_MAP (e : Env) : M Unit := stk (e.oparg * 2) 1 fun vs => do
   let d ← (mkDict : RM Val)
   (dictFromItems e vs d : RM Unit)
@@ -162,17 +169,6 @@ def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
     let d ← (mkDict : RM Val)
     e.om.setItem e.ctx l (.str "__annotations__") d
   pure []
-/-- `%T` of `PyUnicode_FromFormat` (`_PyType_GetFullyQualifiedName`, `Objects/typeobject.c`): the
-qualified name, without the module for `builtins` and `__main__`. The model's classes all live in
-`__main__`, so this is the class's `__qualname__`, and the name of a builtin type. -/
-def typeFullName (v : Val) : RM String := do
-  match ← typeOf v with
-  | .ref a =>
-    match ← getObj a with
-    | .cls c => pure c.qualname
-    | _ => fault "not a type"
-  | t => typeNameOf t
-
 /-- `PyObject_GetOptionalAttr`: the attribute, `none` when the lookup raised `AttributeError`
 (which is cleared), and any other exception propagates. -/
 def optionalAttr (e : Env) (o : Val) (n : String) : RM (Option Val) :=

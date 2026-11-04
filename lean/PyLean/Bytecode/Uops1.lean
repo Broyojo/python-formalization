@@ -691,6 +691,17 @@ def LIST_APPEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   (listAppend (rest.headD .null) v : RM Unit)
   pure rest
+/-- `%T` of `PyUnicode_FromFormat` (`_PyType_GetFullyQualifiedName`, `Objects/typeobject.c`): the
+qualified name, without the module for `builtins` and `__main__`. The model's classes all live in
+`__main__`, so this is the class's `__qualname__`, and the name of a builtin type. -/
+def typeFullName (v : Val) : RM String := do
+  match ← typeOf v with
+  | .ref a =>
+    match ← getObj a with
+    | .cls c => pure c.qualname
+    | _ => fault "not a type"
+  | t => typeNameOf t
+
 /-- `PySet_CheckExact`. -/
 def isExactSet : Val → RM Bool
   | .ref a => do
@@ -708,14 +719,7 @@ def SET_ADD (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   let set := rest.headD .null
   if !(← (isExactSet set : RM Bool)) then
-    let tn ← (do
-      match ← typeOf set with
-      | .ref a =>
-        match ← getObj a with
-        | .cls c => pure c.qualname
-        | _ => fault "not a type"
-      | t => typeNameOf t : RM String)
-    (typeError s!"'{tn}' object is not a set" : RM Unit)
+    (typeError s!"'{← typeFullName set}' object is not a set" : RM Unit)
   (setAdd e.om e.ctx set v : RM Unit)
   pure rest
 /-- `:1399`. -/

@@ -136,7 +136,7 @@ Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_S
 Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
 Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
-Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		changed-in-3.15:
+Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
@@ -234,18 +234,18 @@ Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION
 Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
 Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	modelled	bytecode-build-seq	
 Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	modelled	bytecode-build-seq	
-Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2545	2545	opcode:SET_UPDATE	macro(SET_UPDATE) = _SET_UPDATE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2547	2547	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	todo		
-Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2545	2545	opcode:SET_UPDATE	macro(SET_UPDATE) = _SET_UPDATE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2547	2547	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	modelled	bytecode-builders	
 Python/bytecodes.c	2583	2583	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		
+Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	modelled	bytecode-builders	
+Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	modelled	bytecode-builders	
+Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	modelled	bytecode-builders	
 Python/bytecodes.c	2669	2669	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
 Python/bytecodes.c	2679	2679	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2692	2692	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		changed-in-3.15:

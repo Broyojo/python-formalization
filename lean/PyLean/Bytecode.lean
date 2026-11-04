@@ -18,6 +18,7 @@ import PyLean.Bytecode.SpecDict
 import PyLean.Bytecode.GenericProps
 import PyLean.Bytecode.SpecJumps
 import PyLean.Bytecode.SpecUnpack
+import PyLean.Bytecode.SpecBuild
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -556,7 +557,15 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "UNPACK_EX (before | after << 8), for every object model: the first `before` items come one PyIter_Next call at a time, PySequence_List drains the rest, and the stack gets the first items (item 0 on top), a new list of all but the last `after` of the rest, and those last items in order; too few items gives 'not enough values to unpack (expected at least before+after, got k)' with k counted as CPython counts it in each loop; exceptions from __next__ and non-TypeError exceptions from iter() propagate; v is popped on every error."
     source := "Python/bytecodes.c:2148-2153; _PyEval_UnpackIterableStackRef, Python/ceval.c:2357-2459"
     status := .proven, prop := ``UnpackExFull, thm := some ``unpackExFull_proven
-    notes := "The model's PySequence_List stops at a million items with fuel; the statement assumes fewer." }
+    notes := "The model's PySequence_List stops at a million items with fuel; the statement assumes fewer." },
+  -- Builders.
+  { id := "bytecode-builders", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LIST_EXTEND", op "_LIST_EXTEND", op "SET_UPDATE", op "_SET_UPDATE", op "DICT_UPDATE",
+      op "_DICT_UPDATE", op "DICT_MERGE", op "_DICT_MERGE", op "SET_ADD", op "MAP_ADD", op "BUILD_SET",
+      op "BUILD_MAP"]
+    statement := "For every object model: LIST_EXTEND, SET_UPDATE, DICT_UPDATE and DICT_MERGE call _PyList_Extend, _PySet_Update, PyDict_Update and _PyDict_MergeUniq on the container oparg below the top, pop only the top on success and keep every operand on failure (ERROR_NO_POP); LIST_EXTEND rewrites a TypeError on a non-iterable to 'Value after * must be an iterable, not T'; DICT_UPDATE rewrites an AttributeError to \"'T' object is not a mapping\" exactly when update has no keys, restores it when it has, and chains it as __context__ when the probe raises; DICT_MERGE reports the duplicate key of _PyDict_MergeUniq as 'F got multiple values for keyword argument K' (F the _PyObject_FunctionStr or 'function'), and its AttributeError as 'Value after ** must be a mapping, not T' under the same keys rule, every other exception (a mapping's own KeyError included) unchanged. SET_ADD refuses anything but an exact set with \"'T' object is not a set\" (3.15, gh-154902), SET_ADD and MAP_ADD pop every operand on failure. BUILD_SET and BUILD_MAP add the values (pairs) to a new set (dict) from the bottom up, each add in the runtime the previous left, stopping at the first failure with every value popped."
+    source := "Python/bytecodes.c:1380-1392, :2511-2581, :2610-2666; _PyEval_FormatKwargsError, Python/ceval.c:3414-3446; _PyObject_FunctionStr, Objects/object.c:976-1009"
+    status := .proven, prop := ``BuildersRules, thm := some ``buildersRules_proven }
 ]
 
 end PyLean.Bytecode
