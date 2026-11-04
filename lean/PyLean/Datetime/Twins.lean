@@ -288,4 +288,30 @@ def dateFromtimestampC (k : Clock) (t : Arg) : Py (Int × Int × Int) := do
   checkDateArgsC y m d
   return (y, m, d)
 
+/-! ### `date.__format__` -/
+
+/-- The `fmt` argument of `__format__`: a `str` or another object. -/
+inductive FmtArg where
+  | str (cs : List Char)
+  | other
+  deriving Repr, DecidableEq
+
+/-- `date.__format__(fmt)`, _pydatetime.py:1132-1137: the `isinstance(fmt, str)` check, then
+`self.strftime(fmt)` for a nonempty format and `str(self)` otherwise. `str` and `strftime`
+are the results of those method calls (a subclass may override them). -/
+def dateFormatPy {α : Type} (fmt : FmtArg) (str : Py String) (strftime : List Char → Py α) :
+    Py (Sum String α) :=
+  match fmt with
+  | .other => .error (.typeError "~must be str")
+  | .str cs => if cs.length ≠ 0 then Sum.inr <$> strftime cs else Sum.inl <$> str
+
+/-- `datetime_date___format__`, clinic/_datetimemodule.c.h:492-506 (the `unicode`
+converter), then `datetime_date___format___impl`, :3691-3699: `PyObject_Str(self)` for a
+zero-length format, otherwise the `strftime` method. -/
+def dateFormatC {α : Type} (fmt : FmtArg) (str : Py String) (strftime : List Char → Py α) :
+    Py (Sum String α) :=
+  match fmt with
+  | .other => .error (.typeError "~__format__() argument must be str")
+  | .str cs => if cs.length = 0 then Sum.inl <$> str else Sum.inr <$> strftime cs
+
 end PyLean.Datetime

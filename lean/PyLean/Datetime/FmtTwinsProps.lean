@@ -221,4 +221,51 @@ theorem timespecStr_proven : TimespecStr := by
     simp [specsC, List.find?, Ne.symm h2, Ne.symm h3, Ne.symm h4, Ne.symm h5, Ne.symm h6]
   simp only [parseTimespecArgPy, parseTimespecArgC, hp, h1, ↓reduceIte, hc]
 
+/-! ### `date.__format__` -/
+
+/-- `format(d, fmt)` for every `fmt` and every result of the `str` and `strftime` methods:
+the twins agree (a non-`str` is a `TypeError` in both, with different messages); `''` gives
+`str(d)` and a nonempty format `d.strftime(fmt)`, whatever those methods return or raise. -/
+def DateFormat : Prop :=
+  ∀ {α : Type} (fmt : FmtArg) (str : Py String) (strftime : List Char → Py α),
+    SameOutcome (dateFormatPy fmt str strftime) (dateFormatC fmt str strftime) ∧
+    (dateFormatPy .other str strftime).raises "TypeError" ∧
+    dateFormatPy (.str []) str strftime = Sum.inl <$> str ∧
+    (∀ cs, cs ≠ [] → dateFormatPy (.str cs) str strftime = Sum.inr <$> strftime cs)
+
+theorem dateFormat_proven : DateFormat := by
+  intro α fmt str strftime
+  refine ⟨?_, ⟨_, rfl, rfl⟩, rfl, fun cs h => ?_⟩
+  · cases fmt with
+    | other => simp [dateFormatPy, dateFormatC, SameOutcome, PyExc.className]
+    | str cs =>
+      simp only [dateFormatPy, dateFormatC]
+      by_cases h : cs.length = 0
+      · rw [if_neg (by omega), if_pos h]; exact sameOutcome_refl _
+      · rw [if_pos h, if_neg h]; exact sameOutcome_refl _
+  · simp only [dateFormatPy]
+    rw [if_pos (by cases cs <;> simp_all)]
+
+/-! ### `date.strptime` -/
+
+/-- `date.strptime(s, fmt)` (both twins call `_strptime._strptime_datetime_date`): for every
+parse `r`, the result is `date(r.year, r.month, r.day)`, whatever the time fields; so it
+succeeds on every valid date even where `datetime.strptime` refuses (`%S` matches 60 and
+61), and the parse's exception propagates. A `date.strptime` defined as
+`datetime.strptime(...).date()` fails at a second of 60. -/
+def DateStrptime : Prop :=
+  ∀ (lt : LocaleTimeV) (found : StrpFound),
+    (∀ r, strptimeCore lt found = .ok r →
+      strptimeDate lt found = checkDate r.year r.month r.day ∧
+      (ValidDate r.year r.month r.day → strptimeDate lt found = .ok (r.year, r.month, r.day))) ∧
+    (∀ e, strptimeCore lt found = .error e → strptimeDate lt found = .error e)
+
+theorem dateStrptime_proven : DateStrptime := by
+  intro lt found
+  refine ⟨fun r hr => ?_, fun e he => ?_⟩
+  · have e : strptimeDate lt found = checkDate r.year r.month r.day := by
+      unfold strptimeDate; rw [hr]; rfl
+    exact ⟨e, fun hv => by rw [e]; exact checkDate_ok _ _ _ hv⟩
+  · unfold strptimeDate; rw [he]; rfl
+
 end PyLean.Datetime

@@ -377,6 +377,16 @@ def entries : List Entry := [
     source := "timedelta docs (t2 / t3 returns a float)", status := .open
     prop := ``TimedeltaTruedivDelta
     notes := "Both twins reach long_true_divide, mirrored in LongObj.trueDivide; its correct rounding is the open longobj-true-divide-rounds." },
+  { id := "datetime-date-format", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__format__", "C datetime_date___format__", "C datetime_date___format___impl"]
+    statement := "For every fmt and every result of the str and strftime methods, format(d, fmt) agrees between the twins: TypeError for a non-str, str(d) for '', d.strftime(fmt) otherwise."
+    source := "date.__format__ docs; C/Python twins", status := .proven
+    prop := ``DateFormat, thm := some ``dateFormat_proven },
+  { id := "datetime-date-strptime", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.strptime", "C datetime_date_strptime_impl"]
+    statement := "For every parse r of _strptime, date.strptime returns date(r.year, r.month, r.day) whatever the time fields (so second=60 is accepted), and the parse's exception otherwise."
+    source := "date.strptime docs; _strptime_datetime_date", status := .proven
+    prop := ``DateStrptime, thm := some ``dateStrptime_proven },
   { id := "datetime-days-in-month", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_days_in_month", "C days_in_month", "C is_leap"]
     statement := "For 1 <= m <= 12, _days_in_month(y, m) is 31, 28 or 29 (Gregorian leap rule), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31; it agrees with C days_in_month for 0 <= y < 2**31, is the step of _days_before_month, and the months sum to 365 or 366."
