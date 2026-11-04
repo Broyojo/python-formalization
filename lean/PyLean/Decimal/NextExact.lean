@@ -607,4 +607,153 @@ theorem nextPlus_correct_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (h
         rw [scl_natAbs, hsum] at hg2
         exact next_of_ceil_add hLT ⟨u, hu⟩ hg2
 
+/-! ## `next_plus` returns below the int/str limit -/
+
+/-- `_fix` in a context that traps nothing and whose `prec + 1` is within the int/str limit
+always returns. -/
+theorem fixSpec_ok (q : Ctx) (hp : 1 ≤ q.prec) (htr : q.traps = []) (hlim : q.prec + 1 ≤ maxStrDigits)
+    (neg : Bool) (co : Nat) (e : Int) (hc : co ≠ 0) (fl : List Signal) :
+    ∃ r, fixSpec q neg co e fl = .ok r := by
+  unfold fixSpec
+  simp only
+  split
+  · exact ⟨_, (sigRun_noTraps q htr _ fl _).choose_spec⟩
+  · split
+    · split
+      · exact ⟨_, (sigRun_noTraps q htr _ fl _).choose_spec⟩
+      · exact ⟨_, (sigRun_noTraps q htr _ fl _).choose_spec⟩
+    · rename_i _ hk
+      split
+      · rename_i hbad
+        exfalso
+        have hnd := numDigits_bounds hc
+        generalize hk' : (max ((numDigits co : Int) + e - q.prec) (q.emin - q.prec + 1) - e).toNat = k at hbad
+        have hq0 : co / 10 ^ k < 10 ^ q.prec := by
+          rw [Nat.div_lt_iff_lt_mul (pow10_pos k), ← Nat.pow_add]
+          exact Nat.lt_of_lt_of_le hnd.2 (pow10_le (by omega))
+        have h1 := roundSpec_le q.rounding neg (co / 10 ^ k) (co % 10 ^ k) (10 ^ k)
+        have h2 : roundSpec q.rounding neg (co / 10 ^ k) (co % 10 ^ k) (10 ^ k) < 10 ^ (q.prec + 1) := by
+          have : 10 ^ q.prec < 10 ^ (q.prec + 1) := Nat.pow_lt_pow_right (by decide) (by omega)
+          omega
+        have := (numDigits_le_iff (by omega)).mpr h2
+        omega
+      · exact ⟨_, (sigRun_noTraps q htr _ fl _).choose_spec⟩
+
+theorem natAbs_sum_le (s : Bool) (a b : Nat) :
+    ((if s then -1 else 1) * (a : Int) + 1 * (b : Int)).natAbs ≤ a + b := by
+  cases s <;> simp <;> omega
+
+theorem numDigits_le_of_lt {n j : Nat} (hj : 0 < j) (h : n < 10 ^ j) : numDigits n ≤ j :=
+  (numDigits_le_iff hj).mpr h
+
+/-- The digits `__add__` formats for `x + 1E(eb)` (`str(result.int)` after `_normalize`) are at
+most the operand's digits plus `prec + 3`. -/
+theorem workDigits_le (p : Nat) (hp : 1 ≤ p) (s : Bool) (co : Nat) (hc : co ≠ 0) (e eb : Int) :
+    (numDigits (exactSum s co e false 1 eb).natAbs : Int) + min e eb - addWorkExp p co e 1 eb ≤
+      numDigits co + p + 3 := by
+  have hnd := numDigits_bounds hc
+  have hS := natAbs_sum_le s (co * 10 ^ (e - min e eb).toNat) (1 * 10 ^ (eb - min e eb).toNat)
+  have hsum : exactSum s co e false 1 eb =
+      (if s then -1 else 1) * ((co * 10 ^ (e - min e eb).toNat : Nat) : Int) +
+        1 * ((1 * 10 ^ (eb - min e eb).toNat : Nat) : Int) := by
+    simp [exactSum]
+  rw [hsum]
+  generalize hN : ((if s then -1 else 1) * ((co * 10 ^ (e - min e eb).toNat : Nat) : Int) +
+        1 * ((1 * 10 ^ (eb - min e eb).toNat : Nat) : Int)).natAbs = N at hS
+  have h1 : numDigits (1 : Nat) = 1 := rfl
+  simp only [addWorkExp, normExp, normSub, normX, h1]
+  by_cases hlt : e < eb
+  · -- the operand 1E(eb) has the larger exponent
+    simp only [hlt, ↓reduceIte]
+    obtain ⟨d, hd⟩ : ∃ d : Nat, (d : Int) = eb - e := ⟨(eb - e).toNat, by omega⟩
+    have e1 : (e - min e eb).toNat = 0 := by omega
+    have e2 : (eb - min e eb).toNat = d := by omega
+    rw [e1, e2] at hS
+    simp only [Nat.pow_zero, Nat.mul_one, Nat.one_mul] at hS
+    split
+    · rename_i hsub
+      have hco : co < 10 ^ (d - 1) := Nat.lt_of_lt_of_le hnd.2 (pow10_le (by omega))
+      have hd1 : 10 ^ d = 10 * 10 ^ (d - 1) := by
+        rw [← Nat.pow_succ']; congr 1; omega
+      have : N < 10 ^ (d + 1) := by rw [Nat.pow_succ, hd1]; omega
+      have := numDigits_le_of_lt (by omega) this
+      omega
+    · rename_i hsub
+      have hmx : co + 10 ^ d < 10 ^ (max (numDigits co) d + 1) := by
+        have a1 : co < 10 ^ max (numDigits co) d := Nat.lt_of_lt_of_le hnd.2 (pow10_le (by omega))
+        have a2 : 10 ^ d ≤ 10 ^ max (numDigits co) d := pow10_le (by omega)
+        rw [Nat.pow_succ]; omega
+      have := numDigits_le_of_lt (by omega) (Nat.lt_of_le_of_lt hS hmx)
+      omega
+  · simp only [hlt, ↓reduceIte]
+    obtain ⟨d, hd⟩ : ∃ d : Nat, (d : Int) = e - eb := ⟨(e - eb).toNat, by omega⟩
+    have e1 : (e - min e eb).toNat = d := by omega
+    have e2 : (eb - min e eb).toNat = 0 := by omega
+    rw [e1, e2] at hS
+    simp only [Nat.pow_zero, Nat.mul_one] at hS
+    have hb : co * 10 ^ d + 1 < 10 ^ (numDigits co + d + 1) := by
+      have a1 : co * 10 ^ d < 10 ^ numDigits co * 10 ^ d := Nat.mul_lt_mul_of_pos_right hnd.2 (pow10_pos d)
+      rw [← Nat.pow_add] at a1
+      have a2 : 10 ^ (numDigits co + d) < 10 ^ (numDigits co + d + 1) := Nat.pow_lt_pow_right (by decide) (by omega)
+      omega
+    have := numDigits_le_of_lt (by omega) (Nat.lt_of_le_of_lt hS hb)
+    split
+    · omega
+    · omega
+
+/-- `next_plus` of a finite operand returns, flags untouched, whenever its coefficient has at most
+`4300 - prec - 3` digits (beyond that `__add__`'s `str(result.int)` can hit the int/str limit). -/
+theorem nextPlus_ok_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (s : Bool) (co : Nat) (e : Int)
+    (hd : numDigits co + c.prec + 3 ≤ maxStrDigits) :
+    ∃ y, (nextPlus c (.fin s co e)).run fl = .ok (y, fl) := by
+  rw [nextPlus_fin_run]
+  generalize hqd : quietCtx c .ceiling = q
+  have hqp : 1 ≤ q.prec := by rw [← hqd]; exact hp
+  have hqt : q.traps = [] := by rw [← hqd]; rfl
+  have hqP : q.prec = c.prec := by rw [← hqd]; rfl
+  have hlim : q.prec + 1 ≤ maxStrDigits := by have := numDigits_pos co; omega
+  have hzero : ∀ sz ez fl0, ∃ r, (fix q (.fin sz 0 ez)).run fl0 = .ok r := by
+    intro sz ez fl0
+    rw [(fixExact_proven q fl0 hqp).2.1 sz ez]
+    split <;> split
+    all_goals first
+      | exact ⟨_, rfl⟩
+      | exact ⟨_, (sigRun_noTraps q hqt _ fl0 _).choose_spec⟩
+  have haddOk : ∀ fl2, ∃ r, (add q (.fin s co e) (.fin false 1 (q.etiny - 1))).run fl2 = .ok r := by
+    intro fl2
+    by_cases hc : co = 0
+    · subst hc
+      rw [add_zero_left q fl2 hqp s e false 1 (q.etiny - 1) (by decide)]
+      exact fixSpec_ok q hqp hqt hlim _ _ _ (Nat.mul_ne_zero (by decide)
+        (Nat.pos_iff_ne_zero.mp (pow10_pos _))) fl2
+    · rw [add_fin_exact q fl2 hqp s co e false 1 (q.etiny - 1) hc (by decide)]
+      have hw := workDigits_le q.prec hqp s co hc e (q.etiny - 1)
+      have h1 : ¬ maxStrDigits < numDigits co := by omega
+      have h2 : ¬ maxStrDigits < numDigits 1 := by decide
+      simp only [h1, h2, ↓reduceIte]
+      split
+      · exact hzero _ _ fl2
+      · split
+        · rename_i hbad; exfalso; omega
+        · rename_i hz _
+          exact fixSpec_ok q hqp hqt hlim _ _ _ (fun h0 => hz (Int.natAbs_eq_zero.mp h0)) fl2
+  by_cases hc : co = 0
+  · subst hc
+    obtain ⟨⟨v, fl2⟩, hf⟩ := hzero s e fl
+    rw [hf]
+    simp only
+    split
+    · exact ⟨_, rfl⟩
+    · obtain ⟨⟨y, fl3⟩, ha⟩ := haddOk fl2
+      rw [ha]
+      exact ⟨y, rfl⟩
+  · obtain ⟨⟨v, fl2⟩, hf⟩ := fixSpec_ok q hqp hqt hlim s co e hc fl
+    rw [fixExact_fin q s co e fl hqp hc, hf]
+    simp only
+    split
+    · exact ⟨_, rfl⟩
+    · obtain ⟨⟨y, fl3⟩, ha⟩ := haddOk fl2
+      rw [ha]
+      exact ⟨y, rfl⟩
+
 end PyLean.Decimal
