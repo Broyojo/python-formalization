@@ -8,7 +8,7 @@ Lib/enum.py	69	76	_is_internal_class	_is_internal_class(cls_name, obj)	todo
 Lib/enum.py	78	89	_is_private	_is_private(cls_name, name)	todo		
 Lib/enum.py	91	98	_is_single_bit	_is_single_bit(num)	modelled	corelibs-enum-single-bit	
 Lib/enum.py	100	113	_make_class_unpicklable	_make_class_unpicklable(obj)	todo		
-Lib/enum.py	115	125	_iter_bits_lsb	_iter_bits_lsb(num)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	115	125	_iter_bits_lsb	_iter_bits_lsb(num)	todo		review: iterBits covers only the loop at :123-125 on a Nat; the isinstance(num, Enum) unwrap (:118-119) and the ValueError for num < 0 (:120-121) are missing (probe: _iter_bits_lsb(-1) raises ValueError '-1 is not a positive integer', and _iter_bits_lsb(F.A|F.B) == [1, 2]).
 Lib/enum.py	127	128	show_flag_values	show_flag_values(value)	todo		withdrawn: holds of any function, or a refutation that does not run it
 Lib/enum.py	130	153	bin	bin(num, max_bits=None)	todo		
 Lib/enum.py	156	157	_not_given.__repr__	__repr__(self)	todo		
@@ -20,16 +20,16 @@ Lib/enum.py	213	218	property.__set__	__set__(self, instance, value)	todo
 Lib/enum.py	220	225	property.__delete__	__delete__(self, instance)	todo		
 Lib/enum.py	227	229	property.__set_name__	__set_name__(self, ownerclass, name)	todo		
 Lib/enum.py	237	238	_proto_member.__init__	__init__(self, value)	todo		
-Lib/enum.py	240	325	_proto_member.__set_name__	__set_name__(self, enum_class, member_name)	modelled	corelibs-enum-round-trip,corelibs-enum-unique-distinct,corelibs-enum-flag-masks	
+Lib/enum.py	240	325	_proto_member.__set_name__	__set_name__(self, enum_class, member_name)	todo		review: EClass.setName mirrors plain/Flag/StrEnum creation, the Flag masks, the alias search and the value tables, and MemberRoundTrip/UniqueIffDistinct/FlagBuildMasks are strong; but the lookup at :285-297 runs user __hash__/__eq__ under except TypeError and except KeyError, and EV has no value whose hash or == raises (probe: a value whose __eq__ raises KeyError in the linear search is caught at :296 and becomes a new member); the _value_ not set TypeError path (:258-268) is not modelled either.
 Lib/enum.py	335	341	EnumDict.__init__	__init__(self, cls_name=None)	modelled	corelibs-enum-functional-class,corelibs-enum-dict-auto	
-Lib/enum.py	343	443	EnumDict.__setitem__	__setitem__(self, key, value)	modelled	corelibs-enum-dict-branches,corelibs-enum-dict-names-new,corelibs-enum-dict-sunders,corelibs-enum-functional-class,corelibs-enum-dict-auto	
+Lib/enum.py	343	443	EnumDict.__setitem__	__setitem__(self, key, value)	todo		review: EnumDict.set keeps the branch order of :352-443, and the three theorems pin it; but ignoreList maps a tuple to [] where :379 does list(value) (probe: _ignore_ = ('X',) ignores X, members ['Y']), so a tuple-valued _ignore_ makes the wrong members.
 Lib/enum.py	446	447	EnumDict.member_names	member_names(self)	todo		
-Lib/enum.py	449	457	EnumDict.update	update(self, members, **more_members)	modelled	corelibs-enum-dict-update-keys	
+Lib/enum.py	449	457	EnumDict.update	update(self, members, **more_members)	todo		review: update mirrors the try covering the keys() loop and the restart over the iterated keys (:450-457), but its only entry is the refutation EnumDictUpdateKeys, \"d'.has key\", which a no-op update that returns the dict unchanged also satisfies; the bug's {'AB': auto()} -> {'A': 'B'} (probe confirmed) is never stated.
 Lib/enum.py	468	479	EnumType.__prepare__	__prepare__(metacls, cls, bases, **kwds)	todo		
 Lib/enum.py	481	693	EnumType.__new__	__new__(metacls, cls, bases, classdict, *, boundary=None, _simple=False, **kwds)	todo		changed-in-3.15:
 Lib/enum.py	695	699	EnumType.__bool__	__bool__(cls)	todo		
-Lib/enum.py	701	748	EnumType.__call__	__call__(cls, value, names=_not_given, *values, module=None, qualname=None, type=None, start=1, boundary=None)	modelled	corelibs-enum-call	
-Lib/enum.py	750	769	EnumType.__contains__	__contains__(cls, value)	modelled	corelibs-enum-round-trip,corelibs-enum-flag-class-contains	
+Lib/enum.py	701	748	EnumType.__call__	__call__(cls, value, names=_not_given, *values, module=None, qualname=None, type=None, start=1, boundary=None)	todo		review: enumCall drops the type argument: :735 is `names is _not_given and type is None`, but the model raises TypeError whenever there are no extra values (probe: Enum('X', type=int) builds <enum 'X'>), and the functional branch returns none instead of reaching _create_.
+Lib/enum.py	750	769	EnumType.__contains__	__contains__(cls, value)	todo		review: FlagCls.classContains sends every non-int to false, but after _missing_ raises ValueError :767-769 still tests both value lists with ==, so FlagClassPaths' first conjunct is false about CPython (probe: 1.0 in F is True for a Flag F with A = 1); the plain path has no value whose __eq__ raises. The CONFORM refutation (8 in F, probe True) is sound.
 Lib/enum.py	771	776	EnumType.__delattr__	__delattr__(cls, attr)	modelled	corelibs-enum-attr-guards	
 Lib/enum.py	778	798	EnumType.__dir__	__dir__(cls)	todo		changed-in-3.15:
 Lib/enum.py	800	804	EnumType.__getitem__	__getitem__(cls, name)	modelled	corelibs-enum-round-trip	
@@ -48,10 +48,10 @@ Lib/enum.py	999	1023	EnumType._find_data_type_	_find_data_type_(mcls, class_name
 Lib/enum.py	1026	1068	EnumType._find_new_	_find_new_(mcls, classdict, member_type, first_enum)	todo		
 Lib/enum.py	1070	1115	EnumType._add_member_	_add_member_(cls, name, member)	modelled	corelibs-enum-add-alias,corelibs-enum-scan-bases	
 Lib/enum.py	1118	1129	EnumType.__signature__	__signature__(cls)	todo		
-Lib/enum.py	1175	1234	Enum.__new__	__new__(cls, value)	modelled	corelibs-enum-lookup,corelibs-enum-strict-named	
+Lib/enum.py	1175	1234	Enum.__new__	__new__(cls, value)	todo		review: enumNew mirrors the identity shortcut, the long search, the no-members TypeErrors and every _missing_ outcome, all pinned by EnumLookup; but :1184-1196 catch KeyError and TypeError from the user value's __hash__/__eq__, and EV cannot express a value whose hash raises (probe: a value whose __hash__ raises KeyError reaches _missing_ and returns M.A).
 Lib/enum.py	1236	1237	Enum._add_alias_	_add_alias_(self, name)	modelled	corelibs-enum-add-alias	
-Lib/enum.py	1239	1262	Enum._add_value_alias_	_add_value_alias_(self, value)	modelled	corelibs-enum-value-alias-hashable,corelibs-enum-value-alias-exclusive,corelibs-enum-value-alias-bound,corelibs-enum-value-alias-found	
-Lib/enum.py	1265	1283	Enum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	modelled	corelibs-enum-generate	
+Lib/enum.py	1239	1262	Enum._add_value_alias_	_add_value_alias_(self, value)	todo		review: addValueAlias gets both halves right, including the TypeError that formatting at :1251 raises for an unhashable value, and the refutations (bugs corelibs-enum-value-alias-unhashable, corelibs-enum-name-override) are sound; but both try blocks (:1241-1252, :1253-1262) catch TypeError from user __hash__/__eq__, and EV has no value whose hash or == raises.
+Lib/enum.py	1265	1283	Enum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		review: enumGenerate works over a fixed atom set (int, str, int tuples, opaque lists), not an abstract ordered type with + 1: floats cannot be expressed (probe: auto() after A = 1.5 gives 2.5), nor a __lt__ that raises something other than TypeError at :1277-1279. EnumGenerateRules quantifies over ints only.
 Lib/enum.py	1286	1287	Enum._missing_	_missing_(cls, value)	todo		
 Lib/enum.py	1289	1291	Enum.__repr__	__repr__(self)	todo		
 Lib/enum.py	1293	1294	Enum.__str__	__str__(self)	todo		
@@ -63,17 +63,17 @@ Lib/enum.py	1334	1335	Enum.__deepcopy__	__deepcopy__(self, memo)	todo
 Lib/enum.py	1337	1338	Enum.__copy__	__copy__(self)	todo		
 Lib/enum.py	1349	1351	Enum.name	name(self)	todo		
 Lib/enum.py	1354	1356	Enum.value	value(self)	todo		
-Lib/enum.py	1376	1395	StrEnum.__new__	__new__(cls, *values)	modelled	corelibs-enum-strenum	
+Lib/enum.py	1376	1395	StrEnum.__new__	__new__(cls, *values)	todo		review: strEnumNew has no bytes, so the successful two- and three-argument str(*values) at :1392 is missing, and StrEnumValues, whose docstring says \"every other argument list raises TypeError\", is false about CPython (probe: A = b'x', 'ascii' gives <S.A: 'x'>).
 Lib/enum.py	1398	1402	StrEnum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		
 Lib/enum.py	1405	1407	pickle_by_global_name	pickle_by_global_name(self, proto)	todo		
 Lib/enum.py	1410	1412	pickle_by_enum_name	pickle_by_enum_name(self, proto)	todo		
-Lib/enum.py	1437	1453	Flag._generate_next_value_	_generate_next_value_(name, start, count, last_values)	modelled	corelibs-enum-flag-generate	
-Lib/enum.py	1456	1461	Flag._iter_member_by_value_	_iter_member_by_value_(cls, value)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1437	1453	Flag._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		review: flagGenerate takes an Int start, so the `start if start is not None else 1` branch at :1447 is gone (probe: Flag('G', 'A B', start=None) has values [1, 2]); max, _high_bit and the TypeError are otherwise mirrored, and FlagGenerateRules pins the least power of two.
+Lib/enum.py	1456	1461	Flag._iter_member_by_value_	_iter_member_by_value_(cls, value)	todo		review: iterMembers reads memberOf, the defined members only, but :1461 is _value2member_map_.get(val), which also holds the pseudo-members _missing_ cached at :1566 (probe: class F(Flag): A=1; X=6 gives list(F.X) == [None, None], then [<F: 2>, None] after F(2)); the model's note that the bookkeeping has no effect is false. The only entry is the len/iter refutation.
 Lib/enum.py	1466	1473	Flag._iter_member_by_def_	_iter_member_by_def_(cls, value)	todo		withdrawn: holds of any function, or a refutation that does not run it
-Lib/enum.py	1476	1569	Flag._missing_	_missing_(cls, value)	modelled	corelibs-enum-conform,corelibs-enum-strict-named	
+Lib/enum.py	1476	1569	Flag._missing_	_missing_(cls, value)	todo		review: FlagCls.missing mirrors the 3.15.2 body (the new boundary test in the neg_value branch, the alias loop, STRICT after the not-combined test), and the STRICT refutation is sound (probe: F(2) nameless, F(2)|F.A raises \"no members with value 2\"); but it takes an Int, so the non-int ValueError at :1482-1485 (reached by F(1.5)) is not in it, and ConformKeepsMask is a lemma about andMask that never runs missing.
 Lib/enum.py	1571	1579	Flag.__contains__	__contains__(self, other)	modelled	corelibs-enum-flag-operands	
-Lib/enum.py	1581	1585	Flag.__iter__	__iter__(self)	modelled	corelibs-enum-len-iter	
-Lib/enum.py	1587	1588	Flag.__len__	__len__(self)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1581	1585	Flag.__iter__	__iter__(self)	todo		review: __iter__ goes through iterMembers, whose definition-order branch appends the None entries where _iter_member_by_def_ sorts on m._sort_order_ and raises (probe: class F(Flag): B=2; A=1; X=12 makes list(F.X) raise AttributeError 'NoneType' object has no attribute '_sort_order_', while the model yields two items); the cache is also missing. Only the len/iter refutation covers it.
+Lib/enum.py	1587	1588	Flag.__len__	__len__(self)	todo		review: bitCount is bit_count on the non-negative value, but its only entry, LenMatchesIter, is a single KEEP counterexample (probe: len(K(8)) == 1, list(K(8)) == []), which a constant len of 1 also satisfies; no theorem ties bitCount to the number of set bits.
 Lib/enum.py	1590	1596	Flag.__repr__	__repr__(self)	todo		withdrawn: holds of any function, or a refutation that does not run it
 Lib/enum.py	1598	1603	Flag.__str__	__str__(self)	todo		withdrawn: holds of any function, or a refutation that does not run it
 Lib/enum.py	1605	1606	Flag.__bool__	__bool__(self)	todo		
@@ -89,8 +89,8 @@ Lib/enum.py	1699	1706	global_enum_repr	global_enum_repr(self)	todo
 Lib/enum.py	1708	1729	global_flag_repr	global_flag_repr(self)	todo		
 Lib/enum.py	1731	1739	global_str	global_str(self)	todo		
 Lib/enum.py	1741	1754	global_enum	global_enum(cls, update_str=False)	todo		
-Lib/enum.py	1756	1949	_simple_enum	_simple_enum(etype=Enum, *, boundary=None, use_args=None)	excluded		internal-bootstrap: builds the stdlib's own enums without EnumType, for import speed
+Lib/enum.py	1756	1949	_simple_enum	_simple_enum(etype=Enum, *, boundary=None, use_args=None)	todo		review: internal-bootstrap does not apply: this is not interpreter bootstrap but the decorator that builds the public enums of re, ssl, uuid, http, tkinter and pstats (grep of Lib/), with observable members, aliases, Flag masks and boundaries; _test_simple_enum exists to compare it with EnumType, which makes it a twin property, not an exclusion.
 Lib/enum.py	1966	1967	verify.__init__	__init__(self, *checks)	todo		
-Lib/enum.py	1968	2046	verify.__call__	__call__(self, enumeration)	modelled	corelibs-enum-continuous,corelibs-enum-unique-aliases,corelibs-enum-verify	withdrawn: the Flag branch of CONTINUOUS has no theorem
+Lib/enum.py	1968	2046	verify.__call__	__call__(self, enumeration)	todo		review: verifyCall reads __name__ after the subclass test, but :1970 reads it first (probe: verify(UNIQUE)(42) raises AttributeError, not the TypeError VerifyCall states for a non-enum), and intValues drops non-int values, so VerifyContinuous is false about CPython (probe: @verify(CONTINUOUS) on values 1, 2, 'x' raises TypeError from min, but the model passes); the Flag branch of CONTINUOUS has no theorem (the row's own note).
 Lib/enum.py	2048	2168	_test_simple_enum	_test_simple_enum(checked_enum, simple_enum)	excluded		test-support: compares a hand-written enum with a _simple_enum one in the test suite
 Lib/enum.py	2170	2198	_old_convert_	_old_convert_(etype, name, module, filter, source=None, *, boundary=None)	todo		
