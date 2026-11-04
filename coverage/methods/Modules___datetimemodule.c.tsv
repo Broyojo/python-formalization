@@ -15,8 +15,8 @@ Modules/_datetimemodule.c	571	574	ymd_to_ord	ymd_to_ord(int year, int month, int
 Modules/_datetimemodule.c	578	581	weekday	weekday(int year, int month, int day)	modelled	datetime-date-weekday,datetime-isocalendar-roundtrip	
 Modules/_datetimemodule.c	587	598	iso_week1_monday	iso_week1_monday(int year)	modelled	datetime-isocalendar-roundtrip	
 Modules/_datetimemodule.c	645	653	check_delta_day_range	check_delta_day_range(int days)	modelled	datetime-timedelta-ctor-twins	
-Modules/_datetimemodule.c	659	680	check_date_args	check_date_args(int year, int month, int day)	modelled	datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
-Modules/_datetimemodule.c	686	711	check_time_args	check_time_args(int h, int m, int s, int us, int fold)	modelled	datetime-datetime-ctor,datetime-fromiso-offset-range,datetime-time-ctor	
+Modules/_datetimemodule.c	659	680	check_date_args	check_date_args(int year, int month, int day)	modelled	datetime-check-date-fields-index,datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
+Modules/_datetimemodule.c	686	711	check_time_args	check_time_args(int h, int m, int s, int us, int fold)	modelled	datetime-check-time-fields-index,datetime-datetime-ctor,datetime-fromiso-offset-range,datetime-time-ctor	
 Modules/_datetimemodule.c	724	735	normalize_pair	normalize_pair(int *hi, int *lo, int factor)	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	744	762	normalize_d_s_us	normalize_d_s_us(int *d, int *s, int *us)	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	771	831	normalize_y_m_d	normalize_y_m_d(int *y, int *m, int *d)	modelled	datetime-date-add-timedelta	
@@ -65,8 +65,8 @@ Modules/_datetimemodule.c	2139	2190	delta_to_microseconds	delta_to_microseconds(
 Modules/_datetimemodule.c	2193	2213	checked_divmod	checked_divmod(PyObject *a, PyObject *b)	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	2218	2284	microseconds_to_delta_ex	microseconds_to_delta_ex(PyObject *pyus, PyTypeObject *type)	modelled	datetime-timedelta-ctor-twins	
 Modules/_datetimemodule.c	2290	2308	multiply_int_timedelta	multiply_int_timedelta(PyObject *intobj, PyDateTime_Delta *delta)	modelled	datetime-timedelta-ops-twins	
-Modules/_datetimemodule.c	2311	2335	get_float_as_integer_ratio	get_float_as_integer_ratio(PyObject *floatobj)	todo		
-Modules/_datetimemodule.c	2339	2367	multiply_truedivide_timedelta_float	multiply_truedivide_timedelta_float(PyDateTime_Delta *delta, PyObject *floatobj, int op)	todo		
+Modules/_datetimemodule.c	2311	2335	get_float_as_integer_ratio	get_float_as_integer_ratio(PyObject *floatobj)	modelled	datetime-timedelta-float-ratio,datetime-timedelta-float-ratio-twins	
+Modules/_datetimemodule.c	2339	2367	multiply_truedivide_timedelta_float	multiply_truedivide_timedelta_float(PyDateTime_Delta *delta, PyObject *floatobj, int op)	modelled	datetime-timedelta-float-ops,datetime-timedelta-float-ratio,datetime-timedelta-float-ratio-twins	
 Modules/_datetimemodule.c	2370	2388	divide_timedelta_int	divide_timedelta_int(PyDateTime_Delta *delta, PyObject *intobj)	modelled	datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2391	2411	divide_timedelta_timedelta	divide_timedelta_timedelta(PyDateTime_Delta *left, PyDateTime_Delta *right)	modelled	datetime-timedelta-ops-twins	
 Modules/_datetimemodule.c	2414	2434	truedivide_timedelta_timedelta	truedivide_timedelta_timedelta(PyDateTime_Delta *left, PyDateTime_Delta *right)	todo		
@@ -103,7 +103,7 @@ Modules/_datetimemodule.c	3291	3306	date_fromtimestamp	date_fromtimestamp(PyType
 Modules/_datetimemodule.c	3323	3353	datetime_date_today_impl	datetime_date_today_impl(PyTypeObject *type) /*[clinic end generated code: output=d5474697df6b251c input=21688afa289c0a06]*/	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Modules/_datetimemodule.c	3369	3373	datetime_date_fromtimestamp_impl	datetime_date_fromtimestamp_impl(PyTypeObject *type, PyObject *timestamp) /*[clinic end generated code: output=59def4e32c028fb6 input=15720eef43b169a1]*/	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Modules/_datetimemodule.c	3380	3390	datetime_date_fromtimestamp_capi	datetime_date_fromtimestamp_capi(PyObject *cls, PyObject *args)	excluded		internal-bootstrap: module and interpreter state, type readiness and the C API capsule; no Python-level behaviour of its own
-Modules/_datetimemodule.c	3406	3419	datetime_date_fromordinal_impl	datetime_date_fromordinal_impl(PyTypeObject *type, int ordinal) /*[clinic end generated code: output=ea5cc69d86614a6b input=a3a4eedf582f145e]*/	modelled	datetime-ordinal-roundtrip	
+Modules/_datetimemodule.c	3406	3419	datetime_date_fromordinal_impl	datetime_date_fromordinal_impl(PyTypeObject *type, int ordinal) /*[clinic end generated code: output=ea5cc69d86614a6b input=a3a4eedf582f145e]*/	modelled	datetime-fromordinal-arg,datetime-ordinal-roundtrip	
 Modules/_datetimemodule.c	3432	3461	datetime_date_fromisoformat_impl	datetime_date_fromisoformat_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=8b9f9324904fca02 input=73c64216c10bcc8e]*/	modelled	datetime-date-isoformat-roundtrip	
 Modules/_datetimemodule.c	3478	3503	datetime_date_fromisocalendar_impl	datetime_date_fromisocalendar_impl(PyTypeObject *type, int year, int week, int day) /*[clinic end generated code: output=7b26e15115d24df6 input=fbb05b53d6fb51d8]*/	modelled	datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
 Modules/_datetimemodule.c	3521	3536	datetime_date_strptime_impl	datetime_date_strptime_impl(PyTypeObject *type, PyObject *string, PyObject *format) /*[clinic end generated code: output=454d473bee2d5161 input=2db8f0b2b5242deb]*/	modelled	strptime-methods	
