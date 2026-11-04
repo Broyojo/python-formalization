@@ -467,13 +467,17 @@ theorem findSepTwins_proven : FindSepTwins := by
 
 /-! ### `__reduce__`, `__reduce_ex__` -/
 
-/-- `date.__reduce__` in both twins: `(type(self), (bytes,))` with the receiver's own type for
-every class (a subclass pickles as itself) and the four state bytes. -/
+/-- `date.__reduce__` in both twins, every class and every valid date: `(type(self), (bytes,))`
+with the receiver's own type (a subclass pickles as itself), and calling `date` on the state, as
+unpickling does, gives the date back in both twins. -/
 def DateReduceCls : Prop :=
-  ∀ (ty : Nat) (y m d : Int), dateReduceClsC ty y m d = dateReduceClsPy ty y m d ∧
-    (dateReduceClsC ty y m d).1 = ty ∧ (dateReduceClsC ty y m d).2 = dateData y m d
+  ∀ (ty : Nat) (y m d : Int), ValidDate y m d →
+    dateReduceClsC ty y m d = dateReduceClsPy ty y m d ∧ (dateReduceClsC ty y m d).1 = ty ∧
+    dateNewC [.bytes (dateReduceClsC ty y m d).2] = .ok (y, m, d) ∧
+    dateNewPy (.bytes (dateReduceClsPy ty y m d).2) .none_ .none_ = .ok (y, m, d)
 
-theorem dateReduceCls_proven : DateReduceCls := fun _ _ _ _ => ⟨rfl, rfl, rfl⟩
+theorem dateReduceCls_proven : DateReduceCls := fun _ y m d h =>
+  ⟨rfl, rfl, (datePickle_proven y m d h).2.2, (datePickle_proven y m d h).2.1⟩
 
 /-- `time.__reduce_ex__(proto)` and `__reduce__()` in C for every receiver type: the protocol
 goes through the clinic `int` converter first (`PyLong_AsInt`: an object without `__index__`

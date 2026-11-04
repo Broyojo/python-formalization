@@ -118,7 +118,7 @@ def entries : List Entry := [
     prop := ``FindSepTwins, thm := some ``findSepTwins_proven },
   { id := "datetime-date-reduce-cls", pyFile := "Modules/_datetimemodule.c"
     pyFns := ["C date_reduce", "date.__reduce__"]
-    statement := "date.__reduce__ in both twins is (type(self), (bytes,)) with the receiver's own type for every class and the four state bytes."
+    statement := "date.__reduce__ in both twins is (type(self), (bytes,)) with the receiver's own type for every class, and date(*state) gives every valid date back in both twins."
     source := "C/Python twins; pickle contract", status := .proven
     prop := ``DateReduceCls, thm := some ``dateReduceCls_proven },
   { id := "datetime-time-reduce-ex-cls", pyFile := "Modules/_datetimemodule.c"
