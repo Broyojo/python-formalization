@@ -202,8 +202,8 @@ def argOf (j : Json) : Except String Arg := do
   match ← (a[0]!).getStr? with
   | "dec" => return .dec (← decDec a[1]!)
   | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
-  | "tuple" => return .tuple ((← (a[1]!).getStr?).toNat?.getD 0)
-  | _ => return .other
+  | "tuple" => return .tuple (← (← (a[1]!).getArr?).toList.mapM strKindOf)
+  | _ => return .other (← strKindOf (a.getD 1 Json.null))
 
 def jOptD (m : DM (Option Dec)) : DM Json :=
   jDec m (fun o => match o with
@@ -447,7 +447,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "other_ctx" =>
         let acts2 ← (← (← field j "acts2").getArr?).toList.mapM (·.getStr?)
         pure (.sd (some (statusOfActs acts2)))
-      | "bad_dict" | "bad_frozen" => pure (.dict [(.other, true)])
+      | "bad_dict" | "bad_frozen" => pure (.dict [(.other, { truth := true })])
       | _ => pure .other
     return runSd (← getStr j "op") sd key w
   | "ieee" =>

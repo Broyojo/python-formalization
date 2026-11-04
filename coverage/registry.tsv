@@ -387,8 +387,13 @@ decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal._
 decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,_WorkRep.__init__
 decimal-add-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__add__,_WorkRep.__init__,_normalize
 decimal-sub-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,Decimal.copy_negate,_WorkRep.__init__,_normalize
-decimal-add-correct	open	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__,Decimal._fix
-decimal-sub-correct	open	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,Decimal._fix
+decimal-add-correct	proven	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__,Decimal._fix
+decimal-add-exact	proven	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__
+decimal-sub-correct	proven	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,Decimal._fix
+decimal-fma-fin-exact	proven	Lib/_pydecimal.py	Decimal.fma,Decimal.__add__,_normalize
+decimal-rotate-exact	proven	Lib/_pydecimal.py	Decimal.rotate
+decimal-shift-exact	proven	Lib/_pydecimal.py	Decimal.shift
+decimal-sub-exact	proven	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,_WorkRep.__init__
 decimal-mul-overflow-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix,Overflow.handle
 decimal-mul-subnormal-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
 decimal-parse-converse	open	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,numeric_as_ascii
@@ -471,7 +476,7 @@ decimal-abs-no-round-exact	proven	Lib/_pydecimal.py	Decimal.__abs__,Decimal.copy
 decimal-compare-total-mag-rest	proven	Lib/_pydecimal.py	Decimal.compare_total_mag
 decimal-convert-other-tuple-exact	proven	Lib/_pydecimal.py	_convert_other
 decimal-remainder-near-rest	proven	Lib/_pydecimal.py	Decimal.remainder_near,Decimal._check_nans,_WorkRep.__init__
-decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans
+decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans,Decimal.__round__,Context.quantize
 decimal-adjusted-exact	proven	Lib/_pydecimal.py	Decimal.adjusted
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
