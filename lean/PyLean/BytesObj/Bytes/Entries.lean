@@ -5,6 +5,7 @@ import PyLean.BytesObj.Bytes.FormatProps8
 import PyLean.BytesObj.Bytes.FromFormatProps
 import PyLean.BytesObj.Bytes.CtorProps
 import PyLean.BytesObj.Bytes.SlotsProps
+import PyLean.BytesObj.Bytes.TailProps
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -190,7 +191,7 @@ def entries : List Entry := [
     statement := "bytes.__new__(T, ...) for a subclass T is an instance of T with the contents bytes(...) has; __bytes__ of any instance is an exact bytes with the same contents; T.fromhex(s) is an instance of T with bytes.fromhex(s)'s contents."
     source := "Doc/library/stdtypes.rst bytes.fromhex ('classmethod'); bytesobject.c:1832-1837, :2951-2953", status := .proven
     prop := ``BytesNewSubtype, thm := some ``bytesNewSubtype_proven
-    notes := "Classes by identity: a subclass with its own __new__ or __init__, which type(result) would run, is out of scope." },
+    notes := "For fromhex: a subclass that keeps bytes.__new__ and object.__init__; any other is bytesobj-bytes-fromhex-callback." },
   { id := "bytesobj-bytes-escape-spec", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_DecodeEscape2"]
     statement := "escape_decode before any run without a backslash: the one-character escapes, backslash-newline, three octal digits (mod 256, a value above 0o377 reported), one octal digit, \\xHH, an unknown escape (kept, reported); a trailing backslash is ValueError; an invalid \\x is the positioned ValueError under strict, '?' under replace, nothing under ignore (then one hex digit skipped), and the unknown-handler ValueError otherwise."
@@ -245,6 +246,53 @@ def entries : List Entry := [
     source := "docstrings, bytesobject.c:1883-1897 ('the separator itself'); python/cpython#137217", status := .proven
     prop := ``PartitionObj, thm := some ``partitionObj_proven
     notes := "Identity of self in the not-found item is out of scope (an exact bytes); its contents are pinned." },
+  { id := "bytesobj-bytes-private-rfind", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_ReverseFind"]
+    statement := "_PyBytes_ReverseFind is the offset plus the start of the last occurrence of the needle (the haystack's length for an empty needle), or -1 when there is none, for every haystack, needle and offset."
+    source := "stringlib_rfind contract, Objects/stringlib/find.h:26-42", status := .proven
+    prop := ``PrivateRFindSpec, thm := some ``privateRFindSpec_proven },
+  { id := "bytesobj-bytes-getnewargs", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_getnewargs"]
+    statement := "b.__getnewargs__() is a 1-tuple holding an exact bytes with the contents for every class of b, and passing it back to cls.__new__ (pickle protocol 2+) rebuilds an instance of cls with the same contents."
+    source := "pickle protocol 2 (__getnewargs__, copyreg.__newobj__)", status := .proven
+    prop := ``GetnewargsPickle, thm := some ``getnewargsPickle_proven },
+  { id := "bytesobj-bytes-fromhex-callback", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_fromhex_impl"]
+    statement := "T.fromhex(s) for a subclass T is whatever type(result) gives, an exception (e.g. an __init__ with another signature) or any object included, called only after the parse succeeded; for bytes no call is made."
+    source := "Doc/library/stdtypes.rst bytes.fromhex (classmethod); bytesobject.c:2621-2623", status := .proven
+    prop := ``FromHexCallback, thm := some ``fromHexCallback_proven
+    notes := "type(result) is a fallible callback; the difftest runs a subclass whose __init__ takes two arguments and one whose __new__ returns 42." },
+  { id := "bytesobj-bytes-fromlist-mut", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FromList"]
+    statement := "bytes(lst) rereads the list after every __index__: with no item touching it the result is each item converted in turn; an appended value is converted too (range check included); clearing the list ends the loop after the current byte, popping the last item keeps it from being read, a raising __index__ stops with its exception, and the writer grows past its allocation (257 items whose last __index__ appends a 258th give 258 bytes)."
+    source := "bytesobject.c:2995-3019 (3.15 loop); Doc/library/stdtypes.rst bytes(iterable_of_ints)", status := .proven
+    prop := ``FromListMut, thm := some ``fromListMut_proven
+    notes := "Scope: the GIL build. Unverified lead: under Py_GIL_DISABLED _PyList_GetItemRef can return NULL without an exception set (listobject.c:375-388), which :2997-2998 would return as NULL with no exception (a SystemError); no free-threaded build was available, no record." },
+  { id := "bytesobj-bytes-alloc", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_alloc", "bytes_subtype_new"]
+    statement := "bytes_alloc leaves ob_shash at -1 (not the 0 of zeroed memory), so the first hash() of an object it allocated is the hash of whatever contents were written (gh-91020); bytes_subtype_new then copies its source's cache."
+    source := "gh-91020; bytesobject.c:3166-3180", status := .proven
+    prop := ``BytesAllocSpec, thm := some ``bytesAllocSpec_proven },
+  { id := "bytesobj-bytes-resize-pv", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_Resize"]
+    statement := "_PyBytes_Resize sets *pv to NULL when the resize fails (a negative size is the bad internal call, a size past PY_SSIZE_T_MAX - 33 the OverflowError) and gives the resized object otherwise; PyBytes_Concat's in-place branch past that limit leaves *pv NULL with the OverflowError."
+    source := "Doc/c-api/bytes.rst _PyBytes_Resize; bytesobject.c:3474-3484", status := .proven
+    prop := ``PyBytesResizeSpec, thm := some ``pyBytesResizeSpec_proven },
+  { id := "bytesobj-bytes-iter-reduce", pyFile := "Objects/bytesobject.c"
+    pyFns := ["striter_reduce"]
+    statement := "iter(b).__reduce__() looks up iter first and reads it_seq and it_index as that lookup left them (gh-101765): a lookup that exhausts the iterator gives (iter, ((),)), a failed one is the result; a live iterator reduces to (iter, (b,), index) and iter(b).__setstate__(index) rebuilds it."
+    source := "pickle round trip; gh-101765", status := .proven
+    prop := ``StrIterReduceSpec, thm := some ``strIterReduceSpec_proven },
+  { id := "bytesobj-bytes-iter-setstate", pyFile := "Objects/bytesobject.c"
+    pyFns := ["striter_setstate"]
+    statement := "__setstate__ clamps an index above len(b) to len(b) and a negative one to 0, does nothing to an exhausted iterator, and refuses an index outside Py_ssize_t with OverflowError; afterwards the length hint is in [0, len(b)]."
+    source := "bytesobject.c:3567-3582; the iterator protocol (__length_hint__ is not negative)", status := .proven
+    prop := ``StrIterSetstateSpec, thm := some ``strIterSetstateSpec_proven },
+  { id := "bytesobj-bytes-writer-bytes", pyFile := "Objects/bytesobject.c"
+    pyFns := ["byteswriter_resize"]
+    statement := "byteswriter_resize with its storage bytes has the writer model's control flow and keeps every old byte at the front of the new storage, the small buffer included when the first object is made; its overallocation guard makes a size whose quarter would overflow ask for itself (MemoryError up to PY_SSIZE_T_MAX - 33) and a size below it ask for size + size/4 (OverflowError past the limit), as b'%*bx' % (7378697629483820645, b'') and (7378697629483820638, b'') show."
+    source := "bytesobject.c:3730-3798", status := .proven
+    prop := ``WriterBytesSpec, thm := some ``writerBytesSpec_proven },
   { id := "bytesobj-bytes-escape-roundtrip", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytearray_repr", "bytearray_repr_lock_held"]
     statement := "For every byte string and either quote: decoding the body of the literal repr writes, for bytes and for bytearray, gives back the bytes with no invalid escape, so repr is an inverse of escape_decode."

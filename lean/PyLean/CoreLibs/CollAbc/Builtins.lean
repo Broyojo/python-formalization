@@ -117,19 +117,39 @@ def listMSeq {α : Type} : MSeq (List α) α where
 def listSet {α : Type} [DecidableEq α] (xs : List α) : SetV α :=
   ⟨.ok xs.length, .ok xs, fun x => .ok (decide (x ∈ xs)), none⟩
 
-/-- The set of the elements of a list: what the constructor `cls(it)` does. -/
-def dedup {α : Type} [DecidableEq α] : List α → List α → List α
-  | seen, [] => seen.reverse
-  | seen, x :: xs => if x ∈ seen then dedup seen xs else dedup (x :: seen) xs
+/-- Insertion into a `list`-backed set: a new element goes at the end, a present one changes nothing. -/
+def listAdd {α : Type} [DecidableEq α] (s : List α) (x : α) : List α := if x ∈ s then s else s ++ [x]
 
-def mkSet {α : Type} [DecidableEq α] (xs : List α) : SetV α := listSet (dedup [] xs)
+/-- `cls(it)` for a `list`-backed set, as a consumer: every element is inserted, none fails. -/
+def listBuilder {α : Type} [DecidableEq α] : FromIter (List α) α (SetV α) :=
+  ⟨.ok [], fun r x => .ok (listAdd r x), fun r => .ok (listSet r)⟩
 
 /-- A `set` as a `MutableSet`, in insertion order. -/
-def listMSet {α : Type} [DecidableEq α] : MSet (List α) α where
+def listMSet {α : Type} [DecidableEq α] : MSet (List α) (List α) α where
   view := listSet
-  add s x := .ok (if x ∈ s then s else s ++ [x])
+  add s x := .ok (listAdd s x)
   discard s x := .ok (s.erase x)
-  fromIter := mkSet
+  fromIter := listBuilder
+
+/-- The builtin `set(it)` as a consumer of `it` (Objects/setobject.c `set_update_internal`, `set_add_key`): each element
+is hashed (`hash`, which raises `TypeError` for an unhashable one) and then inserted. -/
+def setBuilder {α : Type} [DecidableEq α] (hash : α → Py Unit) : FromIter (List α) α (List α) :=
+  ⟨.ok [], fun r x => do hash x; pure (listAdd r x), fun r => .ok r⟩
+
+/-- `KeysView._from_iterable` and `ItemsView._from_iterable`, Lib/_collections_abc.py:851-853, 869-871: `set(it)`, the
+builtin `set` whatever `cls` is. -/
+def viewFromIterable {C α : Type} [DecidableEq α] (hash : α → Py Unit) (_cls : C) (xs : Py (List α))
+    (tail : Option PyExc) : Py (List α) :=
+  build (setBuilder hash) xs tail
+
+/-- Python's `a - b` between two sets of one mixin class built by `listBuilder`: `Set.__sub__` (the class is the same
+on both sides, so no reflected method is tried), whose `NotImplemented` would be the operator's `TypeError`. -/
+def mixinMinus {α : Type} [DecidableEq α] (a b : SetV α) : Py (SetV α) :=
+  retOr (a.sub listBuilder (.set b)) (.error (.typeError "~unsupported operand type(s) for -"))
+
+/-- Python's `a | b` between two such sets: `Set.__or__`. -/
+def mixinOr {α : Type} [DecidableEq α] (a b : SetV α) : Py (SetV α) :=
+  retOr (a.or listBuilder (.set b)) (.error (.typeError "~unsupported operand type(s) for |"))
 
 /-- `d[k]` on a `dict` kept as its item list. -/
 def dictGet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) : Py V :=
@@ -139,12 +159,7 @@ def dictGet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) : Py V :=
 
 /-- A `dict` as a `Mapping`. -/
 def dictMap {K V : Type} [DecidableEq K] (d : List (K × V)) : MapV K V :=
-  ⟨dictGet d, .ok (d.map Prod.fst), .ok d.length, none⟩
-
-/-- `d[k] = v`: an existing key keeps its position. -/
-def dictSet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (v : V) : List (K × V) :=
-  if d.any (fun p => p.1 = k) then d.map (fun p => if p.1 = k then (k, v) else p)
-  else d ++ [(k, v)]
+  { getitem := dictGet d, iter := .ok (d.map Prod.fst), len := .ok d.length }
 
 /-- `del d[k]`. -/
 def dictDel {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) : Py (List (K × V)) :=

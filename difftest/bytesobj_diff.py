@@ -1481,7 +1481,8 @@ def b_rfmt(rng):
         elif wk < 0.45:
             sp += b"*"
             args.append(["int", rng.choice([0, 1, 5, 8, -1, -5, -8, 12, 2 ** 63, -2 ** 63, -2 ** 63 + 1, 2 ** 63 - 1,
-                                            2 ** 63 - 30, 2 ** 47, 2 ** 48 - 1])])
+                                            2 ** 63 - 30, 2 ** 47, 2 ** 48 - 1, 7378697629483820638,
+                                            7378697629483820645, 7378697629483820600, 8301034833169298226])])
         pk = rng.random()
         if pk < 0.25:
             sp += b"." + str(rng.choice([0, 1, 2, 3, 6, 10, 17, 20])).encode()
@@ -1927,6 +1928,20 @@ def gen_bytes(rng):
                                     ["bytes", [1]], ["plain"]])
             if c["item"][0] == "float":
                 c["item"] = b_bflt(1.5)
+        elif k < 0.79:
+            # _PyBytes_FromList rereads the list after every __index__ (bytesobject.c:2995-2996)
+            c["fn"] = "bytes.fromlistmut"
+            items = []
+            n = rng.choice([1, 2, 3, 5, 255, 256, 257, 300])
+            for _ in range(n):
+                if rng.random() < (0.97 if n > 10 else 0.6):
+                    items.append(["plain", ["int", rng.choice([0, 1, 97, 255, 256, -1, 2 ** 70])
+                                            if rng.random() < 0.05 else rng.randrange(256)]])
+                else:
+                    r = rng.choice([rng.randrange(256), 300, -1, 2 ** 80, ["ValueError", "boom"]])
+                    act = rng.choice([["keep"], ["append", rng.choice([5, 300, -2])], ["clear"], ["pop"]])
+                    items.append(["mut", r, act])
+            c["items"] = items
         elif k < 0.82:
             # the separator object itself comes back (partition.h:57)
             c["fn"] = rng.choice(["bytes.partitionobj", "bytes.rpartitionobj"])
@@ -1967,7 +1982,11 @@ def gen_bytes(rng):
             # bytes_new_impl for a subtype: bytes_subtype_new
             c["fn"] = "bytes.newsub"
     elif r < 0.685 and ty == "bytes":
-        c["fn"] = rng.choice(["bytes.fromhexsub", "bytes.dunderbytes", "bytes.dunderbytessub"])
+        c["fn"] = rng.choice(["bytes.fromhexsub", "bytes.dunderbytes", "bytes.dunderbytessub", "bytes.fromhexcls",
+                              "bytes.fromhexcls", "bytes.getnewargs", "bytes.pickle"])
+        c["cls"] = rng.choice(["bytes", "BSubB", "BHexInit", "BHexNew"])
+        c["sub"] = rng.random() < 0.5
+        c["proto"] = rng.choice([2, 3, 4, 5])
         c["x"] = rng.choice([["str", list(b"61 62 ff")], ["str", list(b"6")], ["bytes", list(b"0a")], ["int", 1],
                              ["str", [0x20ac]], ["str", []]])
     elif r < 0.72:
@@ -2259,6 +2278,35 @@ class BSubB(bytes):
     """A bytes subclass that keeps bytes.__new__ and object.__init__."""
 
 
+class BIdxMut:
+    """An item whose __index__ acts on the list that holds it, then returns or raises."""
+    def __init__(self, lst, r, act):
+        self.lst, self.r, self.act = lst, r, act
+
+    def __index__(self):
+        if self.act[0] == "append":
+            self.lst.append(self.act[1])
+        elif self.act[0] == "clear":
+            self.lst.clear()
+        elif self.act[0] == "pop":
+            self.lst.pop()
+        if isinstance(self.r, list):
+            raise b_exc(self.r)
+        return self.r
+
+
+class BHexInit(bytes):
+    """type(result) in fromhex fails: __init__ takes two arguments."""
+    def __init__(self, a, b):
+        pass
+
+
+class BHexNew(bytes):
+    """type(result) in fromhex returns an int."""
+    def __new__(cls, *args):
+        return 42
+
+
 class BSub(bytearray):
     pass
 
@@ -2366,6 +2414,11 @@ def run_bytes(case):
             return b_benc(s.hex(*a))
         if m == "fromhex":
             return b_benc(mk.fromhex(b_build(c["x"])))
+        if m == "fromlistmut":
+            lst = []
+            for it in c["items"]:
+                lst.append(b_build(it[1]) if it[0] == "plain" else BIdxMut(lst, it[1], it[2]))
+            return b_benc(bytes(lst))
         if m in ("partitionobj", "rpartitionobj"):
             r = getattr(s, m[:-3])(b_build(c["sep"]))
             return [[type(x).__name__, list(bytes(x))] for x in r]
@@ -2397,6 +2450,20 @@ def run_bytes(case):
             if c.get("err") is not None:
                 kw["errors"] = c["err"]
             r = BSubB(*a, **kw)
+            return [type(r).__name__, b_benc(bytes(r))]
+        if m == "fromhexcls":
+            cls = {"bytes": bytes, "BSubB": BSubB, "BHexInit": BHexInit, "BHexNew": BHexNew}[c["cls"]]
+            r = cls.fromhex(b_build(c["x"]))
+            if isinstance(r, bytes):
+                return [type(r).__name__, b_benc(bytes(r))]
+            return ["obj", type(r).__name__, repr(r)]
+        if m == "getnewargs":
+            o = BSubB(bytes(c["s"])) if c["sub"] else bytes(c["s"])
+            t = o.__getnewargs__()
+            return [type(t).__name__, len(t), type(t[0]).__name__, b_benc(bytes(t[0]))]
+        if m == "pickle":
+            import pickle
+            r = pickle.loads(pickle.dumps(BSubB(bytes(c["s"])), c["proto"]))
             return [type(r).__name__, b_benc(bytes(r))]
         if m == "fromhexsub":
             r = BSubB.fromhex(b_build(c["x"]))

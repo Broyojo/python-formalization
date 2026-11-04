@@ -196,6 +196,23 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   | "escapew" =>
     return encPy (fun (p : Seq × Option String) => Json.arr #[jB p.1, Json.null])
       (bytesDecodeEscapeW s (← optStr j "err") true)
+  | "fromlistmut" =>
+    let items ← (← (← field j "items").getArr?).toList.mapM fun it => do
+      let a ← it.getArr?
+      match ← (a.getD 0 Json.null).getStr? with
+      | "plain" => return LItem.plain (← decObj (a.getD 1 Json.null))
+      | _ =>
+        let r : Py Int ← match a.getD 1 Json.null with
+          | .arr _ => pure (.error (← decExc (a.getD 1 Json.null)))
+          | v => pure (.ok (← v.getInt?))
+        let act ← (a.getD 2 Json.null).getArr?
+        let actK : ListAct ← match ← (act.getD 0 Json.null).getStr? with
+          | "append" => pure (.append (← (act.getD 1 Json.null).getInt?))
+          | "clear" => pure .clear
+          | "pop" => pure .popLast
+          | _ => pure .keep
+        return LItem.mut r actK
+    return encPy jB (bytesFromList items)
   | "partitionobj" | "rpartitionobj" =>
     let f := if m == "partitionobj" then bytesPartitionObj else bytesRPartitionObj
     let enc (o : Obj) : Json := Json.arr #[toJson o.typeName, toJson ((o.buffer?).getD [])]
@@ -204,6 +221,26 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   | "newsub" =>
     return encPy jTB (bytesNewType "BSubB" (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
   | "fromhexsub" => return encPy jTB (bytesFromHexType "BSubB" (← fieldObj j "x"))
+  | "fromhexcls" =>
+    -- type(result) for the test's classes: BSubB keeps bytes.__new__ and object.__init__,
+    -- BHexInit has `__init__(self, a, b)`, BHexNew has a `__new__` that returns 42
+    let call : Option (Seq → Py Json) ← match (← getStr j "cls") with
+      | "bytes" => pure none
+      | "BSubB" => pure (some fun r => (plainSubCall "BSubB" r).map jTB)
+      | "BHexInit" => pure (some fun _ =>
+          .error (.typeError "BHexInit.__init__() missing 1 required positional argument: 'b'"))
+      | "BHexNew" => pure (some fun _ => .ok (Json.arr #["obj", "int", "42"]))
+      | c => throw s!"cls {c}"
+    return encPy id (bytesFromHexT (fun r => jTB ("bytes", r)) call (← fieldObj j "x"))
+  | "getnewargs" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return Json.mkObj [("ok", Json.arr #["tuple", toJson (1 : Nat), toJson a.typeName,
+        jB ((a.buffer?).getD [])])]
+    | _ => throw "getnewargs"
+  | "pickle" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return encPy jTB (bytesNewType "BSubB" (some a) none none)
+    | _ => throw "pickle"
   | "dunderbytes" => return encPy jTB (.ok (bytesDunderBytes "bytes" s) : Py (String × Seq))
   | "dunderbytessub" => return encPy jTB (.ok (bytesDunderBytes "BSubB" s) : Py (String × Seq))
   | "maketrans" =>

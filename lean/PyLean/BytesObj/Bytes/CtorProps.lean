@@ -118,10 +118,47 @@ theorem bytesNewSubtype_proven : BytesNewSubtype := by
     unfold bytesDunderBytes
     split <;> simp_all
   · intro T o hT
-    unfold bytesFromHexType
-    cases bytesFromHex o <;> simp [hT, bytesNewType, bytesNew, bytesSubtypeNew, Except.map]
+    unfold bytesFromHexType bytesFromHexT
+    cases bytesFromHex o <;> simp [hT, plainSubCall, bytesNewType, bytesNew, bytesSubtypeNew, Except.map]
   · intro o
-    unfold bytesFromHexType
+    unfold bytesFromHexType bytesFromHexT
     cases bytesFromHex o <;> simp [Except.map]
+
+/-- The subclass branch of `bytes_fromhex_impl` (bytesobject.c:2621-2623) runs user code: for any
+`type(result)`, the result is what that call gives, an exception included (a subclass whose
+`__init__` takes other arguments makes `T.fromhex('00')` a TypeError) or any object (a `__new__` that
+returns an int); the call is made only after the parse succeeded, so a parse error comes first and no
+user code runs; for `bytes` itself no call is made. -/
+def FromHexCallback : Prop :=
+  (∀ {α : Type} (inj : Seq → α) (f : Seq → Py α) (o : Obj) (r : Seq), bytesFromHex o = .ok r →
+    bytesFromHexT inj (some f) o = f r) ∧
+  (∀ {α : Type} (inj : Seq → α) (f : Seq → Py α) (o : Obj) (e : PyExc), bytesFromHex o = .error e →
+    bytesFromHexT inj (some f) o = .error e) ∧
+  (∀ {α : Type} (inj : Seq → α) (o : Obj), bytesFromHexT inj none o = (bytesFromHex o).map inj) ∧
+  (∀ (o : Obj) (r : Seq) (e : PyExc), bytesFromHex o = .ok r →
+    bytesFromHexT (fun r => Obj.bytes r) (some (fun _ => .error e)) o = .error e) ∧
+  (∀ (o : Obj) (r : Seq) (x : Obj), bytesFromHex o = .ok r →
+    bytesFromHexT (fun r => Obj.bytes r) (some (fun _ => .ok x)) o = .ok x)
+
+theorem fromHexCallback_proven : FromHexCallback := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro α inj f o r h; simp [bytesFromHexT, h]
+  · intro α inj f o e h; simp [bytesFromHexT, h]
+  · intro α inj o; unfold bytesFromHexT; cases bytesFromHex o <;> rfl
+  · intro o r e h; simp [bytesFromHexT, h]
+  · intro o r x h; simp [bytesFromHexT, h]
+
+/-- `__getnewargs__` (bytesobject.c:2775-2780) is a 1-tuple holding an exact bytes with the contents,
+whatever the class of `self`; it is what `copyreg.__newobj__` passes back to `cls.__new__`, which for
+a subclass that keeps `bytes.__new__` rebuilds an instance of `cls` with the same contents (the pickle
+round trip). -/
+def GetnewargsPickle : Prop :=
+  ∀ (cls : String) (s : Seq), ∃ a, bytesGetnewargs s = .tuple [a] ∧ a.typeName = "bytes" ∧
+    a.buffer? = some s ∧ bytesNewType cls (some a) none none = .ok (if cls ≠ "bytes" then cls else "bytes", s)
+
+theorem getnewargsPickle_proven : GetnewargsPickle := by
+  intro cls s
+  refine ⟨.bytes s, rfl, rfl, rfl, ?_⟩
+  by_cases h : cls ≠ "bytes" <;> simp [bytesNewType, bytesNew, bytesSubtypeNew, h]
 
 end PyLean.BytesObj.Bytes

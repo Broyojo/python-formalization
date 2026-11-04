@@ -1,0 +1,82 @@
+id: corelibs-asyncgenerator-aclose-message
+title: "collections.abc.AsyncGenerator.aclose says 'asynchronous generator ignored GeneratorExit', builtin aclose() says 'async generator ignored GeneratorExit'"
+priority: P5
+kind: twin-mismatch
+module: corelibs
+files: [Lib/_collections_abc.py, Objects/genobject.c]
+functions: ["AsyncGenerator.aclose"]
+summary: |
+  When an async generator yields instead of finishing after GeneratorExit is thrown in, both the
+  mixin AsyncGenerator.aclose and the builtin async_generator.aclose() raise RuntimeError, but with
+  different messages: the mixin says "asynchronous generator ignored GeneratorExit", the builtin
+  "async generator ignored GeneratorExit". For generators and coroutines the mixin and the builtin
+  use the same text ("generator ignored GeneratorExit", "coroutine ignored GeneratorExit"), so the
+  async family is the odd one out. Code that matches the message, or a test that compares a wrapper
+  with the generator it wraps, sees the difference.
+likelihood: |
+  Very low. It needs a hand-written AsyncGenerator subclass whose athrow yields while closing, and a
+  caller that looks at the message rather than the exception type.
+maybe_intended: |
+  Probably an accident of history: the mixin was written in 3.6 with the message spelled out, and
+  ASYNC_GEN_IGNORED_EXIT_MSG in Objects/genobject.c uses the short spelling. Nothing documents
+  either message. A maintainer may well consider it not worth changing.
+reproducer: |
+  from collections.abc import AsyncGenerator
+  def drive(c):
+      try:
+          c.send(None)
+      except StopIteration as e:
+          return e.value
+      raise AssertionError("suspended")
+  def msg(f):
+      try:
+          f()
+      except RuntimeError as e:
+          return str(e)
+  class Mixin(AsyncGenerator):
+      async def asend(self, value):
+          return 1
+      async def athrow(self, *args):
+          return 1   # yields instead of closing
+  async def builtin():
+      try:
+          yield 1
+      except GeneratorExit:
+          yield 2
+  b = builtin()
+  drive(b.asend(None))
+  builtin_msg = msg(lambda: drive(b.aclose()))
+  mixin_msg = msg(lambda: drive(Mixin().aclose()))
+  print('builtin:', builtin_msg)
+  print('mixin:  ', mixin_msg)
+  if builtin_msg != mixin_msg and mixin_msg == 'asynchronous generator ignored GeneratorExit':
+      print('REPRODUCED corelibs-asyncgenerator-aclose-message')
+expected: |
+  The mixin raises RuntimeError("async generator ignored GeneratorExit"), as builtin async
+  generators do, the way Generator.close and Coroutine.close match their builtins.
+observed: |
+  python3 3.15.2: builtin 'async generator ignored GeneratorExit', mixin 'asynchronous generator
+  ignored GeneratorExit'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing promises the message. Doc/library/collections.abc.rst describes AsyncGenerator as the ABC
+  of asynchronous generator classes implementing PEP 525 and PEP 492; the mixin's own docstring says
+  only "Raise GeneratorExit inside coroutine."
+cause: |
+  Lib/_collections_abc.py:270 raise RuntimeError("asynchronous generator ignored GeneratorExit"),
+  while Objects/genobject.c:64-65 ASYNC_GEN_IGNORED_EXIT_MSG = "async generator ignored
+  GeneratorExit" is used at :528, :2401 and :2471. Lib/_collections_abc.py:184 and :390 match their
+  builtin counterparts at Objects/genobject.c:524-526.
+possible_fix: |
+  raise RuntimeError("async generator ignored GeneratorExit") at Lib/_collections_abc.py:270.
+duplicates:
+  issues: []
+  queries: ["gh search issues --repo python/cpython asynchronous generator ignored GeneratorExit",
+    "gh search issues --repo python/cpython AsyncGenerator aclose",
+    "gh search issues --repo python/cpython collections.abc AsyncGenerator",
+    "gh search issues --repo python/cpython _collections_abc aclose",
+    "gh search issues --repo python/cpython ignored GeneratorExit RuntimeError message",
+    "bugforge README: no match for AsyncGenerator, aclose or collections_abc"]
+lean:
+  property: PyLean.CoreLibs.CollAbc.AcloseMatchesBuiltin
+  theorem: PyLean.CoreLibs.CollAbc.acloseMatchesBuiltin_refuted

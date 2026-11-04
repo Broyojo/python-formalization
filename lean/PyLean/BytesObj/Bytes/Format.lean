@@ -64,7 +64,7 @@ def getNextArg (st : FS) (allowone : Bool) : Py (Obj × FS) :=
     if st.arglen ≥ 0 then
       match st.args with
       | .tuple xs => .ok (xs.getD st.argidx.toNat default, st')
-      | _ => .error (badInternalCall "PyTuple_GetItem")
+      | _ => .error (badInternalCall "Objects/tupleobject.c" 107)
     else if allowone then .ok (st.args, st')
     else .error notEnough
   else .error notEnough

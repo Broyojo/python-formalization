@@ -27,6 +27,67 @@ def bytesFromItems : List Obj → Py Seq
     let tail ← bytesFromItems rest
     return v :: tail
 
+/-- What an item's `__index__` does to the list that holds it, before it returns. -/
+inductive ListAct where
+  | keep
+  | append (v : Int)
+  | clear
+  | popLast
+
+/-- An item of a list given to `bytes()`: a plain object, or one whose `__index__` first acts on the
+list and then returns `r` (or raises, or returns a non-int: the `TypeError` in `r`). -/
+inductive LItem where
+  | plain (o : Obj)
+  | mut (r : Py Int) (act : ListAct)
+
+instance : Inhabited LItem := ⟨.plain .none⟩
+
+/-- The list after `act`; an appended value is a plain int. -/
+def ListAct.apply : ListAct → List LItem → List LItem
+  | .keep, xs => xs
+  | .append v, xs => xs ++ [.plain (.int v)]
+  | .clear, _ => []
+  | .popLast, xs => xs.dropLast
+
+/-- `PyNumber_AsSsize_t(item, NULL)` on an item of the list `xs` (bytesobject.c:3000): the clipped
+value, and the list as `__index__` left it. -/
+def lItemIndex (item : LItem) (xs : List LItem) : Py Int × List LItem :=
+  match item with
+  | .plain o => (asSsizeClamp o, xs)
+  | .mut r act => (r.map clampSsize, act.apply xs)
+
+/-- The loop of `_PyBytes_FromList`, bytesobject.c:2995-3021: `i < PyList_GET_SIZE(x)` and
+`_PyList_GetItemRef(x, i)` read the list as the previous `__index__` left it (:2995-2996); the range
+check (:3005-3009); past `size`, `_PyBytesWriter_ResizeAndUpdatePointer(writer, size + 1, str)` and
+`_PyBytesWriter_ResizeToAllocated` (:3011-3019). The model is the GIL build, where
+`_PyList_GetItemRef` of an index below the size cannot fail; under `Py_GIL_DISABLED` it can return
+NULL without an exception set (listobject.c:375-388), a lead that is not verified here. -/
+def fromListLoop : Nat → List LItem → Nat → Writer → Int → Seq → Py (Seq × Writer)
+  | 0, _, _, _, _, _ => .error .modelFuel
+  | fuel + 1, xs, i, w, size, out =>
+    if i < xs.length then
+      match lItemIndex (xs.getD i default) xs with
+      | (.error e, _) => .error e
+      | (.ok value, xs) =>
+        if value < 0 ∨ value ≥ 256 then .error (.valueError "bytes must be in range(0, 256)")
+        else if (i : Int) ≥ size then
+          match writerResize w (size + 1) with
+          | .error e => .error e
+          | .ok w =>
+            let w := writerResizeToAllocated w
+            fromListLoop fuel xs (i + 1) w w.size (out ++ [value.toNat])
+        else fromListLoop fuel xs (i + 1) w size (out ++ [value.toNat])
+    else .ok (out, w)
+
+/-- `_PyBytes_FromList(x)`, bytesobject.c:2984-3026: `PyBytesWriter_Create(size)`,
+`_PyBytesWriter_ResizeToAllocated` (:2987-2992), the loop, `PyBytesWriter_FinishWithPointer`. Every
+`__index__` appends at most one plain item, so `2 * len + 1` rounds bound the loop. -/
+def bytesFromList (xs : List LItem) : Py Seq := do
+  let w ← writerCreate xs.length false
+  let w := writerResizeToAllocated w
+  let (out, w) ← fromListLoop (2 * xs.length + 1) xs 0 w w.size []
+  writerFinish w out
+
 /-- `PyBytes_FromObject`, bytesobject.c:3124-3164. -/
 def bytesFromObject (x : Obj) : Py Seq :=
   match x with
@@ -38,7 +99,8 @@ def bytesFromObject (x : Obj) : Py Seq :=
       let cannot : PyExc := .typeError s!"cannot convert '{x.typeName}' object to bytes"
       match x with
       | .str _ => .error cannot
-      | .list items | .tuple items => bytesFromItems items
+      | .list items => bytesFromList (items.map .plain)
+      | .tuple items => bytesFromItems items
       | _ => do
         let items ← getIterOr cannot x
         -- `_PyBytes_FromIterator`, bytesobject.c:3068-3074: the hint, then the allocation.
@@ -115,14 +177,31 @@ def bytesNewType (type : String) (x : Option Obj) (encoding errors : Option Stri
   | .ok b =>
     if type ≠ "bytes" then .ok (type, (bytesSubtypeNew { data := b }).data) else .ok ("bytes", b)
 
-/-- `bytes_fromhex_impl(type, string)`, bytesobject.c:2617-2626: `_PyBytes_FromHex`, then for a
-subclass `type(result)` (:2621-2623), which for a subclass that keeps `bytes.__new__` and
-`object.__init__` is `bytes_new_impl(type, result)`. A subclass with its own `__new__` or `__init__`
-is out of scope (classes by identity). -/
-def bytesFromHexType (type : String) (o : Obj) : Py (String × Seq) :=
+/-- `bytes_fromhex_impl(type, string)`, bytesobject.c:2617-2626, for any result type `α`:
+`_PyBytes_FromHex`, then, when `type` is not `bytes`, `PyObject_CallOneArg(type, result)`
+(:2621-2623). `call` is that call: `none` for `bytes` itself (the result is `inj r`); `some f` for a
+subclass, where `f r` runs the subclass's `__new__` and `__init__` and may raise or return any
+object. It is called only after the parse succeeded. -/
+def bytesFromHexT {α : Type} (inj : Seq → α) (call : Option (Seq → Py α)) (o : Obj) : Py α :=
   match bytesFromHex o with
   | .error e => .error e
-  | .ok r => if type ≠ "bytes" then bytesNewType type (some (.bytes r)) none none else .ok ("bytes", r)
+  | .ok r =>
+    match call with
+    | none => .ok (inj r)
+    | some f => f r
+
+/-- `type(r)` for a subclass `T` that keeps `bytes.__new__` and `object.__init__`:
+`bytes_new_impl(T, r)`, an instance of `T` with the contents of `r`. -/
+def plainSubCall (T : String) (r : Seq) : Py (String × Seq) := bytesNewType T (some (.bytes r)) none none
+
+/-- `T.fromhex(s)` for `bytes` (`T = "bytes"`) or a subclass `T` that keeps `bytes.__new__` and
+`object.__init__`: `(class, contents)`. -/
+def bytesFromHexType (type : String) (o : Obj) : Py (String × Seq) :=
+  bytesFromHexT (fun r => ("bytes", r)) (if type ≠ "bytes" then some (plainSubCall type) else none) o
+
+/-- `bytes_getnewargs(op)`, bytesobject.c:2775-2780: `Py_BuildValue("(y#)", ob_sval, size)`, a new
+1-tuple holding a new exact bytes with the contents, whatever the class of `self`. -/
+def bytesGetnewargs (s : Seq) : Obj := .tuple [.bytes s]
 
 /-- `bytes.decode(encoding, errors)`, bytesobject.c:2573-2579: `PyUnicode_FromEncodedObject(self,
 encoding, errors)`, which for a bytes is `PyUnicode_Decode`, after its own empty-input shortcut

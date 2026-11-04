@@ -527,4 +527,29 @@ theorem partitionObj_proven : PartitionObj := by
     · simp only [bytesRPartitionObj, hb, h0, ite_false]
       by_cases hp : fastsearch s b (-1) .rsearch < 0 <;> simp [hp, Except.map]
 
+/-! ## `_PyBytes_ReverseFind` -/
+
+/-- `_PyBytes_ReverseFind(haystack, len, needle, len, offset)` (bytesobject.c:1419-1426) is
+`stringlib_rfind`: the offset plus the start of the last occurrence of the needle (the length of the
+haystack for an empty needle), or -1 when there is none, for every haystack, needle and offset. -/
+def PrivateRFindSpec : Prop :=
+  (∀ (hay needle : Seq) (off : Int), (∀ j, ¬ StrSearch.Occ hay needle j) →
+    privateBytesRFind hay needle off = -1) ∧
+  (∀ (hay needle : Seq) (off : Int) (i : Nat), StrSearch.Occ hay needle i →
+    (∀ j, i < j → ¬ StrSearch.Occ hay needle j) → privateBytesRFind hay needle off = off + i)
+
+theorem privateRFindSpec_proven : PrivateRFindSpec := by
+  refine ⟨?_, ?_⟩
+  · intro hay needle off h
+    have hn := StrSearch.rfindL_eq_none.mpr h
+    by_cases hl : needle.length ≤ hay.length
+    · simp [privateBytesRFind, StrSearch.stringlibRFind_eq hl, hn, StrSearch.optOff]
+    · have hp : needle.length ≠ 0 := by omega
+      have hs : hay.length < needle.length := by omega
+      simp [privateBytesRFind, stringlibRFind, hp, fastsearch, hs]
+  · intro hay needle off i ho hlast
+    have hs := StrSearch.rfindL_eq_some.mpr ⟨ho, hlast⟩
+    have hl : needle.length ≤ hay.length := by have := ho.1; omega
+    simp [privateBytesRFind, StrSearch.stringlibRFind_eq hl, hs, StrSearch.optOff]
+
 end PyLean.BytesObj.Bytes

@@ -222,33 +222,116 @@ theorem setHashMatchesFrozenset_proven : SetHashMatchesFrozenset := by
     show shuffleBits 0 = nullBits from rfl, cancel]
   rfl
 
-/-- `_DeprecateByteStringMeta`: creating a class warns unless it is `ByteString` itself, so that
-the module's own definition is silent; `isinstance` warns every time and does not change the
-`ABCMeta` answer. The deprecation note in `collections.abc`. -/
+/-- `_DeprecateByteStringMeta`: creating a class shows the `DeprecationWarning` of `warnings._deprecated` unless it is
+`ByteString` itself, so that the module's own definition is silent; under an ignoring filter nothing is shown, and under
+an erroring one the warning is raised and the class is not made. `isinstance` warns the same way every time and then
+gives `ABCMeta`'s answer, or nothing under an erroring filter. Lib/_collections_abc.py:1069-1087. -/
 def ByteStringMeta : Prop :=
-  (∀ name : String, byteStringMetaWarns name = true ↔ name ≠ "ByteString") ∧
-  (∀ answer : Bool, byteStringInstanceCheck answer = (true, answer))
+  ∀ (γ : Type) (name : String) (make : Py γ) (act : WarnAction) (answer : Py Bool),
+    (name ≠ "ByteString" →
+      byteStringMetaNew .always name make = ([⟨"DeprecationWarning", "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"⟩], make) ∧
+      byteStringMetaNew .ignore name make = ([], make) ∧
+      byteStringMetaNew .error name make = ([], .error (.named "DeprecationWarning" "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"))) ∧
+    byteStringMetaNew act "ByteString" make = ([], make) ∧
+    byteStringInstanceCheck .always answer = ([⟨"DeprecationWarning", "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"⟩], answer) ∧
+    byteStringInstanceCheck .ignore answer = ([], answer) ∧
+    byteStringInstanceCheck .error answer = ([], .error (.named "DeprecationWarning" "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"))
 
 theorem byteStringMeta_proven : ByteStringMeta := by
-  refine ⟨?_, fun _ => rfl⟩
-  intro name
-  simp [byteStringMetaWarns]
+  intro γ name make act answer
+  refine ⟨?_, by simp [byteStringMetaNew], ?_, ?_, rfl⟩
+  · intro h
+    have h' : (name != "ByteString") = true := by simpa using h
+    refine ⟨?_, ?_, ?_⟩
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals (cases make <;> rfl)
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals (cases make <;> rfl)
+    · simp only [byteStringMetaNew, h', ite_true, byteStringWarn, bind, Except.bind]
+      all_goals rfl
+  · simp only [byteStringInstanceCheck, byteStringWarn, bind, Except.bind]
+    all_goals (cases answer <;> rfl)
+  · simp only [byteStringInstanceCheck, byteStringWarn, bind, Except.bind]
+    all_goals (cases answer <;> rfl)
 
-/-- `ByteString` is out of the module's globals until it is read: the first read warns and puts it back, and a read after
-that finds it with no warning. A warning turned into an exception leaves it out, so the next read warns again. Any other
-name is an `AttributeError`. -/
+/-- `ByteString` is out of the module's globals until it is read. The first read warns, with the category and message
+of `warnings._deprecated`, and puts it back; under a filter that ignores the warning it is put back silently; under one
+that makes the warning an exception, the exception propagates and it stays out, so the next read warns again; a read
+once it is back finds it without calling `__getattr__`. Any other name is the `AttributeError` with the module's
+message. Lib/_collections_abc.py:1175-1183 with Lib/_py_warnings.py:873, 876-892. -/
 def ModuleGetattrByteString : Prop :=
-  ∀ (w : Option PyExc) (e : PyExc) (l : Bool) (attr : String),
-    moduleGetattr none false "ByteString" = (true, .ok ()) ∧
-    moduleGetattr (some e) false "ByteString" = (false, .error e) ∧
-    moduleGetattr w true "ByteString" = (true, .ok ()) ∧
+  ∀ (act : WarnAction) (l : Bool) (attr : String),
+    moduleGetattr .always false "ByteString" =
+      ([⟨"DeprecationWarning", "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"⟩],
+        true, .ok ()) ∧
+    moduleGetattr .ignore false "ByteString" = ([], true, .ok ()) ∧
+    moduleGetattr .error false "ByteString" = ([], false,
+      .error (.named "DeprecationWarning"
+        "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17")) ∧
+    moduleGetattr act true "ByteString" = ([], true, .ok ()) ∧
     (attr ≠ "ByteString" →
-      moduleGetattr w l attr = (l, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'")))
+      moduleGetattr act l attr =
+        ([], l, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'")))
 
 theorem moduleGetattrByteString_proven : ModuleGetattrByteString := by
-  intro w e l attr
-  refine ⟨rfl, rfl, rfl, ?_⟩
-  intro h
-  simp [moduleGetattr, h]
+  intro act l attr
+  refine ⟨rfl, rfl, rfl, ?_, ?_⟩
+  · simp [moduleGetattr]
+  · intro h
+    simp [moduleGetattr, h]
+
+theorem hashLoop_ok {α : Type} (hash : α → Py Int) (t : Option PyExc) :
+    ∀ (xs : List α) (hs : List Int) (h : Nat), xs.mapM hash = .ok hs →
+    hashLoop hash t h xs = raiseTail t (hs.foldl hashRound h)
+  | [], hs, h, e => by
+    simp only [List.mapM_nil, pure, Except.pure, Except.ok.injEq] at e
+    subst e
+    rfl
+  | x :: xs, hs, h, e => by
+    simp only [List.mapM_cons] at e
+    cases hx : hash x with
+    | error err => simp [hx, bind, Except.bind] at e
+    | ok a =>
+      cases hr : xs.mapM hash with
+      | error err => simp [hx, hr, bind, Except.bind] at e
+      | ok as =>
+        simp only [hx, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at e
+        subst e
+        simp only [hashLoop, hx, bind, Except.bind, List.foldl_cons]
+        exact hashLoop_ok hash t xs as (hashRound h a) hr
+
+theorem hashLoop_err {α : Type} (hash : α → Py Int) (t : Option PyExc) (z : α) (post : List α) (e : PyExc)
+    (hz : hash z = .error e) : ∀ (pre : List α) (h : Nat), (∀ x ∈ pre, ∃ v, hash x = .ok v) →
+    hashLoop hash t h (pre ++ z :: post) = .error e
+  | [], h, _ => by simp [hashLoop, hz, bind, Except.bind]
+  | x :: xs, h, hp => by
+    obtain ⟨v, hv⟩ := hp x (by simp)
+    simp only [List.cons_append, hashLoop, hv, bind, Except.bind]
+    exact hashLoop_err hash t z post e hz xs _ (fun y hy => hp y (by simp [hy]))
+
+/-- `Set._hash` over any primitives: a failing `len(self)` is the outcome before anything else, then a failing
+`iter(self)`, then the first element whose `hash()` raises (`TypeError` for an unhashable one), then an iterator that
+raises after its items; when all succeed the result is the arithmetic of the loop on `len(self)`, the count `__len__`
+reports, and the element hashes in iteration order. Lib/_collections_abc.py:668-684. -/
+def SetHashPaths : Prop :=
+  ∀ (α : Type) (s : SetV α) (hash : α → Py Int) (n : Nat) (xs pre post : List α) (z : α) (e : PyExc)
+    (hs : List Int),
+    (s.len = .error e → s.hash hash = .error e) ∧
+    (s.len = .ok n → s.iter = .error e → s.hash hash = .error e) ∧
+    (s.len = .ok n → s.iter = .ok (pre ++ z :: post) → (∀ x ∈ pre, ∃ v, hash x = .ok v) → hash z = .error e →
+      s.hash hash = .error e) ∧
+    (s.len = .ok n → s.iter = .ok xs → xs.mapM hash = .ok hs →
+      s.hash hash = raiseTail s.tail (setHash n hs))
+
+theorem setHashPaths_proven : SetHashPaths := by
+  intro α s hash n xs pre post z e hs
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro h; simp [SetV.hash, h, bind, Except.bind]
+  · intro h1 h2; simp [SetV.hash, h1, h2, bind, Except.bind]
+  · intro h1 h2 h3 h4
+    simp [SetV.hash, h1, h2, hashLoop_err hash s.tail z post e h4 pre _ h3, bind, Except.bind]
+  · intro h1 h2 h3
+    simp only [SetV.hash, h1, h2, hashLoop_ok hash s.tail xs hs _ h3, bind, Except.bind, setHash]
+    cases s.tail <;> rfl
 
 end PyLean.CoreLibs.CollAbc

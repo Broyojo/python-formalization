@@ -1,4 +1,4 @@
-import PyLean.BytesObj.Bytes.BasicProps3
+import PyLean.BytesObj.Bytes.FromListLemmas
 
 /-!
 Properties of the `bytes` methods, fourth part.
@@ -175,9 +175,10 @@ theorem items_ok (vals : Seq) (h : ∀ c ∈ vals, c < 256) :
 /-- `bytes(x)`: a list, a tuple and a generator of ints in `range(256)` give those bytes
 (three separate C loops); an int `n ≥ 0` gives `n` zero bytes and a negative one
 `ValueError`; a `str` without an encoding is a `TypeError`; a buffer gives its contents;
-a bad item stops the loop with `ValueError`. -/
+a bad item stops the loop with `ValueError`. Hypothesis of the list cases: a list that can exist
+(fewer than `2^46` items), since `_PyBytes_FromList` allocates its writer for the list's size first. -/
 def BytesNewSpec : Prop :=
-  (∀ vals : Seq, (∀ c ∈ vals, c < 256) →
+  (∀ vals : Seq, (∀ c ∈ vals, c < 256) → (vals.length : Int) + 33 < 2 ^ 46 →
     let items := vals.map (fun (c : Nat) => Obj.int (c : Int))
     bytesNew (some (.list items)) none none = .ok vals ∧
     bytesNew (some (.tuple items)) none none = .ok vals ∧
@@ -191,18 +192,21 @@ def BytesNewSpec : Prop :=
   (∀ (s a : Seq), bytesNew (some (.memview s a)) none none = .ok s ∧
     bytesNew (some (.bytearray s)) none none = .ok s) ∧
   bytesNew none none none = .ok [] ∧
-  (∀ (rest : List Obj), bytesNew (some (.list (.int 256 :: rest))) none none =
+  (∀ (rest : List Obj), (rest.length : Int) + 34 < 2 ^ 46 →
+    bytesNew (some (.list (.int 256 :: rest))) none none =
     .error (.valueError "bytes must be in range(0, 256)"))
 
 theorem bytesNewSpec_proven : BytesNewSpec := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro vals h
+  · intro vals h hl
     have := items_ok vals h
     have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
+    have hfl := bytesFromList_plain (vals.map (fun (c : Nat) => Obj.int (c : Int))) (by simpa using hl)
+    rw [this, List.map_map] at hfl
     simp only
     refine ⟨?_, ?_, ?_⟩ <;>
       simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, this, getIterOr, lengthHint,
-        iterFinish, hw, bind, Except.bind, pure, Except.pure]
+        iterFinish, hw, hfl, bind, Except.bind, pure, Except.pure]
   · intro n h0 hs
     have h1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
       rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega
@@ -217,13 +221,15 @@ theorem bytesNewSpec_proven : BytesNewSpec := by
   · intro s a
     simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?]
   · simp [bytesNew, bytesFromStringAndSize]
-  · intro rest
+  · intro rest hr
+    have hfl := bytesFromList_plain (.int 256 :: rest) (by simp; omega)
     have c256 : clampSsize (256 : Int) = 256 := clamp_id 256 (by decide) (by decide)
     have h : byteItem (.int 256) = .error (.valueError "bytes must be in range(0, 256)") := by
       simp [byteItem, asSsizeClamp, Obj.index?, c256, bind, Except.bind]
       rfl
-    simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, bytesFromItems, h, bind,
-      Except.bind]
+    simp only [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, List.map_cons] at hfl ⊢
+    rw [hfl]
+    simp [bytesFromItems, h, bind, Except.bind]
 
 /-! ## The iterator -/
 

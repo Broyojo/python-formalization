@@ -47,7 +47,7 @@ and `_PyBytes_Resize`, :3474-3484, for a buffer of `oldsize` bytes: what can fai
 first `newsize` bytes, extended with bytes the caller fills. The copy for a shared or hashed object
 and `bytes_resize_inplace` have the same two failures as `_PyBytes_FromSize`. -/
 def bytesResizeCheck (oldsize newsize : Int) : Py Unit :=
-  if newsize < 0 then .error (badInternalCall "../Objects/bytesobject.c:3424")
+  if newsize < 0 then .error (badInternalCall "Objects/bytesobject.c" 3424)
   else if oldsize = newsize then .ok ()
   else if oldsize = 0 then bytesSizeCheck newsize
   else if newsize = 0 then .ok ()
@@ -125,6 +125,29 @@ def writerResizeRaw (w : Writer) (size : Int) (resize : Bool) : Py Writer :=
       else size
     match writerObjResize w size with
     | .ok obj => .ok { w with obj := some obj }
+    | .error e => .error e
+
+/-- `byteswriter_resize(writer, size, resize)` with the storage bytes, bytesobject.c:3730-3798: `buf`
+is the storage the writer has (its 256-byte small buffer, or the object's bytes, `writerAllocated w`
+of them). The control flow is `writerResizeRaw`'s. An object it already has is resized in place,
+`PyByteArray_Resize` or `_PyBytes_ResizeKeepOnError` (:3749-3764), which keeps its bytes; a first object
+gets the small buffer copied in by the `memcpy` of :3771-3773 and :3783-3785 when `resize` (the
+`Create` call passes 0 and copies nothing). New bytes are uninitialised, read as 0. -/
+def writerResizeRawD (w : Writer) (buf : Seq) (size : Int) (resize : Bool) : Py (Writer × Seq) :=
+  if size ≤ writerAllocated w then .ok (w, buf)
+  else
+    let size :=
+      if resize ∧ w.overallocate ∧ size ≤ ssizeMax - size / overallocateFactor then
+        size + size / overallocateFactor
+      else size
+    match writerObjResize w size with
+    | .ok obj =>
+      let keep : Seq :=
+        match w.obj with
+        | some _ => buf
+        | none => if resize then buf.take smallBufferSize.toNat else []
+      let n := obj.1.toNat
+      .ok ({ w with obj := some obj }, (keep ++ List.replicate n 0).take n)
     | .error e => .error e
 
 /-- `byteswriter_create(size, use_bytearray)`, bytesobject.c:3801-3835, and its two wrappers
