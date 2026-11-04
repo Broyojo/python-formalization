@@ -246,6 +246,18 @@ CREDIT = {
     "pygrammar-rule-invalid-starred-expression-unpacking-sequence": {
         GRAM: ["rule:invalid_starred_expression_unpacking_sequence"]},
     "pygrammar-rule-invalid-default": {GRAM: ["rule:invalid_default"]},
+    "pygrammar-rule-invalid-kwds": {GRAM: ["rule:invalid_kwds"]},
+    "pygrammar-rule-invalid-lambda-kwds": {GRAM: ["rule:invalid_lambda_kwds"]},
+    "pygrammar-rule-invalid-block": {GRAM: ["rule:invalid_block"]},
+    "pygrammar-rule-invalid-double-type-comments": {GRAM: ["rule:invalid_double_type_comments"]},
+    "pygrammar-rule-invalid-type-params": {GRAM: ["rule:invalid_type_params"]},
+    "pygrammar-rule-invalid-noteq": {GRAM: ["rule:invalid_noteq"]},
+    "pygrammar-rule-invalid-factor": {GRAM: ["rule:invalid_factor"]},
+    "pygrammar-rule-invalid-arithmetic": {GRAM: ["rule:invalid_arithmetic"]},
+    "pygrammar-rule-invalid-starred-expression": {GRAM: ["rule:invalid_starred_expression"]},
+    "pygrammar-rule-invalid-if-expression": {GRAM: ["rule:invalid_if_expression"]},
+    "pygrammar-rule-invalid-kvpair-unpacking": {GRAM: ["rule:invalid_kvpair_unpacking"]},
+    "pygrammar-rule-invalid-kvpair": {GRAM: ["rule:invalid_kvpair"]},
     "pygrammar-lex-nextc-in-buffer": {
         "Parser__lexer__lexer.c": ["tok_nextc"],
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],

@@ -421,11 +421,17 @@ def rule_interactive : List String := [
 def rule_invalid_ann_assign_target : List String := [
   "rule:invalid_ann_assign_target"]
 
+def rule_invalid_arithmetic : List String := [
+  "rule:invalid_arithmetic"]
+
 def rule_invalid_assert_stmt : List String := [
   "rule:invalid_assert_stmt"]
 
 def rule_invalid_assignment : List String := [
   "rule:invalid_assignment"]
+
+def rule_invalid_block : List String := [
+  "rule:invalid_block"]
 
 def rule_invalid_default : List String := [
   "rule:invalid_default"]
@@ -436,8 +442,17 @@ def rule_invalid_del_stmt : List String := [
 def rule_invalid_dotted_as_name : List String := [
   "rule:invalid_dotted_as_name"]
 
+def rule_invalid_double_type_comments : List String := [
+  "rule:invalid_double_type_comments"]
+
+def rule_invalid_factor : List String := [
+  "rule:invalid_factor"]
+
 def rule_invalid_group : List String := [
   "rule:invalid_group"]
+
+def rule_invalid_if_expression : List String := [
+  "rule:invalid_if_expression"]
 
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
@@ -445,14 +460,35 @@ def rule_invalid_import : List String := [
 def rule_invalid_import_from_as_name : List String := [
   "rule:invalid_import_from_as_name"]
 
+def rule_invalid_kvpair : List String := [
+  "rule:invalid_kvpair"]
+
+def rule_invalid_kvpair_unpacking : List String := [
+  "rule:invalid_kvpair_unpacking"]
+
+def rule_invalid_kwds : List String := [
+  "rule:invalid_kwds"]
+
+def rule_invalid_lambda_kwds : List String := [
+  "rule:invalid_lambda_kwds"]
+
+def rule_invalid_noteq : List String := [
+  "rule:invalid_noteq"]
+
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]
+
+def rule_invalid_starred_expression : List String := [
+  "rule:invalid_starred_expression"]
 
 def rule_invalid_starred_expression_unpacking : List String := [
   "rule:invalid_starred_expression_unpacking"]
 
 def rule_invalid_starred_expression_unpacking_sequence : List String := [
   "rule:invalid_starred_expression_unpacking_sequence"]
+
+def rule_invalid_type_params : List String := [
+  "rule:invalid_type_params"]
 
 def rule_inversion : List String := [
   "rule:inversion"]
