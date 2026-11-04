@@ -120,7 +120,7 @@ Objects/longobject.c	5314	5397	long_rshift1	long_rshift1(PyLongObject *a, Py_ssi
 Objects/longobject.c	5400	5426	long_rshift	long_rshift(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	5430	5453	_PyLong_Rshift	_PyLong_Rshift(PyObject *a, int64_t shiftby)	modelled	longobj-rshift	
 Objects/longobject.c	5456	5494	long_lshift1	long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	modelled	longobj-lshift	
-Objects/longobject.c	5498	5521	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	modelled	longobj-binary-methods,longobj-lshift	
+Objects/longobject.c	5498	5521	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	modelled	longobj-binary-methods	
 Objects/longobject.c	5525	5544	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	modelled	longobj-lshift	
 Objects/longobject.c	5547	5550	_PyLong_Lshift	_PyLong_Lshift(PyObject *a, int64_t shiftby)	modelled	longobj-lshift	
 Objects/longobject.c	5558	5568	v_complement	v_complement(digit *z, digit *a, Py_ssize_t m)	modelled	longobj-v-complement	
@@ -166,6 +166,6 @@ Objects/longobject.c	6861	6864	PyLong_AsUInt64	int PyLong_AsUInt64(PyObject *obj
 Objects/longobject.c	6876	6879	PyLong_GetNativeLayout	PyLong_GetNativeLayout(void)	todo		
 Objects/longobject.c	6883	6922	PyLong_Export	PyLong_Export(PyObject *obj, PyLongExport *export_long)	todo		
 Objects/longobject.c	6926	6933	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	excluded		no-behaviour: drops the reference held by the export; no value is produced
-Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	modelled	longobj-writer,longobj-export-writer	
+Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	todo		review: Re-reviewed after the fix. WriterExact (longobj-writer) now pins the ValueError for zero digits and long_alloc's OverflowError. But longWriter takes ndigits as a List's length, so it tests ds.length = 0 where the C tests ndigits <= 0 (:6941). A negative Py_ssize_t ndigits, which the C API forbids and the check exists to reject, cannot be expressed. A Create that tested only == 0 would pass, and would then call long_alloc with a negative size, which its assert forbids. ndigits should be an Int parameter.
 Objects/longobject.c	6965	6974	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	excluded		no-behaviour: frees an unfinished writer; no value is produced
 Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	modelled	longobj-writer,longobj-export-writer	
