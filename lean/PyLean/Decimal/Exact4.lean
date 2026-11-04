@@ -186,4 +186,16 @@ theorem quantizeExact_proven : QuantizeExact := by
     · simp only [quantize, checkNans]
       rw [pure_bind]; exact invalid_run c fl
 
+/-! ## `adjusted` -/
+
+/-- `adjusted()` (_pydecimal.py:2971-2977): `self._exp + len(self._int) - 1` for a finite value
+(zero included: `len('0') = 1`, so `0E+5` gives 5), and `0` for an infinity or a NaN, whose `_exp`
+is a str and makes the addition raise the `TypeError` the `except` catches. -/
+def AdjustedExact : Prop :=
+  (∀ (n : Bool) (co : Nat) (e : Int), (Dec.fin n co e).adjusted = e + numDigits co - 1) ∧
+  (∀ n : Bool, (Dec.inf n).adjusted = 0) ∧
+  (∀ (n s : Bool) (p : Nat), (Dec.nan n s p).adjusted = 0)
+
+theorem adjustedExact_proven : AdjustedExact := ⟨fun _ _ _ => rfl, fun _ => rfl, fun _ _ _ => rfl⟩
+
 end PyLean.Decimal

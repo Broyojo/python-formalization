@@ -88,7 +88,7 @@ Lib/_pydecimal.py	2880	2920	Decimal.max	max(self, other, context=None)	modelled	
 Lib/_pydecimal.py	2922	2954	Decimal.min	min(self, other, context=None)	modelled	decimal-minmax-exact	
 Lib/_pydecimal.py	2956	2963	Decimal._isinteger	_isinteger(self)	todo		
 Lib/_pydecimal.py	2965	2969	Decimal._iseven	_iseven(self)	todo		
-Lib/_pydecimal.py	2971	2977	Decimal.adjusted	adjusted(self)	todo		review: Dec.adjusted/adjustedD mirror :2973-2977, but its only entry is QuantizeCorrect, which holds only when quantize returns, and the special-value result 0 (the except TypeError) is never stated.
+Lib/_pydecimal.py	2971	2977	Decimal.adjusted	adjusted(self)	modelled	decimal-adjusted-exact,decimal-logb-exact	
 Lib/_pydecimal.py	2979	2985	Decimal.canonical	canonical(self)	excluded		trivial: the body is `return self` (:2979-2985), no branch; Context.canonical's entry decimal-context-predicates-exact states it.
 Lib/_pydecimal.py	2987	2997	Decimal.compare_signal	compare_signal(self, other, context=None)	modelled	decimal-comparisons-exact	
 Lib/_pydecimal.py	2999	3069	Decimal.compare_total	compare_total(self, other, context=None)	modelled	decimal-compare-total-exact	

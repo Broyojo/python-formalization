@@ -640,7 +640,13 @@ def entries : List Entry := [
     statement := "For every context and rounding argument, on every operand pair: for finite ±co·10^e and a finite target exponent qe, with v the coefficient at qe (co padded with zeros when qe <= e, otherwise co with its last qe - e digits dropped and rounded as the mode says): qe outside [Etiny, Emax] is InvalidOperation; a zero becomes the zero of its sign at qe through _fix; an adjusted exponent above Emax, or adjusted - qe + 1 above prec, is InvalidOperation; the int/str-limit ValueError is raised exactly when the rounding incremented to a coefficient of more than 4300 digits; otherwise a result with adjusted exponent above Emax or more than prec digits is InvalidOperation, and else Subnormal (non-zero and below Emin), Inexact (non-zero digits dropped) and Rounded (digits dropped) are signalled in that order, the first trapped one raising, and ±v·10^qe goes through _fix. A NaN operand goes through _check_nans, two infinities give the first operand, one infinity is InvalidOperation."
     source := "quantize docs (Doc/library/decimal.rst, Decimal.quantize); Lib/_pydecimal.py:2600-2659; General Decimal Arithmetic, 'quantize'"
     status := .proven, prop := ``QuantizeExact, thm := some ``quantizeExact_proven
-    notes := "Unconditional, so it supersedes decimal-quantize-correct (which holds only when quantize returns). Checked on 3.15.2 at prec 5, Emin -5: quantize(1.234E-6, 1E-8) = 1.23E-6 with Subnormal, Inexact, Rounded, and Subnormal is the one raised when both it and Inexact are trapped; quantize(123, 1E-3) is NaN with InvalidOperation; 4301 nines E-1 quantized to 1 with ROUND_UP raises the int/str-limit ValueError, 4300 nines does not." }
+    notes := "Unconditional, so it supersedes decimal-quantize-correct (which holds only when quantize returns). Checked on 3.15.2 at prec 5, Emin -5: quantize(1.234E-6, 1E-8) = 1.23E-6 with Subnormal, Inexact, Rounded, and Subnormal is the one raised when both it and Inexact are trapped; quantize(123, 1E-3) is NaN with InvalidOperation; 4301 nines E-1 quantized to 1 with ROUND_UP raises the int/str-limit ValueError, 4300 nines does not." },
+  { id := "decimal-adjusted-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.adjusted"]
+    statement := "adjusted() is exp + (number of coefficient digits) - 1 for every finite decimal, zeros included (Decimal('0E+5').adjusted() == 5), and 0 for every infinity and NaN."
+    source := "adjusted docstring 'Return the adjusted exponent of self' and Lib/_pydecimal.py:2973-2977 (the except TypeError for special values)"
+    status := .proven, prop := ``AdjustedExact, thm := some ``adjustedExact_proven
+    notes := "The difftest compares adjusted() with both twins on every operand kind (the 'adjusted' method case)." }
 ]
 
 end PyLean.Decimal
