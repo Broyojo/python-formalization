@@ -35,6 +35,8 @@ import PyLean.Datetime.EdgeProps
 import PyLean.Datetime.Twins2Props
 import PyLean.Datetime.ArgCheckProps
 import PyLean.Datetime.PickleProps
+import PyLean.Datetime.CmpProps2
+import PyLean.Datetime.ReprProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -188,15 +190,15 @@ def entries : List Entry := [
     prop := ``TznameTwins, thm := some ``tznameTwins_proven },
   { id := "datetime-time-repr", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
-    statement := "repr(time) is the same text in both twins."
+    statement := "repr(time) of the base class is the same text in both twins."
     source := "C/Python twins", status := .proven
     prop := ``TimeRepr, thm := some ``timeRepr_proven },
   { id := "datetime-datetime-repr", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
-    statement := "repr(datetime) is the same text in both twins unless both fold and tzinfo are set."
+    statement := "repr(datetime) of the base class is the same text in both twins unless both fold and tzinfo are set."
     source := "C/Python twins", status := .proven
     prop := ``DatetimeRepr, thm := some ``datetimeRepr_proven
-    notes := "With fold=1 and a tzinfo the keywords come in a different order: C prints fold first, Python tzinfo first. Cosmetic, not filed." },
+    notes := "With fold=1 and a tzinfo the keywords come in a different order: C prints fold first, Python tzinfo first; refuted on record as datetime-repr-fold-tzinfo-twins." },
   { id := "datetime-time-isoformat-twins", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time.isoformat", "time._tzstr", "_format_time", "_format_offset", "C datetime_time_isoformat_impl", "C time_str", "C format_utcoffset"]
     statement := "time.isoformat(timespec) and str(time) agree between the twins for every timespec and tzinfo."
@@ -796,11 +798,10 @@ def entries : List Entry := [
     prop := ``StrftimeTwinsNoBareColon
     notes := "Needs an induction relating the list scan of _wrap_strftime to the index loop of wrap_strftime." },
   { id := "datetime-time-compare-whole-minutes", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time._cmp", "C time_richcompare"]
-    statement := "With whole-minute offsets, time comparison agrees between the twins."
-    source := "C/Python twins", status := .open
-    prop := ``TimeCompareWholeMinutes
-    notes := "The arithmetic of the two offset branches; cmpTuple against the C difference." },
+    pyFns := ["time._cmp", "time.__eq__", "time.__le__", "time.__lt__", "time.__ge__", "time.__gt__", "_cmp", "C time_richcompare", "C diff_to_bool"]
+    statement := "With whole-minute offsets, time comparison agrees between the twins for every operator: the same tzinfo, equal offsets of different tzinfos, naive against aware (== False, != True, ordering TypeError in both), and different offsets compared in UTC."
+    source := "C/Python twins (narrows datetime-time-compare-twins)", status := .proven
+    prop := ``TimeCompareWholeMinutes, thm := some ``timeCompareWholeMinutes_proven },
   { id := "datetime-astimezone-to-timezone", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.astimezone", "timezone.fromutc", "C datetime_datetime_astimezone_impl", "C timezone_fromutc"]
     statement := "astimezone to a timezone agrees between the twins when utcoffset(self) is a timedelta in range."
@@ -1276,7 +1277,31 @@ def entries : List Entry := [
     pyFns := ["datetime.__new__", "datetime.__setstate", "C datetime_new", "C datetime_from_pickle"]
     statement := "datetime(state, tzinfo) for every byte string: the header test selects the pickle branch, which decodes every field and fold unchecked and keeps a None or tzinfo argument in both twins; any other second argument is TypeError('bad tzinfo state arg') in both; a str state above U+00FF is the latin-1 ValueError in both; bytes failing the header are a TypeError in both."
     source := "pickle contract; C/Python twins", status := .proven
-    prop := ``DatetimeNewPickle, thm := some ``datetimeNewPickle_proven }
+    prop := ``DatetimeNewPickle, thm := some ``datetimeNewPickle_proven },
+  { id := "datetime-time-repr-cls", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    statement := "repr(time) is the same text in both twins for the base class and every subclass whose __qualname__ is its __name__ and whose module is not named datetime, for every field value, tzinfo and fold."
+    source := "C/Python twins", status := .proven
+    prop := ``TimeReprCls, thm := some ``timeReprCls_proven },
+  { id := "datetime-time-repr-cls-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr"]
+    statement := "repr(time) is the same text in both twins for every class."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimeReprClsTwins, thm := some ``timeReprClsTwins_refuted
+    bug := some "datetime-repr-qualname-vs-tp-name"
+    notes := "A nested subclass: Python prints __qualname__ (Outer.T(1, 2)), C tp_name (T(1, 2))." },
+  { id := "datetime-datetime-repr-cls", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    statement := "repr(datetime) is the same text in both twins for the base class and every plain subclass, for every valid datetime without both fold=1 and a tzinfo."
+    source := "C/Python twins (narrows datetime-repr-fold-tzinfo-twins)", status := .proven
+    prop := ``DatetimeReprCls, thm := some ``datetimeReprCls_proven },
+  { id := "datetime-repr-fold-tzinfo-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.__repr__", "C datetime_repr"]
+    statement := "repr(datetime) of the base class is the same text in both twins for every valid datetime, fold=1 with a tzinfo included."
+    source := "C/Python twins", status := .refuted
+    prop := ``DatetimeReprFoldTzTwins, thm := some ``datetimeReprFoldTzTwins_refuted
+    bug := some "datetime-repr-fold-tzinfo-order"
+    notes := "C appends fold before tzinfo, Python after." }
 ]
 
 end PyLean.Datetime
