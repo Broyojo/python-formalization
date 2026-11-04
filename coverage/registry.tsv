@@ -2274,6 +2274,7 @@ bytecode-gap-huge-shift	open	Objects/longobject.c
 bytecode-gap-huge-int-pow	open	Objects/longobject.c	
 bytecode-gap-huge-seq-repeat	open	Objects/abstract.c	
 bytecode-gap-is-on-immediates	open	Python/bytecodes.c	
+bytecode-is-op	proven	Python/bytecodes.c	opcode:IS_OP,opcode:_IS_OP
 bytecode-gap-set-iteration-order	open	Objects/setobject.c	
 bytecode-gap-refcount-finalizers	open	Objects/genobject.c	
 bytecode-unpack-sequence	proven	Python/bytecodes.c	opcode:UNPACK_SEQUENCE,opcode:_UNPACK_SEQUENCE,opcode:UNPACK_SEQUENCE_TWO_TUPLE,opcode:_UNPACK_SEQUENCE_TWO_TUPLE,opcode:UNPACK_SEQUENCE_TUPLE,opcode:_UNPACK_SEQUENCE_TUPLE,opcode:UNPACK_SEQUENCE_LIST,opcode:_UNPACK_SEQUENCE_LIST
@@ -2282,7 +2283,13 @@ bytecode-builders	proven	Python/bytecodes.c	opcode:LIST_EXTEND,opcode:_LIST_EXTE
 bytecode-get-iter	proven	Python/bytecodes.c	opcode:GET_ITER,opcode:_GET_ITER,opcode:GET_ITER_SELF,opcode:_GUARD_ITERATOR,opcode:GET_ITER_VIRTUAL,opcode:_GUARD_ITER_VIRTUAL,opcode:_PUSH_TAGGED_ZERO
 bytecode-format	proven	Python/bytecodes.c	opcode:CONVERT_VALUE,opcode:FORMAT_SIMPLE,opcode:FORMAT_WITH_SPEC
 bytecode-intrinsics	proven	Python/bytecodes.c	opcode:CALL_INTRINSIC_1,opcode:_CALL_INTRINSIC_1,opcode:CALL_INTRINSIC_2,opcode:_CALL_INTRINSIC_2
-bytecode-call-builtins	proven	Python/bytecodes.c	opcode:_CHECK_PERIODIC_AT_END,opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL,opcode:_GUARD_CALLABLE_TYPE_1,opcode:_CALL_TYPE_1,opcode:CALL_TYPE_1,opcode:_GUARD_CALLABLE_STR_1,opcode:_CALL_STR_1,opcode:CALL_STR_1,opcode:_GUARD_CALLABLE_TUPLE_1,opcode:_CALL_TUPLE_1,opcode:CALL_TUPLE_1,opcode:CALL_LEN,opcode:_GUARD_CALLABLE_LEN,opcode:_CALL_LEN,opcode:_GUARD_CALLABLE_ISINSTANCE,opcode:_CALL_ISINSTANCE,opcode:CALL_ISINSTANCE,opcode:CALL_LIST_APPEND,opcode:_GUARD_CALLABLE_LIST_APPEND,opcode:_CALL_LIST_APPEND
+bytecode-call-builtins	proven	Python/bytecodes.c	opcode:_CHECK_PERIODIC_AT_END,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL,opcode:_GUARD_CALLABLE_TYPE_1,opcode:_CALL_TYPE_1,opcode:CALL_TYPE_1,opcode:_GUARD_CALLABLE_STR_1,opcode:_CALL_STR_1,opcode:CALL_STR_1,opcode:_GUARD_CALLABLE_TUPLE_1,opcode:_CALL_TUPLE_1,opcode:CALL_TUPLE_1,opcode:CALL_LEN,opcode:_GUARD_CALLABLE_LEN,opcode:_CALL_LEN,opcode:_GUARD_CALLABLE_ISINSTANCE,opcode:_CALL_ISINSTANCE,opcode:CALL_ISINSTANCE,opcode:CALL_LIST_APPEND,opcode:_GUARD_CALLABLE_LIST_APPEND,opcode:_CALL_LIST_APPEND
+bytecode-call-generic	proven	Python/bytecodes.c	opcode:CALL,opcode:_MAYBE_EXPAND_METHOD,opcode:_DO_CALL,opcode:CALL_KW,opcode:_MAYBE_EXPAND_METHOD_KW,opcode:_DO_CALL_KW,opcode:CALL_FUNCTION_EX,opcode:_MAKE_CALLARGS_A_TUPLE,opcode:_DO_CALL_FUNCTION_EX
+bytecode-attr-specialized	proven	Python/bytecodes.c	opcode:LOAD_ATTR_SLOT,opcode:_LOAD_ATTR_SLOT,opcode:LOAD_ATTR_MODULE,opcode:_LOAD_ATTR_MODULE,opcode:LOAD_ATTR_CLASS,opcode:_CHECK_ATTR_CLASS,opcode:_LOAD_ATTR_CLASS,opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK,opcode:STORE_ATTR_SLOT,opcode:_STORE_ATTR_SLOT,opcode:_GUARD_TYPE_VERSION
+bytecode-property-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATTR_PROPERTY,opcode:_LOAD_ATTR_PROPERTY_FRAME
+bytecode-getattribute-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN,opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME
+bytecode-import	proven	Python/bytecodes.c	opcode:IMPORT_NAME,opcode:IMPORT_FROM
+bytecode-null-guards	proven	Python/bytecodes.c	opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_TOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL
 bytecode-match	proven	Python/bytecodes.c	opcode:MATCH_CLASS,opcode:_MATCH_CLASS,opcode:MATCH_MAPPING,opcode:MATCH_SEQUENCE,opcode:MATCH_KEYS
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	

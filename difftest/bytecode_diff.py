@@ -180,7 +180,8 @@ def p_unpack(r):
     out = []
     srcs = ["[1, 2]", "(1, 2)", "[1, 2, 3]", "(1,)", "[]", "'ab'", "'abc'", "{1: 2, 3: 4}", "range(2)", "5", "None",
             "iter([1, 2])", "(i for i in range(2))", "{1: 2, 3: 4, 5: 6}", "It(1)", "It(2)", "It(3)", "It(4)",
-            "L([1, 2, 3])", "Q()", "D()", "(1, 2, 3)", "[1, 2, 3, 4]", "{1: 2}", "{}", "'abcd'"]
+            "L([1, 2, 3])", "Q()", "D()", "(1, 2, 3)", "[1, 2, 3, 4]", "{1: 2}", "{}", "'abcd'",
+            "V(0)", "V(1)", "V(2)", "V(3)", "V(4)", "V(5)", "V(6)"]
     for _ in range(r.randint(3, 6)):
         s = r.choice(srcs)
         tgt = r.choice(["a, b", "a, *b", "*a, b", "a, b, *c", "a, *b, c", "a,", "[a, b]", "(a, (b, c))", "*a,",
@@ -191,7 +192,16 @@ def p_unpack(r):
                "    it = It(n)\n    try:\n        a, *b, c = it\n        print(a, b, c)\n    except ValueError as e:\n        print(e)\n    print(it.calls)\n")
     head = ("class It:\n    def __init__(self, n):\n        self.n, self.calls = n, 0\n    def __iter__(self):\n        return self\n"
             "    def __next__(self):\n        self.calls += 1\n        if self.calls > self.n:\n            raise StopIteration\n        return self.calls\n"
-            "class L(list):\n    pass\nclass Q:\n    __iter__ = None\nclass D:\n    def __iter__(self):\n        raise TypeError('x')\n")
+            "class L(list):\n    pass\nclass Q:\n    __iter__ = None\nclass D:\n    def __iter__(self):\n        raise TypeError('x')\n"
+            # `PySequence_List(it)` goes through `_PyList_Extend`: `iter(it)` and `__length_hint__`
+            # of the iterator run before the drain (`list_extend_iter_lock_held`)
+            "class W:\n    def __init__(self, k):\n        self.k, self.n = k, 0\n    def __iter__(self):\n"
+            "        if self.k == 1:\n            raise ValueError('w-iter')\n        if self.k == 2:\n            return iter([7, 8, 9])\n        return self\n"
+            "    def __next__(self):\n        self.n += 1\n        if self.k == 6 and self.n == 3:\n            raise KeyError('w-next')\n"
+            "        if self.n > 3:\n            raise StopIteration\n        return self.n\n"
+            "    def __length_hint__(self):\n        if self.k == 3:\n            raise KeyError('w-lh')\n        if self.k == 4:\n            return 'x'\n"
+            "        if self.k == 5:\n            return -1\n        if self.k == 0:\n            raise TypeError('w-lh-type')\n        return NotImplemented\n"
+            "class V:\n    def __init__(self, k):\n        self.k = k\n    def __iter__(self):\n        return W(self.k)\n")
     return head + "\n".join(out)
 
 
@@ -566,6 +576,26 @@ def p_builders(r):
     out = [head]
     for x in r.sample(exprs, r.randint(4, 10)):
         out.append(guarded(f"print({x})"))
+    # `_PyObject_FunctionStr`: both lookups and the comparison come before `str()`, the module first
+    fs = r.choice(["raise ValueError('m')", "raise AttributeError('m')", "return QS('m')", "return 'builtins'",
+                   "return None", "return QS('builtins')"])
+    out.append("class QS:\n    def __init__(self, t):\n        self.t = t\n    def __str__(self):\n        print('str', self.t)\n"
+               "        return self.t\n"
+               "class FX:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            return QS('q')\n"
+               f"        if n == '__module__':\n            {fs}\n        return object.__getattribute__(self, n)\n"
+               "    def __call__(self, **k):\n        return k\n" + guarded("print(FX()(**{'a': 1}, **{'a': 2}))"))
+    # a failed SET_ADD / MAP_ADD / LIST_APPEND leaves the container for the cleanup handler
+    out.append(r.choice([
+        "def h():\n    x = 'keep'\n    try:\n        {[] for x in range(1)}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h():\n    x = 'keep'\n    try:\n        {x: [] for x in [1, []]}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h():\n    x = 'keep'\n    try:\n        {[]: x for x in range(2)}\n    except TypeError as e:\n        print(e)\n    return x\nprint(h())",
+        "def h(n):\n    try:\n        return [{y for y in [x, []]} for x in range(n)]\n    except TypeError as e:\n        return str(e)\nprint(h(0), h(2))",
+        guarded("print({x for x in [1, [], 2]})"),
+        guarded("print({k: v for k, v in [(1, 2), ([], 3)]})"),
+        "class G:\n    def __init__(self):\n        self.n = 0\n    def __iter__(self):\n        return self\n    def __next__(self):\n"
+        "        self.n += 1\n        if self.n > 2:\n            raise ValueError('g')\n        return self.n\nl = [0]\n"
+        + guarded("l.extend(G())") + "\nprint(l)\nl += [5]\nl.extend(l)\nprint(l)\nl.extend((7,))\nl.extend({8: 9})\nl.extend({8: 9}.items())\nprint(l)",
+    ]))
     out.append(r.choice([
         "for _ in range(2):\n    try:\n        f(**T())\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
         "for _ in range(2):\n    try:\n        {**T()}\n    except Exception as e:\n        print(type(e).__name__, e, repr(e.__context__))\n",
@@ -573,6 +603,36 @@ def p_builders(r):
         + guarded("if True:\n    x: int = 1\nprint('annotated')"),
         "print({x for x in [1, 2, 1]} == {1, 2}, {k: v for k, v in [(1, 2), (1, 3)]})",
     ]))
+    return "\n".join(out)
+
+
+def p_call_generic(r):
+    """`CALL`, `CALL_KW`, `CALL_FUNCTION_EX` on every kind of callable: a bound method object
+    (expanded by `_MAYBE_EXPAND_METHOD`), a function (inlined, the frame failing on bad arguments),
+    a builtin, a class, an instance with `__call__` (`tp_call`: `PyObject_Call` hands it the dict),
+    `*` of a non-tuple iterable (`_MAKE_CALLARGS_A_TUPLE`), and `**` with a non-str key."""
+    head = ("class P:\n    def __init__(self):\n        self.v = 1\n    def m(self, a=0, *r, k=0, **kw):\n"
+            "        return (self.v, a, r, k, sorted(kw.items()))\n"
+            "class D:\n    @property\n    def __call__(self):\n        print('lookup')\n        return lambda *a, **k: (a, sorted(k.items()))\n"
+            "class E:\n    def __call__(self, *a, **k):\n        return ('E', a, sorted(k.items()))\n"
+            "class It:\n    def __iter__(self):\n        print('iter')\n        return iter([1, 2])\n"
+            "class Bad:\n    def __iter__(self):\n        raise " + r.choice(["TypeError('inner')", "ValueError('v')"]) + "\n"
+            "def f(a, b=2, *c, d=4, **e):\n    return (a, b, c, d, sorted(e.items()))\n"
+            "def g(x, /, y):\n    return (x, y)\n"
+            "class K:\n    def __init__(self, *a, **k):\n        self.a = (a, sorted(k.items()))\n")
+    # builtins only where the model's argument parsing is CPython's: their messages for bad
+    # arguments belong to the builtins, not to the call instructions
+    callees = ["P().m", "bm", "f", "g", "D()", "E()", "K", "(lambda *a, **k: (a, k))", "P.m"]
+    argss = ["", "1", "1, 2", "1, 2, 3", "a=1", "k=5", "1, k=5", "1, d=5", "x=1", "1, y=2", "*[1, 2]", "*It()",
+             "*(1,)", "*Bad()", "*5", "**{'a': 1}", "**{1: 2}", "*[1], **{'k': 3}", "*It(), **{'zz': 0}",
+             "1, *[2], **{'b': 3}", "**{'d': 1, 'k': 2}"]
+    out = [head, "bm = P().m", guarded("print(*It(), sep='-')"), guarded("print(len(*[[1, 2]]), dict(**{'a': 1}))"),
+           guarded("print(*Bad())"), guarded("print(**{1: 2})")]
+    for _ in range(r.randint(4, 10)):
+        c, a = r.choice(callees), r.choice(argss)
+        out.append(guarded(f"print(K({a}).a if {c!r} == 'K' else {c}({a}))"))
+    out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}))\n"
+               + guarded("loop(" + r.choice(["bm", "P().m", "E()", "f", "(lambda *a, **k: (a, sorted(k.items())))"]) + ")"))
     return "\n".join(out)
 
 
@@ -607,7 +667,7 @@ def p_long_names(r):
 
 
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
 
 
 def enc_const(c, table):

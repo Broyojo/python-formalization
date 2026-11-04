@@ -189,29 +189,32 @@ theorem unpackSeqRules_proven : UnpackSeqRules := by
 def atLeastMsg (n k : Nat) : String := s!"not enough values to unpack (expected at least {n}, got {k})"
 
 /-- `UNPACK_EX` with `oparg = before | after << 8` (`Python/bytecodes.c:2148-2153`, the
-`argcntafter >= 0` paths of `Python/ceval.c:2380-2440`), for every object model, with
-`PyObject_GetIter(v)` returning `it`: the first `before` items `xs` come out one call at a time,
-then `PySequence_List(it)` drains the remaining items `ys` (up to the end, a call that returns
-`NULL`). When `ys` has at least `after` items the stack gets, from the top, the `xs`, a new list of
-all but the last `after` of the `ys`, and those last `after` items in order; otherwise
+`argcntafter >= 0` paths of `Python/ceval.c:2380-2451`), for every object model, with
+`PyObject_GetIter(v)` returning `it`: the first `before` items `xs` come out one `PyIter_Next` at a
+time. Then `PySequence_List(it)` (`Objects/abstract.c:2081-2101`) makes a new empty list `L` (the
+next heap address) and calls `_PyList_Extend(L, it)`, the object model's `listExtend`, on the
+iterator itself (not on `v`); whatever that does to `it` (`PyObject_GetIter(it)`,
+`PyObject_LengthHint(it, 8)`, the loop of `list_extend_iter_lock_held`) is the list-object model's
+business, so this statement holds for every behaviour of it. With `ys` the items `L` then holds:
+when there are at least `after`, the stack gets, from the top, the `xs`, `L` itself cut to all but
+the last `after` items (`Py_SET_SIZE`, `:2449`), and those last `after` items in order; otherwise
 `ValueError("not enough values to unpack (expected at least before+after, got before+len(ys))")`.
 When the iterator ends among the first `before` items, after `k` of them, the message is
-`"... (expected at least before+after, got k)"`. `v` is popped on every error. The model's
-`PySequence_List` is bounded at a million items (`ys.length < 1000000`); beyond that it stops
-with fuel, which is not a Python outcome. -/
+`"... (expected at least before+after, got k)"`. `v` is popped on every error. -/
 def UnpackExRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val)
     (it : Val) (rt1 : Rt) (xs : List Val) (rt2 : Rt),
   e.om.getIter e.ctx v regs.rt = .ok it rt1 → NextChain e.om e.ctx it rt1 xs rt2 →
-  (xs.length = e.oparg &&& 255 → ∀ ys rt3 rt4, NextChain e.om e.ctx it rt2 ys rt3 →
-    iterNextOpt e.om e.ctx it rt3 = .ok none rt4 → ys.length < 1000000 →
-    (e.oparg >>> 8 ≤ ys.length →
+  (xs.length = e.oparg &&& 255 → ∀ rt3 ys,
+    e.om.listExtend e.ctx (.ref rt2.heap.size) it { rt2 with heap := rt2.heap.push (.list #[]) } = .ok () rt3 →
+    rt3.heap[rt2.heap.size]? = some (.list ys) →
+    (e.oparg >>> 8 ≤ ys.size →
       execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .ok ()
-        ⟨{ regs with rt := { rt4 with
-            heap := (rt4.heap.push (Obj.list (ys.take (ys.length - (e.oparg >>> 8))).toArray)) } },
-         xs ++ (Val.ref rt4.heap.size :: (ys.drop (ys.length - (e.oparg >>> 8)) ++ rest))⟩) ∧
-    (ys.length < e.oparg >>> 8 → ∀ x rt5,
-      valueError (α := Unit) (atLeastMsg ((e.oparg &&& 255) + (e.oparg >>> 8)) ((e.oparg &&& 255) + ys.length)) rt4 = .error x rt5 →
-      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt5 }, rest⟩)) ∧
+        ⟨{ regs with rt := { rt3 with
+            heap := rt3.heap.setIfInBounds rt2.heap.size (.list (ys.toList.take (ys.size - (e.oparg >>> 8))).toArray) } },
+         xs ++ (Val.ref rt2.heap.size :: (ys.toList.drop (ys.size - (e.oparg >>> 8)) ++ rest))⟩) ∧
+    (ys.size < e.oparg >>> 8 → ∀ x rt4,
+      valueError (α := Unit) (atLeastMsg ((e.oparg &&& 255) + (e.oparg >>> 8)) ((e.oparg &&& 255) + ys.size)) rt3 = .error x rt4 →
+      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt4 }, rest⟩)) ∧
   (xs.length < e.oparg &&& 255 → ∀ rt3, iterNextOpt e.om e.ctx it rt2 = .ok none rt3 → ∀ x rt4,
     valueError (α := List Val) (atLeastMsg ((e.oparg &&& 255) + (e.oparg >>> 8)) xs.length) rt3 = .error x rt4 →
     execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt4 }, rest⟩)
@@ -219,35 +222,31 @@ def UnpackExRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List V
 theorem unpackExRules_proven : UnpackExRules := by
   intro e regs v rest it rt1 xs rt2 h0 hc
   constructor
-  · intro hlen ys rt3 rt4 hys hend hbound
+  · intro hlen rt3 ys hext hys
     have hf := first_run e.om e.ctx it (e.oparg &&& 255) (some (e.oparg >>> 8)) rt1 rt2 xs hc (by omega)
     have hz : (e.oparg &&& 255) - xs.length = 0 := by omega
     rw [hz] at hf
-    have hd := drain_chain e.om e.ctx it ys rt2 rt3 (1000000 - ys.length) [] hys
-    have hd' : ys.length + (1000000 - ys.length) = 1000000 := by omega
-    rw [hd'] at hd
-    obtain ⟨k, hk⟩ : ∃ k, 1000000 - ys.length = k + 1 := ⟨1000000 - ys.length - 1, by omega⟩
-    rw [hk] at hd
-    have hdr : drain e.om e.ctx it 1000000 [] rt2 = .ok ys rt4 := by
-      rw [hd]; simp [drain, bind, EStateM.bind, hend, pure, EStateM.pure]
     constructor
     · intro hge
-      have hnlt : ¬ ys.length < e.oparg >>> 8 := by omega
+      have hnlt : ¬ ys.size < e.oparg >>> 8 := by omega
       have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt =
-          .ok (xs ++ [Val.ref rt4.heap.size] ++ ys.drop (ys.length - (e.oparg >>> 8)))
-            { rt4 with heap := rt4.heap.push (.list (ys.take (ys.length - (e.oparg >>> 8))).toArray) } := by
+          .ok (xs ++ [Val.ref rt2.heap.size] ++ ys.toList.drop (ys.size - (e.oparg >>> 8)))
+            { rt3 with heap :=
+              rt3.heap.setIfInBounds rt2.heap.size (.list (ys.toList.take (ys.size - (e.oparg >>> 8))).toArray) } := by
         simp only [unpackIterable, tryExc, h0, bind, EStateM.bind]
         rw [hf]
-        simp [unpackIterable.first, hdr, hnlt, pure, EStateM.pure, EStateM.bind, mkList, alloc]
-      have hl : ys.length - (ys.length - (e.oparg >>> 8)) + (xs.length + 1) =
+        simp [unpackIterable.first, mkList, alloc, hext, getObj, hys, hnlt, setObj, pure, EStateM.pure,
+          EStateM.bind]
+      have hl : ys.size - (ys.size - (e.oparg >>> 8)) + (xs.length + 1) =
           (e.oparg &&& 255) + 1 + (e.oparg >>> 8) := by omega
       bc_simp [execOp, UNPACK_EX, hr, hl]
-    · intro hlt x rt5 hv
-      have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error x rt5 := by
+    · intro hlt x rt4 hv
+      have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error x rt4 := by
         simp only [unpackIterable, tryExc, h0, bind, EStateM.bind]
         rw [hf]
         simp [atLeastMsg] at hv
-        simp [unpackIterable.first, hdr, hlt, hv, hlen, pure, EStateM.pure, EStateM.bind]
+        simp [unpackIterable.first, mkList, alloc, hext, getObj, hys, hlt, hv, hlen, pure, EStateM.pure,
+          EStateM.bind]
       bc_simp [execOp, UNPACK_EX, hr]
   · intro hlt rt3 hend x rt4 hv
     have hf := first_run e.om e.ctx it (e.oparg &&& 255) (some (e.oparg >>> 8)) rt1 rt2 xs hc (by omega)
@@ -260,24 +259,25 @@ theorem unpackExRules_proven : UnpackExRules := by
     bc_simp [execOp, UNPACK_EX, hr]
 
 /-- The failure paths of `UNPACK_EX` that are not its own messages: `__next__` raising among the
-first `before` items, or while `PySequence_List` drains the rest, and `PyObject_GetIter` raising
-anything but a `TypeError`. Each propagates with `v` popped (`ERROR_IF(res == 0)`, `:2152`),
-raised in the runtime the failing call left. -/
+first `before` items, `_PyList_Extend(L, it)` failing in `PySequence_List` (whatever it raised,
+`PyObject_GetIter(it)` or `__length_hint__` or `__next__`), and `PyObject_GetIter(v)` raising
+anything but a `TypeError`. Each propagates with `v` popped (`ERROR_IF(res == 0)`, `:2152`), raised
+in the runtime the failing call left. -/
 def UnpackExErrors : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val),
   (∀ it rt1 xs rt2 x rt3, e.om.getIter e.ctx v regs.rt = .ok it rt1 → NextChain e.om e.ctx it rt1 xs rt2 →
     xs.length < e.oparg &&& 255 → iterNextOpt e.om e.ctx it rt2 = .error x rt3 →
     execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt3 }, rest⟩) ∧
-  (∀ it rt1 xs rt2 ys rt3 x rt4, e.om.getIter e.ctx v regs.rt = .ok it rt1 →
+  (∀ it rt1 xs rt2 x rt3, e.om.getIter e.ctx v regs.rt = .ok it rt1 →
     NextChain e.om e.ctx it rt1 xs rt2 → xs.length = e.oparg &&& 255 →
-    NextChain e.om e.ctx it rt2 ys rt3 → ys.length < 1000000 → iterNextOpt e.om e.ctx it rt3 = .error x rt4 →
-    execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt4 }, rest⟩) ∧
+    e.om.listExtend e.ctx (.ref rt2.heap.size) it { rt2 with heap := rt2.heap.push (.list #[]) } = .error x rt3 →
+    execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt3 }, rest⟩) ∧
   (∀ x rt1 rt2, e.om.getIter e.ctx v regs.rt = .error (.exc x) rt1 →
     givenMatches x 8 (.cls "TypeError") rt1 = .ok false rt2 →
       execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error (.exc x) ⟨{ regs with rt := rt2 }, rest⟩)
 
 theorem unpackExErrors_proven : UnpackExErrors := by
   intro e regs v rest
-  refine ⟨fun it rt1 xs rt2 x rt3 h0 hc hlt hx => ?_, fun it rt1 xs rt2 ys rt3 x rt4 h0 hc hlen hys hb hx => ?_,
+  refine ⟨fun it rt1 xs rt2 x rt3 h0 hc hlt hx => ?_, fun it rt1 xs rt2 x rt3 h0 hc hlen hext => ?_,
     fun x rt1 rt2 h0 hm => ?_⟩
   · have hf := first_run e.om e.ctx it (e.oparg &&& 255) (some (e.oparg >>> 8)) rt1 rt2 xs hc (by omega)
     obtain ⟨m, hm⟩ : ∃ m, (e.oparg &&& 255) - xs.length = m + 1 := ⟨(e.oparg &&& 255) - xs.length - 1, by omega⟩
@@ -289,17 +289,10 @@ theorem unpackExErrors_proven : UnpackExErrors := by
   · have hf := first_run e.om e.ctx it (e.oparg &&& 255) (some (e.oparg >>> 8)) rt1 rt2 xs hc (by omega)
     have hz : (e.oparg &&& 255) - xs.length = 0 := by omega
     rw [hz] at hf
-    have hd := drain_chain e.om e.ctx it ys rt2 rt3 (1000000 - ys.length) [] hys
-    have hd' : ys.length + (1000000 - ys.length) = 1000000 := by omega
-    rw [hd'] at hd
-    obtain ⟨k, hk⟩ : ∃ k, 1000000 - ys.length = k + 1 := ⟨1000000 - ys.length - 1, by omega⟩
-    rw [hk] at hd
-    have hdr : drain e.om e.ctx it 1000000 [] rt2 = .error x rt4 := by
-      rw [hd]; simp [drain, bind, EStateM.bind, hx]
-    have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error x rt4 := by
+    have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error x rt3 := by
       simp only [unpackIterable, tryExc, h0, bind, EStateM.bind]
       rw [hf]
-      simp [unpackIterable.first, hdr, pure, EStateM.pure, EStateM.bind]
+      simp [unpackIterable.first, mkList, alloc, hext, pure, EStateM.pure, EStateM.bind]
     bc_simp [execOp, UNPACK_EX, hr]
   · have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error (.exc x) rt2 := by
       simp [unpackIterable, tryExc, h0, bind, EStateM.bind, hm, throw, throwThe, MonadExcept.throw,
