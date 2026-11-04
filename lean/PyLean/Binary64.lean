@@ -66,14 +66,15 @@ def entries : List Entry := [
     status := .proven, prop := ``FmaCorrect, thm := some ``fmaCorrect_proven
     notes := "Foundation, for math.fma." },
   { id := "float-add-correct", pyFile := floatFile, pyFns := ["float_add", "_Py_convert_int_to_double"]
-    statement := "On every pair of operands, float_add converts the left operand first (a float or float subclass gives its value, an int its rounded value or OverflowError, anything else NotImplemented) and then the right one; on floats, a NaN operand or infinities of opposite signs give a NaN, an infinity otherwise wins, and finite operands give the exact sum rounded to nearest even, -0.0 only for two negative operands."
+    statement := "On every pair of operands, float_add converts the left operand first (a float or float subclass gives its value, an int its rounded value or OverflowError, anything else NotImplemented) and then the right one; on floats, a NaN operand or infinities of opposite signs give a NaN, an infinity otherwise wins, and finite operands give the exact sum rounded to nearest even, -0.0 only for two negative operands, and any other result, an overflow to infinity included, has the sign of the exact sum (-1e308 + -1e308 is -inf)."
     source := "floatobject.c:311-315, :541-549; IEEE 754-2019 6.1, 6.3 (addition, infinities, sign of an exact zero sum)"
     status := .proven, prop := ``FloatAddSpec, thm := some ``floatAddSpec_proven
-    notes := "Smoke-tested on 3.15.2: inf + 1.0 is inf, inf + -inf is nan, 1.0 + 10**400 and 10**400 + 1.0 raise OverflowError, float.__add__(1.0, 'a') is NotImplemented." },
+    notes := "Smoke-tested on 3.15.2: inf + 1.0 is inf, inf + -inf is nan, 1.0 + 10**400 and 10**400 + 1.0 raise OverflowError, float.__add__(1.0, 'a') is NotImplemented, -1e308 + -1e308 is -inf and 1e308 + 1e308 is inf." },
   { id := "float-sub-correct", pyFile := floatFile, pyFns := ["float_sub", "_Py_convert_int_to_double"]
-    statement := "On every pair of operands, float_sub has the same conversion dispatch as float_add; on floats, a NaN operand or infinities of the same sign give a NaN, a left infinity otherwise wins, a finite left operand minus an infinity is the opposite infinity, and finite operands give the exact difference rounded, -0.0 only for -0.0 - 0.0."
+    statement := "On every pair of operands, float_sub has the same conversion dispatch as float_add; on floats, a NaN operand or infinities of the same sign give a NaN, a left infinity otherwise wins, a finite left operand minus an infinity is the opposite infinity, and finite operands give the exact difference rounded, -0.0 only for -0.0 - 0.0, and any other result, an overflow to infinity included, has the sign of the exact difference (-1e308 - 1e308 is -inf)."
     source := "floatobject.c:551-559; IEEE 754-2019 6.1, 6.3"
-    status := .proven, prop := ``FloatSubSpec, thm := some ``floatSubSpec_proven },
+    status := .proven, prop := ``FloatSubSpec, thm := some ``floatSubSpec_proven
+    notes := "Smoke-tested on 3.15.2: -1e308 - 1e308 is -inf, 1e308 - -1e308 is inf." },
   { id := "float-mul-correct", pyFile := floatFile, pyFns := ["float_mul", "_Py_convert_int_to_double"]
     statement := "On every pair of operands, float_mul has the CONVERT_TO_DOUBLE dispatch; on floats, a NaN operand or an infinity times a zero gives a NaN, an infinity times anything else the infinity of the exclusive or of the signs, and finite operands the exact product rounded with that sign, zero included."
     source := "floatobject.c:561-569; IEEE 754-2019 6.1, 6.3"
@@ -151,10 +152,11 @@ def entries : List Entry := [
     source := "floatobject.c:1069-1090, :1704-1707; conjugate docstring (:1082)"
     status := .proven, prop := ``FloatFloatSpec, thm := some ``floatFloatSpec_proven
     notes := "Smoke-tested on 3.15.2: x.conjugate() is x and x.real is x for x = 1.5; for an instance f of a float subclass, f.real is not f and type(f.real) is float." },
-  { id := "float-getnewargs", pyFile := floatFile, pyFns := ["float___getnewargs___impl"]
+  { id := "float-getnewargs", pyFile := floatFile, pyFns := []
     statement := "x.__getnewargs__() is the 1-tuple (x,), and float(*x.__getnewargs__()) gives back all 64 bits of x, NaN payload included, whatever identity the new float gets."
     source := "floatobject.c:1665-1669; copy and pickle protocol (__getnewargs__)"
-    status := .proven, prop := ``GetnewargsSpec, thm := some ``getnewargsSpec_proven },
+    status := .proven, prop := ``GetnewargsSpec, thm := some ``getnewargsSpec_proven
+    notes := "Credits no row: float___getnewargs___impl is excluded (trivial: one field in a 1-tuple, no branch); the round trip is float_new's." },
   { id := "float-new", pyFile := floatFile, pyFns := ["float_new_impl"]
     statement := "float() is a new 0.0; float(s) for an exact str goes straight to PyFloat_FromString; float(x) for an exact float is x itself; anything else goes through PyNumber_Float, which calls nb_float first (an exception propagates, an exact float result is returned as that object, a float subclass result raises the DeprecationWarning under an error filter and is copied otherwise, anything else is TypeError), then nb_index through PyLong_AsDouble, then a float subclass's own value, then PyFloat_FromString."
     source := "floatobject.c:1567-1585; Objects/abstract.c:1602-1657"
