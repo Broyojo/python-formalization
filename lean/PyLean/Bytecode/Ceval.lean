@@ -433,6 +433,37 @@ def kwonlyFill (hk : KwHooks) (co : Code) (funcv : Val) :
         | none => kwonlyFill hk co funcv is fast (missing + 1)
       else kwonlyFill hk co funcv is fast (missing + 1)
 
+/-- Lines 1912-1940 of `initialize_locals`, with `func` the function object as the keyword loop
+left it. `m = co_argcount - defcount` is a `Py_ssize_t`, negative when `__defaults__` was
+replaced by a tuple longer than the parameters; then no positional is missing, `i = n - m`
+skips the first defaults, and the last `co_argcount - n` fill the unfilled slots from `n` on. -/
+def defaultsFill (co : Code) (func : FuncObj) (argcount n : Nat) (fast : Array Val) :
+    RM (Array Val) := do
+  if argcount < co.argcount then
+    let defs ← tupleItems func.defaults
+    let defcount := defs.size
+    let m : Int := (co.argcount : Int) - defcount
+    let missing := ((List.range' argcount (m.toNat - argcount)).filter
+      fun i => fast.getD i .null == .null).length
+    if missing != 0 then
+      missingArguments co (some defcount) fast func.qualname
+    let i0 : Nat := if (n : Int) > m then ((n : Int) - m).toNat else 0
+    pure <| (List.range' i0 (defcount - i0)).foldl
+      (fun f (i : Nat) => if f.getD (m + (i : Int)).toNat .null == .null
+        then f.setIfInBounds (m + (i : Int)).toNat (defs.getD i .null) else f) fast
+  else pure fast
+
+/-- Lines 1942-1966 of `initialize_locals`: the keyword-only defaults loop, then
+`missing_arguments` with `func_qualname` read when it is called. -/
+def kwonlyStage (hk : KwHooks) (co : Code) (funcv : Val) (fast : Array Val) : RM (Array Val) := do
+  if co.kwonlyargcount > 0 then
+    let (fast, missing) ← kwonlyFill hk co funcv
+      (List.range' co.argcount (co.argcount + co.kwonlyargcount - co.argcount)) fast 0
+    if missing != 0 then
+      missingArguments co none fast (← getFunc funcv).qualname
+    pure fast
+  else pure fast
+
 /-- `initialize_locals`, lines 1738-1984. `args` are the positional arguments,
 `kwargs` the keyword objects and values in `kwnames` order. `co` is the code object read when the
 call began (the frame holds it); `func_defaults`, `func_kwdefaults` and `func_qualname` are read
@@ -463,30 +494,8 @@ def initializeLocals (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val
   -- lines 1905-1910
   if argcount > co.argcount && !hasVarargs then
     tooManyPositional co argcount func.defaults fast func.qualname
-  -- lines 1912-1940. `m = co_argcount - defcount` is a `Py_ssize_t`, negative when
-  -- `__defaults__` was replaced by a tuple longer than the parameters; then no positional
-  -- is missing, `i = n - m` skips the first defaults, and the last `co_argcount - n` fill the
-  -- unfilled slots from `n` on.
-  let fast ← if argcount < co.argcount then do
-      let defs ← tupleItems func.defaults
-      let defcount := defs.size
-      let m : Int := (co.argcount : Int) - defcount
-      let missing := ((List.range' argcount (m.toNat - argcount)).filter
-        fun i => fast.getD i .null == .null).length
-      if missing != 0 then
-        missingArguments co (some defcount) fast func.qualname
-      let i0 : Nat := if (n : Int) > m then ((n : Int) - m).toNat else 0
-      pure <| (List.range' i0 (defcount - i0)).foldl
-        (fun f i => if f.getD (m + i).toNat .null == .null
-          then f.setIfInBounds (m + i).toNat (defs.getD i .null) else f) fast
-    else pure fast
-  -- lines 1942-1966
-  if co.kwonlyargcount > 0 then
-    let (fast, missing) ← kwonlyFill hk co funcv (List.range' co.argcount (totalArgs - co.argcount)) fast 0
-    if missing != 0 then
-      missingArguments co none fast (← getFunc funcv).qualname
-    pure fast
-  else pure fast
+  let fast ← defaultsFill co func argcount n fast
+  kwonlyStage hk co funcv fast
 
 /-- `_PyEvalFramePushAndInit`, lines 2033-2068. `args` holds the positional
 arguments followed by the values of `kwnames`. -/

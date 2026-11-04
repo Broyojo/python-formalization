@@ -42,11 +42,12 @@ def entries : List Entry := [
     statement := "gen_set_exception: a traceback argument that is not None or a traceback is 'throw() third argument must be a traceback object' whatever typ is; then a class is normalized with its value, an instance with a value other than None is 'instance exception may not have a separate value', an instance with none is raised as it is, and anything else is 'exceptions must be classes or instances deriving from BaseException, not <tp_name>'."
     source := "genobject.c:546-601", status := .proven
     prop := ``GenSetExceptionCases, thm := some ``genSetExceptionCases_proven
-    notes := "Tracebacks are not modelled: the traceback restored with the exception is out of scope." },
+    notes := "PyErr_NormalizeException is the world-threaded normalize hook: the class constructor is Python code, may re-enter the model and its error is the exception thrown (on 3.15.2, a KeyError raised by __init__ is thrown into the generator and caught there). Tracebacks are not modelled." },
   { id := "gen-throw-outcomes", pyFile := src, pyFns := ["_gen_throw"]
     statement := "_gen_throw for every state and every outcome of the code it runs: running and finished refusals first; not delegating, a gen_set_exception failure writes the state back and raises and a success is thrown into the frame; delegating with GeneratorExit and close_on_genexit, the sub-iterator is closed and its error thrown in, else throw_here; delegating otherwise, an exact generator or coroutine gets _gen_throw recursively, anything else has throw looked up (failure writes the state back and raises, no attribute is throw_here) and called with (typ, val, tb); a value from the sub-iterator writes the state back and is the result, an error is thrown into the frame."
     source := "genobject.c:625-726", status := .proven
-    prop := ``GenThrowFOutcomes, thm := some ``genThrowFOutcomes_proven },
+    prop := ``GenThrowFOutcomes, thm := some ``genThrowFOutcomes_proven
+    notes := "Checked on 3.15.2: an exception class whose __init__ calls next() on the generator being thrown into gets 'generator already executing' (gi_running is True during the normalization, which runs after :649); the difftest class ReInit re-enters the top object from its constructor." },
   { id := "gen-throw-args", pyFile := src, pyFns := ["gen_throw"]
     statement := "gen.throw(*args): no argument is 'throw expected at least 1 argument, got 0' and more than three 'throw expected at most 3 arguments, got n', with nothing run; two or three arguments first emit the DeprecationWarning, whose failure is the result; then _gen_throw with close_on_genexit set and the arguments in the typ, val, tb slots."
     source := "genobject.c:730-757", status := .proven
@@ -66,7 +67,8 @@ def entries : List Entry := [
   { id := "gen-async-unwrap-outcomes", pyFile := src, pyFns := ["async_gen_unwrap_value", "_PyAsyncGenValueWrapperNew"]
     statement := "async_gen_unwrap_value: NULL with nothing set becomes StopAsyncIteration and sets ag_closed, NULL with StopAsyncIteration or GeneratorExit sets ag_closed, any other NULL leaves it, all three clearing ag_running_async; the value _PyAsyncGenValueWrapperNew makes of v becomes StopIteration(v) with ag_running_async cleared; any other value passes through unchanged."
     source := "genobject.c:1912-1938, :2246-2262", status := .proven
-    prop := ``AsyncGenUnwrapValueOutcomes, thm := some ``asyncGenUnwrapValueOutcomes_proven },
+    prop := ``AsyncGenUnwrapValueOutcomes, thm := some ``asyncGenUnwrapValueOutcomes_proven
+    notes := "Unmodelled: the allocation failure of _PyAsyncGenValueWrapperNew (:2250-2256: on a freelist miss PyObject_GC_New returns NULL and the function returns NULL with MemoryError set)." },
   { id := "gen-async-init-hooks-outcomes", pyFile := src, pyFns := ["async_gen_init_hooks"]
     statement := "async_gen_init_hooks does nothing once ag_hooks_inited is set; otherwise it sets the flag, stores the thread's finalizer if any, and calls firstiter with the generator in that world, its failure being the result."
     source := "genobject.c:1669-1702", status := .proven
