@@ -28,6 +28,7 @@ import PyLean.Datetime.FloatProps
 import PyLean.Datetime.IsoFormsProps
 import PyLean.Datetime.IndexProps
 import PyLean.Datetime.IsoTimeProps
+import PyLean.Datetime.WrapScanProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -606,6 +607,11 @@ def entries : List Entry := [
     source := "C/Python twins; PEP 495", status := .proven
     prop := ``DatetimeCompareTwins, thm := some ``datetimeCompareTwins_proven
     notes := "Python asks for the flipped offsets up front, C only when the operands are otherwise equal, so a method that raises only there is an exception in one twin." },
+  { id := "datetime-wrap-scan-directives", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_wrap_strftime"]
+    statement := "Step by step, for every object, tzinfo environment and remaining format, _wrap_strftime copies a non-% character, replaces %f by the six-digit microsecond, %z and %:z by _format_offset(utcoffset()) without and with ':' (empty for a date; exceptions propagate), %Z by tzname() with % doubled (empty for None or a date), keeps %:x, %% and every other directive, keeps a trailing % and drops a trailing %:, and for a year below 1000 with the normalization needed writes %Y, %G, %C, %F itself."
+    source := "strftime docs (%f, %z, %:z, %Z); _pydatetime.py:227-292", status := .proven
+    prop := ``WrapScanDirectives, thm := some ``wrapScanDirectives_proven },
   { id := "datetime-strftime-twins", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_wrap_strftime", "C wrap_strftime"]
     statement := "For every format, both twins hand the same format to time.strftime."
