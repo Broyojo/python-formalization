@@ -178,6 +178,15 @@ def rule_assert_stmt_invalid : List String := [
 def rule_augassign : List String := [
   "rule:augassign"]
 
+def rule_await_primary : List String := [
+  "rule:await_primary"]
+
+def rule_comparison : List String := [
+  "rule:comparison"]
+
+def rule_compound_stmt : List String := [
+  "rule:compound_stmt"]
+
 def rule_del_stmt : List String := [
   "rule:del_stmt"]
 
@@ -193,6 +202,12 @@ def rule_factor : List String := [
 def rule_file : List String := [
   "rule:file"]
 
+def rule_for_stmt : List String := [
+  "rule:for_stmt"]
+
+def rule_global_nonlocal : List String := [
+  "rule:global_stmt", "rule:nonlocal_stmt"]
+
 def rule_import_name : List String := [
   "rule:import_name"]
 
@@ -204,6 +219,9 @@ def rule_invalid_import : List String := [
 
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]
+
+def rule_inversion : List String := [
+  "rule:inversion"]
 
 def rule_keyword_stmts : List String := [
   "rule:pass_stmt", "rule:break_stmt", "rule:continue_stmt"]
@@ -225,6 +243,9 @@ def rule_return_stmt : List String := [
 
 def rule_signed_number : List String := [
   "rule:signed_number"]
+
+def rule_simple_stmt : List String := [
+  "rule:simple_stmt"]
 
 def rule_statement : List String := [
   "rule:statement"]

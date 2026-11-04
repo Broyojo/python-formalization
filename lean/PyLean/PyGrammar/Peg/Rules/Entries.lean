@@ -6,6 +6,9 @@ import PyLean.PyGrammar.Peg.Rules.Exprs
 import PyLean.PyGrammar.Peg.Rules.Lazy
 import PyLean.PyGrammar.Peg.Rules.Start
 import PyLean.PyGrammar.Peg.Rules.Aug
+import PyLean.PyGrammar.Peg.Rules.Compound
+import PyLean.PyGrammar.Peg.Rules.Simple
+import PyLean.PyGrammar.Peg.Rules.Exprs2
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -203,6 +206,81 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``AssertStmtInvalid
     thm := some ``assertStmtInvalid_proven
+    notes := scheme },
+  { id := "pygrammar-rule-for-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_for_stmt
+    statement := "for_stmt: 'for t in ex: body [else]' gives For(t, ex, b, el, type_comment); a " ++
+      "failure of star_expressions after 'in' hits the cut: NULL with the mark back, and in the " ++
+      "second pass invalid_for_target, the last alternative, is not run."
+    source := "Grammar/python.gram:410-416"
+    status := .proven
+    prop := ``ForStmt
+    thm := some ``forStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-compound-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_compound_stmt
+    statement := "compound_stmt: lookahead dispatch in order: function_def behind def/@/async; if_stmt at " ++
+      "'if'; at a decorator a failing function_def falls through to class_def; with every " ++
+      "lookahead failing, match_stmt decides."
+    source := "Grammar/python.gram:137-145"
+    status := .proven
+    prop := ``CompoundStmt
+    thm := some ``compoundStmt_proven
+    notes := scheme ++ " Lookaheads are the rule calls _tmp_4 to _tmp_7 and token reads." },
+  { id := "pygrammar-rule-simple-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_simple_stmt
+    statement := "simple_stmt (memo): assignment first and winning when it succeeds; then, past the type " ++
+      "and import lookaheads, Expr(star_expressions); only then keyword statements (return_stmt " ++
+      "behind &'return', pass_stmt behind &'pass' after the raise lookahead fails); memoized."
+    source := "Grammar/python.gram:121-135"
+    status := .proven
+    prop := ``SimpleStmt
+    thm := some ``simpleStmt_proven
+    notes := scheme ++ " Hypothesis: no memo entry yet at the position." },
+  { id := "pygrammar-rule-global-nonlocal"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_global_nonlocal
+    statement := "global_stmt, nonlocal_stmt: at the keyword, the comma-separated names become " ++
+      "Global/Nonlocal of their ids; a failure of the names gives NULL with the mark back; " ++
+      "other tokens NULL."
+    source := "Grammar/python.gram:203-207"
+    status := .proven
+    prop := ``GlobalNonlocal
+    thm := some ``globalNonlocal_proven
+    notes := scheme },
+  { id := "pygrammar-rule-inversion"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_inversion
+    statement := "inversion (memo): 'not' a gives UnaryOp(Not, a) over inversion one token on; any " ++
+      "other token gives comparison's result; memoized."
+    source := "Grammar/python.gram:777-779"
+    status := .proven
+    prop := ``Inversion
+    thm := some ``inversion_proven
+    notes := scheme },
+  { id := "pygrammar-rule-comparison"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_comparison
+    statement := "comparison: bitwise_or followed by one or more comparison pairs gives one Compare " ++
+      "node with the operators and right operands in order; without a pair the mark goes back " ++
+      "and bitwise_or parsed again is the result."
+    source := "Grammar/python.gram:784-791"
+    status := .proven
+    prop := ``Comparison
+    thm := some ``comparison_proven
+    notes := scheme },
+  { id := "pygrammar-rule-await-primary"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_await_primary
+    statement := "await_primary (memo): 'await' primary gives Await(a) with feature_version >= 5 and " ++
+      "fails with an error below; any other token gives primary's result; memoized."
+    source := "Grammar/python.gram:871-873"
+    status := .proven
+    prop := ``AwaitPrimary
+    thm := some ``awaitPrimary_proven
     notes := scheme },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"
