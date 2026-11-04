@@ -47,7 +47,7 @@ possible_fix: |
   In _pydatetime, pass `fold=fold` only when `fold` is nonzero, as C does.
 reproduces:
   python3 (3.15.2): REPRODUCED
-  main: PENDING
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:
     - {number: 89039, state: closed, relation: related (replace() calling the subclass constructor, fixed by gh-114780; not this difference)}
