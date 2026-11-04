@@ -1,0 +1,82 @@
+id: sequences-dequeiter-new-ignores-kwargs
+title: "type(iter(deque))() and type(reversed(deque))() silently ignore keyword arguments"
+priority: P5
+kind: argument-validation
+module: sequences
+files: [Modules/_collectionsmodule.c]
+functions: ["dequeiter_new", "dequereviter_new"]
+summary: |
+  The deque iterator types are constructible from Python (pickle uses them:
+  it.__reduce__() returns (type(it), (d, index))). Their tp_new, dequeiter_new and
+  dequereviter_new, parse `args` with PyArg_ParseTuple(args, "O!|n", ...) and never look at
+  `kwds`, so any keyword argument is accepted and dropped. type(iter(d))(d, index=3) returns
+  a fresh iterator over all of d instead of raising TypeError (or honouring index), and
+  type(iter(d))(d, 2, index=4) or type(iter(d))(d, bogus=1) are accepted too. Every other
+  argument error is reported (a non-deque first argument, a non-int index, an index outside
+  Py_ssize_t), and calling without the positional deque fails with "function takes at least
+  1 argument (0 given)" even when deque= is passed as a keyword.
+  Lean: DequeIterNewKw ("both constructors raise TypeError when given keyword arguments") is
+  refuted (dequeIterNewKw_neither breaks each); DequeIterNew (positional use, the
+  consumption count, __length_hint__ and the __reduce__ round trip) is proven.
+likelihood: |
+  Low. The types are private (collections._deque_iterator, _deque_reverse_iterator) and are
+  normally only called by pickle with positional arguments. A caller who writes index= gets
+  a wrong iterator silently rather than an error.
+maybe_intended: |
+  Possibly won't fix: the types are undocumented and the call path is pickle's. But CPython
+  treats a C callable that silently accepts and drops keyword arguments as a bug and fixes
+  it with _PyArg_NoKeywords (python/cpython#41553, xrange() accepting keyword args silently;
+  python/cpython#61965, weakref.ref ignoring a callback keyword), so a one-line fix would
+  plausibly be accepted, or converted to Argument Clinic, which rejects them by default.
+reproducer: |
+  from collections import deque
+  d = deque(range(5))
+  IT, RIT = type(iter(d)), type(reversed(d))
+  r1 = list(IT(d, index=3))
+  r2 = list(RIT(d, index=3))
+  r3 = list(IT(d, 2, index=4))
+  r4 = list(IT(d, bogus=1))
+  try:
+      IT(deque=d)
+      r5 = 'accepted'
+  except TypeError as e:
+      r5 = str(e)
+  print('IT(d, index=3)       :', r1)
+  print('RIT(d, index=3)      :', r2)
+  print('IT(d, 2, index=4)    :', r3)
+  print('IT(d, bogus=1)       :', r4)
+  print('IT(deque=d)          :', r5)
+  if (r1 == [0, 1, 2, 3, 4] and r2 == [4, 3, 2, 1, 0] and r3 == [2, 3, 4]
+          and r4 == [0, 1, 2, 3, 4] and 'at least 1 argument' in r5):
+      print('REPRODUCED sequences-dequeiter-new-ignores-kwargs')
+expected: |
+  TypeError for every call with keyword arguments (for example
+  "_deque_iterator() takes no keyword arguments"), or index= honoured.
+observed: |
+  python3 3.15.2: IT(d, index=3) -> [0, 1, 2, 3, 4]; RIT(d, index=3) -> [4, 3, 2, 1, 0];
+  IT(d, 2, index=4) -> [2, 3, 4]; IT(d, bogus=1) -> [0, 1, 2, 3, 4]; IT(deque=d) raises
+  "function takes at least 1 argument (0 given)". REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev ef1fce0): identical, REPRODUCED.
+promised_by: |
+  No documentation for these private types. The convention that a C callable without
+  keyword parameters rejects keywords: Python/getargs.c _PyArg_NoKeywords and its use in
+  every tp_new that takes positional arguments only; python/cpython#41553.
+cause: |
+  Modules/_collectionsmodule.c:2011-2043 (dequeiter_new) and :2161-2193 (dequereviter_new):
+  `if (!PyArg_ParseTuple(args, "O!|n", state->deque_type, &deque, &index))` at :2017 and
+  :2167; `kwds` is never read.
+possible_fix: |
+  Add `if (!_PyArg_NoKeywords("_deque_iterator", kwds)) return NULL;` (and the same with
+  "_deque_reverse_iterator") before PyArg_ParseTuple, or convert both to Argument Clinic.
+duplicates:
+  issues:
+    - {number: 41553, state: closed, relation: "same class of defect in xrange() (2005), fixed with _PyArg_NoKeywords; not this function"}
+    - {number: 61965, state: closed, relation: "weakref.ref ignoring a 'callback' keyword (2016); same class, not this function"}
+    - {number: 64379, state: closed, relation: "Argument Clinic conversion derby touching _collectionsmodule.c; did not convert dequeiter_new"}
+  queries: ["deque iterator keyword arguments", "_deque_iterator keyword", "deque_iterator kwargs",
+            "ignores keyword arguments tp_new", "silently ignores keyword arguments", "deque iterator __new__",
+            "keyword arguments ignored iterator constructor", "_deque_reverse_iterator", "dequeiter",
+            "deque iterator pickle", "bugforge README: no deque entries"]
+lean:
+  property: PyLean.Sequences.DequeIterNewKw
+  theorem: PyLean.Sequences.dequeIterNewKw_refuted

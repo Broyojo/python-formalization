@@ -8,6 +8,7 @@ import PyLean.Sequences.PopRemove
 import PyLean.Sequences.SliceAssign
 import PyLean.Sequences.DequeRepeat
 import PyLean.Sequences.DequeReentrant
+import PyLean.Sequences.DequeCompare
 import PyLean.Sequences.Reverse
 import PyLean.Sequences.ArrayItems
 import PyLean.Sequences.ArraySlice
@@ -46,25 +47,86 @@ def entries : List Entry := [
   { id := "sequences-deque-ends-evict", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_append_lock_held", "deque_append_impl", "deque_appendleft_lock_held",
       "deque_appendleft_impl", "deque_extend_impl", "deque_extendleft_impl", "deque_pop_impl",
-      "deque_popleft_impl", "deque_clear", "deque_clearmethod_impl", "deque_inplace_concat",
+      "deque_popleft_impl", "deque_clear", "deque_clearmethod_impl",
       "finalize_iterator", "consume_iterator"]
-    statement := "For every deque satisfying the block-layout invariant and any items: append/extend/+=/extend(d) keep the last maxlen items of items + xs, appendleft/extendleft keep the first maxlen of reversed(xs) + items, pop/popleft remove the last/first item or raise IndexError when empty; the invariant and maxlen are preserved. An iterator that does not touch the deque and ends with StopIteration (or runs out) makes extend/extendleft/+= return None, one that raises another exception e after its items makes them raise e with the items kept, a non-iterable raises TypeError and changes nothing."
+    statement := "For every deque satisfying the block-layout invariant and any items: append/extend/extend(d) keep the last maxlen items of items + xs, appendleft/extendleft keep the first maxlen of reversed(xs) + items, pop/popleft remove the last/first item or raise IndexError when empty; the invariant and maxlen are preserved. An iterator that does not touch the deque and ends with StopIteration (or runs out) makes extend/extendleft return None, one that raises another exception e after its items makes them raise e with the items kept, a non-iterable raises TypeError and changes nothing."
     source := "Doc/library/collections.rst:479-485 (bounded deques discard from the opposite end), :488-565", status := .proven
     prop := ``DequeEndsEvict, thm := some ``dequeEndsEvict_proven },
   { id := "sequences-deque-extend-reentrant", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_extend_impl", "deque_extendleft_impl", "deque_inplace_concat", "finalize_iterator",
-      "consume_iterator"]
-    statement := "For every deque and every iterator whose __iter__ and __next__ calls run arbitrary code on the deque that keeps its invariant and maxlen: extend/extendleft/+= leave a deque satisfying the invariant with the same maxlen (maxlen == 0 included, the consume_iterator path). For any such calls that yield and then optionally a call raising e: the result is None when they run out or e is StopIteration, and e otherwise, also when maxlen == 0; an __iter__ raising e raises e with no __next__ call."
+    pyFns := ["deque_extend_impl", "deque_extendleft_impl", "finalize_iterator", "consume_iterator"]
+    statement := "For every deque and every iterator whose __iter__ and __next__ calls run arbitrary code on the deque that keeps its invariant and maxlen: extend/extendleft leave a deque satisfying the invariant with the same maxlen (maxlen == 0 included, the consume_iterator path). For any such calls that yield and then optionally a call raising e: the result is None when they run out or e is StopIteration, and e otherwise, also when maxlen == 0; an __iter__ raising e raises e with no __next__ call."
     source := "invariant: exceptions propagate, StopIteration ends iteration; Doc/library/collections.rst:479-485", status := .proven
     prop := ``DequeExtendRe, thm := some ``dequeExtendRe_proven
-    notes := "The iterator is a list of re-entrant calls (Deque -> Py item x Deque), finite by scope. The loop applies the maxlen read at entry (:484, :539); sequences-deque-extend-keeps-bound is the refutation for an iterator that changes it." },
+    notes := "The iterator is a list of re-entrant calls (Deque -> Py item x Deque), finite by scope. The loop applies the maxlen read at entry (:484, :539): sequences-deque-extend-stale-bound states what happens when an iterator changes it, sequences-deque-extend-keeps-bound is the refutation." },
+  { id := "sequences-deque-extend-stale-bound", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_extend_impl", "deque_extendleft_impl", "deque_append_lock_held", "deque_appendleft_lock_held",
+      "consume_iterator", "finalize_iterator"]
+    statement := "For every deque and every iterator whose calls keep the block layout, maxlen changes and d.__init__ included, extend and extendleft leave a valid block layout. For every 0 <= m' <= sys.maxsize, xs and ending e, an __iter__ that runs d.__init__(maxlen=m') and then yields xs makes them return None or raise e as usual and leaves maxlen == m' with the last (extend) / first reversed (extendleft) old-maxlen items of xs: the bound read on entry, nothing when it was 0, every item when it was None."
+    source := "Modules/_collectionsmodule.c:484, :539 (maxlen read once); invariant: the block layout of :103-125", status := .proven
+    prop := ``DequeExtendStaleBound, thm := some ``dequeExtendStaleBound_proven
+    notes := "Smoke-tested on 3.15.2 for maxlen None/0/2/5 on entry and m' in 0..2, extend and extendleft." },
   { id := "sequences-deque-extend-keeps-bound", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_extend_impl"]
+    pyFns := ["deque_extend_impl", "deque_extendleft_impl"]
     statement := "For every deque and every iterator whose __iter__ and __next__ calls each keep the deque's invariant (len(d) <= maxlen for a bounded deque), __init__ included, extend and extendleft leave a deque that satisfies it."
     source := "Doc/library/collections.rst:479-485 (bounded deques discard from the opposite end); invariant len(d) <= maxlen", status := .refuted
     prop := ``DequeExtendKeepsBound, thm := some ``dequeExtendKeepsBound_refuted
     bug := some "sequences-deque-extend-reinit-maxlen"
-    notes := "deque().extend(X()) where X.__iter__ calls d.__init__(maxlen=1) and returns iter([1, 2, 3]) leaves deque([1, 2, 3], maxlen=1): deque_extend_impl captured maxlen = -1 before PyObject_GetIter." },
+    notes := "deque().extend(X()) and deque().extendleft(X()) where X.__iter__ calls d.__init__(maxlen=1) and returns iter([1, 2, 3]) leave deque([1, 2, 3], maxlen=1) and deque([3, 2, 1], maxlen=1): both captured maxlen = -1 before PyObject_GetIter. dequeExtendKeepsBound_neither breaks each half; the refutation goes through extendleft." },
+  { id := "sequences-deque-iadd", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_inplace_concat"]
+    statement := "For every deque and every iterator (re-entrant ones included), d += it leaves the deque exactly as d.extend(it) does and returns the deque itself when extend returns None, extend's exception when it raises; for an iterator over xs that does not touch a WF deque, d += xs returns d holding the last maxlen items of list(d) + xs, an iterator raising e raises e with the items kept, a non-iterable raises TypeError and changes nothing."
+    source := "Doc/library/collections.rst (deques support +=); Modules/_collectionsmodule.c:587-589", status := .proven
+    prop := ``DequeIAdd, thm := some ``dequeIAdd_proven
+    notes := "The result is an object identity (SlotRef.self is the receiver, SlotRef.none is Py_None); the difftest checks `d.__iadd__(...) is d`. d += d is the self case of deque_extend_impl (extendSelf)." },
+  { id := "sequences-deque-iter-walk", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_iter", "dequeiter_next_lock_held", "dequeiter_next", "dequeiter_len", "deque___reversed___impl",
+      "deque_reviter", "dequereviter_next_lock_held", "dequereviter_next"]
+    statement := "For every deque: iter(d) yields every item in order and reversed(d) every item in reverse, then StopIteration; after p calls __length_hint__() is len(d) - p and the rest yields d[p:] (reversed(d)[p:]); an exhausted iterator keeps stopping. Once the deque's mutation counter moved, the forward iterator raises RuntimeError('deque mutated during iteration') on every later call, even when it was exhausted before, the reverse iterator raises it once and then stops, and an exhausted reverse iterator just stops; both set the length hint to 0."
+    source := "Doc/library/collections.rst:479-490 (deques support iteration, reversed()); invariant: no mutation goes unnoticed, no read outside the blocks", status := .proven
+    prop := ``DequeIterWalk, thm := some ``dequeIterWalk_proven
+    notes := "The twin difference (forward tests the state first, reverse tests exhaustion first, :1973-1979 vs :2124-2131) is stated, not merged. Smoke-tested on 3.15.2." },
+  { id := "sequences-deque-iter-new", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["dequeiter_new", "dequereviter_new", "dequeiter_len", "dequeiter_reduce", "deque_iter", "deque_reviter"]
+    statement := "For every deque (len <= sys.maxsize) and every int index in Py_ssize_t, type(iter(d))(d, index) and type(reversed(d))(d, index) have consumed min(max(index, 0), len(d)) items, with that length hint, and yield the rest; an index outside Py_ssize_t raises OverflowError. it.__reduce__() gives (type(it), (d, len(d) - it.__length_hint__())), and rebuilding from it yields exactly what is left of it, for every iterator reached by __next__ calls on the unchanged deque."
+    source := "invariant: pickle round trip of an iterator (Lib/pickle.py), __length_hint__ protocol (PEP 424)", status := .proven
+    prop := ``DequeIterNew, thm := some ``dequeIterNew_proven
+    notes := "Positional arguments only; keyword arguments are sequences-deque-iter-new-kwargs." },
+  { id := "sequences-deque-iter-new-kwargs", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["dequeiter_new", "dequereviter_new"]
+    statement := "type(iter(d))(...) and type(reversed(d))(...) raise TypeError when given keyword arguments, as a call that does not accept them must."
+    source := "invariant: a C callable that takes no keyword arguments rejects them (_PyArg_NoKeywords; precedent python/cpython#41553, xrange accepting keyword args silently)", status := .refuted
+    prop := ``DequeIterNewKw, thm := some ``dequeIterNewKw_refuted
+    bug := some "sequences-dequeiter-new-ignores-kwargs"
+    notes := "type(iter(d))(d, index=3) returns a fresh iterator over all of d: PyArg_ParseTuple(args, \"O!|n\", ...) never looks at kwds. dequeIterNewKw_neither breaks both constructors." },
+  { id := "sequences-deque-reduce", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque___reduce___impl"]
+    statement := "For every deque (maxlen a Py_ssize_t) and every outcome of _PyObject_GetState: a raising __getstate__ makes __reduce__ raise it; otherwise it returns (type(d), () or ((), maxlen), state, it) where it yields exactly the items, and type(d)(*args) extended with them has the same type, items and maxlen."
+    source := "invariant: pickle/copy round trip (Lib/copyreg.py, Lib/pickle.py listitems)", status := .proven
+    prop := ``DequeReduce, thm := some ``dequeReduce_proven
+    notes := "Scope: the deque's own iterator; a subclass overriding __iter__ makes PyObject_GetIter return that instead." },
+  { id := "sequences-deque-repr", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_repr"]
+    statement := "For every deque, element repr (which may raise and run any code on the deque) and outcome of Py_ReprEnter: an error is returned, a deque already being printed gives '[...]', otherwise the item reprs run left to right on the snapshot list(d) and when they all return s_i the result is T([s_0, ...]) or T([s_0, ...], maxlen=m) with the type name and bound from before any item repr ran; the first raising item repr makes repr(d) raise it."
+    source := "Doc/library/collections.rst (deque repr); invariant: repr reflects the object at the call", status := .proven
+    prop := ``DequeRepr, thm := some ``dequeRepr_proven
+    notes := "Scope: the deque's own iterator (PySequence_List dispatches to an overriding __iter__)." },
+  { id := "sequences-deque-sizeof", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque___sizeof___impl"]
+    statement := "For every deque, __sizeof__() is the type's basic size plus 528 bytes per block from leftblock to rightblock inclusive (at least one block), the assert at :1795-1796 holds, every item lies in a counted block and the last item in the last one."
+    source := "invariant: the C assert at Modules/_collectionsmodule.c:1795-1796; block layout :103-125", status := .proven
+    prop := ``DequeSizeof, thm := some ``dequeSizeof_proven
+    notes := "sizeof(block) = 528 is the LP64 value; the difftest reads the block count back from __sizeof__() after every operation." },
+  { id := "sequences-deque-compare-reentrant", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_richcompare"]
+    statement := "For every pair of deques (distinct or the same object), op, and element comparisons that may raise or run any code on either deque: v is w gives True for == and False for !=, different lengths False/True, before any element is compared; otherwise, for every position k such that the == comparisons before it returned true and left both deques alone, a raising == at k raises, a false == returns op's comparison of that pair, a true == after moving v's mutation counter (or w's, v untouched) raises RuntimeError('deque mutated during iteration'), and when one deque ends at k the lengths decide."
+    source := "Doc/library/stdtypes.rst (sequence comparison); invariant: a mutation during iteration is detected, no stale block is read", status := .proven
+    prop := ``DequeCompareRe, thm := some ``dequeCompareRe_proven
+    notes := "Scope: the deques' own iterators (a subclass overriding __iter__ is out of scope); NotImplemented for a non-deque operand is checked by the difftest. Smoke-tested on 3.15.2: __eq__ clearing or appending to either deque, at the first and the last pair, raising, and returning false after a mutation." },
+  { id := "sequences-deque-compare-seq", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_richcompare"]
+    statement := "For every pair of deques (distinct or the same object) and element comparisons that do not touch them, when the shortcuts do not decide, deque_richcompare is the lexicographic comparison of list(v) and list(w) by first difference."
+    source := "Doc/library/stdtypes.rst, Comparisons: sequences of the same type compare lexicographically", status := .proven
+    prop := ``DequeCompareSeq, thm := some ``dequeCompareSeq_proven },
   { id := "sequences-deque-init", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_new", "deque_init_impl"]
     statement := "A new deque is empty, unbounded (maxlen None before __init__) and centred in its block. For every deque d (not only a fresh one): d.__init__(xs, maxlen) empties d first and then holds the last maxlen items of xs; an iterator raising e after xs raises e with those items kept; an invalid maxlen raises before anything is cleared; d.__init__() without an iterable empties d without moving an empty deque's block indices, unlike d.__init__([])."
@@ -534,7 +596,7 @@ def entries : List Entry := [
     prop := ``DefDictGetitem, thm := some ``defDictGetitem_proven },
   { id := "sequences-defdict-copy-reduce", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["defdict_copy", "new_defdict", "defdict_reduce"]
-    statement := "dd.copy() has the same items in order, type and factory (NULL becoming None); __reduce__ calls dd.items() and returns (type(dd), args, None, None, iter(items)) with args () or (factory,), raising what items() raises and TypeError for a non-iterable result."
+    statement := "dd.copy() has the same items in order, type and factory (NULL becoming None); __reduce__ calls dd.items() and, for whatever iterable it returns (dict.items or an override yielding any pairs and ending any way), returns (type(dd), args, None, None, iter(that)) with args () or (factory,), raising what items() raises and TypeError for a non-iterable result."
     source := "invariant", status := .proven
     prop := ``DefDictCopyReduce, thm := some ``defDictCopyReduce_proven },
   { id := "sequences-defdict-repr-init-or", pyFile := "Modules/_collectionsmodule.c"
