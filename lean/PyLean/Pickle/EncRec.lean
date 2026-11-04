@@ -107,8 +107,12 @@ def addStepR (b n i : Nat) (item : EncM Unit) : EncM Unit := do
 /-- `save_long` (`Lib/pickle.py:822-852`) in its frame: `encode_long` is a Python call at
 protocol 2 and up outside the 4-byte range; `repr` and `pack` are C. -/
 def pySaveLongR (b p : Nat) (i : Int) : EncM Unit := do
-  if p ≥ 2 ∧ ¬ (-0x80000000 ≤ i ∧ i ≤ 0x7fffffff) then pyCall b fun _ => pure ()
+  pyEncodeLongR b p i
   pyW b (← liftPy (pySaveLong p i))
+where
+  /-- The `encode_long(obj)` frame of :842. -/
+  pyEncodeLongR (b p : Nat) (i : Int) : EncM Unit :=
+    if p ≥ 2 ∧ ¬ (-0x80000000 ≤ i ∧ i ≤ 0x7fffffff) then pyCall b fun _ => pure () else pure ()
 
 /-- The binary branch of `save_str` (`Lib/pickle.py:938-948`). -/
 def pyStrDataR (b p : Nat) (data : Bytes) : EncM Unit :=
@@ -146,15 +150,18 @@ def pySaveStrObjR (b p : Nat) (o : Oid) (s : List Nat) : EncM Unit :=
 (:1229-1252), then `memoize`. -/
 def pySaveGlobalBodyR (b p : Nat) (g : Glob) : EncM Unit := do
   pyCall b (fun b' => pyCall b' fun _ => pure ())
-  if p ≥ 4 then do
-    pySaveStrObjR b p (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
-    pySaveStrObjR b p (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
-    pyW b [oSTACK_GLOBAL]
-  else
-    pyCall b fun b' => do
-      pyW b' (oGLOBAL :: ascii (globModuleOut p g) ++ [nl])
-      pyW b' (ascii g.name ++ [nl])
+  pyGlobalRefR b p g
   pyMemoizeR b p (.glob g)
+where
+  pyGlobalRefR (b p : Nat) (g : Glob) : EncM Unit :=
+    if p ≥ 4 then do
+      pySaveStrObjR b p (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
+      pySaveStrObjR b p (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
+      pyW b [oSTACK_GLOBAL]
+    else
+      pyCall b fun b' => do
+        pyW b' (oGLOBAL :: ascii (globModuleOut p g) ++ [nl])
+        pyW b' (ascii g.name ++ [nl])
 
 /-- `self.save(func)` for one of the globals: a type goes through `save_type` (:1254-1261) to
 `save_global`; `codecs.encode` through its C `__reduce_ex__`, whose result `'encode'` is passed
