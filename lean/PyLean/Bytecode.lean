@@ -19,6 +19,7 @@ import PyLean.Bytecode.GenericProps
 import PyLean.Bytecode.SpecJumps
 import PyLean.Bytecode.SpecUnpack
 import PyLean.Bytecode.SpecBuild
+import PyLean.Bytecode.SpecMisc
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -565,7 +566,24 @@ def entries : List Entry := GenObj.entries ++ [
       op "BUILD_MAP"]
     statement := "For every object model: LIST_EXTEND, SET_UPDATE, DICT_UPDATE and DICT_MERGE call _PyList_Extend, _PySet_Update, PyDict_Update and _PyDict_MergeUniq on the container oparg below the top, pop only the top on success and keep every operand on failure (ERROR_NO_POP); LIST_EXTEND rewrites a TypeError on a non-iterable to 'Value after * must be an iterable, not T'; DICT_UPDATE rewrites an AttributeError to \"'T' object is not a mapping\" exactly when update has no keys, restores it when it has, and chains it as __context__ when the probe raises; DICT_MERGE reports the duplicate key of _PyDict_MergeUniq as 'F got multiple values for keyword argument K' (F the _PyObject_FunctionStr or 'function'), and its AttributeError as 'Value after ** must be a mapping, not T' under the same keys rule, every other exception (a mapping's own KeyError included) unchanged. SET_ADD refuses anything but an exact set with \"'T' object is not a set\" (3.15, gh-154902), SET_ADD and MAP_ADD pop every operand on failure. BUILD_SET and BUILD_MAP add the values (pairs) to a new set (dict) from the bottom up, each add in the runtime the previous left, stopping at the first failure with every value popped."
     source := "Python/bytecodes.c:1380-1392, :2511-2581, :2610-2666; _PyEval_FormatKwargsError, Python/ceval.c:3414-3446; _PyObject_FunctionStr, Objects/object.c:976-1009"
-    status := .proven, prop := ``BuildersRules, thm := some ``buildersRules_proven }
+    status := .proven, prop := ``BuildersRules, thm := some ``buildersRules_proven },
+  { id := "bytecode-get-iter", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_ITER", op "_GET_ITER", op "GET_ITER_SELF", op "_GUARD_ITERATOR", op "GET_ITER_VIRTUAL",
+      op "_GUARD_ITER_VIRTUAL", op "_PUSH_TAGGED_ZERO"]
+    statement := "GET_ITER, for every object model: on a type with _tp_iteritem (exact list, tuple, str, bytes) it keeps the value and pushes a tagged 0 without calling __iter__; otherwise on a type whose tp_iter is PyObject_SelfIter it keeps the value and pushes NULL; otherwise it replaces the value by PyObject_GetIter's result with NULL above, or propagates its exception with the value popped; a coroutine in a plain generator's yield from raises TypeError 'cannot 'yield from' a coroutine object in a non-coroutine generator'. GET_ITER_VIRTUAL and GET_ITER_SELF give GET_ITER's result on the values their guards accept and are GET_ITER on every other value."
+    source := "Python/bytecodes.c:3720-3774; _PyEval_GetIter, Python/ceval.c:1131-1163"
+    status := .proven, prop := ``GetIterRules, thm := some ``getIterRules_proven },
+  { id := "bytecode-format", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CONVERT_VALUE", op "FORMAT_SIMPLE", op "FORMAT_WITH_SPEC"]
+    statement := "CONVERT_VALUE 1/2/3 replaces the value by PyObject_Str/Repr/ASCII of it (!s, !r, !a); FORMAT_SIMPLE keeps an exact str without calling anything and replaces anything else by PyObject_Format(v, NULL); FORMAT_WITH_SPEC replaces value and spec by PyObject_Format(v, spec); every failure propagates with the operands popped. For every object model."
+    source := "Python/bytecodes.c:5873-5904"
+    status := .proven, prop := ``FormatRules, thm := some ``formatRules_proven },
+  { id := "bytecode-intrinsics", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL_INTRINSIC_1", op "_CALL_INTRINSIC_1", op "CALL_INTRINSIC_2", op "_CALL_INTRINSIC_2"]
+    statement := "CALL_INTRINSIC_1 calls _PyIntrinsics_UnaryFunctions[oparg] on the value and CALL_INTRINSIC_2 calls _PyIntrinsics_BinaryFunctions[oparg](value2, value1) with value2 the deeper operand, replacing the operands by the result; when the intrinsic fails both leave through ERROR_NO_POP with the operands kept (new in 3.15). For every object model and oparg."
+    source := "Python/bytecodes.c:1498-1529"
+    status := .proven, prop := ``IntrinsicRules, thm := some ``intrinsicRules_proven
+    notes := "The intrinsic functions themselves are Python/intrinsics.c rows." }
 ]
 
 end PyLean.Bytecode

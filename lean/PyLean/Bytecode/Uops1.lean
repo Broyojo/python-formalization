@@ -754,14 +754,16 @@ def STORE_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT_STORE_SUBSCRIPT; 
 def DELETE_SUBSCR (e : Env) : M Unit := stk 2 0 fun
   | [c, sub] => do e.om.delItem e.ctx c sub; pure []
   | _ => fault "arity"
-/-- `@3.14.7:1496`. -/
-def CALL_INTRINSIC_1 (e : Env) : M Unit := stk 1 1 fun
+/-- `:1498-1509`: `_CALL_INTRINSIC_1 + POP_TOP`; since 3.15 a failing intrinsic leaves through
+`ERROR_NO_POP` with the operand kept. -/
+def CALL_INTRINSIC_1 (e : Env) : M Unit := stkK 1 1 fun
   | [v] => do
     let f ← getFrame
     pure [← e.om.intrinsic1 e.ctx f e.oparg v]
   | _ => fault "arity"
-/-- `:1529`. -/
-def CALL_INTRINSIC_2 (e : Env) : M Unit := stk 2 1 fun
+/-- `:1511-1529`: `_CALL_INTRINSIC_2 + POP_TOP + POP_TOP`, `func(tstate, value2, value1)` with
+`value2` the deeper operand; `ERROR_NO_POP` on failure. -/
+def CALL_INTRINSIC_2 (e : Env) : M Unit := stkK 2 1 fun
   | [v2, v1] => do
     let f ← getFrame
     pure [← e.om.intrinsic2 e.ctx f e.oparg v2 v1]

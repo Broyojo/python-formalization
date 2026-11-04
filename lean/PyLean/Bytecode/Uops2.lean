@@ -631,7 +631,9 @@ def CHECK_EXC_MATCH : M Unit := stkK 2 2 fun
 /-- `:3456`. -/
 def IMPORT_NAME (e : Env) : M Unit := stk 2 1 fun
   | [level, fromlist] => do
-    let name ← getName e e.oparg
+    -- 3.15: the name is `co_names[oparg >> 2]`; bit 1 picks the eager `_PyEval_ImportName` over
+    -- `_PyEval_LazyImportName` (PEP 810), which the model does not distinguish
+    let name ← getName e (e.oparg >>> 2)
     let f ← getFrame
     pure [← e.om.importName e.ctx f name fromlist level]
   | _ => fault "arity"
@@ -762,10 +764,11 @@ def getIterStack (e : Env) (co : Code) (iterable : Val) : RM (List Val) := do
   if ← hasIterItem iterable then return [iterable, .tagged 0]
   if ← isSelfIter iterable then return [iterable, .null]
   let yieldFrom := fixupGetIter e.oparg co.flags
-  if yieldFrom != 0 && (← genKindOf iterable) == some .coro then
-    if yieldFrom == getIterYieldFromCoroCheck then
-      typeError "cannot 'yield from' a coroutine object in a non-coroutine generator"
-    return [iterable, .null]
+  if yieldFrom != 0 then
+    if (← genKindOf iterable) == some .coro then
+      if yieldFrom == getIterYieldFromCoroCheck then
+        typeError "cannot 'yield from' a coroutine object in a non-coroutine generator"
+      return [iterable, .null]
   return [← e.om.getIter e.ctx iterable, .null]
 
 /-- `:3736`: `(iterable -- iter, index_or_null)`. -/
