@@ -554,6 +554,17 @@ RULE_FORMS = [
     "match {e}:\n case 1: pass", "match {e}\n case 1: pass", "match {e}:\ncase 1: pass", "match {e}, {f}:\n case _: pass",
     "match:\n case 1: pass", "@{e}\n@{f}\n@{e}\ndef g(): pass", "@{e} @{f}\ndef g(): pass", "@\ndef g(): pass",
     "@{e}\n\ndef g(): pass", "@{e}\nclass C: pass",
+    # primary, t_primary, atom, slices, targets (Peg/Rules/Primary.lean, TPrimary.lean, Atom.lean,
+    # Targets.lean, Targets2.lean)
+    "{e}.b(c)[d]", "f({e} for x in y)", "f({e} for x in y, 1)", "f({e})({f})", "f(x for x in {e})[0]",
+    "a[{e}:{f}:{e}]", "a[{e}, {f}]", "a[{e},]", "a[*{e}]", "a[::]", "a[{e}:]", "a[:{f}]", "a[{e}, *{f}]",
+    "{e}.b = 1", "{e}[0] = 1", "{e}.b.c = 1", "{e}(x).b = 1", "*{e}, = 1", "{e}, {f} = 1", "[{e}, *{f}] = 1",
+    "({e}) = 1", "({e}, {f}) = 1", "[{e}] = 1", "* {e} = 1", "**{e}, = 1", "{e}(x for x in y).b = 1",
+    "del {e}.x, {f}[0]", "del ({e}, {f})", "del [{e}]", "del {e},", "del ({e})", "del {e}[{f}:]",
+    "a.{n}", "True.x", "None[0]", "...", "...[0]", "f(**{e})", "a.b(c)[{e}].d = {f}", "x[a := 1]",
+    "x[a, b:c]", "{e}.", "{e}[", "{e}(", "{e}[]", "(x for x in {e})", "[{e}]", "{{{e}}}", "{{{e}: {f}}}",
+    "'s'.x", "1 .real", "1.real", "f'{e}'.x", "for {e}.x in y: pass", "for {e}[0] in y: pass",
+    "with a as {e}.b: pass", "with a as ({e}, {f}): pass", "x: {e}[0] = 1", "{e}.x: int",
 ]
 
 
