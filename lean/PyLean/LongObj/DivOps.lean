@@ -30,13 +30,41 @@ def fastPair (v w : Long) : Long × Long :=
   let p := fastDivmod v.toInt w.toInt
   (Long.ofInt p.1, Long.ofInt p.2)
 
-/-- `l_divmod(v, w, &div, &mod)`, longobject.c:4482-4553. The `_pylong` branch is
-`pylong_int_divmod`, :4423-4457, with `MathInt.pylongIntDivmod` as its result. -/
+/-- What `PyObject_CallMethod(mod, "int_divmod", "OO", v, w)` returns when it does not
+raise: a tuple, whose items are ints (`some`) or other objects (`none`), or any object
+that is not a tuple. -/
+inductive PylongDivmodRes where
+  | tuple (items : List (Option Long))
+  | other
+
+/-- `pylong_int_divmod(v, w, &div, &mod)`, longobject.c:4422-4457. `imp` is
+`PyImport_ImportModule("_pylong")` (:4426-4429) and `call` the method call
+(:4430-4434); both can raise, and `_pylong` can be replaced through `sys.modules`. The
+result must be a 2-tuple (:4435-4440) of ints (:4441-4448). -/
+def pylongIntDivmodC (imp : Py Unit) (call : Long → Long → Py PylongDivmodRes) (v w : Long) :
+    Py (Long × Long) := do
+  imp
+  match ← call v w with
+  | .tuple [some q, some r] => pure (q, r)
+  | .tuple [_, _] => throw (.valueError "tuple of int is required from int_divmod()")
+  | _ => throw (.valueError "tuple of length 2 is required from int_divmod()")
+
+/-- The real `_pylong.int_divmod`, Lib/_pylong.py:528-541, as `MathInt.pylongIntDivmod`. -/
+def pylongCallDivmod (v w : Long) : Py PylongDivmodRes :=
+  let p := pylongIntDivmod v.toInt w.toInt
+  .ok (.tuple [some (Long.ofInt p.1), some (Long.ofInt p.2)])
+
+theorem pylongIntDivmodC_real (v w : Long) :
+    pylongIntDivmodC (.ok ()) pylongCallDivmod v w =
+      .ok (Long.ofInt (pylongIntDivmod v.toInt w.toInt).1,
+        Long.ofInt (pylongIntDivmod v.toInt w.toInt).2) := rfl
+
+/-- `l_divmod(v, w, &div, &mod)`, longobject.c:4482-4553. The `_pylong` branch
+(:4511-4521) is `pylong_int_divmod` with the real `_pylong`. -/
 def lDivmod (v w : Long) : Py (Long × Long) :=
   if v.ds.length = 1 ∧ w.ds.length = 1 then .ok (fastPair v w)
   else if w.ds.length > 300 ∧ (v.ds.length : Int) - w.ds.length > 150 then
-    let p := pylongIntDivmod v.toInt w.toInt
-    .ok (Long.ofInt p.1, Long.ofInt p.2)
+    pylongIntDivmodC (.ok ()) pylongCallDivmod v w
   else
     match longDivrem v w with
     | .error e => .error e
@@ -139,7 +167,7 @@ theorem lDivmod_eq (v w : Int) (hs : DivSized v w) :
   · simp only [h1, and_self, ite_true, ofPair, fastPair, toInt_ofInt_eq]
   · rw [if_neg h1, if_neg h1]
     by_cases h2 : digitCount w.natAbs > 300 ∧ (digitCount v.natAbs : Int) - digitCount w.natAbs > 150
-    · simp only [h2, gt_iff_lt, and_self, ite_true, ofPair]
+    · simp only [h2, gt_iff_lt, and_self, ite_true, pylongIntDivmodC_real, toInt_ofInt_eq, ofPair]
     · rw [if_neg h2, if_neg h2]
       by_cases h3 : w = 0
       · subst h3

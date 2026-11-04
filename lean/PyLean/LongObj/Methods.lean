@@ -142,12 +142,54 @@ def WriterRejectsEmpty : Prop :=
 
 theorem writerRejectsEmpty_proven : WriterRejectsEmpty := fun _ => rfl
 
+/-- `PyLongWriter_Create` then `PyLongWriter_Finish`, for every digit array the caller
+may write: an empty count is the ValueError of :6941-6944, too many digits is
+`long_alloc`'s OverflowError, and otherwise Finish's `long_normalize` and
+`maybe_small_long` (:7006) give the canonical object of the value, whatever leading zero
+digits the caller left and whatever sign it asked for zero. Digits below `2**30` are the
+API's documented precondition. -/
+def WriterExact : Prop :=
+  (∀ n : Bool, longWriter n [] = .error (.valueError "ndigits must be positive")) ∧
+  (∀ (n : Bool) (ds : List Nat), maxLongDigits < ds.length →
+    longWriter n ds = .error (.overflowError "too many digits in integer")) ∧
+  ∀ (negative : Bool) (ds : List Nat), ds ≠ [] → IsDigits ds → ds.length ≤ maxLongDigits →
+    longWriter negative ds = .ok (Long.ofInt (if negative then -(val ds : Int) else val ds))
+
+theorem writerExact_proven : WriterExact := by
+  refine ⟨writerRejectsEmpty_proven, fun n ds h => ?_, fun negative ds hne hd hs => ?_⟩
+  · have h0 : ¬ ds.length = 0 := by omega
+    simp only [longWriter, h0, ite_false, longAlloc, if_pos h]
+  · have h0 : ¬ ds.length = 0 := fun h => hne (List.eq_nil_of_length_eq_zero h)
+    simp only [longWriter, h0, ite_false]
+    rw [longAlloc_ok hs]
+    simp only
+    rw [digitsOf_normalize hd]
+    by_cases hv : val ds = 0
+    · rw [hv]
+      have e : digitsOf 0 = [] := digitsOf_eq_nil.2 rfl
+      cases negative <;> simp [e, Long.ofInt]
+    · have hemp : (digitsOf (val ds)).isEmpty = false := by
+        cases hh : digitsOf (val ds) with
+        | nil => exact absurd (digitsOf_eq_nil.1 hh) hv
+        | cons _ _ => rfl
+      cases negative
+      · simp [hemp, Long.ofInt_natCast]
+      · simp only [hemp, ite_true]
+        rw [Long.ofInt_neg_natCast (by omega)]
+        rfl
+
 def entriesMethods : List Entry := [
   { id := "longobj-export-writer", pyFile := "Objects/longobject.c"
     pyFns := ["PyLongWriter_Create", "PyLongWriter_Finish"]
     statement := "PyLong_Export followed by the PyLongWriter API round-trips every int."
     source := "C API docs: Export API", status := .proven
-    prop := ``ExportRoundTrip, thm := some ``exportRoundTrip_proven }
+    prop := ``ExportRoundTrip, thm := some ``exportRoundTrip_proven },
+  { id := "longobj-writer", pyFile := "Objects/longobject.c"
+    pyFns := ["PyLongWriter_Create", "PyLongWriter_Finish"]
+    statement := "PyLongWriter_Create rejects ndigits <= 0 with ValueError and too many digits with OverflowError; PyLongWriter_Finish returns the canonical int of the written digits and sign, normalizing leading zero digits and negative zero."
+    source := "C API docs: PyLongWriter_Finish (\"normalizes the digits\")", status := .proven
+    prop := ``WriterExact, thm := some ``writerExact_proven
+    notes := "Smoke-tested through _testcapi.pylongwriter_create on 3.15.2, with trailing zero digits and negative zero. The Py_DEBUG check for uninitialized digits (:6983-7003) is compiled out of release builds." }
 ]
 
 end PyLean.LongObj

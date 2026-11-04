@@ -236,18 +236,30 @@ def RshiftExact : Prop :=
 theorem rshiftExact_proven : RshiftExact := fun a b h => longRshift_spec a b h
 
 /-- `a << b` raises `ValueError` for `b < 0`, is `0` for `a == 0`, raises
-`OverflowError` for `a != 0` when `b` does not fit `int64_t`, and is `a * 2**b` whenever
-the result can be allocated. -/
+`OverflowError` for `a != 0` when `b` does not fit `int64_t`; below `2**63` it is
+`a * 2**b` exactly when `long_alloc` accepts the size `long_lshift1` asks for, and
+`OverflowError('too many digits in integer')` otherwise (for example `1 << (2**63 - 1)`).
+The same holds of `long_lshift_int64` and `_PyLong_Lshift` for every count. A
+MemoryError where the size is accepted but the memory is not available is outside the
+model. -/
 def LshiftExact : Prop :=
   ∀ a b : Int,
     (b < 0 → longLshift (.ofInt a) (.ofInt b) = .error (.valueError "negative shift count")) ∧
     (0 ≤ b → a = 0 → longLshift (.ofInt a) (.ofInt b) = .ok (.ofInt 0)) ∧
     (a ≠ 0 → (2 : Int) ^ 63 ≤ b → longLshift (.ofInt a) (.ofInt b) =
       .error (.overflowError "too many digits in integer")) ∧
-    (0 ≤ b → b < 2 ^ 63 → digitCount a.natAbs + b.toNat / 30 + 1 ≤ maxLongDigits →
-      longLshift (.ofInt a) (.ofInt b) = .ok (.ofInt (a * 2 ^ b.toNat)))
+    (0 ≤ b → b < 2 ^ 63 → a ≠ 0 → longLshift (.ofInt a) (.ofInt b) =
+      if lshiftNeed a b.toNat ≤ maxLongDigits then .ok (.ofInt (a * 2 ^ b.toNat))
+      else .error (.overflowError "too many digits in integer")) ∧
+    (∀ s : Nat, longLshiftInt64 (.ofInt a) s =
+      if a = 0 then .ok (.ofInt 0)
+      else if lshiftNeed a s ≤ maxLongDigits then .ok (.ofInt (a * 2 ^ s))
+      else .error (.overflowError "too many digits in integer"))
 
-theorem lshiftExact_proven : LshiftExact := longLshift_spec
+theorem lshiftExact_proven : LshiftExact := fun a b =>
+  ⟨(longLshift_spec a b).1, (longLshift_spec a b).2.1, (longLshift_spec a b).2.2.1,
+    fun hb hb2 ha => by rw [longLshift_int64 a b hb hb2, longLshiftInt64_spec, if_neg ha],
+    longLshiftInt64_spec a⟩
 
 /-- `v_complement` on a non-zero vector is the two's complement, with no carry out. -/
 def VComplementExact : Prop :=
