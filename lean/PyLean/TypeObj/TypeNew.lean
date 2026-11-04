@@ -28,6 +28,26 @@ def dedupKeep : List Addr → List Addr → List Addr
   | [], seen => seen.reverse
   | x :: xs, seen => if seen.contains x then dedupKeep xs seen else dedupKeep xs (x :: seen)
 
+/-- Bytes of the UTF-8 encoding. -/
+def utf8Len (cs : List Char) : Nat := (cs.map Char.utf8Size).sum
+
+/-- The `PyDict_Next` loop of `set_mro_error`, `Objects/typeobject.c:3371-3394`. `off` is the
+C `off`: the bytes `PyOS_snprintf` would have written so far, so the loop stops calling
+`class_name` once the text reaches the 1000-byte buffer (`:3371`), and a `,` is added only
+while it fits (`:3391`). The result is the untruncated text; the caller keeps its first 999
+bytes, as the buffer does. -/
+def setMroErrorLoop (rt : Rt) : List Addr → Nat → List Char → M (List Char)
+  | [], _, text => pure text
+  | c :: cs, off, text =>
+    if off < 1000 then do
+      let n ← classNameOf rt (.obj c)
+      let s := (" " ++ n.getD "?").toList
+      let off := off + utf8Len s
+      let text := text ++ s
+      if cs ≠ [] ∧ off + 1 < 1000 then setMroErrorLoop rt cs (off + 1) (text ++ [','])
+      else setMroErrorLoop rt cs off text
+    else pure text
+
 /-- `set_mro_error`, `Objects/typeobject.c:3350-3398`. The message is built with `PyOS_snprintf`
 in `char buf[1000]` (`:3353`, `:3370-3394`), so it is the first 999 bytes of the UTF-8 of the
 whole text (a `,` is added only while it fits, `:3391`, and a cut name ends the loop, `:3373`),
@@ -38,12 +58,8 @@ non-ASCII class name, that decoding fails and CPython raises `UnicodeDecodeError
 def setMroError {α : Type} (rt : Rt) (rests : List (List Addr)) : M α := do
   let heads := rests.filterMap List.head?
   let cands := dedupKeep heads []
-  let mut names : List String := []
-  for c in cands do
-    let n ← classNameOf rt (.obj c)
-    names := names ++ [n.getD "?"]
-  let body := ",".intercalate (names.map (" " ++ ·))
-  let full := ("Cannot create a consistent method resolution order (MRO) for bases" ++ body).toList
+  let pre := "Cannot create a consistent method resolution order (MRO) for bases".toList
+  let full ← setMroErrorLoop rt cands (utf8Len pre) pre
   let cut := cutUtf8 999 full
   if (full.map Char.utf8Size).sum ≤ 999 ∨ (cut.map Char.utf8Size).sum = 999 then
     typeErr (String.ofList cut)

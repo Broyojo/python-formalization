@@ -12,6 +12,7 @@ import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
 import PyLean.TypeObj.StructSeqStatic
+import PyLean.TypeObj.MroSpec2
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -80,7 +81,7 @@ def entries : List Entry := [
     "invariant"
     ``C3Complete ``c3Complete_proven,
   p "typeobj-c3-fast-path" ty ["mro_implementation_unlocked"]
-    "With one base whose MRO starts with it and has no repeats, the fast path at :3352 gives what pmerge gives."
+    "With one base whose MRO starts with it and has no repeats, the fast path at :3493-3513 gives what pmerge gives."
     "fast path vs slow path, typeobject.c:3493-3513"
     ``C3FastPathAgrees ``c3FastPathAgrees_proven
     "A custom mro() can break the precondition; class creation then fails or keeps the custom order. Reached only through a metaclass overriding mro().",
@@ -92,6 +93,43 @@ def entries : List Entry := [
     "A duplicate-free tuple of bases passes check_duplicates."
     "typeobject.c:3266-3267"
     ``C3DuplicateBaseRejected ``c3DuplicateBaseRejected_proven,
+  p "typeobj-c3-exact" ty ["pmerge", "tail_contains"]
+    "For all lists of classes, pmerge returns m exactly when the C3 rule (take the head of the earliest list whose head is in no tail, remove it from every list, repeat) linearizes them to m, and fails at remaining lists r exactly when that rule gets stuck at r."
+    "typeobject.c:3426-3436 (earliest direct superclass) and the C3 paper cited at :3259"
+    ``C3MergeExact ``c3MergeExact_proven,
+  p "typeobj-check-duplicates-exact" ty ["check_duplicates"]
+    "check_duplicates finds nothing exactly when the bases have no repeat, and otherwise reports the first base that occurs again later."
+    "typeobject.c:3310-3338; docs: duplicate bases are an error (:3266-3267)"
+    ``CheckDuplicatesExact ``checkDuplicatesExact_proven,
+  p "typeobj-mro-impl-exact" ty ["mro_implementation_unlocked", "check_duplicates", "pmerge", "tail_contains"]
+    "For every class, bases and base MROs: the first base without an MRO is reported first; one base gives the class then the base's MRO; several bases give the first duplicate, else the class then the C3 merge of the base MROs and the bases, or a conflict at the stuck state."
+    "typeobject.c:3471-3556"
+    ``MroImplementationExact ``mroImplementationExact_proven,
+  p "typeobj-c3-example-earliest" ty ["mro_implementation_unlocked", "pmerge", "tail_contains"]
+    "D(B(X), C(Y)) has MRO D B X C Y object, as on CPython 3.15.2; a merge scanning lists from the end would give D B C Y X object."
+    "typeobject.c:3431-3436"
+    ``C3ExampleEarliestBase ``c3ExampleEarliestBase_proven,
+  p "typeobj-c3-example-conflict" ty ["mro_implementation_unlocked", "pmerge"]
+    "X2(A, B2), Y2(B2, A), Z(X2, Y2) fails stuck with heads A and B2, the names CPython 3.15.2 prints."
+    "typeobject.c:3459-3462"
+    ``C3ExampleConflict ``c3ExampleConflict_proven,
+  p "typeobj-mro-impl-errors" ty ["mro_implementation_unlocked", "class_name", "check_duplicates"]
+    "mro_implementation_unlocked raises 'Cannot extend an incomplete type' for a base without an MRO, 'duplicate base class' with class_name of the duplicate (its str __name__, the bare message for a non-str __name__, its repr when __name__ is missing, or the lookup's exception), set_mro_error's error on a conflict, and returns the MRO with the world unchanged otherwise."
+    "typeobject.c:3299-3307, :3316-3333, :3482-3491"
+    ``MroImplementationErrors ``mroImplementationErrors_proven,
+  p "typeobj-set-mro-error-message" ty ["set_mro_error"]
+    "When each candidate's __name__ is a str and the text fits the buffer, the MRO conflict TypeError is 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each after a space, joined by ','."
+    "typeobject.c:3350-3398"
+    ``SetMroErrorMessage ``setMroErrorMessage_proven
+    "Scope: candidates are hashed by identity; a metaclass __hash__ or __name__ that re-enters can free the borrowed to_merge tuples (bugs/typeobj-set-mro-error-borrowed-mro.yaml).",
+  p "typeobj-metaclass-exact" ty ["_PyType_CalculateMetaclass"]
+    "The calculated metaclass is the given one or a base's metaclass and, under the subtype order, a subclass of all of them; the calculation fails exactly when some base's metaclass is unrelated to the winner of the bases before it, with the exact message."
+    "typeobject.c:4213-4244"
+    ``MetaclassExact ``metaclassExact_proven,
+  p "typeobj-best-base-exact" ty ["find_best_base"]
+    "find_best_base returns the first base whose solid base is below every base's solid base; acceptable bases with pairwise related solid bases always succeed; two unrelated solid bases give the layout conflict; the first non-class or final base gives its exact message."
+    "typeobject.c:3743-3797 ('the first one that's on the path to the solid base')"
+    ``FindBestBaseExact ``findBestBaseExact_proven,
   -- metaclass
   p "typeobj-metaclass-winner" ty ["_PyType_CalculateMetaclass"]
     "Under a reflexive transitive subtype order, the winner is a subclass of the given metaclass and of the metaclass of every base."
