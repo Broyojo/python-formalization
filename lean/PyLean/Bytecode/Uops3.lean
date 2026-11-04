@@ -807,16 +807,35 @@ def _MAKE_CALLARGS_A_TUPLE (e : Env) : M Unit := stkK 4 4 fun
       pure [f, n, t, kw]
   | _ => fault "arity"
 
-/-- `_PyStack_UnpackDict` (`Objects/call.c`): names and values of a kwargs dict. -/
+/-- The keyword name a `_PyStack_UnpackDict` key stands for, when its type has
+`Py_TPFLAGS_UNICODE_SUBCLASS` (`Objects/call.c:1059-1061`): an exact `str`, or an instance of a
+`str` subclass, whose `str` payload is `base`. `none` for every other key. Scope limit: the model
+then matches and stores the keyword by that payload, so a subclass overriding `__eq__` (which
+`initialize_locals`' slow loop calls, `Python/ceval.c:1832`) and the subclass key object itself
+inside a `**kwargs` dict (`:1882`) are not modelled. -/
+def kwKeyName (rt : Rt) : Val → Option String
+  | .str s => some s
+  | .ref a =>
+    match rt.heap[a]? with
+    | some (.inst i) =>
+      match i.base with
+      | .str s => some s
+      | _ => none
+    | _ => none
+  | _ => none
+
+/-- `_PyStack_UnpackDict` (`Objects/call.c:1013-1080`): names and values of a kwargs dict, in
+`PyDict_Next` order. `keys_are_strings &= Py_TYPE(key)->tp_flags` over every key, checked once
+after the loop (`:1059-1078`): any key whose type lacks `Py_TPFLAGS_UNICODE_SUBCLASS` gives
+`TypeError("keywords must be strings")`. The loop runs no Python code. -/
 def unpackKwargs : Val → RM (List String × List Val)
   | .null => pure ([], [])
   | dv => do
     let d ← getDict dv
-    let names ← d.entries.toList.mapM fun en =>
-      match en.key with
-      | .str s => pure s
-      | _ => typeError "keywords must be strings"
-    pure (names, d.entries.toList.map (·.value))
+    let rt ← get
+    if d.entries.toList.all fun en => (kwKeyName rt en.key).isSome then
+      pure (d.entries.toList.filterMap (kwKeyName rt ·.key), d.entries.toList.map (·.value))
+    else typeError "keywords must be strings"
 
 /-- `:5637`. -/
 def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do

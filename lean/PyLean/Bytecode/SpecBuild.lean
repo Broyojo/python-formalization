@@ -195,7 +195,10 @@ theorem dictUpdateRules_proven : DictUpdateRules := by
 stays (`ERROR_NO_POP`) and `_PyEval_FormatKwargsError` (`Python/ceval.c:3414-3446`) rewrites the
 error: a duplicate key `k` gives `TypeError("F got multiple values for keyword argument 'K'")` with
 `F` the `_PyObject_FunctionStr` of the callable, or `"function"` when that fails, and `K` the
-`str()` of the key; with no duplicate, an `AttributeError` becomes `TypeError("Value after ** must
+`str()` of the key; when that `str()` raises, `PyUnicode_FromFormatV` returns `NULL` and
+`_PyErr_FormatV` (`Python/errors.c:1219-1233`, which cleared any `functionStr` error first) sets
+nothing, so its exception is the one raised; with no
+duplicate, an `AttributeError` becomes `TypeError("Value after ** must
 be a mapping, not T")` only when `update` has no `keys`, is restored as it was when it has, and is
 the `__context__` of whatever the `keys` probe raised; any other exception propagates unchanged.
 A `KeyError` raised by the mapping is such an other exception: since 3.15 it is not read as a
@@ -210,6 +213,9 @@ def DictMergeRules : Prop := ∀ (e : Env) (regs : Regs) (upd d x1 x2 callable :
     typeError (α := List Val) s!"{fs.getD "function"} got multiple values for keyword argument '{ks}'" rt2 =
       .error y rt3 →
     execOp e .DICT_MERGE ⟨regs, S⟩ = .error y ⟨{ regs with rt := rt3 }, S⟩) ∧
+  (∀ k rt fs rt1 z rt2, e.om.dictMerge e.ctx d upd regs.rt = .ok (some k) rt →
+    functionStr e callable rt = .ok fs rt1 → strText e k rt1 = .error (.exc z) rt2 →
+    execOp e .DICT_MERGE ⟨regs, S⟩ = .error (.exc z) ⟨{ regs with rt := rt2 }, S⟩) ∧
   (∀ x rt1 rt2, e.om.dictMerge e.ctx d upd regs.rt = .error (.exc x) rt1 →
     givenMatches x 8 (.cls "AttributeError") rt1 = .ok false rt2 →
     execOp e .DICT_MERGE ⟨regs, S⟩ = .error (.exc x) ⟨{ regs with rt := rt2 }, S⟩) ∧
@@ -232,7 +238,8 @@ theorem dictMergeRules_proven : DictMergeRules := by
   intro e regs upd d x1 x2 callable mid below hm
   have hL : (upd :: (mid ++ [d, x2, x1, callable])).length = e.oparg + 4 := by simp; omega
   have hq : (callable :: x1 :: x2 :: d :: mid.reverse).length = e.oparg + 3 := by simp; omega
-  refine ⟨fun rt h => ?_, fun k rt fs rt1 ks rt2 y rt3 h hf hk hy => ?_, fun x rt1 rt2 h hm1 => ?_,
+  refine ⟨fun rt h => ?_, fun k rt fs rt1 ks rt2 y rt3 h hf hk hy => ?_,
+    fun k rt fs rt1 z rt2 h hf hk => ?_, fun x rt1 rt2 h hm1 => ?_,
     fun x rt1 rt2 rt3 h hm1 hk => ?_, fun x rt1 rt2 rt3 tn rt4 y rt5 h hm1 hk ht hy => ?_,
     fun x rt1 rt2 z rt3 y rt4 h hm1 hk hc => ?_⟩
   · simp only [execOp, DICT_MERGE]
@@ -241,6 +248,9 @@ theorem dictMergeRules_proven : DictMergeRules := by
   · simp only [execOp, DICT_MERGE]
     refine stkK_split_err hL ?_
     body_simp [h, formatKwargsError, hf, hk, hy]
+  · simp only [execOp, DICT_MERGE]
+    refine stkK_split_err hL ?_
+    body_simp [h, formatKwargsError, hf, hk]
   · simp only [execOp, DICT_MERGE]
     refine stkK_split_err hL ?_
     body_simp [h, formatKwargsError, hm1]
@@ -261,44 +271,68 @@ looked up next and, when present and not `None`, compared with `"builtins"` by
 `PyObject_RichCompareBool(..., Py_NE)` (identity first) — all before anything is formatted. Only
 then does `PyUnicode_FromFormat` run `str()`: of the module and then of `q` for `"%S.%S()"`, of `q`
 alone for `"%S()"`. Any exception (a lookup that raises something other than `AttributeError`,
-the comparison, either `str()`) makes the result `NULL` (`none`) at that point: in particular a
-raising `__module__` lookup means `str(q)` is never called, and a raising `str(module)` means
-`str(q)` is never called. Each clause threads the runtime through the calls in that order. -/
+the comparison `PyObject_RichCompareBool` or its truth test (`:991-994`), `str(module)`, `str(q)`
+in any branch, `str(x)` when there is no `__qualname__`) makes the result `NULL` (`none`) at that
+point, in the runtime the raising call left: in particular a raising `__module__` lookup,
+comparison or `str(module)` means `str(q)` is never called. Each clause threads the runtime
+through the calls in that order. -/
 def FunctionStrRules : Prop := ∀ (e : Env) (f : Val) (rt0 : Rt),
-  (∀ rt1, optionalAttr e f "__qualname__" rt0 = .ok none rt1 → ∀ s rt2, strText e f rt1 = .ok s rt2 →
-    functionStr e f rt0 = .ok (some s) rt2) ∧
+  (∀ rt1, optionalAttr e f "__qualname__" rt0 = .ok none rt1 →
+    (∀ s rt2, strText e f rt1 = .ok s rt2 → functionStr e f rt0 = .ok (some s) rt2) ∧
+    (∀ x rt2, strText e f rt1 = .error (.exc x) rt2 → functionStr e f rt0 = .ok none rt2)) ∧
   (∀ x rt1, optionalAttr e f "__qualname__" rt0 = .error (.exc x) rt1 → functionStr e f rt0 = .ok none rt1) ∧
   (∀ q rt1, optionalAttr e f "__qualname__" rt0 = .ok (some q) rt1 →
     (∀ x rt2, optionalAttr e f "__module__" rt1 = .error (.exc x) rt2 → functionStr e f rt0 = .ok none rt2) ∧
-    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok none rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
-      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
-    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some .none) rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
-      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
-    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some (.str "builtins")) rt2 → ∀ qs rt3,
-      strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok none rt2 →
+      (∀ qs rt3, strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+      (∀ x rt3, strText e q rt2 = .error (.exc x) rt3 → functionStr e f rt0 = .ok none rt3)) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some .none) rt2 →
+      (∀ qs rt3, strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+      (∀ x rt3, strText e q rt2 = .error (.exc x) rt3 → functionStr e f rt0 = .ok none rt3)) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some (.str "builtins")) rt2 →
+      (∀ qs rt3, strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+      (∀ x rt3, strText e q rt2 = .error (.exc x) rt3 → functionStr e f rt0 = .ok none rt3)) ∧
     (∀ m rt2, optionalAttr e f "__module__" rt1 = .ok (some m) rt2 → m ≠ .none → m ≠ .str "builtins" →
+      (∀ x rt3, e.om.richCompare e.ctx m (.str "builtins") 3 rt2 = .error (.exc x) rt3 →
+        functionStr e f rt0 = .ok none rt3) ∧
       ∀ c rt3, e.om.richCompare e.ctx m (.str "builtins") 3 rt2 = .ok c rt3 →
+      (∀ x rt4, e.om.isTrue e.ctx c rt3 = .error (.exc x) rt4 → functionStr e f rt0 = .ok none rt4) ∧
       (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok true rt4 →
         (∀ ms rt5 qs rt6, strText e m rt4 = .ok ms rt5 → strText e q rt5 = .ok qs rt6 →
           functionStr e f rt0 = .ok (some s!"{ms}.{qs}()") rt6) ∧
+        (∀ ms rt5 x rt6, strText e m rt4 = .ok ms rt5 → strText e q rt5 = .error (.exc x) rt6 →
+          functionStr e f rt0 = .ok none rt6) ∧
         (∀ x rt5, strText e m rt4 = .error (.exc x) rt5 → functionStr e f rt0 = .ok none rt5)) ∧
-      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok false rt4 → ∀ qs rt5, strText e q rt4 = .ok qs rt5 →
-        functionStr e f rt0 = .ok (some s!"{qs}()") rt5)))
+      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok false rt4 →
+        (∀ qs rt5, strText e q rt4 = .ok qs rt5 → functionStr e f rt0 = .ok (some s!"{qs}()") rt5) ∧
+        (∀ x rt5, strText e q rt4 = .error (.exc x) rt5 → functionStr e f rt0 = .ok none rt5))))
 
 theorem functionStrRules_proven : FunctionStrRules := by
   intro e f rt0
-  refine ⟨fun rt1 h1 s rt2 h2 => ?_, fun x rt1 h1 => ?_, fun q rt1 h1 => ⟨fun x rt2 h2 => ?_,
-    fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_,
-    fun m rt2 h2 hn hb c rt3 hc => ⟨fun rt4 ht => ⟨fun ms rt5 qs rt6 hm hq => ?_, fun x rt5 hm => ?_⟩,
-      fun rt4 ht qs rt5 hq => ?_⟩⟩⟩
+  refine ⟨fun rt1 h1 => ⟨fun s rt2 h2 => ?_, fun x rt2 h2 => ?_⟩, fun x rt1 h1 => ?_,
+    fun q rt1 h1 => ⟨fun x rt2 h2 => ?_,
+    fun rt2 h2 => ⟨fun qs rt3 h3 => ?_, fun x rt3 h3 => ?_⟩,
+    fun rt2 h2 => ⟨fun qs rt3 h3 => ?_, fun x rt3 h3 => ?_⟩,
+    fun rt2 h2 => ⟨fun qs rt3 h3 => ?_, fun x rt3 h3 => ?_⟩,
+    fun m rt2 h2 hn hb => ⟨fun x rt3 hc => ?_, fun c rt3 hc => ⟨fun x rt4 ht => ?_,
+      fun rt4 ht => ⟨fun ms rt5 qs rt6 hm hq => ?_, fun ms rt5 x rt6 hm hq => ?_, fun x rt5 hm => ?_⟩,
+      fun rt4 ht => ⟨fun qs rt5 hq => ?_, fun x rt5 hq => ?_⟩⟩⟩⟩⟩
+  · body_simp [functionStr, h1, h2]
   · body_simp [functionStr, h1, h2]
   · body_simp [functionStr, h1]
   · body_simp [functionStr, h1, h2]
   · body_simp [functionStr, h1, h2, h3]
   · body_simp [functionStr, h1, h2, h3]
   · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, hn, hb, hc]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm, hq]
   · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm, hq]
   · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hq]
   · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hq]
 
 /-! ## `SET_ADD`, `MAP_ADD` -/

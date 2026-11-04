@@ -348,8 +348,9 @@ alone; anything else is first checked by `_Py_Check_ArgsIterable` (`Python/ceval
 `%.200s`) and then made a tuple (`PySequence_Tuple`, which is what calling the exact `tuple` type
 does, `tuple_new_impl`), after which the instruction is exactly the instruction on the stack with
 that tuple; both failures keep every operand (`ERROR_NO_POP`). With an exact tuple,
-`_DO_CALL_FUNCTION_EX` (`:5637-5711`) inlines a function object (`_PyEvalFramePushAndInit_Ex`:
-the dict unpacked by `_PyStack_UnpackDict` into names and values after the positional items,
+`_DO_CALL_FUNCTION_EX` (`:5637-5711`) inlines a function object (`_PyEvalFramePushAndInit_Ex`,
+`Python/ceval.c:2074-2125`: the dict unpacked by `_PyStack_UnpackDict` into names and values after
+the positional items, `UnpackKwargsRules` saying which keys it takes, `str` subclasses included,
 `return_offset` set, `DISPATCH_INLINED`, operands consumed when that fails) and gives anything else
 to `PyObject_Call(func, callargs, kwargs)` with the dict itself, whose result replaces the operands
 before `_CHECK_PERIODIC_AT_END` and whose error pops them. -/
@@ -442,8 +443,70 @@ theorem callFunctionExRules_proven : CallFunctionExRules := by
     simp [_DO_CALL_FUNCTION_EX, exStack_peek, stk, exStack_pop, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, hff, hx, pure, EStateM.pure]
 
-def CallGenericFull : Prop := CallGenericRules ∧ CallKwGenericRules ∧ CallFunctionExRules
+/-- Which keys `_PyStack_UnpackDict` takes as keyword names: those whose type has
+`Py_TPFLAGS_UNICODE_SUBCLASS` (`Objects/call.c:1059-1061`), that is an exact `str` and an instance
+of any `str` subclass (its `str` payload), and nothing else: an `int`, a `bytes`, an instance of a
+class that does not derive from `str`, a type object. -/
+def KwKeyNameRules : Prop := ∀ (rt : Rt),
+  (∀ s, kwKeyName rt (.str s) = some s) ∧
+  (∀ a i s, rt.heap[a]? = some (.inst i) → i.base = .str s → kwKeyName rt (.ref a) = some s) ∧
+  (∀ k, (∀ s, k ≠ .str s) → (∀ a i s, k = .ref a → rt.heap[a]? = some (.inst i) → i.base ≠ .str s) →
+    kwKeyName rt k = none)
+
+theorem kwKeyNameRules_proven : KwKeyNameRules := by
+  intro rt
+  refine ⟨fun s => rfl, fun a i s h hb => by simp [kwKeyName, h, hb], fun k hs hr => ?_⟩
+  cases k with
+  | str s => exact absurd rfl (hs s)
+  | ref a =>
+    simp only [kwKeyName]
+    cases ho : rt.heap[a]? with
+    | none => rfl
+    | some o =>
+      cases o with
+      | inst i =>
+        simp only
+        cases hb : i.base with
+        | str s => exact absurd hb (hr a i s rfl ho)
+        | _ => rfl
+      | _ => rfl
+  | _ => rfl
+
+/-- `_PyStack_UnpackDict` (`Objects/call.c:1013-1080`) on the `kwargs` dict of `CALL_FUNCTION_EX`
+and of a vectorcall reached through `PyObject_Call`: `NULL` is no keywords; for a dict whose keys
+all pass `KwKeyNameRules` the names are those keys' strings and the values the dict's values, both
+in `PyDict_Next` order, with the runtime untouched (the loop runs no Python code); if any key fails,
+wherever it is, `TypeError("keywords must be strings")` (the flag is tested once after the loop,
+`:1071-1076`). So `f(**{S('a'): 1})` with `class S(str)` binds `a`, as CPython 3.15.2 does. -/
+def UnpackKwargsRules : Prop := ∀ (rt : Rt),
+  unpackKwargs .null rt = .ok ([], []) rt ∧
+  ∀ a d, rt.heap[a]? = some (.dict d) →
+    ((∀ en ∈ d.entries.toList, ∃ s, kwKeyName rt en.key = some s) →
+      unpackKwargs (.ref a) rt =
+        .ok (d.entries.toList.filterMap (kwKeyName rt ·.key), d.entries.toList.map (·.value)) rt) ∧
+    ((∃ en ∈ d.entries.toList, kwKeyName rt en.key = none) → ∀ x rt',
+      typeError (α := List String × List Val) "keywords must be strings" rt = .error x rt' →
+      unpackKwargs (.ref a) rt = .error x rt')
+
+theorem unpackKwargsRules_proven : UnpackKwargsRules := by
+  intro rt
+  refine ⟨by simp [unpackKwargs, pure, EStateM.pure], fun a d h => ⟨fun hall => ?_, fun hex x rt' hx => ?_⟩⟩
+  · have hb : (d.entries.toList.all fun en => (kwKeyName rt en.key).isSome) = true := by
+      rw [List.all_eq_true]; intro en hen; obtain ⟨s, hs⟩ := hall en hen; simp [hs]
+    simp only [unpackKwargs, getDict, getObj, h, get, getThe, MonadStateOf.get, EStateM.get, bind,
+      EStateM.bind, pure, EStateM.pure]
+    rw [if_pos hb]; rfl
+  · have hb : ¬ (d.entries.toList.all fun en => (kwKeyName rt en.key).isSome) = true := by
+      obtain ⟨en, hen, hn⟩ := hex
+      intro hc; rw [List.all_eq_true] at hc; have := hc en hen; simp [hn] at this
+    simp only [unpackKwargs, getDict, getObj, h, get, getThe, MonadStateOf.get, EStateM.get, bind,
+      EStateM.bind, pure, EStateM.pure]
+    rw [ite_cond_eq_false _ _ (eq_false hb)]; exact hx
+
+def CallGenericFull : Prop :=
+  CallGenericRules ∧ CallKwGenericRules ∧ CallFunctionExRules ∧ UnpackKwargsRules ∧ KwKeyNameRules
 theorem callGenericFull_proven : CallGenericFull :=
-  ⟨callGenericRules_proven, callKwGenericRules_proven, callFunctionExRules_proven⟩
+  ⟨callGenericRules_proven, callKwGenericRules_proven, callFunctionExRules_proven,
+    unpackKwargsRules_proven, kwKeyNameRules_proven⟩
 
 end PyLean.Bytecode
