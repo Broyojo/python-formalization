@@ -651,7 +651,7 @@ pyio-bytesio-readlines-float-twins	refuted	Lib/_pyio.py	IOBase.readlines,_io_Byt
 pyio-bytesio-write-obj	proven	Lib/_pyio.py	BytesIO.write
 pyio-bytesio-init-twins	proven	Lib/_pyio.py	BytesIO.__init__,_io_BytesIO___init___impl,bytesio_new
 pyio-bytesio-getstate	proven	Lib/_pyio.py	BytesIO.__getstate__,bytesio_getstate,bytesio_getstate_lock_held
-pyio-bytesio-getbuffer	proven	Lib/_pyio.py	BytesIO.getbuffer,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer
+pyio-bytesio-getbuffer	proven	Lib/_pyio.py	BytesIO.getbuffer,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer,_io_BytesIO_close_impl
 pyio-stringio-write-refusals	proven	Lib/_pyio.py	TextIOWrapper.write,_io_StringIO_write_impl
 pyio-stringio-write-check-order-twins	refuted	Lib/_pyio.py	TextIOWrapper.write,_io_StringIO_write_impl
 pyio-stringio-newline-check	proven	Lib/_pyio.py	TextIOWrapper._check_newline
@@ -688,6 +688,18 @@ pyio-base-tell-dispatch	proven	Lib/_pyio.py	IOBase.tell,_io__IOBase_tell_impl
 pyio-base-closed-protocol	proven	Lib/_pyio.py	iobase_is_closed,iobase_closed_get,iobase_check_closed,_PyIOBase_check_closed,iobase_enter,iobase_iter,_io__IOBase_isatty_impl,IOBase._checkClosed,IOBase.__enter__,IOBase.__iter__,IOBase.isatty
 pyio-base-writelines	proven	Lib/_pyio.py	IOBase.writelines
 pyio-iobase-readline-readahead	proven	Lib/_pyio.py	IOBase.readline
+pyio-bytesio-held-immutable	proven	Modules/_io/bytesio.c	unshare_buffer_lock_held,resize_buffer_lock_held,resize_unshared_buffer_lock_held,write_bytes_lock_held,_io_BytesIO_write_impl,_io_BytesIO_getvalue_impl,read_bytes_lock_held,_io_BytesIO_read_impl,_io_BytesIO_readline_impl,_io_BytesIO_truncate_impl,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,bytesiobuf_releasebuffer,_io_BytesIO_close_impl
+pyio-bytesio-zero-copy	proven	Modules/_io/bytesio.c	_io_BytesIO_getvalue_impl,read_bytes_lock_held,_io_BytesIO_read_impl,unshare_buffer_lock_held,resize_unshared_buffer_lock_held
+pyio-bytesio-getbuffer-live	proven	Modules/_io/bytesio.c	_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,bytesiobuf_releasebuffer,check_exports,_io_BytesIO_close_impl,write_bytes_lock_held,_io_BytesIO_truncate_impl
+pyio-bytesio-sizeof	proven	Modules/_io/bytesio.c	bytesio_sizeof_lock_held,bytesio_sizeof
+pyio-bytesio-hash-consistent	refuted	Modules/_io/bytesio.c	_io_BytesIO_getvalue_impl,write_bytes_lock_held,_io_BytesIO_write_impl,resize_buffer_lock_held,unshare_buffer_lock_held,resize_unshared_buffer_lock_held,_io_BytesIO_seek_impl
+pyio-bytesio-write-callback	proven	Modules/_io/bytesio.c	write_bytes_lock_held,_io_BytesIO_write_impl,check_closed,check_exports,BytesIO.write
+pyio-bytesio-writelines-iter	proven	Modules/_io/bytesio.c	_io_BytesIO_writelines_impl,IOBase.writelines
+pyio-bytesio-reinit-obj	proven	Modules/_io/bytesio.c	_io_BytesIO___init___impl,BytesIO.__init__
+pyio-bytesio-seek-spec	proven	Modules/_io/bytesio.c	_io_BytesIO_seek_impl
+pyio-bytesio-seek-twins	refuted	Lib/_pyio.py	_io_BytesIO_seek_impl,BytesIO.seek
+pyio-bytesio-setstate-checks	proven	Modules/_io/bytesio.c	bytesio_setstate_lock_held,bytesio_setstate
+pyio-bytesio-pickle-dict	proven	Modules/_io/bytesio.c	bytesio_getstate,bytesio_getstate_lock_held,bytesio_setstate_lock_held,bytesio_setstate
 json-loads-twins	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_make_scanner,py_scanstring,scanstring_unicode,scan_once_unicode,scanner_call,raise_errmsg
 json-loads-twins-pos	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,scanstring_unicode,scan_once_unicode
 json-loads-twins-scan	proven	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,_decode_uXXXX,JSONObject,JSONArray,py_make_scanner,scanstring_unicode,_parse_object_unicode,_parse_array_unicode,_parse_constant,_match_number_unicode,scan_once_unicode,scanner_call,raise_errmsg,raise_stop_iteration
