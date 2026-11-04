@@ -8,6 +8,8 @@ import PyLean.Pickle.TextRoundtrip
 import PyLean.Pickle.OpenProps
 import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
+import PyLean.Pickle.EncRecProps
+import PyLean.Pickle.CountedLong
 import PyLean.Pickle.DecProps
 import PyLean.Pickle.ToolsGen
 import PyLean.Pickle.DecChunk
@@ -16,7 +18,9 @@ import PyLean.Pickle.DecChunk
 `Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.15.2, on plain data: None,
 bool, int, str, bytes, bytearray, tuple, list, dict, set and frozenset, under
 protocols 0-5. Floats, custom classes, reduce and anything that runs code are
-out of scope. The memo is modelled with object identity; cyclic objects are
+out of scope. The encoder mirrors (`EncRec.lean`) carry both recursion limits (C stack room,
+Python frames) and the `protocol` and `buffer_callback` arguments; `fix_imports=False`, file
+output, `fast` mode, `persistent_id`, `reducer_override` and subclasses are out of scope. The memo is modelled with object identity; cyclic objects are
 difftested on the decoding side only.
 -/
 
@@ -26,7 +30,7 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "pickle-decode-encode-long", pyFile := "Lib/pickle.py"
-    pyFns := ["encode_long", "decode_long", "load_counted_long"]
+    pyFns := ["encode_long", "decode_long"]
     statement := "decode_long(encode_long(x)) == x for every int x, through the trimmed two's-complement encoding at every byte boundary."
     source := "docstrings of encode_long and decode_long, Lib/pickle.py:372-420", status := .proven
     prop := ``DecodeEncodeLong, thm := some ``decodeEncodeLong_proven },
@@ -35,12 +39,18 @@ def entries : List Entry := [
     statement := "encode_long(x) is the unique shortest byte string that decode_long maps to x, so encode_long is a bijection from ints onto the shortest encodings, including the sign-trimmed -(2**(8*j - 1))."
     source := "docstrings of encode_long and decode_long, Lib/pickle.py:372-420; LONG1/LONG4 in Lib/pickletools.py", status := .proven
     prop := ``EncodeLongShortest, thm := some ``encodeLongShortest_proven },
+  { id := "pickle-load-counted-long", pyFile := "Modules/_pickle.c"
+    pyFns := ["load_counted_long"]
+    statement := "At any position of an unframed stream, LONG1 and LONG4 in the C unpickler: too few bytes for the count raise; a negative count raises UnpicklingError 'LONG pickle has negative byte count'; a zero count pushes 0 right after the count; too few bytes for the payload raise; otherwise the payload, read as a signed little-endian int, is pushed and the reader stands right after it."
+    source := "LONG1/LONG4 format, Lib/pickletools.py:875-928; Modules/_pickle.c:5703-5734", status := .proven
+    prop := ``CountedLongRead, thm := some ``countedLongRead_proven
+    notes := "Frames are outside (frame_end is -1). The payload save_long writes is encode_long(x), which decode_long maps back to x (pickle-decode-encode-long)." },
   { id := "pickle-text-int-roundtrip", pyFile := "Lib/pickle.py"
-    pyFns := ["_Pickler.save_long", "_Unpickler.load_int", "_Unpickler.load_long", "load_int", "load_long"]
-    statement := "For every int with at most 4300 decimal digits, the protocol 0/1 lines I<x> and L<x>L read back as the int x in both unpicklers, never as a bool."
+    pyFns := ["_Unpickler.load_int", "_Unpickler.load_long", "load_int", "load_long"]
+    statement := "For every int with at most 4300 decimal digits, the text lines I<x> and L<x>L (as protocol 0 writes them, and L<x>L at protocol 1 outside the 4-byte range) read back as the int x in both unpicklers, never as a bool."
     source := "pickle round trip, Doc/library/pickle.rst", status := .proven
     prop := ``TextIntRoundtrip, thm := some ``textIntRoundtrip_proven
-    notes := "Past 4300 digits repr raises ValueError at dump time, in both twins." },
+    notes := "About the readers only; save_long is pinned by pickle-save-long-twins-sized. Past 4300 digits repr raises ValueError at dump time, in both twins." },
   { id := "pickle-save-long-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["save_long"]
     statement := "For every int and protocol 0-5, the C and Python save_long produce the same bytes or the same exception."
@@ -95,36 +105,44 @@ def entries : List Entry := [
     notes := "The hypothesis is exactly the refuted case. Includes the 4300-digit limit, whitespace and underscores." },
   { id := "pickle-dumps-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_dumps_impl", "_dumps"]
-    statement := "For every plain value and protocol argument, pickle.dumps and pickle._dumps produce the same bytes or the same exception."
+    statement := "For every plain value, int protocol argument, C stack room and Python frame budget, pickle.dumps and pickle._dumps produce the same bytes or the same exception."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
-    prop := ``DumpsTwinsAgree, thm := some ``dumpsTwinsAgree_refuted
+    prop := ``DumpsTwinsAgreeR, thm := some ``dumpsTwinsAgreeR_refuted
     bug := some "pickle-protocol-long-overflow"
-    notes := "protocol=-2**63-1 is OverflowError in C and the highest protocol in Python. The batch shapes of 3.14 are gone: pickle-dumps-twins-narrow covers every batch size." },
+    notes := "protocol=-2**63-1 is OverflowError in C and the highest protocol in Python." },
   { id := "pickle-dumps-twins-long", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "The same, for protocol arguments within C long."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
-    prop := ``DumpsTwinsAgreeLong, thm := some ``dumpsTwinsAgreeLong_refuted
+    prop := ``DumpsTwinsAgreeLongR, thm := some ``dumpsTwinsAgreeLongR_refuted
     bug := some "pickle-py-oversize-struct-error"
     notes := "bytes(2**32) at protocol 3: OverflowError in C, struct.error in Python." },
+  { id := "pickle-dumps-twins-rec", pyFile := "Modules/_pickle.c"
+    pyFns := ["save", "save_list", "_Pickler.save", "_Pickler.save_list", "_Pickler._batch_appends"]
+    statement := "For every C stack room and Python frame budget, on the values and protocols of pickle-dumps-twins-narrow, pickle.dumps and pickle._dumps both raise or return the same bytes."
+    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
+    prop := ``DumpsTwinsRec, thm := some ``dumpsTwinsRec_refuted
+    bug := some "pickle-twins-recursion-limit"
+    notes := "Witness [[]] with 100 levels of room and 5 frames. At the default limit, lists 331 deep fail in pickle._dumps and pickle in C (probe); python/cpython#47369." },
   { id := "pickle-dumps-twins-narrow", pyFile := "Modules/_pickle.c"
-    pyFns := ["dump", "_pickle_dumps_impl", "save", "save_none", "save_bool", "save_long", "save_bytes",
-      "_save_bytes_data", "save_bytearray", "_save_bytearray_data", "_Pickler_write_bytes", "save_unicode",
-      "write_unicode_binary", "raw_unicode_escape", "store_tuple_elements", "save_tuple", "save_list",
-      "batch_list", "batch_list_exact", "save_dict", "batch_dict", "batch_dict_exact_impl", "batch_dict_exact",
-      "save_set", "save_frozenset_impl", "save_frozenset", "memo_get", "memo_put", "_Pickler_Write",
-      "_Pickler_OpcodeBoundary", "_Pickler_CommitFrame", "_Pickler_SetProtocol", "_write_size64",
-      "_Pickler.dump", "_dumps", "_Pickler.__init__", "_Pickler.memoize", "_Pickler.put", "_Pickler.get",
-      "_Pickler.save", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long",
-      "_Pickler._save_bytes_no_memo", "_Pickler.save_bytes", "_Pickler._save_bytearray_no_memo",
-      "_Pickler.save_bytearray", "_Pickler.save_str", "_Pickler.save_tuple", "_Pickler.save_list",
-      "_Pickler._batch_appends", "_Pickler.save_dict", "_Pickler._batch_setitems", "_Pickler.save_set",
-      "_Pickler.save_frozenset", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing",
-      "_Framer.commit_frame", "_Framer.write", "_Framer.write_large_bytes", "encode_long"]
-    statement := "For every plain value whose ints pass C's LONG4 size check, and every protocol within C long, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice, every batch size of list, dict and set, and the reduce paths for bytes, bytearray, set and frozenset included."
+    pyFns := ["save_none", "save_bool", "save_long", "save_bytes", "_save_bytes_data", "save_bytearray", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "raw_unicode_escape", "store_tuple_elements", "save_tuple", "batch_dict_exact", "save_frozenset_impl", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler.save_bytes", "_Pickler._save_bytearray_no_memo", "_Pickler.save_bytearray", "_Pickler.save_str", "_Pickler.save_tuple", "_Pickler.save_list", "_Pickler._batch_appends", "_Pickler.save_dict", "_Pickler._batch_setitems", "_Pickler.save_set", "_Pickler.save_frozenset", "encode_long"]
+    statement := "With 4 * depth + 4 levels of C stack room and 10 * depth + 18 Python frames left where pickle._dumps is called (depth: the container nesting), for every plain value whose ints pass C's LONG4 size check, protocol None or an int within C long, and buffer_callback None or not, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice, every batch size of list, dict and set, and the reduce paths for bytes, bytearray, set and frozenset included."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
-    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise: on record in pickle-dumps-twins-long, exact equality is the open pickle-dumps-twins-exact-sized. Values are acyclic by construction; object identity is arbitrary, so sharing is covered. save_reduce and save_global are mirrored for the five globals only, so they are not claimed here." },
+    notes := "Each hypothesis is one refutation: pickle-dumps-twins-rec, pickle-save-long-twins, pickle-dumps-twins, pickle-dumps-protocol-float. Both mirrors check their limit at every guard or frame (EncRec.lean); EncRecExact.lean shows the room suffices. Exception classes may differ when both raise (pickle-dumps-twins-long). Rows whose own body has an unmodelled branch (file output, fast mode, persistent_id, reducer_override, fix_imports=False, subclasses, size-change re-checks) are not claimed here." },
+  { id := "pickle-dumps-twins-norec", pyFile := "Modules/_pickle.c"
+    pyFns := ["save_none", "save_bool", "save_long", "save_bytes", "_save_bytes_data", "save_bytearray", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "raw_unicode_escape", "store_tuple_elements", "save_tuple", "batch_dict_exact", "save_frozenset_impl", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler.save_bytes", "_Pickler._save_bytearray_no_memo", "_Pickler.save_bytearray", "_Pickler.save_str", "_Pickler.save_tuple", "_Pickler.save_list", "_Pickler._batch_appends", "_Pickler.save_dict", "_Pickler._batch_setitems", "_Pickler.save_set", "_Pickler.save_frozenset", "encode_long"]
+    statement := "For every C stack room and Python frame budget under which neither twin raises its RecursionError, on the values and protocols of pickle-dumps-twins-narrow, pickle.dumps and pickle._dumps both raise, or both return the same bytes."
+    source := "invariant: C accelerator vs pure-Python twin", status := .proven
+    prop := ``DumpsTwinsNoRec, thm := some ``dumpsTwinsNoRec_proven
+    notes := "EncRecApprox.lean: every bounded encoder computes what its frames-free twin computes or raises its RecursionError." },
+  { id := "pickle-dumps-protocol-float", pyFile := "Modules/_pickle.c"
+    pyFns := ["_Pickler_SetProtocol", "_Pickler.__init__"]
+    statement := "With the room and frames of pickle-dumps-twins-narrow, for every protocol object (None, int, float, or another type), pickle.dumps and pickle._dumps both raise or return the same bytes."
+    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
+    prop := ``DumpsTwinsProtocol, thm := some ``dumpsTwinsProtocol_refuted
+    bug := some "pickle-protocol-float"
+    notes := "pickle.dumps(None, 2.5) is TypeError (PyLong_AsLong); pickle._dumps(None, 2.5) is b'\\x80\\x02N.' (int(2.5))." },
   { id := "pickle-dumps-twins-exact-sized", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "With no str or bytes payload over 4 GiB below protocol 4, and fewer than 2**32 memoized objects, pickle.dumps and pickle._dumps produce the same bytes or the same exception, class and message."
