@@ -87,6 +87,195 @@ theorem forStmt_proven : ForStmt := by
         items_call_null (by rw [call_rule, h3])])]
     rfl
 
+/-! ### `assignment`, the augmented alternative -/
+
+/-- `assignment` (`Grammar/python.gram:151-166`), its fourth alternative
+`a=single_target b=augassign ~ c=annotated_rhs { _PyAST_AugAssign(a, b->kind, c, EXTRA) }`,
+reached on `x += ...`: the annotated forms fail (`x` is a `NAME` not followed by `:`, and the
+artificial `_tmp_9` of the parenthesised / subscript targets fails), and no `star_targets '='`
+prefix matches (`_loop1_10`). Then:
+* `annotated_rhs` succeeding gives `AugAssign(a, op, c)`, `op` the operator `augassign` returned;
+* `annotated_rhs` failing hits the cut: `NULL` with the mark back, in either pass, so
+  `invalid_assignment` (the last alternative) never runs after an augmented operator. -/
+def AssignmentAug : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  ∀ (n a op k c : Ast) (tn : Token) (s0 s1 s2 s3 s4 s5 s6 : PS),
+  nameToken q = (n, s0) → n ≠ .null → expectToken 11 s0 = (.null, s1) → s1.errorIndicator = false →
+  callRule (f + 5) 288 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+  callRule (f + 4) 289 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = false →
+  callRule (f + 3) 199 { s3 with mark := p.mark } = (a, s4) → a ≠ .null →
+  callRule (f + 2) 13 s4 = (op, s5) → op = rec_ .PAugOperator [k] →
+  callRule f 12 s5 = (c, s6) →
+  (c ≠ .null → s6.errorIndicator = false →
+    callRule (f + 11) 11 p = (mkAt .AugAssign [a, k, c] (extraLoc (q.tokenAt p.mark) s6), s6.leave)) ∧
+  (c = .null → callRule (f + 11) 11 p = (.null, { s6 with mark := p.mark }.leave))
+
+theorem assignmentAug_proven : AssignmentAug := by
+  intro f p q h n a op k c tn s0 s1 s2 s3 s4 s5 s6 h0 hn h1 h1e h2 h2e h3 h3e h4 ha h5 hop h6
+  obtain ⟨he, -, -, -, -, -, -⟩ := h.facts
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 11 = r11 from rfl, r11]
+  have hop' : op ≠ .null := by rw [hop]; simp [rec_]
+  refine ⟨fun hc h6e => ?_, fun hc => ?_⟩
+  · rw [alts_fail (by rfl) he (by
+        dsimp only
+        rw [items_call (by rw [call_name, h0]) hn, items_call_null (by rw [call_tok, h1])]),
+      alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+      alts_fail (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]),
+      alts_ok (by rfl) (show ({ s3 with mark := p.mark } : PS).errorIndicator = false from h3e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h4]) ha, items_call (by rw [call_rule, h5]) hop', items_cut,
+          items_call (by rw [call_rule, h6]) hc, items_nil]), altResult_extra rfl rfl]
+    subst hop
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, mkExtra, h6e,
+      Bool.or_false, mkAt, extraLoc, locArgs, rec_]
+    simp [mkAst, nonNull, h6e, StateT.pure, pure]
+  · subst hc
+    rw [alts_fail (by rfl) he (by
+        dsimp only
+        rw [items_call (by rw [call_name, h0]) hn, items_call_null (by rw [call_tok, h1])]),
+      alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+      alts_fail (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]),
+      alts_cut (by rfl) (show ({ s3 with mark := p.mark } : PS).errorIndicator = false from h3e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h4]) ha, items_call (by rw [call_rule, h5]) hop', items_cut,
+          items_call_null (by rw [call_rule, h6])])]
+    rfl
+
+/-- `assignment`'s first and third alternatives (`Grammar/python.gram:152-163`):
+* `x: T [= v]`: `NAME ':' expression ['=' annotated_rhs]` gives, under `CHECK_VERSION(6, ...)`,
+  `AnnAssign(x, T, v, simple=1)` with the name's context set to `Store`;
+* `(x): T [= v]` and other non-`NAME` targets: with no `NAME` first, the artificial `_tmp_9`
+  (`'(' single_target ')' | single_subscript_attribute_target`) gives the target, and the result
+  is `AnnAssign(target, T, v, simple=0)`, under the same version check;
+* `x = v` (the annotated forms failing as in `AssignmentAug`): the targets `(star_targets '=')+`,
+  then `annotated_rhs` not followed by another `=` (a negative lookahead, nothing consumed), and an
+  optional `TYPE_COMMENT`, give `Assign(targets, v, type_comment)`. -/
+def AssignmentAnnPlain : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (∀ (id ctx b c : Ast) (l : Option Loc) (tc : Token) (s0 s1 s2 s3 : PS),
+    nameToken q = (.node .Name [id, ctx] l, s0) → expectToken 11 s0 = (.tok tc, s1) →
+    callRule (f + 4) 109 s1 = (b, s2) → b ≠ .null → callRule (f + 3) 287 s2 = (c, s3) →
+    s3.errorIndicator = false → 6 ≤ s3.featureVersion →
+    callRule (f + 11) 11 p =
+      (mkAt .AnnAssign [.node .Name [id, opNode .Store] l, b, c, .int 1]
+        (extraLoc (q.tokenAt p.mark) s3), s3.leave)) ∧
+  (∀ (a b c : Ast) (tc : Token) (s0 s1 s2 s3 s4 : PS),
+    nameToken q = (.null, s0) → s0.errorIndicator = false →
+    callRule (f + 5) 288 { s0 with mark := p.mark } = (a, s1) → a ≠ .null →
+    expectToken 11 s1 = (.tok tc, s2) → callRule (f + 3) 109 s2 = (b, s3) → b ≠ .null →
+    callRule (f + 2) 287 s3 = (c, s4) → s4.errorIndicator = false → 6 ≤ s4.featureVersion →
+    callRule (f + 11) 11 p =
+      (mkAt .AnnAssign [a, b, c, .int 0] (extraLoc (q.tokenAt p.mark) s4), s4.leave)) ∧
+  (∀ (n ts b tcm : Ast) (s0 s1 s2 s3 s4 s5 s6 : PS),
+    nameToken q = (n, s0) → n ≠ .null → expectToken 11 s0 = (.null, s1) →
+    s1.errorIndicator = false →
+    callRule (f + 5) 288 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 4) 289 { s2 with mark := p.mark } = (ts, s3) → ts ≠ .null →
+    callRule (f + 3) 12 s3 = (b, s4) → b ≠ .null →
+    expectToken 22 s4 = (.null, s5) →
+    expectToken 57 { s5 with mark := s4.mark } = (tcm, s6) → s6.errorIndicator = false →
+    callRule (f + 11) 11 p =
+      (mkAt .Assign [ts, b, typeCommentOf tcm] (extraLoc (q.tokenAt p.mark) s6), s6.leave))
+
+theorem assignmentAnnPlain_proven : AssignmentAnnPlain := by
+  intro f p q h
+  obtain ⟨he, -, -, -, -, -, -⟩ := h.facts
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 11 = r11 from rfl, r11]
+  refine ⟨fun id ctx b c l tc s0 s1 s2 s3 h0 h1 h2 hb h3 h3e hv => ?_,
+    fun a b c tc s0 s1 s2 s3 s4 h0 h0e h1 ha h2 h3 hb h4 h4e hv => ?_,
+    fun n ts b tcm s0 s1 s2 s3 s4 s5 s6 h0 hn h1 h1e h2 h2e h3 hts h4 hb h5 h6 h6e => ?_⟩
+  · rw [alts_ok (by rfl) he (by
+      dsimp only
+      rw [items_call (by rw [call_name, h0]) (by simp), items_call (by rw [call_tok, h1]) (by simp),
+        items_call (by rw [call_rule, h2]) hb, items_opt (by rw [call_rule, h3]) h3e, items_nil]),
+      altResult_extra rfl rfl]
+    have h6 : ¬ ((s3.featureVersion : Int) < 6) := by omega
+    have hE : evalA ((((#[] : Array Ast).push (.node .Name [id, ctx] l)).push (.tok tc)).push b |>.push c)
+        (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s3))
+        (.checkVersion (.int 6) (.str "Variable annotation syntax is")
+          (.mk .AnnAssign [.check (.call .set_expr_context [.var 0, .ctor .Store]), .var 2, .var 3,
+            .int 1, .extra0, .extra1, .extra2, .extra3])) s3 =
+        (mkAt .AnnAssign [.node .Name [id, opNode .Store] l, b, c, .int 1]
+          (extraLoc (q.tokenAt p.mark) s3), s3) := by
+      have hsec : setExprContext (opNode .Store) 100000 (.node .Name [id, ctx] l) =
+          .node .Name [id, opNode .Store] l := rfl
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+        MonadStateOf.get, StateT.get, mkAst, callHelper]
+      simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push,
+        Array.size_empty, List.getD, Option.getD_some]
+      simp only [Nat.reduceEqDiff, ↓reduceIte, Option.getD_some, List.getElem?_cons_succ,
+        List.getElem?_cons_zero, hsec]
+      simp only [bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
+      rw [ite_f h6]
+      simp [mkAst, mkAt, extraLoc, locArgs, mkExtra, StateT.pure, pure]
+    rw [hE]
+    simp [mkAst, mkAt, nonNull, h3e]
+  · rw [alts_fail (by rfl) he (by dsimp only; rw [items_call_null (by rw [call_name, h0])]),
+      alts_ok (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = false from h0e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h1]) ha, items_call (by rw [call_tok, h2]) (by simp),
+          items_call (by rw [call_rule, h3]) hb, items_opt (by rw [call_rule, h4]) h4e, items_nil]),
+      altResult_extra rfl rfl]
+    have h6 : ¬ ((s4.featureVersion : Int) < 6) := by omega
+    have hE : evalA ((((#[] : Array Ast).push a).push (.tok tc)).push b |>.push c)
+        (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s4))
+        (.checkVersion (.int 6) (.str "Variable annotations syntax is")
+          (.mk .AnnAssign [.var 0, .var 2, .var 3, .int 0, .extra0, .extra1, .extra2, .extra3])) s4 =
+        (mkAt .AnnAssign [a, b, c, .int 0] (extraLoc (q.tokenAt p.mark) s4), s4) := by
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+        MonadStateOf.get, StateT.get, mkAst]
+      rw [ite_f h6]
+      simp [mkAst, mkAt, extraLoc, locArgs, mkExtra, StateT.pure, pure]
+    rw [hE]
+    simp [mkAst, mkAt, nonNull, h4e]
+  · rw [alts_fail (by rfl) he (by
+        dsimp only
+        rw [items_call (by rw [call_name, h0]) hn, items_call_null (by rw [call_tok, h1])]),
+      alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e)
+        (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+      alts_ok (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h3]) hts, items_call (by rw [call_rule, h4]) hb,
+          items_look (b := false) (by rw [call_tok, h5]) rfl,
+          items_opt (by rw [call_tok, h6]) h6e, items_nil]), altResult_extra rfl rfl]
+    simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, mkExtra, h6e,
+      Bool.or_false, mkAt, extraLoc, locArgs, callHelper]
+    simp [mkAst, nonNull, h6e, StateT.pure, pure]
+
+/-- `assignment` in the second pass: when no alternative matches without passing a cut (here: no
+`NAME`, no `_tmp_9` target, no `star_targets '='`, no `single_target`), `invalid_assignment`, the
+last alternative, runs from the start mark and its outcome is the rule's. -/
+def AssignmentInvalid : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  ∀ (v : Ast) (s0 s1 s2 s3 s4 : PS),
+  nameToken q = (.null, s0) → s0.errorIndicator = false →
+  callRule (f + 5) 288 { s0 with mark := p.mark } = (.null, s1) → s1.errorIndicator = false →
+  callRule (f + 4) 289 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+  callRule (f + 3) 199 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = false →
+  s3.callInvalidRules = true →
+  callRule (f + 2) 216 { s3 with mark := p.mark } = (v, s4) →
+  (v = .null → callRule (f + 11) 11 p = (.null, { s4 with mark := p.mark }.leave))
+
+theorem assignmentInvalid_proven : AssignmentInvalid := by
+  intro f p q h v s0 s1 s2 s3 s4 h0 h0e h1 h1e h2 h2e h3 h3e h3i h4 hv
+  obtain ⟨he, -, -, -, -, -, -⟩ := h.facts
+  subst hv
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 11 = r11 from rfl, r11]
+  rw [alts_fail (by rfl) he (by dsimp only; rw [items_call_null (by rw [call_name, h0])]),
+    alts_fail (by rfl) (show ({ s0 with mark := p.mark } : PS).errorIndicator = false from h0e)
+      (by dsimp only; rw [items_call_null (by rw [call_rule, h1])]),
+    alts_fail (by rfl) (show ({ s1 with mark := p.mark } : PS).errorIndicator = false from h1e)
+      (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+    alts_fail (by rfl) (show ({ s2 with mark := p.mark } : PS).errorIndicator = false from h2e)
+      (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]),
+    alts_fail (by simp [h3i]) (show ({ s3 with mark := p.mark } : PS).errorIndicator = false from h3e)
+      (by dsimp only; rw [items_call_null (by rw [call_rule, h4])]), alts_nil]
+  rfl
+
 /-! ### `compound_stmt` -/
 
 /-- `compound_stmt` (`Grammar/python.gram:137-145`), dispatch by positive lookahead, in order:

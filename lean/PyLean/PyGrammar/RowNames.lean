@@ -175,6 +175,15 @@ def rule_assert_stmt : List String := [
 def rule_assert_stmt_invalid : List String := [
   "rule:assert_stmt"]
 
+def rule_assignment_ann_plain : List String := [
+  "rule:assignment"]
+
+def rule_assignment_aug : List String := [
+  "rule:assignment"]
+
+def rule_assignment_invalid : List String := [
+  "rule:assignment"]
+
 def rule_augassign : List String := [
   "rule:augassign"]
 

@@ -282,6 +282,38 @@ def ruleEntries : List Entry := [
     prop := ``AwaitPrimary
     thm := some ``awaitPrimary_proven
     notes := scheme },
+  { id := "pygrammar-rule-assignment-aug"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assignment_aug
+    statement := "assignment, 'x op= v' (earlier alternatives failing): AugAssign(x, op, v); a " ++
+      "failing annotated_rhs after the operator hits the cut: NULL with the mark back in either " ++
+      "pass, invalid_assignment not run."
+    source := "Grammar/python.gram:151-166"
+    status := .proven
+    prop := ``AssignmentAug
+    thm := some ``assignmentAug_proven
+    notes := scheme },
+  { id := "pygrammar-rule-assignment-ann-plain"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assignment_ann_plain
+    statement := "assignment: 'x: T [= v]' gives AnnAssign(x in Store, T, v, 1) and '(x): T' " ++
+      "AnnAssign(x, T, v, 0), both under CHECK_VERSION(6); 'targets = v' with no further '=' " ++
+      "(negative lookahead) gives Assign(targets, v, type_comment)."
+    source := "Grammar/python.gram:151-166"
+    status := .proven
+    prop := ``AssignmentAnnPlain
+    thm := some ``assignmentAnnPlain_proven
+    notes := scheme },
+  { id := "pygrammar-rule-assignment-invalid"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_assignment_invalid
+    statement := "assignment, second pass: with every alternative failing before a cut, " ++
+      "invalid_assignment runs from the start mark and its outcome is the rule's."
+    source := "Grammar/python.gram:151-166"
+    status := .proven
+    prop := ``AssignmentInvalid
+    thm := some ``assignmentInvalid_proven
+    notes := scheme },
   { id := "pygrammar-rule-file"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_file

@@ -353,6 +353,9 @@ theorem call_tok (f t : Nat) (s : PS) : runCall (f + 1) (.tok t) s = expectToken
 theorem call_number (f : Nat) (s : PS) : runCall (f + 1) .number s = numberToken s := by
   simp [runCall]
 
+theorem call_name (f : Nat) (s : PS) : runCall (f + 1) .name s = nameToken s := by
+  simp [runCall]
+
 theorem call_softKw (f : Nat) (kw : List Nat) (s : PS) :
     runCall (f + 1) (.softKw kw) s = expectSoftKeyword kw s := by
   simp [runCall]
