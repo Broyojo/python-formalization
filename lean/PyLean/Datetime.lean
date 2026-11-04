@@ -50,6 +50,7 @@ import PyLean.Datetime.SubclassCtor
 import PyLean.Datetime.IsoformatCProps
 import PyLean.Datetime.FromtimestampProps
 import PyLean.Datetime.StrptimeImpl
+import PyLean.Datetime.SubObjProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -64,6 +65,47 @@ namespace PyLean.Datetime
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "datetime-add-timedelta-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C add_datetime_timedelta", "C new_datetime_subclass_ex", "C new_datetime_subclass_fold_ex", "C call_subclass_fold"]
+    statement := "C datetime +/- timedelta (add_datetime_timedelta) for every receiver type: a normalization error comes before any constructor call; for datetime itself the result is the base model (pinned against Python elsewhere); for a subclass the class is called once with the eight normalized fields and the receiver's tzinfo positionally, no fold keyword, and its result (any object) is returned."
+    source := "mirror of :6241-6266 and :1288-1314", status := .proven
+    prop := ``AddDatetimeTimedeltaObj, thm := some ``addDatetimeTimedeltaObj_proven },
+  { id := "datetime-utctimetuple-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_utctimetuple", "C add_datetime_timedelta"]
+    statement := "C utctimetuple for every receiver type: for datetime it is the base model; for a subclass with an aware receiver and any timedelta offset, zero included, the subclass is called on the normalized self - offset fields and the struct_time is the returned datetime's fields; a naive receiver or a None offset never calls it."
+    source := "mirror of :7154-7191", status := .proven
+    prop := ``UtctimetupleObj, thm := some ``utctimetupleObj_proven },
+  { id := "datetime-utctimetuple-obj-defined", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_utctimetuple", "C add_datetime_timedelta"]
+    statement := "C utctimetuple never reads the datetime fields of an object that is not a datetime."
+    source := "invariant (no memory-unsafe reads)", status := .refuted
+    prop := ``UtctimetupleObjDefined, thm := some ``utctimetupleObjDefined_refuted
+    bug := some "datetime-subclass-arith-result-type-confusion"
+    notes := "A subclass __new__ returning bytearray(200) gives struct_time (0, 0, 0, 0, 0, 0, -2, 0, 0) on 3.15.2 and main; same root cause as gh-145166." },
+  { id := "datetime-astimezone-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_astimezone_impl", "C add_datetime_timedelta"]
+    statement := "C astimezone for every receiver type: for datetime with the built-in fromutc it is the base model dtAstimezoneFullC; for a subclass, an aware receiver, a target that is not its own tzinfo and a timedelta offset, the subclass is called once on the normalized self - offset fields with the receiver's tzinfo, and the returned datetime, given tzinfo tz (rebuilt aware in its own type if it was naive), is passed to tz.fromutc, whose result is returned."
+    source := "mirror of :6914-7004", status := .proven
+    prop := ``AstimezoneObj, thm := some ``astimezoneObj_proven },
+  { id := "datetime-astimezone-obj-defined", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_astimezone_impl", "C add_datetime_timedelta"]
+    statement := "C astimezone never reads or writes the tzinfo slot of an object that is not a datetime."
+    source := "invariant (no crash)", status := .refuted
+    prop := ``AstimezoneObjDefined, thm := some ``astimezoneObjDefined_refuted
+    bug := some "datetime-subclass-arith-result-type-confusion"
+    notes := "Segfault on 3.15.2 and main when the subclass __new__ returns 1 or three zero bytes; open PR #145181 (gh-145166) would add the check in add_datetime_timedelta." },
+  { id := "datetime-pep495-obj-same-kind", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C pep495_eq_exception", "C delta_cmp"]
+    statement := "When each side's offset and flip offset are both None or both timedeltas, C pep495_eq_exception (pointer test, then delta_cmp) equals Python's value test in _cmp(allow_mixed=True), errors of either flip-offset call included, and the second flip offset is consulted only when the first test does not fire."
+    source := "C/Python twins; mirror of :6560-6586", status := .proven
+    prop := ``Pep495ObjSameKind, thm := some ``pep495ObjSameKind_proven },
+  { id := "datetime-pep495-obj-defined", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C pep495_eq_exception", "C delta_cmp"]
+    statement := "pep495_eq_exception never reads a non-timedelta as a timedelta: for all None/timedelta offsets and flip offsets its result is defined."
+    source := "invariant (no out-of-object reads)", status := .refuted
+    prop := ``Pep495ObjDefined, thm := some ``pep495ObjDefined_refuted
+    bug := some "datetime-pep495-delta-cmp-none"
+    notes := "utcoffset None for fold 0 and timedelta(0) for fold 1: C == is True, Python False, on 3.15.2 and main." },
   { id := "datetime-ordinal-roundtrip", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.fromordinal", "date.toordinal", "_ymd2ord", "_ord2ymd", "_is_leap", "_days_before_year", "_days_in_month", "_days_before_month", "_check_date_fields", "C datetime_date_fromordinal_impl", "C date_toordinal", "C ord_to_ymd", "C ymd_to_ord", "C is_leap", "C days_in_month", "C check_date_args"]
     statement := "For every date d, date.fromordinal(d.toordinal()) == d, in both the C and the Python implementation."
