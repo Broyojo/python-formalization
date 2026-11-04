@@ -48,9 +48,12 @@ maybe_intended: |
   Possibly in part: `except*` also matches concretely (python/cpython#56238 documents that `except`
   ignores virtual subclasses), so a maintainer may say groups follow the interpreter; and since
   `except` refuses unions (#91123, rejected), one may say a union was never a valid argument to
-  `suppress`. But `suppress` documents the opposite choice for bare exceptions, accepts the union
-  there without complaint, and the TypeError for arguments that work for bare exceptions is hard to
-  call intended.
+  `suppress`. Guido van Rossum, rejecting unions in `except` (python/cpython#91123, comment of
+  2022-03-09): "Exception matching is its own special thing (e.g. it doesn't honor virtual
+  subclasses) and we shouldn't hyper-generalize." A maintainer may read the group path, which uses
+  that interpreter matching, as the intended one. But `suppress` documents the opposite choice for
+  bare exceptions (the issubclass comment at :513-521), accepts the union there without complaint,
+  and the TypeError for arguments that work for bare exceptions is hard to call intended.
 reproducer: |
   import abc, contextlib
   class E(Exception, metaclass=abc.ABCMeta):
@@ -122,7 +125,8 @@ duplicates:
             "ExceptionGroup split union", "suppress tuple exception group", "except UnionType",
             "union except clause (found 102414)", "suppress union", "get_matcher_type",
             "expected an exception type tuple of exception types callable",
-            "gh issue view 102414 comments: duplicate of 91123"]
+            "gh issue view 102414 comments: duplicate of 91123",
+            "gh api issues/91123/comments: gvanrossum 2022-03-09, 'doesn't honor virtual subclasses'"]
 lean:
   property: PyLean.CoreLibs.Misc.Contextlib.SuppressGroupConsistent
   theorem: PyLean.CoreLibs.Misc.Contextlib.suppressGroupConsistent_refuted

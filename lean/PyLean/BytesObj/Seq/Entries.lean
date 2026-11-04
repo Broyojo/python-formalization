@@ -248,8 +248,8 @@ def entries : List Entry := [
     source := "Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiTupleObj, thm := some ``cApiTupleObj_proven },
   { id := "bytesobj-tuple-binary-slice-obj", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_BinarySlice"]
-    statement := "t[a:b] on an exact tuple under BINARY_SLICE converts a before b, and the first exception (a raising __index__, or TypeError for a bound that is not an int, None or an __index__ object) is the result; otherwise it has the items of t[slice(a, b)]."
-    source := "twin: tuple_subscript; tupleobject.c:534-551; Python/ceval.c:2948-2999", status := .proven
+    statement := "t[a:b] on an exact tuple under BINARY_SLICE converts a before b, and the first exception (a raising __index__, or TypeError for a bound that is not an int, None or an __index__ object) is the result; otherwise it has the items of t[slice(a, b)], and it is t itself exactly when the bounds cover the tuple (a None, 0 or <= -len, b None or >= len; any bounds for ()), else a new tuple or the empty singleton."
+    source := "twin: tuple_subscript; tupleobject.c:534-551 (identity branch :543-545); Python/ceval.c:2948-2999", status := .proven
     prop := ``TupleBinarySliceObj, thm := some ``tupleBinarySliceObj_proven },
   { id := "bytesobj-tuple-setitem-hash-fresh", pyFile := "Objects/tupleobject.c", pyFns := ["PyTuple_SetItem", "tuple_hash"]
     statement := "After PyTuple_SetItem on a uniquely referenced tuple, hash agrees with that of a fresh tuple of the same items."

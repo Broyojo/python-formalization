@@ -988,7 +988,7 @@ float-pow-special-values	proven	Objects/floatobject.c	float_pow,_Py_convert_int_
 float-hash-basics	proven	Objects/floatobject.c	float_hash
 float-unary	proven	Objects/floatobject.c	float_neg,float_abs,float_bool
 float-float-identity	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal
-float-getnewargs	proven	Objects/floatobject.c	float___getnewargs___impl
+float-getnewargs	proven	Objects/floatobject.c	
 float-new	proven	Objects/floatobject.c	float_new_impl
 float-subtype-new	proven	Objects/floatobject.c	float_subtype_new
 float-vectorcall	proven	Objects/floatobject.c	float_vectorcall

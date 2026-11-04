@@ -36,59 +36,71 @@ def pick (r : Res Val) (d : Val) : Val :=
   | .ok v => v
   | .error _ => d
 
-/-- The world after reading `names` in order, each read changing it by `upd`. -/
-def afterReads (upd : String → σ → σ) (names : List String) (s : St σ) : St σ :=
-  { s with g := names.foldl (fun g a => upd a g) s.g }
+/-- Reading the attributes `names` of `func` in order from `s`, each read in the world the read
+before it left, gets past every one and ends in `s'`: each result is `Copyable`, judged in the heap
+that read returned, so an `AttributeError` the read itself allocated (the ordinary missing
+attribute) counts. -/
+def PassesReads (k : ValOps Val) (fn : FuncView σ Val D) : List String → St σ → St σ → Prop
+  | [], s, s' => s' = s
+  | a :: l, s, s' =>
+    Copyable k (fn.read a s).1.h a (fn.read a s).2 ∧ PassesReads k fn l (fn.read a s).1 s'
 
-/-- The six attributes of `w` are those read from `func` where the read gave a value, and `helper`'s
-own where it raised `AttributeError`. -/
-def CopiedMeta (r : String → Res Val) (h0 w : FnAttrs Val) : Prop :=
-  w.module = pick (r "__module__") h0.module ∧ w.name = pick (r "__name__") h0.name ∧
-  w.qualname = pick (r "__qualname__") h0.qualname ∧ w.doc = pick (r "__doc__") h0.doc ∧
-  w.annotate = pick (r "__annotate__") h0.annotate ∧
-  w.typeParams = pick (r "__type_params__") h0.typeParams
+/-- The six attributes of `w` are those read from `func` (`r1`, ..., `r6` for `__module__`, ...,
+`__type_params__`) where the read gave a value, and `helper`'s own where it raised
+`AttributeError`. -/
+def CopiedMeta (r1 r2 r3 r4 r5 r6 : Res Val) (h0 w : FnAttrs Val) : Prop :=
+  w.module = pick r1 h0.module ∧ w.name = pick r2 h0.name ∧ w.qualname = pick r3 h0.qualname ∧
+  w.doc = pick r4 h0.doc ∧ w.annotate = pick r5 h0.annotate ∧ w.typeParams = pick r6 h0.typeParams
 
-/-- `@wraps(func)` on `helper`, for every `func` whose attribute reads give `r` and change only the
-world, by `upd`, so that their order shows. `func = Placeholder` is refused by `partial` before
-anything is read. Otherwise the reads go in the order of `WRAPPER_ASSIGNMENTS`, and:
-- when each read gives a value its setter accepts or `AttributeError`, `helper` gets those values,
-  keeps its own name, qualified name, module and empty docstring, annotations and type parameters
-  where `AttributeError` was raised, gets the items of `func.__dict__` (none when that raises
-  `AttributeError`), the last of a key winning, and `__wrapped__` is `func` whatever that dict held;
-  the six attributes are not taken from the dict; a failure of `func.__dict__` or of iterating it
-  propagates;
+/-- `@wraps(func)` on `helper`, for every `func` and every behaviour of its attribute reads: each
+`getattr(func, attr)` may run any code, change the world, allocate (a missing attribute raises a new
+`AttributeError`) and raise. `func = Placeholder` is refused by `partial` before anything is read.
+Otherwise the reads go in the order of `WRAPPER_ASSIGNMENTS`, each in the world the one before left
+(`s1`, ..., `s6`), and:
+- when each read gives a value its setter accepts or an `AttributeError` (judged in the heap that
+  read returned), `helper` gets those values, keeps its own name, qualified name, module and empty
+  docstring, annotations and type parameters where `AttributeError` was raised, gets the items of
+  `func.__dict__` (none when that raises `AttributeError`), the last of a key winning, and
+  `__wrapped__` is `func` whatever that dict held; the six attributes are not taken from the dict;
+  a failure of `func.__dict__` or of iterating it propagates;
 - the first read that is refused by its setter (a non-`str` `__name__` or `__qualname__`, an
   `__annotate__` that is neither callable nor `None`, a non-tuple `__type_params__`) stops it with
-  that `TypeError`, chained to the exception being handled, and nothing after it is read; the first
-  read that raises anything but `AttributeError` stops it with that exception. -/
+  that `TypeError`, raised in the world that read left and chained to the exception being handled
+  (which exists in that heap: type invariant), and nothing after it is read; the first read that
+  raises anything but `AttributeError` stops it with that exception, in the world it left. -/
 def ContextmanagerWraps : Prop :=
   ∀ (σ Val D : Type) (k : ValOps Val) (fn : FuncView σ Val D) (self : Val) (isAsync : Bool)
-    (handled : Option ExcId) (s : St σ) (upd : String → σ → σ) (r : String → Res Val),
+    (handled : Option ExcId) (s : St σ),
     let run := contextmanagerDeco k fn self isAsync handled s
     let h0 := freshHelper k isAsync
     (k.isPlaceholder self = true →
       run = ((s.raiseNew clsType "Placeholder cannot be passed as a keyword argument" handled).1,
         .error (s.raiseNew clsType "Placeholder cannot be passed as a keyword argument" handled).2)) ∧
-    (k.isPlaceholder self = false → (∀ a s', fn.read a s' = ({ s' with g := upd a s'.g }, r a)) →
-      ((∀ a ∈ wrapperAssignments, Copyable k s.h a (r a)) →
-        let s1 := afterReads upd wrapperAssignments s
-        (∀ s2 d ps s3, fn.getDict s1 = (s2, .ok d) → fn.items d s2 = (s3, .ok ps) →
-          ∃ w, run = (s3, .ok w) ∧ CopiedMeta r h0 w ∧
+    (k.isPlaceholder self = false →
+      (∀ (s1 s2 s3 s4 s5 s6 : St σ) (r1 r2 r3 r4 r5 r6 : Res Val),
+        fn.read "__module__" s = (s1, r1) → fn.read "__name__" s1 = (s2, r2) →
+        fn.read "__qualname__" s2 = (s3, r3) → fn.read "__doc__" s3 = (s4, r4) →
+        fn.read "__annotate__" s4 = (s5, r5) → fn.read "__type_params__" s5 = (s6, r6) →
+        Copyable k s1.h "__module__" r1 → Copyable k s2.h "__name__" r2 →
+        Copyable k s3.h "__qualname__" r3 → Copyable k s4.h "__doc__" r4 →
+        Copyable k s5.h "__annotate__" r5 → Copyable k s6.h "__type_params__" r6 →
+        (∀ s7 d ps s8, fn.getDict s6 = (s7, .ok d) → fn.items d s7 = (s8, .ok ps) →
+          ∃ w, run = (s8, .ok w) ∧ CopiedMeta r1 r2 r3 r4 r5 r6 h0 w ∧
             ∀ key, w.dict.lookup key = if key = "__wrapped__" then some self else ps.reverse.lookup key) ∧
-        (∀ s2 e, fn.getDict s1 = (s2, .error e) → s2.h.isInst e "AttributeError" = true →
-          ∃ w, run = (s2, .ok w) ∧ CopiedMeta r h0 w ∧ w.dict = [("__wrapped__", self)]) ∧
-        (∀ s2 e, fn.getDict s1 = (s2, .error e) → s2.h.isInst e "AttributeError" = false →
-          run = (s2, .error e)) ∧
-        (∀ s2 d s3 e, fn.getDict s1 = (s2, .ok d) → fn.items d s2 = (s3, .error e) →
-          run = (s3, .error e))) ∧
-      (∀ pre a post, wrapperAssignments = pre ++ a :: post → (∀ b ∈ pre, Copyable k s.h b (r b)) →
-        let sa := afterReads upd (pre ++ [a]) s
-        (∀ v msg, r a = .ok v → Refuses k a v msg →
+        (∀ s7 e, fn.getDict s6 = (s7, .error e) → s7.h.isInst e "AttributeError" = true →
+          ∃ w, run = (s7, .ok w) ∧ CopiedMeta r1 r2 r3 r4 r5 r6 h0 w ∧ w.dict = [("__wrapped__", self)]) ∧
+        (∀ s7 e, fn.getDict s6 = (s7, .error e) → s7.h.isInst e "AttributeError" = false →
+          run = (s7, .error e)) ∧
+        (∀ s7 d s8 e, fn.getDict s6 = (s7, .ok d) → fn.items d s7 = (s8, .error e) →
+          run = (s8, .error e))) ∧
+      (∀ pre a post s0, wrapperAssignments = pre ++ a :: post → PassesReads k fn pre s s0 →
+        (∀ sa v msg, fn.read a s0 = (sa, .ok v) → Refuses k a v msg →
           run = ((sa.raiseNew clsType msg handled).1, .error (sa.raiseNew clsType msg handled).2) ∧
-          ∀ y, handled = some y → y < s.h.length →
+          ∀ y, handled = some y → y < sa.h.length →
             ((sa.raiseNew clsType msg handled).1.h.get (sa.raiseNew clsType msg handled).2).context =
               some y) ∧
-        (∀ e, r a = .error e → s.h.isInst e "AttributeError" = false → run = (sa, .error e))))
+        (∀ sa e, fn.read a s0 = (sa, .error e) → sa.h.isInst e "AttributeError" = false →
+          run = (sa, .error e))))
 
 /-! ### Proof -/
 
@@ -106,10 +118,6 @@ def FnAttrs.putR (f : FnAttrs Val) (a : String) (x : Res Val) : FnAttrs Val :=
   match x with
   | .ok v => f.put a v
   | .error _ => f
-
-def copyAll (r : String → Res Val) : List String → FnAttrs Val → FnAttrs Val
-  | [], f => f
-  | a :: l, f => copyAll r l (f.putR a (r a))
 
 theorem set_of_accepts (k : ValOps Val) (f : FnAttrs Val) (a : String) (v : Val)
     (h : Accepts k a v) : f.set k a v = .ok (f.put a v) := by
@@ -135,38 +143,39 @@ theorem set_of_refuses (k : ValOps Val) (f : FnAttrs Val) (a : String) (v : Val)
   rcases h with ⟨rfl, h1, rfl⟩ | ⟨rfl, h1, rfl⟩ | ⟨rfl, h1, h2, rfl⟩ | ⟨rfl, h1, rfl⟩ <;>
     simp [FnAttrs.set, *]
 
-theorem assignAll_copy (k : ValOps Val) (fn : FuncView σ Val D) (handled : Option ExcId)
-    (upd : String → σ → σ) (r : String → Res Val)
-    (hread : ∀ a s', fn.read a s' = ({ s' with g := upd a s'.g }, r a)) :
-    ∀ (pre rest : List String) (f : FnAttrs Val) (s : St σ), (∀ b ∈ pre, Copyable k s.h b (r b)) →
-      assignAll k fn handled (pre ++ rest) f s =
-        assignAll k fn handled rest (copyAll r pre f) (afterReads upd pre s) := by
+theorem assignAll_step (k : ValOps Val) (fn : FuncView σ Val D) (handled : Option ExcId)
+    (a : String) (rest : List String) (f : FnAttrs Val) (s s1 : St σ) (x : Res Val)
+    (hr : fn.read a s = (s1, x)) (hc : Copyable k s1.h a x) :
+    assignAll k fn handled (a :: rest) f s = assignAll k fn handled rest (f.putR a x) s1 := by
+  rcases hc with ⟨v, rfl, hacc⟩ | ⟨e, rfl, hattr⟩
+  · simp only [assignAll, hr, set_of_accepts k f a v hacc, FnAttrs.putR]
+  · simp only [assignAll, hr, hattr, if_true, FnAttrs.putR]
+
+theorem assignAll_passes (k : ValOps Val) (fn : FuncView σ Val D) (handled : Option ExcId) :
+    ∀ (pre rest : List String) (f : FnAttrs Val) (s s' : St σ), PassesReads k fn pre s s' →
+      ∃ f', assignAll k fn handled (pre ++ rest) f s = assignAll k fn handled rest f' s' := by
   intro pre
   induction pre with
-  | nil => intro rest f s _; rfl
+  | nil =>
+    intro rest f s s' hp
+    simp only [PassesReads] at hp
+    subst hp
+    exact ⟨f, rfl⟩
   | cons b pre ih =>
-    intro rest f s hc
-    have hb := hc b (by simp)
-    have hrest : ∀ b' ∈ pre, Copyable k ({ s with g := upd b s.g } : St σ).h b' (r b') :=
-      fun b' hb' => hc b' (by simp [hb'])
-    rcases hb with ⟨v, hv, hacc⟩ | ⟨e, he, hattr⟩
-    · simp only [List.cons_append, assignAll, hread, hv, set_of_accepts k f b v hacc]
-      rw [ih rest _ { s with g := upd b s.g } hrest]
-      simp [copyAll, FnAttrs.putR, hv, afterReads]
-    · simp only [List.cons_append, assignAll, hread, he, hattr, if_true]
-      rw [ih rest _ { s with g := upd b s.g } hrest]
-      simp [copyAll, FnAttrs.putR, he, afterReads]
+    intro rest f s s' hp
+    simp only [PassesReads] at hp
+    obtain ⟨hc, hp⟩ := hp
+    rw [List.cons_append, assignAll_step k fn handled b (pre ++ rest) f s _ _ rfl hc]
+    exact ih rest _ _ s' hp
 
-theorem assignAll_nil (k : ValOps Val) (fn : FuncView σ Val D) (handled : Option ExcId)
-    (f : FnAttrs Val) (s : St σ) : assignAll k fn handled [] f s = (s, .ok f) := rfl
-
-theorem copyAll_meta (r : String → Res Val) (h0 : FnAttrs Val) :
-    CopiedMeta r h0 (copyAll r wrapperAssignments h0) ∧
-      (copyAll r wrapperAssignments h0).dict = h0.dict := by
+theorem putR6_meta (h0 : FnAttrs Val) (r1 r2 r3 r4 r5 r6 : Res Val) :
+    CopiedMeta r1 r2 r3 r4 r5 r6 h0 ((((((h0.putR "__module__" r1).putR "__name__" r2).putR
+      "__qualname__" r3).putR "__doc__" r4).putR "__annotate__" r5).putR "__type_params__" r6) ∧
+    ((((((h0.putR "__module__" r1).putR "__name__" r2).putR "__qualname__" r3).putR "__doc__" r4).putR
+      "__annotate__" r5).putR "__type_params__" r6).dict = h0.dict := by
   unfold CopiedMeta
-  simp only [wrapperAssignments, copyAll, FnAttrs.putR]
-  cases r "__module__" <;> cases r "__name__" <;> cases r "__qualname__" <;> cases r "__doc__" <;>
-    cases r "__annotate__" <;> cases r "__type_params__" <;> simp [FnAttrs.put, pick]
+  cases r1 <;> cases r2 <;> cases r3 <;> cases r4 <;> cases r5 <;> cases r6 <;>
+    simp [FnAttrs.putR, FnAttrs.put, pick]
 
 theorem lookup_cons' (key pk : String) (pv : Val) (l : List (String × Val)) :
     ((pk, pv) :: l).lookup key = if key = pk then some pv else l.lookup key := by
@@ -249,30 +258,33 @@ theorem raiseNew_context (s : St σ) (c : Cls) (msg : String) (y : ExcId) (hy : 
   · simp [Heap.alloc]
   · simp only [Heap.alloc]; exact Nat.ne_of_lt hy
 
-theorem afterReads_snoc (upd : String → σ → σ) (pre : List String) (a : String) (s : St σ) :
-    afterReads upd (pre ++ [a]) s =
-      { afterReads upd pre s with g := upd a (afterReads upd pre s).g } := by
-  simp [afterReads, List.foldl_append]
-
 theorem contextmanagerWraps_proven : ContextmanagerWraps := by
-  intro σ Val D k fn self isAsync handled s upd r run h0
+  intro σ Val D k fn self isAsync handled s run h0
   refine ⟨?_, ?_⟩
   · intro hp
     simp [run, contextmanagerDeco, hp]
-  intro hp hread
+  intro hp
   have hrun : run = updateWrapper k fn self handled h0 s := by
     simp [run, h0, contextmanagerDeco, hp]
   rw [hrun]
-  obtain ⟨hmeta, hdict⟩ := copyAll_meta r h0
   have hd0 : h0.dict = [] := rfl
   refine ⟨?_, ?_⟩
-  · intro hall
-    have ha := assignAll_copy k fn handled upd r hread wrapperAssignments [] h0 s hall
-    rw [List.append_nil, assignAll_nil] at ha
+  · intro s1 s2 s3 s4 s5 s6 r1 r2 r3 r4 r5 r6 e1 e2 e3 e4 e5 e6 c1 c2 c3 c4 c5 c6
+    obtain ⟨hmeta, hdict⟩ := putR6_meta h0 r1 r2 r3 r4 r5 r6
+    have ha : assignAll k fn handled wrapperAssignments h0 s = (s6, .ok ((((((h0.putR "__module__" r1).putR
+        "__name__" r2).putR "__qualname__" r3).putR "__doc__" r4).putR "__annotate__" r5).putR
+        "__type_params__" r6)) := by
+      simp only [wrapperAssignments]
+      rw [assignAll_step k fn handled _ _ _ _ _ _ e1 c1, assignAll_step k fn handled _ _ _ _ _ _ e2 c2,
+        assignAll_step k fn handled _ _ _ _ _ _ e3 c3, assignAll_step k fn handled _ _ _ _ _ _ e4 c4,
+        assignAll_step k fn handled _ _ _ _ _ _ e5 c5, assignAll_step k fn handled _ _ _ _ _ _ e6 c6]
+      rfl
+    generalize ((((((h0.putR "__module__" r1).putR "__name__" r2).putR "__qualname__" r3).putR
+      "__doc__" r4).putR "__annotate__" r5).putR "__type_params__" r6) = w0 at ha hmeta hdict
     refine ⟨?_, ?_, ?_, ?_⟩
-    · intro s2 d ps s3 hg hi
-      refine ⟨{ copyAll r wrapperAssignments h0 with
-        dict := dictSet (ps.foldl (fun d (p : String × Val) => dictSet d p.1 p.2) (copyAll r wrapperAssignments h0).dict)
+    · intro s7 d ps s8 hg hi
+      refine ⟨{ w0 with
+        dict := dictSet (ps.foldl (fun d (p : String × Val) => dictSet d p.1 p.2) w0.dict)
           "__wrapped__" self }, ?_, hmeta, ?_⟩
       · simp only [updateWrapper, ha, hg, hi]
       · intro key
@@ -280,31 +292,29 @@ theorem contextmanagerWraps_proven : ContextmanagerWraps := by
         by_cases hk : key = "__wrapped__"
         · simp [hk]
         · cases ps.reverse.lookup key <;> simp [hk, List.lookup]
-    · intro s2 e hg he
-      refine ⟨{ copyAll r wrapperAssignments h0 with dict := [("__wrapped__", self)] }, ?_, hmeta, rfl⟩
+    · intro s7 e hg he
+      refine ⟨{ w0 with dict := [("__wrapped__", self)] }, ?_, hmeta, rfl⟩
       simp only [updateWrapper, ha, hg, he, if_true, List.foldl_nil, hdict, hd0]
       rfl
-    · intro s2 e hg he
+    · intro s7 e hg he
       simp only [updateWrapper, ha, hg, he, Bool.false_eq_true, if_false]
-    · intro s2 d s3 e hg hi
+    · intro s7 d s8 e hg hi
       simp only [updateWrapper, ha, hg, hi]
-  · intro pre a post hsplit hpre
-    have ha := assignAll_copy k fn handled upd r hread pre (a :: post) h0 s hpre
-    have hsa := afterReads_snoc upd pre a s
-    have hh : (afterReads upd pre s).h = s.h := rfl
+  · intro pre a post s0 hsplit hpre
+    obtain ⟨f', ha⟩ := assignAll_passes k fn handled pre (a :: post) h0 s s0 hpre
     refine ⟨?_, ?_⟩
-    · intro v msg hv hm
-      have hset := set_of_refuses k (copyAll r pre h0) a v msg hm
+    · intro sa v msg hv hm
+      have hset := set_of_refuses k f' a v msg hm
       refine ⟨?_, ?_⟩
       · simp only [updateWrapper]
         rw [hsplit, ha]
-        simp only [assignAll, hread, hv, hset, hsa]
+        simp only [assignAll, hv, hset]
       · intro y hy hyl
         subst hy
         exact raiseNew_context _ clsType msg y hyl
-    · intro e he hattr
+    · intro sa e he hattr
       simp only [updateWrapper]
       rw [hsplit, ha]
-      simp only [assignAll, hread, he, hsa, hh, hattr, Bool.false_eq_true, if_false]
+      simp only [assignAll, he, hattr, Bool.false_eq_true, if_false]
 
 end PyLean.CoreLibs.Misc.Contextlib
