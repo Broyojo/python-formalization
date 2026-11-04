@@ -46,7 +46,9 @@ def sumBreak (N : Num ν) (kindOf : ν → SKind) (ofInt : Int → ν)
   | .floatOrComplex => fcTail r xs stop
   | _ => sumGeneric N r xs stop
 
-/-- `sum(items)` with `start` omitted: the int fast path on `i_result` (:2929-2955). -/
+/-- `sum(items)` with `start` omitted: the int fast path on `i_result` (:2929-2955): an exact int item
+whose `PyLong_AsLongAndOverflow` does not overflow (`overflow == 0`, :2945-2947) and whose addition stays
+in `Py_ssize_t` (:2948-2949). -/
 def sumP (N : Num ν) (kindOf : ν → SKind) (ofInt : Int → ν)
     (fcTail : ν → List ν → Option PyExc → Py ν) (acc : Int) : List ν → Option PyExc → Py ν
   | [], stop => match stop with
@@ -55,7 +57,7 @@ def sumP (N : Num ν) (kindOf : ν → SKind) (ofInt : Int → ν)
   | x :: xs, stop =>
     match kindOf x with
     | .int b =>
-      if (if acc ≥ 0 then b ≤ ssizeMax - acc else b ≥ ssizeMin - acc) then
+      if ssizeMin ≤ b ∧ b ≤ ssizeMax ∧ (if acc ≥ 0 then b ≤ ssizeMax - acc else b ≥ ssizeMin - acc) then
         sumP N kindOf ofInt fcTail (acc + b) xs stop
       else sumBreak N kindOf ofInt fcTail acc x xs stop
     | _ => sumBreak N kindOf ofInt fcTail acc x xs stop
@@ -100,10 +102,10 @@ theorem sumP_int (fc : Int → List Int → Option PyExc → Py Int) :
       show sumGeneric intNum (acc + x) xs none = _
       rw [sumGeneric_int]
       simp [Int.add_assoc]
-    show (if (if acc ≥ 0 then x ≤ ssizeMax - acc else x ≥ ssizeMin - acc) then
+    show (if ssizeMin ≤ x ∧ x ≤ ssizeMax ∧ (if acc ≥ 0 then x ≤ ssizeMax - acc else x ≥ ssizeMin - acc) then
         sumP intNum SKind.int id fc (acc + x) xs none
       else sumBreak intNum SKind.int id fc acc x xs none) = _
-    by_cases hc : (if acc ≥ 0 then x ≤ ssizeMax - acc else x ≥ ssizeMin - acc)
+    by_cases hc : ssizeMin ≤ x ∧ x ≤ ssizeMax ∧ (if acc ≥ 0 then x ≤ ssizeMax - acc else x ≥ ssizeMin - acc)
     · rw [if_pos hc, sumP_int fc xs (acc + x)]; simp [Int.add_assoc]
     · rw [if_neg hc]; exact hb
 

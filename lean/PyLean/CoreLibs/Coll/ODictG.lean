@@ -288,4 +288,35 @@ def odGenRun (o : OD κ ν) (rev : Bool) : Nat → OGen → Py (List κ)
     | (.ok (some k), g') => (odGenRun o rev f g').map (k :: ·)
     | (.error e, _) => .error e
 
+/-! ### `__init__` with keywords, and the views -/
+
+/-- `OrderedDict.__init__`, :113-117: `self.__update(other, **kwds)`, `MutableMapping.update` storing the
+positional source and then `for key, value in kwds.items()` in keyword order (Lib/_collections_abc.py:983-984). -/
+def odInit (K : KOps κ) (src : Option (USrc κ ν)) (kwds : List (κ × ν)) : Py (OD κ ν) :=
+  let r : Out (OD κ ν) := match src with
+    | some s => odUpdate K OD.new s
+    | none => (OD.new, none)
+  (r.andThen (fun o => loopS (fun o (p : κ × ν) => odSet K o p.1 p.2) o kwds)).toPy
+
+/-- `list(od.keys())`: `KeysView.__iter__` is `yield from self._mapping`, the `__iter__` generator; with
+`rev`, `_OrderedDictKeysView.__reversed__` (:71-72), `yield from reversed(self._mapping)`. -/
+def odKeysView (o : OD κ ν) (rev : Bool) : Py (List κ) := odGenRun o rev (o.next + 1) .fresh
+
+/-- `self._mapping[key]` for a key the generator yields. -/
+def odGetitem (rk : κ → String) (o : OD κ ν) (k : κ) : Py ν :=
+  match D.get? o.d k with
+  | some v => .ok v
+  | none => .error (.keyError (rk k))
+
+/-- `list(od.items())`: `ItemsView.__iter__` (`for key in self._mapping: yield (key, self._mapping[key])`),
+or `_OrderedDictItemsView.__reversed__` (:76-78) over `reversed(self._mapping)`. -/
+def odItemsView (rk : κ → String) (o : OD κ ν) (rev : Bool) : Py (List (κ × ν)) := do
+  let ks ← odKeysView o rev
+  ks.mapM (fun k => do let v ← odGetitem rk o k; pure (k, v))
+
+/-- `list(od.values())`: `ValuesView.__iter__`, or `_OrderedDictValuesView.__reversed__` (:82-84). -/
+def odValuesView (rk : κ → String) (o : OD κ ν) (rev : Bool) : Py (List ν) := do
+  let ks ← odKeysView o rev
+  ks.mapM (odGetitem rk o)
+
 end PyLean.CoreLibs.Coll
