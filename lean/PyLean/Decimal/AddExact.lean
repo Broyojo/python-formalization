@@ -476,4 +476,113 @@ theorem norm_core (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (st so : Bool
     · rw [Nat.pow_add, ← Nat.mul_assoc]; exact h2
     · rw [show oe = X - (d : Int) by omega]; exact h6
 
+/-! ## `__add__` over all finite operands -/
+
+theorem sgnI_sum_ne (sa sb : Bool) (a b : Nat) (ha : a ≠ 0) (hb : b ≠ 0)
+    (h : sgnI sa a + sgnI sb b = 0) : sa ≠ sb := by
+  intro hs; subst hs; rw [sgnI_add_same, sgnI_eq_zero] at h; omega
+
+theorem natAbs_ne_zero_of {x : Int} (h : x ≠ 0) : x.natAbs ≠ 0 := by
+  intro h0; exact h (Int.natAbs_eq_zero.mp h0)
+
+/-- The end of `__add__` once `_normalize`'s working sum `σ` (at `E`) is related to the exact sum
+`x` (at `min(ea, eb)`), either equal to it or rounded alike by `_fix`. -/
+theorem add_finish (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa sb : Bool) (ea eb E : Int)
+    (σ x : Int)
+    (hcase : (σ = x ∧ E = min ea eb) ∨ (∃ (s : Bool) (W X : Nat), σ = sgnI s W ∧ x = sgnI s X ∧
+      W ≠ 0 ∧ X ≠ 0 ∧ numDigits X = numDigits W + (E - min ea eb).toNat ∧ min ea eb ≤ E ∧
+      fixSpec c s X (min ea eb) fl = fixSpec c s W E fl))
+    (hz : x = 0 → sa ≠ sb) :
+    (if σ = 0 then (fix c (.fin (decide (c.rounding = .floor ∧ sa ≠ sb)) 0 (min ea eb))).run fl
+      else if maxStrDigits < numDigits σ.natAbs then .error (.valueError limitToStrMsg)
+      else (fix c (.fin (decide (σ < 0)) σ.natAbs E)).run fl) =
+    (if x = 0 then (fix c (.fin (decide (c.rounding = .floor)) 0 (min ea eb))).run fl
+      else if (maxStrDigits : Int) < (numDigits x.natAbs : Int) + min ea eb - E then
+        .error (.valueError limitToStrMsg)
+      else fixSpec c (decide (x < 0)) x.natAbs (min ea eb) fl) := by
+  rcases hcase with ⟨rfl, rfl⟩ | ⟨s, W, X, rfl, rfl, hW, hX, hnd, hle, hfx⟩
+  · by_cases hx : σ = 0
+    · simp only [hx, ↓reduceIte, ne_eq, hz hx, not_false_eq_true, and_true]
+    · rw [if_neg hx, if_neg hx, fixExact_fin c _ _ _ fl hp (natAbs_ne_zero_of hx)]
+      by_cases hl : maxStrDigits < numDigits σ.natAbs
+      · rw [if_pos hl, if_pos (by omega)]
+      · rw [if_neg hl, if_neg (by omega)]
+  · have h1 : sgnI s W ≠ 0 := by rw [ne_eq, sgnI_eq_zero]; exact hW
+    have h2 : sgnI s X ≠ 0 := by rw [ne_eq, sgnI_eq_zero]; exact hX
+    rw [if_neg h1, if_neg h2, sgnI_natAbs, sgnI_natAbs, sgnI_lt s W hW, sgnI_lt s X hX,
+      fixExact_fin c _ _ _ fl hp hW, hfx]
+    by_cases hl : maxStrDigits < numDigits W
+    · rw [if_pos hl, if_pos (by omega)]
+    · rw [if_neg hl, if_neg (by omega)]
+
+/-- `__add__` (_pydecimal.py:1202-1286) of two non-zero finite operands, for every context with
+`prec ≥ 1`: `_WorkRep` raises the int/str-limit `ValueError` for a coefficient of more than 4300
+digits (`int(value._int)`, :1255-1256 via :5703); otherwise an exact sum of zero is the zero of
+sign `ROUND_FLOOR` at `min(ea, eb)` through `_fix` (:1263-1265), the working sum `_normalize` makes
+raises the int/str-limit `ValueError` in `str(result.int)` when it has more than 4300 digits (its
+digit count is the exact sum's plus `min(ea, eb)` less the working exponent), and anything else is
+the exact sum `x` rounded into the context by `_fix` (`fixSpec`, overflow and subnormals included):
+`_normalize`'s substitution never changes the rounded result or the signals. -/
+theorem add_fin_exact (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (sa : Bool) (ca : Nat) (ea : Int)
+    (sb : Bool) (cb : Nat) (eb : Int) (ha : ca ≠ 0) (hb : cb ≠ 0) :
+    (add c (.fin sa ca ea) (.fin sb cb eb)).run fl =
+      if maxStrDigits < numDigits ca then .error (.valueError (limitToIntMsg (numDigits ca)))
+      else if maxStrDigits < numDigits cb then .error (.valueError (limitToIntMsg (numDigits cb)))
+      else if exactSum sa ca ea sb cb eb = 0 then
+        (fix c (.fin (decide (c.rounding = .floor)) 0 (min ea eb))).run fl
+      else if (maxStrDigits : Int) < (numDigits (exactSum sa ca ea sb cb eb).natAbs : Int) + min ea eb -
+          addWorkExp c.prec ca ea cb eb then .error (.valueError limitToStrMsg)
+      else fixSpec c (decide (exactSum sa ca ea sb cb eb < 0)) (exactSum sa ca ea sb cb eb).natAbs
+        (min ea eb) fl := by
+  by_cases l1 : maxStrDigits < numDigits ca
+  · (simp only [add, ha, hb, and_self, ↓reduceIte, liftPy_run, intLimit, gt_iff_lt, l1]) <;> rfl
+  by_cases l2 : maxStrDigits < numDigits cb
+  · (simp only [add, ha, hb, and_self, ↓reduceIte, liftPy_run, intLimit, gt_iff_lt, l1, l2]) <;> rfl
+  rw [if_neg l1, if_neg l2]
+  have hl1 : numDigits ca ≤ maxStrDigits := by omega
+  have hl2 : numDigits cb ≤ maxStrDigits := by omega
+  have hz : exactSum sa ca ea sb cb eb = 0 → sa ≠ sb := fun h => by
+    rw [exactSum_sgn] at h
+    exact sgnI_sum_ne sa sb _ _ (Nat.mul_ne_zero ha (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide))))
+      (Nat.mul_ne_zero hb (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide)))) h
+  by_cases hab : ea < eb
+  · -- `tmp` is the second operand
+    have hw := workNormalize_snd c.prec sb sa cb ca eb ea hl2 hl1 hab
+    rw [add_run_of_norm c sa ca ea sb cb eb fl ha hb hl1 hl2 _ _ _ _ _ hw (by split <;> omega)
+      (Nat.mul_ne_zero hb (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide))))]
+    have hmin : min ea eb = ea := by omega
+    have hwe : addWorkExp c.prec ca ea cb eb = normExp c.prec cb eb ca ea := by
+      simp [addWorkExp, hab]
+    rw [hwe]
+    refine add_finish c fl hp sa sb ea eb _ _ _ ?_ hz
+    obtain ⟨hE, hns, hs⟩ := norm_core c fl hp sb sa cb ca eb ea hb ha (by omega)
+    have hx : exactSum sa ca ea sb cb eb = sgnI sb (cb * 10 ^ (eb - ea).toNat) + sgnI sa ca := by
+      rw [exactSum_sgn, hmin, Int.add_comm]; simp
+    rw [hx, hmin]
+    by_cases hsub : normSub c.prec cb eb ca ea
+    · obtain ⟨s, W, X, h1, h2, h3, h4, h5, h6⟩ := hs hsub
+      refine Or.inr ⟨s, W, X, ?_, h2, h3, h4, h5, hE, h6⟩
+      rw [if_pos hsub, Int.add_comm]; exact h1
+    · obtain ⟨hE', hσ⟩ := hns hsub
+      refine Or.inl ⟨?_, hE'⟩
+      rw [if_neg hsub, Int.add_comm]; exact hσ
+  · -- `tmp` is the first operand
+    have hw := workNormalize_fst c.prec sa sb ca cb ea eb hl1 hl2 (by omega)
+    rw [add_run_of_norm c sa ca ea sb cb eb fl ha hb hl1 hl2 _ _ _ _ _ hw
+      (Nat.mul_ne_zero ha (Nat.pos_iff_ne_zero.mp (Nat.pow_pos (by decide)))) (by split <;> omega)]
+    have hmin : min ea eb = eb := by omega
+    have hwe : addWorkExp c.prec ca ea cb eb = normExp c.prec ca ea cb eb := by
+      simp [addWorkExp, hab]
+    rw [hwe]
+    refine add_finish c fl hp sa sb ea eb _ _ _ ?_ hz
+    obtain ⟨hE, hns, hs⟩ := norm_core c fl hp sa sb ca cb ea eb ha hb (by omega)
+    have hx : exactSum sa ca ea sb cb eb = sgnI sa (ca * 10 ^ (ea - eb).toNat) + sgnI sb cb := by
+      rw [exactSum_sgn, hmin]; simp
+    rw [hx, hmin]
+    by_cases hsub : normSub c.prec ca ea cb eb
+    · obtain ⟨s, W, X, h1, h2, h3, h4, h5, h6⟩ := hs hsub
+      exact Or.inr ⟨s, W, X, by rw [if_pos hsub]; exact h1, h2, h3, h4, h5, hE, h6⟩
+    · obtain ⟨hE', hσ⟩ := hns hsub
+      exact Or.inl ⟨by rw [if_neg hsub]; exact hσ, hE'⟩
+
 end PyLean.Decimal
