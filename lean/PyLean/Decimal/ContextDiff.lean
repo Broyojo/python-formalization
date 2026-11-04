@@ -34,6 +34,20 @@ where
     | some x => pure x
     | none => throw s!"bad signal {s}"
 
+def hexNat (s : List Char) : Nat := s.foldl (fun a c =>
+  a * 16 + (if c.toNat ≥ 97 then c.toNat - 87 else c.toNat - 48)) 0
+
+/-- `hex(i)` back to the int, sign included. -/
+def intOfHex (s : String) : Int :=
+  match s.toList with
+  | '-' :: '0' :: 'x' :: ds => -(hexNat ds : Int)
+  | '0' :: 'x' :: ds => hexNat ds
+  | _ => 0
+
+/-- An int as `hex(i)`. -/
+def ctxHex (i : Int) : Json :=
+  toJson (String.ofList ((if i < 0 then ['-'] else []) ++ ['0', 'x'] ++ Nat.toDigits 16 i.natAbs))
+
 def ctxArgOf (j : Json) : Except String CtxArg := do
   match j with
   | .null => return .none
@@ -52,6 +66,16 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
     | "frozendict_py" | "obj" => return .obj
     | "tuple" => return .tuple ((← (a[1]!).getStr?).toNat?.getD 0)
     | "idx" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
+    | "hint" => return .int (intOfHex (← (a[1]!).getStr?))
+    | "bool" => return .bool (← (a[1]!).getBool?)
+    | "none" => return .none
+    | "eqobj" =>
+      let ans ← (← (a[1]!).getArr?).toList.mapM (fun x => do
+        match ← x.getStr? with
+        | "y" => pure EqAns.yes
+        | "r" => pure (EqAns.raises (.named "RuntimeError" "boom"))
+        | _ => pure EqAns.no)
+      return .eqObj 0 ans
     | t => throw s!"bad ctx arg {t}"
 
 def ctxInitOf (j : Json) : Except String CtxInit := do
@@ -94,15 +118,16 @@ def templateOf (j : Json) : Except String (PyContext × CContext) := do
 def sortStrs (l : List String) : Json := toJson (l.toArray.qsort (· < ·))
 
 def encPyContext (c : PyContext) : Json :=
-  Json.mkObj [("prec", toJson (toString c.prec)), ("rounding", toJson c.rounding.name),
-    ("Emin", toJson (toString c.emin)), ("Emax", toJson (toString c.emax)),
-    ("capitals", toJson (toString c.capitals)), ("clamp", toJson (toString c.clamp)),
+  Json.mkObj [("prec", ctxHex c.prec),
+    ("rounding", toJson (if c.roundingObj.isSome then "obj" else c.rounding.name)),
+    ("Emin", ctxHex c.emin), ("Emax", ctxHex c.emax),
+    ("capitals", ctxHex c.capitals), ("clamp", ctxHex c.clamp),
     ("flags", sortStrs (setNames c.flags)), ("traps", sortStrs (setNames c.traps))]
 
 def encCContext (c : CContext) : Json :=
-  Json.mkObj [("prec", toJson (toString c.prec)), ("rounding", toJson c.round.name),
-    ("Emin", toJson (toString c.emin)), ("Emax", toJson (toString c.emax)),
-    ("capitals", toJson (toString c.capitals)), ("clamp", toJson (toString c.clamp)),
+  Json.mkObj [("prec", ctxHex c.prec), ("rounding", toJson c.round.name),
+    ("Emin", ctxHex c.emin), ("Emax", ctxHex c.emax),
+    ("capitals", ctxHex c.capitals), ("clamp", ctxHex c.clamp),
     ("flags", sortStrs ((signalsAsList c.status).map Signal.name)),
     ("traps", sortStrs ((signalsAsList c.traps).map Signal.name))]
 

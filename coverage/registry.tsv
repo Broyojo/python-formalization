@@ -444,6 +444,16 @@ decimal-fix-nan-exact	proven	Lib/_pydecimal.py	Decimal._fix_nan,InvalidOperation
 decimal-int-trunc-exact	proven	Lib/_pydecimal.py	Decimal.__int__
 decimal-from-float-exact	open	Lib/_pydecimal.py	Decimal.from_float,Decimal.__new__,Decimal.from_number
 decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp,Decimal._isnan
+decimal-mul-nan-exact	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._check_nans,_convert_other
+decimal-normalize-nan-exact	proven	Lib/_pydecimal.py	Decimal.normalize,Decimal._check_nans,Decimal._fix_nan
+decimal-scaleb-rest-exact	proven	Lib/_pydecimal.py	Decimal.scaleb,Decimal._check_nans
+decimal-fma-special-exact	proven	Lib/_pydecimal.py	Decimal.fma
+decimal-abs-no-round-exact	proven	Lib/_pydecimal.py	Decimal.__abs__,Decimal.copy_abs
+decimal-compare-total-mag-rest	proven	Lib/_pydecimal.py	Decimal.compare_total_mag
+decimal-convert-other-tuple-exact	proven	Lib/_pydecimal.py	_convert_other
+decimal-remainder-near-rest	proven	Lib/_pydecimal.py	Decimal.remainder_near,Decimal._check_nans,_WorkRep.__init__
+decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans
+decimal-adjusted-exact	proven	Lib/_pydecimal.py	Decimal.adjusted
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
@@ -2247,6 +2257,14 @@ bytecode-gap-huge-seq-repeat	open	Objects/abstract.c
 bytecode-gap-is-on-immediates	open	Python/bytecodes.c	
 bytecode-gap-set-iteration-order	open	Objects/setobject.c	
 bytecode-gap-refcount-finalizers	open	Objects/genobject.c	
+bytecode-unpack-sequence	proven	Python/bytecodes.c	opcode:UNPACK_SEQUENCE,opcode:_UNPACK_SEQUENCE,opcode:UNPACK_SEQUENCE_TWO_TUPLE,opcode:_UNPACK_SEQUENCE_TWO_TUPLE,opcode:UNPACK_SEQUENCE_TUPLE,opcode:_UNPACK_SEQUENCE_TUPLE,opcode:UNPACK_SEQUENCE_LIST,opcode:_UNPACK_SEQUENCE_LIST
+bytecode-unpack-ex	proven	Python/bytecodes.c	opcode:UNPACK_EX
+bytecode-builders	proven	Python/bytecodes.c	opcode:LIST_EXTEND,opcode:_LIST_EXTEND,opcode:SET_UPDATE,opcode:_SET_UPDATE,opcode:DICT_UPDATE,opcode:_DICT_UPDATE,opcode:DICT_MERGE,opcode:_DICT_MERGE,opcode:SET_ADD,opcode:MAP_ADD,opcode:BUILD_SET,opcode:BUILD_MAP
+bytecode-get-iter	proven	Python/bytecodes.c	opcode:GET_ITER,opcode:_GET_ITER,opcode:GET_ITER_SELF,opcode:_GUARD_ITERATOR,opcode:GET_ITER_VIRTUAL,opcode:_GUARD_ITER_VIRTUAL,opcode:_PUSH_TAGGED_ZERO
+bytecode-format	proven	Python/bytecodes.c	opcode:CONVERT_VALUE,opcode:FORMAT_SIMPLE,opcode:FORMAT_WITH_SPEC
+bytecode-intrinsics	proven	Python/bytecodes.c	opcode:CALL_INTRINSIC_1,opcode:_CALL_INTRINSIC_1,opcode:CALL_INTRINSIC_2,opcode:_CALL_INTRINSIC_2
+bytecode-call-builtins	proven	Python/bytecodes.c	opcode:_CHECK_PERIODIC_AT_END,opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL,opcode:_GUARD_CALLABLE_TYPE_1,opcode:_CALL_TYPE_1,opcode:CALL_TYPE_1,opcode:_GUARD_CALLABLE_STR_1,opcode:_CALL_STR_1,opcode:CALL_STR_1,opcode:_GUARD_CALLABLE_TUPLE_1,opcode:_CALL_TUPLE_1,opcode:CALL_TUPLE_1,opcode:CALL_LEN,opcode:_GUARD_CALLABLE_LEN,opcode:_CALL_LEN,opcode:_GUARD_CALLABLE_ISINSTANCE,opcode:_CALL_ISINSTANCE,opcode:CALL_ISINSTANCE,opcode:CALL_LIST_APPEND,opcode:_GUARD_CALLABLE_LIST_APPEND,opcode:_CALL_LIST_APPEND
+bytecode-match	proven	Python/bytecodes.c	opcode:MATCH_CLASS,opcode:_MATCH_CLASS,opcode:MATCH_MAPPING,opcode:MATCH_SEQUENCE,opcode:MATCH_KEYS
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
@@ -2348,6 +2366,29 @@ pygrammar-rule-file	proven	Grammar/python.gram	rule:file
 pygrammar-rule-eval	proven	Grammar/python.gram	rule:eval
 pygrammar-rule-interactive	proven	Grammar/python.gram	rule:interactive
 pygrammar-rule-statement	proven	Grammar/python.gram	rule:statement
+pygrammar-rule-elif-stmt	proven	Grammar/python.gram	rule:elif_stmt
+pygrammar-rule-finally-block	proven	Grammar/python.gram	rule:finally_block
+pygrammar-rule-try-stmt	proven	Grammar/python.gram	rule:try_stmt
+pygrammar-rule-except-block	proven	Grammar/python.gram	rule:except_block
+pygrammar-rule-except-star-block	proven	Grammar/python.gram	rule:except_star_block
+pygrammar-rule-with-stmt	proven	Grammar/python.gram	rule:with_stmt
+pygrammar-rule-async-with-type-comment	refuted	Grammar/python.gram	rule:with_stmt
+pygrammar-rule-with-item	proven	Grammar/python.gram	rule:with_item
+pygrammar-rule-import-from-targets	proven	Grammar/python.gram	rule:import_from_targets
+pygrammar-rule-class-def	proven	Grammar/python.gram	rule:class_def
+pygrammar-rule-function-def	proven	Grammar/python.gram	rule:function_def
+pygrammar-rule-class-def-raw	proven	Grammar/python.gram	rule:class_def_raw
+pygrammar-rule-function-def-raw	proven	Grammar/python.gram	rule:function_def_raw
+pygrammar-rule-annotation-default	proven	Grammar/python.gram	rule:annotation,rule:star_annotation,rule:default
+pygrammar-rule-sum	proven	Grammar/python.gram	rule:sum
+pygrammar-rule-bitwise-or	proven	Grammar/python.gram	rule:bitwise_or
+pygrammar-rule-bitwise-xor	proven	Grammar/python.gram	rule:bitwise_xor
+pygrammar-rule-bitwise-and	proven	Grammar/python.gram	rule:bitwise_and
+pygrammar-rule-term	proven	Grammar/python.gram	rule:term
+pygrammar-rule-shift-expr	proven	Grammar/python.gram	rule:shift_expr
+pygrammar-rule-invalid-assert-stmt	proven	Grammar/python.gram	rule:invalid_assert_stmt
+pygrammar-rule-match-stmt	proven	Grammar/python.gram	rule:match_stmt
+pygrammar-rule-decorators	proven	Grammar/python.gram	rule:decorators
 pygrammar-rule-lazy-import-diagnosed	refuted	Grammar/python.gram	rule:invalid_import
 pygrammar-unparse-str-repr	proven	Parser/string_parser.c	decode_unicode_with_escapes,_PyPegen_decode_string,_PyPegen_parse_string,Unparser._write_constant
 pygrammar-ast-increment-lineno	proven	Lib/ast.py	
