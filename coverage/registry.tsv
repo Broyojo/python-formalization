@@ -2631,6 +2631,8 @@ bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_EN
 bytecode-bind-keywords	proven	Python/ceval.c	initialize_locals
 bytecode-find-kw-slot	proven	Python/ceval.c	initialize_locals
 bytecode-initialize-locals	proven	Python/ceval.c	initialize_locals
+bytecode-defaults-fill	proven	Python/ceval.c	initialize_locals
+bytecode-kwonly-defaults	proven	Python/ceval.c	initialize_locals
 bytecode-too-many-positional	proven	Python/ceval.c	too_many_positional
 bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
 bytecode-unexpected-keyword	proven	Python/ceval.c	
