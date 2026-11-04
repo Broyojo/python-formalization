@@ -25,6 +25,7 @@ import PyLean.Datetime.ZoneCacheSubProps
 import PyLean.Datetime.TwinsProps
 import PyLean.Datetime.FmtTwinsProps
 import PyLean.Datetime.FloatProps
+import PyLean.Datetime.IsoFormsProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -387,6 +388,60 @@ def entries : List Entry := [
     statement := "For every parse r of _strptime, date.strptime returns date(r.year, r.month, r.day) whatever the time fields (so second=60 is accepted), and the parse's exception otherwise."
     source := "date.strptime docs; _strptime_datetime_date", status := .proven
     prop := ``DateStrptime, thm := some ``dateStrptime_proven },
+  { id := "datetime-parse-isodate-forms", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_isoformat_date", "_read_isoformat_component", "_isoweek_to_gregorian"]
+    statement := "For all ASCII digits, _parse_isoformat_date parses YYYYMMDD to its fields, YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww to _isoweek_to_gregorian(Y, W, D or 1), and raises 'Inconsistent use of dash separator' when only one of the two separators is a dash (month and week forms)."
+    source := "date.fromisoformat docs (ISO 8601 formats); _parse_isoformat_date", status := .proven
+    prop := ``ParseIsoDateForms, thm := some ``parseIsoDateForms_proven },
+  { id := "datetime-parse-isodate-refusals", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_isoformat_date"]
+    statement := "For every string, _parse_isoformat_date raises 'Invalid isoformat string' when its length is not 7, 8 or 10, and when it is not ASCII."
+    source := "_parse_isoformat_date", status := .proven
+    prop := ``ParseIsoDateRefusals, thm := some ``parseIsoDateRefusals_proven },
+  { id := "datetime-find-sep-forms", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_find_isoformat_datetime_separator", "_is_ascii_digit"]
+    statement := "For all digits, any separator x and any time text t, _find_isoformat_datetime_separator returns the length of the date part for YYYY-MM-DD, YYYYMMDD, YYYY-Www-D (x not a digit), YYYY-Www followed by -DD, YYYYWwwD, YYYY-Www and YYYYWww (x not a digit), and raises 'Invalid ISO string' for the nine characters YYYY-Www-."
+    source := "datetime.fromisoformat docs; the ambiguity rule at _pydatetime.py:315-323", status := .proven
+    prop := ``FindSepForms, thm := some ``findSepForms_proven },
+  { id := "datetime-date-fromisoformat", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromisoformat", "_parse_isoformat_date"]
+    statement := "For every string, date.fromisoformat refuses non-ASCII text ('Argument must be an ASCII str') and lengths other than 7, 8, 10 (ValueError), returns the checked date of an accepted parse, and raises ValueError for a refused parse or an invalid date."
+    source := "date.fromisoformat docs", status := .proven
+    prop := ``DateFromisoformat, thm := some ``dateFromisoformat_proven },
+  { id := "datetime-parse-hhmmssff-forms", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_hh_mm_ss_ff", "_read_isoformat_component"]
+    statement := "For all ASCII digits, _parse_hh_mm_ss_ff parses HH, HH:MM, HHMMSS, HH:MM:SS.ffffff, HH:MM:SS,fff (times 1000) and truncates a seventh fraction digit; it raises 'Invalid time separator' for a non-colon after HH:MM, 'Invalid microsecond separator' for a separator other than . or ,, and 'Non-digit values in fraction'."
+    source := "time.fromisoformat docs; _parse_hh_mm_ss_ff", status := .proven
+    prop := ``ParseHHMMSSFFForms, thm := some ``parseHHMMSSFFForms_proven },
+  { id := "datetime-date-ctor-args", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__new__", "_check_date_fields", "C date_new", "C datetime_date", "C datetime_date_impl", "C new_date_ex", "C check_date_args", "C date_from_pickle"]
+    statement := "date(*args) agrees between the twins for every positional argument list whose second argument is not None and whose ints fit a C int: pickle state, int fields, non-int fields, missing or extra arguments."
+    source := "C/Python twins", status := .proven
+    prop := ``DateNewArgs, thm := some ``dateNewArgs_proven
+    notes := "A None second argument is on record as datetime-date-ctor-twins; ints beyond C int are gh-158778's class." },
+  { id := "datetime-date-sub-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__sub__", "C date_subtract"]
+    statement := "date - x agrees between the twins for every valid right operand: timedelta, date, datetime or another object."
+    source := "C/Python twins; date docs (date - date, date - timedelta only)", status := .refuted
+    prop := ``DateSubTwins, thm := some ``dateSubTwins_refuted
+    bug := some "datetime-pydatetime-date-sub-datetime"
+    notes := "date(2020, 1, 2) - datetime(2020, 1, 1): timedelta(days=1) in Python, TypeError in C." },
+  { id := "datetime-date-sub-operand", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__sub__", "C date_subtract", "C add_date_timedelta"]
+    statement := "For every valid date and every right operand other than a datetime, date - x agrees between the twins, and another object is NotImplemented in both."
+    source := "C/Python twins", status := .proven
+    prop := ``DateSubOperand, thm := some ``dateSubOperand_proven },
+  { id := "datetime-fromordinal-range", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromordinal", "_ord2ymd", "C datetime_date_fromordinal_impl", "C ord_to_ymd"]
+    statement := "date.fromordinal(n) raises ValueError in Python for every int n outside 1..date.max.toordinal(); C raises ValueError for such C ints and OverflowError beyond int; for C ints the twins agree."
+    source := "date.fromordinal docs (ValueError unless 1 <= ordinal <= date.max.toordinal())", status := .proven
+    prop := ``FromordinalRange, thm := some ``fromordinalRange_proven },
+  { id := "datetime-date-fromtimestamp", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.fromtimestamp", "C date_fromtimestamp"]
+    statement := "For every clock and argument, date.fromtimestamp(None) raises TypeError in both twins without consulting the clock, and otherwise both return the checked localtime date of the same time_t."
+    source := "date.fromtimestamp docs; C/Python twins", status := .proven
+    prop := ``DateFromtimestamp, thm := some ``dateFromtimestamp_proven
+    notes := "The clock (time(NULL), localtime(3) and the float-to-time_t path) is an abstract parameter: platform." },
   { id := "datetime-days-in-month", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_days_in_month", "C days_in_month", "C is_leap"]
     statement := "For 1 <= m <= 12, _days_in_month(y, m) is 31, 28 or 29 (Gregorian leap rule), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31; it agrees with C days_in_month for 0 <= y < 2**31, is the step of _days_before_month, and the months sum to 365 or 366."
