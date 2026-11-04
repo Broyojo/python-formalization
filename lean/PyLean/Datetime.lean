@@ -92,6 +92,11 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``TimedeltaOpsTwins, thm := some ``timedeltaOpsTwins_proven
     notes := "Float multipliers and timedelta/timedelta (a float) wait for the binary64 model." },
+  { id := "datetime-divide-and-round", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_divide_and_round", "C divide_nearest"]
+    statement := "For all ints a, b: _divide_and_round(a, b) equals C divide_nearest(a, b) (_PyLong_DivmodNear); for b != 0 it is a / b rounded to the nearest int with ties to even, for b == 0 it raises ZeroDivisionError."
+    source := "_divide_and_round docstring; C/Python twins", status := .proven
+    prop := ``DivideAndRound, thm := some ``divideAndRound_proven },
   { id := "datetime-timedelta-divmod", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__divmod__", "timedelta.__floordiv__", "timedelta.__mod__", "timedelta._to_microseconds"]
     statement := "For valid timedeltas a, b with b != 0, divmod(a, b) == (a // b, a % b) with q*b + r == a and r zero or of b's sign with |r| < |b|; for b == 0 it raises ZeroDivisionError."

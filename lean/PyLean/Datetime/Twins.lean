@@ -66,28 +66,6 @@ def checkTimeFieldsPy (h m s us fold : Int) : Py (Int × Int × Int × Int × In
 def buildStructTimeArgsC (y m d hh mm ss dstflag : Int) : TimeTuple :=
   [y, m, d, hh, mm, ss, (ymdToOrdC y m d + 6).tmod 7, daysBeforeMonth y m + d, dstflag]
 
-/-! ### `_divide_and_round` and C `divide_nearest` -/
-
-/-- C `divide_nearest`, :392-403, which is `_PyLong_DivmodNear(m, n)[0]`,
-Objects/longobject.c:6118-6187: truncating `long_divrem`, then twice the remainder (negated
-when the quotient is negative) compared with the divisor, then the quotient moved one away
-from zero. The `PyLong_Check` refusals cannot happen: both callers pass ints. -/
-def divideNearestC (a b : Int) : Py Int :=
-  if b = 0 then .error (.zeroDivisionError "division by zero")
-  else
-    let quoIsNeg := decide (a < 0) != decide (b < 0)
-    let quo := a.tdiv b
-    let rem := a.tmod b
-    let twiceRem := if quoIsNeg then -(2 * rem) else 2 * rem
-    let cmp : Int := if twiceRem < b then -1 else if twiceRem = b then 0 else 1
-    let quoIsOdd := quo.natAbs % 2 = 1
-    if (if b < 0 then cmp < 0 else cmp > 0) ∨ (cmp = 0 ∧ quoIsOdd) then
-      .ok (if quoIsNeg then quo - 1 else quo + 1)
-    else .ok quo
-
-/-- `truedivide_timedelta_int`, :2437-2452: `divide_nearest`, then `microseconds_to_delta`. -/
-def Delta.truedivIntC2 (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← divideNearestC a.toUs k)
-
 /-! ### Float operands of `*` and `/` -/
 
 /-- `float.as_integer_ratio`, the method both twins call (`other.as_integer_ratio()` in
