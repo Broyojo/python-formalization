@@ -96,12 +96,12 @@ Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	modelled	coll-use
 Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	coll-userdict-popitem-lifo	
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-fromkeys-p	
 Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-init-copy,coll-userlist-operands	
-Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	todo		review: `ListOps.repr : List α → String` can neither raise nor recurse, so an element `__repr__` that raises and the `[...]` of a UserList that holds itself cannot be expressed, and UserListObservers states only `ulRepr ops u = ops.repr u.data`, the definition (UserDict.__repr__ pins both cases).
-Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	modelled	coll-userlist-repr-r	
+Lib/collections/__init__.py	1302	1303	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-compare-p,coll-userlist-len-after-prefix	
+Lib/collections/__init__.py	1305	1306	UserList.__le__	__le__(self, other)	modelled	coll-userlist-compare-p,coll-userlist-len-after-prefix	
 Lib/collections/__init__.py	1308	1309	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-compare-p	
-Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-compare-p	
+Lib/collections/__init__.py	1311	1312	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-compare-p,coll-userlist-len-after-prefix	
+Lib/collections/__init__.py	1314	1315	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-compare-p,coll-userlist-len-after-prefix	
 Lib/collections/__init__.py	1317	1318	UserList.__cast	__cast(self, other)	modelled	coll-userlist-compare-p	
 Lib/collections/__init__.py	1320	1321	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1323	1324	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
@@ -116,14 +116,14 @@ Lib/collections/__init__.py	1366	1368	UserList.__imul__	__imul__(self, n)	modell
 Lib/collections/__init__.py	1370	1375	UserList.__copy__	__copy__(self)	modelled	coll-userlist-init-copy	
 Lib/collections/__init__.py	1377	1378	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1380	1381	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	todo		review: `ulPop` still cites `@3.14.7:1328-1329` (3.15.2 is :1383-1384), and UserListSimulatesList drops the popped value through `(·.2)`, so a `pop` that returned the wrong element passes; no entry states the return value.
+Lib/collections/__init__.py	1383	1384	UserList.pop	pop(self, i=-1)	modelled	coll-userlist-pop	
 Lib/collections/__init__.py	1386	1387	UserList.remove	remove(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1389	1390	UserList.clear	clear(self)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1392	1393	UserList.copy	copy(self)	modelled	coll-userlist-init-copy	
 Lib/collections/__init__.py	1395	1396	UserList.count	count(self, item)	modelled	coll-userlist-contains-count	
 Lib/collections/__init__.py	1398	1399	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1401	1402	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
-Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	todo		review: `ListOps.sort : List α → Bool → List α` drops `key` and the positional `*args` and cannot raise, so a raising element `__lt__` or `key`, the TypeError for a positional argument, and `ValueError('list modified during sort')` (Objects/listobject.c:3197) cannot be expressed; UserListIntInstance only checks `ops.sort` on ints by rfl.
+Lib/collections/__init__.py	1404	1405	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-sort-p	
 Lib/collections/__init__.py	1407	1411	UserList.extend	extend(self, other)	modelled	coll-userlist-iadd-atomic	
 Lib/collections/__init__.py	1420	1426	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1428	1429	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	
@@ -144,21 +144,21 @@ Lib/collections/__init__.py	1482	1483	UserString.__getitem__	__getitem__(self, i
 Lib/collections/__init__.py	1485	1490	UserString.__add__	__add__(self, other)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1492	1495	UserString.__radd__	__radd__(self, other)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1497	1498	UserString.__mul__	__mul__(self, n)	modelled	coll-userstring-mul,coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	todo		review: `args` is a tuple of ints, so `u % mapping`, `u % 'x'` and `u % UserString(...)` (a non-tuple with `__getitem__`, which PyUnicode_Format takes as a mapping) cannot be expressed, and a body that did `self.data % tuple(args)` passes.
+Lib/collections/__init__.py	1502	1503	UserString.__mod__	__mod__(self, args)	modelled	coll-userstring-pass-through,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1505	1506	UserString.__rmod__	__rmod__(self, template)	modelled	coll-userstring-str-calls	
 Lib/collections/__init__.py	1509	1510	UserString.capitalize	capitalize(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1512	1513	UserString.casefold	casefold(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1515	1516	UserString.center	center(self, width, *args)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` (:1518) are not modelled: an omitted argument is `none` on both sides, so `u.count(x)` is compared with `str.count(x)`, not with the `str.count(x, 0, sys.maxsize)` the body calls, and a version with a wrong default such as `end=0` passes.
+Lib/collections/__init__.py	1518	1521	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-defaults,coll-userstring-simulates	
 Lib/collections/__init__.py	1523	1526	UserString.removeprefix	removeprefix(self, prefix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1528	1531	UserString.removesuffix	removesuffix(self, suffix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
 Lib/collections/__init__.py	1533	1536	UserString.encode	encode(self, encoding='utf-8', errors='strict')	modelled	coll-userstring-construct-add,coll-userstring-simulates	
-Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), and the TypeError for a UserString suffix, which 3.15.2 still raises, is stated only in the siblings refutation, whose counterexample runs `partition`; the row's entry, strsearch-tailmatch-str-bytes, is about `str` and `bytes` and does not name UserString.
+Lib/collections/__init__.py	1538	1539	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	modelled	coll-userstring-affix-no-unwrap,coll-userstring-defaults,coll-userstring-simulates	
 Lib/collections/__init__.py	1541	1542	UserString.expandtabs	expandtabs(self, tabsize=8)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
-Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	todo		review: `usFormat` takes positional ints only and drops `**kwds`, so `u.format(name=...)` cannot be expressed, and a body that ignored `kwds` passes.
-Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	todo		review: The mapping is a list of (str, int) pairs, so a mapping with `__missing__` or a raising `__getitem__`, which is what distinguishes `format_map` from `format(**m)`, cannot be expressed, and a body `self.data.format(**mapping)` passes.
-Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`), so a version with a wrong default passes.
+Lib/collections/__init__.py	1544	1547	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-defaults,coll-userstring-simulates	
+Lib/collections/__init__.py	1549	1550	UserString.format	format(self, /, *args, **kwds)	modelled	coll-userstring-pass-through,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1552	1553	UserString.format_map	format_map(self, mapping)	modelled	coll-userstring-pass-through,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1555	1558	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-defaults,coll-userstring-simulates	
 Lib/collections/__init__.py	1560	1561	UserString.isalpha	isalpha(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1563	1564	UserString.isalnum	isalnum(self)	modelled	coll-userstring-simulates	
 Lib/collections/__init__.py	1566	1567	UserString.isascii	isascii(self)	modelled	coll-userstring-simulates	
@@ -177,18 +177,18 @@ Lib/collections/__init__.py	1602	1603	UserString.lower	lower(self)	modelled	coll
 Lib/collections/__init__.py	1605	1606	UserString.lstrip	lstrip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1610	1611	UserString.partition	partition(self, sep)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-partition-find
 Lib/collections/__init__.py	1613	1618	UserString.replace	replace(self, old, new, maxsplit=-1)	modelled	coll-userstring-replace-count,coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-replace-str-bytes
-Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); the row's strsearch entries are about `str` and do not name UserString.
-Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled (as for `count`); strsearch-find-str-bytes, the row's entry, does not name UserString.
+Lib/collections/__init__.py	1620	1623	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-defaults,coll-userstring-simulates	
+Lib/collections/__init__.py	1625	1628	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-defaults,coll-userstring-simulates	
 Lib/collections/__init__.py	1630	1631	UserString.rjust	rjust(self, width, *args)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1633	1634	UserString.rpartition	rpartition(self, sep)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1636	1637	UserString.rstrip	rstrip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1639	1640	UserString.split	split(self, sep=None, maxsplit=-1)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1642	1643	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	modelled	coll-str-clinic-order,coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1645	1646	UserString.splitlines	splitlines(self, keepends=False)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	todo		review: The defaults `start=0, end=_sys.maxsize` are not modelled, and the TypeError for a UserString prefix, which 3.15.2 still raises (:1648-1649), is stated only in the `partition` refutation.
+Lib/collections/__init__.py	1648	1649	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	modelled	coll-userstring-affix-no-unwrap,coll-userstring-defaults,coll-userstring-simulates	
 Lib/collections/__init__.py	1651	1652	UserString.strip	strip(self, chars=None)	modelled	coll-userstring-no-unwrap,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1654	1655	UserString.swapcase	swapcase(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1657	1658	UserString.title	title(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
-Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	todo		review: `*args` becomes one table of (int, int-or-None) pairs, so a sequence or str-valued table, a `__getitem__` that raises LookupError (keep the character) or anything else, and a wrong argument count cannot be expressed, and a body that did `self.data.translate(dict(table))` passes.
+Lib/collections/__init__.py	1660	1661	UserString.translate	translate(self, *args)	modelled	coll-userstring-pass-through,coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1663	1664	UserString.upper	upper(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1666	1667	UserString.zfill	zfill(self, width)	modelled	coll-userstring-result-class,coll-userstring-simulates	

@@ -48,7 +48,7 @@ def usRaddP (u : US) (a : SArgP) : Py US := (strOf a).map (fun s => ⟨u.cls, s 
 /-- `UserString.__rmod__`, :1505-1506: `self.__class__(str(template) % self)`. -/
 def usRmodP (ops : UniOps) (u : US) (template : SArgP) : Py US := do
   let t ← strOf template
-  wrapIn u (ops.modUser t u.data)
+  wrapIn u (ops.mod t (.user u.data))
 
 /-- `UserString.__getnewargs__`, :1446-1447: the 1-tuple `(self.data[:],)`. -/
 def usGetnewargsP (u : US) : List Seq := [u.data]
@@ -197,5 +197,72 @@ theorem strClinicOrder_proven : StrClinicOrder := by
     simp [argSsize, hw]
   simp only [strCenterA, strLjustA, strRjustA, strSplitA, strRSplitA, h]
   exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+
+/-- **The `start`/`end` defaults are `0` and `sys.maxsize`, the same as `str`'s.** For every
+`UserString`, text and bounds: `count`, `find`, `rfind`, `index`, `rindex`, `startswith` and
+`endswith` with `start` and `end` omitted give what the `str` method gives with them omitted; they
+pass `0` and `sys.maxsize` (:1518, :1538, :1544, :1555, :1620, :1625, :1648). A wrong default
+(`end=0`, say) fails the first conjunct.
+
+Source: Lib/collections/__init__.py:1518-1649; Objects/unicodeobject.c (`start` and `end` default
+to `0` and `PY_SSIZE_T_MAX`). -/
+def UserStringDefaults : Prop :=
+  ∀ (u : US) (t : Seq) (st en : Option Int) (fwd : Bool) (a : AffixArg),
+    usCount u (.str t) st en = strCountA u.data (.str t) st en ∧
+    usCount u (.str t) none none = strCountA u.data (.str t) (some 0) (some ssizeMax) ∧
+    usFind u (.str t) st en fwd = strFindA u.data (.str t) st en fwd ∧
+    usFind u (.str t) none none fwd = strFindA u.data (.str t) (some 0) (some ssizeMax) fwd ∧
+    usIndex u (.str t) st en fwd = strIndexA u.data (.str t) st en fwd ∧
+    usIndex u (.str t) none none fwd = strIndexA u.data (.str t) (some 0) (some ssizeMax) fwd ∧
+    usStartswith u a st en = strStartswithA u.data a st en ∧
+    usStartswith u a none none = strStartswithA u.data a (some 0) (some ssizeMax) ∧
+    usEndswith u a st en = strEndswithA u.data a st en ∧
+    usEndswith u a none none = strEndswithA u.data a (some 0) (some ssizeMax)
+
+theorem userStringDefaults_proven : UserStringDefaults := by
+  intro u t st en fwd a
+  exact ⟨strCountA_dflt _ _ _ _, rfl, strFindA_dflt _ _ _ _ _, rfl, strIndexA_dflt _ _ _ _ _, rfl,
+    strStartswithA_dflt _ _ _ _, rfl, strEndswithA_dflt _ _ _ _, rfl⟩
+
+/-- **`%`, `format`, `format_map` and `translate` pass their arguments through.** For every
+`UserString` and every argument: `u % x` is `self.__class__` around `u.data % x` for a tuple, a
+single object, a mapping and a `UserString` (passed as itself); `u.format(*args, **kwds)` is
+`u.data.format(*args, **kwds)`, keywords included; `u.format_map(m)` is `u.data.format_map(m)` for any
+mapping, a `__missing__` included; `u.translate(*args)` is `self.__class__` around
+`u.data.translate(*args)` for any table (mapping or sequence, `str` entries, a raising lookup), and
+anything but one argument is `str.translate`'s `TypeError`.
+
+Source: Lib/collections/__init__.py:1502-1503, :1549-1553, :1660-1661. -/
+def UserStringPassThrough : Prop :=
+  ∀ (ops : UniOps) (u : US) (x : ModArg) (args : List Int) (kw : List (String × Int)) (m : FMap)
+    (t : TTable) (ts : List TTable),
+    usMod ops u x = (ops.mod u.data x).map (fun d => ⟨u.cls, d⟩) ∧
+    usFormat ops u args kw = ops.format u.data args kw ∧
+    usFormatMap ops u m = ops.formatMap u.data m ∧
+    usTranslate ops u [t] = (ops.translate u.data t).map (fun d => ⟨u.cls, d⟩) ∧
+    (ts.length ≠ 1 → usTranslate ops u ts =
+      .error (.typeError s!"str.translate() takes exactly one argument ({ts.length} given)"))
+
+theorem userStringPassThrough_proven : UserStringPassThrough := by
+  intro ops u x args kw m t ts
+  refine ⟨rfl, rfl, rfl, rfl, fun h => ?_⟩
+  match ts, h with
+  | [], _ => rfl
+  | [_], h => exact absurd rfl h
+  | _ :: _ :: _, _ => rfl
+
+/-- **`startswith` and `endswith` do not unwrap a `UserString` prefix.** For every `UserString` and
+text, with any bounds: a `UserString` prefix or suffix raises `str`'s `TypeError`, where `count` or
+`replace` would unwrap it (still so on 3.15.2, :1538-1539, :1648-1649).
+
+Source: Lib/collections/__init__.py:1538-1539, :1648-1649. -/
+def UserStringAffixNoUnwrap : Prop :=
+  ∀ (ops : UniOps) (u : US) (s : Seq) (st en : Option Int),
+    usCall ops (.startswith (.one (.user s)) st en) u =
+      .error (.typeError "startswith first arg must be str or a tuple of str, not UserString") ∧
+    usCall ops (.endswith (.one (.user s)) st en) u =
+      .error (.typeError "endswith first arg must be str or a tuple of str, not UserString")
+
+theorem userStringAffixNoUnwrap_proven : UserStringAffixNoUnwrap := fun _ _ _ _ _ => ⟨rfl, rfl⟩
 
 end PyLean.CoreLibs.Coll

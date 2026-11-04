@@ -878,20 +878,36 @@ def coll_gen_us(rng):
     if op == "getslice":
         coll_slice_args(rng, case, ("st", "en", "se"))
     if op == "format":
-        case["s"] = list(map(ord, rng.choice(["x", "{}", "{}{}", "{0}", "{1}", ""])))
+        case["s"] = list(map(ord, rng.choice(["x", "{}", "{}{}", "{0}", "{1}", "", "{a}", "{0}{a}"])))
         case["args"] = coll_ints(rng)[:2]
+        case["kw"] = [["a", rng.randint(0, 9)]] if rng.random() < 0.5 else []
     if op == "format_map":
         case["s"] = list(map(ord, rng.choice(["x", "{a}", "{b}", ""])))
         case["m"] = [["a", rng.randint(0, 9)]]
+        case["miss"] = rng.random() < 0.4
     if op == "mod":
-        case["s"] = list(map(ord, rng.choice(["x", "%d", "%s%d", "%%", "", "%d%%"])))
-        case["args"] = coll_ints(rng)[:2]
+        case["mk"] = rng.choice(["tuple", "single", "mapping", "user"])
+        if case["mk"] == "mapping":
+            case["s"] = list(map(ord, rng.choice(["x", "%(a)s", "%(a)d", "%%", "%(b)s"])))
+            case["m"] = [["a", rng.randint(0, 9)]]
+        elif case["mk"] == "user":
+            case["s"] = list(map(ord, rng.choice(["x", "%s", "x%sy"])))
+            case["us"] = coll_cps(rng, n=3)
+        else:
+            case["s"] = list(map(ord, rng.choice(["x", "%d", "%s%d", "%%", "", "%d%%"])))
+            case["args"] = coll_ints(rng)[:2]
+            case["v"] = rng.randint(-5, 5)
     if op == "rmod":
         case["t"] = list(map(ord, rng.choice(["5", "%s", "x%sy", "%s%s"])))
     if op == "translate":
-        case["t"] = [[ord(rng.choice(coll_ALPHA)), rng.choice([None, 120])]
-                     for _ in range(rng.randint(0, 3))]
-        case["t"] = list({p[0]: p for p in case["t"]}.values())
+        case["tk"] = rng.choice(["dict", "dict", "list", "bad"])
+        if case["tk"] == "list":
+            case["t"] = [[i, rng.choice([None, 120, "yz", i])] for i in range(rng.randint(0, 100))]
+        else:
+            case["t"] = [[ord(rng.choice(coll_ALPHA)), rng.choice([None, 120, "yz", ""])]
+                         for _ in range(rng.randint(0, 3))]
+            case["t"] = list({p[0]: p for p in case["t"]}.values())
+        case["n"] = rng.choice([1, 1, 1, 1, 0, 2])
     if op == "encode":
         case["enc"] = rng.choice(["utf-8", "ascii", "nope"])
         case["err"] = rng.choice(["strict", "ignore"])
@@ -916,6 +932,16 @@ def coll_enc_us(r):
     if isinstance(r, tuple):
         return {"tup": [list(map(ord, x)) for x in r]}
     raise AssertionError(type(r))
+
+
+class coll_FMiss(dict):
+    def __missing__(self, key):
+        return -1
+
+
+class coll_BadTable:
+    def __getitem__(self, k):
+        raise ValueError("t")
 
 
 def coll_run_us(case):
@@ -997,13 +1023,28 @@ def coll_run_us(case):
         if op == "getslice":
             return coll_enc_us(u[slice(st, en, case.get("se"))])
         if op == "format":
-            return coll_enc_us(u.format(*case["args"]))
+            return coll_enc_us(u.format(*case["args"], **coll_d(case["kw"])))
         if op == "format_map":
-            return coll_enc_us(u.format_map(coll_d(case["m"])))
+            m = (coll_FMiss if case["miss"] else dict)(coll_d(case["m"]))
+            return coll_enc_us(u.format_map(m))
         if op == "mod":
-            return coll_enc_us(u % tuple(case["args"]))
+            mk = case["mk"]
+            if mk == "tuple":
+                return coll_enc_us(u % tuple(case["args"]))
+            if mk == "single":
+                return coll_enc_us(u % case["v"])
+            if mk == "mapping":
+                return coll_enc_us(u % coll_d(case["m"]))
+            return coll_enc_us(u % coll_collections.UserString("".join(map(chr, case["us"]))))
         if op == "translate":
-            return coll_enc_us(u.translate(coll_d(case["t"])))
+            tk = case["tk"]
+            if tk == "list":
+                table = [v for _, v in case["t"]]
+            elif tk == "bad":
+                table = coll_BadTable()
+            else:
+                table = coll_d(case["t"])
+            return coll_enc_us(u.translate(*([table] * case["n"])))
         if op == "encode":
             return coll_enc_us(u.encode(case["enc"], case["err"]))
         if op == "len":
