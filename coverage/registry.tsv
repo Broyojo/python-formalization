@@ -2330,7 +2330,7 @@ bytecode-iter-len-reduce	open	Objects/iterobject.c	iter_len,iter_reduce
 bytecode-anext-coroutine	open	Objects/iterobject.c	anextawaitable_iternext,anextawaitable_getiter
 bytecode-enum-reduce	open	Objects/enumobject.c	enum_reduce
 bytecode-reversed-setstate	open	Objects/enumobject.c	reversed_setstate,reversed_len
-bytecode-yield-suspends	open	Python/bytecodes.c	opcode:YIELD_VALUE
+bytecode-yield-suspends	proven	Python/bytecodes.c	opcode:YIELD_VALUE,opcode:_YIELD_VALUE
 bytecode-frame-push-pop	open	Objects/frameobject.c	push_value,pop_value,top_of_stack
 bytecode-lawful-builtin	proven	Python/bytecodes.c	
 bytecode-gap-str-percent	open	Objects/unicodeobject.c	
@@ -2375,6 +2375,16 @@ bytecode-get-anext	proven	Python/bytecodes.c	opcode:GET_ANEXT,_PyEval_GetANext
 bytecode-load-special	proven	Python/bytecodes.c	opcode:LOAD_SPECIAL,opcode:_LOAD_SPECIAL,opcode:_INSERT_NULL
 bytecode-attr-method-no-dict	proven	Python/bytecodes.c	opcode:LOAD_ATTR_METHOD_NO_DICT,opcode:_LOAD_ATTR_METHOD_NO_DICT,opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT,opcode:LOAD_ATTR_METHOD_LAZY_DICT,opcode:_CHECK_ATTR_METHOD_LAZY_DICT,opcode:_LOAD_ATTR_METHOD_LAZY_DICT
 bytecode-get-awaitable	proven	Python/bytecodes.c	opcode:GET_AWAITABLE,_PyEval_GetAwaitable,_PyEval_FormatAwaitableError
+bytecode-call-builtin-fn	proven	Python/bytecodes.c	opcode:CALL_BUILTIN_O,opcode:_GUARD_CALLABLE_BUILTIN_O,opcode:_CALL_BUILTIN_O,opcode:_CHECK_RECURSION_LIMIT,opcode:CALL_BUILTIN_FAST,opcode:_GUARD_CALLABLE_BUILTIN_FAST,opcode:_CALL_BUILTIN_FAST,opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS,opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS,opcode:CALL_BUILTIN_CLASS,opcode:_GUARD_CALLABLE_BUILTIN_CLASS,opcode:_CALL_BUILTIN_CLASS,_Py_BuiltinCallFast_StackRef,_Py_BuiltinCallFastWithKeywords_StackRef,_Py_CallBuiltinClass_StackRef
+bytecode-call-method-descriptor	proven	Python/bytecodes.c	opcode:CALL_METHOD_DESCRIPTOR_O,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O,opcode:_CALL_METHOD_DESCRIPTOR_O,opcode:CALL_METHOD_DESCRIPTOR_NOARGS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS,opcode:CALL_METHOD_DESCRIPTOR_FAST,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST,opcode:_CALL_METHOD_DESCRIPTOR_FAST,opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS,_PyCallMethodDescriptorFast_StackRef,_PyCallMethodDescriptorFastWithKeywords_StackRef
+bytecode-call-method-descriptor-inline	proven	Python/bytecodes.c	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE,opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE
+bytecode-send-async-gen	proven	Python/bytecodes.c	opcode:SEND_ASYNC_GEN,opcode:_GUARD_3OS_ASYNC_GEN_ASEND,opcode:_SEND_ASYNC_GEN,_PyAsyncGenASend_Send
+bytecode-return-generator	proven	Python/bytecodes.c	opcode:RETURN_GENERATOR
+bytecode-send	proven	Python/bytecodes.c	opcode:SEND,opcode:_SEND
+bytecode-iter-send	proven	Objects/abstract.c	
+bytecode-traceback-here	proven	Python/bytecodes.c	
+bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
+bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
