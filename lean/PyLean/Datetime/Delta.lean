@@ -4,10 +4,12 @@ import PyLean.Core
 `timedelta` with integer arguments: the pure-Python class
 (`Lib/_pydatetime.py:635-995`) and the C type (`Modules/_datetimemodule.c`,
 `delta_new_impl` :2832-2932, `microseconds_to_delta_ex` :2218-2284, `new_delta_ex`
-:1383-1411 and the number methods).
+:1384-1411 and the number methods).
 
-Float arguments are out of scope. Python's `divmod` and `//`, `%` by a positive
-constant are Lean's `/`, `%` on `Int` (Euclidean division agrees with floor
+This file has the int-argument layer; float arguments are in `TdFloat.lean` (the
+constructor) and `Twins.lean` (`*` and `/` by a float), on exact binary64, and the C objects
+with their class and the `zero_delta` singleton in `DeltaObj.lean`. Python's `divmod` and
+`//`, `%` by a positive constant are Lean's `/`, `%` on `Int` (Euclidean division agrees with floor
 division for a positive divisor); for a divisor of either sign we use
 `Int.fdiv` / `Int.fmod`.
 -/
@@ -85,7 +87,11 @@ def divideAndRound (a b : Int) : Py Int := do
 /-- C `divide_nearest`, :392-403, which is `_PyLong_DivmodNear(m, n)[0]`,
 Objects/longobject.c:6118-6187: truncating `long_divrem`, then twice the remainder (negated
 when the quotient is negative) compared with the divisor, then the quotient moved one away
-from zero. The `PyLong_Check` refusals cannot happen: both callers pass ints. -/
+from zero. The `PyLong_Check` refusal (`TypeError: non-integer arguments in division`,
+longobject.c:6140-6144) is not modelled: `truedivide_timedelta_int` passes ints, and
+`multiply_truedivide_timedelta_float` passes the items of `as_integer_ratio()`, which are ints
+for a `float` but can be anything for a float subclass that overrides the method (that case
+is outside `RatioSeq`, Twins.lean). -/
 def divideNearestC (a b : Int) : Py Int :=
   if b = 0 then .error (.zeroDivisionError "division by zero")
   else
@@ -157,17 +163,36 @@ def deltaC (days seconds microseconds milliseconds minutes hours weeks : Int) : 
   usToDeltaC (microseconds + milliseconds * 1000 + seconds * 1000000 + minutes * 60000000 +
     hours * 3600000000 + days * 86400000000 + weeks * 604800000000)
 
-/-- `normalize_pair`, :724-735, using the C `divmod` helper (:373-386), which
-rounds towards minus infinity. The callers' inputs are within a few times the
-field ranges, so the C `int` arithmetic does not overflow. -/
-def normalizePair (hi lo factor : Int) : Int × Int :=
-  if lo < 0 ∨ lo ≥ factor then (hi + lo / factor, lo % factor) else (hi, lo)
+/-- The C `divmod` helper, :373-386: C's truncating `x / y`, the remainder `x - quo * y`, and
+one step towards minus infinity when the remainder is negative. Its callers require
+`y > 0` (the `assert` at :377); then `quo * y` never overflows. Returns `(quo, r)`. -/
+def cDivmod (x y : Int) : Int × Int :=
+  let quo := x.tdiv y
+  let r := x - quo * y
+  if r < 0 then (quo - 1, r + y) else (quo, r)
 
-/-- `new_delta(d, s, us, 1)`: `normalize_d_s_us` (:744-767) then the day range
-check, :1383-1411. -/
-def newDeltaNormC (d s us : Int) : Py Delta := do
+/-- `normalize_pair(hi, lo, factor)`, :724-735: when `lo` is outside `[0, factor)`, the C
+`divmod` of `lo` by `factor` moves the quotient into `hi`. The callers' inputs are within a
+few times the field ranges, so the C `int` addition does not overflow (the `assert` at
+:731). Returns `(hi, lo)`. -/
+def normalizePair (hi lo factor : Int) : Int × Int :=
+  if lo < 0 ∨ lo ≥ factor then
+    let (numHi, lo) := cDivmod lo factor
+    (hi + numHi, lo)
+  else (hi, lo)
+
+/-- `normalize_d_s_us`, :744-762: microseconds into seconds, then seconds into days, each
+only when out of range. Returns `(d, s, us)`. -/
+def normalizeDSUsC (d s us : Int) : Int × Int × Int :=
   let (s, us) := if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)
   let (d, s) := if s < 0 ∨ s ≥ 86400 then normalizePair d s 86400 else (d, s)
+  (d, s, us)
+
+/-- `new_delta(d, s, us, 1)` as a value: `normalize_d_s_us` then the day range check of
+`new_delta_ex`, :1384-1411. `newDeltaExC` (DeltaObj.lean) is the whole function, with the
+class and the `zero_delta` singleton; `newDeltaExC_norm_val` relates the two. -/
+def newDeltaNormC (d s us : Int) : Py Delta := do
+  let (d, s, us) := normalizeDSUsC d s us
   checkDeltaDayRange d
   return ⟨d, s, us⟩
 

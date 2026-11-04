@@ -70,13 +70,34 @@ theorem usToDeltaC_eq (x : Int) :
   · simp only [h1, ite_false]
     rfl
 
+/-- The C `divmod` helper is floor division for every positive divisor. -/
+theorem cDivmod_eq (x y : Int) (hy : 0 < y) : cDivmod x y = (x / y, x % y) := by
+  have h1 := Int.tmod_add_tdiv_mul x y
+  have h2 := Int.tmod_lt_of_pos x hy
+  have h3 := Int.lt_tmod_of_pos x hy
+  unfold cDivmod
+  simp only
+  split
+  · have := (Int.ediv_emod_unique (a := x) (r := x - x.tdiv y * y + y) (q := x.tdiv y - 1) hy).mpr
+      ⟨by rw [Int.mul_sub]; rw [Int.mul_comm y]; omega, by omega, by omega⟩
+    rw [this.1, this.2]
+  · have := (Int.ediv_emod_unique (a := x) (r := x - x.tdiv y * y) (q := x.tdiv y) hy).mpr
+      ⟨by rw [Int.mul_comm y]; omega, by omega, by omega⟩
+    rw [this.1, this.2]
+
+theorem normalizePair_pos (hi lo factor : Int) (h : 0 < factor) :
+    normalizePair hi lo factor =
+      if lo < 0 ∨ lo ≥ factor then (hi + lo / factor, lo % factor) else (hi, lo) := by
+  unfold normalizePair
+  rw [cDivmod_eq lo factor h]
+
 theorem normStep_us (s us : Int) :
     (if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)).1 * 1000000 +
       (if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)).2 = s * 1000000 + us ∧
     0 ≤ (if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)).2 ∧
     (if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)).2 < 1000000 := by
   by_cases h : us < 0 ∨ us ≥ 1000000
-  · simp only [h, normalizePair, ite_true]; omega
+  · simp only [h, normalizePair_pos s us 1000000 (by decide), ite_true]; omega
   · simp only [h, ite_false, true_and]; omega
 
 theorem normStep_s (d s : Int) :
@@ -85,12 +106,18 @@ theorem normStep_s (d s : Int) :
     0 ≤ (if s < 0 ∨ s ≥ 86400 then normalizePair d s 86400 else (d, s)).2 ∧
     (if s < 0 ∨ s ≥ 86400 then normalizePair d s 86400 else (d, s)).2 < 86400 := by
   by_cases h : s < 0 ∨ s ≥ 86400
-  · simp only [h, normalizePair, ite_true]; omega
+  · simp only [h, normalizePair_pos d s 86400 (by decide), ite_true]; omega
   · simp only [h, ite_false, true_and]; omega
 
-theorem newDeltaNormC_eq (d s us : Int) : newDeltaNormC d s us = mkDeltaN ((d * 86400 + s) * 1000000 + us) := by
+/-- `normalize_d_s_us` keeps the total `(d * 86400 + s) * 10**6 + us` and leaves
+`0 <= s < 86400`, `0 <= us < 10**6`. -/
+theorem normalizeDSUsC_spec (d s us : Int) :
+    ((normalizeDSUsC d s us).1 * 86400 + (normalizeDSUsC d s us).2.1) * 1000000 +
+        (normalizeDSUsC d s us).2.2 = (d * 86400 + s) * 1000000 + us ∧
+    0 ≤ (normalizeDSUsC d s us).2.1 ∧ (normalizeDSUsC d s us).2.1 < 86400 ∧
+    0 ≤ (normalizeDSUsC d s us).2.2 ∧ (normalizeDSUsC d s us).2.2 < 1000000 := by
   have h1 := normStep_us s us
-  unfold newDeltaNormC
+  unfold normalizeDSUsC
   generalize (if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)) = p1 at h1 ⊢
   obtain ⟨s1, us1⟩ := p1
   have h2 := normStep_s d s1
@@ -98,9 +125,20 @@ theorem newDeltaNormC_eq (d s us : Int) : newDeltaNormC d s us = mkDeltaN ((d * 
   generalize (if s1 < 0 ∨ s1 ≥ 86400 then normalizePair d s1 86400 else (d, s1)) = p2 at h2 ⊢
   obtain ⟨d2, s2⟩ := p2
   simp only at h2 ⊢
+  refine ⟨?_, h2.2.1, h2.2.2, h1.2.1, h1.2.2⟩
+  have := h1.1; have := h2.1
+  omega
+
+theorem newDeltaNormC_eq (d s us : Int) : newDeltaNormC d s us = mkDeltaN ((d * 86400 + s) * 1000000 + us) := by
+  have h := normalizeDSUsC_spec d s us
+  unfold newDeltaNormC
+  generalize normalizeDSUsC d s us = p at h ⊢
+  obtain ⟨d2, s2, us2⟩ := p
+  obtain ⟨h0, h1, h2, h3, h4⟩ := h
+  simp only at h0 h1 h2 h3 h4 ⊢
   have e1 : d2 = ((d * 86400 + s) * 1000000 + us) / 86400000000 := by omega
   have e2 : s2 = ((d * 86400 + s) * 1000000 + us) / 1000000 % 86400 := by omega
-  have e3 : us1 = ((d * 86400 + s) * 1000000 + us) % 1000000 := by omega
+  have e3 : us2 = ((d * 86400 + s) * 1000000 + us) % 1000000 := by omega
   subst e1 e2 e3
   unfold checkDeltaDayRange mkDeltaN
   split <;> simp [*, bind, Except.bind, Functor.map, Except.map, pure, Except.pure]

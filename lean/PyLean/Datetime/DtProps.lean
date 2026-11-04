@@ -286,17 +286,17 @@ theorem datetimeSubTwins_proven : DatetimeSubTwins := by
 /-! ### `datetime + timedelta` -/
 
 theorem np_us (hi lo : Int) : normalizePair hi lo 1000000 = (hi + lo / 1000000, lo % 1000000) := by
-  unfold normalizePair; split
+  rw [normalizePair_pos hi lo 1000000 (by decide)]; split
   · rfl
   · simp only [Prod.mk.injEq]; omega
 
 theorem np_60 (hi lo : Int) : normalizePair hi lo 60 = (hi + lo / 60, lo % 60) := by
-  unfold normalizePair; split
+  rw [normalizePair_pos hi lo 60 (by decide)]; split
   · rfl
   · simp only [Prod.mk.injEq]; omega
 
 theorem np_24 (hi lo : Int) : normalizePair hi lo 24 = (hi + lo / 24, lo % 24) := by
-  unfold normalizePair; split
+  rw [normalizePair_pos hi lo 24 (by decide)]; split
   · rfl
   · simp only [Prod.mk.injEq]; omega
 
