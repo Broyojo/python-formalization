@@ -48,11 +48,54 @@ def entries : List Entry := [
       "deque_appendleft_impl", "deque_extend_impl", "deque_extendleft_impl", "deque_pop_impl",
       "deque_popleft_impl", "deque_clear", "deque_clearmethod_impl", "deque_inplace_concat",
       "finalize_iterator", "consume_iterator"]
-    statement := "For every deque satisfying the block-layout invariant and any items: append/extend/+=/extend(d) keep the last maxlen items of items + xs, appendleft/extendleft keep the first maxlen of reversed(xs) + items, pop/popleft remove the last/first item or raise IndexError when empty; the invariant and maxlen are preserved."
+    statement := "For every deque satisfying the block-layout invariant and any items: append/extend/+=/extend(d) keep the last maxlen items of items + xs, appendleft/extendleft keep the first maxlen of reversed(xs) + items, pop/popleft remove the last/first item or raise IndexError when empty; the invariant and maxlen are preserved. An iterator that does not touch the deque and ends with StopIteration (or runs out) makes extend/extendleft/+= return None, one that raises another exception e after its items makes them raise e with the items kept, a non-iterable raises TypeError and changes nothing."
     source := "Doc/library/collections.rst:479-485 (bounded deques discard from the opposite end), :488-565", status := .proven
     prop := ``DequeEndsEvict, thm := some ``dequeEndsEvict_proven },
+  { id := "sequences-deque-extend-reentrant", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_extend_impl", "deque_extendleft_impl", "deque_inplace_concat", "finalize_iterator",
+      "consume_iterator"]
+    statement := "For every deque and every iterator whose __iter__ and __next__ calls run arbitrary code on the deque that keeps its invariant and maxlen: extend/extendleft/+= leave a deque satisfying the invariant with the same maxlen (maxlen == 0 included, the consume_iterator path). For any such calls that yield and then optionally a call raising e: the result is None when they run out or e is StopIteration, and e otherwise, also when maxlen == 0; an __iter__ raising e raises e with no __next__ call."
+    source := "invariant: exceptions propagate, StopIteration ends iteration; Doc/library/collections.rst:479-485", status := .proven
+    prop := ``DequeExtendRe, thm := some ``dequeExtendRe_proven
+    notes := "The iterator is a list of re-entrant calls (Deque -> Py item x Deque), finite by scope. The loop applies the maxlen read at entry (:484, :539); sequences-deque-extend-keeps-bound is the refutation for an iterator that changes it." },
+  { id := "sequences-deque-extend-keeps-bound", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_extend_impl"]
+    statement := "For every deque and every iterator whose __iter__ and __next__ calls each keep the deque's invariant (len(d) <= maxlen for a bounded deque), __init__ included, extend and extendleft leave a deque that satisfies it."
+    source := "Doc/library/collections.rst:479-485 (bounded deques discard from the opposite end); invariant len(d) <= maxlen", status := .refuted
+    prop := ``DequeExtendKeepsBound, thm := some ``dequeExtendKeepsBound_refuted
+    bug := some "sequences-deque-extend-reinit-maxlen"
+    notes := "deque().extend(X()) where X.__iter__ calls d.__init__(maxlen=1) and returns iter([1, 2, 3]) leaves deque([1, 2, 3], maxlen=1): deque_extend_impl captured maxlen = -1 before PyObject_GetIter." },
+  { id := "sequences-deque-init", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_new", "deque_init_impl"]
+    statement := "A new deque is empty, unbounded (maxlen None before __init__) and centred in its block. For every deque d (not only a fresh one): d.__init__(xs, maxlen) empties d first and then holds the last maxlen items of xs; an iterator raising e after xs raises e with those items kept; an invalid maxlen raises before anything is cleared; d.__init__() without an iterable empties d without moving an empty deque's block indices, unlike d.__init__([])."
+    source := "Doc/library/collections.rst:463-485; invariant: re-initialisation", status := .proven
+    prop := ``DequeInit, thm := some ``dequeInit_proven },
+  { id := "sequences-deque-search-reentrant", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_count_impl", "deque_contains_lock_held", "deque_contains", "deque_index_impl",
+      "deque_remove_impl"]
+    statement := "For every deque, value and __eq__ that may raise or run code on the deque, and every k < len(d) with the comparisons before k false and harmless: a comparison with item k raising e makes count, in, index and remove raise e; one returning c after changing the deque's mutation counter makes count raise RuntimeError('deque mutated during iteration'), in/index return the match when c is true and raise that RuntimeError otherwise, and remove raise IndexError('deque mutated during iteration') whatever c is."
+    source := "invariant: exceptions propagate; the C checks (:1175-1183, :1210-1217, :1307-1315, :1474-1484)", status := .proven
+    prop := ``DequeSearchRe, thm := some ``dequeSearchRe_proven
+    notes := "index is stated for deque_index_impl(d, v, 0, len(d)), after the argument conversion that sequences-index-agree covers." },
+  { id := "sequences-deque-concat-args", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_concat_lock_held", "deque_concat"]
+    statement := "For every deque d and every right operand: a non-deque raises TypeError('can only concatenate deque (not \"T\") to deque'), an instance check that raises propagates, and an instance (a deque or an object whose __class__ claims deque) is iterated into a copy of d: the last d.maxlen items of list(d) + its items with d's maxlen and type, its exception when the iteration raises, TypeError when it is not iterable."
+    source := "Doc/library/collections.rst:599-600; invariant: exceptions propagate", status := .proven
+    prop := ``DequeConcatArgs, thm := some ``dequeConcatArgs_proven },
+  { id := "sequences-deque-mul", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_repeat"]
+    statement := "For every deque and every int n in Py_ssize_t whose repeated result list(d)*n, cut to the last maxlen items, has at most sys.maxsize items (always for bounded deques), d * n succeeds with exactly those items."
+    source := "Doc/library/collections.rst:479-482, 599-600", status := .refuted
+    prop := ``DequeMul, thm := some ``dequeMul_refuted
+    bug := some "sequences-deque-imul-maxlen-memoryerror"
+    notes := "deque([1, 2], maxlen=3) * 2**62 raises MemoryError: deque_repeat copies and calls deque_inplace_repeat_lock_held, whose overflow guard precedes the maxlen reduction." },
+  { id := "sequences-deque-mul-checked", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_repeat"]
+    statement := "For every deque (maxlen a Py_ssize_t) and n in Py_ssize_t with len(d) <= 1 or len(d) * n <= sys.maxsize, d * n holds the last maxlen items of list(d) * n with d's maxlen and the invariant; n outside Py_ssize_t raises OverflowError."
+    source := "Doc/library/collections.rst:479-482, 599-600", status := .proven
+    prop := ``DequeMulChecked, thm := some ``dequeMulChecked_proven },
   { id := "sequences-deque-construct", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_new", "deque_init_impl", "deque_len", "deque_get_maxlen"]
+    pyFns := ["deque_init_impl", "deque_get_maxlen"]
     statement := "deque(xs, maxlen) holds xs (maxlen None) or the last maxlen items of xs (0 <= maxlen <= sys.maxsize); a negative maxlen raises ValueError and one outside Py_ssize_t OverflowError."
     source := "Doc/library/collections.rst:463-485", status := .proven
     prop := ``DequeConstruct, thm := some ``dequeConstruct_proven },
@@ -491,40 +534,40 @@ def entries : List Entry := [
     prop := ``DefDictGetitem, thm := some ``defDictGetitem_proven },
   { id := "sequences-defdict-copy-reduce", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["defdict_copy", "new_defdict", "defdict_reduce"]
-    statement := "dd.copy() has the same items in order, type and factory; __reduce__ gives the items and the factory when callable."
+    statement := "dd.copy() has the same items in order, type and factory (NULL becoming None); __reduce__ calls dd.items() and returns (type(dd), args, None, None, iter(items)) with args () or (factory,), raising what items() raises and TypeError for a non-iterable result."
     source := "invariant", status := .proven
     prop := ``DefDictCopyReduce, thm := some ``defDictCopyReduce_proven },
   { id := "sequences-defdict-repr-init-or", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["defdict_repr", "defdict_init", "defdict_or"]
-    statement := "repr shows the factory, or None, or ... while printing it; __init__ refuses a non-callable and replaces the factory before dict.__init__ runs; | has the updated items and the defaultdict operand's type and factory, also with a frozendict operand, NotImplemented for anything else."
+    statement := "repr is type(factory repr, dict repr): the dict repr first (its exception wins), None for a NULL factory without Py_ReprEnter, a failing Py_ReprEnter or factory repr propagating, ... while the factory is being printed; __init__ refuses a non-callable and replaces the factory before dict.__init__ runs; | has the updated items and the defaultdict operand's type and factory, also with a frozendict operand, NotImplemented for anything else."
     source := "Doc/library/collections.rst defaultdict", status := .proven
     prop := ``DefDictReprInitOr, thm := some ``defDictReprInitOr_proven },
   { id := "sequences-count-agree", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["_collections__count_elements_impl"]
-    statement := "On a real dict, the fast path, the slow path and the pure-Python twin of _count_elements end in the same state with the same outcome, for every __hash__ and __add__, provided 0 + 1 is 1."
+    statement := "On a real dict, the fast path, the slow path and the pure-Python twin of _count_elements end in the same state with the same outcome, for every iterator (whose __next__ may change the dict or raise), every __hash__ and every __add__ (which may raise, or mutate or clear the dict), provided 0 + 1 is 1."
     source := "Lib/collections/__init__.py:540-544 twin", status := .proven
     prop := ``CountAgree, thm := some ``countAgree_proven
     notes := "The theorem passes one hash outcome to all paths: the slow path's TypeError for an unhashable key is worded differently in CPython, which the difftest records." },
   { id := "sequences-count-elements", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["_collections__count_elements_impl"]
-    statement := "With int counts, every key's count grows by its number of occurrences; a raising iterable keeps the counts reached; a non-iterable raises TypeError."
+    statement := "With int counts, every key's count grows by its number of occurrences; a raising iterable keeps the counts reached and raises, StopIteration ends normally; a non-iterable raises TypeError; for every __add__ the sum is stored into the dict as __add__ left it."
     source := "Doc/library/collections.rst Counter.update", status := .proven
     prop := ``CountElements, thm := some ``countElements_proven },
   { id := "sequences-tuplegetter", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["tuplegetter_new_impl", "tuplegetter_descr_get", "tuplegetter_descr_set",
       "tuplegetter_reduce", "tuplegetter_repr"]
-    statement := "A tuplegetter reads item index of a tuple when 0 <= index < len, raises IndexError otherwise and TypeError for other objects, refuses assignment, is rebuilt by __reduce__, and refuses an index outside Py_ssize_t."
+    statement := "A tuplegetter reads item index of a tuple when 0 <= index < len, raises IndexError otherwise and TypeError for other objects, raises AttributeError(\"can't set attribute\") / (\"can't delete attribute\"), is rebuilt by __reduce__, refuses an index outside Py_ssize_t, and its repr is the type name with the repr of the __reduce__ arguments, raising what repr(doc) raises."
     source := "invariant", status := .proven
     prop := ``TupleGetterSpec, thm := some ``tupleGetterSpec_proven },
   { id := "sequences-deque-irepeat", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat", "deque_repeat"]
+    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat"]
     statement := "For every deque and every int n in Py_ssize_t whose repeated result list(d)*n, cut to the last maxlen items, has at most sys.maxsize items (always for bounded deques), d *= n succeeds with exactly those items."
     source := "Doc/library/collections.rst:479-482, 599-600", status := .refuted
     prop := ``DequeIRepeat, thm := some ``dequeIRepeat_refuted
     bug := some "sequences-deque-imul-maxlen-memoryerror"
     notes := "deque([1, 2], maxlen=3) *= 2**62 raises MemoryError: the overflow guard precedes the maxlen reduction (the one-item fast path applies maxlen first)." },
   { id := "sequences-deque-irepeat-checked", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat", "deque_repeat"]
+    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat"]
     statement := "For every deque with at most one item, or with len(d) * n <= sys.maxsize, d *= n (n in Py_ssize_t) holds the last maxlen items of list(d) * n, keeping the invariant and maxlen."
     source := "Doc/library/collections.rst:479-482, 599-600", status := .proven
     prop := ``DequeIRepeatChecked, thm := some ``dequeIRepeatChecked_proven
