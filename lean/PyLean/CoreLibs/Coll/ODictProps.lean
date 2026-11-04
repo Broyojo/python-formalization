@@ -122,6 +122,7 @@ structure ODInv (o : OD κ ν) (L : List (Nat × κ)) : Prop where
   map : ∀ k, D.get? o.map k = (L.find? (·.2 = k)).map (·.1)
   mem : ∀ k, D.mem o.d k = decide (k ∈ L.map (·.2))
   wfd : D.WF o.d
+  wfm : D.WF o.map
 
 /-- **Iteration follows the links.** Under the invariant, `list(od)` is the keys of `L` in order. -/
 theorem keysList_inv {o : OD κ ν} {L : List (Nat × κ)} (I : ODInv o L) : o.keysList = L.map (·.2) := by
@@ -130,6 +131,6 @@ theorem keysList_inv {o : OD κ ν} {L : List (Nat × κ)} (I : ODInv o L) : o.k
   exact walk_chain o L 0 o.next (fun x hx => Nat.pos_iff_ne_zero.1 (I.pos x hx).1) I.len I.chain
 
 theorem odInv_new : ODInv (OD.new : OD κ ν) [] := by
-  refine ⟨trivial, rfl, by simp, by simp, by simp, by simp [OD.new], fun k => rfl, fun k => rfl, D.WF_nil⟩
+  refine ⟨trivial, rfl, by simp, by simp, by simp, by simp [OD.new], fun k => rfl, fun k => rfl, D.WF_nil, D.WF_nil⟩
 
 end PyLean.CoreLibs.Coll
