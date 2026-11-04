@@ -172,4 +172,48 @@ theorem invalidDefault_proven : InvalidDefault := by
   · rw [alts_fail (by rfl) he' (by dsimp only; rw [items_call_null (by rw [call_tok, h1])]), alts_nil]
     rfl
 
+/-- `_tmp_126: ')' | ','` (8, 12), the lookahead group of `invalid_default`: that token with the
+mark past it; at any other token (`:` included, so a lambda's `a=:` is not diagnosed here) `NULL`
+with the state the entry read left. -/
+def Tmp126 : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  let t := q.tokenAt p.mark
+  ((t.type = 8 ∨ t.type = 12) →
+    callRule (f + 7) 403 p = (.tok t, { q with mark := p.mark + 1 }.leave)) ∧
+  (t.type ≠ 8 → t.type ≠ 12 → callRule (f + 7) 403 p = (.null, q.leave))
+
+theorem tmp126_proven : Tmp126 := by
+  intro f p q h
+  obtain ⟨he, -, -, -, hm, hlt, -⟩ := h.facts
+  have he' : p.enter.errorIndicator = false := h.ei
+  have hq : { q with mark := p.mark } = q := by rw [← hm]
+  have hlt' : q.mark < q.fill := hm ▸ hlt
+  have ek : ∀ ty g, runCall (g + 1) (.tok ty) q = if (q.tokenAt p.mark).type = ty then
+      (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) else (.null, q) := by
+    intro ty g
+    rw [call_tok, expectToken_at _ _ hlt', hm]
+  have e1 : ∀ ty g, runCall (g + 1) (.tok ty) p.enter = if (q.tokenAt p.mark).type = ty then
+      (.tok (q.tokenAt p.mark), { q with mark := p.mark + 1 }) else (.null, q) := by
+    intro ty g
+    rw [call_tok, expect_entered h]
+  rw [callRule_plain rfl rfl rfl rfl rfl h.ei h.level]
+  simp only [show ruleOf 403 = r403 from rfl, r403]
+  refine ⟨fun ht => ?_, fun h8 h12 => ?_⟩
+  · rcases ht with ht | ht
+    · rw [alts_ok (by rfl) he' (by
+        dsimp only; rw [items_call (by rw [e1, ite_t ht]) (by simp), items_nil]),
+        altResult_none1 rfl rfl]
+      rfl
+    · rw [alts_fail (by rfl) he' (items_call_null (by rw [e1, ite_f (by omega)])), hq,
+        alts_ok (by rfl) he (by
+        dsimp only; rw [items_call (by rw [ek, ite_t ht]) (by simp), items_nil]),
+        altResult_none1 rfl rfl]
+      rfl
+  · rw [alts_fail (by rfl) he' (items_call_null (by rw [e1, ite_f h8])), hq,
+      alts_fail (by rfl) he (items_call_null (by rw [ek, ite_f h12])), hq, alts_nil]
+    rfl
+
+/-- `invalid_default` with its lookahead group pinned. -/
+def InvalidDefaultRule : Prop := InvalidDefault ∧ Tmp126
+theorem invalidDefaultRule_proven : InvalidDefaultRule := ⟨invalidDefault_proven, tmp126_proven⟩
+
 end PyLean.PyGrammar.Peg

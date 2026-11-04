@@ -21,6 +21,12 @@ summary: |
     `self._local_timezone()` takes the aware branch, `(self - _EPOCH) // timedelta(seconds=1)`,
     which raises `TypeError: cannot mix naive and timezone-aware time`; C treats `self` as
     naive (`goto naive`, :6946-6949) and returns the local time.
+  - An aware `self` at the edge of the range whose `self - offset` overflows, under a local
+    zone whose `tm_gmtoff` no `timezone` accepts (POSIX `TZ='XXX-24:30'`, 24h30 ahead of UTC):
+    `datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone()` raises `ValueError`
+    in Python (`_local_timezone()` builds `timezone(timedelta(seconds=88200))` before the
+    subtraction) and `OverflowError: date value out of range` in C, which subtracts first
+    (:6957) and never reaches `local_timezone`. A raising `localtime` gives the same split.
   `astimezone(tz)` with an explicit tz, and aware datetimes with an offset, agree (proven in
   Lean, AstimezoneLocal).
 likelihood: |
@@ -30,7 +36,8 @@ likelihood: |
 maybe_intended: |
   Not intended as a difference: PEP 399 asks the twins to agree. Which result is preferable in
   the gap is a PEP 495 question (C's normalised wall time is what fromtimestamp would give);
-  the TypeError is plainly an accident of computing the target zone from `self`.
+  the TypeError is plainly an accident of computing the target zone from `self`, and so is the
+  exception class at the range edge.
 reproducer: |
   import datetime, _pydatetime, os, time
   os.environ['TZ'] = 'EST5EDT,M3.2.0,M11.1.0'
@@ -52,11 +59,16 @@ reproducer: |
   out = {k: (run(lambda: f(datetime)), run(lambda: f(_pydatetime))) for k, f in [
       ('gap fold=0', lambda m: gap(m, 0)), ('gap fold=1', lambda m: gap(m, 1)),
       ('utcoffset None', none_offset)]}
+  os.environ['TZ'] = 'XXX-24:30'
+  time.tzset()
+  out['aware edge'] = tuple(run(lambda m=m: m.datetime(1, 1, 1, tzinfo=m.timezone(m.timedelta(hours=1))).astimezone())
+                            for m in (datetime, _pydatetime))
   for k, (c, p) in out.items():
       print(k, ' C:', c, ' Python:', p)
   if out['gap fold=0'] == ((3, 30, -4.0, 'EDT'), (2, 30, -5.0, 'EST')) and \
      out['gap fold=1'] == ((1, 30, -5.0, 'EST'), (2, 30, -4.0, 'EDT')) and \
-     out['utcoffset None'] == ((3, -5.0), 'TypeError'):
+     out['utcoffset None'] == ((3, -5.0), 'TypeError') and \
+     out['aware edge'] == ('OverflowError', 'ValueError'):
       print('REPRODUCED datetime-pydatetime-astimezone-local-target')
 expected: |
   The same result in both implementations: as C, the target local zone taken from the UTC
@@ -80,11 +92,14 @@ duplicates:
   issues:
     - {number: 83861, state: closed, relation: related (astimezone and gap times under PEP 495, round trips through UTC; not the twin difference)}
     - {number: 103982, state: open, relation: related (astimezone(None) and fold; not the twin difference)}
+    - {number: 130718, state: open, relation: "related (unexpected behaviour of datetime.astimezone; not this twin difference)"}
   queries: ["gh search issues: astimezone gap pydatetime", "astimezone nonexistent", "astimezone gap fold local (found 83861, 116038, 116035)",
             "_local_timezone", "astimezone utcoffset None (found 103982)",
-            "bugforge-results/README.md: astimezone, local_timezone (no entries)"]
+            "bugforge-results/README.md: astimezone, local_timezone (no entries)",
+            "gh search issues: astimezone year 1 overflow local", "gh issue view 130718"]
 lean:
   property: PyLean.Datetime.AstimezoneLocalNaiveTwins
   theorem: PyLean.Datetime.astimezoneLocalNaiveTwins_refuted
   also:
     - {property: PyLean.Datetime.AstimezoneLocalNoneOffsetTwins, theorem: PyLean.Datetime.astimezoneLocalNoneOffsetTwins_refuted}
+    - {property: PyLean.Datetime.AstimezoneLocalAwareEdgeTwins, theorem: PyLean.Datetime.astimezoneLocalAwareEdgeTwins_refuted}

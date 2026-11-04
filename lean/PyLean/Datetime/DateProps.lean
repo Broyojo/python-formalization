@@ -227,9 +227,9 @@ theorem dateSubtract_proven : DateSubtract := by
         unfold totalUs Delta.toUs; simp only; omega
       rw [e, mkDeltaPy_of_valid _ hv]
     have main := dateAddTimedelta_proven y m d ⟨-t.days, 0, 0⟩ ha hv
-    unfold dateSubDeltaPy dateSubDeltaC
+    unfold dateSubDeltaPy dateSubDeltaC normalizeDateC
     simp only [hneg, bind, Except.bind]
-    unfold dateAddC at main
+    unfold dateAddC normalizeDateC at main
     simp only [bind, Except.bind] at main
     by_cases hr : 1 ≤ toordinal y m d + -t.days ∧ toordinal y m d + -t.days ≤ MAXORDINAL
     · obtain ⟨y2, m2, d2, _, _, e1, e2⟩ := main.1 hr

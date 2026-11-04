@@ -1,0 +1,435 @@
+import PyLean.Registry
+import PyLean.PyGrammar.RowNames
+import PyLean.PyGrammar.Peg.Rules.SpecStr
+
+/-! Registry entries for the rules stated as equations (`Peg/Rules/Spec.lean` and the
+`Spec*.lean` files after it). -/
+
+namespace PyLean.PyGrammar.Peg
+
+open PyLean.Registry
+
+private def scheme : String :=
+  "Rule-specific equation: callRule on this rule's data, from any entry state (no error, below " ++
+  "MAXSTACK), equals specAlts over the rule's alternatives written from its text in " ++
+  "Grammar/python.gram (items with their lookaheads and options, the invalid_ guard, and each " ++
+  "action as the exception it raises, with class, message and location, or the value it builds). " ++
+  "specAlts mirrors handle_alt_normal (guard, error check, mark reset, cut, NULL past the last); " ++
+  "runAlts_spec matches it to the data, so reordered alternatives, a dropped item or lookahead, " ++
+  "another message, location or node fail it."
+
+/-- An entry for an equation-style rule statement. -/
+def specEntry (id : String) (rows : List String) (stmt src : String) (prop thm : Lean.Name)
+    (extra : String := "") : Entry :=
+  { id := id, pyFile := "Grammar/python.gram", pyFns := rows, statement := stmt, source := src,
+    status := .proven, prop := prop, thm := some thm, notes := scheme ++ extra }
+
+def specEntries : List Entry := [
+  specEntry "pygrammar-rule-invalid-kwds" Rows.rule_invalid_kwds
+    ("invalid_kwds: '**' param '=' raises \"var-keyword parameter cannot have default value\" at " ++
+     "the '='; '**' param ',' param, then '**' param ',' ('*'|'**'|'/') raise \"parameters cannot " ++
+     "follow var-keyword parameter\" at the parameter or token after the comma.")
+    "Grammar/python.gram:1381-1384" ``InvalidKwds ``invalidKwds_proven
+    " Tmp129 pins the group _tmp_129 to '*' | '**' | '/'.",
+  specEntry "pygrammar-rule-invalid-lambda-kwds" Rows.rule_invalid_lambda_kwds
+    ("invalid_lambda_kwds: invalid_kwds with lambda_param: the same three alternatives and " ++
+     "messages.")
+    "Grammar/python.gram:1409-1412" ``InvalidLambdaKwds ``invalidLambdaKwds_proven
+    " One statement (InvalidKwdsOf) over the rule numbers covers both twins.",
+  specEntry "pygrammar-rule-invalid-block" Rows.rule_invalid_block
+    "invalid_block: NEWLINE not followed by INDENT raises IndentationError \"expected an indented block\"."
+    "Grammar/python.gram:1348-1349" ``InvalidBlock ``invalidBlock_proven,
+  specEntry "pygrammar-rule-invalid-double-type-comments" Rows.rule_invalid_double_type_comments
+    ("invalid_double_type_comments: TYPE_COMMENT NEWLINE TYPE_COMMENT NEWLINE INDENT raises " ++
+     "\"Cannot have two type comments on def\".")
+    "Grammar/python.gram:1413-1415" ``InvalidDoubleTypeComments ``invalidDoubleTypeComments_proven,
+  specEntry "pygrammar-rule-invalid-type-params" Rows.rule_invalid_type_params
+    "invalid_type_params: '[' ']' raises \"Type parameter list cannot be empty\" from the ']' on."
+    "Grammar/python.gram:1642-1646" ``InvalidTypeParams ``invalidTypeParams_proven,
+  specEntry "pygrammar-rule-invalid-noteq" Rows.rule_invalid_noteq
+    ("invalid_noteq: '<' '>' adjacent (the first ends where the second starts) raise \"invalid " ++
+     "syntax.  Maybe you meant '!=' instead of '<>'?\" over both; apart, the action's NULL without " ++
+     "an exception is the result.")
+    "Grammar/python.gram:1648-1653; Parser/pegen.h:212-216" ``InvalidNoteq ``invalidNoteq_proven,
+  specEntry "pygrammar-rule-invalid-factor" Rows.rule_invalid_factor
+    ("invalid_factor: ('+'|'-'|'~') 'not' factor raises \"'not' after an operator must be " ++
+     "parenthesized\" over 'not' .. the operand.")
+    "Grammar/python.gram:1639-1640" ``InvalidFactor ``invalidFactor_proven
+    " Tmp158 pins the operator group.",
+  specEntry "pygrammar-rule-invalid-arithmetic" Rows.rule_invalid_arithmetic
+    ("invalid_arithmetic: sum ('+'|'-'|'*'|'/'|'%'|'//'|'@') 'not' inversion raises \"'not' after " ++
+     "an operator must be parenthesized\" over 'not' .. the operand.")
+    "Grammar/python.gram:1637-1638" ``InvalidArithmetic ``invalidArithmetic_proven
+    " Tmp157 pins the operator group (no '|', '&', '^', '<<', '>>', '**').",
+  specEntry "pygrammar-rule-invalid-starred-expression" Rows.rule_invalid_starred_expression
+    "invalid_starred_expression: '*' raises \"Invalid star expression\" at the last token read."
+    "Grammar/python.gram:1585-1586" ``InvalidStarredExpression ``invalidStarredExpression_proven,
+  specEntry "pygrammar-rule-invalid-if-expression" Rows.rule_invalid_if_expression
+    ("invalid_if_expression: disjunction 'if' disjunction 'else' '*' raises \"cannot unpack only " ++
+     "part of a conditional expression\" at the '*'; with '**' \"cannot use dict unpacking on only " ++
+     "part of a conditional expression\" at the '**'.")
+    "Grammar/python.gram:1281-1285" ``InvalidIfExpression ``invalidIfExpression_proven,
+  specEntry "pygrammar-rule-invalid-kvpair-unpacking" Rows.rule_invalid_kvpair_unpacking
+    ("invalid_kvpair_unpacking (3.15): the five alternatives in order: '**' if_expression, '*' " ++
+     "and '**' bitwise_or ':' expression (dictionary key), expression ':' '*' and '**' bitwise_or " ++
+     "(dictionary value), each raising its message over the star .. the operand.")
+    "Grammar/python.gram:1564-1570" ``InvalidKvpairUnpacking ``invalidKvpairUnpacking_proven,
+  specEntry "pygrammar-rule-invalid-kvpair" Rows.rule_invalid_kvpair
+    ("invalid_kvpair: expression not followed by ':' raises \"':' expected after dictionary key\" " ++
+     "from the key's last column (end column -1 + 1); expression ':' '*' / '**' bitwise_or raise " ++
+     "from the star to the end of the line; expression ':' followed by '}' or ',' raises " ++
+     "\"expression expected after dictionary key and ':'\" at the ':'.")
+    "Grammar/python.gram:1571-1576; Parser/pegen.h:187-200" ``InvalidKvpair ``invalidKvpair_proven
+    " Tmp151 pins the lookahead group to '}' | ','.",
+  specEntry "pygrammar-rule-invalid-if-stmt" Rows.rule_invalid_if_stmt
+    ("invalid_if_stmt: 'if' named_expression NEWLINE raises \"expected ':'\"; 'if' named_expression " ++
+     "':' NEWLINE not followed by INDENT raises IndentationError \"expected an indented block after " ++
+     "'if' statement on line N\", N the line of the 'if'.")
+    "Grammar/python.gram:1531-1534" ``InvalidIfStmt ``invalidIfStmt_proven,
+  specEntry "pygrammar-rule-invalid-elif-stmt" Rows.rule_invalid_elif_stmt
+    "invalid_elif_stmt: as invalid_if_stmt with 'elif' and \"... after 'elif' statement on line N\"."
+    "Grammar/python.gram:1535-1538" ``InvalidElifStmt ``invalidElifStmt_proven,
+  specEntry "pygrammar-rule-invalid-else-stmt" Rows.rule_invalid_else_stmt
+    ("invalid_else_stmt: 'else' ':' NEWLINE without INDENT raises the IndentationError with the " ++
+     "line of 'else'; 'else' ':' block 'elif' raises \"'elif' block follows an 'else' block\".")
+    "Grammar/python.gram:1539-1542" ``InvalidElseStmt ``invalidElseStmt_proven,
+  specEntry "pygrammar-rule-invalid-while-stmt" Rows.rule_invalid_while_stmt
+    "invalid_while_stmt: as invalid_if_stmt with 'while' and \"... after 'while' statement on line N\"."
+    "Grammar/python.gram:1543-1546" ``InvalidWhileStmt ``invalidWhileStmt_proven,
+  specEntry "pygrammar-rule-invalid-for-stmt" Rows.rule_invalid_for_stmt
+    ("invalid_for_stmt: ['async'] 'for' star_targets 'in' star_expressions NEWLINE raises " ++
+     "\"expected ':'\"; with ':' NEWLINE and no INDENT the IndentationError with the line of 'for'.")
+    "Grammar/python.gram:1547-1550" ``InvalidForStmt ``invalidForStmt_proven,
+  specEntry "pygrammar-rule-invalid-def-raw" Rows.rule_invalid_def_raw
+    ("invalid_def_raw: a def header ending in ':' NEWLINE without INDENT raises \"expected an " ++
+     "indented block after function definition on line N\" (N of 'def'); otherwise a def with " ++
+     "forced '(' and ':' and a block gives the dummy result.")
+    "Grammar/python.gram:1551-1554" ``InvalidDefRawRule ``invalidDefRawRule_proven
+    " Tmp26 pins ['->' expression].",
+  specEntry "pygrammar-rule-invalid-class-def-raw" Rows.rule_invalid_class_def_raw
+    ("invalid_class_def_raw: 'class' NAME [type_params] ['(' [arguments] ')'] NEWLINE raises " ++
+     "\"expected ':'\"; with ':' NEWLINE and no INDENT \"expected an indented block after class " ++
+     "definition on line N\".")
+    "Grammar/python.gram:1555-1558" ``InvalidClassDefRawRule ``invalidClassDefRawRule_proven
+    " Tmp25 pins ['(' [arguments] ')'].",
+  specEntry "pygrammar-rule-invalid-try-stmt" Rows.rule_invalid_try_stmt
+    ("invalid_try_stmt: the four alternatives in order: no indented block after 'try' " ++
+     "(IndentationError with its line), a block followed by neither 'except' nor 'finally', " ++
+     "except_block+ then 'except' '*' (range 'except' .. '*'), except_star_block+ then a plain " ++
+     "'except' (at the 'except'), the last two \"cannot have both 'except' and 'except*' on the " ++
+     "same 'try'\".")
+    "Grammar/python.gram:1469-1476" ``InvalidTryStmtRule ``invalidTryStmtRule_proven
+    " The groups, block* and the except loops are pinned (Tmp144, Loop0_145, Loop1_36, Loop1_37, Tmp21, Tmp146).",
+  specEntry "pygrammar-rule-invalid-except-stmt" Rows.rule_invalid_except_stmt
+    ("invalid_except_stmt: 'except' expression ',' expressions 'as' NAME ':' raises \"multiple " ++
+     "exception types must be parenthesized when using 'as'\" from the first type on; a missing ':' " ++
+     "(with or without a type) \"expected ':'\"; 'except' expression 'as' expression ':' block " ++
+     "\"cannot use except statement with <name of target>\" at the target.")
+    "Grammar/python.gram:1477-1484" ``InvalidExceptStmtRule ``invalidExceptStmtRule_proven,
+  specEntry "pygrammar-rule-invalid-except-star-stmt" Rows.rule_invalid_except_star_stmt
+    ("invalid_except_star_stmt: the except* twins of invalid_except_stmt, and 'except' '*' " ++
+     "followed by NEWLINE or ':' raises \"expected one or more exception types\".")
+    "Grammar/python.gram:1485-1492" ``InvalidExceptStarStmtRule ``invalidExceptStarStmtRule_proven,
+  specEntry "pygrammar-rule-invalid-finally-stmt" Rows.rule_invalid_finally_stmt
+    "invalid_finally_stmt: 'finally' ':' NEWLINE without INDENT raises the IndentationError with its line."
+    "Grammar/python.gram:1493-1495" ``InvalidFinallyStmt ``invalidFinallyStmt_proven,
+  specEntry "pygrammar-rule-invalid-except-stmt-indent" Rows.rule_invalid_except_stmt_indent
+    ("invalid_except_stmt_indent: 'except' expression ['as' NAME] ':' NEWLINE, then 'except' ':' " ++
+     "NEWLINE, without INDENT raise the IndentationError with the line of 'except'.")
+    "Grammar/python.gram:1496-1499" ``InvalidExceptStmtIndentRule ``invalidExceptStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-except-star-stmt-indent" Rows.rule_invalid_except_star_stmt_indent
+    "invalid_except_star_stmt_indent: as invalid_except_stmt_indent for 'except' '*' expression."
+    "Grammar/python.gram:1500-1502" ``InvalidExceptStarStmtIndentRule ``invalidExceptStarStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-match-stmt" Rows.rule_invalid_match_stmt
+    ("invalid_match_stmt: \"match\" subject_expr NEWLINE raises \"expected ':'\" and CHECK_VERSION's " ++
+     "NULL sets error_indicator; a match header without INDENT raises the IndentationError; " ++
+     "\"case\" patterns guard? ':' block outside a match raises \"case statement must be inside " ++
+     "match statement\" over \"case\" .. ':'.")
+    "Grammar/python.gram:1503-1510" ``InvalidMatchStmt ``invalidMatchStmt_proven,
+  specEntry "pygrammar-rule-invalid-case-block" Rows.rule_invalid_case_block
+    ("invalid_case_block: \"case\" patterns guard? NEWLINE raises \"expected ':'\"; with ':' " ++
+     "NEWLINE and no INDENT the IndentationError with the line of \"case\".")
+    "Grammar/python.gram:1511-1514" ``InvalidCaseBlock ``invalidCaseBlock_proven,
+  specEntry "pygrammar-rule-invalid-with-stmt" Rows.rule_invalid_with_stmt
+    ("invalid_with_stmt: items then ',' ':' raises \"the last 'with' item has a trailing comma\" " ++
+     "at the comma; items, or a parenthesized list, then NEWLINE raise \"expected ':'\".")
+    "Grammar/python.gram:1458-1462" ``InvalidWithStmtRule ``invalidWithStmtRule_proven
+    " The item gathers and groups are pinned (WithGathers).",
+  specEntry "pygrammar-rule-invalid-with-stmt-indent" Rows.rule_invalid_with_stmt_indent
+    ("invalid_with_stmt_indent: a with header, plain or parenthesized, ending ':' NEWLINE without " ++
+     "INDENT raises the IndentationError with the line of 'with'.")
+    "Grammar/python.gram:1463-1467" ``InvalidWithStmtIndentRule ``invalidWithStmtIndentRule_proven,
+  specEntry "pygrammar-rule-invalid-with-item" Rows.rule_invalid_with_item
+    ("invalid_with_item: expression 'as' expression followed by ',' ')' or ':' runs " ++
+     "RAISE_SYNTAX_ERROR_INVALID_TARGET(STAR_TARGETS) on the target: \"cannot assign to <name>\" " ++
+     "over its first invalid part, or NULL without an exception when it is a valid target.")
+    "Grammar/python.gram:1416-1418; Parser/pegen.h:245-264" ``InvalidWithItemRule ``invalidWithItemRule_proven,
+  specEntry "pygrammar-rule-invalid-for-target" Rows.rule_invalid_for_target
+    ("invalid_for_target: 'async'? 'for' star_expressions runs " ++
+     "RAISE_SYNTAX_ERROR_INVALID_TARGET(FOR_TARGETS) on the target.")
+    "Grammar/python.gram:1424-1426; Parser/pegen.h:245-264" ``InvalidForTarget ``invalidForTarget_proven,
+  specEntry "pygrammar-rule-invalid-for-if-clause" Rows.rule_invalid_for_if_clause
+    ("invalid_for_if_clause: 'async'? 'for' (bitwise_or (',' bitwise_or)* [',']) not followed by " ++
+     "'in' raises \"'in' expected after for-loop variables\".")
+    "Grammar/python.gram:1420-1422" ``InvalidForIfClauseRule ``invalidForIfClauseRule_proven,
+  specEntry "pygrammar-rule-invalid-import-from" Rows.rule_invalid_import_from
+    ("invalid_import_from (3.15): 'from' dots dotted_name \"lazy\" 'import' import_from_targets " ++
+     "raises \"use 'lazy from ... ' instead of 'from ... lazy import'\" at \"lazy\".")
+    "Grammar/python.gram:1447-1450" ``InvalidImportFromRule ``invalidImportFromRule_proven,
+  specEntry "pygrammar-rule-invalid-import-from-targets" Rows.rule_invalid_import_from_targets
+    ("invalid_import_from_targets: import_from_as_names ',' NEWLINE raises \"trailing comma not " ++
+     "allowed without surrounding parentheses\"; a bare NEWLINE \"Expected one or more names after " ++
+     "'import'\" from the NEWLINE on.")
+    "Grammar/python.gram:1452-1456" ``InvalidImportFromTargets ``invalidImportFromTargets_proven,
+  specEntry "pygrammar-rule-invalid-as-pattern" Rows.rule_invalid_as_pattern
+    ("invalid_as_pattern: or_pattern 'as' \"_\" raises \"cannot use '_' as a target\"; or_pattern " ++
+     "'as' expression \"cannot use <name> as pattern target\", both at the target.")
+    "Grammar/python.gram:1515-1519" ``InvalidAsPattern ``invalidAsPattern_proven,
+  specEntry "pygrammar-rule-invalid-class-pattern" Rows.rule_invalid_class_pattern
+    ("invalid_class_pattern: name_or_attr '(' invalid_class_argument_pattern raises \"positional " ++
+     "patterns follow keyword patterns\" from the first to the last of those positional patterns.")
+    "Grammar/python.gram:1520-1524" ``InvalidClassPattern ``invalidClassPattern_proven,
+  specEntry "pygrammar-rule-invalid-mapping-pattern" Rows.rule_invalid_mapping_pattern
+    ("invalid_mapping_pattern (3.15): '{' (items_pattern ',')? double_star_pattern ',' " ++
+     "items_pattern ','? '}' raises \"double star pattern must be the last (right-most) subpattern " ++
+     "in the mapping pattern\" at the '**' pattern.")
+    "Grammar/python.gram:1525-1528" ``InvalidMappingPatternRule ``invalidMappingPatternRule_proven,
+  specEntry "pygrammar-rule-invalid-class-argument-pattern" Rows.rule_invalid_class_argument_pattern
+    ("invalid_class_argument_pattern: [positional_patterns ','] keyword_patterns ',' " ++
+     "positional_patterns gives the positional patterns after the keyword ones.")
+    "Grammar/python.gram:1529-1530" ``InvalidClassArgumentPatternRule ``invalidClassArgumentPatternRule_proven,
+  specEntry "pygrammar-rule-statements" Rows.rule_statements
+    "statements: statement+ (_loop1_2, pinned) gives the statements of each statement, flattened in order."
+    "Grammar/python.gram:97" ``StatementsRule ``statementsRule_proven,
+  specEntry "pygrammar-rule-single-compound-stmt" Rows.rule_single_compound_stmt
+    ("single_compound_stmt: compound_stmt gives the one-statement sequence, through " ++
+     "_PyPegen_register_stmts (which, in the second pass, records the statement's start).")
+    "Grammar/python.gram:105-107; Parser/action_helpers.c:2116-2134"
+    ``SingleCompoundStmt ``singleCompoundStmt_proven,
+  specEntry "pygrammar-rule-statement-newline" Rows.rule_statement_newline
+    ("statement_newline: single_compound_stmt NEWLINE, then simple_stmts, then a NEWLINE alone (one " ++
+     "Pass spanning it), then ENDMARKER (NULL from _PyPegen_interactive_exit), in that order.")
+    "Grammar/python.gram:109-113" ``StatementNewline ``statementNewline_proven,
+  specEntry "pygrammar-rule-simple-stmts" Rows.rule_simple_stmts
+    ("simple_stmts: simple_stmt not followed by ';' then NEWLINE gives the one-statement sequence; " ++
+     "otherwise ';'.simple_stmt+ [';'] NEWLINE gives the gathered statements.")
+    "Grammar/python.gram:115-117" ``SimpleStmts ``simpleStmts_proven
+    " The ';' gather _gather_4 is not restated (GatherSep is for ',').",
+  specEntry "pygrammar-rule-annotated-rhs" Rows.rule_annotated_rhs
+    "annotated_rhs: yield_expr, then star_expressions, each from the start mark."
+    "Grammar/python.gram:168" ``AnnotatedRhs ``annotatedRhs_proven,
+  specEntry "pygrammar-rule-type-alias" Rows.rule_type_alias
+    ("type_alias: \"type\" NAME [type_params] '=' expression gives TypeAlias(name in Store " ++
+     "context, params, value) with EXTRA; CHECK on the context, and below feature version 12 " ++
+     "\"Type statement is only supported in Python 3.12 and greater\" with error_indicator set.")
+    "Grammar/python.gram:680-683" ``TypeAlias ``typeAlias_proven,
+  specEntry "pygrammar-rule-star-targets-list-seq" Rows.rule_star_targets_list_seq
+    "star_targets_list_seq: ','.star_target+ [','] gives the gathered targets."
+    "Grammar/python.gram:1123" ``StarTargetsListSeqRule ``starTargetsListSeqRule_proven
+    " Gather99 pins the gather.",
+  specEntry "pygrammar-rule-star-targets-tuple-seq" Rows.rule_star_targets_tuple_seq
+    ("star_targets_tuple_seq: star_target (',' star_target)+ [','] gives all the targets; then " ++
+     "star_target ',' the one-target sequence.")
+    "Grammar/python.gram:1125-1127" ``StarTargetsTupleSeqRule ``starTargetsTupleSeqRule_proven,
+  specEntry "pygrammar-rule-star-atom" Rows.rule_star_atom
+    ("star_atom: NAME in Store context; '(' target_with_star_atom ')' in Store context; '(' " ++
+     "[star_targets_tuple_seq] ')' Tuple(Store); '[' [star_targets_list_seq] ']' List(Store), with EXTRA.")
+    "Grammar/python.gram:1139-1143" ``StarAtom ``starAtom_proven,
+  specEntry "pygrammar-rule-single-subscript-attribute-target" Rows.rule_single_subscript_attribute_target
+    ("single_subscript_attribute_target: t_primary '.' NAME and t_primary '[' slices ']', each not " ++
+     "followed by t_lookahead, give Attribute and Subscript in Store context with EXTRA.")
+    "Grammar/python.gram:1150-1152" ``SingleSubscriptAttributeTarget ``singleSubscriptAttributeTarget_proven,
+  specEntry "pygrammar-rule-del-t-atom" Rows.rule_del_t_atom
+    "del_t_atom: star_atom's four alternatives with del_target/del_targets and Del context."
+    "Grammar/python.gram:1178-1182" ``DelTAtom ``delTAtom_proven,
+  specEntry "pygrammar-rule-type-expressions" Rows.rule_type_expressions
+    ("type_expressions: the seven alternatives in order, the '*' and '**' expressions appended " ++
+     "to the gathered plain ones.")
+    "Grammar/python.gram:1188-1203" ``TypeExpressionsRule ``typeExpressionsRule_proven
+    " Gather105 pins the gather.",
+  specEntry "pygrammar-rule-func-type-comment" Rows.rule_func_type_comment
+    ("func_type_comment: NEWLINE TYPE_COMMENT followed by NEWLINE INDENT gives the comment; then, " ++
+     "in the second pass only, invalid_double_type_comments; then TYPE_COMMENT.")
+    "Grammar/python.gram:1205-1208" ``FuncTypeCommentRule ``funcTypeCommentRule_proven,
+  specEntry "pygrammar-rule-expression-without-invalid" Rows.rule_expression_without_invalid
+    ("expression_without_invalid: with call_invalid_rules off (restored after), disjunction 'if' " ++
+     "disjunction 'else' expression gives IfExp(test, body, orelse) with EXTRA; then disjunction; " ++
+     "then lambdef.")
+    "Grammar/python.gram:1242-1245" ``ExpressionWithoutInvalid ``expressionWithoutInvalid_proven,
+  specEntry "pygrammar-rule-invalid-arguments" Rows.rule_invalid_arguments
+    ("invalid_arguments: the seven alternatives in order: '**' unpacking then ',' starred " ++
+     "arguments (from the ',' on), an unparenthesized generator before ',' (over the expression .. " ++
+     "the last comprehension item), NAME '=' expression for_if_clauses, NAME '=' before ',' or ')', " ++
+     "_PyPegen_nonparen_genexp_in_call (more than one positional argument), args ',' a generator, " ++
+     "and args ',' args (_PyPegen_arguments_parsing_error: positional argument follows keyword " ++
+     "argument [unpacking]).")
+    "Grammar/python.gram:1217-1229; Parser/action_helpers.c:1271-1312"
+    ``InvalidArgumentsRule ``invalidArgumentsRule_proven
+    " The groups _tmp_107, _tmp_169, _gather_109, _tmp_170, _tmp_110, _tmp_111, _tmp_112 are pinned.",
+  specEntry "pygrammar-rule-invalid-kwarg" Rows.rule_invalid_kwarg
+    ("invalid_kwarg: ('True'|'False'|'None') '=' raises \"cannot assign to <keyword>\"; NAME '=' " ++
+     "expression for_if_clauses the '==' / ':=' hint; an expression that is not NAME '=' followed by " ++
+     "'=' \"expression cannot contain assignment, perhaps you meant \\\"==\\\"?\"; '**' expression " ++
+     "'=' expression \"cannot assign to keyword argument unpacking\".")
+    "Grammar/python.gram:1230-1240" ``InvalidKwargRule ``invalidKwargRule_proven,
+  specEntry "pygrammar-rule-invalid-legacy-expression" Rows.rule_invalid_legacy_expression
+    ("invalid_legacy_expression: NAME not followed by '(' then star_expressions: for print and exec " ++
+     "\"Missing parentheses in call to 'X'. Did you mean X(...)?\" over the name .. the arguments; " ++
+     "for another name NULL without an exception.")
+    "Grammar/python.gram:1246-1249; Parser/action_helpers.c:950-962" ``InvalidLegacyExpression
+    ``invalidLegacyExpression_proven,
+  specEntry "pygrammar-rule-invalid-type-param" Rows.rule_invalid_type_param
+    ("invalid_type_param: '*' NAME ':' expression raises \"cannot use constraints with " ++
+     "TypeVarTuple\" for a tuple bound and \"cannot use bound with TypeVarTuple\" otherwise, from " ++
+     "the ':' on; '**' NAME ':' expression the same for ParamSpec.")
+    "Grammar/python.gram:1251-1261" ``InvalidTypeParam ``invalidTypeParam_proven,
+  specEntry "pygrammar-rule-invalid-expression" Rows.rule_invalid_expression
+    ("invalid_expression: the seven alternatives in order: code between two strings, a missing " ++
+     "comma (_PyPegen_raise_error_for_missing_comma), 'if' without 'else', 'else' followed by a " ++
+     "statement, a statement before 'if', and lambda before FSTRING_MIDDLE / TSTRING_MIDDLE, each " ++
+     "with its message and location.")
+    "Grammar/python.gram:1263-1279" ``InvalidExpressionRule ``invalidExpressionRule_proven
+    " The groups _loop1_115, _tmp_171, _tmp_116, _tmp_117, _tmp_118 are pinned.",
+  specEntry "pygrammar-rule-invalid-named-expression" Rows.rule_invalid_named_expression
+    ("invalid_named_expression (memo): expression ':=' expression \"cannot use assignment " ++
+     "expressions with <name>\"; NAME '=' bitwise_or not followed by '=' or ':=' the '==' / ':=' " ++
+     "hint; a bitwise_or that is not a list, tuple, genexp, True, None or False, '=' bitwise_or " ++
+     "\"cannot assign to <name> here. Maybe you meant '==' instead of '='?\"; memoized.")
+    "Grammar/python.gram:1287-1295" ``InvalidNamedExpressionRule ``invalidNamedExpressionRule_proven,
+  specEntry "pygrammar-rule-invalid-comprehension" Rows.rule_invalid_comprehension
+    ("invalid_comprehension: '[' / '(' '**' expression for_if_clauses raise the dict unpacking " ++
+     "messages over '**' .. the expression; ('['|'{') star_named_expression ',' then " ++
+     "star_named_expressions or nothing before for_if_clauses \"did you forget parentheses around " ++
+     "the comprehension target?\".")
+    "Grammar/python.gram:1350-1359" ``InvalidComprehensionRule ``invalidComprehensionRule_proven,
+  specEntry "pygrammar-rule-invalid-parameters" Rows.rule_invalid_parameters
+    ("invalid_parameters: the six alternatives in order with their messages: '/' first, a second " ++
+     "'/', a parameter without a default after one with, parenthesized parameters, '/' after '*', " ++
+     "and '/' '*' without a comma.")
+    "Grammar/python.gram:1360-1372" ``InvalidParameters ``invalidParameters_proven
+    " One statement (InvalidParametersOf) covers the twin; ParamGroups pins the groups and loops.",
+  specEntry "pygrammar-rule-invalid-lambda-parameters" Rows.rule_invalid_lambda_parameters
+    ("invalid_lambda_parameters: invalid_parameters with the lambda rules; its parenthesized " ++
+     "alternative takes ','.lambda_param+ and says \"Lambda expression parameters cannot be " ++
+     "parenthesized\".")
+    "Grammar/python.gram:1388-1400" ``InvalidLambdaParameters ``invalidLambdaParameters_proven,
+  specEntry "pygrammar-rule-invalid-parameters-helper" Rows.rule_invalid_parameters_helper
+    "invalid_parameters_helper: slash_with_default as a one-element sequence, then param_with_default+."
+    "Grammar/python.gram:1385-1387" ``InvalidParametersHelper ``invalidParametersHelper_proven,
+  specEntry "pygrammar-rule-invalid-lambda-parameters-helper" Rows.rule_invalid_lambda_parameters_helper
+    "invalid_lambda_parameters_helper: the lambda twin of invalid_parameters_helper."
+    "Grammar/python.gram:1401-1403" ``InvalidLambdaParametersHelper ``invalidLambdaParametersHelper_proven,
+  specEntry "pygrammar-rule-invalid-star-etc" Rows.rule_invalid_star_etc
+    ("invalid_star_etc: '*' then ')' or ',' (')' | '**') raises \"named parameters must follow bare " ++
+     "*\" at the '*'; '*' ',' TYPE_COMMENT \"bare * has associated type comment\"; '*' param '=' " ++
+     "\"var-positional parameter cannot have default value\"; a second '*' \"* may appear only once\".")
+    "Grammar/python.gram:1375-1380" ``InvalidStarEtcRule ``invalidStarEtcRule_proven,
+  specEntry "pygrammar-rule-invalid-lambda-star-etc" Rows.rule_invalid_lambda_star_etc
+    ("invalid_lambda_star_etc: '*' then ':' or ',' (':' | '**') raises \"named parameters must " ++
+     "follow bare *\" at the last token read (not at the '*', unlike invalid_star_etc); then the " ++
+     "default and second-'*' messages.")
+    "Grammar/python.gram:1404-1408" ``InvalidLambdaStarEtcRule ``invalidLambdaStarEtcRule_proven,
+  specEntry "pygrammar-rule-invalid-double-starred-kvpairs" Rows.rule_invalid_double_starred_kvpairs
+    ("invalid_double_starred_kvpairs: invalid_kvpair_unpacking [','], then pairs ',' " ++
+     "(invalid_kvpair | invalid_kvpair_unpacking) (second pass), both the dummy result when their " ++
+     "rule does not raise; then expression ':' before '}' or ',' \"expression expected after " ++
+     "dictionary key and ':'\".")
+    "Grammar/python.gram:1560-1563" ``InvalidDoubleStarredKvpairsRule ``invalidDoubleStarredKvpairsRule_proven,
+  specEntry "pygrammar-rule-fstring-middle" Rows.rule_fstring_middle
+    ("fstring_middle: fstring_replacement_field, then FSTRING_MIDDLE through " ++
+     "_PyPegen_constant_from_token.")
+    "Grammar/python.gram:969-971" ``FstringMiddle ``fstringMiddle_proven,
+  specEntry "pygrammar-rule-fstring-replacement-field" Rows.rule_fstring_replacement_field
+    ("fstring_replacement_field: '{' annotated_rhs '='? [fstring_conversion] " ++
+     "[fstring_full_format_spec] '}' gives _PyPegen_formatted_value(a, debug, conversion, format, " ++
+     "rbrace, EXTRA); then, second pass only, invalid_fstring_replacement_field.")
+    "Grammar/python.gram:972-975" ``FstringReplacementField ``fstringReplacementField_proven,
+  specEntry "pygrammar-rule-fstring-conversion" Rows.rule_fstring_conversion
+    "fstring_conversion: \"!\" NAME through _PyPegen_check_fstring_conversion(conv_token, conv)."
+    "Grammar/python.gram:976-977" ``FstringConversion ``fstringConversion_proven,
+  specEntry "pygrammar-rule-fstring-full-format-spec" Rows.rule_fstring_full_format_spec
+    ("fstring_full_format_spec: ':' fstring_format_spec* through _PyPegen_setup_full_format_spec " ++
+     "with EXTRA.")
+    "Grammar/python.gram:978-979" ``FstringFullFormatSpecG ``fstringFullFormatSpecG_proven,
+  specEntry "pygrammar-rule-fstring-format-spec" Rows.rule_fstring_format_spec
+    ("fstring_format_spec: FSTRING_MIDDLE through _PyPegen_decoded_constant_from_token, then " ++
+     "fstring_replacement_field.")
+    "Grammar/python.gram:980-982" ``FstringFormatSpec ``fstringFormatSpec_proven,
+  specEntry "pygrammar-rule-fstring" Rows.rule_fstring
+    "fstring: FSTRING_START fstring_middle* FSTRING_END through _PyPegen_joined_str(a, b, c)."
+    "Grammar/python.gram:983-984" ``FstringRuleG ``fstringRuleG_proven
+    " StringLoops pins the loops.",
+  specEntry "pygrammar-rule-tstring-format-spec-replacement-field" Rows.rule_tstring_format_spec_replacement_field
+    ("tstring_format_spec_replacement_field: as fstring_replacement_field with " ++
+     "tstring_full_format_spec and invalid_tstring_replacement_field; the action is " ++
+     "_PyPegen_formatted_value.")
+    "Grammar/python.gram:986-989" ``TstringFormatSpecReplacementField ``tstringFormatSpecReplacementField_proven,
+  specEntry "pygrammar-rule-tstring-format-spec" Rows.rule_tstring_format_spec
+    ("tstring_format_spec: TSTRING_MIDDLE through _PyPegen_decoded_constant_from_token, then " ++
+     "tstring_format_spec_replacement_field.")
+    "Grammar/python.gram:990-992" ``TstringFormatSpec ``tstringFormatSpec_proven,
+  specEntry "pygrammar-rule-tstring-full-format-spec" Rows.rule_tstring_full_format_spec
+    "tstring_full_format_spec: ':' tstring_format_spec* through _PyPegen_setup_full_format_spec."
+    "Grammar/python.gram:993-994" ``TstringFullFormatSpecG ``tstringFullFormatSpecG_proven,
+  specEntry "pygrammar-rule-tstring-replacement-field" Rows.rule_tstring_replacement_field
+    ("tstring_replacement_field: the fstring_replacement_field items with " ++
+     "tstring_full_format_spec, through _PyPegen_interpolation with EXTRA; then, second pass only, " ++
+     "invalid_tstring_replacement_field.")
+    "Grammar/python.gram:995-998" ``TstringReplacementField ``tstringReplacementField_proven,
+  specEntry "pygrammar-rule-tstring-middle" Rows.rule_tstring_middle
+    "tstring_middle: tstring_replacement_field, then TSTRING_MIDDLE through _PyPegen_constant_from_token."
+    "Grammar/python.gram:999-1001" ``TstringMiddle ``tstringMiddle_proven,
+  specEntry "pygrammar-rule-tstring" Rows.rule_tstring
+    ("tstring (memo): TSTRING_START tstring_middle* TSTRING_END through _PyPegen_template_str " ++
+     "under CHECK_VERSION 14: NULL sets error_indicator; below 3.14 \"t-strings are only " ++
+     "supported in Python 3.14 and greater\"; memoized.")
+    "Grammar/python.gram:1002-1008" ``TstringRuleG ``tstringRuleG_proven,
+  specEntry "pygrammar-rule-string" Rows.rule_string
+    "string: STRING through _PyPegen_constant_from_string."
+    "Grammar/python.gram:1010" ``StringRule ``stringRule_proven,
+  specEntry "pygrammar-rule-strings" Rows.rule_strings
+    ("strings (memo): invalid_string_tstring_concat (second pass only), then (fstring|string)+ " ++
+     "through _PyPegen_concatenate_strings, then tstring+ through _PyPegen_concatenate_tstrings, " ++
+     "with EXTRA; memoized.")
+    "Grammar/python.gram:1011-1014" ``StringsRuleG ``stringsRuleG_proven,
+  specEntry "pygrammar-rule-invalid-fstring-replacement-field" Rows.rule_invalid_fstring_replacement_field
+    ("invalid_fstring_replacement_field: the eleven alternatives in order with their " ++
+     "\"f-string: ...\" messages: KNOWN_LOCATION at '=', '!', ':', '}' after '{', then " ++
+     "ON_NEXT_TOKEN (under PyErr_Occurred() ? NULL :) for the expected next part, and the " ++
+     "conversion character alternative with no action.")
+    "Grammar/python.gram:1587-1603" ``InvalidFstringReplacementFieldG ``invalidFstringReplacementFieldG_proven
+    " FieldGroups pins _tmp_152.._tmp_155.",
+  specEntry "pygrammar-rule-invalid-fstring-conversion-character" Rows.rule_invalid_fstring_conversion_character
+    ("invalid_fstring_conversion_character: '!' before ':' or '}' \"f-string: missing conversion " ++
+     "character\"; '!' not followed by NAME \"f-string: invalid conversion character\", at the " ++
+     "next token.")
+    "Grammar/python.gram:1605-1607" ``InvalidFstringConversionCharacterG ``invalidFstringConversionCharacterG_proven,
+  specEntry "pygrammar-rule-invalid-tstring-replacement-field" Rows.rule_invalid_tstring_replacement_field
+    ("invalid_tstring_replacement_field: the t-string twin with \"t-string: ...\" messages, its " ++
+     "tenth alternative on fstring_format_spec* (python.gram:1622), as the text has it.")
+    "Grammar/python.gram:1609-1625" ``InvalidTstringReplacementFieldG ``invalidTstringReplacementFieldG_proven
+    " The f-string loop in it is the cause of pygrammar-tstring-format-spec-fstring-message.",
+  specEntry "pygrammar-rule-invalid-tstring-conversion-character" Rows.rule_invalid_tstring_conversion_character
+    "invalid_tstring_conversion_character: the t-string twin of invalid_fstring_conversion_character."
+    "Grammar/python.gram:1627-1629" ``InvalidTstringConversionCharacterG ``invalidTstringConversionCharacterG_proven,
+  specEntry "pygrammar-rule-invalid-string-tstring-concat" Rows.rule_invalid_string_tstring_concat
+    ("invalid_string_tstring_concat: (fstring|string)+ tstring, then tstring+ (fstring|string), " ++
+     "raise \"cannot mix t-string literals with string or bytes literals\" from the last literal of " ++
+     "the first kind to the first of the other.")
+    "Grammar/python.gram:1631-1635" ``InvalidStringTstringConcatG ``invalidStringTstringConcatG_proven,
+  { id := "pygrammar-rule-tstring-field-messages"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_tstring_field_messages
+    statement := "For every text between the quotes, when f'...' ends in \"f-string: <m>\", the same " ++
+      "t'...' ends in \"t-string: <m>\" (invalid_tstring_replacement_field is the f-string rule " ++
+      "with \"t-string:\" messages)."
+    source := "the implementation against itself: Grammar/python.gram:1587-1603 against 1609-1625"
+    status := .refuted
+    prop := ``TstringFieldMessages
+    thm := some ``tstringFieldMessages_refuted
+    bug := some "pygrammar-tstring-format-spec-fstring-message"
+    notes := "Counterexample run in the kernel: the body {x:{a:} gives \"f-string: expecting '}', " ++
+      "or format specs\" for both f'...' and t'...'; line 1622 uses fstring_format_spec*." }
+]
+
+end PyLean.PyGrammar.Peg

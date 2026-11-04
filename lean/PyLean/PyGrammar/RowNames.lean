@@ -169,6 +169,9 @@ def peg_tokenizer_error : List String := [
 def peg_warn_lazy : List String := [
   "_warn_relative_import_of_lazy"]
 
+def rule_annotated_rhs : List String := [
+  "rule:annotated_rhs"]
+
 def rule_annotation_default : List String := [
   "rule:annotation", "rule:star_annotation", "rule:default"]
 
@@ -280,6 +283,9 @@ def rule_del_stmt_invalid : List String := [
 def rule_del_stmt_targets : List String := [
   "rule:del_stmt"]
 
+def rule_del_t_atom : List String := [
+  "rule:del_t_atom"]
+
 def rule_del_target : List String := [
   "rule:del_target"]
 
@@ -334,6 +340,9 @@ def rule_except_star_block : List String := [
 def rule_expression : List String := [
   "rule:expression"]
 
+def rule_expression_without_invalid : List String := [
+  "rule:expression_without_invalid"]
+
 def rule_expressions : List String := [
   "rule:expressions"]
 
@@ -355,8 +364,29 @@ def rule_for_if_clauses : List String := [
 def rule_for_stmt : List String := [
   "rule:for_stmt"]
 
+def rule_fstring : List String := [
+  "rule:fstring"]
+
+def rule_fstring_conversion : List String := [
+  "rule:fstring_conversion"]
+
+def rule_fstring_format_spec : List String := [
+  "rule:fstring_format_spec"]
+
+def rule_fstring_full_format_spec : List String := [
+  "rule:fstring_full_format_spec"]
+
+def rule_fstring_middle : List String := [
+  "rule:fstring_middle"]
+
+def rule_fstring_replacement_field : List String := [
+  "rule:fstring_replacement_field"]
+
 def rule_func_type : List String := [
   "rule:func_type"]
+
+def rule_func_type_comment : List String := [
+  "rule:func_type_comment"]
 
 def rule_function_def : List String := [
   "rule:function_def"]
@@ -421,11 +451,41 @@ def rule_interactive : List String := [
 def rule_invalid_ann_assign_target : List String := [
   "rule:invalid_ann_assign_target"]
 
+def rule_invalid_arguments : List String := [
+  "rule:invalid_arguments"]
+
+def rule_invalid_arithmetic : List String := [
+  "rule:invalid_arithmetic"]
+
+def rule_invalid_as_pattern : List String := [
+  "rule:invalid_as_pattern"]
+
 def rule_invalid_assert_stmt : List String := [
   "rule:invalid_assert_stmt"]
 
 def rule_invalid_assignment : List String := [
   "rule:invalid_assignment"]
+
+def rule_invalid_block : List String := [
+  "rule:invalid_block"]
+
+def rule_invalid_case_block : List String := [
+  "rule:invalid_case_block"]
+
+def rule_invalid_class_argument_pattern : List String := [
+  "rule:invalid_class_argument_pattern"]
+
+def rule_invalid_class_def_raw : List String := [
+  "rule:invalid_class_def_raw"]
+
+def rule_invalid_class_pattern : List String := [
+  "rule:invalid_class_pattern"]
+
+def rule_invalid_comprehension : List String := [
+  "rule:invalid_comprehension"]
+
+def rule_invalid_def_raw : List String := [
+  "rule:invalid_def_raw"]
 
 def rule_invalid_default : List String := [
   "rule:invalid_default"]
@@ -436,23 +496,164 @@ def rule_invalid_del_stmt : List String := [
 def rule_invalid_dotted_as_name : List String := [
   "rule:invalid_dotted_as_name"]
 
+def rule_invalid_double_starred_kvpairs : List String := [
+  "rule:invalid_double_starred_kvpairs"]
+
+def rule_invalid_double_type_comments : List String := [
+  "rule:invalid_double_type_comments"]
+
+def rule_invalid_elif_stmt : List String := [
+  "rule:invalid_elif_stmt"]
+
+def rule_invalid_else_stmt : List String := [
+  "rule:invalid_else_stmt"]
+
+def rule_invalid_except_star_stmt : List String := [
+  "rule:invalid_except_star_stmt"]
+
+def rule_invalid_except_star_stmt_indent : List String := [
+  "rule:invalid_except_star_stmt_indent"]
+
+def rule_invalid_except_stmt : List String := [
+  "rule:invalid_except_stmt"]
+
+def rule_invalid_except_stmt_indent : List String := [
+  "rule:invalid_except_stmt_indent"]
+
+def rule_invalid_expression : List String := [
+  "rule:invalid_expression"]
+
+def rule_invalid_factor : List String := [
+  "rule:invalid_factor"]
+
+def rule_invalid_finally_stmt : List String := [
+  "rule:invalid_finally_stmt"]
+
+def rule_invalid_for_if_clause : List String := [
+  "rule:invalid_for_if_clause"]
+
+def rule_invalid_for_stmt : List String := [
+  "rule:invalid_for_stmt"]
+
+def rule_invalid_for_target : List String := [
+  "rule:invalid_for_target"]
+
+def rule_invalid_fstring_conversion_character : List String := [
+  "rule:invalid_fstring_conversion_character"]
+
+def rule_invalid_fstring_replacement_field : List String := [
+  "rule:invalid_fstring_replacement_field"]
+
 def rule_invalid_group : List String := [
   "rule:invalid_group"]
+
+def rule_invalid_if_expression : List String := [
+  "rule:invalid_if_expression"]
+
+def rule_invalid_if_stmt : List String := [
+  "rule:invalid_if_stmt"]
 
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
 
+def rule_invalid_import_from : List String := [
+  "rule:invalid_import_from"]
+
 def rule_invalid_import_from_as_name : List String := [
   "rule:invalid_import_from_as_name"]
 
+def rule_invalid_import_from_targets : List String := [
+  "rule:invalid_import_from_targets"]
+
+def rule_invalid_kvpair : List String := [
+  "rule:invalid_kvpair"]
+
+def rule_invalid_kvpair_unpacking : List String := [
+  "rule:invalid_kvpair_unpacking"]
+
+def rule_invalid_kwarg : List String := [
+  "rule:invalid_kwarg"]
+
+def rule_invalid_kwds : List String := [
+  "rule:invalid_kwds"]
+
+def rule_invalid_lambda_kwds : List String := [
+  "rule:invalid_lambda_kwds"]
+
+def rule_invalid_lambda_parameters : List String := [
+  "rule:invalid_lambda_parameters"]
+
+def rule_invalid_lambda_parameters_helper : List String := [
+  "rule:invalid_lambda_parameters_helper"]
+
+def rule_invalid_lambda_star_etc : List String := [
+  "rule:invalid_lambda_star_etc"]
+
+def rule_invalid_legacy_expression : List String := [
+  "rule:invalid_legacy_expression"]
+
+def rule_invalid_mapping_pattern : List String := [
+  "rule:invalid_mapping_pattern"]
+
+def rule_invalid_match_stmt : List String := [
+  "rule:invalid_match_stmt"]
+
+def rule_invalid_named_expression : List String := [
+  "rule:invalid_named_expression"]
+
+def rule_invalid_noteq : List String := [
+  "rule:invalid_noteq"]
+
+def rule_invalid_parameters : List String := [
+  "rule:invalid_parameters"]
+
+def rule_invalid_parameters_helper : List String := [
+  "rule:invalid_parameters_helper"]
+
 def rule_invalid_raise_stmt : List String := [
   "rule:invalid_raise_stmt"]
+
+def rule_invalid_star_etc : List String := [
+  "rule:invalid_star_etc"]
+
+def rule_invalid_starred_expression : List String := [
+  "rule:invalid_starred_expression"]
 
 def rule_invalid_starred_expression_unpacking : List String := [
   "rule:invalid_starred_expression_unpacking"]
 
 def rule_invalid_starred_expression_unpacking_sequence : List String := [
   "rule:invalid_starred_expression_unpacking_sequence"]
+
+def rule_invalid_string_tstring_concat : List String := [
+  "rule:invalid_string_tstring_concat"]
+
+def rule_invalid_try_stmt : List String := [
+  "rule:invalid_try_stmt"]
+
+def rule_invalid_tstring_conversion_character : List String := [
+  "rule:invalid_tstring_conversion_character"]
+
+def rule_invalid_tstring_replacement_field : List String := [
+  "rule:invalid_tstring_replacement_field"]
+
+def rule_invalid_type_param : List String := [
+  "rule:invalid_type_param"]
+
+def rule_invalid_type_params : List String := [
+  "rule:invalid_type_params"]
+
+def rule_invalid_while_stmt : List String := [
+  "rule:invalid_while_stmt"]
+
+def rule_invalid_with_item : List String := [
+  "rule:invalid_with_item"]
+
+def rule_invalid_with_stmt : List String := [
+  "rule:invalid_with_stmt"]
+
+def rule_invalid_with_stmt_indent : List String := [
+  "rule:invalid_with_stmt_indent"]
 
 def rule_inversion : List String := [
   "rule:inversion"]
@@ -661,6 +862,15 @@ def rule_simple_stmt : List String := [
 def rule_simple_stmt_more : List String := [
   "rule:simple_stmt"]
 
+def rule_simple_stmts : List String := [
+  "rule:simple_stmts"]
+
+def rule_single_compound_stmt : List String := [
+  "rule:single_compound_stmt"]
+
+def rule_single_subscript_attribute_target : List String := [
+  "rule:single_subscript_attribute_target"]
+
 def rule_single_target : List String := [
   "rule:single_target"]
 
@@ -675,6 +885,9 @@ def rule_slice : List String := [
 
 def rule_slices : List String := [
   "rule:slices"]
+
+def rule_star_atom : List String := [
+  "rule:star_atom"]
 
 def rule_star_etc : List String := [
   "rule:star_etc"]
@@ -706,11 +919,29 @@ def rule_star_target : List String := [
 def rule_star_targets : List String := [
   "rule:star_targets"]
 
+def rule_star_targets_list_seq : List String := [
+  "rule:star_targets_list_seq"]
+
+def rule_star_targets_tuple_seq : List String := [
+  "rule:star_targets_tuple_seq"]
+
 def rule_starred_expression : List String := [
   "rule:starred_expression"]
 
 def rule_statement : List String := [
   "rule:statement"]
+
+def rule_statement_newline : List String := [
+  "rule:statement_newline"]
+
+def rule_statements : List String := [
+  "rule:statements"]
+
+def rule_string : List String := [
+  "rule:string"]
+
+def rule_strings : List String := [
+  "rule:strings"]
 
 def rule_subject_expr : List String := [
   "rule:subject_expr"]
@@ -736,8 +967,35 @@ def rule_term : List String := [
 def rule_try_stmt : List String := [
   "rule:try_stmt"]
 
+def rule_tstring : List String := [
+  "rule:tstring"]
+
+def rule_tstring_field_messages : List String := [
+  "rule:invalid_tstring_replacement_field"]
+
+def rule_tstring_format_spec : List String := [
+  "rule:tstring_format_spec"]
+
+def rule_tstring_format_spec_replacement_field : List String := [
+  "rule:tstring_format_spec_replacement_field"]
+
+def rule_tstring_full_format_spec : List String := [
+  "rule:tstring_full_format_spec"]
+
+def rule_tstring_middle : List String := [
+  "rule:tstring_middle"]
+
+def rule_tstring_replacement_field : List String := [
+  "rule:tstring_replacement_field"]
+
 def rule_tuple : List String := [
   "rule:tuple"]
+
+def rule_type_alias : List String := [
+  "rule:type_alias"]
+
+def rule_type_expressions : List String := [
+  "rule:type_expressions"]
 
 def rule_type_param : List String := [
   "rule:type_param"]

@@ -4,49 +4,49 @@ Modules/_collectionsmodule.c	29	34	get_module_state_by_cls	get_module_state_by_c
 Modules/_collectionsmodule.c	39	44	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	excluded		no-behaviour: module-state lookup
 Modules/_collectionsmodule.c	177	189	newblock	newblock(dequeobject *deque) {	excluded		no-behaviour: block allocator; the model treats allocation as succeeding, and block numbers are kept relative
 Modules/_collectionsmodule.c	192	200	freeblock	freeblock(dequeobject *deque, block *b)	excluded		no-behaviour: block allocator; freed blocks are cached, which is invisible
-Modules/_collectionsmodule.c	203	233	deque_new	deque_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-construct	
+Modules/_collectionsmodule.c	203	233	deque_new	deque_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-init	
 Modules/_collectionsmodule.c	245	278	deque_pop_impl	deque_pop_impl(dequeobject *deque) /*[clinic end generated code: output=2e5f7890c4251f07 input=55c5b6a8ad51d72f]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
 Modules/_collectionsmodule.c	290	324	deque_popleft_impl	deque_popleft_impl(dequeobject *deque) /*[clinic end generated code: output=62b154897097ff68 input=1571ce88fe3053de]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
 Modules/_collectionsmodule.c	341	366	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	380	386	deque_append_impl	deque_append_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9c7bcb8b599c6362 input=b0eeeb09b9f5cf18]*/	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	389	415	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	429	435	deque_appendleft_impl	deque_appendleft_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9a192edbcd0f20db input=236c2fbceaf08e14]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	438	450	finalize_iterator	finalize_iterator(PyObject *it)	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	455	465	consume_iterator	consume_iterator(PyObject *it)	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	479	520	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	578	590	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	438	450	finalize_iterator	finalize_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	455	465	consume_iterator	consume_iterator(PyObject *it)	modelled	sequences-deque-extend-reentrant	
+Modules/_collectionsmodule.c	479	520	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-extend-reentrant,sequences-deque-extend-keeps-bound,sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	578	590	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-extend-reentrant,sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	602	661	deque_copy_impl	deque_copy_impl(dequeobject *deque) /*[clinic end generated code: output=6409b3d1ad2898b5 input=51d2ed1a23bab5e2]*/	modelled	sequences-deque-copy-concat,sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	671	675	deque___copy___impl	deque___copy___impl(dequeobject *deque) /*[clinic end generated code: output=7c5821504342bf23 input=f5464036f9686a55]*/	modelled	sequences-deque-copy-concat-checked	
-Modules/_collectionsmodule.c	678	707	deque_concat_lock_held	deque_concat_lock_held(dequeobject *deque, PyObject *other)	modelled	sequences-deque-copy-concat-checked	
-Modules/_collectionsmodule.c	710	718	deque_concat	deque_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-copy-concat-checked	
+Modules/_collectionsmodule.c	678	707	deque_concat_lock_held	deque_concat_lock_held(dequeobject *deque, PyObject *other)	modelled	sequences-deque-concat-args,sequences-deque-copy-concat	
+Modules/_collectionsmodule.c	710	718	deque_concat	deque_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-concat-args,sequences-deque-copy-concat	
 Modules/_collectionsmodule.c	721	803	deque_clear	deque_clear(PyObject *self)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	815	820	deque_clearmethod_impl	deque_clearmethod_impl(dequeobject *deque) /*[clinic end generated code: output=79b2513e097615c1 input=3a22e9605d20c5e9]*/	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	823	897	deque_inplace_repeat_lock_held	deque_inplace_repeat_lock_held(dequeobject *deque, Py_ssize_t n)	modelled	sequences-deque-irepeat,sequences-deque-irepeat-checked	
 Modules/_collectionsmodule.c	900	908	deque_inplace_repeat	deque_inplace_repeat(PyObject *self, Py_ssize_t n)	modelled	sequences-deque-irepeat,sequences-deque-irepeat-checked	
-Modules/_collectionsmodule.c	911	927	deque_repeat	deque_repeat(PyObject *self, Py_ssize_t n)	modelled	sequences-deque-irepeat	
+Modules/_collectionsmodule.c	911	927	deque_repeat	deque_repeat(PyObject *self, Py_ssize_t n)	modelled	sequences-deque-mul,sequences-deque-mul-checked	
 Modules/_collectionsmodule.c	955	1076	_deque_rotate	_deque_rotate(dequeobject *deque, Py_ssize_t n)	modelled	sequences-deque-rotate-loop	
 Modules/_collectionsmodule.c	1091	1097	deque_rotate_impl	deque_rotate_impl(dequeobject *deque, Py_ssize_t n) /*[clinic end generated code: output=96c2402a371eb15d input=3543c3b2297de8f1]*/	modelled	sequences-deque-rotate-loop	
 Modules/_collectionsmodule.c	1109	1145	deque_reverse_impl	deque_reverse_impl(dequeobject *deque) /*[clinic end generated code: output=bdeebc2cf8c1f064 input=26f4167fd623027f]*/	modelled	sequences-deque-reverse	
-Modules/_collectionsmodule.c	1159	1193	deque_count_impl	deque_count_impl(dequeobject *deque, PyObject *v) /*[clinic end generated code: output=2ca26c49b6ab0400 input=4ef67ef2b34dc1fc]*/	modelled	sequences-pop-remove-count-agree	
-Modules/_collectionsmodule.c	1196	1225	deque_contains_lock_held	deque_contains_lock_held(dequeobject *deque, PyObject *v)	modelled	sequences-pop-remove-count-agree	
-Modules/_collectionsmodule.c	1228	1236	deque_contains	deque_contains(PyObject *self, PyObject *v)	modelled	sequences-pop-remove-count-agree	
-Modules/_collectionsmodule.c	1239	1243	deque_len	deque_len(PyObject *self)	modelled	sequences-deque-construct	
-Modules/_collectionsmodule.c	1262	1324	deque_index_impl	deque_index_impl(dequeobject *deque, PyObject *v, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=df45132753175ef9 input=1c3b19632cf3484f]*/	modelled	sequences-index-agree	
+Modules/_collectionsmodule.c	1159	1193	deque_count_impl	deque_count_impl(dequeobject *deque, PyObject *v) /*[clinic end generated code: output=2ca26c49b6ab0400 input=4ef67ef2b34dc1fc]*/	modelled	sequences-deque-search-reentrant,sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1196	1225	deque_contains_lock_held	deque_contains_lock_held(dequeobject *deque, PyObject *v)	modelled	sequences-deque-search-reentrant,sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1228	1236	deque_contains	deque_contains(PyObject *self, PyObject *v)	modelled	sequences-deque-search-reentrant,sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1239	1243	deque_len	deque_len(PyObject *self)	excluded		trivial: returns FT_ATOMIC_LOAD_SSIZE(deque->ob_size), one field with no branch (:1239-1243); nothing to prove, not coverage
+Modules/_collectionsmodule.c	1262	1324	deque_index_impl	deque_index_impl(dequeobject *deque, PyObject *v, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=df45132753175ef9 input=1c3b19632cf3484f]*/	modelled	sequences-deque-search-reentrant,sequences-index-agree	
 Modules/_collectionsmodule.c	1347	1373	deque_insert_impl	deque_insert_impl(dequeobject *deque, Py_ssize_t index, PyObject *value) /*[clinic end generated code: output=ef4d2c15d5532b80 input=dbee706586cc9cde]*/	modelled	sequences-insert-agree	
 Modules/_collectionsmodule.c	1376	1381	valid_index	valid_index(Py_ssize_t i, Py_ssize_t limit)	modelled	sequences-subscript-agree	
 Modules/_collectionsmodule.c	1384	1420	deque_item_lock_held	deque_item_lock_held(dequeobject *deque, Py_ssize_t i)	modelled	sequences-subscript-agree	
 Modules/_collectionsmodule.c	1423	1431	deque_item	deque_item(PyObject *self, Py_ssize_t i)	modelled	sequences-subscript-agree	
 Modules/_collectionsmodule.c	1434	1447	deque_del_item	deque_del_item(dequeobject *deque, Py_ssize_t i)	modelled	sequences-subscript-agree	
-Modules/_collectionsmodule.c	1461	1500	deque_remove_impl	deque_remove_impl(dequeobject *deque, PyObject *value) /*[clinic end generated code: output=54cff28b8ef78c5b input=60eb3f8aa4de532a]*/	modelled	sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1461	1500	deque_remove_impl	deque_remove_impl(dequeobject *deque, PyObject *value) /*[clinic end generated code: output=54cff28b8ef78c5b input=60eb3f8aa4de532a]*/	modelled	sequences-deque-search-reentrant,sequences-pop-remove-count-agree	
 Modules/_collectionsmodule.c	1503	1532	deque_ass_item_lock_held	deque_ass_item_lock_held(dequeobject *deque, Py_ssize_t i, PyObject *v)	modelled	sequences-subscript-agree	
 Modules/_collectionsmodule.c	1535	1543	deque_ass_item	deque_ass_item(PyObject *self, Py_ssize_t i, PyObject *v)	modelled	sequences-subscript-agree	
-Modules/_collectionsmodule.c	1546	1566	deque_dealloc	deque_dealloc(PyObject *self)	excluded		no-behaviour: frees the blocks and items
+Modules/_collectionsmodule.c	1546	1566	deque_dealloc	deque_dealloc(PyObject *self)	todo		todo: FT_CLEAR_WEAKREFS(self, weakreflist) at :1553 is PyObject_ClearWeakRefs (Include/internal/pycore_weakref.h:32-52; guarded by weakref_list != NULL in the default build), which clears the deque's weakrefs and calls their callbacks, an observable effect; the model has no weakref or finalization state, so it is not mirrored. The rest of the body (deque_clear, freeblock, PyMem_Free of the free list) only drops references and frees memory.
 Modules/_collectionsmodule.c	1569	1593	deque_traverse	deque_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_collectionsmodule.c	1604	1628	deque___reduce___impl	deque___reduce___impl(dequeobject *deque) /*[clinic end generated code: output=cb85d9e0b7d2c5ad input=991a933a5bc7a526]*/	todo		
 Modules/_collectionsmodule.c	1633	1661	deque_repr	deque_repr(PyObject *deque)	todo		
 Modules/_collectionsmodule.c	1664	1740	deque_richcompare	deque_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Modules/_collectionsmodule.c	1755	1778	deque_init_impl	deque_init_impl(dequeobject *deque, PyObject *iterable, PyObject *maxlenobj) /*[clinic end generated code: output=7084a39d71218dcd input=2b9e37af1fd73143]*/	modelled	sequences-deque-construct	
+Modules/_collectionsmodule.c	1755	1778	deque_init_impl	deque_init_impl(dequeobject *deque, PyObject *iterable, PyObject *maxlenobj) /*[clinic end generated code: output=7084a39d71218dcd input=2b9e37af1fd73143]*/	modelled	sequences-deque-init,sequences-deque-construct	
 Modules/_collectionsmodule.c	1790	1800	deque___sizeof___impl	deque___sizeof___impl(dequeobject *deque) /*[clinic end generated code: output=4d36e9fb4f30bbaf input=762312f2d4813535]*/	todo		
 Modules/_collectionsmodule.c	1803	1809	deque_get_maxlen	deque_get_maxlen(PyObject *self, void *Py_UNUSED(closure))	modelled	sequences-deque-construct	
 Modules/_collectionsmodule.c	1822	1826	deque___reversed___impl	deque___reversed___impl(dequeobject *deque) /*[clinic end generated code: output=3e7e7e715883cf2e input=3d494c25a6fe5c7e]*/	todo		

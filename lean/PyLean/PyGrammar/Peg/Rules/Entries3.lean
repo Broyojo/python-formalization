@@ -630,8 +630,9 @@ def cmpEntries : List Entry := [
     statement := "noteq_bitwise_or: the operator group and bitwise_or give (NotEq, operand); the " ++
       "group _tmp_64 takes NOTEQUAL: without barry_as_FLUFL '!=' is the operator and '<>' gives " ++
       "NULL with no error; with it '<>' is the operator and '!=' raises \"with Barry as BDFL, use " ++
-      "'<>' instead of '!='\" and gives NULL."
-    source := "Grammar/python.gram:807-808; Parser/pegen.c (_PyPegen_check_barry_as_flufl)"
+      "'<>' instead of '!='\" and gives NULL with error_indicator set (an error return, so no " ++
+      "later comparison operator is tried)."
+    source := "Grammar/python.gram:807-808; Parser/action_helpers.c:934-948"
     status := .proven
     prop := ``NoteqBitwiseOrRule
     thm := some ``noteqBitwiseOrRule_proven
@@ -672,9 +673,9 @@ def invalid3Entries : List Entry := [
       "'a=:' is not diagnosed: ':' is neither)."
     source := "Grammar/python.gram:1373-1374"
     status := .proven
-    prop := ``InvalidDefault
-    thm := some ``invalidDefault_proven
-    notes := scheme }
+    prop := ``InvalidDefaultRule
+    thm := some ``invalidDefaultRule_proven
+    notes := scheme ++ " Tmp126 pins the lookahead group _tmp_126 (r403) to ')' | ','." }
 ]
 
 end PyLean.PyGrammar.Peg

@@ -168,6 +168,76 @@ BOMB = Bomb()
 MUTS = [Mut(k) for k in range(5)]
 
 
+def re_act(d, st):
+    """What a re-entrant iterator step does to the deque under test (see ReAct in Diff.lean)."""
+    k = st[0]
+    if k == "a":
+        d.append(0)
+    elif k == "c":
+        d.clear()
+    elif k == "i":
+        d.__init__(maxlen=st[1])
+    elif k == "p":
+        d.pop()
+    elif k == "r":
+        raise ValueError("it")
+    elif k == "s":
+        raise StopIteration
+
+
+class ReIt:
+    """An iterator over a script: __iter__ runs `pre` on the deque, each __next__ runs its
+    step's action on the deque and then yields the step's last entry."""
+
+    def __init__(self, d, pre, steps):
+        self.d, self.pre, self.steps, self.k = d, pre, steps, 0
+
+    def __iter__(self):
+        re_act(self.d, self.pre)
+        return self
+
+    def __next__(self):
+        if self.k >= len(self.steps):
+            raise StopIteration
+        st = self.steps[self.k]
+        self.k += 1
+        re_act(self.d, st)
+        return to_el(st[-1])
+
+
+class FakeDeque:
+    """Passes PyObject_IsInstance(x, deque) through its __class__."""
+
+    def __init__(self, xs, raise_):
+        self.xs, self.raise_ = xs, raise_
+
+    @property
+    def __class__(self):
+        return deque
+
+    def __iter__(self):
+        xs = [to_el(e) for e in self.xs]
+        return RaisingIter(xs, ValueError("it")) if self.raise_ else iter(xs)
+
+
+class F2:
+    @property
+    def __class__(self):
+        return deque
+
+
+class ClsRaise:
+    @property
+    def __class__(self):
+        raise ValueError("cls")
+
+
+class H:
+    @property
+    def __class__(self):
+        raise AttributeError("a")
+
+
 def to_el(j):
     if isinstance(j, str):
         return BOMB if j == "B" else MUTS[int(j[1:])]
@@ -406,10 +476,39 @@ def repeat_factor(rng, size, maxlen, itemsize=None, inplace=True, is_list=False)
     return n if size * n <= BIG else None
 
 
+def gen_re(rng):
+    ml = lambda: rng.choice([None, 0, 1, 2, 5])
+    pre = rng.choice([["n"]] * 6 + [["a"], ["c"], ["i", ml()], ["i", ml()], ["p"], ["r"]])
+    steps = []
+    for _ in range(rng.choice([0, 1, 2, 3, 5, 8, 70])):
+        x = rng.randint(0, 5)
+        k = rng.choice("yyyyyyaacip")
+        steps.append(["i", ml(), x] if k == "i" else [k, x])
+    end = rng.random()
+    if end < 0.15:
+        steps.append(["r"])
+    elif end < 0.3:
+        steps.append(["s"])
+    return [pre, steps]
+
+
 def gen_deque_op(rng, d):
     n = len(d)
     maxlen = d.maxlen
     x = de_elem(rng)
+    if rng.random() < 0.2:
+        op = rng.choice(["extend_re", "extendleft_re", "iadd_re", "init_re", "init_noarg", "add_odd"])
+        if op == "init_noarg":
+            return [op] + rng.choice([[], [None], [0], [1], [3]])
+        if op == "add_odd":
+            k = rng.choice(["fake", "fake", "fake_noiter", "cls_raise", "cls_attr"])
+            if k == "fake":
+                return [op, k, de_items(rng, rng.choice([0, 1, 2, 5, 70]))] + (["r"] if rng.random() < 0.3 else [])
+            return [op, k]
+        r = [op] + gen_re(rng)
+        if op == "init_re":
+            r += rng.choice([[], [None], [0], [1], [3]])
+        return r
     op = rng.choice(["append", "appendleft", "pop", "popleft", "extend", "extendleft", "extend_self",
                      "extendleft_self", "iadd", "iadd_self", "rotate", "rotate", "rotate", "reverse",
                      "copy", "add", "add_self", "add_bad", "clear", "init", "init_self", "index", "index",
@@ -799,7 +898,10 @@ def make(c):
         return list(c["init"])
     if kind == "array":
         return (A if c["tname"] == "A" else array)(c["tc"], [to_val(v) for v in c["init"]])
-    return (D if c["tname"] == "D" else deque)([to_el(e) for e in c["init"]], c["maxlen"])
+    cls = D if c["tname"] == "D" else deque
+    if c.get("noinit"):
+        return cls(maxlen=c["maxlen"])
+    return cls([to_el(e) for e in c["init"]], c["maxlen"])
 
 
 def gen_array_new(rng):
@@ -865,30 +967,31 @@ def gen_defdict(rng):
     for _ in range(rng.randint(1, 6)):
         op = rng.choice(["getitem", "getitem", "missing", "copy", "reduce", "repr", "repr_nested", "or_dict",
                          "ror_dict", "or_dd", "or_bad", "init", "init_toomany", "set", "or_frozen",
-                         "ror_frozen"])
+                         "ror_frozen", "reduce_raise", "reduce_bad", "repr_base_raise"])
         if op in ("getitem", "missing"):
             ops.append([op, rng.choice([1, rng.randint(0, 7)])])
-        elif op in ("copy", "reduce", "repr", "or_bad", "repr_nested"):
+        elif op in ("copy", "reduce", "repr", "or_bad", "repr_nested", "reduce_raise", "reduce_bad",
+                    "repr_base_raise"):
             ops.append([op])
         elif op in ("or_dict", "ror_dict", "or_frozen", "ror_frozen"):
             ops.append([op, items()])
         elif op == "or_dd":
             ops.append([op, items(), rng.choice(["null", "none", "F0"])])
         elif op == "init":
-            f = rng.choice(["absent", "none", "F0", "F1", "bad"])
+            f = rng.choice(["absent", "none", "F0", "F1", "FR", "bad"])
             ops.append([op, f, [] if f == "absent" else items()])
         elif op == "init_toomany":
             ops.append([op, rng.choice(["none", "F0"])])
         else:
             ops.append([op, rng.randint(0, 5), rng.randint(0, 9)])
     return {"mod": "sequences", "fn": "defdict", "init": items(),
-            "factory": rng.choice(["null", "none", "F0", "F1", "F2", "F3"]),
+            "factory": rng.choice(["null", "none", "F0", "F1", "F2", "F3", "FR"]),
             "tname": rng.choice(["defaultdict", "DD"]), "ops": ops}
 
 
 def gen_count(rng):
-    key = lambda: rng.choice([0, 1, 2, 3, "U"] if rng.random() < 0.3 else [0, 1, 2, 3])
-    val = lambda: rng.choice([0, 1, 2, -1, "S"] if rng.random() < 0.3 else [0, 1, 2, -1])
+    key = lambda: rng.choice([0, 1, 2, 3, "U", "X"] if rng.random() < 0.3 else [0, 1, 2, 3])
+    val = lambda: rng.choice([0, 1, 2, -1, "S", "C"] if rng.random() < 0.3 else [0, 1, 2, -1])
     init = [[k, val()] for k in {rng.randint(0, 3) for _ in range(rng.randint(0, 3))}]
     return {"mod": "sequences", "fn": "count", "mapping": rng.choice(["dict", "slow"]), "init": init,
             "keys": [key() for _ in range(rng.choice([0, 1, 2, 3, 5, 8]))],
@@ -897,7 +1000,8 @@ def gen_count(rng):
 
 def gen_tuplegetter(rng):
     n = rng.randint(0, 4)
-    return {"mod": "sequences", "fn": "tuplegetter", "index": edge_index(rng, n), "doc": rng.randint(0, 5),
+    return {"mod": "sequences", "fn": "tuplegetter", "index": edge_index(rng, n),
+            "doc": rng.choice([0, 1, 2, 3, 4, 5, "R"]),
             "tuple": [rng.randint(0, 5) for _ in range(n)]}
 
 
@@ -952,6 +1056,9 @@ def gen_case(rng):
         c["maxlen"] = rng.choice([None, None, None, 0, 1, 2, 3, 5, 64, 65, n, n + 1, n + 3, 2 ** 31,
                                   2 ** 31 + 5, 2 ** 32, 2 ** 32 + 2, 2 ** 33, 2 ** 40])
         init = de_items(rng, n)
+        if rng.random() < 0.1:
+            c["noinit"] = True
+            init = []
     else:
         init = [rng.randint(0, 5) for _ in range(n)]
     c["init"] = init
@@ -1159,6 +1266,25 @@ def run_deque_op(d, op, extra):
     if name == "iadd_bad":
         d.__iadd__(5)
         return None
+    if name in ("extend_re", "extendleft_re"):
+        return getattr(d, name[:-3])(ReIt(d, args[0], args[1]))
+    if name == "iadd_re":
+        d.__iadd__(ReIt(d, args[0], args[1]))
+        return None
+    if name == "init_re":
+        d.__init__(ReIt(d, args[0], args[1]), *args[2:])
+        return None
+    if name == "init_noarg":
+        if args:
+            d.__init__(maxlen=args[0])
+        else:
+            d.__init__()
+        return None
+    if name == "add_odd":
+        k = args[0]
+        other = {"fake": lambda: FakeDeque(args[1], len(args) > 2), "fake_noiter": F2,
+                 "cls_raise": ClsRaise, "cls_attr": H}[k]()
+        return deque_j(d + other)
     if name in ("extend_self", "extendleft_self"):
         return getattr(d, name[:-5])(d)
     if name == "iadd_self":
@@ -1608,6 +1734,8 @@ class Fac:
         self.name = name
 
     def __repr__(self):
+        if self.name == "FR":
+            raise ValueError("frepr")
         return self.name
 
     def __call__(self):
@@ -1638,6 +1766,32 @@ def fac_of(name):
     return {"null": None, "none": None}.get(name, Fac(name)) if name in ("null", "none") else Fac(name)
 
 
+class BadRepr:
+    def __repr__(self):
+        raise ValueError("vrepr")
+
+
+class DDI(defaultdict):
+    def items(self):
+        raise ValueError("items")
+
+
+class DDJ(defaultdict):
+    def items(self):
+        return 5
+
+
+def safe_repr(a):
+    try:
+        return repr(a)
+    except Exception:
+        return "<repr raises>"
+
+
+def reduce_j(r):
+    return [r[0].__name__, [safe_repr(a) for a in r[1]], r[2], r[3], [list(kv) for kv in r[4]]]
+
+
 def dd_j(x):
     return [type(x).__name__, [list(kv) for kv in x.items()], repr(x)]
 
@@ -1666,8 +1820,15 @@ def run_dd_op(dd, op):
     if name == "copy":
         return dd_j(dd.copy())
     if name == "reduce":
-        r = dd.__reduce__()
-        return [repr(r[1][0]) if r[1] else None, [list(kv) for kv in r[4]]]
+        return reduce_j(dd.__reduce__())
+    if name == "reduce_raise":
+        return reduce_j(DDI(dd.default_factory, dd).__reduce__())
+    if name == "reduce_bad":
+        return reduce_j(DDJ(dd.default_factory, dd).__reduce__())
+    if name == "repr_base_raise":
+        x = type(dd)(dd.default_factory, dd)
+        x[99] = BadRepr()
+        return repr(x)
     if name == "repr":
         return repr(dd)
     if name == "repr_nested":
@@ -1711,20 +1872,42 @@ class SlowDict(dict):
         dict.__setitem__(self, k, v)
 
 
+COUNT_TARGET = [None]
+
+
+class ClrV:
+    """A count whose `+ 1` clears the mapping being counted into and gives 99."""
+
+    def __add__(self, other):
+        COUNT_TARGET[0].clear()
+        return 99
+
+
 def run_count(c):
     k_ = lambda k: [] if k == "U" else k
-    v_ = lambda v: "x" if v == "S" else v
+    v_ = lambda v: "x" if v == "S" else (ClrV() if v == "C" else v)
     m = (dict if c["mapping"] == "dict" else SlowDict)((k, v_(v)) for k, v in c["init"])
-    keys = [k_(k) for k in c["keys"]]
-    src = 5 if c["bad"] else (RaisingIter(keys, ValueError("iter")) if c["raises"] else keys)
+    COUNT_TARGET[0] = m
+
+    def keys():
+        for k in c["keys"]:
+            if k == "X":
+                m.clear()
+                yield 0
+            else:
+                yield k_(k)
+        if c["raises"]:
+            raise ValueError("iter")
+    src = 5 if c["bad"] else keys()
     r = py_res(lambda: collections._count_elements(m, src))
-    items = [[k, "S" if v == "x" else v] for k, v in m.items()]
+    items = [[k, "S" if v == "x" else ("C" if isinstance(v, ClrV) else v)] for k, v in m.items()]
     return {"ok": [r, items]}
 
 
 def run_tuplegetter(c):
+    doc = BadRepr() if c["doc"] == "R" else c["doc"]
     try:
-        g = collections._tuplegetter(c["index"], c["doc"])
+        g = collections._tuplegetter(c["index"], doc)
     except Exception as e:
         return {"exc": type(e).__name__, "msg": str(e)}
     t = tuple(c["tuple"])
@@ -1739,7 +1922,9 @@ def run_tuplegetter(c):
     def del_():
         g.__delete__(t)
     return {"ok": [py_res(lambda: get(t, tuple)), py_res(lambda: get(None, tuple)), py_res(lambda: get(None, tuple)),
-                   py_res(lambda: get(5, int)), py_res(set_), py_res(del_), list(g.__reduce__()[1]), repr(g)]}
+                   py_res(lambda: get(5, int)), py_res(set_), py_res(del_),
+                   [g.__reduce__()[1][0], "R" if isinstance(g.__reduce__()[1][1], BadRepr) else g.__reduce__()[1][1]],
+                   py_res(lambda: repr(g))]}
 
 
 def run_array_new(c):

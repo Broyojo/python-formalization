@@ -158,28 +158,6 @@ theorem datetimeRepr_proven : DatetimeRepr := by
   · simp [appendFold, h0]
   · simp [appendTzinfo, h0]
 
-/-- `time.isoformat()` and `str(time)`: the twins agree for every `timespec`. -/
-def TimeIsoformatTwins : Prop :=
-  ∀ (env : TzEnv) (t : TM) (spec : TimeSpec), env.Valid → OptTzOk t.tz →
-    tmIsoformatPy env t spec = tmIsoformatC env t spec
-
-theorem timeIsoformatTwins_proven : TimeIsoformatTwins := by
-  intro env t spec henv h
-  unfold tmIsoformatPy tmIsoformatC tmTzstrPy
-  rw [tm_utcoffset_twin env henv t h]
-  cases t.utcoffsetC env <;> rfl
-
-/-- `datetime.isoformat()` and `str(datetime)`: the twins agree for every `sep` and
-`timespec`. -/
-def DatetimeIsoformatTwins : Prop :=
-  ∀ (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec), env.Valid → OptTzOk dt.tz →
-    dtIsoformatPy env dt sep spec = dtIsoformatC env dt sep spec
-
-theorem datetimeIsoformatTwins_proven : DatetimeIsoformatTwins := by
-  intro env dt sep spec henv h
-  unfold dtIsoformatPy dtIsoformatC
-  rw [dt_utcoffset_twin env henv dt h]
-
 /-! ### `replace`, `combine`, parts -/
 
 /-- `t.replace()` and `dt.replace()` with no argument return an equal object;

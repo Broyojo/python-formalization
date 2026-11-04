@@ -13,7 +13,7 @@ Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	modelled	date
 Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	modelled	datetime-zoneinfo-fromutc-twins,datetime-zoneinfo-fromutc-twins-instances,datetime-zoneinfo-fromutc-twins-notrans,datetime-zoneinfo-fromutc-twins-sorted,datetime-zoneinfo-fromutc-twins-static,datetime-zoneinfo-fromutc-twins-wide	
 Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	modelled	datetime-zoneinfo-lookup-twins,datetime-zoneinfo-lookup-twins-instances	
 Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	modelled	datetime-zoneinfo-fromutc-twins-instances,datetime-zoneinfo-fromutc-twins-sorted,datetime-zoneinfo-lookup-twins,datetime-zoneinfo-lookup-twins-instances	
-Lib/zoneinfo/_zoneinfo.py	197	201	ZoneInfo.__str__	__str__(self)	todo		
+Lib/zoneinfo/_zoneinfo.py	197	201	ZoneInfo.__str__	__str__(self)	todo		candidates:datetime-str-isoformat-override-twins,datetime-str-via-isoformat
 Lib/zoneinfo/_zoneinfo.py	203	207	ZoneInfo.__repr__	__repr__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	209	210	ZoneInfo.__reduce__	__reduce__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	212	217	ZoneInfo._file_reduce	_file_reduce(self)	todo		

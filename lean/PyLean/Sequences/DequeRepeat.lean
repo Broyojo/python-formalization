@@ -364,7 +364,7 @@ and type (Doc/library/collections.rst:507-511, 599-600); all results keep the in
 def DequeCopyConcat : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → d.maxlen ≤ ssizeMax → ∀ (other : Deque α),
     ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
-      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+      ∃ n, d.concat (.ofDeque other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
         n.maxlen = d.maxlen ∧ n.tname = d.tname
 
 /-- The same for the exact type, and for a subclass whose `maxlen` is unbounded or
@@ -374,7 +374,7 @@ def DequeCopyConcatChecked : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → (d.tname = "deque" ∨ d.maxlen < 2147483648) →
     ∀ (other : Deque α),
     ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
-      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+      ∃ n, d.concat (.ofDeque other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
         n.maxlen = d.maxlen ∧ n.tname = d.tname
 
 theorem maxOk_le (d : Deque α) (h : d.WF) : d.maxlen < 0 ∨ (d.items.length : Int) ≤ d.maxlen := by
@@ -436,12 +436,12 @@ theorem copy_spec (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen
 theorem copy_concat_of (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen ≤ ssizeMax)
     (other : Deque α) :
     ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
-      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+      ∃ n, d.concat (.ofDeque other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
         n.maxlen = d.maxlen ∧ n.tname = d.tname := by
   obtain ⟨c, h1, w, i, m, t⟩ := copy_spec d h hc
   obtain ⟨w2, i2, m2⟩ := Deque.extend_spec c other.items w
   refine ⟨c, h1, w, i, m, t, c.extend other.items, ?_, w2, ?_, ?_, ?_⟩
-  · unfold Deque.concat; rw [h1]
+  · unfold Deque.concat; simp only [Deque.ConcatArg.ofDeque]; rw [h1]; simp only; rw [Deque.extendIter_iter]; rfl
   · rw [i2, m, i]
   · rw [m2, m]
   · rw [extend_tname, t]

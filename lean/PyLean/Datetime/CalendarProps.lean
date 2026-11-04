@@ -390,13 +390,13 @@ theorem dateAddTimedelta_proven : DateAddTimedelta := by
     rw [← ho, (ord_roundtrip y' m' d' (by unfold ValidDate MINYEAR at hv; omega)
       ⟨hv.2.2.1, hv.2.2.2.1⟩ ⟨hv.2.2.2.2.1, hv.2.2.2.2.2⟩).1] at hpy
     refine ⟨y', m', d', hv, ho, hpy, ?_⟩
-    unfold dateAddC
+    unfold dateAddC normalizeDateC
     rw [hn]
     exact checkDate_ok _ _ _ hv
   · unfold dateAddPy
     rw [if_neg (by omega)]
     exact ⟨_, rfl, rfl⟩
-  · unfold dateAddC
+  · unfold dateAddC normalizeDateC
     obtain ⟨e, he, hc⟩ := normalizeYMDC_err y m d t h hout
     rw [he]
     exact ⟨e, rfl, hc⟩

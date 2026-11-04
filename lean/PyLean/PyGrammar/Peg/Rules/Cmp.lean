@@ -183,14 +183,17 @@ theorem isnotBitwiseOr_proven : IsnotBitwiseOr := cmpPair2_of rfl
 
 /-! ### `noteq_bitwise_or` and the `!=` / `<>` check -/
 
-/-- The message `_PyPegen_check_barry_as_flufl` raises (`Parser/pegen.c`). -/
+/-- The message `_PyPegen_check_barry_as_flufl` raises (`Parser/action_helpers.c:940`). -/
 abbrev barryMsg : String := "with Barry as BDFL, use '<>' instead of '!='"
 
 /-- `_tmp_64: tok='!=' { _PyPegen_check_barry_as_flufl(p, tok) ? NULL : tok }`, the operator of
 `noteq_bitwise_or` (`Grammar/python.gram:807-808`). The tokenizer gives `NOTEQUAL` (28) for both
 `!=` and `<>`. Without `barry_as_FLUFL`, `!=` is the result and `<>` gives `NULL` (no error);
 with it, `<>` is the result and `!=` raises "with Barry as BDFL, use '<>' instead of '!='" and
-gives `NULL`; at another token `NULL` with the mark back. -/
+gives `NULL` with `error_indicator` set (`_PyPegen_check_barry_as_flufl`,
+`Parser/action_helpers.c:934-948`, returns -1 after `RAISE_SYNTAX_ERROR`, so the action's `NULL`
+is an error return and `compare_op_bitwise_or_pair` tries no further operator); at another token
+`NULL` with the mark back. -/
 def Tmp64 : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
   let s1 : PS := { q with mark := p.mark + 1 }
@@ -203,6 +206,7 @@ def Tmp64 : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
     callRule (f + 5) 341 p = (.tok t, s1.leave)) ∧
   (t.type = 28 → q.flagBarry = true → t.bytes ≠ [60, 62] →
     (callRule (f + 5) 341 p).1 = .null ∧
+    (callRule (f + 5) 341 p).2.errorIndicator = true ∧
     (callRule (f + 5) 341 p).2.tok = (raiseError0 "SyntaxError" barryMsg s1).2.tok)
 
 theorem tmp64_proven : Tmp64 := by
@@ -231,11 +235,14 @@ theorem tmp64_proven : Tmp64 := by
   · simp [hb, hs, truth, nonNull, he1, StateT.pure, pure, StateT.bind, bind]
   · have hs2 : ((q.tokenAt p.mark).bytes != [60, 62]) = true := by simpa using hs
     simp [hb, hs, hs2, StateT.pure, pure, StateT.bind, bind]
+    have hr := (raises_raiseError0 "SyntaxError" barryMsg).2
+      { q with mark := p.mark + 1, flagBarry := true }
     generalize raiseError0 "SyntaxError" "with Barry as BDFL, use '<>' instead of '!='"
-      { q with mark := p.mark + 1, flagBarry := true } = r
+      { q with mark := p.mark + 1, flagBarry := true } = r at hr
     obtain ⟨u, s'⟩ := r
+    simp only at hr
     simp only [truth, nonNull]
-    split <;> simp [PS.leave, StateT.pure, pure] <;> split <;> simp
+    split <;> simp [PS.leave, StateT.pure, pure, hr] <;> split <;> simp_all [StateT.pure] <;> (rename_i hx _; exact hx rfl)
 
 /-- `noteq_bitwise_or: (tok='!=' { ... }) a=bitwise_or { _PyPegen_cmpop_expr_pair(p, NotEq, a) }`
 (`Grammar/python.gram:807-808`): the operator group (`_tmp_64`, 341) and a `bitwise_or` (135) give
