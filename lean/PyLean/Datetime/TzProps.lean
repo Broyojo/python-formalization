@@ -213,12 +213,23 @@ theorem timezoneMethods_proven : TimezoneMethods := by
     simp only [CmpOp.holds, decide_eq_true_eq] at h
     exact (timedeltaBoolHash_proven off off2 h1 h2).2.1.mpr h
 
-/-- `timezone(offset, name)`: the twins agree on the outcome for every valid
-offset, and zero with no name is the `timezone.utc` singleton. -/
+theorem createTimezoneC_fresh (oid : Nat) (off : Delta) (name : Option String)
+    (h : off ≠ ⟨0, 0, 0⟩ ∨ name ≠ none) : createTimezoneC oid off name = ⟨oid, .timezone off name⟩ := by
+  unfold createTimezoneC lookUpTimezoneC
+  rw [if_neg (fun hh => by rcases h with h | h <;> exact h (by simp only [hh]))]
+
+/-- `timezone(offset, name)`: the twins agree on the outcome for every valid offset (the
+type invariant) and every name, and a zero offset without a name is the `timezone.utc`
+singleton in both (in C `new_timezone`'s own test; `create_timezone`'s `look_up_timezone`
+never fires on this path), while a zero offset with a name is a new object (`timezone(
+timedelta(0), 'UTC') is not timezone.utc`), as is every nonzero in-range offset. -/
 def TimezoneNew : Prop :=
   ∀ (oid : Nat) (off : Delta) (name : TzName), off.Valid →
     SameOutcome (timezoneNewPy oid off name) (timezoneNewC oid off name) ∧
-    (off.toUs = 0 → timezoneNewPy oid off .omitted = .ok tzUTC)
+    (off.toUs = 0 → timezoneNewPy oid off .omitted = .ok tzUTC ∧ timezoneNewC oid off .omitted = .ok tzUTC) ∧
+    (∀ s, off.toUs = 0 → timezoneNewC oid off (.str s) = .ok ⟨oid, .timezone off (some s)⟩) ∧
+    (-86400000000 < off.toUs → off.toUs < 86400000000 → off.toUs ≠ 0 →
+      timezoneNewC oid off .omitted = .ok ⟨oid, .timezone off none⟩)
 
 theorem timezoneNew_proven : TimezoneNew := by
   intro oid off name hv
@@ -229,18 +240,26 @@ theorem timezoneNew_proven : TimezoneNew := by
   have hin : (off.days = -1 ∧ off.seconds = 0 ∧ off.us < 1) ∨ off.days < -1 ∨ off.days ≥ 1 ↔
       ¬(-86400000000 < off.toUs ∧ off.toUs < 86400000000) := by
     unfold Delta.toUs; omega
-  constructor
+  have hz : off.toUs = 0 ↔ off = ⟨0, 0, 0⟩ := by
+    constructor
+    · intro e; unfold Delta.toUs at e
+      obtain ⟨d, s, u⟩ := off
+      simp only [Delta.mk.injEq]; simp only at hv' e; omega
+    · intro e; rw [e]; rfl
+  refine ⟨?_, fun h0 => ?_, fun s h0 => ?_, fun h1 h2 h0 => ?_⟩
   · cases name with
     | other => simp [timezoneNewPy, timezoneNewC, SameOutcome, PyExc.className]
     | omitted =>
       simp only [timezoneNewPy, timezoneNewC]
       by_cases h0 : off.bool = true
       · simp only [h0, Bool.not_true, Bool.false_eq_true, ite_false]
+        rw [createTimezoneC_fresh oid off none (Or.inl (fun e => hb.mp h0 (hz.mpr e)))]
         revert htw
         cases timezonePy off <;> cases newTimezoneC off <;> simp [SameOutcome]
       · simp [h0, sameOutcome_refl]
     | str s =>
       simp only [timezoneNewPy, timezoneNewC]
+      rw [createTimezoneC_fresh oid off (some s) (Or.inr (by simp))]
       unfold timezonePy
       by_cases h : (off.days = -1 ∧ off.seconds = 0 ∧ off.us < 1) ∨ off.days < -1 ∨ off.days ≥ 1
       · have hn := hin.mp h
@@ -255,11 +274,18 @@ theorem timezoneNew_proven : TimezoneNew := by
         · simp [h0, SameOutcome]
         · have h2 : -86399999999 ≤ off.toUs ∧ off.toUs ≤ 86399999999 := by omega
           simp [h0, h2, SameOutcome]
-  · intro h0
-    have : off.bool = false := by
+  · have : off.bool = false := by
       cases hc : off.bool
       · rfl
       · exact absurd h0 (hb.mp hc)
-    simp [timezoneNewPy, this]
+    exact ⟨by simp [timezoneNewPy, this], by simp [timezoneNewC, this]⟩
+  · have e := hz.mp h0
+    subst e
+    simp [timezoneNewC, createTimezoneC_fresh]
+  · have hbt : off.bool = true := hb.mpr h0
+    have hr : ¬((off.days = -1 ∧ off.seconds = 0 ∧ off.us < 1) ∨ off.days < -1 ∨ off.days ≥ 1) :=
+      fun e => hin.mp e ⟨h1, h2⟩
+    simp only [timezoneNewC, hbt, Bool.not_true, Bool.false_eq_true, ite_false, newTimezoneC, h0, hr]
+    rw [createTimezoneC_fresh oid off none (Or.inl (fun e => h0 (hz.mpr e)))]
 
 end PyLean.Datetime

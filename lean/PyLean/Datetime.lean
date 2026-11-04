@@ -43,6 +43,7 @@ import PyLean.Datetime.AstzProps
 import PyLean.Datetime.Hollow0506Props
 import PyLean.Datetime.LocalZoneProps
 import PyLean.Datetime.TdFloat
+import PyLean.Datetime.DeltaObjProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -95,7 +96,7 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``FromisocalendarTwinsCInt, thm := some ``fromisocalendarTwinsCInt_proven },
   { id := "datetime-timedelta-ctor-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__new__", "C delta_new_impl", "C accum", "C microseconds_to_delta_ex", "C new_delta_ex", "C check_delta_day_range", "C checked_divmod", "C normalize_pair", "C normalize_d_s_us", "C divmod"]
+    pyFns := ["timedelta.__new__", "C delta_new_impl", "C accum", "C microseconds_to_delta_ex", "C check_delta_day_range"]
     statement := "For all int arguments days, seconds, microseconds, milliseconds, minutes, hours, weeks, C and Python timedelta(...) return the same value or raise the same exception class (OverflowError)."
     source := "C/Python twins", status := .proven
     prop := ``TimedeltaCtorTwins, thm := some ``timedeltaCtorTwins_proven
@@ -106,7 +107,7 @@ def entries : List Entry := [
     source := "timedelta docs (normalization, \"If the normalized value of days lies outside the indicated range, OverflowError is raised\")", status := .proven
     prop := ``TimedeltaCtorExact, thm := some ``timedeltaCtorExact_proven },
   { id := "datetime-timedelta-ops-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__add__", "timedelta.__sub__", "timedelta.__neg__", "timedelta.__abs__", "timedelta.__mul__", "timedelta.__floordiv__", "timedelta.__truediv__", "timedelta.__mod__", "timedelta.__divmod__", "timedelta._to_microseconds", "_divide_and_round", "C delta_add", "C delta_subtract", "C delta_negative", "C delta_abs", "C delta_multiply", "C delta_divide", "C delta_truedivide", "C delta_remainder", "C delta_divmod", "C multiply_int_timedelta", "C divide_timedelta_int", "C divide_timedelta_timedelta", "C truedivide_timedelta_int", "C divide_nearest", "C delta_to_microseconds"]
+    pyFns := ["timedelta.__add__", "timedelta.__sub__", "timedelta.__neg__", "timedelta.__abs__", "timedelta.__mul__", "timedelta.__floordiv__", "timedelta.__truediv__", "timedelta.__mod__", "timedelta.__divmod__", "timedelta._to_microseconds", "_divide_and_round", "C delta_add", "C delta_subtract", "C delta_negative", "C delta_abs", "C delta_divide", "C delta_remainder", "C delta_divmod", "C multiply_int_timedelta", "C divide_timedelta_int", "C divide_timedelta_timedelta", "C truedivide_timedelta_int", "C divide_nearest", "C delta_to_microseconds", "C normalize_d_s_us", "C normalize_pair", "C divmod"]
     statement := "For all valid timedeltas a, b and every int k, a+b, a-b, -a, abs(a), a*k, a//k, a/k, a//b, a%b and divmod(a, b) agree between C and Python in value and exception class."
     source := "C/Python twins", status := .proven
     prop := ``TimedeltaOpsTwins, thm := some ``timedeltaOpsTwins_proven
@@ -132,7 +133,7 @@ def entries : List Entry := [
     source := "timedelta docs; __hash__ contract", status := .proven
     prop := ``TimedeltaBoolHash, thm := some ``timedeltaBoolHash_proven },
   { id := "datetime-timedelta-reduce", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__reduce__", "timedelta._getstate", "C delta_reduce", "C delta_getstate"]
+    pyFns := ["timedelta.__reduce__", "timedelta._getstate", "C delta_getstate"]
     statement := "timedelta(*t.__reduce__()[1]) == t in both twins."
     source := "pickle contract", status := .proven
     prop := ``TimedeltaReduce, thm := some ``timedeltaReduce_proven },
@@ -175,8 +176,8 @@ def entries : List Entry := [
     source := "timezone docs; C/Python twins", status := .proven
     prop := ``TimezoneMethods, thm := some ``timezoneMethods_proven },
   { id := "datetime-timezone-new", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timezone.__new__", "timezone._create", "C timezone_new_impl", "C create_timezone", "C new_timezone"]
-    statement := "timezone(offset[, name]) agrees between the twins for every valid timedelta and name; a zero offset without a name is timezone.utc."
+    pyFns := ["timezone.__new__", "timezone._create", "C timezone_new_impl", "C create_timezone", "C new_timezone", "C look_up_timezone"]
+    statement := "timezone(offset[, name]) agrees between the twins for every valid timedelta and name; a zero offset without a name is timezone.utc in both, a zero offset with a name and every nonzero in-range offset a new timezone."
     source := "C/Python twins; timezone docs", status := .proven
     prop := ``TimezoneNew, thm := some ``timezoneNew_proven },
   { id := "datetime-time-offsets", pyFile := "Lib/_pydatetime.py"
@@ -1401,7 +1402,49 @@ def entries : List Entry := [
     source := "C/Python twins; timedelta docs (fractional microseconds of all arguments combined, then rounded)", status := .refuted
     prop := ``TimedeltaFloatCtorTwins, thm := some ``timedeltaFloatCtorTwins_refuted
     bug := some "datetime-pydatetime-timedelta-float-precision"
-    notes := "timedelta(hours=10000000.1): C 416666 days 57959 s 999999 us (exact), Python 416666 days 57960 s (hours*3600 rounded as a double first). gh-160806, fixed on main. Not on record as a refutation: the type checks run in a different order (timedelta(days='x', microseconds=inf) is TypeError in Python, OverflowError in C)." }
+    notes := "timedelta(hours=10000000.1): C 416666 days 57959 s 999999 us (exact), Python 416666 days 57960 s (hours*3600 rounded as a double first). gh-160806, fixed on main. Not on record as a refutation: the type checks run in a different order (timedelta(days='x', microseconds=inf) is TypeError in Python, OverflowError in C)." },
+  { id := "datetime-c-normalize-helpers", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C divmod", "C normalize_pair", "C normalize_d_s_us"]
+    statement := "The C divmod helper is Python's divmod for every positive divisor; normalize_pair keeps hi*factor + lo with 0 <= lo < factor and leaves an in-range pair alone; normalize_d_s_us keeps the total microseconds with seconds and microseconds in range and leaves in-range fields alone."
+    source := "C/Python twins (divmod); invariant (the asserts at :384, :734, :760-761)", status := .proven
+    prop := ``CNormalizeHelpers, thm := some ``cNormalizeHelpers_proven },
+  { id := "datetime-new-delta-ex", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_delta_ex", "C look_up_delta", "C normalize_d_s_us"]
+    statement := "new_delta_ex(d, s, us, normalize, type) is the normalized value of (d*86400 + s)*10**6 + us microseconds as an object of class type, the zero value of timedelta itself being the zero_delta singleton, and OverflowError out of the day range; with normalize false, for in-range s and us."
+    source := "invariant (new_delta_ex comment, :1377-1382); timedelta(0) is timedelta(0) in C", status := .proven
+    prop := ``NewDeltaEx, thm := some ``newDeltaEx_proven },
+  { id := "datetime-timedelta-ctor-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C delta_new_impl", "C microseconds_to_delta_ex", "C new_delta_ex", "C look_up_delta"]
+    statement := "timedelta(...) with int arguments in C, for every class: the value of the value model (equal to Python's) as an object of that class; timedelta(0) is the zero_delta singleton, a subclass's zero a new object."
+    source := "C/Python twins (value); identity as CPython 3.15.2 behaves", status := .proven
+    prop := ``TimedeltaCtorObj, thm := some ``timedeltaCtorObj_proven },
+  { id := "datetime-us-to-delta-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C microseconds_to_delta_ex", "C checked_divmod"]
+    statement := "microseconds_to_delta_ex on any object: an int converts exactly; for another object, an exception from divmod propagates, a non-tuple and a tuple of size other than 2 are checked_divmod's TypeErrors, an out-of-range int remainder is 'divmod() returned a value out of range', a remainder without __index__ is TypeError, and a pair of ints (q, r) with 0 <= r < 10**6 converts like q*10**6 + r."
+    source := "invariant (no crash, errors as in the source); messages checked on CPython 3.15.2", status := .proven
+    prop := ``UsToDeltaExObj, thm := some ``usToDeltaExObj_proven },
+  { id := "datetime-timedelta-mul-int-subclass", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__mul__", "C delta_multiply", "C multiply_int_timedelta", "C microseconds_to_delta_ex", "C checked_divmod"]
+    statement := "timedelta * n agrees between the twins for every int operand, an int subclass with its own __mul__ included."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimedeltaMulIntSubclassTwins, thm := some ``timedeltaMulIntSubclassTwins_refuted
+    bug := some "datetime-timedelta-mul-int-subclass"
+    notes := "class I(int): __mul__ = lambda s, o: 2.5; timedelta(1) * I(2): Python timedelta(days=2) (int.__mul__ on the fields), C TypeError (PyNumber_Multiply(intobj, us) runs I.__mul__)." },
+  { id := "datetime-timedelta-mul-dispatch", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__mul__", "C delta_multiply", "C multiply_int_timedelta", "C multiply_truedivide_timedelta_float"]
+    statement := "For operands without overridden arithmetic and a timedelta on either side, x * y agrees between the twins: NotImplemented for two timedeltas or another object, the same outcome for timedelta*int, int*timedelta, timedelta*float and float*timedelta; C's result is of class timedelta."
+    source := "C/Python twins", status := .proven
+    prop := ``TimedeltaMulDispatch, thm := some ``timedeltaMulDispatch_proven },
+  { id := "datetime-timedelta-truediv-dispatch", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__truediv__", "C delta_truedivide", "C truedivide_timedelta_int", "C multiply_truedivide_timedelta_float"]
+    statement := "For operands without overridden arithmetic and a timedelta on either side, x / y agrees between the twins: NotImplemented unless a timedelta is divided by a timedelta, int or float; the same outcome for each of those; C's timedelta / timedelta is long_true_divide of the microsecond counts and its timedelta results are of class timedelta."
+    source := "C/Python twins", status := .proven
+    prop := ``TimedeltaTruedivDispatch, thm := some ``timedeltaTruedivDispatch_proven },
+  { id := "datetime-timedelta-reduce-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__reduce__", "C delta_reduce", "C delta_getstate"]
+    statement := "t.__reduce__() is (type(t), (days, seconds, microseconds)) in both twins for every class, and calling that class on those arguments gives back an object of the same class and value (the zero_delta singleton for a zero timedelta in C)."
+    source := "pickle contract (__reduce__); C/Python twins", status := .proven
+    prop := ``TimedeltaReduceCls, thm := some ``timedeltaReduceCls_proven }
 ]
 
 end PyLean.Datetime

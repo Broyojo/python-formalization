@@ -65,20 +65,38 @@ def timezoneNewPy (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
     | .ok _ => .ok ⟨oid, .timezone offset (some s)⟩
     | .error e => .error e
 
-/-- `timezone_new_impl`, :4363-4367, `new_timezone`, :1459-1479, `create_timezone`, :1431-1453.
-The clinic wrapper checks `name` first; `offset` is a `timedelta` in this signature. -/
+/-- `look_up_timezone`, :4603-4610: `timezone.utc` when `offset` is `utc_timezone`'s offset
+object (the static `zero_delta`) and there is no name, else `NULL` (`none`). A zero
+`timedelta` of the base class is that object (`new_delta_ex` hands out `zero_delta`,
+`NewDeltaEx`), so a zero value stands for it here; a zero subclass instance reaches
+`create_timezone` only with a name (`new_timezone` returns `timezone.utc` first for every
+false offset without one), where the test fails either way. -/
+def lookUpTimezoneC (offset : Delta) (name : Option String) : Option Tz :=
+  if offset = ⟨0, 0, 0⟩ ∧ name = none then some tzUTC else none
+
+/-- `create_timezone`, :1431-1453: the `look_up_timezone` singleton, else a new
+`timezone` holding `offset` and `name` (allocation failure aside). -/
+def createTimezoneC (oid : Nat) (offset : Delta) (name : Option String) : Tz :=
+  match lookUpTimezoneC offset name with
+  | some tz => tz
+  | none => ⟨oid, .timezone offset name⟩
+
+/-- `timezone_new_impl`, :4363-4367, and `new_timezone`, :1459-1479: `timezone.utc` for a
+false offset without a name (:1465-1467), the range check with its `ValueError`
+(:1468-1475), then `create_timezone` (:1478). The clinic wrapper checks `name` first;
+`offset` is a `timedelta` in this signature. -/
 def timezoneNewC (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
   match name with
   | .other => .error (.typeError "~timezone() argument 'name' must be str")
   | .omitted =>
     if !offset.bool then .ok tzUTC
     else match newTimezoneC offset with
-      | .ok _ => .ok ⟨oid, .timezone offset none⟩
+      | .ok _ => .ok (createTimezoneC oid offset none)
       | .error e => .error e
   | .str s =>
     if (offset.days = -1 ∧ offset.seconds = 0 ∧ offset.us < 1) ∨ offset.days < -1 ∨ offset.days ≥ 1 then
       .error (.valueError "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
-    else .ok ⟨oid, .timezone offset (some s)⟩
+    else .ok (createTimezoneC oid offset (some s))
 
 /-- `timezone.__eq__`, Py:2493-2496: offsets compare, names do not. -/
 def timezoneEqPy (a b : Delta) : Bool := a.richPy .eq b
