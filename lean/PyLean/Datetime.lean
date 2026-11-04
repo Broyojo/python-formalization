@@ -34,6 +34,7 @@ import PyLean.Datetime.DeltaStrProps
 import PyLean.Datetime.EdgeProps
 import PyLean.Datetime.Twins2Props
 import PyLean.Datetime.ArgCheckProps
+import PyLean.Datetime.PickleProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -1255,7 +1256,27 @@ def entries : List Entry := [
     pyFns := ["time.fromisoformat"]
     statement := "time.fromisoformat(s), by what _parse_isoformat_time returns for s without a leading T: a parser ValueError becomes 'Invalid isoformat string', another exception propagates, error_from_tz is raised, error_from_components is the hour-24 ValueError, otherwise the parsed time checked by the constructor."
     source := "_pydatetime.py:1653-1670", status := .proven
-    prop := ``TimeFromIsoBody, thm := some ``timeFromIsoBody_proven }
+    prop := ``TimeFromIsoBody, thm := some ``timeFromIsoBody_proven },
+  { id := "datetime-time-reduce-roundtrip", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time._getstate", "time.__reduce_ex__", "time.__reduce__", "time.__setstate", "time.__new__", "C time_getstate", "C datetime_time___reduce_ex___impl", "C datetime_time___reduce___impl", "C time_from_pickle", "C time_new"]
+    statement := "For every valid time and protocol, both twins' __reduce_ex__(p) give the same state tuple (with the tzinfo when there is one), __reduce__ is __reduce_ex__(2), and time(*state) gives back the time with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
+    source := "pickle contract; PEP 495; C/Python twins", status := .proven
+    prop := ``TimeReduceRoundtrip, thm := some ``timeReduceRoundtrip_proven },
+  { id := "datetime-datetime-reduce-roundtrip", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime._getstate", "datetime.__reduce_ex__", "datetime.__reduce__", "datetime.__setstate", "datetime.__new__", "C datetime_getstate", "C datetime_datetime___reduce_ex___impl", "C datetime_datetime___reduce___impl", "C datetime_from_pickle", "C datetime_new"]
+    statement := "For every valid datetime and protocol, both twins' __reduce_ex__(p) give the same state tuple, __reduce__ is __reduce_ex__(2), and datetime(*state) gives back the datetime with its tzinfo, its fold above protocol 3 and fold 0 otherwise, in both twins."
+    source := "pickle contract; PEP 495; C/Python twins", status := .proven
+    prop := ``DatetimeReduceRoundtrip, thm := some ``datetimeReduceRoundtrip_proven },
+  { id := "datetime-time-new-pickle", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__new__", "time.__setstate", "C time_new", "C time_from_pickle"]
+    statement := "time(state, tzinfo) for every byte string: the header test selects the pickle branch, which decodes hour, fold, minute, second and microsecond unchecked and keeps a None or tzinfo argument in both twins; another non-falsy second argument is TypeError('bad tzinfo state arg') in both; a str state above U+00FF is the latin-1 ValueError in both; bytes failing the header are a TypeError in both."
+    source := "pickle contract; C/Python twins", status := .proven
+    prop := ``TimeNewPickle, thm := some ``timeNewPickle_proven },
+  { id := "datetime-datetime-new-pickle", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.__new__", "datetime.__setstate", "C datetime_new", "C datetime_from_pickle"]
+    statement := "datetime(state, tzinfo) for every byte string: the header test selects the pickle branch, which decodes every field and fold unchecked and keeps a None or tzinfo argument in both twins; any other second argument is TypeError('bad tzinfo state arg') in both; a str state above U+00FF is the latin-1 ValueError in both; bytes failing the header are a TypeError in both."
+    source := "pickle contract; C/Python twins", status := .proven
+    prop := ``DatetimeNewPickle, thm := some ``datetimeNewPickle_proven }
 ]
 
 end PyLean.Datetime
