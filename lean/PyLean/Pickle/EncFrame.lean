@@ -242,16 +242,18 @@ theorem preEv_FR (p : Nat) :
   by_cases h2 : p ≥ 2 <;> by_cases h4 : p ≥ 4 <;>
     simp [preEv, h2, h4, FR, PyFramer.step, CFramer.step, CFramer.write]
 
-/-- The picklers agree, exception class aside, on every plain value without
+/-- With frames free (the models of `Enc.lean`, which have no recursion limits; the mirrors
+with limits are in `EncRec.lean`, and `EncRecProps.lean` carries this over to them).
+The picklers agree, exception class aside, on every plain value without
 `long4Edge`, for every protocol within C `long`, at every batch boundary. Each
 hypothesis is one of the refutations above. Both raise for oversized objects;
 that the classes then differ is on record in `pickle-dumps-twins-long`, and exact
 equality below that size is the open `pickle-dumps-twins-exact-sized`. -/
-def DumpsTwinsNarrow : Prop :=
+def DumpsTwinsFree : Prop :=
   ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax → IntsOk x →
     SameOutcome (cDumps x protocol) (pyDumps x protocol)
 
-theorem dumpsTwinsNarrow_proven : DumpsTwinsNarrow := by
+theorem dumpsTwinsFree_proven : DumpsTwinsFree := by
   intro x protocol hlo hhi hi
   by_cases h5 : protocol > 5
   · have hc : cProtocol protocol = .error (.valueError "pickle protocol must be <= 5") := by
