@@ -873,14 +873,17 @@ def _PY_FRAME_EX (e : Env) : M Frame := do
     let pos ← (tupleItems callargs : RM _)
     pushInit e func (pos.toList ++ kwvals) kw
   | _ => fault "arity"
-/-- `:5763`. No `_CHECK_RECURSION_REMAINING` here either: python/cpython#155151. -/
-def CALL_EX_PY (e : Env) : M Unit := do
-  _CHECK_PEP_523
-  _MAKE_CALLARGS_A_TUPLE e
+/-- The uops of `CALL_EX_PY` after `_MAKE_CALLARGS_A_TUPLE` (`:5763-5771`). -/
+def CALL_EX_PY_TAIL (e : Env) : M Unit := do
   _CHECK_IS_PY_CALLABLE_EX
   let nf ← _PY_FRAME_EX e
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
+/-- `:5763`. No `_CHECK_RECURSION_REMAINING` here either: python/cpython#155151. -/
+def CALL_EX_PY (e : Env) : M Unit := do
+  _CHECK_PEP_523
+  _MAKE_CALLARGS_A_TUPLE e
+  CALL_EX_PY_TAIL e
 /-- `:5773`. -/
 def _CHECK_IS_NOT_PY_CALLABLE_EX : M Unit := guardTop 4 fun
   | [f, _, _, _] => (isFunction f : RM Bool)

@@ -896,8 +896,9 @@ theorem pyFrameEx_err (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val
 (`:5734-5738`); on a function it unpacks the dict with `_PyStack_UnpackDict` (refusing non-str keys
 as `CALL_FUNCTION_EX` does) and builds and enters the frame `CALL_FUNCTION_EX` builds
 (`_PY_FRAME_EX`, `:5740-5761`, `_PyEvalFramePushAndInit_Ex`), or fails as it does. The narrowing of
-`CallExPyRefines`; a non-tuple `callargs` is first made a tuple by the same
-`_MAKE_CALLARGS_A_TUPLE` on both paths (`CallFunctionExRules`). -/
+`CallExPyRefines`. A non-tuple `callargs` is first made a tuple by `CALL_EX_PY`'s own
+`_MAKE_CALLARGS_A_TUPLE`, after which dispatch is exactly itself on the tuple stack (`CallExPyFast`,
+`SpecCallPyFast.lean`), as `CALL_FUNCTION_EX` is (`CallFunctionExRules`). -/
 def CallExPyRefinesWithBudget : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val)
     (t : Addr) (items : Array Val),
   ca = .ref t → regs.rt.heap[t]? = some (.tuple items) → Live regs.rt f →
@@ -905,24 +906,33 @@ def CallExPyRefinesWithBudget : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw :
   afterInstr e.P (execOp e .CALL_EX_PY ⟨regs, kw :: ca :: n :: f :: rest⟩) =
     afterInstr e.P (execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩)
 
+/-- With an exact tuple as `callargs`, `CALL_EX_PY`'s `_MAKE_CALLARGS_A_TUPLE` has nothing to do and
+dispatch is the tail under `withDeopt`. -/
+theorem execCallExPy_tuple (e : Env) (regs : Regs) (f n ca kw : Val) (rest : List Val) (h : IsTuple regs.rt ca) :
+    execCallExPy e ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+      withDeopt (CALL_EX_PY_TAIL e) (CALL_FUNCTION_EX e) ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+  have hmk := makeCallargs_keep e regs f n ca kw rest h
+  simp only [execCallExPy, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
+  rw [hmk]
+
 theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
   intro e regs f n ca kw rest t items hct ht hfl hn hr
   have htup : IsTuple regs.rt ca := ⟨t, items, hct, ht⟩
   have hca : Live regs.rt ca := by
     intro a ha; rw [hct] at ha; cases ha
     exact (Array.getElem?_eq_some_iff.mp ht).1
-  have hmk := makeCallargs_keep e regs f n ca kw rest htup
   have hgen := (callFunctionExRules_proven e regs f n ca kw rest hca).2.2 t items hct ht
   simp only [execOp] at hgen ⊢
+  rw [execCallExPy_tuple e regs f n ca kw rest htup]
   by_cases hf : ∃ a fo, f = .ref a ∧ regs.rt.heap[a]? = some (.func fo)
   · obtain ⟨a, fo, hfa, ho⟩ := hf
     have hg := hgen.1 a fo hfa ho
     have hpc := isPyCallableEx_pass regs f n ca kw rest a fo ho hfa
     cases hu : unpackKwargs kw regs.rt with
     | error x rt =>
-      have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩ := by
-        simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
-        rw [hmk]; simp only; rw [hpc]; simp only
+      have hspec : CALL_EX_PY_TAIL e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩ := by
+        simp only [CALL_EX_PY_TAIL, bind, EStateM.bind, pure, EStateM.pure]
+        rw [hpc]; simp only
         rw [pyFrameEx_kwerr e regs f n ca kw rest x rt hu]
       by_cases hx : x = .deopt
       · subst hx; rw [wd_deopt hspec]
@@ -936,9 +946,9 @@ theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
       | ok nf r =>
         obtain ⟨hr1, hr2⟩ := pushInit_ok e _ _ _ regs nf r hpi
         have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
-        have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () (enteredSt e nf r rest) := by
-          simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
-          rw [hmk]; simp only; rw [hpc]; simp only
+        have hspec : CALL_EX_PY_TAIL e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () (enteredSt e nf r rest) := by
+          simp only [CALL_EX_PY_TAIL, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hpc]; simp only
           rw [pyFrameEx_ok e regs f n ca kw rest t items hct ht names vals hu nf r hpi]
           simp only
           have := pushFrame_entered e nf r rest hnext
@@ -947,16 +957,16 @@ theorem callExPyRefinesWithBudget_proven : CallExPyRefinesWithBudget := by
         rw [wd_ok hspec, hg2.1 nf r hpi, dispatch_entered e nf r rest (by omega)]
         rfl
       | error x r =>
-        have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩ := by
-          simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
-          rw [hmk]; simp only; rw [hpc]; simp only
+        have hspec : CALL_EX_PY_TAIL e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩ := by
+          simp only [CALL_EX_PY_TAIL, bind, EStateM.bind, pure, EStateM.pure]
+          rw [hpc]; simp only
           rw [pyFrameEx_err e regs f n ca kw rest t items hct ht names vals hu x r hpi]
         by_cases hx : x = .deopt
         · subst hx; rw [wd_deopt hspec]
         · rw [wd_err hspec hx, hg2.2 x r hpi]
-  · have hspec : CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error .deopt ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
-      simp only [CALL_EX_PY, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
-      rw [hmk]; simp only
+  · have hspec : CALL_EX_PY_TAIL e ⟨regs, kw :: ca :: n :: f :: rest⟩ =
+        .error .deopt ⟨regs, kw :: ca :: n :: f :: rest⟩ := by
+      simp only [CALL_EX_PY_TAIL, bind, EStateM.bind, pure, EStateM.pure]
       rw [isPyCallableEx_fail regs f n ca kw rest hfl hf]
     rw [wd_deopt hspec]
 
