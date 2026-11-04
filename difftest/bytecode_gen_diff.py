@@ -116,7 +116,16 @@ def rop(op, target):
     log(f"re:{t}:{res}:{1 if running(target) else 0}")
 
 
-CLS = {c.__name__: c for c in [
+class ReInit(Exception):
+    """Its constructor, run by PyErr_NormalizeException when the class is thrown, calls next() on
+    the top object: Python code inside gen_set_exception (Objects/genobject.c:566)."""
+
+    def __init__(self, *a):
+        rop(["next"], C.top)
+        super().__init__(*a)
+
+
+CLS = {c.__name__: c for c in [ReInit, 
     ValueError, KeyError, RuntimeError, StopIteration, StopAsyncIteration, GeneratorExit,
     MyGE, MySI, MySAI, BaseException, Exception, LookupError]}
 
@@ -650,12 +659,15 @@ def has_reent(x):
 
 
 def gen_throw_args(rng):
-    c = rng.choice(EXCS)
+    c0 = rng.choice(EXCS)
+    # a class whose constructor re-enters; only where a class is thrown (an instance would be
+    # built by this driver, before the throw)
+    c = "ReInit" if rng.random() < 0.15 else c0
     k = rng.random()
     if k < 0.45:
         return [["cls", c]]
     if k < 0.6:
-        return [["inst", c, "x"]]
+        return [["inst", c0, "x"]]
     if k < 0.66:
         return [["junk"]]
     if k < 0.72:
@@ -669,7 +681,7 @@ def gen_throw_args(rng):
     if k < 0.92:
         return [["cls", c], ["none"], ["int", 1]]
     if k < 0.96:
-        return [["inst", c, "x"], ["str", "v"]]
+        return [["inst", c0, "x"], ["str", "v"]]
     return [["cls", c], ["none"], ["none"], ["none"]]
 
 
