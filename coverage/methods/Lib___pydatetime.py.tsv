@@ -25,7 +25,7 @@ Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, da
 Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-check-time-fields	
 Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-check-tzinfo-arg	
 Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-divide-and-round,datetime-timedelta-float-ops	
-Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	todo		int path mirrored against 3.15.2 (:686-688, :699-701, :721-724, :740-745, :754-757, :763-764) and proven (datetime-timedelta-ctor-twins, -ctor-exact); still missing: the float branches (:692-746: math.modf, float divmod, round) and the type loop (:667-679)
+Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	todo		int path mirrored against 3.15.2 (:686-688, :699-701, :721-724, :740-745, :754-757, :763-764) and proven (datetime-timedelta-ctor-twins, -ctor-exact); still missing: the float branches (:692-746: math.modf, float divmod, round) and the type loop (:667-679). review: deltaPy models only int arguments: the float branches (:692-744) of the documented float support and the per-argument TypeError loop (:667-679) are absent (the entry's note defers floats to binary64); its six citations still read @3.14.7 (Delta.lean:46-66) and were not rechecked against the 3.15.2 lines (:686-761).
 Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	todo		
 Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	todo		
 Lib/_pydatetime.py	796	799	timedelta.total_seconds	total_seconds(self)	todo		
@@ -41,7 +41,7 @@ Lib/_pydatetime.py	852	856	timedelta.__abs__	__abs__(self)	modelled	datetime-tim
 Lib/_pydatetime.py	858	869	timedelta.__mul__	__mul__(self, other)	modelled	datetime-timedelta-float-ops,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	873	875	timedelta._to_microseconds	_to_microseconds(self)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	877	884	timedelta.__floordiv__	__floordiv__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	886	896	timedelta.__truediv__	__truediv__(self, other)	todo		int divisor: datetime-timedelta-ops-twins; float divisor: datetime-timedelta-float-ops (both proven); timedelta divisor (:890-891, long_true_divide) is the open datetime-timedelta-truediv-delta, waiting for the rounding proof of longobj-true-divide-rounds
+Lib/_pydatetime.py	886	896	timedelta.__truediv__	__truediv__(self, other)	todo		int divisor: datetime-timedelta-ops-twins; float divisor: datetime-timedelta-float-ops (both proven); timedelta divisor (:890-891, long_true_divide) is the open datetime-timedelta-truediv-delta, waiting for the rounding proof of longobj-true-divide-rounds. review: Only the int branch (:892-893) is modelled; timedelta / timedelta returning a float (:890-891) and a float divisor (:894-896) are not.
 Lib/_pydatetime.py	898	902	timedelta.__mod__	__mod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	904	909	timedelta.__divmod__	__divmod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	913	917	timedelta.__eq__	__eq__(self, other)	modelled	datetime-timedelta-compare	
