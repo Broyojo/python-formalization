@@ -165,7 +165,7 @@ def bytesCompareEq (a b : Seq) : Bool :=
   else decide (memcmp a.length a b = 0)
 
 /-- `bytes_richcompare`, bytesobject.c:1650-1711, for two bytes objects. The
-identity shortcut, :1606-1709, gives the same result as this code for equal
+identity shortcut, :1672-1687, gives the same result as this code for equal
 contents, so it is not a separate case. -/
 def bytesRichcompare (a b : Seq) (op : CmpOp) : Bool :=
   if op = .eq ∨ op = .ne then
