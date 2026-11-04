@@ -52,6 +52,11 @@ import PyLean.Datetime.FromtimestampProps
 import PyLean.Datetime.StrptimeImpl
 import PyLean.Datetime.Misc3Props
 import PyLean.Datetime.SubObjProps
+import PyLean.Datetime.StrfMemberProps
+import PyLean.Datetime.ReduceDispatchProps
+import PyLean.Datetime.FromtsClsProps
+import PyLean.Datetime.TdFloatProps
+import PyLean.Datetime.Hour24AstzProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -1671,11 +1676,10 @@ def entries : List Entry := [
     source := "_PyTime_ObjectToTime_t (Python/pytime.c:484-520); messages checked on CPython 3.15.2", status := .proven
     prop := ``TimestampConversion, thm := some ``timestampConversion_proven },
   { id := "datetime-timestamp-floor", pyFile := "Modules/_datetimemodule.c"
-    pyFns := ["C date_fromtimestamp"]
-    statement := "For a finite float t, date.fromtimestamp(t) uses floor(t) when it lies in [-2**63, 2**63) and raises OverflowError otherwise, in both twins."
-    source := "date.fromtimestamp docs; _PyTime_ObjectToTime_t with _PyTime_ROUND_FLOOR", status := .open
-    prop := ``TimestampConversion
-    notes := "Needs F64.floor's value (ofIntS of floorInt) and the comparison of ofInt(+-2**63) with it through toRat; the model (objectToTimeT) has the branch." },
+    pyFns := ["C date_fromtimestamp", "C datetime_date_fromtimestamp_impl", "date.fromtimestamp"]
+    statement := "For a finite float t and every class, date.fromtimestamp(t) uses floor(t) (toward minus infinity: -1.5 is -2, -1e-300 is -1) when it lies in [-2**63, 2**63), hands it to localtime and then to cls(y, m, d), and raises OverflowError otherwise, in both twins."
+    source := "date.fromtimestamp docs; _PyTime_ObjectToTime_t with _PyTime_ROUND_FLOOR (Python/pytime.c:484-520)", status := .proven
+    prop := ``TimestampFloor, thm := some ``timestampFloor_proven },
   { id := "datetime-date-strptime-cls", pyFile := "Modules/_datetimemodule.c"
     pyFns := ["C datetime_date_strptime_impl", "date.strptime", "_strptime_datetime_date"]
     statement := "date.strptime in both twins passes its class to _strptime_datetime_date: for date the checked parsed date, a subclass is called with the parsed year, month and day, and a parse error propagates."
@@ -1694,16 +1698,72 @@ def entries : List Entry := [
   { id := "datetime-timedelta-num-py-int", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__new__"]
     statement := "With int arguments the float-capable model of timedelta.__new__ is the int-only model (so TimedeltaCtorTwins and TimedeltaCtorExact apply to it)."
-    source := "invariant (the float branches are not taken)", status := .open
-    prop := ``TimedeltaNumPyInt
-    notes := "Needs binary64 lemmas: float(m) + 0.0 == float(m) for |m| < 10**6 and round() of an integral double." },
+    source := "invariant (the float branches are not taken; round(m + 0.0) is m)", status := .proven
+    prop := ``TimedeltaNumPyInt, thm := some ``timedeltaNumPyInt_proven },
   { id := "datetime-astimezone-local-aware-edge-twins", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.astimezone", "datetime._local_timezone", "C datetime_datetime_astimezone_impl"]
     statement := "astimezone() (tz=None) on an aware datetime with an offset agrees between the twins, where self - offset leaves the datetime range included."
     source := "C/Python twins", status := .refuted
     prop := ``AstimezoneLocalAwareEdgeTwins, thm := some ``astimezoneLocalAwareEdgeTwins_refuted
     bug := some "datetime-pydatetime-astimezone-local-target"
-    notes := "datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone() with TZ='XXX-24:30': Python builds the local timezone first and raises ValueError (offset 24:30), C subtracts first and raises OverflowError." }
+    notes := "datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone() with TZ='XXX-24:30': Python builds the local timezone first and raises ValueError (offset 24:30), C subtracts first and raises OverflowError." },
+  { id := "datetime-tzinfo-member-replacements", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C get_tzinfo_member", "C make_somezreplacement", "C make_Zreplacement"]
+    statement := "For every struct get_tzinfo_member may see: neither a datetime nor a time, hastzinfo 0, or a Py_None member gives '' for %z, %:z and %Z without calling anything; a datetime or time with hastzinfo set calls its tzinfo's utcoffset(tzinfoarg) and tzname(tzinfoarg) (checked as call_tzinfo_method and call_tzname do), formats the offset with format_utcoffset and doubles % in the name, errors propagating."
+    source := "mirror of :1505-1515, :1799-1817, :1820-1860", status := .proven
+    prop := ``TzinfoMemberReplacements, thm := some ``tzinfoMemberReplacements_proven },
+  { id := "datetime-strftime-z-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C get_tzinfo_member", "C make_somezreplacement", "C make_Zreplacement", "C format_utcoffset"]
+    statement := "For every date, time or datetime whose utcoffset and tzname are the inherited ones, every separator and every tzinfo, strftime's %z/%:z replacement is the same text or exception in both twins and %Z the same text or an exception of the same class."
+    source := "C/Python twins (narrows datetime-strftime-z-override-twins)", status := .proven
+    prop := ``StrftimeZTwins, thm := some ``strftimeZTwins_proven },
+  { id := "datetime-strftime-z-override-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C get_tzinfo_member", "C make_somezreplacement", "C wrap_strftime", "_wrap_strftime"]
+    statement := "strftime's %z replacement agrees between the twins for every object, a subclass that overrides utcoffset() included."
+    source := "C/Python twins", status := .refuted
+    prop := ``StrftimeZOverrideTwins, thm := some ``strftimeZOverrideTwins_refuted
+    bug := some "datetime-strftime-ignores-utcoffset-override"
+    notes := "class D(datetime) with utcoffset() returning +5h: D(2000, 1, 1).strftime('%z') is '+0500' in Python, '' in C (get_tzinfo_member reads the struct, which has no tzinfo)." },
+  { id := "datetime-reduce-dispatch-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__reduce__", "datetime.__reduce__", "C datetime_time___reduce___impl", "C datetime_datetime___reduce___impl"]
+    statement := "time.__reduce__() and datetime.__reduce__() agree between the twins for every receiver class, whatever __reduce_ex__ that class has."
+    source := "C/Python twins", status := .refuted
+    prop := ``ReduceDispatchTwins, thm := some ``reduceDispatchTwins_refuted
+    bug := some "datetime-pydatetime-reduce-dispatches-reduce-ex"
+    notes := "Python's __reduce__ is self.__reduce_ex__(2), a lookup that runs a subclass override (one that delegates to __reduce__ recurses into RecursionError); C builds (Py_TYPE(self), getstate(self, 2)) itself." },
+  { id := "datetime-reduce-dispatch-inherited", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__reduce__", "datetime.__reduce__", "C datetime_time___reduce___impl", "C datetime_datetime___reduce___impl"]
+    statement := "For a class that keeps the inherited __reduce_ex__, Python's __reduce__ (the lookup of __reduce_ex__ called with 2) is C's (type(self), protocol-2 state) for every valid time and datetime, and unpickling that state gives the value back with fold 0."
+    source := "C/Python twins (narrows datetime-reduce-dispatch-twins); pickle contract", status := .proven
+    prop := ``ReduceDispatchInherited, thm := some ``reduceDispatchInherited_proven },
+  { id := "datetime-date-fromtimestamp-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_fromtimestamp", "C datetime_date_fromtimestamp_impl", "date.fromtimestamp"]
+    statement := "date.fromtimestamp in both twins for every class and argument (localtime's fields being C ints): None is TypeError; otherwise C and Python are the same conversion and localtime followed by cls(y, m, d): the checked date for date, midnight for datetime, a subclass called with the three fields and nothing else; conversion and localtime errors come before any call."
+    source := "C/Python twins; mirror of :3291-3306, :3369-3373 and Py:1035-1041", status := .proven
+    prop := ``DateFromtimestampCls, thm := some ``dateFromtimestampCls_proven },
+  { id := "datetime-timedelta-integral-float-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__new__", "C delta_new_impl", "C accum"]
+    statement := "For every combination of ints, integral-valued floats and (in C) omitted arguments, each below 2**31 in magnitude, timedelta(...) agrees between the twins and is the int model of the values."
+    source := "C/Python twins (narrows datetime-timedelta-float-ctor-twins); timedelta docs (int and float arguments)", status := .proven
+    prop := ``TimedeltaIntegralFloatTwins, thm := some ``timedeltaIntegralFloatTwins_proven
+    notes := "Excluded and on record through the refuted float twin: fractional floats (Python rounds hours*3600 and the sums as doubles, gh-160806) and integral floats large enough for those products or sums to be inexact." },
+  { id := "datetime-time-fromiso-hour24-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_time_fromisoformat_impl"]
+    statement := "C time.fromisoformat for every class and every string whose time part parses with hour 24: with minute, second and microsecond zero it is midnight with the parsed tzinfo (time itself, or the class called with (0, 0, 0, 0, tzinfo)); otherwise ValueError 'minute, second, and microsecond must be 0 when hour is 24' before the tzinfo is built; '24:00' is time(0, 0) and 'T24:00:00+01:00' midnight at +01:00."
+    source := "time.fromisoformat docs (24:00 accepted as midnight); mirror of :5204-5250", status := .proven
+    prop := ``TimeFromIsoHour24C, thm := some ``timeFromIsoHour24C_proven },
+  { id := "datetime-astimezone-keeps-objects", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_datetime_astimezone_impl", "C add_datetime_timedelta"]
+    statement := "astimezone(tz) on an aware datetime never changes a datetime that existed before the call, for every subclass call and fromutc that only allocate objects."
+    source := "datetime docs (immutable objects); __hash__ contract", status := .refuted
+    prop := ``AstimezoneKeepsObjects, thm := some ``astimezoneKeepsObjects_refuted
+    bug := some "datetime-astimezone-mutates-subclass-result"
+    notes := "A subclass __new__ returning a cached instance for the eight-argument call: C's Py_SETREF(result->tzinfo, ...) (:6983, :6996) writes into the cached object." },
+  { id := "datetime-astimezone-keeps-objects-py", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.astimezone"]
+    statement := "Python's astimezone(tz) on an aware datetime with an offset never changes a datetime that existed before the call, for every subclass call and fromutc that only allocate objects: it only calls the class (self - offset, replace) and tz.fromutc."
+    source := "datetime docs (immutable objects); Py:2157-2160", status := .proven
+    prop := ``AstimezoneKeepsObjectsPy, thm := some ``astimezoneKeepsObjectsPy_proven }
 ]
 
 end PyLean.Datetime
