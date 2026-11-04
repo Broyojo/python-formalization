@@ -23,6 +23,8 @@ import PyLean.Datetime.ZoneCacheIdProps
 import PyLean.Datetime.ZoneCacheEqProps
 import PyLean.Datetime.ZoneCacheSubProps
 import PyLean.Datetime.TwinsProps
+import PyLean.Datetime.FmtTwinsProps
+import PyLean.Datetime.FloatProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -337,6 +339,44 @@ def entries : List Entry := [
     prop := ``DateNewTwins, thm := some ``dateNewTwins_refuted
     bug := some "datetime-pydatetime-none-as-omitted"
     notes := "date(b'\\x07\\xd0\\x01\\x01', None): Python unpickles (its test is month is None), C raises TypeError (its test is one positional argument)." },
+  { id := "datetime-date-isoformat-text", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.isoformat", "C date_isoformat"]
+    statement := "For every valid date, date.isoformat() is the ten characters YYYY-MM-DD (four year digits, '-', two month digits, '-', two day digits), and C date_isoformat gives the same text."
+    source := "date.isoformat docstring (\"This is 'YYYY-MM-DD'.\"); C/Python twins", status := .proven
+    prop := ``DateIsoformatText, thm := some ``dateIsoformatText_proven },
+  { id := "datetime-format-time-text", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_format_time", "C datetime_time_isoformat_impl"]
+    statement := "For valid hh, mm, ss, us and every timespec, _format_time is HH, HH:MM, HH:MM:SS, HH:MM:SS.sss (us // 1000) or HH:MM:SS.ffffff, auto choosing microseconds exactly when us != 0, and the C time formatter gives the same text."
+    source := "time.isoformat docs (timespec); C/Python twins", status := .proven
+    prop := ``FormatTimeText, thm := some ``formatTimeText_proven },
+  { id := "datetime-format-offset-text", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_format_offset", "C format_utcoffset"]
+    statement := "For every valid offset strictly inside +-24h and every separator, _format_offset is +-HH sep MM, then sep SS when seconds or microseconds are nonzero, then .ffffff when microseconds are nonzero; C format_utcoffset gives the same text."
+    source := "utcoffset/isoformat docs; C/Python twins", status := .proven
+    prop := ``FormatOffsetText, thm := some ``formatOffsetText_proven },
+  { id := "datetime-timespec-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_format_time", "C datetime_time_isoformat_impl"]
+    statement := "isoformat(timespec=x) refuses the same arguments with the same exception class in both twins."
+    source := "C/Python twins; time.isoformat docs (ValueError for an invalid timespec)", status := .refuted
+    prop := ``TimespecTwins, thm := some ``timespecTwins_refuted
+    bug := some "datetime-timespec-non-str-class"
+    notes := "time(1).isoformat(timespec=1): ValueError in Python, TypeError in C." },
+  { id := "datetime-timespec-str", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_format_time", "C datetime_time_isoformat_impl"]
+    statement := "For every str timespec the twins give the same spec or the same ValueError, and an unhashable non-str is a TypeError in both."
+    source := "C/Python twins", status := .proven
+    prop := ``TimespecStr, thm := some ``timespecStr_proven },
+  { id := "datetime-timedelta-float-ops", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__mul__", "timedelta.__truediv__", "_divide_and_round", "C multiply_truedivide_timedelta_float", "C get_float_as_integer_ratio", "C divide_nearest"]
+    statement := "For every valid timedelta t and float x, t * x and t / x agree between the twins; for finite x = n/d (as_integer_ratio), t * x is t_us * n / d and t / x is t_us * d / n microseconds rounded half to even (OverflowError out of range, ZeroDivisionError for x == 0); infinities raise OverflowError and NaN ValueError."
+    source := "timedelta docs (t1 * f, t1 / f: rounded using round-half-to-even); C/Python twins", status := .proven
+    prop := ``TimedeltaFloatOps, thm := some ``timedeltaFloatOps_proven },
+  { id := "datetime-timedelta-truediv-delta", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__truediv__", "C truedivide_timedelta_timedelta"]
+    statement := "For valid timedeltas a, b with b != 0, a / b is the correctly rounded double of a_us / b_us in both twins."
+    source := "timedelta docs (t2 / t3 returns a float)", status := .open
+    prop := ``TimedeltaTruedivDelta
+    notes := "Both twins reach long_true_divide, mirrored in LongObj.trueDivide; its correct rounding is the open longobj-true-divide-rounds." },
   { id := "datetime-days-in-month", pyFile := "Lib/_pydatetime.py"
     pyFns := ["_days_in_month", "C days_in_month", "C is_leap"]
     statement := "For 1 <= m <= 12, _days_in_month(y, m) is 31, 28 or 29 (Gregorian leap rule), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31; it agrees with C days_in_month for 0 <= y < 2**31, is the step of _days_before_month, and the months sum to 365 or 366."

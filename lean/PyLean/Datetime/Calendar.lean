@@ -17,7 +17,7 @@ open PyLean
 
 def MINYEAR : Int := 1
 def MAXYEAR : Int := 9999
-/-- `date.max.toordinal()`, `_MAXORDINAL` (_pydatetime.py:20), C `MAXORDINAL`. -/
+/-- `date.max.toordinal()`, `_MAXORDINAL` (_pydatetime.py:26), C `MAXORDINAL`. -/
 def MAXORDINAL : Int := 3652059
 
 /-- `_is_leap`, _pydatetime.py:47-49; C `is_leap` (:425-435) casts to

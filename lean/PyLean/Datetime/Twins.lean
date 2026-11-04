@@ -210,18 +210,21 @@ def parseTimespecArgPy : SpecArg → Py TimeSpec
   | .other true => .error (.valueError "Unknown timespec value")
   | .other false => .error (.typeError "~cannot use an unhashable object as a dict key")
 
+/-- The `specs` table of `datetime_time_isoformat_impl`, :4907-4913, in order. -/
+def specsC : List (String × TimeSpec) :=
+  [("hours", .hours), ("minutes", .minutes), ("seconds", .seconds), ("milliseconds", .milliseconds),
+   ("microseconds", .microseconds)]
+
 /-- The clinic `str` converter of `timespec` (clinic/_datetimemodule.c.h, `time.isoformat`
 and `datetime.isoformat`): a non-`str` is a `TypeError` before the impl runs; then the
 search of `specs` in `datetime_time_isoformat_impl`, :4916-4941. -/
 def parseTimespecArgC : SpecArg → Py TimeSpec
-  | .str s => match s with
-    | "auto" => .ok .auto
-    | "hours" => .ok .hours
-    | "minutes" => .ok .minutes
-    | "seconds" => .ok .seconds
-    | "milliseconds" => .ok .milliseconds
-    | "microseconds" => .ok .microseconds
-    | _ => .error (.valueError "Unknown timespec value")
+  | .str s =>
+    -- `timespec == NULL || strcmp(timespec, "auto") == 0`, then the loop over `specs`
+    if s = "auto" then .ok .auto
+    else match specsC.find? (·.1 = s) with
+      | some (_, sp) => .ok sp
+      | none => .error (.valueError "Unknown timespec value")
   | .other _ => .error (.typeError "~isoformat() argument 'timespec' must be str")
 
 /-- The time part of C `datetime_time_isoformat_impl`, :4900-4952 (and of
