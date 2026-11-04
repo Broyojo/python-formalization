@@ -538,4 +538,77 @@ theorem mSetMatchesBuiltin_proven : MSetMatchesBuiltin := by
     subst h
     exact mset_pop_cons a as
 
+
+/-! ### `_from_iterable` -/
+
+section
+variable {α : Type} [DecidableEq α]
+
+theorem feedAll_setb (hash : α → Py Unit) (t : Option PyExc) : ∀ (xs r : List α), r.Nodup →
+    (∀ x ∈ xs, hash x = .ok ()) →
+    ∃ r', feedAll (setBuilder hash) t r xs = raiseTail t r' ∧ r'.Nodup ∧ ∀ z, z ∈ r' ↔ z ∈ r ∨ z ∈ xs
+  | [], r, h, _ => ⟨r, rfl, h, by simp⟩
+  | x :: xs, r, h, hh => by
+    have hx := hh x (by simp)
+    obtain ⟨r', h1, h2, h3⟩ := feedAll_setb hash t xs (listAdd r x) (listAdd_nodup h x)
+      (fun y hy => hh y (by simp [hy]))
+    refine ⟨r', ?_, h2, ?_⟩
+    · simp only [feedAll, setBuilder, hx, bind, Except.bind, pure, Except.pure]
+      exact h1
+    · intro z
+      rw [h3, listAdd_mem]
+      simp only [List.mem_cons]
+      constructor
+      · rintro ((a | rfl) | b)
+        · exact Or.inl a
+        · exact Or.inr (Or.inl rfl)
+        · exact Or.inr (Or.inr b)
+      · rintro (a | rfl | b)
+        · exact Or.inl (Or.inl a)
+        · exact Or.inl (Or.inr rfl)
+        · exact Or.inr b
+
+theorem feedAll_setb_err (hash : α → Py Unit) (t : Option PyExc) (z : α) (post : List α) (e : PyExc)
+    (hz : hash z = .error e) : ∀ (pre r : List α), (∀ x ∈ pre, hash x = .ok ()) →
+    feedAll (setBuilder hash) t r (pre ++ z :: post) = .error e
+  | [], r, _ => by simp [feedAll, setBuilder, hz, bind, Except.bind]
+  | x :: xs, r, hh => by
+    have hx := hh x (by simp)
+    simp only [List.cons_append, feedAll, setBuilder, hx, bind, Except.bind, pure, Except.pure]
+    exact feedAll_setb_err hash t z post e hz xs _ (fun y hy => hh y (by simp [hy]))
+
+end
+
+/-- `KeysView._from_iterable` and `ItemsView._from_iterable` ignore `cls` and build a builtin `set`:
+`iter(it)` failing is the outcome, then the first element whose hash fails (after the earlier ones were inserted),
+then the iterator's end; with every element hashable the result holds exactly the elements, once each.
+Lib/_collections_abc.py:851-853, 869-871. -/
+def FromIterableSpec : Prop :=
+  ∀ (C α : Type) [DecidableEq α] (hash : α → Py Unit) (cls cls' : C) (it : Py (List α)) (t : Option PyExc)
+    (xs pre post : List α) (z : α) (e : PyExc),
+    viewFromIterable hash cls it t = viewFromIterable hash cls' it t ∧
+    viewFromIterable hash cls (.error e) t = .error e ∧
+    (hash z = .error e → (∀ x ∈ pre, hash x = .ok ()) →
+      viewFromIterable hash cls (.ok (pre ++ z :: post)) t = .error e) ∧
+    ((∀ x ∈ xs, hash x = .ok ()) →
+      ∃ r, viewFromIterable hash cls (.ok xs) none = .ok r ∧ r.Nodup ∧ ∀ w, w ∈ r ↔ w ∈ xs) ∧
+    ((∀ x ∈ xs, hash x = .ok ()) → viewFromIterable hash cls (.ok xs) (some e) = .error e)
+
+theorem fromIterableSpec_proven : FromIterableSpec := by
+  intro C α _ hash cls cls' it t xs pre post z e
+  have hs : (setBuilder hash).start = .ok [] := rfl
+  have hd : ∀ r, (setBuilder hash).done r = .ok r := fun _ => rfl
+  refine ⟨rfl, rfl, ?_, ?_, ?_⟩
+  · intro hz hp
+    simp only [viewFromIterable, build, hs, feedAll_setb_err hash t z post e hz pre [] hp, bind, Except.bind]
+  · intro hh
+    obtain ⟨r, h1, h2, h3⟩ := feedAll_setb hash none xs [] List.nodup_nil hh
+    refine ⟨r, ?_, h2, by simpa using h3⟩
+    simp only [raiseTail] at h1
+    simp only [viewFromIterable, build, hs, hd, h1, bind, Except.bind]
+  · intro hh
+    obtain ⟨r, h1, _, _⟩ := feedAll_setb hash (some e) xs [] List.nodup_nil hh
+    simp only [raiseTail] at h1
+    simp only [viewFromIterable, build, hs, h1, bind, Except.bind]
+
 end PyLean.CoreLibs.CollAbc

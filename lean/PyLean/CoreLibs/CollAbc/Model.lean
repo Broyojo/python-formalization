@@ -120,40 +120,46 @@ def subclasshook (x cls : String) (mro : List ClassDict) : Ret Bool :=
 
 /-! ### Abstract method bodies -/
 
-/-- What calling an abstract stub does. -/
+/-- What an abstract body does, reached through `super()` or the class. A generator body gives a generator that yields
+`n` `None`s and then stops with `StopIteration`; an `async def` body gives a coroutine, so the call succeeds and
+awaiting it raises; any other body raises at the call. (The bodies that return one constant, `Hashable.__hash__`,
+`Sized.__len__`, `Container.__contains__` and `Callable.__call__`, are not here.) -/
 inductive Stub where
-  | returnsInt (n : Int)
-  | returnsBool (b : Bool)
-  /-- A generator that yields these `None`s and stops. -/
-  | yieldsNones (n : Nat)
-  | raises (cls : String)
+  | gen (n : Nat)
+  | raises (e : PyExc)
+  | awaitRaises (e : PyExc)
   deriving Repr, DecidableEq
 
-/-- The body of each abstract method, by inventory name. -/
+/-- `raise StopAsyncIteration`: `str(e)` is empty. -/
+def stopAsyncIteration : PyExc := .named "StopAsyncIteration" ""
+/-- `raise NotImplementedError`. -/
+def notImplementedError : PyExc := .named "NotImplementedError" ""
+/-- `AsyncIterator()` for the abstract class, `object_new`'s refusal (Objects/typeobject.c), whose message names the
+class's one abstract method. -/
+def abstractAsyncIterator : PyExc :=
+  .typeError "Can't instantiate abstract class AsyncIterator without an implementation for abstract method '__anext__'"
+
+/-- The body of each abstract method, by inventory name, Lib/_collections_abc.py at the lines given. -/
 def stubBody : String → Option Stub
-  | "Hashable.__hash__" => some (.returnsInt 0)                -- :126
-  | "Sized.__len__" => some (.returnsInt 0)                    -- :409
-  | "Container.__contains__" => some (.returnsBool false)      -- :424
-  | "Callable.__call__" => some (.returnsBool false)           -- :535
-  | "Awaitable.__await__" => some (.yieldsNones 1)             -- :141
-  | "Iterable.__iter__" => some (.yieldsNones 0)               -- :289-290
-  | "Reversible.__reversed__" => some (.yieldsNones 0)         -- :342-343
-  | "Iterator.__next__" => some (.raises "StopIteration")      -- :308
-  | "Generator.send" => some (.raises "StopIteration")         -- :367
-  | "Coroutine.send" => some (.raises "StopIteration")         -- :161
-  | "AsyncIterator.__anext__" => some (.raises "StopAsyncIteration")  -- :220
-  | "AsyncGenerator.asend" => some (.raises "StopAsyncIteration")     -- :247
-  | "AsyncIterable.__aiter__" => some (.raises "TypeError")    -- :202, AsyncIterator() is abstract
-  | "Buffer.__buffer__" => some (.raises "NotImplementedError")  -- :452
-  | "MutableSet.add" => some (.raises "NotImplementedError")     -- :707
-  | "MutableSet.discard" => some (.raises "NotImplementedError") -- :712
-  | "Mapping.__getitem__" => some (.raises "KeyError")           -- :790
-  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- :922
-  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- :926
-  | "Sequence.__getitem__" => some (.raises "IndexError")        -- :1014
-  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- :1116
-  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- :1120
-  | "MutableSequence.insert" => some (.raises "IndexError")      -- :1125
+  | "Awaitable.__await__" => some (.gen 1)                     -- :141 `yield`
+  | "Iterable.__iter__" => some (.gen 0)                       -- :289-290 `while False: yield None`
+  | "Reversible.__reversed__" => some (.gen 0)                 -- :342-343
+  | "Iterator.__next__" => some (.raises .stopIteration)       -- :308
+  | "Generator.send" => some (.raises .stopIteration)          -- :367
+  | "Coroutine.send" => some (.raises .stopIteration)          -- :161
+  | "AsyncIterator.__anext__" => some (.awaitRaises stopAsyncIteration)  -- :218-220 `async def`
+  | "AsyncGenerator.asend" => some (.awaitRaises stopAsyncIteration)     -- :243-247 `async def`
+  | "AsyncIterable.__aiter__" => some (.raises abstractAsyncIterator)    -- :202 `return AsyncIterator()`
+  | "Buffer.__buffer__" => some (.raises notImplementedError)  -- :452
+  | "MutableSet.add" => some (.raises notImplementedError)     -- :707
+  | "MutableSet.discard" => some (.raises notImplementedError) -- :712
+  | "Mapping.__getitem__" => some (.raises (.keyError ""))     -- :790
+  | "MutableMapping.__setitem__" => some (.raises (.keyError ""))  -- :922
+  | "MutableMapping.__delitem__" => some (.raises (.keyError ""))  -- :926
+  | "Sequence.__getitem__" => some (.raises (.indexError ""))      -- :1014
+  | "MutableSequence.__setitem__" => some (.raises (.indexError ""))  -- :1116
+  | "MutableSequence.__delitem__" => some (.raises (.indexError ""))  -- :1120
+  | "MutableSequence.insert" => some (.raises (.indexError ""))       -- :1125
   | _ => none
 
 /-! ### Generator, Coroutine, AsyncGenerator mixins -/
@@ -1022,8 +1028,12 @@ def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) (isTuple : Bool) 
       | .ok v => E.same v value
   | _ => .ok false
 
-/-- `MappingView.__repr__`, Lib/_collections_abc.py:841-842. -/
-def viewRepr (cls mappingRepr : String) : String := s!"{cls}({mappingRepr})"
+/-- `MappingView.__repr__`, Lib/_collections_abc.py:841-842: `'{0.__class__.__name__}({0._mapping!r})'.format(self)`.
+The fields are formatted left to right: the class name, then `repr(self._mapping)`, which may raise (also the
+`TypeError` of a `__repr__` that returns a non-string). -/
+def viewRepr (cls : String) (mappingRepr : Py String) : Py String := do
+  let r ← mappingRepr
+  pure s!"{cls}({r})"
 
 /-- `d[k] = v` on a `dict` kept as its item list: an existing key keeps its position. -/
 def dictSet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (v : V) : List (K × V) :=
@@ -1153,14 +1163,6 @@ def MMap.setdefault {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (defaul
 
 /-! ### `ByteString` deprecation -/
 
-/-- `_DeprecateByteStringMeta.__new__`, Lib/_collections_abc.py:1070-1078: a
-`DeprecationWarning` for any class name but `ByteString`. -/
-def byteStringMetaWarns (name : String) : Bool := name != "ByteString"
-
-/-- `_DeprecateByteStringMeta.__instancecheck__`, Lib/_collections_abc.py:1080-1087:
-always warns, then the `ABCMeta` answer. -/
-def byteStringInstanceCheck (abcAnswer : Bool) : Bool × Bool := (true, abcAnswer)
-
 /-- `warnings._deprecated("collections.abc.ByteString", remove=(3, 17))` on 3.15, Lib/_py_warnings.py:873, 876-892:
 the formatted `_DEPRECATED_MSG`, warned with `DeprecationWarning`. -/
 def byteStringDeprecated : String :=
@@ -1179,6 +1181,28 @@ structure Warned where
   category : String
   message : String
   deriving Repr, DecidableEq
+
+/-- `warnings._deprecated("collections.abc.ByteString", remove=(3, 17))` under the filter's action: the warning shown,
+nothing, or the warning raised. -/
+def byteStringWarn (act : WarnAction) : List Warned × Py Unit :=
+  match act with
+  | .ignore => ([], .ok ())
+  | .always => ([⟨"DeprecationWarning", byteStringDeprecated⟩], .ok ())
+  | .error => ([], .error (.named "DeprecationWarning" byteStringDeprecated))
+
+/-- `_DeprecateByteStringMeta.__new__`, Lib/_collections_abc.py:1070-1078: the deprecation warning for any class name
+but `ByteString`, then `ABCMeta.__new__` (`make`), which does not run when the warning is an exception. -/
+def byteStringMetaNew {γ : Type} (act : WarnAction) (name : String) (make : Py γ) : List Warned × Py γ :=
+  if name != "ByteString" then
+    let (ws, w) := byteStringWarn act
+    (ws, do w; make)
+  else ([], make)
+
+/-- `_DeprecateByteStringMeta.__instancecheck__`, Lib/_collections_abc.py:1080-1087: the warning every time, then
+`ABCMeta.__instancecheck__` (`answer`). -/
+def byteStringInstanceCheck (act : WarnAction) (answer : Py Bool) : List Warned × Py Bool :=
+  let (ws, w) := byteStringWarn act
+  (ws, do w; answer)
 
 /-- Reading an attribute of the module, Lib/_collections_abc.py:1175-1183: `loaded` says that `ByteString` is in the
 module's globals, where the normal lookup finds it and `__getattr__` is not called. The result is the warnings shown,

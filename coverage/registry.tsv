@@ -2726,6 +2726,7 @@ coll-namedtuple-defaults	proven	Lib/collections/__init__.py	namedtuple
 corelibs-collabc-check-methods	proven	Lib/_collections_abc.py	_check_methods
 corelibs-collabc-subclasshooks	proven	Lib/_collections_abc.py	Hashable.__subclasshook__,Awaitable.__subclasshook__,Coroutine.__subclasshook__,AsyncIterable.__subclasshook__,AsyncIterator.__subclasshook__,AsyncGenerator.__subclasshook__,Iterable.__subclasshook__,Iterator.__subclasshook__,Reversible.__subclasshook__,Generator.__subclasshook__,Sized.__subclasshook__,Container.__subclasshook__,Collection.__subclasshook__,Buffer.__subclasshook__,Callable.__subclasshook__
 corelibs-collabc-abstract-bodies	proven	Lib/_collections_abc.py	
+corelibs-collabc-abstract-primitives	proven	Lib/_collections_abc.py	Sequence.__getitem__,Mapping.__getitem__,MutableSequence.insert,MutableMapping.__setitem__
 corelibs-collabc-throw	proven	Lib/_collections_abc.py	Generator.throw,Coroutine.throw,AsyncGenerator.athrow
 corelibs-collabc-throw-paths	proven	Lib/_collections_abc.py	Coroutine.throw,Generator.throw,AsyncGenerator.athrow
 corelibs-collabc-close-up-to-value	proven	Lib/_collections_abc.py	Generator.close,Coroutine.close
@@ -2759,6 +2760,8 @@ corelibs-collabc-set-hash-paths	proven	Lib/_collections_abc.py	Set._hash
 corelibs-collabc-mutableset	proven	Lib/_collections_abc.py	MutableSet.remove,MutableSet.pop,MutableSet.clear,MutableSet.__ior__,MutableSet.__iand__,MutableSet.__ixor__,MutableSet.__isub__
 corelibs-collabc-mset-paths	proven	Lib/_collections_abc.py	MutableSet.remove,MutableSet.pop,MutableSet.clear,MutableSet.__ior__,MutableSet.__iand__,MutableSet.__ixor__,MutableSet.__isub__
 corelibs-collabc-mapping	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,KeysView.__contains__,ItemsView.__iter__,ValuesView.__contains__,ValuesView.__iter__
+corelibs-collabc-view-repr	proven	Lib/_collections_abc.py	MappingView.__repr__
+corelibs-collabc-from-iterable	proven	Lib/_collections_abc.py	KeysView._from_iterable,ItemsView._from_iterable
 corelibs-collabc-mapping-paths	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,ItemsView.__contains__,KeysView.__contains__
 corelibs-collabc-map-view-paths	proven	Lib/_collections_abc.py	ItemsView.__iter__,ValuesView.__iter__,ValuesView.__contains__
 corelibs-collabc-itemsview-tuples	proven	Lib/_collections_abc.py	ItemsView.__contains__
@@ -2768,7 +2771,7 @@ corelibs-collabc-mapping-eq-paths	proven	Lib/_collections_abc.py	Mapping.__eq__
 corelibs-collabc-mutablemapping	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.clear,MutableMapping.update,MutableMapping.setdefault
 corelibs-collabc-mmap-paths	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.setdefault,MutableMapping.update
 corelibs-collabc-mmap-clear	proven	Lib/_collections_abc.py	MutableMapping.clear
-corelibs-collabc-bytestring-meta	proven	Lib/_collections_abc.py	
+corelibs-collabc-bytestring-meta	proven	Lib/_collections_abc.py	_DeprecateByteStringMeta.__new__,_DeprecateByteStringMeta.__instancecheck__
 corelibs-collabc-module-getattr	proven	Lib/_collections_abc.py	__getattr__
 corelibs-functools-lru-results	refuted	Lib/functools.py	_lru_cache_wrapper
 corelibs-functools-lru-delete-c	proven	Modules/_functoolsmodule.c	

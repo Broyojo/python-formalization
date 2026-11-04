@@ -1166,6 +1166,8 @@ def collabc_scripted(base, stop_exc, async_=False):
 
         if async_:
             async def asend(self, v):
+                if not self.s.script:
+                    raise StopAsyncIteration(0)
                 return self.s.step()
 
             async def athrow(self, typ, val=None, tb=None):
@@ -1220,18 +1222,12 @@ collabc_METHODS = ["__hash__", "__await__", "send", "throw", "close", "__aiter__
                    "asend", "athrow", "aclose", "__iter__", "__next__", "__reversed__", "__len__",
                    "__contains__", "__buffer__", "__call__", "__eq__", "other"]
 collabc_STUBS = {
-    "Hashable.__hash__": lambda: collabc_A.Hashable.__hash__(None),
-    "Sized.__len__": lambda: collabc_A.Sized.__len__(None),
-    "Container.__contains__": lambda: collabc_A.Container.__contains__(None, 1),
-    "Callable.__call__": lambda: collabc_A.Callable.__call__(None),
     "Awaitable.__await__": lambda: len(list(collabc_A.Awaitable.__await__(None))),
     "Iterable.__iter__": lambda: len(list(collabc_A.Iterable.__iter__(None))),
     "Reversible.__reversed__": lambda: len(list(collabc_A.Reversible.__reversed__(None))),
     "Iterator.__next__": lambda: collabc_A.Iterator.__next__(None),
     "Generator.send": lambda: collabc_A.Generator.send(None, 1),
     "Coroutine.send": lambda: collabc_A.Coroutine.send(None, 1),
-    "AsyncIterator.__anext__": lambda: collabc_drive(collabc_A.AsyncIterator.__anext__(None)),
-    "AsyncGenerator.asend": lambda: collabc_drive(collabc_A.AsyncGenerator.asend(None, 1)),
     "AsyncIterable.__aiter__": lambda: collabc_A.AsyncIterable.__aiter__(None),
     "Buffer.__buffer__": lambda: collabc_A.Buffer.__buffer__(None, 0),
     "MutableSet.add": lambda: collabc_A.MutableSet.add(None, 1),
@@ -1284,6 +1280,31 @@ def collabc_opt(rng, xs):
     return None if rng.random() < 0.7 or not xs else rng.choice(xs)
 
 
+collabc_ASYNC_STUBS = {
+    "AsyncIterator.__anext__": lambda: collabc_A.AsyncIterator.__anext__(None),
+    "AsyncGenerator.asend": lambda: collabc_A.AsyncGenerator.asend(None, 1),
+}
+
+
+def collabc_stub(name):
+    if name in collabc_ASYNC_STUBS:
+        c = py_result(collabc_ASYNC_STUBS[name])
+        if "exc" in c:
+            return {"callexc": c}
+        return py_result(lambda: collabc_drive(c["ok"]))
+    return py_result(collabc_STUBS[name])
+
+
+class collabc_BadRepr(dict):
+    def __repr__(self):
+        raise ValueError("repr")
+
+
+class collabc_NotStr(dict):
+    def __repr__(self):
+        return 5
+
+
 collabc_TOBJ = [{"k": "cls", "n": "ValueError"}, {"k": "cls", "n": "KeyError"}, {"k": "cls_ude"},
                 {"k": "cls_bad"}, {"k": "inst", "n": "ValueError"}, {"k": "func"}, {"k": "wtb"},
                 {"k": "other"}]
@@ -1307,17 +1328,22 @@ def collabc_gen(rng):
                 "x": x, "cls": x if rng.random() < .7 else rng.choice(collabc_HOOKS)}
     if r == 2:
         if rng.random() < .5:
-            return {"fn": "collabc.stub", "name": rng.choice(list(collabc_STUBS))}
+            return {"fn": "collabc.stub", "name": rng.choice(list(collabc_STUBS) + list(collabc_ASYNC_STUBS))}
         k = rng.randrange(0, 4)
         if k == 0:
             return {"fn": "collabc.list_remove", "xs": xs, "v": v, "bad": bad}
+        act = rng.choice(["ignore", "always", "error"])
         if k == 1:
-            return {"fn": "collabc.bytestring_new",
+            return {"fn": "collabc.bytestring_new", "act": act,
                     "name": rng.choice(["ByteString", "Other", "bytestring"])}
         if k == 2:
-            return {"fn": "collabc.bytestring_check", "answer": rng.random() < .5}
+            return {"fn": "collabc.bytestring_check", "answer": rng.random() < .5, "act": act}
+        if rng.random() < .5:
+            ys = [None if rng.random() < .15 else x for x in xs]
+            return {"fn": "collabc.from_iterable", "kind": rng.choice(["set", "keys", "items"]), "xs": ys,
+                    "tail": rng.random() < .2, "uh": collabc_opt(rng, xs)}
         return {"fn": "collabc.view_repr", "cls": rng.choice(["KeysView", "ItemsView", "ValuesView"]),
-                "r": "{1: 2}"}
+                "kind": rng.choice(["ok", "raise", "notstr"])}
     if r == 3:
         return {"fn": "collabc.throw", "typ": rng.choice(collabc_TOBJ),
                 "val": None if rng.random() < .5 else rng.choice(collabc_TOBJ),
@@ -1328,7 +1354,8 @@ def collabc_gen(rng):
         if r == 4:
             return {"fn": "collabc.gen_close", "script": script,
                     "kind": rng.choice(["gen", "coro", "agen"])}
-        return {"fn": rng.choice(["collabc.gen_next", "collabc.builtin_close", "collabc.builtin_aclose"]),
+        return {"fn": rng.choice(["collabc.gen_next", "collabc.agen_next", "collabc.builtin_close",
+                                  "collabc.builtin_aclose"]),
                 "script": script[:1], "kind": rng.choice(["gen", "coro"])}
     if r == 6:
         if rng.random() < .35:
@@ -1478,7 +1505,11 @@ def collabc_run(case):
         hook = getattr(collabc_A, case["x"]).__dict__["__subclasshook__"].__func__
         return collabc_hook(cls, hook, case["mro"])
     if fn == "stub":
-        return py_result(collabc_STUBS[case["name"]])
+        return collabc_stub(case["name"])
+    if fn == "agen_next":
+        return collabc_agen_next([tuple(s) for s in case["script"]])
+    if fn == "from_iterable":
+        return collabc_from_iterable(case)
     if fn == "throw":
         return collabc_throw(case)
     if fn == "gen_close":
@@ -1571,23 +1602,20 @@ def collabc_run(case):
         loaded = "ByteString" in g
         g["ByteString"] = B
         return {"ok": [[[x.category.__name__, str(x.message)] for x in w], loaded, r]}
-    if fn == "bytestring_new":
+    if fn in ("bytestring_new", "bytestring_check"):
         import warnings
         B = collabc_bytestring()
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            type(B)(case["name"], (), {})
-        return {"ok": any(x.category is DeprecationWarning for x in w)}
-    if fn == "bytestring_check":
-        import warnings
-        B = collabc_bytestring()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            a = isinstance(b"" if case["answer"] else 1, B)
-        return {"ok": [any(x.category is DeprecationWarning for x in w), a]}
+            warnings.simplefilter(case["act"])
+            if fn == "bytestring_new":
+                r = py_result(lambda: (type(B)(case["name"], (), {}), None)[1])
+            else:
+                r = py_result(lambda: isinstance(b"" if case["answer"] else 1, B))
+        return {"ok": [[[x.category.__name__, str(x.message)] for x in w], r]}
     if fn == "view_repr":
         cls = getattr(collabc_A, case["cls"])
-        return {"ok": repr(cls({1: 2}))}
+        m = {"ok": dict, "raise": collabc_BadRepr, "notstr": collabc_NotStr}[case["kind"]]({1: 2})
+        return py_result(lambda: repr(cls(m)))
     if fn == "set_cmp":
         s = collabc_self(collabc_Set, raw, tail=case["selftail"])
         s.badlen = case["badlen"]
@@ -1699,6 +1727,31 @@ def collabc_gen_next(script):
     except ValueError as e:
         r = {"exc": "ValueError", "msg": str(e)}
     return {"ok": {"r": r, "left": len(g.s.script)}}
+
+
+def collabc_agen_next(script):
+    g = collabc_AGenC(script)
+    try:
+        r = {"y": collabc_drive(g.__anext__())}
+    except StopAsyncIteration as e:
+        r = {"r": e.args[0] if e.args else None}
+    except GeneratorExit as e:
+        r = {"exc": "GeneratorExit", "msg": str(e)}
+    except ValueError as e:
+        r = {"exc": "ValueError", "msg": str(e)}
+    return {"ok": {"r": r, "left": len(g.s.script)}}
+
+
+def collabc_from_iterable(case):
+    elems = [[0] if x is None else x for x in case["xs"]]
+    it = collabc_tail(elems) if case["tail"] else iter(elems)
+    if case["kind"] == "set":
+        collabc_Set.uh = case["uh"]
+        return py_result(lambda: collabc_Set._from_iterable(
+            collabc_tail([x for x in case["xs"] if x is not None]) if case["tail"]
+            else iter([x for x in case["xs"] if x is not None])).xs)
+    cls = collabc_A.KeysView if case["kind"] == "keys" else collabc_A.ItemsView
+    return py_result(lambda: sorted(cls._from_iterable(it)))
 
 
 def collabc_real(step):
