@@ -136,7 +136,7 @@ Lib/_pydecimal.py	3911	3925	_dec_from_triple	_dec_from_triple(sign, coefficient,
 Lib/_pydecimal.py	3941	3942	_ContextManager.__init__	__init__(self, new_context)	todo		
 Lib/_pydecimal.py	3943	3946	_ContextManager.__enter__	__enter__(self)	todo		
 Lib/_pydecimal.py	3947	3948	_ContextManager.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	modelled	decimal-context-init-exact	
+Lib/_pydecimal.py	3969	4003	Context.__init__	__init__(self, prec=None, rounding=None, Emin=None, Emax=None, capitals=None, clamp=None, flags=None, traps=None, _ignored_flags=None)	todo		review: pyContextNew (Context.lean:619) follows :3978-4003 and the last review's counterexamples now hold (ListOutcome: Context(traps=[k]) raises what k.__eq__ raises against the first signal, a k equal to every signal traps all nine and is kept as an extra key; a traps that is neither list nor dict is the `_signals + value` TypeError), but the model still drops the comparisons `k in traps` (:3994) makes between two non-signal elements (SigKey.ansBefore gives `.no` for an earlier non-signal element, Objects/listobject.c:686 calls `earlier == k`), so for a hashable class R whose __eq__ raises against another R and returns NotImplemented otherwise, Context(traps=[R(), R()]) raises that exception in CPython where ContextInitExact gives KeyError; the same scope hides the dict merging of two equal non-signal elements with equal hashes (otherItems keeps both as keys, so trapsExtra is wrong for two K() whose __eq__ is always True and __hash__ constant). The hash-collision and stateless-__eq__ scopes are acceptable (signals hash by identity), but this one removes an __eq__-raises path of the credited line.
 Lib/_pydecimal.py	4005	4017	Context._set_integer_check	_set_integer_check(self, name, value, vmin, vmax)	modelled	decimal-context-setattr-exact,decimal-context-attr-twins	
 Lib/_pydecimal.py	4019	4028	Context._set_signal_dict	_set_signal_dict(self, name, d)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message,decimal-context-init-exact	
 Lib/_pydecimal.py	4030	4053	Context.__setattr__	__setattr__(self, name, value)	modelled	decimal-context-setattr-exact,decimal-signal-dict-type-error-message	
@@ -168,9 +168,9 @@ Lib/_pydecimal.py	4378	4389	Context.copy_abs	copy_abs(self, a)	modelled	decimal-
 Lib/_pydecimal.py	4391	4402	Context.copy_decimal	copy_decimal(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4404	4415	Context.copy_negate	copy_negate(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4417	4439	Context.copy_sign	copy_sign(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	4441	4476	Context.divide	divide(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-truediv-exact	
+Lib/_pydecimal.py	4441	4476	Context.divide	divide(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4478	4499	Context.divide_int	divide_int(self, a, b)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	4501	4520	Context.divmod	divmod(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-divmod-exact	
+Lib/_pydecimal.py	4501	4520	Context.divmod	divmod(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	4522	4544	Context.exp	exp(self, a)	todo		
 Lib/_pydecimal.py	4546	4567	Context.fma	fma(self, a, b, c)	modelled	decimal-fma-exact,decimal-fma-fin-exact	
 Lib/_pydecimal.py	4569	4580	Context.is_canonical	is_canonical(self, a)	modelled	decimal-context-predicates-exact	
@@ -205,7 +205,7 @@ Lib/_pydecimal.py	5207	5222	Context.plus	plus(self, a)	modelled	decimal-context-
 Lib/_pydecimal.py	5224	5302	Context.power	power(self, a, b, modulo=None)	todo		
 Lib/_pydecimal.py	5304	5360	Context.quantize	quantize(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-quantize-exact	
 Lib/_pydecimal.py	5362	5368	Context.radix	radix(self)	excluded		trivial: the body is `return Decimal(10)` (:5362-5368), one constant with no branch.
-Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-mod-exact	
+Lib/_pydecimal.py	5370	5406	Context.remainder	remainder(self, a, b)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5408	5440	Context.remainder_near	remainder_near(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-remainder-near-exact,decimal-remainder-near-rest	
 Lib/_pydecimal.py	5442	5469	Context.rotate	rotate(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-rotate-exact	
 Lib/_pydecimal.py	5471	5493	Context.same_quantum	same_quantum(self, a, b)	modelled	decimal-context-methods-match-decimal,decimal-same-quantum-exact	
