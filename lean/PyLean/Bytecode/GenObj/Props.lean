@@ -263,7 +263,7 @@ theorem genSendStateEdges_proven : GenSendStateEdges := by
 
 /-- `next(gen)` and `gen.send(None)` are the same operation: same result, same
 world, for every state and frame outcome, on the two types with `tp_iternext`
-(`gen_iternext` asserts this type at @3.14.7:632). -/
+(`gen_iternext` asserts this type at :763). -/
 def GenIternextVsSendNone : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref),
     (w.get r).kind ≠ .asyncGen →
