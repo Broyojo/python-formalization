@@ -20,7 +20,14 @@ tuple (:1606), a dict (:1613) and the value `default` returned (:1644), stack ba
 `DecRec.lean`: `c` is the stack room, and each guard has its own cost in it (`XCfg.stk`), the C
 frames from that guard to the next one, which depend on the container: on 3.15.2 x86-64 the
 deepest encodable nesting is 47456 lists, 29001 dicts (sorted or not), 47453 `default` results,
-and 18001 list-in-dict pairs, so a dict level costs about 1.64 list levels and the costs add up. Python: every call pushes a frame (generators
+and 18001 list-in-dict pairs, so a dict level costs about 1.64 list levels and the costs add up.
+Two more C checks are on the encoder's paths: the `%R` of a dict item's note (:1732) runs
+`PyObject_Repr`, whose own check can fail where the guard just failed, and then `_PyErr_FormatNote`
+raises the repr's `RecursionError` with the exception passing by as its `__context__`
+(Python/errors.c:1281-1292; `cFormatNoteR`); and entering a Python `default` (:1638) checks the
+stack too (`cCallDflt`; a C callable such as `operator.attrgetter` does not). Exceptions carry
+their `__context__` chain (`XCtx`). The other callbacks (a custom `encoder`, `__str__`, `items()`,
+`__iter__`) run as if the stack were free, a scope limit. Python: every call pushes a frame (generators
 too, when they start and when they are resumed); `p` is the number of frames left. The frames
 are `_iterencode_once`, `_iterencode`, `_iterencode_list`, `_iterencode_dict`, `_default`,
 `floatstr` and the string encoder (`py_encode_basestring(_ascii)` and its `replace` callback when

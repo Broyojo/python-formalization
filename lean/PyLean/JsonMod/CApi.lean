@@ -19,8 +19,9 @@ is written, so its failures are modelled: `unicode_repeat`'s `OverflowError`, an
 from `malloc`. Whether `malloc` grants a request depends on the machine and the process limits
 (3.15.2 under a 32 GB address limit refuses `'  ' * 2**34`; nothing grants `'  ' * 2**43`, 16 TB,
 on an ordinary machine), so it is an oracle `alloc : Nat → Bool` on the byte count, and every
-statement quantifies over it. Every later allocation (the writer, the other cache entries) is
-assumed to succeed: the encoder models have no other out-of-memory failure, a scope limit.
+statement quantifies over it. The 1-element list of `PyList_New(1)` (:1383, a few bytes, usually
+from the free list) and every later allocation (the writer, the other cache entries) are assumed to
+succeed: the encoder models have no other out-of-memory failure, a scope limit.
 -/
 
 namespace PyLean.JsonMod
@@ -221,7 +222,7 @@ def ucsStruct (maxchar : Nat) : Nat := if maxchar < 128 then 40 else 56
 /-- `char_size` of `PyUnicode_New`. -/
 def ucsWidth (maxchar : Nat) : Nat := if maxchar < 256 then 1 else if maxchar < 65536 then 2 else 4
 
-/-- `PyUnicode_New(size, maxchar)` for `1 <= size` succeeds (Objects/unicodeobject.c:1269-1345):
+/-- `PyUnicode_New(size, maxchar)` for `1 <= size` succeeds (Objects/unicodeobject.c:1277-1371):
 `struct_size` 40 for ASCII (`PyASCIIObject`), 56 otherwise (`PyCompactUnicodeObject`; 3.15.2,
 64-bit, checked with `sys.getsizeof`), the size check of :1325-1326, then
 `PyObject_Malloc(struct_size + (size + 1) * char_size)` (:1332), granted or not by `alloc`. -/
