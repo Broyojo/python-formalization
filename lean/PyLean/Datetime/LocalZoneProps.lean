@@ -533,5 +533,97 @@ theorem astimezoneLocal_proven : AstimezoneLocal := by
     · simp [dtAstimezoneFullPy, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
     · simp [dtAstimezoneFullC, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
 
+/-! ### Where the twins part: the target zone of `astimezone()` -/
+
+instance sameOutcomeDecidable {α : Type} [DecidableEq α] (x y : Py α) : Decidable (SameOutcome x y) := by
+  cases x <;> cases y <;> simp only [SameOutcome] <;> infer_instance
+
+/-- A zone that springs forward by an hour at the epoch: UTC before it (`STD`), UTC+1 from
+it on (`DST`), so the local times 00:00-00:59 of 1970-01-01 do not exist. -/
+def gapZone (u : Int) : Py LocalTmZ := do
+  let off : Int := if u < 0 then 0 else 3600
+  let s := u + off
+  let o := ord2ymd (s / 86400 + 719163)
+  let ymd ← checkDate o.1 o.2.1 o.2.2
+  let r := s % 86400
+  return ((ymd.1, ymd.2.1, ymd.2.2, r / 3600, r % 3600 / 60, r % 60), off, if u < 0 then "STD" else "DST")
+
+theorem checkDate_valid (y m d : Int) (v : Int × Int × Int) (h : checkDate y m d = .ok v) :
+    ValidDate y m d ∧ v = (y, m, d) := by
+  by_cases hv : ValidDate y m d
+  · rw [checkDate_ok _ _ _ hv] at h; cases h; exact ⟨hv, rfl⟩
+  · obtain ⟨e, he, _⟩ := checkDate_err y m d hv
+    rw [he] at h; cases h
+
+theorem gapZone_valid : ∀ v r, gapZone v = .ok r → LocalTmValid r.1 := by
+  intro v r h
+  unfold gapZone at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  split at h
+  · cases h
+  · rename_i ymd hy
+    cases h
+    obtain ⟨hd, rfl⟩ := checkDate_valid _ _ _ _ hy
+    unfold LocalTmValid
+    refine ⟨hd, ?_⟩
+    dsimp only
+    generalize (v + if v < 0 then 0 else 3600) = s
+    omega
+
+/-- `astimezone()` (`tz=None`) on a naive datetime agrees between the twins for every valid
+datetime and every C-library `localtime` with fields a `datetime` accepts. -/
+def AstimezoneLocalNaiveTwins : Prop :=
+  ∀ (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT),
+    env.Valid → self.Valid → self.tz = none → (∀ v r, ltz v = .ok r → LocalTmValid r.1) →
+    o1 ≠ 0 → o2 ≠ 0 → o1 ≠ o2 →
+    SameOutcome (dtAstimezoneFullPy env ltz o1 o2 self .none_) (dtAstimezoneFullC env ltz o1 o2 self .none_)
+
+/-- `datetime(1970, 1, 1, 0, 30).astimezone()` in `gapZone`, a wall time in the gap: Python
+takes the target zone from `self._local_timezone()` of the naive wall time (UTC+0 for fold 0)
+and returns `00:30` with that zone; C converts to UTC first and takes the zone of the UTC
+result (`local_timezone(result)`, UTC+1) and returns `01:30+01:00`. The same instant, a
+different wall time and tzinfo (the bug record reproduces it with `TZ=EST5EDT`). -/
+theorem astimezoneLocalNaiveTwins_refuted : ¬ AstimezoneLocalNaiveTwins := by
+  intro h
+  have hv : (⟨1970, 1, 1, 0, 30, 0, 0, 0, none⟩ : DT).Valid := by
+    refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+      Or.inl rfl, trivial⟩
+  have := h emptyEnv gapZone 7 8 ⟨1970, 1, 1, 0, 30, 0, 0, 0, none⟩ emptyEnv_valid hv rfl gapZone_valid
+    (by decide) (by decide) (by decide)
+  revert this
+  decide +kernel
+
+/-- A `localtime` that always reports 2020-01-02 03:00:00 UTC (enough to run both twins). -/
+def constZone (_ : Int) : Py LocalTmZ := .ok ((2020, 1, 2, 3, 0, 0), 0, "UTC")
+
+theorem constZone_valid : ∀ v r, constZone v = .ok r → LocalTmValid r.1 := by
+  intro v r h
+  cases h
+  exact ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+/-- `astimezone()` (`tz=None`) on an aware datetime whose tzinfo's `utcoffset()` is `None`
+agrees between the twins. -/
+def AstimezoneLocalNoneOffsetTwins : Prop :=
+  ∀ (env : TzEnv) (ltz : Int → Py LocalTmZ) (o1 o2 : Nat) (self : DT),
+    env.Valid → self.Valid → self.tz ≠ none → self.utcoffsetPy env = .ok none →
+    (∀ v r, ltz v = .ok r → LocalTmValid r.1) → o1 ≠ 0 → o2 ≠ 0 → o1 ≠ o2 →
+    (∀ z, self.tz = some z → z.oid ≠ o1 ∧ z.oid ≠ o2 ∧ z.oid ≠ 0) →
+    SameOutcome (dtAstimezoneFullPy env ltz o1 o2 self .none_) (dtAstimezoneFullC env ltz o1 o2 self .none_)
+
+/-- `datetime(2020, 1, 2, 3, tzinfo=T()).astimezone()` with `T.utcoffset` returning `None`:
+Python computes the target zone first, `self._local_timezone()`, whose aware branch
+`self - _EPOCH` raises `TypeError('cannot mix naive and timezone-aware time')`; C treats `self`
+as naive (`goto naive`) and converts. -/
+theorem astimezoneLocalNoneOffsetTwins_refuted : ¬ AstimezoneLocalNoneOffsetTwins := by
+  intro h
+  have hv : (⟨2020, 1, 2, 3, 0, 0, 0, 0, some ⟨5, .custom 0⟩⟩ : DT).Valid := by
+    refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+      Or.inl rfl, trivial⟩
+  have := h emptyEnv constZone 7 8 ⟨2020, 1, 2, 3, 0, 0, 0, 0, some ⟨5, .custom 0⟩⟩ emptyEnv_valid hv
+    (by simp) rfl constZone_valid (by decide) (by decide) (by decide)
+    (fun z hz => by cases hz; decide)
+  revert this
+  decide +kernel
+
 end PyLean.Datetime
 
