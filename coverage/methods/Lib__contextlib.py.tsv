@@ -1,57 +1,57 @@
 file	line	endline	name	signature	status	entry	note
-Lib/contextlib.py	31	33	AbstractContextManager.__enter__	__enter__(self)	modelled	misc-ctx-abstract-bases	
-Lib/contextlib.py	36	38	AbstractContextManager.__exit__	__exit__(self, exc_type, exc_value, traceback)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	31	33	AbstractContextManager.__enter__	__enter__(self)	todo		review: `absEnter self = self` is `rfl` on a one-line identity, which the playbook does not count; the row is a `trivial:` exclusion candidate.
+Lib/contextlib.py	36	38	AbstractContextManager.__exit__	__exit__(self, exc_type, exc_value, traceback)	todo		review: `absExit = none` is a hard-coded constant proved by `rfl`, and the `@abc.abstractmethod` effect is not modelled; it should be excluded, not claimed.
 Lib/contextlib.py	41	44	AbstractContextManager.__subclasshook__	__subclasshook__(cls, C)	modelled	misc-ctx-abstract-bases,misc-ctx-subclasshook-none	
-Lib/contextlib.py	55	57	AbstractAsyncContextManager.__aenter__	__aenter__(self)	modelled	misc-ctx-abstract-bases	
-Lib/contextlib.py	60	62	AbstractAsyncContextManager.__aexit__	__aexit__(self, exc_type, exc_value, traceback)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	55	57	AbstractAsyncContextManager.__aenter__	__aenter__(self)	todo		review: `absEnter` is the sync identity: the coroutine that `async def` returns is not modelled, and the theorem is `rfl` on a one-line definition.
+Lib/contextlib.py	60	62	AbstractAsyncContextManager.__aexit__	__aexit__(self, exc_type, exc_value, traceback)	todo		review: `absExit = none` is a constant proved by `rfl`, and the coroutine and the abstractmethod effect are not modelled.
 Lib/contextlib.py	65	69	AbstractAsyncContextManager.__subclasshook__	__subclasshook__(cls, C)	modelled	misc-ctx-abstract-bases,misc-ctx-subclasshook-none	
-Lib/contextlib.py	75	85	ContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	75	85	ContextDecorator._recreate_cm	_recreate_cm(self)	todo		review: `recreateCm c = c` is `rfl` on a one-line `return self`; DecoratorIsWith really describes `__call__`, which is a todo row; this is a `trivial:` exclusion candidate.
 Lib/contextlib.py	87	118	ContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: the plain-function branch is modelled (misc-ctx-decorator), the generator, coroutine and async generator branches new in 3.15 are not: a body that suspends inside a with needs a model of generators
-Lib/contextlib.py	124	127	AsyncContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	124	127	AsyncContextDecorator._recreate_cm	_recreate_cm(self)	todo		review: `rfl` on a one-line `return self`, and the only other theorem covers `ContextDecorator.call`, not this class's (todo) `__call__`.
 Lib/contextlib.py	129	164	AsyncContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: the plain-function branch is modelled (misc-ctx-decorator), the generator, coroutine and async generator branches new in 3.15 are not: a body that suspends inside a with needs a model of generators
-Lib/contextlib.py	170	177	_GeneratorContextManagerBase.__init__	__init__(self, func, args, kwds)	modelled	misc-ctx-recreate	
-Lib/contextlib.py	184	188	_GeneratorContextManagerBase._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-recreate	
+Lib/contextlib.py	170	177	_GeneratorContextManagerBase.__init__	__init__(self, func, args, kwds)	todo		review: No Lean function mirrors the body: `self.gen = func(...)` is an abstract `fresh`, and `gcmDoc` (lines 174-177 only) is proved by `rfl`, without the `getattr(func, \"__doc__\", None)` failure path.
+Lib/contextlib.py	184	188	_GeneratorContextManagerBase._recreate_cm	_recreate_cm(self)	todo		review: The fresh-manager path is pinned, but the post-`__enter__` conjunct compares only `.2`, the new heap index, so neither AttributeError nor its message is proved, although the registry statement claims AttributeError.
 Lib/contextlib.py	198	205	_GeneratorContextManager.__enter__	__enter__(self)	modelled	misc-ctx-enter,misc-ctx-try-finally	
-Lib/contextlib.py	207	262	_GeneratorContextManager.__exit__	__exit__(self, typ, value, traceback)	modelled	misc-ctx-async-twin,misc-ctx-exit-never-raises-value,misc-ctx-exit-no-exception,misc-ctx-exit-throw-cases,misc-ctx-try-finally	
-Lib/contextlib.py	271	278	_AsyncGeneratorContextManager.__aenter__	__aenter__(self)	modelled	misc-ctx-enter	
-Lib/contextlib.py	280	335	_AsyncGeneratorContextManager.__aexit__	__aexit__(self, typ, value, traceback)	modelled	misc-ctx-async-twin,misc-ctx-exit-never-raises-value,misc-ctx-exit-no-exception,misc-ctx-exit-throw-cases	
-Lib/contextlib.py	338	368	contextmanager	contextmanager(func)	modelled	misc-ctx-recreate,misc-ctx-try-finally	
-Lib/contextlib.py	371	401	asynccontextmanager	asynccontextmanager(func)	modelled	misc-ctx-recreate,misc-ctx-try-finally	
-Lib/contextlib.py	421	422	closing.__init__	__init__(self, thing)	modelled	misc-ctx-closing	
-Lib/contextlib.py	423	424	closing.__enter__	__enter__(self)	modelled	misc-ctx-closing	
-Lib/contextlib.py	425	426	closing.__exit__	__exit__(self, *exc_info)	modelled	misc-ctx-closing	
-Lib/contextlib.py	447	448	aclosing.__init__	__init__(self, thing)	modelled	misc-ctx-closing	
-Lib/contextlib.py	449	450	aclosing.__aenter__	__aenter__(self)	modelled	misc-ctx-closing	
-Lib/contextlib.py	451	452	aclosing.__aexit__	__aexit__(self, *exc_info)	modelled	misc-ctx-closing	
-Lib/contextlib.py	459	462	_RedirectStream.__init__	__init__(self, new_target)	modelled	misc-ctx-redirect	
-Lib/contextlib.py	464	467	_RedirectStream.__enter__	__enter__(self)	modelled	misc-ctx-redirect	
+Lib/contextlib.py	207	262	_GeneratorContextManager.__exit__	__exit__(self, typ, value, traceback)	todo		review: `gcmExit` mirrors :207-262 and ExitNoException/ExitThrowCases pin every branch for a given `value`, but no theorem covers `value is None` (:219-222): `value = typ()` and its failure. A gcmExit that returns `.ok false` there passes every entry.
+Lib/contextlib.py	271	278	_AsyncGeneratorContextManager.__aenter__	__aenter__(self)	todo		review: `agcmEnter` adds the coroutine boundary, but EnterCases is stated over `gcmEnter`, not `agcmEnter`, so a `StopIteration` from `anext` becoming `RuntimeError(\"coroutine raised StopIteration\")` is in no theorem.
+Lib/contextlib.py	280	335	_AsyncGeneratorContextManager.__aexit__	__aexit__(self, typ, value, traceback)	todo		review: ExitNoException, ExitThrowCases and ExitNeverRaisesValue are about `gcmExit asyncCfg`, not `agcmExit`. The only theorem that unfolds `agcmExit` (AsyncTwinExit) covers just the throw-raises-a-non-stop branch, leaving the `typ is None` path, the yield-after-athrow path, the `value = typ()` path and the coroutine boundary unpinned.
+Lib/contextlib.py	338	368	contextmanager	contextmanager(func)	todo		review: `contextmanager` is the hard-coded constant `{ live := true }`, `@wraps(func)` and `helper` are not modelled, and ContextmanagerTryFinally is about `gcmEnter`/`gcmExit`, which would hold whatever this constant were.
+Lib/contextlib.py	371	401	asynccontextmanager	asynccontextmanager(func)	todo		review: The same constant as `contextmanager`, and ContextmanagerTryFinally uses `gcmEnter`/`gcmExit` instead of the async `agcmEnter`/`agcmExit`.
+Lib/contextlib.py	421	422	closing.__init__	__init__(self, thing)	todo		review: No Lean function models `__init__`; ClosingOnce builds the manager from `thing` directly. Storing one field is a `trivial:` exclusion candidate.
+Lib/contextlib.py	423	424	closing.__enter__	__enter__(self)	todo		review: `closingEnter thing = thing` is `rfl` on a one-line `return self.thing`, which is a `trivial:` exclusion candidate.
+Lib/contextlib.py	425	426	closing.__exit__	__exit__(self, *exc_info)	todo		review: ClosingOnce fixes `close()` to one non-raising counter increment, a single-example instance, so a `closingExit` that swallowed an exception from `close()` would still pass.
+Lib/contextlib.py	447	448	aclosing.__init__	__init__(self, thing)	todo		review: No Lean function models `__init__` (one stored field); a `trivial:` exclusion candidate.
+Lib/contextlib.py	449	450	aclosing.__aenter__	__aenter__(self)	todo		review: The sync `closingEnter` is reused through `rfl`, and the coroutine is not modelled.
+Lib/contextlib.py	451	452	aclosing.__aexit__	__aexit__(self, *exc_info)	todo		review: The twins are merged: `closingExit` has no coroutine boundary, so `await thing.aclose()` raising StopIteration (RuntimeError in CPython) is wrong in the model, and close is fixed to one non-raising instance.
+Lib/contextlib.py	459	462	_RedirectStream.__init__	__init__(self, new_target)	todo		review: `Redirect.init` with `oldTargets = []` is `rfl` on a one-line constructor; a `trivial:` exclusion candidate.
+Lib/contextlib.py	464	467	_RedirectStream.__enter__	__enter__(self)	todo		review: `Redirect.enter` takes the current stream as a given value, so `getattr(sys, self._stream)` failing (no `sys.stdout`: AttributeError, nothing appended) is not modelled.
 Lib/contextlib.py	469	470	_RedirectStream.__exit__	__exit__(self, exctype, excinst, exctb)	modelled	misc-ctx-redirect	
-Lib/contextlib.py	506	507	suppress.__init__	__init__(self, *exceptions)	modelled	misc-ctx-suppress-plain	
-Lib/contextlib.py	509	510	suppress.__enter__	__enter__(self)	modelled	misc-ctx-suppress-plain	
-Lib/contextlib.py	512	531	suppress.__exit__	__exit__(self, exctype, excinst, exctb)	modelled	misc-ctx-suppress-group,misc-ctx-suppress-plain	
+Lib/contextlib.py	506	507	suppress.__init__	__init__(self, *exceptions)	todo		review: No Lean function models `__init__`: the class list `cs` is a parameter of `suppressExit`.
+Lib/contextlib.py	509	510	suppress.__enter__	__enter__(self)	todo		review: `suppressEnter = ()` is `rfl` on a constant `pass`; it should be excluded.
+Lib/contextlib.py	512	531	suppress.__exit__	__exit__(self, exctype, excinst, exctb)	todo		review: The model tests `excinst` for None (the source tests `exctype`) and uses concrete MRO membership where :524 and :526 use `issubclass`, which the comment at :513-521 says on purpose and which honours `__subclasscheck__`/ABC registration; it also leaves out the TypeError for non-class arguments and a user `derive`. SuppressGroup assumes a flat group, a non-documented hypothesis that assumes away nested groups.
 Lib/contextlib.py	534	542	_lookup_special	_lookup_special(obj, name, default)	modelled	misc-ctx-lookup-special	
 Lib/contextlib.py	552	555	_BaseExitStack._create_cb_wrapper	_create_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
-Lib/contextlib.py	557	558	_BaseExitStack.__init__	__init__(self)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	560	565	_BaseExitStack.pop_all	pop_all(self)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	567	576	_BaseExitStack.push	push(self, exit)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	557	558	_BaseExitStack.__init__	__init__(self)	todo		review: `Stack.init = []` is `rfl` on a one-line definition.
+Lib/contextlib.py	560	565	_BaseExitStack.pop_all	pop_all(self)	todo		review: `popAll st = (st, [])` is `rfl` on a one-line definition, and `type(self)()` (a subclass `__init__` that can raise before `self` is emptied) is not modelled.
+Lib/contextlib.py	567	576	_BaseExitStack.push	push(self, exit)	todo		review: The model returns `Unit` where :576 returns `exit` for decorator use, which the docs promise (\"The passed in object is returned\"). The registration conjuncts are otherwise right.
 Lib/contextlib.py	578	596	_BaseExitStack.enter_context	enter_context(self, cm)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	598	609	_BaseExitStack.callback	callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	611	612	_BaseExitStack._push_exit_callback	_push_exit_callback(self, callback, is_sync=True)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	627	628	ExitStack.__enter__	__enter__(self)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	598	609	_BaseExitStack.callback	callback(self, callback, /, *args, **kwds)	todo		review: The conjunct `callback st f a = (true, .wrapped f a) :: st` is `rfl` on a one-line definition, and the documented return of `callback` and the `__wrapped__` assignment (:607-609) are not modelled.
+Lib/contextlib.py	611	612	_BaseExitStack._push_exit_callback	_push_exit_callback(self, callback, is_sync=True)	todo		review: A one-line cons seen only through `rfl`/`simp` conjuncts; no theorem links the push order to the order `__exit__` pops in (ExitLifo starts from a given list and is stated on `nested`).
+Lib/contextlib.py	627	628	ExitStack.__enter__	__enter__(self)	todo		review: `stackEnter o = o` is `rfl` on a one-line `return self`; a `trivial:` exclusion candidate.
 Lib/contextlib.py	630	682	ExitStack.__exit__	__exit__(self, *exc_details)	modelled	misc-ctx-exit-keeps-context-acyclic,misc-ctx-exit-lifo,misc-ctx-exit-matches-nested,misc-ctx-exit-terminates	
-Lib/contextlib.py	684	686	ExitStack.close	close(self)	modelled	misc-ctx-async-exit-matches	
-Lib/contextlib.py	704	707	AsyncExitStack._create_async_cb_wrapper	_create_async_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
-Lib/contextlib.py	709	727	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	729	739	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	741	752	AsyncExitStack.push_async_callback	push_async_callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	754	756	AsyncExitStack.aclose	aclose(self)	modelled	misc-ctx-async-exit-matches	
-Lib/contextlib.py	758	759	AsyncExitStack.__aenter__	__aenter__(self)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	761	817	AsyncExitStack.__aexit__	__aexit__(self, *exc_details)	modelled	misc-ctx-async-exit-matches,misc-ctx-exit-keeps-context-acyclic,misc-ctx-exit-terminates	
-Lib/contextlib.py	831	832	nullcontext.__init__	__init__(self, enter_result=None)	modelled	misc-ctx-nullcontext	
-Lib/contextlib.py	834	835	nullcontext.__enter__	__enter__(self)	modelled	misc-ctx-nullcontext	
-Lib/contextlib.py	837	838	nullcontext.__exit__	__exit__(self, *excinfo)	modelled	misc-ctx-nullcontext	
-Lib/contextlib.py	840	841	nullcontext.__aenter__	__aenter__(self)	modelled	misc-ctx-nullcontext	
-Lib/contextlib.py	843	844	nullcontext.__aexit__	__aexit__(self, *excinfo)	modelled	misc-ctx-nullcontext	
-Lib/contextlib.py	850	852	chdir.__init__	__init__(self, path)	modelled	misc-ctx-chdir	
-Lib/contextlib.py	854	856	chdir.__enter__	__enter__(self)	modelled	misc-ctx-chdir	
-Lib/contextlib.py	858	859	chdir.__exit__	__exit__(self, *excinfo)	modelled	misc-ctx-chdir	
+Lib/contextlib.py	684	686	ExitStack.close	close(self)	todo		review: AsyncExitMatches' second conjunct restates the definition of `close` (exit with `None`, result dropped), an alias restated, not a property.
+Lib/contextlib.py	704	707	AsyncExitStack._create_async_cb_wrapper	_create_async_cb_wrapper(callback, /, *args, **kwds)	todo		review: The twins are merged: the async `_exit_wrapper` is the same `Cb.wrapped` as the sync one, with no coroutine boundary, so `await callback()` raising StopIteration (RuntimeError in CPython) is not distinguished.
+Lib/contextlib.py	709	727	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	todo		review: It reuses the sync `enterContext` with `isSync = false`, leaving out the coroutine boundary at this `async def` (a StopIteration from `await _enter()` becomes RuntimeError).
+Lib/contextlib.py	729	739	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	todo		review: The model returns `Unit` where :739 returns `exit` for decorator use, the same gap as `push`.
+Lib/contextlib.py	741	752	AsyncExitStack.push_async_callback	push_async_callback(self, callback, /, *args, **kwds)	todo		review: `pushAsyncCallback` is proved by `rfl` on a one-line definition, and the returned `callback` and `__wrapped__` (:750-752) are not modelled.
+Lib/contextlib.py	754	756	AsyncExitStack.aclose	aclose(self)	todo		review: No model of `aclose` exists: AsyncExitMatches' conjunct is about the sync `close`, which calls `exit`, not `aexit`.
+Lib/contextlib.py	758	759	AsyncExitStack.__aenter__	__aenter__(self)	todo		review: The sync `stackEnter` identity is reused through `rfl`, and the coroutine is not modelled.
+Lib/contextlib.py	761	817	AsyncExitStack.__aexit__	__aexit__(self, *exc_details)	todo		review: `aexit` mirrors :761-817, but the only theorem that unfolds it (AsyncExitMatches) assumes AllSync, assuming away the `await cb(...)` entries that are the point of this class. The two refutations credited here run `exit`, not `aexit`, and the reproducer never uses AsyncExitStack.
+Lib/contextlib.py	831	832	nullcontext.__init__	__init__(self, enter_result=None)	todo		review: No Lean function models `__init__` (one stored field); a `trivial:` exclusion candidate.
+Lib/contextlib.py	834	835	nullcontext.__enter__	__enter__(self)	todo		review: `nullEnter` is `rfl` on a one-line `return self.enter_result`; NullcontextTransparent is really about `withStmt`.
+Lib/contextlib.py	837	838	nullcontext.__exit__	__exit__(self, *excinfo)	todo		review: `nullExit = false` is a hard-coded constant for `pass`.
+Lib/contextlib.py	840	841	nullcontext.__aenter__	__aenter__(self)	todo		review: The sync `nullEnter` is reused, and the coroutine and `async with` are not modelled.
+Lib/contextlib.py	843	844	nullcontext.__aexit__	__aexit__(self, *excinfo)	todo		review: The sync constant `nullExit` is reused, with no coroutine.
+Lib/contextlib.py	850	852	chdir.__init__	__init__(self, path)	todo		review: `Chdir.init` is `rfl` on a one-line constructor.
+Lib/contextlib.py	854	856	chdir.__enter__	__enter__(self)	todo		review: `Chdir.enter` takes the cwd as a given value, so an `os.getcwd()` failure (a removed cwd: FileNotFoundError, nothing pushed) is not modelled.
+Lib/contextlib.py	858	859	chdir.__exit__	__exit__(self, *excinfo)	todo		review: ChdirRestores pins only the successful pop-and-chdir; the `os.chdir` failure after the pop and the IndexError on an empty stack, both mirrored in `Chdir.exit`, are in no conjunct.
