@@ -61,7 +61,7 @@ def MulNanExact : Prop :=
   (∀ (c : Ctx) (a : Dec) (n : Int) (fl : List Signal), maxStrDigits < numDigits n.natAbs →
     (opArg mul c a (.int n)).run fl = .error (.valueError limitToStrMsg)) ∧
   (∀ (c : Ctx) (a : Dec) (fl : List Signal),
-    (opArg mul c a .other).run fl = .ok (none, fl) ∧ ∀ k, (opArg mul c a (.tuple k)).run fl = .ok (none, fl))
+    (∀ s, (opArg mul c a (.other s)).run fl = .ok (none, fl)) ∧ ∀ t, (opArg mul c a (.tuple t)).run fl = .ok (none, fl))
 
 theorem opArg_dec {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a d : Dec) (fl : List Signal) :
     (opArg f c a (.dec d)).run fl = (fun p => (some p.1, p.2)) <$> (f c a d).run fl := by
@@ -71,7 +71,7 @@ theorem opArg_dec {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a d
 
 theorem mulNanExact_proven : MulNanExact := by
   refine ⟨fun c a b fl h => ?_, fun c a d fl => opArg_dec mul c a d fl, fun c a n fl hl => ?_,
-    fun c a n fl hl => ?_, fun c a fl => ⟨rfl, fun k => rfl⟩⟩
+    fun c a n fl hl => ?_, fun c a fl => ⟨fun _ => rfl, fun _ => rfl⟩⟩
   · rcases a with ⟨_, _, _⟩ | _ | ⟨_, sa, _⟩ <;> rcases b with ⟨_, _, _⟩ | _ | ⟨_, sb, _⟩ <;>
       first
       | (simp [nanKind] at h; done)
@@ -243,17 +243,22 @@ theorem compareTotalMagRest_proven : CompareTotalMagRest := by
 
 /-! ## `_convert_other` of a tuple, with `raiseit` -/
 
-/-- `_convert_other(t, raiseit=True)` for a tuple `t` (_pydecimal.py:6111-6112) raises `TypeError`
-with what `"Unable to convert %s to Decimal" % t` gives: the formatting error for `()` and for
-tuples of two or more elements (`%` takes the tuple as its argument tuple), the formatted message
-for a 1-tuple. With `raiseit=False` a tuple is `NotImplemented` (`ConvertOtherExact`). -/
+/-- `_convert_other(t, raiseit=True)` for a tuple `t` (_pydecimal.py:6111-6112) raises what
+`raise TypeError("Unable to convert %s to Decimal" % t)` raises, `%` taking the tuple as its
+argument tuple (Objects/unicode_format.c): "not enough arguments for format string (got 0)" for
+`()`; for a first element whose `str()` raises (`(10**5000,)`, `(10**5000, 1)`), that exception;
+the `TypeError` with the formatted message for a 1-tuple that prints; and "not all arguments
+converted during string formatting (required 1, got k)" for k >= 2 elements whose first prints.
+With `raiseit=False` a tuple is `NotImplemented` (`ConvertOtherExact`). -/
 def ConvertOtherTupleExact : Prop :=
-  convertOther true (.tuple 0) = .error (.typeError "not enough arguments for format string (got 0)") ∧
-  convertOther true (.tuple 1) = .error (.typeError unableMsg) ∧
-  ∀ k : Nat, convertOther true (.tuple (k + 2)) =
-    .error (.typeError s!"not all arguments converted during string formatting (required 1, got {k + 2})")
+  convertOther true (.tuple []) = .error (.typeError "not enough arguments for format string (got 0)") ∧
+  (∀ (e : PyExc) (rest : List StrErr), convertOther true (.tuple (some e :: rest)) = .error e) ∧
+  convertOther true (.tuple [none]) = .error (.typeError unableMsg) ∧
+  ∀ (x : StrErr) (rest : List StrErr), convertOther true (.tuple (none :: x :: rest)) =
+    .error (.typeError s!"not all arguments converted during string formatting (required 1, got {rest.length + 2})")
 
-theorem convertOtherTupleExact_proven : ConvertOtherTupleExact := ⟨rfl, rfl, fun _ => rfl⟩
+theorem convertOtherTupleExact_proven : ConvertOtherTupleExact :=
+  ⟨rfl, fun _ _ => rfl, rfl, fun _ _ => rfl⟩
 
 /-! ## `remainder_near`: the branches `RemainderNearExact` leaves -/
 

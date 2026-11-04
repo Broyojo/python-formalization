@@ -81,7 +81,7 @@ def flagsAsException (st : Status) : Option Signal := signalMap.find? (hasSignal
 /-- `exception_as_flag`, _decimal.c:432-446 (inventory: `Py_LOCAL_INLINE`). -/
 def exceptionAsFlag : SigKey → Py Status
   | .sig s => .ok s.flagBits
-  | .other => .error (.keyError "~valid values for signals are")
+  | .other .. => .error (.keyError "~valid values for signals are")
 
 /-- `flags_as_list`, _decimal.c:448-478: conditions first, then `signal_map+1`. -/
 def flagsAsList (st : Status) : List String :=
@@ -102,8 +102,9 @@ def listAsFlags : List SigKey → Py Status
 /-- `flags_as_dict`, _decimal.c:527-546. -/
 def flagsAsDict (st : Status) : SigDict := signalMap.map (fun s => (s, hasSignal st s))
 
-def lookupKey (d : List (SigKey × Bool)) (k : SigKey) : Option Bool :=
-  (d.find? (fun p => p.1 == k)).map (·.2)
+/-- `PyDict_GetItemWithError(val, signal)` then `PyObject_IsTrue` of the value (_decimal.c:571-583). -/
+def lookupKey (d : List (SigKey × SigVal)) (k : SigKey) : Option Bool :=
+  (d.find? (fun p => p.1 == k)).map (·.2.truth)
 
 /-- `dict_as_flags`, _decimal.c:549-589. Since 3.15 it takes `PyAnyDict_Check`, so a
 `frozendict` is `CtxArg.dict` here; `_pydecimal` still wants a `dict`. -/
@@ -377,7 +378,7 @@ def signaldictRepr : SigObj → Py String
 /-- The right operand of a `SignalDict` comparison. -/
 inductive SdOperand where
   | sd (w : SigObj)
-  | dict (d : List (SigKey × Bool))
+  | dict (d : List (SigKey × SigVal))
   | other
 
 /-- `signaldict_richcompare`, _decimal.c:791-824, for `==` (`ne = false`) and `!=`.

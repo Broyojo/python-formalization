@@ -17,41 +17,70 @@ namespace PyLean.Decimal
 
 open PyLean
 
+/-! ## Formatting an object into a message -/
+
+/-- What `str()` or `repr()` of an object raises: `none` when it returns its text (which the model
+does not render; messages built from it start with `~`). An int of more than 4300 digits raises the
+int/str-limit `ValueError` (Objects/longobject.c:2207-2216); a `__str__` or `__repr__` written in
+Python can raise anything. -/
+abbrev StrErr := Option PyExc
+
+/-- `str(n)` or `repr(n)` of an int. -/
+def intStrErr (n : Int) : StrErr :=
+  if maxStrDigits < numDigits n.natAbs then some (.valueError limitToStrMsg) else none
+
+/-- `raise E(fmt % x)` for a format `fmt` with one `%s` and an `x` that is not a tuple: `%s` takes
+`str(x)` (Objects/unicode_format.c:720), whose exception, if any, is what is raised; otherwise `ok`,
+the exception built from the formatted message. -/
+def pctExc (strErr : StrErr) (ok : PyExc) : PyExc := strErr.getD ok
+
+/-- `raise E(fmt % t)` for a format with one `%s` and a tuple `t`, `elems` being what `str()` of
+each element raises: `%` takes the tuple as its argument tuple (Objects/unicode_format.c): no
+element is "not enough arguments" (:96-113), the first element is formatted with `str()` (:720),
+and a second one left over is "not all arguments converted" (:1093-1099). -/
+def pctTupleExc (elems : List StrErr) (ok : PyExc) : PyExc :=
+  match elems with
+  | [] => .typeError "not enough arguments for format string (got 0)"
+  | e :: rest =>
+    match e with
+    | some x => x
+    | none =>
+      match rest with
+      | [] => ok
+      | _ => .typeError s!"not all arguments converted during string formatting (required 1, got {rest.length + 1})"
+
 /-! ## Operands -/
 
 /-- An operand of a `Context` method or a binary operator. -/
 inductive Arg where
   | dec (d : Dec)
   | int (n : Int)
-  /-- A tuple of `n` elements, which `"..." % other` takes as its argument tuple. -/
-  | tuple (n : Nat)
-  | other
+  /-- A tuple, which `"..." % other` takes as its argument tuple; `elems` is what `str()` of each
+  element raises (a huge int, a `__str__` that raises). -/
+  | tuple (elems : List StrErr)
+  /-- Any other object; `str` is what `str()` of it raises (`str([10**5000])` and
+  `str(Fraction(10**5000))` raise the int/str-limit `ValueError`). -/
+  | other (str : StrErr := none)
   deriving Repr, Inhabited
 
 /-- `"Unable to convert %s to Decimal" % other`, formatted text the model does not render. -/
 def unableMsg : String := "~Unable to convert to Decimal"
 
-/-- `"Unable to convert %s to Decimal" % other` for a tuple `other` (_pydecimal.py:6112): `%`
-takes the tuple as its arguments, so an empty one and one of two or more elements fail in the
-formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
-def unableMsgTuple : Nat → String
-  | 0 => "not enough arguments for format string (got 0)"
-  | 1 => unableMsg
-  | n + 2 => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
-
-/-- The text of `"Unable to convert %s to Decimal" % x` for an operand `x` that is not a
-Decimal or an int. -/
-def unableMsgOf : Arg → String
-  | .tuple n => unableMsgTuple n
-  | _ => unableMsg
+/-- `raise TypeError("Unable to convert %s to Decimal" % x)` (_pydecimal.py:6112, and the
+`Context` wrappers' `% b`, :4248, :4474, :4497, :4518, :5054, :5300, :5404, :5595) for an operand
+`x` that is not a Decimal or an int: the exception raised, from the formatting or the `TypeError`. -/
+def unableExc : Arg → PyExc
+  | .tuple t => pctTupleExc t (.typeError unableMsg)
+  | .other s => pctExc s (.typeError unableMsg)
+  | _ => .typeError unableMsg
 
 /-- `_convert_other(other, raiseit)`, _pydecimal.py:6096-6113, without `allow_float`,
 which nothing in the module passes. `none` is `NotImplemented`. -/
 def convertOther (raiseit : Bool) : Arg → Py (Option Dec)
   | .dec d => .ok (some d)
   | .int n => do return some (← pyFromInt n)
-  | .tuple n => if raiseit then .error (.typeError (unableMsgOf (.tuple n))) else .ok none
-  | .other => if raiseit then .error (.typeError unableMsg) else .ok none
+  | .tuple t => if raiseit then .error (unableExc (.tuple t)) else .ok none
+  | .other s => if raiseit then .error (unableExc (.other s)) else .ok none
 
 /-- `_convert_other(other, raiseit=True)`, which never returns `NotImplemented`. -/
 def convertRaise (x : Arg) : Py Dec := do
@@ -89,7 +118,7 @@ def ctxOp {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a b : Arg) 
   let x ← liftPy (convertRaise a)
   match ← opArg f c x b with
   | some r => return r
-  | none => throw (.typeError (unableMsgOf b))
+  | none => throw (unableExc b)
 
 /-- `a = _convert_other(a, raiseit=True); return a.m(b, context=self)`, where
 `a.m` starts with `other = _convert_other(other, raiseit=True)`. -/
@@ -191,14 +220,60 @@ def pySignals : List Signal :=
   [.clamped, .divisionByZero, .inexact, .overflow, .rounded,
    .underflow, .invalidOperation, .subnormal, .floatOperation]
 
-/-- A key of a dict passed as `flags` or `traps`. -/
+/-- An element of a list, or a key of a dict, passed as `flags` or `traps`. -/
 inductive SigKey where
   | sig (s : Signal)
-  | other
+  /-- Any other object. `repr` is what `repr()` of it raises (`none`: it returns; an int of more
+  than 4300 digits raises the limit `ValueError`, `intKey`), `hash` what `hash()` of it raises
+  (`none`: hashable; a list raises `TypeError`). Scope: it compares unequal to every signal and to
+  the other elements without running Python code (`s in traps` and the dict lookups at
+  _pydecimal.py:3994, :4023, :4026 call no `__eq__` that raises); the C twin reads neither field. -/
+  | other (repr : StrErr := none) (hash : StrErr := none)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- An int element or key: hashable, and `repr()` of it raises past 4300 digits. -/
+def intKey (n : Int) : SigKey := .other (intStrErr n) none
+
+def SigKey.isSig : SigKey → Bool
+  | .sig _ => true
+  | .other .. => false
+
+/-- What `repr()` of an element or key raises; a signal is a class, whose repr always returns. -/
+def SigKey.reprErr : SigKey → StrErr
+  | .sig _ => none
+  | .other r _ => r
+
+/-- A value of a dict passed as `flags` or `traps`: its truth value, which is all
+`_raise_error` reads (`if not self.traps[error]`, :4118; a `__bool__` that raises is out of
+scope), and what `repr()` of it raises (`{Clamped: 10**5000, ...}`). -/
+structure SigVal where
+  truth : Bool
+  repr : StrErr := none
   deriving Repr, DecidableEq, Inhabited
 
 /-- A valid signal dict, in insertion order. -/
 abbrev SigDict := List (Signal × Bool)
+
+/-- What `repr()` of a list raises: the first element whose `repr()` raises
+(Objects/listobject.c:623-638). -/
+def listReprErr : List SigKey → StrErr
+  | [] => none
+  | k :: rest =>
+    match k.reprErr with
+    | some e => some e
+    | none => listReprErr rest
+
+/-- What `repr()` of a dict raises: key, then value, item by item in insertion order
+(Objects/dictobject.c:3672-3702, `anydict_repr_impl`). -/
+def dictReprErr : List (SigKey × SigVal) → StrErr
+  | [] => none
+  | (k, v) :: rest =>
+    match k.reprErr with
+    | some e => some e
+    | none =>
+      match v.repr with
+      | some e => some e
+      | none => dictReprErr rest
 
 /-- What `mode == value` gives, in `value in _rounding_modes`, for an object `value` of a class
 that is not `str` (or a subclass of it): `str.__eq__` returns `NotImplemented`, so the reflected
@@ -219,15 +294,35 @@ inductive CtxArg where
   /-- `True` or `False`: an `int` to `isinstance`, but `%s` prints its name. -/
   | bool (b : Bool)
   /-- An object `id` of a class that is not `str`, whose `__eq__` answers the eight mode names
-  of `_rounding_modes`, in that order, as `eq` says (a missing answer is `no`). -/
-  | eqObj (id : Nat) (eq : List EqAns)
+  of `_rounding_modes`, in that order, as `eq` says (a missing answer is `no`), and `str()` of
+  which raises `str` (`none`: it returns). -/
+  | eqObj (id : Nat) (eq : List EqAns) (str : StrErr := none)
   | str (s : String)
   | list (l : List SigKey)
-  | dict (d : List (SigKey × Bool))
-  /-- A tuple of `n` elements, which `"%s ..." % d` treats as the format arguments. -/
-  | tuple (n : Nat)
-  | obj
+  | dict (d : List (SigKey × SigVal))
+  /-- A tuple, which `"%s ..." % d` takes as its argument tuple; `elems` is what `str()` of each
+  element raises. -/
+  | tuple (elems : List StrErr)
+  /-- Any other object; `str` is what `str()` of it raises. -/
+  | obj (str : StrErr := none)
   deriving Repr, Inhabited
+
+/-- What `str()` of a value raises, for a value that is not a tuple: an int past the limit, a
+list or dict through the `repr()` of its elements, an object through its own `__str__`. `None`,
+a bool and a str always print. -/
+def CtxArg.strErr : CtxArg → StrErr
+  | .int n => intStrErr n
+  | .eqObj _ _ s => s
+  | .list l => listReprErr l
+  | .dict d => dictReprErr d
+  | .obj s => s
+  | _ => Option.none
+
+/-- `raise E(fmt % v)` for a format with one `%s`: the exception the formatting raises, or `ok`. -/
+def CtxArg.pct (v : CtxArg) (ok : PyExc) : PyExc :=
+  match v with
+  | .tuple t => pctTupleExc t ok
+  | v => pctExc v.strErr ok
 
 structure PyContext where
   prec : Int
@@ -243,7 +338,7 @@ structure PyContext where
   the first mode it compared equal to); `none` when `rounding` holds the mode name itself. What
   an operation does under such a context (`_pick_rounding_function[rounding]` hashes the object)
   is out of scope. -/
-  roundingObj : Option (Nat × List EqAns) := none
+  roundingObj : Option (Nat × List EqAns × StrErr) := none
   deriving Repr, DecidableEq, Inhabited
 
 def Rounding.name : Rounding → String
@@ -289,30 +384,26 @@ def setIntegerCheck (name : String) (v : CtxArg) (vmin vmax : Option Int) : Py I
     | none, none => .ok value
   | none => .error (.typeError s!"{name} must be an integer")
 
-def hasKey (d : List (SigKey × Bool)) (k : SigKey) : Bool := d.any (fun p => p.1 == k)
+def hasKey (d : List (SigKey × SigVal)) (k : SigKey) : Bool := d.any (fun p => p.1 == k)
 
-/-- Drop the key wrapper from a dict all of whose keys are signals. -/
-def sigEntries (d : List (SigKey × Bool)) : SigDict :=
+/-- A key that is not a signal: `for key in d: if not key in _signals` (_pydecimal.py:4022-4023). -/
+def hasOther (d : List (SigKey × SigVal)) : Bool := d.any (fun p => !p.1.isSig)
+
+/-- Drop the key wrapper from a dict all of whose keys are signals, keeping each value's truth. -/
+def sigEntries (d : List (SigKey × SigVal)) : SigDict :=
   d.filterMap (fun p => match p.1 with
-    | .sig s => some (s, p.2)
-    | .other => none)
+    | .sig s => some (s, p.2.truth)
+    | .other .. => none)
 
-/-- `"%s must be a signal dict" % d` for a non-dict `d`, _pydecimal.py:4021: a tuple is
-taken as the argument tuple of `%`, so an empty one and one of two or more elements fail in
-the formatting itself (Objects/unicodeobject.c, `PyUnicode_Format`). -/
-def notSignalDictMsg : CtxArg → String
-  | .tuple 0 => "not enough arguments for format string (got 0)"
-  | .tuple (n + 2) => s!"not all arguments converted during string formatting (required 1, got {n + 2})"
-  | _ => "~must be a signal dict"
-
-/-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. -/
+/-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. Each refusal formats `d` with `%s`
+(:4021, :4024, :4027), which can itself raise (`CtxArg.pct`). -/
 def setSignalDict (v : CtxArg) : Py SigDict :=
   match v with
   | .dict d =>
-    if hasKey d .other then .error (.keyError "~is not a valid signal dict")
-    else if !pySignals.all (fun s => hasKey d (.sig s)) then .error (.keyError "~is not a valid signal dict")
+    if hasOther d then .error (v.pct (.keyError "~is not a valid signal dict"))
+    else if !pySignals.all (fun s => hasKey d (.sig s)) then .error (v.pct (.keyError "~is not a valid signal dict"))
     else .ok (sigEntries d)
-  | v => .error (.typeError (notSignalDictMsg v))
+  | v => .error (v.pct (.typeError "~must be a signal dict"))
 
 /-- The signals of a list assigned to `_ignored_flags`. `_raise_error` and `_regard_flags`
 only test signals for membership and remove them (_pydecimal.py:4113, :4141), so other
@@ -321,7 +412,7 @@ scope here: `_ignored_flags` is private, and the module only ever assigns a list
 def ignoredOf : CtxArg → List Signal
   | .list l => l.filterMap (fun k => match k with
     | .sig s => some s
-    | .other => none)
+    | .other .. => none)
   | _ => []
 
 /-- `value in _rounding_modes` (_pydecimal.py:4042) for an `eqObj`: `tuple_contains` compares the
@@ -335,18 +426,19 @@ def eqIn : List EqAns → List Rounding → Py (Option Rounding)
     | .no => eqIn as rs
     | .raises e => .error e
 
-/-- `raise TypeError("%s: invalid rounding mode" % value)` (_pydecimal.py:4045) for a value
-`value in _rounding_modes` refuses without calling Python code: no mode equals an int, a bool,
-`None`, a list, a dict, a tuple or a plain object. `%s` of an int over the limit raises the
-int/str-limit `ValueError`; a tuple is the argument tuple of `%` (`PyUnicode_Format`). -/
-def invalidRoundingExc : CtxArg → Py PyExc
-  | .int n => do return .typeError s!"{← intText (.int n)}: invalid rounding mode"
-  | .bool b => .ok (.typeError s!"{if b then "True" else "False"}: invalid rounding mode")
-  | .none => .ok (.typeError "None: invalid rounding mode")
-  | .tuple 0 => .ok (.typeError "not enough arguments for format string (got 0)")
-  | .tuple (n + 2) =>
-    .ok (.typeError s!"not all arguments converted during string formatting (required 1, got {n + 2})")
-  | _ => .ok (.typeError "~: invalid rounding mode")
+/-- `raise TypeError("%s: invalid rounding mode" % value)` (_pydecimal.py:4045): the text of the
+message for a value `%s` prints without raising. -/
+def roundingMsg : CtxArg → String
+  | .int n => s!"{n}: invalid rounding mode"
+  | .bool b => s!"{if b then "True" else "False"}: invalid rounding mode"
+  | .none => "None: invalid rounding mode"
+  | .str s => s!"{s}: invalid rounding mode"
+  | _ => "~: invalid rounding mode"
+
+/-- The exception `raise TypeError("%s: invalid rounding mode" % value)` raises: the formatting's
+own (an int over the limit, a list holding one, a `__str__` that raises, a tuple as `%`'s argument
+tuple), or the `TypeError`. -/
+def invalidRoundingExc (v : CtxArg) : PyExc := v.pct (.typeError (roundingMsg v))
 
 /-- `Context.__setattr__`, _pydecimal.py:4030-4053. -/
 def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
@@ -360,12 +452,12 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
     | .str s =>
       match roundingOfName s with
       | some r => return { c with rounding := r, roundingObj := none }
-      | none => throw (.typeError s!"{s}: invalid rounding mode")
-    | .eqObj id eq =>
+      | none => throw (invalidRoundingExc (.str s))
+    | .eqObj id eq st =>
       match ← eqIn eq roundingModes with
-      | some r => return { c with rounding := r, roundingObj := some (id, eq) }
-      | none => throw (.typeError "~: invalid rounding mode")
-    | v => throw (← invalidRoundingExc v)
+      | some r => return { c with rounding := r, roundingObj := some (id, eq, st) }
+      | none => throw (invalidRoundingExc (.eqObj id eq st))
+    | v => throw (invalidRoundingExc v)
   else if name == "flags" then return { c with flags := ← setSignalDict v }
   else if name == "traps" then return { c with traps := ← setSignalDict v }
   else if name == "_ignored_flags" then return { c with ignored := ignoredOf v }
@@ -388,18 +480,38 @@ structure CtxInit where
   ignored : Option (List Signal) := none
   deriving Repr, Inhabited
 
-/-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3994: a key
-outside `_signals` stays in the dict for `_set_signal_dict` to refuse. -/
-def signalDictOf (l : List SigKey) : List (SigKey × Bool) :=
-  pySignals.map (fun s => (SigKey.sig s, l.contains (.sig s))) ++
-    (if l.contains .other then [(.other, true)] else [])
+/-- `PyDict_SetItem` of a key whose `hash()` raises `e`: a `TypeError` is replaced by
+"cannot use '<type>' as a dict key (<e>)", any other exception propagates
+(Objects/dictobject.c:2442-2461, :2749-2755). -/
+def dictKeyExc (e : PyExc) : PyExc :=
+  match e with
+  | .typeError m => .typeError s!"~cannot use as a dict key ({m})"
+  | e => e
+
+/-- The items `dict(...)` adds after the signals for the elements of `l` (each `int(s in l)` is
+1), in order: a signal is already a key, any other element is a new key, and one whose `hash()`
+raises stops the construction. Equal elements are kept as separate keys (scope of `SigKey.other`). -/
+def otherItems : List SigKey → Py (List (SigKey × SigVal))
+  | [] => .ok []
+  | .sig _ :: rest => otherItems rest
+  | .other r h :: rest =>
+    match h with
+    | some e => .error (dictKeyExc e)
+    | none => do return (.other r none, { truth := true }) :: (← otherItems rest)
+
+/-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3994: the signals first, each
+set exactly when listed, then the other elements, which stay in the dict for `_set_signal_dict`
+to refuse. -/
+def signalDictOf (l : List SigKey) : Py (List (SigKey × SigVal)) := do
+  let rest ← otherItems l
+  return pySignals.map (fun s => (SigKey.sig s, ({ truth := l.contains (.sig s) } : SigVal))) ++ rest
 
 /-- The value `Context()` assigns to `traps` or `flags`, _pydecimal.py:3991-4003. A
 value that is neither a dict nor a list fails at `_signals + value`. -/
-def signalArg (dflt : List (SigKey × Bool)) : CtxArg → Py CtxArg
+def signalArg (dflt : List (SigKey × SigVal)) : CtxArg → Py CtxArg
   | .none => .ok (.dict dflt)
   | .dict d => .ok (.dict d)
-  | .list l => .ok (.dict (signalDictOf l))
+  | .list l => do return .dict (← signalDictOf l)
   | _ => .error (.typeError "~can only concatenate list to list")
 
 def orElseArg (a dflt : CtxArg) : CtxArg :=
@@ -407,13 +519,13 @@ def orElseArg (a dflt : CtxArg) : CtxArg :=
   | .none => dflt
   | v => v
 
-def keyed (d : SigDict) : List (SigKey × Bool) := d.map (fun p => (.sig p.1, p.2))
+def keyed (d : SigDict) : List (SigKey × SigVal) := d.map (fun p => (.sig p.1, { truth := p.2 }))
 
 /-- The object a context's `rounding` attribute holds, as a value to assign again. -/
 def PyContext.roundingArg (c : PyContext) : CtxArg :=
   match c.roundingObj with
   | none => .str c.rounding.name
-  | some (id, eq) => .eqObj id eq
+  | some (id, eq, st) => .eqObj id eq st
 
 /-- `Context.__init__(...)`, _pydecimal.py:3969-4003; `dc` is `DefaultContext`. -/
 def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do

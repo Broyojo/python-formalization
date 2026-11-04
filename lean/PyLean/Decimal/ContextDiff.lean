@@ -24,15 +24,37 @@ def cInitOfKwargs (kw : List (String × CtxArg)) : Py CtxInit := do
 
 /-! ## Decoding -/
 
+/-- `RuntimeError("boom")`, what the difftest's raising `__str__`/`__repr__`/`__eq__` raise. -/
+def boom : PyExc := .named "RuntimeError" "boom"
+
+/-- What `str()` of a tuple element or plain object raises: `"h"`, `10**5000`; `"r"`, an object
+whose `__str__` raises `boom`; anything else prints. -/
+def strKindOf (j : Json) : Except String StrErr :=
+  match j.getStr? with
+  | .ok "h" => pure (intStrErr (10 ^ 5000))
+  | .ok "r" => pure (some boom)
+  | _ => pure none
+
 def sigKeyOf (j : Json) : Except String SigKey := do
   let s ← j.getStr?
+  -- `5`, an int; `hugeint`, `10**5000` (its repr raises the limit); `unhash`, `[]` (unhashable);
+  -- `badrepr`, an object whose repr raises RuntimeError("boom").
   if s == "other" then return .other
+  if s == "hugeint" then return intKey (10 ^ 5000)
+  if s == "unhash" then return .other none (some (.typeError "unhashable type: 'list'"))
+  if s == "badrepr" then return .other (some boom) none
   return .sig (← signalOfName s)
 where
   signalOfName (s : String) : Except String Signal :=
     match pySignals.find? (fun x => x.name == s) with
     | some x => pure x
     | none => throw s!"bad signal {s}"
+
+/-- A dict value: `true`/`false`, or `"huge"`, `10**5000` (true, its repr raising the limit). -/
+def sigValOf (j : Json) : Except String SigVal :=
+  match j.getBool? with
+  | .ok b => pure { truth := b }
+  | .error _ => pure { truth := true, repr := intStrErr (10 ^ 5000) }
 
 def hexNat (s : List Char) : Nat := s.foldl (fun a c =>
   a * 16 + (if c.toNat ≥ 97 then c.toNat - 87 else c.toNat - 48)) 0
@@ -61,10 +83,10 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
     | "dict" | "frozendict" =>
       let pairs ← (← (a[1]!).getArr?).toList.mapM (fun p => do
         let q ← p.getArr?
-        return ((← sigKeyOf q[0]!), (← (q[1]!).getBool?)))
+        return ((← sigKeyOf q[0]!), (← sigValOf q[1]!)))
       return .dict pairs
-    | "frozendict_py" | "obj" => return .obj
-    | "tuple" => return .tuple ((← (a[1]!).getStr?).toNat?.getD 0)
+    | "frozendict_py" | "obj" => return .obj (← strKindOf (a.getD 1 Json.null))
+    | "tuple" => return .tuple (← (← (a[1]!).getArr?).toList.mapM strKindOf)
     | "idx" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | "hint" => return .int (intOfHex (← (a[1]!).getStr?))
     | "bool" => return .bool (← (a[1]!).getBool?)
@@ -75,7 +97,7 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
         | "y" => pure EqAns.yes
         | "r" => pure (EqAns.raises (.named "RuntimeError" "boom"))
         | _ => pure EqAns.no)
-      return .eqObj 0 ans
+      return .eqObj 0 ans (← strKindOf (a.getD 2 Json.null))
     | t => throw s!"bad ctx arg {t}"
 
 def ctxInitOf (j : Json) : Except String CtxInit := do
@@ -90,7 +112,7 @@ def namesOf (j : Json) : Except String (List Signal) := do
   let ks ← (← j.getArr?).toList.mapM sigKeyOf
   return ks.filterMap (fun k => match k with
     | .sig s => some s
-    | .other => none)
+    | .other .. => none)
 
 /-- A `DefaultContext` state, for each twin. -/
 def templateOf (j : Json) : Except String (PyContext × CContext) := do
