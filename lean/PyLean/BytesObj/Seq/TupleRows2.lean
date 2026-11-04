@@ -25,13 +25,15 @@ def TupleGetnewargs : Prop :=
 
 theorem tupleGetnewargs_proven : TupleGetnewargs := by
   intro α mt a hl
-  have hs := tupleSlice_eq mt a 0 a.items.length hl
   have e1 : max (0 : Int) 0 = 0 := rfl
   have e2 : max (min (a.items.length : Int) a.items.length) 0 = a.items.length := by omega
+  have hL : a.items = (a.items.drop (max (0 : Int) 0).toNat).take
+      (max (min (a.items.length : Int) a.items.length) (max 0 0) - max 0 0).toNat := by
+    rw [e1, e2]; simp
+  have hs := tupleSlice_eq mt a 0 a.items.length hl a.items hL
   rw [e1, e2] at hs
-  simp only [Int.toNat_zero, List.drop_zero, Int.sub_zero, Int.toNat_natCast, List.take_length, true_and] at hs
   refine ⟨fun he => ?_, fun he hne => ?_, fun he hn => ?_⟩
-  · rw [if_pos he] at hs
+  · rw [if_pos ⟨rfl, rfl, he⟩] at hs
     simp only [tupleGetnewargs, hs]
   · rw [if_neg (by simp [he]), if_neg hne] at hs
     simp only [tupleGetnewargs, hs]
@@ -104,15 +106,17 @@ theorem cApiTupleObj_proven : CApiTupleObj := by
   · simp [tupleResize, h]
   · have : (u.items.length : Int) ≠ 0 := by
       have := List.length_pos_iff.mpr hne; omega
-    simp [tupleResize, this]
+    simp [tupleResize, hne]
   · have hn : ¬ n < 0 := by omega
     by_cases h0 : u.items = []
     · have hz : (u.items.length : Int) = 0 := by simp [h0]
-      simp [tupleResize, he, hn, hl]
+      have hn00 : n = 0 := by omega
+      subst hn00
+      simp [tupleResize, he, h0]
     · simp [tupleResize, he, hn, hu h0, hl]
   · have : (u.items.length : Int) ≠ 0 := by
       have := List.length_pos_iff.mpr hne; omega
-    simp [tupleResize, he, this]
+    simp [tupleResize, he, hne]
   · have hz : (u.items.length : Int) = 0 := by simp [hn]
     have hn0 : ¬ n < 0 := by omega
     have hne0 : (0 : Int) ≠ n := by omega
@@ -123,13 +127,13 @@ theorem cApiTupleObj_proven : CApiTupleObj := by
     have hn0 : ¬ n < 0 := by omega
     have hn0' : n ≠ 0 := by omega
     have hb : ¬ n > (ssizeMax - tupleBase) / 8 := by omega
-    simp [tupleResize, he, h00, hn0, hn0', hl, hb]
+    simp [tupleResize, he, hne, hn0, hn0', hl, hb]
   · have h00 : (u.items.length : Int) ≠ 0 := by
       have := List.length_pos_iff.mpr hne; omega
     have hn0 : ¬ n < 0 := by omega
     have hn0' : n ≠ 0 := by omega
     have hb : n > (ssizeMax - tupleBase) / 8 := by omega
-    simp [tupleResize, he, h00, hn0, hn0', hl, hb]
+    simp [tupleResize, he, hne, hn0, hn0', hl, hb]
 
 /-- After `PyTuple_SetItem` on a uniquely referenced tuple, `hash` agrees with that of a fresh tuple
 of the same items: the cache invariant of `ob_hash` ("Cached hash", Include/cpython/tupleobject.h),

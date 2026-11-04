@@ -2,6 +2,7 @@ import PyLean.BytesObj.Seq.TupleCall
 import PyLean.BytesObj.Seq.ListRows
 import PyLean.BytesObj.Seq.ReprProps
 import PyLean.BytesObj.Seq.IterProps
+import PyLean.BytesObj.Seq.HashProps
 
 /-!
 `tuple` on every branch of the functions whose earlier statements covered only their success path
@@ -57,7 +58,9 @@ theorem seqTupleList_spec (next : Nat → Option (Py α)) : ∀ (ys : List α) (
       simp only [seqTupleList, he]
   | y :: ys, fuel, k, o, hw, hne, hf, hb, hn => by
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at hf; omega⟩
-    have h0 : next k = some (.ok y) := by simpa using hn 0 (by simp)
+    have h0 : next k = some (.ok y) := by
+      have := hn 0 (by simp)
+      simpa only [Nat.add_zero, List.getElem_cons_zero] using this
     have hg : listCanGrow o (o.items.length + 1) :=
       canGrow_small o _ (by omega) (by simp at hb; omega)
     obtain ⟨o', ho', hi', hw'⟩ := (listAppend_spec o y hw).1 hg
@@ -88,7 +91,7 @@ theorem seqTupleBuf_spec (next : Nat → Option (Py α)) (fuel : Nat) : ∀ (n :
       seqTupleBuf next fuel n buf.length buf = .error e)
   | 0, buf, ys, h8, hn, hf, hb => by
     have hw : ({ items := buf, allocated := 16, hasItems := true } : LObj α).WF :=
-      ⟨by decide, by simp; omega, fun _ => rfl, by decide⟩
+      ⟨by show (0 : Int) ≤ 16; decide, by simp; omega, fun _ => rfl, by show (16 : Int) ≤ ssizeMax / 8; decide⟩
     have hne : buf ≠ [] := fun e => by simp [e] at h8
     exact seqTupleList_spec next ys fuel buf.length { items := buf, allocated := 16, hasItems := true }
       hw hne hf hb hn
@@ -99,7 +102,9 @@ theorem seqTupleBuf_spec (next : Nat → Option (Py α)) (fuel : Nat) : ∀ (n :
     · simp only [List.length_nil, Nat.add_zero] at h
       simp only [seqTupleBuf, h]
   | n + 1, buf, y :: ys, h8, hn, hf, hb => by
-    have h0 : next buf.length = some (.ok y) := by simpa using hn 0 (by simp)
+    have h0 : next buf.length = some (.ok y) := by
+      have := hn 0 (by simp)
+      simpa only [Nat.add_zero, List.getElem_cons_zero] using this
     have hl : (buf ++ [y]).length = buf.length + 1 := by simp
     have hn' : ∀ j (hj : j < ys.length), next ((buf ++ [y]).length + j) = some (.ok ys[j]) := by
       intro j hj
@@ -431,47 +436,43 @@ theorem tupleReprErrors_proven : TupleReprErrors := by
 /-! ## `tuple.index` -/
 
 theorem tupleIndexLoop_none (E : ElemOps α ρ) (value : α) (stop : Int) : ∀ (xs : List α) (i : Int),
-    (∀ k (hk : k < xs.length), i + k < stop → richBool E .eq xs[k] value = .ok false) →
+    (∀ (k : Nat) x, xs[k]? = some x → i + k < stop → richBool E .eq x value = .ok false) →
     tupleIndexLoop E value stop xs i = .ok none
   | [], i, _ => rfl
   | x :: xs, i, h => by
     unfold tupleIndexLoop
     split
-    · have h0 := h 0 (by simp) (by simpa using ‹i < stop›)
-      simp only [List.getElem_cons_zero] at h0
+    · have h0 := h 0 x rfl (by simpa using ‹i < stop›)
       rw [h0]
-      exact tupleIndexLoop_none E value stop xs (i + 1) (fun k hk hs => by
-        have := h (k + 1) (by simp; omega) (by push_cast; omega)
-        simpa using this)
+      exact tupleIndexLoop_none E value stop xs (i + 1) (fun k y hy hs =>
+        h (k + 1) y (by simpa using hy) (by push_cast; omega))
     · rfl
 
 theorem tupleIndexLoop_hit (E : ElemOps α ρ) (value : α) (stop : Int) (r : Py (Option Int)) :
-    ∀ (m : Nat) (xs : List α) (i : Int) (hm : m < xs.length), i + m < stop →
-    (∀ k (hk : k < m), richBool E .eq (xs[k]'(by omega)) value = .ok false) →
-    (richBool E .eq xs[m] value = .ok true → r = .ok (some (i + m))) →
-    (∀ e, richBool E .eq xs[m] value = .error e → r = .error e) →
-    (richBool E .eq xs[m] value ≠ .ok false) →
+    ∀ (m : Nat) (xs : List α) (i : Int) (y : α), xs[m]? = some y → i + m < stop →
+    (∀ (k : Nat) x, k < m → xs[k]? = some x → richBool E .eq x value = .ok false) →
+    (richBool E .eq y value = .ok true → r = .ok (some (i + m))) →
+    (∀ e, richBool E .eq y value = .error e → r = .error e) →
+    richBool E .eq y value ≠ .ok false →
     tupleIndexLoop E value stop xs i = r
-  | _, [], _, hm, _, _, _, _, _ => by simp at hm
-  | 0, x :: xs, i, _, hs, _, ht, he, hnf => by
+  | _, [], _, _, hy, _, _, _, _, _ => by simp at hy
+  | 0, x :: xs, i, y, hy, hs, _, ht, he, hnf => by
+    simp only [List.getElem?_cons_zero, Option.some.injEq] at hy
+    subst hy
     unfold tupleIndexLoop
     rw [if_pos (by simpa using hs)]
-    simp only [List.getElem_cons_zero] at ht he hnf
     cases hc : richBool E .eq x value with
     | error err => rw [he err hc]
     | ok b =>
       cases b
       · exact absurd hc hnf
       · rw [ht hc]; simp
-  | m + 1, x :: xs, i, hm, hs, hpre, ht, he, hnf => by
+  | m + 1, x :: xs, i, y, hy, hs, hpre, ht, he, hnf => by
     unfold tupleIndexLoop
     rw [if_pos (by omega)]
-    have h0 := hpre 0 (by omega)
-    simp only [List.getElem_cons_zero] at h0
-    rw [h0]
-    simp only [List.getElem_cons_succ] at ht he hnf
-    exact tupleIndexLoop_hit E value stop r m xs (i + 1) (by simp at hm; omega) (by push_cast at hs ⊢; omega)
-      (fun k hk => by simpa using hpre (k + 1) (by omega))
+    rw [hpre 0 x (by omega) rfl]
+    exact tupleIndexLoop_hit E value stop r m xs (i + 1) y (by simpa using hy) (by push_cast at hs ⊢; omega)
+      (fun k z hk hz => hpre (k + 1) z (by omega) (by simpa using hz))
       (fun h => by rw [ht h]; congr 2; push_cast; omega) he hnf
 
 /-- `t.index(value, start, stop)`, `tuple_index_impl` (tupleobject.c:672-699), for every element type,
@@ -481,15 +482,15 @@ comparison that raises before one is found is the result, and when no item in th
 equal the result is `ValueError("tuple.index(x): x not in tuple")` (:697), as the docstring says
 ("Raises ValueError if the value is not present"); a `-1` for an absent value fails it. -/
 def TupleIndexResult : Prop :=
-  ∀ (α ρ : Type) (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Option Int) (i : Nat)
+  ∀ (α ρ : Type) (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Option Int) (i : Nat) (y : α)
     (err : PyExc),
     let b := tupleIndexBounds t.length start stop
-    ((∀ k (hk : k < t.length), b.1 ≤ k → (k : Int) < b.2 → richBool E .eq t[k] value = .ok false) →
+    ((∀ (k : Nat) x, t[k]? = some x → b.1 ≤ k → (k : Int) < b.2 → richBool E .eq x value = .ok false) →
       tupleIndex E t value start stop = .error (.valueError "tuple.index(x): x not in tuple")) ∧
-    (∀ (hi : i < t.length), b.1 ≤ i → (i : Int) < b.2 →
-      (∀ k (hk : k < i), b.1 ≤ k → richBool E .eq (t[k]'(by omega)) value = .ok false) →
-      (richBool E .eq t[i] value = .ok true → tupleIndex E t value start stop = .ok i) ∧
-      (richBool E .eq t[i] value = .error err → tupleIndex E t value start stop = .error err))
+    (t[i]? = some y → b.1 ≤ i → (i : Int) < b.2 →
+      (∀ (k : Nat) x, k < i → b.1 ≤ k → t[k]? = some x → richBool E .eq x value = .ok false) →
+      (richBool E .eq y value = .ok true → tupleIndex E t value start stop = .ok i) ∧
+      (richBool E .eq y value = .error err → tupleIndex E t value start stop = .error err))
 
 theorem tupleIndexBounds_start (n : Int) (start stop : Option Int) : 0 ≤ (tupleIndexBounds n start stop).1 := by
   unfold tupleIndexBounds
@@ -499,33 +500,28 @@ theorem tupleIndexBounds_start (n : Int) (start stop : Option Int) : 0 ≤ (tupl
   · omega
 
 theorem tupleIndexResult_proven : TupleIndexResult := by
-  intro α ρ E t value start stop i err b
+  intro α ρ E t value start stop i y err b
   have hs0 : 0 ≤ b.1 := tupleIndexBounds_start _ _ _
   have hb : tupleIndexBounds t.length start stop = (b.1, b.2) := rfl
-  have hdrop : ∀ k (hk : k < (t.drop b.1.toNat).length), (t.drop b.1.toNat)[k] = t[b.1.toNat + k]'(by
-      simp at hk; omega) := fun k hk => by simp
-  refine ⟨fun hall => ?_, fun hi h1 h2 hpre => ⟨fun ht => ?_, fun he => ?_⟩⟩
+  have hdrop : ∀ k : Nat, (t.drop b.1.toNat)[k]? = t[b.1.toNat + k]? := fun k => List.getElem?_drop ..
+  refine ⟨fun hall => ?_, fun hy h1 h2 hpre => ⟨fun ht => ?_, fun he => ?_⟩⟩
   · have hn : tupleIndexLoop E value b.2 (t.drop b.1.toNat) b.1 = .ok none := by
       apply tupleIndexLoop_none
-      intro k hk hlt
-      rw [hdrop k hk]
-      exact hall _ _ (by omega) (by push_cast; omega)
+      intro k x hx hlt
+      rw [hdrop] at hx
+      exact hall _ x hx (by omega) (by push_cast; omega)
     simp only [tupleIndex, hb, hn]
-  · have hm : i - b.1.toNat < (t.drop b.1.toNat).length := by simp; omega
-    have hl := tupleIndexLoop_hit E value b.2 (.ok (some (i : Int))) (i - b.1.toNat) (t.drop b.1.toNat) b.1 hm
-      (by omega) (fun k hk => by rw [hdrop]; exact hpre _ _ (by omega))
-      (fun _ => by congr 2; omega) (fun e h => by
-        rw [hdrop] at h; rw [show b.1.toNat + (i - b.1.toNat) = i by omega] at h; rw [ht] at h; cases h)
-      (by rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega, ht]; simp)
+  · have hy' : (t.drop b.1.toNat)[i - b.1.toNat]? = some y := by
+      rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega]; exact hy
+    have hl := tupleIndexLoop_hit E value b.2 (.ok (some (i : Int))) (i - b.1.toNat) (t.drop b.1.toNat) b.1 y
+      hy' (by omega) (fun k x hk hx => by rw [hdrop] at hx; exact hpre _ x (by omega) (by omega) hx)
+      (fun _ => by congr 2; omega) (fun e h => by rw [ht] at h; cases h) (by rw [ht]; simp)
     simp only [tupleIndex, hb, hl]
-  · have hm : i - b.1.toNat < (t.drop b.1.toNat).length := by simp; omega
-    have hl := tupleIndexLoop_hit E value b.2 (.error err) (i - b.1.toNat) (t.drop b.1.toNat) b.1 hm
-      (by omega) (fun k hk => by rw [hdrop]; exact hpre _ _ (by omega))
-      (fun h => by
-        rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega, he] at h; cases h)
-      (fun e h => by
-        rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega, he] at h; cases h; rfl)
-      (by rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega, he]; simp)
+  · have hy' : (t.drop b.1.toNat)[i - b.1.toNat]? = some y := by
+      rw [hdrop, show b.1.toNat + (i - b.1.toNat) = i by omega]; exact hy
+    have hl := tupleIndexLoop_hit E value b.2 (.error err) (i - b.1.toNat) (t.drop b.1.toNat) b.1 y
+      hy' (by omega) (fun k x hk hx => by rw [hdrop] at hx; exact hpre _ x (by omega) (by omega) hx)
+      (fun h => by rw [he] at h; cases h) (fun e h => by rw [he] at h; cases h; rfl) (by rw [he]; simp)
     simp only [tupleIndex, hb, hl]
 
 /-! ## `tuple_slice` and `PyTuple_GetSlice` -/
@@ -564,15 +560,11 @@ def TupleSliceSpec : Prop :=
       ∃ r r', pyTupleGetSlice mt (some a) i j = .ok r ∧ tupleGetSlice a ⟨some i, some j, none⟩ = .ok r' ∧
         r.items a.items [] = r'.items a.items [])
 
-theorem tupleSlice_eq (mt : α → Bool) (a : Tup α) (i j : Int) (hl : (a.items.length : Int) ≤ tupleLimit) :
+theorem tupleSlice_eq (mt : α → Bool) (a : Tup α) (i j : Int) (hl : (a.items.length : Int) ≤ tupleLimit)
+    (L : List α) (hL : L = (a.items.drop (max i 0).toNat).take (max (min j a.items.length) (max i 0) - max i 0).toNat) :
     tupleSlice mt a i j = .ok (if max i 0 = 0 ∧ max (min j a.items.length) (max i 0) = a.items.length ∧
         a.exact = true then .arg 0
-      else if (a.items.drop (max i 0).toNat).take (max (min j a.items.length) (max i 0) - max i 0).toNat = []
-        then .empty
-      else .fresh { items := (a.items.drop (max i 0).toNat).take
-          (max (min j a.items.length) (max i 0) - max i 0).toNat,
-        tracked := ((a.items.drop (max i 0).toNat).take
-          (max (min j a.items.length) (max i 0) - max i 0).toNat).any mt }) := by
+      else if L = [] then .empty else .fresh { items := L, tracked := L.any mt }) := by
   have e1 : (if i < 0 then 0 else i) = max i 0 := by split <;> omega
   have e2 : (if (if j > (a.items.length : Int) then (a.items.length : Int) else j) < max i 0 then max i 0
       else (if j > (a.items.length : Int) then (a.items.length : Int) else j)) =
@@ -581,14 +573,16 @@ theorem tupleSlice_eq (mt : α → Bool) (a : Tup α) (i j : Int) (hl : (a.items
   simp only [e1, e2]
   split
   · rfl
-  · apply fromArray_sub
+  · rw [← hL]
+    apply fromArray_sub
+    rw [hL]
     simp only [List.length_take, List.length_drop]
     omega
 
 theorem tupleSliceSpec_proven : TupleSliceSpec := by
   intro α mt a i j hl n lo hi L
   have hM : ssizeMax = 9223372036854775807 := by decide
-  have hs := tupleSlice_eq mt a i j hl
+  have hs := tupleSlice_eq mt a i j hl L rfl
   refine ⟨hs, fun k => ?_, rfl, rfl, fun h => ?_, fun he h0 h1 h2 h3 => ?_⟩
   · show ((a.items.drop lo.toNat).take (hi - lo).toNat)[k]? = _
     rw [List.getElem?_take, List.getElem?_drop]
@@ -596,13 +590,16 @@ theorem tupleSliceSpec_proven : TupleSliceSpec := by
     · rw [if_pos hk, if_pos (by omega)]
     · rw [if_neg hk, if_neg (by omega)]
   · show tupleSlice mt a i j = tupleSlice mt a 0 j
-    rw [hs, tupleSlice_eq mt a 0 j hl]
     have : max i 0 = max (0 : Int) 0 := by omega
+    rw [hs, tupleSlice_eq mt a 0 j hl L (by rw [← this])]
     rw [this]
   · have hl' : (a.items.length : Int) ≤ (ssizeMax - tupleBase) / 8 := hl
     obtain ⟨rb, rg, hb1, hb2, hb3⟩ := tupleBinarySlice_proven α mt a (some i) (some j) he hl'
     refine ⟨_, rg, hs, hb2, ?_⟩
     rw [← hb3]
+    have hLdef : L = (a.items.drop (max i 0).toNat).take
+        (max (min j (a.items.length : Int)) (max i 0) - max i 0).toNat := rfl
+    rw [hLdef]
     have ha1 : RangeSlice.adjustOne i a.items.length 1 = min i a.items.length := by
       unfold RangeSlice.adjustOne; split <;> (try split) <;> omega
     have ha2 : RangeSlice.adjustOne j a.items.length 1 = min j a.items.length := by
@@ -613,23 +610,26 @@ theorem tupleSliceSpec_proven : TupleSliceSpec := by
     have c4 : ¬ j > ssizeMax := by omega
     have hu : unpackIndices (a.items.length : Int) ⟨some i, some j, none⟩ =
         (min i a.items.length, min j a.items.length) := by
-      simp only [unpackIndices, RangeSlice.clampSsize, c1, c2, c3, c4, if_false,
-        RangeSlice.adjustIndices, ha1, ha2]
-    generalize hA : a.items = A at hb1 hl ⊢
+      have hc1 : RangeSlice.clampSsize i = i := by
+        unfold RangeSlice.clampSsize; rw [if_neg c1, if_neg c2]
+      have hc2 : RangeSlice.clampSsize j = j := by
+        unfold RangeSlice.clampSsize; rw [if_neg c3, if_neg c4]
+      simp [unpackIndices, hc1, hc2, RangeSlice.adjustIndices, ha1, ha2]
     have hbin : tupleBinarySlice mt a ⟨some i, some j, none⟩ =
-        if min i (A.length : Int) = 0 ∧ min j (A.length : Int) = A.length then .ok (.arg 0)
-        else tupleFromArray mt ((A.drop (min i (A.length : Int)).toNat).take
-          ((if min j (A.length : Int) < min i A.length then min i A.length else min j A.length) -
-            min i A.length).toNat) := by
-      simp only [tupleBinarySlice, hu, hA]
+        if min i (a.items.length : Int) = 0 ∧ min j (a.items.length : Int) = a.items.length then .ok (.arg 0)
+        else tupleFromArray mt ((a.items.drop (min i (a.items.length : Int)).toNat).take
+          ((if min j (a.items.length : Int) < min i a.items.length then min i a.items.length
+            else min j a.items.length) - min i a.items.length).toNat) := by
+      simp only [tupleBinarySlice, hu]
     rw [hbin] at hb1
+    generalize hA : a.items = A at hb1 hl ⊢
     have hmi : max i 0 = i := by omega
     simp only [hmi, he, and_true]
     by_cases cb : min i (A.length : Int) = 0 ∧ min j (A.length : Int) = A.length
     · rw [if_pos cb] at hb1
       cases hb1
       by_cases ca : i = 0 ∧ max (min j (A.length : Int)) i = A.length
-      · rw [if_pos ca]; rfl
+      · rw [if_pos ca]
       · rw [if_neg ca]
         have hn : A.length = 0 := by omega
         have hA0 : A = [] := List.length_eq_zero_iff.mp hn
@@ -654,6 +654,5 @@ theorem tupleSliceSpec_proven : TupleSliceSpec := by
           rw [d1, d2]
           simp
       rw [hL]
-      split <;> simp [TRes.items]
 
 end PyLean.BytesObj.Seq
