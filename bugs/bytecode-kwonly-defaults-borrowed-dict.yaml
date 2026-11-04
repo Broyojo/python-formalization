@@ -1,0 +1,90 @@
+id: bytecode-kwonly-defaults-borrowed-dict
+title: "initialize_locals passes a borrowed func->func_kwdefaults to PyDict_GetItemRef; a key whose __eq__ resets f.__kwdefaults__ frees the dict mid-lookup (use after free)"
+priority: P2
+kind: memory-safety
+module: bytecode
+files: [Python/ceval.c, Objects/dictobject.c, Objects/funcobject.c]
+functions: ["initialize_locals", "PyDict_GetItemRef", "_Py_dict_lookup", "compare_generic", "func_set_kwdefaults"]
+summary: |
+  When a call leaves a keyword-only parameter unbound, `initialize_locals` looks its default up
+  with `PyDict_GetItemRef(func->func_kwdefaults, varname, &def)` (Python/ceval.c:1949-1951 in
+  3.15.2), passing the function's `__kwdefaults__` dict as a borrowed reference. `__kwdefaults__`
+  can be any dict, with any keys. If it holds a non-str key whose hash equals the parameter
+  name's, the dict's keys are DICT_KEYS_GENERAL and `compare_generic` calls that key's `__eq__`
+  (Objects/dictobject.c:1193). That `__eq__` is Python code and can run
+  `f.__kwdefaults__ = None`; `func_set_kwdefaults` (Objects/funcobject.c:875-906) then drops the
+  function's reference, the last one, and the dict and its keys object are freed. After the
+  comparison returns, `compare_generic` reads `mp->ma_keys` of the freed dict (:1198) and, on a
+  mismatch, `_Py_dict_lookup` restarts on it (`goto start`, :1380).
+
+  On a release build the freed dict usually sits on the dict free list unchanged, so the lookup
+  reads stale but intact memory and the call raises the expected "missing 1 required keyword-only
+  argument" TypeError. With PYTHONMALLOC=debug (freed memory overwritten) 3.15.2 and main both
+  crash with SIGSEGV in `_Py_dict_lookup` called from `PyDict_GetItemRef` called from
+  `_PyEvalFramePushAndInit`.
+
+  Every other borrowed object `initialize_locals` touches after Python code can run is kept
+  alive by something else: the code object by the frame's f_executable, kwnames by the caller,
+  the `**kwargs` dict by the frame's locals, and `func_qualname` and `func_defaults` are re-read
+  from the function at the point of use with no Python code in between.
+likelihood: |
+  Low. It needs a __kwdefaults__ dict with a hand-made non-str key that collides with a
+  parameter name and whose __eq__ reassigns the function's __kwdefaults__. Pure Python, no ctypes.
+maybe_intended: "No. A crash from pure Python code; the C-API rule is that a borrowed reference is only valid while its owner keeps it, and here the owner is mutable from the callee."
+reproducer: |
+  import os, subprocess, sys
+  child = r'''
+  class K:
+      def __hash__(self):
+          return hash('b')
+      def __eq__(self, other):
+          f.__kwdefaults__ = None
+          return False
+  def f(*, b):
+      return b
+  f.__kwdefaults__ = {K(): 1}
+  try:
+      f()
+  except TypeError as e:
+      print("TypeError", e, flush=True)
+  print("survived", flush=True)
+  '''
+  env = dict(os.environ, PYTHONMALLOC="debug")
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True, env=env)
+  print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n", " | "))
+  if p.returncode < 0 and "survived" not in p.stdout:
+      print("REPRODUCED bytecode-kwonly-defaults-borrowed-dict")
+expected: "f() raises TypeError: f() missing 1 required keyword-only argument: 'b' (K() == 'b' is False), and the process continues."
+observed: |
+  python3 3.15.2 (release build) with PYTHONMALLOC=debug: SIGSEGV (rc -11); faulthandler's C
+  stack is _Py_dict_lookup <- PyDict_GetItemRef <- (initialize_locals) <- _PyEvalFramePushAndInit
+  <- _PyEval_EvalFrameDefault. REPRODUCED. Without PYTHONMALLOC=debug it prints the TypeError and
+  survives (stale memory). A control whose __eq__ does not touch __kwdefaults__ survives under
+  PYTHONMALLOC=debug.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev ef1fce0, release build): same, SIGSEGV with
+  PYTHONMALLOC=debug. REPRODUCED. The code is unchanged there (Python/ceval.c:2027-2029).
+promised_by: "Invariant: no crash from pure-Python code."
+cause: |
+  Python/ceval.c:1949-1951 (3.15.2): `PyDict_GetItemRef(func->func_kwdefaults, ...)` with a
+  borrowed dict. The generic lookup runs a stored key's `__eq__` (Objects/dictobject.c:1193) and
+  then dereferences `mp` (:1198), relying on the caller to keep `mp` alive, which nothing does
+  once func_set_kwdefaults (Objects/funcobject.c:901-904) has dropped the reference.
+possible_fix: |
+  Take a strong reference for the lookup: `PyObject *kwdefs = Py_XNewRef(func->func_kwdefaults);`
+  before the keyword-only loop (or per iteration), use it in `PyDict_GetItemRef`, and
+  `Py_XDECREF(kwdefs)` on every exit path.
+duplicates:
+  issues: []
+  queries: ["kwdefaults use after free", "kwdefaults crash", "kwdefaults segfault",
+            "initialize_locals", "__kwdefaults__ __eq__", "keyword-only defaults dict mutated",
+            "kwdefaults (issues, 30 results)", "kwdefaults (PRs, 30 results)",
+            "borrowed reference dict lookup __eq__ use after free",
+            "gh issue view 117050 (sneaky __defaults__ replacement: a failed assert in CALL_PY_EXACT_ARGS, not this)"]
+  note: "No matching issue or PR found. bugforge-results/README.md has no kwdefaults or initialize_locals entry."
+reproduces:
+  python3 (3.15.2): REPRODUCED (SIGSEGV with PYTHONMALLOC=debug)
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (SIGSEGV with PYTHONMALLOC=debug)
+lean:
+  property: PyLean.Bytecode.KwDefC.KwonlyDefaultsNoCrash
+  theorem: PyLean.Bytecode.KwDefC.kwonlyDefaultsNoCrash_refuted
+  model: "lean/PyLean/Bytecode/KwDefaultsC.lean (the keyword-only defaults loop and the generic dict lookup over a reference-counted C heap; uafState is the reproducer; KwonlyDefaultsFixedOnUaf shows a strong reference avoids it)"

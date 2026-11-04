@@ -25,7 +25,8 @@ which is `extendSelf`):
 `IndexError` on an empty deque), and `clear` empties it. An iterator that raises
 leaves the items it yielded in the deque, and only then does the exception
 propagate (`StopIteration` is cleared); a non-iterable changes nothing. All
-results satisfy the invariant and keep `maxlen`. -/
+results satisfy the invariant and keep `maxlen`. The re-entrant iterator (one that runs
+code on the deque) is `DequeExtendRe`. -/
 def DequeEndsEvict : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (x : α) (xs : List α),
     ((d.append x).WF ∧ (d.append x).items = keepLast d.maxlen (d.items ++ [x]) ∧
@@ -46,9 +47,13 @@ def DequeEndsEvict : Prop :=
       (∃ d', d.popleft = .ok (ix d.items 0, d') ∧ d'.WF ∧ d'.items = d.items.drop 1 ∧
         d'.maxlen = d.maxlen)) ∧
     (d.clear.WF ∧ d.clear.items = [] ∧ d.clear.maxlen = d.maxlen) ∧
-    (∀ (e : Option PyExc), d.iadd (.iter xs e) = (finalizeIterator e, d.extend xs) ∧
-      d.extendIter (.iter xs e) = (finalizeIterator e, d.extend xs) ∧
-      d.extendleftIter (.iter xs e) = (finalizeIterator e, d.extendleft xs)) ∧
+    (∀ e : Option PyExc, (e = none ∨ e = some .stopIteration) →
+      d.iadd (.iter xs e) = (.ok (), d.extend xs) ∧ d.extendIter (.iter xs e) = (.ok (), d.extend xs) ∧
+      d.extendleftIter (.iter xs e) = (.ok (), d.extendleft xs)) ∧
+    (∀ e : PyExc, e ≠ .stopIteration →
+      d.iadd (.iter xs (some e)) = (.error e, d.extend xs) ∧
+      d.extendIter (.iter xs (some e)) = (.error e, d.extend xs) ∧
+      d.extendleftIter (.iter xs (some e)) = (.error e, d.extendleft xs)) ∧
     (∀ t, d.iadd (.notIterable t) = (.error (notIterableErr t), d) ∧
       d.extendIter (.notIterable t) = (.error (notIterableErr t), d) ∧
       d.extendleftIter (.notIterable t) = (.error (notIterableErr t), d))
@@ -71,7 +76,7 @@ theorem dequeEndsEvict_proven : DequeEndsEvict := by
   intro α _ d h x xs
   refine ⟨Deque.append_spec d x h, Deque.appendleft_spec d x h, Deque.extend_spec d xs h,
     Deque.extendleft_spec d xs h, ?_, ?_, ?_, ?_, clear_spec d h,
-    fun e => ⟨rfl, rfl, rfl⟩, fun t => ⟨rfl, rfl, rfl⟩⟩
+    fun e he => ?_, fun e he => ?_, fun t => ⟨rfl, rfl, rfl⟩⟩
   · obtain ⟨a, b, _⟩ := Deque.extend_spec d d.items h; exact ⟨a, b⟩
   · obtain ⟨a, b, _⟩ := Deque.extendleft_spec d d.items h; exact ⟨a, b⟩
   · intro he
@@ -79,6 +84,15 @@ theorem dequeEndsEvict_proven : DequeEndsEvict := by
     exact ⟨by unfold Deque.pop; rw [iteT hs], by unfold Deque.popleft; rw [iteT hs]⟩
   · intro hne
     exact ⟨Deque.pop_wf d h hne, Deque.popleft_wf d h hne⟩
+  · have hf : finalizeIterator e = .ok () := by rcases he with he | he <;> subst he <;> rfl
+    refine ⟨?_, ?_, ?_⟩
+    · show d.extendIter _ = _; rw [Deque.extendIter_iter, hf]
+    · rw [Deque.extendIter_iter, hf]
+    · rw [Deque.extendleftIter_iter, hf]
+  · refine ⟨?_, ?_, ?_⟩
+    · show d.extendIter _ = _; rw [Deque.extendIter_iter, Deque.finalize_some e he]
+    · rw [Deque.extendIter_iter, Deque.finalize_some e he]
+    · rw [Deque.extendleftIter_iter, Deque.finalize_some e he]
 
 /-- `deque(xs, maxlen)` and subclasses without their own constructor: `maxlen`
 absent or `None` keeps all items; an int `0 <= maxlen <= sys.maxsize` keeps the last
@@ -104,14 +118,19 @@ theorem new_wf (t : String) (m : Int) (hm : m = -1 ∨ 0 ≤ m) : ({ Deque.new t
   · rw [Deque.maxOk_iff]; simp only [Deque.new, List.length_nil, Int.natCast_zero]; omega
 
 theorem makeOf_absent (t : String) (xs : List α) :
-    Deque.makeOf t xs .absent = .ok (({ Deque.new t with maxlen := -1 } : Deque α).extend xs) := rfl
+    Deque.makeOf t xs .absent = .ok (({ Deque.new t with maxlen := -1 } : Deque α).extend xs) := by
+  unfold Deque.makeOf Deque.init Deque.initRe
+  simp only [ReIter.ofIterable]
+  rw [Deque.extendRe_ofList]
+  rfl
 
 theorem makeOf_int (t : String) (xs : List α) (m : Int) (h0 : 0 ≤ m) (h1 : m ≤ ssizeMax) :
     Deque.makeOf t xs (.int m) = .ok (({ Deque.new t with maxlen := m } : Deque α).extend xs) := by
-  unfold Deque.makeOf Deque.init
-  simp only [asSsize]
+  unfold Deque.makeOf Deque.init Deque.initRe
+  simp only [asSsize, ReIter.ofIterable]
   rw [iteT ⟨by unfold ssizeMin; unfold ssizeMax at h1; omega, h1⟩]
   simp only [iteF (show ¬ m < 0 by omega)]
+  rw [Deque.extendRe_ofList]
   rfl
 
 theorem dequeConstruct_proven : DequeConstruct := by
@@ -133,11 +152,11 @@ theorem dequeConstruct_proven : DequeConstruct := by
       refine ⟨_, makeOf_int t xs m h0 h1, a, hi, c, ?_, by unfold Deque.len; rw [Deque.size_eq, hi], ?_⟩
       · unfold Deque.getMaxlen; rw [c]; simp only; rw [iteF (by omega)]
       · exact extend_tname _ _
-    · unfold Deque.makeOf Deque.init
+    · unfold Deque.makeOf Deque.init Deque.initRe
       simp only [asSsize]
       rw [iteT ⟨h1, by unfold ssizeMax; omega⟩]
       simp only [iteT h0]
-    · unfold Deque.makeOf Deque.init
+    · unfold Deque.makeOf Deque.init Deque.initRe
       simp only [asSsize]
       rw [iteF (by omega)]
 

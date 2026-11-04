@@ -187,7 +187,7 @@ def entries : List Entry := [
     source := "genobject.c:848-854, :875-881", status := .proven
     prop := ``GenNameSetters, thm := some ``genNameSetters_proven },
   { id := "gen-make-coro-kinds", pyFile := src, pyFns := ["make_gen", "_Py_MakeCoro"]
-    statement := "_Py_MakeCoro picks the type from the code flags, starts from a cleared frame with the function's names, and initialises the async generator flags and cr_origin."
+    statement := "_Py_MakeCoro always makes an object (allocation failure aside) and picks the type from the masked code flags: exactly CO_GENERATOR a generator, exactly CO_ASYNC_GENERATOR an async generator, anything else (no flag, or two at once, which a release build reaches through code.replace(co_flags=...)) a coroutine; it starts from a cleared frame with the function's names, and initialises the async generator flags and cr_origin."
     source := "genobject.c:1095-1162", status := .proven
     prop := ``PyMakeCoroKinds, thm := some ``pyMakeCoroKinds_proven },
   { id := "gen-cr-origin-take", pyFile := src, pyFns := ["_PyCoro_ComputeOrigin"]

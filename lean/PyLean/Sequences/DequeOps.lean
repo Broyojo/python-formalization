@@ -446,6 +446,108 @@ theorem foldl_step1 (d : Deque α) (k : Nat) : ∀ (b j p : Int), b * 64 + j - d
     exact ⟨by rw [c1]; omega, c2, c3⟩
 
 
+/-! ### Iterators that do not touch the deque -/
+
+theorem finalize_some (e : PyExc) (h : e ≠ .stopIteration) : finalizeIterator (some e) = .error e := by
+  cases e <;> first | exact absurd rfl h | rfl
+
+theorem snd_popleft_maxlen (d : Deque α) : (snd' d.popleft d).maxlen = d.maxlen := by
+  unfold popleft
+  split
+  · rfl
+  · dsimp only
+    split
+    · split <;> rfl
+    · rfl
+
+theorem snd_pop_maxlen (d : Deque α) : (snd' d.pop d).maxlen = d.maxlen := by
+  unfold pop
+  split
+  · rfl
+  · dsimp only
+    split
+    · split <;> rfl
+    · rfl
+
+theorem appendM_maxlen (d : Deque α) (x : α) (m : Int) : (d.appendM x m).maxlen = d.maxlen := by
+  unfold appendM
+  dsimp only
+  split <;> split <;> first | rfl | exact snd_popleft_maxlen _
+
+theorem appendleftM_maxlen (d : Deque α) (x : α) (m : Int) : (d.appendleftM x m).maxlen = d.maxlen := by
+  unfold appendleftM
+  dsimp only
+  split <;> split <;> first | rfl | exact snd_pop_maxlen _
+
+/-- The calls that end a `ReIter.ofList` iterator. -/
+theorem ofList_nexts (xs : List α) (e : Option PyExc) : (ReIter.ofList xs e).nexts =
+    xs.map (fun x (d : Deque α) => ((.ok x : Py α), d)) ++
+      (match e with | none => [] | some e => [fun d => (.error e, d)]) := rfl
+
+theorem pushLoop_end (push : Deque α → α → Int → Deque α) (m : Int) (e : Option PyExc) (d : Deque α) :
+    pushLoop push m (match e with | none => [] | some e => [fun d => (.error e, d)]) d =
+      (finalizeIterator e, d) := by
+  cases e <;> rfl
+
+theorem consumeLoop_end (e : Option PyExc) (d : Deque α) :
+    consumeLoop (match e with | none => [] | some e => [fun d => (.error e, d)]) d =
+      (finalizeIterator e, d) := by
+  cases e <;> rfl
+
+theorem pushLoop_pure_right (m : Int) (e : Option PyExc) (xs : List α) : ∀ d : Deque α, d.maxlen = m →
+    pushLoop appendM m (xs.map (fun x (d : Deque α) => ((.ok x : Py α), d)) ++
+      (match e with | none => [] | some e => [fun d => (.error e, d)])) d =
+      (finalizeIterator e, xs.foldl (fun d x => d.appendM x d.maxlen) d) := by
+  induction xs with
+  | nil => intro d _; exact pushLoop_end _ _ _ _
+  | cons x xs ih =>
+    intro d hm
+    simp only [List.map_cons, List.cons_append, pushLoop, List.foldl_cons]
+    rw [hm, ih _ (by rw [appendM_maxlen, hm])]
+
+theorem pushLoop_pure_left (m : Int) (e : Option PyExc) (xs : List α) : ∀ d : Deque α, d.maxlen = m →
+    pushLoop appendleftM m (xs.map (fun x (d : Deque α) => ((.ok x : Py α), d)) ++
+      (match e with | none => [] | some e => [fun d => (.error e, d)])) d =
+      (finalizeIterator e, xs.foldl (fun d x => d.appendleftM x d.maxlen) d) := by
+  induction xs with
+  | nil => intro d _; exact pushLoop_end _ _ _ _
+  | cons x xs ih =>
+    intro d hm
+    simp only [List.map_cons, List.cons_append, pushLoop, List.foldl_cons]
+    rw [hm, ih _ (by rw [appendleftM_maxlen, hm])]
+
+theorem consumeLoop_pure (e : Option PyExc) (xs : List α) : ∀ d : Deque α,
+    consumeLoop (xs.map (fun x (d : Deque α) => ((.ok x : Py α), d)) ++
+      (match e with | none => [] | some e => [fun d => (.error e, d)])) d = (finalizeIterator e, d) := by
+  induction xs with
+  | nil => intro d; exact consumeLoop_end _ _
+  | cons x xs ih => intro d; simp only [List.map_cons, List.cons_append, consumeLoop]; exact ih d
+
+/-- `extendRe` on an iterator that does not touch the deque is `extend`. -/
+theorem extendRe_ofList (d : Deque α) (xs : List α) (e : Option PyExc) :
+    d.extendRe (.ofList xs e) = (finalizeIterator e, d.extend xs) := by
+  unfold extendRe extend
+  simp only [ReIter.ofList]
+  by_cases h0 : d.maxlen = 0
+  · rw [iteT h0, iteT h0]; exact consumeLoop_pure e xs d
+  · rw [iteF h0, iteF h0]
+    exact pushLoop_pure_right _ e xs _ (by split <;> rfl)
+
+theorem extendleftRe_ofList (d : Deque α) (xs : List α) (e : Option PyExc) :
+    d.extendleftRe (.ofList xs e) = (finalizeIterator e, d.extendleft xs) := by
+  unfold extendleftRe extendleft
+  simp only [ReIter.ofList]
+  by_cases h0 : d.maxlen = 0
+  · rw [iteT h0, iteT h0]; exact consumeLoop_pure e xs d
+  · rw [iteF h0, iteF h0]
+    exact pushLoop_pure_left _ e xs _ (by split <;> rfl)
+
+theorem extendIter_iter (d : Deque α) (xs : List α) (e : Option PyExc) :
+    d.extendIter (.iter xs e) = (finalizeIterator e, d.extend xs) := extendRe_ofList d xs e
+
+theorem extendleftIter_iter (d : Deque α) (xs : List α) (e : Option PyExc) :
+    d.extendleftIter (.iter xs e) = (finalizeIterator e, d.extendleft xs) := extendleftRe_ofList d xs e
+
 end Deque
 
 end PyLean.Sequences

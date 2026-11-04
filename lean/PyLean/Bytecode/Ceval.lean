@@ -1,4 +1,5 @@
 import PyLean.Bytecode.ObjModel
+import PyLean.TypeObj.ExcCore
 
 /-!
 Helpers of `Python/ceval.c` that the instruction bodies call, CPython 3.15.2:
@@ -217,7 +218,7 @@ def joinStrs (sep : String) : List String → String
   | [a] => a
   | a :: r => a ++ sep ++ joinStrs sep r
 
-/-- `format_missing`, lines 1513-1574. -/
+/-- `format_missing`, lines 1514-1574. -/
 def formatMissing {α : Type} (kind : String) (names : List String) (qualname : String) : RM α :=
   let len := names.length
   let nameStr :=
@@ -229,7 +230,8 @@ def formatMissing {α : Type} (kind : String) (names : List String) (qualname : 
       joinStrs ", " (names.take (len - 2)) ++ tail
   typeError s!"{qualname}() missing {len} required {kind} argument{if len == 1 then "" else "s"}: {nameStr}"
 
-/-- `missing_arguments`, lines 1576-1613. `defcount = none` is C's `-1`. -/
+/-- `missing_arguments`, lines 1577-1613. `defcount = none` is C's `-1`. `end = co_argcount -
+defcount` cannot be negative here: the caller has a missing name below it. -/
 def missingArguments {α : Type} (co : Code) (defcount : Option Nat) (fast : Array Val)
     (qualname : String) : RM α :=
   let (kind, start, stop) :=
@@ -240,14 +242,16 @@ def missingArguments {α : Type} (co : Code) (defcount : Option Nat) (fast : Arr
     fun i => reprName (co.localsplusnames.getD i "")
   formatMissing kind names qualname
 
-/-- `too_many_positional`, lines 1615-1671. -/
+/-- `too_many_positional`, lines 1616-1671. -/
 def tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast : Array Val)
     (qualname : String) : RM α := do
   let kwonlyGiven := ((List.range' co.argcount co.kwonlyargcount).filter
     fun i => fast.getD i .null != .null).length
   let defcount := (← tupleItems defaults).size
+  -- `atleast = co_argcount - defcount` is a `Py_ssize_t`: negative when `__defaults__` was replaced
+  -- by a longer tuple
   let (plural, sig) :=
-    if defcount != 0 then (true, s!"from {co.argcount - defcount} to {co.argcount}")
+    if defcount != 0 then (true, s!"from {(co.argcount : Int) - defcount} to {co.argcount}")
     else (co.argcount != 1, s!"{co.argcount}")
   let kwonlySig :=
     if kwonlyGiven != 0 then
@@ -255,8 +259,9 @@ def tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast
     else ""
   typeError s!"{qualname}() takes {sig} positional argument{if plural then "s" else ""} but {gvn}{kwonlySig} {if gvn == 1 && kwonlyGiven == 0 then "was" else "were"} given"
 
-/-- `positional_only_passed_as_keyword`, lines 1673-1735: raises when any
-positional-only name appears among the keywords. -/
+/-- `positional_only_passed_as_keyword`, lines 1674-1735: for each positional-only name in order,
+every keyword equal to it (`kwname == posonly_name`, else `PyObject_RichCompareBool`, which on two
+exact `str` is equality of the text), joined with `", "`; a `TypeError` when there is any. -/
 def posonlyPassedAsKeyword (co : Code) (kwnames : List String) (qualname : String) : RM Unit := do
   let conflicts := (List.range co.posonlyargcount).flatMap fun k =>
     let n := co.localsplusnames.getD k ""
@@ -264,29 +269,60 @@ def posonlyPassedAsKeyword (co : Code) (kwnames : List String) (qualname : Strin
   if !conflicts.isEmpty then
     typeError s!"{qualname}() got some positional-only arguments passed as keyword arguments: '{joinStrs ", " conflicts}'"
 
-/-- Index of `name` among the parameters that may be passed by keyword,
-lines 1762-1782. -/
+/-- Index of `name` among the parameters that may be passed by keyword, the first of
+`co_varnames[co_posonlyargcount:total_args]` equal to it: the pointer loop (lines 1815-1822) and
+the `PyObject_RichCompareBool(keyword, varname, Py_EQ)` loop (lines 1824-1834) find the same one
+for an exact `str` keyword, whose names are interned. A `str` subclass with its own `__eq__`
+(possible through `**` and `_PyStack_UnpackDict`) is outside the machine's keyword model, which
+holds keyword names as text. -/
 def kwSlot (co : Code) (name : String) : Option Nat :=
   let total := co.argcount + co.kwonlyargcount
   (List.range' co.posonlyargcount (total - co.posonlyargcount)).find?
     fun j => co.localsplusnames.getD j "" == name
 
-/-- The keyword loop of `initialize_locals`, lines 1804-1903. -/
-def bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) :
+/-- `possible_keywords` (lines 1853-1861): the names that may be passed by keyword. -/
+def possibleKeywords (co : Code) : List String :=
+  let total := co.argcount + co.kwonlyargcount
+  (List.range' co.posonlyargcount (total - co.posonlyargcount)).map fun j => co.localsplusnames.getD j ""
+
+/-- The unexpected keyword `TypeError` of lines 1851-1876: `_Py_CalculateSuggestions` over
+`possible_keywords` when `total_args > co_posonlyargcount` (the same `Python/suggestions.c`
+model as `TypeObj.calcSuggestion`), then `"%U() got an unexpected keyword argument '%S'"` with
+`". Did you mean '%S'?"` when it found one. `PyUnicode_AsUTF8AndSize` cannot fail on a `String`
+(no surrogates), and the `PyList_New` failure is not modelled. -/
+def kwSuggestion (co : Code) (keyword : String) : Option String :=
+  if co.argcount + co.kwonlyargcount > co.posonlyargcount then
+    PyLean.TypeObj.calcSuggestion (possibleKeywords co) keyword
+  else none
+
+def unexpectedKeyword {α : Type} (co : Code) (qualname keyword : String) : RM α :=
+  match kwSuggestion co keyword with
+  | some sug => typeError s!"{qualname}() got an unexpected keyword argument '{keyword}'. Did you mean '{sug}'?"
+  | none => typeError s!"{qualname}() got an unexpected keyword argument '{keyword}'"
+
+/-- The keyword loop of `initialize_locals`, lines 1803-1903, over the keywords in `kwnames`
+order; `kwnames` is all of them, for `positional_only_passed_as_keyword`. A keyword that names a
+parameter fills its local, or raises "got multiple values" if it is set; one that names none goes
+into `**kwargs` (`PyDict_SetItem`), or, with no `**kwargs`, raises the positional-only error when
+there are positional-only parameters and a keyword names one, else the unexpected keyword
+error. -/
+def bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) (kwnames : List String) :
     List (String × Val) → Array Val → RM (Array Val)
   | [], fast => pure fast
   | (keyword, value) :: rest, fast => do
     match kwSlot co keyword with
     | some j =>
+      -- `kw_found`, lines 1889-1897
       if fast.getD j .null != .null then
         typeError s!"{func.qualname}() got multiple values for argument '{keyword}'"
-      bindKeywords co func kwdict rest (fast.setIfInBounds j value)
+      bindKeywords co func kwdict kwnames rest (fast.setIfInBounds j value)
     | none =>
       if kwdict == .null then
-        -- `positional_only_passed_as_keyword` needs all the names; the caller checks first.
-        typeError s!"{func.qualname}() got an unexpected keyword argument '{keyword}'"
+        if co.posonlyargcount != 0 then
+          posonlyPassedAsKeyword co kwnames func.qualname
+        unexpectedKeyword co func.qualname keyword
       dictSetStr kwdict keyword value
-      bindKeywords co func kwdict rest fast
+      bindKeywords co func kwdict kwnames rest fast
 
 /-- `initialize_locals`, lines 1737-1984. `args` are the positional arguments,
 `kwargs` the keyword arguments in `kwnames` order. -/
@@ -296,48 +332,43 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
   let argcount := args.length
   let hasVarargs := flagSet co.flags coVarargs
   let hasVarkw := flagSet co.flags coVarkeywords
-  -- lines 1747-1758
+  -- lines 1746-1760
   let (kwdict, fast) ← if hasVarkw then do
       let kd ← mkDict
       let i := if hasVarargs then totalArgs + 1 else totalArgs
       pure (kd, fast0.setIfInBounds i kd)
     else pure (Val.null, fast0)
-  -- lines 1764-1774
+  -- lines 1762-1773
   let n := if argcount > co.argcount then co.argcount else argcount
   let fast := (List.range n).foldl (fun f j => f.setIfInBounds j (args.getD j .null)) fast
-  -- lines 1777-1795
+  -- lines 1775-1800
   let fast ← if hasVarargs then do
       let u ← mkTuple (args.drop n)
       pure (fast.setIfInBounds totalArgs u)
     else pure fast
-  -- lines 1804-1903, with the posonly check of 1844-1850 done when the first
-  -- unknown keyword is met
-  let needsPosonly := kwdict == .null && co.posonlyargcount != 0 &&
-    kwargs.any fun kv => (kwSlot co kv.1).isNone
-  let fast ← if needsPosonly then do
-      let upto := kwargs.takeWhile fun kv => (kwSlot co kv.1).isSome
-      let fast ← bindKeywords co func kwdict upto fast
-      posonlyPassedAsKeyword co (kwargs.map (·.1)) func.qualname
-      bindKeywords co func kwdict (kwargs.drop upto.length) fast
-    else bindKeywords co func kwdict kwargs fast
-  -- lines 1906-1910
+  -- lines 1802-1899
+  let fast ← bindKeywords co func kwdict (kwargs.map (·.1)) kwargs fast
+  -- lines 1901-1906
   if argcount > co.argcount && !hasVarargs then
     tooManyPositional co argcount func.defaults fast func.qualname
-  -- lines 1913-1940
+  -- lines 1908-1940. `m = co_argcount - defcount` is a `Py_ssize_t`, negative when
+  -- `__defaults__` was replaced by a tuple longer than the parameters; then no positional
+  -- is missing, `i = n - m` skips the first defaults, and the last `co_argcount - n` fill the
+  -- unfilled slots from `n` on.
   let fast ← if argcount < co.argcount then do
       let defs ← tupleItems func.defaults
       let defcount := defs.size
-      let m := co.argcount - defcount
-      let missing := ((List.range' argcount (m - argcount)).filter
+      let m : Int := (co.argcount : Int) - defcount
+      let missing := ((List.range' argcount (m.toNat - argcount)).filter
         fun i => fast.getD i .null == .null).length
       if missing != 0 then
         missingArguments co (some defcount) fast func.qualname
-      let i0 := if n > m then n - m else 0
+      let i0 : Nat := if (n : Int) > m then ((n : Int) - m).toNat else 0
       pure <| (List.range' i0 (defcount - i0)).foldl
-        (fun f i => if f.getD (m + i) .null == .null
-          then f.setIfInBounds (m + i) (defs.getD i .null) else f) fast
+        (fun f i => if f.getD (m + i).toNat .null == .null
+          then f.setIfInBounds (m + i).toNat (defs.getD i .null) else f) fast
     else pure fast
-  -- lines 1943-1966
+  -- lines 1942-1966
   if co.kwonlyargcount > 0 then
     let mut fast := fast
     let mut missing := 0

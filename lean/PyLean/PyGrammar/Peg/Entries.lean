@@ -3,6 +3,7 @@ import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
 import PyLean.PyGrammar.Peg.ImportProps
+import PyLean.PyGrammar.Peg.HelperProps
 import PyLean.PyGrammar.Peg.RuleFacts
 import PyLean.PyGrammar.Peg.Rules.Entries
 
@@ -423,7 +424,221 @@ def entries : List Entry := [
     notes := "True on every difftest case. Not reachable as stated: it needs, for each of the " ++
       "action expressions in the grammar, that the node built meets validate_expr and " ++
       "validate_stmt, plus VALIDATE_POSITIONS, which needs lexer facts that token positions " ++
-      "increase. CallRuleSound says nothing about what actions compute, so it does not help." }
+      "increase. CallRuleSound says nothing about what actions compute, so it does not help." },
+  { id := "pygrammar-peg-check-fstring-conversion"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_check_fstring_conversion
+    statement := "_PyPegen_check_fstring_conversion: a name not adjacent to '!' raises \"f-string: " ++
+      "conversion type must come right after the exclamation mark\" over both, checked first; a " ++
+      "name other than s, r, a raises \"...invalid conversion character 'x': expected 's', 'r', " ++
+      "or 'a'\" at the name (repr of the name, t- for t-strings); else the result record."
+    source := "Parser/action_helpers.c:1005-1027"
+    status := .proven
+    prop := ``CheckFstringConversion
+    thm := some ``checkFstringConversion_proven },
+  { id := "pygrammar-peg-expr-name"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_expr_name
+    statement := "_PyPegen_get_expr_name names all 28 switch cases (Constant by value identity); " ++
+      "among expression kinds only Slice reaches the default: NULL with SystemError " ++
+      "\"unexpected expression in assignment 29 (line N)\"."
+    source := "Parser/action_helpers.c:1083-1159"
+    status := .proven
+    prop := ``ExprNameTable
+    thm := some ``exprNameTable_proven
+    notes := "No grammar call site passes a Slice; a NULL name formatted with %s would be " ++
+      "strlen(NULL) in unicode_fromformat_write_utf8, where the model formats \"\"." },
+  { id := "pygrammar-peg-arguments-parsing-error"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_arguments_parsing_error
+    statement := "_PyPegen_arguments_parsing_error raises \"positional argument follows keyword " ++
+      "argument unpacking\" when a keyword is a ** unpacking, \"positional argument follows " ++
+      "keyword argument\" otherwise, at the last token, and gives NULL."
+    source := "Parser/action_helpers.c:1271-1288"
+    status := .proven
+    prop := ``ArgumentsParsingError
+    thm := some ``argumentsParsingError_proven },
+  { id := "pygrammar-peg-last-comprehension-item"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_last_comprehension_item
+    statement := "_PyPegen_get_last_comprehension_item is the last if of the comprehension, or its " ++
+      "iter when it has none."
+    source := "Parser/action_helpers.c:1161-1167"
+    status := .proven
+    prop := ``LastComprehensionItem
+    thm := some ``lastComprehensionItem_proven },
+  { id := "pygrammar-peg-nonparen-genexp"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_nonparen_genexp
+    statement := "_PyPegen_nonparen_genexp_in_call is silent with at most one positional argument; " ++
+      "with more it raises \"Generator expression must be parenthesized\" from the last " ++
+      "argument to the last item of the last comprehension."
+    source := "Parser/action_helpers.c:1290-1312"
+    status := .proven
+    prop := ``NonparenGenexp
+    thm := some ``nonparenGenexp_proven },
+  { id := "pygrammar-peg-check-legacy-stmt"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_check_legacy_stmt
+    statement := "_PyPegen_check_legacy_stmt is 1 exactly for a Name print or exec, 0 otherwise."
+    source := "Parser/action_helpers.c:950-962"
+    status := .proven
+    prop := ``CheckLegacyStmt
+    thm := some ``checkLegacyStmt_proven },
+  { id := "pygrammar-peg-check-barry"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_check_barry
+    statement := "_PyPegen_check_barry_as_flufl: under barry_as_FLUFL '!=' raises \"with Barry as " ++
+      "BDFL, use '<>' instead of '!='\" (-1) and '<>' is 0; without it '!=' is 0 and '<>' nonzero."
+    source := "Parser/action_helpers.c:934-948"
+    status := .proven
+    prop := ``CheckBarry
+    thm := some ``checkBarry_proven },
+  { id := "pygrammar-peg-ensure-complex"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_ensure_complex
+    statement := "_PyPegen_ensure_imaginary passes a complex Constant, _PyPegen_ensure_real any other " ++
+      "Constant; everything else raises \"imaginary/real number required in complex literal\" " ++
+      "at the node."
+    source := "Parser/action_helpers.c:853-872"
+    status := .proven
+    prop := ``EnsureComplexParts
+    thm := some ``ensureComplexParts_proven },
+  { id := "pygrammar-peg-concatenate-strings"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_concatenate_strings
+    statement := "_PyPegen_concatenate_strings: bytes with non-bytes raises \"cannot mix bytes and " ++
+      "nonbytes literals\"; one literal is itself; two or more bytes or str literals are one " ++
+      "Constant of the concatenation with the first's kind; with an f-string, a JoinedStr of " ++
+      "_build_concatenated_str."
+    source := "Parser/action_helpers.c:1688-1785, 1943-2029; reference: string literal concatenation"
+    status := .proven
+    prop := ``ConcatenateStrings
+    thm := some ``concatenateStrings_proven
+    notes := "_build_concatenated_bytes' size-overflow MemoryError (3.15) is allocation, out of scope." },
+  { id := "pygrammar-peg-concatenate-tstrings"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_concatenate_tstrings
+    statement := "_PyPegen_concatenate_tstrings is the TemplateStr of _build_concatenated_str; for " ++
+      "the same parts it is the f-string JoinedStr with the constructor changed."
+    source := "Parser/action_helpers.c:1956-1968"
+    status := .proven
+    prop := ``ConcatenateTstrings
+    thm := some ``concatenateTstrings_proven },
+  { id := "pygrammar-peg-concat-folds"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_concat_folds
+    statement := "_build_concatenated_str keeps the text (characters and nodes, in order), folds " ++
+      "every run of adjacent constants into one, and leaves no empty str constant."
+    source := "Parser/action_helpers.c:1788-1941"
+    status := .proven
+    prop := ``ConcatFolds
+    thm := some ``concatFolds_proven },
+  { id := "pygrammar-peg-setup-format-spec"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_setup_format_spec
+    statement := "_PyPegen_setup_full_format_spec drops empty constants; none or one constant left " ++
+      "is a JoinedStr of it, two or more constants a Constant, anything with a field the " ++
+      "JoinedStr of _build_concatenated_str; NULL spec gives NULL."
+    source := "Parser/action_helpers.c:1029-1081"
+    status := .proven
+    prop := ``SetupFullFormatSpec
+    thm := some ``setupFullFormatSpec_proven },
+  { id := "pygrammar-peg-format-spec-joinedstr"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_format_spec_joinedstr
+    statement := "Every format spec _PyPegen_setup_full_format_spec builds is a JoinedStr, as " ++
+      "Doc/library/ast.rst documents for FormattedValue and Interpolation."
+    source := "Doc/library/ast.rst:319-320, 402-405; python/cpython#122300"
+    status := .refuted
+    prop := ``FormatSpecIsJoinedStr
+    thm := some ``formatSpecIsJoinedStr_refuted
+    bug := some "pygrammar-format-spec-constant"
+    notes := "Counterexample: the two decoded constants of f'{x:\\N{DIGIT ONE}b}'." },
+  { id := "pygrammar-peg-interpolation-conversion"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_interpolation_conversion
+    statement := "_get_interpolation_conversion is the conversion name's first character, else " ++
+      "'r' for a debug = without a format spec, else -1."
+    source := "Parser/action_helpers.c:1526-1541"
+    status := .proven
+    prop := ``InterpolationConversion
+    thm := some ``interpolationConversion_proven },
+  { id := "pygrammar-peg-formatted-value-interpolation"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_formatted_value_interpolation
+    statement := "_PyPegen_formatted_value and _PyPegen_interpolation build the same node (conversion, " ++
+      "format spec, location) inside the same debug wrapper; the Interpolation also keeps the " ++
+      "expression text, stripped after a debug =."
+    source := "Parser/action_helpers.c:1578-1686"
+    status := .proven
+    prop := ``FormattedValueInterpolation
+    thm := some ``formattedValueInterpolation_proven
+    notes := "The inventory has no rows for _PyPegen_formatted_value and _PyPegen_interpolation " ++
+      "(one-line definitions it missed), so this entry credits none." },
+  { id := "pygrammar-peg-debug-info-source"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_debug_info_source
+    statement := "The debug text ends at the conversion name, else just past the format spec's " ++
+      "start, else at the field's end, with that token's metadata."
+    source := "Parser/action_helpers.c:1589-1603, 1658-1672"
+    status := .proven
+    prop := ``DebugInfoSource
+    thm := some ``debugInfoSource_proven
+    notes := "Shared by _PyPegen_formatted_value and _PyPegen_interpolation, which have no rows." },
+  { id := "pygrammar-peg-joined-str-parts"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_joined_str_parts
+    statement := "_PyPegen_joined_str/_PyPegen_template_str over parts with nothing to decode: the " ++
+      "parts in order with debug pairs spliced in, from start to end token; a JoinedStr part that " ++
+      "is not a pair raises SystemError \"unexpected JoinedStr (TemplateStr) node without debug " ++
+      "data in f-string (t-string) at line N\"."
+    source := "Parser/action_helpers.c:1347-1455"
+    status := .proven
+    prop := ``JoinedStrParts
+    thm := some ``joinedStrParts_proven },
+  { id := "pygrammar-peg-joined-str-literal"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_joined_str_literal
+    statement := "_PyPegen_joined_str/_PyPegen_template_str over one literal part decode its text " ++
+      "(raw for an r prefix or no backslash), drop an empty result, and turn a decode error into " ++
+      "the SyntaxError of _Pypegen_raise_decode_error_known_location at the part."
+    source := "Parser/action_helpers.c:1316-1345, 1347-1455, 1483-1500"
+    status := .proven
+    prop := ``JoinedStrLiteral
+    thm := some ``joinedStrLiteral_proven },
+  { id := "pygrammar-peg-fstring-literal-twin"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_fstring_literal_twin
+    statement := "The literal text of f'''...''' (rf, t, rt) decodes to the value the plain " ++
+      "string '''...''' (r) with the same text has, and fails exactly when it fails."
+    source := "the implementation agreeing with itself (f-string vs plain string)"
+    status := .proven
+    prop := ``FstringLiteralTwin
+    thm := some ``fstringLiteralTwin_proven },
+  { id := "pygrammar-peg-escape-warning-line"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_escape_warning_line
+    statement := "An invalid escape in the text of a plain string and of the same f-string is " ++
+      "warned about on the same line."
+    source := "the implementation disagreeing with itself; python/cpython#160491's intent"
+    status := .refuted
+    prop := ``EscapeWarningLineTwin
+    thm := some ``escapeWarningLineTwin_refuted
+    bug := some "pygrammar-fstring-escape-warning-line"
+    notes := "Counterexample run in the kernel: body \\n\\d\\n warns on line 2 in '''...''' and on " ++
+      "line 4 in f'''...''', counted from the end token _get_resized_exprs passes." },
+  { id := "pygrammar-peg-constant-from-string"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_constant_from_string
+    statement := "_PyPegen_constant_from_string is the Constant of _PyPegen_parse_string's value at " ++
+      "the token, kind 'u' exactly for a lowercase u prefix; a failure is NULL after " ++
+      "_Pypegen_raise_decode_error."
+    source := "Parser/action_helpers.c:1501-1524"
+    status := .proven
+    prop := ``ConstantFromString
+    thm := some ``constantFromString_proven
+    notes := "U\"a\" has no kind (the_str[0] == 'u'), as python/cpython#149267 observed." }
 ] ++ ruleEntries
 
 end PyLean.PyGrammar.Peg

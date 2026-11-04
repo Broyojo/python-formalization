@@ -12,7 +12,7 @@ open PyLean.Bytecode
 
 /-! ### Lines 1848-1937: cells -/
 
-/-- `@3.14.7:1848`. -/
+/-- `:2354-2366`. -/
 def DELETE_FAST (e : Env) : M Unit := stk 0 0 fun _ => do
   let v ← getLocal e.oparg
   if v == .null then
@@ -54,7 +54,8 @@ def DELETE_DEREF (e : Env) : M Unit := stk 0 0 fun _ => do
   (cellSet c .null : RM Unit)
   pure []
 
-/-- `@3.14.7:1887`. -/
+/-- `:2393-2422`. The `PyLazyImport_CheckExact` branch (`:2413-2419`) is not modelled: the machine has
+no lazy import objects. -/
 def LOAD_FROM_DICT_OR_DEREF (e : Env) : M Unit := stkK 1 1 fun
   | [cd] => do
     let co ← getCode e.P
@@ -85,7 +86,7 @@ def STORE_DEREF (e : Env) : M Unit := stk 1 0 fun
     pure []
   | _ => fault "arity"
 
-/-- `@3.14.7:1925`. -/
+/-- `:2438-2450`. -/
 def COPY_FREE_VARS (e : Env) : M Unit := stk 0 0 fun _ => do
   let f ← getFrame
   let co ← getCode e.P
@@ -98,19 +99,19 @@ def COPY_FREE_VARS (e : Env) : M Unit := stk 0 0 fun _ => do
 
 /-! ### Lines 1939-2147: builders -/
 
-/-- `@3.14.7:1939`. -/
+/-- `:2452-2457`. -/
 def BUILD_STRING (e : Env) : M Unit := stk e.oparg 1 fun pieces => do
   let strs := pieces.map fun
     | .str s => s
     | _ => ""
   pure [.str (String.join strs)]
-/-- `@3.14.7:1952`. -/
+/-- `:2459-2481`. -/
 def BUILD_INTERPOLATION (e : Env) : M Unit := stk (2 + (e.oparg &&& 1)) 1 fun
   | v :: s :: rest => do
     let fmt := if e.oparg &&& 1 != 0 then rest.headD .null else .str ""
     pure [← e.om.buildInterpolation e.ctx v s (e.oparg >>> 2) fmt]
   | _ => fault "arity"
-/-- `@3.14.7:1976`. -/
+/-- `:2483-2491`. -/
 def BUILD_TEMPLATE (e : Env) : M Unit := stk 2 1 fun
   | [a, b] => do pure [← e.om.buildTemplate e.ctx a b]
   | _ => fault "arity"
@@ -160,7 +161,7 @@ def BUILD_MAP (e : Env) : M Unit := stk (e.oparg * 2) 1 fun vs => do
   let d ← (mkDict : RM Val)
   (dictFromItems e vs d : RM Unit)
   pure [d]
-/-- `@3.14.7:2077`. -/
+/-- `:2583-2603`. -/
 def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
   let l := (← getFrame).locals
   if l == .null then (raiseS "SystemError" "no locals found when setting up annotations" : RM _)

@@ -65,7 +65,9 @@ duplicates:
             "invalid_tstring_replacement_field", "t-string format spec syntax error",
             "tstring_format_spec", "t-string error message format spec",
             "template string error message f-string", "t-string syntax error (prs)",
-            "t-string invalid replacement field (prs)"]
+            "t-string invalid replacement field (prs)",
+            "gh issue view 157491; gh pr view 157492; gh pr view 159472; gh pr diff 157492 (2026-11-04)"]
+  related: ["python/cpython#157491 (open; PRs #157492 for main and #159472 for 3.14, both open and unmerged as of 2026-11-04): Nested replacement fields switch f-string lexing out of format-spec mode. A different defect, in the lexer, not in python.gram:1622: on 3.15.2, Parser/lexer/lexer.c:1336-1340 clears in_format_spec and returns to TOK_FSTRING_MODE when a nested field's '}' closes, even while the outer field is still open (main moved this to Parser/lexer/string.c, _PyLexer_close_ftstring_expr, which the PR patches); it touches the same inputs, a nested replacement field inside a format spec. Its fix keeps the lexer in format-spec mode after the inner '}', so the token stream of the reproducer's sources (f'{x:{a:}' and t'{x:{a:}') changes and their messages may change too, for the f-string and the t-string alike: on a main with that fix the reproducer can stop printing REPRODUCED although line 1622 is unchanged. Re-derive the expected messages from the fixed lexer before relying on the reproducer there. The grammar fix here (tstring_format_spec* at line 1622) is independent of it."]
   bugforge: "none (no t-string entries)"
 lean:
   property: PyLean.PyGrammar.Peg.TstringFieldMessages

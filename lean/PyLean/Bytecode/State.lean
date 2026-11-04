@@ -157,6 +157,12 @@ structure GenObj where
   runningAsync : Bool := false
   /-- `ag_closed`. -/
   agClosed : Bool := false
+  /-- `cr_origin_or_finalizer` of a coroutine, as `cr_origin` reads it: `none` for NULL, else one
+  `(code, lasti)` per frame, innermost first, from which `_PyCoro_ComputeOrigin`
+  (`Objects/genobject.c:1540-1570`) builds `(co_filename, PyUnstable_InterpreterFrame_GetLine(frame),
+  co_name)`; the machine has no line table, so the line is kept as the `lasti` it is read from, as
+  `Obj.traceback` keeps `tb_lasti`. -/
+  origin : Option (List (Nat × Nat)) := none
   deriving Inhabited
 
 /-- `PyDictKeyEntry`: the stored hash is what makes equality calls observable
@@ -315,6 +321,8 @@ structure Rt where
   sameImmediate : Val → Val → Bool := fun _ _ => false
   /-- `tstate->async_gen_firstiter`, `.null` when unset (`sys.set_asyncgen_hooks`). -/
   asyncGenFirstiter : Val := .null
+  /-- `tstate->coroutine_origin_tracking_depth` (`sys.set_coroutine_origin_tracking_depth`). -/
+  coroOriginDepth : Nat := 0
   /-- `_Py_ReachedRecursionLimit(tstate)` (`Python/ceval.c`): whether the machine stack pointer is
   past the soft limit. It depends on C stack use, which the machine does not track, so it is an
   oracle, as `stackSpace` is. -/

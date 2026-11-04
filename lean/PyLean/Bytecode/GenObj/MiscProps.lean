@@ -501,22 +501,31 @@ theorem genReprNames_proven : GenReprNames := by
 
 /-! ## Construction -/
 
-/-- `make_gen` and `_Py_MakeCoro` pick the type from the code flags, start with a
-cleared frame and the function's names, and an async generator starts with its
-flags off. -/
+/-- `make_gen` and `_Py_MakeCoro` always make an object (allocation failure aside), pick the
+type from the code flags, start with a cleared frame and the function's names, and an async
+generator starts with its flags off. Masked flags other than exactly `CO_GENERATOR` or exactly
+`CO_ASYNC_GENERATOR` (none, or two at once) make a coroutine, as on a release build. -/
 def PyMakeCoroKinds : Prop :=
-  ∀ (V X : Type) (w : World V X) (code : Code) (n q : Obj V) (g : GenObj V),
-    pyMakeCoro w code n q = some g →
+  ∀ (V X : Type) (w : World V X) (code : Code) (n q : Obj V),
+    (pyMakeCoro w code n q).isSome ∧
+    ∀ g : GenObj V, pyMakeCoro w code n q = some g →
     g.state = .cleared ∧ g.name = n ∧ g.qualname = q ∧ g.code.flags = code.flags ∧
     (let cf := code.flags &&& (CO_GENERATOR ||| CO_COROUTINE ||| CO_ASYNC_GENERATOR)
      (cf = CO_GENERATOR → g.kind = .gen) ∧
      (cf = CO_ASYNC_GENERATOR → g.kind = .asyncGen ∧ g.agClosed = false ∧
         g.agHooksInited = false ∧ g.agRunningAsync = false) ∧
-     (cf = CO_COROUTINE → g.kind = .coro ∧
+     (cf ≠ CO_GENERATOR → cf ≠ CO_ASYNC_GENERATOR → g.kind = .coro ∧
        g.origin = if w.originDepth = 0 then none else some (computeCrOrigin w.originDepth w.callStack)))
 
 theorem pyMakeCoroKinds_proven : PyMakeCoroKinds := by
-  intro V X w code n q g hm
+  intro V X w code n q
+  refine ⟨?_, ?_⟩
+  · simp only [pyMakeCoro]; split
+    · rfl
+    · split
+      · rfl
+      · split <;> rfl
+  intro g hm
   simp only [pyMakeCoro] at hm
   split at hm
   · rename_i h1
@@ -530,22 +539,17 @@ theorem pyMakeCoroKinds_proven : PyMakeCoroKinds := by
       simp at hm; subst hm
       refine ⟨rfl, rfl, rfl, rfl, ?_⟩
       simp only [h2]
-      refine ⟨?_, fun _ => by simp [makeGen], ?_⟩ <;> intro h <;> exact absurd h (by decide)
+      exact ⟨fun h => absurd h (by decide), fun _ => by simp [makeGen], fun _ h' => absurd rfl h'⟩
     · rename_i h2
       split at hm
-      · rename_i h3
-        split at hm
-        · rename_i h4
-          simp at hm; subst hm
-          refine ⟨rfl, rfl, rfl, rfl, ?_⟩
-          simp only [h3, h4]
-          refine ⟨?_, ?_, fun _ => ⟨rfl, by simp⟩⟩ <;> intro h <;> exact absurd h (by decide)
-        · rename_i h4
-          simp at hm; subst hm
-          refine ⟨rfl, rfl, rfl, rfl, ?_⟩
-          simp only [h3]
-          refine ⟨?_, ?_, fun _ => ⟨rfl, by simp [h4]⟩⟩ <;> intro h <;> exact absurd h (by decide)
-      · simp at hm
+      · rename_i h4
+        simp at hm; subst hm
+        refine ⟨rfl, rfl, rfl, rfl, ?_⟩
+        refine ⟨fun h => absurd h h1, fun h => absurd h h2, fun _ _ => ⟨rfl, by simp [h4]⟩⟩
+      · rename_i h4
+        simp at hm; subst hm
+        refine ⟨rfl, rfl, rfl, rfl, ?_⟩
+        refine ⟨fun h => absurd h h1, fun h => absurd h h2, fun _ _ => ⟨rfl, by simp [h4]⟩⟩
 
 /-- The frame-copying constructors start in `FRAME_CREATED`, and a NULL name or
 qualname falls back to the code object's. -/

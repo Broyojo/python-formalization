@@ -239,6 +239,29 @@ def p_calls(r):
     return "\n".join(out)
 
 
+def p_binding(r):
+    """`initialize_locals` (`Python/ceval.c:1737-1984`): keyword suggestions
+    (`_Py_CalculateSuggestions`), `__defaults__` longer or shorter than the parameters (the
+    `Py_ssize_t` `m = co_argcount - defcount` going negative), positional-only names passed by
+    keyword, and keyword-only defaults."""
+    params = r.choice(["abc", "abc, *, defg=1", "abc, /, defg", "ab, abc, /, *, abcd", "Name, name2=0",
+                       "a, b, *, c", "a, b=1, *, c=2", "x, y, z", "xx, /", "alpha, beta, **kw", "a, b, *args"])
+    names = [q.split("=")[0].strip(" *") for q in params.split(",") if q.strip() not in ("*", "/")]
+    out = [f"def f({params}):\n    return {r.choice(['(' + ', '.join(names) + ',)', '1', 'None'])}"]
+    if r.random() < 0.5:
+        out.append(f"f.__defaults__ = {r.choice(['(5, 6, 7)', '(9,)', '()', 'None', '(1, 2)', '(1, 2, 3, 4, 5)'])}")
+    if r.random() < 0.3:
+        out.append(f"f.__kwdefaults__ = {r.choice(['None', '{}', dict(c=3), dict(defg=4), dict(abcd=5)])}")
+    calls = ["f()", "f(1)", "f(1, 2)", "f(1, 2, 3)", "f(1, 2, 3, 4)", "f(abd=1)", "f(1, defh=2)", "f(Abc=1)",
+             "f(abc=1, abcd=2)", "f(1, abcde=2)", "f(name=1)", "f(1, Name2=2)", "f(xy=1)", "f(1, alpha=2)",
+             "f(ab=1, abc=2)", "f(1, 2, abcd=3)", "f(c=1)", "f(1, c=1)", "f(1, b=2, c=3)", "f(xx=1)",
+             "f(1, 2, c=3, d=4)", "f(**{'abc': 1})", "f(1, **{'bta': 2})", "f(1, zz=2, yy=3)",
+             "f(alpha=1, beta=2, gamma=3)", "f(beta=1)", "f(1, y=2, z=3)", "f(1, z=2)"]
+    for c in r.sample(calls, r.randint(3, 8)):
+        out.append(guarded(f"print({c})"))
+    return "\n".join(out)
+
+
 def p_scope(r):
     return r.choice([
         "def f():\n    print(x)\n    x = 1\n" + guarded("f()"),
@@ -799,9 +822,28 @@ def p_long_names(r):
     ])
 
 
+def p_genflags(r):
+    """`_Py_MakeCoro` (`Objects/genobject.c:1117-1162`) on code whose generator flags were
+    rewritten (`flags_<mask>_*`, see `mark_flags`): exactly CO_GENERATOR or exactly
+    CO_ASYNC_GENERATOR pick those types, anything else (no flag, two at once) a coroutine."""
+    mask = r.choice([0, 0x20, 0x80, 0x200, 0xa0, 0x220, 0x280, 0x2a0])
+    name = f"flags_{mask:x}_f"
+    body = r.choice([
+        f"def {name}():\n    x = yield 1\n    print('in', x)\n    return 2\n",
+        f"def {name}():\n    yield 1\n    yield 2\n",
+        f"async def {name}():\n    print('body')\n    return 3\n",
+    ])
+    ops = r.choices(["print(r.send(None))", "print(r.send(7))", "print(next(r))", "r.close()\nprint('closed')",
+                     "print(r.throw(ValueError('t')))", "print(list(r))", "print([*r])", "a, b = r\nprint(a, b)",
+                     "a, *b = r\nprint(a, b)", "for x in r:\n    print(x)", "print(iter(r) is r)"], k=r.randint(1, 4))
+    out = [body, f"r = {name}()", "print(type(r).__name__, r.__name__, r.__qualname__)"]
+    out += [guarded(o) for o in ops]
+    return "\n".join(out)
+
+
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
             p_agen, p_tb,
-            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names, p_builders, p_call_generic, p_genflags, p_binding]
 
 
 def enc_const(c, table):
@@ -856,6 +898,10 @@ def mark_iterable_coroutines(co):
     does: these programs cannot import. Both sides run the marked code."""
     consts = tuple(mark_iterable_coroutines(c) if isinstance(c, types.CodeType) else c for c in co.co_consts)
     flags = co.co_flags | 0x100 if co.co_name.startswith("itercoro_") else co.co_flags
+    # `flags_<hex>_*`: the generator flags (CO_GENERATOR | CO_COROUTINE | CO_ASYNC_GENERATOR) set
+    # to exactly <hex>, as `code.replace(co_flags=...)` can
+    if co.co_name.startswith("flags_"):
+        flags = (flags & ~0x2a0) | int(co.co_name.split("_")[1], 16)
     return co.replace(co_consts=consts, co_flags=flags)
 
 
@@ -893,7 +939,8 @@ def run_python(case):
                 exc = [type(e).__name__, str(e)]
     # Finalizers of objects still alive at the end are not part of the program's
     # output, and must not run during a later case.
-    with contextlib.redirect_stdout(io.StringIO()):
+    with contextlib.redirect_stdout(io.StringIO()), warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         g.clear()
         e = None
         gc.collect(1)

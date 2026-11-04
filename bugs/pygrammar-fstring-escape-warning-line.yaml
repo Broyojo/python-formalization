@@ -1,0 +1,103 @@
+id: pygrammar-fstring-escape-warning-line
+title: "An invalid escape in a multi-line f-string or t-string is warned about on the wrong line"
+priority: P4
+kind: diagnostic
+module: pygrammar
+files: [Parser/action_helpers.c, Parser/string_parser.c]
+functions: ["_get_resized_exprs", "_PyPegen_decode_fstring_part", "warn_invalid_escape_sequence"]
+summary: |
+  The SyntaxWarning for an invalid escape sequence names the line of the escape for a plain
+  string, but for the literal text of an f-string or t-string it names a line counted from the
+  string's closing quote. warn_invalid_escape_sequence (Parser/string_parser.c:53-66) starts at
+  t->lineno and adds the newlines before the escape in the decoded text. For a STRING token t is
+  the string itself; for an f-string part, _get_resized_exprs (Parser/action_helpers.c:1401)
+  calls _PyPegen_decode_fstring_part(p, is_raw, item, b) with b the FSTRING_END/TSTRING_END
+  token, which _PyPegen_decode_string passes on (:1333). So
+
+      x = '''        x = f'''
+      \d             \d
+      '''            '''
+
+  warns on line 2 for the plain string and on line 4 for the f-string (the source has three
+  lines); `f'''\d\n\n\n'''` warns on line 4 for an escape on line 1. The t-string twin does the
+  same. With warnings turned into errors (-W error) the SyntaxError carries the same wrong line
+  and a column taken from the closing quote (`RAISE_ERROR_KNOWN_LOCATION` at
+  Parser/string_parser.c:100-110). Single-line f-strings get the right line (only the column
+  is off, in the -W error SyntaxError).
+likelihood: |
+  Moderate for a diagnostic: SyntaxWarning for invalid escapes is on by default since 3.12, and
+  multi-line f-strings (docstring-like templates, SQL, regexes in f'''...''') are common; the
+  warning points at the closing quote's line or past the end of the file, so the user looks in
+  the wrong place. No wrong code is produced.
+maybe_intended: |
+  No. python/cpython#160491 (closed, fixed by gh-160493 in 3.15.2) fixed exactly this for decode
+  errors in the same function: it added _Pypegen_raise_decode_error_known_location so that an
+  error in a literal part is reported at the part, "not at the closing quote", because "for
+  multi-line strings it can point at the wrong line entirely". The warning path, a few lines
+  above in the same call, still gets the closing token.
+reproducer: |
+  import warnings
+
+  def lines(src):
+      with warnings.catch_warnings(record=True) as w:
+          warnings.simplefilter('always')
+          compile(src, '<s>', 'exec')
+      return [x.lineno for x in w if issubclass(x.category, SyntaxWarning)]
+
+  def err_line(src):
+      with warnings.catch_warnings():
+          warnings.simplefilter('error')
+          try:
+              compile(src, '<s>', 'exec')
+          except SyntaxError as e:
+              return e.lineno
+
+  plain = lines("x = '''\n\\d\n'''\n")
+  fstr = lines("x = f'''\n\\d\n'''\n")
+  tstr = lines("x = t'''\n\\d\n'''\n")
+  first = lines("x = f'''\\d\n\n\n'''\n")
+  werr = (err_line("x = '''\n\\d\n'''\n"), err_line("x = f'''\n\\d\n'''\n"))
+  print(plain, fstr, tstr, first, werr)
+  if plain == [2] and fstr == [4] and tstr == [4] and first == [4] and werr == (2, 4):
+      print("REPRODUCED pygrammar-fstring-escape-warning-line")
+expected: |
+  The f-string's and the t-string's warning on line 2, where `\d` is, like the plain string's;
+  `f'''\d\n\n\n'''` on line 1.
+promised_by: |
+  The implementation disagreeing with itself: the same text inside '''...''' and f'''...''' is
+  warned about on different lines; and python/cpython#160491's stated intent that literal-part
+  diagnostics point at the part. PEP 701 keeps f-string literal text the same as string text.
+cause: |
+  Parser/action_helpers.c:1401 passes `b` (the end token) as the token of every literal part;
+  :1333 hands it to _PyPegen_decode_string, and Parser/string_parser.c:53-66 counts lines from
+  t->lineno (and :69-86 the column from t->col_offset and the quotes at the start of t's text).
+  The part's own position is the Constant's (constant->lineno, constant->col_offset), which
+  _PyPegen_constant_from_token copied from the FSTRING_MIDDLE token (:1483-1499).
+possible_fix: |
+  Give warn_invalid_escape_sequence the part's start instead of the end token: e.g. let
+  _PyPegen_decode_fstring_part build a Token-like position from constant->lineno and
+  constant->col_offset (no quote counting: the part has no quotes), or pass the line and column
+  down to _PyPegen_decode_string as the decode-error path now does with the constant.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related: ["python/cpython#160491 (closed, completed 2026-10-23; PRs gh-160493, gh-160530, gh-160531): the same misplacement for decode errors (\\xZZ) in f-string literal parts, fixed with _Pypegen_raise_decode_error_known_location; the SyntaxWarning path was not changed",
+            "python/cpython#116042 (closed): span of invalid escapes in multi-line plain strings, which added the line/column counting in warn_invalid_escape_sequence"]
+  queries: ["invalid escape sequence f-string line", "SyntaxWarning invalid escape multiline",
+            "invalid escape sequence lineno", "invalid escape sequence warning f-string",
+            "SyntaxWarning f-string line number", "SyntaxWarning wrong line f-string triple quoted",
+            "invalid escape sequence f-string line number", "warn_invalid_escape_sequence (issues and prs)",
+            "invalid escape sequence column bytes", "escape sequence error location non-ASCII",
+            "gh api issues/160491, pulls/160493 files"]
+  bugforge: "none (no parser escape-warning entries in vendor/bugforge-results/README.md)"
+lean:
+  property: PyLean.PyGrammar.Peg.EscapeWarningLineTwin
+  theorem: PyLean.PyGrammar.Peg.escapeWarningLineTwin_refuted
+notes: |
+  Two further column defects of the same function's -W error path, seen while triaging and not
+  modelled (the model does not turn warnings into errors): the column is counted over the
+  escape-rewritten buffer, so each non-ASCII character before the escape on its line moves it
+  right (x = 'é\d' reports offset 11 for a backslash at 7); and the quote count at :69-86 stops at
+  a prefix letter, so b'ab\d' and u'ab\d' are off by the prefix and quote (offset 7 for 9).

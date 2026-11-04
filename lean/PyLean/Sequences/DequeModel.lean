@@ -54,13 +54,41 @@ structure Deque (α : Type) where
 
 instance {α : Type} : Inhabited (Deque α) := ⟨⟨CENTER + 1, CENTER, [], -1, 0, "deque"⟩⟩
 
-/-- `finalize_iterator` (_collectionsmodule.c:438-450): `StopIteration` raised by
-`tp_iternext` is cleared, any other exception propagates. -/
+/-- `finalize_iterator` (_collectionsmodule.c:438-450), called once `tp_iternext` has
+returned NULL: `e` is the exception then set (`PyErr_Occurred()`, `none` for plain
+exhaustion). `StopIteration` is cleared, any other exception propagates. -/
 def finalizeIterator (e : Option PyExc) : Py Unit :=
   match e with
   | none => .ok ()
   | some .stopIteration => .ok ()
   | some e => .error e
+
+/-- One `tp_iternext` call made from inside a method of deque `d`: the iterator runs
+arbitrary Python code, which sees `d` as it stands and may change it (append, clear,
+re-initialise it with `d.__init__(maxlen=...)`, ...), then yields an item or raises
+(`StopIteration` included). -/
+abbrev NextFn (α : Type) := Deque α → Py α × Deque α
+
+/-- An iterable as `deque_extend_impl` / `deque_extendleft_impl` / `deque_init_impl`
+see it (other than the deque itself): `PyObject_GetIter(iterable)` (`getIter`: `__iter__`
+runs, may change the deque, and may raise; a non-iterable raises `TypeError`), then the
+`tp_iternext` calls in order. After the last one `tp_iternext` returns NULL with no
+exception set; a call that raises ends the iteration. A finite iterator is a list of
+calls (the scope: an endless iterator never returns from `extend`). -/
+structure ReIter (α : Type) where
+  getIter : Deque α → Py Unit × Deque α
+  nexts : List (NextFn α)
+
+/-- An iterator that does not touch the deque: it yields `xs`, then ends with `e`
+(`none`: plain exhaustion). -/
+def ReIter.ofList {α : Type} (xs : List α) (e : Option PyExc) : ReIter α :=
+  ⟨fun d => (.ok (), d), xs.map (fun x d => (.ok x, d)) ++
+    (match e with | none => [] | some e => [fun d => (.error e, d)])⟩
+
+/-- A `PyIterable` as a `ReIter`: a non-iterable fails in `PyObject_GetIter`. -/
+def ReIter.ofIterable {α : Type} : PyIterable α → ReIter α
+  | .notIterable t => ⟨fun d => (.error (notIterableErr t), d), []⟩
+  | .iter xs e => ReIter.ofList xs e
 
 /-- The `maxlen` argument of `deque_init_impl`. -/
 inductive MaxlenArg where
@@ -115,7 +143,9 @@ def write (d : Deque α) (b j : Int) (v : α) : Py (Deque α) :=
     if 0 ≤ j ∧ j < 64 ∧ 0 ≤ k ∧ k < d.size then .ok { d with items := d.items.set k.toNat v }
     else .error (cUB "unused slot")
 
-/-- `deque_new` (_collectionsmodule.c:203-233): one block, centred, unbounded. -/
+/-- `deque_new` (_collectionsmodule.c:203-233): one block, empty and centred
+(`leftindex = CENTER + 1`, `rightindex = CENTER`, :225-226), `state = 0`, and
+`maxlen = -1` (:228), so `deque.__new__(deque).maxlen is None` before any `__init__`. -/
 def new (tname : String := "deque") : Deque α := ⟨CENTER + 1, CENTER, [], -1, 0, tname⟩
 
 /-- `deque_pop_impl` (_collectionsmodule.c:245-278). -/
@@ -168,47 +198,89 @@ def appendleftM (d : Deque α) (x : α) (maxlen : Int) : Deque α :=
   let d := { d with items := x :: d.items, left := left - 1 }
   if d.needsTrim maxlen then snd' d.pop d else { d with state := d.state + 1 }
 
-/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:380-386, 425-431). -/
+/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:380-386, 429-435). -/
 def append (d : Deque α) (x : α) : Deque α := d.appendM x d.maxlen
 def appendleft (d : Deque α) (x : α) : Deque α := d.appendleftM x d.maxlen
 
-/-- The body of `deque_extend_impl` (_collectionsmodule.c:479-520) after
-`PyObject_GetIter`, for an iterator yielding `xs`: nothing at all when
-`maxlen == 0` (`consume_iterator`, :455-465), otherwise the "start filling from
-the left" heuristic on an empty deque and one `deque_append_lock_held` per
-item. -/
+/-- The loop `while ((item = iternext(it)) != NULL) push(deque, item, maxlen)` of
+`deque_extend_impl` (_collectionsmodule.c:512-518, `push` = `deque_append_lock_held`)
+and `deque_extendleft_impl` (:567-573, `deque_appendleft_lock_held`), then
+`finalize_iterator` (:519, :574). `maxlen` is the local read once at entry
+(:484, :539), not `deque->maxlen`: an iterator that re-initialises the deque does not
+change the bound the loop applies. Every call sees the deque the previous push left. -/
+def pushLoop (push : Deque α → α → Int → Deque α) (maxlen : Int) :
+    List (NextFn α) → Deque α → Py Unit × Deque α
+  | [], d => (finalizeIterator none, d)
+  | nx :: rest, d =>
+    match nx d with
+    | (.error e, d) => (finalizeIterator (some e), d)
+    | (.ok x, d) => pushLoop push maxlen rest (push d x maxlen)
+
+/-- `consume_iterator` (_collectionsmodule.c:455-465): call `tp_iternext` until it
+returns NULL, dropping the items, then `finalize_iterator`. -/
+def consumeLoop : List (NextFn α) → Deque α → Py Unit × Deque α
+  | [], d => (finalizeIterator none, d)
+  | nx :: rest, d =>
+    match nx d with
+    | (.error e, d) => (finalizeIterator (some e), d)
+    | (.ok _, d) => consumeLoop rest d
+
+/-- `deque_extend_impl` (_collectionsmodule.c:479-520) for an iterable other than the
+deque: `maxlen` read at :484, `PyObject_GetIter` (:497-499), `consume_iterator` when that
+`maxlen` is 0 (:501-502), the "start filling from the left" heuristic on a deque that is
+empty *now* (:505-510), then the loop. -/
+def extendRe (d : Deque α) (it : ReIter α) : Py Unit × Deque α :=
+  let maxlen := d.maxlen
+  match it.getIter d with
+  | (.error e, d) => (.error e, d)
+  | (.ok (), d) =>
+    if maxlen = 0 then consumeLoop it.nexts d
+    else
+      let d := if d.size = 0 then { d with left := 1, right := 0 } else d
+      pushLoop appendM maxlen it.nexts d
+
+/-- `deque_extendleft_impl` (_collectionsmodule.c:534-575): `maxlen` at :539,
+`PyObject_GetIter` :552-554, `consume_iterator` :556-557, heuristic :560-565, loop. -/
+def extendleftRe (d : Deque α) (it : ReIter α) : Py Unit × Deque α :=
+  let maxlen := d.maxlen
+  match it.getIter d with
+  | (.error e, d) => (.error e, d)
+  | (.ok (), d) =>
+    if maxlen = 0 then consumeLoop it.nexts d
+    else
+      let d := if d.size = 0 then { d with left := 64 - 1, right := 64 - 2 } else d
+      pushLoop appendleftM maxlen it.nexts d
+
+/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:578-590): `deque_extend`,
+then `d` itself on success. -/
+def iaddRe (d : Deque α) (it : ReIter α) : Py Unit × Deque α := d.extendRe it
+
+/-- What `extendRe` does with an iterator yielding `xs` that does not touch the deque
+(`extendRe_ofList` in `DequeOps` proves it): nothing when `maxlen == 0`, otherwise
+the heuristic and one `deque_append_lock_held` per item. -/
 def extend (d : Deque α) (xs : List α) : Deque α :=
   if d.maxlen = 0 then d
   else
     let d := if d.size = 0 then { d with left := 1, right := 0 } else d
     xs.foldl (fun d x => d.appendM x d.maxlen) d
 
-/-- `deque_extendleft_impl` (_collectionsmodule.c:534-575), the same after
-`PyObject_GetIter`. -/
+/-- The same for `extendleftRe`. -/
 def extendleft (d : Deque α) (xs : List α) : Deque α :=
   if d.maxlen = 0 then d
   else
     let d := if d.size = 0 then { d with left := 64 - 1, right := 64 - 2 } else d
     xs.foldl (fun d x => d.appendleftM x d.maxlen) d
 
-/-- `d.extend(iterable)` for an iterable other than `d`: `PyObject_GetIter`, the
-items, then `finalize_iterator` (items taken before the iterator fails stay). -/
-def extendIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α :=
-  match src with
-  | .notIterable t => (.error (notIterableErr t), d)
-  | .iter xs e => (finalizeIterator e, d.extend xs)
-
-/-- `d.extendleft(iterable)`. -/
+/-- `d.extend(iterable)` / `d.extendleft(iterable)` / `d += iterable` for an iterable
+that does not touch the deque. -/
+def extendIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.extendRe (.ofIterable src)
 def extendleftIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α :=
-  match src with
-  | .notIterable t => (.error (notIterableErr t), d)
-  | .iter xs e => (finalizeIterator e, d.extendleft xs)
+  d.extendleftRe (.ofIterable src)
+def iadd (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.iaddRe (.ofIterable src)
 
-/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:578-590). -/
-def iadd (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.extendIter src
-
-/-- `d.extend(d)` / `d.extendleft(d)` / `d += d`: `PySequence_List(d)` first
-(_collectionsmodule.c:487-495, 538-546). -/
+/-- `d.extend(d)` / `d += d` (_collectionsmodule.c:487-495): `PySequence_List(d)`, then
+`deque_extend` over that private list, which no Python code can reach; `d.extendleft(d)`
+(:542-550) the same with `deque_extendleft_impl`. -/
 def extendSelf (d : Deque α) : Deque α := d.extend d.items
 def extendleftSelf (d : Deque α) : Deque α := d.extendleft d.items
 
@@ -219,7 +291,7 @@ def clear (d : Deque α) : Deque α :=
   if d.size = 0 then d
   else { d with items := [], left := CENTER + 1, right := CENTER, state := d.state + 1 }
 
-/-- The fill of `deque_copy_impl` (_collectionsmodule.c:608-648), exact `deque`
+/-- The fill of `deque_copy_impl` (_collectionsmodule.c:608-646), exact `deque`
 type: a new deque with the same `maxlen`, filled from the left by walking the
 blocks of the old one. -/
 def copyExact (d : Deque α) : Deque α :=
@@ -228,9 +300,13 @@ def copyExact (d : Deque α) : Deque α :=
     (d.items.foldl (fun nd x => nd.appendM x nd.maxlen) { nd with left := 1, right := 0 })
   else nd
 
-/-- `deque_init_impl` (_collectionsmodule.c:1755-1778) for an iterable other
-than `d`. `xs` is what the iterable yields after the clear. -/
-def init (d : Deque α) (src : PyIterable α) (maxlenobj : MaxlenArg) : Py Unit × Deque α :=
+/-- `deque_init_impl` (_collectionsmodule.c:1755-1778): `maxlen` parsed (:1758-1767,
+`None` and an absent argument both mean -1), stored (:1768), the deque cleared if it is
+not empty (:1769-1770: a re-initialisation), then `deque_extend_impl` only when an
+iterable was given (:1771-1776; `none` is `iterable == NULL`, which leaves the indices
+where they are). An iterable equal to `d` is the self case of `deque_extend_impl`: the
+cleared deque as a list, i.e. `some (.ofList [] none)`. -/
+def initRe (d : Deque α) (iterable : Option (ReIter α)) (maxlenobj : MaxlenArg) : Py Unit × Deque α :=
   let parsed : Py Int := match maxlenobj with
     | .absent => .ok (-1)
     | .other => .error (.typeError "an integer is required")
@@ -243,11 +319,25 @@ def init (d : Deque α) (src : PyIterable α) (maxlenobj : MaxlenArg) : Py Unit 
   | .ok maxlen =>
     let d : Deque α := { d with maxlen }
     let d : Deque α := if d.size > (0 : Int) then d.clear else d
-    d.extendIter src
+    match iterable with
+    | none => (.ok (), d)
+    | some it => d.extendRe it
+
+/-- `d.__init__(iterable, maxlen)` for an iterable that does not touch the deque. -/
+def init (d : Deque α) (src : PyIterable α) (maxlenobj : MaxlenArg) : Py Unit × Deque α :=
+  d.initRe (some (.ofIterable src)) maxlenobj
 
 /-- `type(tname)(xs, maxlen)`: `deque_new` then `deque_init`. -/
 def makeOf (tname : String) (xs : List α) (maxlen : MaxlenArg) : Py (Deque α) :=
   let (r, d) := (new tname).init (.iter xs none) maxlen
+  match r with
+  | .ok () => .ok d
+  | .error e => .error e
+
+/-- `type(tname)()` / `type(tname)(maxlen=m)`: `deque_new`, then `deque_init` with
+`iterable == NULL`. -/
+def makeEmpty (tname : String) (maxlen : MaxlenArg) : Py (Deque α) :=
+  let (r, d) := (new tname).initRe none maxlen
   match r with
   | .ok () => .ok d
   | .error e => .error e
@@ -265,17 +355,35 @@ def copy (d : Deque α) : Py (Deque α) :=
   else if d.maxlen < 0 then makeOf d.tname d.items .absent
   else makeOf d.tname d.items (.int d.maxlen)
 
-/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:678-707; `other`
-is a deque, or `.inr` the type name of anything else): copy, then
-`deque_extend_impl` with the other deque's items. `deque_concat` (:710-718) adds
-only the lock. -/
-def concat (d : Deque α) (other : Deque α ⊕ String) : Py (Deque α) :=
+/-- The right operand of `d + other`, as `PyObject_IsInstance(other, deque)`
+(Objects/abstract.c `object_isinstance`) classifies it: a deque instance, or an object
+whose `__class__` claims to be one, iterated by `deque_extend_impl` (`src`: what that
+iteration yields; it runs on the new deque, which no Python code can reach, so it is a
+`PyIterable`); anything else (`tname`: its type's name); or `__class__` raising (an
+exception other than `AttributeError`). -/
+inductive ConcatArg (α : Type) where
+  | inst (src : PyIterable α)
+  | notInst (tname : String)
+  | raises (e : PyExc)
+
+/-- A deque operand: iterating it yields its items. -/
+def ConcatArg.ofDeque {α : Type} (o : Deque α) : ConcatArg α := .inst (.iter o.items none)
+
+/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:678-707): the
+instance check (:684-691: `rv < 0` propagates, `rv == 0` is the `TypeError`), `copy`
+(:693-695), then `deque_extend_impl` on the copy (:699-703), whose failure discards it.
+`deque_concat` (:710-718) adds only the lock. -/
+def concat (d : Deque α) (other : ConcatArg α) : Py (Deque α) :=
   match other with
-  | .inr t => .error (.typeError s!"can only concatenate deque (not \"{t}\") to deque")
-  | .inl o =>
+  | .raises e => .error e
+  | .notInst t => .error (.typeError s!"can only concatenate deque (not \"{t}\") to deque")
+  | .inst src =>
     match d.copy with
     | .error e => .error e
-    | .ok nd => .ok (nd.extend o.items)
+    | .ok nd =>
+      match nd.extendIter src with
+      | (.error e, _) => .error e
+      | (.ok (), nd) => .ok nd
 
 /-! ### Rotation -/
 

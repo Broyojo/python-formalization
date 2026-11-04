@@ -13,18 +13,19 @@ open Lexer
 
 /-! ### `','.rr+`: the `_loop0_` of `',' rr` and the `_gather_` around it -/
 
-/-- `handle_alt_loop` for the alternative `',' elem=rr { elem }` of a `_loop0_` (the tail of a
-`','.rr+` gather): round `i` reads `,` (12) from `ss i`, then `rr` gives `vs i` and ends in
-`ss (i + 1)`; the loop stops at the first round where `,` or `rr` fails (round `n`), with the
-children in order and `_mark` the end of the last child (so a trailing `,` is left unread). -/
-theorem runLoop_sep (rr : Nat) (a : Alt) (ha : a.items = [.call (.tok 12), .call (.rule rr)])
+/-- `handle_alt_loop` for the alternative `sep elem=rr { elem }` of a `_loop0_` (the tail of a
+`sep.rr+` gather; `sep` is `,` (12) or, for `simple_stmts`, `;` (13)): round `i` reads the
+separator token `sep` from `ss i`, then `rr` gives `vs i` and ends in `ss (i + 1)`; the loop stops
+at the first round where `sep` or `rr` fails (round `n`), with the children in order and `_mark`
+the end of the last child (so a trailing separator is left unread). -/
+theorem runLoop_sep (sep rr : Nat) (a : Alt) (ha : a.items = [.call (.tok sep), .call (.rule rr)])
     (hact : a.action = some (.var 1)) (hex : a.extra = false) (st : Int × Int) :
     ∀ (n f : Nat) (vs : Nat → Ast) (ss ts : Nat → PS) (s' : PS) (acc : List Ast),
-    (∀ i, i < n → (∃ c, expectToken 12 (ss i) = (.tok c, ts i)) ∧
+    (∀ i, i < n → (∃ c, expectToken sep (ss i) = (.tok c, ts i)) ∧
       callRule (f + (n - i)) rr (ts i) = (vs i, ss (i + 1)) ∧ vs i ≠ .null ∧
       (ss (i + 1)).errorIndicator = false) →
-    (expectToken 12 (ss n) = (.null, s') ∨
-      ∃ (c : Token) (t : PS), expectToken 12 (ss n) = (.tok c, t) ∧ callRule f rr t = (.null, s')) →
+    (expectToken sep (ss n) = (.null, s') ∨
+      ∃ (c : Token) (t : PS), expectToken sep (ss n) = (.tok c, t) ∧ callRule f rr t = (.null, s')) →
     runLoop (f + n + 4) a (ss 0).mark st acc (ss 0) =
       ((((List.range n).map vs).reverse ++ acc, (ss n).mark, false, true), s') := by
   intro n
@@ -82,32 +83,33 @@ theorem callRule_gather {f id : Nat} {p : PS}
   simp only [hg, h3, Bool.false_eq_true, ↓reduceIte]
   split <;> simp_all
 
-/-- A `','.rr+` gather (`_gather_g`: `rr _loop0_lp`, `_loop0_lp`: `(',' rr)*`), from `p`: the
+/-- A `sep.rr+` gather (`_gather_g`: `rr _loop0_lp`, `_loop0_lp`: `(sep rr)*`, `sep` a token
+type), from `p`: the
 first `rr` at the entry state, then the loop's rounds (`runLoop_sep`) from the state after it; the
 result is the sequence of all the `rr` values in source order, ending after the last one; no first
 `rr` gives `NULL` with the mark back. -/
-def GatherSep (g lp rr : Nat) : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false →
+def GatherSepTok (sep g lp rr : Nat) : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false →
   p.level + 1 < MAXSTACK →
   (∀ (k0 : Ast) (s1 : PS) (n : Nat) (vs : Nat → Ast) (ss ts : Nat → PS) (s' : PS),
     callRule (f + n + 7) rr p.enter = (k0, s1) → k0 ≠ .null → s1.errorIndicator = false →
     s1.level = p.level + 1 →
     ss 0 = s1.enter →
-    (∀ i, i < n → (∃ c, expectToken 12 (ss i) = (.tok c, ts i)) ∧
+    (∀ i, i < n → (∃ c, expectToken sep (ss i) = (.tok c, ts i)) ∧
       callRule (f + (n - i)) rr (ts i) = (vs i, ss (i + 1)) ∧ vs i ≠ .null ∧
       (ss (i + 1)).errorIndicator = false) →
-    (expectToken 12 (ss n) = (.null, s') ∨
-      ∃ (c : Token) (t : PS), expectToken 12 (ss n) = (.tok c, t) ∧ callRule f rr t = (.null, s')) →
+    (expectToken sep (ss n) = (.null, s') ∨
+      ∃ (c : Token) (t : PS), expectToken sep (ss n) = (.tok c, t) ∧ callRule f rr t = (.null, s')) →
     callRule (f + n + 12) g p =
       (.seq (k0 :: (List.range n).map vs), { s' with mark := (ss n).mark }.leave.leave)) ∧
   (∀ (n : Nat) (s1 : PS), callRule (f + n + 7) rr p.enter = (.null, s1) →
     callRule (f + n + 12) g p = (.null, { s1 with mark := p.mark }.leave))
 
-theorem gatherSep_of {g lp rr : Nat}
+theorem gatherSepTok_of {sep g lp rr : Nat}
     (hg : ruleOf g = Rule.mk (ruleOf g).name .gather false false false false false
       [Alt.mk [.call (.rule rr), .call (.rule lp)] none 2 false false])
     (hl : ruleOf lp = Rule.mk (ruleOf lp).name .loop0 false false false false false
-      [Alt.mk [.call (.tok 12), .call (.rule rr)] (some (.var 1)) 2 false false]) :
-    GatherSep g lp rr := by
+      [Alt.mk [.call (.tok sep), .call (.rule rr)] (some (.var 1)) 2 false false]) :
+    GatherSepTok sep g lp rr := by
   intro f p he hlv
   have hl1 : p.level ≠ MAXSTACK := by omega
   have he' : p.enter.errorIndicator = false := he
@@ -119,7 +121,7 @@ theorem gatherSep_of {g lp rr : Nat}
     rw [callRule_gather (by rw [hg]) (by rw [hg]) (by rw [hg]) (by rw [hg]) (by rw [hg]) he hl1, hg]
   refine ⟨fun k0 s1 n vs ss ts s' h1 hk h1e h1l hs0 hstep hlast => ?_, fun n s1 h1 => ?_⟩
   · rw [show f + n + 12 = (f + n + 10) + 2 from rfl, hG]
-    have hloop := runLoop_sep rr ((ruleOf lp).alts.headD default) (by rw [hl]; rfl) (by rw [hl]; rfl)
+    have hloop := runLoop_sep sep rr ((ruleOf lp).alts.headD default) (by rw [hl]; rfl) (by rw [hl]; rfl)
       (by rw [hl]; rfl) (0, 0) n f vs ss ts s' [] hstep hlast
     rw [hs0] at hloop
     have hle : s1.level ≠ MAXSTACK := by omega
@@ -151,5 +153,16 @@ theorem gatherSep_of {g lp rr : Nat}
   · rw [show f + n + 12 = (f + n + 10) + 2 from rfl, hG]
     rw [alts_fail (by rfl) he' (by dsimp only; rw [items_call_null (by rw [call_rule, h1])]), alts_nil]
     rfl
+
+/-- `GatherSepTok` with the separator `,` (12), the separator of every gather but `simple_stmts`'
+`';'.simple_stmt+`. -/
+def GatherSep (g lp rr : Nat) : Prop := GatherSepTok 12 g lp rr
+
+theorem gatherSep_of {g lp rr : Nat}
+    (hg : ruleOf g = Rule.mk (ruleOf g).name .gather false false false false false
+      [Alt.mk [.call (.rule rr), .call (.rule lp)] none 2 false false])
+    (hl : ruleOf lp = Rule.mk (ruleOf lp).name .loop0 false false false false false
+      [Alt.mk [.call (.tok 12), .call (.rule rr)] (some (.var 1)) 2 false false]) :
+    GatherSep g lp rr := gatherSepTok_of hg hl
 
 end PyLean.PyGrammar.Peg

@@ -808,7 +808,11 @@ def computeCrOrigin (originDepth : Nat) (frames : List (String × Nat × String)
   crOriginCollect (crOriginCount originDepth frames 0) frames 0
 
 /-- `_Py_MakeCoro`, :1117-1162. Which of the three types the code flags select, and
-the tail initialised for each. -/
+the tail initialised for each. The masked flags are compared with `==`: exactly `CO_GENERATOR`
+is a generator, exactly `CO_ASYNC_GENERATOR` an async generator, and anything else a coroutine,
+since `assert(coro_flags)` and `assert (coro_flags == CO_COROUTINE)` (:1121, :1139) are compiled
+out of a release build (no flags, or two of them, set with `code.replace(co_flags=...)`, make a
+coroutine on 3.15.2). The result is never `none`. -/
 def pyMakeCoro (w : World V X) (code : Code) (funcName funcQualname : Obj V) : Option (GenObj V) :=
   let coroFlags := code.flags &&& (CO_GENERATOR ||| CO_COROUTINE ||| CO_ASYNC_GENERATOR)
   if coroFlags = CO_GENERATOR then
@@ -816,13 +820,12 @@ def pyMakeCoro (w : World V X) (code : Code) (funcName funcQualname : Obj V) : O
   else if coroFlags = CO_ASYNC_GENERATOR then
     some { makeGen .asyncGen code funcName funcQualname with
            finalizer := none, agClosed := false, agHooksInited := false, agRunningAsync := false }
-  else if coroFlags = CO_COROUTINE then
+  else
     let g := makeGen .coro code funcName funcQualname
     if w.originDepth = 0 then
       some { g with origin := none }
     else
       some { g with origin := some (computeCrOrigin w.originDepth w.callStack) }
-  else none
 
 /-- `gen_new_with_qualname`, :1164-1199: the frame is copied, the state is
 `FRAME_CREATED`, and a NULL name or qualname falls back to the code object's. -/

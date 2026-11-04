@@ -169,6 +169,65 @@ def jMaxlen (op : Array Json) (k : Nat) : Except String MaxlenArg := do
   | some (.str _) => return .other
   | some v => return .int (← v.getInt?)
 
+/-- What a re-entrant iterator of the difftest does to the deque under test before
+yielding (or instead of yielding): nothing, `d.append(0)`, `d.clear()`,
+`d.__init__(maxlen=m)`, `d.pop()`, raise `ValueError('it')`, raise `StopIteration`. -/
+inductive ReAct where
+  | nop | app | clr | init (m : MaxlenArg) | pop | raise | stop
+
+def ReAct.run (a : ReAct) (d : Deque DElem) : Py Unit × Deque DElem :=
+  match a with
+  | .nop => (.ok (), d)
+  | .app => (.ok (), d.append (.int 0))
+  | .clr => (.ok (), d.clear)
+  | .init m => d.initRe none m
+  | .pop =>
+    match d.pop with
+    | .ok (_, d') => (.ok (), d')
+    | .error e => (.error e, d)
+  | .raise => (.error (.valueError "it"), d)
+  | .stop => (.error .stopIteration, d)
+
+def jReAct (a : Array Json) : Except String ReAct := do
+  match ← (← arg a 0).getStr? with
+  | "n" | "y" => pure .nop
+  | "a" => pure .app
+  | "c" => pure .clr
+  | "i" => pure (.init (← jMaxlen a 1))
+  | "p" => pure .pop
+  | "r" => pure .raise
+  | "s" => pure .stop
+  | k => throw s!"react {k}"
+
+/-- A step `[act, ..., x]`: act, then yield `x` (the last entry); `["r"]` and `["s"]`
+raise. For `"i"` the entry before `x` is the `maxlen` (`null`: none). -/
+def jReStep (j : Json) : Except String (NextFn DElem) := do
+  let a ← j.getArr?
+  let act ← jReAct a
+  let x ← if a.size ≥ 2 then jElem a[a.size - 1]! else pure (DElem.int 0)
+  return fun d =>
+    match act.run d with
+    | (.error e, d) => (.error e, d)
+    | (.ok (), d) => (.ok x, d)
+
+/-- `[pre, steps]`: `__iter__` runs `pre` (and raises if it raises), then the steps. -/
+def jReIter (pre steps : Json) : Except String (ReIter DElem) := do
+  let act ← jReAct (← pre.getArr?)
+  let nexts ← (← steps.getArr?).toList.mapM jReStep
+  return ⟨act.run, nexts⟩
+
+/-- The right operand of `d + other` in the difftest. -/
+def jConcatArg (op : Array Json) : Except String (Deque.ConcatArg DElem) := do
+  match ← (← arg op 1).getStr? with
+  | "fake" =>
+    let xs ← jElems (← arg op 2)
+    let e : Option PyExc := if op.size > 3 then some (.valueError "it") else none
+    pure (.inst (.iter xs e))
+  | "fake_noiter" => pure (.inst (.notIterable "F2"))
+  | "cls_raise" => pure (.raises (.valueError "cls"))
+  | "cls_attr" => pure (.notInst "H")
+  | k => throw s!"concat arg {k}"
+
 /-- A deque under test and its iterators (`true`: reversed). -/
 structure DState where
   d : Deque DElem
@@ -202,6 +261,12 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
   | "extend_bad" => return pair (d.extendIter (.notIterable "int")) (fun _ => unitJ)
   | "extendleft_bad" => return pair (d.extendleftIter (.notIterable "int")) (fun _ => unitJ)
   | "iadd_bad" => return pair (d.iadd (.notIterable "int")) (fun _ => unitJ)
+  | "extend_re" => return pair (d.extendRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
+  | "extendleft_re" => return pair (d.extendleftRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
+  | "iadd_re" => return pair (d.iaddRe (← jReIter (← arg op 1) (← arg op 2))) (fun _ => unitJ)
+  | "init_re" => return pair (d.initRe (some (← jReIter (← arg op 1) (← arg op 2))) (← jMaxlen op 3)) (fun _ => unitJ)
+  | "init_noarg" => return pair (d.initRe none (← jMaxlen op 1)) (fun _ => unitJ)
+  | "add_odd" => return same (pyJ dequeJ (d.concat (← jConcatArg op)))
   | "extend_self" | "iadd_self" => return (okJ unitJ, { s with d := d.extendSelf })
   | "extendleft_self" => return (okJ unitJ, { s with d := d.extendleftSelf })
   | "rotate" => return keep (d.rotate ((← optArg op 1).getD 1)) (fun _ => unitJ) id
@@ -221,9 +286,9 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
     let other ← match Deque.make (← jElems (← arg op 1)) (← jMaxlen op 2) with
       | .ok o => pure o
       | .error _ => throw "add: bad other deque"
-    return same (pyJ dequeJ (d.concat (.inl other)))
-  | "add_self" => return same (pyJ dequeJ (d.concat (.inl d)))
-  | "add_bad" => return same (pyJ dequeJ (d.concat (.inr "list")))
+    return same (pyJ dequeJ (d.concat (.ofDeque other)))
+  | "add_self" => return same (pyJ dequeJ (d.concat (.ofDeque d)))
+  | "add_bad" => return same (pyJ dequeJ (d.concat (.notInst "list")))
   | "clear" => return (okJ unitJ, { s with d := d.clear })
   | "init" => return pair (d.init (.iter (← jElems (← arg op 1)) none) (← jMaxlen op 2)) (fun _ => unitJ)
   | "init_self" => return pair (d.init (.iter [] none) (← jMaxlen op 1)) (fun _ => unitJ)
@@ -231,12 +296,14 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
   | "maxlen" => return same (okJ (match d.getMaxlen with | none => Json.null | some m => toJson m))
   | "repr" => return same (pyJ toJson (d.repr DElem.repr false))
   | "repr_nested" =>
-    -- repr(d) of a deque holding itself as the last item
+    -- `c = d.copy(); c.append(c); repr(c)`: a deque holding itself as the last item
     let inner ← match d.repr DElem.repr true with
       | .ok v => pure v
       | .error _ => throw "repr"
     let r : DElem → Py String := fun e => if e = .mut 99 then .ok inner else e.repr
-    return same (pyJ toJson ((d.append (.mut 99)).repr r false))
+    match d.copy with
+    | .ok c => return same (pyJ toJson ((c.append (.mut 99)).repr r false))
+    | .error e => return same (errJ e)
   | "reduce" =>
     let (m, _) := d.reduce
     return same (okJ (Json.arr #[(match m with | none => Json.null | some v => toJson v),
@@ -727,10 +794,11 @@ def facOf (name : String) : Factory Int Int :=
   match name with
   | "null" => .null
   | "none" => .none
-  | "F1" => .call "F1" (fun d => (.error (.valueError "fac"), d))
-  | "F2" => .call "F2" (fun d => (.ok 1, dictSet d 100 7))
-  | "F3" => .call "F3" (fun d => (.ok 1, dictSet d 1 5))
-  | _ => .call "F0" (fun d => (.ok 0, d))
+  | "F1" => .call (.ok "F1") (fun d => (.error (.valueError "fac"), d))
+  | "F2" => .call (.ok "F2") (fun d => (.ok 1, dictSet d 100 7))
+  | "F3" => .call (.ok "F3") (fun d => (.ok 1, dictSet d 1 5))
+  | "FR" => .call (.error (.valueError "frepr")) (fun d => (.ok 0, d))
+  | _ => .call (.ok "F0") (fun d => (.ok 0, d))
 
 def itemsJ (d : PyDict Int Int) : Json := toJson (d.map (fun kv => [kv.1, kv.2]))
 
@@ -742,45 +810,65 @@ def jItems (j : Json) : Except String (PyDict Int Int) := do
     let some b := q[1]? | throw "pair"
     return ((← a.getInt?), (← b.getInt?)))
 
-def baseRepr (d : PyDict Int Int) : String :=
-  "{" ++ ", ".intercalate (d.map (fun kv => s!"{kv.1}: {kv.2}")) ++ "}"
+def baseRepr (d : PyDict Int Int) : Py String :=
+  .ok ("{" ++ ", ".intercalate (d.map (fun kv => s!"{kv.1}: {kv.2}")) ++ "}")
+
+/-- The repr of a factory as an argument of `__reduce__`. -/
+def facJ : Factory Int Int → Json
+  | .null | .none => toJson "None"
+  | .call r _ => match r with | .ok s => toJson s | .error _ => toJson "<repr raises>"
+
+def redJ : DefDict.RedItem Int Int → Json
+  | .type t => toJson t
+  | .args fs => Json.arr (fs.map facJ).toArray
+  | .none => Json.null
+  | .iter xs _ => itemsJ xs
 
 def stepDD (dd : DefDict Int Int) (op : Array Json) : Except String (Json × DefDict Int Int) := do
   let name ← (← arg op 0).getStr?
   let pair (r : Py Int × DefDict Int Int) : Json × DefDict Int Int := (pyJ toJson r.1, r.2)
-  let dj (x : DefDict Int Int) : Json := Json.arr #[toJson x.tname, itemsJ x.items,
-    toJson (DefDict.repr x baseRepr false)]
+  let dj (x : DefDict Int Int) : Py Json := do
+    let r ← DefDict.repr x baseRepr (.ok false)
+    return Json.arr #[toJson x.tname, itemsJ x.items, toJson r]
+  let djr (r : Option (DefDict Int Int)) : Json :=
+    match r with | some x => pyJ id (dj x) | none => okJ (toJson "NI")
   match name with
   | "getitem" => return pair (dd.getitem toString (← jInt (← arg op 1)))
   | "missing" => return pair (dd.missing toString (← jInt (← arg op 1)))
-  | "copy" => return (okJ (dj dd.copy), dd)
-  | "reduce" =>
-    let (f, items) := dd.reduce
-    return (okJ (Json.arr #[(match f with | some r => toJson r | none => Json.null), itemsJ items]), dd)
-  | "repr" => return (okJ (toJson (dd.repr baseRepr false)), dd)
+  | "copy" => return (pyJ id (dj dd.copy), dd)
+  | "reduce" => return (pyJ (fun l => Json.arr (l.map redJ).toArray) (dd.reduce (.ok (.iter dd.items none))), dd)
+  | "reduce_raise" =>
+    return (pyJ (fun l => Json.arr (l.map redJ).toArray)
+      ({ dd with tname := "DDI" }.reduce (.error (.valueError "items"))), dd)
+  | "reduce_bad" =>
+    return (pyJ (fun l => Json.arr (l.map redJ).toArray)
+      ({ dd with tname := "DDJ" }.reduce (.ok (.notIterable "int"))), dd)
+  | "repr" => return (pyJ toJson (dd.repr baseRepr (.ok false)), dd)
+  | "repr_base_raise" =>
+    return (pyJ toJson (dd.repr (fun _ => .error (.valueError "vrepr")) (.ok false)), dd)
   | "repr_nested" =>
-    let inner := ({ dd with factory := facOf "F0" }).repr baseRepr true
-    let outer := ({ dd with factory := .call inner (fun d => (.ok 0, d)) }).repr baseRepr false
-    return (okJ (toJson outer), dd)
+    let inner := ({ dd with factory := facOf "F0" }).repr baseRepr (.ok true)
+    let outer := ({ dd with factory := .call inner (fun d => (.ok 0, d)) }).repr baseRepr (.ok false)
+    return (pyJ toJson outer, dd)
   | "or_dict" =>
     let r := DefDict.orOp (.dd dd) (.plain (dictUpdate [] (← jItems (← arg op 1))))
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "ror_dict" =>
     let r := DefDict.orOp (.plain (dictUpdate [] (← jItems (← arg op 1)))) (.dd dd)
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "or_dd" =>
     let o : DefDict Int Int := ⟨dictUpdate [] (← jItems (← arg op 1)), facOf (← (← arg op 2).getStr?), "defaultdict"⟩
     let r := DefDict.orOp (.dd dd) (.dd o)
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "or_frozen" =>
     let r := DefDict.orOp (.dd dd) (.frozen (dictUpdate [] (← jItems (← arg op 1))))
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "ror_frozen" =>
     let r := DefDict.orOp (.frozen (dictUpdate [] (← jItems (← arg op 1)))) (.dd dd)
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "or_bad" =>
     let r := DefDict.orOp (.dd dd) .notDict
-    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+    return (djr r, dd)
   | "init" =>
     let f ← (← arg op 1).getStr?
     let first : DefDict.FactoryArg Int Int := if f == "absent" then .absent else if f == "bad" then .bad
@@ -800,19 +888,22 @@ inductive CKey where
   | unhash
   deriving Repr, DecidableEq, Inhabited
 
-/-- Values: ints, and a str (whose `+ 1` raises). -/
+/-- Values: ints, a str (whose `+ 1` raises), and an object whose `__add__` clears the
+mapping and returns 99. -/
 inductive CVal where
   | int (n : Int)
   | str
+  | clr
   deriving Repr, DecidableEq, Inhabited
 
 def cHash : CKey → Py Unit
   | .int _ => .ok ()
   | .unhash => .error (.typeError "unhashable type: 'list'")
 
-def cAdd : CVal → Py CVal
-  | .int n => .ok (.int (n + 1))
-  | .str => .error (.typeError "can only concatenate str (not \"int\") to str")
+def cAdd (d : PyDict CKey CVal) : CVal → Py CVal × PyDict CKey CVal
+  | .int n => (.ok (.int (n + 1)), d)
+  | .str => (.error (.typeError "can only concatenate str (not \"int\") to str"), d)
+  | .clr => (.ok (.int 99), [])
 
 /-- `dict.get` reports an unhashable key differently from `_PyObject_HashFast`. -/
 def cHashGet : CKey → Py Unit
@@ -826,13 +917,14 @@ def jCKey (j : Json) : Except String CKey :=
 
 def jCVal (j : Json) : Except String CVal :=
   match j with
+  | .str "C" => .ok .clr
   | .str _ => .ok .str
   | v => CVal.int <$> v.getInt?
 
 def cItemsJ (d : PyDict CKey CVal) : Json :=
   toJson (d.map (fun kv =>
     Json.arr #[(match kv.1 with | .int n => toJson n | .unhash => toJson "U"),
-               (match kv.2 with | .int n => toJson n | .str => toJson "S")]))
+               (match kv.2 with | .int n => toJson n | .str => toJson "S" | .clr => toJson "C")]))
 
 def jCItems (j : Json) : Except String (PyDict CKey CVal) := do
   let arr ← j.getArr?
@@ -842,25 +934,38 @@ def jCItems (j : Json) : Except String (PyDict CKey CVal) := do
     let some b := q[1]? | throw "pair"
     return ((← jCKey a), (← jCVal b)))
 
+/-- A key of the iterator: `"X"` clears the mapping, then yields 0. -/
+def jCNext (j : Json) : Except String (KeyNext CKey (PyDict CKey CVal)) :=
+  match j with
+  | .str "X" => .ok (fun _ => (.ok (.int 0), []))
+  | v => do let k ← jCKey v; pure (fun d => (.ok k, d))
+
 def runCount (j : Json) : Except String Json := do
   let d ← jCItems (← field j "init")
-  let ks ← (← (← field j "keys").getArr?).toList.mapM jCKey
+  let ks ← (← (← field j "keys").getArr?).toList.mapM jCNext
   let raises ← getBool j "raises"
   let bad ← getBool j "bad"
-  let src : PyIterable CKey := if bad then .notIterable "int"
-    else .iter ks (if raises then some (.valueError "iter") else none)
+  let src : KeySrc CKey (PyDict CKey CVal) := if bad then .notIterable "int"
+    else .iter (ks ++ (if raises then [fun d => (.error (.valueError "iter"), d)] else []))
   let (r, d') ←
     match ← getStr j "mapping" with
     | "dict" => pure (countDict cHash cAdd (.int 1) src d)
-    | _ => pure (countMapping (dictMget cHashGet (.int 0)) dictMset (· == .int 0) cAdd (.int 1) src d)
+    | _ => pure (countMapping (.ok ()) (dictMget cHashGet (.int 0)) dictMset (· == .int 0) cAdd (.int 1) src d)
   return okJ (Json.arr #[pyJ (fun _ => unitJ) r, cItemsJ d'])
 
 def runTG (j : Json) : Except String Json := do
-  match tuplegetterNew (← getInt j "index") (← getInt j "doc") with
+  let doc : Option Int ← match ← field j "doc" with
+    | .str _ => pure none
+    | v => some <$> v.getInt?
+  match tuplegetterNew (← getInt j "index") doc with
   | .error e => return errJ e
   | .ok g =>
     let xs ← jInts (← field j "tuple")
-    let g' : TupleGetter Int := g
+    let g' : TupleGetter (Option Int) := g
+    let docJ : Option Int → Json := fun o => match o with | some v => toJson v | none => toJson "R"
+    let docRepr : Option Int → Py String := fun o => match o with
+      | some v => .ok (toString v)
+      | none => .error (.valueError "vrepr")
     let r1 : Py (Option Int) := tuplegetterGet g' (.tuple xs)
     let r2 : Py (Option Int) := tuplegetterGet g' (.none)
     let r3 : Py (Option Int) := tuplegetterGet g' (.null)
@@ -869,7 +974,7 @@ def runTG (j : Json) : Except String Json := do
     let (i, d) := tuplegetterReduce g'
     return okJ (Json.arr #[pyJ enc r1, pyJ enc r2, pyJ enc r3, pyJ enc r4,
       errJ (tuplegetterSet (some (0 : Int))), errJ (tuplegetterSet (none : Option Int)),
-      Json.arr #[toJson i, toJson d], toJson (tuplegetterRepr g' toString)])
+      Json.arr #[toJson i, docJ d], pyJ toJson (tuplegetterRepr g' docRepr)])
 
 def runOps {σ : Type} (step : σ → Array Json → Except String (Json × σ)) (enc : σ → Json)
     (s : σ) (ops : List Json) : Except String Json := do
@@ -929,7 +1034,10 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "deque" =>
     let t := (← getStr j "tname")
     let ml := (j.getObjVal? "maxlen").toOption.getD .null
-    match Deque.makeOf t (← jElems (← field j "init")) (← jMaxlen #[ml] 0) with
+    let noinit := (j.getObjVal? "noinit").toOption.isSome
+    let made : Py (Deque DElem) ← if noinit then pure (Deque.makeEmpty t (← jMaxlen #[ml] 0))
+      else pure (Deque.makeOf t (← jElems (← field j "init")) (← jMaxlen #[ml] 0))
+    match made with
     | .ok d => runOps stepDeque (fun s => Json.arr #[toJson (s.d.items.map DElem.toJ), toJson s.d.blocks]) ⟨d, #[]⟩ ops
     | .error e => return errJ e
   | other => throw s!"unknown fn {other}"

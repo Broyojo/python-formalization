@@ -94,11 +94,38 @@ def lex_stacks : List String := [
 def lex_untokenize_lossless : List String := [
   "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
 
+def peg_arguments_parsing_error : List String := [
+  "_PyPegen_arguments_parsing_error"]
+
+def peg_check_barry : List String := [
+  "_PyPegen_check_barry_as_flufl"]
+
+def peg_check_fstring_conversion : List String := [
+  "result_token_with_metadata", "_PyPegen_check_fstring_conversion"]
+
+def peg_check_legacy_stmt : List String := [
+  "_PyPegen_check_legacy_stmt"]
+
 def peg_checked_from_import : List String := [
   "_PyPegen_checked_from_import"]
 
 def peg_concat : List String := [
   "_build_concatenated_str"]
+
+def peg_concat_folds : List String := [
+  "_build_concatenated_str"]
+
+def peg_concatenate_strings : List String := [
+  "_build_concatenated_bytes", "_build_concatenated_unicode", "_build_concatenated_joined_str", "_PyPegen_concatenate_strings"]
+
+def peg_concatenate_tstrings : List String := [
+  "_PyPegen_concatenate_tstrings"]
+
+def peg_constant_from_string : List String := [
+  "_PyPegen_constant_from_string"]
+
+def peg_debug_info_source : List String := [
+  ]
 
 def peg_decode_error : List String := [
   ]
@@ -109,14 +136,44 @@ def peg_decode_format_spec : List String := [
 def peg_decode_known : List String := [
   ]
 
+def peg_ensure_complex : List String := [
+  "_PyPegen_ensure_imaginary", "_PyPegen_ensure_real"]
+
+def peg_escape_warning_line : List String := [
+  "_PyPegen_decode_fstring_part", "_get_resized_exprs", "_PyPegen_joined_str", "_PyPegen_constant_from_token"]
+
 def peg_expect_token : List String := [
   "_PyPegen_expect_token"]
+
+def peg_expr_name : List String := [
+  "_PyPegen_get_expr_name"]
 
 def peg_fill_token : List String := [
   "_PyPegen_fill_token"]
 
 def peg_first_error : List String := [
   ]
+
+def peg_format_spec_joinedstr : List String := [
+  "_PyPegen_setup_full_format_spec", "_build_concatenated_unicode", "_PyPegen_concatenate_strings"]
+
+def peg_formatted_value_interpolation : List String := [
+  ]
+
+def peg_fstring_literal_twin : List String := [
+  "_PyPegen_decode_fstring_part", "_get_resized_exprs", "_PyPegen_template_str", "_PyPegen_joined_str", "_PyPegen_constant_from_token", "_PyPegen_constant_from_string"]
+
+def peg_interpolation_conversion : List String := [
+  "_get_interpolation_conversion"]
+
+def peg_joined_str_literal : List String := [
+  "_PyPegen_decode_fstring_part", "_get_resized_exprs", "_PyPegen_template_str", "_PyPegen_joined_str", "_PyPegen_constant_from_token"]
+
+def peg_joined_str_parts : List String := [
+  "_get_resized_exprs", "_PyPegen_template_str", "_PyPegen_joined_str"]
+
+def peg_last_comprehension_item : List String := [
+  "_PyPegen_get_last_comprehension_item"]
 
 def peg_last_token : List String := [
   "_PyPegen_get_last_nonnwhitespace_token"]
@@ -132,6 +189,9 @@ def peg_missing_comma : List String := [
 
 def peg_never_silent : List String := [
   "_PyPegen_run_parser"]
+
+def peg_nonparen_genexp : List String := [
+  "_PyPegen_nonparen_genexp_in_call"]
 
 def peg_raise_error : List String := [
   "_PyPegen_raise_error"]
@@ -153,6 +213,9 @@ def peg_roundtrip_parser : List String := [
 
 def peg_set_syntax_error : List String := [
   "_Pypegen_set_syntax_error"]
+
+def peg_setup_format_spec : List String := [
+  "result_token_with_metadata", "_PyPegen_setup_full_format_spec"]
 
 def peg_strip_interpolation : List String := [
   "_strip_interpolation_debug_expr"]

@@ -856,7 +856,9 @@ def isIterableImpl (v : Val) : RM Bool := do
   | .str _ | .bytes _ => pure true
   | .ref a =>
     match ← getObj a with
-    | .list _ | .tuple _ | .dict _ | .set .. | .range .. | .dictView .. | .gen _ => pure true
+    | .list _ | .tuple _ | .dict _ | .set .. | .range .. | .dictView .. => pure true
+    -- coroutines and async generators have no `tp_iter` and are not sequences
+    | .gen g => pure (g.kind == .gen)
     | .inst i =>
       if (← userLookup i.cls "__iter__").isSome then pure true
       else return (← userLookup i.cls "__getitem__").isSome
@@ -1768,14 +1770,33 @@ def mlMethImpl (f self : Val) (args : List Val) : RM Val := do
     | _ => fault "no ml_meth"
   | _ => fault "no ml_meth"
 
+/-- The static exception types `_PyExc_InitTypes` gives `tp_vectorcall = BaseException_vectorcall`
+(`Objects/exceptions.c:4495-4507`): those whose `tp_new` is `BaseException_new` and `tp_init` is
+`BaseException_init` after `PyType_Ready`, that is `BaseException` itself (`:648`), every
+`SimpleExtendsException` (`:659-671`) and `KeyError` (`ComplexExtendsException` with `BaseException`
+storage and an inherited `tp_new`, `:3037-3038`). The others have their own `tp_init` or `tp_new`
+(`MemoryError_new`, `OSError`, `ImportError`, `StopIteration`, `SyntaxError`, `NameError`,
+`AttributeError`, `SystemExit`, the Unicode errors, the groups) or are heap types (`ExceptionGroup`).
+Read off `tp_vectorcall` on 3.15.2 with ctypes. -/
+def excTypesWithVectorcall : List String :=
+  ["BaseException", "Exception", "TypeError", "StopAsyncIteration", "GeneratorExit", "KeyboardInterrupt",
+   "EOFError", "RuntimeError", "RecursionError", "PythonFinalizationError", "NotImplementedError",
+   "LookupError", "IndexError", "KeyError", "ValueError", "UnicodeError", "AssertionError",
+   "ArithmeticError", "FloatingPointError", "OverflowError", "ZeroDivisionError", "SystemError",
+   "ReferenceError", "BufferError", "Warning", "UserWarning", "DeprecationWarning",
+   "PendingDeprecationWarning", "SyntaxWarning", "RuntimeWarning", "FutureWarning", "ImportWarning",
+   "UnicodeWarning", "BytesWarning", "EncodingWarning", "ResourceWarning"]
+
 /-- `tp_vectorcall != NULL` of a type (`.tp_vectorcall =` in `Objects/*.c`: `range`, `bool`, `dict`,
-`enumerate`, `filter`, `float`, `frozenset`, `list`, `int`, `map`, `reversed`, `set`, `super`,
-`tuple`, `type`, `str`). A class has none: `type_new` does not set it. -/
+`enumerate`, `filter`, `float`, `frozenset`, `frozendict`, `list`, `int`, `map`, `reversed`, `set`,
+`super`, `tuple`, `type`, `str`, and the exception types of `excTypesWithVectorcall`). A class has
+none: `type_new` does not set it, so a subclass of `ValueError` has none either. -/
 def hasTypeVectorcallImpl (_ : Rt) (v : Val) : Bool :=
   match v with
   | .cls n =>
-    ["range", "bool", "dict", "enumerate", "filter", "float", "frozenset", "list", "int", "map",
-      "reversed", "set", "super", "tuple", "type", "str"].contains n
+    ["range", "bool", "dict", "enumerate", "filter", "float", "frozenset", "frozendict", "list", "int",
+      "map", "reversed", "set", "super", "tuple", "type", "str"].contains n ||
+    excTypesWithVectorcall.contains n
   | _ => false
 
 /-- `PyGen_am_send` (`Objects/genobject.c:377-382`, the `am_send` of generators, coroutines and
