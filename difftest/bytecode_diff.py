@@ -578,10 +578,29 @@ def p_builders(r):
         out.append(guarded(f"print({x})"))
     # `_PyObject_FunctionStr`: both lookups and the comparison come before `str()`, the module first
     fs = r.choice(["raise ValueError('m')", "raise AttributeError('m')", "return QS('m')", "return 'builtins'",
-                   "return None", "return QS('builtins')"])
+                   "return None", "return QS('builtins')", "return NE(0)", "return NE(1)", "return NE(2)",
+                   "return NE(3)", "return QS('bad')"])
+    qn = r.choice(["QS('q')", "QS('q')", "QS('bad')"])
+    # `PyObject_RichCompareBool(module, "builtins", Py_NE)` raising or its result's truth test
+    # raising, `str(qualname)` raising, `str(x)` raising with no `__qualname__`: all NULL, so
+    # 'function'; a raising `str(dupkey)` is the exception DICT_MERGE raises
     out.append("class QS:\n    def __init__(self, t):\n        self.t = t\n    def __str__(self):\n        print('str', self.t)\n"
+               "        if self.t == 'bad':\n            raise KeyError('str-bad')\n"
                "        return self.t\n"
-               "class FX:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            return QS('q')\n"
+               "class TB:\n    def __bool__(self):\n        raise KeyError('tb')\n"
+               "class NE:\n    def __init__(self, k):\n        self.k = k\n    def __ne__(self, o):\n        print('ne', o)\n"
+               "        if self.k == 0:\n            raise ValueError('ne')\n        if self.k == 1:\n            return TB()\n"
+               "        return self.k == 2\n    def __str__(self):\n        return 'NE' + str(self.k)\n"
+               "class NoQS:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n            raise AttributeError('q')\n"
+               "        return object.__getattribute__(self, n)\n    def __call__(self, **k):\n        return k\n"
+               "    def __str__(self):\n        raise KeyError('nostr')\n"
+               "class SS(str):\n    def __str__(self):\n        print('dupkey str')\n        raise ValueError('dup-str')\n"
+               "class SK(str):\n    pass\n"
+               + guarded("print(NoQS()(**{'a': 1}, **{'a': 2}))") + "\n"
+               + guarded(f"print(f(**{{'a': 1}}, **{{{r.choice(['SS', 'SK'])}('a'): 2}}))") + "\n"
+               + guarded(f"print(f(**{{{r.choice(['SS', 'SK'])}('a'): 1}}, a=2))") + "\n"
+               "class FX:\n    def __getattribute__(self, n):\n        if n == '__qualname__':\n"
+               f"            return {qn}\n"
                f"        if n == '__module__':\n            {fs}\n        return object.__getattribute__(self, n)\n"
                "    def __call__(self, **k):\n        return k\n" + guarded("print(FX()(**{'a': 1}, **{'a': 2}))"))
     # a failed SET_ADD / MAP_ADD / LIST_APPEND leaves the container for the cleanup handler
@@ -619,19 +638,38 @@ def p_call_generic(r):
             "class Bad:\n    def __iter__(self):\n        raise " + r.choice(["TypeError('inner')", "ValueError('v')"]) + "\n"
             "def f(a, b=2, *c, d=4, **e):\n    return (a, b, c, d, sorted(e.items()))\n"
             "def g(x, /, y):\n    return (x, y)\n"
-            "class K:\n    def __init__(self, *a, **k):\n        self.a = (a, sorted(k.items()))\n")
+            "class K:\n    def __init__(self, *a, **k):\n        self.a = (a, sorted(k.items()))\n"
+            # `_PyStack_UnpackDict` takes any key whose type has Py_TPFLAGS_UNICODE_SUBCLASS
+            "class S(str):\n    pass\n"
+            "class S2(S):\n    pass\n"
+            "class NS:\n    def __hash__(self):\n        return 1\n")
     # builtins only where the model's argument parsing is CPython's: their messages for bad
     # arguments belong to the builtins, not to the call instructions
     callees = ["P().m", "bm", "f", "g", "D()", "E()", "K", "(lambda *a, **k: (a, k))", "P.m"]
     argss = ["", "1", "1, 2", "1, 2, 3", "a=1", "k=5", "1, k=5", "1, d=5", "x=1", "1, y=2", "*[1, 2]", "*It()",
              "*(1,)", "*Bad()", "*5", "**{'a': 1}", "**{1: 2}", "*[1], **{'k': 3}", "*It(), **{'zz': 0}",
-             "1, *[2], **{'b': 3}", "**{'d': 1, 'k': 2}"]
+             "1, *[2], **{'b': 3}", "**{'d': 1, 'k': 2}", "**{S('a'): 1}", "**{S('k'): 1}", "1, **{S2('d'): 7}",
+             "**{S('zz'): 1}", "**{'a': 1, NS(): 2}", "**{S('a'): 1, 3: 2}", "**{b'a': 1}", "1, **{S('x'): 0}"]
     out = [head, "bm = P().m", guarded("print(*It(), sep='-')"), guarded("print(len(*[[1, 2]]), dict(**{'a': 1}))"),
            guarded("print(*Bad())"), guarded("print(**{1: 2})")]
     for _ in range(r.randint(4, 10)):
         c, a = r.choice(callees), r.choice(argss)
         out.append(guarded(f"print(K({a}).a if {c!r} == 'K' else {c}({a}))"))
-    out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}))\n"
+    # the specialized Python calls: exact-args functions and methods, defaults, keyword-only
+    # parameters (never EXACT_ARGS), *args, keywords to a bound method, f(*t, **d)
+    out.append("def x2(a, b):\n    return (a, b)\n"
+               "def xd(a, b=7):\n    return (a, b)\n"
+               "def xk(a, *, b=3):\n    return (a, b)\n"
+               "def xv(a, *r):\n    return (a, r)\n"
+               "class XM:\n    def m(self, a):\n        return ('m', a)\n    def n(self, a, b=1):\n        return ('n', a, b)\n"
+               "xo = XM()\n"
+               "for _ in range(4):\n"
+               "    print(x2(1, 2), xd(1), xd(1, 2), xk(1), xk(1, b=4), xv(1), xv(1, 2), xo.m(5), xo.n(5), xo.n(a=5, b=6),\n"
+               "          x2(*(1, 2)), xd(*[1], **{'b': 9}), xo.m(*(3,)), xk(*(1,), **{S('b'): 8}))\n")
+    out.append(guarded("for _ in range(3):\n    print(x2(1))") + "\n" + guarded("for _ in range(3):\n    print(xo.m(a=1, z=2))"))
+    out.append(guarded("print(dict(**{S('a'): 1}), sorted(dict(**{S('b'): 2, 'c': 3}).items()))"))
+    out.append(guarded("print(dict(**{S('a'): 1, 2: 3}))"))
+    out.append("def loop(h):\n    for _ in range(3):\n        print(h(1), h(1, k=2), h(*[1]), h(*(1,), **{'k': 2}), h(1, **{S('k'): 3}))\n"
                + guarded("loop(" + r.choice(["bm", "P().m", "E()", "f", "(lambda *a, **k: (a, sorted(k.items())))"]) + ")"))
     return "\n".join(out)
 

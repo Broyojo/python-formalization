@@ -260,9 +260,13 @@ theorem unpackExRules_proven : UnpackExRules := by
 
 /-- The failure paths of `UNPACK_EX` that are not its own messages: `__next__` raising among the
 first `before` items, `_PyList_Extend(L, it)` failing in `PySequence_List` (whatever it raised,
-`PyObject_GetIter(it)` or `__length_hint__` or `__next__`), and `PyObject_GetIter(v)` raising
-anything but a `TypeError`. Each propagates with `v` popped (`ERROR_IF(res == 0)`, `:2152`), raised
-in the runtime the failing call left. -/
+`PyObject_GetIter(it)` or `__length_hint__` or `__next__`), and `PyObject_GetIter(v)` raising.
+Each propagates with `v` popped (`ERROR_IF(res == 0)`, `:2152`), raised in the runtime the failing
+call left. A `PyObject_GetIter(v)` failure goes through the same test as in `UNPACK_SEQUENCE`
+(`Python/ceval.c:2369-2376`): anything but a `TypeError` propagates; a `TypeError` on a value with
+`tp_iter` or the sequence protocol (`isIterable`) propagates unchanged; a `TypeError` on any other
+value is replaced by `TypeError("cannot unpack non-iterable T object")`, `T` the type name cut to
+200 bytes. -/
 def UnpackExErrors : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val),
   (∀ it rt1 xs rt2 x rt3, e.om.getIter e.ctx v regs.rt = .ok it rt1 → NextChain e.om e.ctx it rt1 xs rt2 →
     xs.length < e.oparg &&& 255 → iterNextOpt e.om e.ctx it rt2 = .error x rt3 →
@@ -273,12 +277,21 @@ def UnpackExErrors : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List 
     execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt3 }, rest⟩) ∧
   (∀ x rt1 rt2, e.om.getIter e.ctx v regs.rt = .error (.exc x) rt1 →
     givenMatches x 8 (.cls "TypeError") rt1 = .ok false rt2 →
-      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error (.exc x) ⟨{ regs with rt := rt2 }, rest⟩)
+      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error (.exc x) ⟨{ regs with rt := rt2 }, rest⟩) ∧
+  (∀ x rt1 rt2 rt3, e.om.getIter e.ctx v regs.rt = .error (.exc x) rt1 →
+    givenMatches x 8 (.cls "TypeError") rt1 = .ok true rt2 → e.om.isIterable v rt2 = .ok true rt3 →
+      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error (.exc x) ⟨{ regs with rt := rt3 }, rest⟩) ∧
+  (∀ x rt1 rt2 rt3 name rt4 y rt5, e.om.getIter e.ctx v regs.rt = .error (.exc x) rt1 →
+    givenMatches x 8 (.cls "TypeError") rt1 = .ok true rt2 → e.om.isIterable v rt2 = .ok false rt3 →
+    tpName v rt3 = .ok name rt4 →
+    typeError (α := Val) s!"cannot unpack non-iterable {trunc200 name} object" rt4 = .error y rt5 →
+      execOp e .UNPACK_EX ⟨regs, v :: rest⟩ = .error y ⟨{ regs with rt := rt5 }, rest⟩)
 
 theorem unpackExErrors_proven : UnpackExErrors := by
   intro e regs v rest
   refine ⟨fun it rt1 xs rt2 x rt3 h0 hc hlt hx => ?_, fun it rt1 xs rt2 x rt3 h0 hc hlen hext => ?_,
-    fun x rt1 rt2 h0 hm => ?_⟩
+    fun x rt1 rt2 h0 hm => ?_, fun x rt1 rt2 rt3 h0 hm hi => ?_,
+    fun x rt1 rt2 rt3 name rt4 y rt5 h0 hm hi hn ht => ?_⟩
   · have hf := first_run e.om e.ctx it (e.oparg &&& 255) (some (e.oparg >>> 8)) rt1 rt2 xs hc (by omega)
     obtain ⟨m, hm⟩ : ∃ m, (e.oparg &&& 255) - xs.length = m + 1 := ⟨(e.oparg &&& 255) - xs.length - 1, by omega⟩
     rw [hm] at hf
@@ -297,6 +310,13 @@ theorem unpackExErrors_proven : UnpackExErrors := by
   · have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error (.exc x) rt2 := by
       simp [unpackIterable, tryExc, h0, bind, EStateM.bind, hm, throw, throwThe, MonadExcept.throw,
         EStateM.throw, MonadExceptOf.throw]
+    bc_simp [execOp, UNPACK_EX, hr]
+  · have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error (.exc x) rt3 := by
+      simp [unpackIterable, tryExc, h0, bind, EStateM.bind, hm, hi, throw, throwThe, MonadExcept.throw,
+        EStateM.throw, MonadExceptOf.throw]
+    bc_simp [execOp, UNPACK_EX, hr]
+  · have hr : unpackIterable e.om e.ctx v (e.oparg &&& 255) (some (e.oparg >>> 8)) regs.rt = .error y rt5 := by
+      simp [unpackIterable, tryExc, h0, bind, EStateM.bind, hm, hi, hn, ht, pure, EStateM.pure]
     bc_simp [execOp, UNPACK_EX, hr]
 
 def UnpackExFull : Prop := UnpackExRules ∧ UnpackExErrors

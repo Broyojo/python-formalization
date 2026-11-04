@@ -2334,6 +2334,15 @@ bytecode-getattribute-frame-recursion	refuted	Python/bytecodes.c	opcode:LOAD_ATT
 bytecode-import	proven	Python/bytecodes.c	opcode:IMPORT_NAME,opcode:IMPORT_FROM
 bytecode-null-guards	proven	Python/bytecodes.c	opcode:_GUARD_NOS_NOT_NULL,opcode:_GUARD_TOS_NOT_NULL,opcode:_GUARD_NOS_NULL,opcode:_GUARD_THIRD_NULL
 bytecode-match	proven	Python/bytecodes.c	opcode:MATCH_CLASS,opcode:_MATCH_CLASS,opcode:MATCH_MAPPING,opcode:MATCH_SEQUENCE,opcode:MATCH_KEYS
+bytecode-call-py-general	proven	Python/bytecodes.c	opcode:CALL_PY_GENERAL,opcode:_CHECK_FUNCTION_VERSION,opcode:_CHECK_RECURSION_REMAINING,opcode:_PY_FRAME_GENERAL,opcode:_SAVE_RETURN_OFFSET,opcode:_PUSH_FRAME
+bytecode-call-bound-method-general	proven	Python/bytecodes.c	opcode:CALL_BOUND_METHOD_GENERAL,opcode:_CHECK_METHOD_VERSION,opcode:_EXPAND_METHOD
+bytecode-call-py-exact-args	proven	Python/bytecodes.c	opcode:CALL_PY_EXACT_ARGS,opcode:_CHECK_FUNCTION_EXACT_ARGS,opcode:_CHECK_STACK_SPACE,opcode:_INIT_CALL_PY_EXACT_ARGS
+bytecode-call-bound-method-exact-args	proven	Python/bytecodes.c	opcode:CALL_BOUND_METHOD_EXACT_ARGS,opcode:_CHECK_CALL_BOUND_METHOD_EXACT_ARGS,opcode:_INIT_CALL_BOUND_METHOD_EXACT_ARGS
+bytecode-call-kw-py	proven	Python/bytecodes.c	opcode:CALL_KW_PY,opcode:_CHECK_FUNCTION_VERSION_KW,opcode:_PY_FRAME_KW
+bytecode-call-kw-bound-recursion	refuted	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW,opcode:_PY_FRAME_KW
+bytecode-call-kw-bound-budget	proven	Python/bytecodes.c	opcode:CALL_KW_BOUND_METHOD,opcode:_CHECK_METHOD_VERSION_KW,opcode:_EXPAND_METHOD_KW
+bytecode-call-ex-py-recursion	refuted	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
+bytecode-call-ex-py-budget	proven	Python/bytecodes.c	opcode:CALL_EX_PY,opcode:_CHECK_IS_PY_CALLABLE_EX,opcode:_PY_FRAME_EX
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
