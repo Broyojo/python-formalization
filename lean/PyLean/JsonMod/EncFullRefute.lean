@@ -202,4 +202,90 @@ theorem dumpsTwinsSub_refuted : ¬ DumpsTwinsSub := by
   · cases h2; cases h3
   · cases h2
 
+/-- A `dict` subclass of type `DF` defined in `__main__`. -/
+def tDF : PyType := { name := "DF", module := "__main__", heap := true }
+
+/-- `DF(z=1)` where `DF.__len__` returns 0: one stored entry, `bool()` false, `items()` that of
+`dict`. -/
+def wDictSub : XVal := .mapSub tDF 1 false .ok [(.tup, .str (cs "z"), .int 1)] none
+
+theorem wDictSub_C : dumpsCX {} 10 wDictSub = .ok (cs "{\"z\": 1}") := by
+  simp only [wDictSub, dumpsCX, cObjX, cEnterX, cContX]
+  unfold cMapPart
+  simp [cSubItems, cMapItemsX, cKeyX, cWriteStringX, cFastEncode, writeStrObj, SObj.ofStr, intRepr,
+    decDigits, decDigitsF, maxStrDigits, XCfg.toE, writeEscapedAscii, asciiEscapeSize, Except.map, cObjX, liftE]
+  decide
+
+theorem wDictSub_Py : dumpsPyX {} 10 wDictSub = .ok (cs "{}") := by
+  simp only [wDictSub, dumpsPyX, iterJoinPyX, pyCallX, pyIterX, pyContX]
+  unfold pyDictPart
+  simp
+
+/-- With a `dict` subclass that overrides only `__len__` (or `__bool__`): its stored size is the
+number of its pairs and `items()` is `dict.items`, the pairs of exact-container values of
+`DumpsTwinsX`; exact separators, no custom encoder. When neither twin raises its
+`RecursionError`, the same text or the same exception. -/
+def dictSubOf (t : PyType) (tr : Bool) (kvs : List (XKey × XVal)) : XVal :=
+  .mapSub t kvs.length tr .ok (kvs.map fun (k, x) => (.tup, k, x)) none
+
+def DumpsTwinsDictSub : Prop :=
+  ∀ (cfg : XCfg) (c p : Nat) (t : PyType) (tr : Bool) (kvs : List (XKey × XVal)), cfg.Okx →
+    XVal.okxItems kvs = true →
+    ¬ IsRecCX (dumpsCX cfg c (dictSubOf t tr kvs)) → ¬ IsRecPyX (dumpsPyX cfg p (dictSubOf t tr kvs)) →
+    SameExc (dumpsCX cfg c (dictSubOf t tr kvs)) (dumpsPyX cfg p (dictSubOf t tr kvs))
+
+/-- `DF(z=1)` with `__len__` returning 0: `{"z": 1}` in C, which tests the stored size
+(`PyDict_GET_SIZE`, :1806) and then iterates `PyMapping_Items` (:1839-1840) through
+`_encoder_iterate_mapping_lock_held`; `{}` in Python, where `if not dct` calls `__len__`
+(encoder.py:329-331). Related: gh-123183, cpython#158731/158732. -/
+theorem dumpsTwinsDictSub_refuted : ¬ DumpsTwinsDictSub := by
+  intro h
+  have h1 := h {} 10 10 tDF false [(.str (cs "z"), .int 1)] okx_default (by decide)
+    (by rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_C]; rintro ⟨ns, h⟩; cases h)
+    (by rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_Py]; rintro ⟨ns, h⟩; cases h)
+  rw [show dictSubOf tDF false [(.str (cs "z"), .int 1)] = wDictSub from rfl, wDictSub_C, wDictSub_Py] at h1
+  rcases h1 with ⟨t, h2, h3⟩ | ⟨_, _, _, h2, _⟩
+  · cases h2; cases h3
+  · cases h2
+
+/-! ### `encoder_call` at a level whose indent cannot be built -/
+
+/-- `c_make_encoder(...)(o, level)` gives the 1-tuple of the text of `_make_iterencode(...)(o,
+level)`, or the same exception, for every level `0 <= level <= sys.maxsize`, every value and option
+of `DumpsTwinsX`, when neither raises its `RecursionError` (`EncoderCallX` 4 without the cache). -/
+def EncoderCallTwins : Prop :=
+  ∀ (cfg : XCfg) (c p : Nat) (v : XVal) (level : Int), cfg.Okx → v.okx = true → 0 ≤ level →
+    ¬ outOfSsize level → ¬ IsRecCX (encoderCallX cfg c v level) →
+    ¬ IsRecPyX (iterencodePyX cfg p v level.toNat) →
+    (∃ t, encoderCallX cfg c v level = .ok [t] ∧ iterencodePyX cfg p v level.toNat = .ok t) ∨
+    (∃ e nsC nsP, encoderCallX cfg c v level = .error (e, nsC) ∧ iterencodePyX cfg p v level.toNat = .error (e, nsP))
+
+def cfgIndent2 : XCfg := { indent := some (cs "  ") }
+
+theorem okx_indent2 : cfgIndent2.Okx :=
+  ⟨rfl, rfl, rfl, fun n t v' h => by simp [cfgIndent2, defaultErr] at h⟩
+
+theorem wLevel_C : encoderCallX cfgIndent2 10 (.int 1) (2 ^ 62) =
+    .error (xe (.overflowError "repeated string is too long")) :=
+  encoderCallX_cacheErr (ind := cs "  ") rfl (by decide)
+    (createIndentCache_ovf _ (by decide) (by simp [ssizeMax]; decide))
+
+theorem wLevel_Py : iterencodePyX cfgIndent2 10 (.int 1) (2 ^ 62 : Int).toNat = .ok (cs "1") := by
+  simp [iterencodePyX, pyCallX, pyIterX, liftE, intRepr, decDigits, decDigitsF, maxStrDigits]
+  decide
+
+/-- With `indent='  '`, `c_make_encoder(...)(1, 2**62)` raises `OverflowError('repeated string is
+too long')` from `create_indent_cache` (:1378, `unicode_repeat`, Objects/unicodeobject.c:12573-12576)
+before writing anything, while `_make_iterencode(...)(1, 2**62)` returns `'1'`: it repeats the
+indent only inside a container (encoder.py:281, :340). Levels whose string `malloc` refuses give
+`MemoryError` the same way (bugs/json-encoder-call-indent-level.yaml). -/
+theorem encoderCallTwins_refuted : ¬ EncoderCallTwins := by
+  intro h
+  have h1 := h cfgIndent2 10 10 (.int 1) (2 ^ 62) okx_indent2 rfl (by decide) (by decide)
+    (by rw [wLevel_C]; rintro ⟨ns, h⟩; cases h) (by rw [wLevel_Py]; rintro ⟨ns, h⟩; cases h)
+  rw [wLevel_C, wLevel_Py] at h1
+  rcases h1 with ⟨t, h2, _⟩ | ⟨_, _, _, _, h3⟩
+  · cases h2
+  · cases h3
+
 end PyLean.JsonMod

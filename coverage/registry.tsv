@@ -705,13 +705,14 @@ json-loads-twins-pos	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.
 json-loads-twins-scan	proven	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,_decode_uXXXX,JSONObject,JSONArray,py_make_scanner,scanstring_unicode,_parse_object_unicode,_parse_array_unicode,_parse_constant,_match_number_unicode,scan_once_unicode,scanner_call,raise_errmsg,raise_stop_iteration
 json-loads-twins-rec	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_make_scanner,JSONArray,scan_once_unicode,_parse_array_unicode,scanner_call
 json-raw-decode-twins	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,scan_once_unicode,scanner_call
-json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,scan_once_unicode,scanner_call,_build_rval_index_tuple,_parse_object_unicode,_parse_array_unicode,_match_number_unicode
+json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,scan_once_unicode,scanner_call,_build_rval_index_tuple,_parse_object_unicode,_parse_array_unicode,_match_number_unicode,raise_errmsg
 json-raw-decode-twins-rec	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONArray,scan_once_unicode,_parse_array_unicode,scanner_call
 json-dumps-twins	proven	Lib/json/encoder.py	JSONEncoder.encode,JSONEncoder.iterencode,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unicode,ascii_escape_unichar,escape_unicode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,encoder_encode_key_value,encoder_encode_float,encoder_write_string,_encoded_const,write_escaped_ascii,write_escaped_unicode,_encoder_iterate_mapping_lock_held,_encoder_iterate_dict_lock_held,_encoder_iterate_fast_seq_lock_held
 json-dumps-twins-rec	refuted	Lib/json/encoder.py	JSONEncoder.encode,_make_iterencode,encoder_listencode_obj,encoder_listencode_list
 json-dumps-twins-notes	refuted	Lib/json/encoder.py	JSONEncoder.encode,_make_iterencode,encoder_listencode_obj,encoder_listencode_dict,encoder_encode_key_value
 json-dumps-twins-separators	refuted	Modules/_json.c	encoder_encode_key_value,encoder_listencode_list,encoder_listencode_dict,encoder_listencode_obj,_encoder_iterate_fast_seq_lock_held,_encoder_iterate_dict_lock_held,JSONEncoder.encode,_make_iterencode
 json-dumps-twins-subclass	refuted	Modules/_json.c	encoder_listencode_list,encoder_listencode_obj,JSONEncoder.encode,_make_iterencode
+json-dumps-twins-dict-subclass	refuted	Modules/_json.c	encoder_listencode_dict,_encoder_iterate_mapping_lock_held,encoder_encode_key_value,encoder_listencode_obj,JSONEncoder.encode,_make_iterencode
 json-dumps-api-twins	proven	Lib/json/__init__.py	dumps
 json-dumps-fast-path	proven	Lib/json/__init__.py	dumps,dump,JSONEncoder.__init__
 json-dump-is-dumps	proven	Lib/json/__init__.py	dump,dumps,_make_iterencode,JSONEncoder.iterencode
@@ -751,7 +752,8 @@ json-scanner-call-raw	proven	Modules/_json.c	scanner_call,raise_stop_iteration,_
 json-scanner-new	proven	Modules/_json.c	scanner_new
 json-encoder-new	proven	Modules/_json.c	encoder_new
 json-encoder-new-sep-typeerror	refuted	Modules/_json.c	encoder_new
-json-encoder-call	proven	Modules/_json.c	encoder_call
+json-encoder-call	proven	Modules/_json.c	encoder_call,create_indent_cache
+json-encoder-call-twins	refuted	Modules/_json.c	encoder_call,create_indent_cache,_make_iterencode
 json-encoder-string	proven	Modules/_json.c	encoder_write_string,_steal_accumulate
 json-encoder-string-raw	refuted	Modules/_json.c	encoder_write_string,_steal_accumulate
 json-indent-cache	proven	Modules/_json.c	create_indent_cache,update_indent_cache,get_item_separator,write_newline_indent

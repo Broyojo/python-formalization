@@ -21,6 +21,15 @@ the depth of the caller. The callbacks are the abstract functions of `DCfg`; tha
 the same outcome at every depth is a scope limit (a Python hook near the limit could raise
 `RecursionError` itself).
 
+**The error's frame.** Raising `JSONDecodeError(msg, doc, pos)` runs `JSONDecodeError.__init__`
+(Lib/json/decoder.py:31-41), a Python frame, so it needs one frame left where it is raised
+(`chargeJde`); at none, `RecursionError('maximum recursion depth exceeded')` is raised instead.
+C: `raise_errmsg` calls the class with `PyObject_CallFunction(JSONDecodeError, "zOn", ...)`
+(Modules/_json.c:432), and `raw_decode` turns C's `StopIteration` into `JSONDecodeError('Expecting
+value')` in its own frame (decoder.py:374-377); the C scanner takes no Python frame, so both happen
+with the `p` frames left at the `scan_once` call. Python: `JSONObject`, `JSONArray`, `py_scanstring`
+and `_decode_uXXXX` raise in their own frames, with what is left after them.
+
 `cScanOnceR` and the rest are `cScanOnce` and the rest (DecC.lean, DecPy.lean) with these checks;
 the unbounded models are what they compute when the checks pass (`bridgeC`, `bridgePy`).
 -/
@@ -36,6 +45,38 @@ def recC (what : String) : DErr :=
 
 /-- `RecursionError` of `_Py_CheckRecursiveCallPy`. -/
 def recPy : DErr := .exc (.named "RecursionError" "maximum recursion depth exceeded")
+
+/-- A `JSONDecodeError` raised where `b` frames are left: its `__init__` needs one. -/
+def chargeJde {α : Type} (b : Nat) (r : DR α) : DR α :=
+  match b, r with
+  | 0, .error (.jde _ _) => .error recPy
+  | _, r => r
+
+theorem chargeJde_succ {α : Type} (b : Nat) (r : DR α) : chargeJde (b + 1) r = r := by
+  cases r <;> rfl
+
+@[simp] theorem chargeJde_ok {α : Type} (b : Nat) (a : α) : chargeJde b (.ok a : DR α) = .ok a := by
+  cases b <;> rfl
+
+@[simp] theorem chargeJde_exc {α : Type} (b : Nat) (e : PyExc) :
+    chargeJde b (.error (.exc e) : DR α) = .error (.exc e) := by
+  cases b <;> rfl
+
+@[simp] theorem chargeJde_stop {α : Type} (b : Nat) (i : Int) :
+    chargeJde b (.error (.stop i) : DR α) = .error (.stop i) := by
+  cases b <;> rfl
+
+@[simp] theorem chargeJde_zero_jde {α : Type} (m : String) (i : Int) :
+    chargeJde 0 (.error (.jde m i) : DR α) = .error recPy := rfl
+
+theorem chargeJde_cases {α : Type} (b : Nat) (r : DR α) :
+    chargeJde b r = r ∨ (b = 0 ∧ chargeJde b r = .error recPy) := by
+  cases b with
+  | succ b => exact Or.inl (chargeJde_succ b r)
+  | zero =>
+    cases r with
+    | ok a => exact Or.inl rfl
+    | error e => cases e <;> first | exact Or.inl rfl | exact Or.inr ⟨rfl, rfl⟩
 
 /-! ### C -/
 
@@ -117,18 +158,21 @@ def cObjBodyR (cfg : DCfg) (s : PStr) : Nat → Nat → Nat → List (PStr × JV
             else cObjBodyR cfg s b n i.toNat acc
 end
 
-/-- `raw_decode` with the C scanner and stack room `c`. -/
-def rawDecodeCR (cfg : DCfg) (c : Nat) (s : PStr) (idx : Int) : DR (JVal × Int) :=
+/-- `raw_decode` with the C scanner, stack room `c` and `p` Python frames left at the `scan_once`
+call: every `JSONDecodeError` of the scan (`raise_errmsg`, :422-440) and the `'Expecting value'`
+that `raw_decode` makes of its `StopIteration` need one of them. -/
+def rawDecodeCR (cfg : DCfg) (c p : Nat) (s : PStr) (idx : Int) : DR (JVal × Int) :=
   if idx < ssizeMin ∨ idx > ssizeMax then
     .error (.exc (.overflowError "Python int too large to convert to C ssize_t"))
   else if idx < 0 then .error (.exc (.valueError "idx cannot be negative"))
   else
-    match stopToJde (cScanOnceR cfg s c (docFuel s) idx.toNat) with
+    match chargeJde p (stopToJde (cScanOnceR cfg s c (docFuel s) idx.toNat)) with
     | .ok (v, e) => .ok (v, (e : Int))
     | .error err => .error err
 
-/-- `json.loads(s)` with the C scanner and stack room `c`. -/
-def loadsCR (cfg : DCfg) (c : Nat) (s : PStr) : DR JVal := decodeWith (rawDecodeCR cfg c) s
+/-- `json.loads(s)` with the C scanner, stack room `c` and `p` frames left at the `scan_once` call
+(`'Extra data'` is raised in `decode`'s frame, one further out). -/
+def loadsCR (cfg : DCfg) (c p : Nat) (s : PStr) : DR JVal := decodeWith (rawDecodeCR cfg c p) s
 
 /-! ### Python -/
 
@@ -162,12 +206,12 @@ def pyScanLoopR (s : PStr) (strict : Bool) (begin : Int) (b : Nat) : Nat → Nat
             | none => .error (.jde (escMsgPy esc) e)
             | some ch => pyScanLoopR s strict begin b f (e + 1) (acc ++ [ch])
           else
-            match pyCall b (fun _ => decodeUXXXX s e) with
+            match pyCall b (fun b => chargeJde b (decodeUXXXX s e)) with
             | .error err => .error err
             | .ok uni =>
               let e := e + 5
               if 0xd800 ≤ uni ∧ uni ≤ 0xdbff ∧ (s.drop e).take 2 = [92, 117] then
-                match pyCall b (fun _ => decodeUXXXX s (e + 1)) with
+                match pyCall b (fun b => chargeJde b (decodeUXXXX s (e + 1))) with
                 | .error err => .error err
                 | .ok uni2 =>
                   if 0xdc00 ≤ uni2 ∧ uni2 ≤ 0xdfff then
@@ -175,9 +219,9 @@ def pyScanLoopR (s : PStr) (strict : Bool) (begin : Int) (b : Nat) : Nat → Nat
                   else pyScanLoopR s strict begin b f e (acc ++ [uni])
               else pyScanLoopR s strict begin b f e (acc ++ [uni])
 
-/-- `py_scanstring` with `b` frames left after its own. -/
+/-- `py_scanstring` with `b` frames left after its own; its errors are raised in its frame. -/
 def pyScanstringR (s : PStr) (e : Int) (strict : Bool) (b : Nat) : DR (PStr × Int) :=
-  pyScanLoopR s strict (e - 1) b (s.length + 1) (clampPos s e) []
+  chargeJde b (pyScanLoopR s strict (e - 1) b (s.length + 1) (clampPos s e) [])
 
 mutual
 /-- `_scan_once` with `b` frames left after its own: `parse_string`, `parse_object` and
@@ -194,7 +238,8 @@ def pyScanOnceR (cfg : DCfg) (s : PStr) : Nat → Nat → Int → DR (JVal × In
           | .ok (v, e) => .ok (.str v, e)
           | .error err => .error err
       else if c = 123 then
-        pyCall b fun b =>
+        -- `JSONObject`, raising in its frame
+        pyCall b fun b => chargeJde b <|
           let e := idx + 1
           let nc := pySlice s e (e + 1)
           if nc ≠ [34] then
@@ -205,7 +250,8 @@ def pyScanOnceR (cfg : DCfg) (s : PStr) : Nat → Nat → Int → DR (JVal × In
             else pyObjLoopR cfg s b n (e + 1) []
           else pyObjLoopR cfg s b n (e + 1) []
       else if c = 91 then
-        pyCall b fun b =>
+        -- `JSONArray`, raising in its frame
+        pyCall b fun b => chargeJde b <|
           let e := idx + 1
           let nc := pySlice s e (e + 1)
           let (e, nc) : Int × PStr :=
@@ -412,10 +458,10 @@ theorem bridgeC (cfg : DCfg) (s : PStr) : ∀ n : Nat,
                 · simp only [h3, ↓reduceIte]; exact (ihO b _ _).2 (by omega)
 
 /-- `py_scanstring` with `b` frames left is the unbounded one, or `RecursionError` when it has
-none for `_decode_uXXXX`. -/
+no frame for `_decode_uXXXX` or for its `JSONDecodeError`. -/
 theorem bridgeScanLoop (s : PStr) (strict : Bool) (begin : Int) (b : Nat) : ∀ (f e : Nat) (acc : PStr),
     pyScanLoopR s strict begin b f e acc = pyScanLoop s strict begin f e acc ∨
-    (b = 0 ∧ pyScanLoopR s strict begin b f e acc = .error recPy) := by
+    (b ≤ 1 ∧ pyScanLoopR s strict begin b f e acc = .error recPy) := by
   intro f
   induction f with
   | zero => intro e acc; left; simp [pyScanLoopR, pyScanLoop]
@@ -446,39 +492,51 @@ theorem bridgeScanLoop (s : PStr) (strict : Bool) (begin : Int) (b : Nat) : ∀ 
           | some ch => simp only; exact ih _ _
         simp only [h3, ↓reduceIte]
         cases b with
-        | zero => right; exact ⟨rfl, rfl⟩
+        | zero => right; exact ⟨by omega, rfl⟩
         | succ b =>
           simp only [pyCall]
+          rcases chargeJde_cases b (decodeUXXXX s (e + k + 1)) with hc | ⟨hb0, hc⟩
+          rotate_left
+          · rw [hc]; right; exact ⟨by omega, rfl⟩
+          rw [hc]
           cases decodeUXXXX s (e + k + 1) with
           | error x => left; rfl
           | ok uni =>
             simp only
             by_cases h4 : 0xd800 ≤ uni ∧ uni ≤ 0xdbff ∧ (s.drop (e + k + 1 + 5)).take 2 = [92, 117]
             · simp only [h4, and_self, ↓reduceIte]
+              rcases chargeJde_cases b (decodeUXXXX s (e + k + 1 + 5 + 1)) with hc2 | ⟨hb0, hc2⟩
+              rotate_left
+              · rw [hc2]; right; exact ⟨by omega, rfl⟩
+              rw [hc2]
               cases decodeUXXXX s (e + k + 1 + 5 + 1) with
               | error x => left; rfl
               | ok uni2 =>
                 simp only
                 by_cases h5 : 0xdc00 ≤ uni2 ∧ uni2 ≤ 0xdfff
                 · simp only [h5, and_self, ↓reduceIte]
-                  rcases ih (e + k + 1 + 5 + 6) _ with h | ⟨h, _⟩
-                  · exact Or.inl h
-                  · cases h
+                  exact ih _ _
                 · simp only [h5, ↓reduceIte]
-                  rcases ih (e + k + 1 + 5) _ with h | ⟨h, _⟩
-                  · exact Or.inl h
-                  · cases h
+                  exact ih _ _
             · simp only [h4, ↓reduceIte]
-              rcases ih (e + k + 1 + 5) _ with h | ⟨h, _⟩
-              · exact Or.inl h
-              · cases h
+              exact ih _ _
 
 theorem bridgeScanstring (s : PStr) (e : Int) (strict : Bool) (b : Nat) :
-    RelB IsRecPy 1 b (pyScanstringR s e strict b) (pyScanstring s e strict) := by
+    RelB IsRecPy 2 b (pyScanstringR s e strict b) (pyScanstring s e strict) := by
   unfold pyScanstringR pyScanstring
-  rcases bridgeScanLoop s strict (e - 1) b (s.length + 1) (clampPos s e) [] with h | ⟨h0, h⟩
-  · rw [h]; exact RelB.refl _
-  · exact ⟨Or.inr h, fun hb => by omega⟩
+  rcases chargeJde_cases b (pyScanLoopR s strict (e - 1) b (s.length + 1) (clampPos s e) []) with hc | ⟨hb0, hc⟩
+  · rw [hc]
+    rcases bridgeScanLoop s strict (e - 1) b (s.length + 1) (clampPos s e) [] with h | ⟨h0, h⟩
+    · rw [h]; exact RelB.refl _
+    · exact ⟨Or.inr h, fun hb => by omega⟩
+  · rw [hc]; exact ⟨Or.inr rfl, fun hb => by omega⟩
+
+/-- A frame's `chargeJde` keeps the relation when the fuel needs two frames. -/
+theorem RelB.charge {α : Type} {f b : Nat} {x y : DR α} (h : RelB IsRecPy (f + 2) (b + 1) x y) :
+    RelB IsRecPy (f + 2) (b + 1) (chargeJde b x) y := by
+  rcases chargeJde_cases b x with hc | ⟨hb0, hc⟩
+  · rw [hc]; exact h
+  · rw [hc]; exact ⟨Or.inr rfl, fun hf => by omega⟩
 
 theorem bridgePy (cfg : DCfg) (s : PStr) : ∀ n : Nat,
     (∀ b idx, RelB IsRecPy (n + 2) b (pyScanOnceR cfg s b n idx) (pyScanOnce cfg s n idx)) ∧
@@ -518,8 +576,8 @@ theorem bridgePy (cfg : DCfg) (s : PStr) : ∀ n : Nat,
           | zero => exact RelB.rec0 rfl
           | succ b =>
             simp only [pyCall]
-            exact RelB.ite _ (RelB.ite _ (RelB.refl _) (RelB.ite _ (RelB.refl _) (ihO b _ []).succ))
-              (ihO b _ []).succ
+            exact RelB.charge (RelB.ite _ (RelB.ite _ (RelB.refl _) (RelB.ite _ (RelB.refl _) (ihO b _ []).succ))
+              (ihO b _ []).succ)
         simp only [h3, ↓reduceIte]
         by_cases h4 : c = 91
         · simp only [h4, ↓reduceIte]
@@ -527,7 +585,7 @@ theorem bridgePy (cfg : DCfg) (s : PStr) : ∀ n : Nat,
           | zero => exact RelB.rec0 rfl
           | succ b =>
             simp only [pyCall]
-            exact RelB.ite _ (RelB.refl _) (ihA b _ []).succ
+            exact RelB.charge (RelB.ite _ (RelB.refl _) (ihA b _ []).succ)
         simp only [h4, ↓reduceIte]
         exact RelB.refl _
     · simp only [pyArrLoopR, pyArrLoop]

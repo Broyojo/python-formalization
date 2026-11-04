@@ -9,7 +9,7 @@ subclasses of `list`, `tuple` and `dict`.
 **Notes.** Every level that sees an exception pass adds a note. C: `_PyErr_FormatNote("when
 serializing %T item %zd", seq, i)` (Modules/_json.c:1906), `("when serializing %T item %R", dct,
 key)` (:1732) with the original key, `("when serializing %T object", obj)` (:1654). Python:
-`exc.add_note(f'when serializing {type(lst).__name__} item {i}')` (Lib/json/encoder.py:316),
+`exc.add_note(f'when serializing {type(lst).__name__} item {i}')` (Lib/json/encoder.py:319),
 `f'... {type(dct).__name__} item {key!r}'` (:406) with the key after its conversion to `str`,
 `f'... {type(o).__name__} object'` (:446). A note records the type and the key; `%T` prints the
 fully qualified name (`_PyType_GetFullyQualifiedName`, Objects/typeobject.c:1694-1724), Python
@@ -26,9 +26,9 @@ uses one frame (a scope limit). With the room as the measure, a cycle under
 `check_circular=False` ends in `RecursionError`, as in CPython; no fuel is needed.
 
 **Subclasses.** C takes the exact-type paths only for exact `list`, `tuple`, `dict` and
-`frozendict` (`PySequence_Fast`, :1922; `PyAnyDict_CheckExact`, :1838); a subclass is iterated
+`frozendict` (`PySequence_Fast`, :1923; `PyAnyDict_CheckExact`, :1839); a subclass is iterated
 (`list(seq)`) or asked for `items()` (`PyMapping_Items`, Objects/abstract.c:2472-2481), and its
-emptiness is the stored size (`PyDict_GET_SIZE`, :1806) or the materialised list (:1925). Python
+emptiness is the stored size (`PyDict_GET_SIZE`, :1806) or the materialised list (:1926). Python
 uses `not lst`/`not dct` (`__len__`, `__bool__`) and iterates lazily. A subclass is given by
 those outcomes: `bool(o)` (not raising, a scope limit: C's `list()` would call `__len__` too),
 what iteration yields and whether it ends by raising, what `items()` returns.
@@ -258,7 +258,7 @@ def cEnterX {α : Type} (c : Nat) (k : (c' : Nat) → c' < c → Except XErr α)
 def cNoteKey (k : XKey) : NoteKey := .orig k
 
 /-- The items list of `encoder_listencode_dict` for an exact dict: `PyMapping_Items` and
-`PyList_Sort` under `sort_keys` (:1838-1843), otherwise `PyDict_Next` (:1858-1866); every item a
+`PyList_Sort` under `sort_keys` (:1839-1845), otherwise `_encoder_iterate_dict_lock_held` (:1857-1863, `PyDict_Next` at :1779); every item a
 2-tuple. -/
 def cExactItems (cfg : XCfg) (kvs : List (XKey × XVal)) : Except PyExc (List (ItemShape × XKey × XVal)) :=
   if cfg.sortKeys then (xSortItems kvs).map (·.map fun (k, v) => (.tup, k, v))
@@ -296,7 +296,7 @@ def cObjX (cfg : XCfg) (c lvl : Nat) (seen : List Nat) (anc : List XVal) (v : XV
     | some a => cEnterX c (fun c' _ => cContX cfg c' lvl seen anc true a)
     | none => .error (xe .modelFuel)
   | .other n t =>
-    -- :1617-1665: markers, `default`, `_Py_EnterRecursiveCall`, the note on failure
+    -- :1619-1666: markers, `default`, `_Py_EnterRecursiveCall`, the note on failure
     if cfg.checkCircular ∧ n ∈ seen then .error (xe circularErr)
     else
       match cfg.dflt n t with
@@ -419,18 +419,25 @@ def dumpsCX (cfg : XCfg) (c : Nat) (v : XVal) : XR :=
   | .str s => .ok (cStrEnc cfg.toE s)
   | _ => cObjX cfg c 0 [] [] v
 
-/-- `c_make_encoder(...)(o, level)`, `encoder_call` (:1448-1488): `create_indent_cache(level)`
-then `indent_level = 0`, so the cache's level-0 entry is `'\n' + indent * level` (`''` for a
-negative level, `PySequence_Repeat`) and every level is shifted by `level`; `n` conversion of
-the level first. -/
+/-- `c_make_encoder(...)(o, level)`, `encoder_call` (:1448-1488): the `n` conversion of the
+level, then `create_indent_cache(level)` when `indent` is not `None` (:1465-1471), whose failure
+is the result before anything is written; then `indent_level = 0` (:1472) with the cache, whose
+entries at level `k` are `'\n' + indent * (copies + k)` (`IndentCacheSpec`), so `cObjX` runs at
+level `copies` (`cacheCopies`: none for a level below 1, the repeat's `''`). Without an indent
+the level is never read. -/
 def encoderCallX (cfg : XCfg) (c : Nat) (v : XVal) (level : Int) : Except XErr (List PStr) :=
   if outOfSsize level then .error (xe ssizeErr)
   else
-    match cObjX cfg c level.toNat [] [] v with
-    | .ok t => .ok [t]
-    | .error e => .error e
+    match (match cfg.indent with
+           | none => (Except.ok () : Except PyExc Unit)
+           | some ind => (createIndentCache ind level).map (fun _ => ())) with
+    | .error e => .error (xe e)
+    | .ok () =>
+      match cObjX cfg c (cacheCopies level) [] [] v with
+      | .ok t => .ok [t]
+      | .error e => .error e
 
-/-! ### Python: `_make_iterencode`, Lib/json/encoder.py:259-459 -/
+/-! ### Python: `_make_iterencode`, Lib/json/encoder.py:265-459 -/
 
 /-- A Python call with `b` frames left: `RecursionError` when there is none. -/
 def pyCallX {α : Type} (b : Nat) (k : (b' : Nat) → b' < b → Except XErr α) : Except XErr α :=
@@ -438,7 +445,7 @@ def pyCallX {α : Type} (b : Nat) (k : (b' : Nat) → b' < b → Except XErr α)
   | 0 => .error (xe recEncPy)
   | b' + 1 => k b' (Nat.lt_succ_self b')
 
-/-- Whether `re.sub` calls `replace`: `ESCAPE_ASCII` (encoder.py:10) or `ESCAPE` (:9) matches. -/
+/-- Whether `re.sub` calls `replace`: `ESCAPE_ASCII` (encoder.py:19) or `ESCAPE` (:18) matches. -/
 def needsReplace (ascii : Bool) (s : PStr) : Bool :=
   if ascii then s.any (fun c => c = 92 ∨ c = 34 ∨ ¬(32 ≤ c ∧ c ≤ 126))
   else s.any (fun c => c < 32 ∨ c = 92 ∨ c = 34)
@@ -512,8 +519,8 @@ def pyIterX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (v : 
       | .ok v' => pyCallX b (fun b' _ => addNote (.obj t) (pyIterX cfg b' lvl (n :: seen) anc v'))
 termination_by (2 * b, 0, 0)
 
-/-- A value inside the `try` of `_iterencode_list` (encoder.py:300-313) or `_iterencode_dict`
-(:385-402): the scalars and the containers as in `_iterencode`, an unknown object in a new
+/-- A value inside the `try` of `_iterencode_list` (encoder.py:290-320) or `_iterencode_dict`
+(:379-407): the scalars and the containers as in `_iterencode`, an unknown object in a new
 `_iterencode` generator (a frame). -/
 def pyItemX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (x : XVal) : XR :=
   match x with
@@ -521,7 +528,7 @@ def pyItemX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (x : 
   | _ => pyIterX cfg b lvl seen anc x
 termination_by (2 * b, 1, 0)
 
-/-- `_iterencode_list` (encoder.py:265-326) or `_iterencode_dict` (:328-413) on `a`, in its frame. -/
+/-- `_iterencode_list` (encoder.py:269-326) or `_iterencode_dict` (:328-413) on `a`, in its frame. -/
 def pyContX (cfg : XCfg) (b lvl : Nat) (seen : List Nat) (anc : List XVal) (cyc : Bool) (a : XVal) : XR :=
   match a with
   | .seq t xs => pyListPart cfg b lvl seen anc cyc a t (!xs.isEmpty) xs none
