@@ -2345,9 +2345,9 @@ bytecode-iter-step	proven	Objects/iterobject.c	iter_iternext
 bytecode-calliter-ends	proven	Objects/iterobject.c	calliter_iternext,PyCallIter_New,calliter_reduce
 bytecode-enum-counts	proven	Objects/enumobject.c	enum_new_impl,enumerate_vectorcall,enum_next,enum_next_long,increment_longindex_lock_held
 bytecode-cell-new	proven	Objects/cellobject.c	cell_new,PyCell_New
-bytecode-return-value	proven	Python/bytecodes.c	opcode:RETURN_VALUE,opcode:_RETURN_VALUE
+bytecode-return-value	proven	Python/bytecodes.c	opcode:RETURN_VALUE,opcode:_RETURN_VALUE,_PyEval_FrameClearAndPop,clear_thread_frame,clear_gen_frame
 bytecode-unwind-to-handler	proven	Python/bytecodes.c	get_exception_handler,scan_back_to_entry_start,skip_to_next_entry
-bytecode-unwind-no-handler	proven	Python/bytecodes.c	_PyEval_FrameClearAndPop,clear_thread_frame
+bytecode-unwind-no-handler	proven	Python/bytecodes.c	
 bytecode-unwind-exit	proven	Python/bytecodes.c	
 bytecode-exc-info-nests	proven	Python/bytecodes.c	opcode:POP_EXCEPT
 bytecode-for-iter-exhausted	proven	Python/bytecodes.c	
@@ -2421,6 +2421,11 @@ bytecode-iter-send	proven	Objects/abstract.c
 bytecode-traceback-here	proven	Python/bytecodes.c	
 bytecode-with-except-start	proven	Python/bytecodes.c	opcode:WITH_EXCEPT_START
 bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_END_ASYNC_FOR
+bytecode-bind-keywords	proven	Python/ceval.c	initialize_locals
+bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
+bytecode-unexpected-keyword	proven	Python/ceval.c	
+bytecode-resume	proven	Python/bytecodes.c	opcode:RESUME,opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM,opcode:RESUME_CHECK,opcode:_RESUME_CHECK,opcode:RESUME_CHECK_JIT
+bytecode-kwonly-defaults-borrowed	refuted	Python/ceval.c	initialize_locals
 pygrammar-lex-stacks	proven	Parser/lexer/lexer.c	tok_get_normal_mode,tok_get_fstring_mode,tok_get,_PyTokenizer_Get
 pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c	
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
