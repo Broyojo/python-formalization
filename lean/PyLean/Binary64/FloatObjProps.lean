@@ -277,4 +277,224 @@ theorem floatNewSpec_proven : FloatNewSpec := by
     | float y => exact absurd hk (hx y)
     | _ => rfl
 
+/-! ## Subclasses, `vectorcall`, `from_number` -/
+
+/-- `float_subtype_new` (floatobject.c:1593-1610) and the subclass branch of `float_new_impl`
+(:1573-1578): `F(x)` first makes `float(x)` exactly as `float` would, so its exceptions
+propagate unchanged, and then returns a new `F` instance holding that value; `F()` holds
+`float(0)`, which is `0.0`. -/
+def FloatSubtypeNewSpec : Prop :=
+  ∀ (warnErr : Bool) (c : FCls) (x : FObj),
+    floatNew warnErr (some c) (some x) =
+      (floatNew warnErr none (some x)).map (fun r => .freshSub c.name r.floatVal) ∧
+    (∀ e, floatNew warnErr none (some x) = .error e → floatNew warnErr (some c) (some x) = .error e) ∧
+    (∀ r, floatNew warnErr none (some x) = .ok r →
+      floatNew warnErr (some c) (some x) = .ok (.freshSub c.name r.floatVal)) ∧
+    floatNew warnErr (some c) none = .ok (.freshSub c.name d0)
+
+theorem floatSubtypeNewSpec_proven : FloatSubtypeNewSpec := by
+  intro w c x
+  have e : floatNew w (some c) (some x) =
+      (floatNew w none (some x)).map (fun r => .freshSub c.name r.floatVal) := by
+    show floatSubtypeNew w c x = _
+    unfold floatSubtypeNew
+    simp only [floatNew]
+    cases floatNewExact w (some x) <;> rfl
+  refine ⟨e, fun err h => by rw [e, h]; rfl, fun r h => by rw [e, h]; rfl, ?_⟩
+  cases w <;> rfl
+
+/-- `float_vectorcall` (floatobject.c:1613-1627): any keyword argument is `TypeError` before
+the arguments are looked at (`_PyArg_NoKwnames`), more than one positional argument is
+`TypeError`, and otherwise it is `float_new_impl` with the one argument or none. -/
+def FloatVectorcallSpec : Prop :=
+  ∀ (warnErr : Bool) (cls : Option FCls) (args : List FObj) (kwnames : List String),
+    (kwnames ≠ [] → floatVectorcall warnErr cls args kwnames =
+      .error (.typeError "float() takes no keyword arguments")) ∧
+    (kwnames = [] → 1 < args.length → floatVectorcall warnErr cls args kwnames =
+      .error (.typeError s!"float expected at most 1 argument, got {args.length}")) ∧
+    floatVectorcall warnErr cls [] [] = floatNew warnErr cls none ∧
+    (∀ x, floatVectorcall warnErr cls [x] [] = floatNew warnErr cls (some x))
+
+theorem floatVectorcallSpec_proven : FloatVectorcallSpec := by
+  intro w cls args kw
+  refine ⟨fun h => by simp [floatVectorcall, h], fun h hl => ?_, rfl, fun _ => rfl⟩
+  subst h
+  match args, hl with
+  | _ :: _ :: _, _ => simp [floatVectorcall]
+
+/-- `float_from_number_impl` (floatobject.c:1641-1657): an exact float with `cls = float` is
+returned itself (:1644-1647); a float subclass instance gives a new float of its value,
+without its `__float__`; anything else goes through `PyFloat_AsDouble`, whose exceptions
+propagate, so a str is `TypeError`; and a subclass `cls` gets `cls(result)` called, whose
+result is returned as it is, `__new__` overrides included (:1653-1655). -/
+def FloatFromNumberSpec : Prop :=
+  ∀ (warnErr : Bool) (cls : Option FCls) (o : FObj),
+    (∀ x, o.kind = .float x → o.exact = true → floatFromNumber warnErr none o = .ok (.same x)) ∧
+    (∀ x, o.kind = .float x → o.exact = false → floatFromNumber warnErr none o = .ok (.fresh x)) ∧
+    (NotFloat o → floatFromNumber warnErr none o = (asDoubleO warnErr o).map .fresh) ∧
+    (∀ c : FCls, floatFromNumber warnErr (some c) o =
+      (asDoubleO warnErr o).bind fun x => (c.call x).map .called) ∧
+    (∀ cps, o.kind = .str cps → floatFromNumber warnErr cls o =
+      .error (.typeError s!"must be real number, not {o.tp.take 50}") ∨ o.nbFloat ≠ none ∨ o.nbIndex ≠ none)
+
+theorem floatFromNumberSpec_proven : FloatFromNumberSpec := by
+  intro w cls o
+  obtain ⟨id, k, ex, tp, fq, f, i⟩ := o
+  refine ⟨fun x hk he => ?_, fun x hk he => ?_, fun hn => ?_, fun c => ?_, fun cps hk => ?_⟩
+  · simp only [FObj.kind, FObj.exact] at hk he; subst hk; subst he; rfl
+  · simp only [FObj.kind, FObj.exact] at hk he; subst hk; subst he; rfl
+  · cases k with
+    | float y => exact absurd rfl (hn y)
+    | _ =>
+      simp only [floatFromNumber, FObj.kind]
+      cases asDoubleO w _ <;> rfl
+  · have h1 : floatFromNumber w (some c) (.mk id k ex tp fq f i) =
+        (asDoubleO w (.mk id k ex tp fq f i)) >>= fun x => (c.call x) >>= fun r => pure (.called r) := by
+      cases k <;> rfl
+    rw [h1]
+    generalize asDoubleO w (FObj.mk id k ex tp fq f i) = r
+    cases r with
+    | error e => rfl
+    | ok x =>
+      show (c.call x >>= fun r => pure (FRes.called r)) = (c.call x).map FRes.called
+      cases c.call x <;> rfl
+  · simp only [FObj.kind] at hk; subst hk
+    by_cases hf : f = none
+    · by_cases hi : i = none
+      · subst hf; subst hi; left
+        cases cls <;> rfl
+      · right; right; exact hi
+    · right; left; exact hf
+
+/-! ## `float_float`, `conjugate`, `real`, `__getnewargs__` -/
+
+/-- Whether a result is the argument object itself. -/
+def FRes.isSame : FRes → Bool
+  | .same _ => true
+  | _ => false
+
+/-- `float_float` (floatobject.c:1069-1077), behind `__float__`, and `conjugate` and `real`,
+which call it: the result is always an exact float with all 64 bits of `self` (a NaN keeps
+its payload), and it is `self` itself exactly when `self` is an exact float; a subclass
+instance gets a new exact float. -/
+def FloatFloatSpec : Prop :=
+  ∀ (x : F64) (exact : Bool),
+    (∀ r ∈ [floatFloatO x exact, floatConjugateO x exact, floatGetrealO x exact],
+      r.val = some x ∧ (r.isSame = true ↔ exact = true) ∧
+      (exact = false → r = .fresh x))
+
+theorem floatFloatSpec_proven : FloatFloatSpec := by
+  intro x e r hr
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+  rcases hr with rfl | rfl | rfl <;> cases e <;> simp [floatFloatO, floatConjugateO, floatGetrealO,
+    FRes.val, FRes.isSame]
+
+/-- An exact float object of value `x`, with the slots `float` has. -/
+def exactFloatObj (id : Nat) (x : F64) : FObj :=
+  .mk id (.float x) true "float" "float" (some (.ok (.mk id (.float x) true "float" "float" none none))) none
+
+/-- `float.__getnewargs__` (floatobject.c:1665-1669) is the 1-tuple `(x,)`, and pickling's
+reconstruction `float(*x.__getnewargs__())` gives back all 64 bits of `x`, NaN payload
+included, for every float and every identity the new float in the tuple gets. -/
+def GetnewargsSpec : Prop :=
+  ∀ (x : F64) (warnErr : Bool) (id : Nat),
+    (floatGetnewargsO x).length = 1 ∧
+    (floatGetnewargsO x).map (fun y => (floatNew warnErr none (some (exactFloatObj id y))).map FRes.floatVal) =
+      [.ok x]
+
+theorem getnewargsSpec_proven : GetnewargsSpec := fun _ _ _ => ⟨rfl, rfl⟩
+
+/-! ## `float.fromhex` at the object level -/
+
+theorem utf8Encode_ascii : ∀ (i : Nat) (cps : List Nat), (∀ c ∈ cps, c < 0x80) → utf8Encode i cps = .ok cps
+  | _, [], _ => rfl
+  | i, c :: cs, h => by
+    have hc : c < 0x80 := h c (List.mem_cons_self ..)
+    have ih := utf8Encode_ascii (i + 1) cs (fun d hd => h d (List.mem_cons_of_mem _ hd))
+    simp [utf8Encode, utf8Cp, hc, ih]
+
+/-- `float.fromhex` on any argument and class (floatobject.c:1225-1463): a non-str is
+`TypeError` from `PyUnicode_AsUTF8AndSize` (:1280-1282), a str holding a surrogate is
+`UnicodeEncodeError`, and otherwise its UTF-8 is parsed, parse and overflow errors
+propagating before any class is called; `float.fromhex` gives a new float, and a subclass
+`cls` gets `cls(x)` called, its result or exception returned as it is (:1444-1446). -/
+def FloatFromhexObjSpec : Prop :=
+  ∀ (cls : Option FCls) (o : FObj),
+    ((∀ cps, o.kind ≠ .str cps) →
+      floatFromhexO cls o = .error (.typeError "bad argument type for built-in operation")) ∧
+    (∀ cps i, o.kind = .str cps → utf8Encode 0 cps = .error i →
+      ∃ msg, floatFromhexO cls o = .error (.named "UnicodeEncodeError" msg)) ∧
+    (∀ cps, o.kind = .str cps → (∀ c ∈ cps, c < 0x80) →
+      floatFromhexO none o = (float_fromhex cps).map .fresh ∧
+      ∀ c : FCls, floatFromhexO (some c) o = (float_fromhex cps).bind fun x => (c.call x).map .called)
+
+theorem floatFromhexObjSpec_proven : FloatFromhexObjSpec := by
+  intro cls o
+  obtain ⟨id, k, ex, tp, fq, f, i⟩ := o
+  refine ⟨fun h => ?_, fun cps j hk he => ?_, fun cps hk ha => ?_⟩
+  · cases k with
+    | str c => exact absurd rfl (h c)
+    | _ => rfl
+  · simp only [FObj.kind] at hk; subst hk
+    exact ⟨_, by simp only [floatFromhexO, FObj.kind, he]; rfl⟩
+  · simp only [FObj.kind] at hk; subst hk
+    refine ⟨?_, fun c => ?_⟩
+    · simp only [floatFromhexO, FObj.kind, utf8Encode_ascii 0 cps ha]
+      cases float_fromhex cps <;> rfl
+    · simp only [floatFromhexO, FObj.kind, utf8Encode_ascii 0 cps ha]
+      cases float_fromhex cps <;> try rfl
+      all_goals (simp [bind, Except.bind, Except.map, pure, Except.pure]; try (cases c.call _ <;> rfl))
+
+/-! ## `round` -/
+
+/-- `float.__round__` (floatobject.c:1024-1066) on every `ndigits` object: `None` rounds to
+an int; otherwise `PyNumber_AsSsize_t` runs first, so a non-integer (`round(1.5, 'a')`), an
+`__index__` that raises, returns a non-int, or returns an int subclass under an error
+filter, raises before `x` is looked at; an int too large for `Py_ssize_t` is clipped, so a
+huge positive `ndigits` returns `x` and a huge negative one a zero with the sign of `x`. -/
+def FloatRoundObjSpec : Prop :=
+  ∀ (warnErr : Bool) (x : F64) (o : FObj),
+    floatRoundO warnErr x none = (float_round_int x).map .int ∧
+    (∀ e, numberIndex warnErr o = .error e → floatRoundO warnErr x (some o) = .error e) ∧
+    (∀ n, numberIndex warnErr o = .ok n →
+      floatRoundO warnErr x (some o) = (float_round_ndigits x (clipSsize n)).map .float) ∧
+    (∀ n, numberIndex warnErr o = .ok n → ssizeMax < n →
+      floatRoundO warnErr x (some o) = .ok (.float x)) ∧
+    (∀ n, numberIndex warnErr o = .ok n → n < ssizeMin → x.isFinite = true →
+      floatRoundO warnErr x (some o) = .ok (.float (F64.mul d0 x)))
+
+theorem clip_big {n : Int} (h : ssizeMax < n) : clipSsize n = ssizeMax := by
+  unfold clipSsize ssizeMax ssizeMin at *; omega
+
+theorem clip_small {n : Int} (h : n < ssizeMin) : clipSsize n = ssizeMin := by
+  unfold clipSsize ssizeMax ssizeMin at *; omega
+
+theorem floatRoundObjSpec_proven : FloatRoundObjSpec := by
+  intro w x o
+  have base : ∀ n, numberIndex w o = .ok n →
+      floatRoundO w x (some o) = (float_round_ndigits x (clipSsize n)).map .float := by
+    intro n h
+    simp only [floatRoundO, numberAsSsize, h, bind, Except.bind, pure, Except.pure]
+    cases float_round_ndigits x (clipSsize n) <;> rfl
+  refine ⟨rfl, fun e h => ?_, base, fun n h hb => ?_, fun n h hs hf => ?_⟩
+  · simp [floatRoundO, numberAsSsize, h, bind, Except.bind]
+  · rw [base n h, clip_big hb]
+    have hc : clipSsize ssizeMax = ssizeMax := by decide
+    unfold float_round_ndigits
+    rw [hc]
+    by_cases hf : x.isFinite = true
+    · simp [hf, ssizeMax]; rfl
+    · simp [hf]; rfl
+  · rw [base n h, clip_small hs]
+    have hc : clipSsize ssizeMin = ssizeMin := by decide
+    unfold float_round_ndigits
+    rw [hc]
+    simp [hf, ssizeMin]; rfl
+
+/-- `round(1.5, 'a')`: `'str' object cannot be interpreted as an integer`. -/
+theorem round_str_ndigits (w : Bool) (x : F64) :
+    floatRoundO w x (some (.mk 7 (.str [97]) true "str" "str" none none)) =
+      .error (.typeError "'str' object cannot be interpreted as an integer") := by
+  cases w <;> rfl
+
 end PyLean.Binary64
