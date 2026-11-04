@@ -332,16 +332,17 @@ def BytesClassesBoth : Prop :=
 
 theorem bytesClassesBoth_proven : BytesClassesBoth := ⟨cBytesClasses, pyBytesClasses⟩
 
-/-- Both twins' `str` savers before the memo: every size class of the binary branch, and the
-protocol 0 text line. -/
+/-- Both twins' `str` savers before the memo: every size class of the binary branch, and C's
+protocol 0 text line. Python's protocol 0 line is not claimed: `tmp.encode('raw-unicode-escape')`
+looks the codec up in Python frames (`encodings.search_function`, importlib) until it is cached,
+which the model does not have (EncRec.lean, scope). -/
 def StrClassesBoth : Prop :=
   StrClasses cHP cStrData ∧ (∀ b, 2 ≤ b → StrClasses pyHP (fun p d => pyStrDataR b p d)) ∧
-  ∀ (b : Nat) (st : List Nat) (s : EncSt), 2 ≤ b →
-    cStrBody 0 st s = .ok ((), After s [.w [nl], .w (cRawUnicodeEscape st), .w [oUNICODE]]) ∧
-    pyStrBodyR b 0 st s = .ok ((), After s [.w (oUNICODE :: cRawUnicodeEscape st ++ [nl])])
+  ∀ (st : List Nat) (s : EncSt),
+    cStrBody 0 st s = .ok ((), After s [.w [nl], .w (cRawUnicodeEscape st), .w [oUNICODE]])
 
 theorem strClassesBoth_proven : StrClassesBoth :=
-  ⟨cStrClasses, pyStrClasses, fun b st s hb => strBody0 b hb st s⟩
+  ⟨cStrClasses, pyStrClasses, fun st s => (strBody0 2 (by omega) st s).1⟩
 
 /-- Both twins' `bytearray` savers at protocol 5. -/
 def BytearrayExact : Prop :=
@@ -351,5 +352,52 @@ def BytearrayExact : Prop :=
       pySaveBytearrayDataR b p d s = .ok ((), After s (pyHP (oBYTEARRAY8 :: f) d))
 
 theorem bytearrayExact_proven : BytearrayExact := fun b p d s hb hl => bytearrayData b p hb d s hl
+
+end PyLean.Pickle
+
+namespace PyLean.Pickle
+
+/-- The state after memoizing `o` under the next index, with the calls `evs`. -/
+def memoAfter (s : EncSt) (o : Oid) (evs : List Event) : EncSt := { memo := (o, s.memo.length) :: s.memo, ev := evs }
+
+/-- C `save()` on a `bytearray` not yet in the memo, protocol 5, with stack room (the guard of
+:4683, `save_bytearray`, `_save_bytearray_data`, `memo_put`): the opcode boundary, `BYTEARRAY8`
+with an 8-byte length that reads back as the size and the payload (outside the frame from 64 KiB),
+then `MEMOIZE`, and the object is memoized under the next index. -/
+theorem cBytearrayObj5 {c : Nat} (hc : 1 ≤ c) (o : Oid) (d : Bytes) (s : EncSt)
+    (hm : s.memo.lookup o = none) (hl : d.length < 2 ^ 64) :
+    ∃ f, f.length = 8 ∧ leNat f = d.length ∧
+      cSaveBytearrayObjR c 5 o d s =
+        .ok ((), memoAfter s o (.w [oMEMOIZE] :: (cHP (oBYTEARRAY8 :: f) d ++ (.boundary :: s.ev)))) := by
+  refine ⟨leBytes d.length 8, leBytes_length _ _, leNat_le8 hl, ?_⟩
+  have e1 : cSaveBytearrayObjR c 5 o d s =
+      (cWriteBytes (oBYTEARRAY8 :: leBytes d.length 8) d >>= fun _ => cMemoPut 5 o)
+        { s with ev := .boundary :: s.ev } := by
+    unfold cSaveBytearrayObjR
+    rw [bind_run (rfl : (emit .boundary : EncM Unit) s = .ok ((), { s with ev := .boundary :: s.ev }))]
+    have hml : ∀ (f : Option Nat → EncM Unit) (t : EncSt), (memoLookup o >>= f) t = f (t.memo.lookup o) t :=
+      fun _ _ => rfl
+    rw [hml]
+    dsimp only
+    rw [hm]
+    show cEnter c _ _ = _
+    rw [eq_cEnter (by omega) rfl]
+    rfl
+  rw [e1]
+  unfold cWriteBytes cHP frameSizeTarget
+  split <;> rfl
+
+end PyLean.Pickle
+
+namespace PyLean.Pickle
+
+/-- C `save()` on a fresh `bytearray` at protocol 5, every payload and room. -/
+def BytearrayObjExact : Prop :=
+  ∀ (c : Nat) (o : Oid) (d : Bytes) (s : EncSt), 1 ≤ c → s.memo.lookup o = none → d.length < 2 ^ 64 →
+    ∃ f, f.length = 8 ∧ leNat f = d.length ∧
+      cSaveBytearrayObjR c 5 o d s =
+        .ok ((), memoAfter s o (.w [oMEMOIZE] :: (cHP (oBYTEARRAY8 :: f) d ++ (.boundary :: s.ev))))
+
+theorem bytearrayObjExact_proven : BytearrayObjExact := fun _ o d s hc hm hl => cBytearrayObj5 hc o d s hm hl
 
 end PyLean.Pickle
