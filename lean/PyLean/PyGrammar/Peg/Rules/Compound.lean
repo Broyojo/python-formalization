@@ -388,6 +388,157 @@ theorem assignmentInvalid_proven : AssignmentInvalid := by
       (by dsimp only; rw [items_call_null (by rw [call_rule, h4])]), alts_nil]
   rfl
 
+/-- The rest of `assignment` (`Grammar/python.gram:151-166`):
+* `x: T [= v]` and `(x): T [= v]` under a `feature_version` below 6: `CHECK_VERSION(6, ...)` fails,
+  `NULL` with the exception for "Variable annotation syntax is only supported in Python 3.6 and
+  greater" (first alternative) or "Variable annotations syntax is ..." (second);
+* `x = v = w` where the third alternative's `!'='` fails after `v`: that alternative fails, the
+  mark goes back, and with `augassign` not matching either, the first pass ends in `NULL`;
+* second pass, `f() = 1`: a `NAME` not followed by `:`, then no `_tmp_11` target, no
+  `star_targets '='`, no `single_target`: `invalid_assignment` decides. -/
+def AssignmentMore : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (∀ (id ctx b c : Ast) (l : Option Loc) (tc : Token) (s0 s1 s2 s3 : PS),
+    nameToken q = (.node .Name [id, ctx] l, s0) → expectToken 11 s0 = (.tok tc, s1) →
+    callRule (f + 4) 109 s1 = (b, s2) → b ≠ .null → callRule (f + 3) 287 s2 = (c, s3) →
+    s3.errorIndicator = false → s3.featureVersion < 6 →
+    (callRule (f + 11) 11 p).1 = .null ∧ (callRule (f + 11) 11 p).2.errorIndicator = true ∧
+    (callRule (f + 11) 11 p).2.tok = (raiseError0 "SyntaxError"
+      "Variable annotation syntax is only supported in Python 3.6 and greater"
+      { s3 with errorIndicator := true }).2.tok) ∧
+  (∀ (a b c : Ast) (tc : Token) (s0 s1 s2 s3 s4 : PS),
+    nameToken q = (.null, s0) → s0.errorIndicator = false →
+    callRule (f + 5) 288 { s0 with mark := p.mark } = (a, s1) → a ≠ .null →
+    expectToken 11 s1 = (.tok tc, s2) → callRule (f + 3) 109 s2 = (b, s3) → b ≠ .null →
+    callRule (f + 2) 287 s3 = (c, s4) → s4.errorIndicator = false → s4.featureVersion < 6 →
+    (callRule (f + 11) 11 p).1 = .null ∧ (callRule (f + 11) 11 p).2.errorIndicator = true ∧
+    (callRule (f + 11) 11 p).2.tok = (raiseError0 "SyntaxError"
+      "Variable annotations syntax is only supported in Python 3.6 and greater"
+      { s4 with errorIndicator := true }).2.tok) ∧
+  (∀ (n ts b a : Ast) (te : Token) (s0 s1 s2 s3 s4 s5 s6 s7 : PS),
+    nameToken q = (n, s0) → n ≠ .null → expectToken 11 s0 = (.null, s1) →
+    s1.errorIndicator = false →
+    callRule (f + 5) 288 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 4) 289 { s2 with mark := p.mark } = (ts, s3) → ts ≠ .null →
+    callRule (f + 3) 12 s3 = (b, s4) → b ≠ .null →
+    expectToken 22 s4 = (.tok te, s5) → s5.errorIndicator = false →
+    callRule (f + 3) 199 { s5 with mark := p.mark } = (a, s6) → a ≠ .null →
+    callRule (f + 2) 13 s6 = (.null, s7) → s7.errorIndicator = false →
+    s7.callInvalidRules = false →
+    callRule (f + 11) 11 p = (.null, { s7 with mark := p.mark }.leave)) ∧
+  (∀ (n v : Ast) (s0 s1 s2 s3 s4 s5 : PS),
+    nameToken q = (n, s0) → n ≠ .null → expectToken 11 s0 = (.null, s1) →
+    s1.errorIndicator = false →
+    callRule (f + 5) 288 { s1 with mark := p.mark } = (.null, s2) → s2.errorIndicator = false →
+    callRule (f + 4) 289 { s2 with mark := p.mark } = (.null, s3) → s3.errorIndicator = false →
+    callRule (f + 3) 199 { s3 with mark := p.mark } = (.null, s4) → s4.errorIndicator = false →
+    s4.callInvalidRules = true →
+    callRule (f + 2) 216 { s4 with mark := p.mark } = (v, s5) → v = .null →
+    callRule (f + 11) 11 p = (.null, { s5 with mark := p.mark }.leave))
+
+theorem assignmentMore_proven : AssignmentMore := by
+  intro f p q h
+  obtain ⟨he, -, -, -, -, -, -⟩ := h.facts
+  rw [callRule_extra rfl rfl rfl rfl rfl h]
+  simp only [show ruleOf 11 = r11 from rfl, r11]
+  have E : ∀ s : PS, s.errorIndicator = false → ({ s with mark := p.mark } : PS).errorIndicator = false :=
+    fun s hs => hs
+  refine ⟨fun id ctx b c l tc s0 s1 s2 s3 h0 h1 h2 hb h3 h3e hv => ?_,
+    fun a b c tc s0 s1 s2 s3 s4 h0 h0e h1 ha h2 h3 hb h4 h4e hv => ?_,
+    fun n ts b a te s0 s1 s2 s3 s4 s5 s6 s7 h0 hn h1 h1e h2 h2e h3 hts h4 hb h5 h5e h6 ha h7 h7e h7i => ?_,
+    fun n v s0 s1 s2 s3 s4 s5 h0 hn h1 h1e h2 h2e h3 h3e h4 h4e h4i h5 hv => ?_⟩
+  · rw [alts_ok (by rfl) he (by
+      dsimp only
+      rw [items_call (by rw [call_name, h0]) (by simp), items_call (by rw [call_tok, h1]) (by simp),
+        items_call (by rw [call_rule, h2]) hb, items_opt (by rw [call_rule, h3]) h3e, items_nil]),
+      altResult_extra rfl rfl]
+    have h6 : (s3.featureVersion : Int) < 6 := by omega
+    have hsec : setExprContext (opNode .Store) 100000 (.node .Name [id, ctx] l) =
+        .node .Name [id, opNode .Store] l := rfl
+    have hE : evalA ((((#[] : Array Ast).push (.node .Name [id, ctx] l)).push (.tok tc)).push b |>.push c)
+        (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s3))
+        (.checkVersion (.int 6) (.str "Variable annotation syntax is")
+          (.mk .AnnAssign [.check (.call .set_expr_context [.var 0, .ctor .Store]), .var 2, .var 3,
+            .int 1, .extra0, .extra1, .extra2, .extra3])) s3 =
+        (.null, (raiseError0 "SyntaxError"
+          "Variable annotation syntax is only supported in Python 3.6 and greater"
+          { s3 with errorIndicator := true }).2) := by
+      have hmsg : toString (cpsStr ("Variable annotation syntax is".toList.map Char.toNat)) ++
+          toString " only supported in Python 3." ++ toString (6 : Int) ++ toString " and greater" =
+          "Variable annotation syntax is only supported in Python 3.6 and greater" := by decide +kernel
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+        MonadStateOf.get, StateT.get, mkAst, callHelper]
+      simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push, Array.size_push,
+        Array.size_empty, List.getD, Option.getD_some]
+      simp only [Nat.reduceEqDiff, ↓reduceIte, Option.getD_some, List.getElem?_cons_succ,
+        List.getElem?_cons_zero, hsec]
+      simp only [bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
+      rw [ite_t h6]
+      simp only [hmsg]
+      rfl
+    rw [hE]
+    have hei := (frame_raiseError0 "SyntaxError"
+      "Variable annotation syntax is only supported in Python 3.6 and greater"
+      { s3 with errorIndicator := true }).grows.err rfl
+    generalize raiseError0 "SyntaxError"
+      "Variable annotation syntax is only supported in Python 3.6 and greater"
+      { s3 with errorIndicator := true } = r at hei ⊢
+    dsimp only
+    split <;> simp [hei, PS.leave]
+  · rw [alts_fail (by rfl) he (by dsimp only; rw [items_call_null (by rw [call_name, h0])]),
+      alts_ok (by rfl) (E s0 h0e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h1]) ha, items_call (by rw [call_tok, h2]) (by simp),
+          items_call (by rw [call_rule, h3]) hb, items_opt (by rw [call_rule, h4]) h4e, items_nil]),
+      altResult_extra rfl rfl]
+    have h6 : (s4.featureVersion : Int) < 6 := by omega
+    have hE : evalA ((((#[] : Array Ast).push a).push (.tok tc)).push b |>.push c)
+        (mkExtra ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) (lastNonWhitespaceToken s4))
+        (.checkVersion (.int 6) (.str "Variable annotations syntax is")
+          (.mk .AnnAssign [.var 0, .var 2, .var 3, .int 0, .extra0, .extra1, .extra2, .extra3])) s4 =
+        (.null, (raiseError0 "SyntaxError"
+          "Variable annotations syntax is only supported in Python 3.6 and greater"
+          { s4 with errorIndicator := true }).2) := by
+      have hmsg : toString (cpsStr ("Variable annotations syntax is".toList.map Char.toNat)) ++
+          toString " only supported in Python 3." ++ toString (6 : Int) ++ toString " and greater" =
+          "Variable annotations syntax is only supported in Python 3.6 and greater" := by decide +kernel
+      simp only [evalA, evalA.evalList, bind, StateT.bind, pure, StateT.pure, get, getThe,
+        MonadStateOf.get, StateT.get, mkAst]
+      rw [ite_t h6]
+      simp only [hmsg]
+      rfl
+    rw [hE]
+    have hei := (frame_raiseError0 "SyntaxError"
+      "Variable annotations syntax is only supported in Python 3.6 and greater"
+      { s4 with errorIndicator := true }).grows.err rfl
+    generalize raiseError0 "SyntaxError"
+      "Variable annotations syntax is only supported in Python 3.6 and greater"
+      { s4 with errorIndicator := true } = r at hei ⊢
+    dsimp only
+    split <;> simp [hei, PS.leave]
+  · rw [alts_fail (by rfl) he (by
+        dsimp only
+        rw [items_call (by rw [call_name, h0]) hn, items_call_null (by rw [call_tok, h1])]),
+      alts_fail (by rfl) (E s1 h1e) (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+      alts_fail (by rfl) (E s2 h2e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h3]) hts, items_call (by rw [call_rule, h4]) hb,
+          items_look_fail (b := false) (by rw [call_tok, h5]) rfl]),
+      alts_fail (by rfl) (E s5 h5e) (by
+        dsimp only
+        rw [items_call (by rw [call_rule, h6]) ha, items_call_null (by rw [call_rule, h7])]),
+      alts_skip (by simp [h7i]), alts_nil]
+    rfl
+  · subst hv
+    rw [alts_fail (by rfl) he (by
+        dsimp only
+        rw [items_call (by rw [call_name, h0]) hn, items_call_null (by rw [call_tok, h1])]),
+      alts_fail (by rfl) (E s1 h1e) (by dsimp only; rw [items_call_null (by rw [call_rule, h2])]),
+      alts_fail (by rfl) (E s2 h2e) (by dsimp only; rw [items_call_null (by rw [call_rule, h3])]),
+      alts_fail (by rfl) (E s3 h3e) (by dsimp only; rw [items_call_null (by rw [call_rule, h4])]),
+      alts_fail (by simp [h4i]) (E s4 h4e) (by dsimp only; rw [items_call_null (by rw [call_rule, h5])]),
+      alts_nil]
+    rfl
+
 /-! ### `compound_stmt` -/
 
 /-- `compound_stmt` (`Grammar/python.gram:137-145`), dispatch by positive lookahead, in order:
