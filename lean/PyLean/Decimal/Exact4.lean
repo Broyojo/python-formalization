@@ -21,19 +21,19 @@ def sigThen {β : Type} (c : Ctx) : List Signal → List Signal → (List Signal
 target with exponent `qe`, with `v` the coefficient `quantSpec` gives (`co` padded with zeros when
 `qe ≤ e`, otherwise `co` with its last `qe - e` digits dropped and rounded as `m` says):
 
-* a target exponent outside `[Etiny, Emax]` is InvalidOperation (:2626-2629);
-* a zero becomes the zero of its sign at `qe` through `_fix` (:2632-2634);
+* a target exponent outside `[Etiny, Emax]` is InvalidOperation (:2624-2626);
+* a zero becomes the zero of its sign at `qe` through `_fix` (:2628-2630);
 * the operand's adjusted exponent above `Emax`, or `adjusted - qe + 1` above `prec`, is
-  InvalidOperation (:2636-2643);
+  InvalidOperation (:2632-2638);
 * `_rescale` raises the int/str-limit `ValueError` when the rounding incremented a coefficient
   of more than 4300 digits (`str(int(coeff) + 1)`);
 * otherwise a result whose adjusted exponent exceeds `Emax` or which has more than `prec` digits is
-  InvalidOperation (:2645-2650); else Subnormal (a non-zero result below `Emin`), Inexact (when
+  InvalidOperation (:2640-2646); else Subnormal (a non-zero result below `Emin`), Inexact (when
   non-zero digits were dropped) and Rounded (when any were) are signalled in that order, the first
-  trapped one raising, and the result `±v·10^qe` goes through `_fix` (:2651-2659).
+  trapped one raising (:2648-2654), and the result `±v·10^qe` goes through `_fix` (:2658-2659).
 
-A NaN operand goes through `_check_nans` (:2612-2614); two infinities give the first operand
-(:2616-2618); one infinity is InvalidOperation (:2620-2621). -/
+A NaN operand goes through `_check_nans` (:2612-2615); two infinities give the first operand
+(:2617-2619); one infinity is InvalidOperation (:2620-2621). -/
 def QuantizeExact : Prop :=
   ∀ (c : Ctx) (r : Option Rounding) (fl : List Signal),
     (∀ (neg : Bool) (co : Nat) (e : Int) (qn : Bool) (qc : Nat) (qe : Int),

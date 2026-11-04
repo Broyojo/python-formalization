@@ -80,12 +80,15 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
     | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | "str" => return .str (← (a[1]!).getStr?)
     | "list" => return .list (← (← (a[1]!).getArr?).toList.mapM sigKeyOf)
-    | "dict" | "frozendict" =>
+    | "dict" | "frozendict" | "frozendict_py" =>
       let pairs ← (← (a[1]!).getArr?).toList.mapM (fun p => do
         let q ← p.getArr?
         return ((← sigKeyOf q[0]!), (← sigValOf q[1]!)))
+      -- `_pydecimal` takes a frozendict for a plain object (not a `dict`), whose `str()` is the
+      -- dict's repr
+      if tag == "frozendict_py" then return .obj (dictReprErr pairs)
       return .dict pairs
-    | "frozendict_py" | "obj" => return .obj (← strKindOf (a.getD 1 Json.null))
+    | "obj" => return .obj (← strKindOf (a.getD 1 Json.null))
     | "tuple" => return .tuple (← (← (a[1]!).getArr?).toList.mapM strKindOf)
     | "idx" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | "hint" => return .int (intOfHex (← (a[1]!).getStr?))

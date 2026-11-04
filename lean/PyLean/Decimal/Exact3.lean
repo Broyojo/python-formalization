@@ -103,10 +103,10 @@ theorem normalizeNanExact_proven : NormalizeNanExact := by
 
 /-- `scaleb` (_pydecimal.py:3746-3769), the branches `ScalebExact` leaves: a NaN operand goes
 through `_check_nans` (:3753-3755), `nanSpec2`; for an integral second operand `n` whose digit
-string has more than 4300 digits, `int(other)` (:3760) raises the int/str-limit `ValueError`
+string has more than 4300 digits, `int(other)` (:3761) raises the int/str-limit `ValueError`
 (`int(self._int)`, Objects/longobject.c), whatever the first operand (a non-NaN); and an infinite
 first operand with `n` out of `[-2·(Emax+prec), 2·(Emax+prec)]` signals InvalidOperation, the range
-test coming before the infinity test (:3760-3764). -/
+test coming before the infinity test (:3761-3765). -/
 def ScalebRestExact : Prop :=
   ∀ (c : Ctx) (fl : List Signal),
     (∀ a b : Dec, nanKind a ≠ 0 ∨ nanKind b ≠ 0 → (scaleb c a b).run fl = nanSpec2 c a b fl) ∧
@@ -266,11 +266,11 @@ theorem convertOtherTupleExact_proven : ConvertOtherTupleExact :=
 state, for every `math.log10` (none of them reaches `_is_less_than_pow10a`): a NaN operand goes
 through `_check_nans` (:1559-1561), `nanSpec2`, before the infinity and zero tests; a zero `a` with a
 non-zero finite `b` is the zero of `a`'s sign at the ideal exponent `min(ea, eb)` through `_fix`
-(:1580-1584), and with an infinite `b` it is `a` through `_fix` (:1576-1578); for non-zero finite
+(:1583-1586), and with an infinite `b` it is `a` through `_fix` (:1578-1580); for non-zero finite
 operands whose adjusted exponents differ by `prec + 1` or more the result is InvalidOperation
-(DivisionImpossible, :1588-1590), and by `-2` or less (`|a/b| < 0.1`, so the nearest integer is 0)
+(DivisionImpossible, :1589-1592), and by `-2` or less (`|a/b| < 0.1`, so the nearest integer is 0)
 it is `a` itself, rescaled to the ideal exponent by padding zeros (exact), through `_fix`
-(:1591-1594); in between, `_WorkRep` (:1597-1598) takes `int(self._int)` and `int(other._int)`, which
+(:1593-1596); in between, `_WorkRep` (:1599-1600) takes `int(self._int)` and `int(other._int)`, which
 raise the int/str-limit `ValueError` for a coefficient of more than 4300 digits, `a`'s first. -/
 def RemainderNearRest : Prop :=
   ∀ (lg : Nat → Binary64.F64) (c : Ctx) (fl : List Signal),
