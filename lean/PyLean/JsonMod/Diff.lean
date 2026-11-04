@@ -401,6 +401,10 @@ def encXR (show_ : Note → NoteShown) : XR → Json
       ("msg", toJson (if e.message.startsWith "~" then "~" else e.message)),
       ("notes", Json.arr (ns.toArray.map fun n => toJson (show_ n).text))])]
 
+/-- The allocator of the difftest machine for the strings `make_enc` asks for: they are tiny or
+of 2**61 bytes and more (never in between), and only the tiny ones are granted. -/
+def diffAlloc : Alloc := fun n => decide (n < 2 ^ 40)
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "loads_py" | "loads_c" =>
@@ -505,7 +509,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       (← getStrArg (← field j "key_sep")) (← getStrArg (← field j "item_sep"))
       (← getBool j "sort_keys") (← getBool j "skipkeys") (← getBool j "allow_nan")
     let level ← decIntStr (← field j "level")
-    return encPy (fun l => Json.arr (l.toArray.map encStr)) (r.bind fun cfg => encoderCall cfg v level)
+    return encPy (fun l => Json.arr (l.toArray.map encStr)) (r.bind fun cfg => encoderCall diffAlloc cfg v level)
   | "loads_rec_py" | "loads_rec_c" =>
     let s ← decStr (← field j "s")
     let cfg : DCfg := { strict := ← getBool j "strict" }
