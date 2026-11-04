@@ -47,6 +47,7 @@ import PyLean.Datetime.DeltaObjProps
 import PyLean.Datetime.CalendarCProps
 import PyLean.Datetime.IsoDateCProps
 import PyLean.Datetime.SubclassCtor
+import PyLean.Datetime.IsoformatCProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -184,12 +185,12 @@ def entries : List Entry := [
     source := "C/Python twins; timezone docs", status := .proven
     prop := ``TimezoneNew, thm := some ``timezoneNew_proven },
   { id := "datetime-time-offsets", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.utcoffset", "time.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C get_tzinfo_member", "C time_utcoffset", "C time_dst"]
+    pyFns := ["time.utcoffset", "time.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C time_utcoffset", "C time_dst"]
     statement := "time.utcoffset() and time.dst() agree between the twins for every tzinfo, and an offset returned is strictly inside 24 hours."
     source := "tzinfo docs; C/Python twins", status := .proven
     prop := ``TimeOffsets, thm := some ``timeOffsets_proven },
   { id := "datetime-datetime-offsets", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.utcoffset", "datetime.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C get_tzinfo_member", "C datetime_utcoffset", "C datetime_dst"]
+    pyFns := ["datetime.utcoffset", "datetime.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C datetime_utcoffset", "C datetime_dst"]
     statement := "datetime.utcoffset() and datetime.dst() agree between the twins for every tzinfo, and an offset returned is strictly inside 24 hours."
     source := "tzinfo docs; C/Python twins", status := .proven
     prop := ``DatetimeOffsets, thm := some ``datetimeOffsets_proven },
@@ -199,18 +200,18 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``TznameTwins, thm := some ``tznameTwins_proven },
   { id := "datetime-time-repr", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) of the base class is the same text in both twins."
     source := "C/Python twins", status := .proven
     prop := ``TimeRepr, thm := some ``timeRepr_proven },
   { id := "datetime-datetime-repr", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) of the base class is the same text in both twins unless both fold and tzinfo are set."
     source := "C/Python twins", status := .proven
     prop := ``DatetimeRepr, thm := some ``datetimeRepr_proven
     notes := "With fold=1 and a tzinfo the keywords come in a different order: C prints fold first, Python tzinfo first; refuted on record as datetime-repr-fold-tzinfo-twins." },
   { id := "datetime-time-isoformat-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.isoformat", "time._tzstr", "_format_time", "_format_offset", "C datetime_time_isoformat_impl", "C time_str", "C format_utcoffset"]
+    pyFns := ["time.isoformat", "time._tzstr", "_format_time", "_format_offset", "C datetime_time_isoformat_impl", "C format_utcoffset"]
     statement := "time.isoformat(timespec) and str(time) agree between the twins for every timespec and tzinfo."
     source := "C/Python twins", status := .proven
     prop := ``TimeIsoformatTwins, thm := some ``timeIsoformatTwins_proven },
@@ -701,7 +702,7 @@ def entries : List Entry := [
     source := "method vs equivalent method", status := .proven
     prop := ``StrptimeMethods, thm := some ``strptimeMethods_proven },
   { id := "datetime-date-isoformat-roundtrip", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C date_str", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C _find_isoformat_datetime_separator"]
+    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C _find_isoformat_datetime_separator"]
     statement := "For every date d, date.fromisoformat(d.isoformat()) == d and datetime.fromisoformat(d.isoformat()) == datetime(d.year, d.month, d.day), in both twins."
     source := "date.fromisoformat docs (\"the output of date.isoformat()\" is accepted)", status := .proven
     prop := ``DateIsoformatRoundtrip, thm := some ``dateIsoformatRoundtrip_proven },
@@ -1283,7 +1284,7 @@ def entries : List Entry := [
     source := "pickle contract; C/Python twins", status := .proven
     prop := ``DatetimeNewPickle, thm := some ``datetimeNewPickle_proven },
   { id := "datetime-time-repr-cls", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) is the same text in both twins for the base class and every subclass whose __qualname__ is its __name__ and whose module is not named datetime, for every field value, tzinfo and fold."
     source := "C/Python twins", status := .proven
     prop := ``TimeReprCls, thm := some ``timeReprCls_proven },
@@ -1295,7 +1296,7 @@ def entries : List Entry := [
     bug := some "datetime-repr-qualname-vs-tp-name"
     notes := "A nested subclass: Python prints __qualname__ (Outer.T(1, 2)), C tp_name (T(1, 2))." },
   { id := "datetime-datetime-repr-cls", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) is the same text in both twins for the base class and every plain subclass, for every valid datetime without both fold=1 and a tzinfo."
     source := "C/Python twins (narrows datetime-repr-fold-tzinfo-twins)", status := .proven
     prop := ``DatetimeReprCls, thm := some ``datetimeReprCls_proven },
@@ -1354,12 +1355,12 @@ def entries : List Entry := [
     source := "_pydatetime.py:1998-2014; datetime.fromisoformat docs", status := .proven
     prop := ``DatetimeFromIsoRollover, thm := some ``datetimeFromIsoRollover_proven },
   { id := "datetime-time-repr-fallible", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) with a tzinfo whose __repr__ may raise or return a non-str: both twins agree on every outcome for the base class and plain subclasses; a raising __repr__ propagates its exception, a non-str result is TypeError, a str result r is inserted as tzinfo=r before fold, in both; with str results it is the infallible text of TimeReprCls."
     source := "C/Python twins; PyObject_Repr contract", status := .proven
     prop := ``TimeReprFallible, thm := some ``timeReprFallible_proven },
   { id := "datetime-datetime-repr-fallible", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) with a tzinfo whose __repr__ may raise or return a non-str: both twins agree for plain classes when fold is 0, there is no tzinfo, or the tzinfo repr fails; a raising __repr__ propagates, a non-str is TypeError, a str r is inserted in each twin's order; with str results it is DatetimeReprCls's text."
     source := "C/Python twins; PyObject_Repr contract", status := .proven
     prop := ``DatetimeReprFallible, thm := some ``datetimeReprFallible_proven },
@@ -1479,7 +1480,24 @@ def entries : List Entry := [
     pyFns := ["C parse_isoformat_date", "C parse_digits", "C is_digit"]
     statement := "parse_isoformat_date returns -1 unless the first four bytes are digits; YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww give iso_to_ymd's date or -3 + its code; a wrong separator is -2 in both branches, a missing day digit -4, a missing week digit -3; YYYY-MM-DD and YYYYMMDD give their fields."
     source := "code comment (return codes, :946-955); invariant", status := .proven
-    prop := ``ParseIsoDateCSpec, thm := some ``parseIsoDateCSpec_proven }
+    prop := ``ParseIsoDateCSpec, thm := some ``parseIsoDateCSpec_proven },
+  { id := "datetime-str-via-isoformat", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_str", "C time_str", "date.__str__", "time.__str__"]
+    statement := "str() of a date or time whose class keeps isoformat is the same text in both twins (YYYY-MM-DD for a date); in C, a class that overrides isoformat gets its override's result or exception."
+    source := "C/Python twins; date.__str__ docs (\"For a date d, str(d) is equivalent to d.isoformat()\")", status := .proven
+    prop := ``StrViaIsoformat, thm := some ``strViaIsoformat_proven },
+  { id := "datetime-str-isoformat-override-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_str", "date.__str__"]
+    statement := "str() of a date agrees between the twins for every class, a subclass overriding isoformat included."
+    source := "C/Python twins", status := .refuted
+    prop := ``StrIsoformatOverrideTwins, thm := some ``strIsoformatOverrideTwins_refuted
+    bug := some "datetime-pydatetime-str-isoformat-alias"
+    notes := "class D(date): def isoformat(self): return 'X'; str(D(2000, 1, 1)) is 'X' in C, '2000-01-01' in _pydatetime (__str__ = isoformat binds date.isoformat). time is the same; datetime.__str__ calls self.isoformat(sep=' ') in both." },
+  { id := "datetime-append-fold-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C append_keyword_fold"]
+    statement := "C append_keyword_fold (', fold=%d)') and Python's s[:-1] + ', fold=1)' agree for folds 0 and 1: no change for 0, ', fold=1)' for 1."
+    source := "C/Python twins", status := .proven
+    prop := ``AppendFoldTwins, thm := some ``appendFoldTwins_proven }
 ]
 
 end PyLean.Datetime
