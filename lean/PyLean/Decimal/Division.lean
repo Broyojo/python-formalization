@@ -92,6 +92,15 @@ def log10Base2Hi : Binary64.F64 := .ofBits 0x400a934f0979a372
 /-- `q.bit_length()`. -/
 def bitLen (q : Nat) : Nat := if q = 0 then 0 else Nat.log2 q + 1
 
+/-- `n < x` for an int `n` and a non-NaN double `x` (`float_richcompare`, exact): an infinity
+compares by its sign. -/
+def intLtF (n : Nat) (x : Binary64.F64) : Bool :=
+  if x.isInf then !x.sign else decide ((n : Rat) < x.toRat)
+
+/-- `n >= x` for an int `n` and a non-NaN double `x`. -/
+def intGeF (n : Nat) (x : Binary64.F64) : Bool :=
+  if x.isInf then x.sign else decide (x.toRat ≤ (n : Rat))
+
 /-- `_is_less_than_pow10a_use_str(q, a)`, _pydecimal.py:470-501: `is_valid`, and whether
 `str(q)` was computed. `a * _LOG_10_BASE_2_LO` converts `a` to a double first, which raises
 OverflowError when `a` rounds to infinity (`PyLong_AsDouble`, Objects/longobject.c); Python
@@ -101,8 +110,8 @@ tests leave open, `str(q)` runs whatever `q` is, so the integer string limit can
 def isLessThanPow10aUseStr (q a : Nat) : Py (Bool × Bool) :=
   let fa := Binary64.F64.ofInt a
   if fa.isInf then .error (.overflowError "int too large to convert to float") else
-  if (bitLen q : Rat) < (Binary64.F64.mul fa log10Base2Lo).toRat then .ok (true, false)
-  else if (Binary64.F64.add Binary64.F64.one (Binary64.F64.mul fa log10Base2Hi)).toRat ≤ bitLen q then
+  if intLtF (bitLen q) (Binary64.F64.mul fa log10Base2Lo) then .ok (true, false)
+  else if intGeF (bitLen q) (Binary64.F64.add Binary64.F64.one (Binary64.F64.mul fa log10Base2Hi)) then
     .ok (false, false)
   else do
     strLimit q

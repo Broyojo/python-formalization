@@ -21,14 +21,12 @@ namespace PyLean.Decimal
 open PyLean
 
 theorem pow10_lo_false :
-    ¬ ((1182146628 : Nat) : Rat) <
-      (Binary64.F64.mul (Binary64.F64.ofInt ((355861594 : Nat) : Int)) log10Base2Lo).toRat := by
+    intLtF 1182146628 (Binary64.F64.mul (Binary64.F64.ofInt ((355861594 : Nat) : Int)) log10Base2Lo) = false := by
   decide +kernel
 
 theorem pow10_hi_true :
-    (Binary64.F64.add Binary64.F64.one
-        (Binary64.F64.mul (Binary64.F64.ofInt ((355861594 : Nat) : Int)) log10Base2Hi)).toRat ≤
-      ((1182146628 : Nat) : Rat) := by
+    intGeF 1182146628 (Binary64.F64.add Binary64.F64.one
+        (Binary64.F64.mul (Binary64.F64.ofInt ((355861594 : Nat) : Int)) log10Base2Hi)) = true := by
   decide +kernel
 
 theorem pow10_fa_finite : (Binary64.F64.ofInt ((355861594 : Nat) : Int)).isInf = false := by
@@ -39,7 +37,8 @@ theorem pow10_hi_fires (q : Nat) (hb : bitLen q = 1182146628) :
     isLessThanPow10aUseStr q 355861594 = .ok (false, false) := by
   unfold isLessThanPow10aUseStr
   simp only
-  rw [hb, if_neg (by rw [pow10_fa_finite]; decide), if_neg pow10_lo_false, if_pos pow10_hi_true]
+  rw [hb, pow10_fa_finite, pow10_lo_false, pow10_hi_true]
+  rfl
 
 /-! ### Certified bounds on `2^n / 10^k`
 

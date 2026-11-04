@@ -21,7 +21,7 @@ open PyLean.Binary64
 /-! ## `from_float` -/
 
 /-- `Decimal.from_float(f)` for a float `f`, with `cls` = `Decimal`,
-_pydecimal.py:736-760. An infinity or NaN goes through `cls(repr(f))`, whose
+_pydecimal.py:739-760. An infinity or NaN goes through `cls(repr(f))`, whose
 `repr` is `'inf'`, `'-inf'` or `'nan'` (a NaN's sign is not printed). -/
 def fromFloat (f : F64) : Py Dec := do
   if f.isInf || f.isNaN then

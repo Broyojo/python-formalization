@@ -459,7 +459,7 @@ theorem numDigits_nines {p : Nat} (hp : 1 ≤ p) : numDigits (10 ^ p - 1) = p :=
       omega
   omega
 
-/-- `Overflow.handle` (_pydecimal.py:284-297) against its docstring (:267-282): an infinity
+/-- `Overflow.handle` (_pydecimal.py:284-297) against its docstring (:263-282): an infinity
 with the result's sign for ROUND_HALF_UP, HALF_EVEN, HALF_DOWN and UP; for ROUND_DOWN the
 largest finite number of the precision, `prec` nines at exponent `Emax - prec + 1` (adjusted
 exponent Emax), with the result's sign; ROUND_CEILING gives that for a negative result and

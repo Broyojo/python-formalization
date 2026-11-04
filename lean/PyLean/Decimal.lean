@@ -409,7 +409,7 @@ def entries : List Entry := [
   { id := "decimal-check-nans-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal._check_nans", "Decimal._isnan", "Decimal._fix_nan", "InvalidOperation.handle", "Context._raise_error"]
     statement := "_check_nans: a signaling NaN on either side signals InvalidOperation (raising if trapped) and returns that operand quiet with its payload cut to prec - clamp digits, the left one first; otherwise a quiet NaN is returned so, the left one first, with no flag; with no NaN it returns 0. The same for the one-operand form."
-    source := "_check_nans docstring, _pydecimal.py:791-798; InvalidOperation docstring (:150-157)"
+    source := "_check_nans docstring, _pydecimal.py:791-798; InvalidOperation docstring (:136-157)"
     status := .proven, prop := ``CheckNansExact, thm := some ``checkNansExact_proven },
   { id := "decimal-compare-check-nans-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal._compare_check_nans", "Decimal.is_snan", "Decimal.is_qnan", "Decimal._fix_nan",
@@ -456,13 +456,13 @@ def entries : List Entry := [
   { id := "decimal-overflow-handle-table", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Overflow.handle"]
     statement := "Overflow.handle gives the signed infinity for ROUND_HALF_UP, HALF_EVEN, HALF_DOWN and UP; prec nines at exponent Emax - prec + 1 (prec digits, adjusted exponent Emax) with the result's sign for ROUND_DOWN and ROUND_05UP; for ROUND_CEILING that for a negative result and +Infinity otherwise; for ROUND_FLOOR that for a positive result and -Infinity otherwise."
-    source := "Overflow docstring, _pydecimal.py:267-282"
+    source := "Overflow docstring, _pydecimal.py:263-282"
     status := .proven, prop := ``OverflowHandleTable, thm := some ``overflowHandleTable_proven
     notes := "ROUND_05UP is not in the docstring; the handler gives the ROUND_DOWN value, which is what 05up rounding of nines gives." },
   { id := "decimal-fix-nan-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal._fix_nan", "InvalidOperation.handle"]
     statement := "_fix_nan keeps the sign and kind and the last prec - clamp payload digits (leading zeros dropped); InvalidOperation.handle returns that, quiet, for its NaN argument, and the positive quiet NaN without one."
-    source := "_fix_nan comment, _pydecimal.py:1704-1708; InvalidOperation docstring (:150-157)"
+    source := "_fix_nan comment, _pydecimal.py:1704-1708; InvalidOperation docstring (:136-157)"
     status := .proven, prop := ``FixNanExact, thm := some ``fixNanExact_proven },
   { id := "decimal-int-trunc-exact", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__int__"]

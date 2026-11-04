@@ -168,7 +168,7 @@ def compareTotalMag (a b : Dec) : Int := compareTotal (copyAbs a) (copyAbs b)
 
 /-! ## `max`, `min`, `max_mag`, `min_mag` -/
 
-/-- The NaN handling these four share, _pydecimal.py:2893-2906: `none` to go on. -/
+/-- The NaN handling these four share, _pydecimal.py:2891-2901: `none` to go on. -/
 def minmaxNans (c : Ctx) (a b : Dec) : DM (Option Dec) := do
   if isSpecial a || isSpecial b then
     let sn := isnan a
