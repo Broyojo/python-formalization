@@ -452,6 +452,8 @@ decimal-abs-no-round-exact	proven	Lib/_pydecimal.py	Decimal.__abs__,Decimal.copy
 decimal-compare-total-mag-rest	proven	Lib/_pydecimal.py	Decimal.compare_total_mag
 decimal-convert-other-tuple-exact	proven	Lib/_pydecimal.py	_convert_other
 decimal-remainder-near-rest	proven	Lib/_pydecimal.py	Decimal.remainder_near,Decimal._check_nans,_WorkRep.__init__
+decimal-quantize-exact	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._check_nans
+decimal-adjusted-exact	proven	Lib/_pydecimal.py	Decimal.adjusted
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	check_closed,_io_BytesIO_close_impl,_io_BytesIO_read_impl,BytesIO.close,BytesIO.read
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io_BytesIO_seek_impl,BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	check_exports,_io_BytesIO_getbuffer_impl,bytesiobuf_getbuffer_lock_held,bytesiobuf_getbuffer,BytesIO.getbuffer,_io_BytesIO_write_impl,write_bytes_lock_held,BytesIO.write
