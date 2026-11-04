@@ -7,6 +7,7 @@ import PyLean.Sequences.Insert
 import PyLean.Sequences.PopRemove
 import PyLean.Sequences.SliceAssign
 import PyLean.Sequences.DequeRepeat
+import PyLean.Sequences.DequeReentrant
 import PyLean.Sequences.Reverse
 import PyLean.Sequences.ArrayItems
 import PyLean.Sequences.ArraySlice
