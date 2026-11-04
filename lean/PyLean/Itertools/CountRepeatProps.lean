@@ -33,8 +33,25 @@ def countSpec (N : NumOps ν) (ty : String) (step : CVal ν) : CVal ν → List 
 step), slow mode holds it in `long_cnt` with `cnt == PY_SSIZE_T_MAX`. -/
 def CountInv (s : CountState ν) (v step : CVal ν) : Prop :=
   s.longStep = step ∧
-  ((∃ i : Int, s.longCnt = none ∧ s.cnt = i ∧ v = .int i ∧ step = .int 1 ∧ i ≤ ssizeMax) ∨
+  ((∃ i : Int, s.longCnt = none ∧ s.cnt = i ∧ v = .int i ∧ step = .int 1 ∧ ssizeMin ≤ i ∧ i ≤ ssizeMax) ∨
     (s.longCnt = some v ∧ s.cnt = ssizeMax))
+
+theorem two64_le_intStrBound : (2 : Nat) ^ 64 ≤ 10 ^ 4300 :=
+  Nat.le_trans (Nat.pow_le_pow_left (by decide) 64) (Nat.pow_le_pow_right (by decide) (by decide))
+
+/-- A `Py_ssize_t` has at most 19 digits, far below the limit, so the fast path's `%zd`
+and `%R` of the same int agree. -/
+theorem intRepr_ssize (i : Int) (h1 : ssizeMin ≤ i) (h2 : i ≤ ssizeMax) :
+    intRepr i = .ok (toString i) := by
+  have hlt : i.natAbs < 2 ^ 64 := by
+    rw [ssizeMin_eq] at h1
+    rw [ssizeMax_eq] at h2
+    rcases Int.natAbs_eq i with h | h <;> omega
+  have : ¬ (10 ^ 4300 ≤ i.natAbs) := Nat.not_le.mpr (Nat.lt_of_lt_of_le hlt two64_le_intStrBound)
+  simp only [intRepr, this, if_false]
+
+theorem intRepr_ssizeMax : intRepr ssizeMax = .ok (toString ssizeMax) :=
+  intRepr_ssize _ (by decide) (Int.le_refl _)
 
 theorem asLongOrMinus1_eq_one (x : Int) : asLongOrMinus1 x = 1 ↔ x = 1 := by
   simp only [asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
@@ -48,14 +65,14 @@ theorem countOps_spec (N : NumOps ν) (ty : String) (step : CVal ν) : ∀ (ops 
   | [], _, _, _ => rfl
   | .next :: ops, s, v, ⟨hst, h⟩ => by
     simp only [cCountOps, countSpec, cCountNext]
-    rcases h with ⟨i, h1, h2, rfl, rfl, h4⟩ | ⟨h1, h2⟩
+    rcases h with ⟨i, h1, h2, rfl, rfl, h3, h4⟩ | ⟨h1, h2⟩
     · by_cases hv : i = ssizeMax
       · subst hv
         simp only [h2, ↓reduceIte, h1, Option.getD, hst, pyAdd]
         rw [countOps_spec N ty _ ops _ (.int (ssizeMax + 1)) ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩]
       · simp only [h2, hv, ↓reduceIte, pyAdd]
         rw [countOps_spec N ty _ ops { s with cnt := i + 1 } (.int (i + 1))
-          ⟨hst, Or.inl ⟨i + 1, h1, rfl, rfl, rfl, by omega⟩⟩]
+          ⟨hst, Or.inl ⟨i + 1, h1, rfl, rfl, rfl, by omega, by omega⟩⟩]
     · simp only [h2, ↓reduceIte, h1, Option.getD, hst]
       cases ha : pyAdd N v step with
       | error e =>
@@ -69,8 +86,8 @@ theorem countOps_spec (N : NumOps ν) (ty : String) (step : CVal ν) : ∀ (ops 
   | .repr :: ops, s, v, ⟨hst, h⟩ => by
     simp only [cCountOps, countSpec]
     rw [countOps_spec N ty step ops s v ⟨hst, h⟩]
-    rcases h with ⟨i, h1, h2, rfl, rfl, h4⟩ | ⟨h1, h2⟩
-    · simp [cCountRepr, h1, h2, stepIsOne_one, pyRepr] <;> rfl
+    rcases h with ⟨i, h1, h2, rfl, rfl, h3, h4⟩ | ⟨h1, h2⟩
+    · simp [cCountRepr, h1, h2, stepIsOne_one, pyRepr, intRepr_ssize i h3 h4] <;> rfl
     · simp [cCountRepr, h1, hst]
   | .hint :: ops, s, v, hinv => by
     simp only [cCountOps, countSpec]
@@ -84,6 +101,7 @@ theorem countNew_inv (start step : Option (CVal ν)) (hs : NoIntSub start) (ht :
     ∃ s, cCountNew start step = .ok s ∧ CountInv s (start.getD (.int 0)) (step.getD (.int 1)) := by
   have hone : asLongOrMinus1 1 = 1 := by simp [asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
   have hmax : (0 : Int) ≤ ssizeMax := by decide
+  have hmin : ssizeMin ≤ (0 : Int) := by decide
   have hslow : ∀ (lc : CVal ν), CountInv { cnt := ssizeMax, longCnt := some lc, longStep := step.getD (.int 1) }
       lc (step.getD (.int 1)) := fun lc => ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩
   cases start with
@@ -91,14 +109,14 @@ theorem countNew_inv (start step : Option (CVal ν)) (hs : NoIntSub start) (ht :
     cases step with
     | none =>
       exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.longVal, hone] <;> rfl,
-        ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmax⟩⟩⟩
+        ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmin, hmax⟩⟩⟩
     | some t =>
       cases t with
       | int j =>
         by_cases hj : j = 1
         · subst hj
           exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hone] <;> rfl,
-            ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmax⟩⟩⟩
+            ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmin, hmax⟩⟩⟩
         · have hne : asLongOrMinus1 j ≠ 1 := fun h => hj ((asLongOrMinus1_eq_one j).1 h)
           exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hne] <;> rfl,
             hslow _⟩
@@ -119,20 +137,20 @@ theorem countNew_inv (start step : Option (CVal ν)) (hs : NoIntSub start) (ht :
             cases t <;> simp_all [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi] <;> rfl,
           hslow _⟩
       | ok v =>
-        have hv : v = i ∧ i ≤ ssizeMax := by
+        have hv : v = i ∧ ssizeMin ≤ i ∧ i ≤ ssizeMax := by
           simp only [asSsize] at hi; split at hi <;> simp_all
-        obtain ⟨rfl, hle⟩ := hv
+        obtain ⟨rfl, hge, hle⟩ := hv
         cases step with
         | none =>
           exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hone] <;> rfl,
-            ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hle⟩⟩⟩
+            ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hge, hle⟩⟩⟩
         | some t =>
           cases t with
           | int j =>
             by_cases hj : j = 1
             · subst hj
               exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hone] <;> rfl,
-                ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hle⟩⟩⟩
+                ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hge, hle⟩⟩⟩
             · have hne : asLongOrMinus1 j ≠ 1 := fun h => hj ((asLongOrMinus1_eq_one j).1 h)
               exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hne] <;> rfl,
                 hslow _⟩
@@ -165,15 +183,21 @@ theorem countConsistent_proven : CountConsistent := by
   simp only [cCount, hs]
   exact countOps_spec N ty _ ops s _ hinv
 
+/-- `repr(count)` for the int value `v` and int step: `count(V)` when the step is 1,
+`count(V, step)` otherwise, or the int/str-limit `ValueError` when `V`, or the step where
+it is shown, has more than 4300 digits. -/
+def intCountRepr (ty : String) (step v : Int) : OpRes (CVal ν) :=
+  if 10 ^ 4300 ≤ v.natAbs ∨ (step ≠ 1 ∧ 10 ^ 4300 ≤ step.natAbs) then .exc (.valueError intStrLimitMsg)
+  else .str (if step = 1 then s!"{ty}({v})" else s!"{ty}({v}, {step})")
+
 /-- For every int `start` and `step` and every sequence of `next()`/`repr()`
 calls, `count` gives `start + k*step` and its `repr` is `count(V)` or
-`count(V, step)`: the fast path and the slow path are invisible, for ints with no
-hypothesis at all. -/
+`count(V, step)`, or the int/str-limit `ValueError` past 4300 digits: the fast path and
+the slow path are invisible, for ints with no hypothesis at all. -/
 def intSpec (ty : String) (step : Int) : Int → List Op → List (OpRes (CVal ν))
   | _, [] => []
   | v, .next :: ops => .val (.int v) :: intSpec ty step (v + step) ops
-  | v, .repr :: ops =>
-    .str (if step = 1 then s!"{ty}({v})" else s!"{ty}({v}, {step})") :: intSpec ty step v ops
+  | v, .repr :: ops => intCountRepr ty step v :: intSpec ty step v ops
   | v, .hint :: ops => .exc (.typeError "~no __length_hint__") :: intSpec ty step v ops
 
 theorem countSpec_int (N : NumOps ν) (ty : String) (step : Int) : ∀ (ops : List Op) (v : Int),
@@ -187,9 +211,18 @@ theorem countSpec_int (N : NumOps ν) (ty : String) (step : Int) : ∀ (ops : Li
     rw [countSpec_int N ty step ops]
     by_cases h : step = 1
     · subst h
-      simp [cCountRepr, stepIsOne_one, pyRepr, reprRes] <;> rfl
+      by_cases hv : 10 ^ 4300 ≤ v.natAbs
+      · simp [cCountRepr, stepIsOne_one, pyRepr, intRepr, reprRes, intCountRepr, hv]
+      · simp [cCountRepr, stepIsOne_one, pyRepr, intRepr, reprRes, intCountRepr, hv] <;> rfl
     · have hne : ¬ asLongOrMinus1 step = 1 := fun h' => h ((asLongOrMinus1_eq_one step).1 h')
-      simp [cCountRepr, stepIsOne, CVal.isLong, CVal.longVal, hne, pyRepr, reprRes, h] <;> rfl
+      by_cases hv : 10 ^ 4300 ≤ v.natAbs
+      · simp [cCountRepr, stepIsOne, CVal.isLong, CVal.longVal, hne, pyRepr, intRepr, reprRes, h,
+          intCountRepr, hv]
+      · by_cases ht : 10 ^ 4300 ≤ step.natAbs
+        · simp [cCountRepr, stepIsOne, CVal.isLong, CVal.longVal, hne, pyRepr, intRepr, reprRes, h,
+            intCountRepr, hv, ht]
+        · simp [cCountRepr, stepIsOne, CVal.isLong, CVal.longVal, hne, pyRepr, intRepr, reprRes, h,
+            intCountRepr, hv, ht] <;> rfl
   | .hint :: ops, v => by
     simp only [countSpec, intSpec]
     rw [countSpec_int N ty step ops]
@@ -348,7 +381,7 @@ theorem countFailedAddRaisesFirst_proven : CountFailedAddRaisesFirst := by
     cases s
     simp_all
   · simp [cCountNext, h1, h2, h3]
-  · simp [cCountRepr, ho, h1, h2, pyRepr]
+  · simp [cCountRepr, ho, h1, h2, pyRepr, intRepr_ssizeMax]
     rfl
 
 /-! ## repeat -/
