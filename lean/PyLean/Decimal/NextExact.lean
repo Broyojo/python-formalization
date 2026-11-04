@@ -317,4 +317,294 @@ theorem ceil_round (q : Ctx) (hp : 1 ≤ q.prec) (hE : q.emin ≤ q.emax) (hr : 
           rw [hXv] at hXZ
           exact least_pos hL2 hZ q0 (r * 10 ^ b) (b + k) hrb0 hXZ hsm
 
+/-- `_fix` under `ROUND_CEILING`, in a context that traps nothing, of every finite non-zero value:
+the least representable value at or above it (`CeilGoal`). -/
+theorem ceil_fixSpec (q : Ctx) (hp : 1 ≤ q.prec) (hE : q.emin ≤ q.emax) (hr : q.rounding = .ceiling)
+    (htr : q.traps = []) (neg : Bool) (co : Nat) (e L : Int) (hc : co ≠ 0) (hL1 : L ≤ e)
+    (hL2 : L ≤ q.etiny) (fl0 fl1 : List Signal) (v : Dec) (h : fixSpec q neg co e fl0 = .ok (v, fl1)) :
+    CeilGoal q L (scl neg co e L) v := by
+  have hT : q.etiny = q.emin - q.prec + 1 := rfl
+  have hU : q.etop = q.emax - q.prec + 1 := rfl
+  unfold fixSpec at h
+  simp only at h
+  split at h
+  · rename_i ho
+    rw [sigRun_val htr h]
+    exact ceil_over q hp hE hr neg co e L hc hL1 hL2 ho
+  · rename_i ho
+    split at h
+    · rename_i hk
+      split at h
+      · rename_i hcl
+        rw [sigRun_val htr h]
+        exact ceil_keep q neg _ _ co e L (by omega) (scl_fold neg co e _ L hcl.2 (by omega))
+      · rw [sigRun_val htr h]
+        exact ceil_keep q neg co e co e L (by omega) rfl
+    · rename_i hk
+      split at h
+      · exact absurd h (by simp)
+      · rw [sigRun_val htr h]
+        simp only [hr]
+        exact ceil_round q hp hE hr neg co e L _ _ hc hL1 hL2 (Int.le_max_left _ _) (Int.le_max_right _ _)
+          (by omega) ho (by omega) (by omega)
+
+/-- What `next_plus` gives for the value `X` (scaled to `L`): `+Infinity` when no representable
+value is above `X`, otherwise the least representable value above it. -/
+def NextGoal (c : Ctx) (L X : Int) (y : Dec) : Prop :=
+  (y = .inf false ∧ ∀ Z, RepAt c L Z → Z ≤ X) ∨
+  (∃ sy cy ey, y = .fin sy cy ey ∧ cy < 10 ^ c.prec ∧ c.etiny ≤ ey ∧ ey ≤ c.etop ∧
+     X < scl sy cy ey L ∧ ∀ Z, RepAt c L Z → X < Z → scl sy cy ey L ≤ Z)
+
+/-- A rounded value that differs from the operand is the least representable value above it. -/
+theorem next_of_ceil_ne {c : Ctx} {L X : Int} {v : Dec} (h : CeilGoal c L X v)
+    (hne : ∀ sv cv ev, v = .fin sv cv ev → c.etiny ≤ ev → scl sv cv ev L ≠ X) : NextGoal c L X v := by
+  rcases h with ⟨rfl, h2⟩ | ⟨sv, cv, ev, rfl, h1, h2, h3, h4⟩
+  · exact Or.inl ⟨rfl, fun Z hZ => Int.le_of_lt (h2 Z hZ)⟩
+  · have hn := hne sv cv ev rfl h1
+    rcases h3 with h3 | ⟨h3, h3'⟩
+    · exact absurd h3 hn
+    · exact Or.inr ⟨sv, cv, ev, rfl, h3, h1, h3', by omega, fun Z hZ hXZ => h4 Z hZ (by omega)⟩
+
+/-- `10^(Etiny - L)` as an integer, for `L < Etiny`. -/
+def gapD (c : Ctx) (L : Int) : Int := ((10 ^ (c.etiny - L).toNat : Nat) : Int)
+def gapd (c : Ctx) (L : Int) : Int := ((10 ^ (c.etiny - 1 - L).toNat : Nat) : Int)
+
+theorem gapD_eq {c : Ctx} {L : Int} (hL : L < c.etiny) : gapD c L = 10 * gapd c L := by
+  have : (c.etiny - L).toNat = (c.etiny - 1 - L).toNat + 1 := by omega
+  simp only [gapD, gapd, this, Nat.pow_succ]
+  omega
+
+theorem gapd_pos (c : Ctx) (L : Int) : 0 < gapd c L := by
+  have := pow10_pos (c.etiny - 1 - L).toNat
+  simp only [gapd]; omega
+
+/-- Values on the grid of `10^Etiny`: from `u·D < w·D`, `w·D ≥ u·D + D`. -/
+theorem grid_step {u w D : Int} (hD : 0 < D) (h : u * D < w * D) : u * D + D ≤ w * D := by
+  have h1 : u < w := Int.lt_of_mul_lt_mul_right h (by omega)
+  have h2 : 1 * D ≤ (w - u) * D := Int.mul_le_mul_of_nonneg_right (by omega) (by omega)
+  rw [Int.sub_mul, Int.one_mul] at h2
+  omega
+
+/-- A finite value at an exponent of at least `Etiny` is on the grid of `10^Etiny`. -/
+theorem fin_grid (c : Ctx) (L : Int) (sv : Bool) (cv : Nat) (ev : Int) (hT : c.etiny ≤ ev) (hL : L ≤ c.etiny) :
+    ∃ w : Int, scl sv cv ev L = w * gapD c L := by
+  have h := mult_of_ge (cz := cv) (show (c.etiny - L).toNat ≤ (ev - L).toNat by omega)
+  refine ⟨sgnVal sv (cv * 10 ^ ((ev - L).toNat - (c.etiny - L).toNat)), ?_⟩
+  simp only [scl, gapD, sgnVal, h]
+  cases sv <;> simp [Int.natCast_mul, Int.neg_mul]
+
+theorem repAt_grid {c : Ctx} {L Z : Int} (hL : L ≤ c.etiny) (hZ : RepAt c L Z) :
+    ∃ w : Int, Z = w * gapD c L := by
+  obtain ⟨b, cz, ez, _, h1, _, rfl⟩ := hZ
+  exact fin_grid c L b cz ez h1 hL
+
+/-- `next_plus` after the rounding returned the operand itself: the value one tenth of a unit
+of `Etiny` above it, rounded up, is the least representable value above the operand. -/
+theorem next_of_ceil_add {c : Ctx} {L X : Int} {y : Dec} (hL : L < c.etiny) (hX : ∃ u, X = u * gapD c L)
+    (h : CeilGoal c L (X + gapd c L) y) : NextGoal c L X y := by
+  obtain ⟨u, rfl⟩ := hX
+  have hD := gapD_eq hL
+  have hd := gapd_pos c L
+  have hDp : 0 < gapD c L := by omega
+  rcases h with ⟨rfl, h2⟩ | ⟨sy, cy, ey, rfl, h1, h2, h3, h4⟩
+  · refine Or.inl ⟨rfl, fun Z hZ => ?_⟩
+    have := h2 Z hZ
+    obtain ⟨w, rfl⟩ := repAt_grid (by omega) hZ
+    by_cases hc : u * gapD c L < w * gapD c L
+    · have := grid_step hDp hc; omega
+    · omega
+  · obtain ⟨w, hw⟩ := fin_grid c L sy cy ey h1 (by omega)
+    have hne : scl sy cy ey L ≠ u * gapD c L + gapd c L := by
+      rw [hw]; intro heq
+      by_cases hc : u * gapD c L < w * gapD c L
+      · have := grid_step hDp hc; omega
+      · omega
+    rcases h3 with h3 | ⟨h3, h3'⟩
+    · exact absurd h3 hne
+    · refine Or.inr ⟨sy, cy, ey, rfl, h3, h1, h3', by omega, fun Z hZ hXZ => h4 Z hZ ?_⟩
+      obtain ⟨w', rfl⟩ := repAt_grid (by omega) hZ
+      have := grid_step hDp hXZ; omega
+
+/-! ## `next_plus` on a finite operand -/
+
+/-- The body of `next_plus` on a finite operand (_pydecimal.py:3612-3619): `_fix` under
+`ROUND_CEILING` in a copy that ignores every flag, then the sum with `1E(Etiny-1)` when that left
+the value unchanged; the caller's flags are untouched. -/
+theorem nextPlus_fin_run (c : Ctx) (s : Bool) (co : Nat) (e : Int) (fl : List Signal) :
+    (nextPlus c (.fin s co e)).run fl =
+      match (fix (quietCtx c .ceiling) (.fin s co e)).run fl with
+      | .error x => .error x
+      | .ok (v, fl2) =>
+        if cmpVal v (.fin s co e) ≠ .eq then .ok (v, fl)
+        else match (add (quietCtx c .ceiling) (.fin s co e)
+            (.fin false 1 ((quietCtx c .ceiling).etiny - 1))).run fl2 with
+          | .error x => .error x
+          | .ok (y, _) => .ok (y, fl) := by
+  simp only [nextPlus, checkNans, isinfinity, StateT.run, bind, StateT.bind, pure, StateT.pure,
+    Except.bind, Except.pure]
+  simp only [show ¬ ((0 : Int) = 1) by decide, show ¬ ((0 : Int) = -1) by decide, ↓reduceIte]
+  unfold quietly
+  simp only [StateT.bind, bind, Except.bind, pure, Except.pure]
+  cases fix (quietCtx c .ceiling) (.fin s co e) fl with
+  | error x => rfl
+  | ok p =>
+    obtain ⟨v, fl2⟩ := p
+    simp only
+    by_cases hc : cmpVal v (.fin s co e) ≠ .eq
+    · simp only [hc, ↓reduceIte, ne_eq, not_false_eq_true]; rfl
+    · simp only [hc, ↓reduceIte]
+      cases add (quietCtx c .ceiling) (.fin s co e) (.fin false 1 ((quietCtx c .ceiling).etiny - 1)) fl2 with
+      | error x => rfl
+      | ok p => rfl
+
+theorem ordOf_eq_iff (x y : Int) : ordOf x y = .eq ↔ x = y := by
+  unfold ordOf
+  by_cases h1 : x < y
+  · simp only [h1, ↓reduceIte, reduceCtorEq, false_iff]; omega
+  · by_cases h2 : x = y <;> simp [h1, h2]
+
+theorem scl_split (n : Bool) (c : Nat) (e m L : Int) (h1 : m ≤ e) (h2 : L ≤ m) :
+    scl n c e L = sgnVal n (c * 10 ^ (e - m).toNat) * ((10 ^ (m - L).toNat : Nat) : Int) := by
+  have : (e - L).toNat = (e - m).toNat + (m - L).toNat := by omega
+  simp only [scl, sgnVal, this, Nat.pow_add, ← Nat.mul_assoc]
+  cases n <;> simp [Int.natCast_mul, Int.neg_mul]
+
+/-- `_cmp` finds two finite values equal exactly when they agree scaled to any lower exponent. -/
+theorem finOrder_eq_iff (n1 : Bool) (c1 : Nat) (e1 : Int) (n2 : Bool) (c2 : Nat) (e2 L : Int)
+    (h1 : L ≤ e1) (h2 : L ≤ e2) :
+    finOrder n1 c1 e1 n2 c2 e2 = .eq ↔ scl n1 c1 e1 L = scl n2 c2 e2 L := by
+  unfold finOrder
+  rw [ordOf_eq_iff, scl_split n1 c1 e1 (min e1 e2) L (by omega) (by omega),
+    scl_split n2 c2 e2 (min e1 e2) L (by omega) (by omega)]
+  have hD : ((10 ^ (min e1 e2 - L).toNat : Nat) : Int) ≠ 0 := by
+    have := pow10_pos (min e1 e2 - L).toNat; omega
+  constructor
+  · intro h; rw [h]
+  · intro h; exact Int.eq_of_mul_eq_mul_right hD h
+
+theorem scl_natAbs (x L : Int) : scl (decide (x < 0)) x.natAbs L L = x := by
+  by_cases hx : x < 0 <;> simp [scl, hx] <;> omega
+
+theorem scl_zero (s : Bool) (e L : Int) : scl s 0 e L = 0 := by cases s <;> simp [scl]
+
+/-- The exact sum `next_plus` forms, at the lower exponent `L = min(e, Etiny - 1)`. -/
+theorem exactSum_next (c : Ctx) (s : Bool) (co : Nat) (e : Int) :
+    exactSum s co e false 1 (c.etiny - 1) = scl s co e (min e (c.etiny - 1)) + gapd c (min e (c.etiny - 1)) := by
+  cases s <;> simp [exactSum, scl, gapd]
+
+theorem grid_ne_zero {c : Ctx} {L : Int} (hL : L < c.etiny) (u : Int) : u * gapD c L + gapd c L ≠ 0 := by
+  have hD := gapD_eq hL
+  have hd := gapd_pos c L
+  intro h
+  by_cases hu : 0 ≤ u
+  · have : 0 ≤ u * gapD c L := Int.mul_nonneg hu (by omega)
+    omega
+  · have h2 : u * gapD c L ≤ (-1) * gapD c L := Int.mul_le_mul_of_nonneg_right (by omega) (by omega)
+    omega
+
+/-- `next_plus` of every finite operand, when it returns, is the least representable value above
+the operand (`+Infinity` when there is none), and leaves the flags unchanged. -/
+theorem nextPlus_correct_fin (c : Ctx) (fl : List Signal) (hp : 1 ≤ c.prec) (hE : c.emin ≤ c.emax)
+    (s : Bool) (co : Nat) (e : Int) (y : Dec) (fl' : List Signal)
+    (h : (nextPlus c (.fin s co e)).run fl = .ok (y, fl')) :
+    fl' = fl ∧ NextGoal c (min e (c.etiny - 1)) (scl s co e (min e (c.etiny - 1))) y := by
+  have hLT : min e (c.etiny - 1) < c.etiny := by omega
+  rw [nextPlus_fin_run] at h
+  generalize hqd : quietCtx c .ceiling = q at h
+  have hqp : 1 ≤ q.prec := by rw [← hqd]; exact hp
+  have hqE : q.emin ≤ q.emax := by rw [← hqd]; exact hE
+  have hqr : q.rounding = .ceiling := by rw [← hqd]; rfl
+  have hqt : q.traps = [] := by rw [← hqd]; rfl
+  have hqT : q.etiny = c.etiny := by rw [← hqd]; rfl
+  have hfin : ∀ y X, CeilGoal q (min e (c.etiny - 1)) X y → CeilGoal c (min e (c.etiny - 1)) X y := by
+    intro y X hg; subst hqd; exact hg
+  by_cases hc : co = 0
+  · subst hc
+    have hz := (fixExact_proven q fl hqp).2.1 s e
+    obtain ⟨ne, fl2, hfz⟩ : ∃ ne fl2, (fix q (.fin s 0 e)).run fl = .ok (.fin s 0 ne, fl2) := by
+      rw [hz]
+      split <;> split
+      all_goals first
+        | exact ⟨e, fl, rfl⟩
+        | exact ⟨_, _, (sigRun_noTraps q hqt _ fl _).choose_spec⟩
+    have hcm : cmpVal (.fin s 0 ne) (.fin s 0 e) = .eq := by simp [cmpVal]
+    rw [hfz] at h
+    simp only [hcm, ne_eq, not_true_eq_false, ↓reduceIte] at h
+    rw [add_zero_left q fl2 hqp s e false 1 (q.etiny - 1) (by decide), hqT] at h
+    generalize hE2 : max (min e (c.etiny - 1)) (c.etiny - 1 - ↑q.prec - 1) = E2 at h
+    cases hfs : fixSpec q false (1 * 10 ^ (c.etiny - 1 - E2).toNat) E2 fl2 with
+    | error x => rw [hfs] at h; exact absurd h (by simp)
+    | ok p =>
+      obtain ⟨y', fl3⟩ := p
+      rw [hfs] at h
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨rfl, ?_⟩
+      have hg := ceil_fixSpec q hqp hqE hqr hqt false _ E2 (min e (c.etiny - 1))
+        (Nat.mul_ne_zero (by decide) (Nat.pos_iff_ne_zero.mp (pow10_pos _)))
+        (by omega) (by omega) fl2 fl3 y' hfs
+      have hv : scl false (1 * 10 ^ (c.etiny - 1 - E2).toNat) E2 (min e (c.etiny - 1)) =
+          scl s 0 e (min e (c.etiny - 1)) + gapd c (min e (c.etiny - 1)) := by
+        rw [scl_zero]
+        have : (c.etiny - 1 - E2).toNat + (E2 - min e (c.etiny - 1)).toNat =
+            (c.etiny - 1 - min e (c.etiny - 1)).toNat := by omega
+        simp only [scl, gapd, Bool.false_eq_true, ↓reduceIte, Nat.one_mul, ← Nat.pow_add, this]
+        omega
+      rw [hv] at hg
+      exact next_of_ceil_add hLT ⟨0, by rw [scl_zero, Int.zero_mul]⟩ (hfin _ _ hg)
+  · have hfx := fixExact_fin q s co e fl hqp hc
+    rw [hfx] at h
+    cases hfs : fixSpec q s co e fl with
+    | error x => rw [hfs] at h; exact absurd h (by simp)
+    | ok p =>
+      obtain ⟨v, fl2⟩ := p
+      rw [hfs] at h
+      simp only at h
+      have hg := hfin _ _ (ceil_fixSpec q hqp hqE hqr hqt s co e (min e (c.etiny - 1)) hc (by omega)
+        (by omega) fl fl2 v hfs)
+      by_cases hcmp : cmpVal v (.fin s co e) ≠ .eq
+      · simp only [hcmp, ne_eq, not_false_eq_true, ↓reduceIte, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨rfl, next_of_ceil_ne hg ?_⟩
+        intro sv cv ev hv hT heq
+        subst hv
+        rw [cmpVal_fin_exact, ne_eq, finOrder_eq_iff sv cv ev s co e (min e (c.etiny - 1)) (by omega)
+          (by omega)] at hcmp
+        exact hcmp heq
+      · simp only [hcmp, ne_eq, not_false_eq_true, ↓reduceIte, Decidable.not_not] at h
+        simp only [ne_eq, Decidable.not_not] at hcmp
+        -- the rounding kept the value: it is finite, on the grid of 10^Etiny
+        obtain ⟨u, hu⟩ : ∃ u, scl s co e (min e (c.etiny - 1)) = u * gapD c (min e (c.etiny - 1)) := by
+          rcases hg with ⟨rfl, _⟩ | ⟨sv, cv, ev, rfl, h1, _, _, _⟩
+          · simp [cmpVal] at hcmp
+          · rw [cmpVal_fin_exact, finOrder_eq_iff sv cv ev s co e (min e (c.etiny - 1)) (by omega)
+              (by omega)] at hcmp
+            obtain ⟨w, hw⟩ := fin_grid c (min e (c.etiny - 1)) sv cv ev h1 (by omega)
+            exact ⟨w, by rw [← hcmp, hw]⟩
+        cases hadd : (add q (.fin s co e) (.fin false 1 (q.etiny - 1))).run fl2 with
+        | error x => rw [hadd] at h; exact absurd h (by simp)
+        | ok p =>
+        obtain ⟨y', fl3⟩ := p
+        rw [hadd] at h
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨rfl, ?_⟩
+        rw [add_fin_exact q fl2 hqp s co e false 1 (q.etiny - 1) hc (by decide), hqT] at hadd
+        have hsum := exactSum_next c s co e
+        split at hadd
+        · exact absurd hadd (by simp)
+        split at hadd
+        · exact absurd hadd (by simp)
+        split at hadd
+        · rename_i h0
+          rw [hsum, hu] at h0
+          exact absurd h0 (grid_ne_zero hLT u)
+        rename_i h0
+        split at hadd
+        · exact absurd hadd (by simp)
+        have hg2 := hfin _ _ (ceil_fixSpec q hqp hqE hqr hqt _ _ _ (min e (c.etiny - 1))
+          (by intro hz; exact h0 (Int.natAbs_eq_zero.mp hz)) (Int.le_refl _) (by omega) fl2 fl3 _ hadd)
+        rw [scl_natAbs, hsum] at hg2
+        exact next_of_ceil_add hLT ⟨u, hu⟩ hg2
+
 end PyLean.Decimal
