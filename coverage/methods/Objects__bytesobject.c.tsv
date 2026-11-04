@@ -68,11 +68,11 @@ Objects/bytesobject.c	2776	2780	bytes_getnewargs	bytes_getnewargs(PyObject *op, 
 Objects/bytesobject.c	2843	2850	bytes_mod	bytes_mod(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-mod-notimpl	
 Objects/bytesobject.c	2873	2956	bytes_new_impl	bytes_new_impl(PyTypeObject *type, PyObject *x, const char *encoding, const char *errors) /*[clinic end generated code: output=1e0c471be311a425 input=f0a966d19b7262b4]*/	modelled	bytesobj-bytes-new,bytesobj-bytes-new-arms,bytesobj-bytes-new-subtype	
 Objects/bytesobject.c	2959	2982	_PyBytes_FromBuffer	_PyBytes_FromBuffer(PyObject *x)	modelled	bytesobj-bytes-new	
-Objects/bytesobject.c	2985	3027	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	todo		
+Objects/bytesobject.c	2985	3027	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	modelled	bytesobj-bytes-fromlist-mut	
 Objects/bytesobject.c	3030	3060	_PyBytes_FromTuple	_PyBytes_FromTuple(PyObject *x)	modelled	bytesobj-bytes-new	
 Objects/bytesobject.c	3063	3122	_PyBytes_FromIterator	_PyBytes_FromIterator(PyObject *it, PyObject *x)	modelled	bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
 Objects/bytesobject.c	3125	3164	PyBytes_FromObject	PyBytes_FromObject(PyObject *x)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
-Objects/bytesobject.c	3172	3180	bytes_alloc	bytes_alloc(PyTypeObject *self, Py_ssize_t nitems)	todo		
+Objects/bytesobject.c	3172	3180	bytes_alloc	bytes_alloc(PyTypeObject *self, Py_ssize_t nitems)	modelled	bytesobj-bytes-alloc,bytesobj-bytes-hash-cache	
 Objects/bytesobject.c	3183	3199	bytes_subtype_new	bytes_subtype_new(PyTypeObject *type, PyObject *tmp)	modelled	bytesobj-bytes-hash-cache	
 Objects/bytesobject.c	3218	3226	bytes_iteritem	bytes_iteritem(PyObject *obj, Py_ssize_t index)	modelled	bytesobj-bytes-iteritem	
 Objects/bytesobject.c	3275	3321	PyBytes_Concat	PyBytes_Concat(PyObject **pv, PyObject *w)	modelled	bytesobj-bytes-concat,bytesobj-bytes-concat-value	
@@ -80,19 +80,19 @@ Objects/bytesobject.c	3324	3328	PyBytes_ConcatAndDel	PyBytes_ConcatAndDel(PyObje
 Objects/bytesobject.c	3336	3354	_PyBytes_IsMutable	_PyBytes_IsMutable(PyObject *self)	excluded		no-behaviour: debug assertions on a bytes object; it returns 1
 Objects/bytesobject.c	3359	3401	bytes_resize_inplace	bytes_resize_inplace(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-bytes-resize-rules	
 Objects/bytesobject.c	3418	3471	_PyBytes_ResizeKeepOnError	_PyBytes_ResizeKeepOnError(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-bytes-resize-rules	
-Objects/bytesobject.c	3475	3484	_PyBytes_Resize	_PyBytes_Resize(PyObject **pv, Py_ssize_t newsize)	todo		
+Objects/bytesobject.c	3475	3484	_PyBytes_Resize	_PyBytes_Resize(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-bytes-hash-cache,bytesobj-bytes-resize-pv,bytesobj-bytes-resize-rules	
 Objects/bytesobject.c	3498	3504	striter_dealloc	striter_dealloc(PyObject *op)	excluded		no-behaviour: reference counting and GC untracking of the iterator
 Objects/bytesobject.c	3507	3512	striter_traverse	striter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Objects/bytesobject.c	3515	3534	striter_next	striter_next(PyObject *op)	modelled	bytesobj-bytes-iter	
 Objects/bytesobject.c	3537	3544	striter_len	striter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3550	3563	striter_reduce	striter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/bytesobject.c	3568	3582	striter_setstate	striter_setstate(PyObject *op, PyObject *state)	todo		
+Objects/bytesobject.c	3550	3563	striter_reduce	striter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter,bytesobj-bytes-iter-reduce	
+Objects/bytesobject.c	3568	3582	striter_setstate	striter_setstate(PyObject *op, PyObject *state)	modelled	bytesobj-bytes-iter,bytesobj-bytes-iter-setstate	
 Objects/bytesobject.c	3627	3642	bytes_iter	bytes_iter(PyObject *seq)	modelled	bytesobj-bytes-iter	
 Objects/bytesobject.c	3646	3666	_PyBytes_Repeat	_PyBytes_Repeat(char* dest, Py_ssize_t len_dest, const char* src, Py_ssize_t len_src)	modelled	bytesobj-bytes-repeat-fill	
 Objects/bytesobject.c	3674	3677	byteswriter_data	byteswriter_data(PyBytesWriter *writer)	excluded		no-behaviour: the pointer to the current buffer; the model keeps the bytes with the caller, and allocation is byteswriter_allocated
 Objects/bytesobject.c	3681	3692	byteswriter_allocated	byteswriter_allocated(PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
 Objects/bytesobject.c	3697	3718	byteswriter_check_consistency	byteswriter_check_consistency(PyBytesWriter *writer)	excluded		no-behaviour: assertions of a debug build
-Objects/bytesobject.c	3731	3798	byteswriter_resize	byteswriter_resize(PyBytesWriter *writer, Py_ssize_t size, int resize)	todo		
+Objects/bytesobject.c	3731	3798	byteswriter_resize	byteswriter_resize(PyBytesWriter *writer, Py_ssize_t size, int resize)	modelled	bytesobj-bytes-writer,bytesobj-bytes-writer-bytes,bytesobj-bytes-writer-growth	
 Objects/bytesobject.c	3802	3835	byteswriter_create	byteswriter_create(Py_ssize_t size, int use_bytearray)	modelled	bytesobj-bytes-writer,bytesobj-bytes-writer-growth	
 Objects/bytesobject.c	3838	3841	PyBytesWriter_Create	PyBytesWriter_Create(Py_ssize_t size)	modelled	bytesobj-bytes-writer,bytesobj-bytes-writer-growth	
 Objects/bytesobject.c	3844	3847	_PyBytesWriter_CreateByteArray	_PyBytesWriter_CreateByteArray(Py_ssize_t size)	modelled	bytesobj-bytes-writer	
