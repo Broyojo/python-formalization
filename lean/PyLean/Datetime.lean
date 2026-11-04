@@ -22,6 +22,7 @@ import PyLean.Datetime.ZoneCacheErrProps
 import PyLean.Datetime.ZoneCacheIdProps
 import PyLean.Datetime.ZoneCacheEqProps
 import PyLean.Datetime.ZoneCacheSubProps
+import PyLean.Datetime.TwinsProps
 
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
@@ -98,12 +99,12 @@ def entries : List Entry := [
     prop := ``TimedeltaDivmod, thm := some ``timedeltaDivmod_proven },
   { id := "datetime-timedelta-compare", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__eq__", "timedelta.__le__", "timedelta.__lt__", "timedelta.__ge__", "timedelta.__gt__", "timedelta._cmp", "timedelta._getstate", "_cmp", "C delta_cmp", "C delta_richcompare", "C diff_to_bool"]
-    statement := "For valid timedeltas, every comparison operator agrees between C and Python and orders the durations."
+    statement := "For valid timedeltas a, b and every operator op, a op b in Python and in C is the comparison of a._to_microseconds() and b._to_microseconds() by op."
     source := "C/Python twins; timedelta docs (comparison)", status := .proven
     prop := ``TimedeltaCompare, thm := some ``timedeltaCompare_proven },
   { id := "datetime-timedelta-bool-hash", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__bool__", "timedelta.__hash__", "C delta_bool", "C delta_hash"]
-    statement := "bool(t) is t != timedelta(0), and equal timedeltas have the same hash key."
+    pyFns := ["timedelta.__bool__", "timedelta.__hash__", "C delta_bool", "C delta_hash", "C delta_getstate"]
+    statement := "bool(t) is t != timedelta(0); hash(t) is the hash of the state tuple (days, seconds, microseconds) in both twins, so two valid timedeltas have the same hash key exactly when they are equal."
     source := "timedelta docs; __hash__ contract", status := .proven
     prop := ``TimedeltaBoolHash, thm := some ``timedeltaBoolHash_proven },
   { id := "datetime-timedelta-reduce", pyFile := "Lib/_pydatetime.py"
@@ -111,12 +112,24 @@ def entries : List Entry := [
     statement := "timedelta(*t.__reduce__()[1]) == t in both twins."
     source := "pickle contract", status := .proven
     prop := ``TimedeltaReduce, thm := some ``timedeltaReduce_proven },
-  { id := "datetime-timedelta-pos-rsub", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__pos__", "timedelta.__rsub__", "C delta_positive"]
-    statement := "+t == t, and b - a through __rsub__ agrees between the twins whenever -a is a timedelta."
+  { id := "datetime-timedelta-pos", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__pos__", "C delta_positive"]
+    statement := "For every valid timedelta t, Python's +t is t itself, and C's +t is a new timedelta equal to t."
+    source := "C/Python twins (identity is observable: +t is t)", status := .proven
+    prop := ``TimedeltaPos, thm := some ``timedeltaPos_proven },
+  { id := "datetime-timedelta-rsub", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__rsub__", "C delta_subtract"]
+    statement := "For valid timedeltas a, b: if -a is a timedelta, a.__rsub__(b) agrees between the twins; otherwise Python raises OverflowError."
     source := "C/Python twins", status := .proven
-    prop := ``TimedeltaPosRsub, thm := some ``timedeltaPosRsub_proven
-    notes := "-a out of range: timedelta.max.__rsub__ raises in Python where C does not; no reflected call reaches it from the operators." },
+    prop := ``TimedeltaRsub, thm := some ``timedeltaRsub_proven
+    notes := "The excluded case is on record as datetime-timedelta-rsub-twins." },
+  { id := "datetime-timedelta-rsub-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__rsub__"]
+    statement := "For all valid timedeltas a, b, a.__rsub__(b) agrees between C and Python."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimedeltaRsubTwins, thm := some ``timedeltaRsubTwins_refuted
+    bug := some "datetime-pydatetime-rsub-negate-overflow"
+    notes := "timedelta.max.__rsub__(timedelta.max): Python computes -self + other and -self overflows; C returns timedelta(0)." },
   { id := "datetime-timezone-range", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timezone.__new__", "C new_timezone"]
     statement := "timezone(offset) accepts exactly the offsets strictly between -24h and 24h (returning that offset) and otherwise raises ValueError, identically in both twins."
@@ -247,12 +260,12 @@ def entries : List Entry := [
     notes := "Offsets of 1 and 2 microseconds. Fixed on main." },
   { id := "datetime-date-compare", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__eq__", "date.__le__", "date.__lt__", "date.__ge__", "date.__gt__", "date._cmp", "_cmp", "C date_richcompare", "C diff_to_bool"]
-    statement := "date comparison agrees between the twins and == is field equality; comparing with a datetime is NotImplemented in both."
+    statement := "For valid dates a, b and every operator op, a op b in Python and in C is the comparison of a.toordinal() and b.toordinal() by op; comparing with a datetime is NotImplemented in both."
     source := "date docs; C/Python twins", status := .proven
     prop := ``DateCompare, thm := some ``dateCompare_proven },
   { id := "datetime-date-hash", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__hash__", "date._getstate", "C date_hash", "C generic_hash", "C date_getstate"]
-    statement := "Equal dates have equal hash keys in both twins."
+    statement := "In each twin two valid dates have the same hash key exactly when they are equal; Python hashes the 1-tuple _getstate(), C the state bytes."
     source := "__hash__ contract", status := .proven
     prop := ``DateHash, thm := some ``dateHash_proven },
   { id := "datetime-date-weekday", pyFile := "Lib/_pydatetime.py"
@@ -266,10 +279,18 @@ def entries : List Entry := [
     source := "date docs; C/Python twins", status := .proven
     prop := ``DateSubtract, thm := some ``dateSubtract_proven },
   { id := "datetime-date-replace", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.replace", "C datetime_date_replace_impl"]
-    statement := "d.replace() == d, and replace with C-int fields agrees between the twins."
+    pyFns := ["date.replace", "date.__new__", "C datetime_date_replace", "C datetime_date_replace_impl", "C new_date_subclass_ex", "C new_date_ex", "C check_date_args"]
+    statement := "d.replace() == d in both twins and d.replace(None, None, None) == d in Python; with no explicit None and C-int ints, replace agrees between the twins for every int or other argument."
     source := "date docs; C/Python twins", status := .proven
-    prop := ``DateReplace, thm := some ``dateReplace_proven },
+    prop := ``DateReplace, thm := some ``dateReplace_proven
+    notes := "An explicit None is on record as datetime-date-replace-twins; ints beyond C int are gh-158778's class." },
+  { id := "datetime-date-replace-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.replace"]
+    statement := "date.replace agrees between the twins for every combination of omitted, None, int and other arguments."
+    source := "C/Python twins", status := .refuted
+    prop := ``DateReplaceTwins, thm := some ``dateReplaceTwins_refuted
+    bug := some "datetime-pydatetime-none-as-omitted"
+    notes := "date(2020, 1, 1).replace(year=None): Python keeps the year, C raises TypeError." },
   { id := "datetime-date-timetuple", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.timetuple", "_build_struct_time", "C date_timetuple", "C build_struct_time"]
     statement := "date.timetuple() agrees between the twins and is (y, m, d, 0, 0, 0, weekday, yday, -1)."
@@ -282,9 +303,17 @@ def entries : List Entry := [
     prop := ``DateCtime, thm := some ``dateCtime_proven },
   { id := "datetime-date-repr", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__repr__", "_get_class_module", "C date_repr"]
-    statement := "repr(date) is the same text in both twins."
+    statement := "repr(date) agrees between the twins for the base class and for every subclass whose __qualname__ is its __name__ and whose module is not named datetime."
     source := "C/Python twins", status := .proven
-    prop := ``DateRepr, thm := some ``dateRepr_proven },
+    prop := ``DateRepr, thm := some ``dateRepr_proven
+    notes := "Other classes are on record as datetime-date-repr-twins." },
+  { id := "datetime-date-repr-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__repr__", "_get_class_module", "C date_repr"]
+    statement := "repr(date) is the same text in both twins for every class."
+    source := "C/Python twins", status := .refuted
+    prop := ``DateReprTwins, thm := some ``dateReprTwins_refuted
+    bug := some "datetime-repr-qualname-vs-tp-name"
+    notes := "A nested subclass: Python prints __qualname__ (Outer.D), C tp_name (D)." },
   { id := "datetime-date-pickle", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date._getstate", "date.__setstate", "date.__reduce__", "C date_getstate", "C date_from_pickle", "C date_reduce"]
     statement := "date(*d.__reduce__()[1]) == d in both twins."
@@ -296,6 +325,38 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``DateCtorInt, thm := some ``dateCtorInt_proven
     notes := "Fields outside int: gh-158778." },
+  { id := "datetime-date-ctor-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["date.__new__", "C date_new"]
+    statement := "date(*args) agrees between the twins for every positional argument list whose ints fit a C int."
+    source := "C/Python twins", status := .refuted
+    prop := ``DateNewTwins, thm := some ``dateNewTwins_refuted
+    bug := some "datetime-pydatetime-none-as-omitted"
+    notes := "date(b'\\x07\\xd0\\x01\\x01', None): Python unpickles (its test is month is None), C raises TypeError (its test is one positional argument)." },
+  { id := "datetime-days-in-month", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_days_in_month", "C days_in_month", "C is_leap"]
+    statement := "For 1 <= m <= 12, _days_in_month(y, m) is 31, 28 or 29 (Gregorian leap rule), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31; it agrees with C days_in_month for 0 <= y < 2**31, is the step of _days_before_month, and the months sum to 365 or 366."
+    source := "Gregorian calendar; C/Python twins", status := .proven
+    prop := ``DaysInMonth, thm := some ``daysInMonth_proven },
+  { id := "datetime-check-date-fields", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_date_fields", "C check_date_args"]
+    statement := "For all ints y, m, d, _check_date_fields and C check_date_args give the same result and message; it succeeds exactly for valid dates, returning the fields, and raises ValueError otherwise."
+    source := "date docs (ValueError out of range); C/Python twins", status := .proven
+    prop := ``CheckDateFields, thm := some ``checkDateFields_proven },
+  { id := "datetime-check-time-fields", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_time_fields", "C check_time_args"]
+    statement := "For all ints h, m, s, us, fold, _check_time_fields and C check_time_args give the same result and message; it succeeds exactly when every field is in range and fold is 0 or 1, and raises ValueError otherwise."
+    source := "time docs; C/Python twins", status := .proven
+    prop := ``CheckTimeFields, thm := some ``checkTimeFields_proven },
+  { id := "datetime-check-tzinfo-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_check_tzinfo_arg", "C check_tzinfo_subclass"]
+    statement := "For every argument, _check_tzinfo_arg and C check_tzinfo_subclass accept None and tzinfo instances and raise TypeError for anything else."
+    source := "time/datetime docs; C/Python twins", status := .proven
+    prop := ``TzinfoArg, thm := some ``tzinfoArg_proven },
+  { id := "datetime-build-struct-time", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_build_struct_time", "C build_struct_time"]
+    statement := "For every valid date and any ints hh, mm, ss, dstflag, _build_struct_time is (y, m, d, hh, mm, ss, weekday, yday, dstflag) with weekday in 0..6 and yday in 1..366, the tuple C build_struct_time passes to struct_time."
+    source := "time.struct_time docs; C/Python twins", status := .proven
+    prop := ``BuildStructTime, thm := some ``buildStructTime_proven },
   { id := "datetime-isocalendardate", pyFile := "Lib/_pydatetime.py"
     pyFns := ["IsoCalendarDate.__new__", "IsoCalendarDate.year", "IsoCalendarDate.week", "IsoCalendarDate.weekday", "IsoCalendarDate.__repr__", "C iso_calendar_date_repr", "C iso_calendar_date_year", "C iso_calendar_date_week", "C iso_calendar_date_weekday"]
     statement := "The named fields of IsoCalendarDate are its tuple items, and repr in C is repr in Python with the module prefix."

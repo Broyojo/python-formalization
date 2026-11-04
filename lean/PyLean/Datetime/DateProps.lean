@@ -25,13 +25,88 @@ theorem validDate_pos (y m d : Int) (h : ValidDate y m d) : 1 ≤ y ∧ y ≤ 99
   have := dimL_bounds (isLeap y) m ⟨h'.2.2.1, h'.2.2.2.1⟩
   omega
 
-/-- `date` comparison: the twins agree, `==` is equality of the fields, and neither
-compares with a `datetime`. -/
+/-- Within a year, a valid date's day of the year `dbmL m + d - 1` grows with `(m, d)`. -/
+theorem dbmL_mono_table : ∀ leap : Bool, ∀ i j : Fin 12, i < j →
+    dbmL leap ((i : Nat) + 1) + dimL leap ((i : Nat) + 1) ≤ dbmL leap ((j : Nat) + 1) := by
+  decide
+
+theorem dbmL_mono (leap : Bool) (m m' : Int) (h1 : 1 ≤ m) (h2 : m < m') (h3 : m' ≤ 12) :
+    dbmL leap m + dimL leap m ≤ dbmL leap m' := by
+  have := dbmL_mono_table leap ⟨(m - 1).toNat, by omega⟩ ⟨(m' - 1).toNat, by omega⟩
+    (by simp only [Fin.mk_lt_mk]; omega)
+  simp only at this
+  have e1 : (((m - 1).toNat : Nat) : Int) + 1 = m := by omega
+  have e2 : (((m' - 1).toNat : Nat) : Int) + 1 = m' := by omega
+  rw [e1, e2] at this
+  exact this
+
+/-- `toordinal` is strictly increasing in the field order of valid dates. -/
+theorem ymd2ord_lt_of_lex (y m d y' m' d' : Int) (ha : ValidDate y m d) (hb : ValidDate y' m' d')
+    (h : y < y' ∨ (y = y' ∧ m < m') ∨ (y = y' ∧ m = m' ∧ d < d')) :
+    ymd2ord y m d < ymd2ord y' m' d' := by
+  have pa := (validDate_iff y m d).mp ha
+  have pb := (validDate_iff y' m' d').mp hb
+  unfold MINYEAR MAXYEAR at pa pb
+  have fa := (monthDay_forward (isLeap y) m d ⟨pa.2.2.1, pa.2.2.2.1⟩ ⟨pa.2.2.2.2.1, pa.2.2.2.2.2⟩).2
+  have hoa : ymd2ord y m d = jan1 y + (dbmL (isLeap y) m + d - 1) := by
+    unfold ymd2ord jan1; rw [daysBeforeMonth_eq]; omega
+  have hob : ymd2ord y' m' d' = jan1 y' + (dbmL (isLeap y') m' + d' - 1) := by
+    unfold ymd2ord jan1; rw [daysBeforeMonth_eq]; omega
+  have nb := dbmL_nonneg (isLeap y') m' ⟨pb.2.2.1, pb.2.2.2.1⟩
+  rcases h with h | ⟨rfl, h⟩ | ⟨rfl, rfl, h⟩
+  · have hs := jan1_succ y
+    have hm : jan1 (y + 1) ≤ jan1 y' := by
+      by_cases he : y + 1 = y'
+      · rw [he]; omega
+      · have := jan1_mono (y + 1) y' (by omega) (by omega); omega
+    rw [hoa, hob]
+    generalize isLeap y = L at hs fa ⊢
+    cases L <;> simp only [Bool.false_eq_true, ↓reduceIte] at hs fa <;> omega
+  · have := dbmL_mono (isLeap y) m m' pa.2.2.1 h pb.2.2.2.1
+    rw [hoa, hob]; omega
+  · rw [hoa, hob]; omega
+
+/-- For valid dates, the field comparison `_cmp` has the sign of the ordinal difference. -/
+theorem dateCmp_sign (y m d y' m' d' : Int) (ha : ValidDate y m d) (hb : ValidDate y' m' d') :
+    (cmpTuple [y, m, d] [y', m', d'] = 0 ↔ ymd2ord y m d = ymd2ord y' m' d') ∧
+    (cmpTuple [y, m, d] [y', m', d'] < 0 ↔ ymd2ord y m d < ymd2ord y' m' d') := by
+  rw [cmpTuple_cons y y' [m, d] [m', d'] rfl, cmpTuple_cons m m' [d] [d'] rfl,
+    cmpTuple_cons d d' [] [] rfl, cmpTuple_nil]
+  have lt1 := ymd2ord_lt_of_lex y m d y' m' d' ha hb
+  have lt2 := ymd2ord_lt_of_lex y' m' d' y m d hb ha
+  by_cases h1 : y = y'
+  · rw [if_pos h1]
+    by_cases h2 : m = m'
+    · rw [if_pos h2]
+      by_cases h3 : d = d'
+      · rw [if_pos h3]; subst h1 h2 h3; simp
+      · rw [if_neg h3]
+        by_cases h4 : d < d'
+        · have := lt1 (Or.inr (Or.inr ⟨h1, h2, h4⟩))
+          rw [if_pos h4]; constructor <;> constructor <;> intro <;> omega
+        · have := lt2 (Or.inr (Or.inr ⟨h1.symm, h2.symm, by omega⟩))
+          rw [if_neg h4]; constructor <;> constructor <;> intro <;> omega
+    · rw [if_neg h2]
+      by_cases h4 : m < m'
+      · have := lt1 (Or.inr (Or.inl ⟨h1, h4⟩))
+        rw [if_pos h4]; constructor <;> constructor <;> intro <;> omega
+      · have := lt2 (Or.inr (Or.inl ⟨h1.symm, by omega⟩))
+        rw [if_neg h4]; constructor <;> constructor <;> intro <;> omega
+  · rw [if_neg h1]
+    by_cases h4 : y < y'
+    · have := lt1 (Or.inl h4)
+      rw [if_pos h4]; constructor <;> constructor <;> intro <;> omega
+    · have := lt2 (Or.inl (by omega))
+      rw [if_neg h4]; constructor <;> constructor <;> intro <;> omega
+
+/-- `date` comparison: every operator of each twin computes the order of the ordinals
+(chronological order, `toordinal()`), for all valid dates; comparing with a `datetime` is
+`NotImplemented` in both. A `__le__` computing `< 0` fails at `a == b`. -/
 def DateCompare : Prop :=
   ∀ (a b : Int × Int × Int) (op : CmpOp), ValidDate a.1 a.2.1 a.2.2 → ValidDate b.1 b.2.1 b.2.2 →
-    dateRichPy op a b false = dateRichC op a b false ∧
-    dateRichPy op a b true = none ∧ dateRichC op a b true = none ∧
-    (dateRichPy .eq a b false = some true ↔ a = b)
+    dateRichPy op a b false = some (op.holds (toordinal a.1 a.2.1 a.2.2) (toordinal b.1 b.2.1 b.2.2)) ∧
+    dateRichC op a b false = some (op.holds (toordinal a.1 a.2.1 a.2.2) (toordinal b.1 b.2.1 b.2.2)) ∧
+    dateRichPy op a b true = none ∧ dateRichC op a b true = none
 
 theorem dateCompare_proven : DateCompare := by
   intro a b op ha hb
@@ -39,26 +114,43 @@ theorem dateCompare_proven : DateCompare := by
   obtain ⟨y', m', d'⟩ := b
   have pa := validDate_pos _ _ _ ha
   have pb := validDate_pos _ _ _ hb
-  simp only at pa pb
-  refine ⟨?_, by simp [dateRichPy], by simp [dateRichC], ?_⟩
-  · simp only [dateRichPy, dateRichC, dateCmpPy, ite_false, Bool.false_eq_true]
+  simp only at pa pb ha hb ⊢
+  obtain ⟨s0, s1⟩ := dateCmp_sign y m d y' m' d' ha hb
+  refine ⟨?_, ?_, by simp [dateRichPy], by simp [dateRichC]⟩
+  · simp only [dateRichPy, dateCmpPy, Bool.false_eq_true, ite_false, toordinal]
+    rw [← richPy_holds op _ _ _ s0 s1]
+    cases op <;> rfl
+  · simp only [dateRichC, Bool.false_eq_true, ite_false, toordinal]
     rw [date_memcmp _ _ _ _ _ _ (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
-  · have hc := cmpTuple_sign [y, m, d] [y', m', d'] rfl
-    simp only [dateRichPy, dateCmpPy, ite_false, Bool.false_eq_true, diffToBool, Option.some.injEq]
-    simp [hc, Prod.ext_iff]
+    rw [diffToBool_holds op _ _ _ s0 s1]
 
-/-- Equal dates hash alike, in both twins. -/
+/-- The hash key of each twin determines the date: two valid dates have the same key exactly
+when they are equal (a constant key fails). Python hashes the one-element state tuple
+`(bytes,)` and C the packed bytes themselves, both the pickle state `_getstate()`. -/
 def DateHash : Prop :=
   ∀ a b : Int × Int × Int, ValidDate a.1 a.2.1 a.2.2 → ValidDate b.1 b.2.1 b.2.2 →
-    dateRichPy .eq a b false = some true →
-    dateHashKeyPy a.1 a.2.1 a.2.2 = dateHashKeyPy b.1 b.2.1 b.2.2 ∧
-    dateHashKeyC a.1 a.2.1 a.2.2 = dateHashKeyC b.1 b.2.1 b.2.2
+    (dateHashKeyPy a.1 a.2.1 a.2.2 = dateHashKeyPy b.1 b.2.1 b.2.2 ↔ a = b) ∧
+    (dateHashKeyC a.1 a.2.1 a.2.2 = dateHashKeyC b.1 b.2.1 b.2.2 ↔ a = b) ∧
+    dateHashKeyPy a.1 a.2.1 a.2.2 = .tuple1 (dateGetstate a.1 a.2.1 a.2.2) ∧
+    dateHashKeyC a.1 a.2.1 a.2.2 = .bytes (dateGetstate a.1 a.2.1 a.2.2)
+
+theorem dateData_inj (y m d y' m' d' : Int) (ha : ValidDate y m d) (hb : ValidDate y' m' d') :
+    dateData y m d = dateData y' m' d' ↔ (y, m, d) = (y', m', d') := by
+  have pa := validDate_pos _ _ _ ha
+  have pb := validDate_pos _ _ _ hb
+  unfold dateData
+  simp only [List.cons.injEq, and_true, Prod.mk.injEq]
+  omega
 
 theorem dateHash_proven : DateHash := by
-  intro a b ha hb h
-  have := (dateCompare_proven a b .eq ha hb).2.2.2.mp h
-  subst this
-  exact ⟨rfl, rfl⟩
+  intro a b ha hb
+  obtain ⟨y, m, d⟩ := a
+  obtain ⟨y', m', d'⟩ := b
+  simp only at ha hb ⊢
+  have := dateData_inj y m d y' m' d' ha hb
+  refine ⟨?_, ?_, rfl, rfl⟩
+  · simp only [dateHashKeyPy, HashKey.tuple1.injEq]; exact this
+  · simp only [dateHashKeyC, HashKey.bytes.injEq]; exact this
 
 theorem weekdayC_eq (y m d : Int) (h : ValidDate y m d) : weekdayC y m d = (ymd2ord y m d + 6) % 7 := by
   have p := validDate_pos _ _ _ h
@@ -149,31 +241,6 @@ theorem dateSubtract_proven : DateSubtract := by
       simp only [SameOutcome]
       rw [c1, c2]
 
-/-- `date.replace`: with no argument it returns the same date; on C `int` arguments
-the twins agree (for arguments outside `int`, C raises `OverflowError` and Python
-`ValueError`, the class upstream closed as not planned in gh-158778). -/
-def DateReplace : Prop :=
-  ∀ (y m d : Int) (ny nm nd : Option Int), ValidDate y m d →
-    dateReplacePy y m d none none none = .ok (y, m, d) ∧
-    dateReplaceC y m d none none none = .ok (y, m, d) ∧
-    (fitsCInt (ny.getD y) → fitsCInt (nm.getD m) → fitsCInt (nd.getD d) →
-      dateReplacePy y m d ny nm nd = dateReplaceC y m d ny nm nd)
-
-theorem dateReplace_proven : DateReplace := by
-  intro y m d ny nm nd h
-  have p := validDate_pos _ _ _ h
-  refine ⟨?_, ?_, ?_⟩
-  · unfold dateReplacePy; exact checkDate_ok y m d h
-  · unfold dateReplaceC
-    have : fitsCInt y ∧ fitsCInt m ∧ fitsCInt d := by unfold fitsCInt; omega
-    simp only [Option.getD_none]
-    rw [if_neg (by simp [this])]
-    exact checkDate_ok y m d h
-  · intro h1 h2 h3
-    unfold dateReplacePy dateReplaceC
-    simp only
-    rw [if_neg (by simp [h1, h2, h3])]
-
 /-- `date.timetuple()`: the twins agree, and the tuple holds the fields, weekday,
 day of the year and `tm_isdst == -1`. -/
 def DateTimetuple : Prop :=
@@ -209,12 +276,6 @@ theorem dateCtime_proven : DateCtime := by
     split <;> omega
   dsimp only
   rw [e]
-
-/-- `repr(date)` and `str(date)`: the twins produce the same text. -/
-def DateRepr : Prop :=
-  ∀ y m d : Int, dateReprPy y m d = dateReprC y m d ∧ getClassModule "datetime" = "datetime."
-
-theorem dateRepr_proven : DateRepr := fun _ _ _ => ⟨rfl, rfl⟩
 
 /-- `date(d.__reduce__()[1][0]) == d`, through the bytes state, in both twins. -/
 def DatePickle : Prop :=

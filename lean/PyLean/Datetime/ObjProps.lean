@@ -119,13 +119,36 @@ theorem mc_us (a b : Int) (ha : 0 ≤ a) (hb : 0 ≤ b) (ha' : a < 1000000) (hb'
 
 /-! ### `timedelta` -/
 
-/-- `timedelta` comparison: the twins agree for all valid operands, and the
-comparison is the order of the durations. Precondition: the type invariant. -/
+/-- The comparison `x op y` of two integers, the order the operators are meant to compute. -/
+def CmpOp.holds : CmpOp → Int → Int → Bool
+  | .lt, x, y => decide (x < y)
+  | .le, x, y => decide (x ≤ y)
+  | .eq, x, y => decide (x = y)
+  | .ne, x, y => !decide (x = y)
+  | .gt, x, y => decide (x > y)
+  | .ge, x, y => decide (x ≥ y)
+
+/-- A three-way result `c` with the sign of `x - y` gives every operator its meaning, through
+C's `diff_to_bool`. -/
+theorem diffToBool_holds (op : CmpOp) (c x y : Int) (h0 : c = 0 ↔ x = y) (hlt : c < 0 ↔ x < y) :
+    diffToBool c op = op.holds x y := by
+  have : (c < 0 ∧ x < y) ∨ (c = 0 ∧ x = y) ∨ (0 < c ∧ y < x) := by
+    rcases Int.lt_trichotomy x y with h | h | h
+    · exact Or.inl ⟨hlt.mpr h, h⟩
+    · exact Or.inr (Or.inl ⟨h0.mpr h, h⟩)
+    · have h1 : ¬ c < 0 := fun hc => by have := hlt.mp hc; omega
+      have h2 : ¬ c = 0 := fun hc => by have := h0.mp hc; omega
+      exact Or.inr (Or.inr ⟨by omega, h⟩)
+  rcases this with ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> cases op <;>
+    simp only [diffToBool, CmpOp.holds, ← decide_not] <;> rw [decide_eq_decide] <;>
+    constructor <;> intro <;> omega
+
+/-- `timedelta` comparison: every operator of each twin computes the order of the durations
+(`toUs`), for all valid operands. Precondition: the type invariant. A `__le__` computing
+`< 0`, or a shared helper with a wrong case, fails at `a == b`. -/
 def TimedeltaCompare : Prop :=
   ∀ (a b : Delta) (op : CmpOp), a.Valid → b.Valid →
-    a.richPy op b = a.richC op b ∧
-    (a.richPy .eq b = true ↔ a.toUs = b.toUs) ∧
-    (a.richPy .lt b = true ↔ a.toUs < b.toUs)
+    a.richPy op b = op.holds a.toUs b.toUs ∧ a.richC op b = op.holds a.toUs b.toUs
 
 theorem delta_cmp_eq (a b : Delta) (ha : a.Valid) (hb : b.Valid) :
     a.cmpPy b = (if a.toUs = b.toUs then 0 else if a.toUs < b.toUs then -1 else 1) ∧
@@ -144,38 +167,45 @@ theorem delta_cmp_eq (a b : Delta) (ha : a.Valid) (hb : b.Valid) :
   · split <;> (try split) <;> omega
   · split <;> (try split) <;> omega
 
+/-- The Python operators, each from its own line of the source, against the order. -/
+theorem richPy_holds (op : CmpOp) (c x y : Int) (h0 : c = 0 ↔ x = y) (hlt : c < 0 ↔ x < y) :
+    (match op with
+      | .eq => decide (c = 0) | .ne => !decide (c = 0) | .le => decide (c ≤ 0)
+      | .lt => decide (c < 0) | .ge => decide (c ≥ 0) | .gt => decide (c > 0)) = op.holds x y := by
+  rw [← diffToBool_holds op c x y h0 hlt]
+  cases op <;> rfl
+
 theorem timedeltaCompare_proven : TimedeltaCompare := by
   intro a b op ha hb
   obtain ⟨h1, h2, h3⟩ := delta_cmp_eq a b ha hb
-  unfold Delta.richPy Delta.richC
-  rw [h1]
-  refine ⟨?_, ?_, ?_⟩
-  · cases op <;> simp only [diffToBool] <;> (split <;> (try split)) <;> simp <;> omega
-  · simp only [diffToBool]; split <;> (try split) <;> simp <;> omega
-  · simp only [diffToBool]; split <;> (try split) <;> simp <;> omega
+  have p0 : a.cmpPy b = 0 ↔ a.toUs = b.toUs := by rw [h1]; split <;> (try split) <;> omega
+  have p1 : a.cmpPy b < 0 ↔ a.toUs < b.toUs := by rw [h1]; split <;> (try split) <;> omega
+  refine ⟨?_, ?_⟩
+  · unfold Delta.richPy
+    exact richPy_holds op _ _ _ p0 p1
+  · unfold Delta.richC
+    exact diffToBool_holds op _ _ _ h2 h3
 
-/-- `bool(t)` is `t != timedelta(0)`, and equal timedeltas hash alike. -/
+/-- `bool(t)` is `t != timedelta(0)`; the hash key of each twin is the state tuple
+`(days, seconds, microseconds)`, so the twins hash alike, and two valid timedeltas have the
+same key exactly when they are equal (a constant key fails). -/
 def TimedeltaBoolHash : Prop :=
   ∀ a b : Delta, a.Valid → b.Valid →
-    (a.bool = true ↔ a.toUs ≠ 0) ∧ (a.richPy .eq b = true → a.hashKey = b.hashKey)
+    (a.bool = true ↔ a.toUs ≠ 0) ∧ (a.hashKey = b.hashKey ↔ a.toUs = b.toUs) ∧
+    a.hashKey = a.hashKeyC
 
 theorem timedeltaBoolHash_proven : TimedeltaBoolHash := by
   intro a b ha hb
-  constructor
+  refine ⟨?_, ?_, rfl⟩
   · have ha' := ha
     unfold Delta.Valid MAX_DELTA_DAYS at ha'
     unfold Delta.bool Delta.toUs
     simp only [Bool.or_eq_true, bne_iff_ne, ne_eq]
     omega
-  · intro h
-    have h1 := (timedeltaCompare_proven a b .eq ha hb).2.1.mp h
-    unfold Delta.Valid MAX_DELTA_DAYS at ha hb
-    unfold Delta.toUs at h1
-    unfold Delta.hashKey Delta.getstate
-    have e1 : a.days = b.days := by omega
-    have e2 : a.seconds = b.seconds := by omega
-    have e3 : a.us = b.us := by omega
-    rw [e1, e2, e3]
+  · unfold Delta.Valid MAX_DELTA_DAYS at ha hb
+    unfold Delta.hashKey Delta.getstate Delta.toUs
+    simp only [HashKey.ints.injEq, List.cons.injEq, and_true]
+    omega
 
 /-- `timedelta(*t.__reduce__()[1]) == t`, through `.days`, `.seconds`,
 `.microseconds`, in both twins. -/
@@ -206,25 +236,50 @@ theorem timedeltaReduce_proven : TimedeltaReduce := by
         0 * 604800000000 = a.toUs := by unfold Delta.toUs; omega
     rw [deltaC, this]; exact usToDeltaC_of_valid a ha
 
-/-- `+t == t`; and the reflected `a.__rsub__(b)` is `b - a`, provided `-a` is a
-timedelta (the source computes `-self + other`, so `timedelta.max.__rsub__(x)`
-raises while `x - timedelta.max` may not). -/
-def TimedeltaPosRsub : Prop :=
-  ∀ a b : Delta, a.Valid → b.Valid → MIN_US ≤ -a.toUs →
-    a.posC = .ok a.posPy ∧ SameOutcome (a.rsubPy b) (a.rsubC b)
+/-- `+t`: Python returns the receiver itself (`+t is t`); C `delta_positive` builds a new,
+equal timedelta after its day-range check, which a valid `t` passes. -/
+def TimedeltaPos : Prop :=
+  ∀ a : Delta, a.Valid → a.posPy = .self_ ∧ a.posC = .ok (.fresh a)
 
-theorem timedeltaPosRsub_proven : TimedeltaPosRsub := by
-  intro a b ha hb hneg
-  constructor
-  · have ha' := ha
-    unfold Delta.Valid at ha'
-    unfold Delta.posC Delta.posPy checkDeltaDayRange
-    have : -MAX_DELTA_DAYS ≤ a.days ∧ a.days ≤ MAX_DELTA_DAYS := ⟨ha'.2.2.2.2.1, ha'.2.2.2.2.2⟩
-    simp [this, bind, Except.bind, pure, Except.pure]
+theorem timedeltaPos_proven : TimedeltaPos := by
+  intro a ha
+  refine ⟨rfl, ?_⟩
+  unfold Delta.Valid at ha
+  unfold Delta.posC checkDeltaDayRange
+  have : -MAX_DELTA_DAYS ≤ a.days ∧ a.days ≤ MAX_DELTA_DAYS := ⟨ha.2.2.2.2.1, ha.2.2.2.2.2⟩
+  simp [this, bind, Except.bind, pure, Except.pure]
+
+/-- The reflected `a.__rsub__(b)` is `b - a` in both twins, for all valid operands. -/
+def TimedeltaRsubTwins : Prop :=
+  ∀ a b : Delta, a.Valid → b.Valid → SameOutcome (a.rsubPy b) (a.rsubC b)
+
+/-- `timedelta.max.__rsub__(timedelta.max)`: Python computes `-self + other` and `-self`
+overflows; C computes `other - self`, which is `timedelta(0)`. -/
+theorem timedeltaRsubTwins_refuted : ¬TimedeltaRsubTwins := by
+  intro h
+  have := h ⟨999999999, 86399, 999999⟩ ⟨999999999, 86399, 999999⟩ (by decide) (by decide)
+  have e1 : Delta.rsubC ⟨999999999, 86399, 999999⟩ ⟨999999999, 86399, 999999⟩ = .ok ⟨0, 0, 0⟩ := by
+    decide
+  have e2 : Delta.rsubPy ⟨999999999, 86399, 999999⟩ ⟨999999999, 86399, 999999⟩ =
+      .error (.overflowError "timedelta # of days is too large: -1000000000") := by decide
+  rw [e1, e2] at this
+  exact this
+
+/-- The reflected `a.__rsub__(b)` is `b - a` in both twins whenever `-a` is a timedelta; when
+it is not (`a.days == 999999999` and `a` beyond `timedelta(999999999)`), Python raises
+`OverflowError`. -/
+def TimedeltaRsub : Prop :=
+  ∀ a b : Delta, a.Valid → b.Valid →
+    (MIN_US ≤ -a.toUs → SameOutcome (a.rsubPy b) (a.rsubC b)) ∧
+    (-a.toUs < MIN_US → (a.rsubPy b).raises "OverflowError")
+
+theorem timedeltaRsub_proven : TimedeltaRsub := by
+  intro a b ha hb
+  have hn : deltaPy (-a.days) (-a.seconds) (-a.us) 0 0 0 0 = mkDeltaPy (-a.toUs) := by
+    rw [deltaPy_eq]; congr 1; unfold totalUs Delta.toUs; omega
+  refine ⟨fun hneg => ?_, fun hneg => ?_⟩
   · unfold Delta.rsubPy Delta.rsubC Delta.negPy Delta.addPy Delta.subC
     rw [newDeltaNormC_eq]
-    have hn : deltaPy (-a.days) (-a.seconds) (-a.us) 0 0 0 0 = mkDeltaPy (-a.toUs) := by
-      rw [deltaPy_eq]; congr 1; unfold totalUs Delta.toUs; omega
     have ba := (toUs_valid_bounds a ha)
     rw [hn]
     obtain ⟨hv, hin, -⟩ := mkDeltaPy_spec (-a.toUs)
@@ -244,5 +299,11 @@ theorem timedeltaPosRsub_proven : TimedeltaPosRsub := by
       rw [e3]
       exact sameOutcome_mkN _
     · exfalso; apply hr; unfold MIN_US END_US at *; omega
+  · unfold Delta.rsubPy Delta.negPy
+    rw [hn]
+    obtain ⟨-, hin, hor⟩ := mkDeltaPy_spec (-a.toUs)
+    rcases hor with ⟨t, ht⟩ | ⟨e, he, hc⟩
+    · exfalso; have := hin.mp ⟨t, ht⟩; omega
+    · rw [he]; exact ⟨e, rfl, hc⟩
 
 end PyLean.Datetime
