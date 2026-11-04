@@ -705,8 +705,9 @@ theorem one_f64 [RandLibm] : (1.0 : F64) = F64.one := by
 /-- "Returned values range from 0 to positive infinity if lambd is positive"
 (Lib/random.py:610-612): for every `lambd > 0` (an infinite one included) and a
 `random()` value in `[0, 1)`, `expovariate` returns, raises nothing, and its result is
-`>= 0`. The `log` never sees `0.0`, because `1.0 - random()` is at least `2 ** -53`'s
-neighbour on the binary64 grid (the reason for `1.0 - random()` in the source). -/
+`>= 0`. The `log` never sees `0.0`: `1.0` and `random()` both lie on the `2 ** -1074`
+grid, so `1.0 - random()` is a positive multiple of it and does not round to zero
+(`F64Order.one_sub_unit`). -/
 def ExpovariateNonneg : Prop :=
   ∀ [RandLibm], LogNonpos → ∀ (σ : Type) (g : Gen σ F64) (lambd u : F64) (s s1 : σ),
     g.random s = (u, s1) → u.isFinite = true → 0 ≤ u.toRat → u.toRat < 1 → Flt.lt 0.0 lambd = true →

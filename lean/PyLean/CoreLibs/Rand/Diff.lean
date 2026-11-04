@@ -414,7 +414,11 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "sys_random" =>
     encRM encF (sysRandom stubRaw) s
   | "sys_getrandbits" =>
-    encRM encNat (sysGetrandbits stubRaw (← getIntArg j "k")) s
+    let kj ← field j "k"
+    let k : SysBitsArg F64 ← match kj.getObjVal? "fl" with
+      | .ok v => pure (.flt (← decF v))
+      | .error _ => pure (.arg (← getIntArgJ kj))
+    encRM encNat (sysGetrandbitsArg stubRaw k) s
   | "sys_randbytes" =>
     encRM (fun (l : List Nat) => toJson l) (sysRandbytes stubRaw (← getIntArg j "n")) s
   | "sys_randrange" =>
@@ -449,6 +453,14 @@ def run (fn : String) (j : Json) : Except String Json := do
         return (out, res :: tail)
     let (_, res) ← build cs []
     enc (fun (l : List (Option String)) => toJson l) (.ok res) s
+  | "init_subclass_hooks" =>
+    let hs ← (← getArr j "hooks").mapM fun (h : Json) => do
+      let t ← h.getStr?
+      if t = "random" then pure SubclassHook.random
+      else if t = "object" then pure SubclassHook.object
+      else pure (SubclassHook.cooperative t)
+    let kw ← (← getArr j "kwargs").mapM (·.getStr?)
+    enc (fun (p : List String × Option String) => toJson p.1) (runInitSubclass "C" [] kw hs) s
   | "main" =>
     let getInput (c : Json) : Except String (CliInput F64) := do
       let asInt ← getOptInt c "asint"

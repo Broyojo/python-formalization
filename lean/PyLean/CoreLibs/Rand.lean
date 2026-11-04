@@ -7,6 +7,7 @@ import PyLean.CoreLibs.Rand.SeedProps
 import PyLean.CoreLibs.Rand.DistProps
 import PyLean.CoreLibs.Rand.SystemProps
 import PyLean.CoreLibs.Rand.OpenProps
+import PyLean.CoreLibs.Rand.DistFormula
 
 /-! Registry for the `Rand` area of CoreLibs: Lib/random.py, Modules/_randommodule.c, CPython 3.15.2. -/
 

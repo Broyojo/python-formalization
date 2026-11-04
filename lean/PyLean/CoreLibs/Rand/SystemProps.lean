@@ -222,8 +222,8 @@ theorem mainPositionalMatchesOption_refuted : ¬ MainPositionalMatchesOption := 
   let g : Gen Unit F64 := ⟨fun s => (F64.zero false, s), fun _ s => (.ok 0, s)⟩
   have e := congrFun (h Unit F64 below g 0 none [] "") ()
   obtain ⟨m, hm⟩ := randint_empty below 1 0 (by decide) ()
-  have lhs : (cliMain below g (posArgs 0 none []) "" ()).1.toBool = true := by
-    have hpos : cliMain below g (posArgs 0 none []) "" () =
+  have lhs : (cliMain below g (posArgs 0 none []) "" (fun _ => pure ()) ()).1.toBool = true := by
+    have hpos : cliMain below g (posArgs 0 none []) "" (fun _ => pure ()) () =
         tryValue (randint below (.int 1) (.int 0) >>= fun r => Pure.pure (CliOut.int r))
           (do
             let y : F64 ← RM.lift (pyFloat 0)
@@ -232,7 +232,7 @@ theorem mainPositionalMatchesOption_refuted : ¬ MainPositionalMatchesOption := 
     rw [hpos]
     simp only [tryValue, RM.bind_apply, hm]
     rfl
-  have rhs : (cliMain below g (optArgs 0) "" ()).1.toBool = false := by
+  have rhs : (cliMain below g (optArgs 0) "" (fun _ => pure ()) ()).1.toBool = false := by
     have hopt : cliMain below g (optArgs 0) "" =
         (randint below (.int 1) (.int 0) >>= fun r => Pure.pure (CliOut.int r)) := rfl
     rw [hopt]
@@ -273,7 +273,7 @@ theorem mainPositionalPositive_proven : MainPositionalPositive := by
       (randint below (.int 1) (.int n) >>= fun r => Pure.pure (CliOut.int r)) := rfl
   constructor
   · funext s
-    have hpos : cliMain below g (posArgs n x w) h s =
+    have hpos : cliMain below g (posArgs n x w) h (fun _ => pure ()) s =
         tryValue (randint below (.int 1) (.int n) >>= fun r => Pure.pure (CliOut.int r))
           (do
             let y : F ← RM.lift (pyFloat n)
@@ -310,7 +310,7 @@ def MainChoices : Prop :=
         | .str w => w ∈ c :: cs
         | _ => False)) ∧
     (∀ (args : CliArgs F), args.choice = none → args.integer = none → args.float = none →
-      args.test = none → args.input = [] → ∀ s, cliMain below g args h s = (.ok (.str h), s))
+      args.test = none → args.input = [] → ∀ s, cliMain below g args h (fun _ => pure ()) s = (.ok (.str h), s))
 
 theorem mainChoices_proven : MainChoices := by
   intro σ F _ below g h hv
