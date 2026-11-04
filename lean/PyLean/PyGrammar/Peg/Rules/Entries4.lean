@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.SpecInv4
+import PyLean.PyGrammar.Peg.Rules.SpecStr
 
 /-! Registry entries for the rules stated as equations (`Peg/Rules/Spec.lean` and the
 `Spec*.lean` files after it). -/
@@ -334,7 +334,102 @@ def specEntries : List Entry := [
      "(invalid_kvpair | invalid_kvpair_unpacking) (second pass), both the dummy result when their " ++
      "rule does not raise; then expression ':' before '}' or ',' \"expression expected after " ++
      "dictionary key and ':'\".")
-    "Grammar/python.gram:1560-1563" ``InvalidDoubleStarredKvpairsRule ``invalidDoubleStarredKvpairsRule_proven
+    "Grammar/python.gram:1560-1563" ``InvalidDoubleStarredKvpairsRule ``invalidDoubleStarredKvpairsRule_proven,
+  specEntry "pygrammar-rule-fstring-middle" Rows.rule_fstring_middle
+    ("fstring_middle: fstring_replacement_field, then FSTRING_MIDDLE through " ++
+     "_PyPegen_constant_from_token.")
+    "Grammar/python.gram:969-971" ``FstringMiddle ``fstringMiddle_proven,
+  specEntry "pygrammar-rule-fstring-replacement-field" Rows.rule_fstring_replacement_field
+    ("fstring_replacement_field: '{' annotated_rhs '='? [fstring_conversion] " ++
+     "[fstring_full_format_spec] '}' gives _PyPegen_formatted_value(a, debug, conversion, format, " ++
+     "rbrace, EXTRA); then, second pass only, invalid_fstring_replacement_field.")
+    "Grammar/python.gram:972-975" ``FstringReplacementField ``fstringReplacementField_proven,
+  specEntry "pygrammar-rule-fstring-conversion" Rows.rule_fstring_conversion
+    "fstring_conversion: \"!\" NAME through _PyPegen_check_fstring_conversion(conv_token, conv)."
+    "Grammar/python.gram:976-977" ``FstringConversion ``fstringConversion_proven,
+  specEntry "pygrammar-rule-fstring-full-format-spec" Rows.rule_fstring_full_format_spec
+    ("fstring_full_format_spec: ':' fstring_format_spec* through _PyPegen_setup_full_format_spec " ++
+     "with EXTRA.")
+    "Grammar/python.gram:978-979" ``FstringFullFormatSpecG ``fstringFullFormatSpecG_proven,
+  specEntry "pygrammar-rule-fstring-format-spec" Rows.rule_fstring_format_spec
+    ("fstring_format_spec: FSTRING_MIDDLE through _PyPegen_decoded_constant_from_token, then " ++
+     "fstring_replacement_field.")
+    "Grammar/python.gram:980-982" ``FstringFormatSpec ``fstringFormatSpec_proven,
+  specEntry "pygrammar-rule-fstring" Rows.rule_fstring
+    "fstring: FSTRING_START fstring_middle* FSTRING_END through _PyPegen_joined_str(a, b, c)."
+    "Grammar/python.gram:983-984" ``FstringRuleG ``fstringRuleG_proven
+    " StringLoops pins the loops.",
+  specEntry "pygrammar-rule-tstring-format-spec-replacement-field" Rows.rule_tstring_format_spec_replacement_field
+    ("tstring_format_spec_replacement_field: as fstring_replacement_field with " ++
+     "tstring_full_format_spec and invalid_tstring_replacement_field; the action is " ++
+     "_PyPegen_formatted_value.")
+    "Grammar/python.gram:986-989" ``TstringFormatSpecReplacementField ``tstringFormatSpecReplacementField_proven,
+  specEntry "pygrammar-rule-tstring-format-spec" Rows.rule_tstring_format_spec
+    ("tstring_format_spec: TSTRING_MIDDLE through _PyPegen_decoded_constant_from_token, then " ++
+     "tstring_format_spec_replacement_field.")
+    "Grammar/python.gram:990-992" ``TstringFormatSpec ``tstringFormatSpec_proven,
+  specEntry "pygrammar-rule-tstring-full-format-spec" Rows.rule_tstring_full_format_spec
+    "tstring_full_format_spec: ':' tstring_format_spec* through _PyPegen_setup_full_format_spec."
+    "Grammar/python.gram:993-994" ``TstringFullFormatSpecG ``tstringFullFormatSpecG_proven,
+  specEntry "pygrammar-rule-tstring-replacement-field" Rows.rule_tstring_replacement_field
+    ("tstring_replacement_field: the fstring_replacement_field items with " ++
+     "tstring_full_format_spec, through _PyPegen_interpolation with EXTRA; then, second pass only, " ++
+     "invalid_tstring_replacement_field.")
+    "Grammar/python.gram:995-998" ``TstringReplacementField ``tstringReplacementField_proven,
+  specEntry "pygrammar-rule-tstring-middle" Rows.rule_tstring_middle
+    "tstring_middle: tstring_replacement_field, then TSTRING_MIDDLE through _PyPegen_constant_from_token."
+    "Grammar/python.gram:999-1001" ``TstringMiddle ``tstringMiddle_proven,
+  specEntry "pygrammar-rule-tstring" Rows.rule_tstring
+    ("tstring (memo): TSTRING_START tstring_middle* TSTRING_END through _PyPegen_template_str " ++
+     "under CHECK_VERSION 14: NULL sets error_indicator; below 3.14 \"t-strings are only " ++
+     "supported in Python 3.14 and greater\"; memoized.")
+    "Grammar/python.gram:1002-1008" ``TstringRuleG ``tstringRuleG_proven,
+  specEntry "pygrammar-rule-string" Rows.rule_string
+    "string: STRING through _PyPegen_constant_from_string."
+    "Grammar/python.gram:1010" ``StringRule ``stringRule_proven,
+  specEntry "pygrammar-rule-strings" Rows.rule_strings
+    ("strings (memo): invalid_string_tstring_concat (second pass only), then (fstring|string)+ " ++
+     "through _PyPegen_concatenate_strings, then tstring+ through _PyPegen_concatenate_tstrings, " ++
+     "with EXTRA; memoized.")
+    "Grammar/python.gram:1011-1014" ``StringsRuleG ``stringsRuleG_proven,
+  specEntry "pygrammar-rule-invalid-fstring-replacement-field" Rows.rule_invalid_fstring_replacement_field
+    ("invalid_fstring_replacement_field: the eleven alternatives in order with their " ++
+     "\"f-string: ...\" messages: KNOWN_LOCATION at '=', '!', ':', '}' after '{', then " ++
+     "ON_NEXT_TOKEN (under PyErr_Occurred() ? NULL :) for the expected next part, and the " ++
+     "conversion character alternative with no action.")
+    "Grammar/python.gram:1587-1603" ``InvalidFstringReplacementFieldG ``invalidFstringReplacementFieldG_proven
+    " FieldGroups pins _tmp_152.._tmp_155.",
+  specEntry "pygrammar-rule-invalid-fstring-conversion-character" Rows.rule_invalid_fstring_conversion_character
+    ("invalid_fstring_conversion_character: '!' before ':' or '}' \"f-string: missing conversion " ++
+     "character\"; '!' not followed by NAME \"f-string: invalid conversion character\", at the " ++
+     "next token.")
+    "Grammar/python.gram:1605-1607" ``InvalidFstringConversionCharacterG ``invalidFstringConversionCharacterG_proven,
+  specEntry "pygrammar-rule-invalid-tstring-replacement-field" Rows.rule_invalid_tstring_replacement_field
+    ("invalid_tstring_replacement_field: the t-string twin with \"t-string: ...\" messages, its " ++
+     "tenth alternative on fstring_format_spec* (python.gram:1622), as the text has it.")
+    "Grammar/python.gram:1609-1625" ``InvalidTstringReplacementFieldG ``invalidTstringReplacementFieldG_proven
+    " The f-string loop in it is the cause of pygrammar-tstring-format-spec-fstring-message.",
+  specEntry "pygrammar-rule-invalid-tstring-conversion-character" Rows.rule_invalid_tstring_conversion_character
+    "invalid_tstring_conversion_character: the t-string twin of invalid_fstring_conversion_character."
+    "Grammar/python.gram:1627-1629" ``InvalidTstringConversionCharacterG ``invalidTstringConversionCharacterG_proven,
+  specEntry "pygrammar-rule-invalid-string-tstring-concat" Rows.rule_invalid_string_tstring_concat
+    ("invalid_string_tstring_concat: (fstring|string)+ tstring, then tstring+ (fstring|string), " ++
+     "raise \"cannot mix t-string literals with string or bytes literals\" from the last literal of " ++
+     "the first kind to the first of the other.")
+    "Grammar/python.gram:1631-1635" ``InvalidStringTstringConcatG ``invalidStringTstringConcatG_proven,
+  { id := "pygrammar-rule-tstring-field-messages"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_tstring_field_messages
+    statement := "For every text between the quotes, when f'...' ends in \"f-string: <m>\", the same " ++
+      "t'...' ends in \"t-string: <m>\" (invalid_tstring_replacement_field is the f-string rule " ++
+      "with \"t-string:\" messages)."
+    source := "the implementation against itself: Grammar/python.gram:1587-1603 against 1609-1625"
+    status := .refuted
+    prop := ``TstringFieldMessages
+    thm := some ``tstringFieldMessages_refuted
+    bug := some "pygrammar-tstring-format-spec-fstring-message"
+    notes := "Counterexample run in the kernel: the body {x:{a:} gives \"f-string: expecting '}', " ++
+      "or format specs\" for both f'...' and t'...'; line 1622 uses fstring_format_spec*." }
 ]
 
 end PyLean.PyGrammar.Peg

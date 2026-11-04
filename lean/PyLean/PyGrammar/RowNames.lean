@@ -364,6 +364,24 @@ def rule_for_if_clauses : List String := [
 def rule_for_stmt : List String := [
   "rule:for_stmt"]
 
+def rule_fstring : List String := [
+  "rule:fstring"]
+
+def rule_fstring_conversion : List String := [
+  "rule:fstring_conversion"]
+
+def rule_fstring_format_spec : List String := [
+  "rule:fstring_format_spec"]
+
+def rule_fstring_full_format_spec : List String := [
+  "rule:fstring_full_format_spec"]
+
+def rule_fstring_middle : List String := [
+  "rule:fstring_middle"]
+
+def rule_fstring_replacement_field : List String := [
+  "rule:fstring_replacement_field"]
+
 def rule_func_type : List String := [
   "rule:func_type"]
 
@@ -520,6 +538,12 @@ def rule_invalid_for_stmt : List String := [
 def rule_invalid_for_target : List String := [
   "rule:invalid_for_target"]
 
+def rule_invalid_fstring_conversion_character : List String := [
+  "rule:invalid_fstring_conversion_character"]
+
+def rule_invalid_fstring_replacement_field : List String := [
+  "rule:invalid_fstring_replacement_field"]
+
 def rule_invalid_group : List String := [
   "rule:invalid_group"]
 
@@ -601,8 +625,17 @@ def rule_invalid_starred_expression_unpacking : List String := [
 def rule_invalid_starred_expression_unpacking_sequence : List String := [
   "rule:invalid_starred_expression_unpacking_sequence"]
 
+def rule_invalid_string_tstring_concat : List String := [
+  "rule:invalid_string_tstring_concat"]
+
 def rule_invalid_try_stmt : List String := [
   "rule:invalid_try_stmt"]
+
+def rule_invalid_tstring_conversion_character : List String := [
+  "rule:invalid_tstring_conversion_character"]
+
+def rule_invalid_tstring_replacement_field : List String := [
+  "rule:invalid_tstring_replacement_field"]
 
 def rule_invalid_type_param : List String := [
   "rule:invalid_type_param"]
@@ -904,6 +937,12 @@ def rule_statement_newline : List String := [
 def rule_statements : List String := [
   "rule:statements"]
 
+def rule_string : List String := [
+  "rule:string"]
+
+def rule_strings : List String := [
+  "rule:strings"]
+
 def rule_subject_expr : List String := [
   "rule:subject_expr"]
 
@@ -927,6 +966,27 @@ def rule_term : List String := [
 
 def rule_try_stmt : List String := [
   "rule:try_stmt"]
+
+def rule_tstring : List String := [
+  "rule:tstring"]
+
+def rule_tstring_field_messages : List String := [
+  "rule:invalid_tstring_replacement_field"]
+
+def rule_tstring_format_spec : List String := [
+  "rule:tstring_format_spec"]
+
+def rule_tstring_format_spec_replacement_field : List String := [
+  "rule:tstring_format_spec_replacement_field"]
+
+def rule_tstring_full_format_spec : List String := [
+  "rule:tstring_full_format_spec"]
+
+def rule_tstring_middle : List String := [
+  "rule:tstring_middle"]
+
+def rule_tstring_replacement_field : List String := [
+  "rule:tstring_replacement_field"]
 
 def rule_tuple : List String := [
   "rule:tuple"]

@@ -544,6 +544,58 @@ theorem altResult_krv {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {
     rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
   rfl
 
+/-- An action that calls a helper with a state: `emit_action`'s check on its value and state. -/
+@[irreducible] def oState (v : Array Ast → PS → Ast × PS) : Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env _ s => pureRes (v env s).1 (v env s).2
+
+theorem altResult_s {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {act : AE} {v : Array Ast → PS → Ast × PS} (h1 : a.action = some act)
+    (h : ∀ ex, evalA env ex act s = v env s) : altResult a g env st s = oState v env st s := by
+  unfold oState
+  exact altResult_pure2 h1 (fun ex => (h ex).trans rfl)
+
+/-- The same with `EXTRA`. -/
+@[irreducible] def oStateX (v : Array Ast → Loc → PS → Ast × PS) :
+    Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun env st s => pureRes (v env (locFrom st s) s).1 (v env (locFrom st s) s).2
+
+theorem altResult_sx {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
+    {act : AE} {v : Array Ast → Loc → PS → Ast × PS} (h1 : a.action = some act) (hx : a.extra = true)
+    (h : ∀ (el ec : Int), evalA env ⟨st.1, st.2, el, ec⟩ act s = v env ⟨st.1, st.2, el, ec⟩ s) :
+    altResult a g env st s = oStateX v env st s := by
+  unfold oStateX
+  rw [altResult_extra h1 hx]
+  simp only [mkExtra, locFrom, h]
+  rfl
+
+/-- `PyErr_Occurred() ? NULL : RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN(msg)`: with an exception already
+set, the action's `NULL` (an error return); otherwise the raise at the token under the mark. -/
+@[irreducible] def oNextIf (m : String) : Array Ast → Int × Int → PS → Option Ast × PS :=
+  fun _ _ s => if s.errOccurred then pureRes .null s else raisedMsg "SyntaxError" true m s
+
+theorem altResult_nextIf {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS} {m : String}
+    (h1 : a.action = some (.ite (.call .PyErr_Occurred []) .null
+      (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [.str m])))
+    (hm : msgOf [.str (m.toList.map Char.toNat)] = m) :
+    altResult a g env st s = oNextIf m env st s := by
+  unfold oNextIf
+  have hp : ∀ ex, evalA env ex (.call .PyErr_Occurred []) s =
+      (.int (if s.errOccurred then 1 else 0), s) := fun _ => rfl
+  cases hs : s.errOccurred
+  · rw [altResult_pure2 (v := .null) (s' := (raiseError "SyntaxError" true m s).2) h1 (fun ex => by
+      rw [evalA_ite, hp, hs]
+      simp only [Bool.false_eq_true, ↓reduceIte, truth, evalA, evalA.evalList, bind, StateT.bind, pure,
+        StateT.pure, callHelper, hm]
+      rfl)]
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    unfold raisedMsg pureRes
+    generalize (raiseError "SyntaxError" true m s).2 = r
+    cases hr : r.errOccurred <;> simp [nonNull, hr]
+  · rw [altResult_pure2 (v := .null) (s' := s) h1 (fun ex => by
+      rw [evalA_ite, hp, hs]
+      rfl)]
+    rfl
+
 theorem altResult_none1' {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int} {s : PS}
     (h1 : a.action = none) (h2 : a.nvars = 1) : altResult a g env st s = oVar0 env st s := by
   rw [altResult_none1 h1 h2]
@@ -661,6 +713,9 @@ macro "spec_alts" : tactic => `(tactic| (
     | (intro _ _ _; exact altResult_x rfl rfl (fun _ _ => rfl))
     | (intro _ _ _; exact altResult_krv rfl (fun _ => rfl) (fun _ => rfl) (by decide +kernel))
     | (intro _ _ _; exact altResult_pure2 rfl (fun _ => rfl))
+    | (intro _ _ _; exact altResult_s rfl (fun _ => rfl))
+    | (intro _ _ _; exact altResult_sx rfl rfl (fun _ _ => rfl))
+    | (intro _ _ _; exact altResult_nextIf rfl (by decide +kernel))
     | skip))
 
 /-! ### Rules without `EXTRA` -/
@@ -742,6 +797,18 @@ def MemoSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p q : PS), Ent
 macro "memo_spec" : tactic => `(tactic| (
   intro f p q h hn
   rw [callRule_memo_plain rfl rfl rfl rfl rfl h hn]
+  refine congrArg (memoDone p.mark _) (runAlts_spec f _ _ ?_ _ _ _)
+  spec_alts))
+
+/-- A `(memo)` rule function with `EXTRA`, at a position with no memo entry for it yet. -/
+def MemoExtraSpec (id : Nat) (xs : List SAlt) : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
+  (q.memo.getD p.mark []).find? (fun m => m.1 == 1000 + id) = none →
+  callRule (f + 2) id p = memoDone p.mark id
+    (specAlts f xs p.mark ((q.tokenAt p.mark).lineno, (q.tokenAt p.mark).colOffset) q)
+
+macro "memo_extra_spec" : tactic => `(tactic| (
+  intro f p q h hn
+  rw [callRule_memo_extra rfl rfl rfl rfl rfl h hn]
   refine congrArg (memoDone p.mark _) (runAlts_spec f _ _ ?_ _ _ _)
   spec_alts))
 
