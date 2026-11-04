@@ -115,14 +115,31 @@ def bytesNewType (type : String) (x : Option Obj) (encoding errors : Option Stri
   | .ok b =>
     if type ≠ "bytes" then .ok (type, (bytesSubtypeNew { data := b }).data) else .ok ("bytes", b)
 
-/-- `bytes_fromhex_impl(type, string)`, bytesobject.c:2617-2626: `_PyBytes_FromHex`, then for a
-subclass `type(result)` (:2621-2623), which for a subclass that keeps `bytes.__new__` and
-`object.__init__` is `bytes_new_impl(type, result)`. A subclass with its own `__new__` or `__init__`
-is out of scope (classes by identity). -/
-def bytesFromHexType (type : String) (o : Obj) : Py (String × Seq) :=
+/-- `bytes_fromhex_impl(type, string)`, bytesobject.c:2617-2626, for any result type `α`:
+`_PyBytes_FromHex`, then, when `type` is not `bytes`, `PyObject_CallOneArg(type, result)`
+(:2621-2623). `call` is that call: `none` for `bytes` itself (the result is `inj r`); `some f` for a
+subclass, where `f r` runs the subclass's `__new__` and `__init__` and may raise or return any
+object. It is called only after the parse succeeded. -/
+def bytesFromHexT {α : Type} (inj : Seq → α) (call : Option (Seq → Py α)) (o : Obj) : Py α :=
   match bytesFromHex o with
   | .error e => .error e
-  | .ok r => if type ≠ "bytes" then bytesNewType type (some (.bytes r)) none none else .ok ("bytes", r)
+  | .ok r =>
+    match call with
+    | none => .ok (inj r)
+    | some f => f r
+
+/-- `type(r)` for a subclass `T` that keeps `bytes.__new__` and `object.__init__`:
+`bytes_new_impl(T, r)`, an instance of `T` with the contents of `r`. -/
+def plainSubCall (T : String) (r : Seq) : Py (String × Seq) := bytesNewType T (some (.bytes r)) none none
+
+/-- `T.fromhex(s)` for `bytes` (`T = "bytes"`) or a subclass `T` that keeps `bytes.__new__` and
+`object.__init__`: `(class, contents)`. -/
+def bytesFromHexType (type : String) (o : Obj) : Py (String × Seq) :=
+  bytesFromHexT (fun r => ("bytes", r)) (if type ≠ "bytes" then some (plainSubCall type) else none) o
+
+/-- `bytes_getnewargs(op)`, bytesobject.c:2775-2780: `Py_BuildValue("(y#)", ob_sval, size)`, a new
+1-tuple holding a new exact bytes with the contents, whatever the class of `self`. -/
+def bytesGetnewargs (s : Seq) : Obj := .tuple [.bytes s]
 
 /-- `bytes.decode(encoding, errors)`, bytesobject.c:2573-2579: `PyUnicode_FromEncodedObject(self,
 encoding, errors)`, which for a bytes is `PyUnicode_Decode`, after its own empty-input shortcut

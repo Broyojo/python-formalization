@@ -204,6 +204,26 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   | "newsub" =>
     return encPy jTB (bytesNewType "BSubB" (← optObj j "x") (← optStr j "enc") (← optStr j "err"))
   | "fromhexsub" => return encPy jTB (bytesFromHexType "BSubB" (← fieldObj j "x"))
+  | "fromhexcls" =>
+    -- type(result) for the test's classes: BSubB keeps bytes.__new__ and object.__init__,
+    -- BHexInit has `__init__(self, a, b)`, BHexNew has a `__new__` that returns 42
+    let call : Option (Seq → Py Json) ← match (← getStr j "cls") with
+      | "bytes" => pure none
+      | "BSubB" => pure (some fun r => (plainSubCall "BSubB" r).map jTB)
+      | "BHexInit" => pure (some fun _ =>
+          .error (.typeError "BHexInit.__init__() missing 1 required positional argument: 'b'"))
+      | "BHexNew" => pure (some fun _ => .ok (Json.arr #["obj", "int", "42"]))
+      | c => throw s!"cls {c}"
+    return encPy id (bytesFromHexT (fun r => jTB ("bytes", r)) call (← fieldObj j "x"))
+  | "getnewargs" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return Json.mkObj [("ok", Json.arr #["tuple", toJson (1 : Nat), toJson a.typeName,
+        jB ((a.buffer?).getD [])])]
+    | _ => throw "getnewargs"
+  | "pickle" =>
+    match bytesGetnewargs s with
+    | .tuple [a] => return encPy jTB (bytesNewType "BSubB" (some a) none none)
+    | _ => throw "pickle"
   | "dunderbytes" => return encPy jTB (.ok (bytesDunderBytes "bytes" s) : Py (String × Seq))
   | "dunderbytessub" => return encPy jTB (.ok (bytesDunderBytes "BSubB" s) : Py (String × Seq))
   | "maketrans" =>
