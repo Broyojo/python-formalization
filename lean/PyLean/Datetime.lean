@@ -31,6 +31,7 @@ import PyLean.Datetime.IsoTimeProps
 import PyLean.Datetime.WrapScanProps
 import PyLean.Datetime.DeltaStrProps
 
+import PyLean.Datetime.EdgeProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -1111,7 +1112,22 @@ def entries : List Entry := [
     source := "invariant (no crash)", status := .refuted
     prop := ``Zone.StrongLookupDefined, thm := some ``Zone.strongLookupDefined_refuted
     bug := some "datetime-zoneinfo-strong-cache-eq-reentry"
-    notes := "Duplicate of gh-142782: an __eq__ that calls ZoneInfo.clear_cache() frees the node find_in_strong_cache reads next." }
+    notes := "Duplicate of gh-142782: an __eq__ that calls ZoneInfo.clear_cache() frees the node find_in_strong_cache reads next." },
+  { id := "datetime-wrap-scan-end", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_wrap_strftime"]
+    statement := "For every object, tzinfo environment and format, _wrap_strftime's scan appends nothing once the format is used up, the format's length is enough fuel (any larger fuel gives the same result), and _wrap_strftime is that scan from the start of the format with the time tuple's year, month and day."
+    source := "_pydatetime.py:225-294 (while i < n; \"\".join); invariant (no early stop)", status := .proven
+    prop := ``WrapScanEnd, thm := some ``wrapScanEnd_proven },
+  { id := "datetime-find-sep-len7", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_find_isoformat_datetime_separator"]
+    statement := "_find_isoformat_datetime_separator returns 7 for every string of length 7, whatever its characters."
+    source := "_pydatetime.py:303-304", status := .proven
+    prop := ``FindSepLen7, thm := some ``findSepLen7_proven },
+  { id := "datetime-parse-isotime-edges", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_parse_isoformat_time"]
+    statement := "_parse_isoformat_time raises 'Isoformat time too short' for fewer than two characters and 'Invalid isoformat string' for any non-ASCII string before parsing; hour 24 next to a Z or an offset sets the same flags as without one (24:00 is midnight with became_next_day, other hour-24 times set error_from_components) and keeps the offset."
+    source := "_pydatetime.py:455-459, :471-478", status := .proven
+    prop := ``ParseIsoTimeEdges, thm := some ``parseIsoTimeEdges_proven }
 ]
 
 end PyLean.Datetime
