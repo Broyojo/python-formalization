@@ -562,6 +562,13 @@ def typeNewInitSubclass (rt : Rt) (t : Addr) (kwds : Kw) : M Unit := do
   let _ ← rt.call func [] kwds
   pure ()
 
+/-- The object `ht_slots` holds for the (mangled) slot name `n`: the `__slots__` item itself when
+`_Py_Mangle` left it unchanged, so a `str` subclass instance stays one, else a new `str`. -/
+def slotNameObj (w : World) (slots : List Val) (n : Name) : Val :=
+  match slots.find? (fun v => strOf w v == some n) with
+  | some v => v
+  | none => .str n
+
 /-- `type_new_impl` after `type_new_init`, `Objects/typeobject.c:5001`, with
 `type_new_alloc` (`:4467`). -/
 def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
@@ -574,7 +581,9 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
     name := ctx.name, qualname := ctx.name, base := some ctx.base, bases := baseAddrs,
     dict := orig, asNumber := true, asSequence := true, asMapping := true, asAsync := true,
     asBuffer := true, heap := true, baseType := true,
-    htSlots := names.bind fun n => if n.isEmpty then none else some n })
+    htSlots := names.bind fun n => if n.isEmpty then none else some n
+    htSlotVals := (names.bind fun n => if n.isEmpty then none else some n).map fun ns =>
+      ns.map fun n => slotNameObj w ((ctx.slots).getD []) n })
   let dict ← typeNewSetAttrs rt ctx t orig
   let members := names.getD []
   let dict ← typeNewDescriptors ctx t ctx.nslot dict
@@ -617,6 +626,12 @@ def typeNewGetBases (rt : Rt) (ctx : TypeNewCtx) : M (Sum Val TypeNewCtx) := do
   let base ← bestBase c.bases
   pure (.inr { c with base := base })
 
+/-- A namespace entry with an exact `str` key. -/
+def strKeyEntry (p : Val × Val) : Option (Name × Val) :=
+  match p.1 with
+  | .str k => some (k, p.2)
+  | _ => none
+
 /-- `type_new`, `Objects/typeobject.c:5118`. -/
 def typeNew (rt : Rt) (metatype : Addr) (args : List Val) (kwds : Kw) : M Val := do
   let w ← getW
@@ -628,10 +643,7 @@ def typeNew (rt : Rt) (metatype : Addr) (args : List Val) (kwds : Kw) : M Val :=
       | typeErr s!"type.__new__() argument 2 must be tuple, not {typeName w basesV}"
     let some es := anyDictOf w dictV
       | typeErr s!"type.__new__() argument 3 must be dict or frozendict, not {objFQN w dictV}"
-    let orig : NameDict := es.filterMap fun p =>
-      match p.1 with
-      | .str k => some (k, p.2)
-      | _ => none
+    let orig : NameDict := es.filterMap strKeyEntry
     if orig.length != es.length then gap%
     let ctx : TypeNewCtx := { metatype, args, kwds, name, bases }
     match ← typeNewGetBases rt ctx with
@@ -676,24 +688,36 @@ def compatBase (w : World) : Nat → Addr → Addr
       | none => t
     else t
 
-/-- `same_slots_added`, `Objects/typeobject.c:7644`. -/
-def sameSlotsAdded (w : World) (a b : Addr) : Bool :=
+/-- `same_slots_added`, `Objects/typeobject.c:7643-7670`. The two `ht_slots` tuples are compared
+with `PyObject_RichCompareBool(slots_a, slots_b, Py_EQ)` (`:7665`), which runs the `__eq__` of
+`str` subclass slot names; an exception from it counts as "differ" (`!= 1`), and
+`compatible_for_assignment` then replaces it with its own `TypeError`. Types the model built
+without the slot objects compare their names. -/
+def sameSlotsAdded (rt : Rt) (a b : Addr) : M Bool := do
+  let w ← getW
   let da := tdata w a
   let db := tdata w b
   match da.base with
-  | none => false
+  | none => pure false
   | some base =>
     let size0 := (tdata w base).basicsize
     let size1 := if da.dictoffset == size0 && db.dictoffset == size0 then size0 + 8 else size0
     let size2 := if da.weaklistoffset == size1 && db.weaklistoffset == size1 then size1 + 8 else size1
-    if !da.heap || !db.heap then false else
+    if !da.heap || !db.heap then pure false else
     match da.htSlots, db.htSlots with
     | some sa, some sb =>
-      if sa != sb then false
+      let eq ← match da.htSlotVals, db.htSlotVals with
+        | some va, some vb =>
+          tryM (richCompareBool rt (.tuple va) (.tuple vb) .eq) fun e =>
+            match e with
+            | .exc _ _ _ => pure false
+            | e => raise e
+        | _, _ => pure (sa == sb)
+      if !eq then pure false
       else
         let size3 := size2 + 8 * sa.length
-        size3 == da.basicsize && size3 == db.basicsize
-    | _, _ => size2 == da.basicsize && size2 == db.basicsize
+        pure (size3 == da.basicsize && size3 == db.basicsize)
+    | _, _ => pure (size2 == da.basicsize && size2 == db.basicsize)
 
 /-- `tp_flags & (Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_INLINE_VALUES | Py_TPFLAGS_PREHEADER)`. -/
 def layoutFlags (w : World) (t : Addr) : List Bool :=
@@ -707,9 +731,12 @@ def compatibleFlags (setclass : Bool) (w : World) (origto newto : Addr) : Bool :
   if setclass then layoutFlags w origto == layoutFlags w newto
   else ((layoutFlags w origto).zip (layoutFlags w newto)).all fun (o, n) => o || !n
 
-/-- `compatible_for_assignment`, `Objects/typeobject.c:7684`. `tp_free` is `PyObject_GC_Del` exactly
-for GC types among those modelled. -/
-def compatibleForAssignment (origto newto : Addr) (attr : String) (setclass : Bool) : M Unit := do
+/-- `compatible_for_assignment`, `Objects/typeobject.c:7683-7750`. `tp_free` is `PyObject_GC_Del`
+exactly for GC types among those modelled. The checks run in the C order: deallocator, flags,
+`tp_dictoffset`, `tp_weaklistoffset`, then the compatible bases, where `same_slots_added` runs
+only when the two bases differ and share `tp_base`. -/
+def compatibleForAssignment (rt : Rt) (origto newto : Addr) (attr : String) (setclass : Bool) :
+    M Unit := do
   let w ← getW
   let oldto := if setclass then origto else (tdata w origto).base.getD B.object
   if setclass && hasGC w newto != hasGC w oldto then
@@ -718,19 +745,57 @@ def compatibleForAssignment (origto newto : Addr) (attr : String) (setclass : Bo
   let n := tdata w newto
   let newbase := compatBase w w.heap.size newto
   let oldbase := compatBase w w.heap.size oldto
-  let differs : Bool :=
-    !compatibleFlags setclass w origto newto ||
-    ((setclass || n.dictoffset != 0) && o.dictoffset != n.dictoffset) ||
-    ((setclass || n.weaklistoffset != 0) && o.weaklistoffset != n.weaklistoffset) ||
-    (newbase != oldbase &&
-      ((tdata w newbase).base != (tdata w oldbase).base || !sameSlotsAdded w newbase oldbase))
-  if differs then
+  let differsErr : M Unit := do
+    let w ← getW
     typeErr s!"{attr} assignment: '{tpName w newto}' object layout differs from '{tpName w oldto}'"
+  if !compatibleFlags setclass w origto newto ||
+      ((setclass || n.dictoffset != 0) && o.dictoffset != n.dictoffset) ||
+      ((setclass || n.weaklistoffset != 0) && o.weaklistoffset != n.weaklistoffset) then
+    differsErr
+  else if newbase != oldbase then
+    if (tdata w newbase).base != (tdata w oldbase).base then differsErr
+    else if !(← sameSlotsAdded rt newbase oldbase) then differsErr
 
-/-- `object_set_class`, `Objects/typeobject.c:7856`, with
-`object_set_class_world_stopped` (`:7756`). The module allowlist is not modelled: no
-module objects here. -/
-def objectSetClass (self : Val) (value : Option Val) : M Unit := do
+/-- `PySys_Audit(event, args)`, `Python/sysmodule.c`: each installed hook is called with the event
+name and the argument tuple; the first exception aborts. -/
+def pySysAuditLoop (rt : Rt) (event : String) (args : List Val) : List Val → M Unit
+  | [] => pure ()
+  | h :: hs => do
+    let _ ← rt.call h [.str event, .tuple args] []
+    pySysAuditLoop rt event args hs
+
+def pySysAudit (rt : Rt) (event : String) (args : List Val) : M Unit := do
+  let w ← getW
+  pySysAuditLoop rt event args w.auditHooks
+
+/-- `PyType_IsSubtype(t, &PyModule_Type)`; no type is when the world has no `ModuleType`. -/
+def isModuleSubtype (w : World) (t : Addr) : Bool :=
+  match w.moduleType with
+  | some m => isSubtype w t m
+  | none => false
+
+/-- `object_set_class_world_stopped`, `Objects/typeobject.c:7755-7853`: the mutable-type check,
+with its `ModuleType` allowlist (`:7809-7810`), then `compatible_for_assignment`, then the new
+type. Materialising a managed dict (`:7822-7840`) moves the inline values into a dict object,
+which this model always has, so it is not a step here. -/
+def objectSetClassWorldStopped (rt : Rt) (self : Val) (newto : Addr) : M Unit := do
+  let w ← getW
+  let oldto := typeOf w self
+  if !(isModuleSubtype w newto && isModuleSubtype w oldto) &&
+      ((tdata w newto).immutable || (tdata w oldto).immutable) then
+    typeErr "__class__ assignment only supported for mutable types or ModuleType subclasses"
+  compatibleForAssignment rt oldto newto "__class__" true
+  match self with
+  | .obj a =>
+    modW fun w =>
+      match w.get a with
+      | .val o => w.setCell a (.val { o with cls := newto })
+      | .ty _ d => w.setCell a (.ty newto d)
+  | _ => gap%
+
+/-- `object_set_class`, `Objects/typeobject.c:7856-7894`: the delete and non-class errors, the
+`object.__setattr__` audit event (`:7872-7875`), then `object_set_class_world_stopped`. -/
+def objectSetClass (rt : Rt) (self : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
   | none => typeErr "can't delete __class__ attribute"
@@ -738,17 +803,8 @@ def objectSetClass (self : Val) (value : Option Val) : M Unit := do
     match asType w v with
     | none => typeErr s!"__class__ must be set to a class, not '{typeName w v}' object"
     | some newto =>
-      let oldto := typeOf w self
-      if (tdata w newto).immutable || (tdata w oldto).immutable then
-        typeErr "__class__ assignment only supported for mutable types or ModuleType subclasses"
-      compatibleForAssignment oldto newto "__class__" true
-      match self with
-      | .obj a =>
-        modW fun w =>
-          match w.get a with
-          | .val o => w.setCell a (.val { o with cls := newto })
-          | .ty _ d => w.setCell a (.ty newto d)
-      | _ => gap%
+      pySysAudit rt "object.__setattr__" [self, .str "__class__", v]
+      objectSetClassWorldStopped rt self newto
 
 /-- `mro_hierarchy_for_complete_type`, `Objects/typeobject.c:1837`: recompute the MRO of
 `t` and its subclasses, recording old MROs for undo. -/
@@ -793,7 +849,7 @@ def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
   let w ← getW
   let oldBaseO := (tdata w t).base
   let oldBases := (tdata w t).bases
-  compatibleForAssignment t newBase "__bases__" false
+  compatibleForAssignment rt t newBase "__bases__" false
   let newAddrs := items.filterMap (asType w)
   modType t fun d => { d with bases := newAddrs, base := some newBase }
   let undoBases : M Unit :=

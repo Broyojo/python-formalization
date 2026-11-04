@@ -249,35 +249,46 @@ theorem subtypeIsMroMember_proven : SubtypeIsMroMember := by
   simp [isSubtype, h]
 
 /-- Assigning `__class__` needs a class: the first two checks of `object_set_class`,
-`Objects/typeobject.c:7859-7869`. -/
+`Objects/typeobject.c:7859-7869`, made before the audit event. -/
 def SetClassChecks : Prop :=
-  ∀ (self v : Val) (w : World),
-    objectSetClass self none w = (typeErr "can't delete __class__ attribute" : M Unit) w ∧
+  ∀ (rt : Rt) (self v : Val) (w : World),
+    objectSetClass rt self none w = (typeErr "can't delete __class__ attribute" : M Unit) w ∧
     (asType w v = none →
-      objectSetClass self (some v) w =
+      objectSetClass rt self (some v) w =
         (typeErr s!"__class__ must be set to a class, not '{typeName w v}' object" : M Unit) w)
 
 theorem setClassChecks_proven : SetClassChecks := by
-  intro self v w
+  intro rt self v w
   constructor
   · simp [objectSetClass]
   · intro h
     simp [objectSetClass, h]
 
-/-- `__class__` assignment to or from an immutable type is refused: `(1).__class__ = C` and
-`C().__class__ = int`, `Objects/typeobject.c:7809-7817`. -/
+/-- `__class__` assignment to or from an immutable type is refused unless both types are
+`ModuleType` subclasses: `(1).__class__ = C` and `C().__class__ = int`,
+`Objects/typeobject.c:7809-7817`. Stated with no audit hook installed (one could raise first). -/
 def SetClassImmutable : Prop :=
-  ∀ (self v : Val) (t : Addr) (w : World),
-    asType w v = some t →
+  ∀ (rt : Rt) (self v : Val) (t : Addr) (w : World),
+    asType w v = some t → w.auditHooks = [] →
+    (∀ m, w.moduleType = some m → ¬ (isSubtype w t m = true ∧ isSubtype w (typeOf w self) m = true)) →
     ((tdata w t).immutable || (tdata w (typeOf w self)).immutable) = true →
-    objectSetClass self (some v) w =
+    objectSetClass rt self (some v) w =
       (typeErr "__class__ assignment only supported for mutable types or ModuleType subclasses" : M Unit) w
 
 theorem setClassImmutable_proven : SetClassImmutable := by
-  intro self v t w h1 h2
+  intro rt self v t w h1 ha hm h2
   have h3 : (tdata w t).immutable = true ∨ (tdata w (typeOf w self)).immutable = true := by
     simpa using h2
-  simp [objectSetClass, h1, h3, typeErr, raiseC]
+  have hmod : (isModuleSubtype w t && isModuleSubtype w (typeOf w self)) = false := by
+    unfold isModuleSubtype
+    cases hmt : w.moduleType with
+    | none => rfl
+    | some m =>
+      have h4 := hm m hmt
+      cases h5 : isSubtype w t m <;> cases h6 : isSubtype w (typeOf w self) m <;> simp_all
+  simp only [objectSetClass, objectSetClassWorldStopped, pySysAudit, pySysAuditLoop, M.bind_app,
+    getW_app, h1, ha, M.pure_app, hmod, h2, Bool.not_false, Bool.true_and, ite_true]
+  simp [typeErr, raiseC]
 
 /-- `object.__format__` refuses a non-empty spec and is `str()` otherwise,
 `Objects/typeobject.c:8506-8512`. -/

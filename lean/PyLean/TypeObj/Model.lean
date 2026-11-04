@@ -376,6 +376,10 @@ structure TypeData where
   weaklistoffset : Int := 0
   /-- Member names added by `__slots__`: `ht_slots`. -/
   htSlots : Option (List Name) := none
+  /-- The objects of `ht_slots`, in the same order: `_Py_Mangle` keeps a name it does not
+  mangle, so a `str` subclass instance from `__slots__` stays one (`Objects/typeobject.c:4330`).
+  `none` where the model built the type without them. -/
+  htSlotVals : Option (List Val) := none
   subclasses : List Addr := []
   deriving Repr, Inhabited
 
@@ -418,6 +422,11 @@ structure World where
   attribute of the module (`Objects/typeobject.c:7955-7963`). `none` is the function of
   `Lib/copyreg.py`, which `copyregSlotnames` mirrors. -/
   copyregSlotnames : Option Val := none
+  /-- The hooks `sys.addaudithook` installed, in order; `PySys_Audit` calls each with the event
+  name and argument tuple, and an exception from one aborts the audited operation. -/
+  auditHooks : List Val := []
+  /-- The address of `types.ModuleType` when the world has it; the model's builtins do not. -/
+  moduleType : Option Addr := none
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level

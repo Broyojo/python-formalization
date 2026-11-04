@@ -1931,7 +1931,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
   let tA := match obj with
     | .obj a => a
     | _ => 0
-  if owner == B.object && n == "__class__" then return ← objectSetClass obj value
+  if owner == B.object && n == "__class__" then return ← objectSetClass rt obj value
   if owner == B.object && n == "__dict__" then return ← subtypeSetdict rt obj value
   if owner == B.type then
     if n == "__name__" then
