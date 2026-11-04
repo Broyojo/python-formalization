@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
-import PyLean.CoreLibs.Coll.CounterProps5
+import PyLean.CoreLibs.Coll.CounterTotal
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
@@ -104,6 +104,10 @@ def counterEntries : List Entry := [
     statement := "For any pure +=, -=, <, > on counts, a += b leaves a[k] += b[k] at b's keys and a[k] elsewhere, -= likewise, |= takes b[k] where b[k] > a[k], &= takes b[k] (0 when missing) where b[k] < a[k], each keeping only counts > 0, without raising."
     source := "docstrings, Lib/collections/__init__.py:964-1011"
     status := .proven, prop := ``InplaceArith, thm := some ``inplaceArith_proven },
+  { id := "coll-counter-total-sum", pyFile := file, pyFns := ["Counter.total"]
+    statement := "total() is sum(self.values()): the exact sum for int counts (whether or not the Py_ssize_t fast path overflows), and ((0 + c1) + c2) + ... in insertion order for counts that are not int, float or complex, + free to raise; the compensated float/complex paths are a parameter."
+    source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625; Python/bltinmodule.c:2878-2972"
+    status := .proven, prop := ``CounterTotalSum, thm := some ``counterTotalSum_proven },
   { id := "coll-counter-total", pyFile := file, pyFns := []
     statement := "total() is sum(self.values()) for every count type."
     source := "docstring 'Sum of the counts', Lib/collections/__init__.py:625"

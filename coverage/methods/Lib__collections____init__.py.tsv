@@ -29,7 +29,7 @@ Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names,
 Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-count-elements-twins-hashable,coll-count-elements-twins-narrow,coll-counter-count-iter-int	
 Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-count-iter-int,coll-counter-update-mapping-kw	
 Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
-Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		review: `sum(self.values())` on arbitrary values (float `sum` uses compensated summation, mixed types raise TypeError) is modelled as an Int fold, so the property holds only on the int-only domain the model picks.
+Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total-sum	
 Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common,coll-counter-most-common-neg	
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
