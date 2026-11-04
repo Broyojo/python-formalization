@@ -1308,7 +1308,7 @@ longobj-divmod-near	proven	Objects/longobject.c	_PyLong_DivmodNear
 longobj-int-round	proven	Objects/longobject.c	int___round___impl
 longobj-pow-obj	proven	Objects/longobject.c	long_pow
 longobj-as-byte-array-stores	open	Objects/longobject.c	_PyLong_AsByteArray
-bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
+bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-cached	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-one-lane	proven	Objects/tupleobject.c	tuple_hash
@@ -1320,7 +1320,7 @@ bytesobj-count-agree	proven	Objects/tupleobject.c	tuple_count_impl,list_count_im
 bytesobj-compare-agree	proven	Objects/listobject.c	list_richcompare_impl,list_richcompare,tuple_richcompare
 bytesobj-compare-reflexive	proven	Objects/tupleobject.c	tuple_richcompare
 bytesobj-tuple-iter-yields	proven	Objects/tupleobject.c	tuple_iter,tupleiter_next
-bytesobj-tuple-iter-reduce	proven	Objects/tupleobject.c	tupleiter_len,tupleiter_reduce,tupleiter_setstate
+bytesobj-tuple-iter-reduce	proven	Objects/tupleobject.c	tupleiter_len
 bytesobj-list-iter-safe	proven	Objects/listobject.c	list_iter,listiter_next,listiter_setstate,list___reversed___impl,listreviter_next,listreviter_setstate
 bytesobj-list-iter-yields	proven	Objects/listobject.c	list_iter,listiter_next,list___reversed___impl,listreviter_next
 bytesobj-list-iter-hint	proven	Objects/listobject.c	listiter_len,listreviter_len,listiter_reduce,listreviter_reduce,listiter_reduce_general,listiter_setstate,listreviter_setstate
@@ -1330,12 +1330,12 @@ bytesobj-slice-reads	proven	Objects/tupleobject.c	tuple_subscript,list_slice_loc
 bytesobj-list-resize	proven	Objects/listobject.c	list_resize,py_list_resize
 bytesobj-list-growth-pattern	proven	Objects/listobject.c	list_resize,_PyList_AppendTakeRefListResize,list_append_impl
 bytesobj-list-ops-wf	proven	Objects/listobject.c	list_resize,list_preallocate_exact,list_new_prealloc,list_clear_impl,list_clear,list_clear_slot,py_list_clear_impl,list_append_impl,list_extend_fast,list_extend_lock_held,list_extend_set,list_extend_dict,list_inplace_repeat,list_ass_item,list_ass_slice,reverse_slice,list_reverse_impl,PyList_Clear
-bytesobj-tuple-concat	proven	Objects/tupleobject.c	_PyTuple_Concat,tuple_alloc,tuple_get_empty
+bytesobj-tuple-concat	proven	Objects/tupleobject.c	_PyTuple_Concat,tuple_alloc
 bytesobj-repeat	proven	Objects/tupleobject.c	tuple_repeat,list_repeat,tuple_alloc
-bytesobj-tuple-construct	proven	Objects/tupleobject.c	maybe_tracked,PyTuple_FromArray,_PyTuple_FromStackRefStealOnSuccess,_PyTuple_FromArraySteal,PyTuple_Pack,_PyTuple_MaybeUntrack,tuple_new_impl,tuple_vectorcall,tuple_subtype_new,tuple___getnewargs___impl,tuple_slice
-bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,_PyTuple_Resize,list_ass_slice,valid_index
-bytesobj-item-access	proven	Objects/tupleobject.c	tuple_item,tuple_length,list_item,list_length,tuple_subscript
-bytesobj-capi-construct	proven	Objects/listobject.c	PyList_New,PyTuple_New,_PyList_FromStackRefStealOnSuccess,_PyList_AsTupleAndClear,PyTuple_SetItem,PyList_GetSlice,PyTuple_GetSlice,list_vectorcall
+bytesobj-tuple-construct	proven	Objects/tupleobject.c	PyTuple_FromArray,_PyTuple_FromStackRefStealOnSuccess,_PyTuple_FromArraySteal,PyTuple_Pack,_PyTuple_MaybeUntrack
+bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,list_ass_slice,valid_index
+bytesobj-item-access	proven	Objects/tupleobject.c	tuple_item,list_item,list_length
+bytesobj-capi-construct	proven	Objects/listobject.c	PyList_New,_PyList_FromStackRefStealOnSuccess,_PyList_AsTupleAndClear,PyList_GetSlice,list_vectorcall
 bytesobj-list-contents	proven	Objects/listobject.c	list_append_impl,PyList_Insert,list_clear_impl,reverse_slice,list_reverse_impl,PyList_Reverse,list_extend_fast,list_extend_set,list_extend_dict,_list_extend,list_extend_impl,_PyList_Extend,list_inplace_concat,list_concat_lock_held,_PyList_Concat,list_copy_impl,list___init___impl,list_inplace_repeat,list_inplace_repeat_lock_held
 bytesobj-list-extend-iter	proven	Objects/listobject.c	list_extend_iter_lock_held,_list_extend
 bytesobj-sortslice-parallel	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance,sortslice_reverse
@@ -1351,6 +1351,18 @@ bytesobj-list-hint-inert	refuted	Objects/listobject.c	list_extend_iter_lock_held
 bytesobj-list-hint-ignored	proven	Objects/listobject.c	list_extend_iter_lock_held
 bytesobj-tuple-from-pair	proven	Objects/tupleobject.c	_PyTuple_FromPair,_PyTuple_FromPairSteal
 bytesobj-tuple-hash-guard	proven	Objects/tupleobject.c	tuple_hash
+bytesobj-tuple-new-iterable	proven	Objects/tupleobject.c	tuple_new_impl,tuple_vectorcall,tuple_subtype_new
+bytesobj-tuple-richcompare-any	proven	Objects/tupleobject.c	tuple_richcompare
+bytesobj-tuple-subscript-dispatch	proven	Objects/tupleobject.c	tuple_subscript,tuple_item
+bytesobj-tuple-iter-reduce-form	proven	Objects/tupleobject.c	tupleiter_reduce,tupleiter_setstate,tuple_iter
+bytesobj-tuple-hash-loop	proven	Objects/tupleobject.c	tuple_hash
+bytesobj-tuple-repr-errors	proven	Objects/tupleobject.c	tuple_repr
+bytesobj-tuple-index-result	proven	Objects/tupleobject.c	tuple_index_impl
+bytesobj-tuple-slice-spec	proven	Objects/tupleobject.c	tuple_slice,PyTuple_GetSlice,PyTuple_FromArray
+bytesobj-tuple-getnewargs	proven	Objects/tupleobject.c	tuple___getnewargs___impl,tuple_slice
+bytesobj-capi-tuple-obj	proven	Objects/tupleobject.c	PyTuple_New,PyTuple_SetItem,_PyTuple_Resize,tuple_alloc
+bytesobj-tuple-binary-slice-obj	proven	Objects/tupleobject.c	_PyTuple_BinarySlice
+bytesobj-tuple-setitem-hash-fresh	refuted	Objects/tupleobject.c	PyTuple_SetItem,tuple_hash
 bytesobj-list-binary-slice	proven	Objects/listobject.c	
 bytesobj-tuple-binary-slice	proven	Objects/tupleobject.c	
 bytesobj-iteritem-agrees	proven	Objects/tupleobject.c	tuple_iteritem,list_iteritem
