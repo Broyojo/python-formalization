@@ -232,6 +232,9 @@ def rule_closed_pattern : List String := [
 def rule_comparison : List String := [
   "rule:comparison"]
 
+def rule_complex_number : List String := [
+  "rule:complex_number"]
+
 def rule_compound_stmt : List String := [
   "rule:compound_stmt"]
 
@@ -370,6 +373,12 @@ def rule_keyword_stmts : List String := [
 def rule_lazy_import_diagnosed : List String := [
   "rule:invalid_import"]
 
+def rule_literal_expr : List String := [
+  "rule:literal_expr"]
+
+def rule_literal_pattern : List String := [
+  "rule:literal_pattern"]
+
 def rule_match_stmt : List String := [
   "rule:match_stmt"]
 
@@ -397,6 +406,9 @@ def rule_raise_stmt : List String := [
 def rule_raise_stmt_invalid : List String := [
   "rule:raise_stmt"]
 
+def rule_real_imaginary_number : List String := [
+  "rule:real_number", "rule:imaginary_number"]
+
 def rule_return_stmt : List String := [
   "rule:return_stmt"]
 
@@ -408,6 +420,9 @@ def rule_shift_expr : List String := [
 
 def rule_signed_number : List String := [
   "rule:signed_number"]
+
+def rule_signed_real_number : List String := [
+  "rule:signed_real_number"]
 
 def rule_simple_stmt : List String := [
   "rule:simple_stmt"]
