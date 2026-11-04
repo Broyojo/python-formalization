@@ -92,11 +92,11 @@ Grammar/python.gram	600	600	rule:open_sequence_pattern	open_sequence_pattern[asd
 Grammar/python.gram	604	604	rule:maybe_sequence_pattern	maybe_sequence_pattern[asdl_seq*]:	modelled	pygrammar-rule-maybe-sequence-pattern	
 Grammar/python.gram	607	607	rule:maybe_star_pattern	maybe_star_pattern[pattern_ty]:	modelled	pygrammar-rule-maybe-star-pattern	
 Grammar/python.gram	611	611	rule:star_pattern	star_pattern[pattern_ty] (memo):	modelled	pygrammar-rule-star-pattern	
-Grammar/python.gram	617	617	rule:mapping_pattern	mapping_pattern[pattern_ty]:	todo		review: CallRuleSound (Peg/Sound.lean:1186) is one theorem over all grammar data with no hypothesis on the rule, so it holds vacuously for a rule that accepts nothing, survives swapped alternatives, dropped lookaheads and cuts (RuleM ignores them), never instantiates this rule, and claims nothing about the AST or SyntaxError the rule produces; the order of the four alternatives, the get_pattern_keys/get_patterns split and invalid_mapping_pattern (new in 3.15) are not reflected.
+Grammar/python.gram	617	617	rule:mapping_pattern	mapping_pattern[pattern_ty]:	modelled	pygrammar-rule-mapping-pattern	
 Grammar/python.gram	636	636	rule:items_pattern	items_pattern[asdl_seq*]:	modelled	pygrammar-rule-items-pattern	
 Grammar/python.gram	639	639	rule:key_value_pattern	key_value_pattern[KeyPatternPair*]:	modelled	pygrammar-rule-key-value-pattern	
 Grammar/python.gram	643	643	rule:double_star_pattern	double_star_pattern[expr_ty]:	modelled	pygrammar-rule-double-star-pattern	
-Grammar/python.gram	646	646	rule:class_pattern	class_pattern[pattern_ty]:	todo		review: CallRuleSound (Peg/Sound.lean:1186) is one theorem over all grammar data with no hypothesis on the rule, so it holds vacuously for a rule that accepts nothing, survives swapped alternatives, dropped lookaheads and cuts (RuleM ignores them), never instantiates this rule, and claims nothing about the AST or SyntaxError the rule produces; the alternative order, the MatchClass keyword split via map_names_to_ids and invalid_class_pattern are not reflected.
+Grammar/python.gram	646	646	rule:class_pattern	class_pattern[pattern_ty]:	modelled	pygrammar-rule-class-pattern	
 Grammar/python.gram	668	668	rule:positional_patterns	positional_patterns[asdl_pattern_seq*]:	modelled	pygrammar-rule-positional-patterns	
 Grammar/python.gram	671	671	rule:keyword_patterns	keyword_patterns[asdl_seq*]:	modelled	pygrammar-rule-keyword-patterns	
 Grammar/python.gram	674	674	rule:keyword_pattern	keyword_pattern[KeyPatternPair*]:	modelled	pygrammar-rule-keyword-pattern	

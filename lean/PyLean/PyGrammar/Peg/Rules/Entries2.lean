@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Peg.Rules.Patterns5
+import PyLean.PyGrammar.Peg.Rules.Patterns6
 
 /-! Registry entries for the pattern rules of `Peg/Rules/Patterns2.lean` and after, in the scheme
 of `Entries.lean`. -/
@@ -246,7 +246,35 @@ def patternEntries : List Entry := [
     status := .proven
     prop := ``CaseBlock
     thm := some ``caseBlock_proven
-    notes := scheme }
+    notes := scheme },
+  { id := "pygrammar-rule-mapping-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_mapping_pattern
+    statement := "mapping_pattern: at '{', '}' gives the empty MatchMapping; once that fails, " ++
+      "'**' rest [','] '}' MatchMapping(rest=name); then items ',' '**' rest [','] '}' " ++
+      "MatchMapping(keys, patterns, rest); then items [','] '}' MatchMapping(keys, patterns), " ++
+      "keys and patterns the fields of the items' pairs; each alternative from the '{' again; " ++
+      "all failing (or another token) NULL with the mark back in the first pass, the result of " ++
+      "invalid_mapping_pattern in the second."
+    source := "Grammar/python.gram:617-634"
+    status := .proven
+    prop := ``MappingPattern
+    thm := some ``mappingPattern_proven
+    notes := scheme ++ " Each failed alternative is stated through MapA*Fails, which lists every " ++
+      "item at which it can fail without an error." },
+  { id := "pygrammar-rule-class-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_class_pattern
+    statement := "class_pattern: name_or_attr '(' then ')' gives MatchClass(cls); once that fails, " ++
+      "positional_patterns [','] ')' MatchClass(cls, patterns); then keyword_patterns [','] ')' " ++
+      "MatchClass(cls, [], names of the keyword pairs, their patterns); then positional ',' " ++
+      "keyword [','] ')' all four; each alternative from the start mark; all failing NULL with " ++
+      "the mark back in the first pass, the result of invalid_class_pattern in the second."
+    source := "Grammar/python.gram:646-666"
+    status := .proven
+    prop := ``ClassPattern
+    thm := some ``classPattern_proven
+    notes := scheme ++ " Each failed alternative is stated through ClsA*Fails." }
 ]
 
 end PyLean.PyGrammar.Peg

@@ -235,6 +235,9 @@ def rule_class_def : List String := [
 def rule_class_def_raw : List String := [
   "rule:class_def_raw"]
 
+def rule_class_pattern : List String := [
+  "rule:class_pattern"]
+
 def rule_closed_pattern : List String := [
   "rule:closed_pattern"]
 
@@ -405,6 +408,9 @@ def rule_literal_expr : List String := [
 
 def rule_literal_pattern : List String := [
   "rule:literal_pattern"]
+
+def rule_mapping_pattern : List String := [
+  "rule:mapping_pattern"]
 
 def rule_match_stmt : List String := [
   "rule:match_stmt"]

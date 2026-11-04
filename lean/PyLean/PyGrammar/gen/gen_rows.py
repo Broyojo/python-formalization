@@ -157,6 +157,8 @@ CREDIT = {
     "pygrammar-rule-name-or-attr": {GRAM: ["rule:name_or_attr"]},
     "pygrammar-rule-as-pattern": {GRAM: ["rule:as_pattern"]},
     "pygrammar-rule-case-block": {GRAM: ["rule:case_block"]},
+    "pygrammar-rule-mapping-pattern": {GRAM: ["rule:mapping_pattern"]},
+    "pygrammar-rule-class-pattern": {GRAM: ["rule:class_pattern"]},
     "pygrammar-rule-match-stmt": {GRAM: ["rule:match_stmt"]},
     "pygrammar-rule-decorators": {GRAM: ["rule:decorators"]},
     "pygrammar-rule-annotation-default": {GRAM: ["rule:annotation", "rule:star_annotation",
