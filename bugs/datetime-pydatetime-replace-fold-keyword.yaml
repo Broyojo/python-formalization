@@ -1,0 +1,60 @@
+id: datetime-pydatetime-replace-fold-keyword
+title: "_pydatetime replace() always passes fold= to a subclass constructor; C passes it only when nonzero"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime.replace", "time.replace", "C call_subclass_fold", "C new_datetime_subclass_fold_ex", "C new_time_subclass_fold_ex"]
+summary: |
+  For a datetime or time subclass whose constructor does not take a `fold` keyword
+  (`def __new__(cls, *args): return super().__new__(cls, *args)`), `replace()` works in C and
+  raises in _pydatetime. C's `call_subclass_fold` (Modules/_datetimemodule.c:1254-1285) adds
+  `fold=` to the call only when the fold is nonzero (gh-89039 made replace call the subclass);
+  Python's replace calls `type(self)(..., fold=fold)` (Lib/_pydatetime.py:1747, :2116-2117)
+  always. `D(2000, 1, 1).replace(day=2)` is `D(2000, 1, 2, 0, 0)` in C and
+  `TypeError: D.__new__() got an unexpected keyword argument 'fold'` in Python; the same for
+  `time`.
+likelihood: |
+  Low: subclasses with a narrower `__new__` signature than the base class.
+maybe_intended: |
+  C's choice looks deliberate (it keeps such subclasses working for fold 0); Python never
+  followed it. Possibly considered acceptable; low value.
+reproducer: |
+  import datetime, _pydatetime
+  def run(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  out = []
+  for m in (datetime, _pydatetime):
+      class D(m.datetime):
+          def __new__(cls, *a):
+              return super().__new__(cls, *a)
+      class T(m.time):
+          def __new__(cls, *a):
+              return super().__new__(cls, *a)
+      out.append((run(lambda: D(2000, 1, 1).replace(day=2)), run(lambda: T(1).replace(hour=2))))
+  print('C:', out[0], ' Python:', out[1])
+  if out[0] == ('D(2000, 1, 2, 0, 0)', 'T(2, 0)') and out[1] == ('TypeError', 'TypeError'):
+      print('REPRODUCED datetime-pydatetime-replace-fold-keyword')
+expected: The same result in both implementations.
+promised_by: PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:1747 `return type(self)(hour, minute, second, microsecond, tzinfo, fold=fold)`
+  and :2116-2117; Modules/_datetimemodule.c:1265-1278 (`if (fold) { kwargs = ...; }`).
+possible_fix: |
+  In _pydatetime, pass `fold=fold` only when `fold` is nonzero, as C does.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 89039, state: closed, relation: related (replace() calling the subclass constructor, fixed by gh-114780; not this difference)}
+  queries: ["gh search issues: call_subclass_fold", "gh search prs: call_subclass_fold (found 114780)",
+            "datetime replace subclass fold keyword", "replace fold unexpected keyword subclass",
+            "subclass __new__ fold unexpected keyword", "pydatetime replace fold subclass TypeError",
+            "bugforge-results/README.md: replace (no datetime entries)"]
+lean:
+  property: PyLean.Datetime.DtReplaceSubclassAnyTwins
+  theorem: PyLean.Datetime.dtReplaceSubclassAnyTwins_refuted

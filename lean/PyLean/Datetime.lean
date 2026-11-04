@@ -43,6 +43,13 @@ import PyLean.Datetime.AstzProps
 import PyLean.Datetime.Hollow0506Props
 import PyLean.Datetime.LocalZoneProps
 import PyLean.Datetime.TdFloat
+import PyLean.Datetime.DeltaObjProps
+import PyLean.Datetime.CalendarCProps
+import PyLean.Datetime.IsoDateCProps
+import PyLean.Datetime.SubclassCtor
+import PyLean.Datetime.IsoformatCProps
+import PyLean.Datetime.FromtimestampProps
+import PyLean.Datetime.StrptimeImpl
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -58,7 +65,7 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "datetime-ordinal-roundtrip", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromordinal", "date.toordinal", "_ymd2ord", "_ord2ymd", "_is_leap", "_days_before_year", "_days_in_month", "_days_before_month", "_check_date_fields", "C datetime_date_fromordinal_impl", "C date_toordinal", "C ord_to_ymd", "C ymd_to_ord", "C is_leap", "C days_in_month", "C days_before_month", "C days_before_year", "C check_date_args"]
+    pyFns := ["date.fromordinal", "date.toordinal", "_ymd2ord", "_ord2ymd", "_is_leap", "_days_before_year", "_days_in_month", "_days_before_month", "_check_date_fields", "C datetime_date_fromordinal_impl", "C date_toordinal", "C ord_to_ymd", "C ymd_to_ord", "C is_leap", "C days_in_month", "C check_date_args"]
     statement := "For every date d, date.fromordinal(d.toordinal()) == d, in both the C and the Python implementation."
     source := "date.toordinal docs (inverse of fromordinal); invariant", status := .proven
     prop := ``FromordinalToordinal, thm := some ``fromordinalToordinal_proven },
@@ -95,7 +102,7 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``FromisocalendarTwinsCInt, thm := some ``fromisocalendarTwinsCInt_proven },
   { id := "datetime-timedelta-ctor-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__new__", "C delta_new_impl", "C accum", "C microseconds_to_delta_ex", "C new_delta_ex", "C check_delta_day_range", "C checked_divmod", "C normalize_pair", "C normalize_d_s_us", "C divmod"]
+    pyFns := ["timedelta.__new__", "C delta_new_impl", "C accum", "C microseconds_to_delta_ex", "C check_delta_day_range"]
     statement := "For all int arguments days, seconds, microseconds, milliseconds, minutes, hours, weeks, C and Python timedelta(...) return the same value or raise the same exception class (OverflowError)."
     source := "C/Python twins", status := .proven
     prop := ``TimedeltaCtorTwins, thm := some ``timedeltaCtorTwins_proven
@@ -106,7 +113,7 @@ def entries : List Entry := [
     source := "timedelta docs (normalization, \"If the normalized value of days lies outside the indicated range, OverflowError is raised\")", status := .proven
     prop := ``TimedeltaCtorExact, thm := some ``timedeltaCtorExact_proven },
   { id := "datetime-timedelta-ops-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__add__", "timedelta.__sub__", "timedelta.__neg__", "timedelta.__abs__", "timedelta.__mul__", "timedelta.__floordiv__", "timedelta.__truediv__", "timedelta.__mod__", "timedelta.__divmod__", "timedelta._to_microseconds", "_divide_and_round", "C delta_add", "C delta_subtract", "C delta_negative", "C delta_abs", "C delta_multiply", "C delta_divide", "C delta_truedivide", "C delta_remainder", "C delta_divmod", "C multiply_int_timedelta", "C divide_timedelta_int", "C divide_timedelta_timedelta", "C truedivide_timedelta_int", "C divide_nearest", "C delta_to_microseconds"]
+    pyFns := ["timedelta.__add__", "timedelta.__sub__", "timedelta.__neg__", "timedelta.__abs__", "timedelta.__mul__", "timedelta.__floordiv__", "timedelta.__truediv__", "timedelta.__mod__", "timedelta.__divmod__", "timedelta._to_microseconds", "_divide_and_round", "C delta_add", "C delta_subtract", "C delta_negative", "C delta_abs", "C delta_divide", "C delta_remainder", "C delta_divmod", "C multiply_int_timedelta", "C divide_timedelta_int", "C divide_timedelta_timedelta", "C truedivide_timedelta_int", "C divide_nearest", "C delta_to_microseconds", "C normalize_d_s_us", "C normalize_pair", "C divmod"]
     statement := "For all valid timedeltas a, b and every int k, a+b, a-b, -a, abs(a), a*k, a//k, a/k, a//b, a%b and divmod(a, b) agree between C and Python in value and exception class."
     source := "C/Python twins", status := .proven
     prop := ``TimedeltaOpsTwins, thm := some ``timedeltaOpsTwins_proven
@@ -132,7 +139,7 @@ def entries : List Entry := [
     source := "timedelta docs; __hash__ contract", status := .proven
     prop := ``TimedeltaBoolHash, thm := some ``timedeltaBoolHash_proven },
   { id := "datetime-timedelta-reduce", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timedelta.__reduce__", "timedelta._getstate", "C delta_reduce", "C delta_getstate"]
+    pyFns := ["timedelta.__reduce__", "timedelta._getstate", "C delta_getstate"]
     statement := "timedelta(*t.__reduce__()[1]) == t in both twins."
     source := "pickle contract", status := .proven
     prop := ``TimedeltaReduce, thm := some ``timedeltaReduce_proven },
@@ -175,17 +182,17 @@ def entries : List Entry := [
     source := "timezone docs; C/Python twins", status := .proven
     prop := ``TimezoneMethods, thm := some ``timezoneMethods_proven },
   { id := "datetime-timezone-new", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timezone.__new__", "timezone._create", "C timezone_new_impl", "C create_timezone", "C new_timezone"]
-    statement := "timezone(offset[, name]) agrees between the twins for every valid timedelta and name; a zero offset without a name is timezone.utc."
+    pyFns := ["timezone.__new__", "timezone._create", "C timezone_new_impl", "C create_timezone", "C new_timezone", "C look_up_timezone"]
+    statement := "timezone(offset[, name]) agrees between the twins for every valid timedelta and name; a zero offset without a name is timezone.utc in both, a zero offset with a name and every nonzero in-range offset a new timezone."
     source := "C/Python twins; timezone docs", status := .proven
     prop := ``TimezoneNew, thm := some ``timezoneNew_proven },
   { id := "datetime-time-offsets", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.utcoffset", "time.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C get_tzinfo_member", "C time_utcoffset", "C time_dst"]
+    pyFns := ["time.utcoffset", "time.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C time_utcoffset", "C time_dst"]
     statement := "time.utcoffset() and time.dst() agree between the twins for every tzinfo, and an offset returned is strictly inside 24 hours."
     source := "tzinfo docs; C/Python twins", status := .proven
     prop := ``TimeOffsets, thm := some ``timeOffsets_proven },
   { id := "datetime-datetime-offsets", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.utcoffset", "datetime.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C get_tzinfo_member", "C datetime_utcoffset", "C datetime_dst"]
+    pyFns := ["datetime.utcoffset", "datetime.dst", "_check_utc_offset", "C call_tzinfo_method", "C call_utcoffset", "C call_dst", "C datetime_utcoffset", "C datetime_dst"]
     statement := "datetime.utcoffset() and datetime.dst() agree between the twins for every tzinfo, and an offset returned is strictly inside 24 hours."
     source := "tzinfo docs; C/Python twins", status := .proven
     prop := ``DatetimeOffsets, thm := some ``datetimeOffsets_proven },
@@ -195,18 +202,18 @@ def entries : List Entry := [
     source := "C/Python twins", status := .proven
     prop := ``TznameTwins, thm := some ``tznameTwins_proven },
   { id := "datetime-time-repr", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) of the base class is the same text in both twins."
     source := "C/Python twins", status := .proven
     prop := ``TimeRepr, thm := some ``timeRepr_proven },
   { id := "datetime-datetime-repr", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) of the base class is the same text in both twins unless both fold and tzinfo are set."
     source := "C/Python twins", status := .proven
     prop := ``DatetimeRepr, thm := some ``datetimeRepr_proven
     notes := "With fold=1 and a tzinfo the keywords come in a different order: C prints fold first, Python tzinfo first; refuted on record as datetime-repr-fold-tzinfo-twins." },
   { id := "datetime-time-isoformat-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.isoformat", "time._tzstr", "_format_time", "_format_offset", "C datetime_time_isoformat_impl", "C time_str", "C format_utcoffset"]
+    pyFns := ["time.isoformat", "time._tzstr", "_format_time", "_format_offset", "C datetime_time_isoformat_impl", "C format_utcoffset"]
     statement := "time.isoformat(timespec) and str(time) agree between the twins for every timespec and tzinfo."
     source := "C/Python twins", status := .proven
     prop := ``TimeIsoformatTwins, thm := some ``timeIsoformatTwins_proven },
@@ -419,7 +426,7 @@ def entries : List Entry := [
     source := "date.__format__ docs; C/Python twins", status := .proven
     prop := ``DateFormat, thm := some ``dateFormat_proven },
   { id := "datetime-date-strptime", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.strptime", "C datetime_date_strptime_impl"]
+    pyFns := ["date.strptime"]
     statement := "For every parse, date.strptime(s, fmt) is date(*(time.strptime(s, fmt)[0:3])) through the date constructor, exceptions included; for a parse with a valid date, no offset and second 60 or 61 it returns the date while datetime.strptime raises ValueError; and '2024 1 2 60' with %Y %m %d %S is such a parse."
     source := "date.strptime docs; _strptime_datetime_date", status := .proven
     prop := ``DateStrptime, thm := some ``dateStrptime_proven },
@@ -497,7 +504,7 @@ def entries : List Entry := [
     source := "date.fromordinal docs (ValueError unless 1 <= ordinal <= date.max.toordinal())", status := .proven
     prop := ``FromordinalRange, thm := some ``fromordinalRange_proven },
   { id := "datetime-date-fromtimestamp", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromtimestamp", "C date_fromtimestamp"]
+    pyFns := ["date.fromtimestamp", "C date_fromtimestamp", "C datetime_date_fromtimestamp_impl"]
     statement := "For every clock and argument, date.fromtimestamp(None) raises TypeError in both twins without consulting the clock, and otherwise both return the checked localtime date of the same time_t."
     source := "date.fromtimestamp docs; C/Python twins", status := .proven
     prop := ``DateFromtimestamp, thm := some ``dateFromtimestamp_proven
@@ -657,15 +664,10 @@ def entries : List Entry := [
     source := "invariant", status := .proven
     prop := ``UtcToSeconds, thm := some ``utcToSeconds_proven },
   { id := "datetime-packed-accessors", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.year", "date.month", "date.day", "time.hour", "time.minute", "time.second", "time.microsecond", "datetime.hour", "datetime.minute", "datetime.second", "datetime.microsecond", "C date_year", "C date_month", "C date_day", "C time_hour", "C time_minute", "C py_time_second", "C time_microsecond", "C datetime_hour", "C datetime_minute", "C datetime_second", "C datetime_microsecond", "C set_date_fields"]
+    pyFns := ["date.year", "date.month", "date.day", "time.hour", "time.minute", "time.second", "time.microsecond", "datetime.hour", "datetime.minute", "datetime.second", "datetime.microsecond", "C date_year", "C time_hour", "C time_minute", "C py_time_second", "C time_microsecond", "C datetime_hour", "C datetime_minute", "C datetime_second", "C datetime_microsecond", "C set_date_fields"]
     statement := "For every valid object, each C accessor reads back from the packed bytes the field the Python class keeps as an attribute."
     source := "C/Python twins", status := .proven
     prop := ``PackedAccessors, thm := some ``packedAccessors_proven },
-  { id := "datetime-subclass-construction", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["C new_date_subclass_ex", "C new_datetime_ex", "C new_datetime_subclass_fold_ex", "C call_subclass_fold", "C new_time_ex", "C new_time_subclass_fold_ex"]
-    statement := "The base classes take the fast path, which checks the fields; a subclass constructor whose fold keyword defaults to 0 sees the object's fold."
-    source := "invariant", status := .proven
-    prop := ``SubclassConstruction, thm := some ``subclassConstruction_proven },
   { id := "datetime-format-via-strftime", pyFile := "Lib/_pydatetime.py"
     pyFns := ["date.__format__", "time.__format__", "C datetime_date___format___impl", "C datetime_time___format___impl"]
     statement := "format(x, '') is str(x) and format(x, f) is x.strftime(f) for nonempty f, for date and time, in both twins."
@@ -692,7 +694,7 @@ def entries : List Entry := [
     source := "no internal error leaking", status := .proven
     prop := ``StrptimeCompileErrors, thm := some ``strptimeCompileErrors_proven },
   { id := "strptime-methods", pyFile := "Lib/_strptime.py"
-    pyFns := ["_strptime", "_strptime_datetime_date", "_strptime_datetime_time", "_strptime_datetime_datetime", "_parse_tz", "C datetime_date_strptime_impl", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
+    pyFns := ["_strptime", "_strptime_datetime_date", "_strptime_datetime_time", "_strptime_datetime_datetime", "_parse_tz", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "When datetime.strptime succeeds, date.strptime gives its date and time.strptime its time and tzinfo, for the same match."
     source := "method vs equivalent method", status := .proven
     prop := ``StrptimeMethods, thm := some ``strptimeMethods_proven },
@@ -702,12 +704,12 @@ def entries : List Entry := [
     source := "method vs equivalent method", status := .proven
     prop := ``StrptimeMethods, thm := some ``strptimeMethods_proven },
   { id := "datetime-date-isoformat-roundtrip", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C date_str", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C parse_digits", "C is_digit", "C _find_isoformat_datetime_separator"]
+    pyFns := ["date.isoformat", "date.fromisoformat", "datetime.fromisoformat", "_parse_isoformat_date", "_read_isoformat_component", "_find_isoformat_datetime_separator", "_is_ascii_digit", "C date_isoformat", "C datetime_date_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl", "C tzinfo_from_isoformat_results", "C parse_isoformat_date", "C _find_isoformat_datetime_separator"]
     statement := "For every date d, date.fromisoformat(d.isoformat()) == d and datetime.fromisoformat(d.isoformat()) == datetime(d.year, d.month, d.day), in both twins."
     source := "date.fromisoformat docs (\"the output of date.isoformat()\" is accepted)", status := .proven
     prop := ``DateIsoformatRoundtrip, thm := some ``dateIsoformatRoundtrip_proven },
   { id := "datetime-date-fromiso-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["date.fromisoformat", "C datetime_date_fromisoformat_impl", "C parse_isoformat_date", "C parse_digits"]
+    pyFns := ["date.fromisoformat", "C datetime_date_fromisoformat_impl", "C parse_isoformat_date"]
     statement := "For every string s, C and Python date.fromisoformat(s) return the same date or both raise the same exception class."
     source := "C/Python twins", status := .refuted
     prop := ``DateFromisoTwins, thm := some ``dateFromisoTwins_refuted
@@ -1284,7 +1286,7 @@ def entries : List Entry := [
     source := "pickle contract; C/Python twins", status := .proven
     prop := ``DatetimeNewPickle, thm := some ``datetimeNewPickle_proven },
   { id := "datetime-time-repr-cls", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) is the same text in both twins for the base class and every subclass whose __qualname__ is its __name__ and whose module is not named datetime, for every field value, tzinfo and fold."
     source := "C/Python twins", status := .proven
     prop := ``TimeReprCls, thm := some ``timeReprCls_proven },
@@ -1296,7 +1298,7 @@ def entries : List Entry := [
     bug := some "datetime-repr-qualname-vs-tp-name"
     notes := "A nested subclass: Python prints __qualname__ (Outer.T(1, 2)), C tp_name (T(1, 2))." },
   { id := "datetime-datetime-repr-cls", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) is the same text in both twins for the base class and every plain subclass, for every valid datetime without both fold=1 and a tzinfo."
     source := "C/Python twins (narrows datetime-repr-fold-tzinfo-twins)", status := .proven
     prop := ``DatetimeReprCls, thm := some ``datetimeReprCls_proven },
@@ -1328,7 +1330,8 @@ def entries : List Entry := [
     pyFns := ["time.strptime", "datetime.strptime", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "time.strptime and datetime.strptime for every parse: a _strptime exception propagates; without an offset they are the naive time/datetime of the parsed fields through the constructor; with one they attach _parse_tz's timezone; and '%H:%M' on 12:30 is time(12, 30), '%Y %m %d %H %M' on 2024 1 2 12 30 is datetime(2024, 1, 2, 12, 30)."
     source := "time.strptime/datetime.strptime docs", status := .proven
-    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven },
+    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven
+    notes := "Scope: the class and _strptime's datetime module are one implementation (Lib/datetime.py's setup); a _pydatetime class with the C _strptime refuses a parsed offset, datetime-strptime-class-impl." },
   { id := "datetime-datetime-fromiso-body", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.fromisoformat", "_find_isoformat_datetime_separator", "_parse_isoformat_date", "_parse_isoformat_time"]
     statement := "datetime.fromisoformat(s) for every string, by its parsers' results: short strings and refused date parts are 'Invalid isoformat string'; no time part is midnight of the date; a time-part ValueError is 'Invalid isoformat string', error_from_tz is raised, hour 24 with other fields is the hour-24 ValueError, and 24:00 on a valid date other than 9999-12-31 is midnight of the next day (ordinal + 1, a valid date)."
@@ -1355,12 +1358,12 @@ def entries : List Entry := [
     source := "_pydatetime.py:1998-2014; datetime.fromisoformat docs", status := .proven
     prop := ``DatetimeFromIsoRollover, thm := some ``datetimeFromIsoRollover_proven },
   { id := "datetime-time-repr-fallible", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["time.__repr__", "_get_class_module", "C time_repr", "C append_keyword_tzinfo"]
     statement := "repr(time) with a tzinfo whose __repr__ may raise or return a non-str: both twins agree on every outcome for the base class and plain subclasses; a raising __repr__ propagates its exception, a non-str result is TypeError, a str result r is inserted as tzinfo=r before fold, in both; with str results it is the infallible text of TimeReprCls."
     source := "C/Python twins; PyObject_Repr contract", status := .proven
     prop := ``TimeReprFallible, thm := some ``timeReprFallible_proven },
   { id := "datetime-datetime-repr-fallible", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo", "C append_keyword_fold"]
+    pyFns := ["datetime.__repr__", "_get_class_module", "C datetime_repr", "C append_keyword_tzinfo"]
     statement := "repr(datetime) with a tzinfo whose __repr__ may raise or return a non-str: both twins agree for plain classes when fold is 0, there is no tzinfo, or the tzinfo repr fails; a raising __repr__ propagates, a non-str is TypeError, a str r is inserted in each twin's order; with str results it is DatetimeReprCls's text."
     source := "C/Python twins; PyObject_Repr contract", status := .proven
     prop := ``DatetimeReprFallible, thm := some ``datetimeReprFallible_proven },
@@ -1401,7 +1404,142 @@ def entries : List Entry := [
     source := "C/Python twins; timedelta docs (fractional microseconds of all arguments combined, then rounded)", status := .refuted
     prop := ``TimedeltaFloatCtorTwins, thm := some ``timedeltaFloatCtorTwins_refuted
     bug := some "datetime-pydatetime-timedelta-float-precision"
-    notes := "timedelta(hours=10000000.1): C 416666 days 57959 s 999999 us (exact), Python 416666 days 57960 s (hours*3600 rounded as a double first). gh-160806, fixed on main. Not on record as a refutation: the type checks run in a different order (timedelta(days='x', microseconds=inf) is TypeError in Python, OverflowError in C)." }
+    notes := "timedelta(hours=10000000.1): C 416666 days 57959 s 999999 us (exact), Python 416666 days 57960 s (hours*3600 rounded as a double first). gh-160806, fixed on main. Not on record as a refutation: the type checks run in a different order (timedelta(days='x', microseconds=inf) is TypeError in Python, OverflowError in C)." },
+  { id := "datetime-c-normalize-helpers", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C divmod", "C normalize_pair", "C normalize_d_s_us"]
+    statement := "The C divmod helper is Python's divmod for every positive divisor; normalize_pair keeps hi*factor + lo with 0 <= lo < factor and leaves an in-range pair alone; normalize_d_s_us keeps the total microseconds with seconds and microseconds in range and leaves in-range fields alone."
+    source := "C/Python twins (divmod); invariant (the asserts at :384, :734, :760-761)", status := .proven
+    prop := ``CNormalizeHelpers, thm := some ``cNormalizeHelpers_proven },
+  { id := "datetime-new-delta-ex", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_delta_ex", "C look_up_delta", "C normalize_d_s_us"]
+    statement := "new_delta_ex(d, s, us, normalize, type) is the normalized value of (d*86400 + s)*10**6 + us microseconds as an object of class type, the zero value of timedelta itself being the zero_delta singleton, and OverflowError out of the day range; with normalize false, for in-range s and us."
+    source := "invariant (new_delta_ex comment, :1377-1382); timedelta(0) is timedelta(0) in C", status := .proven
+    prop := ``NewDeltaEx, thm := some ``newDeltaEx_proven },
+  { id := "datetime-timedelta-ctor-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C delta_new_impl", "C microseconds_to_delta_ex", "C new_delta_ex", "C look_up_delta"]
+    statement := "timedelta(...) with int arguments in C, for every class: the value of the value model (equal to Python's) as an object of that class; timedelta(0) is the zero_delta singleton, a subclass's zero a new object."
+    source := "C/Python twins (value); identity as CPython 3.15.2 behaves", status := .proven
+    prop := ``TimedeltaCtorObj, thm := some ``timedeltaCtorObj_proven },
+  { id := "datetime-us-to-delta-obj", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C microseconds_to_delta_ex", "C checked_divmod"]
+    statement := "microseconds_to_delta_ex on any object: an int converts exactly; for another object, an exception from divmod propagates, a non-tuple and a tuple of size other than 2 are checked_divmod's TypeErrors, an out-of-range int remainder is 'divmod() returned a value out of range', a remainder without __index__ is TypeError, and a pair of ints (q, r) with 0 <= r < 10**6 converts like q*10**6 + r."
+    source := "invariant (no crash, errors as in the source); messages checked on CPython 3.15.2", status := .proven
+    prop := ``UsToDeltaExObj, thm := some ``usToDeltaExObj_proven },
+  { id := "datetime-timedelta-mul-int-subclass", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__mul__", "C delta_multiply", "C multiply_int_timedelta", "C microseconds_to_delta_ex", "C checked_divmod"]
+    statement := "timedelta * n agrees between the twins for every int operand, an int subclass with its own __mul__ included."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimedeltaMulIntSubclassTwins, thm := some ``timedeltaMulIntSubclassTwins_refuted
+    bug := some "datetime-timedelta-mul-int-subclass"
+    notes := "class I(int): __mul__ = lambda s, o: 2.5; timedelta(1) * I(2): Python timedelta(days=2) (int.__mul__ on the fields), C TypeError (PyNumber_Multiply(intobj, us) runs I.__mul__)." },
+  { id := "datetime-timedelta-mul-dispatch", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__mul__", "C delta_multiply", "C multiply_int_timedelta", "C multiply_truedivide_timedelta_float"]
+    statement := "For operands without overridden arithmetic and a timedelta on either side, x * y agrees between the twins: NotImplemented for two timedeltas or another object, the same outcome for timedelta*int, int*timedelta, timedelta*float and float*timedelta; C's result is of class timedelta."
+    source := "C/Python twins", status := .proven
+    prop := ``TimedeltaMulDispatch, thm := some ``timedeltaMulDispatch_proven },
+  { id := "datetime-timedelta-truediv-dispatch", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__truediv__", "C delta_truedivide", "C truedivide_timedelta_int", "C multiply_truedivide_timedelta_float"]
+    statement := "For operands without overridden arithmetic and a timedelta on either side, x / y agrees between the twins: NotImplemented unless a timedelta is divided by a timedelta, int or float; the same outcome for each of those; C's timedelta / timedelta is long_true_divide of the microsecond counts and its timedelta results are of class timedelta."
+    source := "C/Python twins", status := .proven
+    prop := ``TimedeltaTruedivDispatch, thm := some ``timedeltaTruedivDispatch_proven },
+  { id := "datetime-timedelta-reduce-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["timedelta.__reduce__", "C delta_reduce", "C delta_getstate"]
+    statement := "t.__reduce__() is (type(t), (days, seconds, microseconds)) in both twins for every class, and calling that class on those arguments gives back an object of the same class and value (the zero_delta singleton for a zero timedelta in C)."
+    source := "pickle contract (__reduce__); C/Python twins", status := .proven
+    prop := ``TimedeltaReduceCls, thm := some ``timedeltaReduceCls_proven },
+  { id := "datetime-ymd-to-ord-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C ymd_to_ord", "C days_before_year", "C days_before_month", "C is_leap", "_ymd2ord", "_days_before_year", "_days_before_month"]
+    statement := "For every year in 1..9999 and month in 1..12, C days_before_year, days_before_month and ymd_to_ord equal Python's _days_before_year, _days_before_month and _ymd2ord; at year 0 (unvalidated pickle state) days_before_year is -365 in C and -366 in Python."
+    source := "C/Python twins", status := .proven
+    prop := ``YmdToOrdTwins, thm := some ``ymdToOrdTwins_proven },
+  { id := "datetime-date-subclass-ctor", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_date_subclass_ex", "C new_date_ex", "C new_datetime_ex", "date.fromordinal"]
+    statement := "new_date_subclass_ex(y, m, d, cls) is Python's cls(y, m, d) for every class and all C-int fields: date and datetime check the fields as their constructors do (ValueError, the same text; midnight for datetime), another class is called with (y, m, d) and no keyword."
+    source := "C/Python twins", status := .proven
+    prop := ``DateSubclassCtor, thm := some ``dateSubclassCtor_proven },
+  { id := "datetime-new-datetime-ex-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C new_datetime_ex", "C new_time_ex"]
+    statement := "new_datetime_ex (DateTime_FromDateAndTime) is datetime(y, m, d, hh, mm, ss, us, tzinfo) and new_time_ex (Time_FromTime) is time(hh, mm, ss, us, tzinfo) for all C-int fields and a None or tzinfo tzinfo, with fold 0."
+    source := "C/Python twins (C API constructors against the Python constructors)", status := .proven
+    prop := ``NewDatetimeExTwins, thm := some ``newDatetimeExTwins_proven },
+  { id := "datetime-subclass-fold-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C call_subclass_fold", "C new_datetime_subclass_fold_ex", "C new_time_subclass_fold_ex", "datetime.replace", "time.replace"]
+    statement := "For every class whose constructor treats an omitted fold like fold=0, new_datetime_subclass_fold_ex and new_time_subclass_fold_ex agree with replace's type(self)(..., fold=fold): the base classes run the same checks, a subclass gets the fields positionally in order and fold as a keyword, which C passes only when nonzero."
+    source := "C/Python twins", status := .proven
+    prop := ``SubclassFoldTwins, thm := some ``subclassFoldTwins_proven },
+  { id := "datetime-replace-subclass-fold-any", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C call_subclass_fold", "C new_datetime_subclass_fold_ex", "datetime.replace"]
+    statement := "datetime.replace on a subclass agrees between the twins for every subclass constructor."
+    source := "C/Python twins", status := .refuted
+    prop := ``DtReplaceSubclassAnyTwins, thm := some ``dtReplaceSubclassAnyTwins_refuted
+    bug := some "datetime-pydatetime-replace-fold-keyword"
+    notes := "A subclass whose __new__ takes no fold keyword: Python's replace always passes fold=0 and raises TypeError; C's call_subclass_fold leaves a zero fold out and succeeds." },
+  { id := "datetime-parse-digits-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C parse_digits", "C is_digit"]
+    statement := "parse_digits(p, var, n) fails exactly when one of the n bytes from p is not an ASCII digit (is_digit is the 0x30..0x39 test), and otherwise returns p + n and the value the C loop accumulates."
+    source := "invariant (no read past the NUL terminator; the value of the digits)", status := .proven
+    prop := ``ParseDigitsSpec, thm := some ``parseDigitsSpec_proven },
+  { id := "datetime-parse-isoformat-date-c", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C parse_isoformat_date", "C parse_digits", "C is_digit"]
+    statement := "parse_isoformat_date returns -1 unless the first four bytes are digits; YYYY-Www-D, YYYYWwwD, YYYY-Www and YYYYWww give iso_to_ymd's date or -3 + its code; a wrong separator is -2 in both branches, a missing day digit -4, a missing week digit -3; YYYY-MM-DD and YYYYMMDD give their fields."
+    source := "code comment (return codes, :946-955); invariant", status := .proven
+    prop := ``ParseIsoDateCSpec, thm := some ``parseIsoDateCSpec_proven },
+  { id := "datetime-str-via-isoformat", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_str", "C time_str", "date.__str__", "time.__str__"]
+    statement := "str() of a date or time whose class keeps isoformat is the same text in both twins (YYYY-MM-DD for a date); in C, a class that overrides isoformat gets its override's result or exception."
+    source := "C/Python twins; date.__str__ docs (\"For a date d, str(d) is equivalent to d.isoformat()\")", status := .proven
+    prop := ``StrViaIsoformat, thm := some ``strViaIsoformat_proven },
+  { id := "datetime-str-isoformat-override-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_str", "date.__str__"]
+    statement := "str() of a date agrees between the twins for every class, a subclass overriding isoformat included."
+    source := "C/Python twins", status := .refuted
+    prop := ``StrIsoformatOverrideTwins, thm := some ``strIsoformatOverrideTwins_refuted
+    bug := some "datetime-pydatetime-str-isoformat-alias"
+    notes := "class D(date): def isoformat(self): return 'X'; str(D(2000, 1, 1)) is 'X' in C, '2000-01-01' in _pydatetime (__str__ = isoformat binds date.isoformat). time is the same; datetime.__str__ calls self.isoformat(sep=' ') in both." },
+  { id := "datetime-append-fold-twins", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C append_keyword_fold"]
+    statement := "C append_keyword_fold (', fold=%d)') and Python's s[:-1] + ', fold=1)' agree for folds 0 and 1: no change for 0, ', fold=1)' for 1."
+    source := "C/Python twins", status := .proven
+    prop := ``AppendFoldTwins, thm := some ``appendFoldTwins_proven },
+  { id := "datetime-timestamp-conversion", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_fromtimestamp", "C datetime_date_fromtimestamp_impl", "date.fromtimestamp"]
+    statement := "date.fromtimestamp(t) in both twins: an int outside the 64-bit time_t range is OverflowError (an int inside it goes to localtime as is), a NaN ValueError, an infinity OverflowError, a str TypeError."
+    source := "_PyTime_ObjectToTime_t (Python/pytime.c:484-520); messages checked on CPython 3.15.2", status := .proven
+    prop := ``TimestampConversion, thm := some ``timestampConversion_proven },
+  { id := "datetime-timestamp-floor", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C date_fromtimestamp"]
+    statement := "For a finite float t, date.fromtimestamp(t) uses floor(t) when it lies in [-2**63, 2**63) and raises OverflowError otherwise, in both twins."
+    source := "date.fromtimestamp docs; _PyTime_ObjectToTime_t with _PyTime_ROUND_FLOOR", status := .open
+    prop := ``TimestampConversion
+    notes := "Needs F64.floor's value (ofIntS of floorInt) and the comparison of ofInt(+-2**63) with it through toRat; the model (objectToTimeT) has the branch." },
+  { id := "datetime-date-strptime-cls", pyFile := "Modules/_datetimemodule.c"
+    pyFns := ["C datetime_date_strptime_impl", "date.strptime", "_strptime_datetime_date"]
+    statement := "date.strptime in both twins passes its class to _strptime_datetime_date: for date the checked parsed date, a subclass is called with the parsed year, month and day, and a parse error propagates."
+    source := "C/Python twins", status := .proven
+    prop := ``DateStrptimeCls, thm := some ``dateStrptimeCls_proven },
+  { id := "datetime-strptime-class-impl", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.strptime", "datetime.strptime", "_strptime_datetime_time", "_strptime_datetime_datetime", "_check_tzinfo_arg"]
+    statement := "time.strptime and datetime.strptime give the StrptimeTimeDatetime results when the class and _strptime's datetime module are one implementation; when they differ (a _pydatetime class with the C _strptime), a parsed %z offset is TypeError from the class's tzinfo check and a format without %z gives the same value."
+    source := "Lib/datetime.py:7-10 and _strptime.py:22-24 (configuration); _check_tzinfo_arg", status := .proven
+    prop := ``StrptimeClassImpl, thm := some ``strptimeClassImpl_proven },
+  { id := "datetime-timedelta-type-loop", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__new__"]
+    statement := "timedelta(...) in Python raises TypeError naming the first component, in signature order, that is neither an int nor a float, before any arithmetic."
+    source := "timedelta docs (arguments may be integers or floats); Py:667-679", status := .proven
+    prop := ``TimedeltaTypeLoop, thm := some ``timedeltaTypeLoop_proven },
+  { id := "datetime-timedelta-num-py-int", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__new__"]
+    statement := "With int arguments the float-capable model of timedelta.__new__ is the int-only model (so TimedeltaCtorTwins and TimedeltaCtorExact apply to it)."
+    source := "invariant (the float branches are not taken)", status := .open
+    prop := ``TimedeltaNumPyInt
+    notes := "Needs binary64 lemmas: float(m) + 0.0 == float(m) for |m| < 10**6 and round() of an integral double." },
+  { id := "datetime-astimezone-local-aware-edge-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.astimezone", "datetime._local_timezone", "C datetime_datetime_astimezone_impl"]
+    statement := "astimezone() (tz=None) on an aware datetime with an offset agrees between the twins, where self - offset leaves the datetime range included."
+    source := "C/Python twins", status := .refuted
+    prop := ``AstimezoneLocalAwareEdgeTwins, thm := some ``astimezoneLocalAwareEdgeTwins_refuted
+    bug := some "datetime-pydatetime-astimezone-local-target"
+    notes := "datetime(1, 1, 1, tzinfo=timezone(timedelta(hours=1))).astimezone() with TZ='XXX-24:30': Python builds the local timezone first and raises ValueError (offset 24:30), C subtracts first and raises OverflowError." }
 ]
 
 end PyLean.Datetime

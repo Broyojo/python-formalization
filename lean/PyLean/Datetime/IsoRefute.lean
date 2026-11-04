@@ -114,10 +114,12 @@ def DateFromisoTenChars : Prop :=
 the basic-format parser reads 8 characters and ignores the last two. -/
 theorem dateFromisoTenChars_refuted : ¬DateFromisoTenChars := by
   intro h
-  have h1 := (h "2020010112".toList (by decide)).1
+  have h1 := h "2020010112".toList (by decide)
   have e1 : dateFromIsoPy "2020010112".toList = .ok (2020, 1, 1) := by decide
   have e2 : dateFromIsoC "2020010112".toList = .ok (2020, 1, 1) := by decide
-  rw [e1] at h1
-  exact absurd (h1 rfl) (by decide)
+  rw [e1, e2] at h1
+  have hc := h1.2 rfl
+  have hp := h1.1 rfl
+  exact absurd hc (by decide)
 
 end PyLean.Datetime

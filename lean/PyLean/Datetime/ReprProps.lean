@@ -70,7 +70,7 @@ def dtReprBodyC (pre : String) (dt : DT) : String :=
 def dtReprClsPy (env : TzEnv) (c : ReprCls) (dt : DT) : String :=
   appendFold (appendTzinfo env (dtReprBodyPy (getClassModule c.module ++ c.dtQualname) dt) dt.tz) dt.fold
 
-/-- `datetime_repr`, :6378-6413: `tp_name`, then fold (:6406-6407), then tzinfo (:6408-6410). -/
+/-- `datetime_repr`, :6378-6413: `tp_name`, then fold (:6408-6409), then tzinfo (:6410-6412). -/
 def dtReprClsC (env : TzEnv) (c : ReprCls) (dt : DT) : String :=
   appendTzinfo env (appendFold (dtReprBodyC c.dtTpName dt) dt.fold) dt.tz
 

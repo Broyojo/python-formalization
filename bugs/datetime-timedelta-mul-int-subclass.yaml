@@ -1,0 +1,61 @@
+id: datetime-timedelta-mul-int-subclass
+title: "timedelta * n for an int subclass: C runs n.__mul__ on the microseconds, _pydatetime uses int arithmetic"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Modules/_datetimemodule.c]
+functions: ["C multiply_int_timedelta", "C delta_multiply", "C microseconds_to_delta_ex", "C checked_divmod", "timedelta.__mul__"]
+summary: |
+  `timedelta * n` with `n` an instance of an int subclass that overrides `__mul__`: C's
+  `multiply_int_timedelta` computes `PyNumber_Multiply(intobj, pyus_in)`, the int on the left
+  (Modules/_datetimemodule.c:2299), so the subclass's `__mul__` runs on the microsecond count
+  and its result goes to `microseconds_to_delta`, whose `checked_divmod` then rejects it.
+  `_pydatetime` computes `self._days * other` etc. (Lib/_pydatetime.py:862-864), the timedelta's
+  ints on the left, so `int.__mul__` runs and the override is ignored. With
+  `class I(int): __mul__ = lambda s, o: 2.5`, `timedelta(1) * I(2)` is `timedelta(days=2)` in
+  Python and `TypeError: 'float' object cannot be interpreted as an integer` in C; an override
+  returning an object whose `divmod` is not a 2-tuple gives `divmod() returned non-tuple` or
+  `divmod() returned a tuple of size 3`, one returning a remainder out of range
+  `divmod() returned a value out of range`. `I(2) * timedelta(1)` calls `I.__mul__` first in
+  both and agrees.
+likelihood: |
+  Low: an int subclass with its own `__mul__` used as a timedelta multiplier. The C error
+  paths are reachable and checked, so nothing crashes.
+maybe_intended: |
+  Not intended as a difference (PEP 399), but which side is right is debatable: C's order
+  mirrors `n * td`; Python's `self._days * other` predates it. Low value.
+reproducer: |
+  import datetime, _pydatetime
+  def run(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__ + ': ' + str(e)
+  class I(int):
+      __mul__ = lambda s, o: 2.5
+  c = run(lambda: datetime.timedelta(1) * I(2))
+  p = run(lambda: _pydatetime.timedelta(1) * I(2))
+  print('C:', c, ' Python:', p)
+  if c == "TypeError: 'float' object cannot be interpreted as an integer" and p == 'datetime.timedelta(days=2)':
+      print('REPRODUCED datetime-timedelta-mul-int-subclass')
+expected: The same result in both implementations (either both use int arithmetic or both call the subclass).
+promised_by: PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Modules/_datetimemodule.c:2299 `pyus_out = PyNumber_Multiply(intobj, pyus_in);` (int on the
+  left), then microseconds_to_delta_ex (:2218-2284) with checked_divmod (:2193-2213).
+  Lib/_pydatetime.py:862-864 `timedelta(self._days * other, self._seconds * other,
+  self._microseconds * other)`.
+possible_fix: |
+  In multiply_int_timedelta, multiply `pyus_in * intobj` (the timedelta's int on the left), as
+  Python does; or convert `intobj` with `PyNumber_Index` first.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 124852, state: closed, relation: unrelated (bool days argument)}
+  queries: ["gh search issues: multiply_int_timedelta", "timedelta int subclass multiplication",
+            "timedelta int subclass mul", "bugforge-results/README.md: timedelta (no related entries)"]
+lean:
+  property: PyLean.Datetime.TimedeltaMulIntSubclassTwins
+  theorem: PyLean.Datetime.timedeltaMulIntSubclassTwins_refuted

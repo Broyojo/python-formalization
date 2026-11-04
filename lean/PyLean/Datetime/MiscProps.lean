@@ -123,65 +123,9 @@ theorem packedAccessors_proven : PackedAccessors := by
     rw [e1, e2, e3]
     omega
 
-/-! ### Subclass construction -/
+/-! ### Subclass construction
 
-/-- What `cls` is for the `new_*_subclass` helpers. -/
-inductive DateCls where
-  | date
-  | datetime
-  /-- A subclass: its constructor is called with `year, month, day`. -/
-  | sub (ctor : Int → Int → Int → Py DT)
-
-/-- `new_date_subclass_ex`, :1191-1206. A plain `date` is the `datetime` at midnight
-with no tzinfo in this result type. -/
-def newDateSubclassC (y m d : Int) : DateCls → Py DT
-  | .date => do
-    let _ ← checkDate y m d
-    return ⟨y, m, d, 0, 0, 0, 0, 0, none⟩
-  | .datetime => newDT ⟨y, m, d, 0, 0, 0, 0, 0, none⟩
-  | .sub ctor => ctor y m d
-
-/-- `call_subclass_fold`, :1254-1285: `fold` is passed as a keyword only when nonzero. -/
-def callSubclassFold {α : Type} (cls : Option Int → Py α) (fold : Int) : Py α :=
-  cls (if fold ≠ 0 then some fold else none)
-
-/-- `new_datetime_subclass_fold_ex`, :1288-1305. `none` is `datetime` itself. -/
-def newDatetimeSubclassFoldC (dt : DT) : Option (Option Int → Py DT) → Py DT
-  | none => newDT dt
-  | some cls => callSubclassFold cls dt.fold
-
-/-- `new_time_subclass_fold_ex`, :1358-1373. -/
-def newTimeSubclassFoldC (t : TM) : Option (Option Int → Py TM) → Py TM
-  | none => newTM t
-  | some cls => callSubclassFold cls t.fold
-
-/-- The C constructors for subclasses: the base classes take the fast path, which checks
-the fields, and a subclass constructor whose `fold` keyword defaults to 0 sees the
-object's `fold`. -/
-def SubclassConstruction : Prop :=
-  (∀ y m d : Int, ValidDate y m d →
-    newDateSubclassC y m d .date = .ok ⟨y, m, d, 0, 0, 0, 0, 0, none⟩ ∧
-    newDateSubclassC y m d .datetime = .ok ⟨y, m, d, 0, 0, 0, 0, 0, none⟩) ∧
-  (∀ dt : DT, dt.Valid → newDatetimeSubclassFoldC dt none = .ok dt) ∧
-  (∀ t : TM, t.Valid → newTimeSubclassFoldC t none = .ok t) ∧
-  (∀ {α : Type} (cls : Option Int → Py α) (fold : Int), cls none = cls (some 0) →
-    callSubclassFold cls fold = cls (some fold))
-
-theorem subclassConstruction_proven : SubclassConstruction := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · intro y m d h
-    have hdt : DT.Valid ⟨y, m, d, 0, 0, 0, 0, 0, none⟩ :=
-      ⟨h, by simp, by simp, by simp, by simp, by simp, by simp, by simp, by simp, Or.inl rfl, trivial⟩
-    constructor
-    · simp [newDateSubclassC, checkDate_ok _ _ _ h, bind, Except.bind, pure, Except.pure]
-    · exact newDT_ok _ hdt
-  · intro dt h; exact newDT_ok dt h
-  · intro t h; exact newTM_ok t h
-  · intro α cls fold h
-    unfold callSubclassFold
-    by_cases h0 : fold = 0
-    · subst h0; simpa using h
-    · simp [h0]
+The constructors that may call a subclass are in `SubclassCtor.lean`. -/
 
 /-! ### `__format__` and `tzinfo.__reduce__` -/
 

@@ -1,0 +1,72 @@
+id: pygrammar-tstring-format-spec-fstring-message
+title: "A malformed replacement field nested in a t-string's format spec is reported as an 'f-string:' error"
+priority: P5
+kind: diagnostic
+module: pygrammar
+files: [Grammar/python.gram]
+functions: ["invalid_tstring_replacement_field"]
+summary: |
+  invalid_tstring_replacement_field (python.gram:1609-1625) is the t-string copy of
+  invalid_fstring_replacement_field (1587-1603), with every message prefixed "t-string:". Its
+  tenth alternative, line 1622, still reads
+      | '{' annotated_rhs '='? ['!' NAME] ':' fstring_format_spec* !'}' { ... "t-string: ..." }
+  with the f-string format-spec loop. Inside a t-string, fstring_format_spec never matches a
+  TSTRING_MIDDLE (it wants FSTRING_MIDDLE), so it reaches fstring_replacement_field, whose
+  second-pass alternative invalid_fstring_replacement_field raises its own "f-string: ..."
+  message for a nested field. So `t'{x:{a:}'` fails with "f-string: expecting '}', or format
+  specs", while `t'{x:{a}'` gets "t-string: expecting '}', or format specs" and
+  `t'{x:{a:{}'` gets "t-string: valid expression required before '}'". The location differs too:
+  the f-string twin `f'{x:{a:}'` reports offset 10..11, the t-string offset 9..9.
+likelihood: |
+  Low impact: the wrong prefix (and a zero-width location) in the message of a syntax error that
+  is an error either way. Reached only by a t-string whose format spec holds a replacement field
+  that itself has a format spec and an unclosed brace, e.g. `t'{x:{a:}'` or `t'{x:{a:{b}}'`.
+maybe_intended: |
+  Almost certainly an oversight in the PEP 750 copy: every other alternative of the t-string rule
+  refers to t-string rules (invalid_tstring_conversion_character) or to rules shared by both.
+  tstring_format_spec* exists and is what tstring_full_format_spec uses (line 994).
+reproducer: |
+  def msg(src):
+      try:
+          compile(src, "<s>", "exec")
+      except SyntaxError as e:
+          return e.msg
+  f = msg("f'{x:{a:}'\n")
+  t = msg("t'{x:{a:}'\n")
+  t2 = msg("t'{x:{a}'\n")
+  print(repr(f), repr(t), repr(t2))
+  if f == "f-string: expecting '}', or format specs" and \
+     t == "f-string: expecting '}', or format specs" and \
+     t2 == "t-string: expecting '}', or format specs":
+      print("REPRODUCED pygrammar-tstring-format-spec-fstring-message")
+expected: |
+  `t'{x:{a:}'` fails with "t-string: expecting '}', or format specs" (or another "t-string:"
+  message), like every other malformed t-string replacement field.
+promised_by: |
+  No documentation sentence; the implementation disagreeing with itself: the t-string invalid
+  rule is the f-string one with "t-string:" messages, and every other probe of the twin pair
+  (176 sources, f and t, fields with and without nested format specs) gives "t-string: <m>"
+  exactly where the f-string gives "f-string: <m>".
+cause: |
+  Grammar/python.gram:1622: `fstring_format_spec*` in invalid_tstring_replacement_field, where
+  the t-string rules use `tstring_format_spec*` (line 994). The generated code is
+  invalid_tstring_replacement_field_rule's tenth alternative calling _loop0_78_rule
+  (fstring_format_spec) in Parser/parser.c.
+possible_fix: |
+  Use the t-string loop in line 1622:
+      | '{' annotated_rhs '='? ['!' NAME] ':' tstring_format_spec* !'}' {
+  (and regenerate Parser/parser.c).
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["t-string f-string error message", "tstring fstring_format_spec",
+            "invalid_tstring_replacement_field", "t-string format spec syntax error",
+            "tstring_format_spec", "t-string error message format spec",
+            "template string error message f-string", "t-string syntax error (prs)",
+            "t-string invalid replacement field (prs)"]
+  bugforge: "none (no t-string entries)"
+lean:
+  property: PyLean.PyGrammar.Peg.TstringFieldMessages
+  theorem: PyLean.PyGrammar.Peg.tstringFieldMessages_refuted
