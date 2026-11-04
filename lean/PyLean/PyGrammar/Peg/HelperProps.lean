@@ -377,4 +377,428 @@ theorem ensureComplexParts_proven : EnsureComplexParts := by
         Bool.not_false, ↓reduceIte]
       rfl
 
+/-! ### String concatenation: `_PyPegen_concatenate_strings`, `_build_concatenated_bytes`,
+`_build_concatenated_unicode`, `_build_concatenated_str`, `_build_concatenated_joined_str`,
+`_PyPegen_concatenate_tstrings` -/
+
+theorem bytes_isConstant {e : Ast} (h : isBytesConst e = true) : isConstant e = true := by
+  unfold isBytesConst at h
+  split at h
+  · rfl
+  · exact absurd h (by simp)
+
+/-- `_PyPegen_concatenate_strings(p, strings, EXTRA)` (`Parser/action_helpers.c:1970-2029`, the
+`strings` rule's `(fstring|string)+`, python.gram:1013), on a non-empty sequence, through
+`callHelper`:
+* a bytes literal next to anything that is not bytes (a str or an f-string) raises "cannot mix
+  bytes and nonbytes literals" at the last token and gives `NULL`;
+* one literal alone is returned as it is (its own node and location);
+* two or more bytes literals are one bytes `Constant` of their concatenation, with the `kind` of
+  the first, over `EXTRA` (`_build_concatenated_bytes`, `:1689-1739`);
+* two or more str literals likewise one str `Constant` (`_build_concatenated_unicode`,
+  `:1741-1786`), so `u"a" "b"` keeps `kind` `u` and `"a" u"b"` has none;
+* with an f-string among str literals, a `JoinedStr` over `EXTRA` of `_build_concatenated_str`
+  (`_build_concatenated_joined_str`, `:1943-1954`).
+State unchanged except by the raise. -/
+def ConcatenateStrings : Prop := ∀ (xs : List Ast) (l c el ec : Int) (p : PS),
+  (xs.any isBytesConst = true → xs.any (fun e => !isBytesConst e) = true →
+    callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      (.null, (raiseError0 "SyntaxError" "cannot mix bytes and nonbytes literals" p).2)) ∧
+  (∀ x, xs = [x] → isConstant x = true →
+    callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p = (x, p)) ∧
+  (∀ x y r, xs = x :: y :: r → xs.all isBytesConst = true →
+    callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      (mkAt .Constant [.const (.bytes (xs.flatMap constBytes)), constKind x] ⟨l, c, el, ec⟩, p)) ∧
+  (∀ x y r, xs = x :: y :: r → xs.all (fun e => isConstant e && !isBytesConst e) = true →
+    callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      (mkAt .Constant [.const (.str (xs.flatMap constStr)), constKind x] ⟨l, c, el, ec⟩, p)) ∧
+  (xs.any (fun e => !isConstant e) = true → xs.any isBytesConst = false →
+    callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      (mkAt .JoinedStr [.seq (buildConcatenatedStr (.seq xs))] ⟨l, c, el, ec⟩, p))
+
+theorem any_not_bytes {xs : List Ast} (h : xs.any (fun e => !isBytesConst e) = true) :
+    (xs.any (fun e => isConstant e && !isBytesConst e) || xs.any (fun e => !isConstant e)) = true := by
+  obtain ⟨e, he, hne⟩ := List.any_eq_true.1 h
+  cases hk : isConstant e
+  · exact Bool.or_eq_true_iff.2 (Or.inr (List.any_eq_true.2 ⟨e, he, by simp [hk]⟩))
+  · exact Bool.or_eq_true_iff.2 (Or.inl (List.any_eq_true.2 ⟨e, he, by simp_all⟩))
+
+theorem concatenateStrings_proven : ConcatenateStrings := by
+  intro xs l c el ec p
+  have hc : callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      concatenateStrings (.seq xs) l c el ec p := rfl
+  simp only [hc]
+  refine ⟨fun hb hn => ?_, fun x hx hk => ?_, fun x y r hx ha => ?_, fun x y r hx ha => ?_,
+    fun hf hb => ?_⟩
+  · have hu := any_not_bytes hn
+    simp only [concatenateStrings, seqOf, hu, hb, Bool.and_self, ↓reduceIte, bind, StateT.bind,
+      pure, StateT.pure]
+    rfl
+  · subst hx
+    cases hb : isBytesConst x <;>
+      simp [concatenateStrings, seqOf, hb, hk, bind, StateT.bind, pure, StateT.pure]
+  · subst hx
+    have hall : ∀ e ∈ x :: y :: r, isBytesConst e = true := fun e he => List.all_eq_true.1 ha e he
+    have hb : (x :: y :: r).any isBytesConst = true := List.any_eq_true.2 ⟨x, by simp, hall x (by simp)⟩
+    have hu : (x :: y :: r).any (fun e => isConstant e && !isBytesConst e) = false :=
+      List.any_eq_false.2 (fun e he => by simp [hall e he])
+    have hf : (x :: y :: r).any (fun e => !isConstant e) = false :=
+      List.any_eq_false.2 (fun e he => by simp [bytes_isConstant (hall e he)])
+    simp only [concatenateStrings, seqOf, hu, hf, hb, Bool.or_self, Bool.false_and,
+      Bool.false_eq_true, ↓reduceIte, Bool.not_false, bind, StateT.bind, pure, StateT.pure]
+  · subst hx
+    have hall : ∀ e ∈ x :: y :: r, (isConstant e && !isBytesConst e) = true :=
+      fun e he => List.all_eq_true.1 ha e he
+    have hb : (x :: y :: r).any isBytesConst = false :=
+      List.any_eq_false.2 (fun e he => by have := hall e he; simp_all)
+    have hf : (x :: y :: r).any (fun e => !isConstant e) = false :=
+      List.any_eq_false.2 (fun e he => by have := hall e he; simp_all)
+    simp only [concatenateStrings, seqOf, hf, hb, Bool.or_false, Bool.and_false,
+      Bool.false_eq_true, ↓reduceIte, Bool.not_false, bind, StateT.bind, pure, StateT.pure]
+  · simp only [concatenateStrings, seqOf, hf, hb, Bool.or_true, Bool.and_false,
+      Bool.false_eq_true, ↓reduceIte, Bool.not_true, bind, StateT.bind, pure, StateT.pure]
+
+/-- A node with its constructor replaced. -/
+def retag (c : Ctor) : Ast → Ast
+  | .node _ fs l => .node c fs l
+  | a => a
+
+/-- `_PyPegen_concatenate_tstrings(p, strings, EXTRA)` (`Parser/action_helpers.c:1956-1968`,
+python.gram:1014 `tstring+`): a `TemplateStr` over `EXTRA` of `_build_concatenated_str`, state
+unchanged; and the t-string twin of the f-string path: for the same parts (an interpolation among
+them, no bytes), the `TemplateStr` is the `JoinedStr` `_PyPegen_concatenate_strings` builds, with
+the constructor changed and nothing else. -/
+def ConcatenateTstrings : Prop := ∀ (xs : List Ast) (l c el ec : Int) (p : PS),
+  callHelper .concatenate_tstrings [.seq xs, .int l, .int c, .int el, .int ec] p =
+    (mkAt .TemplateStr [.seq (buildConcatenatedStr (.seq xs))] ⟨l, c, el, ec⟩, p) ∧
+  (xs.any (fun e => !isConstant e) = true → xs.any isBytesConst = false →
+    callHelper .concatenate_tstrings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      ((retag .TemplateStr
+        (callHelper .concatenate_strings [.seq xs, .int l, .int c, .int el, .int ec] p).1), p))
+
+theorem concatenateTstrings_proven : ConcatenateTstrings := by
+  intro xs l c el ec p
+  have h1 : callHelper .concatenate_tstrings [.seq xs, .int l, .int c, .int el, .int ec] p =
+      (mkAt .TemplateStr [.seq (buildConcatenatedStr (.seq xs))] ⟨l, c, el, ec⟩, p) := rfl
+  refine ⟨h1, fun hf hb => ?_⟩
+  rw [h1, (concatenateStrings_proven xs l c el ec p).2.2.2.2 hf hb]
+  rfl
+
+/-- The text of a value sequence: the characters of each `Constant` str, and each other node. -/
+def textView : List Ast → List (Sum Nat Ast)
+  | [] => []
+  | e :: r => (if isConstant e then (constStr e).map Sum.inl else [Sum.inr e]) ++ textView r
+
+/-- The flattening loop of `_build_concatenated_str` (`Parser/action_helpers.c:1810-1836`): the
+values of each `JoinedStr` and `TemplateStr`, every other node as itself. -/
+def concatFlat (strings : Ast) : List Ast :=
+  (seqOf strings).flatMap fun e =>
+    match e with
+    | .node .JoinedStr (v :: _) _ | .node .TemplateStr (v :: _) _ => seqOf v
+    | e => [e]
+
+/-- No two `Constant`s next to each other. -/
+def NoAdjConst : List Ast → Prop
+  | a :: b :: r => ¬(isConstant a = true ∧ isConstant b = true) ∧ NoAdjConst (b :: r)
+  | _ => True
+
+/-- `_build_concatenated_str` (`Parser/action_helpers.c:1788-1941`), what its flattening and
+folding loops make of any sequence of parts: (a) the text is kept, character by character and
+node by node, in order (no part dropped, duplicated or moved, no character lost: `f'a' 'b'
+f'{c}' 'd'` reads `a b {c} d`); (b) every run of adjacent constants is folded into one, so no two
+constants are adjacent in the result; (c) no empty str constant is left ("Drop all empty contanst
+strings", `:1931-1935`). Together these fix the result up to the constants' kinds and
+locations. -/
+def ConcatFolds : Prop := ∀ strings : Ast,
+  textView (buildConcatenatedStr strings) = textView (concatFlat strings) ∧
+  NoAdjConst (buildConcatenatedStr strings) ∧
+  (buildConcatenatedStr strings).all (fun e => !isEmptyStrConst e) = true
+
+theorem textView_append (a b : List Ast) : textView (a ++ b) = textView a ++ textView b := by
+  induction a with
+  | nil => rfl
+  | cons x xs ih => simp only [List.cons_append, textView, ih, List.append_assoc]
+
+theorem textView_consts (ys : List Ast) (h : ∀ y ∈ ys, isConstant y = true) :
+    textView ys = (ys.flatMap constStr).map Sum.inl := by
+  induction ys with
+  | nil => rfl
+  | cons y ys ih =>
+    have hy := h y (by simp)
+    have := ih (fun z hz => h z (by simp [hz]))
+    simp [textView, hy, this, List.map_append]
+
+theorem takeWhile_const (xs : List Ast) : ∀ y ∈ xs.takeWhile isConstant, isConstant y = true := by
+  induction xs with
+  | nil => simp
+  | cons x xs ih =>
+    intro y hy
+    cases hx : isConstant x
+    · simp [List.takeWhile, hx] at hy
+    · simp only [List.takeWhile, hx, List.mem_cons] at hy
+      rcases hy with rfl | hy
+      · exact hx
+      · exact ih y hy
+
+theorem dropWhile_head (xs : List Ast) : ∀ y ∈ (xs.dropWhile isConstant).head?, isConstant y = false := by
+  induction xs with
+  | nil => simp
+  | cons x xs ih =>
+    intro y hy
+    cases hx : isConstant x
+    · simp only [List.dropWhile, hx, List.head?_cons, Option.mem_def, Option.some.injEq] at hy
+      subst hy; exact hx
+    · simp only [List.dropWhile, hx] at hy
+      exact ih y hy
+
+theorem foldConsts_spec (xs : List Ast) (acc : List Nat) (last : Ast) :
+    (foldConsts xs acc last).1 = acc ++ (xs.takeWhile isConstant).flatMap constStr ∧
+    (foldConsts xs acc last).2.2 = xs.dropWhile isConstant := by
+  induction xs generalizing acc last with
+  | nil => simp [foldConsts]
+  | cons x xs ih =>
+    unfold foldConsts
+    split
+    · rename_i h
+      obtain ⟨h1, h2⟩ := ih (acc ++ constStr x) x
+      refine ⟨?_, ?_⟩
+      · rw [h1]; simp [List.takeWhile, h, List.append_assoc]
+      · rw [h2]; simp [List.dropWhile, h]
+    · rename_i h
+      simp [List.takeWhile, List.dropWhile, h]
+
+theorem isConstant_mkAt (s : List Nat) (k : Ast) (l : Loc) :
+    isConstant (mkAt .Constant [.const (.str s), k] l) = true := rfl
+
+theorem constStr_mkAt (s : List Nat) (k : Ast) (l : Loc) :
+    constStr (mkAt .Constant [.const (.str s), k] l) = s := rfl
+
+theorem emptyConst_facts (e : Ast) (h : isEmptyStrConst e = true) :
+    isConstant e = true ∧ constStr e = [] := by
+  unfold isEmptyStrConst at h
+  split at h
+  · exact ⟨rfl, rfl⟩
+  · exact absurd h (by simp)
+
+theorem nextIsConstant_head (rest : List Ast) (h : nextIsConstant rest = false) :
+    ∀ y ∈ rest.head?, isConstant y = false := by
+  cases rest with
+  | nil => simp
+  | cons y r => simpa [nextIsConstant] using h
+
+theorem foldLoop_text : ∀ (f : Nat) (xs : List Ast), xs.length < f →
+    textView (foldLoop f xs) = textView xs := by
+  intro f
+  induction f with
+  | zero => intro xs h; simp at h
+  | succ f ih =>
+    intro xs h
+    cases xs with
+    | nil => simp [foldLoop]
+    | cons e rest =>
+      simp only [List.length_cons] at h
+      have hlen := foldConsts_len rest (constStr e) e
+      obtain ⟨h1, h2⟩ := foldConsts_spec rest (constStr e) e
+      rw [foldLoop]
+      split
+      · rename_i hc
+        have he : isConstant e = true := (Bool.and_eq_true_iff.1 hc).1
+        have htv : textView (e :: rest) = ((foldConsts rest (constStr e) e).1).map Sum.inl ++
+            textView (foldConsts rest (constStr e) e).2.2 := by
+          rw [h1, h2]
+          have hs : e :: rest = (e :: rest.takeWhile isConstant) ++ rest.dropWhile isConstant := by
+            simp [List.takeWhile_append_dropWhile]
+          rw [hs, textView_append, textView_consts (e :: rest.takeWhile isConstant) (by
+            intro y hy
+            simp only [List.mem_cons] at hy
+            rcases hy with rfl | hy
+            · exact he
+            · exact takeWhile_const rest y hy)]
+          simp [List.map_append]
+        dsimp only
+        split
+        · rename_i hs
+          rw [ih _ (by omega), htv]
+          simp [List.isEmpty_iff.1 hs]
+        · rw [textView, isConstant_mkAt, if_pos rfl, constStr_mkAt, ih _ (by omega), htv]
+      · split
+        · rename_i hemp
+          rw [ih _ (by omega)]
+          have := emptyConst_facts e hemp
+          simp [textView, this.1, this.2]
+        · simp only [textView]
+          rw [ih _ (by omega)]
+
+theorem noAdj_cons (x : Ast) (L : List Ast) :
+    NoAdjConst (x :: L) ↔
+      (∀ y ∈ L.head?, ¬(isConstant x = true ∧ isConstant y = true)) ∧ NoAdjConst L := by
+  cases L with
+  | nil => simp [NoAdjConst]
+  | cons y r => simp [NoAdjConst]
+
+theorem foldLoop_head : ∀ (f : Nat) (xs : List Ast), xs.length < f →
+    (∀ y ∈ xs.head?, isConstant y = false) → ∀ z ∈ (foldLoop f xs).head?, isConstant z = false := by
+  intro f xs h hx
+  cases f with
+  | zero => simp at h
+  | succ f =>
+    cases xs with
+    | nil => simp [foldLoop]
+    | cons y r =>
+      have hy : isConstant y = false := hx y (by simp)
+      have hne : isEmptyStrConst y = false := by
+        cases hq : isEmptyStrConst y
+        · rfl
+        · rw [(emptyConst_facts y hq).1] at hy; exact absurd hy (by simp)
+      intro z hz
+      rw [foldLoop] at hz
+      simp only [hy, Bool.false_and, Bool.false_eq_true, ↓reduceIte, hne, List.head?_cons,
+        Option.mem_def, Option.some.injEq] at hz
+      subst hz; exact hy
+
+theorem foldLoop_noAdj : ∀ (f : Nat) (xs : List Ast), xs.length < f → NoAdjConst (foldLoop f xs) := by
+  intro f
+  induction f with
+  | zero => intro xs h; simp at h
+  | succ f ih =>
+    intro xs h
+    cases xs with
+    | nil => simp [foldLoop, NoAdjConst]
+    | cons e rest =>
+      simp only [List.length_cons] at h
+      have hlen := foldConsts_len rest (constStr e) e
+      obtain ⟨_, h2⟩ := foldConsts_spec rest (constStr e) e
+      rw [foldLoop]
+      split
+      · dsimp only
+        split
+        · exact ih _ (by omega)
+        · rw [noAdj_cons]
+          refine ⟨fun y hy hb => ?_, ih _ (by omega)⟩
+          have := foldLoop_head f _ (by omega) (by rw [h2]; exact dropWhile_head rest) y hy
+          rw [this] at hb; exact absurd hb.2 (by simp)
+      · rename_i hc
+        split
+        · exact ih _ (by omega)
+        · rw [noAdj_cons]
+          refine ⟨fun y hy hb => ?_, ih _ (by omega)⟩
+          have hn : nextIsConstant rest = false := by
+            cases hq : nextIsConstant rest
+            · rfl
+            · exact absurd (by simp [hb.1, hq]) hc
+          have := foldLoop_head f rest (by omega) (nextIsConstant_head rest hn) y hy
+          rw [this] at hb; exact absurd hb.2 (by simp)
+
+theorem concatFolds_proven : ConcatFolds := by
+  intro strings
+  have hb : buildConcatenatedStr strings = foldLoop ((concatFlat strings).length + 1) (concatFlat strings) := rfl
+  rw [hb]
+  exact ⟨foldLoop_text _ _ (by omega), foldLoop_noAdj _ _ (by omega),
+    concatNormalForm_proven _ _ (by omega)⟩
+
+/-! ### `_PyPegen_setup_full_format_spec` -/
+
+/-- The parts of a format spec that are not empty str constants (`Parser/action_helpers.c:1041-1065`). -/
+def keptOf (xs : List Ast) : List Ast := xs.filter (fun e => !isEmptyStrConst e)
+
+/-- `_PyPegen_setup_full_format_spec(p, colon, spec, EXTRA)` (`Parser/action_helpers.c:1029-1081`,
+`fstring_full_format_spec`/`tstring_full_format_spec`, python.gram:978-979,993-994), through
+`callHelper`: `NULL` spec gives `NULL`; otherwise the empty str constants are dropped, and of what
+is left (`kept`):
+* nothing, or one constant: a `JoinedStr` of it over `EXTRA` (the 3.11 shape, `:1037-1039`);
+* two or more constants (and nothing else): `_PyPegen_concatenate_strings` makes them one
+  `Constant`, which becomes the format spec itself, not a `JoinedStr`;
+* anything with a replacement field in it: the `JoinedStr` of `_build_concatenated_str`;
+each wrapped with the `:` token's metadata, state unchanged. Hypothesis for the last two: no bytes
+constant (format spec parts are str). -/
+def SetupFullFormatSpec : Prop := ∀ (colon : Ast) (xs : List Ast) (l c el ec : Int) (p : PS),
+  callHelper .setup_full_format_spec [colon, .null, .int l, .int c, .int el, .int ec] p = (.null, p) ∧
+  (keptOf xs = [] → callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p =
+    (rec_ .PResultTokenWithMetadata [mkAt .JoinedStr [.seq []] ⟨l, c, el, ec⟩, tokMeta colon], p)) ∧
+  (∀ x, keptOf xs = [x] → isConstant x = true →
+    callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p =
+      (rec_ .PResultTokenWithMetadata [mkAt .JoinedStr [.seq [x]] ⟨l, c, el, ec⟩, tokMeta colon], p)) ∧
+  (∀ x y r, keptOf xs = x :: y :: r → (keptOf xs).all (fun e => isConstant e && !isBytesConst e) = true →
+    callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p =
+      (rec_ .PResultTokenWithMetadata
+        [mkAt .Constant [.const (.str ((keptOf xs).flatMap constStr)), constKind x] ⟨l, c, el, ec⟩,
+          tokMeta colon], p)) ∧
+  ((keptOf xs).any (fun e => !isConstant e) = true → (keptOf xs).any isBytesConst = false →
+    callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p =
+      (rec_ .PResultTokenWithMetadata
+        [mkAt .JoinedStr [.seq (buildConcatenatedStr (.seq (keptOf xs)))] ⟨l, c, el, ec⟩,
+          tokMeta colon], p))
+
+theorem setupFullFormatSpec_proven : SetupFullFormatSpec := by
+  intro colon xs l c el ec p
+  have hc : ∀ spec, callHelper .setup_full_format_spec [colon, spec, .int l, .int c, .int el, .int ec] p =
+      setupFullFormatSpec colon spec l c el ec p := fun _ => rfl
+  simp only [hc]
+  refine ⟨rfl, fun hk => ?_, fun x hk hx => ?_, fun x y r hk ha => ?_, fun hf hb => ?_⟩
+  · have hk : xs.filter (fun e => !isEmptyStrConst e) = [] := hk
+    simp only [setupFullFormatSpec, seqOf, hk, bind, StateT.bind, pure, StateT.pure, ↓reduceIte,
+      tokMeta]
+    rfl
+  · have hk : xs.filter (fun e => !isEmptyStrConst e) = [x] := hk
+    simp only [setupFullFormatSpec, seqOf, hk, hx, bind, StateT.bind, pure, StateT.pure, ↓reduceIte,
+      tokMeta]
+    rfl
+  · have ha' : (x :: y :: r).all (fun e => isConstant e && !isBytesConst e) = true := hk ▸ ha
+    rw [hk]
+    have hk : xs.filter (fun e => !isEmptyStrConst e) = x :: y :: r := hk
+    have hcs := (concatenateStrings_proven (x :: y :: r) l c el ec p).2.2.2.1 x y r rfl ha'
+    have hcs' : concatenateStrings (.seq (x :: y :: r)) l c el ec p =
+        (mkAt .Constant [.const (.str ((x :: y :: r).flatMap constStr)), constKind x] ⟨l, c, el, ec⟩, p) :=
+      hcs
+    simp only [setupFullFormatSpec, seqOf, hk, Bool.false_eq_true, ↓reduceIte, bind, StateT.bind,
+      hcs', pure, StateT.pure, tokMeta]
+    rfl
+  · have hcs := (concatenateStrings_proven _ l c el ec p).2.2.2.2 hf hb
+    have hcs' : concatenateStrings (.seq (xs.filter (fun e => !isEmptyStrConst e))) l c el ec p =
+        (mkAt .JoinedStr [.seq (buildConcatenatedStr (.seq (keptOf xs)))]
+          ⟨l, c, el, ec⟩, p) := hcs
+    have hf : (xs.filter (fun e => !isEmptyStrConst e)).any (fun e => !isConstant e) = true := hf
+    unfold keptOf
+    unfold keptOf at hcs'
+    dsimp only [setupFullFormatSpec, seqOf, bind]
+    rw [if_neg ?_]
+    · simp only [StateT.bind, hcs', pure, StateT.pure, tokMeta]
+      rfl
+    · intro hsimp
+      split at hsimp
+      · rename_i heq
+        rw [heq] at hf
+        simp at hf
+      · rename_i x heq
+        rw [heq] at hf
+        simp at hf
+        rw [hf] at hsimp
+        exact absurd hsimp (by simp)
+      · exact absurd hsimp (by simp)
+
+/-- The documented shape of a format spec (`Doc/library/ast.rst:319-320`, "``format_spec`` is a
+:class:`JoinedStr` node representing the formatting of the value", and `:402-405` for
+`Interpolation`), at the helper that builds it: whatever `_PyPegen_setup_full_format_spec` returns
+(not `NULL`) carries a `JoinedStr`. This is what python/cpython#122300 restored for one constant
+(gh-122308, the `n == 1` branch at `:1076`). -/
+def FormatSpecIsJoinedStr : Prop := ∀ (colon : Ast) (xs : List Ast) (l c el ec : Int) (p : PS)
+  (r : Ast) (s : PS),
+  callHelper .setup_full_format_spec [colon, .seq xs, .int l, .int c, .int el, .int ec] p = (r, s) →
+  r ≠ .null → (recField r 0).ctor? = some .JoinedStr
+
+/-- The format spec of `f'{x:\N{DIGIT ONE}b}'`: the lexer ends a `FSTRING_MIDDLE` at the `}` of
+`\N{...}`, so the spec arrives as two decoded constants, `"1"` and `"b"`, and the two-constant
+branch makes it a `Constant`. -/
+theorem formatSpecIsJoinedStr_refuted : ¬ FormatSpecIsJoinedStr := by
+  intro h
+  let c1 : Ast := mkAt .Constant [.const (.str [49]), .null] ⟨1, 5, 1, 18⟩
+  let c2 : Ast := mkAt .Constant [.const (.str [98]), .null] ⟨1, 18, 1, 19⟩
+  have e := (setupFullFormatSpec_proven .null [c1, c2] 1 4 1 19 default).2.2.2.1 c1 c2 [] rfl rfl
+  have := h .null [c1, c2] 1 4 1 19 default _ _ e (by simp [rec_])
+  have h2 : ∀ t, (recField (rec_ .PResultTokenWithMetadata [mkAt .Constant
+      [.const (.str t), constKind c1] ⟨1, 4, 1, 19⟩, tokMeta .null]) 0).ctor? =
+      some .Constant := fun _ => rfl
+  rw [h2] at this
+  cases Option.some.inj this
+
 end PyLean.PyGrammar.Peg

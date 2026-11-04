@@ -457,14 +457,21 @@ def buildConcatenatedStr (strings : Ast) : List Ast :=
     | e => [e]
   foldLoop (flat.length + 1) flat
 
-/-- `_PyPegen_concatenate_strings`, `Parser/action_helpers.c`. -/
+/-- `PyBytes_CheckExact(elem->v.Constant.value)` on a `Constant`. -/
+def isBytesConst (e : Ast) : Bool :=
+  match e with
+  | .node .Constant (.const (.bytes _) :: _) _ => true
+  | _ => false
+
+/-- `_PyPegen_concatenate_strings`, `Parser/action_helpers.c:1970-2029`: the kind loop (a
+`Constant` is bytes or unicode, anything else an f-string; a `TemplateStr` is `assert(0)`, which
+`Grammar/python.gram` never reaches), the mixing check, a lone literal returned as is, two or more
+bytes or str literals joined by `_build_concatenated_bytes`/`_build_concatenated_unicode` with the
+kind of the first, and otherwise `_build_concatenated_joined_str`. -/
 def concatenateStrings (strings : Ast) (l c el ec : Int) : PM Ast := do
   let xs := seqOf strings
-  let isB (e : Ast) := match e with
-    | .node .Constant (.const (.bytes _) :: _) _ => true
-    | _ => false
-  let bytesFound := xs.any isB
-  let unicodeFound := xs.any fun e => isConstant e && !isB e
+  let bytesFound := xs.any isBytesConst
+  let unicodeFound := xs.any fun e => isConstant e && !isBytesConst e
   let fFound := xs.any fun e => !isConstant e
   if (unicodeFound || fFound) && bytesFound then
     raiseError0 "SyntaxError" "cannot mix bytes and nonbytes literals"
