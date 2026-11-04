@@ -127,4 +127,98 @@ theorem le_add {a t : F64} (ha : a.isFinite = true) (ht : t.isFinite = true) (ht
   · rw [le_of_finite ha hf]
     exact decide_eq_true (rnd_ge ha hq hf)
 
+/-- `1.0 - u` for `u` in `[0, 1)` is in `(0, 1]`: both lie on the `2 ** -1074` grid, so the
+exact difference is at least the smallest subnormal and cannot round to zero. -/
+theorem one_sub_unit {u : F64} (hu : u.isFinite = true) (h0 : 0 ≤ u.toRat) (h1 : u.toRat < 1) :
+    (F64.sub F64.one u).isFinite = true ∧ 0 < (F64.sub F64.one u).toRat ∧
+      (F64.sub F64.one u).toRat ≤ 1 := by
+  have ho : F64.one.isFinite = true := by decide +kernel
+  have ho1 : F64.one.toRat = 1 := by decide +kernel
+  have hna : u.neg.isFinite = true := by rw [neg_isFinite]; exact hu
+  unfold F64.sub
+  rw [add_eq ho hna, toRat_neg, ho1]
+  have hlim := abs_toRat_lt ho
+  rw [ho1, abs_of_nonneg (by decide)] at hlim
+  have hq0 : 0 < 1 + -u.toRat := by grind
+  have hq1 : 1 + -u.toRat ≤ 1 := by grind
+  have hf : (rnd (1 + -u.toRat) (F64.one.sign && u.neg.sign)).isFinite = true := by
+    apply rnd_isFinite
+    rw [abs_of_nonneg (Rat.le_of_lt hq0)]
+    grind
+  refine ⟨hf, ?_, ?_⟩
+  · have hge := rnd_ge (zero_isFinite false) (q := 1 + -u.toRat) (z := F64.one.sign && u.neg.sign)
+      (by rw [zero_toRat]; exact Rat.le_of_lt hq0) hf
+    rw [zero_toRat] at hge
+    have hne : (1 : Rat) + -u.toRat ≠ 0 := by grind
+    obtain ⟨Z, hZ⟩ := toRat_grid u hu
+    obtain ⟨W, hW⟩ := toRat_grid F64.one ho
+    rw [ho1] at hW
+    have hgrid : (1 : Rat) + -u.toRat = ((W - Z : Int) : Rat) * pw (-1074) := by
+      rw [hZ, hW, Rat.intCast_sub]; grind
+    have hWZ : W - Z ≠ 0 := by
+      intro h; rw [h] at hgrid; simp at hgrid; exact hne hgrid
+    have hz := ofRat_ne_zero_of_grid hgrid hWZ
+    have hr : rnd (1 + -u.toRat) (F64.one.sign && u.neg.sign) = ofRat (1 + -u.toRat) := by
+      unfold rnd; rw [if_neg hne]
+    rw [hr] at hf ⊢
+    have hnz : (ofRat (1 + -u.toRat)).toRat ≠ 0 := by
+      intro h
+      have := (isZero_iff_toRat hf).2 h
+      rw [hz] at this; cases this
+    rw [hr] at hge
+    exact Rat.lt_of_le_of_ne hge (Ne.symm hnz)
+  · exact rnd_le ho (by rw [ho1]; exact hq1) hf
+
+/-- `0 <= rnd q z` for `q >= 0`, an overflow included. -/
+theorem le_zero_rnd {q : Rat} (hq : 0 ≤ q) (z : Bool) : F64.le (zero false) (rnd q z) = true := by
+  cases hf : (rnd q z).isFinite
+  · have hne : q ≠ 0 := by
+      intro h0
+      have : (rnd q z).isFinite = true := by unfold rnd; rw [if_pos h0]; exact zero_isFinite _
+      rw [hf] at this; cases this
+    have hr : rnd q z = ofRat q := by unfold rnd; rw [if_neg hne]
+    rw [hr] at hf ⊢
+    have hinf : (ofRat q).isInf = true := by
+      rcases classify (ofRat q) with h | h | h
+      · rw [hf] at h; cases h
+      · exact h
+      · rw [ofRat_isNaN] at h; cases h
+    have hs : (ofRat q).sign = false := by
+      rw [ofRat_sign hne]; simp; exact Rat.not_lt.2 hq
+    have h0 := zero_isFinite false
+    have z1 := isNaN_false_of_finite h0
+    have z2 := isInf_false_of_finite h0
+    simp only [F64.le, F64.lt, z1, ofRat_isNaN, z2, hinf, hs, Bool.or_self, Bool.false_eq_true,
+      if_false, if_true, Bool.not_false, Bool.true_or]
+  · rw [le_of_finite (zero_isFinite false) hf, zero_toRat]
+    have := rnd_ge (zero_isFinite false) (q := q) (z := z) (by rw [zero_toRat]; exact hq) hf
+    rw [zero_toRat] at this
+    exact decide_eq_true this
+
+/-- `x / y >= 0` for a finite `x >= 0` and `y > 0` (an infinite `y` included). -/
+theorem div_nonneg {x y : F64} (hx : x.isFinite = true) (hx0 : 0 ≤ x.toRat)
+    (hy : F64.lt (zero false) y = true) : F64.le (zero false) (F64.div x y) = true := by
+  have h0 := zero_isFinite false
+  have hyn : y.isNaN = false := by
+    cases h : y.isNaN
+    · rfl
+    · simp [F64.lt, h] at hy
+  rcases classify y with hyf | hyi | hyn'
+  · rw [lt_of_finite h0 hyf, zero_toRat] at hy
+    have hy0 : 0 < y.toRat := of_decide_eq_true hy
+    have hyz : y.isZero = false := by
+      cases h : y.isZero
+      · rfl
+      · rw [toRat_of_isZero h] at hy0; exact absurd hy0 (by decide)
+    have hd : F64.div x y = rnd (x.toRat / y.toRat) (x.sign != y.sign) := by
+      simp [F64.div, rnd, isNaN_false_of_finite hx, hyn, isInf_false_of_finite hx,
+        isInf_false_of_finite hyf, hyz]
+    rw [hd]
+    exact le_zero_rnd (by rw [Rat.div_def]; exact Rat.mul_nonneg hx0 (Rat.le_of_lt (Rat.inv_pos.2 hy0))) _
+  · have hd : F64.div x y = zero (x.sign != y.sign) := by
+      simp [F64.div, isNaN_false_of_finite hx, hyn, isInf_false_of_finite hx, hyi]
+    rw [hd, le_of_finite h0 (zero_isFinite _), zero_toRat, zero_toRat]
+    decide
+  · rw [hyn] at hyn'; cases hyn'
+
 end PyLean.CoreLibs.Rand.F64Order

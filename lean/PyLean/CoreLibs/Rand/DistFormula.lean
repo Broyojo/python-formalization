@@ -19,7 +19,7 @@ accepts `x`, `none` rejects.
 
 namespace PyLean.CoreLibs.Rand
 
-open PyLean PyLean.Binary64 RM Flt
+open PyLean PyLean.Binary64 PyLean.Binary64.F64 RM Flt
 
 /-! ### Unfolding the monad -/
 
@@ -689,5 +689,67 @@ theorem binomialLoopsF64_proven : BinomialLoopsF64 := by
       cases pyDiv p (1.0 - p) with
       | error e => rfl
       | ok q => rfl
+
+/-! ### `expovariate` stays on the documented side of zero -/
+
+/-- A fact about the C library's `log`: finite and `<= 0` on `(0, 1]`. C99 Annex F gives
+`log(1) = +0`; a monotone `log`, as glibc's is, does the rest. -/
+def LogNonpos [RandLibm] : Prop :=
+  ∀ x : F64, x.isFinite = true → 0 < x.toRat → x.toRat ≤ 1 →
+    (RandLibm.log x).isFinite = true ∧ (RandLibm.log x).toRat ≤ 0
+
+theorem one_f64 [RandLibm] : (1.0 : F64) = F64.one := by
+  show F64R.ofDecimal 10 true 1 = _
+  decide +kernel
+
+/-- "Returned values range from 0 to positive infinity if lambd is positive"
+(Lib/random.py:610-612): for every `lambd > 0` (an infinite one included) and a
+`random()` value in `[0, 1)`, `expovariate` returns, raises nothing, and its result is
+`>= 0`. The `log` never sees `0.0`, because `1.0 - random()` is at least `2 ** -53`'s
+neighbour on the binary64 grid (the reason for `1.0 - random()` in the source). -/
+def ExpovariateNonneg : Prop :=
+  ∀ [RandLibm], LogNonpos → ∀ (σ : Type) (g : Gen σ F64) (lambd u : F64) (s s1 : σ),
+    g.random s = (u, s1) → u.isFinite = true → 0 ≤ u.toRat → u.toRat < 1 → Flt.lt 0.0 lambd = true →
+    ∃ r, expovariate g lambd s = (.ok r, s1) ∧ Flt.le 0.0 r = true
+
+theorem expovariateNonneg_proven : ExpovariateNonneg := by
+  intro _ hlog σ g lambd u s s1 h hu h0 h1 hl
+  rw [expovariateF64_proven σ g lambd u s s1 h]
+  obtain ⟨wf, wpos, wle⟩ := F64Order.one_sub_unit hu h0 h1
+  have hw : (1.0 : F64) - u = F64.sub F64.one u := by rw [one_f64]; rfl
+  obtain ⟨lf, lle⟩ := hlog _ wf wpos wle
+  have zf := zero_isFinite false
+  have hlog' : mathLog ((1.0 : F64) - u) = .ok (RandLibm.log (F64.sub F64.one u)) := by
+    rw [hw]
+    have a1 : Flt.isNan (F64.sub F64.one u) = false := isNaN_false_of_finite wf
+    have a2 : Flt.le (F64.sub F64.one u) 0.0 = false := by
+      show F64.le _ (0.0 : F64) = false
+      rw [zero_f64, le_of_finite wf zf, zero_toRat]
+      exact decide_eq_false (Rat.not_le.2 wpos)
+    have a3 : Flt.isInf (F64.sub F64.one u) = false := isInf_false_of_finite wf
+    have a4 : Flt.isNan (Flt.log (F64.sub F64.one u)) = false := isNaN_false_of_finite lf
+    have a5 : Flt.isInf (Flt.log (F64.sub F64.one u)) = false := isInf_false_of_finite lf
+    simp only [mathLog, math1Dom, a1, a2, a3, a4, a5, Bool.false_and, Bool.false_eq_true, if_false]
+    rfl
+  rw [hlog']
+  have hnf : (RandLibm.log (F64.sub F64.one u)).neg.isFinite = true := by rw [neg_isFinite]; exact lf
+  have hn0 : 0 ≤ (RandLibm.log (F64.sub F64.one u)).neg.toRat := by rw [toRat_neg]; grind
+  have hl' : F64.lt (zero false) lambd = true := by rw [← zero_f64]; exact hl
+  have hne : Flt.beq lambd 0.0 = false := by
+    show F64.eq lambd (0.0 : F64) = false
+    rw [zero_f64]
+    rcases classify lambd with hf | hi | hn
+    · rw [lt_of_finite zf hf, zero_toRat] at hl'
+      rw [eq_of_finite hf zf, zero_toRat]
+      have := of_decide_eq_true hl'
+      exact decide_eq_false (fun e => by rw [e] at this; exact absurd this (by decide))
+    · simp [F64.eq, isNaN_false_of_finite zf, isInf_false_of_finite zf, hi]
+    · simp [F64.lt, hn] at hl'
+  refine ⟨F64.div (RandLibm.log (F64.sub F64.one u)).neg lambd, ?_, ?_⟩
+  · simp only [ex_ok_bind, pyDiv, hne, Bool.false_eq_true, if_false]
+    rfl
+  · show F64.le (0.0 : F64) _ = true
+    rw [zero_f64]
+    exact F64Order.div_nonneg hnf hn0 hl'
 
 end PyLean.CoreLibs.Rand
