@@ -232,14 +232,151 @@ def agcmEnter (ops : GenOps σ V) (self : GCM) (s : St σ) : GCM × St σ × Res
   let (s, r) := coBoundary s r
   (g, s, r)
 
-/-- `helper(*args, **kwds)` of `contextmanager(func)`, Lib/contextlib.py:365-367, and of
-`asynccontextmanager(func)`, :398-400: `_GeneratorContextManager(func, args, kwds)`, resp. the async
-class, built by `gcmInit` when the decorated function is called. `@wraps(func)` (:365, :398) copies
-`func`'s metadata onto `helper`; that is `functools.update_wrapper`, outside this model. -/
+/-- `helper(*args, **kwds)` of `contextmanager(func)`, Lib/contextlib.py:366-367, and of
+`asynccontextmanager(func)`, :399-400: `_GeneratorContextManager(func, args, kwds)`, resp. the async
+class, built by `gcmInit` when the decorated function is called. The decoration itself, `@wraps(func)`
+at :365 and :398, is `contextmanagerDeco` below. -/
 def contextmanagerCall {D : Type} (call : St σ → St σ × Res Unit)
     (getDoc : St σ → St σ × Res (Option D)) (classDoc : Option D) (s : St σ) :
     St σ × Res (GCM × Option D) :=
   gcmInit call getDoc classDoc s
+
+/-! ### `@wraps(func)` on `helper` -/
+
+/-- What the code below asks of a Python value: the tests of the function setters
+(Objects/funcobject.c), the `Placeholder` test of `partial_new`, and the values `def helper` starts
+with. -/
+structure ValOps (Val : Type) where
+  /-- `PyUnicode_Check` -/
+  isStr : Val → Bool
+  /-- `PyTuple_Check` -/
+  isTuple : Val → Bool
+  /-- `Py_IsNone` -/
+  isNone : Val → Bool
+  /-- `PyCallable_Check` -/
+  callable : Val → Bool
+  /-- `val == functools.Placeholder` -/
+  isPlaceholder : Val → Bool
+  /-- a `str` -/
+  ofStr : String → Val
+  /-- `None` -/
+  none : Val
+  /-- `()` -/
+  unit : Val
+
+/-- The attributes of a function object that `update_wrapper` writes. The six names of
+`WRAPPER_ASSIGNMENTS` are getset descriptors of `function` (Objects/funcobject.c:1060-1073), kept in
+the object, not in `__dict__`; `dict` is `__dict__`, its keys in insertion order. Keys that are no
+`str` are outside the model. -/
+structure FnAttrs (Val : Type) where
+  module : Val
+  name : Val
+  qualname : Val
+  doc : Val
+  annotate : Val
+  typeParams : Val
+  dict : List (String × Val)
+
+/-- `d[k] = v` on a dict: an existing key keeps its place, a new one goes last. -/
+def dictSet {Val : Type} (d : List (String × Val)) (k : String) (v : Val) : List (String × Val) :=
+  if d.any (fun p => p.1 == k) then d.map (fun p => if p.1 == k then (k, v) else p) else d ++ [(k, v)]
+
+/-- `setattr(f, a, v)` on a function object, for the names `update_wrapper` sets: the setters of
+Objects/funcobject.c. `__module__` (:800-811) and `__doc__` (:775-786) take any object; `__name__`
+(:716-733) and `__qualname__` (:743-761) a `str`; `__annotate__` `None` or a callable (:934-956);
+`__type_params__` a tuple (:1035-1047). `.error msg` is the `TypeError`. Any other name, here only
+`__wrapped__`, is a store in `__dict__`. -/
+def FnAttrs.set {Val : Type} (k : ValOps Val) (f : FnAttrs Val) (a : String) (v : Val) :
+    Except String (FnAttrs Val) :=
+  if a = "__module__" then .ok { f with module := v }
+  else if a = "__name__" then
+    if k.isStr v then .ok { f with name := v } else .error "__name__ must be set to a string object"
+  else if a = "__qualname__" then
+    if k.isStr v then .ok { f with qualname := v }
+    else .error "__qualname__ must be set to a string object"
+  else if a = "__doc__" then .ok { f with doc := v }
+  else if a = "__annotate__" then
+    if k.isNone v then .ok { f with annotate := v }
+    else if k.callable v then .ok { f with annotate := v }
+    else .error "__annotate__ must be callable or None"
+  else if a = "__type_params__" then
+    if k.isTuple v then .ok { f with typeParams := v }
+    else .error "__type_params__ must be set to a tuple"
+  else .ok { f with dict := dictSet f.dict a v }
+
+/-- `WRAPPER_ASSIGNMENTS`, Lib/functools.py:32-33. -/
+def wrapperAssignments : List String :=
+  ["__module__", "__name__", "__qualname__", "__doc__", "__annotate__", "__type_params__"]
+
+/-- The object `func` as `update_wrapper` reads it. -/
+structure FuncView (σ Val D : Type) where
+  /-- `getattr(func, attr)`, which can run any code and raise -/
+  read : String → St σ → St σ × Res Val
+  /-- `getattr(func, '__dict__')` -/
+  getDict : St σ → St σ × Res D
+  /-- What `dict.update(d)` reads from `d`, in order: the items of a mapping, or the failure of
+  iterating something that is none -/
+  items : D → St σ → St σ × Res (List (String × Val))
+
+/-- The first loop of `update_wrapper`, Lib/functools.py:50-56: `getattr(wrapped, attr)`; an
+`AttributeError` skips the name (:53-54), any other exception propagates; else `setattr(wrapper,
+attr, value)` (:55-56), whose `TypeError` is raised in the `else:` clause, after the `except` has
+ended, so with `handled`, the exception of the caller, being handled. -/
+def assignAll {Val D : Type} (k : ValOps Val) (fn : FuncView σ Val D) (handled : Option ExcId) :
+    List String → FnAttrs Val → St σ → St σ × Res (FnAttrs Val)
+  | [], f, s => (s, .ok f)
+  | a :: rest, f, s =>
+    match fn.read a s with
+    | (s, .error e) =>
+      if s.h.isInst e "AttributeError" then assignAll k fn handled rest f s else (s, .error e)
+    | (s, .ok v) =>
+      match f.set k a v with
+      | .error msg =>
+        let (s, e) := s.raiseNew clsType msg handled
+        (s, .error e)
+      | .ok f => assignAll k fn handled rest f s
+
+/-- `update_wrapper(wrapper, wrapped)`, Lib/functools.py:35-63, with the default `assigned` and
+`updated`: the first loop; then `getattr(wrapper, '__dict__').update(getattr(wrapped, '__dict__',
+{}))` (:57-58), where `helper.__dict__` always exists and an `AttributeError` from `func` gives `{}`;
+then `wrapper.__wrapped__ = wrapped` (:61), last, so an entry `__wrapped__` of `func.__dict__` is
+overwritten. A failure leaves the half-updated `helper` unreachable, so it is not kept. -/
+def updateWrapper {Val D : Type} (k : ValOps Val) (fn : FuncView σ Val D) (self : Val)
+    (handled : Option ExcId) (w : FnAttrs Val) (s : St σ) : St σ × Res (FnAttrs Val) :=
+  match assignAll k fn handled wrapperAssignments w s with
+  | (s, .error e) => (s, .error e)
+  | (s, .ok w) =>
+    let got : St σ × Res (List (String × Val)) :=
+      match fn.getDict s with
+      | (s, .error e) => if s.h.isInst e "AttributeError" then (s, .ok []) else (s, .error e)
+      | (s, .ok d) => fn.items d s
+    match got with
+    | (s, .error e) => (s, .error e)
+    | (s, .ok ps) =>
+      let w := { w with dict := ps.foldl (fun d (p : String × Val) => dictSet d p.1 p.2) w.dict }
+      (s, .ok { w with dict := dictSet w.dict "__wrapped__" self })
+
+/-- The function `def helper(*args, **kwds)` makes, Lib/contextlib.py:366, :399: named `helper`,
+qualified by the enclosing function, in module `contextlib`, with no docstring, annotations or type
+parameters, and an empty `__dict__`. -/
+def freshHelper {Val : Type} (k : ValOps Val) (isAsync : Bool) : FnAttrs Val :=
+  { module := k.ofStr "contextlib", name := k.ofStr "helper",
+    qualname := k.ofStr
+      (if isAsync then "asynccontextmanager.<locals>.helper" else "contextmanager.<locals>.helper"),
+    doc := k.none, annotate := k.none, typeParams := k.unit, dict := [] }
+
+/-- `contextmanager(func)`, Lib/contextlib.py:338-368, and `asynccontextmanager(func)`, :371-401,
+the decoration: `wraps(func)` is `partial(update_wrapper, wrapped=func, assigned=..., updated=...)`
+(Lib/functools.py:65-77), which `partial_new` refuses when `func` is `Placeholder`
+(Modules/_functoolsmodule.c:193-204); applied to the new `helper` (:365-367, :398-400) it is
+`update_wrapper`, and `helper` is returned (:368, :401). Calling `helper` is `contextmanagerCall`.
+`self` is `func` as a value. -/
+def contextmanagerDeco {Val D : Type} (k : ValOps Val) (fn : FuncView σ Val D) (self : Val)
+    (isAsync : Bool) (handled : Option ExcId) (s : St σ) : St σ × Res (FnAttrs Val) :=
+  if k.isPlaceholder self then
+    let (s, e) := s.raiseNew clsType "Placeholder cannot be passed as a keyword argument" handled
+    (s, .error e)
+  else updateWrapper k fn self handled (freshHelper k isAsync) s
 
 /-! ### `closing`, `aclosing`, `nullcontext`, `_RedirectStream`, `chdir` -/
 
@@ -342,10 +479,12 @@ inductive SupItem (σ : Type) where
   /-- A class whose metaclass is exactly `type`, by its concrete MRO: the quick test of :2737-2742
   and `PyType_IsSubtype` in `recursive_issubclass`, :2715-2717. -/
   | cls (c : Cls)
-  /-- An object whose type has `__subclasscheck__`, :2770-2783: an ABC, a class with another
+  /-- An object whose type has `__subclasscheck__`, :2766-2784: an ABC, a class with another
   metaclass. `check` is calling it on `exctype` and taking the truth value, which can run any code
-  and raise. A nested tuple, which :2749-2766 loops over, is a `hook` whose `check` is that loop.
-  `excCls` is the item's MRO when it is an exception class (`PyExceptionClass_Check`). -/
+  and raise. A nested tuple, which :2748-2764 loops over, is a `hook` whose `check` is that loop,
+  and so is a union such as `KeyError | ValueError`, whose arguments :2744-2746 take as that tuple.
+  `excCls` is the item's MRO when it is an exception class (`PyExceptionClass_Check`); a tuple or a
+  union is none. -/
   | hook (check : Derived → St σ → St σ × Res Bool) (excCls : Option Cls)
   /-- Anything else: neither `__subclasscheck__` nor `__bases__`. -/
   | other
@@ -370,7 +509,7 @@ def issubItem (d : Derived) (handled : Option ExcId) (i : SupItem σ) (s : St σ
   | .other, .cls _ => typeErr "issubclass() arg 2 must be a class, a tuple of classes, or a union"
   | .other, .other => typeErr "issubclass() arg 1 must be a class"
 
-/-- `issubclass(exctype, self._exceptions)`, the tuple branch Objects/abstract.c:2749-2766: the items
+/-- `issubclass(exctype, self._exceptions)`, the tuple branch Objects/abstract.c:2748-2764: the items
 in order, stopping at the first that is true or raises. -/
 def issubTuple (d : Derived) (handled : Option ExcId) : List (SupItem σ) → St σ → St σ × Res Bool
   | [], s => (s, .ok false)
@@ -650,12 +789,16 @@ def pushAsyncCallback (st : Stack F O A) (f : F) (args : A) : Stack F O A × F :
   (pushExitCallback st (.wrapped f args) false, f)
 
 /-- `_BaseExitStack.enter_context`, Lib/contextlib.py:578-596, and `AsyncExitStack.enter_async_context`, :709-727. Both
-lookups run first, `__enter__` before `__exit__`, and a missing one is a `TypeError` with the source's message `msg`. The
-enter method runs only after both, and the exit is pushed only if it succeeded. -/
+lookups run first, `__enter__` before `__exit__`, and a missing one is a `TypeError` with the source's message `msg`
+(:584-588, :589-593; :715-719, :720-724), raised with `handled`, `sys.exception()` at the call, as `__context__`; a
+coroutine's frame sees the exception of the code that awaits it. `msg` reads `type(cm).__module__` and
+`__qualname__`, which a metaclass could make raise; that is outside the model. The enter method runs only after both
+lookups, and the exit is pushed only if it succeeded. -/
 def enterContext (enterOf : O → Option (Descr (Xs σ F O A → Xs σ F O A × Res V))) (exitOf : ExitLookup F O A)
-    (msg : String) (isSync : Bool) (x : Xs σ F O A) (cm : O) : Xs σ F O A × Res V :=
+    (msg : String) (isSync : Bool) (handled : Option ExcId) (x : Xs σ F O A) (cm : O) :
+    Xs σ F O A × Res V :=
   let refuse : Xs σ F O A × Res V :=
-    let (s, e) := x.1.raiseNew clsType msg
+    let (s, e) := x.1.raiseNew clsType msg handled
     ((s, x.2), .error e)
   match lookupSentinel (enterOf cm) with
   | .error e => (x, .error e)
@@ -793,8 +936,9 @@ def aclose (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A) (frame
 `is_sync=False`, inside an `async def`, so a `StopIteration` from a lookup or from `await _enter()`
 leaves as `RuntimeError`. -/
 def aenterContext (enterOf : O → Option (Descr (Xs σ F O A → Xs σ F O A × Res V)))
-    (exitOf : ExitLookup F O A) (msg : String) (x : Xs σ F O A) (cm : O) : Xs σ F O A × Res V :=
-  let (x, r) := enterContext enterOf exitOf msg false x cm
+    (exitOf : ExitLookup F O A) (msg : String) (handled : Option ExcId) (x : Xs σ F O A) (cm : O) :
+    Xs σ F O A × Res V :=
+  let (x, r) := enterContext enterOf exitOf msg false handled x cm
   let (s, r) := coBoundary x.1 r
   ((s, x.2), r)
 

@@ -10,7 +10,7 @@ namespace PyLean.CoreLibs.Misc.Contextlib
 open PyLean
 
 /-- Every member of a group was made before the group: `BaseExceptionGroup.__new__` takes a
-sequence of existing exceptions and `excs` is read-only afterwards (Objects/exceptions.c:1347), so
+sequence of existing exceptions and `excs` is read-only afterwards (Objects/exceptions.c:1358), so
 an exception is never its own member, directly or not. -/
 def MembersBefore (h : Heap) : Prop :=
   ∀ e cs, (h.get e).children = some cs → ∀ c ∈ cs, c < e
