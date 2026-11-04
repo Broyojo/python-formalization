@@ -138,4 +138,92 @@ theorem roundPos32_none_iff {n d : Nat} (hn : 0 < n) (hd : 0 < d) :
       simp [hq'']
 
 
+/-! ## The specification -/
+
+/-- `PyFloat_Pack4` on every double, in both byte orders.
+
+* A finite `x` with `|x|` at or past `2**128 - 2**103` raises `OverflowError` (:2009-2013).
+* Any other finite `x` packs to a binary32 pattern `v` with the sign of `x` (signed zeros
+  and underflow to zero included) whose value, read back by `PyFloat_Unpack4`, is a
+  binary32 number at least as close to `x` as every binary32 number, with an even
+  significand (`v % 2 = 0`) on a tie: round to nearest even, so `0.1` packs to `0x3dcccccd`.
+* An infinity packs to the infinity of its sign.
+* A NaN keeps its sign and the top 22 payload bits (bits 51-29 of the fraction, the lower
+  29 are dropped), and is quiet unless it was signaling with a nonzero kept payload
+  (:2015-2029). -/
+def Pack4Spec : Prop :=
+  ∀ (x : F64) (le : Bool),
+    (x.isFinite = true → limit32 ≤ Rat.abs x.toRat →
+      PyFloat_Pack4 x le = .error (.overflowError "float too large to pack with f format")) ∧
+    (x.isFinite = true → Rat.abs x.toRat < limit32 → ∃ v, v < 2 ^ 32 ∧
+      PyFloat_Pack4 x le = .ok (layout 4 v le) ∧
+      (2 ^ 31 ≤ v ↔ x.sign = true) ∧
+      (PyFloat_Unpack4 (layout 4 v le) le).isFinite = true ∧
+      Rep binary32 (PyFloat_Unpack4 (layout 4 v le) le).toRat ∧
+      (∀ z, Rep binary32 z →
+        Rat.abs (x.toRat - (PyFloat_Unpack4 (layout 4 v le) le).toRat) ≤ Rat.abs (x.toRat - z)) ∧
+      (∀ z, Rep binary32 z →
+        Rat.abs (x.toRat - (PyFloat_Unpack4 (layout 4 v le) le).toRat) = Rat.abs (x.toRat - z) →
+        z ≠ (PyFloat_Unpack4 (layout 4 v le) le).toRat → v % 2 = 0)) ∧
+    (x.isInf = true →
+      PyFloat_Pack4 x le = .ok (layout 4 (if x.sign then 0xff800000 else 0x7f800000) le)) ∧
+    (x.isNaN = true →
+      PyFloat_Pack4 x le = .ok (layout 4 ((if x.sign then 2 ^ 31 else 0) + 0x7f800000 +
+        (if (x.frac / 2 ^ 51) % 2 = 1 ∨ (x.frac / 2 ^ 29) % 2 ^ 22 = 0 then 2 ^ 22 else 0) +
+        (x.frac / 2 ^ 29) % 2 ^ 22) le))
+
+theorem rep32_neg {y : Rat} (h : Rep binary32 y) : Rep binary32 (-y) := by
+  obtain ⟨M, E, hM, hE, hy⟩ := h
+  refine ⟨M, E, hM, hE, ?_⟩
+  rcases hy with rfl | rfl
+  · right; rfl
+  · left; simp [Rat.neg_neg]
+
+/-- A rounded binary32 result read back as its pattern's fields. -/
+theorem view_encode32 (neg : Bool) {m : Nat} {e : Int} (hm : m < 2 ^ 24) (he : -149 ≤ e)
+    (hc : 2 ^ 23 ≤ m ∨ e = -149) (hmax : e ≤ 104) :
+    binary32.encode neg (some (m, e)) < 2 ^ 32 ∧
+    binary32.view (binary32.encode neg (some (m, e))) = .finite neg m e ∧
+    (2 ^ 31 ≤ binary32.encode neg (some (m, e)) ↔ neg = true) ∧
+    binary32.encode neg (some (m, e)) % 2 = m % 2 ∧
+    binary32.encode neg (some (m, e)) % 2 ^ 31 ≠ 0x7f800000 := by
+  rw [encode32]
+  generalize hk : (e + 150).toNat = k
+  have hk1 : k ≤ 254 := by omega
+  by_cases hsub : m < 2 ^ 23
+  · have he' : e = -149 := by omega
+    simp only [hsub, ↓reduceIte]
+    have hv := view32 ((if neg then 2 ^ 31 else 0) + m) (by split <;> omega)
+    refine ⟨by split <;> omega, ?_, by cases neg <;> simp <;> omega, by split <;> omega,
+      by split <;> omega⟩
+    rw [hv, he']
+    have h1 : ¬ (((if neg = true then 2 ^ 31 else 0) + m) / 2 ^ 23) % 256 = 255 := by split <;> omega
+    have h2 : (((if neg = true then 2 ^ 31 else 0) + m) / 2 ^ 23) % 256 = 0 := by split <;> omega
+    have h3 : ((if neg = true then 2 ^ 31 else 0) + m) % 2 ^ 23 = m := by split <;> omega
+    have h4 : decide (2 ^ 31 ≤ (if neg = true then 2 ^ 31 else 0) + m) = neg := by
+      cases neg <;> simp <;> omega
+    simp only [h2, h3, h4, ↓reduceIte]
+    simp
+  · have hk0 : 1 ≤ k := by omega
+    simp only [hsub, ↓reduceIte]
+    have hv := view32 ((if neg then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) (by split <;> omega)
+    refine ⟨by split <;> omega, ?_, by cases neg <;> simp <;> omega, by split <;> omega,
+      by split <;> omega⟩
+    rw [hv]
+    have h1 : ¬ (((if neg = true then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) / 2 ^ 23) % 256 = 255 := by
+      split <;> omega
+    have h2 : ¬ (((if neg = true then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) / 2 ^ 23) % 256 = 0 := by
+      split <;> omega
+    have h3 : ((if neg = true then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) % 2 ^ 23 = m - 2 ^ 23 := by
+      split <;> omega
+    have h3' : (((if neg = true then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) / 2 ^ 23) % 256 = k := by
+      split <;> omega
+    have h4 : decide (2 ^ 31 ≤ (if neg = true then 2 ^ 31 else 0) + (k * 2 ^ 23 + (m - 2 ^ 23))) = neg := by
+      cases neg <;> simp <;> omega
+    simp only [h1, h2, h3, h3', h4, ↓reduceIte]
+    have hk255 : k ≠ 255 := by omega
+    have hk00 : k ≠ 0 := by omega
+    simp only [hk255, hk00, ↓reduceIte, View.finite.injEq, true_and]
+    exact ⟨by omega, by omega⟩
+
 end PyLean.Binary64
