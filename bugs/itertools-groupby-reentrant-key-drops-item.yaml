@@ -36,6 +36,11 @@ maybe_intended: |
   real crash happening this is working as intended", with pochmann agreeing that the caller
   dropped the value. rhettinger's proposal in python/cpython#142732 to block re-entrancy in
   itertools entirely would remove this along with the crashes, but it is not decided.
+  The overwrite at :524-527 is itself a deliberate crash fix: python/cpython#74532
+  (bpo-30347, closed 2017) reported an assertion failure in _grouper_next when a key function
+  iterated a group inside groupby, and the fix replaced the assert and plain assignment with
+  Py_XSETREF. The dropped item is a side effect of that fix (found by the itertools review,
+  ff84f8fd).
   Recorded to keep the refuted property on file, not for filing on its own.
 reproducer: |
   import itertools
@@ -87,6 +92,7 @@ duplicates:
     - {number: 143543, state: closed, relation: "re-entrant __eq__ use-after-free in groupby_next", reason: "different path (comparison), crash"}
     - {number: 146613, state: closed, relation: "re-entrant __eq__ use-after-free in _grouper_next", reason: "different path (comparison), crash"}
     - {number: 145678, state: closed, relation: "use-after-free in _grouper_next", reason: "different path (comparison), crash"}
+    - {number: 74532, state: closed, relation: "bpo-30347: key function iterating a group inside groupby tripped an assert in _grouper_next; fixed with Py_XSETREF, the overwrite that now drops the item", reason: "the fix that introduced this behaviour"}
   queries: ["groupby key reentrant", "groupby key function next", "groupby re-entrant key", "groupby reentrancy",
             "groupby lost item", "groupby drops item", "groupby _grouper_next", "groupby currgrouper",
             "groupby groupby_step", "groupby key next groupby", "itertools reentrant", "itertools re-entrant",
