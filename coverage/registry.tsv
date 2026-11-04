@@ -486,6 +486,7 @@ json-c-scanstring	proven	Modules/_json.c	py_scanstring_impl,scanstring_unicode,_
 json-scanner-call-raw	proven	Modules/_json.c	scanner_call,raise_stop_iteration,_build_rval_index_tuple
 json-scanner-new	proven	Modules/_json.c	scanner_new
 json-encoder-new	proven	Modules/_json.c	encoder_new
+json-encoder-new-sep-typeerror	refuted	Modules/_json.c	encoder_new
 json-encoder-call	proven	Modules/_json.c	encoder_call
 json-encoder-string	proven	Modules/_json.c	encoder_write_string
 json-indent-cache	proven	Modules/_json.c	create_indent_cache,update_indent_cache,get_item_separator,write_newline_indent
