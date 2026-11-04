@@ -160,7 +160,76 @@ theorem endForRules_proven : EndForRules := by
   refine ⟨by simp [beginInstr], by simp [beginInstr], ?_⟩
   bc_simp [execOp, END_FOR]
 
+/-- `RETURN_VALUE` from a generator's frame (`_RETURN_VALUE`, `Python/bytecodes.c:1573-1589`, with
+`_PyEval_FrameClearAndPop`'s `clear_gen_frame`, `Python/ceval.c:2001-2016`): besides what it does
+for a thread's frame (`ReturnValue`), the generator is marked `FRAME_CLEARED`, `tstate->exc_info`
+goes back to the item below the generator's own, the generator's handled exception is cleared
+(`_PyErr_ClearExcState`), and its frame's locals and stack are dropped. The hypotheses are the
+asserts of `clear_gen_frame`: a generator's frame belongs to a live generator, and its
+`gi_exc_state` is the top of the `exc_info` chain. A frame owned by the interpreter never runs
+`RETURN_VALUE` (`assert(frame->owner != FRAME_OWNED_BY_INTERPRETER)`, `:1574`). -/
+def ReturnValueGen : Prop :=
+  ∀ (regs : Regs) (retval : Val) (rest : List Val) (caller : Frame) (prev : List Frame) (g : Addr)
+    (o : GenObj) (top : Val) (chain : List Val),
+    regs.prev = caller :: prev → regs.frame.owner = .generator g →
+    regs.rt.heap[g]? = some (.gen o) → regs.rt.excInfo = top :: chain →
+    RETURN_VALUE ⟨regs, retval :: rest⟩ =
+      .ok () ⟨{ regs with
+        rt := { regs.rt with
+          pyRecursionRemaining := regs.rt.pyRecursionRemaining + 1
+          excInfo := chain
+          heap := (regs.rt.heap.setIfInBounds g
+            (.gen { o with frameState := 5, excValue := .null, frame := { o.frame with fast := #[], stack := [] } })) }
+        frame := caller, prev := prev, next := caller.instrPtr + caller.returnOffset },
+        retval :: caller.stack⟩
+
+theorem returnValueGen_proven : ReturnValueGen := by
+  intro regs retval rest caller prev g o top chain hp ho hg he
+  obtain ⟨rt, frame, pv, next⟩ := regs
+  simp only at hp ho hg he
+  subst hp
+  bc_simp [RETURN_VALUE, getFrame, leaveRecursivePy, popToPrevious, frameClearAndPop, ho, clearGenFrame,
+    getGen, hg, popExcState, he, setObj, loadIp]
+
+/-- `_CREATE_INIT_FRAME` (`Python/bytecodes.c:4790-4813`): when `_PyEvalFramePushAndInit` cannot
+build `__init__`'s frame (a bad argument count, say) the error is raised in the caller with
+`init`, `self` and the arguments consumed, no shim frame on the chain, the caller's
+`return_offset` untouched and the recursion counter unchanged; when it can, the `_Py_InitCleanup`
+shim holding `self` becomes the frame `__init__` returns to, the caller records
+`return_offset = 1 + INLINE_CACHE_ENTRIES_CALL`, and one recursion unit is taken for the shim. -/
+def CreateInitFrameRules : Prop := ∀ (e : Env) (regs : Regs) (init self : Val) (args rest : List Val),
+  args.length = e.oparg →
+  (∀ x rt, framePushAndInit e.P init .null (self :: args) [] regs.rt = .error x rt →
+    _CREATE_INIT_FRAME e ⟨regs, args.reverse ++ self :: init :: rest⟩ =
+      .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+  (∀ nf rt, framePushAndInit e.P init .null (self :: args) [] regs.rt = .ok nf rt →
+    _CREATE_INIT_FRAME e ⟨regs, args.reverse ++ self :: init :: rest⟩ = .ok nf
+      ⟨{ regs with
+          rt := { rt with pyRecursionRemaining := rt.pyRecursionRemaining - 1 }
+          frame := { code := initCleanupIdx, stack := [self], owner := .thread }
+          prev := { regs.frame with returnOffset := 1 + 3, stack := rest } :: regs.prev }, [self]⟩)
+
+theorem createInitFrameRules_proven : CreateInitFrameRules := by
+  intro e regs init self args rest hlen
+  have hn : e.oparg + 2 = args.reverse.length + 2 := by simp [hlen]
+  have ht : (args.reverse ++ self :: init :: rest).take (e.oparg + 2) = args.reverse ++ [self, init] := by
+    rw [hn, List.take_append, List.take_of_length_le (by simp)]; simp
+  have hd : (args.reverse ++ self :: init :: rest).drop (e.oparg + 2) = rest := by
+    rw [hn, List.drop_append]; simp
+  have hle : e.oparg + 2 ≤ (args.reverse ++ self :: init :: rest).length := by simp [hlen]
+  have hle' : e.oparg + 2 ≤ args.length + (rest.length + 1 + 1) := by omega
+  constructor
+  · intro x rt h
+    bc_simp [_CREATE_INIT_FRAME, ht, hd, hle, hle', h]
+  · intro nf rt h
+    bc_simp [_CREATE_INIT_FRAME, ht, hd, hle, hle', h, setReturnOffset, modifyFrame, enterFrame,
+      decRecursionRemaining]
+
 /-! ## Registry forms -/
+
+
+def ReturnValueRules : Prop := ReturnValue ∧ ReturnValueGen
+theorem returnValueRules_proven : ReturnValueRules := ⟨returnValue_proven, returnValueGen_proven⟩
 
 def ForIterRules : Prop := ForIterExhausted ∧ ForIterNext ∧ ForIterRaises
 theorem forIterRules_proven : ForIterRules :=

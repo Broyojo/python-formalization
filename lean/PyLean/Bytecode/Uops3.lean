@@ -546,17 +546,23 @@ def _ALLOCATE_OBJECT (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
 /-- The `_Py_InitCleanup` shim of `Python/specialize.c`: reserved `Program` index 1. -/
 def initCleanupIdx : Nat := 1
 
-/-- `:4790`. -/
+/-- `:4790-4813`. C pushes the `_Py_InitCleanup` shim on the data stack first, without making it
+the current frame, then `_PyEvalFramePushAndInit` builds `__init__`'s frame on top of it; when
+that fails (`:4803-4806`) the shim is popped again (`_PyEval_FrameClearAndPop`) and the error is
+raised in the caller with the operands consumed (`SYNC_SP` before `ERROR_NO_POP`), before
+`return_offset` is set and before the recursion counter is touched. Building the frame is
+heap-only here, so the model builds it first and enters the shim only on success, which leaves
+the same state on both paths. -/
 def _CREATE_INIT_FRAME (e : Env) : M Frame := do
   let ins ← popN (e.oparg + 2)
   match ins with
   | init :: self :: args => do
+    let nf ← BM.lift do
+      (framePushAndInit e.P init .null (self :: args) [] : RM _)
     -- `frame->return_offset` belongs to the caller
     BM.lift (setReturnOffset (1 + 3))
     let shim : Frame := { code := initCleanupIdx, stack := [self], owner := .thread }
     enterFrame shim
-    let nf ← BM.lift do
-      (framePushAndInit e.P init .null (self :: args) [] : RM _)
     BM.lift (decRecursionRemaining : RM Unit)
     pure nf
   | _ => fault "arity"

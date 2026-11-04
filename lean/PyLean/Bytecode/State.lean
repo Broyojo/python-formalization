@@ -175,6 +175,8 @@ structure ExcData where
   suppressContext : Bool := false
   /-- `PyStopIterationObject.value`. -/
   value : Val := .none
+  /-- `PyNameErrorObject.name`, `NULL` until set. -/
+  name : Val := .null
   deriving Inhabited
 
 structure ClassObj where

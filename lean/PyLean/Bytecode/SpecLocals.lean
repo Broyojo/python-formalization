@@ -64,7 +64,8 @@ def LoadFastCheckRules : Prop := ∀ (e : Env) (s : St) (v : Val) (c : Code),
   s.regs.frame.fast[e.oparg]? = some v → e.P[s.regs.frame.code]? = some c →
     (v ≠ .null → execOp e .LOAD_FAST_CHECK s = execOp e .LOAD_FAST s) ∧
     (v = .null → ∀ x rt,
-      (raiseS "UnboundLocalError" (unboundLocalMsg (c.localsplusnames.getD e.oparg "")) : RM Unit)
+      (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (c.localsplusnames.getD e.oparg ""))
+        (c.localsplusnames.getD e.oparg "") : RM Unit)
         s.regs.rt = .error x rt →
       execOp e .LOAD_FAST_CHECK s = .error x { s with regs := { s.regs with rt := rt } })
 
@@ -88,7 +89,7 @@ theorem loadFastCheckRules_proven : LoadFastCheckRules := by
     show stk 0 1 _ s = _
     exact stk_err (by simp) (by
       simp [bind, EStateM.bind, getLocal_ok hv, getCode_ok hc, liftM, monadLift, MonadLift.monadLift,
-        RM.lift, formatExcCheckArg, hr])
+        RM.lift, hr])
 
 theorem setIfInBounds_restore {α : Type} {a : Array α} {i : Nat} {v x : α} (h : a[i]? = some v) :
     (a.setIfInBounds i x).setIfInBounds i v = a := by
@@ -227,7 +228,8 @@ def DeleteFastRules : Prop := ∀ (e : Env) (s : St) (v : Val) (c : Code),
   s.regs.frame.fast[e.oparg]? = some v → e.P[s.regs.frame.code]? = some c →
     (v ≠ .null → execOp e .DELETE_FAST s = .ok () (withLocal s e.oparg .null)) ∧
     (v = .null → ∀ x rt,
-      (raiseS "UnboundLocalError" (unboundLocalMsg (c.localsplusnames.getD e.oparg "")) : RM Unit)
+      (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (c.localsplusnames.getD e.oparg ""))
+        (c.localsplusnames.getD e.oparg "") : RM Unit)
         s.regs.rt = .error x rt →
       execOp e .DELETE_FAST s = .error x { s with regs := { s.regs with rt := rt } })
 
@@ -245,7 +247,7 @@ theorem deleteFastRules_proven : DeleteFastRules := by
     show stk 0 0 _ s = _
     exact stk_err (by simp) (by
       simp [bind, EStateM.bind, getLocal_ok h, getCode_ok hc, liftM, monadLift, MonadLift.monadLift,
-        RM.lift, formatExcCheckArg, hr])
+        RM.lift, hr])
 
 /-! ### Constants -/
 

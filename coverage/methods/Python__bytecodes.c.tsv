@@ -153,8 +153,8 @@ Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _
 Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-raise-varargs	
 Python/bytecodes.c	1544	1544	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	todo		review: ReturnValue assumes regs.frame.owner = .thread, so the generator frame, where _PyEval_FrameClearAndPop clears the generator (frameClearAndPop's other branch), is excluded; that hypothesis is neither a type invariant nor a documented precondition.
-Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	todo		review: Same as _RETURN_VALUE: ReturnValue is only for thread-owned frames, so a return from a generator frame is assumed away.
+Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	modelled	bytecode-return-value	
+Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	modelled	bytecode-return-value	
 Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1602	1602	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		
@@ -213,9 +213,9 @@ Python/bytecodes.c	2212	2212	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) 
 Python/bytecodes.c	2222	2222	opcode:LOAD_FROM_DICT_OR_GLOBALS	inst(LOAD_FROM_DICT_OR_GLOBALS, (mod_or_class_dict -- v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2244	2244	opcode:LOAD_NAME	inst(LOAD_NAME, (-- v)) {	todo		
 Python/bytecodes.c	2256	2256	opcode:_SPECIALIZE_LOAD_GLOBAL	specializing op(_SPECIALIZE_LOAD_GLOBAL, (counter/1 -- )) {	todo		changed-in-3.15:
-Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	todo		review: LoadGlobalRules covers only exact-dict globals and builtins, so the PyMapping_GetOptionalItem slow path of _PyEval_LoadGlobalStackRef (dict-subclass globals from exec, a non-dict builtins) is assumed away, the reason the sibling LOAD_NAME entry credits no row; and the NameError the model raises lacks the .name that _PyEval_FormatExcCheckArg sets (ceval.c:3463-3472).
+Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	modelled	bytecode-load-global	
 Python/bytecodes.c	2277	2277	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	modelled	bytecode-load-global	
-Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	todo		review: As _LOAD_GLOBAL: exact-dict globals and builtins only, and the model's NameError has no .name attribute (ceval.c:3463-3472).
+Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	modelled	bytecode-load-global	
 Python/bytecodes.c	2291	2291	opcode:_GUARD_GLOBALS_VERSION	op(_GUARD_GLOBALS_VERSION, (version/1 --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2299	2299	opcode:_LOAD_GLOBAL_MODULE	op(_LOAD_GLOBAL_MODULE, (version/1, unused/1, index/1 -- res))	todo		changed-in-3.15:
 Python/bytecodes.c	2319	2319	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTINS, (version/1, index/1 -- res))	todo		changed-in-3.15:
@@ -428,7 +428,7 @@ Python/bytecodes.c	4735	4735	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, n
 Python/bytecodes.c	4749	4749	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	todo		changed-in-3.15:
 Python/bytecodes.c	4758	4758	opcode:_CHECK_OBJECT	op(_CHECK_OBJECT, (type_version/2, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4766	4766	opcode:_ALLOCATE_OBJECT	op(_ALLOCATE_OBJECT, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
-Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	todo		review: On failure of _PyEvalFramePushAndInit C clears the shim with _PyEval_FrameClearAndPop and raises in the caller (:4799-4802), but the model has already entered the shim and lets the exception unwind from it, where Exec.unwind's leaveRecursivePy gives back a recursion unit C never took; the failure exit is not mirrored.
+Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	modelled	bytecode-create-init-frame,bytecode-call-alloc-abstract	
 Python/bytecodes.c	4815	4815	opcode:CALL_ALLOC_AND_ENTER_INIT	macro(CALL_ALLOC_AND_ENTER_INIT) =	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4825	4825	opcode:EXIT_INIT_CHECK	inst(EXIT_INIT_CHECK, (should_be_none -- )) {	todo		
 Python/bytecodes.c	4835	4835	opcode:_GUARD_CALLABLE_BUILTIN_CLASS	op(_GUARD_CALLABLE_BUILTIN_CLASS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function

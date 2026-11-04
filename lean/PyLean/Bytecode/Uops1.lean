@@ -79,7 +79,7 @@ def LOAD_FAST_CHECK (e : Env) : M Unit := stk 0 1 fun _ => do
   if v == .null then
     let co ← getCode e.P
     let n := co.localsplusnames.getD e.oparg ""
-    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg n) : RM _)
+    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg n) n : RM _)
   pure [v]
 
 /-- `:283`. -/
@@ -1130,7 +1130,7 @@ def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
   if ns == .null then
     (raiseS "SystemError" s!"no locals when deleting '{name}'" : RM _)
   let del : RM Unit := tryExc (e.om.delItem e.ctx ns (.str name))
-    fun _ => formatExcCheckArg "NameError" (nameErrorMsg name)
+    fun _ => formatExcCheckArg "NameError" (nameErrorMsg name) name
   del
   pure []
 
@@ -1213,7 +1213,7 @@ def STORE_GLOBAL (e : Env) : M Unit := stk 1 0 fun
 def DELETE_GLOBAL (e : Env) : M Unit := stk 0 0 fun _ => do
   let name ← getName e e.oparg
   let found ← (dictPopStr (← getFrame).globals name : RM Bool)
-  if !found then (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+  if !found then (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
   pure []
 /-- `:2212`. -/
 def LOAD_LOCALS : M Unit := stk 0 1 fun _ => do
@@ -1229,7 +1229,7 @@ def loadGlobal (e : Env) (name : String) : BM Val := do
   | none =>
     match ← (optItem e f.builtins name : RM _) with
     | some v => pure v
-    | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+    | none => (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
 
 /-- `:2222`. -/
 def LOAD_FROM_DICT_OR_GLOBALS (e : Env) : M Unit := stk 1 1 fun
@@ -1252,7 +1252,7 @@ def loadName (e : Env) (name : String) : BM Val := do
     | none =>
       match ← (optItem e f.builtins name : RM _) with
       | some v => pure v
-      | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+      | none => (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
 
 /-- `:2244`. -/
 def LOAD_NAME (e : Env) : M Unit := stk 0 1 fun _ => do

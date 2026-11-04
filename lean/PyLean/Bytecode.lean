@@ -50,9 +50,9 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``GlobalRoundTrip, thm := some ``globalRoundTrip_proven },
   { id := "bytecode-load-global", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_GLOBAL", op "_LOAD_GLOBAL", op "_PUSH_NULL_CONDITIONAL"]
-    statement := "LOAD_GLOBAL looks in the globals then the builtins and pushes the value, with a NULL after it for the call form; when neither has the name it raises NameError naming it with the stack unchanged."
-    source := "Python/bytecodes.c _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL; _PyEval_LoadGlobalStackRef"
-    status := .proven, prop := ``LoadGlobalRules, thm := some ``loadGlobalRules_proven },
+    statement := "LOAD_GLOBAL looks the name up in the globals then the builtins with PyMapping_GetOptionalItem (any mapping, a dict subclass from exec included) and pushes the value, with a NULL after it for the call form; when neither has the name it raises NameError with the stack unchanged, and that NameError carries the name in .name (UnboundLocalError does not); a raising lookup propagates with the stack unchanged."
+    source := "Python/bytecodes.c:2270-2289; _PyEval_LoadGlobalStackRef, Python/ceval.c:3597-3630; _PyEval_FormatExcCheckArg, Python/ceval.c:3449-3475"
+    status := .proven, prop := ``LoadGlobalFull, thm := some ``loadGlobalFull_proven },
   { id := "bytecode-attr-dispatch", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_ATTR", op "_STORE_ATTR", op "DELETE_ATTR", op "LOAD_ATTR", op "_LOAD_ATTR"]
     statement := "STORE_ATTR, DELETE_ATTR and LOAD_ATTR take the name from co_names, call PyObject_SetAttr, PyObject_DelAttr and getattr (or the method form with self_or_null on top), and pop their operands on success and failure, for any object model."
@@ -364,9 +364,9 @@ def entries : List Entry := GenObj.entries ++ [
   -- Frame-switching and unwinding invariants.
   { id := "bytecode-return-value", pyFile := "Python/bytecodes.c"
     pyFns := [op "RETURN_VALUE", op "_RETURN_VALUE"]
-    statement := "RETURN_VALUE pops the frame, restores the Python recursion budget, and resumes the caller at instr_ptr + return_offset with the returned value on top, for every caller stack."
-    source := "RETURN_VALUE, Python/bytecodes.c:1573-1593"
-    status := .proven, prop := ``ReturnValue, thm := some ``returnValue_proven },
+    statement := "RETURN_VALUE pops the frame, restores the Python recursion budget, and resumes the caller at instr_ptr + return_offset with the returned value on top, for every caller stack; from a generator's frame it also marks the generator FRAME_CLEARED, gives tstate->exc_info back to the item below the generator's, clears the generator's handled exception and drops its frame's locals."
+    source := "RETURN_VALUE, Python/bytecodes.c:1573-1593; clear_gen_frame and _PyEval_FrameClearAndPop, Python/ceval.c:2001-2030"
+    status := .proven, prop := ``ReturnValueRules, thm := some ``returnValueRules_proven },
   { id := "bytecode-unwind-to-handler", pyFile := "Python/bytecodes.c"
     pyFns := ["get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
     statement := "exception_unwind truncates the stack to the handler's recorded depth, pushes lasti if the entry says so, pushes the exception, and jumps to the handler; every value below the recorded level survives."
@@ -424,6 +424,11 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "RAISE_VARARGS 1 raises the top of the stack and RAISE_VARARGS 2 the second value with the top as its cause, through do_raise, popping the operands; RAISE_VARARGS 0 re-raises the handled exception through exception_unwind, or raises RuntimeError when there is none."
     source := "Python/bytecodes.c:1531-1542; do_raise, Python/ceval.c"
     status := .proven, prop := ``RaiseVarargsRules, thm := some ``raiseVarargsRules_proven },
+  { id := "bytecode-create-init-frame", pyFile := "Python/bytecodes.c"
+    pyFns := [op "_CREATE_INIT_FRAME"]
+    statement := "_CREATE_INIT_FRAME raises in the caller, with its operands consumed, no shim frame left, return_offset and the recursion counter untouched, when __init__'s frame cannot be built; otherwise the _Py_InitCleanup shim holding self becomes the frame __init__ returns to, the caller records return_offset 1 + INLINE_CACHE_ENTRIES_CALL, and one recursion unit is taken."
+    source := "Python/bytecodes.c:4790-4813"
+    status := .proven, prop := ``CreateInitFrameRules, thm := some ``createInitFrameRules_proven },
   { id := "bytecode-end-for", pyFile := "Python/bytecodes.c"
     pyFns := [op "END_FOR"]
     statement := "END_FOR is no_save_ip: dispatching it leaves frame->instr_ptr unchanged, where POP_TOP with the same body records its own address; then it pops its operand."

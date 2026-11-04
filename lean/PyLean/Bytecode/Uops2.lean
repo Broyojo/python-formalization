@@ -17,7 +17,7 @@ def DELETE_FAST (e : Env) : M Unit := stk 0 0 fun _ => do
   let v ← getLocal e.oparg
   if v == .null then
     let co ← getCode e.P
-    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (co.localsplusnames.getD e.oparg "")) : RM _)
+    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (co.localsplusnames.getD e.oparg "")) (co.localsplusnames.getD e.oparg "") : RM _)
   setLocal e.oparg .null
   pure []
 
