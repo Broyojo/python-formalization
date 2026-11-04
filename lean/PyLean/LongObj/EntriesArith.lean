@@ -47,7 +47,7 @@ def entriesArith : List Entry := [
     source := "comment at longobject.c:4068-4071 and the (*) comment at :4134-4177", status := .proven
     prop := ``KMulExact, thm := some ``kMulExact_proven },
   { id := "longobj-mul", pyFile := "Objects/longobject.c"
-    pyFns := ["long_mul", "_PyLong_Negate", "Py_LOCAL_INLINE"]
+    pyFns := ["long_mul"]
     statement := "a * b returns the canonical object on the compact path and through k_mul, for x * y and for x * x on one object."
     source := "invariant: exact integer arithmetic", status := .proven
     prop := ``LongMulExact, thm := some ``longMulExact_proven },

@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 `PyLong_GetSign`, `PyLong_IsPositive`, `PyLong_IsNegative`, `PyLong_IsZero`
-(Objects/longobject.c:900-962), CPython 3.15.2, on an object that is an int (its value and the
+(Objects/longobject.c:901-963), CPython 3.15.2, on an object that is an int (its value and the
 sign bits of `lv_tag`) or not (its type name).
 
 Type invariant (`_PyLong_SetSignAndDigitCount`, Include/internal/pycore_long.h): the sign bits
@@ -21,22 +21,22 @@ def TagOk : Obj → Prop
   | .int v s => s = (if v > 0 then 0 else if v = 0 then 1 else 2)
   | .other _ => True
 
-/-- `PyLong_IsPositive`, :900-909 (`_PyLong_IsPositive`: sign bits == 0). -/
+/-- `PyLong_IsPositive`, :901-910 (`_PyLong_IsPositive`: sign bits == 0). -/
 def isPositive : Obj → Py Bool
   | .int _ s => .ok (s % 4 == 0)
   | .other t => .error (.typeError s!"expected int, got {t}")
 
-/-- `PyLong_IsNegative`, :911-920 (sign bits == `SIGN_NEGATIVE`). -/
+/-- `PyLong_IsNegative`, :912-921 (sign bits == `SIGN_NEGATIVE`). -/
 def isNegative : Obj → Py Bool
   | .int _ s => .ok (s % 4 == 2)
   | .other t => .error (.typeError s!"expected int, got {t}")
 
-/-- `PyLong_IsZero`, :922-931 (sign bits == `SIGN_ZERO`). -/
+/-- `PyLong_IsZero`, :923-932 (sign bits == `SIGN_ZERO`). -/
 def isZero : Obj → Py Bool
   | .int _ s => .ok (s % 4 == 1)
   | .other t => .error (.typeError s!"expected int, got {t}")
 
-/-- `PyLong_GetSign`, :953-962, with `long_sign` (:933-944): compact and non-compact sign are
+/-- `PyLong_GetSign`, :953-963, with `long_sign` (:934-945): compact and non-compact sign are
 both `1 - (lv_tag & SIGN_MASK)`. Its message says "expect int", unlike the other three. -/
 def getSign : Obj → Py Int
   | .int _ s => .ok (1 - ((s % 4 : Nat) : Int))
