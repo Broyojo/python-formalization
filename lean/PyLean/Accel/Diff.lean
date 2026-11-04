@@ -185,6 +185,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       let carg : Heapq.CArg := match arg with
         | "list" => ⟨true, "list"⟩
         | "tuple" => ⟨false, "tuple"⟩
+        | "long" => ⟨false, "a" ++ String.ofList (List.replicate 30 'é')⟩
         | _ => ⟨false, "None"⟩
       let r : Except Heapq.CErr (Option Int) × Heapq.HW Heapq.St Int :=
         match fn with

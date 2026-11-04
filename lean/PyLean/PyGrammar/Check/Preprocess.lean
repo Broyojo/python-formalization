@@ -452,7 +452,18 @@ structure FutureError where
   loc : Loc
   deriving Repr, Inhabited
 
-/-- `future_check_features`, `Python/future.c:9-62`. Returns whether `annotations` was seen. -/
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: at most `n` bytes, and an incomplete UTF-8 sequence at the
+cut is dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in
+`n` bytes. A feature name is an identifier, so its UTF-8 (`PyUnicode_AsUTF8`, `future.c:18`) is
+valid and has no NUL. The same cut as `TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
+/-- `future_check_features`, `Python/future.c:9-62`. Returns whether `annotations` was seen.
+An unknown feature is named with `UNDEFINED_FUTURE_FEATURE`, `"future feature %.100s is not
+defined"` (`:6`, raised at `:51-52`). -/
 def futureCheckFeatures (names : List Ast) : Except FutureError Bool :=
   names.foldlM (init := false) fun acc a =>
     match a with
@@ -462,7 +473,7 @@ def futureCheckFeatures (names : List Ast) : Except FutureError Bool :=
       else if knownFutures.contains n then .ok acc
       else if n == "braces".toList.map Char.toNat then .error ⟨"not a chance", loc⟩
       else
-        let bs := (String.ofList (n.map Char.ofNat)).toList.take 100
+        let bs := truncUtf8 100 (n.map Char.ofNat)
         .error ⟨"future feature " ++ String.ofList bs ++ " is not defined", loc⟩
     | _ => .ok acc
 

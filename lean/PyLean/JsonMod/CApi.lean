@@ -18,9 +18,6 @@ namespace PyLean.JsonMod
 
 open PyLean
 
-/-- `%.Ns` of a type name. -/
-def truncName (n : Nat) (t : String) : String := String.ofList (t.toList.take n)
-
 /-- A Python object where a `str` is expected. -/
 inductive StrArg where
   | str (s : PStr)

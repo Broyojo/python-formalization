@@ -158,13 +158,17 @@ def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
     let d ← (mkDict : RM Val)
     e.om.setItem e.ctx l (.str "__annotations__") d
   pure []
-/-- `:2636`. -/
+/-- `:2636`. The refusal is `"'%T' object is not a mapping"` (`:2621-2623`): `%T` has no
+precision, so the name is not cut. `%T` prints the fully qualified name, which is `tp_name` for
+the builtin types and the classes of `__main__` that the model's programs define. The model raises
+it on any `AttributeError`; CPython does only when `update` has no `keys` (`:2619-2620`), and otherwise
+keeps the `AttributeError`. -/
 def DICT_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let upd := ins.getLastD .null
   let rest := ins.dropLast
   let u : RM Unit := tryExc (e.om.dictUpdate e.ctx (rest.headD .null) upd) fun exc => do
     if ← givenMatches exc 8 (.cls "AttributeError") then
-      typeError s!"'{trunc200 (← tpName upd)}' object is not a mapping"
+      typeError s!"'{← tpName upd}' object is not a mapping"
     else throw (.exc exc)
   u
   pure rest

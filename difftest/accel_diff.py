@@ -153,10 +153,14 @@ class E:
         return res
 
 
+# A type whose name `%.50s` cuts inside a character: 61 bytes, printed as "a" and 24 'é'.
+LONG_OBJ = type("a" + "\u00e9" * 30, (), {})()
+
+
 def run_heap(c):
     f = getattr(MODS[c["impl"]]["heapq"], c["fn"] + ("_max" if c["max"] else ""))
     items = [E(v) for v in c["heap"]]
-    heap = {"list": items, "tuple": tuple(items), "none": None}[c["arg"]]
+    heap = {"list": items, "tuple": tuple(items), "none": None, "long": LONG_OBJ}[c["arg"]]
     st = {"k": 0, "log": [], "heap": heap, "script": {k: acts for k, acts in c["script"]}}
     E.ctx = st
     args = (E(c["item"]),) if c["fn"] in ("heappush", "heapreplace", "heappushpop") else ()
@@ -165,7 +169,7 @@ def run_heap(c):
         out = {"r": r.v if isinstance(r, E) else None, "exc": None}
     except Exception as e:
         out = {"r": None, "exc": [type(e).__name__, str(e)]}
-    out["heap"] = [x.v for x in heap] if heap is not None else []
+    out["heap"] = [x.v for x in heap] if isinstance(heap, (list, tuple)) else []
     out["log"] = st["log"]
     return {"ok": out}
 
@@ -451,6 +455,8 @@ def gen_case(rng):
     fn = rng.choice(list(GENS))
     c = {"mod": "accel", "fn": fn, "impl": rng.choice(["c", "py"])}
     c.update(GENS[fn](rng, fn))
+    if c["impl"] == "c" and c.get("arg") == "none" and rng.random() < 0.5:
+        c["arg"] = "long"
     return c
 
 

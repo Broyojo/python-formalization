@@ -690,6 +690,9 @@ FOLD = ["__debug__", "if __debug__: pass", "x = __debug__", "__debug__ = 1", "de
         "from __future__ import braces", "from __future__ import nope", "'doc'\nfrom __future__ import nope",
         "x\nfrom __future__ import nope", "from __future__ import division, nope", "from . import nope",
         "from __future__ import *",
+        # `%.100s` of the feature name cuts UTF-8 bytes: 51 'é' print as 50, a cut inside a character.
+        "from __future__ import " + "\u00e9" * 51, "from __future__ import a" + "\u00e9" * 50,
+        "from __future__ import " + "\u4e2d" * 34, "from __future__ import " + "x" * 101,
         "match x:\n  case +1: pass\n", "match x:\n  case +1.5: pass\n", "match x:\n  case +1j: pass\n",
         "match x:\n  case +1+2j: pass\n", "match x:\n  case +1-2j: pass\n", "match x:\n  case +0.0+1j: pass\n",
         "match x:\n  case -0.0+1j: pass\n", "match x:\n  case +0.0-1j: pass\n", "match x:\n  case {+1: y, +1+2j: z}: pass\n",

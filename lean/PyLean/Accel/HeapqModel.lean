@@ -231,11 +231,20 @@ structure CArg where
   isList : Bool
   tpName : String
 
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: at most `n` bytes, and an incomplete UTF-8 sequence at the
+cut is dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in
+`n` bytes. `tp_name` is valid UTF-8 without NUL (`type()` refuses both). The same cut as
+`TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
 /-- `_PyArg_BadArgument(fname, displayname, "list", arg)`, Python/getargs.c:663-670:
-`"%.200s() %.200s must be %.50s, not %.50s"` (the `%.50s` cut is by bytes; the model cuts
-characters, which is the same for ASCII names). -/
+`"%.200s() %.200s must be %.50s, not %.50s"`. `fname` and `displayname` are short ASCII
+literals of the clinic wrapper, so only the type name can be cut: to 50 bytes of UTF-8. -/
 def badArg (fname which tp : String) : PyExc :=
-  .typeError s!"{fname}() {which} must be list, not {tp.take 50}"
+  .typeError s!"{fname}() {which} must be list, not {String.ofList (truncUtf8 50 tp.toList)}"
 
 def fnName (base : String) (mx : Bool) : String := if mx then base ++ "_max" else base
 

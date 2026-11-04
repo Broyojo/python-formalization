@@ -13,8 +13,21 @@ because it is an implementation twin of `_PyObject_GenericGetAttrWithDict`.
 
 namespace PyLean.TypeObj
 
-/-- `%.Ns` in `PyErr_Format` for ASCII text. -/
-def trunc (n : Nat) (s : String) : String := String.ofList (s.toList.take n)
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: at most `n` bytes, and an incomplete UTF-8 sequence at the
+cut is dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in
+`n` bytes. The same definition as `truncUtf8` in `ExcCore`. -/
+def cutUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: cutUtf8 (n - c.utf8Size) cs else []
+
+/-- `%.Ns` in `PyErr_Format` of a C string: a `tp_name`, which is valid UTF-8 without NUL
+(`type()` refuses both), or a short ASCII literal. -/
+def trunc (n : Nat) (s : String) : String := String.ofList (cutUtf8 n s.toList)
+
+/-- `%.NR`, `%.NS`, `%.NU` and `%.NV` in `PyErr_Format`: the precision counts code points
+(`unicode_fromformat_write_str`, `Objects/unicodeobject.c:2588-2589`). -/
+def truncChars (n : Nat) (s : String) : String := String.ofList (s.toList.take n)
 
 /-- One character of `unicode_repr` for a `str` body, `Objects/unicodeobject.c`: the
 escapes that matter for attribute names and messages. -/

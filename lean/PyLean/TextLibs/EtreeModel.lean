@@ -49,9 +49,18 @@ def caseTy : Ty Nat := { isElem := (· < 1000), tpName := fun _ => "int", pyName
 /-- The children after a store or delete, and its outcome. -/
 abbrev Out (α : Type) := List α × Py Unit
 
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: at most `n` bytes, and an incomplete UTF-8 sequence at the
+cut is dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in
+`n` bytes. `tp_name` is valid UTF-8 without NUL (`type()` refuses both). The same cut as
+`TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
 /-- `raise_type_error`, Modules/_elementtree.c:530-535: `"%.200s"` of `tp_name`. -/
 def typeErrC (T : Ty α) (x : α) : PyExc :=
-  .typeError s!"expected an Element, not \"{String.ofList ((T.tpName x).toList.take 200)}\""
+  .typeError s!"expected an Element, not \"{String.ofList (truncUtf8 200 (T.tpName x).toList)}\""
 
 /-- `_assert_is_element`, Lib/xml/etree/ElementTree.py:248-252. -/
 def typeErrPy (T : Ty α) (x : α) : PyExc :=

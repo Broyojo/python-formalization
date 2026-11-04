@@ -1,0 +1,108 @@
+id: longobj-str-digits-limit-pylong-path
+title: "str(int) can return more digits than sys.set_int_max_str_digits allows when the limit is 9000 or more"
+priority: P3
+kind: wrong-result
+module: longobj
+files: [Objects/longobject.c]
+functions: [long_to_decimal_string_internal, long_to_decimal_string, pylong_int_to_decimal_string]
+summary: |
+  long_to_decimal_string_internal guards the digit limit twice: a rough pre-check on the
+  number of 30-bit digits (lines 2125-2135), and an exact check on the computed decimal
+  length (lines 2207-2217). Since _pylong was added, values of more than 1000 30-bit
+  digits switch to _pylong.int_to_decimal_string (lines 2138-2145) right after the
+  pre-check, so the exact check never runs for them. The pre-check only fires when
+  max_str_digits // 90 <= (size_a - 11) // 10; it is deliberately loose (10/3 against
+  log2(10)), and it was written when the exact check always followed. For a limit of
+  9000 or more some values of more than 1000 digits pass it, and str() returns all their
+  digits. With sys.set_int_max_str_digits(10000), str(10**10050) returns a 10051-digit
+  string, and int() of that string then raises the limit ValueError, so the output does
+  not round-trip under the same limit. repr(), f-strings, "%d" and b"%d" go through the
+  same function and behave the same way. Below 9000 (the default 4300 included) the
+  pre-check fires on every value that takes the _pylong path, so the limit holds exactly.
+likelihood: |
+  Low. It needs a limit raised to 9000 or more (the default is 4300) and a value just
+  above that limit with more than 1000 30-bit digits (about 9000 decimal digits). The
+  overshoot is bounded: at most 122 digits (about 1.4%) at limit 9000, 115 (1.15%) at
+  10000, and the ratio falls towards 10/3 / log2(10) - 1, about 0.34%, for large limits
+  (424 digits at 100000, 3514 at 1000000). The conversion cost stays within the same
+  factor of what the limit allows, so the denial-of-service protection is barely
+  weakened; what breaks is the documented contract and the str/int round trip.
+maybe_intended: |
+  Unlikely to be intended. The limit is documented as applying to the number of digits
+  of the output, and the post-loop check exists precisely because the pre-check is
+  loose: in gh-96537 (the pre-check PR) Mark Dickinson notes that values between the
+  limit and the pre-check bound "will end up getting converted and _then_ meeting the
+  post-loop check and raising ValueError". gh-96673 (adding _pylong) then routed large
+  values around that post-loop check. Neil Schemenauer remarked there that "putting the
+  int_max_str_digits check in there [in _pylong] could be a good idea", as later work.
+  A maintainer may still consider an overshoot of a fraction of a percent acceptable.
+reproducer: |
+  import sys
+  sys.set_int_max_str_digits(10000)
+  n = 10 ** 10050
+  s = str(n)
+  print('limit', sys.get_int_max_str_digits(), 'len(str(10**10050)) =', len(s))
+  try:
+      int(s)
+      back = 'ok'
+  except ValueError as e:
+      back = 'ValueError: ' + str(e)[:60]
+  print('int(str(n)) ->', back)
+  sys.set_int_max_str_digits(5000)
+  try:
+      str(10 ** 5010)
+      small = 'no error'
+  except ValueError:
+      small = 'ValueError'
+  print('limit 5000, str(10**5010) ->', small)
+  if len(s) > 10000 and back.startswith('ValueError') and small == 'ValueError':
+      print('REPRODUCED longobj-str-digits-limit-pylong-path')
+expected: |
+  ValueError: Exceeds the limit (10000 digits) for integer string conversion; use
+  sys.set_int_max_str_digits() to increase the limit, as for str(10**5010) at limit 5000.
+promised_by: |
+  Doc/builtins/stdtypes.rst:6820-6824: "The limit is applied to the number of digit
+  characters in the input or output string when a non-linear conversion algorithm would
+  be involved. Underscores and the sign are not counted towards the limit. When an
+  operation would exceed the limit, a ValueError is raised". str(integer) is listed among
+  the affected APIs at :6873.
+cause: |
+  Objects/longobject.c:2125-2135 is the only limit check before the switch at
+  :2138-2145, which returns pylong_int_to_decimal_string's result directly. The exact
+  check on strlen_nosign at :2207-2217 is after the switch and is skipped. Lib/_pylong.py
+  int_to_decimal_string (:178-221) does not check the limit itself: its leaf str() calls
+  (:195) are on pieces of at most 1000 digits, below any limit of 9000 or more.
+possible_fix: |
+  After pylong_int_to_decimal_string returns, compare the length of the result (minus
+  the sign) with max_str_digits and raise the same ValueError when it is larger; or do
+  that check in pylong_int_to_decimal_string before writing to the writer. Either keeps
+  the cheap pre-check for the common case. Alternatively pass the limit to
+  _pylong.int_to_decimal_string and check there.
+tested:
+  python3 3.15.2: REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related:
+    - {number: 95778, state: closed, relation: "CVE-2020-10735, introduced the limit"}
+    - {number: 96537, state: merged PR, relation: "added the pre-check; review notes the post-loop check catches what the pre-check misses"}
+    - {number: 96673, state: merged PR, relation: "gh-90716, added _pylong and the switch that bypasses the post-loop check; limit-in-_pylong idea mentioned, not done"}
+    - {number: 118164, state: closed, relation: "str(10**10000) hangs without _decimal; same code path, different issue"}
+    - {number: 158245, state: closed, relation: "print(10**10**10) hangs; about computing the power, not this"}
+  queries:
+    - "gh search issues --repo python/cpython int_max_str_digits"
+    - "gh search issues --repo python/cpython set_int_max_str_digits"
+    - "gh search issues --repo python/cpython _pylong int_to_decimal_string limit"
+    - "gh search issues --repo python/cpython str int digits limit exceeded"
+    - "gh search issues --repo python/cpython max_str_digits"
+    - "gh search issues --repo python/cpython str digits limit pylong"
+    - "gh search issues --repo python/cpython \"integer string conversion\" limit exceeds"
+    - "gh search issues --repo python/cpython str int longer than limit pre-check"
+    - "gh search prs --repo python/cpython _pylong int_to_decimal_string"
+    - "gh search prs --repo python/cpython max_str_digits"
+    - "gh api comments of #96537, #96673, #118483, #90716, filtered for limit/max_str_digits/pre-check"
+  bugforge: "only digit-limit entry is html-20261003-020338-c2 (html.unescape, #158719); not this one"
+lean:
+  property: PyLean.LongObj.StrDigitLimitExact
+  theorem: PyLean.LongObj.strDigitLimitExact_refuted
+  note: "The exact behaviour is PyLean.LongObj.StrIntExact (longToDecimalString_eq); the promise holds for every limit below 9000, PyLean.LongObj.StrDigitLimitBelow9000."

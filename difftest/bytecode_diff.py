@@ -525,8 +525,29 @@ def p_float_repr(r):
     return "\n".join(lines)
 
 
+# Identifiers around the 200 bytes of `%.200s`, which cuts UTF-8 bytes, not characters:
+# 2-, 3- and 4-byte characters, a cut that falls inside one, and ASCII on both sides of it.
+LONG_NAMES = ["é" * 101, "a" + "é" * 100, "é" * 100, "中" * 67, "ab" + "中" * 66,
+              "\U00010000" * 51, "x" * 199 + "é", "x" * 201, "ж" * 99 + "xyz"]
+
+
+def p_long_names(r):
+    """`%.200s` of a name or a `tp_name` (NameError, unpack, `*`), and `%T` (`**`), with long
+    non-ASCII identifiers."""
+    n = r.choice(LONG_NAMES)
+    return r.choice([
+        guarded(f"print({n})"),
+        f"def f():\n    return {n}\n" + guarded("f()"),
+        f"class {n}:\n    pass\n" + guarded(f"a, b = {n}()"),
+        f"class {n}:\n    pass\n" + guarded(f"print(*{n}())"),
+        f"class {n}:\n    pass\n" + guarded(f"print([*{n}()])"),
+        f"class {n}:\n    pass\n" + guarded(f"print({{**{n}()}})"),
+        f"class {n}:\n    pass\n" + guarded(f"print(type({n}()).__name__ == {n!r})"),
+    ])
+
+
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_virtual, p_fastpath, p_messages, p_float_repr]
+            p_virtual, p_fastpath, p_messages, p_float_repr, p_long_names]
 
 
 def enc_const(c, table):

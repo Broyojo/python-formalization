@@ -3,6 +3,9 @@ import PyLean.LongObj.IntNew
 import PyLean.LongObj.DiffComplex
 import PyLean.LongObj.LongFloat
 import PyLean.LongObj.DiffStr
+import PyLean.LongObj.Compare
+import PyLean.LongObj.Binop
+import PyLean.LongObj.AsByteArray
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -122,6 +125,24 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "as_long_overflow" =>
     let r := asLongAndOverflow (← getLong j "a")
     return encPy (fun (p : Int × Int) => Json.arr #[toJson p.1, toJson p.2]) (.ok r)
+  | "as_longlong_overflow" =>
+    let r := asLongLongAndOverflow (← getLong j "a")
+    return encPy (fun (p : Int × Int) => Json.arr #[toJson p.1, toJson p.2]) (.ok r)
+  | "byte_array_w" =>
+    let n ← getNat j "n"
+    let r := asByteArrayW (← getLong j "a") n true false
+    let buf := r.stored ++ List.replicate (n - r.stored.length) 170
+    return encPy toJson (.ok (MathInt.bytesVal buf))
+  | "richcmp" =>
+    let a ← getLong j "a"
+    let selfArg : RichArg := .int (if (← getBool j "same") then 1 else 0) a
+    let otherArg : RichArg ← if (← getBool j "other") then pure (.other 1) else do
+      pure (.int 1 (← getLong j "b"))
+    let enc : RichOut → Json := fun
+      | .notImplemented => toJson "NI"
+      | .bool b => toJson b
+    let rs := [RichOp.lt, .le, .eq, .ne, .gt, .ge].map (fun op => enc (longRichcompare selfArg otherArg op))
+    return encPy id (.ok (Json.arr rs.toArray))
   | "as_long" => encResult toJson (asLong (← getLong j "a"))
   | "as_int" => encResult toJson (asCInt (← getLong j "a"))
   | "as_ssize" => encResult toJson (asSsize (← getLong j "a"))

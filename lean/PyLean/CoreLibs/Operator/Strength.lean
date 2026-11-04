@@ -143,8 +143,9 @@ theorem richCompareExact_proven : RichCompareExact := by
 
 /-! ### `index` -/
 
-/-- Each twin of `operator.index`, every path. C reads the slot and checks what it returns; Python returns what
-`__index__` returns, and reads the instance dict. `IndexTwinsAlways` is refuted on those differences. -/
+/-- Each twin of `operator.index`, every path. C answers an `int` first, then reads the slot and checks what it
+returns; Python returns what `a.__index__()` returns, reading the instance dict and then the class, whatever the
+object is. `IndexTwinsAlways` is refuted on those differences. -/
 def IndexExact : Prop :=
   ∀ (o : IndexObj) (n : Int) (tn : String) (e : PyExc) (r : Py IndexRet),
     (o.isInt = some n → indexC o = .ok (.exact n)) ∧
@@ -157,9 +158,9 @@ def IndexExact : Prop :=
     (o.isInt = none → o.slot = some (.ok (.sub n)) → o.warn = none → indexC o = .ok (.exact n)) ∧
     (o.isInt = none → o.slot = some (.ok (.sub n)) → o.warn = some e → indexC o = .error e) ∧
     (o.inst = some r → indexPy o = r) ∧
-    (o.inst = none → o.isInt = some n → indexPy o = .ok (.exact n)) ∧
-    (o.inst = none → o.isInt = none → o.slot = some r → indexPy o = r) ∧
-    (o.inst = none → o.isInt = none → o.slot = none →
+    (o.inst = none → o.slot = some r → indexPy o = r) ∧
+    (o.inst = none → o.isInt = some n → o.slot = some (.ok (.exact n)) → indexPy o = .ok (.exact n)) ∧
+    (o.inst = none → o.slot = none →
       indexPy o = .error (.named "AttributeError" s!"'{o.tn}' object has no attribute '__index__'"))
 
 theorem indexExact_proven : IndexExact := by
@@ -174,8 +175,8 @@ theorem indexExact_proven : IndexExact := by
   · intro h h2 h3; simp [indexC, h, h2, h3]
   · intro h; simp [indexPy, h]
   · intro h h2; simp [indexPy, h, h2]
-  · intro h h2 h3; simp [indexPy, h, h2, h3]
-  · intro h h2 h3; simp [indexPy, h, h2, h3]
+  · intro h h2 h3; simp [indexPy, h, h3]
+  · intro h h2; simp [indexPy, h, h2]
 
 /-! ### `concat`, `iconcat` -/
 
@@ -197,9 +198,10 @@ def ConcatExact : Prop :=
       (A.nbIAdd a b = .ok (.val x) → iconcatC A lt a b = .ok x) ∧
       (A.nbIAdd a b = .ok .notImplemented → iconcatC A lt a b = .error (noConcat lt)) ∧
       (A.nbIAdd a b = .error e → iconcatC A lt a b = .error e)) ∧
-    (A.hasGetitem = false →
+    (A.hasGetitem = .ok false →
       concatPy A lt rt a b = .error (noConcat lt) ∧ iconcatPy A lt rt a b = .error (noConcat lt)) ∧
-    (A.hasGetitem = true →
+    (A.hasGetitem = .error e → concatPy A lt rt a b = .error e ∧ iconcatPy A lt rt a b = .error e) ∧
+    (A.hasGetitem = .ok true →
       (A.nbAdd a b = .ok (.val x) → concatPy A lt rt a b = .ok x) ∧
       (A.nbAdd a b = .error e → concatPy A lt rt a b = .error e) ∧
       (A.nbAdd a b = .ok .notImplemented → A.sqConcat = some f → concatPy A lt rt a b = f a b) ∧
@@ -215,7 +217,10 @@ def ConcatExact : Prop :=
 
 theorem concatExact_proven : ConcatExact := by
   intro α A lt rt a b x f g e
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  rotate_left 8
+  · intro h; simp [concatPy, iconcatPy, h]
+  rotate_left 1
   · intro h; simp [concatC, h]
   · intro h h2; simp [concatC, h, h2]
   · intro h h2 h3
@@ -391,24 +396,33 @@ theorem searchExact_proven : SearchExact := by
 /-! ### `length_hint` -/
 
 /-- `length_hint` in Python, every path. `default` is checked first, a working `len` wins, a `TypeError` from `len`
-or from the hint falls through, any other exception propagates, and a negative hint raises. -/
+or from the hint falls through, any other exception propagates, and a negative hint raises. The lookup
+`type(obj).__length_hint__` finds the class's attribute, else the metaclass's; an `AttributeError` from it is the
+default, any other exception propagates. The default and the hint come back as the objects given, an `int` subclass
+included. -/
 def LengthHintPyExact : Prop :=
   ∀ (o : HintObj) (d v : Int) (n : Nat) (m m' tn : String) (e : PyExc),
-    (o.len = .ok n → lengthHintPy o (.int d) = .ok n) ∧
+    (o.len = .ok n → lengthHintPy o (.int d) = .ok (.exact n)) ∧
     (isTypeError e = false → o.len = .error e → lengthHintPy o (.int d) = .error e) ∧
     (o.len = .error (.typeError m) →
-      (o.hint = none → lengthHintPy o (.int d) = .ok d) ∧
-      (o.hint = some (.func (.ok .notImplemented)) → lengthHintPy o (.int d) = .ok d) ∧
-      (o.hint = some (.func (.error (.typeError m'))) → lengthHintPy o (.int d) = .ok d) ∧
+      (o.hint = none → o.metaHint = none → lengthHintPy o (.int d) = .ok (.exact d)) ∧
+      (o.hint = some (.func (.ok .notImplemented)) → lengthHintPy o (.int d) = .ok (.exact d)) ∧
+      (o.hint = some (.func (.error (.typeError m'))) → lengthHintPy o (.int d) = .ok (.exact d)) ∧
       (isTypeError e = false → o.hint = some (.func (.error e)) → lengthHintPy o (.int d) = .error e) ∧
       (o.hint = some (.func (.ok (.other tn))) →
         lengthHintPy o (.int d) = .error (.typeError s!"__length_hint__ must be integer, not {tn}")) ∧
-      (o.hint = some (.func (.ok (.int v))) → 0 ≤ v → lengthHintPy o (.int d) = .ok v) ∧
+      (o.hint = some (.func (.ok (.int v))) → 0 ≤ v → lengthHintPy o (.int d) = .ok (.exact v)) ∧
       (o.hint = some (.func (.ok (.int v))) → v < 0 →
         lengthHintPy o (.int d) = .error (.valueError negativeHint)) ∧
-      (∀ g, o.hint = some (.prop g) → lengthHintPy o (.int d) = .ok d) ∧
-      (∀ r, o.hint = some (.static r (.error (.typeError m'))) → lengthHintPy o (.int d) = .ok d) ∧
-      (∀ r, o.hint = some (.static r (.ok (.int v))) → 0 ≤ v → lengthHintPy o (.int d) = .ok v)) ∧
+      (∀ g, o.hint = some (.prop g) → lengthHintPy o (.int d) = .ok (.exact d)) ∧
+      (∀ r, o.hint = some (.static r (.error (.typeError m'))) → lengthHintPy o (.int d) = .ok (.exact d)) ∧
+      (∀ r, o.hint = some (.static r (.ok (.int v))) → 0 ≤ v → lengthHintPy o (.int d) = .ok (.exact v)) ∧
+      (o.hint = none → o.metaHint = some (.ok (.int v)) → 0 ≤ v → lengthHintPy o (.int d) = .ok (.exact v)) ∧
+      (∀ c, isAttrError e = false → o.hint = some (.desc c (.error e)) → lengthHintPy o (.int d) = .error e) ∧
+      (∀ c, o.hint = some (.desc c (.error (.named "AttributeError" m'))) →
+        lengthHintPy o (.int d) = .ok (.exact d)) ∧
+      (o.hint = none → o.metaHint = none → lengthHintPy o (.intSub d tn) = .ok (.sub d tn)) ∧
+      (o.hint = some (.func (.ok (.intSub v tn))) → 0 ≤ v → lengthHintPy o (.int d) = .ok (.sub v tn))) ∧
     lengthHintPy o (.other tn) = .error (.typeError s!"'{tn}' object cannot be interpreted as an integer")
 
 theorem lengthHintPyExact_proven : LengthHintPyExact := by
@@ -417,8 +431,9 @@ theorem lengthHintPyExact_proven : LengthHintPyExact := by
   · intro h; simp [lengthHintPy, h, bind, Except.bind, pure, Except.pure]
   · intro h1 h; simp [lengthHintPy, h, h1, bind, Except.bind, pure, Except.pure, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
   · intro h
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
-      simp_all [lengthHintPy, hintCallPy, isTypeError, bind, Except.bind, pure, Except.pure, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
+      simp_all [lengthHintPy, hintLookupPy, isTypeError, isAttrError, bind, Except.bind, pure, Except.pure,
+        throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
 
 /-- `length_hint` in C, every path. The checks of the Python twin, with `Py_ssize_t` around them: `default` must
 fit, and so must the hint, whose overflow is reported before its sign. An object with `__index__` is a `default`
@@ -447,7 +462,10 @@ def LengthHintCExact : Prop :=
         (o.hint = some (.prop (.error e)) → lengthHintC o (.int d) = .error e) ∧
         ((o.hint = some (.prop (.ok (.ok (.int v)))) → 0 ≤ v → v ≤ ssizeMax → lengthHintC o (.int d) = .ok v) ∧
           (o.hint = some (.prop (.ok (.error (.typeError m')))) → lengthHintC o (.int d) = .ok d)) ∧
-        (∀ r, o.hint = some (.static (.ok (.int v)) r) → 0 ≤ v → v ≤ ssizeMax → lengthHintC o (.int d) = .ok v)))
+        (∀ r, o.hint = some (.static (.ok (.int v)) r) → 0 ≤ v → v ≤ ssizeMax → lengthHintC o (.int d) = .ok v) ∧
+        (∀ p, o.hint = some (.desc (.error e) p) → lengthHintC o (.int d) = .error e) ∧
+        (o.hint = some (.func (.ok (.intSub v tn))) → 0 ≤ v → v ≤ ssizeMax → lengthHintC o (.int d) = .ok v) ∧
+        (o.hint = none → lengthHintC o (.intSub d tn) = .ok d)))
 
 theorem toSsize_ok (n : Int) (h1 : ssizeMin ≤ n) (h2 : n ≤ ssizeMax) : toSsize n = .ok n := by
   have : ¬(n > ssizeMax ∨ n < ssizeMin) := by omega
@@ -469,7 +487,17 @@ theorem lengthHintCExact_proven : LengthHintCExact := by
     · intro h; simp [lengthHintC, hd, h, bind, Except.bind, pure, Except.pure]
     · intro h3 h; simp [lengthHintC, hd, h, h3, bind, Except.bind, pure, Except.pure, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
     · intro h
-      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      rotate_left 11
+      · intro p h4
+        simp [lengthHintC, hd, h, h4, hintLookupC, isTypeError, bind, Except.bind, pure, Except.pure, throw, throwThe,
+          MonadExcept.throw, MonadExceptOf.throw]
+      · intro h4 h5 h6
+        have hv := toSsize_ok v (by simp only [ssizeMin] at *; omega) h6
+        have h7 : ¬ v < 0 := by omega
+        simp [lengthHintC, hd, h, h4, hv, h7, hintLookupC, isTypeError, bind, Except.bind, pure, Except.pure]
+      · intro h4
+        simp [lengthHintC, hd, h, h4, isTypeError, bind, Except.bind, pure, Except.pure]
       rotate_left 8
       · intro h4
         simp [lengthHintC, hd, h, h4, hintLookupC, isTypeError, bind, Except.bind, pure, Except.pure, throw, throwThe,

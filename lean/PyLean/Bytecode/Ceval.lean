@@ -374,8 +374,19 @@ def localsFor (co : Code) (func : FuncObj) : Val :=
 
 /-! ## Name errors -/
 
-/-- `%.200s` of a C string. -/
-def trunc200 (s : String) : String := String.ofList (s.toList.take 200)
+/-- `%.Ns` of `PyUnicode_FromFormat`, `unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c:2623-2661`: it reads at most `n` bytes, stopping early at a NUL
+(`:2634-2636`), and when it stops at the limit an incomplete UTF-8 sequence at the cut is dropped
+(`pconsumed`, `:2637-2644`). On valid UTF-8 the result is the longest prefix of whole characters
+before the first NUL whose encoding fits in `n` bytes. The same cut as `TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs =>
+    if c = '\x00' then [] else if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
+/-- `%.200s` of a C string: the UTF-8 of a `str` (`PyUnicode_AsUTF8`, for a name) or a type's
+`tp_name`. A `String` holds no surrogate, so the UTF-8 is valid and nothing is replaced. -/
+def trunc200 (s : String) : String := String.ofList (truncUtf8 200 s.toList)
 
 /-- `NameError` with `.name` set, `_PyEval_FormatExcCheckArg`, lines 3448-3475. -/
 def formatExcCheckArg {α : Type} (cls msg : String) : RM α := raiseS cls msg

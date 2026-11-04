@@ -3680,7 +3680,7 @@ def operator_gen(rng):
                 "k": rng.choice(["int", "int", "idx", "bad", "str"]),
                 "n": rng.choice([0, 1, 2, 3, -1, -3, -4, 2**63, -2**63 - 1])}
     if r == 9:
-        kinds = ["list", "tuple", "dict", "seqadd", "radd", "plain", "int"]
+        kinds = ["list", "tuple", "dict", "seqadd", "radd", "plain", "int", "gar"]
         return {"fn": "operator.concat", "twin": twin, "a": rng.choice(kinds), "b": rng.choice(kinds),
                 "inplace": rng.random() < .4}
     if r in (10, 11):
@@ -3692,9 +3692,9 @@ def operator_gen(rng):
     if r == 12:
         return {"fn": "operator.length_hint", "twin": twin,
                 "len": rng.choice([None, None, 3, 0, "raise"]),
-                "hint": rng.choice([None, 0, 2, -1, "ni", "typeerror", "raise", "str"]),
-                "desc": rng.choice(["func", "func", "func", "static", "prop", "propraise"]),
-                "dkind": rng.choice(["int", "int", "int", "other"]), "d": rng.choice([0, 7, -1])}
+                "hint": rng.choice([None, 0, 2, -1, "ni", "typeerror", "raise", "str", "true"]),
+                "desc": rng.choice(["func", "func", "func", "static", "prop", "propraise", "descraise", "descattr", "meta"]),
+                "dkind": rng.choice(["int", "int", "int", "bool", "other"]), "d": rng.choice([0, 7, -1])}
     if r == 13:
         xs = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 5))]
         return {"fn": "operator.itemgetter", "twin": twin, "xs": xs, "obj": rng.choice(["tuple", "sub", "list"]),
@@ -4468,7 +4468,11 @@ def operator_index(case, m):
             raise ValueError("index")
         return f
     if case["isint"]:
-        o = operator_IntO(n)
+        if case["slot"] != "none":
+            # an int subclass overriding __index__: Python's a.__index__() runs it, C answers PyLong_Check first
+            o = type("I", (int,), {"__index__": mk(case["slot"], n + 2)})(n)
+        else:
+            o = operator_IntO(n)
     else:
         body = {"__slots__": ()} if False else {}
         if case["slot"] != "none":
@@ -4551,8 +4555,13 @@ def operator_concat(case, m):
     class Plain:
         def __add__(self, o):
             return self
+
+    class GAR:
+        # hasattr(a, '__getitem__') passes this ValueError on
+        def __getattr__(self, name):
+            raise ValueError("getattr")
     mk = {"list": list, "tuple": tuple, "dict": dict, "seqadd": SeqAdd, "radd": RAdd, "plain": Plain,
-          "int": lambda: 5}
+          "int": lambda: 5, "gar": GAR}
     names = {list: "list", tuple: "tuple", SeqAdd: "seqadd", RAdd: "radd", Plain: "plain"}
     a, b = mk[case["a"]](), mk[case["b"]]()
     f = m.iconcat if case["inplace"] else m.concat
@@ -4618,9 +4627,21 @@ def operator_hint(case, m):
                 raise TypeError("hint")
             if hint == "raise":
                 raise ValueError("hint")
-            return {"ni": NotImplemented, "str": "x"}.get(hint, hint)
+            return {"ni": NotImplemented, "str": "x", "true": True}.get(hint, hint)
         desc = case.get("desc", "func")
-        if desc == "static":
+        meta = None
+        if desc in ("descraise", "descattr"):
+            class D:
+                # with an instance (C's lookup) the function; with none (Python's type(obj) lookup) an error
+                def __get__(self, inst, owner):
+                    if inst is None:
+                        raise (ValueError if desc == "descraise" else AttributeError)("get")
+                    return lambda: h(inst)
+            body["__length_hint__"] = D()
+        elif desc == "meta":
+            # only Python's type(obj).__length_hint__ sees the metaclass
+            meta = type("M", (type,), {"__length_hint__": lambda cls, o: h(o)})
+        elif desc == "static":
             # C calls it with no argument; Python's call with obj is a TypeError
             body["__length_hint__"] = staticmethod(lambda: h(None))
         elif desc == "prop":
@@ -4632,8 +4653,10 @@ def operator_hint(case, m):
             body["__length_hint__"] = property(g)
         else:
             body["__length_hint__"] = h
-    obj = type("O", (), body)()
-    d = case["d"] if case["dkind"] == "int" else "x"
+    else:
+        meta = None
+    obj = (meta or type)("O", (), body)()
+    d = {"int": case["d"], "bool": bool(case["d"])}.get(case["dkind"], "x")
     return py_result(lambda: m.length_hint(obj, d))
 
 

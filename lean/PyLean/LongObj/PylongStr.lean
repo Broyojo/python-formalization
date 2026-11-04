@@ -439,8 +439,8 @@ theorem longToDecimalString_eq {lim : Nat} (hlim : ValidLimit lim) (v : Int) :
         · right
           have : ¬ lim / 90 ≤ (sizeOf' v - 11) / 10 := fun h => h1 ⟨by omega, h⟩
           omega
-      have := intToDecimalString_spec (strf := fun n => longStrF 2 lim (Long.ofInt n))
+      rw [pylongIntToDecimalString_real, Long.toInt_ofInt]
+      exact intToDecimalString_spec (strf := fun n => longStrF 2 lim (Long.ofInt n))
         (fun n hn => leaf_str (f := 1) hlim hl n hn) v
-      simpa [Long.toInt_ofInt] using this
 
 end PyLean.LongObj
