@@ -1,0 +1,142 @@
+id: sequences-array-ins1-stale-size
+title: "array.append/insert/extend: ins1 resizes to a size read before __index__/__float__ ran, so an item conversion that clears the array exposes uninitialised memory and one that grows it loses items"
+priority: P1
+priority_note: |
+  P1 rather than P2: reachable from pure Python with no threads, ctypes or gc tricks, through the
+  three most common array mutators (append, insert, extend from an iterable all call ins1), and the
+  effect is a read of uninitialised heap memory, not only a wrong result. In a release build the
+  exposed items held whatever the allocator left there (in our runs, values that look like heap
+  addresses), so it is also an information disclosure. Not P0: it needs an item whose conversion
+  method mutates the very array it is being stored into, which ordinary code does not do.
+kind: memory-safety
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["ins1", "ins", "array_array_append_impl", "array_array_insert_impl", "array_iter_extend", "array_resize"]
+summary: |
+  ins1 (Modules/arraymodule.c:862-889) reads `n = Py_SIZE(self)` at :865, then calls
+  `setitem(self, -1, v)` at :870 to check the value. For every typecode but u and w that setitem
+  converts v with PyArg_Parse or _PyNumber_Index, which runs `__index__`, `__float__` or
+  `__complex__`. After that call ins1 resizes with the stale size, `array_resize(self, n+1)`
+  (:873), clips `where` against the stale n (:876-882), shifts n - where items (:884-887) and stores
+  (:888). Nothing re-reads Py_SIZE(self) after the Python code ran.
+  * If the code cleared the array (16 or more items, so `array_resize(self, 0)` frees the buffer,
+    :163-169), the resize reallocates a NULL buffer to n + 1 items (:183-198) and the append succeeds
+    with n + 1 items, the first n never written: uninitialised memory becomes array items readable
+    from Python. With fewer than 16 items the buffer is kept (:156-161) and the "cleared" items
+    reappear instead.
+  * If the code grew the array, the resize truncates it to n + 1 and the grown items are dropped
+    silently.
+  CHECK_ARRAY_BOUNDS, added for gh-142555/gh-142882, re-checks the index inside each setitem after the
+  conversion; it cannot help here, because the stale value is ins1's own `n`, and the store at
+  `where < n + 1` is in bounds of the array ins1 itself just resized.
+  Lean: ArrayIns1Reentrant (an append leaves one item more than the conversion code left) is refuted
+  by a 16-item 'q' array whose `__index__` clears it; ArrayIns1Stale states the exact outcome for every
+  integer typecode and every array of at least 16 items.
+likelihood: |
+  Low in ordinary code: an item whose conversion method mutates the array it is being appended to.
+  Easy to reach deliberately from pure Python, and fuzzers that mutate containers from callbacks hit
+  this class of bug (gh-142555, gh-142882, gh-152166 are siblings in the same file).
+maybe_intended: |
+  No. The same file already guards this pattern elsewhere (CHECK_ARRAY_BOUNDS after every conversion),
+  and no API documents that append may return uninitialised items or drop items.
+reproducer: |
+  from array import array
+  a = array('q', range(64))
+  class V:
+      calls = 0
+      def __index__(self):
+          V.calls += 1
+          if V.calls == 1:
+              a.clear()
+          return 7
+  a.append(V())
+  # Correct behaviour: the conversion cleared the array, so the append leaves [7].
+  changed = sum(1 for x, y in zip(a[:64], range(64)) if x != y)
+  print("len", len(a), "last", a[-1], "items differing from range(64):", changed)
+  if len(a) == 65 and a[-1] == 7:
+      print("REPRODUCED sequences-array-ins1-stale-size")
+variants:
+  grow_loses_items: |
+    from array import array
+    a = array('q', range(4))
+    class G:
+        calls = 0
+        def __index__(self):
+            G.calls += 1
+            if G.calls == 1:
+                a.extend([100, 101, 102])
+            return 7
+    a.append(G())
+    print(list(a))   # [0, 1, 2, 3, 7]: 100, 101, 102 are gone (expected [0, 1, 2, 3, 100, 101, 102, 7])
+  small_array_stale_items: |
+    from array import array
+    c = array('q', range(8))
+    class X:
+        calls = 0
+        def __index__(self):
+            X.calls += 1
+            if X.calls == 1:
+                c.clear()
+            return 7
+    c.insert(0, X())
+    print(list(c))   # [7, 0, 1, 2, 3, 4, 5, 6, 7]: the cleared items come back (expected [7])
+expected: |
+  The append acts on the array the conversion left: a cleared array becomes [7]; a grown array keeps
+  the grown items and gets 7 appended.
+observed: |
+  python3 3.15.2 (pod): `len 65 last 7`, all 64 leading items differing from range(64). REPRODUCED.
+  Under PYTHONMALLOC=debug every exposed item is -3617008641903833651 (0xCDCD... fill of fresh
+  memory), which confirms the items were never written.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): identical. REPRODUCED.
+  Variants on both: grow_loses_items prints [0, 1, 2, 3, 7]; small_array_stale_items prints
+  [7, 0, 1, 2, 3, 4, 5, 6, 7].
+promised_by: |
+  Invariant: no read of uninitialised memory from pure Python. Doc/library/array.rst: append adds
+  one item to the end of the array.
+cause: |
+  Modules/arraymodule.c:865 reads `n` before the conversion at :870 can run Python code; :873
+  (`array_resize(self, n+1)`), :876-882 and :884-887 use the stale n. array_resize (:140-199) does not
+  initialise new items, so growing a freed buffer (:183-198) exposes uninitialised memory.
+possible_fix: |
+  Re-read the size after the first setitem: `if (setitem(self, -1, v) < 0) return -1;
+  n = Py_SIZE(self);` before the resize. Or resize before running user code, as open PR #158348 does
+  for gh-158345 (it drops the first setitem and deletes the slot again if the store fails); that change
+  would also remove this stale read, and a test with a clearing `__index__` should be added to it.
+duplicates:
+  issues:
+    - {number: 158345, state: open, relation: "related, not a duplicate: append/insert/extend grow the array when the store raises OverflowError (our sequences-array-e-ins1-overflow-keeps-slot). Same function, different path: there the second setitem fails; here no error is raised and the stale n comes from a conversion that mutated the array. Its open PR #158348 would incidentally remove the stale read by resizing before the conversion."}
+    - {number: 152166, state: open, relation: "sibling, not a duplicate: fromlist recomputes the store index from the live size after __index__ resized the array. Different function; its PR #152167 changes only fromlist."}
+    - {number: 142555, state: closed, relation: "sibling: setitem wrote through a stale buffer after __index__ cleared the array; fixed by CHECK_ARRAY_BOUNDS, which does not cover ins1's stale n"}
+    - {number: 142882, state: closed, relation: "sibling, closed as duplicate of 142555: the second setitem of ins1 (via extend) after __index__ cleared the array; fixed by the same re-check"}
+    - {number: 144128, state: open, relation: "unrelated: use-after-free of the converted object itself in _PyNumber_Index/PyFloat_AsDouble error formatting"}
+  queries: ["gh search issues --repo python/cpython (unquoted words): array append __index__",
+            "array insert __index__ clear", "array append clear uninitialized", "array extend __index__ resize (152166)",
+            "arraymodule ins1 (142882, 142663 unrelated)", "array append shrink (144922 tofile, unrelated)",
+            "array __float__ append (0 results)", "array uninitialized memory (152166, 158345)",
+            "array reentrant setitem (pickle issues, unrelated)", "array CHECK_ARRAY_BOUNDS (0 results)",
+            "array append use after free (144128)", "array fromlist uninitialized (152166)",
+            "array information leak heap (none relevant)",
+            "gh search prs: 142882; CHECK_ARRAY_BOUNDS; array ins1 -> PR #158348 (open, gh-158345)",
+            "gh issue view / gh api: 152166, 144128, 142883, 142882, 142555, 158345, 157197, 157196; gh pr diff 152167, 158348",
+            "bugforge README: no array entry beyond unrelated bytearray/struct ones"]
+  note: |
+    Differs from bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml, which concerns the same function:
+    that record is an e (float16) value that passes the first check and fails the store, so ins1 raises
+    after growing the array and leaves one stale slot; no Python code runs in between. This record needs
+    no failure at all: the first check runs Python code that changes the array, and ins1 then trusts a
+    size it read before. Fixing either one does not fix the other (except PR #158348, which restructures
+    ins1 and would remove both).
+    The fromlist lead (array_resize(self, old_size) at :1871/:1877 after a callback cleared the array) does
+    reproduce, but only when the array reaches 16 items: below that, clear keeps the buffer (:156-161) and
+    the restore re-exposes the old items unchanged, which is why array('q', range(10)) kept [0..9]. With
+    array('q', range(64)), an item whose __index__ clears the array and raises leaves 64 items of fresh
+    memory under PYTHONMALLOC=debug. That is the same function and symptom as open gh-152166 (whose PR
+    #152167 still calls array_resize(self, old_size) on its new error path, so it would not fix the
+    restore), so no separate record was written; it belongs in a comment on gh-152166 if a human decides
+    to report it. It is modelled by arrFromListRe (ArrayReModel.lean).
+lean:
+  property: PyLean.Sequences.ArrayIns1Reentrant
+  theorem: PyLean.Sequences.arrayIns1Reentrant_refuted
+  related: ["PyLean.Sequences.arrayIns1Stale_proven (the exact outcome for every integer typecode and every array of >= 16 items)",
+            "PyLean.Sequences.arrIns1Re_pure (with an item that changes nothing, the re-entrant model is the old arrIns1S)"]
+  note: "ArrayReModel.lean: ReVal is an item whose conversion call k may change the array; arrIns1Re mirrors ins1 with the size read before the first conversion. The model pads new items with 0 where CPython has uninitialised memory."

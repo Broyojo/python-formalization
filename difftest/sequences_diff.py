@@ -22,6 +22,14 @@ uninitialised. The harness stores 0.0 there, the model's value for such a slot, 
 the failing call and only for that slot; the length, `allocated`, the exception and the
 slots that were shifted are still compared.
 
+Items whose conversion runs code that changes the array (`M` objects, `{"m": k, "v": inner}`:
+the first `__index__`/`__float__`/`__complex__` call clears the array, appends one or twenty zero
+items, opens a memoryview, or appends to the list `fromlist` reads) reach the stale size of `ins1`
+(bugs/sequences-array-ins1-stale-size.yaml) and the restore of `fromlist`. Items those paths
+expose without writing are uninitialised memory (or stale bytes) in CPython and 0 in the model;
+the harness computes exactly which positions they are from what the `M` object observed and
+stores 0 there before comparing (`scrub_m`, `scrub_fromlist`).
+
 Results that would need gigabytes of memory are never requested: repeat counts are
 steered to small values unless the C code's explicit overflow check rejects them
 (MemoryError) or a small `maxlen` bounds the result.
@@ -210,6 +218,46 @@ def user_val(j):
     return user_cls(j["u"], int, ns)(b["i"])
 
 
+EXTRA = [None]      # the `extra` of the case being run (its open memoryviews)
+CURLIST = [None]    # the list `fromlist_m` is reading
+
+
+def mut_val(j):
+    """An `M` object: its conversion methods run mutation `j["m"]` on the array under test the
+    first time any of them is called, then give what `j["v"]` says. `_st` records the array's
+    length before (`n0`) and after (`m`) the mutation and the number of calls."""
+    inner, k = j["v"], j["m"]
+    st = {"calls": 0}
+
+    def wrap(r):
+        def meth(self):
+            st["calls"] += 1
+            if st["calls"] == 1:
+                a = TARGET[0]
+                st["n0"] = len(a)
+                if k == 1:
+                    a.clear()
+                elif k == 2:
+                    a.frombytes(bytes(a.itemsize))
+                elif k == 3:
+                    a.frombytes(bytes(20 * a.itemsize))
+                elif k == 4:
+                    EXTRA[0]["views"].append(memoryview(a))
+                elif k == 5:
+                    CURLIST[0].append(0)
+                st["m"] = len(a)
+            return ret_obj(r)
+        return meth
+    ns = {}
+    for key, meth in (("fl", "__float__"), ("ix", "__index__"), ("cx", "__complex__")):
+        r = inner.get(key)
+        if r is not None:
+            ns[meth] = wrap(r)
+    o = user_cls(inner["u"], object, ns)()
+    o._st = st
+    return o
+
+
 def werr_in(x):
     """Whether a value (or nested list) asks for DeprecationWarning to be an error."""
     if isinstance(x, dict):
@@ -221,6 +269,8 @@ def werr_in(x):
 
 def to_val(j):
     if isinstance(j, dict):
+        if "m" in j:
+            return mut_val(j)
         if "u" in j:
             return user_val(j)
         if "f" in j:
@@ -275,6 +325,8 @@ def de_items(rng, k):
 def rand_len(rng, kind):
     if kind == "deque" and rng.random() < 0.4:
         return rng.choice([31, 32, 33, 62, 63, 64, 65, 66, 95, 96, 127, 128, 129, 130, 200])
+    if kind == "array" and rng.random() < 0.15:
+        return rng.choice([15, 16, 17, 31, 32, 64, 65])
     return rng.choice([0, 0, 1, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 16, 17, 18, 24, rng.randrange(40)])
 
 
@@ -528,6 +580,29 @@ def user_obj(rng, werr):
     return j
 
 
+def m_val(rng, tc, kinds):
+    """An `M` object (see `mut_val`) whose conversion for typecode tc calls a method: __index__
+    for the integer typecodes, __float__ or __index__ for f and d, also __complex__ for Zf and Zd."""
+    if tc in INT_RANGE:
+        key = "ix"
+    elif tc in ("f", "d"):
+        key = rng.choice(["fl", "ix"])
+    else:
+        key = rng.choice(["cx", "fl", "ix"])
+    kind = {"fl": "f", "ix": "i", "cx": "c"}[key]
+    if rng.random() < 0.6:
+        if kind == "i":
+            g = good_val(rng, tc) if tc in INT_RANGE else rng.randint(-5, 5)
+            r = {"i": g}
+        elif kind == "f":
+            r = {"f": fbits(rng)}
+        else:
+            r = {"c": [fbits(rng), fbits(rng)]}
+    else:
+        r = gen_ret(rng, kind, False)
+    return {"m": rng.choice(kinds), "v": {"u": "M", key: r}}
+
+
 def store_val(rng, tc):
     """A value to store, with more of what 3.15 changed: values `PyFloat_Pack2` refuses after
     `ins1` has grown the array, and `__index__` objects for `II_setitem`, `LL_setitem` and
@@ -556,9 +631,22 @@ def gen_array_op(rng, a):
                      "fromfile_raise", "tofile", "fromunicode", "tounicode", "byteswap", "reverse", "clear",
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
                      "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
-                     "it_setstate"])
+                     "it_setstate", "append_m", "append_m", "insert_m", "setitem_m", "extend_m",
+                     "fromlist_m", "fromlist_m", "getitem_bad"])
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
+    if op.endswith("_m"):
+        if tc in ("u", "w", "e"):
+            return None         # u/w run no Python code; e's failed store leaves its own stale slot
+        if op == "append_m":
+            return [op, m_val(rng, tc, [1, 2, 3, 4])]
+        if op == "insert_m":
+            return [op, edge_index(rng, n), m_val(rng, tc, [1, 2, 3, 4])]
+        if op == "setitem_m":
+            return [op, rng.choice([edge_index(rng, n), rng.randint(-n, max(n - 1, 0))]), m_val(rng, tc, [1, 2, 3, 4])]
+        vs = good(rng.choice([0, 1, 2, 3, 5]))
+        vs.insert(rng.randint(0, len(vs)), m_val(rng, tc, [1, 2, 3, 4] + ([5] if op == "fromlist_m" else [])))
+        return [op, vs]
     if op == "append":
         return [op, store_val(rng, tc)]
     if op in ("count", "contains", "remove", "index"):
@@ -603,6 +691,8 @@ def gen_array_op(rng, a):
     if op in ("add_other", "extend_arr_other"):
         tc2 = rng.choice([t for t in "bBhHiIlLqQ" if t != tc])
         return [op[:-6], tc2, [good_val(rng, tc2) for _ in range(rng.choice([0, 1, 2]))]]
+    if op == "getitem_bad":
+        return [op, rng.choice(["k", None, 1.5])]
     if op in ("add_bad", "iadd_bad", "iadd_self", "extend_bad", "extend_self", "fromlist_bad", "tolist",
               "tobytes", "tounicode", "byteswap", "reverse", "clear", "copy", "buffer_info",
               "typecode", "itemsize", "len", "repr", "mv_open", "mv_close", "it_new"):
@@ -1122,6 +1212,60 @@ def ins_at_end(a, i):
     return i >= n or (n == 0 and i < 0)
 
 
+def zero_of(tc):
+    return 0j if tc in ("Zf", "Zd") else (0.0 if tc in ("e", "f", "d") else 0)
+
+
+def ins1pos(n, w):
+    if w < 0:
+        w += n
+        if w < 0:
+            w = 0
+    return n if w > n else w
+
+
+def scrub_m(a, v, where):
+    """After `ins1(a, where, v)` for an `M` object `v`: if the store ran (second call), the
+    resize to the stale `n0 + 1` exposed the items `[m, n0 + 1)` past what the mutation left,
+    and the memmove from the clipped `w` moved them up by one; store 0 at every position that
+    still holds such an item."""
+    st = v._st
+    if st["calls"] < 2 or "m" not in st:
+        return
+    n0, m = st["n0"], st["m"]
+    w = ins1pos(n0, where if where is not None else n0)
+    for j in range(len(a)):
+        if j > n0:
+            break
+        exposed = (m <= j < w) or (w < j and j - 1 >= m)
+        if exposed:
+            a[j] = zero_of(a.typecode)
+
+
+def scrub_fromlist(a, item, p, old, nl, raised):
+    """After `a.fromlist(l)` with the `M` object `item` at position `p` of `l` (length `nl`,
+    the array `old` items long before): the positions the model holds 0 at and CPython never
+    wrote. Clear (1): the restore to `old` exposes `[0, old)`. Growth by `g` (2, 3): items after
+    `p` are stored `g` places further on, so `[old+p+1, old+p+1+g)` below `old+nl` is never
+    written. Export (4): a failure leaves `[old+p, old+nl)` unwritten, the restore refused."""
+    st = item._st
+    if st["calls"] == 0 or "m" not in st:
+        return
+    k = item._k
+    if k == 1:
+        rng_ = range(0, old)
+    elif k in (2, 3):
+        g = 1 if k == 2 else 20
+        rng_ = range(old + p + 1, min(old + p + 1 + g, old + nl))
+    elif k == 4 and raised and len(a) == old + nl:
+        rng_ = range(old + p, old + nl)
+    else:
+        return
+    for j in rng_:
+        if j < len(a):
+            a[j] = zero_of(a.typecode)
+
+
 def run_array_op(a, op, c, extra):
     name, args = op[0], op[1:]
     its = extra["its"]
@@ -1149,6 +1293,8 @@ def run_array_op(a, op, c, extra):
     if name == "remove":
         return a.remove(to_val(args[0]))
     if name == "getitem":
+        return from_val(a[args[0]])
+    if name == "getitem_bad":
         return from_val(a[args[0]])
     if name == "sqitem":
         return from_val(sq_get(a, args[0]))
@@ -1216,6 +1362,45 @@ def run_array_op(a, op, c, extra):
         return a.extend(a)
     if name == "fromlist":
         return a.fromlist([to_val(v) for v in args[0]])
+    if name in ("append_m", "insert_m", "setitem_m", "extend_m", "fromlist_m"):
+        EXTRA[0] = extra
+    if name == "append_m":
+        v = to_val(args[0])
+        try:
+            return a.append(v)
+        finally:
+            scrub_m(a, v, None)
+    if name == "insert_m":
+        v = to_val(args[1])
+        try:
+            return a.insert(args[0], v)
+        finally:
+            if -M - 1 <= args[0] <= M:
+                scrub_m(a, v, args[0])
+    if name == "setitem_m":
+        a[args[0]] = to_val(args[1])
+        return None
+    if name == "extend_m":
+        vs = [to_val(x) for x in args[0]]
+        try:
+            return a.extend(vs)
+        finally:
+            for v in vs:
+                if hasattr(v, "_st"):
+                    scrub_m(a, v, None)
+    if name == "fromlist_m":
+        vs = [to_val(x) for x in args[0]]
+        p = next(i for i, x in enumerate(args[0]) if isinstance(x, dict) and "m" in x)
+        vs[p]._k = args[0][p]["m"]
+        CURLIST[0] = vs
+        old, nl = len(a), len(vs)
+        try:
+            a.fromlist(vs)
+        except Exception:
+            scrub_fromlist(a, vs[p], p, old, nl, True)
+            raise
+        scrub_fromlist(a, vs[p], p, old, nl, False)
+        return None
     if name == "fromlist_bad":
         return a.fromlist(())
     if name == "tolist":

@@ -18,6 +18,9 @@ import PyLean.Sequences.ArrayFloatProps
 import PyLean.Sequences.ArrayCmp
 import PyLean.Sequences.ArrayFile
 import PyLean.Sequences.ArrayRepr
+import PyLean.Sequences.ArrayReentrant
+import PyLean.Sequences.ArrayLimits
+import PyLean.Sequences.ArraySubscr
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
@@ -117,7 +120,7 @@ def entries : List Entry := [
     notes := "'b' rejects 128..32767 with 'signed char is greater than maximum' but larger values with the 'signed short integer' message of PyArg_Parse('h'); class is OverflowError throughout." },
   { id := "sequences-array-subscript", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_subscr", "array_ass_subscr", "array_item", "array_ass_item", "getarrayitem",
-      "array_del_slice", "array_length"]
+      "array_del_slice", "array_length", "setarrayitem"]
     statement := "For every array and int i: a[i], a[i] = v and del a[i] are the list operations on the stored values, with IndexError out of range; the sq_item and sq_ass_item slots do the same."
     source := "invariant: sequence indexing", status := .proven
     prop := ``ArraySubscript, thm := some ``arraySubscript_proven },
@@ -280,6 +283,75 @@ def entries : List Entry := [
     statement := "For every typecode but e, append and insert of a value the store refuses raise its exception and leave the array as it was; a value that passes the first check and is refused by the store is an e item, and append raises with a new last slot."
     source := "invariant: a failed call changes nothing", status := .proven
     prop := ``ArrayIns1Failure, thm := some ``arrayIns1Failure_proven },
+  { id := "sequences-array-ins1-reentrant", pyFile := "Modules/arraymodule.c"
+    pyFns := ["ins1", "ins", "array_array_append_impl", "array_resize"]
+    statement := "For every array without exported buffers and every item whose first conversion (__index__, __float__, __complex__) may run code that changes the array, a successful a.append(v) leaves exactly one item more than that code left."
+    source := "invariant: append adds one item to the array (Doc/library/array.rst append); no read of uninitialised memory", status := .refuted
+    prop := ``ArrayIns1Reentrant, thm := some ``arrayIns1Reentrant_refuted
+    bug := some "sequences-array-ins1-stale-size"
+    notes := "ins1 reads n = Py_SIZE(self) before the first setitem runs the conversion and resizes to the stale n + 1: a 16-item array whose __index__ clears it gets 17 items, 16 never written. Reproduces on main." },
+  { id := "sequences-array-ins1-stale", pyFile := "Modules/arraymodule.c"
+    pyFns := ["ins1", "ins", "array_array_append_impl", "array_resize", "array_array_clear_impl"]
+    statement := "For every integer typecode, every array of at least 16 items without exports and every x in range, with an item whose __index__ clears the array once and returns x: the clear frees the buffer and a.append(v) succeeds with n + 1 items, the first n the cells array_resize(self, n+1) obtained from a NULL buffer (uninitialised in CPython, 0 in the model), the last x."
+    source := "Modules/arraymodule.c:862-889, 140-199 (what the code does)", status := .proven
+    prop := ``ArrayIns1Stale, thm := some ``arrayIns1Stale_proven },
+  { id := "sequences-array-setitem-recheck", pyFile := "Modules/arraymodule.c"
+    pyFns := ["b_setitem", "BB_setitem", "h_setitem", "HH_setitem", "i_setitem", "II_setitem",
+      "l_setitem", "LL_setitem", "q_setitem", "QQ_setitem"]
+    statement := "For every integer typecode, index i >= 0 and item whose __index__ runs code leaving the array a' and returns x: if i is no longer inside a' (or a' has no buffer) setitem raises the conversion's own OverflowError when x fails a check that precedes CHECK_ARRAY_BOUNDS, else IndexError('array assignment index out of range') (also for x that b's later signed-char check refuses), storing nothing; inside a' it stores the converted x into a'."
+    source := "invariant: CHECK_ARRAY_BOUNDS after the conversion (arraymodule.c:217-238); Python/getargs.c, Objects/longobject.c for the conversion's messages", status := .proven
+    prop := ``ArraySetitemRecheck, thm := some ``arraySetitemRecheck_proven },
+  { id := "sequences-array-fromlist-guard", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromlist_impl"]
+    statement := "For every integer typecode and array without exports: a first item whose conversion appends to the list is stored, then fromlist raises RuntimeError('list changed size during iteration') and the array gets its old items back; a first item whose conversion fails raises its exception with the old items back; while a buffer is exported, a non-empty list raises BufferError before any conversion."
+    source := "Modules/arraymodule.c:1852-1883; Doc/library/array.rst:218-219 (unchanged on error)", status := .proven
+    prop := ``ArrayFromListGuard, thm := some ``arrayFromListGuard_proven
+    notes := "With items whose conversion changes nothing, the re-entrant model arrFromListRe is arrFromList (arrFromListRe_pure), so sequences-array-fromlist applies to it." },
+  { id := "sequences-array-exported-resize", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_do_extend", "array_inplace_concat", "array_array_extend_impl", "array_array_remove_impl",
+      "array_array_pop_impl", "array_array_fromunicode_impl", "array_inplace_repeat", "array_del_slice"]
+    statement := "While a buffer is exported: a.extend(b) and a += b for a non-empty same-typecode b raise BufferError after the overflow check; remove raises BufferError after finding the item; pop reads the item (its error first) then raises BufferError; fromunicode of a non-empty str raises BufferError (w: after its MemoryError check); a *= n (n != 1, non-empty) raises the MemoryError of its overflow checks, else BufferError."
+    source := "Doc/library/array.rst (buffer protocol); invariant: an exported buffer is never moved", status := .proven
+    prop := ``ArrayExportedResize, thm := some ``arrayExportedResize_proven },
+  { id := "sequences-array-alloc-limits", pyFile := "Modules/arraymodule.c"
+    pyFns := ["newarrayobject_untracked", "newarrayobject", "array_repeat"]
+    statement := "newarrayobject refuses exactly the sizes above PY_SSIZE_T_MAX / itemsize with MemoryError and otherwise gives size zeroed items; a * n (non-empty a, n in Py_ssize_t) raises MemoryError when n > PY_SSIZE_T_MAX / len(a), and else when len(a) * n > PY_SSIZE_T_MAX / itemsize."
+    source := "invariant: allocation sizes are checked (arraymodule.c:812-814, 1152-1154)", status := .proven
+    prop := ``ArrayAllocLimits, thm := some ``arrayAllocLimits_proven
+    notes := "A size that passes both checks can still fail in the allocator (array('b', [1]) * 2**62 asks for 4 EiB); the model has no allocator, so that MemoryError is outside it." },
+  { id := "sequences-array-search-errors", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_count_impl", "array_contains", "array_array_index_impl", "array_array_remove_impl",
+      "getarrayitem"]
+    statement := "For every array (items need not decode) and every comparison that may raise: count, in, index() and remove read and compare the items in order and raise the first exception, of a read or of a comparison, comparing no later item; count counts true comparisons, the others stop at the first, remove deleting it."
+    source := "invariant: same methods as list (Objects/listobject.c list_count/list_index/list_remove propagate the comparison's error)", status := .proven
+    prop := ``ArraySearchErrors, thm := some ``arraySearchErrors_proven
+    notes := "Scope: a comparison that mutates the array is not modelled (the loops re-read Py_SIZE)." },
+  { id := "sequences-array-get-slice", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_subscr"]
+    statement := "For every array and slice with a non-zero step, a[s] is a new array.array of the same typecode holding the items at start + k*step for the start, step and length slice.indices gives, through the step-1 memcpy and the size_t cursor loop alike; a zero step raises ValueError; an __index__ key is a[i]; any other key raises TypeError('array indices must be integers')."
+    source := "invariant: sequence slicing (Doc/library/stdtypes.rst common sequence operations); twin: memcpy fast path vs cursor loop", status := .proven
+    prop := ``ArrayGetSlice, thm := some ``arrayGetSlice_proven },
+  { id := "sequences-array-tolist", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_tolist_impl", "getarrayitem"]
+    statement := "For every array and typecode, a.tolist() is [a[0], ..., a[len(a)-1]], reading in order, so the first item that does not read (a u/w value outside [0, 0x10FFFF]) raises its ValueError."
+    source := "Doc/library/array.rst tolist; twin: tolist vs subscript", status := .proven
+    prop := ``ArrayToList, thm := some ``arrayToList_proven },
+  { id := "sequences-array-ass-slice-checks", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_ass_subscr"]
+    statement := "a[s] = value unpacks the slice first (zero step: ValueError for any value); a non-array value raises TypeError('can only assign array (not \"T\") to array slice'); a[s] = a is the assignment of a copy of a; an array of another typecode raises TypeError (PyErr_BadArgument); while exported, a deletion or a size-changing assignment raises BufferError before anything changes."
+    source := "Modules/arraymodule.c:2825-2878; invariant: an exported buffer is never moved", status := .proven
+    prop := ``ArrayAssSliceChecks, thm := some ``arrayAssSliceChecks_proven },
+  { id := "sequences-array-mformat-table", pyFile := "Modules/arraymodule.c"
+    pyFns := ["typecode_to_mformat_code"]
+    statement := "On a little-endian machine, every typecode's machine format code is in 0..27 and names a little-endian row, and for every typecode but u and w its mformat_descriptors row has the typecode's item size and signedness."
+    source := "twin: typecode_to_mformat_code vs the descriptor table (arraymodule.c:770-789, 2096-2129)", status := .proven
+    prop := ``ArrayMformatTable, thm := some ``arrayMformatTable_proven },
+  { id := "sequences-array-sizeof-exact", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array___sizeof___impl", "array_resize"]
+    statement := "a.__sizeof__() is basicsize + allocated * itemsize, and after array_resize to n (no exports, n items fit) allocated is unchanged when the buffer is kept (allocated >= n, shrink by less than 16, a buffer exists), 0 for n == 0, else (n >> 4) + (size < 8 ? 3 : 7) + n."
+    source := "Modules/arraymodule.c:2085-2091, 140-199 (difftested against __sizeof__)", status := .proven
+    prop := ``ArraySizeofExact, thm := some ``arraySizeofExact_proven
+    notes := "The source comment's growth pattern (0, 4, 8, 16, 25, 34, 46, ...) is off from 34 on: the code gives 44, which 3.15.2 confirms." },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
     statement := "For every array and int n whose result fits: a * n and a *= n give n copies of the items (none for n <= 0), OverflowError outside Py_ssize_t included."
@@ -293,7 +365,7 @@ def entries : List Entry := [
     prop := ``ArrayClearCopy, thm := some ``arrayClearCopy_proven
     notes := "copy.copy of a subclass gives a plain array: python/cpython#152042." },
   { id := "sequences-array-fromlist", pyFile := "Modules/arraymodule.c"
-    pyFns := ["array_array_fromlist_impl", "array_array_tolist_impl", "setarrayitem", "getarrayitem"]
+    pyFns := ["array_array_fromlist_impl", "array_array_tolist_impl", "getarrayitem"]
     statement := "a.fromlist(l) is all or nothing; a.tolist() on an integer typecode gives the items."
     source := "Doc/library/array.rst fromlist", status := .proven
     prop := ``ArrayFromList, thm := some ``arrayFromList_proven },
@@ -310,7 +382,8 @@ def entries : List Entry := [
     source := "invariant", status := .proven
     prop := ``ArrayAttrs, thm := some ``arrayAttrs_proven },
   { id := "sequences-array-buffer", pyFile := "Modules/arraymodule.c"
-    pyFns := ["array_buffer_getbuf", "array_buffer_relbuf", "array_resize"]
+    pyFns := ["array_buffer_getbuf", "array_buffer_relbuf", "array_resize", "ins1",
+      "array_array_append_impl", "array_del_slice", "array_array_clear_impl"]
     statement := "memoryview(a) has the array's format, itemsize, length and bytes; releasing restores the array; while exported, size changes raise BufferError."
     source := "Doc/library/array.rst; invariant", status := .proven
     prop := ``ArrayBuffer, thm := some ``arrayBuffer_proven },
