@@ -5,6 +5,8 @@ kind: diagnostic
 module: pygrammar
 files: [Grammar/python.gram]
 functions: ["invalid_dotted_as_name", "invalid_import_from_as_name"]
+status: duplicate
+duplicate_of: python/cpython#146492 (open, labelled type-bug, 3.14, 3.15); fix in PR python/cpython#146493 (open, changes requested, labelled stale)
 summary: |
   `invalid_dotted_as_name` and `invalid_import_from_as_name` (python.gram:1438-1445) fire when
   the token after `as` is not "a NAME followed by `,` `)` `;` or NEWLINE", then parse
@@ -21,9 +23,19 @@ likelihood: |
   missing-comma case is a common typing mistake; `else` after a one-line import is rarer.
 maybe_intended: |
   No: the message contradicts the grammar (a NAME is exactly what `as` takes), and gh-146492 is
-  open and labelled type-bug. Note that the fix sketched there (adding NAME to the tokens the
-  lookahead accepts after the target) does not cover a keyword such as `else`, nor `=` or `:`,
-  after the name.
+  open and labelled type-bug. Every case here is already covered upstream. PR gh-146493 (by
+  brianschubert) adds a rule for "expected comma between import clauses" and also requires
+  `(',' | ')' | ';' | NEWLINE)` after `a=expression` in both rules
+  (`dotted_name 'as' !(NAME (',' | ')' | ';' | NEWLINE)) a=expression (',' | ')' | ';' | NEWLINE)`).
+  With that change, `else`, `=` and `:` after the name no longer reach the "cannot use name"
+  action either. The trailing-terminator change came from brianschubert's own PR comment
+  listing `import a as b 1`, `import a as b as c` and `import a as b import foo`; pablogsal
+  replied that it belonged in the same PR. pablogsal's review asked for changes: the missing-comma rule was "a bit
+  too broad" (`import a b()`, `import a b + c`), the tests did not pin the caret range, and
+  `import a b c` falls back to the generic error. The PR is open, labelled "awaiting changes"
+  and "stale" (no activity for 90 days). An earlier version of this record said the upstream
+  fix missed `else`, `=` and `:`. That was wrong: it read only the sketch in the issue, not the
+  PR diff.
 reproducer: |
   def msg(src):
       try:
@@ -50,7 +62,8 @@ cause: |
 possible_fix: |
   Only raise when the target is not a plain name, for example by requiring `!NAME` before
   `a=expression` combined with the existing lookahead, or by making the action return NULL when
-  `a->kind == Name_kind`; or, as gh-146493 does, give the missing-comma case its own message.
+  `a->kind == Name_kind`; or, as gh-146493 does, require `(',' | ')' | ';' | NEWLINE)` after
+  `a=expression` and give the missing-comma case its own message.
 tested:
   python3 (3.15.2): REPRODUCED
   main (vendor/cpython-main/python.exe): REPRODUCED
@@ -58,7 +71,11 @@ duplicates:
   issues: [146492]
   related: [138944]
   queries: ["cannot use name as import target", "import target error message as name",
-            "import as target misleading syntax error", "146492 (PR search)"]
+            "import as target misleading syntax error", "146492 (PR search)",
+            "gh pr view 146493 --repo python/cpython --comments",
+            "gh pr diff 146493 --repo python/cpython",
+            "gh api repos/python/cpython/pulls/146493/comments (review comments)",
+            "gh issue view 146492 --repo python/cpython --json state,labels"]
   bugforge: "none (no import-target entries)"
 lean:
   property: PyLean.PyGrammar.Peg.DottedAsNameNameTarget

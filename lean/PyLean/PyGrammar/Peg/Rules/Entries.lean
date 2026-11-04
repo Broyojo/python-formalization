@@ -1078,15 +1078,21 @@ def ruleEntries : List Entry := [
     statement := "invalid_assignment: a list/tuple target before ':' annotation raises \"only " ++
       "single target (not <name>) can be annotated\"; a star_named_expression ',' ... ':' raises " ++
       "the tuple message at the first element; an expression ':' annotation raises \"illegal " ++
-      "target for annotation\"; and after the annotation and '=' alternatives fail, " ++
-      "star_expressions augassign annotated_rhs raises \"'<name>' is an illegal expression for " ++
-      "augmented assignment\"; each raise over that expression, NULL with error_indicator set."
+      "target for annotation\"; once those fail, (star_targets '=')* star_expressions '=' " ++
+      "raises \"cannot assign to <name of t>\" over the first invalid target t " ++
+      "(_PyPegen_get_invalid_target(a, STAR_TARGETS)), or with none gives NULL with no error and " ++
+      "the mark after '='; with star_expressions NULL, (star_targets '=')* yield_expr '=' raises " ++
+      "\"assignment to yield expression not possible\" over the yield expression; and after the " ++
+      "annotation and '=' alternatives fail, star_expressions augassign annotated_rhs raises " ++
+      "\"'<name>' is an illegal expression for augmented assignment\"; each raise over that " ++
+      "expression, NULL with error_indicator set."
     source := "Grammar/python.gram:1297-1316"
     status := .proven
-    prop := ``InvalidAssignment
-    thm := some ``invalidAssignment_proven
-    notes := scheme ++ " The two '=' alternatives (INVALID_TARGET, yield) are stated only as " ++
-      "failing on the way to augassign." },
+    prop := ``InvalidAssignmentRule
+    thm := some ``invalidAssignmentRule_proven
+    notes := scheme ++ " AnnAltsFail lets alternatives 2 and 3 fail at any of their items " ++
+      "(no star_named_expression, no ',', no ':' after the loop; no expression, no ':'); the " ++
+      "'=' clauses take that as a hypothesis." },
   { id := "pygrammar-rule-sum-sub-sub"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_sum_sub_sub
