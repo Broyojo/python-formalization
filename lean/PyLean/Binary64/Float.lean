@@ -11,7 +11,7 @@ conversions, `hex`, `fromhex`, `as_integer_ratio`, `pow`, `divmod`, `//`, `%`,
 models assume a little-endian platform (`_PY_FLOAT_LITTLE_ENDIAN`), like the machines
 they are tested on.
 
-The decimal paths (`repr`, `float(str)`, `round(x, n)`) live in `Decimal.lean` and
+The decimal paths (`repr`, `float(str)`, `round(x, n)`) live in `Dtoa.lean` and
 `Strtod.lean`, on top of the mirror of `Python/dtoa.c`.
 -/
 
