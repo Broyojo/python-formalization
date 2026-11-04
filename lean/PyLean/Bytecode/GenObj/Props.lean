@@ -437,6 +437,7 @@ def noopHooks : Hooks Unit Unit where
   warnUnawaitedAgen w _ _ := w
   normalize _ _ := Exc.generatorExit
   typeName _ := "x"
+  typeFqName _ := "x"
   audit _ _ := none
   frameObject _ _ := .none
   isIter _ := false
@@ -451,7 +452,7 @@ The hypothesis is what a depth-1 frame does: no handler but the outermost, whose
 `stopiteration_error` passes `GeneratorExit` through. -/
 def GenCloseFastSlowAgree : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (n : Nat) (w : World V X) (r : Ref),
-    (w.get r).state = .suspended → (w.get r).instr = .resume true → w.noUnwindTools = false →
+    (w.get r).state = .suspended → (w.get r).instr.isResumeDepth1 = true → w.noUnwindTools = false →
     (∀ a, (h.resume (w.setState r .executing) r a (some Exc.generatorExit)).2 =
       .raised Exc.generatorExit) →
     let fast := genCloseF h (n + 1) { w with noUnwindTools := true } r
@@ -466,7 +467,7 @@ theorem genCloseFastSlowAgree_proven : GenCloseFastSlowAgree := by
   have hfast : genCloseF h (n + 1) { w with noUnwindTools := true } r =
       (genClearFrame ((({ w with noUnwindTools := true } : World V X).setState r .executing).setState r .cleared) r,
        .ok .none) := by
-    simp [genCloseF, g1, hs, genCloseBody, closeDelegate, hi, InstrPtr.isResumeDepth1]
+    simp [genCloseF, g1, hs, genCloseBody, closeDelegate, hi]
   have hsl : genCloseF h (n + 1) w r =
       genCloseFinish h (w.setState r .executing) r (some Exc.generatorExit) := by
     simp [genCloseF, hs, genCloseBody, closeDelegate, hi, hu, closePending]

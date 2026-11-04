@@ -147,13 +147,38 @@ structure Code where
 
 def Code.hasFlag (c : Code) (flag : Nat) : Bool := c.flags &&& flag != 0
 
-/-- Where `frame->instr_ptr` points, as far as `is_resume` (:451-461) and the
-`RESUME_OPARG_DEPTH1_MASK` test (:504-505) can tell. `is_resume` accepts `RESUME`,
-`RESUME_CHECK`, `RESUME_CHECK_JIT` and `INSTRUMENTED_RESUME`; `depth1` is the mask bit. -/
-inductive InstrPtr where
-  | resume (depth1 : Bool)
-  | other
+/-- The opcodes `is_resume` (:452-461) accepts, `Include/opcode_ids.h:133`, `:205-206`, `:235`. -/
+def RESUME : Nat := 128
+def RESUME_CHECK : Nat := 200
+def RESUME_CHECK_JIT : Nat := 201
+def INSTRUMENTED_RESUME : Nat := 244
+/-- `RESUME_OPARG_DEPTH1_MASK`, `Include/internal/pycore_opcode_utils.h:93`. -/
+def RESUME_OPARG_DEPTH1_MASK : Nat := 0x8
+/-- `RESUME_AFTER_YIELD`, `pycore_opcode_utils.h:87`. -/
+def RESUME_AFTER_YIELD : Nat := 1
+
+/-- The code unit `frame->instr_ptr` points at: its opcode and oparg, all that `is_resume`
+(:452-461) and the `RESUME_OPARG_DEPTH1_MASK` test (:504-505) read. -/
+structure InstrPtr where
+  opcode : Nat := 0
+  oparg : Nat := 0
   deriving DecidableEq, Repr, Inhabited
+
+/-- `is_resume`, :452-461: the four `RESUME` opcodes, compared one by one. -/
+def InstrPtr.isResume (i : InstrPtr) : Bool :=
+  i.opcode == RESUME || i.opcode == RESUME_CHECK || i.opcode == RESUME_CHECK_JIT ||
+    i.opcode == INSTRUMENTED_RESUME
+
+/-- `oparg & RESUME_OPARG_DEPTH1_MASK` (:504-505). -/
+def InstrPtr.depth1 (i : InstrPtr) : Bool := i.oparg &&& RESUME_OPARG_DEPTH1_MASK != 0
+
+/-- A code unit that is not a `RESUME` (opcode 0 is `CACHE`). -/
+def InstrPtr.other : InstrPtr := {}
+
+/-- `RESUME` after a `yield` (`RESUME_AFTER_YIELD`), with the depth-1 bit `d`, as
+`Python/flowgraph.c:969-977` emits it. -/
+def InstrPtr.resumeAfterYield (d : Bool) : InstrPtr :=
+  { opcode := RESUME, oparg := RESUME_AFTER_YIELD ||| (if d then RESUME_OPARG_DEPTH1_MASK else 0) }
 
 /-- `PyGenObject`, with the `PyAsyncGenObject`/`PyCoroObject` tail. -/
 structure GenObj (V : Type) where
@@ -161,7 +186,7 @@ structure GenObj (V : Type) where
   /-- `gi_frame_state` -/
   state : FrameState := .cleared
   /-- `gi_iframe.instr_ptr` -/
-  instr : InstrPtr := .other
+  instr : InstrPtr := InstrPtr.other
   /-- `_PyFrame_StackPeek(frame, 2)`, meaningful when suspended in a `yield from`: the
   receiver, which on 3.15 lies under `index_or_null`. -/
   stackTop : Obj V := .none
@@ -261,10 +286,10 @@ end World
 
 /-- What `_PyEval_EvalFrame` left behind (:281). For `yielded`, `oparg` is
 `YIELD_VALUE`'s oparg (`false` is 0: `FRAME_SUSPENDED`, `true` is 1:
-`FRAME_SUSPENDED_YIELD_FROM`), `depth1` is `RESUME_OPARG_DEPTH1_MASK` of the
-`RESUME` that follows it, and `top` is what `_PyFrame_StackPeek` then sees. -/
+`FRAME_SUSPENDED_YIELD_FROM`), `next` is the code unit `frame->instr_ptr` then points at
+(the `RESUME` that follows the yield), and `top` is what `_PyFrame_StackPeek` then sees. -/
 inductive ResumeOutcome (V : Type) where
-  | yielded (oparg : Bool) (value : Obj V) (depth1 : Bool) (top : Obj V)
+  | yielded (oparg : Bool) (value : Obj V) (next : InstrPtr) (top : Obj V)
   | returned (value : Obj V)
   | raised (e : Exc V)
   deriving Inhabited
@@ -316,8 +341,12 @@ structure Hooks (V X : Type) where
   warnUnawaitedAgen : World V X → Ref → String → World V X
   /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:488) for a class `typ`. -/
   normalize : Obj V → Option (Obj V) → Exc V
-  /-- `Py_TYPE(o)->tp_name`. -/
+  /-- `Py_TYPE(o)->tp_name`: for a class statement the bare `__name__`. -/
   typeName : Obj V → String
+  /-- `%T` of `PyErr_Format`: `_PyType_GetFullyQualifiedName(Py_TYPE(o), '.')`, the
+  `__qualname__` prefixed by `__module__` unless that is `builtins` or `__main__`
+  (`Objects/typeobject.c`). -/
+  typeFqName : Obj V → String
   /-- `PySys_Audit("object.__getattr__", "Os", gen, name)` (:956, @3.14.7:799). -/
   audit : World V X → String → Option (Exc V)
   /-- `_PyFrame_GetFrameObject` (:964). -/
@@ -359,10 +388,10 @@ def clearGenFrame (w : World V X) (r : Ref) : World V X :=
   w.setState r .cleared
 
 /-- What `_YIELD_VALUE` does to its generator, `Python/bytecodes.c:1856-1872`. -/
-def suspendFrame (w : World V X) (r : Ref) (oparg depth1 : Bool) (top : Obj V) : World V X :=
+def suspendFrame (w : World V X) (r : Ref) (oparg : Bool) (next : InstrPtr) (top : Obj V) : World V X :=
   w.set r { w.get r with
     state := FrameState.ofOparg oparg
-    instr := .resume depth1
+    instr := next
     stackTop := top }
 
 /-- The end of `gen_send_ex2`, :289-324, with the state write `_YIELD_VALUE` or
@@ -370,7 +399,7 @@ def suspendFrame (w : World V X) (r : Ref) (oparg depth1 : Bool) (top : Obj V) :
 of the two ran, and is here the shape of the outcome. -/
 def finishResume (w : World V X) (r : Ref) (kind : GenKind) (arg : Option (Obj V)) :
     ResumeOutcome V → World V X × SendResult V
-  | .yielded oparg v depth1 top => (suspendFrame w r oparg depth1 top, .next v)
+  | .yielded oparg v next top => (suspendFrame w r oparg next top, .next v)
   | .returned v =>
     if v.isNone = true ∧ kind ≠ .asyncGen ∧ arg.isNone = true then
       (clearGenFrame w r, .err none)
@@ -471,10 +500,8 @@ def nextCall (h : Hooks V X) (w : World V X) (r : Ref) : World V X × Ret V :=
 
 /-! ## Delegation: `gen_close`, `_gen_throw` -/
 
-/-- `is_resume` (:451-461) followed by the mask test at :505. -/
-def InstrPtr.isResumeDepth1 : InstrPtr → Bool
-  | .resume d => d
-  | .other => false
+/-- `is_resume(frame->instr_ptr)` (:500) followed by the mask test at :505. -/
+def InstrPtr.isResumeDepth1 (i : InstrPtr) : Bool := i.isResume && i.depth1
 
 /-- `frame_state == FRAME_SUSPENDED_YIELD_FROM` and `_PyFrame_StackPeek(frame, 2)`, which on
 3.15 stand where `_PyGen_yf` stood: :776-781 in `gen_getyieldfrom`. -/
@@ -724,16 +751,19 @@ def genGetName (g : GenObj V) : Obj V := g.name
 /-- `gen_get_qualname`, :863-869. -/
 def genGetQualname (g : GenObj V) : Obj V := g.qualname
 
-/-- `gen_set_name`, :844-860. `value` is `none` for `del gen.__name__`. -/
+/-- `gen_set_name`, :844-861. `value` is `none` for `del gen.__name__`. `Obj.str` stands for
+every object `PyUnicode_Check` accepts, `str` subclasses included, and the setter stores the
+value it was given (`Py_NewRef(value)`, :857); a value model has no object identity beyond
+that. -/
 def genSetName (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
-  | some (.str s) => (w.set r { w.get r with name := .str s }, .ok)
+  | some v@(.str _) => (w.set r { w.get r with name := v }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__name__ must be set to a string object")))
 
 /-- `gen_set_qualname`, :871-887. -/
 def genSetQualname (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
-  | some (.str s) => (w.set r { w.get r with qualname := .str s }, .ok)
+  | some v@(.str _) => (w.set r { w.get r with qualname := v }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__qualname__ must be set to a string object")))
 
 /-- `gen_getyieldfrom`, :890-914, which on 3.15 is also `cr_await` and `ag_await`. -/
@@ -833,7 +863,7 @@ def genNewWithQualname (kind : GenKind) (code : Code) (name qualname : Option (O
     GenObj V :=
   { kind := kind
     state := .created
-    instr := .resume false
+    instr := { opcode := RESUME, oparg := 0 }
     code := code
     name := name.getD (.str code.name)
     qualname := qualname.getD (.str code.qualname) }
@@ -869,8 +899,17 @@ def isCoro (w : World V X) : Obj V → Bool
   | .gen r => (w.get r).kind = .coro
   | _ => false
 
-/-- `_PyCoro_GetAwaitableIter`, :1245-1284. `%T` omits the module for `__main__` and
-`builtins`. -/
+/-- `%.Ns` of `PyUnicode_FromFormat` on a C string (`unicode_fromformat_write_utf8`,
+`Objects/unicodeobject.c`): the longest prefix of whole characters whose UTF-8 encoding fits
+in `n` bytes. The same definition as `PyLean.TypeObj.cutUtf8`. -/
+def cutUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: cutUtf8 (n - c.utf8Size) cs else []
+
+def trunc100 (s : String) : String := String.ofList (cutUtf8 100 s.toList)
+
+/-- `_PyCoro_GetAwaitableIter`, :1245-1284. The two `__await__` messages use `%T` (the
+fully qualified name), the last one `'%.100s'` of `tp_name`. -/
 def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V X × Ret V :=
   if isCoro w o = true ∨ genIsCoroutine w o = true then
     (w, .ok o)
@@ -879,15 +918,15 @@ def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V
     | some (w1, .ok res) =>
       if isCoro w1 res = true ∨ genIsCoroutine w1 res = true then
         (w1, .err (some (Exc.typeError
-          (h.typeName o ++ ".__await__() must return an iterator, not coroutine"))))
+          (h.typeFqName o ++ ".__await__() must return an iterator, not coroutine"))))
       else if h.isIter res = false then
         (w1, .err (some (Exc.typeError
-          (h.typeName o ++ ".__await__() must return an iterator, not " ++ h.typeName res))))
+          (h.typeFqName o ++ ".__await__() must return an iterator, not " ++ h.typeFqName res))))
       else
         (w1, .ok res)
     | some (w1, .err e) => (w1, .err e)
     | none =>
-      (w, .err (some (Exc.typeError ("'" ++ h.typeName o ++ "' object can't be awaited"))))
+      (w, .err (some (Exc.typeError ("'" ++ trunc100 (h.typeName o) ++ "' object can't be awaited"))))
 
 /-- `coro_wrapper_iternext`, :1454-1459. `coro_await` (:1142-1152) just pairs the
 coroutine with a wrapper, so a wrapper is its coroutine's `Ref`. -/
