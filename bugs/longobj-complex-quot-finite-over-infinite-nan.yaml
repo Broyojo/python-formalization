@@ -1,0 +1,52 @@
+id: longobj-complex-quot-finite-over-infinite-nan
+title: "complex(1e308, 1e308) / complex(inf, inf) is nan+0j, not 0j"
+priority: P4
+kind: wrong-result
+module: longobj
+files: [Objects/complexobject.c]
+functions: [_Py_c_quot, complex_div]
+summary: |
+  gh-119372 added the C11 Annex G.5.2 recoveries to _Py_c_quot so that a finite number over
+  a complex infinity is a zero: (1+1j)/(inf+infj) is 0j. The zero recovery computes
+  0.0 * (a.real*x + a.imag*y) with x and y the boxed signs of the divisor's parts. When both
+  divisor parts are infinite, x and y are both +-1, and a.real*x + a.imag*y can overflow to
+  an infinity even though a is finite; 0.0 * inf is a NaN. So complex(1e308, 1e308) /
+  complex(inf, inf) is nan+0j, and complex(1e308, -1e308) / complex(inf, inf) is nanj
+  (real 0, imaginary NaN).
+likelihood: |
+  Very low. Needs a dividend with both parts near DBL_MAX and a divisor with both parts
+  infinite.
+maybe_intended: |
+  Probably accepted if reported: the recovery is the C11 reference _Cdivd taken literally,
+  which overflows the same way. Annex G.5.2's normative bullet still asks for a zero.
+reproducer: |
+  import sys
+  r = complex(1e308, 1e308) / complex(float('inf'), float('inf'))
+  print(sys.version.split()[0], r)
+  if r != 0:
+      print('REPRODUCED longobj-complex-quot-finite-over-infinite-nan')
+expected: |
+  0j (a zero in both parts), as (1+1j)/(inf+infj) gives since gh-119372.
+promised_by: |
+  C11 Annex G.5.2 ("if the first operand is a finite number and the second operand is an
+  infinity, then the result of the / operator is a zero"), cited at complexobject.c:224-225.
+cause: |
+  Objects/complexobject.c:235-241: the recovery multiplies 0.0 by a.real*x + a.imag*y and
+  a.imag*x - a.real*y, which overflow when |a.real| + |a.imag| exceeds DBL_MAX.
+possible_fix: |
+  Give the zero its sign directly (copysign(0.0, ...) of the sign of the sum) instead of
+  multiplying, or scale a before forming the sums.
+tested:
+  python3 3.15.2: REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related:
+    - {number: 119372, state: closed, relation: "added the recovery; this is the overflow inside it"}
+  queries: ["complex division infinity nan", "complex division Annex G", "_Py_c_quot nan",
+            "complex divide inf zero", "complex division inf", "complex division", "_Cdivd",
+            "complex quotient", "Annex G"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.CQuotAnnexG
+  theorem: PyLean.LongObj.Cplx.cQuotAnnexG_refuted
