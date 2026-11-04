@@ -11,11 +11,9 @@ of those methods over an arbitrary state `σ`. `Random` itself is one `Gen` (ove
 property of the Python layer is stated for every `Gen` that meets its documented
 contract, and then applies to each of them.
 
-Floats: the type `F` is a parameter with the raw IEEE operations in `Flt`. Lean's
-`Float` is one instance (used by the difftest, see `FloatInst.lean`). Lean cannot
-reduce `Float` operations, so properties never look inside `F`: what they say is
-either about the integers around the floats, or about every `Flt` satisfying the
-IEEE NaN rules (`Dist.lean`).
+Floats: the type `F` is a parameter with the raw IEEE operations in `Flt`. The
+instance used for every float property and by the difftest is the exact binary64
+model `F64`, with the C library as the parameter `RandLibm` (`F64Inst.lean`).
 -/
 
 namespace PyLean.CoreLibs.Rand
@@ -198,18 +196,24 @@ def mathSin (x : F) : Py F := math1Dom sin x
 def mathCos (x : F) : Py F := math1Dom cos x
 def mathAcos (x : F) : Py F := math1Dom acos x
 
-/-- `math.log(x)`, `m_log`, Modules/mathmodule.c: `x <= 0` is a domain error, nan
-and inf pass through. -/
+/-- `math.log(x)` on a float: `loghelper` (Modules/mathmodule.c:1615-1621) calls
+`math_1(x, m_log, 0, ...)`. `m_log` (:628-649) returns NaN itself, `+inf` itself,
+`-inf` for `0` and NaN (with `EDOM`) for a negative or `-inf`, all of which `math_1`
+turns into the `ValueError`; only a positive finite `x` reaches libm, and `math_1`
+(:788-825) still checks that result. -/
 def mathLog (x : F) : Py F :=
   if isNan x then .ok x
   else if Flt.le x 0.0 then .error (.valueError "~domain")
-  else .ok (log x)
+  else if isInf x then .ok x
+  else math1Dom log x
 
-/-- `math.log2(x)`, same shape as `mathLog`. -/
+/-- `math.log2(x)`: `loghelper(x, m_log2)`, same shape as `mathLog` (`m_log2`,
+Modules/mathmodule.c:660-685). -/
 def mathLog2 (x : F) : Py F :=
   if isNan x then .ok x
   else if Flt.le x 0.0 then .error (.valueError "~domain")
-  else .ok (log2 x)
+  else if isInf x then .ok x
+  else math1Dom log2 x
 
 /-- `math.lgamma(x)`, through `math_1a`: `m_lgamma` sets `ERANGE` for an infinite
 result from a finite argument. -/
