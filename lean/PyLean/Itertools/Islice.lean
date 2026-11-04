@@ -68,10 +68,10 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
   match startStop with
   | .error e => .error e
   | .ok (start, stop) =>
-    -- @3.14.7:1643-1648
+    -- :1637-1642
     if start < 0 ∨ stop < -1 then .error (.valueError isliceIdxMsg)
     else
-      -- @3.14.7:1650-1659
+      -- :1644-1654
       let step := match a3 with | some (some v) => asSsizeOrMinus1 v | _ => 1
       if step < 1 then .error (.valueError isliceStepMsg) else .ok (start, stop, step)
 

@@ -91,7 +91,7 @@ def entries : List Entry := [
     prop := ``SimpleDocAgree, thm := some ``simpleDocAgree_proven },
   { id := "itertools-constructor-errors", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_cycle_impl", "itertools_accumulate_impl", "itertools_compress_impl", "batched_new_impl", "chain_new", "itertools_chain_from_iterable_impl", "zip_longest_new"]
-    statement := "Each constructor that calls iter() on an argument fails with iter()'s own TypeError for a non-iterable, the first such argument winning (compress: data, then selectors); chain() accepts any arguments unchecked until iterated and rejects keywords, unless a subclass defines __init__ (:1916); zip_longest rejects any single keyword but fillvalue."
+    statement := "Each constructor that calls iter() on an argument fails with iter()'s own TypeError for a non-iterable, the first such argument winning (compress: data, then selectors); chain() accepts any arguments unchecked until iterated and rejects keywords, unless a subclass defines __init__ (:1911); zip_longest rejects any single keyword but fillvalue."
     source := "invariant: argument checks run at construction, in source order", status := .proven
     prop := ``CtorErrors, thm := some ``ctorErrors_proven },
   { id := "itertools-arg-checks", pyFile := "Modules/itertoolsmodule.c"
@@ -233,7 +233,7 @@ def entries : List Entry := [
     source := "invariant: Python code cannot crash the interpreter", status := .refuted
     prop := ``GroupbyNoCrash, thm := some ``groupbyNoCrash_refuted
     bug := some "itertools-groupby-eq-reentry-null-currkey"
-    notes := "An __eq__ that starts a new group and reads it clears currkey; when it then answers False, groupby_next takes the break and does Py_INCREF(NULL) at :569." },
+    notes := "An __eq__ that starts a new group and reads it clears currkey; when it then answers False, groupby_next takes the break and does Py_INCREF(NULL) at :567." },
   { id := "itertools-groupby-no-crash-no-reentry", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["groupby_next", "_grouper_next"]
     statement := "With nothing re-entering, the process survives every sequence of operations, for every comparison, key function and input, including raising ones."
@@ -242,22 +242,22 @@ def entries : List Entry := [
   { id := "itertools-groupby-eq-error", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["groupby_next", "_grouper_next"]
     statement := "For every comparison, key function and state, a raising __eq__ propagates out of groupby_next, which leaves every field but currgrouper as it was, and out of _grouper_next, which changes nothing."
-    source := "invariant: the rcmp == -1 returns (:560-561, :691-693)", status := .proven
+    source := "invariant: the rcmp == -1 returns (:558-559, :687-689)", status := .proven
     prop := ``GroupbyEqError, thm := some ``groupbyEqError_proven },
   { id := "itertools-grouper-eq-false", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["_grouper_next"]
     statement := "For every comparison and state, a comparison answering false ends the group and changes nothing."
-    source := "invariant: the rcmp == 0 return (:691-693)", status := .proven
+    source := "invariant: the rcmp == 0 return (:687-689)", status := .proven
     prop := ``GrouperEqFalseStops, thm := some ``grouperEqFalseStops_proven },
   { id := "itertools-groupby-failed-step", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["Py_LOCAL_INLINE"]
     statement := "For every key function and state, a failed groupby_step leaves currkey, currvalue, tgtkey, currgrouper and the groupers as they were, loses at most the one item it took, and reports no exception exactly when the input ended cleanly."
-    source := "invariant: currvalue and currkey are assigned only after both calls succeeded (:526-529)", status := .proven
+    source := "invariant: currvalue and currkey are assigned only after both calls succeeded (:524-526)", status := .proven
     prop := ``GroupbyFailedStepKeepsState, thm := some ``groupbyFailedStepKeepsState_proven },
   { id := "itertools-grouper-direct", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools__grouper_impl", "_grouper_create", "_grouper_next"]
     statement := "Creating a _grouper directly on a groupby replaces the current grouper, so every grouper made earlier stops at once and leaves the state alone, for every comparison, key function and input."
-    source := "invariant: only the current grouper reads the shared input (:637, :673-674)", status := .proven
+    source := "invariant: only the current grouper reads the shared input (:633, :669-670)", status := .proven
     prop := ``GrouperDirectInvalidates, thm := some ``grouperDirectInvalidates_proven },
   { id := "itertools-groupby-ctor-error", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_groupby_impl"]
@@ -278,7 +278,7 @@ def entries : List Entry := [
   { id := "itertools-tee-running-balanced", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["tee_next", "teedataobject_getitem", "teedataobject_getitem_lock_held"]
     statement := "For every state, hook and sequence of operations, including raising inputs and hooks that hit the guard, the running flags end as they began, so no later next() gets a spurious RuntimeError."
-    source := "invariant: running is cleared before the result of PyIter_Next is looked at (:800-802)", status := .proven
+    source := "invariant: running is cleared before the result of PyIter_Next is looked at (:796-799)", status := .proven
     prop := ``TeeRunningBalanced, thm := some ``teeRunningBalanced_proven },
   { id := "itertools-tee-wrap", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools__tee_impl", "tee_fromiterable", "teedataobject_newinternal"]
@@ -299,13 +299,13 @@ def entries : List Entry := [
     notes := "No re-entry is a precondition: the doc's generator raises ValueError when re-entered." },
   { id := "itertools-pairwise-reentry", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["pairwise_next"]
-    statement := "For every hook and state, once po->it is cleared next() stops and changes nothing; if a re-entrant call cleared it while the outer call took its first item, the outer call stops and clears old (:363-367); and an input like map(f, [0, 1, 2]) whose f(0) drains the pairwise object does reach this."
+    statement := "For every hook and state, once po->it is cleared next() stops and changes nothing; if a re-entrant call cleared it while the outer call took its first item, the outer call stops and clears old (:364-368); and an input like map(f, [0, 1, 2]) whose f(0) drains the pairwise object does reach this."
     source := "invariant: po->it is re-read after calling Python code", status := .proven
     prop := ``PairwiseReentryStops, thm := some ``pairwiseReentryStops_proven },
   { id := "itertools-teedataobject-args", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_teedataobject_impl"]
     statement := "_tee_dataobject(it, values, next) succeeds exactly when values has at most LINKCELLS items and next is None, or values has exactly LINKCELLS items and next is another dataobject; otherwise ValueError('Invalid arguments')."
-    source := "invariant: a block is linked onward only when full (:889-930)", status := .proven
+    source := "invariant: a block is linked onward only when full (:885-926)", status := .proven
     prop := ``TeeDataObjectArgs, thm := some ``teeDataObjectArgs_proven }
 ]
 
