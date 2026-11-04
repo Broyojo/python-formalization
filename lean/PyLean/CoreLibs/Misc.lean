@@ -541,13 +541,13 @@ def contextlibEntries : List Entry := [
     status := .proven, prop := ``Contextlib.LookupSpecialFollowsDescriptor,
     thm := some ``Contextlib.lookupSpecialFollowsDescriptor_proven },
   { id := "misc-ctx-callback-cannot-suppress", pyFile := "Lib/contextlib.py"
-    pyFns := ["_BaseExitStack._create_cb_wrapper"]
-    statement := "The wrapper of callback ignores the exception details and returns false, so it cannot suppress."
+    pyFns := ["_BaseExitStack._create_cb_wrapper", "_BaseExitStack.callback"]
+    statement := "The wrapper of callback ignores the exception details and returns false, so it cannot suppress: a stack of one callback exits with false."
     source := "docstring of callback"
     status := .proven, prop := ``Contextlib.CallbackCannotSuppress, thm := some ``Contextlib.callbackCannotSuppress_proven },
   { id := "misc-ctx-async-callback-cannot-suppress", pyFile := "Lib/contextlib.py"
-    pyFns := ["AsyncExitStack._create_async_cb_wrapper"]
-    statement := "The async wrapper ignores the details and gives None; an exception comes through, a StopIteration as the coroutine's RuntimeError."
+    pyFns := ["AsyncExitStack._create_async_cb_wrapper", "AsyncExitStack.push_async_callback"]
+    statement := "The async wrapper ignores the details and gives None; an exception comes through, a StopIteration as the coroutine's RuntimeError; a stack of one async callback exits with false."
     source := "docstring of push_async_callback; Python/intrinsics.c:141-182"
     status := .proven, prop := ``Contextlib.AsyncCallbackCannotSuppress,
     thm := some ``Contextlib.asyncCallbackCannotSuppress_proven },

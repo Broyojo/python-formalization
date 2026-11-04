@@ -495,30 +495,43 @@ theorem closeMatchesNested_proven : CloseMatchesNested := by
 
 /-- `callback` "Cannot suppress exceptions": the wrapper of `_create_cb_wrapper` calls the callback
 with its own arguments, drops the result, and ignores the exception details. An exit method bound to `cm`, which is
-what `_lookup_special` gives for a function, passes the details on, so it can suppress. -/
+what `_lookup_special` gives for a function, passes the details on, so it can suppress. So a stack holding only what
+`callback(f, *args)` registered, exited with any exception, calls `f(*args)` and returns false. -/
 def CallbackCannotSuppress : Prop :=
   ∀ (σ F O A : Type) (c : Calls σ F O A) (f m : F) (a : A) (o : O) (x : Xs σ F O A) (d d' : Option ExcId),
     (Cb.wrapped f a : Cb F O A).call c x d = (Cb.wrapped f a : Cb F O A).call c x d' ∧
     (∀ x', c.wrapped f a x = (x', .ok ()) → (Cb.wrapped f a : Cb F O A).call c x d = (x', .ok false)) ∧
     (∀ x' e, c.wrapped f a x = (x', .error e) →
       (Cb.wrapped f a : Cb F O A).call c x d = (x', .error e)) ∧
-    (Cb.bound m o : Cb F O A).call c x d = c.bound m o x d
+    (Cb.bound m o : Cb F O A).call c x d = c.bound m o x d ∧
+    (∀ (s : St σ) (x' : Xs σ F O A) (fix : Nat) (exc frame : Option ExcId),
+      c.wrapped f a (s, []) = (x', .ok ()) → x'.2 = [] →
+      exit c 2 fix (s, (callback [] f a).1) exc frame = .ok (x', .ok false))
 
 theorem callbackCannotSuppress_proven : CallbackCannotSuppress := by
   intro σ F O A c f m a o x d d'
-  refine ⟨rfl, ?_, ?_, rfl⟩
+  refine ⟨rfl, ?_, ?_, rfl, ?_⟩
   · intro x' h; simp [Cb.call, h]
   · intro x' e h; simp [Cb.call, h]
+  · intro s x' fix exc frame h hx
+    obtain ⟨s', st'⟩ := x'
+    simp only at hx
+    subst hx
+    simp [exit, exitLoop, callback, pushExitCallback, Cb.call, h, bind, Except.bind, pure, Except.pure]
 
 /-! ### `AsyncExitStack` -/
 
 /-- `push_async_callback`'s entry "Cannot suppress exceptions" either: the `async def` wrapper of
 `_create_async_cb_wrapper` awaits the callback with its own arguments, ignores the details and gives
 `None`; an exception comes through, except that a `StopIteration`, which a callable that is no
-coroutine function can raise from the call, leaves the wrapper as the coroutine's `RuntimeError`. -/
+coroutine function can raise from the call, leaves the wrapper as the coroutine's `RuntimeError`.
+A stack holding only that entry, exited with any exception, awaits the callback and returns false. -/
 def AsyncCallbackCannotSuppress : Prop :=
-  ∀ (σ F O A : Type) (ac : Calls σ F O A) (f : F) (a : A) (x x' : Xs σ F O A) (d d' : Option ExcId)
+  ∀ (σ F O A : Type) (c ac : Calls σ F O A) (f : F) (a : A) (x x' : Xs σ F O A) (d d' : Option ExcId)
     (e : ExcId),
+    (∀ (s : St σ) (fix : Nat) (exc frame : Option ExcId),
+      ac.wrapped f a (s, []) = (x', .ok ()) → x'.2 = [] →
+      aexit c ac 2 fix (s, (pushAsyncCallback [] f a).1) exc frame = .ok (x', .ok false)) ∧
     (Cb.wrapped f a : Cb F O A).acall ac x d = (Cb.wrapped f a : Cb F O A).acall ac x d' ∧
     (ac.wrapped f a x = (x', .ok ()) → (Cb.wrapped f a : Cb F O A).acall ac x d = (x', .ok false)) ∧
     (ac.wrapped f a x = (x', .error e) → x'.1.h.isInst e "StopIteration" = false →
@@ -529,8 +542,14 @@ def AsyncCallbackCannotSuppress : Prop :=
         ((r.1, x'.2), r.2))
 
 theorem asyncCallbackCannotSuppress_proven : AsyncCallbackCannotSuppress := by
-  intro σ F O A ac f a x x' d d' e
-  refine ⟨rfl, ?_, ?_, ?_⟩
+  intro σ F O A c ac f a x x' d d' e
+  refine ⟨?_, rfl, ?_, ?_, ?_⟩
+  · intro s fix exc frame h hx
+    obtain ⟨s', st'⟩ := x'
+    simp only at hx
+    subst hx
+    simp [aexit, aexitLoop, pushAsyncCallback, pushExitCallback, Cb.acall, h, coBoundary, bind,
+      Except.bind, pure, Except.pure]
   · intro h; simp [Cb.acall, h, coBoundary]
   · intro h1 h2; simp [Cb.acall, h1, h2, coBoundary]
   · intro h1 h2; simp [Cb.acall, h1, h2, coBoundary, coroutineStop]
