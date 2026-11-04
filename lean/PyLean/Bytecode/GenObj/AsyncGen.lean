@@ -166,6 +166,12 @@ def asyncGenAsendFinalize (h : Hooks V X) (w : World V X) (a : Ref) : World V X 
     h.warnUnawaitedAgen w (w.asends a).gen "asend"
   else w
 
+/-- `async_gen_asend_dealloc`, :1945-1961: `PyObject_CallFinalizerFromDealloc` runs
+`async_gen_asend_finalize` unless the collector already did (`finalized`); the rest drops
+references and returns the object to the freelist. -/
+def asyncGenAsendDealloc (h : Hooks V X) (w : World V X) (a : Ref) (finalized : Bool) : World V X :=
+  if finalized then w else asyncGenAsendFinalize h w a
+
 /-- `_PyAsyncGenValueWrapperNew`, :2245-2262. -/
 def asyncGenValueWrapperNew (val : Obj V) : Obj V := .wrapped val
 
@@ -299,5 +305,9 @@ def asyncGenAthrowFinalize (h : Hooks V X) (w : World V X) (a : Ref) : World V X
   if o.state = .init then
     h.warnUnawaitedAgen w o.gen (match o.args with | some _ => "athrow" | none => "aclose")
   else w
+
+/-- `async_gen_athrow_dealloc`, :2272-2285, as `async_gen_asend_dealloc`. -/
+def asyncGenAthrowDealloc (h : Hooks V X) (w : World V X) (a : Ref) (finalized : Bool) : World V X :=
+  if finalized then w else asyncGenAthrowFinalize h w a
 
 end PyLean.Bytecode.GenObj

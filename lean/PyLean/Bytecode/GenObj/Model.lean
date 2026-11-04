@@ -355,6 +355,9 @@ structure Hooks (V X : Type) where
   isIter : Obj V → Bool
   /-- `ot->tp_as_async->am_await` (:1257-1261); `none` when there is no getter. -/
   amAwait : World V X → Obj V → Option (World V X × Ret V)
+  /-- `PyObject_ClearWeakRefs(o)` (`FT_CLEAR_WEAKREFS`, :212), which runs the callbacks of the
+  object's weak references. -/
+  clearWeakrefs : World V X → Obj V → World V X := fun w _ => w
 
 variable {V X : Type}
 
@@ -743,6 +746,17 @@ def genFinalize (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) : World V
         | (w1, .err (some e)) =>
           h.unraisable w1 "Exception ignored while closing generator" e
         | (w1, _) => w1
+
+/-- `gen_dealloc`, :206-239, as far as it is visible from Python: `FT_CLEAR_WEAKREFS` runs the
+weak reference callbacks (:212), then `PyObject_CallFinalizerFromDealloc` (:216) runs
+`gen_finalize` unless the collector already finalized the object (`finalized`, the
+`_PyGC_FINALIZED` bit `PyObject_CallFinalizer` tests, `Objects/object.c`). Resurrection by the
+finalizer (:216-217) and what follows, which only drops references and frees the frame, are
+under the finalization scope limit. -/
+def genDealloc (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (finalized : Bool) :
+    World V X :=
+  let w1 := h.clearWeakrefs w (.gen r)
+  if finalized then w1 else genFinalize h fuel w1 r
 
 /-! ## Getters and setters -/
 

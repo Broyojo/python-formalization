@@ -556,4 +556,37 @@ theorem athrowCloseOutcomes_proven : AthrowCloseOutcomes := by
   refine ⟨fun hs => by simp [asyncGenAthrowClose, hs], fun hs w' res ht => ?_⟩
   simp only [asyncGenAthrowClose, hs, if_false, ht, closeResult_eq]
 
+/-! ## Deallocation and finalizers -/
+
+/-- `gen_dealloc` (:206-239): the weak reference callbacks run first (`FT_CLEAR_WEAKREFS`,
+:212), then, unless the collector already finalized the object, `gen_finalize` in the world
+they left (:216), so a callback sees the frame still suspended and the generator's `finally`
+runs after it. `async_gen_asend_dealloc` (:1945-1961) and `async_gen_athrow_dealloc`
+(:2272-2285) run their finalizers the same way: `async_gen_asend_finalize` (:2094-2100) warns
+"coroutine method 'asend' ... was never awaited" exactly when the awaitable is still
+`AWAITABLE_STATE_INIT`, and `async_gen_athrow_finalize` (:2528-2535) the same with `athrow` or
+`aclose` by mode. -/
+def DeallocOutcomes : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X),
+    (∀ r, genDealloc h fuel w r true = h.clearWeakrefs w (.gen r) ∧
+      genDealloc h fuel w r false = genFinalize h fuel (h.clearWeakrefs w (.gen r)) r) ∧
+    (∀ a, asyncGenAsendDealloc h w a true = w ∧
+      ((w.asends a).state = .init →
+        asyncGenAsendDealloc h w a false = h.warnUnawaitedAgen w (w.asends a).gen "asend") ∧
+      ((w.asends a).state ≠ .init → asyncGenAsendDealloc h w a false = w)) ∧
+    (∀ a, asyncGenAthrowDealloc h w a true = w ∧
+      ((w.athrows a).state = .init →
+        asyncGenAthrowDealloc h w a false = h.warnUnawaitedAgen w (w.athrows a).gen
+          (match (w.athrows a).args with | some _ => "athrow" | none => "aclose")) ∧
+      ((w.athrows a).state ≠ .init → asyncGenAthrowDealloc h w a false = w))
+
+theorem deallocOutcomes_proven : DeallocOutcomes := by
+  intro V X h fuel w
+  refine ⟨fun r => ⟨rfl, rfl⟩, fun a => ⟨rfl, fun hs => ?_, fun hs => ?_⟩,
+    fun a => ⟨rfl, fun hs => ?_, fun hs => ?_⟩⟩
+  · simp [asyncGenAsendDealloc, asyncGenAsendFinalize, hs]
+  · simp [asyncGenAsendDealloc, asyncGenAsendFinalize, hs]
+  · cases hm : (w.athrows a).args <;> simp [asyncGenAthrowDealloc, asyncGenAthrowFinalize, hs, hm]
+  · simp [asyncGenAthrowDealloc, asyncGenAthrowFinalize, hs]
+
 end PyLean.Bytecode.GenObj
