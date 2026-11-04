@@ -336,6 +336,10 @@ inductive Payload where
   | seqIter (seq : Option Val) (index : Int)
   /-- `C.__dict__`: a `mappingproxy` over the `tp_dict` of `ty`. -/
   | typeDictProxy (ty : Addr)
+  /-- The `tp_dict` of `ty` as an object, a `dict`. The model keeps a class's namespace in its
+  `TypeData`, so this stands for that dict where an object is needed: the value
+  `type_new_set_classdictcell` stores in `__classdictcell__`. Operations on it are not modelled. -/
+  | typeDict (ty : Addr)
   /-- `mappingproxyobject`, `Objects/descrobject.c:1040`, over any mapping. -/
   | proxy (mapping : Val)
   | mappingproxy (mapping : Val)

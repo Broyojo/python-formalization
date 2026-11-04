@@ -849,6 +849,24 @@ def pyStr (rt : Rt) (v : Val) : M String := do
       | some s => pure s
       | none => typeErr s!"{objFQN w v}.__str__() must return a str, not {objFQN w res}"
 
+/-- `PyObject_Str`, `Objects/object.c:801-841`, returning the object as C does: an exact `str`
+is returned as it is (`:808-810`), and `tp_str`'s result only has to pass `PyUnicode_Check`
+(`:832-837`), so a `str` subclass instance comes back as itself. With no `tp_str` the result is
+`PyObject_Repr`'s (`:811-812`), which `rt.repr` gives as text. -/
+def pyStrObj (rt : Rt) (v : Val) : M Val := do
+  match v with
+  | .str _ => pure v
+  | _ =>
+    let w ← getW
+    match slotOf w (typeOf w v) .tp_str with
+    | none => .str <$> rt.repr v
+    | some f =>
+      let res ← callStr rt f v
+      let w ← getW
+      match strOf w res with
+      | some _ => pure res
+      | none => typeErr s!"{objFQN w v}.__str__() must return a str, not {objFQN w res}"
+
 /-! ## Index conversion -/
 
 /-- `_PyIndex_Check`: the type has `nb_index`. -/

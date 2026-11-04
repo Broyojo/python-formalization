@@ -945,12 +945,13 @@ over the static hierarchy. -/
 def classDictKeys (w : World) (t : Addr) : List Name :=
   ((tdata w t).mro.getD []).flatMap fun c => (tdata w c).dict.map (·.1)
 
-/-- `object___format___impl`, `Objects/typeobject.c:8501`. -/
+/-- `object___format___impl`, `Objects/typeobject.c:8501-8513`: `PyObject_Str(self)` for an empty
+spec, the object it returns (a `str` subclass instance stays one). -/
 def objectFormat (rt : Rt) (self : Val) (spec : String) : M Val := do
   let w ← getW
   if spec.length > 0 then
     typeErr s!"unsupported format string passed to {trunc 200 (typeName w self)}.__format__"
-  .str <$> rt.str self
+  pyStrObj rt self
 
 /-- `PyObject_Format`, `Objects/abstract.c:853`. -/
 def pyFormat (rt : Rt) (obj : Val) (spec : Option Val) : M Val := do

@@ -31,17 +31,23 @@ def dedupKeep : List Addr → List Addr → List Addr
 /-- Bytes of the UTF-8 encoding. -/
 def utf8Bytes (cs : List Char) : Nat := (cs.map Char.utf8Size).sum
 
+/-- The C string `PyUnicode_AsUTF8` returns, as `%s` reads it: up to the first NUL. A `__name__`
+can hold a NUL only through a metaclass property (`type.__name__` refuses one). -/
+def cStr (s : String) : String := String.ofList (s.toList.takeWhile (· ≠ '\x00'))
+
 /-- The `PyDict_Next` loop of `set_mro_error`, `Objects/typeobject.c:3371-3394`. `off` is the
 C `off`: the bytes `PyOS_snprintf` would have written so far, so the loop stops calling
 `class_name` once the text reaches the 1000-byte buffer (`:3371`), and a `,` is added only
 while it fits (`:3391`). The result is the untruncated text; the caller keeps its first 999
-bytes, as the buffer does. -/
+bytes, as the buffer does. A `class_name` exception propagates (`:3384-3388`: the function
+returns with it set, before `PyErr_SetString`); a name that is not a `str` is `"?"`
+(`:3380-3382`); a `str` name is written by `" %s"` (`:3389`), so only up to a NUL. -/
 def setMroErrorLoop (rt : Rt) : List Addr → Nat → List Char → M (List Char)
   | [], _, text => pure text
   | c :: cs, off, text =>
     if off < 1000 then do
       let n ← classNameOf rt (.obj c)
-      let s := (" " ++ n.getD "?").toList
+      let s := (" " ++ cStr (n.getD "?")).toList
       let off := off + utf8Bytes s
       let text := text ++ s
       if cs ≠ [] ∧ off + 1 < 1000 then setMroErrorLoop rt cs (off + 1) (text ++ [','])
@@ -383,19 +389,27 @@ def typeNewDescriptors (ctx : TypeNewCtx) (t : Addr) (nslot : Nat) (dict : NameD
   let dict ← if ctx.addDict then typeAddCommonDescriptor true dict else pure dict
   if ctx.addWeak then typeAddCommonDescriptor false dict else pure dict
 
-/-- `type_new_set_classcell`/`type_new_set_classdictcell`, `Objects/typeobject.c:4810`,
-`:4836`. The dict cell receives the tp_dict proxy. -/
-def typeNewSetCell (key : Name) (value : Val) (dict : NameDict) : M NameDict := do
+/-- `type_new_set_classcell` (`Objects/typeobject.c:4810-4833`) and `type_new_set_classdictcell`
+(`:4836-4859`), which differ only in the key and in what the cell receives: `value`, run only once
+a cell is found (`PyCell_Set`, `:4828`, `:4854`). -/
+def typeNewSetCell (key : Name) (value : M Val) (dict : NameDict) : M NameDict := do
   let w ← getW
   match NameDict.get? dict key with
   | none => pure dict
   | some cell =>
     match cell, payloadOf w cell with
     | .obj c, some (.cell _) =>
-      modObj c fun o => { o with body := .cell (some value) }
+      let v ← value
+      modObj c fun o => { o with body := .cell (some v) }
       pure (NameDict.erase dict key)
     | _, _ =>
       typeErr s!"{key} must be a nonlocal cell, not {truncChars 200 (typeRepr w (typeOf w cell))}"
+
+/-- The `tp_dict` of class `t` as the `dict` object `__classdictcell__` receives
+(`PyCell_Set(cell, (PyObject *)dict)`, `Objects/typeobject.c:4854`, where `dict` is
+`type->tp_dict`, `:4907`). The model keeps the namespace in the class's `TypeData`, so the object
+standing for it is made when a cell needs it, once per class. -/
+def typeDictObj (t : Addr) : M Val := alloc B.dict (.typeDict t)
 
 /-! ## `PyType_Ready` for heap types -/
 
@@ -587,8 +601,8 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
   let dict ← typeNewSetAttrs rt ctx t orig
   let members := names.getD []
   let dict ← typeNewDescriptors ctx t ctx.nslot dict
-  let dict ← typeNewSetCell "__classcell__" (.obj t) dict
-  let dict ← typeNewSetCell "__classdictcell__" (.obj t) dict
+  let dict ← typeNewSetCell "__classcell__" (pure (.obj t)) dict
+  let dict ← typeNewSetCell "__classdictcell__" (typeDictObj t) dict
   modType t fun d => { d with dict := dict }
   typeReady rt t members
   modW fun w => fixupSlotDispatchers w t

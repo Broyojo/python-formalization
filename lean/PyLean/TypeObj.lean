@@ -119,9 +119,9 @@ def entries : List Entry := [
     "typeobject.c:3299-3307, :3316-3333, :3482-3491"
     ``MroImplementationErrors ``mroImplementationErrors_proven,
   p "typeobj-set-mro-error-message" ty ["set_mro_error"]
-    "When each candidate's __name__ is a str and the text fits the buffer, the MRO conflict TypeError is 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each after a space, joined by ','."
-    "typeobject.c:3350-3398"
-    ``SetMroErrorMessage ``setMroErrorMessage_proven
+    "The MRO conflict TypeError is the first 999 bytes of 'Cannot create a consistent method resolution order (MRO) for bases' followed by the distinct heads of the remaining lists in first-seen order, each as ' ' and its str __name__ up to a NUL, or ' ?' for a non-str __name__, joined by ','; an exception from the first candidate's __name__ is raised instead."
+    "typeobject.c:3350-3398; checked on 3.15.2 with metaclass properties returning 42, 'a\\x00b' and raising, and two 600-character names (999-character message)"
+    ``SetMroErrorExact ``setMroErrorExact_proven
     "Scope: candidates are hashed by identity; a metaclass __hash__ or __name__ that re-enters can free the borrowed to_merge tuples (bugs/typeobj-set-mro-error-borrowed-mro.yaml).",
   p "typeobj-metaclass-exact" ty ["_PyType_CalculateMetaclass"]
     "The calculated metaclass is the given one or a base's metaclass and, under the subtype order, a subclass of all of them; the calculation fails exactly when some base's metaclass is unrelated to the winner of the bases before it, with the exact message."

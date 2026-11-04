@@ -44,27 +44,44 @@ theorem wrapInDictExact_proven : WrapInDictExact := by
 
 /-! ## `type_new_set_classcell`, `type_new_set_classdictcell` -/
 
-/-- **`type_new_set_classcell` / `type_new_set_classdictcell`.** `Objects/typeobject.c:4808-4858`:
-no `__classcell__` (`__classdictcell__`) key leaves the namespace as it is; a cell gets the value
-stored (`PyCell_Set`) and the key is deleted from the namespace; anything else raises
-"%s must be a nonlocal cell, not %.200R" with the repr of its type. `value` is the class for
-`__classcell__`. For `__classdictcell__` CPython stores the class's dict object
-(`:4907`, `type(C.f())` is `dict` on 3.15.2); the model's caller passes the class, since its
-`tp_dict` is not an object. -/
+theorem get_push_lt' (w : World) (c : Cell) {a : Addr} (h : a < w.heap.size) :
+    World.get { w with heap := w.heap.push c } a = w.get a := by
+  have hne : a ≠ w.heap.size := Nat.ne_of_lt h
+  simp only [World.get]
+  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?]
+  simp [Array.getElem?_push, hne]
+
+/-- **`type_new_set_classcell` / `type_new_set_classdictcell`.** `Objects/typeobject.c:4808-4859`,
+for the class `t` being created and its namespace `dict`:
+* no `__classcell__` (`__classdictcell__`) key leaves the namespace and the world as they are;
+* a value that is not a cell raises "%s must be a nonlocal cell, not %.200R" with the repr of its
+  type, before anything is stored;
+* a cell under `__classcell__` receives the class `t` itself (`PyCell_Set(cell, type)`, `:4828`);
+* a cell under `__classdictcell__` receives the class's namespace dict (`PyCell_Set(cell, dict)`,
+  `:4854`, `dict` being `type->tp_dict`): a `dict` object standing for `t`'s namespace
+  (`Payload.typeDict t`), not the class (`type(C.f())` is `dict` for `def f(): return __classdict__`
+  in a class body, on 3.15.2);
+* in both cases the key is then deleted from the namespace and nothing else changes. -/
 def TypeNewSetCellExact : Prop :=
-  ∀ (key : Name) (value : Val) (dict : NameDict) (w : World),
-    (NameDict.get? dict key = none → typeNewSetCell key value dict w = .ok dict w) ∧
-    (∀ c o x, NameDict.get? dict key = some (.obj c) → w.get c = .val o → o.body = .cell x →
+  ∀ (t : Addr) (dict : NameDict) (w : World),
+    (∀ key (value : M Val), NameDict.get? dict key = none → typeNewSetCell key value dict w = .ok dict w) ∧
+    (∀ key (value : M Val) v, NameDict.get? dict key = some v → (∀ x, payloadOf w v ≠ some (.cell x)) →
       typeNewSetCell key value dict w =
-        .ok (NameDict.erase dict key) (w.setCell c (.val { o with body := .cell (some value) }))) ∧
-    (∀ v, NameDict.get? dict key = some v → (∀ x, payloadOf w v ≠ some (.cell x)) →
-      typeNewSetCell key value dict w =
-        (typeErr s!"{key} must be a nonlocal cell, not {truncChars 200 (typeRepr w (typeOf w v))}" : M NameDict) w)
+        (typeErr s!"{key} must be a nonlocal cell, not {truncChars 200 (typeRepr w (typeOf w v))}" : M NameDict) w) ∧
+    (∀ c o x, NameDict.get? dict "__classcell__" = some (.obj c) → w.get c = .val o → o.body = .cell x →
+      typeNewSetCell "__classcell__" (pure (.obj t)) dict w =
+        .ok (NameDict.erase dict "__classcell__") (w.setCell c (.val { o with body := .cell (some (.obj t)) }))) ∧
+    (∀ c o x, NameDict.get? dict "__classdictcell__" = some (.obj c) → c < w.heap.size →
+      w.get c = .val o → o.body = .cell x →
+      let w1 : World := { w with heap := w.heap.push (.val { cls := B.dict, body := .typeDict t }) }
+      typeNewSetCell "__classdictcell__" (typeDictObj t) dict w =
+        .ok (NameDict.erase dict "__classdictcell__")
+          (w1.setCell c (.val { o with body := .cell (some (.obj w.heap.size)) })))
 
 theorem typeNewSetCellExact_proven : TypeNewSetCellExact := by
-  intro key value dict w
-  refine ⟨fun h => by simp [typeNewSetCell, h], fun c o x h hc hb => ?_, fun v h hv => ?_⟩
-  · simp [typeNewSetCell, h, payloadOf, hc, hb, modObj]
+  intro t dict w
+  refine ⟨fun key value h => by simp [typeNewSetCell, h], fun key value v h hv => ?_,
+    fun c o x h hc hb => ?_, fun c o x h hlt hc hb => ?_⟩
   · cases v with
     | obj c =>
       cases hp : payloadOf w (.obj c) with
@@ -72,6 +89,10 @@ theorem typeNewSetCellExact_proven : TypeNewSetCellExact := by
       | some p =>
         cases p <;> simp_all [typeNewSetCell]
     | _ => simp [typeNewSetCell, h, payloadOf]
+  · simp [typeNewSetCell, h, payloadOf, hc, hb, modObj]
+  · dsimp only
+    have hc' := get_push_lt' w (.val { cls := B.dict, body := .typeDict t }) hlt
+    simp [typeNewSetCell, h, payloadOf, hc, hb, modObj, typeDictObj, alloc, allocCell, hc']
 
 /-! ## `type_new` -/
 
