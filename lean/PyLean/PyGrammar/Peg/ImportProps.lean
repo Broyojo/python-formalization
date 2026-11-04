@@ -94,49 +94,98 @@ theorem missingComma_proven : MissingComma := by
         (if (locOf b).endColOffset == -5 then -5 else (locOf b).endColOffset + 1) fresh
       exact ⟨rfl, x, q1, q2, q3, by rw [q4, if_neg hs]⟩
 
+/-- The `SyntaxError` of `_PyErr_RaiseSyntaxError`, `Python/errors.c:1956-1973`, `text` `None`. -/
+def syntaxErrAt (msg : String) (a b c e : Int) : PyError :=
+  { cls := "SyntaxError", msg := msg, lineno := some a, offset := some b, endLineno := some c,
+    endOffset := some e, text := none }
+
+/-- The state after `_PyErr_EmitSyntaxWarning` recorded the warning. -/
+def warned (p : PS) (msg : String) (lineno : Int) : PS :=
+  { p with tok := { p.tok with warnings := ("SyntaxWarning", msg, lineno) :: p.tok.warnings } }
+
+/-- The state after `_PyErr_EmitSyntaxWarning` raised the `SyntaxError` in place of the warning. -/
+def warnRaised (p : PS) (msg : String) (l : Loc) : PS :=
+  { p with tok := { p.tok with err := some (syntaxErrAt msg l.lineno (l.colOffset + 1) l.endLineno
+    (l.endColOffset + 1)) } }
+
 /-- `_warn_relative_import_of_lazy`: on the first pass, it warns about `from . lazy import x`, where
 space separates the dots from the name, and says how many dots. `from .lazy import x` is left
-alone, and so is everything on the second pass. Warnings as errors are out of scope, as in
-`warnInvalidEscapeSeq`. -/
+alone, and so is everything on the second pass. Under a filter that makes `SyntaxWarning` an error
+(`-W error`), the warning becomes a `SyntaxError` with the same message at the module name, columns
+one-based (`_PyErr_EmitSyntaxWarning`, `Python/errors.c:1984-1994`), and the result is -1; otherwise
+it is 0. The last element of `dots` is a token, as the grammar's `('.' | '...')+` gives. -/
 def WarnRelativeLazy : Prop := ∀ (dots module : Ast) (p : PS) (d : Token),
   (seqOf dots).getLast? = some (.tok d) →
-  (p.callInvalidRules = true → (warnRelativeImportOfLazy dots module p).2 = p) ∧
+  (p.callInvalidRules = true → warnRelativeImportOfLazy dots module p = (0, p)) ∧
   (d.endLineno = (locOf module).lineno → d.endColOffset = (locOf module).colOffset →
-    (warnRelativeImportOfLazy dots module p).2 = p) ∧
+    warnRelativeImportOfLazy dots module p = (0, p)) ∧
   (p.callInvalidRules = false →
     ¬(d.endLineno = (locOf module).lineno ∧ d.endColOffset = (locOf module).colOffset) →
-    let buf := String.ofList (List.replicate (countDots dots).toNat '.')
-    (warnRelativeImportOfLazy dots module p).2.tok.warnings =
-      ("SyntaxWarning", s!"'from {buf} lazy import' is the same as 'from {buf}lazy import'; "
-        ++ s!"did you mean 'lazy from {buf} import'?", (locOf module).lineno) :: p.tok.warnings)
+    (p.cfg.warnErrors.contains "SyntaxWarning" = false →
+      warnRelativeImportOfLazy dots module p = (0, warned p (lazyMsg dots) (locOf module).lineno)) ∧
+    (p.cfg.warnErrors.contains "SyntaxWarning" = true →
+      warnRelativeImportOfLazy dots module p = (-1, warnRaised p (lazyMsg dots) (locOf module))))
+
+theorem warnLazy_second (dots module : Ast) (p : PS) (h : p.callInvalidRules = true) :
+    warnRelativeImportOfLazy dots module p = (0, p) := by
+  simp [warnRelativeImportOfLazy, h, bind, StateT.bind, pure, StateT.pure, get, getThe,
+    MonadStateOf.get, StateT.get]
+
+theorem warnLazy_fire (dots module : Ast) (p : PS) (d : Token) (hd : (seqOf dots).getLast? = some (.tok d))
+    (h1 : p.callInvalidRules = false)
+    (h2 : ¬(d.endLineno = (locOf module).lineno ∧ d.endColOffset = (locOf module).colOffset)) :
+    warnRelativeImportOfLazy dots module p = emitSyntaxWarning (lazyMsg dots) (locOf module).lineno
+      ((locOf module).colOffset + 1) (locOf module).endLineno ((locOf module).endColOffset + 1) p := by
+  have hn : ¬((d.endLineno == (locOf module).lineno && d.endColOffset == (locOf module).colOffset)
+      = true) := by
+    simpa using h2
+  simp only [warnRelativeImportOfLazy, h1, hd, hn, bind, StateT.bind, pure, StateT.pure, get, getThe,
+    MonadStateOf.get, StateT.get, Bool.false_eq_true, ↓reduceIte]
+
+theorem emit_ok (msg : String) (a b c e : Int) (p : PS)
+    (h : p.cfg.warnErrors.contains "SyntaxWarning" = false) :
+    emitSyntaxWarning msg a b c e p = (0, warned p msg a) := by
+  simp only [emitSyntaxWarning, h, bind, StateT.bind, pure, StateT.pure, get, getThe,
+    MonadStateOf.get, StateT.get, Bool.false_eq_true, ↓reduceIte, modify, modifyGet,
+    MonadStateOf.modifyGet, StateT.modifyGet, MonadState.modifyGet]
+  rfl
+
+theorem emit_err (msg : String) (a b c e : Int) (p : PS)
+    (h : p.cfg.warnErrors.contains "SyntaxWarning" = true) :
+    emitSyntaxWarning msg a b c e p =
+      (-1, { p with tok := { p.tok with err := some (syntaxErrAt msg a b c e) } }) := by
+  simp only [emitSyntaxWarning, h, bind, StateT.bind, pure, StateT.pure, get, getThe,
+    MonadStateOf.get, StateT.get, ↓reduceIte, setErr, modify, modifyGet,
+    MonadStateOf.modifyGet, StateT.modifyGet, MonadState.modifyGet]
+  rfl
 
 theorem warnRelativeLazy_proven : WarnRelativeLazy := by
   intro dots module p d hd
-  refine ⟨fun h => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
-  · simp [warnRelativeImportOfLazy, h, bind, StateT.bind, pure, StateT.pure, get, getThe,
-      MonadStateOf.get, StateT.get]
+  refine ⟨fun h => warnLazy_second dots module p h, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
   · by_cases h : p.callInvalidRules = true
-    · simp [warnRelativeImportOfLazy, h, bind, StateT.bind, pure, StateT.pure, get, getThe,
-        MonadStateOf.get, StateT.get]
+    · exact warnLazy_second dots module p h
     · simp [warnRelativeImportOfLazy, h, hd, h1, h2, bind, StateT.bind, pure, StateT.pure, get,
         getThe, MonadStateOf.get, StateT.get]
-  · have hn : ¬((d.endLineno == (locOf module).lineno && d.endColOffset == (locOf module).colOffset)
-        = true) := by
-      simpa using h2
-    simp [warnRelativeImportOfLazy, h1, hd, hn, bind, StateT.bind, pure, StateT.pure, get, getThe,
-      MonadStateOf.get, StateT.get, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
-      MonadState.modifyGet]
+  · rw [warnLazy_fire dots module p d hd h1 h2]
+    exact ⟨fun h => emit_ok _ _ _ _ _ p h, fun h => emit_err _ _ _ _ _ p h⟩
 
-/-- `_PyPegen_checked_from_import`: `lazy from __future__` is refused; otherwise the result is the
-`ImportFrom` of the module, the names, the number of dots, and whether `lazy` was there; and only a
-`from __future__ import barry_as_FLUFL` turns on `<>` for the tokenizer and the parser. The module
-is a `Name`, as `dotted_name` guarantees, which is what `.id` reads. -/
+/-- `_PyPegen_checked_from_import`: `lazy from __future__` is refused; a failed warning
+(`Parser/action_helpers.c:2108-2110`, `-W error` on `from . lazy import x`) gives `NULL` with the
+state the warning left; otherwise the result is the `ImportFrom` of the module, the names, the
+number of dots, and whether `lazy` was there; and only a `from __future__ import barry_as_FLUFL`
+turns on `<>` for the tokenizer and the parser. The module is a `Name`, as `dotted_name`
+guarantees, which is what `.id` reads. -/
 def CheckedFromImport : Prop := ∀ (dots m names lazy : Ast) (l c el ec : Int) (p : PS),
   (countDots dots = 0 → isFutureModule m = true → hasValue lazy = true → Fresh p →
     (checkedFromImport dots m names lazy l c el ec p).1 = .null ∧
     ∃ e : PyError, (checkedFromImport dots m names lazy l c el ec p).2.tok.err = some e ∧
       e.cls = "SyntaxError" ∧ e.msg = "lazy from __future__ import is not allowed") ∧
+  (countDots dots > 0 → hasValue lazy = false → isLazyModule m = true →
+    (warnRelativeImportOfLazy dots m p).1 < 0 →
+    checkedFromImport dots m names lazy l c el ec p = (.null, (warnRelativeImportOfLazy dots m p).2)) ∧
   (¬(countDots dots = 0 ∧ isFutureModule m = true ∧ hasValue lazy = true) →
+    ¬(countDots dots > 0 ∧ hasValue lazy = false ∧ isLazyModule m = true ∧
+      (warnRelativeImportOfLazy dots m p).1 < 0) →
     (checkedFromImport dots m names lazy l c el ec p).1 = mkAst .ImportFrom
       [fieldOf m "id", names, .int (countDots dots), .int (if hasValue lazy then 1 else 0),
        .int l, .int c, .int el, .int ec]) ∧
@@ -147,36 +196,51 @@ def CheckedFromImport : Prop := ∀ (dots m names lazy : Ast) (l c el ec : Int) 
   (¬(countDots dots = 0 ∧ isFutureModule m = true) →
     (checkedFromImport dots m names lazy l c el ec p).2.tok.barryAsBdfl = p.tok.barryAsBdfl)
 
+theorem emit_keeps_barry (msg : String) (a b c e : Int) (p : PS) :
+    (emitSyntaxWarning msg a b c e p).2.tok.barryAsBdfl = p.tok.barryAsBdfl := by
+  cases h : p.cfg.warnErrors.contains "SyntaxWarning"
+  · rw [emit_ok _ _ _ _ _ p h]
+    rfl
+  · rw [emit_err _ _ _ _ _ p h]
+
 theorem warn_keeps_barry (dots m : Ast) (p : PS) :
     (warnRelativeImportOfLazy dots m p).2.tok.barryAsBdfl = p.tok.barryAsBdfl := by
   by_cases h : p.callInvalidRules = true
-  · simp [warnRelativeImportOfLazy, h, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
+  · rw [warnLazy_second dots m p h]
   · cases hl : (seqOf dots).getLast? with
     | none => simp [warnRelativeImportOfLazy, h, hl, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
     | some x =>
       cases x with
       | tok d =>
-        by_cases q : (d.endLineno == (locOf m).lineno && d.endColOffset == (locOf m).colOffset) = true
-        · simp only [warnRelativeImportOfLazy, h, hl, q, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get, Bool.false_eq_true, ↓reduceIte]
-        · simp only [warnRelativeImportOfLazy, h, hl, q, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get, Bool.false_eq_true, ↓reduceIte, modify,
-            modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, MonadState.modifyGet]
+        by_cases q : d.endLineno = (locOf m).lineno ∧ d.endColOffset = (locOf m).colOffset
+        · simp [warnRelativeImportOfLazy, h, hl, q, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
+        · rw [warnLazy_fire dots m p d hl (by simpa using h) q]
+          exact emit_keeps_barry _ _ _ _ _ p
       | _ => simp [warnRelativeImportOfLazy, h, hl, bind, StateT.bind, pure, StateT.pure, get, getThe, MonadStateOf.get, StateT.get]
 
-theorem bind_pure_fst (w : PM Unit) (x : Ast) (p : PS) :
-    (StateT.bind w (fun _ => StateT.pure x) p).1 = x := by
-  unfold StateT.bind StateT.pure
-  cases w p
-  rfl
-
-theorem bind_pure_snd (w : PM Unit) (x : Ast) (p : PS) :
-    (StateT.bind w (fun _ => StateT.pure x) p).2 = (w p).2 := by
-  unfold StateT.bind StateT.pure
-  cases w p
-  rfl
+/-- `checkedFromImport` on the `lazy` path, as the warning's result decides. -/
+theorem checked_lazy_path (dots m names lazy : Ast) (l c el ec : Int) (p : PS)
+    (hn : ¬((countDots dots == 0 && isFutureModule m) = true))
+    (hw : (decide (countDots dots > 0) && !hasValue lazy && isLazyModule m) = true) :
+    checkedFromImport dots m names lazy l c el ec p =
+      if (warnRelativeImportOfLazy dots m p).1 < 0 then (.null, (warnRelativeImportOfLazy dots m p).2)
+      else (mkAst .ImportFrom
+        [fieldOf m "id", names, .int (countDots dots), .int (if hasValue lazy then 1 else 0),
+         .int l, .int c, .int el, .int ec], (warnRelativeImportOfLazy dots m p).2) := by
+  simp only [checkedFromImport, hn, hw, bind, StateT.bind, pure, StateT.pure, get, getThe,
+    MonadStateOf.get, StateT.get, Bool.false_eq_true, ↓reduceIte]
+  cases warnRelativeImportOfLazy dots m p with
+  | mk r q =>
+    by_cases hr : r < 0
+    · simp only [hr, ↓reduceIte]
+      rfl
+    · simp only [hr, ↓reduceIte]
+      rfl
 
 theorem checkedFromImport_proven : CheckedFromImport := by
   intro dots m names lazy l c el ec p
-  refine ⟨fun h1 h2 h3 fresh => ?_, fun h => ?_, fun h1 h2 h3 h4 => ?_, fun h => ?_⟩
+  refine ⟨fun h1 h2 h3 fresh => ?_, fun h1 h2 h3 h4 => ?_, fun h hw' => ?_, fun h1 h2 h3 h4 => ?_,
+    fun h => ?_⟩
   · have e : checkedFromImport dots m names lazy l c el ec p = (.null,
         (raiseRange "SyntaxError" lazy lazy "lazy from __future__ import is not allowed" p).2) := by
       simp [checkedFromImport, h1, h2, h3, bind, StateT.bind, pure, StateT.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
@@ -189,6 +253,13 @@ theorem checkedFromImport_proven : CheckedFromImport := by
       (if (locOf lazy).colOffset == -5 then -5 else (locOf lazy).colOffset + 1) (locOf lazy).endLineno
       (if (locOf lazy).endColOffset == -5 then -5 else (locOf lazy).endColOffset + 1) fresh
     exact ⟨rfl, x, q1, q2, q3⟩
+  · have hn : ¬((countDots dots == 0 && isFutureModule m) = true) := by
+      simp only [Bool.and_eq_true, beq_iff_eq, not_and]
+      intro h0
+      omega
+    have hw : (decide (countDots dots > 0) && !hasValue lazy && isLazyModule m) = true := by
+      simp [h1, h2, h3]
+    rw [checked_lazy_path dots m names lazy l c el ec p hn hw, if_pos h4]
   · by_cases hf : countDots dots = 0 ∧ isFutureModule m = true
     · have hz : hasValue lazy = false := by
         cases hv : hasValue lazy with
@@ -200,9 +271,12 @@ theorem checkedFromImport_proven : CheckedFromImport := by
     · have hn : ¬((countDots dots == 0 && isFutureModule m) = true) := by
         simpa using hf
       by_cases hw : (decide (countDots dots > 0) && !hasValue lazy && isLazyModule m) = true
-      · simp only [checkedFromImport, hn, hw, bind, StateT.bind, pure, StateT.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
-        MonadState.modifyGet, get, getThe, MonadStateOf.get, StateT.get]
-        exact bind_pure_fst _ _ _
+      · rw [checked_lazy_path dots m names lazy l c el ec p hn hw]
+        have hr : ¬ (warnRelativeImportOfLazy dots m p).1 < 0 := by
+          intro hr
+          simp only [Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at hw
+          exact hw' ⟨hw.1.1, hw.1.2, hw.2, hr⟩
+        rw [if_neg hr]
       · simp only [checkedFromImport, hn, hw, bind, StateT.bind, pure, StateT.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
         MonadState.modifyGet, get, getThe, MonadStateOf.get, StateT.get]
         rfl
@@ -215,14 +289,10 @@ theorem checkedFromImport_proven : CheckedFromImport := by
   · have hn : ¬((countDots dots == 0 && isFutureModule m) = true) := by
       simpa using h
     by_cases hw : (decide (countDots dots > 0) && !hasValue lazy && isLazyModule m) = true
-    · have e : (checkedFromImport dots m names lazy l c el ec p).2 =
-          (warnRelativeImportOfLazy dots m p).2 := by
-        simp only [checkedFromImport, hn, hw, bind, StateT.bind, pure, StateT.pure, modify, modifyGet,
-          MonadStateOf.modifyGet, StateT.modifyGet, MonadState.modifyGet, get, getThe, MonadStateOf.get,
-          StateT.get, Bool.false_eq_true, ↓reduceIte]
-        exact bind_pure_snd _ _ _
-      rw [e]
-      exact warn_keeps_barry dots m p
+    · rw [checked_lazy_path dots m names lazy l c el ec p hn hw]
+      split
+      · exact warn_keeps_barry dots m p
+      · exact warn_keeps_barry dots m p
     · simp only [checkedFromImport, hn, hw, bind, StateT.bind, pure, StateT.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
         MonadState.modifyGet, get, getThe, MonadStateOf.get, StateT.get]
       rfl

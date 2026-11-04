@@ -308,4 +308,223 @@ def LegalTargetAccepted : Prop := ∀ (f n : Nat) (e : Ast), n < f → Legal n e
 
 theorem legalTargetAccepted_proven : LegalTargetAccepted := legal_null
 
+/-! ### What the rewrite computes, and what the blame picks -/
+
+/-- The six node shapes `_PyPegen_set_expr_context` rewrites, `Parser/action_helpers.c:325-345`;
+every other expression is returned as is (`default: new = expr;`). -/
+def ctxShape : Ast → Bool
+  | .node .Name [_, _] _ | .node .Tuple [_, _] _ | .node .List [_, _] _
+  | .node .Subscript [_, _, _] _ | .node .Attribute [_, _, _] _ | .node .Starred [_, _] _ => true
+  | _ => false
+
+/-- `e'` is "an `expr_ty` equivalent to `expr` but with `ctx` as context" (the comment on
+`_PyPegen_set_expr_context`, `Parser/action_helpers.c:318`): every position of the target spine gets
+the context `cx`, and nothing else changes. A `Name` keeps its id (`_set_name_context`, `:269-272`),
+a `Subscript` its value and slice (`:295-299`), an `Attribute` its value and attr (`:302-306`), and
+every node its location (`EXTRA_EXPR(e, e)`); a `Starred` has its value rewritten (`:309-316`), and a
+`Tuple` or `List` its elements, each in place and in order (`_set_seq_context`, `:246-266`). The
+value of a `Subscript` or `Attribute` is not on the spine and keeps its own context. `n` bounds the
+nesting of stars, tuples and lists. -/
+inductive Recontext (cx : Ast) : Nat → Ast → Ast → Prop
+  | name {n : Nat} {i x : Ast} {l : Option Loc} :
+      Recontext cx n (.node .Name [i, x] l) (.node .Name [i, cx] l)
+  | attr {n : Nat} {v a x : Ast} {l : Option Loc} :
+      Recontext cx n (.node .Attribute [v, a, x] l) (.node .Attribute [v, a, cx] l)
+  | sub {n : Nat} {v s x : Ast} {l : Option Loc} :
+      Recontext cx n (.node .Subscript [v, s, x] l) (.node .Subscript [v, s, cx] l)
+  | star {n : Nat} {v v' x : Ast} {l : Option Loc} : Recontext cx n v v' →
+      Recontext cx (n + 1) (.node .Starred [v, x] l) (.node .Starred [v', cx] l)
+  | tuple {n : Nat} {elts x : Ast} {ys : List Ast} {l : Option Loc} :
+      (seqOf elts).length = ys.length → (∀ q ∈ (seqOf elts).zip ys, Recontext cx n q.1 q.2) →
+      Recontext cx (n + 1) (.node .Tuple [elts, x] l) (.node .Tuple [.seq ys, cx] l)
+  | list {n : Nat} {elts x : Ast} {ys : List Ast} {l : Option Loc} :
+      (seqOf elts).length = ys.length → (∀ q ∈ (seqOf elts).zip ys, Recontext cx n q.1 q.2) →
+      Recontext cx (n + 1) (.node .List [elts, x] l) (.node .List [.seq ys, cx] l)
+  | other {n : Nat} {e : Ast} : ctxShape e = false → Recontext cx n e e
+
+theorem map_zip_eq {g : Ast → Ast} : ∀ {xs ys : List Ast}, xs.length = ys.length →
+    (∀ q ∈ xs.zip ys, g q.1 = q.2) → xs.map g = ys
+  | [], [], _, _ => rfl
+  | [], _ :: _, h, _ => by simp at h
+  | _ :: _, [], h, _ => by simp at h
+  | x :: xs, y :: ys, h, hq => by
+    simp only [List.map_cons, List.zip_cons_cons, List.mem_cons, forall_eq_or_imp] at hq ⊢
+    rw [hq.1, map_zip_eq (by simpa using h) hq.2]
+
+theorem set_noShape {cx : Ast} {f : Nat} {e : Ast} (h : ctxShape e = false) :
+    setExprContext cx (f + 1) e = e := by
+  rw [setExprContext.eq_def]
+  simp only []
+  split <;> simp_all [ctxShape]
+
+/-- `_PyPegen_set_expr_context` computes exactly `Recontext`: the result is the input with `cx` on
+the target spine and every id, attr, value, slice, element and location kept. The fuel is above the
+nesting, as the parser's `MAXSTACK` keeps it below the 100000 of the call site. -/
+def SetContextExact : Prop := ∀ (cx : Ast) (n f : Nat) (e e' : Ast), n < f →
+  Recontext cx n e e' → setExprContext cx f e = e'
+
+theorem setContextExact_proven : SetContextExact := by
+  intro cx n f
+  induction f generalizing n with
+  | zero => intro e e' h; omega
+  | succ f ih =>
+    intro e e' hn hr
+    cases hr with
+    | name => rfl
+    | attr => rfl
+    | sub => rfl
+    | star hv => simp only [setExprContext, ih _ _ _ (by omega) hv]
+    | tuple hl hq =>
+      simp only [setExprContext]
+      rw [map_zip_eq hl fun q hm => ih _ _ _ (by omega) (hq q hm)]
+    | list hl hq =>
+      simp only [setExprContext]
+      rw [map_zip_eq hl fun q hm => ih _ _ _ (by omega) (hq q hm)]
+    | other h => exact set_noShape h
+
+/-- The forms `_PyPegen_get_invalid_target` looks into or accepts, `Parser/action_helpers.c:1238-1264`;
+any other expression is its own answer (`default: return e;`). -/
+def blameForm : Ast → Bool
+  | .null | .node .List (_ :: _) _ | .node .Tuple (_ :: _) _ | .node .Starred (_ :: _) _
+  | .node .Compare (_ :: _ :: _) _ | .node .Name _ _ | .node .Subscript _ _
+  | .node .Attribute _ _ => true
+  | _ => false
+
+/-- The first comparison operator is `in`. -/
+def firstOpIn (ops : Ast) : Prop := ∃ fs l rest, seqOf ops = .node .In fs l :: rest
+
+/-- Every subexpression of a target that cannot be assigned to (`k` 0, `STAR_TARGETS`), deleted
+(1, `DEL_TARGETS`) or bound by `for` (2, `FOR_TARGETS`), left to right. Names, attributes and
+subscripts are good; a tuple or list is as good as its elements, "the only ones that can contain valid
+names in targets when they are parsed as expressions" (`:1232-1236`); a star is bad under `del` and
+otherwise as good as its value; a comparison is bad, except that for `for` "the `a in b` in
+`for a in b` gets parsed as a comparison" (`:1250-1252`), so a comparison whose first operator is
+`in` is as good as its left side, and any other comparison is not blamed at all; every other
+expression is bad. `n` bounds the nesting. -/
+inductive Offenders (k : Nat) : Nat → Ast → List Ast → Prop
+  | null {n : Nat} : Offenders k n .null []
+  | name {n : Nat} {fs : List Ast} {l : Option Loc} : Offenders k n (.node .Name fs l) []
+  | attr {n : Nat} {fs : List Ast} {l : Option Loc} : Offenders k n (.node .Attribute fs l) []
+  | sub {n : Nat} {fs : List Ast} {l : Option Loc} : Offenders k n (.node .Subscript fs l) []
+  | tuple {n : Nat} {elts : Ast} {fs : List Ast} {l : Option Loc} {oss : List (List Ast)} :
+      (seqOf elts).length = oss.length → (∀ q ∈ (seqOf elts).zip oss, Offenders k n q.1 q.2) →
+      Offenders k (n + 1) (.node .Tuple (elts :: fs) l) oss.flatten
+  | list {n : Nat} {elts : Ast} {fs : List Ast} {l : Option Loc} {oss : List (List Ast)} :
+      (seqOf elts).length = oss.length → (∀ q ∈ (seqOf elts).zip oss, Offenders k n q.1 q.2) →
+      Offenders k (n + 1) (.node .List (elts :: fs) l) oss.flatten
+  | starDel {n : Nat} {v : Ast} {fs : List Ast} {l : Option Loc} : k = 1 →
+      Offenders k n (.node .Starred (v :: fs) l) [.node .Starred (v :: fs) l]
+  | star {n : Nat} {v : Ast} {fs : List Ast} {l : Option Loc} {os : List Ast} : k ≠ 1 →
+      Offenders k n v os → Offenders k (n + 1) (.node .Starred (v :: fs) l) os
+  | cmp {n : Nat} {left ops : Ast} {fs : List Ast} {l : Option Loc} : k ≠ 2 →
+      Offenders k n (.node .Compare (left :: ops :: fs) l) [.node .Compare (left :: ops :: fs) l]
+  | cmpIn {n : Nat} {left ops : Ast} {fs : List Ast} {l : Option Loc} {os : List Ast} : k = 2 →
+      firstOpIn ops → Offenders k n left os →
+      Offenders k (n + 1) (.node .Compare (left :: ops :: fs) l) os
+  | cmpOther {n : Nat} {left ops : Ast} {fs : List Ast} {l : Option Loc} : k = 2 →
+      ¬ firstOpIn ops → Offenders k n (.node .Compare (left :: ops :: fs) l) []
+  | other {n : Nat} {e : Ast} : blameForm e = false → Offenders k n e [e]
+
+theorem offenders_nonnull {k n : Nat} {e : Ast} {os : List Ast} (h : Offenders k n e os) :
+    ∀ o ∈ os, o ≠ .null := by
+  induction h with
+  | null | name | attr | sub | cmpOther => simp
+  | @tuple _ elts _ _ oss hl _ ih | @list _ elts _ _ oss hl _ ih =>
+    intro o ho
+    obtain ⟨xs, hx, ho⟩ := List.mem_flatten.1 ho
+    have hm : xs ∈ ((seqOf elts).zip oss).map Prod.snd := by
+      rw [List.map_snd_zip (by omega)]
+      exact hx
+    obtain ⟨q, hq, hqe⟩ := List.mem_map.1 hm
+    exact ih q hq o (hqe ▸ ho)
+  | starDel => simp
+  | star _ _ ih => exact ih
+  | cmp => simp
+  | cmpIn _ _ _ ih => exact ih
+  | other h =>
+    intro o ho
+    simp only [List.mem_singleton] at ho
+    subst ho
+    intro hn
+    subst hn
+    simp [blameForm] at h
+
+theorem visit_first {g : Ast → Ast} : ∀ {xs : List Ast} {oss : List (List Ast)},
+    xs.length = oss.length → (∀ q ∈ xs.zip oss, g q.1 = q.2.headD .null ∧ ∀ o ∈ q.2, o ≠ .null) →
+    ((xs.map g).find? (fun x => match x with | .null => false | _ => true)).getD .null =
+      oss.flatten.headD .null
+  | [], [], _, _ => rfl
+  | [], _ :: _, h, _ => by simp at h
+  | _ :: _, [], h, _ => by simp at h
+  | x :: xs, os :: oss, h, hq => by
+    simp only [List.zip_cons_cons, List.mem_cons, forall_eq_or_imp] at hq
+    obtain ⟨⟨hg, hnn⟩, hr⟩ := hq
+    simp only [List.map_cons, List.find?_cons, List.flatten_cons]
+    cases os with
+    | nil =>
+      rw [hg]
+      exact visit_first (by simpa using h) hr
+    | cons o os =>
+      have ho : o ≠ .null := hnn o (List.mem_cons_self ..)
+      rw [hg]
+      simp only [List.headD_cons, List.cons_append]
+      cases o with
+      | null => exact (ho rfl).elim
+      | _ => rfl
+
+/-- `_PyPegen_get_invalid_target` returns the first subexpression `Offenders` lists, and `NULL`
+when there is none: the leftmost offender of a tuple or list wins (`VISIT_CONTAINER`, `:1220-1229`),
+a star is looked through except under `del`, and a `for` target looks through the `in` of a
+comparison and nowhere else. The fuel is above the nesting, as the parser's `MAXSTACK` keeps it
+below the 100000 of the call sites. -/
+def InvalidTargetFirst : Prop := ∀ (k n f : Nat) (e : Ast) (os : List Ast), n < f →
+  Offenders k n e os → invalidTarget k f e = os.headD .null
+
+theorem invalidTargetFirst_proven : InvalidTargetFirst := by
+  intro k n f
+  induction f generalizing n with
+  | zero => intro e os h; omega
+  | succ f ih =>
+    intro e os hn ho
+    cases ho with
+    | null => rfl
+    | name => rfl
+    | attr => rfl
+    | sub => rfl
+    | tuple hl hq =>
+      rw [invalidTarget.eq_def]
+      simp only []
+      exact visit_first hl fun q hm => ⟨ih _ _ _ (by omega) (hq q hm), offenders_nonnull (hq q hm)⟩
+    | list hl hq =>
+      rw [invalidTarget.eq_def]
+      simp only []
+      exact visit_first hl fun q hm => ⟨ih _ _ _ (by omega) (hq q hm), offenders_nonnull (hq q hm)⟩
+    | starDel hk =>
+      rw [invalidTarget.eq_def]
+      simp [hk]
+    | star hk hv =>
+      rw [invalidTarget.eq_def]
+      simp only [beq_iff_eq, hk, ↓reduceIte]
+      exact ih _ _ _ (by omega) hv
+    | cmp hk =>
+      rw [invalidTarget.eq_def]
+      simp [hk]
+    | cmpIn hk hin hv =>
+      obtain ⟨fs, l, rest, hs⟩ := hin
+      subst hk
+      rw [invalidTarget.eq_def]
+      simp only [beq_self_eq_true, ↓reduceIte, hs]
+      exact ih _ _ _ (by omega) hv
+    | cmpOther hk hin =>
+      subst hk
+      rw [invalidTarget.eq_def]
+      simp only [beq_self_eq_true, ↓reduceIte]
+      split
+      · next _ _ _ hs => exact (hin ⟨_, _, _, hs⟩).elim
+      · rfl
+    | other h =>
+      rw [invalidTarget.eq_def]
+      simp only []
+      split <;> simp_all [blameForm]
+
 end PyLean.PyGrammar.Check
