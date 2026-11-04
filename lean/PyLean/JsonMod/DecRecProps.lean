@@ -568,6 +568,16 @@ theorem loads_brace (cfg : DCfg) :
     simp [loadsPyR, decodeWith, rawDecodePyR, docFuel, pyScanOnceR, pyCall, pyIndex, pySlice, sliceBound,
       inWsSlice, stopToJde, wsEnd, wsLen, wsEndPy, chargeJde_succ, recPy, isWs, clampPos]
 
+/-- `'"\\uzz"'`: Python needs five frames (`scan_once`, `_scan_once`, `py_scanstring`,
+`_decode_uXXXX` and the error's `__init__`). -/
+theorem loads_uzz (cfg : DCfg) :
+    loadsPyR cfg 4 [34, 92, 117, 122, 122, 34] = .error recPy ∧
+    loadsPyR cfg 5 [34, 92, 117, 122, 122, 34] = .error (.jde "Invalid \\uXXXX escape" 2) := by
+  refine ⟨?_, ?_⟩ <;>
+    simp [loadsPyR, decodeWith, rawDecodePyR, docFuel, pyScanOnceR, pyScanstringR, pyScanLoopR, pyCall,
+      findTerm, isTerm, clampPos, pyIndex, decodeUXXXX, hex4, stopToJde, wsEnd, wsLen, chargeJde_succ, recPy,
+      isWs]
+
 /-- `json.loads(s)` with the recursion limits, for every document (`len(s) <= sys.maxsize`), every
 decoder setting, stack room `c` and number `p` of frames left at the `scan_once` call:
 1. each bounded model gives the unbounded model's result or a `RecursionError` it raised itself
@@ -584,7 +594,7 @@ decoder setting, stack room `c` and number `p` of frames left at the `scan_once`
    Python raises that `JSONDecodeError` exactly when `2 * k + 2 <= p`;
 5. the error's frame: on `'"'` C raises `RecursionError` at `p = 0` and its `JSONDecodeError` at
    `p >= 1`, Python its `JSONDecodeError` from four frames and `RecursionError` at three; on `'{'`
-   the same in Python. -/
+   the same in Python; on `'"\\uzz"'` Python needs five (`_decode_uXXXX` raises in its frame). -/
 def LoadsTwinsScanRec : Prop :=
   ∀ (cfg : DCfg) (c p : Nat) (s : PStr), (s.length : Int) ≤ ssizeMax →
     (loadsCR cfg c p s = loadsC cfg s ∨ IsRecCP (loadsCR cfg c p s)) ∧
@@ -607,7 +617,9 @@ def LoadsTwinsScanRec : Prop :=
       loadsPyR cfg 3 [34] = .error recPy ∧
       loadsPyR cfg 4 [34] = .error (.jde "Unterminated string starting at" 0) ∧
       loadsPyR cfg 3 [123] = .error recPy ∧
-      loadsPyR cfg 4 [123] = .error (.jde "Expecting property name enclosed in double quotes" 1))
+      loadsPyR cfg 4 [123] = .error (.jde "Expecting property name enclosed in double quotes" 1) ∧
+      loadsPyR cfg 4 [34, 92, 117, 122, 122, 34] = .error recPy ∧
+      loadsPyR cfg 5 [34, 92, 117, 122, 122, 34] = .error (.jde "Invalid \\uXXXX escape" 2))
 
 theorem loadsTwinsScanRec_proven : LoadsTwinsScanRec := by
   intro cfg c p s hs
@@ -615,9 +627,10 @@ theorem loadsTwinsScanRec_proven : LoadsTwinsScanRec := by
   have hP := loadsPy_bridge cfg p s
   obtain ⟨q1, q2, q3, q4⟩ := loads_quote cfg c p
   obtain ⟨b1, b2⟩ := loads_brace cfg
+  obtain ⟨u1, u2⟩ := loads_uzz cfg
   refine ⟨hC1, hP.1, hC2, hP.2, fun h1 h2 => ?_, fun hA k hk =>
     ⟨loadsCR_nest cfg hA c p k hk, loadsPyR_nest cfg hA p k hk⟩,
-    fun k hk => ⟨loadsCR_nestO cfg c p k hk, loadsPyR_nestO cfg p k hk⟩, q1, q2, q3, q4, b1, b2⟩
+    fun k hk => ⟨loadsCR_nestO cfg c p k hk, loadsPyR_nestO cfg p k hk⟩, q1, q2, q3, q4, b1, b2, u1, u2⟩
   have e1 : loadsCR cfg c p s = loadsC cfg s := hC1.resolve_right h1
   have e2 : loadsPyR cfg p s = loadsPy cfg s := hP.1.resolve_right h2
   rw [e1, e2]
