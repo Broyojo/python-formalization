@@ -535,14 +535,19 @@ def _CHECK_OBJECT (e : Env) : M Unit := guardTop (e.oparg + 2) fun
     | some v => pure (v != cacheNat e 0)
   | _ => fault "arity"
 
-/-- `:4766`: `(callable, self_or_null, args -- init, self, args)`. `cache[1]` is
-`cls->_spec_cache.init`. Note that nothing here looks at `Py_TPFLAGS_IS_ABSTRACT`:
-`bytecode-call-alloc-abstract`. -/
+/-- `:4766-4788`: `(callable, self_or_null, args -- init, self, args)`. `init` is
+`cls->_spec_cache.init`, which lives on the type: `_PyType_CacheInitForSpecialization` stores it
+under the version `_CHECK_OBJECT` has just matched, and `type_modified` clears it and drops the
+version (`Objects/typeobject.c`), so under that version it is the `__init__` that `_PyType_Lookup`
+finds. The model reads it that way rather than from the instruction's cache, whose object
+reference would belong to the profiling run of the `quick` difftest. Note that nothing here looks
+at `Py_TPFLAGS_IS_ABSTRACT`: `bytecode-call-alloc-abstract`. -/
 def _ALLOCATE_OBJECT (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
   | c :: _ :: args => do
+    let some init ← (e.om.typeLookup c "__init__" : RM _) | fault "_spec_cache.init is NULL"
     deoptIf !(← hasStackSpace)
     let self ← (alloc (.inst { cls := c }) : RM Val)
-    pure ((e.cache[1]?).getD .null :: self :: args)
+    pure (init :: self :: args)
   | _ => fault "arity"
 
 /-- The `_Py_InitCleanup` shim of `Python/specialize.c`: reserved `Program` index 1. -/
