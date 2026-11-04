@@ -135,7 +135,7 @@ in a new group which is created using the original group's `derive()` method"). 
 `derive` comes through; a result that is no `BaseExceptionGroup` is the `TypeError` of
 `exceptiongroup_subset`; a group is raised with the original's `__cause__` and `__traceback__`, and
 the exception being handled as `__context__`. -/
-def SuppressGroupDerive : Prop :=
+def SuppressGroupDeriveCore : Prop :=
   ∀ (σ : Type) (items : List (SupItem σ)) (ms : List Cls) (derive : Derive σ) (s s1 s2 : St σ)
     (handled : Option ExcId) (e g x : ExcId) (cs : List ExcId),
     let dc := (s.h.get e).cls
@@ -157,7 +157,7 @@ def SuppressGroupDerive : Prop :=
         ((s2.h.get e).tb.isSome → (s3.h.get g).tb = (s2.h.get e).tb) ∧
         (handled ≠ some g → handled.isSome → (s3.h.get g).context = handled))
 
-theorem suppressGroupDerive_proven : SuppressGroupDerive := by
+theorem suppressGroupDeriveCore_proven : SuppressGroupDeriveCore := by
   intro σ items ms derive s s1 s2 handled e g x cs dc hsub hbeg hcls hms hm hch hne hleaf
   have hl : e < s1.h.length := isInst_lt hbeg
   have hbegc : subOf dc clsBEG = true := by
@@ -244,6 +244,148 @@ theorem suppressGroupDerive_proven : SuppressGroupDerive := by
     · intro hne hsome
       obtain ⟨y, rfl⟩ := Option.isSome_iff_exists.1 hsome
       exact raiseCtx_context h2 g y hl2 (fun h => hne (by rw [h]))
+
+/-- An item `get_matcher_type` accepts in the tuple: an exception class (`PyExceptionClass_Check`,
+Objects/exceptions.c:1260-1266). A class whose metaclass has `__subclasscheck__` is one when it
+derives from `BaseException`; an ABC that is no exception class, a nested tuple and a union are
+not. -/
+def ExcClassItem {σ : Type} : SupItem σ → Prop
+  | .cls c => c.contains "BaseException" = true
+  | .hook _ c => c.isSome = true
+  | .other => False
+
+/-- The classes of the items that are exception classes, in order. -/
+def itemClasses {σ : Type} : List (SupItem σ) → List Cls
+  | [] => []
+  | .cls c :: is => c :: itemClasses is
+  | .hook _ (some c) :: is => c :: itemClasses is
+  | _ :: is => itemClasses is
+
+theorem matcherClasses_some {σ : Type} : ∀ items : List (SupItem σ),
+    (∀ i ∈ items, ExcClassItem i) → matcherClasses items = some (itemClasses items)
+  | [], _ => rfl
+  | i :: is, h => by
+    have hi := h i (by simp)
+    have hr := matcherClasses_some is (fun j hj => h j (by simp [hj]))
+    cases i with
+    | cls c =>
+      simp only [ExcClassItem] at hi
+      simp only [matcherClasses, itemClasses]
+      rw [if_pos hi, hr]
+      rfl
+    | hook ch c =>
+      cases c with
+      | none => simp [ExcClassItem] at hi
+      | some c => simp [matcherClasses, itemClasses, hr]
+    | other => simp [ExcClassItem] at hi
+
+theorem matcherClasses_none {σ : Type} : ∀ items : List (SupItem σ),
+    (∃ i ∈ items, ¬ExcClassItem i) → matcherClasses items = none
+  | [], ⟨_, hi, _⟩ => by simp at hi
+  | i :: is, ⟨j, hj, hn⟩ => by
+    rcases List.mem_cons.1 hj with rfl | hj'
+    · cases j with
+      | cls c =>
+        simp only [ExcClassItem] at hn
+        simp only [matcherClasses]
+        rw [if_neg hn]
+      | hook ch c =>
+        cases c with
+        | none => simp [matcherClasses]
+        | some c => simp [ExcClassItem] at hn
+      | other => simp [matcherClasses]
+    · have ih := matcherClasses_none is ⟨j, hj', hn⟩
+      cases i with
+      | cls c =>
+        simp only [matcherClasses]
+        by_cases hc : c.contains "BaseException" = true
+        · rw [if_pos hc, ih]; rfl
+        · rw [if_neg hc]
+      | hook ch c =>
+        cases c with
+        | none => simp [matcherClasses]
+        | some c => simp [matcherClasses, ih]
+      | other => simp [matcherClasses]
+
+/-- What `suppressExit` gives when it raises a new `c(msg)` in state `s`. -/
+def raisedNew {σ : Type} (s : St σ) (c : Cls) (msg : String) (handled : Option ExcId) :
+    PyLean.Py (St σ × Res (Option Bool)) :=
+  .ok ((s.raiseNew c msg handled).1, .error (s.raiseNew c msg handled).2)
+
+/-- The `TypeError` of `get_matcher_type`, Objects/exceptions.c:1271-1275. -/
+def matcherMsg : String :=
+  "expected an exception type, a tuple of exception types, or a callable (other than a class)"
+
+/-- When `exctype` is a group class that `issubclass` did not match, `excinst.split(self._exceptions)`
+(Lib/contextlib.py:527) runs, and fails: with `AttributeError` for an `excinst` of `None` or of an
+exception that is no group, and with the `TypeError` of `get_matcher_type` for a group when an item
+of the tuple is no exception class, though `issubclass` accepted it at :524: an ABC that is no
+exception class, a nested tuple, a union such as `KeyError | ValueError`, or a class that is no
+exception class (`suppress(int)`). Each is raised in `__exit__`, so the exception being handled, the
+group itself inside a `with`, is its `__context__`, and `derive` is not called. -/
+def SuppressSplitRefusals : Prop :=
+  ∀ (σ : Type) (items : List (SupItem σ)) (derive : Derive σ) (s s1 : St σ) (handled : Option ExcId)
+    (dc : Cls) (e : ExcId),
+    issubTuple (.cls dc) handled items s = (s1, .ok false) → subOf dc clsBEG = true →
+    suppressExit items derive s handled (some (.cls dc)) none =
+      raisedNew s1 clsAttr "'NoneType' object has no attribute 'split'" handled ∧
+    (s1.h.isInst e "BaseExceptionGroup" = false →
+      suppressExit items derive s handled (some (.cls dc)) (some e) =
+        raisedNew s1 clsAttr s!"'{(s1.h.get e).cls.headD ""}' object has no attribute 'split'" handled) ∧
+    (s1.h.isInst e "BaseExceptionGroup" = true → (∃ i ∈ items, ¬ExcClassItem i) →
+      suppressExit items derive s handled (some (.cls dc)) (some e) = raisedNew s1 clsType matcherMsg handled)
+
+theorem suppressSplitRefusals_proven : SuppressSplitRefusals := by
+  intro σ items derive s s1 handled dc e hsub hbeg
+  refine ⟨?_, ?_, ?_⟩
+  · simp [suppressExit, hsub, issubItem, hbeg, egSplit, raisedNew]
+  · intro hg
+    simp [suppressExit, hsub, issubItem, hbeg, egSplit, raisedNew, hg]
+  · intro hg hn
+    simp [suppressExit, hsub, issubItem, hbeg, egSplit, raisedNew, hg, matcherClasses_none items hn,
+      matcherMsg]
+
+/-- A group of leaves none of which matches: the rest is the group `derive` makes from all of
+them, so whatever the group class's `derive` does decides the outcome, as the docs say ("re-raised
+in a new group which is created using the original group's `derive()` method"). An exception from
+`derive` comes through; a result that is no `BaseExceptionGroup` is the `TypeError` of
+`exceptiongroup_subset`; a group is raised with the original's `__cause__` and `__traceback__`, and
+the exception being handled as `__context__`. When an item is no exception class, `split` refuses
+the tuple before it looks at the members, with the `TypeError` of `get_matcher_type`. -/
+def SuppressGroupDerive : Prop :=
+  ∀ (σ : Type) (items : List (SupItem σ)) (derive : Derive σ) (s s1 s2 : St σ)
+    (handled : Option ExcId) (e g x : ExcId) (cs : List ExcId),
+    let dc := (s.h.get e).cls
+    issubTuple (.cls dc) handled items s = (s1, .ok false) → s1.h.isInst e "BaseExceptionGroup" = true →
+    (s1.h.get e).cls = dc →
+    ((∃ i ∈ items, ¬ExcClassItem i) →
+      suppressExit items derive s handled (some (.cls dc)) (some e) = raisedNew s1 clsType matcherMsg handled) ∧
+    ((∀ i ∈ items, ExcClassItem i) → matchBy s1.h (itemClasses items) e = false →
+      (s1.h.get e).children = some cs → cs ≠ [] →
+      (∀ c ∈ cs, (s1.h.get c).children = none ∧ matchBy s1.h (itemClasses items) c = false) →
+      (derive e cs s1 = (s2, .error x) →
+        suppressExit items derive s handled (some (.cls dc)) (some e) = .ok (s2, .error x)) ∧
+      (derive e cs s1 = (s2, .ok g) → s2.h.isInst g "BaseExceptionGroup" = false →
+        ∃ t, suppressExit items derive s handled (some (.cls dc)) (some e) =
+          .ok (((s2.raiseNew clsType "derive must return an instance of BaseExceptionGroup" handled).1,
+            .error t)) ∧
+          ((s2.raiseNew clsType "derive must return an instance of BaseExceptionGroup" handled).1.h.get t).msg =
+            "derive must return an instance of BaseExceptionGroup") ∧
+      (derive e cs s1 = (s2, .ok g) → s2.h.isInst g "BaseExceptionGroup" = true →
+        ∃ s3, suppressExit items derive s handled (some (.cls dc)) (some e) = .ok (s3, .error g) ∧
+          (s3.h.get g).cause = (s2.h.get e).cause ∧
+          ((s2.h.get e).tb.isSome → (s3.h.get g).tb = (s2.h.get e).tb) ∧
+          (handled ≠ some g → handled.isSome → (s3.h.get g).context = handled)))
+
+theorem suppressGroupDerive_proven : SuppressGroupDerive := by
+  intro σ items derive s s1 s2 handled e g x cs dc hsub hbeg hcls
+  have hbegc : subOf dc clsBEG = true := by
+    simp only [Heap.isInst] at hbeg
+    simpa [subOf, clsBEG, hcls] using hbeg
+  refine ⟨fun hn => (suppressSplitRefusals_proven σ items derive s s1 handled dc e hsub hbegc).2.2 hbeg hn,
+    fun hall hm hch hne hleaf => ?_⟩
+  exact suppressGroupDeriveCore_proven σ items (itemClasses items) derive s s1 s2 handled e g x cs hsub hbeg
+    hcls (matcherClasses_some items hall) hm hch hne hleaf
 
 /-- "If the code within the with block raises a `BaseExceptionGroup`, suppressed exceptions are
 removed from the group" (Doc/library/contextlib.rst): a group of leaves, each of which `suppress`

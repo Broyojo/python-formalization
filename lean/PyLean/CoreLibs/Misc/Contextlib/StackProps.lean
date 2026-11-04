@@ -1,4 +1,5 @@
 import PyLean.CoreLibs.Misc.Contextlib.AsyncProps
+import PyLean.CoreLibs.Misc.Contextlib.WrapsProps
 
 /-!
 Properties of `ExitStack` and `AsyncExitStack`.
@@ -88,17 +89,38 @@ theorem exitLoop_nested (c : Calls σ F O A) (frameExc : Option ExcId) (fixFuel 
 every stack, every behaviour of the callbacks and every exception passed in, the exception that
 leaves the `with ExitStack()` block is the one that leaves the nested `with` statements, and the
 callbacks run with the same arguments in the same order, ending with the same stack. A fuel or
-`__context__` failure is shared by the two sides. -/
+`__context__` failure is shared by the two sides. With no exception passed in, `__exit__` never
+returns true, even when a callback does (`received_exc and suppressed_exc`, Lib/contextlib.py:682). -/
 def ExitMatchesNested : Prop :=
   ∀ (σ F O A : Type) (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
     (exc frameExc : Option ExcId),
-    match nested c frameExc fixFuel fuel x exc, exit c fuel fixFuel x exc frameExc with
-    | .error e, r => r = .error e
-    | .ok (x1, o), .ok (x2, r) => outcome exc r = o ∧ x2.2 = x1.2
-    | .ok _, .error _ => False
+    (match nested c frameExc fixFuel fuel x exc, exit c fuel fixFuel x exc frameExc with
+     | .error e, r => r = .error e
+     | .ok (x1, o), .ok (x2, r) => outcome exc r = o ∧ x2.2 = x1.2
+     | .ok _, .error _ => False) ∧
+    (exc = none → ∀ x2 r, exit c fuel fixFuel x exc frameExc = .ok (x2, r) → r ≠ .ok true)
+
+theorem exit_none_not_true (c : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
+    (frameExc : Option ExcId) (x2 : Xs σ F O A) (r : Res Bool)
+    (h : exit c fuel fixFuel x none frameExc = .ok (x2, r)) : r ≠ .ok true := by
+  cases hl : exitLoop c frameExc fixFuel fuel x none false false with
+  | error e => simp [exit, hl, bind, Except.bind] at h
+  | ok q =>
+    obtain ⟨x', e', sup, pend⟩ := q
+    cases pend with
+    | true =>
+      cases e' with
+      | none => simp [exit, hl, bind, Except.bind] at h
+      | some e =>
+        simp [exit, hl, bind, Except.bind, pure, Except.pure] at h
+        rw [← h.2]; simp
+    | false =>
+      simp [exit, hl, bind, Except.bind, pure, Except.pure] at h
+      rw [← h.2]; simp
 
 theorem exitMatchesNested_proven : ExitMatchesNested := by
   intro σ F O A c fuel fixFuel x exc frameExc
+  refine ⟨?_, fun hn x2 r h => by subst hn; exact exit_none_not_true c fuel fixFuel x frameExc x2 r h⟩
   have hinv : FlagInv exc exc false false := ⟨fun _ => (by simp), fun h => (by cases h)⟩
   have h := exitLoop_nested c frameExc fixFuel exc fuel x exc false false hinv
   cases hn : nested c frameExc fixFuel fuel x exc with
@@ -340,7 +362,8 @@ registration puts its entry on top, where `__exit__` takes it first. -/
 def StackRegistration : Prop :=
   ∀ (σ F O A V : Type) (st : Stack F O A) (lookup : ExitLookup F O A) (asF : O → F) (o : O) (f : F) (cb : Cb F O A)
     (a : A) (x : Xs σ F O A) (msg : String) (en : Xs σ F O A → Xs σ F O A × Res V) (x1 : Xs σ F O A)
-    (v : V) (e : ExcId) (b : Bool) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V)) (dx : Descr (Cb F O A)),
+    (v : V) (e : ExcId) (b : Bool) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V)) (dx : Descr (Cb F O A))
+    (handled : Option ExcId),
     (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → push lookup asF st o = ((true, cb) :: st, .ok o)) ∧
     (lookup o = none → push lookup asF st o = ((true, .raw (asF o)) :: st, .ok o)) ∧
     (lookup o = some (.get (.error e)) → push lookup asF st o = (st, .error e)) ∧
@@ -350,17 +373,17 @@ def StackRegistration : Prop :=
     (callback st f a = ((true, .wrapped f a) :: st, f) ∧ (Cb.wrapped f a : Cb F O A).wrappedAttr = some f) ∧
     pushAsyncCallback st f a = ((false, .wrapped f a) :: st, f) ∧
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .error e) →
-      enterContext (fun _ => some dn) (fun _ => some dx) msg b x o = (x1, .error e)) ∧
+      enterContext (fun _ => some dn) (fun _ => some dx) msg b handled x o = (x1, .error e)) ∧
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .ok v) →
-      enterContext (fun _ => some dn) (fun _ => some dx) msg b x o = ((x1.1, (b, cb) :: x1.2), .ok v)) ∧
-    (enterContext (V := V) (fun _ => none) lookup msg b x o).1.2 = x.2 ∧
-    (descriptorGet dn = .ok en → (enterContext (fun _ => some dn) (fun _ => none) msg b x o).1.2 = x.2) ∧
-    enterContext (V := V) (fun _ => some (.get (.error e))) lookup msg b x o = (x, .error e) ∧
+      enterContext (fun _ => some dn) (fun _ => some dx) msg b handled x o = ((x1.1, (b, cb) :: x1.2), .ok v)) ∧
+    (enterContext (V := V) (fun _ => none) lookup msg b handled x o).1.2 = x.2 ∧
+    (descriptorGet dn = .ok en → (enterContext (fun _ => some dn) (fun _ => none) msg b handled x o).1.2 = x.2) ∧
+    enterContext (V := V) (fun _ => some (.get (.error e))) lookup msg b handled x o = (x, .error e) ∧
     (descriptorGet dn = .ok en →
-      enterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg b x o = (x, .error e))
+      enterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg b handled x o = (x, .error e))
 
 theorem stackRegistration_proven : StackRegistration := by
-  intro σ F O A V st lookup asF o f cb a x msg en x1 v e b dn dx
+  intro σ F O A V st lookup asF o f cb a x msg en x1 v e b dn dx handled
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ⟨rfl, rfl⟩, rfl, ?_, ?_, ?_, ?_, rfl, ?_⟩
   · intro h; simp [push, h, pushExitCallback]
   · intro h; simp [push, lookupSpecial, h, pushExitCallback]
@@ -463,7 +486,7 @@ def CloseMatchesNested : Prop :=
 
 theorem closeMatchesNested_proven : CloseMatchesNested := by
   intro σ F O A c fuel fixFuel x frameExc
-  have h := exitMatchesNested_proven σ F O A c fuel fixFuel x none frameExc
+  have h := (exitMatchesNested_proven σ F O A c fuel fixFuel x none frameExc).1
   cases hn : nested c frameExc fixFuel fuel x none with
   | error e =>
     rw [hn] at h
@@ -561,25 +584,26 @@ of a lookup or of `_enter` pushes nothing and comes through, a `StopIteration` a
 def AEnterContextCases : Prop :=
   ∀ (σ F O A V : Type) (x x1 : Xs σ F O A) (o : O) (msg : String) (cb : Cb F O A) (v : V) (e : ExcId)
     (en : Xs σ F O A → Xs σ F O A × Res V) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V))
-    (dx : Descr (Cb F O A)) (lookup : ExitLookup F O A),
+    (dx : Descr (Cb F O A)) (lookup : ExitLookup F O A) (handled : Option ExcId),
     let wrap : Xs σ F O A → ExcId → Xs σ F O A × Res V := fun y e =>
       if y.1.h.isInst e "StopIteration" then
         let r : St σ × Res V := coroutineStop y.1 e
         ((r.1, y.2), r.2)
       else (y, .error e)
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .ok v) →
-      aenterContext (fun _ => some dn) (fun _ => some dx) msg x o = ((x1.1, (false, cb) :: x1.2), .ok v)) ∧
+      aenterContext (fun _ => some dn) (fun _ => some dx) msg handled x o = ((x1.1, (false, cb) :: x1.2), .ok v)) ∧
     (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .error e) →
-      aenterContext (fun _ => some dn) (fun _ => some dx) msg x o = wrap x1 e) ∧
-    aenterContext (V := V) (fun _ => some (.get (.error e))) lookup msg x o = wrap x e ∧
+      aenterContext (fun _ => some dn) (fun _ => some dx) msg handled x o = wrap x1 e) ∧
+    aenterContext (V := V) (fun _ => some (.get (.error e))) lookup msg handled x o = wrap x e ∧
     (descriptorGet dn = .ok en →
-      aenterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg x o = wrap x e) ∧
-    (∃ t, aenterContext (V := V) (fun _ => none) lookup msg x o =
-      (((x.1.raiseNew clsType msg).1, x.2), .error t) ∧ ((x.1.raiseNew clsType msg).1.h.get t).msg = msg ∧
-      ((x.1.raiseNew clsType msg).1.h.get t).cls = clsType)
+      aenterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg handled x o = wrap x e) ∧
+    (∃ t, aenterContext (V := V) (fun _ => none) lookup msg handled x o =
+      (((x.1.raiseNew clsType msg handled).1, x.2), .error t) ∧
+      ((x.1.raiseNew clsType msg handled).1.h.get t).msg = msg ∧
+      ((x.1.raiseNew clsType msg handled).1.h.get t).cls = clsType)
 
 theorem aEnterContextCases_proven : AEnterContextCases := by
-  intro σ F O A V x x1 o msg cb v e en dn dx lookup wrap
+  intro σ F O A V x x1 o msg cb v e en dn dx lookup handled wrap
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro h1 h2 h3
     simp [aenterContext, enterContext, lookupSentinel, h1, h2, h3, pushExitCallback, coBoundary]
@@ -592,11 +616,47 @@ theorem aEnterContextCases_proven : AEnterContextCases := by
     simp only [aenterContext, enterContext, lookupSentinel, h1]
     cases hs : x.1.h.isInst e "StopIteration" <;>
       simp [descriptorGet, coBoundary, wrap, hs, coroutineStop]
-  · have hr := raiseNew_not_stop x.1 clsType msg none (by decide)
-    have ho := raiseNew_obj x.1 clsType msg none
-    refine ⟨(x.1.raiseNew clsType msg).2, ?_, ho.2.1, ho.2.2.2.2⟩
+  · have hr := raiseNew_not_stop x.1 clsType msg handled (by decide)
+    have ho := raiseNew_obj x.1 clsType msg handled
+    refine ⟨(x.1.raiseNew clsType msg handled).2, ?_, ho.2.1, ho.2.2.2.2⟩
     simp only [aenterContext, enterContext, lookupSentinel]
     rw [coBoundary_of_not_stop _ _ hr]
+
+/-- `enter_context` and `enter_async_context` refuse an object that lacks the enter method, whatever
+its exit lookup would do, or that has it and lacks the exit method, with `TypeError(msg)` before
+running anything (Lib/contextlib.py:584-593, :715-724): the state is the one they were called in
+plus the new exception, the stack is unchanged, and the exception has the one being handled at the
+call as `__context__`; for the coroutine, the one being handled where it is awaited. -/
+def EnterContextRefusals : Prop :=
+  ∀ (σ F O A V : Type) (x : Xs σ F O A) (o : O) (msg : String) (handled : Option ExcId) (b : Bool)
+    (en : Xs σ F O A → Xs σ F O A × Res V) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V))
+    (lookup : ExitLookup F O A),
+    let t := x.1.raiseNew clsType msg handled
+    enterContext (V := V) (fun _ => none) lookup msg b handled x o = ((t.1, x.2), .error t.2) ∧
+    (descriptorGet dn = .ok en →
+      enterContext (fun _ => some dn) (fun _ => none) msg b handled x o = ((t.1, x.2), .error t.2)) ∧
+    aenterContext (V := V) (fun _ => none) lookup msg handled x o = ((t.1, x.2), .error t.2) ∧
+    (descriptorGet dn = .ok en →
+      aenterContext (fun _ => some dn) (fun _ => none) msg handled x o = ((t.1, x.2), .error t.2)) ∧
+    (t.1.h.get t.2).cls = clsType ∧ (t.1.h.get t.2).msg = msg ∧
+    (∀ y, handled = some y → y < x.1.h.length → (t.1.h.get t.2).context = some y)
+
+theorem enterContextRefusals_proven : EnterContextRefusals := by
+  intro σ F O A V x o msg handled b en dn lookup t
+  have hr := raiseNew_not_stop x.1 clsType msg handled (by decide)
+  have ho := raiseNew_obj x.1 clsType msg handled
+  refine ⟨rfl, ?_, ?_, ?_, ho.2.2.2.2, ho.2.1, ?_⟩
+  · intro h
+    simp only [enterContext, lookupSentinel, h]
+    rfl
+  · simp only [aenterContext, enterContext, lookupSentinel]
+    rw [coBoundary_of_not_stop _ _ hr]
+  · intro h
+    simp only [aenterContext, enterContext, lookupSentinel, h]
+    rw [coBoundary_of_not_stop _ _ hr]
+  · intro y hy hyl
+    subst hy
+    exact raiseNew_context x.1 clsType msg y hyl
 
 /-- Nested `async with` statements, innermost first: a sync entry is called, an async one awaited. -/
 def anested (c ac : Calls σ F O A) (frameExc : Option ExcId) (fixFuel : Nat) :
@@ -686,18 +746,47 @@ statements", here `async with` and `with` statements: for every stack, sync and 
 mixed, every behaviour of the callbacks and every exception passed in, the callbacks run in the
 same order with the same arguments, ending with the same stack, and what `__aexit__` gives is what
 leaves the nested statements: true for nothing, false for the exception passed in, or the
-exception raised, after the coroutine boundary of `__aexit__`. -/
+exception raised, after the coroutine boundary of `__aexit__`. With no exception passed in it never
+returns true (`received_exc and suppressed_exc`, Lib/contextlib.py:817). -/
 def AExitMatchesNested : Prop :=
   ∀ (σ F O A : Type) (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
     (exc frameExc : Option ExcId),
-    match anested c ac frameExc fixFuel fuel x exc, aexit c ac fuel fixFuel x exc frameExc with
-    | .error e, r => r = .error e
-    | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧
-        (match r with
-         | .ok true => o = none
-         | .ok false => o = exc
-         | .error e => ∃ p, o = some p ∧ ALeaves x2.1.h p e)
-    | .ok _, .error _ => False
+    (match anested c ac frameExc fixFuel fuel x exc, aexit c ac fuel fixFuel x exc frameExc with
+     | .error e, r => r = .error e
+     | .ok (x1, o), .ok (x2, r) => x2.2 = x1.2 ∧
+         (match r with
+          | .ok true => o = none
+          | .ok false => o = exc
+          | .error e => ∃ p, o = some p ∧ ALeaves x2.1.h p e)
+     | .ok _, .error _ => False) ∧
+    (exc = none → ∀ x2 r, aexit c ac fuel fixFuel x exc frameExc = .ok (x2, r) → r ≠ .ok true)
+
+theorem aexit_none_not_true (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
+    (frameExc : Option ExcId) (x2 : Xs σ F O A) (r : Res Bool)
+    (h : aexit c ac fuel fixFuel x none frameExc = .ok (x2, r)) : r ≠ .ok true := by
+  cases hl : aexitLoop c ac frameExc fixFuel fuel x none false false with
+  | error e => simp [aexit, hl, bind, Except.bind] at h
+  | ok q =>
+    obtain ⟨x', e', sup, pend⟩ := q
+    cases pend with
+    | true =>
+      cases e' with
+      | none => simp [aexit, hl, bind, Except.bind] at h
+      | some e =>
+        intro hr
+        subst hr
+        simp only [aexit, hl, bind, Except.bind, pure, Except.pure, if_true] at h
+        generalize hcb : coBoundary (raiseKeepingContext x' e frameExc).1 (.error e : Res Bool) = cb at h
+        obtain ⟨s', res⟩ := cb
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        rw [h.2] at hcb
+        unfold coBoundary at hcb
+        by_cases hs : (raiseKeepingContext x' e frameExc).1.h.isInst e "StopIteration" = true
+        · simp [hs] at hcb
+        · simp [hs] at hcb
+    | false =>
+      simp [aexit, hl, bind, Except.bind, pure, Except.pure] at h
+      rw [← h.2]; simp
 
 theorem aexit_shape (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O A)
     (exc frameExc : Option ExcId) :
@@ -738,7 +827,8 @@ theorem aexit_shape (c ac : Calls σ F O A) (fuel fixFuel : Nat) (x : Xs σ F O 
 
 theorem aExitMatchesNested_proven : AExitMatchesNested := by
   intro σ F O A c ac fuel fixFuel x exc frameExc
-  exact aexit_shape c ac fuel fixFuel x exc frameExc
+  exact ⟨aexit_shape c ac fuel fixFuel x exc frameExc,
+    fun hn x2 r h => by subst hn; exact aexit_none_not_true c ac fuel fixFuel x frameExc x2 r h⟩
 
 /-- `aclose()` is `__aexit__(None, None, None)` with the result dropped: what leaves it is the
 exception leaving nested `async with` statements with no exception, after the coroutine boundary,

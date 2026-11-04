@@ -630,27 +630,34 @@ def runStack (j : Json) : Except String Json := do
             ((s, x.2), .error e)
           else (x, .ok en))))
       let (x', r) := if isAsync
-        then aenterContext m (fun o => some (.get (.ok (.bound o o)))) "" x f
-        else enterContext m (fun o => some (.get (.ok (.bound o o)))) "" true x f
+        then aenterContext m (fun o => some (.get (.ok (.bound o o)))) "" none x f
+        else enterContext m (fun o => some (.get (.ok (.bound o o)))) "" true none x f
       x := x'
       out := out.push (encRes x.1.g.labels x.1.h jInt r)
     | "enter_bad" =>
       let isAsync ← jBoolAt op 1
       let kind ← jStrAt op 2
+      let inExc ← jBoolAt op 3
       let tail := if isAsync then "asynchronous context manager protocol" else "context manager protocol"
       let msg := s!"'__main__.{if kind == "noexit" then "MiscNoExit" else "MiscNoCM"}' object does not support the {tail}"
       let body : Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int := fun x => (x, .ok 0)
+      -- inside `except KeyError:` for a `KeyError("handled")`
+      let (x0, handled) : Xs SW XF XF Unit × Option ExcId :=
+        if inExc then
+          let (h, e) := x.1.h.alloc { cls := clsOf "KeyError", msg := "handled" }
+          (({ x.1 with h := h }, x.2), some e)
+        else (x, none)
       let (x', r) ← match kind with
-        | "none" => pure (enterContext (fun _ => none) (fun _ => none) msg true x ((0, .ret false) : XF))
-        | "noexit" => pure (enterContext (fun _ => some (.noGet body)) (fun _ => none) msg true x ((0, .ret false) : XF))
+        | "none" => pure (enterContext (fun _ => none) (fun _ => none) msg true handled x0 ((0, .ret false) : XF))
+        | "noexit" => pure (enterContext (fun _ => some (.noGet body)) (fun _ => none) msg true handled x0 ((0, .ret false) : XF))
         | "enterfail" =>
-          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
-          let y : Xs SW XF XF Unit := (s, x.2)
-          pure (enterContext (fun _ => some (.get (.error e))) (fun _ => none) msg true y ((0, .ret false) : XF))
+          let (s, e) := x0.1.raiseNew (clsOf "ValueError") "descr" handled
+          let y : Xs SW XF XF Unit := (s, x0.2)
+          pure (enterContext (fun _ => some (.get (.error e))) (fun _ => none) msg true handled y ((0, .ret false) : XF))
         | _ =>
-          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
-          let y : Xs SW XF XF Unit := (s, x.2)
-          pure (enterContext (fun _ => some (.noGet body)) (fun _ => some (.get (.error e))) msg true y ((0, .ret false) : XF))
+          let (s, e) := x0.1.raiseNew (clsOf "ValueError") "descr" handled
+          let y : Xs SW XF XF Unit := (s, x0.2)
+          pure (enterContext (fun _ => some (.noGet body)) (fun _ => some (.get (.error e))) msg true handled y ((0, .ret false) : XF))
       let (s', r) := if isAsync then coBoundary x'.1 r else (x'.1, r)
       let x' := (s', x'.2)
       x := x'
@@ -858,6 +865,114 @@ def runNull (j : Json) : Except String Json := do
   let (s, r) := withStmt cm bodyF { h := [], g := () }
   return Json.mkObj [("ok", encRes [] s.h (jOpt jInt) r)]
 
+/-! ### `@wraps(func)` -/
+
+/-- The values of a `wraps` case: strings, ints, `None`, tuples by length, a list, a function, the
+decorated object itself, and `functools.Placeholder`. -/
+inductive WV where
+  | s (x : String)
+  | i (n : Int)
+  | none
+  | t (n : Nat)
+  | l
+  | fn
+  | self
+  | ph
+  deriving Repr, DecidableEq, Inhabited
+
+def wvOps : ValOps WV where
+  isStr := fun | .s _ => true | _ => false
+  isTuple := fun | .t _ => true | _ => false
+  isNone := fun | .none => true | _ => false
+  callable := fun | .fn => true | .self => true | _ => false
+  isPlaceholder := fun | .ph => true | _ => false
+  ofStr := .s
+  none := .none
+  unit := .t 0
+
+def parseWV (j : Json) : Except String WV := do
+  match ← jStrAt j 0 with
+  | "s" => return .s (← jStrAt j 1)
+  | "i" => return .i (← jIntAt j 1)
+  | "none" => return .none
+  | "t" => return .t (← jNatAt j 1)
+  | "l" => return .l
+  | "fn" => return .fn
+  | o => throw s!"bad value {o}"
+
+def encWV : WV → Json
+  | .s x => Json.arr #[jStr "s", jStr x]
+  | .i n => Json.arr #[jStr "i", jInt n]
+  | .none => Json.arr #[jStr "none"]
+  | .t n => Json.arr #[jStr "t", toJson n]
+  | .l => Json.arr #[jStr "l"]
+  | .fn => Json.arr #[jStr "fn"]
+  | .self => Json.arr #[jStr "self"]
+  | .ph => Json.arr #[jStr "ph"]
+
+/-- How the decorated object answers `getattr` for one name. -/
+inductive WSpec where
+  | attr
+  | raise
+  | val (v : WV)
+
+def parseWSpec (j : Json) : Except String WSpec := do
+  match ← jStrAt j 0 with
+  | "attr" => return .attr
+  | "raise" => return .raise
+  | "val" => return .val (← parseWV (← jGetI j 1))
+  | o => throw s!"bad spec {o}"
+
+def wRaise {α : Type} (handled : Option ExcId) (s : St (List String)) (c : Cls) (m : String) :
+    St (List String) × Res α :=
+  let (s, e) := s.raiseNew c m handled
+  (s, .error e)
+
+/-- `contextmanager(obj)` or `asynccontextmanager(obj)`, where `obj.__getattribute__` answers each
+name of `WRAPPER_ASSIGNMENTS` and `__dict__` by the case and logs it; `__dict__` is a dict, missing,
+raising, or the int `5`. -/
+def runWraps (j : Json) : Except String Json := do
+  let isAsync ← getBool j "async"
+  let ph ← getBool j "ph"
+  let withH ← getBool j "with"
+  let attrs ← (← jArr (← field j "attrs")).mapM
+    (fun p => do return ((← jStrAt p 0), ← parseWSpec (← jGetI p 1)))
+  let dj ← field j "dict"
+  let dk ← jStrAt dj 0
+  let pairs ← if dk == "dict" then
+      (← jArr (← jGetI dj 1)).mapM (fun p => do return ((← jStrAt p 0), ← parseWV (← jGetI p 1)))
+    else pure []
+  let base : St (List String) := { h := [], g := [] }
+  let (s0, handled, labels) : St (List String) × Option ExcId × List (ExcId × String) :=
+    if withH then
+      let (h, e) := base.h.alloc { cls := clsOf "KeyError", msg := "handled" }
+      ({ base with h := h }, some e, [(e, "handled")])
+    else (base, none, [])
+  let fn : FuncView (List String) WV (Option (List (String × WV))) :=
+    { read := fun a s =>
+        let s := { s with g := s.g ++ [a] }
+        match attrs.lookup a with
+        | some .attr => wRaise handled s clsAttr a
+        | some .raise => wRaise handled s (clsOf "ValueError") a
+        | some (.val v) => (s, .ok v)
+        | none => wRaise handled s clsAttr a
+      getDict := fun s =>
+        let s := { s with g := s.g ++ ["__dict__"] }
+        if dk == "attr" then wRaise handled s clsAttr "__dict__"
+        else if dk == "raise" then wRaise handled s (clsOf "ValueError") "__dict__"
+        else if dk == "int" then (s, .ok none)
+        else (s, .ok (some pairs))
+      items := fun d s =>
+        match d with
+        | some ps => (s, .ok ps)
+        | none => wRaise handled s clsType "'int' object is not iterable" }
+  let self : WV := if ph then .ph else .self
+  let (s, r) := contextmanagerDeco wvOps fn self isAsync handled s0
+  let enc (w : FnAttrs WV) : Json :=
+    Json.arr #[encWV w.name, encWV w.qualname, encWV w.module, encWV w.doc, encWV w.annotate,
+      encWV w.typeParams, Json.arr (w.dict.map (fun p => Json.arr #[jStr p.1, encWV p.2])).toArray]
+  return Json.mkObj [("ok", Json.arr #[encRes labels s.h enc r, Json.arr (s.g.map jStr).toArray])]
+
 def runCase (j : Json) : Except String Json := do
   match ← getStr j "k" with
   | "gcm" => runGcm j
@@ -873,6 +988,7 @@ def runCase (j : Json) : Except String Json := do
   | "init" => runInit j
   | "agraw" => runAgRaw j
   | "aclosing" => runAclosing j
+  | "wraps" => runWraps j
   | k => throw s!"bad kind {k}"
 
 end PyLean.CoreLibs.Misc.Contextlib

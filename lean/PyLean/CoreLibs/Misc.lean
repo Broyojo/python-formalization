@@ -384,7 +384,12 @@ def contextlibEntries : List Entry := [
     source := "docstring of contextmanager"
     status := .proven, prop := ``Contextlib.ContextmanagerTryFinally,
     thm := some ``Contextlib.contextmanagerTryFinally_proven
-    notes := "@wraps(func) is functools.update_wrapper and outside this statement." },
+    notes := "The decoration, @wraps(func), is misc-ctx-wraps." },
+  { id := "misc-ctx-wraps", pyFile := "Lib/contextlib.py"
+    pyFns := ["contextmanager", "asynccontextmanager"]
+    statement := "@wraps(func) on helper: Placeholder is refused; func's attributes are read in WRAPPER_ASSIGNMENTS order and copied, helper keeps its own where AttributeError is raised, the first setter refusal (non-str __name__/__qualname__, bad __annotate__, non-tuple __type_params__) or other exception stops it, func.__dict__ is merged and __wrapped__ is func last."
+    source := "Lib/contextlib.py:365, :398; Lib/functools.py:35-77; Objects/funcobject.c setters"
+    status := .proven, prop := ``Contextlib.ContextmanagerWraps, thm := some ``Contextlib.contextmanagerWraps_proven },
   { id := "misc-ctx-async-twin", pyFile := "Lib/contextlib.py"
     pyFns := ["_AsyncGeneratorContextManager.__aexit__", "_GeneratorContextManager.__exit__"]
     statement := "When neither value nor the raised exception is a stop exception, __aexit__ and __exit__ give the same result on the same generator behaviour."
@@ -417,7 +422,7 @@ def contextlibEntries : List Entry := [
     source := "docstring of asynccontextmanager"
     status := .proven, prop := ``Contextlib.AContextmanagerTryFinally,
     thm := some ``Contextlib.aContextmanagerTryFinally_proven
-    notes := "@wraps(func) is functools.update_wrapper and outside this statement." },
+    notes := "The decoration, @wraps(func), is misc-ctx-wraps." },
   { id := "misc-ctx-closing", pyFile := "Lib/contextlib.py"
     pyFns := ["closing.__exit__"]
     statement := "For every close(), with closing(x) binds x and is try/finally x.close(): close runs once after the block, its exception replaces the outcome, and nothing is suppressed."
@@ -429,13 +434,13 @@ def contextlibEntries : List Entry := [
     source := "docstring of aclosing; Python/intrinsics.c:141-182"
     status := .proven, prop := ``Contextlib.AClosingTryFinally, thm := some ``Contextlib.aClosingTryFinally_proven },
   { id := "misc-ctx-redirect", pyFile := "Lib/contextlib.py"
-    pyFns := ["_RedirectStream.__enter__", "_RedirectStream.__exit__"]
-    statement := "__enter__ installs and returns the target and the matching __exit__ restores the stream and the object's state, re-entrantly; a missing sys stream raises in __enter__ with nothing appended; __exit__ alone is IndexError."
+    pyFns := ["_RedirectStream.__init__", "_RedirectStream.__enter__", "_RedirectStream.__exit__"]
+    statement := "__enter__ installs and returns the target and the matching __exit__ restores the stream and the object's state, re-entrantly; a missing sys stream raises in __enter__ with nothing appended; a new object saves nothing, so __exit__ alone is IndexError, and its first enter/exit pair returns it to its initial state."
     source := "comment Lib/contextlib.py:461"
     status := .proven, prop := ``Contextlib.RedirectRestores, thm := some ``Contextlib.redirectRestores_proven },
   { id := "misc-ctx-chdir", pyFile := "Lib/contextlib.py"
-    pyFns := ["chdir.__enter__", "chdir.__exit__"]
-    statement := "The matching __exit__ returns to the directory __enter__ found; a failing os.getcwd pushes nothing; a failing os.chdir propagates, in __enter__ with the directory saved, in __exit__ with it popped; __exit__ alone is IndexError."
+    pyFns := ["chdir.__init__", "chdir.__enter__", "chdir.__exit__"]
+    statement := "The matching __exit__ returns to the directory __enter__ found; a failing os.getcwd pushes nothing; a failing os.chdir propagates, in __enter__ with the directory saved, in __exit__ with it popped; a new chdir(p) has an empty stack, so __exit__ alone is IndexError, and its first __enter__ goes to p."
     source := "docstring of chdir"
     status := .proven, prop := ``Contextlib.ChdirRestores, thm := some ``Contextlib.chdirRestores_proven },
   { id := "misc-ctx-suppress-issubclass", pyFile := "Lib/contextlib.py"
@@ -450,7 +455,7 @@ def contextlibEntries : List Entry := [
     status := .proven, prop := ``Contextlib.IssubTupleCases, thm := some ``Contextlib.issubTupleCases_proven },
   { id := "misc-ctx-suppress-derive", pyFile := "Lib/contextlib.py"
     pyFns := ["suppress.__exit__"]
-    statement := "For a group of unmatched leaves the rest is what the group class's derive makes: its exception comes through, a non-group is TypeError, a group is raised with the original's cause and traceback and the handled exception as context."
+    statement := "For a group of unmatched leaves the rest is what the group class's derive makes: its exception comes through, a non-group is TypeError, a group is raised with the original's cause and traceback and the handled exception as context; an item that is no exception class is get_matcher_type's TypeError before derive."
     source := "Doc/library/contextlib.rst: re-raised in a new group created using the original group's derive()"
     status := .proven, prop := ``Contextlib.SuppressGroupDerive, thm := some ``Contextlib.suppressGroupDerive_proven },
   { id := "misc-ctx-suppress-group-consistent", pyFile := "Lib/contextlib.py"
@@ -461,9 +466,15 @@ def contextlibEntries : List Entry := [
     thm := some ``Contextlib.suppressGroupConsistent_refuted
     bug := some "corelibs-suppress-group-virtual-subclass"
     notes := "issubclass honours __subclasscheck__, ExceptionGroup.split matches concretely." },
+  { id := "misc-ctx-suppress-split-refusals", pyFile := "Lib/contextlib.py"
+    pyFns := ["suppress.__exit__"]
+    statement := "For a group class that issubclass did not match, split fails: AttributeError for a None or non-group excinst, get_matcher_type's TypeError for an item issubclass accepted that is no exception class (ABC, nested tuple, union), each chained to the handled exception."
+    source := "Lib/contextlib.py:526-527; Objects/exceptions.c:1245-1276"
+    status := .proven, prop := ``Contextlib.SuppressSplitRefusals,
+    thm := some ``Contextlib.suppressSplitRefusals_proven },
   { id := "misc-ctx-suppress-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["suppress.__exit__"]
-    statement := "For exception classes and the builtin derive, a group not suppressed whole is suppressed when every leaf is under a matching node, and otherwise a new group with exactly the other leaves in order and the original's message, cause and traceback is raised; existing objects keep their data."
+    statement := "For plain classes and the builtin derive, a group not suppressed whole is get_matcher_type's TypeError if a class is no exception class; else it is suppressed when every leaf is under a matching node, and otherwise a new group with exactly the other leaves in order and the original's message, cause and traceback is raised; existing objects keep their data."
     source := "Doc/library/contextlib.rst: suppressed exceptions are removed from the group, the rest re-raised in a new group"
     status := .proven, prop := ``Contextlib.SuppressNested, thm := some ``Contextlib.suppressNested_proven },
   { id := "misc-ctx-lookup-special-is-special", pyFile := "Lib/contextlib.py"
@@ -476,7 +487,7 @@ def contextlibEntries : List Entry := [
     notes := "getattr_static also searches the metaclass of a type (Lib/inspect.py:1796-1803)." },
   { id := "misc-ctx-exit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
-    statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements."
+    statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements; with no exception passed in __exit__ never returns True."
     source := "comment Lib/contextlib.py:634-635, :651-652"
     status := .proven, prop := ``Contextlib.ExitMatchesNested, thm := some ``Contextlib.exitMatchesNested_proven
     notes := "__context__ is outside the statement: it differs in the open python/cpython#102201." },
@@ -556,6 +567,12 @@ def contextlibEntries : List Entry := [
     statement := "enter_async_context returns the awaited __aenter__ result and pushes __aexit__ after it with is_sync False; a failing lookup or __aenter__ pushes nothing and comes through, a StopIteration as the coroutine's RuntimeError; a missing method is the TypeError."
     source := "docstring of enter_async_context; Python/intrinsics.c:141-182"
     status := .proven, prop := ``Contextlib.AEnterContextCases, thm := some ``Contextlib.aEnterContextCases_proven },
+  { id := "misc-ctx-enter-context-refusals", pyFile := "Lib/contextlib.py"
+    pyFns := ["_BaseExitStack.enter_context", "AsyncExitStack.enter_async_context"]
+    statement := "A missing enter method, or a missing exit method after a found enter method, is TypeError(msg) before anything runs, with the stack unchanged and the exception being handled at the call (where the coroutine is awaited) as __context__."
+    source := "Lib/contextlib.py:584-593, :715-724"
+    status := .proven, prop := ``Contextlib.EnterContextRefusals,
+    thm := some ``Contextlib.enterContextRefusals_proven },
   { id := "misc-ctx-close-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.close"]
     statement := "close() raises what nested with statements with no exception raise, and otherwise returns None, also when a callback returns true."
@@ -563,7 +580,7 @@ def contextlibEntries : List Entry := [
     status := .proven, prop := ``Contextlib.CloseMatchesNested, thm := some ``Contextlib.closeMatchesNested_proven },
   { id := "misc-ctx-aexit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["AsyncExitStack.__aexit__"]
-    statement := "For every stack of sync and async entries, AsyncExitStack.__aexit__ runs the callbacks as nested async with and with statements do and gives what leaves them, a raised StopIteration as the coroutine's RuntimeError."
+    statement := "For every stack of sync and async entries, AsyncExitStack.__aexit__ runs the callbacks as nested async with and with statements do and gives what leaves them, a raised StopIteration as the coroutine's RuntimeError; with no exception passed in it never returns True."
     source := "comment Lib/contextlib.py:765-766, :782-783"
     status := .proven, prop := ``Contextlib.AExitMatchesNested, thm := some ``Contextlib.aExitMatchesNested_proven },
   { id := "misc-ctx-aclose-matches-nested", pyFile := "Lib/contextlib.py"

@@ -434,22 +434,34 @@ is created using the original group's derive() method". For exception classes an
 group is suppressed; otherwise a new group is raised whose leaves are exactly the others, in
 order, with the message, cause and traceback of the original, and every object that existed keeps
 its class, message, members, cause and traceback. `MembersBefore` is the invariant that groups are
-made from existing exceptions. -/
+made from existing exceptions. A class given to `suppress` that is no exception class, which
+`issubclass` accepts, makes `split` refuse the tuple with the `TypeError` of `get_matcher_type`. -/
 def SuppressNested : Prop :=
   ∀ (σ : Type) (cls : List Cls) (s : St σ) (handled : Option ExcId) (e : ExcId) (cs : List ExcId),
-    MembersBefore s.h → (∀ c ∈ cls, c.contains "BaseException" = true) →
+    MembersBefore s.h →
     (s.h.get e).children = some cs → s.h.isInst e "BaseExceptionGroup" = true →
     cls.any (subOf (s.h.get e).cls) = false →
     let r := suppressExit (cls.map SupItem.cls) builtinDerive s handled
       (some (Derived.cls (s.h.get e).cls)) (some e)
+    ((∃ c ∈ cls, c.contains "BaseException" = false) → r = raisedNew s clsType matcherMsg handled) ∧
+    ((∀ c ∈ cls, c.contains "BaseException" = true) →
     (kept s.h cls (e + 1) e = [] → ∃ s', r = .ok (s', .ok (some true))) ∧
     (kept s.h cls (e + 1) e ≠ [] → ∃ s' x, r = .ok (s', .error x) ∧ x ≠ e ∧
       leaves s'.h (x + 1) x = kept s.h cls (e + 1) e ∧
       (s'.h.get x).msg = (s.h.get e).msg ∧ (s'.h.get x).cause = (s.h.get e).cause ∧
-      (s'.h.get x).tb = (s.h.get e).tb ∧ (∀ i < s.h.length, SameData (s'.h.get i) (s.h.get i)))
+      (s'.h.get x).tb = (s.h.get e).tb ∧ (∀ i < s.h.length, SameData (s'.h.get i) (s.h.get i))))
 
 theorem suppressNested_proven : SuppressNested := by
-  intro σ cls s handled e cs hm hcls hch hbeg hnm r
+  intro σ cls s handled e cs hm hch hbeg hnm r
+  have hbegc0 : subOf (s.h.get e).cls clsBEG = true := by
+    simp only [Heap.isInst] at hbeg
+    simpa [subOf, clsBEG] using hbeg
+  refine ⟨fun ⟨c, hc, hn⟩ => ?_, fun hcls => ?_⟩
+  · have hnone : matcherClasses (cls.map SupItem.cls : List (SupItem σ)) = none :=
+      matcherClasses_none _ ⟨.cls c, List.mem_map_of_mem hc, by simp only [ExcClassItem, hn]; decide⟩
+    simp only [r, suppressExit, issubTuple_plain, hnm, issubItem, hbegc0, egSplit, hbeg,
+      Bool.not_true, Bool.false_eq_true, if_false, hnone]
+    rfl
   have hel : e < s.h.length := isInst_lt hbeg
   have hbegc : subOf (s.h.get e).cls clsBEG = true := by
     simp only [Heap.isInst] at hbeg
