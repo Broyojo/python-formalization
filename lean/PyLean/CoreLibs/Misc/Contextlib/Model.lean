@@ -601,6 +601,25 @@ def lookupSentinel (d : Option (Descr T)) : Res (Option T) :=
     | .error e => .error e
     | .ok v => .ok (some v)
 
+/-- A class's `__dict__` as a lookup. -/
+abbrev ClsDict (T : Type) := String → Option T
+
+/-- `getattr_static(cls, name)` for a class `cls` with MRO `mro` and metaclass MRO `metaMro`,
+Lib/inspect.py:1759-1805: `cls` is a type, so `klass = cls` (:1780-1781) and no instance dict is
+read; the first entry of the MRO that has `name` (`_check_class`, :1719-1723); failing that, "for
+types we check the metaclass too" (:1795-1801); `none` is the `AttributeError` of :1804. Classes with
+a shadowing `__dict__` (`_shadowed_dict`) are outside the model. -/
+def getattrStaticType {T : Type} (mro metaMro : List (ClsDict T)) (name : String) : Option T :=
+  match mro.findSome? (· name) with
+  | some v => some v
+  | none => metaMro.findSome? (· name)
+
+/-- `_PyType_LookupRef(Py_TYPE(self), attr)` in `_PyObject_LookupSpecial`, Objects/typeobject.c:2994,
+the lookup of the `with` statement and of the interpreter's special methods: the MRO of the type
+only. -/
+def specialLookupType {T : Type} (mro : List (ClsDict T)) (name : String) : Option T :=
+  mro.findSome? (· name)
+
 /-- `getattr_static(type(obj), '__exit__')`, for one object. -/
 abbrev ExitLookup (F O A : Type) := O → Option (Descr (Cb F O A))
 

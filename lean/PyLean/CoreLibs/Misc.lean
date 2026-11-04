@@ -8,7 +8,7 @@ import PyLean.CoreLibs.Misc.Numbers.Props
 import PyLean.CoreLibs.Misc.Types.Props
 import PyLean.CoreLibs.Misc.Contextlib.Props
 import PyLean.CoreLibs.Misc.Contextlib.StackProps
-import PyLean.CoreLibs.Misc.Contextlib.SuppressProps
+import PyLean.CoreLibs.Misc.Contextlib.SuppressNested
 import PyLean.CoreLibs.Misc.Weakref.PropsWkd2
 import PyLean.CoreLibs.Misc.Weakref.PropsDeep
 import PyLean.CoreLibs.Misc.Weakref.PropsFin
@@ -461,6 +461,19 @@ def contextlibEntries : List Entry := [
     thm := some ``Contextlib.suppressGroupConsistent_refuted
     bug := some "corelibs-suppress-group-virtual-subclass"
     notes := "issubclass honours __subclasscheck__, ExceptionGroup.split matches concretely." },
+  { id := "misc-ctx-suppress-nested", pyFile := "Lib/contextlib.py"
+    pyFns := ["suppress.__exit__"]
+    statement := "For exception classes and the builtin derive, a group not suppressed whole is suppressed when every leaf is under a matching node, and otherwise a new group with exactly the other leaves in order and the original's message, cause and traceback is raised; existing objects keep their data."
+    source := "Doc/library/contextlib.rst: suppressed exceptions are removed from the group, the rest re-raised in a new group"
+    status := .proven, prop := ``Contextlib.SuppressNested, thm := some ``Contextlib.suppressNested_proven },
+  { id := "misc-ctx-lookup-special-is-special", pyFile := "Lib/contextlib.py"
+    pyFns := ["_lookup_special"]
+    statement := "getattr_static(type(obj), name) finds what the interpreter's special-method lookup on type(obj) finds."
+    source := "comment Lib/contextlib.py:535; Objects/typeobject.c:2990-3002"
+    status := .refuted, prop := ``Contextlib.LookupSpecialIsSpecial,
+    thm := some ``Contextlib.lookupSpecialIsSpecial_refuted
+    bug := some "corelibs-exitstack-lookup-special-metaclass"
+    notes := "getattr_static also searches the metaclass of a type (Lib/inspect.py:1795-1801)." },
   { id := "misc-ctx-exit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
     statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements."

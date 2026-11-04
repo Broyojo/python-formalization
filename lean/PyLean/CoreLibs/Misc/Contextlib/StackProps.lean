@@ -316,6 +316,21 @@ theorem lookupSpecialFollowsDescriptor_proven : LookupSpecialFollowsDescriptor :
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
   cases r <;> rfl
 
+/-- `_lookup_special` "Follow[s] the standard lookup behaviour for special methods"
+(Lib/contextlib.py:535): `getattr_static(type(obj), name)` finds what the interpreter's special
+lookup finds on `type(obj)`. Refuted: when `type(obj)` is a class whose metaclass defines `name`,
+`getattr_static` falls back to the metaclass (Lib/inspect.py:1795-1801), and `_descriptor_get`
+binds that metaclass method to `obj`, while the `with` statement finds nothing and raises
+`TypeError`. -/
+def LookupSpecialIsSpecial : Prop :=
+  ∀ (T : Type) (mro metaMro : List (ClsDict T)) (name : String),
+    getattrStaticType mro metaMro name = specialLookupType mro name
+
+theorem lookupSpecialIsSpecial_refuted : ¬LookupSpecialIsSpecial := by
+  intro h
+  have := h Nat [fun _ => none] [fun n => if n = "__enter__" then some 1 else none] "__enter__"
+  simp [getattrStaticType, specialLookupType, List.findSome?] at this
+
 /-- What `push`, `callback`, `enter_context` do to `_exit_callbacks`, in the sync and the async class. `push` registers
 what `_lookup_special` gives, or else the object as a plain callable, and returns the object it was given, "for use as a
 decorator"; a failing `__get__` raises and registers nothing. `callback` registers a wrapper whose `__wrapped__` is the
