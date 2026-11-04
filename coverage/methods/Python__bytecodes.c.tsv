@@ -454,7 +454,7 @@ Python/bytecodes.c	5063	5063	opcode:_GUARD_CALLABLE_LIST_APPEND	op(_GUARD_CALLAB
 Python/bytecodes.c	5069	5069	opcode:_CALL_LIST_APPEND	op(_CALL_LIST_APPEND, (callable, self, arg -- none, c, s)) {	modelled	bytecode-call-builtins	
 Python/bytecodes.c	5090	5090	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
 Python/bytecodes.c	5105	5105	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res, c, s, a)) {	modelled	bytecode-call-method-descriptor	
-Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	modelled	bytecode-call-builtin-fn,bytecode-call-method-descriptor	
+Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	modelled	bytecode-call-builtin-fn	
 Python/bytecodes.c	5134	5134	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_O_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s, a)) {	modelled	bytecode-call-method-descriptor-inline	
 Python/bytecodes.c	5153	5153	opcode:CALL_METHOD_DESCRIPTOR_O	macro(CALL_METHOD_DESCRIPTOR_O) =	modelled	bytecode-call-method-descriptor	
 Python/bytecodes.c	5165	5165	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	modelled	bytecode-call-method-descriptor	
@@ -498,7 +498,7 @@ Python/bytecodes.c	5801	5801	opcode:INSTRUMENTED_CALL_FUNCTION_EX	macro(INSTRUME
 Python/bytecodes.c	5807	5807	opcode:_MAKE_FUNCTION	op(_MAKE_FUNCTION, (codeobj_st -- func, co)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_FUNCTION + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	modelled	bytecode-return-generator	
+Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		review: The machine's genKindOfFlags (Bytecode/Uops3.lean:1072-1075) tests CO_COROUTINE first and falls back to a generator, while _Py_MakeCoro (Objects/genobject.c:1120-1140), which the GenObj model mirrors exactly, compares the masked flags with == and makes a coroutine otherwise, so code with none of the three flags or with CO_GENERATOR|CO_ASYNC_GENERATOR (reachable through code.replace(co_flags=...) on a release build) gets a generator or async generator in the model and a coroutine in CPython; cr_origin (sys.set_coroutine_origin_tracking_depth) is also absent.
 Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	modelled	bytecode-build-slice	
 Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	modelled	bytecode-format	
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	modelled	bytecode-format	
