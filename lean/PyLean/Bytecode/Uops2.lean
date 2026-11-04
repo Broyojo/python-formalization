@@ -666,17 +666,25 @@ def CHECK_EXC_MATCH : M Unit := stkK 2 2 fun
 /-- `:3456`. -/
 def IMPORT_NAME (e : Env) : M Unit := stk 2 1 fun
   | [level, fromlist] => do
-    -- 3.15: the name is `co_names[oparg >> 2]`; bit 1 picks the eager `_PyEval_ImportName` over
-    -- `_PyEval_LazyImportName` (PEP 810), which the model does not distinguish
+    -- 3.15 (`:3456-3476`): the name is `co_names[oparg >> 2]`; without bit 1 the import goes to
+    -- `_PyEval_LazyImportName` with bit 0 (`lazy import`) as `lazy`, with it (an import the
+    -- compiler forces eager, in a function, a class or an exception handler) to `_PyEval_ImportName`
     let name ← getName e (e.oparg >>> 2)
     let f ← getFrame
-    pure [← e.om.importName e.ctx f name fromlist level]
+    if e.oparg &&& 2 == 0 then
+      pure [← e.om.lazyImportName e.ctx f name fromlist level (e.oparg &&& 1 != 0)]
+    else
+      pure [← e.om.importName e.ctx f name fromlist level]
   | _ => fault "arity"
 /-- `:3478`. -/
 def IMPORT_FROM (e : Env) : M Unit := stkK 1 2 fun
   | [from_] => do
+    -- `:3478-3492`: a lazy import object (PEP 810) goes to `_PyEval_LazyImportFrom`
     let name ← getName e e.oparg
-    pure [from_, ← e.om.importFrom e.ctx from_ name]
+    if ← (e.om.isLazyImport from_ : RM Bool) then
+      pure [from_, ← e.om.lazyImportFrom e.ctx (← getFrame) from_ name]
+    else
+      pure [from_, ← e.om.importFrom e.ctx from_ name]
   | _ => fault "arity"
 
 /-! ### Lines 2879-3031: jumps -/

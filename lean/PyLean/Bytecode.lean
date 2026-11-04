@@ -24,6 +24,7 @@ import PyLean.Bytecode.SpecCall
 import PyLean.Bytecode.SpecCallGeneric
 import PyLean.Bytecode.SpecLoadAttr
 import PyLean.Bytecode.AttrRecursion
+import PyLean.Bytecode.SpecImport
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -627,6 +628,12 @@ def entries : List Entry := GenObj.entries ++ [
     source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3079-3105, :4628-4642"
     status := .refuted, prop := ``GetattributeFrameChecksRecursion, thm := some ``getattributeFrameChecksRecursion_refuted
     bug := some "bytecode-attr-frame-recursion" },
+  { id := "bytecode-import", pyFile := "Python/bytecodes.c"
+    pyFns := [op "IMPORT_NAME", op "IMPORT_FROM"]
+    statement := "For every object model: IMPORT_NAME takes the name co_names[oparg >> 2]; without bit 1 it calls _PyEval_LazyImportName with bit 0 as the lazy flag (PEP 810), with bit 1 _PyEval_ImportName, on fromlist and level, and pops both on success and failure; IMPORT_FROM keeps the module and pushes _PyEval_LazyImportFrom of a lazy import object, _PyEval_ImportFrom of anything else, keeping the module on failure."
+    source := "Python/bytecodes.c:3456-3492; Python/codegen.c:2936-2946"
+    status := .proven, prop := ``ImportRules, thm := some ``importRules_proven
+    notes := "What _PyEval_LazyImportName, _PyEval_ImportName and the lazy import object do is Python/ceval.c, Python/import.c and Objects/lazyimportobject.c; the difftest model imports nothing and has no lazy import." },
   { id := "bytecode-null-guards", pyFile := "Python/bytecodes.c"
     pyFns := [op "_GUARD_NOS_NOT_NULL", op "_GUARD_TOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL"]
     statement := "_GUARD_NOS_NOT_NULL exits exactly when the second value is NULL and _GUARD_TOS_NOT_NULL exactly when the top is; _GUARD_NOS_NULL and _GUARD_THIRD_NULL exit exactly when their slot is not NULL; each leaves the stack unchanged, for every stack."

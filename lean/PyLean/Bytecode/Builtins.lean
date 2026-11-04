@@ -1952,6 +1952,7 @@ def mkOM (P : Program) : Nat → ObjModel
       lookupSpecial := fun _ _ _ => bad, superLookup := fun _ _ _ _ _ => bad
       genericGetattr := fun _ => bad, typeLookup := fun _ _ => bad, isInstance := fun _ _ _ => bad
       importName := fun _ _ _ _ _ => bad, importFrom := fun _ _ _ => bad, egSplit := fun _ _ _ => bad
+      lazyImportName := fun _ _ _ _ _ _ => bad, isLazyImport := fun _ => bad, lazyImportFrom := fun _ _ _ _ => bad
       egWrap := fun _ _ => bad, matchClass := fun _ _ _ _ _ => bad, matchKeys := fun _ _ _ => bad
       isMapping := fun _ => bad, isSequence := fun _ => bad, getAIter := fun _ _ => bad
       getANext := fun _ _ => bad, getAwaitable := fun _ _ _ => bad, dictUpdate := fun _ _ _ => bad
@@ -1993,6 +1994,13 @@ def mkOM (P : Program) : Nat → ObjModel
       isInstance := fun ctx i t => isInstanceImpl i t
       importName := fun _ _ n _ _ => raiseS "ModuleNotFoundError" s!"No module named '{n}'"
       importFrom := fun ctx v n => om.getAttr ctx v n
+      -- No module can be imported, so no import is ever lazy: an eager import is
+      -- `_PyEval_ImportName`, and a `lazy import` is not modelled.
+      lazyImportName := fun ctx f n fl lv lazy =>
+        if lazy then fault "lazy imports are not modelled"
+        else raiseS "ModuleNotFoundError" s!"No module named '{n}'"
+      isLazyImport := fun _ => pure false
+      lazyImportFrom := fun _ _ _ _ => fault "lazy imports are not modelled"
       egSplit := fun ctx a b => egSplitImpl a b
       egWrap := fun _ _ => fault "exception groups not modelled"
       matchClass := fun ctx s t n k => matchClassImpl om ctx s t n k
