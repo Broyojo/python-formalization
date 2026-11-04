@@ -414,6 +414,10 @@ structure World where
   one `__dict__` and one `__weakref__` getset for all classes. -/
   dictDescr : Option Val := none
   weakrefDescr : Option Val := none
+  /-- `copyreg._slotnames` when a program has replaced it: `_PyType_GetSlotNames` calls the
+  attribute of the module (`Objects/typeobject.c:7955-7963`). `none` is the function of
+  `Lib/copyreg.py`, which `copyregSlotnames` mirrors. -/
+  copyregSlotnames : Option Val := none
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level

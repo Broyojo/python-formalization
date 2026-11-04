@@ -209,22 +209,57 @@ def freshBody (w : World) (t : Addr) : Payload :=
   else if isSubtype w t B.super then .super none none none
   else .plain
 
-/-- `join(sorted(names))` of the abstract method error, `Objects/typeobject.c:7484-7502`. -/
+/-- Sort by code points, as `list.sort` orders exact `str` items (`unsafe_latin_compare` or
+`unicode_compare`, no Python code). -/
+def sortStrs (names : List String) : List String :=
+  names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0)
+
+/-- `PyList_Sort` of the `__abstractmethods__` items, `Objects/typeobject.c:7493`, where the model
+can say what it does. Exact `str` items sort by code point; one item needs no comparison; two exact
+`int`s compare by value (`unsafe_long_compare`); two items of different types make the one
+comparison of `count_run` (`Objects/listobject.c:2003-2005`), `items[1] < items[0]` through
+`safe_object_compare` (`PyObject_RichCompareBool`, which for `<` is `PyObject_RichCompare` and
+`PyObject_IsTrue`), and are swapped when it holds. Longer mixed lists, and two non-`str` items of one
+type, run `unsafe_object_compare` and the merge, which the model does not follow (`gap%`). -/
+def sortAbstractItems (rt : Rt) (items : List Val) : M (List Val) := do
+  let w ← getW
+  let strs := items.filterMap fun x => match x with
+    | .str s => some s
+    | _ => none
+  if strs.length == items.length then pure ((sortStrs strs).map Val.str)
+  else
+    match items with
+    | [] | [_] => pure items
+    | [.int a, .int b] => pure (if b < a then [.int b, .int a] else [.int a, .int b])
+    | [a, b] =>
+      if typeOf w a == typeOf w b then gap%
+      else
+        let r ← rt.richCompare b a .lt
+        let lt ← rt.isTrue r
+        pure (if lt then [b, a] else [a, b])
+    | _ => gap%
+
+/-- `PyUnicode_Join("', '", sorted)`, `Objects/typeobject.c:7502`: the first item that is not a
+`str` raises, at its index in the sorted list. -/
+def joinAbstract (w : World) (items : List Val) : M (List String) :=
+  match items.findIdx? (fun x => (strOf w x).isNone) with
+  | some i =>
+    typeErr s!"sequence item {i}: expected str instance, {trunc 80 (typeName w (items.getD i .none))} found"
+  | none => pure (items.filterMap (strOf w))
+
+/-- `"', '".join(sorted(type.__abstractmethods__))` of the abstract method error,
+`Objects/typeobject.c:7484-7502`: `type_abstractmethods`, `PySequence_List`, `PyList_Sort`, then
+`PyUnicode_Join`. The sort runs first, so `['a', 1]` raises the `'<' not supported` `TypeError`
+(checked on 3.15.2), and a join error names the index in sorted order. -/
 def abstractNames (rt : Rt) (t : Addr) : M (List String) := do
   let w ← getW
   match NameDict.get? (tdata w t).dict "__abstractmethods__" with
   | none => raiseC B.AttributeError "__abstractmethods__"
   | some am =>
     let items ← pySequenceList rt am
+    let sorted ← sortAbstractItems rt items
     let w ← getW
-    let names := items.filterMap (strOf w)
-    if names.length != items.length then
-      -- `PyList_Sort` of mixed or non-str items, then `PyUnicode_Join`.
-      match items.findIdx? (fun x => (strOf w x).isNone) with
-      | some i =>
-        typeErr s!"sequence item {i}: expected str instance, {trunc 80 (typeName w (items.getD i .none))} found"
-      | none => gap%
-    pure (names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0))
+    joinAbstract w sorted
 
 /-- `object_new`, `Objects/typeobject.c:7462`. -/
 def objectNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do

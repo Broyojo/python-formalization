@@ -91,7 +91,7 @@ def copyregSlotnames (rt : Rt) (cls : Addr) : M Val := do
   exceptAll (rt.setAttr (.obj cls) "__slotnames__" (some l))
   pure l
 
-/-- `_PyType_GetSlotNames`, `Objects/typeobject.c:7930`. -/
+/-- `_PyType_GetSlotNames`, `Objects/typeobject.c:7930-7977`. -/
 def typeGetSlotNames (rt : Rt) (cls : Addr) : M Val := do
   let w ← getW
   match NameDict.get? (tdata w cls).dict "__slotnames__" with
@@ -99,7 +99,10 @@ def typeGetSlotNames (rt : Rt) (cls : Addr) : M Val := do
     if s.is .none || (listOf w s).isSome then pure s
     else typeErr s!"{trunc 200 (tpName w cls)}.__slotnames__ should be a list or None, not {trunc 200 (typeName w s)}"
   | none =>
-    let s ← copyregSlotnames rt cls
+    -- `PyObject_CallMethodOneArg(copyreg, "_slotnames", cls)`, `:7961-7962`.
+    let s ← match w.copyregSlotnames with
+      | some f => rt.call f [.obj cls] []
+      | none => copyregSlotnames rt cls
     let w ← getW
     if s.is .none || (listOf w s).isSome then pure s
     else typeErr "copyreg._slotnames didn't return a list or None"

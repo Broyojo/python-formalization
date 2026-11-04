@@ -93,15 +93,17 @@ theorem slotLenInRange_proven : SlotLenInRange := by
   | ok r w1 =>
     rw [hv] at h
     simp only at h
-    cases hi : pyNumberIndex rt r w1 with
+    cases hi : numberIndex rt r w1 with
     | err e w2 => rw [hi] at h; simp at h
-    | ok idx w2 =>
+    | ok v w2 =>
       rw [hi] at h
-      simp only at h
+      obtain ⟨idx, hidx⟩ := indexResultIsInt_proven rt r v w1 w2 hi
+      simp only [getW_app, hidx, Option.getD_some] at h
       by_cases hneg : idx < 0
       · simp [hneg, valueErr, raiseC] at h
-      · simp only [hneg, decide_false, ite_false, numberAsSsize, M.bind_app] at h
-        simp [pyNumberIndex, numberIndex, intOf] at h
+      · have hn : numberIndex rt v w2 = .ok v w2 := by simp [numberIndex, hidx]
+        simp only [hneg, ite_false, numberAsSsize, pyNumberIndex, M.bind_app, hn, getW_app,
+          hidx, Option.getD_some] at h
         by_cases hs : inSsize idx = true
         · simp [hs] at h
           obtain ⟨rfl, _⟩ := h
@@ -174,17 +176,18 @@ theorem getIterSequenceFallback_proven : GetIterSequenceFallback := by
   simp [pyGetIter, h1, h2]
 
 /-- **`__iter__ = None` disables the `__getitem__` fallback**, with the same `TypeError` as
-a type that is not iterable, `Objects/typeobject.c:11208`. -/
+a type that is not iterable, and `__getitem__` is never looked up (`Objects/typeobject.c:11208`
+tests `attr_is_none` first): with a `__getitem__` descriptor whose `__get__` raises, CPython
+3.15.2 still raises "'C' object is not iterable". -/
 def IterNoneNotIterable : Prop :=
-  ∀ (rt : Rt) (self : Val) (w w1 w2 : World) (l : Looked),
+  ∀ (rt : Rt) (self : Val) (w w1 : World),
     maybeCallSpecial rt self "__iter__" [] true w = .ok .isNone w1 →
-    lookupMethodEx rt self "__getitem__" false w1 = .ok l w2 →
     slotTpIter rt self w =
-      (typeErr s!"'{trunc 200 (typeName w2 self)}' object is not iterable" : M Val) w2
+      (typeErr s!"'{trunc 200 (typeName w1 self)}' object is not iterable" : M Val) w1
 
 theorem iterNoneNotIterable_proven : IterNoneNotIterable := by
-  intro rt self w w1 w2 l h1 h2
-  cases l <;> simp [slotTpIter, h1, h2]
+  intro rt self w w1 h1
+  simp [slotTpIter, h1]
 
 /-- A `seqiterobject` stays exhausted: once `it_seq` is cleared, `next` keeps returning
 NULL without calling `__getitem__`, `Objects/iterobject.c:53`. -/
