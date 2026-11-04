@@ -26,6 +26,8 @@ import PyLean.PyGrammar.Peg.Rules.TPrimary
 import PyLean.PyGrammar.Peg.Rules.Atom
 import PyLean.PyGrammar.Peg.Rules.Targets
 import PyLean.PyGrammar.Peg.Rules.Targets2
+import PyLean.PyGrammar.Peg.Rules.Imports
+import PyLean.PyGrammar.Peg.Rules.Patterns
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -889,6 +891,160 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``DelTarget
     thm := some ``delTarget_proven
+    notes := scheme },
+  { id := "pygrammar-rule-dotted-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_name
+    statement := "dotted_name: the seed loop returns the last seed that grew; each round with seed " ++
+      "v gives the Name v.id + '.' + NAME.id from the start of v to the end of NAME after '.' " ++
+      "NAME, and NAME from the start mark otherwise; the first round is NAME."
+    source := "Grammar/python.gram:256-258"
+    status := .proven
+    prop := ``DottedNameRule
+    thm := some ``dottedNameRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-join-names"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.rule_join_names
+    statement := "_PyPegen_join_names_with_dot(p, a, b), as dotted_name's action: the Name " ++
+      "\"%U.%U\" of the two ids, Load, located from a's start to b's end (EXTRA_EXPR)."
+    source := "Parser/action_helpers.c:123-139"
+    status := .proven
+    prop := ``DottedNameStep
+    thm := some ``dottedNameStep_proven
+    notes := "The third conjunct of DottedNameStep evaluates the action through callHelper. " ++
+      "Allocation failure (PyUnicode_FromFormat, _PyArena_AddPyObject returning NULL) is not " ++
+      "modelled; interning has no observable effect on the tree." },
+  { id := "pygrammar-rule-dotted-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_dotted_as_name
+    statement := "dotted_as_name: dotted_name and an optional 'as' NAME give alias(name, asname or " ++
+      "NULL); no dotted_name gives NULL; in the second pass invalid_dotted_as_name runs first and " ++
+      "its error ends the rule."
+    source := "Grammar/python.gram:251-254"
+    status := .proven
+    prop := ``DottedAsName
+    thm := some ``dottedAsName_proven
+    notes := scheme },
+  { id := "pygrammar-rule-import-from-as-name"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from_as_name
+    statement := "import_from_as_name: NAME and an optional 'as' NAME give alias(name, asname or " ++
+      "NULL); no NAME gives NULL; in the second pass invalid_import_from_as_name runs first and " ++
+      "its error ends the rule."
+    source := "Grammar/python.gram:244-247"
+    status := .proven
+    prop := ``ImportFromAsName
+    thm := some ``importFromAsName_proven
+    notes := scheme },
+  { id := "pygrammar-rule-as-names"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_as_names
+    statement := "import_from_as_names and dotted_as_names: the ','.x+ gather is the result, no " ++
+      "trailing ','; NULL with the mark back without it."
+    source := "Grammar/python.gram:242-250"
+    status := .proven
+    prop := ``AsNames
+    thm := some ``asNames_proven
+    notes := scheme },
+  { id := "pygrammar-rule-closed-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_closed_pattern
+    statement := "closed_pattern (memo): the ordered choice of literal, capture, wildcard, value, " ++
+      "group, sequence, mapping and class patterns, in that order, from the start mark; an error " ++
+      "ends it; memoized."
+    source := "Grammar/python.gram:522-530"
+    status := .proven
+    prop := ``ClosedPattern
+    thm := some ``closedPattern_proven
+    notes := scheme ++ " choiceRes is the ordered choice of rule calls (choice_run proves the " ++
+      "generated alternatives run it)." },
+  { id := "pygrammar-rule-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_pattern
+    statement := "pattern: the ordered choice of as_pattern then or_pattern."
+    source := "Grammar/python.gram:509-511"
+    status := .proven
+    prop := ``PatternRule
+    thm := some ``patternRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-maybe-star-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_maybe_star_pattern
+    statement := "maybe_star_pattern: the ordered choice of star_pattern then pattern."
+    source := "Grammar/python.gram:607-609"
+    status := .proven
+    prop := ``MaybeStarPattern
+    thm := some ``maybeStarPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-or-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_or_pattern
+    statement := "or_pattern: the '|'.closed_pattern+ gather with one element is that element, " ++
+      "with more MatchOr(patterns); no gather gives NULL."
+    source := "Grammar/python.gram:518-520"
+    status := .proven
+    prop := ``OrPattern
+    thm := some ``orPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-capture-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_capture_pattern
+    statement := "capture_pattern: MatchAs(NULL, name) from pattern_capture_target; NULL without it."
+    source := "Grammar/python.gram:572-573"
+    status := .proven
+    prop := ``CapturePattern
+    thm := some ``capturePattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-wildcard-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_wildcard_pattern
+    statement := "wildcard_pattern: the soft keyword '_' gives MatchAs(NULL, NULL); NULL without it."
+    source := "Grammar/python.gram:579-580"
+    status := .proven
+    prop := ``WildcardPattern
+    thm := some ``wildcardPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-group-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_group_pattern
+    statement := "group_pattern: '(' pattern ')' is the inner pattern; any other token, or no " ++
+      "inner pattern, NULL with the mark back."
+    source := "Grammar/python.gram:593-594"
+    status := .proven
+    prop := ``GroupPattern
+    thm := some ``groupPattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-sequence-pattern"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sequence_pattern
+    statement := "sequence_pattern: '[' [maybe_sequence_pattern] ']' and, after the first " ++
+      "alternative fails at '(', '(' [open_sequence_pattern] ')' give MatchSequence; other tokens " ++
+      "NULL."
+    source := "Grammar/python.gram:596-598"
+    status := .proven
+    prop := ``SequencePattern
+    thm := some ``sequencePattern_proven
+    notes := scheme },
+  { id := "pygrammar-rule-patterns"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_patterns
+    statement := "patterns: open_sequence_pattern gives MatchSequence; without it pattern from the " ++
+      "start mark; an error in open_sequence_pattern gives NULL."
+    source := "Grammar/python.gram:504-507"
+    status := .proven
+    prop := ``Patterns
+    thm := some ``patterns_proven
+    notes := scheme },
+  { id := "pygrammar-rule-subject-expr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_subject_expr
+    statement := "subject_expr: star_named_expression ',' [star_named_expressions] gives " ++
+      "Tuple([value] + values, Load); otherwise named_expression from the start mark."
+    source := "Grammar/python.gram:492-495"
+    status := .proven
+    prop := ``SubjectExpr
+    thm := some ``subjectExpr_proven
     notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"

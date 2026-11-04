@@ -172,6 +172,9 @@ def peg_warn_lazy : List String := [
 def rule_annotation_default : List String := [
   "rule:annotation", "rule:star_annotation", "rule:default"]
 
+def rule_as_names : List String := [
+  "rule:import_from_as_names", "rule:dotted_as_names"]
+
 def rule_assert_stmt : List String := [
   "rule:assert_stmt"]
 
@@ -214,11 +217,17 @@ def rule_bitwise_xor : List String := [
 def rule_block : List String := [
   "rule:block"]
 
+def rule_capture_pattern : List String := [
+  "rule:capture_pattern"]
+
 def rule_class_def : List String := [
   "rule:class_def"]
 
 def rule_class_def_raw : List String := [
   "rule:class_def_raw"]
+
+def rule_closed_pattern : List String := [
+  "rule:closed_pattern"]
 
 def rule_comparison : List String := [
   "rule:comparison"]
@@ -246,6 +255,12 @@ def rule_del_target : List String := [
 
 def rule_del_targets : List String := [
   "rule:del_targets"]
+
+def rule_dotted_as_name : List String := [
+  "rule:dotted_as_name"]
+
+def rule_dotted_name : List String := [
+  "rule:dotted_name"]
 
 def rule_elif_stmt : List String := [
   "rule:elif_stmt"]
@@ -289,11 +304,17 @@ def rule_function_def_raw : List String := [
 def rule_global_nonlocal : List String := [
   "rule:global_stmt", "rule:nonlocal_stmt"]
 
+def rule_group_pattern : List String := [
+  "rule:group_pattern"]
+
 def rule_if_stmt : List String := [
   "rule:if_stmt"]
 
 def rule_import_from : List String := [
   "rule:import_from"]
+
+def rule_import_from_as_name : List String := [
+  "rule:import_from_as_name"]
 
 def rule_import_from_targets : List String := [
   "rule:import_from_targets"]
@@ -319,6 +340,9 @@ def rule_invalid_raise_stmt : List String := [
 def rule_inversion : List String := [
   "rule:inversion"]
 
+def rule_join_names : List String := [
+  "_PyPegen_join_names_with_dot"]
+
 def rule_keyword_stmts : List String := [
   "rule:pass_stmt", "rule:break_stmt", "rule:continue_stmt"]
 
@@ -327,6 +351,18 @@ def rule_lazy_import_diagnosed : List String := [
 
 def rule_match_stmt : List String := [
   "rule:match_stmt"]
+
+def rule_maybe_star_pattern : List String := [
+  "rule:maybe_star_pattern"]
+
+def rule_or_pattern : List String := [
+  "rule:or_pattern"]
+
+def rule_pattern : List String := [
+  "rule:pattern"]
+
+def rule_patterns : List String := [
+  "rule:patterns"]
 
 def rule_power : List String := [
   "rule:power"]
@@ -342,6 +378,9 @@ def rule_raise_stmt_invalid : List String := [
 
 def rule_return_stmt : List String := [
   "rule:return_stmt"]
+
+def rule_sequence_pattern : List String := [
+  "rule:sequence_pattern"]
 
 def rule_shift_expr : List String := [
   "rule:shift_expr"]
@@ -373,6 +412,9 @@ def rule_star_targets : List String := [
 def rule_statement : List String := [
   "rule:statement"]
 
+def rule_subject_expr : List String := [
+  "rule:subject_expr"]
+
 def rule_sum : List String := [
   "rule:sum"]
 
@@ -393,6 +435,9 @@ def rule_try_stmt : List String := [
 
 def rule_while_stmt : List String := [
   "rule:while_stmt"]
+
+def rule_wildcard_pattern : List String := [
+  "rule:wildcard_pattern"]
 
 def rule_with_item : List String := [
   "rule:with_item"]
