@@ -25,6 +25,7 @@ import PyLean.Decimal.LogicalExact
 import PyLean.Decimal.NextExact
 import PyLean.Decimal.EngExact
 import PyLean.Decimal.MiscExact
+import PyLean.Decimal.RatioExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -768,7 +769,13 @@ def entries : List Entry := [
     statement := "For every DefaultContext and every int bits: IEEEContext(bits) raises ValueError('argument must be a multiple of 32, with a maximum of 512') when bits <= 0, bits > 512 or bits % 32 != 0; otherwise it is Context() (its exceptions included) with prec = 9*(bits//32) - 2, Emax = 3*2**(bits//16 + 3), Emin = 1 - Emax, ROUND_HALF_EVEN, clamp = 1 and every trap off; so 32, 64 and 128 bits give the IEEE 754 decimal32/64/128 parameters (7, 96), (16, 384), (34, 6144)."
     source := "IEEEContext docstring (Lib/_pydecimal.py:428-432); decimal docs, IEEEContext; IEEE 754-2008 Table 3.6"
     status := .proven, prop := ``IEEEContextExact, thm := some ``ieeeContextExact_proven
-    notes := "Scope: an int argument (IEEE_CONTEXT_MAX_BITS is 512 on a 64-bit build); a float reaches ctx.prec = ... as a float and is refused there. Checked on 3.15.2: every bits in [-64, 600) gives the stated context or the stated ValueError." }
+    notes := "Scope: an int argument (IEEE_CONTEXT_MAX_BITS is 512 on a 64-bit build); a float reaches ctx.prec = ... as a float and is refused there. Checked on 3.15.2: every bits in [-64, 600) gives the stated context or the stated ValueError." },
+  { id := "decimal-ratio-exact-py", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.as_integer_ratio"]
+    statement := "For every decimal, as_integer_ratio() in _pydecimal: a zero gives (0, 1); a coefficient of more than 4300 digits raises int(self._int)'s int/str-limit ValueError; every pair (n, d) it returns has d > 0, gcd(n, d) = 1 and n/d equal to the value exactly; within the limit it is the pair _decimal returns; a NaN raises ValueError('cannot convert NaN to integer ratio') and an infinity OverflowError('cannot convert Infinity to integer ratio')."
+    source := "Decimal.as_integer_ratio docstring (Lib/_pydecimal.py:1022-1034: 'Express a finite Decimal instance in the form n / d ... When called on an infinity or NaN, raises OverflowError or ValueError respectively.'); Lib/_pydecimal.py:1021-1069"
+    status := .proven, prop := ``RatioExactPy, thm := some ``ratioExactPy_proven
+    notes := "pyRatio now mirrors the source's reduction (strip5 for the d5 loop at :1053-1055, trailing zero bits for (n & -n).bit_length() - 1 at :1060, d = 5**d5 << d2 at :1065) instead of a gcd; strip_ratio shows the loops leave n/d in lowest terms (the 5s stop only at a factor-free n, the 2s only at an odd n or d2 = 0), lowest_unique gives the C twin's gcd pair, and the value and lowest-terms facts then come from decimal-ratio-correct-c. Difftested (ratio_py, ratio_c) on 3.15.2." }
 ]
 
 end PyLean.Decimal
