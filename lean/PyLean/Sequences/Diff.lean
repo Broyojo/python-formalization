@@ -217,13 +217,11 @@ def jReIter (pre steps : Json) : Except String (ReIter DElem) := do
   return ⟨act.run, nexts⟩
 
 /-- The right operand of `d + other` in the difftest. -/
-def jConcatArg (op : Array Json) : Except String (ConcatArg DElem) := do
+def jConcatArg (op : Array Json) : Except String (Deque.ConcatArg DElem) := do
   match ← (← arg op 1).getStr? with
   | "fake" =>
     let xs ← jElems (← arg op 2)
-    let e : Option PyExc := match op[3]? with
-      | some (.str "r") => some (.valueError "it")
-      | _ => none
+    let e : Option PyExc := if op.size > 3 then some (.valueError "it") else none
     pure (.inst (.iter xs e))
   | "fake_noiter" => pure (.inst (.notIterable "F2"))
   | "cls_raise" => pure (.raises (.valueError "cls"))

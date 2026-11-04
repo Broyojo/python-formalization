@@ -162,10 +162,10 @@ def DefDictReprInitOr : Prop :=
   ∀ (κ ν : Type) [DecidableEq κ] (dd : DefDict κ ν) (base : PyDict κ ν → Py String) (entered : Py Bool),
     (∀ e, base dd.items = .error e → dd.repr base entered = .error e) ∧
     (∀ s, base dd.items = .ok s →
-      (dd.factory = .null → dd.repr base entered = .ok s!"{dd.tname}(None, {s})") ∧
+      (dd.factory = .null → dd.repr base entered = .ok s!"{dd.tname}({"None"}, {s})") ∧
       (dd.factory ≠ .null → ∀ e, entered = .error e → dd.repr base entered = .error e) ∧
-      (dd.factory ≠ .null → entered = .ok true → dd.repr base entered = .ok s!"{dd.tname}(..., {s})") ∧
-      (dd.factory = .none → entered = .ok false → dd.repr base entered = .ok s!"{dd.tname}(None, {s})") ∧
+      (dd.factory ≠ .null → entered = .ok true → dd.repr base entered = .ok s!"{dd.tname}({"..."}, {s})") ∧
+      (dd.factory = .none → entered = .ok false → dd.repr base entered = .ok s!"{dd.tname}({"None"}, {s})") ∧
       (∀ r run, dd.factory = .call r run → entered = .ok false →
         (∀ t, r = .ok t → dd.repr base entered = .ok s!"{dd.tname}({t}, {s})") ∧
         (∀ e, r = .error e → dd.repr base entered = .error e))) ∧
@@ -356,7 +356,7 @@ theorem countElements_proven : CountElements := by
   refine ⟨(main ks d).1, (main ks d).2, fun e he => ?_, ?_, fun t => rfl, fun add k old v d' hg ha => ?_⟩
   · simp only [countDict, KeySrc.ofIterable]
     rw [hp _ ks d (main ks d).1]
-    simp only [countFast, iterEnd]
+    simp only [countFast]
     cases e <;> first | exact absurd rfl he | rfl
   · simp only [countDict, KeySrc.ofIterable]
     rw [hp _ ks d (main ks d).1]

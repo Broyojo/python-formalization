@@ -35,7 +35,8 @@ theorem pushLoop_wf (push : Deque α → α → Int → Deque α) (m : Int)
     (pushLoop push m nexts d).2.WF ∧ (pushLoop push m nexts d).2.maxlen = m
   | [], d, _, h, hm => ⟨h, hm⟩
   | nx :: rest, d, hk, h, hm => by
-    obtain ⟨w1, m1⟩ := hk nx (List.mem_cons_self ..) d h
+    have w1 : (nx d).2.WF := (hk nx (List.mem_cons_self ..) d h).1
+    have m1 : (nx d).2.maxlen = d.maxlen := (hk nx (List.mem_cons_self ..) d h).2
     rcases hc : nx d with ⟨r, d1⟩
     rw [hc] at w1 m1
     simp only at w1 m1
@@ -51,7 +52,8 @@ theorem consumeLoop_wf : ∀ (nexts : List (NextFn α)) (d : Deque α),
     (consumeLoop nexts d).2.WF ∧ (consumeLoop nexts d).2.maxlen = d.maxlen
   | [], d, _, h => ⟨h, rfl⟩
   | nx :: rest, d, hk, h => by
-    obtain ⟨w1, m1⟩ := hk nx (List.mem_cons_self ..) d h
+    have w1 : (nx d).2.WF := (hk nx (List.mem_cons_self ..) d h).1
+    have m1 : (nx d).2.maxlen = d.maxlen := (hk nx (List.mem_cons_self ..) d h).2
     rcases hc : nx d with ⟨r, d1⟩
     rw [hc] at w1 m1
     simp only at w1 m1
@@ -67,14 +69,14 @@ theorem push_right_ok (m : Int) (d : Deque α) (x : α) (h : d.WF) (hm : d.maxle
   have := append_spec d x h
   unfold append at this
   rw [hm] at this
-  exact ⟨this.1, by rw [this.2.2, hm]⟩
+  exact ⟨this.1, this.2.2⟩
 
 theorem push_left_ok (m : Int) (d : Deque α) (x : α) (h : d.WF) (hm : d.maxlen = m) :
     (d.appendleftM x m).WF ∧ (d.appendleftM x m).maxlen = m := by
   have := appendleft_spec d x h
   unfold appendleft at this
   rw [hm] at this
-  exact ⟨this.1, by rw [this.2.2, hm]⟩
+  exact ⟨this.1, this.2.2⟩
 
 theorem heurR_wf (d : Deque α) (h : d.WF) :
     (if d.size = 0 then { d with left := 1, right := 0 } else d).WF ∧
@@ -99,7 +101,8 @@ theorem heurL_wf (d : Deque α) (h : d.WF) :
 theorem extendRe_wf (d : Deque α) (h : d.WF) (it : ReIter α) (hg : KeepsWF (fun d => (it.getIter d).2))
     (hn : ∀ nx ∈ it.nexts, KeepsWF (fun d => (nx d).2)) :
     (d.extendRe it).2.WF ∧ (d.extendRe it).2.maxlen = d.maxlen := by
-  obtain ⟨w1, m1⟩ := hg d h
+  have w1 : (it.getIter d).2.WF := (hg d h).1
+  have m1 : (it.getIter d).2.maxlen = d.maxlen := (hg d h).2
   unfold extendRe
   rcases hc : it.getIter d with ⟨r, d1⟩
   rw [hc] at w1 m1
@@ -118,7 +121,8 @@ theorem extendRe_wf (d : Deque α) (h : d.WF) (it : ReIter α) (hg : KeepsWF (fu
 theorem extendleftRe_wf (d : Deque α) (h : d.WF) (it : ReIter α) (hg : KeepsWF (fun d => (it.getIter d).2))
     (hn : ∀ nx ∈ it.nexts, KeepsWF (fun d => (nx d).2)) :
     (d.extendleftRe it).2.WF ∧ (d.extendleftRe it).2.maxlen = d.maxlen := by
-  obtain ⟨w1, m1⟩ := hg d h
+  have w1 : (it.getIter d).2.WF := (hg d h).1
+  have m1 : (it.getIter d).2.maxlen = d.maxlen := (hg d h).2
   unfold extendleftRe
   rcases hc : it.getIter d with ⟨r, d1⟩
   rw [hc] at w1 m1
@@ -276,16 +280,18 @@ theorem reinit_wf (d : Deque α) (h : d.WF) (m : Int) (h0 : 0 ≤ m) (h1 : m ≤
     have hs' : ¬ ({ d with maxlen := m } : Deque α).size = 0 := by omega
     unfold Deque.clear
     rw [iteF hs']
-    refine ⟨⟨?_, ?_⟩, rfl, rfl, rfl, by rw [iteF hne]⟩
+    refine ⟨⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
     · rw [Deque.layout_iff]; simp [CENTER]
     · rw [Deque.maxOk_iff]; simp only [List.length_nil, Int.natCast_zero]; right; omega
+    all_goals (try simp only [iteF hne]) <;> first | rfl | trivial
   · rw [iteF hs]
     have he : d.items = [] := by
       rw [Deque.size_eq] at hs; simp only at hs
       exact List.eq_nil_of_length_eq_zero (by omega)
-    refine ⟨⟨?_, ?_⟩, rfl, rfl, he, by rw [iteT he]⟩
+    refine ⟨⟨?_, ?_⟩, ?_, ?_, ?_, ?_⟩
     · rw [Deque.layout_iff]; simp only; exact h'
     · rw [Deque.maxOk_iff]; simp only [he, List.length_nil, Int.natCast_zero]; right; omega
+    all_goals (try simp only [iteT he]) <;> first | rfl | trivial | exact he
 
 /-- The bound read once (_collectionsmodule.c:484, :539) is not the deque's bound any more
 once an iterator re-initialises the deque with `d.__init__(maxlen=1)`, and the loop goes
@@ -393,23 +399,29 @@ theorem dequeInit_proven : DequeInit := by
   refine ⟨new_wf t (-1) (Or.inl rfl), rfl, rfl, rfl, fun d h => ⟨fun xs m h0 h1 => ?_, fun xs => ?_,
     fun src => rfl, fun src m hm hm' => ?_⟩⟩
   · obtain ⟨w, i, mx⟩ := cleared_wf d h m (Or.inr h0)
-    obtain ⟨_, ri, rm⟩ := reinit_wf d h m h0 h1
-    simp only at w i mx
+    obtain ⟨_, _, r3, r4, r5⟩ := reinit_wf d h m h0 h1
+    try simp only at w i mx
     have hx := Deque.extend_spec _ xs w
-    rw [init_int d _ m h0 h1, init_int d _ m h0 h1]
-    simp only [ReIter.ofIterable]
-    rw [Deque.extendRe_ofList, Deque.extendRe_ofList]
-    refine ⟨rfl, by rw [hx.2.1, i, mx]; rfl, by rw [hx.2.2, mx], fun e he => ⟨Deque.finalize_some e he,
-      by rw [hx.2.1, i, mx]; rfl⟩, ri.2.1, ri.2.2.1, ri.2.2.2, fun hm0 => ?_⟩
-    rw [Deque.extendRe_ofList]
-    simp only [Deque.extend, mx, iteF hm0]
+    have key : ∀ (ys : List α) (e : Option PyExc), d.init (.iter ys e) (.int m) =
+        (finalizeIterator e, (if ({ d with maxlen := m } : Deque α).size > (0 : Int) then
+          ({ d with maxlen := m } : Deque α).clear else { d with maxlen := m }).extend ys) := by
+      intro ys e
+      rw [init_int d _ m h0 h1]
+      exact Deque.extendRe_ofList _ ys e
+    refine ⟨by rw [key]; rfl, by rw [key, hx.2.1, i, mx]; rfl, by rw [key, hx.2.2, mx],
+      fun e he => ⟨by rw [key]; exact Deque.finalize_some e he, by rw [key, hx.2.1, i, mx]; rfl⟩,
+      r3, r4, r5, fun hm0 => ?_⟩
+    rw [key]
     have hs : (if ({ d with maxlen := m } : Deque α).size > (0 : Int) then
         ({ d with maxlen := m } : Deque α).clear else { d with maxlen := m }).size = 0 := by
       rw [Deque.size_eq, i]; rfl
+    show (Deque.extend _ []).left = 1
+    unfold Deque.extend
+    rw [mx, iteF hm0]
+    simp only [List.foldl_nil]
     rw [iteT hs]
-    rfl
   · obtain ⟨w, i, mx⟩ := cleared_wf d h (-1) (Or.inl rfl)
-    simp only at w i mx
+    try simp only at w i mx
     have hx := Deque.extend_spec _ xs w
     unfold Deque.init Deque.initRe
     simp only [ReIter.ofIterable]
@@ -441,7 +453,7 @@ theorem scanLoop_skip (d : Deque α) (hL : d.Layout) (cmp : Cmp α) (v : α) (cf
     rw [read_ok d hL b j (by dq_omega) (by dq_omega) h0 h1 (by omega) (by dq_omega)]
     simp only [hp]
     have h0q := hq 0 (by omega)
-    simp only [Nat.cast_zero, Int.add_zero] at h0q
+    rw [show p + ((0 : Nat) : Int) = p by omega] at h0q
     rw [h0q]
     simp only [Bool.and_false, Bool.false_eq_true, ite_false, ne_eq, not_true_eq_false]
     obtain ⟨c1, c2, c3⟩ := step1_pos d b j p hp h0 h1
@@ -470,7 +482,7 @@ theorem countLoop_skip (d : Deque α) (hL : d.Layout) (cmp : Cmp α) (v : α) :
     rw [read_ok d hL b j (by dq_omega) (by dq_omega) h0 h1 (by omega) (by dq_omega)]
     simp only [hp]
     have h0q := hq 0 (by omega)
-    simp only [Nat.cast_zero, Int.add_zero] at h0q
+    rw [show p + ((0 : Nat) : Int) = p by omega] at h0q
     rw [h0q]
     simp only [Bool.false_eq_true, ite_false, Int.add_zero, ne_eq, not_true_eq_false]
     obtain ⟨c1, c2, c3⟩ := step1_pos d b j p hp h0 h1
@@ -498,6 +510,7 @@ theorem scanLoop_at (d : Deque α) (hL : d.Layout) (cmp : Cmp α) (v : α) (st :
   simp only [scanLoop]
   rw [read_ok d hL b j (by dq_omega) (by dq_omega) h0 h1 (by omega) (by dq_omega)]
   simp only [hp]
+  rfl
 
 theorem countLoop_at (d : Deque α) (hL : d.Layout) (cmp : Cmp α) (v : α) (st : Nat)
     (n : Nat) (p b j c : Int) (hp : b * 64 + j - d.left = p) (h0 : 0 ≤ j) (h1 : j < 64) (hp0 : 0 ≤ p)
@@ -513,55 +526,50 @@ theorem countLoop_at (d : Deque α) (hL : d.Layout) (cmp : Cmp α) (v : α) (st 
   simp only [countLoop]
   rw [read_ok d hL b j (by dq_omega) (by dq_omega) h0 h1 (by omega) (by dq_omega)]
   simp only [hp]
+  rfl
 
 end Deque
 
 /-- The searches with an `__eq__` that raises or mutates the deque
 (`deque_count_impl`, `deque_contains_lock_held`, `deque_index_impl`, `deque_remove_impl`).
-For every element type, every deque `d` (type invariants `WF` and `len(d) <= sys.maxsize`),
-every value `v`, every comparison `cmp` (`PyObject_RichCompareBool(item, v, Py_EQ)`, which
-may run any code on `d` and raise), and every position `k < len(d)` such that the
-comparisons with the items before `k` are false and leave `d` alone: if the comparison
-with item `k` raises `e`, all four methods raise `e`, leaving the deque as the comparison
-did; if it returns `c` after changing the deque's mutation counter (any method that moves
-items), `count` raises `RuntimeError('deque mutated during iteration')`, `x in d` and
-`d.index(x)` return the match (`True`, `k`) when `c` is true and raise the same
-`RuntimeError` otherwise, and `d.remove(x)` raises `IndexError('deque mutated during
-iteration')` whatever `c` is (it checks the counter before the match). -/
+For every element type, every deque `d` (type invariant `WF`), every value `v`, every
+comparison `cmp` (`PyObject_RichCompareBool(item, v, Py_EQ)`, which may run any code on
+`d` and raise), and every position `k < len(d)` such that the comparisons with the items
+before `k` are false and leave `d` alone: if the comparison with item `k` raises `e`,
+all four methods raise `e`, leaving the deque as the comparison did; if it returns `c`
+after changing the deque's mutation counter (any method that moves items), `count`
+raises `RuntimeError('deque mutated during iteration')`, `x in d` and
+`d.index(x, 0, len(d))` (`deque_index_impl` after its argument conversion) return the
+match (`True`, `k`) when `c` is true and raise the same `RuntimeError` otherwise, and
+`d.remove(x)` raises `IndexError('deque mutated during iteration')` whatever `c` is (it
+checks the counter before the match). -/
 def DequeSearchRe : Prop :=
-  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → (d.items.length : Int) ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF →
     ∀ (cmp : Cmp α) (v : α) (k : Nat),
     k < d.items.length → (∀ q : Nat, q < k → cmp d (ix d.items q) v = (.ok false, d)) →
     (∀ (e : PyExc) (d' : Deque α), cmp d (ix d.items k) v = (.error e, d') →
       d.count cmp v = (.error e, d') ∧ d.contains cmp v = (.error e, d') ∧
-      d.index cmp v none none = (.error e, d') ∧ d.remove cmp v = (.error e, d')) ∧
+      d.indexC cmp v 0 d.size = (.error e, d') ∧ d.remove cmp v = (.error e, d')) ∧
     (∀ (c : Bool) (d' : Deque α), cmp d (ix d.items k) v = (.ok c, d') → d'.state ≠ d.state →
       d.count cmp v = (.error Deque.mutatedErr, d') ∧
       d.contains cmp v = (if c then .ok true else .error Deque.mutatedErr, d') ∧
-      d.index cmp v none none = (if c then .ok (k : Int) else .error Deque.mutatedErr, d') ∧
+      d.indexC cmp v 0 d.size = (if c then .ok (k : Int) else .error Deque.mutatedErr, d') ∧
       d.remove cmp v = (.error (.indexError "deque mutated during iteration"), d'))
 
-/-- `d.index(v)` with the default bounds scans the whole deque from the left. -/
-theorem index_default (d : Deque α) (h : d.WF) (hlen : (d.items.length : Int) ≤ ssizeMax)
-    (cmp : Cmp α) (v : α) :
-    d.index cmp v none none =
+/-- `deque_index_impl(d, v, 0, len(d))` scans the whole deque from the left. -/
+theorem indexC_full (d : Deque α) (h : d.WF) (cmp : Cmp α) (v : α) :
+    d.indexC cmp v 0 d.size =
       match Deque.scanLoop cmp v d.state false Deque.mutatedErr d.items.length 0 0 d.left d with
       | (.ok (some k), d) => (.ok k, d)
       | (.ok none, d) => (.error (.valueError "deque.index(x): x not in deque"), d)
       | (.error e, d) => (.error e, d) := by
   have h' := h.1
   rw [Deque.layout_iff] at h'
-  have hs0 : sliceIndex 0 = 0 := by decide
-  have hsm : sliceIndex ssizeMax = ssizeMax := by decide
-  unfold Deque.index Deque.indexC
-  simp only [Option.getD_none, hs0, hsm]
-  have hpos : ¬ ssizeMax < 0 := by decide
-  have hst : (if ssizeMax > d.size then d.size else ssizeMax) = d.size := by
-    rw [Deque.size_eq]; split <;> omega
-  have hz : ¬ ((0 : Int) > d.size) := by rw [Deque.size_eq]; omega
-  simp only [show ¬ ((0 : Int) < 0) by decide, hpos, ite_false, hst, hz]
-  simp only [show ¬ ((0 : Int) - 64 > 0) by decide, ite_false, Int.zero_mul, Int.sub_self,
-    Int.toNat_zero, List.range_zero, List.foldl_nil, Int.sub_zero]
+  have a1 : ¬ ((0 : Int) < 0) := by decide
+  have a2 : ¬ (d.size < 0) := by rw [Deque.size_eq]; omega
+  have a3 : ¬ (d.size > d.size) := by omega
+  have a4 : ¬ ((0 : Int) > d.size) := by rw [Deque.size_eq]; omega
+  have a5 : ¬ ((0 : Int) - 64 > 0) := by decide
   have hrb : ¬ ((0 : Int) > d.rbNum + 1 ∨ (0 : Int) - 1 > d.rbNum) := by
     unfold Deque.rbNum; rw [Deque.size_eq]
     have : 0 ≤ (d.left + (d.items.length : Int) - 1) / 64 := by
@@ -570,15 +578,18 @@ theorem index_default (d : Deque α) (h : d.WF) (hlen : (d.items.length : Int) �
       · have := h'.2.2.2.2.2 (by omega); omega
       · omega
     omega
-  rw [iteF hrb, Deque.size_eq, show ((d.items.length : Int)).toNat = d.items.length by omega]
+  unfold Deque.indexC
+  simp only [a1, a2, a3, a4, a5, ite_false, Int.zero_mul, Int.sub_self, Int.toNat_zero, List.range_zero,
+    List.foldl_nil]
+  rw [iteF hrb, Deque.size_eq, show ((d.items.length : Int) - 0).toNat = d.items.length by omega]
+  rfl
 
 theorem dequeSearchRe_proven : DequeSearchRe := by
-  intro α _ d h hlen cmp v k hk hpre
+  intro α _ d h cmp v k hk hpre
   have hL := h.1
   have h' := h.1
   rw [Deque.layout_iff] at h'
-  let N := d.items.length - k - 1
-  have hN : d.items.length = k + (N + 1) := by omega
+  obtain ⟨N, hN⟩ : ∃ N, d.items.length = k + (N + 1) := ⟨d.items.length - k - 1, by omega⟩
   have hpre' : ∀ q : Nat, q < k → cmp d (ix d.items ((0 : Int) + q)) v = (.ok false, d) := by
     intro q hq; rw [Int.zero_add]; exact hpre q hq
   have hsz : (0 : Int) + k ≤ d.size := by rw [Deque.size_eq]; omega
@@ -601,8 +612,8 @@ theorem dequeSearchRe_proven : DequeSearchRe := by
       d.left d with
       | (.ok r, d) => (.ok r.isSome, d)
       | (.error e, d) => (.error e, d) := by
-    unfold Deque.contains; rw [← hN]
-  have ex := index_default d h hlen cmp v
+    unfold Deque.contains; rw [← hN]; rfl
+  have ex := indexC_full d h cmp v
   rw [hN] at ex
   have er : d.remove cmp v = match Deque.scanLoop cmp v d.state true
       (.indexError "deque mutated during iteration") (k + (N + 1)) 0 0 d.left d with
@@ -612,21 +623,14 @@ theorem dequeSearchRe_proven : DequeSearchRe := by
         match d.delItem i with
         | .ok d => (.ok (), d)
         | .error e => (.error e, d) := by
-    unfold Deque.remove; rw [← hN]
+    unfold Deque.remove; rw [← hN]; rfl
   refine ⟨fun e d' hc => ?_, fun c d' hc hst => ?_⟩
   · rw [hc] at s1 s2 s3
-    simp only at s1 s2 s3
-    rw [ec, s3, ei, s1, ex, s1, er, s2]
-    exact ⟨rfl, rfl, rfl, rfl⟩
+    rw [ec, ei, ex, er, s1, s2, s3]
+    refine ⟨?_, ?_, ?_, ?_⟩ <;> rfl
   · rw [hc] at s1 s2 s3
     have hst' : d.state ≠ d'.state := fun x => hst x.symm
-    simp only [hst', ne_eq, not_false_eq_true, ite_true, Bool.not_true, Bool.false_and,
-      Bool.not_false, Bool.true_and, Bool.false_eq_true, ite_false] at s1 s2 s3
-    rw [ec, s3, ei, ex, er, s2]
-    cases c
-    · simp only [Bool.false_eq_true, ite_false] at s1 ⊢
-      rw [s1]; exact ⟨rfl, rfl, rfl, rfl⟩
-    · simp only [ite_true] at s1 ⊢
-      rw [s1]; exact ⟨rfl, rfl, rfl, rfl⟩
+    rw [ec, ei, ex, er, s1, s2, s3]
+    cases c <;> simp [hst'] <;> rfl
 
 end PyLean.Sequences
