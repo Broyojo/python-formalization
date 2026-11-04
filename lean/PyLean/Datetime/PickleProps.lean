@@ -46,13 +46,14 @@ def tmGetstateTupleC (t : TM) (proto : Int) : StateTuple :=
 the class is the receiver's (classes by identity), so the state is what varies. -/
 def tmReduceExPy (t : TM) (protocol : Int) : StateTuple := tmGetstateTuplePy t protocol
 
-/-- `time.__reduce__()`, Py:1782-1783: `self.__reduce_ex__(2)`. -/
+/-- `time.__reduce__()`, Py:1782-1783: `self.__reduce_ex__(2)`, for a class that keeps
+`time.__reduce_ex__` (the lookup on an overriding subclass is `tmReduceDispatchPy`). -/
 def tmReducePy (t : TM) : StateTuple := tmReduceExPy t 2
 
 /-- `datetime_time___reduce_ex___impl`, :5297-5300. -/
 def tmReduceExC (t : TM) (proto : Int) : StateTuple := tmGetstateTupleC t proto
 
-/-- `datetime_time___reduce___impl`, :5308-5311: `time_getstate(self, 2)`. -/
+/-- `datetime_time___reduce___impl`, :5308-5312: `time_getstate(self, 2)`. -/
 def tmReduceC (t : TM) : StateTuple := tmGetstateTupleC t 2
 
 /-- `datetime._getstate(protocol)`, Py:2402-2415. -/
@@ -73,13 +74,14 @@ def dtGetstateTupleC (dt : DT) (proto : Int) : StateTuple :=
 /-- `datetime.__reduce_ex__(protocol)`, Py:2432-2433. -/
 def dtReduceExPy (dt : DT) (protocol : Int) : StateTuple := dtGetstateTuplePy dt protocol
 
-/-- `datetime.__reduce__()`, Py:2435-2436: `self.__reduce_ex__(2)`. -/
+/-- `datetime.__reduce__()`, Py:2435-2436: `self.__reduce_ex__(2)`, for a class that keeps
+`datetime.__reduce_ex__` (an override: `dtReduceDispatchPy`). -/
 def dtReducePy (dt : DT) : StateTuple := dtReduceExPy dt 2
 
 /-- `datetime_datetime___reduce_ex___impl`, :7229-7233. -/
 def dtReduceExC (dt : DT) (proto : Int) : StateTuple := dtGetstateTupleC dt proto
 
-/-- `datetime_datetime___reduce___impl`, :7241-7245: `datetime_getstate(self, 2)`. -/
+/-- `datetime_datetime___reduce___impl`, :7241-7246: `datetime_getstate(self, 2)`. -/
 def dtReduceC (dt : DT) : StateTuple := dtGetstateTupleC dt 2
 
 /-! ### Lemmas -/

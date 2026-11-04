@@ -249,7 +249,7 @@ def tmReduceExClsC (ty : Nat) (t : TM) (proto : Arg) : Py (Nat × StateTuple) :=
   let p ← parseI proto
   return (ty, tmReduceExC t p)
 
-/-- `datetime_time___reduce___impl`, :5308-5311: `(Py_TYPE(self), time_getstate(self, 2))`. -/
+/-- `datetime_time___reduce___impl`, :5308-5312: `(Py_TYPE(self), time_getstate(self, 2))`. -/
 def tmReduceClsC (ty : Nat) (t : TM) : Nat × StateTuple := (ty, tmReduceC t)
 
 /-- `time.__reduce_ex__(protocol)`, Py:1779-1780: `(self.__class__, self._getstate(protocol))`
@@ -262,7 +262,7 @@ def dtReduceExClsC (ty : Nat) (dt : DT) (proto : Arg) : Py (Nat × StateTuple) :
   let p ← parseI proto
   return (ty, dtReduceExC dt p)
 
-/-- `datetime_datetime___reduce___impl`, :7241-7245. -/
+/-- `datetime_datetime___reduce___impl`, :7241-7246. -/
 def dtReduceClsC (ty : Nat) (dt : DT) : Nat × StateTuple := (ty, dtReduceC dt)
 
 /-- `datetime.__reduce_ex__(protocol)`, Py:2432-2433. -/

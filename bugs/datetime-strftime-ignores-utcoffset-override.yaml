@@ -1,0 +1,67 @@
+id: datetime-strftime-ignores-utcoffset-override
+title: "strftime %z/%:z/%Z: _pydatetime calls a subclass's utcoffset()/tzname() override, C reads the tzinfo member"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Modules/_datetimemodule.c, Lib/_pydatetime.py]
+functions: ["C get_tzinfo_member", "C make_somezreplacement", "C make_Zreplacement", "C wrap_strftime", "_wrap_strftime"]
+summary: |
+  _wrap_strftime builds the %z and %:z text from `object.utcoffset()` when
+  `hasattr(object, "utcoffset")` (Lib/_pydatetime.py:240-247, :252-259) and %Z from
+  `object.tzname()` (:264-272), so a date, time or datetime subclass that overrides those
+  methods gets its override's result. C's wrap_strftime takes the tzinfo from the struct with
+  get_tzinfo_member (Modules/_datetimemodule.c:1505-1515: PyDateTime_Check or PyTime_Check, then
+  HASTZINFO) and calls that tzinfo's utcoffset/tzname directly (make_somezreplacement
+  :1799-1817 through format_utcoffset :1740; make_Zreplacement :1820-1860 through call_tzname),
+  so the override is never consulted: for `class D(datetime)` with `def utcoffset(self): return
+  timedelta(hours=5)` and `def tzname(self): return "FIVE"`, `D(2000, 1, 1).strftime('%z|%:z|%Z')`
+  is '+0500|+05:00|FIVE' in _pydatetime and '||' in C; a time subclass the same; a date subclass
+  defining utcoffset() gets '+0500' in Python, '' in C. For the inherited methods the twins agree
+  (StrftimeZTwins). isoformat() shows the same pattern (Python's _tzstr/isoformat call
+  self.utcoffset(), C reads the member), not modelled here.
+likelihood: |
+  Low: needs a subclass that overrides utcoffset()/tzname() instead of supplying a tzinfo.
+maybe_intended: |
+  Possibly: the docs define awareness through tzinfo, and C's reading of the member matches that;
+  _pydatetime's method call is the older, duck-typed reading. Either way the twins differ (PEP 399).
+reproducer: |
+  import sys
+  import datetime as C
+  import _pydatetime as P
+  out = {}
+  for name, m in (("C", C), ("Python", P)):
+      class D(m.datetime):
+          def utcoffset(self):
+              return m.timedelta(hours=5)
+          def tzname(self):
+              return "FIVE"
+      class T(m.time):
+          def utcoffset(self):
+              return m.timedelta(hours=5)
+      out[name] = (D(2000, 1, 1).strftime("%z|%:z|%Z"), T(1).strftime("%z"))
+      print(name, out[name])
+  if out["C"] != out["Python"]:
+      print("REPRODUCED datetime-strftime-ignores-utcoffset-override")
+expected: |
+  The same text in both implementations.
+promised_by: |
+  PEP 399 (C and Python twins behave alike); strftime docs (%z: "utcoffset() is transformed into
+  a string of the form ±HHMM[SS[.ffffff]]").
+cause: |
+  Modules/_datetimemodule.c:1505-1515 (get_tzinfo_member), :1802-1813 and :1823-1832 read the
+  struct's tzinfo; Lib/_pydatetime.py:242-243, :254-255 and :267-268 call the object's methods.
+possible_fix: |
+  Leave C as is and have _wrap_strftime use the tzinfo directly, or document the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED (C ('||', ''), Python ('+0500|+05:00|FIVE', '+0500'))
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (same output)
+duplicates:
+  issues: []
+  queries: ["gh search issues: strftime subclass utcoffset override", "strftime %z subclass utcoffset",
+            "wrap_strftime tzinfo utcoffset subclass", "strftime ignores overridden utcoffset",
+            "strftime %Z tzname override subclass", "strftime utcoffset", "strftime tzname subclass",
+            "datetime subclass utcoffset", "strftime %z (30 results read)", "utcoffset subclass (20 results read)",
+            "bugforge-results/README.md: no strftime entry"]
+lean:
+  property: PyLean.Datetime.StrftimeZOverrideTwins
+  theorem: PyLean.Datetime.strftimeZOverrideTwins_refuted
