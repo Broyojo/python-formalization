@@ -59,7 +59,7 @@ observed: |
   -3617008641903833651 (0xCDCD... fill of fresh memory), which confirms they were never written.
   With array('q', range(100, 115)) and one item (15 + 1 = 16 items at the clear) the same happens;
   with array('q', range(100, 108)) the old items come back unchanged.
-  main (3.16.0a1+dev, vendor/cpython-main/python.exe): see check_bugs results in the report below.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): identical. REPRODUCED (scripts/check_bugs.py on both).
 promised_by: |
   Invariant: no read of uninitialised memory from pure Python. Doc/library/array.rst fromlist:
   "if there is a type error, the array is unchanged" (all or nothing).
