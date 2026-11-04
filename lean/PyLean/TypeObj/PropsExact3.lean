@@ -148,8 +148,12 @@ theorem findBestBaseFirstFailure_proven : FindBestBaseFirstFailure := by
         cases h : isSubtype w win (solidBase w bx) with
         | false => rfl
         | true =>
-          rw [← hsx] at h
-          exact absurd (htree _ _ _ hminy h) hyx
+          obtain ⟨by', hy', _⟩ : Acceptable w y := hacc y hy
+          have hminy' := hminy
+          rw [solidOf_of w y by' hy'] at hminy'
+          have hc := htree _ _ _ hminy' h
+          rw [← solidOf_of w y by' hy', ← hsx] at hc
+          exact absurd hc hyx
       have h2 : isSubtype w (solidBase w bx) win = false := by
         cases h : isSubtype w (solidBase w bx) win with
         | false => rfl

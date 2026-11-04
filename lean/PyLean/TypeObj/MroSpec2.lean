@@ -133,10 +133,14 @@ def Comparable (w : World) (a b : Addr) : Prop :=
 def IsMinSolid (w : World) (L : List Val) (x : Val) : Prop :=
   ∀ z ∈ L, isSubtype w (solidOf w x) (solidOf w z) = true
 
-/-- Two supertypes of one class are related: solid bases lie on `tp_base` chains, which form a
-tree. A type invariant of hierarchies built by `type_new`. -/
+/-- Two solid bases with a common subclass are related. Only solid bases (`solid_base` of some
+class): two unrelated plain classes `A`, `B` do share the subclass `class C(A, B)`. A type
+invariant of hierarchies built by `type_new`: `find_best_base` refuses a class whose bases have
+unrelated solid bases (the lay-out conflict), so every solid base above a class lies on the
+`tp_base` chain of its own solid base, and those chains form a tree. -/
 def TreeOrder (w : World) : Prop :=
-  ∀ a b c, isSubtype w c a = true → isSubtype w c b = true → Comparable w a b
+  ∀ s t c, isSubtype w c (solidBase w s) = true → isSubtype w c (solidBase w t) = true →
+    Comparable w (solidBase w s) (solidBase w t)
 
 theorem solidOf_of (w : World) (x : Val) (t : Addr) (h : asType w x = some t) :
     solidOf w x = solidBase w t := by simp [solidOf, h]
@@ -376,7 +380,13 @@ theorem findBestBaseExact_proven : FindBestBaseExact := by
     cases hr : bestBaseLoop w bases none none with
     | ok r =>
       obtain ⟨_, pre, post, _, _, hmin, _⟩ := bestBase_first_top w ho bases r hr
-      exact absurd (htree _ _ _ (hmin y hy) (hmin z hz)) hyz
+      obtain ⟨by', hy', _⟩ := hacc y hy
+      obtain ⟨bz, hz', _⟩ := hacc z hz
+      have h1 := hmin y hy
+      have h2 := hmin z hz
+      rw [solidOf_of w y by' hy'] at h1 hyz
+      rw [solidOf_of w z bz hz'] at h2 hyz
+      exact absurd (htree _ _ _ h1 h2) hyz
     | error m =>
       cases bases with
       | nil => simp at hy

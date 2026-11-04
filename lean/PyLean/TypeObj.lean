@@ -887,7 +887,7 @@ def entries : List Entry := [
     "abstract.c:1203-1215"
     ``InPlaceFirst ``inPlaceFirst_proven,
   p "typeobj-inplace-pow" ab ["ternary_iop", "PyNumber_InPlacePower", "_PyNumber_InPlacePowerNoMod", "slot_nb_inplace_power"]
-    "__ipow__ gets two arguments, whatever the third operand."
+    "__ipow__ gets two arguments, whatever the third operand; its result other than NotImplemented is the answer, its exception propagates, and NotImplemented falls back to the binary ** protocol."
     "typeobject.c:10971-10975"
     ``InplacePowerTwoArgs ``inplacePowerTwoArgs_proven,
   p "typeobj-number-long" ab ["PyNumber_Long"]
