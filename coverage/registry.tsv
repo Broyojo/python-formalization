@@ -792,6 +792,10 @@ itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,is
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-consumes-max-start-stop	proven	Modules/itertoolsmodule.c	islice_next
 itertools-islice-step-message	refuted	Modules/itertoolsmodule.c	islice_new
+itertools-islice-reentry-pure	proven	Modules/itertoolsmodule.c	islice_next
+itertools-islice-reentry-rereads	proven	Modules/itertoolsmodule.c	islice_next
+itertools-islice-no-use-after-free	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-no-crash-shared	proven	Modules/itertoolsmodule.c	islice_next
 itertools-combinatorics-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
 itertools-combinatorics-doc-agree-nonneg	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
 itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
@@ -831,12 +835,16 @@ itertools-grouper-eq-false	proven	Modules/itertoolsmodule.c	_grouper_next
 itertools-groupby-next-step-error	proven	Modules/itertoolsmodule.c	groupby_next,groupby_step
 itertools-grouper-step-error	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
 itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	groupby_step
+itertools-grouper-reentrant-step	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
+itertools-grouper-step-keeps-items	refuted	Modules/itertoolsmodule.c	_grouper_next,groupby_step,groupby_next,_grouper_create
+itertools-grouper-step-keeps-items-no-reentry	proven	Modules/itertoolsmodule.c	_grouper_next,groupby_step
 itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
 itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl,itertools__tee_impl
 itertools-tee-reentry-guard	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable
 itertools-tee-running-balanced	proven	Modules/itertoolsmodule.c	tee_next,teedataobject_getitem,teedataobject_getitem_lock_held
 itertools-tee-wrap	proven	Modules/itertoolsmodule.c	itertools__tee_impl,tee_fromiterable,teedataobject_newinternal
+itertools-tee-two-getiter	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_fromiterable
 itertools-tee-clear	proven	Modules/itertoolsmodule.c	tee_clear,tee_dealloc
 itertools-pairwise-doc-agree	proven	Modules/itertoolsmodule.c	pairwise_new_impl,pairwise_next
 itertools-pairwise-reentry	proven	Modules/itertoolsmodule.c	pairwise_next
