@@ -101,19 +101,22 @@ theorem dumpsTwinsNotes_refuted : ¬ DumpsTwinsNotes := by
 
 /-! ### Separators -/
 
-/-- A `str` subclass whose `__str__` returns `'X'`, as `item_separator`. -/
-def cfgSepX : XCfg := { itemSep := ⟨cs ",", false, .ok (cs "X")⟩, keySep := SObj.ofStr (cs ":") }
+/-- `str` subclasses whose `__str__` returns `'X'`, as both separators. -/
+def cfgSepX : XCfg := { itemSep := ⟨cs ",", false, .ok (cs "X")⟩, keySep := ⟨cs ":", false, .ok (cs "X")⟩ }
 
-def wSep : XVal := .seq tList [.int 1, .int 2]
+/-- `{'a': [1, 2]}`. -/
+def wSep : XVal := .map tDict [(.str (cs "a"), .seq tList [.int 1, .int 2])]
 
-theorem wSep_C : dumpsCX cfgSepX 10 wSep = .ok (cs "[1X2]") := by
-  simp [wSep, cfgSepX, dumpsCX, cObjX, cEnterX, cContX, cSeqPart, cSeqItemsX, writeStrObj, liftE, intRepr,
-    decDigits, decDigitsF, maxStrDigits]
+theorem wSep_C : dumpsCX cfgSepX 10 wSep = .ok (cs "{\"a\"X[1X2]}") := by
+  simp [wSep, cfgSepX, dumpsCX, cObjX, cEnterX, cContX, cMapPart, cExactItems, cMapItemsX, cKeyX, cSeqPart,
+    cSeqItemsX, writeStrObj, liftE, intRepr, decDigits, decDigitsF, maxStrDigits, cWriteStringX, cFastEncode,
+    XCfg.toE, writeEscapedAscii, asciiEscapeSize, Except.map]
   decide
 
-theorem wSep_Py : dumpsPyX cfgSepX 10 wSep = .ok (cs "[1,2]") := by
-  simp [wSep, cfgSepX, dumpsPyX, iterJoinPyX, pyCallX, pyIterX, pyContX, pyListPart, pyListItemsX, pyItemX, liftE,
-    intRepr, decDigits, decDigitsF, maxStrDigits]
+theorem wSep_Py : dumpsPyX cfgSepX 10 wSep = .ok (cs "{\"a\":[1,2]}") := by
+  simp [wSep, cfgSepX, dumpsPyX, iterJoinPyX, pyCallX, pyIterX, pyContX, pyDictPart.eq_def, pyExactItems,
+    cExactItems, pyDictItemsX, pyKeyX, pyEncStrX, needsReplace, pyListPart, pyListItemsX, pyItemX, liftE,
+    intRepr, decDigits, decDigitsF, maxStrDigits, Except.map]
   decide
 
 /-- With separators that may be `str` subclasses (everything else as in `DumpsTwinsX`), when neither
@@ -123,15 +126,15 @@ def DumpsTwinsSep : Prop :=
     (∀ n t v', cfg.dflt n t = .ok v' → v'.okx = true) → v.okx = true →
     ¬ IsRecCX (dumpsCX cfg c v) → ¬ IsRecPyX (dumpsPyX cfg p v) → SameExc (dumpsCX cfg c v) (dumpsPyX cfg p v)
 
-/-- `json.dumps([1, 2], separators=(S(','), ':'))` with `S.__str__` returning `'X'`: `[1X2]` in C
-(`PyUnicodeWriter_WriteStr` calls `str()`), `[1,2]` in Python. -/
+/-- `json.dumps({'a': [1, 2]}, separators=(S(','), S(':')))` with `S.__str__` returning `'X'`:
+`{"a"X[1X2]}` in C (`PyUnicodeWriter_WriteStr` calls `str()`), `{"a":[1,2]}` in Python. -/
 theorem dumpsTwinsSep_refuted : ¬ DumpsTwinsSep := by
   intro h
   have h1 := h cfgSepX 10 10 wSep rfl (fun n t v' h => by simp [cfgSepX, defaultErr] at h) (by decide)
     (by rw [wSep_C]; rintro ⟨ns, h⟩; cases h) (by rw [wSep_Py]; rintro ⟨ns, h⟩; cases h)
   rw [wSep_C, wSep_Py] at h1
   rcases h1 with ⟨t, h2, h3⟩ | ⟨_, _, _, h2, _⟩
-  · cases h2; cases h3
+  · exact absurd (Except.ok.inj (h2.trans h3.symm)) (by decide)
   · cases h2
 
 /-- With a custom `encoder` (`c_make_encoder` only), `encoder_write_string` writes the text of the
