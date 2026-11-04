@@ -6,10 +6,11 @@ A rule's text is written in the statement as a list of `SAlt`: the items of each
 the order of `Grammar/python.gram`, with their lookaheads, options and cuts), whether it is an
 `invalid_` alternative, and what its action does, as an explicit function of the values the items
 bound: the exception it raises (class, message, location) or the node it builds. `specAlts` runs
-that list the way `handle_alt_normal` of `Tools/peg_generator/pegen/c_generator.py` does: the
-`call_invalid_rules` guard, the `error_indicator` check, the `&&` chain of the items
-(`runItems`, `join_conditions`), the mark reset after a failed alternative, the cut, and `NULL`
-past the last. `runAlts_spec` matches it to the rule's data in `GrammarData.lean`, so a rule
+that list the way the generated rule function does (`Tools/peg_generator/pegen/c_generator.py`):
+the `call_invalid_rules` guard of an `invalid_` alternative (`visit_Alt`, 835-860), the
+`error_indicator` check, the `&&` chain of the items (`runItems`, `join_conditions`, 727-737), the
+action and `goto done` (`handle_alt_normal`, 781-802), the mark reset after a failed alternative
+and the cut, and `NULL` past the last. `runAlts_spec` matches it to the rule's data in `GrammarData.lean`, so a rule
 with its alternatives in another order, an item or lookahead dropped, another message, location
 or node fails the statement.
 
@@ -116,7 +117,8 @@ def raisedFrom (a : Ast) (m : String) (s : PS) : PS :=
   fun env _ s => (none, raisedFrom (env.getD i .null) m s)
 
 /-- An action that computes a value without touching the parser: `emit_action`'s
-`if (_res == NULL && PyErr_Occurred())` turns a `NULL` into the error return. -/
+`if ((_res == NULL || p->error_indicator) && PyErr_Occurred())` (`c_generator.py:739-748`) turns it
+into the error return. -/
 def pureRes (v : Ast) (s : PS) : Option Ast × PS :=
   if ((!nonNull v || s.errorIndicator) && s.errOccurred) = true then
     (none, { s with errorIndicator := true }) else (some v, s)
@@ -486,8 +488,8 @@ theorem altResult_target {a : Alt} {g : Bool} {env : Array Ast} {st : Int × Int
       cases t <;> first | contradiction | rfl) (errOcc_raiseEKL _ _ _ _ _ _ _)]
     cases t <;> first | contradiction | rfl
 
-/-- The default action of an alternative with several items: the dummy `_PyPegen_dummy_name`
-result (`(void*)1` in `emit_default_action`). -/
+/-- The default action of an alternative with several items: `_PyPegen_dummy_name(p, ...)`
+(`emit_default_action`, `c_generator.py:755-776`). -/
 @[irreducible] def oDummy : Array Ast → Int × Int → PS → Option Ast × PS :=
   fun _ _ s => (some (rec_ .PDummy []), s)
 
