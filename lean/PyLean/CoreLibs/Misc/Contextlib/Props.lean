@@ -404,17 +404,21 @@ theorem closingTryFinally_proven : ClosingTryFinally := by
 /-- `redirect_stdout` and `redirect_stderr` are re-entrant: `__enter__` installs the new target and
 returns it, and the matching `__exit__` restores exactly the stream that was current and the state of
 the object. When `getattr(sys, stream)` fails, `__enter__` raises that, appends nothing and sets
-nothing. `__exit__` without `__enter__` is `IndexError` from the empty list. -/
+nothing. A new object, `redirect_stdout(t)`, starts with no saved stream, so `__exit__` without
+`__enter__` is `IndexError` from the empty list, and its first `__enter__` installs `t` and saves
+only the current stream, which the matching `__exit__` gives back with the object as new. -/
 def RedirectRestores : Prop :=
   ∀ (S E : Type) (r : Redirect S) (cur : S) (e : E) (t : S),
     (r.enter (.ok cur : Except E S)).2 = .ok (r.newTarget, r.newTarget) ∧
     ((r.enter (.ok cur : Except E S)).1.exit = some (r, cur)) ∧
     r.enter (.error e : Except E S) = (r, .error e) ∧
-    ((Redirect.init t).exit = none)
+    ((Redirect.init t).exit = none) ∧
+    (Redirect.init t).enter (.ok cur : Except E S) = ({ newTarget := t, oldTargets := [cur] }, .ok (t, t)) ∧
+    ({ newTarget := t, oldTargets := [cur] } : Redirect S).exit = some (Redirect.init t, cur)
 
 theorem redirectRestores_proven : RedirectRestores := by
   intro S E r cur e t
-  refine ⟨rfl, ?_, rfl, rfl⟩
+  refine ⟨rfl, ?_, rfl, rfl, rfl, rfl⟩
   simp [Redirect.enter, Redirect.exit]
 
 /-- `chdir`: the matching `__exit__` goes back to the directory `__enter__` found, also when several
@@ -422,9 +426,15 @@ theorem redirectRestores_proven : RedirectRestores := by
 fails, `__enter__` raises that and pushes nothing. When `os.chdir` fails in `__enter__`, the
 exception propagates, the cwd stays, and the saved directory stays on the stack, because it was
 pushed first. `__exit__` pops before it calls `os.chdir`, so a failing `os.chdir` there leaves the
-cwd and drops the entry; with an empty stack it is `IndexError`. -/
+cwd and drops the entry; with an empty stack it is `IndexError`. A new object, `chdir(p)`, starts
+with an empty stack, so `__exit__` alone is `IndexError`, and its first `__enter__` saves only the
+current directory and goes to `p`, after which `__exit__` comes back with the object as new. -/
 def ChdirRestores : Prop :=
-  ∀ (P E : Type) (f : P → P → Except E P) (c : Chdir P) (cwd new old : P) (e : E),
+  ∀ (P E : Type) (f : P → P → Except E P) (c : Chdir P) (cwd new old p : P) (e : E),
+    (Chdir.init p).exit f cwd = none ∧
+    (f p cwd = .ok new → (Chdir.init p).enter f (.ok cwd) cwd = ({ path := p, oldCwd := [cwd] }, new, .ok ())) ∧
+    (f cwd new = .ok cwd →
+      ({ path := p, oldCwd := [cwd] } : Chdir P).exit f new = some (Chdir.init p, cwd, .ok ())) ∧
     (f c.path cwd = .ok new → f cwd new = .ok cwd →
       (c.enter f (.ok cwd) cwd).1.exit f (c.enter f (.ok cwd) cwd).2.1 = some (c, cwd, .ok ())) ∧
     (c.enter f (.error e) cwd = (c, cwd, .error e)) ∧
@@ -435,8 +445,10 @@ def ChdirRestores : Prop :=
       c.exit f cwd = some ({ c with oldCwd := c.oldCwd.dropLast }, cwd, .error e))
 
 theorem chdirRestores_proven : ChdirRestores := by
-  intro P E f c cwd new old e
-  refine ⟨?_, rfl, ?_, ?_, ?_⟩
+  intro P E f c cwd new old p e
+  refine ⟨rfl, ?_, ?_, ?_, rfl, ?_, ?_, ?_⟩
+  · intro h; simp [Chdir.init, Chdir.enter, h]
+  · intro h; simp [Chdir.init, Chdir.exit, h]
   · intro h1 h2
     simp [Chdir.enter, Chdir.exit, h1, h2]
   · intro h

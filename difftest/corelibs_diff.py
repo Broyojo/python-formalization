@@ -7773,7 +7773,7 @@ def misc_gen_ctx(rng):
         return None if rng.random() < 0.4 else rng.choice(excs)
     kind = rng.choice(["gcm", "gcm", "gcm", "with", "deco", "suppress", "suppress", "stack", "stack",
                        "stack", "redirect", "chdir", "hook", "closing", "null", "init", "agraw",
-                       "agraw", "aclosing"])
+                       "agraw", "aclosing", "wraps", "wraps"])
     case = {"fn": "misc.ctx", "k": kind}
     if kind == "gcm":
         case["async"] = rng.random() < 0.4
@@ -7850,7 +7850,8 @@ def misc_gen_ctx(rng):
                 ops.append(["enter_ctx", i, beh(), rng.randint(0, 9),
                             rng.choice(["ok"] * 6 + ["fail", "stop"]), a])
             else:
-                ops.append(["enter_bad", a, rng.choice(["none", "noexit", "enterfail", "exitfail"])])
+                ops.append(["enter_bad", a, rng.choice(["none", "noexit", "enterfail", "exitfail"]),
+                            rng.random() < 0.5])
             if rng.random() < 0.1:
                 ops.append(["pop_all", rng.random() < 0.3])
         if rng.random() < 0.8:
@@ -7895,6 +7896,35 @@ def misc_gen_ctx(rng):
     elif kind == "aclosing":
         case["aclose"] = rng.choice(["ok", "ok", "raise", "stop"])
         case["body"] = body()
+    elif kind == "wraps":
+        vals = [["s", "x"], ["s", "y"], ["i", 5], ["none"], ["t", 1], ["t", 0], ["l"], ["fn"]]
+        strs = [["s", "x"], ["s", "y"]]
+        good = {"__module__": vals, "__doc__": vals, "__name__": strs, "__qualname__": strs,
+                "__annotate__": [["none"], ["fn"]], "__type_params__": [["t", 1], ["t", 0]]}
+        def wspec(n):
+            k = rng.random()
+            if k < 0.1:
+                return ["attr"]
+            if k < 0.14:
+                return ["raise"]
+            if k < 0.9:
+                return ["val", rng.choice(good[n])]
+            return ["val", rng.choice(vals)]
+        names = ["__module__", "__name__", "__qualname__", "__doc__", "__annotate__", "__type_params__"]
+        case["attrs"] = [[n, wspec(n)] for n in names]
+        k = rng.random()
+        if k < 0.1:
+            case["dict"] = ["attr"]
+        elif k < 0.15:
+            case["dict"] = ["raise"]
+        elif k < 0.2:
+            case["dict"] = ["int"]
+        else:
+            keys = rng.sample(["__wrapped__", "__name__", "__doc__", "a", "b"], rng.randint(0, 3))
+            case["dict"] = ["dict", [[kk, rng.choice(vals)] for kk in keys]]
+        case["async"] = rng.random() < 0.5
+        case["ph"] = rng.random() < 0.04
+        case["with"] = rng.random() < 0.4
     elif kind == "hook":
         a = rng.random() < 0.5
         ms = ["__aenter__", "__aexit__"] if a else ["__enter__", "__exit__"]
@@ -8101,10 +8131,18 @@ def misc_run_stack(case):
                 out.append(misc_cres(lambda: box[0].enter_context(c), labels))
         elif k == "enter_bad":
             bad = {"none": MiscNoCM, "noexit": MiscNoExit, "enterfail": MiscEnterFail, "exitfail": MiscExitFail}[op[2]]
-            if op[1]:
-                out.append(misc_cres(lambda: misc_run_co(box[0].enter_async_context(bad())), labels))
-            else:
-                out.append(misc_cres(lambda: box[0].enter_context(bad()), labels))
+
+            def call(bad=bad, isa=op[1]):
+                if isa:
+                    return misc_run_co(box[0].enter_async_context(bad()))
+                return box[0].enter_context(bad())
+
+            def in_except(call=call):
+                try:
+                    raise KeyError("handled")
+                except KeyError:
+                    return call()
+            out.append(misc_cres(in_except if op[3] else call, labels))
         elif k == "pop_all":
             old = box[0]
             MiscFailStack.fail = op[1]
@@ -8140,8 +8178,96 @@ def misc_run_stack(case):
     return {"ok": [out, log, len(box[0]._exit_callbacks)]}
 
 
+def misc_wraps_fn():
+    pass
+
+
+def misc_run_wraps(case):
+    import functools
+    log = []
+
+    def mk(v):
+        k = v[0]
+        if k in ("s", "i"):
+            return v[1]
+        if k == "none":
+            return None
+        if k == "t":
+            return tuple(range(v[1]))
+        if k == "l":
+            return [1]
+        return misc_wraps_fn
+    spec = {n: sp for n, sp in case["attrs"]}
+    dspec = case["dict"]
+
+    class G:
+        def __call__(self):
+            pass
+
+        def __getattribute__(self, n):
+            if n == "__dict__":
+                log.append(n)
+                k = dspec[0]
+                if k == "attr":
+                    raise AttributeError(n)
+                if k == "raise":
+                    raise ValueError(n)
+                if k == "int":
+                    return 5
+                return {kk: mk(vv) for kk, vv in dspec[1]}
+            if n in spec:
+                log.append(n)
+                sp = spec[n]
+                if sp[0] == "attr":
+                    raise AttributeError(n)
+                if sp[0] == "raise":
+                    raise ValueError(n)
+                return mk(sp[1])
+            return object.__getattribute__(self, n)
+    obj = functools.Placeholder if case["ph"] else G()
+    deco = misc_contextlib.asynccontextmanager if case["async"] else misc_contextlib.contextmanager
+
+    def enc(v):
+        if v is obj:
+            return ["self"]
+        if v is misc_wraps_fn:
+            return ["fn"]
+        if v is None:
+            return ["none"]
+        if isinstance(v, str):
+            return ["s", v]
+        if isinstance(v, int):
+            return ["i", v]
+        if isinstance(v, tuple):
+            return ["t", len(v)]
+        if isinstance(v, list):
+            return ["l"]
+        return ["?", repr(v)]
+
+    def run():
+        h = deco(obj)
+        return [enc(h.__name__), enc(h.__qualname__), enc(h.__module__), enc(h.__doc__),
+                enc(h.__annotate__), enc(h.__type_params__), [[k, enc(v)] for k, v in h.__dict__.items()]]
+    labels = []
+    if case["with"]:
+        hexc = KeyError("handled")
+        labels.append((hexc, "handled"))
+
+        def run2():
+            try:
+                raise hexc
+            except KeyError:
+                return run()
+        r = misc_cres(run2, labels)
+    else:
+        r = misc_cres(run, labels)
+    return {"ok": [r, log]}
+
+
 def misc_run_ctx(case):
     k = case["k"]
+    if k == "wraps":
+        return misc_run_wraps(case)
     if k == "gcm":
         a = case["async"]
         g = (misc_agen_of if a else misc_gen_of)(case["script"])
