@@ -231,20 +231,18 @@ theorem timeFormat_proven : TimeFormat := by
 /-! ### `fromisoformat` -/
 
 /-- `time.fromisoformat` and `datetime.fromisoformat` on every argument: a non-`str` is a
-`TypeError` in both twins, a `str` with a lone surrogate a `ValueError` in both, and a `str`
-goes to the parser of each twin. -/
+`TypeError` in both twins; for `time` a `str` with a lone surrogate is a `ValueError` in both
+(it fails `isascii()` wherever it sits); and a `str` goes to the parser of each twin. -/
 def FromisoArg : Prop :=
   (timeFromIsoArgPy .other).raises "TypeError" ∧ (timeFromIsoArgC .other).raises "TypeError" ∧
   (datetimeFromIsoArgPy .other).raises "TypeError" ∧ (datetimeFromIsoArgC .other).raises "TypeError" ∧
   (timeFromIsoArgPy .surrogateStr).raises "ValueError" ∧ (timeFromIsoArgC .surrogateStr).raises "ValueError" ∧
-  (datetimeFromIsoArgPy .surrogateStr).raises "ValueError" ∧
-  (datetimeFromIsoArgC .surrogateStr).raises "ValueError" ∧
   ∀ s, timeFromIsoArgPy (.str s) = timeFromIsoPy s ∧ timeFromIsoArgC (.str s) = timeFromIsoC s ∧
     datetimeFromIsoArgPy (.str s) = datetimeFromIsoPy s ∧ datetimeFromIsoArgC (.str s) = datetimeFromIsoC s
 
 theorem fromisoArg_proven : FromisoArg :=
-  ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩,
-    ⟨_, rfl, rfl⟩, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
+  ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩,
+    fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
 /-- `time.fromisoformat(s)` (Py:1645-1670) on every string, by what `_parse_isoformat_time`
 returns for `s` without a leading `T`: a `ValueError` of the parser becomes

@@ -211,20 +211,26 @@ def timeFromIsoArgC : IsoArg → Py TimeV
   | .surrogateStr => .error (.valueError "~Invalid isoformat string")
   | .other => .error (.typeError "~fromisoformat() argument must be str")
 
+/-- The argument of `datetime.fromisoformat`: a `str` or another object. A `str` with a lone
+surrogate is out of scope here (Lean's `Char` has none, and where the surrogate sits matters:
+`_pydatetime` accepts `'20200516\ud800'`, the surrogate being the separator before an empty
+time part, the bare-separator difference on record as
+`datetime-pydatetime-fromisoformat-trailing-separator`). -/
+inductive DtIsoArg where
+  | str (s : List Char)
+  | other
+  deriving DecidableEq, Repr
+
 /-- `datetime.fromisoformat(arg)`, Py:1964-2014: `isinstance(date_string, str)` (:1966-1967),
-then `datetimeFromIsoPy`; a surrogate fails `isascii()` in a parser or is too short, every
-such `ValueError` becomes `Invalid isoformat string`. -/
-def datetimeFromIsoArgPy : IsoArg → Py DateTimeV
+then `datetimeFromIsoPy`. -/
+def datetimeFromIsoArgPy : DtIsoArg → Py DateTimeV
   | .str s => datetimeFromIsoPy s
-  | .surrogateStr => .error (.valueError "~Invalid isoformat string")
   | .other => .error (.typeError "fromisoformat: argument must be str")
 
 /-- `datetime.fromisoformat(arg)` in C: the clinic converter (clinic/_datetimemodule.c.h:1712-1726),
-then the impl, whose surrogate handling (`_sanitize_isoformat_str`, then a failed UTF-8
-conversion) ends in `invalid_string_error`. -/
-def datetimeFromIsoArgC : IsoArg → Py DateTimeV
+then the impl. -/
+def datetimeFromIsoArgC : DtIsoArg → Py DateTimeV
   | .str s => datetimeFromIsoC s
-  | .surrogateStr => .error (.valueError "~Invalid isoformat string")
   | .other => .error (.typeError "~fromisoformat() argument must be str")
 
 end PyLean.Datetime

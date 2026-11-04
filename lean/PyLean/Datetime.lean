@@ -38,6 +38,7 @@ import PyLean.Datetime.PickleProps
 import PyLean.Datetime.CmpProps2
 import PyLean.Datetime.ReprProps
 import PyLean.Datetime.Misc2Props
+import PyLean.Datetime.FromisoBodyProps
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -1251,7 +1252,7 @@ def entries : List Entry := [
     prop := ``TimeFormat, thm := some ``timeFormat_proven },
   { id := "datetime-fromiso-arg", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time.fromisoformat", "datetime.fromisoformat", "C datetime_time_fromisoformat_impl", "C datetime_datetime_fromisoformat_impl"]
-    statement := "time.fromisoformat and datetime.fromisoformat raise TypeError in both twins for a non-str argument and ValueError for a str with a lone surrogate."
+    statement := "time.fromisoformat and datetime.fromisoformat raise TypeError in both twins for a non-str argument; time.fromisoformat raises ValueError in both for a str with a lone surrogate."
     source := "fromisoformat docs; C/Python twins", status := .proven
     prop := ``FromisoArg, thm := some ``fromisoArg_proven },
   { id := "datetime-time-fromiso-body", pyFile := "Lib/_pydatetime.py"
@@ -1324,7 +1325,12 @@ def entries : List Entry := [
     pyFns := ["time.strptime", "datetime.strptime", "C datetime_time_strptime_impl", "C datetime_datetime_strptime_impl"]
     statement := "time.strptime and datetime.strptime for every parse: a _strptime exception propagates; without an offset they are the naive time/datetime of the parsed fields through the constructor; with one they attach _parse_tz's timezone; and '%H:%M' on 12:30 is time(12, 30), '%Y %m %d %H %M' on 2024 1 2 12 30 is datetime(2024, 1, 2, 12, 30)."
     source := "time.strptime/datetime.strptime docs", status := .proven
-    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven }
+    prop := ``StrptimeTimeDatetime, thm := some ``strptimeTimeDatetime_proven },
+  { id := "datetime-datetime-fromiso-body", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.fromisoformat", "_find_isoformat_datetime_separator", "_parse_isoformat_date", "_parse_isoformat_time"]
+    statement := "datetime.fromisoformat(s) for every string, by its parsers' results: short strings and refused date parts are 'Invalid isoformat string'; no time part is midnight of the date; a time-part ValueError is 'Invalid isoformat string', error_from_tz is raised, hour 24 with other fields is the hour-24 ValueError, and 24:00 on a valid date other than 9999-12-31 is midnight of the next day (ordinal + 1, a valid date)."
+    source := "datetime.fromisoformat docs (24:00 is the next day's midnight); _pydatetime.py:1969-2014", status := .proven
+    prop := ``DatetimeFromIsoBody, thm := some ``datetimeFromIsoBody_proven }
 ]
 
 end PyLean.Datetime
