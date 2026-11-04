@@ -342,10 +342,10 @@ def _DO_CALL (e : Env) : M Unit := do
 /-- `:4436`. -/
 def _MONITOR_CALL : M Unit := pure ()
 /-- `:4457`. -/
-def CALL (e : Env) : M Unit := do _SPECIALIZE_CALL; _MAYBE_EXPAND_METHOD e; _DO_CALL e; _CHECK_PERIODIC
+def CALL (e : Env) : M Unit := do _SPECIALIZE_CALL; _MAYBE_EXPAND_METHOD e; _DO_CALL e; _CHECK_PERIODIC_AT_END e
 /-- `:4458`. -/
 def INSTRUMENTED_CALL (e : Env) : M Unit := do
-  _MAYBE_EXPAND_METHOD e; _MONITOR_CALL; _DO_CALL e; _CHECK_PERIODIC
+  _MAYBE_EXPAND_METHOD e; _MONITOR_CALL; _DO_CALL e; _CHECK_PERIODIC_AT_END e
 
 /-- `:4460`. -/
 def _PY_FRAME_GENERAL (e : Env) : M Frame := do
@@ -431,7 +431,7 @@ def callNonPy (e : Env) : M Unit := stk (e.oparg + 2) 1 fun
 def _CALL_NON_PY_GENERAL (e : Env) : M Unit := callNonPy e
 /-- `:4569`. -/
 def CALL_NON_PY_GENERAL (e : Env) : M Unit := do
-  _CHECK_IS_NOT_PY_CALLABLE e; _CALL_NON_PY_GENERAL e; _CHECK_PERIODIC
+  _CHECK_IS_NOT_PY_CALLABLE e; _CALL_NON_PY_GENERAL e; _CHECK_PERIODIC_AT_END e
 
 /-- `:4577`. -/
 def _CHECK_CALL_BOUND_METHOD_EXACT_ARGS (e : Env) : M Unit := guardTop (e.oparg + 2) fun
@@ -490,7 +490,7 @@ def CALL_PY_EXACT_ARGS (e : Env) : M Unit := do
 
 /-! ### Lines 4052-4372: calls of known builtins -/
 
-/-- `:4671`. -/
+/-- `:4671-4673`. -/
 def _GUARD_NOS_NULL : M Unit := guardTop 2 fun
   | [n, _] => pure (n != .null)
   | _ => fault "arity"
@@ -498,30 +498,32 @@ def _GUARD_NOS_NULL : M Unit := guardTop 2 fun
 def guardCallable (w : Val) : M Unit := guardTop 3 fun
   | [c, _, _] => pure (c != w)
   | _ => fault "arity"
-/-- `:5585`. -/
+/-- `:4679-4682`. -/
 def _GUARD_CALLABLE_TYPE_1 : M Unit := guardCallable (.cls "type")
-/-- `:4684`. -/
+/-- `:4684-4692`: `Py_TYPE(arg)`; the `POP_TOP` of the macro is folded in. -/
 def _CALL_TYPE_1 : M Unit := stk 3 1 fun
   | [_, _, a] => do pure [← (typeOf a : RM Val)]
   | _ => fault "arity"
-/-- `:4694`. -/
+/-- `:4694-4700`. -/
 def CALL_TYPE_1 : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TYPE_1; _CALL_TYPE_1
-/-- `:4702`. -/
+/-- `:4702-4705`. -/
 def _GUARD_CALLABLE_STR_1 : M Unit := guardCallable (.cls "str")
-/-- `:4707`. -/
-def _CALL_STR_1 (e : Env) : M Unit := stk 3 1 fun
+/-- `:4707-4719`: `PyObject_Str(arg)`, `ERROR_NO_POP` on failure; the `POP_TOP` of the macro is
+folded in. -/
+def _CALL_STR_1 (e : Env) : M Unit := stkK 3 1 fun
   | [_, _, a] => do pure [← e.om.str e.ctx a]
   | _ => fault "arity"
-/-- `:4721`. -/
-def CALL_STR_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_STR_1; _CALL_STR_1 e; _CHECK_PERIODIC
-/-- `:4730`. -/
+/-- `:4721-4728`. -/
+def CALL_STR_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_STR_1; _CALL_STR_1 e; _CHECK_PERIODIC_AT_END e
+/-- `:4730-4733`. -/
 def _GUARD_CALLABLE_TUPLE_1 : M Unit := guardCallable (.cls "tuple")
-/-- `:4735`: `PySequence_Tuple` is what `tuple(x)` calls. -/
-def _CALL_TUPLE_1 (e : Env) : M Unit := stk 3 1 fun
+/-- `:4735-4747`: `PySequence_Tuple(arg)`, which is what calling `tuple` with one argument runs
+(`tuple_vectorcall`), `ERROR_NO_POP` on failure; the `POP_TOP` of the macro is folded in. -/
+def _CALL_TUPLE_1 (e : Env) : M Unit := stkK 3 1 fun
   | [c, _, a] => do pure [← e.om.call e.ctx c [a] []]
   | _ => fault "arity"
-/-- `:4749`. -/
-def CALL_TUPLE_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TUPLE_1; _CALL_TUPLE_1 e; _CHECK_PERIODIC
+/-- `:4749-4756`. -/
+def CALL_TUPLE_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TUPLE_1; _CALL_TUPLE_1 e; _CHECK_PERIODIC_AT_END e
 
 /-- `:4758`: split off `_CHECK_AND_ALLOCATE_OBJECT` of 3.14, so that
 `_CHECK_RECURSION_REMAINING` can run before anything is allocated. -/
@@ -596,56 +598,58 @@ def _CALL_BUILTIN_CLASS (e : Env) : M Unit := do
   builtinGuard e fun c _ => do return !(← (isType c : RM Bool))
   callNonPy e
 /-- `:4862`. -/
-def CALL_BUILTIN_CLASS (e : Env) : M Unit := do _CALL_BUILTIN_CLASS e; _CHECK_PERIODIC
+def CALL_BUILTIN_CLASS (e : Env) : M Unit := do _CALL_BUILTIN_CLASS e; _CHECK_PERIODIC_AT_END e
 /-- `:4883`. -/
 def _CALL_BUILTIN_O (e : Env) : M Unit := do
   builtinGuard e fun c args => pure (args.length != 1 || !(match c with | .builtin _ => true | _ => false))
   callNonPy e
 /-- `:4905`. -/
-def CALL_BUILTIN_O (e : Env) : M Unit := do _CALL_BUILTIN_O e; _CHECK_PERIODIC
+def CALL_BUILTIN_O (e : Env) : M Unit := do _CALL_BUILTIN_O e; _CHECK_PERIODIC_AT_END e
 /-- `:4922`. -/
 def _CALL_BUILTIN_FAST (e : Env) : M Unit := do
   builtinGuard e fun c _ => pure !(match c with | .builtin _ => true | _ => false)
   callNonPy e
 /-- `:4944`. -/
-def CALL_BUILTIN_FAST (e : Env) : M Unit := do _CALL_BUILTIN_FAST e; _CHECK_PERIODIC
+def CALL_BUILTIN_FAST (e : Env) : M Unit := do _CALL_BUILTIN_FAST e; _CHECK_PERIODIC_AT_END e
 /-- `:4960`. -/
 def _CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := _CALL_BUILTIN_FAST e
 /-- `:4978`. -/
-def CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := do _CALL_BUILTIN_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC
-/-- `:4997`. -/
+def CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := do _CALL_BUILTIN_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC_AT_END e
+/-- `:4997-5001`: `callable_cache.len`, the builtin `len`. -/
 def _GUARD_CALLABLE_LEN : M Unit := guardCallable (.builtin "len")
-/-- `:5003`. -/
+/-- `:5003-5020`: `PyObject_Length(arg)` as an int, `ERROR_NO_POP` on failure; the two `POP_TOP`s of
+the macro are folded in. -/
 def _CALL_LEN (e : Env) : M Unit := stkK 3 1 fun
   | [_, _, a] => do pure [.int (← e.om.length e.ctx a)]
   | _ => fault "arity"
-/-- `:4988`. -/
+/-- `:4988-4995`. -/
 def CALL_LEN (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_LEN; _CALL_LEN e
-/-- `_GUARD_THIRD_NULL`: `(null, unused, unused -- ...)`. -/
+/-- `:4675-4677`: `(null, unused, unused -- ...)`. -/
 def _GUARD_THIRD_NULL : M Unit := guardTop 3 fun
   | [n, _, _] => pure (n != .null)
   | _ => fault "arity"
-/-- `:5022`. -/
+/-- `:5022-5026`. -/
 def _GUARD_CALLABLE_ISINSTANCE : M Unit := guardTop 4 fun
   | [c, _, _, _] => pure (c != .builtin "isinstance")
   | _ => fault "arity"
-/-- `:5028`: `(callable, null, instance, cls -- res)`. -/
+/-- `:5028-5044`: `(callable, null, instance, cls -- res)`, `PyObject_IsInstance`, `ERROR_NO_POP` on
+failure. -/
 def _CALL_ISINSTANCE (e : Env) : M Unit := stkK 4 1 fun
   | [_, _, i, c] => do pure [.bool (← e.om.isInstance e.ctx i c)]
   | _ => fault "arity"
-/-- `:5046`. -/
+/-- `:5046-5051`. -/
 def CALL_ISINSTANCE (e : Env) : M Unit := do
   _GUARD_THIRD_NULL; _GUARD_CALLABLE_ISINSTANCE; _CALL_ISINSTANCE e
-/-- `:5063`. -/
+/-- `:5063-5067`. -/
 def _GUARD_CALLABLE_LIST_APPEND : M Unit := guardCallable (.methDescr "list" "append")
-/-- `:5069`: `(callable, self, arg -- none, c, s)`, and the two `POP_TOP` of the macro. It
+/-- `:5069-5090`: `(callable, self, arg -- none, c, s)`, and the two `POP_TOP` of the macro. It
 leaves `None` for the `POP_TOP` that follows in the bytecode, which 3.14 skipped. -/
 def _CALL_LIST_APPEND : M Unit := stk 3 1 fun
   | [_, s, a] => do
     (listAppend s a : RM Unit)
     pure [.none]
   | _ => fault "arity"
-/-- `:5053`. -/
+/-- `:5053-5061`. -/
 def CALL_LIST_APPEND : M Unit := do
   _GUARD_CALLABLE_LIST_APPEND; _GUARD_NOS_NOT_NULL; _GUARD_NOS_LIST; _CALL_LIST_APPEND
 
@@ -660,20 +664,20 @@ def methDescrGuard (e : Env) (min : Nat) : M Unit :=
 /-- `:5105`. -/
 def _CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do methDescrGuard e 2; callNonPy e
 /-- `:5153`. -/
-def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_O e; _CHECK_PERIODIC
+def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_O e; _CHECK_PERIODIC_AT_END e
 /-- `:5839`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
 /-- `:5229`. -/
 def CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do
-  _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC
+  _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC_AT_END e
 /-- `:5254`. -/
 def _CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
 /-- `:5296`. -/
-def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_NOARGS e; _CHECK_PERIODIC
+def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_NOARGS e; _CHECK_PERIODIC_AT_END e
 /-- `:5323`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
 /-- `:5372`. -/
-def CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_FAST e; _CHECK_PERIODIC
+def CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_FAST e; _CHECK_PERIODIC_AT_END e
 
 /-! ### Lines 4591-4840: `CALL_KW` -/
 
@@ -779,7 +783,7 @@ def _CALL_KW_NON_PY (e : Env) : M Unit := stk (e.oparg + 3) 1 fun
   | _ => fault "arity"
 /-- `:5608`. -/
 def CALL_KW_NON_PY (e : Env) : M Unit := do
-  _CHECK_IS_NOT_PY_CALLABLE_KW e; _CALL_KW_NON_PY e; _CHECK_PERIODIC
+  _CHECK_IS_NOT_PY_CALLABLE_KW e; _CALL_KW_NON_PY e; _CHECK_PERIODIC_AT_END e
 
 /-! ### Lines 4841-5087: `CALL_FUNCTION_EX`, functions, formatting -/
 
@@ -831,7 +835,7 @@ def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
 
 /-- `:5728`. -/
 def CALL_FUNCTION_EX (e : Env) : M Unit := do
-  _MAKE_CALLARGS_A_TUPLE e; _DO_CALL_FUNCTION_EX e; _CHECK_PERIODIC
+  _MAKE_CALLARGS_A_TUPLE e; _DO_CALL_FUNCTION_EX e; _CHECK_PERIODIC_AT_END e
 /-- `:5801`. -/
 def INSTRUMENTED_CALL_FUNCTION_EX (e : Env) : M Unit := CALL_FUNCTION_EX e
 /-- `:5734`. -/
@@ -869,7 +873,7 @@ def _CALL_FUNCTION_EX_NON_PY_GENERAL (e : Env) : M Unit := stk 4 1 fun
 /-- `:5794`. -/
 def CALL_EX_NON_PY_GENERAL (e : Env) : M Unit := do
   _CHECK_IS_NOT_PY_CALLABLE_EX; _MAKE_CALLARGS_A_TUPLE e; _CALL_FUNCTION_EX_NON_PY_GENERAL e
-  _CHECK_PERIODIC
+  _CHECK_PERIODIC_AT_END e
 
 /-- `:5824`. -/
 def MAKE_FUNCTION (e : Env) : M Unit := stk 1 1 fun

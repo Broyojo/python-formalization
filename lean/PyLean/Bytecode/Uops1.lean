@@ -50,6 +50,18 @@ def checkPeriodics : RM Unit := fun rt =>
   else raiseVal rt.pendingExc { rt with pendingExc := .null }
 /-- `:158-161`: `ERROR_IF(err != 0)` (`:160`) with nothing popped. -/
 def _CHECK_PERIODIC : M Unit := BM.lift (checkPeriodics : RM Unit)
+/-- `check_periodics_at_end`, `Python/ceval_macros.h:550-563`: as `check_periodics`, except that
+nothing is handled when the code unit before this instruction is `LOAD_SPECIAL`
+(`frame->instr_ptr[-1].op.code == LOAD_SPECIAL`), so that the `__enter__`/`__exit__` call of a
+`with` block runs without an interrupt in between. -/
+def checkPeriodicsAtEnd (e : Env) : BM Unit := fun r =>
+  if r.rt.pendingExc == .null then .ok () r
+  else
+    let prev := ((e.P[r.frame.code]?).bind fun c => c.instrs[r.frame.instrPtr - 1]?).map (·.op)
+    if r.frame.instrPtr != 0 && prev == some .LOAD_SPECIAL then .ok () r
+    else RM.lift checkPeriodics r
+/-- `:163-166`: `ERROR_IF(err != 0)` with nothing popped; it ends the `CALL` family's macros. -/
+def _CHECK_PERIODIC_AT_END (e : Env) : M Unit := BM.lift (checkPeriodicsAtEnd e)
 /-- `@3.14.7:164`. -/
 def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
 /-- `:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/

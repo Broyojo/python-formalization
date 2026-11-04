@@ -20,6 +20,7 @@ import PyLean.Bytecode.SpecJumps
 import PyLean.Bytecode.SpecUnpack
 import PyLean.Bytecode.SpecBuild
 import PyLean.Bytecode.SpecMisc
+import PyLean.Bytecode.SpecCall
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -583,7 +584,22 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "CALL_INTRINSIC_1 calls _PyIntrinsics_UnaryFunctions[oparg] on the value and CALL_INTRINSIC_2 calls _PyIntrinsics_BinaryFunctions[oparg](value2, value1) with value2 the deeper operand, replacing the operands by the result; when the intrinsic fails both leave through ERROR_NO_POP with the operands kept (new in 3.15). For every object model and oparg."
     source := "Python/bytecodes.c:1498-1529"
     status := .proven, prop := ``IntrinsicRules, thm := some ``intrinsicRules_proven
-    notes := "The intrinsic functions themselves are Python/intrinsics.c rows." }
+    notes := "The intrinsic functions themselves are Python/intrinsics.c rows." },
+  { id := "bytecode-call-builtins", pyFile := "Python/bytecodes.c"
+    pyFns := [op "_CHECK_PERIODIC_AT_END", op "_GUARD_NOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL",
+      op "_GUARD_CALLABLE_TYPE_1", op "_CALL_TYPE_1", op "CALL_TYPE_1", op "_GUARD_CALLABLE_STR_1", op "_CALL_STR_1",
+      op "CALL_STR_1", op "_GUARD_CALLABLE_TUPLE_1", op "_CALL_TUPLE_1", op "CALL_TUPLE_1", op "CALL_LEN",
+      op "_GUARD_CALLABLE_LEN", op "_CALL_LEN", op "_GUARD_CALLABLE_ISINSTANCE", op "_CALL_ISINSTANCE",
+      op "CALL_ISINSTANCE", op "CALL_LIST_APPEND", op "_GUARD_CALLABLE_LIST_APPEND", op "_CALL_LIST_APPEND"]
+    statement := "For every object model: with a NULL self_or_null and the builtin type, str, tuple, len or isinstance itself as the callable, CALL_TYPE_1, CALL_STR_1, CALL_TUPLE_1, CALL_LEN and CALL_ISINSTANCE push Py_TYPE(arg), PyObject_Str(arg), tuple(arg), len(arg) as an int, or the bool of isinstance(inst, cls) in place of their operands, keep every operand when that slot raises (ERROR_NO_POP), and CALL_STR_1/CALL_TUPLE_1 end with _CHECK_PERIODIC_AT_END; CALL_LIST_APPEND with list.append and an exact list as self appends and leaves None; on every stack a guard rejects, each is the generic CALL. _CHECK_PERIODIC_AT_END handles a pending event like _CHECK_PERIODIC except right after a LOAD_SPECIAL code unit, where it leaves it pending."
+    source := "Python/bytecodes.c:163-166, :1753-1755, :4671-4756, :4988-5090; check_periodics_at_end, Python/ceval_macros.h:550-563"
+    status := .proven, prop := ``CallSpecRules, thm := some ``callSpecRules_proven },
+  { id := "bytecode-match", pyFile := "Python/bytecodes.c"
+    pyFns := [op "MATCH_CLASS", op "_MATCH_CLASS", op "MATCH_MAPPING", op "MATCH_SEQUENCE", op "MATCH_KEYS"]
+    statement := "MATCH_CLASS replaces subject, type and names by _PyEval_MatchClass's attribute tuple, or None on no match, keeping all three when it raises (ERROR_NO_POP, 3.15); MATCH_MAPPING and MATCH_SEQUENCE push above the subject whether its type has Py_TPFLAGS_MAPPING / Py_TPFLAGS_SEQUENCE; MATCH_KEYS pushes _PyEval_MatchKeys(subject, keys) above both and keeps both when it raises. For every object model."
+    source := "Python/bytecodes.c:3675-3717"
+    status := .proven, prop := ``MatchRules, thm := some ``matchRules_proven
+    notes := "_PyEval_MatchClass and _PyEval_MatchKeys themselves are Python/ceval.c rows." }
 ]
 
 end PyLean.Bytecode

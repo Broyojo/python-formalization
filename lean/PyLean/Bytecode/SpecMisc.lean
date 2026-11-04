@@ -222,4 +222,35 @@ theorem intrinsicRules_proven : IntrinsicRules := by
   refine ⟨fun r rt h => ?_, fun x rt h => ?_, fun r rt h => ?_, fun x rt h => ?_⟩ <;>
     bc_simp [execOp, CALL_INTRINSIC_1, CALL_INTRINSIC_2, getFrame, h]
 
+/-! ## Pattern matching -/
+
+/-- `MATCH_CLASS oparg` (`:3675-3699`): `_PyEval_MatchClass(subject, type, oparg, names)` replaces the
+three operands by the tuple of attributes on a match and by `None` on no match; when it raises, the
+operands stay (`ERROR_NO_POP`). `MATCH_MAPPING` and `MATCH_SEQUENCE` (`:3701-3709`) push, above the
+subject, whether its type has `Py_TPFLAGS_MAPPING` / `Py_TPFLAGS_SEQUENCE`. `MATCH_KEYS`
+(`:3711-3717`) pushes `_PyEval_MatchKeys(subject, keys)` (a tuple of values or `None`) above both. For
+every object model. -/
+def MatchRules : Prop := ∀ (e : Env) (regs : Regs) (subj tp names : Val) (rest : List Val),
+  (∀ attrs rt, e.om.matchClass e.ctx subj tp e.oparg names regs.rt = .ok (some attrs) rt →
+    execOp e .MATCH_CLASS ⟨regs, names :: tp :: subj :: rest⟩ = .ok () ⟨{ regs with rt := rt }, attrs :: rest⟩) ∧
+  (∀ rt, e.om.matchClass e.ctx subj tp e.oparg names regs.rt = .ok none rt →
+    execOp e .MATCH_CLASS ⟨regs, names :: tp :: subj :: rest⟩ = .ok () ⟨{ regs with rt := rt }, .none :: rest⟩) ∧
+  (∀ x rt, e.om.matchClass e.ctx subj tp e.oparg names regs.rt = .error x rt →
+    execOp e .MATCH_CLASS ⟨regs, names :: tp :: subj :: rest⟩ =
+      .error x ⟨{ regs with rt := rt }, names :: tp :: subj :: rest⟩) ∧
+  (∀ b rt, e.om.isMapping subj regs.rt = .ok b rt →
+    execOp e .MATCH_MAPPING ⟨regs, subj :: rest⟩ = .ok () ⟨{ regs with rt := rt }, .bool b :: subj :: rest⟩) ∧
+  (∀ b rt, e.om.isSequence subj regs.rt = .ok b rt →
+    execOp e .MATCH_SEQUENCE ⟨regs, subj :: rest⟩ = .ok () ⟨{ regs with rt := rt }, .bool b :: subj :: rest⟩) ∧
+  (∀ keys v rt, e.om.matchKeys e.ctx subj keys regs.rt = .ok v rt →
+    execOp e .MATCH_KEYS ⟨regs, keys :: subj :: rest⟩ = .ok () ⟨{ regs with rt := rt }, v :: keys :: subj :: rest⟩) ∧
+  (∀ keys x rt, e.om.matchKeys e.ctx subj keys regs.rt = .error x rt →
+    execOp e .MATCH_KEYS ⟨regs, keys :: subj :: rest⟩ = .error x ⟨{ regs with rt := rt }, keys :: subj :: rest⟩)
+
+theorem matchRules_proven : MatchRules := by
+  intro e regs subj tp names rest
+  refine ⟨fun attrs rt h => ?_, fun rt h => ?_, fun x rt h => ?_, fun b rt h => ?_, fun b rt h => ?_,
+    fun keys v rt h => ?_, fun keys x rt h => ?_⟩ <;>
+    bc_simp [execOp, MATCH_CLASS, MATCH_MAPPING, MATCH_SEQUENCE, MATCH_KEYS, h]
+
 end PyLean.Bytecode

@@ -705,22 +705,24 @@ def POP_JUMP_IF_NOT_NONE (e : Env) : M Unit := do _IS_NONE; _POP_JUMP_IF_FALSE e
 def GET_LEN (e : Env) : M Unit := stkK 1 2 fun
   | [o] => do pure [o, .int (← e.om.length e.ctx o)]
   | _ => fault "arity"
-/-- `:3699`. -/
-def MATCH_CLASS (e : Env) : M Unit := stk 3 1 fun
+/-- `:3675-3699`: `_MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP`. `_PyEval_MatchClass` gives the tuple of
+attributes on a match and `NULL` otherwise; `NULL` with an exception set leaves through
+`ERROR_NO_POP` (new in 3.15) with the three operands kept, `NULL` without one is `None`. -/
+def MATCH_CLASS (e : Env) : M Unit := stkK 3 1 fun
   | [s, t, names] => do
     match ← e.om.matchClass e.ctx s t e.oparg names with
     | some a => pure [a]
     | none => pure [.none]
   | _ => fault "arity"
-/-- `:3701`. -/
+/-- `:3701-3704`. -/
 def MATCH_MAPPING (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isMapping s)]
   | _ => fault "arity"
-/-- `:3706`. -/
+/-- `:3706-3709`. -/
 def MATCH_SEQUENCE (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isSequence s)]
   | _ => fault "arity"
-/-- `:3711`. -/
+/-- `:3711-3717`. -/
 def MATCH_KEYS (e : Env) : M Unit := stkK 2 3 fun
   | [s, k] => do pure [s, k, ← e.om.matchKeys e.ctx s k]
   | _ => fault "arity"
