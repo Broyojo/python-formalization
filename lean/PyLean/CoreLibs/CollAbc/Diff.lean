@@ -224,6 +224,13 @@ def getItemArg (k v : Int) (kind : String) : ItemArg Int Int :=
   | "gen1t" => .one k (some (.valueError "itail"))
   | _ => .notIterable "int"
 
+def getAct : String → WarnAction
+  | "error" => .error
+  | "always" => .always
+  | _ => .ignore
+
+def encWarned (ws : List Warned) : Json := toJson (ws.map fun w => toJson [w.category, w.message])
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "check_methods" =>
@@ -235,10 +242,8 @@ def run (fn : String) (j : Json) : Except String Json := do
       (subclasshook (← getStr j "x") (← getStr j "cls") (← getMro j)))])
   | "stub" =>
     match stubBody (← getStr j "name") with
-    | some (.returnsInt n) => pure (Json.mkObj [("ok", toJson n)])
-    | some (.returnsBool b) => pure (Json.mkObj [("ok", toJson b)])
-    | some (.yieldsNones n) => pure (Json.mkObj [("ok", toJson (n : Int))])
-    | some (.raises c) => pure (Json.mkObj [("exc", toJson c), ("msg", toJson "~")])
+    | some (.gen n) => pure (Json.mkObj [("ok", toJson (n : Int))])
+    | some (.raises e) | some (.awaitRaises e) => pure (encPy (fun (_ : Unit) => Json.null) (.error e))
     | none => throw "no stub"
   | "throw" =>
     let typ ← getTObj (← field j "typ")
@@ -258,7 +263,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let (r, s) := scriptGen.close msg script
     pure (Json.mkObj [("ok", Json.mkObj [("r", encPy (fun _ => Json.null) r),
       ("left", toJson s.length)])])
-  | "gen_next" =>
+  | "gen_next" | "agen_next" =>
     let script ← getScript j
     let (r, s) := scriptGen.next 0 script
     pure (Json.mkObj [("ok", Json.mkObj [("r", encStep r), ("left", toJson s.length)])])
@@ -339,7 +344,8 @@ def run (fn : String) (j : Json) : Except String Json := do
     let r := listRemove (intEq (← getOptInt j "bad")) (← getInt j "v") (← getIntList j "xs")
     pure (encPy (fun o => toJson o) r)
   | "bytestring_new" =>
-    pure (Json.mkObj [("ok", toJson (byteStringMetaWarns (← getStr j "name")))])
+    let (ws, r) := byteStringMetaNew (getAct (← getStr j "act")) (← getStr j "name") (.ok ())
+    pure (Json.mkObj [("ok", toJson [encWarned ws, encPy (fun _ => Json.null) r])])
   | "module_getattr" =>
     let act ← match (← getStr j "act") with
       | "error" => pure WarnAction.error
@@ -350,10 +356,31 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (Json.mkObj [("ok", toJson [toJson (ws.map fun w => toJson [w.category, w.message]), toJson loaded,
       encPy (fun _ => Json.null) r])])
   | "bytestring_check" =>
-    let (w, a) := byteStringInstanceCheck (← getBool j "answer")
-    pure (Json.mkObj [("ok", toJson [w, a])])
+    let (ws, r) := byteStringInstanceCheck (getAct (← getStr j "act")) (.ok (← getBool j "answer"))
+    pure (Json.mkObj [("ok", toJson [encWarned ws, encPy toJson r])])
   | "view_repr" =>
-    pure (Json.mkObj [("ok", toJson (viewRepr (← getStr j "cls") (← getStr j "r")))])
+    let mr : Py String := match (← getStr j "kind") with
+      | "raise" => .error (.valueError "repr")
+      | "notstr" => .error (.typeError "~__repr__() must return a str, not int")
+      | _ => .ok "{1: 2}"
+    pure (encPy toJson (viewRepr (← getStr j "cls") mr))
+  | "from_iterable" =>
+    let elems : List (Option Int) ← (← (← field j "xs").getArr?).toList.mapM fun h => match h with
+      | .null => pure none
+      | v => some <$> v.getInt?
+    let t := tailOf (← getBool j "tail")
+    match (← getStr j "kind") with
+    | "set" =>
+      let uh ← getOptInt j "uh"
+      let call : Unit → Py (List Int) → Py (SetV Int) := fun _ it => build (faultBuilder none uh) it t
+      let r := setFromIterable call () (.ok (elems.filterMap id))
+      pure (encPy (fun (s : SetV Int) => match s.iter with | .ok xs => encIntList xs | .error _ => Json.null) r)
+    | _ =>
+      let hash : Option Int → Py Unit := fun
+        | none => .error (.typeError "cannot use 'list' as a set element (unhashable type: 'list')")
+        | some _ => .ok ()
+      let r := viewFromIterable hash () (.ok elems) t
+      pure (encPy (fun (xs : List (Option Int)) => encIntList ((xs.filterMap id).mergeSort (· ≤ ·))) r)
   | "set_cmp" =>
     let bad ← getOptInt j "bad"
     let s0 := faultSet bad (← getBool j "selftail") (← getIntList j "xs")

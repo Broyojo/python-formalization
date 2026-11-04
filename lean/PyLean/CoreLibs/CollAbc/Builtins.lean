@@ -131,6 +131,21 @@ def listMSet {α : Type} [DecidableEq α] : MSet (List α) (List α) α where
   discard s x := .ok (s.erase x)
   fromIter := listBuilder
 
+/-- `Set._from_iterable(cls, it)`, Lib/_collections_abc.py:597-604: `cls(it)`, a call of the class the classmethod is
+reached through (a subclass, not `Set`), whatever its constructor does or raises. -/
+def setFromIterable {C β γ : Type} (call : C → β → Py γ) (cls : C) (it : β) : Py γ := call cls it
+
+/-- The builtin `set(it)` as a consumer of `it` (Objects/setobject.c `set_update_internal`, `set_add_key`): each element
+is hashed (`hash`, which raises `TypeError` for an unhashable one) and then inserted. -/
+def setBuilder {α : Type} [DecidableEq α] (hash : α → Py Unit) : FromIter (List α) α (List α) :=
+  ⟨.ok [], fun r x => do hash x; pure (listAdd r x), fun r => .ok r⟩
+
+/-- `KeysView._from_iterable` and `ItemsView._from_iterable`, Lib/_collections_abc.py:851-853, 869-871: `set(it)`, the
+builtin `set` whatever `cls` is. -/
+def viewFromIterable {C α : Type} [DecidableEq α] (hash : α → Py Unit) (_cls : C) (xs : Py (List α))
+    (tail : Option PyExc) : Py (List α) :=
+  build (setBuilder hash) xs tail
+
 /-- Python's `a - b` between two sets of one mixin class built by `listBuilder`: `Set.__sub__` (the class is the same
 on both sides, so no reflected method is tried), whose `NotImplemented` would be the operator's `TypeError`. -/
 def mixinMinus {α : Type} [DecidableEq α] (a b : SetV α) : Py (SetV α) :=

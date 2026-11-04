@@ -121,50 +121,70 @@ def stubSeq (α : Type) : Seq α := ⟨stubGetitem (.indexError ""), .ok 0⟩
 /-- The `Mapping` an object has when it relies on the abstract primitives. -/
 def stubMap (K V : Type) : MapV K V := { getitem := stubGetitem (.keyError ""), iter := .ok [], len := .ok 0 }
 
-/-- The abstract bodies, reachable by `super()`, describe the empty collection: `len` 0, nothing
-contained, empty iteration; the abstract `__getitem__`s raise the very exceptions the mixins catch,
-so the mixins built on them see an empty `Sequence` and an empty `Mapping`. -/
+/-- A `MutableSequence` relying on the abstract `__setitem__`, `__delitem__` and `insert`. -/
+def stubMSeq (α : Type) : MSeq Unit α :=
+  ⟨fun _ => stubGetitem (.indexError ""), fun _ _ _ => .error (.indexError ""), fun _ _ => .error (.indexError ""),
+    fun _ _ _ => .error (.indexError ""), fun _ => .ok 0⟩
+
+/-- A `MutableMapping` relying on the abstract `__setitem__` and `__delitem__`. -/
+def stubMMap (K V : Type) : MMap Unit K V :=
+  ⟨fun _ => stubMap K V, fun _ _ _ => .error (.keyError ""), fun _ _ => .error (.keyError "")⟩
+
+/-- The generator a generator stub returns, yielding `n` `None`s: its state is the number of steps taken. -/
+def stubGen (n : Nat) : Gen Nat Unit :=
+  ⟨fun k _ => if k < n then (.yielded (), k + 1) else (.stopped (), k), fun k => (.raised generatorExit, k)⟩
+
+/-- The abstract bodies, reachable through `super()` or the class: each raising body raises exactly its exception,
+with an empty message (`StopIteration`, `StopAsyncIteration`, `NotImplementedError`, `KeyError`, `IndexError`), the
+`async def` ones only when awaited, and `AsyncIterable.__aiter__` the `TypeError` of instantiating the abstract
+`AsyncIterator`; `Awaitable.__await__` is a generator that yields one `None` and stops, `Iterable.__iter__` and
+`Reversible.__reversed__` generators that stop at once, and stay stopped. The abstract `__getitem__`s raise the very
+exceptions the mixins catch, so the mixins built on them see an empty `Sequence` and an empty `Mapping`, while the
+abstract `insert` and `__setitem__` make `append` and `setdefault` raise. -/
 def StubsAreEmpty : Prop :=
-  stubBody "Sized.__len__" = some (.returnsInt 0) ∧
-  stubBody "Hashable.__hash__" = some (.returnsInt 0) ∧
-  stubBody "Container.__contains__" = some (.returnsBool false) ∧
-  stubBody "Callable.__call__" = some (.returnsBool false) ∧
-  stubBody "Iterable.__iter__" = some (.yieldsNones 0) ∧
-  stubBody "Reversible.__reversed__" = some (.yieldsNones 0) ∧
-  stubBody "Awaitable.__await__" = some (.yieldsNones 1) ∧
-  stubBody "Iterator.__next__" = some (.raises "StopIteration") ∧
-  stubBody "Generator.send" = some (.raises "StopIteration") ∧
-  stubBody "Coroutine.send" = some (.raises "StopIteration") ∧
-  stubBody "AsyncIterator.__anext__" = some (.raises "StopAsyncIteration") ∧
-  stubBody "AsyncGenerator.asend" = some (.raises "StopAsyncIteration") ∧
-  stubBody "AsyncIterable.__aiter__" = some (.raises "TypeError") ∧
-  stubBody "Buffer.__buffer__" = some (.raises "NotImplementedError") ∧
-  stubBody "MutableSet.add" = some (.raises "NotImplementedError") ∧
-  stubBody "MutableSet.discard" = some (.raises "NotImplementedError") ∧
-  stubBody "Mapping.__getitem__" = some (.raises "KeyError") ∧
-  stubBody "MutableMapping.__setitem__" = some (.raises "KeyError") ∧
-  stubBody "MutableMapping.__delitem__" = some (.raises "KeyError") ∧
-  stubBody "Sequence.__getitem__" = some (.raises "IndexError") ∧
-  stubBody "MutableSequence.__setitem__" = some (.raises "IndexError") ∧
-  stubBody "MutableSequence.__delitem__" = some (.raises "IndexError") ∧
-  stubBody "MutableSequence.insert" = some (.raises "IndexError") ∧
+  stubBody "Awaitable.__await__" = some (.gen 1) ∧
+  stubBody "Iterable.__iter__" = some (.gen 0) ∧
+  stubBody "Reversible.__reversed__" = some (.gen 0) ∧
+  stubBody "Iterator.__next__" = some (.raises .stopIteration) ∧
+  stubBody "Generator.send" = some (.raises .stopIteration) ∧
+  stubBody "Coroutine.send" = some (.raises .stopIteration) ∧
+  stubBody "AsyncIterator.__anext__" = some (.awaitRaises (.named "StopAsyncIteration" "")) ∧
+  stubBody "AsyncGenerator.asend" = some (.awaitRaises (.named "StopAsyncIteration" "")) ∧
+  stubBody "AsyncIterable.__aiter__" = some (.raises (.typeError
+    "Can't instantiate abstract class AsyncIterator without an implementation for abstract method '__anext__'")) ∧
+  stubBody "Buffer.__buffer__" = some (.raises (.named "NotImplementedError" "")) ∧
+  stubBody "MutableSet.add" = some (.raises (.named "NotImplementedError" "")) ∧
+  stubBody "MutableSet.discard" = some (.raises (.named "NotImplementedError" "")) ∧
+  stubBody "Mapping.__getitem__" = some (.raises (.keyError "")) ∧
+  stubBody "MutableMapping.__setitem__" = some (.raises (.keyError "")) ∧
+  stubBody "MutableMapping.__delitem__" = some (.raises (.keyError "")) ∧
+  stubBody "Sequence.__getitem__" = some (.raises (.indexError "")) ∧
+  stubBody "MutableSequence.__setitem__" = some (.raises (.indexError "")) ∧
+  stubBody "MutableSequence.__delitem__" = some (.raises (.indexError "")) ∧
+  stubBody "MutableSequence.insert" = some (.raises (.indexError "")) ∧
+  (∀ n k : Nat, k < n → (stubGen n).next () k = (.yielded (), k + 1)) ∧
+  (∀ n k : Nat, n ≤ k → (stubGen n).next () k = (.stopped (), k)) ∧
   (∀ (α : Type) (fuel : Nat), (stubSeq α).iterFrom (fuel + 1) 0 = .ok []) ∧
   (∀ (α : Type) (E : EqOps α) (v : α) (fuel : Nat),
     (stubSeq α).containsFrom E v (fuel + 1) 0 = .ok false) ∧
   (∀ (K V : Type) (k : K) (d : V), (stubMap K V).get k d = .ok d) ∧
-  (∀ (K V : Type) (k : K), (stubMap K V).contains k = .ok false)
+  (∀ (K V : Type) (k : K), (stubMap K V).contains k = .ok false) ∧
+  (∀ (α : Type) (v : α), (stubMSeq α).append () v = .error (.indexError "")) ∧
+  (∀ (K V : Type) (k : K) (d : V), (stubMMap K V).setdefault () k d = .error (.keyError ""))
 
 theorem stubsAreEmpty_proven : StubsAreEmpty := by
-  refine ⟨by simp [stubBody], by simp [stubBody], by simp [stubBody], by simp [stubBody],
-    by simp [stubBody], by simp [stubBody], by simp [stubBody], by simp [stubBody],
-    by simp [stubBody], by simp [stubBody], by simp [stubBody], by simp [stubBody],
-    by simp [stubBody], by simp [stubBody], by simp [stubBody], by simp [stubBody],
-    by simp [stubBody], by simp [stubBody], by simp [stubBody], by simp [stubBody],
-    by simp [stubBody], by simp [stubBody], by simp [stubBody], ?_, ?_, ?_, ?_⟩
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro n k h; simp [Gen.next, stubGen, h]
+  · intro n k h
+    have : ¬ k < n := by omega
+    simp [Gen.next, stubGen, this]
   · intro α fuel; simp [Seq.iterFrom, stubSeq, stubGetitem, isIndexError]
   · intro α E v fuel; simp [Seq.containsFrom, stubSeq, stubGetitem, isIndexError]
   · intro K V k d; simp [MapV.get, stubMap, stubGetitem, isKeyError]
   · intro K V k; simp [MapV.contains, stubMap, stubGetitem, isKeyError]
+  · intro α v; simp [MSeq.append, stubMSeq, bind, Except.bind]
+  · intro K V k d; simp [MMap.setdefault, stubMMap, stubMap, stubGetitem, isKeyError, bind, Except.bind]
 
 /-! ### `throw`, `close` -/
 
@@ -299,12 +319,19 @@ theorem acloseMatchesBuiltinUpToMessage_proven : AcloseMatchesBuiltinUpToMessage
     | stopped v => simp
     | raised e => simp
 
-/-- `Generator.__next__` and `AsyncGenerator.__anext__` are `send(None)`: a generator advanced by
-`next` and by `send(None)` takes the same step. Docs of `generator.__next__`. -/
+/-- `Generator.__next__` is `self.send(None)` and `AsyncGenerator.__anext__` is `await self.asend(None)`: for any
+`send` (scope: `asend` is a coroutine function), the step is the one `send` takes on `None`, whether it yields, stops
+(`StopIteration`, or `StopAsyncIteration` in the async family) or raises, which propagates. Lib/_collections_abc.py:356-360,
+236-240. -/
 def NextIsSendNone : Prop :=
-  ∀ (σ V : Type) (G : Gen σ V) (none : V) (s : σ), G.next none s = G.send s none
+  ∀ (σ V : Type) (G : Gen σ V) (none v : V) (s s' : σ) (e : PyExc),
+    (G.send s none = (.yielded v, s') → G.next none s = (.yielded v, s')) ∧
+    (G.send s none = (.stopped v, s') → G.next none s = (.stopped v, s')) ∧
+    (G.send s none = (.raised e, s') → G.next none s = (.raised e, s'))
 
-theorem nextIsSendNone_proven : NextIsSendNone := fun _ _ _ _ _ => rfl
+theorem nextIsSendNone_proven : NextIsSendNone := by
+  intro σ V G none v s s' e
+  exact ⟨fun h => h, fun h => h, fun h => h⟩
 
 /-! ### `Callable[...]` -/
 
