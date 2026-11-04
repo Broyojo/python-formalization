@@ -110,7 +110,9 @@ def absSt : St :=
     stack := [.null, .ref 1] }
 
 def absEnv : Env :=
-  { P := #[{}, {}, { argcount := 1, nlocalsplus := 1 }], om := Proto.mkOM #[] 0,
+  { P := #[{}, {}, { argcount := 1, nlocalsplus := 1 }],
+    -- an object model whose `_PyType_Lookup(C, "__init__")` is the function at address 2
+    om := { Proto.mkOM #[] 0 with typeLookup := fun _ _ => pure (some (.ref 2)) },
     ctx := ⟨fun _ _ => throw .fuel⟩, opcode := .CALL_ALLOC_AND_ENTER_INIT, oparg := 0, this := 0,
     cache := [.tagged 7, .ref 2] }
 

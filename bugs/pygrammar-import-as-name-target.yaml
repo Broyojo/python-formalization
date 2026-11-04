@@ -1,0 +1,65 @@
+id: pygrammar-import-as-name-target
+title: "`import a as b <anything but , ) ; NEWLINE>` says 'cannot use name as import target' about the valid target `b` (duplicate of gh-146492)"
+priority: P5
+kind: diagnostic
+module: pygrammar
+files: [Grammar/python.gram]
+functions: ["invalid_dotted_as_name", "invalid_import_from_as_name"]
+summary: |
+  `invalid_dotted_as_name` and `invalid_import_from_as_name` (python.gram:1438-1445) fire when
+  the token after `as` is not "a NAME followed by `,` `)` `;` or NEWLINE", then parse
+  `a=expression` and raise "cannot use %s as import target" with `_PyPegen_get_expr_name(a)`.
+  When the target is a plain name followed by anything else, `expression` takes the name alone and
+  the message says "cannot use name as import target", pointing at a target that is valid
+  (`import a as b` parses). Seen with a missing comma (`import a as b c`, the case of gh-146492),
+  but also with a one-line `if` whose `else` follows the import (`if x: import a as b else:
+  pass`), with `import a as b = 1`, and with `import a as b:`; `from x import a as b ...` behaves
+  the same. The parenthesized form `from x import (a as b c)` gets "invalid syntax. Perhaps you
+  forgot a comma?" instead.
+likelihood: |
+  Low impact: a misleading message for code that is wrong anyway, pointing at the wrong token. The
+  missing-comma case is a common typing mistake; `else` after a one-line import is rarer.
+maybe_intended: |
+  No: the message contradicts the grammar (a NAME is exactly what `as` takes), and gh-146492 is
+  open and labelled type-bug. Note that the fix sketched there (adding NAME to the tokens the
+  lookahead accepts after the target) does not cover a keyword such as `else`, nor `=` or `:`,
+  after the name.
+reproducer: |
+  def msg(src):
+      try:
+          compile(src, "<s>", "exec")
+      except SyntaxError as e:
+          return e.msg
+  cases = ["import a as b c\n", "from x import a as b c\n", "if x: import a as b else: pass\n",
+           "import a as b = 1\n", "import a as b:\n"]
+  got = [msg(s) for s in cases]
+  print(got)
+  ok = msg("import a as b\n") is None
+  if ok and all(m == "cannot use name as import target" for m in got):
+      print("REPRODUCED pygrammar-import-as-name-target")
+expected: |
+  A message about what follows the target (for example "invalid syntax", or "Perhaps you forgot a
+  comma?" as the parenthesized form gives), not one that rejects the valid name.
+promised_by: |
+  No documentation sentence; the implementation disagreeing with itself: `dotted_as_name` and
+  `import_from_as_name` take `'as' NAME`, while the error rules say a name cannot be a target.
+cause: |
+  Grammar/python.gram:1439 and 1443: the negative lookahead `!(NAME (',' | ')' | ';' | NEWLINE))`
+  is the only guard, and `a=expression` then matches the plain NAME; `_PyPegen_get_expr_name`
+  (Parser/action_helpers.c:1094-1095) gives "name" for a Name node.
+possible_fix: |
+  Only raise when the target is not a plain name, for example by requiring `!NAME` before
+  `a=expression` combined with the existing lookahead, or by making the action return NULL when
+  `a->kind == Name_kind`; or, as gh-146493 does, give the missing-comma case its own message.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: [146492]
+  related: [138944]
+  queries: ["cannot use name as import target", "import target error message as name",
+            "import as target misleading syntax error", "146492 (PR search)"]
+  bugforge: "none (no import-target entries)"
+lean:
+  property: PyLean.PyGrammar.Peg.DottedAsNameNameTarget
+  theorem: PyLean.PyGrammar.Peg.dottedAsNameNameTarget_refuted

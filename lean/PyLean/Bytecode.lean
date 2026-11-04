@@ -21,6 +21,10 @@ import PyLean.Bytecode.SpecUnpack
 import PyLean.Bytecode.SpecBuild
 import PyLean.Bytecode.SpecMisc
 import PyLean.Bytecode.SpecCall
+import PyLean.Bytecode.SpecCallGeneric
+import PyLean.Bytecode.SpecLoadAttr
+import PyLean.Bytecode.AttrRecursion
+import PyLean.Bytecode.SpecImport
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -533,7 +537,12 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "`is` on ints, floats and strs agrees with CPython."
     source := "IS_OP, Py_Is"
     status := .open, prop := ``NotYetStated
-    notes := "Those values have no address in the machine, so equal values compare identical; CPython depends on its small-int cache, interning and constant merging. bytecode_diff.py exclusion: is-on-immediates." },
+    notes := "Those values have no address in the machine: IS_OP asks the Rt.sameImmediate oracle for two equal ones (bytecode-is-op), and the difftest's runtime answers false, while CPython's answer depends on its small-int cache, interning, constant merging and on copies of one object. bytecode_diff.py exclusion: is-on-immediates." },
+  { id := "bytecode-is-op", pyFile := "Python/bytecodes.c"
+    pyFns := [op "IS_OP", op "_IS_OP"]
+    statement := "IS_OP replaces both operands by the bool of Py_Is(left, right) ^ oparg, for any two values: heap objects are identical exactly when they share an address, differing values never are, equal singletons (None, bools, builtin types and functions) always are, and two equal ints, floats, strs or bytes are as the runtime's sameImmediate oracle says, not by value equality."
+    source := "Python/bytecodes.c:3320-3328; Py_Is, Include/object.h:187"
+    status := .proven, prop := ``IsOpRules, thm := some ``isOpRules_proven },
   { id := "bytecode-gap-set-iteration-order", pyFile := "Objects/setobject.c"
     pyFns := []
     statement := "Set iteration order agrees with CPython."
@@ -556,17 +565,16 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``UnpackRules, thm := some ``unpackRules_proven },
   { id := "bytecode-unpack-ex", pyFile := "Python/bytecodes.c"
     pyFns := [op "UNPACK_EX"]
-    statement := "UNPACK_EX (before | after << 8), for every object model: the first `before` items come one PyIter_Next call at a time, PySequence_List drains the rest, and the stack gets the first items (item 0 on top), a new list of all but the last `after` of the rest, and those last items in order; too few items gives 'not enough values to unpack (expected at least before+after, got k)' with k counted as CPython counts it in each loop; exceptions from __next__ and non-TypeError exceptions from iter() propagate; v is popped on every error."
-    source := "Python/bytecodes.c:2148-2153; _PyEval_UnpackIterableStackRef, Python/ceval.c:2357-2459"
-    status := .proven, prop := ``UnpackExFull, thm := some ``unpackExFull_proven
-    notes := "The model's PySequence_List stops at a million items with fuel; the statement assumes fewer." },
+    statement := "UNPACK_EX (before | after << 8), for every object model: the first `before` items come one PyIter_Next call at a time; then PySequence_List(it) makes a new empty list L and calls _PyList_Extend(L, it) on the iterator itself (the object model's listExtend, which is where PyObject_GetIter(it), PyObject_LengthHint(it, 8) and the loop live), and the stack gets the first items (item 0 on top), L cut to all but its last `after` items, and those last items in order; too few items gives 'not enough values to unpack (expected at least before+after, got k)' with k counted as CPython counts it in each loop; exceptions from __next__, from _PyList_Extend and non-TypeError exceptions from iter() propagate; v is popped on every error."
+    source := "Python/bytecodes.c:2148-2153; _PyEval_UnpackIterableStackRef, Python/ceval.c:2357-2451; PySequence_List, Objects/abstract.c:2081-2101"
+    status := .proven, prop := ``UnpackExFull, thm := some ``unpackExFull_proven },
   -- Builders.
   { id := "bytecode-builders", pyFile := "Python/bytecodes.c"
     pyFns := [op "LIST_EXTEND", op "_LIST_EXTEND", op "SET_UPDATE", op "_SET_UPDATE", op "DICT_UPDATE",
       op "_DICT_UPDATE", op "DICT_MERGE", op "_DICT_MERGE", op "SET_ADD", op "MAP_ADD", op "BUILD_SET",
       op "BUILD_MAP"]
-    statement := "For every object model: LIST_EXTEND, SET_UPDATE, DICT_UPDATE and DICT_MERGE call _PyList_Extend, _PySet_Update, PyDict_Update and _PyDict_MergeUniq on the container oparg below the top, pop only the top on success and keep every operand on failure (ERROR_NO_POP); LIST_EXTEND rewrites a TypeError on a non-iterable to 'Value after * must be an iterable, not T'; DICT_UPDATE rewrites an AttributeError to \"'T' object is not a mapping\" exactly when update has no keys, restores it when it has, and chains it as __context__ when the probe raises; DICT_MERGE reports the duplicate key of _PyDict_MergeUniq as 'F got multiple values for keyword argument K' (F the _PyObject_FunctionStr or 'function'), and its AttributeError as 'Value after ** must be a mapping, not T' under the same keys rule, every other exception (a mapping's own KeyError included) unchanged. SET_ADD refuses anything but an exact set with \"'T' object is not a set\" (3.15, gh-154902), SET_ADD and MAP_ADD pop every operand on failure. BUILD_SET and BUILD_MAP add the values (pairs) to a new set (dict) from the bottom up, each add in the runtime the previous left, stopping at the first failure with every value popped."
-    source := "Python/bytecodes.c:1380-1392, :2511-2581, :2610-2666; _PyEval_FormatKwargsError, Python/ceval.c:3414-3446; _PyObject_FunctionStr, Objects/object.c:976-1009"
+    statement := "For every object model: LIST_EXTEND, SET_UPDATE, DICT_UPDATE and DICT_MERGE call _PyList_Extend, _PySet_Update, PyDict_Update and _PyDict_MergeUniq on the container oparg below the top, pop only the top on success and keep every operand on failure (ERROR_NO_POP); LIST_EXTEND rewrites a TypeError on a non-iterable to 'Value after * must be an iterable, not T'; DICT_UPDATE rewrites an AttributeError to \"'T' object is not a mapping\" exactly when update has no keys, restores it when it has, and chains it as __context__ when the probe raises; DICT_MERGE reports the duplicate key of _PyDict_MergeUniq as 'F got multiple values for keyword argument K' (F the _PyObject_FunctionStr or 'function'), and its AttributeError as 'Value after ** must be a mapping, not T' under the same keys rule, every other exception (a mapping's own KeyError included) unchanged. _PyObject_FunctionStr looks up __qualname__, then __module__, compares it with 'builtins', and only then runs str() of the module and of the qualname, returning NULL at the first exception (so a raising __module__ lookup never calls str(qualname)). SET_ADD refuses anything but an exact set with \"'T' object is not a set\" (3.15, gh-154902); on failure SET_ADD pops only the value and MAP_ADD only key and value, leaving the container and the items above it for the comprehension's cleanup handler. BUILD_SET and BUILD_MAP add the values (pairs) to a new set (dict) from the bottom up, each add in the runtime the previous left, stopping at the first failure with every value popped."
+    source := "Python/bytecodes.c:1380-1392, :2511-2581, :2610-2666; Python/generated_cases.c.h:10292-10293, :11384-11396; _PyEval_FormatKwargsError, Python/ceval.c:3414-3446; _PyObject_FunctionStr, Objects/object.c:976-1009"
     status := .proven, prop := ``BuildersRules, thm := some ``buildersRules_proven },
   { id := "bytecode-get-iter", pyFile := "Python/bytecodes.c"
     pyFns := [op "GET_ITER", op "_GET_ITER", op "GET_ITER_SELF", op "_GUARD_ITERATOR", op "GET_ITER_VIRTUAL",
@@ -586,7 +594,7 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``IntrinsicRules, thm := some ``intrinsicRules_proven
     notes := "The intrinsic functions themselves are Python/intrinsics.c rows." },
   { id := "bytecode-call-builtins", pyFile := "Python/bytecodes.c"
-    pyFns := [op "_CHECK_PERIODIC_AT_END", op "_GUARD_NOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL",
+    pyFns := [op "_CHECK_PERIODIC_AT_END", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL",
       op "_GUARD_CALLABLE_TYPE_1", op "_CALL_TYPE_1", op "CALL_TYPE_1", op "_GUARD_CALLABLE_STR_1", op "_CALL_STR_1",
       op "CALL_STR_1", op "_GUARD_CALLABLE_TUPLE_1", op "_CALL_TUPLE_1", op "CALL_TUPLE_1", op "CALL_LEN",
       op "_GUARD_CALLABLE_LEN", op "_CALL_LEN", op "_GUARD_CALLABLE_ISINSTANCE", op "_CALL_ISINSTANCE",
@@ -594,6 +602,43 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model: with a NULL self_or_null and the builtin type, str, tuple, len or isinstance itself as the callable, CALL_TYPE_1, CALL_STR_1, CALL_TUPLE_1, CALL_LEN and CALL_ISINSTANCE push Py_TYPE(arg), PyObject_Str(arg), tuple(arg), len(arg) as an int, or the bool of isinstance(inst, cls) in place of their operands, keep every operand when that slot raises (ERROR_NO_POP), and CALL_STR_1/CALL_TUPLE_1 end with _CHECK_PERIODIC_AT_END; CALL_LIST_APPEND with list.append and an exact list as self appends and leaves None; on every stack a guard rejects, each is the generic CALL. _CHECK_PERIODIC_AT_END handles a pending event like _CHECK_PERIODIC except right after a LOAD_SPECIAL code unit, where it leaves it pending."
     source := "Python/bytecodes.c:163-166, :1753-1755, :4671-4756, :4988-5090; check_periodics_at_end, Python/ceval_macros.h:550-563"
     status := .proven, prop := ``CallSpecRules, thm := some ``callSpecRules_proven },
+  { id := "bytecode-call-generic", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CALL", op "_MAYBE_EXPAND_METHOD", op "_DO_CALL", op "CALL_KW", op "_MAYBE_EXPAND_METHOD_KW",
+      op "_DO_CALL_KW", op "CALL_FUNCTION_EX", op "_MAKE_CALLARGS_A_TUPLE", op "_DO_CALL_FUNCTION_EX"]
+    statement := "For every object model and every live callable: CALL and CALL_KW first split a bound method object with a NULL self_or_null into im_func and im_self and are then exactly themselves on the split stack; a function object is inlined (operands popped, _PyEvalFramePushAndInit on self then the arguments, with kwnames for CALL_KW, return_offset = INSTRUCTION_SIZE, DISPATCH_INLINED), its frame-building error raised with the operands consumed; anything else goes to PyObject_Vectorcall, whose result replaces the operands (then _CHECK_PERIODIC_AT_END for CALL) and whose error pops them. CALL_FUNCTION_EX makes a non-tuple callargs a tuple after the 'Value after * must be an iterable, not T' check, keeping every operand on either failure, and is then itself on the tuple; with a tuple it inlines a function object with the kwargs dict unpacked after the positional items, and hands anything else to PyObject_Call with the dict itself, result then _CHECK_PERIODIC_AT_END, error popping the operands."
+    source := "Python/bytecodes.c:4373-4457, :5407-5472, :5565-5569, :5620-5732; _Py_Check_ArgsIterable, Python/ceval.c:3403-3412; _PyObject_Call, Objects/call.c:333-367"
+    status := .proven, prop := ``CallGenericFull, thm := some ``callGenericFull_proven },
+  { id := "bytecode-attr-specialized", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_SLOT", op "_LOAD_ATTR_SLOT", op "LOAD_ATTR_MODULE", op "_LOAD_ATTR_MODULE",
+      op "LOAD_ATTR_CLASS", op "_CHECK_ATTR_CLASS", op "_LOAD_ATTR_CLASS", op "LOAD_ATTR_CLASS_WITH_METACLASS_CHECK",
+      op "STORE_ATTR_SLOT", op "_STORE_ATTR_SLOT", op "_GUARD_TYPE_VERSION"]
+    statement := "For every object model: LOAD_ATTR_SLOT, under the owner's cached type version, replaces an instance by the non-NULL value in its cached slot (a NULL above it for the method form) and is the generic LOAD_ATTR on another version or an empty slot; LOAD_ATTR_MODULE replaces a module by the non-NULL value at the cached index of its dict under the cached keys version, and is LOAD_ATTR on anything but a module, another version or a NULL value; LOAD_ATTR_CLASS replaces a class object with the cached version by the cached descriptor and is LOAD_ATTR otherwise; LOAD_ATTR_CLASS_WITH_METACLASS_CHECK asks the metaclass version first and then the class version, each mismatch being LOAD_ATTR; STORE_ATTR_SLOT stores the value in the cached slot of an instance under the cached type version, popping both, and is the generic STORE_ATTR on another version."
+    source := "Python/bytecodes.c:2862-2866, :2918-2948, :2999-3054, :3193-3212"
+    status := .proven, prop := ``AttrSpecRules, thm := some ``attrSpecRules_proven
+    notes := "A slot index and a dict entry index stand for C's byte offset and DK_UNICODE_ENTRIES index. The machine's builtin types carry no tp_version_tag, so _CHECK_ATTR_CLASS exits on them where CPython could pass." },
+  { id := "bytecode-property-frame-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_PROPERTY", op "_LOAD_ATTR_PROPERTY_FRAME"]
+    statement := "With the recursion budget spent (py_recursion_remaining <= 1), LOAD_ATTR_PROPERTY does not enter the getter's frame, as every CALL form that pushes a Python frame checks with _CHECK_RECURSION_REMAINING. It does: _GUARD_TYPE_VERSION, the function-version and stack-space exits of _LOAD_ATTR_PROPERTY_FRAME, _SAVE_RETURN_OFFSET and _PUSH_FRAME pass, and _PUSH_FRAME tests nothing, so a recursive property passes the limit once its site has specialized."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3056-3077, :4611-4613, :4628-4642"
+    status := .refuted, prop := ``PropertyFrameChecksRecursion, thm := some ``propertyFrameChecksRecursion_refuted
+    bug := some "bytecode-attr-frame-recursion" },
+  { id := "bytecode-getattribute-frame-recursion", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN", op "_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME"]
+    statement := "With the recursion budget spent, LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN does not enter the overriding __getattribute__'s frame. It does, by the same _PUSH_FRAME with no _CHECK_RECURSION_REMAINING."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3079-3105, :4628-4642"
+    status := .refuted, prop := ``GetattributeFrameChecksRecursion, thm := some ``getattributeFrameChecksRecursion_refuted
+    bug := some "bytecode-attr-frame-recursion" },
+  { id := "bytecode-import", pyFile := "Python/bytecodes.c"
+    pyFns := [op "IMPORT_NAME", op "IMPORT_FROM"]
+    statement := "For every object model: IMPORT_NAME takes the name co_names[oparg >> 2]; without bit 1 it calls _PyEval_LazyImportName with bit 0 as the lazy flag (PEP 810), with bit 1 _PyEval_ImportName, on fromlist and level, and pops both on success and failure; IMPORT_FROM keeps the module and pushes _PyEval_LazyImportFrom of a lazy import object, _PyEval_ImportFrom of anything else, keeping the module on failure."
+    source := "Python/bytecodes.c:3456-3492; Python/codegen.c:2936-2946"
+    status := .proven, prop := ``ImportRules, thm := some ``importRules_proven
+    notes := "What _PyEval_LazyImportName, _PyEval_ImportName and the lazy import object do is Python/ceval.c, Python/import.c and Objects/lazyimportobject.c; the difftest model imports nothing and has no lazy import." },
+  { id := "bytecode-null-guards", pyFile := "Python/bytecodes.c"
+    pyFns := [op "_GUARD_NOS_NOT_NULL", op "_GUARD_TOS_NOT_NULL", op "_GUARD_NOS_NULL", op "_GUARD_THIRD_NULL"]
+    statement := "_GUARD_NOS_NOT_NULL exits exactly when the second value is NULL and _GUARD_TOS_NOT_NULL exactly when the top is; _GUARD_NOS_NULL and _GUARD_THIRD_NULL exit exactly when their slot is not NULL; each leaves the stack unchanged, for every stack."
+    source := "Python/bytecodes.c:1753-1755, :3868-3870, :4671-4677"
+    status := .proven, prop := ``NullGuardRules, thm := some ``nullGuardRules_proven },
   { id := "bytecode-match", pyFile := "Python/bytecodes.c"
     pyFns := [op "MATCH_CLASS", op "_MATCH_CLASS", op "MATCH_MAPPING", op "MATCH_SEQUENCE", op "MATCH_KEYS"]
     statement := "MATCH_CLASS replaces subject, type and names by _PyEval_MatchClass's attribute tuple, or None on no match, keeping all three when it raises (ERROR_NO_POP, 3.15); MATCH_MAPPING and MATCH_SEQUENCE push above the subject whether its type has Py_TPFLAGS_MAPPING / Py_TPFLAGS_SEQUENCE; MATCH_KEYS pushes _PyEval_MatchKeys(subject, keys) above both and keeps both when it raises. For every object model."

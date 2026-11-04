@@ -46,6 +46,18 @@ theorem stkK_split_err {p q : Nat} {f : List Val → BM (List Val)} {regs r : Re
   subst hL
   simp [stkK, peekN, bind, EStateM.bind, BM.lift, hf]
 
+theorem stkE_split_ok {p q k : Nat} {f : List Val → BM (List Val)} {regs r : Regs} {L below outs : List Val}
+    (hL : L.length = p) (hf : f L.reverse regs = .ok outs r) (hq : outs.length = q) :
+    stkE p q k f ⟨regs, L ++ below⟩ = .ok () ⟨r, outs.reverse ++ below⟩ := by
+  subst hL; subst hq
+  simp [stkE, stkK, peekN, popN, bind, EStateM.bind, BM.lift, hf, pushAll, pure, EStateM.pure]
+
+theorem stkE_split_err {p q k : Nat} {f : List Val → BM (List Val)} {regs r : Regs} {L below : List Val} {x : Err}
+    (hL : L.length = p) (hf : f L.reverse regs = .error x r) :
+    stkE p q k f ⟨regs, L ++ below⟩ = .error x ⟨r, (L ++ below).drop k⟩ := by
+  subst hL
+  simp [stkE, stkK, peekN, bind, EStateM.bind, BM.lift, hf]
+
 theorem dropLast_cons_snoc (a : Val) (xs : List Val) (t : Val) : (a :: (xs ++ [t])).dropLast = a :: xs := by
   rw [← List.cons_append, List.dropLast_concat]
 
@@ -242,28 +254,79 @@ theorem dictMergeRules_proven : DictMergeRules := by
     refine stkK_split_err hL ?_
     body_simp [h, formatKwargsError, hm1, hk, hc, Functor.map, EStateM.map]
 
+/-- `_PyObject_FunctionStr(x)` (`Objects/object.c:976-1009`), the `F` of `DICT_MERGE`'s duplicate
+keyword message, for every object model, in the order the C does it: `__qualname__` is looked up
+first (`PyObject_GetOptionalAttr`); absent, the result is `str(x)`. Present (`q`), `__module__` is
+looked up next and, when present and not `None`, compared with `"builtins"` by
+`PyObject_RichCompareBool(..., Py_NE)` (identity first) — all before anything is formatted. Only
+then does `PyUnicode_FromFormat` run `str()`: of the module and then of `q` for `"%S.%S()"`, of `q`
+alone for `"%S()"`. Any exception (a lookup that raises something other than `AttributeError`,
+the comparison, either `str()`) makes the result `NULL` (`none`) at that point: in particular a
+raising `__module__` lookup means `str(q)` is never called, and a raising `str(module)` means
+`str(q)` is never called. Each clause threads the runtime through the calls in that order. -/
+def FunctionStrRules : Prop := ∀ (e : Env) (f : Val) (rt0 : Rt),
+  (∀ rt1, optionalAttr e f "__qualname__" rt0 = .ok none rt1 → ∀ s rt2, strText e f rt1 = .ok s rt2 →
+    functionStr e f rt0 = .ok (some s) rt2) ∧
+  (∀ x rt1, optionalAttr e f "__qualname__" rt0 = .error (.exc x) rt1 → functionStr e f rt0 = .ok none rt1) ∧
+  (∀ q rt1, optionalAttr e f "__qualname__" rt0 = .ok (some q) rt1 →
+    (∀ x rt2, optionalAttr e f "__module__" rt1 = .error (.exc x) rt2 → functionStr e f rt0 = .ok none rt2) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok none rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
+      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some .none) rt2 → ∀ qs rt3, strText e q rt2 = .ok qs rt3 →
+      functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ rt2, optionalAttr e f "__module__" rt1 = .ok (some (.str "builtins")) rt2 → ∀ qs rt3,
+      strText e q rt2 = .ok qs rt3 → functionStr e f rt0 = .ok (some s!"{qs}()") rt3) ∧
+    (∀ m rt2, optionalAttr e f "__module__" rt1 = .ok (some m) rt2 → m ≠ .none → m ≠ .str "builtins" →
+      ∀ c rt3, e.om.richCompare e.ctx m (.str "builtins") 3 rt2 = .ok c rt3 →
+      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok true rt4 →
+        (∀ ms rt5 qs rt6, strText e m rt4 = .ok ms rt5 → strText e q rt5 = .ok qs rt6 →
+          functionStr e f rt0 = .ok (some s!"{ms}.{qs}()") rt6) ∧
+        (∀ x rt5, strText e m rt4 = .error (.exc x) rt5 → functionStr e f rt0 = .ok none rt5)) ∧
+      (∀ rt4, e.om.isTrue e.ctx c rt3 = .ok false rt4 → ∀ qs rt5, strText e q rt4 = .ok qs rt5 →
+        functionStr e f rt0 = .ok (some s!"{qs}()") rt5)))
+
+theorem functionStrRules_proven : FunctionStrRules := by
+  intro e f rt0
+  refine ⟨fun rt1 h1 s rt2 h2 => ?_, fun x rt1 h1 => ?_, fun q rt1 h1 => ⟨fun x rt2 h2 => ?_,
+    fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_, fun rt2 h2 qs rt3 h3 => ?_,
+    fun m rt2 h2 hn hb c rt3 hc => ⟨fun rt4 ht => ⟨fun ms rt5 qs rt6 hm hq => ?_, fun x rt5 hm => ?_⟩,
+      fun rt4 ht qs rt5 hq => ?_⟩⟩⟩
+  · body_simp [functionStr, h1, h2]
+  · body_simp [functionStr, h1]
+  · body_simp [functionStr, h1, h2]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, h3]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm, hq]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hm]
+  · body_simp [functionStr, h1, h2, hn, hb, hc, ht, hq]
+
 /-! ## `SET_ADD`, `MAP_ADD` -/
 
 /-- `SET_ADD oparg` (`:1380-1392`) and `MAP_ADD oparg` (`:2656-2666`). `SET_ADD` first checks the
 target, since 3.15 (gh-154902, user code can rebind `__conditional_annotations__`): anything but an
 exact set raises `TypeError("'T' object is not a set")` (`%T`) without touching the value; on an
 exact set it adds the value (`_PySet_AddTakeRef`) and pops it. `MAP_ADD` stores `dict[key] = value`
-(`_PyDict_SetItem_Take2`) and pops both. Either way a failure pops every operand (`ERROR_IF`). -/
+(`_PyDict_SetItem_Take2`) and pops both. A failure pops only what the instruction consumes: `v` for
+`SET_ADD` (`stack_pointer += -1` then `error`, `generated_cases.c.h:11384-11389`, and
+`pop_1_error`, `:11396`), `key` and `value` for `MAP_ADD` (`pop_2_error`, `:10292-10293`); the
+container and the `oparg - 1` items above it stay, for the comprehension's cleanup handler
+(`Python/codegen.c:4946-4950`) to unwind. -/
 def SetMapAddRules : Prop := ∀ (e : Env) (regs : Regs) (v c : Val) (mid below : List Val),
   mid.length + 1 = e.oparg →
   ((∃ a items, c = .ref a ∧ regs.rt.heap[a]? = some (.set false items)) →
     (∀ rt, setAdd e.om e.ctx c v regs.rt = .ok () rt →
       execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .ok () ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩) ∧
     (∀ x rt, setAdd e.om e.ctx c v regs.rt = .error x rt →
-      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, below⟩)) ∧
+      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩)) ∧
   (Live regs.rt c → (¬ ∃ a items, c = .ref a ∧ regs.rt.heap[a]? = some (.set false items)) →
     ∀ tn rt1 y rt2, typeFullName c regs.rt = .ok tn rt1 →
       typeError (α := Unit) s!"'{tn}' object is not a set" rt1 = .error y rt2 →
-      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error y ⟨{ regs with rt := rt2 }, below⟩) ∧
+      execOp e .SET_ADD ⟨regs, (v :: (mid ++ [c])) ++ below⟩ = .error y ⟨{ regs with rt := rt2 }, (mid ++ [c]) ++ below⟩) ∧
   (∀ key rt, dictSet e.om e.ctx c key v regs.rt = .ok () rt →
     execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .ok () ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩) ∧
   (∀ key x rt, dictSet e.om e.ctx c key v regs.rt = .error x rt →
-    execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, below⟩)
+    execOp e .MAP_ADD ⟨regs, (v :: key :: (mid ++ [c])) ++ below⟩ = .error x ⟨{ regs with rt := rt }, (mid ++ [c]) ++ below⟩)
 
 theorem isExactSet_true {rt : Rt} {c : Val} (h : ∃ a items, c = .ref a ∧ rt.heap[a]? = some (.set false items)) :
     isExactSet c rt = .ok true rt := by
@@ -292,15 +355,15 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     fun key rt h => ?_, fun key x rt h => ?_⟩
   · have hx := isExactSet_true (rt := regs.rt) hs
     simp only [execOp, SET_ADD]
-    refine (stk_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL ?_ hq).trans (by simp)
+    refine (stkE_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL ?_ hq).trans (by simp)
     body_simp [hx, h]
   · have hx := isExactSet_true (rt := regs.rt) hs
     simp only [execOp, SET_ADD]
-    refine stk_split_err hL ?_
+    refine (stkE_split_err (x := x) (r := { regs with rt := rt }) hL ?_).trans (by simp)
     body_simp [hx, h]
   · have hx := isExactSet_false hl hs
     simp only [execOp, SET_ADD]
-    refine stk_split_err hL ?_
+    refine (stkE_split_err (x := y) (r := { regs with rt := rt2 }) hL ?_).trans (by simp)
     body_simp [hx, ht, hy]
   · have hL2 : (v :: key :: (mid ++ [c])).length = e.oparg + 2 := by simp; omega
     have hk : (c :: (mid.reverse ++ [key, v]))[e.oparg]? = some key := by
@@ -308,7 +371,7 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     have hv : (mid.reverse ++ [key, v])[e.oparg]? = some v := by
       rw [← hm]; simp [List.getElem?_append_right]
     simp only [execOp, MAP_ADD]
-    refine (stk_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL2 ?_ hq).trans (by simp)
+    refine (stkE_split_ok (outs := c :: mid.reverse) (r := { regs with rt := rt }) hL2 ?_ hq).trans (by simp)
     body_simp [h, hk, hv, dropLast2_cons_snoc]
   · have hL2 : (v :: key :: (mid ++ [c])).length = e.oparg + 2 := by simp; omega
     have hk : (c :: (mid.reverse ++ [key, v]))[e.oparg]? = some key := by
@@ -316,7 +379,7 @@ theorem setMapAddRules_proven : SetMapAddRules := by
     have hv : (mid.reverse ++ [key, v])[e.oparg]? = some v := by
       rw [← hm]; simp [List.getElem?_append_right]
     simp only [execOp, MAP_ADD]
-    refine stk_split_err hL2 ?_
+    refine (stkE_split_err (x := x) (r := { regs with rt := rt }) hL2 ?_).trans (by simp)
     body_simp [h, hk, hv, dropLast2_cons_snoc]
 
 /-! ## `BUILD_SET`, `BUILD_MAP` -/
@@ -432,9 +495,10 @@ theorem buildSetMapRules_proven : BuildSetMapRules := by
       rw [← hv] at this
       body_simp [mkDict, freshVersion, alloc, this]
 
-def BuildersRules : Prop := ListExtendRules ∧ DictUpdateRules ∧ DictMergeRules ∧ SetMapAddRules ∧ BuildSetMapRules
+def BuildersRules : Prop :=
+  ListExtendRules ∧ DictUpdateRules ∧ DictMergeRules ∧ FunctionStrRules ∧ SetMapAddRules ∧ BuildSetMapRules
 theorem buildersRules_proven : BuildersRules :=
-  ⟨listExtendRules_proven, dictUpdateRules_proven, dictMergeRules_proven, setMapAddRules_proven,
-    buildSetMapRules_proven⟩
+  ⟨listExtendRules_proven, dictUpdateRules_proven, dictMergeRules_proven, functionStrRules_proven,
+    setMapAddRules_proven, buildSetMapRules_proven⟩
 
 end PyLean.Bytecode

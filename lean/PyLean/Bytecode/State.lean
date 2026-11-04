@@ -291,6 +291,11 @@ structure Rt where
   breaker has no event or its handlers succeed. A signal handler is Python code the model does
   not run, so the outcome of the pending work is an oracle, as `stackSpace` is. -/
   pendingExc : Val := .null
+  /-- `Py_Is` on two equal immediates that are not singletons (ints, floats, strs, bytes with the
+  same value): whether they are one object depends on how each was made (the small-int cache,
+  interning, constant merging, a variable copied), which the machine does not track, so it is an
+  oracle, as `stackSpace` is. -/
+  sameImmediate : Val → Val → Bool := fun _ _ => false
   /-- Written only by the profiling loop of the difftest: per code object and
   instruction, the specialized form seen first. -/
   profile : Array (Array (Option Instr)) := #[]

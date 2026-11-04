@@ -211,6 +211,31 @@ theorem callListAppendRules_proven : CallListAppendRules := by
       refine withDeopt_of (s' := ⟨regs, a :: s :: c :: rest⟩) ?_
       bc_simp [CALL_LIST_APPEND, _GUARD_CALLABLE_LIST_APPEND, guardCallable, hb]
 
+/-- The NULL guards, `Python/bytecodes.c`, on their own: `_GUARD_NOS_NOT_NULL` (`:1753-1755`, in
+`CALL_LIST_APPEND` before `_GUARD_NOS_LIST` and in `SEND_VIRTUAL`) exits exactly when the second
+value is `NULL` and `_GUARD_TOS_NOT_NULL` (`:3868-3870`, in `FOR_ITER_VIRTUAL`) exactly when the top
+is, each leaving the stack as it was; `_GUARD_NOS_NULL` (`:4671-4673`) and `_GUARD_THIRD_NULL`
+(`:4675-4677`) exit exactly when the slot is not `NULL`. For every value in the slot and every
+stack. In `CALL_LIST_APPEND` the NULL `self` is the one value C's `PyList_CheckExact` in
+`_GUARD_NOS_LIST` must never see (it dereferences its argument), so the exit here is what keeps it
+away. -/
+def NullGuardRules : Prop := ∀ (regs : Regs) (x y z : Val) (rest : List Val),
+  _GUARD_NOS_NOT_NULL ⟨regs, y :: x :: rest⟩ =
+    (if x = .null then .error .deopt ⟨regs, y :: x :: rest⟩ else .ok () ⟨regs, y :: x :: rest⟩) ∧
+  _GUARD_TOS_NOT_NULL ⟨regs, x :: rest⟩ =
+    (if x = .null then .error .deopt ⟨regs, x :: rest⟩ else .ok () ⟨regs, x :: rest⟩) ∧
+  _GUARD_NOS_NULL ⟨regs, y :: x :: rest⟩ =
+    (if x = .null then .ok () ⟨regs, y :: x :: rest⟩ else .error .deopt ⟨regs, y :: x :: rest⟩) ∧
+  _GUARD_THIRD_NULL ⟨regs, z :: y :: x :: rest⟩ =
+    (if x = .null then .ok () ⟨regs, z :: y :: x :: rest⟩ else .error .deopt ⟨regs, z :: y :: x :: rest⟩)
+
+theorem nullGuardRules_proven : NullGuardRules := by
+  intro regs x y z rest
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> by_cases hx : x = .null <;>
+    simp [hx, _GUARD_NOS_NOT_NULL, _GUARD_TOS_NOT_NULL, _GUARD_NOS_NULL, _GUARD_THIRD_NULL, guardTop, peekN,
+      bind, EStateM.bind, BM.lift, deoptIf, pure, EStateM.pure, throw, throwThe, MonadExcept.throw,
+      EStateM.throw, MonadExceptOf.throw]
+
 def CallSpecRules : Prop := CheckPeriodicAtEndRules ∧ CallBuiltin1Rules ∧ CallListAppendRules
 theorem callSpecRules_proven : CallSpecRules :=
   ⟨checkPeriodicAtEndRules_proven, callBuiltin1Rules_proven, callListAppendRules_proven⟩

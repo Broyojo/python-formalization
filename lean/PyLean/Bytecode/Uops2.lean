@@ -221,16 +221,21 @@ def functionStr (e : Env) (f : Val) : RM (Option String) :=
     match ← optionalAttr e f "__qualname__" with
     | none => pure (some (← strText e f))
     | some q =>
-      let qs ← strText e q
+      -- `:987-1004`: both lookups and the comparison come before any formatting; `%S` calls
+      -- `PyObject_Str` while `PyUnicode_FromFormat` runs, the module first
       match ← optionalAttr e f "__module__" with
       | some m =>
-        if m == .none then pure (some s!"{qs}()")
-        else
+        if m != .none then
           -- `PyObject_RichCompareBool(module, "builtins", Py_NE)`: identity first
           let ne ← if m == .str "builtins" then pure false
             else e.om.isTrue e.ctx (← e.om.richCompare e.ctx m (.str "builtins") 3)
-          if ne then pure (some s!"{← strText e m}.{qs}()") else pure (some s!"{qs}()")
-      | none => pure (some s!"{qs}()"))
+          if ne then
+            let ms ← strText e m
+            let qs ← strText e q
+            pure (some s!"{ms}.{qs}()")
+          else pure (some s!"{← strText e q}()")
+        else pure (some s!"{← strText e q}()")
+      | none => pure (some s!"{← strText e q}()"))
     fun _ => pure none
 
 /-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`. With a `dupkey` it raises
@@ -263,8 +268,10 @@ def DICT_MERGE (e : Env) : M Unit := stkK (e.oparg + 4) (e.oparg + 3) fun ins =>
   match ← r with
   | none => pure rest
   | some k => (formatKwargsError e callable upd (some k) .null : RM _)
-/-- `:2656`. -/
-def MAP_ADD (e : Env) : M Unit := stk (e.oparg + 2) e.oparg fun ins => do
+/-- `:2656-2666`. A failed `_PyDict_SetItem_Take2` pops `key` and `value` only (`pop_2_error`,
+`generated_cases.c.h:10292-10293`): the dict and the items below it stay for the comprehension's
+cleanup handler (`Python/codegen.c:4946-4950`). -/
+def MAP_ADD (e : Env) : M Unit := stkE (e.oparg + 2) e.oparg 2 fun ins => do
   let rest := ins.dropLast.dropLast
   let key := ins.getD e.oparg .null
   let v := ins.getD (e.oparg + 1) .null
@@ -415,21 +422,29 @@ def classVersion : Val → RM (Option Nat)
     | _ => pure none
   | _ => pure none
 
-/-- `:3025`. -/
-def _CHECK_ATTR_CLASS (e : Env) : M Unit := guardTop 1 fun
+/-- `_CHECK_ATTR_CLASS` (`:3025-3031`) reading its `type_version` at cache position `i`:
+`EXIT_IF(!PyType_Check(owner))`, then the owner's own `tp_version_tag`. The machine's builtin types
+carry no version, so they exit. -/
+def checkAttrClassAt (e : Env) (i : Nat) : M Unit := guardTop 1 fun
   | [o] => do
     match ← (classVersion o : RM _) with
-    | some v => pure (v != cacheNat e 0)
+    | some v => pure (v != cacheNat e i)
     | none => pure true
   | _ => fault "arity"
+/-- `:3025`. -/
+def _CHECK_ATTR_CLASS (e : Env) : M Unit := checkAttrClassAt e 0
+/-- `_LOAD_ATTR_CLASS` (`:3033-3038`) reading its `descr` at cache position `i`: the owner is
+replaced by the cached object. -/
+def loadAttrClassAt (e : Env) (i : Nat) : M Unit := stk 1 1 fun _ => pure [(e.cache[i]?).getD .null]
 /-- `:3033`. -/
-def _LOAD_ATTR_CLASS (e : Env) : M Unit := stk 1 1 fun _ => pure [(e.cache[1]?).getD .null]
-/-- `:3040`. -/
+def _LOAD_ATTR_CLASS (e : Env) : M Unit := loadAttrClassAt e 1
+/-- `:3040-3046`: the cache is `[type_version, descr]` (`unused/2` between them in C). -/
 def LOAD_ATTR_CLASS (e : Env) : M Unit := do
   _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
-/-- `:3048`. -/
+/-- `:3048-3054`: `_GUARD_TYPE_VERSION` on the metaclass first, then `_CHECK_ATTR_CLASS` on the class
+itself; the cache is `[metaclass version, class version, descr]`. -/
 def LOAD_ATTR_CLASS_WITH_METACLASS_CHECK (e : Env) : M Unit := do
-  _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
+  _GUARD_TYPE_VERSION e; checkAttrClassAt e 1; loadAttrClassAt e 2; _PUSH_NULL_CONDITIONAL e
 
 /-- The function in a `descr/4` cache entry, under its version guard. In C the entry cannot
 dangle while the type version holds. The model's `quick` difftest rewrites a program from an
@@ -568,9 +583,29 @@ def COMPARE_OP_INT (e : Env) : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _COM
 /-- `:3259`. -/
 def COMPARE_OP_STR (e : Env) : M Unit := do _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _COMPARE_OP_STR e
 
-/-- `:3320`. -/
+/-- Values of which the interpreter has one object per value: `None`, `NotImplemented`,
+`Ellipsis`, `True`, `False`, and the machine's stateless builtins (types, functions, method
+descriptors, code objects, by name or index). -/
+def singletonVal : Val → Bool
+  | .none | .notImpl | .ellipsis | .bool _ | .cls _ | .builtin _ | .methDescr .. | .code _ => true
+  | _ => false
+
+/-- The runtime itself. -/
+def getRt : RM Rt := fun rt => .ok rt rt
+
+/-- `Py_Is(left, right)` (`Include/object.h:187`), pointer equality. Heap objects are the same object
+exactly when they have the same address; values that differ are different objects; equal
+singletons are one object; for two equal ints, floats, strs or bytes the answer is the runtime's
+`sameImmediate` oracle. -/
+def pyIs (rt : Rt) : Val → Val → Bool
+  | .ref a, .ref b => a == b
+  | l, r => if l != r then false else if singletonVal l then true else rt.sameImmediate l r
+
+/-- `:3320-3328`: `_IS_OP + POP_TOP + POP_TOP`, `Py_Is(left, right) ^ oparg`. -/
 def IS_OP (e : Env) : M Unit := stk 2 1 fun
-  | [l, r] => pure [.bool (((if l == r then 1 else 0) ^^^ e.oparg) != 0)]
+  | [l, r] => do
+    let rt ← (getRt : RM _)
+    pure [.bool (((if pyIs rt l r then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
 /-- `:3335`. -/
 def _CONTAINS_OP (e : Env) : M Unit := stkK 2 1 fun
@@ -631,17 +666,25 @@ def CHECK_EXC_MATCH : M Unit := stkK 2 2 fun
 /-- `:3456`. -/
 def IMPORT_NAME (e : Env) : M Unit := stk 2 1 fun
   | [level, fromlist] => do
-    -- 3.15: the name is `co_names[oparg >> 2]`; bit 1 picks the eager `_PyEval_ImportName` over
-    -- `_PyEval_LazyImportName` (PEP 810), which the model does not distinguish
+    -- 3.15 (`:3456-3476`): the name is `co_names[oparg >> 2]`; without bit 1 the import goes to
+    -- `_PyEval_LazyImportName` with bit 0 (`lazy import`) as `lazy`, with it (an import the
+    -- compiler forces eager, in a function, a class or an exception handler) to `_PyEval_ImportName`
     let name ← getName e (e.oparg >>> 2)
     let f ← getFrame
-    pure [← e.om.importName e.ctx f name fromlist level]
+    if e.oparg &&& 2 == 0 then
+      pure [← e.om.lazyImportName e.ctx f name fromlist level (e.oparg &&& 1 != 0)]
+    else
+      pure [← e.om.importName e.ctx f name fromlist level]
   | _ => fault "arity"
 /-- `:3478`. -/
 def IMPORT_FROM (e : Env) : M Unit := stkK 1 2 fun
   | [from_] => do
+    -- `:3478-3492`: a lazy import object (PEP 810) goes to `_PyEval_LazyImportFrom`
     let name ← getName e e.oparg
-    pure [from_, ← e.om.importFrom e.ctx from_ name]
+    if ← (e.om.isLazyImport from_ : RM Bool) then
+      pure [from_, ← e.om.lazyImportFrom e.ctx (← getFrame) from_ name]
+    else
+      pure [from_, ← e.om.importFrom e.ctx from_ name]
   | _ => fault "arity"
 
 /-! ### Lines 2879-3031: jumps -/

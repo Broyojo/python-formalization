@@ -1,4 +1,5 @@
 import PyLean.Datetime.Objects
+import PyLean.Binary64.Model
 
 /-!
 The constructors `date(...)`, `time(...)`, `datetime(...)` on their full argument
@@ -17,30 +18,51 @@ namespace PyLean.Datetime
 open PyLean
 
 /-- A constructor argument. `none_` is `None`, or an omitted parameter whose
-default is `None`; a `str` is its list of code points. -/
+default is `None`; a `str` is its list of code points; `index r` is an object that is not
+an `int` but has `__index__`, whose call returns an int (`some n`), returns a non-int
+(`none`), or raises (`.error e`); `float x` a `float`. Such an object is compared by identity
+(a class overriding `__eq__` or `__bool__` is out of scope), and `other` is any other object,
+one without `__index__` that equals neither 0 nor 1. -/
 inductive Arg where
   | none_
   | int (n : Int)
   | bytes (b : List Nat)
   | str (cs : List Nat)
   | tz (t : Tz)
+  | index (r : Py (Option Int))
+  | float (x : Binary64.F64)
   | other
-  deriving Repr, DecidableEq, Inhabited
+  deriving DecidableEq, Inhabited
 
-/-- `operator.index(x)` (`_index`, _pydatetime.py:12). -/
+/-- `operator.index(x)` (`_index`, _pydatetime.py:12; `PyNumber_Index`,
+Objects/abstract.c:1409-1462): an `int` is itself; an object with `__index__` gives what the
+method returns if that is an int, `TypeError('%T.__index__() must return an int, not %T')`
+if not, and the method's own exception if it raises; anything else is
+`TypeError("'%s' object cannot be interpreted as an integer")`. -/
 def pyIndex : Arg → Py Int
   | .int n => .ok n
+  | .index (.ok (some n)) => .ok n
+  | .index (.ok none) => .error (.typeError "~__index__() must return an int")
+  | .index (.error e) => .error e
   | _ => .error (.typeError "~object cannot be interpreted as an integer")
 
 /-- The clinic `int` converter, `PyLong_AsInt`, `Objects/longobject.c:690-702`: first
-`__index__`, whose `TypeError` names the object's type, then the C `int` range. -/
-def parseI : Arg → Py Int
-  | .int n => asCInt n
-  | _ => .error (.typeError "~object cannot be interpreted as an integer")
+`__index__` (`PyNumber_Index`, the same outcomes as `pyIndex`), then the C `int` range. -/
+def parseI (a : Arg) : Py Int := do
+  let n ← pyIndex a
+  asCInt n
+
+/-- An argument whose conversion to a C `int` cannot overflow: an int, or an object whose
+`__index__` returns one, inside the C `int` range (every other argument qualifies, since
+it fails before the range check). -/
+def Arg.FitsC : Arg → Prop
+  | .int n => fitsCInt n
+  | .index (.ok (some n)) => fitsCInt n
+  | _ => True
 
 theorem parseI_int (n : Int) (h : fitsCInt n) : parseI (.int n) = .ok n := by
   unfold fitsCInt at h
-  simp only [parseI, asCInt]
+  simp only [parseI, pyIndex, asCInt, bind, Except.bind]
   rw [if_pos (by omega)]
 
 /-- The arity checks of `_PyArg_UnpackKeywords`, `Python/getargs.c:2572-2603`, for a parser
@@ -64,6 +86,7 @@ def Arg.falsy : Arg → Bool
   | .int n => n == 0
   | .bytes b => b.isEmpty
   | .str s => s.isEmpty
+  | .float x => x.isZero
   | _ => false
 
 /-- A state string encoded to bytes: `str.encode('latin1')` with its error. -/
@@ -77,6 +100,63 @@ def stateOf (kind : String) : Arg → Option (List Nat × Py (List Nat))
   | .bytes b => some (b, .ok b)
   | .str cs => some (cs, latin1State kind cs)
   | _ => none
+
+/-! ### `_check_date_fields` and `_check_time_fields` on any argument -/
+
+/-- `_check_date_fields(year, month, day)`, _pydatetime.py:578-589: `_index` of the three
+arguments in order (:579-581), then the range checks. -/
+def checkDateFieldsArgPy (year month day : Arg) : Py (Int × Int × Int) := do
+  let y ← pyIndex year
+  let m ← pyIndex month
+  let d ← pyIndex day
+  checkDate y m d
+
+/-- `fold not in (0, 1)`, _pydatetime.py:605-606, on any object: the tuple test compares
+with `==` (no `_index`), so an int is accepted when it is 0 or 1 and a float when it equals
+0.0 or 1.0 (so `-0.0` too); every other object in scope equals neither. -/
+def checkFoldArgPy : Arg → Py Unit
+  | .int n => checkFold n
+  | .float x =>
+    if x.isZero || Binary64.F64.eq x Binary64.F64.one then .ok ()
+    else .error (.valueError "~fold must be either 0 or 1, not <float>")
+  | _ => .error (.valueError "~fold must be either 0 or 1, not <object>")
+
+/-- `_check_time_fields(hour, minute, second, microsecond, fold)`, _pydatetime.py:591-606:
+`_index` of the four time fields in order (:592-595), the four range checks, then the
+`fold` test, and `fold` is returned as given (the object itself, not an index). -/
+def checkTimeFieldsArgPy (hour minute second us fold : Arg) : Py (Int × Int × Int × Int × Arg) := do
+  let h ← pyIndex hour
+  let mi ← pyIndex minute
+  let s ← pyIndex second
+  let u ← pyIndex us
+  let (h, mi, s, u) ← checkTime h mi s u
+  checkFoldArgPy fold
+  return (h, mi, s, u, fold)
+
+/-- The value of an accepted `fold` (an int 0 or 1, or a float equal to one of them). The
+object itself is what `_pydatetime` stores; the model keeps its value, so a float `fold`
+reads back as an int (a stated scope limit: `time(fold=1.0).fold` is `1.0` in Python). -/
+def Arg.foldVal : Arg → Int
+  | .int n => n
+  | .float x => if x.isZero then 0 else 1
+  | _ => 0
+
+/-- `date.fromordinal(n)`, _pydatetime.py:1050-1057, on any argument. There is no `_index`:
+`_ord2ymd` starts with `n -= 1` and then uses `divmod` and `(n + 50) >> 5` (:116-153), so an
+int goes on to `fromordinalPy`, and every other argument raises `TypeError` there: an
+object with only `__index__` (no arithmetic, the scope of `Arg.index`), `None`, a str, bytes,
+or a float (which survives `-=` and `divmod` but not `>>`, or reaches `cls(...)`'s `_index`
+first through the early return at :127-130). -/
+def fromordinalArgPy : Arg → Py (Int × Int × Int)
+  | .int n => fromordinalPy n
+  | _ => .error (.typeError "~unsupported operand type(s)")
+
+/-- `date.fromordinal(arg)` in C: the clinic wrapper `datetime_date_fromordinal`,
+clinic/_datetimemodule.c.h:252-265, converts with `PyLong_AsInt` (`__index__`, then the C
+`int` range), then `datetime_date_fromordinal_impl`, :3406-3419 (`fromordinalC`). -/
+def fromordinalArgC (a : Arg) : Py (Int × Int × Int) := do
+  let n ← pyIndex a
+  fromordinalC n
 
 /-! ### `date` -/
 
@@ -92,11 +172,7 @@ def dateNewPy (year month day : Arg) : Py (Int × Int × Int) :=
     match dateSetstate st with
     | some v => return v
     | none => throw .modelFuel
-  | none => do
-    let y ← pyIndex year
-    let m ← pyIndex month
-    let d ← pyIndex day
-    checkDate y m d
+  | none => checkDateFieldsArgPy year month day
 
 /-- `datetime_date_impl`, _datetimemodule.c:3284-3288: `new_date_ex`, which checks the fields
 with `check_date_args`. -/
@@ -154,7 +230,7 @@ def stateTz : Arg → Py (Option Tz)
 /-! ### `time` -/
 
 /-- `time.__new__`, _pydatetime.py:1436-1473. -/
-def timeNewPy (hour minute second us tz : Arg) (fold : Int) : Py TM :=
+def timeNewPy (hour minute second us tz : Arg) (fold : Arg) : Py TM :=
   let pickled : Option (Py (List Nat)) := match stateOf "time" hour with
     | some (u, enc) => if u.length = 6 ∧ u.getD 0 0 % 128 < 24 then some enc else none
     | none => none
@@ -167,14 +243,10 @@ def timeNewPy (hour minute second us tz : Arg) (fold : Int) : Py TM :=
     | some v => return v
     | none => throw .modelFuel
   | none => do
-    let h ← pyIndex hour
-    let mi ← pyIndex minute
-    let s ← pyIndex second
-    let u ← pyIndex us
-    let _ ← checkTime h mi s u
-    checkFold fold
+    -- :1462-1464
+    let (h, mi, s, u, f) ← checkTimeFieldsArgPy hour minute second us fold
     let t ← checkTzinfoArgPy tz
-    return ⟨h, mi, s, u, fold, t⟩
+    return ⟨h, mi, s, u, f.foldVal, t⟩
 
 /-- `datetime_time_impl`, _datetimemodule.c:4770-4775: `new_time_ex2`, :1318-1345. -/
 def datetimeTimeImplC (h mi s u : Int) (tzi : Arg) (fold : Int) : Py TM := do
@@ -185,18 +257,18 @@ def datetimeTimeImplC (h mi s u : Int) (tzi : Arg) (fold : Int) : Py TM := do
 
 /-- The clinic wrapper `datetime_time`, clinic/_datetimemodule.c.h:746-871, for positional
 arguments and the keyword `fold` (always passed here, so the arity check counts it). -/
-def datetimeTimeClinicC (args : List Arg) (fold : Int) : Py TM := do
+def datetimeTimeClinicC (args : List Arg) (fold : Arg) : Py TM := do
   if let some e := clinicArity "time" 5 6 args.length 1 then throw e
   let h ← match args with | a :: _ => parseI a | [] => pure 0
   let mi ← match args with | _ :: a :: _ => parseI a | _ => pure 0
   let s ← match args with | _ :: _ :: a :: _ => parseI a | _ => pure 0
   let u ← match args with | _ :: _ :: _ :: a :: _ => parseI a | _ => pure 0
   let tzi := args.getD 4 .none_
-  let f ← parseI (.int fold)
+  let f ← parseI fold
   datetimeTimeImplC h mi s u tzi f
 
 /-- `time_new`, _datetimemodule.c:4710-4749, for positional arguments and `fold`. -/
-def timeNewC (args : List Arg) (fold : Int) : Py TM :=
+def timeNewC (args : List Arg) (fold : Arg) : Py TM :=
   let pickled : Option (Py (List Nat) × Arg) := match args with
     | state :: rest =>
       if rest.length ≤ 1 then
@@ -218,7 +290,7 @@ def timeNewC (args : List Arg) (fold : Int) : Py TM :=
 /-! ### `datetime` -/
 
 /-- `datetime.__new__`, _pydatetime.py:1800-1833. -/
-def datetimeNewPy (year month day hour minute second us tz : Arg) (fold : Int) : Py DT :=
+def datetimeNewPy (year month day hour minute second us tz : Arg) (fold : Arg) : Py DT :=
   let pickled : Option (Py (List Nat)) := match stateOf "datetime" year with
     | some (u, enc) =>
       let m := u.getD 2 0 % 128
@@ -232,18 +304,11 @@ def datetimeNewPy (year month day hour minute second us tz : Arg) (fold : Int) :
     | some v => return v
     | none => throw .modelFuel
   | none => do
-    let y ← pyIndex year
-    let m ← pyIndex month
-    let d ← pyIndex day
-    let _ ← checkDate y m d
-    let h ← pyIndex hour
-    let mi ← pyIndex minute
-    let s ← pyIndex second
-    let u ← pyIndex us
-    let _ ← checkTime h mi s u
-    checkFold fold
+    -- :1818-1821
+    let (y, m, d) ← checkDateFieldsArgPy year month day
+    let (h, mi, s, u, f) ← checkTimeFieldsArgPy hour minute second us fold
     let t ← checkTzinfoArgPy tz
-    return ⟨y, m, d, h, mi, s, u, fold, t⟩
+    return ⟨y, m, d, h, mi, s, u, f.foldVal, t⟩
 
 /-- `datetime_datetime_impl`, _datetimemodule.c:5550-5558: `new_datetime_ex2`, :1210-1240. -/
 def datetimeDatetimeImplC (y m d h mi s u : Int) (tzi : Arg) (fold : Int) : Py DT := do
@@ -255,7 +320,7 @@ def datetimeDatetimeImplC (y m d h mi s u : Int) (tzi : Arg) (fold : Int) : Py D
 
 /-- The clinic wrapper `datetime_datetime`, clinic/_datetimemodule.c.h:1641-1771, for
 positional arguments and the keyword `fold` (always passed here). -/
-def datetimeDatetimeClinicC (args : List Arg) (fold : Int) : Py DT := do
+def datetimeDatetimeClinicC (args : List Arg) (fold : Arg) : Py DT := do
   if let some e := clinicArity "datetime" 8 9 args.length 1 then throw e
   match args with
   | a :: b :: c :: rest =>
@@ -267,12 +332,12 @@ def datetimeDatetimeClinicC (args : List Arg) (fold : Int) : Py DT := do
     let s ← match rest with | _ :: _ :: x :: _ => parseI x | _ => pure 0
     let u ← match rest with | _ :: _ :: _ :: x :: _ => parseI x | _ => pure 0
     let tzi := rest.getD 4 .none_
-    let f ← parseI (.int fold)
+    let f ← parseI fold
     datetimeDatetimeImplC y m d h mi s u tzi f
   | _ => throw (clinicMissing "datetime" ["year", "month", "day"] args.length)
 
 /-- `datetime_new`, _datetimemodule.c:5487-5526, for positional arguments and `fold`. -/
-def datetimeNewC (args : List Arg) (fold : Int) : Py DT :=
+def datetimeNewC (args : List Arg) (fold : Arg) : Py DT :=
   let pickled : Option (Py (List Nat) × Arg) := match args with
     | state :: rest =>
       if rest.length ≤ 1 then
@@ -307,14 +372,14 @@ def dateCallPy (args : List Arg) : Py (Int × Int × Int) :=
 
 /-- `time(*args, fold=fold)` in Python: `def __new__(cls, hour=0, minute=0, second=0,
 microsecond=0, tzinfo=None, *, fold=0)`. -/
-def timeCallPy (args : List Arg) (fold : Int) : Py TM :=
+def timeCallPy (args : List Arg) (fold : Arg) : Py TM :=
   if args.length > 5 then .error pyCallError
   else timeNewPy (args.getD 0 (.int 0)) (args.getD 1 (.int 0)) (args.getD 2 (.int 0))
     (args.getD 3 (.int 0)) (args.getD 4 .none_) fold
 
 /-- `datetime(*args, fold=fold)` in Python: `def __new__(cls, year, month=None, day=None,
 hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)`. -/
-def datetimeCallPy (args : List Arg) (fold : Int) : Py DT :=
+def datetimeCallPy (args : List Arg) (fold : Arg) : Py DT :=
   if args.isEmpty ∨ args.length > 8 then .error pyCallError
   else datetimeNewPy (args.getD 0 .none_) (args.getD 1 .none_) (args.getD 2 .none_)
     (args.getD 3 (.int 0)) (args.getD 4 (.int 0)) (args.getD 5 (.int 0)) (args.getD 6 (.int 0))

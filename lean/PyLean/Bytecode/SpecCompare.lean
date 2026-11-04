@@ -157,4 +157,48 @@ theorem compareStr_proven : CompareStr := by
       · simp [hab, pure, EStateM.pure, and_low 8 e.oparg (by decide), hm]
       · simp [hab, pure, EStateM.pure, and_low 7 e.oparg (by decide), hm]
 
+/-! ## `IS_OP` -/
+
+/-- The bool `IS_OP oparg` pushes for an identity answer `b`: `Py_Is(left, right) ^ oparg`. -/
+def isOpResult (oparg : Nat) (b : Bool) : Val := .bool (((if b then 1 else 0) ^^^ oparg) != 0)
+
+/-- `IS_OP oparg` (`Python/bytecodes.c:3320-3328`, `_IS_OP + POP_TOP + POP_TOP`) replaces both
+operands by `Py_Is(left, right) ^ oparg` as a bool, for any two values, calling nothing. Identity
+is not value equality: two heap objects are one object exactly when they share an address (two
+equal lists are not); values that differ are never one object (`1 is 1.0`, `1 is True` are
+false); equal singletons (`None`, `True`, a builtin type) always are; for two equal ints, floats,
+strs or bytes the answer is the runtime's `sameImmediate`, since CPython's answer there depends on
+where each object came from (`x = 10**20; x is 10**20` is false, `y = x; x is y` true). -/
+def IsOpRules : Prop := ∀ (e : Env) (regs : Regs) (l r : Val) (rest : List Val),
+  (∀ a b, l = .ref a → r = .ref b →
+    execOp e .IS_OP ⟨regs, r :: l :: rest⟩ = .ok () ⟨regs, isOpResult e.oparg (a == b) :: rest⟩) ∧
+  (l ≠ r → execOp e .IS_OP ⟨regs, r :: l :: rest⟩ = .ok () ⟨regs, isOpResult e.oparg false :: rest⟩) ∧
+  (singletonVal l = true →
+    execOp e .IS_OP ⟨regs, l :: l :: rest⟩ = .ok () ⟨regs, isOpResult e.oparg true :: rest⟩) ∧
+  ((∃ i, l = .int i) ∨ (∃ x, l = .float x) ∨ (∃ t, l = .str t) ∨ (∃ b, l = .bytes b) →
+    execOp e .IS_OP ⟨regs, l :: l :: rest⟩ = .ok () ⟨regs, isOpResult e.oparg (regs.rt.sameImmediate l l) :: rest⟩)
+
+theorem isOpRules_proven : IsOpRules := by
+  intro e regs l r rest
+  refine ⟨fun a b hl hr => ?_, fun hne => ?_, fun hs => ?_, fun hi => ?_⟩
+  · subst hl hr
+    simp [execOp, IS_OP, getRt, stk, popN, pushAll, pyIs, isOpResult, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure]
+  · have hb : pyIs regs.rt l r = false := by
+      unfold pyIs; split
+      · rename_i a b; simp only [beq_eq_false_iff_ne]; intro h; exact hne (by subst h; rfl)
+      · simp [hne]
+    simp [execOp, IS_OP, getRt, stk, popN, pushAll, hb, isOpResult, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure]
+  · have hb : pyIs regs.rt l l = true := by
+      unfold pyIs; split
+      · simp
+      · simp [hs]
+    simp [execOp, IS_OP, getRt, stk, popN, pushAll, hb, isOpResult, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure]
+  · have hb : pyIs regs.rt l l = regs.rt.sameImmediate l l := by
+      rcases hi with ⟨i, rfl⟩ | ⟨x, rfl⟩ | ⟨t, rfl⟩ | ⟨b, rfl⟩ <;> simp [pyIs, singletonVal]
+    simp [execOp, IS_OP, getRt, stk, popN, pushAll, hb, isOpResult, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure]
+
 end PyLean.Bytecode

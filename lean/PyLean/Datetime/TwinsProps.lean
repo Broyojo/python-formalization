@@ -257,18 +257,38 @@ theorem dateReplaceTwins_refuted : ¬DateReplaceTwins := by
   have := h 2020 1 1 (some .none_) none none (by decide) (by intro n hn; simp at hn)
   exact not_sameOutcome_ok_err _ _ (2020, 1, 1) (by decide) (by decide) this
 
-theorem replArg_twin (old : Int) (o : Option Arg) (hfit : ∀ n, o = some (.int n) → fitsCInt n)
+/-- `PyLong_AsInt` and `operator.index` agree on every argument that fits a C `int`. -/
+theorem parseI_eq (a : Arg) (h : a.FitsC) : parseI a = pyIndex a := by
+  match a, h with
+  | .int n, h =>
+    unfold Arg.FitsC fitsCInt at h
+    simp only [parseI, pyIndex, asCInt, bind, Except.bind]
+    rw [if_pos (by omega)]
+  | .index (.ok (some n)), h =>
+    unfold Arg.FitsC fitsCInt at h
+    simp only [parseI, pyIndex, asCInt, bind, Except.bind]
+    rw [if_pos (by omega)]
+  | .index (.ok none), _ => rfl
+  | .index (.error _), _ => rfl
+  | .none_, _ => rfl
+  | .bytes _, _ => rfl
+  | .str _, _ => rfl
+  | .tz _, _ => rfl
+  | .float _, _ => rfl
+  | .other, _ => rfl
+
+theorem replArg_twin (old : Int) (o : Option Arg) (hfit : ∀ a, o = some a → a.FitsC)
     (hnone : o ≠ some .none_) :
     replKeep old o ≠ .none_ ∧ SameOutcome (pyIndex (replKeep old o)) (replConv old o) := by
   rcases o with _ | a
   · exact ⟨by simp [replKeep], sameOutcome_refl _⟩
-  · cases a with
+  · have hf := hfit a rfl
+    cases a with
     | none_ => exact absurd rfl hnone
-    | int n =>
-      have := hfit n rfl
-      simp only [replKeep, replConv, pyIndex, parseI_int n this]
+    | _ =>
+      simp only [replKeep, replConv]
+      rw [parseI_eq _ hf]
       exact ⟨by simp, sameOutcome_refl _⟩
-    | _ => exact ⟨by simp [replKeep], by simp [replKeep, replConv, pyIndex, parseI, SameOutcome, PyExc.className]⟩
 
 /-- `date.replace`: with every argument omitted, or every argument `None` in Python, it
 returns the same date; and when no argument is an explicit `None`, the twins agree for all
@@ -279,13 +299,13 @@ def DateReplace : Prop :=
     dateReplacePy y m d none none none = .ok (y, m, d) ∧
     dateReplaceC y m d none none none = .ok (y, m, d) ∧
     dateReplacePy y m d (some .none_) (some .none_) (some .none_) = .ok (y, m, d) ∧
-    ((∀ n, ny = some (.int n) ∨ nm = some (.int n) ∨ nd = some (.int n) → fitsCInt n) →
+    ((∀ a, ny = some a ∨ nm = some a ∨ nd = some a → a.FitsC) →
       ny ≠ some .none_ → nm ≠ some .none_ → nd ≠ some .none_ →
       SameOutcome (dateReplacePy y m d ny nm nd) (dateReplaceC y m d ny nm nd))
 
 theorem dateNewPy_noPickle (a b c : Arg) (hb : b ≠ .none_) :
     dateNewPy a b c = (do let y ← pyIndex a; let m ← pyIndex b; let d ← pyIndex c; checkDate y m d) := by
-  cases a <;> simp [dateNewPy, stateOf, hb]
+  cases a <;> simp [dateNewPy, checkDateFieldsArgPy, stateOf, hb]
 
 theorem dateReplace_proven : DateReplace := by
   intro y m d ny nm nd h
@@ -305,9 +325,9 @@ theorem dateReplace_proven : DateReplace := by
     rw [dateNewPy_noPickle _ _ _ (by simp [replKeep])]
     simp only [replKeep, pyIndex, bind, Except.bind]
     exact checkDate_ok y m d h
-  · obtain ⟨n1, s1⟩ := replArg_twin y ny (fun n hn => hfit n (Or.inl hn)) h1
-    obtain ⟨n2, s2⟩ := replArg_twin m nm (fun n hn => hfit n (Or.inr (Or.inl hn))) h2
-    obtain ⟨n3, s3⟩ := replArg_twin d nd (fun n hn => hfit n (Or.inr (Or.inr hn))) h3
+  · obtain ⟨n1, s1⟩ := replArg_twin y ny (fun a hn => hfit a (Or.inl hn)) h1
+    obtain ⟨n2, s2⟩ := replArg_twin m nm (fun a hn => hfit a (Or.inr (Or.inl hn))) h2
+    obtain ⟨n3, s3⟩ := replArg_twin d nd (fun a hn => hfit a (Or.inr (Or.inr hn))) h3
     unfold dateReplacePy dateReplaceC
     rw [dateNewPy_noPickle _ _ _ n2]
     refine sameOutcome_bind2 _ _ _ _ s1 (fun a => ?_)
@@ -514,11 +534,14 @@ theorem dateFromtimestamp_proven : DateFromtimestamp := by
 
 /-! ### `date.__new__` without a `None` second argument -/
 
-theorem pyIndex_parseI (a : Arg) (h : ∀ n, a = .int n → fitsCInt n) :
+theorem pyIndex_parseI (a : Arg) (h : a.FitsC) :
     SameOutcome (pyIndex a) (parseI a) := by
-  cases a with
-  | int n => rw [parseI_int n (h n rfl)]; exact sameOutcome_refl _
-  | _ => exact sameOutcome_refl _
+  rw [parseI_eq a h]; exact sameOutcome_refl _
+
+/-- An argument whose `__index__`, if it has one, does not raise. -/
+def Arg.NoRaise : Arg → Prop
+  | .index (.error _) => False
+  | _ => True
 
 theorem pyIndex_none_err {β : Type} (x : Py Int) (f : Int → Py β) :
     (do let v ← x; let _ ← pyIndex .none_; f v).raises "TypeError" ∨ (∃ e, x = .error e) := by
@@ -527,23 +550,34 @@ theorem pyIndex_none_err {β : Type} (x : Py Int) (f : Int → Py β) :
   | ok v => exact Or.inl ⟨_, rfl, rfl⟩
 
 /-- `date(*args)` for every positional argument list whose second argument (if any) is not
-`None` and whose ints fit a C `int`: the twins agree, on the pickle state (one bytes or str
-argument), on int fields (the same date or `ValueError`) and on every `TypeError` (a non-int
-field, a missing field, too many arguments). -/
+`None`, whose ints (given or returned by `__index__`) fit a C `int`, and in which no
+`__index__` raises: the twins agree, on the pickle state (one bytes or str argument), on
+int fields (the same date or `ValueError`) and on every `TypeError` (a non-int field, a
+missing field, too many arguments). With all three fields given, a raising `__index__`
+propagates in both twins (`CheckDateFieldsIndex`); with fewer, `DateNewIndexMissing`
+states the difference: Python runs `__index__` of the given fields before it reaches the
+missing one, C counts the arguments first. -/
 def DateNewArgs : Prop :=
-  ∀ args : List Arg, (∀ n, Arg.int n ∈ args → fitsCInt n) → (∀ b, args[1]? = some b → b ≠ .none_) →
+  ∀ args : List Arg, (∀ a ∈ args, a.FitsC ∧ a.NoRaise) → (∀ b, args[1]? = some b → b ≠ .none_) →
     SameOutcome (dateCallPy args) (dateNewC args)
 
-theorem pyIndex_err (a : Arg) (e : PyExc) (h : pyIndex a = .error e) : e.className = "TypeError" := by
-  cases a <;> simp [pyIndex] at h <;> subst h <;> rfl
+theorem pyIndex_err (a : Arg) (hn : a.NoRaise) (e : PyExc) (h : pyIndex a = .error e) :
+    e.className = "TypeError" := by
+  match a, hn with
+  | .index (.error _), hn => exact absurd hn id
+  | .index (.ok none), _ => simp [pyIndex] at h; subst h; rfl
+  | .index (.ok (some _)), _ => simp [pyIndex] at h
+  | .int _, _ => simp [pyIndex] at h
+  | .none_, _ | .bytes _, _ | .str _, _ | .tz _, _ | .float _, _ | .other, _ =>
+    simp [pyIndex] at h; subst h; rfl
 
-theorem raises_typeError_three (a b : Arg) :
+theorem raises_typeError_three (a b : Arg) (ha : a.NoRaise) (hb : b.NoRaise) :
     (do let y ← pyIndex a; let m ← pyIndex b; let d ← pyIndex .none_; checkDate y m d).raises "TypeError" := by
   cases h1 : pyIndex a with
-  | error e => exact ⟨e, by simp [bind, Except.bind], pyIndex_err a e h1⟩
+  | error e => exact ⟨e, by simp [bind, Except.bind], pyIndex_err a ha e h1⟩
   | ok y =>
     cases h2 : pyIndex b with
-    | error e => exact ⟨e, by simp [bind, Except.bind, h2], pyIndex_err b e h2⟩
+    | error e => exact ⟨e, by simp [bind, Except.bind, h2], pyIndex_err b hb e h2⟩
     | ok m => exact ⟨.typeError "~object cannot be interpreted as an integer",
         by simp [bind, Except.bind, h2, pyIndex], rfl⟩
 
@@ -589,22 +623,30 @@ theorem dateNewArgs_proven : DateNewArgs := by
     | none_ => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
     | tz t => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
     | other => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
-  | [a, b], _, hs =>
+    | float x => exact sameOutcome_typeErrors _ _ ⟨_, rfl, rfl⟩ ⟨_, rfl, rfl⟩
+    | index r =>
+      have hn := (hf (.index r) (by simp)).2
+      apply sameOutcome_typeErrors
+      · rcases r with e | (_ | n)
+        · exact absurd hn id
+        · exact ⟨_, rfl, rfl⟩
+        · exact ⟨_, rfl, rfl⟩
+      · exact ⟨_, rfl, rfl⟩
+  | [a, b], hf, hs =>
     have hb : b ≠ .none_ := hs b rfl
     have hp : dateCallPy [a, b] = dateNewPy a b .none_ := rfl
     rw [hp, dateNewPy_noPickle a b .none_ hb]
-    exact sameOutcome_typeErrors _ _ (raises_typeError_three a b) ⟨_, rfl, rfl⟩
+    exact sameOutcome_typeErrors _ _
+      (raises_typeError_three a b (hf a (by simp)).2 (hf b (by simp)).2) ⟨_, rfl, rfl⟩
   | [a, b, c], hf, hs =>
     have hb : b ≠ .none_ := hs b rfl
     have hp : dateCallPy [a, b, c] = dateNewPy a b c := rfl
     have hc : dateNewC [a, b, c] = (do
         let y ← parseI a; let m ← parseI b; let d ← parseI c; datetimeDateImplC y m d) := rfl
     rw [hp, dateNewPy_noPickle a b c hb, hc]
-    have f : ∀ x : Arg, x ∈ [a, b, c] → ∀ n, x = .int n → fitsCInt n := by
-      intro x hx n hn; subst hn; exact hf n hx
-    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI a (f a (by simp))) (fun y => ?_)
-    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI b (f b (by simp))) (fun m => ?_)
-    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI c (f c (by simp))) (fun d => ?_)
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI a (hf a (by simp)).1) (fun y => ?_)
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI b (hf b (by simp)).1) (fun m => ?_)
+    refine sameOutcome_bind2 _ _ _ _ (pyIndex_parseI c (hf c (by simp)).1) (fun d => ?_)
     rw [datetimeDateImplC, checkDateC_eq]
     exact sameOutcome_refl _
   | a :: b :: c :: d :: rest, _, _ =>

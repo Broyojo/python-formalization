@@ -1,0 +1,81 @@
+id: datetime-pydatetime-fold-ordinal-no-index
+title: "_pydatetime does not apply operator.index to fold and to date.fromordinal's argument, unlike C"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["_check_time_fields", "time.__new__", "datetime.__new__", "time.replace", "datetime.replace", "date.fromordinal", "_ord2ymd"]
+summary: |
+  `_check_date_fields` and `_check_time_fields` pass every field through `operator.index`
+  (as C's `PyLong_AsInt` does), but two integer arguments are used without it:
+  - `fold`: `_check_time_fields` tests `fold not in (0, 1)` (Lib/_pydatetime.py:605), which
+    compares with `==`. So `time(fold=1.0)`, `datetime(2020, 1, 1, fold=1.0)` and
+    `time(1).replace(fold=1.0)` succeed in Python, store the float (`time(fold=1.0).fold` is
+    `1.0`, and `time(fold=True).fold` is `True`), while C raises `TypeError: 'float' object
+    cannot be interpreted as an integer` (and returns `1` for `True`). Conversely
+    `time(fold=obj)` with `obj.__index__()` returning 1 is accepted by C and refused by Python
+    with `ValueError: fold must be either 0 or 1, not <obj>`.
+  - `date.fromordinal(n)`: `_ord2ymd(n)` starts with `n -= 1`, so an object with only
+    `__index__` raises `TypeError: unsupported operand type(s) for -=` in Python, while C
+    converts it and returns the date (`date.fromordinal(obj)` with `obj.__index__()` returning
+    5 is `date(1, 1, 5)`).
+likelihood: |
+  Low. A float fold can come from arithmetic or from a JSON round trip; there it silently
+  works on PyPy and _pydatetime and fails on CPython, and the stored fold keeps the float type.
+  An __index__-only ordinal or fold (a numpy-like scalar without arithmetic) is rare; numpy
+  integers have arithmetic and __eq__, so they work in both.
+maybe_intended: |
+  Unlikely. The other fields were given `_index` calls precisely to match C's argument
+  conversion; fold and fromordinal look like they were missed. The docs say fold is "in
+  [0, 1]" and fromordinal takes an "ordinal", both integers.
+reproducer: |
+  import datetime, _pydatetime
+  class Idx:
+      def __init__(self, v): self.v = v
+      def __index__(self): return self.v
+  def run(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  r = {name: (run(lambda: f(datetime)), run(lambda: f(_pydatetime))) for name, f in [
+      ('time(fold=1.0).fold', lambda m: m.time(fold=1.0).fold),
+      ('time(fold=Idx(1)).fold', lambda m: m.time(fold=Idx(1)).fold),
+      ('date.fromordinal(Idx(5))', lambda m: m.date.fromordinal(Idx(5)))]}
+  for k, (c, p) in r.items():
+      print(k, ' C:', c, ' Python:', p)
+  if r['time(fold=1.0).fold'] == ('TypeError', '1.0') and \
+     r['time(fold=Idx(1)).fold'] == ('1', 'ValueError') and \
+     r['date.fromordinal(Idx(5))'] == ('datetime.date(1, 1, 5)', 'TypeError'):
+      print('REPRODUCED datetime-pydatetime-fold-ordinal-no-index')
+expected: |
+  The same outcome in both implementations, as in C: fold and the ordinal converted with
+  operator.index, so a float is a TypeError and an __index__ object is accepted.
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime; the time/datetime docs ("fold in [0, 1]",
+  an int) and date.fromordinal's ordinal.
+cause: |
+  Lib/_pydatetime.py:605-606: `if fold not in (0, 1)` without `fold = _index(fold)` (compare
+  :592-595 for the other fields), and :606 returns `fold` as given. Lib/_pydatetime.py:1056 and
+  :116 (`n -= 1` in `_ord2ymd`): no `_index(n)`. C: the clinic `int` converters
+  (Modules/clinic/_datetimemodule.c.h:841 for time's fold, :1392 for datetime's, :1182 and
+  :1976 for the replace methods, :252-265 for fromordinal)
+  call PyLong_AsInt, i.e. `__index__`.
+possible_fix: |
+  `fold = _index(fold)` before the test in `_check_time_fields`, and `n = _index(n)` at the
+  top of `date.fromordinal`.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search issues: pydatetime fold float", "datetime fold index", "_check_time_fields",
+            "fromordinal index", "pydatetime index", "fold must be either 0 or 1",
+            "time fold float pure python",
+            "bugforge-results/README.md: fold, fromordinal, __index__ (only plistlib fold entries, unrelated)"]
+lean:
+  property: PyLean.Datetime.TimeFoldTwins
+  theorem: PyLean.Datetime.timeFoldTwins_refuted
+  also:
+    - {property: PyLean.Datetime.DatetimeFoldTwins, theorem: PyLean.Datetime.datetimeFoldTwins_refuted}
+    - {property: PyLean.Datetime.FromordinalIndexTwins, theorem: PyLean.Datetime.fromordinalIndexTwins_refuted}

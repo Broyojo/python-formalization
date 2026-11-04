@@ -172,7 +172,7 @@ theorem classDef_proven : ClassDef := by
     | d=decorators f=function_def_raw { _PyPegen_function_def_decorators(p, d, f) }
     | function_def_raw
 ```
-As `class_def`: `_PyPegen_function_def_decorators` (`Parser/action_helpers.c:739-765`) rebuilds the
+As `class_def`: `_PyPegen_function_def_decorators` (`Parser/action_helpers.c:739-763`) rebuilds the
 `FunctionDef` or `AsyncFunctionDef`, whichever it was, with the decorators and every other field,
 location included, unchanged. -/
 def FunctionDef : Prop := ∀ (f : Nat) (p : PS), p.errorIndicator = false → p.level ≠ MAXSTACK →

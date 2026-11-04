@@ -224,6 +224,32 @@ def dateFromIsoC (s : List Char) : Py (Int × Int × Int) :=
   | .error _ => .error (.valueError "~Invalid isoformat string")
   | .ok (y, m, d) => checkDate y m d
 
+/-- The argument of `date.fromisoformat`: a `str` without lone surrogates (its code points),
+a `str` that contains a lone surrogate (Lean's `Char` has none; its other characters do not
+matter to either twin), or any other object (bytes, None, an int). -/
+inductive IsoArg where
+  | str (s : List Char)
+  | surrogateStr
+  | other
+  deriving DecidableEq, Repr
+
+/-- `date.fromisoformat(date_string)`, _pydatetime.py:1060-1075, on any argument: the
+`isinstance(date_string, str)` check (:1063-1064), then `isascii()` (:1066-1067, false for a
+surrogate), then `dateFromIsoPy`. -/
+def dateFromIsoArgPy : IsoArg → Py (Int × Int × Int)
+  | .str s => dateFromIsoPy s
+  | .surrogateStr => .error (.valueError "Argument must be an ASCII str")
+  | .other => .error (.typeError "Argument must be a str")
+
+/-- `date.fromisoformat(arg)` in C: the clinic wrapper `datetime_date_fromisoformat`,
+clinic/_datetimemodule.c.h:280-294 (`PyUnicode_Check`, else `TypeError`), then the impl,
+:3432-3461, whose failed `PyUnicode_AsUTF8AndSize` on a surrogate goes to
+`invalid_string_error` (:3437-3440) and replaces the `UnicodeEncodeError` by `ValueError`. -/
+def dateFromIsoArgC : IsoArg → Py (Int × Int × Int)
+  | .str s => dateFromIsoC s
+  | .surrogateStr => .error (.valueError "~Invalid isoformat string")
+  | .other => .error (.typeError "~fromisoformat: argument must be str")
+
 /-- `rv < 0` after `parse_isoformat_time`: `-6` keeps the exception `check_time_args` set
 (`goto error`, :5216-5218 and :6141-6143), anything else is `invalid_string_error`. -/
 def timeResError (r : TimeRes) : PyExc :=

@@ -1,0 +1,66 @@
+id: datetime-timedelta-float-ratio-not-tuple
+title: "timedelta * float subclass: _pydatetime unpacks any as_integer_ratio() result, C demands a 2-tuple of ints"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["timedelta.__mul__", "timedelta.__truediv__"]
+summary: |
+  For `t * x` and `t / x` with a float `x`, both implementations call
+  `x.as_integer_ratio()`, so a float subclass can override it. _pydatetime unpacks the result
+  with `a, b = ...`; C's `get_float_as_integer_ratio` requires a tuple of size 2 and
+  `divide_nearest` requires int parts. So for `class F(float)` whose `as_integer_ratio`
+  returns:
+  - the list `[3, 2]`: `timedelta(1) * F(1.5)` is `timedelta(days=1, seconds=43200)` in
+    Python and `TypeError: unexpected return type from as_integer_ratio(): expected tuple, not
+    'list'` in C (any non-tuple iterable, e.g. an iterator, behaves like the list);
+  - a list of another length: ValueError (unpacking) in Python, TypeError in C;
+  - the tuple `(3.0, 2)`: a float computation in Python, `TypeError: non-integer arguments in
+    division` in C.
+  A tuple of the wrong length is a ValueError in both, with different messages.
+likelihood: |
+  Very low: it needs a float subclass that overrides as_integer_ratio with a non-tuple or
+  non-int result.
+maybe_intended: |
+  likely. C's checks are defensive type checks of a method result; Python relies on duck
+  typing. Recorded because the twin property is stated over all float operands; not worth
+  filing alone.
+reproducer: |
+  import datetime, _pydatetime
+  def mk(ret):
+      class F(float):
+          def as_integer_ratio(self):
+              return ret
+      return F(1.5)
+  def run(m, ret):
+      try:
+          r = m.timedelta(1) * mk(ret)
+          return (r.days, r.seconds, r.microseconds)
+      except Exception as e:
+          return type(e).__name__
+  r = {repr(ret): (run(datetime, ret), run(_pydatetime, ret)) for ret in ([3, 2], (3.0, 2))}
+  for k, (c, p) in r.items():
+      print(k, ' C:', c, ' Python:', p)
+  if r['[3, 2]'] == ('TypeError', (1, 43200, 0)) and r['(3.0, 2)'] == ('TypeError', (1, 43200, 0)):
+      print('REPRODUCED datetime-timedelta-float-ratio-not-tuple')
+expected: The same outcome in both implementations.
+promised_by: PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:866 and :895: `a, b = other.as_integer_ratio()` accepts any iterable of
+  two items, and `_divide_and_round` (:615-632) computes with float parts.
+  Modules/_datetimemodule.c:2320-2332 (get_float_as_integer_ratio: PyTuple_Check, size 2) and
+  :392-403 with Objects/longobject.c:6118 (divide_nearest via _PyLong_DivmodNear, which
+  refuses non-int arguments).
+possible_fix: |
+  Check `type(ratio) is tuple` and int parts in _pydatetime, or accept the difference.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search issues: as_integer_ratio timedelta subclass", "get_float_as_integer_ratio",
+            "timedelta float subclass as_integer_ratio tuple",
+            "bugforge-results/README.md: timedelta entries (none related)"]
+lean:
+  property: PyLean.Datetime.TimedeltaFloatRatioTwins
+  theorem: PyLean.Datetime.timedeltaFloatRatioTwins_refuted
