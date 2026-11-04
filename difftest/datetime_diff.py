@@ -923,6 +923,11 @@ def gen_case(rng):
         spec = rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"])
         if rng.random() < 0.03:
             spec = rng.choice([1, 0, "AUTO", "", "minute"])
+        elif rng.random() < 0.03:
+            # NUL (refused by C's clinic converter) and lone surrogates (UnicodeEncodeError in C)
+            spec = rng.choice([spec + "\0", "\0" + spec, "\0", spec[:2] + "\0" + spec[2:],
+                               {"surrogate": [ord(ch) for ch in rng.choice([spec + "\ud800", "\udfff",
+                                                                             "\0\udc80", spec[:1] + "\udbff"])]}])
         tz = None if rng.random() < 0.3 else rng.choice([0, 1, -1, 999999, -999999, 86399999999, -86399999999,
                                                         3600 * 10**6, -19800 * 10**6, rng.randint(-86399999999, 86399999999)])
         t = [rng.randint(0, 23), rng.randint(0, 59), rng.randint(0, 59), rng.choice([0, 1, 999, 1000, 999999, rng.randrange(10**6)])]
@@ -958,6 +963,13 @@ def enc_time(t):
 def enc_dt(v):
     return [v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond,
             None if v.tzinfo is None else common_us(v.utcoffset())]
+
+
+def spec_arg(spec):
+    """The timespec of a case: `{"surrogate": [code points]}` is a str with a lone surrogate."""
+    if isinstance(spec, dict):
+        return "".join(map(chr, spec["surrogate"]))
+    return spec
 
 
 def run_python(c):
@@ -1019,10 +1031,10 @@ def run_python(c):
             v = m.date(*c["date"]).isoformat()
         elif base == "time_isoformat":
             tz = None if c["tz"] is None else m.timezone(m.timedelta(microseconds=c["tz"]))
-            v = m.time(*c["time"], tzinfo=tz).isoformat(c["spec"])
+            v = m.time(*c["time"], tzinfo=tz).isoformat(spec_arg(c["spec"]))
         elif base == "datetime_isoformat":
             tz = None if c["tz"] is None else m.timezone(m.timedelta(microseconds=c["tz"]))
-            v = m.datetime(*c["dt"], tzinfo=tz).isoformat(chr(c["sep"]), c["spec"])
+            v = m.datetime(*c["dt"], tzinfo=tz).isoformat(chr(c["sep"]), spec_arg(c["spec"]))
         else:
             raise AssertionError(fn)
         return {"ok": v}

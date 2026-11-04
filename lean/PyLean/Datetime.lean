@@ -362,10 +362,17 @@ def entries : List Entry := [
     prop := ``TimespecTwins, thm := some ``timespecTwins_refuted
     bug := some "datetime-timespec-non-str-class"
     notes := "time(1).isoformat(timespec=1): ValueError in Python, TypeError in C." },
+  { id := "datetime-timespec-str-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["_format_time", "C datetime_time_isoformat_impl", "C datetime_time_isoformat", "C datetime_datetime_isoformat"]
+    statement := "For every str timespec the twins give the same spec or the same ValueError, message included."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimespecStrTwins, thm := some ``timespecStrTwins_refuted
+    bug := some "datetime-timespec-non-str-class"
+    notes := "time(1).isoformat(timespec='auto\\0'): Python 'Unknown timespec value', C's clinic str converter 'embedded null character' (clinic/_datetimemodule.c.h:965-968)." },
   { id := "datetime-timespec-str", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["_format_time", "C datetime_time_isoformat_impl"]
-    statement := "For every str timespec the twins give the same spec or the same ValueError, and an unhashable non-str is a TypeError in both."
-    source := "C/Python twins", status := .proven
+    pyFns := ["_format_time", "C datetime_time_isoformat_impl", "C datetime_time_isoformat", "C datetime_datetime_isoformat"]
+    statement := "For every str timespec without NUL or lone surrogate the twins give the same result, the spec its documented name selects or ValueError('Unknown timespec value'); with a NUL Python raises 'Unknown timespec value' and C 'embedded null character' (both ValueError); with a lone surrogate Python raises ValueError and C UnicodeEncodeError; an unhashable non-str is a TypeError in both."
+    source := "C/Python twins; time.isoformat docs (timespec values)", status := .proven
     prop := ``TimespecStr, thm := some ``timespecStr_proven },
   { id := "datetime-timedelta-float-ops", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__mul__", "timedelta.__truediv__", "_divide_and_round", "C multiply_truedivide_timedelta_float", "C get_float_as_integer_ratio", "C divide_nearest"]

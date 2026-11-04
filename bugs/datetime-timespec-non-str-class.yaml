@@ -1,39 +1,51 @@
 id: datetime-timespec-non-str-class
-title: "isoformat(timespec=<non-str>) raises ValueError in _pydatetime and TypeError in C"
+title: "isoformat(timespec=...) refuses non-str, NUL and surrogate timespecs differently in _pydatetime and C"
 priority: P5
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
 functions: ["_format_time", "time.isoformat", "datetime.isoformat"]
 summary: |
-  `time(1).isoformat(timespec=1)` and `datetime(2020, 1, 1).isoformat(timespec=1)` raise
-  `ValueError: Unknown timespec value` with _pydatetime, because `specs[1]` raises KeyError,
-  and `TypeError: isoformat() argument 'timespec' must be str, not int` with the C module,
-  whose Argument Clinic `str` converter refuses the argument first. An unhashable timespec
-  (a list) is a TypeError in both.
-likelihood: Only code that passes a non-str timespec; it fails in both, with a different class.
+  C's Argument Clinic `str` converter for `timespec` runs before the impl's lookup of the
+  spec, and refuses three kinds of argument that _pydatetime simply fails to find in its
+  `specs` dict (ValueError: Unknown timespec value):
+  - a non-str, e.g. `time(1).isoformat(timespec=1)`: C raises `TypeError: isoformat()
+    argument 'timespec' must be str, not int` (an unhashable timespec, a list, is a
+    TypeError in both);
+  - a str with a NUL, e.g. `timespec='auto\0'`: C raises `ValueError: embedded null
+    character` (same class, other message);
+  - a str with a lone surrogate, e.g. `timespec='\ud800'`: C raises `UnicodeEncodeError:
+    'utf-8' codec can't encode character ... surrogates not allowed`, a ValueError subclass.
+  The same holds for `datetime.isoformat`.
+likelihood: Only code that passes a non-str or a malformed timespec; it fails in both, with a different class or message.
 maybe_intended: |
-  The docs say "ValueError will be raised on an invalid timespec argument", which Python
-  follows; C's TypeError for a wrong type is the usual convention. Either way only the class
-  differs. Recorded for the twin property; not worth filing alone.
+  likely. The docs say "ValueError will be raised on an invalid timespec argument", which
+  Python follows; C's TypeError for a wrong type and the clinic's NUL and encoding checks are
+  the usual conventions of a C str argument. Only the class or message of an error differs.
+  Recorded for the twin properties; not worth filing alone.
 reproducer: |
   import datetime, _pydatetime
-  def run(m):
+  def run(m, ts):
       try:
-          m.time(1).isoformat(timespec=1)
+          m.time(1).isoformat(timespec=ts)
           return 'ok'
       except Exception as e:
-          return type(e).__name__
-  c, p = run(datetime), run(_pydatetime)
-  print('C:', c, ' Python:', p)
-  if c == 'TypeError' and p == 'ValueError':
+          return type(e).__name__ + ': ' + str(e)
+  r = {ts: (run(datetime, ts), run(_pydatetime, ts)) for ts in (1, 'auto\0', '\ud800')}
+  for ts, (c, p) in r.items():
+      print(repr(ts), ' C:', c, ' Python:', p)
+  if r[1][0].startswith('TypeError') and r[1][1].startswith('ValueError') and \
+     r['auto\0'] == ('ValueError: embedded null character', 'ValueError: Unknown timespec value') and \
+     r['\ud800'][0].startswith('UnicodeEncodeError') and r['\ud800'][1] == 'ValueError: Unknown timespec value':
       print('REPRODUCED datetime-timespec-non-str-class')
-expected: The same exception class from both implementations.
+expected: The same exception (class and message) from both implementations.
 promised_by: PEP 399 equivalence; time.isoformat docs (ValueError on an invalid timespec).
 cause: |
   Lib/_pydatetime.py:181-184: `specs[timespec]` and its KeyError handler accept any hashable
-  object. The clinic `str` converter of datetime_time_isoformat (and datetime.isoformat) runs
-  before Modules/_datetimemodule.c:4900-4952.
+  object. The clinic `str` converter of datetime_time_isoformat
+  (Modules/clinic/_datetimemodule.c.h:956-968: PyUnicode_Check, PyUnicode_AsUTF8AndSize, the
+  strlen check) and of datetime_datetime_isoformat (:1815-1827) runs before
+  Modules/_datetimemodule.c:4900-4952.
 possible_fix: Check `isinstance(timespec, str)` in _format_time, or accept the difference.
 reproduces:
   python3 (3.15.2): REPRODUCED
@@ -42,7 +54,10 @@ duplicates:
   issues: []
   queries: ["gh api search: timespec+TypeError+isoformat", "isoformat+timespec+TypeError+ValueError",
             "timespec+non-string", "timespec+not+str+pydatetime",
+            "timespec+embedded+null+isoformat", "isoformat+timespec+surrogate",
             "bugforge-results/README.md: datetime entries (none related)"]
 lean:
   property: PyLean.Datetime.TimespecTwins
   theorem: PyLean.Datetime.timespecTwins_refuted
+  also:
+    - {property: PyLean.Datetime.TimespecStrTwins, theorem: PyLean.Datetime.timespecStrTwins_refuted}

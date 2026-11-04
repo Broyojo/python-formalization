@@ -196,17 +196,22 @@ def dateReprClsC (c : ReprCls) (y m d : Int) : String :=
 def dateIsoformatC (y m d : Int) : List Char :=
   (fmt0 4 y ++ "-" ++ fmt0 2 m ++ "-" ++ fmt0 2 d).toList
 
-/-- The `timespec` argument: a `str`, or another object, hashable or not. -/
+/-- The `timespec` argument: a `str` (Lean's `String` has no lone surrogates), a `str` that
+contains a lone surrogate code point (its other characters do not matter to either twin), or
+another object, hashable or not. -/
 inductive SpecArg where
   | str (s : String)
+  | surrogateStr
   | other (hashable : Bool)
   deriving Repr, DecidableEq
 
 /-- `_format_time(..., timespec)`'s spec handling, _pydatetime.py:175-184, on any object:
-a non-`str` compares unequal to every key, so `specs[timespec]` raises `KeyError` (turned
-into `ValueError`), or `TypeError` from hashing an unhashable object. -/
+a `str` that is not a key (one with a NUL or a surrogate included) and a non-`str` compare
+unequal to every key, so `specs[timespec]` raises `KeyError` (turned into `ValueError`), or
+`TypeError` from hashing an unhashable object. -/
 def parseTimespecArgPy : SpecArg → Py TimeSpec
   | .str s => parseTimespec s
+  | .surrogateStr => .error (.valueError "Unknown timespec value")
   | .other true => .error (.valueError "Unknown timespec value")
   | .other false => .error (.typeError "~cannot use an unhashable object as a dict key")
 
@@ -215,16 +220,22 @@ def specsC : List (String × TimeSpec) :=
   [("hours", .hours), ("minutes", .minutes), ("seconds", .seconds), ("milliseconds", .milliseconds),
    ("microseconds", .microseconds)]
 
-/-- The clinic `str` converter of `timespec` (clinic/_datetimemodule.c.h, `time.isoformat`
-and `datetime.isoformat`): a non-`str` is a `TypeError` before the impl runs; then the
-search of `specs` in `datetime_time_isoformat_impl`, :4916-4941. -/
+/-- The clinic `str` converter of `timespec` (clinic/_datetimemodule.c.h:956-968 for
+`time.isoformat`, :1815-1827 for `datetime.isoformat`): a non-`str` is a `TypeError`
+(`PyUnicode_Check`, :956-959); `PyUnicode_AsUTF8AndSize` fails with `UnicodeEncodeError`
+on a lone surrogate (:961-964); a NUL makes `strlen` differ from the length, `ValueError:
+embedded null character` (:965-968). Then the search of `specs` in
+`datetime_time_isoformat_impl`, :4916-4941. -/
 def parseTimespecArgC : SpecArg → Py TimeSpec
   | .str s =>
+    if s.toList.contains '\x00' then .error (.valueError "embedded null character")
     -- `timespec == NULL || strcmp(timespec, "auto") == 0`, then the loop over `specs`
-    if s = "auto" then .ok .auto
+    else if s = "auto" then .ok .auto
     else match specsC.find? (·.1 = s) with
       | some (_, sp) => .ok sp
       | none => .error (.valueError "Unknown timespec value")
+  | .surrogateStr =>
+    .error (.named "UnicodeEncodeError" "~'utf-8' codec can't encode character: surrogates not allowed")
   | .other _ => .error (.typeError "~isoformat() argument 'timespec' must be str")
 
 /-- The time part of C `datetime_time_isoformat_impl`, :4900-4952 (and of

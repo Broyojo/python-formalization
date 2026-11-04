@@ -195,31 +195,76 @@ theorem timespecTwins_refuted : ¬TimespecTwins := by
   have := h (.other true)
   simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className] at this
 
-/-- For every `str` the twins give the same spec or the same `ValueError` (message included),
-and an unhashable non-`str` is a `TypeError` in both. -/
+theorem parseTimespec_other (s : String) (h1 : s ≠ "auto") (h2 : s ≠ "hours") (h3 : s ≠ "minutes")
+    (h4 : s ≠ "seconds") (h5 : s ≠ "milliseconds") (h6 : s ≠ "microseconds") :
+    parseTimespec s = .error (.valueError "Unknown timespec value") := by
+  unfold parseTimespec; split <;> simp_all
+
+/-- For every `str` the twins give the same spec or the same `ValueError` (message included).
+Taken literally this is false: C's clinic converter refuses a NUL before the impl runs. -/
+def TimespecStrTwins : Prop :=
+  ∀ s : String, parseTimespecArgPy (.str s) = parseTimespecArgC (.str s)
+
+/-- `time(1).isoformat(timespec='auto\0')`: Python looks `'auto\0'` up in `specs` and raises
+`ValueError('Unknown timespec value')`; C's clinic `str` converter raises
+`ValueError('embedded null character')`. -/
+theorem timespecStrTwins_refuted : ¬TimespecStrTwins := by
+  intro h
+  have := h "auto\x00"
+  revert this; decide
+
+/-- `isoformat(timespec=s)` for every `str` without a lone surrogate: without a NUL the twins
+give the same spec or the same `ValueError` (message included), and the spec is the one the
+documented name selects; with a NUL Python raises `ValueError('Unknown timespec value')` and C
+`ValueError('embedded null character')`, the same class; a `str` with a lone surrogate is a
+`ValueError` in Python and a `UnicodeEncodeError` (a `ValueError` subclass) in C; an
+unhashable non-`str` is a `TypeError` in both. -/
 def TimespecStr : Prop :=
-  (∀ s : String, parseTimespecArgPy (.str s) = parseTimespecArgC (.str s)) ∧
+  (∀ s : String, '\x00' ∉ s.toList →
+    parseTimespecArgPy (.str s) = parseTimespecArgC (.str s) ∧
+    parseTimespecArgC (.str s) =
+      (if s = "auto" then .ok .auto else if s = "hours" then .ok .hours
+       else if s = "minutes" then .ok .minutes else if s = "seconds" then .ok .seconds
+       else if s = "milliseconds" then .ok .milliseconds
+       else if s = "microseconds" then .ok .microseconds
+       else .error (.valueError "Unknown timespec value"))) ∧
+  (∀ s : String, '\x00' ∈ s.toList →
+    parseTimespecArgPy (.str s) = .error (.valueError "Unknown timespec value") ∧
+    parseTimespecArgC (.str s) = .error (.valueError "embedded null character")) ∧
+  parseTimespecArgPy .surrogateStr = .error (.valueError "Unknown timespec value") ∧
+  (parseTimespecArgC .surrogateStr).raises "UnicodeEncodeError" ∧
   SameOutcome (parseTimespecArgPy (.other false)) (parseTimespecArgC (.other false))
 
 theorem timespecStr_proven : TimespecStr := by
-  refine ⟨fun s => ?_, by simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className]⟩
-  by_cases h1 : s = "auto"
-  · subst h1; decide
-  by_cases h2 : s = "hours"
-  · subst h2; decide
-  by_cases h3 : s = "minutes"
-  · subst h3; decide
-  by_cases h4 : s = "seconds"
-  · subst h4; decide
-  by_cases h5 : s = "milliseconds"
-  · subst h5; decide
-  by_cases h6 : s = "microseconds"
-  · subst h6; decide
-  have hp : parseTimespec s = .error (.valueError "Unknown timespec value") := by
-    unfold parseTimespec; split <;> simp_all
-  have hc : specsC.find? (·.1 = s) = none := by
-    simp [specsC, List.find?, Ne.symm h2, Ne.symm h3, Ne.symm h4, Ne.symm h5, Ne.symm h6]
-  simp only [parseTimespecArgPy, parseTimespecArgC, hp, h1, ↓reduceIte, hc]
+  refine ⟨fun s hn => ?_, fun s hn => ?_, rfl, ⟨_, rfl, rfl⟩,
+    by simp [SameOutcome, parseTimespecArgPy, parseTimespecArgC, PyExc.className]⟩
+  · have hc0 : s.toList.contains '\x00' = false := by simpa using hn
+    by_cases h1 : s = "auto"
+    · subst h1; decide
+    by_cases h2 : s = "hours"
+    · subst h2; decide
+    by_cases h3 : s = "minutes"
+    · subst h3; decide
+    by_cases h4 : s = "seconds"
+    · subst h4; decide
+    by_cases h5 : s = "milliseconds"
+    · subst h5; decide
+    by_cases h6 : s = "microseconds"
+    · subst h6; decide
+    have hp := parseTimespec_other s h1 h2 h3 h4 h5 h6
+    have hc : specsC.find? (·.1 = s) = none := by
+      simp [specsC, List.find?, Ne.symm h2, Ne.symm h3, Ne.symm h4, Ne.symm h5, Ne.symm h6]
+    simp only [parseTimespecArgPy, parseTimespecArgC, hp, hc0, h1, h2, h3, h4, h5, h6, hc,
+      Bool.false_eq_true, ↓reduceIte, and_self]
+  · have hc0 : s.toList.contains '\x00' = true := by simpa using hn
+    have ne : ∀ k ∈ ["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"], s ≠ k := by
+      intro k hk heq; subst heq; simp at hk; rcases hk with h | h | h | h | h | h <;> subst h <;>
+        revert hn <;> decide
+    simp at ne
+    obtain ⟨h1, h2, h3, h4, h5, h6⟩ := ne
+    refine ⟨?_, ?_⟩
+    · simp only [parseTimespecArgPy]; exact parseTimespec_other s h1 h2 h3 h4 h5 h6
+    · simp only [parseTimespecArgC, hc0, ↓reduceIte]
 
 /-! ### `date.__format__` -/
 
