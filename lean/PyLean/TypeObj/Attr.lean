@@ -638,6 +638,13 @@ def superLookupDescr (w : World) (suType objType : Addr) (n : Name) : Option Val
       | none => mro.length
     findInMroList w (mro.drop start) n
 
+/-- The `obj` argument `do_super_lookup` passes to `__get__`: NULL for a class-bound `super`
+(`su_obj == su_obj_type`), else `su_obj`, `Objects/typeobject.c:12761-12763`. -/
+def superBindObj (suObj : Option Val) (ot : Addr) : Option Val :=
+  match suObj with
+  | some so => if so.is (.obj ot) then none else some so
+  | none => none
+
 /-- `do_super_lookup`, `Objects/typeobject.c:12742`, without the method shortcut. -/
 def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
     (suObjType : Option Addr) (n : Name) : M Val := do
@@ -651,12 +658,7 @@ def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
     | some res =>
       match slotOf w (typeOf w res) .tp_descr_get with
       | none => pure res
-      | some f =>
-        let o : Option Val :=
-          match suObj with
-          | some so => if so.is (.obj ot) then none else some so
-          | none => none
-        callDescrGet rt f res o (some (.obj ot))
+      | some f => callDescrGet rt f res (superBindObj suObj ot) (some (.obj ot))
 
 /-- `super_getattro`, `Objects/typeobject.c:12793`. -/
 def superGetattro (rt : Rt) (self : Val) (n : Name) : M Val := do
@@ -695,6 +697,17 @@ def callAttribute (rt : Rt) (self attr : Val) (n : Name) : M Val := do
 def slotTpGetattro (rt : Rt) (self : Val) (n : Name) : M Val :=
   vectorcallMethod rt "__getattribute__" [self, .str n]
 
+/-- `getattribute == NULL`, or the `wrapper_descriptor` of `object.__getattribute__`
+(`d_wrapped == PyObject_GenericGetAttr`), `Objects/typeobject.c:11116-11119`. -/
+def isGenericGetattribute (w : World) (ga : Option Val) : Bool :=
+  match ga with
+  | none => true
+  | some ga =>
+    typeOf w ga == B.wrapperDescr &&
+      (match payloadOf w ga with
+       | some (.wrapperDescr _ _ (.c .object)) => true
+       | _ => false)
+
 /-- `_Py_slot_tp_getattr_hook`, `Objects/typeobject.c:11091`. -/
 def slotTpGetattrHook (rt : Rt) (self : Val) (n : Name) : M Val := do
   let w ← getW
@@ -703,15 +716,7 @@ def slotTpGetattrHook (rt : Rt) (self : Val) (n : Name) : M Val := do
   | none => slotTpGetattro rt self n
   | some getattr =>
     let getattribute := findInMro w tp "__getattribute__"
-    let isGeneric : Bool :=
-      match getattribute with
-      | none => true
-      | some ga =>
-        typeOf w ga == B.wrapperDescr &&
-          (match payloadOf w ga with
-           | some (.wrapperDescr _ _ (.c .object)) => true
-           | _ => false)
-    if isGeneric then
+    if isGenericGetattribute w getattribute then
       match ← genericGetAttrSup rt self n true with
       | some r => pure r
       | none => callAttribute rt self getattr n
