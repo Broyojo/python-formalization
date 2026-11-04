@@ -1,0 +1,76 @@
+id: pygrammar-async-with-type-comment
+title: "With type_comments=True, a parenthesized `async with` followed by a type comment is a SyntaxError or parses as one tuple item; the gh-111420 fix covered only `with`"
+priority: P5
+kind: sibling-mismatch
+module: pygrammar
+files: [Grammar/python.gram, Parser/parser.c]
+functions: ["with_stmt"]
+summary: |
+  gh-111420 (PR #111468, merged 2023-10-31) found that `ast.parse(..., type_comments=True)` rejected
+  `with (a as b): # type: T` and read `with (a, b): # type: T` as one withitem holding a Tuple, and
+  fixed it by adding `tc=[TYPE_COMMENT]` to the parenthesized `with` alternative of with_stmt. The
+  parenthesized `async with` alternative right below it (python.gram:427-428) was left without it,
+  so the same two failures still happen with `async`: `async with (a as b): # type: T` is a
+  SyntaxError ("invalid syntax" at the comment), and `async with (a, b): # type: T` gives
+  AsyncWith(items=[withitem(Tuple(a, b))], type_comment='T') instead of two withitems. Without
+  type_comments, or without the comment, both parse as the sync forms do.
+likelihood: |
+  Low: type comments are only tokenized with type_comments=True (typed_ast users, mypy,
+  black-style tools that ask for them), and the source needs a parenthesized multi-line or
+  `as` context manager list in an `async with` with a type comment on the header line. psf/black
+  #3677, which led to gh-111420, shows tools do meet the sync form.
+maybe_intended: |
+  No: the alternative is the async twin of the one gh-111420 fixed, and the fourth alternative
+  (unparenthesized `async with`) already takes `tc=[TYPE_COMMENT]`. The parenthesized async form
+  even builds AsyncWith with a hard-coded NULL type comment, which is what the sync form did before
+  the fix.
+reproducer: |
+  import ast
+  def parse(src):
+      try:
+          return repr([ast.dump(i) for i in ast.parse(src, type_comments=True).body[0].items])
+      except SyntaxError as e:
+          return "SyntaxError: " + e.msg
+  a = parse("with (a as b): # type: int\n    pass\n")
+  b = parse("async with (a as b): # type: int\n    pass\n")
+  c = parse("with (a, b): # type: int\n    pass\n")
+  d = parse("async with (a, b): # type: int\n    pass\n")
+  print(a)
+  print(b)
+  print(c)
+  print(d)
+  if not a.startswith("SyntaxError") and b.startswith("SyntaxError") and "Tuple" not in c and "Tuple" in d:
+      print("REPRODUCED pygrammar-async-with-type-comment")
+expected: |
+  `async with (a as b): # type: int` parses to AsyncWith with one withitem(a, b) and
+  type_comment='int', and `async with (a, b): # type: int` to two withitems, as for `with`.
+promised_by: |
+  The implementation disagreeing with itself: the sync and async parenthesized alternatives of
+  with_stmt, and the issue gh-111420 that fixed the sync one ("ast.parse(type_comments=True) fails
+  on some parenthesized context managers").
+cause: |
+  Grammar/python.gram:427-428 (Parser/parser.c with_stmt_rule, 6707-6960):
+      | 'async' 'with' '(' a=','.with_item+ ','? ')' ':' b=block {
+         CHECK_VERSION(stmt_ty, 5, "Async with statements are", _PyAST_AsyncWith(a, b, NULL, EXTRA)) }
+  With a TYPE_COMMENT token after ':', block fails, the rule backs up to the unparenthesized
+  alternative (429-430), whose with_item reads `(a, b)` as a tuple expression, or cannot read
+  `(a as b)` at all, and the second pass reports "invalid syntax".
+possible_fix: |
+  As in PR #111468 for the sync form:
+      | 'async' 'with' '(' a[asdl_withitem_seq*]=','.with_item+ ','? ')' ':' tc=[TYPE_COMMENT] b=block {
+         CHECK_VERSION(stmt_ty, 5, "Async with statements are", _PyAST_AsyncWith(a, b, NEW_TYPE_COMMENT(p, tc), EXTRA)) }
+  and regenerate Parser/parser.c; extend the gh-111420 tests in Lib/test/test_type_comments.py to
+  `async with`.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: ["gh-111420 (closed, fixed the sync form only, PR #111468)"]
+  queries: ["async with type comment parenthesized", "\"async with\" type_comments",
+            "TYPE_COMMENT async_with", "parenthesized async with type comments",
+            "async with TYPE_COMMENT grammar", "PRs: async with type comment parenthesized",
+            "type_comments async"]
+  bugforge: "none (no type-comment or with_stmt entries)"
+lean:
+  property: PyLean.PyGrammar.Peg.AsyncWithTypeComment
+  theorem: PyLean.PyGrammar.Peg.asyncWithTypeComment_refuted

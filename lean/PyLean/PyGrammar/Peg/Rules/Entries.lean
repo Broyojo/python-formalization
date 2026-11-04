@@ -11,6 +11,16 @@ import PyLean.PyGrammar.Peg.Rules.Simple
 import PyLean.PyGrammar.Peg.Rules.Exprs2
 import PyLean.PyGrammar.Peg.Rules.Exprs3
 import PyLean.PyGrammar.Peg.Rules.Blocks
+import PyLean.PyGrammar.Peg.Rules.Try
+import PyLean.PyGrammar.Peg.Rules.Except
+import PyLean.PyGrammar.Peg.Rules.With
+import PyLean.PyGrammar.Peg.Rules.Defs
+import PyLean.PyGrammar.Peg.Rules.AsyncWith
+import PyLean.PyGrammar.Peg.Rules.LeftRec
+import PyLean.PyGrammar.Peg.Rules.LeftRec2
+import PyLean.PyGrammar.Peg.Rules.InvalidAssert
+import PyLean.PyGrammar.Peg.Rules.Match
+import PyLean.PyGrammar.Peg.Rules.Decorators
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -25,6 +35,9 @@ private def scheme : String :=
   "mark within the tokens, token under the mark read), for every result of the sub-rule calls " ++
   "and token reads, given as equations. Written from the rule text, not the data, so another " ++
   "order of alternatives, a dropped lookahead or another action fails it."
+
+private def LR : String :=
+  "Left-recursive leader: GrowSeedChain is the seed loop of the generated leader (_PyPegen_update_memo, then the _raw function, then the growth test), proven by induction on the rounds; the round theorem unfolds the _raw function on this rule's data from any state whose memo holds the seed, the recursive call returning the seed through _PyPegen_is_memoized. Hypotheses: the token at the start mark is read, the seed ends within the tokens read, below MAXSTACK; and for the whole rule, no memo entry yet at the start."
 
 def ruleEntries : List Entry := [
   { id := "pygrammar-rule-keyword-stmts"
@@ -493,6 +506,262 @@ def ruleEntries : List Entry := [
     status := .proven
     prop := ``StatementRule
     thm := some ``statementRule_proven
+    notes := scheme },
+  { id := "pygrammar-rule-elif-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_elif_stmt
+    statement := "elif_stmt: If(a, b, [elif]) with a further elif; without one, backs up and gives " ++
+      "If(a, b, else); NULL at any other token; second pass: invalid_elif_stmt first, its error " ++
+      "ending the rule, its NULL leading to the nested alternative."
+    source := "Grammar/python.gram:391-395"
+    status := .proven
+    prop := ``ElifStmt
+    thm := some ``elifStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-finally-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_finally_block
+    statement := "finally_block: 'finally: a' gives a; after 'finally' the forced ':' either matches " ++
+      "or ends the rule with its error set; NULL at any other token; second pass: " ++
+      "invalid_finally_stmt's error ends the rule, its NULL leads to the plain alternative."
+    source := "Grammar/python.gram:480-482"
+    status := .proven
+    prop := ``FinallyBlock
+    thm := some ``finallyBlock_proven
+    notes := scheme },
+  { id := "pygrammar-rule-try-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_try_stmt
+    statement := "try_stmt: 'try: b finally: f' gives Try(b, [], [], f); with no finally, backs up " ++
+      "for Try(b, handlers, orelse, final); with no except either, TryStar under " ++
+      "CHECK_VERSION(11) with the exact message below 11; the forced ':' failing ends the rule " ++
+      "with its error; second pass: invalid_try_stmt first."
+    source := "Grammar/python.gram:441-447"
+    status := .proven
+    prop := ``TryStmt
+    thm := some ``tryStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-except-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_except_block
+    statement := "except_block: 'except e: b', then 'except e as n: b', then 'except A, B: b' under " ++
+      "CHECK_VERSION(14) with the exact message, then bare 'except: b', each reached when the one " ++
+      "before fails; second pass: invalid_except_stmt_indent first and invalid_except_stmt last."
+    source := "Grammar/python.gram:453-466"
+    status := .proven
+    prop := ``ExceptBlock
+    thm := some ``exceptBlock_proven
+    notes := scheme },
+  { id := "pygrammar-rule-except-star-block"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_except_star_block
+    statement := "except_star_block: as except_block with '*' after 'except' and no bare form; " ++
+      "'except' without '*' fails every alternative (NULL in the first pass, " ++
+      "invalid_except_star_stmt deciding in the second)."
+    source := "Grammar/python.gram:467-479"
+    status := .proven
+    prop := ``ExceptStarBlock
+    thm := some ``exceptStarBlock_proven
+    notes := scheme },
+  { id := "pygrammar-rule-with-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_with_stmt
+    statement := "with_stmt: the parenthesised form first, then the plain one (also after 'with (...)' " ++
+      "not followed by ':'), then 'async with (...)' giving AsyncWith(a, b, NULL) and plain " ++
+      "'async with' giving AsyncWith(a, b, tc), both under CHECK_VERSION(5); a block failing in " ++
+      "the parenthesised async form falls back to the plain one; second pass: " ++
+      "invalid_with_stmt_indent first, invalid_with_stmt last."
+    source := "Grammar/python.gram:421-431"
+    status := .proven
+    prop := ``WithStmt
+    thm := some ``withStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-async-with-type-comment"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_async_with_type_comment
+    statement := "With type comments on, whatever follows 'with', if 'with ...' parses then " ++
+      "'async with ...' parses."
+    source := "the implementation against itself: the sync and async parenthesised alternatives of with_stmt"
+    status := .refuted
+    prop := ``AsyncWithTypeComment
+    thm := some ``asyncWithTypeComment_refuted
+    bug := some "pygrammar-async-with-type-comment"
+    notes := "Counterexample run in the kernel: 'with(a as b):#type:c\\n x\\n' parses, the async " ++
+      "form does not." },
+  { id := "pygrammar-rule-with-item"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_with_item
+    statement := "with_item: 'e as t' followed by ',', ')' or ':' gives withitem(e, t); otherwise " ++
+      "backs up and gives withitem(e, NULL), in the second pass after invalid_with_item, whose " ++
+      "error ends the rule."
+    source := "Grammar/python.gram:433-436"
+    status := .proven
+    prop := ``WithItem
+    thm := some ``withItem_proven
+    notes := scheme },
+  { id := "pygrammar-rule-import-from-targets"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_import_from_targets
+    statement := "import_from_targets: '(names ,?)' gives the names; names not followed by ',' give " ++
+      "the names; names followed by ',' fail (invalid_import_from_targets decides in the second " ++
+      "pass); '*' gives [alias('*')] located at the star."
+    source := "Grammar/python.gram:237-241"
+    status := .proven
+    prop := ``ImportFromTargets
+    thm := some ``importFromTargets_proven
+    notes := scheme },
+  { id := "pygrammar-rule-class-def"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_class_def
+    statement := "class_def: decorators then class_def_raw gives the ClassDef with the decorators " ++
+      "and every other field, location included, unchanged; no decorators gives class_def_raw's " ++
+      "result; decorators with no class after them give NULL."
+    source := "Grammar/python.gram:276-278"
+    status := .proven
+    prop := ``ClassDef
+    thm := some ``classDef_proven
+    notes := scheme },
+  { id := "pygrammar-rule-function-def"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_function_def
+    statement := "function_def: as class_def, for FunctionDef and AsyncFunctionDef alike."
+    source := "Grammar/python.gram:291-293"
+    status := .proven
+    prop := ``FunctionDef
+    thm := some ``functionDef_proven
+    notes := scheme },
+  { id := "pygrammar-rule-class-def-raw"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_class_def_raw
+    statement := "class_def_raw: 'class n[tp](args): c' gives ClassDef(n.id, args.args, " ++
+      "args.keywords, c, [], tp), bases and keywords empty without an argument list; NULL at any " ++
+      "other token; second pass: invalid_class_def_raw first."
+    source := "Grammar/python.gram:280-286"
+    status := .proven
+    prop := ``ClassDefRaw
+    thm := some ``classDefRaw_proven
+    notes := scheme },
+  { id := "pygrammar-rule-function-def-raw"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_function_def_raw
+    statement := "function_def_raw: 'def n[tp](params) -> r: tc b' gives FunctionDef with empty " ++
+      "arguments for '()'; 'async def' gives AsyncFunctionDef under CHECK_VERSION(5) with the exact " ++
+      "message; NULL at any other token; second pass: invalid_def_raw first."
+    source := "Grammar/python.gram:295-309"
+    status := .proven
+    prop := ``FunctionDefRaw
+    thm := some ``functionDefRaw_proven
+    notes := scheme },
+  { id := "pygrammar-rule-annotation-default"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_annotation_default
+    statement := "annotation, star_annotation, default: the expression after ':' (star_expression for " ++
+      "star_annotation) or '='; NULL at any other token; default in the second pass with nothing " ++
+      "after '=': invalid_default decides."
+    source := "Grammar/python.gram:379-381"
+    status := .proven
+    prop := ``AnnotationDefault
+    thm := some ``annotationDefault_proven
+    notes := scheme },
+  { id := "pygrammar-rule-sum"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_sum
+    statement := "sum: the seed loop returns the last seed that grew; each round with seed v gives " ++
+      "BinOp(v, Add, term) after '+', BinOp(v, Sub, term) after '-' (after the '+' alternative fails " ++
+      "and the seed is found again), and term from the start mark otherwise; the first round, with " ++
+      "no seed, is term. So a - b - c is BinOp(BinOp(a, Sub, b), Sub, c)."
+    source := "Grammar/python.gram:842-845"
+    status := .proven
+    prop := ``SumRule
+    thm := some ``sumRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-or"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_or
+    statement := "bitwise_or: as sum with the one operator '|' (BitOr) over bitwise_xor."
+    source := "Grammar/python.gram:821-823"
+    status := .proven
+    prop := ``BitwiseOrRule
+    thm := some ``bitwiseOrRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-xor"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_xor
+    statement := "bitwise_xor: as sum with the one operator '^' (BitXor) over bitwise_and."
+    source := "Grammar/python.gram:825-827"
+    status := .proven
+    prop := ``BitwiseXorRule
+    thm := some ``bitwiseXorRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-bitwise-and"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_bitwise_and
+    statement := "bitwise_and: as sum with the one operator '&' (BitAnd) over shift_expr."
+    source := "Grammar/python.gram:829-831"
+    status := .proven
+    prop := ``BitwiseAndRule
+    thm := some ``bitwiseAndRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-term"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_term
+    statement := "term: the seed loop returns the last seed that grew; a round with seed v tries '*', " ++
+      "'/', '//', '%', '@' in that order, each after the ones before fail at their token, giving " ++
+      "BinOp(v, op, factor), '@' under CHECK_VERSION(5) with the exact message; with no seed or no " ++
+      "operator, factor from the start mark, in the second pass after invalid_factor, whose error " ++
+      "ends the round."
+    source := "Grammar/python.gram:847-854"
+    status := .proven
+    prop := ``TermRule
+    thm := some ``termRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-shift-expr"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_shift_expr
+    statement := "shift_expr: as term with '<<' then '>>' over sum, and invalid_arithmetic before the " ++
+      "operand alternative in the second pass."
+    source := "Grammar/python.gram:833-837"
+    status := .proven
+    prop := ``ShiftExprRule
+    thm := some ``shiftExprRule_proven
+    notes := LR },
+  { id := "pygrammar-rule-invalid-assert-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_invalid_assert_stmt
+    statement := "invalid_assert_stmt: 'assert a = b' raises \"cannot assign to <name> here. Maybe you " ++
+      "meant '==' instead of '='?\" over a..b with <name> = _PyPegen_get_expr_name(a); then 'assert " ++
+      "t, a = b' the same about a; then 'assert a := b' and 'assert t, a := b' raise \"cannot use " ++
+      "named expression without parentheses here\" over a..b; each in order after the ones before " ++
+      "fail; any other token: NULL, no error."
+    source := "Grammar/python.gram:1329-1347"
+    status := .proven
+    prop := ``InvalidAssertStmt
+    thm := some ``invalidAssertStmt_proven
+    notes := scheme ++ " Hypothesis exprName a = some nm: every node expression returns has a " ++
+      "name (only Slice lacks one, and only a subscript holds a Slice)." },
+  { id := "pygrammar-rule-match-stmt"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_match_stmt
+    statement := "match_stmt: soft keyword 'match', subject, ':' NEWLINE INDENT case_block+ DEDENT " ++
+      "gives Match(subject, cases) under CHECK_VERSION(10) with the exact message below 10; no " ++
+      "soft keyword: NULL in the first pass; second pass, with no soft keyword or no ':' after " ++
+      "the subject, invalid_match_stmt decides."
+    source := "Grammar/python.gram:487-490"
+    status := .proven
+    prop := ``MatchStmt
+    thm := some ``matchStmt_proven
+    notes := scheme },
+  { id := "pygrammar-rule-decorators"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.rule_decorators
+    statement := "decorators: each line '@' named_expression NEWLINE gives the expression (NULL " ++
+      "without the NEWLINE or the '@'); the rule is the lines in source order as one sequence, " ++
+      "ending after the last NEWLINE, and NULL with no line (the + loop, proven by induction on " ++
+      "the rounds of handle_alt_loop)."
+    source := "Grammar/python.gram:271"
+    status := .proven
+    prop := ``DecoratorsRule
+    thm := some ``decoratorsRule_proven
     notes := scheme },
   { id := "pygrammar-rule-lazy-import-diagnosed"
     pyFile := "Grammar/python.gram"
