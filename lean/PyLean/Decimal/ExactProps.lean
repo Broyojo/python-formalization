@@ -347,4 +347,141 @@ theorem compareTotalExact_proven : CompareTotalExact := by
   · intro n s p q h
     cases n <;> cases s <;> simp [compareTotal, compareTotalSame, Dec.neg, nanKind, payloadOf, h]
 
+/-! ## Classification -/
+
+/-- `number_class` (_pydecimal.py:3667-3707) gives all ten classes of the docs by sign, kind,
+zero coefficient and the threshold `adjusted() < Emin`; `is_normal` and `is_subnormal`
+(:3200-3226) test that threshold on non-zero finite values and are False otherwise; `is_zero`
+(:3228-3230) and `__bool__` (:855-860) test the coefficient, NaNs and infinities being nonzero;
+`_isinfinity` (:777-788) is +1 / -1 by sign. -/
+def ClassificationExact : Prop :=
+  ∀ (c : Ctx) (d : Dec),
+    numberClass c d = (match d with
+      | .nan _ true _ => "sNaN"
+      | .nan _ false _ => "NaN"
+      | .inf n => if n then "-Infinity" else "+Infinity"
+      | .fin n co e =>
+        if co = 0 then (if n then "-Zero" else "+Zero")
+        else if adjustedD co e < c.emin then (if n then "-Subnormal" else "+Subnormal")
+        else if n then "-Normal" else "+Normal") ∧
+    isNormal c d = (match d with | .fin _ co e => decide (co ≠ 0 ∧ c.emin ≤ adjustedD co e) | _ => false) ∧
+    isSubnormal c d = (match d with | .fin _ co e => decide (co ≠ 0 ∧ adjustedD co e < c.emin) | _ => false) ∧
+    isZero d = (match d with | .fin _ co _ => decide (co = 0) | _ => false) ∧
+    decBool d = (match d with | .fin _ co _ => decide (co ≠ 0) | _ => true) ∧
+    isinfinity d = (match d with | .inf n => if n then -1 else 1 | _ => 0)
+
+theorem classificationExact_proven : ClassificationExact := by
+  intro c d
+  rcases d with ⟨n, co, e⟩ | n | ⟨n, s, p⟩
+  · by_cases hc : co = 0
+    · subst hc
+      cases n <;> simp [numberClass, isSnan, isQnan, isnan, nanKind, isinfinity, isZero, isNormal,
+        isSubnormal, isSpecial, decBool, Dec.neg]
+    · have hz : isZero (.fin n co e) = false := by cases co <;> simp_all [isZero]
+      by_cases ha : adjustedD co e < c.emin
+      · have ha' : ¬ c.emin ≤ adjustedD co e := by omega
+        cases n <;> simp [numberClass, isSnan, isQnan, isnan, nanKind, isinfinity, hz, hc, isNormal,
+          isSubnormal, isSpecial, decBool, Dec.adjusted, Dec.neg, ha, ha']
+      · have ha' : c.emin ≤ adjustedD co e := by omega
+        cases n <;> simp [numberClass, isSnan, isQnan, isnan, nanKind, isinfinity, hz, hc, isNormal,
+          isSubnormal, isSpecial, decBool, Dec.adjusted, Dec.neg, ha, ha']
+  · cases n <;> simp [numberClass, isSnan, isQnan, isnan, nanKind, isinfinity, isZero, isNormal,
+      isSubnormal, isSpecial, decBool]
+  · cases s <;> simp [numberClass, isSnan, isQnan, isnan, nanKind, isinfinity, isZero, isNormal,
+      isSubnormal, isSpecial, decBool]
+
+/-! ## `copy_abs`, `copy_negate` -/
+
+/-- `copy_negate` (_pydecimal.py:3088-3093) flips the sign and keeps the coefficient, exponent,
+NaN kind and payload: it is an involution that reverses the numeric order. `copy_abs`
+(:3084-3086) is `copy_negate` on a negative operand and the operand itself otherwise, so
+`copy_sign(copy_abs(a), a)` rebuilds `a`. -/
+def CopyExact : Prop :=
+  ∀ a b : Dec,
+    copyAbs a = (if a.neg then copyNegate a else a) ∧ (copyAbs a).neg = false ∧
+    copySign (copyAbs a) a = a ∧
+    (copyNegate a).neg = !a.neg ∧ copyNegate (copyNegate a) = a ∧
+    nanKind (copyNegate a) = nanKind a ∧ payloadOf (copyNegate a) = payloadOf a ∧
+    expOf (copyNegate a) = expOf a ∧
+    (nanKind a = 0 → nanKind b = 0 → numOrder (copyNegate a) (copyNegate b) = (numOrder a b).swap)
+
+theorem finOrder_neg (n1 n2 : Bool) (c1 c2 : Nat) (e1 e2 : Int) :
+    finOrder (!n1) c1 e1 (!n2) c2 e2 = (finOrder n1 c1 e1 n2 c2 e2).swap := by
+  simp only [finOrder, ordOf, sgnVal]
+  generalize c1 * 10 ^ (e1 - min e1 e2).toNat = P1
+  generalize c2 * 10 ^ (e2 - min e1 e2).toNat = P2
+  cases n1 <;> cases n2 <;> simp only [Bool.not_true, Bool.not_false, Bool.false_eq_true, ↓reduceIte] <;>
+    (repeat' split) <;> simp_all [Ordering.swap] <;> omega
+
+theorem copyExact_proven : CopyExact := by
+  intro a b
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, fun ha hb => ?_⟩
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> cases n <;>
+      simp [copyAbs, copyNegate, negate, Dec.withSign, Dec.neg]
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> rfl
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> rfl
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> rfl
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> simp [copyNegate, negate, Dec.withSign, Dec.neg]
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> (try cases s) <;> rfl
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> rfl
+  · rcases a with ⟨n, co, e⟩ | n | ⟨n, s, p⟩ <;> rfl
+  · rcases a with ⟨n1, c1, e1⟩ | n1 | ⟨n1, s1, p1⟩ <;> rcases b with ⟨n2, c2, e2⟩ | n2 | ⟨n2, s2, p2⟩ <;>
+      (try cases s1) <;> (try cases s2) <;> (try simp [nanKind] at ha hb)
+    · exact finOrder_neg n1 n2 c1 c2 e1 e2
+    all_goals cases n1 <;> (try cases n2) <;> rfl
+
+/-! ## `Overflow.handle`, `InvalidOperation.handle`, `_fix_nan` -/
+
+theorem numDigits_nines {p : Nat} (hp : 1 ≤ p) : numDigits (10 ^ p - 1) = p := by
+  have h1 : 10 ^ p - 1 < 10 ^ p := Nat.sub_lt (Nat.pow_pos (by decide)) (by decide)
+  have hle := (numDigits_le_iff (by omega : 0 < p)).mpr h1
+  have hge : ¬ numDigits (10 ^ p - 1) ≤ p - 1 := by
+    intro h
+    by_cases hp1 : p - 1 = 0
+    · have : p = 1 := by omega
+      subst this; simp [numDigits] at h
+    · have := (numDigits_le_iff (by omega : 0 < p - 1)).mp h
+      have h2 : 10 ^ p = 10 * 10 ^ (p - 1) := by
+        rw [← Nat.pow_succ']; congr 1; omega
+      have h3 : 1 ≤ 10 ^ (p - 1) := Nat.one_le_pow _ _ (by decide)
+      omega
+  omega
+
+/-- `Overflow.handle` (_pydecimal.py:284-297) against its docstring (:267-282): an infinity
+with the result's sign for ROUND_HALF_UP, HALF_EVEN, HALF_DOWN and UP; for ROUND_DOWN the
+largest finite number of the precision, `prec` nines at exponent `Emax - prec + 1` (adjusted
+exponent Emax), with the result's sign; ROUND_CEILING gives that for a negative result and
++Infinity otherwise, ROUND_FLOOR that for a positive result and -Infinity otherwise.
+ROUND_05UP, which the docstring does not list, gives the ROUND_DOWN value (rounding nines
+toward zero leaves them). `_fix`'s overflow branches return the same value. -/
+def OverflowHandleTable : Prop :=
+  ∀ (c : Ctx) (s : Bool),
+    handle c (.overflow s) = some (match c.rounding with
+      | .halfUp | .halfEven | .halfDown | .up => .inf s
+      | .down | .r05up => .fin s (10 ^ c.prec - 1) (c.emax - c.prec + 1)
+      | .ceiling => if s then .fin s (10 ^ c.prec - 1) (c.emax - c.prec + 1) else .inf false
+      | .floor => if s then .inf true else .fin s (10 ^ c.prec - 1) (c.emax - c.prec + 1)) ∧
+    (1 ≤ c.prec → numDigits (10 ^ c.prec - 1) = c.prec ∧
+      adjustedD (10 ^ c.prec - 1) (c.emax - c.prec + 1) = c.emax)
+
+theorem overflowHandleTable_proven : OverflowHandleTable := by
+  intro c s
+  refine ⟨?_, fun hp => ⟨numDigits_nines hp, ?_⟩⟩
+  · simp only [handle, overflowResult]
+    cases c.rounding <;> cases s <;> rfl
+  · simp only [adjustedD, numDigits_nines hp]; omega
+
+/-- `_fix_nan` (_pydecimal.py:1701-1711) keeps the sign and kind and the last `prec - clamp`
+payload digits; `InvalidOperation.handle` (:158-162) returns that, quiet, for the NaN
+operand it is given, and the positive quiet NaN `_NaN` without one. -/
+def FixNanExact : Prop :=
+  ∀ (c : Ctx) (n s : Bool) (p : Nat),
+    fixNan c n s p = .nan n s (p % 10 ^ nanDigits c) ∧
+    handle c (.invalidOperation (some (.nan n s p))) = some (.nan n false (p % 10 ^ nanDigits c)) ∧
+    handle c (.invalidOperation none) = some (.nan false false 0)
+
+theorem fixNanExact_proven : FixNanExact := by
+  intro c n s p
+  exact ⟨fixNan_spec c n s p, by simp [handle, quietOf, fixNan_spec], rfl⟩
+
 end PyLean.Decimal
