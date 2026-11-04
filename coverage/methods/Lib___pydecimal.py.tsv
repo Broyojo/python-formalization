@@ -10,7 +10,7 @@ Lib/_pydecimal.py	284	297	Overflow.handle	handle(self, context, sign, *args)	mod
 Lib/_pydecimal.py	358	370	getcontext	getcontext()	todo		
 Lib/_pydecimal.py	372	377	setcontext	setcontext(context)	todo		
 Lib/_pydecimal.py	381	424	localcontext	localcontext(ctx=None, **kwargs)	todo		
-Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	todo		
+Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	modelled	decimal-ieee-context-exact	
 Lib/_pydecimal.py	465	467	_tento	_tento(n)	modelled	decimal-pow10a-exact	
 Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	modelled	decimal-pow10-correct,decimal-pow10-band-exact	
 Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	modelled	decimal-pow10a-exact,decimal-remainder-near-exact	
@@ -29,8 +29,8 @@ Lib/_pydecimal.py	943	950	Decimal.__le__	__le__(self, other, context=None)	model
 Lib/_pydecimal.py	952	959	Decimal.__gt__	__gt__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	961	968	Decimal.__ge__	__ge__(self, other, context=None)	modelled	decimal-comparisons-exact,decimal-convert-comparisons	
 Lib/_pydecimal.py	970	986	Decimal.compare	compare(self, other, context=None)	modelled	decimal-comparisons-exact	
-Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	todo		review: The only entry is the int-limit refutation (hash(Decimal(10**4300))), a limitation upstream declined (python/cpython#96589; the record says do not file), so it is not a promised behaviour; nothing states the hash of an in-limit value (no narrowed twin agreement or Fraction-consistency for _pydecimal).
-Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	todo		
+Lib/_pydecimal.py	988	1012	Decimal.__hash__	__hash__(self)	modelled	decimal-hash-twins-agree,decimal-hash-exact-py	
+Lib/_pydecimal.py	1014	1019	Decimal.as_tuple	as_tuple(self)	modelled	decimal-as-tuple-exact-py	
 Lib/_pydecimal.py	1021	1069	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
 Lib/_pydecimal.py	1071	1074	Decimal.__repr__	__repr__(self)	modelled	decimal-repr-exact	
 Lib/_pydecimal.py	1076	1126	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-str-spell-exact,decimal-tuple-twins-agree-int-digits	

@@ -24,6 +24,7 @@ import PyLean.Decimal.DivExact
 import PyLean.Decimal.LogicalExact
 import PyLean.Decimal.NextExact
 import PyLean.Decimal.EngExact
+import PyLean.Decimal.MiscExact
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
@@ -749,7 +750,25 @@ def entries : List Entry := [
     statement := "For every decimal and both settings of getcontext().capitals, repr(d) in _pydecimal is Decimal('...') around the scientific spelling of decimal-str-spell-exact (E or e as capitals says), raising the int/str-limit ValueError exactly when str(d) would print an adjusted exponent of more than 4300 digits (Decimal((0, (1,), 10**4300))); and whenever the coefficient has at most 4294 digits and the adjusted exponent and a NaN payload at most 4300, the quoted string reads back to d exactly (sign, coefficient, exponent, NaN kind and payload), the invariant eval(repr(d)) == d the source states."
     source := "Lib/_pydecimal.py:1071-1074 (comment '# Invariant:  eval(repr(d)) == d')"
     status := .proven, prop := ``ReprExact, thm := some ``reprExact_proven
-    notes := "pyRepr takes capitals: str(self) is __str__(context=None), which reads getcontext().capitals (:1122-1124); the C twin's dec_repr also uses the current context's capitals (reprD caps). No InCLimits hypothesis: Decimal((0, (1,), 10**19)) round-trips (checked on 3.15.2). The read-back is decimal-str-roundtrip-py-bounded on the quoted string; past the bounds it is the int-limit class (decimal-str-roundtrip-py, python/cpython#96589). Checked on 3.15.2: repr under localcontext(capitals=0) writes 'e' in both twins." }
+    notes := "pyRepr takes capitals: str(self) is __str__(context=None), which reads getcontext().capitals (:1122-1124); the C twin's dec_repr also uses the current context's capitals (reprD caps). No InCLimits hypothesis: Decimal((0, (1,), 10**19)) round-trips (checked on 3.15.2). The read-back is decimal-str-roundtrip-py-bounded on the quoted string; past the bounds it is the int-limit class (decimal-str-roundtrip-py, python/cpython#96589). Checked on 3.15.2: repr under localcontext(capitals=0) writes 'e' in both twins." },
+  { id := "decimal-hash-exact-py", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__hash__"]
+    statement := "For every decimal, hash() in _pydecimal: a finite d hashes to hash(Fraction(d)) (the numeric hash of its exact value modulo 2**61 - 1) unless its coefficient has more than 4300 digits, where int(self._int) raises the int/str-limit ValueError ('value has N digits'); so hash(Decimal(n)) == hash(n) for every int n within the limit; for every non-NaN within the limit it equals _decimal's hash; Infinity and -Infinity hash to 314159 and -314159 (sys.hash_info.inf, the hash of float('inf')); a signaling NaN raises TypeError('Cannot hash a signaling NaN value.'), a quiet NaN hashes by identity (not modelled)."
+    source := "Lib/_pydecimal.py:988-1012 (comment: 'the hash of a Decimal instance agrees with the hash of a numerically equal integer, float or Fraction'); Built-in Types, 'Hashing of numeric types'"
+    status := .proven, prop := ``HashExactPy, thm := some ``hashExactPy_proven
+    notes := "The Fraction side is Fractions.hash of ofDecimal (HashMatchesDecimal, HashMatchesInt in Fractions/Hash.lean). Past 4300 coefficient digits it is the declined int-limit class (decimal-hash-twins-agree, python/cpython#96589). Checked on 3.15.2: 20,000 random values against hash(Fraction(*d.as_integer_ratio())), hash(_decimal.Decimal) and hash(int(d)); the C twin's sNaN message has no final period ('Cannot hash a signaling NaN value'), a cosmetic twin difference." },
+  { id := "decimal-as-tuple-exact-py", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.as_tuple"]
+    statement := "For every decimal d, d.as_tuple() in _pydecimal is (sign, the digits of _int as ints, each in 0..9 and reading as the coefficient (or the NaN payload; () for a NaN without one, (0,) for an infinity), the exponent or 'F'/'n'/'N'), and Decimal(d.as_tuple()) rebuilds exactly d's _sign, _int and _exp, with no digit limit."
+    source := "Decimal.as_tuple docstring (Lib/_pydecimal.py:1015-1017: 'To show the internals exactly as they are'); decimal docs, as_tuple and the tuple constructor; Lib/_pydecimal.py:642-685, :1014-1019"
+    status := .proven, prop := ``AsTupleExactPy, thm := some ``asTupleExactPy_proven
+    notes := "The rebuild goes through pyFromTuple's leading-zero skipping (collect_nil) and str() of each digit (flatMap_digs); a zero coefficient comes back as '0'. Checked on 3.15.2: 20,000 random values (coefficients to 40 digits, exponents to ±10**4) and the six specials." },
+  { id := "decimal-ieee-context-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["IEEEContext"]
+    statement := "For every DefaultContext and every int bits: IEEEContext(bits) raises ValueError('argument must be a multiple of 32, with a maximum of 512') when bits <= 0, bits > 512 or bits % 32 != 0; otherwise it is Context() (its exceptions included) with prec = 9*(bits//32) - 2, Emax = 3*2**(bits//16 + 3), Emin = 1 - Emax, ROUND_HALF_EVEN, clamp = 1 and every trap off; so 32, 64 and 128 bits give the IEEE 754 decimal32/64/128 parameters (7, 96), (16, 384), (34, 6144)."
+    source := "IEEEContext docstring (Lib/_pydecimal.py:428-432); decimal docs, IEEEContext; IEEE 754-2008 Table 3.6"
+    status := .proven, prop := ``IEEEContextExact, thm := some ``ieeeContextExact_proven
+    notes := "Scope: an int argument (IEEE_CONTEXT_MAX_BITS is 512 on a 64-bit build); a float reaches ctx.prec = ... as a float and is refused there. Checked on 3.15.2: every bits in [-64, 600) gives the stated context or the stated ValueError." }
 ]
 
 end PyLean.Decimal
