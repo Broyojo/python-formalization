@@ -457,13 +457,21 @@ def gen_eqobj(rng):
     return ["eqobj", [rng.choice("nnnnyri") for _ in range(n)], rng.choice("iiihr")]
 
 
+def gen_eqkey(rng):
+    """An object whose __eq__ answers the nine signals of _signals: y(es), n(o), r(aise),
+    i (NotImplemented); hashable by identity."""
+    n = rng.choice([0, 1, 3, 5, 9, 9, 9])
+    return ["eq", "".join(rng.choice("nnnnnyyri") for _ in range(n))]
+
+
 def gen_sig_list(rng):
     names = [x for x in ALL_SIGNALS if rng.random() < 0.3]
-    if rng.random() < 0.15:
-        # 5; 10**5000 (repr raises the limit); [] (unhashable); an object whose repr raises
-        for _ in range(rng.choice([1, 1, 2])):
-            names.insert(rng.randrange(len(names) + 1),
-                         rng.choice(["other", "other", "hugeint", "unhash", "badrepr"]))
+    if rng.random() < 0.3:
+        # 5; 10**5000 (repr raises the limit); [] (unhashable); an object whose repr raises;
+        # an object with its own __eq__ against the signals
+        for _ in range(rng.choice([1, 1, 2, 3])):
+            k = rng.choice(["other", "other", "hugeint", "unhash", "badrepr", "eq", "eq", "eq"])
+            names.insert(rng.randrange(len(names) + 1), gen_eqkey(rng) if k == "eq" else k)
     return ["list", names]
 
 
@@ -474,6 +482,11 @@ def gen_sig_dict(rng):
         keys.remove(rng.choice(keys))
     elif r < 0.25:
         keys.insert(rng.randrange(len(keys) + 1), rng.choice(["other", "other", "hugeint", "badrepr"]))
+    elif r < 0.4:
+        for _ in range(rng.choice([1, 1, 2])):
+            keys.insert(rng.randrange(len(keys) + 1), gen_eqkey(rng))
+        if rng.random() < 0.2:
+            keys.remove(rng.choice([k for k in keys if isinstance(k, str)]))
     # a value of 10**5000: true, and its repr raises the limit
     return ["dict", [[k, "huge" if rng.random() < 0.05 else rng.random() < 0.3] for k in keys]]
 
@@ -904,7 +917,38 @@ def run_rop(M, case):
     return [enc_val(M, r), flags]
 
 
+class EqKey:
+    """Answers `self == signal` (and the reflected `signal == self`) from a string indexed by
+    `_signals` order; NotImplemented for anything else, so two of them compare unequal."""
+
+    def __init__(self, answers):
+        self.answers = answers
+
+    def __eq__(self, other):
+        for M in (P, C):
+            for i, s in enumerate(PY_SIGNAL_ORDER):
+                if other is getattr(M, s):
+                    a = self.answers[i] if i < len(self.answers) else "n"
+                    if a == "r":
+                        raise RuntimeError("boom")
+                    if a == "i":
+                        return NotImplemented
+                    return a == "y"
+        return NotImplemented
+
+    __hash__ = object.__hash__
+
+    def __repr__(self):
+        return "EqKey"
+
+
+PY_SIGNAL_ORDER = ["Clamped", "DivisionByZero", "Inexact", "Overflow", "Rounded", "Underflow",
+                   "InvalidOperation", "Subnormal", "FloatOperation"]
+
+
 def key_obj(M, k):
+    if isinstance(k, list) and k[0] == "eq":
+        return EqKey(k[1])
     if k == "other":
         return 5
     if k == "hugeint":
@@ -993,10 +1037,13 @@ class Idx:
 
 def enc_ctx(M, c):
     names = lambda d: sorted(k.__name__ for k in ALL_SIG_OBJ[M] if d[k])
+    # keys that are not signals, which _pydecimal stores when their __eq__ accepts them (by
+    # identity, so no __eq__ runs here)
+    extra = lambda d: sum(1 for k in d if not any(k is s for s in ALL_SIG_OBJ[M]))
     return {"prec": hex(c.prec), "rounding": c.rounding if isinstance(c.rounding, str) else "obj",
             "Emin": hex(c.Emin), "Emax": hex(c.Emax),
             "capitals": hex(c.capitals), "clamp": hex(c.clamp), "flags": names(c.flags),
-            "traps": names(c.traps)}
+            "traps": names(c.traps), "xf": extra(c.flags), "xt": extra(c.traps)}
 
 
 ALL_SIG_OBJ = {M: [getattr(M, s) for s in ALL_SIGNALS] for M in (P, C)}

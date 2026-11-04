@@ -164,11 +164,158 @@ theorem pct_spec (v : CtxArg) (ok : PyExc) : PctRaises v ok (v.pct ok) := by
   | dict d => exact plain_spec (.dict d) ok (fun t h => nomatch h)
   | obj st => exact plain_spec (.obj st) ok (fun t h => nomatch h)
 
-/-! ## `__setattr__`, `_set_integer_check`, `_set_signal_dict` -/
+/-! ## `x in seq` and `_set_signal_dict`, stated without the model's functions -/
 
-/-- A dict whose keys are exactly the nine signals (each once or more). -/
-def ValidSigDict (d : List (SigKey × SigVal)) : Prop :=
-  hasOther d = false ∧ ∀ s, hasKey d (.sig s) = true
+/-- The first answer that is not `no`, or `no` when every one is: what `x in seq` gives when its
+comparisons with the items of `seq` answer `as`, in order. -/
+def firstAns : List EqAns → EqAns
+  | [] => .no
+  | .no :: rest => firstAns rest
+  | a :: _ => a
+
+/-- An answer that is not an exception. -/
+def NotRaise (a : EqAns) : Prop := ∀ e, a ≠ .raises e
+
+/-- What `k in _signals` answers (_pydecimal.py:4023): `signal == k` for each signal in order. -/
+def KeyIn (k : SigKey) : EqAns := firstAns (pySignals.map k.eqSig)
+
+/-- `_set_signal_dict(name, d)` on a dict `d` (_pydecimal.py:4019-4028), outcome by outcome, `r`
+being its result and `K` what holds of the dict it stores (its signal entries, its other keys).
+The keys are searched for in `_signals` in insertion order (:4022-4024): the first whose `__eq__`
+raises raises that exception, and the first equal to no signal raises what
+`raise KeyError("%s is not a valid signal dict" % d)` raises (`PctRaises`: the `KeyError`, or the
+exception `repr()` of a key or value raises). When every key equals some signal, a signal that is
+not a key raises the same (:4025-4027); otherwise `d` is stored, with any key that is not a signal
+but compared equal to one. -/
+def DictOutcome {α : Type} (d : List (SigKey × SigVal)) (r : Py α)
+    (K : SigDict → List (SigKey × SigVal) → Prop) : Prop :=
+  (∀ pre k v post e, d = pre ++ (k, v) :: post → (∀ p ∈ pre, KeyIn p.1 = .yes) →
+    KeyIn k = .raises e → r = .error e) ∧
+  (∀ pre k v post, d = pre ++ (k, v) :: post → (∀ p ∈ pre, KeyIn p.1 = .yes) → KeyIn k = .no →
+    ∃ x, r = .error x ∧ PctRaises (.dict d) (.keyError "~is not a valid signal dict") x) ∧
+  ((∀ p ∈ d, KeyIn p.1 = .yes) → (∃ s, ∀ v, (SigKey.sig s, v) ∉ d) →
+    ∃ x, r = .error x ∧ PctRaises (.dict d) (.keyError "~is not a valid signal dict") x) ∧
+  ((∀ p ∈ d, KeyIn p.1 = .yes) → (∀ s, ∃ v, (SigKey.sig s, v) ∈ d) →
+    K (sigEntries d) (extrasOf d))
+
+theorem ansIn_first : ∀ as : List EqAns, ansIn as =
+    match firstAns as with
+    | .yes => .ok true
+    | .no => .ok false
+    | .raises e => .error e
+  | [] => rfl
+  | .yes :: _ => rfl
+  | .no :: rest => by simp only [ansIn, firstAns]; exact ansIn_first rest
+  | .raises _ :: _ => rfl
+
+theorem ansIn_ok_of (as : List EqAns) (h : NotRaise (firstAns as)) :
+    ansIn as = .ok (decide (firstAns as = .yes)) := by
+  rw [ansIn_first]
+  cases hf : firstAns as with
+  | yes => rfl
+  | no => rfl
+  | raises e => exact absurd hf (h e)
+
+theorem ansIn_err_of (as : List EqAns) (e : PyExc) (h : firstAns as = .raises e) :
+    ansIn as = .error e := by
+  rw [ansIn_first, h]
+
+theorem keyIn_yes {k : SigKey} (h : KeyIn k = .yes) : ansIn (pySignals.map k.eqSig) = .ok true := by
+  have h' : firstAns (pySignals.map k.eqSig) = .yes := h
+  rw [ansIn_first, h']
+
+theorem keyIn_no {k : SigKey} (h : KeyIn k = .no) : ansIn (pySignals.map k.eqSig) = .ok false := by
+  have h' : firstAns (pySignals.map k.eqSig) = .no := h
+  rw [ansIn_first, h']
+
+theorem keyIn_raises {k : SigKey} {e : PyExc} (h : KeyIn k = .raises e) :
+    ansIn (pySignals.map k.eqSig) = .error e := by
+  have h' : firstAns (pySignals.map k.eqSig) = .raises e := h
+  rw [ansIn_first, h']
+
+theorem checkKeys_cons_yes (fmt : PyExc) (k : SigKey) (v : SigVal) (rest : List (SigKey × SigVal))
+    (h : KeyIn k = .yes) : checkKeys fmt ((k, v) :: rest) = checkKeys fmt rest := by
+  simp [checkKeys, keyIn_yes h, bind, Except.bind, pure, Except.pure]
+
+theorem checkKeys_cons_no (fmt : PyExc) (k : SigKey) (v : SigVal) (rest : List (SigKey × SigVal))
+    (h : KeyIn k = .no) : checkKeys fmt ((k, v) :: rest) = .error fmt := by
+  simp [checkKeys, keyIn_no h, bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
+
+theorem checkKeys_cons_raises (fmt e : PyExc) (k : SigKey) (v : SigVal) (rest : List (SigKey × SigVal))
+    (h : KeyIn k = .raises e) : checkKeys fmt ((k, v) :: rest) = .error e := by
+  simp [checkKeys, keyIn_raises h, bind, Except.bind]
+
+theorem checkKeys_pre (fmt : PyExc) : ∀ (pre rest : List (SigKey × SigVal)),
+    (∀ p ∈ pre, KeyIn p.1 = .yes) → checkKeys fmt (pre ++ rest) = checkKeys fmt rest
+  | [], rest, _ => rfl
+  | (k, v) :: pre, rest, h => by
+    rw [List.cons_append, checkKeys_cons_yes fmt k v _ (h (k, v) (by simp))]
+    exact checkKeys_pre fmt pre rest (fun p hp => h p (by simp [hp]))
+
+theorem checkKeys_all (fmt : PyExc) (d : List (SigKey × SigVal)) (h : ∀ p ∈ d, KeyIn p.1 = .yes) :
+    checkKeys fmt d = .ok () := by
+  have := checkKeys_pre fmt d [] h
+  simpa [checkKeys] using this
+
+theorem hasKey_iff (d : List (SigKey × SigVal)) (s : Signal) :
+    hasKey d (.sig s) = true ↔ ∃ v, (SigKey.sig s, v) ∈ d := by
+  unfold hasKey
+  rw [List.any_eq_true]
+  constructor
+  · rintro ⟨⟨k, v⟩, hm, hk⟩
+    have : k = .sig s := by simpa using hk
+    subst this
+    exact ⟨v, hm⟩
+  · rintro ⟨v, hm⟩
+    exact ⟨(.sig s, v), hm, by simp⟩
+
+/-- The model's `_set_signal_dict` on a dict has every outcome `DictOutcome` states. -/
+theorem setSignalDict_outcome (d : List (SigKey × SigVal)) :
+    DictOutcome d (setSignalDict (.dict d)) (fun T X => setSignalDict (.dict d) = .ok (T, X)) := by
+  refine ⟨fun pre k v post e hd hp hk => ?_, fun pre k v post hd hp hk => ?_, fun hall hs => ?_,
+    fun hall hs => ?_⟩
+  · subst hd
+    simp only [setSignalDict, checkKeys_pre _ pre _ hp, checkKeys_cons_raises _ e k v post hk, bind,
+      Except.bind]
+  · subst hd
+    refine ⟨_, ?_, pct_spec _ _⟩
+    simp only [setSignalDict, checkKeys_pre _ pre _ hp, checkKeys_cons_no _ k v post hk, bind,
+      Except.bind]
+  · refine ⟨_, ?_, pct_spec (.dict d) _⟩
+    obtain ⟨s, hs⟩ := hs
+    have h1 : pySignals.all (fun s => hasKey d (.sig s)) = false := by
+      rw [List.all_eq_false]
+      refine ⟨s, pySignals_mem s, fun hh => ?_⟩
+      obtain ⟨v, hv⟩ := (hasKey_iff d s).1 hh
+      exact hs v hv
+    simp [setSignalDict, checkKeys_all _ d hall, h1, bind, Except.bind, throw, throwThe,
+      MonadExceptOf.throw]
+  · have h1 : pySignals.all (fun s => hasKey d (.sig s)) = true := by
+      rw [List.all_eq_true]
+      intro s _
+      exact (hasKey_iff d s).2 (hs s)
+    simp [setSignalDict, checkKeys_all _ d hall, h1, bind, Except.bind, pure, Except.pure]
+
+theorem DictOutcome.bind {α : Type} {d : List (SigKey × SigVal)}
+    {m : Py (SigDict × List (SigKey × SigVal))} {f : SigDict × List (SigKey × SigVal) → Py α}
+    (h : DictOutcome d m (fun T X => m = .ok (T, X))) :
+    DictOutcome d (m >>= f) (fun T X => (m >>= f) = f (T, X)) := by
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  refine ⟨fun pre k v post e hd hp hk => ?_, fun pre k v post hd hp hk => ?_, fun ha hs => ?_,
+    fun ha hs => ?_⟩
+  · rw [h1 pre k v post e hd hp hk]; try rfl
+  · obtain ⟨x, hx, hpx⟩ := h2 pre k v post hd hp hk
+    exact ⟨x, by rw [hx]; try rfl, hpx⟩
+  · obtain ⟨x, hx, hpx⟩ := h3 ha hs
+    exact ⟨x, by rw [hx]; try rfl, hpx⟩
+  · rw [h4 ha hs]; try rfl
+
+theorem DictOutcome.mono {α : Type} {d : List (SigKey × SigVal)} {r : Py α}
+    {K K' : SigDict → List (SigKey × SigVal) → Prop}
+    (h : DictOutcome d r K) (hk : ∀ T X, K T X → K' T X) : DictOutcome d r K' :=
+  ⟨h.1, h.2.1, h.2.2.1, fun a b => hk _ _ (h.2.2.2 a b)⟩
+
+/-! ## `__setattr__`, `_set_integer_check`, `_set_signal_dict` -/
 
 /-- Every assignment to a `_pydecimal` `Context` attribute (_pydecimal.py:4005-4053):
 
@@ -186,11 +333,14 @@ def ValidSigDict (d : List (SigKey × SigVal)) : Prop :=
   mode" % value)` (:4045) raises (`PctRaises`): the `TypeError`, or the exception `str(value)`
   raises (an int of more than 4300 digits, `[10**5000]`, a `__str__` that raises), or for a tuple
   the argument-tuple errors of `%`;
-* `flags` and `traps` store a dict whose keys are exactly the signals; a dict with another key or
-  a missing signal raises what `raise KeyError("%s is not a valid signal dict" % d)` raises: the
-  `KeyError`, or the exception `repr()` of the first key or value that does not print raises
-  (`{10**5000: 1}`, `{Clamped: 10**5000, ...}`); anything else raises what
-  `raise TypeError("%s must be a signal dict" % d)` raises (:4019-4028);
+* `flags` and `traps` given a dict have every outcome of `DictOutcome` (:4019-4028): each key is
+  searched for in `_signals` with `==`, so a key whose `__eq__` raises raises that exception
+  (`Context().traps = {k: 1}`), a key equal to no signal raises what
+  `raise KeyError("%s is not a valid signal dict" % d)` raises (the `KeyError`, or the exception
+  `repr()` of the first key or value that does not print raises: `{10**5000: 1}`,
+  `{Clamped: 10**5000, ...}`), as does a missing signal, and otherwise the dict is stored, a key
+  that is not a signal but compared equal to one included (the nine signals plus such a key are
+  accepted); anything else raises what `raise TypeError("%s must be a signal dict" % d)` raises;
 * `_ignored_flags` stores its value (:4049-4050);
 * any other name is an `AttributeError` (:4051-4053).
 
@@ -252,12 +402,10 @@ def SetattrExact : Prop :=
     (((∃ s, v = .obj s) ∨ (∃ t, v = .tuple t) ∨ (∃ l, v = .list l) ∨ (∃ d, v = .dict d)) →
       ∃ r, pySetattr c "rounding" v = .error r ∧ PctRaises v (.typeError "~: invalid rounding mode") r) ∧
     -- flags, traps
-    (∀ d, ValidSigDict d →
-      pySetattr c "flags" (.dict d) = .ok { c with flags := sigEntries d } ∧
-      pySetattr c "traps" (.dict d) = .ok { c with traps := sigEntries d }) ∧
-    (∀ d, (hasOther d = true ∨ ∃ s, hasKey d (.sig s) = false) →
-      ∃ r, pySetattr c "flags" (.dict d) = .error r ∧ pySetattr c "traps" (.dict d) = .error r ∧
-        PctRaises (.dict d) (.keyError "~is not a valid signal dict") r) ∧
+    (∀ d, DictOutcome d (pySetattr c "flags" (.dict d))
+        (fun T X => pySetattr c "flags" (.dict d) = .ok { c with flags := T, flagsExtra := X }) ∧
+      DictOutcome d (pySetattr c "traps" (.dict d))
+        (fun T X => pySetattr c "traps" (.dict d) = .ok { c with traps := T, trapsExtra := X })) ∧
     ((∀ d, v ≠ .dict d) →
       ∃ r, pySetattr c "flags" v = .error r ∧ pySetattr c "traps" v = .error r ∧
         PctRaises v (.typeError "~must be a signal dict") r) ∧
@@ -276,23 +424,6 @@ theorem ignoredOf_map (l : List Signal) : ignoredOf (.list (l.map .sig)) = l := 
   induction l with
   | nil => rfl
   | cons x xs ih => simpa [ignoredOf] using ih
-
-theorem setSignalDict_valid (d : List (SigKey × SigVal)) (h : ValidSigDict d) :
-    setSignalDict (.dict d) = .ok (sigEntries d) := by
-  have h1 : pySignals.all (fun s => hasKey d (.sig s)) = true := by
-    rw [List.all_eq_true]; intro s _; exact h.2 s
-  simp [setSignalDict, h.1, h1]
-
-theorem setSignalDict_bad (d : List (SigKey × SigVal))
-    (h : hasOther d = true ∨ ∃ s, hasKey d (.sig s) = false) :
-    setSignalDict (.dict d) = .error ((CtxArg.dict d).pct (.keyError "~is not a valid signal dict")) := by
-  rcases h with h | ⟨s, hs⟩
-  · simp [setSignalDict, h]
-  · have h1 : pySignals.all (fun s => hasKey d (.sig s)) = false := by
-      rw [List.all_eq_false]; exact ⟨s, pySignals_mem s, by simp [hs]⟩
-    by_cases ho : hasOther d = true
-    · simp [setSignalDict, ho]
-    · simp [setSignalDict, ho, h1]
 
 theorem setSignalDict_nondict (v : CtxArg) (h : ∀ d, v ≠ .dict d) :
     setSignalDict v = .error (v.pct (.typeError "~must be a signal dict")) := by
@@ -346,8 +477,8 @@ theorem setattrExact_proven : SetattrExact := by
   intro c n v
   refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun h => ?_, fun h => ?_, fun h => ?_, fun h => ?_,
     fun h1 h2 => ?_, ?_, fun hv => ?_, fun r => ?_, fun s hs => ?_, fun id eq st i hi hp => ?_,
-    fun id eq st hp => ?_, ?_, ?_, ?_, ?_, fun hv => ?_, fun d hd => ?_,
-    fun d hd => ?_, fun hv => ?_, fun l => ?_, fun name hn => ?_⟩
+    fun id eq st hp => ?_, ?_, ?_, ?_, ?_, fun hv => ?_, fun d => ?_,
+    fun hv => ?_, fun l => ?_, fun name hn => ?_⟩
   · rw [pySetattr_prec, if_neg (by omega)]
   · rw [pySetattr_prec, if_pos h]
   · rw [pySetattr_emin, if_neg (by omega)]
@@ -380,10 +511,9 @@ theorem setattrExact_proven : SetattrExact := by
   · rfl
   · rfl
   · exact ⟨_, pySetattr_rounding_other c v hv, pct_spec v _⟩
-  · simp [pySetattr, setSignalDict_valid d hd, bind, Except.bind, pure, Except.pure]
-  · have hm := setSignalDict_bad d hd
-    exact ⟨_, by simp [pySetattr, hm, bind, Except.bind], by simp [pySetattr, hm, bind, Except.bind],
-      pct_spec (.dict d) _⟩
+  · refine ⟨?_, ?_⟩
+    · rw [pySetattr_flags]; exact DictOutcome.bind (setSignalDict_outcome d)
+    · rw [pySetattr_traps]; exact DictOutcome.bind (setSignalDict_outcome d)
   · have hm := setSignalDict_nondict v hv
     exact ⟨_, by simp [pySetattr, hm, bind, Except.bind], by simp [pySetattr, hm, bind, Except.bind],
       pct_spec v _⟩
@@ -436,65 +566,92 @@ def optSig : Option SigArg → CtxArg
   | none => .none
   | some t => t.arg
 
-/-- An argument `_set_signal_dict` accepts: a list of signals only, or a dict whose keys are
-exactly the signals. -/
-def SigArg.valid : SigArg → Prop
-  | .list l => ∀ k ∈ l, k.isSig = true
-  | .dict d => ValidSigDict d
-
-/-- What a valid argument becomes: for a list, `dict((s, int(s in l)) for s in _signals + l)`
-(_pydecimal.py:3994, :4001), each signal in `_signals` order, set exactly when listed; a dict is
-stored as given. -/
-def SigArg.stored : SigArg → SigDict
-  | .list l => pySignals.map (fun s => (s, l.contains (.sig s)))
-  | .dict d => sigEntries d
-
-/-- The dict an optional argument leaves: `D` when it is not given. -/
-def SigArg.storedOr (D : SigDict) : Option SigArg → SigDict
-  | none => D
-  | some t => t.stored
-
 /-- What `hash()` of an element raises (`none`: it is hashable); a signal is a class. -/
 def SigKey.hashErr : SigKey → StrErr
   | .sig _ => none
-  | .other _ h => h
+  | .other _ h _ => h
 
-/-- `r` is what `Context()` raises for a `flags` or `traps` argument `_set_signal_dict` refuses.
-A list first becomes `dict((s, int(s in l)) for s in _signals + l)` (:3994, :4001), whose
-construction hashes the elements in order: the first one whose `hash()` raises `e` stops it, a
-`TypeError` becoming "cannot use '<type>' as a dict key (<e>)" and anything else propagating
-(Objects/dictobject.c:2442-2461). When every element hashes, the dict has a key that is not a
-signal and `raise KeyError("%s is not a valid signal dict" % d)` (:4024) formats it: the signals
-and the `0`/`1` values print, so it raises the `KeyError` when every element prints, or the
-exception `repr()` of the first element that does not print raises. A dict goes to
-`_set_signal_dict` as is (`PctRaises`). -/
-def SigRefusal : SigArg → PyExc → Prop
-  | .list l, r =>
-    (∀ pre k post e, l = pre ++ k :: post → (∀ x ∈ pre, x.hashErr = none) → k.hashErr = some e →
-      (∀ m, e = .typeError m → r = .typeError s!"~cannot use as a dict key ({m})") ∧
-      ((∀ m, e ≠ .typeError m) → r = e)) ∧
-    ((∀ x ∈ l, x.hashErr = none) →
-      (AllPrint l → r = .keyError "~is not a valid signal dict") ∧ ∀ e, ListRaises l e → r = e)
-  | .dict d, r => PctRaises (.dict d) (.keyError "~is not a valid signal dict") r
+/-- What `s in l` answers for a signal `s` (`int(s in traps)`, _pydecimal.py:3994): the elements'
+comparisons with `s`, in order. -/
+def SigAns (l : List SigKey) (s : Signal) : EqAns := firstAns (l.map (fun x : SigKey => x.eqSig s))
+
+/-- What `k in l` answers for an element `k` before it reaches itself, `pre` the elements before
+it: a signal `t` among them answers through `k`'s reflected `__eq__`, another non-signal element is
+unequal (scope of `SigKey.other`). -/
+def SelfAns (pre : List SigKey) (k : SigKey) : EqAns := firstAns (pre.map k.ansBefore)
+
+/-- An element `dict(...)` takes in: its `k in l` does not raise and it hashes. -/
+def ElemOk (pre : List SigKey) (k : SigKey) : Prop := NotRaise (SelfAns pre k) ∧ k.hashErr = none
+
+/-- An element on which `dict(...)` stops with `r`: its `k in l` raises `r`, or it is hashed and
+`hash()` raises, a `TypeError` becoming "cannot use '<type>' as a dict key (<e>)" and anything else
+propagating (Objects/dictobject.c:2442-2461). -/
+def ElemFails (pre : List SigKey) (k : SigKey) (r : PyExc) : Prop :=
+  SelfAns pre k = .raises r ∨
+  (NotRaise (SelfAns pre k) ∧ ∃ h, k.hashErr = some h ∧
+    (∀ m, h = .typeError m → r = .typeError s!"~cannot use as a dict key ({m})") ∧
+    ((∀ m, h ≠ .typeError m) → r = h))
+
+/-- The items the elements of `l` that are not signals add, each with the value `1`. -/
+def otherList : List SigKey → List (SigKey × SigVal)
+  | [] => []
+  | .sig _ :: rest => otherList rest
+  | .other r _ eq :: rest => (.other r none eq, { truth := true }) :: otherList rest
+
+/-- `dict((s, int(s in l)) for s in _signals + l)` when nothing raises: the nine signals, each set
+when `s in l` is true, then the other elements. -/
+def ListBuilt (l : List SigKey) : List (SigKey × SigVal) :=
+  pySignals.map (fun s => (SigKey.sig s, ({ truth := decide (SigAns l s = .yes) } : SigVal))) ++
+    otherList l
+
+/-- `Context()` with the list `l` as `traps` or `flags` (_pydecimal.py:3993-3994, :4000-4001), `r`
+being the result and `K` what holds of the stored dict: `dict(...)` takes the signals first, in
+`_signals` order, and the first whose `s in l` raises raises that; then the elements in order, the
+first that fails (`ElemFails`) raising its exception; then the dict goes to `_set_signal_dict`
+(`DictOutcome`). -/
+def ListOutcome {α : Type} (l : List SigKey) (r : Py α)
+    (K : SigDict → List (SigKey × SigVal) → Prop) : Prop :=
+  (∀ pre s post e, pySignals = pre ++ s :: post → (∀ t ∈ pre, NotRaise (SigAns l t)) →
+    SigAns l s = .raises e → r = .error e) ∧
+  ((∀ s, NotRaise (SigAns l s)) → ∀ pre k post e, l = pre ++ k :: post →
+    (∀ pre1 k1 post1, pre = pre1 ++ k1 :: post1 → ElemOk pre1 k1) → ElemFails pre k e → r = .error e) ∧
+  ((∀ s, NotRaise (SigAns l s)) → (∀ pre k post, l = pre ++ k :: post → ElemOk pre k) →
+    DictOutcome (ListBuilt l) r K)
+
+def SigOutcome {α : Type} : SigArg → Py α → (SigDict → List (SigKey × SigVal) → Prop) → Prop
+  | .list l, r, K => ListOutcome l r K
+  | .dict d, r, K => DictOutcome d r K
+
+/-- An optional argument: when it is not given, the dict `D` with the other keys `X` is stored. -/
+def SigOutcomeOpt {α : Type} (D : SigDict) (X : List (SigKey × SigVal)) :
+    Option SigArg → Py α → (SigDict → List (SigKey × SigVal) → Prop) → Prop
+  | none, _, K => K D X
+  | some t, r, K => SigOutcome t r K
+
+/-- A value that is neither a list nor a dict, given. -/
+def NotSigArg (v : CtxArg) : Prop := v ≠ .none ∧ (∀ l, v ≠ .list l) ∧ ∀ d, v ≠ .dict d
 
 /-- `Context(prec, rounding, Emin, Emax, capitals, clamp, flags, traps, _ignored_flags)`
 (_pydecimal.py:3969-4003) with ints, rounding modes, `_ignored_flags` a list of signals, and
 `flags` and `traps` lists or dicts, for every `DefaultContext` (a context: its `traps` has every
-signal, and a non-str `rounding` it holds compares equal to the mode stored with it, as
-`__setattr__` checked when it was assigned). An argument that is not given (or `None`) is taken
-from `DefaultContext`, except `flags`, which start clear, and `_ignored_flags`, which starts empty.
-When every value is accepted the context holds exactly these values (a list of signals becoming the
-dict of those set, a dict stored as is). Otherwise the attributes are assigned in the order `prec`,
-`rounding`, `Emin`, `Emax`, `capitals`, `clamp`, `_ignored_flags`, `traps`, `flags`, and the first
-refused value raises: the `ValueError` of `_set_integer_check` (the int/str-limit `ValueError` when
-its `%s` has more than 4300 digits), the `TypeError` of an unknown rounding name, what refusing a
-`traps` or `flags` list or dict raises (`SigRefusal`: an unhashable element's `TypeError`, the
-`KeyError`, or the exception of formatting the dict into its message, as for `Context(traps=[[]])`
-and `Context(traps=[10**5000])`), or the `TypeError` of a `prec` that is not an int. -/
+signal, any other key it holds compares equal to a signal, and a non-str `rounding` it holds
+compares equal to the mode stored with it, as `__setattr__` checked when they were assigned). An
+argument that is not given (or `None`) is taken from `DefaultContext` (`dc.traps.copy()`, other
+keys included), except `flags`, which start clear, and `_ignored_flags`, which starts empty. The
+attributes are assigned in the order `prec`, `rounding`, `Emin`, `Emax`, `capitals`, `clamp`,
+`_ignored_flags`, `traps`, `flags`, and the first refused value raises: the `ValueError` of
+`_set_integer_check` (the int/str-limit `ValueError` when its `%s` has more than 4300 digits), the
+`TypeError` of an unknown rounding name, the `TypeError` of a `prec` that is not an int, and for
+`traps` then `flags` every outcome of `ListOutcome` (a list: `s in l` and `k in l` run the
+elements' `__eq__`, so `Context(traps=[k])` raises what `k.__eq__` raises, or with a `k` equal to
+every signal traps every signal and keeps `k`; then hashing) or `DictOutcome` (a dict); any other
+value fails at `_signals + value` with `TypeError`. When every value is accepted the context holds
+exactly these values. -/
 def ContextInitExact : Prop :=
   ∀ (dc : PyContext) (p emin emax cap cl : Option Int) (r : Option Rounding)
     (ig : Option (List Signal)) (fl tr : Option SigArg),
     (∀ s, (dc.traps.lookup s).isSome) →
+    (∀ q ∈ dc.trapsExtra, q.1.isSig = false ∧ KeyIn q.1 = .yes) →
     (∀ id eq st, dc.roundingObj = some (id, eq, st) → eqIn eq roundingModes = .ok (some dc.rounding)) →
     let P := p.getD dc.prec
     let Em := emin.getD dc.emin
@@ -505,17 +662,21 @@ def ContextInitExact : Prop :=
                          emax := optInt emax, capitals := optInt cap, clamp := optInt cl,
                          flags := optSig fl, traps := optSig tr, ignored := ig }
     let IntsOk : Prop := 1 ≤ P ∧ Em ≤ 0 ∧ 0 ≤ EM ∧ (Ca = 0 ∨ Ca = 1) ∧ (Cl = 0 ∨ Cl = 1)
-    let TrOk : Prop := ∀ t, tr = some t → t.valid
-    (IntsOk → TrOk → (∀ f, fl = some f → f.valid) →
-      pyContextNew dc a = .ok
-        { prec := P, rounding := r.getD dc.rounding, emin := Em, emax := EM, capitals := Ca,
-          clamp := Cl,
-          flags := SigArg.storedOr (pySignals.map (fun s => (s, false))) fl,
-          traps := SigArg.storedOr dc.traps tr,
-          ignored := ig.getD [],
-          roundingObj := (match r with
-            | none => dc.roundingObj
-            | some _ => none) }) ∧
+    let RO : Option (Nat × List EqAns × StrErr) := match r with
+      | none => dc.roundingObj
+      | some _ => none
+    (IntsOk →
+      SigOutcomeOpt dc.traps dc.trapsExtra tr (pyContextNew dc a) (fun T X =>
+        SigOutcomeOpt (pySignals.map (fun s => (s, false))) [] fl (pyContextNew dc a) (fun F Y =>
+          pyContextNew dc a = .ok
+            { prec := P, rounding := r.getD dc.rounding, emin := Em, emax := EM, capitals := Ca,
+              clamp := Cl, flags := F, traps := T, ignored := ig.getD [], roundingObj := RO,
+              flagsExtra := Y, trapsExtra := X }))) ∧
+    (IntsOk → ∀ v, NotSigArg v →
+      pyContextNew dc { a with traps := v } = .error (.typeError "~can only concatenate list to list")) ∧
+    (IntsOk → ∀ v, NotSigArg v →
+      SigOutcomeOpt dc.traps dc.trapsExtra tr (pyContextNew dc { a with flags := v }) (fun _ _ =>
+        pyContextNew dc { a with flags := v } = .error (.typeError "~can only concatenate list to list"))) ∧
     (P < 1 → pyContextNew dc a = .error (limitOr P (.valueError s!"prec must be in [1, inf]. got: {P}"))) ∧
     (∀ s, roundingOfName s = none → 1 ≤ P →
       pyContextNew dc { a with rounding := .str s } = .error (.typeError s!"{s}: invalid rounding mode")) ∧
@@ -527,10 +688,6 @@ def ContextInitExact : Prop :=
       pyContextNew dc a = .error (limitOr Ca (.valueError s!"capitals must be in [0, 1]. got {Ca}"))) ∧
     (1 ≤ P → Em ≤ 0 → 0 ≤ EM → (Ca = 0 ∨ Ca = 1) → ¬(Cl = 0 ∨ Cl = 1) →
       pyContextNew dc a = .error (limitOr Cl (.valueError s!"clamp must be in [0, 1]. got {Cl}"))) ∧
-    (IntsOk → ∀ t, tr = some t → ¬ t.valid →
-      ∃ e, pyContextNew dc a = .error e ∧ SigRefusal t e) ∧
-    (IntsOk → TrOk → ∀ f, fl = some f → ¬ f.valid →
-      ∃ e, pyContextNew dc a = .error e ∧ SigRefusal f e) ∧
     (∀ v, intValue v = none → v ≠ .none →
       pyContextNew dc { a with prec := v } = .error (.typeError "prec must be an integer"))
 
@@ -540,125 +697,10 @@ theorem orElse_optInt (o : Option Int) (d : Int) : orElseArg (optInt o) (.int d)
 theorem orElse_ne (v d : CtxArg) (h : v ≠ .none) : orElseArg v d = v := by
   cases v <;> simp_all [orElseArg]
 
-theorem listDict_total (l : List SigKey) (s : Signal) :
-    ((pySignals.map (fun s => (s, l.contains (.sig s)))).lookup s).isSome := by
-  cases s <;> rfl
-
 theorem clearDict0_keyed :
     setSignalDict (.dict (keyed (pySignals.map (fun s => (s, false))))) =
-      .ok (pySignals.map (fun s => (s, false))) :=
+      .ok (pySignals.map (fun s => (s, false)), []) :=
   setSignalDict_keyed _ clearDict0_total
-
-/-- The items `otherItems` adds when every element hashes. -/
-def otherList : List SigKey → List (SigKey × SigVal)
-  | [] => []
-  | .sig _ :: rest => otherList rest
-  | .other r _ :: rest => (.other r none, { truth := true }) :: otherList rest
-
-theorem otherItems_ok : ∀ l : List SigKey, (∀ x ∈ l, x.hashErr = none) →
-    otherItems l = .ok (otherList l)
-  | [], _ => rfl
-  | .sig s :: rest, h => by
-    simp only [otherItems, otherList]
-    exact otherItems_ok rest (fun x hx => h x (by simp [hx]))
-  | .other r hh :: rest, h => by
-    have h0 : hh = none := h (.other r hh) (by simp)
-    subst h0
-    simp only [otherItems, otherList]
-    rw [otherItems_ok rest (fun x hx => h x (by simp [hx]))]
-    rfl
-
-theorem otherItems_err (e : PyExc) : ∀ (pre : List SigKey) (k : SigKey) (post : List SigKey),
-    (∀ x ∈ pre, x.hashErr = none) → k.hashErr = some e →
-    otherItems (pre ++ k :: post) = .error (dictKeyExc e)
-  | [], .sig s, post, _, hk => by simp [SigKey.hashErr] at hk
-  | [], .other r h, post, _, hk => by
-    simp only [SigKey.hashErr] at hk
-    subst hk
-    rfl
-  | .sig s :: pre, k, post, hp, hk => by
-    simp only [List.cons_append, otherItems]
-    exact otherItems_err e pre k post (fun x hx => hp x (by simp [hx])) hk
-  | .other r h :: pre, k, post, hp, hk => by
-    have h0 : h = none := hp (.other r h) (by simp)
-    subst h0
-    simp only [List.cons_append, otherItems]
-    rw [otherItems_err e pre k post (fun x hx => hp x (by simp [hx])) hk]
-    rfl
-
-theorem first_hash_err : ∀ l : List SigKey, ¬ (∀ x ∈ l, x.hashErr = none) →
-    ∃ pre k post e, l = pre ++ k :: post ∧ (∀ x ∈ pre, x.hashErr = none) ∧ k.hashErr = some e
-  | [], h => absurd (fun x hx => by simp at hx) h
-  | k :: rest, h => by
-    cases hk : k.hashErr with
-    | some e => exact ⟨[], k, rest, e, rfl, by simp, hk⟩
-    | none =>
-      have h' : ¬ (∀ x ∈ rest, x.hashErr = none) := fun hr => h (fun x hx => by
-        simp only [List.mem_cons] at hx
-        rcases hx with rfl | hx
-        · exact hk
-        · exact hr x hx)
-      obtain ⟨pre, k', post, e, h1, h2, h3⟩ := first_hash_err rest h'
-      refine ⟨k :: pre, k', post, e, by simp [h1], fun x hx => ?_, h3⟩
-      simp only [List.mem_cons] at hx
-      rcases hx with rfl | hx
-      · exact hk
-      · exact h2 x hx
-
-theorem dictReprErr_otherList : ∀ l : List SigKey, dictReprErr (otherList l) = listReprErr l
-  | [] => rfl
-  | .sig s :: rest => by
-    simp only [otherList, listReprErr, SigKey.reprErr]
-    exact dictReprErr_otherList rest
-  | .other r h :: rest => by
-    cases r with
-    | some e => simp [otherList, listReprErr, dictReprErr, SigKey.reprErr]
-    | none =>
-      simp only [otherList, listReprErr, dictReprErr, SigKey.reprErr]
-      exact dictReprErr_otherList rest
-
-theorem dictReprErr_sigs_append (b : Signal → Bool) (rest : List (SigKey × SigVal)) :
-    dictReprErr (pySignals.map (fun s => (SigKey.sig s, ({ truth := b s } : SigVal))) ++ rest) =
-      dictReprErr rest := by
-  simp [pySignals, dictReprErr, SigKey.reprErr]
-
-theorem hasOther_otherList : ∀ l : List SigKey, (∃ k ∈ l, k.isSig = false) →
-    hasOther (otherList l) = true
-  | [], ⟨k, hk, _⟩ => by simp at hk
-  | .sig s :: rest, ⟨k, hk, hs⟩ => by
-    simp only [List.mem_cons] at hk
-    rcases hk with rfl | hk
-    · simp [SigKey.isSig] at hs
-    · simp only [otherList]
-      exact hasOther_otherList rest ⟨k, hk, hs⟩
-  | .other r h :: rest, _ => by simp [otherList, hasOther, SigKey.isSig]
-
-theorem otherList_sigs : ∀ l : List SigKey, (∀ k ∈ l, k.isSig = true) → otherList l = []
-  | [], _ => rfl
-  | .sig s :: rest, h => by
-    simp only [otherList]
-    exact otherList_sigs rest (fun k hk => h k (by simp [hk]))
-  | .other r hh :: rest, h => by simpa [SigKey.isSig] using h (.other r hh) (by simp)
-
-theorem signalDictOf_valid (l : List SigKey) (h : ∀ k ∈ l, k.isSig = true) :
-    signalDictOf l = .ok (keyed (pySignals.map (fun s => (s, l.contains (.sig s))))) := by
-  have hh : ∀ x ∈ l, x.hashErr = none := fun x hx => by
-    have := h x hx
-    cases x with
-    | sig s => rfl
-    | other r e => simp [SigKey.isSig] at this
-  simp only [signalDictOf, otherItems_ok l hh, otherList_sigs l h, keyed, List.map_map, List.append_nil,
-    bind, Except.bind, pure, Except.pure]
-  simp [Function.comp_def]
-
-theorem sigArg_ok (dflt : List (SigKey × SigVal)) (t : SigArg) (h : t.valid) :
-    ∃ d, signalArg dflt t.arg = .ok (.dict d) ∧ setSignalDict (.dict d) = .ok t.stored := by
-  cases t with
-  | list l =>
-    refine ⟨keyed (pySignals.map (fun s => (s, l.contains (.sig s)))), ?_, ?_⟩
-    · simp only [SigArg.arg, signalArg, signalDictOf_valid l h, bind, Except.bind, pure, Except.pure]
-    · exact setSignalDict_keyed _ (listDict_total l)
-  | dict d => exact ⟨d, rfl, setSignalDict_valid d h⟩
 
 theorem dictKeyExc_spec (e : PyExc) :
     (∀ m, e = .typeError m → dictKeyExc e = .typeError s!"~cannot use as a dict key ({m})") ∧
@@ -668,62 +710,150 @@ theorem dictKeyExc_spec (e : PyExc) :
   | typeError m => exact absurd rfl (h m)
   | _ => rfl
 
-/-- A refused argument: the error comes from building the dict, or from `_set_signal_dict`. -/
-theorem sigArg_bad (dflt : List (SigKey × SigVal)) (t : SigArg) (h : ¬ t.valid) :
-    ∃ e, SigRefusal t e ∧ (signalArg dflt t.arg = .error e ∨
-      ∃ d, signalArg dflt t.arg = .ok (.dict d) ∧ setSignalDict (.dict d) = .error e) := by
-  cases t with
-  | list l =>
-    have hne : ∃ k ∈ l, k.isSig = false := by
-      refine Classical.byContradiction fun hc => h (fun k hk => ?_)
-      cases hs : k.isSig
-      · exact absurd ⟨k, hk, hs⟩ hc
-      · rfl
-    by_cases hh : ∀ x ∈ l, x.hashErr = none
-    · let D := pySignals.map (fun s => (SigKey.sig s, ({ truth := l.contains (.sig s) } : SigVal))) ++
-        otherList l
-      have hD : signalArg dflt (SigArg.list l).arg = .ok (.dict D) := by
-        simp only [SigArg.arg, signalArg, signalDictOf, otherItems_ok l hh, bind, Except.bind, pure,
-          Except.pure, D]
-      have ho : hasOther D = true := by
-        simp [D, hasOther, List.any_append]
-        exact Or.inr (by simpa [hasOther] using hasOther_otherList l hne)
-      refine ⟨_, ⟨fun pre k post e hl _ hk => ?_, fun _ => ⟨fun hp => ?_, fun e he => ?_⟩⟩,
-        Or.inr ⟨D, hD, setSignalDict_bad D (Or.inl ho)⟩⟩
-      · exact absurd (hh k (by simp [hl])) (by simp [hk])
-      · simp [CtxArg.pct, pctExc, CtxArg.strErr, D, dictReprErr_sigs_append, dictReprErr_otherList,
-          listReprErr_none l hp]
-      · obtain ⟨pre, k, post, rfl, hp, hk⟩ := he
-        simp [CtxArg.pct, pctExc, CtxArg.strErr, D, dictReprErr_sigs_append, dictReprErr_otherList,
-          listReprErr_some e pre k post hp hk]
-    · obtain ⟨pre, k, post, e, rfl, hp, hk⟩ := first_hash_err l hh
-      have hE : signalArg dflt (SigArg.list (pre ++ k :: post)).arg = .error (dictKeyExc e) := by
-        simp only [SigArg.arg, signalArg, signalDictOf, otherItems_err e pre k post hp hk, bind,
-          Except.bind]
-      refine ⟨_, ⟨fun pre' k' post' e' hl hp' hk' => ?_, fun hall => absurd hall hh⟩, Or.inl hE⟩
-      have hE' := otherItems_err e' pre' k' post' hp' hk'
-      rw [← hl, otherItems_err e pre k post hp hk] at hE'
-      have heq : dictKeyExc e = dictKeyExc e' := by injection hE'
-      rw [heq]
-      exact dictKeyExc_spec e'
-  | dict d =>
-    have hb : hasOther d = true ∨ ∃ s, hasKey d (.sig s) = false := by
-      by_cases ho : hasOther d = true
-      · exact Or.inl ho
-      · refine Or.inr (Classical.byContradiction fun hc => h ⟨by simpa using ho, fun s => ?_⟩)
-        cases hs : hasKey d (.sig s)
-        · exact absurd ⟨s, hs⟩ hc
-        · rfl
-    exact ⟨_, pct_spec (.dict d) _, Or.inr ⟨d, rfl, setSignalDict_bad d hb⟩⟩
+theorem firstAns_noRaise : ∀ as : List EqAns, (∀ a ∈ as, NotRaise a) → NotRaise (firstAns as)
+  | [], _ => fun e h => nomatch h
+  | .yes :: _, _ => fun e h => nomatch h
+  | .no :: rest, h => by
+    simp only [firstAns]
+    exact firstAns_noRaise rest (fun a ha => h a (by simp [ha]))
+  | .raises e :: _, h => absurd rfl (h (.raises e) (by simp) e)
 
-/-- `signalArg` then `_set_signal_dict` on an accepted argument, or on none. -/
-theorem sigStep (dflt : List (SigKey × SigVal)) (D : SigDict) (o : Option SigArg)
-    (hD : setSignalDict (.dict dflt) = .ok D) (hv : ∀ t, o = some t → t.valid) :
-    ∃ d, signalArg dflt (optSig o) = .ok (.dict d) ∧
-      setSignalDict (.dict d) = .ok (SigArg.storedOr D o) := by
-  cases o with
-  | none => exact ⟨dflt, rfl, hD⟩
-  | some t => exact sigArg_ok dflt t (hv t rfl)
+/-- A signal element never makes `dict(...)` stop. -/
+theorem elemOk_sig (pre : List SigKey) (s : Signal) : ElemOk pre (.sig s) := by
+  refine ⟨firstAns_noRaise _ (fun a ha => ?_), rfl⟩
+  simp only [List.mem_map] at ha
+  obtain ⟨x, _, rfl⟩ := ha
+  cases x with
+  | sig t =>
+    show NotRaise ((SigKey.sig s).eqSig t)
+    simp only [SigKey.eqSig]
+    split <;> exact fun e h => nomatch h
+  | other r h eq =>
+    show NotRaise EqAns.no
+    exact fun e h => nomatch h
+
+theorem sigItems_ok (l : List SigKey) : ∀ ss : List Signal, (∀ s ∈ ss, NotRaise (SigAns l s)) →
+    sigItems l ss =
+      .ok (ss.map (fun s => (SigKey.sig s, ({ truth := decide (SigAns l s = .yes) } : SigVal))))
+  | [], _ => rfl
+  | s :: rest, h => by
+    have ha := ansIn_ok_of (l.map (fun x : SigKey => x.eqSig s)) (h s (by simp))
+    have hr := sigItems_ok l rest (fun t ht => h t (by simp [ht]))
+    simp only [sigItems, ha, hr, bind, Except.bind, pure, Except.pure, List.map_cons]
+    rfl
+
+theorem sigItems_err (l : List SigKey) (e : PyExc) : ∀ (pre : List Signal) (s : Signal) (post : List Signal),
+    (∀ t ∈ pre, NotRaise (SigAns l t)) → SigAns l s = .raises e →
+    sigItems l (pre ++ s :: post) = .error e
+  | [], s, post, _, hs => by
+    simp only [List.nil_append, sigItems, ansIn_err_of _ e hs, bind, Except.bind]
+  | t :: pre, s, post, hp, hs => by
+    have ha := ansIn_ok_of (l.map (fun x : SigKey => x.eqSig t)) (hp t (by simp))
+    simp only [List.cons_append, sigItems, ha, sigItems_err l e pre s post (fun x hx => hp x (by simp [hx])) hs,
+      bind, Except.bind]
+
+theorem selfIn_ok (k : SigKey) (pre : List SigKey) (h : NotRaise (SelfAns pre k)) :
+    selfIn k pre = .ok () := by
+  simp only [selfIn, ansIn_ok_of _ h, bind, Except.bind, pure, Except.pure]
+
+theorem selfIn_err (k : SigKey) (pre : List SigKey) (e : PyExc) (h : SelfAns pre k = .raises e) :
+    selfIn k pre = .error e := by
+  simp only [selfIn, ansIn_err_of _ e h, bind, Except.bind]
+
+theorem otherItems_ok : ∀ (l acc : List SigKey),
+    (∀ pre k post, l = pre ++ k :: post → ElemOk (acc ++ pre) k) → otherItems acc l = .ok (otherList l)
+  | [], _, _ => rfl
+  | .sig t :: rest, acc, h => by
+    simp only [otherItems, otherList]
+    exact otherItems_ok rest (acc ++ [.sig t]) (fun pre k post hl => by
+      have := h (.sig t :: pre) k post (by simp [hl])
+      simpa using this)
+  | .other r hh eq :: rest, acc, h => by
+    have h0 := h [] (.other r hh eq) rest (by simp)
+    simp only [List.append_nil] at h0
+    obtain ⟨h1, h2⟩ := h0
+    have h2' : hh = none := h2
+    subst h2'
+    have ih := otherItems_ok rest (acc ++ [.other r none eq]) (fun pre k post hl => by
+      have := h (.other r none eq :: pre) k post (by simp [hl])
+      simpa using this)
+    simp only [otherItems, otherList, selfIn_ok _ _ h1, ih, bind, Except.bind, pure, Except.pure]
+
+theorem otherItems_err (e : PyExc) : ∀ (pre acc : List SigKey) (k : SigKey) (post : List SigKey),
+    (∀ pre1 k1 post1, pre = pre1 ++ k1 :: post1 → ElemOk (acc ++ pre1) k1) →
+    ElemFails (acc ++ pre) k e → otherItems acc (pre ++ k :: post) = .error e
+  | [], acc, .sig t, post, _, hf => by
+    exfalso
+    obtain ⟨hn, hh⟩ := elemOk_sig (acc ++ []) t
+    rcases hf with hf | ⟨_, h, hh', _⟩
+    · exact hn e hf
+    · rw [hh] at hh'; exact nomatch hh'
+  | [], acc, .other r hh eq, post, _, hf => by
+    simp only [List.append_nil] at hf
+    rcases hf with hf | ⟨hn, h, hh', h1, h2⟩
+    · simp only [List.nil_append, otherItems, selfIn_err _ _ e hf, bind, Except.bind]
+    · have hh'' : hh = some h := hh'
+      subst hh''
+      simp only [List.nil_append, otherItems, selfIn_ok _ _ hn, bind, Except.bind]
+      by_cases ht : ∃ m, h = .typeError m
+      · obtain ⟨m, hm⟩ := ht
+        rw [(dictKeyExc_spec h).1 m hm, h1 m hm]
+      · have hn' : ∀ m, h ≠ .typeError m := fun m hm => ht ⟨m, hm⟩
+        rw [(dictKeyExc_spec h).2 hn', h2 hn']
+  | x :: pre, acc, k, post, hp, hf => by
+    have h0 := hp [] x pre (by simp)
+    simp only [List.append_nil] at h0
+    have ih := otherItems_err e pre (acc ++ [x]) k post (fun pre1 k1 post1 hl => by
+      have := hp (x :: pre1) k1 post1 (by simp [hl])
+      simpa using this) (by simpa using hf)
+    cases x with
+    | sig t =>
+      simp only [List.cons_append, otherItems]
+      exact ih
+    | other r hh eq =>
+      obtain ⟨h1, h2⟩ := h0
+      have h2' : hh = none := h2
+      subst h2'
+      simp only [List.cons_append, otherItems, selfIn_ok _ _ h1, ih, bind, Except.bind]
+
+/-- `signalArg` then `_set_signal_dict` on a list or dict argument, then `g`, has every outcome
+`SigOutcome` states. -/
+theorem sigArg_outcome {α : Type} (dflt : List (SigKey × SigVal)) (t : SigArg)
+    (g : SigDict × List (SigKey × SigVal) → Py α) :
+    SigOutcome t (signalArg dflt t.arg >>= fun v => setSignalDict v >>= g)
+      (fun T X => (signalArg dflt t.arg >>= fun v => setSignalDict v >>= g) = g (T, X)) := by
+  cases t with
+  | dict d =>
+    have e : (signalArg dflt (SigArg.dict d).arg >>= fun v => setSignalDict v >>= g) =
+        (setSignalDict (.dict d) >>= g) := rfl
+    simp only [SigOutcome]
+    rw [e]
+    exact DictOutcome.bind (setSignalDict_outcome d)
+  | list l =>
+    simp only [SigOutcome]
+    refine ⟨fun pre s post e hps hp hs => ?_, fun hs pre k post e hl hp hf => ?_, fun hs he => ?_⟩
+    · have : sigItems l pySignals = .error e := by rw [hps]; exact sigItems_err l e pre s post hp hs
+      simp only [SigArg.arg, signalArg, signalDictOf, this, bind, Except.bind]
+    · have h1 := sigItems_ok l pySignals (fun s _ => hs s)
+      have h2 : otherItems [] l = .error e := by
+        rw [hl]
+        exact otherItems_err e pre [] k post (fun pre1 k1 post1 hq => by simpa using hp pre1 k1 post1 hq)
+          (by simpa using hf)
+      simp only [SigArg.arg, signalArg, signalDictOf, h1, h2, bind, Except.bind]
+    · have h1 := sigItems_ok l pySignals (fun s _ => hs s)
+      have h2 := otherItems_ok l [] (fun pre k post hq => by simpa using he pre k post hq)
+      have e : (signalArg dflt (SigArg.list l).arg >>= fun v => setSignalDict v >>= g) =
+          (setSignalDict (.dict (ListBuilt l)) >>= g) := by
+        simp only [SigArg.arg, signalArg, signalDictOf, h1, h2, bind, Except.bind, pure, Except.pure,
+          ListBuilt]
+      rw [e]
+      exact DictOutcome.bind (setSignalDict_outcome _)
+
+theorem SigOutcome.mono {α : Type} {t : SigArg} {r : Py α} {K K' : SigDict → List (SigKey × SigVal) → Prop}
+    (h : SigOutcome t r K) (hk : ∀ T X, K T X → K' T X) : SigOutcome t r K' := by
+  cases t with
+  | dict d => exact DictOutcome.mono h hk
+  | list l => exact ⟨h.1, h.2.1, fun a b => DictOutcome.mono (h.2.2 a b) hk⟩
 
 theorem pySetattr_rounding_init (dc c : PyContext) (r : Option Rounding)
     (hro : ∀ id eq st, dc.roundingObj = some (id, eq, st) → eqIn eq roundingModes = .ok (some dc.rounding)) :
@@ -752,27 +882,113 @@ theorem pySetattr_prec_type (c : PyContext) (v : CtxArg) (h : intValue v = none)
   | bool b => simp [intValue] at h
   | _ => rfl
 
+theorem ok_bind {α β : Type} (x : α) (f : α → Py β) : (Except.ok x >>= f) = f x := rfl
+
+/-- The context `Context()` builds from accepted values (a proof device; `ContextInitExact` writes
+it out). -/
+def builtCtx (dc : PyContext) (p emin emax cap cl : Option Int) (r : Option Rounding)
+    (ig : Option (List Signal)) (T : SigDict) (X : List (SigKey × SigVal)) (F : SigDict)
+    (Y : List (SigKey × SigVal)) : PyContext :=
+  { prec := p.getD dc.prec, rounding := r.getD dc.rounding, emin := emin.getD dc.emin,
+    emax := emax.getD dc.emax, capitals := cap.getD dc.capitals, clamp := cl.getD dc.clamp,
+    flags := F, traps := T, ignored := ig.getD [],
+    roundingObj := (match r with
+      | none => dc.roundingObj
+      | some _ => none),
+    flagsExtra := Y, trapsExtra := X }
+
+/-- Under accepted ints, `Context()` comes down to its `traps` and `flags` steps. -/
+theorem pyContextNew_sigs (dc : PyContext) (p emin emax cap cl : Option Int) (r : Option Rounding)
+    (ig : Option (List Signal)) (trA flA : CtxArg)
+    (hro : ∀ id eq st, dc.roundingObj = some (id, eq, st) → eqIn eq roundingModes = .ok (some dc.rounding))
+    (h1 : 1 ≤ p.getD dc.prec) (h2 : emin.getD dc.emin ≤ 0) (h3 : 0 ≤ emax.getD dc.emax)
+    (h4 : cap.getD dc.capitals = 0 ∨ cap.getD dc.capitals = 1)
+    (h5 : cl.getD dc.clamp = 0 ∨ cl.getD dc.clamp = 1) :
+    pyContextNew dc
+        { prec := optInt p, rounding := optRound r, emin := optInt emin,
+          emax := optInt emax, capitals := optInt cap, clamp := optInt cl, flags := flA, traps := trA,
+          ignored := ig } =
+      (signalArg (keyed dc.traps ++ dc.trapsExtra) trA >>= fun v => setSignalDict v >>= fun d =>
+        signalArg (keyed (pySignals.map (fun s => (s, false)))) flA >>= fun w =>
+          setSignalDict w >>= fun d' =>
+            .ok (builtCtx dc p emin emax cap cl r ig d.1 d.2 d'.1 d'.2)) := by
+  have g1 : ¬ p.getD dc.prec < 1 := by omega
+  have g2 : ¬ emin.getD dc.emin > 0 := by omega
+  have g3 : ¬ emax.getD dc.emax < 0 := by omega
+  have g4 : ¬ (cap.getD dc.capitals < 0 ∨ cap.getD dc.capitals > 1) := by omega
+  have g5 : ¬ (cl.getD dc.clamp < 0 ∨ cl.getD dc.clamp > 1) := by omega
+  have hR := fun c => pySetattr_rounding_init dc c r hro
+  simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg g1, hR,
+    pySetattr_emin, if_neg g2, pySetattr_emax, if_neg g3, pySetattr_capitals, if_neg g4, pySetattr_clamp,
+    if_neg g5, pySetattr_ignored, pySetattr_traps, pySetattr_flags, ok_bind, bind_assoc, pure_bind]
+  rfl
+
 theorem contextInitExact_proven : ContextInitExact := by
-  intro dc p emin emax cap cl r ig fl tr htr hro
+  intro dc p emin emax cap cl r ig fl tr htr hxt hro
   dsimp only
   have hR := fun c => pySetattr_rounding_init dc c r hro
-  have hT0 := setSignalDict_keyed dc.traps htr
-  refine ⟨fun hI hT hF => ?_, fun h => ?_, fun s hs h1 => ?_, fun h1 h2 => ?_, fun h1 h2 h3 => ?_,
-    fun h1 h2 h3 h4 => ?_, fun h1 h2 h3 h4 h5 => ?_, fun hI t ht hb => ?_, fun hI hT f hf hb => ?_,
+  have hx : ExtrasOk dc.trapsExtra := fun q hq => ⟨(hxt q hq).1, keyIn_yes (hxt q hq).2⟩
+  have hT0 := setSignalDict_keyed_extra dc.traps dc.trapsExtra htr hx
+  refine ⟨fun hI => ?_, fun hI v hv => ?_, fun hI v hv => ?_, fun h => ?_, fun s hs h1 => ?_,
+    fun h1 h2 => ?_, fun h1 h2 h3 => ?_, fun h1 h2 h3 h4 => ?_, fun h1 h2 h3 h4 h5 => ?_,
     fun v hv hn => ?_⟩
   · obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-    obtain ⟨dT, e1, e2⟩ := sigStep (keyed dc.traps) dc.traps tr hT0 hT
-    obtain ⟨dF, e3, e4⟩ := sigStep (keyed (pySignals.map (fun s => (s, false))))
-      (pySignals.map (fun s => (s, false))) fl clearDict0_keyed hF
-    have g1 : ¬ p.getD dc.prec < 1 := by omega
-    have g2 : ¬ emin.getD dc.emin > 0 := by omega
-    have g3 : ¬ emax.getD dc.emax < 0 := by omega
-    have g4 : ¬ (cap.getD dc.capitals < 0 ∨ cap.getD dc.capitals > 1) := by omega
-    have g5 : ¬ (cl.getD dc.clamp < 0 ∨ cl.getD dc.clamp > 1) := by omega
-    simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg g1, hR, pySetattr_emin, if_neg g2,
-      pySetattr_emax, if_neg g3, pySetattr_capitals, if_neg g4, pySetattr_clamp, if_neg g5,
-      pySetattr_ignored, e1, e3, pySetattr_traps, pySetattr_flags, e2, e4, bind, Except.bind, pure,
-      Except.pure]
+    rw [pyContextNew_sigs dc p emin emax cap cl r ig _ _ hro h1 h2 h3 h4 h5]
+    -- the flags step, for the dict the traps step stored
+    have hF : ∀ T X, SigOutcomeOpt (pySignals.map (fun s => (s, false))) [] fl
+        (signalArg (keyed (pySignals.map (fun s => (s, false)))) (optSig fl) >>= fun w =>
+          setSignalDict w >>= fun d' =>
+            (Except.ok (builtCtx dc p emin emax cap cl r ig T X d'.1 d'.2) : Py PyContext))
+        (fun F Y =>
+          (signalArg (keyed (pySignals.map (fun s => (s, false)))) (optSig fl) >>= fun w =>
+            setSignalDict w >>= fun d' =>
+              (Except.ok (builtCtx dc p emin emax cap cl r ig T X d'.1 d'.2) : Py PyContext)) =
+            .ok (builtCtx dc p emin emax cap cl r ig T X F Y)) := by
+      intro T X
+      cases fl with
+      | none => simp only [SigOutcomeOpt, optSig, signalArg, clearDict0_keyed, ok_bind]
+      | some f => exact SigOutcome.mono (sigArg_outcome _ f _) (fun F Y h => h)
+    cases tr with
+    | none =>
+      have e0 : signalArg (keyed dc.traps ++ dc.trapsExtra) (optSig none) = .ok (.dict (keyed dc.traps ++ dc.trapsExtra)) := rfl
+      simp only [SigOutcomeOpt, e0, ok_bind, hT0]
+      exact hF dc.traps dc.trapsExtra
+    | some t =>
+      simp only [SigOutcomeOpt, optSig]
+      refine SigOutcome.mono (sigArg_outcome _ t _) (fun T X hTX => ?_)
+      rw [hTX]
+      exact hF T X
+  · obtain ⟨h1, h2, h3, h4, h5⟩ := hI
+    obtain ⟨hv1, hv2, hv3⟩ := hv
+    have hs : signalArg (keyed dc.traps ++ dc.trapsExtra) v =
+        .error (.typeError "~can only concatenate list to list") := by
+      cases v with
+      | none => exact absurd rfl hv1
+      | list l => exact absurd rfl (hv2 l)
+      | dict d => exact absurd rfl (hv3 d)
+      | _ => rfl
+    rw [pyContextNew_sigs dc p emin emax cap cl r ig _ _ hro h1 h2 h3 h4 h5, hs]
+    rfl
+  · obtain ⟨h1, h2, h3, h4, h5⟩ := hI
+    obtain ⟨hv1, hv2, hv3⟩ := hv
+    have hs : signalArg (keyed (pySignals.map (fun s => (s, false)))) v =
+        .error (.typeError "~can only concatenate list to list") := by
+      cases v with
+      | none => exact absurd rfl hv1
+      | list l => exact absurd rfl (hv2 l)
+      | dict d => exact absurd rfl (hv3 d)
+      | _ => rfl
+    rw [pyContextNew_sigs dc p emin emax cap cl r ig _ _ hro h1 h2 h3 h4 h5]
+    cases tr with
+    | none =>
+      have e0 : signalArg (keyed dc.traps ++ dc.trapsExtra) (optSig none) = .ok (.dict (keyed dc.traps ++ dc.trapsExtra)) := rfl
+      simp only [SigOutcomeOpt, e0, ok_bind, hT0, hs]
+      rfl
+    | some t =>
+      simp only [SigOutcomeOpt, optSig]
+      refine SigOutcome.mono (sigArg_outcome _ t _) (fun T X hTX => ?_)
+      rw [hTX, hs]
+      rfl
   · simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_pos h, bind, Except.bind]
   · simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
       bind, Except.bind]
@@ -793,43 +1009,6 @@ theorem contextInitExact_proven : ContextInitExact := by
       hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
       if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
       if_pos g5, bind, Except.bind]
-  · obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-    subst ht
-    obtain ⟨e, hs, hc⟩ := sigArg_bad (keyed dc.traps) t hb
-    have g4 : ¬ (cap.getD dc.capitals < 0 ∨ cap.getD dc.capitals > 1) := by omega
-    have g5 : ¬ (cl.getD dc.clamp < 0 ∨ cl.getD dc.clamp > 1) := by omega
-    refine ⟨e, ?_, hs⟩
-    rcases hc with e1 | ⟨dT, e1, e2⟩
-    · simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
-        hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
-        if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
-        if_neg g5, pySetattr_ignored, optSig, e1, bind, Except.bind]
-    · simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
-        hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
-        if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
-        if_neg g5, pySetattr_ignored, optSig, e1, pySetattr_traps, e2, bind, Except.bind]
-  · obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-    subst hf
-    obtain ⟨dT, e1, e2⟩ := sigStep (keyed dc.traps) dc.traps tr hT0 hT
-    obtain ⟨e, hs, hc⟩ := sigArg_bad (keyed (pySignals.map (fun s => (s, false)))) f hb
-    have g4 : ¬ (cap.getD dc.capitals < 0 ∨ cap.getD dc.capitals > 1) := by omega
-    have g5 : ¬ (cl.getD dc.clamp < 0 ∨ cl.getD dc.clamp > 1) := by omega
-    refine ⟨e, ?_, hs⟩
-    rcases hc with e3 | ⟨dF, e3, e4⟩
-    · have e3' : signalArg (keyed (pySignals.map (fun s => (s, false)))) (optSig (some f)) =
-        .error e := e3
-      simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
-        hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
-        if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
-        if_neg g5, pySetattr_ignored, e1, pySetattr_traps, e2, e3', bind,
-        Except.bind, pure, Except.pure]
-    · have e3' : signalArg (keyed (pySignals.map (fun s => (s, false)))) (optSig (some f)) =
-        .ok (.dict dF) := e3
-      simp only [pyContextNew, orElse_optInt, pySetattr_prec, if_neg (show ¬ p.getD dc.prec < 1 by omega),
-        hR, pySetattr_emin, if_neg (show ¬ emin.getD dc.emin > 0 by omega), pySetattr_emax,
-        if_neg (show ¬ emax.getD dc.emax < 0 by omega), pySetattr_capitals, if_neg g4, pySetattr_clamp,
-        if_neg g5, pySetattr_ignored, e1, pySetattr_traps, e2, e3', pySetattr_flags, e4, bind,
-        Except.bind, pure, Except.pure]
   · simp only [pyContextNew, orElse_ne v _ hn, pySetattr_prec_type _ v hv, bind, Except.bind]
 
 end PyLean.Decimal

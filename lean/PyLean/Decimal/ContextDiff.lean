@@ -35,7 +35,18 @@ def strKindOf (j : Json) : Except String StrErr :=
   | .ok "r" => pure (some boom)
   | _ => pure none
 
+/-- What the difftest's `EqKey.__eq__` answers for one signal: `y`, `n`, `i` (NotImplemented, so
+unequal) or `r` (raises `boom`). -/
+def eqAnsOf (c : Char) : EqAns :=
+  match c with
+  | 'y' => .yes
+  | 'r' => .raises boom
+  | _ => .no
+
 def sigKeyOf (j : Json) : Except String SigKey := do
+  -- `["eq", answers]`: an `EqKey`, hashable by identity, whose `__eq__` answers the nine signals
+  if let .ok a := j.getArr? then
+    return .other none none ((← (a[1]!).getStr?).toList.map eqAnsOf)
   let s ← j.getStr?
   -- `5`, an int; `hugeint`, `10**5000` (its repr raises the limit); `unhash`, `[]` (unhashable);
   -- `badrepr`, an object whose repr raises RuntimeError("boom").
@@ -147,14 +158,15 @@ def encPyContext (c : PyContext) : Json :=
     ("rounding", toJson (if c.roundingObj.isSome then "obj" else c.rounding.name)),
     ("Emin", ctxHex c.emin), ("Emax", ctxHex c.emax),
     ("capitals", ctxHex c.capitals), ("clamp", ctxHex c.clamp),
-    ("flags", sortStrs (setNames c.flags)), ("traps", sortStrs (setNames c.traps))]
+    ("flags", sortStrs (setNames c.flags)), ("traps", sortStrs (setNames c.traps)),
+    ("xf", toJson c.flagsExtra.length), ("xt", toJson c.trapsExtra.length)]
 
 def encCContext (c : CContext) : Json :=
   Json.mkObj [("prec", ctxHex c.prec), ("rounding", toJson c.round.name),
     ("Emin", ctxHex c.emin), ("Emax", ctxHex c.emax),
     ("capitals", ctxHex c.capitals), ("clamp", ctxHex c.clamp),
     ("flags", sortStrs ((signalsAsList c.status).map Signal.name)),
-    ("traps", sortStrs ((signalsAsList c.traps).map Signal.name))]
+    ("traps", sortStrs ((signalsAsList c.traps).map Signal.name)), ("xf", toJson 0), ("xt", toJson 0)]
 
 /-! ## Actions that set condition bits -/
 
