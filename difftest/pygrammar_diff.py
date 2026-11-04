@@ -599,7 +599,23 @@ RULE_FORMS = [
     "match x:\n case *a: pass", "match x:\n case {k} if {e}: pass", "match x:\n case {k} if {e} := 1: pass",
     "match x:\n case {k} if: pass", "match x:\n case {k}:\n  pass\n case _:\n  pass",
     "match x:\n case {k} if {e}:\n  {f}", "match x:\n case a, b if {e}: pass",
+    # parameters and their lambda twins, group/invalid_group, star sequences
+    # (Peg/Rules/Params*.lean, Invalid2.lean, Exprs4.lean)
+    "def f({p}): pass", "def f({p}, /): pass", "def f({p}, /, {q}): pass", "def f({p}, *, {q}): pass",
+    "def f({p}, *{n}, {q}): pass", "def f(*, {q}): pass", "def f({p}, **{n}): pass", "def f(*{n}: *{e}): pass",
+    "def f({p}, *{n}, {q}, **k): pass", "def f(a=1, {p}): pass", "def f({p}, /, *, {q}, **k,): pass",
+    "def f(\n {p}, # type: int\n {q}\n): pass", "def f({p}, # type: int\n): pass", "def f(*, **k): pass",
+    "def f(**k, {p}): pass", "def f(/, {p}): pass", "def f({p}, /, /): pass", "def f(*a, *b): pass",
+    "lambda {p}: 0", "lambda {p}, /: 0", "lambda {p}, /, {q}: 0", "lambda {p}, *, {q}: 0",
+    "lambda {p}, *{n}, {q}: 0", "lambda *, {q}: 0", "lambda {p}, **{n}: 0", "lambda *{n}, {q}, **k: 0",
+    "lambda a=1, {p}: 0", "lambda ({p}): 0", "lambda {p}, /, *, {q}, **k,: 0", "lambda **k, {p}: 0",
+    "lambda /, {p}: 0", "lambda *, **k: 0", "lambda {p} {q}: 0", "lambda *a, *b: 0", "lambda {p}, (b): 0",
+    "({e})", "(*{e})", "(**{e})", "(*{e}, {f})", "({e}, *{f})", "(yield {e})", "({e} := 1)", "(*{e} for x in y)",
+    "[*{e}]", "[{e}, *{f},]", "{{*{e}, {f}}}", "({e},)", "(*{e},)", "[*{e} if x else y]", "{{*{e} or z}}",
+    "(**{e} for x in y)", "f(**{e}, *{f})", "print((*{e}))", "x = (**{e})",
 ]
+RULE_PARAMS = ["a", "a, b", "a=1", "a, b=2", "a: int", "a: int = 1", "a=1, b", "*a", "**a", "a, *b",
+               "a=1, /", "a, /", "*, a", "a, b, /, c", "a=1, b=2", "a=", "1", "(a)", "a:", "a b", ""]
 
 
 def gen_rule_target(rng):
@@ -609,7 +625,8 @@ def gen_rule_target(rng):
     src = form.format(e=pick(RULE_EXPRS), f=pick(RULE_EXPRS), n=pick(RULE_NAMES),
                       m=pick(RULE_NAMES), s=pick(["", "+", "-", "+ ", "- ", "--", "~"]),
                       k=pick(["1", "0", "1.5", "1j", "0x10", "1_0", "x", "(1)"]),
-                      u=pick(["", "-", "+", "~", "not ", "- "]))
+                      u=pick(["", "-", "+", "~", "not ", "- "]),
+                      p=pick(RULE_PARAMS), q=pick(RULE_PARAMS))
     if rng.random() < 0.3:
         src = "def f():\n    " + src.replace("\n", "\n    ")
     if rng.random() < 0.2:

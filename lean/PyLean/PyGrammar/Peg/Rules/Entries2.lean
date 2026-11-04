@@ -333,7 +333,10 @@ def patternEntries : List Entry := [
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_group
     statement := "group: '(' (yield_expr | named_expression) ')' gives the inner expression; " ++
-      "otherwise NULL with the mark back in the first pass, invalid_group in the second."
+      "once that alternative fails (GroupA1Fails: another token, no inner expression, or no ')'), " ++
+      "NULL with the mark back in the first pass; in the second an error already set gives NULL, " ++
+      "and otherwise invalid_group runs from the start mark and its result is the rule's (NULL " ++
+      "with the mark back after it raises for (*a) or (**not a))."
     source := "Grammar/python.gram:906-909"
     status := .proven
     prop := ``GroupRule
@@ -352,8 +355,8 @@ def patternEntries : List Entry := [
   { id := "pygrammar-rule-list"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_list
-    statement := "list: '[' [star_named_expressions] ']' gives List(elts, Load); another token or " ++
-      "no ']' NULL with the mark back."
+    statement := "list (3.15): '[' [star_named_expressions_sequence] ']' gives List(elts, Load); " ++
+      "another token or no ']' NULL with the mark back."
     source := "Grammar/python.gram:1016-1017"
     status := .proven
     prop := ``ListRule
@@ -362,7 +365,8 @@ def patternEntries : List Entry := [
   { id := "pygrammar-rule-tuple"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_tuple
-    statement := "tuple: '(' [star_named_expression ',' [star_named_expressions]] ')' gives " ++
+    statement := "tuple (3.15): '(' [star_named_expression_sequence ',' " ++
+      "[star_named_expressions_sequence]] ')' gives " ++
       "Tuple(elts, Load), the group the first element in front of the rest; another token or no " ++
       "')' NULL with the mark back."
     source := "Grammar/python.gram:1019-1021"
@@ -373,7 +377,7 @@ def patternEntries : List Entry := [
   { id := "pygrammar-rule-set"
     pyFile := "Grammar/python.gram"
     pyFns := Rows.rule_set
-    statement := "set: '{' star_named_expressions '}' gives Set(elts); another token, no " ++
+    statement := "set (3.15): '{' star_named_expressions_sequence '}' gives Set(elts); another token, no " ++
       "elements or no '}' NULL with the mark back."
     source := "Grammar/python.gram:1023"
     status := .proven
@@ -396,7 +400,7 @@ def patternEntries : List Entry := [
     statement := "disjunction (memo): conjunction followed by one or more 'or' conjunction gives " ++
       "one flat BoolOp(Or, [a] + the loop's values in order); once that fails, conjunction from " ++
       "the start mark; the loop _loop1_61 and its group 'or' conjunction stated with it."
-    source := "Grammar/python.gram:763-766"
+    source := "Grammar/python.gram:763-768"
     status := .proven
     prop := ``DisjunctionRule
     thm := some ``disjunctionRule_proven
@@ -407,7 +411,7 @@ def patternEntries : List Entry := [
     statement := "conjunction (memo): inversion followed by one or more 'and' inversion gives " ++
       "one flat BoolOp(And, [a] + the loop's values in order); once that fails, inversion from " ++
       "the start mark; the loop _loop1_62 and its group 'and' inversion stated with it."
-    source := "Grammar/python.gram:768-771"
+    source := "Grammar/python.gram:770-775"
     status := .proven
     prop := ``ConjunctionRule
     thm := some ``conjunctionRule_proven

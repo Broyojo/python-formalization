@@ -257,7 +257,8 @@ the inner expression itself (parentheses leave no node). Once that alternative f
 (`GroupA1Fails`, ending in `s`): in the first pass (`s.callInvalidRules = false`) `NULL` with the
 mark back; in the second, an error already set ends the rule with `NULL`, and otherwise
 `invalid_group` (236) runs from the start mark and its result is the rule's (`NULL` with the mark
-back when it gives `NULL`, which is what it gives after raising for `(*a)` and `(**a)`). -/
+back when it gives `NULL`, which is what it gives after raising for `(*a)` and `(**not a)`; in
+3.15 `(**a)` raises earlier, in `tuple`'s `star_named_expression_sequence`). -/
 def Group : Prop := ∀ (f : Nat) (p q : PS), Entered p q →
   let t := q.tokenAt p.mark
   (t.type = 7 → ∀ (v : Ast) (c : Token) (s1 s2 : PS),

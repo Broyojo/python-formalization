@@ -33,6 +33,7 @@ import PyLean.PyGrammar.Peg.Rules.SumCompose
 import PyLean.PyGrammar.Peg.Rules.AsTarget
 import PyLean.PyGrammar.Peg.Rules.AsTarget2
 import PyLean.PyGrammar.Peg.Rules.Entries2
+import PyLean.PyGrammar.Peg.Rules.Entries3
 
 /-! Registry entries for the rule-by-rule statements of `Peg/Rules/`. Each one is about the
 generated rule function of one rule, run by `callRule` on `GrammarData.lean`, and says what it
@@ -1171,6 +1172,6 @@ def ruleEntries : List Entry := [
     thm := some ``lazyImportDiagnosed_refuted
     bug := some "pygrammar-lazy-import-diagnostics"
     notes := "Counterexample run in the kernel: 'lazy import\\n' gives 'invalid syntax'." }
-] ++ patternEntries
+] ++ patternEntries ++ paramEntries
 
 end PyLean.PyGrammar.Peg

@@ -385,6 +385,9 @@ def rule_invalid_del_stmt : List String := [
 def rule_invalid_dotted_as_name : List String := [
   "rule:invalid_dotted_as_name"]
 
+def rule_invalid_group : List String := [
+  "rule:invalid_group"]
+
 def rule_invalid_import : List String := [
   "rule:invalid_import"]
 
@@ -414,6 +417,39 @@ def rule_keyword_patterns : List String := [
 
 def rule_keyword_stmts : List String := [
   "rule:pass_stmt", "rule:break_stmt", "rule:continue_stmt"]
+
+def rule_kwds : List String := [
+  "rule:kwds"]
+
+def rule_lambda_kwds : List String := [
+  "rule:lambda_kwds"]
+
+def rule_lambda_param : List String := [
+  "rule:lambda_param"]
+
+def rule_lambda_param_maybe_default : List String := [
+  "rule:lambda_param_maybe_default"]
+
+def rule_lambda_param_no_default : List String := [
+  "rule:lambda_param_no_default"]
+
+def rule_lambda_param_with_default : List String := [
+  "rule:lambda_param_with_default"]
+
+def rule_lambda_parameters : List String := [
+  "rule:lambda_parameters"]
+
+def rule_lambda_params : List String := [
+  "rule:lambda_params"]
+
+def rule_lambda_slash_no_default : List String := [
+  "rule:lambda_slash_no_default"]
+
+def rule_lambda_slash_with_default : List String := [
+  "rule:lambda_slash_with_default"]
+
+def rule_lambda_star_etc : List String := [
+  "rule:lambda_star_etc"]
 
 def rule_lambdef : List String := [
   "rule:lambdef"]
@@ -453,6 +489,30 @@ def rule_open_sequence_pattern : List String := [
 
 def rule_or_pattern : List String := [
   "rule:or_pattern"]
+
+def rule_param : List String := [
+  "rule:param"]
+
+def rule_param_maybe_default : List String := [
+  "rule:param_maybe_default"]
+
+def rule_param_no_default : List String := [
+  "rule:param_no_default"]
+
+def rule_param_no_default_star_annotation : List String := [
+  "rule:param_no_default_star_annotation"]
+
+def rule_param_star_annotation : List String := [
+  "rule:param_star_annotation"]
+
+def rule_param_with_default : List String := [
+  "rule:param_with_default"]
+
+def rule_parameters : List String := [
+  "rule:parameters"]
+
+def rule_params : List String := [
+  "rule:params"]
 
 def rule_pattern : List String := [
   "rule:pattern"]
@@ -508,11 +568,20 @@ def rule_simple_stmt_more : List String := [
 def rule_single_target : List String := [
   "rule:single_target"]
 
+def rule_slash_no_default : List String := [
+  "rule:slash_no_default"]
+
+def rule_slash_with_default : List String := [
+  "rule:slash_with_default"]
+
 def rule_slice : List String := [
   "rule:slice"]
 
 def rule_slices : List String := [
   "rule:slices"]
+
+def rule_star_etc : List String := [
+  "rule:star_etc"]
 
 def rule_star_expression : List String := [
   "rule:star_expression"]
@@ -522,6 +591,9 @@ def rule_star_expressions : List String := [
 
 def rule_star_named_expression : List String := [
   "rule:star_named_expression"]
+
+def rule_star_named_expression_sequence : List String := [
+  "rule:star_named_expression_sequence"]
 
 def rule_star_pattern : List String := [
   "rule:star_pattern"]
