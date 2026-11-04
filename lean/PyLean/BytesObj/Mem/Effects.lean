@@ -80,8 +80,8 @@ theorem deallocMono (i : Nat) (st : St) : Mono st (memoryDealloc i st).2 := by
     · exact h
   · exact h
 
-/-- `memory_dealloc`, @3.14.7:1150-1161, on the last reference to a view: the release comes first
-(@3.14.7:1156), and only then `PyObject_ClearWeakRefs` (@3.14.7:1158-1159), so the callback of a weakref runs
+/-- `memory_dealloc`, :1150-1161, on the last reference to a view: the release comes first
+(:1156), and only then `PyObject_ClearWeakRefs` (:1158-1159), so the callback of a weakref runs
 on a view that has given up its export and, if it was the last view, on a released exporter.
 A view the callback releases must have no exports left; a view with exports is refused, and
 the state is what the release left. Hypotheses: `i` and `t` exist. -/
@@ -127,8 +127,8 @@ theorem deallocRules_proven : DeallocRules := by
     simp only [if_pos h2]
     exact ⟨trivial, memoryRelease_released t _ h3⟩
 
-/-- `mbuf_dealloc`, @3.14.7:120-128, is reached once with a live master: when `mbuf_add_view` refuses
-the buffer, @3.14.7:811-819, the `Py_DECREF(mbuf)` releases it. `memoryview(x)` raises `ValueError`,
+/-- `mbuf_dealloc`, :120-128, is reached once with a live master: when `mbuf_add_view` refuses
+the buffer, :811-819, the `Py_DECREF(mbuf)` releases it. `memoryview(x)` raises `ValueError`,
 the managed buffer ends released, and the exporter's `__release_buffer__` has run: the request
 that failed does not leak its buffer. Hypothesis: `__buffer__` gave a buffer of more than 64
 dimensions, which is the case. -/
@@ -191,7 +191,7 @@ theorem mbufDeallocOnFail_proven : MbufDeallocOnFail := by
       rw [hmvs]
       exact h0
 
-/-- `mbuf_release`, @3.14.7:107-117, and `mbuf_clear`, @3.14.7:139-145: the first release of a managed buffer
+/-- `mbuf_release`, :107-117, and `mbuf_clear`, :139-145: the first release of a managed buffer
 marks it and gives its master back, which runs the exporter's `__release_buffer__` or takes back
 an export of the view it came from; any later release does nothing. Hypothesis: `k` exists. -/
 def MbufReleaseRules : Prop :=
@@ -273,9 +273,9 @@ theorem strhexWithSepM_len (arg : M (List Nat)) (r : Ret Int) (rel : Option Nat)
       · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
       · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
 
-/-- `memoryview_hex_impl`, @3.14.7:2337-2373, with a `sep` whose `__len__` calls `self.release()`.
+/-- `memoryview_hex_impl`, :2416-2453, with a `sep` whose `__len__` calls `self.release()`.
 `hex` raises in every case. A contiguous view hexes its own memory, so it holds an export over
-the call (@3.14.7:2352-2354, gh-143195): the release is refused and the view is exactly as before. A
+the call (:2429-2431, gh-143195): the release is refused and the view is exactly as before. A
 view that is not contiguous hexes a private copy and holds nothing: it is released, and that is
 safe, because `bytes` is not the view's memory. Hypotheses: a live view; an export count is not
 negative; `tobytes` succeeds, otherwise `__len__` never runs. -/
@@ -318,7 +318,7 @@ theorem hexHoldsExport_proven : HexHoldsExport := by
     rw [hx, hs']
     exact ⟨rfl, memoryRelease_released self st hv⟩
 
-/-- What `memory_hash` checks before it asks the exporter for a hash, @3.14.7:3217-3227. -/
+/-- What `memory_hash` checks before it asks the exporter for a hash, :3344-3354. -/
 structure HashGuards (st : St) (i : Nat) : Prop where
   valid : i < st.mvs.length
   live : baseInaccessible st i = false
@@ -326,7 +326,7 @@ structure HashGuards (st : St) (i : Nat) : Prop where
   readonly : (st.mv i).view.readonly = true
   format : ∃ c size, getNativeFmtchar ((st.mv i).view.format.getD []) = some (c, size) ∧ isByteFormat c = true
 
-/-- `memory_hash`, @3.14.7:3231-3233, holds an export around `PyObject_Hash(view->obj)` (gh-142664).
+/-- `memory_hash`, :3358-3360, holds an export around `PyObject_Hash(view->obj)` (gh-142664).
 A `__hash__` that calls `self.release()` is refused and the view stays live; a `__hash__` that
 raises passes its exception up, with the export given back and no cached hash, so a later `hash`
 asks again. A `__hash__` that releases another view succeeds at that. Hypotheses: the checks of
@@ -343,7 +343,7 @@ def HashHoldsExport : Prop :=
     (∀ j, st.hashHook.getD e none = some j → j ≠ self → j < st.mvs.length → (st.mv j).exports = 0 →
       ((memoryHash self st).2.mv j).flags.released = true)
 
-/-- The end of `memory_hash`, @3.14.7:3237-3257: the bytes, and the cache. -/
+/-- The end of `memory_hash`, :3364-3384: the bytes, and the cache. -/
 def hashTail (st : St) (self : Nat) : M (List Nat) := do
   let mem ← if !(st.mv self).flags.isC then M.lift (bufferToContiguous st.mem (st.mv self).view 'C')
     else pure (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat)
@@ -524,11 +524,13 @@ theorem getBufferFull_val (b : Buf) (st : St) (hn : b.ndim ≤ 64) :
   rw [if_neg (by omega)]
   rfl
 
-/-- `memory_richcompare`, @3.14.7:3192-3199: the right side's buffer is released after the result is
+/-- `memory_richcompare`, :3319-3326: the right side's buffer is released after the result is
 known, and that release is Python code when the right side has `__release_buffer__`. `v == w`
 gives what the two buffers compare to, even when that callback releases `v` itself, and the
 callback's release has happened by the time `==` returns. Hypotheses: a live `v`; `__buffer__`
-succeeds with a valid buffer (`__buffer__` failing is `NotImplemented`, `BufferFailures`). -/
+succeeds with a buffer of at most 64 dimensions. When it fails instead, `memory_richcompare` clears
+the error and returns `NotImplemented` (:3253-3257); that case is `CompareNoBuffer`, not this
+statement, and `BufferFailures` only says what `PyObject_GetBuffer` itself raises. -/
 def CompareReleases : Prop :=
   ∀ (st : St) (v t : Nat) (b : Buf), baseInaccessible st v = false → b.ndim ≤ 64 → b.hook = some t →
     t < st.mvs.length → (st.mv t).exports = 0 →
@@ -588,7 +590,7 @@ theorem count_start (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char
     simp [newIter, List.getD_eq_getElem?_getD]
   simp only [memoryviewCount, M.bind_app, memoryIter_spec st self n d f [c] hL hf, M.get, hlen]
 
-/-- The loops of `memoryview_count_impl`, @3.14.7:2797-2816, and `memoryview_index_impl`, @3.14.7:2872-2895,
+/-- The loops of `memoryview_count_impl`, :2877-2896, and `memoryview_index_impl`, :2952-2975,
 with a value whose `__eq__` runs Python code. An exception from `__eq__` is passed up at once. An
 `__eq__` that calls `self.release()` succeeds, because an iterator holds no export, and the next
 step refuses with the `CHECK_RELEASED` of `memoryiter_next` or `memory_item`. On a view of one
@@ -691,9 +693,9 @@ theorem eqFailures_proven : EqFailures := by
 /-! ## Views that are not 1-D -/
 
 /-- What iteration, `len`, `count`, `index` and `m[i]` do on views that are not 1-D. `len` is
-`shape[0]` on every view with dimensions (@3.14.7:2746-2756), and a 0-dim view has none. A 0-dim view
-has no iterator, no items and no lookup (@3.14.7:3529-3532, @3.14.7:2466-2469, @3.14.7:2847-2850); a view of two or more
-dimensions refuses them as not implemented (@3.14.7:3533-3537, @3.14.7:2476-2478, @3.14.7:2900-2903), and so does
+`shape[0]` on every view with dimensions (:2826-2836), and a 0-dim view has none. A 0-dim view
+has no iterator, no items and no lookup (:3656-3659, :2546-2549, :2927-2930); a view of two or more
+dimensions refuses them as not implemented (:3660-3664, :2556-2558, :2980-2983), and so does
 `count`, which iterates. Hypotheses: a live view, and for `m[i]` a format `adjust_fmt` accepts. -/
 def RankRules : Prop :=
   ∀ (st : St) (self : Nat) (v : Obj) (a b i : Int) (fmt : List Char),
@@ -736,7 +738,7 @@ theorem rankRules_proven : RankRules := by
 
 /-! ## `ptr == NULL` in `memoryiter_next` -/
 
-/-- `memoryiter_next`, @3.14.7:3508-3510: an item at `NULL` returns NULL with no exception set, which
+/-- `memoryiter_next`, :3635-3637: an item at `NULL` returns NULL with no exception set, which
 is `StopIteration`, though the iterator has not reached `it_length` and keeps its view: it has
 stepped past the item, so the next `next` goes on from the item after. Hypotheses: a live view,
 the iterator inside it, and the case itself, the item's address being `NULL`. -/
@@ -823,7 +825,7 @@ theorem sliceFailures_proven : SliceFailures := by
   · obtain ⟨s', he, -⟩ := sliceEvents_fail s rel f e st hfail (Or.inr h0)
     rw [he]
 
-/-- `memory_subscript`, @3.14.7:2616-2623, and `memory_ass_sub`, @3.14.7:2699-2718, when `PySlice_Unpack`
+/-- `memory_subscript`, :2696-2703, and `memory_ass_sub`, :2779-2798, when `PySlice_Unpack`
 fails. `m[s]` has already made the sliced view with `mbuf_add_view`, and the `Py_DECREF(sliced)`
 gives its export of the managed buffer back; `m[s] = x` has already asked `x` for its buffer,
 and gives that back, running its `__release_buffer__`. Hypotheses: a live 1-D view, the failing

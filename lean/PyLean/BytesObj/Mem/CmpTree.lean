@@ -36,7 +36,7 @@ theorem treeListEq_length (l r : List Tree) (h : treeListEq l r = true) : l.leng
       simp only [treeListEq, Bool.and_eq_true] at h
       simp [ih bs h.2]
 
-/-- `cmp_base`, @3.14.7:3040-3058, for an item comparison with the meaning `itemEq`. -/
+/-- `cmp_base`, :3143-3161, for an item comparison with the meaning `itemEq`. -/
 theorem cmpBase_spec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)) (g h : Int → Item)
     (he : ∀ p q, unpackCmp m p q fmt unp = .ok (itemEq (g p) (h q)))
     (ps qs : Int) (psub qsub : Option (List Int)) (n : Nat) (p q : Int) :
@@ -51,7 +51,7 @@ theorem cmpBase_spec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)
     | false => rfl
     | true => simpa using ih (p + ps) (q + qs)
 
-/-- The loop of `cmp_rec`, @3.14.7:3084-3093. -/
+/-- The loop of `cmp_rec`, :3187-3196. -/
 theorem cmpLoop_spec (ps qs : Int) (body : Int → Int → Py Bool) (F G : Int → Tree)
     (hb : ∀ p q, body p q = .ok (treeEq (F p) (G q))) (n : Nat) (p q : Int) :
     cmpLoop ps qs body n p q = .ok (treeListEq ((walk ps n p).map F) ((walk qs n q).map G)) := by
@@ -63,7 +63,7 @@ theorem cmpLoop_spec (ps qs : Int) (body : Int → Int → Py Bool) (F G : Int �
     | false => rfl
     | true => simpa using ih (p + ps) (q + qs)
 
-/-- `cmp_rec`, @3.14.7:3062-3096, on shapes that `equiv_shape` accepts. -/
+/-- `cmp_rec`, :3165-3199, on shapes that `equiv_shape` accepts. -/
 theorem cmpRec_spec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)) (g h : Int → Item)
     (he : ∀ p q, unpackCmp m p q fmt unp = .ok (itemEq (g p) (h q))) (sh sh' : List Int)
     (hne : sh ≠ []) (hlen : sh.length = sh'.length) (hs : shapeLoop sh sh' = true)

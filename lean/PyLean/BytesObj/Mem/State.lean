@@ -149,7 +149,7 @@ def onError {α : Type} (x : M α) (cleanup : M Unit) : M α := fun s =>
 
 end M
 
-/-- `CHECK_RELEASED`/`CHECK_RELEASED_INT` and their `_AGAIN` forms, :184-196, @3.14.7:214-215. -/
+/-- `CHECK_RELEASED`/`CHECK_RELEASED_INT` and their `_AGAIN` forms, :184-196, :214-215. -/
 def checkReleased (i : Nat) : M Unit := fun st =>
   if baseInaccessible st i then (.error releasedError, st) else (.ok (), st)
 
@@ -229,7 +229,7 @@ def initFlags (v : Buf) : Flags :=
 
 /-! ## Strides -/
 
-/-- The loop of `init_fortran_strides_from_shape`, @3.14.7:487-489. -/
+/-- The loop of `init_fortran_strides_from_shape`, :487-489. -/
 def fStrides (sd : Int) : List Int → List Int
   | [] => []
   | d :: ds => sd :: fStrides (sd * d) ds
@@ -272,7 +272,7 @@ def stripAt (f : List Char) : List Char := if cc f 0 = '@' then f.drop 1 else f
 def equivFormat (dest src : Buf) : Bool :=
   stripAt (dest.format.getD []) == stripAt (src.format.getD []) && dest.itemsize == src.itemsize
 
-/-- The loop of `equiv_shape`, @3.14.7:315-320: stop at the first equal zero. -/
+/-- The loop of `equiv_shape`, :315-320: stop at the first equal zero. -/
 def shapeLoop : List Int → List Int → Bool
   | [], _ => true
   | a :: as, bs =>
@@ -316,7 +316,7 @@ def readItems (sm : Mem) (itemsize : Nat) (stride : Int) (subs : Option (List In
   | n + 1, sptr =>
     rdBytes sm (adjustPtr sm sptr subs 0) itemsize :: readItems sm itemsize stride subs n (sptr + stride)
 
-/-- The second loop of `copy_base`, @3.14.7:364-367. Pointers of `dest` come from `dm`. -/
+/-- The second loop of `copy_base`, :364-367. Pointers of `dest` come from `dm`. -/
 def writeItems (itemsize : Nat) (stride : Int) (subs : Option (List Int)) :
     List (List Nat) → Int → Mem → Mem
   | [], _, dm => dm
