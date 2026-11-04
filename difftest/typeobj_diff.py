@@ -2354,11 +2354,110 @@ def fam_methods(g):
     g.probe(call(name("MT"), name("c"), kw=[("x", lit(1))]))
 
 
+def fam_exact(g):
+    """The changed models of the typeobject.c fixes: abstract names sorted before joining,
+    slot_tp_iter's None test before __getitem__, object.__eq__ by identity, slot_sq_length on an
+    int subclass result, MRO conflicts and duplicates, and __class__ assignment comparing
+    str-subclass slot names with their __eq__."""
+    r = g.rng
+    k = r.randrange(6)
+    if k == 0:
+        cls(g, "A", (), [simple_method(g, "m", "A.m", ["self"], lit(1))])
+        items = r.choice([[lit("a"), lit(1)], [lit(1), lit("a")], [lit(1)], [lit(2), lit(1)],
+                          [lit("b"), lit("a")], [lit("b"), lit("a"), lit("c")], [NONE, lit("x")],
+                          [lit("x"), lit(1.5) if False else lit(True)], [lit("zz"), lit("Z"), lit("a")],
+                          [lit(1), lit(1)], [lit(1), NONE], []])
+        v = r.choice([["list", items], ["tuple", items]])
+        g.probes(["setattr", name("A"), "__abstractmethods__", v])
+        g.probe(call(name("A")))
+        g.probe(call(name("A"), lit(1)))
+    elif k == 1:
+        # A __getitem__ descriptor whose __get__ logs and raises or returns.
+        get_body = [["log", "G.__get__"]]
+        if r.random() < 0.6:
+            get_body.append(["raise", call(name(r.choice(["ValueError", "AttributeError", "KeyError"])), lit("g"))])
+        else:
+            get_body.append(["ret", name("o")])
+        cls(g, "G", (), [g.method("__get__", "G.__get__", ["self", "o", "t"], get_body)])
+        body = [["assign", "__getitem__", call(name("G"))]]
+        it = r.randrange(3)
+        if it == 0:
+            body.append(["assign", "__iter__", NONE])
+        elif it == 1:
+            # __iter__ found but missing: a property raising AttributeError.
+            body.append(g.method("_it", "It._it", ["self"], [["log", "It._it"], ["raise", call(name("AttributeError"), lit("i"))]]))
+            body.append(["assign", "__iter__", call(name("property"), name("_it"))])
+        cls(g, "It", (), body)
+        g.probe(call(name("iter"), call(name("It"))))
+        g.probe(call(name("list"), call(name("It"))))
+        g.probe(["in", lit(1), call(name("It"))])
+    elif k == 2:
+        cls(g, "C", (), [simple_method(g, "__eq__", "C.__eq__", ["self", "o"], g.value())])
+        g.main.append(["assign", "a", call(name("C"))])
+        g.main.append(["assign", "b", call(name("C"))])
+        for x, y in [("a", "a"), ("a", "b"), ("b", "a")]:
+            g.probe(call(attr(name("object"), "__eq__"), name(x), name(y)))
+            g.probe(call(attr(name("object"), "__ne__"), name(x), name(y)))
+        for x, y in [(lit(5), lit(5)), (lit(1), lit(2)), (NONE, NONE), (lit("a"), lit("a")),
+                     (lit("a"), lit("b")), (lit(True), lit(1)), (["tuple", []], ["tuple", []])]:
+            g.probe(call(attr(name("object"), "__eq__"), x, y))
+            g.probe(call(attr(name("object"), "__ne__"), x, y))
+        g.probe(call(attr(name("object"), "__lt__"), name("a"), name("b")))
+    elif k == 3:
+        cls(g, "I", ["int"], None)
+        v = r.choice([lit(["bigint", str(2**70)]), lit(-1), lit(3), lit(["bigint", str(2**63 - 1)]),
+                      lit(["bigint", str(2**63)]), lit(0)])
+        cls(g, "L", (), [simple_method(g, "__len__", "L.__len__", ["self"], call(name("I"), v))])
+        g.probe(call(name("len"), call(name("L"))))
+        g.probe(call(name("bool"), call(name("L"))))
+        cls(g, "L2", (), [simple_method(g, "__len__", "L2.__len__", ["self"], v)])
+        g.probe(call(name("len"), call(name("L2"))))
+    elif k == 4:
+        # MRO: the earliest-base rule, conflicts, duplicates.
+        cls(g, "X", ())
+        cls(g, "Y", ())
+        cls(g, "B", ["X"])
+        cls(g, "Cc", ["Y"])
+        shapes = [["B", "Cc"], ["Cc", "B"], ["X", "B"], ["B", "X"], ["B", "B"], ["X", "Y", "X"],
+                  ["B", "Cc", "X"], ["X", "Y"], ["Y", "X"]]
+        bases = r.choice(shapes)
+        cls(g, "D", bases)
+        g.probe(attr(name("D"), "__mro__"))
+        cls(g, "P", ["X", "Y"])
+        cls(g, "Q", ["Y", "X"])
+        cls(g, "Z", r.choice([["P", "Q"], ["Q", "P"], ["P", "Y"], ["X", "P"]]))
+        g.probe(attr(name("Z"), "__mro__"))
+    else:
+        # __class__ assignment between classes whose __slots__ name is a str subclass.
+        ret = r.choice([lit(True), lit(False), NOTIMPL, None])
+        eq_body = [["log", "S.__eq__"]]
+        if ret is None:
+            eq_body.append(["raise", call(name("ValueError"), lit("eq"))])
+        else:
+            eq_body.append(["ret", ret])
+        cls(g, "S", ["str"], [g.method("__eq__", "S.__eq__", ["self", "o"], eq_body),
+                              ["assign", "__hash__", attr(name("str"), "__hash__")]])
+        shared = r.random() < 0.3
+        if shared:
+            g.main.append(["assign", "sx", call(name("S"), lit("x"))])
+            ax = bx = name("sx")
+        else:
+            ax = call(name("S"), lit("x"))
+            bx = call(name("S"), lit(r.choice(["x", "y"])))
+        cls(g, "A", (), [["assign", "__slots__", ["tuple", [ax]]]])
+        cls(g, "Bb", (), [["assign", "__slots__", ["tuple", [bx]]]])
+        g.probes(["assign", "oa", call(name("A"))])
+        g.probes(["setattr", name("oa"), "__class__", name("Bb")])
+        g.probe(call(name("type"), name("oa")))
+        g.probes(["setattr", name("oa"), "__class__", name("A")])
+        g.probe(call(name("type"), name("oa")))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
             fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs, fam_float, fam_methods,
-            fam_funcattrs, fam_repin]
+            fam_funcattrs, fam_repin, fam_exact, fam_exact, fam_exact]
 
 
 def gen_case(rng):

@@ -116,21 +116,44 @@ def tsResult (it : Src α) (hooks : List (List TeeOp)) (ops : List TeeOp) (t : T
   let t' := tsRun (hooks.length + 1) ops t
   (t'.log, it.items.length - t'.it.items.length)
 
+/-- What `PyObject_GetIter` returns when called again on the iterator a first call
+returned: the iterator itself (the iterator protocol, Doc/library/stdtypes.rst,
+`iterator.__iter__`: "Return the iterator object itself"), another iterator, or
+an exception (its `__iter__` raising, or returning a non-iterator). An `__iter__`
+that returns a tee is not modelled. -/
+inductive ReIter (α : Type) where
+  | self
+  | other (s : Src α)
+  | fail (e : PyExc)
+
+/-- The second `PyObject_GetIter`, on the iterator `it`. -/
+def reIter : ReIter α → Src α → Py (Src α)
+  | .self, it => .ok it
+  | .other s, _ => .ok s
+  | .fail e, _ => .error e
+
 /-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
 `Py_ssize_t(allow_negative=False)` converter (Modules/clinic/itertoolsmodule.c.h:338-352),
-`n == 0` returns `()` without touching the iterable, then
-`tee_fromiterable` and `n - 1` calls of `tee_copy`. -/
-def cTeeR (iterable : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List TeeOp) :
-    Py (List (NextRes α) × Nat) :=
+`n == 0` returns `()` without touching the iterable (:1170-1171), then
+`PyObject_GetIter(iterable)` (:1172), `tee_fromiterable` on that iterator, which
+calls `PyObject_GetIter` on it again (:1056; `re` is what that second call gives,
+by default the iterator itself), and `n - 1` calls of `tee_copy`. The items pulled
+are counted on the iterator the tees read. -/
+def cTeeR (iterable : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List TeeOp)
+    (re : ReIter α := .self) : Py (List (NextRes α) × Nat) :=
   match asSsize n with
   | .error e => .error e
   | .ok n =>
     if n < 0 then .error (.valueError "n cannot be negative")
     else if !tupleNewOk n then .error memoryError
     else if n = 0 then .ok ([], 0)
-    else match teeFromIterable iterable hooks with
+    else match getIter iterable with
       | .error e => .error e
-      | .ok t => .ok (tsResult t.it hooks ops { t with tees := List.replicate n.toNat (0, 0) })
+      | .ok it1 =>
+        match reIter re it1 with
+        | .error e => .error e
+        | .ok it => .ok (tsResult it hooks ops
+            { it := it, blocks := [[]], tees := List.replicate n.toNat (0, 0), hooks := hooks })
 
 /-- `itertools__tee_impl` (:1093-1098) on an input that is not a tee. -/
 def cTeeWrap (iterable : Obj α) (hooks : List (List TeeOp)) (ops : List TeeOp) :
@@ -228,7 +251,7 @@ theorem tsFold_pure : ∀ (ops : List TeeOp) (c : CTee α) (log : List (NextRes 
 end Pure
 
 theorem cTeeR_pure (o : Obj α) (n : Int) (ops : List TeeOp) : cTeeR o n [] ops = cTee o n ops := by
-  simp only [cTeeR, cTee, teeFromIterable]
+  simp only [cTeeR, cTee, reIter]
   cases ha : asSsize n with
   | error e => rfl
   | ok v =>
@@ -358,8 +381,10 @@ theorem teeReentryGuard_proven : TeeReentryGuard := by
     rfl
 
 /-- `itertools._tee(x)` on an input that is not a tee is `tee(x, 1)[0]`, for every
-input, hook and sequence of operations; a non-iterable fails with `iter()`'s
-TypeError. -/
+input whose iterator returns itself from `__iter__` (the iterator protocol; `cTeeR`'s
+default), hook and sequence of operations; a non-iterable fails with `iter()`'s
+TypeError. `TeeTwoGetIter` is the case of an `__iter__` that does not return
+itself, where the two differ. -/
 def TeeWrapIsTeeOne : Prop :=
   ∀ (α : Type) [Inhabited α] (o : Obj α) (hooks : List (List TeeOp)) (ops : List TeeOp),
     cTeeWrap o hooks ops = cTeeR o 1 hooks ops ∧
@@ -369,24 +394,46 @@ theorem teeWrapIsTeeOne_proven : TeeWrapIsTeeOne := by
   intro α _ o hooks ops
   constructor
   · have h1 : asSsize (1 : Int) = .ok 1 := asSsize_ok (by decide) (by decide)
-    simp only [cTeeWrap, cTeeR, h1]
+    simp only [cTeeWrap, cTeeR, h1, teeFromIterable, reIter]
     simp only [show ¬ ((1 : Int) < 0) by decide, if_false]
     have h2 : tupleNewOk (1 : Int) = true := by decide
     simp only [h2, Bool.not_true, Bool.false_eq_true, if_false, show ¬ ((1 : Int) = 0) by decide]
-    cases h : teeFromIterable o hooks with
+    cases hi : getIter o with
     | error e => rfl
-    | ok t =>
-      have hT : t.tees = [(0, 0)] := by
-        simp only [teeFromIterable] at h
-        cases hi : getIter o with
-        | error e => simp [hi] at h
-        | ok it =>
-          simp only [hi, Except.ok.injEq] at h
-          rw [← h]
-      simp [List.replicate, hT.symm]
+    | ok it => rfl
   · intro ty h
     subst h
     rfl
+
+/-- `tee(iterable, n)` calls `PyObject_GetIter` twice (:1172, then :1056 inside
+`tee_fromiterable`), `_tee(iterable)` once. For every input object, `n ≥ 1` in
+`Py_ssize_t` whose tuple fits, hooks and operations: when the iterator's own
+`__iter__` returns another iterator `s2`, `tee` reads `s2`, exactly as `tee` of
+an object yielding `s2` does, and when that `__iter__` raises, `tee` raises its
+exception; `n == 0` makes neither call. `_tee` makes only the first call
+(`cTeeWrap`), so it reads the first iterator.
+Checked on 3.15.2: with `A.__iter__` returning `b` and `b.__iter__` returning
+`iter(['x', 'y'])`, `tee(A(), 2)` gives `['x', 'y']` twice while `_tee(A())` gives
+`b`'s items; with `b.__iter__` raising `KeyError`, `tee` raises it and `_tee` does
+not; `n == 0` calls neither. -/
+def TeeTwoGetIter : Prop :=
+  ∀ (α : Type) [Inhabited α] (l : List α) (err : Option PyExc) (n : Int) (hooks : List (List TeeOp))
+    (ops : List TeeOp), 1 ≤ n → n ≤ ssizeMax → tupleNewOk n = true →
+    (∀ s2 : Src α, cTeeR (.iter l err) n hooks ops (.other s2) = cTeeR (.iter s2.items s2.err) n hooks ops) ∧
+    (∀ e, cTeeR (.iter l err) n hooks ops (.fail e) = .error e) ∧
+    (∀ re : ReIter α, cTeeR (.iter l err) 0 hooks ops re = .ok ([], 0))
+
+theorem teeTwoGetIter_proven : TeeTwoGetIter := by
+  intro α _ l err n hooks ops h1 h2 h3
+  have hm : ssizeMin ≤ 0 := by decide
+  have ha : asSsize n = .ok n := asSsize_ok (by omega) h2
+  have hn0 : ¬ n < 0 := by omega
+  have hn1 : ¬ n = 0 := by omega
+  have ha0 : asSsize (0 : Int) = .ok 0 := asSsize_ok hm (by decide)
+  refine ⟨fun s2 => ?_, fun e => ?_, fun re => ?_⟩
+  · simp [cTeeR, ha, hn0, hn1, h3, getIter, reIter]
+  · simp [cTeeR, ha, hn0, hn1, h3, getIter, reIter]
+  · simp [cTeeR, ha0, tupleNewOk]
 
 /-! ## `tee_clear`, `tee_dealloc` -/
 

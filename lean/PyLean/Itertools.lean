@@ -17,6 +17,7 @@ import PyLean.Itertools.TeeReentry
 import PyLean.Itertools.PairwiseReentry
 import PyLean.Itertools.CountFloat
 import PyLean.Itertools.CountReentry
+import PyLean.Itertools.IsliceReentry
 
 /-!
 `Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.15.2.
@@ -58,6 +59,31 @@ def entries : List Entry := [
     source := "invariant: error message describes the violated constraint", status := .refuted
     prop := ``IsliceStepMessageAccurate, thm := some ``isliceStepMessageAccurate_refuted
     bug := some "itertools-islice-step-message" },
+  { id := "itertools-islice-reentry-pure", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["islice_next"]
+    statement := "With an input that does not call back into the islice, for every element type, input object (not iterable, or raising after its items) and arguments, and whether or not the islice holds the only reference to the input, the mirror of islice_next with a re-entrant input gives exactly the run of cIsliceNext, and the process survives."
+    source := "invariant: the re-entrant mirror reduces to the plain one, so the islice theorems above hold for it", status := .proven
+    prop := ``IsliceReentryPure, thm := some ``isliceReentryPure_proven
+    notes := "This carries itertools-islice-doc-agree-nowrap, -ssize and consumes-max-start-stop over to the mirror whose input is a fallible iterator that may re-enter." },
+  { id := "itertools-islice-reentry-rereads", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["islice_next"]
+    statement := "For every state and re-entrant code: a next() with nothing to skip and below stop takes the input's item v; if the input's __next__ then calls next() on the islice and that does not free the iterator, the outer call returns v and advances the cnt and next the inner calls left, not its own. And on 3.15.2, islice(it, 5) over 0..9 whose __next__ calls next() once when taking 0 gives 1 to the inner call, then 0, 2, 3, 4 and the end; islice(it, 2, None) gives 3 to the inner call, then 4..9."
+    source := "Modules/itertoolsmodule.c:1710, :1715, :1717, :1722-1728 (lz->cnt and lz->next re-read after each pull)", status := .proven
+    prop := ``IsliceReentryRereads, thm := some ``isliceReentryRereads_proven
+    notes := "The two runs are what CPython 3.15.2 prints, inner results first. The islice keeps no re-entry guard (python/cpython#142732 asks for one), so these values are what the code does, not a documented promise." },
+  { id := "itertools-islice-no-use-after-free", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["islice_new", "islice_next"]
+    statement := "For every input, arguments, re-entrant __next__ and number of calls, islice never pulls from an input it has already let go and that has been freed."
+    source := "invariant: Python code cannot make the interpreter use freed memory", status := .refuted
+    prop := ``IsliceNoUseAfterFree, thm := some ``isliceNoUseAfterFree_refuted
+    bug := some "itertools-islice-reentrant-input-uaf"
+    notes := "islice(it, 2, None) holding the only reference to it; taking its one item, __next__ calls next() on the islice, which finds the input exhausted and clears lz->it. When __next__ returns the iterator is freed, and the outer call, still skipping, calls iternext on the stale local it (:1711). Segfault on 3.15.2 and main. Already reported as python/cpython#142732 (open)." },
+  { id := "itertools-islice-no-crash-shared", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["islice_next"]
+    statement := "When something besides the islice holds the input, for every input, arguments, re-entrant __next__ and number of calls, nothing is freed under islice and the process survives."
+    source := "invariant: Python code does not crash the interpreter", status := .proven
+    prop := ``IsliceNoCrashShared, thm := some ``isliceNoCrashShared_proven
+    notes := "So the use-after-free needs the islice to hold the only reference. With another reference the outer call simply keeps pulling from an iterator the islice has cleared." },
   { id := "itertools-combinatorics-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_combinations_impl"]
     statement := "For every element type, every input object and every int r (and r=None for permutations) the C combinations, combinations_with_replacement and permutations yield the same tuples as their doc equivalents and raise in the same cases."
@@ -163,7 +189,7 @@ def entries : List Entry := [
   { id := "itertools-count-no-reentry", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["count_next", "count_nextlong"]
     statement := "For every number type whose add does not call next() on the count, the mirror of count_next/count_nextlong with a re-entrant add returns what cCountNext returns and leaves the same object, for every state; and along every sequence of next() calls from the constructor no reference to a value is handed over twice."
-    source := "invariant: the comment at Modules/itertoolsmodule.c:3630-3631 (the count's reference to long_cnt is either returned or kept)", status := .proven
+    source := "invariant: the comment at Modules/itertoolsmodule.c:3631-3632 (the count's reference to long_cnt is either returned or kept)", status := .proven
     prop := ``CountNextNoReentry, thm := some ``countNextNoReentry_proven
     notes := "References are modelled by name: the count's own, a new one for each PyLong_FromSsize_t and PyNumber_Add result. The first conjunct carries every count theorem above over to the re-entrant mirror when nothing re-enters." },
   { id := "itertools-count-reentry-twice", pyFile := "Modules/itertoolsmodule.c"
@@ -175,7 +201,7 @@ def entries : List Entry := [
   { id := "itertools-count-hands-out-once", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_count_impl", "count_next", "count_nextlong"]
     statement := "For every number type and add, along every sequence of next() calls from the constructor, no reference to a value is handed over twice."
-    source := "invariant: the comment at Modules/itertoolsmodule.c:3630-3631; no use-after-free from Python code", status := .refuted
+    source := "invariant: the comment at Modules/itertoolsmodule.c:3631-3632; no use-after-free from Python code", status := .refuted
     prop := ``CountHandsOutOnce, thm := some ``countHandsOutOnce_refuted
     bug := some "itertools-count-reentrant-step-double-ref"
     notes := "count(5, Step()) whose step's first __radd__ calls next(c): both calls return 5 with the count's reference. Already reported upstream as python/cpython#154670 (open, fix PR python/cpython#154671 open)." },
@@ -272,21 +298,41 @@ def entries : List Entry := [
     prop := ``GrouperEqFalseStops, thm := some ``grouperEqFalseStops_proven },
   { id := "itertools-groupby-next-step-error", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["groupby_next", "groupby_step"]
-    statement := "For every comparison, key function and state where groupby_next's loop calls groupby_step (no current key, or a current key equal to the target with nothing re-entering): a key function raising on the next item makes next() raise that exception, consuming the item and clearing currgrouper with every other field kept, so the next call carries on from the following item; an input that raises makes next() raise that exception and the input is used up."
+    statement := "For every comparison, key function and state where groupby_next's loop calls groupby_step (no current key, or a current key equal to the target with nothing re-entering), with an input and key function that do not re-enter: a key function raising on the next item makes next() raise that exception, consuming the item and clearing currgrouper with every other field kept, so the next call carries on from the following item; an input that raises makes next() raise that exception and the input is used up."
     source := "invariant: the groupby_step failure return (Modules/itertoolsmodule.c:564-565)", status := .proven
     prop := ``GroupbyNextStepError, thm := some ``groupbyNextStepError_proven
     notes := "Checked on 3.15.2: groupby([2, 3, 11], key) with key raising on 2 raises once, then gives (0, [3]) and (1, ...); groupby([1, 2, 3, 11], key), next() twice without reading the group raises on the second, then gives (1, [11])." },
   { id := "itertools-grouper-step-error", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["_grouper_next", "groupby_step"]
-    statement := "For every comparison, key function and state, next() on the current group with no current value: a key function raising on the next item raises that exception, consumes the item and changes nothing else, so the group stays current and a later next() returns the following item when its key compares equal; an input that raises propagates its exception, and the group then stops."
+    statement := "For every comparison, key function and state, with an input and key function that do not re-enter, next() on the current group with no current value: a key function raising on the next item raises that exception, consumes the item and changes nothing else, so the group stays current and a later next() returns the following item when its key compares equal; an input that raises propagates its exception, and the group then stops."
     source := "invariant: the groupby_step failure return (Modules/itertoolsmodule.c:671-673)", status := .proven
     prop := ``GrouperStepError, thm := some ``grouperStepError_proven
     notes := "Checked on 3.15.2: in groupby([1, 2, 3, 11], key) with key raising on 2, the first group gives 1, ZeroDivisionError, 3, then stops; an input raising KeyError after 1 gives 1, KeyError, then StopIteration." },
   { id := "itertools-groupby-failed-step", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["groupby_step"]
-    statement := "For every key function and state, a failed groupby_step leaves currkey, currvalue, tgtkey, currgrouper and the groupers as they were, loses at most the one item it took, and reports no exception exactly when the input ended cleanly."
+    statement := "For every key function and state, with an input and key function that do not re-enter, a failed groupby_step leaves currkey, currvalue, tgtkey, currgrouper and the groupers as they were, loses at most the one item it took, and reports no exception exactly when the input ended cleanly."
     source := "invariant: currvalue and currkey are assigned only after both calls succeeded (:524-526)", status := .proven
-    prop := ``GroupbyFailedStepKeepsState, thm := some ``groupbyFailedStepKeepsState_proven },
+    prop := ``GroupbyFailedStepKeepsState, thm := some ``groupbyFailedStepKeepsState_proven
+    notes := "With re-entry the fields are whatever the re-entrant calls left; itertools-grouper-reentrant-step says what the step then does." },
+  { id := "itertools-grouper-reentrant-step", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["_grouper_next", "groupby_step"]
+    statement := "For every comparison, key function, state and re-entrant code run by the input's __next__ or the key function: next() on the current group with no current value takes the next item v with key k, and after that code has run (whatever it did: made another group current, left another value current, used up the input) does not check currgrouper again; it stores v and k over what it finds, releasing the value it finds, and compares its own key with k, so with nothing re-entering the comparison it returns v when __eq__ answers true and stops keeping v when false. And on 3.15.2, groupby([1, 1, 1, 2, 2, 3, 3]) whose second key call runs next() on the groupby gives 1, 1 from the first group, key 2 to the inner call, and then only 2 from the new group before it stops at 3."
+    source := "Modules/itertoolsmodule.c:669-672 (currgrouper checked before groupby_step only), :524-527", status := .proven
+    prop := ``GrouperReentrantStep, thm := some ``grouperReentrantStep_proven
+    notes := "The doc's pure Python groupby raises ValueError('generator already executing') on this re-entry, so there is no doc behaviour to compare. Checked step by step on 3.15.2: next(g1) -> 1; next(g1) with the key re-entering -> 1 while the inner next(gb) returned (2, g2); next(g1) -> stop; list(g2) -> [2]." },
+  { id := "itertools-grouper-step-keeps-items", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["_grouper_next", "groupby_step", "groupby_next", "_grouper_create"]
+    statement := "For every comparison, key function, input, re-entrant code and sequence of operations, the groupby_step that _grouper_next calls to fill an empty current value never releases a value, so no item made current is lost without being returned."
+    source := "invariant: _grouper_next steps only when currvalue is NULL (:671), to fill it; no item is lost", status := .refuted
+    prop := ``GrouperStepKeepsItems, thm := some ``grouperStepKeepsItems_refuted
+    bug := some "itertools-groupby-reentrant-key-drops-item"
+    notes := "groupby([1, 1, 1, 2, 2, 3, 3], key) whose second key call runs next() on the groupby: the inner groupby_next leaves the first 2 current for the new group, and the old group's step stores its second 1 over it (:524-527), so the group of 2 never yields its first item. An input whose __next__ re-enters does the same." },
+  { id := "itertools-grouper-step-keeps-items-no-reentry", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["_grouper_next", "groupby_step"]
+    statement := "With an input and key function that do not re-enter, for every comparison (whose __eq__ may raise and re-enter), key function and input (which may raise) and every sequence of operations, the groupby_step that _grouper_next calls never releases a value."
+    source := "invariant: _grouper_next steps only when currvalue is NULL (:671)", status := .proven
+    prop := ``GrouperStepKeepsItemsNoReentry, thm := some ``grouperStepKeepsItemsNoReentry_proven
+    notes := "So the loss in itertools-grouper-step-keeps-items needs the input or the key function to re-enter; a re-entrant __eq__ alone cannot cause it, since the comparison runs after the step." },
   { id := "itertools-grouper-direct", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools__grouper_impl", "_grouper_create", "_grouper_next"]
     statement := "Creating a _grouper(gb, k) directly on a groupby replaces the current grouper, so every grouper made earlier stops at once and leaves the state alone, and next() on the new one compares k with the current key: with a current value v and nothing re-entering, it returns v (and clears it) when __eq__ answers true, stops when false, and raises what __eq__ raises; for every comparison, key function and state."
@@ -318,7 +364,14 @@ def entries : List Entry := [
     pyFns := ["itertools__tee_impl", "tee_fromiterable", "teedataobject_newinternal"]
     statement := "itertools._tee(x) on an input that is not a tee behaves as tee(x, 1)[0], for every input, hook and sequence of operations, and a non-iterable fails with iter()'s TypeError."
     source := "Modules/itertoolsmodule.c:1089 (Iterator wrapped to make it copyable)", status := .proven
-    prop := ``TeeWrapIsTeeOne, thm := some ``teeWrapIsTeeOne_proven },
+    prop := ``TeeWrapIsTeeOne, thm := some ``teeWrapIsTeeOne_proven
+    notes := "For inputs whose iterator returns itself from __iter__, as the iterator protocol requires; itertools-tee-two-getiter is the other case." },
+  { id := "itertools-tee-two-getiter", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["itertools_tee_impl", "tee_fromiterable"]
+    statement := "tee(iterable, n) calls PyObject_GetIter on the iterable and again on the iterator it got, _tee(iterable) only once: for every input, n >= 1 in Py_ssize_t whose tuple fits, hooks and operations, an iterator whose __iter__ returns another iterator s2 makes tee behave exactly as tee of an object yielding s2, one whose __iter__ raises makes tee raise that exception, and n == 0 calls neither."
+    source := "Modules/itertoolsmodule.c:1170-1172, :1056", status := .proven
+    prop := ``TeeTwoGetIter, thm := some ``teeTwoGetIter_proven
+    notes := "Checked on 3.15.2: A.__iter__ returns b, b.__iter__ returns iter(['x', 'y']): tee(A(), 2) gives ['x', 'y'] twice and calls b.__iter__ once, _tee(A()) gives b's items and never calls it; b.__iter__ raising KeyError makes tee raise it; returning 5 makes tee raise TypeError. Intended or not, the iterator protocol says __iter__ returns the iterator itself, so no bug is claimed." },
   { id := "itertools-tee-clear", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["tee_clear", "tee_dealloc"]
     statement := "For references created in any order and callbacks that may raise, destroying a tee runs each callback once, newest first, whether or not the others raised; nothing raises out of it; dataobj and the list end up cleared; and a second tee_clear runs nothing."

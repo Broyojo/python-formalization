@@ -154,7 +154,7 @@ def RichcompareDefaults : Prop :=
 theorem richcompareDefaults_proven : RichcompareDefaults := by
   intro rt v u w hs heq hi hi'
   constructor
-  · simp [doRichcompare, ← heq, hs, callRichcompare, objectRichcompare, hi, hi', CmpOp.swapped]
+  · simp [doRichcompare, ← heq, hs, callRichcompare, objectRichcompare, identityKnown, hi, hi', CmpOp.swapped]
   · intro op hop
     rcases hop with rfl | rfl | rfl | rfl <;>
       simp [doRichcompare, ← heq, hs, callRichcompare, objectRichcompare, CmpOp.swapped]

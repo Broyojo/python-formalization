@@ -445,11 +445,11 @@ theorem superGetBound_proven : SuperGetBound := by
 
 /-- `__class__` assignment to the same class passes the layout test, for every class. -/
 def CompatibleReflexive : Prop :=
-  ∀ (t : Addr) (attr : String) (w : World),
-    compatibleForAssignment t t attr true w = .ok () w
+  ∀ (rt : Rt) (t : Addr) (attr : String) (w : World),
+    compatibleForAssignment rt t t attr true w = .ok () w
 
 theorem compatibleReflexive_proven : CompatibleReflexive := by
-  intro t attr w
+  intro rt t attr w
   simp [compatibleForAssignment, compatibleFlags]
 
 /-- `check_set_special_type_attr`, `Objects/typeobject.c:1519`: deleting a special attribute fails

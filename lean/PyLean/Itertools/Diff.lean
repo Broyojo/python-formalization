@@ -8,6 +8,7 @@ import PyLean.Itertools.TeeReentry
 import PyLean.Itertools.PairwiseReentry
 import PyLean.Itertools.CountFloat
 import PyLean.Itertools.CountReentry
+import PyLean.Itertools.IsliceReentry
 
 /-!
 Differential-testing handler for `itertools` cases (`"mod": "itertools"`).
@@ -208,8 +209,9 @@ def decTeeOp (v : Json) : Except String TeeOp := do
   | "k" => TeeOp.ctor <$> (a.getD 1 Json.null).getNat?
   | o => throw s!"unknown tee op {o}"
 
-def getHooks {β : Type} (dec : Json → Except String β) (j : Json) : Except String (List (List β)) :=
-  match j.getObjVal? "hooks" with
+def getHooks {β : Type} (dec : Json → Except String β) (j : Json) (k : String := "hooks") :
+    Except String (List (List β)) :=
+  match j.getObjVal? k with
   | .error _ => .ok []
   | .ok v => do
     (← v.getArr?).toList.mapM (fun h => do (← h.getArr?).toList.mapM dec)
@@ -376,7 +378,9 @@ def run (fn : String) (j : Json) : Except String Json := do
     if isC then
       let hooks ← getHooks decGbOp j
       let key ← if kname == "eqr" || kname == "eqh" then pure (fun x => .ok x) else keyFnPy kname
-      let r := cGroupbyR (keyEqFor kname) key o hooks ops
+      let khooks ← getHooks decGbOp j "khooks"
+      let ihooks ← getHooks decGbOp j "ihooks"
+      let r := cGroupbyR (keyEqFor kname) key o hooks ops khooks ihooks
       return encPy (fun (rs, crashed) =>
         if crashed then toJson "CRASH"
         else Json.arr (rs.map (fun r => match r with
@@ -394,7 +398,22 @@ def run (fn : String) (j : Json) : Except String Json := do
       Json.arr #[Json.arr (r.1.map encNext).toArray, toJson r.2]
     if fn == "tee_wrap" then return encPy enc (cTeeWrap o hooks ops)
     let n ← getInt j "n"
-    return encPy enc (if isC then cTeeR o n hooks ops else docTee o n ops)
+    -- what `__iter__` of the first iterator returns: itself, another input, or raises
+    let re : ReIter Int ← match j.getObjVal? "iter2" with
+      | .error _ => pure .self
+      | .ok v => match v.getObjVal? "raise" with
+        | .ok m => do pure (ReIter.fail (boom (← m.getStr?)))
+        | .error _ => do pure (ReIter.other ⟨← getIntList v "l", ← decErr v⟩)
+    return encPy enc (if isC then cTeeR o n hooks ops re else docTee o n ops)
+  | "islice_r" =>
+    let o ← getObj j "obj"
+    let args ← getOptIntList j "args"
+    let sole ← getBool j "sole"
+    let hooks ← (← (← field j "hooks").getArr?).toList.mapM (·.getNat?)
+    let n ← getNat j "calls"
+    return encPy (fun (r : List (NextRes Int) × Bool × Nat) =>
+      if r.2.1 then toJson "CRASH" else Json.arr #[Json.arr (r.1.map encNext).toArray, toJson r.2.2])
+      (cIsliceR o args sole hooks n)
   | "pairwise_r" =>
     let o ← getObj j "obj"
     let hooks ← (← (← field j "hooks").getArr?).toList.mapM (·.getNat?)

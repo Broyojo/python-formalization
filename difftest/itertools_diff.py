@@ -23,6 +23,7 @@ import math
 import operator
 import os
 import resource
+import signal
 import struct
 import sys
 import weakref
@@ -386,6 +387,89 @@ class Source:
         raise StopIteration
 
 
+class Reiter(Source):
+    """An iterator whose __iter__ does not return itself: it returns `second`, or raises."""
+
+    def __init__(self, items, err, second):
+        super().__init__(items, err)
+        self.second = second
+
+    def __iter__(self):
+        if isinstance(self.second, str):
+            raise ValueError(self.second)
+        return self.second
+
+
+class Wrap:
+    """An iterable whose __iter__ returns the given iterator."""
+
+    def __init__(self, it):
+        self.it = it
+
+    def __iter__(self):
+        return self.it
+
+
+class OwnedSource:
+    """`Source` for islice_r: counts into `counter`, and after taking an item makes the
+    next of `hooks` calls on the islice through `call`. Holds no reference to itself, so
+    when the islice drops it, it is freed. __next__ on a freed object is a crash."""
+
+    def __init__(self, items, err, counter, hooks, call, dead):
+        self.items, self.err, self.pos = items, err, 0
+        self.counter, self.hooks, self.call, self.dead = counter, hooks, call, dead
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:  # on a freed object even reading the flag fails
+            dead = self.dead[0]
+        except BaseException:
+            dead = True
+        if dead:
+            os.kill(os.getpid(), signal.SIGSEGV)
+        if self.pos < len(self.items):
+            self.pos += 1
+            self.counter[0] += 1
+            v = self.items[self.pos - 1]
+            if self.hooks:
+                for _ in range(self.hooks.pop(0)):
+                    self.call()
+            return v
+        if self.err is not None:
+            e, self.err = self.err, None
+            raise ValueError(e)
+        raise StopIteration
+
+    def __del__(self):
+        self.dead[0] = True
+
+
+def run_islice_r(c):
+    spec_, counter, ref, out = c["obj"], [0], [None], []
+
+    def call():
+        try:
+            out.append(next(ref[0]))
+        except StopIteration:
+            out.append(None)
+        except ValueError as e:
+            out.append(["exc"] + enc_exc(e))
+
+    src = 5 if "bad" in spec_ else OwnedSource(spec_["l"], spec_["err"], counter, list(c["hooks"]), call, [False])
+    try:
+        ref[0] = itertools.islice(src, *c["args"])
+    except Exception as e:
+        return {"exc": type(e).__name__, "msg": str(e)}
+    keep = None if c["sole"] else src
+    del src
+    for _ in range(c["calls"]):
+        call()
+    del keep
+    return {"ok": [out, counter[0]]}
+
+
 def obj(spec):
     """The Python object for a `decObj` spec."""
     if "bad" in spec:
@@ -530,12 +614,20 @@ def gen_islice(rng):
     return {"obj": spec(rng, l), "args": args, "index": rng.random() < 0.3}
 
 
+def iter2(rng):
+    """What `__iter__` of the iterator returns when tee() calls PyObject_GetIter on it again."""
+    if rng.random() < 0.4:
+        return {"raise": "iter2"}
+    return {"l": list(range(100, 100 + rng.randrange(70))), "err": "boom" if rng.random() < 0.2 else None}
+
+
 def gen_case(rng):
     fn = rng.choice(["islice", "islice", "islice", "islice_arity", "batched", "accumulate", "chain",
                      "chain_from", "compress", "cycle", "dropwhile", "takewhile", "filterfalse",
                      "pairwise", "pairwise_r", "starmap", "zip_longest", "product", "combinations", "cwr",
                      "permutations", "sizeof", "count", "count", "count", "count_reentry", "repeat", "groupby",
-                     "groupby", "groupby", "tee", "tee", "tee_wrap", "teedata", "teeweak"])
+                     "groupby", "groupby", "tee", "tee", "tee_wrap", "teedata", "teeweak",
+                     "islice_r", "islice_r", "groupby", "tee"])
     impl = rng.choice(["c", "doc"])
     c = {"mod": "itertools", "fn": fn, "impl": impl}
     if fn == "islice":
@@ -684,6 +776,14 @@ def gen_case(rng):
             # What successive __eq__ calls do: next(groupby), and reading a group.
             c["hooks"] = [[rng.choice(["o", "o", rng.randrange(5)]) for _ in range(rng.randrange(1, 4))]
                           for _ in range(rng.randrange(1, 4))]
+        if impl == "c" and rng.random() < 0.35:
+            # What successive key-function calls do before they answer.
+            c["khooks"] = [[rng.choice(["o", "o", rng.randrange(4)]) for _ in range(rng.randrange(3))]
+                           for _ in range(rng.randrange(1, 6))]
+        if impl == "c" and "bad" not in o and rng.random() < 0.35:
+            # What the input's __next__ does after taking successive items.
+            c["ihooks"] = [[rng.choice(["o", "o", rng.randrange(4)]) for _ in range(rng.randrange(3))]
+                           for _ in range(rng.randrange(1, 6))]
     elif fn == "tee":
         n = rng.choice([0, 1, 2, 2, 3, -1])
         if impl == "c" and rng.random() < 0.1:
@@ -707,12 +807,28 @@ def gen_case(rng):
         if impl == "c" and rng.random() < 0.3:
             c["hooks"] = [[[rng.choice("nnnc"), rng.randrange(4)] for _ in range(rng.randrange(1, 3))]
                           for _ in range(rng.randrange(1, 6))]
+        if impl == "c" and rng.random() < 0.25:
+            c["iter2"] = iter2(rng)
     elif fn == "tee_wrap":
         L = rng.choice([0, 3, 56, 57, 58, rng.randrange(70)])
         c.update(impl="c", obj=spec(rng, list(range(L))),
                  ops=[[rng.choice("nnnnck"), rng.randrange(3)] for _ in range(rng.choice([5, 80]))])
         if rng.random() < 0.3:
             c["hooks"] = [[["n", rng.randrange(3)]] for _ in range(rng.randrange(1, 4))]
+        if rng.random() < 0.25:
+            c["iter2"] = iter2(rng)
+    elif fn == "islice_r":
+        # An input whose __next__ calls next() on the islice after taking an item; `sole`:
+        # the islice holds the only reference to it (python/cpython#142732 when it is freed).
+        l = small_list(rng, 8, span=3)
+        n = len(l)
+        nargs = rng.choice([1, 2, 2, 3])
+        args = [rng.choice([None, 0, 1, 2, 3, n, n + 1, rng.randrange(n + 3)]) for _ in range(nargs)]
+        if nargs == 3 and args[2] is not None and args[2] < 1:
+            args[2] = rng.choice([1, 2, 3])
+        c.update(impl="c", obj=spec(rng, l), args=args, sole=rng.random() < 0.4,
+                 hooks=[rng.choice([0, 0, 1, 1, 2, 3]) for _ in range(rng.randrange(6))],
+                 calls=rng.randrange(n + 5))
     elif fn == "teeweak":
         ids = list(range(rng.randrange(6)))
         refs = list(ids)
@@ -862,8 +978,25 @@ def run_groupby(c):
         return interned.setdefault(x, K(x))
 
     objkey = key in ("eqr", "eqh")
+    khooks = list(c.get("khooks") or [])
+    base = intern if objkey else KEYS[key]
+
+    def keyf(x):
+        if khooks:
+            for o in khooks.pop(0):
+                do(o)
+        return base(x)
+
+    src = obj(c["obj"])
+    if isinstance(src, Source):
+        src.hooks = list(c.get("ihooks") or [])
+
+        def run(ops):
+            for o in ops:
+                do(o)
+        src.run = run
     try:
-        g = F(obj(c["obj"]), intern if objkey else KEYS[key])
+        g = F(src, keyf if c.get("khooks") else base)
     except Exception as e:
         return {"exc": type(e).__name__, "msg": str(e)}
     groups, out = [], []
@@ -893,9 +1026,17 @@ def run_groupby(c):
 
 def run_tee(c, F):
     src = obj(c["obj"])
+    iterable = src
+    sp = c.get("iter2")
+    if sp is not None and isinstance(src, Source):
+        # Wrap(first): tee() calls __iter__ on `first` again, _tee() does not.
+        second = sp["raise"] if "raise" in sp else Source(sp["l"], sp["err"])
+        first = Reiter(src.items, src.err, second)
+        iterable = Wrap(first)
+        src = second if c["fn"] == "tee" and isinstance(second, Source) else first
     try:
         n = IntLike(c["n"]) if c.get("index") else c.get("n")
-        tees = [itertools._tee(src)] if c["fn"] == "tee_wrap" else list(F(src, n))
+        tees = [itertools._tee(iterable)] if c["fn"] == "tee_wrap" else list(F(iterable, n))
     except Exception as e:
         return {"exc": type(e).__name__, "msg": str(e)}
     out = []
@@ -1069,7 +1210,10 @@ def run_python(c):
         k = c["ops"].count("n")
         return {"ok": [v for v, _ in zip(make(), range(k))]}
     if fn == "groupby":
-        return forked(lambda: run_groupby(c)) if c.get("hooks") else run_groupby(c)
+        hooked = c.get("hooks") or c.get("khooks") or c.get("ihooks")
+        return forked(lambda: run_groupby(c)) if hooked else run_groupby(c)
+    if fn == "islice_r":
+        return forked(lambda: run_islice_r(c)) if c["sole"] else run_islice_r(c)
     if fn in ("tee", "tee_wrap"):
         return run_tee(c, F)
     if fn == "teedata":
