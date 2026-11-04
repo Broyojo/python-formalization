@@ -1,0 +1,103 @@
+id: typeobj-set-mro-error-borrowed-mro
+title: "MRO conflict message reads freed memory: set_mro_error hashes candidate classes while to_merge holds borrowed base MROs, and a metaclass __hash__ that reassigns __bases__ frees them"
+priority: P2
+kind: memory-safety
+module: typeobj
+files: [Objects/typeobject.c]
+functions: ["set_mro_error", "pmerge", "mro_implementation_unlocked"]
+summary: |
+  `mro_implementation_unlocked` fills `to_merge` with *borrowed* references to each base's
+  `tp_mro` (typeobject.c:3537-3539). When `pmerge` finds no candidate it calls
+  `set_mro_error`, which walks `to_merge` and inserts each remaining head into a dict
+  (`PyDict_SetItem`, :3359-3362). Inserting hashes the class, so a metaclass `__hash__` runs
+  between reads of `to_merge[i]`. If it assigns `__bases__` of one of the bases, that base gets
+  a new `tp_mro` and its old tuple, still in `to_merge`, is freed; the next iteration reads
+  `PyTuple_GET_SIZE` and `PyTuple_GET_ITEM` of freed memory.
+
+      class M(type):
+          def __hash__(cls):
+              if armed and cls.__name__ == 'X':
+                  B.__bases__ = (X, Y)        # frees B's old __mro__
+              return type.__hash__(cls)
+      class X(metaclass=M): pass
+      class Y(metaclass=M): pass
+      class A(X, Y): pass
+      class B(Y, X): pass
+      class C(A, B): pass                     # MRO conflict -> set_mro_error
+
+  With B's old MRO longer than the tuple free list keeps (here 34 entries) and the memory
+  refilled with bytes objects, CPython reports
+  `Cannot create a consistent method resolution order (MRO) for bases X, b'AAAA...'`: a
+  "candidate class" read out of the freed tuple. With other contents it is an arbitrary
+  pointer.
+likelihood: |
+  Low. It needs a metaclass `__hash__` (or `__eq__`) with side effects on the hierarchy,
+  running during a failing class statement. No real code is known to do this.
+maybe_intended: |
+  No. Pure Python must not read freed memory; `class_name` at :3296-3297 already carries the
+  comment "Note that this is potentially re-entrant", but the dict insertion is too.
+reproducer: |
+  import subprocess, sys
+  code = r'''
+  state = {'armed': False}
+  junk = []
+  class M(type):
+      def __hash__(cls):
+          if state['armed'] and cls.__name__ == 'X':
+              state['armed'] = False
+              B.__bases__ = (X, Y)
+              junk.extend(bytes([0x41]) * 230 for _ in range(20000))
+          return type.__hash__(cls)
+  base = object
+  for i in range(30):
+      base = M('Z%d' % i, (base,), {})
+  class X(base, metaclass=M): pass
+  class Y(metaclass=M): pass
+  class A(X, Y): pass
+  class B(Y, X): pass
+  state['armed'] = True
+  try:
+      class C(A, B): pass
+  except TypeError as e:
+      print('MSG', str(e)[:120])
+  '''
+  p = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True)
+  out = p.stdout.strip()
+  print(out[:160], 'returncode', p.returncode)
+  msg = out.split('for bases', 1)[-1] if 'for bases' in out else ''
+  names = [n.strip() for n in msg.split(',')]
+  if p.returncode < 0 or (msg and any(n not in ('X', 'Y') for n in names)):
+      print('REPRODUCED typeobj-set-mro-error-borrowed-mro')
+expected: |
+  `TypeError: Cannot create a consistent method resolution order (MRO) for bases X, Y` (the
+  heads of the lists as they were), or the new hierarchy's error; no read of freed memory.
+observed: |
+  python3 3.15.2: "Cannot create a consistent method resolution order (MRO) for bases X,
+  b'AAAAAAAA...'" (a bytes object allocated in the freed tuple's memory). REPRODUCED.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same message. REPRODUCED.
+  With a short B.__mro__ the freed tuple goes to the free list and is reused by the next
+  4-tuple, so the message names an `object()` instance instead.
+promised_by: |
+  Undisputed invariant: pure Python must not read freed memory or crash the interpreter.
+cause: |
+  Objects/typeobject.c:3537-3539 stores borrowed `lookup_tp_mro(base)` pointers in
+  `to_merge`; :3359-3362 reads `to_merge[i]` on each iteration after a `PyDict_SetItem` that
+  can run `__hash__`/`__eq__` of the metaclass. `type_set_bases` replaces and frees `tp_mro`
+  of the base.
+possible_fix: |
+  Take strong references in `to_merge` (`Py_NewRef` at :3539 and decref after `pmerge`), or
+  collect the candidate classes into a new tuple before any `PyDict_SetItem`, so no Python
+  code runs while `to_merge` is read.
+duplicates:
+  issues: []
+  queries: ["set_mro_error", "set_mro_error use after free", "pmerge to_merge borrowed",
+            "mro conflict __hash__ __bases__ crash", "consistent method resolution order hash metaclass crash",
+            "mro error message crash", "__bases__ assignment during mro", "mro_implementation reentrant",
+            "type_new mro use-after-free", "mro crash (words)", "mro use-after-free (words)",
+            "bugforge-results/README.md: no match for set_mro_error or pmerge"]
+  searched_again: "2026-11-04; word searches found #159098 (getattr, different path) and #132835 (closed: NULL in mro_hierarchy), neither this one"
+lean: |
+  Not refuted in Lean: the model passes the remaining lists by value and hashes classes by
+  identity (a stated scope limit), so it cannot express the borrowed tuple. SetMroErrorMessage
+  (lean/PyLean/TypeObj/MroSpec2.lean) states the message when the lookups do not re-enter, and
+  names this record.
