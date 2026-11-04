@@ -1024,6 +1024,7 @@ longobj-richcompare	proven	Objects/longobject.c	long_richcompare,long_compare
 longobj-negate	proven	Objects/longobject.c	_PyLong_Negate
 longobj-divmod-near	proven	Objects/longobject.c	_PyLong_DivmodNear
 longobj-int-round	proven	Objects/longobject.c	int___round___impl
+longobj-pow-obj	proven	Objects/longobject.c	long_pow
 longobj-as-byte-array-stores	open	Objects/longobject.c	_PyLong_AsByteArray
 bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
