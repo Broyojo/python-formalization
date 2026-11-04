@@ -1,18 +1,23 @@
 id: datetime-pydatetime-none-as-omitted
-title: "_pydatetime treats an explicit None as an omitted argument in date.replace"
+title: "_pydatetime treats an explicit None as an omitted argument in date.replace, time.replace and datetime.replace"
 priority: P4
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["date.replace"]
+functions: ["date.replace", "time.replace", "datetime.replace"]
 summary: |
   _pydatetime uses None as the "not given" default and tests `is None`, so an explicit None
   behaves like an omitted argument; C uses Argument Clinic defaults and treats None as an
   object to convert.
   `date(2020, 1, 1).replace(year=None)` returns date(2020, 1, 1) in Python and raises
   `TypeError: 'NoneType' object cannot be interpreted as an integer` in C (same for month
-  and day). (The related pickle test `date(state, None)` is recorded separately, at P5, as
-  datetime-date-pickle-test-month-none.)
+  and day). time.replace and datetime.replace share the pattern for every field and for
+  fold (Lib/_pydatetime.py:1735-1746 and :2097-2116): `time(1, 2, 3).replace(hour=None)` and
+  `datetime(2020, 2, 3).replace(year=None, fold=None)` keep the fields in Python and raise the
+  same TypeError in C (the clinic `int` converters of datetime_time_replace and
+  datetime_datetime_replace, Modules/clinic/_datetimemodule.c.h:1089-1191 and :1853-1985).
+  `tzinfo=None` is a real value in both (it removes the tzinfo). (The related pickle test
+  `date(state, None)` is recorded separately, at P5, as datetime-date-pickle-test-month-none.)
 likelihood: |
   replace(year=None) can come from code that forwards optional fields as None, which then
   works on PyPy and _pydatetime and fails on CPython.
@@ -28,18 +33,27 @@ reproducer: |
       except TypeError:
           return 'TypeError'
   r = [run(lambda: m.date(2020, 1, 1).replace(year=None)) for m in (datetime, _pydatetime)]
-  print('replace C/Python:', r)
-  if r[0] == 'TypeError' and r[1].endswith('date(2020, 1, 1)'):
+  t = [run(lambda: m.time(1, 2, 3).replace(hour=None)) for m in (datetime, _pydatetime)]
+  d = [run(lambda: m.datetime(2020, 2, 3).replace(year=None, fold=None)) for m in (datetime, _pydatetime)]
+  print('date.replace C/Python:', r)
+  print('time.replace C/Python:', t)
+  print('datetime.replace C/Python:', d)
+  if (r[0] == 'TypeError' and r[1].endswith('date(2020, 1, 1)') and t[0] == 'TypeError'
+          and t[1].endswith('time(1, 2, 3)') and d[0] == 'TypeError'
+          and d[1].endswith('datetime(2020, 2, 3, 0, 0)')):
       print('REPRODUCED datetime-pydatetime-none-as-omitted')
 expected: |
-  The same outcome in both implementations: TypeError for replace(year=None), as in C.
+  The same outcome in both implementations: TypeError for replace(year=None) (and for any
+  other field or fold given as None), as in C.
 promised_by: |
   PEP 399 equivalence of _pydatetime and _datetime; the documented replace signature has no
   None default.
 cause: |
-  Lib/_pydatetime.py:1186-1191: `if year is None: year = self._year` (and month, day).
-  Modules/clinic/_datetimemodule.c.h:631-653: replace converts every given argument with
-  PyLong_AsInt.
+  Lib/_pydatetime.py:1186-1191: `if year is None: year = self._year` (and month, day);
+  :1735-1746 (time.replace) and :2097-2116 (datetime.replace) likewise for every field and fold.
+  Modules/clinic/_datetimemodule.c.h:631-653 (date), :1089-1191 (time), :1853-1985 (datetime):
+  replace converts every given argument with PyLong_AsInt; the impls are
+  Modules/_datetimemodule.c:3956-3961, :5171-5178, :6753-6762.
 possible_fix: |
   Use a private sentinel instead of None for the omitted defaults of date.replace (and of
   time.replace and datetime.replace if they share the pattern), or accept the difference.
@@ -52,7 +66,11 @@ duplicates:
   queries: ["gh api search: date+replace+None", "replace+year+None+pydatetime", "date.replace+None+year",
             "replace+year=None+datetime", "pydatetime+replace+None+TypeError", "_pydatetime+replace+None",
             "date.replace+None+keeps", "date+pickle+state+None+month", "date+constructor+bytes+state+None",
+            "replace None pydatetime", "time replace None TypeError", "datetime replace None keyword",
             "bugforge-results/README.md: datetime entries (none related)"]
 lean:
   property: PyLean.Datetime.DateReplaceTwins
   theorem: PyLean.Datetime.dateReplaceTwins_refuted
+  also:
+    - {property: PyLean.Datetime.TimeReplaceTwins, theorem: PyLean.Datetime.timeReplaceTwins_refuted}
+    - {property: PyLean.Datetime.DatetimeReplaceTwins, theorem: PyLean.Datetime.datetimeReplaceTwins_refuted}

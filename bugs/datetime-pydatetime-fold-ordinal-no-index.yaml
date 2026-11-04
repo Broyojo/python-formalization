@@ -4,7 +4,7 @@ priority: P4
 kind: twin-mismatch
 module: datetime
 files: [Lib/_pydatetime.py]
-functions: ["_check_time_fields", "time.__new__", "datetime.__new__", "time.replace", "datetime.replace", "date.fromordinal", "_ord2ymd"]
+functions: ["_check_time_fields", "time.__new__", "datetime.__new__", "date.fromordinal", "_ord2ymd"]
 summary: |
   `_check_date_fields` and `_check_time_fields` pass every field through `operator.index`
   (as C's `PyLong_AsInt` does), but two integer arguments are used without it:

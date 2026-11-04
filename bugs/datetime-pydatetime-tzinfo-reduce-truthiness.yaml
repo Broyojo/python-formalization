@@ -1,0 +1,55 @@
+id: datetime-pydatetime-tzinfo-reduce-truthiness
+title: "_pydatetime's tzinfo.__reduce__ tests __getinitargs__ for truth; C calls whatever it finds"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["tzinfo.__reduce__"]
+summary: |
+  `tzinfo.__reduce__` looks up `__getinitargs__` with `getattr(self, "__getinitargs__",
+  None)` and calls it only `if getinitargs:` (Lib/_pydatetime.py:1371-1375). C's
+  `tzinfo_reduce` calls any attribute `PyObject_GetOptionalAttr` found
+  (Modules/_datetimemodule.c:4261-4266). So a tzinfo subclass that sets
+  `__getinitargs__ = None` (the usual way to switch an inherited method off) pickles as
+  `(cls, (), state)` in Python and raises `TypeError: 'NoneType' object is not callable` in C;
+  a falsy callable is not called in Python and is called in C. For a method (always true) the
+  twins agree.
+likelihood: |
+  Very low: it needs a tzinfo subclass that disables an inherited __getinitargs__, and then
+  only matters when pickling.
+maybe_intended: |
+  Probably not intended, but harmless; the Python twin's `if getinitargs:` reads as a shorthand
+  for `is not None`, which would still differ from C for an explicit None.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      class TZ(m.tzinfo):
+          __getinitargs__ = None
+      try:
+          return repr(TZ().__reduce__()[1])
+      except TypeError:
+          return 'TypeError'
+  r = [run(m) for m in (datetime, _pydatetime)]
+  print('__reduce__ args C/Python:', r)
+  if r == ['TypeError', '()']:
+      print('REPRODUCED datetime-pydatetime-tzinfo-reduce-truthiness')
+expected: |
+  The same outcome in both implementations (most plausibly C's: a found attribute is called).
+promised_by: |
+  PEP 399 equivalence of _pydatetime and _datetime.
+cause: |
+  Lib/_pydatetime.py:1372: `if getinitargs:` (truth test). C: Modules/_datetimemodule.c:4264,
+  `if (getinitargs != NULL)`.
+possible_fix: |
+  `if getinitargs is not None:` in _pydatetime matches C except for an explicit None
+  attribute; to match it fully, distinguish a missing attribute with a sentinel default.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["gh search issues: tzinfo reduce getinitargs", "getinitargs None tzinfo", "getinitargs",
+            "bugforge-results/README.md: reduce/getinitargs (none)"]
+lean:
+  property: PyLean.Datetime.TzinfoReduceTwins
+  theorem: PyLean.Datetime.tzinfoReduceTwins_refuted

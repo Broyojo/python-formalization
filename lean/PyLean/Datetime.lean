@@ -32,6 +32,7 @@ import PyLean.Datetime.WrapScanProps
 import PyLean.Datetime.DeltaStrProps
 
 import PyLean.Datetime.EdgeProps
+import PyLean.Datetime.Twins2Props
 /-!
 `Lib/_pydatetime.py`, `Modules/_datetimemodule.c` and `Lib/_strptime.py`, CPython 3.15.2.
 
@@ -635,11 +636,6 @@ def entries : List Entry := [
     prop := ``TimePickleCtorTwins, thm := some ``timePickleCtorTwins_refuted
     bug := some "datetime-time-pickle-falsy-tzinfo"
     notes := "Python's `minute or None` accepts any falsy object as tzinfo." },
-  { id := "datetime-mktime-twins", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["datetime._mktime", "C local_to_seconds"]
-    statement := "datetime._mktime and local_to_seconds compute the same seconds for every local-time function and either fold."
-    source := "C/Python twins", status := .proven
-    prop := ``MktimeTwins, thm := some ``mktimeTwins_proven },
   { id := "datetime-mktime-fixed", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime._mktime", "C local_to_seconds"]
     statement := "In a zone with a fixed offset, local seconds t are POSIX seconds t - offset, for either fold."
@@ -665,11 +661,6 @@ def entries : List Entry := [
     statement := "format(x, '') is str(x) and format(x, f) is x.strftime(f) for nonempty f, for date and time, in both twins."
     source := "date.__format__ docs", status := .proven
     prop := ``FormatViaStrftime, thm := some ``formatViaStrftime_proven },
-  { id := "datetime-tzinfo-reduce", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
-    statement := "tzinfo.__reduce__ gives no constructor arguments without __getinitargs__, its result with one, then the state; an exception from either propagates."
-    source := "pickle contract", status := .proven
-    prop := ``TzinfoReduce, thm := some ``tzinfoReduce_proven },
   { id := "datetime-sanitize-isoformat", pyFile := "Lib/_pydatetime.py"
     pyFns := ["C _sanitize_isoformat_str"]
     statement := "Short strings fail, a string with no surrogate at positions 7, 8 or 10 comes back unchanged, and a surrogate at 7 becomes T."
@@ -1127,7 +1118,91 @@ def entries : List Entry := [
     pyFns := ["_parse_isoformat_time"]
     statement := "_parse_isoformat_time raises 'Isoformat time too short' for fewer than two characters and 'Invalid isoformat string' for any non-ASCII string before parsing; hour 24 next to a Z or an offset sets the same flags as without one (24:00 is midnight with became_next_day, other hour-24 times set error_from_components) and keeps the offset."
     source := "_pydatetime.py:455-459, :471-478", status := .proven
-    prop := ``ParseIsoTimeEdges, thm := some ``parseIsoTimeEdges_proven }
+    prop := ``ParseIsoTimeEdges, thm := some ``parseIsoTimeEdges_proven },
+  { id := "datetime-tzinfo-reduce-body", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
+    statement := "For every lookup of __getinitargs__ and every state: a lookup error propagates; a missing attribute gives () and the state; Python tests the object's truth (an error propagates), gives () for a false object without calling it and calls a true one, C calls whatever it found; an error of the call propagates before the state is asked for."
+    source := "_pydatetime.py:1370-1376; _datetimemodule.c:4256-4282; pickle contract", status := .proven
+    prop := ``TzinfoReduceBody, thm := some ``tzinfoReduceBody_proven },
+  { id := "datetime-tzinfo-reduce-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
+    statement := "tzinfo.__reduce__ agrees between the twins for every __getinitargs__ attribute."
+    source := "C/Python twins", status := .refuted
+    prop := ``TzinfoReduceTwins, thm := some ``tzinfoReduceTwins_refuted
+    bug := some "datetime-pydatetime-tzinfo-reduce-truthiness"
+    notes := "__getinitargs__ = None: Python's `if getinitargs:` is false and gives (); C calls None and raises TypeError." },
+  { id := "datetime-tzinfo-reduce-twins-truthy", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["tzinfo.__reduce__", "C tzinfo_reduce"]
+    statement := "tzinfo.__reduce__ returns the same value or exception in both twins whenever __getinitargs__ is missing or true (every function and bound method is true)."
+    source := "C/Python twins (narrows datetime-tzinfo-reduce-twins)", status := .proven
+    prop := ``TzinfoReduceTwinsTruthy, thm := some ``tzinfoReduceTwinsTruthy_proven },
+  { id := "datetime-isoformat-sep-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.isoformat", "C datetime_datetime_isoformat_impl"]
+    statement := "datetime.isoformat(sep, timespec) agrees between the twins for every sep object."
+    source := "C/Python twins", status := .refuted
+    prop := ``IsoformatSepTwins, thm := some ``isoformatSepTwins_refuted
+    bug := some "datetime-pydatetime-isoformat-int-sep"
+    notes := "isoformat(sep=65): Python's '%c' gives 'A', C's clinic converter raises TypeError." },
+  { id := "datetime-isoformat-sep-arg", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.isoformat", "C datetime_datetime_isoformat_impl"]
+    statement := "For a one-character str sep both twins give the same text; any other str is a TypeError in both; every non-str sep is a TypeError in C, while Python takes an int n in 0..0x10FFFF as chr(n) and raises OverflowError outside it."
+    source := "C/Python twins; datetime.isoformat docs (one-character separator)", status := .proven
+    prop := ``IsoformatSepArg, thm := some ``isoformatSepArg_proven },
+  { id := "datetime-datetime-compare-all", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.__eq__", "datetime._cmp", "C datetime_richcompare", "C pep495_eq_exception"]
+    statement := "datetime comparison agrees between the twins for every valid tzinfo environment and valid operands, with no assumption on the flipped-fold offsets."
+    source := "C/Python twins; PEP 495", status := .refuted
+    prop := ``DatetimeCompareTwinsAll, thm := some ``datetimeCompareTwinsAll_refuted
+    bug := some "datetime-pydatetime-pep495-eager-flip"
+    notes := "Python asks for the flipped-fold offset of both operands up front for ==; C only for otherwise-equal operands. A utcoffset that raises for fold=1 makes == raise in Python and return False in C. datetime-datetime-compare is the narrowed statement." },
+  { id := "datetime-time-replace-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.replace", "C datetime_time_replace_impl"]
+    statement := "time.replace agrees between the twins for every combination of omitted, None, int and other arguments, on every valid time."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimeReplaceTwins, thm := some ``timeReplaceTwins_refuted
+    bug := some "datetime-pydatetime-none-as-omitted"
+    notes := "time(1, 2, 3).replace(hour=None): Python keeps the hour, C raises TypeError." },
+  { id := "datetime-time-replace-int", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.replace", "C datetime_time_replace_impl", "C new_time_subclass_fold_ex"]
+    statement := "time.replace with each field and fold omitted or an int within C int, and any tzinfo argument, gives in both twins exactly the time with the new fields (omitted ones from self), checked in the constructor's order with its messages."
+    source := "time.replace docs; C/Python twins (narrows datetime-time-replace-twins)", status := .proven
+    prop := ``TimeReplaceInt, thm := some ``timeReplaceInt_proven },
+  { id := "datetime-datetime-replace-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.replace", "C datetime_datetime_replace_impl"]
+    statement := "datetime.replace agrees between the twins for every combination of omitted, None, int and other arguments, on every valid datetime."
+    source := "C/Python twins", status := .refuted
+    prop := ``DatetimeReplaceTwins, thm := some ``datetimeReplaceTwins_refuted
+    bug := some "datetime-pydatetime-none-as-omitted"
+    notes := "datetime(2020, 2, 3).replace(year=None): Python keeps the year, C raises TypeError." },
+  { id := "datetime-datetime-replace-int", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.replace", "C datetime_datetime_replace_impl", "C new_datetime_subclass_fold_ex"]
+    statement := "datetime.replace with each field and fold omitted or an int within C int, and any tzinfo argument, gives in both twins exactly the datetime with the new fields (omitted ones from self), checked in the constructor's order with its messages."
+    source := "datetime.replace docs; C/Python twins (narrows datetime-datetime-replace-twins)", status := .proven
+    prop := ``DatetimeReplaceInt, thm := some ``datetimeReplaceInt_proven },
+  { id := "datetime-mktime-local-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime._mktime", "C local_to_seconds", "C local", "C utc_to_seconds"]
+    statement := "For every valid naive datetime and every C-library localtime whose fields a datetime accepts, Python's _mktime and C's local_to_seconds(...) - epoch give the same seconds or the same exception."
+    source := "C/Python twins (narrows datetime-mktime-local-twins-all)", status := .proven
+    prop := ``MktimeLocalTwins, thm := some ``mktimeLocalTwins_proven },
+  { id := "datetime-mktime-local-twins-all", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime._mktime", "C local_to_seconds", "C local", "C utc_to_seconds"]
+    statement := "Python's _mktime and C's local_to_seconds agree for every valid naive datetime and every C-library localtime, a leap-second zone included."
+    source := "C/Python twins", status := .refuted
+    prop := ``MktimeLocalTwinsAll, thm := some ``mktimeLocalTwinsAll_refuted
+    bug := some "datetime-pydatetime-mktime-leap-second"
+    notes := "A localtime reporting second 60: Python's local() builds datetime(..., 60) and raises ValueError; C's utc_to_seconds takes the second as it is." },
+  { id := "datetime-local-timezone-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime._local_timezone", "datetime._mktime", "C local_timezone_from_local", "C local_to_seconds"]
+    statement := "datetime._local_timezone and C local_timezone_from_local pick the same timestamp for every valid datetime and every localtime with fields a datetime accepts: in a gap or fold the other fold's seconds exactly when (ts2 > ts) == fold."
+    source := "C/Python twins (narrows datetime-local-timezone-twins-all)", status := .proven
+    prop := ``LocalTimezoneTwins, thm := some ``localTimezoneTwins_proven },
+  { id := "datetime-local-timezone-twins-all", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime._local_timezone", "C local_timezone_from_local"]
+    statement := "datetime._local_timezone and C local_timezone_from_local pick the same timestamp for every valid datetime and every localtime."
+    source := "C/Python twins", status := .refuted
+    prop := ``LocalTimezoneTwinsAll, thm := some ``localTimezoneTwinsAll_refuted
+    bug := some "datetime-pydatetime-mktime-leap-second"
+    notes := "datetime(1972, 7, 1).astimezone() in a leap-second zone: Python raises ValueError, C returns." }
 ]
 
 end PyLean.Datetime
