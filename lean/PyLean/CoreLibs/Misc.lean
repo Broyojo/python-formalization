@@ -455,8 +455,8 @@ def contextlibEntries : List Entry := [
     status := .proven, prop := ``Contextlib.IssubTupleCases, thm := some ``Contextlib.issubTupleCases_proven },
   { id := "misc-ctx-suppress-derive", pyFile := "Lib/contextlib.py"
     pyFns := ["suppress.__exit__"]
-    statement := "For a group of unmatched leaves the rest is what the group class's derive makes: its exception comes through, a non-group is TypeError, a group is raised with the original's cause and traceback and the handled exception as context; an item that is no exception class is get_matcher_type's TypeError before derive."
-    source := "Doc/library/contextlib.rst: re-raised in a new group created using the original group's derive()"
+    statement := "For a group of unmatched leaves the rest is what the group class's derive makes: its exception comes through, a non-group is TypeError, a group is raised with the original's cause and traceback and the handled exception as context; an item that is no exception class is get_matcher_type's TypeError before derive. For a flat group with some leaves matched and some not, for every derive: derive runs on the matched leaves first, and its exception or non-group result is raised though the match is discarded; then derive on the rest decides the outcome as above."
+    source := "Doc/library/contextlib.rst: re-raised in a new group created using the original group's derive(); Objects/exceptions.c:1151-1196, :1374-1420"
     status := .proven, prop := ``Contextlib.SuppressGroupDerive, thm := some ``Contextlib.suppressGroupDerive_proven },
   { id := "misc-ctx-suppress-group-consistent", pyFile := "Lib/contextlib.py"
     pyFns := ["suppress.__exit__"]

@@ -99,7 +99,8 @@ theorem float_mul_floats (x y : F64) : float_mul (.float x) (.float y) = .ok (so
 /-- `float_add` on two floats, floatobject.c:546, as IEEE 754 addition: a NaN operand or
 infinities of opposite signs give a NaN, an infinity otherwise wins, and finite operands
 give the exact sum rounded to nearest even, an exact zero being `-0.0` only for two
-negative operands. -/
+negative operands, and any other result, an overflow to infinity included (`-1e308 + -1e308` is
+`-inf`), having the sign of the exact sum. -/
 def AddIEEE : Prop :=
   ∀ x y : F64,
     ((x.isNaN || y.isNaN) = true → NaNRes (float_add (.float x) (.float y))) ∧
@@ -109,7 +110,8 @@ def AddIEEE : Prop :=
     (x.isFinite = true → y.isInf = true → float_add (.float x) (.float y) = .ok (some y)) ∧
     (x.isFinite = true → y.isFinite = true → ∃ z, float_add (.float x) (.float y) = .ok (some z) ∧
       IsRounding (x.toRat + y.toRat) z ∧
-      (x.toRat + y.toRat = 0 → z.isZero = true ∧ z.sign = (x.sign && y.sign)))
+      (x.toRat + y.toRat = 0 → z.isZero = true ∧ z.sign = (x.sign && y.sign)) ∧
+      (x.toRat + y.toRat ≠ 0 → z.sign = decide (x.toRat + y.toRat < 0)))
 
 /-- `float_add`, floatobject.c:541-549, on every pair of operands. -/
 def FloatAddSpec : Prop := BinDispatch float_add ∧ AddIEEE
@@ -121,7 +123,8 @@ theorem addIEEE (x y : F64) :
     (x.isFinite = true → y.isInf = true → F64.add x y = y) ∧
     (x.isFinite = true → y.isFinite = true →
       IsRounding (x.toRat + y.toRat) (F64.add x y) ∧
-      (x.toRat + y.toRat = 0 → (F64.add x y).isZero = true ∧ (F64.add x y).sign = (x.sign && y.sign))) := by
+      (x.toRat + y.toRat = 0 → (F64.add x y).isZero = true ∧ (F64.add x y).sign = (x.sign && y.sign)) ∧
+      (x.toRat + y.toRat ≠ 0 → (F64.add x y).sign = decide (x.toRat + y.toRat < 0))) := by
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro h; simp [F64.add, h, qnan_isNaN]
   · intro hx hy hs
@@ -139,11 +142,12 @@ theorem addIEEE (x y : F64) :
     simp [F64.add, isNaN_false_of_finite hx, not_nan_of_inf hy, isInf_false_of_finite hx, hy]
   · intro hx hy
     rw [add_of_finite hx hy]
-    refine ⟨?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · split
       · rename_i h; rw [h]; exact zero_isRounding _
       · exact ofRat_isRounding _
     · intro h; rw [if_pos h]; exact ⟨zero_isZero _, zero_sign _⟩
+    · intro h; rw [if_neg h]; exact MathInt.ofRat_sign h
 
 theorem floatAddSpec_proven : FloatAddSpec := by
   refine ⟨withDoubles_dispatch _, ?_⟩
@@ -152,12 +156,13 @@ theorem floatAddSpec_proven : FloatAddSpec := by
   simp only [float_add_floats]
   refine ⟨fun h => ⟨_, rfl, a1 h⟩, fun h1 h2 h3 => ⟨_, rfl, a2 h1 h2 h3⟩,
     fun h1 h2 h3 => by rw [a3 h1 h2 h3], fun h1 h2 => by rw [a4 h1 h2], fun h1 h2 => ?_⟩
-  exact ⟨_, rfl, (a5 h1 h2).1, (a5 h1 h2).2⟩
+  exact ⟨_, rfl, (a5 h1 h2).1, (a5 h1 h2).2.1, (a5 h1 h2).2.2⟩
 
 /-- `float_sub` on two floats, floatobject.c:556: NaN for a NaN operand or for infinities
 of the same sign, the left infinity otherwise, the negated right infinity for a finite
 left operand, and for finite operands the exact difference rounded, an exact zero being
-`-0.0` only for `-0.0 - 0.0`. -/
+`-0.0` only for `-0.0 - 0.0`, and any other result, an overflow to infinity included
+(`-1e308 - 1e308` is `-inf`), having the sign of the exact difference. -/
 def SubIEEE : Prop :=
   ∀ x y : F64,
     ((x.isNaN || y.isNaN) = true → NaNRes (float_sub (.float x) (.float y))) ∧
@@ -168,7 +173,8 @@ def SubIEEE : Prop :=
       float_sub (.float x) (.float y) = .ok (some (F64.inf (!y.sign)))) ∧
     (x.isFinite = true → y.isFinite = true → ∃ z, float_sub (.float x) (.float y) = .ok (some z) ∧
       IsRounding (x.toRat - y.toRat) z ∧
-      (x.toRat - y.toRat = 0 → z.isZero = true ∧ z.sign = (x.sign && !y.sign)))
+      (x.toRat - y.toRat = 0 → z.isZero = true ∧ z.sign = (x.sign && !y.sign)) ∧
+      (x.toRat - y.toRat ≠ 0 → z.sign = decide (x.toRat - y.toRat < 0)))
 
 /-- `float_sub`, floatobject.c:551-559, on every pair of operands. -/
 def FloatSubSpec : Prop := BinDispatch float_sub ∧ SubIEEE
@@ -185,14 +191,11 @@ theorem floatSubSpec_proven : FloatSubSpec := by
     fun h1 h2 h3 => by rw [a3 h1 h2 (fun h => by have := h3 h; cases hx : x.sign <;> cases hy : y.sign <;> simp_all)],
     fun h1 h2 => ?_, fun h1 h2 => ?_⟩
   · rw [a4 h1 h2, eq_inf_of_isInf (show y.neg.isInf = true by rw [neg_isInf]; exact h2), (neg_fields y).1]
-  · obtain ⟨r1, r2⟩ := a5 h1 h2
-    rw [toRat_neg] at r1 r2
-    refine ⟨_, rfl, ?_, ?_⟩
-    · have e : x.toRat + -y.toRat = x.toRat - y.toRat := by grind
-      rw [e] at r1; exact r1
-    · intro h
-      have e : x.toRat + -y.toRat = 0 := by grind
-      exact r2 e
+  · obtain ⟨r1, r2, r3⟩ := a5 h1 h2
+    rw [toRat_neg] at r1 r2 r3
+    have e : x.toRat + -y.toRat = x.toRat - y.toRat := by grind
+    rw [e] at r1 r2 r3
+    exact ⟨_, rfl, r1, r2, r3⟩
 
 /-! ## Multiplication -/
 

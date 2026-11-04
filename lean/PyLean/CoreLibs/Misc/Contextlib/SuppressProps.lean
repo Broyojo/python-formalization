@@ -345,15 +345,218 @@ theorem suppressSplitRefusals_proven : SuppressSplitRefusals := by
     simp [suppressExit, hsub, issubItem, hbeg, egSplit, raisedNew, hg, matcherClasses_none items hn,
       matcherMsg]
 
+/-- The `TypeError` of `exceptiongroup_subset`, Objects/exceptions.c:1179-1183. -/
+def deriveMsg : String := "derive must return an instance of BaseExceptionGroup"
+
+theorem get_modify_of_ne (h : Heap) (a i : ExcId) (f : ExcObj → ExcObj) (hne : i ≠ a) :
+    (h.modify a f).get i = h.get i := by
+  simp only [Heap.modify, Heap.get]
+  rw [List.getD_eq_getElem?_getD, List.getElem?_set_ne (Ne.symm hne), ← List.getD_eq_getElem?_getD]
+
+/-- What `exceptiongroup_subset` does to the group `derive` returned (:1187-1196). -/
+def subsetFix (h : Heap) (orig eg : ExcId) : Heap :=
+  let o := h.get orig
+  let h1 := match o.tb with
+    | some t => h.setTb eg (some t)
+    | none => h
+  (h1.setContext eg o.context).modify eg (fun x => { x with cause := o.cause })
+
+theorem subsetFix_props (h : Heap) (orig g : ExcId) (hg : g < h.length) :
+    (subsetFix h orig g).length = h.length ∧ (∀ i, i ≠ g → (subsetFix h orig g).get i = h.get i) ∧
+    ((subsetFix h orig g).get g).cause = (h.get orig).cause ∧
+    ((subsetFix h orig g).get g).context = (h.get orig).context ∧
+    ((h.get orig).tb.isSome → ((subsetFix h orig g).get g).tb = (h.get orig).tb) := by
+  have hl1 : ∀ t, (h.setTb g t).length = h.length := fun t => by simp [Heap.setTb, length_modify]
+  generalize ho : h.get orig = o
+  have hfix : subsetFix h orig g = ((match o.tb with
+      | some t => h.setTb g (some t)
+      | none => h).setContext g o.context).modify g (fun x => { x with cause := o.cause }) := by
+    simp only [subsetFix, ho]
+  rw [hfix]
+  generalize hh1 : (match o.tb with
+      | some t => h.setTb g (some t)
+      | none => h) = h1
+  have hlen1 : h1.length = h.length := by
+    rw [← hh1]; split
+    · exact hl1 _
+    · rfl
+  have hg1 : g < (h1.setContext g o.context).length := by rw [length_setContext, hlen1]; exact hg
+  refine ⟨by rw [length_modify, length_setContext, hlen1], fun i hi => ?_, ?_, ?_, fun hs => ?_⟩
+  · rw [get_modify_of_ne _ _ _ _ hi, Heap.setContext, get_modify_of_ne _ _ _ _ hi, ← hh1]
+    split
+    · rw [Heap.setTb, get_modify_of_ne _ _ _ _ hi]
+    · rfl
+  · rw [get_modify_self _ _ _ hg1]
+  · rw [get_modify_self _ _ _ hg1, Heap.setContext, get_modify_self _ _ _ (by rw [hlen1]; exact hg)]
+  · rw [get_modify_self _ _ _ hg1, Heap.setContext, get_modify_self _ _ _ (by rw [hlen1]; exact hg)]
+    obtain ⟨t, ht⟩ := Option.isSome_iff_exists.1 hs
+    simp only [ht] at hh1
+    rw [← hh1, ht, Heap.setTb, get_modify_self _ _ _ hg]
+
+theorem subsetM_cons {σ : Type} (derive : Derive σ) (handled : Option ExcId) (s : St σ) (orig : ExcId)
+    (excs : List ExcId) (hne : excs ≠ []) :
+    subsetM derive handled s orig excs =
+      match derive orig excs s with
+      | (s, .error e) => (s, .error e)
+      | (s, .ok eg) =>
+        if s.h.isInst eg "BaseExceptionGroup" then ({ s with h := subsetFix s.h orig eg }, .ok (some eg))
+        else ((s.raiseNew clsType deriveMsg handled).1, .error (s.raiseNew clsType deriveMsg handled).2) := by
+  have he : excs.isEmpty = false := by
+    cases excs with
+    | nil => exact absurd rfl hne
+    | cons _ _ => rfl
+  simp only [subsetM, he, Bool.false_eq_true, if_false, subsetFix, deriveMsg]
+  rcases derive orig excs s with ⟨s', r⟩
+  cases r with
+  | error x => rfl
+  | ok g =>
+    simp only
+    split <;> rfl
+
+/-- `splitRec` on members that are all leaves: each goes to the match or to the rest by the concrete
+test, in order, and nothing else happens. -/
+theorem foldl_flat {σ : Type} (ms : List Cls) (derive : Derive σ) (handled : Option ExcId)
+    (fuel : Nat) (s : St σ) :
+    ∀ (cs ml rl : List ExcId), (∀ c ∈ cs, (s.h.get c).children = none) →
+      cs.foldl (splitStep (splitRec ms derive handled (fuel + 1))) (some (s, .ok (ml, rl))) =
+        some (s, .ok (ml ++ cs.filter (matchBy s.h ms), rl ++ cs.filter (fun c => !matchBy s.h ms c))) := by
+  intro cs
+  induction cs with
+  | nil => intro ml rl _; simp
+  | cons c rest ih =>
+    intro ml rl h
+    have hc := h c (by simp)
+    have hr : ∀ c' ∈ rest, (s.h.get c').children = none := fun c' hc' => h c' (by simp [hc'])
+    simp only [List.foldl_cons]
+    cases hm : matchBy s.h ms c with
+    | true =>
+      have : splitStep (splitRec ms derive handled (fuel + 1)) (some (s, .ok (ml, rl))) c =
+          some (s, .ok (ml ++ [c], rl)) := by
+        simp [splitStep, splitRec, hm]
+      rw [this, ih _ _ hr]
+      simp [List.filter_cons, hm]
+    | false =>
+      have : splitStep (splitRec ms derive handled (fuel + 1)) (some (s, .ok (ml, rl))) c =
+          some (s, .ok (ml, rl ++ [c])) := by
+        simp [splitStep, splitRec, hm, hc]
+      rw [this, ih _ _ hr]
+      simp [List.filter_cons, hm]
+
+/-- A flat group some of whose leaves match and some not, for every `derive` of the group class:
+`split` (Objects/exceptions.c:1374-1420) calls `derive` first on the matched leaves, in order, and
+then on the rest. A `derive` that raises on the matched part, or returns something that is no
+`BaseExceptionGroup`, makes `excinst.split(...)` (Lib/contextlib.py:527) raise that (the
+`TypeError` of :1179-1183), though the match is discarded and the rest is never built. Otherwise the
+match gets the original's `__traceback__`, `__context__` and `__cause__` and nothing else changes,
+and the rest is `derive` on the unmatched leaves in that world: its exception comes through, a
+non-group is the `TypeError`, and a group is raised with the original's cause and traceback and the
+exception being handled as `__context__`. -/
+def SuppressGroupDerivePartial : Prop :=
+  ∀ (σ : Type) (items : List (SupItem σ)) (ms : List Cls) (derive : Derive σ) (s s1 s2 s3 : St σ)
+    (handled : Option ExcId) (e g g' x : ExcId) (cs : List ExcId),
+    let dc := (s.h.get e).cls
+    let ml := cs.filter (matchBy s1.h ms)
+    let rl := cs.filter (fun c => !matchBy s1.h ms c)
+    let r := suppressExit items derive s handled (some (.cls dc)) (some e)
+    issubTuple (.cls dc) handled items s = (s1, .ok false) → s1.h.isInst e "BaseExceptionGroup" = true →
+    (s1.h.get e).cls = dc → matcherClasses items = some ms → matchBy s1.h ms e = false →
+    (s1.h.get e).children = some cs → (∀ c ∈ cs, (s1.h.get c).children = none) → ml ≠ [] → rl ≠ [] →
+    (derive e ml s1 = (s2, .error x) → r = .ok (s2, .error x)) ∧
+    (derive e ml s1 = (s2, .ok g) → s2.h.isInst g "BaseExceptionGroup" = false →
+      r = raisedNew s2 clsType deriveMsg handled) ∧
+    (derive e ml s1 = (s2, .ok g) → s2.h.isInst g "BaseExceptionGroup" = true →
+      ∃ s2' : St σ, s2'.g = s2.g ∧ s2'.h.length = s2.h.length ∧ (∀ i, i ≠ g → s2'.h.get i = s2.h.get i) ∧
+        (s2'.h.get g).cause = (s2.h.get e).cause ∧ (s2'.h.get g).context = (s2.h.get e).context ∧
+        ((s2.h.get e).tb.isSome → (s2'.h.get g).tb = (s2.h.get e).tb) ∧
+        (derive e rl s2' = (s3, .error x) → r = .ok (s3, .error x)) ∧
+        (derive e rl s2' = (s3, .ok g') → s3.h.isInst g' "BaseExceptionGroup" = false →
+          r = raisedNew s3 clsType deriveMsg handled) ∧
+        (derive e rl s2' = (s3, .ok g') → s3.h.isInst g' "BaseExceptionGroup" = true →
+          ∃ s4, r = .ok (s4, .error g') ∧ (s4.h.get g').cause = (s3.h.get e).cause ∧
+            ((s3.h.get e).tb.isSome → (s4.h.get g').tb = (s3.h.get e).tb) ∧
+            (handled ≠ some g' → handled.isSome → (s4.h.get g').context = handled)))
+
+theorem suppressGroupDerivePartial_proven : SuppressGroupDerivePartial := by
+  intro σ items ms derive s s1 s2 s3 handled e g g' x cs dc ml rl r hsub hbeg hcls hms hm hch hleaf hml hrl
+  have hl : e < s1.h.length := isInst_lt hbeg
+  have hbegc : subOf dc clsBEG = true := by
+    simp only [Heap.isInst] at hbeg
+    simpa [subOf, clsBEG, hcls] using hbeg
+  obtain ⟨f, hf⟩ : ∃ f, s1.h.length = f + 1 :=
+    ⟨s1.h.length - 1, (Nat.succ_pred_eq_of_pos (Nat.lt_of_le_of_lt (Nat.zero_le e) hl)).symm⟩
+  have hfold := foldl_flat ms derive handled f s1 cs [] [] hleaf
+  simp only [List.nil_append] at hfold
+  have hsplit : egSplit items derive handled s1 (some e) =
+      (match subsetM derive handled s1 e ml with
+       | (s, .error x) => some (s, .error x)
+       | (s, .ok m) =>
+         match subsetM derive handled s e rl with
+         | (s, .error x) => some (s, .error x)
+         | (s, .ok r) => some (s, .ok (m, r))) := by
+    simp only [egSplit, hbeg, Bool.not_true, Bool.false_eq_true, if_false, hms]
+    rw [hf, splitRec]
+    simp only [hm, Bool.false_eq_true, if_false, hch]
+    rw [hfold]
+    rfl
+  have hpre : r =
+      (match egSplit items derive handled s1 (some e) with
+       | none => .error .modelFuel
+       | some (s, .error e) => .ok (s, .error e)
+       | some (s, .ok (_, none)) => .ok (s, .ok (some true))
+       | some (s, .ok (_, some r)) => .ok ({ s with h := s.h.raiseCtx r handled }, .error r)) := by
+    simp [r, suppressExit, hsub, issubItem, hbegc]
+    try rfl
+  have hs1 := subsetM_cons derive handled s1 e ml hml
+  refine ⟨fun hd => ?_, fun hd hg => ?_, fun hd hg => ?_⟩
+  · rw [hpre, hsplit, hs1, hd]
+  · rw [hpre, hsplit, hs1, hd]
+    simp only [hg, Bool.false_eq_true, if_false]
+    rfl
+  · have hgl : g < s2.h.length := isInst_lt hg
+    obtain ⟨hlen, hoth, hcause, hctx, htb⟩ := subsetFix_props s2.h e g hgl
+    refine ⟨{ s2 with h := subsetFix s2.h e g }, rfl, hlen, hoth, hcause, hctx, htb, ?_⟩
+    have hs2 := subsetM_cons derive handled { s2 with h := subsetFix s2.h e g } e rl hrl
+    have hfirst : subsetM derive handled s1 e ml = ({ s2 with h := subsetFix s2.h e g }, .ok (some g)) := by
+      rw [hs1, hd]; simp only [hg, if_true]
+    refine ⟨fun hd2 => ?_, fun hd2 hg2 => ?_, fun hd2 hg2 => ?_⟩
+    · rw [hpre, hsplit, hfirst]
+      simp only
+      rw [hs2, hd2]
+    · rw [hpre, hsplit, hfirst]
+      simp only
+      rw [hs2, hd2]
+      simp only [hg2, Bool.false_eq_true, if_false]
+      rfl
+    · have hgl2 : g' < s3.h.length := isInst_lt hg2
+      obtain ⟨_, _, hcause2, _, htb2⟩ := subsetFix_props s3.h e g' hgl2
+      have hl2 : g' < (subsetFix s3.h e g').length := by
+        rw [(subsetFix_props s3.h e g' hgl2).1]; exact hgl2
+      have hsame := raiseCtx_same (subsetFix s3.h e g') g' handled g'
+      refine ⟨{ s3 with h := (subsetFix s3.h e g').raiseCtx g' handled }, ?_, ?_, ?_, ?_⟩
+      · rw [hpre, hsplit, hfirst]
+        simp only
+        rw [hs2, hd2]
+        simp only [hg2, if_true]
+      · show (((subsetFix s3.h e g').raiseCtx g' handled).get g').cause = _
+        rw [hsame.2.2.1, hcause2]
+      · intro hs
+        show (((subsetFix s3.h e g').raiseCtx g' handled).get g').tb = _
+        rw [hsame.2.2.2.1, htb2 hs]
+      · intro hne hsome
+        obtain ⟨y, rfl⟩ := Option.isSome_iff_exists.1 hsome
+        exact raiseCtx_context _ g' y hl2 (fun h => hne (by rw [h]))
+
 /-- A group of leaves none of which matches: the rest is the group `derive` makes from all of
 them, so whatever the group class's `derive` does decides the outcome, as the docs say ("re-raised
 in a new group which is created using the original group's `derive()` method"). An exception from
 `derive` comes through; a result that is no `BaseExceptionGroup` is the `TypeError` of
 `exceptiongroup_subset`; a group is raised with the original's `__cause__` and `__traceback__`, and
 the exception being handled as `__context__`. When an item is no exception class, `split` refuses
-the tuple before it looks at the members, with the `TypeError` of `get_matcher_type`. -/
+the tuple before it looks at the members, with the `TypeError` of `get_matcher_type`. And a flat
+group some of whose leaves match and some not, for every `derive`: `SuppressGroupDerivePartial`
+(`derive` on the matched leaves first, its failure or non-group result raised, then on the rest). -/
 def SuppressGroupDerive : Prop :=
-  ∀ (σ : Type) (items : List (SupItem σ)) (derive : Derive σ) (s s1 s2 : St σ)
+  (∀ (σ : Type) (items : List (SupItem σ)) (derive : Derive σ) (s s1 s2 : St σ)
     (handled : Option ExcId) (e g x : ExcId) (cs : List ExcId),
     let dc := (s.h.get e).cls
     issubTuple (.cls dc) handled items s = (s1, .ok false) → s1.h.isInst e "BaseExceptionGroup" = true →
@@ -375,9 +578,11 @@ def SuppressGroupDerive : Prop :=
         ∃ s3, suppressExit items derive s handled (some (.cls dc)) (some e) = .ok (s3, .error g) ∧
           (s3.h.get g).cause = (s2.h.get e).cause ∧
           ((s2.h.get e).tb.isSome → (s3.h.get g).tb = (s2.h.get e).tb) ∧
-          (handled ≠ some g → handled.isSome → (s3.h.get g).context = handled)))
+          (handled ≠ some g → handled.isSome → (s3.h.get g).context = handled)))) ∧
+  SuppressGroupDerivePartial
 
 theorem suppressGroupDerive_proven : SuppressGroupDerive := by
+  refine ⟨?_, suppressGroupDerivePartial_proven⟩
   intro σ items derive s s1 s2 handled e g x cs dc hsub hbeg hcls
   have hbegc : subOf dc clsBEG = true := by
     simp only [Heap.isInst] at hbeg

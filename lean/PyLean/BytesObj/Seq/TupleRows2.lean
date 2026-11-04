@@ -140,7 +140,10 @@ with `_PyEval_UnpackIndices`, Python/ceval.c:2981-2999), for every pair of bound
 with `__index__`: `start` is converted first, and its exception (from `__index__`, or the `TypeError`
 for an object that is neither an int, `None` nor has `__index__`) is the result whatever `stop` is;
 then `stop`'s; otherwise the result has the items of `t[slice(a, b)]` for the values `a` and `b`
-(`TupleBinarySlice`). Hypothesis: the tuple's length is one `tuple_alloc` gives (type invariant). -/
+(`TupleBinarySlice`), and it is the tuple itself (`Py_NewRef(container)`, :543-545) exactly when the
+bounds cover it: `a` is `None`, `0` or at most `-len`, and `b` is `None` or at least `len` (any bounds
+for the empty tuple); otherwise it is a new tuple or the empty singleton, never `t`. Hypothesis: the
+tuple's length is one `tuple_alloc` gives (type invariant). -/
 def TupleBinarySliceObj : Prop :=
   ∀ (α : Type) (mt : α → Bool) (t : Tup α) (start stop : SIdx) (e : PyExc) (a b : Option Int),
     t.exact = true → (t.items.length : Int) ≤ tupleLimit →
@@ -150,15 +153,64 @@ def TupleBinarySliceObj : Prop :=
     (evalSliceIndex start = .ok a → evalSliceIndex stop = .error e → tupleBinarySliceObj mt t start stop = .error e) ∧
     (evalSliceIndex start = .ok a → evalSliceIndex stop = .ok b →
       ∃ r r', tupleBinarySliceObj mt t start stop = .ok r ∧ tupleGetSlice t ⟨a, b, none⟩ = .ok r' ∧
-        r.items t.items [] = r'.items t.items [])
+        r.items t.items [] = r'.items t.items []) ∧
+    (evalSliceIndex start = .ok a → evalSliceIndex stop = .ok b →
+      (tupleBinarySliceObj mt t start stop = .ok (.arg 0) ↔
+        (t.items = [] ∨ ((a = none ∨ a = some 0 ∨ ∃ v, a = some v ∧ v ≤ -(t.items.length : Int)) ∧
+          (b = none ∨ ∃ v, b = some v ∧ (t.items.length : Int) ≤ v)))))
+
+theorem tupleFromArray_ne_arg (mt : α → Bool) (L : List α) (k : Nat) :
+    tupleFromArray mt L ≠ .ok (.arg k) := by
+  unfold tupleFromArray
+  split
+  · simp
+  · cases tupleAlloc (L.length : Int) <;> simp
+
+theorem tupleBinarySlice_arg (mt : α → Bool) (t : Tup α) (a b : Option Int)
+    (hl : (t.items.length : Int) ≤ tupleLimit) :
+    tupleBinarySlice mt t ⟨a, b, none⟩ = .ok (.arg 0) ↔
+      (t.items = [] ∨ ((a = none ∨ a = some 0 ∨ ∃ v, a = some v ∧ v ≤ -(t.items.length : Int)) ∧
+        (b = none ∨ ∃ v, b = some v ∧ (t.items.length : Int) ≤ v))) := by
+  have hlim : tupleLimit = (ssizeMax - tupleBase) / 8 := rfl
+  have hM : ssizeMax = 9223372036854775807 := by decide
+  have hm : ssizeMin = -9223372036854775808 := by decide
+  have hB : tupleBase = 32 := rfl
+  have key : tupleBinarySlice mt t ⟨a, b, none⟩ = .ok (.arg 0) ↔
+      (unpackIndices t.items.length ⟨a, b, none⟩).1 = 0 ∧
+        (unpackIndices t.items.length ⟨a, b, none⟩).2 = t.items.length := by
+    cases hp : unpackIndices (t.items.length : Int) ⟨a, b, none⟩ with
+    | mk x y =>
+    have e1 : tupleBinarySlice mt t ⟨a, b, none⟩ = if x = 0 ∧ y = (t.items.length : Int) then .ok (.arg 0)
+        else tupleFromArray mt ((t.items.drop x.toNat).take ((if y < x then x else y) - x).toNat) := by
+      simp only [tupleBinarySlice, hp]
+    rw [e1]
+    simp only
+    by_cases h : x = 0 ∧ y = (t.items.length : Int)
+    · simp [h]
+    · rw [if_neg h]
+      simp only [h, iff_false]
+      exact tupleFromArray_ne_arg mt _ 0
+  rw [key]
+  have he : t.items = [] ↔ (t.items.length : Int) = 0 := by simp
+  rw [he]
+  have hn0 : 0 ≤ (t.items.length : Int) := by omega
+  rw [hlim, hM, hB] at hl
+  generalize (t.items.length : Int) = n at hl hn0 ⊢
+  cases a <;> cases b <;>
+    simp [unpackIndices, RangeSlice.adjustIndices, RangeSlice.adjustOne, RangeSlice.clampSsize, hM, hm] <;>
+    (repeat' split) <;> omega
 
 theorem tupleBinarySliceObj_proven : TupleBinarySliceObj := by
   intro α mt t start stop e a b he hl
-  refine ⟨rfl, rfl, fun h => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
+  refine ⟨rfl, rfl, fun h => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
   · simp only [tupleBinarySliceObj, h]
   · simp only [tupleBinarySliceObj, h1, h2]
   · obtain ⟨r, r', hr, hr', hi⟩ := tupleBinarySlice_proven α mt t a b he hl
     exact ⟨r, r', by simp only [tupleBinarySliceObj, h1, h2, hr], hr', hi⟩
+  · have : tupleBinarySliceObj mt t start stop = tupleBinarySlice mt t ⟨a, b, none⟩ := by
+      simp only [tupleBinarySliceObj, h1, h2]
+    rw [this]
+    exact tupleBinarySlice_arg mt t a b hl
 
 /-- After `PyTuple_SetItem` on a uniquely referenced tuple, `hash` agrees with that of a fresh tuple
 of the same items: the cache invariant of `ob_hash` ("Cached hash", Include/cpython/tupleobject.h),
