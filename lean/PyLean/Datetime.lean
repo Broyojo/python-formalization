@@ -380,6 +380,18 @@ def entries : List Entry := [
     statement := "For every valid timedelta t and float x, t * x and t / x agree between the twins; for finite x = n/d (as_integer_ratio), t * x is t_us * n / d and t / x is t_us * d / n microseconds rounded half to even (OverflowError out of range, ZeroDivisionError for x == 0); infinities raise OverflowError and NaN ValueError."
     source := "timedelta docs (t1 * f, t1 / f: rounded using round-half-to-even); C/Python twins", status := .proven
     prop := ``TimedeltaFloatOps, thm := some ``timedeltaFloatOps_proven },
+  { id := "datetime-timedelta-float-ratio-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__mul__", "timedelta.__truediv__", "C multiply_truedivide_timedelta_float", "C get_float_as_integer_ratio"]
+    statement := "For every valid timedelta t and every float operand, a float subclass with its own as_integer_ratio included, t * x and t / x agree between the twins."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimedeltaFloatRatioTwins, thm := some ``timedeltaFloatRatioTwins_refuted
+    bug := some "datetime-timedelta-float-ratio-not-tuple"
+    notes := "A float subclass whose as_integer_ratio returns [3, 2]: Python unpacks it, C's get_float_as_integer_ratio raises TypeError for a non-tuple." },
+  { id := "datetime-timedelta-float-ratio", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timedelta.__mul__", "timedelta.__truediv__", "_divide_and_round", "C multiply_truedivide_timedelta_float", "C get_float_as_integer_ratio", "C divide_nearest"]
+    statement := "For every valid timedelta t: a plain float operand is the float.as_integer_ratio model; for a float subclass whose as_integer_ratio returns a 2-tuple (n, d) of ints the twins agree and t * x is t_us * n / d (t / x is d * t_us / n) rounded half to even; a 2-list gives the same in Python and TypeError in C; a tuple of another length is ValueError in both, a list of another length ValueError in Python and TypeError in C; a non-iterable is TypeError in both; an exception of the method propagates in both."
+    source := "C/Python twins; timedelta docs (round-half-to-even)", status := .proven
+    prop := ``TimedeltaFloatRatio, thm := some ``timedeltaFloatRatio_proven },
   { id := "datetime-timedelta-truediv-delta", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timedelta.__truediv__", "C truedivide_timedelta_timedelta"]
     statement := "For valid timedeltas a, b with b != 0, a / b is the correctly rounded double of a_us / b_us in both twins."

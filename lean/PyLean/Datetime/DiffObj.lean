@@ -306,6 +306,25 @@ def runObj (fn : String) (j : Json) : Except String Json := do
       | _, true => a.truedivFloatC x
       | _, false => a.truedivFloatPy x
     return encPy encD r
+  | "td_float_sub" =>
+    -- a float subclass whose `as_integer_ratio` returns `["t", ints]` (a tuple), `["l", ints]`
+    -- (a list), `["n"]` (an int, not iterable) or raises `ValueError(msg)` (`["e", msg]`)
+    let a ← decDelta (← field j "a")
+    let r ← (← field j "r").getArr?
+    let ints : List Int := ((r.getD 1 .null).getArr?.toOption.getD #[]).toList.map
+      (fun v => (v.getInt?).toOption.getD 0)
+    let rs : Py RatioSeq ← match ← (r.getD 0 .null).getStr? with
+      | "t" => pure (.ok (.tuple ints))
+      | "l" => pure (.ok (.list ints))
+      | "e" => pure (.error (.valueError (← (r.getD 1 .null).getStr?)))
+      | _ => pure (.ok .notIter)
+    let x : FloatOperand := .sub rs
+    let res := match (← getStr j "op"), isC with
+      | "mul", true => a.mulFloatObjC x
+      | "mul", false => a.mulFloatObjPy x
+      | _, true => a.truedivFloatObjC x
+      | _, false => a.truedivFloatObjPy x
+    return encPy encD res
   | "date_sub_dt" =>
     let a ← getYMD j "a"; let b ← getYMD j "b"
     let r := binarySub ((if isC then dateSubC else dateSubPy) a.1 a.2.1 a.2.2 (.datetime b.1 b.2.1 b.2.2))

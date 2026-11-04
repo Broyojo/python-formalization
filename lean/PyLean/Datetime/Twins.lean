@@ -64,6 +64,73 @@ def Delta.truedivFloatC (a : Delta) (x : Binary64.F64) : Py Delta := do
   let temp := pyusIn * ratio.2
   usToDeltaC (← divideNearestC temp ratio.1)
 
+/-! ### Float operands whose `as_integer_ratio` is overridden -/
+
+/-- What `other.as_integer_ratio()` returns: a tuple of ints, a list of ints (any iterable
+that is not a tuple), or an object that is neither a tuple nor iterable (an int, `None`).
+A part that is not an int (a float, a str) is out of scope: C refuses it in `divide_nearest`
+(`TypeError: non-integer arguments in division`), Python computes with it. -/
+inductive RatioSeq where
+  | tuple (items : List Int)
+  | list (items : List Int)
+  | notIter
+  deriving DecidableEq, Repr
+
+/-- The float operand of `timedelta * x` and `timedelta / x`: a `float` (or a subclass that
+keeps `float.as_integer_ratio`), or a `float` subclass whose `as_integer_ratio` returns `r`
+or raises. Both twins call the method through normal attribute lookup. -/
+inductive FloatOperand where
+  | exact (x : Binary64.F64)
+  | sub (r : Py RatioSeq)
+
+/-- The call `other.as_integer_ratio()`. -/
+def FloatOperand.ratioCall : FloatOperand → Py RatioSeq
+  | .exact x => (fun p => RatioSeq.tuple [p.1, p.2]) <$> asRatio x
+  | .sub r => r
+
+/-- `a, b = other.as_integer_ratio()`, _pydatetime.py:866 and :895: sequence unpacking, so
+any iterable of exactly two items is accepted, a tuple or not. -/
+def unpackRatioPy : RatioSeq → Py (Int × Int)
+  | .tuple [n, d] | .list [n, d] => .ok (n, d)
+  | .tuple l | .list l =>
+    if l.length < 2 then .error (.valueError "~not enough values to unpack (expected 2)")
+    else .error (.valueError "~too many values to unpack (expected 2)")
+  | .notIter => .error (.typeError "~cannot unpack non-iterable object")
+
+/-- `get_float_as_integer_ratio`, _datetimemodule.c:2312-2336: the result must be a tuple
+(`PyTuple_Check`, else `TypeError`, :2320-2326) of size 2 (else `ValueError`, :2327-2332). -/
+def getFloatAsIntegerRatioC : RatioSeq → Py (Int × Int)
+  | .tuple [n, d] => .ok (n, d)
+  | .tuple _ => .error (.valueError "as_integer_ratio() must return a 2-tuple")
+  | .list _ | .notIter =>
+    .error (.typeError "~unexpected return type from as_integer_ratio(): expected tuple")
+
+/-- `timedelta * x` for a float operand, _pydatetime.py:864-868. -/
+def Delta.mulFloatObjPy (a : Delta) (x : FloatOperand) : Py Delta := do
+  let usec := a.toUs
+  let (n, d) ← unpackRatioPy (← x.ratioCall)
+  usToDeltaPy (← divideAndRound (usec * n) d)
+
+/-- `multiply_truedivide_timedelta_float(delta, x, 0)`, :2339-2368. -/
+def Delta.mulFloatObjC (a : Delta) (x : FloatOperand) : Py Delta := do
+  let pyusIn := a.toUs
+  let ratio ← getFloatAsIntegerRatioC (← x.ratioCall)
+  let temp := pyusIn * ratio.1
+  usToDeltaC (← divideNearestC temp ratio.2)
+
+/-- `timedelta / x` for a float operand, _pydatetime.py:894-896. -/
+def Delta.truedivFloatObjPy (a : Delta) (x : FloatOperand) : Py Delta := do
+  let usec := a.toUs
+  let (n, d) ← unpackRatioPy (← x.ratioCall)
+  usToDeltaPy (← divideAndRound (d * usec) n)
+
+/-- `multiply_truedivide_timedelta_float(delta, x, 1)`, :2339-2368. -/
+def Delta.truedivFloatObjC (a : Delta) (x : FloatOperand) : Py Delta := do
+  let pyusIn := a.toUs
+  let ratio ← getFloatAsIntegerRatioC (← x.ratioCall)
+  let temp := pyusIn * ratio.2
+  usToDeltaC (← divideNearestC temp ratio.1)
+
 /-- `timedelta / timedelta`, _pydatetime.py:890-891: `usec / other._to_microseconds()`, the
 int true division `long_true_divide` (Objects/longobject.c:4607-4861). -/
 def Delta.truedivDeltaPy (a b : Delta) : Py LongObj.Cplx.Dbl :=

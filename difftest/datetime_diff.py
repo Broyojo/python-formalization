@@ -328,7 +328,7 @@ OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "dat
            "tm_iso", "tm_state", "tm_strftime", "tm_replace", "dt_cmp", "dt_cmp", "dt_hash", "dt_repr", "dt_iso", "dt_ctime",
            "dt_add", "dt_sub_delta", "dt_sub", "dt_sub", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_combine",
            "dt_replace", "dt_fromutc", "dt_astimezone", "dt_state", "dt_strftime", "ctor_date", "ctor_time", "ctor_datetime",
-           "ctor_time", "ctor_datetime", "fromordinal_arg", "td_float", "td_float", "date_sub_dt", "date_format"]
+           "ctor_time", "ctor_datetime", "fromordinal_arg", "td_float_sub", "td_float", "td_float", "date_sub_dt", "date_format"]
 
 FLOATS = [0.0, -0.0, 0.5, -0.5, 1.5, -2.5, 2.0, 1e-7, -1e-7, 1e-300, 3.3, 0.1, 1e6, 1e12, 1e18, 1e300, -1e300,
           float("inf"), float("-inf"), float("nan"), 5e-324, 1.7976931348623157e308]
@@ -498,6 +498,11 @@ def gen_obj_case(rng):
         c.update(a=rand_date(rng), td=rand_delta_small(rng))
     elif fn == "date_replace":
         c.update(a=rand_date(rng), ny=repl_field(rng), nm=repl_field(rng), nd=repl_field(rng))
+    elif fn == "td_float_sub":
+        ints = lambda k: [rng.choice([0, 1, -1, 2, 3, -3, 7, 10**6, 10**18, rng.randint(-10**9, 10**9)]) for _ in range(k)]
+        r = rng.choice([["t", ints(2)], ["t", ints(2)], ["l", ints(2)], ["t", ints(rng.choice([0, 1, 3]))],
+                        ["l", ints(rng.choice([0, 1, 3]))], ["n"], ["e", "ratio"]])
+        c.update(a=rand_delta(rng), r=r, op=rng.choice(["mul", "div"]))
     elif fn == "td_float":
         c.update(a=rand_delta(rng), x=float_bits(rand_float(rng)), op=rng.choice(["mul", "div"]))
     elif fn == "date_sub_dt":
@@ -825,6 +830,20 @@ def run_obj(c):
         if fn == "date_timetuple": return list(m.date(*c["a"]).timetuple())
         if fn == "date_ctime": return m.date(*c["a"]).ctime()
         if fn == "date_repr": return repr(date_cls(c.get("cls", 0))(*c["a"]))
+        if fn == "td_float_sub":
+            r = c["r"]
+
+            class F(float):
+                def as_integer_ratio(self):
+                    if r[0] == "t":
+                        return tuple(r[1])
+                    if r[0] == "l":
+                        return list(r[1])
+                    if r[0] == "e":
+                        raise ValueError(r[1])
+                    return 5
+            t = m.timedelta(*c["a"])
+            return deltaenc(t * F(1.5) if c["op"] == "mul" else t / F(1.5))
         if fn == "td_float":
             import struct
             x = struct.unpack("<d", struct.pack("<Q", c["x"]))[0]
