@@ -144,4 +144,16 @@ instance instFltF64 [RandLibm] : Flt F64 where
   isOddInteger := F64R.isOdd
   zeroLike x := F64.zero x.sign
 
+/-- A C library used only as a witness: it shows that hypotheses on `RandLibm` (such as
+`ExpNaN`, `exp(NaN)` is NaN) are satisfiable, and it instantiates refutations whose
+lemmas hold for every library. It is never used to state a value. -/
+@[instance_reducible] def annexWitness : RandLibm where
+  log := id
+  log2 := id
+  exp := id
+  sin := id
+  cos := id
+  acos := id
+  pow x _ := x
+
 end PyLean.CoreLibs.Rand

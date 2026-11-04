@@ -1,6 +1,7 @@
 import PyLean.CoreLibs.Rand.SeedProps
 import PyLean.CoreLibs.Rand.DistProps
 import PyLean.CoreLibs.Rand.System
+import PyLean.CoreLibs.Rand.F64Inst
 
 /-!
 Properties of `SystemRandom`, `__init_subclass__` and the command line of
@@ -9,7 +10,7 @@ Properties of `SystemRandom`, `__init_subclass__` and the command line of
 
 namespace PyLean.CoreLibs.Rand
 
-open PyLean RM Flt
+open PyLean PyLean.Binary64 RM Flt
 
 variable {σ F : Type}
 
@@ -217,14 +218,15 @@ def MainPositionalMatchesOption : Prop :=
 theorem mainPositionalMatchesOption_refuted : ¬ MainPositionalMatchesOption := by
   intro h
   let below : Nat → RM Unit Nat := fun _ s => (.ok 0, s)
-  let g : Gen Unit NanF := ⟨fun s => (.num, s), fun _ s => (.ok 0, s)⟩
-  have e := congrFun (h Unit NanF below g 0 none [] "") ()
+  letI := annexWitness
+  let g : Gen Unit F64 := ⟨fun s => (F64.zero false, s), fun _ s => (.ok 0, s)⟩
+  have e := congrFun (h Unit F64 below g 0 none [] "") ()
   obtain ⟨m, hm⟩ := randint_empty below 1 0 (by decide) ()
   have lhs : (cliMain below g (posArgs 0 none []) "" ()).1.toBool = true := by
     have hpos : cliMain below g (posArgs 0 none []) "" () =
         tryValue (randint below (.int 1) (.int 0) >>= fun r => Pure.pure (CliOut.int r))
           (do
-            let y : NanF ← RM.lift (pyFloat 0)
+            let y : F64 ← RM.lift (pyFloat 0)
             let r ← cliUniform g y
             return CliOut.flt r) () := rfl
     rw [hpos]
