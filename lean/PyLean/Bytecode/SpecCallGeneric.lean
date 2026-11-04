@@ -373,10 +373,10 @@ def CallFunctionExRules : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw : Val) 
       (∀ x rt, unpackKwargs kw regs.rt = .error x rt →
         execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
       (∀ names vals, unpackKwargs kw regs.rt = .ok (names, vals) regs.rt →
-        (∀ nf r, pushInit e f (items.toList ++ vals) names regs = .ok nf r →
+        (∀ nf r, pushInitV e f (items.toList ++ vals) names regs = .ok nf r →
           execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ =
             (dispatchInlined nf : M Unit) ⟨{ r with frame := { r.frame with returnOffset := instrSize e.opcode } }, rest⟩) ∧
-        (∀ x r, pushInit e f (items.toList ++ vals) names regs = .error x r →
+        (∀ x r, pushInitV e f (items.toList ++ vals) names regs = .error x r →
           execOp e .CALL_FUNCTION_EX ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩))) ∧
     (Live regs.rt f → (¬ ∃ a fo, f = .ref a ∧ regs.rt.heap[a]? = some (.func fo)) →
       (∀ v rt, e.om.callDict e.ctx f ca kw regs.rt = .ok v rt →
@@ -474,18 +474,19 @@ theorem kwKeyNameRules_proven : KwKeyNameRules := by
 
 /-- `_PyStack_UnpackDict` (`Objects/call.c:1013-1080`) on the `kwargs` dict of `CALL_FUNCTION_EX`
 and of a vectorcall reached through `PyObject_Call`: `NULL` is no keywords; for a dict whose keys
-all pass `KwKeyNameRules` the names are those keys' strings and the values the dict's values, both
-in `PyDict_Next` order, with the runtime untouched (the loop runs no Python code); if any key fails,
-wherever it is, `TypeError("keywords must be strings")` (the flag is tested once after the loop,
-`:1071-1076`). So `f(**{S('a'): 1})` with `class S(str)` binds `a`, as CPython 3.15.2 does. -/
+all pass `KwKeyNameRules` the names are those key objects themselves (a `str` subclass key stays
+one, for `initialize_locals` to compare with `PyObject_RichCompareBool`) and the values the dict's
+values, both in `PyDict_Next` order, with the runtime untouched (the loop runs no Python code); if
+any key fails, wherever it is, `TypeError("keywords must be strings")` (the flag is tested once
+after the loop, `:1071-1076`). -/
 def UnpackKwargsRules : Prop := ∀ (rt : Rt),
   unpackKwargs .null rt = .ok ([], []) rt ∧
   ∀ a d, rt.heap[a]? = some (.dict d) →
     ((∀ en ∈ d.entries.toList, ∃ s, kwKeyName rt en.key = some s) →
       unpackKwargs (.ref a) rt =
-        .ok (d.entries.toList.filterMap (kwKeyName rt ·.key), d.entries.toList.map (·.value)) rt) ∧
+        .ok (d.entries.toList.map (·.key), d.entries.toList.map (·.value)) rt) ∧
     ((∃ en ∈ d.entries.toList, kwKeyName rt en.key = none) → ∀ x rt',
-      typeError (α := List String × List Val) "keywords must be strings" rt = .error x rt' →
+      typeError (α := List Val × List Val) "keywords must be strings" rt = .error x rt' →
       unpackKwargs (.ref a) rt = .error x rt')
 
 theorem unpackKwargsRules_proven : UnpackKwargsRules := by

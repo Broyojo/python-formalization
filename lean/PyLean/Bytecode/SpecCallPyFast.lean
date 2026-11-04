@@ -435,9 +435,9 @@ def CallExPyFast : Prop := ∀ (e : Env) (regs : Regs) (f n ca kw : Val) (rest :
       (∀ x rt, unpackKwargs kw regs.rt = .error x rt →
         CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
       (∀ names vals, unpackKwargs kw regs.rt = .ok (names, vals) regs.rt →
-        (∀ nf r, pushInit e f (items.toList ++ vals) names regs = .ok nf r →
+        (∀ nf r, pushInitV e f (items.toList ++ vals) names regs = .ok nf r →
           CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .ok () (enteredSt e nf r rest)) ∧
-        (∀ x r, pushInit e f (items.toList ++ vals) names regs = .error x r →
+        (∀ x r, pushInitV e f (items.toList ++ vals) names regs = .error x r →
           CALL_EX_PY e ⟨regs, kw :: ca :: n :: f :: rest⟩ = .error x ⟨r, rest⟩))))
 
 theorem callExPyFast_proven : CallExPyFast := by
@@ -476,7 +476,7 @@ theorem callExPyFast_proven : CallExPyFast := by
     rw [pyFrameEx_kwerr e regs f n ca kw rest x rt hu]
   · have hmk := makeCallargs_keep e regs f n ca kw rest ⟨t, items, hct, ht⟩
     have hpc := isPyCallableEx_pass regs f n ca kw rest a fo ho hfa
-    obtain ⟨hr1, _⟩ := pushInit_ok e _ _ _ regs nf r hpi
+    obtain ⟨hr1, _⟩ := pushInitV_ok e _ _ _ regs nf r hpi
     have hnext : r.next = e.this + instrSize e.opcode := by rw [hr1]; exact hn
     simp only [CALL_EX_PY, CALL_EX_PY_TAIL, _CHECK_PEP_523, bind, EStateM.bind, pure, EStateM.pure]
     rw [hmk]; simp only; rw [hpc]; simp only

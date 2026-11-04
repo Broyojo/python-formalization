@@ -283,17 +283,24 @@ def kwText (rt : Rt) : Val → Option String
     | _ => none
   | _ => none
 
+/-- A call into Python code from C gives `py_recursion_remaining` back as it found it: each frame
+it enters takes a unit and returns it when it leaves, raising or not. -/
+def keepRecursion {α : Type} (m : RM α) : RM α := fun rt =>
+  match m rt with
+  | .ok a rt' => .ok a { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
+  | .error e rt' => .error e { rt' with pyRecursionRemaining := rt.pyRecursionRemaining }
+
 /-- The hooks of the machine's object model: `PyObject_RichCompareBool` is identity, else
 `PyObject_RichCompare` then `PyObject_IsTrue` (a `bool` result read as it is). -/
 def kwHooksOf (om : ObjModel) (ctx : Ctx) : KwHooks where
-  eq a b := do
+  eq a b := keepRecursion do
     if a == b then pure true else om.isTrue ctx (← om.richCompare ctx a b 2)
-  str o := do
+  str o := keepRecursion do
     let v ← om.str ctx o
     match kwText (← get) v with
     | some t => pure t
     | none => fault "str() did not return a str"
-  setItem d k v := om.setItem ctx d k v
+  setItem d k v := keepRecursion (om.setItem ctx d k v)
 
 /-- Hooks for a `kwnames` of exact `str` only, which never call them (`findKwSlot`, `fmtKw`,
 `posonlyHits` and the `**kwargs` store test for an exact `str` first). -/
