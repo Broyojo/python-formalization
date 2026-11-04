@@ -17,7 +17,7 @@ def DELETE_FAST (e : Env) : M Unit := stk 0 0 fun _ => do
   let v ← getLocal e.oparg
   if v == .null then
     let co ← getCode e.P
-    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (co.localsplusnames.getD e.oparg "")) : RM _)
+    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg (co.localsplusnames.getD e.oparg "")) (co.localsplusnames.getD e.oparg "") : RM _)
   setLocal e.oparg .null
   pure []
 
@@ -505,8 +505,8 @@ def _COMPARE_OP_FLOAT (e : Env) : M Unit := stk 2 1 fun
 /-- `:3280`. -/
 def _COMPARE_OP_INT (e : Env) : M Unit := stk 2 1 fun
   | [.int l, .int r] => do
-    if !isCompact l then throw .deopt
-    if !isCompact r then throw .deopt
+    if !isCompact l then fault "assert(_PyLong_IsCompact(left_o))"
+    if !isCompact r then fault "assert(_PyLong_IsCompact(right_o))"
     let signIsh := comparisonBit (decide (l ≥ r)) (decide (l ≤ r))
     pure [.bool (signIsh &&& e.oparg != 0)]
   | _ => fault "not ints"

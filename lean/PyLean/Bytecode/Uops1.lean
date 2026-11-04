@@ -42,8 +42,14 @@ def asciiLimit : Nat := 128
 def NOP : M Unit := pure ()
 /-- `:156`. -/
 def NOT_TAKEN : M Unit := NOP
-/-- `@3.14.7:155`. Pending calls and signals are outside the model. -/
-def _CHECK_PERIODIC : M Unit := pure ()
+/-- `check_periodics`, `Python/ceval_macros.h:541-548`: with an event pending, the result of
+`_Py_HandlePending`. Which handler runs is not modelled; whether it fails is `Rt.pendingExc`,
+and the event is consumed either way. -/
+def checkPeriodics : RM Unit := fun rt =>
+  if rt.pendingExc == .null then .ok () rt
+  else raiseVal rt.pendingExc { rt with pendingExc := .null }
+/-- `:157`: `ERROR_IF(err != 0)` with nothing popped. -/
+def _CHECK_PERIODIC : M Unit := BM.lift (checkPeriodics : RM Unit)
 /-- `@3.14.7:164`. -/
 def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
 /-- `:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/
@@ -73,7 +79,7 @@ def LOAD_FAST_CHECK (e : Env) : M Unit := stk 0 1 fun _ => do
   if v == .null then
     let co ← getCode e.P
     let n := co.localsplusnames.getD e.oparg ""
-    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg n) : RM _)
+    (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg n) n : RM _)
   pure [v]
 
 /-- `:283`. -/
@@ -154,8 +160,10 @@ def INSTRUMENTED_END_SEND : M Unit := END_SEND
 
 /-! ### Lines 455-595: unary operators and `TO_BOOL` -/
 
-/-- `:451`. -/
-def UNARY_NEGATIVE (e : Env) : M Unit := stk 1 1 fun
+/-- `:451`: `_UNARY_NEGATIVE + POP_TOP`. `_UNARY_NEGATIVE` (`:453-461`) is `(value -- res, v)`
+and leaves through `ERROR_NO_POP()` when `PyNumber_Negative` fails, so the operand stays on the
+stack for the handler; `stkK` keeps it. The `POP_TOP` of `v` is folded in. -/
+def UNARY_NEGATIVE (e : Env) : M Unit := stkK 1 1 fun
   | [v] => do pure [← e.om.negative e.ctx v]
   | _ => fault "arity"
 /-- `:477`. -/
@@ -164,21 +172,17 @@ def UNARY_NOT : M Unit := stk 1 1 fun
   | _ => fault "UNARY_NOT on a non-bool"
 /-- `:493`. The counter is not modelled; rewriting is the quickening relation. -/
 def _SPECIALIZE_TO_BOOL : M Unit := pure ()
-/-- `@3.14.7:490`. -/
+/-- `:505`. -/
 def _TO_BOOL (e : Env) : M Unit := stk 1 1 fun
   | [v] => do pure [.bool (← e.om.isTrue e.ctx v)]
   | _ => fault "arity"
-/-- `@3.14.7:497`. -/
+/-- `:512`. -/
 def TO_BOOL (e : Env) : M Unit := do _SPECIALIZE_TO_BOOL; _TO_BOOL e
 
-/-- `@3.14.7:499`. -/
+/-- `:514`: `EXIT_IF(!PyStackRef_BoolCheck(value))`. -/
 def TO_BOOL_BOOL : M Unit := guardTop 1 fun
   | [.bool _] => pure false
   | _ => pure true
-/-- `:527`. -/
-def TO_BOOL_INT : M Unit := stk 1 1 fun
-  | [.int i] => pure [.bool (i != 0)]
-  | _ => throw .deopt
 
 /-- `PyList_CheckExact` on a value. -/
 def notList (v : Val) : BM Bool := do return !(← (isExactList v : RM Bool))
@@ -204,15 +208,15 @@ def notStr : Val → Bool
   | .str _ => false
   | _ => true
 
-/-- `@3.14.7:519`. -/
+/-- `:530`. -/
 def _GUARD_NOS_LIST : M Unit := guardTop 2 fun
   | [nos, _] => notList nos
   | _ => fault "arity"
-/-- `@3.14.7:524`. -/
+/-- `:535`. -/
 def _GUARD_TOS_LIST : M Unit := guardTop 1 fun
   | [tos] => notList tos
   | _ => fault "arity"
-/-- `@3.14.7:529`. -/
+/-- `:540`. -/
 def _GUARD_TOS_SLICE : M Unit := guardTop 1 fun
   | [tos] => notSlice tos
   | _ => fault "arity"
@@ -225,15 +229,15 @@ def _TO_BOOL_LIST : M Unit := stk 1 1 fun
   | _ => fault "not a list"
 /-- `:545`. -/
 def TO_BOOL_LIST : M Unit := do _GUARD_TOS_LIST; _TO_BOOL_LIST
-/-- `@3.14.7:544`. -/
+/-- `:556`: `EXIT_IF(!PyStackRef_IsNone(value))`, then `False`. -/
 def TO_BOOL_NONE : M Unit := stk 1 1 fun
   | [.none] => pure [.bool false]
   | _ => throw .deopt
-/-- `@3.14.7:552`. -/
+/-- `:570`. -/
 def _GUARD_NOS_UNICODE : M Unit := guardTop 2 fun
   | [nos, _] => pure (notStr nos)
   | _ => fault "arity"
-/-- `@3.14.7:557`. -/
+/-- `:575`. -/
 def _GUARD_TOS_UNICODE : M Unit := guardTop 1 fun
   | [v] => pure (notStr v)
   | _ => fault "arity"
@@ -241,7 +245,7 @@ def _GUARD_TOS_UNICODE : M Unit := guardTop 1 fun
 def _TO_BOOL_STR : M Unit := stk 1 1 fun
   | [.str s] => pure [.bool (s != "")]
   | _ => fault "not a str"
-/-- `@3.14.7:577`. -/
+/-- `:588`. -/
 def TO_BOOL_STR : M Unit := do _GUARD_TOS_UNICODE; _TO_BOOL_STR
 /-- `:591`. -/
 def _REPLACE_WITH_TRUE : M Unit := stk 1 1 fun _ => pure [.bool true]
@@ -261,15 +265,16 @@ def cacheNat (e : Env) (i : Nat) : Nat :=
   | some (.tagged n) => n
   | _ => 0
 
-/-- `@3.14.7:2317`. -/
+/-- `:2862`. -/
 def _GUARD_TYPE_VERSION (e : Env) : M Unit := guardTop 1 fun
   | [o] => do return (← typeVersionOf o) != cacheNat e 0
   | _ => fault "arity"
 
-/-- `@3.14.7:585`. -/
+/-- `:597`: `_RECORD_TOS_TYPE` only records for tier 2, and the `POP_TOP` is folded in. -/
 def TO_BOOL_ALWAYS_TRUE (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _REPLACE_WITH_TRUE
-/-- `:604`. -/
-def UNARY_INVERT (e : Env) : M Unit := stk 1 1 fun
+/-- `:604`: `_UNARY_INVERT + POP_TOP`. `_UNARY_INVERT` (`:606-614`) leaves through
+`ERROR_NO_POP()` when `PyNumber_Invert` fails, keeping the operand, as `UNARY_NEGATIVE`. -/
+def UNARY_INVERT (e : Env) : M Unit := stkK 1 1 fun
   | [v] => do pure [← e.om.invert e.ctx v]
   | _ => fault "arity"
 
@@ -286,14 +291,31 @@ which is not modelled. -/
 def notCompactInt : Val → Bool
   | .int i => !isCompact i
   | _ => true
-/-- `@3.14.7:615`. -/
+/-- `:635`. -/
 def _GUARD_NOS_INT : M Unit := guardTop 2 fun
   | [l, _] => pure (notCompactInt l)
   | _ => fault "arity"
-/-- `@3.14.7:620`. -/
+/-- `:640`. -/
 def _GUARD_TOS_INT : M Unit := guardTop 1 fun
   | [v] => pure (notCompactInt v)
   | _ => fault "arity"
+/-- `:369`: `assert(PyLong_CheckExact(value))` and a close, which has no effect the model
+can see. -/
+def _POP_TOP_INT : M Unit := stk 1 0 fun
+  | [.int _] => pure []
+  | _ => fault "_POP_TOP_INT on a non-int"
+/-- `:379`: as `_POP_TOP_INT`, for an exact `str`. -/
+def _POP_TOP_UNICODE : M Unit := stk 1 0 fun
+  | [.str _] => pure []
+  | _ => fault "_POP_TOP_UNICODE on a non-str"
+/-- `:519`: `(value -- res, v)`. `_PyLong_IsZero` tests the sign bits, which are zero only for
+`0`. -/
+def _TO_BOOL_INT : M Unit := stk 1 2 fun
+  | [.int i] => pure [.bool (i != 0), .int i]
+  | _ => fault "_TO_BOOL_INT on a non-int"
+/-- `:527`: `_GUARD_TOS_INT + unused/1 + unused/2 + _TO_BOOL_INT + _POP_TOP_INT`. Since 3.15 the
+guard is `_GUARD_TOS_INT`, so an int of more than one digit exits to `TO_BOOL`. -/
+def TO_BOOL_INT : M Unit := do _GUARD_TOS_INT; _TO_BOOL_INT; _POP_TOP_INT
 /-- `medium_from_stwodigits`, `Objects/longobject.c:328-336`, as the fast paths see it: a
 result outside `is_medium_int` (:53-58) comes back as `PyStackRef_NULL`, and the caller's
 `EXIT_IF(PyStackRef_IsNull(res))` sends the instruction to its generic form. The
@@ -311,17 +333,17 @@ def _BINARY_OP_ADD_INT : M Unit := stk 2 1 fun
 def _BINARY_OP_SUBTRACT_INT : M Unit := stk 2 1 fun
   | [.int l, .int r] => compactResult (l - r)
   | _ => fault "not ints"
-/-- `@3.14.7:670`. -/
+/-- `:702`. -/
 def BINARY_OP_MULTIPLY_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _BINARY_OP_MULTIPLY_INT
-/-- `@3.14.7:672`. -/
+/-- `:705`. -/
 def BINARY_OP_ADD_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _BINARY_OP_ADD_INT
-/-- `@3.14.7:674`. -/
+/-- `:708`. -/
 def BINARY_OP_SUBTRACT_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _BINARY_OP_SUBTRACT_INT
-/-- `@3.14.7:677`. -/
+/-- `:768`. -/
 def _GUARD_NOS_FLOAT : M Unit := guardTop 2 fun
   | [l, _] => pure (notFloat l)
   | _ => fault "arity"
-/-- `@3.14.7:682`. -/
+/-- `:773`. -/
 def _GUARD_TOS_FLOAT : M Unit := guardTop 1 fun
   | [v] => pure (notFloat v)
   | _ => fault "arity"
@@ -337,17 +359,17 @@ def _BINARY_OP_ADD_FLOAT : M Unit := stk 2 1 fun
 def _BINARY_OP_SUBTRACT_FLOAT : M Unit := stk 2 1 fun
   | [.float l, .float r] => pure [.float (fsub l r)]
   | _ => fault "not floats"
-/-- `@3.14.7:732`. -/
+/-- `:838`. -/
 def BINARY_OP_MULTIPLY_FLOAT : M Unit := do _GUARD_TOS_FLOAT; _GUARD_NOS_FLOAT; _BINARY_OP_MULTIPLY_FLOAT
-/-- `@3.14.7:734`. -/
+/-- `:840`. -/
 def BINARY_OP_ADD_FLOAT : M Unit := do _GUARD_TOS_FLOAT; _GUARD_NOS_FLOAT; _BINARY_OP_ADD_FLOAT
-/-- `@3.14.7:736`. -/
+/-- `:842`. -/
 def BINARY_OP_SUBTRACT_FLOAT : M Unit := do _GUARD_TOS_FLOAT; _GUARD_NOS_FLOAT; _BINARY_OP_SUBTRACT_FLOAT
 /-- `:945`. -/
 def _BINARY_OP_ADD_UNICODE : M Unit := stk 2 1 fun
   | [.str l, .str r] => pure [.str (l ++ r)]
   | _ => fault "not strs"
-/-- `@3.14.7:754`. -/
+/-- `:962`. -/
 def BINARY_OP_ADD_UNICODE : M Unit := do _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _BINARY_OP_ADD_UNICODE
 /-- `:968`: `left = left + right`. On 3.15 this no longer folds the `STORE_FAST` in: it
 writes `NULL` to the target local and leaves the result for the `STORE_FAST` that follows. -/
@@ -365,7 +387,7 @@ def _BINARY_OP_INPLACE_ADD_UNICODE (e : Env) : M Unit := do
       setLocal nextOparg .null
       pure [.str (l ++ r)]
   | _ => fault "not strs"
-/-- `@3.14.7:837`. -/
+/-- `:1069`. -/
 def BINARY_OP_INPLACE_ADD_UNICODE (e : Env) : M Unit := do
   _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _BINARY_OP_INPLACE_ADD_UNICODE e
 
@@ -468,19 +490,29 @@ def _GUARD_NOS_TUPLE : M Unit := guardTop 2 fun
 def _GUARD_TOS_TUPLE : M Unit := guardTop 1 fun
   | [tos] => notTuple tos
   | _ => fault "arity"
-/-- `:1263`. -/
+/-- `:1250`: `EXIT_IF(!_PyLong_IsNonNegativeCompact(sub))`, then `EXIT_IF(index >=
+PyTuple_GET_SIZE(tuple))`. -/
+def _GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS : M Unit := guardTop 2 fun
+  | [.ref a, .int sub] => do
+    if !isNonNegCompact sub then return true
+    match ← (getObj a : RM Obj) with
+    | .tuple items => pure (items.size ≤ sub.toNat)
+    | _ => fault "not a tuple"
+  | _ => fault "not tuple[int]"
+/-- `:1263`: the bounds were checked by the guard above, so the read has no exit; an index
+outside them is the `assert(res_o != NULL)`. -/
 def _BINARY_OP_SUBSCR_TUPLE_INT : M Unit := stk 2 1 fun
   | [.ref a, .int sub] => do
-    if !isNonNegCompact sub then throw .deopt
     match ← (getObj a : RM Obj) with
     | .tuple items =>
       match items[sub.toNat]? with
       | some v => pure [v]
-      | none => throw .deopt
+      | none => fault "tuple index past the guard"
     | _ => fault "not a tuple"
   | _ => fault "not tuple[int]"
 /-- `:1240`. -/
-def BINARY_OP_SUBSCR_TUPLE_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_TUPLE; _BINARY_OP_SUBSCR_TUPLE_INT
+def BINARY_OP_SUBSCR_TUPLE_INT : M Unit := do
+  _GUARD_TOS_INT; _GUARD_NOS_TUPLE; _GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS; _BINARY_OP_SUBSCR_TUPLE_INT
 /-- `:1280`: `mp_subscript == _PyDict_Subscript`. That also admits a subclass with no
 `__getitem__` and a `frozendict`. The model has no `frozendict`, and `suggest` only picks this
 form for an exact dict, so a subclass here takes the generic path to the same result. -/
@@ -496,8 +528,8 @@ def _GUARD_NOS_DICT_STORE_SUBSCRIPT : M Unit := guardTop 2 fun
 def _GUARD_TOS_ANY_DICT : M Unit := guardTop 1 fun
   | [tos] => notDict tos
   | _ => fault "arity"
-/-- `@3.14.7:1226`. -/
-def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stk 2 1 fun
+/-- `:1326`: `ERROR_NO_POP` when `_PyDict_Subscript` raises, so the operands stay. -/
+def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stkK 2 1 fun
   | [d, sub] => do
     let r ← (dictGet e.om e.ctx d sub : RM _)
     match r with
@@ -1098,7 +1130,7 @@ def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
   if ns == .null then
     (raiseS "SystemError" s!"no locals when deleting '{name}'" : RM _)
   let del : RM Unit := tryExc (e.om.delItem e.ctx ns (.str name))
-    fun _ => formatExcCheckArg "NameError" (nameErrorMsg name)
+    fun _ => formatExcCheckArg "NameError" (nameErrorMsg name) name
   del
   pure []
 
@@ -1181,7 +1213,7 @@ def STORE_GLOBAL (e : Env) : M Unit := stk 1 0 fun
 def DELETE_GLOBAL (e : Env) : M Unit := stk 0 0 fun _ => do
   let name ← getName e e.oparg
   let found ← (dictPopStr (← getFrame).globals name : RM Bool)
-  if !found then (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+  if !found then (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
   pure []
 /-- `:2212`. -/
 def LOAD_LOCALS : M Unit := stk 0 1 fun _ => do
@@ -1197,7 +1229,7 @@ def loadGlobal (e : Env) (name : String) : BM Val := do
   | none =>
     match ← (optItem e f.builtins name : RM _) with
     | some v => pure v
-    | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+    | none => (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
 
 /-- `:2222`. -/
 def LOAD_FROM_DICT_OR_GLOBALS (e : Env) : M Unit := stk 1 1 fun
@@ -1220,7 +1252,7 @@ def loadName (e : Env) (name : String) : BM Val := do
     | none =>
       match ← (optItem e f.builtins name : RM _) with
       | some v => pure v
-      | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
+      | none => (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM _)
 
 /-- `:2244`. -/
 def LOAD_NAME (e : Env) : M Unit := stk 0 1 fun _ => do

@@ -383,6 +383,11 @@ def excAttr (o : Val) (name : String) : RM (Option Val) := do
   | "__suppress_context__" => pure (some (.bool d.suppressContext))
   | "__traceback__" => pure (some .none)
   | "value" => if ← isSubtype (← typeOf o) (.cls "StopIteration") then pure (some d.value) else pure none
+  /- `NameError_members`, `Objects/exceptions.c:2631-2634`: a member, `None` while unset. -/
+  | "name" =>
+    if ← isSubtype (← typeOf o) (.cls "NameError") then
+      pure (some (if d.name == .null then .none else d.name))
+    else pure none
   | _ => pure none
 
 /-- `gen_getyieldfrom`, `Objects/genobject.c:890-914`. -/

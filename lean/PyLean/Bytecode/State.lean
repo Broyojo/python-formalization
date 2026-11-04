@@ -175,6 +175,8 @@ structure ExcData where
   suppressContext : Bool := false
   /-- `PyStopIterationObject.value`. -/
   value : Val := .none
+  /-- `PyNameErrorObject.name`, `NULL` until set. -/
+  name : Val := .null
   deriving Inhabited
 
 structure ClassObj where
@@ -285,6 +287,10 @@ structure Rt where
   /-- `_PyThreadState_HasStackSpace`: whether the current data-stack chunk has
   room. It depends on the allocator's chunk boundaries, so it is an oracle. -/
   stackSpace : Bool := true
+  /-- What `_Py_HandlePending` raises at the next periodic check, or `.null` when the eval
+  breaker has no event or its handlers succeed. A signal handler is Python code the model does
+  not run, so the outcome of the pending work is an oracle, as `stackSpace` is. -/
+  pendingExc : Val := .null
   /-- Written only by the profiling loop of the difftest: per code object and
   instruction, the specialized form seen first. -/
   profile : Array (Array (Option Instr)) := #[]
