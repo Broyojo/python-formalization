@@ -191,10 +191,48 @@ def nearestQR (x y : Nat) : Nat × Int :=
   let r := x % y
   if 2 * r + q % 2 > y then (q + 1, (r : Int) - y) else (q, r)
 
-/-- `Decimal.remainder_near`, _pydecimal.py:1550-1625. `_is_less_than_pow10a(q, prec)`
-(:504-536), which replaced the test `q >= 10**prec` in 3.15, is taken as that test: it
-rests on `math.log10` of a big int, which is not modelled. -/
-def remainderNear (c : Ctx) (a b : Dec) : DM Dec := do
+/-- `_tento(n)`, _pydecimal.py:465-467: `(5 ** n) << n`. -/
+def tento (n : Nat) : Nat := 5 ^ n * 2 ^ n
+
+/-- `int(x)` of a float (`float.__trunc__`, Objects/floatobject.c `float___trunc___impl`). -/
+def floatToInt (x : Binary64.F64) : Py Int :=
+  if x.isNaN then .error (.valueError "cannot convert float NaN to integer")
+  else if x.isInf then .error (.overflowError "cannot convert float infinity to integer")
+  else .ok x.truncInt
+
+/-- `_is_less_than_pow10a(q, a)` with its defaults `exact=True, ulp_order=20`,
+_pydecimal.py:504-536. `lg q` is `math.log10(q)` (Modules/mathmodule.c `loghelper_int`: libm's
+`log10` of the int as a double, or `fma(log10(2), e, log10(x))` from `_PyLong_Frexp` when it does
+not fit), which the model does not compute: it is a parameter, and the statements assume only its
+accuracy (`Log10Accurate`). The two `assert`s raise `AssertionError` (assertions enabled). A
+negative `inthi` would make `_tento` shift a float (`5 ** n` is a float for `n < 0`), a `TypeError`. -/
+def isLessThanPow10a (lg : Nat → Binary64.F64) (q a : Nat) : Py Bool := do
+  if q < 10 then return decide (a ≥ 1)
+  let z := lg q
+  let t := Binary64.F64.mul (Binary64.F64.ulp z) (Binary64.F64.ofInt 20)
+  let intlo ← floatToInt (Binary64.F64.sub z t)
+  let inthi ← floatToInt (Binary64.F64.add z t)
+  let diff := inthi - intlo
+  if ¬(diff = 0 ∨ diff = 1) then throw (.assertionError "")
+  let ndigits ← if diff = 1 then do
+      if inthi < 0 then throw (.typeError "~unsupported operand type(s) for <<: 'float' and 'int'")
+      let lo := tento inthi.toNat
+      if q < lo then
+        if ¬(q ≥ lo / 10) then throw (.assertionError "")
+        pure inthi
+      else pure (inthi + 1)
+    else pure (inthi + 1)
+  return decide (ndigits ≤ a)
+
+/-- The stand-in for `math.log10` that the difftest and the `Context` wrappers run with:
+`len(str(q)) - 1` as a double. It is not `math.log10`, but it meets `Log10Accurate` for every
+`q` the difftest reaches, and the statements show the result does not depend on which accurate
+value is used. -/
+def log10Stand (q : Nat) : Binary64.F64 := Binary64.F64.ofInt ((numDigits q : Int) - 1)
+
+/-- `Decimal.remainder_near`, _pydecimal.py:1550-1625, with `math.log10` as `lg` (see
+`isLessThanPow10a`). -/
+def remainderNearL (lg : Nat → Binary64.F64) (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   if isinfinity a ≠ 0 then return ← invalid c
   if !decBool b then return ← invalid c
@@ -211,10 +249,13 @@ def remainderNear (c : Ctx) (a b : Dec) : DM Dec := do
     let _ ← liftPy (workRep (.fin sb cb eb))
     let p := scaled ca ea cb eb
     let qr := nearestQR p.1 p.2
-    if qr.1 ≥ 10 ^ c.prec then return ← invalid c
+    if !(← liftPy (isLessThanPow10a lg qr.1 c.prec)) then return ← invalid c
     let sign := if qr.2 < 0 then !sa else sa
     liftPy (strLimit qr.2.natAbs)
     fix c (.fin sign qr.2.natAbs idealExponent)
   | _, _ => return a
+
+/-- `Decimal.remainder_near` as the difftest and the `Context` wrappers run it. -/
+def remainderNear (c : Ctx) (a b : Dec) : DM Dec := remainderNearL log10Stand c a b
 
 end PyLean.Decimal

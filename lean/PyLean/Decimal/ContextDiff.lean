@@ -50,6 +50,7 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
         return ((← sigKeyOf q[0]!), (← (q[1]!).getBool?)))
       return .dict pairs
     | "frozendict_py" | "obj" => return .obj
+    | "tuple" => return .tuple ((← (a[1]!).getStr?).toNat?.getD 0)
     | "idx" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | t => throw s!"bad ctx arg {t}"
 

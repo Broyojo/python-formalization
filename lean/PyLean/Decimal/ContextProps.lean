@@ -70,10 +70,11 @@ theorem convertOther_false (b : Arg) (y : Dec) (h : convertRaise b = .ok y) :
     cases hp : pyFromInt n with
     | error e => simp [hp] at h
     | ok d => simpa [hp] using h
+  | tuple n => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
   | other => simp [convertRaise, convertOther, bind, Except.bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, pure, Except.pure] at h
 
 theorem convertOther_false_err (b : Arg) (e : PyExc) (h : convertRaise b = .error e) :
-    convertOther false b = .error e ∨ (b = .other ∧ e = .typeError unableMsg) := by
+    convertOther false b = .error e ∨ (convertOther false b = .ok none ∧ e = .typeError (unableMsgOf b)) := by
   cases b with
   | dec d => simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
   | int n =>
@@ -82,6 +83,10 @@ theorem convertOther_false_err (b : Arg) (e : PyExc) (h : convertRaise b = .erro
     cases hp : pyFromInt n with
     | error e' => simp_all
     | ok d => simp [hp] at h
+  | tuple n =>
+    right
+    simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
+    exact ⟨rfl, h.symm⟩
   | other =>
     right
     simp [convertRaise, convertOther, bind, Except.bind, pure, Except.pure] at h
@@ -157,10 +162,12 @@ theorem ctxOp_equiv {α : Type} (f : Ctx → Dec → Dec → DM α) : Equiv2 (ct
     | error e =>
       simp only [ctxOp]
       rw [liftPy_ok_run _ fl ha, bind_run]
-      rcases convertOther_false_err b e hb with h | ⟨rfl, rfl⟩
+      rcases convertOther_false_err b e hb with h | ⟨h, rfl⟩
       · simp only [opArg]
         rw [liftPy_err_run _ fl h]
-      · rfl
+      · simp only [opArg]
+        rw [liftPy_ok_run _ fl h]
+        rfl
 
 /-- `Context.fma` under the same reading as `Equiv2`, for three operands. -/
 theorem contextFma_equiv (c : Ctx) (a b t : Arg) (x y z : Dec) (fl : List Signal)
@@ -367,6 +374,7 @@ theorem contextNewClearsFlagsPy_proven : ContextNewClearsFlagsPy := by
   obtain ⟨c4, _, h⟩ := ebind_ok h
   obtain ⟨c5, _, h⟩ := ebind_ok h
   obtain ⟨c6, _, h⟩ := ebind_ok h
+  obtain ⟨c6', _, h⟩ := ebind_ok h
   obtain ⟨t, _, h⟩ := ebind_ok h
   obtain ⟨c7, _, h⟩ := ebind_ok h
   obtain ⟨f, hf, h⟩ := ebind_ok h
