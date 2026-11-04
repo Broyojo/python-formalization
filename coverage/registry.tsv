@@ -49,6 +49,36 @@ ipaddress-v6-netmask-cache	refuted	Lib/ipaddress.py	_BaseV6._make_netmask
 ipaddress-v6-init-str	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._split_scope_id
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
 ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
+datetime-date-replace-cls	proven	Modules/_datetimemodule.c	C datetime_date_replace_impl,C new_date_subclass_ex,date.replace
+datetime-time-replace-cls	proven	Modules/_datetimemodule.c	C datetime_time_replace_impl,C new_time_subclass_fold_ex
+datetime-datetime-replace-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_replace_impl,C new_datetime_subclass_fold_ex
+datetime-combine-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_combine_impl,C new_datetime_subclass_fold_ex
+datetime-time-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_time_strptime_impl,time.strptime,_strptime_datetime_time
+datetime-datetime-strptime-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_strptime_impl,datetime.strptime,_strptime_datetime_datetime
+datetime-time-fromisoformat-cls	proven	Modules/_datetimemodule.c	C datetime_time_fromisoformat_impl,C tzinfo_from_isoformat_results
+datetime-datetime-fromisoformat-cls	proven	Modules/_datetimemodule.c	C datetime_datetime_fromisoformat_impl,C _sanitize_isoformat_str,C new_datetime_subclass_ex
+datetime-sanitize-isoformat-full	proven	Modules/_datetimemodule.c	C _sanitize_isoformat_str
+datetime-find-sep-twins	proven	Modules/_datetimemodule.c	C _find_isoformat_datetime_separator,_find_isoformat_datetime_separator
+datetime-date-reduce-cls	proven	Modules/_datetimemodule.c	C date_reduce,date.__reduce__
+datetime-time-reduce-ex-cls	proven	Modules/_datetimemodule.c	C datetime_time___reduce_ex___impl,C datetime_time___reduce___impl,time.__reduce_ex__,time.__reduce__
+datetime-datetime-reduce-ex-cls	proven	Modules/_datetimemodule.c	C datetime_datetime___reduce_ex___impl,C datetime_datetime___reduce___impl,datetime.__reduce_ex__,datetime.__reduce__
+datetime-time-reduce-ex-all-int	refuted	Modules/_datetimemodule.c	C datetime_time___reduce_ex___impl,time.__reduce_ex__
+datetime-datetime-reduce-ex-all-int	refuted	Modules/_datetimemodule.c	C datetime_datetime___reduce_ex___impl,datetime.__reduce_ex__
+datetime-tzinfo-reduce-cls	proven	Modules/_datetimemodule.c	C tzinfo_reduce,tzinfo.__reduce__
+datetime-isocalendar-date-obj	proven	Modules/_datetimemodule.c	C iso_calendar_date_year,C iso_calendar_date_week,C iso_calendar_date_weekday,C iso_calendar_date_reduce,C iso_calendar_date_new_impl,C date_isocalendar
+datetime-date-toordinal-c	proven	Modules/_datetimemodule.c	C date_toordinal,C ymd_to_ord
+datetime-timezone-richcompare	proven	Modules/_datetimemodule.c	C timezone_richcompare,timezone.__eq__
+datetime-init-types-twins	proven	Modules/_datetimemodule.c	C _PyDateTime_InitTypes,C create_timezone_from_delta,C look_up_timezone,C create_timezone
+datetime-datetime-str-call	proven	Modules/_datetimemodule.c	C datetime_str,datetime.__str__
+datetime-datetime-str-twins	refuted	Modules/_datetimemodule.c	C datetime_str,datetime.__str__
+datetime-now-checks	proven	Modules/_datetimemodule.c	C datetime_datetime_now_impl
+datetime-add-timedelta-obj	proven	Modules/_datetimemodule.c	C add_datetime_timedelta,C new_datetime_subclass_ex,C new_datetime_subclass_fold_ex,C call_subclass_fold
+datetime-utctimetuple-obj	proven	Modules/_datetimemodule.c	C datetime_utctimetuple,C add_datetime_timedelta
+datetime-utctimetuple-obj-defined	refuted	Modules/_datetimemodule.c	C datetime_utctimetuple,C add_datetime_timedelta
+datetime-astimezone-obj	proven	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-astimezone-obj-defined	refuted	Modules/_datetimemodule.c	C datetime_datetime_astimezone_impl,C add_datetime_timedelta
+datetime-pep495-obj-same-kind	proven	Modules/_datetimemodule.c	C pep495_eq_exception,C delta_cmp
+datetime-pep495-obj-defined	refuted	Modules/_datetimemodule.c	C pep495_eq_exception,C delta_cmp
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord

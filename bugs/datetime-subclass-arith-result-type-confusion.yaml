@@ -1,0 +1,91 @@
+id: datetime-subclass-arith-result-type-confusion
+title: "datetime.astimezone() and utctimetuple() read a datetime subclass's __new__ result as a datetime struct (segfault, garbage struct_time)"
+priority: P1
+kind: memory-safety
+module: datetime
+files: [Modules/_datetimemodule.c]
+functions: ["C add_datetime_timedelta", "C datetime_datetime_astimezone_impl", "C datetime_utctimetuple"]
+summary: |
+  add_datetime_timedelta() ends in new_datetime_subclass_ex(..., Py_TYPE(date))
+  (Modules/_datetimemodule.c:6262-6265), which for a subclass is cls(y, m, d, hh, mm, ss, us,
+  tzinfo) and returns whatever that call returns. Two more callers than the one gh-145166
+  reports (tzinfo_fromutc) then use that object as a PyDateTime_DateTime without a type check:
+  - datetime_datetime_astimezone_impl reads HASTZINFO(result) (:6963), and either rebuilds the
+    object through new_datetime_ex2(..., Py_TYPE(result)) (:6965-6978: the foreign type's own
+    tp_alloc, then datetime fields written into it) or does Py_SETREF(result->tzinfo, utc)
+    (:6983); it then writes result->tzinfo again (:6996). With `class D(datetime)` whose
+    __new__ returns `1` (or `b'\x00'*3`, sometimes `object()`) for eight positional arguments,
+    `D(2000, 1, 1, 12, tzinfo=timezone(timedelta(hours=1))).astimezone(timezone.utc)` is a
+    segfault on 3.15.2 (for object() it varies between runs); with bytearray(200) it writes a pointer into the bytearray's header and
+    then raises "fromutc: argument must be a datetime".
+  - datetime_utctimetuple reads GET_YEAR(utcself)..DATE_GET_SECOND(utcself) (:7182-7187) and
+    returns a struct_time of whatever bytes sit there: tm_year=0, tm_mon=0, tm_wday=-2 for a
+    bytearray, tm_year=65535, tm_mon=255 for object() on 3.15.2. It calls the constructor for
+    every non-None offset, timedelta(0) included (`D(..., tzinfo=timezone.utc).utctimetuple()`
+    is affected), where _pydatetime's `if offset:` (Lib/_pydatetime.py:2075) skips zero.
+  _pydatetime has no crash: `self - offset` goes through type(self).combine(...) and the next
+  attribute access (`.year`, `.replace`) raises AttributeError or reads the object's own
+  attributes.
+  Same root cause as gh-145166 (open; tzinfo_fromutc only). Its open PR #145181 adds a
+  PyDateTime_Check to add_datetime_timedelta itself, which would cover both callers here; the
+  PR's tests and NEWS entry name fromutc and utctimetuple, not astimezone.
+likelihood: |
+  Low: needs a datetime subclass whose __new__ returns a non-datetime for the 8-argument call.
+  Such classes exist (proxy/wrapper classes, ORMs returning their own objects from __new__),
+  but returning a non-instance from __new__ is rare.
+maybe_intended: |
+  No: pure Python code must not crash the interpreter or read foreign memory.
+reproducer: |
+  import subprocess, sys
+  head = ("from datetime import datetime, timezone, timedelta\n"
+          "class D(datetime):\n"
+          "    def __new__(cls, *a, **k):\n"
+          "        if len(a) == 8:\n"
+          "            return PAYLOAD\n"
+          "        return super().__new__(cls, *a, **k)\n"
+          "d = D(2000, 1, 1, 12, tzinfo=timezone(timedelta(hours=1)))\n")
+  crashed = []
+  for payload in ("1", "object()", "b'\\x00' * 3"):
+      code = head.replace("PAYLOAD", payload) + "d.astimezone(timezone.utc)\n"
+      p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+      print("astimezone, __new__ returns", payload, "-> returncode", p.returncode)
+      if p.returncode < 0:
+          crashed.append(payload)
+  code = head.replace("PAYLOAD", "bytearray(200)") + "print(tuple(d.utctimetuple()))\n"
+  p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+  print("utctimetuple, __new__ returns bytearray(200) ->", p.returncode, p.stdout.strip(), p.stderr.strip()[-200:])
+  garbage = p.returncode < 0
+  if p.returncode == 0:
+      t = eval(p.stdout)
+      garbage = not (1 <= t[1] <= 12 and 1 <= t[2] <= 31 and 0 <= t[6] <= 6)
+  if crashed or garbage:
+      print("REPRODUCED datetime-subclass-arith-result-type-confusion")
+expected: |
+  TypeError (as PR #145181 proposes in add_datetime_timedelta), or the Python twin's behaviour;
+  never a crash or a struct_time read from a non-datetime.
+promised_by: |
+  no crash from pure Python code; utctimetuple docs (a struct_time of the UTC datetime).
+cause: |
+  Modules/_datetimemodule.c:6262-6265 return the subclass call's result unchecked;
+  :6957-6996 (astimezone) and :7174-7187 (utctimetuple) cast it to PyDateTime_DateTime *.
+possible_fix: |
+  Check PyDateTime_Check(result) in add_datetime_timedelta (PR #145181), or in each caller;
+  utctimetuple could also skip the subtraction for a zero offset as Python does.
+reproduces:
+  python3 (3.15.2): REPRODUCED (astimezone returncode -11 for `1` and b'\x00'*3; for object() -11 in one run, TypeError in another, so the outcome depends on heap contents; utctimetuple gives (0, 0, 0, 0, 0, 0, -2, 0, 0))
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same: -11 for `1` and b'\x00'*3, utctimetuple (0, 0, 0, 0, 0, 0, -2, 0, 0))
+  builds: release builds only; no ASan or debug interpreter exists on the pod (vendor/ has release builds of 3.15.2 and main).
+duplicates:
+  issues:
+    - {number: 145166, state: open, relation: same root cause, reason: reports only tzinfo_fromutc; astimezone is not mentioned}
+    - {number: 145181, state: open (PR), relation: fix candidate, reason: adds PyDateTime_Check in add_datetime_timedelta, which covers astimezone and utctimetuple; tests cover fromutc and utctimetuple only}
+    - {number: 64570, state: closed, relation: unrelated, reason: replace bypassing __new__ (2014)}
+  queries: ["gh search issues: astimezone subclass __new__ crash", "datetime subclass __new__ returns non-datetime",
+            "utctimetuple subclass new", "astimezone segfault", "datetime subclass type confusion",
+            "add_datetime_timedelta subclass", "datetime __new__ returns bytearray", "astimezone type confusion",
+            "datetime subclass new returns different type crash", "gh search prs: 145166",
+            "bugforge-results/README.md: no astimezone/utctimetuple entry"]
+lean:
+  property: PyLean.Datetime.AstimezoneObjDefined
+  theorem: PyLean.Datetime.astimezoneObjDefined_refuted
+  also: [PyLean.Datetime.utctimetupleObjDefined_refuted]
