@@ -12,6 +12,7 @@ import PyLean.LongObj.Binop
 import PyLean.LongObj.SignApi
 import PyLean.LongObj.Compare
 import PyLean.LongObj.AsByteArray
+import PyLean.LongObj.RoundNear
 
 /-!
 All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.15.2.
@@ -53,6 +54,15 @@ def entriesCompare : List Entry := [
     source := "comment at longobject.c:353-354", status := .proven
     prop := ``LongNegateExact, thm := some ``longNegateExact_proven
     notes := "longNegate_fst shows that on every caller's argument the result is Long.flip, which is how the models of long_mul, long_divrem and long_rem write the call." },
+  { id := "longobj-divmod-near", pyFile := "Objects/longobject.c", pyFns := ["_PyLong_DivmodNear"]
+    statement := "_PyLong_DivmodNear raises TypeError('non-integer arguments in division') for a non-int argument and ZeroDivisionError for b == 0, and otherwise returns (q, r) with a == q*b + r, 2*abs(r) <= abs(b) and q even on a tie, for every sign of a and b."
+    source := "comment at longobject.c:6112-6115", status := .proven
+    prop := ``DivmodNearExact, thm := some ``divmodNearExact_proven
+    notes := "Smoke-tested through ctypes on 3.15.2 against the Python reference in the comment at :6127-6137, 300k cases with negative divisors. The fix-up is MathInt.divmodNear, a value-level mirror of :6146-6185." },
+  { id := "longobj-int-round", pyFile := "Objects/longobject.c", pyFns := ["int___round___impl"]
+    statement := "round(x, ndigits) for an int returns x for None; ndigits goes through _PyNumber_Index (an int directly, another object's __index__, whose exception or TypeError passes through); the value is the multiple of 10**-ndigits nearest x, ties to even, and x for ndigits >= 0."
+    source := "built-in round() docs", status := .proven
+    prop := ``IntRoundExact, thm := some ``intRoundExact_proven },
   { id := "longobj-as-byte-array-stores", pyFile := "Objects/longobject.c", pyFns := ["_PyLong_AsByteArray"]
     statement := "When v >= 0 or the conversion is signed, _PyLong_AsByteArray stores exactly n bytes holding v mod 256**n whether or not it succeeds, returns 0 exactly when v fits, and sets OverflowError only with with_exceptions; a negative v converted unsigned stores nothing."
     source := "comment at longobject.c:1154-1157; int.to_bytes docs", status := .open
