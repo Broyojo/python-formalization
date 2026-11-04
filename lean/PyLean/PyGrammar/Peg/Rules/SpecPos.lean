@@ -64,12 +64,23 @@ theorem statementNewline_proven : StatementNewline := by extra_spec
     | a=simple_stmt !';' NEWLINE { (asdl_stmt_seq*)_PyPegen_singleton_seq(p, a) } # Not needed, there for speedup
     | a[asdl_stmt_seq*]=';'.simple_stmt+ [';'] NEWLINE { a }
 ```
-`';'.simple_stmt+` is `_gather_4` (281); its separator is `;`, so `GatherSep` (for `,`) does
-not pin it. -/
+`';'.simple_stmt+` is `_gather_4` (281), pinned by `Gather4`. -/
 def SimpleStmts : Prop := PlainSpec 8 [
   ⟨[.call (.rule 9), .look false (.tok 13), .call (.tok 4)], false, oPure (fun env => .seq [env.getD 0 .null])⟩,
   ⟨[.call (.rule 281), .opt (.tok 13), .call (.tok 4)], false, oVar 0⟩]
 theorem simpleStmts_proven : SimpleStmts := by plain_spec
+
+/-- `';'.simple_stmt+` (`Grammar/python.gram:117`): `_gather_4` (281) is `simple_stmt _loop0_3`
+and `_loop0_3` (280) is `(';' simple_stmt)*`, separator `;` (13): the first `simple_stmt` (rule 9),
+then one more for every `;` followed by a `simple_stmt`, all in source order, stopping before a
+`;` that no statement follows (the `[';']` of `simple_stmts` reads it); no first statement gives
+`NULL` with the mark back. -/
+def Gather4 : Prop := GatherSepTok 13 281 280 9
+theorem gather4_proven : Gather4 := gatherSepTok_of rfl rfl
+
+/-- `simple_stmts` with its gather pinned. -/
+def SimpleStmtsRule : Prop := SimpleStmts ∧ Gather4
+theorem simpleStmtsRule_proven : SimpleStmtsRule := ⟨simpleStmts_proven, gather4_proven⟩
 
 /-- `annotated_rhs[expr_ty]: yield_expr | star_expressions` (`Grammar/python.gram:168`). -/
 def AnnotatedRhs : Prop := PlainSpec 12 [
