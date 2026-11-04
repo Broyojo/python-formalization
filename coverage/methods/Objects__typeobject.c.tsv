@@ -118,14 +118,14 @@ Objects/typeobject.c	2944	2966	is_subtype_with_mro	is_subtype_with_mro(PyObject 
 Objects/typeobject.c	2969	2972	PyType_IsSubtype	PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2990	3002	_PyObject_LookupSpecial	_PyObject_LookupSpecial(PyObject *self, PyObject *attr)	todo		
 Objects/typeobject.c	3010	3035	_PyObject_LookupSpecialMethod	_PyObject_LookupSpecialMethod(PyObject *attr, _PyStackRef *method_and_self)	todo		
-Objects/typeobject.c	3038	3070	lookup_method_ex	lookup_method_ex(PyObject *self, PyObject *attr, _PyStackRef *out, int raise_attribute_error)	modelled	typeobj-maybe-call-special-exact,typeobj-slot-nb-index-exact	
+Objects/typeobject.c	3038	3070	lookup_method_ex	lookup_method_ex(PyObject *self, PyObject *attr, _PyStackRef *out, int raise_attribute_error)	modelled	typeobj-maybe-call-special-exact	
 Objects/typeobject.c	3073	3076	lookup_maybe_method	lookup_maybe_method(PyObject *self, PyObject *attr, _PyStackRef *out)	modelled	typeobj-maybe-call-special-exact	
 Objects/typeobject.c	3079	3082	lookup_method	lookup_method(PyObject *self, PyObject *attr, _PyStackRef *out)	todo		
 Objects/typeobject.c	3086	3098	vectorcall_unbound	vectorcall_unbound(PyThreadState *tstate, int unbound, PyObject *func, PyObject *const *args, Py_ssize_t nargs)	todo		
 Objects/typeobject.c	3101	3109	call_unbound_noarg	call_unbound_noarg(int unbound, PyObject *func, PyObject *self)	todo		
 Objects/typeobject.c	3114	3127	call_method_noarg	call_method_noarg(PyObject *self, PyObject *attr)	todo		
 Objects/typeobject.c	3130	3148	call_method	call_method(PyObject *self, PyObject *attr, PyObject *args, PyObject *kwds)	todo		
-Objects/typeobject.c	3156	3172	vectorcall_method	vectorcall_method(PyObject *name, PyObject *const *args, Py_ssize_t nargs)	modelled	typeobj-slot-nb-index-exact	
+Objects/typeobject.c	3156	3172	vectorcall_method	vectorcall_method(PyObject *name, PyObject *const *args, Py_ssize_t nargs)	todo		review: vectorcallMethod (Attr.lean:494) mirrors :3156-3172, but its only listed theorem, SlotNbIndexExact, states it for args = [self] alone, so the arguments after self (vectorcall_unbound's args++ at :3090-3095, used by every SLOT1 and by __set__ with three) are in no statement; a vectorcall_method that called the method with self only passes.
 Objects/typeobject.c	3177	3197	vectorcall_maybe	vectorcall_maybe(PyThreadState *tstate, PyObject *name, PyObject *const *args, Py_ssize_t nargs)	todo		
 Objects/typeobject.c	3204	3221	maybe_call_special_no_args	maybe_call_special_no_args(PyObject *self, PyObject *attr, int *attr_is_none)	modelled	typeobj-maybe-call-special-exact	
 Objects/typeobject.c	3224	3243	maybe_call_special_one_arg	maybe_call_special_one_arg(PyObject *self, PyObject *attr, PyObject *arg, int *attr_is_none)	modelled	typeobj-maybe-call-special-exact	
@@ -134,7 +134,7 @@ Objects/typeobject.c	3252	3255	_PyObject_MaybeCallSpecialOneArg	_PyObject_MaybeC
 Objects/typeobject.c	3286	3296	tail_contains	tail_contains(PyObject *tuple, Py_ssize_t whence, PyObject *o)	modelled	typeobj-c3-exact,typeobj-mro-impl-exact	
 Objects/typeobject.c	3299	3307	class_name	class_name(PyObject *cls)	modelled	typeobj-mro-impl-errors	
 Objects/typeobject.c	3310	3338	check_duplicates	check_duplicates(PyObject *tuple)	modelled	typeobj-check-duplicates-exact,typeobj-mro-impl-exact,typeobj-mro-impl-errors	
-Objects/typeobject.c	3350	3398	set_mro_error	set_mro_error(PyObject **to_merge, Py_ssize_t to_merge_size, Py_ssize_t *remain)	modelled	typeobj-set-mro-error-message,typeobj-mro-impl-errors	
+Objects/typeobject.c	3350	3398	set_mro_error	set_mro_error(PyObject **to_merge, Py_ssize_t to_merge_size, Py_ssize_t *remain)	todo		review: setMroError mirrors the dict of heads (by identity, a stated scope), the snprintf offsets and the ',' rule, but SetMroErrorMessage assumes every __name__ is a str read without side effects and the text fits in 999 bytes: the '?' for a non-str name (:3380-3382), the silent return on a class_name exception (:3384-3388) and the cut at the 1000-byte buffer (:3373, :3389-3391) are unstated, so a set_mro_error that never truncated, or named a non-str __name__ by repr, passes.
 Objects/typeobject.c	3401	3468	pmerge	pmerge(PyObject *acc, PyObject **to_merge, Py_ssize_t to_merge_size)	modelled	typeobj-c3-exact,typeobj-mro-impl-exact,typeobj-c3-example-earliest,typeobj-c3-example-conflict	
 Objects/typeobject.c	3471	3556	mro_implementation_unlocked	mro_implementation_unlocked(PyTypeObject *type)	modelled	typeobj-mro-impl-exact,typeobj-mro-impl-errors,typeobj-c3-fast-path,typeobj-c3-example-earliest	
 Objects/typeobject.c	3559	3566	mro_implementation	mro_implementation(PyTypeObject *type)	todo		
@@ -142,7 +142,7 @@ Objects/typeobject.c	3575	3584	type_mro_impl	type_mro_impl(PyTypeObject *self) /
 Objects/typeobject.c	3587	3614	mro_check	mro_check(PyTypeObject *type, PyObject *mro)	todo		changed-in-3.15:
 Objects/typeobject.c	3631	3670	mro_invoke	mro_invoke(PyTypeObject *type)	todo		
 Objects/typeobject.c	3695	3741	mro_internal	mro_internal(PyTypeObject *type, int initial, PyObject **p_old_mro)	todo		changed-in-3.15:
-Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	modelled	typeobj-best-base-exact	
+Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	todo		review: bestBaseLoop mirrors :3757-3795, and FindBestBaseExact pins the first minimal-solid-base result, success for pairwise related bases, and each base error when everything before it is acceptable and pairwise related; but a layout conflict among earlier bases followed by a non-class or final base (type('C', (int, str, bool), {}): CPython raises the lay-out conflict at str) is excluded by every clause, so a find_best_base that validated all bases before comparing layouts passes.
 Objects/typeobject.c	3802	3808	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	todo		
 Objects/typeobject.c	3811	3827	solid_base	solid_base(PyTypeObject *type)	todo		
 Objects/typeobject.c	3876	3886	slot_update_new_chunk	slot_update_new_chunk(void)	todo		changed-in-3.15: new function
@@ -178,7 +178,7 @@ Objects/typeobject.c	4684	4707	type_add_common_descriptor	type_add_common_descri
 Objects/typeobject.c	4711	4787	type_new_descriptors	type_new_descriptors(const type_new_ctx *ctx, PyTypeObject *type, PyObject *dict)	todo		changed-in-3.15:
 Objects/typeobject.c	4791	4805	type_new_set_slots	type_new_set_slots(const type_new_ctx *ctx, PyTypeObject *type)	todo		changed-in-3.15:
 Objects/typeobject.c	4810	4833	type_new_set_classcell	type_new_set_classcell(PyTypeObject *type, PyObject *dict)	modelled	typeobj-set-cell-exact	
-Objects/typeobject.c	4836	4859	type_new_set_classdictcell	type_new_set_classdictcell(PyObject *dict)	modelled	typeobj-set-cell-exact	
+Objects/typeobject.c	4836	4859	type_new_set_classdictcell	type_new_set_classdictcell(PyObject *dict)	todo		review: :4854 stores the namespace dict in the cell (PyCell_Set(cell, dict)), but the model's caller passes the class (TypeNew.lean:591, as the entry's own note admits), so the mirrored function writes the wrong object into __classdictcell__; TypeNewSetCellExact holds only because it quantifies the value.
 Objects/typeobject.c	4862	4923	type_new_set_attrs	type_new_set_attrs(const type_new_ctx *ctx, PyTypeObject *type)	todo		changed-in-3.15:
 Objects/typeobject.c	4927	4954	type_new_get_slots	type_new_get_slots(type_new_ctx *ctx, PyObject *dict)	todo		
 Objects/typeobject.c	4958	4997	type_new_init	type_new_init(type_new_ctx *ctx)	todo		changed-in-3.15:
@@ -260,18 +260,18 @@ Objects/typeobject.c	7462	7529	object_new	object_new(PyTypeObject *type, PyObjec
 Objects/typeobject.c	7532	7535	object_dealloc	object_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	7538	7563	object_repr	object_repr(PyObject *self)	todo		
 Objects/typeobject.c	7566	7574	object_str	object_str(PyObject *self)	todo		
-Objects/typeobject.c	7577	7618	object_richcompare	object_richcompare(PyObject *self, PyObject *other, int op)	modelled	typeobj-object-richcompare-exact	
-Objects/typeobject.c	7621	7624	_Py_BaseObject_RichCompare	_Py_BaseObject_RichCompare(PyObject* self, PyObject* other, int op)	modelled	typeobj-object-richcompare-exact	
+Objects/typeobject.c	7577	7618	object_richcompare	object_richcompare(PyObject *self, PyObject *other, int op)	todo		review: objectRichcompare now compares identity (gap% where equal values may or may not be one object, which leaves only object.__eq__(x, x) for a big int, float, long str or tuple unmodelled), but ObjectRichcompareExact quantifies eqSlot, so the NE branch's choice of Py_TYPE(self)->tp_richcompare and its NULL check (:7593-7597), built in callRichcompare (Protocol.lean:298-306), are in no statement; a callRichcompare that passed type(other)'s slot passes.
+Objects/typeobject.c	7621	7624	_Py_BaseObject_RichCompare	_Py_BaseObject_RichCompare(PyObject* self, PyObject* other, int op)	todo		review: A pass-through to object_richcompare (:7621-7624) through the same entry; inherits that row's unstated slot selection.
 Objects/typeobject.c	7627	7630	object_get_class	object_get_class(PyObject *self, void *closure)	todo		
 Objects/typeobject.c	7633	7641	compatible_with_tp_base	compatible_with_tp_base(PyTypeObject *child)	todo		changed-in-3.15:
-Objects/typeobject.c	7644	7670	same_slots_added	same_slots_added(PyTypeObject *a, PyTypeObject *b)	modelled	typeobj-same-slots-added-exact	
+Objects/typeobject.c	7644	7670	same_slots_added	same_slots_added(PyTypeObject *a, PyTypeObject *b)	todo		review: sameSlotsAdded mirrors :7644-7670 with the rich comparison of the ht_slots objects, but SameSlotsAddedExact assumes both types are heap types with ht_slots and slot objects: the non-heap 0 (:7658-7661) and the size-only check when either ht_slots is NULL (:7662-7668 skipped) are unstated, so a same_slots_added returning 1 whenever a type has no __slots__ passes.
 Objects/typeobject.c	7673	7681	compatible_flags	compatible_flags(int setclass, PyTypeObject *origto, PyTypeObject *newto, unsigned long flags)	todo		
-Objects/typeobject.c	7684	7751	compatible_for_assignment	compatible_for_assignment(PyTypeObject *origto, PyTypeObject *newto, const char *attr, int setclass)	modelled	typeobj-compatible-for-assignment-exact	
-Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	modelled	typeobj-set-class-world-stopped-exact	
-Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	modelled	typeobj-set-class-exact	
+Objects/typeobject.c	7684	7751	compatible_for_assignment	compatible_for_assignment(PyTypeObject *origto, PyTypeObject *newto, const char *attr, int setclass)	todo		review: compatibleForAssignment mirrors :7684-7750 for both modes, but CompatibleForAssignmentExact fixes setclass = true: the __bases__ mode (type_set_bases, :1960) with oldto = tp_base, no deallocator check, the subset flag rule and the offsets compared only when the new base sets them (:7700-7720) is in no statement, so a function that ignored setclass passes.
+Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	todo		review: objectSetClassWorldStopped now has the ModuleType allowlist and ObjectSetClassWorldStoppedExact pins the refusal, the delegation and an instance's new type, but its success clause requires w1.get a = .val o: assigning __class__ of a class (C.__class__ = M2 for heap metaclasses, the model's .ty arm) is unstated, so a function that left a class's metaclass unchanged passes.
+Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	todo		review: ObjectSetClassExact assumes value is a class, so the delete and non-class TypeErrors (:7859-7869) are not in the listed entry (SetClassChecks has them but is not listed for this row), and the audit is stated only for no hook, a first hook raising, or exactly one hook succeeding, so a version running only the first of several hooks passes; the stale oldto decref is the bug record, outside the model's scope.
 Objects/typeobject.c	7912	7927	import_copyreg	import_copyreg(void)	todo		
 Objects/typeobject.c	7930	7976	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	modelled	typeobj-slot-names-exact	
-Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	modelled	typeobj-getstate-default-exact	
+Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	todo		review: GetstateDefaultExact pins the two 'cannot pickle' errors, the None-or-__dict__ state, the slot-names exception and the (state, slots) result, but only in terms of getstateSlotsLoop: the per-name step (PyObject_GetOptionalAttr, skipping a missing attribute, PyDict_SetItem, :8046-8061) is opaque here and in GetstateSlotsGuard, so a step that never stored a value passes; the step's non-str name message also drops %.200s.
 Objects/typeobject.c	8104	8124	object_getstate	object_getstate(PyObject *obj, int required)	todo		
 Objects/typeobject.c	8127	8130	_PyObject_GetState	_PyObject_GetState(PyObject *obj)	todo		
 Objects/typeobject.c	8139	8143	object___getstate___impl	object___getstate___impl(PyObject *self) /*[clinic end generated code: output=5a2500dcb6217e9e input=692314d8fbe194ee]*/	todo		
@@ -283,7 +283,7 @@ Objects/typeobject.c	8414	8418	object___reduce___impl	object___reduce___impl(PyO
 Objects/typeobject.c	8430	8461	object___reduce_ex___impl	object___reduce_ex___impl(PyObject *self, int protocol) /*[clinic end generated code: output=2e157766f6b50094 input=f326b43fb8a4c5ff]*/	todo		
 Objects/typeobject.c	8464	8467	object_subclasshook	object_subclasshook(PyObject *cls, PyObject *args)	todo		
 Objects/typeobject.c	8478	8481	object_init_subclass	object_init_subclass(PyObject *cls, PyObject *arg)	todo		
-Objects/typeobject.c	8501	8513	object___format___impl	object___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=34897efb543a974b input=b94d8feb006689ea]*/	modelled	typeobj-object-format-exact	
+Objects/typeobject.c	8501	8513	object___format___impl	object___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=34897efb543a974b input=b94d8feb006689ea]*/	todo		review: :8512 returns PyObject_Str(self), which is the object __str__ returned, a str subclass instance included, but objectFormat returns .str of the String rt.str yields, so object.__format__(x, '') for a __str__ returning S('a') is an exact str in the model and an S in CPython; ObjectFormatExact states that conversion.
 Objects/typeobject.c	8522	8537	object___sizeof___impl	object___sizeof___impl(PyObject *self) /*[clinic end generated code: output=73edab332f97d550 input=1200ff3dfe485306]*/	todo		
 Objects/typeobject.c	8549	8591	object___dir___impl	object___dir___impl(PyObject *self) /*[clinic end generated code: output=66dd48ea62f26c90 input=0a89305bec669b10]*/	todo		
 Objects/typeobject.c	8657	8721	type_add_method	type_add_method(PyTypeObject *type, PyMethodDef *meth)	todo		changed-in-3.15:
@@ -416,7 +416,7 @@ Objects/typeobject.c	12611	12636	PyType_Freeze	PyType_Freeze(PyTypeObject *type)
 Objects/typeobject.c	12661	12670	super_dealloc	super_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	12673	12686	super_repr	super_repr(PyObject *self)	todo		
 Objects/typeobject.c	12693	12737	_PySuper_LookupDescr	_PySuper_LookupDescr(PyTypeObject *su_type, PyTypeObject *su_obj_type, PyObject *name)	todo		changed-in-3.15: new function
-Objects/typeobject.c	12742	12790	do_super_lookup	do_super_lookup(superobject *su, PyTypeObject *su_type, PyObject *su_obj, PyTypeObject *su_obj_type, PyObject *name, int *method)	modelled	typeobj-do-super-lookup-exact	
+Objects/typeobject.c	12742	12790	do_super_lookup	do_super_lookup(superobject *su, PyTypeObject *su_type, PyObject *su_obj, PyTypeObject *su_obj_type, PyObject *name, int *method)	todo		review: doSuperLookup models only su != NULL and method == NULL, the call from super_getattro: the method flag (:12753-12755) and the temporary super(su_type, su_obj) built when su is NULL (:12777-12784, which reruns supercheck and so a proxy's __class__ lookup), both reached from LOAD_SUPER_ATTR through _PySuper_Lookup, are absent from model and statement.
 Objects/typeobject.c	12793	12805	super_getattro	super_getattro(PyObject *self, PyObject *name)	modelled	typeobj-super-getattro-exact	
 Objects/typeobject.c	12808	12871	supercheck	supercheck(PyTypeObject *type, PyObject *obj)	modelled	typeobj-supercheck-exact	
 Objects/typeobject.c	12874	12883	_PySuper_Lookup	_PySuper_Lookup(PyTypeObject *su_type, PyObject *su_obj, PyObject *name, int *method)	todo		
