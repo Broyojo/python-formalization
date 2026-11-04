@@ -5,6 +5,7 @@ import PyLean.PyIO.StringPy
 import PyLean.PyIO.DiffText
 import PyLean.PyIO.DiffBuffered
 import PyLean.PyIO.DiffFile
+import PyLean.PyIO.BytesShare
 
 /-! Differential-testing handler for `pyio` cases (`"mod": "pyio"`).
 
@@ -52,6 +53,34 @@ def getBOp (j : Json) : Except String BOp := do
 def encResults (rs : List (Py Val)) : Json :=
   Json.mkObj [("ok", Json.arr (rs.map (encPy encVal)).toArray)]
 
+def getShareOp (j : Json) : Except String Share.SOp := do
+  match ← getStr j "op" with
+  | "write" => return .write (← getNats j "b")
+  | "getvalue" => return .getvalue
+  | "read" => return .read (← getOptInt j "n")
+  | "readline" => return .readline (← getOptInt j "n")
+  | "seek" => return .seek (← getInt j "pos") (← getInt j "whence")
+  | "tell" => return .tell
+  | "truncate" => return .truncate (← getOptInt j "n")
+  | "getbuffer" => return .getbuffer
+  | "viewset" => return .viewSet (← getNat j "v") (← getNat j "i") (← getNat j "x")
+  | "viewbytes" => return .viewBytes (← getNat j "v")
+  | "release" => return .release (← getNat j "v")
+  | "close" => return .close
+  | "closed" => return .closed
+  | "drop" => return .drop (← getNat j "h")
+  | "hash" => return .hash (← getNat j "h")
+  | "same" => return .same (← getNat j "h") (← getNat j "k")
+  | o => throw s!"unknown op {o}"
+
+def runShare (fn : String) (j : Json) : Option (Except String Json) :=
+  match fn with
+  | "share_c" => some do
+    let init ← getNats j "init"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getShareOp
+    return encResults (Share.runS init (← getBool j "keep") ops).2
+  | _ => none
+
 def encRun : Py (List (Py Val)) → Json
   | .ok rs => encResults rs
   | .error e => encPy (fun (_ : Unit) => Json.null) (.error e)
@@ -80,6 +109,9 @@ def handler : Handler := fun fn j =>
     | none =>
       match runFile fn j with
       | some r => some r
-      | none => some (run fn j)
+      | none =>
+        match runShare fn j with
+        | some r => some r
+        | none => some (run fn j)
 
 end PyLean.PyIO
