@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterTotal
 import PyLean.CoreLibs.Coll.ODictMore2
+import PyLean.CoreLibs.Coll.ODictMove
 import PyLean.CoreLibs.Coll.ChainMapGProps
 import PyLean.CoreLibs.Coll.UserDictGProps
 import PyLean.CoreLibs.Coll.NamedtupleP
@@ -523,7 +524,23 @@ def odictEntries : List Entry := [
   { id := "coll-odict-iter", pyFile := file, pyFns := ["OrderedDict.__iter__"]
     statement := "The __iter__ generator yields the keys in link order, list(od); resuming it after its current key was deleted raises AttributeError."
     source := "Lib/collections/__init__.py:146-153"
-    status := .proven, prop := ``ODIterGen, thm := some ``odIterGen_proven }
+    status := .proven, prop := ``ODIterGen, thm := some ``odIterGen_proven },
+  { id := "coll-odict-copy-obj", pyFile := file, pyFns := ["OrderedDict.copy"]
+    statement := "od.copy() is a new object of the same class (not od), with od's keys in order and od's value objects; od and every other object are unchanged."
+    source := "Lib/collections/__init__.py:304-306, :104-117"
+    status := .proven, prop := ``ODCopyObj, thm := some ``odCopyObj_proven },
+  { id := "coll-odict-reduce", pyFile := file, pyFns := ["OrderedDict.__reduce__"]
+    statement := "od.__reduce__() is (cls, (), state, None, items in link order): state drops the three private attributes, is None when nothing is left, (state, slots) with non-empty slots; a falsy __getstate__ result passes as is, (None, slots) raises AttributeError, a raising __getstate__ propagates."
+    source := "Lib/collections/__init__.py:285-302"
+    status := .proven, prop := ``ODReduce, thm := some ``odReduce_proven },
+  { id := "coll-odict-repr-rec", pyFile := file, pyFns := ["OrderedDict.__repr__"]
+    statement := "repr(od) under recursive_repr: '...' for an instance already being repr'd, Cls() when empty, Cls({k: ...}) for a self-reference, a twice-held other instance in full both times, Cls(%r) of the items in link order with plain values, and raising key or value reprs propagate."
+    source := "Lib/collections/__init__.py:278-283; Lib/reprlib.py:9-24"
+    status := .proven, prop := ``ODReprRec, thm := some ``odReprRec_proven },
+  { id := "coll-odict-move-to-end", pyFile := file, pyFns := ["OrderedDict.move_to_end"]
+    statement := "move_to_end(key) leaves the list with that link moved last, move_to_end(key, last=False) with it first, the dict unchanged; an absent key raises KeyError(key), an unhashable one the dict-key TypeError."
+    source := "docstring, Lib/collections/__init__.py:194-217"
+    status := .proven, prop := ``ODMoveInv, thm := some ``odMoveInv_proven }
 ]
 
 def entries : List Entry :=

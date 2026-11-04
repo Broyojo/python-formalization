@@ -2717,7 +2717,15 @@ coll-odict-popitem	proven	Lib/collections/__init__.py	OrderedDict.popitem
 coll-odict-setdefault	proven	Lib/collections/__init__.py	OrderedDict.setdefault
 coll-odict-order-views	proven	Lib/collections/__init__.py	OrderedDict.__reduce__,OrderedDict.__eq__
 coll-odict-update-order	proven	Lib/collections/__init__.py	OrderedDict.__new__,OrderedDict.__init__,OrderedDict.fromkeys,OrderedDict.copy
+coll-odict-absent	proven	Lib/collections/__init__.py	OrderedDict.__delitem__,OrderedDict.pop
+coll-odict-eq-full	proven	Lib/collections/__init__.py	OrderedDict.__eq__
+coll-odict-views	proven	Lib/collections/__init__.py	OrderedDict.keys,OrderedDict.items,OrderedDict.values,OrderedDict.__reversed__,_OrderedDictKeysView.__reversed__,_OrderedDictItemsView.__reversed__,_OrderedDictValuesView.__reversed__
+coll-odict-init-merge	proven	Lib/collections/__init__.py	OrderedDict.__init__,OrderedDict.__ior__,OrderedDict.__or__,OrderedDict.__ror__
 coll-odict-iter	proven	Lib/collections/__init__.py	OrderedDict.__iter__
+coll-odict-copy-obj	proven	Lib/collections/__init__.py	OrderedDict.copy
+coll-odict-reduce	proven	Lib/collections/__init__.py	OrderedDict.__reduce__
+coll-odict-repr-rec	proven	Lib/collections/__init__.py	OrderedDict.__repr__
+coll-odict-move-to-end	proven	Lib/collections/__init__.py	OrderedDict.move_to_end
 coll-chainmap-flat-view	proven	Lib/collections/__init__.py	ChainMap.__missing__,ChainMap.get,ChainMap.__len__,ChainMap.__iter__,ChainMap.__contains__,ChainMap.__bool__
 coll-chainmap-writes-first	proven	Lib/collections/__init__.py	ChainMap.__setitem__,ChainMap.__delitem__,ChainMap.popitem,ChainMap.pop
 coll-chainmap-union-flat	proven	Lib/collections/__init__.py	ChainMap.__ror__

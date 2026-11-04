@@ -10,16 +10,16 @@ Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	modelled
 Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	modelled	coll-odict-views	
 Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	modelled	coll-odict-clear	
 Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	modelled	coll-odict-popitem	
-Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		todo: mirrored in ODictG.odMoveToEnd and difftested; the invariant proof (unlink, then append or prepend the same link) is not done
+Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	modelled	coll-odict-move-to-end	
 Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	excluded		platform: sums sys.getsizeof of the instance dict, __map, the links and their proxies; the value depends on the build's object layout, not on the mapping
 Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	modelled	coll-odict-views	
 Lib/collections/__init__.py	234	236	OrderedDict.items	items(self)	modelled	coll-odict-views	
 Lib/collections/__init__.py	238	240	OrderedDict.values	values(self)	modelled	coll-odict-views	
 Lib/collections/__init__.py	246	266	OrderedDict.pop	pop(self, key, default=__marker)	modelled	coll-odict-absent,coll-odict-del-pop	
 Lib/collections/__init__.py	268	276	OrderedDict.setdefault	setdefault(self, key, default=None)	modelled	coll-odict-setdefault	
-Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	todo		todo: odRepr follows link order but the recursive_repr guard (:278) is not modelled
-Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	todo		todo: odReduce models an instance without other attributes; the __getstate__ handling of :287-301 is not modelled
-Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	todo		todo: coll-odict-update-order pins the key order of the copy; OD has no object identity and the values are not stated
+Lib/collections/__init__.py	279	283	OrderedDict.__repr__	__repr__(self)	modelled	coll-odict-repr-rec	
+Lib/collections/__init__.py	285	302	OrderedDict.__reduce__	__reduce__(self)	modelled	coll-odict-order-views,coll-odict-reduce	
+Lib/collections/__init__.py	304	306	OrderedDict.copy	copy(self)	modelled	coll-odict-copy-obj,coll-odict-update-order	
 Lib/collections/__init__.py	309	315	OrderedDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-odict-update-order	
 Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	modelled	coll-odict-eq-full,coll-odict-order-views	
 Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	modelled	coll-odict-init-merge	
