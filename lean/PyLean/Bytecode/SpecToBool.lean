@@ -1,5 +1,4 @@
-import PyLean.Bytecode.SpecBasic
-import PyLean.Bytecode.SpecLocals
+import PyLean.Bytecode.SpecFast
 
 /-!
 `TO_BOOL` and its specializations, `Python/bytecodes.c:486-588`.
@@ -70,72 +69,41 @@ theorem toBoolSpecialized_proven : ToBoolSpecialized := by
   obtain ⟨regs, stack⟩ := s
   match stack, hs with
   | v :: rest, _ =>
-  have hdeopt : (Err.deopt : Err) = .deopt := rfl
+  have hv : Live regs.rt v := fun a ha => by
+    subst ha
+    obtain ⟨o, ho⟩ := hheap a (by simp)
+    exact (Array.getElem?_eq_some_iff.1 ho).1
+  obtain ⟨_, fi1, fi2, fn1, fn2, fs1, fs2, fl1, fl2, fb1, fb2⟩ := toBoolFast_proven regs rest v hv
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · -- TO_BOOL_BOOL: a guard; on a bool the value stays, which is what `bool_slot` gives.
-    apply withDeopt_eq
-    cases v with
-    | bool b =>
-      right
-      rw [toBool_generic e regs rest _ b (hom.true_bool _ _ _)]
-      show guardTop 1 _ _ = _
-      exact guardTop_one regs rest _ (.bool b) false rfl
-    | _ =>
-      left
-      exact ⟨_, by show guardTop 1 _ _ = _; rw [guardTop_one regs rest _ _ true rfl]; rfl⟩
   · apply withDeopt_eq
-    cases v with
-    | int i =>
-      right
-      rw [toBool_generic e regs rest _ _ (hom.true_int _ _ _)]
-      exact stk_ok (outs := [.bool (i != 0)]) (r := regs) (by simp) rfl rfl
-    | _ => left; exact stk11_deopt _ regs _ rest rfl
+    by_cases hb : IsBool v
+    · right
+      obtain ⟨b, rfl⟩ := hb
+      rw [fb1 ⟨b, rfl⟩, toBool_generic e regs rest _ b (hom.true_bool _ _ _)]
+    · exact Or.inl ⟨_, fb2 hb⟩
   · apply withDeopt_eq
-    cases v with
-    | none =>
-      right
-      rw [toBool_generic e regs rest _ _ (hom.true_none _ _)]
-      exact stk_ok (outs := [.bool false]) (r := regs) (by simp) rfl rfl
-    | _ => left; exact stk11_deopt _ regs _ rest rfl
+    by_cases hc : CompactInt v
+    · right
+      obtain ⟨i, rfl, hc⟩ := hc
+      rw [fi1 i rfl hc, toBool_generic e regs rest _ _ (hom.true_int _ _ _)]
+    · exact Or.inl ⟨_, fi2 hc⟩
   · apply withDeopt_eq
-    cases v with
-    | str t =>
-      right
-      rw [toBool_generic e regs rest _ _ (hom.true_str _ _ _)]
-      show (do _GUARD_TOS_UNICODE; _TO_BOOL_STR) _ = _
-      have hg : _GUARD_TOS_UNICODE ⟨regs, .str t :: rest⟩ = .ok () ⟨regs, .str t :: rest⟩ :=
-        strKind.tos_eval regs rest (.str t)
-      simp only [bind, EStateM.bind, hg]
-      exact stk_ok (outs := [.bool (t != "")]) (r := regs) (by simp) rfl rfl
-    | _ => left; exact ⟨_, rfl⟩
+    by_cases hn : v = .none
+    · right
+      subst hn
+      rw [fn1 rfl, toBool_generic e regs rest _ _ (hom.true_none _ _)]
+    · exact Or.inl (fn2 hn)
   · apply withDeopt_eq
-    have hguard : ∀ isL, notList v regs = .ok isL regs →
-        _GUARD_TOS_LIST ⟨regs, v :: rest⟩ =
-          if isL then .error .deopt ⟨regs, v :: rest⟩ else .ok () ⟨regs, v :: rest⟩ :=
-      fun isL h => guardTop_one regs rest _ v isL (by simpa using h)
-    cases v with
-    | ref a =>
-      obtain ⟨o, ho⟩ := hheap a (by simp)
-      cases o with
-      | list items =>
-        right
-        rw [toBool_generic e regs rest _ _ (hom.true_list _ a items _ ho)]
-        have hn : notList (.ref a) regs = .ok false regs := by
-          simp [notList, isExactList, getObj, ho, bind, EStateM.bind, RM.lift, pure, EStateM.pure,
-            monadLift, liftM, MonadLift.monadLift]
-        show (do _GUARD_TOS_LIST; _TO_BOOL_LIST) _ = _
-        simp only [bind, EStateM.bind, hguard false hn, Bool.false_eq_true, ite_false]
-        exact stk_ok (outs := [.bool (items.size != 0)]) (r := regs) (by simp)
-          (by simp [getObj, ho, bind, EStateM.bind, RM.lift, pure, EStateM.pure, monadLift, liftM,
-            MonadLift.monadLift]) rfl
-      | _ =>
-        left
-        have hn : notList (.ref a) regs = .ok true regs := by
-          simp [notList, isExactList, getObj, ho, bind, EStateM.bind, RM.lift, pure, EStateM.pure,
-            monadLift, liftM, MonadLift.monadLift]
-        refine ⟨⟨regs, .ref a :: rest⟩, ?_⟩
-        show (do _GUARD_TOS_LIST; _TO_BOOL_LIST) _ = _
-        simp [bind, EStateM.bind, hguard true hn]
-    | _ => left; exact ⟨_, rfl⟩
+    by_cases ht : IsStr v
+    · right
+      obtain ⟨t, rfl⟩ := ht
+      rw [fs1 t rfl, toBool_generic e regs rest _ _ (hom.true_str _ _ _)]
+    · exact Or.inl ⟨_, fs2 ht⟩
+  · apply withDeopt_eq
+    by_cases hl : IsList regs.rt v
+    · right
+      obtain ⟨a, items, rfl, ho⟩ := hl
+      rw [fl1 a items rfl ho, toBool_generic e regs rest _ _ (hom.true_list _ a items _ ho)]
+    · exact Or.inl ⟨_, fl2 hl⟩
 
 end PyLean.Bytecode

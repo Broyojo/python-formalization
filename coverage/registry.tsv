@@ -2127,32 +2127,33 @@ bytecode-store-subscr-list-int	proven	Python/bytecodes.c	opcode:STORE_SUBSCR_LIS
 bytecode-subscr-tuple-int	proven	Python/bytecodes.c	opcode:BINARY_OP_SUBSCR_TUPLE_INT,opcode:_BINARY_OP_SUBSCR_TUPLE_INT,opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS,opcode:_GUARD_NOS_TUPLE
 bytecode-subscr-str-int	proven	Python/bytecodes.c	opcode:BINARY_OP_SUBSCR_STR_INT,opcode:_BINARY_OP_SUBSCR_STR_INT,opcode:_GUARD_NOS_COMPACT_ASCII,opcode:BINARY_OP_SUBSCR_USTR_INT,opcode:_BINARY_OP_SUBSCR_USTR_INT
 bytecode-compare-float	proven	Python/bytecodes.c	opcode:COMPARE_OP_FLOAT,opcode:_COMPARE_OP_FLOAT
-bytecode-compare-fused	proven	Python/bytecodes.c	opcode:COMPARE_OP,opcode:_COMPARE_OP
+bytecode-compare-fused	proven	Python/bytecodes.c	
 bytecode-compare-int	proven	Python/bytecodes.c	opcode:COMPARE_OP_INT,opcode:_COMPARE_OP_INT
 bytecode-compare-str	proven	Python/bytecodes.c	opcode:COMPARE_OP_STR,opcode:_COMPARE_OP_STR
 bytecode-to-bool-generic	proven	Python/bytecodes.c	opcode:TO_BOOL,opcode:_TO_BOOL
 bytecode-to-bool-specialized	proven	Python/bytecodes.c	opcode:TO_BOOL_BOOL,opcode:TO_BOOL_INT,opcode:_TO_BOOL_INT,opcode:TO_BOOL_NONE,opcode:TO_BOOL_STR,opcode:_TO_BOOL_STR,opcode:TO_BOOL_LIST,opcode:_TO_BOOL_LIST,opcode:_GUARD_TOS_LIST
-bytecode-load-fast	proven	Python/bytecodes.c	opcode:LOAD_FAST,opcode:LOAD_FAST_BORROW
+bytecode-fast-guards	proven	Python/bytecodes.c	opcode:_GUARD_TOS_INT,opcode:_GUARD_NOS_INT,opcode:_GUARD_TOS_FLOAT,opcode:_GUARD_NOS_FLOAT,opcode:_GUARD_TOS_UNICODE,opcode:_GUARD_NOS_UNICODE,opcode:_GUARD_NOS_COMPACT_ASCII,opcode:_GUARD_TOS_LIST,opcode:_GUARD_NOS_LIST,opcode:_GUARD_NOS_TUPLE,opcode:_GUARD_TOS_TUPLE,opcode:_GUARD_TOS_SLICE,opcode:TO_BOOL_BOOL
+bytecode-load-fast	proven	Python/bytecodes.c	
 bytecode-load-fast-check	proven	Python/bytecodes.c	opcode:LOAD_FAST_CHECK
 bytecode-load-clear-store	proven	Python/bytecodes.c	opcode:LOAD_FAST_AND_CLEAR,opcode:STORE_FAST
 bytecode-store-fast	proven	Python/bytecodes.c	opcode:STORE_FAST
 bytecode-load-superinstructions	proven	Python/bytecodes.c	opcode:LOAD_FAST_LOAD_FAST,opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW
 bytecode-store-superinstructions	proven	Python/bytecodes.c	opcode:STORE_FAST_STORE_FAST,opcode:STORE_FAST_LOAD_FAST
 bytecode-delete-fast	proven	Python/bytecodes.c	opcode:DELETE_FAST
-bytecode-load-const	proven	Python/bytecodes.c	opcode:LOAD_CONST,opcode:LOAD_SMALL_INT
-bytecode-stack-drops	proven	Python/bytecodes.c	opcode:POP_TOP,opcode:END_FOR,opcode:POP_ITER,opcode:END_SEND,opcode:PUSH_NULL
+bytecode-load-const	proven	Python/bytecodes.c	
+bytecode-stack-drops	proven	Python/bytecodes.c	
 bytecode-copy	proven	Python/bytecodes.c	opcode:COPY
 bytecode-swap	proven	Python/bytecodes.c	opcode:SWAP
-bytecode-jumps	proven	Python/bytecodes.c	opcode:JUMP_FORWARD,opcode:JUMP_BACKWARD_NO_INTERRUPT,opcode:JUMP_BACKWARD
+bytecode-jumps	proven	Python/bytecodes.c	opcode:JUMP_FORWARD,opcode:JUMP_BACKWARD_NO_INTERRUPT,opcode:JUMP_BACKWARD,opcode:_CHECK_PERIODIC
 bytecode-branches	proven	Python/bytecodes.c	opcode:POP_JUMP_IF_TRUE,opcode:POP_JUMP_IF_FALSE,opcode:POP_JUMP_IF_NONE,opcode:POP_JUMP_IF_NOT_NONE,opcode:_POP_JUMP_IF_TRUE,opcode:_POP_JUMP_IF_FALSE,opcode:_IS_NONE
 bytecode-unary-not	proven	Python/bytecodes.c	opcode:UNARY_NOT
-bytecode-binary-op-add-int	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_INT,opcode:_BINARY_OP_ADD_INT,opcode:_GUARD_TOS_INT,opcode:_GUARD_NOS_INT,opcode:BINARY_OP,opcode:_BINARY_OP,opcode:_SPECIALIZE_BINARY_OP
+bytecode-binary-op-add-int	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_INT,opcode:_BINARY_OP_ADD_INT
 bytecode-binary-op-sub-int	proven	Python/bytecodes.c	opcode:BINARY_OP_SUBTRACT_INT,opcode:_BINARY_OP_SUBTRACT_INT
 bytecode-binary-op-mul-int	proven	Python/bytecodes.c	opcode:BINARY_OP_MULTIPLY_INT,opcode:_BINARY_OP_MULTIPLY_INT
-bytecode-binary-op-add-float	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_FLOAT,opcode:_BINARY_OP_ADD_FLOAT,opcode:_GUARD_TOS_FLOAT,opcode:_GUARD_NOS_FLOAT
+bytecode-binary-op-add-float	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_FLOAT,opcode:_BINARY_OP_ADD_FLOAT
 bytecode-binary-op-sub-float	proven	Python/bytecodes.c	opcode:BINARY_OP_SUBTRACT_FLOAT,opcode:_BINARY_OP_SUBTRACT_FLOAT
 bytecode-binary-op-mul-float	proven	Python/bytecodes.c	opcode:BINARY_OP_MULTIPLY_FLOAT,opcode:_BINARY_OP_MULTIPLY_FLOAT
-bytecode-binary-op-add-unicode	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_UNICODE,opcode:_BINARY_OP_ADD_UNICODE,opcode:_GUARD_TOS_UNICODE,opcode:_GUARD_NOS_UNICODE
+bytecode-binary-op-add-unicode	proven	Python/bytecodes.c	opcode:BINARY_OP_ADD_UNICODE,opcode:_BINARY_OP_ADD_UNICODE
 bytecode-binary-op-subscr-list-int	proven	Python/bytecodes.c	opcode:BINARY_OP_SUBSCR_LIST_INT,opcode:_BINARY_OP_SUBSCR_LIST_INT
 bytecode-stack-effects	open	Python/bytecodes.c	
 bytecode-send-gen-recursion	refuted	Python/bytecodes.c	opcode:SEND_GEN,opcode:_SEND_GEN_FRAME,opcode:_PUSH_FRAME
@@ -2168,12 +2169,19 @@ bytecode-calliter-ends	proven	Objects/iterobject.c	calliter_iternext,PyCallIter_
 bytecode-enum-counts	proven	Objects/enumobject.c	enum_new_impl,enumerate_vectorcall,enum_next,enum_next_long,increment_longindex_lock_held
 bytecode-cell-new	proven	Objects/cellobject.c	cell_new,PyCell_New
 bytecode-return-value	proven	Python/bytecodes.c	opcode:RETURN_VALUE,opcode:_RETURN_VALUE
-bytecode-unwind-to-handler	proven	Python/bytecodes.c	opcode:RAISE_VARARGS,get_exception_handler,scan_back_to_entry_start,skip_to_next_entry
+bytecode-unwind-to-handler	proven	Python/bytecodes.c	get_exception_handler,scan_back_to_entry_start,skip_to_next_entry
 bytecode-unwind-no-handler	proven	Python/bytecodes.c	_PyEval_FrameClearAndPop,clear_thread_frame
 bytecode-unwind-exit	proven	Python/bytecodes.c	
-bytecode-exc-info-nests	proven	Python/bytecodes.c	opcode:PUSH_EXC_INFO,opcode:POP_EXCEPT
-bytecode-for-iter-exhausted	proven	Python/bytecodes.c	opcode:FOR_ITER,opcode:_FOR_ITER,opcode:_SPECIALIZE_FOR_ITER
-bytecode-for-iter-next	proven	Python/bytecodes.c	opcode:FOR_ITER
+bytecode-exc-info-nests	proven	Python/bytecodes.c	opcode:POP_EXCEPT
+bytecode-for-iter-exhausted	proven	Python/bytecodes.c	
+bytecode-for-iter-next	proven	Python/bytecodes.c	
+bytecode-for-iter	proven	Python/bytecodes.c	opcode:FOR_ITER,opcode:_FOR_ITER
+bytecode-binary-op	proven	Python/bytecodes.c	opcode:BINARY_OP,opcode:_BINARY_OP
+bytecode-compare-op	proven	Python/bytecodes.c	opcode:COMPARE_OP,opcode:_COMPARE_OP
+bytecode-push-exc-info	proven	Python/bytecodes.c	opcode:PUSH_EXC_INFO
+bytecode-raise-varargs	proven	Python/bytecodes.c	opcode:RAISE_VARARGS
+bytecode-create-init-frame	proven	Python/bytecodes.c	opcode:_CREATE_INIT_FRAME
+bytecode-end-for	proven	Python/bytecodes.c	opcode:END_FOR
 bytecode-frame-swap-shallow	proven	Objects/frameobject.c	stack_swap,peek
 bytecode-frame-first-line	proven	Objects/frameobject.c	first_line_not_before,marklines
 bytecode-iter-setstate	open	Objects/iterobject.c	iter_setstate

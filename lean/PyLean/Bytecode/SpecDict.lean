@@ -251,42 +251,96 @@ theorem globalRoundTrip_proven : GlobalRoundTrip := by
     BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn,
     getFrame, hg, hset, hsh, hlo, isExactDict, getObj, hheap, hget]
 
-/-- `LOAD_GLOBAL` looks the name up in the globals, then the builtins, and pushes it, followed by
-a NULL when the low bit asks for the call form; when neither has it, it raises `NameError` naming
-it and leaves the stack alone. For frames whose globals and builtins are exact dicts. -/
-def LoadGlobalRules : Prop := ∀ (e : Env) (s : St) (g b : Addr) (dg db : DictObj) (c : Code) (name : String),
-  s.regs.frame.globals = .ref g → s.regs.frame.builtins = .ref b →
-  s.regs.rt.heap[g]? = some (.dict dg) → s.regs.rt.heap[b]? = some (.dict db) →
+/-- `LOAD_GLOBAL` (`Python/bytecodes.c:2270-2289`, `_PyEval_LoadGlobalStackRef`,
+`Python/ceval.c:3597-3630`) looks the name up in the frame's globals, then its builtins, as
+`PyMapping_GetOptionalItem` does (a dict lookup for an exact dict, `__getitem__` with `KeyError`
+swallowed for anything else, such as a dict subclass passed to `exec`), and pushes the value,
+followed by a NULL when the low bit of the oparg asks for the call form; when neither has the name
+it raises `NameError` through `_PyEval_FormatExcCheckArg`, and when a lookup raises it propagates
+that exception; in both failures the stack is unchanged. For every pair of namespaces and every
+object model. The exact-dict fast path `_PyDict_LoadGlobalStackRef` gives the same answers as
+`PyMapping_GetOptionalItem` on exact dicts, so the model takes one route. A lazy-import object
+(`PyLazyImport_CheckExact`, `:3622-3630`) does not exist in the model. -/
+def LoadGlobalRules : Prop := ∀ (e : Env) (s : St) (c : Code) (name : String),
   e.P[s.regs.frame.code]? = some c → c.names[e.oparg >>> 1]? = some name →
-    (∀ v, (lookupStr dg name = some v ∨ (lookupStr dg name = none ∧ lookupStr db name = some v)) →
+    (∀ v rt, optItem e s.regs.frame.globals name s.regs.rt = .ok (some v) rt →
       execOp e .LOAD_GLOBAL s = .ok ()
-        { s with stack := List.replicate (e.oparg &&& 1) .null ++ v :: s.stack }) ∧
-    (lookupStr dg name = none → lookupStr db name = none → ∀ x rt,
-      (raiseS "NameError" (nameErrorMsg name) : RM Val) s.regs.rt = .error x rt →
-      execOp e .LOAD_GLOBAL s = .error x { s with regs := { s.regs with rt := rt } })
+        ⟨{ s.regs with rt := rt }, List.replicate (e.oparg &&& 1) .null ++ v :: s.stack⟩) ∧
+    (∀ rt v rt', optItem e s.regs.frame.globals name s.regs.rt = .ok none rt →
+      optItem e s.regs.frame.builtins name rt = .ok (some v) rt' →
+      execOp e .LOAD_GLOBAL s = .ok ()
+        ⟨{ s.regs with rt := rt' }, List.replicate (e.oparg &&& 1) .null ++ v :: s.stack⟩) ∧
+    (∀ rt rt' x rt'', optItem e s.regs.frame.globals name s.regs.rt = .ok none rt →
+      optItem e s.regs.frame.builtins name rt = .ok none rt' →
+      (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM Val) rt' = .error x rt'' →
+      execOp e .LOAD_GLOBAL s = .error x ⟨{ s.regs with rt := rt'' }, s.stack⟩) ∧
+    (∀ x rt, optItem e s.regs.frame.globals name s.regs.rt = .error x rt →
+      execOp e .LOAD_GLOBAL s = .error x ⟨{ s.regs with rt := rt }, s.stack⟩) ∧
+    (∀ rt x rt', optItem e s.regs.frame.globals name s.regs.rt = .ok none rt →
+      optItem e s.regs.frame.builtins name rt = .error x rt' →
+      execOp e .LOAD_GLOBAL s = .error x ⟨{ s.regs with rt := rt' }, s.stack⟩)
 
 theorem loadGlobalRules_proven : LoadGlobalRules := by
-  intro e s g b dg db c name hg hb hdg hdb hc hn
+  intro e s c name hc hn
   obtain ⟨regs, stack⟩ := s
-  simp only at hg hb hdg hdb hc ⊢
-  have hgg := dictGetStr_ref g dg name regs.rt hdg
-  have hgb := dictGetStr_ref b db name regs.rt hdb
+  simp only at hc ⊢
   have hrep : (List.replicate (e.oparg &&& 1) Val.null).length = e.oparg &&& 1 := by simp
+  have hco := getCode_ok (P := e.P) (r := regs) hc
+  refine ⟨fun v rt h => ?_, fun rt v rt' h1 h2 => ?_, fun rt rt' x rt'' h1 h2 h3 => ?_,
+    fun x rt h => ?_, fun rt x rt' h1 h2 => ?_⟩
+  · simp [bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, peekN, popN,
+      pushAll, stk, getObj, execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL, loadGlobal,
+      getName, hco, hn, getFrame, h]
+  · simp [bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, peekN, popN,
+      pushAll, stk, getObj, execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL, loadGlobal,
+      getName, hco, hn, getFrame, h1, h2]
+  · simp [bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, peekN, popN,
+      pushAll, stk, getObj, execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, loadGlobal, getName, hco, hn,
+      getFrame, h1, h2, h3]
+  · simp [bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, peekN, popN,
+      pushAll, stk, getObj, execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, loadGlobal, getName, hco, hn,
+      getFrame, h]
+  · simp [bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, peekN, popN,
+      pushAll, stk, getObj, execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, loadGlobal, getName, hco, hn,
+      getFrame, h1, h2]
+
+/-- With no exception being handled, the `NameError` that `_PyEval_FormatExcCheckArg` raises
+(`Python/ceval.c:3463-3472`) carries the name in its `name` member, and the `UnboundLocalError` it
+raises for a local does not (`exc == PyExc_NameError` compares the class itself). -/
+def NameErrorName : Prop := ∀ (rt : Rt) (msg n : String), rt.excInfo = [.null] →
+  (∀ x rt', (formatExcCheckArg "NameError" msg n : RM Val) rt = .error x rt' →
+    ∃ a args, x = .exc (.ref a) ∧
+      rt'.heap[a]? = some (.inst { cls := .cls "NameError", exc := some { args := args, name := .str n } })) ∧
+  (∀ x rt', (formatExcCheckArg "UnboundLocalError" msg n : RM Val) rt = .error x rt' →
+    ∃ a args, x = .exc (.ref a) ∧
+      rt'.heap[a]? = some (.inst { cls := .cls "UnboundLocalError", exc := some { args := args } }))
+
+theorem nameErrorName_proven : NameErrorName := by
+  intro rt msg n he
   constructor
-  · intro v hv
-    rcases hv with hv | ⟨hv0, hv⟩
-    · simp [execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL, loadGlobal,
-        optItem, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
-        MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn, getFrame, hg, isExactDict, getObj,
-        hdg, hgg, hv]
-    · simp [execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL, loadGlobal,
-        optItem, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
-        MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn, getFrame, hg, hb, isExactDict,
-        getObj, hdg, hdb, hgg, hgb, hv0, hv]
-  · intro h0 h1 x rt hx
-    simp [execOp, LOAD_GLOBAL, _SPECIALIZE_LOAD_GLOBAL, _LOAD_GLOBAL, loadGlobal, optItem, stk, popN, bind,
-      EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, getName,
-      getCode, hc, hn, getFrame, hg, hb, isExactDict, getObj, hdg, hdb, hgg, hgb, h0, h1, formatExcCheckArg, hx]
+  · intro x rt' h
+    simp [formatExcCheckArg, newExc, mkTuple, alloc, excData, setExcData, setObj, raiseVal, setObject,
+      topmostExc, topmostExc.go, he, getObj, bind, EStateM.bind, pure, EStateM.pure, throw, throwThe,
+      MonadExcept.throw, EStateM.throw, MonadExceptOf.throw, Array.getElem_push, Array.size_push,
+      Array.getElem?_push] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨rt.heap.size + 1, .ref rt.heap.size, rfl, ?_⟩
+    simp
+  · intro x rt' h
+    simp [formatExcCheckArg, newExc, mkTuple, alloc, raiseVal, setObject, topmostExc, topmostExc.go, he,
+      bind, EStateM.bind, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
+      MonadExceptOf.throw] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨rt.heap.size + 1, .ref rt.heap.size, rfl, ?_⟩
+    simp [Array.getElem_push]
+
+def LoadGlobalFull : Prop := LoadGlobalRules ∧ NameErrorName
+theorem loadGlobalFull_proven : LoadGlobalFull := ⟨loadGlobalRules_proven, nameErrorName_proven⟩
 
 /-- `LOAD_NAME` looks the name up in the frame's locals, then its globals, then its builtins, and
 pushes it; when none has it, it raises `NameError` naming it and leaves the stack alone. For a
@@ -301,7 +355,7 @@ def LoadNameRules : Prop := ∀ (e : Env) (s : St) (l g b : Addr) (dl dg db : Di
         (lookupStr dl name = none ∧ lookupStr dg name = none ∧ lookupStr db name = some v)) →
       execOp e .LOAD_NAME s = .ok () { s with stack := v :: s.stack }) ∧
     (lookupStr dl name = none → lookupStr dg name = none → lookupStr db name = none → ∀ x rt,
-      (raiseS "NameError" (nameErrorMsg name) : RM Val) s.regs.rt = .error x rt →
+      (formatExcCheckArg "NameError" (nameErrorMsg name) name : RM Val) s.regs.rt = .error x rt →
       execOp e .LOAD_NAME s = .error x { s with regs := { s.regs with rt := rt } })
 
 theorem loadNameRules_proven : LoadNameRules := by
@@ -321,7 +375,7 @@ theorem loadNameRules_proven : LoadNameRules := by
   · intro h0 h1 h2 x rt hx
     simp [execOp, LOAD_NAME, loadName, optItem, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
       MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn, getFrame, hl, hg, hb, isExactDict,
-      getObj, hdl, hdg, hdb, hgl, hgg, hgb, h0, h1, h2, hnn, formatExcCheckArg, hx]
+      getObj, hdl, hdg, hdb, hgl, hgg, hgb, h0, h1, h2, hnn, hx]
 
 /-- `STORE_NAME name` then `LOAD_NAME name` pushes the stored value, on a frame whose locals are an
 exact dict (a class body or module level). -/

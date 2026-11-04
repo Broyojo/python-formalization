@@ -237,6 +237,10 @@ def p_scope(r):
         "x = 1\ndel x\n" + guarded("print(x)"),
         guarded("class C:\n    print(missing)"),
         "def f():\n    x = 1\n    return [x + i for i in range(3)], x\nprint(f())",
+        # `_PyEval_FormatExcCheckArg` sets `.name` on a NameError, not on an UnboundLocalError
+        "def f():\n    return nope_q\ndef g():\n    y = y\ndef h():\n    def k():\n        return w\n    k()\n    w = 1\n"
+        "for fn in (f, g, h):\n    try:\n        fn()\n    except NameError as e:\n        print(type(e).__name__, e.name)\n"
+        "try:\n    del nope_r\nexcept NameError as e:\n    print(e.name)\nprint(NameError('m').name)",
         "def f():\n    x = 5\n    r = [x for x in range(2)]\n    return x, r\nprint(f())",
         "def f():\n    try:\n        return [1 / i for i in [1, 0]]\n    except ZeroDivisionError:\n        return i\n" + guarded("f()"),
     ])
@@ -470,6 +474,15 @@ def p_fastpath(r):
         "class P:\n    def __init__(self):\n        self.n = 0\n    @property\n    def p(self):\n        self.n += 1\n        return self.n\n"
         "def f(o):\n    return o.p\nx = P()\nprint(f(x), f(x), f(x))\n"
         "class Q:\n    def __getattribute__(self, n):\n        return 'ga:' + n\ndef g(o):\n    return o.p\nprint(g(Q()), g(Q()), g(x))\n",
+        # TO_BOOL_INT and COMPARE_OP_INT exit on an int past one digit (3.15 `_GUARD_TOS_INT`);
+        # `-x`/`~x` raising keeps the operand (`ERROR_NO_POP`); a raising `__next__` ends a loop
+        f"def t(x):\n    return 1 if x else 0\ndef c(x, y):\n    return x < y, x == y, x >= y\n"
+        f"print(t(0), t({a}), t({b}), t(0), t({c}))\nprint(c(1, 2), c({a}, {b}), c({b}, {c}), c(1, 2))\n"
+        "class N:\n    def __neg__(self):\n        raise ValueError('neg')\n    def __invert__(self):\n        raise KeyError('inv')\n"
+        + guarded("print(-N())") + "\n" + guarded("print(~N())") + "\n"
+        + "class It:\n    def __init__(self):\n        self.n = 0\n    def __iter__(self):\n        return self\n    def __next__(self):\n"
+        "        self.n += 1\n        if self.n > 2:\n            raise ValueError(self.n)\n        return self.n\n"
+        + guarded("for v in It():\n    print(v)"),
         # one site per form: a site first reached by another type specializes to that type
         "def f(s, i):\n    return s[i]\n" + guarded(f"print(f('aé☃', {r.choice(['0', '1', '2', '3', '-1', 'True', '-4'])}))")
         + "\n" + guarded(f"print(f('aé☃', {j}))") + "\n" + guarded(f"print(f('abc', {i}))"),

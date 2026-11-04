@@ -57,7 +57,7 @@ theorem eff_unary_not (e : Env) :
 theorem eff_unary_negative (e : Env) :
     Eff (numPopped .UNARY_NEGATIVE e.oparg) (numPushed .UNARY_NEGATIVE e.oparg)
       (execOp e .UNARY_NEGATIVE) :=
-  eff_stk _ _ _
+  eff_stkK _ _ _
 theorem eff_build_tuple (e : Env) :
     Eff (numPopped .BUILD_TUPLE e.oparg) (numPushed .BUILD_TUPLE e.oparg) (execOp e .BUILD_TUPLE) :=
   eff_stk _ _ _

@@ -388,8 +388,14 @@ def truncUtf8 : Nat → List Char → List Char
 `tp_name`. A `String` holds no surrogate, so the UTF-8 is valid and nothing is replaced. -/
 def trunc200 (s : String) : String := String.ofList (truncUtf8 200 s.toList)
 
-/-- `NameError` with `.name` set, `_PyEval_FormatExcCheckArg`, lines 3448-3475. -/
-def formatExcCheckArg {α : Type} (cls msg : String) : RM α := raiseS cls msg
+/-- `_PyEval_FormatExcCheckArg`, `Python/ceval.c:3449-3475`: raise `cls` with the formatted
+message, and when `cls` is `NameError` itself (`exc == PyExc_NameError`, so not its subclass
+`UnboundLocalError`) set the new exception's `name` to `obj`, to offer suggestions later. The
+`PyUnicode_AsUTF8` failure cannot happen to a `String`. -/
+def formatExcCheckArg {α : Type} (cls msg obj : String) : RM α := do
+  let v ← newExc (.cls cls) [.str msg]
+  if cls == "NameError" then setExcData v { ← excData v with name := .str obj }
+  raiseVal v
 
 def nameErrorMsg (n : String) : String := s!"name '{trunc200 n}' is not defined"
 def unboundLocalMsg (n : String) : String :=
@@ -403,8 +409,8 @@ def firstFree (c : Code) : Nat := c.nlocalsplus - c.nfreevars
 /-- `_PyEval_FormatExcUnbound`, lines 3477-3492. -/
 def formatExcUnbound {α : Type} (co : Code) (oparg : Nat) : RM α :=
   let name := co.localsplusnames.getD oparg ""
-  if oparg < firstFree co then formatExcCheckArg "UnboundLocalError" (unboundLocalMsg name)
-  else formatExcCheckArg "NameError" (unboundFreeMsg name)
+  if oparg < firstFree co then formatExcCheckArg "UnboundLocalError" (unboundLocalMsg name) name
+  else formatExcCheckArg "NameError" (unboundFreeMsg name) name
 
 /-! ## `except` type checks -/
 

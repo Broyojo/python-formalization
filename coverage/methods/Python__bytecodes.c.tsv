@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
 Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
-Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	175	175	opcode:_QUICKEN_RESUME	tier1 op(_QUICKEN_RESUME, (counter/1 --)) {	todo		changed-in-3.15:
@@ -14,79 +14,79 @@ Python/bytecodes.c	245	245	opcode:RESUME_CHECK_JIT	macro(RESUME_CHECK_JIT) =	tod
 Python/bytecodes.c	250	250	opcode:_MONITOR_RESUME	op(_MONITOR_RESUME, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	260	260	opcode:INSTRUMENTED_RESUME	macro(INSTRUMENTED_RESUME) =	todo		changed-in-3.15:
 Python/bytecodes.c	271	271	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	modelled	bytecode-load-fast-check	
-Python/bytecodes.c	283	283	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	todo		review: The body is one branch-free line (value = DUP(GETLOCAL(oparg)), :283-286) and LoadFastPushes only evaluates it (stk_ok with getLocal); this is rfl on a one-line definition, which AGENTS.md says is not coverage; a trivial: candidate.
-Python/bytecodes.c	288	288	opcode:LOAD_FAST_BORROW	replicate(8) pure inst (LOAD_FAST_BORROW, (-- value)) {	todo		review: Same as LOAD_FAST: one branch-free line (:288-291) and LoadFastPushes is its evaluation, rfl on a one-line definition; a trivial: candidate.
+Python/bytecodes.c	283	283	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	excluded		trivial: value = PyStackRef_DUP(GETLOCAL(oparg)) (:283-286), one read of a local with no branch (the NULL check is an assert; LOAD_FAST_CHECK is the checked form)
+Python/bytecodes.c	288	288	opcode:LOAD_FAST_BORROW	replicate(8) pure inst (LOAD_FAST_BORROW, (-- value)) {	excluded		trivial: value = PyStackRef_Borrow(GETLOCAL(oparg)) (:288-291), one read of a local with no branch; a borrow differs from LOAD_FAST only in reference counting
 Python/bytecodes.c	293	293	opcode:LOAD_FAST_AND_CLEAR	inst(LOAD_FAST_AND_CLEAR, (-- value)) {	modelled	bytecode-load-clear-store	
 Python/bytecodes.c	298	298	opcode:LOAD_FAST_LOAD_FAST	inst(LOAD_FAST_LOAD_FAST, ( -- value1, value2)) {	modelled	bytecode-load-superinstructions	
 Python/bytecodes.c	305	305	opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW	inst(LOAD_FAST_BORROW_LOAD_FAST_BORROW, ( -- value1, value2)) {	modelled	bytecode-load-superinstructions	
-Python/bytecodes.c	312	312	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	todo		review: The body is GETITEM(FRAME_CO_CONSTS, oparg) pushed (:312-315) and LoadConstRules is its evaluation under co_consts[oparg]? = some k (proof stk_ok ... rfl); rfl on a one-line definition, a trivial: candidate.
-Python/bytecodes.c	317	317	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	todo		review: Pushes the cached small int oparg (:317-321) and LoadConstRules' second conjunct is closed by stk_ok ... rfl rfl: rfl on a one-line definition, not coverage; a trivial: candidate.
+Python/bytecodes.c	312	312	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	excluded		trivial: value = GETITEM(FRAME_CO_CONSTS, oparg) (:312-315), one read with no branch
+Python/bytecodes.c	317	317	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	excluded		trivial: value = _PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + oparg] (:317-321), one cached int with no branch (the range is an assert)
 Python/bytecodes.c	323	323	opcode:STORE_FAST	macro(STORE_FAST) = _SWAP_FAST + POP_TOP;	modelled	bytecode-load-clear-store,bytecode-store-fast	
 Python/bytecodes.c	325	325	opcode:_SWAP_FAST	replicate(8) op(_SWAP_FAST, (value -- trash)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	336	336	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	modelled	bytecode-store-superinstructions	
 Python/bytecodes.c	346	346	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	modelled	bytecode-store-superinstructions	
-Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	todo		review: One branch-free line (:359-361); StackDrops' conjunct is stk_ok ... rfl rfl, rfl on a one-line definition; a trivial: candidate (dropping the last reference can run __del__, outside the finalization model).
+Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	excluded		no-behaviour: PyStackRef_XCLOSE(value) (:359-361) only drops a reference; a finalizer it may trigger is outside the model by the stated finalization scope limit, and its stack effect is the DSL signature that bytecode-stack-effects checks
 Python/bytecodes.c	363	363	opcode:_POP_TOP_NOP	op(_POP_TOP_NOP, (value --)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	369	369	opcode:_POP_TOP_INT	op(_POP_TOP_INT, (value --)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	374	374	opcode:_POP_TOP_FLOAT	op(_POP_TOP_FLOAT, (value --)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	379	379	opcode:_POP_TOP_UNICODE	op(_POP_TOP_UNICODE, (value --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	369	369	opcode:_POP_TOP_INT	op(_POP_TOP_INT, (value --)) {	excluded		no-behaviour: an assert and PyStackRef_CLOSE_SPECIALIZED with _PyLong_ExactDealloc (:369-372); an exact int has no finalizer, so dropping it has no Python-visible effect
+Python/bytecodes.c	374	374	opcode:_POP_TOP_FLOAT	op(_POP_TOP_FLOAT, (value --)) {	excluded		no-behaviour: an assert and PyStackRef_CLOSE_SPECIALIZED with _PyFloat_ExactDealloc (:374-377); an exact float has no finalizer, so dropping it has no Python-visible effect
+Python/bytecodes.c	379	379	opcode:_POP_TOP_UNICODE	op(_POP_TOP_UNICODE, (value --)) {	excluded		no-behaviour: an assert and PyStackRef_CLOSE_SPECIALIZED with _PyUnicode_ExactDealloc (:379-382); an exact str has no finalizer, so dropping it has no Python-visible effect
 Python/bytecodes.c	384	384	opcode:_POP_TOP_OPARG	op(_POP_TOP_OPARG, (args[oparg] -- )) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	389	389	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	todo		review: StackDrops only says PUSH_NULL then POP_TOP changes nothing, which a PUSH_NULL pushing None (or any value) also satisfies; that the pushed value is NULL (:389-391) is never stated.
-Python/bytecodes.c	393	393	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	todo		review: StackDrops states only that END_FOR drops the top, which POP_TOP also does; END_FOR's one distinguishing feature, no_save_ip (:393-398, mirrored in beginInstr), is not stated, so END_FOR implemented as POP_TOP passes; otherwise rfl on a one-line body.
-Python/bytecodes.c	403	403	opcode:POP_ITER	inst(POP_ITER, (iter, index_or_null -- )) {	todo		review: (iter, index_or_null --) with one CLOSE (:403-407); StackDrops' conjunct is stk_ok ... rfl rfl, rfl on a one-line definition; a trivial: candidate.
+Python/bytecodes.c	389	389	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	excluded		trivial: res = PyStackRef_NULL (:389-391), one constant with no branch
+Python/bytecodes.c	393	393	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	modelled	bytecode-end-for	
+Python/bytecodes.c	403	403	opcode:POP_ITER	inst(POP_ITER, (iter, index_or_null -- )) {	excluded		no-behaviour: (void)index_or_null and PyStackRef_CLOSE(iter) (:403-407) only drop references; a finalizer is outside the model by the stated finalization scope limit
 Python/bytecodes.c	409	409	opcode:INSTRUMENTED_END_FOR	no_save_ip tier1 inst(INSTRUMENTED_END_FOR, (receiver, index_or_null, value -- receiver, index_or_null)) {	todo		changed-in-3.15:
 Python/bytecodes.c	421	421	opcode:INSTRUMENTED_POP_ITER	tier1 inst(INSTRUMENTED_POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
-Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	todo		review: (receiver, index_or_null, value -- val) (:428-434) is a single move and StackDrops' conjunct is closed by stk_ok ... rfl rfl: rfl on a one-line definition.
+Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	excluded		trivial: val = value (:428-434), its one output is its top input with no branch; closing the receiver only drops a reference, outside the finalization model
 Python/bytecodes.c	436	436	opcode:INSTRUMENTED_END_SEND	tier1 inst(INSTRUMENTED_END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
-Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	todo		review: 3.15's _UNARY_NEGATIVE (:453-461) fails with ERROR_NO_POP, keeping value on the stack, but the model is stk 1 1 (pops on failure) and UnaryRules states the popped stack rest after a raising __neg__, so the failure exit is not mirrored and the property asserts the wrong error state.
+Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	modelled	bytecode-unary	
 Python/bytecodes.c	453	453	opcode:_UNARY_NEGATIVE	op(_UNARY_NEGATIVE, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	465	465	opcode:_UNARY_NEGATIVE_FLOAT_INPLACE	tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	todo		review: One line on an asserted bool (:477-482); unaryNot_ok is stk_ok ... rfl rfl and the involution follows from it: rfl on a one-line definition.
+Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	modelled	bytecode-unary-not	
 Python/bytecodes.c	493	493	opcode:_SPECIALIZE_TO_BOOL	specializing op(_SPECIALIZE_TO_BOOL, (counter/1, value -- value)) {	todo		changed-in-3.15:
 Python/bytecodes.c	505	505	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	modelled	bytecode-to-bool-generic	
 Python/bytecodes.c	512	512	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	modelled	bytecode-to-bool-generic	
-Python/bytecodes.c	514	514	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	todo		review: ToBoolSpecialized is execOp TO_BOOL_BOOL s = execOp TO_BOOL s, and execOp wraps the fast path in withDeopt, so a guard that always exits satisfies it; nothing pins that the specialization ever runs; stale citation @3.14.7:499 (now :514).
-Python/bytecodes.c	519	519	opcode:_TO_BOOL_INT	op(_TO_BOOL_INT, (value -- res, v)) {	todo		review: Only reached through ToBoolSpecialized's withDeopt equality, which an always-deopting body passes; the body (_PyLong_IsZero, :519-525) is folded into the model's TO_BOOL_INT.
-Python/bytecodes.c	527	527	opcode:TO_BOOL_INT	macro(TO_BOOL_INT) =	todo		review: 3.15's macro is _GUARD_TOS_INT + _TO_BOOL_INT + _POP_TOP_INT (:527-528), and _GUARD_TOS_INT exits on a non-compact int (:640-643), but the model's TO_BOOL_INT accepts every int with no guard; and ToBoolSpecialized is a withDeopt equality that an always-deopting body passes.
-Python/bytecodes.c	530	530	opcode:_GUARD_NOS_LIST	op(_GUARD_NOS_LIST, (nos, unused -- nos, unused)) {	todo		
-Python/bytecodes.c	535	535	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	todo		review: Only pinned through ToBoolSpecialized's withDeopt equality: a guard that always exits passes it; stale citation @3.14.7:524 (now :535).
-Python/bytecodes.c	540	540	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- tos)) {	todo		
-Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	todo		review: ToBoolSpecialized is execOp TO_BOOL_LIST = execOp TO_BOOL under withDeopt, which a body that always deopts satisfies; nothing forces the fast path to answer.
-Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	todo		review: Pinned only through the withDeopt equality of ToBoolSpecialized, which an always-deopting _TO_BOOL_LIST passes.
-Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	todo		review: withDeopt equality with TO_BOOL only; a TO_BOOL_NONE that always exits passes ToBoolSpecialized; stale citation @3.14.7:544 (now :556).
-Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	todo		review: SubscrStrInt is execOp BINARY_OP_SUBSCR_STR_INT = execOp BINARY_OP under withDeopt; a guard that always exits satisfies it, so neither of the two EXIT_IFs at :566-567 is pinned beyond rejecting what the fast body would fault on.
-Python/bytecodes.c	570	570	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	todo		review: Pinned only by BinaryAddUnicode's withDeopt equality, which an always-exiting guard satisfies; stale citation @3.14.7:552 (now :570).
-Python/bytecodes.c	575	575	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	todo		review: Same as _GUARD_NOS_UNICODE: withDeopt equality only, passed by a guard that always exits; stale citation @3.14.7:557 (now :575).
-Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	todo		review: withDeopt equality only (ToBoolSpecialized), passed by an always-deopting body; the model also tests s != \"\" where C tests identity with _Py_STR(empty) (:583), a substitution justified only by a probe.
-Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	todo		review: ToBoolSpecialized's withDeopt equality is satisfied by an always-exiting TO_BOOL_STR; stale citation @3.14.7:577 (now :588).
+Python/bytecodes.c	514	514	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	modelled	bytecode-to-bool-specialized,bytecode-fast-guards	
+Python/bytecodes.c	519	519	opcode:_TO_BOOL_INT	op(_TO_BOOL_INT, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	527	527	opcode:TO_BOOL_INT	macro(TO_BOOL_INT) =	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	530	530	opcode:_GUARD_NOS_LIST	op(_GUARD_NOS_LIST, (nos, unused -- nos, unused)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	535	535	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	540	540	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- tos)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	modelled	bytecode-fast-guards,bytecode-subscr-str-int	
+Python/bytecodes.c	570	570	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	575	575	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	591	591	opcode:_REPLACE_WITH_TRUE	op(_REPLACE_WITH_TRUE, (value -- res, v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	597	597	opcode:TO_BOOL_ALWAYS_TRUE	macro(TO_BOOL_ALWAYS_TRUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	todo		review: _UNARY_INVERT (:606-614) fails with ERROR_NO_POP, keeping value, but the model pops on failure (stk 1 1) and UnaryRules asserts the popped stack after a raising __invert__; the int conjunct only restates Lawful.invert_int.
+Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	modelled	bytecode-unary	
 Python/bytecodes.c	606	606	opcode:_UNARY_INVERT	op(_UNARY_INVERT, (value -- res, v)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	635	635	opcode:_GUARD_NOS_INT	op(_GUARD_NOS_INT, (left, unused -- left, unused)) {	todo		review: BinaryAddInt is execOp BINARY_OP_ADD_INT = execOp BINARY_OP under withDeopt, which a guard that always exits satisfies; stale citation @3.14.7:615 (now :635), though notCompactInt does follow the 3.15 _PyLong_CheckExactAndCompact.
-Python/bytecodes.c	640	640	opcode:_GUARD_TOS_INT	op(_GUARD_TOS_INT, (value -- value)) {	todo		review: withDeopt equality only, passed by an always-exiting guard; stale citation @3.14.7:620 (now :640).
+Python/bytecodes.c	635	635	opcode:_GUARD_NOS_INT	op(_GUARD_NOS_INT, (left, unused -- left, unused)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	640	640	opcode:_GUARD_TOS_INT	op(_GUARD_TOS_INT, (value -- value)) {	modelled	bytecode-fast-guards	
 Python/bytecodes.c	645	645	opcode:_GUARD_NOS_OVERFLOWED	op(_GUARD_NOS_OVERFLOWED, (left, unused -- left, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	651	651	opcode:_GUARD_TOS_OVERFLOWED	op(_GUARD_TOS_OVERFLOWED, (value -- value)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	657	657	opcode:_BINARY_OP_MULTIPLY_INT	pure op(_BINARY_OP_MULTIPLY_INT, (left, right -- res, l, r)) {	todo		review: BinaryMulInt is a withDeopt equality with BINARY_OP: a _BINARY_OP_MULTIPLY_INT that always returns NULL (EXIT_IF at :666) satisfies it, so the product is never pinned.
-Python/bytecodes.c	672	672	opcode:_BINARY_OP_ADD_INT	pure op(_BINARY_OP_ADD_INT, (left, right -- res, l, r)) {	todo		review: BinaryAddInt is passed by a body that always deopts (EXIT_IF(PyStackRef_IsNull(res)) path, :681); a fast path that never runs is indistinguishable.
-Python/bytecodes.c	687	687	opcode:_BINARY_OP_SUBTRACT_INT	pure op(_BINARY_OP_SUBTRACT_INT, (left, right -- res, l, r)) {	todo		review: BinarySubInt is a withDeopt equality that an always-deopting body satisfies.
-Python/bytecodes.c	702	702	opcode:BINARY_OP_MULTIPLY_INT	macro(BINARY_OP_MULTIPLY_INT) =	todo		review: withDeopt equality with BINARY_OP only (BinaryMulInt), passed by an always-exiting macro; stale citation @3.14.7:670 (now :702).
-Python/bytecodes.c	705	705	opcode:BINARY_OP_ADD_INT	macro(BINARY_OP_ADD_INT) =	todo		review: withDeopt equality only (BinaryAddInt), passed by an always-exiting macro; stale citation @3.14.7:672 (now :705).
-Python/bytecodes.c	708	708	opcode:BINARY_OP_SUBTRACT_INT	macro(BINARY_OP_SUBTRACT_INT) =	todo		review: withDeopt equality only (BinarySubInt); stale citation @3.14.7:674 (now :708).
+Python/bytecodes.c	657	657	opcode:_BINARY_OP_MULTIPLY_INT	pure op(_BINARY_OP_MULTIPLY_INT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-mul-int	
+Python/bytecodes.c	672	672	opcode:_BINARY_OP_ADD_INT	pure op(_BINARY_OP_ADD_INT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-add-int	
+Python/bytecodes.c	687	687	opcode:_BINARY_OP_SUBTRACT_INT	pure op(_BINARY_OP_SUBTRACT_INT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-sub-int	
+Python/bytecodes.c	702	702	opcode:BINARY_OP_MULTIPLY_INT	macro(BINARY_OP_MULTIPLY_INT) =	modelled	bytecode-binary-op-mul-int	
+Python/bytecodes.c	705	705	opcode:BINARY_OP_ADD_INT	macro(BINARY_OP_ADD_INT) =	modelled	bytecode-binary-op-add-int	
+Python/bytecodes.c	708	708	opcode:BINARY_OP_SUBTRACT_INT	macro(BINARY_OP_SUBTRACT_INT) =	modelled	bytecode-binary-op-sub-int	
 Python/bytecodes.c	714	714	opcode:_BINARY_OP_ADD_INT_INPLACE	tier2 op(_BINARY_OP_ADD_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	723	723	opcode:_BINARY_OP_SUBTRACT_INT_INPLACE	tier2 op(_BINARY_OP_SUBTRACT_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	732	732	opcode:_BINARY_OP_MULTIPLY_INT_INPLACE	tier2 op(_BINARY_OP_MULTIPLY_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	741	741	opcode:_BINARY_OP_ADD_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_ADD_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	750	750	opcode:_BINARY_OP_SUBTRACT_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_SUBTRACT_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	759	759	opcode:_BINARY_OP_MULTIPLY_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_MULTIPLY_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	768	768	opcode:_GUARD_NOS_FLOAT	op(_GUARD_NOS_FLOAT, (left, unused -- left, unused)) {	todo		review: BinaryAddFloat's withDeopt equality is satisfied by a guard that always exits; stale citation @3.14.7:677 (now :768).
-Python/bytecodes.c	773	773	opcode:_GUARD_TOS_FLOAT	op(_GUARD_TOS_FLOAT, (value -- value)) {	todo		review: withDeopt equality only; stale citation @3.14.7:682 (now :773).
-Python/bytecodes.c	778	778	opcode:_BINARY_OP_MULTIPLY_FLOAT	pure op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res, l, r)) {	todo		review: BinaryMulFloat compares with BINARY_OP under withDeopt, so a body that always deopts passes; the binary64 product is never pinned on its own.
-Python/bytecodes.c	798	798	opcode:_BINARY_OP_ADD_FLOAT	pure op(_BINARY_OP_ADD_FLOAT, (left, right -- res, l, r)) {	todo		review: BinaryAddFloat is a withDeopt equality, passed by an always-deopting body.
-Python/bytecodes.c	818	818	opcode:_BINARY_OP_SUBTRACT_FLOAT	pure op(_BINARY_OP_SUBTRACT_FLOAT, (left, right -- res, l, r)) {	todo		review: BinarySubFloat is a withDeopt equality, passed by an always-deopting body.
-Python/bytecodes.c	838	838	opcode:BINARY_OP_MULTIPLY_FLOAT	macro(BINARY_OP_MULTIPLY_FLOAT) =	todo		review: withDeopt equality only; stale citation @3.14.7:732 (now :838).
-Python/bytecodes.c	840	840	opcode:BINARY_OP_ADD_FLOAT	macro(BINARY_OP_ADD_FLOAT) =	todo		review: withDeopt equality only; stale citation @3.14.7:734 (now :840).
-Python/bytecodes.c	842	842	opcode:BINARY_OP_SUBTRACT_FLOAT	macro(BINARY_OP_SUBTRACT_FLOAT) =	todo		review: withDeopt equality only; stale citation @3.14.7:736 (now :842).
+Python/bytecodes.c	768	768	opcode:_GUARD_NOS_FLOAT	op(_GUARD_NOS_FLOAT, (left, unused -- left, unused)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	773	773	opcode:_GUARD_TOS_FLOAT	op(_GUARD_TOS_FLOAT, (value -- value)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	778	778	opcode:_BINARY_OP_MULTIPLY_FLOAT	pure op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-mul-float	
+Python/bytecodes.c	798	798	opcode:_BINARY_OP_ADD_FLOAT	pure op(_BINARY_OP_ADD_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-add-float	
+Python/bytecodes.c	818	818	opcode:_BINARY_OP_SUBTRACT_FLOAT	pure op(_BINARY_OP_SUBTRACT_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-sub-float	
+Python/bytecodes.c	838	838	opcode:BINARY_OP_MULTIPLY_FLOAT	macro(BINARY_OP_MULTIPLY_FLOAT) =	modelled	bytecode-binary-op-mul-float	
+Python/bytecodes.c	840	840	opcode:BINARY_OP_ADD_FLOAT	macro(BINARY_OP_ADD_FLOAT) =	modelled	bytecode-binary-op-add-float	
+Python/bytecodes.c	842	842	opcode:BINARY_OP_SUBTRACT_FLOAT	macro(BINARY_OP_SUBTRACT_FLOAT) =	modelled	bytecode-binary-op-sub-float	
 Python/bytecodes.c	849	849	opcode:_BINARY_OP_ADD_FLOAT_INPLACE	tier2 op(_BINARY_OP_ADD_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	857	857	opcode:_BINARY_OP_SUBTRACT_FLOAT_INPLACE	tier2 op(_BINARY_OP_SUBTRACT_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	865	865	opcode:_BINARY_OP_MULTIPLY_FLOAT_INPLACE	tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
@@ -96,8 +96,8 @@ Python/bytecodes.c	890	890	opcode:_BINARY_OP_SUBTRACT_FLOAT_INPLACE_RIGHT	tier2 
 Python/bytecodes.c	900	900	opcode:_BINARY_OP_TRUEDIV_FLOAT	tier2 op(_BINARY_OP_TRUEDIV_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	923	923	opcode:_BINARY_OP_TRUEDIV_FLOAT_INPLACE	tier2 op(_BINARY_OP_TRUEDIV_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	934	934	opcode:_BINARY_OP_TRUEDIV_FLOAT_INPLACE_RIGHT	tier2 op(_BINARY_OP_TRUEDIV_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	945	945	opcode:_BINARY_OP_ADD_UNICODE	pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {	todo		review: BinaryAddUnicode is a withDeopt equality with BINARY_OP, which an always-deopting body satisfies.
-Python/bytecodes.c	962	962	opcode:BINARY_OP_ADD_UNICODE	macro(BINARY_OP_ADD_UNICODE) =	todo		review: withDeopt equality only; stale citation @3.14.7:754 (now :962).
+Python/bytecodes.c	945	945	opcode:_BINARY_OP_ADD_UNICODE	pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {	modelled	bytecode-binary-op-add-unicode	
+Python/bytecodes.c	962	962	opcode:BINARY_OP_ADD_UNICODE	macro(BINARY_OP_ADD_UNICODE) =	modelled	bytecode-binary-op-add-unicode	
 Python/bytecodes.c	968	968	opcode:_BINARY_OP_INPLACE_ADD_UNICODE	op(_BINARY_OP_INPLACE_ADD_UNICODE, (left, right -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1011	1011	opcode:_GUARD_BINARY_OP_EXTEND_LHS	tier2 op(_GUARD_BINARY_OP_EXTEND_LHS, (descr/4, left, right -- left, right)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1019	1019	opcode:_GUARD_BINARY_OP_EXTEND_RHS	tier2 op(_GUARD_BINARY_OP_EXTEND_RHS, (descr/4, left, right -- left, right)) {	todo		changed-in-3.15: new function
@@ -111,19 +111,19 @@ Python/bytecodes.c	1108	1108	opcode:BINARY_SLICE	macro(BINARY_SLICE) = _SPECIALI
 Python/bytecodes.c	1110	1110	opcode:_SPECIALIZE_STORE_SLICE	specializing op(_SPECIALIZE_STORE_SLICE, (v, container, start, stop -- v, container, start, stop)) {	todo		
 Python/bytecodes.c	1117	1117	opcode:_STORE_SLICE	op(_STORE_SLICE, (v, container, start, stop -- )) {	todo		
 Python/bytecodes.c	1132	1132	opcode:STORE_SLICE	macro(STORE_SLICE) = _SPECIALIZE_STORE_SLICE + _STORE_SLICE;	todo		
-Python/bytecodes.c	1134	1134	opcode:BINARY_OP_SUBSCR_LIST_INT	macro(BINARY_OP_SUBSCR_LIST_INT) =	todo		review: SubscrListInt is execOp BINARY_OP_SUBSCR_LIST_INT = execOp BINARY_OP under withDeopt; an always-exiting macro satisfies it (the 3.15 negative-index path is mirrored but not pinned).
-Python/bytecodes.c	1137	1137	opcode:_BINARY_OP_SUBSCR_LIST_INT	op(_BINARY_OP_SUBSCR_LIST_INT, (list_st, sub_st -- res, ls, ss)) {	todo		review: The index += size and the EXIT_IF bounds check (:1144-1153) are mirrored, but SubscrListInt is passed by a body that always deopts.
+Python/bytecodes.c	1134	1134	opcode:BINARY_OP_SUBSCR_LIST_INT	macro(BINARY_OP_SUBSCR_LIST_INT) =	modelled	bytecode-binary-op-subscr-list-int	
+Python/bytecodes.c	1137	1137	opcode:_BINARY_OP_SUBSCR_LIST_INT	op(_BINARY_OP_SUBSCR_LIST_INT, (list_st, sub_st -- res, ls, ss)) {	modelled	bytecode-binary-op-subscr-list-int	
 Python/bytecodes.c	1164	1164	opcode:BINARY_OP_SUBSCR_LIST_SLICE	macro(BINARY_OP_SUBSCR_LIST_SLICE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1167	1167	opcode:_BINARY_OP_SUBSCR_LIST_SLICE	op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res, ls, ss)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1185	1185	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	todo		review: SubscrStrInt is a withDeopt equality with BINARY_OP, passed by an always-exiting macro.
-Python/bytecodes.c	1188	1188	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res, s, i)) {	todo		review: The non-negative-compact and length exits (:1194-1196) are mirrored, but SubscrStrInt is passed by a body that always deopts.
-Python/bytecodes.c	1207	1207	opcode:BINARY_OP_SUBSCR_USTR_INT	macro(BINARY_OP_SUBSCR_USTR_INT) =	todo		review: SubscrStrInt's second conjunct is a withDeopt equality, passed by an always-exiting macro.
-Python/bytecodes.c	1210	1210	opcode:_BINARY_OP_SUBSCR_USTR_INT	op(_BINARY_OP_SUBSCR_USTR_INT, (str_st, sub_st -- res, s, i)) {	todo		review: The three EXIT_IFs (:1216-1221) are mirrored, but the only property is a withDeopt equality an always-deopting body satisfies.
-Python/bytecodes.c	1230	1230	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	todo		review: Pinned only by SubscrTupleInt's withDeopt equality, passed by a guard that always exits.
-Python/bytecodes.c	1235	1235	opcode:_GUARD_TOS_TUPLE	op(_GUARD_TOS_TUPLE, (tos -- tos)) {	todo		
-Python/bytecodes.c	1240	1240	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	todo		review: 3.15 adds _GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS to the macro (:1240-1247), which the model folds into _BINARY_OP_SUBSCR_TUPLE_INT; and SubscrTupleInt is a withDeopt equality that an always-exiting macro satisfies.
-Python/bytecodes.c	1250	1250	opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS	op(_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS, (tuple_st, sub_st -- tuple_st, sub_st)) {	todo		review: Has no definition of its own (its two exits are folded into _BINARY_OP_SUBSCR_TUPLE_INT, same order), and the withDeopt equality SubscrTupleInt is passed by a guard that always exits.
-Python/bytecodes.c	1263	1263	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res, ts, ss)) {	todo		review: withDeopt equality only, passed by an always-deopting body.
+Python/bytecodes.c	1185	1185	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1188	1188	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res, s, i)) {	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1207	1207	opcode:BINARY_OP_SUBSCR_USTR_INT	macro(BINARY_OP_SUBSCR_USTR_INT) =	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1210	1210	opcode:_BINARY_OP_SUBSCR_USTR_INT	op(_BINARY_OP_SUBSCR_USTR_INT, (str_st, sub_st -- res, s, i)) {	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1230	1230	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	1235	1235	opcode:_GUARD_TOS_TUPLE	op(_GUARD_TOS_TUPLE, (tos -- tos)) {	modelled	bytecode-fast-guards	
+Python/bytecodes.c	1240	1240	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	modelled	bytecode-subscr-tuple-int	
+Python/bytecodes.c	1250	1250	opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS	op(_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS, (tuple_st, sub_st -- tuple_st, sub_st)) {	modelled	bytecode-subscr-tuple-int	
+Python/bytecodes.c	1263	1263	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res, ts, ss)) {	modelled	bytecode-subscr-tuple-int	
 Python/bytecodes.c	1280	1280	opcode:_GUARD_NOS_DICT_SUBSCRIPT	op(_GUARD_NOS_DICT_SUBSCRIPT, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1286	1286	opcode:_GUARD_NOS_DICT_STORE_SUBSCRIPT	op(_GUARD_NOS_DICT_STORE_SUBSCRIPT, (unused, nos, unused -- unused, nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1292	1292	opcode:_GUARD_TOS_ANY_DICT	op(_GUARD_TOS_ANY_DICT, (tos -- tos)) {	todo		changed-in-3.15: new function
@@ -140,8 +140,8 @@ Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1],
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
-Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	todo		review: StoreSubscrListInt is execOp STORE_SUBSCR_LIST_INT = execOp STORE_SUBSCR under withDeopt, satisfied by a macro that always exits.
-Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	todo		review: The 3.15 negative-index adjustment and DEOPT_IF (:1431-1440) are mirrored, but the withDeopt equality is passed by a body that always deopts.
+Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	modelled	bytecode-store-subscr-list-int	
+Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	modelled	bytecode-store-subscr-list-int	
 Python/bytecodes.c	1454	1454	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =	todo		changed-in-3.15:
 Python/bytecodes.c	1458	1458	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1473	1473	opcode:_STORE_SUBSCR_DICT_KNOWN_HASH	tier2 op(_STORE_SUBSCR_DICT_KNOWN_HASH, (value, dict_st, sub, hash/4 -- st)) {	todo		changed-in-3.15: new function
@@ -150,11 +150,11 @@ Python/bytecodes.c	1498	1498	opcode:_CALL_INTRINSIC_1	op(_CALL_INTRINSIC_1, (val
 Python/bytecodes.c	1509	1509	opcode:CALL_INTRINSIC_1	macro(CALL_INTRINSIC_1) = _CALL_INTRINSIC_1 + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (value2_st, value1_st -- res, vs1, vs2)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _CALL_INTRINSIC_2 + POP_TOP + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	todo		review: bytecode-unwind-to-handler's UnwindToHandler is about the exception_unwind label (Exec.unwind) and never runs RAISE_VARARGS, so neither do_raise's argument order (cause = args[1], exc = args[0]) nor the bare-raise goto exception_unwind at :1537-1540 is stated.
+Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-raise-varargs	
 Python/bytecodes.c	1544	1544	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	todo		review: ReturnValue assumes regs.frame.owner = .thread, so the generator frame, where _PyEval_FrameClearAndPop clears the generator (frameClearAndPop's other branch), is excluded; that hypothesis is neither a type invariant nor a documented precondition.
-Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	todo		review: Same as _RETURN_VALUE: ReturnValue is only for thread-owned frames, so a return from a generator frame is assumed away.
+Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	modelled	bytecode-return-value	
+Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	modelled	bytecode-return-value	
 Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
 Python/bytecodes.c	1602	1602	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		
@@ -166,7 +166,7 @@ Python/bytecodes.c	1722	1722	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;
 Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receiver, null, v -- receiver, null, gen_frame)) {	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
 Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	todo		review: ForIterExhausted and ForIterNext only cover virtualNext returning ok; the ERROR_NO_POP exit when the iterator raises (:3812-3814) is not stated, so a FOR_ITER that treated a raise as exhaustion passes both; this row is a second macro(FOR_ITER) definition (the other is :3823).
+Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter	
 Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
@@ -213,9 +213,9 @@ Python/bytecodes.c	2212	2212	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) 
 Python/bytecodes.c	2222	2222	opcode:LOAD_FROM_DICT_OR_GLOBALS	inst(LOAD_FROM_DICT_OR_GLOBALS, (mod_or_class_dict -- v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2244	2244	opcode:LOAD_NAME	inst(LOAD_NAME, (-- v)) {	todo		
 Python/bytecodes.c	2256	2256	opcode:_SPECIALIZE_LOAD_GLOBAL	specializing op(_SPECIALIZE_LOAD_GLOBAL, (counter/1 -- )) {	todo		changed-in-3.15:
-Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	todo		review: LoadGlobalRules covers only exact-dict globals and builtins, so the PyMapping_GetOptionalItem slow path of _PyEval_LoadGlobalStackRef (dict-subclass globals from exec, a non-dict builtins) is assumed away, the reason the sibling LOAD_NAME entry credits no row; and the NameError the model raises lacks the .name that _PyEval_FormatExcCheckArg sets (ceval.c:3463-3472).
+Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	modelled	bytecode-load-global	
 Python/bytecodes.c	2277	2277	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	modelled	bytecode-load-global	
-Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	todo		review: As _LOAD_GLOBAL: exact-dict globals and builtins only, and the model's NameError has no .name attribute (ceval.c:3463-3472).
+Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	modelled	bytecode-load-global	
 Python/bytecodes.c	2291	2291	opcode:_GUARD_GLOBALS_VERSION	op(_GUARD_GLOBALS_VERSION, (version/1 --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2299	2299	opcode:_LOAD_GLOBAL_MODULE	op(_LOAD_GLOBAL_MODULE, (version/1, unused/1, index/1 -- res))	todo		changed-in-3.15:
 Python/bytecodes.c	2319	2319	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTINS, (version/1, index/1 -- res))	todo		changed-in-3.15:
@@ -287,14 +287,14 @@ Python/bytecodes.c	3186	3186	opcode:STORE_ATTR_WITH_HINT	macro(STORE_ATTR_WITH_H
 Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	todo		changed-in-3.15:
 Python/bytecodes.c	3220	3220	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	todo		review: CompareFused only relates COMPARE_OP with bit 16 to COMPARE_OP without it plus TO_BOOL, with the same om and oparg >> 5 on both sides, so a body that called PyObject_RichCompare(right, left, ...) or ignored oparg >> 5 still passes; the comparison itself (:3236-3240) is never pinned.
-Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	todo		review: Same as _COMPARE_OP: CompareFused pins the bool fusion and its two failure exits but not which comparison is made on which operands.
-Python/bytecodes.c	3253	3253	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	todo		review: CompareFloat is execOp COMPARE_OP_FLOAT = execOp COMPARE_OP under withDeopt, satisfied by a macro that always exits.
-Python/bytecodes.c	3256	3256	opcode:COMPARE_OP_INT	macro(COMPARE_OP_INT) =	todo		review: CompareInt is a withDeopt equality with COMPARE_OP, satisfied by an always-exiting macro.
-Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	todo		review: CompareStr is a withDeopt equality with COMPARE_OP, satisfied by an always-exiting macro.
-Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	todo		review: The COMPARISON_BIT computation with NaN (:3262-3278) is mirrored on Binary64, but CompareFloat is passed by a body that always deopts.
-Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	todo		review: withDeopt equality only (CompareInt), passed by an always-deopting body.
-Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	todo		review: withDeopt equality only (CompareStr), passed by an always-deopting body.
+Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	modelled	bytecode-compare-op	
+Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	modelled	bytecode-compare-op	
+Python/bytecodes.c	3253	3253	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	modelled	bytecode-compare-float	
+Python/bytecodes.c	3256	3256	opcode:COMPARE_OP_INT	macro(COMPARE_OP_INT) =	modelled	bytecode-compare-int	
+Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	modelled	bytecode-compare-str	
+Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-compare-float	
+Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	modelled	bytecode-compare-int	
+Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	modelled	bytecode-compare-str	
 Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
 Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
 Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	modelled	bytecode-dispatch	
@@ -311,10 +311,10 @@ Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_val
 Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
 Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	todo		review: One line, JUMPBY(oparg) (:3494-3496), and JumpRules closes its conjunct by rfl (the forward-then-back conjunct is arithmetic): rfl on a one-line definition.
+Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3503	3503	opcode:_SPECIALIZE_JUMP_BACKWARD	specializing tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3515	3515	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	todo		review: The macro includes _CHECK_PERIODIC (:3544-3548), whose ERROR_IF (:158-161) raises e.g. KeyboardInterrupt from a pending signal, but the model's _CHECK_PERIODIC is pure () (and that row is still todo), so the failure exit is missing and JumpRules' 'touches nothing else' is false in CPython; the conjunct is also closed by rfl.
+Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	modelled	bytecode-jumps	
 Python/bytecodes.c	3550	3550	opcode:JUMP_BACKWARD_NO_JIT	macro(JUMP_BACKWARD_NO_JIT) =	todo		
 Python/bytecodes.c	3555	3555	opcode:JUMP_BACKWARD_JIT	macro(JUMP_BACKWARD_JIT) =	todo		
 Python/bytecodes.c	3579	3579	opcode:ENTER_EXECUTOR	tier1 inst(ENTER_EXECUTOR, (--)) {	todo		changed-in-3.15:
@@ -325,7 +325,7 @@ Python/bytecodes.c	3648	3648	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = u
 Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
 Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	modelled	bytecode-branches	
 Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
-Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	todo		review: One line, JUMPBY(-oparg) under the asserted oparg <= INSTR_OFFSET() (:3656-3664), and JumpRules closes it by rfl: rfl on a one-line definition.
+Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	modelled	bytecode-get-len	
 Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
@@ -341,9 +341,9 @@ Python/bytecodes.c	3760	3760	opcode:_GUARD_ITER_VIRTUAL	op(_GUARD_ITER_VIRTUAL, 
 Python/bytecodes.c	3766	3766	opcode:_PUSH_TAGGED_ZERO	op(_PUSH_TAGGED_ZERO, ( -- zero)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3770	3770	opcode:GET_ITER_VIRTUAL	macro(GET_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
 Python/bytecodes.c	3776	3776	opcode:_GET_ITER_TRAD	op(_GET_ITER_TRAD, (iterable -- iter, index_or_null)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	3798	3798	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter, null_or_index -- iter, null_or_index)) {	todo		review: Modelled as pure (); the ForIter entries never depend on it, so any no-op passes; the rewrite it performs is only visible through quickening, so this row is better excluded than claimed.
-Python/bytecodes.c	3810	3810	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter, null_or_index -- iter, null_or_index, next)) {	todo		review: ForIterExhausted/ForIterNext fix the exhausted jump (oparg + 1, both slots kept) and the next-item write-back, but not the ERROR_NO_POP exit when the iterator raises (:3812-3814), so a body that swallowed the exception as exhaustion passes.
-Python/bytecodes.c	3823	3823	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;	todo		review: Same as _FOR_ITER: the raising-iterator exit is not stated, so FOR_ITER that turned an exception into a normal loop end satisfies both entries.
+Python/bytecodes.c	3798	3798	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter, null_or_index -- iter, null_or_index)) {	excluded		no-behaviour: the adaptive counter and the in-place rewrite by _Py_Specialize_ForIter (:3798-3808); the rewrite is meant to be invisible, which bytecode-for-iter-seq and bytecode-for-iter-range state, and is seen only through dis(adaptive=True)
+Python/bytecodes.c	3810	3810	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter	
+Python/bytecodes.c	3823	3823	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;	modelled	bytecode-for-iter	
 Python/bytecodes.c	3825	3825	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3838	3838	opcode:_GUARD_TYPE_ITER	tier2 op(_GUARD_TYPE_ITER, (expected_type/4, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3843	3843	opcode:_ITER_NEXT_INLINE	tier2 op(_ITER_NEXT_INLINE, (iternext_fn/4, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
@@ -353,29 +353,29 @@ Python/bytecodes.c	3872	3872	opcode:_FOR_ITER_VIRTUAL	replaced op(_FOR_ITER_VIRT
 Python/bytecodes.c	3890	3890	opcode:FOR_ITER_VIRTUAL	macro(FOR_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
 Python/bytecodes.c	3895	3895	opcode:_FOR_ITER_VIRTUAL_TIER_TWO	op(_FOR_ITER_VIRTUAL_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3913	3913	opcode:INSTRUMENTED_FOR_ITER	inst(INSTRUMENTED_FOR_ITER, (unused/1, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3927	3927	opcode:_ITER_CHECK_LIST	op(_ITER_CHECK_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		review: ForIterSeq is execOp FOR_ITER_LIST = execOp FOR_ITER under withDeopt; a guard that always exits satisfies it.
-Python/bytecodes.c	3936	3936	opcode:_ITER_JUMP_LIST	replaced op(_ITER_JUMP_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		review: Mirrors the size test and jump of :3936-3952 (leaving the slot instead of writing TagInt(-1)), but the only property is ForIterSeq's withDeopt equality, which an always-exiting FOR_ITER_LIST passes.
+Python/bytecodes.c	3927	3927	opcode:_ITER_CHECK_LIST	op(_ITER_CHECK_LIST, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-seq	
+Python/bytecodes.c	3936	3936	opcode:_ITER_JUMP_LIST	replaced op(_ITER_JUMP_LIST, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-seq	
 Python/bytecodes.c	3956	3956	opcode:_GUARD_NOT_EXHAUSTED_LIST	op(_GUARD_NOT_EXHAUSTED_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3964	3964	opcode:_ITER_NEXT_LIST	replaced op(_ITER_NEXT_LIST, (iter, null_or_index -- iter, null_or_index, next)) {	todo		review: withDeopt equality only (ForIterSeq), passed by an always-exiting macro.
+Python/bytecodes.c	3964	3964	opcode:_ITER_NEXT_LIST	replaced op(_ITER_NEXT_LIST, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter-seq	
 Python/bytecodes.c	3988	3988	opcode:_ITER_NEXT_LIST_TIER_TWO	op(_ITER_NEXT_LIST_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4006	4006	opcode:FOR_ITER_LIST	macro(FOR_ITER_LIST) =	todo		review: ForIterSeq is a withDeopt equality with FOR_ITER, satisfied by a macro that always exits.
-Python/bytecodes.c	4012	4012	opcode:_ITER_CHECK_TUPLE	op(_ITER_CHECK_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		review: withDeopt equality only (ForIterSeq), passed by an always-exiting guard.
-Python/bytecodes.c	4018	4018	opcode:_ITER_JUMP_TUPLE	replaced op(_ITER_JUMP_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		review: withDeopt equality only (ForIterSeq), passed by an always-exiting macro.
+Python/bytecodes.c	4006	4006	opcode:FOR_ITER_LIST	macro(FOR_ITER_LIST) =	modelled	bytecode-for-iter-seq	
+Python/bytecodes.c	4012	4012	opcode:_ITER_CHECK_TUPLE	op(_ITER_CHECK_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-seq	
+Python/bytecodes.c	4018	4018	opcode:_ITER_JUMP_TUPLE	replaced op(_ITER_JUMP_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-seq	
 Python/bytecodes.c	4032	4032	opcode:_GUARD_NOT_EXHAUSTED_TUPLE	op(_GUARD_NOT_EXHAUSTED_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4038	4038	opcode:_ITER_NEXT_TUPLE	op(_ITER_NEXT_TUPLE, (iter, null_or_index -- iter, null_or_index, next)) {	todo		review: withDeopt equality only (ForIterSeq), passed by an always-exiting macro.
-Python/bytecodes.c	4047	4047	opcode:FOR_ITER_TUPLE	macro(FOR_ITER_TUPLE) =	todo		review: ForIterSeq's second conjunct is a withDeopt equality, satisfied by a macro that always exits.
-Python/bytecodes.c	4053	4053	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		review: ForIterRange is execOp FOR_ITER_RANGE = execOp FOR_ITER under withDeopt, satisfied by a guard that always exits.
-Python/bytecodes.c	4061	4061	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		review: withDeopt equality only (ForIterRange), passed by an always-exiting macro.
+Python/bytecodes.c	4038	4038	opcode:_ITER_NEXT_TUPLE	op(_ITER_NEXT_TUPLE, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter-seq	
+Python/bytecodes.c	4047	4047	opcode:FOR_ITER_TUPLE	macro(FOR_ITER_TUPLE) =	modelled	bytecode-for-iter-seq	
+Python/bytecodes.c	4053	4053	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-range	
+Python/bytecodes.c	4061	4061	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-range	
 Python/bytecodes.c	4076	4076	opcode:_GUARD_NOT_EXHAUSTED_RANGE	op(_GUARD_NOT_EXHAUSTED_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4082	4082	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter, null_or_index -- iter, null_or_index, next)) {	todo		review: withDeopt equality only (ForIterRange); its model citation :4659 is wrong (the op is at :4082-4095).
-Python/bytecodes.c	4097	4097	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	todo		review: ForIterRange is a withDeopt equality with FOR_ITER, satisfied by a macro that always exits.
+Python/bytecodes.c	4082	4082	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter-range	
+Python/bytecodes.c	4097	4097	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	modelled	bytecode-for-iter-range	
 Python/bytecodes.c	4103	4103	opcode:_FOR_ITER_GEN_FRAME	op(_FOR_ITER_GEN_FRAME, (iter, null -- iter, null, gen_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4118	4118	opcode:FOR_ITER_GEN	macro(FOR_ITER_GEN) =	todo		changed-in-3.15:
 Python/bytecodes.c	4125	4125	opcode:_INSERT_NULL	op(_INSERT_NULL, (self -- method_and_self[2])) {	todo		
 Python/bytecodes.c	4131	4131	opcode:_LOAD_SPECIAL	op(_LOAD_SPECIAL, (method_and_self[2] -- method_and_self[2])) {	todo		
 Python/bytecodes.c	4148	4148	opcode:LOAD_SPECIAL	macro(LOAD_SPECIAL) =	todo		changed-in-3.15:
 Python/bytecodes.c	4153	4153	opcode:WITH_EXCEPT_START	inst(WITH_EXCEPT_START, (exit_func, exit_self, lasti, unused, val -- exit_func, exit_self, lasti, unused, val, res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4213	4213	opcode:PUSH_EXC_INFO	inst(PUSH_EXC_INFO, (exc -- prev_exc, new_exc)) {	todo		review: ExcInfoNests only checks PUSH_EXC_INFO; pop; POP_EXCEPT restores exc_info, which a PUSH_EXC_INFO that pushes the old value but never installs exc as exc_info->exc_value (:4222) also satisfies, so the handled exception inside the except block is never pinned.
+Python/bytecodes.c	4213	4213	opcode:PUSH_EXC_INFO	inst(PUSH_EXC_INFO, (exc -- prev_exc, new_exc)) {	modelled	bytecode-push-exc-info	
 Python/bytecodes.c	4228	4228	opcode:_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT	op(_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT, (owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4235	4235	opcode:_GUARD_KEYS_VERSION	op(_GUARD_KEYS_VERSION, (keys_version/2, owner -- owner)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4242	4242	opcode:_LOAD_ATTR_METHOD_WITH_VALUES	op(_LOAD_ATTR_METHOD_WITH_VALUES, (descr/4, owner -- attr, self)) {	todo		
@@ -428,7 +428,7 @@ Python/bytecodes.c	4735	4735	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, n
 Python/bytecodes.c	4749	4749	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	todo		changed-in-3.15:
 Python/bytecodes.c	4758	4758	opcode:_CHECK_OBJECT	op(_CHECK_OBJECT, (type_version/2, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4766	4766	opcode:_ALLOCATE_OBJECT	op(_ALLOCATE_OBJECT, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
-Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	todo		review: On failure of _PyEvalFramePushAndInit C clears the shim with _PyEval_FrameClearAndPop and raises in the caller (:4799-4802), but the model has already entered the shim and lets the exception unwind from it, where Exec.unwind's leaveRecursivePy gives back a recursion unit C never took; the failure exit is not mirrored.
+Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	modelled	bytecode-create-init-frame,bytecode-call-alloc-abstract	
 Python/bytecodes.c	4815	4815	opcode:CALL_ALLOC_AND_ENTER_INIT	macro(CALL_ALLOC_AND_ENTER_INIT) =	modelled	bytecode-call-alloc-abstract	
 Python/bytecodes.c	4825	4825	opcode:EXIT_INIT_CHECK	inst(EXIT_INIT_CHECK, (should_be_none -- )) {	todo		
 Python/bytecodes.c	4835	4835	opcode:_GUARD_CALLABLE_BUILTIN_CLASS	op(_GUARD_CALLABLE_BUILTIN_CLASS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
@@ -504,9 +504,9 @@ Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- 
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
 Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5906	5906	opcode:COPY	pure replicate(1:4) inst(COPY, (bottom, unused[oparg-1] -- bottom, unused[oparg-1], top)) {	modelled	bytecode-copy	
-Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	todo		review: Modelled as pure () and no property depends on it; its only effects are the quickening rewrite and the oparg-range asserts (:5910-5922), so it should be excluded rather than credited.
-Python/bytecodes.c	5924	5924	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res, l, r)) {	todo		review: Only reached through BinaryAddInt, where Lawful.add_int is symmetric and oparg is 0 or 13, so a body that swapped lhs and rhs or ignored oparg passes; the ERROR_NO_POP exit (:5929-5931) and every other operator are unstated.
-Python/bytecodes.c	5940	5940	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + _RECORD_TOS_TYPE + _RECORD_NOS_TYPE + unused/4 + _BINARY_OP + POP_TOP + POP_TOP;	todo		review: Same as _BINARY_OP: the generic form is pinned only on compact int addition, symmetric in its operands, and never on its failure path.
+Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	excluded		no-behaviour: the adaptive counter and the in-place rewrite by _Py_Specialize_BinaryOp (:5910-5922); the rewrite is meant to be invisible, which the bytecode-binary-op-* entries state per specialized form, and is seen only through dis(adaptive=True); the oparg range is an assert
+Python/bytecodes.c	5924	5924	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res, l, r)) {	modelled	bytecode-binary-op	
+Python/bytecodes.c	5940	5940	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + _RECORD_TOS_TYPE + _RECORD_NOS_TYPE + unused/4 + _BINARY_OP + POP_TOP + POP_TOP;	modelled	bytecode-binary-op	
 Python/bytecodes.c	5942	5942	opcode:SWAP	pure replicate(2:4) inst(SWAP, (bottom, unused[oparg-2], top --	modelled	bytecode-swap	
 Python/bytecodes.c	5949	5949	opcode:INSTRUMENTED_LINE	inst(INSTRUMENTED_LINE, ( -- )) {	todo		
 Python/bytecodes.c	5979	5979	opcode:INSTRUMENTED_INSTRUCTION	inst(INSTRUMENTED_INSTRUCTION, ( -- )) {	todo		
