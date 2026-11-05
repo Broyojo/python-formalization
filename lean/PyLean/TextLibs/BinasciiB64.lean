@@ -501,4 +501,236 @@ theorem b64RoundTripAll_proven : B64RoundTripAll := by
   rw [e0, h1]
   exact h2
 
+/-! ### The decoder's arguments -/
+
+/-- The bytes of the alphabet the decoder reads. -/
+def alphaChars : AlphaArg → List Nat
+  | .absent => b64Alpha
+  | .bytes a => a
+  | .other _ => []
+
+/-- `ignorechars` as the loop sees it, `Modules/binascii.c:768-773`. -/
+def igEff (strict : Option Bool) (g : Option (List Nat)) : Option (List Nat) :=
+  if !strict.getD g.isSome || g.isNone || g == some [] then none else g
+
+/-- The arguments either fail whatever the data, with one exception, or leave the loop with the table of
+a 64-byte alphabet. -/
+theorem a2bB64_cases (strict : Option Bool) (p : Bool) (alpha : AlphaArg) (g : Option (List Nat)) (k : Bool) :
+    (∃ e, ∀ s, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k = .error e) ∨
+    ((alphaChars alpha).length = 64 ∧ ∀ s, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k =
+      a2b64Core ⟨strict.getD g.isSome, p, revT (alphaChars alpha) (some 61), igEff strict g⟩ k s) := by
+  have hgd : bufOpt (g.map .bytes) = .ok g := by cases g <;> rfl
+  cases alpha with
+  | absent =>
+    right
+    refine ⟨by decide, fun s => ?_⟩
+    simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, igEff, alphaChars, bind, Except.bind]
+  | bytes a =>
+    by_cases hl : a.length = 64
+    · right
+      refine ⟨hl, fun s => ?_⟩
+      simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, hl, igEff, alphaChars, bind, Except.bind]
+    · left
+      refine ⟨.valueError s!"alphabet must have length {64}", fun s => ?_⟩
+      simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, hl, bind, Except.bind]
+  | other t =>
+    left
+    refine ⟨.typeError s!"{"a2b_base64"}() argument 'alphabet' must be bytes, not {t}", fun s => ?_⟩
+    simp [a2bB64, asciiBuffer, alphaDec, bind, Except.bind]
+
+theorem revT_mem_any (a : List Nat) (p : Option Nat) (y : Nat) (hy : y ∈ a) (hp : p ≠ some y) :
+    revT a p y < a.length := by
+  have h1 : (p == some y) = false := by simpa using hp
+  obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hy
+  have hs : (a.zipIdx.reverse.find? (·.1 == a[i])).isSome := by
+    rw [List.find?_isSome]
+    refine ⟨(a[i], i), List.mem_reverse.mpr ?_, by simp⟩
+    rw [List.mem_zipIdx_iff_getElem?]
+    simp [hi]
+  obtain ⟨q, hq⟩ := Option.isSome_iff_exists.mp hs
+  have hm := List.mem_of_find?_eq_some hq
+  have hlt := List.snd_lt_add_of_mem_zipIdx (List.mem_reverse.mp hm)
+  simp only [revT, h1, Bool.false_eq_true, if_false, hq, Option.map_some, Option.getD_some]
+  omega
+
+/-- For a 64-byte alphabet, the data characters are exactly the alphabet's bytes but `'='`. -/
+theorem tbl64_lt (A : List Nat) (hA : A.length = 64) (x : Nat) :
+    revT A (some 61) x < 64 ↔ (x ∈ A ∧ x ≠ 61) := by
+  constructor
+  · intro h
+    by_cases h61 : x = 61
+    · subst h61
+      rw [revT_pad, hA] at h
+      omega
+    · refine ⟨?_, h61⟩
+      by_cases hx : x ∈ A
+      · exact hx
+      · rw [revT_large A (some 61) x (by simpa using Ne.symm h61) (fun y hy e => hx (e ▸ hy))] at h
+        omega
+  · intro ⟨hx, h61⟩
+    have := revT_mem_any A (some 61) x hx (by simpa using Ne.symm h61)
+    omega
+
+theorem tbl64_61 (A : List Nat) (hA : A.length = 64) : 64 ≤ revT A (some 61) 61 := by
+  rw [revT_pad, hA]; exact Nat.le_refl 64
+
+/-! ### What `strict_mode` rejects -/
+
+/-- A run that cannot end well: it raises, or it stops at a pad after one data character (the `break`
+of `Modules/binascii.c:836-839`), which the check after the loop refuses. -/
+def Doomed (c : B64) (s : List Nat) (st : Dec) : Prop :=
+  ∀ st', slow64 c s st = .ok st' → st'.quad = 1
+
+theorem doomed_prefix (c : B64) (m : List Nat) (hm : ∀ st, Doomed c m st) :
+    ∀ (s1 : List Nat) (st : Dec), Doomed c (s1 ++ m) st := by
+  intro s1
+  induction s1 with
+  | nil => intro st; simpa using hm st
+  | cons x xs ih =>
+    intro st st' h
+    simp only [List.cons_append, slow64] at h
+    split at h
+    · split at h
+      · exact ih _ _ h
+      · split at h
+        · exact ih _ _ h
+        · split at h
+          · rename_i hq
+            injection h with h
+            subst h
+            exact hq
+          · cases h
+    · split at h
+      · split at h
+        · cases h
+        · exact ih _ _ h
+      · split at h
+        · cases h
+        · exact ih _ _ h
+
+theorem doomed_core (c : B64) (h61 : 64 ≤ c.tbl 61) (k : Bool) (s : List Nat) (h : Doomed c s {}) :
+    ∀ r, a2b64Core c k s ≠ .ok r := by
+  intro r hr
+  rw [core_slow c h61] at hr
+  cases hs : slow64 c s {} with
+  | error e => rw [hs] at hr; cases hr
+  | ok st =>
+    rw [hs] at hr
+    have hq := h st hs
+    simp [Except.bind, fin64, hq, bind, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw] at hr
+
+theorem doomed_junk (c : B64) (hs : c.strict = true) (x : Nat) (hx : 64 ≤ c.tbl x)
+    (hp : ¬(c.padded = true ∧ x = 61)) (hi : ign c.ig x = false) (r : List Nat) (st : Dec) : Doomed c (x :: r) st := by
+  intro st' h
+  have h1 : (c.padded && x == 61) = false := by
+    cases hc : c.padded <;> simp_all
+  simp [slow64, h1, hx, hs, hi] at h
+
+theorem doomed_pads (c : B64) (hs : c.strict = true) (hp : c.padded = true) (hi : ign c.ig 61 = false)
+    (h61 : 64 ≤ c.tbl 61) (y : Nat) (hy : c.tbl y < 64) (r : List Nat) :
+    ∀ (s2 : List Nat) (st : Dec), 0 < st.pads → Doomed c (s2 ++ y :: r) st := by
+  have hy61 : (y == 61) = false := by
+    apply beq_false_of_ne; intro e; subst e; omega
+  intro s2
+  induction s2 with
+  | nil =>
+    intro st hpos st' h
+    simp only [List.nil_append, slow64, hp, hy61, Bool.and_false, Bool.false_eq_true, if_false,
+      if_neg (Nat.not_le.mpr hy), hs, hi] at h
+    rw [if_pos (by simp; omega)] at h
+    cases h
+  | cons x xs ih =>
+    intro st hpos st' h
+    simp only [List.cons_append, slow64] at h
+    split at h
+    · split at h
+      · exact ih _ (by simp) _ h
+      · split at h
+        · exact ih _ (by simp) _ h
+        · split at h
+          · rename_i hq
+            injection h with h
+            subst h
+            exact hq
+          · cases h
+    · split at h
+      · split at h
+        · cases h
+        · exact ih _ hpos _ h
+      · rw [if_pos (by simp [hs, hi]; omega)] at h
+        cases h
+
+theorem doomed_eq (c : B64) (hs : c.strict = true) (hp : c.padded = true) (hi : ign c.ig 61 = false)
+    (h61 : 64 ≤ c.tbl 61) (y : Nat) (hy : c.tbl y < 64) (s2 r : List Nat) (st : Dec) :
+    Doomed c (61 :: s2 ++ y :: r) st := by
+  intro st' h
+  simp only [List.cons_append, slow64, hp, beq_self_eq_true, Bool.and_self, if_true, hs, hi, Bool.not_true,
+    Bool.or_false, Bool.false_eq_true, if_false] at h
+  split at h
+  · exact doomed_pads c hs hp hi h61 y hy r s2 _ (by simp) _ h
+  · split at h
+    · rename_i _ hq
+      injection h with h
+      subst h
+      exact hq
+    · cases h
+
+/-- What `strict_mode` refuses, for every option. When the decoding is strict (given, or by default
+because `ignorechars` is given), a byte that is not in the alphabet, or a `'='` when `padded=False`,
+that `ignorechars` does not name, makes it raise; and with `padded=True` and no `'='` in
+`ignorechars`, so does any data character after a `'='`. A decoder that ignores `strict_mode` returns
+data for both, so it does not satisfy this; `B64RoundTripAll` says the strict mode accepts what the
+encoder writes, so an always-raising one does not either. -/
+def B64StrictLaw : Prop :=
+  ∀ (s : List Nat) (strict : Option Bool) (p : Bool) (alpha : AlphaArg) (g : Option (List Nat)) (k : Bool),
+    strict.getD g.isSome = true →
+    ((∃ x ∈ s, (x ≠ 61 → x ∉ alphaChars alpha) ∧ (x = 61 → p = false) ∧ ∀ l, g = some l → x ∉ l) →
+      ∀ r, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k ≠ .ok r) ∧
+    (p = true → (∀ l, g = some l → 61 ∉ l) → ∀ s1 s2 y s3, s = s1 ++ 61 :: s2 ++ y :: s3 →
+      y ∈ alphaChars alpha → y ≠ 61 → ∀ r, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k ≠ .ok r)
+
+theorem ign_eff (strict : Option Bool) (g : Option (List Nat)) (x : Nat) (h : ∀ l, g = some l → x ∉ l) :
+    ign (igEff strict g) x = false := by
+  unfold igEff
+  split
+  · rfl
+  · cases g with
+    | none => rfl
+    | some l => simpa [ign] using h l rfl
+
+theorem b64StrictLaw_proven : B64StrictLaw := by
+  intro s strict p alpha g k hs
+  rcases a2bB64_cases strict p alpha g k with ⟨e, he⟩ | ⟨hA, he⟩
+  · refine ⟨fun _ r h => ?_, fun _ _ _ _ _ _ _ _ _ r h => ?_⟩
+    · rw [he] at h; cases h
+    · rw [he] at h; cases h
+  · generalize hAc : alphaChars alpha = A at hA he
+    let c : B64 := ⟨strict.getD g.isSome, p, revT A (some 61), igEff strict g⟩
+    have h61 : 64 ≤ c.tbl 61 := tbl64_61 A hA
+    constructor
+    · rintro ⟨x, hx, h1, h2, h3⟩ r hr
+      rw [he] at hr
+      obtain ⟨s1, s3, rfl⟩ := List.append_of_mem hx
+      have hjunk : ∀ st, Doomed c (x :: s3) st := by
+        intro st
+        apply doomed_junk c hs x
+        · show 64 ≤ revT A (some 61) x
+          by_cases hx61 : x = 61
+          · subst hx61; exact h61
+          · have := mt (tbl64_lt A hA x).mp (by simp [h1 hx61])
+            omega
+        · intro ⟨hp, hx61⟩
+          have := h2 hx61
+          simp_all [c]
+        · exact ign_eff strict g x h3
+      exact doomed_core c h61 k _ (doomed_prefix c _ hjunk s1 {}) r hr
+    · intro hp hg s1 s2 y s3 hseq hy hy61 r hr
+      rw [he, hseq] at hr
+      have hyt : c.tbl y < 64 := (tbl64_lt A hA y).mpr ⟨hy, hy61⟩
+      have hm : ∀ st, Doomed c (61 :: s2 ++ y :: s3) st :=
+        fun st => doomed_eq c hs hp (ign_eff strict g 61 hg) h61 y hyt s2 s3 st
+      have := doomed_prefix c _ hm s1 {}
+      simp only [List.cons_append] at this hr
+      exact doomed_core c h61 k _ (by simpa using this) r hr
+
 end PyLean.TextLibs.Binascii
