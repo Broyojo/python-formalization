@@ -81,7 +81,10 @@ def parseAtom (j : Json) : Except String Atom := do
            tname := ← getStr j "t", fs := ← getOptInt j "fs"
            nan := (j.getObjValAs? Bool "nan").toOption.getD false
            ract := (j.getObjValAs? Nat "ra").toOption.getD 0
-           rk := (j.getObjValAs? Bool "rk").toOption.getD false }
+           rk := (j.getObjValAs? Bool "rk").toOption.getD false
+           hact := (j.getObjValAs? Nat "ha").toOption.getD 0
+           hres := (j.getObjValAs? Nat "hr").toOption.getD 0
+           sbody := (j.getObjValAs? (List Int) "sb").toOption }
 
 def arg (op : Array Json) (k : Nat) : Except String Json :=
   match op[k]? with
@@ -131,6 +134,12 @@ def setArg (st : St) (j : Json) : Except String (SetArg DObj) := do
        else s)
     return .live { steps := steps ++ if stop then [M.throw (.valueError "stop")] else [] }
   | "g" => return .iter { items := ← objs st (← arg a 1), stop := some (.valueError "stop") }
+  | "S" =>
+    -- `['S', contents, items]`: an instance of a set subclass holding `contents`, whose
+    -- `__iter__` yields `items`.
+    let body := (setUpdate plainSet (.iter { items := ← objs st (← arg a 1) })
+      ({ ident := 900, exact := false, tname := "SSub" } : DS)).2
+    return .sub { body with peers := [] } (ReIter.ofIterable { items := ← objs st (← arg a 2) })
   | "n" => return .iter { getIter := some (.typeError "'int' object is not iterable"), items := [] }
   | t => throw s!"set arg {t}"
 
@@ -786,7 +795,7 @@ def stepSet (st : St) (name : String) (a : Array Json) : Except String (Option (
   let P := match st.stgt with
     | some t => sProtoAt st.pool st.ss[t]!.ident
     | none => sProto
-  let sh := DObj.setHash
+  let sh := testKeySet
   let argsAt (n : Nat) : Except String (List (SetArg DObj)) := do
     (← arrOf (← arg a n)).mapM (setArg st)
   let so := st.ss[i]!
@@ -1334,6 +1343,10 @@ def run (fn : String) (j : Json) : Except String Json := do
     | some "s1" => some 1
     | _ => none
   let st := { initSt poolA [] with tgt, stgt }
+  -- `s1sub`: slot 1 is an instance of `SKeep`, a set subclass that keeps `set`'s `__iter__`.
+  let st := if (j.getObjValAs? Bool "s1sub").toOption.getD false then
+      { st with ss := st.ss.set! 1 { st.ss[1]! with exact := false, tname := "SKeep" } }
+    else st
   let ops ← arrOf (← field j "ops")
   let every := (j.getObjValAs? Nat "every").toOption.getD 1
   let runOps := fun st => runOps every st ops 0 #[]

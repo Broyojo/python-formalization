@@ -1,0 +1,56 @@
+id: pickle-protocol-float
+title: "pickle: pickle._dumps accepts a float protocol and truncates it, pickle.dumps raises TypeError"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [_Pickler_SetProtocol, _Pickler.__init__]
+summary: |
+  `_Pickler.__init__` compares `protocol` with 0 and 5 and stores `int(protocol)`, so any float in
+  [0, 5] is accepted and truncated (`pickle._dumps(None, 2.5)` is `b'\x80\x02N.'`, 4.999 is
+  protocol 4, 0.5 is protocol 0) and any negative float selects protocol 5. The C pickler converts
+  the argument with `PyLong_AsLong`, which refuses floats: `pickle.dumps(None, 2.5)` raises
+  TypeError "'float' object cannot be interpreted as an integer". Floats above 5 and NaN are
+  ValueError in Python, TypeError in C.
+likelihood: |
+  Low. Passing a float protocol is a mistake, but one that pickle.py silently accepts, and code
+  tested without `_pickle` (or with `pickle._Pickler`) behaves differently under the accelerator.
+maybe_intended: |
+  Not designed; the C behaviour (reject non-integers) is probably the intended one, and a
+  maintainer might call the Python behaviour harmless leniency. Related in kind to
+  pickle-protocol-long-overflow (same function pair, same conversion).
+reproducer: |
+  import pickle
+  def r(f, p):
+      try: return ('ok', f(None, p))
+      except Exception as e: return (type(e).__name__, str(e))
+  c, py = r(pickle.dumps, 2.5), r(pickle._dumps, 2.5)
+  print('C', c, '| Python', py)
+  if c[0] == 'TypeError' and py == ('ok', b'\x80\x02N.'):
+      print('REPRODUCED pickle-protocol-float')
+expected: |
+  Both twins raise TypeError for a non-integer protocol (or both accept it the same way).
+observed: |
+  python3 3.15.2: REPRODUCED. 0.5 -> b'N.' (Python) / TypeError (C); 4.999 -> protocol 4 /
+  TypeError; -1.5 -> protocol 5 / TypeError; 5.5 and nan -> ValueError / TypeError; True -> b'N.'
+  in both.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED, same behaviour.
+promised_by: |
+  C/Python twin agreement (test_pickle runs both). Doc/library/pickle.rst:294: "The optional *protocol*
+  argument, an integer, ...".
+cause: |
+  Lib/pickle.py:471-476 compares the argument with ints and :488 takes `int(protocol)`, which
+  truncates a float; Modules/_pickle.c:1191 calls `PyLong_AsLong`, which goes through
+  `__index__` and refuses floats.
+possible_fix: |
+  In `_Pickler.__init__`, convert with `operator.index(protocol)` before the comparisons.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["pickle protocol float", "pickle protocol argument type int",
+            "bugforge-results/README.md: no pickle entries"]
+lean:
+  property: PyLean.Pickle.DumpsTwinsProtocol
+  theorem: PyLean.Pickle.dumpsTwinsProtocol_refuted

@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.CoreLibs.EnumDC.EnumClass
+import PyLean.CoreLibs.EnumDC.EnumObj
 import PyLean.CoreLibs.EnumDC.Dataclass
 import PyLean.CoreLibs.EnumDC.DcAnnot
 
@@ -175,15 +175,18 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
     let a ← decAtom (← op.getArrVal? 1)
     let more ← (← (← op.getArrVal? 2).getArr?).toList.mapM decAtom
     let miss ← decMissing c (← op.getArrVal? 3)
-    match enumCall c none a more miss with
-    | some r => pure (encPy nameJ r)
-    | none => pure (okJ "functional")
+    match enumCallG evOps c none a more {} miss with
+    | .ok (.member n) => pure (okJ (nameJ n))
+    | .ok (.create _ _ _) => pure (okJ "functional")
+    | .error e => pure (unitJ (.error e))
   | "callself" =>
     let n ← decName (← op.getArrVal? 1)
     pure (encPy nameJ (match c.getItem n with
       | .error e => .error e
-      | .ok m => enumNew c (some m) (.atom (.int 0)) false .none))
-  | "contains" => pure (okJ (toJson (enumContains c false (← decEV 4 (← op.getArrVal? 1)))))
+      | .ok m => c.toG.enumNew evOps (some m) (.atom (.int 0)) false .none))
+  | "contains" =>
+    pure (encPy (fun (b : Bool) => toJson b)
+      (containsG evOps false none c.unhashableValues c.hashableValues (← decEV 4 (← op.getArrVal? 1))))
   | "getitem" => pure (encPy nameJ (c.getItem (← decName (← op.getArrVal? 1))))
   | "iter" => pure (okJ (toJson [toJson (c.iter.map nameJ), toJson (c.reversed.map nameJ), toJson c.len]))
   | "setattr" => pure (unitJ (c.setAttr (← decName (← op.getArrVal? 1))))
@@ -199,16 +202,19 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
     let v ← decEV 4 (← op.getArrVal? 2)
     pure (encPy summaryJ (match c.getItem self with
       | .error e => .error e
-      | .ok m => c.addValueAlias memberName m v))
+      | .ok m =>
+        match c.toG.addValueAlias evOps memberName m v with
+        | .error e => .error e
+        | .ok g => .ok (c.ofG g)))
   | "valias_call" =>
     let self ← decName (← op.getArrVal? 1)
     let v ← decEV 4 (← op.getArrVal? 2)
     pure (encPy nameJ (match c.getItem self with
       | .error e => .error e
       | .ok m =>
-        match c.addValueAlias memberName m v with
+        match c.toG.addValueAlias evOps memberName m v with
         | .error e => .error e
-        | .ok c' => enumNew c' none v false .none))
+        | .ok g => g.enumNew evOps none v false .none))
   | "unique" => pure (unitJ (c.unique memberName))
   | "verify" =>
     let checks ← (← (← op.getArrVal? 1).getArr?).toList.mapM fun k => do
@@ -216,7 +222,7 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
       | "unique" => pure Check.unique
       | "continuous" => pure Check.continuous
       | _ => pure Check.named
-    pure (unitJ (c.verifyCall true memberName checks))
+    pure (unitJ (verifyCallG evOps id c.toG memberName (.ok "C") (.enum (c.kind == .flag)) checks))
   | _ => throw "class op"
 
 def runClass (j : Json) : Except String Json := do
@@ -317,8 +323,8 @@ def runFlag (j : Json) : Except String Json := do
       | some a => pure (okJ (toJson (flagBool a)))
   | "class_in" =>
     match kindO with
-    | "other" => pure (okJ (toJson (c.classContains none)))
-    | _ => pure (okJ (toJson (c.classContains (some (← vO.getInt?)))))
+    | "other" => pure (encPy (fun (b : Bool) => toJson b) (c.containsOf evOps false (.atom (.str "x"))))
+    | _ => pure (encPy (fun (b : Bool) => toJson b) (c.containsOf evOps false (.atom (.int (← vO.getInt?)))))
   | _ => throw "flag op"
 
 /-! ### Dataclasses -/
@@ -476,6 +482,144 @@ partial def encDV : DV → Json
   | .counter k v => toJson [toJson "counter", toJson (k.map encDV), toJson (v.map encDV)]
   | .inst _ _ => Json.null
 
+/-! ### Values that raise: `PV` -/
+
+def getOptStrJ (j : Json) : Except String (Option String) :=
+  match j with
+  | .null => pure none
+  | v => some <$> v.getStr?
+
+def decKeys (j : Json) : Except String (List (Int × Option String × Option String)) := do
+  (← getArr j "keys").mapM fun k => do
+    pure (← (← k.getArrVal? 0).getInt?, ← getOptStrJ (← k.getArrVal? 1), ← getOptStrJ (← k.getArrVal? 2))
+
+def decPV (keys : List (Int × Option String × Option String)) (j : Json) : Except String PV := do
+  let k ← (← j.getArrVal? 0).getStr?
+  let v ← j.getArrVal? 1
+  match k with
+  | "int" => pure (.int (← v.getInt?))
+  | "str" => pure (.str (← v.getStr?))
+  | "key" =>
+    let i ← v.getNat?
+    match keys[i]? with
+    | some (kk, he, ee) => pure (.key kk he ee i)
+    | none => throw "key"
+  | _ => pure (.list (← v.getNat?))
+
+def encPV : PV → Json
+  | .int n => toJson [toJson "int", toJson n]
+  | .str s => toJson [toJson "str", toJson s]
+  | .key _ _ _ i => toJson [toJson "key", toJson i]
+  | .list i => toJson [toJson "list", toJson i]
+
+/-- How each member is made: a plain class; `class C(int, Enum)` whose `__new__` returns `int.__new__(cls, 7)` without
+setting `_value_`, so `int(value)` is called; and a class whose `__init__` raises `ValueError('init')` for
+`value == 'boom'`. -/
+def pvMaker (kind : String) (v : PV) : Maker PV :=
+  match kind with
+  | "customnew" =>
+    { plain := false,
+      callType := match v with
+        | .int n => .ok (.int n)
+        | .str s =>
+          match s.toInt? with
+          | some n => .ok (.int n)
+          | none => .error (.valueError "~invalid literal for int() with base 10")
+        | _ => .error (.typeError "~int() argument must be a string, a bytes-like object or a real number") }
+  | "mnew" =>
+    { plain := false,
+      callType := match v with
+        | .str "b" => .error (.named "BExc" "b")
+        | .int n => .ok (.int n)
+        | _ => .error (.valueError "v") }
+  | "initfail" =>
+    { init := match pvOps.eq v (.str "boom") with
+        | .error e => .error e
+        | .ok true => .error (.valueError "init")
+        | .ok false => .ok () }
+  | _ => {}
+
+def summaryPV (c : EClassG PV) : Json :=
+  toJson [toJson (c.memberNames.map nameJ),
+    toJson (c.memberMap.map fun p => toJson [nameJ p.1, nameJ p.2, (c.values.lookup p.2).elim Json.null encPV]),
+    toJson (c.value2member.map fun p => toJson [encPV p.1, nameJ p.2]),
+    toJson (c.hashableValues.map encPV), toJson (c.unhashableValues.map encPV),
+    toJson (c.unhashableMap.map fun p => toJson [nameJ p.1, toJson (p.2.map encPV)])]
+
+def runEhClass (j : Json) : Except String Json := do
+  let keys ← decKeys j
+  let kind ← getStr j "kind"
+  let body ← (← getArr j "body").mapM fun p => do
+    pure (← decName (← p.getArrVal? 0), ← decPV keys (← p.getArrVal? 1))
+  let op ← field j "op"
+  match ({} : EClassG PV).build pvOps (pvMaker kind) body with
+  | .error e => pure (unitJ (.error e))
+  | .ok c =>
+    match ← (← op.getArrVal? 0).getStr? with
+    | "summary" => pure (okJ (summaryPV c))
+    | "call" =>
+      let v ← decPV keys (← op.getArrVal? 1)
+      let mj ← op.getArrVal? 2
+      let miss ← match ← (← mj.getArrVal? 0).getStr? with
+        | "none" => pure MissingRet.none
+        | "other" => pure .other
+        | "raises" => pure (.raises (.named "KeyError" s!"'{← (← mj.getArrVal? 2).getStr?}'"))
+        | _ =>
+          match c.memberMap.lookup (← decName (← mj.getArrVal? 1)) with
+          | some m => pure (.member m)
+          | none => pure (.raises (.keyError "~name"))
+      -- `EnumType.__call__`, Lib/enum.py:729-739: no members, no `names`, no `type`
+      if c.memberMap.isEmpty then pure (unitJ (.error (.typeError "~has no members; specify `names=()`")))
+      else pure (encPy nameJ (c.enumNew pvOps none v false miss))
+    | "contains" =>
+      let v ← decPV keys (← op.getArrVal? 1)
+      pure (encPy (fun (b : Bool) => toJson b) (containsG pvOps false none c.unhashableValues c.hashableValues v))
+    | "callself" =>
+      let n ← decName (← op.getArrVal? 1)
+      pure (encPy nameJ (match c.getItem n with
+        | .error e => .error e
+        | .ok m => c.enumNew pvOps (some m) (.int 0) false .none))
+    | k =>
+      let n ← decName (← op.getArrVal? 1)
+      let v ← decPV keys (← op.getArrVal? 2)
+      match c.getItem n with
+      | .error e => pure (unitJ (.error e))
+      | .ok m =>
+        match c.addValueAlias pvOps id m v with
+        | .error e => pure (unitJ (.error e))
+        | .ok c' =>
+          if k == "valias" then pure (okJ (summaryPV c'))
+          else pure (encPy nameJ (c'.enumNew pvOps none v false .none))
+
+/-- `verify(*checks)` on a class built from `int` and `str` values, or on `int`, `len` or `42`. `order` is the iteration
+order of the set of values, as the generator saw it, as places in the set's insertion order. -/
+def runEhVerify (j : Json) : Except String Json := do
+  let kind := decKind (← getStr j "kind")
+  let body ← decItems (← getArr j "body")
+  let order : List EV → List EV ← match ← field j "order" with
+    | .null => pure id
+    | o => do
+      let idx ← (← o.getArr?).toList.mapM (·.getNat?)
+      pure (fun l => idx.filterMap (fun i => l[i]?))
+  let checks ← (← getArr j "checks").mapM fun k => do
+    match ← k.getStr? with
+    | "unique" => pure Check.unique
+    | "named" => pure Check.named
+    | _ => pure Check.continuous
+  match bodyDict "C".toList kind body with
+  | .error e => pure (unitJ (.error e))
+  | .ok d =>
+    match enumTypeNew kind d with
+    | .error e => pure (unitJ (.error e))
+    | .ok c =>
+      let vals := c.memberNames.filterMap c.valueOf
+      let (name, target) : Py String × VTarget := match ← getStr j "target" with
+        | "cls" => (.ok "C", .enum (kind == .flag))
+        | "int" => (.ok "int", .cls)
+        | "notcls_name" => (.ok "len", .notCls)
+        | _ => (.error (.named "AttributeError" "'int' object has no attribute '__name__'"), .notCls)
+      pure (unitJ (verifyCallG evOps order c.toG id name target checks))
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "flag_call" =>
@@ -495,10 +639,15 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (withValues c (← getInt j "v") (← getInt j "w") (fun a _ => c.invert a))
   | "flag_iter" =>
     let c ← getCls j
-    pure (encPy (fun x => match x with
-      | .flag v _ => toJson [toJson v,
-          toJson ((c.iterMembers v).map fun m => m.map Prod.fst), toJson (bitCount v)]
-      | .plain _ => Json.null) (c.call (← getInt j "v")))
+    match c.callC [] (← getInt j "v") with
+    | .error e => pure (unitJ (.error e))
+    | .ok (.plain _, _) => pure (okJ Json.null)
+    | .ok (.flag v _, cache) =>
+      pure (encPy (fun (l : List (Option MapEntry)) => toJson [toJson v,
+          toJson (l.map fun m => match m with
+            | some (.member n _) => toJson n
+            | some (.pseudo _ n) => toJson n
+            | none => Json.null), toJson (bitCount v)]) (c.iterC cache v))
   | "names" =>
     let s := (← getStr j "s").toList
     pure (okJ (toJson [isDunder s, isSunder s, isPrivate ['F'] s]))
@@ -536,7 +685,8 @@ def run (fn : String) (j : Json) : Except String Json := do
     let s := scanBases 0 {} (← (← getArr j "bases").mapM decBase)
     pure (okJ (if s.found then toJson [toJson true, toJson s.attrType, toJson s.clsIndex] else toJson [false]))
   | "ec_progress" =>
-    pure (encPy (fun (n : Name) => toJson (String.ofList n)) (enumNew {} none (.atom (.int 1)) true .none))
+    pure (encPy (fun (n : Name) => toJson (String.ofList n))
+      (({} : EClassG EV).enumNew evOps none (.atom (.int 1)) true .none))
   | "ec_flag" => runFlag j
   | "dc_class" => runDc j
   | "dc_hash" =>
@@ -594,7 +744,74 @@ def run (fn : String) (j : Json) : Except String Json := do
     let v ← decDV 8 (← field j "v")
     let f := if (← getStr j "fact") == "tuple" then TupFact.tuple else .list
     pure (encPy encDV (astupleV f v))
-  | "ec_verify_other" => pure (unitJ (({} : EClass).verifyCall false id [.unique]))
+  | "ec_verify_other" => pure (unitJ (verifyCallG evOps id ({} : EClassG EV) id (.ok "int") .cls [.unique]))
+  | "eh_class" => runEhClass j
+  | "eh_flag_in" => do
+    let keys ← decKeys j
+    let c ← getCls j
+    let v ← field j "v"
+    if (← (← v.getArrVal? 0).getStr?) == "member" then
+      pure (encPy (fun (b : Bool) => toJson b) (c.containsOf pvOps true (.int 0)))
+    else pure (encPy (fun (b : Bool) => toJson b) (c.containsOf pvOps false (← decPV keys v)))
+  | "eh_strenum" => do
+    let args ← (← getArr j "args").mapM fun a => do
+      let k ← (← a.getArrVal? 0).getStr?
+      let v ← a.getArrVal? 1
+      match k with
+      | "str" => pure (SArg.str (α := PV) (← v.getStr?))
+      | "bytes" => pure (.bytes (← (← v.getArr?).toList.mapM (·.getNat?)))
+      | "bytearray" | "memoryview" => pure (.buffer (← (← v.getArr?).toList.mapM (·.getNat?)))
+      | _ => pure (.other (.int (← v.getInt?)))
+    pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec args))
+  | "eh_flag_gen" => do
+    let keys ← decKeys j
+    let start ← match ← field j "start" with
+      | .null => pure none
+      | s => pure (some (← decPV keys s))
+    let last ← (← getArr j "last").mapM (decPV keys)
+    pure (encPy encPV (flagGenerateG pvOps start (← getNat j "count") last))
+  | "eh_iter" => do
+    let c ← getCls j
+    let calls ← (← getArr j "calls").mapM (·.getInt?)
+    match c.callsC [] calls with
+    | .error e => pure (unitJ (.error e))
+    | .ok cache =>
+      match c.callC cache (← getInt j "v") with
+      | .error e => pure (unitJ (.error e))
+      | .ok (.plain _, _) => pure (okJ "plain")
+      | .ok (.flag v _, cache') =>
+        pure (encPy (fun (l : List (Option MapEntry)) => toJson [toJson v,
+          toJson (l.map fun m => match m with
+            | some (.member n _) => toJson [toJson "member", toJson n]
+            | some (.pseudo w n) => toJson [toJson "pseudo", toJson w, toJson n]
+            | none => Json.null), toJson (bitCount v)]) (c.iterC cache' v))
+  | "eh_bits" => do
+    let a ← field j "arg"
+    let n ← (← a.getArrVal? 1).getInt?
+    let arg := if (← (← a.getArrVal? 0).getStr?) == "int" then BitsArg.int n else .member n s!"<N.X: {n}>"
+    pure (encPy (fun (l : List Nat) => toJson l) (iterBitsLsb arg))
+  | "eh_verify" => runEhVerify j
+  | "eh_call" => do
+    let body ← decItems (← getArr j "body")
+    match bodyDict "C".toList .plain body with
+    | .error e => pure (unitJ (.error e))
+    | .ok d =>
+      match enumTypeNew .plain d with
+      | .error e => pure (unitJ (.error e))
+      | .ok c =>
+        let value ← decAtom (← field j "value")
+        let more ← (← getArr j "more").mapM decAtom
+        let kw : CallKw := { type := if ← getBool j "type" then some 0 else none,
+                             start := ← decAtom (← field j "start"),
+                             boundary := (← getOptStrJ (← field j "boundary")).map (fun s => if s == "strict" then 0 else 1),
+                             module := ← getOptStrJ (← field j "module"),
+                             qualname := ← getOptStrJ (← field j "qualname") }
+        pure (encPy (fun (r : CallOut) => match r with
+          | .member n => toJson [toJson "member", nameJ n]
+          | .create cn names k => toJson [toJson "create", encAtom cn, names.elim Json.null encAtom, toJson k.type.isSome,
+              encAtom k.start, toJson (k.boundary.map (fun b => if b == 0 then "strict" else "keep")), toJson k.module,
+              toJson k.qualname])
+          (enumCallG evOps c none value more kw .none))
   | _ => throw s!"unknown fn enumdc.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

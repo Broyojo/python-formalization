@@ -351,6 +351,18 @@ def decSObj (j : Json) : Except String SObj := do
   | 2 => return ⟨s, false, .error (.valueError "sep")⟩
   | _ => return SObj.ofStr s
 
+/-- The costs of the C stack checks, `stk` minus one (`XCfg.stk`). -/
+def getStk (j : Json) : Except String (Guard → Nat) := do
+  match j.getObjVal? "stk" with
+  | .error _ => return fun _ => 0
+  | .ok o =>
+    let g := fun (k : String) => (match o.getObjVal? k with
+      | .ok v => (match v.getNat? with | .ok n => n | .error _ => 0)
+      | .error _ => 0)
+    return fun
+      | .seq => g "seq" | .seqSub => g "seqSub" | .map => g "map" | .mapSub => g "mapSub"
+      | .dflt => g "dflt" | .repr => g "repr" | .call => g "call"
+
 def getXCfg (j : Json) : Except String XCfg := do
   let indent ← match j.getObjVal? "indent" with
     | .ok .null | .error _ => pure none
@@ -369,7 +381,11 @@ def getXCfg (j : Json) : Except String XCfg := do
            dflt := fun n t => match tbl.lookup n with
              | some (some v) => .ok v
              | some none => .error (.valueError "boom")
-             | none => .error (defaultErr t.name) }
+             | none => .error (defaultErr t.name)
+           stk := ← getStk j
+           dfltPy := match j.getObjVal? "dflt_py" with
+             | .ok (.bool b) => b
+             | _ => true }
 
 /-- `repr` of an ASCII `str` (`unicode_repr`): single quotes unless the text has one and no double
 quote; `\\`, the quote, `\t`, `\n`, `\r` and `\xNN` escaped. Other code points are not rendered. -/
@@ -395,11 +411,25 @@ def NoteShown.text : NoteShown → String
   | .key tn k => s!"when serializing {tn} item {k.text}"
   | .obj tn => s!"when serializing {tn} object"
 
+/-- A message as the difftest compares it: a stack-overflow `RecursionError` by what follows
+`(used N kB)`, another formatted message as `~`. -/
+def msgTail (m : String) : String :=
+  let pre := "~Stack overflow (used N kB)"
+  if m.startsWith pre then "~" ++ (m.drop pre.length).toString
+  else if m.startsWith "~" then "~" else m
+
 def encXR (show_ : Note → NoteShown) : XR → Json
   | .ok t => Json.mkObj [("ok", Json.mkObj [("text", encStr t)])]
-  | .error (e, ns) => Json.mkObj [("ok", Json.mkObj [("exc", toJson e.className),
-      ("msg", toJson (if e.message.startsWith "~" then "~" else e.message)),
-      ("notes", Json.arr (ns.toArray.map fun n => toJson (show_ n).text))])]
+  | .error (e, ns, cx) => Json.mkObj [("ok", Json.mkObj [("exc", toJson e.className),
+      ("msg", toJson (msgTail e.message)),
+      ("notes", Json.arr (ns.toArray.map fun n => toJson (show_ n).text)),
+      ("ctx", Json.arr (cx.toArray.map fun (e', ns') => Json.arr #[toJson e'.className, toJson (msgTail e'.message),
+        Json.arr (ns'.toArray.map fun n => toJson (show_ n).text)]))])]
+
+
+/-- The allocator of the difftest machine for the strings `make_enc` asks for: they are tiny or
+of 2**61 bytes and more (never in between), and only the tiny ones are granted. -/
+def diffAlloc : Alloc := fun n => decide (n < 2 ^ 40)
 
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
@@ -505,7 +535,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       (← getStrArg (← field j "key_sep")) (← getStrArg (← field j "item_sep"))
       (← getBool j "sort_keys") (← getBool j "skipkeys") (← getBool j "allow_nan")
     let level ← decIntStr (← field j "level")
-    return encPy (fun l => Json.arr (l.toArray.map encStr)) (r.bind fun cfg => encoderCall cfg v level)
+    return encPy (fun l => Json.arr (l.toArray.map encStr)) (r.bind fun cfg => encoderCall diffAlloc cfg v level)
   | "loads_rec_py" | "loads_rec_c" =>
     let s ← decStr (← field j "s")
     let cfg : DCfg := { strict := ← getBool j "strict" }
@@ -521,6 +551,18 @@ def run (fn : String) (j : Json) : Except String Json := do
     let n ← getNat j "budget"
     if fn = "dumpsx_py" then return encXR showPy (dumpsPyX cfg n v)
     else return encXR showC (dumpsCX cfg n v)
+  | "nestx_c" =>
+    -- `n` nested lists or dicts (the innermost empty), or a chain of `n` objects that `default`
+    -- turns into the next one and the last into `None`, at stack room `room`
+    let n ← getNat j "n"
+    let room ← getNat j "room"
+    let stk ← getStk j
+    let tObj : PyType := { name := "XO", module := "__main__", heap := true }
+    let base : XCfg := { stk, dfltPy := ← getBool j "dflt_py" }
+    match ← getStr j "kind" with
+    | "list" => return encXR showC (dumpsCX base room (nestL (n - 1)))
+    | "dict" => return encXR showC (dumpsCX base room (nestD (n - 1)))
+    | _ => return encXR showC (dumpsCX (chainCfg base (n - 1)) room (.other 0 tObj))
   | "colorize" =>
     return Json.mkObj [("ok", encStr (colorizeJson testTheme (← decStr (← field j "s"))))]
   | "tool" =>

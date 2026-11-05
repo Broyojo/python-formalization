@@ -196,6 +196,66 @@ class HClear:
         return f"HC({self.u})"
 
 
+class KH(K):
+    """`__hash__` does `evil_act` to the target set, then answers or raises (`hres`)."""
+    __slots__ = ("hact", "hres")
+
+    def __init__(self, c, h, u, hact, hres):
+        super().__init__(c, h, u)
+        self.hact, self.hres = hact, hres
+
+    def __hash__(self):
+        evil_act(TARGET[0], self.hact)
+        return hook_answer(self.h, self.hres)
+
+    def __eq__(self, o):
+        if isinstance(o, (KRaise, KEvil)):
+            return NotImplemented
+        return type(o) is KH and o.c == self.c
+
+
+def hook_answer(h, hres):
+    if hres == 0:
+        return h
+    if hres == 1:
+        raise TypeError("no")
+    if hres == 2:
+        raise TESub("te")
+    raise ValueError("hv")
+
+
+class SH(set):
+    """A set subclass (so `PySet_Check` holds) whose `__hash__` acts, then answers or raises."""
+
+    def __init__(self, items, hact, hres):
+        super().__init__(items)
+        self.hact, self.hres = hact, hres
+
+    def __hash__(self):
+        evil_act(TARGET[0], self.hact)
+        return hook_answer(0, self.hres)
+
+
+class SKeep(set):
+    """A set subclass that keeps set's __iter__ (and its size): PyAnySet_CheckExact fails."""
+    __slots__ = ()
+
+
+class SSub(set):
+    """A set subclass with its own `__iter__`: PyAnySet_Check holds, PyAnySet_CheckExact does not."""
+
+    def __iter__(self):
+        return iter(self.it)
+
+
+def type_fqn(o):
+    """`%T`: the qualified name, with the module unless it is builtins or __main__."""
+    tp = type(o)
+    if tp.__module__ in ("builtins", "__main__"):
+        return tp.__qualname__
+    return f"{tp.__module__}.{tp.__qualname__}"
+
+
 class HRaise:
     __slots__ = ("u",)
 
@@ -345,6 +405,10 @@ def build(spec):
         return frozenset(p)
     if kind == "st":
         return set(p)
+    if kind == "kh":
+        return KH(p[0], p[1], u, p[2], p[3])
+    if kind == "sh":
+        return SH(p[0], p[1], p[2])
     raise ValueError(kind)
 
 
@@ -356,12 +420,26 @@ class Pool:
     def _cls(self, key):
         return self.cls.setdefault(key, len(self.cls))
 
-    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None, ra=0, rk=False):
+    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None, ra=0, rk=False, sb=None):
         u = len(self.specs)
         ckey = ckey if ckey is not None else ("u", u)
         spec = {"py": [kind, p], "u": u, "c": self._cls(ckey), "hk": hk, "r": r, "a": a, "fs": fs,
                 "ra": ra, "rk": rk}
+        if sb is not None:
+            spec["sb"] = sb
         o = build(spec)
+        if kind in ("kh", "sh"):
+            # Its hash acts on the target set; the answer is recorded here instead.
+            spec["h"] = p[1] if kind == "kh" else 0
+            spec["ha"], spec["hr"] = (p[2], p[3]) if kind == "kh" else (p[1], p[2])
+            if kind == "sh":
+                spec["sb"] = list(p[0])
+            spec["s"] = spec["sl"] = False
+            spec["rep"] = repr(o)
+            spec["t"] = type_fqn(o)
+            spec["nan"] = False
+            self.specs.append(spec)
+            return u
         if kind == "hclr":
             # Its hash acts on a dict; the class is recorded here instead.
             spec["h"], spec["hk"] = 0, 3
@@ -434,7 +512,7 @@ def mixed_pool(pool, rng):
         pool.add("Krk", [98, h], r=True, rk=True)
     if rng.random() < 0.2:
         pool.add("fz", [1, 2], ("fs", 12))
-        pool.add("st", [1, 2], ("fs", 12), fs=hash(frozenset([1, 2])))
+        pool.add("st", [1, 2], ("fs", 12), fs=hash(frozenset([1, 2])), sb=[1, 2])
 
 
 def dict_op(rng, n):
@@ -1296,6 +1374,9 @@ class Runner:
         self.uid = {id(o): s["u"] for o, s in zip(self.pool, case["pool"])}
         self.ds = [{}, {}, {}]
         self.ss = [set(), set(), set()]
+        if case.get("s1sub"):
+            # Slot 1 is an instance of a set subclass that keeps set's __iter__.
+            self.ss[1] = SKeep()
         self.its = [None] * 4
         self.fn = case["fn"]
         self.limit = len(self.pool) + 2
@@ -1545,6 +1626,10 @@ class Runner:
                 if a[4]:
                     raise ValueError("stop")
             return hooked()
+        if t == "S":
+            o = SSub(self.O(x) for x in a[1])
+            o.it = [self.O(x) for x in a[2]]
+            return o
         return 5
 
     def seq2(self, it):

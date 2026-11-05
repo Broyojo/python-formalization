@@ -58,7 +58,7 @@ section Null
 variable {hf : K → Int} {eqv : K → K → Bool}
 
 /-- A table with fewer filled slots than slots has a NULL one, which is what ends a failing search
-(@3.14.7:334-335). -/
+(:517-519). -/
 theorem SetCore.exists_null {so : SetObj K} (w : SetCore hf eqv so) (hfree : so.fill ≤ so.mask) :
     ∃ s, s ≤ so.mask ∧ so.slot s = .null := by
   apply Classical.byContradiction
@@ -271,7 +271,7 @@ theorem lookOuter_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool
         exact g
 
 theorem setLookkeyAux_ok (n : Nat) (so : SetObj K) (s : Nat) {key : K} {hash : Int}
-    (h : lookOuter P so.frozenExact key hash so.mask (setProbeFuel so.mask) (toU64 hash &&& so.mask)
+    (h : lookOuter P false key hash so.mask (setProbeFuel so.mask) (toU64 hash &&& so.mask)
       (toU64 hash) so = (.ok (some s), so)) :
     setLookkeyAux P key hash (n + 1) so = (.ok s, so) := by
   simp only [setLookkeyAux, M.bind_run, M.get_run]
@@ -330,8 +330,17 @@ theorem setLookkey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K)
     ∃ s, setLookkey P key (hf key) so = (.ok s, so) ∧
       ((so.slot s = .null ∧ ∀ s' k h, so.slot s' = .active k h → eqv k key = false) ∨
        ∃ k h, so.slot s = .active k h ∧ eqv k key = true) := by
-  obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w so.frozenExact key
-  exact ⟨s, setLookkeyAux_ok 255 so _ h1, h2⟩
+  cases hfr : so.frozenExact with
+  | true =>
+    obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w true key
+    refine ⟨s, ?_, h2⟩
+    simp only [setLookkey, M.bind_run, M.get_run, hfr, if_true]
+    simp [h1]
+  | false =>
+    obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w false key
+    refine ⟨s, ?_, h2⟩
+    simp only [setLookkey, M.bind_run, M.get_run, hfr]
+    exact setLookkeyAux_ok 255 so _ h1
 
 end Look
 

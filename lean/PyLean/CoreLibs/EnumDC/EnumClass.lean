@@ -170,12 +170,19 @@ def splitGo : List Char → Name → List Name
 /-- `value.replace(',', ' ').split()`, Lib/enum.py:377, :651, :872. -/
 def splitNames (s : List Char) : List Name := splitGo s []
 
-/-- The `_ignore_` branch, Lib/enum.py:376-379. A list is taken as a list of names; the id of `.list` is not a name. -/
+/-- The name of a tuple item of `_ignore_`: only a `str` can equal a key. -/
+def Atom.ignoreName : Atom → Option Name
+  | .str s => some s.toList
+  | _ => none
+
+/-- The `_ignore_` branch, Lib/enum.py:376-381: a `str` is split, anything else is `list(value)`, and `set(value)` at
+:381 hashes the items. A list of names is itself; the model's list `[i]` holds an `int`, which no key equals; a tuple
+gives its items, of which only a `str` can be a key, and an unhashable item is the `TypeError` of `set`. -/
 def ignoreList : EV → Py (List Name)
   | .atom (.str s) => .ok (splitNames s.toList)
   | .names l => .ok l
   | .atom (.list _) => .ok []
-  | .tup _ => .ok []
+  | .tup l => if l.all Atom.hashable then .ok (l.filterMap Atom.ignoreName) else .error (.typeError "~unhashable type")
   | _ => .error (.typeError "~object is not iterable")
 
 /-- `_generate_next_value = value`, Lib/enum.py:373-374. Calling anything but a function fails. -/
@@ -296,6 +303,25 @@ def EnumDict.unpackKeys (d : EnumDict) : List Name → Py EnumDict
     | .ok d' => d'.unpackKeys r
   | _ :: _ => .error (.valueError "~values to unpack")
 
+/-- The bases of a builtin exception class, for the classes the model raises. -/
+def builtinParent : String → List String
+  | "KeyError" | "IndexError" => ["LookupError"]
+  | "UnicodeDecodeError" => ["UnicodeError"]
+  | "UnicodeError" => ["ValueError"]
+  | "OverflowError" | "ZeroDivisionError" => ["ArithmeticError"]
+  | "LookupError" | "TypeError" | "ValueError" | "AttributeError" | "RuntimeError" | "NameError" | "ArithmeticError"
+  | "AssertionError" => ["Exception"]
+  | "Exception" => ["BaseException"]
+  | _ => []
+
+/-- `issubclass(c, cls)`: `cls` is `c` or an ancestor through any of the bases `parent` gives (all of `c.__mro__`). -/
+def subclassOf (parent : String → List String) : Nat → String → String → Bool
+  | 0, _, _ => false
+  | f + 1, c, cls => c == cls || (parent c).any (fun p => subclassOf parent f p cls)
+
+/-- `isinstance(e, cls)`, the test of `except cls:`, which catches subclasses too. -/
+def excIs (parent : String → List String) (e : PyExc) (cls : String) : Bool := subclassOf parent 32 e.className cls
+
 /-- `EnumDict.update`, Lib/enum.py:449-457: the `except AttributeError` covers the loop over `keys()` too, so an
 `AttributeError` from `__setitem__` restarts the loop on the iteration of the mapping. -/
 def EnumDict.update (d : EnumDict) (members : UpdateArg) (more : List (Name × EV)) : Py EnumDict :=
@@ -304,7 +330,8 @@ def EnumDict.update (d : EnumDict) (members : UpdateArg) (more : List (Name × E
     | .mapping items =>
       match d.setAll items with
       | (d', none) => .ok d'
-      | (d', some e) => if e.className == "AttributeError" then d'.unpackKeys (items.map Prod.fst) else .error e
+      | (d', some e) =>
+        if excIs builtinParent e "AttributeError" then d'.unpackKeys (items.map Prod.fst) else .error e
     | .pairs ps =>
       match d.setAll ps with
       | (d', none) => .ok d'
@@ -358,9 +385,31 @@ def EClass.findEqual (c : EClass) (v : EV) : Option Name :=
 def EClass.aliasOf (c : EClass) (v : EV) : Option Name :=
   if v.hashable then c.value2member.lookup v else c.findEqual v
 
-/-- `StrEnum.__new__`, Lib/enum.py:1376-1395. With two or three values, `str(*values)` decodes, and no value of the
-model is bytes, so it fails. -/
-def strEnumNew (values : List Atom) : Py String :=
+/-! ### `StrEnum.__new__`, Lib/enum.py:1376-1395 -/
+
+/-- An argument of `StrEnum.__new__`: an exact `str`, a `bytes`, or anything else. A subclass of `str` with its own
+`__str__` is not modelled. -/
+inductive SArg (α : Type) where
+  | str (s : String)
+  | bytes (b : List Nat)
+  /-- Any other object with the buffer protocol, such as a `bytearray` or a `memoryview`. -/
+  | buffer (b : List Nat)
+  | other (x : α)
+  deriving Repr, DecidableEq
+
+/-- `bytes.decode(encoding, errors)`: the codec lookup and the decoder. -/
+abbrev Codec := List Nat → String → String → Py String
+
+/-- `str(b, encoding, errors)` for a `bytes`, Objects/unicodeobject.c:3480-3489, or another buffer, :3498-3515: an empty one is `''` before
+any codec lookup (in a release build without `-X dev`, :532-536), anything else goes to the codec. -/
+def strDecode (codec : Codec) (bs : List Nat) (enc errors : String) : Py String :=
+  if bs = [] then .ok "" else codec bs enc errors
+
+/-- `StrEnum.__new__`, Lib/enum.py:1376-1395: the checks of :1378-1391 in order, then `str(*values)` at :1392. With no
+argument that is `''`, with one `str` that `str`; with an encoding, and `errors` (`'strict'` when not given), a `bytes` is
+decoded by the codec, a `str` is the `TypeError` "decoding str is not supported", and anything else the `TypeError` of
+`PyUnicode_FromEncodedObject`, Objects/unicodeobject.c. -/
+def strEnumNewG (codec : Codec) {α : Type} (values : List (SArg α)) : Py String :=
   if values.length > 3 then .error (.typeError "~too many arguments for str()")
   else
     match values with
@@ -369,13 +418,44 @@ def strEnumNew (values : List Atom) : Py String :=
       match a with
       | .str s => .ok s
       | _ => .error (.typeError "~is not a string")
-    | _ :: b :: r =>
+    | a :: b :: r =>
       match b with
-      | .str _ =>
-        match r with
-        | [] | [.str _] => .error (.typeError "~decoding")
-        | _ => .error (.typeError "~errors must be a string")
+      | .str enc =>
+        let errors : Py String := match r with
+          | [] => .ok "strict"
+          | [.str er] => .ok er
+          | _ => .error (.typeError "~errors must be a string")
+        match errors with
+        | .error e => .error e
+        | .ok er =>
+          match a with
+          | .bytes bs => strDecode codec bs enc er
+          | .buffer bs => strDecode codec bs enc er
+          | .str _ => .error (.typeError "decoding str is not supported")
+          | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
       | _ => .error (.typeError "~encoding must be a string")
+
+/-- The ASCII and Latin-1 codecs, for the difftest: any other encoding is unknown, and the error handler is looked up
+only when a byte does not decode, with `strict`, `ignore` and `replace` known and any other name taken as unknown (the
+names the difftest uses are). -/
+def pyCodec : Codec := fun bs enc errors =>
+  if enc = "latin-1" then .ok (String.ofList (bs.map Char.ofNat))
+  else if enc = "ascii" then
+    if bs.all (· < 128) then .ok (String.ofList (bs.map Char.ofNat))
+    else if errors = "strict" then .error (.named "UnicodeDecodeError" "~'ascii' codec can't decode")
+    else if errors = "ignore" then .ok (String.ofList ((bs.filter (· < 128)).map Char.ofNat))
+    else if errors = "replace" then
+      .ok (String.ofList (bs.map (fun b => if b < 128 then Char.ofNat b else '�')))
+    else .error (.named "LookupError" s!"unknown error handler name '{errors}'")
+  else .error (.named "LookupError" s!"unknown encoding: {enc}")
+
+/-- `Atom` as an argument of `StrEnum.__new__`: no `Atom` is a `bytes`. -/
+def Atom.toSArg : Atom → SArg Atom
+  | .str s => .str s
+  | a => .other a
+
+/-- `StrEnum.__new__` on the values of a class body, which are not `bytes`. -/
+def strEnumNew (values : List Atom) : Py String := strEnumNewG pyCodec (values.map Atom.toSArg)
 
 /-- `enum_member._value_`, Lib/enum.py:247-270. -/
 def memberValue (k : EKind) (v : EV) : Py EV :=
@@ -572,30 +652,10 @@ def enumNew (c : EClass) (self : Option Name) (v : EV) (inProgress : Bool) (miss
         | .other => .error (.typeError "~error in _missing_: returned instead of None or a valid member")
         | .raises e => .error e
 
-/-- `EnumType.__call__`, Lib/enum.py:729-739. `none` is the functional API, `_create_`, reached with `names` on a class
-without members. -/
-def enumCall (c : EClass) (self : Option Name) (value : Atom) (more : List Atom) (miss : MissingRet) :
-    Option (Py Name) :=
-  if !c.memberMap.isEmpty then
-    some (enumNew c self (if more.isEmpty then .atom value else .tup (value :: more)) false miss)
-  else if more.isEmpty then some (.error (.typeError "~has no members; specify `names=()`"))
-  else none
-
 /-- `EnumType.__contains__`, Lib/enum.py:758-769, for a class that is not a `Flag`. Both lists use `==`, so an
 unhashable value does not raise. -/
 def enumContains (c : EClass) (isMember : Bool) (value : EV) : Bool :=
   isMember || c.unhashableValues.contains value || c.hashableValues.contains value
-
-/-- `EnumType.__contains__`, Lib/enum.py:760-769, for a `Flag` class. `none` is a value that is not an `int`, for
-which `_missing_` raises `ValueError`, and which is in neither list. -/
-def FlagCls.classContains (c : FlagCls) (value : Option Int) : Bool :=
-  match value with
-  | none => false
-  | some i =>
-    match c.missing i with
-    | .ok (.flag _ _) => true
-    | .ok (.plain _) => false
-    | .error _ => c.members.any (fun p => (p.2 : Int) == i)
 
 /-- `EnumType.__getitem__`, Lib/enum.py:800-804. -/
 def EClass.getItem (c : EClass) (name : Name) : Py Name :=
@@ -760,23 +820,6 @@ def EClass.intValues (c : EClass) : List Int :=
 /-- The integers from `a` up to, and not including, `b`. -/
 def intRange (a b : Int) : List Int := (List.range (b - a).toNat).map (fun (i : Nat) => a + (i : Int))
 
-/-- The `CONTINUOUS` check, Lib/enum.py:1989-2010, on `int` values. -/
-def EClass.verifyContinuous (c : EClass) : Py Unit :=
-  match c.intValues with
-  | [] => .ok ()
-  | i :: is =>
-    let low := is.foldl min i
-    let high := is.foldl max i
-    if low = high then .ok ()
-    else
-      let values := i :: is
-      let missing : List Int :=
-        if c.kind == .flag then
-          (intRange (bitLength low.natAbs) (bitLength high.natAbs - 1)).filter
-            (fun k => !values.contains (2 ^ k.toNat))
-        else (intRange (low + 1) high).filter (fun k => !values.contains k)
-      if missing.isEmpty then .ok () else .error (.valueError "~missing values")
-
 /-- An alias with a bit that is not the value of a member, Lib/enum.py:2018-2030. A negative value has `toNat` 0, and
 so no bits, which is the `continue` at :2022-2024. -/
 def EClass.missesName (c : EClass) (p : Name × Name) : Bool :=
@@ -795,22 +838,5 @@ inductive Check where
   | continuous
   | named
   deriving Repr, DecidableEq, Inhabited
-
-def EClass.verifyOne (c : EClass) (memberName : Name → Name) : Check → Py Unit
-  | .unique => c.verifyUnique memberName
-  | .continuous => c.verifyContinuous
-  | .named => c.verifyNamed
-
-def EClass.verifyAll (c : EClass) (memberName : Name → Name) : List Check → Py Unit
-  | [] => .ok ()
-  | k :: r =>
-    match c.verifyOne memberName k with
-    | .error e => .error e
-    | .ok () => c.verifyAll memberName r
-
-/-- `verify.__call__`, Lib/enum.py:1968-2046. `isEnum` is `issubclass(enumeration, Enum)`. -/
-def EClass.verifyCall (c : EClass) (isEnum : Bool) (memberName : Name → Name) (checks : List Check) : Py Unit :=
-  if !isEnum then .error (.typeError "the 'verify' decorator only works with Enum and Flag")
-  else c.verifyAll memberName checks
 
 end PyLean.CoreLibs.EnumDC

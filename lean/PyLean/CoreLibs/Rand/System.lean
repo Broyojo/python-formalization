@@ -60,6 +60,23 @@ def sysGetrandbits (raw : Nat → RM σ (List Nat)) (k : IntArg) : RM σ Nat := 
       let x := fromBytesBE b
       return x >>> (numbytes * 8 - k).toNat
 
+/-- The argument of the method `SystemRandom.getrandbits(k)`: an object `operator.index`
+understands or not (`IntArg`), or a `float` with its value. The value matters: the first
+line, `if k < 0` (:912), compares it. -/
+inductive SysBitsArg (F : Type) where
+  | arg (k : IntArg)
+  | flt (x : F)
+
+/-- The method `SystemRandom.getrandbits(k)`, Lib/random.py:910-916, for every argument. A
+float fails `k < 0` with `ValueError` when it is negative (`-1.5`, `-inf`); otherwise
+`(k + 7) // 8` is still a float (NaN for `inf` or `nan`) and `_urandom` rejects it with
+`TypeError` (posixmodule.c, the `Py_ssize_t` converter). -/
+def sysGetrandbitsArg [Flt F] (raw : Nat → RM σ (List Nat)) : SysBitsArg F → RM σ Nat
+  | .flt x =>
+    if Flt.lt x 0.0 then raise (.valueError "number of bits must be non-negative")
+    else raise (.typeError "'float' object cannot be interpreted as an integer")
+  | .arg k => sysGetrandbits raw k
+
 /-- `SystemRandom.randbytes`, Lib/random.py:918-922. -/
 def sysRandbytes (raw : Nat → RM σ (List Nat)) (n : IntArg) : RM σ (List Nat) := osUrandom raw n
 
@@ -70,6 +87,19 @@ def sysSeed {β : Type} (_args : β) : RM σ Unit := pure ()
 `getstate` and `setstate`. -/
 def sysNotImplemented {β α : Type} (_args : β) : RM σ α :=
   raise (.named "NotImplementedError" "System entropy source does not have state.")
+
+/-- `SystemRandom(x)`: `Random.__init__` (Lib/random.py:119-126) runs `self.seed(x)`, which
+is `SystemRandom.seed`, then sets `gauss_next = None`. The result is the new
+`gauss_next`; the entropy source is not touched. -/
+def sysInit {β : Type} (x : β) : RM σ (Option F) := do
+  sysSeed x
+  pure none
+
+/-- `SystemRandom.__reduce__`, inherited from `Random.__reduce__` (Lib/random.py:219-220):
+`self.getstate()` is `_notimplemented` (:931), so pickling and `copy.copy` raise. -/
+def sysReduce : RM σ Unit := do
+  let _ ← (sysNotImplemented () : RM σ Unit)
+  pure ()
 
 /-- `SystemRandom` as a `Gen`. `os.urandom(7)` failing inside `random()` (no entropy
 source at all) is a platform condition, so `random` falls back to `default` there. -/
@@ -103,7 +133,50 @@ def initSubclass : List ClsDict → Option String
       else if c.hasRandom then some "_randbelow_without_getrandbits"
       else initSubclass mro
 
+/-- An `__init_subclass__` that class creation can reach: `type.__new__` calls
+`super(cls, cls).__init_subclass__(**kwargs)` (Objects/typeobject.c, `type_new_init_subclass`),
+which is the first class after `cls` in its MRO that defines one. -/
+inductive SubclassHook where
+  /-- `Random.__init_subclass__`, Lib/random.py:225-243. -/
+  | random
+  /-- A user hook written by the data-model convention: it does its own work (recorded as
+  `name`) and then calls `super().__init_subclass__(**kwargs)`. -/
+  | cooperative (name : String)
+  /-- `object.__init_subclass__`: `TypeError` for any keyword (Objects/typeobject.c,
+  `object_init_subclass`). -/
+  | object
+  deriving Repr, DecidableEq
+
+/-- Creating class `cls` with class keywords `kwargs`, whose MRO after `cls` holds the
+`__init_subclass__` hooks `hooks` in order, and whose MRO (with `cls`) is `mro`. The result
+is the user hooks that ran and what `Random.__init_subclass__` assigned to `_randbelow`.
+`Random`'s hook (:225-243) takes `**kwargs`, runs the `for c in cls.__mro__` loop and
+returns: it never calls `super().__init_subclass__(**kwargs)`, so the hooks after it do not
+run and the keywords reach no one. -/
+def runInitSubclass (cls : String) (mro : List ClsDict) (kwargs : List String) :
+    List SubclassHook → Py (List String × Option String)
+  | [] => .ok ([], none)
+  | .random :: _ => .ok ([], initSubclass mro)
+  | .cooperative n :: rest => do
+    let (ran, rb) ← runInitSubclass cls mro kwargs rest
+    pure (n :: ran, rb)
+  | .object :: _ =>
+    if kwargs = [] then .ok ([], none)
+    else .error (.typeError s!"{cls}.__init_subclass__() takes no keyword arguments")
+
 /-! ### `main`, Lib/random.py:1047-1083 -/
+
+/-- `_test(N)` (Lib/random.py:988-1006) up to its first failure. Its first call,
+`_test_generator(N, random, ())` (:971-985), draws `N` values of `random()` (none for
+`N <= 0`, as `_repeat(None, N)` is then empty), and `statistics.fmean` of no data raises,
+then `statistics.stdev` of one value. For `N >= 2` nothing fails, and the rest of `_test`
+(timing and printing, the test support excluded in the tsv) is the parameter `rest`. -/
+def cliTest [Flt F] (g : Gen σ F) (rest : Int → RM σ Unit) (n : Int) : RM σ Unit :=
+  if n ≤ 0 then raise (.named "StatisticsError" "fmean requires at least one data point")
+  else if n = 1 then do
+    let _ ← rnd g
+    raise (.named "StatisticsError" "stdev requires at least two data points")
+  else rest n
 
 /-- A positional argument, with what `int(val)`, `float(val)` and `val.split()`
 give for it (these are `str` and `int` behaviour, modelled elsewhere). -/
@@ -159,10 +232,11 @@ def mainOne [Flt F] (below : Nat → RM σ Nat) (g : Gen σ F) (i : CliInput F) 
       let w ← choice below (listSeq i.words)
       return .str w
 
-/-- `main`, Lib/random.py:1047-1083, on what `_parse_args` returned. `_test` only
-prints timings, so the branch at :1060-1062 returns `""`. -/
-def cliMain [Flt F] (below : Nat → RM σ Nat) (g : Gen σ F) (args : CliArgs F) (helpText : String) :
-    RM σ (CliOut F) :=
+/-- `main`, Lib/random.py:1047-1083, on what `_parse_args` returned. The `--test` branch
+(:1060-1062) runs `_test(args.test)` (`cliTest`) and returns `""`; `testRest` is what
+`_test` does for `N >= 2`. -/
+def cliMain [Flt F] (below : Nat → RM σ Nat) (g : Gen σ F) (args : CliArgs F) (helpText : String)
+    (testRest : Int → RM σ Unit := fun _ => pure ()) : RM σ (CliOut F) :=
   match args.choice with
   | some (c :: cs) => do
     let w ← choice below (listSeq (c :: cs))
@@ -180,7 +254,9 @@ def cliMain [Flt F] (below : Nat → RM σ Nat) (g : Gen σ F) (args : CliArgs F
       | none =>
         match args.test with
         | some t =>
-          if t ≠ 0 then pure (.str "")
+          if t ≠ 0 then do
+            cliTest g testRest t
+            pure (.str "")
           else mainRest
         | none => mainRest
 where

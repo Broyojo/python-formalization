@@ -765,9 +765,10 @@ json-tool-roundtrip	open	Lib/json/tool.py	main
 json-loads-bytes	open	Lib/json/__init__.py	loads,detect_encoding
 json-roundtrip-float	open	Lib/json/encoder.py	encoder_encode_float,_match_number_unicode
 json-dumps-accepted-float	open	Lib/json/encoder.py	JSONEncoder.encode,scan_once_unicode
-pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long,load_counted_long
+pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long
 pickle-encode-long-shortest	proven	Lib/pickle.py	encode_long,decode_long
-pickle-text-int-roundtrip	proven	Lib/pickle.py	_Pickler.save_long,_Unpickler.load_int,_Unpickler.load_long,load_int,load_long
+pickle-load-counted-long	proven	Modules/_pickle.c	load_counted_long
+pickle-text-int-roundtrip	proven	Lib/pickle.py	_Unpickler.load_int,_Unpickler.load_long,load_int,load_long
 pickle-save-long-twins	refuted	Modules/_pickle.c	save_long
 pickle-save-long-same-outcome	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
 pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
@@ -778,7 +779,17 @@ pickle-long-line-twins	refuted	Modules/_pickle.c	load_long
 pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long,_Unpickler.load_long
 pickle-dumps-twins	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
 pickle-dumps-twins-long	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
-pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dump,_pickle_dumps_impl,save,save_none,save_bool,save_long,save_bytes,_save_bytes_data,save_bytearray,_save_bytearray_data,_Pickler_write_bytes,save_unicode,write_unicode_binary,raw_unicode_escape,store_tuple_elements,save_tuple,save_list,batch_list,batch_list_exact,save_dict,batch_dict,batch_dict_exact_impl,batch_dict_exact,save_set,save_frozenset_impl,save_frozenset,memo_get,memo_put,_Pickler_Write,_Pickler_OpcodeBoundary,_Pickler_CommitFrame,_Pickler_SetProtocol,_write_size64,_Pickler.dump,_dumps,_Pickler.__init__,_Pickler.memoize,_Pickler.put,_Pickler.get,_Pickler.save,_Pickler.save_none,_Pickler.save_bool,_Pickler.save_long,_Pickler._save_bytes_no_memo,_Pickler.save_bytes,_Pickler._save_bytearray_no_memo,_Pickler.save_bytearray,_Pickler.save_str,_Pickler.save_tuple,_Pickler.save_list,_Pickler._batch_appends,_Pickler.save_dict,_Pickler._batch_setitems,_Pickler.save_set,_Pickler.save_frozenset,_Framer.__init__,_Framer.start_framing,_Framer.end_framing,_Framer.commit_frame,_Framer.write,_Framer.write_large_bytes,encode_long
+pickle-dumps-twins-rec	refuted	Modules/_pickle.c	save,save_list,_Pickler.save,_Pickler.save_list,_Pickler._batch_appends
+pickle-dumps-twins-narrow	open	Modules/_pickle.c	save_none,save_bool,save_long,_save_bytes_data,_save_bytearray_data,save_unicode,write_unicode_binary,memo_get,_Pickler_Write,_Pickler_CommitFrame,_write_size64,_Pickler_SetBufferCallback,_Framer.__init__,_Framer.start_framing,_Framer.end_framing,_Pickler.put,_Pickler.get,_Pickler.save_none,_Pickler.save_bool,_Pickler.save_long,_Pickler._save_bytes_no_memo,_Pickler._save_bytearray_no_memo,encode_long
+pickle-dumps-twins-norec	proven	Modules/_pickle.c	save_none,save_bool,save_long,_save_bytes_data,_save_bytearray_data,save_unicode,write_unicode_binary,memo_get,_Pickler_Write,_Pickler_CommitFrame,_write_size64,_Pickler_SetBufferCallback,_Framer.__init__,_Framer.start_framing,_Framer.end_framing,_Pickler.put,_Pickler.get,_Pickler.save_none,_Pickler.save_bool,_Pickler.save_long,_Pickler._save_bytes_no_memo,_Pickler._save_bytearray_no_memo,encode_long
+pickle-dumps-protocol-float	refuted	Modules/_pickle.c	_Pickler_SetProtocol,_Pickler.__init__
+pickle-atoms-exact	proven	Modules/_pickle.c	save_none,save_bool,_Pickler_SetBufferCallback,_Pickler.save_none,_Pickler.save_bool,_Framer.__init__,_Framer.start_framing,_Framer.end_framing
+pickle-memo-ops-exact	proven	Modules/_pickle.c	memo_get,_Pickler.put,_Pickler.get
+pickle-bytes-classes	proven	Modules/_pickle.c	_save_bytes_data,_Pickler._save_bytes_no_memo,_write_size64
+pickle-str-classes	proven	Modules/_pickle.c	write_unicode_binary,save_unicode,_write_size64
+pickle-bytearray-exact	proven	Modules/_pickle.c	_save_bytearray_data,_Pickler._save_bytearray_no_memo,_write_size64
+pickle-bytearray-obj-exact	proven	Modules/_pickle.c	_save_bytearray_data,_write_size64
+pickle-frames-exact	proven	Modules/_pickle.c	_Pickler_CommitFrame,_Pickler_Write,_write_size64,_Framer.__init__,_Framer.start_framing,_Framer.end_framing
 pickle-dumps-twins-exact-sized	open	Modules/_pickle.c	_pickle_dumps_impl,_dumps
 pickle-roundtrip	open	Lib/pickle.py	_dumps,_loads,_pickle_dumps_impl,_pickle_loads_impl
 pickle-loads-twins-exact	refuted	Modules/_pickle.c	_pickle_loads_impl,_loads
@@ -1168,12 +1179,26 @@ set-pop	proven	Objects/setobject.c	set_pop_impl
 set-clear	proven	Objects/setobject.c	set_clear_internal,set_empty_to_minsize
 set-iter-order	proven	Objects/setobject.c	set_next
 set-probe-failure	proven	Objects/setobject.c	set_lookkey,set_do_lookup,set_compare_entry_lock_held,set_add_entry_takeref
+set-lookup-restarts-on-resize	refuted	Objects/setobject.c	set_compare_entry_lock_held
+set-add-restarts-on-resize	refuted	Objects/setobject.c	set_add_entry_takeref
 set-contains-body	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_compare_frozenset,set_do_lookup,set_contains_entry
 set-frozen-identity-first	proven	Objects/setobject.c	set_compare_frozenset,set_compare_entry_lock_held
-set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_unhashable_type
+set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_unhashable_type
+set-unhashable-type	proven	Objects/setobject.c	set_unhashable_type
+set-lookkey-body	proven	Objects/setobject.c	set_lookkey
+set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
+set-update-iterable-body	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-update-iterable-refines	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-intersection-branches	proven	Objects/setobject.c	set_intersection
+set-inter-iter-refines	proven	Objects/setobject.c	set_intersection
+set-isdisjoint-branches	proven	Objects/setobject.c	set_isdisjoint_impl
+set-disjoint-iter-refines	proven	Objects/setobject.c	set_isdisjoint_impl
+set-shuffle-bits-bijective	proven	Objects/setobject.c	_shuffle_bits
+set-shuffle-bits-values	proven	Objects/setobject.c	_shuffle_bits,frozenset_hash_impl
+set-dealloc-order	proven	Objects/setobject.c	set_dealloc
 set-merge-refines	proven	Objects/setobject.c	set_merge_lock_held
 set-copy-refines	proven	Objects/setobject.c	set_copy_impl,set_copy_untracked_lock_held
-set-for-iter-body	proven	Objects/setobject.c	set_update_iterable_lock_held,set_intersection,set_isdisjoint_impl
+set-for-iter-body	proven	Objects/setobject.c	
 set-inter-iter-body	proven	Objects/setobject.c	set_intersection
 set-iter-routes	proven	Objects/setobject.c	set_update_iterable_lock_held,set_isdisjoint_impl
 set-inter-refines	proven	Objects/setobject.c	set_intersection
@@ -1183,6 +1208,7 @@ set-subset-refines	proven	Objects/setobject.c
 set-disjoint-refines	proven	Objects/setobject.c	set_isdisjoint_impl
 set-add-trusts-yes	proven	Objects/setobject.c	
 set-hash-failure	proven	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
+set-hash-failure-unchanged	refuted	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 odict-twins-agree	open	Objects/odictobject.c	_odict_get_index,_odict_resize,_odict_add_new_node,_odict_remove_node
 dict-view-len	proven	Objects/dictobject.c	
 dict-view-iter-order	proven	Objects/dictobject.c	dictkeys_iter,dictitems_iter,dictvalues_iter,dictkeys_reversed,dictitems_reversed,dictvalues_reversed
@@ -2021,6 +2047,7 @@ typeobj-slot-sq-contains-exact	proven	Objects/typeobject.c	slot_sq_contains
 typeobj-slot-tp-init-exact	proven	Objects/typeobject.c	slot_tp_init
 typeobj-slot-tp-iter-exact	proven	Objects/typeobject.c	slot_tp_iter,has_dunder_getitem
 typeobj-slot-sq-length-exact	proven	Objects/typeobject.c	slot_sq_length
+typeobj-align-up-layout	proven	Objects/typeobject.c	_align_up,PyType_GetTypeDataSize
 typeobj-vectorcall-method-exact	proven	Objects/typeobject.c	vectorcall_method,vectorcall_unbound
 typeobj-slot-nb-index-exact	proven	Objects/typeobject.c	slot_nb_index
 typeobj-method-is-overloaded-exact	proven	Objects/typeobject.c	method_is_overloaded
@@ -3925,13 +3952,11 @@ corelibs-enum-dict-branches	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-names-new	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-sunders	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-functional-class	proven	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__,EnumType._create_
-corelibs-enum-lookup	proven	Lib/enum.py	Enum.__new__
-corelibs-enum-call	proven	Lib/enum.py	EnumType.__call__
+corelibs-enum-lookup	proven	Lib/enum.py	
 corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member_,EnumType.__len__
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
-corelibs-enum-value-alias-hashable	proven	Lib/enum.py	Enum._add_value_alias_
-corelibs-enum-value-alias-binds	proven	Lib/enum.py	Enum._add_value_alias_
-corelibs-enum-flag-class-paths	proven	Lib/enum.py	EnumType.__contains__
+corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
+corelibs-enum-value-alias-binds	proven	Lib/enum.py	
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__
@@ -3939,28 +3964,46 @@ corelibs-enum-unique-named	proven	Lib/enum.py	unique
 corelibs-enum-value-alias-found	refuted	Lib/enum.py	Enum._add_value_alias_,Enum.__new__
 corelibs-enum-dict-auto	refuted	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__
 corelibs-enum-dict-update-keys	refuted	Lib/enum.py	EnumDict.update
-corelibs-enum-generate	proven	Lib/enum.py	Enum._generate_next_value_
-corelibs-enum-flag-generate	proven	Lib/enum.py	Flag._generate_next_value_
-corelibs-enum-strenum	proven	Lib/enum.py	StrEnum.__new__
+corelibs-enum-generate	proven	Lib/enum.py	
+corelibs-enum-flag-generate	proven	Lib/enum.py	
 corelibs-enum-order	proven	Lib/enum.py	
-corelibs-enum-continuous	proven	Lib/enum.py	verify.__call__
-corelibs-enum-verify	proven	Lib/enum.py	verify.__call__
+corelibs-enum-verify	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-flag-operands	proven	Lib/enum.py	Flag._get_value,Flag.__contains__,Flag.__invert__
 corelibs-enum-flag-bin	proven	Lib/enum.py	Flag.__or__,Flag.__and__,Flag.__xor__
 corelibs-enum-invert-bits	proven	Lib/enum.py	Flag.__invert__
-corelibs-enum-flag-class-contains	refuted	Lib/enum.py	EnumType.__contains__
+corelibs-enum-flag-class-contains	refuted	Lib/enum.py	EnumType.__contains__,Flag._missing_
 corelibs-enum-attr-guards	proven	Lib/enum.py	EnumType.__setattr__,EnumType.__delattr__
 corelibs-enum-names	proven	Lib/enum.py	_is_dunder,_is_sunder
 corelibs-enum-single-bit	proven	Lib/enum.py	_is_single_bit
-corelibs-enum-round-trip	proven	Lib/enum.py	_proto_member.__set_name__,EnumType.__contains__,EnumType.__getitem__,EnumType.__iter__,EnumType.__reversed__
-corelibs-enum-unique-distinct	proven	Lib/enum.py	unique,_proto_member.__set_name__
-corelibs-enum-flag-masks	proven	Lib/enum.py	_proto_member.__set_name__
+corelibs-enum-round-trip	proven	Lib/enum.py	EnumType.__getitem__,EnumType.__iter__,EnumType.__reversed__
+corelibs-enum-unique-distinct	proven	Lib/enum.py	unique
+corelibs-enum-flag-masks	proven	Lib/enum.py	
 corelibs-enum-flag-ops-commute	proven	Lib/enum.py	
 corelibs-enum-flag-contains	proven	Lib/enum.py	
 corelibs-enum-conform	proven	Lib/enum.py	Flag._missing_
 corelibs-enum-strict-named	refuted	Lib/enum.py	Flag._missing_,Enum.__new__
-corelibs-enum-len-iter	refuted	Lib/enum.py	Flag.__len__,Flag.__iter__,Flag._iter_member_by_value_,_iter_bits_lsb
+corelibs-enum-len-iter	refuted	Lib/enum.py	Flag.__len__,Flag.__iter__,Flag._iter_member_by_value_
 corelibs-enum-auto-values	proven	Lib/enum.py	
+corelibs-enum-call-rules	proven	Lib/enum.py	EnumType.__call__
+corelibs-enum-strenum-rules	proven	Lib/enum.py	StrEnum.__new__
+corelibs-enum-contains-paths	proven	Lib/enum.py	EnumType.__contains__
+corelibs-enum-missing-of	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-verify-rules	proven	Lib/enum.py	verify.__call__
+corelibs-enum-continuous-ints	proven	Lib/enum.py	verify.__call__
+corelibs-enum-lookup-g	proven	Lib/enum.py	Enum.__new__
+corelibs-enum-value-alias-paths	proven	Lib/enum.py	Enum._add_value_alias_
+corelibs-enum-set-name	proven	Lib/enum.py	_proto_member.__set_name__
+corelibs-enum-dict-update	proven	Lib/enum.py	EnumDict.update
+corelibs-enum-ignore-tuple	proven	Lib/enum.py	EnumDict.__setitem__
+corelibs-enum-iter-bits	proven	Lib/enum.py	_iter_bits_lsb
+corelibs-enum-flag-len	proven	Lib/enum.py	Flag.__len__
+corelibs-enum-flag-iter	proven	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_,Flag._iter_member_by_def_
+corelibs-enum-flag-iter-members	refuted	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_
+corelibs-enum-flag-generate-g	proven	Lib/enum.py	Flag._generate_next_value_
+corelibs-enum-verify-named	proven	Lib/enum.py	verify.__call__
+corelibs-enum-missing-boundaries	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-missing-in-range	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-continuous-errors	proven	Lib/enum.py	verify.__call__
 corelibs-dataclasses-hash-table	proven	Lib/dataclasses.py	
 corelibs-dataclasses-init-order	proven	Lib/dataclasses.py	_fields_in_init_order
 corelibs-dataclasses-default-order	proven	Lib/dataclasses.py	
@@ -4277,18 +4320,45 @@ rand-one-draw	proven	Lib/random.py	Random.uniform,Random.triangular,Random.expov
 rand-gauss-draws	proven	Lib/random.py	Random.gauss
 rand-rejection-draws	proven	Lib/random.py	Random.normalvariate,Random.lognormvariate,Random.vonmisesvariate,Random.gammavariate,Random.betavariate
 rand-gamma-checks-first	proven	Lib/random.py	Random.gammavariate
-rand-gamma-exits	refuted	Lib/random.py	Random.gammavariate,Random.betavariate
+rand-gamma-exits	refuted	Lib/random.py	Random.gammavariate
 rand-vonmises-exits	refuted	Lib/random.py	Random.vonmisesvariate
 rand-binomial-edges	proven	Lib/random.py	Random.binomialvariate
 rand-binomial-rejects-nan	refuted	Lib/random.py	Random.binomialvariate
-rand-sysrandom-bound	proven	Lib/random.py	SystemRandom.random
 rand-sysrandom-getrandbits	proven	Lib/random.py	SystemRandom.getrandbits
-rand-sysrandom-randbytes	proven	Lib/random.py	SystemRandom.randbytes
-rand-sysrandom-no-state	proven	Lib/random.py	SystemRandom.seed,SystemRandom._notimplemented
 rand-init-subclass-pick	proven	Lib/random.py	Random.__init_subclass__
 rand-main-positional-matches-option	refuted	Lib/random.py	main
 rand-main-positional-positive	proven	Lib/random.py	main
 rand-main-choices	proven	Lib/random.py	main
+rand-seed-reaches	proven	Lib/random.py	Random.seed
+rand-dunder-state-round-trip	proven	Lib/random.py	Random.__getstate__,Random.__setstate__
+rand-randbelow-with-exact	proven	Lib/random.py	Random._randbelow_with_getrandbits
+rand-randbelow-without-exact	proven	Lib/random.py	Random._randbelow_without_getrandbits
+rand-choice-exact	proven	Lib/random.py	Random.choice
+rand-shuffle-exact	proven	Lib/random.py	Random.shuffle
+rand-sample-exact	proven	Lib/random.py	Random.sample
+rand-choices-exact	proven	Lib/random.py	Random.choices
+rand-uniform-f64	proven	Lib/random.py	Random.uniform
+rand-triangular-f64	proven	Lib/random.py	Random.triangular
+rand-normal-f64	proven	Lib/random.py	Random.normalvariate,Random.lognormvariate
+rand-gauss-f64	proven	Lib/random.py	Random.gauss
+rand-expovariate-f64	proven	Lib/random.py	Random.expovariate
+rand-expovariate-nonneg	proven	Lib/random.py	Random.expovariate
+rand-vonmises-f64	proven	Lib/random.py	Random.vonmisesvariate
+rand-gamma-f64	proven	Lib/random.py	Random.gammavariate
+rand-gamma-loops-f64	proven	Lib/random.py	Random.gammavariate
+rand-beta-pareto-weibull-f64	proven	Lib/random.py	Random.betavariate,Random.paretovariate,Random.weibullvariate
+rand-binomial-f64	proven	Lib/random.py	Random.binomialvariate
+rand-binomial-loops-f64	proven	Lib/random.py	Random.binomialvariate
+rand-lognorm-nonneg	proven	Lib/random.py	Random.lognormvariate
+rand-pareto-ge-one	proven	Lib/random.py	Random.paretovariate
+rand-weibull-nonneg	proven	Lib/random.py	Random.weibullvariate
+rand-beta-exits	refuted	Lib/random.py	Random.betavariate
+rand-sysrandom-random-exact	proven	Lib/random.py	SystemRandom.random
+rand-sysrandom-getrandbits-exact	proven	Lib/random.py	SystemRandom.getrandbits
+rand-sysrandom-randbytes-exact	proven	Lib/random.py	SystemRandom.randbytes
+rand-init-subclass-chains	refuted	Lib/random.py	Random.__init_subclass__
+rand-init-subclass-stops	proven	Lib/random.py	Random.__init_subclass__
+rand-main-test	proven	Lib/random.py	main
 rand-randbelow-without-huge	open	Lib/random.py	Random._randbelow_without_getrandbits
 rand-choices-index-in-range	open	Lib/random.py	Random.choices
 rand-uniform-range	open	Lib/random.py	Random.uniform

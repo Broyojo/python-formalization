@@ -1,0 +1,72 @@
+id: pickle-twins-recursion-limit
+title: "pickle: the C and pure-Python picklers stop at different nesting depths (C stack vs sys.getrecursionlimit())"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [save, save_list, save_dict, _Pickler.save, _Pickler.save_list, _Pickler._batch_appends]
+summary: |
+  `_Py_EnterRecursiveCall` in `_pickle` is a check of the machine stack pointer since 3.14, so
+  `pickle.dumps` nests as deep as the C stack allows (10000 lists pickle, 100000 raise "Stack
+  overflow (used 8160 kB) while pickling an object" on Linux with an 8 MB stack), while
+  `pickle._dumps` pushes three Python frames per list level (`save`, `save_list`,
+  `_batch_appends`) and raises RecursionError at `sys.getrecursionlimit()`: at the default limit
+  of 1000, lists 331 deep fail at protocols 0, 2 and 5, and `pickle.dumps` of the same object
+  succeeds. The Lean model has both limits as parameters (C stack room in levels, Python frames
+  left): the twins agree with `4 * depth + 4` levels and `10 * depth + 18` frames
+  (pickle-dumps-twins-narrow) and whenever neither raises its RecursionError
+  (pickle-dumps-twins-norec); the statement for every limit is refuted with `[[]]`, 100 levels
+  and 5 frames (pickle-dumps-twins-rec).
+likelihood: |
+  Real data 330-10000 levels deep is rare (linked lists, deep trees, machine-generated
+  structures). It matters to anyone running without `_pickle` or comparing the two picklers.
+maybe_intended: |
+  Probably accepted: python/cpython#47369 ("pickle.py is limited by python's call stack", open
+  since 2008) is about exactly this limit of the pure-Python pickler, and the C limit has been
+  stack-based since 3.14 by design. Recorded so the twin property has its exclusion on record.
+reproducer: |
+  import pickle
+  v = []
+  for _ in range(400):
+      v = [v]
+  def r(f):
+      try:
+          f(v, 5)
+          return 'ok'
+      except RecursionError as e:
+          return 'RecursionError: ' + str(e)
+  c, py = r(pickle.dumps), r(pickle._dumps)
+  print('C', c, '| Python', py)
+  if c == 'ok' and py.startswith('RecursionError'):
+      print('REPRODUCED pickle-twins-recursion-limit')
+expected: |
+  Twins that accept the same objects, or a documented statement that the pure-Python pickler is
+  limited by sys.getrecursionlimit() and the accelerator by the C stack.
+observed: |
+  python3 3.15.2: REPRODUCED. Python first fails at 331 levels at protocols 0, 2 and 5 (limit
+  1000); C pickles 10000 levels and fails at 100000 with "Stack overflow (used 8160 kB) while
+  pickling an object".
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED, same thresholds.
+promised_by: |
+  C/Python twin agreement: Lib/test/test_pickle.py runs the pickler tests against both
+  (PyPicklerTests, CPicklerTests). Nothing documents a depth limit for either.
+cause: |
+  Modules/_pickle.c:4683 (save), :3364/:3373 (save_list) and :3671/:3683 (save_dict) call
+  `_Py_EnterRecursiveCall`, which in 3.15 is `_Py_MakeRecCheck` on the stack pointer
+  (Include/internal/pycore_ceval.h:211-241). Lib/pickle.py:562-634, :1018-1065 and :1067-1113
+  recurse through Python frames, checked against the recursion limit.
+possible_fix: |
+  Document the difference, or make the pure-Python pickler iterative (the patches on
+  python/cpython#47369). Matching the limits exactly is not realistic.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 47369, state: open, relation: "duplicate: pickle.py is limited by python's call stack (bpo-3119)", reason: open}
+    - {number: 36838, state: closed, relation: "unrelated (infinite recursion on a cyclic object)", reason: closed}
+  queries: ["pickle RecursionError pure python", "pickle deeply nested recursion",
+            "bugforge-results/README.md: no pickle entries"]
+lean:
+  property: PyLean.Pickle.DumpsTwinsRec
+  theorem: PyLean.Pickle.dumpsTwinsRec_refuted

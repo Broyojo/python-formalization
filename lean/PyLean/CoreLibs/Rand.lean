@@ -7,6 +7,11 @@ import PyLean.CoreLibs.Rand.SeedProps
 import PyLean.CoreLibs.Rand.DistProps
 import PyLean.CoreLibs.Rand.SystemProps
 import PyLean.CoreLibs.Rand.OpenProps
+import PyLean.CoreLibs.Rand.DistFormula
+import PyLean.CoreLibs.Rand.SystemF64
+import PyLean.CoreLibs.Rand.ExactStream
+import PyLean.CoreLibs.Rand.SeedExact
+import PyLean.CoreLibs.Rand.DistSupport
 
 /-! Registry for the `Rand` area of CoreLibs: Lib/random.py, Modules/_randommodule.c, CPython 3.15.2. -/
 
@@ -272,15 +277,15 @@ def entries : List Entry := [
     source := "Doc/library/random.rst gammavariate", status := .proven
     prop := ``GammaChecksFirst, thm := some ``gammaChecksFirst_proven },
   { id := "rand-gamma-exits", pyFile := "Lib/random.py"
-    pyFns := ["Random.gammavariate", "Random.betavariate"]
-    statement := "For all parameters gammavariate raises or leaves its loop for some sequence of draws, under IEEE NaN rules."
+    pyFns := ["Random.gammavariate"]
+    statement := "Over binary64, with any C library where exp(NaN) is NaN, every gammavariate call raises or leaves its loop for some sequence of draws."
     source := "invariant: no hang", status := .refuted
     prop := ``GammaExitsForSomeDraws, thm := some ``gammaExitsForSomeDraws_refuted
     bug := some "corelibs-random-nan-parameters"
     notes := "alpha = nan passes alpha <= 0.0 and no draw leaves the loop." },
   { id := "rand-vonmises-exits", pyFile := "Lib/random.py"
     pyFns := ["Random.vonmisesvariate"]
-    statement := "For all parameters vonmisesvariate raises or leaves its loop for some sequence of draws, under IEEE NaN rules."
+    statement := "Over binary64, with any C library where exp(NaN) is NaN, every vonmisesvariate call raises or leaves its loop for some sequence of draws."
     source := "invariant: no hang; python/cpython#61343", status := .refuted
     prop := ``VonmisesExitsForSomeDraws, thm := some ``vonmisesExitsForSomeDraws_refuted
     bug := some "corelibs-random-nan-parameters" },
@@ -291,33 +296,18 @@ def entries : List Entry := [
     prop := ``BinomialEdges, thm := some ``binomialEdges_proven },
   { id := "rand-binomial-rejects-nan", pyFile := "Lib/random.py"
     pyFns := ["Random.binomialvariate"]
-    statement := "A NaN p raises the ValueError for p outside [0, 1]."
+    statement := "Over binary64, a NaN p raises the ValueError for p outside [0, 1]."
     source := "Lib/random.py:819", status := .refuted
     prop := ``BinomialRejectsNaN, thm := some ``binomialRejectsNaN_refuted
     bug := some "corelibs-random-nan-parameters"
     notes := "AssertionError for n != 1, the value 0 for n == 1." },
 
   /- `SystemRandom`, subclasses, the command line -/
-  { id := "rand-sysrandom-bound", pyFile := "Lib/random.py"
-    pyFns := ["SystemRandom.random"]
-    statement := "Given the os.urandom contract, the numerator of SystemRandom.random() is below 2**53."
-    source := "docstring, Lib/random.py:907", status := .proven
-    prop := ``SysRandomBound, thm := some ``sysRandomBound_proven },
   { id := "rand-sysrandom-getrandbits", pyFile := "Lib/random.py"
     pyFns := ["SystemRandom.getrandbits"]
     statement := "SystemRandom.getrandbits(k) < 2**k and k < 0 raises ValueError, so SystemRandom is a valid core generator."
     source := "docstring, Lib/random.py:911", status := .proven
     prop := ``SysGetrandbitsBound, thm := some ``sysGetrandbitsBound_proven },
-  { id := "rand-sysrandom-randbytes", pyFile := "Lib/random.py"
-    pyFns := ["SystemRandom.randbytes"]
-    statement := "SystemRandom.randbytes(n) gives n bytes for n >= 0, and a negative n raises ValueError."
-    source := "comment, Lib/random.py:920-921", status := .proven
-    prop := ``SysRandbytes, thm := some ``sysRandbytes_proven },
-  { id := "rand-sysrandom-no-state", pyFile := "Lib/random.py"
-    pyFns := ["SystemRandom.seed", "SystemRandom._notimplemented"]
-    statement := "SystemRandom.seed does nothing for any arguments, and getstate and setstate raise NotImplementedError."
-    source := "docstrings, Lib/random.py:925-930", status := .proven
-    prop := ``SysNoState, thm := some ``sysNoState_proven },
   { id := "rand-init-subclass-pick", pyFile := "Lib/random.py"
     pyFns := ["Random.__init_subclass__"]
     statement := "The first class in the MRO defining one of _randbelow, getrandbits, random decides, in that order within a class; an MRO containing Random always gets an answer."
@@ -341,22 +331,178 @@ def entries : List Entry := [
     source := "Doc/library/random.rst, command-line usage", status := .proven
     prop := ``MainChoices, thm := some ``mainChoices_proven },
 
-  /- Float values: stated, not settled until the Binary64 model is merged. -/
+  /- Exact results, over binary64 where floats are involved (DistFormula, ExactStream, SeedExact, SystemF64) -/
+  { id := "rand-seed-reaches", pyFile := "Lib/random.py"
+    pyFns := ["Random.seed"]
+    statement := "seed(a, version) hands super().seed exactly: None, the int, an int subclass, a hashed float, the v1 string hash for str/bytes with version 1, int.from_bytes(b + sha512(b).digest()) for str (UTF-8)/bytes/bytearray with version 2, the hashed str/bytes or the unhashable bytearray for other versions, TypeError for other types; then the C state and gauss_next = None, or nothing changed on an exception."
+    source := "Random.seed docstring; Lib/random.py:146-174", status := .proven
+    prop := ``SeedReaches, thm := some ``seedReaches_proven },
+  { id := "rand-dunder-state-round-trip", pyFile := "Lib/random.py"
+    pyFns := ["Random.__getstate__", "Random.__setstate__"]
+    statement := "__getstate__ is getstate, and __setstate__(__getstate__()) restores the object exactly, gauss_next included, whatever the target held."
+    source := "Lib/random.py:213-217", status := .proven
+    prop := ``DunderStateRoundTrip, thm := some ``dunderStateRoundTrip_proven },
+  { id := "rand-randbelow-with-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random._randbelow_with_getrandbits"]
+    statement := "_randbelow_with_getrandbits(n) returns the first value below n among the calls getrandbits(n.bit_length()), after exactly the calls up to it, and propagates the first exception."
+    source := "Lib/random.py:245-252", status := .proven
+    prop := ``RandbelowWithExact, thm := some ``randbelowWithExact_proven },
+  { id := "rand-randbelow-without-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random._randbelow_without_getrandbits"]
+    statement := "Over binary64: for 0 < n < 2**53 the result is floor(u * 2**53) % n for the first random() value u below (2**53 - 2**53 % n) / 2**53; for n >= 2**53 it first issues the UserWarning (raising it before any draw under an error filter), then floor(u * float(n)) after one draw."
+    source := "Lib/random.py:254-272", status := .proven
+    prop := ``RandbelowWithoutExact, thm := some ``randbelowWithoutExact_proven },
+  { id := "rand-choice-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random.choice"]
+    statement := "choice(seq) is seq[_randbelow(len(seq))]: IndexError before any draw when empty, else exactly one _randbelow(len(seq)) and that item, with every exception propagated."
+    source := "Lib/random.py:347-354", status := .proven
+    prop := ``ChoiceExact, thm := some ``choiceExact_proven },
+  { id := "rand-shuffle-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random.shuffle"]
+    statement := "shuffle performs exactly the Fisher-Yates steps: for i from len(x)-1 down to 1, one _randbelow(i+1) = j and the swap of x[i] and x[j]."
+    source := "Lib/random.py:356-363", status := .proven
+    prop := ``ShuffleExact, thm := some ``shuffleExact_proven },
+  { id := "rand-sample-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random.sample"]
+    statement := "sample picks the pool branch when n <= setsize; a pool step calls _randbelow(n - i), takes pool[j] and moves pool[n-i-1] to slot j; a set step redraws _randbelow(n) until the index is new and takes population[j]."
+    source := "Lib/random.py:438-458", status := .proven
+    prop := ``SampleExact, thm := some ``sampleExact_proven },
+  { id := "rand-choices-exact", pyFile := "Lib/random.py"
+    pyFns := ["Random.choices"]
+    statement := "Over binary64: each unweighted item is population[floor(random() * (float(n) + 0.0))], each weighted item population[bisect(cum_weights, random() * total, 0, n - 1)], one draw per item; weights are accumulated, and total = cum_weights[-1] + 0.0 must be > 0 and finite."
+    source := "Lib/random.py:466-495", status := .proven
+    prop := ``ChoicesExact, thm := some ``choicesExact_proven },
+  { id := "rand-uniform-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.uniform"]
+    statement := "Over binary64, uniform(a, b) is a + (b - a) * random() after one draw, and for finite a <= b with b - a finite and random() in [0, 1) it is >= a."
+    source := "docstring, Lib/random.py:501-509", status := .proven
+    prop := ``UniformF64, thm := some ``uniformF64_proven },
+  { id := "rand-triangular-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.triangular"]
+    statement := "Over binary64, triangular after one draw u: c = 0.5 or (mode - low) / (high - low), low when high - low == 0, then the swap for u > c and low + (high - low) * sqrt(u * c)."
+    source := "Lib/random.py:524-534", status := .proven
+    prop := ``TriangularF64, thm := some ``triangularF64_proven },
+  { id := "rand-normal-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.normalvariate", "Random.lognormvariate"]
+    statement := "Over binary64, each round of normalvariate draws u1, r2, takes z = NV_MAGICCONST * (u1 - 0.5) / (1 - r2) and accepts when z*z/4 <= -log(1 - r2); the result is mu + z * sigma, and lognormvariate is exp of it on the same draws."
+    source := "Lib/random.py:548-555, :603", status := .proven
+    prop := ``NormalvariateF64, thm := some ``normalvariateF64_proven },
+  { id := "rand-gauss-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.gauss"]
+    statement := "Over binary64, gauss with an empty cache draws u1, u2, returns mu + cos(u1*TWOPI) * sqrt(-2 log(1 - u2)) * sigma and caches sin(u1*TWOPI) * sqrt(-2 log(1 - u2)); with a cached z it returns mu + z * sigma without a draw and empties the cache."
+    source := "Lib/random.py:584-593", status := .proven
+    prop := ``GaussF64, thm := some ``gaussF64_proven },
+  { id := "rand-expovariate-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.expovariate"]
+    statement := "Over binary64, expovariate(lambd) is -log(1.0 - random()) / lambd after one draw, ZeroDivisionError for a zero lambd."
+    source := "Lib/random.py:623", status := .proven
+    prop := ``ExpovariateF64, thm := some ``expovariateF64_proven },
+  { id := "rand-expovariate-nonneg", pyFile := "Lib/random.py"
+    pyFns := ["Random.expovariate"]
+    statement := "Over binary64, for lambd > 0 and random() in [0, 1), expovariate raises nothing and returns a value >= 0, given a C log that is finite and <= 0 on (0, 1]."
+    source := "docstring, Lib/random.py:610-612", status := .proven
+    prop := ``ExpovariateNonneg, thm := some ``expovariateNonneg_proven },
+  { id := "rand-vonmises-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.vonmisesvariate"]
+    statement := "Over binary64, vonmisesvariate is TWOPI * random() for kappa <= 1e-6; otherwise each round draws u1, u2 and accepts z = cos(pi*u1) by u2 < 1 - d*d or u2 <= (1 - d) * exp(d), d = z / (r + z), and the result is (mu +- acos((q + z) / (1 + q*z))) % TWOPI by a third draw."
+    source := "Lib/random.py:642-665", status := .proven
+    prop := ``VonmisesF64, thm := some ``vonmisesF64_proven },
+  { id := "rand-gamma-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.gammavariate"]
+    statement := "Over binary64, gammavariate raises before any draw for alpha <= 0 or beta <= 0, is -log(1 - random()) * beta for alpha == 1, and beta times Cheng's loop (alpha > 1, ainv = sqrt(2 alpha - 1)) or the GS loop (alpha < 1)."
+    source := "Lib/random.py:687-734", status := .proven
+    prop := ``GammaF64, thm := some ``gammaF64_proven },
+  { id := "rand-gamma-loops-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.gammavariate"]
+    statement := "Over binary64, one round of Cheng's loop and of the GS loop: the draws, the candidate x and the acceptance tests of Lib/random.py:701-711 and :720-733."
+    source := "Lib/random.py:701-733", status := .proven
+    prop := ``GammaLoopsF64, thm := some ``gammaLoopsF64_proven },
+  { id := "rand-beta-pareto-weibull-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.betavariate", "Random.paretovariate", "Random.weibullvariate"]
+    statement := "Over binary64, betavariate is y / (y + gammavariate(beta, 1)) with y = gammavariate(alpha, 1), or 0.0 for y == 0; paretovariate is (1 - random()) ** (-1 / alpha); weibullvariate is alpha * (-log(1 - random())) ** (1 / beta)."
+    source := "Lib/random.py:763-784", status := .proven
+    prop := ``BetaParetoWeibullF64, thm := some ``betaParetoWeibullF64_proven },
+  { id := "rand-binomial-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.binomialvariate"]
+    statement := "Over binary64, for n >= 0 and 0 < p < 1: random() < p for n == 1, n - binomialvariate(n, 1 - p) for p > 0.5, the BG loop with c = log2(1 - p) for n*p < 10, else the BTRS loop with spq, b, a, c, vr as in the source."
+    source := "Lib/random.py:824-857", status := .proven
+    prop := ``BinomialF64, thm := some ``binomialF64_proven },
+  { id := "rand-binomial-loops-f64", pyFile := "Lib/random.py"
+    pyFns := ["Random.binomialvariate"]
+    statement := "Over binary64, one round of the BG loop (retry on ValueError, return x once y > n) and of the BTRS loop (retry on ZeroDivisionError or k outside [0, n], quick accept, the cached setup and the lgamma test)."
+    source := "Lib/random.py:840-890", status := .proven
+    prop := ``BinomialLoopsF64, thm := some ``binomialLoopsF64_proven },
+  { id := "rand-lognorm-nonneg", pyFile := "Lib/random.py"
+    pyFns := ["Random.lognormvariate"]
+    statement := "Over binary64, with a C exp that is never NaN or negative on a non-NaN argument: when normalvariate gives a non-NaN x, lognormvariate gives exp(x) >= 0 on the same draws, or OverflowError('math range error')."
+    source := "docstring, Lib/random.py:596-603", status := .proven
+    prop := ``LognormNonneg, thm := some ``lognormNonneg_proven },
+  { id := "rand-pareto-ge-one", pyFile := "Lib/random.py"
+    pyFns := ["Random.paretovariate"]
+    statement := "Over binary64, with a C pow that is +inf or >= 1 for 0 < x < 1, y < 0: for every alpha > 0 (inf included) and random() in [0, 1), paretovariate returns a value >= 1.0 or raises the OverflowError of **, after one draw."
+    source := "Pareto distribution support [1, inf), Lib/random.py:768-773", status := .proven
+    prop := ``ParetoGeOne, thm := some ``paretoGeOne_proven },
+  { id := "rand-weibull-nonneg", pyFile := "Lib/random.py"
+    pyFns := ["Random.weibullvariate"]
+    statement := "Over binary64, with a C log <= 0 on (0, 1] and a C pow >= +0 for positive arguments: for finite alpha > 0, beta > 0 (inf included) and random() in [0, 1), weibullvariate returns a value >= 0.0 or raises the OverflowError of **, after one draw."
+    source := "Weibull distribution support [0, inf), Lib/random.py:775-784", status := .proven
+    prop := ``WeibullNonneg, thm := some ``weibullNonneg_proven },
+  { id := "rand-beta-exits", pyFile := "Lib/random.py"
+    pyFns := ["Random.betavariate"]
+    statement := "Over binary64, with any C library where exp(NaN) is NaN, every betavariate call raises or returns for some sequence of draws."
+    source := "invariant: no hang", status := .refuted
+    prop := ``BetaExitsForSomeDraws, thm := some ``betaExitsForSomeDraws_refuted
+    bug := some "corelibs-random-nan-parameters"
+    notes := "alpha = nan hangs in the first gammavariate; beta = nan in the second (betavariate_nan_beta_f64)." },
+  { id := "rand-sysrandom-random-exact", pyFile := "Lib/random.py"
+    pyFns := ["SystemRandom.random"]
+    statement := "SystemRandom.random() reads exactly os.urandom(7) and returns the exact (int.from_bytes(b) >> 3) / 2**53, with numerator below 2**53; an os.urandom failure propagates."
+    source := "docstring, Lib/random.py:906-908", status := .proven
+    prop := ``SysRandomExact, thm := some ``sysRandomExact_proven },
+  { id := "rand-sysrandom-getrandbits-exact", pyFile := "Lib/random.py"
+    pyFns := ["SystemRandom.getrandbits"]
+    statement := "SystemRandom.getrandbits(k): negative int or float k raises ValueError before any read; int k >= 0 reads (k+7)//8 bytes and returns int.from_bytes(b) >> (numbytes*8 - k) < 2**k; a float k >= 0 or NaN raises TypeError."
+    source := "docstring, Lib/random.py:910-916", status := .proven
+    prop := ``SysGetrandbitsExact, thm := some ``sysGetrandbitsExact_proven },
+  { id := "rand-sysrandom-randbytes-exact", pyFile := "Lib/random.py"
+    pyFns := ["SystemRandom.randbytes"]
+    statement := "SystemRandom.randbytes(n) is os.urandom(n): the bytes it returns for 0 <= n <= sys.maxsize, ValueError for negative n, OverflowError past Py_ssize_t, TypeError for a non-integer."
+    source := "comment, Lib/random.py:920-921", status := .proven
+    prop := ``SysRandbytesExact, thm := some ``sysRandbytesExact_proven },
+  { id := "rand-init-subclass-chains", pyFile := "Lib/random.py"
+    pyFns := ["Random.__init_subclass__"]
+    statement := "Random.__init_subclass__ passes control and the class keywords on: class creation runs the same later hooks, and the same TypeError for stray keywords, as without it."
+    source := "Doc/reference/datamodel.rst, Customizing class creation", status := .refuted
+    prop := ``InitSubclassChains, thm := some ``initSubclassChains_refuted
+    bug := some "corelibs-random-init-subclass-super"
+    notes := "No super().__init_subclass__(**kwargs): a mixin hook after Random never runs, and class keywords are swallowed." },
+  { id := "rand-init-subclass-stops", pyFile := "Lib/random.py"
+    pyFns := ["Random.__init_subclass__"]
+    statement := "The hooks before Random's in the MRO run, Random's assigns _randbelow by the MRO loop, and nothing after it runs, whatever the keywords."
+    source := "Lib/random.py:225-243", status := .proven
+    prop := ``InitSubclassStops, thm := some ``initSubclassStops_proven },
+  { id := "rand-main-test", pyFile := "Lib/random.py"
+    pyFns := ["main"]
+    statement := "main --test N raises StatisticsError for N < 2: before any draw for N <= 0, after one random() for N = 1; for N >= 2 it runs the rest of _test and returns ''."
+    source := "Lib/random.py:1060-1062, :971-988", status := .proven
+    prop := ``MainTest, thm := some ``mainTest_proven },
+
+  /- Float values still open, over binary64 -/
   { id := "rand-randbelow-without-huge", pyFile := "Lib/random.py"
     pyFns := ["Random._randbelow_without_getrandbits"]
     statement := "For n >= 2**53, floor(random() * n) is below n."
     source := "docstring, Lib/random.py:255", status := .open, prop := ``RandbelowWithoutHuge
-    notes := "Needs binary64 rounding of the product; the difftest compares it bit for bit." },
+    notes := "Needs a bound on the rounding of random() * float(n) near n." },
   { id := "rand-choices-index-in-range", pyFile := "Lib/random.py"
     pyFns := ["Random.choices"]
     statement := "choices on a non-empty population never raises IndexError: floor(random() * n) < n and the bisect result is at most n - 1."
     source := "Doc/library/random.rst choices", status := .open, prop := ``ChoicesIndexInRange
-    notes := "Needs binary64 rounding. The exact part is rand-choices-spec." },
+    notes := "Needs a bound on the rounding of random() * n near n. The exact part is rand-choices-exact." },
   { id := "rand-uniform-range", pyFile := "Lib/random.py"
     pyFns := ["Random.uniform"]
     statement := "uniform(a, b) lies between a and b, up to rounding, for finite a and b whose difference does not overflow."
     source := "docstring, Lib/random.py:501", status := .open, prop := ``UniformInRange
-    notes := "Needs binary64 rounding. python/cpython#134668 records the overflow case as not worth changing." },
+    notes := "The lower half is proven in rand-uniform-f64; the upper half needs fl(a + fl(fl(b - a) * u)) <= b. python/cpython#134668 records the overflow case as not worth changing." },
   { id := "rand-binomial-range", pyFile := "Lib/random.py"
     pyFns := ["Random.binomialvariate"]
     statement := "binomialvariate(n, p) lies in [0, n] for valid arguments."

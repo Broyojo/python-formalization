@@ -1,39 +1,39 @@
 file	line	endline	name	signature	status	entry	note
 Lib/random.py	119	126	Random.__init__	__init__(self, x=None)	modelled	rand-init-matches-seed	
-Lib/random.py	128	174	Random.seed	seed(self, a=None, version=2)	modelled	rand-init-matches-seed,rand-seed-all-or-nothing,rand-seed-str-bytes-agree,rand-seed-unsupported-type,rand-seed-v1-hash,rand-seed-v2-all-bits	
+Lib/random.py	128	174	Random.seed	seed(self, a=None, version=2)	modelled	rand-seed-reaches,rand-seed-str-bytes-agree,rand-seed-v2-all-bits,rand-seed-v1-hash,rand-seed-unsupported-type,rand-seed-all-or-nothing,rand-init-matches-seed	
 Lib/random.py	176	178	Random.getstate	getstate(self)	modelled	rand-state-round-trip	
 Lib/random.py	180	200	Random.setstate	setstate(self, state)	modelled	rand-setstate-atomic,rand-setstate-keeps-core,rand-setstate-versions,rand-state-round-trip	
-Lib/random.py	213	214	Random.__getstate__	__getstate__(self)	modelled	rand-pickle-round-trip	
-Lib/random.py	216	217	Random.__setstate__	__setstate__(self, state)	modelled	rand-pickle-round-trip,rand-setstate-versions	
+Lib/random.py	213	214	Random.__getstate__	__getstate__(self)	modelled	rand-dunder-state-round-trip	
+Lib/random.py	216	217	Random.__setstate__	__setstate__(self, state)	modelled	rand-pickle-round-trip,rand-setstate-versions,rand-dunder-state-round-trip	
 Lib/random.py	219	220	Random.__reduce__	__reduce__(self)	modelled	rand-pickle-round-trip	
-Lib/random.py	225	243	Random.__init_subclass__	__init_subclass__(cls, /, **kwargs)	modelled	rand-init-subclass-pick	
-Lib/random.py	245	252	Random._randbelow_with_getrandbits	_randbelow_with_getrandbits(self, n)	modelled	rand-randbelow-in-range	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
-Lib/random.py	254	272	Random._randbelow_without_getrandbits	_randbelow_without_getrandbits(self, n, maxsize=1 << BPF)	modelled	rand-randbelow-without-in-range	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
+Lib/random.py	225	243	Random.__init_subclass__	__init_subclass__(cls, /, **kwargs)	modelled	rand-init-subclass-pick,rand-init-subclass-stops,rand-init-subclass-chains	
+Lib/random.py	245	252	Random._randbelow_with_getrandbits	_randbelow_with_getrandbits(self, n)	modelled	rand-randbelow-with-exact,rand-randbelow-in-range	
+Lib/random.py	254	272	Random._randbelow_without_getrandbits	_randbelow_without_getrandbits(self, n, maxsize=1 << BPF)	modelled	rand-randbelow-without-exact,rand-randbelow-without-in-range	
 Lib/random.py	287	289	Random.randbytes	randbytes(self, n)	modelled	rand-randbytes-spec	
 Lib/random.py	294	333	Random.randrange	randrange(self, start, stop=None, step=_ONE)	modelled	rand-randrange-arg-errors,rand-randrange-bounds,rand-randrange-is-range-choice	
 Lib/random.py	335	342	Random.randint	randint(self, a, b)	modelled	rand-randint-spec	
-Lib/random.py	347	354	Random.choice	choice(self, seq)	modelled	rand-choice-spec	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
-Lib/random.py	356	363	Random.shuffle	shuffle(self, x)	modelled	rand-shuffle-immutable,rand-shuffle-permutation	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
-Lib/random.py	365	458	Random.sample	sample(self, population, k, *, counts=None)	modelled	rand-sample-arg-errors,rand-sample-counts-equivalent,rand-sample-distinct-positions,rand-sample-rejects-negative-counts	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
-Lib/random.py	460	495	Random.choices	choices(self, population, weights=None, *, cum_weights=None, k=1)	modelled	rand-choices-spec	withdrawn: range or membership only: always 0, always the first, or the identity permutation passes
-Lib/random.py	500	509	Random.uniform	uniform(self, a, b)	modelled	rand-one-draw	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	511	534	Random.triangular	triangular(self, low=0.0, high=1.0, mode=None)	modelled	rand-one-draw	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	536	555	Random.normalvariate	normalvariate(self, mu=0.0, sigma=1.0)	modelled	rand-rejection-draws	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	557	593	Random.gauss	gauss(self, mu=0.0, sigma=1.0)	modelled	rand-gauss-draws	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	595	603	Random.lognormvariate	lognormvariate(self, mu, sigma)	modelled	rand-rejection-draws	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	605	623	Random.expovariate	expovariate(self, lambd=1.0)	modelled	rand-one-draw	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	625	665	Random.vonmisesvariate	vonmisesvariate(self, mu, kappa)	modelled	rand-rejection-draws,rand-vonmises-exits	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	667	734	Random.gammavariate	gammavariate(self, alpha, beta)	modelled	rand-gamma-checks-first,rand-gamma-exits,rand-rejection-draws	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	736	766	Random.betavariate	betavariate(self, alpha, beta)	modelled	rand-gamma-exits,rand-rejection-draws	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	768	773	Random.paretovariate	paretovariate(self, alpha)	modelled	rand-one-draw	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	775	784	Random.weibullvariate	weibullvariate(self, alpha, beta)	modelled	rand-one-draw	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	789	890	Random.binomialvariate	binomialvariate(self, n=1, p=0.5)	modelled	rand-binomial-edges,rand-binomial-rejects-nan	withdrawn: draw counts only: any function of the same draws passes
-Lib/random.py	906	908	SystemRandom.random	random(self)	modelled	rand-sysrandom-bound	withdrawn: ok-implies statements on an abstract source: always raising passes
-Lib/random.py	910	916	SystemRandom.getrandbits	getrandbits(self, k)	modelled	rand-sysrandom-getrandbits	withdrawn: ok-implies statements on an abstract source: always raising passes
-Lib/random.py	918	922	SystemRandom.randbytes	randbytes(self, n)	modelled	rand-sysrandom-randbytes	withdrawn: ok-implies statements on an abstract source: always raising passes
-Lib/random.py	924	926	SystemRandom.seed	seed(self, *args, **kwds)	modelled	rand-sysrandom-no-state	
-Lib/random.py	928	930	SystemRandom._notimplemented	_notimplemented(self, *args, **kwds)	modelled	rand-sysrandom-no-state	
+Lib/random.py	347	354	Random.choice	choice(self, seq)	modelled	rand-choice-exact,rand-choice-spec	
+Lib/random.py	356	363	Random.shuffle	shuffle(self, x)	modelled	rand-shuffle-exact,rand-shuffle-permutation,rand-shuffle-immutable	
+Lib/random.py	365	458	Random.sample	sample(self, population, k, *, counts=None)	modelled	rand-sample-exact,rand-sample-distinct-positions,rand-sample-arg-errors,rand-sample-counts-equivalent,rand-sample-rejects-negative-counts	
+Lib/random.py	460	495	Random.choices	choices(self, population, weights=None, *, cum_weights=None, k=1)	modelled	rand-choices-exact,rand-choices-spec	
+Lib/random.py	500	509	Random.uniform	uniform(self, a, b)	modelled	rand-uniform-f64	
+Lib/random.py	511	534	Random.triangular	triangular(self, low=0.0, high=1.0, mode=None)	modelled	rand-triangular-f64	
+Lib/random.py	536	555	Random.normalvariate	normalvariate(self, mu=0.0, sigma=1.0)	modelled	rand-normal-f64	
+Lib/random.py	557	593	Random.gauss	gauss(self, mu=0.0, sigma=1.0)	modelled	rand-gauss-f64	
+Lib/random.py	595	603	Random.lognormvariate	lognormvariate(self, mu, sigma)	modelled	rand-normal-f64,rand-lognorm-nonneg	
+Lib/random.py	605	623	Random.expovariate	expovariate(self, lambd=1.0)	modelled	rand-expovariate-f64,rand-expovariate-nonneg	
+Lib/random.py	625	665	Random.vonmisesvariate	vonmisesvariate(self, mu, kappa)	modelled	rand-vonmises-f64,rand-vonmises-exits	
+Lib/random.py	667	734	Random.gammavariate	gammavariate(self, alpha, beta)	modelled	rand-gamma-f64,rand-gamma-loops-f64,rand-gamma-exits	
+Lib/random.py	736	766	Random.betavariate	betavariate(self, alpha, beta)	modelled	rand-beta-pareto-weibull-f64,rand-beta-exits	
+Lib/random.py	768	773	Random.paretovariate	paretovariate(self, alpha)	modelled	rand-beta-pareto-weibull-f64,rand-pareto-ge-one	
+Lib/random.py	775	784	Random.weibullvariate	weibullvariate(self, alpha, beta)	modelled	rand-beta-pareto-weibull-f64,rand-weibull-nonneg	
+Lib/random.py	789	890	Random.binomialvariate	binomialvariate(self, n=1, p=0.5)	modelled	rand-binomial-f64,rand-binomial-loops-f64,rand-binomial-edges,rand-binomial-rejects-nan	
+Lib/random.py	906	908	SystemRandom.random	random(self)	modelled	rand-sysrandom-random-exact	
+Lib/random.py	910	916	SystemRandom.getrandbits	getrandbits(self, k)	modelled	rand-sysrandom-getrandbits-exact,rand-sysrandom-getrandbits	
+Lib/random.py	918	922	SystemRandom.randbytes	randbytes(self, n)	modelled	rand-sysrandom-randbytes-exact	
+Lib/random.py	924	926	SystemRandom.seed	seed(self, *args, **kwds)	excluded		trivial: the body is `return None` (:926), no branch and no state: it returns None for any arguments, so Random.__init__'s self.seed(x) accepts any x for a SystemRandom
+Lib/random.py	928	930	SystemRandom._notimplemented	_notimplemented(self, *args, **kwds)	excluded		trivial: the body is one unconditional raise (:930): NotImplementedError('System entropy source does not have state.') for any arguments, with no branch; it is also getstate and setstate (:931)
 Lib/random.py	971	985	_test_generator	_test_generator(n, func, args)	excluded		test-support: timing and summary-statistics printer for the module self-test
 Lib/random.py	988	1006	_test	_test(N=10000)	excluded		test-support: runs _test_generator over a fixed list of calls
-Lib/random.py	1020	1044	_parse_args	_parse_args(arg_list: list[str] | None)	excluded		test-support: argparse wiring for the CLI; argparse is not in this area, and its result is the data main is modelled over
-Lib/random.py	1047	1083	main	main(arg_list: list[str] | None=None)	modelled	rand-main-choices,rand-main-positional-matches-option,rand-main-positional-positive	
+Lib/random.py	1020	1044	_parse_args	_parse_args(arg_list: list[str] | None)	todo		todo: the argparse parser of the python -m random CLI (mutually exclusive -c/-i/-f, type=int/float conversion with SystemExit 2, the suppressed --test, the help text); Lib/argparse.py is not modelled, so main is modelled on the namespace it returns
+Lib/random.py	1047	1083	main	main(arg_list: list[str] | None=None)	modelled	rand-main-positional-matches-option,rand-main-positional-positive,rand-main-choices,rand-main-test	

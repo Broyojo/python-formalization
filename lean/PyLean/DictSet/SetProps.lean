@@ -140,7 +140,8 @@ theorem setClearEmpties_proven : SetClearEmpties := by
 
 /-- The contract of `__hash__` and `__eq__`, for a set's keys. -/
 structure HonestSet (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool) : Prop where
-  hash_ok : ∀ k, P.hash k = .ok (hf k)
+  /-- `__hash__` answers `hf k` and changes nothing. -/
+  hash_ok : ∀ k s, P.hashM k s = (.ok (hf k), s)
   eq_ok : ∀ a b s, P.eq a b s = (.ok (eqv a b), s)
   str_eq : ∀ a b, P.isStr a = true → P.isStr b = true → P.strEq a b = eqv a b
   refl : ∀ a, eqv a a = true

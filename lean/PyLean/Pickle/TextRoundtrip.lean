@@ -142,9 +142,10 @@ theorem pyInt_dec_nl (x : Int) (hlen : (decDigits x.natAbs).length ≤ maxStrDig
   rw [takeWhile_ne_zero_of_not_mem hz, pyLongFromString_append_space _ isSpace_nl, pyLong_dec x hlen]
   simp
 
-/-- For every int with at most 4300 decimal digits (beyond which `repr` raises),
-the lines `save_long` writes for protocols 0 and 1, `I<x>` and `L<x>L`, read
-back as the int `x` in both unpicklers. -/
+/-- For every int with at most 4300 decimal digits (beyond which `repr` raises), the decimal
+text lines `I<x>` and `L<x>L` (the shapes protocol 0 writes, and protocol 1 for `L` outside the
+4-byte range; protocol 1 writes `BININT*` inside it) read back as the int `x`, never a bool, in
+both unpicklers. A statement about the readers only: it does not unfold `save_long`. -/
 def TextIntRoundtrip : Prop :=
   ∀ x : Int, (decDigits x.natAbs).length ≤ maxStrDigits →
     pyLoadIntLine (decInt x ++ [nl]) = .ok (.int x) ∧ cLoadIntLine (decInt x ++ [nl]) = .ok (.int x) ∧

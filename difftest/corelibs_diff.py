@@ -5976,7 +5976,9 @@ def enumdc_gmisc(rng):
 
 
 def enumdc_gen(rng):
-    r0 = rng.randrange(0, 40)
+    r0 = rng.randrange(0, 52)
+    if r0 >= 40:
+        return enumdc_ehgen_case(rng)
     if r0 >= 33:
         return enumdc_gmisc(rng)
     if r0 >= 25:
@@ -6653,8 +6655,449 @@ def enumdc_dcmisc(case, fn):
     return py_result(go)
 
 
+class enumdc_KSub(KeyError):
+    pass
+
+
+class enumdc_TSub(TypeError):
+    pass
+
+
+class enumdc_KT(KeyError, TypeError):
+    pass
+
+
+class enumdc_BExc(BaseException):
+    pass
+
+
+enumdc_KSub.__name__ = enumdc_KSub.__qualname__ = "KSub"
+enumdc_TSub.__name__ = enumdc_TSub.__qualname__ = "TSub"
+enumdc_KT.__name__ = enumdc_KT.__qualname__ = "KT"
+enumdc_BExc.__name__ = enumdc_BExc.__qualname__ = "BExc"
+enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError,
+              "KSub": enumdc_KSub, "TSub": enumdc_TSub, "KT": enumdc_KT}
+
+
+class enumdc_M(int):
+    """A mixin whose own call raises: BExc for 'b', ValueError for a non-int; a subclass gets int 7 without _value_."""
+
+    def __new__(cls, v):
+        if cls is enumdc_M:
+            if isinstance(v, str) and v == "b":
+                raise enumdc_BExc("b")
+            if type(v) is int:
+                return int.__new__(enumdc_M, v)
+            raise ValueError("v")
+        return int.__new__(cls, 7)
+
+
+class enumdc_K:
+    """A member value whose __hash__ and __eq__ raise on request: `he` and `ee` name the exception class."""
+    __slots__ = ("k", "he", "ee", "i")
+
+    def __init__(self, k, he, ee, i):
+        self.k, self.he, self.ee, self.i = k, he, ee, i
+
+    def __hash__(self):
+        if self.he:
+            raise enumdc_EXC[self.he]("hash")
+        return hash(self.k)
+
+    def __eq__(self, o):
+        if self.ee:
+            raise enumdc_EXC[self.ee]("eq")
+        if isinstance(o, enumdc_K):
+            return o.k == self.k
+        if isinstance(o, int):
+            return o == self.k
+        return NotImplemented
+
+    def __lt__(self, o):
+        if isinstance(o, enumdc_K):
+            return self.k < o.k
+        if isinstance(o, int):
+            return self.k < o
+        return NotImplemented
+
+    def __gt__(self, o):
+        if isinstance(o, enumdc_K):
+            return self.k > o.k
+        if isinstance(o, int):
+            return self.k > o
+        return NotImplemented
+
+    def __repr__(self):
+        return "K(%d)" % self.k
+
+enumdc_K.__name__ = enumdc_K.__qualname__ = "K"
+
+
+def enumdc_gkeys(rng):
+    """The K objects of one case, by index: a key, and the exceptions of __hash__ and __eq__."""
+    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError", "KSub", "TSub", "TSub", "KT", "KT"]
+    return [[rng.choice([0, 1, 1, 2, 3, -1]), rng.choice(exc) if rng.random() < .5 else None,
+             rng.choice(exc) if rng.random() < .5 else None] for _ in range(rng.randrange(1, 4))]
+
+
+def enumdc_gpv(rng, nkeys, strs=("x", "y", "")):
+    r = rng.randrange(0, 10)
+    if r <= 3:
+        return ["int", rng.choice([0, 1, 1, 2, 3, -1, 5, 2**61 - 1, 2**61, -(2**61)])]
+    if r <= 4:
+        return ["str", rng.choice(strs)]
+    if r <= 8:
+        return ["key", rng.randrange(0, nkeys)]
+    return ["list", rng.randrange(0, 3)]
+
+
+def enumdc_pv(v, objs):
+    k = v[0]
+    if k == "int" or k == "str":
+        return v[1]
+    if k == "key":
+        return objs[v[1]]
+    return [v[1]]
+
+
+def enumdc_pvenc(x):
+    if isinstance(x, enumdc_K):
+        return ["key", x.i]
+    if isinstance(x, list):
+        return ["list", x[0]]
+    if isinstance(x, bool):
+        raise ValueError(x)
+    if isinstance(x, int):
+        return ["int", x]
+    return ["str", x]
+
+
+def enumdc_gehclass(rng):
+    keys = enumdc_gkeys(rng)
+    n = len(keys)
+    kind = rng.choice(["plain", "plain", "plain", "customnew", "initfail", "mnew"])
+    names = rng.sample(["A", "B", "C", "D"], rng.randrange(0, 5))
+    strs = ("x", "y", "", "7", "boom", "b") if kind != "plain" else ("x", "y", "")
+    body = [[nm, enumdc_gpv(rng, n, strs)] for nm in names]
+    r = rng.randrange(0, 6)
+    if r == 0:
+        op = ["summary"]
+    elif r == 1:
+        miss = rng.choice([["none"], ["member", rng.choice(names + ["Q"])], ["other"], ["raises", "KeyError", "m"]])
+        op = ["call", enumdc_gpv(rng, n, strs), miss]
+    elif r == 2:
+        op = ["contains", enumdc_gpv(rng, n, strs)]
+    elif r == 3:
+        op = ["valias", rng.choice(names + ["Q"]), enumdc_gpv(rng, n, strs)]
+    elif r == 4:
+        op = ["valias_call", rng.choice(names + ["Q"]), enumdc_gpv(rng, n, strs)]
+    else:
+        op = ["callself", rng.choice(names + ["Q"])]
+    return {"fn": "enumdc.eh_class", "keys": keys, "kind": kind, "body": body, "op": op}
+
+
+def enumdc_ehbuild(case, objs):
+    kind = case["kind"]
+    bases = ((int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_M, enumdc_enum.Enum) if kind == "mnew"
+             else (enumdc_enum.Enum,))
+    ns = enumdc_enum.EnumType.__prepare__("C", bases)
+    op = case["op"]
+    if op[0] == "call":
+        miss = op[2]
+
+        def _missing_(cls, value):
+            if miss[0] == "none":
+                return None
+            if miss[0] == "other":
+                return 42
+            if miss[0] == "member":
+                return cls[miss[1]]
+            raise KeyError(miss[2])
+        ns["_missing_"] = classmethod(_missing_)
+    if kind == "customnew":
+        def __new__(cls, v):
+            return int.__new__(cls, 7)
+        ns["__new__"] = __new__
+    if kind == "initfail":
+        def __init__(self, v):
+            if v == "boom":
+                raise ValueError("init")
+        ns["__init__"] = __init__
+    for k, v in case["body"]:
+        ns[k] = enumdc_pv(v, objs)
+    return enumdc_enum.EnumType("C", bases, ns)
+
+
+def enumdc_ehsummary(C):
+    return [list(C._member_names_),
+            [[n, m._name_, enumdc_pvenc(m._value_)] for n, m in C._member_map_.items()],
+            [[enumdc_pvenc(k), m._name_] for k, m in C._value2member_map_.items()],
+            [enumdc_pvenc(v) for v in C._hashable_values_], [enumdc_pvenc(v) for v in C._unhashable_values_],
+            [[k, [enumdc_pvenc(x) for x in l]] for k, l in C._unhashable_values_map_.items()]]
+
+
+def enumdc_ehclass(case):
+    objs = [enumdc_K(k, he, ee, i) for i, (k, he, ee) in enumerate(case["keys"])]
+    op = case["op"]
+
+    def go():
+        C = enumdc_ehbuild(case, objs)
+        k = op[0]
+        if k == "summary":
+            return enumdc_ehsummary(C)
+        if k == "call":
+            return C(enumdc_pv(op[1], objs))._name_
+        if k == "contains":
+            return enumdc_pv(op[1], objs) in C
+        if k == "callself":
+            return C(C[op[1]])._name_
+        C[op[1]]._add_value_alias_(enumdc_pv(op[2], objs))
+        if k == "valias":
+            return enumdc_ehsummary(C)
+        return C(enumdc_pv(op[2], objs))._name_
+    try:
+        return py_result(go)
+    except enumdc_BExc as e:
+        return {"exc": "BExc", "msg": str(e)}
+
+
+def enumdc_gehflag_in(rng):
+    keys = enumdc_gkeys(rng)
+    return {"fn": "enumdc.eh_flag_in", "keys": keys, "members": rng.choice(enumdc_DEFS),
+            "boundary": rng.choice(["strict", "conform", "eject", "keep"]),
+            "v": rng.choice([enumdc_gpv(rng, len(keys)), ["int", rng.randrange(-20, 40)], ["member", "A"]])}
+
+
+def enumdc_ehflag_in(case):
+    objs = [enumdc_K(k, he, ee, i) for i, (k, he, ee) in enumerate(case["keys"])]
+    F = enumdc_cls(case)
+
+    def go():
+        v = case["v"]
+        x = getattr(F, v[1]) if v[0] == "member" else enumdc_pv(v, objs)
+        return x in F
+    return py_result(go)
+
+
+def enumdc_gsarg(rng):
+    r = rng.randrange(0, 8)
+    if r <= 2:
+        return ["str", rng.choice(["x", "ascii", "latin-1", "strict", "ignore", "replace", "nope", ""])]
+    if r <= 5:
+        return [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                [rng.choice([120, 65, 0, 127, 128, 200, 255]) for _ in range(rng.randrange(0, 4))]]
+    return ["int", rng.choice([0, 1])]
+
+
+def enumdc_gehstr(rng):
+    n = rng.choice([0, 1, 1, 2, 2, 2, 3, 3, 3, 4])
+    args = [enumdc_gsarg(rng) for _ in range(n)]
+    if n >= 2 and rng.random() < .6:
+        args[1] = ["str", rng.choice(["ascii", "latin-1", "nope"])]
+        if n == 3 and rng.random() < .7:
+            args[2] = ["str", rng.choice(["strict", "ignore", "replace"])]
+        if rng.random() < .6:
+            args[0] = [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                       args[0][1] if args[0][0] in ("bytes", "bytearray", "memoryview") else [120]]
+    return {"fn": "enumdc.eh_strenum", "args": args}
+
+
+def enumdc_sarg(a):
+    if a[0] == "bytes":
+        return bytes(a[1])
+    if a[0] == "bytearray":
+        return bytearray(a[1])
+    if a[0] == "memoryview":
+        return memoryview(bytes(a[1]))
+    return a[1]
+
+
+def enumdc_ehstr(case):
+    def go():
+        args = [enumdc_sarg(a) for a in case["args"]]
+        ns = enumdc_enum.EnumType.__prepare__("S", (enumdc_enum.StrEnum,))
+        ns["A"] = args[0] if len(args) == 1 else tuple(args)
+        S = enumdc_enum.EnumType("S", (enumdc_enum.StrEnum,), ns)
+        return S.A._value_
+    return py_result(go)
+
+
+def enumdc_gehgen(rng):
+    keys = [[k, None, None] for k in (1, 3)]
+    start = rng.choice([None, ["int", 1], ["int", 0], ["int", 5], ["str", "s"], ["key", 0]])
+    last = [rng.choice([["int", rng.choice([0, 1, 2, 3, 4, 7, 8, -3, 2**70])], ["str", "x"], ["key", rng.randrange(0, 2)],
+                        ["list", 1]]) for _ in range(rng.randrange(0, 4))]
+    if rng.random() < .5:
+        last = [["int", rng.randrange(0, 40)] for _ in range(rng.randrange(0, 4))]
+    return {"fn": "enumdc.eh_flag_gen", "keys": keys, "start": start, "count": rng.choice([0, 0, 1, 2, 3]),
+            "last": last}
+
+
+def enumdc_ehgen(case):
+    objs = [enumdc_K(k, he, ee, i) for i, (k, he, ee) in enumerate(case["keys"])]
+
+    def go():
+        s = case["start"]
+        r = enumdc_enum.Flag._generate_next_value_("x", None if s is None else enumdc_pv(s, objs), case["count"],
+                                                  [enumdc_pv(v, objs) for v in case["last"]])
+        return enumdc_pvenc(r)
+    return py_result(go)
+
+
+enumdc_IDEFS = enumdc_DEFS + [[["B", 2], ["A", 1], ["X", 12]], [["A", 1], ["X", 6], ["C", 8]],
+                              [["B", 2], ["A", 1], ["X", 6], ["C", 4]], [["C", 4], ["X", 3]]]
+
+
+def enumdc_gehiter(rng):
+    return {"fn": "enumdc.eh_iter", "members": rng.choice(enumdc_IDEFS),
+            "boundary": rng.choice(["strict", "conform", "keep", "eject"]),
+            "calls": [rng.randrange(-4, 16) for _ in range(rng.randrange(0, 4))], "v": rng.randrange(0, 16)}
+
+
+def enumdc_ehiter(case):
+    def go():
+        F = enumdc_cls(case)
+        for w in case["calls"]:
+            F(w)
+        x = F(case["v"])
+        if not isinstance(x, F):
+            return "plain"
+        out = []
+        for m in x:
+            if m is None:
+                out.append(None)
+            elif m._name_ in F._member_map_ and F._member_map_[m._name_] is m:
+                out.append(["member", m._name_])
+            else:
+                out.append(["pseudo", m._value_, m._name_])
+        return [x._value_, out, len(x)]
+    return py_result(go)
+
+
+def enumdc_gehbits(rng):
+    if rng.random() < .5:
+        return {"fn": "enumdc.eh_bits", "arg": ["int", rng.choice([0, 1, -1, 5, 12, 255, -12, 2**64 + 3,
+                                                                   rng.randrange(-50, 300)])]}
+    return {"fn": "enumdc.eh_bits", "arg": ["member", rng.choice([0, 1, 6, -3, 12, 2**65])]}
+
+
+def enumdc_ehbits(case):
+    def go():
+        a = case["arg"]
+        if a[0] == "int":
+            x = a[1]
+        else:
+            x = enumdc_enum.IntEnum("N", [("X", a[1])]).X
+        return list(enumdc_enum._iter_bits_lsb(x))
+    return py_result(go)
+
+
+def enumdc_gehverify(rng):
+    kind = rng.choice(["plain", "plain", "flag"])
+    vals = []
+    for _ in range(rng.randrange(0, 6)):
+        if kind == "flag":
+            vals.append(["int", rng.choice([1, 2, 3, 4, 5, 6, 8, 12, 16, 32])])
+        else:
+            vals.append(rng.choice([["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5])], ["int", rng.choice([1, 2, 3])],
+                                    ["str", rng.choice(["a", "b", "x"])]]))
+    target = rng.choice(["cls"] * 8 + ["int", "notcls_name", "notcls_noname"])
+    checks = [rng.choice(["unique", "continuous", "continuous", "named"]) for _ in range(rng.randrange(0, 3))]
+    case = {"fn": "enumdc.eh_verify", "kind": kind, "body": [["M%d" % i, v] for i, v in enumerate(vals)],
+            "target": target, "checks": checks, "order": None}
+    try:
+        C = enumdc_ehvbuild(case)
+        ev = [e.value for e in C]
+        ins = []
+        for x in ev:
+            if x not in ins:
+                ins.append(x)
+        case["order"] = [ins.index(x) for x in set(ev)]
+    except Exception:
+        pass
+    return case
+
+
+def enumdc_ehvbuild(case):
+    base = enumdc_enum.Flag if case["kind"] == "flag" else enumdc_enum.Enum
+    ns = enumdc_enum.EnumType.__prepare__("C", (base,))
+    for k, v in case["body"]:
+        ns[k] = v[1]
+    return enumdc_enum.EnumType("C", (base,), ns)
+
+
+def enumdc_ehverify(case):
+    def go():
+        C = enumdc_ehvbuild(case)
+        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                   "named": enumdc_enum.NAMED_FLAGS}[k] for k in case["checks"]]
+        t = case["target"]
+        x = {"cls": C, "int": int, "notcls_name": len, "notcls_noname": 42}[t]
+        enumdc_enum.verify(*checks)(x)
+        return None
+    return py_result(go)
+
+
+def enumdc_gehcall(rng):
+    names = rng.sample(["A", "B"], rng.randrange(0, 3))
+    body = [[nm, ["int", i + 1]] for i, nm in enumerate(names)]
+    more = [] if rng.random() < .6 else [["str", "P Q"]] + [["int", 3]] * rng.randrange(0, 2)
+    return {"fn": "enumdc.eh_call", "body": body, "value": rng.choice([["str", "X"], ["int", 1], ["int", 5]]),
+            "more": more, "type": rng.random() < .5, "start": rng.choice([["int", 1], ["int", 1], ["int", 5], ["str", "s"]]),
+            "boundary": rng.choice([None, None, "strict", "keep"]), "module": rng.choice([None, "m"]),
+            "qualname": rng.choice([None, "q"])}
+
+
+def enumdc_ehcall(case):
+    def go():
+        ns = enumdc_enum.EnumType.__prepare__("C", (enumdc_enum.Enum,))
+        for k, v in case["body"]:
+            ns[k] = v[1]
+        C = enumdc_enum.EnumType("C", (enumdc_enum.Enum,), ns)
+
+        def _create_(cls, class_name, names, *, module=None, qualname=None, type=None, start=1, boundary=None):
+            return ["create", enumdc_pvenc(class_name), None if names is None else enumdc_pvenc(names),
+                    type is not None, enumdc_pvenc(start), None if boundary is None else boundary.value, module, qualname]
+        type.__setattr__(C, "_create_", classmethod(_create_))
+        bd = {None: None, "strict": enumdc_enum.STRICT, "keep": enumdc_enum.KEEP}[case["boundary"]]
+        r = C(case["value"][1], *[m[1] for m in case["more"]], type=int if case["type"] else None,
+              start=case["start"][1], boundary=bd, module=case["module"], qualname=case["qualname"])
+        if isinstance(r, list):
+            return r
+        return ["member", r._name_]
+    return py_result(go)
+
+
+def enumdc_ehgen_case(rng):
+    r = rng.randrange(0, 16)
+    if r <= 4:
+        return enumdc_gehclass(rng)
+    if r <= 6:
+        return enumdc_gehflag_in(rng)
+    if r <= 8:
+        return enumdc_gehstr(rng)
+    if r == 9:
+        return enumdc_gehgen(rng)
+    if r <= 11:
+        return enumdc_gehiter(rng)
+    if r == 12:
+        return enumdc_gehbits(rng)
+    if r <= 14:
+        return enumdc_gehverify(rng)
+    return enumdc_gehcall(rng)
+
+
+def enumdc_ehrun(case):
+    fn = case["fn"].split(".")[1]
+    return {"eh_class": enumdc_ehclass, "eh_flag_in": enumdc_ehflag_in, "eh_strenum": enumdc_ehstr,
+            "eh_flag_gen": enumdc_ehgen, "eh_iter": enumdc_ehiter, "eh_bits": enumdc_ehbits,
+            "eh_verify": enumdc_ehverify, "eh_call": enumdc_ehcall}[fn](case)
+
+
 def enumdc_run(case):
     fn = case["fn"].split(".")[1]
+    if fn.startswith("eh_"):
+        return enumdc_ehrun(case)
     if fn == "dc_class":
         return enumdc_dcclass(case)
     if fn in ("dc_hash", "dc_eq", "dc_order", "dc_frozen", "dc_make", "dc_asdict", "dc_astuple", "dc_annotation", "dc_doc"):
@@ -10729,6 +11172,8 @@ def rand_arg(d):
         return rand_idec(d["i"])
     if "b" in d:
         return d["b"]
+    if "fl" in d:
+        return rand_float(d["fl"])
     return rand_obj(d["o"])
 
 
@@ -10950,7 +11395,7 @@ def rand_h_gauss(c):
 def rand_h_without(c):
     def go(r):
         with rand_warnings.catch_warnings():
-            rand_warnings.simplefilter("ignore")
+            rand_warnings.simplefilter("error" if c.get("werr") else "ignore")
             return r._randbelow_without_getrandbits(c["n"])
     return rand_call(c, go)
 
@@ -10982,6 +11427,55 @@ def rand_h_init_subclass(c):
         f = getattr(cls, "_randbelow", None)
         out.append(f.__name__ if f is not None else None)
     return {"ok": {"r": {"ok": out}, "fp": rand_fp(rand_mk(c))}}
+
+
+def rand_h_hooks(c):
+    ran = []
+
+    def mixin(name):
+        def hook(cls, **kw):
+            ran.append(name)
+            super(M, cls).__init_subclass__(**kw)
+        M = type(name, (), {"__init_subclass__": classmethod(hook)})
+        return M
+    bases = []
+    for b in c["bases"]:
+        bases.append(rand_random.Random if b == "Random" else mixin(b))
+    kw = {k: 1 for k in c["kwargs"]}
+    try:
+        cls = type("C", tuple(bases), {}, **kw)
+        hooks = []
+        for k in cls.__mro__[1:]:
+            if "__init_subclass__" in k.__dict__:
+                hooks.append("random" if k is rand_random.Random else "object" if k is object else k.__name__)
+        c["hooks"] = hooks
+        res = {"ok": ran}
+    except TypeError as e:
+        res = {"exc": "TypeError", "msg": str(e)}
+    return {"ok": {"r": res, "fp": rand_fp(rand_mk(c))}}
+
+
+def rand_gen_hooks(rng, c):
+    names = [f"M{i}" for i in range(rng.randrange(0, 4))]
+    bases = names + ["Random"]
+    rng.shuffle(bases)
+    c["bases"] = bases
+    c["kwargs"] = rng.choice([[], [], ["flag"], ["a", "b"]])
+    # the hook list is the class's MRO after it; it does not depend on the keywords
+    order = []
+    try:
+        probe = type("C", tuple(rand_random.Random if b == "Random" else type(b, (), {}) for b in bases), {})
+    except TypeError:
+        return None
+    for k in probe.__mro__[1:]:
+        if k is rand_random.Random:
+            order.append("random")
+        elif k is object:
+            order.append("object")
+        elif k.__name__ in names:
+            order.append(k.__name__)
+    c["hooks"] = order
+    return c
 
 
 def rand_h_main(c):
@@ -11050,6 +11544,7 @@ rand_handlers = {
     "sys_seed": lambda c: rand_sys(c, lambda sr: sr.seed(1, 2, x=3)),
     "sys_state": lambda c: rand_sys(c, lambda sr: sr.getstate()),
     "init_subclass": rand_h_init_subclass,
+    "init_subclass_hooks": rand_h_hooks,
     "main": rand_h_main,
 }
 
@@ -11062,7 +11557,9 @@ rand_INTS = [0, 1, -1, 2, -2, 3, 7, 8, 31, 32, 33, 63, 64, 65, 255, 256, 1000, 2
              2**32, 2**32 + 1, 2**53 - 1, 2**53, 2**53 + 1, 2**63 - 1, 2**63, -2**63, 2**64 - 1, 2**64, -2**64,
              2**128 + 5, 10**30, -10**30, 10**4300 - 1, 10**4300, -10**4300]
 rand_SMALL_FLOATS = [0.0, -0.0, 1.0, -1.0, 0.5, 2.0, 3.0, 10.0, 1e-3, 0.25, 0.9, 1.5, 100.0, 1e-300, 1e300]
-rand_ALL_FLOATS = rand_SMALL_FLOATS + [float('inf'), float('-inf'), float('nan'), 5e-324, 1.7976931348623157e308]
+rand_ALL_FLOATS = rand_SMALL_FLOATS + [float('inf'), float('-inf'), float('nan'), 5e-324, -5e-324, 1.7976931348623157e308,
+                                       -1.7976931348623157e308, 2.2250738585072014e-308, 2.225073858507201e-308,
+                                       1 - 2**-53, 1 + 2**-52, -1e-310]
 
 
 def rand_seed_val(rng):
@@ -11231,6 +11728,7 @@ def rand_gen_exact(rng, c):
         c["n"] = rand_pos(rng)
     elif fn == "rand.randbelow_without":
         c["n"] = rand_pos(rng) if rng.random() < 0.8 else rng.choice([2**53 - 1, 2**53, 2**53 + 1, 2**60, 10**400])
+        c["werr"] = rng.random() < 0.3
     elif fn == "rand.randbytes":
         c["n"] = rand_intarg(rng, [0, 1, 2, 3, 4, 5, 7, 8, 9, 16, 1000, -1, 2**61, 2**62, 2**64])
         c["n"] = rand_clamp(c["n"], 0, 2**17, 2**61, 2**62, 2**64)
@@ -11373,6 +11871,9 @@ def rand_gen_sys(rng, c):
     if fn == "rand.sys_getrandbits":
         c["k"] = rand_intarg(rng, [0, 1, 7, 8, 9, 16, 17, -1, 2**70], ("float", "NoneType", "str"))
         c["k"] = rand_clamp(c["k"], 0, 2**15, 2**70)
+        if rng.random() < 0.15:
+            c["k"] = {"fl": rand_bits(rng.choice([-1.5, -0.0, 0.0, 2.5, 8.0, -1.0, float('inf'), float('-inf'),
+                                                 float('nan'), -5e-324, 5e-324, 1e300, -1e300]))}
     elif fn == "rand.sys_randbytes":
         c["n"] = rand_intarg(rng, [0, 1, 2, 7, 8, -1, 2**70], ("float", "NoneType", "str"))
         c["n"] = rand_clamp(c["n"], 0, 2**15, 2**70)
@@ -11438,7 +11939,7 @@ def rand_gen_main(rng, c):
     elif p < 0.97:
         argv = []
     else:
-        argv = ["--test", "0", rng.choice(["5", "a"])]
+        argv = ["--test", rng.choice(["0", "0", "1", "-1", "-7"]), rng.choice(["5", "a"])]
     c["argv"] = argv
     try:
         with rand_contextlib.redirect_stderr(rand_io.StringIO()):
@@ -11483,6 +11984,8 @@ def rand_gen(rng):
     p = rng.random()
     if p < 0.03:
         return rand_gen_subclass(rng, rand_base(rng, "init_subclass"))
+    if p < 0.045:
+        return rand_gen_hooks(rng, rand_base(rng, "init_subclass_hooks"))
     if p < 0.09:
         c = rand_base(rng, "main")
         c["sub"] = False

@@ -398,21 +398,32 @@ theorem slotReprDefault_proven : SlotReprDefault := by
   intro rt self w h
   simp [slotTpRepr, maybeCallSpecial, lookupMethodEx, h]
 
-/-- `__ipow__` is called with two arguments: `slot_nb_inplace_power` drops the third
-operand, `Objects/typeobject.c:10971-10975`. -/
+/-- **`slot_nb_inplace_power`, every outcome.** `Objects/typeobject.c:10971-10975`: the slot is
+`vectorcall_method("__ipow__", [self, arg1])`, dropping the third operand, and `ternary_iop`
+(`Objects/abstract.c`) takes its result:
+* a result other than `NotImplemented` is the answer, unchanged;
+* an exception from looking up or calling `__ipow__` propagates (it is not taken as
+  `NotImplemented`, so `**` is not tried);
+* `NotImplemented` falls back to the binary `**` protocol with the world `__ipow__` left. -/
 def InplacePowerTwoArgs : Prop :=
-  ∀ (rt : Rt) (v u z r : Val) (w w1 : World),
+  ∀ (rt : Rt) (v u z : Val) (w w1 : World),
     slotIn w v .nb_inplace_power = some .generic →
-    vectorcallMethod rt "__ipow__" [v, u] w = .ok r w1 → r.is .notImpl = false →
-    ternaryIop rt v u z w = .ok r w1
+    (∀ r, vectorcallMethod rt "__ipow__" [v, u] w = .ok r w1 → r.is .notImpl = false →
+      ternaryIop rt v u z w = .ok r w1) ∧
+    (∀ e, vectorcallMethod rt "__ipow__" [v, u] w = .err e w1 → ternaryIop rt v u z w = .err e w1) ∧
+    (vectorcallMethod rt "__ipow__" [v, u] w = .ok .notImpl w1 →
+      ternaryIop rt v u z w = ternaryOp rt v u z "**=" w1)
 
 theorem inplacePowerTwoArgs_proven : InplacePowerTwoArgs := by
-  intro rt v u z r w w1 h1 h2 h3
-  have hr : r ≠ .notImpl := by
-    intro h
-    subst h
-    simp [Val.is] at h3
-  simp [ternaryIop, h1, h2, hr]
+  intro rt v u z w w1 h1
+  refine ⟨fun r h2 h3 => ?_, fun e h2 => ?_, fun h2 => ?_⟩
+  · have hr : r ≠ .notImpl := by
+      intro h
+      subst h
+      simp [Val.is] at h3
+    simp [ternaryIop, h1, h2, hr]
+  · simp [ternaryIop, h1, h2]
+  · simp [ternaryIop, h1, h2]
 
 /-! ## `super` -/
 
