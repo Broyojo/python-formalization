@@ -11,7 +11,7 @@ summary: |
   * corelibs-enum-call: `Enum('X', type=int)` creates a class: :735 raises only when `names is _not_given and type
     is None`.
   * corelibs-enum-strenum: `class S(StrEnum): A = b'x', 'ascii'` makes the member 'x', through `str(b'x', 'ascii')`
-    at :1391; the checks at :1377-1390 only test that the encoding and errors are str.
+    at :1392; the checks at :1378-1391 only test that the encoding and errors are str.
   * corelibs-enum-flag-class-paths: `1.0 in F` (and any object equal to 1) is True for `class F(Flag): A = 1`: after
     Flag._missing_ raises ValueError for a non-int, :766-769 compare the value with each member value by ==.
   * corelibs-enum-continuous: `verify(CONTINUOUS)` on values 1, 2, 'x' raises TypeError from min(): the check is

@@ -7,7 +7,7 @@ files: [Lib/enum.py]
 functions: ["verify.__call__"]
 summary: |
   verify.__call__ starts with `cls_name = enumeration.__name__` (Lib/enum.py:1970) and only then asks
-  `issubclass(enumeration, Flag)` / `issubclass(enumeration, Enum)` (:1971-1975), whose else branch raises
+  `issubclass(enumeration, Flag)` / `issubclass(enumeration, Enum)` (:1971-1976), whose else branch raises
   TypeError("the 'verify' decorator only works with Enum and Flag"). That message is therefore reached only for a
   class that is not an Enum. An object without __name__, such as `verify(UNIQUE)(42)`, raises
   AttributeError: 'int' object has no attribute '__name__'; a function, which has a __name__, raises the
@@ -44,9 +44,9 @@ observed: |
   class; TypeError: the 'verify' decorator only works with Enum and Flag. REPRODUCED.
   main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Lib/enum.py:1975, the decorator's own TypeError for anything that is not an Enum or Flag.
+  Lib/enum.py:1976, the decorator's own TypeError for anything that is not an Enum or Flag.
 cause: |
-  Lib/enum.py:1970 reads __name__ before the isinstance/issubclass tests of :1971-1975, and issubclass is called on
+  Lib/enum.py:1970 reads __name__ before the issubclass tests of :1971-1976, and issubclass is called on
   an object that may not be a class.
 possible_fix: |
   Test `isinstance(enumeration, type)` first, raise the decorator's TypeError otherwise, and read __name__ after.

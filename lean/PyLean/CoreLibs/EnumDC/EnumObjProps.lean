@@ -56,7 +56,7 @@ theorem inLists_eq (o : Ops α) (h : List α) (v : α) : ∀ unh, inLists o unh 
 
 /-- The sentence the earlier model proved, on the mirror that has `bytes`: a member takes one `str` or nothing, and any
 other argument list is a `TypeError`, as the docstring's "values must already be of type `str`" says. False:
-`A = b'x', 'ascii'` makes the member `'x'`, through `str(b'x', 'ascii')` at Lib/enum.py:1391. -/
+`A = b'x', 'ascii'` makes the member `'x'`, through `str(b'x', 'ascii')` at Lib/enum.py:1392. -/
 def StrEnumValues : Prop :=
   ∀ (codec : Codec) (l : List (SArg PV)) (s : String),
     strEnumNewG codec l = .ok s ↔ (l = [] ∧ s = "") ∨ l = [.str s]
@@ -576,7 +576,7 @@ def twoG (a b : EV) : EClassG EV :=
   { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])], values := [(['A'], a), (['B'], b)] }
 
 /-- A value linked to a member is a `ValueError` for any other member, the docs of `_add_value_alias_`. False for an
-unhashable value: the check at Lib/enum.py:1246-1247 reads the `_value_` of the members only, so a value linked with
+unhashable value: the check at Lib/enum.py:1248-1249 reads the `_value_` of the members only, so a value linked with
 `_add_value_alias_` is not seen, and the second member gets it as well. -/
 def ValueAliasExclusive : Prop :=
   ∀ (α : Type) (o : Ops α) (c c' : EClassG α) (f : Name → Name) (m m' : Name) (v : α), m ≠ m' →
@@ -603,7 +603,7 @@ theorem valueAliasExclusive_refuted : ¬ValueAliasExclusive := by
   cases he
 
 /-- A value that is another member's `_value_` is a `ValueError`, unhashable or not. False: for an unhashable value the
-`ValueError` is formatted with `cls._value2member_map_[value]` at :1249, which hashes the value again and raises
+`ValueError` is formatted with `cls._value2member_map_[value]` at :1251, which hashes the value again and raises
 `TypeError`. -/
 def ValueAliasBoundError : Prop :=
   ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (m m' : Name) (v : α), m ≠ m' →
@@ -675,7 +675,7 @@ theorem updateRules_proven : UpdateRules := by
     cases x <;> rfl
   · simp [EnumDict.update, h, className_bne ha]
 
-/-- `_ignore_` given as a tuple of names ignores those names, as a list does: `list(value)` at :379. -/
+/-- `_ignore_` given as a tuple of names ignores those names, as a list does: `list(value)` at Lib/enum.py:379. -/
 def IgnoreTuple : Prop :=
   ∀ (l : List String), ignoreList (.tup (l.map Atom.str)) = .ok (l.map String.toList) ∧
     ignoreList (.names (l.map String.toList)) = .ok (l.map String.toList)

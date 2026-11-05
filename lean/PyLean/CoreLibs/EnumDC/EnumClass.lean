@@ -175,8 +175,8 @@ def Atom.ignoreName : Atom → Option Name
   | .str s => some s.toList
   | _ => none
 
-/-- The `_ignore_` branch, Lib/enum.py:376-380: a `str` is split, anything else is `list(value)`, and `set(value)` at
-:380 hashes the items. A list of names is itself; the model's list `[i]` holds an `int`, which no key equals; a tuple
+/-- The `_ignore_` branch, Lib/enum.py:376-381: a `str` is split, anything else is `list(value)`, and `set(value)` at
+:381 hashes the items. A list of names is itself; the model's list `[i]` holds an `int`, which no key equals; a tuple
 gives its items, of which only a `str` can be a key, and an unhashable item is the `TypeError` of `set`. -/
 def ignoreList : EV → Py (List Name)
   | .atom (.str s) => .ok (splitNames s.toList)
@@ -383,7 +383,7 @@ any codec lookup (in a release build without `-X dev`, :532-536), anything else 
 def strDecode (codec : Codec) (bs : List Nat) (enc errors : String) : Py String :=
   if bs = [] then .ok "" else codec bs enc errors
 
-/-- `StrEnum.__new__`, Lib/enum.py:1376-1395: the checks of :1377-1390 in order, then `str(*values)` at :1391. With no
+/-- `StrEnum.__new__`, Lib/enum.py:1376-1395: the checks of :1378-1391 in order, then `str(*values)` at :1392. With no
 argument that is `''`, with one `str` that `str`; with an encoding, and `errors` (`'strict'` when not given), a `bytes` is
 decoded by the codec, a `str` is the `TypeError` "decoding str is not supported", and anything else the `TypeError` of
 `PyUnicode_FromEncodedObject`, Objects/unicodeobject.c. -/

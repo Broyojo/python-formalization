@@ -150,7 +150,9 @@ def intBitLength (n : Int) : Nat := bitLength n.natAbs
 
 /-! ### `_proto_member.__set_name__`, Lib/enum.py:240-325 -/
 
-/-- How the class makes one member, Lib/enum.py:247-273. -/
+/-- How the class makes one member, Lib/enum.py:247-273: what `_new_member_`, `_member_type_` and `__init__` do with
+`args`, the value or the items of a tuple value, wrapped once more for a `tuple` mixin (:248-254). Each is user or mixin
+code, so each is a hook that can raise. -/
 structure Maker (α : Type) where
   /-- `enum_class._new_member_(enum_class[, *args])`: what it raises, or the member, with the `_value_` it set. -/
   newMember : Py (Option α) := .ok none
@@ -162,7 +164,7 @@ structure Maker (α : Type) where
   init : Py Unit := .ok ()
 
 /-- The `_value_` of the new member, Lib/enum.py:255-269: what `__new__` set, else the value itself for a plain
-class, else `_member_type_(*args)`, whose `Exception` becomes the `TypeError` of :264-268. Then `__init__`, :272. -/
+class, else `_member_type_(*args)`, whose `Exception` becomes the `TypeError` of :264-268. Then `__init__`, :273. -/
 def Maker.memberValue (mk : Maker α) (value : α) : Py α :=
   let v : Py α :=
     match mk.newMember with
@@ -191,7 +193,7 @@ def EClassG.flagUpdate (o : Ops α) (c : EClassG α) (v : α) : EClassG α :=
     { c1 with allBits := 2 ^ intBitLength c1.flagMask - 1 }
   else c
 
-/-- The linear search of :290-295: the first canonical member whose `_value_ == value`; no identity shortcut, the
+/-- The linear search of :290-294: the first canonical member whose `_value_ == value`; no identity shortcut, the
 member's value on the left. -/
 def EClassG.firstEqual (o : Ops α) (c : EClassG α) (v : α) : List (Name × Name) → Py (Option Name)
   | [] => .ok none
@@ -204,8 +206,8 @@ def EClassG.firstEqual (o : Ops α) (c : EClassG α) (v : α) : List (Name × Na
       | .ok true => .ok (some m)
       | .ok false => c.firstEqual o v r
 
-/-- The alias search, Lib/enum.py:283-297. `some m` is the member with this value; `none` is the `KeyError` of :297,
-or a `KeyError` from `__hash__` or `__eq__`, all caught at :298. A `TypeError` from the fast lookup goes to the linear
+/-- The alias search, Lib/enum.py:283-296. `some m` is the member with this value; `none` is the `KeyError` of :295,
+or a `KeyError` from `__hash__` or `__eq__`, all caught at :296. A `TypeError` from the fast lookup goes to the linear
 search; a `TypeError` raised there, inside the handler, goes out. -/
 def EClassG.aliasOf (o : Ops α) (c : EClassG α) (v : α) : Py (Option Name) :=
   let linear : Py (Option Name) :=
@@ -337,7 +339,7 @@ def EClassG.enumNew (o : Ops α) (c : EClassG α) (self : Option Name) (v : α) 
 
 /-! ### `Enum._add_value_alias_`, Lib/enum.py:1239-1262 -/
 
-/-- The first member, by `_member_map_.values()`, whose `_value_ == value`, :1246-1247. -/
+/-- The first member, by `_member_map_.values()`, whose `_value_ == value`, :1248-1249. -/
 def EClassG.firstMemberEq (o : Ops α) (c : EClassG α) (v : α) : List (Name × Name) → Py (Option Name)
   | [] => .ok none
   | (_, m) :: r =>
@@ -361,7 +363,7 @@ def EClassG.bindValue (o : Ops α) (c : EClassG α) (memberName : Name → Name)
   | .ok (d, _) => .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }
 
 /-- `Enum._add_value_alias_`, Lib/enum.py:1239-1262. `value in map` and the two reads of `map[value]` at :1242-1244
-give one answer, as `hash` and `==` are functions. In the `except TypeError` branch the `ValueError` of :1249 is
+give one answer, as `hash` and `==` are functions. In the `except TypeError` branch the `ValueError` of :1251 is
 formatted with `map[value]`, which raises that `TypeError` again, so the `TypeError` comes out instead. -/
 def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → Name) (self : Name) (v : α) :
     Py (EClassG α) :=
@@ -447,7 +449,7 @@ def extremum (cmp : α → α → Py Bool) : α → List α → Py α
     | .ok true => extremum cmp x r
     | .ok false => extremum cmp cur r
 
-/-- `for i in is: if i not in values: missing.append(i)`, Lib/enum.py:1999-2006. -/
+/-- `for i in is: if i not in values: missing.append(i)`, Lib/enum.py:1996-2004. -/
 def Ops.missingFrom (o : Ops α) (s : List (α × Unit)) : List Int → Py (List Int)
   | [] => .ok []
   | i :: r =>
@@ -537,7 +539,7 @@ def verifyCallG (o : Ops α) (order : List α → List α) (c : EClass) (vals : 
 /-! ### `Flag._generate_next_value_`, Lib/enum.py:1437-1453 -/
 
 /-- `Flag._generate_next_value_`: `start`, or `1` for `None`, for the first member; then `2 ** (_high_bit(max) + 1)`,
-where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1450-1451. -/
+where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1449-1452. -/
 def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α) : Py α :=
   if count = 0 then .ok (start.getD (o.ofInt 1))
   else
