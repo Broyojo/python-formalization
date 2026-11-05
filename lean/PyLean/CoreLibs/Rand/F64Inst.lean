@@ -54,7 +54,7 @@ def ofIntOpt (n : Int) : Option F64 :=
   let x := F64.ofInt n
   if x.isInf then none else some x
 
-/-- `lanczos_num_coeffs`, Modules/mathmodule.c:317-331. -/
+/-- `lanczos_num_coeffs`, Modules/mathmodule.c:318-332. -/
 def lanczosNum : List F64 := [
   ofDecimal 23531376880410759688572007674451636754734846804940 true 39,
   ofDecimal 42919803642649098768957899047001988850926355848959 true 39,
@@ -70,15 +70,15 @@ def lanczosNum : List F64 := [
   ofDecimal 21082427775157934587250973392071336271166969580291 true 47,
   ofDecimal 25066282746310002701649081771338373386264310793408 true 49]
 
-/-- `lanczos_den_coeffs`, Modules/mathmodule.c:334-336. -/
+/-- `lanczos_den_coeffs`, Modules/mathmodule.c:335-337. -/
 def lanczosDen : List F64 :=
   [0, 39916800, 120543840, 150917976, 105258076, 45995730,
    13339535, 2637558, 357423, 32670, 1925, 66, 1].map (fun n : Nat => F64.ofInt n)
 
-/-- `lanczos_g`, Modules/mathmodule.c:315. -/
+/-- `lanczos_g`, Modules/mathmodule.c:316. -/
 def lanczosG : F64 := ofDecimal 6024680040776729583740234375 true 27
 
-/-- `lanczos_sum`, Modules/mathmodule.c:351-379: Horner in `x` from the last
+/-- `lanczos_sum`, Modules/mathmodule.c:351-378: Horner in `x` from the last
 coefficient below `5.0`, in `1/x` from the first above. -/
 def lanczosSum (x : F64) : F64 :=
   let pairs := lanczosNum.zip lanczosDen
