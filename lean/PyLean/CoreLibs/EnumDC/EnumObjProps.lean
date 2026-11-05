@@ -402,8 +402,10 @@ theorem className_bne {e : PyExc} {s : String} (h : e.className ≠ s) : (e.clas
 
 /-- `_proto_member.__set_name__`, every path, for every `hash`, `==` and way of making the member. The member's `_value_`:
 an exception from `__new__` goes out; a value it set is kept; otherwise a plain class keeps the value itself, and any
-other calls `_member_type_(*args)`, whose exception becomes the `TypeError` "_value_ not set in __new__, unable to create
-it"; then `__init__`, whose exception goes out. The alias search: what the dict lookup finds or does not find decides; a
+other calls `_member_type_(*args)`, whose `Exception` becomes the `TypeError` "_value_ not set in __new__, unable to
+create it" (`except Exception`, :264) while a `BaseException` that is not an `Exception` goes out; then `__init__`, whose
+exception goes out. Exception classes may have several bases: `KT(KeyError, TypeError)` raised by both `__hash__` and
+`__eq__` runs the linear search and then makes a new member filed as unhashable. The alias search: what the dict lookup finds or does not find decides; a
 `KeyError` from the lookup, `__hash__` or `__eq__` makes a new member; a `TypeError` runs the linear search, which compares
 `canonical._value_ == value` (no identity shortcut), and in which a `KeyError` again makes a new member and any other
 exception goes out. An alias is added to `_member_map_` only; a new member also goes to `_member_names_` (for a `Flag`,
@@ -411,13 +413,15 @@ when its value is a single bit). The tables: `setdefault` and `value not in _has
 filing the value in the unhashable lists under the member's name, and any other exception going out. -/
 def SetNamePaths : Prop :=
   ∀ (α : Type) (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) (value v : α),
-    (∀ e, mk.newMember = .error e → mk.memberValue value = .error e) ∧
-    (mk.newMember = .ok (some v) → mk.memberValue value = mk.init.map (fun _ => v)) ∧
-    (mk.newMember = .ok none → mk.plain = true → mk.memberValue value = mk.init.map (fun _ => value)) ∧
-    (mk.newMember = .ok none → mk.plain = false → mk.callType = .ok v → mk.memberValue value = mk.init.map (fun _ => v)) ∧
-    (mk.newMember = .ok none → mk.plain = false → ∀ e, mk.callType = .error e →
-      mk.memberValue value = .error (.typeError "_value_ not set in __new__, unable to create it")) ∧
-    (∀ e, mk.memberValue value = .error e → c.setName o mk name value = .error e) ∧
+    (∀ e, mk.newMember = .error e → mk.memberValue o value = .error e) ∧
+    (mk.newMember = .ok (some v) → mk.memberValue o value = mk.init.map (fun _ => v)) ∧
+    (mk.newMember = .ok none → mk.plain = true → mk.memberValue o value = mk.init.map (fun _ => value)) ∧
+    (mk.newMember = .ok none → mk.plain = false → mk.callType = .ok v → mk.memberValue o value = mk.init.map (fun _ => v)) ∧
+    (mk.newMember = .ok none → mk.plain = false → ∀ e, mk.callType = .error e → o.isInst e "Exception" = true →
+      mk.memberValue o value = .error (.typeError "_value_ not set in __new__, unable to create it")) ∧
+    (mk.newMember = .ok none → mk.plain = false → ∀ e, mk.callType = .error e → o.isInst e "Exception" = false →
+      mk.memberValue o value = .error e) ∧
+    (∀ e, mk.memberValue o value = .error e → c.setName o mk name value = .error e) ∧
     (∀ r, o.dictGet c.value2member v = .ok r → c.aliasOf o v = .ok r) ∧
     (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = false → o.isInst e "KeyError" = true →
       c.aliasOf o v = .ok none) ∧
@@ -432,7 +436,7 @@ def SetNamePaths : Prop :=
       | .error e => .error e
       | .ok true => .ok (some m)
       | .ok false => c.firstEqual o v r) ∧
-    (mk.memberValue value = .ok v →
+    (mk.memberValue o value = .ok v →
       (∀ e, (c.flagUpdate o v).aliasOf o v = .error e → c.setName o mk name value = .error e) ∧
       (∀ m, (c.flagUpdate o v).aliasOf o v = .ok (some m) →
         c.setName o mk name value = ((c.flagUpdate o v).addToMap name m).bind (fun c2 => c2.noteValue o name m v)) ∧
@@ -459,12 +463,13 @@ def SetNamePaths : Prop :=
 
 theorem setNamePaths_proven : SetNamePaths := by
   intro α o mk c name value v
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro e h; simp [Maker.memberValue, h]
   · intro h; simp only [Maker.memberValue, h]; cases mk.init <;> rfl
   · intro h hp; simp only [Maker.memberValue, h, hp, ↓reduceIte]; cases mk.init <;> rfl
   · intro h hp hc; simp only [Maker.memberValue, h, hp, hc, Bool.false_eq_true, ↓reduceIte]; cases mk.init <;> rfl
-  · intro h hp e hc; simp [Maker.memberValue, h, hp, hc]
+  · intro h hp e hc hx; simp [Maker.memberValue, h, hp, hc, hx]
+  · intro h hp e hc hx; simp [Maker.memberValue, h, hp, hc, hx]
   · intro e h; simp [EClassG.setName, h]
   · intro r h; simp [EClassG.aliasOf, h]
   · intro e h ht hk
@@ -712,6 +717,26 @@ private theorem valueAlias_typeErrorSubclass :
 private theorem valueAlias_typeErrorSubclass_filed :
     (cA.addValueAlias pvOps id ['A'] (.key 5 (some "TSub") none 0)).map (·.unhashableMap) =
       .ok [(['A'], [.key 5 (some "TSub") none 0])] := by
+  decide +kernel
+
+/-- The earlier clause of `SetNamePaths`, any exception of `_member_type_(*args)` gives the `TypeError`, is false: `:264`
+is `except Exception`, so a `BaseException` subclass `BExc` raised by the mixin's own call goes out, as on 3.15.2. -/
+private theorem setName_baseException :
+    ¬ (∀ (α : Type) (o : Ops α) (mk : Maker α) (value : α) (e : PyExc), mk.newMember = .ok none → mk.plain = false →
+        mk.callType = .error e →
+        mk.memberValue o value = .error (.typeError "_value_ not set in __new__, unable to create it")) := by
+  intro h
+  have := h PV pvOps { plain := false, callType := .error (.named "BExc" "b") } (.str "b") (.named "BExc" "b") rfl rfl rfl
+  revert this
+  decide +kernel
+
+/-- `KT(KeyError, TypeError)` raised by both `__hash__` and `__eq__`: the `TypeError` side runs the linear search, the
+`KeyError` side of the `__eq__` there makes a new member, and `setdefault`'s `TypeError` files it as unhashable, as on
+3.15.2: `(['A', 'B'], ['A', 'B'], 1)`. -/
+private theorem setName_twoBases :
+    (cA.setName pvOps {} ['B'] (.key 1 (some "KT") (some "KT") 0)).map
+      (fun c => (c.memberNames, c.memberMap.map Prod.fst, c.unhashableValues.length)) =
+      .ok ([['A'], ['B']], [['A'], ['B']], 1) := by
   decide +kernel
 
 end PyLean.CoreLibs.EnumDC

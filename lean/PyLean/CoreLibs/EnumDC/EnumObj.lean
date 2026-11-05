@@ -42,8 +42,8 @@ structure Ops (α : Type) where
   typeName : α → String
   /-- `bool(a)`. -/
   truth : α → Py Bool
-  /-- The base of each exception class of the program, builtin or its own, for `except`. -/
-  excParent : String → Option String
+  /-- The bases of each exception class of the program, builtin or its own, for `except`. -/
+  excParent : String → List String
 
 variable {α β : Type}
 
@@ -171,8 +171,9 @@ structure Maker (α : Type) where
   init : Py Unit := .ok ()
 
 /-- The `_value_` of the new member, Lib/enum.py:255-269: what `__new__` set, else the value itself for a plain
-class, else `_member_type_(*args)`, whose `Exception` becomes the `TypeError` of :264-268. Then `__init__`, :273. -/
-def Maker.memberValue (mk : Maker α) (value : α) : Py α :=
+class, else `_member_type_(*args)`, whose `Exception` becomes the `TypeError` of :264-268, while a `BaseException` that is
+not an `Exception` goes out as it is. Then `__init__`, :273. -/
+def Maker.memberValue (o : Ops α) (mk : Maker α) (value : α) : Py α :=
   let v : Py α :=
     match mk.newMember with
     | .error e => .error e
@@ -182,7 +183,9 @@ def Maker.memberValue (mk : Maker α) (value : α) : Py α :=
       else
         match mk.callType with
         | .ok v => .ok v
-        | .error _ => .error (.typeError "_value_ not set in __new__, unable to create it")
+        | .error e =>
+          if o.isInst e "Exception" then .error (.typeError "_value_ not set in __new__, unable to create it")
+          else .error e
   match v with
   | .error e => .error e
   | .ok v =>
@@ -244,7 +247,7 @@ def EClassG.noteValue (o : Ops α) (c : EClassG α) (name member : Name) (v : α
 
 /-- `_proto_member.__set_name__`, Lib/enum.py:240-325, for the member `name` with the body value `value`. -/
 def EClassG.setName (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) (value : α) : Py (EClassG α) :=
-  match mk.memberValue value with
+  match mk.memberValue o value with
   | .error e => .error e
   | .ok v =>
     let c1 := c.flagUpdate o v
@@ -622,7 +625,7 @@ def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α
       | .error e => .error e
       | .ok m =>
         match o.bitLength m with
-        | .error _ => .error (.typeError "~invalid flag value")
+        | .error e => if o.isInst e "Exception" then .error (.typeError "~invalid flag value") else .error e
         | .ok b => .ok (o.ofInt ((2 : Int) ^ b))
 
 /-! ### Iterating a `Flag` value, Lib/enum.py:1456-1473, :1581-1585 -/
@@ -833,6 +836,7 @@ def pvExc (cls msg : String) : PyExc :=
   match cls with
   | "KeyError" => .keyError s!"'{msg}'"
   | "KSub" => .named "KSub" s!"'{msg}'"
+  | "KT" => .named "KT" s!"'{msg}'"
   | "TypeError" => .typeError msg
   | "ValueError" => .valueError msg
   | c => .named c msg
@@ -917,8 +921,10 @@ def pvOps : Ops PV where
     | .str s => .ok (s != "")
     | _ => .ok true
   excParent
-    | "KSub" => some "KeyError"
-    | "TSub" => some "TypeError"
+    | "KSub" => ["KeyError"]
+    | "TSub" => ["TypeError"]
+    | "KT" => ["KeyError", "TypeError"]
+    | "BExc" => ["BaseException"]
     | c => builtinParent c
 
 end PyLean.CoreLibs.EnumDC

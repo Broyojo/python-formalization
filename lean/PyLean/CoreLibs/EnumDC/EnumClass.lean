@@ -303,26 +303,24 @@ def EnumDict.unpackKeys (d : EnumDict) : List Name → Py EnumDict
     | .ok d' => d'.unpackKeys r
   | _ :: _ => .error (.valueError "~values to unpack")
 
-/-- The base of a builtin exception class, for the classes the model raises. -/
-def builtinParent : String → Option String
-  | "KeyError" | "IndexError" => some "LookupError"
-  | "UnicodeDecodeError" => some "UnicodeError"
-  | "UnicodeError" => some "ValueError"
-  | "OverflowError" | "ZeroDivisionError" => some "ArithmeticError"
+/-- The bases of a builtin exception class, for the classes the model raises. -/
+def builtinParent : String → List String
+  | "KeyError" | "IndexError" => ["LookupError"]
+  | "UnicodeDecodeError" => ["UnicodeError"]
+  | "UnicodeError" => ["ValueError"]
+  | "OverflowError" | "ZeroDivisionError" => ["ArithmeticError"]
   | "LookupError" | "TypeError" | "ValueError" | "AttributeError" | "RuntimeError" | "NameError" | "ArithmeticError"
-  | "AssertionError" => some "Exception"
-  | "Exception" => some "BaseException"
-  | _ => none
+  | "AssertionError" => ["Exception"]
+  | "Exception" => ["BaseException"]
+  | _ => []
 
-/-- `issubclass(c, cls)`, climbing `parent`, the bases of the program's exception classes. -/
-def subclassOf (parent : String → Option String) : Nat → String → String → Bool
+/-- `issubclass(c, cls)`: `cls` is `c` or an ancestor through any of the bases `parent` gives (all of `c.__mro__`). -/
+def subclassOf (parent : String → List String) : Nat → String → String → Bool
   | 0, _, _ => false
-  | f + 1, c, cls => c == cls || match parent c with
-    | some p => subclassOf parent f p cls
-    | none => false
+  | f + 1, c, cls => c == cls || (parent c).any (fun p => subclassOf parent f p cls)
 
 /-- `isinstance(e, cls)`, the test of `except cls:`, which catches subclasses too. -/
-def excIs (parent : String → Option String) (e : PyExc) (cls : String) : Bool := subclassOf parent 32 e.className cls
+def excIs (parent : String → List String) (e : PyExc) (cls : String) : Bool := subclassOf parent 32 e.className cls
 
 /-- `EnumDict.update`, Lib/enum.py:449-457: the `except AttributeError` covers the loop over `keys()` too, so an
 `AttributeError` from `__setitem__` restarts the loop on the iteration of the mapping. -/

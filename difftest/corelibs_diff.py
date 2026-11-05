@@ -6663,10 +6663,33 @@ class enumdc_TSub(TypeError):
     pass
 
 
+class enumdc_KT(KeyError, TypeError):
+    pass
+
+
+class enumdc_BExc(BaseException):
+    pass
+
+
 enumdc_KSub.__name__ = enumdc_KSub.__qualname__ = "KSub"
 enumdc_TSub.__name__ = enumdc_TSub.__qualname__ = "TSub"
+enumdc_KT.__name__ = enumdc_KT.__qualname__ = "KT"
+enumdc_BExc.__name__ = enumdc_BExc.__qualname__ = "BExc"
 enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError,
-              "KSub": enumdc_KSub, "TSub": enumdc_TSub}
+              "KSub": enumdc_KSub, "TSub": enumdc_TSub, "KT": enumdc_KT}
+
+
+class enumdc_M(int):
+    """A mixin whose own call raises: BExc for 'b', ValueError for a non-int; a subclass gets int 7 without _value_."""
+
+    def __new__(cls, v):
+        if cls is enumdc_M:
+            if isinstance(v, str) and v == "b":
+                raise enumdc_BExc("b")
+            if type(v) is int:
+                return int.__new__(enumdc_M, v)
+            raise ValueError("v")
+        return int.__new__(cls, 7)
 
 
 class enumdc_K:
@@ -6686,21 +6709,21 @@ class enumdc_K:
             raise enumdc_EXC[self.ee]("eq")
         if isinstance(o, enumdc_K):
             return o.k == self.k
-        if type(o) is int:
+        if isinstance(o, int):
             return o == self.k
         return NotImplemented
 
     def __lt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k < o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k < o
         return NotImplemented
 
     def __gt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k > o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k > o
         return NotImplemented
 
@@ -6712,7 +6735,7 @@ enumdc_K.__name__ = enumdc_K.__qualname__ = "K"
 
 def enumdc_gkeys(rng):
     """The K objects of one case, by index: a key, and the exceptions of __hash__ and __eq__."""
-    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError", "KSub", "TSub", "TSub"]
+    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError", "KSub", "TSub", "TSub", "KT", "KT"]
     return [[rng.choice([0, 1, 1, 2, 3, -1]), rng.choice(exc) if rng.random() < .5 else None,
              rng.choice(exc) if rng.random() < .5 else None] for _ in range(rng.randrange(1, 4))]
 
@@ -6752,9 +6775,9 @@ def enumdc_pvenc(x):
 def enumdc_gehclass(rng):
     keys = enumdc_gkeys(rng)
     n = len(keys)
-    kind = rng.choice(["plain", "plain", "plain", "customnew", "initfail"])
+    kind = rng.choice(["plain", "plain", "plain", "customnew", "initfail", "mnew"])
     names = rng.sample(["A", "B", "C", "D"], rng.randrange(0, 5))
-    strs = ("x", "y", "", "7", "boom") if kind != "plain" else ("x", "y", "")
+    strs = ("x", "y", "", "7", "boom", "b") if kind != "plain" else ("x", "y", "")
     body = [[nm, enumdc_gpv(rng, n, strs)] for nm in names]
     r = rng.randrange(0, 6)
     if r == 0:
@@ -6775,7 +6798,9 @@ def enumdc_gehclass(rng):
 
 def enumdc_ehbuild(case, objs):
     kind = case["kind"]
-    ns = enumdc_enum.EnumType.__prepare__("C", (int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_enum.Enum,))
+    bases = ((int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_M, enumdc_enum.Enum) if kind == "mnew"
+             else (enumdc_enum.Enum,))
+    ns = enumdc_enum.EnumType.__prepare__("C", bases)
     op = case["op"]
     if op[0] == "call":
         miss = op[2]
@@ -6800,7 +6825,6 @@ def enumdc_ehbuild(case, objs):
         ns["__init__"] = __init__
     for k, v in case["body"]:
         ns[k] = enumdc_pv(v, objs)
-    bases = (int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_enum.Enum,)
     return enumdc_enum.EnumType("C", bases, ns)
 
 
@@ -6831,7 +6855,10 @@ def enumdc_ehclass(case):
         if k == "valias":
             return enumdc_ehsummary(C)
         return C(enumdc_pv(op[2], objs))._name_
-    return py_result(go)
+    try:
+        return py_result(go)
+    except enumdc_BExc as e:
+        return {"exc": "BExc", "msg": str(e)}
 
 
 def enumdc_gehflag_in(rng):
