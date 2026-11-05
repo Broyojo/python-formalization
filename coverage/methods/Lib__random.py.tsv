@@ -8,7 +8,7 @@ Lib/random.py	216	217	Random.__setstate__	__setstate__(self, state)	modelled	ran
 Lib/random.py	219	220	Random.__reduce__	__reduce__(self)	modelled	rand-pickle-round-trip	
 Lib/random.py	225	243	Random.__init_subclass__	__init_subclass__(cls, /, **kwargs)	modelled	rand-init-subclass-pick,rand-init-subclass-stops,rand-init-subclass-chains	
 Lib/random.py	245	252	Random._randbelow_with_getrandbits	_randbelow_with_getrandbits(self, n)	modelled	rand-randbelow-with-exact,rand-randbelow-in-range	
-Lib/random.py	254	272	Random._randbelow_without_getrandbits	_randbelow_without_getrandbits(self, n, maxsize=1 << BPF)	modelled	rand-randbelow-without-exact,rand-randbelow-without-in-range	
+Lib/random.py	254	272	Random._randbelow_without_getrandbits	_randbelow_without_getrandbits(self, n, maxsize=1 << BPF)	todo		review: randbelowWithout drops the warn(...) of :262-265 (its docstring says it \"has no effect on the result\"), but for n >= 2**53 CPython always issues that UserWarning, and under an error filter raises it before any draw (probe: Sub(5)._randbelow(2**60) under simplefilter('error') raises UserWarning, state unchanged), so the n >= 2**53 half of RandbelowWithoutExact (\"floor(u * float(n)) after one draw\") is false there; the n < 2**53 half (first u below the correctly rounded limit, then floor(u * 2**53) % n) is exact.
 Lib/random.py	287	289	Random.randbytes	randbytes(self, n)	modelled	rand-randbytes-spec	
 Lib/random.py	294	333	Random.randrange	randrange(self, start, stop=None, step=_ONE)	modelled	rand-randrange-arg-errors,rand-randrange-bounds,rand-randrange-is-range-choice	
 Lib/random.py	335	342	Random.randint	randint(self, a, b)	modelled	rand-randint-spec	
@@ -20,19 +20,19 @@ Lib/random.py	500	509	Random.uniform	uniform(self, a, b)	modelled	rand-uniform-f
 Lib/random.py	511	534	Random.triangular	triangular(self, low=0.0, high=1.0, mode=None)	modelled	rand-triangular-f64	
 Lib/random.py	536	555	Random.normalvariate	normalvariate(self, mu=0.0, sigma=1.0)	modelled	rand-normal-f64	
 Lib/random.py	557	593	Random.gauss	gauss(self, mu=0.0, sigma=1.0)	modelled	rand-gauss-f64	
-Lib/random.py	595	603	Random.lognormvariate	lognormvariate(self, mu, sigma)	modelled	rand-normal-f64	
+Lib/random.py	595	603	Random.lognormvariate	lognormvariate(self, mu, sigma)	todo		review: Its only statement is the NormalvariateF64 conjunct \"lognormvariate is exp of normalvariate on the same draws\", the one-line body (:603) restated by unfolding; rfl on a one-line definition does not count, and no consequence is proven (for example a positive result whenever it returns).
 Lib/random.py	605	623	Random.expovariate	expovariate(self, lambd=1.0)	modelled	rand-expovariate-f64,rand-expovariate-nonneg	
 Lib/random.py	625	665	Random.vonmisesvariate	vonmisesvariate(self, mu, kappa)	modelled	rand-vonmises-f64,rand-vonmises-exits	
 Lib/random.py	667	734	Random.gammavariate	gammavariate(self, alpha, beta)	modelled	rand-gamma-f64,rand-gamma-loops-f64,rand-gamma-exits	
 Lib/random.py	736	766	Random.betavariate	betavariate(self, alpha, beta)	modelled	rand-beta-pareto-weibull-f64,rand-beta-exits	
-Lib/random.py	768	773	Random.paretovariate	paretovariate(self, alpha)	modelled	rand-beta-pareto-weibull-f64	
-Lib/random.py	775	784	Random.weibullvariate	weibullvariate(self, alpha, beta)	modelled	rand-beta-pareto-weibull-f64	
+Lib/random.py	768	773	Random.paretovariate	paretovariate(self, alpha)	todo		review: Its only statement is the BetaParetoWeibullF64 conjunct \"(1.0 - random()) ** (-1.0 / alpha) after one draw\", the two-line body (:772-773) restated by unfolding; that is rfl on a one-line definition, and no consequence is proven (for example a result >= 1.0 for alpha > 0, which needs a stated hypothesis on pow).
+Lib/random.py	775	784	Random.weibullvariate	weibullvariate(self, alpha, beta)	todo		review: Its only statement is the BetaParetoWeibullF64 conjunct \"alpha * (-log(1.0 - random())) ** (1.0 / beta) after one draw\", the two-line body (:783-784) restated by unfolding; that is rfl on a one-line definition, and no consequence is proven (for example a result >= 0 for alpha >= 0, from LogNonpos and a hypothesis on pow).
 Lib/random.py	789	890	Random.binomialvariate	binomialvariate(self, n=1, p=0.5)	modelled	rand-binomial-f64,rand-binomial-loops-f64,rand-binomial-edges,rand-binomial-rejects-nan	
 Lib/random.py	906	908	SystemRandom.random	random(self)	modelled	rand-sysrandom-random-exact	
 Lib/random.py	910	916	SystemRandom.getrandbits	getrandbits(self, k)	modelled	rand-sysrandom-getrandbits-exact,rand-sysrandom-getrandbits	
 Lib/random.py	918	922	SystemRandom.randbytes	randbytes(self, n)	modelled	rand-sysrandom-randbytes-exact	
-Lib/random.py	924	926	SystemRandom.seed	seed(self, *args, **kwds)	modelled	rand-sysrandom-seed-stub	
-Lib/random.py	928	930	SystemRandom._notimplemented	_notimplemented(self, *args, **kwds)	modelled	rand-sysrandom-notimplemented	
+Lib/random.py	924	926	SystemRandom.seed	seed(self, *args, **kwds)	todo		review: SysSeedStub is rfl on the constant body \"return None\" (:926) plus a fact about Random(x) (pyInit), not about this method; a hard-coded constant does not count. It fits trivial: (no branch; returns None for any arguments, so Random.__init__'s self.seed(x) accepts any x).
+Lib/random.py	928	930	SystemRandom._notimplemented	_notimplemented(self, *args, **kwds)	todo		review: SysNotImplemented is rfl on the one constant raise (:930) and on sysReduce, whose getstate call is that same constant; there is nothing else to pin. It fits trivial: with the refusal stated (raises NotImplementedError('System entropy source does not have state.') for any arguments; it is also getstate and setstate, :931).
 Lib/random.py	971	985	_test_generator	_test_generator(n, func, args)	excluded		test-support: timing and summary-statistics printer for the module self-test
 Lib/random.py	988	1006	_test	_test(N=10000)	excluded		test-support: runs _test_generator over a fixed list of calls
 Lib/random.py	1020	1044	_parse_args	_parse_args(arg_list: list[str] | None)	todo		todo: the argparse parser of the python -m random CLI (mutually exclusive -c/-i/-f, type=int/float conversion with SystemExit 2, the suppressed --test, the help text); Lib/argparse.py is not modelled, so main is modelled on the namespace it returns
