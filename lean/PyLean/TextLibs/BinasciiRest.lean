@@ -536,7 +536,10 @@ def b2aUuA (d : Data) (backtick : Py Bool) : Py (List Nat) := do
   let b ← bufData d
   b2aUu b (← backtick)
 
-/-- `crc_hqx`: `crc` is `unsigned_int(bitwise=True)`, so only `__index__` can fail. -/
+/-- `crc_hqx`: `crc` is `unsigned_int(bitwise=True)`: `PyLong_AsNativeBytes` keeps the low 32 bits, `__index__`
+may fail, and a value that does not fit emits `DeprecationWarning: integer value out of range`
+(`Modules/clinic/binascii.c.h:1051-1065`), which raises only when warnings are errors; the warning is not
+modelled. -/
 def crcHqxA (d : Data) (crc : Py Int) : Py Nat := do
   let b ← bufData d
   return crcHqx b (← crc)

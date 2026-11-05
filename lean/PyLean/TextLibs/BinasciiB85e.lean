@@ -124,7 +124,7 @@ theorem enc85P_fuel (a : List Nat) (pad : Bool) : ∀ (n : Nat) (d : List Nat) (
 for the data with the zero bytes added (the docs: "the zero-padding applied to the end of the input is
 retained"), `alphabet` is `translate` from the standard alphabet, and a non-zero `wrapcol` is rounded to a
 multiple of 5 (at least 5) and the lines are cut by `wraplines`, unless the output is empty. Then the
-refusals in their order: a negative `wrapcol`, then an alphabet that is not 85 bytes. -/
+refusals in their order: a negative `wrapcol`, then one of `2 ** 64` or more, then an alphabet that is not 85 bytes. -/
 def B2a85OptionLaw : Prop :=
   (∀ (d : List Nat) (pad : Bool) (w : Nat) (alpha : Option (List Nat)),
     w < 2 ^ 64 → (∀ a, alpha = some a → a.length = 85) →
@@ -134,11 +134,13 @@ def B2a85OptionLaw : Prop :=
         if w ≠ 0 ∧ !s.isEmpty then wraplinesC s (if w < 5 then 5 else w / 5 * 5) else s)) ∧
   (∀ (d : List Nat) (pad : Bool) (w : Int) (alpha : Option Data), w < 0 →
     b2aB85 (.bytes d) pad w alpha = .error (.valueError "Cannot convert negative int")) ∧
+  (∀ (d : List Nat) (pad : Bool) (w : Int) (alpha : Option Data), 2 ^ 64 ≤ w →
+    b2aB85 (.bytes d) pad w alpha = .error (.overflowError "Python int too large for C size_t")) ∧
   (∀ (d : List Nat) (pad : Bool) (w : Nat) (a : List Nat), w < 2 ^ 64 → a.length ≠ 85 →
     b2aB85 (.bytes d) pad w (some (.bytes a)) = .error (.valueError "alphabet must have length 85"))
 
 theorem b2a85OptionLaw_proven : B2a85OptionLaw := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro d pad w alpha hw ha
     have hs : sizeT (w : Int) = .ok w := by
       simp only [sizeT]
@@ -171,6 +173,9 @@ theorem b2a85OptionLaw_proven : B2a85OptionLaw := by
     first | rfl | simp
   · intro d pad w alpha hw
     simp [b2aB85, bufData, sizeT, hw, bind, Except.bind]
+  · intro d pad w alpha hw
+    have : ¬ w < 0 := by omega
+    simp only [b2aB85, bufData, sizeT, if_neg this, if_pos hw, bind, Except.bind]
   · intro d pad w a hw ha
     have hs : sizeT (w : Int) = .ok w := by
       simp only [sizeT]

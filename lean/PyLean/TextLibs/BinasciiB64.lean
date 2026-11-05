@@ -509,7 +509,7 @@ def alphaChars : AlphaArg → List Nat
   | .bytes a => a
   | .other _ => []
 
-/-- `ignorechars` as the loop sees it, `Modules/binascii.c:768-773`. -/
+/-- `ignorechars` as the loop sees it, `Modules/binascii.c:763-768`. -/
 def igEff (strict : Option Bool) (g : Option (List Nat)) : Option (List Nat) :=
   if !strict.getD g.isSome || g.isNone || g == some [] then none else g
 
