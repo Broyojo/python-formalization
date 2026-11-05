@@ -319,6 +319,8 @@ structure Rt where
   interning, constant merging, a variable copied), which the machine does not track, so it is an
   oracle, as `stackSpace` is. -/
   sameImmediate : Val → Val → Bool := fun _ _ => false
+  /-- The `tuple_empty` singleton once made, `.null` before. -/
+  emptyTuple : Val := .null
   /-- `tstate->async_gen_firstiter`, `.null` when unset (`sys.set_asyncgen_hooks`). -/
   asyncGenFirstiter : Val := .null
   /-- `tstate->coroutine_origin_tracking_depth` (`sys.set_coroutine_origin_tracking_depth`). -/
@@ -397,8 +399,15 @@ def freshVersion : RM Nat := fun rt =>
 
 def write (s : String) : RM Unit := fun rt => .ok () { rt with out := rt.out.push s }
 
-/-- Allocate a tuple. -/
-def mkTuple (items : List Val) : RM Val := alloc (.tuple items.toArray)
+/-- Allocate a tuple. An empty one is the `tuple_empty` singleton (`_Py_SINGLETON(tuple_empty)`,
+`Objects/tupleobject.c`, what `PyTuple_New(0)` and every empty-tuple constructor return): made on
+first use and the same object after. -/
+def mkTuple (items : List Val) : RM Val :=
+  if items.isEmpty then fun rt =>
+    match rt.emptyTuple with
+    | .null => .ok (.ref rt.heap.size) { rt with heap := rt.heap.push (.tuple #[]), emptyTuple := .ref rt.heap.size }
+    | v => .ok v rt
+  else alloc (.tuple items.toArray)
 def mkList (items : List Val) : RM Val := alloc (.list items.toArray)
 
 /-- The items of a tuple address. -/

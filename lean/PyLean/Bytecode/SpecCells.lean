@@ -134,11 +134,19 @@ theorem makeCellRules_proven : MakeCellRules := by
   · simp
 
 /-- `BUILD_TUPLE n` and `BUILD_LIST n` pop their `n` operands and push a new object holding them
-in the order they were pushed, leaving the rest of the stack alone. -/
+in the order they were pushed, leaving the rest of the stack alone; `BUILD_TUPLE 0` pushes the
+`tuple_empty` singleton (`_PyTuple_FromStackRefStealOnSuccess`, `Objects/tupleobject.c:474-476`),
+made on first use and the same object after. -/
 def BuildRules : Prop := ∀ (e : Env) (regs : Regs) (top rest : List Val), top.length = e.oparg →
-    execOp e .BUILD_TUPLE ⟨regs, top ++ rest⟩ = .ok ()
+    (top ≠ [] → execOp e .BUILD_TUPLE ⟨regs, top ++ rest⟩ = .ok ()
       ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.push (.tuple top.reverse.toArray) } },
-        .ref regs.rt.heap.size :: rest⟩ ∧
+        .ref regs.rt.heap.size :: rest⟩) ∧
+    (top = [] → regs.rt.emptyTuple ≠ .null → execOp e .BUILD_TUPLE ⟨regs, top ++ rest⟩ = .ok ()
+      ⟨regs, regs.rt.emptyTuple :: rest⟩) ∧
+    (top = [] → regs.rt.emptyTuple = .null → execOp e .BUILD_TUPLE ⟨regs, top ++ rest⟩ = .ok ()
+      ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.push (.tuple #[]),
+                                        emptyTuple := .ref regs.rt.heap.size } },
+        .ref regs.rt.heap.size :: rest⟩) ∧
     execOp e .BUILD_LIST ⟨regs, top ++ rest⟩ = .ok ()
       ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.push (.list top.reverse.toArray) } },
         .ref regs.rt.heap.size :: rest⟩
@@ -147,15 +155,35 @@ theorem buildRules_proven : BuildRules := by
   intro e regs top rest hn
   have ht : ((top ++ rest).take e.oparg).reverse = top.reverse := by rw [← hn]; simp
   have hd : (top ++ rest).drop e.oparg = rest := by rw [← hn]; simp
-  constructor
-  · show stk _ 1 _ _ = _
+  refine ⟨fun hne => ?_, fun he hs => ?_, fun he hs => ?_, ?_⟩
+  · have hne' : top.reverse.isEmpty = false := by cases top <;> simp_all
+    show stk _ 1 _ _ = _
     refine (stk_ok (outs := [.ref regs.rt.heap.size])
       (r := { regs with rt := { regs.rt with heap := regs.rt.heap.push (.tuple top.reverse.toArray) } })
       (by simp; omega) ?_ rfl).trans ?_
     · simp only [ht]
-      simp [bind, EStateM.bind, mkTuple, alloc, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+      simp [bind, EStateM.bind, mkTuple, hne', alloc, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
         EStateM.pure]
     · simp [hd]
+  · subst he
+    have h0 : e.oparg = 0 := by simp at hn; omega
+    show stk _ 1 _ _ = _
+    refine (stk_ok (outs := [regs.rt.emptyTuple]) (r := regs) (by simp [h0]) ?_ rfl).trans ?_
+    · simp only [ht]
+      cases h : regs.rt.emptyTuple <;> simp_all [bind, EStateM.bind, mkTuple, RM.lift, liftM, monadLift,
+        MonadLift.monadLift, pure, EStateM.pure]
+    · simp [h0]
+  · subst he
+    have h0 : e.oparg = 0 := by simp at hn; omega
+    show stk _ 1 _ _ = _
+    refine (stk_ok (outs := [.ref regs.rt.heap.size])
+      (r := { regs with rt := { regs.rt with heap := regs.rt.heap.push (.tuple #[]),
+                                             emptyTuple := .ref regs.rt.heap.size } })
+      (by simp [h0]) ?_ rfl).trans ?_
+    · simp only [ht]
+      simp [bind, EStateM.bind, mkTuple, hs, RM.lift, liftM, monadLift, MonadLift.monadLift, pure,
+        EStateM.pure]
+    · simp [h0]
   · show stk _ 1 _ _ = _
     refine (stk_ok (outs := [.ref regs.rt.heap.size])
       (r := { regs with rt := { regs.rt with heap := regs.rt.heap.push (.list top.reverse.toArray) } })

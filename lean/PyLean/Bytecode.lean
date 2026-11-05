@@ -848,7 +848,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-find-kw-slot", pyFile := "Python/ceval.c"
     pyFns := ["initialize_locals"]
     statement := "For every object model and code object, the parameter a keyword names: an exact str by its text with nothing run; any other keyword object (a str subclass from a ** mapping) by PyObject_RichCompareBool(keyword, varname, Py_EQ) against co_varnames[co_posonlyargcount:total_args] in order, the first true comparison being the slot whatever the texts and an error being the result (kw_fail)."
-    source := "Python/ceval.c:1815-1838"
+    source := "Python/ceval.c:1819-1839"
     status := .proven, prop := ``FindKwSlotRules, thm := some ``findKwSlotRules_proven
     notes := "Checked on 3.15.2 with class S(str) whose __eq__ returns True, False, raises, or compares the text: f(**{S('zz'): 1}) binds abc when __eq__ is always true and raises its ValueError when it raises." },
   { id := "bytecode-initialize-locals", pyFile := "Python/ceval.c"
@@ -896,7 +896,7 @@ def entries : List Entry := GenObj.entries ++ [
     source := "invariant: no crash from pure-Python code; Python/ceval.c:1942-1966, Objects/dictobject.c:1182-1207, Objects/funcobject.c:875-906"
     status := .refuted, prop := ``KwDefC.KwonlyDefaultsNoCrash, thm := some ``KwDefC.kwonlyDefaultsNoCrash_refuted
     bug := some "bytecode-kwonly-defaults-borrowed-dict"
-    notes := "Modelled in KwDefaultsC.lean over a reference-counted C heap (the machine's initializeLocals looks __kwdefaults__ up by string and never frees). KwonlyDefaultsFixedOnUaf: holding a strong reference across the lookup turns the same state into the missing-argument TypeError." }
+    notes := "Modelled in KwDefaultsC.lean over a reference-counted C heap (the machine's initializeLocals looks __kwdefaults__ up through KwHooks.dictGet, PyDict_GetItemRef with the generic comparison, so the key's __eq__ runs and the value is read after it, but its heap never frees). KwonlyDefaultsFixedOnUaf: holding a strong reference across the lookup turns the same state into the missing-argument TypeError." }
 ]
 
 end PyLean.Bytecode
