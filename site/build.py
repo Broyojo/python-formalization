@@ -62,7 +62,12 @@ def bugs():
               ("doc", "Doesn't match the docs"), ("missing-validation", "Missing input check"),
               ("logic", "Wrong result")]
     total = 0
+    # Records for 3.14.7 behaviour that 3.15.2 no longer has do not count (coverage/gone-in-3.15.txt).
+    gone = {l.split()[0] for l in (ROOT / "coverage/gone-in-3.15.txt").read_text().splitlines()
+            if l.strip() and not l.startswith("#")}
     for p in glob.glob(str(ROOT / "bugs/*.yaml")):
+        if Path(p).stem in gone:
+            continue
         t = Path(p).read_text()
         k = re.search(r"^kind:\s*(\S+)", t, re.M)
         k = k.group(1) if k else ""
@@ -276,7 +281,7 @@ def main():
              f"| Theorems and lemmas | {values['THEOREMS']}, all checked on every build |\n"
              f"| Top-level properties | {values['PROVEN']} proven, {values['REFUTED']} refuted, {values['OPEN']} open |\n"
              f"| Functions reviewed faithful | {values['FAITHFUL']} of {values['INSCOPE']} in scope ({values['FAITHFULPCT']}) |\n"
-             f"| Bug records | {values['BUGS']}, each with a reproducer |\n")
+             f"| Bug records | {values['BUGS']} that reproduce on 3.15.2, each with a reproducer |\n")
     r = re.sub(r"(<!-- stats:start -->\n).*?(<!-- stats:end -->)", lambda m: m.group(1) + stats + m.group(2), r, flags=re.S)
     readme.write_text(r)
     print(f"wrote {OUT.relative_to(ROOT)}: {values['FAITHFUL']} faithful of {values['INSCOPE']} "

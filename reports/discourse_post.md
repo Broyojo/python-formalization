@@ -5,14 +5,14 @@
 
 Hi all,
 
-Over the past week I've been building a model of CPython 3.15.2 in Lean 4, a proof assistant. AI agents (Claude Opus 5.5) did most of the work, and I directed it and reviewed the results. Each model copies a C or Python function line by line and is tested against the real interpreter on at least 50,000 generated inputs. Only then do we prove properties about it. A second agent reviews every function, and only functions that pass review count. So far that's 4,071 functions, with 3,834 proved properties and 588 refuted ones.
+Over the past week I've been building a model of CPython 3.15.2 in Lean 4, a proof assistant. AI agents did most of the work (Claude Opus 5.5, with Codex helping in the final review of the reports), and I directed it and reviewed the results. Each model copies a C or Python function line by line and is tested against the real interpreter on at least 50,000 generated inputs. Only then do we prove properties about it. A second agent reviews every function, and only functions that pass review count. So far that's 4,071 functions, with 3,834 proved properties and 588 refuted ones.
 
-When a refuted property turns out to be CPython's fault rather than the model's, we write it up with a plain Python reproducer. Each one was checked on 3.15.2 and on main, and the tracker was searched for duplicates. Today I've filed N_ISSUES of them:
+When a refuted property turns out to be CPython's fault rather than the model's, we write it up with a plain Python reproducer. Each report filed today was rerun on 3.15.2 and on main, and the tracker was searched for duplicates. Today I've filed N_ISSUES of them:
 
 - 22 individual reports (mostly crashes), including hangs, wrong results and unexpected exceptions; many involve a callback that mutates a container while C code holds a pointer into it;
 - 19 grouped reports, organized by module, for smaller inconsistencies: C and pure-Python versions disagreeing, wrong exception types, and documentation mismatches. Some of these may be intended, and I've said so where we weren't sure.
 
-Duplicates of existing issues aren't refiled; the write-up links them instead.
+Findings that duplicate existing issues aren't refiled; their bug records in the repository link the existing issue instead.
 
 Everything is public:
 - Write-up: https://broyojo.com/python-formalization/

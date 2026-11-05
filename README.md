@@ -11,7 +11,7 @@ A Lean 4 model of CPython 3.15.2, written by AI agents, tested against the real 
 | Theorems and lemmas | 18,898, all checked on every build |
 | Top-level properties | 3,834 proven, 588 refuted, 94 open |
 | Functions reviewed faithful | 4,071 of 26,004 in scope (15.7%) |
-| Bug records | 436, each with a reproducer |
+| Bug records | 418 that reproduce on 3.15.2, each with a reproducer |
 <!-- stats:end -->
 
 ## How it works

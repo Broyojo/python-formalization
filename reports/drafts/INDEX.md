@@ -57,12 +57,12 @@ Each has a full record with a reproducer and the cause. Write the body as report
 - [x] [Small inconsistencies in ipaddress found by a formal model](group/ipaddress-1.md)
 - [x] [Small inconsistencies in the bytecode interpreter found by a formal model](group/bytecode-1.md)
 - [x] [Small inconsistencies in the parser and grammar found by a formal model](group/pygrammar-1.md)
-- [x] [Small inconsistencies in calendar and statistics found by a formal model](group/calstat-1.md)
-- [ ] [Small inconsistencies in dict and set found by a formal model](group/dictset-1.md)
-- [x] [Small inconsistencies in itertools found by a formal model](group/itertools-1.md)
-- [x] [Small inconsistencies in int found by a formal model](group/longobj-1.md)
-- [x] [Small inconsistencies in math found by a formal model](group/mathint-1.md)
-- [x] [Small inconsistencies in range and slice found by a formal model](group/rangeslice-1.md)
+- [x] [statistics._sqrtprod loses accuracy when x*y is subnormal, so correlation() of exactly linear data is far from 1](group/calstat-1.md)
+- [ ] [After dict.popitem(od), od.popitem() and od.pop(k) segfault, and iterating od never ends](group/dictset-1.md)
+- [x] [itertools.islice with stop=None yields an extra item when start + step overflows Py_ssize_t](group/itertools-1.md)
+- [x] [str(int) can return more digits than sys.set_int_max_str_digits allows when the limit is 9000 or more](group/longobj-1.md)
+- [x] [cmath.log(0, base) returns (-inf+nanj) instead of raising ValueError: the second c_log() call clears errno](group/mathint-1.md)
+- [x] [PySlice_GetIndices() returns 0 (success) with OverflowError set when a slice index does not fit in Py_ssize_t](group/rangeslice-1.md)
 
 ## Held drafts (10)
 

@@ -1,7 +1,7 @@
-<!-- title: Small inconsistencies in range and slice found by a formal model -->
+<!-- title: PySlice_GetIndices() returns 0 (success) with OverflowError set when a slice index does not fit in Py_ssize_t -->
 ### Bug report
 
-While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the cases below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. They are grouped so they can be triaged together; we're happy to split out any that deserve their own issue.
+While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the case below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. 
 
 #### 1. PySlice_GetIndices() returns 0 (success) with OverflowError set when a slice index does not fit in Py_ssize_t
 

@@ -5,3 +5,5 @@ __pycache__/
 vendor/
 .scratch/
 dashboard/data/
+scratch/
+.DS_Store

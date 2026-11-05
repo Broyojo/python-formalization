@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Formalizing CPython</title>
-<meta name="description" content="AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals, tested every piece against real Python, and found {{BUGS}} bugs along the way.">
+<meta name="description" content="AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals, tested every piece against real Python, and turned up {{BUGS}} bug reports along the way.">
 <link rel="canonical" href="https://broyojo.com/python-formalization/">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Formalizing CPython">
-<meta property="og:description" content="AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals, tested every piece against real Python, and found {{BUGS}} bugs along the way.">
+<meta property="og:description" content="AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals, tested every piece against real Python, and turned up {{BUGS}} bug reports along the way.">
 <meta property="og:url" content="https://broyojo.com/python-formalization/">
 <meta property="og:image" content="https://broyojo.com/python-formalization/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -166,7 +166,7 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 <main>
 <div class="col">
   <h1>Formalizing CPython</h1>
-  <p class="lede">AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals line by line, tested every piece against the real Python, had a computer check every proof, and found {{BUGS}} bugs in Python along the way.</p>
+  <p class="lede">AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals line by line, tested every piece against the real Python, had a computer check every proof, and turned up {{BUGS}} bug reports in Python along the way.</p>
   <div class="byline"><span>David Andrews</span><span>{{DATE}}</span><a href="https://github.com/Broyojo/python-formalization">Code and data</a></div>
 </div>
 
@@ -252,7 +252,7 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 
 <figure class="fig">
   <div class="sparkgrid"><div class="ytitle">Functions accepted</div><div class="sparks">{{TRAJ}}</div><div class="xtitle">Rounds of review →</div></div>
-  <figcaption>Share of each file's functions accepted after each round of review, taken from the project's history. Each point is one review; the scale is the same in every chart, from 0% to all of the file's functions.</figcaption>
+  <figcaption>Share of each file's reviewed functions accepted after each round of review, taken from the project's history. Each point is one review; the scale is the same in every chart, from 0% to all of the functions reviewed in that file. Accepted functions include ones the reviewer confirmed have nothing to check, such as memory bookkeeping.</figcaption>
 </figure>
 
 <div class="col">
@@ -269,10 +269,10 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
   <p>In Python, catching a <code>TypeError</code> also catches any more specific error built on top of it. Three separate copies checked an error's exact name instead. All three had proofs that a custom error type could break.</p>
 
   <h3>Memory that comes back</h3>
-  <p>The copy of Python's <code>set</code> assumed that once memory is freed, the same address never comes back. Real memory allocators reuse addresses all the time. CPython uses a "did the address change?" check to notice when user code has swapped out the set's internals. With reuse, that check can be fooled. Fixing the copy turned an accepted proof into a real memory bug, which we've reported.</p>
+  <p>The copy of Python's <code>set</code> assumed that once memory is freed, the same address never comes back. Real memory allocators reuse addresses all the time. CPython uses a "did the address change?" check to notice when user code has swapped out the set's internals. With reuse, that check can be fooled. Fixing the copy turned an accepted proof into a real memory bug, now one of our bug reports.</p>
 
   <h2>What we found</h2>
-  <p>When a proof fails because Python itself is wrong, and not the copy, we write it up as a bug report. Each report includes a short script that shows the bug on the current release and on Python's development version, a search for duplicates already reported, and an honest rating of how much it matters.</p>
+  <p>When a proof fails because Python itself is wrong, and not the copy, we write it up as a bug report. Each report includes a short script that shows the bug on Python 3.15.2 (for most, also on the development version), a search for duplicates already reported, and an honest rating of how much it matters.</p>
 </div>
 
 <figure class="fig" style="max-width:680px">
@@ -281,7 +281,7 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 </figure>
 
 <div class="col">
-  <p>Most are small: an error message that's wrong, an edge case that behaves differently from the documentation, two versions of a function that disagree. About {{CRASHY}} are more serious and can crash Python or corrupt its memory using nothing but normal Python code, usually by having user code change a container while C code is in the middle of using it. Python doesn't treat running hostile Python code as a security boundary, so these are ordinary bugs, and we're reporting them to the CPython project along with this post. Six small examples of different kinds:</p>
+  <p>Most are small: an error message that's wrong, an edge case that behaves differently from the documentation, two versions of a function that disagree. About {{CRASHY}} are more serious and can crash Python or corrupt its memory using nothing but normal Python code, usually by having user code change a container while C code is in the middle of using it. Python doesn't treat running hostile Python code as a security boundary, so these are ordinary bugs. The ones not already on CPython's tracker are being reported to the project, starting with this post. Six small examples of different kinds:</p>
 </div>
 
 <div class="fig bugs">
@@ -369,7 +369,7 @@ pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>
   <p>For Python specifically, <strong>λπ</strong><sup><a href="#r4">4</a></sup> and a <strong>K framework</strong> semantics of Python 3.3<sup><a href="#r5">5</a></sup> described the language mathematically; this project copies CPython's actual code instead. Similar efforts exist for JavaScript<sup><a href="#r6">6</a>,<a href="#r7">7</a></sup> and WebAssembly<sup><a href="#r8">8</a></sup>, and CompCert<sup><a href="#r9">9</a></sup> and seL4<sup><a href="#r10">10</a></sup> remain the high bar for fully verified software. Comparing two implementations on the same inputs, the testing half of this project, goes back decades<sup><a href="#r11">11</a>,<a href="#r12">12</a></sup>.</p>
 
   <h2>Where it stands</h2>
-  <p>The project started on {{STARTED}}. {{FAITHFUL}} of the {{INSCOPE}} functions worth checking ({{FAITHFULPCT}}) have been copied, tested, proved and accepted by review. The Lean code is {{LEANLINES}} lines in {{LEANFILES}} files, containing {{THEOREMS}} theorems and lemmas; {{PROVEN}} of the top-level properties are proved and {{REFUTED}} are proved false with a counterexample. Most of Python is still ahead, especially the large part of the standard library written in Python itself. Multithreading is out of scope for now. These {{DONECOUNT}} files are finished, meaning every function copied so far has been accepted:</p>
+  <p>The project started on {{STARTED}}. {{FAITHFUL}} of the {{INSCOPE}} functions worth checking ({{FAITHFULPCT}}) have been copied, tested, proved and accepted by review. The Lean code is {{LEANLINES}} lines in {{LEANFILES}} files, containing {{THEOREMS}} theorems and lemmas; {{PROVEN}} of the top-level properties are proved and {{REFUTED}} are proved false with a counterexample. Most of Python is still ahead, especially the large part of the standard library written in Python itself. Multithreading is out of scope for now. In these {{DONECOUNT}} files, every function copied so far has passed review. The 30 with the most accepted functions:</p>
   <ul class="files">{{DONE}}</ul>
 
   <h2>References</h2>

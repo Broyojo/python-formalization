@@ -5,7 +5,7 @@ While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalizati
 
 #### 1. ipaddress: exploded of an IPv4-mapped IPv6 address or interface loses the scope id and the prefix
 
-IPv6Address._explode_shorthand_ip_string formats an IPv4-mapped address by keeping the first 30 characters of the base method's result and appending the dotted quad. That was written for a base result of exactly 39 characters. IPv6Interface inherits the method, and its base result ends in /prefixlen, so IPv6Interface('::ffff:1.2.3.4/64').exploded is '0000:0000:0000:0000:0000:ffff:1.2.3.4', with no /64. Since gh-88178 the base result of a scoped address ends in %scope, so IPv6Address('::ffff:1.2.3.4%eth0').exploded loses its scope id too, which is the one thing that fix set out to keep. str() and compressed show both. exploded of every address and interface outside ::ffff:0:0/96 keeps them (Lean: ipaddress-exploded-by-case).
+IPv6Address._explode_shorthand_ip_string formats an IPv4-mapped address by keeping the first 30 characters of the base method's result and appending the dotted quad. That was written for a base result of exactly 39 characters. IPv6Interface inherits the method, and its base result ends in /prefixlen, so IPv6Interface('::ffff:1.2.3.4/64').exploded is '0000:0000:0000:0000:0000:ffff:1.2.3.4', with no /64. Since gh-88178 the base result of a scoped address ends in %scope, so IPv6Address('::ffff:1.2.3.4%eth0').exploded loses its scope id too, which is the one thing that fix set out to keep. str() and compressed show both. exploded of every address and interface outside ::ffff:0:0/96 keeps them.
 
 <details><summary>Reproducer</summary>
 

@@ -22,7 +22,7 @@ if longest > 76:
 
 #### 2. csv.writer silently drops delimiters after 2**31 fields, because num_fields is a C int
 
-WriterObj.num_fields is a C int (Modules/_csv.c:149), incremented with no check for every field (:1297). join_append_data writes a delimiter when num_fields > 0 (:1173). With a row of more than INT_MAX fields the count wraps negative, which is undefined behaviour in C and in practice a wrap, and every later field is written with no delimiter and no error. Fields run together silently. The Lean model, where the count is a C int, predicted the exact figure below before it was measured: a row of 2147483653 fields gets 2147483647 delimiters, not 2147483652.
+WriterObj.num_fields is a C int (Modules/_csv.c:149), incremented with no check for every field (:1297). join_append_data writes a delimiter when num_fields > 0 (:1173). With a row of more than INT_MAX fields the count wraps negative, which is undefined behaviour in C and in practice a wrap, and every later field is written with no delimiter and no error. Fields run together silently. The count is a C int: a row of 2147483653 fields gets 2147483647 delimiters, not 2147483652.
 
 <details><summary>Reproducer</summary>
 
@@ -43,7 +43,7 @@ if got[0] != n - 1:
 
 #### 3. csv.writer does not quote a leading space under skipinitialspace=True, so the reader silently drops it
 
-With skipinitialspace=True, `csv.writer` writes the field ' a' unquoted, and `csv.reader` with the same dialect reads 'a'. A field ' ' reads back as ''. The data changes silently: no error is raised, and the dialect is the same on both sides. In a sweep of 300000 random dialects and rows, every round trip failure had skipinitialspace=True; with it off, none failed, and for QUOTE_MINIMAL and QUOTE_ALL with a newline terminator that is proved (CsvRoundTripNoSkip). The Lean refutation is CsvRoundTrip.
+With skipinitialspace=True, `csv.writer` writes the field ' a' unquoted, and `csv.reader` with the same dialect reads 'a'. A field ' ' reads back as ''. The data changes silently: no error is raised, and the dialect is the same on both sides. In a sweep of 300000 random dialects and rows, every round trip failure had skipinitialspace=True; with it off, none failed, and for QUOTE_MINIMAL and QUOTE_ALL with a newline terminator that is proved (CsvRoundTripNoSkip).
 
 *May be intended:* Unclear, and probably not. The writer already handles the neighbouring case: python/cpython#115712 made it quote empty fields for delimiter=' ' with skipinitialspace=True, because they would otherwise be lost, and #138005 documented that. A leading space is the same loss. Against this, the docs describe skipinitialspace in terms of the reader, and quoting changes the output of existing programs, so a maintainer may prefer a documentation note. QUOTE_NONE has no quoting to use, so the fix there would be escaping or an error.
 
