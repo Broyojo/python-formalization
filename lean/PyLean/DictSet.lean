@@ -356,6 +356,16 @@ def entries : List Entry := [
     source := "setobject.c:413-433", status := .proven
     prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
     notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); every read of an entry, in the walks, the re-check and the entry functions, goes through the pointer and past the end of a table reads the freed block's stale bytes (SetObj.mem). lookkey_dispatch_probe shows the dispatch is observable." },
+  { id := "set-add-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
+    statement := "For every key protocol, one step of the add's walk, on the branches that call no __eq__, in the state as it is: a NULL entry ends the walk there with the freeslot it had; the very object is found_active whatever __eq__ would answer; two exact str that unicode_eq calls equal are found_active; another hash is passed with mask and freeslot as they were; a dummy becomes the freeslot, replacing any earlier one."
+    source := "setobject.c:275-301", status := .proven
+    prop := ``AddStepBranches, thm := some ``addStepBranches_proven
+    notes := "nan_identity_probe: s = {x}; s.add(x) keeps one element for a key not equal to itself; last_dummy_probe: with dummies at 0 and 6 on the path the add stores at 6 and iteration gives [2, 4]. Both as on 3.15.2 (probed)." },
+  { id := "set-look-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held", "set_compare_frozenset"]
+    statement := "For every key protocol and both compare functions, in the state as it is: a NULL entry ends the block there; the very object is found with no call to __eq__; a dummy is passed; an entry with another hash and another object is passed."
+    source := "setobject.c:138-165, :172-193", status := .proven
+    prop := ``LookStepBranches, thm := some ``lookStepBranches_proven
+    notes := "nan_identity_probe: x in {x} is True for a key not equal to itself, as on 3.15.2." },
   { id := "set-add-restart", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "For every key protocol, step by step and turn by turn: a step that ends the block ends the walk with it, one that goes on moves to the next entry with the mask and freeslot it left, a finished block moves to the next probe with that mask; a turn that ends in an exception, found_active, a restart, a NULL with no freeslot (store, fill and used grow, resize at the load limit), a NULL with a freeslot still a dummy (store there, used grows), or a NULL with a freeslot that __eq__ refilled (restart) does exactly that, each from the state __eq__ left."
     source := "setobject.c:252-335", status := .proven

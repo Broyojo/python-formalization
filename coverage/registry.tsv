@@ -1187,6 +1187,8 @@ set-frozen-identity-first	proven	Objects/setobject.c	set_compare_frozenset,set_c
 set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_unhashable_type
 set-unhashable-type	proven	Objects/setobject.c	set_unhashable_type
 set-lookkey-body	proven	Objects/setobject.c	set_lookkey
+set-add-step-branches	proven	Objects/setobject.c	set_add_entry_takeref
+set-look-step-branches	proven	Objects/setobject.c	set_compare_entry_lock_held,set_compare_frozenset
 set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
 set-update-iterable-body	proven	Objects/setobject.c	set_update_iterable_lock_held
 set-update-iterable-refines	proven	Objects/setobject.c	set_update_iterable_lock_held
