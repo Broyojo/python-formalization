@@ -1018,4 +1018,79 @@ theorem shuffleBitsBijective_proven : ShuffleBitsBijective := by
     calc f h = shuffleBits (unshuffleBits (f h)) := (hinv _ h1).symm
       _ = shuffleBits h := by rw [h2]
 
+/-! ## The steps of the probes, branch by branch -/
+
+/-- One step of `set_add_entry_takeref`'s walk (:275-301), for every key protocol, on the branches
+that call no `__eq__`, each in the state as it is: a NULL entry ends the walk there, carrying the
+`freeslot` it had (:275-276); an entry holding the very object (`startkey == key`, :280-281) is
+`found_active`, whatever `__eq__` would answer; two exact `str` that `unicode_eq` calls equal are
+`found_active` (:282-285); an entry with another hash is passed with `mask` and `freeslot` as they
+were; and a dummy (`entry->hash == -1`, :298-301) becomes the `freeslot`, replacing any earlier one,
+so the last dummy on the path wins. -/
+def AddStepBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot mask : Nat)
+    (fs : Option Nat) (so : SetObj K),
+    (so.mem slot = .null → addStep P key hash slot mask fs so = (.ok (.inl (.unused slot fs mask)), so)) ∧
+    (so.mem slot = .dummy → addStep P key hash slot mask fs so = (.ok (.inr (mask, some slot)), so)) ∧
+    (so.mem slot = .active key hash → addStep P key hash slot mask fs so = (.ok (.inl .active), so)) ∧
+    (∀ k, so.mem slot = .active k hash → P.isStr k = true → P.isStr key = true →
+      P.strEq k key = true → addStep P key hash slot mask fs so = (.ok (.inl .active), so)) ∧
+    (∀ k h, so.mem slot = .active k h → h ≠ hash →
+      addStep P key hash slot mask fs so = (.ok (.inr (mask, fs)), so))
+theorem addStepBranches_proven : AddStepBranches := by
+  intro K _ P key hash slot mask fs so
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h h1 h2 h3 => ?_, fun k h hm hne => ?_⟩
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · by_cases hk : k = key
+    · simp [addStep, M.bind_run, M.get_run, h, hk]
+    · simp [addStep, M.bind_run, M.get_run, h, hk, h1, h2, h3]
+  · simp [addStep, M.bind_run, M.get_run, hm, hne]
+
+/-- The same for `set_compare_entry_lock_held` (:138-165) and `set_compare_frozenset` (:172-193):
+a NULL entry is `SET_LOOKKEY_EMPTY`, ending the block at it; an entry holding the very object is
+`SET_LOOKKEY_FOUND` with no call to `__eq__` (:146-147, :180-182), in both; a dummy, or an entry
+with another hash in the locked compare, is passed. -/
+def LookStepBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot : Nat)
+    (so : SetObj K) (fr : Bool),
+    (so.mem slot = .null → lookStep P fr key hash slot so = (.ok (.inl (.found slot)), so)) ∧
+    (so.mem slot = .dummy → lookStep P fr key hash slot so = (.ok (.inr ()), so)) ∧
+    (so.mem slot = .active key hash → lookStep P fr key hash slot so = (.ok (.inl (.found slot)), so)) ∧
+    (∀ k h, so.mem slot = .active k h → h ≠ hash → k ≠ key →
+      lookStep P fr key hash slot so = (.ok (.inr ()), so))
+theorem lookStepBranches_proven : LookStepBranches := by
+  intro K _ P key hash slot so fr
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h hm hne hk => ?_⟩
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, hm, hne, hk]
+
+/-- A key that is not equal to itself (`float('nan')`): every `==` answers no. -/
+def nanProto : Proto Nat (SetObj Nat) := { natSetProto with eq := fun _ _ s => (.ok false, s) }
+
+/-- The identity tests matter: with a key that is not equal to itself, `s = {x}; s.add(x)` keeps one
+element and `x in s` is `True`, because the entry holds the very object (:146-147, :280-281); an add
+or a lookup without the identity test would compare, hear no, and add a second copy or answer
+`False`. CPython 3.15.2: `len(t)` is 1 and `x in t` is True for `x = float('nan')` (probed). -/
+theorem nan_identity_probe :
+    setKeys (setAddKey nanProto 1 (setAddKey nanProto 1 {}).2).2 = [1] ∧
+    (setContainsKey nanProto 1 (setAddKey nanProto 1 {}).2).1 = .ok true := by
+  constructor <;> decide +kernel
+
+/-- Keys `1`, `2`, `3` hashing to 0 go in at slots 0, 1 and 6; discarding `1` and `3` leaves dummies at
+0 and 6 on the path of hash 0 (0, 1, 6, 7). -/
+def twoDummies : SetObj Nat := setProg plainZero [.add 1, .add 2, .add 3, .discard 1, .discard 3] {}
+
+/-- The last dummy wins (:298-301): adding `4` records the dummy at 0, then the one at 6, reaches the
+NULL at 7, and stores at 6, so iteration gives `[2, 4]`; keeping the first dummy would store at 0 and
+give `[4, 2]`. CPython 3.15.2 gives `[2, 4]` (probed). -/
+theorem last_dummy_probe :
+    twoDummies.slot 0 = .dummy ∧ twoDummies.slot 6 = .dummy ∧ setKeys twoDummies = [2] ∧
+    (addOuter plainZero 4 0 (setProbeFuel 7) 0 0 7 none twoDummies).1 = .ok (.unused 7 (some 6) 7) ∧
+    setKeys (setAddKey plainZero 4 twoDummies).2 = [2, 4] := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
 end PyLean.DictSet

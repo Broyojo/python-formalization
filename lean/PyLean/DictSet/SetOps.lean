@@ -148,7 +148,7 @@ def forNext (id : Nat) (body : K → Int → SM K Bool) : Nat → Nat → SM K B
       if ← body key hash then return true
       forNext id body fuel pos'
 
-/-- The last loop of `set_merge_lock_held` (:883-890): `other->mask` and `other->table` again at each
+/-- The last loop of `set_merge_lock_held` (:889-896): `other->mask` and `other->table` again at each
 turn. -/
 def setMergeLoop (id : Nat) : Nat → Nat → SM K Unit
   | 0, _ => M.throw .modelFuel
