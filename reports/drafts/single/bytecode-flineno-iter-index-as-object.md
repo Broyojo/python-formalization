@@ -1,24 +1,9 @@
-<!-- title: f_lineno jump analysis treats the second slot of GET_ITER as an object … -->
+<!-- title: Setting f_lineno to jump out of a for loop crashes -->
 # Bug report
 
 ### Bug description
 
-On 3.15 `GET_ITER` pushes two values, `(iterable -- iter, index_or_null)`
-(Python/bytecodes.c:3736). The upper one is not an object: `_PyEval_GetIter` stores
-`PyStackRef_TagInt(0)` for an exact list, tuple, str or bytes (Python/ceval.c:1136) and
-`PyStackRef_NULL` for everything else (:1139). `mark_stacks` follows the new shape but gives
-both slots the kind `Iterator` (Objects/frameobject.c:1396-1400), and `compatible_kind` lets
-`Iterator` flow into `Object` (:1183-1195, `to == Object` only rejects `Null`).
-In a `for` body the stack is now `[Iterator, Iterator]`, which is exactly as tall as the
-`[Object, Object]` in the middle of a two-line expression. When `frame.f_lineno = n` names such
-a line, `frame_lineno_set_impl` looks at every place the line table starts line `n`
-(:1766-1789). The first start has an empty stack, the second, where the line resumes after
-the continuation line, has `[Object, Object]`. Both are compatible, and the taller wins at
-`target_stack > best_stack` (:1771). Nothing is popped (:1825) and the frame resumes at `BUILD_LIST 2`
-with the iterable and the index as its operands. `_PyList_FromStackRefStealOnSuccess`
-(Objects/listobject.c:3326) then treats the index slot as an object and the process dies.
-On 3.14 the same analysis had `[Iterator]`, one entry against two, so `compatible_stack`
-rejected that target and the jump went to the true start of the line.
+On 3.15 `GET_ITER` pushes two values, `(iterable -- iter, index_or_null)` (Python/bytecodes.c:3736). The upper one is not an object: `_PyEval_GetIter` stores `PyStackRef_TagInt(0)` for an exact list, tuple, str or bytes (Python/ceval.c:1136) and `PyStackRef_NULL` for everything else (:1139). `mark_stacks` follows the new shape but gives both slots the kind `Iterator` (Objects/frameobject.c:1396-1400), and `compatible_kind` lets `Iterator` flow into `Object` (:1183-1195, `to == Object` only rejects `Null`). In a `for` body the stack is now `[Iterator, Iterator]`, which is exactly as tall as the `[Object, Object]` in the middle of a two-line expression. When `frame.f_lineno = n` names such a line, `frame_lineno_set_impl` looks at every place the line table starts line `n` (:1766-1789). The first start has an empty stack, the second, where the line resumes after the continuation line, has `[Object, Object]`. Both are compatible, and the taller wins at `target_stack > best_stack` (:1771). Nothing is popped (:1825) and the frame resumes at `BUILD_LIST 2` with the iterable and the index as its operands. `_PyList_FromStackRefStealOnSuccess` (Objects/listobject.c:3326) then treats the index slot as an object and the process dies. On 3.14 the same analysis had `[Iterator]`, one entry against two, so `compatible_stack` rejected that target and the jump went to the true start of the line.
 
 ```python
 import subprocess, sys, textwrap
@@ -56,7 +41,7 @@ if r.returncode < 0:
 
 **Expected:** The jump lands at the true start of the line, with the loop's two slots popped, as it does on 3.14.7, or it is rejected with `ValueError`. It must not resume with the index slot as an operand.
 
-**Actual:** python3 3.15.2: frame.f_lasti reads 8 after the jump (offset of BUILD_LIST), then segmentation fault in _PyList_FromStackRefStealOnSuccess. Same for `iter(x)`, a generator expression, range(2), a tuple and dict.fromkeys(x), so both the tagged-int and the NULL form of the slot crash. REPRODUCED. main (vendor/cpython-main/python.exe, 3.16.0a1+dev, ef1fce0): same. REPRODUCED. 3.14.7 (not a target, run to date the regression): frame.f_lasti reads 2, the function returns.
+**Actual:** python3 3.15.2: frame.f_lasti reads 8 after the jump (offset of BUILD_LIST), then segmentation fault in _PyList_FromStackRefStealOnSuccess. Same for `iter(x)`, a generator expression, range(2), a tuple and dict.fromkeys(x), so both the tagged-int and the NULL form of the slot crash. main (vendor/cpython-main/python.exe, 3.16.0a1+dev, ef1fce0): same. 3.14.7 (not a target, run to date the regression): frame.f_lasti reads 2, the function returns.
 
 **Cause:** Objects/frameobject.c:1396-1400 marks both GET_ITER outputs `Iterator`. :1183-1195 `compatible_kind` accepts `Iterator -> Object`, which is sound for a real iterator and unsound for `index_or_null`. Python/ceval.c:1136 and :1139 are what that slot actually holds. :1771 `target_stack > best_stack` then prefers the taller, wrong target over the safe one. Found by bytecode_frame_diff.py: seed 0 first draws this triple at case 5127, which is why a 3000-case run passed and a 20000-case run segfaulted.
 
@@ -64,11 +49,12 @@ if r.returncode < 0:
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/bytecode-flineno-iter-index-as-object.yaml

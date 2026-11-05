@@ -1,21 +1,9 @@
-<!-- title: compile() segfaults on a hand-built AST with None in any of 11 list … -->
+<!-- title: compile() segfaults on an AST with None in a list field -->
 # Bug report
 
 ### Bug description
 
-obj2ast for a sum type turns None into NULL, so a list element None becomes a NULL entry. The
-validator guards this for expressions and statements ("None disallowed in expression list") but
-not for the other sum-typed lists. compile(ast.Module([ast.Try([ast.Pass()], [None], [], [])], []),
-...) reaches VALIDATE_POSITIONS(handler) with handler NULL and the interpreter dies with SIGSEGV.
-MatchSequence([None]) does the same through validate_patterns and validate_pattern.
-TypeAlias(type_params=[None]) passes validation, since validate_type_params skips NULL, and
-crashes later in the compiler. Product types are not affected, because their obj2ast raises
-'required field missing'. The crash needs no deep nesting: each tree here has a handful of nodes.
-Replacing one element by None in every list field of a tree that uses all of them gives SIGSEGV for
-Try.handlers, TryStar.handlers, MatchSequence.patterns, MatchOr.patterns, MatchMapping.patterns,
-MatchMapping.keys, MatchClass.patterns, MatchClass.kwd_patterns, MatchClass.kwd_attrs,
-FunctionDef.type_params and Global.names. MatchMapping.keys dies in validate_pattern at key->kind,
-kwd_attrs in validate_name, Global.names past the validator.
+obj2ast for a sum type turns None into NULL, so a list element None becomes a NULL entry. The validator guards this for expressions and statements ("None disallowed in expression list") but not for the other sum-typed lists. compile(ast.Module([ast.Try([ast.Pass()], [None], [], [])], []), ...) reaches VALIDATE_POSITIONS(handler) with handler NULL and the interpreter dies with SIGSEGV. MatchSequence([None]) does the same through validate_patterns and validate_pattern. TypeAlias(type_params=[None]) passes validation, since validate_type_params skips NULL, and crashes later in the compiler. Product types are not affected, because their obj2ast raises 'required field missing'. The crash needs no deep nesting: each tree here has a handful of nodes. Replacing one element by None in every list field of a tree that uses all of them gives SIGSEGV for Try.handlers, TryStar.handlers, MatchSequence.patterns, MatchOr.patterns, MatchMapping.patterns, MatchMapping.keys, MatchClass.patterns, MatchClass.kwd_patterns, MatchClass.kwd_attrs, FunctionDef.type_params and Global.names. MatchMapping.keys dies in validate_pattern at key->kind, kwd_attrs in validate_name, Global.names past the validator.
 
 ```python
 import subprocess, sys
@@ -36,11 +24,12 @@ print(r.returncode)
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/pygrammar-check-none-in-list-segfault.yaml

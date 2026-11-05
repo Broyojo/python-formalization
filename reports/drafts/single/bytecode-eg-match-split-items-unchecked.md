@@ -1,24 +1,9 @@
-<!-- title: except* installs whatever an ExceptionGroup subclass's split() returns … -->
+<!-- title: except* trusts the items returned by an overridden split() -->
 # Bug report
 
 ### Bug description
 
-For an exception group that does not match the except* type as a whole,
-_PyEval_ExceptionGroupMatch (Python/ceval.c:2313-2340) calls the group's split attribute with
-PyObject_CallMethod, so a subclass's own split() runs. Since gh-128049 the result is checked to be
-an exact tuple of at least two items (:2321-2337), but the two items are taken as they are:
-*match = PyTuple_GET_ITEM(pair, 0), *rest = PyTuple_GET_ITEM(pair, 1) (:2339-2340). CHECK_EG_MATCH
-(Python/bytecodes.c:3415-3439) then calls PyErr_SetHandledException(match_o) for any match that
-is not None (:3434-3436), and _PyErr_SetHandledException (Python/errors.c:619-622) stores it in
-tstate->exc_info->exc_value without a type check. With split() returning (1, None) the handler
-body runs with `as e` bound to 1 and sys.exception() returning 1. The next exception raised in the
-handler goes through _PyErr_SetObject, which reads the topmost handled exception as a
-PyBaseExceptionObject to chain __context__ (PyException_GetContext), and the interpreter dies with
-SIGSEGV (C stack: PyException_GetContext <- _PyErr_SetObject <- _PyEval_EvalFrameDefault). A
-non-exception `rest`, as in split() returning (None, 1), reaches the re-raise and the top level
-then reports "print_exception(): Exception expected for value, int found": an int was raised.
-The Lean model states the body (CheckEgMatchRules, ExceptionGroupMatchRules, proven) and refutes
-"CHECK_EG_MATCH keeps the handled exception an exception instance" with split() returning (1, None).
+For an exception group that does not match the except* type as a whole, _PyEval_ExceptionGroupMatch (Python/ceval.c:2313-2340) calls the group's split attribute with PyObject_CallMethod, so a subclass's own split() runs. Since gh-128049 the result is checked to be an exact tuple of at least two items (:2321-2337), but the two items are taken as they are: *match = PyTuple_GET_ITEM(pair, 0), *rest = PyTuple_GET_ITEM(pair, 1) (:2339-2340). CHECK_EG_MATCH (Python/bytecodes.c:3415-3439) then calls PyErr_SetHandledException(match_o) for any match that is not None (:3434-3436), and _PyErr_SetHandledException (Python/errors.c:619-622) stores it in tstate->exc_info->exc_value without a type check. With split() returning (1, None) the handler body runs with `as e` bound to 1 and sys.exception() returning 1. The next exception raised in the handler goes through _PyErr_SetObject, which reads the topmost handled exception as a PyBaseExceptionObject to chain __context__ (PyException_GetContext), and the interpreter dies with SIGSEGV (C stack: PyException_GetContext <- _PyErr_SetObject <- _PyEval_EvalFrameDefault). A non-exception `rest`, as in split() returning (None, 1), reaches the re-raise and the top level then reports "print_exception(): Exception expected for value, int found": an int was raised. The Lean model states the body (CheckEgMatchRules, ExceptionGroupMatchRules, proven) and refutes "CHECK_EG_MATCH keeps the handled exception an exception instance" with split() returning (1, None).
 
 ```python
 import subprocess, sys
@@ -50,11 +35,12 @@ print(r2.returncode, r2.stdout.strip())
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/bytecode-eg-match-split-items-unchecked.yaml

@@ -1,16 +1,9 @@
-<!-- title: bytearray.__init__ from an iterator tests capacity without ob_start: an … -->
+<!-- title: bytearray.__init__ from an iterator can write past the buffer -->
 # Bug report
 
 ### Bug description
 
-The slow path of bytearray.__init__ appends in place when `Py_SIZE(self) + 1 < self->ob_alloc`.
-ob_alloc counts from ob_bytes, but the bytes start at ob_start, so after a front deletion
-(`b[:k] = b''` advances ob_start) the free space is ob_alloc - offset. An iterator can do that while
-__init__ runs, because self is reachable. Every later item then grows the object past the end of the
-allocation.
-Lean: InitLoopKeepsLayout (one append of this loop keeps a valid buffer layout) is refuted, by the same
-BA.WF invariant that ResizeWF proves bytearray_resize_lock_held keeps. InitLoopFreshLayout, the same
-statement for offset 0, is proven, so the offset is the whole cause.
+The slow path of bytearray.__init__ appends in place when `Py_SIZE(self) + 1 < self->ob_alloc`. ob_alloc counts from ob_bytes, but the bytes start at ob_start, so after a front deletion (`b[:k] = b''` advances ob_start) the free space is ob_alloc - offset. An iterator can do that while __init__ runs, because self is reachable. Every later item then grows the object past the end of the allocation. Lean: InitLoopKeepsLayout (one append of this loop keeps a valid buffer layout) is refuted, by the same BA.WF invariant that ResizeWF proves bytearray_resize_lock_held keeps. InitLoopFreshLayout, the same statement for offset 0, is proven, so the offset is the whole cause.
 
 ```python
 b = bytearray()
@@ -38,7 +31,7 @@ print('len', len(b), 'alloc', it.alloc, 'now', b.__alloc__() - 33, 'offset', K)
 
 **Expected:** The append goes through PyByteArray_Resize and stays inside the allocation.
 
-**Actual:** python3 3.15.2: len 251, ob_alloc 400, offset 150: the object reaches offset + len = 401 > ob_alloc with the allocation unchanged. REPRODUCED. main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+**Actual:** python3 3.15.2: len 251, ob_alloc 400, offset 150: the object reaches offset + len = 401 > ob_alloc with the allocation unchanged. main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same.
 
 **Cause:** Objects/bytearrayobject.c:1165-1168: the test ignores `ob_start - ob_bytes`.
 
@@ -46,11 +39,12 @@ print('len', len(b), 'alloc', it.alloc, 'now', b.__alloc__() - 33, 'offset', K)
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/bytesobj-bytearray-init-iterator-ignores-start.yaml

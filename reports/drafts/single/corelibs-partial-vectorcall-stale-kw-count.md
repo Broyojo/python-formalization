@@ -1,16 +1,9 @@
-<!-- title: partial_vectorcall trusts a keyword count taken before a key's __eq__ … -->
+<!-- title: Calling functools.partial writes out of bounds when a key's __eq__ re-enters -->
 # Bug report
 
 ### Bug description
 
-New in 3.15: partial_vectorcall merges stored and call keywords itself instead of falling back to partial_call. It reads
-pto_nkwds = PyDict_GET_SIZE(partial_keywords), sizes `stack` and the keyword-name tuple from it, and then calls
-PyDict_Contains(partial_keywords, key) for each call keyword. That lookup can run a key's __eq__, for a str subclass whose hash
-collides with a stored key, and p.keywords is the same dict and is writable. The later PyDict_Next loop walks the dict as
-it is then, and asserts i == pto_nkwds only in a debug build. If the dict grew, the loop writes past the tuple and past
-`stack`: in a release build that is a stack smash when `stack` is small_stack. If it shrank, the tuple keeps NULL items and
-the callee reads them: a segfault. If one key was added and the sizes still fit, a call keyword is silently lost.
-The holding of references added for gh-154189 protects the dict object and not its size.
+New in 3.15: partial_vectorcall merges stored and call keywords itself instead of falling back to partial_call. It reads pto_nkwds = PyDict_GET_SIZE(partial_keywords), sizes `stack` and the keyword-name tuple from it, and then calls PyDict_Contains(partial_keywords, key) for each call keyword. That lookup can run a key's __eq__, for a str subclass whose hash collides with a stored key, and p.keywords is the same dict and is writable. The later PyDict_Next loop walks the dict as it is then, and asserts i == pto_nkwds only in a debug build. If the dict grew, the loop writes past the tuple and past `stack`: in a release build that is a stack smash when `stack` is small_stack. If it shrank, the tuple keeps NULL items and the callee reads them: a segfault. If one key was added and the sizes still fit, a call keyword is silently lost. The holding of references added for gh-154189 protects the dict object and not its size.
 
 ```python
 import subprocess, sys, textwrap
@@ -36,7 +29,7 @@ print(r.returncode, r.stdout[-200:], r.stderr[-200:])
 
 **Expected:** The call keeps working on a consistent view of the keywords, as it does on 3.14.7, where the same program prints a result.
 
-**Actual:** python3 3.15.2: stack smashing detected, signal 6, when the dict grows; segfault, signal 11, when it is cleared; a dropped call keyword when one key is added. REPRODUCED. main (3.16.0a1+dev): segfault on grow and on clear. REPRODUCED. 3.14.7: no crash.
+**Actual:** python3 3.15.2: stack smashing detected, signal 6, when the dict grows; segfault, signal 11, when it is cleared; a dropped call keyword when one key is added. main (3.16.0a1+dev): segfault on grow and on clear. 3.14.7: no crash.
 
 **Cause:** Modules/_functoolsmodule.c, partial_vectorcall: the count is read once, `PyDict_Contains(partial_keywords, key)` in the merge loop can run arbitrary code, and the PyDict_Next loop after it writes `tot_kwnames` and `stack` by index with no bound in a release build.
 
@@ -44,11 +37,12 @@ print(r.returncode, r.stdout[-200:], r.stderr[-200:])
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-partial-vectorcall-stale-kw-count.yaml

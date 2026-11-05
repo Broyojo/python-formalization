@@ -1,17 +1,9 @@
-<!-- title: zoneinfo: ZoneInfo.clear_cache() frees strong-cache nodes while the … -->
+<!-- title: ZoneInfo.clear_cache() can free cache nodes that are still in use -->
 # Bug report
 
 ### Bug description
 
-`clear_strong_cache` (Modules/_zoneinfo.c:2581-2590) calls `strong_cache_free(state->ZONEINFO_STRONG_CACHE)`
-and only afterwards sets `state->ZONEINFO_STRONG_CACHE = NULL`. `strong_cache_free` (:2392-2402)
-walks the list and, for each node, `strong_cache_node_free` (:2377-2383) runs `Py_XDECREF(node->key)`
-and `Py_XDECREF(node->zone)` before `PyMem_Free(node)`. Dropping the last reference to a key runs
-arbitrary Python code (a str subclass's `__del__`). If that code constructs a `ZoneInfo`, the
-constructor updates the strong cache through `state->ZONEINFO_STRONG_CACHE` (`update_strong_cache`
-and the move-to-front / eject logic), which still points at the nodes being freed: it links new
-nodes to freed ones, reads `next`/`prev` from freed nodes, and frees nodes a second time. The
-process segfaults.
+`clear_strong_cache` (Modules/_zoneinfo.c:2581-2590) calls `strong_cache_free(state->ZONEINFO_STRONG_CACHE)` and only afterwards sets `state->ZONEINFO_STRONG_CACHE = NULL`. `strong_cache_free` (:2392-2402) walks the list and, for each node, `strong_cache_node_free` (:2377-2383) runs `Py_XDECREF(node->key)` and `Py_XDECREF(node->zone)` before `PyMem_Free(node)`. Dropping the last reference to a key runs arbitrary Python code (a str subclass's `__del__`). If that code constructs a `ZoneInfo`, the constructor updates the strong cache through `state->ZONEINFO_STRONG_CACHE` (`update_strong_cache` and the move-to-front / eject logic), which still points at the nodes being freed: it links new nodes to freed ones, reads `next`/`prev` from freed nodes, and frees nodes a second time. The process segfaults.
 
 ```python
 import subprocess, sys
@@ -45,7 +37,7 @@ print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n
 
 **Expected:** `clear_cache()` empties the strong cache; the ZoneInfo objects created by `__del__` are either cached in a fresh list or dropped; the process continues ("survived").
 
-**Actual:** python3 3.15.2: child prints "clearing", then dies with SIGSEGV (rc -11). REPRODUCED. main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+**Actual:** python3 3.15.2: child prints "clearing", then dies with SIGSEGV (rc -11). main (3.16.0a1+dev, ef1fce0): identical.
 
 **Cause:** Modules/_zoneinfo.c:2588-2589: the list is freed (running key/zone destructors) while `state->ZONEINFO_STRONG_CACHE` still points at its head; it is cleared only after the walk.
 
@@ -53,11 +45,12 @@ print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/datetime-zoneinfo-clear-cache-reentrant-free.yaml

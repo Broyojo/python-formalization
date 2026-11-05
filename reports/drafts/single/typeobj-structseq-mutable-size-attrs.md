@@ -1,15 +1,9 @@
-<!-- title: Struct sequences trust n_fields, n_sequence_fields and … -->
+<!-- title: Struct sequences trust size attributes that Python code can rebind -->
 # Bug report
 
 ### Bug description
 
-`get_type_attr_as_size` (structseq.c:27-42) reads `n_fields`, `n_sequence_fields` and
-`n_unnamed_fields` from the type's dict. The heap types built by `PyStructSequence_NewType`
-(`os.stat_result`, `os.terminal_size`, `time.struct_time`, `resource.struct_rusage`, ...) are
-not `Py_TPFLAGS_IMMUTABLETYPE`, so plain Python can rebind those attributes. The C code then
-uses them as memory bounds, mixed with `get_real_size` (`Py_SIZE` + the hidden slots counted in
-`tp_basicsize`, :55-62), which Python cannot change. Three paths go out of bounds without a
-`dict` argument, and so are not the path in gh-155322:
+`get_type_attr_as_size` (structseq.c:27-42) reads `n_fields`, `n_sequence_fields` and `n_unnamed_fields` from the type's dict. The heap types built by `PyStructSequence_NewType` (`os.stat_result`, `os.terminal_size`, `time.struct_time`, `resource.struct_rusage`, ...) are not `Py_TPFLAGS_IMMUTABLETYPE`, so plain Python can rebind those attributes. The C code then uses them as memory bounds, mixed with `get_real_size` (`Py_SIZE` + the hidden slots counted in `tp_basicsize`, :55-62), which Python cannot change. Three paths go out of bounds without a `dict` argument, and so are not the path in gh-155322:
 
 ```python
 import subprocess, sys
@@ -48,7 +42,7 @@ for name, code in CASES.items():
 
 **Expected:** Each case raises an exception (or works on the new sizes), and the interpreter keeps running.
 
-**Actual:** python3 (3.15.2): all three subprocesses die with SIGSEGV (return code -11); the n_fields = 2**62 case also segfaults. REPRODUCED by scripts/check_bugs.py. main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
+**Actual:** python3 (3.15.2): all three subprocesses die with SIGSEGV (return code -11); the n_fields = 2**62 case also segfaults. by scripts/check_bugs.py. main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same,
 
 **Cause:** Objects/structseq.c:27-42 returns whatever int the dict holds. :65-88 sizes the block from it; :399, :447-449 (replace) and :351, :368-370 (reduce) loop over `get_real_size`, which comes from `tp_basicsize`; :369 and :242 index `tp_members` with `n_unnamed_fields` from the dict; :173-186 then :228 read the dict on both sides of `PySequence_Fast`, which runs Python code. `PyStructSequence_NewType` (:780) builds a mutable heap type.
 
@@ -56,11 +50,12 @@ for name, code in CASES.items():
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-structseq-mutable-size-attrs.yaml

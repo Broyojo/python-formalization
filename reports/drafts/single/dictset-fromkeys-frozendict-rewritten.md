@@ -1,15 +1,9 @@
-<!-- title: frozendict.fromkeys of a subclass hands an untracked frozendict to … -->
+<!-- title: frozendict.fromkeys() on a subclass can mutate a frozendict in place -->
 # Bug report
 
 ### Bug description
 
-Since gh-151722, `_PyDict_FromKeys` uses "not tracked by the GC" to mean "a frozendict still being
-built, which I may fill". A tracked frozendict returned by `cls()` is copied into a fresh untracked
-frozendict, which is filled and then passed to `cls(d)` at :3593. That call runs Python code
-(`cls.__new__`, `cls.__init__`) with the finished but still untracked frozendict, so the object
-escapes untracked. A later `fromkeys` whose `cls()` returns that object sees an untracked
-frozendict, skips the copy (:3443), and fills it in place through `setitem_take2_lock_held`
-(:3538-3555), or through `dict_dict_fromkeys`/`dict_set_fromkeys` for a dict or set argument.
+Since gh-151722, `_PyDict_FromKeys` uses "not tracked by the GC" to mean "a frozendict still being built, which I may fill". A tracked frozendict returned by `cls()` is copied into a fresh untracked frozendict, which is filled and then passed to `cls(d)` at :3593. That call runs Python code (`cls.__new__`, `cls.__init__`) with the finished but still untracked frozendict, so the object escapes untracked. A later `fromkeys` whose `cls()` returns that object sees an untracked frozendict, skips the copy (:3443), and fills it in place through `setitem_take2_lock_held` (:3538-3555), or through `dict_dict_fromkeys`/`dict_set_fromkeys` for a dict or set argument.
 
 ```python
 leaked = []
@@ -37,7 +31,7 @@ if (equal is not fd and r is fd and dict(fd) != before and hash(fd) == h and equ
 
 **Expected:** `fd` never changes: `G.fromkeys(['x'])` either copies `fd` before filling (as it does for a tracked frozendict) or returns a new object; `dict(fd)` stays `{1: None, 2: None}`.
 
-**Actual:** python3 3.15.2: `same object True`, `before {1: None, 2: None} after {1: None, 2: None, 'x': None}`, `hash unchanged True`, `equal copy == fd True`, `hash(copy) == hash(fd) False`, `copy in table False`. REPRODUCED. main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+**Actual:** python3 3.15.2: `same object True`, `before {1: None, 2: None} after {1: None, 2: None, 'x': None}`, `hash unchanged True`, `equal copy == fd True`, `hash(copy) == hash(fd) False`, `copy in table False`. main (3.16.0a1+dev, ef1fce0): identical.
 
 **Cause:** Objects/dictobject.c:3592-3595: `_PyObject_CallOneArg(cls, d)` runs with `d` the untracked copy made at :3443-3455, and nothing tracks `d` first, so `cls.__new__`/`cls.__init__` can keep it. :3443 then treats any untracked frozendict that `cls()` returns as one it may fill: `need_copy` stays 0 and :3486-3508 (dict or set argument) or :3538-3555 (any other iterable) write into it; :3596-3597 then tracks it.
 
@@ -45,11 +39,12 @@ if (equal is not fd and r is fd and dict(fd) != before and hash(fd) == h and equ
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/dictset-fromkeys-frozendict-rewritten.yaml

@@ -1,15 +1,9 @@
-<!-- title: MRO conflict message reads freed memory: set_mro_error hashes candidate … -->
+<!-- title: The MRO conflict error message can read freed memory -->
 # Bug report
 
 ### Bug description
 
-`mro_implementation_unlocked` fills `to_merge` with *borrowed* references to each base's
-`tp_mro` (typeobject.c:3537-3539). When `pmerge` finds no candidate it calls
-`set_mro_error`, which walks `to_merge` and inserts each remaining head into a dict
-(`PyDict_SetItem`, :3359-3362). Inserting hashes the class, so a metaclass `__hash__` runs
-between reads of `to_merge[i]`. If it assigns `__bases__` of one of the bases, that base gets
-a new `tp_mro` and its old tuple, still in `to_merge`, is freed; the next iteration reads
-`PyTuple_GET_SIZE` and `PyTuple_GET_ITEM` of freed memory.
+`mro_implementation_unlocked` fills `to_merge` with *borrowed* references to each base's `tp_mro` (typeobject.c:3537-3539). When `pmerge` finds no candidate it calls `set_mro_error`, which walks `to_merge` and inserts each remaining head into a dict (`PyDict_SetItem`, :3359-3362). Inserting hashes the class, so a metaclass `__hash__` runs between reads of `to_merge[i]`. If it assigns `__bases__` of one of the bases, that base gets a new `tp_mro` and its old tuple, still in `to_merge`, is freed; the next iteration reads `PyTuple_GET_SIZE` and `PyTuple_GET_ITEM` of freed memory.
 
 ```python
 state = {'armed': False}
@@ -37,7 +31,7 @@ except TypeError as e:
 
 **Expected:** `TypeError: Cannot create a consistent method resolution order (MRO) for bases X, Y` (the heads of the lists as they were), or the new hierarchy's error; no read of freed memory.
 
-**Actual:** python3 3.15.2: "Cannot create a consistent method resolution order (MRO) for bases X, b'AAAAAAAA...'" (a bytes object allocated in the freed tuple's memory). REPRODUCED. main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same message. REPRODUCED. With a short B.__mro__ the freed tuple goes to the free list and is reused by the next 4-tuple, so the message names an `object()` instance instead.
+**Actual:** python3 3.15.2: "Cannot create a consistent method resolution order (MRO) for bases X, b'AAAAAAAA...'" (a bytes object allocated in the freed tuple's memory). main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same message. With a short B.__mro__ the freed tuple goes to the free list and is reused by the next 4-tuple, so the message names an `object()` instance instead.
 
 **Cause:** Objects/typeobject.c:3537-3539 stores borrowed `lookup_tp_mro(base)` pointers in `to_merge`; :3359-3362 reads `to_merge[i]` on each iteration after a `PyDict_SetItem` that can run `__hash__`/`__eq__` of the metaclass. `type_set_bases` replaces and frees `tp_mro` of the base.
 
@@ -45,11 +39,12 @@ except TypeError as e:
 
 ### CPython versions tested on
 
-3.15, CPython main branch (ef1fce0)
+3.15, CPython main branch
 
 ### Operating systems tested on
 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance; I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). The report was drafted with AI assistance (Claude); I reproduced it on 3.15.2 and on main and reviewed it before filing.
+Record: https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-set-mro-error-borrowed-mro.yaml
