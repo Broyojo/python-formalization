@@ -879,7 +879,7 @@ def twos (op : Nat → Nat → Nat) (a b : Int) : Int :=
   if r * 2 ≥ m then r - m else r
 
 /-- `f"{m}"`, for the member `m` whose `_value_` is `None` (a class has at most one: a second `None` is an alias of it,
-:283-296). `FORMAT_SIMPLE`, Python/bytecodes.c:5883-5897, calls `PyObject_Format(m, NULL)`, Objects/abstract.c:853-905,
+:283-296). `FORMAT_SIMPLE`, Python/bytecodes.c:5883-5897, calls `PyObject_Format(m, NULL)`, Objects/abstract.c:853-909,
 which runs `type(m).__format__(m, '')`: the class's own, else `Enum.__format__`, Lib/enum.py:1325-1326,
 `str.__format__(str(m), '')`, so the class's own `__str__`, else `Flag.__str__`, :1598-1603, which returns `'F.A'`. -/
 def FlagCls.fmtNone (c : FlagCls) : Py String :=

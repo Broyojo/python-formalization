@@ -1024,7 +1024,7 @@ private theorem verifyNamed_equalValue :
 def FlagCls.outOfRange (c : FlagCls) (v : Int) : Bool :=
   !decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) || andMask v (c.allBits ^^^ c.flagMask) != 0
 
-/-- The value `Flag._missing_` keeps under `KEEP`, :1511-1524: a value `>= 0` itself, a negative one out of range
+/-- The value `Flag._missing_` keeps under `KEEP`, :1508-1521: a value `>= 0` itself, a negative one out of range
 `max(all_bits + 1, 2 ** v.bit_length()) + v`, a negative one in range `all_bits + 1 + v`. -/
 def FlagCls.keepValue (c : FlagCls) (v : Int) : Nat :=
   if 0 ≤ v then v.toNat
