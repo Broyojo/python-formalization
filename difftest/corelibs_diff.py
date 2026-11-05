@@ -11346,7 +11346,7 @@ def rand_h_gauss(c):
 def rand_h_without(c):
     def go(r):
         with rand_warnings.catch_warnings():
-            rand_warnings.simplefilter("ignore")
+            rand_warnings.simplefilter("error" if c.get("werr") else "ignore")
             return r._randbelow_without_getrandbits(c["n"])
     return rand_call(c, go)
 
@@ -11679,6 +11679,7 @@ def rand_gen_exact(rng, c):
         c["n"] = rand_pos(rng)
     elif fn == "rand.randbelow_without":
         c["n"] = rand_pos(rng) if rng.random() < 0.8 else rng.choice([2**53 - 1, 2**53, 2**53 + 1, 2**60, 10**400])
+        c["werr"] = rng.random() < 0.3
     elif fn == "rand.randbytes":
         c["n"] = rand_intarg(rng, [0, 1, 2, 3, 4, 5, 7, 8, 9, 16, 1000, -1, 2**61, 2**62, 2**64])
         c["n"] = rand_clamp(c["n"], 0, 2**17, 2**61, 2**62, 2**64)

@@ -157,28 +157,34 @@ theorem pyFloat_le_2_53 [RandLibm] {m : Nat} (hm : m ≤ 2 ^ 53) :
 /-- `_randbelow_without_getrandbits(n)` over binary64. For `0 < n < 2 ** 53`:
 `limit = (2 ** 53 - 2 ** 53 % n) / 2 ** 53`, the result is `floor(u * 2 ** 53) % n` for the
 first `random()` value `u` below `limit`, after exactly the calls up to it. For
-`n >= 2 ** 53`: one draw `u` and `floor(u * float(n))`, with the `OverflowError` of
-`float(n)` after the draw. -/
+`n >= 2 ** 53`: first `warnings.warn(msg)` (:262-265) with the exact message; when the
+warning filters turn it into an exception, that exception before any draw; otherwise one
+draw `u` and `floor(u * float(n))`, with the `OverflowError` of `float(n)` after the draw.
+`warn` is any warning hook: the small branch never calls it. -/
 def RandbelowWithoutExact : Prop :=
-  ∀ [RandLibm] (σ : Type) (g : Gen σ F64),
+  ∀ [RandLibm] (σ : Type) (g : Gen σ F64) (warn : String → Py Unit),
     (∀ (n fuel : Nat) (us : List F64) (u : F64) (s s' : σ), 0 < n → n < 2 ^ 53 →
       RndRun g s (us ++ [u]) s' →
       (∀ x ∈ us, Flt.le (F64.ofInt (2 ^ 53 - 2 ^ 53 % n : Nat) / F64.ofInt (2 ^ 53 : Nat)) x = true) →
       Flt.le (F64.ofInt (2 ^ 53 - 2 ^ 53 % n : Nat) / F64.ofInt (2 ^ 53 : Nat)) u = false →
       us.length ≤ fuel →
-      randbelowWithout g fuel n (2 ^ 53) s =
+      randbelowWithout g fuel n (2 ^ 53) warn s =
         (match mathFloor (u * F64.ofInt (2 ^ 53 : Nat)) with
          | .ok v => .ok (v % (n : Int)).toNat
          | .error e => .error e, s')) ∧
-    (∀ (n fuel : Nat) (u : F64) (s s1 : σ), 2 ^ 53 ≤ n → g.random s = (u, s1) →
-      randbelowWithout g fuel n (2 ^ 53) s =
+    (∀ (n fuel : Nat) (e : PyExc) (s : σ), 2 ^ 53 ≤ n → warn withoutWarnMsg = .error e →
+      randbelowWithout g fuel n (2 ^ 53) warn s = (.error e, s)) ∧
+    (∀ (n fuel : Nat) (u : F64) (s s1 : σ), 2 ^ 53 ≤ n → warn withoutWarnMsg = .ok () →
+      g.random s = (u, s1) →
+      randbelowWithout g fuel n (2 ^ 53) warn s =
         (match (do let nf ← pyFloat (n : Int); mathFloor (u * nf) : Py Int) with
          | .ok v => .ok v.toNat
          | .error e => .error e, s1))
 
 theorem randbelowWithoutExact_proven : RandbelowWithoutExact := by
-  intro _ σ g
-  refine ⟨fun n fuel us u s s' hn hlt hrun hus hu hf => ?_, fun n fuel u s s1 hn h => ?_⟩
+  intro _ σ g warn
+  refine ⟨fun n fuel us u s s' hn hlt hrun hus hu hf => ?_, fun n fuel e s hn hw => ?_,
+    fun n fuel u s s1 hn hw h => ?_⟩
   · have hrem : 2 ^ 53 % n ≤ 2 ^ 53 := Nat.mod_le _ _
     have ha := pyFloat_le_2_53 (m := 2 ^ 53 - 2 ^ 53 % n) (by omega)
     have hb := pyFloat_le_2_53 (m := 2 ^ 53) (Nat.le_refl _)
@@ -211,7 +217,8 @@ theorem randbelowWithoutExact_proven : RandbelowWithoutExact := by
           (fun y hy => hus y (by simp [hy])) (by simp at hf; omega)]
         simp only [lift_bind_apply]
         cases mathFloor (u * F64.ofInt (2 ^ 53 : Nat)) <;> rfl
-  · simp only [randbelowWithout, if_pos hn, rnd_bind_apply h, lift_bind_apply]
+  · simp only [randbelowWithout, if_pos hn, lift_bind_apply, hw]
+  · simp only [randbelowWithout, if_pos hn, lift_bind_apply, hw, rnd_bind_apply h]
     cases (pyFloat (n : Int) : Py F64) with
     | error e => rfl
     | ok nf =>

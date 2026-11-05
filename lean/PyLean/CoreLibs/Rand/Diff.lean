@@ -339,7 +339,9 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "randbelow_with" =>
     encRM encNat (randbelowWith G bigFuel (← getNat j "n")) s
   | "randbelow_without" =>
-    encRM encNat (randbelowWithout G bigFuel (← getNat j "n")) s
+    let werr := (getBool j "werr").toOption.getD false
+    let warn : String → Py Unit := fun m => if werr then .error (.named "UserWarning" m) else .ok ()
+    encRM encNat (randbelowWithout G bigFuel (← getNat j "n") (2 ^ 53) warn) s
   | "randbytes" =>
     encRM (fun (l : List Nat) => toJson l) (randbytes G (← getIntArg j "n")) s
   | "randrange" =>

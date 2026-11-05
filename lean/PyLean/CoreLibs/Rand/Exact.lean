@@ -54,14 +54,22 @@ def drawBelow [Flt F] (g : Gen σ F) (limit : F) : Nat → F → RM σ F
       drawBelow g limit fuel r
     else pure r
 
+/-- The message of the `warn(...)` call of `_randbelow_without_getrandbits`,
+Lib/random.py:263-265. -/
+def withoutWarnMsg : String :=
+  "Underlying random() generator does not supply \nenough bits to choose from a population range this large.\nTo remove the range limitation, add a getrandbits() method."
+
 /-- `Random._randbelow_without_getrandbits`, Lib/random.py:254-272. Defined for
-`n > 0`. The `warn(...)` of :263-265 prints a `UserWarning` and has no effect on
-the result, so it is not modelled. `(maxsize - rem) / maxsize` is `int / int`
-(correctly rounded), which equals float division here because both operands are
-at most `2**53` and so convert exactly. `Int.toNat` is the identity because
+`n > 0`. `warn` is `warnings.warn(msg)` with the default `UserWarning` category
+(:262-265): it returns under the default filters (printing the warning), and raises
+`UserWarning` under an `error` filter, before any draw. `(maxsize - rem) / maxsize` is
+`int / int` (correctly rounded), which equals float division here because both operands
+are at most `2**53` and so convert exactly. `Int.toNat` is the identity because
 `random()` is never negative. -/
-def randbelowWithout [Flt F] (g : Gen σ F) (fuel n : Nat) (maxsize : Nat := 2 ^ 53) : RM σ Nat := do
+def randbelowWithout [Flt F] (g : Gen σ F) (fuel n : Nat) (maxsize : Nat := 2 ^ 53)
+    (warn : String → Py Unit := fun _ => .ok ()) : RM σ Nat := do
   if n ≥ maxsize then
+    let _ ← lift (warn withoutWarnMsg)
     let r ← rnd g
     let nf ← lift (pyFloat (n : Int))
     let v ← lift (mathFloor (r * nf))
