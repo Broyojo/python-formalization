@@ -377,7 +377,7 @@ theorem pyEncodebytes_eq (d : List Nat) (hd : ∀ x ∈ d, x < 256) : pyEncodeby
       List.replicate ((3 - d.length % 3) % 3 * 4 / 3) 61 = enc d 0 :=
     enc_c d.length d (Nat.le_refl _) hd 0
   have e : b2a64Core b64Alpha d true 76 true = wraplines 76 (enc d 0).length (enc d 0) ++ [10] := by
-    simp [b2a64Core, hc]
+    simp [b2a64Core, hc, wraplinesC_eq 76 (by decide) (enc d 0).length (enc d 0) (Nat.le_refl _)]
   cases d with
   | nil =>
     have : pyEncodebytes [] = [] := by decide
