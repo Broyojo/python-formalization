@@ -306,22 +306,28 @@ def entries : List Entry := [
     source := "setobject.c:709-731, 1095-1136", status := .proven
     prop := ``SetIterOrder, thm := some ``setIterOrder_proven },
   { id := "set-probe-failure", pyFile := "Objects/setobject.c", pyFns := ["set_lookkey", "set_do_lookup", "set_compare_entry_lock_held", "set_add_entry_takeref"]
-    statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when CPython's re-check fires, that is when the table pointer differs or the entry no longer holds startkey, the lookup restarts on any answer and the add restarts on an answer of no."
+    statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when CPython's re-check fires, that is when the table pointer differs, or the entry, inside the table as it stands now, no longer holds startkey, the lookup restarts on any answer and the add restarts on an answer of no."
     source := "setobject.c:153-160, :286-295", status := .proven
     prop := ``SetProbeFailure, thm := some ``setProbeFailure_proven
-    notes := "Narrowed: a new table of another size at the old address does not restart; set-lookup-restarts-on-resize and set-add-restarts-on-resize are the broad claims, refuted." },
+    notes := "Narrowed twice: past the end of a new, smaller table at the old address the entry reads the freed table's stale bytes (SetObj.mem), which may still hold startkey; set-probe-failure-unguarded (no guard), set-lookup-restarts-on-resize and set-add-restarts-on-resize are refuted in the bug's own configuration." },
+  { id := "set-probe-failure-unguarded", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held"]
+    statement := "When the table pointer differs or the entry no longer reads as startkey in the table, the lookup restarts on any answer."
+    source := "the round-2 form of set-probe-failure", status := .refuted
+    prop := ``SetProbeFailureUnguarded, thm := some ``setProbeFailureUnguarded_refuted
+    bug := some "dictset-set-lookup-table-aba"
+    notes := "aba_probe, the reproducer's sizes: 1024-slot table, e at entry 700, refilled to 128 slots at the same address; entry 700 is past the end, the table reads NULL there, but the pointer reads the stale e, so CPython does not restart." },
   { id := "set-lookup-restarts-on-resize", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held"]
     statement := "When __eq__ has replaced the table by one of another size, the lookup starts over."
     source := "the broad form of set-probe-failure", status := .refuted
     prop := ``SetLookupRestartsOnResize, thm := some ``setLookupRestartsOnResize_refuted
     bug := some "dictset-set-lookup-table-aba"
-    notes := "aba_probe: __eq__ clears the set and refills it, and the allocator hands back the freed table's address for a 16-slot table; the re-check at :159 passes and the walk goes on. The model reads past the new table as NULL where CPython reads the old table's stale bytes, so the use after free of the record is outside the model." },
+    notes := "aba_probe, the reproducer's sizes: __eq__ clears the set and refills it to 128 slots, and the allocator hands back the freed 1024-slot block with its bytes; the re-check at :159 reads the stale e at entry 700 and passes. The discard then writes a dummy past the end and drops used to 39 for 40 keys, none of them e: the reference the reproducer's Py_DECREF frees." },
   { id := "set-add-restarts-on-resize", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "When __eq__ has replaced the table by one of another size and answers no, the add starts over."
     source := "the broad form of set-probe-failure", status := .refuted
     prop := ``SetAddRestartsOnResize, thm := some ``setAddRestartsOnResize_refuted
     bug := some "dictset-set-lookup-table-aba"
-    notes := "aba_probe: the add goes on from slot 10 with the block the old mask allowed and stores at slot 16, past the end of the 16-slot table; used becomes 7 for 6 keys, CPython's len(s) one over." },
+    notes := "aba_probe: the add goes on from entry 700 to entry 701 of the old block, past the end of the 128-slot table, and stores there; used becomes 41 for 40 keys, CPython's len(s) one over." },
   { id := "set-contains-body", pyFile := "Objects/setobject.c",
     pyFns := ["_PySet_Contains", "set_contains", "set___contains___impl", "frozenset___contains___impl",
       "set_compare_frozenset", "set_do_lookup", "set_contains_entry"]
@@ -349,7 +355,7 @@ def entries : List Entry := [
     statement := "For every key protocol: an exact frozenset runs one set_compare_frozenset walk of so->table and so->mask, which never asks for a restart, and its slot or exception is the answer; anything else runs set_compare_entry_lock_held in the do-while, where a walk that asks for a restart starts again from the state __eq__ left, with that state's table and mask, and a slot or exception ends it. On the same table the two give different slots."
     source := "setobject.c:413-433", status := .proven
     prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
-    notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); a slot past the end of a table reads as NULL, not as stale bytes. lookkey_dispatch_probe shows the dispatch is observable." },
+    notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); the re-check and the entry functions read past the end of a table as the freed block's stale bytes (SetObj.mem); the walk's own later reads are NULL there (scope). lookkey_dispatch_probe shows the dispatch is observable." },
   { id := "set-add-restart", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "For every key protocol, step by step and turn by turn: a step that ends the block ends the walk with it, one that goes on moves to the next entry with the mask and freeslot it left, a finished block moves to the next probe with that mask; a turn that ends in an exception, found_active, a restart, a NULL with no freeslot (store, fill and used grow, resize at the load limit), a NULL with a freeslot still a dummy (store there, used grows), or a NULL with a freeslot that __eq__ refilled (restart) does exactly that, each from the state __eq__ left."
     source := "setobject.c:252-335", status := .proven
