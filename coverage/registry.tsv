@@ -1181,10 +1181,21 @@ set-iter-order	proven	Objects/setobject.c	set_next
 set-probe-failure	proven	Objects/setobject.c	set_lookkey,set_do_lookup,set_compare_entry_lock_held,set_add_entry_takeref
 set-contains-body	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_compare_frozenset,set_do_lookup,set_contains_entry
 set-frozen-identity-first	proven	Objects/setobject.c	set_compare_frozenset,set_compare_entry_lock_held
-set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_unhashable_type
+set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_unhashable_type
+set-contains-retry-exact	refuted	Objects/setobject.c	_PySet_Contains
+set-unhashable-type	proven	Objects/setobject.c	set_unhashable_type
+set-lookkey-body	proven	Objects/setobject.c	set_lookkey
+set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
+set-update-iterable-body	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-update-iterable-refines	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-intersection-branches	proven	Objects/setobject.c	set_intersection
+set-isdisjoint-branches	proven	Objects/setobject.c	set_isdisjoint_impl
+set-disjoint-iter-refines	proven	Objects/setobject.c	set_isdisjoint_impl
+set-shuffle-bits-values	proven	Objects/setobject.c	_shuffle_bits,frozenset_hash_impl
+set-dealloc-order	proven	Objects/setobject.c	set_dealloc
 set-merge-refines	proven	Objects/setobject.c	set_merge_lock_held
 set-copy-refines	proven	Objects/setobject.c	set_copy_impl,set_copy_untracked_lock_held
-set-for-iter-body	proven	Objects/setobject.c	set_update_iterable_lock_held,set_intersection,set_isdisjoint_impl
+set-for-iter-body	proven	Objects/setobject.c	
 set-inter-iter-body	proven	Objects/setobject.c	set_intersection
 set-iter-routes	proven	Objects/setobject.c	set_update_iterable_lock_held,set_isdisjoint_impl
 set-inter-refines	proven	Objects/setobject.c	set_intersection
@@ -1194,6 +1205,7 @@ set-subset-refines	proven	Objects/setobject.c
 set-disjoint-refines	proven	Objects/setobject.c	set_isdisjoint_impl
 set-add-trusts-yes	proven	Objects/setobject.c	
 set-hash-failure	proven	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
+set-hash-failure-unchanged	refuted	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 odict-twins-agree	open	Objects/odictobject.c	_odict_get_index,_odict_resize,_odict_add_new_node,_odict_remove_node
 dict-view-len	proven	Objects/dictobject.c	
 dict-view-iter-order	proven	Objects/dictobject.c	dictkeys_iter,dictitems_iter,dictvalues_iter,dictkeys_reversed,dictitems_reversed,dictvalues_reversed
