@@ -618,7 +618,10 @@ def FlagGenerateG : Prop :=
     (∀ x r, count ≠ 0 →
       (∀ e, extremum o.gt x r = .error e → flagGenerateG o start count (x :: r) = .error e) ∧
       (∀ m, extremum o.gt x r = .ok m →
-        (∀ e, o.bitLength m = .error e → (flagGenerateG o start count (x :: r)).raises "TypeError") ∧
+        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = true →
+          (flagGenerateG o start count (x :: r)).raises "TypeError") ∧
+        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = false →
+          flagGenerateG o start count (x :: r) = .error e) ∧
         (∀ b, o.bitLength m = .ok b → flagGenerateG o start count (x :: r) = .ok (o.ofInt ((2 : Int) ^ b))))) ∧
     (IntOps o → ∀ (i : Nat) (r : List Nat), count ≠ 0 →
       ∃ k : Nat, flagGenerateG o start count ((i :: r).map fun (x : Nat) => o.ofInt (x : Int)) =
@@ -628,7 +631,8 @@ def FlagGenerateG : Prop :=
 theorem flagGenerateG_proven : FlagGenerateG := by
   intro α o start count last
   refine ⟨rfl, fun hc => by simp [flagGenerateG, hc], fun x r hc => ⟨fun e he => by simp [flagGenerateG, hc, he],
-    fun m hm => ⟨fun e he => ⟨_, by simp [flagGenerateG, hc, hm, he]; rfl, rfl⟩,
+    fun m hm => ⟨fun e he hx => ⟨_, by simp [flagGenerateG, hc, hm, he, hx]; rfl, rfl⟩,
+      fun e he hx => by simp [flagGenerateG, hc, hm, he, hx],
       fun b hb => by simp [flagGenerateG, hc, hm, hb]⟩⟩, ?_⟩
   intro h i r hc
   have hmap : ((i :: r).map fun (x : Nat) => o.ofInt (x : Int)) =
@@ -911,7 +915,8 @@ C = D = 3` passes); and a value that is not an `int` is compared with `0` first,
 def VerifyNamedInts : Prop :=
   ∀ (α : Type) (o : Ops α), IntOps o → ∀ (c : EClassG α) (iv : List Int), c.memberValues = iv.map o.ofInt →
     (∀ n v, c.values.lookup n = some v → ∃ i, v = o.ofInt i) →
-    (c.verifyNamed o = .ok () ↔ ∀ p ∈ c.memberMap, namedOk c o iv p)
+    (c.verifyNamed o = .ok () ↔ ∀ p ∈ c.memberMap, namedOk c o iv p) ∧
+    (c.verifyNamed o = .ok () ∨ (c.verifyNamed o).raises "ValueError")
 
 theorem verifyNamedInts_proven : VerifyNamedInts := by
   intro α o h c iv hm hv
@@ -919,8 +924,9 @@ theorem verifyNamedInts_proven : VerifyNamedInts := by
   unfold EClassG.verifyNamed
   rw [hb]
   cases b with
-  | false => simp only [true_iff]; exact hb'.1 rfl
+  | false => exact ⟨by simp only [true_iff]; exact hb'.1 rfl, .inl rfl⟩
   | true =>
+    refine ⟨?_, .inr ⟨_, rfl, rfl⟩⟩
     simp only [reduceCtorEq, false_iff]
     intro hall
     exact Bool.noConfusion (hb'.2 hall)
@@ -951,11 +957,11 @@ private theorem verifyNamed_equalValue :
 
 /-! ### `Flag._missing_` outside the range -/
 
-/-- The out-of-range test of :1491-1494: outside `~all_bits .. all_bits`, or a bit of `all_bits` no member has. -/
+/-- The out-of-range test of :1494-1497: outside `~all_bits .. all_bits`, or a bit of `all_bits` no member has. -/
 def FlagCls.outOfRange (c : FlagCls) (v : Int) : Bool :=
   !decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) || andMask v (c.allBits ^^^ c.flagMask) != 0
 
-/-- `Flag._missing_` on an out-of-range `int`, each boundary, :1491-1512: `STRICT` is the `ValueError` "invalid value",
+/-- `Flag._missing_` on an out-of-range `int`, each boundary, :1494-1523: `STRICT` is the `ValueError` "invalid value",
 `EJECT` gives back the `int` itself, and `KEEP` never raises: a value `>= 0` keeps every bit, and a negative one becomes
 `max(all_bits + 1, 2 ** v.bit_length()) + v`; in range, a negative value under `KEEP` is `all_bits + 1 + v`. So for a
 two-bit class `F(8)` is the `ValueError` under `STRICT` and `8` under `EJECT`. -/
@@ -1016,5 +1022,80 @@ theorem missingBoundaries_proven : MissingBoundaries := by
         simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
         simp only [show 0 ≤ v by omega, ↓reduceIte]
         exact ⟨_, rfl⟩
+
+/-! ### `Flag._missing_` in range, and the names of pseudo-members -/
+
+/-- The only exception of the name loop, :1541-1560, is the `STRICT` one of :1557, "no members with value". -/
+theorem nameOf_error (c : FlagCls) (value mv al : Nat) (e : PyExc) (h : c.nameOf value mv al = .error e) :
+    c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}" := by
+  by_cases hb : c.boundary = .strict
+  · refine ⟨hb, ?_⟩
+    simp only [FlagCls.nameOf] at h
+    repeat' split at h
+    all_goals first | exact ⟨_, (Except.error.inj h).symm⟩ | cases h
+  · obtain ⟨r, hr⟩ := nameOf_ok c hb value mv al
+    rw [hr] at h
+    cases h
+
+/-- `Flag._missing_` on an `int` `>= 0` in range, any boundary: the value is kept exactly and the name is the name loop's,
+:1541-1560 (a member of that value wins, :1566); the loop's only exception is the `STRICT` "no members with value" of
+:1557, and with no member bit and no alias bit the name is `None`. So `F(3)` of `A = 1, B = 2` under `STRICT` is the
+pseudo-member `(3, 'A|B')`, `F(9)` under `KEEP` is `(9, 'A|8')`, and `F(3)` of `A = 1, X = 6` under `STRICT` is the
+`ValueError` "no members with value 2", all as on 3.15.2. -/
+def MissingInRange : Prop :=
+  (∀ (c : FlagCls) (v : Int), c.outOfRange v = false → 0 ≤ v →
+    c.missing v = (c.nameOf v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)).map
+      (fun nm => .flag v.toNat (match c.memberOf v.toNat with
+        | some n => some n
+        | none => nm))) ∧
+  (∀ (c : FlagCls) (value : Nat), c.nameOf value 0 0 = .ok none) ∧
+  (∀ (c : FlagCls) (value mv al : Nat), c.boundary ≠ .strict → ∃ r, c.nameOf value mv al = .ok r) ∧
+  (∀ (c : FlagCls) (value mv al : Nat) (e : PyExc), c.nameOf value mv al = .error e →
+    c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}") ∧
+  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .strict⟩ 3 = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .keep⟩ 9 = .ok (.flag 9 (some "A|8")) ∧
+  FlagCls.call ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 3 = .error (.valueError "~no members with value 2")
+
+theorem missingInRange_proven : MissingInRange := by
+  refine ⟨?_, fun c value => by simp [FlagCls.nameOf], fun c value mv al hb => nameOf_ok c hb value mv al,
+    nameOf_error, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  intro c v ho hv
+  have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
+      andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
+    unfold FlagCls.outOfRange at ho; simpa using ho
+  have h1 : v ≤ (c.allBits : Int) := by
+    apply Classical.byContradiction
+    intro hc
+    simp [hc] at ho'
+  have h2 : andMask v (c.allBits ^^^ c.flagMask) = 0 := by
+    apply Classical.byContradiction
+    intro hc
+    simp [hc] at ho'
+  have hsub : v.toNat &&& c.flagMask = v.toNat := by
+    rw [andMask_nonneg v _ hv] at h2
+    unfold FlagCls.allBits at h1 h2
+    exact inRange_sub c.flagMask v.toNat (by omega) h2
+  have hnn : ¬ (v < 0) := by omega
+  simp only [FlagCls.missing, ho', Bool.false_eq_true, ↓reduceIte, pure_bind, hnn, notAnd_sub hsub,
+    bne_self_eq_false, Bool.false_and]
+  generalize c.nameOf _ _ _ = x
+  cases x <;> rfl
+
+/-! ### `verify(CONTINUOUS)` on values that do not compare -/
+
+/-- `verify(CONTINUOUS)` raises what building the set raises, and what `min` raises: with values `1, 2, 'x'` that is the
+`TypeError` "'<' not supported between instances of 'str' and 'int'", as on 3.15.2. -/
+def ContinuousErrors : Prop :=
+  (∀ (α : Type) (o : Ops α) (order : List α → List α) (flag : Bool) (s : String) (vals : List α) (e : PyExc),
+    o.setOf vals [] = .error e → verifyContinuousG o order flag s vals = .error e) ∧
+  (∀ (α : Type) (o : Ops α) (order : List α → List α) (flag : Bool) (s : String) (vals : List α)
+    (st : List (α × Unit)) (x : α) (r : List α) (e : PyExc), o.setOf vals [] = .ok st → ¬ st.length < 2 →
+    order (st.map Prod.fst) = x :: r → extremum o.lt x r = .error e → verifyContinuousG o order flag s vals = .error e) ∧
+  verifyContinuousG evOps id false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
+    .error (.typeError "'<' not supported between instances of 'str' and 'int'")
+
+theorem continuousErrors_proven : ContinuousErrors := by
+  refine ⟨fun α o order flag s vals e h => by simp [verifyContinuousG, h],
+    fun α o order flag s vals st x r e h hl ho he => by simp [verifyContinuousG, h, hl, ho, he], by decide +kernel⟩
 
 end PyLean.CoreLibs.EnumDC
