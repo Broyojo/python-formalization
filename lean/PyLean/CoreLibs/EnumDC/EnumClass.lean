@@ -412,15 +412,18 @@ def strEnumNewG (codec : Codec) {α : Type} (values : List (SArg α)) : Py Strin
           | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
       | _ => .error (.typeError "~encoding must be a string")
 
-/-- The ASCII and Latin-1 codecs, with the `strict`, `ignore` and `replace` handlers; any other encoding is unknown. -/
+/-- The ASCII and Latin-1 codecs, for the difftest: any other encoding is unknown, and the error handler is looked up
+only when a byte does not decode, with `strict`, `ignore` and `replace` known and any other name taken as unknown (the
+names the difftest uses are). -/
 def pyCodec : Codec := fun bs enc errors =>
   if enc = "latin-1" then .ok (String.ofList (bs.map Char.ofNat))
   else if enc = "ascii" then
     if bs.all (· < 128) then .ok (String.ofList (bs.map Char.ofNat))
+    else if errors = "strict" then .error (.named "UnicodeDecodeError" "~'ascii' codec can't decode")
     else if errors = "ignore" then .ok (String.ofList ((bs.filter (· < 128)).map Char.ofNat))
     else if errors = "replace" then
       .ok (String.ofList (bs.map (fun b => if b < 128 then Char.ofNat b else '�')))
-    else .error (.named "UnicodeDecodeError" "~'ascii' codec can't decode")
+    else .error (.named "LookupError" s!"unknown error handler name '{errors}'")
   else .error (.named "LookupError" s!"unknown encoding: {enc}")
 
 /-- `Atom` as an argument of `StrEnum.__new__`: no `Atom` is a `bytes`. -/
