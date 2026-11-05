@@ -6,10 +6,11 @@ own `Parser/asdl.py`. Run with no argument to rewrite the file, or with `--check
 to fail if the committed file differs from what the sources generate.
 """
 
+import os
 import sys
 from pathlib import Path
 
-V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
+V = Path(os.environ.get("CPYTHON_SRC", Path(__file__).resolve().parents[4] / "vendor" / "cpython-3.15"))
 if not V.exists():
     V = Path.home() / "pf" / "vendor" / "cpython-3.15"
 sys.path.insert(0, str(V / "Parser"))

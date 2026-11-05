@@ -15,11 +15,12 @@ C actions are parsed by the small expression parser below into the `AE` type of
 
 import io
 import re
+import os
 import sys
 import tokenize
 from pathlib import Path
 
-V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
+V = Path(os.environ.get("CPYTHON_SRC", Path(__file__).resolve().parents[4] / "vendor" / "cpython-3.15"))
 if not V.exists():
     V = Path.home() / "pf" / "vendor" / "cpython-3.15"
 sys.path.insert(0, str(V / "Tools" / "peg_generator"))

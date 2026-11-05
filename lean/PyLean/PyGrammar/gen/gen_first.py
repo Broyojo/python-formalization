@@ -10,12 +10,13 @@ usage: gen_first.py FIRST_TSV
 
 import ast
 import re
+import os
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "Peg" / "RuleFacts.lean"
-ROOT = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
+ROOT = Path(os.environ.get("CPYTHON_SRC", Path(__file__).resolve().parents[4] / "vendor" / "cpython-3.15"))
 
 
 def spellings():

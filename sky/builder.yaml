@@ -49,7 +49,7 @@ setup: |
   $HOME/pf/py315/bin/python3 -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json, _ctypes, test.support; print(sys.version)"
   $V/cpython-main/python -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json; print(sys.version)"
 
-  # AGENTS.md and the bug records use the Mac's absolute paths; make them valid here.
+  # Commands sent from the authors' Mac name vendor/ by its absolute path ($PF in AGENTS.md); make it valid here.
   ROOT=/Users/broyojo/code/projects/python-formalization
   $SUDO mkdir -p $ROOT
   $SUDO ln -sfn $V $ROOT/vendor

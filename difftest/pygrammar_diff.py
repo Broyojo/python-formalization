@@ -165,7 +165,7 @@ def enc(node):  # noqa: F811
 
 # ---- part peg
 
-for V in (Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15"),
+for V in (Path(os.environ.get("CPYTHON_SRC", Path(__file__).resolve().parents[1] / "vendor" / "cpython-3.15")),
           Path.home() / "pf" / "vendor" / "cpython-3.15"):
     if V.exists():
         break

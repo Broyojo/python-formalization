@@ -1,0 +1,15 @@
+python-formalization
+Copyright 2026 David Andrews
+
+This project is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The Lean models in lean/PyLean/ mirror the source code of CPython 3.15.2 and
+quote excerpts of it in comments and citations. The difftest/ harness and the
+bug reproducers in bugs/ exercise CPython's behaviour. CPython is
+Copyright (c) 2001 Python Software Foundation; All Rights Reserved, and is
+distributed under the Python Software Foundation License Version 2
+(https://docs.python.org/3/license.html). Those excerpts remain under that
+license.
+
+The CPython source trees used during development (vendor/) are not part of
+this repository.

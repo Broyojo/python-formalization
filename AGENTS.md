@@ -71,16 +71,18 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
 
 ## Compute: nothing heavy on this machine
 
+`$PF` below is the path of the main checkout (not a worktree); `vendor/` lives only there.
+
 Do not run `lake`, `lean`, difftests, reproducers or any other CPU- or
 memory-heavy command locally. Run them on the build pod through the wrapper,
 from inside your worktree:
 
 ```
-/Users/broyojo/code/projects/python-formalization/scripts/r lake build      # from lean/
-/Users/broyojo/code/projects/python-formalization/scripts/r lake env lean Audit.lean
-/Users/broyojo/code/projects/python-formalization/scripts/r python3 difftest/foo_diff.py --cases 50000
-/Users/broyojo/code/projects/python-formalization/scripts/r python3 scripts/check_bugs.py \
-    --python /Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe
+$PF/scripts/r lake build      # from lean/
+$PF/scripts/r lake env lean Audit.lean
+$PF/scripts/r python3 difftest/foo_diff.py --cases 50000
+$PF/scripts/r python3 scripts/check_bugs.py \
+    --python $PF/vendor/cpython-main/python.exe
 ```
 
 The wrapper syncs your worktree to the pod and runs the command there, so edit
@@ -144,14 +146,14 @@ function with its 3.15.2 body:
 
 Sources (absolute paths; `vendor/` is not in git worktrees):
 - CPython 3.15.2 source (matches `python3`, cite these line numbers):
-  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15`
+  `$PF/vendor/cpython-3.15`
 - CPython 3.14.7 source, only for diffing what changed:
-  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14`
-- CPython main source: `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main`
+  `$PF/vendor/cpython-3.14`
+- CPython main source: `$PF/vendor/cpython-main`
 - CPython main interpreter (to check bugs still exist on main):
-  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe`
+  `$PF/vendor/cpython-main/python.exe`
 - Prior automated findings (for duplicate checks):
-  `/Users/broyojo/code/projects/python-formalization/vendor/bugforge-results/README.md`
+  `$PF/vendor/bugforge-results/README.md`
 
 ## Reference modules (finished; copy their patterns)
 

@@ -65,6 +65,10 @@ Nothing here is specific to Python. To apply the method to another language, lib
 
 The write-up's last sections list the practices that mattered most.
 
+## License
+
+Apache License 2.0 (see `LICENSE`). Excerpts of CPython quoted in the models remain under the PSF License; see `NOTICE`.
+
 ## Credits
 
 Built by David Andrews with AI agents running Claude Opus 5.5 in Claude Code. Inspired by Miles Cranmer's [julia-in-lean](https://github.com/MilesCranmer/julia-in-lean).
