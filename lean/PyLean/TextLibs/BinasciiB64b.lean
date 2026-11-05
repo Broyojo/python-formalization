@@ -311,4 +311,129 @@ theorem b64PadBeforeDataIgnored_proven : B64PadBeforeDataIgnored := by
           simp [igEff, hs, hne, ign, hl]
     rw [slow_prefix _ _ _ (fun st => slow_eq_data _ rfl hign h61 y ((tbl64_lt _ hA y).mpr ⟨hy, hy61⟩) s2 st) s1 {}]
 
+/-! ### The encoder over every option -/
+
+/-- `bytes.translate(bytes.maketrans(BASE64_ALPHABET, a))` on one byte. -/
+def trAlpha (A : List Nat) (c : Nat) : Nat := if c ∈ b64Alpha then A.getD (b64Alpha.idxOf c) 0 else c
+
+theorem b64_idx : ∀ v, v < 64 → b64Alpha.idxOf (b64Alpha.getD v 0) = v ∧ b64Alpha.getD v 0 ∈ b64Alpha := by
+  decide +kernel
+
+theorem tr_getD (A : List Nat) (v : Nat) (hv : v < 64) : trAlpha A (b64Alpha.getD v 0) = A.getD v 0 := by
+  obtain ⟨h1, h2⟩ := b64_idx v hv
+  unfold trAlpha
+  rw [if_pos h2, h1]
+
+theorem fastEnc64_tr (A : List Nat) : ∀ (n : Nat) (d : List Nat), d.length ≤ n →
+    fastEnc64 A d = ((fastEnc64 b64Alpha d).1.map (trAlpha A), (fastEnc64 b64Alpha d).2) := by
+  intro n
+  induction n with
+  | zero =>
+    intro d h
+    have : d = [] := List.eq_nil_of_length_eq_zero (by omega)
+    subst this
+    rfl
+  | succ n ih =>
+    intro d h
+    match d, h with
+    | [], _ => rfl
+    | [_], _ => rfl
+    | [_, _], _ => rfl
+    | x :: y :: z :: r, h =>
+      rw [fastEnc64_three, fastEnc64_three, ih r (by simp at h; omega)]
+      simp only [List.cons_append, List.nil_append, List.map_cons]
+      rw [tr_getD A _ (Nat.mod_lt _ (by decide)), tr_getD A _ (Nat.mod_lt _ (by decide)),
+        tr_getD A _ (Nat.mod_lt _ (by decide)), tr_getD A _ (Nat.mod_lt _ (by decide))]
+
+theorem tail64_tr (A r : List Nat) : tail64 A r = (tail64 b64Alpha r).map (trAlpha A) := by
+  match r with
+  | [] => rfl
+  | [_] =>
+    simp only [tail64, List.map_cons, List.map_nil]
+    rw [tr_getD A _ (Nat.mod_lt _ (by decide)), tr_getD A _ (Nat.mod_lt _ (by decide))]
+  | [_, _] =>
+    simp only [tail64, List.map_cons, List.map_nil]
+    rw [tr_getD A _ (Nat.mod_lt _ (by decide)), tr_getD A _ (Nat.mod_lt _ (by decide)),
+      tr_getD A _ (Nat.mod_lt _ (by decide))]
+  | _ :: _ :: _ :: _ => rfl
+
+theorem unwrapped64_tr (A d : List Nat) (p : Bool) :
+    unwrapped64 A d p = (unwrapped64 b64Alpha d p).map (trAlpha A) := by
+  have h61 : trAlpha A 61 = 61 := by simp [trAlpha, show (61 : Nat) ∉ b64Alpha by decide +kernel]
+  simp only [unwrapped64, List.map_append, fastEnc64_tr A d.length d (Nat.le_refl _), tail64_tr A,
+    List.map_replicate, h61]
+
+theorem unwrapped64_strip (d : List Nat) (p : Bool) :
+    (unwrapped64 b64Alpha d true).filter (fun c => p || c != 61) = unwrapped64 b64Alpha d p := by
+  cases p with
+  | true => simp
+  | false =>
+    have hm := unwrapped64_mem b64Alpha (by decide) d false
+    simp only [unwrapped64, Bool.false_eq_true, if_false, if_true, List.replicate_zero, List.append_nil,
+      Bool.false_or] at hm ⊢
+    have hr : (List.replicate (pads64 d.length) 61).filter (fun c => c != 61) = [] := by
+      simp [List.filter_eq_nil_iff]
+    rw [List.filter_append _ (List.replicate _ _), hr, List.append_nil]
+    apply List.filter_eq_self.mpr
+    intro x hx
+    rcases hm x hx with h | ⟨_, h⟩
+    · have : x ≠ 61 := fun e => (show (61 : Nat) ∉ b64Alpha by decide +kernel) (e ▸ h)
+      simpa using this
+    · cases h
+
+/-- `b2a_base64` over every option, against the specification encoder at its defaults (`b2aBase64`,
+which `base64RoundTrip_proven` and `b2aLength_proven` pin): `padded=False` drops the `'='`, `alphabet`
+is `translate` from the standard alphabet, a non-zero `wrapcol` is rounded to a multiple of 4 (at least 4)
+and the lines are cut by `wraplines`, and `newline` adds one `'\n'`. Then the refusals, in their order:
+a negative or too large `wrapcol`, then an alphabet that is not 64 bytes. -/
+def B2a64OptionLaw : Prop :=
+  (∀ (d : List Nat) (p : Bool) (w : Nat) (nl : Bool) (alpha : Option (List Nat)),
+    (∀ x ∈ d, x < 256) → w < 2 ^ 64 → (∀ a, alpha = some a → a.length = 64) →
+    b2aB64 (.bytes d) p w nl (alpha.map .bytes) =
+      .ok (let s := ((b2aBase64 d false).filter (fun c => p || c != 61)).map (trAlpha (alpha.getD b64Alpha))
+           let w' := if w = 0 then 0 else if w < 4 then 4 else w / 4 * 4
+           (if w' = 0 then s else wraplinesC s w') ++ (if nl then [10] else []))) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Int) (nl : Bool) (alpha : Option Data), w < 0 →
+    b2aB64 (.bytes d) p w nl alpha = .error (.valueError "Cannot convert negative int")) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Int) (nl : Bool) (alpha : Option Data), 2 ^ 64 ≤ w →
+    b2aB64 (.bytes d) p w nl alpha = .error (.overflowError "Python int too large for C size_t")) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Nat) (nl : Bool) (a : List Nat), w < 2 ^ 64 → a.length ≠ 64 →
+    b2aB64 (.bytes d) p w nl (some (.bytes a)) = .error (.valueError "alphabet must have length 64"))
+
+theorem b2a64OptionLaw_proven : B2a64OptionLaw := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro d p w nl alpha hd hw ha
+    have hs : sizeT (w : Int) = .ok w := by
+      simp only [sizeT]
+      rw [if_neg (by omega), if_neg (by omega)]
+      rfl
+    have h0 : b2aBase64 d false = unwrapped64 b64Alpha d true := by
+      rw [← b2a64Core_eq d hd false]
+      simp [b2a64Core, unwrapped64, pads64]
+    obtain ⟨A, hA, hAeq⟩ : ∃ A, encTable alpha b64Alpha 64 = .ok A ∧ alpha.getD b64Alpha = A := by
+      cases alpha with
+      | none => exact ⟨b64Alpha, rfl, rfl⟩
+      | some a => exact ⟨a, by simp [encTable, ha a rfl], rfl⟩
+    have hb : bufOpt (alpha.map .bytes) = .ok alpha := by cases alpha <;> rfl
+    simp only [b2aB64, bufData, hs, hb, hA, bind, Except.bind, pure, Except.pure]
+    rw [hAeq, h0, unwrapped64_strip, ← unwrapped64_tr]
+    simp only [b2a64Core, unwrapped64, pads64]
+    by_cases hw0 : w = 0
+    · subst hw0; cases nl <;> simp
+    · have hpos : (if w < 4 then 4 else w / 4 * 4) ≠ 0 := by split <;> omega
+      cases nl <;> simp [hw0, hpos]
+  · intro d p w nl alpha hw
+    simp [b2aB64, bufData, sizeT, hw, bind, Except.bind]
+  · intro d p w nl alpha hw
+    have : ¬ w < 0 := by omega
+    simp only [b2aB64, bufData, sizeT, if_neg this, if_pos hw, bind, Except.bind]
+  · intro d p w nl a hw ha
+    have hs : sizeT (w : Int) = .ok w := by
+      simp only [sizeT]
+      rw [if_neg (by omega), if_neg (by omega)]
+      rfl
+    simp only [b2aB64, bufData, hs, bufOpt, encTable, bind, Except.bind, pure, Except.pure]
+    rw [if_pos ha]
+    rfl
+
 end PyLean.TextLibs.Binascii
