@@ -674,4 +674,99 @@ theorem isdisjoint_sub_probe :
       (setAddKey natSetProto 1 {}).2).1 = .ok true := by
   constructor <;> decide +kernel
 
+/-! ## `set_intersection` -/
+
+/-- `set_intersection` (:1708-1791), at the function level, for every key protocol, argument and
+iterator: `so == other` is `set_copy_impl(so)` (:1716-1717), for an exact set and a subclass alike;
+any other set (`PyAnySet_Check`, :1723), a subclass with its own `__iter__` too, takes the two-set
+branch (`SetInterRefines` pins it); anything else makes the new result, puts it in focus with `so`
+among the peers, runs `PyObject_GetIter` and the generic loop (`setInterIter`, :1756-1777, each turn
+pinned by `InterIterBody`), and hands back the result, or the exception in the state the loop left
+(:1779-1790). A failed `PyObject_GetIter` is the result. -/
+def SetIntersectionBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (id : Nat) (so o : SetObj K)
+    (it : ReIter (SetObj K) K),
+    (o.ident = so.ident →
+      setIntersection P (.set o) id so = setCopy P id so ∧
+      setIntersection P (.sub o it) id so = setCopy P id so) ∧
+    (o.ident ≠ so.ident →
+      setIntersection P (.set o) id so = withPeer o (setIntersectionSets P o id) so ∧
+      setIntersection P (.sub o it) id so = withPeer o (setIntersectionSets P o id) so) ∧
+    (∀ other : SetArg K, (∀ s, other ≠ .set s) → (∀ s it', other ≠ .sub s it') →
+      setIntersection P other id so =
+        (match onResult (newBasetype so.toSetBody id) (setInterIter P so.ident other.toReIter) so with
+         | (.ok r, s) => (.ok r.2, s)
+         | (.error e, s) => (.error e, s))) ∧
+    (∀ e s1, it.getIter { newBasetype so.toSetBody id with peers := so.toSetBody :: so.peers } =
+        (.error e, s1) → (setIntersection P (.live it) id so).1 = .error e)
+theorem setIntersectionBranches_proven : SetIntersectionBranches := by
+  intro K _ P id so o it
+  have hgen : ∀ other : SetArg K, (∀ s, other ≠ .set s) → (∀ s it', other ≠ .sub s it') →
+      setIntersection P other id so =
+        (match onResult (newBasetype so.toSetBody id) (setInterIter P so.ident other.toReIter) so with
+         | (.ok r, s) => (.ok r.2, s)
+         | (.error e, s) => (.error e, s)) := by
+    intro other h1 h2
+    have hrun : setIntersection P other id so =
+        (do let r ← onResult (newBasetype so.toSetBody id) (setInterIter P so.ident other.toReIter)
+            pure r.2) so := by
+      cases other with
+      | set s => exact absurd rfl (h1 s)
+      | sub s it' => exact absurd rfl (h2 s it')
+      | _ => simp [setIntersection, M.bind_run, M.get_run]
+    rw [hrun, M.bind_run]
+    cases onResult (newBasetype so.toSetBody id) (setInterIter P so.ident other.toReIter) so with
+    | mk r s => cases r <;> rfl
+  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, ?_⟩, hgen, fun e s1 he => ?_⟩
+  · simp [setIntersection, M.bind_run, M.get_run, h]
+  · simp [setIntersection, M.bind_run, M.get_run, h]
+  · simp [setIntersection, M.bind_run, M.get_run, h]
+  · simp [setIntersection, M.bind_run, M.get_run, h]
+  · rw [hgen (.live it) (fun s => nofun) (fun s it' => nofun)]
+    simp [onResult, setInterIter, SetArg.toReIter, M.bind_run, he]
+
+/-! ## `_shuffle_bits` -/
+
+/-- `_shuffle_bits` (:953-957) is `((h ^ 89869747) ^ (h << 16)) * 3644798167` on a 64-bit
+`Py_uhash_t`: its values at the hash fields `frozenset_hash_impl` meets most (NULL's `0` and a dummy's
+`-1`), at `1`, `2**63` and `12345`, and through `frozenset_hash_impl` the hashes CPython 3.15.2 gives
+for `frozenset()`, `frozenset({0})`, `frozenset({1, 2})` and `frozenset(range(10))` (probed). A
+shuffle with another constant, shift or width misses them; `FrozensetHashActive` is the property that
+holds for any shuffle. -/
+def ShuffleBitsValues : Prop :=
+  shuffleBits 0 = 327557089134353749 ∧ shuffleBits 1 = 327318219996883070 ∧
+  shuffleBits (2 ^ 64 - 1) = 327650953621548500 ∧ shuffleBits (2 ^ 63) = 9550929125989129557 ∧
+  shuffleBits 12345 = 3264452959386040038 ∧
+  frozensetHashImpl ({} : SetObj Nat) = 133146708735736 ∧
+  frozensetHashImpl (setProg natSetProto [.add 0] {}) = -2704248722033767810 ∧
+  frozensetHashImpl (setProg natSetProto [.add 1, .add 2] {}) = -1826646154956904602 ∧
+  frozensetHashImpl (setProg natSetProto ((List.range 10).map .add) {}) = 3895031357313128696
+theorem shuffleBitsValues_proven : ShuffleBitsValues := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-! ## `set_dealloc` -/
+
+/-- What `set_dealloc` (:733-754) does that Python can see, as hooks on a world `W`: the weak
+references' callbacks (`PyObject_ClearWeakRefs`), and the release of the keys and the table, whose
+`Py_DECREF`s can run `__del__` (left to the finalization scope limit, as a hook). -/
+structure SetDeallocHooks (W : Type) where
+  clearWeakrefs : W → W
+  dropKeys : W → W
+
+/-- `set_dealloc` (:733-754): untrack (no visible effect), then `FT_CLEAR_WEAKREFS(self,
+so->weakreflist)` (:743), which in the GIL build calls `PyObject_ClearWeakRefs` only when the set has
+a weak reference list (`Include/internal/pycore_weakref.h:46-52`), then the `Py_DECREF` loop over
+the keys and the frees (:745-753). -/
+def setDealloc {W : Type} (h : SetDeallocHooks W) (hasWeakrefs : Bool) (w : W) : W :=
+  let w1 := if hasWeakrefs then h.clearWeakrefs w else w
+  h.dropKeys w1
+
+/-- `set_dealloc`, for every world and hooks: a set with weak references runs their callbacks first,
+in the world as it is, and only then releases its keys, in the world the callbacks left (bpo-31095:
+the untrack comes before any callback); a set without runs no callback. -/
+def SetDeallocOrder : Prop :=
+  ∀ (W : Type) (h : SetDeallocHooks W) (w : W),
+    setDealloc h true w = h.dropKeys (h.clearWeakrefs w) ∧ setDealloc h false w = h.dropKeys w
+theorem setDeallocOrder_proven : SetDeallocOrder := fun _ _ _ => ⟨rfl, rfl⟩
+
 end PyLean.DictSet

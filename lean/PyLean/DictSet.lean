@@ -14,6 +14,7 @@ import PyLean.DictSet.Body
 import PyLean.DictSet.Iter
 import PyLean.DictSet.SetHash
 import PyLean.DictSet.SetBranches
+import PyLean.DictSet.SetHooks
 import PyLean.DictSet.Copy315
 import PyLean.DictSet.Eq315
 import PyLean.DictSet.Repr315
@@ -310,8 +311,8 @@ def entries : List Entry := [
   { id := "set-contains-body", pyFile := "Objects/setobject.c",
     pyFns := ["_PySet_Contains", "set_contains", "set___contains___impl", "frozenset___contains___impl",
       "set_compare_frozenset", "set_do_lookup", "set_contains_entry"]
-    statement := "On a well-formed table, for every honest key protocol, set and frozenset __contains__ answer what the list answers, whichever compare function the search takes."
-    source := "setobject.c:2544-2564, :2606-2626, :171-193, :220-248", status := .proven
+    statement := "On a well-formed table, for every honest key protocol and every relation saying which keys are sets: _PySet_Contains, set_contains (1 or 0), set.__contains__ and frozenset.__contains__ answer what the list answers, whichever compare function the search takes, and change nothing."
+    source := "setobject.c:2544-2593, :2606-2626, :171-193, :220-248", status := .proven
     prop := ``SetContainsBody, thm := some ``setContainsBody_proven },
   { id := "set-frozen-identity-first", pyFile := "Objects/setobject.c",
     pyFns := ["set_compare_frozenset", "set_compare_entry_lock_held"]
@@ -320,10 +321,64 @@ def entries : List Entry := [
     prop := ``FrozenIdentityFirst, thm := some ``frozenIdentityFirst_proven
     notes := "A difference between the twins, new in 3.15. It needs a key that breaks the hash contract, and nothing is wrong with either answer. Run against CPython by hand; the difftest's objects keep their hash." },
   { id := "set-contains-retry", pyFile := "Objects/setobject.c",
-    pyFns := ["_PySet_Contains", "set_unhashable_type"]
-    statement := "For every key protocol, a failed hash in _PySet_Contains is retried with the frozenset hash only for a TypeError from a set, and otherwise goes through set_unhashable_type."
-    source := "setobject.c:2549-2562", status := .proven
-    prop := ``SetContainsRetry, thm := some ``setContainsRetry_proven },
+    pyFns := ["_PySet_Contains", "set_contains", "set___contains___impl", "frozenset___contains___impl",
+      "set_unhashable_type"]
+    statement := "For every key protocol and every relation saying which keys are sets, in _PySet_Contains, set_contains, set.__contains__ and frozenset.__contains__: __hash__ runs first and its effect stands; a failure from a set key that is a TypeError or a subclass (PyErr_ExceptionMatches) is retried with frozenset_hash_impl of the key as it stands after __hash__, by set_lookkey for a set and one set_compare_frozenset walk for a frozenset; any other failure is set_unhashable_type's exception, in the state __hash__ left; a good hash goes on from that state; set_contains gives 1, 0 or the exception and set.__contains__ the bool or the exception, on every path."
+    source := "setobject.c:2544-2626", status := .proven
+    prop := ``SetContainsRetry, thm := some ``setContainsRetry_proven
+    notes := "The exact-type test of set_unhashable_type is set-unhashable-type; the retry test is the subclass relation Proto.isTypeError. set-contains-retry-exact is the withdrawn exact-TypeError version, refuted." },
+  { id := "set-contains-retry-exact", pyFile := "Objects/setobject.c", pyFns := ["_PySet_Contains"]
+    statement := "A failed hash that is not exactly TypeError is never retried by _PySet_Contains."
+    source := "the statement withdrawn from set-contains-retry", status := .refuted
+    prop := ``SetContainsRetryExact, thm := some ``setContainsRetryExact_refuted
+    bug := some "dictset-set-contains-retry-typeerror-subclass"
+    notes := "False: PyErr_ExceptionMatches matches subclasses; x in {frozenset([1])} is True for a set subclass x holding {1} whose __hash__ raises a TypeError subclass. Not a defect." },
+  { id := "set-unhashable-type", pyFile := "Objects/setobject.c", pyFns := ["set_unhashable_type"]
+    statement := "For every key protocol: an exception whose type is exactly TypeError becomes TypeError(\"cannot use '%T' as a set element (%S)\") with the key's type name and the old message; any other exception, a TypeError subclass among them, is re-raised unchanged."
+    source := "setobject.c:345-359", status := .proven
+    prop := ``SetUnhashableType, thm := some ``setUnhashableType_proven },
+  { id := "set-lookkey-body", pyFile := "Objects/setobject.c", pyFns := ["set_lookkey"]
+    statement := "For every key protocol: an exact frozenset runs one set_compare_frozenset walk of so->table and so->mask, which never asks for a restart, and its slot or exception is the answer; anything else runs set_compare_entry_lock_held in the do-while, where a walk that asks for a restart starts again from the state __eq__ left, with that state's table and mask, and a slot or exception ends it. On the same table the two give different slots."
+    source := "setobject.c:413-433", status := .proven
+    prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
+    notes := "Scope: a table is named by an identity a resize never reuses, so a table reallocated at the same address with another mask (bugs/dictset-set-lookup-table-aba.yaml) is outside the model. lookkey_dispatch_probe shows the dispatch is observable." },
+  { id := "set-add-restart", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
+    statement := "For every key protocol, step by step and turn by turn: a step that ends the block ends the walk with it, one that goes on moves to the next entry with the mask and freeslot it left, a finished block moves to the next probe with that mask; a turn that ends in an exception, found_active, a restart, a NULL with no freeslot (store, fill and used grow, resize at the load limit), a NULL with a freeslot still a dummy (store there, used grows), or a NULL with a freeslot that __eq__ refilled (restart) does exactly that, each from the state __eq__ left."
+    source := "setobject.c:252-335", status := .proven
+    prop := ``SetAddRestart, thm := some ``setAddRestart_proven
+    notes := "freeslot_refill_probe and restart_probe reach the refill re-check and the restart with a mutating __eq__ and give CPython's table order ([4, 2, 3] and [2]). Scope: the table test is by identity, as for set-lookkey-body." },
+  { id := "set-update-iterable-body", pyFile := "Objects/setobject.c", pyFns := ["set_update_iterable_lock_held"]
+    statement := "For every key protocol and iterator, turn by turn: a failed PyObject_GetIter is the result; each PyIter_Next runs in the state the last turn left and may raise (the result), end the loop, or yield a key that set_add_key adds; a failed add is the result in the state it left, and otherwise the loop goes on from there."
+    source := "setobject.c:1221-1244", status := .proven
+    prop := ``SetUpdateIterableBody, thm := some ``setUpdateIterableBody_proven },
+  { id := "set-update-iterable-refines", pyFile := "Objects/setobject.c", pyFns := ["set_update_iterable_lock_held"]
+    statement := "set.update(iterable) for an honest key protocol from any well-formed set: a failed __iter__ changes nothing; otherwise an add runs out of memory for a set PyMem_NEW cannot hold, or every item is added in order, the set stays well formed and holds the keys of the list model, and the iterator's exception, if any, is the result."
+    source := "set.update docstring; setobject.c:1221-1244", status := .proven
+    prop := ``SetUpdateIterableRefines, thm := some ``setUpdateIterableRefines_proven },
+  { id := "set-intersection-branches", pyFile := "Objects/setobject.c", pyFns := ["set_intersection"]
+    statement := "For every key protocol, argument and iterator: so == other is set_copy_impl(so); any other set, a subclass with its own __iter__ too, takes the two-set branch; anything else runs the generic loop on a new result in focus with so among the peers and hands back the result or the exception; a failed PyObject_GetIter is the result."
+    source := "setobject.c:1708-1791", status := .proven
+    prop := ``SetIntersectionBranches, thm := some ``setIntersectionBranches_proven
+    notes := "With set-inter-refines (two sets) and set-inter-iter-body (each turn of the generic loop). Not proved: an honest-protocol refinement of the generic branch, which needs the early-stop step (the result has caught up with so) argued by pigeonhole." },
+  { id := "set-isdisjoint-branches", pyFile := "Objects/setobject.c", pyFns := ["set_isdisjoint_impl"]
+    statement := "For every key protocol and iterator: so == other answers whether so is empty and changes nothing; only an exact set or frozenset takes the two-set branch, so an instance of a set subclass goes through its type's __iter__ and the generic loop, as any other iterable does."
+    source := "setobject.c:1910-1968", status := .proven
+    prop := ``SetIsdisjointBranches, thm := some ``setIsdisjointBranches_proven
+    notes := "isdisjoint_sub_probe: {1}.isdisjoint(S([2])) is False for S whose __iter__ yields 1, as on 3.15.2; walking S's table would answer True." },
+  { id := "set-disjoint-iter-refines", pyFile := "Objects/setobject.c", pyFns := ["set_isdisjoint_impl"]
+    statement := "The generic branch of set_isdisjoint for an honest key protocol on a well-formed set: a failed __iter__ is the result; an item the set holds answers False at once, before any later failure; otherwise the iterator's exception, if any, else True; nothing changes."
+    source := "set.isdisjoint docstring; setobject.c:1948-1967", status := .proven
+    prop := ``SetDisjointIterRefines, thm := some ``setDisjointIterRefines_proven },
+  { id := "set-shuffle-bits-values", pyFile := "Objects/setobject.c", pyFns := ["_shuffle_bits", "frozenset_hash_impl"]
+    statement := "_shuffle_bits is ((h ^ 89869747) ^ (h << 16)) * 3644798167 on 64 bits at 0, 1, 2**64 - 1, 2**63 and 12345, and through frozenset_hash_impl the hashes of frozenset(), frozenset({0}), frozenset({1, 2}) and frozenset(range(10)) are those CPython 3.15.2 gives."
+    source := "setobject.c:953-957, :972-1012; hash() on 3.15.2", status := .proven
+    prop := ``ShuffleBitsValues, thm := some ``shuffleBitsValues_proven
+    notes := "Values, not a general law: set-frozenset-hash-active holds for any shuffle; this entry pins the shuffle itself." },
+  { id := "set-dealloc-order", pyFile := "Objects/setobject.c", pyFns := ["set_dealloc"]
+    statement := "For every world and hooks: set_dealloc runs PyObject_ClearWeakRefs exactly when the set has a weak reference list, before it releases the keys, which happens in the world the callbacks left."
+    source := "setobject.c:733-754; Include/internal/pycore_weakref.h:46-52", status := .proven
+    prop := ``SetDeallocOrder, thm := some ``setDeallocOrder_proven
+    notes := "Scope: the key decrefs and frees are the dropKeys hook (finalization scope limit, as in gen-dealloc-finalizers); PyObject_ClearWeakRefs is the clearWeakrefs hook." },
   { id := "set-merge-refines", pyFile := "Objects/setobject.c",
     pyFns := ["set_merge_lock_held"]
     statement := "set_merge_lock_held from another well-formed set, for an honest protocol: on all three paths, the copy of an equal-sized table, the clean reinsertion into an empty one, and the loop, the result holds what the receiver held and the source's keys it did not; the one way to fail is a table PyMem_NEW refuses. From itself it does nothing."
@@ -335,13 +390,13 @@ def entries : List Entry := [
     source := "setobject.c:1570-1602", status := .proven
     prop := ``SetCopyRefines, thm := some ``setCopyRefines_proven },
   { id := "set-for-iter-body", pyFile := "Objects/setobject.c",
-    pyFns := ["set_update_iterable_lock_held", "set_intersection", "set_isdisjoint_impl"]
+    pyFns := []
     statement := "The PyIter_Next loop of the set methods, turn by turn, for any iterator: exhaustion stops it, an exception from the step or the body is the result in the state it left, the body can stop it, and the next step runs on the state this turn left."
     source := "setobject.c:1232-1243, :1762-1778, :1952-1967", status := .proven
     prop := ``ForIterBody, thm := some ``forIterBody_proven },
   { id := "set-inter-iter-body", pyFile := "Objects/setobject.c", pyFns := ["set_intersection"]
-    statement := "One turn of the generic loop of set_intersection, for every key protocol: a failed hash or lookup is the result, a key so does not hold does nothing, and a key it holds goes in and stops the loop when the result has caught up with so as so is now."
-    source := "setobject.c:1763-1777", status := .proven
+    statement := "One turn of the generic loop of set_intersection, for every key protocol: PyObject_Hash runs __hash__, whose failure is the result in the state it left; a failed lookup is the result; a key so does not hold does nothing; and a key it holds goes in and stops the loop when the result has caught up with so as so is now."
+    source := "setobject.c:1763-1776", status := .proven
     prop := ``InterIterBody, thm := some ``interIterBody_proven },
   { id := "set-iter-routes", pyFile := "Objects/setobject.c",
     pyFns := ["set_update_iterable_lock_held", "set_isdisjoint_impl"]
@@ -352,7 +407,7 @@ def entries : List Entry := [
     statement := "set_intersection of two sets, for an honest protocol: the entries of the one walked, which is the smaller, that the other holds, so the result's objects come from the smaller; the original sets are unchanged."
     source := "setobject.c:1723-1755", status := .proven
     prop := ``SetInterRefines, thm := some ``setInterRefines_proven
-    notes := "The set branch; set-inter-iter-body has the other, turn by turn." },
+    notes := "The set branch; set-intersection-branches and set-inter-iter-body have the others." },
   { id := "set-diff-update-refines", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_difference_update_internal from another set, for an honest protocol: what equals a key of the other goes, on the loop and on the route through set_intersection; the one way to fail is a table too big."
     source := "setobject.c:1970-2029", status := .proven
@@ -372,16 +427,22 @@ def entries : List Entry := [
     statement := "set_isdisjoint with an exact set, for an honest protocol: the list answer, whichever of the two it walks, and neither set changes."
     source := "setobject.c:1924-1946", status := .proven
     prop := ``SetDisjointRefines, thm := some ``setDisjointRefines_proven
-    notes := "The exact-set branch; set-iter-routes has the other." },
+    notes := "The exact-set branch; set-isdisjoint-branches and set-disjoint-iter-refines have the others." },
   { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
     source := "setobject.c:159-162 against :290-295", status := .proven
     prop := ``SetAddTrustsYes, thm := some ``setAddTrustsYes_proven
     notes := "A difference between two bodies, on record. It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
   { id := "set-hash-failure", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
-    statement := "For every key protocol, a hash that raises is reported through set_unhashable_type and the set is unchanged."
+    statement := "For every key protocol: __hash__ runs first, as Python code; when it raises, each of set_add_key, set_contains_key and set_discard_key raises set_unhashable_type's exception in the state __hash__ left, and when it answers, each goes on to its entry function with that hash from that state."
     source := "setobject.c:600-631", status := .proven
     prop := ``SetHashFailure, thm := some ``setHashFailure_proven },
+  { id := "set-hash-failure-unchanged", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
+    statement := "A hash that raises leaves the set unchanged."
+    source := "the statement withdrawn from set-hash-failure", status := .refuted
+    prop := ``SetHashFailureUnchanged, thm := some ``setHashFailureUnchanged_refuted
+    bug := some "dictset-set-hash-failure-mutates"
+    notes := "False: a __hash__ that does s.add(99) and raises TypeError leaves 99 in s after s.add, s.discard, s.remove and in (hashAdds_probe). Not a defect." },
   { id := "odict-twins-agree", pyFile := "Objects/odictobject.c",
     pyFns := ["_odict_get_index", "_odict_resize", "_odict_add_new_node", "_odict_remove_node"]
     statement := "For keys keeping the contract, the C and pure-Python OrderedDict hold the same keys in the same order after any program of __setitem__, __delitem__ and move_to_end."

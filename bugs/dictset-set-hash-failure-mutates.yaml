@@ -1,0 +1,59 @@
+id: dictset-set-hash-failure-mutates
+title: "NOT FOR FILING: a failed hash does not leave a set unchanged when __hash__ changed it first"
+priority: P5
+kind: documented-limitation
+module: dictset
+files: [Objects/setobject.c]
+functions: ["set_add_key", "set_contains_key", "set_discard_key"]
+summary: |
+  This records why the withdrawn claim SetHashFailureUnchanged ("a hash that raises leaves the set
+  unchanged") is false; it is not a defect report. __hash__ is Python code and runs before the set is
+  touched (_PyObject_HashFast at :602, :613, :624). Whatever it does to the set stands when it then
+  raises: with s = {1, 2, 3} and a key whose __hash__ does s.add(99) and raises TypeError("no"),
+  s.add(k), s.discard(k), s.remove(k), s.__contains__(k) and `k in s` all raise
+  "TypeError: cannot use 'K' as a set element (no)" and leave s == {1, 2, 3, 99}. The model now runs
+  __hash__ as a world-threaded hook (Proto.hashM), and set-hash-failure states the corrected
+  property: the error is set_unhashable_type's, in the state __hash__ left.
+likelihood: |
+  Not applicable.
+maybe_intended: |
+  Yes. Nothing promises that a failing __hash__ cannot have side effects; the set code has done
+  nothing yet when it fails.
+reproducer: |
+  s = {1, 2, 3}
+  class K:
+      def __hash__(self):
+          s.add(99)
+          raise TypeError("no")
+  results = []
+  for op in ("add", "discard", "remove", "__contains__"):
+      s.clear()
+      s.update([1, 2, 3])
+      try:
+          getattr(s, op)(K())
+      except TypeError as e:
+          results.append((op, str(e), sorted(s)))
+  for r in results:
+      print(*r)
+  if len(results) == 4 and all(m == "cannot use 'K' as a set element (no)" and v == [1, 2, 3, 99]
+                               for _, m, v in results):
+      print('REPRODUCED dictset-set-hash-failure-mutates')
+expected: |
+  What is observed: the TypeError from set_unhashable_type, with the set as __hash__ left it.
+observed: |
+  python3 3.15.2: add, discard, remove and __contains__ each raise "cannot use 'K' as a set element
+  (no)" and leave [1, 2, 3, 99]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Nothing; the withdrawn model claim was stronger than CPython.
+cause: |
+  Objects/setobject.c:602-606, :613-617, :624-628: the hash is computed, by Python code, before any
+  set operation; set_unhashable_type (:345-359) only rewrites the exception.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["not searched: not a defect"]
+lean:
+  property: PyLean.DictSet.SetHashFailureUnchanged
+  theorem: PyLean.DictSet.setHashFailureUnchanged_refuted
