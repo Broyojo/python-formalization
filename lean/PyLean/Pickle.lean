@@ -126,17 +126,17 @@ def entries : List Entry := [
     bug := some "pickle-twins-recursion-limit"
     notes := "Witness [[]] with 100 levels of room and 5 frames. At the default limit, lists 331 deep fail in pickle._dumps and pickle in C (probe); python/cpython#47369." },
   { id := "pickle-dumps-twins-narrow", pyFile := "Modules/_pickle.c"
-    pyFns := ["save_none", "save_bool", "save_long", "_save_bytes_data", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler._save_bytearray_no_memo", "_Pickler.save_str", "encode_long"]
+    pyFns := ["save_none", "save_bool", "save_long", "_save_bytes_data", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler._save_bytearray_no_memo", "encode_long"]
     statement := "With 4 * depth + 4 levels of C stack room and 10 * depth + 18 Python frames left where pickle._dumps is called (depth: the container nesting), for every plain value whose ints pass C's LONG4 size check, protocol None or an int within C long, and buffer_callback None or not, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice, every batch size of list, dict and set, and the reduce paths for bytes, bytearray, set and frozenset included."
-    source := "invariant: C accelerator vs pure-Python twin", status := .proven
-    prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
-    notes := "Each hypothesis is one refutation: pickle-dumps-twins-rec, pickle-save-long-twins, pickle-dumps-twins, pickle-dumps-protocol-float. Both mirrors check their limit at every guard or frame (EncRec.lean); EncRecExact.lean shows the room suffices. Exception classes may differ when both raise (pickle-dumps-twins-long). Rows whose own body has an unmodelled branch (file output, fast mode, persistent_id, reducer_override, fix_imports=False, subclasses, size-change re-checks) are not claimed here." },
+    source := "invariant: C accelerator vs pure-Python twin", status := .open
+    prop := ``DumpsTwinsNarrow
+    notes := "Open: false on a fresh interpreter, the default state, which persists after import pickle and other encodes. There the first protocol 0 str looks up the raw-unicode-escape codec in Python frames (encodings.search_function, importlib), so 'a' needs 15 frames, b'xy' 20 and bytearray(b'z') 25 against the bound of 18 (probe). Needs a codec-cache model in the Python mirror. The Lean theorem dumpsTwinsNarrow_proven holds of the model, which has no codec registry." },
   { id := "pickle-dumps-twins-norec", pyFile := "Modules/_pickle.c"
-    pyFns := ["save_none", "save_bool", "save_long", "_save_bytes_data", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler._save_bytearray_no_memo", "_Pickler.save_str", "encode_long"]
+    pyFns := ["save_none", "save_bool", "save_long", "_save_bytes_data", "_save_bytearray_data", "save_unicode", "write_unicode_binary", "memo_get", "_Pickler_Write", "_Pickler_CommitFrame", "_write_size64", "_Pickler_SetBufferCallback", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing", "_Pickler.put", "_Pickler.get", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long", "_Pickler._save_bytes_no_memo", "_Pickler._save_bytearray_no_memo", "encode_long"]
     statement := "For every C stack room and Python frame budget under which neither twin raises its RecursionError, on the values and protocols of pickle-dumps-twins-narrow, pickle.dumps and pickle._dumps both raise, or both return the same bytes."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``DumpsTwinsNoRec, thm := some ``dumpsTwinsNoRec_proven
-    notes := "EncRecApprox.lean: every bounded encoder computes what its frames-free twin computes or raises its RecursionError." },
+    notes := "EncRecApprox.lean: every bounded encoder computes what its frames-free twin computes or raises its RecursionError. No frame bound: on a fresh interpreter the Python twin's extra codec-lookup frames can only add RecursionErrors, which the hypothesis excludes." },
   { id := "pickle-dumps-protocol-float", pyFile := "Modules/_pickle.c"
     pyFns := ["_Pickler_SetProtocol", "_Pickler.__init__"]
     statement := "With the room and frames of pickle-dumps-twins-narrow, for every protocol object (None, int, float, or another type), pickle.dumps and pickle._dumps both raise or return the same bytes."
@@ -162,16 +162,21 @@ def entries : List Entry := [
     source := "pickle stream format, Lib/pickletools.py (SHORT_BINBYTES, BINBYTES, BINBYTES8); PEP 3154", status := .proven
     prop := ``BytesClassesBoth, thm := some ``bytesClassesBoth_proven },
   { id := "pickle-str-classes", pyFile := "Modules/_pickle.c"
-    pyFns := ["write_unicode_binary", "save_unicode", "_Pickler.save_str", "_write_size64"]
-    statement := "For every UTF-8 payload and protocol 1 and up, both picklers write SHORT_BINUNICODE with a 1-byte length to 255 bytes from protocol 4, BINUNICODE with a 4-byte length below 2**32, BINUNICODE8 with an 8-byte length from protocol 4 (each reads back as the size), and raise below protocol 4 from 2**32; at protocol 0 they write UNICODE, the raw-unicode-escape text and a newline."
+    pyFns := ["write_unicode_binary", "save_unicode", "_write_size64"]
+    statement := "For every UTF-8 payload and protocol 1 and up, both picklers write SHORT_BINUNICODE with a 1-byte length to 255 bytes from protocol 4, BINUNICODE with a 4-byte length below 2**32, BINUNICODE8 with an 8-byte length from protocol 4 (each reads back as the size), and raise below protocol 4 from 2**32; at protocol 0 C writes UNICODE, the raw-unicode-escape text and a newline."
     source := "pickle stream format, Lib/pickletools.py (SHORT_BINUNICODE, BINUNICODE, BINUNICODE8, UNICODE)", status := .proven
     prop := ``StrClassesBoth, thm := some ``strClassesBoth_proven
-    notes := "The escape text itself is the shared cRawUnicodeEscape (raw_unicode_escape is not claimed)." },
+    notes := "The escape text itself is the shared cRawUnicodeEscape (raw_unicode_escape is not claimed). Python's protocol 0 line is not claimed: its raw-unicode-escape codec lookup runs Python frames until cached, which the model does not have." },
   { id := "pickle-bytearray-exact", pyFile := "Modules/_pickle.c"
     pyFns := ["_save_bytearray_data", "_Pickler._save_bytearray_no_memo", "_write_size64"]
     statement := "For every bytearray payload at protocol 5, both picklers write BYTEARRAY8 with an 8-byte length that reads back as the size, outside the frame from 64 KiB."
     source := "pickle stream format, Lib/pickletools.py (BYTEARRAY8); PEP 574", status := .proven
     prop := ``BytearrayExact, thm := some ``bytearrayExact_proven },
+  { id := "pickle-bytearray-obj-exact", pyFile := "Modules/_pickle.c"
+    pyFns := ["_save_bytearray_data", "_write_size64"]
+    statement := "C save() on a bytearray not yet in the memo, protocol 5, any payload and stack room of a level or more: the opcode boundary, BYTEARRAY8 with an 8-byte length that reads back as the size and the payload (outside the frame from 64 KiB), MEMOIZE, and the bytearray memoized under the next index."
+    source := "pickle stream format, Lib/pickletools.py (BYTEARRAY8, MEMOIZE); PEP 574", status := .proven
+    prop := ``BytearrayObjExact, thm := some ``bytearrayObjExact_proven },
   { id := "pickle-frames-exact", pyFile := "Modules/_pickle.c"
     pyFns := ["_Pickler_CommitFrame", "_Pickler_Write", "_write_size64", "_Framer.__init__",
       "_Framer.start_framing", "_Framer.end_framing"]

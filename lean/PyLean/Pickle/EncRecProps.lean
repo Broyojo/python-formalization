@@ -8,6 +8,11 @@ is called), on the mirrors of `EncRec.lean`.
 
 * `DumpsTwinsRec`: for every room and frame budget the twins agree. Refuted: a list in a list
   with 5 frames left; at the default limit of 1000, lists about 330 deep (probe).
+Scope: the Python mirror has no codec registry; it is the interpreter whose raw-unicode-escape
+codec is already cached. On a fresh interpreter the first protocol 0 `str` costs about 9 more
+frames (`encodings.search_function`, importlib) until the codec is cached, so the frame bounds
+below are false there (probe: `bytearray(b'z')` at protocol 0 needs 25 frames).
+
 * `DumpsTwinsNarrow`: with `4 * dep x + 4` levels of room and `10 * dep x + 18` frames, the
   twins agree on every plain value whose ints pass C's LONG4 size check, for `protocol` None or an
   int within C long, with or without `buffer_callback`.
