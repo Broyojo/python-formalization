@@ -5,7 +5,7 @@ Objects/setobject.c	138	165	set_compare_entry_lock_held	set_compare_entry_lock_h
 Objects/setobject.c	172	193	set_compare_frozenset	set_compare_frozenset(PySetObject *so, setentry *table, setentry *ep, PyObject *key, Py_hash_t hash)	modelled	set-contains-body,set-frozen-identity-first,set-look-step-branches,set-table-refines	
 Objects/setobject.c	196	207	set_zero_table	set_zero_table(setentry *table, size_t size)	excluded		no-behaviour: memset of a table, the zeroing `newsize` slots that the model's fresh table is
 Objects/setobject.c	221	248	set_do_lookup	set_do_lookup(PySetObject *so, setentry *table, size_t mask, PyObject *key, Py_hash_t hash, setentry **epp, compare_func compare_entry)	modelled	set-contains-body,set-probe-failure,set-table-refines	
-Objects/setobject.c	253	335	set_add_entry_takeref	set_add_entry_takeref(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-add-restart,set-add-restarts-on-resize,set-add-step-branches,set-probe-failure,set-table-refines	
+Objects/setobject.c	253	335	set_add_entry_takeref	set_add_entry_takeref(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-add-restart,set-add-restarts-on-resize,set-add-step-branches,set-add-trusts-yes,set-probe-failure,set-table-refines	
 Objects/setobject.c	338	343	set_add_entry	set_add_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		one-line call of set_add_entry_takeref, no theorem of its own
 Objects/setobject.c	346	359	set_unhashable_type	set_unhashable_type(PyObject *key)	modelled	set-contains-retry,set-unhashable-type	
 Objects/setobject.c	362	373	_PySet_AddTakeRef	_PySet_AddTakeRef(PySetObject *so, PyObject *key)	todo		one-line wrapper, no definition of its own

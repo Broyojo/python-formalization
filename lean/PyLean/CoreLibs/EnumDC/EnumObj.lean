@@ -403,28 +403,39 @@ def EClassG.bindValue (o : Ops α) (c : EClassG α) (memberName : Name → Name)
     else .error e
   | .ok (d, _) => .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }
 
-/-- `Enum._add_value_alias_`, Lib/enum.py:1239-1262. `value in map` and the two reads of `map[value]` at :1242-1244
-give one answer, as `hash` and `==` are functions. In the `except TypeError` branch the `ValueError` of :1251 is
-formatted with `map[value]`, which raises that `TypeError` again, so the `TypeError` comes out instead. -/
+/-- The `except TypeError` handler of Lib/enum.py:1246-1252, for the `TypeError` `e` it caught: the long search over
+the members' `_value_`. A member other than `self` raises the `ValueError` of :1251, formatted with `map[value]`: that
+is the lookup or the formatting of the `try` done again, and as `hash`, `==` and `repr` are functions it raises `e` again,
+now outside the `try`; `self` is a `return`; no member falls through to the binding of :1253-1262. -/
+def EClassG.valueAliasSearch (o : Ops α) (c : EClassG α) (memberName : Name → Name) (self : Name) (v : α)
+    (e : PyExc) : Py (EClassG α) :=
+  match c.firstMemberEq o v c.memberMap with
+  | .error e' => .error e'
+  | .ok (some m) => if m != self then .error e else .ok c
+  | .ok none => c.bindValue o memberName self v
+
+/-- `Enum._add_value_alias_`, Lib/enum.py:1239-1262. The `try` of :1241-1245 holds `value in map`, the read of
+`map[value]` and the `raise ValueError('%r is already bound: %r' % (value, map[value]))` of :1244, whose tuple reads
+`map[value]` and whose `%` runs `repr(value)` and then `repr(member)`; the `except TypeError` of :1246 catches a
+`TypeError` (or an instance of a subclass) from any of them, from the lookup or from either `repr`, and runs the long
+search (`valueAliasSearch`). Any other exception, and the `ValueError` itself, goes out. `value in map` and the reads
+of `map[value]` give one answer, as `hash` and `==` are functions. -/
 def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → Name) (self : Name) (v : α) :
     Py (EClassG α) :=
+  let caught (e : PyExc) : Py (EClassG α) :=
+    if o.isInst e "TypeError" then c.valueAliasSearch o memberName self v e else .error e
   match o.dictGet c.value2member v with
   | .ok (some m) =>
     if m != self then
-      -- `'%r is already bound: %r' % (value, member)`: the value's `repr`, then the member's
       match o.repr v with
-      | .error e => .error e
+      | .error e => caught e
       | .ok _ =>
-        withRepr (c.memberRepr o m) (.valueError "~is already bound")
+        match c.memberRepr o m with
+        | .error e => caught e
+        | .ok _ => .error (.valueError "~is already bound")
     else .ok c
   | .ok none => c.bindValue o memberName self v
-  | .error e =>
-    if o.isInst e "TypeError" then
-      match c.firstMemberEq o v c.memberMap with
-      | .error e' => .error e'
-      | .ok (some m) => if m != self then .error e else .ok c
-      | .ok none => c.bindValue o memberName self v
-    else .error e
+  | .error e => caught e
 
 /-! ### `EnumType.__contains__`, Lib/enum.py:750-769, and `Flag._missing_` on any value -/
 

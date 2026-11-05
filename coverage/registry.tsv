@@ -1209,7 +1209,7 @@ set-diff-update-refines	proven	Objects/setobject.c
 set-sym-update-refines	proven	Objects/setobject.c	set_symmetric_difference_update_set
 set-subset-refines	proven	Objects/setobject.c	
 set-disjoint-refines	proven	Objects/setobject.c	set_isdisjoint_impl
-set-add-trusts-yes	proven	Objects/setobject.c	
+set-add-trusts-yes	proven	Objects/setobject.c	set_add_entry_takeref
 set-hash-failure	proven	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 set-hash-failure-unchanged	refuted	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 odict-twins-agree	open	Objects/odictobject.c	_odict_get_index,_odict_resize,_odict_add_new_node,_odict_remove_node
@@ -3990,6 +3990,7 @@ corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
 corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
 corelibs-enum-value-alias-binds	proven	Lib/enum.py	
+corelibs-enum-value-alias-linked-raises	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__

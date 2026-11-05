@@ -6033,8 +6033,8 @@ def enumdc_gmisc(rng):
 def enumdc_gboundrepr(rng):
     """A name or value bound to another member whose _value_ has a __repr__ that raises, with the class's own __repr__
     absent, raising, or returning (Lib/enum.py:1074, :1244)."""
-    re = rng.choice(["KeyError", "LookupError", "ValueError"])
-    badrepr = rng.choice([False, True, "ok", "ok"])
+    re = rng.choice(["KeyError", "LookupError", "ValueError", "TypeError", "TSub"])
+    badrepr = rng.choice([False, True, "ok", "ok", "bad"])
     if rng.random() < .5:
         body = [["A", ["robj", re, 0]], ["B", ["int", 2]]]
         if rng.random() < .5:
@@ -6045,8 +6045,11 @@ def enumdc_gboundrepr(rng):
     body = [["A", ["rint", 1, re]], ["B", ["int", 2]]]
     if rng.random() < .5:
         body.reverse()
+    v3 = rng.choice([["int", 3], ["rint", 3, re]])
     op = rng.choice([["valias", "B", ["int", 1]], ["valias", "A", ["int", 2]], ["valias", "B", ["rint", 1, re]],
-                     ["valias_call", "B", ["int", 1]], ["valias", "B", ["int", 3]]])
+                     ["valias_call", "B", ["int", 1]], ["valias", "B", ["int", 3]],
+                     ["valias2", "B", v3, "A"], ["valias2", "A", v3, "B"], ["valias2", "B", v3, "B"],
+                     ["valias2", "B", ["rint", 1, re], "A"], ["valias2", "A", ["list", 7], "B"]])
     return {"fn": "enumdc.eh_class", "keys": enumdc_gkeys(rng), "kind": "plain", "body": body, "op": op,
             "badrepr": badrepr}
 
@@ -6264,6 +6267,10 @@ def enumdc_build(case):
     if case.get("badrepr") == "ok":
         def __repr__(self):
             return "ok"
+        ns["__repr__"] = __repr__
+    elif case.get("badrepr") == "bad":
+        def __repr__(self):
+            return 5
         ns["__repr__"] = __repr__
     elif case.get("badrepr"):
         def __repr__(self):
@@ -6971,6 +6978,10 @@ def enumdc_ehbuild(case, objs):
         def __repr__(self):
             return "ok"
         ns["__repr__"] = __repr__
+    elif case.get("badrepr") == "bad":
+        def __repr__(self):
+            return 5
+        ns["__repr__"] = __repr__
     elif case.get("badrepr"):
         def __repr__(self):
             raise LookupError
@@ -7013,6 +7024,9 @@ def enumdc_ehclass(case):
         if k == "callself":
             return C(C[op[1]])._name_
         C[op[1]]._add_value_alias_(enumdc_pv(op[2], objs))
+        if k == "valias2":
+            C[op[3]]._add_value_alias_(enumdc_pv(op[2], objs))
+            return enumdc_ehsummary(C)
         if k == "valias":
             return enumdc_ehsummary(C)
         return C(enumdc_pv(op[2], objs))._name_
