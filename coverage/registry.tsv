@@ -3935,13 +3935,13 @@ corelibs-enum-dict-branches	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-names-new	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-sunders	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-functional-class	proven	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__,EnumType._create_
-corelibs-enum-lookup	proven	Lib/enum.py	Enum.__new__
-corelibs-enum-call	proven	Lib/enum.py	EnumType.__call__
+corelibs-enum-lookup	proven	Lib/enum.py	
+corelibs-enum-call	refuted	Lib/enum.py	EnumType.__call__
 corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member_,EnumType.__len__
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
-corelibs-enum-value-alias-hashable	proven	Lib/enum.py	Enum._add_value_alias_
-corelibs-enum-value-alias-binds	proven	Lib/enum.py	Enum._add_value_alias_
-corelibs-enum-flag-class-paths	proven	Lib/enum.py	EnumType.__contains__
+corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
+corelibs-enum-value-alias-binds	proven	Lib/enum.py	
+corelibs-enum-flag-class-paths	refuted	Lib/enum.py	EnumType.__contains__,Flag._missing_
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__
@@ -3949,28 +3949,44 @@ corelibs-enum-unique-named	proven	Lib/enum.py	unique
 corelibs-enum-value-alias-found	refuted	Lib/enum.py	Enum._add_value_alias_,Enum.__new__
 corelibs-enum-dict-auto	refuted	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__
 corelibs-enum-dict-update-keys	refuted	Lib/enum.py	EnumDict.update
-corelibs-enum-generate	proven	Lib/enum.py	Enum._generate_next_value_
-corelibs-enum-flag-generate	proven	Lib/enum.py	Flag._generate_next_value_
-corelibs-enum-strenum	proven	Lib/enum.py	StrEnum.__new__
+corelibs-enum-generate	proven	Lib/enum.py	
+corelibs-enum-flag-generate	proven	Lib/enum.py	
+corelibs-enum-strenum	refuted	Lib/enum.py	StrEnum.__new__
 corelibs-enum-order	proven	Lib/enum.py	
-corelibs-enum-continuous	proven	Lib/enum.py	verify.__call__
-corelibs-enum-verify	proven	Lib/enum.py	verify.__call__
+corelibs-enum-continuous	refuted	Lib/enum.py	verify.__call__
+corelibs-enum-verify	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-flag-operands	proven	Lib/enum.py	Flag._get_value,Flag.__contains__,Flag.__invert__
 corelibs-enum-flag-bin	proven	Lib/enum.py	Flag.__or__,Flag.__and__,Flag.__xor__
 corelibs-enum-invert-bits	proven	Lib/enum.py	Flag.__invert__
-corelibs-enum-flag-class-contains	refuted	Lib/enum.py	EnumType.__contains__
+corelibs-enum-flag-class-contains	refuted	Lib/enum.py	EnumType.__contains__,Flag._missing_
 corelibs-enum-attr-guards	proven	Lib/enum.py	EnumType.__setattr__,EnumType.__delattr__
 corelibs-enum-names	proven	Lib/enum.py	_is_dunder,_is_sunder
 corelibs-enum-single-bit	proven	Lib/enum.py	_is_single_bit
-corelibs-enum-round-trip	proven	Lib/enum.py	_proto_member.__set_name__,EnumType.__contains__,EnumType.__getitem__,EnumType.__iter__,EnumType.__reversed__
-corelibs-enum-unique-distinct	proven	Lib/enum.py	unique,_proto_member.__set_name__
-corelibs-enum-flag-masks	proven	Lib/enum.py	_proto_member.__set_name__
+corelibs-enum-round-trip	proven	Lib/enum.py	EnumType.__getitem__,EnumType.__iter__,EnumType.__reversed__
+corelibs-enum-unique-distinct	proven	Lib/enum.py	unique
+corelibs-enum-flag-masks	proven	Lib/enum.py	
 corelibs-enum-flag-ops-commute	proven	Lib/enum.py	
 corelibs-enum-flag-contains	proven	Lib/enum.py	
 corelibs-enum-conform	proven	Lib/enum.py	Flag._missing_
 corelibs-enum-strict-named	refuted	Lib/enum.py	Flag._missing_,Enum.__new__
-corelibs-enum-len-iter	refuted	Lib/enum.py	Flag.__len__,Flag.__iter__,Flag._iter_member_by_value_,_iter_bits_lsb
+corelibs-enum-len-iter	refuted	Lib/enum.py	Flag.__len__,Flag.__iter__,Flag._iter_member_by_value_
 corelibs-enum-auto-values	proven	Lib/enum.py	
+corelibs-enum-call-rules	proven	Lib/enum.py	EnumType.__call__
+corelibs-enum-strenum-rules	proven	Lib/enum.py	StrEnum.__new__
+corelibs-enum-contains-paths	proven	Lib/enum.py	EnumType.__contains__
+corelibs-enum-missing-of	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-verify-rules	proven	Lib/enum.py	verify.__call__
+corelibs-enum-continuous-ints	proven	Lib/enum.py	verify.__call__
+corelibs-enum-lookup-g	proven	Lib/enum.py	Enum.__new__
+corelibs-enum-value-alias-paths	proven	Lib/enum.py	Enum._add_value_alias_
+corelibs-enum-set-name	proven	Lib/enum.py	_proto_member.__set_name__
+corelibs-enum-dict-update	proven	Lib/enum.py	EnumDict.update
+corelibs-enum-ignore-tuple	proven	Lib/enum.py	EnumDict.__setitem__
+corelibs-enum-iter-bits	proven	Lib/enum.py	_iter_bits_lsb
+corelibs-enum-flag-len	proven	Lib/enum.py	Flag.__len__
+corelibs-enum-flag-iter	proven	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_,Flag._iter_member_by_def_
+corelibs-enum-flag-iter-members	refuted	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_
+corelibs-enum-flag-generate-g	proven	Lib/enum.py	Flag._generate_next_value_
 corelibs-dataclasses-hash-table	proven	Lib/dataclasses.py	
 corelibs-dataclasses-init-order	proven	Lib/dataclasses.py	_fields_in_init_order
 corelibs-dataclasses-default-order	proven	Lib/dataclasses.py	
