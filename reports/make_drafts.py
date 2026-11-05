@@ -62,8 +62,9 @@ def first_para(s):
 
 TEXT = ROOT / "reports" / "issue_text"
 VV = ROOT / "reports" / "python-VV.txt"  # output of `python3 -VV` on the test machine
-FOOTER = ("Found while building a Lean 4 model of CPython ({page}). I used AI tools (Claude) to find this "
-          "and draft the report, then reproduced it on 3.15.2 and on main and checked the text myself.")
+FOOTER = ("Found while building a Lean 4 model of CPython ({page}). AI tools (Claude and Codex) helped "
+          "investigate the findings and prepare these drafts. Results in the body are taken from the bug "
+          "records; final interpreter reruns and human review are pending.")
 
 
 def single(path):
@@ -72,9 +73,11 @@ def single(path):
     title = re.search(r"<!-- title: (.*?) -->", text).group(1)
     form = re.search(r"<!-- form: (\w+) -->", text).group(1)
     records = re.search(r"<!-- records: (.*?) -->", text).group(1).split()
+    versions_header = re.search(r"<!-- versions: (.*?) -->", text)
+    versions = versions_header.group(1) if versions_header else "3.15, CPython main branch"
     desc = re.sub(r"<!-- .*? -->\n", "", text).strip()
     body = ["### Crash report" if form == "crash" else "### Bug report", "", desc, "",
-            "### CPython versions tested on:", "", "3.15, CPython main branch", "",
+            "### CPython versions tested on:", "", versions, "",
             "### Operating systems tested on:", "", "Linux", ""]
     if form == "crash":
         vv = VV.read_text().strip() if VV.exists() else "TODO: output of python3 -VV"

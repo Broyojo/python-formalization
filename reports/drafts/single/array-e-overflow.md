@@ -34,4 +34,4 @@ Cause: Modules/arraymodule.c:636-640 (`e_setitem`) packs only for `i >= 0`. `ins
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). I used AI tools (Claude) to find this and draft the report, then reproduced it on 3.15.2 and on main and checked the text myself. Record: [sequences-array-e-ins1-overflow-keeps-slot](https://github.com/Broyojo/python-formalization/blob/main/bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [sequences-array-e-ins1-overflow-keeps-slot](https://github.com/Broyojo/python-formalization/blob/main/bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml)

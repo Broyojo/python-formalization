@@ -38,4 +38,4 @@ Cause: Modules/_datetimemodule.c:6569-6570 and :6580-6581 (`pep495_eq_exception`
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). I used AI tools (Claude) to find this and draft the report, then reproduced it on 3.15.2 and on main and checked the text myself. Record: [datetime-pep495-delta-cmp-none](https://github.com/Broyojo/python-formalization/blob/main/bugs/datetime-pep495-delta-cmp-none.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [datetime-pep495-delta-cmp-none](https://github.com/Broyojo/python-formalization/blob/main/bugs/datetime-pep495-delta-cmp-none.yaml)

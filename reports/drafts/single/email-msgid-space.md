@@ -26,4 +26,4 @@ Cause: Lib/email/_header_value_parser.py:1045-1066. The `if not value` guard doe
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). I used AI tools (Claude) to find this and draft the report, then reproduced it on 3.15.2 and on main and checked the text myself. Record: [textlibs-email-msgid-no-fold-literal-space](https://github.com/Broyojo/python-formalization/blob/main/bugs/textlibs-email-msgid-no-fold-literal-space.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [textlibs-email-msgid-no-fold-literal-space](https://github.com/Broyojo/python-formalization/blob/main/bugs/textlibs-email-msgid-no-fold-literal-space.yaml)

@@ -49,4 +49,4 @@ Cause: Modules/_functoolsmodule.c:1523-1530 unlinks the link while the dict stil
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). I used AI tools (Claude) to find this and draft the report, then reproduced it on 3.15.2 and on main and checked the text myself. Record: [corelibs-lru-evicted-hit-gc-hang](https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-lru-evicted-hit-gc-hang.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [corelibs-lru-evicted-hit-gc-hang](https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-lru-evicted-hit-gc-hang.yaml)
