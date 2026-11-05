@@ -232,7 +232,7 @@ Python/bytecodes.c	2438	2438	opcode:COPY_FREE_VARS	inst(COPY_FREE_VARS, (--)) {	
 Python/bytecodes.c	2452	2452	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	modelled	bytecode-build-string	
 Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION, (value, str, format[oparg & 1] -- interpolation)) {	todo		
 Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
-Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	modelled	bytecode-build-seq	
+Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	todo		review: BuildRules now mirrors :2493-2500 with _PyTuple_FromStackRefStealOnSuccess's n == 0 branch (Objects/tupleobject.c:474-476): oparg > 0 pushes one new tuple in push order, BUILD_TUPLE 0 pushes the tuple_empty singleton (made on first use, the same Val after), so a body that allocates for 0 or reverses fails it, and 3.15.2 agrees (a patched RESUME; BUILD_TUPLE 0; RETURN_VALUE returns an object that is (), is tuple() and is itself on a second call); but the bytecode-build-seq registry statement still says BUILD_TUPLE n pushes 'one new object', which is false for n = 0 on 3.15.2 and contradicts the restated prop.
 Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	modelled	bytecode-build-seq	
 Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	modelled	bytecode-builders	
 Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	modelled	bytecode-builders	
