@@ -38,6 +38,8 @@ structure Ops (α : Type) where
   index : α → Py Int
   /-- `a.bit_length()`. -/
   bitLength : α → Py Nat
+  /-- `type(a).__qualname__`, for messages. -/
+  typeName : α → String
 
 variable {α β : Type}
 
@@ -62,11 +64,21 @@ def Ops.dictFind (o : Ops α) (k : α) (h : Int) : List (α × β) → Py (Optio
         else o.dictFind k h r
       | .error _ => o.dictFind k h r
 
-/-- `d.get(k)` without the default: `hash(k)`, then the probe. `none` is the `KeyError` of `d[k]`. -/
-def Ops.dictGet (o : Ops α) (d : List (α × β)) (k : α) : Py (Option β) :=
+/-- The exception a dict or a set gives when hashing a key raises, Objects/dictobject.c:2442-2460 and
+Objects/setobject.c:346-359: an exact `TypeError` is replaced by "cannot use 'T' as a dict key (msg)", or "a set
+element"; any other exception is kept. -/
+def Ops.keyExc (o : Ops α) (what : String) (k : α) : PyExc → PyExc
+  | .typeError m => .typeError s!"cannot use '{o.typeName k}' as a {what} ({m})"
+  | e => e
+
+/-- A dict or set lookup: `hash(k)`, then the probe. -/
+def Ops.lookupIn (o : Ops α) (what : String) (d : List (α × β)) (k : α) : Py (Option β) :=
   match o.hash k with
-  | .error e => .error e
+  | .error e => .error (o.keyExc what k e)
   | .ok h => o.dictFind k h d
+
+/-- `d.get(k)` without the default, `d[k]`, `k in d`: `none` is the `KeyError` of `d[k]`. -/
+def Ops.dictGet (o : Ops α) (d : List (α × β)) (k : α) : Py (Option β) := o.lookupIn "dict key" d k
 
 /-- `d.setdefault(k, v)`: the dict after, and what it returns. -/
 def Ops.setDefault (o : Ops α) (d : List (α × β)) (k : α) (v : β) : Py (List (α × β) × β) :=
@@ -414,14 +426,14 @@ set is kept in insertion order; its iteration order is a separate argument. -/
 def Ops.setOf (o : Ops α) : List α → List (α × Unit) → Py (List (α × Unit))
   | [], s => .ok s
   | v :: r, s =>
-    match o.dictGet s v with
+    match o.lookupIn "set element" s v with
     | .error e => .error e
     | .ok (some _) => o.setOf r s
     | .ok none => o.setOf r (s ++ [(v, ())])
 
 /-- `v in s` for a set. -/
 def Ops.setIn (o : Ops α) (s : List (α × Unit)) (v : α) : Py Bool :=
-  match o.dictGet s v with
+  match o.lookupIn "set element" s v with
   | .error e => .error e
   | .ok r => .ok r.isSome
 
@@ -682,7 +694,7 @@ def evCmp (sym : String) (f : Int → Int → Bool) (g : String → String → B
 hashable value hashes, its hash value being one, which only decides which entries `==` is tried on. -/
 def evOps : Ops EV where
   same _ _ := false
-  hash v := if v.hashable then .ok 0 else .error (.typeError "~unhashable type")
+  hash v := if v.hashable then .ok 0 else .error (.typeError "unhashable type: 'list'")
   eq a b := .ok (decide (a = b))
   lt := evCmp "<" (fun x y => decide (x < y)) (fun x y => decide (x < y))
   gt := evCmp ">" (fun x y => decide (x > y)) (fun x y => decide (x > y))
@@ -700,6 +712,7 @@ def evOps : Ops EV where
   bitLength
     | .atom (.int n) => .ok (intBitLength n)
     | v => .error (.named "AttributeError" s!"'{v.typeName}' object has no attribute 'bit_length'")
+  typeName := EV.typeName
 
 /-- A value of the difftest's fallible cases. -/
 inductive PV where
@@ -782,7 +795,9 @@ def pvOps : Ops PV where
     | _, _ => false
   hash
     | .int n => .ok (intHash n)
-    | .str s => .ok (2 ^ 62 + s.length)
+    -- `hash('')` is 0, Objects/unicodeobject.c `unicode_hash`; any other `str` hash is randomized, and is given a
+    -- value outside the range of `int` hashes, which a randomized hash meets with probability about 2**-62
+    | .str s => .ok (if s = "" then 0 else 2 ^ 62 + s.length)
     | .key k he _ _ =>
       match he with
       | some x => .error (pvExc x "hash")
@@ -806,5 +821,6 @@ def pvOps : Ops PV where
   bitLength
     | .int n => .ok (intBitLength n)
     | v => .error (.named "AttributeError" s!"'{v.typeName}' object has no attribute 'bit_length'")
+  typeName := PV.typeName
 
 end PyLean.CoreLibs.EnumDC

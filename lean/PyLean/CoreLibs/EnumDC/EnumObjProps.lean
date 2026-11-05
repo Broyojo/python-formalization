@@ -73,10 +73,10 @@ def StrEnumNewRules : Prop :=
   ∀ (α : Type) (codec : Codec) (l : List (SArg α)) (s : String),
     (strEnumNewG codec l = .ok s ↔
       (l = [] ∧ s = "") ∨ l = [.str s] ∨
-      (∃ b enc, l = [.bytes b, .str enc] ∧ codec b enc "strict" = .ok s) ∨
-      (∃ b enc er, l = [.bytes b, .str enc, .str er] ∧ codec b enc er = .ok s)) ∧
+      (∃ b enc, l = [.bytes b, .str enc] ∧ strDecode codec b enc "strict" = .ok s) ∨
+      (∃ b enc er, l = [.bytes b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s)) ∧
     ∀ e, strEnumNewG codec l = .error e →
-      e.className = "TypeError" ∨ ∃ b enc er, l.head? = some (.bytes b) ∧ codec b enc er = .error e
+      e.className = "TypeError" ∨ ∃ b enc er, l.head? = some (.bytes b) ∧ strDecode codec b enc er = .error e
 
 theorem strEnumNewRules_proven : StrEnumNewRules := by
   intro α codec l s
@@ -360,7 +360,8 @@ def EnumLookupG : Prop :=
         | .ok (some n) => .ok n
         | .ok none => c.afterSearch ip miss) ∧
       (e.className ≠ "KeyError" → e.className ≠ "TypeError" → c.enumNew o none v ip miss = .error e)) ∧
-    (∀ e, o.hash v = .error e → o.dictGet c.value2member v = .error e) ∧
+    (∀ e, o.hash v = .error e → o.dictGet c.value2member v = .error (o.keyExc "dict key" v e) ∧
+      (o.keyExc "dict key" v e).className = e.className) ∧
     (∀ n k, firstHolding o v c.unhashableMap = .ok (some n) → c.memberMap.lookup n = some k →
       c.longSearch o v = .ok (some k)) ∧
     (∀ n, firstHolding o v c.unhashableMap = .ok (some n) → c.memberMap.lookup n = none →
@@ -396,7 +397,7 @@ theorem enumLookupG_proven : EnumLookupG := by
     · have h1 : (e.className == "KeyError") = false := by simp [hk]
       have h2 : (e.className == "TypeError") = false := by simp [ht]
       simp [EClassG.enumNew, h, h1, h2]
-  · intro e h; simp [Ops.dictGet, h]
+  · intro e h; refine ⟨by simp [Ops.dictGet, Ops.lookupIn, h], ?_⟩; cases e <;> rfl
   · intro n k h1 h2; simp [EClassG.longSearch, h1, EClassG.getItem, h2]
   · intro n h1 h2; exact ⟨_, by simp [EClassG.longSearch, h1, EClassG.getItem, h2]; rfl, rfl⟩
   · intro e h; simp [EClassG.longSearch, h]
@@ -419,5 +420,274 @@ theorem enumLookupG_proven : EnumLookupG := by
     cases ip
     · exact ⟨_, by simp [EClassG.afterSearch, h]; rfl, rfl⟩
     · exact ⟨_, by simp [EClassG.afterSearch, h]; rfl, rfl⟩
+
+/-! ### `dict.setdefault` -/
+
+theorem setDefault_paths (o : Ops α) (d : List (α × β)) (k : α) (v : β) :
+    (∀ w, o.dictGet d k = .ok (some w) → o.setDefault d k v = .ok (d, w)) ∧
+    (o.dictGet d k = .ok none → o.setDefault d k v = .ok (d ++ [(k, v)], v)) ∧
+    (∀ e, o.dictGet d k = .error e → o.setDefault d k v = .error e) := by
+  refine ⟨fun w h => by simp [Ops.setDefault, h], fun h => by simp [Ops.setDefault, h],
+    fun e h => by simp [Ops.setDefault, h]⟩
+
+theorem className_bne {e : PyExc} {s : String} (h : e.className ≠ s) : (e.className == s) = false := by
+  simp [h]
+
+/-! ### `_proto_member.__set_name__` -/
+
+/-- `_proto_member.__set_name__`, every path, for every `hash`, `==` and way of making the member. The member's `_value_`:
+an exception from `__new__` goes out; a value it set is kept; otherwise a plain class keeps the value itself, and any
+other calls `_member_type_(*args)`, whose exception becomes the `TypeError` "_value_ not set in __new__, unable to create
+it"; then `__init__`, whose exception goes out. The alias search: what the dict lookup finds or does not find decides; a
+`KeyError` from the lookup, `__hash__` or `__eq__` makes a new member; a `TypeError` runs the linear search, which compares
+`canonical._value_ == value` (no identity shortcut), and in which a `KeyError` again makes a new member and any other
+exception goes out. An alias is added to `_member_map_` only; a new member also goes to `_member_names_` (for a `Flag`,
+when its value is a single bit). The tables: `setdefault` and `value not in _hashable_values_`, a `TypeError` from either
+filing the value in the unhashable lists under the member's name, and any other exception going out. -/
+def SetNamePaths : Prop :=
+  ∀ (α : Type) (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) (value v : α),
+    (∀ e, mk.newMember = .error e → mk.memberValue value = .error e) ∧
+    (mk.newMember = .ok (some v) → mk.memberValue value = mk.init.map (fun _ => v)) ∧
+    (mk.newMember = .ok none → mk.plain = true → mk.memberValue value = mk.init.map (fun _ => value)) ∧
+    (mk.newMember = .ok none → mk.plain = false → mk.callType = .ok v → mk.memberValue value = mk.init.map (fun _ => v)) ∧
+    (mk.newMember = .ok none → mk.plain = false → ∀ e, mk.callType = .error e →
+      mk.memberValue value = .error (.typeError "_value_ not set in __new__, unable to create it")) ∧
+    (∀ e, mk.memberValue value = .error e → c.setName o mk name value = .error e) ∧
+    (∀ r, o.dictGet c.value2member v = .ok r → c.aliasOf o v = .ok r) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → e.className = "KeyError" → c.aliasOf o v = .ok none) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → e.className = "TypeError" →
+      (∀ r, c.firstEqual o v c.memberMap = .ok r → c.aliasOf o v = .ok r) ∧
+      (∀ e', c.firstEqual o v c.memberMap = .error e' → e'.className = "KeyError" → c.aliasOf o v = .ok none) ∧
+      (∀ e', c.firstEqual o v c.memberMap = .error e' → e'.className ≠ "KeyError" → c.aliasOf o v = .error e')) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → e.className ≠ "KeyError" → e.className ≠ "TypeError" →
+      c.aliasOf o v = .error e) ∧
+    (∀ n m x r, c.values.lookup m = some x → c.firstEqual o v ((n, m) :: r) =
+      match o.eq x v with
+      | .error e => .error e
+      | .ok true => .ok (some m)
+      | .ok false => c.firstEqual o v r) ∧
+    (mk.memberValue value = .ok v →
+      (∀ e, (c.flagUpdate o v).aliasOf o v = .error e → c.setName o mk name value = .error e) ∧
+      (∀ m, (c.flagUpdate o v).aliasOf o v = .ok (some m) →
+        c.setName o mk name value = ((c.flagUpdate o v).addToMap name m).bind (fun c2 => c2.noteValue o name m v)) ∧
+      ((c.flagUpdate o v).aliasOf o v = .ok none →
+        c.setName o mk name value =
+          ({ c.flagUpdate o v with
+              memberNames := if !(c.flagUpdate o v).isFlag || (match o.asInt v with
+                  | some n => isSingleBitInt n
+                  | none => false) then (c.flagUpdate o v).memberNames ++ [name] else (c.flagUpdate o v).memberNames,
+              values := (c.flagUpdate o v).values ++ [(name, v)] }.addToMap name name).bind
+            (fun c3 => c3.noteValue o name name v))) ∧
+    (∀ m e, o.setDefault c.value2member v m = .error e → e.className = "TypeError" →
+      c.noteValue o name m v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
+                                             unhashableMap := appendToG c.unhashableMap name v }) ∧
+    (∀ m e, o.setDefault c.value2member v m = .error e → e.className ≠ "TypeError" → c.noteValue o name m v = .error e) ∧
+    (∀ m d w, o.setDefault c.value2member v m = .ok (d, w) →
+      (o.listIn v c.hashableValues = .ok false →
+        c.noteValue o name m v = .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }) ∧
+      (o.listIn v c.hashableValues = .ok true → c.noteValue o name m v = .ok { c with value2member := d }) ∧
+      (∀ e, o.listIn v c.hashableValues = .error e → e.className = "TypeError" →
+        c.noteValue o name m v = .ok { c with value2member := d, unhashableValues := c.unhashableValues ++ [v],
+                                               unhashableMap := appendToG c.unhashableMap name v }) ∧
+      (∀ e, o.listIn v c.hashableValues = .error e → e.className ≠ "TypeError" → c.noteValue o name m v = .error e))
+
+theorem setNamePaths_proven : SetNamePaths := by
+  intro α o mk c name value v
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro e h; simp [Maker.memberValue, h]
+  · intro h; simp only [Maker.memberValue, h]; cases mk.init <;> rfl
+  · intro h hp; simp only [Maker.memberValue, h, hp, ↓reduceIte]; cases mk.init <;> rfl
+  · intro h hp hc; simp only [Maker.memberValue, h, hp, hc, Bool.false_eq_true, ↓reduceIte]; cases mk.init <;> rfl
+  · intro h hp e hc; simp [Maker.memberValue, h, hp, hc]
+  · intro e h; simp [EClassG.setName, h]
+  · intro r h; simp [EClassG.aliasOf, h]
+  · intro e h hk
+    simp [EClassG.aliasOf, h, hk]
+  · intro e h ht
+    refine ⟨fun r hr => by simp [EClassG.aliasOf, h, ht, hr], fun e' he hk => by simp [EClassG.aliasOf, h, ht, he, hk],
+      fun e' he hk => by simp [EClassG.aliasOf, h, ht, he, className_bne hk]⟩
+  · intro e h hk ht
+    simp [EClassG.aliasOf, h, className_bne hk, className_bne ht]
+  · intro n m x r hx
+    simp only [EClassG.firstEqual, hx]
+    try rfl
+  · intro hv
+    refine ⟨fun e he => by simp [EClassG.setName, hv, he], fun m hm => ?_, fun hn => ?_⟩
+    · simp only [EClassG.setName, hv, hm]
+      generalize (c.flagUpdate o v).addToMap name m = x
+      cases x <;> rfl
+    · simp only [EClassG.setName, hv, hn]
+      generalize EClassG.addToMap _ name name = x
+      cases x <;> rfl
+  · intro m e h ht
+    simp [EClassG.noteValue, h, ht]
+  · intro m e h ht
+    simp [EClassG.noteValue, h, className_bne ht]
+  · intro m d w h
+    refine ⟨fun hl => by simp [EClassG.noteValue, h, hl], fun hl => by simp [EClassG.noteValue, h, hl],
+      fun e hl ht => by simp [EClassG.noteValue, h, hl, ht],
+      fun e hl ht => by simp [EClassG.noteValue, h, hl, className_bne ht]⟩
+
+/-! ### `Enum._add_value_alias_` -/
+
+/-- `Enum._add_value_alias_`, every path, for every `hash` and `==`: a value another member has in the map is the
+`ValueError`, one this member has is nothing, a new one is bound; a `TypeError` from the lookup runs the search over the
+members' `_value_`, in which a value another member has raises that `TypeError` again (it formats the `ValueError` with
+`map[value]`), one this member has is nothing, and a new one is bound; any other exception goes out. Binding is
+`setdefault` and an append, or with a `TypeError` the unhashable lists under `self.name`. -/
+def ValueAliasPaths : Prop :=
+  ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self : Name) (v : α),
+    (∀ m, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (c.addValueAlias o f self v).raises "ValueError") ∧
+    (o.dictGet c.value2member v = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
+    (o.dictGet c.value2member v = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → e.className = "TypeError" →
+      (∀ m, c.firstMemberEq o v c.memberMap = .ok (some m) → m ≠ self → c.addValueAlias o f self v = .error e) ∧
+      (c.firstMemberEq o v c.memberMap = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
+      (c.firstMemberEq o v c.memberMap = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
+      (∀ e', c.firstMemberEq o v c.memberMap = .error e' → c.addValueAlias o f self v = .error e')) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → e.className ≠ "TypeError" → c.addValueAlias o f self v = .error e) ∧
+    (∀ n m x r, c.values.lookup m = some x → c.firstMemberEq o v ((n, m) :: r) =
+      match o.eq x v with
+      | .error e => .error e
+      | .ok true => .ok (some m)
+      | .ok false => c.firstMemberEq o v r) ∧
+    (∀ d w, o.setDefault c.value2member v self = .ok (d, w) →
+      c.bindValue o f self v = .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }) ∧
+    (∀ e, o.setDefault c.value2member v self = .error e → e.className = "TypeError" →
+      c.bindValue o f self v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
+                                            unhashableMap := appendToG c.unhashableMap (f self) v }) ∧
+    (∀ e, o.setDefault c.value2member v self = .error e → e.className ≠ "TypeError" →
+      c.bindValue o f self v = .error e)
+
+theorem valueAliasPaths_proven : ValueAliasPaths := by
+  intro α o c f self v
+  refine ⟨fun m h hm => ⟨_, by simp [EClassG.addValueAlias, h, hm]; rfl, rfl⟩, fun h => by
+    simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h], fun e h ht => ⟨fun m hm hne => by
+    simp [EClassG.addValueAlias, h, ht, hm, hne], fun hm => by simp [EClassG.addValueAlias, h, ht, hm], fun hm => by
+    simp [EClassG.addValueAlias, h, ht, hm], fun e' he => by simp [EClassG.addValueAlias, h, ht, he]⟩,
+    fun e h ht => by simp [EClassG.addValueAlias, h, className_bne ht], fun n m x r hx => ?_, fun d w h => by
+    simp [EClassG.bindValue, h], fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by
+    simp [EClassG.bindValue, h, className_bne ht]⟩
+  simp only [EClassG.firstMemberEq, hx]
+  try rfl
+
+/-- A class with members `A` and `B` and the given values, built by the mirror. -/
+def twoG (a b : EV) : EClassG EV :=
+  { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])], values := [(['A'], a), (['B'], b)] }
+
+/-- A value linked to a member is a `ValueError` for any other member, the docs of `_add_value_alias_`. False for an
+unhashable value: the check at Lib/enum.py:1246-1247 reads the `_value_` of the members only, so a value linked with
+`_add_value_alias_` is not seen, and the second member gets it as well. -/
+def ValueAliasExclusive : Prop :=
+  ∀ (α : Type) (o : Ops α) (c c' : EClassG α) (f : Name → Name) (m m' : Name) (v : α), m ≠ m' →
+    c.addValueAlias o f m v = .ok c' → (c'.addValueAlias o f m' v).raises "ValueError"
+
+/-- The class after `A._add_value_alias_([9])`, and after `B._add_value_alias_([9])` too. -/
+def twoG1 : EClassG EV :=
+  { twoG (.atom (.int 1)) (.atom (.int 2)) with
+    unhashableValues := [.atom (.list 9)]
+    unhashableMap := [(['A'], [.atom (.list 9)])] }
+
+def twoG2 : EClassG EV :=
+  { twoG (.atom (.int 1)) (.atom (.int 2)) with
+    unhashableValues := [.atom (.list 9), .atom (.list 9)]
+    unhashableMap := [(['A'], [.atom (.list 9)]), (['B'], [.atom (.list 9)])] }
+
+theorem valueAliasExclusive_refuted : ¬ValueAliasExclusive := by
+  intro h
+  have h1 : (twoG (.atom (.int 1)) (.atom (.int 2))).addValueAlias evOps id ['A'] (.atom (.list 9)) = .ok twoG1 := by
+    decide +kernel
+  obtain ⟨e, he, _⟩ := h EV evOps _ _ id ['A'] ['B'] (.atom (.list 9)) (by decide) h1
+  have h2 : twoG1.addValueAlias evOps id ['B'] (.atom (.list 9)) = .ok twoG2 := by decide +kernel
+  rw [h2] at he
+  cases he
+
+/-- A value that is another member's `_value_` is a `ValueError`, unhashable or not. False: for an unhashable value the
+`ValueError` is formatted with `cls._value2member_map_[value]` at :1249, which hashes the value again and raises
+`TypeError`. -/
+def ValueAliasBoundError : Prop :=
+  ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (m m' : Name) (v : α), m ≠ m' →
+    c.firstMemberEq o v c.memberMap = .ok (some m') → (c.addValueAlias o f m v).raises "ValueError"
+
+theorem valueAliasBoundError_refuted : ¬ValueAliasBoundError := by
+  intro h
+  obtain ⟨e, he, hc⟩ := h EV evOps (twoG (.atom (.list 1)) (.atom (.int 2))) id ['B'] ['A'] (.atom (.list 1))
+    (by decide) (by decide +kernel)
+  have : (twoG (.atom (.list 1)) (.atom (.int 2))).addValueAlias evOps id ['B'] (.atom (.list 1)) =
+      .error (.typeError "cannot use 'list' as a dict key (unhashable type: 'list')") := by decide +kernel
+  rw [this] at he
+  cases he
+  exact absurd hc (by decide)
+
+/-- `Enum.__new__` finds a value bound by `_add_value_alias_`, as in the docs' `Color.RED._add_value_alias_(42)`, then
+`Color(42)`. False for a class with a `name` of its own: :1262 files the value under `self.name`, and :1193 does
+`cls[name]`, a `KeyError`. -/
+def ValueAliasFound : Prop :=
+  ∀ (α : Type) (o : Ops α) (c c' : EClassG α) (f : Name → Name) (m : Name) (v : α), c.memberMap.lookup m = some m →
+    c.addValueAlias o f m v = .ok c' → c'.enumNew o none v false .none = .ok m
+
+/-- A class with one member `A`, and the same after `A._add_value_alias_([1])` when `A.name` is `'a'`. -/
+def oneG : EClassG EV := { memberMap := [(['A'], ['A'])], values := [(['A'], .atom (.int 1))] }
+
+def oneG1 : EClassG EV :=
+  { oneG with
+    unhashableValues := [.atom (.list 1)]
+    unhashableMap := [(['a'], [.atom (.list 1)])] }
+
+theorem valueAliasFound_refuted : ¬ValueAliasFound := by
+  intro h
+  have h1 : oneG.addValueAlias evOps (fun _ => ['a']) ['A'] (.atom (.list 1)) = .ok oneG1 := by decide +kernel
+  have := h EV evOps _ _ (fun _ => ['a']) ['A'] (.atom (.list 1)) (by decide) h1
+  revert this
+  decide +kernel
+
+/-! ### `EnumDict` -/
+
+/-- `EnumDict.update`: each item of an iterable of pairs goes through `__setitem__` in turn, the first exception stops it,
+and so do the keyword items after; with a mapping, the same while no `AttributeError` comes, and an `AttributeError`
+from `__setitem__` starts again over the mapping's keys, unpacked, from the state it had reached. So a no-op or a
+constant fails it. -/
+def UpdateRules : Prop :=
+  ∀ (d : EnumDict) (k : Name) (v : EV) (rest more : List (Name × EV)),
+    d.update (.pairs []) [] = .ok d ∧
+    (∀ d1, d.set k v = .ok d1 → d.update (.pairs ((k, v) :: rest)) more = d1.update (.pairs rest) more) ∧
+    (∀ e, d.set k v = .error e → d.update (.pairs ((k, v) :: rest)) more = .error e) ∧
+    (∀ d1, d.set k v = .ok d1 → d.update (.pairs []) ((k, v) :: more) = d1.update (.pairs []) more) ∧
+    (∀ e, d.set k v = .error e → d.update (.pairs []) ((k, v) :: more) = .error e) ∧
+    (∀ items d', d.setAll items = (d', none) → d.update (.mapping items) more = d'.update (.pairs []) more) ∧
+    (∀ items d' e, d.setAll items = (d', some e) → e.className = "AttributeError" →
+      d.update (.mapping items) more =
+        (d'.unpackKeys (items.map Prod.fst)).bind (fun d'' => d''.update (.pairs []) more)) ∧
+    (∀ items d' e, d.setAll items = (d', some e) → e.className ≠ "AttributeError" →
+      d.update (.mapping items) more = .error e)
+
+theorem updateRules_proven : UpdateRules := by
+  intro d k v rest more
+  refine ⟨rfl, fun d1 h => ?_, fun e h => ?_, fun d1 h => ?_, fun e h => ?_, fun items d' h => ?_,
+    fun items d' e h ha => ?_, fun items d' e h ha => ?_⟩
+  · simp only [EnumDict.update, EnumDict.setAll, h]
+  · simp [EnumDict.update, EnumDict.setAll, h]
+  · simp only [EnumDict.update, EnumDict.setAll, h]
+  · simp [EnumDict.update, EnumDict.setAll, h]
+  · simp only [EnumDict.update, h, EnumDict.setAll]
+  · simp only [EnumDict.update, h, ha, beq_self_eq_true, ↓reduceIte, EnumDict.setAll]
+    generalize d'.unpackKeys (items.map Prod.fst) = x
+    cases x <;> rfl
+  · simp [EnumDict.update, h, className_bne ha]
+
+/-- `_ignore_` given as a tuple of names ignores those names, as a list does: `list(value)` at :379. -/
+def IgnoreTuple : Prop :=
+  ∀ (l : List String), ignoreList (.tup (l.map Atom.str)) = .ok (l.map String.toList) ∧
+    ignoreList (.names (l.map String.toList)) = .ok (l.map String.toList)
+
+theorem ignoreTuple_proven : IgnoreTuple := by
+  intro l
+  refine ⟨?_, rfl⟩
+  have h2 : (l.map Atom.str).filterMap Atom.ignoreName = l.map String.toList := by
+    induction l with
+    | nil => rfl
+    | cons x xs ih => simp [Atom.ignoreName] at ih ⊢; exact ih
+  have h1 : (l.map Atom.str).all Atom.hashable = true := by simp [Atom.hashable]
+  simp only [ignoreList, h1, ↓reduceIte, h2]
 
 end PyLean.CoreLibs.EnumDC

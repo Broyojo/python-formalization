@@ -6696,6 +6696,8 @@ class enumdc_K:
     def __repr__(self):
         return "K(%d)" % self.k
 
+enumdc_K.__name__ = enumdc_K.__qualname__ = "K"
+
 
 def enumdc_gkeys(rng):
     """The K objects of one case, by index: a key, and the exceptions of __hash__ and __eq__."""

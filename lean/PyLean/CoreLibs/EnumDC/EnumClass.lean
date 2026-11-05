@@ -378,6 +378,11 @@ inductive SArg (α : Type) where
 /-- `bytes.decode(encoding, errors)`: the codec lookup and the decoder. -/
 abbrev Codec := List Nat → String → String → Py String
 
+/-- `str(b, encoding, errors)` for a `bytes`, Objects/unicodeobject.c:3480-3489: an empty `bytes` is `''` before
+any codec lookup (in a release build without `-X dev`, :532-536), anything else goes to the codec. -/
+def strDecode (codec : Codec) (bs : List Nat) (enc errors : String) : Py String :=
+  if bs = [] then .ok "" else codec bs enc errors
+
 /-- `StrEnum.__new__`, Lib/enum.py:1376-1395: the checks of :1377-1390 in order, then `str(*values)` at :1391. With no
 argument that is `''`, with one `str` that `str`; with an encoding, and `errors` (`'strict'` when not given), a `bytes` is
 decoded by the codec, a `str` is the `TypeError` "decoding str is not supported", and anything else the `TypeError` of
@@ -402,7 +407,7 @@ def strEnumNewG (codec : Codec) {α : Type} (values : List (SArg α)) : Py Strin
         | .error e => .error e
         | .ok er =>
           match a with
-          | .bytes bs => codec bs enc er
+          | .bytes bs => strDecode codec bs enc er
           | .str _ => .error (.typeError "decoding str is not supported")
           | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
       | _ => .error (.typeError "~encoding must be a string")

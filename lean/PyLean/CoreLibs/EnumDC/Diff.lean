@@ -563,7 +563,9 @@ def runEhClass (j : Json) : Except String Json := do
           match c.memberMap.lookup (← decName (← mj.getArrVal? 1)) with
           | some m => pure (.member m)
           | none => pure (.raises (.keyError "~name"))
-      pure (encPy nameJ (c.enumNew pvOps none v false miss))
+      -- `EnumType.__call__`, Lib/enum.py:729-739: no members, no `names`, no `type`
+      if c.memberMap.isEmpty then pure (unitJ (.error (.typeError "~has no members; specify `names=()`")))
+      else pure (encPy nameJ (c.enumNew pvOps none v false miss))
     | "contains" =>
       let v ← decPV keys (← op.getArrVal? 1)
       pure (encPy (fun (b : Bool) => toJson b) (containsG pvOps false none c.unhashableValues c.hashableValues v))

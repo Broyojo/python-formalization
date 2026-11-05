@@ -343,10 +343,10 @@ theorem dictFind_ints (h : IntOps o) (a : Int) (H : Int) (hh : o.hash (o.ofInt a
         · simp only [hH, ↓reduceIte, ih]
           simp [List.mem_cons, Ne.symm hxa]
 
-theorem dictGet_ints (h : IntOps o) (a : Int) (xs : List Int) :
-    o.dictGet (xs.map fun x => (o.ofInt x, ())) (o.ofInt a) = .ok (if a ∈ xs then some () else none) := by
+theorem lookupIn_ints (h : IntOps o) (w : String) (a : Int) (xs : List Int) :
+    o.lookupIn w (xs.map fun x => (o.ofInt x, ())) (o.ofInt a) = .ok (if a ∈ xs then some () else none) := by
   obtain ⟨H, hh⟩ := h.hash_int a
-  simp only [Ops.dictGet, hh]
+  simp only [Ops.lookupIn, hh]
   exact dictFind_ints h a H hh xs
 
 /-- The insertion order of `set(l)`. -/
@@ -385,7 +385,7 @@ theorem setOf_ints (h : IntOps o) : ∀ (l acc : List Int),
     o.setOf (l.map o.ofInt) (acc.map fun x => (o.ofInt x, ())) = .ok ((dedupInto acc l).map fun x => (o.ofInt x, ()))
   | [], acc => rfl
   | x :: r, acc => by
-    simp only [List.map_cons, Ops.setOf, dictGet_ints h, dedupInto]
+    simp only [List.map_cons, Ops.setOf, lookupIn_ints h, dedupInto]
     by_cases hx : x ∈ acc
     · simp only [hx, ↓reduceIte]
       exact setOf_ints h r acc
@@ -396,7 +396,7 @@ theorem setOf_ints (h : IntOps o) : ∀ (l acc : List Int),
 
 theorem setIn_ints (h : IntOps o) (dd : List Int) (a : Int) :
     o.setIn (dd.map fun x => (o.ofInt x, ())) (o.ofInt a) = .ok (decide (a ∈ dd)) := by
-  simp only [Ops.setIn, dictGet_ints h]
+  simp only [Ops.setIn, lookupIn_ints h]
   by_cases ha : a ∈ dd <;> simp [ha]
 
 theorem missingFrom_ints (h : IntOps o) (dd : List Int) : ∀ ps : List Int,
@@ -470,5 +470,372 @@ theorem mem_intRange (a b k : Int) : k ∈ intRange a b ↔ a ≤ k ∧ k < b :=
     omega
   · intro h
     exact ⟨(k - a).toNat, by omega, by omega⟩
+
+/-! ### `verify(CONTINUOUS)` -/
+
+/-- The sentence the earlier model proved, which read only the `int` values: `verify(CONTINUOUS)` on an `Enum` passes
+exactly when every integer between the lowest and the highest `int` value is a value. False: with values `1, 2, 'x'`,
+`min` compares `'x'` with an `int` and raises `TypeError`. -/
+def VerifyContinuous : Prop :=
+  ∀ (α : Type) (o : Ops α) (order : List α → List α) (s : String) (vals : List α) (i : Int) (is : List Int),
+    vals.filterMap o.asInt = i :: is →
+    (verifyContinuousG o order false s vals = .ok () ↔ ∀ k, is.foldl min i < k → k < is.foldl max i → k ∈ i :: is)
+
+theorem verifyContinuous_refuted : ¬VerifyContinuous := by
+  intro h
+  have h1 := (h EV evOps id "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] 1 [2] rfl).2
+    (by intro k h1 h2; simp only [List.foldl_cons, List.foldl_nil] at h1 h2; omega)
+  revert h1
+  decide +kernel
+
+/-- `verify(CONTINUOUS)` on `int` values, for every iteration order of the set and every class of `int`-like values:
+on an `Enum` it passes exactly when every integer strictly between the lowest and the highest value is a value; on a
+`Flag` exactly when every power of two `2**j` with `_high_bit(low) < j < _high_bit(high)` is a value, the docs' "no missing
+values between the lowest-valued member and the highest-valued member". -/
+def VerifyContinuousInts : Prop :=
+  ∀ (α : Type) (o : Ops α), IntOps o → ∀ (order : List α → List α), (∀ l x, x ∈ order l ↔ x ∈ l) →
+    ∀ (s : String) (l : List Int) (lo hi : Int), lo ∈ l → hi ∈ l → (∀ z ∈ l, lo ≤ z ∧ z ≤ hi) →
+      (verifyContinuousG o order false s (l.map o.ofInt) = .ok () ↔ ∀ k, lo < k → k < hi → k ∈ l) ∧
+      (verifyContinuousG o order true s (l.map o.ofInt) = .ok () ↔
+        ∀ j : Nat, intBitLength lo ≤ j → j + 1 < intBitLength hi → (2 : Int) ^ j ∈ l)
+
+theorem verifyContinuousInts_proven : VerifyContinuousInts := by
+  intro α o h order hp s l lo hi hlo hhi hb
+  have hset : o.setOf (l.map o.ofInt) [] = .ok ((dedupInto [] l).map fun x => (o.ofInt x, ())) := setOf_ints h l []
+  have hmem : ∀ z, z ∈ dedupInto [] l ↔ z ∈ l := fun z => by rw [mem_dedupInto]; simp
+  generalize dedupInto [] l = dd at hset hmem
+  have hfst : (dd.map fun x => (o.ofInt x, ())).map Prod.fst = dd.map o.ofInt := by simp
+  have hL : ∀ x ∈ order (dd.map o.ofInt), ∃ y, x = o.ofInt y := by
+    intro x hx
+    obtain ⟨y, _, rfl⟩ := List.mem_map.1 ((hp _ x).1 hx)
+    exact ⟨y, rfl⟩
+  obtain ⟨l', hl'⟩ := map_of_ints _ hL
+  have hl'mem : ∀ z, z ∈ l' ↔ z ∈ l := by
+    intro z
+    constructor
+    · intro hz
+      have : o.ofInt z ∈ order (dd.map o.ofInt) := by rw [hl']; exact List.mem_map_of_mem hz
+      obtain ⟨w, hw, he⟩ := List.mem_map.1 ((hp _ _).1 this)
+      rw [← ofInt_inj h he]
+      exact (hmem w).1 hw
+    · intro hz
+      have : o.ofInt z ∈ order (dd.map o.ofInt) := (hp _ _).2 (List.mem_map_of_mem ((hmem z).2 hz))
+      rw [hl'] at this
+      obtain ⟨w, hw, he⟩ := List.mem_map.1 this
+      rw [← ofInt_inj h he]
+      exact hw
+  have hfilt : ∀ ps : List Int, (ps.filter fun k => !decide (k ∈ dd)) = [] ↔ ∀ k ∈ ps, k ∈ l := by
+    intro ps
+    rw [List.filter_eq_nil_iff]
+    constructor
+    · intro h1 k hk
+      have := h1 k hk
+      simp only [Bool.not_eq_true', decide_eq_false_iff_not, Classical.not_not] at this
+      exact (hmem k).1 this
+    · intro h1 k hk
+      simp only [Bool.not_eq_true', decide_eq_false_iff_not, Classical.not_not]
+      exact (hmem k).2 (h1 k hk)
+  by_cases hlen : dd.length < 2
+  · have heq : lo = hi := by
+      match dd, hmem, hlen with
+      | [], hmem, _ => exact absurd ((hmem lo).2 hlo) (by simp)
+      | [d], hmem, _ =>
+        have h1 := (hmem lo).2 hlo
+        have h2 := (hmem hi).2 hhi
+        simp only [List.mem_singleton] at h1 h2
+        rw [h1, h2]
+      | _ :: _ :: _, _, hlen => exact absurd hlen (by simp)
+    have hok : ∀ flag, verifyContinuousG o order flag s (l.map o.ofInt) = .ok () := by
+      intro flag
+      simp only [verifyContinuousG, hset, List.length_map, hlen, ↓reduceIte]
+    refine ⟨⟨fun _ k h1 h2 => by omega, fun _ => hok false⟩, ⟨fun _ j h1 h2 => by rw [heq] at h1; omega,
+      fun _ => hok true⟩⟩
+  · cases l' with
+    | nil =>
+      exfalso
+      have := (hl'mem lo).2 hlo
+      simp at this
+    | cons y r' =>
+      obtain ⟨m, hm, hm1, hm2⟩ := extremum_lt_ints h r' y
+      obtain ⟨M, hM, hM1, hM2⟩ := extremum_gt_ints h r' y
+      have hmlo : m = lo := by
+        have a1 := (hb m ((hl'mem m).1 hm1)).1
+        have a2 := hm2 lo ((hl'mem lo).2 hlo)
+        omega
+      have hMhi : M = hi := by
+        have a1 := (hb M ((hl'mem M).1 hM1)).2
+        have a2 := hM2 hi ((hl'mem hi).2 hhi)
+        omega
+      rw [hmlo] at hm
+      rw [hMhi] at hM
+      have hord : order ((dd.map fun x => (o.ofInt x, ())).map Prod.fst) = o.ofInt y :: r'.map o.ofInt := by
+        rw [hfst, hl']
+        rfl
+      constructor
+      · simp only [verifyContinuousG, hset, List.length_map, hlen, ↓reduceIte, hord, hm, hM, Bool.false_eq_true,
+          h.succ_int, h.index_int, missingFrom_ints h dd]
+        cases hF : (intRange (lo + 1) hi).filter (fun k => !decide (k ∈ dd)) with
+        | nil =>
+          simp only [true_iff]
+          intro k h1 h2
+          exact ((hfilt _).1 hF) k ((mem_intRange _ _ _).2 ⟨by omega, h2⟩)
+        | cons k ks =>
+          simp only [reduceCtorEq, false_iff]
+          intro hall
+          have hk : k ∈ (intRange (lo + 1) hi).filter (fun k => !decide (k ∈ dd)) := by rw [hF]; simp
+          rw [List.mem_filter] at hk
+          have hr := (mem_intRange _ _ _).1 hk.1
+          have := hall k (by omega) hr.2
+          simp only [Bool.not_eq_true', decide_eq_false_iff_not] at hk
+          exact hk.2 ((hmem k).2 this)
+      · simp only [verifyContinuousG, hset, List.length_map, hlen, ↓reduceIte, hord, hm, hM,
+          h.bitLength_int, missingFrom_ints h dd]
+        cases hF : ((intRange (intBitLength lo : Int) ((intBitLength hi : Int) - 1)).map
+            (fun i => (2 : Int) ^ i.toNat)).filter (fun k => !decide (k ∈ dd)) with
+        | nil =>
+          simp only [true_iff]
+          intro j h1 h2
+          apply (hfilt _).1 hF
+          rw [List.mem_map]
+          exact ⟨(j : Int), (mem_intRange _ _ _).2 ⟨by omega, by omega⟩, by simp⟩
+        | cons k ks =>
+          simp only [reduceCtorEq, false_iff]
+          intro hall
+          have hk : k ∈ ((intRange (intBitLength lo : Int) ((intBitLength hi : Int) - 1)).map
+              (fun i => (2 : Int) ^ i.toNat)).filter (fun k => !decide (k ∈ dd)) := by rw [hF]; simp
+          rw [List.mem_filter, List.mem_map] at hk
+          obtain ⟨⟨i, hi', rfl⟩, hk2⟩ := hk
+          have hr := (mem_intRange _ _ _).1 hi'
+          have := hall i.toNat (by omega) (by omega)
+          simp only [Bool.not_eq_true', decide_eq_false_iff_not] at hk2
+          exact hk2 ((hmem _).2 this)
+
+/-! ### `Flag._generate_next_value_` -/
+
+private theorem lt_two_pow_bitLength' (n : Nat) : n < 2 ^ bitLength n := by
+  unfold bitLength
+  split
+  · rename_i h; subst h; decide
+  · exact Nat.lt_log2_self
+
+/-- `Flag._generate_next_value_`, every path, for every value type: the first value is `start`, or `1` for `None`; then an
+empty `last_values` is the `ValueError` of `max`, an exception from a `>` of `max` goes out, an exception from
+`bit_length` becomes the `TypeError` of :1450-1451, and otherwise the value is `2 ** bit_length(max)`. On `int`s that is
+the least power of two above every value so far, the docs' "the next power of two". -/
+def FlagGenerateG : Prop :=
+  ∀ (α : Type) (o : Ops α) (start : Option α) (count : Nat) (last : List α),
+    flagGenerateG o start 0 last = .ok (start.getD (o.ofInt 1)) ∧
+    (count ≠ 0 → flagGenerateG o start count [] = .error (.valueError "max() iterable argument is empty")) ∧
+    (∀ x r, count ≠ 0 →
+      (∀ e, extremum o.gt x r = .error e → flagGenerateG o start count (x :: r) = .error e) ∧
+      (∀ m, extremum o.gt x r = .ok m →
+        (∀ e, o.bitLength m = .error e → (flagGenerateG o start count (x :: r)).raises "TypeError") ∧
+        (∀ b, o.bitLength m = .ok b → flagGenerateG o start count (x :: r) = .ok (o.ofInt ((2 : Int) ^ b))))) ∧
+    (IntOps o → ∀ (i : Nat) (r : List Nat), count ≠ 0 →
+      ∃ k : Nat, flagGenerateG o start count ((i :: r).map fun (x : Nat) => o.ofInt (x : Int)) =
+          .ok (o.ofInt ((2 ^ k : Nat) : Int)) ∧
+        (∀ x ∈ i :: r, x < 2 ^ k) ∧ ∀ j, k = j + 1 → ∃ x ∈ i :: r, 2 ^ j ≤ x)
+
+theorem flagGenerateG_proven : FlagGenerateG := by
+  intro α o start count last
+  refine ⟨rfl, fun hc => by simp [flagGenerateG, hc], fun x r hc => ⟨fun e he => by simp [flagGenerateG, hc, he],
+    fun m hm => ⟨fun e he => ⟨_, by simp [flagGenerateG, hc, hm, he]; rfl, rfl⟩,
+      fun b hb => by simp [flagGenerateG, hc, hm, hb]⟩⟩, ?_⟩
+  intro h i r hc
+  have hmap : ((i :: r).map fun (x : Nat) => o.ofInt (x : Int)) =
+      ((i : Int) :: r.map (fun x : Nat => (x : Int))).map o.ofInt := by simp
+  obtain ⟨M, hM, hM1, hM2⟩ := extremum_gt_ints h (r.map (fun x : Nat => (x : Int))) (i : Int)
+  have hMn : ∃ Mn : Nat, M = Mn ∧ Mn ∈ i :: r := by
+    simp only [List.mem_cons, List.mem_map] at hM1
+    rcases hM1 with rfl | ⟨Mn, hMn, rfl⟩
+    · exact ⟨i, rfl, by simp⟩
+    · exact ⟨Mn, rfl, by simp [hMn]⟩
+  obtain ⟨Mn, rfl, hMn⟩ := hMn
+  have hle : ∀ x ∈ i :: r, x ≤ Mn := by
+    intro x hx
+    have : ((x : Nat) : Int) ∈ (i : Int) :: r.map (fun x : Nat => (x : Int)) := by
+      simp only [List.mem_cons, List.mem_map] at hx ⊢
+      rcases hx with rfl | hx
+      · exact .inl rfl
+      · exact .inr ⟨x, hx, rfl⟩
+    have := hM2 _ this
+    omega
+  refine ⟨bitLength Mn, ?_, ?_, ?_⟩
+  · rw [hmap]
+    simp only [List.map_cons, flagGenerateG, hc, ↓reduceIte]
+    simp only [hM, h.bitLength_int, intBitLength, Int.natAbs_natCast, Except.ok.injEq]
+    congr 1
+  · intro x hx
+    have := lt_two_pow_bitLength' Mn
+    have := hle x hx
+    omega
+  · intro j hj
+    refine ⟨Mn, hMn, ?_⟩
+    unfold bitLength at hj
+    split at hj
+    · omega
+    · rename_i hn
+      have : j = Mn.log2 := by omega
+      rw [this]
+      exact Nat.log2_self_le hn
+
+/-! ### `Flag._missing_` under `CONFORM` -/
+
+theorem and_sub_or_left (a b : Nat) : a &&& (a ||| b) = a := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_and, Nat.testBit_or]
+  cases a.testBit i <;> simp
+
+theorem and_sub_or_right (a b : Nat) : b &&& (a ||| b) = b := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_and, Nat.testBit_or]
+  cases b.testBit i <;> simp
+
+theorem and_sub_trans {a b c : Nat} (h1 : a &&& b = a) (h2 : b &&& c = b) : a &&& c = a :=
+  calc a &&& c = (a &&& b) &&& c := by rw [h1]
+    _ = a &&& (b &&& c) := Nat.and_assoc a b c
+    _ = a &&& b := by rw [h2]
+    _ = a := h1
+
+theorem foldl_or_sub : ∀ (l : List (String × Nat)) (init : Nat),
+    init &&& l.foldl (fun m p => m ||| p.2) init = init ∧
+      ∀ p ∈ l, p.2 &&& l.foldl (fun m p => m ||| p.2) init = p.2
+  | [], init => ⟨Nat.and_self init, by simp⟩
+  | p :: r, init => by
+    obtain ⟨h1, h2⟩ := foldl_or_sub r (init ||| p.2)
+    simp only [List.foldl_cons]
+    refine ⟨and_sub_trans (and_sub_or_left init p.2) h1, ?_⟩
+    intro q hq
+    rcases List.mem_cons.1 hq with rfl | hq
+    · exact and_sub_trans (and_sub_or_right init q.2) h1
+    · exact h2 q hq
+
+theorem memberOf_sub (c : FlagCls) {x : Nat} {n : String} (h : c.memberOf x = some n) : x &&& c.flagMask = x := by
+  simp only [FlagCls.memberOf, Option.map_eq_some_iff] at h
+  obtain ⟨p, hp, _⟩ := h
+  have h1 := List.find?_some hp
+  have h2 := List.mem_of_find?_eq_some hp
+  have : p.2 = x := by simpa using h1
+  rw [← this]
+  exact (foldl_or_sub c.members 0).2 p h2
+
+theorem lt_of_testBit {n i : Nat} (h : n.testBit i = true) : i < bitLength n := by
+  apply Classical.byContradiction
+  intro hi
+  have : n < 2 ^ i := Nat.lt_of_lt_of_le (lt_two_pow_bitLength' n) (Nat.pow_le_pow_right (by decide) (by omega))
+  rw [Nat.testBit_lt_two_pow this] at h
+  cases h
+
+theorem andMask_nonneg (v : Int) (m : Nat) (hv : 0 ≤ v) : andMask v m = v.toNat &&& m := by
+  unfold andMask
+  rw [Int.toNat_emod hv (Int.natCast_nonneg _), Int.toNat_natCast]
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_and, Nat.testBit_mod_two_pow]
+  cases hm : m.testBit i
+  · simp
+  · have := lt_of_testBit hm
+    simp [this]
+
+theorem notAnd_sub {fm x : Nat} (h : x &&& fm = x) : notAnd fm x = 0 := by
+  unfold notAnd
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_and, Nat.testBit_xor, Nat.testBit_two_pow_sub_one, Nat.zero_testBit]
+  cases hx : x.testBit i
+  · simp
+  · have hi := lt_of_testBit hx
+    have hf : fm.testBit i = true := by
+      have := congrArg (fun n => n.testBit i) h
+      simp only [Nat.testBit_and, hx, Bool.true_and] at this
+      exact this
+    simp [hi, hf]
+
+theorem inRange_sub (fm x : Nat) (hle : x ≤ 2 ^ bitLength fm - 1)
+    (h0 : x &&& ((2 ^ bitLength fm - 1) ^^^ fm) = 0) : x &&& fm = x := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_and]
+  cases hx : x.testBit i
+  · simp
+  · have hi : i < bitLength fm := by
+      apply Classical.byContradiction
+      intro hi
+      have : x < 2 ^ i := by
+        have := Nat.pow_le_pow_right (n := 2) (by decide) (show bitLength fm ≤ i by omega)
+        have := Nat.one_le_two_pow (n := bitLength fm)
+        omega
+      rw [Nat.testBit_lt_two_pow this] at hx
+      cases hx
+    have := congrArg (fun n => n.testBit i) h0
+    simp only [Nat.testBit_and, Nat.testBit_xor, Nat.testBit_two_pow_sub_one, hx, Nat.zero_testBit, hi,
+      decide_true, Bool.true_and] at this
+    cases hf : fm.testBit i
+    · rw [hf] at this; simp at this
+    · rfl
+
+theorem nameOf_ok (c : FlagCls) (hb : c.boundary ≠ .strict) (value mv al : Nat) :
+    ∃ r, c.nameOf value mv al = pure r := by
+  have hs : (c.boundary == Boundary.strict) = false := by simpa using hb
+  simp only [FlagCls.nameOf, hs, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
+  repeat' split
+  all_goals exact ⟨_, rfl⟩
+
+theorem conform_missing (c : FlagCls) (hb : c.boundary = .conform) (v : Int) (hv : 0 ≤ v) :
+    ∃ name, c.missing v = .ok (.flag (v.toNat &&& c.flagMask) name) := by
+  have hns : c.boundary ≠ .strict := by rw [hb]; decide
+  simp only [FlagCls.missing, hb]
+  split
+  · have hx : andMask v c.flagMask &&& c.flagMask = andMask v c.flagMask := by
+      simp only [andMask, Nat.and_assoc, Nat.and_self]
+    have hun := notAnd_sub hx
+    have hnn : ¬ ((andMask v c.flagMask : Int) < 0) := by omega
+    obtain ⟨nm, hnm⟩ := nameOf_ok c hns (andMask v c.flagMask) (andMask v c.flagMask &&& c.singlesMask)
+      (notAnd c.singlesMask (andMask v c.flagMask))
+    simp only [pure_bind, hnn, ↓reduceIte, Int.toNat_natCast, hun, bne_self_eq_false, Bool.false_and,
+      Bool.false_eq_true, hnm]
+    rw [← andMask_nonneg v _ hv]
+    exact ⟨_, rfl⟩
+  · rename_i hoob
+    have h1 : v ≤ (c.allBits : Int) := by
+      apply Classical.byContradiction
+      intro hc
+      apply hoob
+      simp [hc]
+    have h2 : andMask v (c.allBits ^^^ c.flagMask) = 0 := by
+      apply Classical.byContradiction
+      intro hc
+      apply hoob
+      simp [hc]
+    have hsub : v.toNat &&& c.flagMask = v.toNat := by
+      rw [andMask_nonneg v _ hv] at h2
+      unfold FlagCls.allBits at h1 h2
+      exact inRange_sub c.flagMask v.toNat (by omega) h2
+    have hnn : ¬ (v < 0) := by omega
+    obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
+    simp only [pure_bind, hnn, ↓reduceIte, notAnd_sub hsub, bne_self_eq_false, Bool.false_and, Bool.false_eq_true,
+      hnm]
+    rw [hsub]
+    exact ⟨_, rfl⟩
+
+/-- Under `CONFORM`, `F(v)` for an `int` `v ≥ 0` succeeds, and its value is `v & _flag_mask_`: the extra bits are
+discarded, whether `v` is out of range or only has a bit no member has. Docs of `FlagBoundary.CONFORM`: "extra bits are
+discarded". -/
+def ConformKeepsMask : Prop :=
+  ∀ (c : FlagCls) (v : Int), c.boundary = .conform → 0 ≤ v →
+    ∃ name, c.call v = .ok (.flag (v.toNat &&& c.flagMask) name)
+
+theorem conformKeepsMask_proven : ConformKeepsMask := by
+  intro c v hb hv
+  unfold FlagCls.call
+  simp only [ge_iff_le, hv, ↓reduceIte]
+  cases hm : c.memberOf v.toNat with
+  | some n =>
+    refine ⟨some n, ?_⟩
+    simp only [memberOf_sub c hm]
+  | none =>
+    exact conform_missing c hb v hv
 
 end PyLean.CoreLibs.EnumDC
