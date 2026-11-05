@@ -525,6 +525,7 @@ def pvMaker (kind : String) (v : PV) : Maker PV :=
     { plain := false,
       callType := match v with
         | .int n => .ok (.int n)
+        | .rint n _ => .ok (.int n)
         | .str s =>
           match s.toInt? with
           | some n => .ok (.int n)
