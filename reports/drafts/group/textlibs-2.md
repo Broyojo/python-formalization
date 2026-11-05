@@ -22,6 +22,8 @@ def run(mod):
 c, py = run(cmod), run(pymod)
 print('C ', c)
 print('Py', py)
+if c == ['a0', 'X0', 'X1', 'a1', 'a2'] and py == ['a0', 'a1', 'a2']:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -29,6 +31,8 @@ print('Py', py)
 #### 2. plistlib: a binary plist written from datetime.max cannot be read back (InvalidFileException)
 
 The binary writer stores a datetime as the double (value - datetime(2001, 1, 1)).total_seconds() (Lib/plistlib.py:808-815). Near datetime.max that double is only accurate to about 30 microseconds, and total_seconds() rounds 9999-12-31 23:59:59.999999 up to 252423993600.0, which is 10000-01-01. The reader (:587-595) computes datetime(2001, 1, 1) + timedelta(seconds=f), which overflows, and parse turns the OverflowError into InvalidFileException. So plistlib.dumps(datetime.datetime.max, fmt=FMT_BINARY) succeeds and plistlib.loads of the result raises InvalidFileException("Invalid file"); so does any datetime within about 15 microseconds of datetime.max. The XML writer drops the microseconds and round-trips the same value. Far from 2001 the binary round trip also silently loses microseconds (datetime(1, 1, 1, 0, 0, 0, 1) reads back as datetime(1, 1, 1)), which is inherent in the format's double; the exception is not.
+
+*May be intended:* Partly: the precision loss is the format's (Apple stores a double). Writing a file the module itself cannot read is not.
 
 <details><summary>Reproducer</summary>
 
@@ -45,6 +49,8 @@ for name, d in [("max", datetime.datetime.max),
         out[name] = "InvalidFileException: " + str(e)
     print(name, repr(d), "->", out[name])
 print("XML round trip of datetime.max:", repr(plistlib.loads(plistlib.dumps(datetime.datetime.max))))
+if out["max"].startswith("InvalidFileException") and out["year1+1us"] == repr(datetime.datetime(1, 1, 1)):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -52,6 +58,8 @@ print("XML round trip of datetime.max:", repr(plistlib.loads(plistlib.dumps(date
 #### 3. re: x{m,n}+ with m >= 2 is not equivalent to (?>x{m,n}), as the docs say it is
 
 The docs say "x{m,n}+ is equivalent to (?>x{m,n})". They differ when m >= 2 and x can match more than one way: `re.fullmatch(r'(?:a|ab){2}+', 'aba')` is None, and `re.fullmatch(r'(?>(?:a|ab){2})', 'aba')` matches. `re.match(r'(?:a+){2}+', 'aa')` is None, and `re.match(r'(?>(?:a+){2})', 'aa')` matches. An atomic group forbids backtracking into it once it is finished, so inside it the iterations can still trade characters to reach the minimum. The possessive loop makes each iteration atomic alone, so the first iteration cannot give back what the second needs. No difference appears with m <= 1, so x*+, x++ and x?+ keep the sentence the docs state for them. The Lean declarative semantics agrees with CPython on 150000 of 150000 random cases once this is modelled, and the documented form is refuted.
+
+*May be intended:* Unclear. The per-iteration loop is how the possessive repeat was written when it was added in 3.11, and PCRE treats x{m,n}+ as (?>x{m,n}). `(?:a+){2}+` matching nothing against 'aa' surprises, but a maintainer may prefer changing the docs to changing the engine. Either fix closes the report.
 
 <details><summary>Reproducer</summary>
 
@@ -62,6 +70,8 @@ b = re.fullmatch(r'(?>(?:a|ab){2})', 'aba')
 c = re.match(r'(?:a+){2}+', 'aa')
 d = re.match(r'(?>(?:a+){2})', 'aa')
 print(a, b, c, d)
+if a is None and b is not None and c is None and d is not None:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -69,6 +79,8 @@ print(a, b, c, d)
 #### 4. SimpleQueue.get(timeout=inf) raises OverflowError even with an item ready (C), and the twins disagree on NaN and tiny negative timeouts
 
 The C SimpleQueue.get converts a blocking timeout with _PyTime_FromSecondsObject before it looks at the queue. So q.put(1); q.get(timeout=float('inf')) raises OverflowError ("timestamp out of range for C PyTime_t") although the item is there; so do 1e300 and 2**63, and NaN raises ValueError. queue.Queue.get and the pure-Python queue._PySimpleQueue return the item in all four cases. The conversion also rounds up: timeout=-1e-10 becomes 0 ns, so C returns the item where the twin raises ValueError("'timeout' must be a non-negative number").
+
+*May be intended:* Partly: threading.Lock.acquire documents OverflowError above TIMEOUT_MAX. But SimpleQueue's docs say "If timeout is a positive number, it blocks at most timeout seconds", queue.Queue accepts the same values, and the C code carries "XXX Use PyThread_ParseTimeoutArg()".
 
 <details><summary>Reproducer</summary>
 
@@ -85,6 +97,8 @@ for Q in (queue.SimpleQueue, queue._PySimpleQueue):
             out.append(type(e).__name__)
     res.append(out)
 print('C', res[0], 'Py', res[1])
+if res[0] == ['OverflowError', 1] and res[1] == [1, 'ValueError']:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -98,4 +112,4 @@ print('C', res[0], 'Py', res[1])
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

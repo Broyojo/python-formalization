@@ -33,6 +33,7 @@ try:
     f(c)
 except ValueError:
     pass
+print("calling gc.collect()", flush=True)
 gc.collect()              # never returns
 ```
 

@@ -32,6 +32,8 @@ print('array  a[::2] = array("b")      ->', a)
 print('list   l[::2] = []              ->', lr)
 print('array  a[::2] = array("b", [9]) ->', ar)
 print('bytearray b[::2] = b""          ->', b)
+if list(a) == [2, 4] and lr.startswith('ValueError') and ar.startswith('ValueError'):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -59,6 +61,8 @@ try:
 except EOFError:
     exc2 = 'EOFError'
 print(exc, list(a), f.tell(), exc2, list(b))
+if exc == 'ValueError' and len(a) == 0 and f.tell() == 6 and exc2 == 'EOFError' and list(b) == [1]:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -80,6 +84,8 @@ except ValueError as e:
     err = str(e)
 ok = array._array_reconstructor(array.array, 'w', 21, even)
 print(err, ok)
+if err == 'string length not a multiple of item size' and ok.tounicode() == 'ab':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -87,6 +93,8 @@ print(err, ok)
 #### 4. array('w').tounicode() and repr() drop a leading U+FEFF and raise UnicodeDecodeError on surrogates, because they decode UTF-32 with byteorder 0
 
 array('w', s).tounicode() should give s back, and the docs say it does. It calls PyUnicode_DecodeUTF32 with byteorder = 0, which is the "detect a byte order mark" mode, not native order. So array('w', '\ufeffabc').tounicode() is 'abc', and repr shows array('w', 'abc'), which is a different array. Storing a mark in the other byte order with frombytes reinterprets everything after it. Surrogates, which str allows and 'w' stores, raise UnicodeDecodeError, from repr too, so such an array cannot be printed. The deprecated 'u' typecode has none of these problems, as it uses PyUnicode_FromWideChar. Lean: ArrayToUnicodeW is refuted by [U+FEFF, 'a']; ArrayToUnicodeChecked (no surrogates, no leading U+FEFF, and every str for 'u') is proven. ArrayReprWInjective (two 'w' arrays with equal reprs hold the same characters, lean/PyLean/Sequences/ArrayRepr.lean) is refuted by array('w', '\ufeffa') and array('w', 'a').
+
+*May be intended:* The comment says `// native byteorder`, and PyUnicode_DecodeUTF32's convention is that *byteorder == 0 means detect, native being the fallback. The caller's intent was a plain native decoding, so the mark is not intended. Refusing surrogates could be defended as strictness, but it makes repr fail, and 'u' accepts them.
 
 <details><summary>Reproducer</summary>
 
@@ -101,6 +109,8 @@ try:
     err = None
 except UnicodeDecodeError as e:
     err = type(e).__name__
+if t == 'abc' and len(a) == 4 and err == 'UnicodeDecodeError':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -114,4 +124,4 @@ except UnicodeDecodeError as e:
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

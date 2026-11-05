@@ -14,6 +14,8 @@ import binascii
 out = binascii.b2a_qp(b'a' * 75 + b' \n')
 longest = max(len(line) for line in out.split(b'\n'))
 print(out, longest)
+if longest > 76:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -33,6 +35,8 @@ class W:
         got.append(line.count(','))
 csv.writer(W(), lineterminator='\n').writerow(itertools.repeat('', n))
 print('fields', n, 'delimiters', got[0], 'expected', n - 1)
+if got[0] != n - 1:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -40,6 +44,8 @@ print('fields', n, 'delimiters', got[0], 'expected', n - 1)
 #### 3. csv.writer does not quote a leading space under skipinitialspace=True, so the reader silently drops it
 
 With skipinitialspace=True, `csv.writer` writes the field ' a' unquoted, and `csv.reader` with the same dialect reads 'a'. A field ' ' reads back as ''. The data changes silently: no error is raised, and the dialect is the same on both sides. In a sweep of 300000 random dialects and rows, every round trip failure had skipinitialspace=True; with it off, none failed, and for QUOTE_MINIMAL and QUOTE_ALL with a newline terminator that is proved (CsvRoundTripNoSkip). The Lean refutation is CsvRoundTrip.
+
+*May be intended:* Unclear, and probably not. The writer already handles the neighbouring case: python/cpython#115712 made it quote empty fields for delimiter=' ' with skipinitialspace=True, because they would otherwise be lost, and #138005 documented that. A leading space is the same loss. Against this, the docs describe skipinitialspace in terms of the reader, and quoting changes the output of existing programs, so a maintainer may prefer a documentation note. QUOTE_NONE has no quoting to use, so the fix there would be escaping or an error.
 
 <details><summary>Reproducer</summary>
 
@@ -50,6 +56,8 @@ buf = io.StringIO(newline='')
 csv.writer(buf, skipinitialspace=True).writerows(rows)
 back = list(csv.reader(io.StringIO(buf.getvalue(), newline=''), skipinitialspace=True))
 print(repr(buf.getvalue()), back)
+if back != rows:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -70,6 +78,8 @@ except TypeError as e:
     first = str(e)
 second = s.get_opcodes()
 print(repr(first), second)
+if first is not None and second == []:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -92,6 +102,8 @@ again = list(s.get_grouped_opcodes(3))
 fresh = list(difflib.SequenceMatcher(None, a, b).get_grouped_opcodes(3))
 print(before, after)
 print(again, fresh)
+if before[0] == ('equal', 0, 8, 0, 8) and after[0] == ('equal', 7, 8, 7, 8) and again != fresh:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -112,6 +124,8 @@ try:
 except TypeError as e:
     c = str(e)
 print(u, c)
+if "-b'x'" in u and c is not None:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -119,6 +133,8 @@ print(u, c)
 #### 7. email: reading a header with a few hundred nested comments raises RecursionError (policy.default, HeaderRegistry)
 
 `get_comment` (Lib/email/_header_value_parser.py:1287-1309) parses a nested comment by calling itself (:1300-1301), and `Comment.__str__` / `Comment.quote` (:290-299) and `Comment.content` recurse the same way over the result. Nothing bounds the nesting depth, so a header value with a few hundred `(` (well within any line-length limit a mail server enforces on a folded header) exhausts the Python stack. The RecursionError is not a `HeaderParseError`, so the parser's recovery paths do not catch it: it propagates out of `HeaderRegistry()(name, value)` and out of `msg['To']` on a message parsed with `policy.default`, where malformed input is otherwise reported as defects.
+
+*May be intended:* Partly. Python code that recurses on nested input commonly has a recursion limit (tomllib documents one). But the email package documents that it "does a very good job of parsing non-compliant messages, providing information about how a message was deemed broken" via `defects` (Doc/library/email.parser.rst:62-68), and its own error handling catches only HeaderParseError, so a RecursionError escaping is not a designed outcome.
 
 <details><summary>Reproducer</summary>
 
@@ -140,6 +156,8 @@ def outcome(n):
     return out
 shallow, deep = outcome(20), outcome(500)
 print('depth 20:', shallow, 'depth 500:', deep)
+if shallow == ['ok', 'ok'] and deep == ['RecursionError', 'RecursionError']:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -162,6 +180,8 @@ class Sub(ET.Element):
     pass
 s = copy.copy(Sub('r'))
 print('original:', e.attrib, 'shared:', c.attrib is e.attrib, 'copy class:', type(s).__name__)
+if e.attrib == {'k': 'v', 'z': '1'} and c.attrib is e.attrib and type(s) is ET.Element:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -175,4 +195,4 @@ print('original:', e.attrib, 'shared:', c.attrib is e.attrib, 'copy class:', typ
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

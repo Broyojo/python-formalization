@@ -36,7 +36,7 @@ for name, code in CASES.items():
     print(f"{name}: return code {r.returncode} {r.stdout.strip()}")
 ```
 
-Recorded on 3.15.2 and main: all three children exit with SIGSEGV (`-11`) without printing `no crash`. Expected: reject invalid layout metadata or use stable layout bounds; ordinary attribute rebinding must not cause out-of-bounds C access.
+In the final rerun all three children terminate by signal without printing `no crash`. Replacement and reduction exit with SIGSEGV (`-11`) on both interpreters; the constructor exits with SIGABRT (`-6`) on 3.15.2 and SIGSEGV on main. The allocator-sensitive signal can vary. Expected: reject invalid layout metadata or use stable layout bounds; ordinary attribute rebinding must not cause out-of-bounds C access.
 
 Cause: Objects/structseq.c:27-42 reads the attributes from the type dict. `PyStructSequence_New` (:65-88) allocates from these values, but `structseq_replace` copies the original object's real number of fields (:399, :447-449). `structseq_reduce` indexes `tp_members` using unchecked `n_unnamed_fields` (:351, :368-370). The constructor reads sizes before `PySequence_Fast` can run Python and allocates using freshly read sizes afterwards (:173-186, :228-236). Store layout metadata outside the writable dict, or make it read-only and validate consistency with the fixed type layout.
 
@@ -55,4 +55,4 @@ Linux
 Python 3.15.2 (tags/v3.15.2:5e58eaa, Nov  5 2026, 20:20:36) [GCC 11.4.0]
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [typeobj-structseq-mutable-size-attrs](https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-structseq-mutable-size-attrs.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [typeobj-structseq-mutable-size-attrs](https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-structseq-mutable-size-attrs.yaml)

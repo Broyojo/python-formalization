@@ -46,4 +46,4 @@ Cause: Objects/typeobject.c:3537-3539 puts borrowed `lookup_tp_mro(base)` pointe
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [typeobj-set-mro-error-borrowed-mro](https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-set-mro-error-borrowed-mro.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [typeobj-set-mro-error-borrowed-mro](https://github.com/Broyojo/python-formalization/blob/main/bugs/typeobj-set-mro-error-borrowed-mro.yaml)

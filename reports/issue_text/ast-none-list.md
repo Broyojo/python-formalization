@@ -1,7 +1,7 @@
 <!-- title: compile() segfaults on a small hand-built AST with None in Try.handlers -->
 <!-- form: crash -->
 <!-- records: pygrammar-check-none-in-list-segfault -->
-<!-- versions: CPython main branch and a prior 3.14.7 run (recorded); 3.15.2 validation pending -->
+<!-- versions: 3.15.2, CPython main branch -->
 A `None` element in a hand-built AST's `Try.handlers` reaches the validator as a NULL handler. The tree is small; this is not the documented limitation on deeply nested or very large ASTs. The malformed tree should raise an exception.
 
 ```python
@@ -13,7 +13,7 @@ r = subprocess.run([sys.executable, '-c', code], capture_output=True)
 print(r.returncode)
 ```
 
-The record reports SIGSEGV (`-11`) on main and a prior 3.14.7 run. **Validation pending:** unlike the other records, this record does not explicitly log a 3.15.2 result; that run must be recorded before filing.
+The draft reproducer prints `-11` (SIGSEGV) on both 3.15.2 and main in the final prelaunch rerun. The saved record checks also confirm reproduction on both interpreters.
 
 Cause: Python/ast.c:890-893 reads a `Try` handler and immediately uses `VALIDATE_POSITIONS(handler)` without rejecting NULL; the `TryStar` loop at :918-921 instead dereferences the handler's fields directly. The generated AST conversion accepts `None` as NULL for these nodes. The expression and statement list validators already reject forbidden NULL entries; these handler loops should do likewise.
 

@@ -23,6 +23,8 @@ def stale(M):
 c, p = stale(C), stale(P)
 print('_decimal   Context() after DefaultContext.divide: Inexact, Rounded =', c)
 print('_pydecimal Context() after DefaultContext.divide: Inexact, Rounded =', p)
+if c == (True, True) and p == (False, False):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -30,6 +32,8 @@ print('_pydecimal Context() after DefaultContext.divide: Inexact, Rounded =', p)
 #### 2. _decimal's Decimal.__format__ ignores everything after an embedded NUL in the format spec
 
 _decimal_Decimal___format___impl hands the spec's UTF-8 buffer to libmpdec as a NUL-terminated C string and has the length in hand but does not check it, so a spec with an embedded NUL is cut there and the rest is never validated. An invalid spec is accepted and formatted with its prefix: format(_decimal.Decimal('1234.5'), '10\x00xyz') -> ' 1234.5' format(_decimal.Decimal('1234.5'), '.2f\x00') -> '1234.50' format(_pydecimal.Decimal('1234.5'), '10\x00xyz') -> ValueError format(1234.5, '10\x00xyz'), format(1234, '10\x00xyz'), format(Fraction(3, 2), '10\x00xyz') -> ValueError It does know about NUL: it special-cases a NUL fill character at position 0, but only there. A neighbouring, separate oddity: float and complex accept exactly one trailing NUL, because Objects/unicode_formatter.c:558 reads it as the type character and :576 treats '\0' as "no type". So format(1234.5, '10\x00') works there, while int, str, Fraction and _pydecimal raise ValueError. _decimal differs in discarding any tail after the NUL, of any length, so the specs in the reproducer are the ones every other numeric type rejects.
+
+*May be intended:* Not intended: the NUL-fill special case at _decimal.c:3791-3800 shows NUL was considered, and the fallback path through _pydecimal already rejects these specs when libmpdec's parser fails first. Same class as other embedded-NUL fixes in CPython's C code.
 
 <details><summary>Reproducer</summary>
 
@@ -47,6 +51,8 @@ for spec, want in [('10\x00xyz', "'    1234.5'"), ('.2f\x00', "'1234.50'"), ('x>
     f = fmt(1234.5, spec)
     print(ascii(spec), '_decimal:', c, ' _pydecimal:', p, ' float:', f)
     hits += (c == want and p == 'ValueError' and f == 'ValueError')
+if hits == 3:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -69,6 +75,8 @@ def probe(M):
 c, p = probe(C), probe(P)
 print('_decimal   same items, InvalidOperation, flags == copy, a.flags == b.flags:', c)
 print('_pydecimal same items, InvalidOperation, flags == copy, a.flags == b.flags:', p)
+if c == (True, True, False, False) and p == (True, True, True, True):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -82,4 +90,4 @@ print('_pydecimal same items, InvalidOperation, flags == copy, a.flags == b.flag
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

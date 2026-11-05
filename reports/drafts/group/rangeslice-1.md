@@ -7,6 +7,8 @@ While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalizati
 
 PySlice_GetIndices() converts the step, start and stop with PyLong_AsSsize_t() but never checks for the -1/OverflowError failure return. The -1 is used as an ordinary index, the bounds checks that follow usually pass, and the function returns 0 ("success") with the OverflowError still pending. For slice(None, None, 2**64) and length 10 it returns 0 with (start, stop, step) = (9, -1, -1), i.e. a reversed slice nobody asked for, plus a pending exception; for slice(2**64, 5) it returns 0 with start = -1 + 10 = 9. A caller that trusts the documented contract continues with garbage indices and then trips "SystemError: ... returned a result with an exception set" (release builds) or an assertion (debug builds).
 
+*May be intended:* The function is legacy ("XXX support long ints", sliceobject.c:191) and indices that do not fit are expected to be rejected; returning success with an exception set is not a plausible design choice. A very similar typo-level bug in the same function (checking r->step instead of r->start, bpo-34229 / gh-78410) was fixed by maintainers as a "good catch".
+
 <details><summary>Reproducer</summary>
 
 ```python
@@ -44,6 +46,8 @@ r2 = m.getindices(slice(2**64, 5), 10)
 print("PySlice_GetIndices(slice(None, None, 2**64), 10) ->", r1)
 print("PySlice_GetIndices(slice(2**64, 5), 10)          ->", r2)
 # Documented: -1 whenever an exception is set. Observed: 0 (success) with OverflowError set.
+if r1[:2] == (0, "OverflowError") and r2[:2] == (0, "OverflowError"):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -57,4 +61,4 @@ print("PySlice_GetIndices(slice(2**64, 5), 10)          ->", r2)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

@@ -7,10 +7,15 @@ gh-134152 fixed an `UnboundLocalError` in `_get_ptext_to_endchars` for an empty 
 import email
 from email import policy, _header_value_parser as P
 
-P.parse_message_id('<a@[ x]>')    # UnboundLocalError: cannot access local variable 'pos' ...
+def attempt(label, f):
+    try:
+        print(label, f())
+    except Exception as e:
+        print(label, type(e).__name__, str(e))
 
+attempt("parser", lambda: P.parse_message_id('<a@[ x]>'))
 m = email.message_from_string('Message-ID: <a@[ x]>\n\nbody\n', policy=policy.default)
-m['Message-ID']                   # the same error
+attempt("header", lambda: m['Message-ID'])
 ```
 
 I'd expect the header to parse with a defect recorded, as other malformed msg-ids do, rather than an `UnboundLocalError` from inside the parser.

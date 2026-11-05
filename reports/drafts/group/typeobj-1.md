@@ -7,6 +7,8 @@ While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalizati
 
 The only size check in `PyObject_CopyData` is `view_dest.len < view_src.len` (abstract.c:690). If both views are contiguous in one order it does a memcpy, which is fine. Otherwise it walks an index vector over `view_src.shape` and hands the same vector to `PyBuffer_GetPointer` for the destination (abstract.c:727-732). Nothing checks that the two views have the same ndim or shape, so:
 
+*May be intended:* Partly. The docs say only "Copy data from src to dest buffer. Can convert between C-style and or Fortran-style buffers" (Doc/c-api/buffer.rst:524), which suggests same-shaped views, so a shape check is arguably the caller's job, as with memcpy. Writing outside a view after reporting success is still not something a caller can diagnose, and the function already takes responsibility for the size check. The memcpy path does give different shapes a meaning (the same flattened bytes), which the strided path silently does not.
+
 <details><summary>Reproducer</summary>
 
 ```python
@@ -38,6 +40,8 @@ api.PyBuffer_Release(ctypes.byref(view))
 written = {i for i in range(32) if after[i]}
 print('dest', dest.nbytes, 'bytes, src', src.nbytes, 'bytes, rc', rc)
 print('view offsets', sorted(in_view), 'written', sorted(written))
+if rc == 0 and dest.nbytes == src.nbytes == 6 and written - in_view == {6, 7}:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -45,6 +49,8 @@ print('view offsets', sorted(in_view), 'written', sorted(written))
 #### 2. A note added in an except* handler is lost on re-raise: is_same_exception_metadata compares an unused field
 
 `_PyExc_PrepReraiseStar` tells a re-raised subgroup from a newly raised exception with `is_same_exception_metadata`, which compares `notes`, `traceback`, `cause` and `context` of the two objects. `notes` there is the C field `PyBaseExceptionObject.notes`, which nothing writes: `add_note` stores `__notes__` as an ordinary instance attribute. The comparison is always NULL with NULL.
+
+*May be intended:* Partly. A bare `raise` in `except*` re-raises "the same exceptions", and the group `e` is documented as a derived copy, so a reader could expect changes to it to vanish. But the code compares `notes` on purpose, which shows that notes were meant to count, and the field became dead when notes moved to `__notes__`. A change here could also go the other way: documenting that notes added to `e` do not survive, and deleting the comparison and the unused field.
 
 <details><summary>Reproducer</summary>
 
@@ -68,6 +74,8 @@ except ExceptionGroup as x:
     except ValueError as y:
         plain = y.__notes__
     print('except keeps', plain)
+    if got == [None, None, None] and plain == ['while loading config']:
+        print("Observed the reported behavior.")
 ```
 
 </details>
@@ -93,41 +101,12 @@ except ExceptionGroup as e:
     print('context shown: original', 'ctx' in full, 'part', 'ctx' in part)
     if not e.__suppress_context__ and m.__suppress_context__ and m.__context__ is e.__context__ \
             and 'ctx' in full and 'ctx' not in part:
+        print("Observed the reported behavior.")
 ```
 
 </details>
 
-#### 4. x *= seq raises TypeError for instances of Python classes although x * seq works: the sq_repeat fallback in PyNumber_InPlaceMultiply tests tp_as_sequence, which every heap type has
-
-`PyNumber_Multiply` repeats a sequence on either side: if the left operand has no `sq_repeat`, it uses the right operand's (abstract.c:1173-1178), so `n * seq` works for any `n` with `__index__`. `PyNumber_InPlaceMultiply` is meant to do the same, and its comment says so ("the right hand operand should not be mutated in this case so sq_inplace_repeat is not used"), but it writes the test as `if (mv != NULL) { ... } else if (mw != NULL)` (abstract.c:1329, :1336). `mv` is `Py_TYPE(v)->tp_as_sequence`, and `type_new_alloc` sets that pointer on every heap type (typeobject.c:4488). So for an instance of any Python class, including a subclass of int, the right operand is never consulted:
-
-<details><summary>Reproducer</summary>
-
-```python
-class Index:
-    def __index__(self):
-        return 2
-class I(int):
-    pass
-print('Index() * [1] =', Index() * [1])
-print('I(2) * [1] =', I(2) * [1])
-n = 2
-n *= [1]
-print('2 *= [1] ->', n)
-errors = []
-for v in (Index(), I(2)):
-    try:
-        v *= [1]
-    except TypeError as e:
-        errors.append(str(e))
-print(errors)
-if (Index() * [1] == [1, 1] and I(2) * [1] == [1, 1] and n == [1, 1]
-        and len(errors) == 2 and all("*=" in e for e in errors)):
-```
-
-</details>
-
-#### 5. property subclass: .setter/.getter/.deleter drop an explicit doc=, because property_copy reads prop_doc, which __init__ leaves NULL for subclasses
+#### 4. property subclass: .setter/.getter/.deleter drop an explicit doc=, because property_copy reads prop_doc, which __init__ leaves NULL for subclasses
 
 `property_init_impl` stores the docstring in `prop_doc` only for exact `property`. For a subclass it stores it in the instance `__dict__` instead (descrobject.c:1902-1933), so that it is not shadowed by `__doc__` in the class dict, and `prop_doc` stays NULL. `property_copy`, used by `.getter`, `.setter` and `.deleter`, still takes the doc from `pold->prop_doc` (:1809), passes None, and the new object has no docstring:
 
@@ -144,13 +123,16 @@ print(plain.__doc__, plain.setter(setter).__doc__)
 print(sub.__doc__, sub.setter(setter).__doc__)
 if (sub.__doc__ == "doc" and plain.setter(setter).__doc__ == "doc"
         and sub.setter(setter).__doc__ is None):
+    print("Observed the reported behavior.")
 ```
 
 </details>
 
-#### 6. structseq_repr labels visible item i with tp_members[i].name, which skips unnamed fields: os.stat_result prints st_atime=<int slot 7>, and a named field after an unnamed one turns repr into SystemError
+#### 5. structseq_repr labels visible item i with tp_members[i].name, which skips unnamed fields: os.stat_result prints st_atime=<int slot 7>, and a named field after an unnamed one turns repr into SystemError
 
 `initialize_members` (structseq.c:539-570) builds `tp_members` from the named fields only, member `k` pointing at the slot of field `i` (:559-562), so after an unnamed field `k < i`. `structseq_repr` (:296-327) prints visible item `i` as `tp_members[i].name` `=` `repr(item i)` (:308, :323), using the visible index as a member index. After the first unnamed visible field every label is the name of a later field:
+
+*May be intended:* Partly. The stat_result labels have been this way for a long time and a reader can mistake them for a feature (the integer times "are" st_atime and friends). The SystemError check at :309-314 exists precisely because the members can run out, which suggests the indexing is known to be loose. gh-154387 reports this and has linked PRs, so upstream considers it a bug.
 
 <details><summary>Reproducer</summary>
 
@@ -186,6 +168,7 @@ except SystemError as e:
     print("SystemError:", err)
 if ("st_atime=7" in r and s.st_atime == 10 and t.b == 3
         and err is not None and "member 2 name is NULL" in err):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -199,4 +182,4 @@ if ("st_atime=7" in r and s.st_atime == 10 and t.b == 3
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

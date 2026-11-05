@@ -7,6 +7,8 @@ While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalizati
 
 The generic `LOAD_ATTR` reaches a Python property getter through `property.__get__`, and an overriding `__getattribute__` through `slot_tp_getattr_hook`; both call it from C, so the recursion limit is enforced when its frame starts (`_Py_EnterRecursivePy`). The specialized forms inline the call. `LOAD_ATTR_PROPERTY` (Python/bytecodes.c:3070-3077) and `LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN` (:3098-3105) are `_GUARD_TYPE_VERSION + _CHECK_PEP_523 + _LOAD_ATTR_*_FRAME + _SAVE_RETURN_OFFSET + _PUSH_FRAME`. `_PUSH_FRAME` (:4628-4642) decrements `py_recursion_remaining` (:4637) and tests nothing, and neither macro contains `_CHECK_RECURSION_REMAINING` (:4611-4613), which `CALL_PY_GENERAL`, `CALL_PY_EXACT_ARGS`, `CALL_BOUND_METHOD_*` and `CALL_KW_PY` carry before their `_PUSH_FRAME`. So a property (or `__getattribute__`) whose body reads the same attribute again keeps descending past the limit once the `self.p` site has specialized. It stops only when the data-stack chunk is full: `_PyThreadState_HasStackSpace` fails (:3062, :3087), the site exits to the generic form, and the C call raises `RecursionError` because the counter has long gone below zero. How far past the limit it gets depends on where the chunk boundary falls.
 
+*May be intended:* Unknown. As for python/cpython#155151, the limit protects mainly the C stack and these frames use none, so a maintainer may not mind. Against that, the CALL forms do check before `_PUSH_FRAME`, `CALL_ALLOC_AND_ENTER_INIT` got the check for the same reason (python/cpython#149243), and the recursion limit then depends on whether a site has warmed up.
+
 <details><summary>Reproducer</summary>
 
 ```python
@@ -43,6 +45,7 @@ for kind, tmpl in KINDS.items():
     if generic is not None and specialized is not None and generic <= LIMIT < specialized:
         hit = True
 if hit:
+    print("Observed the reported behavior.")
 os._exit(0)
 ```
 
@@ -51,6 +54,8 @@ os._exit(0)
 #### 2. SEND_GEN and FOR_ITER_GEN push a generator frame with no recursion check, so a chain of delegating generators passes the recursion limit once its site has specialized
 
 The generic path enforces the recursion limit when it enters a generator frame. `_SEND` (Python/bytecodes.c:1676) inlines a generator with `DISPATCH_INLINED` (:1694), which goes through the `start_frame` label, where `_Py_EnterRecursivePy` (:6580) raises `RecursionError`. Generic `FOR_ITER` reaches the same check through `tp_iternext` and the evaluation loop. The specialized forms do not. `SEND_GEN` (:1740-1745) and `FOR_ITER_GEN` (:4118-4123) are `_CHECK_PEP_523` + a frame op + `_PUSH_FRAME`. `_PUSH_FRAME` (:4628) decrements `py_recursion_remaining` (:4637) and tests nothing, and neither macro contains `_CHECK_RECURSION_REMAINING` (:4611), which `CALL_PY_GENERAL`, `CALL_PY_EXACT_ARGS`, `CALL_BOUND_METHOD_GENERAL` and `CALL_KW_PY` do contain. So one `yield from` or `for` site that has specialized descends a chain of generators of any depth without a `RecursionError`, while the same chain on unspecialized code stops at the limit. Whether `next(g)` raises depends on whether the site has warmed up.
+
+*May be intended:* Unknown. The limit exists mainly to protect the stack, and an inlined generator frame costs no C stack, so a maintainer may accept the difference. Against that, `CALL_PY_*` does check in the same situation, and behaviour that changes with specialization is what the adaptive interpreter is meant not to do.
 
 <details><summary>Reproducer</summary>
 
@@ -86,6 +91,7 @@ for name, src in (("SEND", SEND), ("FOR_ITER", FOR)):
     out[name] = (generic, specialized)
     print(name, "generic:", generic, "specialized:", specialized, flush=True)
 if any(g == "RecursionError" and s == 1 for g, s in out.values()):
+    print("Observed the reported behavior.")
 os._exit(0)
 ```
 
@@ -100,4 +106,4 @@ os._exit(0)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

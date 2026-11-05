@@ -28,6 +28,8 @@ D(2000, 1, 1, 12, tzinfo=plus1).astimezone(plus2)
 twin = datetime(2000, 1, 1, 11, tzinfo=plus2)
 print("before:", before)
 print("after: ", repr(shared), "== twin:", shared == twin, "hash equal:", hash(shared) == hash(twin))
+if repr(shared) != before:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -54,6 +56,8 @@ print('C      :', c)
 print('Python :', py)
 print('C without NUL:', nonul)
 print('C time :', t)
+if c.startswith('datetime.datetime(2020, 1, 1, 12, 0') and py == 'ValueError' and nonul == 'ValueError':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -77,6 +81,7 @@ for s in ['2020-01-00T24:00', '2020-01-00T00:00', '2020-01-00', '0000-12-31T24:0
 if (parse(datetime, '2020-01-00T24:00') == parse(_pydatetime, '2020-01-00T24:00') == (2020, 1, 1, 0, 0)
         and parse(datetime, '0000-12-31T24:00') == (1, 1, 1, 0, 0)
         and str(parse(datetime, '2020-01-00T00:00')).startswith('ValueError')):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -96,6 +101,8 @@ def run(m):
         return 'TypeError'
 c, p = run(datetime), run(_pydatetime)
 print('C:', c, ' Python:', p)
+if c == 'TypeError' and p.endswith('timedelta(days=1)'):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -126,6 +133,8 @@ for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
         except Exception as e:
             res.append(type(e).__name__)
 print(res)
+if res == ['error', 'AssertionError'] * 2:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -139,4 +148,4 @@ print(res)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

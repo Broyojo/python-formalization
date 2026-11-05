@@ -19,6 +19,8 @@ r3 = list(islice(range(10), 1, 10, M))
 print('islice(range(10), 1, None, sys.maxsize)     ->', r1, '; range(10)[1::sys.maxsize] =', list(range(10))[1::M])
 print('islice(range(10), 5, None, sys.maxsize - 2) ->', r2, '; range(10)[5::sys.maxsize-2] =', list(range(10))[5::M - 2])
 print('islice(range(10), 1, 10, sys.maxsize)       ->', r3, '(an int stop is fine)')
+if r1 == [1, 2] and r2 == [5, 6] and r3 == [1]:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -32,4 +34,4 @@ print('islice(range(10), 1, 10, sys.maxsize)       ->', r3, '(an int stop is fin
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

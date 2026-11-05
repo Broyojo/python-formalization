@@ -42,8 +42,11 @@ def inner_code(repro):
     """The script inside a subprocess wrapper (code = r'''...'''), without REPRODUCED checks."""
     m = re.search(r'code\s*=\s*r?("""|\'\'\')\n(.*?)\1', repro, re.S)
     code = m.group(2) if m else repro
-    keep = [l for l in code.splitlines() if "REPRODUCED" not in l
-            and not re.match(r"\s*import resource", l) and "RLIMIT_CORE" not in l]
+    # Keep the suite of a reproduction check: deleting only its print statement
+    # leaves dangling (including multiline) if statements in the posted code.
+    keep = [re.sub(r"print\(.*REPRODUCED.*", 'print("Observed the reported behavior.")', l)
+            for l in code.splitlines()
+            if not re.match(r"\s*import resource", l) and "RLIMIT_CORE" not in l]
     while keep and re.match(r"\s*if .*:\s*$", keep[-1]):
         keep.pop()
     return "\n".join(keep).strip()
@@ -63,8 +66,8 @@ def first_para(s):
 TEXT = ROOT / "reports" / "issue_text"
 VV = ROOT / "reports" / "python-VV.txt"  # output of `python3 -VV` on the test machine
 FOOTER = ("Found while building a Lean 4 model of CPython ({page}). AI tools (Claude and Codex) helped "
-          "investigate the findings and prepare these drafts. Results in the body are taken from the bug "
-          "records; final interpreter reruns and human review are pending.")
+          "investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main "
+          "during technical review; the human submitter must review the report before filing.")
 
 
 def single(path):
@@ -99,14 +102,16 @@ def group(mod, items, part, parts):
             "out any that deserve their own issue.", ""]
     for i, (bid, t) in enumerate(items, 1):
         mi = field(t, "maybe_intended")
-        note = f"\n\n*May be intended:* {clean(first_para(mi))}" if re.match(r"(?i)(likely|probably|yes|possibly)", mi) else ""
+        note = (f"\n\n*May be intended:* {clean(first_para(mi))}"
+                if mi and not re.match(r"(?i)(no\b|unlikely\b|very unlikely\b)", mi) else "")
         body += [f"#### {i}. {clean(field(t, 'title'))}", "", clean(first_para(field(t, "summary"))) + note, "",
                  "<details><summary>Reproducer</summary>", "", "```python", inner_code(field(t, "reproducer")),
                  "```", "", "</details>", ""]
     body += ["### CPython versions tested on:", "", "3.15, CPython main branch", "",
              "### Operating systems tested on:", "", "Linux", "", "---",
-             "I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 "
-             f"and on main and the text checked before filing. Records: {REPO}/tree/main/bugs"]
+             "AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code "
+             "blocks were rerun on 3.15.2 and main during technical review; the human submitter must review "
+             f"the report before filing. Records: {REPO}/tree/main/bugs"]
     return title, "\n".join(body) + "\n"
 
 

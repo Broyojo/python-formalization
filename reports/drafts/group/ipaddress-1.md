@@ -16,6 +16,8 @@ a = ipaddress.IPv6Address('::ffff:1.2.3.4%eth0')
 print(i.compressed, '->', i.exploded)
 print(a.compressed, '->', a.exploded)
 print('round trip:', ipaddress.IPv6Interface(i.exploded), 'vs', i)
+if not i.exploded.endswith('/64') and 'eth0' not in a.exploded:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -34,6 +36,7 @@ try:
     print(net.exploded)
 except ipaddress.AddressValueError as e:
     print('AddressValueError:', e)
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -57,6 +60,8 @@ prog = (
     "print(r4, t(ipaddress.IPv4Network, '10.0.0.0', 8.0), r6, t(ipaddress.IPv6Network, '2001:db8::', 64.0))\n")
 out = subprocess.run([sys.executable, '-c', prog], capture_output=True, text=True).stdout.split()
 print(out)
+if out == ['AttributeError', '10.0.0.0/8', 'AttributeError', '2001:db8::/64']:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -70,4 +75,4 @@ print(out)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

@@ -1,6 +1,8 @@
 <!-- title: array('e'): append() or insert() of an out-of-range float raises OverflowError but still grows the array (new in 3.15) -->
 <!-- form: bug -->
 <!-- records: sequences-array-e-ins1-overflow-keeps-slot -->
+**Triage:** confirmed duplicate of open gh-158345 during read-only prelaunch review on 2026-11-05. That issue explicitly includes the 3.15 `e`-array case. Keep this draft unfiled.
+
 `ins1` (used by `append`, `insert` and `extend`) first checks the value with a trial `setitem(self, -1, v)`, then grows the array and stores it. For every other typecode the trial call rejects a bad value. For the new `'e'` typecode, `e_setitem` does its range check (`PyFloat_Pack2`) only inside `if (i >= 0)`, so the trial passes, the array grows, and the real store raises. `ins1` returns the error without undoing the growth.
 
 ```python

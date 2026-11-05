@@ -18,6 +18,8 @@ class C:
 a = asdict(C(Counter('aab')))['x']
 b = astuple(C(Counter('aab')))[0]
 print(a, b)
+if a == Counter({('a', 2): 1, ('b', 1): 1}) and b == a:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -25,6 +27,8 @@ print(a, b)
 #### 2. enum.unique and verify(UNIQUE) report every member as a duplicate when the class defines its own name
 
 unique and the UNIQUE check of verify look for aliases by comparing each key of __members__ with member.name. member.name is a public attribute that a class may redefine, and a property such as `def name(self): return self._name_.lower()` is accepted: the rest of enum reads _name_ and works. With such a class there is no alias, and yet @unique raises "duplicate values found in <enum 'Color'>: RED -> red, GREEN -> green". verify(CONTINUOUS) has the same shape with e.value. _add_value_alias_ files an unhashable value under self.name at Lib/enum.py:1262, and Enum.__new__ then does cls[name] at :1193, so Color([1]) raises KeyError 'red' from a lookup that should end in the member.
+
+*May be intended:* Not intended: the code means "this key is not the member's own name", which is `_name_`, the attribute the rest of the module uses. A maintainer could answer that redefining name is unsupported, but nothing says so, and the class otherwise works.
 
 <details><summary>Reproducer</summary>
 
@@ -46,6 +50,8 @@ b = attempt(lambda: verify(UNIQUE)(Color))
 Color.RED._add_value_alias_([1])
 c = attempt(lambda: Color([1]))
 print(a, b, c)
+if a == 'ValueError' and b == 'ValueError' and c == 'KeyError':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -76,6 +82,8 @@ hashable = attempt(lambda: D.B._add_value_alias_(9))
 D.A._add_value_alias_([9])
 second = attempt(lambda: D.B._add_value_alias_([9]))
 print(first, hashable, second, D._unhashable_values_map_)
+if first == 'TypeError' and hashable == 'ValueError' and second == 'no error':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -187,6 +195,8 @@ except KeyError:
     pass
 signal.alarm(0)
 print('second AsyncExitStack hangs:', ahang)
+if hang and len(chain) == 5 and len(chain2) == 2 and ahang and len(achain) == 5:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -210,6 +220,8 @@ pouter, pinner = build(py)
 pouter(1)
 before = pouter.cache_info()
 print(p, before)
+if p == {'maxsize': 7, 'typed': False} and before.maxsize == 7:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -217,6 +229,8 @@ print(p, before)
 #### 6. functools.partial flattens a partial subclass, so the subclass's __call__ never runs
 
 partial(p, x) merges p's stored function and arguments when p is an instance of partial. The test is isinstance, so it also matches a subclass that overrides __call__: partial(Sub(f, 1), 2)() calls f(1, 2) and never reaches Sub.__call__. The twins also disagree on a related case: C does not flatten a partial that has an instance __dict__, Python does, so partial(p, 2).func is p in C and f in the pure-Python module.
+
+*May be intended:* Flattening is a deliberate optimisation (python/cpython#52078). Lib/test/test_functools.py:693-694 says "partial subclasses are not optimized for nested calls" and disables test_nested_optimization for the subclass test class, so the suite does not pin this down, and that comment no longer matches what the code does for a wrapped subclass. A maintainer would likely accept the override case as a bug, and treat the twin difference on __dict__ as harmless.
 
 <details><summary>Reproducer</summary>
 
@@ -231,33 +245,13 @@ outer = partial(Sub(target, 1), 2)
 direct = Sub(target, 1)(2)
 wrapped = outer()
 print('direct:', direct, 'wrapped:', wrapped, 'outer.func:', outer.func)
+if direct[0] == 'override' and wrapped[0] == 'target' and outer.func is target:
+    print("Observed the reported behavior.")
 ```
 
 </details>
 
-#### 7. A random.Random subclass whose __init__ does not call super().__init__() silently returns 0.0 forever
-
-Since Python 3.11 _random.Random seeds in tp_init, and tp_new is PyType_GenericNew, which leaves index = 0 and all 624 words zero. All-zero is the fixed point of the Mersenne Twister recurrence. random.Random.__init__ seeds, so a plain Random() is fine, but a subclass that defines __init__ and does not chain up never seeds. No error is raised: random() returns 0.0 every time, randrange(100) returns 0, and shuffle and sample become one fixed permutation. Before 3.11 the same class worked, because tp_new seeded (bpo-44260 moved it). random.Random.__new__(random.Random) and _random.Random.__new__(_random.Random, 5) behave the same way; the seed argument of the second one is ignored.
-
-<details><summary>Reproducer</summary>
-
-```python
-import random, _random
-class Sub(random.Random):
-    def __init__(self, label):
-        self.label = label
-s = Sub('x')
-floats = {s.random() for _ in range(2000)}
-ints = {s.randrange(100) for _ in range(2000)}
-print(floats, ints)
-raw = _random.Random.__new__(_random.Random, 5)
-print(raw.random())
-plain = {random.Random().random() for _ in range(5)}
-```
-
-</details>
-
-#### 8. @f.register registers the first annotation found, which can be the return type or a later parameter
+#### 7. @f.register registers the first annotation found, which can be the return type or a later parameter
 
 With a bare @f.register, register takes `next(iter(get_type_hints(func).items()))`: the first entry of the hints, whatever its name. `def g(x) -> int` therefore registers the implementation for int, on the return annotation, and `def g(x, y: str)` registers it for str, on the second parameter. Neither raises, and calling f(1) then silently runs g. The docs say that the decorator infers the type of the first argument.
 
@@ -275,6 +269,38 @@ def g(x) -> int:
 def h(x, y: str):
     return 'h'
 print(f(1), sorted(k.__name__ for k in f.registry))
+if f(1) == 'g' and int in f.registry and str in f.registry:
+    print("Observed the reported behavior.")
+```
+
+</details>
+
+#### 8. singledispatch keeps a stale dispatch after ABC.register when the ABC was registered through a union
+
+singledispatch caches dispatch results and clears the cache when abc.get_cache_token() changes, but it only starts watching the token once an ABC is registered. The test at Lib/functools.py:994 is `hasattr(cls, '__abstractmethods__')`, on the argument of register. For register(Sized | int, impl), cls is the UnionType, which has no such attribute, so cache_token stays None. A class dispatched before Sized.register(C) then stays on the old implementation forever, while the same code with register(Sized, impl) picks up the new implementation.
+
+<details><summary>Reproducer</summary>
+
+```python
+from collections.abc import Sized
+from functools import singledispatch
+@singledispatch
+def by_union(x):
+    return 'default'
+by_union.register(Sized | int, lambda x: 'sized')
+@singledispatch
+def by_class(x):
+    return 'default'
+by_class.register(Sized, lambda x: 'sized')
+class C:
+    pass
+c = C()
+before = by_union(c), by_class(c)
+Sized.register(C)
+after = by_union(c), by_class(c)
+print('before:', before, 'after:', after)
+if before == ('default', 'default') and after == ('default', 'sized'):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -288,4 +314,4 @@ print(f(1), sorted(k.__name__ for k in f.registry))
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

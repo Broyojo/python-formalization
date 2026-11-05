@@ -7,7 +7,7 @@ For two aware datetimes with different `tzinfo` objects, `==` checks whether the
 import datetime as C
 import _pydatetime as P
 
-for m in (C, P):
+for label, m in (("datetime", C), ("_pydatetime", P)):
     class Z(m.tzinfo):
         def utcoffset(self, dt):
             return m.timedelta(0) if dt.fold else None
@@ -15,7 +15,7 @@ for m in (C, P):
             return None
     a = m.datetime(2000, 1, 1, tzinfo=Z())
     b = m.datetime(2000, 1, 1, tzinfo=Z())
-    print(m.__name__, a == b, a != b)
+    print(label, a == b, a != b)
 ```
 
 Output on 3.15.2 and main (Linux x86-64):

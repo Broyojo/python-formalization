@@ -1,7 +1,7 @@
 id: sequences-array-e-ins1-overflow-keeps-slot
 title: "array('e').append(65536.0) raises OverflowError but keeps a new item holding uninitialised memory"
 priority: P2
-kind: state-corruption
+kind: duplicate-open-upstream
 module: sequences
 files: [Modules/arraymodule.c]
 functions: ["ins1", "e_setitem", "array_array_append_impl", "array_array_insert_impl", "array_iter_extend"]
@@ -64,9 +64,11 @@ possible_fix: |
   failure, and memcpy to ob_item under `if (i >= 0)`.
 duplicates:
   issues:
+    - {number: 158345, state: open, relation: "duplicate: append/insert/extend growth after OverflowError, explicitly including 3.15 e arrays; confirmed by read-only prelaunch review on 2026-11-05"}
     - {number: 156864, state: closed, relation: "related, not a duplicate: 1e300 becoming inf through the float conversion of e_setitem. Its fix on main changes `float x` to `double x` and keeps Pack2 under `if (i >= 0)`, so this defect stays"}
     - {number: 154568, state: closed, relation: "unrelated: _array_reconstructor byte order for float16"}
-  queries: ["gh search issues: array float16 append OverflowError", "array typecode e half float",
+  queries: ["gh issue view 158345 --repo python/cpython --json number,title,state,body (2026-11-05; exact duplicate confirmed)",
+            "gh search issues: array float16 append OverflowError", "array typecode e half float",
             "array append failed uninitialized", "PyFloat_Pack2 array", "array append OverflowError length grows item",
             "array ins1 setitem", "gh search prs: array e_setitem",
             "bugforge README: no matching entry"]

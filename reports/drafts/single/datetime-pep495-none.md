@@ -7,7 +7,7 @@ For two aware datetimes with different `tzinfo` objects, `==` checks whether the
 import datetime as C
 import _pydatetime as P
 
-for m in (C, P):
+for label, m in (("datetime", C), ("_pydatetime", P)):
     class Z(m.tzinfo):
         def utcoffset(self, dt):
             return m.timedelta(0) if dt.fold else None
@@ -15,7 +15,7 @@ for m in (C, P):
             return None
     a = m.datetime(2000, 1, 1, tzinfo=Z())
     b = m.datetime(2000, 1, 1, tzinfo=Z())
-    print(m.__name__, a == b, a != b)
+    print(label, a == b, a != b)
 ```
 
 Output on 3.15.2 and main (Linux x86-64):
@@ -38,4 +38,4 @@ Cause: Modules/_datetimemodule.c:6569-6570 and :6580-6581 (`pep495_eq_exception`
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [datetime-pep495-delta-cmp-none](https://github.com/Broyojo/python-formalization/blob/main/bugs/datetime-pep495-delta-cmp-none.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [datetime-pep495-delta-cmp-none](https://github.com/Broyojo/python-formalization/blob/main/bugs/datetime-pep495-delta-cmp-none.yaml)

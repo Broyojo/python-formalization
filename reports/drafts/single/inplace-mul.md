@@ -4,20 +4,24 @@
 For a left operand whose class has no `__imul__` and no `__mul__` for lists, `x * seq` falls back to the sequence's repeat, but `x *= seq` does not when `x` is an instance of a Python class, such as an `int` subclass or an `IntEnum` member. With a plain `int` both work.
 
 ```python
-import enum
+import enum, operator
 
 class I(int):
     pass
-
-x = I(2)
-print(x * [1])    # [1, 1]
-x *= [1]          # TypeError: unsupported operand type(s) for *=: 'I' and 'list'
-
 class E(enum.IntEnum):
     TWO = 2
 
-y = E.TWO
-y *= [1]          # TypeError as well; operator.imul(I(2), [1]) too
+def inplace(x):
+    x *= [1]
+    return x
+
+for x in (2, I(2), E.TWO):
+    print(type(x).__name__, "multiply:", x * [1])
+    for name, f in (("*=", inplace), ("operator.imul", lambda x: operator.imul(x, [1]))):
+        try:
+            print(name, f(x))
+        except TypeError as e:
+            print(name, type(e).__name__, str(e))
 ```
 
 I'd expect `x *= [1]` to give `[1, 1]`, as `x * [1]` does and as it does for `x = 2`.
@@ -33,4 +37,4 @@ Cause: `PyNumber_InPlaceMultiply` (Objects/abstract.c:1337-1349) tests `else if 
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [corelibs-inplace-mul-heap-left](https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-inplace-mul-heap-left.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [corelibs-inplace-mul-heap-left](https://github.com/Broyojo/python-formalization/blob/main/bugs/corelibs-inplace-mul-heap-left.yaml)

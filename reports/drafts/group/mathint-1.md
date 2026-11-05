@@ -21,6 +21,8 @@ try:
 except ValueError as e:
     two = 'ValueError: ' + str(e)
 print('log(0):', one, ' log(0, 2):', two)
+if one.startswith('ValueError') and not two.startswith('ValueError'):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -34,4 +36,4 @@ print('log(0):', one, ' log(0, 2):', two)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

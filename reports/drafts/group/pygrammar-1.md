@@ -21,6 +21,8 @@ except ValueError as e:
     a = str(e)
 b = eval(compile(walrus, 'x', 'eval'), {})
 print(a, b)
+if a.startswith('identifier field') and b == 1:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -28,6 +30,8 @@ print(a, b)
 #### 2. ast.unparse corrupts f-string format specs holding braces or control characters written as escapes: output is invalid or means something else
 
 A literal part of a format spec is written by _write_ftstring_inner with only `\`, quotes and newline escaped, after doubling `{` and `}`. Three things go wrong for valid source:
+
+*May be intended:* Not intended: the Unparser docstring promises equivalence, and the code visibly tries to escape the spec (four replace calls). The other control characters are the same omission.
 
 <details><summary>Reproducer</summary>
 
@@ -44,6 +48,8 @@ a = rt(r'''f"{x:\x7d}"''')
 b = rt(r'''f"{x:\x7b}"''')
 c = rt(r'''f"{x:\x00}"''')
 print(a, b, c)
+if not a[0] and not b[0] and not c[0]:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -57,4 +63,4 @@ print(a, b, c)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

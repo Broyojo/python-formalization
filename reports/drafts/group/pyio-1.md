@@ -25,6 +25,8 @@ for mod in (io, _pyio):
         out[mod.__name__] = (f.tell(), f.read())
 os.unlink(path)
 print(out)
+if out["io"] == (2, b"23456789") and out["_pyio"] != out["io"]:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -48,6 +50,8 @@ for mod in (io, _pyio):
     except ValueError as e:
         results[mod.__name__] = e
 print(results)
+if results['io'] == (3, b'bcd') and isinstance(results['_pyio'], ValueError):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -55,6 +59,8 @@ print(results)
 #### 3. readlines(hint) stops one line early in io.BytesIO and all of _pyio, unlike every other C stream and the docs
 
 The docs say no more lines are read once the total size of the lines so far *exceeds* hint. The C _IOBase.readlines (used by io.StringIO, io.TextIOWrapper, io.BufferedReader, real files) stops when the total is greater than hint. io.BytesIO.readlines and _pyio's IOBase.readlines stop when the total is greater than or equal to hint. So when the lines read so far add up to exactly hint, the same content gives different results: io.BytesIO(b'a\nb\nc').readlines(2) is [b'a\n'], but io.BufferedReader(io.BytesIO(b'a\nb\nc')).readlines(2) is [b'a\n', b'b\n'], and in _pyio every class returns one line. The result of a program can change when a file is replaced by a BytesIO or when io is replaced by _pyio.
+
+*May be intended:* Partly. "hint" is a hint, and BytesIO.readlines's docstring calls it "an approximate bound" (bytesio.c:582). No test pins the boundary (test_memoryio's only hint case, readlines(15) over 11-character lines, passes under both rules). A maintainer would likely accept aligning the code as a cleanup, with low urgency, and could equally choose to soften the docs.
 
 <details><summary>Reproducer</summary>
 
@@ -75,6 +81,8 @@ for k, v in got.items():
     print('%-22s %r' % (k, v))
 stop_at_reach = ['io.BytesIO', '_pyio.BytesIO', '_pyio.BufferedReader', '_pyio.StringIO']
 stop_at_exceed = ['io.BufferedReader', 'io.StringIO', 'io.TextIOWrapper']
+if all(len(got[k]) == 1 for k in stop_at_reach) and all(len(got[k]) == 2 for k in stop_at_exceed):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -105,6 +113,8 @@ for nl in bad:
             accepted = -100
         except ValueError as e:
             print(name, repr(nl), 'ValueError:', e)
+if accepted == len(bad):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -112,6 +122,8 @@ for nl in bad:
 #### 5. io.StringIO(newline=None) turns a \\r\\n split across two writes into two newlines
 
 With newline=None the C StringIO translates line endings on write, once per write() call, with the decoder's `final` flag always set. A '\r' at the end of one write is therefore translated to '\n' immediately, and a '\n' at the start of the next write stays, so 'a\r' + '\nb' gives 'a\n\nb'. Written as one string the same text gives 'a\nb'. The stored text and the number of lines depend on how the text was split into write() calls, and `newlines` reports ('\r', '\n') for text that only has a CRLF. _pyio.StringIO stores the raw text and translates it as a whole on read and getvalue(), so it returns 'a\nb' for both, as does a real text file written in two pieces and read back with newline=None.
+
+*May be intended:* The "always final" comment shows that the one-shot translation was deliberate, but not that this outcome was. bpo-5265 (test_issue5265, "StringIO can duplicate newlines in universal newlines mode") fixed the same symptom for a different path, which suggests maintainers consider it a bug. A fix would have to keep a pending \r across writes and flush it on reads and seeks, so it may be judged not worth it, in which case a docs note is the alternative. bpo-20435 (gh-64634) fixed _pyio.getvalue() to match C on translation, so twin mismatches here are in scope.
 
 <details><summary>Reproducer</summary>
 
@@ -134,6 +146,8 @@ f = io.TextIOWrapper(b, encoding='ascii', newline='')
 f.write('a\r'); f.write('\nb'); f.flush()
 back = io.TextIOWrapper(io.BytesIO(b.getvalue()), encoding='ascii', newline=None).read()
 print('file written in two pieces, read with newline=None:', repr(back))
+if res['io'][0] == 'a\n\nb' and res['io'][1] == 'a\nb' and res['_pyio'][0] == 'a\nb' and back == 'a\nb':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -155,6 +169,8 @@ pos = f.tell()
 f.seek(pos)
 rest = f.read()
 print('line', repr(line), 'tell', pos, 'len', len(data), 'rest', repr(rest))
+if pos > len(data) and rest == '':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -168,4 +184,4 @@ print('line', repr(line), 'tell', pos, 'len', len(data), 'rest', repr(rest))
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

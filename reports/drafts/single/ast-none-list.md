@@ -12,7 +12,7 @@ r = subprocess.run([sys.executable, '-c', code], capture_output=True)
 print(r.returncode)
 ```
 
-The record reports SIGSEGV (`-11`) on main and a prior 3.14.7 run. **Validation pending:** unlike the other records, this record does not explicitly log a 3.15.2 result; that run must be recorded before filing.
+The draft reproducer prints `-11` (SIGSEGV) on both 3.15.2 and main in the final prelaunch rerun. The saved record checks also confirm reproduction on both interpreters.
 
 Cause: Python/ast.c:890-893 reads a `Try` handler and immediately uses `VALIDATE_POSITIONS(handler)` without rejecting NULL; the `TryStar` loop at :918-921 instead dereferences the handler's fields directly. The generated AST conversion accepts `None` as NULL for these nodes. The expression and statement list validators already reject forbidden NULL entries; these handler loops should do likewise.
 
@@ -20,7 +20,7 @@ The record also reports the same missing validation across pattern lists, mappin
 
 ### CPython versions tested on:
 
-CPython main branch and a prior 3.14.7 run (recorded); 3.15.2 validation pending
+3.15.2, CPython main branch
 
 ### Operating systems tested on:
 
@@ -31,4 +31,4 @@ Linux
 Python 3.15.2 (tags/v3.15.2:5e58eaa, Nov  5 2026, 20:20:36) [GCC 11.4.0]
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [pygrammar-check-none-in-list-segfault](https://github.com/Broyojo/python-formalization/blob/main/bugs/pygrammar-check-none-in-list-segfault.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [pygrammar-check-none-in-list-segfault](https://github.com/Broyojo/python-formalization/blob/main/bugs/pygrammar-check-none-in-list-segfault.yaml)

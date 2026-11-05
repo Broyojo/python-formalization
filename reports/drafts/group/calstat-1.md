@@ -19,6 +19,8 @@ r = statistics.correlation(x, y)
 s = statistics._sqrtprod(10 * 2.0**-540, 10 * 2.0**-538)
 print(r, s, s == 10 * 2.0**-539)
 print(statistics.correlation([1e-100, 2e-100, 3e-100], [1e-62, 2e-62, 3e-62]))
+if abs(r - 1.0) > 1e-12 and s != 10 * 2.0**-539:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -32,4 +34,4 @@ print(statistics.correlation([1e-100, 2e-100, 3e-100], [1e-62, 2e-62, 3e-62]))
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

@@ -33,6 +33,7 @@ for (c, p), (v, _) in zip(out, rows):
 if (out[0][0][1] == ['when serializing dict item 1'] and out[0][1][1] == ["when serializing dict item '1'"]
         and 'when serializing mymod.Foo object' in out[1][0][1] and 'when serializing Foo object' in out[1][1][1]
         and out[2][0][0].endswith('not datetime.date') and out[2][1][0].endswith('not date')):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -69,6 +70,7 @@ py_scan = scan(pyjson.decoder.py_scanstring)
 print(f"scanstring('ab', 5): C {c_scan} | Python {py_scan}")
 if (out[0][0].startswith('ValueError: idx cannot be negative') and out[0][1] == '(12, 2)'
         and c_scan == 'ValueError: end is out of bounds' and py_scan.startswith('JSONDecodeError')):
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -76,6 +78,8 @@ if (out[0][0].startswith('ValueError: idx cannot be negative') and out[0][1] == 
 #### 3. json: C and pure-Python decoders report invalid escapes at different positions (and both string errors with different messages)
 
 For an invalid backslash escape the C scanner raises JSONDecodeError('Invalid \\escape') at the index of the backslash, while the pure-Python py_scanstring raises JSONDecodeError("Invalid \\escape: 'x'") at the index of the character after it. So `pos`, `colno` and the message all differ: json.loads('"\\x"') gives pos=1, colno=2 with _json and pos=2, colno=3 without it. For a raw control character inside a string (strict=True) the position agrees but the message does not: C says 'Invalid control character at', Python "Invalid control character '\\x01' at". The Lean model proves these are the only differences: for every document and every strict / object_pairs_hook / parse_int setting, json.loads agrees between the twins (value, or exception class, msg, pos, lineno, colno) except for exactly these two errors (json-loads-twins-scan), and the same holds for raw_decode(s, idx) with 0 <= idx <= sys.maxsize (json-raw-decode-twins-in-range).
+
+*May be intended:* The position difference is not: the sibling case was reported as a bug and fixed in 2026. gh-154936 (pure-Python decoder reported one character past an invalid control character, C at the character) was merged as gh-154941 by Serhiy Storchaka and backported, and gh-152052 fixed another scanstring divergence. Invalid escapes were not touched by either; which of the two positions is right is a small judgement call. The message difference has existed since the C scanner was added and gh-154941 left it alone (it tests pos, lineno and colno, not the message; test_decode.py:143-146 only looks for 'escape'), so it is probably tolerated.
 
 <details><summary>Reproducer</summary>
 
@@ -97,6 +101,8 @@ for s, c, p in rows:
     print('   Python:', p)
 esc_c, esc_p = rows[0][1], rows[0][2]
 ctl_c, ctl_p = rows[2][1], rows[2][2]
+if esc_c[1] == 1 and esc_p[1] == 2 and ctl_c[0] != ctl_p[0] and ctl_c[1] == ctl_p[1]:
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -128,6 +134,8 @@ print('iterencode     :', it)
 print('dumps C indent :', repr(ci))
 print('encoder C      :', ce)
 print('encoder Python :', pe)
+if c == '{"a"X[1X2]}' and p == it == '{"a":[1,2]}' and ce == '[X]' and pe == '["ab"]':
+    print("Observed the reported behavior.")
 ```
 
 </details>
@@ -141,4 +149,4 @@ print('encoder Python :', pe)
 Linux
 
 ---
-I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

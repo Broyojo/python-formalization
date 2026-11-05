@@ -7,10 +7,15 @@ gh-134152 fixed an `UnboundLocalError` in `_get_ptext_to_endchars` for an empty 
 import email
 from email import policy, _header_value_parser as P
 
-P.parse_message_id('<a@[ x]>')    # UnboundLocalError: cannot access local variable 'pos' ...
+def attempt(label, f):
+    try:
+        print(label, f())
+    except Exception as e:
+        print(label, type(e).__name__, str(e))
 
+attempt("parser", lambda: P.parse_message_id('<a@[ x]>'))
 m = email.message_from_string('Message-ID: <a@[ x]>\n\nbody\n', policy=policy.default)
-m['Message-ID']                   # the same error
+attempt("header", lambda: m['Message-ID'])
 ```
 
 I'd expect the header to parse with a defect recorded, as other malformed msg-ids do, rather than an `UnboundLocalError` from inside the parser.
@@ -26,4 +31,4 @@ Cause: Lib/email/_header_value_parser.py:1045-1066. The `if not value` guard doe
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [textlibs-email-msgid-no-fold-literal-space](https://github.com/Broyojo/python-formalization/blob/main/bugs/textlibs-email-msgid-no-fold-literal-space.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [textlibs-email-msgid-no-fold-literal-space](https://github.com/Broyojo/python-formalization/blob/main/bugs/textlibs-email-msgid-no-fold-literal-space.yaml)

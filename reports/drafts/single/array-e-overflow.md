@@ -1,6 +1,8 @@
 <!-- title: array('e'): append() or insert() of an out-of-range float raises OverflowError but still grows the array (new in 3.15) -->
 ### Bug report
 
+**Triage:** confirmed duplicate of open gh-158345 during read-only prelaunch review on 2026-11-05. That issue explicitly includes the 3.15 `e`-array case. Keep this draft unfiled.
+
 `ins1` (used by `append`, `insert` and `extend`) first checks the value with a trial `setitem(self, -1, v)`, then grows the array and stores it. For every other typecode the trial call rejects a bad value. For the new `'e'` typecode, `e_setitem` does its range check (`PyFloat_Pack2`) only inside `if (i >= 0)`, so the trial passes, the array grows, and the real store raises. `ins1` returns the error without undoing the growth.
 
 ```python
@@ -34,4 +36,4 @@ Cause: Modules/arraymodule.c:636-640 (`e_setitem`) packs only for `i >= 0`. `ins
 Linux
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. Results in the body are taken from the bug records; final interpreter reruns and human review are pending. Record: [sequences-array-e-ins1-overflow-keeps-slot](https://github.com/Broyojo/python-formalization/blob/main/bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [sequences-array-e-ins1-overflow-keeps-slot](https://github.com/Broyojo/python-formalization/blob/main/bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml)
