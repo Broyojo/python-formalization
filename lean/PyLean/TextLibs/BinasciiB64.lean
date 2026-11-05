@@ -515,27 +515,29 @@ def igEff (strict : Option Bool) (g : Option (List Nat)) : Option (List Nat) :=
 
 /-- The arguments either fail whatever the data, with one exception, or leave the loop with the table of
 a 64-byte alphabet. -/
-theorem a2bB64_cases (strict : Option Bool) (p : Bool) (alpha : AlphaArg) (g : Option (List Nat)) (k : Bool) :
-    (∃ e, ∀ s, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k = .error e) ∨
-    ((alphaChars alpha).length = 64 ∧ ∀ s, a2bB64 (.bytes s) strict p alpha (g.map .bytes) k =
+theorem a2bB64_cases (alpha : AlphaArg) :
+    (∃ e, ∀ s strict p g k, a2bB64 (.bytes s) strict p alpha (Option.map Data.bytes g) k = .error e) ∨
+    ((alphaChars alpha).length = 64 ∧ ∀ s strict p g k, a2bB64 (.bytes s) strict p alpha (Option.map Data.bytes g) k =
       a2b64Core ⟨strict.getD g.isSome, p, revT (alphaChars alpha) (some 61), igEff strict g⟩ k s) := by
-  have hgd : bufOpt (g.map .bytes) = .ok g := by cases g <;> rfl
   cases alpha with
   | absent =>
     right
-    refine ⟨by decide, fun s => ?_⟩
+    refine ⟨by decide, fun s strict p g k => ?_⟩
+    have hgd : bufOpt (g.map .bytes) = .ok g := by cases g <;> rfl
     simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, igEff, alphaChars, bind, Except.bind]
   | bytes a =>
     by_cases hl : a.length = 64
     · right
-      refine ⟨hl, fun s => ?_⟩
+      refine ⟨hl, fun s strict p g k => ?_⟩
+      have hgd : bufOpt (g.map .bytes) = .ok g := by cases g <;> rfl
       simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, hl, igEff, alphaChars, bind, Except.bind]
     · left
-      refine ⟨.valueError s!"alphabet must have length {64}", fun s => ?_⟩
+      refine ⟨.valueError s!"alphabet must have length {64}", fun s strict p g k => ?_⟩
+      have hgd : bufOpt (g.map .bytes) = .ok g := by cases g <;> rfl
       simp [a2bB64, asciiBuffer, alphaDec, hgd, decTable, hl, bind, Except.bind]
   | other t =>
     left
-    refine ⟨.typeError s!"{"a2b_base64"}() argument 'alphabet' must be bytes, not {t}", fun s => ?_⟩
+    refine ⟨.typeError s!"{"a2b_base64"}() argument 'alphabet' must be bytes, not {t}", fun s strict p g k => ?_⟩
     simp [a2bB64, asciiBuffer, alphaDec, bind, Except.bind]
 
 theorem revT_mem_any (a : List Nat) (p : Option Nat) (y : Nat) (hy : y ∈ a) (hp : p ≠ some y) :
@@ -700,7 +702,7 @@ theorem ign_eff (strict : Option Bool) (g : Option (List Nat)) (x : Nat) (h : �
 
 theorem b64StrictLaw_proven : B64StrictLaw := by
   intro s strict p alpha g k hs
-  rcases a2bB64_cases strict p alpha g k with ⟨e, he⟩ | ⟨hA, he⟩
+  rcases a2bB64_cases alpha with ⟨e, he⟩ | ⟨hA, he⟩
   · refine ⟨fun _ r h => ?_, fun _ _ _ _ _ _ _ _ _ r h => ?_⟩
     · rw [he] at h; cases h
     · rw [he] at h; cases h
