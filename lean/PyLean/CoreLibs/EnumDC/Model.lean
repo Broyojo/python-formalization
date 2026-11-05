@@ -34,7 +34,7 @@ def isPrivate (cls name : List Char) : Bool :=
 def isSingleBit (num : Nat) : Bool :=
   if num = 0 then false else (num &&& (num - 1)) == 0
 
-/-- `_high_bit`, Lib/enum.py:663-667. -/
+/-- `_high_bit`, Lib/enum.py:1670-1674. -/
 def highBit (value : Nat) : Int := (bitLength value : Int) - 1
 
 def lowBitAux : (fuel : Nat) → Nat → Nat

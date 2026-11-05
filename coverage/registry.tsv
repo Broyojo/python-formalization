@@ -3936,12 +3936,10 @@ corelibs-enum-dict-names-new	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-sunders	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-functional-class	proven	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__,EnumType._create_
 corelibs-enum-lookup	proven	Lib/enum.py	
-corelibs-enum-call	refuted	Lib/enum.py	EnumType.__call__
 corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member_,EnumType.__len__
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
 corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
 corelibs-enum-value-alias-binds	proven	Lib/enum.py	
-corelibs-enum-flag-class-paths	refuted	Lib/enum.py	EnumType.__contains__,Flag._missing_
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__
@@ -3951,9 +3949,7 @@ corelibs-enum-dict-auto	refuted	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem
 corelibs-enum-dict-update-keys	refuted	Lib/enum.py	EnumDict.update
 corelibs-enum-generate	proven	Lib/enum.py	
 corelibs-enum-flag-generate	proven	Lib/enum.py	
-corelibs-enum-strenum	refuted	Lib/enum.py	StrEnum.__new__
 corelibs-enum-order	proven	Lib/enum.py	
-corelibs-enum-continuous	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-verify	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-flag-operands	proven	Lib/enum.py	Flag._get_value,Flag.__contains__,Flag.__invert__
 corelibs-enum-flag-bin	proven	Lib/enum.py	Flag.__or__,Flag.__and__,Flag.__xor__
@@ -3987,6 +3983,8 @@ corelibs-enum-flag-len	proven	Lib/enum.py	Flag.__len__
 corelibs-enum-flag-iter	proven	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_,Flag._iter_member_by_def_
 corelibs-enum-flag-iter-members	refuted	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_
 corelibs-enum-flag-generate-g	proven	Lib/enum.py	Flag._generate_next_value_
+corelibs-enum-verify-named	proven	Lib/enum.py	verify.__call__
+corelibs-enum-missing-boundaries	proven	Lib/enum.py	Flag._missing_
 corelibs-dataclasses-hash-table	proven	Lib/dataclasses.py	
 corelibs-dataclasses-init-order	proven	Lib/dataclasses.py	_fields_in_init_order
 corelibs-dataclasses-default-order	proven	Lib/dataclasses.py	

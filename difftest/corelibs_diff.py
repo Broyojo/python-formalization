@@ -6655,7 +6655,18 @@ def enumdc_dcmisc(case, fn):
     return py_result(go)
 
 
-enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError}
+class enumdc_KSub(KeyError):
+    pass
+
+
+class enumdc_TSub(TypeError):
+    pass
+
+
+enumdc_KSub.__name__ = enumdc_KSub.__qualname__ = "KSub"
+enumdc_TSub.__name__ = enumdc_TSub.__qualname__ = "TSub"
+enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError,
+              "KSub": enumdc_KSub, "TSub": enumdc_TSub}
 
 
 class enumdc_K:
@@ -6701,7 +6712,7 @@ enumdc_K.__name__ = enumdc_K.__qualname__ = "K"
 
 def enumdc_gkeys(rng):
     """The K objects of one case, by index: a key, and the exceptions of __hash__ and __eq__."""
-    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError"]
+    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError", "KSub", "TSub", "TSub"]
     return [[rng.choice([0, 1, 1, 2, 3, -1]), rng.choice(exc) if rng.random() < .5 else None,
              rng.choice(exc) if rng.random() < .5 else None] for _ in range(rng.randrange(1, 4))]
 
@@ -6846,7 +6857,8 @@ def enumdc_gsarg(rng):
     if r <= 2:
         return ["str", rng.choice(["x", "ascii", "latin-1", "strict", "ignore", "replace", "nope", ""])]
     if r <= 5:
-        return ["bytes", [rng.choice([120, 65, 0, 127, 128, 200, 255]) for _ in range(rng.randrange(0, 4))]]
+        return [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                [rng.choice([120, 65, 0, 127, 128, 200, 255]) for _ in range(rng.randrange(0, 4))]]
     return ["int", rng.choice([0, 1])]
 
 
@@ -6858,13 +6870,18 @@ def enumdc_gehstr(rng):
         if n == 3 and rng.random() < .7:
             args[2] = ["str", rng.choice(["strict", "ignore", "replace"])]
         if rng.random() < .6:
-            args[0] = ["bytes", args[0][1] if args[0][0] == "bytes" else [120]]
+            args[0] = [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                       args[0][1] if args[0][0] in ("bytes", "bytearray", "memoryview") else [120]]
     return {"fn": "enumdc.eh_strenum", "args": args}
 
 
 def enumdc_sarg(a):
     if a[0] == "bytes":
         return bytes(a[1])
+    if a[0] == "bytearray":
+        return bytearray(a[1])
+    if a[0] == "memoryview":
+        return memoryview(bytes(a[1]))
     return a[1]
 
 
@@ -6958,7 +6975,7 @@ def enumdc_gehverify(rng):
             vals.append(rng.choice([["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5])], ["int", rng.choice([1, 2, 3])],
                                     ["str", rng.choice(["a", "b", "x"])]]))
     target = rng.choice(["cls"] * 8 + ["int", "notcls_name", "notcls_noname"])
-    checks = [rng.choice(["unique", "continuous", "continuous"]) for _ in range(rng.randrange(0, 3))]
+    checks = [rng.choice(["unique", "continuous", "continuous", "named"]) for _ in range(rng.randrange(0, 3))]
     case = {"fn": "enumdc.eh_verify", "kind": kind, "body": [["M%d" % i, v] for i, v in enumerate(vals)],
             "target": target, "checks": checks, "order": None}
     try:
@@ -6985,7 +7002,8 @@ def enumdc_ehvbuild(case):
 def enumdc_ehverify(case):
     def go():
         C = enumdc_ehvbuild(case)
-        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS}[k] for k in case["checks"]]
+        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                   "named": enumdc_enum.NAMED_FLAGS}[k] for k in case["checks"]]
         t = case["target"]
         x = {"cls": C, "int": int, "notcls_name": len, "notcls_noname": 42}[t]
         enumdc_enum.verify(*checks)(x)
@@ -6998,7 +7016,9 @@ def enumdc_gehcall(rng):
     body = [[nm, ["int", i + 1]] for i, nm in enumerate(names)]
     more = [] if rng.random() < .6 else [["str", "P Q"]] + [["int", 3]] * rng.randrange(0, 2)
     return {"fn": "enumdc.eh_call", "body": body, "value": rng.choice([["str", "X"], ["int", 1], ["int", 5]]),
-            "more": more, "type": rng.random() < .5}
+            "more": more, "type": rng.random() < .5, "start": rng.choice([["int", 1], ["int", 1], ["int", 5], ["str", "s"]]),
+            "boundary": rng.choice([None, None, "strict", "keep"]), "module": rng.choice([None, "m"]),
+            "qualname": rng.choice([None, "q"])}
 
 
 def enumdc_ehcall(case):
@@ -7010,9 +7030,11 @@ def enumdc_ehcall(case):
 
         def _create_(cls, class_name, names, *, module=None, qualname=None, type=None, start=1, boundary=None):
             return ["create", enumdc_pvenc(class_name), None if names is None else enumdc_pvenc(names),
-                    type is not None]
+                    type is not None, enumdc_pvenc(start), None if boundary is None else boundary.value, module, qualname]
         type.__setattr__(C, "_create_", classmethod(_create_))
-        r = C(case["value"][1], *[m[1] for m in case["more"]], type=int if case["type"] else None)
+        bd = {None: None, "strict": enumdc_enum.STRICT, "keep": enumdc_enum.KEEP}[case["boundary"]]
+        r = C(case["value"][1], *[m[1] for m in case["more"]], type=int if case["type"] else None,
+              start=case["start"][1], boundary=bd, module=case["module"], qualname=case["qualname"])
         if isinstance(r, list):
             return r
         return ["member", r._name_]
