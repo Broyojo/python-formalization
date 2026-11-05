@@ -143,7 +143,9 @@ def readBytes1 : TM Bytes := do
   let data ← tRead n
   needBytes n "bytes1" data
 
-/-- The bound checks of `@3.14.7:515-516` and `@3.14.7:550-551`. -/
+/-- The `sys.maxsize` check and the length check of the 4- and 8-byte counted readers:
+`:517-523` (bytes4), `:552-558` (bytes8), `:587-593` (bytearray8), `:690-696`
+(unicodestring4) and `:731-737` (unicodestring8). -/
 def readCounted (n : Nat) (name : String) : TM Bytes :=
   if n > ssizeMaxN then tThrow (.valueError s!"{name} byte count > sys.maxsize: {n}")
   else do
@@ -283,7 +285,7 @@ def readArg (info : OpInfo) : TM (Option TV) :=
   | some r => do return some (← r)
   | none => pure none
 
-/-- One round of the loop of `_genops`, `@3.14.7:2277-2295`. -/
+/-- One round of the loop of `_genops`, `:2305-2323`. -/
 def genopStep (hasTell : Bool) : TM GenOp := do
   let pos ← getPos hasTell
   let code ← tRead 1
@@ -314,8 +316,13 @@ def genops (hasTell : Bool) (data : Bytes) : Py (List GenOp) :=
 
 /-! ## `optimize` -/
 
-/-- `name in opcode.name`. -/
-def hasSub (name sub : String) : Bool := (name.splitOn sub).length > 1
+/-- `sub` occurs in `s` at some position. -/
+def listInfix (sub : List Char) : List Char → Bool
+  | [] => sub.isEmpty
+  | c :: r => sub.isPrefixOf (c :: r) || listInfix sub r
+
+/-- `sub in opcode.name`: a substring test. -/
+def hasSub (name sub : String) : Bool := listInfix sub.toList name.toList
 
 /-- The argument of a PUT or GET as a dict key: `False == 0` and `True == 1`
 (`read_decimalnl_short` returns bools for `00` and `01`). -/
@@ -331,7 +338,7 @@ inductive OptOp where
   | raw (pos endPos : Nat)
   deriving Repr, DecidableEq
 
-/-- The state of the first loop of `optimize`, `@3.14.7:2331-2359`. -/
+/-- The state of the first loop of `optimize`, `:2359-2387`. -/
 structure OptSt where
   oldids : List Int := []
   /-- `newids`, most recently written first. -/
@@ -349,7 +356,7 @@ nothing there, since no id has been assigned yet. -/
 def addNew (s : List (Int × Option Nat)) (a : Int) : List (Int × Option Nat) :=
   if (s.lookup a).isSome then s else (a, none) :: s
 
-/-- The body of the first loop of `optimize`, `@3.14.7:2337-2359`. -/
+/-- The body of the first loop of `optimize`, `:2365-2387`. -/
 def optStep (p : Bytes) (s : OptSt) (op : GenOp) : OptSt :=
   let name := op.info.name
   let pos := op.pos.getD 0
@@ -378,7 +385,7 @@ def optGet (proto : Nat) : Option Nat → Py Bytes
       .error (.typeError "'<' not supported between instances of 'NoneType' and 'int'")
     else .ok (oGET :: [0x4e, 0x6f, 0x6e, 0x65] ++ [nl])
 
-/-- The state of the second loop of `optimize`, `@3.14.7:2371-2388`. -/
+/-- The state of the second loop of `optimize`, `:2399-2416`. -/
 structure OptOut where
   newids : List (Int × Option Nat)
   idx : Nat := 0
@@ -391,7 +398,7 @@ by `file_write` is `_Framer.write_large_bytes` with an empty header. -/
 def optWrite (s : OptOut) (data : Bytes) : OptOut :=
   { s with ev := .w data :: .boundary :: s.ev }
 
-/-- The body of the second loop of `optimize`, `@3.14.7:2372-2388`. -/
+/-- The body of the second loop of `optimize`, `:2400-2416`. -/
 def optEmit (proto : Nat) (p : Bytes) (s : OptOut) : OptOp → Py OptOut
   | .put arg =>
     if (s.newids.lookup arg).isNone then .ok s

@@ -41,7 +41,7 @@ theorem readUint_short (k : Nat) (name : String) (pre short : Bytes) (h : short.
   rw [if_neg (by omega)]
   rfl
 
-theorem bind_err {α β : Type} (m : TM α) (f : α → TM β) (pos : Nat) (d : Bytes) (e : PyExc)
+theorem tBind_err {α β : Type} (m : TM α) (f : α → TM β) (pos : Nat) (d : Bytes) (e : PyExc)
     (h : m pos d = .error e) : (m >>= f) pos d = .error e := by
   rw [tBind, h]
 
@@ -186,7 +186,7 @@ theorem countedSpec_of {α : Type} (k : Nat) (cname name : String) (post : Bytes
   · intro pre short n hn hk' hs
     rw [readUint_then' k _ _ _ _ hk', tBind, readCounted_short n name _ short hn hs]
   · intro pre short hs
-    exact bind_err _ _ _ _ _ (readUint_short k cname pre short hs)
+    exact tBind_err _ _ _ _ _ (readUint_short k cname pre short hs)
   · intro pre rest n hn hk'
     rw [readUint_then' k _ _ _ _ hk', tBind, readCounted_big n name _ _ hn]
 
@@ -213,7 +213,7 @@ theorem countedSpec_one {α : Type} (name : String) (post : Bytes → Py α) :
     rw [tBind, needBytes_err n name short _ _ (by omega)]
     rfl
   · intro pre short hs
-    exact bind_err _ _ _ _ _ (readUint_short 1 "uint1" pre short hs)
+    exact tBind_err _ _ _ _ _ (readUint_short 1 "uint1" pre short hs)
   · intro pre rest n hn hk'
     unfold ssizeMaxN at hn
     omega
@@ -308,7 +308,7 @@ theorem readString4Exact_proven : ReadString4Exact := by
     rw [tBind, needBytes_err n _ short _ _ (by omega)]
     rfl
   · intro pre short hs
-    exact bind_err _ _ _ _ _ (readInt4_short pre short hs)
+    exact tBind_err _ _ _ _ _ (readInt4_short pre short hs)
   · intro pre b rest n hb hn
     unfold readString4
     rw [readInt4_then_pack n b pre rest hb, if_pos hn]
@@ -343,7 +343,7 @@ theorem readLongExact_proven : ReadLongExact := by
     rw [if_pos (by omega)]
     rfl
   · intro pre short hs
-    exact bind_err _ _ _ _ _ (readUint_short 1 "uint1" pre short hs)
+    exact tBind_err _ _ _ _ _ (readUint_short 1 "uint1" pre short hs)
   · intro pre rest n hn hk
     unfold ssizeMaxN at hn
     omega
@@ -367,7 +367,7 @@ theorem readLongExact_proven : ReadLongExact := by
     rw [if_pos (by omega)]
     rfl
   · intro pre short hs
-    exact bind_err _ _ _ _ _ (readInt4_short pre short hs)
+    exact tBind_err _ _ _ _ _ (readInt4_short pre short hs)
   · intro pre b rest n hb hn
     unfold readLong4
     rw [readInt4_then_pack n b pre rest hb, if_pos hn]

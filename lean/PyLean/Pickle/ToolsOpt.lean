@@ -12,7 +12,7 @@ namespace PyLean.Pickle
 open PyLean
 
 /-- The kind of an opcode for `optimize`: the tests of its first loop in their
-order, `:2368-2390` (`'PUT' in name`, `MEMOIZE`, `'FRAME' in name`, `'GET' in name`,
+order, `:2366-2387` (`'PUT' in name`, `MEMOIZE`, `'FRAME' in name`, `'GET' in name`,
 `PROTO`). -/
 inductive OKind where
   | put (k : Int)
@@ -705,5 +705,18 @@ theorem optimizeExact_proven : OptimizeExact := by
         simp only [List.append_nil] at hl
         simp only [pure, Except.pure]
         rw [hl, h2, List.reverse_reverse]
+
+/-- A GET of a key no PUT stored, outside `MemoWF`: `newids[arg]` stays `None`, so
+`pickler.get(None)` raises `TypeError` from `None < 256` at protocol 1 and up
+(`Lib/pickle.py:555`), and at protocol 0 writes `repr(None)` as the key
+(`b'gNone\n'`). Probed on 3.15.2: `optimize(b'\x80\x02h\x00.')` and
+`optimize(b'g0\n.')`. -/
+def OptimizeGetNone : Prop :=
+  optimize [0x80, 0x02, 0x68, 0x00, 0x2e] =
+    .error (.typeError "'<' not supported between instances of 'NoneType' and 'int'") ∧
+  optimize [0x67, 0x30, 0x0a, 0x2e] = .ok [0x67, 0x4e, 0x6f, 0x6e, 0x65, 0x0a, 0x2e]
+
+theorem optimizeGetNone_proven : OptimizeGetNone := by
+  constructor <;> decide +kernel
 
 end PyLean.Pickle

@@ -84,14 +84,14 @@ theorem argText_ok (info : OpInfo) (arg : Option TV) (mm : Option String) (line 
 def putName (name : String) : Bool :=
   name == "PUT" || name == "BINPUT" || name == "LONG_BINPUT" || name == "MEMOIZE"
 
-/-- `name in ("GET", "BINGET", "LONG_BINGET")`, `:2534`. -/
+/-- `name in ("GET", "BINGET", "LONG_BINGET")`, `:2535`. -/
 def getName (name : String) : Bool := name == "GET" || name == "BINGET" || name == "LONG_BINGET"
 
-/-- The first part of each line, `:2480-2485`, without colours. -/
+/-- The first part of each line, `:2482-2486`, without colours. -/
 def disLine (i : Nat) (s : DisSt) (op : GenOp) : String :=
   pad4 (codeRepr op.info.code) ++ " " ++ spaces (i * s.markstack.length) ++ op.info.name
 
-/-- What has been printed once the position is, `:2477-2478`. -/
+/-- What has been printed once the position is, `:2476-2477`. -/
 def posText : Option Nat → String
   | some p => fmt5 p ++ ": "
   | none => ""
@@ -239,7 +239,7 @@ theorem table_memo_no_mark :
 theorem table_pop : ∀ info ∈ opTable, info.name = "POP" → info.before.length = 1 := by
   decide +kernel
 
-/-- The `STOP` opcode, `:2229-2238`. -/
+/-- The `STOP` opcode, `:2137-2147`. -/
 def stopInfo : OpInfo :=
   { code := 0x2e, name := "STOP", arg := "", proto := 0, before := ["any"], after := [],
     doc := "Stop the unpickling machine." }
@@ -254,12 +254,12 @@ position of any stream and from any emulated stack, memo and mark stack:
 
 * `genops`: when `genops` raises, `dis` raises the same, after what it printed;
 * `nomark`: an opcode that needs a MARK with none on the mark stack raises
-  `"no MARK exists on stack"` (`:2517-2519`);
+  `"no MARK exists on stack"` (`:2518-2519`);
 * `putempty`, `putmark`: a PUT, BINPUT, LONG_BINPUT or MEMOIZE on an empty stack, or
   with the markobject on top, raises `"stack is empty -- can't store into memo"` or
   `"can't store markobject in the memo"` (`:2529-2532`);
 * `getmissing`: a GET, BINGET or LONG_BINGET of a key the memo lacks raises
-  `"memo key %r has never been stored into"` (`:2534-2540`);
+  `"memo key %r has never been stored into"` (`:2535-2540`);
 * `pop`: any other opcode that pops more items than the stack holds raises
   `"tries to pop %d items from stack with only %d items"` (`:2575-2577`);
 * `notempty`: a `STOP` that leaves items on the stack raises
