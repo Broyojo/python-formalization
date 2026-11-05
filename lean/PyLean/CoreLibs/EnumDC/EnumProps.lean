@@ -21,7 +21,8 @@ theorem set_plain {d : EnumDict} {key : Name} (v : EV) (h1 : d.privateName key =
 whatever it holds. A reserved sunder name is a `ValueError`. Past those, a name that is already a member is a
 `TypeError`: "If an enum member name is used twice, an error is raised". A name in `_ignore_`, a `nonmember` and a
 descriptor add no member, and a plain value on a name already in the body, a descriptor say, is the same `TypeError`.
-Docstring of `__setitem__`. -/
+Docstring of `__setitem__`. Both `TypeError`s format what the namespace holds with `%r` (:392, :406), so an exception of
+its `repr` goes out instead: `class D(Enum): A = R(); A = 2` raises the `KeyError` of `R.__repr__`. -/
 def EnumDictBranches : Prop :=
   ∀ (d : EnumDict) (key : Name) (v : EV) (a : Atom) (i : Nat),
     (d.store key v).items.lookup key = some v ∧
@@ -29,13 +30,15 @@ def EnumDictBranches : Prop :=
     (d.privateName key = false → isSunder key = true → sunderReserved key = true →
       (d.set key v).raises "ValueError") ∧
     (d.privateName key = false → isSunder key = false → isDunder key = false →
-      (d.memberNames.contains key = true → (d.set key v).raises "TypeError") ∧
+      (d.memberNames.contains key = true → (∃ s, d.storedRepr key = .ok s) → (d.set key v).raises "TypeError") ∧
+      (d.memberNames.contains key = true → ∀ e, d.storedRepr key = .error e → d.set key v = .error e) ∧
       (d.memberNames.contains key = false →
         (d.ignore.contains key = true → d.set key v = .ok (d.store key v)) ∧
         (d.ignore.contains key = false →
           d.set key (.nonmember v) = .ok (d.store key v) ∧
           d.set key (.descr i) = .ok (d.store key (.descr i)) ∧
-          (d.has key = true → (d.set key (.atom a)).raises "TypeError") ∧
+          (d.has key = true → (∃ s, d.storedRepr key = .ok s) → (d.set key (.atom a)).raises "TypeError") ∧
+          (d.has key = true → ∀ e, d.storedRepr key = .error e → d.set key (.atom a) = .error e) ∧
           (d.has key = false → a.isAuto = false →
             d.set key (.atom a) = .ok (d.addMember key (.atom a))))))
 
@@ -82,22 +85,27 @@ theorem enumDictBranches_proven : EnumDictBranches := by
     refine ⟨.valueError "~_sunder_ names are reserved for future Enum use", ?_, rfl⟩
     simp [EnumDict.set, h1, h2, h3]
   · intro h1 h2 h3
-    refine ⟨?_, ?_⟩
-    · intro h4
+    refine ⟨?_, ?_, ?_⟩
+    · intro h4 ⟨s, hs⟩
       refine ⟨.typeError "~already defined as", ?_, rfl⟩
-      simp only [EnumDict.set, h1, h2, h3, h4, Bool.false_eq_true, ↓reduceIte]
+      simp only [EnumDict.set, h1, h2, h3, h4, Bool.false_eq_true, ↓reduceIte, hs, withRepr]
+    · intro h4 e he
+      simp only [EnumDict.set, h1, h2, h3, h4, Bool.false_eq_true, ↓reduceIte, he, withRepr]
     · intro h4
       refine ⟨?_, ?_⟩
       · intro h5
         simp only [EnumDict.set, h1, h2, h3, h4, h5, Bool.false_eq_true, ↓reduceIte]
       · intro h5
-        refine ⟨?_, ?_, ?_, ?_⟩
+        refine ⟨?_, ?_, ?_, ?_, ?_⟩
         · rw [set_plain _ h1 h2 h3 h4 h5]; rfl
         · rw [set_plain _ h1 h2 h3 h4 h5]; rfl
-        · intro h6
+        · intro h6 ⟨s, hs⟩
           refine ⟨.typeError "~already defined as", ?_, rfl⟩
           rw [set_plain _ h1 h2 h3 h4 h5]
-          simp [EnumDict.setValue, EnumDict.storeMember, h6]
+          simp [EnumDict.setValue, EnumDict.storeMember, h6, hs, withRepr]
+        · intro h6 e he
+          rw [set_plain _ h1 h2 h3 h4 h5]
+          simp [EnumDict.setValue, EnumDict.storeMember, h6, he, withRepr]
         · intro h6 h7
           rw [set_plain _ h1 h2 h3 h4 h5]
           cases a with
@@ -510,7 +518,7 @@ def EnumLookup : Prop :=
       (c.memberMap.isEmpty = false →
         enumNew c none v ip (.member m) = .ok m ∧
         (enumNew c none v ip .none).raises "ValueError" ∧
-        (enumNew c none v ip .other).raises "TypeError" ∧
+        (enumNew c none v ip (.other (.ok ""))).raises "TypeError" ∧
         enumNew c none v ip (.raises e) = .error e) ∧
       (c.memberMap.isEmpty = true → (enumNew c none v ip miss).raises "TypeError")) ∧
     (v.hashable = false → ∀ l k, c.unhashableMap.find? (fun p => p.2.contains v) = some (m, l) →
@@ -541,17 +549,21 @@ theorem enumLookup_proven : EnumLookup := by
 /-! ### `_add_member_` and its callers -/
 
 /-- `_add_alias_`: a new name is added and points at the member, the same name again is nothing, and a name bound to
-another member is a `NameError`. `_member_names_` does not change, so an alias does not show up in iteration or `len`. -/
+another member is a `NameError`, formatted with `%r` of that member (:1074), whose `repr` can raise instead.
+`_member_names_` does not change, so an alias does not show up in iteration or `len`. -/
 def AddAlias : Prop :=
   ∀ (c : EClass) (self name other x : Name),
     (c.memberMap.lookup name = none → ∃ c', c.addAlias self name = .ok c' ∧ c'.memberNames = c.memberNames ∧
       c'.memberMap = c.memberMap ++ [(name, self)] ∧ c'.len = c.len ∧ c'.iter.length ≤ c'.len) ∧
     (c.memberMap.lookup name = some self → c.addAlias self name = .ok c) ∧
-    (c.memberMap.lookup name = some other → other ≠ self → (c.addAlias self name).raises "NameError")
+    (c.memberMap.lookup name = some other → other ≠ self → (∃ s, c.memberRepr other = .ok s) →
+      (c.addAlias self name).raises "NameError") ∧
+    (c.memberMap.lookup name = some other → other ≠ self → ∀ e, c.memberRepr other = .error e →
+      c.addAlias self name = .error e)
 
 theorem addAlias_proven : AddAlias := by
   intro c self name other x
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro h
     refine ⟨{ c with memberMap := c.memberMap ++ [(name, self)] }, ?_, rfl, rfl, rfl, ?_⟩
     · simp [EClass.addAlias, EClass.addToMap, h]
@@ -559,9 +571,11 @@ theorem addAlias_proven : AddAlias := by
       exact List.length_filterMap_le _ _
   · intro h
     simp [EClass.addAlias, EClass.addToMap, h]
-  · intro h hn
+  · intro h hn ⟨s, hs⟩
     refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
-    simp [EClass.addAlias, EClass.addToMap, h, hn]
+    simp [EClass.addAlias, EClass.addToMap, h, hn, hs, withRepr]
+  · intro h hn e he
+    simp [EClass.addAlias, EClass.addToMap, h, hn, he, withRepr]
 
 /-- The scan of the bases in `_add_member_`: `enum.property` stops it at once, with type `enum`. Short of one, a redirect
 is made exactly when a descriptor is there; a plain attribute does not make one, but it takes over the type and the class,

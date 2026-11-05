@@ -159,20 +159,31 @@ with the `repr` of what was given; otherwise the generator yields exactly the po
 from the lowest. So the unwrap of a member, the error, and the order are all pinned. -/
 def IterBitsLsb : Prop :=
   (∀ n : Int, n < 0 → iterBitsLsb (.int n) = .error (.valueError s!"{n} is not a positive integer")) ∧
-  (∀ (v : Int) (r : String), v < 0 → iterBitsLsb (.member v r) = .error (.valueError s!"{r} is not a positive integer")) ∧
-  (∀ (n : Nat) (r : String), iterBitsLsb (.int n) = .ok (bitsOf n) ∧ iterBitsLsb (.member n r) = .ok (bitsOf n)) ∧
+  (∀ (v : Int) (s : String), v < 0 →
+    iterBitsLsb (.member v (.ok s)) = .error (.valueError s!"{s} is not a positive integer") ∧
+    iterBitsLsb (.intSub v (.ok s)) = .error (.valueError s!"{s} is not a positive integer")) ∧
+  (∀ (v : Int) (e : PyExc), v < 0 → iterBitsLsb (.member v (.error e)) = .error e ∧
+    iterBitsLsb (.intSub v (.error e)) = .error e) ∧
+  (∀ (n : Nat) (r : Py String), iterBitsLsb (.int n) = .ok (bitsOf n) ∧ iterBitsLsb (.member n r) = .ok (bitsOf n) ∧
+    iterBitsLsb (.intSub n r) = .ok (bitsOf n)) ∧
   (∀ n b, b ∈ bitsOf n ↔ ∃ i, b = 2 ^ i ∧ n.testBit i = true) ∧
   (∀ n, (bitsOf n).Pairwise (· < ·))
 
 theorem iterBitsLsb_proven : IterBitsLsb := by
-  refine ⟨fun n h => ?_, fun v r h => ?_, fun n r => ⟨by simp [iterBitsLsb], by simp [iterBitsLsb]⟩, fun n b => ?_,
-    fun n => ?_⟩
+  refine ⟨fun n h => ?_, fun v s h => ⟨?_, ?_⟩, fun v e h => ⟨?_, ?_⟩, fun n r => ?_, fun n b => ?_, fun n => ?_⟩
   · unfold iterBitsLsb
-    simp only [h, ↓reduceIte]
+    simp only [h, ↓reduceIte, BitsArg.repr]
     rfl
   · unfold iterBitsLsb
-    simp only [h, ↓reduceIte]
-    rfl
+    simp only [h, ↓reduceIte, BitsArg.repr]
+  · unfold iterBitsLsb
+    simp only [h, ↓reduceIte, BitsArg.repr]
+  · unfold iterBitsLsb
+    simp only [h, ↓reduceIte, BitsArg.repr]
+  · unfold iterBitsLsb
+    simp only [h, ↓reduceIte, BitsArg.repr]
+  · have hn : ¬ ((n : Int) < 0) := by omega
+    refine ⟨?_, ?_, ?_⟩ <;> simp [iterBitsLsb, hn]
   · rw [bitsOf_spec]; exact mem_bitsSpec n b
   · rw [bitsOf_spec]; exact bitsSpec_sorted n
 
@@ -610,9 +621,10 @@ private theorem lt_two_pow_bitLength' (n : Nat) : n < 2 ^ bitLength n := by
 /-- `Flag._generate_next_value_`, every path, for every value type: the first value is `start`, or `1` for `None`; then an
 empty `last_values` is the `ValueError` of `max`, an exception from a `>` of `max` goes out, an exception from
 `bit_length` becomes the `TypeError` of :1450-1451, and otherwise the value is `2 ** bit_length(max)`. On `int`s that is
-the least power of two above every value so far, the docs' "the next power of two". The `TypeError` formats the
-value with `%r` (:1452), so an exception of its `repr` goes out instead: for `R` with `__gt__`, no `bit_length` and a
-`__repr__` raising `ValueError`, `Flag._generate_next_value_('n', 1, 1, [R()])` raises that `ValueError`. -/
+the least power of two above every value so far, the docs' "the next power of two". The `TypeError` is
+`'invalid flag value %r' % last_value` (:1452): an exception of the value's `repr` goes out instead (for `R` with `__gt__`,
+no `bit_length` and a `__repr__` raising `ValueError`, `Flag._generate_next_value_('n', 1, 1, [R()])` raises that
+`ValueError`), and a tuple value is unpacked (`[(1, R())]` is the `TypeError` "not all arguments converted"). -/
 def FlagGenerateG : Prop :=
   ∀ (α : Type) (o : Ops α) (start : Option α) (count : Nat) (last : List α),
     flagGenerateG o start 0 last = .ok (start.getD (o.ofInt 1)) ∧
@@ -620,9 +632,9 @@ def FlagGenerateG : Prop :=
     (∀ x r, count ≠ 0 →
       (∀ e, extremum o.gt x r = .error e → flagGenerateG o start count (x :: r) = .error e) ∧
       (∀ m, extremum o.gt x r = .ok m →
-        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = true → (∃ s, o.repr m = .ok s) →
+        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = true → pyFormat 1 (o.fmtOne m) = .ok () →
           (flagGenerateG o start count (x :: r)).raises "TypeError") ∧
-        (∀ e e', o.bitLength m = .error e → o.isInst e "Exception" = true → o.repr m = .error e' →
+        (∀ e e', o.bitLength m = .error e → o.isInst e "Exception" = true → pyFormat 1 (o.fmtOne m) = .error e' →
           flagGenerateG o start count (x :: r) = .error e') ∧
         (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = false →
           flagGenerateG o start count (x :: r) = .error e) ∧
@@ -635,7 +647,7 @@ def FlagGenerateG : Prop :=
 theorem flagGenerateG_proven : FlagGenerateG := by
   intro α o start count last
   refine ⟨rfl, fun hc => by simp [flagGenerateG, hc], fun x r hc => ⟨fun e he => by simp [flagGenerateG, hc, he],
-    fun m hm => ⟨fun e he hx ⟨s, hs⟩ => ⟨_, by simp [flagGenerateG, hc, hm, he, hx, hs, withRepr]; rfl, rfl⟩,
+    fun m hm => ⟨fun e he hx hs => ⟨_, by simp [flagGenerateG, hc, hm, he, hx, hs, withRepr]; rfl, rfl⟩,
       fun e e' he hx hr => by simp [flagGenerateG, hc, hm, he, hx, hr, withRepr],
       fun e he hx => by simp [flagGenerateG, hc, hm, he, hx],
       fun b hb => by simp [flagGenerateG, hc, hm, hb]⟩⟩, ?_⟩
@@ -1100,7 +1112,7 @@ def ContinuousErrors : Prop :=
     order (st.map Prod.fst) = x :: r → extremum o.lt x r = .error e → verifyContinuousG o order flag s vals = .error e) ∧
   verifyContinuousG evOps id false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
     .error (.typeError "'<' not supported between instances of 'str' and 'int'") ∧
-  verifyContinuousG evOps List.reverse false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
+  verifyContinuousG evOps (fun l => l.rotateRight 1) false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
     .error (.typeError "'<' not supported between instances of 'int' and 'str'")
 
 theorem continuousErrors_proven : ContinuousErrors := by
@@ -1121,6 +1133,13 @@ private theorem flagGenerate_reprRaises :
   rw [this] at he
   cases he
   simp [PyExc.className] at hc
+
+/-- `[(1, R())]`: the tuple is unpacked by the `%` of :1452, so the `TypeError` "not all arguments converted", not the
+`KeyError` of `R.__repr__`, as on 3.15.2. -/
+private theorem flagGenerate_tuple :
+    flagGenerateG pvOps (some (.int 1)) 1 [.pair 1 "KeyError"] =
+      .error (.typeError "not all arguments converted during string formatting (required 1, got 2)") := by
+  decide +kernel
 
 /-! ### `Flag._missing_`: the repr of an out-of-range value, the name loop, negative values -/
 
