@@ -6,7 +6,7 @@ Objects/abstract.c	57	72	PyObject_Size	PyObject_Size(PyObject *o)	modelled	typeo
 Objects/abstract.c	76	79	PyObject_Length	PyObject_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
 Objects/abstract.c	83	86	_PyObject_HasLen	_PyObject_HasLen(PyObject *o) {	todo		
 Objects/abstract.c	95	152	PyObject_LengthHint	PyObject_LengthHint(PyObject *o, Py_ssize_t defaultvalue)	todo		changed-in-3.15: was typeobj-length-hint-default,typeobj-length-hint-notimpl
-Objects/abstract.c	155	206	PyObject_GetItem	PyObject_GetItem(PyObject *o, PyObject *key)	todo		review: Only the mp_subscript-first branch (GetItemMappingFirst) and the __class_getitem__ call (ClassGetitemFallback) are pinned; the sq_item branch with _PyIndex_Check, PyNumber_AsSsize_t(key, IndexError) and \"sequence index must be integer\", type[int], and both \"not subscriptable\" errors are not, so a version whose sq_item branch always raised satisfies both theorems.
+Objects/abstract.c	155	206	PyObject_GetItem	PyObject_GetItem(PyObject *o, PyObject *key)	modelled	abstract-getitem-exact	
 Objects/abstract.c	209	225	PyMapping_GetOptionalItem	PyMapping_GetOptionalItem(PyObject *obj, PyObject *key, PyObject **result)	todo		changed-in-3.15:
 Objects/abstract.c	228	233	_PyMapping_GetOptionalItem2	_PyMapping_GetOptionalItem2(PyObject *obj, PyObject *key, int *err)	todo		changed-in-3.15: new function
 Objects/abstract.c	236	267	PyObject_SetItem	PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)	todo		
@@ -19,12 +19,12 @@ Objects/abstract.c	382	387	PyObject_AsCharBuffer	PyObject_AsCharBuffer(PyObject 
 Objects/abstract.c	396	401	PyObject_AsReadBuffer	PyObject_AsReadBuffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
 Objects/abstract.c	410	434	PyObject_AsWriteBuffer	PyObject_AsWriteBuffer(PyObject *obj, void **buffer, Py_ssize_t *buffer_len)	todo		
 Objects/abstract.c	439	458	PyObject_GetBuffer	PyObject_GetBuffer(PyObject *obj, Py_buffer *view, int flags)	todo		
-Objects/abstract.c	461	498	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	todo		review: FillStridesContiguous only asks that filled strides pass the test, so isFortranContiguous := fun _ => true satisfies it; nothing states a view that is not F-contiguous.
-Objects/abstract.c	501	525	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	todo		review: As _IsFortranContiguous: the only theorem is satisfied by a test that always answers true.
-Objects/abstract.c	528	540	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	todo		review: IsContiguousGuards pins only the suboffsets and unknown-order refusals, so isContiguous := fun _ _ => false satisfies it; the 'C', 'F' and 'A' dispatch (:533-538) is unpinned, and the entry cites @3.14.7:529.
+Objects/abstract.c	461	498	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	modelled	abstract-f-contiguous-exact,abstract-contiguous-examples	
+Objects/abstract.c	501	525	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	modelled	abstract-c-contiguous-exact,abstract-contiguous-examples	
+Objects/abstract.c	528	540	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	modelled	abstract-is-contiguous-exact,abstract-c-contiguous-exact,abstract-f-contiguous-exact,abstract-contiguous-examples	
 Objects/abstract.c	544	556	PyBuffer_GetPointer	PyBuffer_GetPointer(const Py_buffer *view, const Py_ssize_t *indices)	todo		
-Objects/abstract.c	560	573	_Py_add_one_to_index_F	_Py_add_one_to_index_F(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	todo		review: A function that zeroes every digit satisfies both AddOneInRange (zeros are in range of a shape that admits an index) and AddOneWraps; the increment of the first digit below its bound (:565-567) is never pinned.
-Objects/abstract.c	576	589	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	todo		review: AddOneInRange is stated about addOneF only; no theorem unfolds addOneC.
+Objects/abstract.c	560	573	_Py_add_one_to_index_F	_Py_add_one_to_index_F(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	abstract-add-one-f-exact,abstract-add-one-examples	
+Objects/abstract.c	576	589	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	abstract-add-one-c-exact,abstract-add-one-examples	
 Objects/abstract.c	592	624	PyBuffer_SizeFromFormat	PyBuffer_SizeFromFormat(const char *format)	todo		
 Objects/abstract.c	627	677	PyBuffer_FromContiguous	PyBuffer_FromContiguous(const Py_buffer *view, const void *buf, Py_ssize_t len, char order)	todo		changed-in-3.15:
 Objects/abstract.c	679	747	PyObject_CopyData	int PyObject_CopyData(PyObject *dest, PyObject *src)	modelled	typeobj-copydata-bounds	
@@ -32,28 +32,28 @@ Objects/abstract.c	750	771	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguou
 Objects/abstract.c	774	814	PyBuffer_FillInfo	PyBuffer_FillInfo(Py_buffer *view, PyObject *obj, void *buf, Py_ssize_t len, int readonly, int flags)	todo		
 Objects/abstract.c	817	829	PyBuffer_Release	PyBuffer_Release(Py_buffer *view)	todo		
 Objects/abstract.c	832	836	_buffer_release_call	_buffer_release_call(void *arg)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
-Objects/abstract.c	839	843	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	todo		review: Not no-behaviour: it releases the buffer (bf_releasebuffer, which can run __release_buffer__) through _Py_CallInInterpreter, which may defer the call to another interpreter; that needs a scoped exclusion for subinterpreters, not \"thin wrapper\".
-Objects/abstract.c	846	850	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	todo		review: As _PyBuffer_ReleaseInInterpreter, and it also frees the view with PyMem_RawFree after the call.
+Objects/abstract.c	839	843	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	todo		todo: not no-behaviour. It runs PyBuffer_Release (bf_releasebuffer, which can run __release_buffer__, then drops view->obj) through _Py_CallInInterpreter, which calls it at once when interp is the current interpreter and otherwise queues it as a pending call in that interpreter (Python/crossinterp.c:261-269). The TypeObj model has no interpreter states, pending calls or buffer release, so this is not modelled yet.
+Objects/abstract.c	846	850	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	todo		todo: not no-behaviour. As _PyBuffer_ReleaseInInterpreter, through _Py_CallInInterpreterAndRawFree (Python/crossinterp.c:273-284), which also PyMem_RawFree's the view after the call, or queues the call with _Py_PENDING_RAWFREE. Needs an interpreter-state and pending-call model the TypeObj model does not have.
 Objects/abstract.c	853	909	PyObject_Format	PyObject_Format(PyObject *obj, PyObject *format_spec)	todo		changed-in-3.15:
 Objects/abstract.c	913	919	PyNumber_Check	PyNumber_Check(PyObject *o)	todo		
-Objects/abstract.c	999	1008	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	todo		review: BinaryOpNeverNotImplemented only says the result is not NotImplemented; the \"unsupported operand type(s) for %.100s: '%.100s' and '%.100s'\" text of binopTypeError is not stated by this row's entry.
-Objects/abstract.c	1011	1019	binary_op	binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)	todo		review: BinaryOpNeverNotImplemented holds vacuously for a binary_op that always raises, so neither the pass-through of a real result nor the conversion of NotImplemented to binop_type_error is pinned.
+Objects/abstract.c	999	1008	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	modelled	abstract-binary-op-exact,abstract-add-exact	
+Objects/abstract.c	1011	1019	binary_op	binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)	modelled	abstract-binary-op-exact,abstract-binop-candidates	
 Objects/abstract.c	1030	1121	ternary_op	ternary_op(PyObject *v, PyObject *w, PyObject *z, const int op_slot, const char *op_name )	todo		
-Objects/abstract.c	1138	1154	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	todo		review: NumberAddConcatFallback pins only the sq_concat fallback after NotImplemented; the pass-through of a number-slot result and the final binop_type_error are unpinned, so a version that raised whenever nb_add answered satisfies it.
-Objects/abstract.c	1157	1173	sequence_repeat	sequence_repeat(ssizeargfunc repeatfunc, PyObject *seq, PyObject *n)	todo		
-Objects/abstract.c	1176	1192	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	todo		review: NumberMultiplyBothSides pins only the right operand's sq_repeat; the left operand's sq_repeat (tried first, :1183-1185), the pass-through and the final TypeError are unpinned.
+Objects/abstract.c	1138	1154	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	modelled	abstract-add-exact,abstract-binop-candidates	
+Objects/abstract.c	1157	1173	sequence_repeat	sequence_repeat(ssizeargfunc repeatfunc, PyObject *seq, PyObject *n)	modelled	abstract-multiply-exact	
+Objects/abstract.c	1176	1192	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	modelled	abstract-multiply-exact,abstract-binop-candidates	
 Objects/abstract.c	1200	1203	PyNumber_Power	PyNumber_Power(PyObject *v, PyObject *w, PyObject *z)	todo		
 Objects/abstract.c	1206	1209	_PyNumber_PowerNoMod	_PyNumber_PowerNoMod(PyObject *lhs, PyObject *rhs)	todo		
-Objects/abstract.c	1260	1269	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	todo		review: InPlaceFirst is stated about binaryIop1; no theorem unfolds binaryIop, whose NotImplemented-to-TypeError step is this function's body.
-Objects/abstract.c	1272	1287	ternary_iop	ternary_iop(PyObject *v, PyObject *w, PyObject *z, const int iop_slot, const int op_slot, const char *op_name)	todo		review: InplacePowerTwoArgs covers only a type with nb_inplace_power; the common path with no such slot (straight to ternary_op, :1286) is unpinned, so a ternary_iop that raised there satisfies it.
-Objects/abstract.c	1307	1327	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	todo		review: InPlaceFirst is about binaryIop1; pyNumberInPlaceAdd, with its tp_as_sequence test and sq_inplace_concat-then-sq_concat fallback (:1311-1324), is never unfolded.
+Objects/abstract.c	1260	1269	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	modelled	abstract-binary-iop-exact,abstract-binop-candidates	
+Objects/abstract.c	1272	1287	ternary_iop	ternary_iop(PyObject *v, PyObject *w, PyObject *z, const int iop_slot, const int op_slot, const char *op_name)	modelled	abstract-ternary-iop-exact	
+Objects/abstract.c	1307	1327	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	modelled	abstract-inplace-add-exact,abstract-binop-candidates	
 Objects/abstract.c	1330	1356	PyNumber_InPlaceMultiply	PyNumber_InPlaceMultiply(PyObject *v, PyObject *w)	modelled	typeobj-imul-matches-mul	
-Objects/abstract.c	1359	1363	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	todo		review: Its model is ternaryIop itself, so it shares ternary_iop's gap: the no-slot path is unpinned.
-Objects/abstract.c	1366	1369	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	todo		review: ternaryIop with z = None; same gap as ternary_iop.
+Objects/abstract.c	1359	1363	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	modelled	abstract-inplace-power-exact,abstract-ternary-iop-exact	
+Objects/abstract.c	1366	1369	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	modelled	abstract-inplace-power-exact,abstract-ternary-iop-exact	
 Objects/abstract.c	1398	1401	PyIndex_Check	PyIndex_Check(PyObject *obj)	todo		
 Objects/abstract.c	1410	1449	_PyNumber_Index	_PyNumber_Index(PyObject *item)	todo		changed-in-3.15: was typeobj-index-identity,typeobj-index-required,typeobj-index-result-int
 Objects/abstract.c	1456	1463	PyNumber_Index	PyNumber_Index(PyObject *item)	todo		
-Objects/abstract.c	1468	1515	PyNumber_AsSsize_t	PyNumber_AsSsize_t(PyObject *item, PyObject *err)	todo		review: AsSsizeClips covers err = NULL only; the branch that replaces the OverflowError with the caller's exception, \"cannot fit '%.200s' into an index-sized integer\" (:1505-1509), is unpinned, so a version that clipped whatever err is satisfies it.
+Objects/abstract.c	1468	1515	PyNumber_AsSsize_t	PyNumber_AsSsize_t(PyObject *item, PyObject *err)	modelled	abstract-as-ssize-exact	
 Objects/abstract.c	1519	1599	PyNumber_Long	PyNumber_Long(PyObject *o)	todo		changed-in-3.15: was typeobj-number-long
 Objects/abstract.c	1602	1658	PyNumber_Float	PyNumber_Float(PyObject *o)	todo		changed-in-3.15:
 Objects/abstract.c	1662	1675	PyNumber_ToBase	PyNumber_ToBase(PyObject *n, int base)	todo		
@@ -64,22 +64,22 @@ Objects/abstract.c	1721	1744	PySequence_Concat	PySequence_Concat(PyObject *s, Py
 Objects/abstract.c	1747	1775	PySequence_Repeat	PySequence_Repeat(PyObject *o, Py_ssize_t count)	todo		
 Objects/abstract.c	1778	1804	PySequence_InPlaceConcat	PySequence_InPlaceConcat(PyObject *s, PyObject *o)	todo		
 Objects/abstract.c	1807	1838	PySequence_InPlaceRepeat	PySequence_InPlaceRepeat(PyObject *o, Py_ssize_t count)	todo		
-Objects/abstract.c	1841	1868	PySequence_GetItem	PySequence_GetItem(PyObject *s, Py_ssize_t i)	todo		review: SequenceGetItemNegativeIndex constrains only i < 0 with sq_length; a version that also added len to non-negative indices, or got either TypeError wrong, satisfies it.
+Objects/abstract.c	1841	1868	PySequence_GetItem	PySequence_GetItem(PyObject *s, Py_ssize_t i)	modelled	abstract-seq-getitem-exact	
 Objects/abstract.c	1871	1890	PySequence_GetSlice	PySequence_GetSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2)	todo		
-Objects/abstract.c	1893	1923	PySequence_SetItem	PySequence_SetItem(PyObject *s, Py_ssize_t i, PyObject *o)	todo		review: SequenceSetItemNegative constrains only i < 0 with sq_length; non-negative indices, the missing-sq_length case and both TypeErrors are unpinned.
-Objects/abstract.c	1926	1956	PySequence_DelItem	PySequence_DelItem(PyObject *s, Py_ssize_t i)	todo		review: As PySequence_SetItem (value none); the \"doesn't support item deletion\" text is not pinned either.
+Objects/abstract.c	1893	1923	PySequence_SetItem	PySequence_SetItem(PyObject *s, Py_ssize_t i, PyObject *o)	modelled	abstract-seq-setitem-exact	
+Objects/abstract.c	1926	1956	PySequence_DelItem	PySequence_DelItem(PyObject *s, Py_ssize_t i)	modelled	abstract-seq-setitem-exact	
 Objects/abstract.c	1959	1979	PySequence_SetSlice	PySequence_SetSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2, PyObject *o)	todo		
 Objects/abstract.c	1982	2002	PySequence_DelSlice	PySequence_DelSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2)	todo		
 Objects/abstract.c	2005	2078	PySequence_Tuple	PySequence_Tuple(PyObject *v)	modelled	typeobj-sequence-tuple	
 Objects/abstract.c	2081	2101	PySequence_List	PySequence_List(PyObject *v)	todo		
 Objects/abstract.c	2104	2129	PySequence_Fast	PySequence_Fast(PyObject *v, const char *m)	todo		
-Objects/abstract.c	2138	2227	_PySequence_IterSearch	_PySequence_IterSearch(PyObject *seq, PyObject *obj, int operation)	todo		review: iterSearchLoop has neither the COUNT overflow at PY_SSIZE_T_MAX (:2183-2187) nor the INDEX wrap (:2190-2194, :2207-2211), nor is the GetIter TypeError rewrite pinned; IterSearchIdentity covers only a first item identical to obj, which is PyObject_RichCompareBool's shortcut.
+Objects/abstract.c	2138	2227	_PySequence_IterSearch	_PySequence_IterSearch(PyObject *seq, PyObject *obj, int operation)	modelled	abstract-itersearch-start,abstract-itersearch-loop,typeobj-itersearch-identity	
 Objects/abstract.c	2231	2234	PySequence_Count	PySequence_Count(PyObject *s, PyObject *o)	todo		
-Objects/abstract.c	2240	2250	PySequence_Contains	PySequence_Contains(PyObject *seq, PyObject *ob)	todo		review: ContainsIdentity is stated about anyEq (list and tuple sq_contains); pySequenceContains, its sq_contains-or-IterSearch choice, is never unfolded.
+Objects/abstract.c	2240	2250	PySequence_Contains	PySequence_Contains(PyObject *seq, PyObject *ob)	modelled	abstract-contains-exact	
 Objects/abstract.c	2255	2258	PySequence_In	PySequence_In(PyObject *w, PyObject *v)	todo		
 Objects/abstract.c	2261	2264	PySequence_Index	PySequence_Index(PyObject *s, PyObject *o)	todo		
 Objects/abstract.c	2269	2273	PyMapping_Check	PyMapping_Check(PyObject *o)	todo		
-Objects/abstract.c	2276	2297	PyMapping_Size	PyMapping_Size(PyObject *o)	todo		review: ObjectSizeOrder pins mp_length and \"has no len()\", but not the \"%.200s is not a mapping\" branch (:2290-2293); typeobj-size-protocols states it but is not in this row's entry and lists no pyFns.
+Objects/abstract.c	2276	2297	PyMapping_Size	PyMapping_Size(PyObject *o)	modelled	abstract-mapping-size-exact,typeobj-size-protocols	
 Objects/abstract.c	2301	2304	PyMapping_Length	PyMapping_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
 Objects/abstract.c	2308	2322	PyMapping_GetItemString	PyMapping_GetItemString(PyObject *o, const char *key)	todo		
 Objects/abstract.c	2325	2340	PyMapping_GetOptionalItemString	PyMapping_GetOptionalItemString(PyObject *obj, const char *key, PyObject **result)	todo		
@@ -92,23 +92,23 @@ Objects/abstract.c	2433	2457	method_output_as_list	method_output_as_list(PyObjec
 Objects/abstract.c	2460	2469	PyMapping_Keys	PyMapping_Keys(PyObject *o)	todo		changed-in-3.15:
 Objects/abstract.c	2472	2481	PyMapping_Items	PyMapping_Items(PyObject *o)	todo		changed-in-3.15:
 Objects/abstract.c	2484	2493	PyMapping_Values	PyMapping_Values(PyObject *o)	todo		changed-in-3.15:
-Objects/abstract.c	2522	2532	abstract_get_bases	abstract_get_bases(PyObject *cls)	todo		review: AbstractIssubclass uses only the case where __bases__ is absent, so an abstractGetBases that always answered none satisfies it; the non-tuple test (:2527) is unpinned.
-Objects/abstract.c	2536	2584	abstract_issubclass	abstract_issubclass(PyObject *derived, PyObject *cls)	todo		review: AbstractIssubclass pins derived is cls and an absent __bases__ only; `return derived.is cls` satisfies it, so the single-base loop, the any over several bases and a raising __bases__ are unpinned; the entry cites @3.14.7:2546.
-Objects/abstract.c	2587	2600	check_class	check_class(PyObject *cls, const char *error)	todo		
-Objects/abstract.c	2603	2636	object_isinstance	object_isinstance(PyObject *inst, PyObject *cls)	todo		review: ObjectIsinstanceSubtype pins only the first test (a real subtype answers true); the __class__ fallback and the non-type branch with check_class and abstract_issubclass are unpinned.
-Objects/abstract.c	2639	2700	object_recursive_isinstance	object_recursive_isinstance(PyThreadState *tstate, PyObject *inst, PyObject *cls)	todo		review: The _PyUnion_Check branch (:2651-2653) is left out of the model, so isinstance(x, int | str) is not mirrored; of the rest only the exact-type shortcut, an __instancecheck__ result and the empty tuple are pinned, not the PyType_CheckExact route, a non-empty tuple, a failed lookup or the no-checker fallback.
+Objects/abstract.c	2522	2532	abstract_get_bases	abstract_get_bases(PyObject *cls)	modelled	abstract-get-bases-exact	
+Objects/abstract.c	2536	2584	abstract_issubclass	abstract_issubclass(PyObject *derived, PyObject *cls)	modelled	abstract-issubclass-exact	
+Objects/abstract.c	2587	2600	check_class	check_class(PyObject *cls, const char *error)	modelled	abstract-object-isinstance-exact,abstract-recursive-issubclass-exact	
+Objects/abstract.c	2603	2636	object_isinstance	object_isinstance(PyObject *inst, PyObject *cls)	modelled	abstract-object-isinstance-exact	
+Objects/abstract.c	2639	2700	object_recursive_isinstance	object_recursive_isinstance(PyThreadState *tstate, PyObject *inst, PyObject *cls)	modelled	abstract-isinstance-exact	
 Objects/abstract.c	2704	2708	PyObject_IsInstance	PyObject_IsInstance(PyObject *inst, PyObject *cls)	todo		
-Objects/abstract.c	2712	2729	recursive_issubclass	recursive_issubclass(PyObject *derived, PyObject *cls)	todo		review: RecursiveIssubclassMro pins only the fast path for two classes; both check_class TypeErrors and the abstract_issubclass route are unpinned.
+Objects/abstract.c	2712	2729	recursive_issubclass	recursive_issubclass(PyObject *derived, PyObject *cls)	modelled	abstract-recursive-issubclass-exact	
 Objects/abstract.c	2732	2788	object_issubclass	object_issubclass(PyThreadState *tstate, PyObject *derived, PyObject *cls)	todo		
 Objects/abstract.c	2792	2796	PyObject_IsSubclass	PyObject_IsSubclass(PyObject *derived, PyObject *cls)	todo		
 Objects/abstract.c	2800	2803	_PyObject_RealIsInstance	_PyObject_RealIsInstance(PyObject *inst, PyObject *cls)	todo		
 Objects/abstract.c	2806	2809	_PyObject_RealIsSubclass	_PyObject_RealIsSubclass(PyObject *derived, PyObject *cls)	todo		
-Objects/abstract.c	2813	2834	PyObject_GetIter	PyObject_GetIter(PyObject *o)	todo		review: GetIterChecksResult and GetIterSequenceFallback pin two branches; the \"'%.200s' object is not iterable\" error and the return of a valid iterator are unpinned, so a version that raised on every good __iter__ result satisfies both.
+Objects/abstract.c	2813	2834	PyObject_GetIter	PyObject_GetIter(PyObject *o)	modelled	abstract-getiter-exact	
 Objects/abstract.c	2837	2853	PyObject_GetAIter	PyObject_GetAIter(PyObject *o) {	todo		changed-in-3.15:
 Objects/abstract.c	2856	2861	PyIter_Check	PyIter_Check(PyObject *obj)	todo		
 Objects/abstract.c	2864	2870	PyAIter_Check	PyAIter_Check(PyObject *obj)	todo		
-Objects/abstract.c	2873	2893	iternext	iternext(PyObject *iter, PyObject **item)	todo		
+Objects/abstract.c	2873	2893	iternext	iternext(PyObject *iter, PyObject **item)	modelled	abstract-iter-next-exact	
 Objects/abstract.c	2900	2912	PyIter_NextItem	PyIter_NextItem(PyObject *iter, PyObject **item)	todo		
-Objects/abstract.c	2923	2928	PyIter_Next	PyIter_Next(PyObject *iter)	todo		review: IterNextStop pins only the exception paths (StopIteration cleared, others kept); a pyIterNext that answered none for every item satisfies it, so neither the item nor NULL-without-exception is pinned.
+Objects/abstract.c	2923	2928	PyIter_Next	PyIter_Next(PyObject *iter)	modelled	abstract-iter-next-exact	
 Objects/abstract.c	2931	2953	PyIter_Send	PyIter_Send(PyObject *iter, PyObject *arg, PyObject **result)	todo		
 Objects/abstract.c	2956	2961	_PyIter_Send	_PyIter_Send(PyObject *iter, PyObject *arg)	todo		changed-in-3.15: new function
