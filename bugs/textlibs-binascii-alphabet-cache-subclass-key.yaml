@@ -1,6 +1,6 @@
 id: textlibs-binascii-alphabet-cache-subclass-key
 title: "binascii: the reverse-table cache is keyed by the alphabet object, so a bytes subclass can get another alphabet's table"
-priority: P5
+priority: P4
 kind: wrong-result
 module: textlibs
 files: [Modules/binascii.c]
@@ -18,9 +18,19 @@ summary: |
   silent wrong data: with `A32(BASE32_ALPHABET)` hashing like BASE32HEX_ALPHABET,
   `a2b_base32(b2a_base32(b'\xff', alphabet=b), alphabet=b)` returns `b'9'`. The same lookup lets a
   raising `__hash__` or `__eq__` escape from the decoder (ValueError from `__hash__` here).
+  The damage is not confined to the caller that passed the subclass: once a subclass alphabet is
+  stored, later callers passing the plain module constants are affected too, because a stored subclass
+  key is compared first with its own `__eq__`. After `A32(BASE32_ALPHABET)` (hashing like
+  BASE32HEX_ALPHABET, `__eq__` always true) has been used once, `a2b_base32(b'VS======',
+  alphabet=BASE32HEX_ALPHABET)` returns `b'\xac'` instead of `b'\xff'` for every caller in the process;
+  after a subclass whose `__eq__` raises has been stored under the hash of BASE64_ALPHABET,
+  `a2b_base64(..., alphabet=BASE64_ALPHABET)` raises that ValueError.
 likelihood: |
-  Very low: it needs a bytes subclass with a custom `__hash__` and `__eq__` passed as an alphabet. Once
-  it happens the wrong table stays in the module cache for the life of the process.
+  Low: it needs a bytes subclass with a custom `__hash__` and `__eq__` passed as an alphabet somewhere
+  in the process. But once that happens the wrong entry stays in the module cache for the life of the
+  process, and it changes the results of unrelated code that passes the documented module constants
+  (silent wrong bytes for base32, exceptions for base64). That cross-caller effect is why this is P4
+  rather than P5.
 maybe_intended: |
   Probably accepted as a consequence of caching by the object, as with the struct format cache
   (textlibs-struct-cache-str-subclass-key). The clinic type is PyBytesObject, which admits
@@ -41,13 +51,36 @@ reproducer: |
   r2 = binascii.a2b_base64(b"-_-_", alphabet=a)
   r3 = binascii.a2b_base64(enc, alphabet=bytes(a), strict_mode=True)
   print(enc, r1, r2, r3)
-  if enc == b"+/8=" and r1 == "Error: Only base64 data is allowed" and r2 == b"\xfb\xff\xbf" and r3 == b"\xfb\xff":
+  # later callers with the plain module constants
+  class A32(bytes):
+      def __hash__(self): return hash(binascii.BASE32HEX_ALPHABET)
+      def __eq__(self, o): return True
+  binascii.a2b_base32(b"", alphabet=A32(binascii.BASE32_ALPHABET))
+  r4 = binascii.a2b_base32(b"VS======", alphabet=binascii.BASE32HEX_ALPHABET)
+  # a raising __eq__, in a module whose cache does not hold BASE64_ALPHABET yet
+  import importlib.util
+  spec = importlib.util.find_spec("binascii")
+  m = importlib.util.module_from_spec(spec)
+  spec.loader.exec_module(m)
+  class R(bytes):
+      def __hash__(self): return hash(m.BASE64_ALPHABET)
+      def __eq__(self, o): raise ValueError("eq")
+  m.a2b_base64(b"", alphabet=R(m.URLSAFE_BASE64_ALPHABET))
+  try:
+      m.a2b_base64(b"AAAA", alphabet=m.BASE64_ALPHABET)
+      r5 = "no error"
+  except ValueError as e:
+      r5 = "ValueError: %s" % e
+  print(r4, r5)
+  if (enc == b"+/8=" and r1 == "Error: Only base64 data is allowed" and r2 == b"\xfb\xff\xbf" and r3 == b"\xfb\xff"
+          and r4 == b"\xac" and r5 == "ValueError: eq"):
       print("REPRODUCED textlibs-binascii-alphabet-cache-subclass-key")
 expected: |
   The decoders read the alphabet by its bytes: `a2b_base64(enc, alphabet=a, strict_mode=True)` gives
   `b'\xfb\xff'`, as `alphabet=bytes(a)` does, whatever alphabets were used before.
 observed: |
-  python3 3.15.2: b'+/8=' Error: Only base64 data is allowed b'\xfb\xff\xbf' b'\xfb\xff'. REPRODUCED.
+  python3 3.15.2: b'+/8=' Error: Only base64 data is allowed b'\xfb\xff\xbf' b'\xfb\xff'; b'\xac' ValueError: eq.
+  REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
 promised_by: |
   docs of a2b_base64, a2b_base32, a2b_base85: "Optional alphabet must be a bytes object of length N

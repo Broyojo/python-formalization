@@ -562,8 +562,8 @@ theorem tail32_tr (A r : List Nat) : tail32 A r = (tail32 b32Alpha r).map (tr32 
 /-- `b2a_base32` over every option, against its own output at the defaults (which `B32RoundTripAll` and
 `B32StrictLaw` pin through the decoder): `padded=False` drops the `'='`, `alphabet` is `translate` from
 the standard alphabet, and a non-zero `wrapcol` is rounded to a multiple of 8 (at least 8) and the lines
-are cut by `wraplines`, unless the output is empty. Then the refusals in their order: a negative or too
-large `wrapcol`, then an alphabet that is not 32 bytes. -/
+are cut by `wraplines`, unless the output is empty. Then the refusals in their order: a negative `wrapcol`, then one of
+`2 ** 64` or more, then an alphabet that is not 32 bytes. -/
 def B2a32OptionLaw : Prop :=
   (∀ (d : List Nat) (p : Bool) (w : Nat) (alpha : Option (List Nat)),
     w < 2 ^ 64 → (∀ a, alpha = some a → a.length = 32) →
@@ -573,11 +573,13 @@ def B2a32OptionLaw : Prop :=
         if w ≠ 0 ∧ !s.isEmpty then wraplinesC s (if w < 8 then 8 else w / 8 * 8) else s)) ∧
   (∀ (d : List Nat) (p : Bool) (w : Int) (alpha : Option Data), w < 0 →
     b2aB32 (.bytes d) p w alpha = .error (.valueError "Cannot convert negative int")) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Int) (alpha : Option Data), 2 ^ 64 ≤ w →
+    b2aB32 (.bytes d) p w alpha = .error (.overflowError "Python int too large for C size_t")) ∧
   (∀ (d : List Nat) (p : Bool) (w : Nat) (a : List Nat), w < 2 ^ 64 → a.length ≠ 32 →
     b2aB32 (.bytes d) p w (some (.bytes a)) = .error (.valueError "alphabet must have length 32"))
 
 theorem b2a32OptionLaw_proven : B2a32OptionLaw := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro d p w alpha hw ha
     have hs : sizeT (w : Int) = .ok w := by
       simp only [sizeT]
@@ -622,6 +624,9 @@ theorem b2a32OptionLaw_proven : B2a32OptionLaw := by
     rfl
   · intro d p w alpha hw
     simp [b2aB32, bufData, sizeT, hw, bind, Except.bind]
+  · intro d p w alpha hw
+    have : ¬ w < 0 := by omega
+    simp only [b2aB32, bufData, sizeT, if_neg this, if_pos hw, bind, Except.bind]
   · intro d p w a hw ha
     have hs : sizeT (w : Int) = .ok w := by
       simp only [sizeT]

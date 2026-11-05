@@ -67,7 +67,7 @@ def rcLookup : RCache → AObj → HTok → Py (Option CVal)
       | .ok false => rcLookup r q h
     else rcLookup r q h
 
-/-- The table built at `Modules/binascii.c:680-689`: 255 everywhere, `out[in[i]] = i` for each `i` in
+/-- The table built at `Modules/binascii.c:678-687`: 255 everywhere, `out[in[i]] = i` for each `i` in
 order, then the pad character set to `size`. -/
 def buildRev (alpha : List Nat) (size : Nat) (pad : Option Nat) : List Nat :=
   let out := (List.range size).foldl (fun out i => out.set (alpha.getD i 0) i) (List.replicate 256 255)
