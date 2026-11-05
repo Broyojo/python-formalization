@@ -65,6 +65,10 @@ Nothing here is specific to Python. To apply the method to another language, lib
 
 The write-up's last sections list the practices that mattered most.
 
+## Contributing
+
+Help is welcome. Most of CPython is still unmodelled, and the method needs more reviewers as much as more models. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Apache License 2.0 (see `LICENSE`). Excerpts of CPython quoted in the models remain under the PSF License; see `NOTICE`.

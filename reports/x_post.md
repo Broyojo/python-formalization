@@ -34,4 +34,4 @@ So far: 4,071 functions reviewed, 3,834 properties proved, 588 refuted, 418 bug 
 Write-up: https://broyojo.com/python-formalization/
 Code, models and every bug record (Apache-2.0): https://github.com/Broyojo/python-formalization
 
-Nothing here is specific to Python. The write-up says how to do this for your own language or library.
+Nothing here is specific to Python. The write-up says how to do this for your own language or library, and contributions are welcome: most of CPython is still to do.

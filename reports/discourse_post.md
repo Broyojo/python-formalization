@@ -18,7 +18,7 @@ Everything is public:
 - Write-up: https://broyojo.com/python-formalization/
 - Code, models and all bug records: https://github.com/Broyojo/python-formalization
 
-I've tried to keep the reports short and verified, and I'm happy to change the format if another one works better for triage, such as one tracking issue, or fewer and larger grouped issues. I can also send PRs for the ones with small, obvious fixes if that would help.
+I've tried to keep the reports short and verified, and I'm happy to change the format if another one works better for triage, such as one tracking issue, or fewer and larger grouped issues. I can also send PRs for the ones with small, obvious fixes if that would help. The project is open to contributors too: most of CPython is still unmodelled.
 
 Thanks, and thanks for CPython.
 
