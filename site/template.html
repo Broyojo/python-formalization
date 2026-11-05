@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formalizing CPython</title>
+<meta name="description" content="A Lean 4 model of CPython 3.15.2, checked against the real interpreter and reviewed row by row, with the bugs it found along the way.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with wide data bands; numbers set in mono, verdicts as small caps chips. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --fg: #151a22; --muted: #5a6473; --rule: #dde1e7;
+  --accent: #1d5c86; --faithful: #2b7a4b; --hollow: #a8452f; --code-bg: #eef1f5;
+  --display: "Spectral", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
+    --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
+  --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 56px 72px; display: grid; gap: 56px; }
+h1, h2 { font-family: var(--display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; }
+p { margin: 0; max-width: 65ch; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre { font-family: var(--mono); font-size: 0.86em; }
+.eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+header { display: grid; gap: 18px; }
+.lede { font-size: 1.15rem; color: var(--fg); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+section { display: grid; gap: 18px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule);
+  border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.stat { background: var(--panel); padding: 18px 16px; display: grid; gap: 4px; min-width: 0; }
+.stat b { font: 500 1.7rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 0.88rem; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 2.2rem 1fr; gap: 12px; counter-increment: s; }
+.steps li::before { content: counter(s); font: 500 0.9rem/1.7 var(--mono); color: var(--accent);
+  border: 1px solid var(--rule); border-radius: 4px; text-align: center; height: 1.7rem; }
+.steps strong { font-weight: 600; }
+.chip { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.06em; padding: 3px 6px; border-radius: 3px;
+  border: 1px solid currentColor; white-space: nowrap; }
+.chip.f { color: var(--faithful); } .chip.h { color: var(--hollow); }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 16px;
+  overflow-x: auto; line-height: 1.5; margin: 0; }
+.cite { color: var(--muted); font-size: 0.85rem; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--rule); }
+thead th { font: 500 0.78rem/1.2 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+tbody th { font-weight: 500; }
+td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+td.bar { width: 34%; min-width: 150px; }
+td.bar span { display: block; height: 6px; background: var(--rule); border-radius: 3px; position: relative; overflow: hidden; }
+td.bar span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--faithful); }
+td.bar b { font: 500 0.82rem var(--mono); color: var(--muted); }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; }
+.list li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.list li code, .list li span:first-child { overflow-wrap: anywhere; }
+.list b, .list li > span:last-child { font: 500 0.9rem var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.done { columns: 2 260px; column-gap: 28px; }
+.done li { break-inside: avoid; }
+.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); max-width: 65ch; }
+footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--rule); padding-top: 18px; display: grid; gap: 6px; }
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols { grid-template-columns: 1fr; }
+  .wrap { padding-block: 36px 56px; gap: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<header>
+  <div class="eyebrow">Lean 4 · CPython 3.15.2</div>
+  <h1>Formalizing CPython</h1>
+  <p class="lede">A machine-checked model of the CPython interpreter and standard library, written in Lean 4 the way julia-in-lean models Julia Base. Every function, opcode and grammar rule is listed. Each one counts as covered only after an independent review confirms that its model mirrors the C or Python source and that its theorem would catch a wrong implementation.</p>
+  <p class="meta">Snapshot of {{DATE}} · commit <code>{{COMMIT}}</code></p>
+</header>
+
+<section aria-label="Totals">
+  <div class="stats">
+    <div class="stat"><b>{{FAITHFUL}}</b><span>rows reviewed faithful, {{FAITHFULPCT}} of {{INSCOPE}} in scope</span></div>
+    <div class="stat"><b>{{PROVEN}}</b><span>properties proven</span></div>
+    <div class="stat"><b>{{REFUTED}}</b><span>properties refuted against the real interpreter</span></div>
+    <div class="stat"><b>{{BUGS}}</b><span>bug records, each with a reproducer</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>How a row gets covered</h2>
+  <ol class="steps">
+    <li><div><strong>Mirror the source.</strong> The Lean model follows the C or Python body line by line: the same branch order, the same early returns, the same error messages, <code>Py_ssize_t</code> narrowing and fast paths. Every step cites <code>Objects/&lt;file&gt;.c:&lt;lines&gt;</code> in the 3.15.2 tree.</div></li>
+    <li><div><strong>Test it against the interpreter.</strong> A differential test runs the Lean model and python3 3.15.2 on the same generated inputs, with callbacks that raise and re-enter, until they agree on at least 50,000 cases over several seeds.</div></li>
+    <li><div><strong>State and prove a property.</strong> Each property is quantified over all inputs, with no sorry, no native_decide and no new axioms. A statement that turns out to be false is refuted in Lean with a witness and recorded, never weakened into something provable.</div></li>
+    <li><div><strong>Survive an independent review.</strong> A separate reviewer asks whether a wrong function would still satisfy the theorem (one that always raises, or handles only the first branch) and probes every claim on the real interpreter. Rows marked <span class="chip f">FAITHFUL</span> count. Rows marked <span class="chip h">HOLLOW</span> are withdrawn until fixed.</div></li>
+  </ol>
+  <p class="note">Review is the number that matters. The project counts reviewed rows, not claimed ones: {{PROPS}} registered properties ({{OPEN}} still open) back fewer covered rows than the authors claimed, because reviews keep withdrawing statements that a wrong implementation would also satisfy.</p>
+</section>
+
+<section>
+  <h2>A theorem from the model</h2>
+  <p>The length of <code>range(start, stop, step)</code> is computed in C on a fast path over <code>long</code> and a slow path over Python ints. This property pins all three length functions to the same exact count, so a slow path that returned 0, or a fast path that always overflowed, would fail it.</p>
+<pre><code>def RangeLengthExact : Prop :=
+  (∀ lo hi step : Int, IsLong lo → IsLong hi → IsLong step → step ≠ 0 →
+    IsLen lo hi step (getLenOfRange lo hi step)) ∧
+  (∀ start stop step L : Int, step ≠ 0 → IsLen start stop step L →
+    computeRangeLengthLong start stop step =
+      if IsLong start ∧ IsLong stop ∧ IsLong step ∧ L ≤ longMax then some L else none) ∧
+  (∀ start stop step : Int, step ≠ 0 →
+    IsLen start stop step (computeRangeLengthSlow start stop step)) ∧
+  (∀ start stop step : Int, step ≠ 0 →
+    IsLen start stop step (computeRangeLength start stop step))
+
+theorem rangeLengthExact_proven : RangeLengthExact := by …</code></pre>
+  <p class="cite">lean/PyLean/RangeSlice/Length.lean · mirrors Objects/rangeobject.c:273-315</p>
+</section>
+
+<section>
+  <h2>Coverage by area</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col">Area</th><th scope="col" class="num">In scope</th><th scope="col" class="num">Faithful</th><th scope="col">Share</th></tr></thead>
+      <tbody>
+{{AREAROWS}}
+      </tbody>
+    </table>
+  </div>
+  <p class="cite">In scope excludes rows with no Python-visible behaviour (reference counting, GC traversal, generated code), each excluded with a stated reason that review also checks.</p>
+</section>
+
+<section>
+  <h2>Files reviewed in full</h2>
+  <p>{{DONECOUNT}} files with at least 15 modelled rows have every modelled row reviewed faithful. The number is how many rows each has.</p>
+  <ul class="list done">{{DONE}}</ul>
+</section>
+
+<section>
+  <h2>Bugs found along the way</h2>
+  <p>Refuted properties are where the model and CPython disagree. When the disagreement is CPython's fault, it becomes a bug record with a reproducer that runs on 3.15.2, a duplicate search of the CPython tracker, and a priority from P1 (most serious) to P5.</p>
+  <div class="cols">
+    <div>
+      <div class="eyebrow">By kind</div>
+      <ul class="list">{{KINDS}}</ul>
+    </div>
+    <div>
+      <div class="eyebrow">By priority</div>
+      <ul class="list">{{PRIS}}</ul>
+    </div>
+  </div>
+  <p class="note">Details of individual findings are held back until they have been reported to the CPython maintainers.</p>
+</section>
+
+<footer>
+  <div>Formalizing CPython · a Lean 4 model of CPython 3.15.2</div>
+  <div>Built by Broyojo with Claude. Numbers on this page are generated from the repository's coverage tables, registry and bug records.</div>
+</footer>
+
+</main>
+</body>
+</html>
