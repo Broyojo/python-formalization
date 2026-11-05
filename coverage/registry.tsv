@@ -811,24 +811,28 @@ pickle-frame-read	proven	Lib/pickle.py	_Unframer.load_frame,_Unframer._chunked_f
 pickle-frame-chunk-twins	refuted	Modules/_pickle.c	
 pickle-put-twins	refuted	Modules/_pickle.c	load_put
 pickletools-read-uint-exact	proven	Lib/pickletools.py	read_uint1,read_uint2,read_uint4,read_uint8
-pickletools-read-int4-roundtrip	proven	Lib/pickletools.py	read_int4
-pickletools-read-counted-roundtrip	proven	Lib/pickletools.py	read_bytes1,read_string1,read_bytes4,read_bytes8,read_bytearray8
-pickletools-read-string4-roundtrip	proven	Lib/pickletools.py	read_string4
-pickletools-read-long-roundtrip	proven	Lib/pickletools.py	read_long1,read_long4
-pickletools-read-unicode-roundtrip	proven	Lib/pickletools.py	read_unicodestring1,read_unicodestring4,read_unicodestring8
+pickletools-read-int4-exact	proven	Lib/pickletools.py	read_int4
+pickletools-read-bytes-exact	proven	Lib/pickletools.py	read_bytes1,read_string1,read_bytes4,read_bytes8,read_bytearray8,read_uint1,read_uint4,read_uint8
+pickletools-read-string4-exact	proven	Lib/pickletools.py	read_string4,read_int4
+pickletools-read-long-exact	proven	Lib/pickletools.py	read_long1,read_long4,read_uint1,read_int4
+pickletools-read-unicode-exact	proven	Lib/pickletools.py	read_unicodestring1,read_unicodestring4,read_unicodestring8,read_uint1,read_uint4,read_uint8
 pickletools-read-float8-exact	proven	Lib/pickletools.py	read_float8
 pickletools-read-unicodenl	proven	Lib/pickletools.py	read_unicodestringnl
 pickletools-decimal-short-twin	proven	Lib/pickletools.py	read_decimalnl_short
 pickletools-decimal-long-twin	proven	Lib/pickletools.py	read_decimalnl_long
 pickletools-read-stringnl-plain	proven	Lib/pickletools.py	read_stringnl
+pickletools-read-stringnl-exact	proven	Lib/pickletools.py	read_stringnl
 pickletools-noescape-verbatim	refuted	Lib/pickletools.py	read_stringnl_noescape
 pickletools-noescape-no-backslash	proven	Lib/pickletools.py	read_stringnl_noescape,read_stringnl_noescape_pair,read_stringnl
 pickletools-genops-fuel	proven	Lib/pickletools.py	_genops,genops
 pickletools-genops-wellformed	proven	Lib/pickletools.py	_genops,genops
+pickletools-genops-exact	proven	Lib/pickletools.py	_genops,genops
 pickletools-dis-no-indexerror	refuted	Lib/pickletools.py	dis
 pickletools-dis-follows-genops	proven	Lib/pickletools.py	dis,_genops,genops
-pickletools-dis-stack-repr	proven	Lib/pickletools.py	StackObject.__repr__
+pickletools-dis-checks	proven	Lib/pickletools.py	dis,_genops,genops
 pickletools-optimize-raw-copy	proven	Lib/pickletools.py	optimize,_genops
+pickletools-optimize-exact	proven	Lib/pickletools.py	optimize,_genops
+pickletools-optimize-get-none	proven	Lib/pickletools.py	
 pickle-optimize-sound	open	Lib/pickletools.py	optimize
 itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new
 itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
