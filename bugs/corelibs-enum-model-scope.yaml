@@ -1,0 +1,58 @@
+id: corelibs-enum-model-scope
+title: "Four sentences an earlier Lib/enum.py model proved are false about CPython (scope record, not a bug)"
+priority: P5
+kind: scope-record
+module: corelibs
+files: [Lib/enum.py]
+functions: ["EnumType.__call__", "StrEnum.__new__", "EnumType.__contains__", "Flag._missing_", "verify.__call__"]
+summary: |
+  This record exists because four Lean entries are refutations of statements an earlier model of Lib/enum.py proved
+  on inputs that had no room for the real case. It is not a defect report; CPython behaves as its source says.
+  * corelibs-enum-call: `Enum('X', type=int)` creates a class: :735 raises only when `names is _not_given and type
+    is None`.
+  * corelibs-enum-strenum: `class S(StrEnum): A = b'x', 'ascii'` makes the member 'x', through `str(b'x', 'ascii')`
+    at :1391; the checks at :1377-1390 only test that the encoding and errors are str.
+  * corelibs-enum-flag-class-paths: `1.0 in F` (and any object equal to 1) is True for `class F(Flag): A = 1`: after
+    Flag._missing_ raises ValueError for a non-int, :766-769 compare the value with each member value by ==.
+  * corelibs-enum-continuous: `verify(CONTINUOUS)` on values 1, 2, 'x' raises TypeError from min(): the check is
+    over all values, not the int ones.
+likelihood: |
+  Not applicable.
+maybe_intended: |
+  Yes: each is what the source does. Not to be filed.
+reproducer: |
+  import enum
+  from enum import Enum, Flag, StrEnum, verify, CONTINUOUS
+  r1 = isinstance(Enum('X', type=int), enum.EnumType)
+  class S(StrEnum):
+      A = b'x', 'ascii'
+  r2 = S.A._value_ == 'x'
+  class F(Flag):
+      A = 1
+  r3 = (1.0 in F) is True
+  try:
+      ns = enum.EnumType.__prepare__('V', (Enum,))
+      ns['A'] = 1; ns['B'] = 2; ns['C'] = 'x'
+      verify(CONTINUOUS)(enum.EnumType('V', (Enum,), ns))
+      r4 = False
+  except TypeError:
+      r4 = True
+  print(r1, r2, r3, r4)
+  if r1 and r2 and r3 and r4:
+      print('REPRODUCED corelibs-enum-model-scope')
+expected: |
+  (Of the earlier model) a TypeError, a TypeError, False, and a pass.
+observed: |
+  python3 3.15.2: True True True True. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing; recorded to put the refuted sentences on record.
+cause: |
+  The earlier model had no `type` argument, no bytes, no non-int value equal to an int, and read only int values.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["not applicable (not a bug)"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.EnumCallShape, StrEnumValues, FlagClassPaths, VerifyContinuous
+  theorem: PyLean.CoreLibs.EnumDC.enumCallShape_refuted, strEnumValues_refuted, flagClassPaths_refuted, verifyContinuous_refuted

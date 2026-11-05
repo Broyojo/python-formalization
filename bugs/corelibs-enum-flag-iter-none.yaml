@@ -1,0 +1,72 @@
+id: corelibs-enum-flag-iter-none
+title: "Iterating a Flag alias with unnamed bits yields None, or raises AttributeError when the members are not in value order"
+priority: P4
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/enum.py]
+functions: ["Flag.__iter__", "Flag._iter_member_by_value_", "Flag._iter_member_by_def_"]
+summary: |
+  Flag._iter_member_by_value_ (Lib/enum.py:1456-1461) yields `cls._value2member_map_.get(val)` for each bit of
+  `value & _flag_mask_`, so a bit no member has gives None: for `class H(Flag): A = 1; X = 6`, list(H.X) is
+  [None, None]. Once `H(2)` has been called, the pseudo-member it stored at :1566 is found instead, and list(H.X)
+  becomes [<H: 2>, None], so the result of iterating a member depends on what was looked up before.
+  For a class whose single-bit members are not defined in value order, _iter_member_ is _iter_member_by_def_
+  (:663-667), which sorts those same items by `m._sort_order_` (:1466-1473): there the None raises
+  AttributeError: 'NoneType' object has no attribute '_sort_order_' (`class G(Flag): B = 2; A = 1; X = 12`), and a
+  stored pseudo-member raises AttributeError: 'G' object has no attribute '_sort_order_'. So the same alias is
+  iterated as Nones, as pseudo-members, or as an exception, depending on definition order and history.
+likelihood: |
+  Low. It needs a multi-bit alias with a bit that no member names, which verify(NAMED_FLAGS) rejects but plain
+  Flag accepts; the stdlib's ssl.VerifyFlags.VERIFY_CRL_CHECK_CHAIN is one (issue 150577).
+maybe_intended: |
+  Partly. Issue 150577 showed the None items for ssl.VerifyFlags and was closed, a maintainer saying such flags are
+  not meant to be iterated. The AttributeError of the definition-order branch and the dependence on earlier lookups
+  were not discussed there.
+reproducer: |
+  from enum import Flag
+  class H(Flag):
+      A = 1
+      X = 6
+  first = list(H.X)
+  H(2)
+  second = list(H.X)
+  class G(Flag):
+      B = 2
+      A = 1
+      X = 12
+  try:
+      list(G.X)
+      third = 'no error'
+  except AttributeError as e:
+      third = 'AttributeError: %s' % e
+  print(first, second, third)
+  if first == [None, None] and second[1] is None and second[0] is not None and third.startswith('AttributeError'):
+      print('REPRODUCED corelibs-enum-flag-iter-none')
+expected: |
+  Iterating a flag value yields members only (or the unnamed bits are rejected when the class is made), the same
+  way whatever the definition order and whatever was looked up before.
+observed: |
+  python3 3.15.2: [None, None] [<H: 2>, None] AttributeError: 'NoneType' object has no attribute '_sort_order_'.
+  REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/enum.rst:632-634 on Flag.__iter__, "Returns all contained non-alias members"; the docstring of Flag.__iter__,
+  "Returns flags in definition order".
+cause: |
+  Lib/enum.py:1461 uses `_value2member_map_.get(val)`, which is None for a bit no member has and a pseudo-member for
+  one that an earlier call stored at :1566; :1470-1473 then reads `_sort_order_` on those items, which only members
+  have (:274).
+possible_fix: |
+  Skip bits that have no member (`if val in cls._member_map_.values()`-style test, or a mask of the named single
+  bits) in _iter_member_by_value_, which also makes _iter_member_by_def_ safe.
+duplicates:
+  issues:
+    - {number: 150577, state: closed, relation: "same None items, shown for ssl.VerifyFlags; closed without a change",
+       reason: "related, not the same: the AttributeError branch and the history dependence are not in it"}
+  queries: ["gh search issues --repo python/cpython Flag iter None",
+            "gh search issues --repo python/cpython _sort_order_",
+            "gh search issues --repo python/cpython enum flag iteration unnamed bits",
+            "gh search issues --repo python/cpython Flag _iter_member_",
+            "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.FlagIterMembers
+  theorem: PyLean.CoreLibs.EnumDC.flagIterMembers_refuted

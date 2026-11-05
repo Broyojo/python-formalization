@@ -259,8 +259,8 @@ theorem flagIterPaths_proven : FlagIterPaths := by
     exact hg
   simp [FlagCls.mapGet, hm, List.lookup_append, hl]
 
-/-- Every item `iter(x)` yields is a member of the class: the docs, "Returns flags in definition order", and
-`list(Color.RED | Color.GREEN)` in the HOWTO. False: an alias such as `X = 6` with no member for its bits makes
+/-- Every item `iter(x)` yields is a member of the class: Doc/library/enum.rst:632-634, "Returns all contained
+non-alias members". False: an alias such as `X = 6` with no member for its bits makes
 `list(F.X)` yield `None` twice, since `_iter_member_by_value_` uses `_value2member_map_.get`. -/
 def FlagIterMembers : Prop :=
   ∀ (c : FlagCls) (cache : List (Nat × Option String)) (v : Nat) (l : List (Option MapEntry)),

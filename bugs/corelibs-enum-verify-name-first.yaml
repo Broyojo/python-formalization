@@ -1,0 +1,60 @@
+id: corelibs-enum-verify-name-first
+title: "verify(...)(x) reads x.__name__ before its type check, so a non-class gets AttributeError or issubclass's TypeError, not verify's"
+priority: P5
+kind: validation-order
+module: corelibs
+files: [Lib/enum.py]
+functions: ["verify.__call__"]
+summary: |
+  verify.__call__ starts with `cls_name = enumeration.__name__` (Lib/enum.py:1970) and only then asks
+  `issubclass(enumeration, Flag)` / `issubclass(enumeration, Enum)` (:1971-1975), whose else branch raises
+  TypeError("the 'verify' decorator only works with Enum and Flag"). That message is therefore reached only for a
+  class that is not an Enum. An object without __name__, such as `verify(UNIQUE)(42)`, raises
+  AttributeError: 'int' object has no attribute '__name__'; a function, which has a __name__, raises the
+  TypeError "issubclass() arg 1 must be a class" from issubclass itself.
+likelihood: |
+  Very low: it only matters when verify is misapplied to something that is not a class, and the result is still
+  an exception, just not the one written for the case.
+maybe_intended: |
+  Probably not deliberate, but harmless; a maintainer may well call it not worth changing.
+reproducer: |
+  from enum import verify, UNIQUE
+  try:
+      verify(UNIQUE)(42)
+      r1 = 'no error'
+  except Exception as e:
+      r1 = '%s: %s' % (type(e).__name__, e)
+  try:
+      verify(UNIQUE)(len)
+      r2 = 'no error'
+  except Exception as e:
+      r2 = '%s: %s' % (type(e).__name__, e)
+  try:
+      verify(UNIQUE)(int)
+      r3 = 'no error'
+  except Exception as e:
+      r3 = '%s: %s' % (type(e).__name__, e)
+  print(r1); print(r2); print(r3)
+  if r1.startswith('AttributeError') and 'issubclass' in r2 and 'only works with Enum and Flag' in r3:
+      print('REPRODUCED corelibs-enum-verify-name-first')
+expected: |
+  TypeError: the 'verify' decorator only works with Enum and Flag, for 42 and len as for int.
+observed: |
+  python3 3.15.2: AttributeError: 'int' object has no attribute '__name__'; TypeError: issubclass() arg 1 must be a
+  class; TypeError: the 'verify' decorator only works with Enum and Flag. REPRODUCED.
+  main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Lib/enum.py:1975, the decorator's own TypeError for anything that is not an Enum or Flag.
+cause: |
+  Lib/enum.py:1970 reads __name__ before the isinstance/issubclass tests of :1971-1975, and issubclass is called on
+  an object that may not be a class.
+possible_fix: |
+  Test `isinstance(enumeration, type)` first, raise the decorator's TypeError otherwise, and read __name__ after.
+duplicates:
+  issues: []
+  queries: ["gh search issues --repo python/cpython enum verify AttributeError",
+            "gh search issues --repo python/cpython enum verify decorator",
+            "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.VerifyCall
+  theorem: PyLean.CoreLibs.EnumDC.verifyCall_refuted
