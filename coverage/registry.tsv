@@ -1179,10 +1179,11 @@ set-pop	proven	Objects/setobject.c	set_pop_impl
 set-clear	proven	Objects/setobject.c	set_clear_internal,set_empty_to_minsize
 set-iter-order	proven	Objects/setobject.c	set_next
 set-probe-failure	proven	Objects/setobject.c	set_lookkey,set_do_lookup,set_compare_entry_lock_held,set_add_entry_takeref
+set-lookup-restarts-on-resize	refuted	Objects/setobject.c	set_compare_entry_lock_held
+set-add-restarts-on-resize	refuted	Objects/setobject.c	set_add_entry_takeref
 set-contains-body	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_compare_frozenset,set_do_lookup,set_contains_entry
 set-frozen-identity-first	proven	Objects/setobject.c	set_compare_frozenset,set_compare_entry_lock_held
 set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_unhashable_type
-set-contains-retry-exact	refuted	Objects/setobject.c	_PySet_Contains
 set-unhashable-type	proven	Objects/setobject.c	set_unhashable_type
 set-lookkey-body	proven	Objects/setobject.c	set_lookkey
 set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
@@ -1192,6 +1193,7 @@ set-intersection-branches	proven	Objects/setobject.c	set_intersection
 set-inter-iter-refines	proven	Objects/setobject.c	set_intersection
 set-isdisjoint-branches	proven	Objects/setobject.c	set_isdisjoint_impl
 set-disjoint-iter-refines	proven	Objects/setobject.c	set_isdisjoint_impl
+set-shuffle-bits-bijective	proven	Objects/setobject.c	_shuffle_bits
 set-shuffle-bits-values	proven	Objects/setobject.c	_shuffle_bits,frozenset_hash_impl
 set-dealloc-order	proven	Objects/setobject.c	set_dealloc
 set-merge-refines	proven	Objects/setobject.c	set_merge_lock_held
