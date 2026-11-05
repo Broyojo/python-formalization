@@ -28,33 +28,35 @@ theorem forIterBody_proven : ForIterBody := by
   refine ⟨rfl, fun h => ?_, fun h => ?_, fun h => ⟨fun hb => ?_, fun hb => ?_, fun hb => ?_⟩⟩
   all_goals simp_all [forIter, M.bind_run]
 
-/-- One turn of the generic loop of `set_intersection`, for every key protocol: a failed hash or
-lookup is the result, a key `so` does not hold does nothing, and a key it holds goes in, and stops the
-loop when the result has caught up with `so` as `so` is now. -/
+/-- One turn of the generic loop of `set_intersection` (:1763-1776), for every key protocol:
+`PyObject_Hash` runs `__hash__`, whose failure is the result in the state it left (no
+`set_unhashable_type` here); a failed lookup is the result; a key `so` does not hold does nothing;
+and a key it holds goes in, and stops the loop when the result has caught up with `so` as `so` is
+now. -/
 def InterIterBody : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (soId : Nat) (key : K) (hash : Int)
-    (s s' s'' : SetObj K) (e : PyExc),
-    (P.hash key = .error e → interIterStep P soId key s = (.error e, s)) ∧
-    (P.hash key = .ok hash →
-      (onSet soId (setContainsEntry P key hash) s = (.error e, s') →
+    (s s1 s' s'' : SetObj K) (e : PyExc),
+    (P.hashM key s = (.error e, s1) → interIterStep P soId key s = (.error e, s1)) ∧
+    (P.hashM key s = (.ok hash, s1) →
+      (onSet soId (setContainsEntry P key hash) s1 = (.error e, s') →
         interIterStep P soId key s = (.error e, s')) ∧
-      (onSet soId (setContainsEntry P key hash) s = (.ok false, s') →
+      (onSet soId (setContainsEntry P key hash) s1 = (.ok false, s') →
         interIterStep P soId key s = (.ok false, s')) ∧
-      (onSet soId (setContainsEntry P key hash) s = (.ok true, s') →
+      (onSet soId (setContainsEntry P key hash) s1 = (.ok true, s') →
         (setAddEntry P key hash s' = (.error e, s'') →
           interIterStep P soId key s = (.error e, s'')) ∧
         (setAddEntry P key hash s' = (.ok (), s'') →
           interIterStep P soId key s =
             (.ok (decide (s''.used ≥ (s''.live soId).used)), s''))))
 theorem interIterBody_proven : InterIterBody := by
-  intro K _ P soId key hash s s' s'' e
+  intro K _ P soId key hash s s1 s' s'' e
   refine ⟨fun h => ?_, fun h => ⟨fun h1 => ?_, fun h1 => ?_, fun h1 => ⟨fun h2 => ?_, fun h2 => ?_⟩⟩⟩
-  · simp [interIterStep, h, M.bind_run, M.lift_run]
-  · simp [interIterStep, h, h1, M.bind_run, M.lift_run]
-  · simp [interIterStep, h, h1, M.bind_run, M.lift_run]
-  · simp [interIterStep, h, h1, h2, M.bind_run, M.lift_run]
+  · simp [interIterStep, h, M.bind_run]
+  · simp [interIterStep, h, h1, M.bind_run]
+  · simp [interIterStep, h, h1, M.bind_run]
+  · simp [interIterStep, h, h1, h2, M.bind_run]
   · by_cases hc : s''.used ≥ (s''.live soId).used <;>
-      simp [interIterStep, h, h1, h2, hc, M.bind_run, M.lift_run, M.get_run]
+      simp [interIterStep, h, h1, h2, hc, M.bind_run, M.get_run]
 
 /-- The routes of the set methods on what is not a set, for every key protocol and iterator: each
 opens with `PyObject_GetIter`, whose failure is the result, in the focus the C code has at that
@@ -83,12 +85,12 @@ theorem setIterRoutes_proven : SetIterRoutes := by
   intro K _ P it id so s' e
   refine ⟨rfl, fun h => ⟨?_, ?_, ?_, ?_⟩, fun h => ⟨?_, ?_⟩⟩
   · simp [setUpdateIterable, M.bind_run, h]
-  · simp [setIsdisjoint, SetArg.toReIter, M.bind_run, M.get_run, h]
+  · simp [setIsdisjoint, setDisjointIter, SetArg.toReIter, M.bind_run, M.get_run, h]
   · simp [setIssuperset, SetArg.toReIter, M.bind_run, M.get_run, h]
   · simp [setDifferenceUpdateInternal, SetArg.toReIter, M.bind_run, M.get_run, h]
   · have h1 : setIsdisjoint P (.live it) so =
         (do it.getIter; let hit ← forIter (setContainsKey P) it.steps; pure (!hit)) so := by
-      simp [setIsdisjoint, SetArg.toReIter, M.bind_run, M.get_run]
+      simp [setIsdisjoint, setDisjointIter, SetArg.toReIter, M.bind_run, M.get_run]
     rw [h1, M.bind_run, h]
     simp only [M.bind_run]
     cases forIter (setContainsKey P) it.steps s' with

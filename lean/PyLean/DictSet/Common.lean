@@ -104,6 +104,17 @@ structure Proto (K σ : Type) extends KeyOps K where
   /-- What a call of `__hash__` does to the state, whatever it then answers: `hash` gives the
   answer (or the exception), this the effect, which comes first. -/
   hashEff : K → σ → σ := fun _ s => s
+  /-- `PyObject_Hash(key)` as the set model calls it: `__hash__` is Python code, so it may change
+  the state (re-entering the very set being probed), and then answer or raise, with an answer that
+  may depend on what it found. The dict model uses `hash` and `hashEff` instead; this default is
+  the same call. -/
+  hashM : K → M σ Int := fun k s => (hash k, hashEff k s)
+  /-- `PyErr_ExceptionMatches(PyExc_TypeError)` (`Python/errors.c`): the exception is an instance
+  of `TypeError` or of a subclass. `.typeError` is the exact class; a subclass defined in Python is
+  a `.named` exception, which this relation says is or is not under `TypeError`. -/
+  isTypeError : PyExc → Bool := fun e => match e with
+    | .typeError _ => true
+    | _ => false
 
 /-- `_PyErr_SetKeyError(key)`: `str(e)` is `repr(key)`. -/
 def keyErr {K σ : Type} (P : Proto K σ) (k : K) : PyExc := .keyError (P.reprStr k)

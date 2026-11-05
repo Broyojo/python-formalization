@@ -36,6 +36,13 @@ structure Atom where
   ract : Nat := 0
   /-- `__eq__` raises `KESub("eq")`, a subclass of `KeyError`, instead of `ValueError('eq')`. -/
   rk : Bool := false
+  /-- `__hash__` first does `evil_act` number `hact` to the target set (`KH`, `SH` in the test). -/
+  hact : Nat := 0
+  /-- What that `__hash__` then does: 0 answers `hash`, 1 raises `TypeError("no")`, 2 raises
+  `TESub("te")` (a subclass of `TypeError`), 3 raises `ValueError("hv")`. -/
+  hres : Nat := 0
+  /-- For a `set` object (`PySet_Check`): its elements, distinct ints added in this order. -/
+  sbody : Option (List Int) := none
   deriving DecidableEq, Repr, Inhabited
 
 /-- What `a == b` raises when one of them raises: the left operand's `__eq__` runs first. -/
@@ -206,8 +213,43 @@ def peerProto (pool : Array DObj) : Proto DObj DD :=
 def plainSet : Proto DObj DS :=
   { dKeyOps with eq := fun a b s => (DObj.eq a b, s) }
 
+/-- `PyErr_ExceptionMatches(PyExc_TypeError)` for what the test objects raise: `TESub` is the test's
+subclass of `TypeError`. -/
+def isTypeErrorTest (e : PyExc) : Bool :=
+  match e with
+  | .typeError _ => true
+  | .named "TESub" _ => true
+  | _ => false
+
+/-- What a `KH` or `SH` `__hash__` answers once it has acted. -/
+def hookAnswer (a : Atom) : Py Int :=
+  match a.hres with
+  | 0 => .ok a.hash
+  | 1 => .error (.typeError "no")
+  | 2 => .error (.named "TESub" "te")
+  | _ => .error (.valueError "hv")
+
+/-- The body of a set of distinct ints, built as `set(l)` builds it. Its elements stand in for the
+ints: only their hashes and the counts reach `frozenset_hash_impl`. -/
+def intSetBody (l : List Int) : SetBody DObj :=
+  let step := fun (p : DS × Nat) (h : Int) =>
+    let k := DObj.atom { uid := 1000000000 + p.2, cls := 1000000000 + p.2, hash := h }
+    ((setAddEntry plainSet k h p.1).2, p.2 + 1)
+  (l.foldl step (({} : DS), 0)).1.toSetBody
+
+/-- `PySet_Check(key)` and the key's body: the test's set keys are never changed. -/
+def testKeySet (k : DObj) (_ : DS) : Option (SetBody DObj) :=
+  match k with
+  | .atom a => a.sbody.map intSetBody
+  | _ => none
+
 def sProto : Proto DObj DS :=
   { dKeyOps with
+    isTypeError := isTypeErrorTest
+    hashM := fun k s =>
+      match k with
+      | .atom a => if a.hres == 0 then (DObj.hash k, s) else (hookAnswer a, s)
+      | _ => (DObj.hash k, s)
     eq := fun a b s =>
       match DObj.action a b with
       | 1 => (.ok false, setClearInternal s)
@@ -230,6 +272,17 @@ def evilSet (pool : Array DObj) (n : Nat) (t : DS) : DS :=
 /-- `__eq__` acting on the set with this identity, wherever it is in the state. -/
 def sProtoAt (pool : Array DObj) (id : Nat) : Proto DObj DS :=
   { dKeyOps with
+    isTypeError := isTypeErrorTest
+    hashM := fun k s =>
+      match k with
+      | .atom a =>
+        if a.hres == 0 && a.hact == 0 then (DObj.hash k, s)
+        else
+          let s' := if s.ident == id || s.peers.any (·.ident == id) then
+              (evilSet pool a.hact (s.swapIn id)).swapIn s.ident
+            else s
+          (if a.hres == 0 then .ok a.hash else hookAnswer a, s')
+      | _ => (DObj.hash k, s)
     eq := fun a b s =>
       match DObj.action a b with
       | 0 => (DObj.eq a b, s)

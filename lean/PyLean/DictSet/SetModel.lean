@@ -150,19 +150,37 @@ def lookOuter (frozen : Bool) (key : K) (hash : Int) (mask : Nat) :
 
 def setProbeFuel (mask : Nat) : Nat := mask + 15
 
-/-- `set_lookkey` (:413-433): the slot where the search stopped, whose key says whether it was
-found; an exception is `SET_LOOKKEY_ERROR`. A restart is the `do ... while` at :423-426. -/
+/-- The `do { ... } while (status == SET_LOOKKEY_CHANGED)` of `set_lookkey` (:422-426), with
+`set_compare_entry_lock_held`: each turn passes `so->table` and `so->mask` as they are then, so a
+restart walks the table `__eq__` left. `256` turns stand for "until no `__eq__` changes the table".
+
+Scope: `setChanged` names a table by `tableId`, which a resize never gives to a new malloc'ed table,
+so the model cannot express a table freed and reallocated at the same address with another mask;
+CPython's pointer test cannot tell the two apart (bugs/dictset-set-lookup-table-aba.yaml). -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
     let so ← M.get
     let u := toU64 hash
-    let r ← lookOuter P so.frozenExact key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u
+    let r ← lookOuter P false key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u
     match r with
     | some s => return s
     | none => setLookkeyAux key hash restarts
 
-def setLookkey (key : K) (hash : Int) : SM K Nat := setLookkeyAux P key hash 256
+/-- `set_lookkey` (:413-433): the slot where the search stopped, whose key says whether it was
+found; an exception is `SET_LOOKKEY_ERROR`. `PyFrozenSet_CheckExact(so)` (:417) takes one
+`set_do_lookup` with `set_compare_frozenset` (:418-420), which never answers
+`SET_LOOKKEY_CHANGED` (`lookOuter_frozen_ne_restart`); anything else, a frozenset subclass too,
+takes the locked loop. -/
+def setLookkey (key : K) (hash : Int) : SM K Nat := do
+  let so ← M.get
+  if so.frozenExact then
+    let u := toU64 hash
+    let r ← lookOuter P true key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u
+    match r with
+    | some s => return s
+    | none => M.unreachable
+  else setLookkeyAux P key hash 256
 
 end Look
 
@@ -228,7 +246,7 @@ def setTableResize (minused : Nat) : SM K Unit := do
     nextId := so.nextId + 1 }
 
 /-- The resize at the end of `set_add_entry_takeref` (:324-326) and of
-`set_difference_update_internal` (@3.14.7:1765). -/
+`set_difference_update_internal` (:2025-2028). -/
 def setGrow : SM K Unit := do
   let so ← M.get
   setTableResize (if so.used > 50000 then so.used * 2 else so.used * 4)
@@ -244,7 +262,10 @@ inductive AddScan where
 section Add
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
-/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (@3.14.7:157-184). -/
+/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (:275-302): NULL ends the
+walk (:275-276); an entry with the hash is the same object, an equal exact `str`, or is compared
+(:277-297), and after a "no" the table and key are tested (:294-295) before `mask` is read again
+(:296); a dummy becomes `freeslot` (:298-301). The table test has the scope of `setLookkeyAux`. -/
 def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
     SM K (AddScan ⊕ (Nat × Option Nat)) := do
   let so ← M.get
@@ -265,7 +286,7 @@ def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
       return .inr (so'.mask, freeslot)
     else return .inr (mask, freeslot)
 
-/-- The inner loop of `set_add_entry_takeref` (@3.14.7:156-185). -/
+/-- The inner loop of `set_add_entry_takeref` (:274-303): `do { ... entry++; } while (probes--)`. -/
 def addScan (key : K) (hash : Int) : Nat → Nat → Nat → Option Nat → SM K AddScan
   | 0, slot, mask, freeslot => do
     match ← addStep P key hash slot mask freeslot with
@@ -276,6 +297,9 @@ def addScan (key : K) (hash : Int) : Nat → Nat → Nat → Option Nat → SM K
     | .inl r => return r
     | .inr (m, fs) => addScan key hash p (slot + 1) m fs
 
+/-- The `while (1)` of `set_add_entry_takeref` (:271-306): a block of `linearProbes i mask` entries
+from `i`, then `perturb >>= PERTURB_SHIFT; i = (i * 5 + 1 + perturb) & mask` with the mask as the
+block left it (:304-305). -/
 def addOuter (key : K) (hash : Int) : Nat → Nat → Nat → Nat → Option Nat → SM K AddScan
   | 0, _, _, _, _ => M.throw .modelFuel
   | fuel + 1, i, perturb, mask, freeslot => do
@@ -286,7 +310,11 @@ def addOuter (key : K) (hash : Int) : Nat → Nat → Nat → Nat → Option Nat
       addOuter key hash fuel n.1 n.2 mask' fs
     | r => return r
 
-/-- `set_add_entry_takeref` (:252-335), `set_add_entry` (:337-343). -/
+/-- `set_add_entry_takeref` (:252-335), `set_add_entry` (:337-343). Each turn is the `restart:`
+label (:264-269): `mask`, `i`, `perturb` from `so` as it is now and `freeslot = NULL`. The walk
+ends at `found_active` (:328-330), at a restart (:294-295), or at a NULL: with no `freeslot` the
+key goes there and the table may grow (:319-326); with one, a `freeslot` that `__eq__` refilled
+(`freeslot->hash != -1`, :311-313) restarts, and otherwise the key goes in the dummy (:314-317). -/
 def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
@@ -317,17 +345,20 @@ def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
 
 def setAddEntry (key : K) (hash : Int) : SM K Unit := setAddEntryAux P key hash 256
 
-/-- `set_unhashable_type` (:345-359). -/
+/-- `set_unhashable_type` (:345-359): only an exception whose type is exactly `TypeError`
+(`Py_IS_TYPE`, :350) is replaced, by `TypeError("cannot use '%T' as a set element (%S)")`, where
+`%S` is `str(exc)`, here the message; a subclass of `TypeError` and anything else is re-raised as it
+was (:351-352). -/
 def setUnhashableType (key : K) (e : PyExc) : PyExc :=
   match e with
   | .typeError m => .typeError s!"cannot use '{P.typeName key}' as a set element ({m})"
   | e => e
 
-/-- `_PyObject_HashFast` plus `set_unhashable_type`. -/
+/-- `_PyObject_HashFast(key)` and, when it fails, `set_unhashable_type(key)` (:603-607, :614-618,
+:625-629): `__hash__` runs as Python code, so whatever it did to the state stands, whether it then
+answered or raised. -/
 def setHashKey (key : K) : SM K Int :=
-  match P.hash key with
-  | .ok h => pure h
-  | .error e => M.throw (setUnhashableType P key e)
+  M.tryCatch (P.hashM key) fun e => M.throw (setUnhashableType P key e)
 
 /-- `set_add_key` (:600-609), `_PySet_AddTakeRef` (:361-373), `PySet_Add` (:3097-3123),
 `set.add` (:2535-2542). -/

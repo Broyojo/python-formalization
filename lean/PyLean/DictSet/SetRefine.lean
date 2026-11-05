@@ -79,7 +79,7 @@ theorem any_keys_false (so : SetObj K) (key : K)
   rw [hne s e.1 e.2 hs] at hq
   simp at hq
 
-/-- What `set_add_entry` asks of `set_table_resize` for a table of `used` keys (@3.14.7:206-208). -/
+/-- What `set_add_entry` asks of `set_table_resize` for a table of `used` keys (:324-326). -/
 def setGrowMin (used : Nat) : Nat := if used > 50000 then used * 2 else used * 4
 
 /-- A set of `used` keys that would have to grow past what `PyMem_NEW` can give, the one reason an
@@ -198,7 +198,7 @@ theorem getD_replicate_null (n i : Nat) : (List.replicate n (Slot.null : Slot K)
 
 theorem setHashKey_ok (H : HonestSet P hf eqv) (key : K) (so : SetObj K) :
     setHashKey P key so = (.ok (hf key), so) := by
-  simp [setHashKey, H.hash_ok]
+  simp [setHashKey, M.tryCatch, H.hash_ok]
 
 theorem setHashKey_bind {β : Type} (H : HonestSet P hf eqv) (key : K) (f : Int → SM K β)
     (so : SetObj K) : (setHashKey P key >>= f) so = f (hf key) so :=
@@ -223,11 +223,11 @@ theorem setContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
   · simp [hs, any_keys_true so s k h key hs heq]
 
 /-- `frozenset.__contains__`, which runs `set_compare_frozenset` even on a subclass. -/
-theorem frozensetContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (setHash : K → Option Int)
-    (key : K) :
-    frozensetContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so) := by
+theorem frozensetContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so)
+    (keySet : K → SetObj K → Option (SetBody K)) (key : K) :
+    frozensetContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so) := by
   obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w true key
-  simp only [frozensetContains, containsHash, H.hash_ok, M.bind_run, M.lift_run, M.get_run, h1]
+  simp only [frozensetContains, frozenLookup, containsHash, H.hash_ok, M.bind_run, M.get_run, h1]
   rcases h2 with ⟨hn, hne⟩ | ⟨k, h, hs, heq⟩
   · simp [hn, any_keys_false so key hne]
   · simp [hs, any_keys_true so s k h key hs heq]
@@ -703,7 +703,7 @@ theorem addStep_raises (fs : Option Nat) (hs : so.slot slot = .active startkey h
     addStep P key hash slot mask fs so = (.error e, s') := by
   simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq]
 
-/-- `set_add_entry` on an answer of no, and a changed table: it restarts (@3.14.7:177-178). -/
+/-- `set_add_entry` on an answer of no, and a changed table: it restarts (:294-295). -/
 theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey hash)
     (h1 : startkey ≠ key)
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
@@ -711,12 +711,6 @@ theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey 
     (hch : setChanged s' so.tableId slot startkey = true) :
     addStep P key hash slot mask fs so = (.ok (.inl .restart), s') := by
   simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq, hch]
-
-theorem setHash_fails (hh : P.hash key = .error e) :
-    setAddKey P key so = (.error (setUnhashableType P key e), so) ∧
-    setContainsKey P key so = (.error (setUnhashableType P key e), so) ∧
-    setDiscardKey P key so = (.error (setUnhashableType P key e), so) := by
-  simp [setAddKey, setContainsKey, setDiscardKey, setHashKey, hh, M.bind_run]
 
 end Failure
 
@@ -741,21 +735,27 @@ theorem setProbeFailure_proven : SetProbeFailure := by
   · exact fun b hq => lookStep_changed P key startkey hash slot so s' b hs h1 h2 hq hch
   · exact fun hq => addStep_changed P key startkey hash slot mask so s' fs hs h1 h2 hq hch
 
-/-- `_PySet_Contains` and `frozenset.__contains__`, on every branch of the hash: a good hash is the
-list membership, whichever compare function the object takes, and a failed one is retried with the
-frozenset hash only for a `TypeError` from a `set`. A frozenset and a set answer alike here, where
-their compare functions differ. -/
+/-- `_PySet_Contains`, `set_contains`, `set.__contains__` and `frozenset.__contains__` for an honest
+key protocol, on every well-formed table: the answer is list membership, whichever compare function
+the object takes, and nothing changes. A frozenset and a set answer alike here, where their compare
+functions differ. -/
 def SetContainsBody : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
-    HonestSet P hf eqv → ∀ (so : SetObj K) (key : K) (setHash : K → Option Int),
+    HonestSet P hf eqv → ∀ (so : SetObj K) (key : K) (keySet : K → SetObj K → Option (SetBody K)),
       SetWF hf eqv so →
-      setContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so) ∧
-      frozensetContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so)
+      setContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so) ∧
+      setSqContains P keySet key so = (.ok (if (setKeys so).any (eqv · key) then 1 else 0), so) ∧
+      setDunderContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so) ∧
+      frozensetContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so)
 theorem setContainsBody_proven : SetContainsBody := by
-  intro K _ P hf eqv H so key setHash w
-  refine ⟨?_, frozensetContains_hash H w setHash key⟩
-  simp only [setContains, containsHash, H.hash_ok, M.bind_run, M.lift_run]
-  exact setContains_hash H w key
+  intro K _ P hf eqv H so key keySet w
+  have h1 : setContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so) := by
+    simp only [setContains, containsHash, H.hash_ok, M.bind_run]
+    exact setContains_hash H w key
+  refine ⟨h1, ?_, ?_, frozensetContains_hash H w keySet key⟩
+  · simp [setSqContains, h1]
+  · simp only [setDunderContains, setSqContains, h1]
+    cases (setKeys so).any (eqv · key) <;> rfl
 
 /-- The two compare functions differ on a key whose hash changed after it went in: `set_compare_frozenset`
 tests identity first (:180-182), so an exact frozenset finds the object at the slot, and
@@ -773,28 +773,6 @@ theorem frozenIdentityFirst_proven : FrozenIdentityFirst := by
   · simp [lookStep, compareFrozen, M.bind_run, M.get_run, hs]
   · simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, hn]
 
-/-- What a failed hash does in `_PySet_Contains`, for every key protocol: a `TypeError` from a `set`
-is retried with the frozenset hash, and anything else goes through `set_unhashable_type`. -/
-def SetContainsRetry : Prop :=
-  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (e : PyExc) (so : SetObj K)
-    (h : Int) (setHash : K → Option Int), P.hash key = .error e →
-      (setHash key = some h → (∃ m, e = .typeError m) →
-        setContains P setHash key so = setContainsEntry P key h so) ∧
-      (setHash key = none → setContains P setHash key so = (.error (setUnhashableType P key e), so)) ∧
-      ((∀ m, e ≠ .typeError m) →
-        setContains P setHash key so = (.error (setUnhashableType P key e), so))
-theorem setContainsRetry_proven : SetContainsRetry := by
-  intro K _ P key e so h setHash hh
-  refine ⟨fun h1 ⟨m, hm⟩ => ?_, fun h1 => ?_, fun h1 => ?_⟩
-  · subst hm
-    simp [setContains, containsHash, hh, h1, M.bind_run, M.lift_run]
-  · simp [setContains, containsHash, hh, h1, M.bind_run, M.lift_run]
-  · cases e with
-    | typeError m => exact absurd rfl (h1 m)
-    | _ =>
-      cases hs : setHash key <;>
-        simp [setContains, containsHash, hh, hs, M.bind_run, M.lift_run]
-
 /-- `set_add_entry` and `set_lookkey` differ on an `__eq__` that answers yes and changes the table:
 the lookup goes round again, the add stops, believing it. -/
 def SetAddTrustsYes : Prop :=
@@ -809,14 +787,5 @@ theorem setAddTrustsYes_proven : SetAddTrustsYes := by
   intro K _ P key startkey hash slot mask so s' fs hs h1 h2 hq hch
   exact ⟨lookStep_changed P key startkey hash slot so s' true hs h1 h2 hq hch,
     addStep_trusts_yes P key startkey hash slot mask so s' fs hs h1 h2 hq⟩
-
-/-- A failed hash, for every key protocol. -/
-def SetHashFailure : Prop :=
-  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (so : SetObj K) (e : PyExc),
-    P.hash key = .error e →
-    setAddKey P key so = (.error (setUnhashableType P key e), so) ∧
-    setContainsKey P key so = (.error (setUnhashableType P key e), so) ∧
-    setDiscardKey P key so = (.error (setUnhashableType P key e), so)
-theorem setHashFailure_proven : SetHashFailure := fun _ _ P key so e hh => setHash_fails P key so e hh
 
 end PyLean.DictSet

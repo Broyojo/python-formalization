@@ -28,8 +28,13 @@ structure DictArg (K : Type) where
 
 /-- The non-self argument of a set method, by the branch it selects. -/
 inductive SetArg (K : Type) where
-  /-- `PyAnySet_Check(other)`. -/
+  /-- `PyAnySet_Check(other)`, with `set`'s own `__iter__`: an exact set or frozenset, or a subclass
+  that does not override `__iter__` (`s.exact` says which). -/
   | set (s : SetObj K)
+  /-- `PyAnySet_Check(other)` but not `PyAnySet_CheckExact(other)`: an instance of a subclass whose
+  type's `__iter__` is the script `it`. The branches that take `PyAnySet_Check` walk its table;
+  `PyObject_GetIter(other)` runs `it`. -/
+  | sub (s : SetObj K) (it : ReIter (SetObj K) K)
   /-- `PyAnyDict_CheckExact(other)`. -/
   | dict (d : DictArg K)
   /-- Any other iterable, with no callback of its own. -/
@@ -40,6 +45,7 @@ inductive SetArg (K : Type) where
 /-- `PyObject_GetIter(other)` for any argument. -/
 def SetArg.toReIter : SetArg K → ReIter (SetObj K) K
   | .set s => ReIter.ofIterable { items := (setEntries s).map (·.1) }
+  | .sub _ it => it
   | .dict d => ReIter.ofIterable { items := d.keys }
   | .iter it => ReIter.ofIterable it
   | .live it => it
@@ -47,6 +53,7 @@ def SetArg.toReIter : SetArg K → ReIter (SetObj K) K
 /-- The argument as a plain iterable, for the view operations, which run no callback of their own. -/
 def SetArg.toIterable : SetArg K → Iterable K
   | .set s => { items := (setEntries s).map (·.1) }
+  | .sub s _ => { items := (setEntries s).map (·.1) }
   | .dict d => { items := d.keys }
   | .iter it => it
   | .live _ => { items := [] }
@@ -206,6 +213,7 @@ def setUpdateIterable (it : ReIter (SetObj K) K) : SM K Unit := do
 def setUpdate (other : SetArg K) : SM K Unit :=
   match other with
   | .set o => setMerge P o
+  | .sub o _ => setMerge P o
   | .dict d => setUpdateDict P d
   | .iter it => setUpdateIterable P (ReIter.ofIterable it)
   | .live it => setUpdateIterable P it
@@ -248,6 +256,7 @@ def setUnion (others : List (SetArg K)) (id : Nat) : SM K (SetObj K) := do
   let r ← others.foldlM (fun r other => do
     let same := match other with
       | .set o => o.ident == so.ident
+      | .sub o _ => o.ident == so.ident
       | _ => false
     if same then return r
     let x ← onResult r (setUpdate P other)
@@ -273,7 +282,7 @@ def setInterLoop (a b : Nat) : SM K Bool := do
 /-- One turn of the generic loop of `set_intersection` (:1763-1777), with the result in focus: a key
 that makes the result as large as `so` stops the loop, so a later bad element is never hashed. -/
 def interIterStep (soId : Nat) (key : K) : SM K Bool := do
-  let hash ← M.lift (P.hash key)
+  let hash ← P.hashM key
   let rv ← onSet soId (setContainsEntry P key hash)
   if rv then
     setAddEntry P key hash
@@ -291,18 +300,27 @@ def setIntersectionSets (o : SetObj K) (id : Nat) : SM K (SetObj K) := do
   let r ← onResult (newBasetype so.toSetBody id) (setInterLoop P a b)
   return r.2
 
-/-- `set_intersection` (:1708-1791). The result takes the focus while the loops run. -/
+/-- The generic branch of `set_intersection` (:1756-1790), with the result in focus:
+`PyObject_GetIter(other)`, then the loop of `interIterStep`; the loop's own exception, or the
+iterator's, is the result. -/
+def setInterIter (soId : Nat) (it : ReIter (SetObj K) K) : SM K Bool := do
+  it.getIter
+  forIter (interIterStep P soId) it.steps
+
+/-- `set_intersection` (:1708-1791): `so == other` is a copy (:1716-1717); a set (`PyAnySet_Check`,
+:1723) takes the two-set branch; anything else the generic one. The result takes the focus while
+the loops run. -/
 def setIntersection (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
   let so ← M.get
   match other with
   | .set o =>
     if o.ident == so.ident then setCopy P id
     else withPeer o (setIntersectionSets P o id)
+  | .sub o _ =>
+    if o.ident == so.ident then setCopy P id
+    else withPeer o (setIntersectionSets P o id)
   | _ =>
-    let it := other.toReIter
-    let r ← onResult (newBasetype so.toSetBody id) (do
-      it.getIter
-      forIter (interIterStep P so.ident) it.steps)
+    let r ← onResult (newBasetype so.toSetBody id) (setInterIter P so.ident other.toReIter)
     return r.2
 
 /-- `set_intersection_multi_impl` (:1801-1826). -/
@@ -337,11 +355,21 @@ def setDisjointSets (o : SetObj K) : SM K Bool := do
   let hit ← forNext b (fun key hash => onSet a (setContainsEntry P key hash)) (setLoopFuel so b) 0
   return !hit
 
-/-- `set_isdisjoint_impl` (:1910-1968). `PyAnySet_CheckExact` here, not `PyAnySet_Check`. -/
+/-- The generic branch of `set_isdisjoint_impl` (:1948-1967): `PyObject_GetIter(other)`, then
+`set_contains_key` on each item until one is found. -/
+def setDisjointIter (it : ReIter (SetObj K) K) : SM K Bool := do
+  it.getIter
+  let hit ← forIter (setContainsKey P) it.steps
+  return !hit
+
+/-- `set_isdisjoint_impl` (:1910-1968): `so == other` answers whether `so` is empty (:1917-1922);
+`PyAnySet_CheckExact(other)` (:1923), not `PyAnySet_Check`, takes the two-set branch, so a set
+subclass goes through its own `__iter__`. -/
 def setIsdisjoint (other : SetArg K) : SM K Bool := do
   let so ← M.get
   let same := match other with
     | .set o => o.ident == so.ident
+    | .sub o _ => o.ident == so.ident
     | _ => false
   if same then return so.used == 0
   let fast := match other with
@@ -349,11 +377,7 @@ def setIsdisjoint (other : SetArg K) : SM K Bool := do
     | _ => none
   match fast with
   | some o => withPeer o (setDisjointSets P o)
-  | none =>
-    let it := other.toReIter
-    it.getIter
-    let hit ← forIter (setContainsKey P) it.steps
-    return !hit
+  | none => setDisjointIter P other.toReIter
 
 /-- The tail of `set_difference_update_internal` (:2025-2028): more than a quarter dummies. -/
 def setPurgeDummies : SM K Unit := do
@@ -390,12 +414,14 @@ def setDifferenceUpdateInternal (other : SetArg K) (id : Nat) : SM K Unit := do
   let so ← M.get
   let same := match other with
     | .set o => o.ident == so.ident
+    | .sub o _ => o.ident == so.ident
     | _ => false
   if same then
     M.put (setClearInternal so)
     return ()
   match other with
   | .set o => withPeer o (setDiffUpdateSets P o id)
+  | .sub o _ => withPeer o (setDiffUpdateSets P o id)
   | _ =>
     let it := other.toReIter
     it.getIter
@@ -435,6 +461,7 @@ def setDifference (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
   let so ← M.get
   let otherSize : Option Nat := match other with
     | .set o => some o.used
+    | .sub o _ => some o.used
     | .dict d => some d.size
     | _ => none
   match otherSize with
@@ -453,6 +480,7 @@ def setDifference (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
             return false) (setLoopFuel s so.ident) 0)
         return r.2
       | .set o => withPeer o (setDifferenceSets P o id)
+      | .sub o _ => withPeer o (setDifferenceSets P o id)
       | _ => setCopyAndDifference P other id
 
 /-- `set_difference_multi_impl` (:2158-2190). -/
@@ -495,6 +523,11 @@ def setSymmetricDifferenceUpdate (other : SetArg K) (id : Nat) : SM K Unit := do
       M.put (setClearInternal so)
     else
       withPeer o (symDiffSet P o.ident)
+  | .sub o _ =>
+    if o.ident == so.ident then
+      M.put (setClearInternal so)
+    else
+      withPeer o (symDiffSet P o.ident)
   | .dict d => forWalk (symDiffStep P) d.walk
   | _ =>
     let x ← onResult (newBasetype so.toSetBody id) (setUpdate P other)
@@ -523,6 +556,7 @@ def setIssubset (other : SetArg K) (id : Nat) : SM K Bool := do
   let so ← M.get
   match other with
   | .set o => withPeer o (setSubsetSets P o)
+  | .sub o _ => withPeer o (setSubsetSets P o)
   | _ =>
     let tmp ← setIntersection P other id
     let so' ← M.get
@@ -533,6 +567,7 @@ def setIssuperset (other : SetArg K) (id : Nat) : SM K Bool := do
   let so ← M.get
   match other with
   | .set o => withPeer o (onSet o.ident (setIssubset P (.set so) id))
+  | .sub o _ => withPeer o (onSet o.ident (setIssubset P (.set so) id))
   | _ =>
     let it := other.toReIter
     it.getIter
@@ -563,35 +598,64 @@ def setRichcompare (w : SetObj K) (op : CmpOp) (id : Nat) : SM K Bool := do
   | .lt => if v.used ≥ w.used then return false else setIssubset P (.set w) id
   | .gt => if v.used ≤ w.used then return false else setIssuperset P (.set w) id
 
-/-- Retry with the frozenset hash when `key` is a `set`: `setHash key` is
-`PySet_Check(key) ? some (frozenset_hash_impl(key)) : none`. -/
-def retryAsFrozen {α : Type} (setHash : K → Option Int) (key : K) (first : SM K α)
+/-- `frozenset_hash_impl(key)` for a key that `PySet_Check` says is a set: `keySet key s` is that
+set's body as it stands in state `s`, or `none` when the key is not a set. The body comes from the
+state, so whatever `__hash__` did to the key itself is seen. -/
+def keySetHash (keySet : K → SetObj K → Option (SetBody K)) (key : K) (s : SetObj K) : Option Int :=
+  (keySet key s).map fun b => frozensetHashImpl ({ toSetBody := b } : SetObj K)
+
+/-- `!PySet_Check(key) || !PyErr_ExceptionMatches(PyExc_TypeError)` (:2551, :2611, :2649, :2689):
+the retry is for a `set` key and an exception that is `TypeError` or a subclass of it. -/
+def retryHash (keySet : K → SetObj K → Option (SetBody K)) (key : K) (e : PyExc) (s : SetObj K) :
+    Option Int :=
+  if P.isTypeError e then keySetHash keySet key s else none
+
+/-- `set_remove_impl` (:2646-2657) and `set_discard_impl` (:2686-2697): when `set_discard_key`
+fails for a `set` key with a `TypeError` (or a subclass), the error is cleared and the key is looked
+up again by the hash of the equal frozenset. The failure may come from `__hash__` (already through
+`set_unhashable_type`) or from `__eq__` during the lookup. -/
+def retryAsFrozen {α : Type} (keySet : K → SetObj K → Option (SetBody K)) (key : K) (first : SM K α)
     (retry : Int → SM K α) : SM K α :=
-  M.tryCatch first fun e =>
-    match setHash key, e with
-    | some h, .typeError _ => retry h
-    | _, _ => M.throw e
+  M.tryCatch first fun e s =>
+    match retryHash P keySet key e s with
+    | some h => retry h s
+    | none => (.error e, s)
 
 /-- The opening of `_PySet_Contains` (:2549-2562) and `frozenset___contains___impl` (:2609-2619):
-only a failed hash of a `set` is retried, with the hash of the equal frozenset, so unlike 3.14 a
-`TypeError` from `__eq__` is not. -/
-def containsHash (setHash : K → Option Int) (key : K) : Py Int :=
-  match P.hash key with
-  | .ok h => .ok h
-  | .error e =>
-    match setHash key, e with
-    | some h, .typeError _ => .ok h
-    | _, _ => .error (setUnhashableType P key e)
+`_PyObject_HashFast(key)`, whose `__hash__` may change the state; a failure is retried with
+`frozenset_hash_impl(key)` only for a `set` key and a `TypeError` or subclass
+(`PyErr_ExceptionMatches`), and otherwise goes through `set_unhashable_type`, whose own test is the
+exact type. A `TypeError` from `__eq__` comes later and is not retried. -/
+def containsHash (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Int := fun s =>
+  match P.hashM key s with
+  | (.ok h, s') => (.ok h, s')
+  | (.error e, s') =>
+    match retryHash P keySet key e s' with
+    | some h => (.ok h, s')
+    | none => (.error (setUnhashableType P key e), s')
 
-/-- `_PySet_Contains` (:2544-2563), `set_contains`, `set.__contains__` (:2584-2593). -/
-def setContains (setHash : K → Option Int) (key : K) : SM K Bool := do
-  let hash ← M.lift (containsHash P setHash key)
+/-- `_PySet_Contains` (:2544-2564): the hash, then `set_contains_entry`. -/
+def setContains (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Bool := do
+  let hash ← containsHash P keySet key
   setContainsEntry P key hash
 
-/-- `frozenset.__contains__` (:2606-2626): `set_compare_frozenset` on any `frozenset`, a subclass
-too, where `in` takes `set_lookkey` and so tests `PyFrozenSet_CheckExact`. -/
-def frozensetContains (setHash : K → Option Int) (key : K) : SM K Bool := do
-  let hash ← M.lift (containsHash P setHash key)
+/-- `set_contains` (:2566-2571), the `sq_contains` slot that `key in so` calls through
+`PySequence_Contains`: the `int` `_PySet_Contains` gives, `-1` for an exception. -/
+def setSqContains (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Int := fun s =>
+  match setContains P keySet key s with
+  | (.ok b, s') => (.ok (if b then 1 else 0), s')
+  | (.error e, s') => (.error e, s')
+
+/-- `set___contains___impl` (:2584-2593), `set.__contains__(so, key)`: `NULL` when `result < 0`,
+else `PyBool_FromLong(result)`. -/
+def setDunderContains (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Bool := fun s =>
+  match setSqContains P keySet key s with
+  | (.ok r, s') => (.ok (r != 0), s')
+  | (.error e, s') => (.error e, s')
+
+/-- The tail of `frozenset___contains___impl` (:2620-2625): `set_do_lookup(so, so->table, so->mask,
+key, hash, &entry, set_compare_frozenset)`, then `PyBool_FromLong(status)`. -/
+def frozenLookup (key : K) (hash : Int) : SM K Bool := do
   let so ← M.get
   let u := toU64 hash
   match ← lookOuter P true key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u with
@@ -602,14 +666,25 @@ def frozensetContains (setHash : K → Option Int) (key : K) : SM K Bool := do
     | .null => return false
     | _ => return true
 
+/-- `frozenset.__contains__` (`frozenset___contains___impl`, :2606-2626): the same hash and retry as
+`_PySet_Contains`, then one `set_do_lookup` with `set_compare_frozenset` on any frozenset, a subclass
+too, where `in` takes `set_lookkey` and so tests `PyFrozenSet_CheckExact`. The answer is read from
+the slot where the walk stopped, which is `status` (:2621-2625): `set_compare_frozenset` ends a
+block only at a NULL or at an entry it found, and nothing can change a frozenset's table in
+between. -/
+def frozensetContains (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Bool := do
+  let hash ← containsHash P keySet key
+  frozenLookup P key hash
+
+
 /-- `set_remove_impl` (:2640-2665). -/
-def setRemove (setHash : K → Option Int) (key : K) : SM K Unit := do
-  let rv ← retryAsFrozen setHash key (setDiscardKey P key) (setDiscardEntry P key)
+def setRemove (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Unit := do
+  let rv ← retryAsFrozen P keySet key (setDiscardKey P key) (setDiscardEntry P key)
   if !rv then M.throw (keyErr P key)
 
 /-- `set_discard_impl` (:2680-2700). -/
-def setDiscard (setHash : K → Option Int) (key : K) : SM K Unit := do
-  let _ ← retryAsFrozen setHash key (setDiscardKey P key) (setDiscardEntry P key)
+def setDiscard (keySet : K → SetObj K → Option (SetBody K)) (key : K) : SM K Unit := do
+  let _ ← retryAsFrozen P keySet key (setDiscardKey P key) (setDiscardEntry P key)
 
 /-- `PyErr_BadInternalCall()`. -/
 def setBadInternalCall : PyExc := systemError "~bad argument to internal function"

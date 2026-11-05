@@ -204,8 +204,9 @@ def dictviewsXor (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
 def argContains (a : ViewArg K V) (x : K) : Py Bool :=
   match a with
   | .view v => viewContains E v x
-  | .set s => (setContains E.S (fun _ => none) x s).1
-  | .other (.set s) => (setContains E.S (fun _ => none) x s).1
+  | .set s => (setContains E.S (fun _ _ => none) x s).1
+  | .other (.set s) => (setContains E.S (fun _ _ => none) x s).1
+  | .other (.sub s _) => (setContains E.S (fun _ _ => none) x s).1
   | .other (.dict d) =>
     match E.S.hash x with
     | .error e => .error e
@@ -232,6 +233,7 @@ def argLen : ViewArg K V → Nat
   | .view v => dictviewLen v
   | .set s => s.used
   | .other (.set s) => s.used
+  | .other (.sub s _) => s.used
   | .other (.dict d) => d.size
   | .other (.iter it) => it.items.length
   | .other (.live _) => 0
@@ -261,7 +263,7 @@ def dictviewsIsdisjoint (self : View K V) (other : ViewArg K V) (sameObject : Bo
   else
     let s : ViewArg K V := .view self
     let swap : Bool := match other with
-      | .view _ | .set _ | .other (.set _) => decide (argLen other > dictviewLen self)
+      | .view _ | .set _ | .other (.set _) | .other (.sub _ _) => decide (argLen other > dictviewLen self)
       | _ => false
     let (a, b) : ViewArg K V × ViewArg K V := if swap then (other, s) else (s, other)
     let it := (b.toSetArg E).toIterable
