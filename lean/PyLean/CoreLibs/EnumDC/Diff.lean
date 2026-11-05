@@ -175,7 +175,7 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
     let a ← decAtom (← op.getArrVal? 1)
     let more ← (← (← op.getArrVal? 2).getArr?).toList.mapM decAtom
     let miss ← decMissing c (← op.getArrVal? 3)
-    match enumCallG evOps c none a more none miss with
+    match enumCallG evOps c none a more {} miss with
     | .ok (.member n) => pure (okJ (nameJ n))
     | .ok (.create _ _ _) => pure (okJ "functional")
     | .error e => pure (unitJ (.error e))
@@ -222,8 +222,7 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
       | "unique" => pure Check.unique
       | "continuous" => pure Check.continuous
       | _ => pure Check.named
-    let vals := c.memberNames.filterMap c.valueOf
-    pure (unitJ (verifyCallG evOps id c vals memberName (.ok "C") (.enum (c.kind == .flag)) checks))
+    pure (unitJ (verifyCallG evOps id c.toG memberName (.ok "C") (.enum (c.kind == .flag)) checks))
   | _ => throw "class op"
 
 def runClass (j : Json) : Except String Json := do
@@ -599,6 +598,7 @@ def runEhVerify (j : Json) : Except String Json := do
   let checks ← (← getArr j "checks").mapM fun k => do
     match ← k.getStr? with
     | "unique" => pure Check.unique
+    | "named" => pure Check.named
     | _ => pure Check.continuous
   match bodyDict "C".toList kind body with
   | .error e => pure (unitJ (.error e))
@@ -612,7 +612,7 @@ def runEhVerify (j : Json) : Except String Json := do
         | "int" => (.ok "int", .cls)
         | "notcls_name" => (.ok "len", .notCls)
         | _ => (.error (.named "AttributeError" "'int' object has no attribute '__name__'"), .notCls)
-      pure (unitJ (verifyCallG evOps order c vals id name target checks))
+      pure (unitJ (verifyCallG evOps order c.toG id name target checks))
 
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
@@ -738,7 +738,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let v ← decDV 8 (← field j "v")
     let f := if (← getStr j "fact") == "tuple" then TupFact.tuple else .list
     pure (encPy encDV (astupleV f v))
-  | "ec_verify_other" => pure (unitJ (verifyCallG evOps id ({} : EClass) [] id (.ok "int") .cls [.unique]))
+  | "ec_verify_other" => pure (unitJ (verifyCallG evOps id ({} : EClassG EV) id (.ok "int") .cls [.unique]))
   | "eh_class" => runEhClass j
   | "eh_flag_in" => do
     let keys ← decKeys j
@@ -754,6 +754,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       match k with
       | "str" => pure (SArg.str (α := PV) (← v.getStr?))
       | "bytes" => pure (.bytes (← (← v.getArr?).toList.mapM (·.getNat?)))
+      | "bytearray" | "memoryview" => pure (.buffer (← (← v.getArr?).toList.mapM (·.getNat?)))
       | _ => pure (.other (.int (← v.getInt?)))
     pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec args))
   | "eh_flag_gen" => do
@@ -794,11 +795,17 @@ def run (fn : String) (j : Json) : Except String Json := do
       | .ok c =>
         let value ← decAtom (← field j "value")
         let more ← (← getArr j "more").mapM decAtom
-        let type : Option Nat := if ← getBool j "type" then some 0 else none
+        let kw : CallKw := { type := if ← getBool j "type" then some 0 else none,
+                             start := ← decAtom (← field j "start"),
+                             boundary := (← getOptStrJ (← field j "boundary")).map (fun s => if s == "strict" then 0 else 1),
+                             module := ← getOptStrJ (← field j "module"),
+                             qualname := ← getOptStrJ (← field j "qualname") }
         pure (encPy (fun (r : CallOut) => match r with
           | .member n => toJson [toJson "member", nameJ n]
-          | .create cn names t => toJson [toJson "create", encAtom cn, names.elim Json.null encAtom, toJson t.isSome])
-          (enumCallG evOps c none value more type .none))
+          | .create cn names k => toJson [toJson "create", encAtom cn, names.elim Json.null encAtom, toJson k.type.isSome,
+              encAtom k.start, toJson (k.boundary.map (fun b => if b == 0 then "strict" else "keep")), toJson k.module,
+              toJson k.qualname])
+          (enumCallG evOps c none value more kw .none))
   | _ => throw s!"unknown fn enumdc.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

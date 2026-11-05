@@ -40,8 +40,15 @@ structure Ops (α : Type) where
   bitLength : α → Py Nat
   /-- `type(a).__qualname__`, for messages. -/
   typeName : α → String
+  /-- `bool(a)`. -/
+  truth : α → Py Bool
+  /-- The base of each exception class of the program, builtin or its own, for `except`. -/
+  excParent : String → Option String
 
 variable {α β : Type}
+
+/-- `isinstance(e, cls)`: what `except cls:` catches, subclasses included. -/
+def Ops.isInst (o : Ops α) (e : PyExc) (cls : String) : Bool := excIs o.excParent e cls
 
 /-- `PyObject_RichCompareBool(a, b, Py_EQ)`, Objects/object.c: `True` for the same object, else `a == b`. -/
 def Ops.req (o : Ops α) (a b : α) : Py Bool := if o.same a b then .ok true else o.eq a b
@@ -207,18 +214,18 @@ def EClassG.firstEqual (o : Ops α) (c : EClassG α) (v : α) : List (Name × Na
       | .ok false => c.firstEqual o v r
 
 /-- The alias search, Lib/enum.py:283-296. `some m` is the member with this value; `none` is the `KeyError` of :295,
-or a `KeyError` from `__hash__` or `__eq__`, all caught at :296. A `TypeError` from the fast lookup goes to the linear
+or a `KeyError` (or an instance of a subclass) from `__hash__` or `__eq__`, all caught at :296. A `TypeError` from the fast lookup goes to the linear
 search; a `TypeError` raised there, inside the handler, goes out. -/
 def EClassG.aliasOf (o : Ops α) (c : EClassG α) (v : α) : Py (Option Name) :=
   let linear : Py (Option Name) :=
     match c.firstEqual o v c.memberMap with
-    | .error e => if e.className == "KeyError" then .ok none else .error e
+    | .error e => if o.isInst e "KeyError" then .ok none else .error e
     | .ok r => .ok r
   match o.dictGet c.value2member v with
   | .ok r => .ok r
   | .error e =>
-    if e.className == "TypeError" then linear
-    else if e.className == "KeyError" then .ok none
+    if o.isInst e "TypeError" then linear
+    else if o.isInst e "KeyError" then .ok none
     else .error e
 
 /-- The value tables, Lib/enum.py:313-325: `setdefault`, then `value not in _hashable_values_`; a `TypeError` from
@@ -227,11 +234,11 @@ def EClassG.noteValue (o : Ops α) (c : EClassG α) (name member : Name) (v : α
   let unh (c' : EClassG α) : EClassG α :=
     { c' with unhashableValues := c'.unhashableValues ++ [v], unhashableMap := appendToG c'.unhashableMap name v }
   match o.setDefault c.value2member v member with
-  | .error e => if e.className == "TypeError" then .ok (unh c) else .error e
+  | .error e => if o.isInst e "TypeError" then .ok (unh c) else .error e
   | .ok (d, _) =>
     let c1 := { c with value2member := d }
     match o.listIn v c.hashableValues with
-    | .error e => if e.className == "TypeError" then .ok (unh c1) else .error e
+    | .error e => if o.isInst e "TypeError" then .ok (unh c1) else .error e
     | .ok true => .ok c1
     | .ok false => .ok { c1 with hashableValues := c.hashableValues ++ [v] }
 
@@ -329,8 +336,8 @@ def EClassG.enumNew (o : Ops α) (c : EClassG α) (self : Option Name) (v : α) 
     | .ok (some n) => .ok n
     | .ok none => c.afterSearch inProgress miss
     | .error e =>
-      if e.className == "KeyError" then c.afterSearch inProgress miss
-      else if e.className == "TypeError" then
+      if o.isInst e "KeyError" then c.afterSearch inProgress miss
+      else if o.isInst e "TypeError" then
         match c.longSearch o v with
         | .error e' => .error e'
         | .ok (some n) => .ok n
@@ -356,7 +363,7 @@ def EClassG.bindValue (o : Ops α) (c : EClassG α) (memberName : Name → Name)
     Py (EClassG α) :=
   match o.setDefault c.value2member v self with
   | .error e =>
-    if e.className == "TypeError" then
+    if o.isInst e "TypeError" then
       .ok { c with unhashableValues := c.unhashableValues ++ [v],
                    unhashableMap := appendToG c.unhashableMap (memberName self) v }
     else .error e
@@ -371,7 +378,7 @@ def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → N
   | .ok (some m) => if m != self then .error (.valueError "~is already bound") else .ok c
   | .ok none => c.bindValue o memberName self v
   | .error e =>
-    if e.className == "TypeError" then
+    if o.isInst e "TypeError" then
       match c.firstMemberEq o v c.memberMap with
       | .error e' => .error e'
       | .ok (some m) => if m != self then .error e else .ok c
@@ -404,7 +411,7 @@ def containsG (o : Ops α) (isMember : Bool) (flag : Option FlagCls) (unh hashab
       match c.missingOf o v with
       | .ok (.flag _ _) => .ok true
       | .ok (.plain _) => .ok false
-      | .error e => if e.className == "ValueError" then inLists o unh hashable v else .error e
+      | .error e => if o.isInst e "ValueError" then inLists o unh hashable v else .error e
 
 /-- `value in F` for a `Flag` class: its `_hashable_values_` are the `int` values of its members, and its
 `_unhashable_values_` is empty. -/
@@ -510,23 +517,88 @@ def verifyContinuousG (o : Ops α) (order : List α → List α) (flag : Bool) (
               | .ok [] => .ok ()
               | .ok m => .error (.valueError (continuousMsg flag clsName m))
 
-def verifyOneG (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (memberName : Name → Name)
+/-- `[e.value for e in enumeration]`: the values of the members of `_member_names_`. -/
+def EClassG.memberValues (c : EClassG α) : List α := c.memberNames.filterMap (fun n => c.values.lookup n)
+
+/-- The `UNIQUE` check, Lib/enum.py:1978-1988: `name != member.name` for an entry of `__members__`. -/
+def EClassG.verifyUnique (c : EClassG α) (memberName : Name → Name) : Py Unit :=
+  if c.memberMap.any (fun p => p.1 != memberName p.2) then .error (.valueError "~aliases found in") else .ok ()
+
+/-- `list(_iter_bits_lsb(value))`, :2025, for a value that `value < 0` let through: an `int` gives its bits, :122-125; for
+anything else `while num:` takes its truth value, and a true one meets `~num` at :123, the `TypeError` of a type without
+`__invert__`. -/
+def Ops.bitsOfValue (o : Ops α) (v : α) : Py (List Nat) :=
+  match o.asInt v with
+  | some n => .ok (bitsOf n.toNat)
+  | none =>
+    match o.truth v with
+    | .error e => .error e
+    | .ok false => .ok []
+    | .ok true => .error (.typeError s!"bad operand type for unary ~: '{o.typeName v}'")
+
+/-- `[v for v in values if v not in member_values]`, :2026, each `int` compared with the member values by `==`. -/
+def Ops.notIn (o : Ops α) (mvals : List α) : List Nat → Py (List Nat)
+  | [] => .ok []
+  | b :: r =>
+    match o.listIn (o.ofInt (b : Int)) mvals with
+    | .error e => .error e
+    | .ok true => o.notIn mvals r
+    | .ok false =>
+      match o.notIn mvals r with
+      | .error e => .error e
+      | .ok l => .ok (b :: l)
+
+/-- One entry of `_member_map_` in `NAMED_FLAGS`, :2018-2026: a name of `_member_names_` is skipped, then
+`alias.value < 0` (which can raise), then the bits of the value that no member value equals. -/
+def EClassG.missedBits (o : Ops α) (c : EClassG α) (p : Name × Name) : Py (List Nat) :=
+  if c.memberNames.contains p.1 then .ok []
+  else
+    match c.values.lookup p.2 with
+    | none => .ok []
+    | some v =>
+      match o.lt v (o.ofInt 0) with
+      | .error e => .error e
+      | .ok true => .ok []
+      | .ok false =>
+        match o.bitsOfValue v with
+        | .error e => .error e
+        | .ok bs => o.notIn c.memberValues bs
+
+/-- The loop of :2018-2030 over `_member_map_`, in order: whether an entry missed a bit. -/
+def EClassG.namedLoop (o : Ops α) (c : EClassG α) : List (Name × Name) → Py Bool
+  | [] => .ok false
+  | p :: r =>
+    match c.missedBits o p with
+    | .error e => .error e
+    | .ok bs =>
+      match c.namedLoop o r with
+      | .error e => .error e
+      | .ok b => .ok (!bs.isEmpty || b)
+
+/-- The `NAMED_FLAGS` check, Lib/enum.py:2012-2045. -/
+def EClassG.verifyNamed (o : Ops α) (c : EClassG α) : Py Unit :=
+  match c.namedLoop o c.memberMap with
+  | .error e => .error e
+  | .ok true => .error (.valueError "~invalid Flag")
+  | .ok false => .ok ()
+
+def verifyOneG (o : Ops α) (order : List α → List α) (c : EClassG α) (memberName : Name → Name)
     (flag : Bool) (clsName : String) : Check → Py Unit
   | .unique => c.verifyUnique memberName
-  | .continuous => verifyContinuousG o order flag clsName vals
-  | .named => c.verifyNamed
+  | .continuous => verifyContinuousG o order flag clsName c.memberValues
+  | .named => c.verifyNamed o
 
-def verifyAllG (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (memberName : Name → Name)
+def verifyAllG (o : Ops α) (order : List α → List α) (c : EClassG α) (memberName : Name → Name)
     (flag : Bool) (clsName : String) : List Check → Py Unit
   | [] => .ok ()
   | k :: r =>
-    match verifyOneG o order c vals memberName flag clsName k with
+    match verifyOneG o order c memberName flag clsName k with
     | .error e => .error e
-    | .ok () => verifyAllG o order c vals memberName flag clsName r
+    | .ok () => verifyAllG o order c memberName flag clsName r
 
 /-- `verify.__call__`, Lib/enum.py:1968-2046: `enumeration.__name__` is read first, :1970, then `issubclass`, which
 raises for what is not a class, then the checks in order. -/
-def verifyCallG (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (memberName : Name → Name)
+def verifyCallG (o : Ops α) (order : List α → List α) (c : EClassG α) (memberName : Name → Name)
     (name : Py String) (target : VTarget) (checks : List Check) : Py Unit :=
   match name with
   | .error e => .error e
@@ -534,7 +606,7 @@ def verifyCallG (o : Ops α) (order : List α → List α) (c : EClass) (vals : 
     match target with
     | .notCls => .error (.typeError "issubclass() arg 1 must be a class")
     | .cls => .error (.typeError "the 'verify' decorator only works with Enum and Flag")
-    | .enum flag => verifyAllG o order c vals memberName flag clsName checks
+    | .enum flag => verifyAllG o order c memberName flag clsName checks
 
 /-! ### `Flag._generate_next_value_`, Lib/enum.py:1437-1453 -/
 
@@ -646,26 +718,36 @@ def iterBitsLsb (a : BitsArg) : Py (List Nat) :=
 
 /-! ### `EnumType.__call__`, Lib/enum.py:701-748 -/
 
+/-- The keywords of `EnumType.__call__`, :701: `type`, `start`, `boundary`, `module`, `qualname`, as objects (`none` for
+`None`). -/
+structure CallKw where
+  type : Option Nat := none
+  start : Atom := .int 1
+  boundary : Option Nat := none
+  module : Option String := none
+  qualname : Option String := none
+  deriving Repr, DecidableEq, Inhabited
+
 /-- What `EnumType.__call__` does when it does not raise. -/
 inductive CallOut where
   /-- The member that `Enum.__new__` found. -/
   | member (n : Name)
-  /-- `cls._create_(class_name=value, names=..., type=..., ...)`, :740-748: the functional API, with `names` `None` when
-  not given; the further positional values are dropped. -/
-  | create (className : Atom) (names : Option Atom) (type : Option Nat)
+  /-- `cls._create_(class_name=value, names=..., module=, qualname=, type=, start=, boundary=)`, :740-748: the functional
+  API, with `names` `None` when not given, every keyword passed on, and the further positional values dropped. -/
+  | create (className : Atom) (names : Option Atom) (kw : CallKw)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `EnumType.__call__`, Lib/enum.py:701-748. `more` are the positional arguments after `value`, `names` first, and
-`type` is the `type` keyword (`none` for `None`). A class with members looks up `value`, or the tuple
-`(value, names) + values`; one without raises only when neither `names` nor `type` is given, :735. -/
-def enumCallG (o : Ops EV) (c : EClass) (self : Option Name) (value : Atom) (more : List Atom) (type : Option Nat)
+`kw` the keywords. A class with members looks up `value`, or the tuple `(value, names) + values`, whatever the keywords;
+one without raises only when neither `names` nor `type` is given, :735. -/
+def enumCallG (o : Ops EV) (c : EClass) (self : Option Name) (value : Atom) (more : List Atom) (kw : CallKw)
     (miss : MissingRet) : Py CallOut :=
   if !c.memberMap.isEmpty then
     match c.toG.enumNew o self (if more.isEmpty then .atom value else .tup (value :: more)) false miss with
     | .error e => .error e
     | .ok n => .ok (.member n)
-  else if more.isEmpty && type.isNone then .error (.typeError "~has no members; specify `names=()`")
-  else .ok (.create value more.head? type)
+  else if more.isEmpty && kw.type.isNone then .error (.typeError "~has no members; specify `names=()`")
+  else .ok (.create value more.head? kw)
 
 /-! ### Instances: the `EV` values, and the difftest's `PV` values -/
 
@@ -715,6 +797,11 @@ def evOps : Ops EV where
     | .atom (.int n) => .ok (intBitLength n)
     | v => .error (.named "AttributeError" s!"'{v.typeName}' object has no attribute 'bit_length'")
   typeName := EV.typeName
+  truth
+    | .atom (.int n) => .ok (n != 0)
+    | .atom (.str s) => .ok (s != "")
+    | _ => .ok true
+  excParent := builtinParent
 
 /-- A value of the difftest's fallible cases. -/
 inductive PV where
@@ -745,6 +832,7 @@ def intHash (n : Int) : Int :=
 def pvExc (cls msg : String) : PyExc :=
   match cls with
   | "KeyError" => .keyError s!"'{msg}'"
+  | "KSub" => .named "KSub" s!"'{msg}'"
   | "TypeError" => .typeError msg
   | "ValueError" => .valueError msg
   | c => .named c msg
@@ -824,5 +912,13 @@ def pvOps : Ops PV where
     | .int n => .ok (intBitLength n)
     | v => .error (.named "AttributeError" s!"'{v.typeName}' object has no attribute 'bit_length'")
   typeName := PV.typeName
+  truth
+    | .int n => .ok (n != 0)
+    | .str s => .ok (s != "")
+    | _ => .ok true
+  excParent
+    | "KSub" => some "KeyError"
+    | "TSub" => some "TypeError"
+    | c => builtinParent c
 
 end PyLean.CoreLibs.EnumDC

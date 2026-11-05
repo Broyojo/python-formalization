@@ -303,6 +303,27 @@ def EnumDict.unpackKeys (d : EnumDict) : List Name → Py EnumDict
     | .ok d' => d'.unpackKeys r
   | _ :: _ => .error (.valueError "~values to unpack")
 
+/-- The base of a builtin exception class, for the classes the model raises. -/
+def builtinParent : String → Option String
+  | "KeyError" | "IndexError" => some "LookupError"
+  | "UnicodeDecodeError" => some "UnicodeError"
+  | "UnicodeError" => some "ValueError"
+  | "OverflowError" | "ZeroDivisionError" => some "ArithmeticError"
+  | "LookupError" | "TypeError" | "ValueError" | "AttributeError" | "RuntimeError" | "NameError" | "ArithmeticError"
+  | "AssertionError" => some "Exception"
+  | "Exception" => some "BaseException"
+  | _ => none
+
+/-- `issubclass(c, cls)`, climbing `parent`, the bases of the program's exception classes. -/
+def subclassOf (parent : String → Option String) : Nat → String → String → Bool
+  | 0, _, _ => false
+  | f + 1, c, cls => c == cls || match parent c with
+    | some p => subclassOf parent f p cls
+    | none => false
+
+/-- `isinstance(e, cls)`, the test of `except cls:`, which catches subclasses too. -/
+def excIs (parent : String → Option String) (e : PyExc) (cls : String) : Bool := subclassOf parent 32 e.className cls
+
 /-- `EnumDict.update`, Lib/enum.py:449-457: the `except AttributeError` covers the loop over `keys()` too, so an
 `AttributeError` from `__setitem__` restarts the loop on the iteration of the mapping. -/
 def EnumDict.update (d : EnumDict) (members : UpdateArg) (more : List (Name × EV)) : Py EnumDict :=
@@ -311,7 +332,8 @@ def EnumDict.update (d : EnumDict) (members : UpdateArg) (more : List (Name × E
     | .mapping items =>
       match d.setAll items with
       | (d', none) => .ok d'
-      | (d', some e) => if e.className == "AttributeError" then d'.unpackKeys (items.map Prod.fst) else .error e
+      | (d', some e) =>
+        if excIs builtinParent e "AttributeError" then d'.unpackKeys (items.map Prod.fst) else .error e
     | .pairs ps =>
       match d.setAll ps with
       | (d', none) => .ok d'
@@ -372,13 +394,15 @@ def EClass.aliasOf (c : EClass) (v : EV) : Option Name :=
 inductive SArg (α : Type) where
   | str (s : String)
   | bytes (b : List Nat)
+  /-- Any other object with the buffer protocol, such as a `bytearray` or a `memoryview`. -/
+  | buffer (b : List Nat)
   | other (x : α)
   deriving Repr, DecidableEq
 
 /-- `bytes.decode(encoding, errors)`: the codec lookup and the decoder. -/
 abbrev Codec := List Nat → String → String → Py String
 
-/-- `str(b, encoding, errors)` for a `bytes`, Objects/unicodeobject.c:3480-3489: an empty `bytes` is `''` before
+/-- `str(b, encoding, errors)` for a `bytes`, Objects/unicodeobject.c:3480-3489, or another buffer, :3498-3515: an empty one is `''` before
 any codec lookup (in a release build without `-X dev`, :532-536), anything else goes to the codec. -/
 def strDecode (codec : Codec) (bs : List Nat) (enc errors : String) : Py String :=
   if bs = [] then .ok "" else codec bs enc errors
@@ -408,6 +432,7 @@ def strEnumNewG (codec : Codec) {α : Type} (values : List (SArg α)) : Py Strin
         | .ok er =>
           match a with
           | .bytes bs => strDecode codec bs enc er
+          | .buffer bs => strDecode codec bs enc er
           | .str _ => .error (.typeError "decoding str is not supported")
           | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
       | _ => .error (.typeError "~encoding must be a string")

@@ -52,31 +52,33 @@ theorem inLists_eq (o : Ops α) (h : List α) (v : α) : ∀ unh, inLists o unh 
       | true => rfl
       | false => simpa using ih
 
+/-! ### `except` -/
+
+theorem isInst_own (o : Ops α) (e : PyExc) : o.isInst e e.className = true := by
+  show subclassOf o.excParent (31 + 1) e.className e.className = true
+  simp [subclassOf]
+
+theorem isInst_valueError (o : Ops α) (m : String) : o.isInst (.valueError m) "ValueError" = true :=
+  isInst_own o (.valueError m)
+
 /-! ### `StrEnum.__new__` -/
 
-/-- The sentence the earlier model proved, on the mirror that has `bytes`: a member takes one `str` or nothing, and any
-other argument list is a `TypeError`, as the docstring's "values must already be of type `str`" says. False:
-`A = b'x', 'ascii'` makes the member `'x'`, through `str(b'x', 'ascii')` at Lib/enum.py:1392. -/
-def StrEnumValues : Prop :=
-  ∀ (codec : Codec) (l : List (SArg PV)) (s : String),
-    strEnumNewG codec l = .ok s ↔ (l = [] ∧ s = "") ∨ l = [.str s]
-
-theorem strEnumValues_refuted : ¬StrEnumValues := by
-  intro h
-  have h1 : strEnumNewG pyCodec [SArg.bytes (α := PV) [120], .str "ascii"] = .ok "x" := by decide +kernel
-  rcases (h pyCodec _ _).1 h1 with ⟨h2, _⟩ | h2 <;> simp at h2
-
 /-- `StrEnum.__new__`, for every codec and every argument list: it succeeds exactly with no argument (`''`), one `str`
-(itself), or a `bytes` with a `str` encoding and optionally a `str` errors (`'strict'` when not given), which the codec
-decodes; every other exception is a `TypeError`, and the codec's are only raised for a `bytes` first argument. -/
+(itself), or a `bytes` or other buffer (`bytearray`, `memoryview`) with a `str` encoding and optionally a `str` errors
+(`'strict'` when not given), which the codec decodes; every other exception is a `TypeError`, and the codec's are only
+raised for a buffer first argument. So `A = b'x', 'ascii'` and `A = bytearray(b'x'), 'ascii'` both make the member `'x'`
+(:1392, Objects/unicodeobject.c:3480-3515), which the earlier sentence "one `str` or nothing" did not allow. -/
 def StrEnumNewRules : Prop :=
   ∀ (α : Type) (codec : Codec) (l : List (SArg α)) (s : String),
     (strEnumNewG codec l = .ok s ↔
       (l = [] ∧ s = "") ∨ l = [.str s] ∨
       (∃ b enc, l = [.bytes b, .str enc] ∧ strDecode codec b enc "strict" = .ok s) ∨
-      (∃ b enc er, l = [.bytes b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s)) ∧
+      (∃ b enc, l = [.buffer b, .str enc] ∧ strDecode codec b enc "strict" = .ok s) ∨
+      (∃ b enc er, l = [.bytes b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s) ∨
+      (∃ b enc er, l = [.buffer b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s)) ∧
     ∀ e, strEnumNewG codec l = .error e →
-      e.className = "TypeError" ∨ ∃ b enc er, l.head? = some (.bytes b) ∧ strDecode codec b enc er = .error e
+      e.className = "TypeError" ∨ ∃ b enc er, (l.head? = some (.bytes b) ∨ l.head? = some (.buffer b)) ∧
+        strDecode codec b enc er = .error e
 
 theorem strEnumNewRules_proven : StrEnumNewRules := by
   intro α codec l s
@@ -86,7 +88,7 @@ theorem strEnumNewRules_proven : StrEnumNewRules := by
       simp only [strEnumNewG, List.length_nil, Nat.not_lt_zero, ↓reduceIte, Except.ok.injEq, true_and]
       constructor
       · intro h; exact .inl h.symm
-      · rintro (h | h | ⟨_, _, h, _⟩ | ⟨_, _, _, h, _⟩)
+      · rintro (h | h | ⟨_, _, h, _⟩ | ⟨_, _, h, _⟩ | ⟨_, _, _, h, _⟩ | ⟨_, _, _, h, _⟩)
         · exact h.symm
         all_goals cases h
     | [a] => cases a <;> simp [strEnumNewG]
@@ -104,45 +106,47 @@ theorem strEnumNewRules_proven : StrEnumNewRules := by
     | [a], h => cases a <;> simp [strEnumNewG] at h <;> (subst h; left; rfl)
     | [a, b], h =>
       cases a <;> cases b <;> simp [strEnumNewG] at h <;>
-        first | (subst h; left; rfl) | (right; exact ⟨_, _, _, rfl, h⟩)
+        first | (subst h; left; rfl) | (right; exact ⟨_, _, _, .inl rfl, h⟩) | (right; exact ⟨_, _, _, .inr rfl, h⟩)
     | [a, b, c], h =>
       cases a <;> cases b <;> cases c <;> simp [strEnumNewG] at h <;>
-        first | (subst h; left; rfl) | (right; exact ⟨_, _, _, rfl, h⟩)
+        first | (subst h; left; rfl) | (right; exact ⟨_, _, _, .inl rfl, h⟩) | (right; exact ⟨_, _, _, .inr rfl, h⟩)
     | _ :: _ :: _ :: _ :: _, h =>
       simp [strEnumNewG] at h
       subst h
       left; rfl
 
+/-- The previous statement, with `bytes` as the only decodable first argument. -/
+private def StrEnumBytesOnly : Prop :=
+  ∀ (codec : Codec) (l : List (SArg PV)) (s : String), strEnumNewG codec l = .ok s →
+    (l = [] ∧ s = "") ∨ l = [.str s] ∨ (∃ b enc, l = [.bytes b, .str enc]) ∨ (∃ b enc er, l = [.bytes b, .str enc, .str er])
+
+/-- False: `A = bytearray(b'x'), 'ascii'` makes the member `'x'`. -/
+private theorem strEnumBytesOnly_false : ¬StrEnumBytesOnly := by
+  intro h
+  have h1 : strEnumNewG pyCodec [SArg.buffer (α := PV) [120], .str "ascii"] = .ok "x" := by decide +kernel
+  rcases h pyCodec _ _ h1 with ⟨h2, _⟩ | h2 | ⟨_, _, h2⟩ | ⟨_, _, _, h2⟩ <;> simp at h2
+
 /-! ### `EnumType.__call__` -/
 
-/-- The sentence the earlier model proved: a class without members, called with no argument after `value`, raises
-`TypeError`. False: `Enum('X', type=int)` creates a class, since :735 tests `names is _not_given and type is None`. -/
-def EnumCallShape : Prop :=
-  ∀ (o : Ops EV) (c : EClass) (self : Option Name) (a : Atom) (type : Option Nat) (miss : MissingRet),
-    c.memberMap.isEmpty = true → (enumCallG o c self a [] type miss).raises "TypeError"
-
-theorem enumCallShape_refuted : ¬EnumCallShape := by
-  intro h
-  obtain ⟨e, he, _⟩ := h evOps {} none (.str "X") (some 0) .none rfl
-  simp [enumCallG] at he
-
 /-- `EnumType.__call__`: on a class with members, `Cls(a)` looks up `a` and `Cls(a, b, ...)` the tuple `(a, b, ...)`,
-the `type` keyword not mattering; on a class without, `names` or `type` go to `_create_` with `names` (or `None`), and
-with neither it is the `TypeError`. -/
+the keywords not mattering; on a class without, `names` or `type` go to `_create_` with `names` (or `None`) and every
+keyword, `start`, `boundary`, `module` and `qualname` as given, and with neither it is the `TypeError`. So
+`Enum('X', type=int)` goes to `_create_`, and `Enum('X', 'A B', start=5)` passes `start=5` on (its values are
+`[5, 6]`, by `_create_`). -/
 def EnumCallRules : Prop :=
-  ∀ (o : Ops EV) (c : EClass) (self : Option Name) (a b : Atom) (r : List Atom) (type : Option Nat) (t : Nat)
+  ∀ (o : Ops EV) (c : EClass) (self : Option Name) (a b : Atom) (r : List Atom) (kw : CallKw) (t : Nat)
     (miss : MissingRet),
     (c.memberMap.isEmpty = false →
-      enumCallG o c self a (b :: r) type miss = (c.toG.enumNew o self (.tup (a :: b :: r)) false miss).map .member ∧
-      enumCallG o c self a [] type miss = (c.toG.enumNew o self (.atom a) false miss).map .member) ∧
+      enumCallG o c self a (b :: r) kw miss = (c.toG.enumNew o self (.tup (a :: b :: r)) false miss).map .member ∧
+      enumCallG o c self a [] kw miss = (c.toG.enumNew o self (.atom a) false miss).map .member) ∧
     (c.memberMap.isEmpty = true →
-      enumCallG o c self a (b :: r) type miss = .ok (.create a (some b) type) ∧
-      enumCallG o c self a [] (some t) miss = .ok (.create a none (some t)) ∧
-      (enumCallG o c self a [] none miss).raises "TypeError")
+      enumCallG o c self a (b :: r) kw miss = .ok (.create a (some b) kw) ∧
+      (kw.type = some t → enumCallG o c self a [] kw miss = .ok (.create a none kw)) ∧
+      (kw.type = none → (enumCallG o c self a [] kw miss).raises "TypeError"))
 
 theorem enumCallRules_proven : EnumCallRules := by
-  intro o c self a b r type t miss
-  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, ?_, ?_⟩⟩
+  intro o c self a b r kw t miss
+  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, fun ht => ?_, fun ht => ?_⟩⟩
   · simp only [enumCallG, h, Bool.not_false, ↓reduceIte, List.isEmpty_cons, Bool.false_eq_true]
     generalize c.toG.enumNew o self _ false miss = x
     cases x <;> rfl
@@ -150,28 +154,17 @@ theorem enumCallRules_proven : EnumCallRules := by
     generalize c.toG.enumNew o self _ false miss = x
     cases x <;> rfl
   · simp [enumCallG, h]
-  · simp [enumCallG, h]
-  · exact ⟨_, by simp [enumCallG, h]; rfl, rfl⟩
+  · simp [enumCallG, h, ht]
+  · exact ⟨_, by simp [enumCallG, h, ht]; rfl, rfl⟩
 
 /-! ### `EnumType.__contains__` -/
 
-/-- The sentence the earlier model proved: a value that is not an `int` is not in a `Flag` class. False: after `_missing_`
-raises `ValueError`, :766-769 compare the value with each member value by `==`, so `1.0 in F` and `K(1) in F` are true
-for a class with `A = 1`. -/
-def FlagClassPaths : Prop :=
-  ∀ (α : Type) (o : Ops α) (c : FlagCls) (v : α), o.asInt v = none → c.containsOf o false v = .ok false
-
-theorem flagClassPaths_refuted : ¬FlagClassPaths := by
-  intro h
-  have h1 := h PV pvOps ⟨"F", [("A", 1)], .strict⟩ (.key 1 none none 0) rfl
-  revert h1
-  decide +kernel
-
 /-- `value in cls`, every path, for every value and every `==`: a member of the class is in it; for a `Flag` class an
-`int` is in it exactly when `_missing_` makes a member of it, is not when `EJECT` gives back an `int`, and with the
-`ValueError` of `_missing_` (an `int` out of range under `STRICT`, or anything that is not an `int`) the value is compared
-with each member value by `==`, the member value on the left. For any class, that comparison is true when some member
-value is the value itself or equal to it, false when no comparison is, and its exception goes out. -/
+`int` is in it exactly when `_missing_` makes a member of it, is not when `EJECT` gives back an `int`, and with a
+`ValueError` (or subclass) from `_missing_` (an `int` out of range under `STRICT`, or anything that is not an `int`) the
+value is compared with each member value by `==`, the member value on the left, so `1.0 in F` and `K(1) in F` are true
+for a class with `A = 1`. For any class, that comparison is true when some member value is the value itself or equal to
+it, false when no comparison is, and its exception goes out. -/
 def ContainsPaths : Prop :=
   ∀ (α : Type) (o : Ops α) (c : FlagCls) (unh hashable : List α) (v : α),
     containsG o true none unh hashable v = .ok true ∧
@@ -180,8 +173,9 @@ def ContainsPaths : Prop :=
     (∀ i, o.asInt v = some i →
       (∀ n m, c.missing i = .ok (.flag n m) → c.containsOf o false v = .ok true) ∧
       (∀ p, c.missing i = .ok (.plain p) → c.containsOf o false v = .ok false) ∧
-      (∀ e, c.missing i = .error e → e.className = "ValueError" →
-        c.containsOf o false v = o.listIn v (c.members.map fun p => o.ofInt (p.2 : Int)))) ∧
+      (∀ e, c.missing i = .error e → o.isInst e "ValueError" = true →
+        c.containsOf o false v = o.listIn v (c.members.map fun p => o.ofInt (p.2 : Int))) ∧
+      (∀ e, c.missing i = .error e → o.isInst e "ValueError" = false → c.containsOf o false v = .error e)) ∧
     (containsG o false none unh hashable v = .ok false ↔ ∀ y ∈ unh ++ hashable, o.req y v = .ok false) ∧
     (∀ (pre : List α) (y : α) (post : List α), unh ++ hashable = pre ++ y :: post →
       (∀ z ∈ pre, o.req z v = .ok false) →
@@ -191,15 +185,17 @@ theorem containsPaths_proven : ContainsPaths := by
   intro α o c unh hashable v
   refine ⟨rfl, rfl, ?_, ?_, ?_, ?_⟩
   · intro h
-    simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, inLists_eq, PyExc.className]
+    simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, inLists_eq, isInst_valueError]
   · intro i h
-    refine ⟨?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
     · intro n m hm
       simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, hm]
     · intro p hp
       simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, hp]
     · intro e he hc
       simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, he, hc, inLists_eq]
+    · intro e he hc
+      simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, he, hc]
   · simp only [containsG, Bool.false_eq_true, ↓reduceIte, inLists_eq]
     exact listIn_false_iff o v _
   · intro pre y post hl hpre hy
@@ -241,103 +237,76 @@ theorem missingOf_proven : MissingOf := by
 /-- The sentence the earlier model proved: `verify` raises `TypeError` on anything that is not an enumeration. False:
 `enumeration.__name__` is read at :1970, before the `issubclass` test, so `verify(UNIQUE)(42)` raises `AttributeError`. -/
 def VerifyCall : Prop :=
-  ∀ (α : Type) (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (f : Name → Name)
+  ∀ (α : Type) (o : Ops α) (order : List α → List α) (c : EClassG α) (f : Name → Name)
     (name : Py String) (target : VTarget) (checks : List Check),
-    (∀ flag, target ≠ .enum flag) → (verifyCallG o order c vals f name target checks).raises "TypeError"
+    (∀ flag, target ≠ .enum flag) → (verifyCallG o order c f name target checks).raises "TypeError"
 
 theorem verifyCall_refuted : ¬VerifyCall := by
   intro h
-  obtain ⟨e, he, hc⟩ := h EV evOps id {} [] id (.error (.named "AttributeError" "'int' object has no attribute '__name__'"))
+  obtain ⟨e, he, hc⟩ := h EV evOps id {} id (.error (.named "AttributeError" "'int' object has no attribute '__name__'"))
     .notCls [.unique] (by intro flag hf; cases hf)
   simp only [verifyCallG, Except.error.injEq] at he
   subst he
   simp [PyExc.className] at hc
 
-private theorem verifyAll_ok (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (f : Name → Name)
+private theorem verifyAll_ok (o : Ops α) (order : List α → List α) (c : EClassG α) (f : Name → Name)
     (flag : Bool) (s : String) : ∀ checks : List Check,
-    verifyAllG o order c vals f flag s checks = .ok () ↔ ∀ k ∈ checks, verifyOneG o order c vals f flag s k = .ok ()
+    verifyAllG o order c f flag s checks = .ok () ↔ ∀ k ∈ checks, verifyOneG o order c f flag s k = .ok ()
   | [] => by simp [verifyAllG]
   | k :: r => by
     simp only [verifyAllG, List.mem_cons, forall_eq_or_imp]
-    cases h : verifyOneG o order c vals f flag s k with
+    cases h : verifyOneG o order c f flag s k with
     | error e => simp
-    | ok u => simpa using verifyAll_ok o order c vals f flag s r
+    | ok u => simpa using verifyAll_ok o order c f flag s r
 
-private theorem verifyAll_first (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (f : Name → Name)
+private theorem verifyAll_first (o : Ops α) (order : List α → List α) (c : EClassG α) (f : Name → Name)
     (flag : Bool) (s : String) (e : PyExc) : ∀ (pre : List Check) (k : Check) (post : List Check),
-    (∀ k' ∈ pre, verifyOneG o order c vals f flag s k' = .ok ()) → verifyOneG o order c vals f flag s k = .error e →
-    verifyAllG o order c vals f flag s (pre ++ k :: post) = .error e
+    (∀ k' ∈ pre, verifyOneG o order c f flag s k' = .ok ()) → verifyOneG o order c f flag s k = .error e →
+    verifyAllG o order c f flag s (pre ++ k :: post) = .error e
   | [], k, post, _, hk => by simp [verifyAllG, hk]
   | k' :: pre, k, post, hp, hk => by
     simp only [List.cons_append, verifyAllG, hp k' (by simp)]
-    exact verifyAll_first o order c vals f flag s e pre k post (fun x hx => hp x (by simp [hx])) hk
+    exact verifyAll_first o order c f flag s e pre k post (fun x hx => hp x (by simp [hx])) hk
 
 /-- `verify.__call__`: an exception reading `__name__` comes first; then something that is not a class is the `TypeError`
 of `issubclass`, a class that is not an `Enum` the decorator's own `TypeError`; on an enumeration the checks run in order,
-the first that fails is the exception, and it passes exactly when each does. `NAMED_FLAGS` passes exactly when no alias
-has a bit outside the values of the members. -/
+the first that fails is the exception, and it passes exactly when each does. `UNIQUE` is the name test, `CONTINUOUS` runs
+over the member values, and `NAMED_FLAGS` is `EClassG.verifyNamed` (see `VerifyNamedInts`). -/
 def VerifyCallRules : Prop :=
-  ∀ (α : Type) (o : Ops α) (order : List α → List α) (c : EClass) (vals : List α) (f : Name → Name)
-    (checks : List Check),
-    (∀ e target, verifyCallG o order c vals f (.error e) target checks = .error e) ∧
-    (∀ s, verifyCallG o order c vals f (.ok s) .notCls checks =
+  ∀ (α : Type) (o : Ops α) (order : List α → List α) (c : EClassG α) (f : Name → Name) (checks : List Check),
+    (∀ e target, verifyCallG o order c f (.error e) target checks = .error e) ∧
+    (∀ s, verifyCallG o order c f (.ok s) .notCls checks =
         .error (.typeError "issubclass() arg 1 must be a class") ∧
-      verifyCallG o order c vals f (.ok s) .cls checks =
+      verifyCallG o order c f (.ok s) .cls checks =
         .error (.typeError "the 'verify' decorator only works with Enum and Flag") ∧
-      ∀ flag, (verifyCallG o order c vals f (.ok s) (.enum flag) checks = .ok () ↔
-        ∀ k ∈ checks, verifyOneG o order c vals f flag s k = .ok ()) ∧
-        ∀ pre k post e, checks = pre ++ k :: post → (∀ k' ∈ pre, verifyOneG o order c vals f flag s k' = .ok ()) →
-          verifyOneG o order c vals f flag s k = .error e →
-          verifyCallG o order c vals f (.ok s) (.enum flag) checks = .error e) ∧
-    (c.verifyNamed = .ok () ↔ ∀ p ∈ c.memberMap, c.memberNames.contains p.1 = false → ∀ v,
-      c.valueOf p.2 = some (.atom (.int v)) → ∀ b ∈ bitsOf v.toNat, (b : Int) ∈ c.intValues)
+      ∀ flag, (verifyCallG o order c f (.ok s) (.enum flag) checks = .ok () ↔
+        ∀ k ∈ checks, verifyOneG o order c f flag s k = .ok ()) ∧
+        ∀ pre k post e, checks = pre ++ k :: post → (∀ k' ∈ pre, verifyOneG o order c f flag s k' = .ok ()) →
+          verifyOneG o order c f flag s k = .error e →
+          verifyCallG o order c f (.ok s) (.enum flag) checks = .error e) ∧
+    (∀ flag s, (verifyOneG o order c f flag s .unique = .ok () ↔ ∀ p ∈ c.memberMap, p.1 = f p.2) ∧
+      verifyOneG o order c f flag s .continuous = verifyContinuousG o order flag s c.memberValues ∧
+      verifyOneG o order c f flag s .named = c.verifyNamed o)
 
 theorem verifyCallRules_proven : VerifyCallRules := by
-  intro α o order c vals f checks
-  refine ⟨fun e target => rfl, fun s => ⟨rfl, rfl, fun flag => ⟨verifyAll_ok o order c vals f flag s checks, ?_⟩⟩, ?_⟩
+  intro α o order c f checks
+  refine ⟨fun e target => rfl, fun s => ⟨rfl, rfl, fun flag => ⟨verifyAll_ok o order c f flag s checks, ?_⟩⟩,
+    fun flag s => ⟨?_, rfl, rfl⟩⟩
   · intro pre k post e hc hp hk
     subst hc
-    exact verifyAll_first o order c vals f flag s e pre k post hp hk
-  · have hm : ∀ p, c.missesName p = true ↔ c.memberNames.contains p.1 = false ∧ ∃ v,
-        c.valueOf p.2 = some (.atom (.int v)) ∧ ∃ b ∈ bitsOf v.toNat, (b : Int) ∉ c.intValues := by
-      intro p
-      unfold EClass.missesName
-      by_cases hc : c.memberNames.contains p.1 = true
-      · simp only [hc, ↓reduceIte, Bool.false_eq_true, Bool.true_eq_false, false_and]
-      · have hc' : c.memberNames.contains p.1 = false := Bool.eq_false_iff.2 hc
-        simp only [hc', Bool.false_eq_true, ↓reduceIte, true_and]
-        cases hv : c.valueOf p.2 with
-        | none => simp
-        | some w =>
-          cases w with
-          | atom a =>
-            cases a with
-            | int v =>
-              simp only [List.any_eq_true, Bool.not_eq_true', Option.some.injEq, EV.atom.injEq, Atom.int.injEq]
-              constructor
-              · rintro ⟨b, hb, hq⟩
-                exact ⟨v, rfl, b, hb, by simpa using hq⟩
-              · rintro ⟨u, rfl, b, hb, hq⟩
-                exact ⟨b, hb, by simpa using hq⟩
-            | _ => simp
-          | _ => simp
-    simp only [EClass.verifyNamed]
-    cases h : c.memberMap.any c.missesName with
+    exact verifyAll_first o order c f flag s e pre k post hp hk
+  · simp only [verifyOneG, EClassG.verifyUnique]
+    cases h : c.memberMap.any (fun p => p.1 != f p.2) with
     | true =>
       simp only [↓reduceIte, reduceCtorEq, false_iff]
       intro hall
       obtain ⟨p, hp, hq⟩ := List.any_eq_true.1 h
-      obtain ⟨h1, v, h2, b, h3, h4⟩ := (hm p).1 hq
-      exact h4 (hall p hp h1 v h2 b h3)
+      simp [hall p hp] at hq
     | false =>
       simp only [Bool.false_eq_true, ↓reduceIte, true_iff]
-      intro p hp hc v hv b hb
-      apply Classical.byContradiction
-      intro hn
-      have : c.memberMap.any c.missesName = true :=
-        List.any_eq_true.2 ⟨p, hp, (hm p).2 ⟨hc, v, hv, b, hb, hn⟩⟩
-      rw [h] at this
-      exact Bool.noConfusion this
+      intro p hp
+      have := List.any_eq_false.1 h p hp
+      simpa using this
 
 /-! ### `Enum.__new__` -/
 
@@ -353,13 +322,13 @@ def EnumLookupG : Prop :=
     (∀ n, o.dictGet c.value2member v = .ok (some n) → c.enumNew o none v ip miss = .ok n) ∧
     (o.dictGet c.value2member v = .ok none → c.enumNew o none v ip miss = c.afterSearch ip miss) ∧
     (∀ e, o.dictGet c.value2member v = .error e →
-      (e.className = "KeyError" → c.enumNew o none v ip miss = c.afterSearch ip miss) ∧
-      (e.className = "TypeError" → c.enumNew o none v ip miss =
+      (o.isInst e "KeyError" = true → c.enumNew o none v ip miss = c.afterSearch ip miss) ∧
+      (o.isInst e "KeyError" = false → o.isInst e "TypeError" = true → c.enumNew o none v ip miss =
         match c.longSearch o v with
         | .error e' => .error e'
         | .ok (some n) => .ok n
         | .ok none => c.afterSearch ip miss) ∧
-      (e.className ≠ "KeyError" → e.className ≠ "TypeError" → c.enumNew o none v ip miss = .error e)) ∧
+      (o.isInst e "KeyError" = false → o.isInst e "TypeError" = false → c.enumNew o none v ip miss = .error e)) ∧
     (∀ e, o.hash v = .error e → o.dictGet c.value2member v = .error (o.keyExc "dict key" v e) ∧
       (o.keyExc "dict key" v e).className = e.className) ∧
     (∀ n k, firstHolding o v c.unhashableMap = .ok (some n) → c.memberMap.lookup n = some k →
@@ -388,15 +357,11 @@ theorem enumLookupG_proven : EnumLookupG := by
   · intro n h; simp [EClassG.enumNew, h]
   · intro h; simp [EClassG.enumNew, h]
   · intro e h
-    refine ⟨fun hk => ?_, fun ht => ?_, fun hk ht => ?_⟩
+    refine ⟨fun hk => ?_, fun hk ht => ?_, fun hk ht => ?_⟩
     · simp [EClassG.enumNew, h, hk]
-    · simp only [EClassG.enumNew, h, ht]
-      simp only [show ("TypeError" == "KeyError") = false by decide, show ("TypeError" == "TypeError") = true by decide,
-        Bool.false_eq_true, ↓reduceIte]
+    · simp only [EClassG.enumNew, h, hk, ht, Bool.false_eq_true, ↓reduceIte]
       try rfl
-    · have h1 : (e.className == "KeyError") = false := by simp [hk]
-      have h2 : (e.className == "TypeError") = false := by simp [ht]
-      simp [EClassG.enumNew, h, h1, h2]
+    · simp [EClassG.enumNew, h, hk, ht]
   · intro e h; refine ⟨by simp [Ops.dictGet, Ops.lookupIn, h], ?_⟩; cases e <;> rfl
   · intro n k h1 h2; simp [EClassG.longSearch, h1, EClassG.getItem, h2]
   · intro n h1 h2; exact ⟨_, by simp [EClassG.longSearch, h1, EClassG.getItem, h2]; rfl, rfl⟩
@@ -454,12 +419,13 @@ def SetNamePaths : Prop :=
       mk.memberValue value = .error (.typeError "_value_ not set in __new__, unable to create it")) ∧
     (∀ e, mk.memberValue value = .error e → c.setName o mk name value = .error e) ∧
     (∀ r, o.dictGet c.value2member v = .ok r → c.aliasOf o v = .ok r) ∧
-    (∀ e, o.dictGet c.value2member v = .error e → e.className = "KeyError" → c.aliasOf o v = .ok none) ∧
-    (∀ e, o.dictGet c.value2member v = .error e → e.className = "TypeError" →
+    (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = false → o.isInst e "KeyError" = true →
+      c.aliasOf o v = .ok none) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = true →
       (∀ r, c.firstEqual o v c.memberMap = .ok r → c.aliasOf o v = .ok r) ∧
-      (∀ e', c.firstEqual o v c.memberMap = .error e' → e'.className = "KeyError" → c.aliasOf o v = .ok none) ∧
-      (∀ e', c.firstEqual o v c.memberMap = .error e' → e'.className ≠ "KeyError" → c.aliasOf o v = .error e')) ∧
-    (∀ e, o.dictGet c.value2member v = .error e → e.className ≠ "KeyError" → e.className ≠ "TypeError" →
+      (∀ e', c.firstEqual o v c.memberMap = .error e' → o.isInst e' "KeyError" = true → c.aliasOf o v = .ok none) ∧
+      (∀ e', c.firstEqual o v c.memberMap = .error e' → o.isInst e' "KeyError" = false → c.aliasOf o v = .error e')) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = false → o.isInst e "KeyError" = false →
       c.aliasOf o v = .error e) ∧
     (∀ n m x r, c.values.lookup m = some x → c.firstEqual o v ((n, m) :: r) =
       match o.eq x v with
@@ -478,18 +444,18 @@ def SetNamePaths : Prop :=
                   | none => false) then (c.flagUpdate o v).memberNames ++ [name] else (c.flagUpdate o v).memberNames,
               values := (c.flagUpdate o v).values ++ [(name, v)] }.addToMap name name).bind
             (fun c3 => c3.noteValue o name name v))) ∧
-    (∀ m e, o.setDefault c.value2member v m = .error e → e.className = "TypeError" →
+    (∀ m e, o.setDefault c.value2member v m = .error e → o.isInst e "TypeError" = true →
       c.noteValue o name m v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
                                              unhashableMap := appendToG c.unhashableMap name v }) ∧
-    (∀ m e, o.setDefault c.value2member v m = .error e → e.className ≠ "TypeError" → c.noteValue o name m v = .error e) ∧
+    (∀ m e, o.setDefault c.value2member v m = .error e → o.isInst e "TypeError" = false → c.noteValue o name m v = .error e) ∧
     (∀ m d w, o.setDefault c.value2member v m = .ok (d, w) →
       (o.listIn v c.hashableValues = .ok false →
         c.noteValue o name m v = .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }) ∧
       (o.listIn v c.hashableValues = .ok true → c.noteValue o name m v = .ok { c with value2member := d }) ∧
-      (∀ e, o.listIn v c.hashableValues = .error e → e.className = "TypeError" →
+      (∀ e, o.listIn v c.hashableValues = .error e → o.isInst e "TypeError" = true →
         c.noteValue o name m v = .ok { c with value2member := d, unhashableValues := c.unhashableValues ++ [v],
                                                unhashableMap := appendToG c.unhashableMap name v }) ∧
-      (∀ e, o.listIn v c.hashableValues = .error e → e.className ≠ "TypeError" → c.noteValue o name m v = .error e))
+      (∀ e, o.listIn v c.hashableValues = .error e → o.isInst e "TypeError" = false → c.noteValue o name m v = .error e))
 
 theorem setNamePaths_proven : SetNamePaths := by
   intro α o mk c name value v
@@ -501,13 +467,13 @@ theorem setNamePaths_proven : SetNamePaths := by
   · intro h hp e hc; simp [Maker.memberValue, h, hp, hc]
   · intro e h; simp [EClassG.setName, h]
   · intro r h; simp [EClassG.aliasOf, h]
-  · intro e h hk
-    simp [EClassG.aliasOf, h, hk]
+  · intro e h ht hk
+    simp [EClassG.aliasOf, h, ht, hk]
   · intro e h ht
     refine ⟨fun r hr => by simp [EClassG.aliasOf, h, ht, hr], fun e' he hk => by simp [EClassG.aliasOf, h, ht, he, hk],
-      fun e' he hk => by simp [EClassG.aliasOf, h, ht, he, className_bne hk]⟩
-  · intro e h hk ht
-    simp [EClassG.aliasOf, h, className_bne hk, className_bne ht]
+      fun e' he hk => by simp [EClassG.aliasOf, h, ht, he, hk]⟩
+  · intro e h ht hk
+    simp [EClassG.aliasOf, h, hk, ht]
   · intro n m x r hx
     simp only [EClassG.firstEqual, hx]
     try rfl
@@ -522,11 +488,11 @@ theorem setNamePaths_proven : SetNamePaths := by
   · intro m e h ht
     simp [EClassG.noteValue, h, ht]
   · intro m e h ht
-    simp [EClassG.noteValue, h, className_bne ht]
+    simp [EClassG.noteValue, h, ht]
   · intro m d w h
     refine ⟨fun hl => by simp [EClassG.noteValue, h, hl], fun hl => by simp [EClassG.noteValue, h, hl],
       fun e hl ht => by simp [EClassG.noteValue, h, hl, ht],
-      fun e hl ht => by simp [EClassG.noteValue, h, hl, className_bne ht]⟩
+      fun e hl ht => by simp [EClassG.noteValue, h, hl, ht]⟩
 
 /-! ### `Enum._add_value_alias_` -/
 
@@ -540,12 +506,12 @@ def ValueAliasPaths : Prop :=
     (∀ m, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (c.addValueAlias o f self v).raises "ValueError") ∧
     (o.dictGet c.value2member v = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
     (o.dictGet c.value2member v = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
-    (∀ e, o.dictGet c.value2member v = .error e → e.className = "TypeError" →
+    (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = true →
       (∀ m, c.firstMemberEq o v c.memberMap = .ok (some m) → m ≠ self → c.addValueAlias o f self v = .error e) ∧
       (c.firstMemberEq o v c.memberMap = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
       (c.firstMemberEq o v c.memberMap = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
       (∀ e', c.firstMemberEq o v c.memberMap = .error e' → c.addValueAlias o f self v = .error e')) ∧
-    (∀ e, o.dictGet c.value2member v = .error e → e.className ≠ "TypeError" → c.addValueAlias o f self v = .error e) ∧
+    (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = false → c.addValueAlias o f self v = .error e) ∧
     (∀ n m x r, c.values.lookup m = some x → c.firstMemberEq o v ((n, m) :: r) =
       match o.eq x v with
       | .error e => .error e
@@ -553,10 +519,10 @@ def ValueAliasPaths : Prop :=
       | .ok false => c.firstMemberEq o v r) ∧
     (∀ d w, o.setDefault c.value2member v self = .ok (d, w) →
       c.bindValue o f self v = .ok { c with value2member := d, hashableValues := c.hashableValues ++ [v] }) ∧
-    (∀ e, o.setDefault c.value2member v self = .error e → e.className = "TypeError" →
+    (∀ e, o.setDefault c.value2member v self = .error e → o.isInst e "TypeError" = true →
       c.bindValue o f self v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
                                             unhashableMap := appendToG c.unhashableMap (f self) v }) ∧
-    (∀ e, o.setDefault c.value2member v self = .error e → e.className ≠ "TypeError" →
+    (∀ e, o.setDefault c.value2member v self = .error e → o.isInst e "TypeError" = false →
       c.bindValue o f self v = .error e)
 
 theorem valueAliasPaths_proven : ValueAliasPaths := by
@@ -565,9 +531,9 @@ theorem valueAliasPaths_proven : ValueAliasPaths := by
     simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h], fun e h ht => ⟨fun m hm hne => by
     simp [EClassG.addValueAlias, h, ht, hm, hne], fun hm => by simp [EClassG.addValueAlias, h, ht, hm], fun hm => by
     simp [EClassG.addValueAlias, h, ht, hm], fun e' he => by simp [EClassG.addValueAlias, h, ht, he]⟩,
-    fun e h ht => by simp [EClassG.addValueAlias, h, className_bne ht], fun n m x r hx => ?_, fun d w h => by
+    fun e h ht => by simp [EClassG.addValueAlias, h, ht], fun n m x r hx => ?_, fun d w h => by
     simp [EClassG.bindValue, h], fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by
-    simp [EClassG.bindValue, h, className_bne ht]⟩
+    simp [EClassG.bindValue, h, ht]⟩
   simp only [EClassG.firstMemberEq, hx]
   try rfl
 
@@ -655,10 +621,10 @@ def UpdateRules : Prop :=
     (∀ d1, d.set k v = .ok d1 → d.update (.pairs []) ((k, v) :: more) = d1.update (.pairs []) more) ∧
     (∀ e, d.set k v = .error e → d.update (.pairs []) ((k, v) :: more) = .error e) ∧
     (∀ items d', d.setAll items = (d', none) → d.update (.mapping items) more = d'.update (.pairs []) more) ∧
-    (∀ items d' e, d.setAll items = (d', some e) → e.className = "AttributeError" →
+    (∀ items d' e, d.setAll items = (d', some e) → excIs builtinParent e "AttributeError" = true →
       d.update (.mapping items) more =
         (d'.unpackKeys (items.map Prod.fst)).bind (fun d'' => d''.update (.pairs []) more)) ∧
-    (∀ items d' e, d.setAll items = (d', some e) → e.className ≠ "AttributeError" →
+    (∀ items d' e, d.setAll items = (d', some e) → excIs builtinParent e "AttributeError" = false →
       d.update (.mapping items) more = .error e)
 
 theorem updateRules_proven : UpdateRules := by
@@ -673,7 +639,7 @@ theorem updateRules_proven : UpdateRules := by
   · simp only [EnumDict.update, h, ha, beq_self_eq_true, ↓reduceIte, EnumDict.setAll]
     generalize d'.unpackKeys (items.map Prod.fst) = x
     cases x <;> rfl
-  · simp [EnumDict.update, h, className_bne ha]
+  · simp [EnumDict.update, h, ha]
 
 /-- `_ignore_` given as a tuple of names ignores those names, as a list does: `list(value)` at Lib/enum.py:379. -/
 def IgnoreTuple : Prop :=
@@ -689,5 +655,63 @@ theorem ignoreTuple_proven : IgnoreTuple := by
     | cons x xs ih => simp [Atom.ignoreName] at ih ⊢; exact ih
   have h1 : (l.map Atom.str).all Atom.hashable = true := by simp [Atom.hashable]
   simp only [ignoreList, h1, ↓reduceIte, h2]
+
+/-! ### `except` catches subclasses: the witnesses -/
+
+/-- A class with one member `A = 1`, built by the mirror. -/
+private def cA : EClassG PV :=
+  { memberNames := [['A']], memberMap := [(['A'], ['A'])], values := [(['A'], .int 1)],
+    value2member := [(.int 1, ['A'])], hashableValues := [.int 1] }
+
+/-- The earlier clause of `SetNamePaths`, a linear-search exception whose class is not named `KeyError` goes out, is false:
+`B = Q()` whose `__hash__` raises `TypeError` and whose `__eq__` raises a subclass of `KeyError` is caught at :296 and
+becomes a new member, as on 3.15.2 (`list(E) == [A, B]`). -/
+private theorem setName_keyErrorSubclass :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (v : α) (e e' : PyExc), o.dictGet c.value2member v = .error e →
+        e.className = "TypeError" → c.firstEqual o v c.memberMap = .error e' → e'.className ≠ "KeyError" →
+        c.aliasOf o v = .error e') := by
+  intro h
+  have := h PV pvOps cA (.key 1 (some "TypeError") (some "KSub") 0)
+    (.typeError "cannot use 'K' as a dict key (hash)") (.named "KSub" "'eq'") (by decide +kernel) rfl
+    (by decide +kernel) (by decide)
+  revert this
+  decide +kernel
+
+private theorem setName_keyErrorSubclass_member :
+    (cA.setName pvOps {} ['B'] (.key 1 (some "TypeError") (some "KSub") 0)).map (·.memberNames) =
+      .ok [['A'], ['B']] := by
+  decide +kernel
+
+/-- The earlier clause of `EnumLookupG`, an exception whose class is named neither `KeyError` nor `TypeError` goes out, is
+false: for `H(1)` whose `__hash__` raises a subclass of `TypeError` and which equals `1`, `E1(H(1))` is `E1.A` through the
+long search, as on 3.15.2. -/
+private theorem enumNew_typeErrorSubclass :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (v : α) (e : PyExc), o.dictGet c.value2member v = .error e →
+        e.className ≠ "KeyError" → e.className ≠ "TypeError" → c.enumNew o none v false .none = .error e) := by
+  intro h
+  have := h PV pvOps cA (.key 1 (some "TSub") none 0) (.named "TSub" "hash") (by decide +kernel) (by decide)
+    (by decide)
+  revert this
+  decide +kernel
+
+private theorem enumNew_typeErrorSubclass_member :
+    cA.enumNew pvOps none (.key 1 (some "TSub") none 0) false .none = .ok ['A'] := by
+  decide +kernel
+
+/-- The earlier clause of `ValueAliasPaths`, an exception whose class is not named `TypeError` goes out, is false: for a
+value whose `__hash__` raises a subclass of `TypeError`, `E.A._add_value_alias_(v)` files it in the unhashable lists under
+`'A'`, as on 3.15.2. -/
+private theorem valueAlias_typeErrorSubclass :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (m : Name) (v : α) (e : PyExc),
+        o.dictGet c.value2member v = .error e → e.className ≠ "TypeError" → c.addValueAlias o f m v = .error e) := by
+  intro h
+  have := h PV pvOps cA id ['A'] (.key 5 (some "TSub") none 0) (.named "TSub" "hash") (by decide +kernel) (by decide)
+  revert this
+  decide +kernel
+
+private theorem valueAlias_typeErrorSubclass_filed :
+    (cA.addValueAlias pvOps id ['A'] (.key 5 (some "TSub") none 0)).map (·.unhashableMap) =
+      .ok [(['A'], [.key 5 (some "TSub") none 0])] := by
+  decide +kernel
 
 end PyLean.CoreLibs.EnumDC

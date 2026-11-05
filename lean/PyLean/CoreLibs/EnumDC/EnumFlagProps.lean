@@ -284,6 +284,7 @@ structure IntOps {α : Type} (o : Ops α) : Prop where
   succ_int : ∀ a, o.succ (o.ofInt a) = .ok (o.ofInt (a + 1))
   index_int : ∀ a, o.index (o.ofInt a) = .ok a
   bitLength_int : ∀ a, o.bitLength (o.ofInt a) = .ok (intBitLength a)
+  asInt_int : ∀ a, o.asInt (o.ofInt a) = some a
 
 theorem evOps_intOps : IntOps evOps where
   same_int a b h := by simp [evOps] at h
@@ -294,6 +295,7 @@ theorem evOps_intOps : IntOps evOps where
   succ_int a := rfl
   index_int a := rfl
   bitLength_int a := rfl
+  asInt_int a := rfl
 
 theorem pvOps_intOps : IntOps pvOps where
   same_int a b h := by simpa [pvOps] using h
@@ -306,6 +308,7 @@ theorem pvOps_intOps : IntOps pvOps where
   succ_int a := rfl
   index_int a := rfl
   bitLength_int a := rfl
+  asInt_int a := rfl
 
 section Ints
 
@@ -473,25 +476,11 @@ theorem mem_intRange (a b k : Int) : k ∈ intRange a b ↔ a ≤ k ∧ k < b :=
 
 /-! ### `verify(CONTINUOUS)` -/
 
-/-- The sentence the earlier model proved, which read only the `int` values: `verify(CONTINUOUS)` on an `Enum` passes
-exactly when every integer between the lowest and the highest `int` value is a value. False: with values `1, 2, 'x'`,
-`min` compares `'x'` with an `int` and raises `TypeError`. -/
-def VerifyContinuous : Prop :=
-  ∀ (α : Type) (o : Ops α) (order : List α → List α) (s : String) (vals : List α) (i : Int) (is : List Int),
-    vals.filterMap o.asInt = i :: is →
-    (verifyContinuousG o order false s vals = .ok () ↔ ∀ k, is.foldl min i < k → k < is.foldl max i → k ∈ i :: is)
-
-theorem verifyContinuous_refuted : ¬VerifyContinuous := by
-  intro h
-  have h1 := (h EV evOps id "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] 1 [2] rfl).2
-    (by intro k h1 h2; simp only [List.foldl_cons, List.foldl_nil] at h1 h2; omega)
-  revert h1
-  decide +kernel
-
 /-- `verify(CONTINUOUS)` on `int` values, for every iteration order of the set and every class of `int`-like values:
 on an `Enum` it passes exactly when every integer strictly between the lowest and the highest value is a value; on a
 `Flag` exactly when every power of two `2**j` with `_high_bit(low) < j < _high_bit(high)` is a value, the docs' "no missing
-values between the lowest-valued member and the highest-valued member". -/
+values between the lowest-valued member and the highest-valued member". The check runs over every value, not only the
+`int` ones: with values `1, 2, 'x'`, `min` compares `'x'` with an `int` and raises `TypeError`. -/
 def VerifyContinuousInts : Prop :=
   ∀ (α : Type) (o : Ops α), IntOps o → ∀ (order : List α → List α), (∀ l x, x ∈ order l ↔ x ∈ l) →
     ∀ (s : String) (l : List Int) (lo hi : Int), lo ∈ l → hi ∈ l → (∀ z ∈ l, lo ≤ z ∧ z ≤ hi) →
@@ -837,5 +826,195 @@ theorem conformKeepsMask_proven : ConformKeepsMask := by
     simp only [memberOf_sub c hm]
   | none =>
     exact conform_missing c hb v hv
+
+/-! ### `verify(NAMED_FLAGS)` -/
+
+section Named
+
+variable {α : Type} {o : Ops α}
+
+theorem listIn_ints (h : IntOps o) (b : Int) : ∀ l : List Int, o.listIn (o.ofInt b) (l.map o.ofInt) = .ok (decide (b ∈ l))
+  | [] => rfl
+  | y :: r => by
+    have ih := listIn_ints h b r
+    simp only [List.map_cons, Ops.listIn, Ops.req]
+    by_cases hs : o.same (o.ofInt y) (o.ofInt b) = true
+    · have := h.same_int y b hs
+      subst this
+      simp [hs]
+    · simp only [hs, Bool.false_eq_true, ↓reduceIte, h.eq_int]
+      by_cases hy : y = b
+      · subst hy; simp
+      · simp only [hy, decide_false, ih]
+        simp [List.mem_cons, Ne.symm hy]
+
+theorem notIn_ints (h : IntOps o) (iv : List Int) : ∀ bs : List Nat,
+    o.notIn (iv.map o.ofInt) bs = .ok (bs.filter fun b => !decide ((b : Int) ∈ iv))
+  | [] => rfl
+  | b :: r => by
+    simp only [Ops.notIn, listIn_ints h, notIn_ints h iv r, List.filter_cons]
+    by_cases hb : ((b : Int) ∈ iv) <;> simp [hb]
+
+/-- What `NAMED_FLAGS` asks of one entry of `_member_map_` on `int` values. -/
+def namedOk (c : EClassG α) (o : Ops α) (iv : List Int) (p : Name × Name) : Prop :=
+  c.memberNames.contains p.1 = false → ∀ i, c.values.lookup p.2 = some (o.ofInt i) → 0 ≤ i →
+    ∀ b ∈ bitsOf i.toNat, (b : Int) ∈ iv
+
+theorem missedBits_ints (h : IntOps o) (c : EClassG α) (iv : List Int) (hm : c.memberValues = iv.map o.ofInt)
+    (hv : ∀ n v, c.values.lookup n = some v → ∃ i, v = o.ofInt i) (p : Name × Name) :
+    ∃ L, c.missedBits o p = .ok L ∧ (L = [] ↔ namedOk c o iv p) := by
+  unfold EClassG.missedBits namedOk
+  by_cases hc : c.memberNames.contains p.1 = true
+  · refine ⟨[], by simp only [hc, ↓reduceIte], ?_⟩
+    have hc2 := hc
+    simp at hc2
+    simp [hc2]
+  · have hc' : c.memberNames.contains p.1 = false := Bool.eq_false_iff.2 hc
+    simp only [hc', Bool.false_eq_true, ↓reduceIte, forall_const]
+    cases hl : c.values.lookup p.2 with
+    | none => simp
+    | some v =>
+      obtain ⟨i, rfl⟩ := hv _ _ hl
+      simp only [h.lt_int, h.asInt_int, Ops.bitsOfValue, hm, notIn_ints h]
+      by_cases hi : i < 0
+      · refine ⟨[], by simp [hi], ?_⟩
+        simp only [true_iff]
+        intro j hj; have := ofInt_inj h (Option.some.inj hj); omega
+      · refine ⟨(bitsOf i.toNat).filter fun b => !decide ((b : Int) ∈ iv), by simp [hi], ?_⟩
+        rw [List.filter_eq_nil_iff]
+        constructor
+        · intro hall j hj _ b hb
+          rw [← ofInt_inj h (Option.some.inj hj)] at hb
+          have := hall b hb
+          simpa using this
+        · intro hall b hb
+          have := hall i rfl (by omega) b hb
+          simpa using this
+
+theorem namedLoop_ints (h : IntOps o) (c : EClassG α) (iv : List Int) (hm : c.memberValues = iv.map o.ofInt)
+    (hv : ∀ n v, c.values.lookup n = some v → ∃ i, v = o.ofInt i) :
+    ∀ l : List (Name × Name), ∃ b, c.namedLoop o l = .ok b ∧ (b = false ↔ ∀ p ∈ l, namedOk c o iv p)
+  | [] => ⟨false, rfl, by simp⟩
+  | p :: r => by
+    obtain ⟨L, hL, hL'⟩ := missedBits_ints h c iv hm hv p
+    obtain ⟨b, hb, hb'⟩ := namedLoop_ints h c iv hm hv r
+    refine ⟨!L.isEmpty || b, by simp [EClassG.namedLoop, hL, hb], ?_⟩
+    simp only [Bool.or_eq_false_iff, Bool.not_eq_false', List.isEmpty_iff, List.mem_cons, forall_eq_or_imp, hL', hb']
+
+end Named
+
+/-- `verify(NAMED_FLAGS)` on `int` values: it passes exactly when no entry of `_member_map_` that is not in
+`_member_names_` and has a value `>= 0` has a bit that no member value equals, the docs' "multi-flag aliases may not
+contain unnamed flags". The member values are compared by `==`, so a value equal to an `int` counts (`A = 1, B = 2.0,
+C = D = 3` passes); and a value that is not an `int` is compared with `0` first, so `A = 'x'; B = 'x'` raises the
+`TypeError` of `'x' < 0` (see `verifyNamed_strAlias`). -/
+def VerifyNamedInts : Prop :=
+  ∀ (α : Type) (o : Ops α), IntOps o → ∀ (c : EClassG α) (iv : List Int), c.memberValues = iv.map o.ofInt →
+    (∀ n v, c.values.lookup n = some v → ∃ i, v = o.ofInt i) →
+    (c.verifyNamed o = .ok () ↔ ∀ p ∈ c.memberMap, namedOk c o iv p)
+
+theorem verifyNamedInts_proven : VerifyNamedInts := by
+  intro α o h c iv hm hv
+  obtain ⟨b, hb, hb'⟩ := namedLoop_ints h c iv hm hv c.memberMap
+  unfold EClassG.verifyNamed
+  rw [hb]
+  cases b with
+  | false => simp only [true_iff]; exact hb'.1 rfl
+  | true =>
+    simp only [reduceCtorEq, false_iff]
+    intro hall
+    exact Bool.noConfusion (hb'.2 hall)
+
+/-- The earlier rule, which skipped an entry whose value is not an `int`: false, `A = 'x'; B = 'x'` raises the `TypeError`
+of `'x' < 0` at :2022, as on 3.15.2. -/
+private theorem verifyNamed_strAlias :
+    ¬ (∀ c : EClassG EV, c.verifyNamed evOps = .ok () ↔ ∀ p ∈ c.memberMap, c.memberNames.contains p.1 = false →
+        ∀ i, c.values.lookup p.2 = some (.atom (.int i)) → ∀ b ∈ bitsOf i.toNat, (b : Int) ∈ c.memberValues.filterMap
+          evOps.asInt) := by
+  intro h
+  have := (h { memberNames := [['A']], memberMap := [(['A'], ['A']), (['B'], ['A'])],
+               values := [(['A'], .atom (.str "x"))] }).2 (by
+    intro p hp hc i hi
+    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hp
+    rcases hp with rfl | rfl <;> simp at hi)
+  revert this
+  decide +kernel
+
+/-- A member value equal to an `int` counts for `NAMED_FLAGS`: with `A = 1, B = K(2), C = D = 3`, the bit `2` of the alias
+`D` is found by `K(2) == 2`, as `2.0 == 2` is on 3.15.2. -/
+private theorem verifyNamed_equalValue :
+    ({ memberNames := [['A'], ['B'], ['C']],
+       memberMap := [(['A'], ['A']), (['B'], ['B']), (['C'], ['C']), (['D'], ['C'])],
+       values := [(['A'], .int 1), (['B'], .key 2 none none 0), (['C'], .int 3)] } : EClassG PV).verifyNamed pvOps =
+      .ok () := by
+  decide +kernel
+
+/-! ### `Flag._missing_` outside the range -/
+
+/-- The out-of-range test of :1491-1494: outside `~all_bits .. all_bits`, or a bit of `all_bits` no member has. -/
+def FlagCls.outOfRange (c : FlagCls) (v : Int) : Bool :=
+  !decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) || andMask v (c.allBits ^^^ c.flagMask) != 0
+
+/-- `Flag._missing_` on an out-of-range `int`, each boundary, :1491-1512: `STRICT` is the `ValueError` "invalid value",
+`EJECT` gives back the `int` itself, and `KEEP` never raises: a value `>= 0` keeps every bit, and a negative one becomes
+`max(all_bits + 1, 2 ** v.bit_length()) + v`; in range, a negative value under `KEEP` is `all_bits + 1 + v`. So for a
+two-bit class `F(8)` is the `ValueError` under `STRICT` and `8` under `EJECT`. -/
+def MissingBoundaries : Prop :=
+  ∀ (c : FlagCls) (v : Int),
+    (c.boundary = .strict → c.outOfRange v = true → (c.missing v).raises "ValueError") ∧
+    (c.boundary = .eject → c.outOfRange v = true → c.missing v = .ok (.plain v)) ∧
+    (c.boundary = .keep → ∃ name, c.missing v = .ok (.flag (if 0 ≤ v then v.toNat
+        else if c.outOfRange v then ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) + v).toNat
+        else ((c.allBits : Int) + 1 + v).toNat) name))
+
+theorem missingBoundaries_proven : MissingBoundaries := by
+  intro c v
+  refine ⟨fun hb ho => ?_, fun hb ho => ?_, fun hb => ?_⟩
+  · unfold FlagCls.outOfRange at ho
+    simp only [FlagCls.missing, hb, ho, ↓reduceIte]
+    exact ⟨_, rfl, rfl⟩
+  · unfold FlagCls.outOfRange at ho
+    simp only [FlagCls.missing, hb, ho, ↓reduceIte]
+    rfl
+  · have hns : c.boundary ≠ .strict := by rw [hb]; decide
+    simp only [FlagCls.missing, hb]
+    by_cases ho : c.outOfRange v = true
+    · have ho' := ho
+      unfold FlagCls.outOfRange at ho'
+      simp only [ho', ↓reduceIte]
+      by_cases hv : v < 0
+      · have hpos : 0 ≤ ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v := by
+          have h1 := lt_two_pow_bitLength' v.natAbs
+          have h2 : 2 ^ bitLength v.natAbs ≤ max (c.allBits + 1) (2 ^ bitLength v.natAbs) := Nat.le_max_right _ _
+          omega
+        have hnn : ¬ (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v < 0) := by omega
+        obtain ⟨nm, hnm⟩ := nameOf_ok c hns
+          (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat
+          ((((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat &&& c.singlesMask)
+          (notAnd c.singlesMask (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat)
+        simp only [hv, ↓reduceIte, pure_bind, hnn, ne_eq, reduceCtorEq, not_false_eq_true, bne_self_eq_false,
+          Bool.and_false, Bool.false_eq_true, hnm, Bool.and_true, decide_true]
+        simp only [show ¬ (0 ≤ v) by omega, ↓reduceIte, ho]
+        exact ⟨_, rfl⟩
+      · have hnn : ¬ (v < 0) := hv
+        obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
+        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
+        simp only [show 0 ≤ v by omega, ↓reduceIte]
+        exact ⟨_, rfl⟩
+    · have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
+          andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
+        unfold FlagCls.outOfRange at ho; simpa using ho
+      simp only [ho', Bool.false_eq_true, ↓reduceIte, pure_bind]
+      by_cases hv : v < 0
+      · have hk : Boundary.keep = Boundary.eject ∨ Boundary.keep = Boundary.keep := .inr rfl
+        obtain ⟨nm, hnm⟩ := nameOf_ok c hns ((c.allBits : Int) + 1 + v).toNat
+          (((c.allBits : Int) + 1 + v).toNat &&& c.singlesMask) (notAnd c.singlesMask ((c.allBits : Int) + 1 + v).toNat)
+        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
+        simp only [show ¬ (0 ≤ v) by omega, ↓reduceIte, ho]
+        exact ⟨_, rfl⟩
+      · obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
+        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
+        simp only [show 0 ≤ v by omega, ↓reduceIte]
+        exact ⟨_, rfl⟩
 
 end PyLean.CoreLibs.EnumDC

@@ -11,6 +11,7 @@ import PyLean.CoreLibs.Rand.DistFormula
 import PyLean.CoreLibs.Rand.SystemF64
 import PyLean.CoreLibs.Rand.ExactStream
 import PyLean.CoreLibs.Rand.SeedExact
+import PyLean.CoreLibs.Rand.DistSupport
 
 /-! Registry for the `Rand` area of CoreLibs: Lib/random.py, Modules/_randommodule.c, CPython 3.15.2. -/
 
@@ -348,7 +349,7 @@ def entries : List Entry := [
     prop := ``RandbelowWithExact, thm := some ``randbelowWithExact_proven },
   { id := "rand-randbelow-without-exact", pyFile := "Lib/random.py"
     pyFns := ["Random._randbelow_without_getrandbits"]
-    statement := "Over binary64: for 0 < n < 2**53 the result is floor(u * 2**53) % n for the first random() value u below (2**53 - 2**53 % n) / 2**53; for n >= 2**53 it is floor(u * float(n)) after one draw."
+    statement := "Over binary64: for 0 < n < 2**53 the result is floor(u * 2**53) % n for the first random() value u below (2**53 - 2**53 % n) / 2**53; for n >= 2**53 it first issues the UserWarning (raising it before any draw under an error filter), then floor(u * float(n)) after one draw."
     source := "Lib/random.py:254-272", status := .proven
     prop := ``RandbelowWithoutExact, thm := some ``randbelowWithoutExact_proven },
   { id := "rand-choice-exact", pyFile := "Lib/random.py"
@@ -431,6 +432,21 @@ def entries : List Entry := [
     statement := "Over binary64, one round of the BG loop (retry on ValueError, return x once y > n) and of the BTRS loop (retry on ZeroDivisionError or k outside [0, n], quick accept, the cached setup and the lgamma test)."
     source := "Lib/random.py:840-890", status := .proven
     prop := ``BinomialLoopsF64, thm := some ``binomialLoopsF64_proven },
+  { id := "rand-lognorm-nonneg", pyFile := "Lib/random.py"
+    pyFns := ["Random.lognormvariate"]
+    statement := "Over binary64, with a C exp that is never NaN or negative on a non-NaN argument: when normalvariate gives a non-NaN x, lognormvariate gives exp(x) >= 0 on the same draws, or OverflowError('math range error')."
+    source := "docstring, Lib/random.py:596-603", status := .proven
+    prop := ``LognormNonneg, thm := some ``lognormNonneg_proven },
+  { id := "rand-pareto-ge-one", pyFile := "Lib/random.py"
+    pyFns := ["Random.paretovariate"]
+    statement := "Over binary64, with a C pow that is +inf or >= 1 for 0 < x < 1, y < 0: for every alpha > 0 (inf included) and random() in [0, 1), paretovariate returns a value >= 1.0 or raises the OverflowError of **, after one draw."
+    source := "Pareto distribution support [1, inf), Lib/random.py:768-773", status := .proven
+    prop := ``ParetoGeOne, thm := some ``paretoGeOne_proven },
+  { id := "rand-weibull-nonneg", pyFile := "Lib/random.py"
+    pyFns := ["Random.weibullvariate"]
+    statement := "Over binary64, with a C log <= 0 on (0, 1] and a C pow >= +0 for positive arguments: for finite alpha > 0, beta > 0 (inf included) and random() in [0, 1), weibullvariate returns a value >= 0.0 or raises the OverflowError of **, after one draw."
+    source := "Weibull distribution support [0, inf), Lib/random.py:775-784", status := .proven
+    prop := ``WeibullNonneg, thm := some ``weibullNonneg_proven },
   { id := "rand-beta-exits", pyFile := "Lib/random.py"
     pyFns := ["Random.betavariate"]
     statement := "Over binary64, with any C library where exp(NaN) is NaN, every betavariate call raises or returns for some sequence of draws."
@@ -453,16 +469,6 @@ def entries : List Entry := [
     statement := "SystemRandom.randbytes(n) is os.urandom(n): the bytes it returns for 0 <= n <= sys.maxsize, ValueError for negative n, OverflowError past Py_ssize_t, TypeError for a non-integer."
     source := "comment, Lib/random.py:920-921", status := .proven
     prop := ``SysRandbytesExact, thm := some ``sysRandbytesExact_proven },
-  { id := "rand-sysrandom-seed-stub", pyFile := "Lib/random.py"
-    pyFns := ["SystemRandom.seed"]
-    statement := "SystemRandom.seed returns None for every argument and reads no entropy, so SystemRandom(x) succeeds for every x, where Random(x) raises TypeError for an unsupported type."
-    source := "docstring, Lib/random.py:925-926", status := .proven
-    prop := ``SysSeedStub, thm := some ``sysSeedStub_proven },
-  { id := "rand-sysrandom-notimplemented", pyFile := "Lib/random.py"
-    pyFns := ["SystemRandom._notimplemented"]
-    statement := "SystemRandom.getstate/setstate raise NotImplementedError('System entropy source does not have state.') for every argument without a read, and so does __reduce__ (pickle, copy)."
-    source := "docstring, Lib/random.py:928-931", status := .proven
-    prop := ``SysNotImplemented, thm := some ``sysNotImplemented_proven },
   { id := "rand-init-subclass-chains", pyFile := "Lib/random.py"
     pyFns := ["Random.__init_subclass__"]
     statement := "Random.__init_subclass__ passes control and the class keywords on: class creation runs the same later hooks, and the same TypeError for stray keywords, as without it."
