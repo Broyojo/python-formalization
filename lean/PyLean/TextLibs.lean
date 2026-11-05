@@ -2,7 +2,7 @@ import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructPack2
 import PyLean.TextLibs.BinasciiEq3
-import PyLean.TextLibs.BinasciiB85e
+import PyLean.TextLibs.BinasciiA85
 import PyLean.TextLibs.BinasciiCrc
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -785,7 +785,7 @@ def entries : List Entry := [
     statement := "The Ascii85 round trip holds with wrapcol and adobe."
     source := "docs: a85encode, a85decode", status := .open
     prop := ``A85WrapRoundTripC
-    notes := "Needs the loop shown to skip the newlines wraplines inserts, and the framing shown to survive them." },
+    notes := "Hard part: b2a_ascii85 does not round wrapcol, so newlines fall inside groups, and with adobe the last newline is moved before the trailing ~>. The first is done (a85_filter, TextLibs/BinasciiA85.lean: the loop result is unchanged when ignored characters are taken out). Still needed: the decoder on the encoder output with canonical and pad (generalizing dec85A_main), and the shape of the end of wraplines output for the ~> swap." },
   { id := "textlibs-base64-b32-round-trip", pyFile := "Lib/base64.py"
     pyFns := ["b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
     statement := "b32decode(b32encode(d)) == d and b32hexdecode(b32hexencode(d)) == d, for every length, so through all four padding lengths."
