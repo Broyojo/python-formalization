@@ -3252,6 +3252,10 @@ textlibs-binascii-base85-round-trip-all	proven	Modules/binascii.c	binascii_a2b_b
 textlibs-binascii-base85-strict	proven	Modules/binascii.c	binascii_a2b_base85_impl,ignorechar
 textlibs-binascii-base85-canonical	proven	Modules/binascii.c	binascii_a2b_base85_impl
 textlibs-binascii-b2a-base85-options	proven	Modules/binascii.c	binascii_b2a_base85_impl,wraplines
+textlibs-binascii-base64-lenient-refusals	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-strict-pad-shape	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base32-pad-shape	proven	Modules/binascii.c	binascii_a2b_base32_impl
+textlibs-binascii-base85-group-refusals	proven	Modules/binascii.c	binascii_a2b_base85_impl
 textlibs-base64-a85-wrap-round-trip	open	Lib/base64.py	
 textlibs-base64-b32-round-trip	proven	Lib/base64.py	b32encode,b32decode,b32hexencode,b32hexdecode
 textlibs-base64-b32-option-law	proven	Lib/base64.py	b32decode
