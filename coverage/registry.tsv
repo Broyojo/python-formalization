@@ -3231,6 +3231,27 @@ textlibs-binascii-ascii85-round-trip	proven	Modules/binascii.c	binascii_a2b_asci
 textlibs-binascii-reverse-tables	proven	Modules/binascii.c	_Py_ALIGNED_DEF
 textlibs-binascii-hex-ignorechars	proven	Modules/binascii.c	binascii_a2b_hex_impl,binascii_unhexlify_impl,ignorechar
 textlibs-binascii-wraplines	proven	Modules/binascii.c	wraplines
+textlibs-binascii-crc-ccitt	proven	Modules/binascii.c	binascii_crc_hqx_impl
+textlibs-binascii-to-hex-upper	proven	Modules/binascii.c	to_hex
+textlibs-binascii-base64-round-trip-all	proven	Modules/binascii.c	binascii_a2b_base64_impl,binascii_b2a_base64_impl,base64_encode_trio,base64_encode_fast,base64_decode_quad,base64_decode_fast,wraplines,get_reverse_table,ignorechar
+textlibs-binascii-base64-strict	proven	Modules/binascii.c	binascii_a2b_base64_impl,ignorechar
+textlibs-binascii-base64-strict-lenient-all	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-lenient-filter-all	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-canonical	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-pad-ignored	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-b2a-base64-options	proven	Modules/binascii.c	binascii_b2a_base64_impl,wraplines
+textlibs-binascii-base32-round-trip-all	proven	Modules/binascii.c	binascii_a2b_base32_impl,binascii_b2a_base32_impl,base32_encode_quint,base32_encode_fast,base32_decode_octa,base32_decode_fast,wraplines,get_reverse_table,ignorechar
+textlibs-binascii-base32-strict	proven	Modules/binascii.c	binascii_a2b_base32_impl,ignorechar
+textlibs-binascii-base32-canonical	proven	Modules/binascii.c	binascii_a2b_base32_impl
+textlibs-binascii-base32-pad-ignored	refuted	Modules/binascii.c	binascii_a2b_base32_impl
+textlibs-binascii-b2a-base32-options	proven	Modules/binascii.c	binascii_b2a_base32_impl,wraplines
+textlibs-binascii-reverse-table	proven	Modules/binascii.c	get_reverse_table
+textlibs-binascii-decoders-coherent	proven	Modules/binascii.c	get_reverse_table,binascii_a2b_base64_impl,binascii_a2b_base32_impl,binascii_a2b_base85_impl
+textlibs-binascii-alphabet-value-only	refuted	Modules/binascii.c	get_reverse_table,binascii_a2b_base64_impl
+textlibs-binascii-base85-round-trip-all	proven	Modules/binascii.c	binascii_a2b_base85_impl,binascii_b2a_base85_impl,wraplines,get_reverse_table,ignorechar
+textlibs-binascii-base85-strict	proven	Modules/binascii.c	binascii_a2b_base85_impl,ignorechar
+textlibs-binascii-base85-canonical	proven	Modules/binascii.c	binascii_a2b_base85_impl
+textlibs-binascii-b2a-base85-options	proven	Modules/binascii.c	binascii_b2a_base85_impl,wraplines
 textlibs-base64-a85-wrap-round-trip	open	Lib/base64.py	
 textlibs-base64-b32-round-trip	proven	Lib/base64.py	b32encode,b32decode,b32hexencode,b32hexdecode
 textlibs-base64-b32-option-law	proven	Lib/base64.py	b32decode

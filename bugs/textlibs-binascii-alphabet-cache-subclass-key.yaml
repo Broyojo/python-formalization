@@ -1,0 +1,71 @@
+id: textlibs-binascii-alphabet-cache-subclass-key
+title: "binascii: the reverse-table cache is keyed by the alphabet object, so a bytes subclass can get another alphabet's table"
+priority: P5
+kind: wrong-result
+module: textlibs
+files: [Modules/binascii.c]
+functions: ["get_reverse_table", "binascii_a2b_base64_impl", "binascii_a2b_base32_impl", "binascii_a2b_base85_impl"]
+summary: |
+  The decoders that take `alphabet=` (a2b_base64, a2b_base32, a2b_base85, new in 3.15) build a
+  256-byte reverse table and cache it in a module dict keyed by the alphabet object itself
+  (Modules/binascii.c:673 PyDict_GetItemRef, :691 PyDict_SetItem). The argument is a
+  PyBytesObject, so a bytes subclass is accepted, and the dict asks its `__hash__` and `__eq__`.
+  A subclass whose `__hash__` equals that of an alphabet already used and whose `__eq__` says yes
+  is given the stored alphabet's table instead of one built from its own bytes. After
+  `a2b_base64(b'AAAA', alphabet=URLSAFE_BASE64_ALPHABET)`, an `Alpha(BASE64_ALPHABET)` of that kind
+  decodes `b'-_-_'` to `b'\xfb\xff\xbf'`, and strict mode rejects `b'+/8='`, which
+  `b2a_base64(b'\xfb\xff', alphabet=a)` itself wrote ("Only base64 data is allowed"). For base32 it is
+  silent wrong data: with `A32(BASE32_ALPHABET)` hashing like BASE32HEX_ALPHABET,
+  `a2b_base32(b2a_base32(b'\xff', alphabet=b), alphabet=b)` returns `b'9'`. The same lookup lets a
+  raising `__hash__` or `__eq__` escape from the decoder (ValueError from `__hash__` here).
+likelihood: |
+  Very low: it needs a bytes subclass with a custom `__hash__` and `__eq__` passed as an alphabet. Once
+  it happens the wrong table stays in the module cache for the life of the process.
+maybe_intended: |
+  Probably accepted as a consequence of caching by the object, as with the struct format cache
+  (textlibs-struct-cache-str-subclass-key). The clinic type is PyBytesObject, which admits
+  subclasses, but nothing suggests the cache was meant to depend on their methods. A fix is cheap.
+reproducer: |
+  import binascii
+  URL = binascii.URLSAFE_BASE64_ALPHABET
+  binascii.a2b_base64(b"AAAA", alphabet=URL)
+  class Alpha(bytes):
+      def __hash__(self): return hash(URL)
+      def __eq__(self, o): return True
+  a = Alpha(binascii.BASE64_ALPHABET)
+  enc = binascii.b2a_base64(b"\xfb\xff", alphabet=a, newline=False)
+  try:
+      r1 = binascii.a2b_base64(enc, alphabet=a, strict_mode=True)
+  except binascii.Error as e:
+      r1 = "Error: %s" % e
+  r2 = binascii.a2b_base64(b"-_-_", alphabet=a)
+  r3 = binascii.a2b_base64(enc, alphabet=bytes(a), strict_mode=True)
+  print(enc, r1, r2, r3)
+  if enc == b"+/8=" and r1 == "Error: Only base64 data is allowed" and r2 == b"\xfb\xff\xbf" and r3 == b"\xfb\xff":
+      print("REPRODUCED textlibs-binascii-alphabet-cache-subclass-key")
+expected: |
+  The decoders read the alphabet by its bytes: `a2b_base64(enc, alphabet=a, strict_mode=True)` gives
+  `b'\xfb\xff'`, as `alphabet=bytes(a)` does, whatever alphabets were used before.
+observed: |
+  python3 3.15.2: b'+/8=' Error: Only base64 data is allowed b'\xfb\xff\xbf' b'\xfb\xff'. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  docs of a2b_base64, a2b_base32, a2b_base85: "Optional alphabet must be a bytes object of length N
+  which specifies an alternative alphabet." The cache is an undocumented optimisation (gh-145980
+  proposed it as "create it automatically from the passed alphabet argument and cache the result").
+cause: |
+  Modules/binascii.c:673 looks the alphabet object up in state->reverse_table_cache and :691 stores
+  it as the key; the lookup calls the subclass's __hash__ and __eq__ (a raising one propagates from
+  :673). Only the length is checked first (:669).
+possible_fix: |
+  Key the cache on an exact bytes object: use the alphabet as the key only when
+  PyBytes_CheckExact, and otherwise copy it with PyBytes_FromStringAndSize (or skip the cache).
+duplicates: |
+  No report found. gh-145980 (closed) introduced the alphabets and proposed the cache; it does not
+  discuss subclasses. Not in the bugforge list (no binascii entries there).
+  Queries (read-only): gh search issues --repo python/cpython binascii alphabet cache;
+  ... binascii reverse table cache; ... a2b_base64 alphabet subclass; ... binascii alphabet bytes
+  subclass hash; ... get_reverse_table; ... binascii alphabet __hash__; ... binascii alphabet;
+  ... a2b_base64 alphabet; ... binascii cache; ... alphabet subclass; ... reverse table (one hit,
+  gh-145980); ... base32 (read the list).
+lean: lean/PyLean/TextLibs/BinasciiCache.lean (getReverseTable, a2bB64S); lean/PyLean/TextLibs/BinasciiCacheProps.lean (AlphabetValueOnly, alphabetValueOnly_refuted; ReverseTableLaw, DecodersCoherent)

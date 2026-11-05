@@ -1,4 +1,4 @@
-import PyLean.TextLibs.BinasciiRest
+import PyLean.TextLibs.BinasciiWrap
 
 /-!
 The codecs of `Modules/binascii.c` as they stand in CPython 3.15.2, where base32, base85 and Ascii85
@@ -87,13 +87,6 @@ def encTable (alpha : Option (List Nat)) (default : List Nat) (size : Nat) : Py 
   | some a =>
     if a.length ≠ size then .error (.valueError s!"alphabet must have length {size}")
     else .ok a
-
-/-- `wraplines`, `Modules/binascii.c:461-481`: a newline after every `width` characters, none at the
-end. The cases `width = 0` are not reached: each caller tests it. -/
-def wraplines (width : Nat) : (fuel : Nat) → List Nat → List Nat
-  | 0, s => s
-  | fuel + 1, s =>
-    if s.length ≤ width then s else s.take width ++ [10] ++ wraplines width fuel (s.drop width)
 
 /-! ### base64 -/
 
@@ -197,7 +190,7 @@ def b2a64Core (t data : List Nat) (padded : Bool) (wrapcol : Nat) (newline : Boo
   let f := fastEnc64 t data
   let out := f.1 ++ tail64 t f.2 ++ List.replicate pads 61
   let wrapcol := if wrapcol = 0 then 0 else if wrapcol < 4 then 4 else wrapcol / 4 * 4
-  let out := if wrapcol ≠ 0 then wraplines wrapcol out.length out else out
+  let out := if wrapcol ≠ 0 then wraplinesC out wrapcol else out
   if newline then out ++ [10] else out
 
 /-- `binascii.b2a_base64`, with its clinic wrapper. -/
@@ -336,7 +329,7 @@ def b2a32Core (t data : List Nat) (padded : Bool) (wrapcol : Nat) : List Nat :=
   let f := fastEnc32 t n data
   let out := f.1 ++ tail32 t f.2 ++ List.replicate pads 61
   if wrapcol ≠ 0 ∧ !out.isEmpty then
-    wraplines (if wrapcol < 8 then 8 else wrapcol / 8 * 8) out.length out
+    wraplinesC out (if wrapcol < 8 then 8 else wrapcol / 8 * 8)
   else out
 
 /-- `binascii.b2a_base32`, with its clinic wrapper. -/
@@ -476,7 +469,7 @@ def b2aA85Core (data : List Nat) (foldspaces : Bool) (wrapcol : Nat) (pad adobe 
   let outLen := (data.length + 3) / 4 * 5 + (if adobe then 4 else 0) -
     (if !pad && data.length % 4 != 0 then 4 - data.length % 4 else 0)
   if wrapcol ≠ 0 ∧ outLen ≠ 0 then
-    let w := wraplines wrapcol out.length out
+    let w := wraplinesC out wrapcol
     let n := w.length
     if adobe && n ≥ 2 && w.getD (n - 2) 0 == 10 then w.take (n - 3) ++ [10, 126, 62] else w
   else out
@@ -551,7 +544,7 @@ def b2aB85Core (t data : List Nat) (pad : Bool) (wrapcol : Nat) : List Nat :=
     if f.2.isEmpty then [] else (digits85 t (wordOf f.2)).take (if pad then 5 else f.2.length + 1)
   let out := f.1 ++ part
   if wrapcol ≠ 0 ∧ !out.isEmpty then
-    wraplines (if wrapcol < 5 then 5 else wrapcol / 5 * 5) out.length out
+    wraplinesC out (if wrapcol < 5 then 5 else wrapcol / 5 * 5)
   else out
 
 /-- `binascii.b2a_base85`, with its clinic wrapper. -/
