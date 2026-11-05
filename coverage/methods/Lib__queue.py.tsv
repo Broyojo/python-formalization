@@ -5,8 +5,8 @@ Lib/queue.py	94	105	Queue.join	join(self)	modelled	misc-queue-task-accounting
 Lib/queue.py	107	110	Queue.qsize	qsize(self)	modelled	misc-queue-size-predicates	
 Lib/queue.py	112	124	Queue.empty	empty(self)	modelled	misc-queue-size-predicates	
 Lib/queue.py	126	135	Queue.full	full(self)	modelled	misc-queue-size-predicates	
-Lib/queue.py	137	175	Queue.put	put(self, item, block=True, timeout=None)	modelled	misc-queue-failed-put,misc-queue-fifo,misc-queue-nowait-boundary,misc-queue-timed-outcome,misc-queue-timeout-validation	
-Lib/queue.py	177	215	Queue.get	get(self, block=True, timeout=None)	modelled	misc-queue-fifo,misc-queue-nowait-boundary,misc-queue-timed-outcome,misc-queue-timeout-validation	
+Lib/queue.py	137	175	Queue.put	put(self, item, block=True, timeout=None)	todo		review: The timed branch (:165-172) is modelled by timedOut as a wait that only advances the clock, but Condition.wait(remaining) raises OverflowError once remaining exceeds threading.TIMEOUT_MAX, so TimedOutcome (put on a full queue raises Full for every Int t >= 0) is false about CPython: Queue(1) holding one item, put(1, True, 10**10) raises 'OverflowError: timestamp out of range for C PyTime_t' on 3.15.2 (and with the difftest's own t*1e-5 s scaling for every t >= 10**15); timeout is Int-only though documented as a number (NaN gives ValueError 'Invalid value NaN' from acquire, also unmodelled). The other entries (fifo, nowait-boundary, timeout-validation, failed-put) are sound.
+Lib/queue.py	177	215	Queue.get	get(self, block=True, timeout=None)	todo		review: Same timed-wait gap as put (:205-212): TimedOutcome says get on an empty queue raises Empty for every Int t >= 0, but Queue().get(True, 10**10) raises OverflowError on 3.15.2 because Condition.wait(remaining) rejects it; the shutdown-first, block=False, timeout None and timeout<0-before-qsize order is otherwise mirrored and pinned (probe: get(True,-1) with an item raises ValueError, on a shut-down empty queue ShutDown).
 Lib/queue.py	217	223	Queue.put_nowait	put_nowait(self, item)	modelled	misc-queue-fifo,misc-queue-nowait-boundary	
 Lib/queue.py	225	231	Queue.get_nowait	get_nowait(self)	modelled	misc-queue-fifo,misc-queue-nowait-boundary	
 Lib/queue.py	233	256	Queue.shutdown	shutdown(self, immediate=False)	modelled	misc-queue-shutdown	
@@ -22,10 +22,10 @@ Lib/queue.py	302	303	LifoQueue._init	_init(self, maxsize)	modelled	misc-queue-li
 Lib/queue.py	305	306	LifoQueue._qsize	_qsize(self)	modelled	misc-queue-lifo	
 Lib/queue.py	308	309	LifoQueue._put	_put(self, item)	modelled	misc-queue-lifo	
 Lib/queue.py	311	312	LifoQueue._get	_get(self)	modelled	misc-queue-lifo	
-Lib/queue.py	325	327	_PySimpleQueue.__init__	__init__(self)	modelled	misc-simplequeue-twins-blocking	
-Lib/queue.py	329	336	_PySimpleQueue.put	put(self, item, block=True, timeout=None)	modelled	misc-simplequeue-twins-blocking	
-Lib/queue.py	338	355	_PySimpleQueue.get	get(self, block=True, timeout=None)	modelled	misc-simplequeue-twins,misc-simplequeue-twins-blocking	
-Lib/queue.py	357	363	_PySimpleQueue.put_nowait	put_nowait(self, item)	modelled	misc-simplequeue-twins-blocking	
-Lib/queue.py	365	371	_PySimpleQueue.get_nowait	get_nowait(self)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	325	327	_PySimpleQueue.__init__	__init__(self)	todo		review: PySQ.init is defined (Model.lean:220) but no theorem uses it: SimpleQueueTwinsBlocking and SimpleQueueGetTwins quantify over any PySQ with count = length (or pysq c), so the empty-deque, Semaphore(0) start of :325-327 is never unfolded.
+Lib/queue.py	329	336	_PySimpleQueue.put	put(self, item, block=True, timeout=None)	todo		review: PySQ.put mirrors :335-336, but the twin claim compares it with cPut, which drops C's clinic `block: bool` converter (PyObject_IsTrue, Modules/clinic/_queuemodule.c.h:105): SimpleQueue().put(1, B()) with a raising __bool__ raises ZeroDivisionError and enqueues nothing, while _PySimpleQueue ignores block and enqueues (probe on 3.15.2 and main), a twin difference hidden by typing block as Bool.
+Lib/queue.py	338	355	_PySimpleQueue.get	get(self, block=True, timeout=None)	todo		review: SimpleQueueGetTwins ('agree for all arguments') and SimpleQueueTwinsBlocking are false about CPython: cGet omits _PyTime_FromSecondsObject (_queuemodule.c:385-394), so with an item queued SimpleQueue.get(True, 10**10) raises OverflowError while _PySimpleQueue returns 1, and -1e-10 is accepted by C but ValueError in Python (3.15.2 probe; already refuted as textlibs-simplequeue-get-twins / -tiny-negative); semAcquire's timed wait also ignores Condition.wait's OverflowError (empty _PySimpleQueue.get(True, 10**10) raises it, model says Empty).
+Lib/queue.py	357	363	_PySimpleQueue.put_nowait	put_nowait(self, item)	todo		review: Only `(q.putNowait x).queue = cPut c x` is stated; the semaphore count after put_nowait is not, so a put_nowait that appends without release() passes.
+Lib/queue.py	365	371	_PySimpleQueue.get_nowait	get_nowait(self)	todo		review: Only the result `(q.getNowait).2` is compared with C; the contents and count after get_nowait are not, so a get_nowait that returns the head without popping it passes.
 Lib/queue.py	373	375	_PySimpleQueue.empty	empty(self)	modelled	misc-simplequeue-twins-blocking	
 Lib/queue.py	377	379	_PySimpleQueue.qsize	qsize(self)	modelled	misc-simplequeue-twins-blocking	
