@@ -1,7 +1,7 @@
-import PyLean.RangeSlice.Length
+import PyLean.RangeSlice.Objects
 
 /-!
-`range.__bool__`, `range.__reduce__` and the `range(...)` call itself (keyword check, then
+`range.__bool__`, `range.__reduce__` and its round trip through `range(...)` (keyword check, then
 `range_from_array`), Objects/rangeobject.c, CPython 3.15.2.
 -/
 
@@ -33,26 +33,20 @@ theorem rangeBool_big : rangeBool (range1 (2 ^ 64)) = true ∧ rangeLength (rang
 /-- `range_reduce`, rangeobject.c:721-726: `(type(r), (start, stop, step))`. -/
 def rangeReduce (r : Range) : List Int := [r.start, r.stop, r.step]
 
-/-- `range_new` (rangeobject.c:154-160) and `range_vectorcall` (:164-172): keywords are refused
-(`_PyArg_NoKeywords`), then `range_from_array` (:96-150) by argument count. -/
-def rangeCall (args : List Int) (hasKw : Bool) : Py Range :=
-  if hasKw then .error (.typeError "range() takes no keyword arguments")
-  else match args with
-    | [] => .error (.typeError "range expected at least 1 argument, got 0")
-    | [stop] => .ok (range1 stop)
-    | [a, b] => rangeNew a b none
-    | [a, b, c] => rangeNew a b (some c)
-    | l => .error (.typeError s!"range expected at most 3 arguments, got {l.length}")
-
-/-- Pickling round-trips: calling the type with the reduced arguments rebuilds an equal range
-object, for every range object. -/
-def RangeReduceRoundTrip : Prop := ∀ r : Range, r.WF → rangeCall (rangeReduce r) false = .ok r
+/-- Pickling round-trips: calling the type with the reduced arguments, through either entry
+point (`range(*args)` is `range_vectorcall`, `range.__new__(range, *args)` is `range_new`) and
+with no keywords, rebuilds a range object equal to `r` field for field, for every range object. -/
+def RangeReduceRoundTrip : Prop :=
+  ∀ r : Range, r.WF →
+    rangeVectorcall ((rangeReduce r).map .int) none = .ok r ∧
+    rangeNewTp ((rangeReduce r).map .int) none = .ok r
 
 theorem rangeReduceRoundTrip_proven : RangeReduceRoundTrip := by
   intro r ⟨h0, hl⟩
   obtain ⟨a, b, s, L⟩ := r
   simp only at h0 hl
   subst hl
-  simp [rangeCall, rangeReduce, rangeNew, validateStep, h0, makeRangeObject, bind, Except.bind, pure, Except.pure]
+  simp [rangeVectorcall, rangeNewTp, noKwnames, noKeywords, rangeFromArray, rangeFrom23, rangeReduce,
+    numberIndex, validateStepObj, h0, makeRangeObject, bind, Except.bind, pure, Except.pure]
 
 end PyLean.RangeSlice

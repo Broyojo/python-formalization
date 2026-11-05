@@ -9,6 +9,9 @@ import PyLean.RangeSlice.Iter
 import PyLean.RangeSlice.CApi
 import PyLean.RangeSlice.SliceHash
 import PyLean.RangeSlice.RangeMisc
+import PyLean.RangeSlice.Objects
+import PyLean.RangeSlice.Search
+import PyLean.RangeSlice.IterChoice
 
 /-!
 `range` and `slice`: `Objects/rangeobject.c`, `Objects/sliceobject.c`, CPython 3.15.2

@@ -16,9 +16,11 @@ Scope and conventions:
   CPython is compiled with `-fno-strict-overflow` (configure.ac:2255-2281),
   so signed `long` arithmetic that could overflow is modelled with `wrap`
   (two's complement); the properties show where that never happens.
-* Range arguments and slice parts are exact ints (or `None` for slice parts):
-  `PyNumber_Index` returns exact ints (Objects/abstract.c), so this is what
-  every `rangeobject` holds. Objects that are not ints are out of scope.
+* The fields of a `rangeobject` are exact ints: `PyNumber_Index` returns exact ints
+  (Objects/abstract.c:1456-1463), so this file works on `Int`. The objects a caller
+  passes (to `range(...)`, `r[...]`, `in`, `count`, `index`, `==`) are modelled in
+  `RangeSlice/Objects.lean` and `RangeSlice/Search.lean`, with fallible `__index__` and
+  `__eq__` callbacks. Slice parts are ints or `None` here.
 * A range object is created only through `makeRangeObject`, which stores
   `compute_range_length` in the `length` field, as `make_range_object` does.
 -/
@@ -65,7 +67,7 @@ structure Range where
   length : Int
   deriving Repr, DecidableEq, Inhabited
 
-/-- `get_len_of_range`, rangeobject.c:991-1013, in unsigned long arithmetic.
+/-- `get_len_of_range`, rangeobject.c:992-1014, in unsigned long arithmetic.
 `hi - 1UL - lo` converts `hi` and `lo` to unsigned long; `/ step` converts
 `step` to unsigned long. -/
 def getLenOfRange (lo hi step : Int) : Int :=
@@ -84,7 +86,7 @@ def computeRangeLengthLong (start stop step : Int) : Option Int := do
   let ulen := getLenOfRange lstart lstop lstep
   if ulen > longMax then none else some ulen
 
-/-- The PyLong part of `compute_range_length`, rangeobject.c:264-313:
+/-- The PyLong part of `compute_range_length`, rangeobject.c:273-315:
 `(lo, hi, step)` is `(start, stop, step)` for a positive step and
 `(stop, start, -step)` otherwise; then `0` if `lo >= hi`, else
 `(hi - lo - 1) // step + 1`. `PyNumber_FloorDivide` by the positive step is
@@ -94,29 +96,29 @@ def computeRangeLengthSlow (start stop step : Int) : Int :=
   if step > 0 then (if start ≥ stop then 0 else (stop - start - 1) / step + 1)
   else (if stop ≥ start then 0 else (start - stop - 1) / (-step) + 1)
 
-/-- `compute_range_length`, rangeobject.c:243-314: the `long` fast path,
+/-- `compute_range_length`, rangeobject.c:243-323: the `long` fast path,
 then the PyLong slow path. -/
 def computeRangeLength (start stop step : Int) : Int :=
   match computeRangeLengthLong start stop step with
   | some len => len
   | none => computeRangeLengthSlow start stop step
 
-/-- `make_range_object`, rangeobject.c:66-88. -/
+/-- `make_range_object`, rangeobject.c:67-88. -/
 def makeRangeObject (start stop step : Int) : Range :=
   ⟨start, stop, step, computeRangeLength start stop step⟩
 
-/-- `validate_step`, rangeobject.c:46-61. `none` is an omitted step. -/
+/-- `validate_step`, rangeobject.c:47-61, for an argument already converted by `PyNumber_Index` (the object-level model is `validateStepObj`, RangeSlice/Objects.lean). `none` is an omitted step. -/
 def validateStep : Option Int → Py Int
   | none => .ok 1
   | some s => if s = 0 then .error (.valueError "range() arg 3 must not be zero") else .ok s
 
 /-- `range(start, stop[, step])`, `range_from_array` cases 3 and 2,
-rangeobject.c:103-124 and :139. -/
+rangeobject.c:105-122 and :141, after the `PyNumber_Index` conversions (`rangeFrom23`, RangeSlice/Objects.lean, is the object-level model). -/
 def rangeNew (start stop : Int) (step : Option Int) : Py Range := do
   let st ← validateStep step
   return makeRangeObject start stop st
 
-/-- `range(stop)`, `range_from_array` case 1, rangeobject.c:125-132. -/
+/-- `range(stop)`, `range_from_array` case 1, rangeobject.c:123-130. -/
 def range1 (stop : Int) : Range := makeRangeObject 0 stop 1
 
 /-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:748. -/
@@ -236,7 +238,7 @@ def listSlicePositions (n : Int) (s : Slice) : Py (List Int) := do
 
 /-! ## Membership, index, count, comparison, hash -/
 
-/-- `range_contains_long`, rangeobject.c:458-501. -/
+/-- `range_contains_long`, rangeobject.c:459-501. -/
 def rangeContainsLong (r : Range) (ob : Int) : Bool :=
   let (c2, c3) := if r.step > 0 then (decide (r.start ≤ ob), decide (ob < r.stop))
     else (decide (ob ≤ r.start), decide (r.stop < ob))
@@ -253,7 +255,7 @@ def rangeIndex (r : Range) (ob : Int) : Py Int :=
     if r.step = 1 then .ok idx else .ok (idx / r.step)
   else .error (.valueError "range.index(x): x not in range")
 
-/-- `range_equals`, rangeobject.c:529-555, for two distinct objects. -/
+/-- `range_equals`, rangeobject.c:530-553, for two distinct objects (the :534 identity test is in `rangeEqualsObj`, RangeSlice/Objects.lean). -/
 def rangeEquals (r0 r1 : Range) : Bool :=
   if r0.length != r1.length then false
   else if r0.length == 0 then true
@@ -261,7 +263,7 @@ def rangeEquals (r0 r1 : Range) : Bool :=
   else if r0.length == 1 then true
   else r0.step == r1.step
 
-/-- The tuple `range_hash` hashes, rangeobject.c:593-628:
+/-- The tuple `range_hash` hashes, rangeobject.c:594-628:
 `(len, None, None)`, `(len, start, None)` or `(len, start, step)`. -/
 def rangeHashKey (r : Range) : Int × Option Int × Option Int :=
   if r.length == 0 then (r.length, none, none)
@@ -371,7 +373,7 @@ def iterSetstateObj (it : RIter) (state : StateArg) : Py RIter :=
   | .long .., .exact v => iterSetstate it v
   | .long .., _ => .error (.typeError s!"state must be an int, not {state.typeName}")
 
-/-- `iter(r)`: `range_iter`, rangeobject.c:1226-1279. -/
+/-- `iter(r)`: `range_iter`, rangeobject.c:1227-1279. -/
 def rangeIter (r : Range) : RIter :=
   let slow := RIter.long r.start r.step r.length
   match asLong r.start, asLong r.stop, asLong r.step with
@@ -383,7 +385,7 @@ def rangeIter (r : Range) : RIter :=
     else .fast lstart lstep ulen
   | _, _, _ => slow
 
-/-- `reversed(r)`: `range_reverse`, rangeobject.c:1281-1383. The slow path
+/-- `reversed(r)`: `range_reverse`, rangeobject.c:1282-1384. The slow path
 builds `longrange_iterator(start + (len - 1) * step, -step, len)`. -/
 def rangeReverse (r : Range) : RIter :=
   let slow := RIter.long (r.start + (r.length - 1) * r.step) (-r.step) r.length
