@@ -842,4 +842,88 @@ theorem setAddRestartsOnResize_refuted : ¬SetAddRestartsOnResize := by
   rw [aba_probe.2.2.2.2.2.2.2.1] at h2
   exact nomatch h2
 
+/-! ## `_shuffle_bits` is a bijection on 64-bit words -/
+
+/-- `_shuffle_bits` (:953-957) on a 64-bit word. -/
+def shuffleBV (x : BitVec 64) : BitVec 64 := ((x ^^^ 89869747#64) ^^^ (x <<< 16)) * 3644798167#64
+
+/-- Its inverse: multiply by `3644798167⁻¹ mod 2**64`, undo the xor with `89869747`, and undo
+`z ^ (z << 16)` by xoring in the shifts by 16, 32 and 48. -/
+def unshuffleBV (y : BitVec 64) : BitVec 64 :=
+  let z := (y * 7905530827793432295#64) ^^^ 89869747#64
+  z ^^^ (z <<< 16) ^^^ (z <<< 32) ^^^ (z <<< 48)
+
+/-- `unshuffleBV` on `Py_uhash_t` values. -/
+def unshuffleBits (y : Nat) : Nat := (unshuffleBV (BitVec.ofNat 64 y)).toNat
+
+theorem bv_sh64 (x : BitVec 64) : x <<< 64 = 0#64 := by
+  apply BitVec.eq_of_toNat_eq
+  simp
+
+theorem bv_xor_cancel (a b c : BitVec 64) : (a ^^^ b) ^^^ (b ^^^ c) = a ^^^ c := by
+  rw [BitVec.xor_assoc, ← BitVec.xor_assoc b b c, BitVec.xor_self, BitVec.zero_xor]
+
+theorem bv_xor_back (x s c : BitVec 64) : ((x ^^^ c) ^^^ s) ^^^ c = x ^^^ s := by
+  rw [BitVec.xor_assoc, BitVec.xor_comm s c, BitVec.xor_assoc, ← BitVec.xor_assoc c c s,
+    BitVec.xor_self, BitVec.zero_xor]
+
+theorem unshuffle_shuffle (x : BitVec 64) : unshuffleBV (shuffleBV x) = x := by
+  have hk : (3644798167#64 : BitVec 64) * 7905530827793432295#64 = 1#64 := by decide
+  unfold unshuffleBV shuffleBV
+  simp only []
+  rw [BitVec.mul_assoc, hk, BitVec.mul_one, bv_xor_back]
+  simp only [BitVec.shiftLeft_xor_distrib, ← BitVec.shiftLeft_add]
+  rw [show (16 + 16 : Nat) = 32 from rfl, show (16 + 32 : Nat) = 48 from rfl,
+    show (16 + 48 : Nat) = 64 from rfl, bv_sh64, BitVec.xor_zero, bv_xor_cancel, bv_xor_cancel,
+    BitVec.xor_assoc, BitVec.xor_self, BitVec.xor_zero]
+
+theorem shuffle_unshuffle (y : BitVec 64) : shuffleBV (unshuffleBV y) = y := by
+  have hk : (7905530827793432295#64 : BitVec 64) * 3644798167#64 = 1#64 := by decide
+  unfold unshuffleBV shuffleBV
+  simp only []
+  generalize hz : (y * 7905530827793432295#64) ^^^ 89869747#64 = z
+  simp only [BitVec.shiftLeft_xor_distrib, ← BitVec.shiftLeft_add]
+  rw [show (16 + 16 : Nat) = 32 from rfl, show (16 + 32 : Nat) = 48 from rfl,
+    show (16 + 48 : Nat) = 64 from rfl, bv_sh64, BitVec.xor_zero]
+  rw [BitVec.xor_assoc z (z <<< 16) (z <<< 32), BitVec.xor_assoc z _ (z <<< 48),
+    BitVec.xor_assoc, BitVec.xor_comm 89869747#64, bv_xor_cancel, ← hz, BitVec.xor_assoc,
+    BitVec.xor_self, BitVec.xor_zero, BitVec.mul_assoc, hk, BitVec.mul_one]
+
+theorem shuffleBits_bv (h : Nat) (hh : h < 2 ^ 64) :
+    shuffleBits h = (shuffleBV (BitVec.ofNat 64 h)).toNat := by
+  unfold shuffleBits shuffleBV
+  rw [BitVec.toNat_mul, BitVec.toNat_xor, BitVec.toNat_xor, BitVec.toNat_shiftLeft,
+    BitVec.toNat_ofNat, Nat.mod_eq_of_lt hh, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (show 89869747 < 2 ^ 64 by decide),
+    Nat.mod_eq_of_lt (show 3644798167 < 2 ^ 64 by decide)]
+
+theorem bv_ofNat_toNat (x : BitVec 64) : BitVec.ofNat 64 x.toNat = x := by
+  apply BitVec.eq_of_toNat_eq
+  simp
+
+/-- `_shuffle_bits` (:953-957) over every 64-bit word: it stays a 64-bit word, it is a bijection
+(the explicit `unshuffleBits` undoes it, and it undoes `unshuffleBits`), so distinct hash fields of a
+table stay distinct before `frozenset_hash_impl` xors them; and it is the only function on 64-bit
+words that `unshuffleBits` undoes, so a shuffle with any other constant, shift or form fails this,
+a bijective one too. -/
+def ShuffleBitsBijective : Prop :=
+  (∀ h, h < 2 ^ 64 → shuffleBits h < 2 ^ 64 ∧ unshuffleBits (shuffleBits h) = h) ∧
+  (∀ y, y < 2 ^ 64 → shuffleBits (unshuffleBits y) = y) ∧
+  (∀ f : Nat → Nat, (∀ h, h < 2 ^ 64 → f h < 2 ^ 64 ∧ unshuffleBits (f h) = h) →
+    ∀ h, h < 2 ^ 64 → f h = shuffleBits h)
+theorem shuffleBitsBijective_proven : ShuffleBitsBijective := by
+  have hinv : ∀ y, y < 2 ^ 64 → shuffleBits (unshuffleBits y) = y := by
+    intro y hy
+    unfold unshuffleBits
+    rw [shuffleBits_bv _ (BitVec.isLt _), bv_ofNat_toNat, shuffle_unshuffle,
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt hy]
+  refine ⟨fun h hh => ⟨?_, ?_⟩, hinv, fun f hf h hh => ?_⟩
+  · rw [shuffleBits_bv h hh]
+    exact BitVec.isLt _
+  · rw [shuffleBits_bv h hh, unshuffleBits, bv_ofNat_toNat, unshuffle_shuffle, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt hh]
+  · obtain ⟨h1, h2⟩ := hf h hh
+    calc f h = shuffleBits (unshuffleBits (f h)) := (hinv _ h1).symm
+      _ = shuffleBits h := by rw [h2]
+
 end PyLean.DictSet
