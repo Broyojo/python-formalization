@@ -370,9 +370,9 @@ def FlagClassContainsValue : Prop :=
 
 theorem flagClassContainsValue_refuted : ¬FlagClassContainsValue := by
   intro h
-  obtain ⟨n, name, h1, h2⟩ := h EV evOps ⟨"F", [("A", 1), ("B", 2)], .conform⟩ (.atom (.int 8)) 8 rfl (by decide)
+  obtain ⟨n, name, h1, h2⟩ := h EV evOps { name := "F", members := [("A", 1), ("B", 2)], boundary := .conform } (.atom (.int 8)) 8 rfl (by decide)
     (by decide +kernel)
-  have : (FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .conform⟩ 8) = .ok (.flag 0 none) := by decide +kernel
+  have : (FlagCls.call { name := "F", members := [("A", 1), ("B", 2)], boundary := .conform } 8) = .ok (.flag 0 none) := by decide +kernel
   rw [this] at h1
   simp only [Except.ok.injEq, FlagVal.flag.injEq] at h1
   omega
@@ -398,8 +398,8 @@ theorem missingOf_proven : MissingOf := by
 private theorem missingOf_reprRaises :
     ¬ (∀ (α : Type) (o : Ops α) (c : FlagCls) (v : α), o.asInt v = none → (c.missingOf o v).raises "ValueError") := by
   intro h
-  obtain ⟨e, he, hc⟩ := h PV pvOps ⟨"F", [("A", 1)], .strict⟩ (.robj "KeyError" 0) rfl
-  have : FlagCls.missingOf pvOps ⟨"F", [("A", 1)], .strict⟩ (.robj "KeyError" 0) = .error (.keyError "'repr'") := by
+  obtain ⟨e, he, hc⟩ := h PV pvOps { name := "F", members := [("A", 1)], boundary := .strict } (.robj "KeyError" 0) rfl
+  have : FlagCls.missingOf pvOps { name := "F", members := [("A", 1)], boundary := .strict } (.robj "KeyError" 0) = .error (.keyError "'repr'") := by
     decide +kernel
   rw [this] at he
   cases he
@@ -408,7 +408,7 @@ private theorem missingOf_reprRaises :
 /-- `F(RI(8))` under `STRICT`, for a two-bit class and an `int` subclass whose `__repr__` raises `KeyError`: the message of
 :1501 runs it, so `KeyError`. -/
 private theorem missingOf_intReprRaises :
-    FlagCls.missingOf pvOps ⟨"F", [("A", 1), ("B", 2)], .strict⟩ (.rint 8 "KeyError") = .error (.keyError "'repr'") := by
+    FlagCls.missingOf pvOps { name := "F", members := [("A", 1), ("B", 2)], boundary := .strict } (.rint 8 "KeyError") = .error (.keyError "'repr'") := by
   decide +kernel
 
 /-- The earlier `ContainsPaths` clause, a value that is not an `int` is compared with the member values: false for
@@ -417,7 +417,7 @@ private theorem contains_reprRaises :
     ¬ (∀ (α : Type) (o : Ops α) (c : FlagCls) (v : α), o.asInt v = none →
         c.containsOf o false v = o.listIn v (c.members.map fun p => o.ofInt (p.2 : Int))) := by
   intro h
-  have := h PV pvOps ⟨"F", [("A", 1)], .strict⟩ (.robj "KeyError" 0) rfl
+  have := h PV pvOps { name := "F", members := [("A", 1)], boundary := .strict } (.robj "KeyError" 0) rfl
   revert this
   decide +kernel
 
@@ -708,21 +708,104 @@ theorem setNamePaths_proven : SetNamePaths := by
       fun e hl ht => by simp [EClassG.noteValue, h, hl, ht],
       fun e hl ht => by simp [EClassG.noteValue, h, hl, ht]⟩
 
-/-! ### `Enum._add_value_alias_` -/
+/-! ### `EnumType._add_member_`, `Enum._add_alias_` and `Enum._add_value_alias_` -/
+
+/-- The class of the probes on 3.15.2: `A = RI(1, 'KeyError')`, an `int` subclass whose `__repr__` raises `KeyError`,
+`B = 2`, and `own` for the class's own `__repr__` (`none` for `Enum.__repr__`). -/
+def wCls (own : Option (Name → Py String)) : EClassG PV :=
+  { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])],
+    values := [(['A'], .rint 1 "KeyError"), (['B'], .int 2)],
+    value2member := [(.rint 1 "KeyError", ['A']), (.int 2, ['B'])], hashableValues := [.rint 1 "KeyError", .int 2],
+    ownRepr := own }
+
+/-- The same class over the `EV` values, `RObj('KeyError')` for `A`. -/
+def wClsEV (own : Option (Name → Py String)) : EClass :=
+  { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])],
+    values := [(['A'], .robj "KeyError" 0), (['B'], .atom (.int 2))],
+    value2member := [(.robj "KeyError" 0, ['A']), (.atom (.int 2), ['B'])],
+    hashableValues := [.robj "KeyError" 0, .atom (.int 2)], ownRepr := own }
+
+/-- `_add_alias_` is `_add_member_(name, self)`, :1237. A new name is added and points at the member, the same name again
+is nothing, and a name bound to another member is the `NameError` of :1074, `'%r is already bound: %r' % (name,
+member)`, which runs `repr` of that member first: the class's own `__repr__` if it defines one, whose exception goes
+out and whose string gives the `NameError`, whatever the member's value; otherwise `Enum.__repr__` (:1289-1291), which
+runs the `repr` of the member's `_value_`, whose exception goes out instead. `_member_names_` does not change, so an alias
+does not show up in iteration or `len`. The same holds of the `_add_member_` that `__set_name__` runs, over values of any
+type. So for `class W(Enum): A = RI(1); B = 2; def __repr__(self): return 'ok'`, `W.B._add_alias_('A')` and
+`W._add_member_('A', W.B)` are the `NameError`, and without the `__repr__` they raise the `KeyError` of `RI.__repr__`,
+as on 3.15.2. -/
+def AddAlias : Prop :=
+  (∀ (c : EClass) (self name other : Name),
+    (c.memberMap.lookup name = none → ∃ c', c.addAlias self name = .ok c' ∧ c'.memberNames = c.memberNames ∧
+      c'.memberMap = c.memberMap ++ [(name, self)] ∧ c'.len = c.len ∧ c'.iter.length ≤ c'.len) ∧
+    (c.memberMap.lookup name = some self → c.addAlias self name = .ok c) ∧
+    (∀ r, c.memberMap.lookup name = some other → other ≠ self → c.ownRepr = some r →
+      ((∃ s, r other = .ok s) → (c.addAlias self name).raises "NameError") ∧
+      (∀ e, r other = .error e → c.addAlias self name = .error e)) ∧
+    (∀ v, c.memberMap.lookup name = some other → other ≠ self → c.ownRepr = none → c.valueOf other = some v →
+      ((∃ s, v.repr = .ok s) → (c.addAlias self name).raises "NameError") ∧
+      (∀ e, v.repr = .error e → c.addAlias self name = .error e))) ∧
+  (∀ (α : Type) (o : Ops α) (c : EClassG α) (name member other : Name),
+    (c.memberMap.lookup name = none →
+      c.addToMap o name member = .ok { c with memberMap := c.memberMap ++ [(name, member)] }) ∧
+    (c.memberMap.lookup name = some member → c.addToMap o name member = .ok c) ∧
+    (∀ r, c.memberMap.lookup name = some other → other ≠ member → c.ownRepr = some r →
+      ((∃ s, r other = .ok s) → (c.addToMap o name member).raises "NameError") ∧
+      (∀ e, r other = .error e → c.addToMap o name member = .error e)) ∧
+    (∀ v, c.memberMap.lookup name = some other → other ≠ member → c.ownRepr = none → c.values.lookup other = some v →
+      ((∃ s, o.repr v = .ok s) → (c.addToMap o name member).raises "NameError") ∧
+      (∀ e, o.repr v = .error e → c.addToMap o name member = .error e))) ∧
+  ((wClsEV (some fun _ => .ok "ok")).addAlias ['B'] ['A'] = .error (.named "NameError" "~is already bound") ∧
+    (wClsEV none).addAlias ['B'] ['A'] = .error (.keyError "'repr'") ∧
+    (wCls (some fun _ => .ok "ok")).addToMap pvOps ['A'] ['B'] = .error (.named "NameError" "~is already bound") ∧
+    (wCls none).addToMap pvOps ['A'] ['B'] = .error (.keyError "'repr'"))
+
+theorem addAlias_proven : AddAlias := by
+  refine ⟨fun c self name other => ⟨fun h => ?_, fun h => ?_, fun r h hn hr => ⟨fun ⟨s, hs⟩ => ?_, fun e he => ?_⟩,
+    fun v h hn hr hv => ⟨fun ⟨s, hs⟩ => ?_, fun e he => ?_⟩⟩,
+    fun α o c name member other => ⟨fun h => ?_, fun h => ?_, fun r h hn hr => ⟨fun ⟨s, hs⟩ => ?_, fun e he => ?_⟩,
+    fun v h hn hr hv => ⟨fun ⟨s, hs⟩ => ?_, fun e he => ?_⟩⟩, rfl, rfl, rfl, rfl⟩
+  · refine ⟨{ c with memberMap := c.memberMap ++ [(name, self)] }, ?_, rfl, rfl, rfl, ?_⟩
+    · simp [EClass.addAlias, EClass.addToMap, h]
+    · simp only [EClass.iter, EClass.len]
+      exact List.length_filterMap_le _ _
+  · simp [EClass.addAlias, EClass.addToMap, h]
+  · refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
+    simp [EClass.addAlias, EClass.addToMap, EClass.memberRepr, h, hn, hr, hs, withRepr]
+  · simp [EClass.addAlias, EClass.addToMap, EClass.memberRepr, h, hn, hr, he, withRepr]
+  · refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
+    simp [EClass.addAlias, EClass.addToMap, EClass.memberRepr, EClass.valueOf, h, hn, hr, hs, withRepr,
+      show c.values.lookup other = some v from hv]
+  · simp [EClass.addAlias, EClass.addToMap, EClass.memberRepr, EClass.valueOf, h, hn, hr, he, withRepr,
+      show c.values.lookup other = some v from hv]
+  · simp [EClassG.addToMap, h]
+  · simp [EClassG.addToMap, h]
+  · refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
+    simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, hs, withRepr]
+  · simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, he, withRepr]
+  · refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
+    simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, hv, hs, withRepr]
+  · simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, hv, he, withRepr]
 
 /-- `Enum._add_value_alias_`, every path, for every `hash` and `==`: a value another member has in the map is the
-`ValueError` (after the `repr` of the value and of that member, by the class's own `__repr__` if it has one, either of
-which can raise instead), one this member has
-is nothing, a new one is bound; a `TypeError` from the lookup runs the search over the
-members' `_value_`, in which a value another member has raises that `TypeError` again (it formats the `ValueError` with
-`map[value]`), one this member has is nothing, and a new one is bound; any other exception goes out. Binding is
-`setdefault` and an append, or with a `TypeError` the unhashable lists under `self.name`. -/
+`ValueError` of :1244, `'%r is already bound: %r' % (value, member)`, after the `repr` of the value and then of that
+member, either of which can raise instead; the member's `repr` is the class's own `__repr__` if it defines one (its
+exception, or its string and the `ValueError`, whatever the member's value), else the `repr` of the member's `_value_`
+(`Enum.__repr__`, :1289-1291). One this member has is nothing, a new one is bound; a `TypeError` from the lookup runs the
+search over the members' `_value_`, in which a value another member has raises that `TypeError` again (it formats the
+`ValueError` with `map[value]`), one this member has is nothing, and a new one is bound; any other exception goes out.
+Binding is `setdefault` and an append, or with a `TypeError` the unhashable lists under `self.name`. So for
+`class W(Enum): A = RI(1); B = 2; def __repr__(self): return 'ok'`, `W.B._add_value_alias_(1)` is the `ValueError`, and
+without the `__repr__` it is the `KeyError` of `RI.__repr__`, as on 3.15.2. -/
 def ValueAliasPaths : Prop :=
-  ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self : Name) (v : α),
-    (∀ m, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
-      (∃ s, c.memberRepr o m = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
-    (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
-      c.memberRepr o m = .error e → c.addValueAlias o f self v = .error e) ∧
+  (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self : Name) (v : α),
+    (∀ m r, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) → c.ownRepr = some r →
+      ((∃ s, r m = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
+      (∀ e, r m = .error e → c.addValueAlias o f self v = .error e)) ∧
+    (∀ m x, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) → c.ownRepr = none →
+      c.values.lookup m = some x →
+      ((∃ s, o.repr x = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
+      (∀ e, o.repr x = .error e → c.addValueAlias o f self v = .error e)) ∧
     (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → o.repr v = .error e →
       c.addValueAlias o f self v = .error e) ∧
     (o.dictGet c.value2member v = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
@@ -744,12 +827,19 @@ def ValueAliasPaths : Prop :=
       c.bindValue o f self v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
                                             unhashableMap := appendToG c.unhashableMap (f self) v }) ∧
     (∀ e, o.setDefault c.value2member v self = .error e → o.isInst e "TypeError" = false →
-      c.bindValue o f self v = .error e)
+      c.bindValue o f self v = .error e)) ∧
+  (wCls (some fun _ => .ok "ok")).addValueAlias pvOps id ['B'] (.int 1) = .error (.valueError "~is already bound") ∧
+  (wCls none).addValueAlias pvOps id ['B'] (.int 1) = .error (.keyError "'repr'")
 
 theorem valueAliasPaths_proven : ValueAliasPaths := by
+  refine ⟨?_, rfl, rfl⟩
   intro α o c f self v
-  refine ⟨fun m h hm ⟨s, hs⟩ ⟨s', hs'⟩ => ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hs', withRepr]; rfl, rfl⟩,
-    fun m e h hm ⟨s, hs⟩ he => by simp [EClassG.addValueAlias, h, hm, hs, he, withRepr],
+  refine ⟨fun m r h hm ⟨s, hs⟩ hr => ⟨fun ⟨s', hs'⟩ =>
+      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hs', withRepr]; rfl, rfl⟩,
+      fun e he => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, he, withRepr]⟩,
+    fun m x h hm ⟨s, hs⟩ hr hx => ⟨fun ⟨s', hs'⟩ =>
+      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, hs', withRepr]; rfl, rfl⟩,
+      fun e he => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, he, withRepr]⟩,
     fun m e h hm he => by simp [EClassG.addValueAlias, h, hm, he], fun h => by
     simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h], fun e h ht => ⟨fun m hm hne => by
     simp [EClassG.addValueAlias, h, ht, hm, hne], fun hm => by simp [EClassG.addValueAlias, h, ht, hm], fun hm => by
@@ -784,10 +874,9 @@ def twoG2 : EClassG EV :=
 
 theorem valueAliasExclusive_refuted : ¬ValueAliasExclusive := by
   intro h
-  have h1 : (twoG (.atom (.int 1)) (.atom (.int 2))).addValueAlias evOps id ['A'] (.atom (.list 9)) = .ok twoG1 := by
-    decide +kernel
+  have h1 : (twoG (.atom (.int 1)) (.atom (.int 2))).addValueAlias evOps id ['A'] (.atom (.list 9)) = .ok twoG1 := rfl
   obtain ⟨e, he, _⟩ := h EV evOps _ _ id ['A'] ['B'] (.atom (.list 9)) (by decide) h1
-  have h2 : twoG1.addValueAlias evOps id ['B'] (.atom (.list 9)) = .ok twoG2 := by decide +kernel
+  have h2 : twoG1.addValueAlias evOps id ['B'] (.atom (.list 9)) = .ok twoG2 := rfl
   rw [h2] at he
   cases he
 
@@ -803,7 +892,7 @@ theorem valueAliasBoundError_refuted : ¬ValueAliasBoundError := by
   obtain ⟨e, he, hc⟩ := h EV evOps (twoG (.atom (.list 1)) (.atom (.int 2))) id ['B'] ['A'] (.atom (.list 1))
     (by decide) (by decide +kernel)
   have : (twoG (.atom (.list 1)) (.atom (.int 2))).addValueAlias evOps id ['B'] (.atom (.list 1)) =
-      .error (.typeError "cannot use 'list' as a dict key (unhashable type: 'list')") := by decide +kernel
+      .error (.typeError "cannot use 'list' as a dict key (unhashable type: 'list')") := rfl
   rw [this] at he
   cases he
   exact absurd hc (by decide)
@@ -825,7 +914,7 @@ def oneG1 : EClassG EV :=
 
 theorem valueAliasFound_refuted : ¬ValueAliasFound := by
   intro h
-  have h1 : oneG.addValueAlias evOps (fun _ => ['a']) ['A'] (.atom (.list 1)) = .ok oneG1 := by decide +kernel
+  have h1 : oneG.addValueAlias evOps (fun _ => ['a']) ['A'] (.atom (.list 1)) = .ok oneG1 := rfl
   have := h EV evOps _ _ (fun _ => ['a']) ['A'] (.atom (.list 1)) (by decide) h1
   revert this
   decide +kernel
@@ -929,8 +1018,9 @@ private theorem valueAlias_typeErrorSubclass :
         o.dictGet c.value2member v = .error e → e.className ≠ "TypeError" → c.addValueAlias o f m v = .error e) := by
   intro h
   have := h PV pvOps cA id ['A'] (.key 5 (some "TSub") none 0) (.named "TSub" "hash") (by decide +kernel) (by decide)
-  revert this
-  decide +kernel
+  have h2 : (cA.addValueAlias pvOps id ['A'] (.key 5 (some "TSub") none 0)).isOk = true := by decide +kernel
+  rw [this] at h2
+  cases h2
 
 private theorem valueAlias_typeErrorSubclass_filed :
     (cA.addValueAlias pvOps id ['A'] (.key 5 (some "TSub") none 0)).map (·.unhashableMap) =
@@ -981,7 +1071,7 @@ private theorem enumNew_otherBadRepr :
 private def w2 : EClassG PV :=
   { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])],
     values := [(['A'], .int 1), (['B'], .int 2)], value2member := [(.int 1, ['A']), (.int 2, ['B'])],
-    hashableValues := [.int 1, .int 2], reprErr := some (.named "LookupError" "") }
+    hashableValues := [.int 1, .int 2], ownRepr := some fun _ => .error (.named "LookupError" "") }
 
 /-- `W2.B._add_value_alias_(1)`: the `ValueError` of :1244 formats `W2.A`, whose `__repr__` raises; the earlier clause,
 which formatted only its `_value_`, is false. -/
@@ -991,14 +1081,28 @@ private theorem valueAlias_classRepr :
         c.values.lookup m = some x → (∃ s, o.repr x = .ok s) → (c.addValueAlias o f self v).raises "ValueError") := by
   intro h
   obtain ⟨e, he, hc⟩ := h PV pvOps w2 id ['B'] ['A'] (.int 1) (.int 1) (by decide +kernel) (by decide) ⟨_, rfl⟩ rfl ⟨_, rfl⟩
-  have : w2.addValueAlias pvOps id ['B'] (.int 1) = .error (.named "LookupError" "") := by decide +kernel
+  have : w2.addValueAlias pvOps id ['B'] (.int 1) = .error (.named "LookupError" "") := rfl
   rw [this] at he
   cases he
   simp [PyExc.className] at hc
 
 /-- `_add_member_` on a name bound to another member formats that member: with a raising `__repr__` it is that
 exception, not the `NameError` (:1074). -/
-private theorem addMember_classRepr : w2.addToMap pvOps ['A'] ['B'] = .error (.named "LookupError" "") := by
-  decide +kernel
+private theorem addMember_classRepr : w2.addToMap pvOps ['A'] ['B'] = .error (.named "LookupError" "") := rfl
+
+/-- The clause of the earlier model, in which a class's own `__repr__` counted only when it raised and one that returned
+gave way to the `repr` of the member's `_value_`: "the `repr` of the bound member's value raises, so `_add_member_` raises
+it", false for `W`, whose `__repr__` returns `'ok'` (the `NameError` on 3.15.2). -/
+private theorem addMember_valueReprOnly :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (name member other : Name) (x : α) (e : PyExc),
+        c.memberMap.lookup name = some other → other ≠ member → c.values.lookup other = some x → o.repr x = .error e →
+        c.addToMap o name member = .error e) := by
+  intro h
+  have := h PV pvOps (wCls (some fun _ => .ok "ok")) ['A'] ['B'] ['A'] (.rint 1 "KeyError") (.keyError "'repr'") rfl
+    (by decide) rfl rfl
+  have h2 : (wCls (some fun _ => .ok "ok")).addToMap pvOps ['A'] ['B'] = .error (.named "NameError" "~is already bound") :=
+    rfl
+  rw [h2] at this
+  cases this
 
 end PyLean.CoreLibs.EnumDC

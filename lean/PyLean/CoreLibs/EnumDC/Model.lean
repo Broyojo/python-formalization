@@ -62,12 +62,30 @@ inductive Boundary where
   | strict | conform | eject | keep
   deriving Repr, DecidableEq, Inhabited
 
-/-- A `Flag` class: its members, aliases included, in definition order. Members have values `>= 0`. -/
+/-- `_numeric_repr_` of `Flag`, Lib/enum.py:1434, `repr`: an `int` in decimal. -/
+def reprNat (n : Nat) : Py String := .ok (toString n)
+
+/-- `hex(n)`, the `_numeric_repr_` of the examples. -/
+def hexNat (n : Nat) : String := "0x" ++ String.ofList (Nat.toDigits 16 n)
+
+/-- A `Flag` class: its members, aliases included, in definition order. Members have values `>= 0`. The class may set
+two kinds of hooks, each Python code that can raise (a hook is a function of its argument, so one that changes state is
+not modelled). -/
 structure FlagCls where
   name : String
   members : List (String × Nat)
   boundary : Boundary
-  deriving Repr, DecidableEq, Inhabited
+  /-- `'|%s' % cls._numeric_repr_(unknown)`, Lib/enum.py:1560, after the `|`: the call on the unknown bits, then the `%s`
+  of its result (`str()` of it, the items of a tuple result taken as the arguments of `%`), or what either raises. `Flag`
+  sets `repr` (:1434), `reprNat`; a class may set its own, an allowed sunder (:358), such as `hex`. -/
+  numRepr : Nat → Py String := reprNat
+  /-- The class's own `__format__`, if it defines one: what it gives for the member whose `_value_` is `None`, its
+  exception included, and the `TypeError` of Objects/abstract.c:898-904 for a result that is not a `str`. -/
+  ownFormat : Option (Py String) := none
+  /-- The class's own `__str__`, if it defines one, for that member: its result, or its exception, or the `TypeError` of
+  Objects/object.c:833-838 for a result that is not a `str`. -/
+  ownStr : Option (Py String) := none
+  deriving Inhabited
 
 /-- `_flag_mask_`, Lib/enum.py:278. -/
 def FlagCls.flagMask (c : FlagCls) : Nat := c.members.foldl (fun m p => m ||| p.2) 0
@@ -115,7 +133,8 @@ def FlagCls.nameMembers (c : FlagCls) (memberValue aliases : Nat) : List (String
       !first.contains p && p.2 != 0 && (p.2 &&& v) == p.2))
   else first
 
-/-- The name loop of `Flag._missing_`, Lib/enum.py:1541-1560. -/
+/-- The name loop of `Flag._missing_`, Lib/enum.py:1541-1560: the unknown bits are named by the class's
+`_numeric_repr_` (:1560), whose exception goes out. -/
 def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option String) :=
   if memberValue != 0 || aliases != 0 then
     let all := c.nameMembers memberValue aliases
@@ -126,7 +145,10 @@ def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option 
     if combined == 0 then .ok none
     else if unknown != 0 && c.boundary == .strict then
       .error (.valueError s!"~no members with value {unknown}")
-    else if unknown != 0 then .ok (some s!"{joined}|{unknown}")
+    else if unknown != 0 then
+      match c.numRepr unknown with
+      | .error e => .error e
+      | .ok s => .ok (some s!"{joined}|{s}")
     else .ok (some joined)
   else .ok none
 

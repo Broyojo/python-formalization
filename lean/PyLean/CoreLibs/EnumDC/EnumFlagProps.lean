@@ -225,7 +225,7 @@ def LenMatchesIter : Prop :=
 
 theorem lenMatchesIter_refuted : ¬LenMatchesIter := by
   intro h
-  have := h ⟨"F", [("A", 1), ("B", 2), ("C", 4)], .keep⟩ 8 8 none [] (by decide +kernel) (by decide +kernel)
+  have := h { name := "F", members := [("A", 1), ("B", 2), ("C", 4)], boundary := .keep } 8 8 none [] (by decide +kernel) (by decide +kernel)
   revert this
   decide
 
@@ -279,7 +279,7 @@ def FlagIterMembers : Prop :=
 
 theorem flagIterMembers_refuted : ¬FlagIterMembers := by
   intro h
-  have h1 : (FlagCls.iterC ⟨"H", [("A", 1), ("X", 6)], .strict⟩ [] 6) = .ok [none, none] := by decide +kernel
+  have h1 : (FlagCls.iterC { name := "H", members := [("A", 1), ("X", 6)], boundary := .strict } [] 6) = .ok [none, none] := by decide +kernel
   obtain ⟨n, w, hx⟩ := h _ _ _ _ h1 none (by simp)
   cases hx
 
@@ -786,28 +786,47 @@ theorem inRange_sub (fm x : Nat) (hle : x ≤ 2 ^ bitLength fm - 1)
     · rw [hf] at this; simp at this
     · rfl
 
-theorem nameOf_ok (c : FlagCls) (hb : c.boundary ≠ .strict) (value mv al : Nat) :
+/-- A class's `_numeric_repr_` that returns for every `int`, as `repr` and `hex` do. -/
+def FlagCls.NumReprOk (c : FlagCls) : Prop := ∀ u, ∃ s, c.numRepr u = .ok s
+
+theorem nameOf_ok (c : FlagCls) (hb : c.boundary ≠ .strict) (hn : c.NumReprOk) (value mv al : Nat) :
     ∃ r, c.nameOf value mv al = pure r := by
   have hs : (c.boundary == Boundary.strict) = false := by simpa using hb
   simp only [FlagCls.nameOf, hs, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
   repeat' split
-  all_goals exact ⟨_, rfl⟩
+  all_goals first
+    | exact ⟨_, rfl⟩
+    | (rename_i e he; obtain ⟨s, hs'⟩ := hn _; rw [hs'] at he; cases he)
 
+/-- The class `A = 1, X = 6` of the examples, with boundary `b` and `_numeric_repr_` `nr`. -/
+def flagAX (b : Boundary) (nr : Nat → Py String := reprNat) : FlagCls :=
+  { name := "F", members := [("A", 1), ("X", 6)], boundary := b, numRepr := nr }
+
+/-- A `_numeric_repr_` that raises `LookupError('nr')`. -/
+def raiseNr : Nat → Py String := fun _ => .error (.named "LookupError" "nr")
+
+/-- `_numeric_repr_ = hex`. -/
+def hexNr : Nat → Py String := fun n => .ok (hexNat n)
+
+/-- `Flag._missing_` under `CONFORM` on an `int` `>= 0`: the value becomes `v & _flag_mask_`, which has no unknown bit,
+and the name loop names it. -/
 theorem conform_missing (c : FlagCls) (hb : c.boundary = .conform) (v : Int) (hv : 0 ≤ v) :
-    ∃ name, c.missing v = .ok (.flag (v.toNat &&& c.flagMask) name) := by
-  have hns : c.boundary ≠ .strict := by rw [hb]; decide
+    c.missing v = (c.nameOf (v.toNat &&& c.flagMask) ((v.toNat &&& c.flagMask) &&& c.singlesMask)
+      (notAnd c.singlesMask (v.toNat &&& c.flagMask))).map
+      (fun nm => .flag (v.toNat &&& c.flagMask) (match c.memberOf (v.toNat &&& c.flagMask) with
+        | some n => some n
+        | none => nm)) := by
   simp only [FlagCls.missing, FlagCls.missingR, hb]
   split
   · have hx : andMask v c.flagMask &&& c.flagMask = andMask v c.flagMask := by
       simp only [andMask, Nat.and_assoc, Nat.and_self]
     have hun := notAnd_sub hx
     have hnn : ¬ ((andMask v c.flagMask : Int) < 0) := by omega
-    obtain ⟨nm, hnm⟩ := nameOf_ok c hns (andMask v c.flagMask) (andMask v c.flagMask &&& c.singlesMask)
-      (notAnd c.singlesMask (andMask v c.flagMask))
     simp only [pure_bind, hnn, ↓reduceIte, Int.toNat_natCast, hun, bne_self_eq_false, Bool.false_and,
-      Bool.false_eq_true, hnm]
+      Bool.false_eq_true]
     rw [← andMask_nonneg v _ hv]
-    exact ⟨_, rfl⟩
+    generalize c.nameOf _ _ _ = x
+    cases x <;> rfl
   · rename_i hoob
     have h1 : v ≤ (c.allBits : Int) := by
       apply Classical.byContradiction
@@ -824,29 +843,56 @@ theorem conform_missing (c : FlagCls) (hb : c.boundary = .conform) (v : Int) (hv
       unfold FlagCls.allBits at h1 h2
       exact inRange_sub c.flagMask v.toNat (by omega) h2
     have hnn : ¬ (v < 0) := by omega
-    obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
-    simp only [pure_bind, hnn, ↓reduceIte, notAnd_sub hsub, bne_self_eq_false, Bool.false_and, Bool.false_eq_true,
-      hnm]
+    simp only [pure_bind, hnn, ↓reduceIte, notAnd_sub hsub, bne_self_eq_false, Bool.false_and, Bool.false_eq_true]
     rw [hsub]
-    exact ⟨_, rfl⟩
+    generalize c.nameOf _ _ _ = x
+    cases x <;> rfl
 
-/-- Under `CONFORM`, `F(v)` for an `int` `v ≥ 0` succeeds, and its value is `v & _flag_mask_`: the extra bits are
-discarded, whether `v` is out of range or only has a bit no member has. Docs of `FlagBoundary.CONFORM`: "extra bits are
-discarded". -/
+/-- Under `CONFORM`, `F(v)` for an `int` `v ≥ 0` has the value `v & _flag_mask_`: the extra bits are discarded, whether
+`v` is out of range or only has a bit no member has, and no `ValueError` is raised. Docs of `FlagBoundary.CONFORM`:
+"extra bits are discarded". A member's value is that member; anything else is the name loop's pseudo-member, whose unknown
+bits are named by the class's `_numeric_repr_`, so with one that returns (`repr`, `hex`) `F(v)` succeeds, and with one
+that raises it can raise: `A = 1, X = 6` gives `F(3)` the name `'A|2'`, which `_numeric_repr_(2)` makes. -/
 def ConformKeepsMask : Prop :=
   ∀ (c : FlagCls) (v : Int), c.boundary = .conform → 0 ≤ v →
-    ∃ name, c.call v = .ok (.flag (v.toNat &&& c.flagMask) name)
+    (∀ n, c.memberOf v.toNat = some n → c.call v = .ok (.flag (v.toNat &&& c.flagMask) (some n))) ∧
+    (c.memberOf v.toNat = none →
+      c.call v = (c.nameOf (v.toNat &&& c.flagMask) ((v.toNat &&& c.flagMask) &&& c.singlesMask)
+        (notAnd c.singlesMask (v.toNat &&& c.flagMask))).map
+        (fun nm => .flag (v.toNat &&& c.flagMask) (match c.memberOf (v.toNat &&& c.flagMask) with
+          | some n => some n
+          | none => nm))) ∧
+    (c.NumReprOk → ∃ name, c.call v = .ok (.flag (v.toNat &&& c.flagMask) name))
 
 theorem conformKeepsMask_proven : ConformKeepsMask := by
   intro c v hb hv
-  unfold FlagCls.call
-  simp only [ge_iff_le, hv, ↓reduceIte]
-  cases hm : c.memberOf v.toNat with
-  | some n =>
-    refine ⟨some n, ?_⟩
-    simp only [memberOf_sub c hm]
-  | none =>
-    exact conform_missing c hb v hv
+  have hns : c.boundary ≠ .strict := by rw [hb]; decide
+  have hcall : c.memberOf v.toNat = none → c.call v = c.missing v := by
+    intro hm
+    simp only [FlagCls.call, ge_iff_le, hv, ↓reduceIte, hm]
+  refine ⟨fun n hm => ?_, fun hm => by rw [hcall hm, conform_missing c hb v hv], fun hn => ?_⟩
+  · simp only [FlagCls.call, ge_iff_le, hv, ↓reduceIte, hm, memberOf_sub c hm]
+  · cases hm : c.memberOf v.toNat with
+    | some n =>
+      refine ⟨some n, ?_⟩
+      simp only [FlagCls.call, ge_iff_le, hv, ↓reduceIte, hm, memberOf_sub c hm]
+    | none =>
+      rw [hcall hm, conform_missing c hb v hv]
+      obtain ⟨r, hr⟩ := nameOf_ok c hns hn (v.toNat &&& c.flagMask) ((v.toNat &&& c.flagMask) &&& c.singlesMask)
+        (notAnd c.singlesMask (v.toNat &&& c.flagMask))
+      rw [hr]
+      exact ⟨_, rfl⟩
+
+/-- The earlier `ConformKeepsMask`, `F(v)` always succeeds under `CONFORM`, held of a model in which every class named
+unknown bits in decimal: with a `_numeric_repr_` that raises, `F(3)` of `A = 1, X = 6` raises it, as on 3.15.2. -/
+private theorem conform_numReprRaises :
+    ¬ (∀ (c : FlagCls) (v : Int), c.boundary = .conform → 0 ≤ v →
+        ∃ name, c.call v = .ok (.flag (v.toNat &&& c.flagMask) name)) := by
+  intro h
+  obtain ⟨nm, hnm⟩ := h (flagAX .conform raiseNr) 3 rfl (by decide)
+  have : (flagAX .conform raiseNr).call 3 = .error (.named "LookupError" "nr") := by decide +kernel
+  rw [this] at hnm
+  cases hnm
 
 /-! ### `verify(NAMED_FLAGS)` -/
 
@@ -978,21 +1024,72 @@ private theorem verifyNamed_equalValue :
 def FlagCls.outOfRange (c : FlagCls) (v : Int) : Bool :=
   !decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) || andMask v (c.allBits ^^^ c.flagMask) != 0
 
+/-- The value `Flag._missing_` keeps under `KEEP`, :1511-1524: a value `>= 0` itself, a negative one out of range
+`max(all_bits + 1, 2 ** v.bit_length()) + v`, a negative one in range `all_bits + 1 + v`. -/
+def FlagCls.keepValue (c : FlagCls) (v : Int) : Nat :=
+  if 0 ≤ v then v.toNat
+  else if c.outOfRange v then ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) + v).toNat
+  else ((c.allBits : Int) + 1 + v).toNat
+
 /-- `Flag._missing_` on an out-of-range `int`, each boundary, :1494-1523: `STRICT` is the `ValueError` "invalid value",
-`EJECT` gives back the `int` itself, and `KEEP` never raises: a value `>= 0` keeps every bit, and a negative one becomes
-`max(all_bits + 1, 2 ** v.bit_length()) + v`; in range, a negative value under `KEEP` is `all_bits + 1 + v`. So for a
-two-bit class `F(8)` is the `ValueError` under `STRICT` and `8` under `EJECT`. -/
+`EJECT` gives back the `int` itself, and `KEEP` raises no `ValueError`: a value `>= 0` keeps every bit, a negative one
+becomes `max(all_bits + 1, 2 ** v.bit_length()) + v`, and in range a negative value is `all_bits + 1 + v`; that value is
+named by the name loop, whose unknown bits the class's `_numeric_repr_` names, so with one that returns `KEEP` never
+raises. So for a two-bit class `F(8)` is the `ValueError` under `STRICT`, `8` under `EJECT`, and `(8, None)` under
+`KEEP`. -/
 def MissingBoundaries : Prop :=
   ∀ (c : FlagCls) (v : Int),
     (c.boundary = .strict → c.outOfRange v = true → (c.missing v).raises "ValueError") ∧
     (c.boundary = .eject → c.outOfRange v = true → c.missing v = .ok (.plain v)) ∧
-    (c.boundary = .keep → ∃ name, c.missing v = .ok (.flag (if 0 ≤ v then v.toNat
-        else if c.outOfRange v then ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) + v).toNat
-        else ((c.allBits : Int) + 1 + v).toNat) name))
+    (c.boundary = .keep → c.missing v = (c.nameOf (c.keepValue v) (c.keepValue v &&& c.singlesMask)
+      (notAnd c.singlesMask (c.keepValue v))).map (fun nm => .flag (c.keepValue v) (match c.memberOf (c.keepValue v) with
+        | some n => some n
+        | none => nm))) ∧
+    (c.boundary = .keep → c.NumReprOk → ∃ name, c.missing v = .ok (.flag (c.keepValue v) name))
+
+theorem missing_keep (c : FlagCls) (v : Int) (hb : c.boundary = .keep) :
+    c.missing v = (c.nameOf (c.keepValue v) (c.keepValue v &&& c.singlesMask)
+      (notAnd c.singlesMask (c.keepValue v))).map (fun nm => .flag (c.keepValue v) (match c.memberOf (c.keepValue v) with
+        | some n => some n
+        | none => nm)) := by
+  simp only [FlagCls.missing, FlagCls.missingR, hb]
+  by_cases ho : c.outOfRange v = true
+  · have ho' := ho
+    unfold FlagCls.outOfRange at ho'
+    simp only [ho', ↓reduceIte]
+    by_cases hv : v < 0
+    · have hpos : 0 ≤ ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v := by
+        have h1 := lt_two_pow_bitLength' v.natAbs
+        have h2 : 2 ^ bitLength v.natAbs ≤ max (c.allBits + 1) (2 ^ bitLength v.natAbs) := Nat.le_max_right _ _
+        omega
+      have hnn : ¬ (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v < 0) := by omega
+      simp only [hv, ↓reduceIte, pure_bind, hnn, ne_eq, reduceCtorEq, not_false_eq_true, bne_self_eq_false,
+        Bool.and_false, Bool.false_eq_true, Bool.and_true, decide_true]
+      simp only [FlagCls.keepValue, show ¬ (0 ≤ v) by omega, ↓reduceIte, ho]
+      generalize c.nameOf _ _ _ = x
+      cases x <;> rfl
+    · simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true]
+      simp only [FlagCls.keepValue, show 0 ≤ v by omega, ↓reduceIte]
+      generalize c.nameOf _ _ _ = x
+      cases x <;> rfl
+  · have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
+        andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
+      unfold FlagCls.outOfRange at ho; simpa using ho
+    simp only [ho', Bool.false_eq_true, ↓reduceIte, pure_bind]
+    by_cases hv : v < 0
+    · have hk : Boundary.keep = Boundary.eject ∨ Boundary.keep = Boundary.keep := .inr rfl
+      simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true]
+      simp only [FlagCls.keepValue, show ¬ (0 ≤ v) by omega, ↓reduceIte, ho, Bool.false_eq_true]
+      generalize c.nameOf _ _ _ = x
+      cases x <;> rfl
+    · simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true]
+      simp only [FlagCls.keepValue, show 0 ≤ v by omega, ↓reduceIte]
+      generalize c.nameOf _ _ _ = x
+      cases x <;> rfl
 
 theorem missingBoundaries_proven : MissingBoundaries := by
   intro c v
-  refine ⟨fun hb ho => ?_, fun hb ho => ?_, fun hb => ?_⟩
+  refine ⟨fun hb ho => ?_, fun hb ho => ?_, fun hb => missing_keep c v hb, fun hb hn => ?_⟩
   · unfold FlagCls.outOfRange at ho
     simp only [FlagCls.missing, FlagCls.missingR, hb, ho, ↓reduceIte]
     exact ⟨_, rfl, rfl⟩
@@ -1000,65 +1097,37 @@ theorem missingBoundaries_proven : MissingBoundaries := by
     simp only [FlagCls.missing, FlagCls.missingR, hb, ho, ↓reduceIte]
     rfl
   · have hns : c.boundary ≠ .strict := by rw [hb]; decide
-    simp only [FlagCls.missing, FlagCls.missingR, hb]
-    by_cases ho : c.outOfRange v = true
-    · have ho' := ho
-      unfold FlagCls.outOfRange at ho'
-      simp only [ho', ↓reduceIte]
-      by_cases hv : v < 0
-      · have hpos : 0 ≤ ((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v := by
-          have h1 := lt_two_pow_bitLength' v.natAbs
-          have h2 : 2 ^ bitLength v.natAbs ≤ max (c.allBits + 1) (2 ^ bitLength v.natAbs) := Nat.le_max_right _ _
-          omega
-        have hnn : ¬ (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v < 0) := by omega
-        obtain ⟨nm, hnm⟩ := nameOf_ok c hns
-          (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat
-          ((((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat &&& c.singlesMask)
-          (notAnd c.singlesMask (((max (c.allBits + 1) (2 ^ bitLength v.natAbs) : Nat) : Int) + v).toNat)
-        simp only [hv, ↓reduceIte, pure_bind, hnn, ne_eq, reduceCtorEq, not_false_eq_true, bne_self_eq_false,
-          Bool.and_false, Bool.false_eq_true, hnm, Bool.and_true, decide_true]
-        simp only [show ¬ (0 ≤ v) by omega, ↓reduceIte, ho]
-        exact ⟨_, rfl⟩
-      · have hnn : ¬ (v < 0) := hv
-        obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
-        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
-        simp only [show 0 ≤ v by omega, ↓reduceIte]
-        exact ⟨_, rfl⟩
-    · have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
-          andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
-        unfold FlagCls.outOfRange at ho; simpa using ho
-      simp only [ho', Bool.false_eq_true, ↓reduceIte, pure_bind]
-      by_cases hv : v < 0
-      · have hk : Boundary.keep = Boundary.eject ∨ Boundary.keep = Boundary.keep := .inr rfl
-        obtain ⟨nm, hnm⟩ := nameOf_ok c hns ((c.allBits : Int) + 1 + v).toNat
-          (((c.allBits : Int) + 1 + v).toNat &&& c.singlesMask) (notAnd c.singlesMask ((c.allBits : Int) + 1 + v).toNat)
-        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
-        simp only [show ¬ (0 ≤ v) by omega, ↓reduceIte, ho]
-        exact ⟨_, rfl⟩
-      · obtain ⟨nm, hnm⟩ := nameOf_ok c hns v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)
-        simp only [hv, ↓reduceIte, pure_bind, bne_self_eq_false, Bool.and_false, Bool.false_eq_true, false_or, or_true, hnm]
-        simp only [show 0 ≤ v by omega, ↓reduceIte]
-        exact ⟨_, rfl⟩
+    rw [missing_keep c v hb]
+    obtain ⟨r, hr⟩ := nameOf_ok c hns hn (c.keepValue v) (c.keepValue v &&& c.singlesMask)
+      (notAnd c.singlesMask (c.keepValue v))
+    rw [hr]
+    exact ⟨_, rfl⟩
 
 /-! ### `Flag._missing_` in range, and the names of pseudo-members -/
 
-/-- The only exception of the name loop, :1541-1560, is the `STRICT` one of :1557, "no members with value". -/
+theorem and_strict {b : Bool} {x : Boundary} (h : (b && x == Boundary.strict) = true) : x = .strict := by
+  simp only [Bool.and_eq_true, beq_iff_eq] at h
+  exact h.2
+
+/-- The exceptions of the name loop, :1541-1560: the `STRICT` one of :1557, "no members with value", or what the class's
+`_numeric_repr_` raises on nonzero unknown bits, :1560. -/
 theorem nameOf_error (c : FlagCls) (value mv al : Nat) (e : PyExc) (h : c.nameOf value mv al = .error e) :
-    c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}" := by
-  by_cases hb : c.boundary = .strict
-  · refine ⟨hb, ?_⟩
-    simp only [FlagCls.nameOf] at h
-    repeat' split at h
-    all_goals first | exact ⟨_, (Except.error.inj h).symm⟩ | cases h
-  · obtain ⟨r, hr⟩ := nameOf_ok c hb value mv al
-    rw [hr] at h
-    cases h
+    (c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}") ∨
+      ∃ u, u ≠ 0 ∧ c.numRepr u = .error e := by
+  simp only [FlagCls.nameOf] at h
+  repeat' split at h
+  all_goals first
+    | exact .inl ⟨and_strict ‹_›, _, (Except.error.inj h).symm⟩
+    | (obtain rfl := Except.error.inj h; refine .inr ⟨_, ?_, ‹_›⟩; exact bne_iff_ne.mp ‹_›)
+    | cases h
 
 /-- `Flag._missing_` on an `int` `>= 0` in range, any boundary: the value is kept exactly and the name is the name loop's,
-:1541-1560 (a member of that value wins, :1566); the loop's only exception is the `STRICT` "no members with value" of
-:1557, and with no member bit and no alias bit the name is `None`. So `F(3)` of `A = 1, B = 2` under `STRICT` is the
-pseudo-member `(3, 'A|B')`, `F(9)` under `KEEP` is `(9, 'A|8')`, and `F(3)` of `A = 1, X = 6` under `STRICT` is the
-`ValueError` "no members with value 2", all as on 3.15.2. -/
+:1541-1560 (a member of that value wins, :1566). The loop's exceptions are the `STRICT` "no members with value" of :1557
+and what the class's `_numeric_repr_` raises on the unknown bits, :1560; with no member bit and no alias bit the name is
+`None`, and under another boundary with a `_numeric_repr_` that returns it does not raise. So `F(3)` of `A = 1, B = 2`
+under `STRICT` is the pseudo-member `(3, 'A|B')`, `F(9)` of `A = 1, X = 6` under `KEEP` is `(9, 'A|8')`, with
+`_numeric_repr_ = hex` `(9, 'A|0x8')`, and with one that raises `LookupError` that `LookupError`, and `F(3)` of
+`A = 1, X = 6` under `STRICT` is the `ValueError` "no members with value 2", all as on 3.15.2. -/
 def MissingInRange : Prop :=
   (∀ (c : FlagCls) (v : Int), c.outOfRange v = false → 0 ≤ v →
     c.missing v = (c.nameOf v.toNat (v.toNat &&& c.singlesMask) (notAnd c.singlesMask v.toNat)).map
@@ -1066,16 +1135,31 @@ def MissingInRange : Prop :=
         | some n => some n
         | none => nm))) ∧
   (∀ (c : FlagCls) (value : Nat), c.nameOf value 0 0 = .ok none) ∧
-  (∀ (c : FlagCls) (value mv al : Nat), c.boundary ≠ .strict → ∃ r, c.nameOf value mv al = .ok r) ∧
+  (∀ (c : FlagCls) (value mv al : Nat), c.boundary ≠ .strict → c.NumReprOk → ∃ r, c.nameOf value mv al = .ok r) ∧
   (∀ (c : FlagCls) (value mv al : Nat) (e : PyExc), c.nameOf value mv al = .error e →
-    c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}") ∧
-  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .strict⟩ 3 = .ok (.flag 3 (some "A|B")) ∧
-  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .keep⟩ 9 = .ok (.flag 9 (some "A|8")) ∧
-  FlagCls.call ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 3 = .error (.valueError "~no members with value 2")
+    (c.boundary = .strict ∧ ∃ u : Nat, e = .valueError s!"~no members with value {u}") ∨
+      ∃ u, u ≠ 0 ∧ c.numRepr u = .error e) ∧
+  FlagCls.call { name := "F", members := [("A", 1), ("B", 2)], boundary := .strict } 3 = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call { name := "F", members := [("A", 1), ("X", 6)], boundary := .keep } 9 = .ok (.flag 9 (some "A|8")) ∧
+  (flagAX .keep hexNr).call 9 = .ok (.flag 9 (some "A|0x8")) ∧
+  (flagAX .keep raiseNr).call 9 = .error (.named "LookupError" "nr") ∧
+  FlagCls.call { name := "F", members := [("A", 1), ("X", 6)], boundary := .strict } 3 =
+    .error (.valueError "~no members with value 2")
+
+/-- The earlier clauses of `MissingInRange`, the name loop raises only under `STRICT` and only "no members with value",
+held of a model in which every class named unknown bits in decimal: a `_numeric_repr_` that raises makes `F(9)` of
+`A = 1, X = 6` under `KEEP` raise it, as on 3.15.2. -/
+private theorem nameOf_numReprRaises :
+    ¬ (∀ (c : FlagCls) (value mv al : Nat), c.boundary ≠ .strict → ∃ r, c.nameOf value mv al = .ok r) := by
+  intro h
+  obtain ⟨r, hr⟩ := h (flagAX .keep raiseNr) 9 1 8 (by decide)
+  have : (flagAX .keep raiseNr).nameOf 9 1 8 = .error (.named "LookupError" "nr") := by decide +kernel
+  rw [this] at hr
+  cases hr
 
 theorem missingInRange_proven : MissingInRange := by
-  refine ⟨?_, fun c value => by simp [FlagCls.nameOf], fun c value mv al hb => nameOf_ok c hb value mv al,
-    nameOf_error, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  refine ⟨?_, fun c value => by simp [FlagCls.nameOf], fun c value mv al hb hn => nameOf_ok c hb hn value mv al,
+    nameOf_error, by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
   intro c v ho hv
   have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
       andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
@@ -1103,7 +1187,7 @@ theorem missingInRange_proven : MissingInRange := by
 /-- `verify(CONTINUOUS)` raises what building the set raises, and what `min` raises: with values `1, 2, 'x'` that is the
 `TypeError` of `<`, whose operands are in the order the set is iterated, which depends on the hash seed: iterated as
 `1, 2, 'x'` it is "'<' not supported between instances of 'str' and 'int'" (PYTHONHASHSEED=0 on 3.15.2), iterated as
-`'x', 2, 1` it is "... 'int' and 'str'" (PYTHONHASHSEED=1). -/
+`'x', 1, 2` it is "... 'int' and 'str'" (PYTHONHASHSEED=1). -/
 def ContinuousErrors : Prop :=
   (∀ (α : Type) (o : Ops α) (order : List α → List α) (flag : Bool) (s : String) (vals : List α) (e : PyExc),
     o.setOf vals [] = .error e → verifyContinuousG o order flag s vals = .error e) ∧
@@ -1161,7 +1245,9 @@ theorem missingStrictRepr_proven : MissingStrictRepr := by
 /-- The members the name loop collects, :1541-1552: with no alias bit, exactly those of `_iter_member_(member_value)`;
 with alias bits, those and every canonical member with a nonzero value inside `member_value | aliases` (the loop of
 :1547-1552), and nothing else. The name is theirs joined with `|`, plus `|unknown` for bits none of them has, except that
-no bit at all is `None` and unknown bits under `STRICT` are the :1557 error. So `A = 1, X = 6` under `STRICT` gives
+no bit at all is `None` and unknown bits under `STRICT` are the :1557 error. The unknown bits are named by the class's
+`_numeric_repr_`, any function (:1560), its exception going out: `repr` by default (:1434), so `F(9)` of `A = 1, X = 6`
+under `KEEP` is `(9, 'A|8')`, and `hex` makes it `(9, 'A|0x8')`. So `A = 1, X = 6` under `STRICT` gives
 `F(7) = (7, 'A|X')`: the alias loop finds `X`. -/
 def NameLoop : Prop :=
   (∀ (c : FlagCls) (mv : Nat), c.nameMembers mv 0 = (c.iterMembers mv).filterMap id) ∧
@@ -1176,13 +1262,20 @@ def NameLoop : Prop :=
       let unknown := (if al != 0 then mv ||| al else value) ^^^ combined
       if combined == 0 then .ok none
       else if unknown != 0 && c.boundary == .strict then .error (.valueError s!"~no members with value {unknown}")
-      else if unknown != 0 then .ok (some s!"{"|".intercalate (all.map Prod.fst)}|{unknown}")
+      else if unknown != 0 then
+        match c.numRepr unknown with
+        | .error e => .error e
+        | .ok s => .ok (some s!"{"|".intercalate (all.map Prod.fst)}|{s}")
       else .ok (some ("|".intercalate (all.map Prod.fst)))) ∧
-  FlagCls.call ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 7 = .ok (.flag 7 (some "A|X"))
+  FlagCls.call { name := "F", members := [("A", 1), ("X", 6)], boundary := .strict } 7 = .ok (.flag 7 (some "A|X")) ∧
+  (flagAX .keep).nameOf 9 1 8 = .ok (some "A|8") ∧
+  (flagAX .keep hexNr).nameOf 9 1 8 = .ok (some "A|0x8") ∧
+  (flagAX .keep raiseNr).nameOf 9 1 8 = .error (.named "LookupError" "nr")
 
 theorem nameLoop_proven : NameLoop := by
   refine ⟨fun c mv => by simp [FlagCls.nameMembers], fun c mv al hal p hp h0 hs => ?_, fun c mv al hal p hp => ?_,
-    fun c value mv al h => by simp only [FlagCls.nameOf, h, ↓reduceIte], by decide +kernel⟩
+    fun c value mv al h => by simp only [FlagCls.nameOf, h, ↓reduceIte] <;> rfl, by decide +kernel, by decide +kernel,
+    by decide +kernel, by decide +kernel⟩
   · have hal' : (al != 0) = true := by simpa using hal
     simp only [FlagCls.nameMembers, hal', ↓reduceIte, List.mem_append, List.mem_filter]
     by_cases hf : p ∈ (c.iterMembers mv).filterMap id
@@ -1209,9 +1302,9 @@ def MissingNegative : Prop :=
         (fun nm => .flag v2 (match c.memberOf v2 with
           | some n => some n
           | none => nm))) ∧
-  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .strict⟩ (-1) = .ok (.flag 3 (some "A|B")) ∧
-  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .eject⟩ (-1) = .ok (.flag 3 (some "A|B")) ∧
-  FlagCls.call ⟨"G", [("A", 1), ("X", 6)], .strict⟩ (-2) = .ok (.flag 0 none)
+  FlagCls.call { name := "F", members := [("A", 1), ("B", 2)], boundary := .strict } (-1) = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call { name := "F", members := [("A", 1), ("B", 2)], boundary := .eject } (-1) = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call { name := "G", members := [("A", 1), ("X", 6)], boundary := .strict } (-2) = .ok (.flag 0 none)
 
 theorem missingNegative_proven : MissingNegative := by
   refine ⟨?_, by decide +kernel, by decide +kernel, by decide +kernel⟩

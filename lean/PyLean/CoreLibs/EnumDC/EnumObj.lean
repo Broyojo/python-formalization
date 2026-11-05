@@ -138,16 +138,16 @@ structure EClassG (α : Type) where
   flagMask : Int := 0
   singlesMask : Int := 0
   allBits : Int := 0
-  /-- What a `__repr__` of the class's own raises, if it has one that does. -/
-  reprErr : Option PyExc := none
-  deriving DecidableEq
+  /-- The class's own `__repr__`, if it defines one: what `repr(member)` gives for each member, by its `_name_`: a string,
+  its exception, or the `TypeError` of Objects/object.c:791-796 for a result that is not a `str`. -/
+  ownRepr : Option (Name → Py String) := none
 
 /-- The `EV` class as one over `EV` values. -/
 def EClass.toG (c : EClass) : EClassG EV :=
   { isFlag := c.kind == .flag, memberNames := c.memberNames, memberMap := c.memberMap, values := c.values,
     value2member := c.value2member, hashableValues := c.hashableValues, unhashableValues := c.unhashableValues,
     unhashableMap := c.unhashableMap, flagMask := c.flagMask, singlesMask := c.singlesMask, allBits := c.allBits,
-    reprErr := c.reprErr }
+    ownRepr := c.ownRepr }
 
 /-- `cls[name]`, `EnumType.__getitem__`, Lib/enum.py:800-804. -/
 def EClassG.getItem (c : EClassG α) (name : Name) : Py Name :=
@@ -155,10 +155,11 @@ def EClassG.getItem (c : EClassG α) (name : Name) : Py Name :=
   | some m => .ok m
   | none => .error (.keyError "~name")
 
-/-- `repr(member)`: the class's own `__repr__`, or `Enum.__repr__`, `<C.A: repr(_value_)>`, which runs the value's. -/
+/-- `repr(member)`, as `%r` runs it: the class's own `__repr__`, whatever it does, or else `Enum.__repr__`,
+Lib/enum.py:1289-1291, `<C.A: repr(_value_)>`, which runs the value's. -/
 def EClassG.memberRepr (o : Ops α) (c : EClassG α) (m : Name) : Py String :=
-  match c.reprErr with
-  | some e => .error e
+  match c.ownRepr with
+  | some r => r m
   | none =>
     match c.values.lookup m with
     | some v => o.repr v

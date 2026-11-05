@@ -50,7 +50,7 @@ def StrictValuesAreNamed : Prop :=
 
 theorem strictValuesAreNamed_refuted : ¬StrictValuesAreNamed := by
   intro h
-  have := h ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 2 2 none rfl (by decide) (by decide)
+  have := h { name := "F", members := [("A", 1), ("X", 6)], boundary := .strict } 2 2 none rfl (by decide) (by decide)
   simp at this
 
 /-- The bit helpers on concrete shapes used by every `Flag`: zero is not a single bit, the

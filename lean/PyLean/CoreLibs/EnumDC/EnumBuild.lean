@@ -748,7 +748,7 @@ of a `Flag` class body. -/
 def FlagBuildMasks : Prop :=
   ∀ (members : List (String × Nat)) (b : Boundary), (members.map (fun p => p.1.toList)).Nodup →
     ∃ c, ({ kind := .flag } : EClass).build (members.map (fun p => (p.1.toList, .atom (.int (p.2 : Int))))) = .ok c ∧
-      let f : FlagCls := ⟨"F", members, b⟩
+      let f : FlagCls := { name := "F", members := members, boundary := b }
       c.flagMask = f.flagMask ∧ c.singlesMask = f.singlesMask ∧ c.allBits = f.allBits
 
 theorem flagBuildMasks_proven : FlagBuildMasks := by

@@ -36,8 +36,12 @@ def fmtItems (total : Nat) : Nat → List (Py String) → Py Unit
     | .error e => .error e
     | .ok _ => fmtItems total k rest
 
-/-- `fmt % args` for a format with `n` conversions and no mapping key. A single argument is consumed by the first
-conversion; a second conversion then has none, and with no conversion it is left over. -/
+/-- `fmt % args` for a format with `n` conversions and no mapping key, Objects/unicode_format.c:1050-1102. A single
+argument is consumed by the first conversion (`unicode_format_getnextarg`, :97-113); a second conversion then has none.
+With no conversion, `n = 0`, a single argument is left over, the `TypeError` of :1094-1101, only when it is not a
+mapping: `PyMapping_Check` (:1062-1065), true of a `dict`, a `list` or a `bytes`, turns that check off, so `'x' % {}` is
+`'x'`. `.one` does not say which, so `pyFormat 0 (.one r)` is right only for an argument that is not a mapping. No
+caller passes `n = 0`: every format this model runs has one conversion. -/
 def pyFormat (n : Nat) : FmtArgs → Py Unit
   | .one r =>
     match n with
@@ -439,9 +443,10 @@ structure EClass where
   flagMask : Nat := 0
   singlesMask : Nat := 0
   allBits : Nat := 0
-  /-- What a `__repr__` of the class's own raises, if it has one that does. -/
-  reprErr : Option PyExc := none
-  deriving Repr, DecidableEq, Inhabited
+  /-- The class's own `__repr__`, if it defines one: what `repr(member)` gives for each member, by its `_name_`: a string,
+  its exception, or the `TypeError` of Objects/object.c:791-796 for a result that is not a `str`. -/
+  ownRepr : Option (Name → Py String) := none
+  deriving Inhabited
 
 def EClass.valueOf (c : EClass) (n : Name) : Option EV := c.values.lookup n
 
@@ -581,10 +586,11 @@ def keepsName (k : EKind) (v : EV) : Bool :=
   | .flag, _ => false
   | _, _ => true
 
-/-- `repr(member)`: the class's own `__repr__`, or `Enum.__repr__`, which formats the value with `repr`. -/
+/-- `repr(member)`: the class's own `__repr__`, whatever it does, or else `Enum.__repr__`, Lib/enum.py:1289-1291,
+`<C.A: repr(_value_)>`, which runs the value's `repr`. -/
 def EClass.memberRepr (c : EClass) (m : Name) : Py String :=
-  match c.reprErr with
-  | some e => .error e
+  match c.ownRepr with
+  | some r => r m
   | none =>
     match c.valueOf m with
     | some v => v.repr
@@ -872,8 +878,22 @@ def twos (op : Nat → Nat → Nat) (a b : Int) : Int :=
   let r : Int := (op (a % m).toNat (b % m).toNat : Nat)
   if r * 2 ≥ m then r - m else r
 
+/-- `f"{m}"`, for the member `m` whose `_value_` is `None` (a class has at most one: a second `None` is an alias of it,
+:283-296). `FORMAT_SIMPLE`, Python/bytecodes.c:5883-5897, calls `PyObject_Format(m, NULL)`, Objects/abstract.c:853-905,
+which runs `type(m).__format__(m, '')`: the class's own, else `Enum.__format__`, Lib/enum.py:1325-1326,
+`str.__format__(str(m), '')`, so the class's own `__str__`, else `Flag.__str__`, :1598-1603, which returns `'F.A'`. -/
+def FlagCls.fmtNone (c : FlagCls) : Py String :=
+  match c.ownFormat with
+  | some r => r
+  | none =>
+    match c.ownStr with
+    | some r => r
+    | none => .ok ""
+
 /-- `Flag.__or__`, `__and__`, `__xor__`, Lib/enum.py:1615-1646, and their reflected names, :1659-1661: `NotImplemented`,
-the check of both values for `None`, and the class called on the bit operation. -/
+the check of `self`, then `other`, for a `None` value, whose `TypeError` is built with the f-string of :1622, :1633 and
+:1644, which runs the class's `__format__` or `__str__` on that member first, and the class called on the bit
+operation. -/
 def flagBin (c : FlagCls) (intMixin : Bool) (op : Nat → Nat → Nat) (self : Option Nat) (other : FlagArg) :
     Option (Py FlagVal) :=
   match getValue intMixin other with
@@ -881,12 +901,13 @@ def flagBin (c : FlagCls) (intMixin : Bool) (op : Nat → Nat → Nat) (self : O
   | some o =>
     match self, o with
     | some s, some v => some (c.call (twos op s v))
-    | _, _ => some (.error (.typeError "~cannot be combined with other flags"))
+    | _, _ => some (withRepr c.fmtNone (.typeError "~cannot be combined with other flags"))
 
-/-- `Flag.__invert__`, Lib/enum.py:1648-1657, with its `_inverted_` cache. -/
+/-- `Flag.__invert__`, Lib/enum.py:1648-1657, with its `_inverted_` cache; the `TypeError` of a `None` value is built
+with the f-string of :1650. -/
 def flagInvert (c : FlagCls) (cached : Option FlagVal) (self : Option Nat) : Py (FlagVal × Option FlagVal) :=
   match self with
-  | none => .error (.typeError "~cannot be inverted")
+  | none => withRepr c.fmtNone (.typeError "~cannot be inverted")
   | some a =>
     match cached with
     | some v => .ok (v, cached)
