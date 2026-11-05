@@ -1,9 +1,7 @@
 <!-- title: Small inconsistencies in the parser and grammar found by a formal model -->
-# Bug report
+### Bug report
 
-### Bug description
-
-While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the cases below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. They are grouped here so they can be triaged together; we're happy to split out any that deserve their own issue.
+While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the cases below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. They are grouped so they can be triaged together; we're happy to split out any that deserve their own issue.
 
 #### 1. _PyAST_Validate does not validate NamedExpr.target: Name('None') passes and reaches an assert in codegen_nameop; the Load and Del contexts pass too
 
@@ -50,13 +48,13 @@ print(a, b, c)
 
 </details>
 
-### CPython versions tested on
+### CPython versions tested on:
 
 3.15, CPython main branch
 
-### Operating systems tested on
+### Operating systems tested on:
 
 Linux
 
 ---
-Drafted with AI assistance (Claude); each case was reproduced on 3.15.2 and on main and the report reviewed before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs

@@ -1,0 +1,34 @@
+<!-- title: ZoneInfo.clear_cache() crashes if a cache key's __del__ creates a ZoneInfo -->
+<!-- form: crash -->
+<!-- records: datetime-zoneinfo-clear-cache-reentrant-free -->
+`clear_strong_cache` frees the strong cache's nodes and sets `ZONEINFO_STRONG_CACHE = NULL` only after the walk. Freeing a node drops its key, which can run a `str` subclass's `__del__`. If that `__del__` constructs a `ZoneInfo`, the constructor updates the strong cache through the pointer that still refers to the nodes being freed.
+
+```python
+import os, struct, tempfile, gc
+import zoneinfo
+from zoneinfo import ZoneInfo
+
+def tzif():   # a minimal UTC TZif file, so the example needs no tzdata
+    h = b"TZif2" + bytes(15) + struct.pack(">6l", 0, 0, 0, 0, 1, 4)
+    b = h + struct.pack(">lBB", 0, 0, 0) + b"UTC\x00"
+    return b + b + b"\nUTC0\n"
+
+d = tempfile.mkdtemp()
+for i in range(10):
+    with open(os.path.join(d, "k%d" % i), "wb") as f:
+        f.write(tzif())
+zoneinfo.reset_tzpath([d])
+
+n = 3
+class K(str):
+    def __del__(self):
+        global n
+        ZoneInfo("k%d" % n); n += 1
+
+for i in range(3):
+    ZoneInfo(K("k%d" % i))
+gc.collect()
+ZoneInfo.clear_cache()   # segfault
+```
+
+Cause: Modules/_zoneinfo.c:2588-2589 calls `strong_cache_free(state->ZONEINFO_STRONG_CACHE)`, whose `Py_XDECREF(node->key)` (:2377-2383) can run Python code, before setting the pointer to NULL. Detaching the list first (save the head, set the pointer to NULL, then free) would fix it.

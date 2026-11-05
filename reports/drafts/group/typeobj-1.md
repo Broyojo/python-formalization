@@ -1,9 +1,7 @@
 <!-- title: Small inconsistencies in type objects found by a formal model -->
-# Bug report
+### Bug report
 
-### Bug description
-
-While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the cases below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. They are grouped here so they can be triaged together; we're happy to split out any that deserve their own issue.
+While modelling CPython 3.15.2 in Lean 4 (https://broyojo.com/python-formalization/), we found the cases below, where the implementation disagrees with itself (C and pure-Python versions, fast and slow paths) or with its documentation. Some may be intended; where we suspected that, it is noted. Each reproduces on 3.15.2 and on main. They are grouped so they can be triaged together; we're happy to split out any that deserve their own issue.
 
 #### 1. PyObject_CopyData compares only total byte lengths, then walks the source's indices over the destination: wrong data, and writes outside the destination view, when the shapes differ
 
@@ -192,13 +190,13 @@ if ("st_atime=7" in r and s.st_atime == 10 and t.b == 3
 
 </details>
 
-### CPython versions tested on
+### CPython versions tested on:
 
 3.15, CPython main branch
 
-### Operating systems tested on
+### Operating systems tested on:
 
 Linux
 
 ---
-Drafted with AI assistance (Claude); each case was reproduced on 3.15.2 and on main and the report reviewed before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+I used AI tools (Claude) to find these and draft the report; each case was reproduced on 3.15.2 and on main and the text checked before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
