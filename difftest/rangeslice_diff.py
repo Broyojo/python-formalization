@@ -13,6 +13,7 @@ an oracle failure is reported as a mismatch.
 
 import itertools
 import sys
+import warnings
 
 import common
 
@@ -89,8 +90,14 @@ def rand_slice(rng, length):
 
 def gen_case(rng):
     fn = rng.choice(["new", "len", "getitem", "slice", "contains", "index", "count", "eq",
-                     "iter", "iterfor", "reversed", "setstate", "setstate_obj", "indices", "listslice", "slicehash"])
+                     "iter", "iterfor", "reversed", "setstate", "setstate_obj", "indices", "listslice", "slicehash",
+                     "newobj", "newobj", "newobj", "subscript", "subscript", "richcmp", "hashkey",
+                     "search", "search", "search", "search"])
     c = {"mod": "rangeslice", "fn": fn}
+    if fn == "newobj":
+        return gen_newobj(rng, c)
+    if fn == "search":
+        return gen_search(rng, c)
     if fn == "slicehash":
         c.update(parts=[edge_int(rng) if rng.random() < 0.7 else rng.choice([-1, -2, 0, 1, 2**61 - 1, 2**61 - 2, -(2**61 - 1)]) for _ in range(3)])
         return c
@@ -129,6 +136,29 @@ def gen_case(rng):
         c.update(r2=r2, nargs2=n2)
     elif fn in ("iter", "iterfor", "reversed"):
         c["k"] = rng.choice([0, 1, 2, 3, 5])
+    elif fn == "subscript":
+        c["werr"] = rng.random() < 0.3
+        if rng.random() < 0.25:
+            c["item"] = {"k": "slice", "s": rand_slice(rng, L)}
+        else:
+            v = rng.choice([0, 1, -1, L, -L, L - 1, -L - 1, edge_int(rng), rng.randint(-L - 2, L + 2)])
+            c["item"] = rand_obj(rng, v)
+    elif fn == "richcmp":
+        c["op"] = rng.choice(["lt", "le", "eq", "eq", "eq", "ne", "ne", "gt", "ge"])
+        u = rng.random()
+        if u < 0.15:
+            c["other"] = {"k": "self"}
+        elif u < 0.35:
+            c["other"] = {"k": "notrange", "tp": rng.choice(["int", "list", "NoneType", "tuple"])}
+        elif u < 0.65:
+            r2, n2 = rand_range(rng)
+            c["other"] = {"k": "range", "r": r2, "nargs": n2}
+        else:
+            s2 = r[2] if (nargs == 3 and r[2]) else 1
+            if rng.random() < 0.3:
+                s2 = rand_step(rng) or 1
+            r2 = [elem(0), near(rng, elem(L)) if rng.random() < 0.7 else elem(L) + rng.randint(-3, 3) * s2, s2]
+            c["other"] = {"k": "range", "r": r2, "nargs": 3}
     elif fn == "setstate":
         c["k"] = rng.choice([0, 1, 3])
         c["rev"] = rng.random() < 0.5
@@ -147,8 +177,210 @@ def gen_case(rng):
     return c
 
 
+def rand_obj(rng, v):
+    """An argument object with value `v` where it has one (see `getObj` in Diff.lean)."""
+    k = rng.choice(["int", "int", "int", "bool", "sub", "idx", "idxsub", "idxbad", "idxraise", "other", "other"])
+    if k == "int":
+        return v
+    if k == "bool":
+        return {"k": "bool", "v": rng.random() < 0.5}
+    if k == "sub":
+        return {"k": "sub", "v": v, "tp": "IntSub"}
+    if k == "idx":
+        return {"k": "idx", "tp": "Idx", "v": v}
+    if k == "idxsub":
+        if rng.random() < 0.3:
+            return {"k": "idxsub", "tp": "Idx", "v": rng.choice([0, 1]), "rtp": "bool"}
+        return {"k": "idxsub", "tp": "Idx", "v": v, "rtp": "IntSub"}
+    if k == "idxbad":
+        return {"k": "idxbad", "tp": "IdxBad", "rtp": "str"}
+    if k == "idxraise":
+        return {"k": "idxraise", "tp": "IdxRaises", "exc": "RuntimeError", "msg": "from __index__"}
+    return {"k": "other", "tp": rng.choice(["float", "str", "NoneType", "list"])}
+
+
+def gen_newobj(rng, c):
+    """range(*args, **kw) / range.__new__(range, *args, **kw) on argument objects."""
+    n = rng.choice([0, 1, 1, 2, 2, 3, 3, 3, 3, 4, 5, 7])
+    a = edge_int(rng)
+    vals = [a, near(rng, a) if rng.random() < 0.5 else edge_int(rng),
+            rng.choice([0, 1, -1, 2, edge_int(rng)])]
+    args = [rand_obj(rng, vals[i] if i < 3 else edge_int(rng)) for i in range(n)]
+    c.update(args=args, kw=rng.choice([None, None, None, None, [], ["stop"], ["start", "step"]]),
+             via=rng.choice(["call", "new"]), werr=rng.random() < 0.3)
+    return c
+
+
+SMALL = 40  # search cases iterate the range in CPython, so most ranges are short
+
+
+def gen_search(rng, c):
+    """`x in r`, `r.count(x)`, `r.index(x)` for a probe object `x` (see `getHook` in Diff.lean)."""
+    op = rng.choice(["contains", "count", "index"])
+    kind = rng.choice(["int", "bool", "float", "floathalf", "sub", "str", "idx",
+                       "always", "eqv", "trueat", "raiseat", "boolraise"])
+    # probes whose search stops early, so huge ranges are fine
+    early = kind in ("always", "trueat", "raiseat", "boolraise") and (op != "count" or kind in ("raiseat", "boolraise"))
+    if kind in ("int", "bool") or (early and rng.random() < 0.5):
+        r, nargs = rand_range(rng)
+        if r[2] == 0:
+            r[2] = 1
+    else:
+        nargs = 3
+        a = edge_int(rng) if rng.random() < 0.5 else rng.randint(-50, 50)
+        st = rng.choice([1, -1, 2, -2, 3, -5, 7, edge_int(rng) or 1])
+        r = [a, a + st * rng.randint(-2, SMALL), st]
+    a0 = r[0] if nargs > 1 else 0
+    s0 = r[2] if nargs == 3 else 1
+    L = math_len(a0, r[1], s0)
+    if not early and kind not in ("int", "bool") and L > SMALL:
+        r, nargs, a0, s0 = [0, 10, 1], 3, 0, 1
+        L = 10
+    v = rng.choice([a0, a0 + s0, a0 + s0 * (L - 1), a0 + s0 * L, a0 - s0, a0 + s0 * rng.randint(0, max(L - 1, 0)),
+                    near(rng, a0), edge_int(rng)])
+    if early and L > SMALL:
+        m = rng.choice([0, 1, 2, 3])
+    else:
+        m = rng.choice([0, 1, 2, 3, rng.randint(0, L + 2)])
+    if kind in ("float", "floathalf") and abs(v) >= 2 ** 53:
+        v = rng.randint(-50, 50)
+    probe, hook, calls = {
+        "int": (v, {"h": "never"}, False),
+        "bool": ({"k": "bool", "v": v % 2 == 1}, {"h": "never"}, False),
+        "float": ({"k": "other", "tp": "float"}, {"h": "eqv", "v": v}, False),
+        "floathalf": ({"k": "other", "tp": "float"}, {"h": "never"}, False),
+        "sub": ({"k": "sub", "v": v, "tp": "IntSub"}, {"h": "eqv", "v": v}, False),
+        "str": ({"k": "other", "tp": "str"}, {"h": "never"}, False),
+        "idx": ({"k": "idx", "tp": "Idx", "v": v}, {"h": "never"}, False),
+        "always": ({"k": "sub", "v": v, "tp": "AlwaysEq"}, {"h": "always"}, True),
+        "eqv": ({"k": "other", "tp": "EqV"}, {"h": "eqv", "v": v}, True),
+        "trueat": ({"k": "other", "tp": "TrueAt"}, {"h": "trueat", "m": m}, True),
+        "raiseat": ({"k": "other", "tp": "RaiseAt"}, {"h": "raiseat", "m": m, "exc": "RuntimeError", "msg": "eq"}, True),
+        "boolraise": ({"k": "other", "tp": "BoolRaiseAt"}, {"h": "raiseat", "m": m, "exc": "ValueError", "msg": "bool"}, True),
+    }[kind]
+    c.update(r=r, nargs=nargs, op=op, probe=probe, hook=hook, calls=calls, py={"kind": kind, "v": v, "m": m})
+    return c
+
+
 class IntSub(int):
     pass
+
+
+class AlwaysEq(int):
+    """An int subclass whose __eq__ is always true (and counts its calls)."""
+    calls = 0
+
+    def __eq__(self, o):
+        self.calls += 1
+        return True
+
+    __hash__ = int.__hash__
+
+
+class EqV:
+    def __init__(self, v):
+        self.v, self.calls = v, 0
+
+    def __eq__(self, o):
+        self.calls += 1
+        return o == self.v
+
+
+class TrueAt:
+    def __init__(self, m):
+        self.m, self.calls = m, 0
+
+    def __eq__(self, o):
+        n = self.calls
+        self.calls += 1
+        return n == self.m
+
+
+class RaiseAt:
+    def __init__(self, m):
+        self.m, self.calls = m, 0
+
+    def __eq__(self, o):
+        n = self.calls
+        self.calls += 1
+        if n == self.m:
+            raise RuntimeError("eq")
+        return False
+
+
+class BadBool:
+    def __bool__(self):
+        raise ValueError("bool")
+
+
+class BoolRaiseAt:
+    def __init__(self, m):
+        self.m, self.calls = m, 0
+
+    def __eq__(self, o):
+        n = self.calls
+        self.calls += 1
+        return BadBool() if n == self.m else False
+
+
+def make_probe(p):
+    k, v, m = p["kind"], p["v"], p["m"]
+    return {"int": lambda: v, "bool": lambda: v % 2 == 1, "float": lambda: float(v),
+            "floathalf": lambda: v + 0.5, "sub": lambda: IntSub(v), "str": lambda: "a",
+            "idx": lambda: Idx(v), "always": lambda: AlwaysEq(v), "eqv": lambda: EqV(v),
+            "trueat": lambda: TrueAt(m), "raiseat": lambda: RaiseAt(m),
+            "boolraise": lambda: BoolRaiseAt(m)}[k]()
+
+
+def make_obj(o):
+    if isinstance(o, int):
+        return o
+    k = o["k"]
+    if k == "bool":
+        return bool(o["v"])
+    if k == "sub":
+        return IntSub(o["v"])
+    if k == "idx":
+        return Idx(o["v"])
+    if k == "idxsub":
+        return Idx(bool(o["v"]) if o["rtp"] == "bool" else IntSub(o["v"]))
+    if k == "idxbad":
+        return IdxBad()
+    if k == "idxraise":
+        return IdxRaises()
+    if k == "slice":
+        return slice(*o["s"])
+    return {"float": 1.5, "str": "x", "NoneType": None, "list": []}[o["tp"]]
+
+
+def run_search(c, r):
+    probe = make_probe(c["py"])
+    try:
+        if c["op"] == "contains":
+            v = probe in r
+        elif c["op"] == "count":
+            v = r.count(probe)
+        else:
+            v = r.index(probe)
+        inner = {"ok": v}
+    except Exception as e:
+        inner = {"exc": type(e).__name__, "msg": str(e)}
+    return [inner, probe.calls if c["calls"] else None]
+
+
+def hash_key(c, r):
+    """The tuple whose hash is hash(r), among (L, None, None), (L, start, None), (L, start, step)."""
+    a, b, s = c["r"]
+    if c["nargs"] == 1:
+        a = 0
+    if c["nargs"] < 3:
+        s = 1
+    L = math_len(a, b, s)
+    h = hash(r)
+    for cand in ([L, None, None], [L, r.start, None], [L, r.start, r.step]):
+        if hash(tuple(cand)) == h:
+            return cand
+    return "nomatch"
 
 
 class Idx:
@@ -208,7 +440,36 @@ def run_python(c):
             return {"ok": list(range(c["n"]))[slice(*c["s"])]}
         if fn == "slicehash":
             return {"ok": hash(slice(*c["parts"]))}
+        if fn == "newobj":
+            with warnings.catch_warnings():
+                warnings.simplefilter("error" if c["werr"] else "ignore")
+                args = [make_obj(o) for o in c["args"]]
+                kw = {k: 0 for k in c["kw"]} if c["kw"] is not None else {}
+                if c["via"] == "call":
+                    r = range(*args, **kw)
+                else:
+                    r = range.__new__(range, *args, **kw)
+            return {"ok": enc_range(r)}
         r = make_range(c["r"], c["nargs"])
+        if fn == "search":
+            return {"ok": run_search(c, r)}
+        if fn == "subscript":
+            with warnings.catch_warnings():
+                warnings.simplefilter("error" if c["werr"] else "ignore")
+                x = r[make_obj(c["item"])]
+            return {"ok": {"range": enc_range(x)} if isinstance(x, range) else {"item": x}}
+        if fn == "richcmp":
+            o = c["other"]
+            if o["k"] == "self":
+                other = r
+            elif o["k"] == "range":
+                other = make_range(o["r"], o["nargs"])
+            else:
+                other = {"int": 3, "list": [0], "NoneType": None, "tuple": (0,)}[o["tp"]]
+            x = getattr(r, "__" + c["op"] + "__")(other)
+            return {"ok": "NotImplemented" if x is NotImplemented else x}
+        if fn == "hashkey":
+            return {"ok": hash_key(c, r)}
         if fn == "new":
             v = enc_range(r)
         elif fn == "len":
@@ -274,6 +535,8 @@ def oracle(c, res):
         if c["s"][2] == 0:
             return "exc" in res
         return res["ok"] == list(range(*slice(*c["s"]).indices(c["n"])))
+    if fn == "newobj":
+        return True
     a, b, s = c["r"]
     if c["nargs"] == 1:
         a = 0
