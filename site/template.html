@@ -107,8 +107,14 @@ td.r, th.r { text-align: right; }
 .spark .dot.end { fill: var(--blue); }
 .spark figcaption { margin-top: 0.4rem; font-size: 13px; line-height: 1.4; display: grid; }
 .spark figcaption code { background: none; padding: 0; font-size: 12.5px; color: var(--text); overflow-wrap: anywhere; }
-.spark figcaption span { font-family: var(--mono); font-size: 12px; }
-.spark figcaption span b { color: var(--blue); font-weight: 500; }
+.spark figcaption span { font-size: 12.5px; color: var(--muted); }
+.spark .ax { font: 500 9px var(--sans); fill: var(--faint); text-anchor: end; }
+.spark .ax.start { text-anchor: start; }
+.sparkgrid { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: 0.4rem 0.6rem; }
+.ytitle { grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-size: 13px; color: var(--muted); }
+.sparkgrid .sparks { grid-row: 1; grid-column: 2; }
+.xtitle { grid-column: 2; text-align: center; font-size: 13px; color: var(--muted); }
+.spark figcaption span b { color: var(--blue); font-weight: 600; }
 .bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; font-size: 15px; }
 .bars li { display: grid; grid-template-columns: 15rem minmax(0, 1fr) 3rem; gap: 1rem; align-items: center; margin: 0; }
 .bars i { display: block; height: 10px; width: var(--w); min-width: 2px; background: var(--blue-2); border-radius: 2px; }
@@ -127,6 +133,7 @@ td.r, th.r { text-align: right; }
 .bugs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem; }
 .bug { border: 1px solid var(--rule); border-radius: 12px; padding: 1.2rem 1.3rem 0.2rem; min-width: 0; }
 .bug h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.bug .kind { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
 .bug p { font-size: 15.5px; line-height: 1.6; color: var(--muted); margin: 0 0 0.9rem; }
 .bug pre { font-size: 12.5px; margin: 0 0 1.1rem; padding: 0.85rem 1rem; }
 
@@ -244,8 +251,8 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 </div>
 
 <figure class="fig">
-  <div class="sparks">{{TRAJ}}</div>
-  <figcaption>Share of each file's functions accepted at each round of review, from the project's history. The dotted line is 100%.</figcaption>
+  <div class="sparkgrid"><div class="ytitle">Functions accepted</div><div class="sparks">{{TRAJ}}</div><div class="xtitle">Rounds of review →</div></div>
+  <figcaption>Share of each file's functions accepted after each round of review, taken from the project's history. Each point is one review; the scale is the same in every chart, from 0% to all of the file's functions.</figcaption>
 </figure>
 
 <div class="col">
@@ -274,29 +281,55 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 </figure>
 
 <div class="col">
-  <p>Most are small: an error message that's wrong, an edge case that behaves differently from the documentation, two versions of a function that disagree. About {{CRASHY}} are more serious and can crash Python or corrupt its memory using nothing but normal Python code, usually by having user code change a container while C code is in the middle of using it. Python doesn't treat running hostile Python code as a security boundary, so these are ordinary bugs, and we're reporting them to the CPython project along with this post. A few examples:</p>
+  <p>Most are small: an error message that's wrong, an edge case that behaves differently from the documentation, two versions of a function that disagree. About {{CRASHY}} are more serious and can crash Python or corrupt its memory using nothing but normal Python code, usually by having user code change a container while C code is in the middle of using it. Python doesn't treat running hostile Python code as a security boundary, so these are ordinary bugs, and we're reporting them to the CPython project along with this post. Six small examples of different kinds:</p>
 </div>
 
 <div class="fig bugs">
   <div class="bug">
-    <h3>Two picklers, two limits</h3>
-    <p>Python has a C pickler and a pure-Python one. They give up at different nesting depths. This difference was first reported in 2008 and is still open.</p>
-<pre data-lang="py"><code>v = []
-for _ in range(400): v = [v]
-pickle.dumps(v, 5)    <span class="c"># works</span>
-pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>
+    <span class="kind">Crash</span>
+    <h3>A dictionary call that crashes Python</h3>
+    <p>Calling <code>setdefault</code> on an object's attribute dictionary with a <code>StrEnum</code> key crashes the interpreter, if another object of the same class has that attribute and this one doesn't.</p>
+<pre data-lang="py"><code>class Key(StrEnum):
+    NAME = "name"
+class User: pass
+a = User(); a.name = "ada"
+b = User(); b.age = 36
+vars(b).setdefault(Key.NAME, "anon")
+<span class="c"># Segmentation fault</span></code></pre>
   </div>
   <div class="bug">
-    <h3><code>random.Random</code> drops class hooks</h3>
-    <p>Subclassing <code>random.Random</code> silently skips other classes' setup hooks, and accepts settings that any other class would reject.</p>
-<pre data-lang="py"><code>class After(random.Random, Mixin): pass
-<span class="c"># Mixin's __init_subclass__ never runs</span>
-class Kw(random.Random, flag=1): pass
-<span class="c"># accepted; a plain class raises TypeError</span></code></pre>
+    <span class="kind">Memory corruption</span>
+    <h3>An XML edit that corrupts memory</h3>
+    <p>Assigning to a backwards slice of an ElementTree element should insert, as it does for a list. Instead it duplicates one child without taking a reference and loses another.</p>
+<pre data-lang="py"><code>e = ET.Element("root")
+e[:] = [ET.Element(f"a{i}") for i in range(7)]
+e[5:2] = [ET.Element("X")]
+[c.tag for c in e]
+<span class="c"># 'a2' appears twice, 'a4' is gone</span></code></pre>
   </div>
   <div class="bug">
+    <span class="kind">Wrong error</span>
+    <h3>An email header that breaks the parser</h3>
+    <p>A Message-ID with a space inside square brackets makes Python's email parser fail with an internal error. The header comes from whoever sent the email.</p>
+<pre data-lang="py"><code>msg = email.message_from_string(
+    "Message-ID: &lt;a@[ x]&gt;\n\nhi\n",
+    policy=policy.default)
+msg["Message-ID"]
+<span class="c"># UnboundLocalError</span></code></pre>
+  </div>
+  <div class="bug">
+    <span class="kind">Silently wrong result</span>
+    <h3>Base32 padding that depends on position</h3>
+    <p>New in Python 3.15, the base32 decoder can ignore chosen characters. If <code>=</code> is one of them, where it appears still changes the result.</p>
+<pre data-lang="py"><code>a2b_base32(b"AAAAAAA",  ignorechars=b"=")
+<span class="c"># Error: Incorrect padding</span>
+a2b_base32(b"AAAA=AAA", ignorechars=b"=")
+<span class="c"># b'\x00\x00\x00\x00'</span></code></pre>
+  </div>
+  <div class="bug">
+    <span class="kind">Missing error</span>
     <h3>An enum error that disappears</h3>
-    <p>Adding a duplicate enum alias should raise an error. If the class has a broken <code>__repr__</code>, the error is swallowed and the call quietly does nothing.</p>
+    <p>Giving an enum value to a second member should raise an error. If the class's <code>__repr__</code> is broken, the error is swallowed and the call quietly does nothing.</p>
 <pre data-lang="py"><code>class W(Enum):
     A = 1; B = 2
     def __repr__(self): return 5
@@ -304,12 +337,13 @@ W.B._add_value_alias_(3)
 W.A._add_value_alias_(3)  <span class="c"># returns None</span></code></pre>
   </div>
   <div class="bug">
-    <h3>Base32 padding that depends on position</h3>
-    <p>A new option in Python 3.15 lets the base32 decoder ignore characters. If <code>=</code> is ignored, where it appears still changes the result.</p>
-<pre data-lang="py"><code>a2b_base32(b"AAAAAAA",  ignorechars=b"=")
-<span class="c"># Error: Incorrect padding</span>
-a2b_base32(b"AAAA=AAA", ignorechars=b"=")
-<span class="c"># b'\x00\x00\x00\x00'</span></code></pre>
+    <span class="kind">C and Python disagree</span>
+    <h3>Two picklers, two limits</h3>
+    <p>Python has a C pickler and a pure-Python one. They give up at different nesting depths. This difference was first reported in 2008 and is still open.</p>
+<pre data-lang="py"><code>v = []
+for _ in range(400): v = [v]
+pickle.dumps(v, 5)    <span class="c"># works</span>
+pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>
   </div>
 </div>
 

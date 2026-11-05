@@ -100,24 +100,28 @@ def trajectories():
 
 
 def traj_svg(t):
-    w, h, pad = 220, 96, 8
+    w, h, left, pad, bot = 220, 116, 30, 8, 20
     pts = t["pts"]
     n = len(pts)
-    xs = [pad + (w - 2 * pad) * (i / (n - 1)) for i in range(n)]
-    ys = [h - pad - (h - 2 * pad) * (fa / tot) for fa, tot in pts]
+    total = max(tot for _, tot in pts)
+    xs = [left + (w - left - pad) * (i / (n - 1)) for i in range(n)]
+    ys = [h - bot - (h - bot - pad) * min(1, fa / total) for fa, _ in pts]
     path = " ".join(("M" if i == 0 else "L") + f"{x:.1f},{y:.1f}" for i, (x, y) in enumerate(zip(xs, ys)))
     dots = "".join(
-        f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{3.2 if i in (0, n - 1) else 2.2}" '
-        f'class="{"dot end" if i == n - 1 else "dot"}"><title>review {i + 1}: {fa} of {tot}</title></circle>'
-        for i, ((fa, tot), x, y) in enumerate(zip(pts, xs, ys)))
-    first, last = pts[0], pts[-1]
+        f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{3 if i == n - 1 else 2.2}" '
+        f'class="{"dot end" if i == n - 1 else "dot"}"><title>review {i + 1}: {fa} of {total} accepted</title></circle>'
+        for i, ((fa, _), x, y) in enumerate(zip(pts, xs, ys)))
+    last = pts[-1][0]
     return (f'<figure class="spark"><svg viewBox="0 0 {w} {h}" role="img" aria-label="{html.escape(t["file"])}: '
-            f'{first[0]} of {first[1]} faithful at first review, {last[0]} of {last[1]} after {n} reviews">'
-            f'<line x1="{pad}" x2="{w - pad}" y1="{pad}" y2="{pad}" class="full"/>'
-            f'<line x1="{pad}" x2="{w - pad}" y1="{h - pad}" y2="{h - pad}" class="base"/>'
+            f'{pts[0][0]} of {total} accepted after the first review, {last} after {n} reviews">'
+            f'<line x1="{left}" x2="{w - pad}" y1="{pad}" y2="{pad}" class="full"/>'
+            f'<line x1="{left}" x2="{w - pad}" y1="{h - bot}" y2="{h - bot}" class="base"/>'
+            f'<text x="{left - 6}" y="{pad + 3}" class="ax">100%</text>'
+            f'<text x="{left - 6}" y="{h - bot + 3}" class="ax">0%</text>'
+            f'<text x="{left}" y="{h - 5}" class="ax start">review 1</text>'
+            f'<text x="{w - pad}" y="{h - 5}" class="ax">review {n}</text>'
             f'<path d="{path}" class="trace"/>{dots}</svg>'
-            f'<figcaption><code>{html.escape(t["file"])}</code><span>{first[0]}/{first[1]} → '
-            f'<b>{last[0]}/{last[1]}</b> · {n} reviews</span></figcaption></figure>')
+            f'<figcaption><code>{html.escape(t["file"])}</code><span><b>{last} of {total}</b> accepted · {n} reviews</span></figcaption></figure>')
 
 
 KEYWORDS = {
