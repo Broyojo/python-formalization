@@ -107,7 +107,16 @@ def gen_case(rng):
             ops.append([rng.choice(["sand", "sor", "sisub", "siand"]), s, rng.randrange(3)])
         else:
             ops.append([rng.choice(["shash", "slen", "spop", "scopy"]), s])
-    return {"mod": "dictset", "fn": "scenario", "pool": specs, "ops": ops, "target": target}
+    case = {"mod": "dictset", "fn": "scenario", "pool": specs, "ops": ops, "target": target}
+    if rng.random() < 0.35:
+        # Slot 1 keeps set's __iter__ but is not exact: isdisjoint iterates it live, so a hook that
+        # changes it raises "Set changed size during iteration".
+        case["s1sub"] = True
+        case["target"] = "s1"
+        for _ in range(rng.randint(1, 4)):
+            ops.append(["sdisj", 0, ["s", 1]])
+            ops.append(["sadd", rng.randrange(2), rng.choice(hk)])
+    return case
 
 
 if __name__ == "__main__":

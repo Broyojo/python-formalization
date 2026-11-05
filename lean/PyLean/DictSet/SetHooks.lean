@@ -578,8 +578,9 @@ theorem setUpdateIterableRefines_proven : SetUpdateIterableRefines := by
 /-- `set_isdisjoint_impl` (:1910-1968), for every key protocol and iterator: `so == other` answers
 whether `so` is empty, and changes nothing (:1917-1922); only `PyAnySet_CheckExact(other)` (:1924)
 takes the two-set branch, so an instance of a set subclass, whatever its table holds, goes through
-`PyObject_GetIter(other)`, its type's `__iter__`, and the generic loop (:1948-1967), as does any
-other iterable. -/
+`PyObject_GetIter(other)` and the generic loop (:1948-1967): its type's own `__iter__`, or, when it
+keeps `set`'s, `set_iter` over the object itself, in the state (`setDisjointSetIter`); any other
+iterable likewise. -/
 def SetIsdisjointBranches : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (so o : SetObj K) (it : ReIter (SetObj K) K),
     (o.ident = so.ident →
@@ -587,7 +588,7 @@ def SetIsdisjointBranches : Prop :=
       setIsdisjoint P (.sub o it) so = (.ok (so.used == 0), so)) ∧
     (o.ident ≠ so.ident →
       setIsdisjoint P (.sub o it) so = setDisjointIter P it so ∧
-      (o.exact = false → setIsdisjoint P (.set o) so = setDisjointIter P (SetArg.set o).toReIter so)) ∧
+      (o.exact = false → setIsdisjoint P (.set o) so = setDisjointSetIter P o so)) ∧
     setIsdisjoint P (.live it) so = setDisjointIter P it so
 theorem setIsdisjointBranches_proven : SetIsdisjointBranches := by
   intro K _ P so o it
@@ -661,6 +662,26 @@ theorem isdisjoint_sub_probe :
       (.set { (setAddKey natSetProto 2 {}).2 with ident := 5, exact := false })
       (setAddKey natSetProto 1 {}).2).1 = .ok true := by
   constructor <;> decide +kernel
+
+/-- Key `21` (an `X`) hashes to `5`; its `__eq__` adds `99` to the set with identity 9, and answers
+no. -/
+def growProto : Proto Nat (SetObj Nat) :=
+  { natSetProto with
+    hashM := fun k s => (.ok (if k = 21 then 5 else k), s)
+    eq := fun a b s =>
+      if a = 21 ∧ b ≠ 21 then (.ok false, ((setAddKey natSetProto 99 (s.swapIn 9)).2).swapIn s.ident)
+      else (.ok (a == b), s) }
+
+/-- `S([5, 13])` for `class S(set)` that keeps `set`'s `__iter__`. -/
+def growArg : SetObj Nat := { (setProg natSetProto [.add 5, .add 13] {}) with ident := 9, exact := false }
+
+/-- The review's probe: `{X()}.isdisjoint(S([5, 13]))`, where `X.__eq__` grows the `S` instance,
+raises `RuntimeError("Set changed size during iteration")` (3.15.2, probed), because the loop
+iterates the live object. -/
+theorem isdisjoint_grow_probe :
+    (setIsdisjoint growProto (.set growArg) (setProg growProto [.add 21] {})).1 =
+      .error (runtimeError "Set changed size during iteration") := by
+  decide +kernel
 
 /-! ## `set_intersection` -/
 

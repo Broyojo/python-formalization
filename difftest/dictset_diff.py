@@ -236,6 +236,11 @@ class SH(set):
         return hook_answer(0, self.hres)
 
 
+class SKeep(set):
+    """A set subclass that keeps set's __iter__ (and its size): PyAnySet_CheckExact fails."""
+    __slots__ = ()
+
+
 class SSub(set):
     """A set subclass with its own `__iter__`: PyAnySet_Check holds, PyAnySet_CheckExact does not."""
 
@@ -1369,6 +1374,9 @@ class Runner:
         self.uid = {id(o): s["u"] for o, s in zip(self.pool, case["pool"])}
         self.ds = [{}, {}, {}]
         self.ss = [set(), set(), set()]
+        if case.get("s1sub"):
+            # Slot 1 is an instance of a set subclass that keeps set's __iter__.
+            self.ss[1] = SKeep()
         self.its = [None] * 4
         self.fn = case["fn"]
         self.limit = len(self.pool) + 2

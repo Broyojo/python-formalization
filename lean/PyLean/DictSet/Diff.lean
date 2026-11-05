@@ -1343,6 +1343,10 @@ def run (fn : String) (j : Json) : Except String Json := do
     | some "s1" => some 1
     | _ => none
   let st := { initSt poolA [] with tgt, stgt }
+  -- `s1sub`: slot 1 is an instance of `SKeep`, a set subclass that keeps `set`'s `__iter__`.
+  let st := if (j.getObjValAs? Bool "s1sub").toOption.getD false then
+      { st with ss := st.ss.set! 1 { st.ss[1]! with exact := false, tname := "SKeep" } }
+    else st
   let ops ← arrOf (← field j "ops")
   let every := (j.getObjValAs? Nat "every").toOption.getD 1
   let runOps := fun st => runOps every st ops 0 #[]

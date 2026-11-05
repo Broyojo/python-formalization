@@ -362,9 +362,36 @@ def setDisjointIter (it : ReIter (SetObj K) K) : SM K Bool := do
   let hit ← forIter (setContainsKey P) it.steps
   return !hit
 
+/-- `PyIter_Next` over `set_iter(o)` (:1171-1184), for a set `o` whose type keeps `set`'s `__iter__`,
+with `body` run on each key until it answers yes: every step is `setiter_iternext` (:1095-1136) on `o`
+as it stands in the state then, so a change of size made by `body` (an `__eq__` that grew or shrank
+`o`) raises `RuntimeError("Set changed size during iteration")` at the next step. -/
+def setIterLoop (oid : Nat) (body : K → SM K Bool) : Nat → SetIter → SM K Bool
+  | 0, _ => M.throw .modelFuel
+  | fuel + 1, si => do
+    let s ← M.get
+    match setiterNext ({ toSetBody := s.live oid } : SetObj K) si with
+    | (.error e, _) => M.throw e
+    | (.ok none, _) => return false
+    | (.ok (some k), si') =>
+      if ← body k then return true
+      setIterLoop oid body fuel si'
+
+/-- The generic branch of `set_isdisjoint_impl` (:1948-1967) on a set that is not exact but keeps
+`set`'s `__iter__`: `o` is in the state, so `__eq__` can change it under the iterator. -/
+def setDisjointSetIter (o : SetObj K) : SM K Bool :=
+  withPeer o (do
+    let s ← M.get
+    let hit ← setIterLoop o.ident (setContainsKey P) (setLoopFuel s o.ident)
+      (setIterNew ({ toSetBody := s.live o.ident } : SetObj K))
+    return !hit)
+
 /-- `set_isdisjoint_impl` (:1910-1968): `so == other` answers whether `so` is empty (:1917-1922);
 `PyAnySet_CheckExact(other)` (:1924), not `PyAnySet_Check`, takes the two-set branch, so a set
-subclass goes through its own `__iter__`. -/
+subclass goes through its own `__iter__`, or through `set_iter` on the live object when it keeps
+`set`'s. Scope: a dict argument's iteration is the script of its keys (`DictArg.keys`); the set
+model's world holds sets only, so an `__eq__` cannot change the dict under its iterator, and
+"dictionary changed size during iteration" is not expressible. -/
 def setIsdisjoint (other : SetArg K) : SM K Bool := do
   let so ← M.get
   let same := match other with
@@ -377,7 +404,10 @@ def setIsdisjoint (other : SetArg K) : SM K Bool := do
     | _ => none
   match fast with
   | some o => withPeer o (setDisjointSets P o)
-  | none => setDisjointIter P other.toReIter
+  | none =>
+    match other with
+    | .set o => setDisjointSetIter P o
+    | _ => setDisjointIter P other.toReIter
 
 /-- The tail of `set_difference_update_internal` (:2025-2028): more than a quarter dummies. -/
 def setPurgeDummies : SM K Unit := do
