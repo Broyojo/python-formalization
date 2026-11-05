@@ -16,6 +16,7 @@ import PyLean.Pickle.ToolsGen
 import PyLean.Pickle.ToolsExact
 import PyLean.Pickle.ToolsSteps
 import PyLean.Pickle.ToolsDis
+import PyLean.Pickle.ToolsOpt
 import PyLean.Pickle.DecChunk
 
 /-!
