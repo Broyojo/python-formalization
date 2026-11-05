@@ -5579,6 +5579,10 @@ def enumdc_gbody(rng, kind):
         body.append(["_generate_next_value_",
                      ["gen", rng.choice([["enum"], ["flag"], ["const", ["int", 7]],
                                          ["raises", "ValueError", "boom"]] if kind == "flag" else
+                                        # Enum's own on a StrEnum body sorts str tuples, which the todo atom model of
+                                        # Enum._generate_next_value_ does not order
+                                        [["flag"], ["strEnum"], ["const", ["int", 7]], ["const", ["str", "k"]],
+                                         ["raises", "ValueError", "boom"]] if kind == "strEnum" else
                                         [["enum"], ["flag"], ["strEnum"], ["const", ["int", 7]],
                                          ["const", ["str", "k"]], ["raises", "ValueError", "boom"]])]])
     if rng.random() < .08:
@@ -6075,6 +6079,7 @@ class enumdc_Descr:
 
 
 enumdc_ROBJS = {}
+enumdc_INNERS = {}
 
 
 def enumdc_dec(v, cls="C"):
@@ -6098,7 +6103,9 @@ def enumdc_dec(v, cls="C"):
     if k == "descr":
         return enumdc_Descr(v[1])
     if k == "inner":
-        return type("Inner", (), {"__qualname__": str(cls) + ".Inner", "i": v[1]})
+        # one class per id, as the model's `.inner i` values are equal exactly when their ids are
+        return enumdc_INNERS.setdefault((str(cls), v[1]),
+                                        type("Inner", (), {"__qualname__": str(cls) + ".Inner", "i": v[1]}))
     if k == "names":
         return list(v[1])
     if k == "gen":
