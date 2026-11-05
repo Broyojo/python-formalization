@@ -496,11 +496,38 @@ PLAIN_OPS = b'()0212.Nabdeltu}]\x85\x86\x87\x88\x89\x8f\x90\x91\x93\x94\x97\x98R
 MARK_OPS = b'(((000\x85\x862t1ae\x94'
 
 
+def esc_line(rng):
+    """A quoted STRING line in the escaping of `repr(bytes)`, with octal, invalid and
+    trailing escapes mixed in, and sometimes without its closing quote."""
+    q = rng.choice(b"'\"")
+    out = bytearray([q])
+    for _ in range(rng.randrange(7)):
+        c = rng.choice([0, 9, 10, 13, 0x22, 0x27, 0x5c, 0x41, 0x7f, 0x80, 0xff, rng.randrange(256)])
+        if rng.random() < 0.08:
+            out += rng.choice([b'\\101', b'\\7', b'\\08', b'\\q', b'\\x4', b'\\xg0', b'\\\n', b'\\a\\b\\f\\v'])
+        elif c == q or c == 0x5c:
+            out += bytes([0x5c, c])
+        elif c in (9, 10, 13):
+            out += {9: b'\\t', 10: b'\\n', 13: b'\\r'}[c]
+        elif c < 0x20 or c >= 0x7f:
+            out += b'\\x%02x' % c
+        else:
+            out.append(c)
+    r = rng.random()
+    if r < 0.85:
+        out.append(q)
+    elif r < 0.92:
+        out += b'\\'
+    return bytes(out)
+
+
 def tool_op(rng):
     """One opcode with an edge-case argument, for the branches of the readers and of `dis`."""
     line = rng.choice([b'', b'0', b'1', b'00', b'01', b'-1', b' 1', b'+5', b'1_0', b'12', b'5L', b'L',
                        b'x', b'\\', b'a\\', b'\\x41', b'\\x4', b'\\n', b'\xff', b'\xc3\xa9', b"'", b'"',
                        b"''", b'""', b"'a'", b'"a"', b"'a\"", b"\"a'", b"'\\''", b'9' * 30, b'1' * 4301])
+    if rng.random() < 0.2:
+        line = esc_line(rng)
     count = rng.choice([0, 1, 2, 3, 255, 256, 2**31 - 1, 2**32 - 1, 2**63 - 1, 2**63, 2**64 - 1])
     i32_count = rng.choice([0, 1, 2, -1, -2**31, 2**31 - 1])
     tail = bytes(rng.choice(b'ab\xc3\xa9\xed\xa0\x80\x00\n') for _ in range(rng.randrange(5)))
