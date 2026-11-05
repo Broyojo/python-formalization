@@ -319,8 +319,9 @@ def subclassOf (parent : String → List String) : Nat → String → String →
   | 0, _, _ => false
   | f + 1, c, cls => c == cls || (parent c).any (fun p => subclassOf parent f p cls)
 
-/-- `isinstance(e, cls)`, the test of `except cls:`, which catches subclasses too. -/
-def excIs (parent : String → List String) (e : PyExc) (cls : String) : Bool := subclassOf parent 32 e.className cls
+/-- `isinstance(e, cls)`, the test of `except cls:`, which catches subclasses too. Ancestors are followed to a depth of
+1000 classes; a deeper exception class hierarchy is not modelled. -/
+def excIs (parent : String → List String) (e : PyExc) (cls : String) : Bool := subclassOf parent 1000 e.className cls
 
 /-- `EnumDict.update`, Lib/enum.py:449-457: the `except AttributeError` covers the loop over `keys()` too, so an
 `AttributeError` from `__setitem__` restarts the loop on the iteration of the mapping. -/
@@ -405,35 +406,56 @@ any codec lookup (in a release build without `-X dev`, :532-536), anything else 
 def strDecode (codec : Codec) (bs : List Nat) (enc errors : String) : Py String :=
   if bs = [] then .ok "" else codec bs enc errors
 
+/-- `repr(x)` of an argument: only an object of another type runs code of its own. -/
+def SArg.repr {α : Type} (reprA : α → Py String) : SArg α → Py String
+  | .other x => reprA x
+  | _ => .ok ""
+
+/-- `repr` of a tuple of arguments: each item in turn, the first exception going out. -/
+def SArg.reprAll {α : Type} (reprA : α → Py String) : List (SArg α) → Py Unit
+  | [] => .ok ()
+  | x :: r =>
+    match x.repr reprA with
+    | .error e => .error e
+    | .ok _ => SArg.reprAll reprA r
+
+/-- `raise E(msg % (x,))`: the `%r` of `x` runs first, and its exception goes out instead. -/
+def withRepr {γ β : Type} (r : Py γ) (e : PyExc) : Py β :=
+  match r with
+  | .error e' => .error e'
+  | .ok _ => .error e
+
+/-- `str(a, encoding, errors)`, Objects/unicodeobject.c `PyUnicode_FromEncodedObject`: a buffer is decoded, a `str` is
+the `TypeError` "decoding str is not supported", anything else the `TypeError` of a missing buffer. -/
+def strDecodeArg (codec : Codec) {α : Type} (a : SArg α) (enc er : String) : Py String :=
+  match a with
+  | .bytes bs => strDecode codec bs enc er
+  | .buffer bs => strDecode codec bs enc er
+  | .str _ => .error (.typeError "decoding str is not supported")
+  | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
+
 /-- `StrEnum.__new__`, Lib/enum.py:1376-1395: the checks of :1378-1391 in order, then `str(*values)` at :1392. With no
 argument that is `''`, with one `str` that `str`; with an encoding, and `errors` (`'strict'` when not given), a `bytes` is
 decoded by the codec, a `str` is the `TypeError` "decoding str is not supported", and anything else the `TypeError` of
 `PyUnicode_FromEncodedObject`, Objects/unicodeobject.c. -/
-def strEnumNewG (codec : Codec) {α : Type} (values : List (SArg α)) : Py String :=
-  if values.length > 3 then .error (.typeError "~too many arguments for str()")
+def strEnumNewG (codec : Codec) {α : Type} (reprA : α → Py String) (values : List (SArg α)) : Py String :=
+  if values.length > 3 then withRepr (SArg.reprAll reprA values) (.typeError "~too many arguments for str()")
   else
     match values with
     | [] => .ok ""
     | [a] =>
       match a with
       | .str s => .ok s
-      | _ => .error (.typeError "~is not a string")
+      | _ => withRepr (a.repr reprA) (.typeError "~is not a string")
     | a :: b :: r =>
       match b with
       | .str enc =>
-        let errors : Py String := match r with
-          | [] => .ok "strict"
-          | [.str er] => .ok er
-          | _ => .error (.typeError "~errors must be a string")
-        match errors with
-        | .error e => .error e
-        | .ok er =>
-          match a with
-          | .bytes bs => strDecode codec bs enc er
-          | .buffer bs => strDecode codec bs enc er
-          | .str _ => .error (.typeError "decoding str is not supported")
-          | .other _ => .error (.typeError "~decoding to str: need a bytes-like object")
-      | _ => .error (.typeError "~encoding must be a string")
+        match r with
+        | [] => strDecodeArg codec a enc "strict"
+        | [.str er] => strDecodeArg codec a enc er
+        | [c] => withRepr (c.repr reprA) (.typeError "~errors must be a string")
+        | _ => .error (.typeError "~errors must be a string")
+      | _ => withRepr (b.repr reprA) (.typeError "~encoding must be a string")
 
 /-- The ASCII and Latin-1 codecs, for the difftest: any other encoding is unknown, and the error handler is looked up
 only when a byte does not decode, with `strict`, `ignore` and `replace` known and any other name taken as unknown (the
@@ -455,7 +477,7 @@ def Atom.toSArg : Atom → SArg Atom
   | a => .other a
 
 /-- `StrEnum.__new__` on the values of a class body, which are not `bytes`. -/
-def strEnumNew (values : List Atom) : Py String := strEnumNewG pyCodec (values.map Atom.toSArg)
+def strEnumNew (values : List Atom) : Py String := strEnumNewG pyCodec (fun _ => .ok "") (values.map Atom.toSArg)
 
 /-- `enum_member._value_`, Lib/enum.py:247-270. -/
 def memberValue (k : EKind) (v : EV) : Py EV :=
