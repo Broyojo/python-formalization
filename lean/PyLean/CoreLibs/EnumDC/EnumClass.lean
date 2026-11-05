@@ -17,6 +17,46 @@ open PyLean
 
 abbrev Name := List Char
 
+/-- The right operand of `fmt % args`: a tuple supplies its items, anything else is one argument. Each is given as the
+result of the conversion formatting runs on it (`repr` for `%r`). -/
+inductive FmtArgs where
+  | one (r : Py String)
+  | tuple (rs : List (Py String))
+
+/-- The conversions of `fmt % (a, b, ...)` past the first `k`, Objects/unicode_format.c: each takes the next item
+(`unicode_format_getnextarg`, :95-113, "not enough arguments" when none is left) and runs its conversion, the first
+exception going out; items left over at the end are "not all arguments converted" (:1094-1101). -/
+def fmtItems (total : Nat) : Nat → List (Py String) → Py Unit
+  | 0, [] => .ok ()
+  | 0, rest => .error (.typeError
+      s!"not all arguments converted during string formatting (required {total - rest.length}, got {total})")
+  | _ + 1, [] => .error (.typeError s!"not enough arguments for format string (got {total})")
+  | k + 1, r :: rest =>
+    match r with
+    | .error e => .error e
+    | .ok _ => fmtItems total k rest
+
+/-- `fmt % args` for a format with `n` conversions and no mapping key. A single argument is consumed by the first
+conversion; a second conversion then has none, and with no conversion it is left over. -/
+def pyFormat (n : Nat) : FmtArgs → Py Unit
+  | .one r =>
+    match n with
+    | 0 => .error (.typeError "not all arguments converted during string formatting (required 0, got 1)")
+    | k + 1 =>
+      match r with
+      | .error e => .error e
+      | .ok _ => if k = 0 then .ok () else .error (.typeError "not enough arguments for format string (got 1)")
+  | .tuple rs => fmtItems rs.length n rs
+
+/-- `raise E(fmt % args)`: formatting runs first (`r`), and its exception goes out instead of `e`. -/
+def withRepr {γ β : Type} (r : Py γ) (e : PyExc) : Py β :=
+  match r with
+  | .error e' => .error e'
+  | .ok _ => .error e
+
+@[simp] theorem withRepr_ne_ok {γ β : Type} (r : Py γ) (e : PyExc) (s : β) : ((withRepr r e : Py β) = .ok s) = False := by
+  cases r <;> simp [withRepr]
+
 /-- A value in a class body that is not a wrapper. -/
 inductive Atom where
   | int (n : Int)
@@ -54,7 +94,25 @@ inductive EV where
   | names (l : List Name)
   /-- A function given as `_generate_next_value_`. -/
   | gen (g : Gen)
+  /-- `RObj(re)` of the difftest: an object whose `__repr__` raises the exception class `re` names; `id` tells instances
+  apart. -/
+  | robj (re : String) (id : Nat)
   deriving Repr, DecidableEq, Inhabited
+
+/-- The exception `cls(msg)` of a test object. -/
+def pvExc (cls msg : String) : PyExc :=
+  match cls with
+  | "KeyError" => .keyError s!"'{msg}'"
+  | "KSub" => .named "KSub" s!"'{msg}'"
+  | "KT" => .named "KT" s!"'{msg}'"
+  | "TypeError" => .typeError msg
+  | "ValueError" => .valueError msg
+  | c => .named c msg
+
+/-- `repr(v)`: only an `RObj` runs code that raises. -/
+def EV.repr : EV → Py String
+  | .robj re _ => .error (pvExc re "repr")
+  | _ => .ok ""
 
 def Atom.isAuto : Atom → Bool
   | .auto _ => true
@@ -223,9 +281,16 @@ def EnumDict.addAuto (d : EnumDict) (key : Name) (single : Bool) (l : List Atom)
     let v := if single then EV.atom (vals.headD default) else .tup vals
     .ok { d.store key v with memberNames := d.memberNames ++ [key], lastValues := last, autoCalled := called }
 
+/-- `'%r already defined as %r' % (key, self[key])`, :392 and :406: the `repr` of the key (a `str`) and of what the
+namespace holds under it, whose exception goes out instead of the `TypeError`. -/
+def EnumDict.storedRepr (d : EnumDict) (key : Name) : Py String :=
+  match d.items.lookup key with
+  | some v => v.repr
+  | none => .ok ""
+
 /-- The last branch of `__setitem__`, Lib/enum.py:404-442: a new member. -/
 def EnumDict.storeMember (d : EnumDict) (key : Name) (value0 : EV) : Py EnumDict :=
-  if d.has key then .error (.typeError "~already defined as") else
+  if d.has key then withRepr (d.storedRepr key) (.typeError "~already defined as") else
   let value := match value0 with
     | .member v => v
     | v => v
@@ -268,7 +333,7 @@ def EnumDict.set (d : EnumDict) (key : Name) (value : EV) : Py EnumDict :=
     else .ok (d.store key value)
   else if isDunder key then
     .ok (d.store (if key == "__order__".toList then "_order_".toList else key) value)
-  else if d.memberNames.contains key then .error (.typeError "~already defined as")
+  else if d.memberNames.contains key then withRepr (d.storedRepr key) (.typeError "~already defined as")
   else if d.ignore.contains key then .ok (d.store key value)
   else d.setValue key value
 
@@ -374,6 +439,8 @@ structure EClass where
   flagMask : Nat := 0
   singlesMask : Nat := 0
   allBits : Nat := 0
+  /-- What a `__repr__` of the class's own raises, if it has one that does. -/
+  reprErr : Option PyExc := none
   deriving Repr, DecidableEq, Inhabited
 
 def EClass.valueOf (c : EClass) (n : Name) : Option EV := c.values.lookup n
@@ -411,6 +478,14 @@ def SArg.repr {α : Type} (reprA : α → Py String) : SArg α → Py String
   | .other x => reprA x
   | _ => .ok ""
 
+/-- An argument as the right operand of `%` with no tuple around it, as at :1391: a tuple object supplies its items. -/
+def SArg.fmtOne {α : Type} (tupA : α → Option (List α)) (reprA : α → Py String) : SArg α → FmtArgs
+  | .other x =>
+    match tupA x with
+    | some xs => .tuple (xs.map reprA)
+    | none => .one (reprA x)
+  | _ => .one (.ok "")
+
 /-- `repr` of a tuple of arguments: each item in turn, the first exception going out. -/
 def SArg.reprAll {α : Type} (reprA : α → Py String) : List (SArg α) → Py Unit
   | [] => .ok ()
@@ -419,11 +494,6 @@ def SArg.reprAll {α : Type} (reprA : α → Py String) : List (SArg α) → Py 
     | .error e => .error e
     | .ok _ => SArg.reprAll reprA r
 
-/-- `raise E(msg % (x,))`: the `%r` of `x` runs first, and its exception goes out instead. -/
-def withRepr {γ β : Type} (r : Py γ) (e : PyExc) : Py β :=
-  match r with
-  | .error e' => .error e'
-  | .ok _ => .error e
 
 /-- `str(a, encoding, errors)`, Objects/unicodeobject.c `PyUnicode_FromEncodedObject`: a buffer is decoded, a `str` is
 the `TypeError` "decoding str is not supported", anything else the `TypeError` of a missing buffer. -/
@@ -438,7 +508,8 @@ def strDecodeArg (codec : Codec) {α : Type} (a : SArg α) (enc er : String) : P
 argument that is `''`, with one `str` that `str`; with an encoding, and `errors` (`'strict'` when not given), a `bytes` is
 decoded by the codec, a `str` is the `TypeError` "decoding str is not supported", and anything else the `TypeError` of
 `PyUnicode_FromEncodedObject`, Objects/unicodeobject.c. -/
-def strEnumNewG (codec : Codec) {α : Type} (reprA : α → Py String) (values : List (SArg α)) : Py String :=
+def strEnumNewG (codec : Codec) {α : Type} (tupA : α → Option (List α)) (reprA : α → Py String)
+    (values : List (SArg α)) : Py String :=
   if values.length > 3 then withRepr (SArg.reprAll reprA values) (.typeError "~too many arguments for str()")
   else
     match values with
@@ -453,7 +524,7 @@ def strEnumNewG (codec : Codec) {α : Type} (reprA : α → Py String) (values :
         match r with
         | [] => strDecodeArg codec a enc "strict"
         | [.str er] => strDecodeArg codec a enc er
-        | [c] => withRepr (c.repr reprA) (.typeError "~errors must be a string")
+        | [c] => withRepr (pyFormat 1 (c.fmtOne tupA reprA)) (.typeError "~errors must be a string")
         | _ => .error (.typeError "~errors must be a string")
       | _ => withRepr (b.repr reprA) (.typeError "~encoding must be a string")
 
@@ -477,7 +548,8 @@ def Atom.toSArg : Atom → SArg Atom
   | a => .other a
 
 /-- `StrEnum.__new__` on the values of a class body, which are not `bytes`. -/
-def strEnumNew (values : List Atom) : Py String := strEnumNewG pyCodec (fun _ => .ok "") (values.map Atom.toSArg)
+def strEnumNew (values : List Atom) : Py String :=
+  strEnumNewG pyCodec (fun _ => none) (fun _ => .ok "") (values.map Atom.toSArg)
 
 /-- `enum_member._value_`, Lib/enum.py:247-270. -/
 def memberValue (k : EKind) (v : EV) : Py EV :=
@@ -509,10 +581,20 @@ def keepsName (k : EKind) (v : EV) : Bool :=
   | .flag, _ => false
   | _, _ => true
 
-/-- `EnumType._add_member_`, Lib/enum.py:1072-1075, :1115. -/
+/-- `repr(member)`: the class's own `__repr__`, or `Enum.__repr__`, which formats the value with `repr`. -/
+def EClass.memberRepr (c : EClass) (m : Name) : Py String :=
+  match c.reprErr with
+  | some e => .error e
+  | none =>
+    match c.valueOf m with
+    | some v => v.repr
+    | none => .ok ""
+
+/-- `EnumType._add_member_`, :1072-1075, :1115: `'%r is already bound: %r' % (name, cls._member_map_[name])` formats the
+member already bound, whose `repr` can raise instead of the `NameError`. -/
 def EClass.addToMap (c : EClass) (name member : Name) : Py EClass :=
   match c.memberMap.lookup name with
-  | some m => if m != member then .error (.named "NameError" "~is already bound") else .ok c
+  | some m => if m != member then withRepr (c.memberRepr m) (.named "NameError" "~is already bound") else .ok c
   | none => .ok { c with memberMap := c.memberMap ++ [(name, member)] }
 
 /-- What a base of the class holds under a name, Lib/enum.py:1082-1096. -/
@@ -636,8 +718,8 @@ inductive MissingRet where
   | none
   /-- A member of the class. -/
   | member (name : Name)
-  /-- Something else. -/
-  | other
+  /-- Something else, with its `repr`. -/
+  | other (rr : Py String)
   /-- An exception of this class. -/
   | raises (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
@@ -671,7 +753,7 @@ def enumNew (c : EClass) (self : Option Name) (v : EV) (inProgress : Bool) (miss
         match miss with
         | .member n => .ok n
         | .none => .error (.valueError "~is not a valid enum value")
-        | .other => .error (.typeError "~error in _missing_: returned instead of None or a valid member")
+        | .other _ => .error (.typeError "~error in _missing_: returned instead of None or a valid member")
         | .raises e => .error e
 
 /-- `EnumType.__contains__`, Lib/enum.py:758-769, for a class that is not a `Flag`. Both lists use `==`, so an

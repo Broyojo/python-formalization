@@ -63,6 +63,78 @@ theorem isInst_own (o : Ops α) (e : PyExc) : o.isInst e e.className = true :=
 theorem isInst_valueError (o : Ops α) (m : String) : o.isInst (.valueError m) "ValueError" = true :=
   isInst_own o (.valueError m)
 
+/-! ### `str % args` -/
+
+theorem fmtItems_error {total : Nat} : ∀ {k : Nat} {rs : List (Py String)} {e : PyExc},
+    fmtItems total k rs = .error e → e.className = "TypeError" ∨ Except.error e ∈ rs
+  | 0, [], e, h => by simp [fmtItems] at h
+  | 0, _ :: _, e, h => by
+    left
+    simp only [fmtItems, Except.error.injEq] at h
+    rw [← h]; rfl
+  | _ + 1, [], e, h => by
+    left
+    simp only [fmtItems, Except.error.injEq] at h
+    rw [← h]; rfl
+  | k + 1, r :: rest, e, h => by
+    cases r with
+    | error e' =>
+      simp only [fmtItems, Except.error.injEq] at h
+      subst h
+      right; simp
+    | ok _ =>
+      simp only [fmtItems] at h
+      rcases fmtItems_error h with h1 | h1
+      · exact .inl h1
+      · right; simp [h1]
+
+theorem pyFormat_one_error {n : Nat} {r : Py String} {e : PyExc} (h : pyFormat n (.one r) = .error e) :
+    e.className = "TypeError" ∨ r = .error e := by
+  cases n with
+  | zero =>
+    left
+    simp only [pyFormat, Except.error.injEq] at h
+    rw [← h]; rfl
+  | succ k =>
+    cases r with
+    | error e' =>
+      simp only [pyFormat, Except.error.injEq] at h
+      subst h; right; rfl
+    | ok _ =>
+      left
+      simp only [pyFormat] at h
+      split at h
+      · cases h
+      · simp only [Except.error.injEq] at h
+        rw [← h]; rfl
+
+theorem pyFormat_tuple_error {n : Nat} {rs : List (Py String)} {e : PyExc} (h : pyFormat n (.tuple rs) = .error e) :
+    e.className = "TypeError" ∨ Except.error e ∈ rs := fmtItems_error h
+
+/-- The `repr` of an object, or of an item when it is a tuple that `%` unpacks, raised `e`. -/
+def reprOrItemFails {α : Type} (tupA : α → Option (List α)) (reprA : α → Py String) (a : α) (e : PyExc) : Prop :=
+  reprA a = .error e ∨ ∃ xs y, tupA a = some xs ∧ y ∈ xs ∧ reprA y = .error e
+
+theorem sargFmt_error {α : Type} {tupA : α → Option (List α)} {reprA : α → Py String} {x : SArg α} {e : PyExc}
+    (h : pyFormat 1 (x.fmtOne tupA reprA) = .error e) :
+    e.className = "TypeError" ∨ ∃ a, x = .other a ∧ reprOrItemFails tupA reprA a e := by
+  cases x with
+  | other a =>
+    simp only [SArg.fmtOne] at h
+    cases ht : tupA a with
+    | none =>
+      rw [ht] at h
+      rcases pyFormat_one_error h with h1 | h1
+      · exact .inl h1
+      · exact .inr ⟨a, rfl, .inl h1⟩
+    | some xs =>
+      rw [ht] at h
+      rcases pyFormat_tuple_error h with h1 | h1
+      · exact .inl h1
+      · obtain ⟨y, hy, hr⟩ := List.mem_map.1 h1
+        exact .inr ⟨a, rfl, .inr ⟨xs, y, ht, hy, hr⟩⟩
+  | _ => simp [SArg.fmtOne, pyFormat] at h
+
 /-! ### `StrEnum.__new__` -/
 
 /-- `StrEnum.__new__`, for every codec and every argument list: it succeeds exactly with no argument (`''`), one `str`
@@ -70,21 +142,20 @@ theorem isInst_valueError (o : Ops α) (m : String) : o.isInst (.valueError m) "
 (`'strict'` when not given), which the codec decodes; every other exception is a `TypeError`, and the codec's are only
 raised for a buffer first argument. So `A = b'x', 'ascii'` and `A = bytearray(b'x'), 'ascii'` both make the member `'x'`
 (:1392, Objects/unicodeobject.c:3480-3515), which the earlier sentence "one `str` or nothing" did not allow. The
-`TypeError`s of :1378-1391 format the arguments with `%r`, so an exception of an argument's `__repr__` goes out instead. -/
+`TypeError`s of :1378-1391 format the arguments with `%r`, so an exception of an argument's `__repr__` goes out instead;
+:1391 is `'errors must be a string, not %r' % (values[2])` with no tuple around the argument, so a tuple `errors` is
+unpacked: `(1, R())` is the `TypeError` "not all arguments converted during string formatting (required 1, got 2)". -/
 def StrEnumNewRules : Prop :=
-  ∀ (α : Type) (codec : Codec) (reprA : α → Py String) (l : List (SArg α)) (s : String),
-    (strEnumNewG codec reprA l = .ok s ↔
+  ∀ (α : Type) (codec : Codec) (tupA : α → Option (List α)) (reprA : α → Py String) (l : List (SArg α)) (s : String),
+    (strEnumNewG codec tupA reprA l = .ok s ↔
       (l = [] ∧ s = "") ∨ l = [.str s] ∨
       (∃ b enc, l = [.bytes b, .str enc] ∧ strDecode codec b enc "strict" = .ok s) ∨
       (∃ b enc, l = [.buffer b, .str enc] ∧ strDecode codec b enc "strict" = .ok s) ∨
       (∃ b enc er, l = [.bytes b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s) ∨
       (∃ b enc er, l = [.buffer b, .str enc, .str er] ∧ strDecode codec b enc er = .ok s)) ∧
-    ∀ e, strEnumNewG codec reprA l = .error e →
-      e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ l ∧ reprA a = .error e) ∨
+    ∀ e, strEnumNewG codec tupA reprA l = .error e →
+      e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ l ∧ reprOrItemFails tupA reprA a e) ∨
       ∃ b enc er, (l.head? = some (.bytes b) ∨ l.head? = some (.buffer b)) ∧ strDecode codec b enc er = .error e
-
-@[simp] theorem withRepr_ne_ok {γ β : Type} (r : Py γ) (e : PyExc) (s : β) : ((withRepr r e : Py β) = .ok s) = False := by
-  cases r <;> simp [withRepr]
 
 theorem withRepr_error {γ β : Type} {r : Py γ} {e0 e : PyExc} (h : (withRepr r e0 : Py β) = .error e) :
     e = e0 ∨ r = .error e := by
@@ -113,16 +184,27 @@ theorem reprAll_error {α : Type} {reprA : α → Py String} {e : PyExc} :
       obtain ⟨a, ha, he⟩ := reprAll_error h
       exact ⟨a, by simp [ha], he⟩
 
-theorem reprCase {α : Type} {reprA : α → Py String} {L : List (SArg α)} {x : SArg α} {e0 e : PyExc} {P : Prop}
-    (hx : x ∈ L) (h : (withRepr (x.repr reprA) e0 : Py String) = .error e) (ht : e0.className = "TypeError") :
-    e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ L ∧ reprA a = .error e) ∨ P := by
+theorem reprCase {α : Type} {tupA : α → Option (List α)} {reprA : α → Py String} {L : List (SArg α)} {x : SArg α}
+    {e0 e : PyExc} {P : Prop} (hx : x ∈ L) (h : (withRepr (x.repr reprA) e0 : Py String) = .error e)
+    (ht : e0.className = "TypeError") :
+    e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ L ∧ reprOrItemFails tupA reprA a e) ∨ P := by
   rcases withRepr_error h with rfl | hr
   · exact .inl ht
   · obtain ⟨a, rfl, ha⟩ := sarg_repr_error hr
-    exact .inr (.inl ⟨a, hx, ha⟩)
+    exact .inr (.inl ⟨a, hx, .inl ha⟩)
+
+theorem fmtCase {α : Type} {tupA : α → Option (List α)} {reprA : α → Py String} {L : List (SArg α)} {x : SArg α}
+    {e0 e : PyExc} {P : Prop} (hx : x ∈ L) (h : (withRepr (pyFormat 1 (x.fmtOne tupA reprA)) e0 : Py String) = .error e)
+    (ht : e0.className = "TypeError") :
+    e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ L ∧ reprOrItemFails tupA reprA a e) ∨ P := by
+  rcases withRepr_error h with rfl | hr
+  · exact .inl ht
+  · rcases sargFmt_error hr with h1 | ⟨a, rfl, ha⟩
+    · exact .inl h1
+    · exact .inr (.inl ⟨a, hx, ha⟩)
 
 theorem strEnumNewRules_proven : StrEnumNewRules := by
-  intro α codec reprA l s
+  intro α codec tupA reprA l s
   refine ⟨?_, ?_⟩
   · match l with
     | [] =>
@@ -145,40 +227,51 @@ theorem strEnumNewRules_proven : StrEnumNewRules := by
     match l, h with
     | [], h => simp [strEnumNewG] at h
     | [a], h =>
-      cases a <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
+      cases a <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd,
+        gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
         first | (simp at h; done) | exact reprCase (by simp) h rfl
     | [a, b], h =>
-      cases a <;> cases b <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
+      cases a <;> cases b <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add,
+        Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
         first
         | exact reprCase (by simp) h rfl
         | (simp at h; subst h; left; rfl)
         | (simp at h; right; right; exact ⟨_, _, _, .inl rfl, h⟩)
         | (simp at h; right; right; exact ⟨_, _, _, .inr rfl, h⟩)
     | [a, b, c], h =>
-      cases a <;> cases b <;> cases c <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
+      cases a <;> cases b <;> cases c <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil,
+        Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
         first
         | exact reprCase (by simp) h rfl
+        | exact fmtCase (by simp) h rfl
         | (simp at h; subst h; left; rfl)
         | (simp at h; right; right; exact ⟨_, _, _, .inl rfl, h⟩)
         | (simp at h; right; right; exact ⟨_, _, _, .inr rfl, h⟩)
-        | (simp [withRepr] at h; split at h <;> simp_all)
     | x :: y :: z :: w :: r, h =>
       simp only [strEnumNewG, List.length_cons] at h
       simp only [show r.length + 1 + 1 + 1 + 1 > 3 by omega, ↓reduceIte] at h
       rcases withRepr_error h with rfl | hr
       · left; rfl
-      · exact .inr (.inl (reprAll_error hr))
+      · obtain ⟨a, ha, he⟩ := reprAll_error hr
+        exact .inr (.inl ⟨a, ha, .inl he⟩)
 
 /-- The previous statement, with `bytes` as the only decodable first argument. -/
 private def StrEnumBytesOnly : Prop :=
-  ∀ (codec : Codec) (l : List (SArg PV)) (s : String), strEnumNewG codec pvOps.repr l = .ok s →
+  ∀ (codec : Codec) (l : List (SArg PV)) (s : String), strEnumNewG codec pvOps.tupleItems pvOps.repr l = .ok s →
     (l = [] ∧ s = "") ∨ l = [.str s] ∨ (∃ b enc, l = [.bytes b, .str enc]) ∨ (∃ b enc er, l = [.bytes b, .str enc, .str er])
 
 /-- False: `A = bytearray(b'x'), 'ascii'` makes the member `'x'`. -/
 private theorem strEnumBytesOnly_false : ¬StrEnumBytesOnly := by
   intro h
-  have h1 : strEnumNewG pyCodec pvOps.repr [SArg.buffer (α := PV) [120], .str "ascii"] = .ok "x" := by decide +kernel
+  have h1 : strEnumNewG pyCodec pvOps.tupleItems pvOps.repr [SArg.buffer (α := PV) [120], .str "ascii"] = .ok "x" := by
+    decide +kernel
   rcases h pyCodec _ _ h1 with ⟨h2, _⟩ | h2 | ⟨_, _, h2⟩ | ⟨_, _, _, h2⟩ <;> simp at h2
+
+/-- `S._new_member_(S, b'x', 'ascii', (1, R()))`: the tuple `errors` is unpacked by the `%` of :1391, as on 3.15.2. -/
+private theorem strEnum_tupleErrors :
+    strEnumNewG pyCodec pvOps.tupleItems pvOps.repr [SArg.bytes (α := PV) [120], .str "ascii", .other (.pair 1 "KeyError")] =
+      .error (.typeError "not all arguments converted during string formatting (required 1, got 2)") := by
+  decide +kernel
 
 /-! ### `EnumType.__call__` -/
 
@@ -218,7 +311,8 @@ theorem enumCallRules_proven : EnumCallRules := by
 `ValueError` (or subclass) from `_missing_` (an `int` out of range under `STRICT`, or anything that is not an `int`) the
 value is compared with each member value by `==`, the member value on the left, so `1.0 in F` and `K(1) in F` are true
 for a class with `A = 1`. `_missing_` formats a value that is not an `int` with `%r` (:1484), so an exception of its
-`repr` other than a `ValueError` goes out: `R() in F` raises `KeyError` for an `R` whose `__repr__` does. For any class, that comparison is true when some member value is the value itself or equal to
+`repr` other than a `ValueError` goes out (`R() in F` raises `KeyError` for an `R` whose `__repr__` does), and a
+`ValueError` from it is caught like `_missing_`'s own, the value then compared with the member values. For any class, that comparison is true when some member value is the value itself or equal to
 it, false when no comparison is, and its exception goes out. -/
 def ContainsPaths : Prop :=
   ∀ (α : Type) (o : Ops α) (c : FlagCls) (unh hashable : List α) (v : α),
@@ -227,6 +321,8 @@ def ContainsPaths : Prop :=
     (o.asInt v = none → (∃ s, o.repr v = .ok s) →
       c.containsOf o false v = o.listIn v (c.members.map fun p => o.ofInt (p.2 : Int))) ∧
     (o.asInt v = none → ∀ e, o.repr v = .error e → o.isInst e "ValueError" = false → c.containsOf o false v = .error e) ∧
+    (o.asInt v = none → ∀ e, o.repr v = .error e → o.isInst e "ValueError" = true →
+      c.containsOf o false v = o.listIn v (c.members.map fun p => o.ofInt (p.2 : Int))) ∧
     (∀ i, o.asInt v = some i →
       (∀ n m, c.missingR (o.repr v) i = .ok (.flag n m) → c.containsOf o false v = .ok true) ∧
       (∀ p, c.missingR (o.repr v) i = .ok (.plain p) → c.containsOf o false v = .ok false) ∧
@@ -241,11 +337,13 @@ def ContainsPaths : Prop :=
 
 theorem containsPaths_proven : ContainsPaths := by
   intro α o c unh hashable v
-  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rintro h ⟨s, hs⟩
     simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, hs, withRepr, inLists_eq, isInst_valueError]
   · intro h e he hv
     simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, he, withRepr, hv]
+  · intro h e he hv
+    simp [FlagCls.containsOf, containsG, FlagCls.missingOf, h, he, withRepr, hv, inLists_eq]
   · intro i h
     refine ⟨?_, ?_, ?_, ?_⟩
     · intro n m hm
@@ -407,19 +505,20 @@ of them runs it, and any other exception goes out. The long search looks the nam
 checks the unhashable lists first, and compares `value == member._value_` with the value on the left. After it, no members
 is a `TypeError`, and otherwise `_missing_` decides: its member, `None` as `ValueError`, anything else as `TypeError`, and
 its exception as it is. Docs of `_missing_`. Short of a member, :1220 formats the value with `%r` first, so an
-exception of its `repr` goes out instead. -/
+exception of its `repr` goes out instead, and :1225 formats a result that is neither a member nor `None` the same way;
+but only an `Exception` from `_missing_` is caught (:1207), so anything else goes out before either. -/
 def EnumLookupG : Prop :=
   ∀ (α : Type) (o : Ops α) (c : EClassG α) (m : Name) (v : α) (ip : Bool) (miss : MissingRet),
     c.enumNew o (some m) v ip miss = .ok m ∧
     (∀ n, o.dictGet c.value2member v = .ok (some n) → c.enumNew o none v ip miss = .ok n) ∧
-    (o.dictGet c.value2member v = .ok none → c.enumNew o none v ip miss = c.afterSearch ip (o.repr v) miss) ∧
+    (o.dictGet c.value2member v = .ok none → c.enumNew o none v ip miss = c.afterSearch o ip (o.repr v) miss) ∧
     (∀ e, o.dictGet c.value2member v = .error e →
-      (o.isInst e "KeyError" = true → c.enumNew o none v ip miss = c.afterSearch ip (o.repr v) miss) ∧
+      (o.isInst e "KeyError" = true → c.enumNew o none v ip miss = c.afterSearch o ip (o.repr v) miss) ∧
       (o.isInst e "KeyError" = false → o.isInst e "TypeError" = true → c.enumNew o none v ip miss =
         match c.longSearch o v with
         | .error e' => .error e'
         | .ok (some n) => .ok n
-        | .ok none => c.afterSearch ip (o.repr v) miss) ∧
+        | .ok none => c.afterSearch o ip (o.repr v) miss) ∧
       (o.isInst e "KeyError" = false → o.isInst e "TypeError" = false → c.enumNew o none v ip miss = .error e)) ∧
     (∀ e, o.hash v = .error e → o.dictGet c.value2member v = .error (o.keyExc "dict key" v e) ∧
       (o.keyExc "dict key" v e).className = e.className) ∧
@@ -439,12 +538,16 @@ def EnumLookupG : Prop :=
       | .ok true => .ok (some n)
       | .ok false => c.firstByValue o v r) ∧
     (∀ rv : Py String, c.memberMap.isEmpty = false →
-      c.afterSearch ip rv (.member m) = .ok m ∧
-      ((∃ s, rv = .ok s) → (c.afterSearch ip rv .none).raises "ValueError" ∧
-        (c.afterSearch ip rv .other).raises "TypeError" ∧ ∀ e, c.afterSearch ip rv (.raises e) = .error e) ∧
-      (∀ e', rv = .error e' → c.afterSearch ip rv .none = .error e' ∧ c.afterSearch ip rv .other = .error e' ∧
-        ∀ e, c.afterSearch ip rv (.raises e) = .error e')) ∧
-    (c.memberMap.isEmpty = true → (c.afterSearch ip (o.repr v) miss).raises "TypeError")
+      c.afterSearch o ip rv (.member m) = .ok m ∧
+      ((∃ s, rv = .ok s) → (c.afterSearch o ip rv .none).raises "ValueError" ∧
+        (∀ rr, (∃ s, rr = .ok s) → (c.afterSearch o ip rv (.other rr)).raises "TypeError") ∧
+        (∀ e, c.afterSearch o ip rv (.other (.error e)) = .error e) ∧
+        ∀ e, c.afterSearch o ip rv (.raises e) = .error e) ∧
+      (∀ e', rv = .error e' → c.afterSearch o ip rv .none = .error e' ∧
+        (∀ rr, c.afterSearch o ip rv (.other rr) = .error e') ∧
+        ∀ e, o.isInst e "Exception" = true → c.afterSearch o ip rv (.raises e) = .error e') ∧
+      (∀ e, o.isInst e "Exception" = false → c.afterSearch o ip rv (.raises e) = .error e)) ∧
+    (c.memberMap.isEmpty = true → (c.afterSearch o ip (o.repr v) miss).raises "TypeError")
 
 theorem enumLookupG_proven : EnumLookupG := by
   intro α o c m v ip miss
@@ -474,13 +577,19 @@ theorem enumLookupG_proven : EnumLookupG := by
     simp only [EClassG.firstByValue, hx]
     try rfl
   · intro rv h
-    refine ⟨by simp [EClassG.afterSearch, h], fun ⟨s, hs⟩ => ?_, fun e' he => ?_⟩
+    refine ⟨by simp [EClassG.afterSearch, h], fun ⟨s, hs⟩ => ?_, fun e' he => ?_, fun e hx => ?_⟩
     · subst hs
-      exact ⟨⟨_, by simp [EClassG.afterSearch, h, withRepr]; rfl, rfl⟩,
-        ⟨_, by simp [EClassG.afterSearch, h, withRepr]; rfl, rfl⟩, fun e => by simp [EClassG.afterSearch, h, withRepr]⟩
+      refine ⟨⟨_, by simp [EClassG.afterSearch, h, withRepr]; rfl, rfl⟩, fun rr ⟨s', hs'⟩ => ?_,
+        fun e => by simp [EClassG.afterSearch, h, withRepr], fun e => ?_⟩
+      · subst hs'
+        exact ⟨_, by simp [EClassG.afterSearch, h, withRepr]; rfl, rfl⟩
+      · by_cases hx : o.isInst e "Exception" = true
+        · simp [EClassG.afterSearch, h, withRepr, hx]
+        · simp [EClassG.afterSearch, h, withRepr, hx]
     · subst he
-      exact ⟨by simp [EClassG.afterSearch, h, withRepr], by simp [EClassG.afterSearch, h, withRepr],
-        fun e => by simp [EClassG.afterSearch, h, withRepr]⟩
+      exact ⟨by simp [EClassG.afterSearch, h, withRepr], fun rr => by simp [EClassG.afterSearch, h, withRepr],
+        fun e hx => by simp [EClassG.afterSearch, h, withRepr, hx]⟩
+    · simp [EClassG.afterSearch, h, hx]
   · intro h
     cases ip
     · exact ⟨_, by simp [EClassG.afterSearch, h]; rfl, rfl⟩
@@ -539,14 +648,14 @@ def SetNamePaths : Prop :=
     (mk.memberValue o value = .ok v →
       (∀ e, (c.flagUpdate o v).aliasOf o v = .error e → c.setName o mk name value = .error e) ∧
       (∀ m, (c.flagUpdate o v).aliasOf o v = .ok (some m) →
-        c.setName o mk name value = ((c.flagUpdate o v).addToMap name m).bind (fun c2 => c2.noteValue o name m v)) ∧
+        c.setName o mk name value = ((c.flagUpdate o v).addToMap o name m).bind (fun c2 => c2.noteValue o name m v)) ∧
       ((c.flagUpdate o v).aliasOf o v = .ok none →
         c.setName o mk name value =
           ({ c.flagUpdate o v with
               memberNames := if !(c.flagUpdate o v).isFlag || (match o.asInt v with
                   | some n => isSingleBitInt n
                   | none => false) then (c.flagUpdate o v).memberNames ++ [name] else (c.flagUpdate o v).memberNames,
-              values := (c.flagUpdate o v).values ++ [(name, v)] }.addToMap name name).bind
+              values := (c.flagUpdate o v).values ++ [(name, v)] }.addToMap o name name).bind
             (fun c3 => c3.noteValue o name name v))) ∧
     (∀ m e, o.setDefault c.value2member v m = .error e → o.isInst e "TypeError" = true →
       c.noteValue o name m v = .ok { c with unhashableValues := c.unhashableValues ++ [v],
@@ -585,10 +694,10 @@ theorem setNamePaths_proven : SetNamePaths := by
   · intro hv
     refine ⟨fun e he => by simp [EClassG.setName, hv, he], fun m hm => ?_, fun hn => ?_⟩
     · simp only [EClassG.setName, hv, hm]
-      generalize (c.flagUpdate o v).addToMap name m = x
+      generalize (c.flagUpdate o v).addToMap o name m = x
       cases x <;> rfl
     · simp only [EClassG.setName, hv, hn]
-      generalize EClassG.addToMap _ name name = x
+      generalize EClassG.addToMap o _ name name = x
       cases x <;> rfl
   · intro m e h ht
     simp [EClassG.noteValue, h, ht]
@@ -602,7 +711,8 @@ theorem setNamePaths_proven : SetNamePaths := by
 /-! ### `Enum._add_value_alias_` -/
 
 /-- `Enum._add_value_alias_`, every path, for every `hash` and `==`: a value another member has in the map is the
-`ValueError` (after the `repr` of the value and of that member, either of which can raise instead), one this member has
+`ValueError` (after the `repr` of the value and of that member, by the class's own `__repr__` if it has one, either of
+which can raise instead), one this member has
 is nothing, a new one is bound; a `TypeError` from the lookup runs the search over the
 members' `_value_`, in which a value another member has raises that `TypeError` again (it formats the `ValueError` with
 `map[value]`), one this member has is nothing, and a new one is bound; any other exception goes out. Binding is
@@ -610,7 +720,9 @@ members' `_value_`, in which a value another member has raises that `TypeError` 
 def ValueAliasPaths : Prop :=
   ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self : Name) (v : α),
     (∀ m, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
-      (∀ x, c.values.lookup m = some x → ∃ s, o.repr x = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
+      (∃ s, c.memberRepr o m = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
+    (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
+      c.memberRepr o m = .error e → c.addValueAlias o f self v = .error e) ∧
     (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → o.repr v = .error e →
       c.addValueAlias o f self v = .error e) ∧
     (o.dictGet c.value2member v = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
@@ -636,20 +748,17 @@ def ValueAliasPaths : Prop :=
 
 theorem valueAliasPaths_proven : ValueAliasPaths := by
   intro α o c f self v
-  refine ⟨fun m h hm ⟨s, hs⟩ hx => ?_, fun m e h hm he => by simp [EClassG.addValueAlias, h, hm, he], fun h => by
+  refine ⟨fun m h hm ⟨s, hs⟩ ⟨s', hs'⟩ => ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hs', withRepr]; rfl, rfl⟩,
+    fun m e h hm ⟨s, hs⟩ he => by simp [EClassG.addValueAlias, h, hm, hs, he, withRepr],
+    fun m e h hm he => by simp [EClassG.addValueAlias, h, hm, he], fun h => by
     simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h], fun e h ht => ⟨fun m hm hne => by
     simp [EClassG.addValueAlias, h, ht, hm, hne], fun hm => by simp [EClassG.addValueAlias, h, ht, hm], fun hm => by
     simp [EClassG.addValueAlias, h, ht, hm], fun e' he => by simp [EClassG.addValueAlias, h, ht, he]⟩,
     fun e h ht => by simp [EClassG.addValueAlias, h, ht], fun n m x r hx => ?_, fun d w h => by
     simp [EClassG.bindValue, h], fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by
     simp [EClassG.bindValue, h, ht]⟩
-  · cases hl : c.values.lookup m with
-    | none => exact ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hl]; rfl, rfl⟩
-    | some x =>
-      obtain ⟨s', hs'⟩ := hx x hl
-      exact ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hl, hs']; rfl, rfl⟩
-  · simp only [EClassG.firstMemberEq, hx]
-    try rfl
+  simp only [EClassG.firstMemberEq, hx]
+  try rfl
 
 /-- A class with members `A` and `B` and the given values, built by the mirror. -/
 def twoG (a b : EV) : EClassG EV :=
@@ -846,6 +955,50 @@ private theorem setName_twoBases :
     (cA.setName pvOps {} ['B'] (.key 1 (some "KT") (some "KT") 0)).map
       (fun c => (c.memberNames, c.memberMap.map Prod.fst, c.unhashableValues.length)) =
       .ok ([['A'], ['B']], [['A'], ['B']], 1) := by
+  decide +kernel
+
+/-! ### `%r` of `_missing_`'s outcome and of members: the witnesses -/
+
+/-- `_missing_` raising `BExc(7)`, a `BaseException`, for `R()` whose `__repr__` raises `KeyError`: `E2(R())` raises `BExc`,
+since :1207 catches only `Exception` and the `%r` of :1220 never runs; the earlier clause, every non-member outcome raising
+the `repr`'s exception first, is false. -/
+private theorem enumNew_baseException :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (v : α) (e e' : PyExc), c.memberMap.isEmpty = false →
+        o.repr v = .error e' → c.afterSearch o false (o.repr v) (.raises e) = .error e') := by
+  intro h
+  have := h PV pvOps cA (.robj "KeyError" 0) (.named "BExc" "7") (.keyError "'repr'") rfl rfl
+  revert this
+  decide +kernel
+
+/-- `_missing_` returning an object whose `__repr__` raises `LookupError`: the `TypeError` of :1224-1227 formats it, so
+`LookupError` goes out. -/
+private theorem enumNew_otherBadRepr :
+    cA.enumNew pvOps none (.int 5) false (.other (.error (.named "LookupError" "repr"))) =
+      .error (.named "LookupError" "repr") := by
+  decide +kernel
+
+/-- A class with members `A = 1`, `B = 2` and a `__repr__` of its own that raises `LookupError`. -/
+private def w2 : EClassG PV :=
+  { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])],
+    values := [(['A'], .int 1), (['B'], .int 2)], value2member := [(.int 1, ['A']), (.int 2, ['B'])],
+    hashableValues := [.int 1, .int 2], reprErr := some (.named "LookupError" "") }
+
+/-- `W2.B._add_value_alias_(1)`: the `ValueError` of :1244 formats `W2.A`, whose `__repr__` raises; the earlier clause,
+which formatted only its `_value_`, is false. -/
+private theorem valueAlias_classRepr :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self m : Name) (v x : α),
+        o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
+        c.values.lookup m = some x → (∃ s, o.repr x = .ok s) → (c.addValueAlias o f self v).raises "ValueError") := by
+  intro h
+  obtain ⟨e, he, hc⟩ := h PV pvOps w2 id ['B'] ['A'] (.int 1) (.int 1) (by decide +kernel) (by decide) ⟨_, rfl⟩ rfl ⟨_, rfl⟩
+  have : w2.addValueAlias pvOps id ['B'] (.int 1) = .error (.named "LookupError" "") := by decide +kernel
+  rw [this] at he
+  cases he
+  simp [PyExc.className] at hc
+
+/-- `_add_member_` on a name bound to another member formats that member: with a raising `__repr__` it is that
+exception, not the `NameError` (:1074). -/
+private theorem addMember_classRepr : w2.addToMap pvOps ['A'] ['B'] = .error (.named "LookupError" "") := by
   decide +kernel
 
 end PyLean.CoreLibs.EnumDC

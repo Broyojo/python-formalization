@@ -44,10 +44,18 @@ structure Ops (α : Type) where
   truth : α → Py Bool
   /-- `repr(a)`, as `%r` runs it. -/
   repr : α → Py String
+  /-- The items of `a` when it is a tuple, which `fmt % a` unpacks. -/
+  tupleItems : α → Option (List α)
   /-- The bases of each exception class of the program, builtin or its own, for `except`. -/
   excParent : String → List String
 
 variable {α β : Type}
+
+/-- `a` as the right operand of `%` with no tuple written around it: a tuple supplies its items. -/
+def Ops.fmtOne (o : Ops α) (a : α) : FmtArgs :=
+  match o.tupleItems a with
+  | some xs => .tuple (xs.map o.repr)
+  | none => .one (o.repr a)
 
 /-- `isinstance(e, cls)`: what `except cls:` catches, subclasses included. -/
 def Ops.isInst (o : Ops α) (e : PyExc) (cls : String) : Bool := excIs o.excParent e cls
@@ -130,13 +138,16 @@ structure EClassG (α : Type) where
   flagMask : Int := 0
   singlesMask : Int := 0
   allBits : Int := 0
+  /-- What a `__repr__` of the class's own raises, if it has one that does. -/
+  reprErr : Option PyExc := none
   deriving DecidableEq
 
 /-- The `EV` class as one over `EV` values. -/
 def EClass.toG (c : EClass) : EClassG EV :=
   { isFlag := c.kind == .flag, memberNames := c.memberNames, memberMap := c.memberMap, values := c.values,
     value2member := c.value2member, hashableValues := c.hashableValues, unhashableValues := c.unhashableValues,
-    unhashableMap := c.unhashableMap, flagMask := c.flagMask, singlesMask := c.singlesMask, allBits := c.allBits }
+    unhashableMap := c.unhashableMap, flagMask := c.flagMask, singlesMask := c.singlesMask, allBits := c.allBits,
+    reprErr := c.reprErr }
 
 /-- `cls[name]`, `EnumType.__getitem__`, Lib/enum.py:800-804. -/
 def EClassG.getItem (c : EClassG α) (name : Name) : Py Name :=
@@ -144,10 +155,20 @@ def EClassG.getItem (c : EClassG α) (name : Name) : Py Name :=
   | some m => .ok m
   | none => .error (.keyError "~name")
 
-/-- `EnumType._add_member_`, Lib/enum.py:1072-1075, :1115. -/
-def EClassG.addToMap (c : EClassG α) (name member : Name) : Py (EClassG α) :=
+/-- `repr(member)`: the class's own `__repr__`, or `Enum.__repr__`, `<C.A: repr(_value_)>`, which runs the value's. -/
+def EClassG.memberRepr (o : Ops α) (c : EClassG α) (m : Name) : Py String :=
+  match c.reprErr with
+  | some e => .error e
+  | none =>
+    match c.values.lookup m with
+    | some v => o.repr v
+    | none => .ok ""
+
+/-- `EnumType._add_member_`, Lib/enum.py:1072-1075, :1115: `'%r is already bound: %r' % (name, member)` formats the
+member already bound, whose `repr` can raise instead of the `NameError`. -/
+def EClassG.addToMap (o : Ops α) (c : EClassG α) (name member : Name) : Py (EClassG α) :=
   match c.memberMap.lookup name with
-  | some m => if m != member then .error (.named "NameError" "~is already bound") else .ok c
+  | some m => if m != member then withRepr (c.memberRepr o m) (.named "NameError" "~is already bound") else .ok c
   | none => .ok { c with memberMap := c.memberMap ++ [(name, member)] }
 
 /-- `_is_single_bit`, Lib/enum.py:91-98, on any `int`: zero is not, and for a negative `num`, `num & (num - 1)` is
@@ -256,7 +277,7 @@ def EClassG.setName (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) 
     match c1.aliasOf o v with
     | .error e => .error e
     | .ok (some m) =>
-      match c1.addToMap name m with
+      match c1.addToMap o name m with
       | .error e => .error e
       | .ok c2 => c2.noteValue o name m v
     | .ok none =>
@@ -265,7 +286,7 @@ def EClassG.setName (o : Ops α) (mk : Maker α) (c : EClassG α) (name : Name) 
         | none => false)
       let c2 := { c1 with memberNames := if keeps then c1.memberNames ++ [name] else c1.memberNames,
                           values := c1.values ++ [(name, v)] }
-      match c2.addToMap name name with
+      match c2.addToMap o name name with
       | .error e => .error e
       | .ok c3 => c3.noteValue o name name v
 
@@ -320,9 +341,10 @@ def EClassG.longSearch (o : Ops α) (c : EClassG α) (v : α) : Py (Option Name)
 
 /-- After the searches, :1197-1234: no members is a `TypeError`, and otherwise `_missing_` decides. When its result is
 not a member, :1220 builds `ValueError("%r is not a valid %s" % (value, ...))` first, so the value's `repr` (`rv`) runs
-and its exception goes out instead. The `%r` of a result that is not a member, :1225, is of the model's opaque object,
-whose `repr` does not fail. -/
-def EClassG.afterSearch (c : EClassG α) (inProgress : Bool) (rv : Py String) (miss : MissingRet) : Py Name :=
+and its exception goes out instead; then the `TypeError` of :1224-1227 formats the result with `%r` (`rr`). Only an
+`Exception` from `_missing_` is caught, at :1207: anything else goes out at once. -/
+def EClassG.afterSearch (o : Ops α) (c : EClassG α) (inProgress : Bool) (rv : Py String) (miss : MissingRet) :
+    Py Name :=
   if c.memberMap.isEmpty then
     if inProgress then .error (.typeError "do not use `super().__new__; call the appropriate __new__ directly")
     else .error (.typeError "~has no members defined")
@@ -330,8 +352,11 @@ def EClassG.afterSearch (c : EClassG α) (inProgress : Bool) (rv : Py String) (m
     match miss with
     | .member n => .ok n
     | .none => withRepr rv (.valueError "~is not a valid enum value")
-    | .other => withRepr rv (.typeError "~error in _missing_: returned instead of None or a valid member")
-    | .raises e => withRepr rv e
+    | .other rr =>
+      match rv with
+      | .error e => .error e
+      | .ok _ => withRepr rr (.typeError "~error in _missing_: returned instead of None or a valid member")
+    | .raises e => if o.isInst e "Exception" then withRepr rv e else .error e
 
 /-- `Enum.__new__`, Lib/enum.py:1175-1234, for a class that is not a `Flag`. `self` is `type(value) is cls`. The
 `try` at :1184-1196 passes on a `KeyError` from the lookup, the hash or `==`, and searches on a `TypeError`. -/
@@ -342,14 +367,14 @@ def EClassG.enumNew (o : Ops α) (c : EClassG α) (self : Option Name) (v : α) 
   | none =>
     match o.dictGet c.value2member v with
     | .ok (some n) => .ok n
-    | .ok none => c.afterSearch inProgress (o.repr v) miss
+    | .ok none => c.afterSearch o inProgress (o.repr v) miss
     | .error e =>
-      if o.isInst e "KeyError" then c.afterSearch inProgress (o.repr v) miss
+      if o.isInst e "KeyError" then c.afterSearch o inProgress (o.repr v) miss
       else if o.isInst e "TypeError" then
         match c.longSearch o v with
         | .error e' => .error e'
         | .ok (some n) => .ok n
-        | .ok none => c.afterSearch inProgress (o.repr v) miss
+        | .ok none => c.afterSearch o inProgress (o.repr v) miss
       else .error e
 
 /-! ### `Enum._add_value_alias_`, Lib/enum.py:1239-1262 -/
@@ -385,13 +410,11 @@ def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → N
   match o.dictGet c.value2member v with
   | .ok (some m) =>
     if m != self then
-      -- `'%r is already bound: %r' % (value, member)`: the value's `repr`, then the member's, `<C.A: repr(_value_)>`
+      -- `'%r is already bound: %r' % (value, member)`: the value's `repr`, then the member's
       match o.repr v with
       | .error e => .error e
       | .ok _ =>
-        match (c.values.lookup m).map o.repr with
-        | some (.error e) => .error e
-        | _ => .error (.valueError "~is already bound")
+        withRepr (c.memberRepr o m) (.valueError "~is already bound")
     else .ok c
   | .ok none => c.bindValue o memberName self v
   | .error e =>
@@ -629,8 +652,9 @@ def verifyCallG (o : Ops α) (order : List α → List α) (c : EClassG α) (mem
 /-! ### `Flag._generate_next_value_`, Lib/enum.py:1437-1453 -/
 
 /-- `Flag._generate_next_value_`: `start`, or `1` for `None`, for the first member; then `2 ** (_high_bit(max) + 1)`,
-where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1449-1452, whose message
-formats the value with `%r`, so an exception of its `repr` goes out instead. -/
+where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1449-1452, whose message is
+`'invalid flag value %r' % last_value` with no tuple around the value: a tuple is unpacked, so a tuple of two items is
+the `TypeError` "not all arguments converted", and an exception of a `repr` goes out instead. -/
 def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α) : Py α :=
   if count = 0 then .ok (start.getD (o.ofInt 1))
   else
@@ -642,7 +666,8 @@ def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α
       | .ok m =>
         match o.bitLength m with
         | .error e =>
-          if o.isInst e "Exception" then withRepr (o.repr m) (.typeError "~invalid flag value") else .error e
+          if o.isInst e "Exception" then withRepr (pyFormat 1 (o.fmtOne m)) (.typeError "~invalid flag value")
+          else .error e
         | .ok b => .ok (o.ofInt ((2 : Int) ^ b))
 
 /-! ### Iterating a `Flag` value, Lib/enum.py:1456-1473, :1581-1585 -/
@@ -718,13 +743,18 @@ def FlagCls.callsC (c : FlagCls) : List (Nat × Option String) → List Int → 
 
 /-- The argument of `_iter_bits_lsb`: an `int`, or an `Enum` member with an `int` value, and its `repr`. -/
 inductive BitsArg where
+  /-- A plain `int`. -/
   | int (n : Int)
-  | member (value : Int) (repr : String)
+  /-- An instance of a subclass of `int`, with its `repr`. -/
+  | intSub (n : Int) (repr : Py String)
+  /-- An `Enum` member with an `int` value, with its `repr`. -/
+  | member (value : Int) (repr : Py String)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `repr(original)`. -/
-def BitsArg.repr : BitsArg → String
-  | .int n => toString n
+/-- `repr(original)`: digits for a plain `int`, otherwise what the object's `__repr__` gives or raises. -/
+def BitsArg.repr : BitsArg → Py String
+  | .int n => .ok (toString n)
+  | .intSub _ r => r
   | .member _ r => r
 
 /-- `_iter_bits_lsb`, run to the end, as `list()` does: a member is replaced by its value, :118-119, a negative value is
@@ -732,8 +762,13 @@ the `ValueError` of :120-121, and the loop of :122-125 yields `num & (~num + 1)`
 def iterBitsLsb (a : BitsArg) : Py (List Nat) :=
   let num : Int := match a with
     | .int n => n
+    | .intSub n _ => n
     | .member v _ => v
-  if num < 0 then .error (.valueError s!"{a.repr} is not a positive integer")
+  if num < 0 then
+    -- `'%r is not a positive integer' % original`: `original` is not a tuple
+    match a.repr with
+    | .error e => .error e
+    | .ok s => .error (.valueError s!"{s} is not a positive integer")
   else .ok (bitsOf num.toNat)
 
 /-! ### `EnumType.__call__`, Lib/enum.py:701-748 -/
@@ -785,6 +820,7 @@ def EV.typeName : EV → String
   | .descr _ => "Descr"
   | .inner _ => "type"
   | .gen _ => "function"
+  | .robj _ _ => "RObj"
 
 /-- An order comparison of two `EV` values, exact for `int` and `str`; other kinds are not compared by the cases
 the difftest makes, and are given the `TypeError` of two kinds without an order. -/
@@ -821,7 +857,10 @@ def evOps : Ops EV where
     | .atom (.int n) => .ok (n != 0)
     | .atom (.str s) => .ok (s != "")
     | _ => .ok true
-  repr _ := .ok ""
+  repr v := v.repr
+  tupleItems
+    | .tup l => some (l.map EV.atom)
+    | _ => none
   excParent := builtinParent
 
 /-- A value of the difftest's fallible cases. -/
@@ -837,6 +876,8 @@ inductive PV where
   | robj (re : String) (i : Nat)
   /-- `RI(n, re)`: a subclass of `int` of value `n` whose `__repr__` raises the exception `re` names. -/
   | rint (n : Int) (re : String)
+  /-- The tuple `(a, RObj(re))`, a new `RObj` each time. -/
+  | pair (a : Int) (re : String)
   deriving Repr, DecidableEq, Inhabited
 
 def PV.typeName : PV → String
@@ -846,6 +887,7 @@ def PV.typeName : PV → String
   | .list _ => "list"
   | .robj _ _ => "RObj"
   | .rint _ _ => "RI"
+  | .pair _ _ => "tuple"
 
 /-- An `RI` compares and hashes as the `int` it is. -/
 def PV.norm : PV → PV
@@ -859,16 +901,6 @@ def intHash (n : Int) : Int :=
   else
     let r := -((-n) % p)
     if r = -1 then -2 else r
-
-/-- The exception `K` raises: `cls(msg)`. -/
-def pvExc (cls msg : String) : PyExc :=
-  match cls with
-  | "KeyError" => .keyError s!"'{msg}'"
-  | "KSub" => .named "KSub" s!"'{msg}'"
-  | "KT" => .named "KT" s!"'{msg}'"
-  | "TypeError" => .typeError msg
-  | "ValueError" => .valueError msg
-  | c => .named c msg
 
 /-- `a == b`: `K.__eq__` on the left, or reflected when the left operand gives `NotImplemented`; `False` when both do. -/
 def pvEq0 : PV → PV → Py Bool
@@ -896,6 +928,10 @@ def pvEq0 : PV → PV → Py Bool
     match ee with
     | some x => .error (pvExc x "eq")
     | none => .ok false
+  | .pair _ _, .key _ _ ee _ =>
+    match ee with
+    | some x => .error (pvExc x "eq")
+    | none => .ok false
   | .int a, .int b => .ok (a == b)
   | .str a, .str b => .ok (a == b)
   | .list a, .list b => .ok (a == b)
@@ -914,6 +950,10 @@ def pvCmp (gt : Bool) (a b : PV) : Py Bool :=
   | .key x _ _ _, .key y _ _ _ => .ok (r x y)
   | .key x _ _ _, .int y => .ok (r x y)
   | .int x, .key y _ _ _ => .ok (r x y)
+  -- tuples compare their first items, equal here only when both are the same `int`, and then the two `RObj`s
+  | .pair x _, .pair y _ =>
+    if x = y then .error (.typeError s!"'{sym}' not supported between instances of 'RObj' and 'RObj'")
+    else .ok (r x y)
   | _, _ => .error (.typeError s!"'{sym}' not supported between instances of '{a.typeName}' and '{b.typeName}'")
 
 def pvOps : Ops PV where
@@ -934,6 +974,7 @@ def pvOps : Ops PV where
     | .list _ => .error (.typeError "unhashable type: 'list'")
     | .robj _ i => .ok (2 ^ 62 + 1000 + i)
     | .rint n _ => .ok (intHash n)
+    | .pair a _ => .ok (2 ^ 62 + 2000 + a)
   eq := pvEq
   lt := pvCmp false
   gt := pvCmp true
@@ -946,6 +987,7 @@ def pvOps : Ops PV where
     | .int n => .ok (.int (n + 1))
     | .rint n _ => .ok (.int (n + 1))
     | .robj _ _ => .error (.typeError "unsupported operand type(s) for +: 'RObj' and 'int'")
+    | .pair _ _ => .error (.typeError "can only concatenate tuple (not \"int\") to tuple")
     | .str _ => .error (.typeError "can only concatenate str (not \"int\") to str")
     | .list _ => .error (.typeError "can only concatenate list (not \"int\") to list")
     | .key _ _ _ _ => .error (.typeError "unsupported operand type(s) for +: 'K' and 'int'")
@@ -966,7 +1008,11 @@ def pvOps : Ops PV where
   repr
     | .robj re _ => .error (pvExc re "repr")
     | .rint _ re => .error (pvExc re "repr")
+    | .pair _ re => .error (pvExc re "repr")
     | _ => .ok ""
+  tupleItems
+    | .pair a re => some [.int a, .robj re 0]
+    | _ => none
   excParent
     | "KSub" => ["KeyError"]
     | "TSub" => ["TypeError"]
