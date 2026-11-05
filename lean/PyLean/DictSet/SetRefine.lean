@@ -714,7 +714,12 @@ theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey 
 
 end Failure
 
-/-- The failure paths of the set probes, for every key protocol. -/
+/-- The failure paths of the set probes, for every key protocol: an `__eq__` that raises ends the
+probe with that exception, in the state it left (:157-158, :292-293); and when CPython's re-check
+after the comparison fires (:159, :294), that is when the table pointer differs (a table identity
+the allocator gave out anew) or the entry no longer holds `startkey`, the lookup restarts on any
+answer and the add on an answer of no. The re-check does not fire for a new table of another size
+at the old address: `SetLookupRestartsOnResize` and `SetAddRestartsOnResize` are refuted. -/
 def SetProbeFailure : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key startkey : K) (hash : Int) (slot mask : Nat)
     (so s' : SetObj K) (e : PyExc) (fs : Option Nat),
@@ -723,7 +728,7 @@ def SetProbeFailure : Prop :=
     (P.eq startkey key so = (.error e, s') →
       (∀ fr, lookStep P fr key hash slot so = (.error e, s')) ∧
       addStep P key hash slot mask fs so = (.error e, s')) ∧
-    (setChanged s' so.tableId slot startkey = true →
+    ((s'.tableId ≠ so.tableId ∨ ∀ h, s'.slot slot ≠ .active startkey h) →
       (∀ b, P.eq startkey key so = (.ok b, s') →
         lookStep P false key hash slot so = (.ok (.inl .restart), s')) ∧
       (P.eq startkey key so = (.ok false, s') →
@@ -731,9 +736,19 @@ def SetProbeFailure : Prop :=
 theorem setProbeFailure_proven : SetProbeFailure := by
   intro K _ P key startkey hash slot mask so s' e fs hs h1 h2
   refine ⟨fun hq => ⟨fun fr => lookStep_raises P key startkey hash slot so s' e fr hs h1 h2 hq,
-    addStep_raises P key startkey hash slot mask so s' e fs hs h1 h2 hq⟩, fun hch => ⟨?_, ?_⟩⟩
-  · exact fun b hq => lookStep_changed P key startkey hash slot so s' b hs h1 h2 hq hch
-  · exact fun hq => addStep_changed P key startkey hash slot mask so s' fs hs h1 h2 hq hch
+    addStep_raises P key startkey hash slot mask so s' e fs hs h1 h2 hq⟩, fun hc => ?_⟩
+  have hch : setChanged s' so.tableId slot startkey = true := by
+    unfold setChanged
+    rcases hc with hc | hc
+    · simp [Ne.symm hc]
+    · cases hsl : s'.slot slot with
+      | null => simp
+      | dummy => simp
+      | active k h' =>
+        have : k ≠ startkey := fun hk => hc h' (by rw [hsl, hk])
+        simp [this]
+  exact ⟨fun b hq => lookStep_changed P key startkey hash slot so s' b hs h1 h2 hq hch,
+    fun hq => addStep_changed P key startkey hash slot mask so s' fs hs h1 h2 hq hch⟩
 
 /-- `_PySet_Contains`, `set_contains`, `set.__contains__` and `frozenset.__contains__` for an honest
 key protocol, on every well-formed table: the answer is list membership, whichever compare function

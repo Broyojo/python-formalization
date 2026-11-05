@@ -129,27 +129,12 @@ def teKeySet : Nat → SetObj Nat → Option (SetBody Nat) := fun k _ => if k = 
 /-- `{frozenset({1})}`. -/
 def setFsOne : SetObj Nat := (setAddKey teSubProto 5 {}).2
 
-/-- The withdrawn third conjunct of `set-contains-retry`: a failed hash that is not exactly
-`TypeError` is never retried. -/
-def SetContainsRetryExact : Prop :=
-  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (keySet : K → SetObj K → Option (SetBody K))
-    (key : K) (e : PyExc) (so s' : SetObj K),
-    P.hashM key so = (.error e, s') → (∀ m, e ≠ .typeError m) →
-    setContains P keySet key so = (.error (setUnhashableType P key e), s')
-
 /-- `x in {frozenset([1])}` is `True` for an `x` of a set subclass holding `{1}` whose `__hash__`
 raises a subclass of `TypeError`, by `set` and by `frozenset` alike. -/
 theorem teSub_probe :
     (setContains teSubProto teKeySet 7 setFsOne).1 = .ok true ∧
     (frozensetContains teSubProto teKeySet 7 { setFsOne with frozen := true }).1 = .ok true := by
   constructor <;> decide +kernel
-
-theorem setContainsRetryExact_refuted : ¬SetContainsRetryExact := by
-  intro h
-  have h1 := h Nat teSubProto teKeySet 7 (.named "TE" "te") setFsOne setFsOne rfl (fun m => nofun)
-  have h2 := congrArg Prod.fst h1
-  rw [teSub_probe.1] at h2
-  exact nomatch h2
 
 /-- `_PySet_Contains` (:2544-2564), `set_contains` (:2566-2571), `set.__contains__` (:2584-2593)
 and `frozenset.__contains__` (:2606-2626), for every key protocol and every relation saying which
@@ -162,7 +147,10 @@ keys are sets: `__hash__` runs first and leaves `s'`.
   exception (:2551-2554, :2611-2614), in `s'`.
 * It answers `h`: the lookup with `h`, from `s'`.
 * `set_contains` gives `1`, `0` or the exception of `_PySet_Contains`, and `set.__contains__` the
-  `bool` or the exception, on every path, in the state `_PySet_Contains` left. -/
+  `bool` or the exception, on every path, in the state `_PySet_Contains` left.
+
+Example (`teSub_probe`, as on 3.15.2): `x in {frozenset([1])}` is `True` for an instance `x` of a set
+subclass holding `{1}` whose `__hash__` raises a subclass of `TypeError`. -/
 def SetContainsRetry : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (keySet : K → SetObj K → Option (SetBody K))
     (key : K) (so s' : SetObj K),
@@ -768,5 +756,90 @@ def SetDeallocOrder : Prop :=
   ∀ (W : Type) (h : SetDeallocHooks W) (w : W),
     setDealloc h true w = h.dropKeys (h.clearWeakrefs w) ∧ setDealloc h false w = h.dropKeys w
 theorem setDeallocOrder_proven : SetDeallocOrder := fun _ _ _ => ⟨rfl, rfl⟩
+
+/-! ## The table re-check of `set_compare_entry_lock_held` and `set_add_entry_takeref` -/
+
+/-- Keys below 50 hash to themselves; key `99` hashes to `10`. -/
+def abaPlain : Proto Nat (SetObj Nat) :=
+  { natSetProto with hashM := fun k s => (.ok (if k = 99 then 10 else k), s) }
+
+/-- `{10, ..., 15}`, what `__eq__` refills the set from. -/
+def abaRefill : SetObj Nat :=
+  setProg abaPlain [.add 10, .add 11, .add 12, .add 13, .add 14, .add 15] { ident := 77 }
+
+/-- `10 == 99` on the 32-slot table: `s.clear()`, which frees the table, then `s.update(refill)`,
+which makes a 16-slot table; the allocator hands back the address just freed, as glibc does in
+bugs/dictset-set-lookup-table-aba. -/
+def abaProto : Proto Nat (SetObj Nat) :=
+  { abaPlain with
+    eq := fun a b s =>
+      if a = 10 ∧ b = 99 ∧ s.mask = 31 then
+        (.ok false, (setMerge abaPlain abaRefill { setClearInternal s with reuse := [s.tableId] }).2)
+      else (.ok (a == b), s) }
+
+/-- `{10, 1, 2, 3, 4}`: a 32-slot malloc'ed table, `10` at slot 10. -/
+def abaStart : SetObj Nat := setProg abaPlain [.add 10, .add 1, .add 2, .add 3, .add 4] {}
+
+/-- The world `__eq__` leaves: the same table identity, mask 15 instead of 31, and `10` still at
+slot 10, so CPython's re-check `table != so->table || entry->key != startkey` (:159, :294) does
+not fire. The lookup goes on with no restart; the add reloads `mask` (:296), walks on from slot 10
+with the block the old mask allowed, and reaches slot 16, past the end of the new table, where it
+stores: `used` becomes 7 while the table holds 6 keys, CPython's `len(s)` one over.
+
+Scope: the model reads a slot past the end of a table as NULL (`List.getD`) and drops a store there
+(`List.set`). CPython reads and writes the stale bytes of the old table: a lookup that finds the old
+entry past the end (the discard that frees a key, in the bug record) is not expressible. -/
+theorem aba_probe :
+    abaStart.mask = 31 ∧ abaStart.slot 10 = .active 10 10 ∧
+    (abaProto.eq 10 99 abaStart).1 = .ok false ∧
+    (abaProto.eq 10 99 abaStart).2.mask = 15 ∧
+    (abaProto.eq 10 99 abaStart).2.tableId = abaStart.tableId ∧
+    (abaProto.eq 10 99 abaStart).2.slot 10 = .active 10 10 ∧
+    (lookStep abaProto false 99 10 10 abaStart).1 = .ok (.inr ()) ∧
+    (addStep abaProto 99 10 10 31 none abaStart).1 = .ok (.inr (15, none)) ∧
+    (setAddKey abaProto 99 abaStart).2.used = 7 ∧
+    (setKeys (setAddKey abaProto 99 abaStart).2).length = 6 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-- The claim the review found false on 3.15.2: when `__eq__` has replaced the table by one of
+another size, the lookup starts over. -/
+def SetLookupRestartsOnResize : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key startkey : K) (hash : Int) (slot : Nat)
+    (so s' : SetObj K) (b : Bool),
+    so.slot slot = .active startkey hash → startkey ≠ key →
+    ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
+    P.eq startkey key so = (.ok b, s') → s'.mask ≠ so.mask →
+    lookStep P false key hash slot so = (.ok (.inl .restart), s')
+
+/-- The same claim for `set_add_entry_takeref` on an answer of no. -/
+def SetAddRestartsOnResize : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key startkey : K) (hash : Int)
+    (slot mask : Nat) (so s' : SetObj K) (fs : Option Nat),
+    so.slot slot = .active startkey hash → startkey ≠ key →
+    ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
+    P.eq startkey key so = (.ok false, s') → s'.mask ≠ so.mask →
+    addStep P key hash slot mask fs so = (.ok (.inl .restart), s')
+
+theorem aba_eq : abaProto.eq 10 99 abaStart = (.ok false, (abaProto.eq 10 99 abaStart).2) :=
+  Prod.ext aba_probe.2.2.1 rfl
+
+theorem aba_str : ¬ ((abaProto.isStr 10 = true ∧ abaProto.isStr 99 = true) ∧
+    abaProto.strEq 10 99 = true) := by decide
+
+theorem setLookupRestartsOnResize_refuted : ¬SetLookupRestartsOnResize := by
+  intro h
+  have h1 := h Nat abaProto 99 10 10 10 abaStart _ false aba_probe.2.1 (by decide) aba_str aba_eq
+    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h2 := congrArg Prod.fst h1
+  rw [aba_probe.2.2.2.2.2.2.1] at h2
+  exact nomatch h2
+
+theorem setAddRestartsOnResize_refuted : ¬SetAddRestartsOnResize := by
+  intro h
+  have h1 := h Nat abaProto 99 10 10 10 31 abaStart _ none aba_probe.2.1 (by decide) aba_str aba_eq
+    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h2 := congrArg Prod.fst h1
+  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
+  exact nomatch h2
 
 end PyLean.DictSet

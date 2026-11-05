@@ -363,7 +363,7 @@ def setDisjointIter (it : ReIter (SetObj K) K) : SM K Bool := do
   return !hit
 
 /-- `set_isdisjoint_impl` (:1910-1968): `so == other` answers whether `so` is empty (:1917-1922);
-`PyAnySet_CheckExact(other)` (:1923), not `PyAnySet_Check`, takes the two-set branch, so a set
+`PyAnySet_CheckExact(other)` (:1924), not `PyAnySet_Check`, takes the two-set branch, so a set
 subclass goes through its own `__iter__`. -/
 def setIsdisjoint (other : SetArg K) : SM K Bool := do
   let so ← M.get
@@ -668,7 +668,9 @@ def frozenLookup (key : K) (hash : Int) : SM K Bool := do
 
 /-- `frozenset.__contains__` (`frozenset___contains___impl`, :2606-2626): the same hash and retry as
 `_PySet_Contains`, then one `set_do_lookup` with `set_compare_frozenset` on any frozenset, a subclass
-too, where `in` takes `set_lookkey` and so tests `PyFrozenSet_CheckExact`. The answer is read from
+too. (`in` on a frozenset subclass reaches the same function: the subclass's `sq_contains` is
+`slot_sq_contains`, which calls `frozenset.__contains__`; `set_lookkey` and its
+`PyFrozenSet_CheckExact` test are what `set_contains_entry` takes.) The answer is read from
 the slot where the walk stopped, which is `status` (:2621-2625): `set_compare_frozenset` ends a
 block only at a NULL or at an entry it found, and nothing can change a frozenset's table in
 between. -/

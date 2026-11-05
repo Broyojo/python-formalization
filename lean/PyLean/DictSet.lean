@@ -327,13 +327,7 @@ def entries : List Entry := [
     statement := "For every key protocol and every relation saying which keys are sets, in _PySet_Contains, set_contains, set.__contains__ and frozenset.__contains__: __hash__ runs first and its effect stands; a failure from a set key that is a TypeError or a subclass (PyErr_ExceptionMatches) is retried with frozenset_hash_impl of the key as it stands after __hash__, by set_lookkey for a set and one set_compare_frozenset walk for a frozenset; any other failure is set_unhashable_type's exception, in the state __hash__ left; a good hash goes on from that state; set_contains gives 1, 0 or the exception and set.__contains__ the bool or the exception, on every path."
     source := "setobject.c:2544-2626", status := .proven
     prop := ``SetContainsRetry, thm := some ``setContainsRetry_proven
-    notes := "The exact-type test of set_unhashable_type is set-unhashable-type; the retry test is the subclass relation Proto.isTypeError. set-contains-retry-exact is the withdrawn exact-TypeError version, refuted." },
-  { id := "set-contains-retry-exact", pyFile := "Objects/setobject.c", pyFns := ["_PySet_Contains"]
-    statement := "A failed hash that is not exactly TypeError is never retried by _PySet_Contains."
-    source := "the statement withdrawn from set-contains-retry", status := .refuted
-    prop := ``SetContainsRetryExact, thm := some ``setContainsRetryExact_refuted
-    bug := some "dictset-set-contains-retry-typeerror-subclass"
-    notes := "False: PyErr_ExceptionMatches matches subclasses; x in {frozenset([1])} is True for a set subclass x holding {1} whose __hash__ raises a TypeError subclass. Not a defect." },
+    notes := "The exact-type test of set_unhashable_type is set-unhashable-type; the retry test is the subclass relation Proto.isTypeError. teSub_probe: a set subclass whose __hash__ raises a TypeError subclass is retried, as on 3.15.2." },
   { id := "set-unhashable-type", pyFile := "Objects/setobject.c", pyFns := ["set_unhashable_type"]
     statement := "For every key protocol: an exception whose type is exactly TypeError becomes TypeError(\"cannot use '%T' as a set element (%S)\") with the key's type name and the old message; any other exception, a TypeError subclass among them, is re-raised unchanged."
     source := "setobject.c:345-359", status := .proven

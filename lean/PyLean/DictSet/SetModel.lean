@@ -19,7 +19,10 @@ inductive Slot (K : Type) where
 
 /-- `PySetObject`. `tableId` stands for the pointer `so->table`: 0 is `so->smalltable`,
 which is exactly the case `mask == 7`. `ident` is the object's address. `frozen` is
-`PyFrozenSet_Check`, `exact` is `PyAnySet_CheckExact`, `tname` is `tp_name`. -/
+`PyFrozenSet_Check`, `exact` is `PyAnySet_CheckExact`, `tname` is `tp_name`. `reuse` is the
+allocator, as an oracle: the addresses `PyMem_NEW` hands this set's next malloc'ed tables, in order,
+and once it is empty a new address (`nextId`). Nothing stops it from handing back the address of a
+table that was freed, with another size: CPython's allocator does (bugs/dictset-set-lookup-table-aba). -/
 structure SetBody (K : Type) where
   ident : Nat := 0
   fill : Nat := 0
@@ -30,6 +33,7 @@ structure SetBody (K : Type) where
   finger : Nat := 0
   tableId : Nat := 0
   nextId : Nat := 1
+  reuse : List Nat := []
   frozen : Bool := false
   exact : Bool := true
   tname : String := "set"
@@ -242,7 +246,8 @@ def setTableResize (minused : Nat) : SM K Unit := do
     mask := newsize - 1
     table := t
     fill := so.used
-    tableId := if newsize == PySet_MINSIZE then 0 else so.nextId
+    tableId := if newsize == PySet_MINSIZE then 0 else so.reuse.headD so.nextId
+    reuse := if newsize == PySet_MINSIZE then so.reuse else so.reuse.tail
     nextId := so.nextId + 1 }
 
 /-- The resize at the end of `set_add_entry_takeref` (:324-326) and of
