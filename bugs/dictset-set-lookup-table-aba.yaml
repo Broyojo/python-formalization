@@ -145,5 +145,6 @@ duplicates:
             "set_add_entry", "set_compare_entry_lock_held", "set crash re-entrant",
             "bugforge README: no setobject entries"]
 lean:
-  property: "none: the model names a table by an identity that a resize never reuses for a malloc'ed table (tableId), so it cannot express an address reused with another mask; see the set_lookkey and set_add_entry_takeref docstrings in lean/PyLean/DictSet/SetModel.lean"
-  theorem: "none"
+  property: PyLean.DictSet.SetLookupRestartsOnResize
+  theorem: PyLean.DictSet.setLookupRestartsOnResize_refuted
+  also: "PyLean.DictSet.SetAddRestartsOnResize / setAddRestartsOnResize_refuted; witness PyLean.DictSet.aba_probe. The allocator is an oracle (SetBody.reuse) that can hand back a freed table's address with another size; the re-check then passes, the lookup does not restart, and the add stores past the new table with used one over. The model reads past a table as NULL, where CPython reads the old table's stale bytes, so the discard that finds the stale entry and frees the key is outside the model (scope)."

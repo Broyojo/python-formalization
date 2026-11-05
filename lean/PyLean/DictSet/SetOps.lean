@@ -309,7 +309,8 @@ def setInterIter (soId : Nat) (it : ReIter (SetObj K) K) : SM K Bool := do
 
 /-- `set_intersection` (:1708-1791): `so == other` is a copy (:1716-1717); a set (`PyAnySet_Check`,
 :1723) takes the two-set branch; anything else the generic one. The result takes the focus while
-the loops run. -/
+the loops run. Scope: an exact dict argument is iterated as the script of its keys; the set model's
+world holds sets only, so an `__eq__` cannot change the dict under its iterator. -/
 def setIntersection (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
   let so ← M.get
   match other with

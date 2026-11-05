@@ -332,7 +332,8 @@ What a turn ends with:
   `fill` (:314-317);
 * a NULL and a `freeslot` that `__eq__` refilled (`freeslot->hash != -1`, :311-313): the next turn.
 
-Scope: the table test of `addStep` names tables by identity (see `setLookkeyAux`). -/
+The table test of `addStep` is CPython's pointer test, with the allocator of `setLookkeyAux`'s
+docstring: a freed address can come back (`SetAddRestartsOnResize`, refuted). -/
 def SetAddRestart : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (so s' : SetObj K),
     (∀ (slot mask p : Nat) (fs : Option Nat) (r : AddScan),

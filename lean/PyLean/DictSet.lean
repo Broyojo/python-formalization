@@ -306,9 +306,22 @@ def entries : List Entry := [
     source := "setobject.c:709-731, 1095-1136", status := .proven
     prop := ``SetIterOrder, thm := some ``setIterOrder_proven },
   { id := "set-probe-failure", pyFile := "Objects/setobject.c", pyFns := ["set_lookkey", "set_do_lookup", "set_compare_entry_lock_held", "set_add_entry_takeref"]
-    statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when it changed the table, the lookup restarts on any answer and the add restarts on an answer of no."
-    source := "setobject.c:153-160, :288-295", status := .proven
-    prop := ``SetProbeFailure, thm := some ``setProbeFailure_proven },
+    statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when CPython's re-check fires, that is when the table pointer differs or the entry no longer holds startkey, the lookup restarts on any answer and the add restarts on an answer of no."
+    source := "setobject.c:153-160, :286-295", status := .proven
+    prop := ``SetProbeFailure, thm := some ``setProbeFailure_proven
+    notes := "Narrowed: a new table of another size at the old address does not restart; set-lookup-restarts-on-resize and set-add-restarts-on-resize are the broad claims, refuted." },
+  { id := "set-lookup-restarts-on-resize", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held"]
+    statement := "When __eq__ has replaced the table by one of another size, the lookup starts over."
+    source := "the broad form of set-probe-failure", status := .refuted
+    prop := ``SetLookupRestartsOnResize, thm := some ``setLookupRestartsOnResize_refuted
+    bug := some "dictset-set-lookup-table-aba"
+    notes := "aba_probe: __eq__ clears the set and refills it, and the allocator hands back the freed table's address for a 16-slot table; the re-check at :159 passes and the walk goes on. The model reads past the new table as NULL where CPython reads the old table's stale bytes, so the use after free of the record is outside the model." },
+  { id := "set-add-restarts-on-resize", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
+    statement := "When __eq__ has replaced the table by one of another size and answers no, the add starts over."
+    source := "the broad form of set-probe-failure", status := .refuted
+    prop := ``SetAddRestartsOnResize, thm := some ``setAddRestartsOnResize_refuted
+    bug := some "dictset-set-lookup-table-aba"
+    notes := "aba_probe: the add goes on from slot 10 with the block the old mask allowed and stores at slot 16, past the end of the 16-slot table; used becomes 7 for 6 keys, CPython's len(s) one over." },
   { id := "set-contains-body", pyFile := "Objects/setobject.c",
     pyFns := ["_PySet_Contains", "set_contains", "set___contains___impl", "frozenset___contains___impl",
       "set_compare_frozenset", "set_do_lookup", "set_contains_entry"]
@@ -336,12 +349,12 @@ def entries : List Entry := [
     statement := "For every key protocol: an exact frozenset runs one set_compare_frozenset walk of so->table and so->mask, which never asks for a restart, and its slot or exception is the answer; anything else runs set_compare_entry_lock_held in the do-while, where a walk that asks for a restart starts again from the state __eq__ left, with that state's table and mask, and a slot or exception ends it. On the same table the two give different slots."
     source := "setobject.c:413-433", status := .proven
     prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
-    notes := "Scope: a table is named by an identity a resize never reuses, so a table reallocated at the same address with another mask (bugs/dictset-set-lookup-table-aba.yaml) is outside the model. lookkey_dispatch_probe shows the dispatch is observable." },
+    notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); a slot past the end of a table reads as NULL, not as stale bytes. lookkey_dispatch_probe shows the dispatch is observable." },
   { id := "set-add-restart", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "For every key protocol, step by step and turn by turn: a step that ends the block ends the walk with it, one that goes on moves to the next entry with the mask and freeslot it left, a finished block moves to the next probe with that mask; a turn that ends in an exception, found_active, a restart, a NULL with no freeslot (store, fill and used grow, resize at the load limit), a NULL with a freeslot still a dummy (store there, used grows), or a NULL with a freeslot that __eq__ refilled (restart) does exactly that, each from the state __eq__ left."
     source := "setobject.c:252-335", status := .proven
     prop := ``SetAddRestart, thm := some ``setAddRestart_proven
-    notes := "freeslot_refill_probe and restart_probe reach the refill re-check and the restart with a mutating __eq__ and give CPython's table order ([4, 2, 3] and [2]). Scope: the table test is by identity, as for set-lookkey-body." },
+    notes := "freeslot_refill_probe and restart_probe reach the refill re-check and the restart with a mutating __eq__ and give CPython's table order ([4, 2, 3] and [2]). The table test is CPython's pointer test, with an allocator that can reuse a freed address (set-add-restarts-on-resize, refuted)." },
   { id := "set-update-iterable-body", pyFile := "Objects/setobject.c", pyFns := ["set_update_iterable_lock_held"]
     statement := "For every key protocol and iterator, turn by turn: a failed PyObject_GetIter is the result; each PyIter_Next runs in the state the last turn left and may raise (the result), end the loop, or yield a key that set_add_key adds; a failed add is the result in the state it left, and otherwise the loop goes on from there."
     source := "setobject.c:1221-1244", status := .proven
@@ -369,6 +382,11 @@ def entries : List Entry := [
     statement := "The generic branch of set_isdisjoint for an honest key protocol on a well-formed set: a failed __iter__ is the result; an item the set holds answers False at once, before any later failure; otherwise the iterator's exception, if any, else True; nothing changes."
     source := "set.isdisjoint docstring; setobject.c:1948-1967", status := .proven
     prop := ``SetDisjointIterRefines, thm := some ``setDisjointIterRefines_proven },
+  { id := "set-shuffle-bits-bijective", pyFile := "Objects/setobject.c", pyFns := ["_shuffle_bits"]
+    statement := "For every 64-bit word, _shuffle_bits gives a 64-bit word and the explicit unshuffleBits undoes it, and it undoes unshuffleBits: a bijection, so distinct hash fields stay distinct before the xor; and it is the only function on 64-bit words that unshuffleBits undoes."
+    source := "setobject.c:953-957; invariant", status := .proven
+    prop := ``ShuffleBitsBijective, thm := some ``shuffleBitsBijective_proven
+    notes := "The last conjunct makes any other shuffle fail, a bijective one too; proved on BitVec 64 and carried to Py_uhash_t values." },
   { id := "set-shuffle-bits-values", pyFile := "Objects/setobject.c", pyFns := ["_shuffle_bits", "frozenset_hash_impl"]
     statement := "_shuffle_bits is ((h ^ 89869747) ^ (h << 16)) * 3644798167 on 64 bits at 0, 1, 2**64 - 1, 2**63 and 12345, and through frozenset_hash_impl the hashes of frozenset(), frozenset({0}), frozenset({1, 2}) and frozenset(range(10)) are those CPython 3.15.2 gives."
     source := "setobject.c:953-957, :972-1012; hash() on 3.15.2", status := .proven

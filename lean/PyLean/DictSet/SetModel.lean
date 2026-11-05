@@ -158,9 +158,10 @@ def setProbeFuel (mask : Nat) : Nat := mask + 15
 `set_compare_entry_lock_held`: each turn passes `so->table` and `so->mask` as they are then, so a
 restart walks the table `__eq__` left. `256` turns stand for "until no `__eq__` changes the table".
 
-Scope: `setChanged` names a table by `tableId`, which a resize never gives to a new malloc'ed table,
-so the model cannot express a table freed and reallocated at the same address with another mask;
-CPython's pointer test cannot tell the two apart (bugs/dictset-set-lookup-table-aba.yaml). -/
+`setChanged` compares `tableId`, the table's address: the allocator (`SetBody.reuse`) can hand
+back a freed table's address with another mask, and then, as in CPython, the test passes and the
+walk goes on with the old mask (`aba_probe`, bugs/dictset-set-lookup-table-aba.yaml). Scope: a slot
+past the end of the table reads as NULL here, where CPython reads the old table's stale bytes. -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
