@@ -13,6 +13,7 @@ import PyLean.Pickle.CountedLong
 import PyLean.Pickle.EncPins
 import PyLean.Pickle.DecProps
 import PyLean.Pickle.ToolsGen
+import PyLean.Pickle.ToolsExact
 import PyLean.Pickle.DecChunk
 
 /-!
