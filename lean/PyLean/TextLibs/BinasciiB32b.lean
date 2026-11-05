@@ -508,7 +508,7 @@ theorem b32CanonicalLaw_proven : B32CanonicalLaw := by
 /-- The statement `B64PadBeforeDataIgnored` proves of `a2b_base64`: with `'='` in `ignorechars`, a `'='`
 that a data character follows can be taken out without changing anything (the docs: "the pad
 characters presented before the end of the encoded data ... will be ignored"). False: the decoder never
-sets `pads` back to 0 after a data character (`Modules/binascii.c:1771-1781`, where `a2b_base64` has
+sets `pads` back to 0 after a data character (`Modules/binascii.c:1767-1775`, where `a2b_base64` has
 `pads = 0;` at `:873`), so the ignored `'='` still counts as padding at the end.
 `a2b_base32(b'AAAA=AAA', ignorechars=b'=')` returns 4 bytes, `a2b_base32(b'AAAAAAA', ignorechars=b'=')`
 raises "Incorrect padding". -/
