@@ -3,6 +3,7 @@ import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructPack2
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.BinasciiA85
+import PyLean.TextLibs.BinasciiB32c
 import PyLean.TextLibs.BinasciiCrc
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -781,6 +782,22 @@ def entries : List Entry := [
     statement := "b2a_base85 with pad=True writes the default encoding of the data with its zero padding, alphabet translates it, and wrapcol rounded to a multiple of 5 cuts it by wraplines; a negative wrapcol and a wrong-length alphabet are refused in that order."
     source := "docs of b2a_base85", status := .proven
     prop := ``B2a85OptionLaw, thm := some ``b2a85OptionLaw_proven },
+  { id := "textlibs-binascii-base64-lenient-refusals", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "With strict_mode=False, a2b_base64 raises 'Invalid base64-encoded string: number of data characters (n) ...' exactly when n % 4 = 1, and 'Incorrect padding' exactly when padded and n % 4 is 2 or 3 and n % 4 plus the pads after the last data character is below 4, for every input, alphabet, ignorechars and canonical."
+    source := "docs of a2b_base64: padded; RFC 4648 section 3.3", status := .proven
+    prop := ``B64LenientRefusals, thm := some ``b64LenientRefusals_proven },
+  { id := "textlibs-binascii-base64-strict-pad-shape", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "In strict mode, on n data characters and m pads, a2b_base64 raises exactly the invalid-length, Incorrect padding, Leading padding or Excess padding error that the counts determine (b'AAAA=' is Excess padding), and accepts exactly otherwise."
+    source := "docs of a2b_base64: valid base64 in strict mode", status := .proven
+    prop := ``B64StrictPadShape, thm := some ``b64StrictPadShape_proven },
+  { id := "textlibs-binascii-base32-pad-shape", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base32_impl"]
+    statement := "On n data characters and m pads, a2b_base32 raises exactly the 1/3/6 invalid-length, Incorrect padding, Leading padding or Excess padding error that the counts determine (b'AAAAAAA' is Incorrect padding), and accepts exactly otherwise."
+    source := "docs of a2b_base32: padded; invalid base32 data raises", status := .proven
+    prop := ``B32PadShape, thm := some ``b32PadShape_proven },
+  { id := "textlibs-binascii-base85-group-refusals", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base85_impl"]
+    statement := "On alphabet characters, a2b_base85 raises 'Base85 overflow in hunk starting at byte 5i' for the first group (the last padded with 84) that does not fit in 32 bits, and only then, and otherwise 'Incomplete Base85 group' exactly when the digit count is one more than a multiple of 5."
+    source := "docs of a2b_base85: groups encode 0 to 2 ** 32 - 1; a single-character final group is rejected", status := .proven
+    prop := ``B85GroupRefusals, thm := some ``b85GroupRefusals_proven },
   { id := "textlibs-base64-a85-wrap-round-trip", pyFile := "Lib/base64.py", pyFns := []
     statement := "The Ascii85 round trip holds with wrapcol and adobe."
     source := "docs: a85encode, a85decode", status := .open
