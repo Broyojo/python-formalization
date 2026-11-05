@@ -6709,21 +6709,21 @@ class enumdc_K:
             raise enumdc_EXC[self.ee]("eq")
         if isinstance(o, enumdc_K):
             return o.k == self.k
-        if type(o) is int:
+        if isinstance(o, int):
             return o == self.k
         return NotImplemented
 
     def __lt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k < o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k < o
         return NotImplemented
 
     def __gt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k > o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k > o
         return NotImplemented
 
