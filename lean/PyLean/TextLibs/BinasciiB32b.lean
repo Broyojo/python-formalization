@@ -518,6 +518,119 @@ def B32PadBeforeDataIgnored : Prop :=
     a2bB32 (.bytes (s1 ++ 61 :: y :: s2)) true alpha (.bytes g) k =
       a2bB32 (.bytes (s1 ++ y :: s2)) true alpha (.bytes g) k
 
+/-! ### The encoder over every option -/
+
+/-- `bytes.translate(bytes.maketrans(BASE32_ALPHABET, a))` on one byte. -/
+def tr32 (A : List Nat) (c : Nat) : Nat := if c ∈ b32Alpha then A.getD (b32Alpha.idxOf c) 0 else c
+
+theorem b32_idx : ∀ v, v < 32 → b32Alpha.idxOf (b32Alpha.getD v 0) = v ∧ b32Alpha.getD v 0 ∈ b32Alpha := by
+  decide +kernel
+
+theorem tr32_getD (A : List Nat) (v : Nat) (hv : v < 32) : tr32 A (b32Alpha.getD v 0) = A.getD v 0 := by
+  obtain ⟨h1, h2⟩ := b32_idx v hv
+  unfold tr32
+  rw [if_pos h2, h1]
+
+theorem fastEnc32_tr (A : List Nat) : ∀ (f : Nat) (d : List Nat),
+    fastEnc32 A f d = ((fastEnc32 b32Alpha f d).1.map (tr32 A), (fastEnc32 b32Alpha f d).2) := by
+  intro f
+  induction f with
+  | zero => intro d; rfl
+  | succ f ih =>
+    intro d
+    simp only [fastEnc32]
+    split
+    · rw [ih]
+      simp only [List.map_append, List.map_map, Prod.mk.injEq, and_true]
+      congr 1
+      apply List.map_congr_left
+      intro i _
+      exact (tr32_getD A _ (Nat.mod_lt _ (by decide))).symm
+    · rfl
+
+theorem tail32_tr (A r : List Nat) : tail32 A r = (tail32 b32Alpha r).map (tr32 A) := by
+  have g : ∀ v, A.getD (v % 32) 0 = tr32 A (b32Alpha.getD (v % 32) 0) :=
+    fun v => (tr32_getD A _ (Nat.mod_lt _ (by decide))).symm
+  match r with
+  | [] => rfl
+  | [_] => simp only [tail32, List.map_cons, List.map_nil, g]
+  | [_, _] => simp only [tail32, List.map_cons, List.map_nil, g]
+  | [_, _, _] => simp only [tail32, List.map_cons, List.map_nil, g]
+  | [_, _, _, _] => simp only [tail32, List.map_cons, List.map_nil, g]
+  | _ :: _ :: _ :: _ :: _ :: _ => rfl
+
+/-- `b2a_base32` over every option, against its own output at the defaults (which `B32RoundTripAll` and
+`B32StrictLaw` pin through the decoder): `padded=False` drops the `'='`, `alphabet` is `translate` from
+the standard alphabet, and a non-zero `wrapcol` is rounded to a multiple of 8 (at least 8) and the lines
+are cut by `wraplines`, unless the output is empty. Then the refusals in their order: a negative or too
+large `wrapcol`, then an alphabet that is not 32 bytes. -/
+def B2a32OptionLaw : Prop :=
+  (∀ (d : List Nat) (p : Bool) (w : Nat) (alpha : Option (List Nat)),
+    w < 2 ^ 64 → (∀ a, alpha = some a → a.length = 32) →
+    b2aB32 (.bytes d) p w (alpha.map .bytes) =
+      (b2aB32 (.bytes d) true 0 none).map (fun s0 =>
+        let s := (s0.filter (fun c => p || c != 61)).map (tr32 (alpha.getD b32Alpha))
+        if w ≠ 0 ∧ !s.isEmpty then wraplinesC s (if w < 8 then 8 else w / 8 * 8) else s)) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Int) (alpha : Option Data), w < 0 →
+    b2aB32 (.bytes d) p w alpha = .error (.valueError "Cannot convert negative int")) ∧
+  (∀ (d : List Nat) (p : Bool) (w : Nat) (a : List Nat), w < 2 ^ 64 → a.length ≠ 32 →
+    b2aB32 (.bytes d) p w (some (.bytes a)) = .error (.valueError "alphabet must have length 32"))
+
+theorem b2a32OptionLaw_proven : B2a32OptionLaw := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro d p w alpha hw ha
+    have hs : sizeT (w : Int) = .ok w := by
+      simp only [sizeT]
+      rw [if_neg (by omega), if_neg (by omega)]
+      rfl
+    have hs0 : sizeT ((0 : Nat) : Int) = .ok 0 := rfl
+    obtain ⟨A, hA, hAeq⟩ : ∃ A, encTable alpha b32Alpha 32 = .ok A ∧ alpha.getD b32Alpha = A := by
+      cases alpha with
+      | none => exact ⟨b32Alpha, rfl, rfl⟩
+      | some a => exact ⟨a, by simp [encTable, ha a rfl], rfl⟩
+    have hb : bufOpt (alpha.map .bytes) = .ok alpha := by cases alpha <;> rfl
+    simp only [b2aB32, bufData, hs, hb, hA, bind, Except.bind, pure, Except.pure, Except.map]
+    have hz : sizeT (0 : Int) = .ok 0 := rfl
+    simp only [hz, bufOpt, encTable]
+    rw [hAeq]
+    have hstrip : (enc32B b32Alpha d.length d ++ List.replicate (pads32 d.length) 61).filter (fun c => p || c != 61) =
+        enc32B b32Alpha d.length d ++ List.replicate (if p then pads32 d.length else 0) 61 := by
+      cases p with
+      | true => simp
+      | false =>
+        simp only [Bool.false_or, Bool.false_eq_true, if_false, List.replicate_zero, List.append_nil]
+        have hr : (List.replicate (pads32 d.length) 61).filter (fun c => c != 61) = [] := by
+          simp [List.filter_eq_nil_iff]
+        rw [List.filter_append, hr, List.append_nil]
+        apply List.filter_eq_self.mpr
+        intro x hx
+        have hm : x ∈ b32Alpha := by
+          simp only [enc32B, List.mem_append] at hx
+          rcases hx with hx | hx
+          · exact fastEnc32_mem b32Alpha (by decide) _ _ x hx
+          · exact tail32_mem b32Alpha (by decide) _ x hx
+        have : x ≠ 61 := fun e => b32_61 (e ▸ hm)
+        simpa using this
+    have e1 : b2a32Core b32Alpha d true 0 = enc32B b32Alpha d.length d ++ List.replicate (pads32 d.length) 61 := by
+      simp [b2a32Core, enc32B, pads32]
+    have e2 : (enc32B b32Alpha d.length d ++ List.replicate (if p then pads32 d.length else 0) 61).map (tr32 A) =
+        enc32B A d.length d ++ List.replicate (if p then pads32 d.length else 0) 61 := by
+      have h61 : tr32 A 61 = 61 := by simp [tr32, b32_61]
+      simp only [enc32B, List.map_append, fastEnc32_tr A, tail32_tr A, List.map_replicate, h61]
+    rw [e1, hstrip, e2]
+    simp only [b2a32Core, enc32B, pads32]
+    rfl
+  · intro d p w alpha hw
+    simp [b2aB32, bufData, sizeT, hw, bind, Except.bind]
+  · intro d p w a hw ha
+    have hs : sizeT (w : Int) = .ok w := by
+      simp only [sizeT]
+      rw [if_neg (by omega), if_neg (by omega)]
+      rfl
+    simp only [b2aB32, bufData, hs, bufOpt, encTable, bind, Except.bind, pure, Except.pure]
+    rw [if_pos ha]
+    rfl
+
 theorem b32PadBeforeDataIgnored_refuted : ¬B32PadBeforeDataIgnored := by
   intro h
   have := h [65, 65, 65, 65] [65, 65] 65 .absent [61] false (by decide) (by decide +kernel) (by decide)
