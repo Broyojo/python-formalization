@@ -375,12 +375,27 @@ def ChoicesExact : Prop :=
         | .ok cum => choicesCum g pop n cum k s
         | .error e => (.error e, s)) ∧
     (∀ (pop : SeqObj α) (n : Nat) (cum : List (Num F64)) (k : Int) (s : σ), pop.len = .ok n →
-      choices g pop none (some cum) k s = choicesCum g pop n cum k s)
+      choices g pop none (some cum) k s = choicesCum g pop n cum k s) ∧
+    (∀ (pop : SeqObj α) (n : Nat) (cum : List (Num F64)) (k : Int) (s : σ),
+      choicesCum g pop n cum k s =
+        if cum.length ≠ n then (.error (.valueError "The number of weights does not match the population"), s)
+        else match cum.getLast? with
+          | none => (.error (.indexError "list index out of range"), s)
+          | some last =>
+            match (match last with
+                   | .int a => (do let x ← pyFloat a; pure (x + 0.0) : Py F64)
+                   | .flt x => .ok (x + 0.0)) with
+            | .error e => (.error e, s)
+            | .ok total =>
+              if Flt.le total 0.0 then (.error (.valueError "Total of weights must be greater than zero"), s)
+              else if !Flt.isFinite total then (.error (.valueError "Total of weights must be finite"), s)
+              else choicesWeighted g pop cum total (n - 1) k.toNat s)
 
 theorem choicesExact_proven : ChoicesExact := by
   intro _ σ α g
   refine ⟨fun pop nf k u s s1 h => ?_, fun pop cum total hi k u s s1 h => ?_,
-    fun pop n k s hn => ?_, fun pop n xs k s hn => ?_, fun pop n cum k s hn => ?_⟩
+    fun pop n k s hn => ?_, fun pop n xs k s hn => ?_, fun pop n cum k s hn => ?_,
+    fun pop n cum k s => ?_⟩
   · simp only [choicesPlain, rnd_bind_apply h, lift_bind_apply]
     cases mathFloor (u * nf) with
     | error e => rfl
@@ -406,5 +421,34 @@ theorem choicesExact_proven : ChoicesExact := by
   · simp only [choices, lift_bind_apply, hn]
     cases accumulateNums xs <;> rfl
   · simp only [choices, lift_bind_apply, hn]
+  · unfold choicesCum
+    by_cases hl : cum.length ≠ n
+    · rw [if_pos hl, if_pos hl]; rfl
+    · rw [if_neg hl, if_neg hl]
+      cases cum.getLast? with
+      | none => rfl
+      | some last =>
+        simp only [lift_bind_apply]
+        cases last with
+        | int a =>
+          dsimp only
+          cases (pyFloat a : Py F64) with
+          | error e => rfl
+          | ok x =>
+            simp only [ex_ok_bind, ex_pure]
+            by_cases h1 : Flt.le (x + 0.0) 0.0 = true
+            · simp only [h1, if_true, RM.raise_apply]
+            · simp only [h1, Bool.false_eq_true, if_false]
+              by_cases h2 : (!Flt.isFinite (x + 0.0)) = true
+              · simp only [h2, if_true, RM.raise_apply]
+              · simp only [h2, Bool.false_eq_true, if_false]
+        | flt x =>
+          dsimp only
+          by_cases h1 : Flt.le (x + 0.0) 0.0 = true
+          · simp only [h1, if_true, RM.raise_apply]
+          · simp only [h1, Bool.false_eq_true, if_false]
+            by_cases h2 : (!Flt.isFinite (x + 0.0)) = true
+            · simp only [h2, if_true, RM.raise_apply]
+            · simp only [h2, Bool.false_eq_true, if_false]
 
 end PyLean.CoreLibs.Rand
