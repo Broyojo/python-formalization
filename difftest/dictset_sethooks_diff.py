@@ -29,9 +29,11 @@ def sethooks_pool(rng):
     plain = [pool.add("K", [i, h if rng.random() < 0.7 else i], ("K", i)) for i in range(rng.randint(2, 6))]
     fresh = pool.add("K", [50, 1000 + rng.randrange(1000)], ("K", 50))
     acts = [0, 1, 2, 10 + fresh]
+    # One `rs` for all of them: when two KEvil meet, only the left one's __eq__ runs, and the
+    # model's comparison raises if either raises.
+    rs = rng.random() < 0.3
     for i in range(rng.randint(0, 3)):
         act = rng.choice(acts[1:])
-        rs = rng.random() < 0.3
         pool.add("Kev", [100 + i, h, act, rs], ("Kev", i), a=act, r=rs)
     for i in range(rng.randint(1, 5)):
         hh = h if rng.random() < 0.6 else edge_hash(rng)
@@ -59,6 +61,9 @@ def gen_case(rng):
     specs = pool.specs
     n = len(specs)
     hk = [i for i in range(n) if hashable(specs[i])]
+    # What an SSub operand holds: keys whose hash and == run no hook, since it is built before the
+    # operation.
+    quiet = [i for i in range(n) if specs[i]["py"][0] in ("K", "int", "fz")]
     k = lambda: rng.randrange(n)
     target = rng.choice(["s0", "s1"])
 
@@ -73,7 +78,7 @@ def gen_case(rng):
             return ["h", items, rng.randint(0, 6), rng.choice([1, 2]), rng.random() < 0.2]
         if o < 0.8:
             return ["g", [k() for _ in range(rng.randint(0, 4))]]
-        return ["S", [rng.choice(hk) for _ in range(rng.randint(0, 4))],
+        return ["S", [rng.choice(quiet) for _ in range(rng.randint(0, 4))],
                 [k() for _ in range(rng.randint(0, 4))]]
 
     ops = []

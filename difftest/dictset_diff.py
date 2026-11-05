@@ -209,6 +209,8 @@ class KH(K):
         return hook_answer(self.h, self.hres)
 
     def __eq__(self, o):
+        if isinstance(o, (KRaise, KEvil)):
+            return NotImplemented
         return type(o) is KH and o.c == self.c
 
 
