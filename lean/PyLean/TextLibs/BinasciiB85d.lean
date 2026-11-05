@@ -157,4 +157,168 @@ theorem b85_padcanon (t : Nat → Nat) (ig : Option (List Nat)) (N N' : Nat) :
     have e3 : ((n + 1 : Nat) : Int) = (n : Int) + 1 := by omega
     simp only [e1, e2, e3]
 
+/-- The loop's state holds the digits of the group it is in. -/
+def InvP (st : St85) (vs : List Nat) : Prop :=
+  st.pos < 5 ∧ st.pos = vs.length % 5 ∧ st.left = val85 (vs.drop (vs.length - vs.length % 5))
+
+theorem val85_snoc (l : List Nat) (v : Nat) : val85 (l ++ [v]) = val85 l * 85 + v := by
+  simp [val85, List.foldl_append]
+
+theorem invP_step (st : St85) (vs : List Nat) (v : Nat) (h : InvP st vs) (h5 : st.pos + 1 ≠ 5) :
+    InvP { st with left := st.left * 85 + v, pos := st.pos + 1 } (vs ++ [v]) := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨by simp only; omega, by simp only [List.length_append, List.length_singleton]; omega, ?_⟩
+  simp only [List.length_append, List.length_singleton]
+  have e : vs.length + 1 - (vs.length + 1) % 5 = vs.length - vs.length % 5 := by omega
+  rw [e, List.drop_append_of_le_length (by omega), val85_snoc, ← h3]
+
+theorem invP_flush (vs : List Nat) (v : Nat) (o : List Nat) (st : St85) (h : InvP st vs) (h5 : st.pos + 1 = 5) :
+    InvP { out := o } (vs ++ [v]) := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨by simp, by simp only [List.length_append, List.length_singleton]; omega, ?_⟩
+  simp only [List.length_append, List.length_singleton]
+  have e : (vs.length + 1) % 5 = 0 := by omega
+  rw [e, Nat.sub_zero, List.drop_of_length_le (by simp)]
+  rfl
+
+theorem b85_canon_input (t : Nat → Nat) (ig : Option (List Nat)) (N N' : Nat) :
+    ∀ (s : List Nat) (st : St85) (vs : List Nat) (g g' : Nat), InvP st vs → s.length + 6 ≤ g → s.length + 6 ≤ g' →
+      (a2bB85Loop t ig true N g s s.length st).toOption =
+        (a2bB85Loop t ig false N' g' s s.length st).toOption.bind
+          (fun r => if canonBad85 (vs ++ (s.filter (fun x => decide (t x < 85))).map t) then none else some r) := by
+  intro s
+  induction s with
+  | nil =>
+    intro st vs g g' hi hg hg'
+    obtain ⟨h1, h2, h3⟩ := hi
+    simp only [List.length_nil, List.filter_nil, List.map_nil,
+      List.append_nil]
+    rw [show ((0 : Nat) : Int) = 0 from rfl]
+    by_cases h0 : st.pos = 0
+    · obtain ⟨g, rfl⟩ : ∃ k, g = k + 1 := ⟨g - 1, by omega⟩
+      obtain ⟨g', rfl⟩ : ∃ k, g' = k + 1 := ⟨g' - 1, by omega⟩
+      have hc : (decide ((0 : Int) ≤ 0) && st.pos == 0) = true := by simp [h0]
+      have hb : canonBad85 vs = false := by
+        simp only [canonBad85]
+        rw [← h2, h0]
+        simp
+      simp only [a2bB85Loop, hc, if_true, Except.toOption, Option.bind, hb]
+      rfl
+    · have hP := b85_padcanon t ig N N' (4 - st.pos) st 0 g g' (by omega) (by omega) (by omega) (by omega) (by omega)
+      have e1 : (3 + ((0 : Int) - ((4 - st.pos : Nat) : Int))).toNat = st.pos - 1 := by omega
+      have e2 : 4 - st.pos + 1 = 5 - st.pos := by omega
+      rw [e1, e2] at hP
+      have e0 : ((0 : Nat) : Int) = 0 := rfl
+      rw [hP]
+      congr 1
+      funext r
+      have hb : canonBad85 vs = (decide (st.pos - 1 ≠ 0) &&
+          nonCanon (st.left * 85 ^ (5 - st.pos) + (85 ^ (5 - st.pos) - 1)) (st.pos - 1)) := by
+        simp only [canonBad85]
+        rw [← h2] at h3 ⊢
+        rw [← h3]
+        congr 1
+        simp only [decide_eq_decide]
+        omega
+      rw [hb]
+  | cons x xs ih =>
+    intro st vs g g' hi hg hg'
+    obtain ⟨g, rfl⟩ : ∃ k, g = k + 1 := ⟨g - 1, by simp at hg; omega⟩
+    obtain ⟨g', rfl⟩ : ∃ k, g' = k + 1 := ⟨g' - 1, by simp at hg'; omega⟩
+    have hgx : xs.length + 6 ≤ g := by simp at hg; omega
+    have hgx' : xs.length + 6 ≤ g' := by simp at hg'; omega
+    have hst1 : (decide (((x :: xs).length : Int) ≤ 0) && st.pos == 0) = false := by simp; omega
+    have e1 : ((x :: xs).length : Int) - 1 = xs.length := by simp
+    simp only [a2bB85Loop, hst1, Bool.false_eq_true, if_false, Option.getD_some]
+    by_cases hd : t x < 85
+    · rw [List.filter_cons_of_pos (by simpa using hd), List.map_cons]
+      have ev : vs ++ t x :: (xs.filter (fun x => decide (t x < 85))).map t =
+          (vs ++ [t x]) ++ (xs.filter (fun x => decide (t x < 85))).map t := by simp
+      rw [ev]
+      simp only [hd, if_true]
+      by_cases hov : (st.pos == 4 && decide (st.left * 85 + t x ≥ 2 ^ 32)) = true
+      · rw [if_pos hov, if_pos hov]
+        rfl
+      · rw [if_neg hov, if_neg hov]
+        by_cases h5 : st.pos + 1 = 5
+        · have c1 : ¬ ((x :: xs).length : Int) < 1 := by simp; omega
+          simp only [h5, show (5 != 5) = false by decide, Bool.false_eq_true, if_false, c1,
+            show ¬ (4 : Nat) = 0 by decide, show decide ((4 : Nat) < 4) = false by decide, Bool.and_false,
+            Bool.false_and, e1]
+          exact ih _ _ _ _ (invP_flush vs (t x) _ st hi h5) hgx hgx'
+        · have : (st.pos + 1 != 5) = true := by simpa using h5
+          simp only [this, if_true, e1]
+          exact ih _ _ _ _ (invP_step st vs (t x) hi h5) hgx hgx'
+    · rw [List.filter_cons_of_neg (by simpa using hd)]
+      simp only [hd, if_false]
+      by_cases hy : ign ig x = true
+      · have hp5 : (st.pos != 5) = true := by simp; have := hi.1; omega
+        simp only [hy, Bool.not_true, Bool.false_eq_true, if_false, hp5, if_true, e1]
+        exact ih _ _ _ _ hi hgx hgx'
+      · have hy' : ign ig x = false := by simpa using hy
+        simp only [hy', Bool.not_false, if_true]
+        rfl
+
+/-- `canonical=True` is `canonical=False` and one more check, for every alphabet and `ignorechars`:
+an input whose last group is short (two to four digits) and does not use the digits the encoder writes
+for the bytes it decodes to is refused (the docs: "partial final groups must use the same padding
+digits as the encoder"). Stated on whether it fails and what it returns, as the messages of other
+failures give positions. -/
+def B85CanonicalLaw : Prop :=
+  ∀ (s : List Nat) (alpha : AlphaArg) (g : List Nat),
+    (a2bB85 (.bytes s) alpha (.bytes g) true).toOption =
+      (a2bB85 (.bytes s) alpha (.bytes g) false).toOption.bind (fun r =>
+        if canonBad85 ((s.filter (fun x => decide (x ∈ alphaChars85 alpha))).map (revT (alphaChars85 alpha) none))
+        then none else some r)
+
+theorem b85CanonicalLaw_proven : B85CanonicalLaw := by
+  intro s alpha g
+  by_cases hA : (alphaChars85 alpha).length = 85
+  · rw [a2bB85_eq alpha hA, a2bB85_eq alpha hA]
+    have hf : s.filter (fun x => decide (x ∈ alphaChars85 alpha)) =
+        s.filter (fun x => decide (revT (alphaChars85 alpha) none x < 85)) := by
+      apply List.filter_congr
+      intro x _
+      by_cases hm : x ∈ alphaChars85 alpha
+      · have := revT_mem_any _ none x hm (by simp)
+        simp [hm, show revT (alphaChars85 alpha) none x < 85 by omega]
+      · have := revT_large _ none x (by simp) (fun y hy e => hm (e ▸ hy))
+        simp [hm, this]
+    rw [hf]
+    have h := b85_canon_input (revT (alphaChars85 alpha) none) (if g.isEmpty then none else some g) s.length s.length
+      s {} [] (s.length + 6) (s.length + 6) ⟨by decide, rfl, rfl⟩ (Nat.le_refl _) (Nat.le_refl _)
+    simp only [List.nil_append] at h
+    cases hl : a2bB85Loop (revT (alphaChars85 alpha) none) (if g.isEmpty then none else some g) false s.length
+        (s.length + 6) s s.length {} with
+    | error e =>
+      rw [hl] at h
+      cases ht : a2bB85Loop (revT (alphaChars85 alpha) none) (if g.isEmpty then none else some g) true s.length
+          (s.length + 6) s s.length {} with
+      | error e' => rfl
+      | ok st' => rw [ht] at h; cases h
+    | ok st =>
+      rw [hl] at h
+      cases ht : a2bB85Loop (revT (alphaChars85 alpha) none) (if g.isEmpty then none else some g) true s.length
+          (s.length + 6) s s.length {} with
+      | error e' =>
+        rw [ht] at h
+        simp only [Except.toOption, Option.bind] at h
+        split at h
+        · simp [Except.map, Except.toOption, *]
+        · cases h
+      | ok st' =>
+        rw [ht] at h
+        simp only [Except.toOption, Option.bind] at h
+        split at h
+        · cases h
+        · injection h with h
+          subst h
+          simp [Except.map, Except.toOption, *]
+  · cases alpha with
+    | absent => exact absurd (by decide) hA
+    | bytes a =>
+      simp only [alphaChars85] at hA
+      simp [a2bB85, asciiBuffer, alphaDec, bufData, decTable, hA, bind, Except.bind, Except.toOption]
+    | other t => simp [a2bB85, asciiBuffer, alphaDec, bind, Except.bind, Except.toOption]
+
 end PyLean.TextLibs.Binascii
