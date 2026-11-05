@@ -105,16 +105,20 @@ def FlagCls.iterMembers (c : FlagCls) (value : Nat) : List (Option (String × Na
       if (bitsOf (value &&& c.flagMask)).contains p.2 then some (some p) else none)) ++
     (byValue.filter Option.isNone)
 
+/-- The members the name loop of `Flag._missing_` collects, Lib/enum.py:1541-1552: those of `_iter_member_(member_value)`,
+then, with alias bits, each canonical member not yet there whose nonzero value lies within `member_value | aliases`. -/
+def FlagCls.nameMembers (c : FlagCls) (memberValue aliases : Nat) : List (String × Nat) :=
+  let first := (c.iterMembers memberValue).filterMap id
+  if aliases != 0 then
+    let v := memberValue ||| aliases
+    first ++ (c.canonical.filter (fun p =>
+      !first.contains p && p.2 != 0 && (p.2 &&& v) == p.2))
+  else first
+
 /-- The name loop of `Flag._missing_`, Lib/enum.py:1541-1560. -/
 def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option String) :=
   if memberValue != 0 || aliases != 0 then
-    let first := (c.iterMembers memberValue).filterMap id
-    let all :=
-      if aliases != 0 then
-        let v := memberValue ||| aliases
-        first ++ (c.canonical.filter (fun p =>
-          !first.contains p && p.2 != 0 && (p.2 &&& v) == p.2))
-      else first
+    let all := c.nameMembers memberValue aliases
     let combined := all.foldl (fun m p => m ||| p.2) 0
     let value' := if aliases != 0 then memberValue ||| aliases else value
     let unknown := value' ^^^ combined
@@ -126,9 +130,11 @@ def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option 
     else .ok (some joined)
   else .ok none
 
-/-- `Flag._missing_`, Lib/enum.py:1476-1569, for an `int`. The pseudo-member is identified by its value
-and name, so the singleton bookkeeping at :1566-1568 has no effect here. -/
-def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
+/-- `Flag._missing_`, Lib/enum.py:1476-1569, for an `int` whose `repr` is `rv`. The pseudo-member is identified by its
+value and name, so the singleton bookkeeping at :1566-1568 has no effect here. The `%r` of the value in the `STRICT`
+message, :1501, runs its `__repr__`; the `%r` of :1530 only ever sees an `int` the method computed (a value that is in range
+and not negative has no unknown bit), whose `repr` cannot fail. -/
+def FlagCls.missingR (c : FlagCls) (rv : Py String) (value : Int) : Py FlagVal := do
   let fm := c.flagMask
   let sm := c.singlesMask
   let ab := c.allBits
@@ -136,7 +142,10 @@ def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
   let oob := !(-abi - 1 ≤ value ∧ value ≤ abi) || andMask value (ab ^^^ fm) != 0
   let v1 : Int ← if oob then
       match c.boundary with
-      | .strict => throw (.valueError "~invalid value")
+      | .strict =>
+        match rv with
+        | .error e => throw e
+        | .ok _ => throw (.valueError "~invalid value")
       | .conform => pure (andMask value fm : Int)
       | .eject => return .plain value
       | .keep =>
@@ -156,6 +165,9 @@ def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
   pure (.flag v2 (match c.memberOf v2 with
     | some n => some n
     | none => name))
+
+/-- `Flag._missing_` for a plain `int`, whose `repr` does not fail. -/
+def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := c.missingR (.ok (toString value)) value
 
 /-- `Color(value)`: `Enum.__new__`, Lib/enum.py:1175-1234, for a `Flag` and an `int`: the value map, then
 `_missing_`. -/

@@ -6747,8 +6747,37 @@ def enumdc_gpv(rng, nkeys, strs=("x", "y", "")):
     if r <= 4:
         return ["str", rng.choice(strs)]
     if r <= 8:
+        if rng.random() < .15:
+            return rng.choice([["robj", rng.choice(["KeyError", "ValueError", "TypeError"]), rng.randrange(0, 3)],
+                               ["rint", rng.choice([1, 2, 8, -1]), rng.choice(["KeyError", "ValueError"])]])
         return ["key", rng.randrange(0, nkeys)]
     return ["list", rng.randrange(0, 3)]
+
+
+class enumdc_RObj:
+    """No comparison, no bit_length, and a __repr__ that raises."""
+
+    def __init__(self, re, i):
+        self.re, self.i = re, i
+
+    def __repr__(self):
+        raise enumdc_EXC[self.re]("repr")
+
+
+class enumdc_RI(int):
+    """An int whose __repr__ raises."""
+
+    def __new__(cls, n, re):
+        x = int.__new__(cls, n)
+        x.re = re
+        return x
+
+    def __repr__(self):
+        raise enumdc_EXC[self.re]("repr")
+
+
+enumdc_RObj.__name__ = enumdc_RObj.__qualname__ = "RObj"
+enumdc_RI.__name__ = enumdc_RI.__qualname__ = "RI"
 
 
 def enumdc_pv(v, objs):
@@ -6757,6 +6786,10 @@ def enumdc_pv(v, objs):
         return v[1]
     if k == "key":
         return objs[v[1]]
+    if k == "robj":
+        return enumdc_RObj(v[1], v[2])
+    if k == "rint":
+        return enumdc_RI(v[1], v[2])
     return [v[1]]
 
 
@@ -6765,6 +6798,8 @@ def enumdc_pvenc(x):
         return ["key", x.i]
     if isinstance(x, list):
         return ["list", x[0]]
+    if isinstance(x, enumdc_RObj):
+        return ["robj", x.i]
     if isinstance(x, bool):
         raise ValueError(x)
     if isinstance(x, int):
@@ -6926,7 +6961,8 @@ def enumdc_gehgen(rng):
     keys = [[k, None, None] for k in (1, 3)]
     start = rng.choice([None, ["int", 1], ["int", 0], ["int", 5], ["str", "s"], ["key", 0]])
     last = [rng.choice([["int", rng.choice([0, 1, 2, 3, 4, 7, 8, -3, 2**70])], ["str", "x"], ["key", rng.randrange(0, 2)],
-                        ["list", 1]]) for _ in range(rng.randrange(0, 4))]
+                        ["list", 1], ["robj", rng.choice(["ValueError", "KeyError"]), 0],
+                        ["rint", 5, "KeyError"]]) for _ in range(rng.randrange(0, 4))]
     if rng.random() < .5:
         last = [["int", rng.randrange(0, 40)] for _ in range(rng.randrange(0, 4))]
     return {"fn": "enumdc.eh_flag_gen", "keys": keys, "start": start, "count": rng.choice([0, 0, 1, 2, 3]),

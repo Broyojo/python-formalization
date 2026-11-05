@@ -42,6 +42,8 @@ structure Ops (α : Type) where
   typeName : α → String
   /-- `bool(a)`. -/
   truth : α → Py Bool
+  /-- `repr(a)`, as `%r` runs it. -/
+  repr : α → Py String
   /-- The bases of each exception class of the program, builtin or its own, for `except`. -/
   excParent : String → List String
 
@@ -316,17 +318,20 @@ def EClassG.longSearch (o : Ops α) (c : EClassG α) (v : α) : Py (Option Name)
     | .ok none => k
   byName (firstHolding o v c.unhashableMap) (byName (c.firstByValue o v c.memberMap) (.ok none))
 
-/-- After the searches, :1197-1234: no members is a `TypeError`, and otherwise `_missing_` decides. -/
-def EClassG.afterSearch (c : EClassG α) (inProgress : Bool) (miss : MissingRet) : Py Name :=
+/-- After the searches, :1197-1234: no members is a `TypeError`, and otherwise `_missing_` decides. When its result is
+not a member, :1220 builds `ValueError("%r is not a valid %s" % (value, ...))` first, so the value's `repr` (`rv`) runs
+and its exception goes out instead. The `%r` of a result that is not a member, :1225, is of the model's opaque object,
+whose `repr` does not fail. -/
+def EClassG.afterSearch (c : EClassG α) (inProgress : Bool) (rv : Py String) (miss : MissingRet) : Py Name :=
   if c.memberMap.isEmpty then
     if inProgress then .error (.typeError "do not use `super().__new__; call the appropriate __new__ directly")
     else .error (.typeError "~has no members defined")
   else
     match miss with
     | .member n => .ok n
-    | .none => .error (.valueError "~is not a valid enum value")
-    | .other => .error (.typeError "~error in _missing_: returned instead of None or a valid member")
-    | .raises e => .error e
+    | .none => withRepr rv (.valueError "~is not a valid enum value")
+    | .other => withRepr rv (.typeError "~error in _missing_: returned instead of None or a valid member")
+    | .raises e => withRepr rv e
 
 /-- `Enum.__new__`, Lib/enum.py:1175-1234, for a class that is not a `Flag`. `self` is `type(value) is cls`. The
 `try` at :1184-1196 passes on a `KeyError` from the lookup, the hash or `==`, and searches on a `TypeError`. -/
@@ -337,14 +342,14 @@ def EClassG.enumNew (o : Ops α) (c : EClassG α) (self : Option Name) (v : α) 
   | none =>
     match o.dictGet c.value2member v with
     | .ok (some n) => .ok n
-    | .ok none => c.afterSearch inProgress miss
+    | .ok none => c.afterSearch inProgress (o.repr v) miss
     | .error e =>
-      if o.isInst e "KeyError" then c.afterSearch inProgress miss
+      if o.isInst e "KeyError" then c.afterSearch inProgress (o.repr v) miss
       else if o.isInst e "TypeError" then
         match c.longSearch o v with
         | .error e' => .error e'
         | .ok (some n) => .ok n
-        | .ok none => c.afterSearch inProgress miss
+        | .ok none => c.afterSearch inProgress (o.repr v) miss
       else .error e
 
 /-! ### `Enum._add_value_alias_`, Lib/enum.py:1239-1262 -/
@@ -378,7 +383,16 @@ formatted with `map[value]`, which raises that `TypeError` again, so the `TypeEr
 def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → Name) (self : Name) (v : α) :
     Py (EClassG α) :=
   match o.dictGet c.value2member v with
-  | .ok (some m) => if m != self then .error (.valueError "~is already bound") else .ok c
+  | .ok (some m) =>
+    if m != self then
+      -- `'%r is already bound: %r' % (value, member)`: the value's `repr`, then the member's, `<C.A: repr(_value_)>`
+      match o.repr v with
+      | .error e => .error e
+      | .ok _ =>
+        match (c.values.lookup m).map o.repr with
+        | some (.error e) => .error e
+        | _ => .error (.valueError "~is already bound")
+    else .ok c
   | .ok none => c.bindValue o memberName self v
   | .error e =>
     if o.isInst e "TypeError" then
@@ -390,11 +404,12 @@ def EClassG.addValueAlias (o : Ops α) (c : EClassG α) (memberName : Name → N
 
 /-! ### `EnumType.__contains__`, Lib/enum.py:750-769, and `Flag._missing_` on any value -/
 
-/-- `Flag._missing_`, Lib/enum.py:1476-1569: a value that is not an `int` is the `ValueError` of :1482-1485. -/
+/-- `Flag._missing_`, Lib/enum.py:1476-1569: a value that is not an `int` is the `ValueError` of :1482-1485, formatted with
+`%r`, so an exception of its `repr` goes out instead; an `int` (of a subclass too) goes on with its `repr`. -/
 def FlagCls.missingOf (o : Ops α) (c : FlagCls) (v : α) : Py FlagVal :=
   match o.asInt v with
-  | none => .error (.valueError s!"~is not a valid {c.name}")
-  | some i => c.missing i
+  | none => withRepr (o.repr v) (.valueError s!"~is not a valid {c.name}")
+  | some i => c.missingR (o.repr v) i
 
 /-- `value in cls._unhashable_values_ or value in cls._hashable_values_`, :766-769. -/
 def inLists (o : Ops α) (unh hashable : List α) (v : α) : Py Bool :=
@@ -614,7 +629,8 @@ def verifyCallG (o : Ops α) (order : List α → List α) (c : EClassG α) (mem
 /-! ### `Flag._generate_next_value_`, Lib/enum.py:1437-1453 -/
 
 /-- `Flag._generate_next_value_`: `start`, or `1` for `None`, for the first member; then `2 ** (_high_bit(max) + 1)`,
-where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1449-1452. -/
+where `_high_bit` is `bit_length() - 1` and any `Exception` from it is the `TypeError` of :1449-1452, whose message
+formats the value with `%r`, so an exception of its `repr` goes out instead. -/
 def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α) : Py α :=
   if count = 0 then .ok (start.getD (o.ofInt 1))
   else
@@ -625,7 +641,8 @@ def flagGenerateG (o : Ops α) (start : Option α) (count : Nat) (last : List α
       | .error e => .error e
       | .ok m =>
         match o.bitLength m with
-        | .error e => if o.isInst e "Exception" then .error (.typeError "~invalid flag value") else .error e
+        | .error e =>
+          if o.isInst e "Exception" then withRepr (o.repr m) (.typeError "~invalid flag value") else .error e
         | .ok b => .ok (o.ofInt ((2 : Int) ^ b))
 
 /-! ### Iterating a `Flag` value, Lib/enum.py:1456-1473, :1581-1585 -/
@@ -804,6 +821,7 @@ def evOps : Ops EV where
     | .atom (.int n) => .ok (n != 0)
     | .atom (.str s) => .ok (s != "")
     | _ => .ok true
+  repr _ := .ok ""
   excParent := builtinParent
 
 /-- A value of the difftest's fallible cases. -/
@@ -815,6 +833,10 @@ inductive PV where
   | key (k : Int) (he ee : Option String) (i : Nat)
   /-- The list `[i]`, a new object each time. -/
   | list (i : Nat)
+  /-- `RObj(re)`: an object with no comparison, no `bit_length`, and a `__repr__` raising the exception `re` names. -/
+  | robj (re : String) (i : Nat)
+  /-- `RI(n, re)`: a subclass of `int` of value `n` whose `__repr__` raises the exception `re` names. -/
+  | rint (n : Int) (re : String)
   deriving Repr, DecidableEq, Inhabited
 
 def PV.typeName : PV → String
@@ -822,6 +844,13 @@ def PV.typeName : PV → String
   | .str _ => "str"
   | .key _ _ _ _ => "K"
   | .list _ => "list"
+  | .robj _ _ => "RObj"
+  | .rint _ _ => "RI"
+
+/-- An `RI` compares and hashes as the `int` it is. -/
+def PV.norm : PV → PV
+  | .rint n _ => .int n
+  | v => v
 
 /-- `hash(n)` for an `int`, Objects/longobject.c `long_hash`: the value modulo `2**61 - 1`, sign kept, `-1` made `-2`. -/
 def intHash (n : Int) : Int :=
@@ -842,7 +871,7 @@ def pvExc (cls msg : String) : PyExc :=
   | c => .named c msg
 
 /-- `a == b`: `K.__eq__` on the left, or reflected when the left operand gives `NotImplemented`; `False` when both do. -/
-def pvEq : PV → PV → Py Bool
+def pvEq0 : PV → PV → Py Bool
   | .key k _ ee _, b =>
     match ee with
     | some x => .error (pvExc x "eq")
@@ -863,16 +892,22 @@ def pvEq : PV → PV → Py Bool
     match ee with
     | some x => .error (pvExc x "eq")
     | none => .ok false
+  | .robj _ _, .key _ _ ee _ =>
+    match ee with
+    | some x => .error (pvExc x "eq")
+    | none => .ok false
   | .int a, .int b => .ok (a == b)
   | .str a, .str b => .ok (a == b)
   | .list a, .list b => .ok (a == b)
   | _, _ => .ok false
 
+def pvEq (a b : PV) : Py Bool := pvEq0 a.norm b.norm
+
 /-- `a < b` (`gt` false) or `a > b` (`gt` true): `K` compares its key with a `K` or an `int`, reflected on the right. -/
 def pvCmp (gt : Bool) (a b : PV) : Py Bool :=
   let sym := if gt then ">" else "<"
   let r (x y : Int) : Bool := if gt then decide (x > y) else decide (x < y)
-  match a, b with
+  match a.norm, b.norm with
   | .int x, .int y => .ok (r x y)
   | .str x, .str y => .ok (if gt then decide (x > y) else decide (x < y))
   | .list x, .list y => .ok (r (x : Int) (y : Int))
@@ -897,29 +932,41 @@ def pvOps : Ops PV where
       | some x => .error (pvExc x "hash")
       | none => .ok (intHash k)
     | .list _ => .error (.typeError "unhashable type: 'list'")
+    | .robj _ i => .ok (2 ^ 62 + 1000 + i)
+    | .rint n _ => .ok (intHash n)
   eq := pvEq
   lt := pvCmp false
   gt := pvCmp true
   asInt
     | .int n => some n
+    | .rint n _ => some n
     | _ => none
   ofInt n := .int n
   succ
     | .int n => .ok (.int (n + 1))
+    | .rint n _ => .ok (.int (n + 1))
+    | .robj _ _ => .error (.typeError "unsupported operand type(s) for +: 'RObj' and 'int'")
     | .str _ => .error (.typeError "can only concatenate str (not \"int\") to str")
     | .list _ => .error (.typeError "can only concatenate list (not \"int\") to list")
     | .key _ _ _ _ => .error (.typeError "unsupported operand type(s) for +: 'K' and 'int'")
   index
     | .int n => .ok n
+    | .rint n _ => .ok n
     | v => .error (.typeError s!"'{v.typeName}' object cannot be interpreted as an integer")
   bitLength
     | .int n => .ok (intBitLength n)
+    | .rint n _ => .ok (intBitLength n)
     | v => .error (.named "AttributeError" s!"'{v.typeName}' object has no attribute 'bit_length'")
   typeName := PV.typeName
   truth
     | .int n => .ok (n != 0)
+    | .rint n _ => .ok (n != 0)
     | .str s => .ok (s != "")
     | _ => .ok true
+  repr
+    | .robj re _ => .error (pvExc re "repr")
+    | .rint _ re => .error (pvExc re "repr")
+    | _ => .ok ""
   excParent
     | "KSub" => ["KeyError"]
     | "TSub" => ["TypeError"]

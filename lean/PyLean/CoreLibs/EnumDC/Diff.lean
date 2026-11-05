@@ -504,6 +504,8 @@ def decPV (keys : List (Int × Option String × Option String)) (j : Json) : Exc
     match keys[i]? with
     | some (kk, he, ee) => pure (.key kk he ee i)
     | none => throw "key"
+  | "robj" => pure (.robj (← v.getStr?) (← (← j.getArrVal? 2).getNat?))
+  | "rint" => pure (.rint (← v.getInt?) (← (← j.getArrVal? 2).getStr?))
   | _ => pure (.list (← v.getNat?))
 
 def encPV : PV → Json
@@ -511,6 +513,8 @@ def encPV : PV → Json
   | .str s => toJson [toJson "str", toJson s]
   | .key _ _ _ i => toJson [toJson "key", toJson i]
   | .list i => toJson [toJson "list", toJson i]
+  | .robj _ i => toJson [toJson "robj", toJson i]
+  | .rint n _ => toJson [toJson "int", toJson n]
 
 /-- How each member is made: a plain class; `class C(int, Enum)` whose `__new__` returns `int.__new__(cls, 7)` without
 setting `_value_`, so `int(value)` is called; and a class whose `__init__` raises `ValueError('init')` for
@@ -521,6 +525,7 @@ def pvMaker (kind : String) (v : PV) : Maker PV :=
     { plain := false,
       callType := match v with
         | .int n => .ok (.int n)
+        | .rint n _ => .ok (.int n)
         | .str s =>
           match s.toInt? with
           | some n => .ok (.int n)
@@ -762,7 +767,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "bytes" => pure (.bytes (← (← v.getArr?).toList.mapM (·.getNat?)))
       | "bytearray" | "memoryview" => pure (.buffer (← (← v.getArr?).toList.mapM (·.getNat?)))
       | _ => pure (.other (.int (← v.getInt?)))
-    pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec args))
+    pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec pvOps.repr args))
   | "eh_flag_gen" => do
     let keys ← decKeys j
     let start ← match ← field j "start" with
