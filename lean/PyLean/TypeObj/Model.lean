@@ -347,6 +347,9 @@ inductive Payload where
   | exc (e : ExcData)
   /-- The contents of a `bytes` or `bytearray`, which the exception code reads. -/
   | bytes (b : List Nat)
+  /-- `unionobject`, `Objects/unionobject.c`: its `args` tuple, the deduplicated members of
+  `X | Y`. -/
+  | union (args : List Val)
 
 /-- A `PyTypeObject`. -/
 structure TypeData where
