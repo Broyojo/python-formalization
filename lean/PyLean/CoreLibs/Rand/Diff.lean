@@ -1,23 +1,37 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.Rand.System
-import PyLean.CoreLibs.Rand.FloatInst
+import PyLean.CoreLibs.Rand.F64Inst
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "rand.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `rand.` prefix.
 
 Every result is `{"ok": {"r": <value or exception>, "fp": <fingerprint>}}`, so the
-generator state after the call is compared too, also after an exception. Floats
+generator state after the call is compared too, also after an exception. F64s
 cross as their IEEE bits. -/
 
 namespace PyLean.CoreLibs.Rand
 
-open Lean PyLean PyLean.Diff PyLean.CoreLibs.Rand.FloatInst
+open Lean PyLean PyLean.Diff PyLean.Binary64
 
 /-- `PyMem_Malloc`: on the pod's 64-bit Linux an allocation beyond the 47-bit
 address space fails. The difftest stays away from sizes between 2**34 and that. -/
 def podMalloc (n : Nat) : Bool := n < 2 ^ 47
 
-def G : Gen State Float := mtGen podMalloc
+/-- The pod's C library, through Lean's `Float`, whose `log`, `exp`, ... are the C
+functions of the same glibc that CPython links. -/
+def toFl (x : F64) : Float := Float.ofBits x.bits.toUInt64
+def ofFl (x : Float) : F64 := F64.ofBits x.toBits.toNat
+
+instance podLibm : RandLibm where
+  log x := ofFl (Float.log (toFl x))
+  log2 x := ofFl (Float.log2 (toFl x))
+  exp x := ofFl (Float.exp (toFl x))
+  sin x := ofFl (Float.sin (toFl x))
+  cos x := ofFl (Float.cos (toFl x))
+  acos x := ofFl (Float.acos (toFl x))
+  pow x y := ofFl (Float.pow (toFl x) (toFl y))
+
+def G : Gen State F64 := mtGen podMalloc
 
 def bigFuel : Nat := 2000000
 
@@ -32,16 +46,16 @@ def mkState (seed : Int) (burn : Nat) : State :=
 
 /-! ### JSON -/
 
-def encF (x : Float) : Json := toJson x.toBits.toNat
-def decF (j : Json) : Except String Float := do
+def encF (x : F64) : Json := toJson x.bits
+def decF (j : Json) : Except String F64 := do
   let n ← j.getNat?
-  return Float.ofBits n.toUInt64
+  return F64.ofBits n
 
-def getF (j : Json) (key : String) : Except String Float := do decF (← field j key)
+def getF (j : Json) (key : String) : Except String F64 := do decF (← field j key)
 def getArr (j : Json) (key : String) : Except String (List Json) := do
   return (← (← field j key).getArr?).toList
 
-def getOptF (j : Json) (key : String) : Except String (Option Float) :=
+def getOptF (j : Json) (key : String) : Except String (Option F64) :=
   match j.getObjVal? key with
   | .ok .null | .error _ => .ok none
   | .ok v => some <$> decF v
@@ -121,12 +135,12 @@ def getPop (j : Json) : Except String (SeqObj Int) := do
   let kind ← getStr j "seqkind"
   return { listSeq l with isSequence := kind != "set" }
 
-def getNumJ (j : Json) : Except String (Num Float) :=
+def getNumJ (j : Json) : Except String (Num F64) :=
   match j.getObjVal? "f" with
   | .ok v => do return .flt (← decF v)
   | .error _ => do return .int (← decInt (← field j "i"))
 
-def getNums (j : Json) (key : String) : Except String (List (Num Float)) := do
+def getNums (j : Json) (key : String) : Except String (List (Num F64)) := do
   (← getArr j key).mapM getNumJ
 
 def seedArg (j : Json) : Except String SeedArg := do
@@ -176,7 +190,7 @@ def getBelow (j : Json) : Nat → RM State Nat :=
   | .ok (.bool true) => fun n => randbelowWithout G bigFuel n
   | _ => randbelowWith G bigFuel
 
-def encObj (o : Obj Float) : Json :=
+def encObj (o : Obj F64) : Json :=
   Json.mkObj [("gauss", match o.gaussNext with
     | some x => encF x
     | none => Json.null)]
@@ -195,11 +209,11 @@ def stubRaw : Nat → RM State (List Nat) := fun n s =>
   let (b, s) := go n s
   (.ok b, s)
 
-def S : Gen State Float := sysGen stubRaw
+def S : Gen State F64 := sysGen stubRaw
 
 /-! ### Dispatch -/
 
-def getWeights (j : Json) : Except String (Option (WeightsArg Float)) := do
+def getWeights (j : Json) : Except String (Option (WeightsArg F64)) := do
   let v ← field j "weights"
   if v.isNull then pure none
   else
@@ -208,7 +222,7 @@ def getWeights (j : Json) : Except String (Option (WeightsArg Float)) := do
     | _, .ok a => pure (some (.notIterable (← a.getStr?)))
     | _, _ => pure (some (.seq (← (← v.getArr?).toList.mapM getNumJ)))
 
-def getCum (j : Json) : Except String (Option (List (Num Float))) := do
+def getCum (j : Json) : Except String (Option (List (Num F64))) := do
   let v ← field j "cum"
   if v.isNull then pure none
   else pure (some (← (← v.getArr?).toList.mapM getNumJ))
@@ -260,7 +274,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | 0, s, acc => (acc.reverse, s)
       | k + 1, s, acc =>
         let (x, s) := G.random s
-        go k s (x.toBits.toNat :: acc)
+        go k s (x.bits :: acc)
     let (l, s') := go n s []
     let (l2, _) := (List.range n).foldl (fun (acc : List Nat × State) _ =>
       let (m, st) := randomNum acc.2
@@ -290,8 +304,8 @@ def run (fn : String) (j : Json) : Except String Json := do
     | .error e => enc (fun (_ : Unit) => Json.null) (.error e) s
   | "pysetstate" =>
     let gn ← getOptF j "gauss0"
-    let o : Obj Float := { core := s, gaussNext := gn }
-    let arg : SetArg Float ← match (← getStr j "skind") with
+    let o : Obj F64 := { core := s, gaussNext := gn }
+    let arg : SetArg F64 ← match (← getStr j "skind") with
       | "notsub" => pure (.notSubscriptable (← getStr j "sty"))
       | "emptytuple" => pure (.empty false)
       | "emptylist" => pure (.empty true)
@@ -305,13 +319,13 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "pyseed" =>
     let a ← seedArg j
     let v ← getInt j "version"
-    let o : Obj Float := { core := s, gaussNext := some 1.5 }
+    let o : Obj F64 := { core := s, gaussNext := some 1.5 }
     let (r, o') := pySeed noEntropy a v o
     enc (fun (_ : Unit) => Json.null) r o'.core
       |>.map fun out => Json.mkObj [("ok", Json.mkObj [("v", out), ("o", encObj o')])]
   | "pickle" =>
     let gn ← getOptF j "gauss0"
-    let o : Obj Float := { core := s, gaussNext := gn }
+    let o : Obj F64 := { core := s, gaussNext := gn }
     match pyUnpickle { noEntropy with urandom := some #[1, 2, 3] } (pyReduce o) with
     | .ok o' =>
       enc (fun (_ : Unit) => Json.null) (.ok ()) o'.core
@@ -381,7 +395,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "normalvariate" => encRM encF (normalvariate G bigFuel (← getF j "a") (← getF j "b")) s
   | "gauss" =>
     let gn ← getOptF j "gauss0"
-    encRM (fun (p : Float × Option Float) => Json.mkObj
+    encRM (fun (p : F64 × Option F64) => Json.mkObj
         [("v", encF p.1), ("next", match p.2 with
           | some x => encF x
           | none => Json.null)])
@@ -400,7 +414,11 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "sys_random" =>
     encRM encF (sysRandom stubRaw) s
   | "sys_getrandbits" =>
-    encRM encNat (sysGetrandbits stubRaw (← getIntArg j "k")) s
+    let kj ← field j "k"
+    let k : SysBitsArg F64 ← match kj.getObjVal? "fl" with
+      | .ok v => pure (.flt (← decF v))
+      | .error _ => pure (.arg (← getIntArgJ kj))
+    encRM encNat (sysGetrandbitsArg stubRaw k) s
   | "sys_randbytes" =>
     encRM (fun (l : List Nat) => toJson l) (sysRandbytes stubRaw (← getIntArg j "n")) s
   | "sys_randrange" =>
@@ -435,20 +453,28 @@ def run (fn : String) (j : Json) : Except String Json := do
         return (out, res :: tail)
     let (_, res) ← build cs []
     enc (fun (l : List (Option String)) => toJson l) (.ok res) s
+  | "init_subclass_hooks" =>
+    let hs ← (← getArr j "hooks").mapM fun (h : Json) => do
+      let t ← h.getStr?
+      if t = "random" then pure SubclassHook.random
+      else if t = "object" then pure SubclassHook.object
+      else pure (SubclassHook.cooperative t)
+    let kw ← (← getArr j "kwargs").mapM (·.getStr?)
+    enc (fun (p : List String × Option String) => toJson p.1) (runInitSubclass "C" [] kw hs) s
   | "main" =>
-    let getInput (c : Json) : Except String (CliInput Float) := do
+    let getInput (c : Json) : Except String (CliInput F64) := do
       let asInt ← getOptInt c "asint"
       let asFloat ← getOptF c "asfloat"
       let words ← (← getArr c "words").mapM (·.getStr?)
       return { asInt, asFloat, words }
-    let args : CliArgs Float :=
+    let args : CliArgs F64 :=
       { choice := ← getStrListOpt j "choice"
         integer := ← getOptInt j "integer"
         float := ← getOptF j "float"
         test := ← getOptInt j "test"
         input := ← (← getArr j "input").mapM getInput
         inputStrs := ← (← getArr j "inputstrs").mapM (·.getStr?) }
-    encRM (fun (o : CliOut Float) => match o with
+    encRM (fun (o : CliOut F64) => match o with
         | .str x => Json.mkObj [("s", toJson x)]
         | .int n => Json.mkObj [("i", toJson n)]
         | .flt x => Json.mkObj [("f", encF x)])
