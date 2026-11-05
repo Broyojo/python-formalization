@@ -189,4 +189,35 @@ theorem lenOverflow_proven : LenOverflow := by
   rw [← hw.length_eq hL]
   rfl
 
+/-- Every length path is exact. For C `long` arguments with a non-zero step (it asserts
+`step != 0`), `get_len_of_range` (rangeobject.c:992-1014) returns the mathematical length;
+`compute_range_length_long` (:202-236) answers exactly when all three arguments fit a `long`
+and that length is at most `LONG_MAX`, and then with that length; the PyLong slow path of
+`compute_range_length` (:273-315) returns the mathematical length for all Python ints; and so
+does `compute_range_length` itself (:243-323), whichever path it takes. `IsLen` fixes a
+unique value (`isLen_unique`), so a slow path returning 0 for big arguments, or a
+`get_len_of_range` returning `ULONG_MAX`, fails this. The step is non-zero by `validate_step`
+(a documented precondition of all three functions). -/
+def RangeLengthExact : Prop :=
+  (∀ lo hi step : Int, IsLong lo → IsLong hi → IsLong step → step ≠ 0 →
+    IsLen lo hi step (getLenOfRange lo hi step)) ∧
+  (∀ start stop step L : Int, step ≠ 0 → IsLen start stop step L →
+    computeRangeLengthLong start stop step =
+      if IsLong start ∧ IsLong stop ∧ IsLong step ∧ L ≤ longMax then some L else none) ∧
+  (∀ start stop step : Int, step ≠ 0 → IsLen start stop step (computeRangeLengthSlow start stop step)) ∧
+  (∀ start stop step : Int, step ≠ 0 → IsLen start stop step (computeRangeLength start stop step))
+
+theorem rangeLengthExact_proven : RangeLengthExact := by
+  refine ⟨fun lo hi step h1 h2 h3 h0 => ?_, fun start stop step L h0 hL => ?_,
+    fun a b s h0 => slow_isLen a b s h0, fun a b s h0 => computeRangeLength_isLen a b s h0⟩
+  · rw [getLenOfRange_eq lo hi step h1 h2 h3 h0]; exact slow_isLen _ _ _ h0
+  · have hsl := isLen_unique (slow_isLen start stop step h0) hL
+    unfold computeRangeLengthLong asLong
+    by_cases ha : IsLong start <;> by_cases hb : IsLong stop <;> by_cases hc : IsLong step <;>
+      simp [ha, hb, hc]
+    rw [getLenOfRange_eq _ _ _ ha hb hc h0, hsl]
+    by_cases hL' : L ≤ longMax
+    · simp [hL', show ¬ L > longMax by omega]
+    · simp [hL', show L > longMax by omega]
+
 end PyLean.RangeSlice

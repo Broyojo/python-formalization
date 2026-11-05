@@ -116,7 +116,9 @@ theorem addAux_dummy (n : Nat) (so : SetObj K) {key : K} {hash : Int} {slot m f 
       (.ok (), { so with used := so.used + 1, table := so.table.set f (.active key hash) }) := by
   simp only [setAddEntryAux, M.bind_run, M.get_run]
   simp only [h]
-  simp only [M.bind_run, M.get_run, hd]
+  have hm : so.mem f = .dummy := (SetObj.mem_of_ne_null so (by rw [hd]; exact nofun)).trans hd
+  have hlt := slot_lt so f _ (by simp) hd
+  simp only [M.bind_run, M.get_run, hm, SetObj.storeAt_lt so _ hlt]
   rfl
 
 /-- `set_add_entry` on a well-formed set, on all its paths: the key is there and nothing changes; or
@@ -227,8 +229,9 @@ theorem setContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
 theorem frozensetContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so)
     (keySet : K → SetObj K → Option (SetBody K)) (key : K) :
     frozensetContains P keySet key so = (.ok ((setKeys so).any (eqv · key)), so) := by
-  obtain ⟨s, h1, _, h2⟩ := lookOuter_spec (P := P) H w true key
-  simp only [frozensetContains, frozenLookup, containsHash, H.hash_ok, M.bind_run, M.get_run, h1]
+  obtain ⟨s, h1, hlt, h2⟩ := lookOuter_spec (P := P) H w true key
+  simp only [frozensetContains, frozenLookup, containsHash, H.hash_ok, M.bind_run, M.get_run, h1,
+    SetObj.mem_lt so hlt]
   rcases h2 with ⟨hn, hne⟩ | ⟨k, h, hs, heq⟩
   · simp [hn, any_keys_false so key hne]
   · simp [hs, any_keys_true so s k h key hs heq]
@@ -679,7 +682,7 @@ theorem lookStep_raises (hs : so.slot slot = .active startkey hash) (h1 : startk
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
     (hq : P.eq startkey key so = (.error e, s')) :
     lookStep P fr key hash slot so = (.error e, s') := by
-  cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, h1, h2, hq]
+  cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, SetObj.mem_active so hs, h1, h2, hq]
 
 /-- With a set whose table `__eq__` changed, `set_lookkey` restarts, whatever `__eq__` answered, while
 a frozenset does not look: it cannot change. -/
@@ -688,7 +691,7 @@ theorem lookStep_changed (b : Bool) (hs : so.slot slot = .active startkey hash) 
     (hq : P.eq startkey key so = (.ok b, s'))
     (hch : setChanged s' so.tableId slot startkey = true) :
     lookStep P false key hash slot so = (.ok (.inl .restart), s') := by
-  simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, h1, h2, hq, hch]
+  simp [lookStep, compareLocked, M.bind_run, M.get_run, SetObj.mem_active so hs, h1, h2, hq, hch]
 
 /-- `set_add_entry` tests the answer first (:290-291) and the table after it (:294), the reverse of
 `set_compare_entry_lock_held` (:159, :161): an `__eq__` that answers yes and changes the table is believed. -/
@@ -697,14 +700,14 @@ theorem addStep_trusts_yes (fs : Option Nat) (hs : so.slot slot = .active startk
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
     (hq : P.eq startkey key so = (.ok true, s')) :
     addStep P key hash slot mask fs so = (.ok (.inl .active), s') := by
-  simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq]
+  simp [addStep, M.bind_run, M.get_run, SetObj.mem_active so hs, h1, h2, hq]
 
 theorem addStep_raises (fs : Option Nat) (hs : so.slot slot = .active startkey hash)
     (h1 : startkey ≠ key)
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
     (hq : P.eq startkey key so = (.error e, s')) :
     addStep P key hash slot mask fs so = (.error e, s') := by
-  simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq]
+  simp [addStep, M.bind_run, M.get_run, SetObj.mem_active so hs, h1, h2, hq]
 
 /-- `set_add_entry` on an answer of no, and a changed table: it restarts (:294-295). -/
 theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey hash)
@@ -713,7 +716,7 @@ theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey 
     (hq : P.eq startkey key so = (.ok false, s'))
     (hch : setChanged s' so.tableId slot startkey = true) :
     addStep P key hash slot mask fs so = (.ok (.inl .restart), s') := by
-  simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq, hch]
+  simp [addStep, M.bind_run, M.get_run, SetObj.mem_active so hs, h1, h2, hq, hch]
 
 end Failure
 
@@ -791,8 +794,8 @@ def FrozenIdentityFirst : Prop :=
 theorem frozenIdentityFirst_proven : FrozenIdentityFirst := by
   intro K _ P so key h hash slot hs hn
   constructor
-  · simp [lookStep, compareFrozen, M.bind_run, M.get_run, hs]
-  · simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, hn]
+  · simp [lookStep, compareFrozen, M.bind_run, M.get_run, SetObj.mem_active so hs]
+  · simp [lookStep, compareLocked, M.bind_run, M.get_run, SetObj.mem_active so hs, hn]
 
 /-- `set_add_entry` and `set_lookkey` differ on an `__eq__` that answers yes and changes the table:
 the lookup goes round again, the add stops, believing it. -/

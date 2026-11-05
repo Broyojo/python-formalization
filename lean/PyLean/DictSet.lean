@@ -355,12 +355,22 @@ def entries : List Entry := [
     statement := "For every key protocol: an exact frozenset runs one set_compare_frozenset walk of so->table and so->mask, which never asks for a restart, and its slot or exception is the answer; anything else runs set_compare_entry_lock_held in the do-while, where a walk that asks for a restart starts again from the state __eq__ left, with that state's table and mask, and a slot or exception ends it. On the same table the two give different slots."
     source := "setobject.c:413-433", status := .proven
     prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
-    notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); the re-check and the entry functions read past the end of a table as the freed block's stale bytes (SetObj.mem); the walk's own later reads are NULL there (scope). lookkey_dispatch_probe shows the dispatch is observable." },
+    notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); every read of an entry, in the walks, the re-check and the entry functions, goes through the pointer and past the end of a table reads the freed block's stale bytes (SetObj.mem). lookkey_dispatch_probe shows the dispatch is observable." },
+  { id := "set-add-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
+    statement := "For every key protocol, one step of the add's walk: on the branches that call no __eq__, in the state as it is, a NULL entry ends the walk there with the freeslot it had; the very object is found_active whatever __eq__ would answer; two exact str that unicode_eq calls equal are found_active; another hash is passed with mask and freeslot as they were; a dummy becomes the freeslot, replacing any earlier one. An answer of no from __eq__ with the table and entry unchanged goes on with the mask read again from the state __eq__ left and the same freeslot."
+    source := "setobject.c:275-302", status := .proven
+    prop := ``AddStepBranches, thm := some ``addStepBranches_proven
+    notes := "nan_identity_probe: s = {x}; s.add(x) keeps one element for a key not equal to itself; last_dummy_probe: with dummies at 0 and 6 on the path the add stores at 6 and iteration gives [2, 4]. Both as on 3.15.2 (probed)." },
+  { id := "set-look-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held", "set_compare_frozenset"]
+    statement := "For every key protocol and both compare functions, in the state as it is: a NULL entry ends the block there; the very object is found with no call to __eq__; a dummy is passed; an entry with another hash and another object is passed."
+    source := "setobject.c:138-165, :172-193", status := .proven
+    prop := ``LookStepBranches, thm := some ``lookStepBranches_proven
+    notes := "nan_identity_probe: x in {x} is True for a key not equal to itself, as on 3.15.2." },
   { id := "set-add-restart", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "For every key protocol, step by step and turn by turn: a step that ends the block ends the walk with it, one that goes on moves to the next entry with the mask and freeslot it left, a finished block moves to the next probe with that mask; a turn that ends in an exception, found_active, a restart, a NULL with no freeslot (store, fill and used grow, resize at the load limit), a NULL with a freeslot still a dummy (store there, used grows), or a NULL with a freeslot that __eq__ refilled (restart) does exactly that, each from the state __eq__ left."
     source := "setobject.c:252-335", status := .proven
     prop := ``SetAddRestart, thm := some ``setAddRestart_proven
-    notes := "freeslot_refill_probe and restart_probe reach the refill re-check and the restart with a mutating __eq__ and give CPython's table order ([4, 2, 3] and [2]). The table test is CPython's pointer test, with an allocator that can reuse a freed address (set-add-restarts-on-resize, refuted)." },
+    notes := "freeslot_refill_probe and restart_probe reach the refill re-check and the restart with a mutating __eq__ and give CPython's table order ([4, 2, 3] and [2]). The table test is CPython's pointer test, with an allocator that can reuse a freed address (set-add-restarts-on-resize, refuted); the freeslot test and stores read and write through the pointer, so a freeslot past the end of a new table is the freed table's dummy (aba_freeslot_probe: no restart, the key stored there, used one over)." },
   { id := "set-update-iterable-body", pyFile := "Objects/setobject.c", pyFns := ["set_update_iterable_lock_held"]
     statement := "For every key protocol and iterator, turn by turn: a failed PyObject_GetIter is the result; each PyIter_Next runs in the state the last turn left and may raise (the result), end the loop, or yield a key that set_add_key adds; a failed add is the result in the state it left, and otherwise the loop goes on from there."
     source := "setobject.c:1221-1244", status := .proven
@@ -452,11 +462,11 @@ def entries : List Entry := [
     source := "setobject.c:1924-1946", status := .proven
     prop := ``SetDisjointRefines, thm := some ``setDisjointRefines_proven
     notes := "The exact-set branch; set-isdisjoint-branches and set-disjoint-iter-refines have the others." },
-  { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
+  { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
     source := "setobject.c:159-162 against :290-295", status := .proven
     prop := ``SetAddTrustsYes, thm := some ``setAddTrustsYes_proven
-    notes := "A difference between two bodies, on record. It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
+    notes := "Pins the order at :290-295: the yes is trusted before the table is re-checked. trusts_yes_probe: S = {a}, a.__eq__ clears S and answers yes; S.add(b) leaves S empty, where a body re-checking first gives {b} (3.15.2 leaves S empty). It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
   { id := "set-hash-failure", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
     statement := "For every key protocol: __hash__ runs first, as Python code; when it raises, each of set_add_key, set_contains_key and set_discard_key raises set_unhashable_type's exception in the state __hash__ left, and when it answers, each goes on to its entry function with that hash from that state."
     source := "setobject.c:600-631", status := .proven

@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.RangeSlice.Model
 import PyLean.RangeSlice.SliceHash
+import PyLean.RangeSlice.Search
 
 /-! Differential-testing handler for `rangeslice` cases (`"mod": "rangeslice"`).
 A range is `"r": [start, stop, step|null]` with `"nargs"` 1, 2 or 3; a slice is
@@ -82,6 +83,65 @@ def intHash (n : Int) : Int :=
   if h = -1 then -2 else h
 
 
+/-- An object argument (see `difftest/rangeslice_diff.py`, `make_obj`): an int, or
+`{"k": "bool"|"sub"|"idx"|"idxsub"|"idxbad"|"idxraise"|"other"|"slice", ...}`. `werr` is the
+case's warnings filter (`DeprecationWarning` raised or ignored). -/
+def getObj (werr : Bool) (v : Json) : Except String Obj := do
+  match v.getInt? with
+  | .ok i => return .int i
+  | .error _ =>
+    match ← getStr v "k" with
+    | "bool" => return .bool (← getBool v "v")
+    | "sub" => return .intSub (← getInt v "v") (← getStr v "tp")
+    | "idx" => return .index (← getStr v "tp") (.ok (.exact (← getInt v "v")))
+    | "idxsub" => return .index (← getStr v "tp") (.ok (.subclass (← getInt v "v") (← getStr v "rtp") werr))
+    | "idxbad" => return .index (← getStr v "tp") (.ok (.other (← getStr v "rtp")))
+    | "idxraise" => return .index (← getStr v "tp") (.error (.named (← getStr v "exc") (← getStr v "msg")))
+    | "other" => return .other (← getStr v "tp")
+    | "slice" =>
+      let arr ← (← v.getObjVal? "s").getArr?
+      let some a := arr[0]? | throw "slice: missing start"
+      let some b := arr[1]? | throw "slice: missing stop"
+      let some c := arr[2]? | throw "slice: missing step"
+      return .slice ⟨← optInt a, ← optInt b, ← optInt c⟩
+    | k => throw s!"unknown object kind {k}"
+
+/-- The `__eq__` behaviour of a search probe, as a callback counting its calls. -/
+def getHook (v : Json) : Except String (EqHook Nat) := do
+  match ← getStr v "h" with
+  | "eqv" => let t ← getInt v "v"; return fun x n => (.ok (decide (x = t)), n + 1)
+  | "never" => return fun _ n => (.ok false, n + 1)
+  | "always" => return fun _ n => (.ok true, n + 1)
+  | "trueat" => let m ← getNat v "m"; return fun _ n => (.ok (decide (n = m)), n + 1)
+  | "raiseat" =>
+    let m ← getNat v "m"
+    let e ← getStr v "exc"
+    let msg ← getStr v "msg"
+    return fun _ n => (if n = m then .error (.named e msg) else .ok false, n + 1)
+  | h => throw s!"unknown hook {h}"
+
+def encSub : SubRes → Json
+  | .item v => Json.mkObj [("item", toJson v)]
+  | .range r => Json.mkObj [("range", encRange r)]
+
+def encCmp : CmpRes → Json
+  | .notImplemented => toJson "NotImplemented"
+  | .bool b => toJson b
+
+def encKey (k : HashKey) : Json :=
+  Json.arr #[toJson k.1, (match k.2.1 with | some v => toJson v | none => Json.null),
+    (match k.2.2 with | some v => toJson v | none => Json.null)]
+
+def cmpOp : String → Except String CmpOp
+  | "lt" => .ok .lt | "le" => .ok .le | "eq" => .ok .eq
+  | "ne" => .ok .ne | "gt" => .ok .gt | "ge" => .ok .ge
+  | o => .error s!"unknown op {o}"
+
+def optNames (j : Json) (key : String) : Except String (Option (List String)) :=
+  match j.getObjVal? key with
+  | .ok .null | .error _ => .ok none
+  | .ok v => do return some ((← v.getArr?).toList.map fun n => (n.getStr?).toOption.getD "")
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "slicehash" =>
@@ -95,6 +155,12 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "listslice" =>
     let s ← getSlice j
     return encPy toJson (listSlicePositions (← getInt j "n") s)
+  | "newobj" =>
+    let werr ← getBool j "werr"
+    let args ← (← (← field j "args").getArr?).toList.mapM (getObj werr)
+    let kw ← optNames j "kw"
+    let res := if (← getStr j "via") = "new" then rangeNewTp args kw else rangeVectorcall args kw
+    return encPy encRange res
   | _ => pure ()
   let r ← getRange j
   match fn with
@@ -147,6 +213,35 @@ def run (fn : String) (j : Json) : Except String Json := do
       let (xs, it') := iterTake k it
       let red := iterReduce it'
       return Json.arr #[toJson it.typeName, toJson xs, toJson it'.lengthHint, encRange red])
+  | "subscript" =>
+    let item ← getObj (← getBool j "werr") (← field j "item")
+    return encPy encSub (r >>= (rangeSubscript · item))
+  | "richcmp" =>
+    let op ← cmpOp (← getStr j "op")
+    let o ← field j "other"
+    let other ← match ← getStr o "k" with
+      | "self" => pure (Except.ok CmpOther.self)
+      | "range" => do
+        let r2 ← getRangeAt o "r" "nargs"
+        pure (r2.map CmpOther.range)
+      | _ => pure (Except.ok (CmpOther.notRange (← getStr o "tp")))
+    return encPy encCmp (do let a ← r; let b ← other; rangeRichcompare a b op)
+  | "hashkey" =>
+    return encPy id (r >>= fun r => .ok (encKey (rangeHashKey r)))
+  | "search" =>
+    let ob ← getObj false (← field j "probe")
+    let hook ← getHook (← field j "hook")
+    let cnt ← getBool j "calls"
+    let enc := fun {α : Type} (f : α → Json) (p : Py α × Nat) =>
+      Json.arr #[encPy f p.1, if cnt then toJson p.2 else Json.null]
+    match r with
+    | .error e => return encPy id (.error e : Py Json)
+    | .ok r =>
+      match ← getStr j "op" with
+      | "contains" => return encPy id (.ok (enc toJson (rangeContainsObj r ob hook 0)) : Py Json)
+      | "count" => return encPy id (.ok (enc toJson (rangeCountObj r ob hook 0)) : Py Json)
+      | "index" => return encPy id (.ok (enc toJson (rangeIndexObj r ob hook 0)) : Py Json)
+      | o => throw s!"unknown search op {o}"
   | other => throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)

@@ -548,35 +548,6 @@ theorem enumLookup_proven : EnumLookup := by
 
 /-! ### `_add_member_` and its callers -/
 
-/-- `_add_alias_`: a new name is added and points at the member, the same name again is nothing, and a name bound to
-another member is a `NameError`, formatted with `%r` of that member (:1074), whose `repr` can raise instead.
-`_member_names_` does not change, so an alias does not show up in iteration or `len`. -/
-def AddAlias : Prop :=
-  ∀ (c : EClass) (self name other x : Name),
-    (c.memberMap.lookup name = none → ∃ c', c.addAlias self name = .ok c' ∧ c'.memberNames = c.memberNames ∧
-      c'.memberMap = c.memberMap ++ [(name, self)] ∧ c'.len = c.len ∧ c'.iter.length ≤ c'.len) ∧
-    (c.memberMap.lookup name = some self → c.addAlias self name = .ok c) ∧
-    (c.memberMap.lookup name = some other → other ≠ self → (∃ s, c.memberRepr other = .ok s) →
-      (c.addAlias self name).raises "NameError") ∧
-    (c.memberMap.lookup name = some other → other ≠ self → ∀ e, c.memberRepr other = .error e →
-      c.addAlias self name = .error e)
-
-theorem addAlias_proven : AddAlias := by
-  intro c self name other x
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · intro h
-    refine ⟨{ c with memberMap := c.memberMap ++ [(name, self)] }, ?_, rfl, rfl, rfl, ?_⟩
-    · simp [EClass.addAlias, EClass.addToMap, h]
-    · simp only [EClass.iter, EClass.len]
-      exact List.length_filterMap_le _ _
-  · intro h
-    simp [EClass.addAlias, EClass.addToMap, h]
-  · intro h hn ⟨s, hs⟩
-    refine ⟨.named "NameError" "~is already bound", ?_, rfl⟩
-    simp [EClass.addAlias, EClass.addToMap, h, hn, hs, withRepr]
-  · intro h hn e he
-    simp [EClass.addAlias, EClass.addToMap, h, hn, he, withRepr]
-
 /-- The scan of the bases in `_add_member_`: `enum.property` stops it at once, with type `enum`. Short of one, a redirect
 is made exactly when a descriptor is there; a plain attribute does not make one, but it takes over the type and the class,
 as the last one seen, and a descriptor leaves what is there. -/
@@ -863,34 +834,57 @@ theorem orderCheck_proven : OrderCheck := by
 
 /-! ### `Flag` operators -/
 
+/-- `f"{m}"` for the member whose value is `None`, as the `TypeError`s of :1622, :1633, :1644 and :1650 build it: the
+class's own `__format__` decides if it has one; else `Enum.__format__` runs `str()`, so the class's own `__str__` decides
+if it has one; else `Flag.__str__` returns. Each outcome counts: an exception of the hook that decides goes out, and a
+string it returns leaves the `TypeError`. -/
+def NoneFormatted (c : FlagCls) (r : Py FlagVal) (cls : String) : Prop :=
+  (∀ h, c.ownFormat = some h → ((∃ s, h = .ok s) → r.raises cls) ∧ (∀ e, h = .error e → r = .error e)) ∧
+  (∀ h, c.ownFormat = none → c.ownStr = some h → ((∃ s, h = .ok s) → r.raises cls) ∧ (∀ e, h = .error e → r = .error e)) ∧
+  (c.ownFormat = none → c.ownStr = none → r.raises cls)
+
+theorem noneFormatted (c : FlagCls) (e0 : PyExc) : NoneFormatted c (withRepr c.fmtNone e0) e0.className := by
+  refine ⟨fun h hf => ⟨fun ⟨s, hs⟩ => ⟨e0, by simp [FlagCls.fmtNone, hf, hs, withRepr], rfl⟩,
+      fun e he => by simp [FlagCls.fmtNone, hf, he, withRepr]⟩,
+    fun h hf hs' => ⟨fun ⟨s, hs⟩ => ⟨e0, by simp [FlagCls.fmtNone, hf, hs', hs, withRepr], rfl⟩,
+      fun e he => by simp [FlagCls.fmtNone, hf, hs', he, withRepr]⟩,
+    fun hf hs => ⟨e0, by simp [FlagCls.fmtNone, hf, hs, withRepr], rfl⟩⟩
+
 /-- The operators of `Flag` through `_get_value`, each path. An object of another class is `NotImplemented`, so that
-Python tries the other operand; an `int` works on an `IntFlag` only; a `None` value is the `TypeError`; otherwise the
-class is called on the bit operation. `in` raises `TypeError` for anything but a member, and for a member is the subset
-test. `__bool__` is the value. `__invert__` keeps its result: with a cached value it does not compute. -/
+Python tries the other operand; an `int` works on an `IntFlag` only; a `None` value, of `self` or of the other member,
+is the `TypeError`, whose f-string runs the class's `__format__` or `__str__` on that member first (`NoneFormatted`);
+otherwise the class is called on the bit operation. `in` raises `TypeError` for anything but a member, and for a member
+is the subset test. `__bool__` is the value. `__invert__` of a `None` value is the `TypeError` of :1650, formatted the same
+way, and `__invert__` keeps its result: with a cached value it does not compute. -/
 def FlagOperands : Prop :=
-  ∀ (c : FlagCls) (op : Nat → Nat → Nat) (m : Bool) (self o : Nat) (v : Int) (r x : FlagVal),
+  ∀ (c : FlagCls) (op : Nat → Nat → Nat) (m : Bool) (self o : Nat) (v : Int) (r x : FlagVal) (y : Option Nat),
     flagBin c m op (some self) .other = none ∧
     flagBin c false op (some self) (.mixin v) = none ∧
     flagBin c true op (some self) (.mixin v) = some (c.call (twos op self v)) ∧
     flagBin c m op (some self) (.same (some o)) = some (c.call (twos op self o)) ∧
-    (∃ e, flagBin c m op none (.same (some o)) = some (.error e) ∧ e.className = "TypeError") ∧
-    (∃ e, flagBin c m op (some self) (.same none) = some (.error e) ∧ e.className = "TypeError") ∧
+    (∃ q, flagBin c m op none (.same y) = some q ∧ NoneFormatted c q "TypeError") ∧
+    (∃ q, flagBin c m op (some self) (.same none) = some q ∧ NoneFormatted c q "TypeError") ∧
     (flagIn self .other).raises "TypeError" ∧ (flagIn self (.mixin v)).raises "TypeError" ∧
     flagIn self (.same (some o)) = .ok ((o &&& self) == o) ∧
     (flagBool self = false ↔ self = 0) ∧
     flagInvert c (some x) (some self) = .ok (x, some x) ∧
-    (flagInvert c none none).raises "TypeError" ∧
+    NoneFormatted c ((flagInvert c none none).map Prod.fst) "TypeError" ∧
     (c.invert self = .ok r → flagInvert c none (some self) = .ok (r, some r))
 
 theorem flagOperands_proven : FlagOperands := by
-  intro c op m self o v r x
-  refine ⟨?_, rfl, rfl, rfl, ⟨.typeError "~cannot be combined with other flags", rfl, rfl⟩,
-    ⟨.typeError "~cannot be combined with other flags", rfl, rfl⟩,
+  intro c op m self o v r x y
+  refine ⟨?_, rfl, rfl, rfl, ?_, ⟨_, rfl, noneFormatted c (.typeError "~cannot be combined with other flags")⟩,
     ⟨.typeError "~unsupported operand type(s) for 'in'", rfl, rfl⟩,
-    ⟨.typeError "~unsupported operand type(s) for 'in'", rfl, rfl⟩, rfl, ?_, rfl,
-    ⟨.typeError "~cannot be inverted", rfl, rfl⟩, ?_⟩
+    ⟨.typeError "~unsupported operand type(s) for 'in'", rfl, rfl⟩, rfl, ?_, rfl, ?_, ?_⟩
   · simp [flagBin, getValue]
+  · cases y <;> exact ⟨_, rfl, noneFormatted c (.typeError "~cannot be combined with other flags")⟩
   · simp [flagBool]
+  · have h := noneFormatted c (.typeError "~cannot be inverted")
+    have e : (flagInvert c none none).map Prod.fst = withRepr c.fmtNone (.typeError "~cannot be inverted") := by
+      simp only [flagInvert, withRepr]
+      split <;> rfl
+    rw [e]
+    exact h
   · intro h; simp [flagInvert, h]
 
 /-- `Flag._generate_next_value_`: the first value is `start`; after that the next power of two above every value so far,
@@ -1045,16 +1039,38 @@ private theorem twos_nat (op : Nat → Nat → Nat) (a b : Nat) (w : Nat)
   have : ¬ ((op a b : Nat) : Int) * 2 ≥ ((2 ^ w : Nat) : Int) := by omega
   rw [if_neg this]
 
-/-- `|`, `&` and `^` of two members run the bit operation on the two values, through the two's complement of the mirror,
-and give what the operators on the values give: `self.__class__(value | other_value)`. The three methods are told apart
-here by the operation, and `FlagOpsCommute` holds of them. -/
+/-- `|`, `&` and `^`, Lib/enum.py:1615-1646, every path. Another object is `NotImplemented` (:1617-1618), and an `int`
+is one on a `Flag` that is not an `IntFlag`. A member whose `_value_` is `None`, `self` first and then `other` (:1620-1622),
+is the `TypeError` built with the f-string of :1622, :1633 and :1644, which runs the class's own `__format__`, else its own
+`__str__` (through `Enum.__format__`), else `Flag.__str__`, on that member first (`NoneFormatted`): with
+`class FN(Flag): A = None; B = 1` and a `__str__` raising `LookupError`, `FN.A | FN.B` and `FN.B ^ FN.A` raise
+`LookupError` on 3.15.2. Two members give the class called on the bit operation of the values, through the two's
+complement of the mirror: `self.__class__(value | other_value)`, the `int` of an `IntFlag` too. The three methods are
+told apart here by the operation, and `FlagOpsCommute` holds of them. -/
 def FlagBinOnMembers : Prop :=
-  ∀ (c : FlagCls) (m : Bool) (a b : Nat),
+  (∀ (c : FlagCls) (m : Bool) (a b : Nat),
     flagBin c m (· ||| ·) (some a) (.same (some b)) = some (c.orOp a b) ∧
     flagBin c m (· &&& ·) (some a) (.same (some b)) = some (c.andOp a b) ∧
-    flagBin c m (· ^^^ ·) (some a) (.same (some b)) = some (c.xorOp a b)
+    flagBin c m (· ^^^ ·) (some a) (.same (some b)) = some (c.xorOp a b)) ∧
+  (∀ (c : FlagCls) (m : Bool) (op : Nat → Nat → Nat), op = (· ||| ·) ∨ op = (· &&& ·) ∨ op = (· ^^^ ·) →
+    ∀ (self : Option Nat) (y : Option Nat) (v : Int) (a : Nat),
+      flagBin c m op self .other = none ∧
+      flagBin c false op self (.mixin v) = none ∧
+      flagBin c true op (some a) (.mixin v) = some (c.call (twos op a v)) ∧
+      (∃ q, flagBin c m op none (.same y) = some q ∧ NoneFormatted c q "TypeError") ∧
+      (∃ q, flagBin c m op (some a) (.same none) = some q ∧ NoneFormatted c q "TypeError")) ∧
+  flagBin { name := "FN", members := [("B", 1)], boundary := .strict, ownStr := some (.error (.named "LookupError" "")) }
+    false (· ||| ·) none (.same (some 1)) = some (.error (.named "LookupError" "")) ∧
+  flagBin { name := "FN", members := [("B", 1)], boundary := .strict, ownStr := some (.error (.named "LookupError" "")) }
+    false (· ^^^ ·) (some 1) (.same none) = some (.error (.named "LookupError" ""))
 
 theorem flagBinOnMembers_proven : FlagBinOnMembers := by
+  refine ⟨?_, fun c m op _ self y v a => ⟨?_, ?_, rfl, ?_,
+    ⟨_, rfl, noneFormatted c (.typeError "~cannot be combined with other flags")⟩⟩, rfl, rfl⟩
+  rotate_left
+  · cases self <;> rfl
+  · cases self <;> rfl
+  · cases self <;> cases y <;> exact ⟨_, rfl, noneFormatted c (.typeError "~cannot be combined with other flags")⟩
   intro c m a b
   have hw : ∀ w, w = bitLength ((a : Int)).natAbs + bitLength ((b : Int)).natAbs + 2 →
       a < 2 ^ (w - 1) ∧ b < 2 ^ (w - 1) := by

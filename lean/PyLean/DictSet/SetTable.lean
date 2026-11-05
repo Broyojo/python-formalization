@@ -18,29 +18,33 @@ variable {K : Type}
 section Add
 variable [DecidableEq K] {P : Proto K (SetObj K)} {hf : K → Int} {eqv : K → K → Bool}
 
-theorem addStep_null (fs : Option Nat) (key : K) (slot : Nat) (hash : Int) (hn : so.slot slot = .null) :
+theorem addStep_null (fs : Option Nat) (key : K) (slot : Nat) (hash : Int)
+    (hb : slot < so.table.length) (hn : so.slot slot = .null) :
     addStep P key hash slot so.mask fs so = (.ok (.inl (.unused slot fs so.mask)), so) := by
-  simp [addStep, M.bind_run, M.get_run, hn]
+  simp [addStep, M.bind_run, M.get_run, SetObj.mem_lt so hb, hn]
 
 theorem addStep_dummy (fs : Option Nat) (key : K) (slot : Nat) (hash : Int) (hn : so.slot slot = .dummy) :
     addStep P key hash slot so.mask fs so = (.ok (.inr (so.mask, some slot)), so) := by
-  simp [addStep, M.bind_run, M.get_run, hn]
+  have hm : so.mem slot = .dummy := (SetObj.mem_of_ne_null so (by rw [hn]; exact nofun)).trans hn
+  simp [addStep, M.bind_run, M.get_run, hm]
 
 theorem addStep_match (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fs : Option Nat) (key : K)
     (slot : Nat) (k : K) (h : Int) (hs : so.slot slot = .active k h) (heq : eqv k key = true) :
     addStep P key (hf key) slot so.mask fs so = (.ok (.inl .active), so) := by
   have hh : h = hf key := (w.hashes slot k h hs).trans (H.hash_cons _ _ heq)
   subst hh
+  have hm := SetObj.mem_active so hs
   by_cases h1 : k = key
-  · simp [addStep, M.bind_run, M.get_run, hs, h1]
+  · simp [addStep, M.bind_run, M.get_run, hm, h1]
   · by_cases h2 : (P.isStr k = true ∧ P.isStr key = true) ∧ P.strEq k key = true
-    · simp [addStep, M.bind_run, M.get_run, hs, h1, h2]
-    · simp [addStep, M.bind_run, M.get_run, hs, h1, h2, H.eq_ok, heq]
+    · simp [addStep, M.bind_run, M.get_run, hm, h1, h2]
+    · simp [addStep, M.bind_run, M.get_run, hm, h1, h2, H.eq_ok, heq]
 
 theorem addStep_pass (H : HonestSet P hf eqv) (fs : Option Nat) (key : K)
     (slot : Nat) (k : K) (h : Int) (hs : so.slot slot = .active k h) (hne : eqv k key = false) :
     addStep P key (hf key) slot so.mask fs so = (.ok (.inr (so.mask, fs)), so) := by
   have hc := setChanged_same so slot k h hs
+  have hm := SetObj.mem_active so hs
   by_cases hh : h = hf key
   · have h1 : k ≠ key := by
       intro he
@@ -50,8 +54,8 @@ theorem addStep_pass (H : HonestSet P hf eqv) (fs : Option Nat) (key : K)
       rintro ⟨⟨h3, h4⟩, h5⟩
       rw [H.str_eq _ _ h3 h4, hne] at h5
       simp at h5
-    simp [addStep, M.bind_run, M.get_run, hs, hh, h1, h2, H.eq_ok, hne, hc]
-  · simp [addStep, M.bind_run, M.get_run, hs, hh]
+    simp [addStep, M.bind_run, M.get_run, hm, hh, h1, h2, H.eq_ok, hne, hc]
+  · simp [addStep, M.bind_run, M.get_run, hm, hh]
 
 /-- `freeslot` after a run of a block: what it was, or a dummy this run passed. -/
 def FsGood (so : SetObj K) (slot j : Nat) (fs0 fs : Option Nat) : Prop :=
@@ -59,7 +63,7 @@ def FsGood (so : SetObj K) (slot j : Nat) (fs0 fs : Option Nat) : Prop :=
 
 open Classical in
 theorem addScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
-    ∀ (p slot : Nat) (fs : Option Nat),
+    ∀ (p slot : Nat) (fs : Option Nat), slot + p < so.table.length →
       (∃ j, j ≤ p ∧ SStop so eqv key (slot + j) ∧ (∀ j', j' < j → ¬ SStop so eqv key (slot + j')) ∧
         ((addScan P key (hf key) p slot so.mask fs so = (.ok .active, so) ∧
             ∃ k h, so.slot (slot + j) = .active k h ∧ eqv k key = true) ∨
@@ -82,25 +86,25 @@ theorem addScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
         | false => rfl
         | true => exact absurd (Or.inr ⟨k, h, hc, hq⟩) hs
       exact ⟨fs, Or.inl rfl, addStep_pass H fs key slot k h hc hne⟩
-  have hstop : ∀ (p slot : Nat) (fs : Option Nat), SStop so eqv key slot →
+  have hstop : ∀ (p slot : Nat) (fs : Option Nat), slot < so.table.length → SStop so eqv key slot →
       (addScan P key (hf key) p slot so.mask fs so = (.ok .active, so) ∧
         ∃ k h, so.slot (slot + 0) = .active k h ∧ eqv k key = true) ∨
       (so.slot (slot + 0) = .null ∧ ∃ fs', FsGood so slot 0 fs fs' ∧
         addScan P key (hf key) p slot so.mask fs so = (.ok (.unused (slot + 0) fs' so.mask), so)) := by
-    intro p slot fs hs
+    intro p slot fs hb hs
     rcases hs with hn | ⟨k, h, hc, heq⟩
     · right
       refine ⟨hn, fs, Or.inl rfl, ?_⟩
-      cases p <;> simp [addScan, M.bind_run, addStep_null fs key slot _ hn]
+      cases p <;> simp [addScan, M.bind_run, addStep_null fs key slot _ hb hn]
     · left
       refine ⟨?_, k, h, hc, heq⟩
       cases p <;> simp [addScan, M.bind_run, addStep_match H w fs key slot k h hc heq]
   intro p
   induction p with
   | zero =>
-    intro slot fs
+    intro slot fs hb
     by_cases hs : SStop so eqv key slot
-    · exact Or.inl ⟨0, by omega, hs, fun j' h => by omega, hstop 0 slot fs hs⟩
+    · exact Or.inl ⟨0, by omega, hs, fun j' h => by omega, hstop 0 slot fs (by omega) hs⟩
     · right
       obtain ⟨fs1, h1, h2⟩ := hstep slot fs hs
       refine ⟨fun j h => ?_, fs1, h1, ?_⟩
@@ -109,9 +113,9 @@ theorem addScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
         exact hs
       · simp [addScan, M.bind_run, h2]
   | succ p ih =>
-    intro slot fs
+    intro slot fs hb
     by_cases hs : SStop so eqv key slot
-    · exact Or.inl ⟨0, by omega, hs, fun j' h => by omega, hstop (p + 1) slot fs hs⟩
+    · exact Or.inl ⟨0, by omega, hs, fun j' h => by omega, hstop (p + 1) slot fs (by omega) hs⟩
     · obtain ⟨fs1, h1, h2⟩ := hstep slot fs hs
       have hrun : addScan P key (hf key) (p + 1) slot so.mask fs so =
           addScan P key (hf key) p (slot + 1) so.mask fs1 so := by
@@ -127,7 +131,7 @@ theorem addScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
           · rw [hshift]
           · rw [← hshift]
             exact c
-      rcases ih (slot + 1) fs1 with ⟨j, a, b, c, d⟩ | ⟨a, fs', b, c⟩
+      rcases ih (slot + 1) fs1 (by omega) with ⟨j, a, b, c, d⟩ | ⟨a, fs', b, c⟩
       · left
         refine ⟨j + 1, by omega, by rw [← hshift]; exact b, ?_, ?_⟩
         · intro j' hj'
@@ -183,8 +187,13 @@ theorem addOuter_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) (
     omega
   | succ fuel ih =>
     intro t fs hex
+    have hb : spos so.mask u t + linearProbes (spos so.mask u t) so.mask < so.table.length := by
+      have h1 := w.spos_lt u t
+      have h2 := w.len
+      simp only [linearProbes]
+      split <;> omega
     rcases addScan_walk (P := P) H w key (linearProbes (spos so.mask u t) so.mask)
-      (spos so.mask u t) fs with ⟨j, h1, h2, h3, h4⟩ | ⟨h1, fs1, h2, h3⟩
+      (spos so.mask u t) fs hb with ⟨j, h1, h2, h3, h4⟩ | ⟨h1, fs1, h2, h3⟩
     · refine ⟨t, j, by omega, by omega, h1, h2, fun t'' a b => by omega, h3, ?_⟩
       rcases h4 with ⟨a, b⟩ | ⟨a, fs', b, c⟩
       · left

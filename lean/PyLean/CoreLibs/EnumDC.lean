@@ -284,7 +284,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-add-alias"
     pyFile := "Lib/enum.py"
     pyFns := ["Enum._add_alias_", "EnumType._add_member_", "EnumType.__len__"]
-    statement := "_add_alias_ adds a new name, repeats nothing, and is NameError for a name of another member; len does not change."
+    statement := "_add_alias_ and _add_member_ add a new name, repeat nothing, and for a name of another member run %r of it (the class's own __repr__, else the value's repr), whose exception goes out, else NameError; len does not change."
     source := "docs of _add_alias_"
     status := .proven
     prop := ``AddAlias
@@ -305,7 +305,7 @@ def entries : List Entry := [
     status := .proven
     prop := ``ValueAliasHashable
     thm := some ``valueAliasHashable_proven
-    notes := "On the EV model of EnumClass.lean, whose values cannot raise; the function is covered by the generic mirror of EnumObj.lean." },
+    notes := "On the EV model of EnumClass.lean, whose values cannot raise and whose EClass.addValueAlias runs no repr; with a repr raising TypeError it is false (corelibs-enum-value-alias-linked-raises); the function is covered by the generic mirror of EnumObj.lean." },
   { id := "corelibs-enum-value-alias-binds"
     pyFile := "Lib/enum.py"
     pyFns := []
@@ -315,6 +315,15 @@ def entries : List Entry := [
     prop := ``ValueAliasBinds
     thm := some ``valueAliasBinds_proven
     notes := "On the EV model of EnumClass.lean, whose values cannot raise; the function is covered by the generic mirror of EnumObj.lean." },
+  { id := "corelibs-enum-value-alias-linked-raises"
+    pyFile := "Lib/enum.py"
+    pyFns := ["Enum._add_value_alias_"]
+    statement := "A value the map already links with another member is never taken silently: _add_value_alias_ raises."
+    source := "docs of _add_value_alias_"
+    status := .refuted
+    prop := ``ValueAliasLinkedRaises
+    thm := some ``valueAliasLinkedRaises_refuted
+    bug := some "corelibs-enum-value-alias-repr-typeerror" },
   { id := "corelibs-enum-value-alias-exclusive"
     pyFile := "Lib/enum.py"
     pyFns := ["Enum._add_value_alias_"]
@@ -415,7 +424,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-flag-operands"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag._get_value", "Flag.__contains__", "Flag.__invert__"]
-    statement := "The operators through _get_value: NotImplemented, int on IntFlag only, None, the class call, in, and the cache of ~."
+    statement := "The operators through _get_value: NotImplemented, int on IntFlag only, a None value formatted by the class's __format__ or __str__ before its TypeError, the class call, in, and the cache of ~."
     source := "Lib/enum.py:1571-1657"
     status := .proven
     prop := ``FlagOperands
@@ -423,7 +432,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-flag-bin"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag.__or__", "Flag.__and__", "Flag.__xor__"]
-    statement := "|, & and ^ of two members are the class called on the bit operation of the values."
+    statement := "|, & and ^: NotImplemented for another object, a None value formatted by the class's __format__, else __str__, before its TypeError, and two members the class called on the bit operation of the values."
     source := "Lib/enum.py:1615-1646"
     status := .proven
     prop := ``FlagBinOnMembers
@@ -514,7 +523,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-conform"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag._missing_"]
-    statement := "Under CONFORM, F(v) for an int v >= 0 succeeds with the value v & _flag_mask_."
+    statement := "Under CONFORM, F(v) for an int v >= 0 has the value v & _flag_mask_, named by the name loop and the class's _numeric_repr_; with one that returns it succeeds."
     source := "FlagBoundary docs"
     status := .proven
     prop := ``ConformKeepsMask
@@ -604,7 +613,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-value-alias-paths"
     pyFile := "Lib/enum.py"
     pyFns := ["Enum._add_value_alias_"]
-    statement := "Every path of _add_value_alias_ for every hash and ==: bound to another member is ValueError, to self nothing, new is bound; after TypeError the member search, whose hit on another member raises that TypeError."
+    statement := "Every path of _add_value_alias_ for every hash, == and repr: bound to another member is ValueError after the value's repr and the member's (the class's own __repr__, else the value's), to self nothing, new is bound; a TypeError from the lookup or either repr runs the member search, whose hit on another member raises that TypeError and whose miss binds."
     source := "docs of _add_value_alias_"
     status := .proven
     prop := ``ValueAliasPaths
@@ -685,7 +694,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-missing-boundaries"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag._missing_"]
-    statement := "Flag._missing_ on an out-of-range int: STRICT raises ValueError, EJECT gives back the int, and KEEP keeps every bit of a value >= 0 and wraps a negative one."
+    statement := "Flag._missing_ on an out-of-range int: STRICT raises ValueError, EJECT gives back the int, and KEEP keeps every bit of a value >= 0 and wraps a negative one, named by the name loop (no exception with a _numeric_repr_ that returns)."
     source := "FlagBoundary docs"
     status := .proven
     prop := ``MissingBoundaries
@@ -693,7 +702,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-missing-in-range"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag._missing_"]
-    statement := "Flag._missing_ on an in-range int >= 0 keeps the value and takes the name loop's name; the loop's only exception is the STRICT no-members ValueError of :1557, and F(3) is (3, 'A|B')."
+    statement := "Flag._missing_ on an in-range int >= 0 keeps the value and takes the name loop's name; the loop raises only the STRICT no-members ValueError of :1557 and what _numeric_repr_ raises; with hex F(9) is (9, 'A|0x8')."
     source := "FlagBoundary docs; the implementation"
     status := .proven
     prop := ``MissingInRange
@@ -717,7 +726,7 @@ def entries : List Entry := [
   { id := "corelibs-enum-name-loop"
     pyFile := "Lib/enum.py"
     pyFns := ["Flag._missing_"]
-    statement := "The name loop collects the members of member_value and, with alias bits, every canonical member inside member_value | aliases, and nothing else; F(7) of A = 1, X = 6 is (7, 'A|X')."
+    statement := "The name loop collects the members of member_value and, with alias bits, every canonical member inside member_value | aliases, and nothing else, and names unknown bits with any _numeric_repr_; F(7) of A = 1, X = 6 is (7, 'A|X')."
     source := "Lib/enum.py:1541-1560"
     status := .proven
     prop := ``NameLoop
