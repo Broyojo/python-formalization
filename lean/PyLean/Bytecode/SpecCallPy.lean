@@ -129,7 +129,14 @@ theorem kr_tupleItems (v : Val) : KeepsRec (tupleItems v) := by
 
 theorem kr_mkDict : KeepsRec mkDict := kr_bind kr_freshVersion fun _ => kr_alloc _
 
-theorem kr_mkTuple (items : List Val) : KeepsRec (mkTuple items) := kr_alloc _
+theorem kr_mkTuple (items : List Val) : KeepsRec (mkTuple items) := by
+  intro rt a rt' h
+  unfold mkTuple at h
+  cases he : items.isEmpty
+  · simp only [he, Bool.false_eq_true, ↓reduceIte] at h
+    exact kr_alloc _ rt a rt' h
+  · simp only [he, ↓reduceIte] at h
+    split at h <;> cases h <;> rfl
 
 theorem kr_dictFind_go (name : String) (d : DictObj) (h : Int) :
     ∀ n i, KeepsRec (dictFind.go (strKeyEq name) d h n i) := by

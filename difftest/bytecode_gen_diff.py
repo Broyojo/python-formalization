@@ -118,7 +118,7 @@ def rop(op, target):
 
 class ReInit(Exception):
     """Its constructor, run by PyErr_NormalizeException when the class is thrown, calls next() on
-    the top object: Python code inside gen_set_exception (Objects/genobject.c:566)."""
+    the top object: Python code inside gen_set_exception (Objects/genobject.c:564)."""
 
     def __init__(self, *a):
         t = C.top
