@@ -302,7 +302,7 @@ theorem vonmisesF64_proven : VonmisesF64 := by
 /-! ### `gammavariate`, Lib/random.py:667-734 -/
 
 /-- `gammavariate(alpha, beta)`: the `ValueError` before any draw when `alpha <= 0.0` or
-`beta <= 0.0` (:687-688); for `alpha == 1.0`, `-log(1.0 - random()) * beta` (:713-716); for
+`beta <= 0.0` (:687-688); for `alpha == 1.0`, `-log(1.0 - random()) * beta` (:713-715); for
 `alpha > 1.0`, `beta` times the result of Cheng's loop with `ainv = sqrt(2.0 * alpha - 1.0)`,
 `bbb = alpha - LOG4`, `ccc = alpha + ainv` (:690-711); otherwise `beta` times the result of
 the GS loop (:718-734). The rounds of both loops are pinned in `GammaLoopsF64`. -/
@@ -446,9 +446,9 @@ theorem gammaLoopsF64_proven : GammaLoopsF64 := by
 
 /-- `betavariate(alpha, beta)` is `y / (y + gammavariate(beta, 1.0))` with
 `y = gammavariate(alpha, 1.0)` drawn first, and `0.0` without the second call when `y`
-is zero (:762-766); `paretovariate(alpha)` is `(1.0 - random()) ** (-1.0 / alpha)`
-(:771-773); `weibullvariate(alpha, beta)` is
-`alpha * (-log(1.0 - random())) ** (1.0 / beta)` (:782-784). -/
+is zero (:763-766); `paretovariate(alpha)` is `(1.0 - random()) ** (-1.0 / alpha)`
+(:772-773); `weibullvariate(alpha, beta)` is
+`alpha * (-log(1.0 - random())) ** (1.0 / beta)` (:783-784). -/
 def BetaParetoWeibullF64 : Prop :=
   ∀ [RandLibm] (σ : Type) (g : Gen σ F64),
     (∀ (fuel : Nat) (alpha beta : F64) (s : σ),
@@ -501,9 +501,9 @@ theorem betaParetoWeibullF64_proven : BetaParetoWeibullF64 := by
 /-! ### `binomialvariate`, Lib/random.py:789-890 -/
 
 /-- `binomialvariate(n, p)` for `n >= 0` and `0.0 < p < 1.0`: one draw `random() < p` for
-`n == 1` (:829-830); `n - binomialvariate(n, 1.0 - p)` for `p > 0.5` (:832-833); for
+`n == 1` (:824-825); `n - binomialvariate(n, 1.0 - p)` for `p > 0.5` (:828-829); for
 `n * p < 10.0` the geometric (BG) loop with `c = log2(1.0 - p)`, returning `0` at once when
-`c` is zero (:835-846); otherwise, past the `assert`, the BTRS loop with
+`c` is zero (:831-846); otherwise, past the `assert`, the BTRS loop with
 `spq = sqrt(n * p * (1.0 - p))`, `b = 1.15 + 2.53 * spq`, `a = -0.0873 + 0.0248 * b + 0.01 * p`,
 `c = n * p + 0.5` and `vr = 0.92 - 4.2 / b` (:850-857). The rounds are pinned in
 `BinomialLoopsF64`. -/
@@ -566,7 +566,7 @@ theorem binomialF64_proven : BinomialF64 := by
       pysimp
       cases pyDiv 4.2 (1.15 + 2.53 * spq) <;> rfl
 
-/-- One round of each `binomialvariate` loop. BG (:840-846): draw `r`; `y += floor(log2(r) / c) + 1`
+/-- One round of each `binomialvariate` loop. BG (:838-846): draw `r`; `y += floor(log2(r) / c) + 1`
 unless that raises `ValueError`, which starts the round again with `x` and `y` unchanged;
 return `x` once `y > n`. BTRS (:859-890): draw `u0`, `u = u0 - 0.5`, `us = 0.5 - fabs(u)`,
 `k = floor((2.0 * a / us + b) * u + c)`, a `ZeroDivisionError` or `k` outside `[0, n]`

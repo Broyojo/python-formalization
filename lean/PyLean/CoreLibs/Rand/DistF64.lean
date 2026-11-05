@@ -119,7 +119,7 @@ theorem gammavariate_nan_f64 [RandLibm] (hexp : ExpNaN) {σ : Type} (g : Gen σ 
 /-- Every `gammavariate(alpha, beta)` call either raises or leaves its rejection loop
 for some sequence of `random()` values, over binary64 with any C library that has
 `exp(NaN) = NaN`. False: `alpha = nan` passes `alpha <= 0.0 or beta <= 0.0`
-(Lib/random.py:687), fails `alpha > 1.0` and `alpha == 1.0` (:690, :713), and in the
+(Lib/random.py:687), fails `alpha > 1.0` and `alpha == 1.0` (:691, :713), and in the
 `alpha < 1.0` loop (:720-733) `p` is NaN, so `p > 1.0` and `u1 <= _exp(-x)` are both
 false for every draw (`gammavariate_nan_f64`). -/
 def GammaExitsForSomeDraws : Prop :=
@@ -134,8 +134,8 @@ theorem gammaExitsForSomeDraws_refuted : ¬ GammaExitsForSomeDraws := by
   exact hne (gammavariate_nan_f64 annexWitness_expNaN g _ _ qnan_isNaN le_one_zero fuel s)
 
 /-- `betavariate(nan, beta)` hangs in its first `gammavariate(alpha, 1.0)` call
-(Lib/random.py:762), and `betavariate(alpha, nan)` with `alpha > 0` hangs in the
-second one (:764) whenever the first returns a nonzero value. -/
+(Lib/random.py:763), and `betavariate(alpha, nan)` with `alpha > 0` hangs in the
+second one (:765) whenever the first returns a nonzero value. -/
 theorem betavariate_nan_f64 [RandLibm] (hexp : ExpNaN) {σ : Type} (g : Gen σ F64)
     (alpha beta : F64) (ha : alpha.isNaN = true) (fuel : Nat) (s : σ) :
     (betavariate g fuel alpha beta s).1 = .error .modelFuel := by
