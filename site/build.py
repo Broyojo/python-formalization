@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / "site" / "template.html"
 OUT = ROOT / "docs" / "index.html"
 AREA_ORDER = ["Python", "Objects", "Modules", "Parser", "Grammar", "Lib"]
-AREA_NAMES = {"Grammar": "Grammar rules", "Lib": "Standard library (Python)", "Modules": "C extension modules",
-              "Objects": "Built-in types", "Parser": "Parser and tokenizer", "Python": "Interpreter core"}
+AREA_NAMES = {"Grammar": "Grammar rules", "Lib": "Standard library", "Modules": "C modules",
+              "Objects": "Built-in types", "Parser": "Parser", "Python": "Interpreter core"}
 
 
 def rows(path):
@@ -56,10 +56,10 @@ def registry():
 
 def bugs():
     kind = collections.Counter()
-    groups = [("twin", "C and pure-Python twins disagree"), ("sibling", "C and pure-Python twins disagree"),
-              ("memory-safety", "Memory safety"), ("crash", "Crash or assertion failure"),
-              ("wrong-result", "Wrong result"), ("wrong-exception", "Wrong exception or message"),
-              ("doc", "Differs from the documentation"), ("missing-validation", "Missing validation"),
+    groups = [("twin", "C and Python versions disagree"), ("sibling", "C and Python versions disagree"),
+              ("memory-safety", "Memory corruption"), ("crash", "Crash"),
+              ("wrong-result", "Wrong result"), ("wrong-exception", "Wrong error or message"),
+              ("doc", "Doesn't match the docs"), ("missing-validation", "Missing input check"),
               ("logic", "Wrong result")]
     total = 0
     for p in glob.glob(str(ROOT / "bugs/*.yaml")):
@@ -120,6 +120,64 @@ def traj_svg(t):
             f'<b>{last[0]}/{last[1]}</b> · {n} reviews</span></figcaption></figure>')
 
 
+KEYWORDS = {
+    "c": {"static", "if", "else", "return", "const", "struct", "while", "for"},
+    "lean": {"def", "theorem", "if", "then", "else", "let", "fun", "match", "with", "by", "do"},
+    "py": {"for", "in", "class", "def", "return", "pass", "import", "from", "if", "else", "try", "except"},
+}
+TYPES = {"c": {"unsigned", "long", "int", "void", "char"}, "lean": {"Int", "Nat", "Prop", "Bool"},
+         "py": {"Enum"}}
+FUNCS = {"c": {"get_len_of_range"}, "lean": {"getLenOfRange", "uadd", "usub", "toU"},
+         "py": {"range", "pickle", "dumps", "_dumps", "a2b_base32", "_add_value_alias_", "__repr__",
+                "__init_subclass__"}}
+TOKEN = re.compile(r"(&[a-z]+;|&#\d+;)|(#.*$|--.*$)|(b?\"[^\"]*\"|b?'[^']*')|(\b\d+(?:UL)?\b)|([A-Za-z_][A-Za-z_0-9]*)|(∧)",
+                   re.M)
+
+
+def highlight_text(text, lang):
+    def sub(m):
+        ent, com, s, num, word, op = m.groups()
+        if ent:
+            return ent
+        if com:
+            return f'<span class="t-cm">{com}</span>' if lang in ("py", "lean") and (
+                com.startswith("#") if lang == "py" else com.startswith("--")) else com
+        if s:
+            return f'<span class="t-str">{s}</span>' if lang == "py" else s
+        if num:
+            return f'<span class="t-num">{num}</span>'
+        if op:
+            return f'<span class="t-op">{op}</span>'
+        if word in KEYWORDS[lang]:
+            return f'<span class="t-kw">{word}</span>'
+        if word in TYPES[lang]:
+            return f'<span class="t-ty">{word}</span>'
+        if word in FUNCS[lang]:
+            return f'<span class="t-fn">{word}</span>'
+        return word
+    return TOKEN.sub(sub, text)
+
+
+def highlight(page):
+    """Colour tokens inside <pre data-lang="..."> blocks, touching only text between tags."""
+    def block(m):
+        lang, body = m.group(1), m.group(2)
+        parts = re.split(r"(<[^>]+>)", body)
+        inside_cm = False
+        out = []
+        for part in parts:
+            if part.startswith("<"):
+                if 'class="c"' in part or 'class="ln c"' in part:
+                    inside_cm = True
+                elif part.startswith("</span") and inside_cm:
+                    inside_cm = False
+                out.append(part)
+            else:
+                out.append(part if inside_cm else highlight_text(part, lang))
+        return f'<pre data-lang="{lang}">{"".join(out)}</pre>'
+    return re.sub(r'<pre data-lang="(\w+)">(.*?)</pre>', block, page, flags=re.S)
+
+
 def main():
     files = coverage()
     reg = registry()
@@ -146,9 +204,19 @@ def main():
         scope = c["rows"] - c["excluded"]
         share = 100 * c["faithful"] / scope if scope else 0
         area_rows.append(
-            f'<tr><th scope="row">{AREA_NAMES[a]}</th><td class="num">{scope:,}</td>'
-            f'<td class="num">{c["faithful"]:,}</td><td class="meter"><span style="--w:{share:.1f}%"></span>'
-            f'<b>{share:.1f}%</b></td></tr>')
+            f'<tr><td>{AREA_NAMES[a]}</td><td class="r mono">{scope:,}</td>'
+            f'<td class="r mono">{c["faithful"]:,}</td><td class="r mono">{share:.1f}%</td></tr>')
+
+    area_bars = []
+    for a in ["ALL"] + AREA_ORDER:
+        c = tot if a == "ALL" else area[a]
+        scope = c["rows"] - c["excluded"]
+        if not scope:
+            continue
+        f1, f2 = 100 * c["faithful"] / scope, 100 * c["modelled"] / scope
+        area_bars.append(
+            f'<li{" class=\"all\"" if a == "ALL" else ""}><span>{"All of CPython" if a == "ALL" else AREA_NAMES[a]}</span><span class="bar"><i style="width:{f1:.2f}%;background:var(--blue)"></i>'
+            f'<i style="width:{f2:.2f}%;background:var(--blue-2)"></i></span><b>{f1:.0f}%</b></li>')
 
     done = sorted(((c["faithful"], f) for f, c in files.items()
                    if c["faithful"] >= 15 and c["modelled"] == 0), reverse=True)
@@ -171,21 +239,28 @@ def main():
     ncommits = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=ROOT, capture_output=True,
                               text=True).stdout.strip()
 
+    lean_files = sorted((ROOT / "lean" / "PyLean").rglob("*.lean"))
+    lean_text = [f.read_text() for f in lean_files]
+    lean_lines = sum(x.count("\n") for x in lean_text)
+    theorems = sum(len(re.findall(r"^\s*(?:private |protected )?(?:theorem|lemma) ", x, re.M)) for x in lean_text)
+
     values = {
         "PROPS": f'{sum(reg.values()):,}', "PROVEN": f'{reg["proven"]:,}', "REFUTED": f'{reg["refuted"]:,}',
         "OPEN": f'{reg["open"]:,}', "INSCOPE": f"{in_scope:,}", "FAITHFUL": f'{tot["faithful"]:,}',
         "FAITHFULPCT": f'{100 * tot["faithful"] / in_scope:.1f}%', "BUGS": f"{nbugs:,}",
         "TOTALROWS": f'{tot["rows"]:,}', "AREAROWS": "\n".join(area_rows), "DONE": done_items,
         "DONECOUNT": str(len(done)), "KINDS": kind_items, "DATE": date.today().strftime("%-d %B %Y"),
-        "MEMSAFE": str(kinds["Memory safety"]), "TRAJ": trajs, "FUNNEL": funnel_html,
+        "MEMSAFE": str(kinds["Memory corruption"]), "TRAJ": trajs, "FUNNEL": funnel_html,
+        "CRASHY": str(kinds["Memory corruption"] + kinds["Crash"]),
         "STARTED": first_commit, "COMMITS": f"{int(ncommits):,}", "MODELLED": f"{modelled_claimed:,}",
-        "MAPDATA": json.dumps(mapdata, separators=(",", ":")),
+        "LEANLINES": f"{lean_lines:,}", "LEANFILES": f"{len(lean_files):,}", "THEOREMS": f"{theorems:,}", "AREABARS": "".join(area_bars), "MAPDATA": json.dumps(mapdata, separators=(",", ":")),
         "COMMIT": subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
                                  capture_output=True, text=True).stdout.strip(),
     }
     page = TEMPLATE.read_text()
     for k, v in values.items():
         page = page.replace("{{" + k + "}}", v)
+    page = highlight(page)
     missing = re.findall(r"\{\{[A-Z]+\}\}", page)
     if missing:
         raise SystemExit(f"unfilled placeholders: {missing}")
