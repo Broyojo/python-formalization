@@ -1,0 +1,77 @@
+id: corelibs-enum-value-alias-repr-typeerror
+title: "Enum._add_value_alias_ silently accepts a value linked to another member when a repr raises TypeError"
+priority: P4
+kind: logic-error
+module: corelibs
+files: [Lib/enum.py]
+functions: ["Enum._add_value_alias_"]
+summary: |
+  The docs say that _add_value_alias_ raises ValueError if the value is already linked with a different member. The
+  ValueError of Lib/enum.py:1244 is raised inside the try of :1241, and the message runs repr() of the value and of
+  the bound member. If either repr raises TypeError (a __repr__ of the class that returns a non-str, or a value whose
+  __repr__ has a TypeError bug), the except TypeError of :1246, which is meant for unhashable values, catches it. The
+  long search there reads only the members' _value_, so it does not see a link made by an earlier _add_value_alias_.
+  Control then falls through to the binding at :1253-1262. That binding does setdefault, which keeps the old link, and
+  appends the value to _hashable_values_ again, a list on 3.15.2. The call returns None. It raises neither the
+  ValueError nor the TypeError of the repr, and the value stays linked to the first member.
+likelihood: |
+  Low. It needs _add_value_alias_ (new in 3.13, rarely used), a value linked to one member through an earlier
+  _add_value_alias_, a second call for another member, and a repr that raises TypeError. A __repr__ that returns a
+  non-str, or hits a TypeError of its own, is a bug in user code, and the effect is only that this bug and the conflict
+  both go unreported.
+maybe_intended: |
+  Probably not intended: the comment at :1247 says the handler is for an "unhashable value", and here the value is
+  hashable and in the map. But the outcome needs broken user code, so maintainers may judge it not worth a change, or
+  ask for the related corelibs-enum-value-alias-unhashable to be fixed together (same try/except, same docs sentence).
+reproducer: |
+  from enum import Enum
+  class W(Enum):
+      A = 1
+      B = 2
+      def __repr__(self):
+          return 5
+  W.B._add_value_alias_(3)
+  try:
+      r = W.A._add_value_alias_(3)
+      outcome = 'returned %r' % (r,)
+  except Exception as e:
+      outcome = type(e).__name__
+  print(outcome, W(3) is W.B, list(W._hashable_values_))
+  if outcome == 'returned None' and W(3) is W.B:
+      print('REPRODUCED corelibs-enum-value-alias-repr-typeerror')
+expected: |
+  ValueError, as the docs say, or at least the TypeError of the repr.
+observed: |
+  python3 3.15.2: "returned None True [1, 2, 3, 3]", REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): "returned None True [1, 2, 3]", REPRODUCED. On main _hashable_values_ is a set, so the
+  duplicate entry is gone, but the call still returns silently.
+  A value whose __repr__ raises TypeError, V.A._add_value_alias_(RT(3)) after V.B._add_value_alias_(3), returns None
+  on both too.
+promised_by: |
+  Doc/library/enum.rst, Enum._add_value_alias_: "Raises a ValueError if the value is already linked with a different
+  member."
+cause: |
+  Lib/enum.py:1241-1246: the try covers the formatting of the ValueError at :1244, so `except TypeError` (:1246)
+  catches a TypeError from repr() as if it came from hashing an unhashable value. The long search at :1248-1252 only
+  compares the members' _value_, and the fall-through at :1253-1262 re-binds and re-appends.
+possible_fix: |
+  Keep only the lookup in the try, for example `try: bound = cls._value2member_map_.get(value) except TypeError: ...`,
+  and raise the ValueError outside it. That also gives the unhashable case of corelibs-enum-value-alias-unhashable a
+  place to search _unhashable_values_map_.
+duplicates:
+  related: [corelibs-enum-value-alias-unhashable]
+  issues:
+    - {number: 136672, state: closed, relation: "search hit, documentation of _add_alias_ and _add_value_alias_", reason: "docs only, different"}
+  queries: ["gh search issues --repo python/cpython _add_value_alias_",
+            "gh search issues --repo python/cpython _add_value_alias_ TypeError",
+            "gh search issues --repo python/cpython enum add_value_alias repr",
+            "gh search issues --repo python/cpython enum except TypeError already bound",
+            "gh search issues --repo python/cpython _hashable_values_ set",
+            "gh search issues --repo python/cpython enum _hashable_values_",
+            "gh search issues --repo python/cpython enum hashable values",
+            "gh search issues --repo python/cpython enum value alias quadratic",
+            "gh search issues --repo python/cpython Enum contains hashable_values",
+            "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.ValueAliasLinkedRaises
+  theorem: PyLean.CoreLibs.EnumDC.valueAliasLinkedRaises_refuted

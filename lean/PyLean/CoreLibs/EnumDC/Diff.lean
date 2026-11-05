@@ -168,6 +168,7 @@ def getBoolD (j : Json) (key : String) : Bool :=
 def ownReprOf (j : Json) : Option (Name → Py String) :=
   match j.getObjValAs? String "badrepr" with
   | .ok "ok" => some (fun _ => .ok "ok")
+  | .ok "bad" => some (fun _ => .error (.typeError "~C.__repr__() must return a str, not int"))
   | _ => if getBoolD j "badrepr" then some (fun _ => .error (.named "LookupError" "")) else none
 
 def decMissing (c : EClass) (j : Json) : Except String MissingRet := do
@@ -642,6 +643,13 @@ def runEhClass (j : Json) : Except String Json := do
         | .error e => pure (unitJ (.error e))
         | .ok c' =>
           if k == "valias" then pure (okJ (summaryPV c'))
+          else if k == "valias2" then
+            match c'.getItem (← decName (← op.getArrVal? 3)) with
+            | .error e => pure (unitJ (.error e))
+            | .ok m' =>
+              match c'.addValueAlias pvOps id m' v with
+              | .error e => pure (unitJ (.error e))
+              | .ok c'' => pure (okJ (summaryPV c''))
           else pure (encPy nameJ (c'.enumNew pvOps none v false .none))
 
 /-- `verify(*checks)` on a class built from `int` and `str` values, or on `int`, `len` or `42`. `order` is the iteration

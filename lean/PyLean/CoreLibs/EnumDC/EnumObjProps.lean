@@ -787,35 +787,53 @@ theorem addAlias_proven : AddAlias := by
     simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, hv, hs, withRepr]
   · simp [EClassG.addToMap, EClassG.memberRepr, h, hn, hr, hv, he, withRepr]
 
-/-- `Enum._add_value_alias_`, every path, for every `hash` and `==`: a value another member has in the map is the
-`ValueError` of :1244, `'%r is already bound: %r' % (value, member)`, after the `repr` of the value and then of that
-member, either of which can raise instead; the member's `repr` is the class's own `__repr__` if it defines one (its
-exception, or its string and the `ValueError`, whatever the member's value), else the `repr` of the member's `_value_`
-(`Enum.__repr__`, :1289-1291). One this member has is nothing, a new one is bound; a `TypeError` from the lookup runs the
-search over the members' `_value_`, in which a value another member has raises that `TypeError` again (it formats the
-`ValueError` with `map[value]`), one this member has is nothing, and a new one is bound; any other exception goes out.
-Binding is `setdefault` and an append, or with a `TypeError` the unhashable lists under `self.name`. So for
-`class W(Enum): A = RI(1); B = 2; def __repr__(self): return 'ok'`, `W.B._add_value_alias_(1)` is the `ValueError`, and
-without the `__repr__` it is the `KeyError` of `RI.__repr__`, as on 3.15.2. -/
+/-- The class `A = 1, B = 2` whose own `__repr__` returns `5`, after `W.B._add_value_alias_(3)`. -/
+def wBad : EClassG PV :=
+  { memberNames := [['A'], ['B']], memberMap := [(['A'], ['A']), (['B'], ['B'])],
+    values := [(['A'], .int 1), (['B'], .int 2)],
+    value2member := [(.int 1, ['A']), (.int 2, ['B']), (.int 3, ['B'])], hashableValues := [.int 1, .int 2, .int 3],
+    ownRepr := some fun _ => .error (.typeError "W.__repr__() must return a str, not int") }
+
+/-- The same class with `Enum.__repr__`. -/
+def wPlain3 : EClassG PV := { wBad with ownRepr := none }
+
+/-- `Enum._add_value_alias_`, every path, for every `hash`, `==` and `repr`. The `try` of :1241-1245: a value another
+member has in the map is the `ValueError` of :1244 once the `repr` of the value and then of that member return (the
+member's is the class's own `__repr__` if it defines one, whatever the member's value, else the `repr` of its `_value_`);
+one this member has is nothing; a new one is bound. A `TypeError` (or a subclass) from the lookup or from either `repr` is
+caught by the `except TypeError` of :1246, which runs the long search over the members' `_value_`: a member other than
+`self` raises that `TypeError` again (the `ValueError` of :1251 reads and formats the same way), `self` is nothing, and
+no member falls through to the binding. Any other exception goes out. Binding is `setdefault` and an append, or with a
+`TypeError` the unhashable lists under `self.name`. So for `class W(Enum): A = RI(1); B = 2; def __repr__(self): return
+'ok'`, `W.B._add_value_alias_(1)` is the `ValueError`, and without the `__repr__` the `KeyError` of `RI.__repr__`; and
+with a `__repr__` returning `5`, after `W.B._add_value_alias_(3)`, `W.A._add_value_alias_(3)` returns, binding nothing and
+appending `3` to `_hashable_values_` a second time, as on 3.15.2. -/
 def ValueAliasPaths : Prop :=
   (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self : Name) (v : α),
     (∀ m r, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) → c.ownRepr = some r →
       ((∃ s, r m = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
-      (∀ e, r m = .error e → c.addValueAlias o f self v = .error e)) ∧
+      (∀ e, r m = .error e → o.isInst e "TypeError" = true →
+        c.addValueAlias o f self v = c.valueAliasSearch o f self v e) ∧
+      (∀ e, r m = .error e → o.isInst e "TypeError" = false → c.addValueAlias o f self v = .error e)) ∧
     (∀ m x, o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) → c.ownRepr = none →
       c.values.lookup m = some x →
       ((∃ s, o.repr x = .ok s) → (c.addValueAlias o f self v).raises "ValueError") ∧
-      (∀ e, o.repr x = .error e → c.addValueAlias o f self v = .error e)) ∧
+      (∀ e, o.repr x = .error e → o.isInst e "TypeError" = true →
+        c.addValueAlias o f self v = c.valueAliasSearch o f self v e) ∧
+      (∀ e, o.repr x = .error e → o.isInst e "TypeError" = false → c.addValueAlias o f self v = .error e)) ∧
     (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → o.repr v = .error e →
-      c.addValueAlias o f self v = .error e) ∧
+      o.isInst e "TypeError" = true → c.addValueAlias o f self v = c.valueAliasSearch o f self v e) ∧
+    (∀ m e, o.dictGet c.value2member v = .ok (some m) → m ≠ self → o.repr v = .error e →
+      o.isInst e "TypeError" = false → c.addValueAlias o f self v = .error e) ∧
     (o.dictGet c.value2member v = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
     (o.dictGet c.value2member v = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
     (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = true →
-      (∀ m, c.firstMemberEq o v c.memberMap = .ok (some m) → m ≠ self → c.addValueAlias o f self v = .error e) ∧
-      (c.firstMemberEq o v c.memberMap = .ok (some self) → c.addValueAlias o f self v = .ok c) ∧
-      (c.firstMemberEq o v c.memberMap = .ok none → c.addValueAlias o f self v = c.bindValue o f self v) ∧
-      (∀ e', c.firstMemberEq o v c.memberMap = .error e' → c.addValueAlias o f self v = .error e')) ∧
+      c.addValueAlias o f self v = c.valueAliasSearch o f self v e) ∧
     (∀ e, o.dictGet c.value2member v = .error e → o.isInst e "TypeError" = false → c.addValueAlias o f self v = .error e) ∧
+    (∀ e, (∀ m, c.firstMemberEq o v c.memberMap = .ok (some m) → m ≠ self → c.valueAliasSearch o f self v e = .error e) ∧
+      (c.firstMemberEq o v c.memberMap = .ok (some self) → c.valueAliasSearch o f self v e = .ok c) ∧
+      (c.firstMemberEq o v c.memberMap = .ok none → c.valueAliasSearch o f self v e = c.bindValue o f self v) ∧
+      (∀ e', c.firstMemberEq o v c.memberMap = .error e' → c.valueAliasSearch o f self v e = .error e')) ∧
     (∀ n m x r, c.values.lookup m = some x → c.firstMemberEq o v ((n, m) :: r) =
       match o.eq x v with
       | .error e => .error e
@@ -829,26 +847,74 @@ def ValueAliasPaths : Prop :=
     (∀ e, o.setDefault c.value2member v self = .error e → o.isInst e "TypeError" = false →
       c.bindValue o f self v = .error e)) ∧
   (wCls (some fun _ => .ok "ok")).addValueAlias pvOps id ['B'] (.int 1) = .error (.valueError "~is already bound") ∧
-  (wCls none).addValueAlias pvOps id ['B'] (.int 1) = .error (.keyError "'repr'")
+  (wCls none).addValueAlias pvOps id ['B'] (.int 1) = .error (.keyError "'repr'") ∧
+  (wBad.addValueAlias pvOps id ['A'] (.int 3)).map (fun c => (c.value2member, c.hashableValues)) =
+    .ok ([(.int 1, ['A']), (.int 2, ['B']), (.int 3, ['B'])], [.int 1, .int 2, .int 3, .int 3]) ∧
+  wBad.addValueAlias pvOps id ['A'] (.int 2) = .error (.typeError "W.__repr__() must return a str, not int") ∧
+  (wPlain3.addValueAlias pvOps id ['A'] (.rint 3 "TypeError")).map (·.hashableValues) =
+    .ok [.int 1, .int 2, .int 3, .rint 3 "TypeError"] ∧
+  wPlain3.addValueAlias pvOps id ['A'] (.rint 3 "KeyError") = .error (.keyError "'repr'")
 
 theorem valueAliasPaths_proven : ValueAliasPaths := by
-  refine ⟨?_, rfl, rfl⟩
+  refine ⟨?_, rfl, rfl, by decide +kernel, rfl, by decide +kernel, rfl⟩
   intro α o c f self v
   refine ⟨fun m r h hm ⟨s, hs⟩ hr => ⟨fun ⟨s', hs'⟩ =>
-      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hs', withRepr]; rfl, rfl⟩,
-      fun e he => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, he, withRepr]⟩,
+      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hs']; rfl, rfl⟩,
+      fun e he ht => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, he, ht],
+      fun e he ht => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, he, ht]⟩,
     fun m x h hm ⟨s, hs⟩ hr hx => ⟨fun ⟨s', hs'⟩ =>
-      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, hs', withRepr]; rfl, rfl⟩,
-      fun e he => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, he, withRepr]⟩,
-    fun m e h hm he => by simp [EClassG.addValueAlias, h, hm, he], fun h => by
-    simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h], fun e h ht => ⟨fun m hm hne => by
-    simp [EClassG.addValueAlias, h, ht, hm, hne], fun hm => by simp [EClassG.addValueAlias, h, ht, hm], fun hm => by
-    simp [EClassG.addValueAlias, h, ht, hm], fun e' he => by simp [EClassG.addValueAlias, h, ht, he]⟩,
-    fun e h ht => by simp [EClassG.addValueAlias, h, ht], fun n m x r hx => ?_, fun d w h => by
-    simp [EClassG.bindValue, h], fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by
-    simp [EClassG.bindValue, h, ht]⟩
+      ⟨_, by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, hs']; rfl, rfl⟩,
+      fun e he ht => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, he, ht],
+      fun e he ht => by simp [EClassG.addValueAlias, EClassG.memberRepr, h, hm, hs, hr, hx, he, ht]⟩,
+    fun m e h hm he ht => by simp [EClassG.addValueAlias, h, hm, he, ht],
+    fun m e h hm he ht => by simp [EClassG.addValueAlias, h, hm, he, ht],
+    fun h => by simp [EClassG.addValueAlias, h], fun h => by simp [EClassG.addValueAlias, h],
+    fun e h ht => by simp [EClassG.addValueAlias, h, ht], fun e h ht => by simp [EClassG.addValueAlias, h, ht],
+    fun e => ⟨fun m hm hne => by simp [EClassG.valueAliasSearch, hm, hne],
+      fun hm => by simp [EClassG.valueAliasSearch, hm], fun hm => by simp [EClassG.valueAliasSearch, hm],
+      fun e' he => by simp [EClassG.valueAliasSearch, he]⟩,
+    fun n m x r hx => ?_, fun d w h => by simp [EClassG.bindValue, h],
+    fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by simp [EClassG.bindValue, h, ht]⟩
   simp only [EClassG.firstMemberEq, hx]
   try rfl
+
+/-- The clauses of the earlier `ValueAliasPaths`, a `repr` of the bound member or of the value that raises goes out,
+held of a model in which the `try` of :1241 ended before the formatting of :1244: a `TypeError` from either is caught at
+:1246, and with a value linked only by an earlier alias the call returns, as on 3.15.2. -/
+private theorem valueAlias_reprCaught :
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self m : Name) (v : α) (r : Name → Py String)
+        (e : PyExc), o.dictGet c.value2member v = .ok (some m) → m ≠ self → (∃ s, o.repr v = .ok s) →
+        c.ownRepr = some r → r m = .error e → c.addValueAlias o f self v = .error e) ∧
+    ¬ (∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self m : Name) (v : α) (e : PyExc),
+        o.dictGet c.value2member v = .ok (some m) → m ≠ self → o.repr v = .error e →
+        c.addValueAlias o f self v = .error e) := by
+  refine ⟨fun h => ?_, fun h => ?_⟩
+  · have := h PV pvOps wBad id ['A'] ['B'] (.int 3) _ (.typeError "W.__repr__() must return a str, not int")
+      (by decide +kernel) (by decide) ⟨_, rfl⟩ rfl rfl
+    have h2 : (wBad.addValueAlias pvOps id ['A'] (.int 3)).isOk = true := by decide +kernel
+    rw [this] at h2
+    cases h2
+  · have := h PV pvOps wPlain3 id ['A'] ['B'] (.rint 3 "TypeError") (.typeError "repr") (by decide +kernel) (by decide)
+      rfl
+    have h2 : (wPlain3.addValueAlias pvOps id ['A'] (.rint 3 "TypeError")).isOk = true := by decide +kernel
+    rw [this] at h2
+    cases h2
+
+/-- A value already linked with another member is not taken silently: `_add_value_alias_` raises, a `ValueError` by the
+docs ("Raises a ValueError if the value is already linked with a different member"). False for a hashable value whose
+link the map holds: when the `repr` of the value or of the bound member raises `TypeError`, the `except TypeError` of
+:1246, meant for unhashable values, catches it, the long search over `_value_` does not see a link made by an earlier
+`_add_value_alias_`, and the call returns, linking nothing and appending the value to `_hashable_values_` again. -/
+def ValueAliasLinkedRaises : Prop :=
+  ∀ (α : Type) (o : Ops α) (c : EClassG α) (f : Name → Name) (self m : Name) (v : α),
+    o.dictGet c.value2member v = .ok (some m) → m ≠ self → ∃ e, c.addValueAlias o f self v = .error e
+
+theorem valueAliasLinkedRaises_refuted : ¬ValueAliasLinkedRaises := by
+  intro h
+  obtain ⟨e, he⟩ := h PV pvOps wBad id ['A'] ['B'] (.int 3) (by decide +kernel) (by decide)
+  have h2 : (wBad.addValueAlias pvOps id ['A'] (.int 3)).isOk = true := by decide +kernel
+  rw [he] at h2
+  cases h2
 
 /-- A class with members `A` and `B` and the given values, built by the mirror. -/
 def twoG (a b : EV) : EClassG EV :=
