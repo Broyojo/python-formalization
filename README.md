@@ -1,5 +1,7 @@
 # python-formalization
 
+[![Formalizing CPython](docs/og.png)](https://broyojo.com/python-formalization/)
+
 A Lean 4 model of CPython 3.15.2, written by AI agents, tested against the real interpreter, and reviewed function by function. Along the way it found hundreds of bugs in CPython.
 
 **Write-up:** [broyojo.com/python-formalization](https://broyojo.com/python-formalization/)
