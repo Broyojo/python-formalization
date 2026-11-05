@@ -89,5 +89,5 @@ duplicates:
 lean:
   property: PyLean.CoreLibs.Rand.GammaExitsForSomeDraws
   theorem: PyLean.CoreLibs.Rand.gammaExitsForSomeDraws_refuted
-  also_refuted: "VonmisesExitsForSomeDraws, BinomialRejectsNaN"
-  note: "gammaGS_nan and vonmisesLoop_nan hold for every float type satisfying IeeeNaN, which binary64 does; the registered refutations pick the small model NanF because Lean cannot reduce Float."
+  also_refuted: "BetaExitsForSomeDraws, VonmisesExitsForSomeDraws, BinomialRejectsNaN"
+  note: "Over binary64 (F64). gammavariate_nan_f64, betavariate_nan_f64 and vonmisesvariate_nan_f64 hold for every C library with exp(NaN) = NaN (C99 Annex F) and every generator; binomial_nan_f64 needs no libm fact. The refutations instantiate them at one such library (annexWitness)."

@@ -11123,6 +11123,8 @@ def rand_arg(d):
         return rand_idec(d["i"])
     if "b" in d:
         return d["b"]
+    if "fl" in d:
+        return rand_float(d["fl"])
     return rand_obj(d["o"])
 
 
@@ -11378,6 +11380,55 @@ def rand_h_init_subclass(c):
     return {"ok": {"r": {"ok": out}, "fp": rand_fp(rand_mk(c))}}
 
 
+def rand_h_hooks(c):
+    ran = []
+
+    def mixin(name):
+        def hook(cls, **kw):
+            ran.append(name)
+            super(M, cls).__init_subclass__(**kw)
+        M = type(name, (), {"__init_subclass__": classmethod(hook)})
+        return M
+    bases = []
+    for b in c["bases"]:
+        bases.append(rand_random.Random if b == "Random" else mixin(b))
+    kw = {k: 1 for k in c["kwargs"]}
+    try:
+        cls = type("C", tuple(bases), {}, **kw)
+        hooks = []
+        for k in cls.__mro__[1:]:
+            if "__init_subclass__" in k.__dict__:
+                hooks.append("random" if k is rand_random.Random else "object" if k is object else k.__name__)
+        c["hooks"] = hooks
+        res = {"ok": ran}
+    except TypeError as e:
+        res = {"exc": "TypeError", "msg": str(e)}
+    return {"ok": {"r": res, "fp": rand_fp(rand_mk(c))}}
+
+
+def rand_gen_hooks(rng, c):
+    names = [f"M{i}" for i in range(rng.randrange(0, 4))]
+    bases = names + ["Random"]
+    rng.shuffle(bases)
+    c["bases"] = bases
+    c["kwargs"] = rng.choice([[], [], ["flag"], ["a", "b"]])
+    # the hook list is the class's MRO after it; it does not depend on the keywords
+    order = []
+    try:
+        probe = type("C", tuple(rand_random.Random if b == "Random" else type(b, (), {}) for b in bases), {})
+    except TypeError:
+        return None
+    for k in probe.__mro__[1:]:
+        if k is rand_random.Random:
+            order.append("random")
+        elif k is object:
+            order.append("object")
+        elif k.__name__ in names:
+            order.append(k.__name__)
+    c["hooks"] = order
+    return c
+
+
 def rand_h_main(c):
     r = rand_random._inst
     r.seed(rand_idec(c.get("seed", 0)))
@@ -11444,6 +11495,7 @@ rand_handlers = {
     "sys_seed": lambda c: rand_sys(c, lambda sr: sr.seed(1, 2, x=3)),
     "sys_state": lambda c: rand_sys(c, lambda sr: sr.getstate()),
     "init_subclass": rand_h_init_subclass,
+    "init_subclass_hooks": rand_h_hooks,
     "main": rand_h_main,
 }
 
@@ -11456,7 +11508,9 @@ rand_INTS = [0, 1, -1, 2, -2, 3, 7, 8, 31, 32, 33, 63, 64, 65, 255, 256, 1000, 2
              2**32, 2**32 + 1, 2**53 - 1, 2**53, 2**53 + 1, 2**63 - 1, 2**63, -2**63, 2**64 - 1, 2**64, -2**64,
              2**128 + 5, 10**30, -10**30, 10**4300 - 1, 10**4300, -10**4300]
 rand_SMALL_FLOATS = [0.0, -0.0, 1.0, -1.0, 0.5, 2.0, 3.0, 10.0, 1e-3, 0.25, 0.9, 1.5, 100.0, 1e-300, 1e300]
-rand_ALL_FLOATS = rand_SMALL_FLOATS + [float('inf'), float('-inf'), float('nan'), 5e-324, 1.7976931348623157e308]
+rand_ALL_FLOATS = rand_SMALL_FLOATS + [float('inf'), float('-inf'), float('nan'), 5e-324, -5e-324, 1.7976931348623157e308,
+                                       -1.7976931348623157e308, 2.2250738585072014e-308, 2.225073858507201e-308,
+                                       1 - 2**-53, 1 + 2**-52, -1e-310]
 
 
 def rand_seed_val(rng):
@@ -11767,6 +11821,9 @@ def rand_gen_sys(rng, c):
     if fn == "rand.sys_getrandbits":
         c["k"] = rand_intarg(rng, [0, 1, 7, 8, 9, 16, 17, -1, 2**70], ("float", "NoneType", "str"))
         c["k"] = rand_clamp(c["k"], 0, 2**15, 2**70)
+        if rng.random() < 0.15:
+            c["k"] = {"fl": rand_bits(rng.choice([-1.5, -0.0, 0.0, 2.5, 8.0, -1.0, float('inf'), float('-inf'),
+                                                 float('nan'), -5e-324, 5e-324, 1e300, -1e300]))}
     elif fn == "rand.sys_randbytes":
         c["n"] = rand_intarg(rng, [0, 1, 2, 7, 8, -1, 2**70], ("float", "NoneType", "str"))
         c["n"] = rand_clamp(c["n"], 0, 2**15, 2**70)
@@ -11832,7 +11889,7 @@ def rand_gen_main(rng, c):
     elif p < 0.97:
         argv = []
     else:
-        argv = ["--test", "0", rng.choice(["5", "a"])]
+        argv = ["--test", rng.choice(["0", "0", "1", "-1", "-7"]), rng.choice(["5", "a"])]
     c["argv"] = argv
     try:
         with rand_contextlib.redirect_stderr(rand_io.StringIO()):
@@ -11877,6 +11934,8 @@ def rand_gen(rng):
     p = rng.random()
     if p < 0.03:
         return rand_gen_subclass(rng, rand_base(rng, "init_subclass"))
+    if p < 0.045:
+        return rand_gen_hooks(rng, rand_base(rng, "init_subclass_hooks"))
     if p < 0.09:
         c = rand_base(rng, "main")
         c["sub"] = False

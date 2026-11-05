@@ -684,6 +684,10 @@ PROTOS = {}
 
 
 def run_py_frames(x, proto, cb, frames):
+    # The codecs are looked up at import (below), so this measures the interpreter whose
+    # raw-unicode-escape codec is cached, the scope of EncRec.lean. On a fresh interpreter the
+    # first protocol 0 str costs about 9 more frames (encodings.search_function, importlib),
+    # which the model does not have.
     d = frame_depth()
     old = sys.getrecursionlimit()
     # this frame is at depth d: `frames` are left where pickle._dumps is called

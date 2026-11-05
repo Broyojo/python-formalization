@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Lib/pickle.py	96	97	_Stop.__init__	__init__(self, value)	todo		
-Lib/pickle.py	202	204	_Framer.__init__	__init__(self, file_write)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
-Lib/pickle.py	206	207	_Framer.start_framing	start_framing(self)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
-Lib/pickle.py	209	212	_Framer.end_framing	end_framing(self)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	202	204	_Framer.__init__	__init__(self, file_write)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-norec	
+Lib/pickle.py	206	207	_Framer.start_framing	start_framing(self)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-norec	
+Lib/pickle.py	209	212	_Framer.end_framing	end_framing(self)	modelled	pickle-atoms-exact,pickle-frames-exact,pickle-dumps-twins-norec	
 Lib/pickle.py	214	236	_Framer.commit_frame	commit_frame(self, force=False)	todo		review: pyCommit and the .boundary step mirror the tell() >= 64 KiB test, the FRAME header at >= 4 bytes and the fresh frame; but file_write is fixed to an infallible append, so a raising or re-entrant file.write is not expressible, and DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound.
 Lib/pickle.py	238	242	_Framer.write	write(self, data)	todo		review: PyFramer.step .w writes to the frame or to the file; but file_write is fixed to an infallible append, so a raising or re-entrant file.write is not expressible, and DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound.
 Lib/pickle.py	244	257	_Framer.write_large_bytes	write_large_bytes(self, header, payload)	todo		review: PyFramer.step .large commits the frame with force and writes header and payload outside it; but file_write is fixed to an infallible append, so a raising or re-entrant file.write is not expressible, and DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound.
@@ -21,22 +21,22 @@ Lib/pickle.py	436	491	_Pickler.__init__	__init__(self, file, protocol=None, *, f
 Lib/pickle.py	493	501	_Pickler.clear_memo	clear_memo(self)	todo		
 Lib/pickle.py	503	516	_Pickler.dump	dump(self, obj)	todo		review: pyBody mirrors PROTO, start_framing, save, STOP and end_framing, but not the PicklingError when __init__ was not called (:507-509); and DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound.
 Lib/pickle.py	518	538	_Pickler.memoize	memoize(self, obj)	todo		review: pyMemoize mirrors idx = len(memo), write(put(idx)) then the store, but not the self.fast early return (:533-534); and DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound.
-Lib/pickle.py	541	550	_Pickler.put	put(self, idx)	modelled	pickle-memo-ops-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
-Lib/pickle.py	553	560	_Pickler.get	get(self, i)	modelled	pickle-memo-ops-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	541	550	_Pickler.put	put(self, idx)	modelled	pickle-memo-ops-exact,pickle-dumps-twins-norec	
+Lib/pickle.py	553	560	_Pickler.get	get(self, i)	modelled	pickle-memo-ops-exact,pickle-dumps-twins-norec	
 Lib/pickle.py	562	634	_Pickler.save	save(self, obj, save_persistent_id=True)	todo		review: pySave mirrors commit_frame, the memo check and the dispatch of the plain types only; persistent_id (:566-570), reducer_override (:579-581), the dispatch_table, the metaclass case, __reduce_ex__/__reduce__ and the reduce-value checks with add_note (:583-634) are not modelled, nor Python's recursion limit, which is why DumpsTwinsNarrow is false on 3.15.2: a list nested 400 deep pickles in C and raises RecursionError in pickle._dumps at protocols 0, 2 and 5 (probe), since neither save mirror has a recursion bound. progress: the frames of save and its callees are mirrored (pySaveR); still todo: persistent_id overrides, reducer_override, dispatch_table, __reduce_ex__.
 Lib/pickle.py	636	638	_Pickler.persistent_id	persistent_id(self, obj)	todo		
 Lib/pickle.py	640	650	_Pickler.save_pers	save_pers(self, pid)	todo		
 Lib/pickle.py	652	805	_Pickler.save_reduce	save_reduce(self, func, args, state=None, listitems=None, dictitems=None, state_setter=None, *, obj=None)	todo		
-Lib/pickle.py	811	812	_Pickler.save_none	save_none(self, obj)	modelled	pickle-atoms-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
-Lib/pickle.py	815	819	_Pickler.save_bool	save_bool(self, obj)	modelled	pickle-atoms-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
-Lib/pickle.py	822	850	_Pickler.save_long	save_long(self, obj)	modelled	pickle-save-long-twins-sized,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	811	812	_Pickler.save_none	save_none(self, obj)	modelled	pickle-atoms-exact,pickle-dumps-twins-norec	
+Lib/pickle.py	815	819	_Pickler.save_bool	save_bool(self, obj)	modelled	pickle-atoms-exact,pickle-dumps-twins-norec	
+Lib/pickle.py	822	850	_Pickler.save_long	save_long(self, obj)	modelled	pickle-save-long-twins-sized,pickle-dumps-twins-norec	
 Lib/pickle.py	853	857	_Pickler.save_float	save_float(self, obj)	todo		
-Lib/pickle.py	860	872	_Pickler._save_bytes_no_memo	_save_bytes_no_memo(self, obj)	modelled	pickle-bytes-classes,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	860	872	_Pickler._save_bytes_no_memo	_save_bytes_no_memo(self, obj)	modelled	pickle-bytes-classes,pickle-dumps-twins-norec	
 Lib/pickle.py	874	883	_Pickler.save_bytes	save_bytes(self, obj)	todo		todo: mirrored in EncRec.lean and run by pickle-dumps-twins-narrow/-norec, but only twin agreement pins it (two encoders raising alike would satisfy it); needs an exact-output theorem.
-Lib/pickle.py	886	894	_Pickler._save_bytearray_no_memo	_save_bytearray_no_memo(self, obj)	modelled	pickle-bytearray-exact,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	886	894	_Pickler._save_bytearray_no_memo	_save_bytearray_no_memo(self, obj)	modelled	pickle-bytearray-exact,pickle-dumps-twins-norec	
 Lib/pickle.py	896	904	_Pickler.save_bytearray	save_bytearray(self, obj)	todo		todo: mirrored in EncRec.lean and run by pickle-dumps-twins-narrow/-norec, but only twin agreement pins it (two encoders raising alike would satisfy it); needs an exact-output theorem.
 Lib/pickle.py	908	932	_Pickler.save_picklebuffer	save_picklebuffer(self, obj)	todo		
-Lib/pickle.py	936	956	_Pickler.save_str	save_str(self, obj)	modelled	pickle-str-classes,pickle-dumps-twins-narrow,pickle-dumps-twins-norec	
+Lib/pickle.py	936	956	_Pickler.save_str	save_str(self, obj)	todo		todo: the binary branch is pinned (pickle-str-classes); at protocol 0 tmp.encode('raw-unicode-escape') looks the codec up in Python frames (encodings.search_function, importlib, about 9) until it is cached, and the model has no codec registry.
 Lib/pickle.py	959	1014	_Pickler.save_tuple	save_tuple(self, obj)	todo		todo: mirrored in EncRec.lean and run by pickle-dumps-twins-narrow/-norec, but only twin agreement pins it (two encoders raising alike would satisfy it); needs an exact-output theorem.
 Lib/pickle.py	1018	1025	_Pickler.save_list	save_list(self, obj)	todo		todo: mirrored in EncRec.lean and run by pickle-dumps-twins-narrow/-norec, but only twin agreement pins it (two encoders raising alike would satisfy it); needs an exact-output theorem.
 Lib/pickle.py	1031	1065	_Pickler._batch_appends	_batch_appends(self, items, obj)	todo		todo: mirrored in EncRec.lean and run by pickle-dumps-twins-narrow/-norec, but only twin agreement pins it (two encoders raising alike would satisfy it); needs an exact-output theorem.
