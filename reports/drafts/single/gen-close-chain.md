@@ -38,4 +38,4 @@ Linux
 Python 3.15.2 (tags/v3.15.2:5e58eaa, Nov  5 2026, 20:20:36) [GCC 11.4.0]
 
 ---
-Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Record: [bytecode-gen-close-deep-chain-stack-overflow](https://github.com/Broyojo/python-formalization/blob/main/bugs/bytecode-gen-close-deep-chain-stack-overflow.yaml)
+Found while building a Lean 4 model of CPython (https://broyojo.com/python-formalization/). AI tools (Claude and Codex) helped investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and main, and the report received technical review. Record: [bytecode-gen-close-deep-chain-stack-overflow](https://github.com/Broyojo/python-formalization/blob/main/bugs/bytecode-gen-close-deep-chain-stack-overflow.yaml)

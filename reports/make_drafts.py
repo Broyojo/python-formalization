@@ -66,8 +66,8 @@ def first_para(s):
 TEXT = ROOT / "reports" / "issue_text"
 VV = ROOT / "reports" / "python-VV.txt"  # output of `python3 -VV` on the test machine
 FOOTER = ("Found while building a Lean 4 model of CPython ({page}). AI tools (Claude and Codex) helped "
-          "investigate the findings and prepare these drafts. The code blocks were rerun on 3.15.2 and main "
-          "during technical review; the human submitter must review the report before filing.")
+          "investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and "
+          "main, and the report received technical review.")
 
 
 def single(path):
@@ -109,9 +109,9 @@ def group(mod, items, part, parts):
                  "```", "", "</details>", ""]
     body += ["### CPython versions tested on:", "", "3.15, CPython main branch", "",
              "### Operating systems tested on:", "", "Linux", "", "---",
-             "AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code "
-             "blocks were rerun on 3.15.2 and main during technical review; the human submitter must review "
-             f"the report before filing. Records: {REPO}/tree/main/bugs"]
+             "AI tools (Claude and Codex) helped investigate the findings and prepare this report. The examples "
+             "were rerun on CPython 3.15.2 and main, and the report received technical review. "
+             f"Records: {REPO}/tree/main/bugs"]
     return title, "\n".join(body) + "\n"
 
 

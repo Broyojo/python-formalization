@@ -43,4 +43,4 @@ if len(s) > 10000 and back.startswith('ValueError') and small == 'ValueError':
 Linux
 
 ---
-AI tools (Claude and Codex) helped investigate these findings and prepare the draft. The code blocks were rerun on 3.15.2 and main during technical review; the human submitter must review the report before filing. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
+AI tools (Claude and Codex) helped investigate the findings and prepare this report. The examples were rerun on CPython 3.15.2 and main, and the report received technical review. Records: https://github.com/Broyojo/python-formalization/tree/main/bugs
