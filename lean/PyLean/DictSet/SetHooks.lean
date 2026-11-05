@@ -1026,7 +1026,9 @@ that call no `__eq__`, each in the state as it is: a NULL entry ends the walk th
 `found_active`, whatever `__eq__` would answer; two exact `str` that `unicode_eq` calls equal are
 `found_active` (:282-285); an entry with another hash is passed with `mask` and `freeslot` as they
 were; and a dummy (`entry->hash == -1`, :298-301) becomes the `freeslot`, replacing any earlier one,
-so the last dummy on the path wins. -/
+so the last dummy on the path wins. And after `__eq__`: an answer of no with the table and entry
+unchanged goes on with `mask` read again from the state `__eq__` left (`mask = so->mask`, :296) and
+the same `freeslot`. -/
 def AddStepBranches : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot mask : Nat)
     (fs : Option Nat) (so : SetObj K),
@@ -1036,10 +1038,15 @@ def AddStepBranches : Prop :=
     (∀ k, so.mem slot = .active k hash → P.isStr k = true → P.isStr key = true →
       P.strEq k key = true → addStep P key hash slot mask fs so = (.ok (.inl .active), so)) ∧
     (∀ k h, so.mem slot = .active k h → h ≠ hash →
-      addStep P key hash slot mask fs so = (.ok (.inr (mask, fs)), so))
+      addStep P key hash slot mask fs so = (.ok (.inr (mask, fs)), so)) ∧
+    (∀ k s', so.mem slot = .active k hash → k ≠ key →
+      ¬ ((P.isStr k = true ∧ P.isStr key = true) ∧ P.strEq k key = true) →
+      P.eq k key so = (.ok false, s') → setChanged s' so.tableId slot k = false →
+      addStep P key hash slot mask fs so = (.ok (.inr (s'.mask, fs)), s'))
 theorem addStepBranches_proven : AddStepBranches := by
   intro K _ P key hash slot mask fs so
-  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h h1 h2 h3 => ?_, fun k h hm hne => ?_⟩
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h h1 h2 h3 => ?_, fun k h hm hne => ?_,
+    fun k s' hm hk hstr hq hch => ?_⟩
   · simp [addStep, M.bind_run, M.get_run, h]
   · simp [addStep, M.bind_run, M.get_run, h]
   · simp [addStep, M.bind_run, M.get_run, h]
@@ -1047,10 +1054,11 @@ theorem addStepBranches_proven : AddStepBranches := by
     · simp [addStep, M.bind_run, M.get_run, h, hk]
     · simp [addStep, M.bind_run, M.get_run, h, hk, h1, h2, h3]
   · simp [addStep, M.bind_run, M.get_run, hm, hne]
+  · simp [addStep, M.bind_run, M.get_run, hm, hk, hstr, hq, hch]
 
 /-- The same for `set_compare_entry_lock_held` (:138-165) and `set_compare_frozenset` (:172-193):
 a NULL entry is `SET_LOOKKEY_EMPTY`, ending the block at it; an entry holding the very object is
-`SET_LOOKKEY_FOUND` with no call to `__eq__` (:146-147, :180-182), in both; a dummy, or an entry
+`SET_LOOKKEY_FOUND` with no call to `__eq__` (:147-148, :180-182), in both; a dummy, or an entry
 with another hash in the locked compare, is passed. -/
 def LookStepBranches : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot : Nat)
@@ -1072,7 +1080,7 @@ theorem lookStepBranches_proven : LookStepBranches := by
 def nanProto : Proto Nat (SetObj Nat) := { natSetProto with eq := fun _ _ s => (.ok false, s) }
 
 /-- The identity tests matter: with a key that is not equal to itself, `s = {x}; s.add(x)` keeps one
-element and `x in s` is `True`, because the entry holds the very object (:146-147, :280-281); an add
+element and `x in s` is `True`, because the entry holds the very object (:147-148, :280-281); an add
 or a lookup without the identity test would compare, hear no, and add a second copy or answer
 `False`. CPython 3.15.2: `len(t)` is 1 and `x in t` is True for `x = float('nan')` (probed). -/
 theorem nan_identity_probe :
@@ -1092,5 +1100,20 @@ theorem last_dummy_probe :
     (addOuter plainZero 4 0 (setProbeFuel 7) 0 0 7 none twoDummies).1 = .ok (.unused 7 (some 6) 7) ∧
     setKeys (setAddKey plainZero 4 twoDummies).2 = [2, 4] := by
   refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-- `a.__eq__` (key `1` against `2`) clears the set and answers yes. -/
+def yesClearProto : Proto Nat (SetObj Nat) :=
+  { plainZero with
+    eq := fun a b s => if a = 1 ∧ b = 2 then (.ok true, setClearInternal s) else (.ok (a == b), s) }
+
+/-- The add trusts a yes before it re-checks the table (:290-295): with `S = {a}` and `a.__eq__`
+clearing `S` and answering yes, `S.add(b)` stops at `found_active` and leaves `S` empty; a body that
+re-checked first would restart and give `{b}`. The lookup, which re-checks first (:159-162), restarts
+on the same answer (`SetAddTrustsYes`). CPython 3.15.2 leaves `S` empty. -/
+theorem trusts_yes_probe :
+    (addOuter yesClearProto 2 0 (setProbeFuel 7) 0 0 7 none (setAddKey yesClearProto 1 {}).2).1 =
+      .ok .active ∧
+    setKeys (setAddKey yesClearProto 2 (setAddKey yesClearProto 1 {}).2).2 = [] := by
+  constructor <;> decide +kernel
 
 end PyLean.DictSet

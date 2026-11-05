@@ -357,8 +357,8 @@ def entries : List Entry := [
     prop := ``SetLookkeyBody, thm := some ``setLookkeyBody_proven
     notes := "The restart test is CPython's pointer test, with an allocator that can reuse a freed address (set-lookup-restarts-on-resize, refuted, bugs/dictset-set-lookup-table-aba.yaml); every read of an entry, in the walks, the re-check and the entry functions, goes through the pointer and past the end of a table reads the freed block's stale bytes (SetObj.mem). lookkey_dispatch_probe shows the dispatch is observable." },
   { id := "set-add-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
-    statement := "For every key protocol, one step of the add's walk, on the branches that call no __eq__, in the state as it is: a NULL entry ends the walk there with the freeslot it had; the very object is found_active whatever __eq__ would answer; two exact str that unicode_eq calls equal are found_active; another hash is passed with mask and freeslot as they were; a dummy becomes the freeslot, replacing any earlier one."
-    source := "setobject.c:275-301", status := .proven
+    statement := "For every key protocol, one step of the add's walk: on the branches that call no __eq__, in the state as it is, a NULL entry ends the walk there with the freeslot it had; the very object is found_active whatever __eq__ would answer; two exact str that unicode_eq calls equal are found_active; another hash is passed with mask and freeslot as they were; a dummy becomes the freeslot, replacing any earlier one. An answer of no from __eq__ with the table and entry unchanged goes on with the mask read again from the state __eq__ left and the same freeslot."
+    source := "setobject.c:275-302", status := .proven
     prop := ``AddStepBranches, thm := some ``addStepBranches_proven
     notes := "nan_identity_probe: s = {x}; s.add(x) keeps one element for a key not equal to itself; last_dummy_probe: with dummies at 0 and 6 on the path the add stores at 6 and iteration gives [2, 4]. Both as on 3.15.2 (probed)." },
   { id := "set-look-step-branches", pyFile := "Objects/setobject.c", pyFns := ["set_compare_entry_lock_held", "set_compare_frozenset"]
@@ -462,11 +462,11 @@ def entries : List Entry := [
     source := "setobject.c:1924-1946", status := .proven
     prop := ``SetDisjointRefines, thm := some ``setDisjointRefines_proven
     notes := "The exact-set branch; set-isdisjoint-branches and set-disjoint-iter-refines have the others." },
-  { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
+  { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := ["set_add_entry_takeref"]
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
     source := "setobject.c:159-162 against :290-295", status := .proven
     prop := ``SetAddTrustsYes, thm := some ``setAddTrustsYes_proven
-    notes := "A difference between two bodies, on record. It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
+    notes := "Pins the order at :290-295: the yes is trusted before the table is re-checked. trusts_yes_probe: S = {a}, a.__eq__ clears S and answers yes; S.add(b) leaves S empty, where a body re-checking first gives {b} (3.15.2 leaves S empty). It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
   { id := "set-hash-failure", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
     statement := "For every key protocol: __hash__ runs first, as Python code; when it raises, each of set_add_key, set_contains_key and set_discard_key raises set_unhashable_type's exception in the state __hash__ left, and when it answers, each goes on to its entry function with that hash from that state."
     source := "setobject.c:600-631", status := .proven

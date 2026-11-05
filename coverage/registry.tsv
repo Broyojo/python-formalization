@@ -1209,7 +1209,7 @@ set-diff-update-refines	proven	Objects/setobject.c
 set-sym-update-refines	proven	Objects/setobject.c	set_symmetric_difference_update_set
 set-subset-refines	proven	Objects/setobject.c	
 set-disjoint-refines	proven	Objects/setobject.c	set_isdisjoint_impl
-set-add-trusts-yes	proven	Objects/setobject.c	
+set-add-trusts-yes	proven	Objects/setobject.c	set_add_entry_takeref
 set-hash-failure	proven	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 set-hash-failure-unchanged	refuted	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 odict-twins-agree	open	Objects/odictobject.c	_odict_get_index,_odict_resize,_odict_add_new_node,_odict_remove_node
