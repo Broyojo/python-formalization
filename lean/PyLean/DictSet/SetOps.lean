@@ -604,7 +604,7 @@ state, so whatever `__hash__` did to the key itself is seen. -/
 def keySetHash (keySet : K → SetObj K → Option (SetBody K)) (key : K) (s : SetObj K) : Option Int :=
   (keySet key s).map fun b => frozensetHashImpl ({ toSetBody := b } : SetObj K)
 
-/-- `!PySet_Check(key) || !PyErr_ExceptionMatches(PyExc_TypeError)` (:2551, :2611, :2649, :2689):
+/-- `!PySet_Check(key) || !PyErr_ExceptionMatches(PyExc_TypeError)` (:2551, :2611, :2648, :2688):
 the retry is for a `set` key and an exception that is `TypeError` or a subclass of it. -/
 def retryHash (keySet : K → SetObj K → Option (SetBody K)) (key : K) (e : PyExc) (s : SetObj K) :
     Option Int :=

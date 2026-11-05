@@ -1189,6 +1189,7 @@ set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
 set-update-iterable-body	proven	Objects/setobject.c	set_update_iterable_lock_held
 set-update-iterable-refines	proven	Objects/setobject.c	set_update_iterable_lock_held
 set-intersection-branches	proven	Objects/setobject.c	set_intersection
+set-inter-iter-refines	proven	Objects/setobject.c	set_intersection
 set-isdisjoint-branches	proven	Objects/setobject.c	set_isdisjoint_impl
 set-disjoint-iter-refines	proven	Objects/setobject.c	set_isdisjoint_impl
 set-shuffle-bits-values	proven	Objects/setobject.c	_shuffle_bits,frozenset_hash_impl

@@ -15,6 +15,7 @@ import PyLean.DictSet.Iter
 import PyLean.DictSet.SetHash
 import PyLean.DictSet.SetBranches
 import PyLean.DictSet.SetHooks
+import PyLean.DictSet.SetInterIter
 import PyLean.DictSet.Copy315
 import PyLean.DictSet.Eq315
 import PyLean.DictSet.Repr315
@@ -359,7 +360,12 @@ def entries : List Entry := [
     statement := "For every key protocol, argument and iterator: so == other is set_copy_impl(so); any other set, a subclass with its own __iter__ too, takes the two-set branch; anything else runs the generic loop on a new result in focus with so among the peers and hands back the result or the exception; a failed PyObject_GetIter is the result."
     source := "setobject.c:1708-1791", status := .proven
     prop := ``SetIntersectionBranches, thm := some ``setIntersectionBranches_proven
-    notes := "With set-inter-refines (two sets) and set-inter-iter-body (each turn of the generic loop). Not proved: an honest-protocol refinement of the generic branch, which needs the early-stop step (the result has caught up with so) argued by pigeonhole." },
+    notes := "With set-inter-refines (two sets), set-inter-iter-refines (the generic branch, honest) and set-inter-iter-body (each turn of the generic loop, any protocol)." },
+  { id := "set-inter-iter-refines", pyFile := "Objects/setobject.c", pyFns := ["set_intersection"]
+    statement := "set_intersection with an iterable that is not a set, for an honest key protocol, from a well-formed set: either an add runs out of memory for a result PyMem_NEW cannot hold, or the result is a new well-formed set holding exactly the items the set holds, although the loop stops once the result has caught up with the set, and the set is unchanged."
+    source := "set.intersection docstring; setobject.c:1756-1790", status := .proven
+    prop := ``SetInterIterRefines, thm := some ``setInterIterRefines_proven
+    notes := "The early stop at :1772-1775 loses nothing: a result whose keys the set all holds and that is as large as the set holds all of it (caught_up, by pigeonhole). The iterable here has no failing __iter__ and no exception at the end; set-intersection-branches has those." },
   { id := "set-isdisjoint-branches", pyFile := "Objects/setobject.c", pyFns := ["set_isdisjoint_impl"]
     statement := "For every key protocol and iterator: so == other answers whether so is empty and changes nothing; only an exact set or frozenset takes the two-set branch, so an instance of a set subclass goes through its type's __iter__ and the generic loop, as any other iterable does."
     source := "setobject.c:1910-1968", status := .proven

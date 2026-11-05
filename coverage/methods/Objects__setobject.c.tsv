@@ -62,7 +62,7 @@ Objects/setobject.c	1631	1636	set_clear_impl	set_clear_impl(PySetObject *so) /*[
 Objects/setobject.c	1647	1671	set_union_impl	set_union_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=b1bfa3d74065f27e input=55a2e81db6347a4f]*/	todo		
 Objects/setobject.c	1674	1693	set_or	set_or(PyObject *self, PyObject *other)	todo		
 Objects/setobject.c	1696	1706	set_ior	set_ior(PyObject *self, PyObject *other)	todo		
-Objects/setobject.c	1709	1791	set_intersection	set_intersection(PySetObject *so, PyObject *other)	modelled	set-inter-iter-body,set-inter-refines,set-intersection-branches	
+Objects/setobject.c	1709	1791	set_intersection	set_intersection(PySetObject *so, PyObject *other)	modelled	set-inter-iter-body,set-inter-iter-refines,set-inter-refines,set-intersection-branches	
 Objects/setobject.c	1802	1826	set_intersection_multi_impl	set_intersection_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=db9ff9f875132b6b input=36c7b615694cadae]*/	todo		
 Objects/setobject.c	1829	1839	set_intersection_update	set_intersection_update(PySetObject *so, PyObject *other)	todo		
 Objects/setobject.c	1850	1864	set_intersection_update_multi_impl	set_intersection_update_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=d768b5584675b48d input=782e422fc370e4fc]*/	todo		
