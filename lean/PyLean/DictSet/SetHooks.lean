@@ -202,7 +202,7 @@ variable {K : Type} [DecidableEq K] (P : Proto K (SetObj K))
 theorem lookStep_frozen_ne_restart (key : K) (hash : Int) (slot : Nat) (s : SetObj K) :
     (lookStep P true key hash slot s).1 ≠ .ok (.inl .restart) := by
   simp only [lookStep, if_true, compareFrozen, M.bind_run, M.get_run]
-  cases hs : s.slot slot with
+  cases hs : s.mem slot with
   | null => simp [hs]
   | dummy => simp [hs]
   | active k h =>
@@ -332,6 +332,9 @@ What a turn ends with:
 * a NULL and a `freeslot` that is still a dummy: the key goes in the dummy and `used` grows, not
   `fill` (:314-317);
 * a NULL and a `freeslot` that `__eq__` refilled (`freeslot->hash != -1`, :311-313): the next turn.
+The `freeslot` test and store, like every read of an entry, go through the pointer (`SetObj.mem`,
+`storeAt`): a `freeslot` recorded before `__eq__` put a smaller table at the old address can lie past
+its end, and then C tests and stores into the freed table's dummy there.
 
 The table test of `addStep` is CPython's pointer test, with the allocator of `setLookkeyAux`'s
 docstring: a freed address can come back (`SetAddRestartsOnResize`, refuted). -/
@@ -373,11 +376,11 @@ def SetAddRestart : Prop :=
           else
             setGrow { s'.storeAt slot (.active key hash) with fill := s'.fill + 1, used := s'.used + 1 }) ∧
       (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
-          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f = .dummy →
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.mem f = .dummy →
         setAddEntryAux P key hash (n + 1) so =
-          (.ok (), { s' with used := s'.used + 1, table := s'.table.set f (.active key hash) })) ∧
+          (.ok (), { s'.storeAt f (.active key hash) with used := s'.used + 1 })) ∧
       (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
-          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f ≠ .dummy →
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.mem f ≠ .dummy →
         setAddEntryAux P key hash (n + 1) so = setAddEntryAux P key hash n s')
 theorem setAddRestart_proven : SetAddRestart := by
   intro K _ P key hash so s'
@@ -818,8 +821,8 @@ old address, entry 700 lies past its end, and the stale bytes there still hold `
   entry 701 of the old block, past the end, finds it NULL (the freed table had nothing there) and
   stores the key there: `used` 41 for 40 keys, `len(s)` one over.
 CPython 3.15.2 and main do this with these sizes (bugs/dictset-set-lookup-table-aba.yaml:
-`len(s)` 39 and 41 against 40 items, `e` freed while a frozenset holds it). Scope: within a walk the
-model reads an entry past the end of the table as NULL; here the stale entry is NULL too. -/
+`len(s)` 39 and 41 against 40 items, `e` freed while a frozenset holds it). The walk reads entry
+701 through the pointer too: the freed table had nothing there, a stale NULL. -/
 theorem aba_probe :
     abaStart.slot 700 = .active 700 700 ∧
     ((abaProto true).eq 700 9999 abaStart).1 = .ok true ∧
@@ -835,6 +838,37 @@ theorem aba_probe :
     (setAddKey (abaProto false) 9999 abaStart).2.used = 41 ∧
     (setKeys (setAddKey (abaProto false) 9999 abaStart).2).length = 40 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-- The same table with a dummy at entry 699 and `e` stored at entry 700 with hash 699 (it went in
+when 699 was taken): a key hashing to 699 records `freeslot = 699` before it compares with `e`. -/
+def abaStartDummy : SetObj Nat :=
+  { abaStart with
+    fill := 402
+    table := (List.range 1024).map fun i =>
+      if i < 400 then .active i i else if i = 699 then .dummy
+      else if i = 700 then .active 700 699 else .null }
+
+/-- Key `9999` and `e` (`700`) hash to 699; `e.__eq__` refills as before and answers no. -/
+def abaDummyProto : Proto Nat (SetObj Nat) :=
+  { abaProto false with hashM := fun k s => (.ok (if k = 9999 ∨ k = 700 then 699 else k), s) }
+
+/-- The `freeslot` path past the end: the add records the dummy at 699, `e.__eq__` puts the
+128-slot table at the old address, the re-check reads the stale `e` and passes, the walk reaches the
+stale NULL at 701 with `freeslot` 699, past the end; there C reads the freed table's dummy
+(`freeslot->hash == -1`, :311), so it does not restart: it stores the key into that entry (:314-316),
+`used` 41 for 40 keys, `fill` unchanged, and returns. -/
+theorem aba_freeslot_probe :
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).1 =
+      .ok (.unused 701 (some 699) 127) ∧
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).2.slot 699 =
+      .null ∧
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).2.mem 699 =
+      .dummy ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).1 = .ok () ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).2.used = 41 ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).2.fill = 40 ∧
+    (setKeys (setAddKey abaDummyProto 9999 abaStartDummy).2).length = 40 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
 
 theorem aba_eq (ret : Bool) :
     (abaProto ret).eq 700 9999 abaStart = (.ok ret, abaRefill abaStart) := by
