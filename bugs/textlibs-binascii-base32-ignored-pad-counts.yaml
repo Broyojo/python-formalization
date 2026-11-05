@@ -1,0 +1,67 @@
+id: textlibs-binascii-base32-ignored-pad-counts
+title: "binascii.a2b_base32: with '=' in ignorechars, an ignored '=' before data still counts as padding"
+priority: P4
+kind: spec-violation
+module: textlibs
+files: [Modules/binascii.c]
+functions: ["binascii_a2b_base32_impl"]
+summary: |
+  With `ignorechars=b'='` the docs say the pad characters "presented before the end of the encoded
+  data ... will be ignored". a2b_base32 counts every '=' in `pads` and, unlike a2b_base64 (which sets
+  `pads = 0` after each data character, Modules/binascii.c:873), never resets it after a data
+  character. An ignored '=' in the middle therefore still pays for the padding at the end:
+  `a2b_base32(b'AAAAAAA', ignorechars=b'=')` raises "Incorrect padding", but
+  `a2b_base32(b'AAAA=AAA', ignorechars=b'=')` returns `b'\x00\x00\x00\x00'`, and
+  `a2b_base32(b'AA====AA', ignorechars=b'=')` returns `b'\x00\x00'` (seven or four data characters,
+  no padding after them). a2b_base64 with the same options gives "Incorrect padding" for
+  `b'AAA'`, `b'AA=A'` and `b'A=AA'` alike. base64.b32decode passes ignorechars through, so it behaves
+  the same way.
+likelihood: |
+  Low: it needs '=' in ignorechars (a new 3.15 option whose documented purpose is tolerating
+  misplaced and excess padding) and input that is short of padding at the end. The effect is that
+  input which should be refused is accepted, with no wrong bytes for well-formed input.
+maybe_intended: |
+  Unlikely: a2b_base64 resets the count, the docs describe the misplaced '=' as ignored, and the
+  base32 code was written after the base64 one (the comments are the same).
+reproducer: |
+  import binascii
+  def dec(s):
+      try:
+          return binascii.a2b_base32(s, ignorechars=b"=")
+      except binascii.Error as e:
+          return "Error: %s" % e
+  a, b, c = dec(b"AAAAAAA"), dec(b"AAAA=AAA"), dec(b"AA====AA")
+  d = None
+  try:
+      binascii.a2b_base64(b"AA=A", ignorechars=b"=")
+  except binascii.Error as e:
+      d = str(e)
+  print(a, b, c, d)
+  if a == "Error: Incorrect padding" and b == b"\x00\x00\x00\x00" and c == b"\x00\x00" and d == "Incorrect padding":
+      print("REPRODUCED textlibs-binascii-base32-ignored-pad-counts")
+expected: |
+  The ignored '=' is ignored: `a2b_base32(b'AAAA=AAA', ignorechars=b'=')` raises "Incorrect padding"
+  like `a2b_base32(b'AAAAAAA', ignorechars=b'=')`, as a2b_base64 does for its equivalents.
+observed: |
+  python3 3.15.2: Error: Incorrect padding b'\x00\x00\x00\x00' b'\x00\x00' Incorrect padding. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  docs of binascii.a2b_base32: "If ignorechars contains the pad character '=', the pad characters
+  presented before the end of the encoded data and the excess pad characters will be ignored."
+  The twin a2b_base64 behaves so.
+cause: |
+  Modules/binascii.c:1720 counts the pad, :1731-1733 continue when '=' is ignored, and the data branch
+  :1767-1775 checks `pads` but does not set it back to 0 (compare :873 in a2b_base64), so the final
+  check at :1833 `octa_pos + pads < 8` adds the ignored pads. Only the `goto fastpath` after a whole
+  group re-declares `pads = 0` (:1714).
+possible_fix: |
+  Add `pads = 0;` after the check at :1767-1775, as in a2b_base64.
+duplicates: |
+  No report found. gh-148029 (closed) fixed the character count in the "Invalid base32-encoded
+  string" message with ignored characters, gh-148016 (closed) the "Leading padding" message; neither
+  touches the pad count. Not in the bugforge list.
+  Queries (read-only): gh search issues --repo python/cpython a2b_base32 ignorechars;
+  ... base32 ignorechars padding; ... b32decode ignorechars; ... a2b_base32 padding; ...
+  binascii ignorechars; ... ignorechars (16 hits, read); ... base32 padding; ... b32decode padding;
+  ... base32 (read the list).
+lean: lean/PyLean/TextLibs/BinasciiB32b.lean (B32PadBeforeDataIgnored, b32PadBeforeDataIgnored_refuted); the twin statement is proven for base64 in lean/PyLean/TextLibs/BinasciiB64b.lean (B64PadBeforeDataIgnored)

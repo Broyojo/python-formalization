@@ -2,6 +2,8 @@ import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructPack2
 import PyLean.TextLibs.BinasciiEq3
+import PyLean.TextLibs.BinasciiA85
+import PyLean.TextLibs.BinasciiCrc
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReMisc
@@ -680,14 +682,110 @@ def entries : List Entry := [
     source := "the docs of ignorechars and Modules/binascii.c:2310-2343", status := .proven
     prop := ``HexIgnoreLaw, thm := some ``hexIgnoreLaw_proven },
   { id := "textlibs-binascii-wraplines", pyFile := "Modules/binascii.c", pyFns := ["wraplines"]
-    statement := "wraplines joins lines of exactly width characters, and one last line of at most width, with single newlines, and adds nothing else."
-    source := "the comment at Modules/binascii.c:457-458", status := .proven
-    prop := ``WraplinesLaw, thm := some ``wraplinesLaw_proven },
+    statement := "wraplines (the backward memmove loop) leaves data no longer than width alone, and otherwise writes the first width characters, one newline and the rest wrapped the same way; the output is (size - 1) / width characters longer."
+    source := "the comment at Modules/binascii.c:457-460", status := .proven
+    prop := ``WraplinesExact, thm := some ``wraplinesExact_proven },
+  { id := "textlibs-binascii-crc-ccitt", pyFile := "Modules/binascii.c", pyFns := ["binascii_crc_hqx_impl"]
+    statement := "crc_hqx(data, crc) is the bitwise CRC-CCITT recurrence (polynomial 0x1021, MSB first) over every byte of data, from crc & 0xffff."
+    source := "docstring: compute CRC-CCITT incrementally", status := .proven
+    prop := ``CrcHqxCcitt, thm := some ``crcHqxCcitt_proven },
+  { id := "textlibs-binascii-to-hex-upper", pyFile := "Modules/binascii.c", pyFns := ["to_hex"]
+    statement := "to_hex writes only the digits 0-9 and A-F."
+    source := "RFC 2045 section 6.7: upper-case hexadecimal", status := .proven
+    prop := ``ToHexUpper, thm := some ``toHexUpper_proven },
+  { id := "textlibs-binascii-base64-round-trip-all", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl", "base64_encode_trio", "base64_encode_fast",
+      "base64_decode_quad", "base64_decode_fast", "wraplines", "get_reverse_table", "ignorechar"]
+    statement := "a2b_base64(b2a_base64(d, padded=p, wrapcol=w, newline=n, alphabet=a), padded=p, alphabet=a, strict_mode=s, ignorechars=g, canonical=k) == d for every bytes value and every value of every option, given an alphabet of 64 distinct bytes without '=' and, when strict and there are newlines, '\\n' in ignorechars."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``B64RoundTripAll, thm := some ``b64RoundTripAll_proven },
+  { id := "textlibs-binascii-base64-strict", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl", "ignorechar"]
+    statement := "In strict mode (given, or by default from ignorechars), a byte outside the alphabet (or '=' with padded=False) not in ignorechars makes a2b_base64 raise, and with padded=True and no '=' in ignorechars so does any data character after a '='."
+    source := "docs of a2b_base64: valid base64 in strict mode", status := .proven
+    prop := ``B64StrictLaw, thm := some ``b64StrictLaw_proven },
+  { id := "textlibs-binascii-base64-strict-lenient-all", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "Whatever strict_mode=True accepts, strict_mode=False accepts with the same result, for every alphabet, padded, ignorechars and canonical."
+    source := "docs: strict mode only disallows more input", status := .proven
+    prop := ``B64StrictImpliesLenient, thm := some ``b64StrictImpliesLenient_proven },
+  { id := "textlibs-binascii-base64-lenient-filter-all", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "With strict_mode=False, taking out every byte outside the alphabet (and '=' unless padded) changes nothing, failures included, and ignorechars is not used, for every alphabet and canonical."
+    source := "docs: non-alphabet characters are discarded when strict_mode is false", status := .proven
+    prop := ``B64LenientFilter, thm := some ``b64LenientFilter_proven },
+  { id := "textlibs-binascii-base64-canonical", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "canonical=True is canonical=False plus 'Non-zero padding bits' when the last data character leaves non-zero bits after the last whole byte, for every other option."
+    source := "docs of a2b_base64: canonical, RFC 4648 section 3.5", status := .proven
+    prop := ``B64CanonicalLaw, thm := some ``b64CanonicalLaw_proven },
+  { id := "textlibs-binascii-base64-pad-ignored", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "With '=' ignored (non-strict, or '=' in ignorechars), a '=' followed by a data character can be taken out without changing anything."
+    source := "docs of a2b_base64: ignorechars containing the pad character", status := .proven
+    prop := ``B64PadBeforeDataIgnored, thm := some ``b64PadBeforeDataIgnored_proven },
+  { id := "textlibs-binascii-b2a-base64-options", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_base64_impl", "wraplines"]
+    statement := "b2a_base64 with any padded, wrapcol, newline and alphabet is the default encoding with the '=' dropped if not padded, translated to the alphabet, cut by wraplines at wrapcol rounded to a multiple of 4, and a newline; a negative or too large wrapcol and a wrong-length alphabet are refused in that order."
+    source := "docs of b2a_base64", status := .proven
+    prop := ``B2a64OptionLaw, thm := some ``b2a64OptionLaw_proven },
+  { id := "textlibs-binascii-base32-round-trip-all", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base32_impl", "binascii_b2a_base32_impl", "base32_encode_quint", "base32_encode_fast",
+      "base32_decode_octa", "base32_decode_fast", "wraplines", "get_reverse_table", "ignorechar"]
+    statement := "a2b_base32(b2a_base32(d, padded=p, wrapcol=w, alphabet=a), padded=p, alphabet=a, ignorechars=g, canonical=k) == d for every bytes value and every value of every option, given an alphabet of 32 distinct bytes without '=' and '\\n' in ignorechars when wrapped."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``B32RoundTripAll, thm := some ``b32RoundTripAll_proven },
+  { id := "textlibs-binascii-base32-strict", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base32_impl", "ignorechar"]
+    statement := "a2b_base32 raises on a byte outside the alphabet (or '=' with padded=False) not in ignorechars, and, with padded=True and no '=' in ignorechars, on any data character after a '='."
+    source := "docs of a2b_base32: invalid base32 data raises", status := .proven
+    prop := ``B32StrictLaw, thm := some ``b32StrictLaw_proven },
+  { id := "textlibs-binascii-base32-canonical", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base32_impl"]
+    statement := "canonical=True is canonical=False plus 'Non-zero padding bits' when the last data character leaves non-zero bits after the last whole byte, for every other option."
+    source := "docs of a2b_base32: canonical, RFC 4648 section 3.5", status := .proven
+    prop := ``B32CanonicalLaw, thm := some ``b32CanonicalLaw_proven },
+  { id := "textlibs-binascii-base32-pad-ignored", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base32_impl"]
+    statement := "With '=' in ignorechars, a '=' followed by a data character can be taken out without changing anything, as in a2b_base64."
+    source := "docs of a2b_base32: ignorechars containing the pad character; the twin a2b_base64", status := .refuted
+    prop := ``B32PadBeforeDataIgnored, thm := some ``b32PadBeforeDataIgnored_refuted
+    bug := some "textlibs-binascii-base32-ignored-pad-counts"
+    notes := "a2b_base32(b'AAAA=AAA', ignorechars=b'=') returns 4 bytes; a2b_base32(b'AAAAAAA', ignorechars=b'=') raises Incorrect padding. Reproduces on main." },
+  { id := "textlibs-binascii-b2a-base32-options", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_base32_impl", "wraplines"]
+    statement := "b2a_base32 with any padded, wrapcol and alphabet is the default encoding with the '=' dropped if not padded, translated to the alphabet, and cut by wraplines at wrapcol rounded to a multiple of 8; a negative wrapcol and a wrong-length alphabet are refused in that order."
+    source := "docs of b2a_base32", status := .proven
+    prop := ``B2a32OptionLaw, thm := some ``b2a32OptionLaw_proven },
+  { id := "textlibs-binascii-reverse-table", pyFile := "Modules/binascii.c", pyFns := ["get_reverse_table"]
+    statement := "get_reverse_table checks the length before hashing (refusal leaves the cache alone), passes a raising __hash__ on, refuses a corrupt entry, and with only exact bytes keys gives the table of the alphabet's value (last index of each byte, the pad on top) and keeps only such keys."
+    source := "Modules/binascii.c:662-706", status := .proven
+    prop := ``ReverseTableLaw, thm := some ``reverseTableLaw_proven
+    notes := "The cache is a list of (key object, hash, value); hashes are tokens, keys of one hash are compared in insertion order, __hash__/__eq__ are deterministic (stated limits)." },
+  { id := "textlibs-binascii-decoders-coherent", pyFile := "Modules/binascii.c"
+    pyFns := ["get_reverse_table", "binascii_a2b_base64_impl", "binascii_a2b_base32_impl", "binascii_a2b_base85_impl"]
+    statement := "With only exact bytes alphabets stored, a2b_base64, a2b_base32 and a2b_base85 through the cache are the decoders with the table of their alphabet's value, and the cache stays so."
+    source := "the cache is an optimisation (gh-145980)", status := .proven
+    prop := ``DecodersCoherent, thm := some ``decodersCoherent_proven },
+  { id := "textlibs-binascii-alphabet-value-only", pyFile := "Modules/binascii.c"
+    pyFns := ["get_reverse_table", "binascii_a2b_base64_impl"]
+    statement := "a2b_base64 decodes by the bytes of its alphabet, whatever was decoded before."
+    source := "docs: alphabet must be a bytes object of length 64", status := .refuted
+    prop := ``AlphabetValueOnly, thm := some ``alphabetValueOnly_refuted
+    bug := some "textlibs-binascii-alphabet-cache-subclass-key"
+    notes := "After a2b_base64(b'AAAA', alphabet=URLSAFE_BASE64_ALPHABET), a bytes subclass of BASE64_ALPHABET hashing like the URL-safe alphabet with __eq__ always true gets the URL-safe table. Reproduces on main." },
+  { id := "textlibs-binascii-base85-round-trip-all", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base85_impl", "binascii_b2a_base85_impl", "wraplines", "get_reverse_table", "ignorechar"]
+    statement := "a2b_base85(b2a_base85(d, pad=p, wrapcol=w, alphabet=a), alphabet=a, ignorechars=g, canonical=k) is d followed by the zero bytes pad adds, for every bytes value and every value of every option, given 85 distinct alphabet bytes and '\\n' in ignorechars when wrapped."
+    source := "the implementation disagreeing with itself: round trip; docs of b2a_base85 pad", status := .proven
+    prop := ``B85RoundTripAll, thm := some ``b85RoundTripAll_proven },
+  { id := "textlibs-binascii-base85-strict", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base85_impl", "ignorechar"]
+    statement := "a2b_base85 raises on a byte outside the alphabet that ignorechars does not name, for every option."
+    source := "docs of a2b_base85: invalid data raises", status := .proven
+    prop := ``B85StrictLaw, thm := some ``b85StrictLaw_proven },
+  { id := "textlibs-binascii-base85-canonical", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base85_impl"]
+    statement := "canonical=True is canonical=False plus a refusal of a short last group whose digits are not the encoder's for the bytes it decodes to, for every alphabet and ignorechars (on success and failure, not messages)."
+    source := "docs of a2b_base85: partial final groups must use the same padding digits as the encoder", status := .proven
+    prop := ``B85CanonicalLaw, thm := some ``b85CanonicalLaw_proven },
+  { id := "textlibs-binascii-b2a-base85-options", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_base85_impl", "wraplines"]
+    statement := "b2a_base85 with pad=True writes the default encoding of the data with its zero padding, alphabet translates it, and wrapcol rounded to a multiple of 5 cuts it by wraplines; a negative wrapcol and a wrong-length alphabet are refused in that order."
+    source := "docs of b2a_base85", status := .proven
+    prop := ``B2a85OptionLaw, thm := some ``b2a85OptionLaw_proven },
   { id := "textlibs-base64-a85-wrap-round-trip", pyFile := "Lib/base64.py", pyFns := []
     statement := "The Ascii85 round trip holds with wrapcol and adobe."
     source := "docs: a85encode, a85decode", status := .open
     prop := ``A85WrapRoundTripC
-    notes := "Needs the loop shown to skip the newlines wraplines inserts, and the framing shown to survive them." },
+    notes := "Hard part: b2a_ascii85 does not round wrapcol, so newlines fall inside groups, and with adobe the last newline is moved before the trailing ~>. The first is done (a85_filter, TextLibs/BinasciiA85.lean: the loop result is unchanged when ignored characters are taken out). Still needed: the decoder on the encoder output with canonical and pad (generalizing dec85A_main), and the shape of the end of wraplines output for the ~> swap." },
   { id := "textlibs-base64-b32-round-trip", pyFile := "Lib/base64.py"
     pyFns := ["b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
     statement := "b32decode(b32encode(d)) == d and b32hexdecode(b32hexencode(d)) == d, for every length, so through all four padding lengths."

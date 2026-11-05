@@ -261,6 +261,15 @@ def p_binding(r):
                    f"    def __eq__(self, o):\n        return {eq}")
         out.append(f"f.__kwdefaults__ = {{K(): 7, {name!r}: 8}}" if r.random() < 0.5
                    else "f.__kwdefaults__ = {K(): 7}")
+    elif r.random() < 0.3:
+        # a one-shot __eq__ that changes __kwdefaults__ during the lookup: the value is read after
+        # the comparison, from the dict as it now is (_Py_dict_lookup, Objects/dictobject.c)
+        name = r.choice(["c", "defg", "abcd"])
+        act = r.choice([f"f.__kwdefaults__[{name!r}] = 55", f"del f.__kwdefaults__[{name!r}]"])
+        out.append(f"FIRED = [1]\nclass K:\n    def __hash__(self):\n        return hash({name!r})\n"
+                   f"    def __eq__(self, o):\n        if not FIRED:\n            FIRED.append(1)\n"
+                   f"            {act}\n        return False")
+        out.append(f"f.__kwdefaults__ = {{K(): 7, {name!r}: 8}}\nFIRED.clear()")
     calls = ["f()", "f(1)", "f(1, 2)", "f(1, 2, 3)", "f(1, 2, 3, 4)", "f(abd=1)", "f(1, defh=2)", "f(Abc=1)",
              "f(abc=1, abcd=2)", "f(1, abcde=2)", "f(name=1)", "f(1, Name2=2)", "f(xy=1)", "f(1, alpha=2)",
              "f(ab=1, abc=2)", "f(1, 2, abcd=3)", "f(c=1)", "f(1, c=1)", "f(1, b=2, c=3)", "f(xx=1)",

@@ -345,15 +345,15 @@ theorem genCloseIterOutcomes_proven : GenCloseIterOutcomes := by
   · subst he; rfl
   · subst hm; simp only [closeMeth, hcall]; cases res <;> rfl
 
-/-- `gen_set_exception` (:546-601). The traceback is checked first: anything but absent,
-`None` or a traceback object is the `TypeError` whatever `typ` is, with nothing run. Then a
-class is normalized with its value (`PyErr_NormalizeException`, :566), which may call the class,
+/-- `gen_set_exception` (:546-601). The traceback is checked first (:550-557): anything but
+absent, `None` or a traceback object is the `TypeError` whatever `typ` is, with nothing run. Then a
+class is normalized with its value (`PyErr_NormalizeException`, :563-565), which may call the class,
 so Python code runs (`normalize` gets and returns the world, and may re-enter the model) and the
 exception is whatever that leaves, the constructor's own error included; an instance with a
-value other than `None` is the "instance exception may not have a separate value" `TypeError`, an
-instance with none is raised as it is, and anything else is the "exceptions must be classes or
-instances" `TypeError` naming its type (`%s` of `tp_name`, untruncated); none of these three runs
-Python code. Tracebacks themselves are not modelled. -/
+value other than `None` is the "instance exception may not have a separate value" `TypeError`
+(:566-572), an instance with none is raised as it is (:573-581), and anything else is the
+"exceptions must be classes or instances" `TypeError` naming its type (`%s` of `tp_name`,
+untruncated, :583-590); none of these three runs Python code. Tracebacks themselves are not modelled. -/
 def GenSetExceptionCases : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (typ : Obj V) (val : Option (Obj V)),
     (∀ t : Obj V, (match t with | .none | .traceback => False | _ => True) →

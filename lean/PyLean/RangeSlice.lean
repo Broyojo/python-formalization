@@ -9,6 +9,9 @@ import PyLean.RangeSlice.Iter
 import PyLean.RangeSlice.CApi
 import PyLean.RangeSlice.SliceHash
 import PyLean.RangeSlice.RangeMisc
+import PyLean.RangeSlice.Objects
+import PyLean.RangeSlice.Search
+import PyLean.RangeSlice.IterChoice
 
 /-!
 `range` and `slice`: `Objects/rangeobject.c`, `Objects/sliceobject.c`, CPython 3.15.2
@@ -22,12 +25,12 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "rangeslice-len-fast-slow", pyFile := "Objects/rangeobject.c"
-    pyFns := ["compute_range_length", "compute_range_length_long", "get_len_of_range"]
+    pyFns := ["compute_range_length_long"]
     statement := "Whenever the C long fast path of compute_range_length (unsigned long get_len_of_range) produces a length, it equals the PyLong slow path's length."
     source := "invariant: fast path agrees with slow path", status := .proven
     prop := ``RangeLengthFastSlow, thm := some ``rangeLengthFastSlow_proven },
   { id := "rangeslice-new-length", pyFile := "Objects/rangeobject.c"
-    pyFns := ["range_from_array", "validate_step", "make_range_object"]
+    pyFns := ["make_range_object"]
     statement := "range(start, stop[, step]) raises ValueError for step 0 and otherwise succeeds for all ints, storing start, stop, step and the mathematical length."
     source := "Doc/builtins/stdtypes.rst:1802 ('If step is zero, ValueError is raised')", status := .proven
     prop := ``RangeNewLength, thm := some ``rangeNewLength_proven },
@@ -37,12 +40,12 @@ def entries : List Entry := [
     source := "Doc/builtins/stdtypes.rst:1817-1819", status := .proven
     prop := ``LenOverflow, thm := some ``lenOverflow_proven },
   { id := "rangeslice-getitem", pyFile := "Objects/rangeobject.c"
-    pyFns := ["range_subscript", "compute_range_item", "compute_item"]
+    pyFns := ["compute_range_item", "compute_item"]
     statement := "r[i] is start + i*step (i + L for negative i) for -L <= i < L and raises IndexError otherwise, for all ints i."
     source := "invariant: sequence indexing", status := .proven
     prop := ``GetItemSeq, thm := some ``getItemSeq_proven },
   { id := "rangeslice-contains", pyFile := "Objects/rangeobject.c"
-    pyFns := ["range_contains", "range_contains_long"]
+    pyFns := ["range_contains_long"]
     statement := "For an int x, x in r holds exactly when x is one of the L elements start + k*step."
     source := "invariant: membership in the sequence", status := .proven
     prop := ``ContainsMem, thm := some ``containsMem_proven },
@@ -52,12 +55,12 @@ def entries : List Entry := [
     source := "index/count docstrings, rangeobject.c:774-779", status := .proven
     prop := ``IndexCount, thm := some ``indexCount_proven },
   { id := "rangeslice-eq-sequence", pyFile := "Objects/rangeobject.c"
-    pyFns := ["range_richcompare", "range_equals"]
+    pyFns := ["range_equals"]
     statement := "r0 == r1 exactly when both ranges have the same length and the same elements."
     source := "Doc/builtins/stdtypes.rst:1883-1888 (ranges compare as sequences)", status := .proven
     prop := ``EqSameSeq, thm := some ``eqSameSeq_proven },
   { id := "rangeslice-eq-hash", pyFile := "Objects/rangeobject.c"
-    pyFns := ["range_hash", "range_equals"]
+    pyFns := ["range_equals"]
     statement := "Equal ranges hash the same tuple, so r0 == r1 implies hash(r0) == hash(r1)."
     source := "invariant: hash consistent with equality", status := .proven
     prop := ``EqHashConsistent, thm := some ``eqHashConsistent_proven },
@@ -135,10 +138,64 @@ def entries : List Entry := [
     source := "invariant: truth of a sequence is non-emptiness (Doc/library/stdtypes.rst, truth value testing)", status := .proven
     prop := ``RangeBoolNonEmpty, thm := some ``rangeBoolNonEmpty_proven },
   { id := "rangeslice-range-reduce-round-trip", pyFile := "Objects/rangeobject.c", pyFns := ["range_reduce", "range_new", "range_vectorcall"]
-    statement := "Calling range with r.__reduce__()'s arguments (no keywords) rebuilds a range object equal to r, field for field, for every range object."
+    statement := "Calling range(*args) or range.__new__(range, *args) with r.__reduce__()'s arguments rebuilds a range object equal to r, field for field, for every range object."
     source := "invariant: pickling round-trips", status := .proven
     prop := ``RangeReduceRoundTrip, thm := some ``rangeReduceRoundTrip_proven
-    notes := "rangeCall mirrors the keyword refusal and range_from_array's argument-count messages, checked on 3.15.2." }
+    notes := "The keyword and argument-object behaviour of both entry points is rangeslice-range-call-objects." },
+  { id := "rangeslice-len-exact", pyFile := "Objects/rangeobject.c"
+    pyFns := ["compute_range_length", "compute_range_length_long", "get_len_of_range"]
+    statement := "get_len_of_range returns the mathematical length for all C long arguments; compute_range_length_long answers exactly when the arguments fit a long and the length is at most LONG_MAX; the PyLong slow path and compute_range_length itself return the mathematical length for all Python ints (non-zero step)."
+    source := "invariant: every length path computes len(range(start, stop, step))", status := .proven
+    prop := ``RangeLengthExact, thm := some ``rangeLengthExact_proven },
+  { id := "rangeslice-range-call-objects", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_from_array", "validate_step", "range_new", "range_vectorcall", "make_range_object"]
+    statement := "range(*args, **kw) and range.__new__(range, *args, **kw) agree for all objects; any keyword is a TypeError; 0 and >3 arguments are TypeErrors; otherwise start, stop and step go through PyNumber_Index in that order (first failure wins, a raising or non-int __index__ propagates), a zero step is the ValueError only after both conversions, and the result stores the converted values and the mathematical length."
+    source := "Doc/library/stdtypes.rst (range: arguments must be integers or objects with __index__; step zero raises ValueError)", status := .proven
+    prop := ``RangeCallObj, thm := some ``rangeCallObj_proven
+    notes := "numberIndex mirrors PyNumber_Index (Objects/abstract.c:1410-1463) including the DeprecationWarning for an int-subclass __index__ result; the difftest drives it with int subclasses, bool, __index__ objects that raise, return non-ints or int subclasses, and non-index objects." },
+  { id := "rangeslice-subscript-objects", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_subscript", "compute_range_item"]
+    statement := "r[item]: an object with __index__ is converted by PyNumber_Index (its error propagates) and indexes the sequence (IndexError outside -L..L-1); a slice gives compute_slice's range; anything else is TypeError('range indices must be integers or slices, not <type>')."
+    source := "invariant: sequence indexing; Doc/reference/datamodel.rst (__getitem__ takes integers or slices)", status := .proven
+    prop := ``SubscriptObj, thm := some ``subscriptObj_proven },
+  { id := "rangeslice-richcompare", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_richcompare", "range_equals"]
+    statement := "range.__eq__/__ne__ return NotImplemented for a non-range; the four orderings return NotImplemented; a range equals itself; against another range == is True exactly when lengths and elements agree, and != is its negation."
+    source := "Doc/library/stdtypes.rst (ranges compare as sequences with == and !=)", status := .proven
+    prop := ``RichcompareObj, thm := some ``richcompareObj_proven },
+  { id := "rangeslice-hash-key", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_hash"]
+    statement := "hash(r) is the hash of (L, None, None), (L, r[0], None) or (L, r[0], step) for L == 0, 1, or more; two ranges hash the same tuple exactly when they compare equal."
+    source := "invariant: hash consistent with equality (Doc/reference/datamodel.rst, object.__hash__)", status := .proven
+    prop := ``RangeHashObj, thm := some ``rangeHashObj_proven },
+  { id := "rangeslice-search-dispatch", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_contains", "range_count", "range_index"]
+    statement := "x in r, r.count(x), r.index(x): an exact int or bool takes the arithmetic path and never calls __eq__; every other object (int subclass instances included) runs _PySequence_IterSearch over r[0], ..., r[L-1] in order, threading a stateful, re-entrant, fallible __eq__ through the calls."
+    source := "rangeobject.c:507-511, :634-645, :654-660 (PyLong_CheckExact || PyBool_Check)", status := .proven
+    prop := ``SearchDispatch, thm := some ``searchDispatch_proven
+    notes := "_PySequence_IterSearch is mirrored locally (Search.lean) rather than imported from TypeObj, whose world model does not connect to Range." },
+  { id := "rangeslice-search-exact", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_contains", "range_count", "range_index"]
+    statement := "For a stateless comparison, the search gives: in/index -> 0 and ValueError when no element compares true, 1 and the first true position k (OverflowError once k passes PY_SSIZE_T_MAX), the first exception propagated; count -> the number of true comparisons, the first exception propagated, OverflowError at the PY_SSIZE_T_MAX + 1-th."
+    source := "count/index/__contains__ docstrings; invariant", status := .proven
+    prop := ``SearchPureExact, thm := some ``searchPureExact_proven },
+  { id := "rangeslice-search-twin", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_contains", "range_count", "range_index"]
+    statement := "For a probe that compares equal to the int v (a float, an int subclass keeping int.__eq__), in and count agree with the int path for v, and index agrees on members (up to the PY_SSIZE_T_MAX overflow) and raises ValueError with the generic sequence message instead of 'range.index(x): x not in range' for non-members."
+    source := "invariant: the arithmetic fast path agrees with the generic search", status := .proven
+    prop := ``SearchTwin, thm := some ``searchTwin_proven
+    notes := "The non-member message differs between the two paths (range(5).index(5.0) vs range(5).index(5)); a cosmetic twin difference, not filed." },
+  { id := "rangeslice-iter-choice", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_iter", "fast_range_iter"]
+    statement := "iter(r) is range_iterator(start, step, L) exactly when start, stop and step fit a C long, L <= LONG_MAX and (for L > 0) stop + step - 1 <= LONG_MAX (step > 0) or stop + step + 1 >= LONG_MIN (step < 0); otherwise longrange_iterator(start, step, L); with range_iterator, start + L*step fits a C long."
+    source := "invariant: rangeobject.c:1236-1267 (the overflow check for lstart + ulen * lstep)", status := .proven
+    prop := ``IterChoice, thm := some ``iterChoice_proven
+    notes := "The choice is observable: range_iterator.__setstate__ accepts True and __index__ objects, longrange_iterator's raises TypeError (rangeslice-setstate-state-types)." },
+  { id := "rangeslice-reverse-choice", pyFile := "Objects/rangeobject.c"
+    pyFns := ["range_reverse", "fast_range_iter"]
+    statement := "reversed(r) is range_iterator(start + (L-1)*step, -step, L) exactly when start, stop and step fit a C long, step != LONG_MIN, start - step fits a C long and L <= LONG_MAX; otherwise longrange_iterator with the same fields."
+    source := "invariant: rangeobject.c:1292-1300 (reversed(range(a, b, s)) is range(a + (n-1)*s, a - s, -s))", status := .proven
+    prop := ``ReverseChoice, thm := some ``reverseChoice_proven }
 ]
 
 end PyLean.RangeSlice

@@ -404,7 +404,10 @@ def getAttrImpl (o : Val) (name : String) : RM Val := do
       | "__name__" => return .str f.name
       | "__qualname__" => return .str f.qualname
       | "__module__" => return .str "__main__"
+      -- `func_get_defaults` / `func_get_kwdefaults` (`Objects/funcobject.c:814-825`, :861-872):
+      -- `NULL` reads as `None`, else the stored object itself
       | "__defaults__" => return (if f.defaults == .null then .none else f.defaults)
+      | "__kwdefaults__" => return (if f.kwdefaults == .null then .none else f.kwdefaults)
       | _ => pure ()
     | .cls c =>
       match name with

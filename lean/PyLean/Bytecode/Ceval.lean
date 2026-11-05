@@ -44,6 +44,38 @@ def putDict (v : Val) (d : DictObj) : RM Unit :=
   | .ref a => setObj a (.dict d)
   | _ => fault "expected a dict"
 
+/-- One pass of `do_lookup` with `compare_generic` (`Objects/dictobject.c:1182-1207`), over the
+entries in order from `i`, reading the dict afresh at each step. After a stored key with the
+same hash is compared (which may run Python code), the dict is read again: if the entry no longer
+holds that key the pass gives `none`, a restart (`DKIX_KEY_CHANGED`, :1198-1203); otherwise a
+true comparison is the index and a false one goes on. Scope: the model has no `ma_keys` identity,
+so a resize that keeps the entry does not restart as C does. -/
+def dictProbeLive (eq : Val → RM Bool) (dv : Val) (h : Int) : Nat → Nat → RM (Option (Option Nat))
+  | 0, _ => pure (some none)
+  | n + 1, i => do
+    let d ← getDict dv
+    match d.entries[i]? with
+    | none => pure (some none)
+    | some e =>
+      if e.hash == h then
+        let c ← eq e.key
+        let d' ← getDict dv
+        if (d'.entries[i]?.map (·.key)) == some e.key then
+          if c then pure (some (some i)) else dictProbeLive eq dv h n (i + 1)
+        else pure none
+      else dictProbeLive eq dv h n (i + 1)
+
+/-- `_Py_dict_lookup` (`Objects/dictobject.c:1328-1384`): passes until one ends without a
+restart (`goto start`, :1380). The restarts are bounded by fuel, which is never a Python outcome. -/
+def dictFindLive (eq : Val → RM Bool) (dv : Val) (h : Int) : Nat → RM (Option Nat)
+  | 0 => fault "dict lookup restarted too often"
+  | fuel + 1 => do
+    match ← dictProbeLive eq dv h ((← getDict dv).entries.size) 0 with
+    | some r => pure r
+    | none => dictFindLive eq dv h fuel
+
+def dictRestartFuel : Nat := 64
+
 def strKeyEq (name : String) (k : Val) : RM Bool := pure (k == .str name)
 
 /-- `PyDict_GetItemRef` for a str key, on an exact dict. -/
@@ -706,20 +738,22 @@ def hashFor (what : String) (key : Val) : RM Int :=
       | _ => throw (.exc e)
     else throw (.exc e)
 
-/-- `PyDict_GetItemRef`: `none` is "absent". -/
+/-- `PyDict_GetItemRef`: `none` is "absent". The lookup is `dictFindLive` with
+`compare_generic`'s `PyObject_RichCompareBool(startkey, key, Py_EQ)` (the stored key first), and
+the value is read from the dict as the lookup left it (`_Py_dict_lookup`,
+`Objects/dictobject.c:1374-1384`). -/
 def dictGet (dv key : Val) : RM (Option Val) := do
   let h ← hashFor om ctx "dict key" key
-  let d ← getDict dv
-  match ← dictFind (eqBool om ctx key) d h with
-  | some i => pure (d.entries[i]?.map (·.value))
+  match ← dictFindLive (fun k => eqBool om ctx k key) dv h dictRestartFuel with
+  | some i => pure ((← getDict dv).entries[i]?.map (·.value))
   | none => pure none
 
-/-- `PyDict_SetItem`. -/
+/-- `PyDict_SetItem` (`insertdict`): the live lookup, then the value replaced or the entry
+appended in the dict as the lookup left it. -/
 def dictSet (dv key v : Val) : RM Unit := do
   let h ← hashFor om ctx "dict key" key
-  let d ← getDict dv
-  let idx ← dictFind (eqBool om ctx key) d h
-  dictInsertAt dv d idx h key v
+  let idx ← dictFindLive (fun k => eqBool om ctx k key) dv h dictRestartFuel
+  dictInsertAt dv (← getDict dv) idx h key v
 
 /-- `PyDict_Contains`. -/
 def dictContains (dv key : Val) : RM Bool := do

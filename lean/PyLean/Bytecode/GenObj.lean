@@ -244,7 +244,7 @@ def entries : List Entry := [
     bug := some "bytecode-gen-close-deep-chain-stack-overflow" },
   { id := "gen-throw-bad-arg-undelegated", pyFile := src, pyFns := ["gen_throw", "_gen_throw", "gen_set_exception"]
     statement := "With no sub-iterator, throw() of something that cannot be raised changes nothing, on every state, and is the documented TypeError, except that a running generator raises the already-executing ValueError and a finished coroutine the cannot-reuse RuntimeError, since 3.15 looks at the state first."
-    source := "genobject.c:628-645, :584-591", status := .proven
+    source := "genobject.c:628-645, :583-590", status := .proven
     prop := ``GenThrowBadArgUndelegated, thm := some ``genThrowBadArgUndelegated_proven },
   { id := "gen-throw-bad-arg-no-effect", pyFile := src, pyFns := ["gen_throw", "_gen_throw"]
     statement := "With or without a sub-iterator, throw() of something that cannot be raised leaves the generator's state alone."

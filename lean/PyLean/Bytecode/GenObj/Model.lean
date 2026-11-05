@@ -339,7 +339,7 @@ structure Hooks (V X : Type) where
   warnUnawaitedCoro : World V X → Ref → World V X
   /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, :2533). -/
   warnUnawaitedAgen : World V X → Ref → String → World V X
-  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:566) for a class `typ`: it may call the
+  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:564) for a class `typ`: it may call the
   class with `val` (`_PyErr_CreateException`), which runs Python code (`__new__`, `__init__`)
   that acts on the world and may re-enter the model. It always leaves an exception: the
   instance, or the one the constructor raised (`Python/errors.c`, `_PyErr_NormalizeException`). -/
@@ -616,7 +616,7 @@ def givenMatchesGeneratorExit : Obj V → Bool
   | .excClass k _ | .excInst k _ _ _ => k == .generatorExit
   | _ => false
 
-/-- `tb != NULL && !PyTraceBack_Check(tb)` after `None` became NULL, :550-558. -/
+/-- `tb != NULL && !PyTraceBack_Check(tb)` after `None` became NULL, :550-557. -/
 def badTraceback : Option (Obj V) → Bool
   | none | some .none | some .traceback => false
   | some _ => true
