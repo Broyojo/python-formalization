@@ -61,7 +61,9 @@ def slot (so : SetObj K) (i : Nat) : Slot K := so.table.getD i .null
 /-- `PyFrozenSet_CheckExact(so)`. -/
 def frozenExact (so : SetObj K) : Bool := so.frozen && so.exact
 /-- The entry at index `i` as C reads it through `&table[i]`: in the table, the table's; past its
-end, the bytes the block still holds there (`stale`), NULL where it holds none. -/
+end, the bytes the block still holds there (`stale`), NULL where it holds none. The set model reads
+entries only this way; `slot` is the table's own view (iteration, the theorems on well-formed tables,
+where the two agree: `mem_lt`, `mem_active`, `mem_of_ne_null`). -/
 def mem (so : SetObj K) (i : Nat) : Slot K :=
   if i < so.table.length then so.slot i else so.stale.getD (i - so.table.length) .null
 
@@ -78,6 +80,14 @@ theorem mem_active (so : SetObj K) {i : Nat} {k : K} {hh : Int} (h : so.slot i =
   unfold mem
   split
   · exact h
+  · rename_i hn
+    have : so.table[i]? = none := List.getElem?_eq_none (by omega)
+    simp [slot, List.getD, this] at h
+
+theorem mem_of_ne_null (so : SetObj K) {i : Nat} (h : so.slot i ≠ .null) : so.mem i = so.slot i := by
+  unfold mem
+  split
+  · rfl
   · rename_i hn
     have : so.table[i]? = none := List.getElem?_eq_none (by omega)
     simp [slot, List.getD, this] at h
@@ -122,7 +132,7 @@ def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
 entry. `SET_LOOKKEY_EMPTY` and `SET_LOOKKEY_FOUND` both end it at this slot. -/
 def compareLocked (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.found slot)
   | .dummy => return .inr ()
   | .active startkey h =>
@@ -141,7 +151,7 @@ def compareLocked (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit)
 identity test comes before the hash test, so a key found by identity need not have kept its hash. -/
 def compareFrozen (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.found slot)
   | .dummy => return .inr ()
   | .active startkey h =>
@@ -191,8 +201,10 @@ restart walks the table `__eq__` left. `256` turns stand for "until no `__eq__` 
 back a freed table's address with another mask, and then, as in CPython, the test passes and the
 walk goes on with the old mask (`aba_probe`, bugs/dictset-set-lookup-table-aba.yaml). The re-check
 and the entry functions read through the pointer (`SetObj.mem`): past the end of the table, the
-freed block's stale bytes. Scope: the walk's own reads of the following entries use `SetObj.slot`,
-NULL past the end, where CPython reads the stale bytes too. -/
+freed block's stale bytes. Every read of an entry in the probe walks (`compareLocked`,
+`compareFrozen`, `addStep`, the `freeslot` test) and in the entry functions goes through
+`SetObj.mem`, and every store of the add and discard through `storeAt`, as C reads and writes
+through `&table[i]`. -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
@@ -313,7 +325,7 @@ walk (:275-276); an entry with the hash is the same object, an equal exact `str`
 def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
     SM K (AddScan ⊕ (Nat × Option Nat)) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.unused slot freeslot mask)
   | .dummy =>
     -- else if (entry->hash == -1): the last dummy seen wins
@@ -381,9 +393,9 @@ def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
         if so'.fill * 5 < mask * 3 then return ()
         setGrow
       | some fs =>
-        match so.slot fs with
+        match so.mem fs with
         | .dummy =>
-          M.put { so with used := so.used + 1, table := so.table.set fs (.active key hash) }
+          M.put { so.storeAt fs (.active key hash) with used := so.used + 1 }
         | _ => setAddEntryAux key hash restarts
 
 def setAddEntry (key : K) (hash : Int) : SM K Unit := setAddEntryAux P key hash 256

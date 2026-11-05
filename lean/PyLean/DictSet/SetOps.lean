@@ -693,7 +693,7 @@ def frozenLookup (key : K) (hash : Int) : SM K Bool := do
   | none => M.throw .modelFuel
   | some s =>
     let so' ← M.get
-    match so'.slot s with
+    match so'.mem s with
     | .null => return false
     | _ => return true
 
