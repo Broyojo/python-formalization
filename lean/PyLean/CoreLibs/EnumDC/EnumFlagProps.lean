@@ -301,10 +301,10 @@ theorem pvOps_intOps : IntOps pvOps where
   same_int a b h := by simpa [pvOps] using h
   hash_int a := ⟨intHash a, rfl⟩
   eq_int a b := by
-    simp only [pvOps, pvEq, Except.ok.injEq]
+    simp only [pvOps, pvEq, PV.norm, pvEq0, Except.ok.injEq]
     cases h : (a == b) <;> simp_all
-  lt_int a b := by simp [pvOps, pvCmp]
-  gt_int a b := by simp [pvOps, pvCmp]
+  lt_int a b := by simp [pvOps, pvCmp, PV.norm]
+  gt_int a b := by simp [pvOps, pvCmp, PV.norm]
   succ_int a := rfl
   index_int a := rfl
   bitLength_int a := rfl
@@ -610,7 +610,9 @@ private theorem lt_two_pow_bitLength' (n : Nat) : n < 2 ^ bitLength n := by
 /-- `Flag._generate_next_value_`, every path, for every value type: the first value is `start`, or `1` for `None`; then an
 empty `last_values` is the `ValueError` of `max`, an exception from a `>` of `max` goes out, an exception from
 `bit_length` becomes the `TypeError` of :1450-1451, and otherwise the value is `2 ** bit_length(max)`. On `int`s that is
-the least power of two above every value so far, the docs' "the next power of two". -/
+the least power of two above every value so far, the docs' "the next power of two". The `TypeError` formats the
+value with `%r` (:1452), so an exception of its `repr` goes out instead: for `R` with `__gt__`, no `bit_length` and a
+`__repr__` raising `ValueError`, `Flag._generate_next_value_('n', 1, 1, [R()])` raises that `ValueError`. -/
 def FlagGenerateG : Prop :=
   ∀ (α : Type) (o : Ops α) (start : Option α) (count : Nat) (last : List α),
     flagGenerateG o start 0 last = .ok (start.getD (o.ofInt 1)) ∧
@@ -618,8 +620,10 @@ def FlagGenerateG : Prop :=
     (∀ x r, count ≠ 0 →
       (∀ e, extremum o.gt x r = .error e → flagGenerateG o start count (x :: r) = .error e) ∧
       (∀ m, extremum o.gt x r = .ok m →
-        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = true →
+        (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = true → (∃ s, o.repr m = .ok s) →
           (flagGenerateG o start count (x :: r)).raises "TypeError") ∧
+        (∀ e e', o.bitLength m = .error e → o.isInst e "Exception" = true → o.repr m = .error e' →
+          flagGenerateG o start count (x :: r) = .error e') ∧
         (∀ e, o.bitLength m = .error e → o.isInst e "Exception" = false →
           flagGenerateG o start count (x :: r) = .error e) ∧
         (∀ b, o.bitLength m = .ok b → flagGenerateG o start count (x :: r) = .ok (o.ofInt ((2 : Int) ^ b))))) ∧
@@ -631,7 +635,8 @@ def FlagGenerateG : Prop :=
 theorem flagGenerateG_proven : FlagGenerateG := by
   intro α o start count last
   refine ⟨rfl, fun hc => by simp [flagGenerateG, hc], fun x r hc => ⟨fun e he => by simp [flagGenerateG, hc, he],
-    fun m hm => ⟨fun e he hx => ⟨_, by simp [flagGenerateG, hc, hm, he, hx]; rfl, rfl⟩,
+    fun m hm => ⟨fun e he hx ⟨s, hs⟩ => ⟨_, by simp [flagGenerateG, hc, hm, he, hx, hs, withRepr]; rfl, rfl⟩,
+      fun e e' he hx hr => by simp [flagGenerateG, hc, hm, he, hx, hr, withRepr],
       fun e he hx => by simp [flagGenerateG, hc, hm, he, hx],
       fun b hb => by simp [flagGenerateG, hc, hm, hb]⟩⟩, ?_⟩
   intro h i r hc
@@ -779,7 +784,7 @@ theorem nameOf_ok (c : FlagCls) (hb : c.boundary ≠ .strict) (value mv al : Nat
 theorem conform_missing (c : FlagCls) (hb : c.boundary = .conform) (v : Int) (hv : 0 ≤ v) :
     ∃ name, c.missing v = .ok (.flag (v.toNat &&& c.flagMask) name) := by
   have hns : c.boundary ≠ .strict := by rw [hb]; decide
-  simp only [FlagCls.missing, hb]
+  simp only [FlagCls.missing, FlagCls.missingR, hb]
   split
   · have hx : andMask v c.flagMask &&& c.flagMask = andMask v c.flagMask := by
       simp only [andMask, Nat.and_assoc, Nat.and_self]
@@ -977,13 +982,13 @@ theorem missingBoundaries_proven : MissingBoundaries := by
   intro c v
   refine ⟨fun hb ho => ?_, fun hb ho => ?_, fun hb => ?_⟩
   · unfold FlagCls.outOfRange at ho
-    simp only [FlagCls.missing, hb, ho, ↓reduceIte]
+    simp only [FlagCls.missing, FlagCls.missingR, hb, ho, ↓reduceIte]
     exact ⟨_, rfl, rfl⟩
   · unfold FlagCls.outOfRange at ho
-    simp only [FlagCls.missing, hb, ho, ↓reduceIte]
+    simp only [FlagCls.missing, FlagCls.missingR, hb, ho, ↓reduceIte]
     rfl
   · have hns : c.boundary ≠ .strict := by rw [hb]; decide
-    simp only [FlagCls.missing, hb]
+    simp only [FlagCls.missing, FlagCls.missingR, hb]
     by_cases ho : c.outOfRange v = true
     · have ho' := ho
       unfold FlagCls.outOfRange at ho'
@@ -1076,7 +1081,7 @@ theorem missingInRange_proven : MissingInRange := by
     unfold FlagCls.allBits at h1 h2
     exact inRange_sub c.flagMask v.toNat (by omega) h2
   have hnn : ¬ (v < 0) := by omega
-  simp only [FlagCls.missing, ho', Bool.false_eq_true, ↓reduceIte, pure_bind, hnn, notAnd_sub hsub,
+  simp only [FlagCls.missing, FlagCls.missingR, ho', Bool.false_eq_true, ↓reduceIte, pure_bind, hnn, notAnd_sub hsub,
     bne_self_eq_false, Bool.false_and]
   generalize c.nameOf _ _ _ = x
   cases x <;> rfl
@@ -1084,7 +1089,9 @@ theorem missingInRange_proven : MissingInRange := by
 /-! ### `verify(CONTINUOUS)` on values that do not compare -/
 
 /-- `verify(CONTINUOUS)` raises what building the set raises, and what `min` raises: with values `1, 2, 'x'` that is the
-`TypeError` "'<' not supported between instances of 'str' and 'int'", as on 3.15.2. -/
+`TypeError` of `<`, whose operands are in the order the set is iterated, which depends on the hash seed: iterated as
+`1, 2, 'x'` it is "'<' not supported between instances of 'str' and 'int'" (PYTHONHASHSEED=0 on 3.15.2), iterated as
+`'x', 2, 1` it is "... 'int' and 'str'" (PYTHONHASHSEED=1). -/
 def ContinuousErrors : Prop :=
   (∀ (α : Type) (o : Ops α) (order : List α → List α) (flag : Bool) (s : String) (vals : List α) (e : PyExc),
     o.setOf vals [] = .error e → verifyContinuousG o order flag s vals = .error e) ∧
@@ -1092,10 +1099,111 @@ def ContinuousErrors : Prop :=
     (st : List (α × Unit)) (x : α) (r : List α) (e : PyExc), o.setOf vals [] = .ok st → ¬ st.length < 2 →
     order (st.map Prod.fst) = x :: r → extremum o.lt x r = .error e → verifyContinuousG o order flag s vals = .error e) ∧
   verifyContinuousG evOps id false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
-    .error (.typeError "'<' not supported between instances of 'str' and 'int'")
+    .error (.typeError "'<' not supported between instances of 'str' and 'int'") ∧
+  verifyContinuousG evOps List.reverse false "C" [.atom (.int 1), .atom (.int 2), .atom (.str "x")] =
+    .error (.typeError "'<' not supported between instances of 'int' and 'str'")
 
 theorem continuousErrors_proven : ContinuousErrors := by
   refine ⟨fun α o order flag s vals e h => by simp [verifyContinuousG, h],
-    fun α o order flag s vals st x r e h hl ho he => by simp [verifyContinuousG, h, hl, ho, he], by decide +kernel⟩
+    fun α o order flag s vals st x r e h hl ho he => by simp [verifyContinuousG, h, hl, ho, he], by decide +kernel,
+    by decide +kernel⟩
+
+/-- The earlier `FlagGenerateG` clause, an `Exception` from `bit_length` gives the `TypeError`: false when the value's
+`__repr__` raises, as `%r` runs it (:1452). -/
+private theorem flagGenerate_reprRaises :
+    ¬ (∀ (α : Type) (o : Ops α) (start : Option α) (count : Nat) (x : α) (r : List α) (m : α) (e : PyExc),
+        count ≠ 0 → extremum o.gt x r = .ok m → o.bitLength m = .error e → o.isInst e "Exception" = true →
+        (flagGenerateG o start count (x :: r)).raises "TypeError") := by
+  intro h
+  obtain ⟨e, he, hc⟩ := h PV pvOps (some (.int 1)) 1 (.robj "ValueError" 0) [] (.robj "ValueError" 0)
+    (.named "AttributeError" "'RObj' object has no attribute 'bit_length'") (by decide) rfl rfl (by decide +kernel)
+  have : flagGenerateG pvOps (some (.int 1)) 1 [.robj "ValueError" 0] = .error (.valueError "repr") := by decide +kernel
+  rw [this] at he
+  cases he
+  simp [PyExc.className] at hc
+
+/-! ### `Flag._missing_`: the repr of an out-of-range value, the name loop, negative values -/
+
+/-- `Flag._missing_` under `STRICT` on an out-of-range value formats it with `%r` (:1501), so the `repr` of an `int`
+subclass that raises goes out instead of the `ValueError`. -/
+def MissingStrictRepr : Prop :=
+  ∀ (c : FlagCls) (v : Int) (e : PyExc) (s : String), c.boundary = .strict → c.outOfRange v = true →
+    c.missingR (.error e) v = .error e ∧ (c.missingR (.ok s) v).raises "ValueError"
+
+theorem missingStrictRepr_proven : MissingStrictRepr := by
+  intro c v e s hb ho
+  unfold FlagCls.outOfRange at ho
+  refine ⟨?_, ?_⟩
+  · simp only [FlagCls.missingR, hb, ho, ↓reduceIte]
+    rfl
+  · simp only [FlagCls.missingR, hb, ho, ↓reduceIte]
+    exact ⟨_, rfl, rfl⟩
+
+/-- The members the name loop collects, :1541-1552: with no alias bit, exactly those of `_iter_member_(member_value)`;
+with alias bits, those and every canonical member with a nonzero value inside `member_value | aliases` (the loop of
+:1547-1552), and nothing else. The name is theirs joined with `|`, plus `|unknown` for bits none of them has, except that
+no bit at all is `None` and unknown bits under `STRICT` are the :1557 error. So `A = 1, X = 6` under `STRICT` gives
+`F(7) = (7, 'A|X')`: the alias loop finds `X`. -/
+def NameLoop : Prop :=
+  (∀ (c : FlagCls) (mv : Nat), c.nameMembers mv 0 = (c.iterMembers mv).filterMap id) ∧
+  (∀ (c : FlagCls) (mv al : Nat), al ≠ 0 → ∀ p ∈ c.canonical, p.2 ≠ 0 → p.2 &&& (mv ||| al) = p.2 →
+    p ∈ c.nameMembers mv al) ∧
+  (∀ (c : FlagCls) (mv al : Nat), al ≠ 0 → ∀ p ∈ c.nameMembers mv al,
+    p ∈ (c.iterMembers mv).filterMap id ∨ (p ∈ c.canonical ∧ p.2 ≠ 0 ∧ p.2 &&& (mv ||| al) = p.2)) ∧
+  (∀ (c : FlagCls) (value mv al : Nat), (mv != 0 || al != 0) = true →
+    c.nameOf value mv al =
+      let all := c.nameMembers mv al
+      let combined := all.foldl (fun m p => m ||| p.2) 0
+      let unknown := (if al != 0 then mv ||| al else value) ^^^ combined
+      if combined == 0 then .ok none
+      else if unknown != 0 && c.boundary == .strict then .error (.valueError s!"~no members with value {unknown}")
+      else if unknown != 0 then .ok (some s!"{"|".intercalate (all.map Prod.fst)}|{unknown}")
+      else .ok (some ("|".intercalate (all.map Prod.fst)))) ∧
+  FlagCls.call ⟨"F", [("A", 1), ("X", 6)], .strict⟩ 7 = .ok (.flag 7 (some "A|X"))
+
+theorem nameLoop_proven : NameLoop := by
+  refine ⟨fun c mv => by simp [FlagCls.nameMembers], fun c mv al hal p hp h0 hs => ?_, fun c mv al hal p hp => ?_,
+    fun c value mv al h => by simp only [FlagCls.nameOf, h, ↓reduceIte], by decide +kernel⟩
+  · have hal' : (al != 0) = true := by simpa using hal
+    simp only [FlagCls.nameMembers, hal', ↓reduceIte, List.mem_append, List.mem_filter]
+    by_cases hf : p ∈ (c.iterMembers mv).filterMap id
+    · exact .inl hf
+    · refine .inr ⟨hp, ?_⟩
+      simp [hf, h0, hs]
+  · have hal' : (al != 0) = true := by simpa using hal
+    simp only [FlagCls.nameMembers, hal', ↓reduceIte, List.mem_append, List.mem_filter] at hp
+    rcases hp with hp | ⟨hp, hq⟩
+    · exact .inl hp
+    · refine .inr ⟨hp, ?_, ?_⟩ <;> simp at hq <;> simp [hq]
+
+/-- `Flag._missing_` on a negative `int` in range, :1518-1524: under `EJECT` and `KEEP` it becomes `all_bits + 1 + value`,
+and under `STRICT` and `CONFORM` `singles_mask & value`; then the unknown-bits test (skipped under `KEEP`) and the name
+loop. So `F(-1)` of `A = 1, B = 2` is `(3, 'A|B')` under `STRICT` and under `EJECT`, and `G(-2)` of `A = 1, X = 6` under
+`STRICT` is `(0, None)`. -/
+def MissingNegative : Prop :=
+  (∀ (c : FlagCls) (v : Int), c.outOfRange v = false → v < 0 →
+    let v2 : Nat := (if c.boundary = .eject ∨ c.boundary = .keep then (c.allBits : Int) + 1 + v
+      else (andMask v c.singlesMask : Int)).toNat
+    c.missing v =
+      if (notAnd c.flagMask v2 != 0 && c.boundary != .keep) = true then .error (.valueError "~unknown values")
+      else (c.nameOf v2 (v2 &&& c.singlesMask) (notAnd c.singlesMask v2)).map
+        (fun nm => .flag v2 (match c.memberOf v2 with
+          | some n => some n
+          | none => nm))) ∧
+  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .strict⟩ (-1) = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call ⟨"F", [("A", 1), ("B", 2)], .eject⟩ (-1) = .ok (.flag 3 (some "A|B")) ∧
+  FlagCls.call ⟨"G", [("A", 1), ("X", 6)], .strict⟩ (-2) = .ok (.flag 0 none)
+
+theorem missingNegative_proven : MissingNegative := by
+  refine ⟨?_, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  intro c v ho hv
+  have ho' : (!decide (-(c.allBits : Int) - 1 ≤ v ∧ v ≤ (c.allBits : Int)) ||
+      andMask v (c.allBits ^^^ c.flagMask) != 0) = false := by
+    unfold FlagCls.outOfRange at ho; simpa using ho
+  simp only [FlagCls.missing, FlagCls.missingR, ho', Bool.false_eq_true, ↓reduceIte, pure_bind, hv]
+  split
+  · rfl
+  · generalize c.nameOf _ _ _ = x
+    cases x <;> rfl
 
 end PyLean.CoreLibs.EnumDC

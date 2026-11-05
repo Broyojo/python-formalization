@@ -4000,6 +4000,9 @@ corelibs-enum-verify-named	proven	Lib/enum.py	verify.__call__
 corelibs-enum-missing-boundaries	proven	Lib/enum.py	Flag._missing_
 corelibs-enum-missing-in-range	proven	Lib/enum.py	Flag._missing_
 corelibs-enum-continuous-errors	proven	Lib/enum.py	verify.__call__
+corelibs-enum-missing-strict-repr	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-name-loop	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-missing-negative	proven	Lib/enum.py	Flag._missing_
 corelibs-dataclasses-hash-table	proven	Lib/dataclasses.py	
 corelibs-dataclasses-init-order	proven	Lib/dataclasses.py	_fields_in_init_order
 corelibs-dataclasses-default-order	proven	Lib/dataclasses.py	

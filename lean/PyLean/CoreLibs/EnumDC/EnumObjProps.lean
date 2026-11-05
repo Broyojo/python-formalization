@@ -113,6 +113,14 @@ theorem reprAll_error {α : Type} {reprA : α → Py String} {e : PyExc} :
       obtain ⟨a, ha, he⟩ := reprAll_error h
       exact ⟨a, by simp [ha], he⟩
 
+theorem reprCase {α : Type} {reprA : α → Py String} {L : List (SArg α)} {x : SArg α} {e0 e : PyExc} {P : Prop}
+    (hx : x ∈ L) (h : (withRepr (x.repr reprA) e0 : Py String) = .error e) (ht : e0.className = "TypeError") :
+    e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ L ∧ reprA a = .error e) ∨ P := by
+  rcases withRepr_error h with rfl | hr
+  · exact .inl ht
+  · obtain ⟨a, rfl, ha⟩ := sarg_repr_error hr
+    exact .inr (.inl ⟨a, hx, ha⟩)
+
 theorem strEnumNewRules_proven : StrEnumNewRules := by
   intro α codec reprA l s
   refine ⟨?_, ?_⟩
@@ -134,31 +142,22 @@ theorem strEnumNewRules_proven : StrEnumNewRules := by
           fun ⟨_, _, _, ⟨h1, h2, h3⟩, h⟩ => by subst h1; subst h2; subst h3; exact h⟩
     | _ :: _ :: _ :: _ :: r => simp [strEnumNewG]
   · intro e h
-    have rep1 : ∀ (L : List (SArg α)) (x : SArg α) (e0 : PyExc), x ∈ L →
-        (withRepr (x.repr reprA) e0 : Py String) = .error e → e0.className = "TypeError" →
-        e.className = "TypeError" ∨ (∃ a, SArg.other a ∈ L ∧ reprA a = .error e) ∨
-        ∃ b enc er, (L.head? = some (.bytes b) ∨ L.head? = some (.buffer b)) ∧ strDecode codec b enc er = .error e := by
-      intro L x e0 hx hw ht
-      rcases withRepr_error hw with rfl | hr
-      · exact .inl ht
-      · obtain ⟨a, rfl, ha⟩ := sarg_repr_error hr
-        exact .inr (.inl ⟨a, hx, ha⟩)
     match l, h with
     | [], h => simp [strEnumNewG] at h
     | [a], h =>
-      cases a <;> simp only [strEnumNewG, List.length_cons, List.length_nil] at h <;>
-        first | exact rep1 _ _ _ (by simp) h rfl | (simp at h)
+      cases a <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
+        first | (simp at h; done) | exact reprCase (by simp) h rfl
     | [a, b], h =>
-      cases a <;> cases b <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil] at h <;>
+      cases a <;> cases b <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
         first
-        | exact rep1 _ _ _ (by simp) h rfl
+        | exact reprCase (by simp) h rfl
         | (simp at h; subst h; left; rfl)
         | (simp at h; right; right; exact ⟨_, _, _, .inl rfl, h⟩)
         | (simp at h; right; right; exact ⟨_, _, _, .inr rfl, h⟩)
     | [a, b, c], h =>
-      cases a <;> cases b <;> cases c <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil] at h <;>
+      cases a <;> cases b <;> cases c <;> simp only [strEnumNewG, strDecodeArg, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, gt_iff_lt, Nat.reduceLT, ↓reduceIte] at h <;>
         first
-        | exact rep1 _ _ _ (by simp) h rfl
+        | exact reprCase (by simp) h rfl
         | (simp at h; subst h; left; rfl)
         | (simp at h; right; right; exact ⟨_, _, _, .inl rfl, h⟩)
         | (simp at h; right; right; exact ⟨_, _, _, .inr rfl, h⟩)
@@ -644,13 +643,13 @@ theorem valueAliasPaths_proven : ValueAliasPaths := by
     fun e h ht => by simp [EClassG.addValueAlias, h, ht], fun n m x r hx => ?_, fun d w h => by
     simp [EClassG.bindValue, h], fun e h ht => by simp [EClassG.bindValue, h, ht], fun e h ht => by
     simp [EClassG.bindValue, h, ht]⟩
-  · simp only [EClassG.firstMemberEq, hx]
-    try rfl
   · cases hl : c.values.lookup m with
     | none => exact ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hl]; rfl, rfl⟩
     | some x =>
       obtain ⟨s', hs'⟩ := hx x hl
       exact ⟨_, by simp [EClassG.addValueAlias, h, hm, hs, hl, hs']; rfl, rfl⟩
+  · simp only [EClassG.firstMemberEq, hx]
+    try rfl
 
 /-- A class with members `A` and `B` and the given values, built by the mirror. -/
 def twoG (a b : EV) : EClassG EV :=
