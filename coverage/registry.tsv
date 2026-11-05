@@ -3990,6 +3990,7 @@ corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
 corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
 corelibs-enum-value-alias-binds	proven	Lib/enum.py	
+corelibs-enum-value-alias-linked-raises	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__
