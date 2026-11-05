@@ -5504,9 +5504,55 @@ enumdc_BOUND = {"strict": enumdc_enum.STRICT, "conform": enumdc_enum.CONFORM,
                 "eject": enumdc_enum.EJECT, "keep": enumdc_enum.KEEP}
 
 
+def enumdc_numrepr(kind):
+    """The class's own _numeric_repr_ (Lib/enum.py:1560), or None for Flag's repr."""
+    if kind == "hex":
+        return hex
+    if kind == "raise":
+        def nr(n):
+            raise LookupError("nr")
+        return nr
+    if kind == "tuple2":
+        return lambda n: (n, n)
+    if kind == "int10":
+        return lambda n: n * 10
+    return None
+
+
+def enumdc_strhook(kind, exc):
+    """A __str__ or __format__ of the class's own: returns 'S', raises exc, or returns 5."""
+    if kind == "ok":
+        return lambda self, *a: "S"
+    if kind == "raise":
+        def h(self, *a):
+            raise exc
+        return h
+    if kind == "bad":
+        return lambda self, *a: 5
+    return None
+
+
+def enumdc_hooks(F, case):
+    """Set the hooks the case asks for on a fresh class: what a class body would define."""
+    nr = enumdc_numrepr(case.get("numrepr"))
+    if nr is not None:
+        F._numeric_repr_ = nr
+    st = enumdc_strhook(case.get("str"), LookupError("str"))
+    if st is not None:
+        F.__str__ = st
+    fm = enumdc_strhook(case.get("fmt"), KeyError("fmt"))
+    if fm is not None:
+        F.__format__ = fm
+    return F
+
+
+def enumdc_gnumrepr(rng):
+    return rng.choice([None, None, None, None, "hex", "raise", "tuple2", "int10"])
+
+
 def enumdc_cls(case):
-    return enumdc_enum.Flag("F", [tuple(m) for m in case["members"]],
-                            boundary=enumdc_BOUND[case["boundary"]])
+    return enumdc_hooks(enumdc_enum.Flag("F", [tuple(m) for m in case["members"]],
+                                         boundary=enumdc_BOUND[case["boundary"]]), case)
 
 
 def enumdc_out(x, F):
@@ -5672,7 +5718,7 @@ def enumdc_gclass(rng):
     kind = rng.choice(["plain", "plain", "plain", "plain", "flag", "strEnum"])
     body = enumdc_gbody(rng, kind)
     return {"fn": "enumdc.ec_class", "kind": kind, "body": body, "op": enumdc_gop(rng, kind, body),
-            "badrepr": rng.random() < .15}
+            "badrepr": rng.choice([False] * 10 + [True, True, "ok", "ok"])}
 
 
 def enumdc_gverify(rng):
@@ -5729,9 +5775,11 @@ def enumdc_gflag(rng):
         other = rng.choice([["same", rng.randrange(-20, 40)], ["same", rng.randrange(-20, 40)], ["other", 0]])
     if mixin and other[0] == "none":
         other = ["other", 0]
+    hook = lambda: rng.choice([None, None, None, "ok", "raise", "bad"]) if not mixin else None
     return {"fn": "enumdc.ec_flag", "members": rng.choice(enumdc_DEFS),
             "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "mixin": mixin, "op": op,
-            "v": rng.randrange(0, 8), "self_none": not mixin and rng.random() < .1, "other": other}
+            "v": rng.randrange(0, 8), "self_none": not mixin and rng.random() < .1, "other": other,
+            "numrepr": enumdc_gnumrepr(rng), "str": hook(), "fmt": hook()}
 
 
 def enumdc_gfield(rng, name, kind, plain_default=True):
@@ -5982,7 +6030,30 @@ def enumdc_gmisc(rng):
     return {"fn": "enumdc.dc_astuple", "v": enumdc_ginst(rng, 3), "fact": rng.choice(["tuple", "list"])}
 
 
+def enumdc_gboundrepr(rng):
+    """A name or value bound to another member whose _value_ has a __repr__ that raises, with the class's own __repr__
+    absent, raising, or returning (Lib/enum.py:1074, :1244)."""
+    re = rng.choice(["KeyError", "LookupError", "ValueError"])
+    badrepr = rng.choice([False, True, "ok", "ok"])
+    if rng.random() < .5:
+        body = [["A", ["robj", re, 0]], ["B", ["int", 2]]]
+        if rng.random() < .5:
+            body.reverse()
+        op = rng.choice([["alias", "B", "A"], ["alias", "A", "B"], ["alias", "B", "B"], ["alias", "A", "W"],
+                         ["valias", "A", ["int", 2]], ["valias", "B", ["robj", re, 0]]])
+        return {"fn": "enumdc.ec_class", "kind": "plain", "body": body, "op": op, "badrepr": badrepr}
+    body = [["A", ["rint", 1, re]], ["B", ["int", 2]]]
+    if rng.random() < .5:
+        body.reverse()
+    op = rng.choice([["valias", "B", ["int", 1]], ["valias", "A", ["int", 2]], ["valias", "B", ["rint", 1, re]],
+                     ["valias_call", "B", ["int", 1]], ["valias", "B", ["int", 3]]])
+    return {"fn": "enumdc.eh_class", "keys": enumdc_gkeys(rng), "kind": "plain", "body": body, "op": op,
+            "badrepr": badrepr}
+
+
 def enumdc_gen(rng):
+    if rng.random() < .03:
+        return enumdc_gboundrepr(rng)
     r0 = rng.randrange(0, 52)
     if r0 >= 40:
         return enumdc_ehgen_case(rng)
@@ -6012,7 +6083,8 @@ def enumdc_gen(rng):
         v = rng.randrange(-12, 20)
         w = rng.randrange(0, 16)
         base = {"members": rng.choice(enumdc_DEFS),
-                "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "v": v, "w": w}
+                "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "v": v, "w": w,
+                "numrepr": enumdc_gnumrepr(rng)}
         return {"fn": "enumdc." + ["flag_call", "flag_call", "flag_or", "flag_and", "flag_xor",
                                    "flag_invert"][r], **base}
     if r == 6:
@@ -6189,7 +6261,11 @@ def enumdc_build(case):
                 return cls[miss[1]]
             raise {"KeyError": KeyError, "ValueError": ValueError}[miss[1]](miss[2])
         ns["_missing_"] = classmethod(_missing_)
-    if case.get("badrepr"):
+    if case.get("badrepr") == "ok":
+        def __repr__(self):
+            return "ok"
+        ns["__repr__"] = __repr__
+    elif case.get("badrepr"):
         def __repr__(self):
             raise LookupError
         ns["__repr__"] = __repr__
@@ -6298,8 +6374,8 @@ def enumdc_new_in_progress():
 def enumdc_flag(case):
     base = enumdc_enum.IntFlag if case["mixin"] else enumdc_enum.Flag
     members = [tuple(m) for m in case["members"]]
-    F = base("F", members + [("NONE", None)] if case["self_none"] or case["other"][0] == "none" else members,
-             boundary=enumdc_BOUND[case["boundary"]])
+    F = enumdc_hooks(base("F", members + [("NONE", None)] if case["self_none"] or case["other"][0] == "none"
+                          else members, boundary=enumdc_BOUND[case["boundary"]]), case)
     op = case["op"]
     okind, ov = case["other"]
 
@@ -6866,7 +6942,7 @@ def enumdc_gehclass(rng):
     else:
         op = ["callself", rng.choice(names + ["Q"])]
     return {"fn": "enumdc.eh_class", "keys": keys, "kind": kind, "body": body, "op": op,
-            "badrepr": kind == "plain" and rng.random() < .2}
+            "badrepr": kind == "plain" and rng.choice([False] * 8 + [True, "ok"])}
 
 
 def enumdc_ehbuild(case, objs):
@@ -6891,7 +6967,11 @@ def enumdc_ehbuild(case, objs):
                 return cls[miss[1]]
             raise KeyError(miss[2])
         ns["_missing_"] = classmethod(_missing_)
-    if case.get("badrepr"):
+    if case.get("badrepr") == "ok":
+        def __repr__(self):
+            return "ok"
+        ns["__repr__"] = __repr__
+    elif case.get("badrepr"):
         def __repr__(self):
             raise LookupError
         ns["__repr__"] = __repr__
@@ -7037,7 +7117,8 @@ enumdc_IDEFS = enumdc_DEFS + [[["B", 2], ["A", 1], ["X", 12]], [["A", 1], ["X", 
 def enumdc_gehiter(rng):
     return {"fn": "enumdc.eh_iter", "members": rng.choice(enumdc_IDEFS),
             "boundary": rng.choice(["strict", "conform", "keep", "eject"]),
-            "calls": [rng.randrange(-4, 16) for _ in range(rng.randrange(0, 4))], "v": rng.randrange(0, 16)}
+            "calls": [rng.randrange(-4, 16) for _ in range(rng.randrange(0, 4))], "v": rng.randrange(0, 16),
+            "numrepr": enumdc_gnumrepr(rng)}
 
 
 def enumdc_ehiter(case):
