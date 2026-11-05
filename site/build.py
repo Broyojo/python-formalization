@@ -1,14 +1,16 @@
 """Build the project page (docs/index.html) from the repository's own records.
 
 Reads coverage/methods, coverage/review, coverage/registry.tsv and bugs/*.yaml.
-Bug records are reported as counts only: details stay private until they are
-reported upstream. Run: python3 site/build.py
+Individual bug records are not published here; only counts, plus the showcase
+findings named in SHOWCASE, which are written into the template by hand.
+Run: python3 site/build.py
 """
 
 import collections
 import csv
 import glob
 import html
+import json
 import re
 import subprocess
 from datetime import date
@@ -17,6 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / "site" / "template.html"
 OUT = ROOT / "docs" / "index.html"
+AREA_ORDER = ["Python", "Objects", "Modules", "Parser", "Grammar", "Lib"]
+AREA_NAMES = {"Grammar": "Grammar rules", "Lib": "Standard library (Python)", "Modules": "C extension modules",
+              "Objects": "Built-in types", "Parser": "Parser and tokenizer", "Python": "Interpreter core"}
 
 
 def rows(path):
@@ -30,18 +35,16 @@ def coverage():
         for r in rows(p):
             if r["verdict"] == "FAITHFUL":
                 faithful.add((r["file"], r["line"]))
-    areas = collections.defaultdict(collections.Counter)
     files = collections.defaultdict(collections.Counter)
     for p in glob.glob(str(ROOT / "coverage/methods/*.tsv")):
         for r in rows(p):
-            area = r["file"].split("/")[0]
-            c, fc = areas[area], files[r["file"]]
-            for k in (c, fc):
-                k["rows"] += 1
-                k[r["status"]] += 1
-                if r["status"] == "modelled" and (r["file"], r["line"]) in faithful:
-                    k["faithful"] += 1
-    return areas, files
+            c = files[r["file"]]
+            c["rows"] += 1
+            if r["status"] == "modelled":
+                c["faithful" if (r["file"], r["line"]) in faithful else "modelled"] += 1
+            else:
+                c[r["status"]] += 1
+    return files
 
 
 def registry():
@@ -52,74 +55,144 @@ def registry():
 
 
 def bugs():
-    pri, kind = collections.Counter(), collections.Counter()
-    groups = {"twin": "C and Python twins disagree", "memory-safety": "memory safety",
-              "crash": "crash", "wrong-result": "wrong result", "wrong-exception": "wrong exception",
-              "doc-mismatch": "differs from the documentation"}
+    kind = collections.Counter()
+    groups = [("twin", "C and pure-Python twins disagree"), ("sibling", "C and pure-Python twins disagree"),
+              ("memory-safety", "Memory safety"), ("crash", "Crash or assertion failure"),
+              ("wrong-result", "Wrong result"), ("wrong-exception", "Wrong exception or message"),
+              ("doc", "Differs from the documentation"), ("missing-validation", "Missing validation"),
+              ("logic", "Wrong result")]
+    total = 0
     for p in glob.glob(str(ROOT / "bugs/*.yaml")):
         t = Path(p).read_text()
-        m = re.search(r"^priority:\s*(\S+)", t, re.M)
-        pri[m.group(1) if m else "?"] += 1
         k = re.search(r"^kind:\s*(\S+)", t, re.M)
-        k = k.group(1) if k else "other"
-        label = next((v for key, v in groups.items() if k.startswith(key)), "other")
-        kind[label] += 1
-    return pri, kind
+        k = k.group(1) if k else ""
+        kind[next((v for key, v in groups if k.startswith(key)), "Other")] += 1
+        total += 1
+    return total, kind
 
 
-def pct(a, b):
-    return f"{100 * a / b:.1f}%" if b else "–"
+TRAJ_FILES = ["Objects/typeobject.c", "Objects/genobject.c", "Objects/setobject.c", "Modules/_json.c",
+              "Lib/enum.py", "Lib/random.py", "Objects/abstract.c", "Objects/rangeobject.c",
+              "Lib/pickletools.py", "Modules/binascii.c"]
+
+
+def trajectories():
+    """Faithful / reviewed counts in every committed version of a file's review table."""
+    out = []
+    for f in TRAJ_FILES:
+        path = "coverage/review/" + f.replace("/", "__") + ".tsv"
+        log = subprocess.run(["git", "log", "--reverse", "--format=%h", "--", path], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+        pts = []
+        for h in log:
+            text = subprocess.run(["git", "show", f"{h}:{path}"], cwd=ROOT, capture_output=True,
+                                  text=True).stdout
+            lines = text.splitlines()[1:]
+            if not lines:
+                continue
+            fa = sum(1 for l in lines if l.split("\t")[3:4] == ["FAITHFUL"])
+            if pts and pts[-1] == (fa, len(lines)):
+                continue
+            pts.append((fa, len(lines)))
+        if len(pts) >= 2:
+            out.append({"file": f, "pts": pts})
+    return out
+
+
+def traj_svg(t):
+    w, h, pad = 220, 96, 8
+    pts = t["pts"]
+    n = len(pts)
+    xs = [pad + (w - 2 * pad) * (i / (n - 1)) for i in range(n)]
+    ys = [h - pad - (h - 2 * pad) * (fa / tot) for fa, tot in pts]
+    path = " ".join(("M" if i == 0 else "L") + f"{x:.1f},{y:.1f}" for i, (x, y) in enumerate(zip(xs, ys)))
+    dots = "".join(
+        f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{3.2 if i in (0, n - 1) else 2.2}" '
+        f'class="{"dot end" if i == n - 1 else "dot"}"><title>review {i + 1}: {fa} of {tot}</title></circle>'
+        for i, ((fa, tot), x, y) in enumerate(zip(pts, xs, ys)))
+    first, last = pts[0], pts[-1]
+    return (f'<figure class="spark"><svg viewBox="0 0 {w} {h}" role="img" aria-label="{html.escape(t["file"])}: '
+            f'{first[0]} of {first[1]} faithful at first review, {last[0]} of {last[1]} after {n} reviews">'
+            f'<line x1="{pad}" x2="{w - pad}" y1="{pad}" y2="{pad}" class="full"/>'
+            f'<line x1="{pad}" x2="{w - pad}" y1="{h - pad}" y2="{h - pad}" class="base"/>'
+            f'<path d="{path}" class="trace"/>{dots}</svg>'
+            f'<figcaption><code>{html.escape(t["file"])}</code><span>{first[0]}/{first[1]} → '
+            f'<b>{last[0]}/{last[1]}</b> · {n} reviews</span></figcaption></figure>')
 
 
 def main():
-    areas, files = coverage()
+    files = coverage()
     reg = registry()
-    pri, kind = bugs()
+    nbugs, kinds = bugs()
+
+    area = collections.defaultdict(collections.Counter)
+    for f, c in files.items():
+        area[f.split("/")[0]].update(c)
     tot = collections.Counter()
-    for c in areas.values():
+    for c in area.values():
         tot.update(c)
     in_scope = tot["rows"] - tot["excluded"]
 
-    area_names = {"Grammar": "Grammar rules (Grammar/python.gram)", "Lib": "Standard library in Python (Lib/)",
-                  "Modules": "C extension modules (Modules/)", "Objects": "Built-in types (Objects/)",
-                  "Parser": "Parser and tokenizer (Parser/)", "Python": "Interpreter core (Python/)"}
+    # Map data: one entry per file, in area order then file name: [file, faithful, modelled, excluded, todo].
+    mapdata = []
+    for a in AREA_ORDER:
+        for f in sorted(x for x in files if x.split("/")[0] == a):
+            c = files[f]
+            mapdata.append([f, c["faithful"], c["modelled"], c["excluded"], c["todo"]])
+
     area_rows = []
-    for a in sorted(areas):
-        c = areas[a]
+    for a in AREA_ORDER:
+        c = area[a]
         scope = c["rows"] - c["excluded"]
-        share = c["faithful"] / scope if scope else 0
+        share = 100 * c["faithful"] / scope if scope else 0
         area_rows.append(
-            f'<tr><th scope="row">{html.escape(area_names.get(a, a))}</th>'
-            f'<td class="num">{scope:,}</td><td class="num">{c["faithful"]:,}</td>'
-            f'<td class="bar"><span style="--w:{100 * share:.1f}%"></span><b>{pct(c["faithful"], scope)}</b></td></tr>')
+            f'<tr><th scope="row">{AREA_NAMES[a]}</th><td class="num">{scope:,}</td>'
+            f'<td class="num">{c["faithful"]:,}</td><td class="meter"><span style="--w:{share:.1f}%"></span>'
+            f'<b>{share:.1f}%</b></td></tr>')
 
-    done = []
-    for f, c in files.items():
-        if c["modelled"] >= 15 and c["faithful"] == c["modelled"]:
-            done.append((c["faithful"], f))
-    done.sort(reverse=True)
-    done_items = "".join(f'<li><code>{html.escape(f)}</code><span>{n}</span></li>' for n, f in done[:24])
+    done = sorted(((c["faithful"], f) for f, c in files.items()
+                   if c["faithful"] >= 15 and c["modelled"] == 0), reverse=True)
+    done_items = "".join(f'<li><code>{html.escape(f)}</code><span>{n}</span></li>' for n, f in done[:30])
 
-    kind_items = "".join(f'<li><span>{html.escape(k)}</span><b>{n}</b></li>'
-                         for k, n in kind.most_common())
-    pri_items = "".join(f'<li><span>{p}</span><b>{pri[p]}</b></li>' for p in ["P1", "P2", "P3", "P4", "P5"])
+    kmax = max(kinds.values())
+    kind_items = "".join(
+        f'<li><span>{html.escape(k)}</span><i style="--w:{100 * n / kmax:.1f}%"></i><b>{n}</b></li>'
+        for k, n in kinds.most_common())
+    trajs = "".join(traj_svg(t) for t in trajectories())
+    modelled_claimed = tot["faithful"] + tot["modelled"]
+    funnel = [("Rows in the inventory", tot["rows"]), ("In scope", in_scope),
+              ("Modelled in Lean", modelled_claimed), ("Reviewed faithful", tot["faithful"])]
+    fmax = funnel[0][1]
+    funnel_html = "".join(
+        f'<li><span>{label}</span><i style="--w:{100 * n / fmax:.2f}%"></i><b>{n:,}</b></li>'
+        for label, n in funnel)
+    first_commit = subprocess.run(["git", "log", "--reverse", "--format=%ad", "--date=format:%-d %B %Y"],
+                                  cwd=ROOT, capture_output=True, text=True).stdout.splitlines()[0]
+    ncommits = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True).stdout.strip()
 
     values = {
         "PROPS": f'{sum(reg.values()):,}', "PROVEN": f'{reg["proven"]:,}', "REFUTED": f'{reg["refuted"]:,}',
         "OPEN": f'{reg["open"]:,}', "INSCOPE": f"{in_scope:,}", "FAITHFUL": f'{tot["faithful"]:,}',
-        "FAITHFULPCT": pct(tot["faithful"], in_scope), "BUGS": f"{sum(pri.values()):,}",
-        "AREAROWS": "\n".join(area_rows), "DONE": done_items, "DONECOUNT": str(len(done)),
-        "KINDS": kind_items, "PRIS": pri_items, "DATE": date.today().strftime("%-d %B %Y"),
+        "FAITHFULPCT": f'{100 * tot["faithful"] / in_scope:.1f}%', "BUGS": f"{nbugs:,}",
+        "TOTALROWS": f'{tot["rows"]:,}', "AREAROWS": "\n".join(area_rows), "DONE": done_items,
+        "DONECOUNT": str(len(done)), "KINDS": kind_items, "DATE": date.today().strftime("%-d %B %Y"),
+        "MEMSAFE": str(kinds["Memory safety"]), "TRAJ": trajs, "FUNNEL": funnel_html,
+        "STARTED": first_commit, "COMMITS": f"{int(ncommits):,}", "MODELLED": f"{modelled_claimed:,}",
+        "MAPDATA": json.dumps(mapdata, separators=(",", ":")),
         "COMMIT": subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
                                  capture_output=True, text=True).stdout.strip(),
     }
     page = TEMPLATE.read_text()
     for k, v in values.items():
         page = page.replace("{{" + k + "}}", v)
+    missing = re.findall(r"\{\{[A-Z]+\}\}", page)
+    if missing:
+        raise SystemExit(f"unfilled placeholders: {missing}")
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(page)
     print(f"wrote {OUT.relative_to(ROOT)}: {values['FAITHFUL']} faithful of {values['INSCOPE']} "
-          f"in scope ({values['FAITHFULPCT']}), {len(done)} files fully reviewed")
+          f"({values['FAITHFULPCT']}), {len(done)} files fully reviewed, {len(mapdata)} files mapped")
 
 
 if __name__ == "__main__":

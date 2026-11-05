@@ -4,180 +4,464 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Formalizing CPython</title>
-<meta name="description" content="A Lean 4 model of CPython 3.15.2, checked against the real interpreter and reviewed row by row, with the bugs it found along the way.">
+<meta name="description" content="We modelled CPython 3.15.2 in Lean 4 one function at a time, tested every model against the real interpreter, and counted a function only after an independent review. What that took, what it found, and how to do it for your own language.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Formalizing CPython">
+<meta property="og:description" content="A Lean 4 model of CPython 3.15.2: {{FAITHFUL}} functions reviewed faithful, {{PROVEN}} properties proven, {{BUGS}} bug records.">
+<meta property="og:url" content="https://broyojo.com/python-formalization/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one reading column with wide data bands; numbers set in mono, verdicts as small caps chips. */
+/* Layout: a 66ch long-read column; figures break out to 1040px. CPython's own blue marks what is proven and
+   reviewed; its yellow marks where model and interpreter disagreed. Display in a tight grotesk, reading in
+   Newsreader, code and numbers in JetBrains Mono. */
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --fg: #151a22; --muted: #5a6473; --rule: #dde1e7;
-  --accent: #1d5c86; --faithful: #2b7a4b; --hollow: #a8452f; --code-bg: #eef1f5;
-  --display: "Spectral", Georgia, "Times New Roman", serif;
-  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #f7f8fa; --paper: #ffffff; --ink: #121821; --soft: #4b5664; --faint: #858f9d; --rule: #dfe3ea;
+  --blue: #2c6aa0; --blue-soft: #d3e3f1; --yellow: #b88b00; --yellow-bg: #fff5d1; --todo: #e7eaef; --excl: #ccd3dc;
+  --code-bg: #f0f3f7; --hl: #fff0b3;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
-    --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+    --bg: #0c1118; --paper: #111823; --ink: #e5e9ef; --soft: #aab4c2; --faint: #6f7a8a; --rule: #233040;
+    --blue: #6aa8dc; --blue-soft: #1b3954; --yellow: #f0c43a; --yellow-bg: #29230e; --todo: #18212e; --excl: #2a3646;
+    --code-bg: #141c28; --hl: #3a3312; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
-  --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+  --bg: #0c1118; --paper: #111823; --ink: #e5e9ef; --soft: #aab4c2; --faint: #6f7a8a; --rule: #233040;
+  --blue: #6aa8dc; --blue-soft: #1b3954; --yellow: #f0c43a; --yellow-bg: #29230e; --todo: #18212e; --excl: #2a3646;
+  --code-bg: #141c28; --hl: #3a3312; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.wrap { max-width: 880px; margin: 0 auto; padding-block: 56px 72px; display: grid; gap: 56px; }
-h1, h2 { font-family: var(--display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); letter-spacing: -0.01em; }
-h2 { font-size: 1.6rem; }
-p { margin: 0; max-width: 65ch; }
-a { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-code, pre { font-family: var(--mono); font-size: 0.86em; }
-.eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-header { display: grid; gap: 18px; }
-.lede { font-size: 1.15rem; color: var(--fg); }
-.meta { color: var(--muted); font-size: 0.9rem; }
-section { display: grid; gap: 18px; }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule);
-  border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
-.stat { background: var(--panel); padding: 18px 16px; display: grid; gap: 4px; min-width: 0; }
-.stat b { font: 500 1.7rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.stat span { color: var(--muted); font-size: 0.88rem; }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: s; }
-.steps li { display: grid; grid-template-columns: 2.2rem 1fr; gap: 12px; counter-increment: s; }
-.steps li::before { content: counter(s); font: 500 0.9rem/1.7 var(--mono); color: var(--accent);
-  border: 1px solid var(--rule); border-radius: 4px; text-align: center; height: 1.7rem; }
-.steps strong { font-weight: 600; }
-.chip { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.06em; padding: 3px 6px; border-radius: 3px;
-  border: 1px solid currentColor; white-space: nowrap; }
-.chip.f { color: var(--faithful); } .chip.h { color: var(--hollow); }
-pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 16px;
-  overflow-x: auto; line-height: 1.5; margin: 0; }
-.cite { color: var(--muted); font-size: 0.85rem; }
-.table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--rule); }
-thead th { font: 500 0.78rem/1.2 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-tbody th { font-weight: 500; }
-td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
-td.bar { width: 34%; min-width: 150px; }
-td.bar span { display: block; height: 6px; background: var(--rule); border-radius: 3px; position: relative; overflow: hidden; }
-td.bar span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--faithful); }
-td.bar b { font: 500 0.82rem var(--mono); color: var(--muted); }
-.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; }
-.list li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
-.list li code, .list li span:first-child { overflow-wrap: anywhere; }
-.list b, .list li > span:last-child { font: 500 0.9rem var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
-.done { columns: 2 260px; column-gap: 28px; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.14rem/1.72 var(--serif);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+article { max-width: 1040px; margin: 0 auto; padding-block: 72px 88px; display: grid; gap: 26px; }
+article > * { width: 100%; max-width: 66ch; margin-inline: auto; }
+article > .wide { max-width: 1040px; }
+h1, h2, h3, .kicker, .stat b, figcaption, .byline, .tag, .toc { font-family: var(--sans); }
+h1 { font-size: clamp(2.7rem, 7vw, 4.8rem); line-height: 1; letter-spacing: -0.035em; font-weight: 700; margin: 0; text-wrap: balance; }
+h1 em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.015em; color: var(--blue); }
+h2 { font-size: 1.7rem; line-height: 1.18; letter-spacing: -0.02em; font-weight: 700; margin: 44px auto 0; text-wrap: balance; scroll-margin-top: 24px; }
+h3 { font-size: 1.08rem; font-weight: 600; margin: 6px 0 0; letter-spacing: -0.005em; }
+p { margin: 0; }
+a { color: var(--blue); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:focus-visible, canvas:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+sup.ref a { font: 600 0.7em var(--sans); text-decoration: none; padding: 0 1px; }
+.kicker { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue); }
+.dek { font-size: 1.36rem; line-height: 1.5; color: var(--soft); }
+.byline { font-size: 0.9rem; color: var(--faint); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.toc { font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--faint); }
+.toc a { color: var(--soft); text-decoration: none; border-bottom: 1px solid var(--rule); }
+.toc a:hover { color: var(--blue); border-color: var(--blue); }
+code { font-family: var(--mono); font-size: 0.83em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { margin: 0; font: 0.8rem/1.62 var(--mono); background: var(--code-bg); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.k { color: var(--blue); } .cm { color: var(--faint); } .y { color: var(--yellow); }
+figure { margin: 6px auto; display: grid; gap: 10px; }
+figcaption { font-size: 0.84rem; line-height: 1.5; color: var(--faint); max-width: 66ch; }
+.tag { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.stat { padding: 18px 14px 18px 0; display: grid; gap: 2px; min-width: 0; align-content: start; }
+.stat + .stat { padding-left: 14px; border-left: 1px solid var(--rule); }
+.stat b { font-size: clamp(1.5rem, 3.6vw, 2.3rem); font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.stat span { font: 400 0.86rem/1.4 var(--sans); color: var(--soft); }
+.stat.b b { color: var(--blue); } .stat.y b { color: var(--yellow); }
+
+.panel { background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; }
+.maphead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; font: 600 0.85rem/1.4 var(--sans); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--soft); font-weight: 500; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+#readout { min-height: 1.4em; font: 0.8rem/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+canvas { width: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pair > div { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.ln { display: block; padding: 0 6px; margin: 0 -6px; border-radius: 3px; transition: background .12s; }
+.ln[data-k] { cursor: default; }
+.ln.on { background: var(--hl); }
+@media (prefers-reduced-motion: reduce) { .ln { transition: none; } }
+
+.funnel { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font: 500 0.92rem/1.3 var(--sans); }
+.funnel li { display: grid; grid-template-columns: 11rem minmax(0, 1fr) 5.5rem; gap: 12px; align-items: center; }
+.funnel i { display: block; height: 22px; width: var(--w); min-width: 3px; background: var(--blue-soft); border-radius: 3px; }
+.funnel li:last-child i { background: var(--blue); }
+.funnel b { font: 500 0.88rem var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
+.steps li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 16px; align-items: baseline; }
+.steps b { font: 700 0.8rem/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+.verdict { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.06em; padding: 3px 7px; border-radius: 4px; white-space: nowrap; }
+.verdict.f { color: var(--blue); background: var(--blue-soft); }
+.verdict.h { color: var(--yellow); background: var(--yellow-bg); }
+
+.matrix { width: 100%; border-collapse: collapse; font: 400 0.92rem/1.4 var(--sans); }
+.matrix th, .matrix td { padding: 10px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+.matrix thead th { font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+.matrix td.m { text-align: center; font: 600 0.82rem var(--mono); white-space: nowrap; }
+.matrix .pass { color: var(--yellow); } .matrix .catch { color: var(--blue); } .matrix .ok { color: var(--soft); }
+.matrix code { font-size: 0.8em; }
+
+.sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px 18px; }
+.spark { margin: 0; gap: 4px; }
+.spark svg { width: 100%; height: auto; display: block; overflow: visible; }
+.spark .base { stroke: var(--rule); stroke-width: 1; }
+.spark .full { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 3 3; }
+.spark .trace { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark .dot { fill: var(--paper); stroke: var(--blue); stroke-width: 1.5; }
+.spark .dot.end { fill: var(--blue); }
+.spark figcaption { display: grid; gap: 1px; }
+.spark figcaption code { background: none; padding: 0; color: var(--ink); font-size: 0.78rem; overflow-wrap: anywhere; }
+.spark figcaption span { font-family: var(--mono); font-size: 0.74rem; color: var(--soft); }
+.spark figcaption b { color: var(--blue); font-weight: 500; }
+
+.callout { border-left: 3px solid var(--yellow); background: var(--yellow-bg); padding: 14px 18px; border-radius: 0 8px 8px 0; }
+.story { display: grid; gap: 8px; padding-top: 4px; }
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font: 500 0.9rem/1.3 var(--sans); }
+.bars li { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) 3rem; gap: 12px; align-items: center; }
+.bars li span { overflow-wrap: anywhere; }
+.bars i { display: block; height: 12px; width: var(--w); background: var(--yellow); border-radius: 2px; opacity: .85; }
+.bars b { font: 500 0.85rem var(--mono); text-align: right; color: var(--soft); }
+.finds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 26px; }
+.find { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.find p { font-size: 1.02rem; line-height: 1.6; }
+.related { display: grid; gap: 14px; }
+.rel { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 14px; }
+.rel b { font: 600 0.92rem/1.5 var(--sans); }
+.kit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px; list-style: none; padding: 0; margin: 0; font: 400 0.94rem/1.45 var(--sans); }
+.kit li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.kit a { font-family: var(--mono); font-size: 0.82rem; }
+.rules { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+.rules li::marker { font: 700 0.9rem var(--sans); color: var(--blue); }
+.tbl { width: 100%; border-collapse: collapse; font: 400 0.94rem/1.4 var(--sans); font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 9px 8px; border-bottom: 1px solid var(--rule); text-align: left; }
+.tbl thead th { font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+.tbl td.num { text-align: right; font-family: var(--mono); font-size: 0.85rem; }
+.tbl td.meter { width: 36%; min-width: 140px; }
+.tbl td.meter span { display: block; height: 6px; border-radius: 3px; background: var(--todo); position: relative; overflow: hidden; }
+.tbl td.meter span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--blue); }
+.tbl td.meter b { font: 500 0.78rem var(--mono); color: var(--soft); }
+.scroll { overflow-x: auto; }
+.list { list-style: none; margin: 0; padding: 0; font: 400 0.9rem/1.4 var(--sans); }
+.list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.list li > :first-child { overflow-wrap: anywhere; min-width: 0; }
+.list li > span:last-child { font: 500 0.82rem var(--mono); color: var(--soft); }
+.list code { background: none; padding: 0; }
+.done { columns: 3 220px; column-gap: 28px; }
 .done li { break-inside: avoid; }
-.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); max-width: 65ch; }
-footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--rule); padding-top: 18px; display: grid; gap: 6px; }
-@media (max-width: 640px) {
+.refs { margin: 0; padding-left: 1.6em; display: grid; gap: 8px; font: 400 0.9rem/1.5 var(--sans); color: var(--soft); }
+.refs li { scroll-margin-top: 24px; }
+.refs li:target { background: var(--hl); border-radius: 4px; }
+footer { border-top: 1px solid var(--rule); padding-top: 20px; font: 400 0.86rem/1.6 var(--sans); color: var(--faint); display: grid; gap: 4px; }
+@media (max-width: 760px) {
+  article { padding-block: 44px 64px; gap: 22px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cols { grid-template-columns: 1fr; }
-  .wrap { padding-block: 36px 56px; gap: 44px; }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .pair, .finds, .kit { grid-template-columns: 1fr; }
+  .steps li, .rel { grid-template-columns: 1fr; gap: 4px; }
+  .funnel li { grid-template-columns: minmax(0, 1fr) 5rem; }
+  .funnel li i { grid-column: 1 / -1; grid-row: 2; }
+  .bars li { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .bars li i { grid-column: 1 / -1; grid-row: 2; }
+  .panel { padding: 12px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<main class="wrap">
+<article>
 
-<header>
-  <div class="eyebrow">Lean 4 · CPython 3.15.2</div>
-  <h1>Formalizing CPython</h1>
-  <p class="lede">A machine-checked model of the CPython interpreter and standard library, written in Lean 4 the way julia-in-lean models Julia Base. Every function, opcode and grammar rule is listed. Each one counts as covered only after an independent review confirms that its model mirrors the C or Python source and that its theorem would catch a wrong implementation.</p>
-  <p class="meta">Snapshot of {{DATE}} · commit <code>{{COMMIT}}</code></p>
-</header>
+<div class="kicker">Lean 4 · CPython 3.15.2</div>
+<h1>Formalizing <em>CPython</em></h1>
+<p class="dek">We modelled the reference Python interpreter in a proof assistant, one function at a time, tested every model against the real interpreter, and counted a function only after an independent reviewer agreed the model was faithful. Here is what that took, what it turned up, and how to do it for your own language.</p>
+<div class="byline"><span>Broyojo, with Claude</span><span>{{DATE}}</span><a href="https://github.com/Broyojo/python-formalization">github.com/Broyojo/python-formalization</a></div>
 
-<section aria-label="Totals">
-  <div class="stats">
-    <div class="stat"><b>{{FAITHFUL}}</b><span>rows reviewed faithful, {{FAITHFULPCT}} of {{INSCOPE}} in scope</span></div>
-    <div class="stat"><b>{{PROVEN}}</b><span>properties proven</span></div>
-    <div class="stat"><b>{{REFUTED}}</b><span>properties refuted against the real interpreter</span></div>
-    <div class="stat"><b>{{BUGS}}</b><span>bug records, each with a reproducer</span></div>
+<div class="stats wide" role="list">
+  <div class="stat b" role="listitem"><b>{{FAITHFUL}}</b><span>functions, opcodes and grammar rules reviewed faithful</span></div>
+  <div class="stat" role="listitem"><b>{{PROVEN}}</b><span>properties proven in Lean, with no axioms added</span></div>
+  <div class="stat y" role="listitem"><b>{{REFUTED}}</b><span>properties the real interpreter refuted</span></div>
+  <div class="stat y" role="listitem"><b>{{BUGS}}</b><span>CPython bug records, each with a reproducer</span></div>
+</div>
+
+<figure class="wide">
+  <div class="panel">
+    <div class="maphead">
+      <span>All of CPython 3.15.2, one square per function</span>
+      <span class="legend">
+        <span><i style="background:var(--blue)"></i>reviewed faithful</span>
+        <span><i style="background:var(--blue-soft)"></i>modelled, review pending or failed</span>
+        <span><i style="background:var(--excl)"></i>excluded, with a reason</span>
+        <span><i style="background:var(--todo)"></i>not modelled yet</span>
+      </span>
+    </div>
+    <canvas id="map" tabindex="0" aria-label="Map of {{TOTALROWS}} rows of CPython coloured by coverage. Point at a square to see its file."></canvas>
+    <div id="readout">Point at a square to see its file.</div>
   </div>
-</section>
+  <figcaption>{{TOTALROWS}} rows: every C function, bytecode instruction, grammar rule and standard-library function, in the order interpreter core, built-in types, C modules, parser, grammar, then the standard library written in Python. Only blue counts as coverage.</figcaption>
+</figure>
 
-<section>
-  <h2>How a row gets covered</h2>
-  <ol class="steps">
-    <li><div><strong>Mirror the source.</strong> The Lean model follows the C or Python body line by line: the same branch order, the same early returns, the same error messages, <code>Py_ssize_t</code> narrowing and fast paths. Every step cites <code>Objects/&lt;file&gt;.c:&lt;lines&gt;</code> in the 3.15.2 tree.</div></li>
-    <li><div><strong>Test it against the interpreter.</strong> A differential test runs the Lean model and python3 3.15.2 on the same generated inputs, with callbacks that raise and re-enter, until they agree on at least 50,000 cases over several seeds.</div></li>
-    <li><div><strong>State and prove a property.</strong> Each property is quantified over all inputs, with no sorry, no native_decide and no new axioms. A statement that turns out to be false is refuted in Lean with a witness and recorded, never weakened into something provable.</div></li>
-    <li><div><strong>Survive an independent review.</strong> A separate reviewer asks whether a wrong function would still satisfy the theorem (one that always raises, or handles only the first branch) and probes every claim on the real interpreter. Rows marked <span class="chip f">FAITHFUL</span> count. Rows marked <span class="chip h">HOLLOW</span> are withdrawn until fixed.</div></li>
-  </ol>
-  <p class="note">Review is the number that matters. The project counts reviewed rows, not claimed ones: {{PROPS}} registered properties ({{OPEN}} still open) back fewer covered rows than the authors claimed, because reviews keep withdrawing statements that a wrong implementation would also satisfy.</p>
-</section>
+<nav class="toc" aria-label="Contents"><a href="#why">Why</a><a href="#mirror">Mirror, then prove</a><a href="#pipeline">The pipeline</a><a href="#wrong">The wrong-function test</a><a href="#false">Correct but false</a><a href="#found">What it found</a><a href="#related">Related work</a><a href="#yours">Do this for your language</a><a href="#numbers">Numbers</a></nav>
 
-<section>
-  <h2>A theorem from the model</h2>
-  <p>The length of <code>range(start, stop, step)</code> is computed in C on a fast path over <code>long</code> and a slow path over Python ints. This property pins all three length functions to the same exact count, so a slow path that returned 0, or a fast path that always overflowed, would fail it.</p>
-<pre><code>def RangeLengthExact : Prop :=
-  (∀ lo hi step : Int, IsLong lo → IsLong hi → IsLong step → step ≠ 0 →
-    IsLen lo hi step (getLenOfRange lo hi step)) ∧
-  (∀ start stop step L : Int, step ≠ 0 → IsLen start stop step L →
-    computeRangeLengthLong start stop step =
-      if IsLong start ∧ IsLong stop ∧ IsLong step ∧ L ≤ longMax then some L else none) ∧
-  (∀ start stop step : Int, step ≠ 0 →
-    IsLen start stop step (computeRangeLengthSlow start stop step)) ∧
-  (∀ start stop step : Int, step ≠ 0 →
-    IsLen start stop step (computeRangeLength start stop step))
+<h2 id="why">Python is whatever CPython does</h2>
+<p>There is no formal specification of Python. The language reference describes the common case, and everything else is defined by what the reference implementation does: about half a million lines of C plus a standard library written in Python. The interesting behaviour lives in the corners. An <code>__eq__</code> that mutates the dict being searched. A key whose <code>__hash__</code> raises halfway through an insert. An integer one past <code>sys.maxsize</code>. A C fast path and a pure-Python twin that are supposed to agree and occasionally don't.</p>
+<p>A proof assistant drags every one of those corners into the open. To state a theorem about <code>range.__len__</code> you first have to write down what it does for a step of zero, for a length that doesn't fit in a C <code>long</code>, and for an argument whose <code>__index__</code> returns a subclass of <code>int</code>. This project applies that discipline to CPython at scale. It follows Miles Cranmer's julia-in-lean, which modelled Julia Base in Lean 4 and found more than 400 bugs on the way<sup class="ref"><a href="#ref1">1</a></sup>.</p>
+<p>The work started on {{STARTED}}. It was done by Claude agents running in parallel under Claude Code, with a human setting direction and deciding what counts. Every heavy job (Lean builds, differential tests, reproducers) ran on our own build machine. Across {{COMMITS}} commits, {{MODELLED}} rows have been modelled, and {{FAITHFUL}} of them have survived independent review.</p>
 
-theorem rangeLengthExact_proven : RangeLengthExact := by …</code></pre>
-  <p class="cite">lean/PyLean/RangeSlice/Length.lean · mirrors Objects/rangeobject.c:273-315</p>
-</section>
+<h2 id="mirror">Mirror, then prove</h2>
+<p>Every model follows its source line by line: the same branch order, the same early returns, the same overflow behaviour, each step citing the 3.15.2 file and line. Below is the function that computes the length of a <code>range</code> on the C fast path, beside its Lean mirror. Point at a line to see its counterpart. The unsigned arithmetic is modelled exactly, wraparound included, because the C comment's argument that it can't overflow is now something a proof has to check.</p>
 
-<section>
-  <h2>Coverage by area</h2>
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th scope="col">Area</th><th scope="col" class="num">In scope</th><th scope="col" class="num">Faithful</th><th scope="col">Share</th></tr></thead>
-      <tbody>
+<div class="pair wide" id="pair">
+  <div>
+    <span class="tag">Objects/rangeobject.c:992</span>
+<pre><code><span class="ln" data-k="1"><span class="k">static unsigned long</span></span><span class="ln" data-k="1">get_len_of_range(<span class="k">long</span> lo, <span class="k">long</span> hi, <span class="k">long</span> step)</span><span class="ln">{</span><span class="ln" data-k="0">    assert(step != 0);</span><span class="ln" data-k="2">    <span class="k">if</span> (step &gt; 0 &amp;&amp; lo &lt; hi)</span><span class="ln" data-k="3">        <span class="k">return</span> 1UL + (hi - 1UL - lo) / step;</span><span class="ln" data-k="4">    <span class="k">else if</span> (step &lt; 0 &amp;&amp; lo &gt; hi)</span><span class="ln" data-k="5">        <span class="k">return</span> 1UL + (lo - 1UL - hi) / (0UL - step);</span><span class="ln" data-k="6">    <span class="k">else</span></span><span class="ln" data-k="6">        <span class="k">return</span> 0UL;</span><span class="ln">}</span></code></pre>
+  </div>
+  <div>
+    <span class="tag">lean/PyLean/RangeSlice/Model.lean</span>
+<pre><code><span class="ln" data-k="1"><span class="k">def</span> getLenOfRange (lo hi step : Int) : Int :=</span><span class="ln" data-k="2">  <span class="k">if</span> step &gt; 0 ∧ lo &lt; hi <span class="k">then</span></span><span class="ln" data-k="3">    uadd 1 (usub (usub (toU hi) 1) (toU lo) / toU step)</span><span class="ln" data-k="4">  <span class="k">else if</span> step &lt; 0 ∧ lo &gt; hi <span class="k">then</span></span><span class="ln" data-k="5">    uadd 1 (usub (usub (toU lo) 1) (toU hi)</span><span class="ln" data-k="5">              / usub 0 (toU step))</span><span class="ln" data-k="6">  <span class="k">else</span> 0</span><span class="ln"> </span><span class="ln cm" data-k="0">-- step ≠ 0 is a hypothesis of every theorem</span><span class="ln cm">-- toU, uadd, usub: unsigned long, mod 2^64</span></code></pre>
+  </div>
+</div>
+
+<p>Then comes the property. This one ties the C fast path, the slow path over Python integers, and the dispatcher between them to a single exact count. A slow path that returned zero for big arguments fails it, and so does a fast path that always reported overflow.</p>
+<pre><code><span class="k">theorem</span> rangeLengthExact_proven : RangeLengthExact
+<span class="cm">-- for every start, stop, and step ≠ 0:
+--   get_len_of_range on C longs is the true number of elements,
+--   the long fast path returns it exactly when it fits in a long,
+--   the PyLong slow path and the dispatcher always return it.</span></code></pre>
+
+<h2 id="pipeline">The pipeline</h2>
+<p>Every row goes through the same five gates. The funnel below is the whole project as of this snapshot. The drop between "modelled" and "reviewed faithful" is the point of the exercise.</p>
+<figure class="wide" style="max-width:66ch">
+  <ul class="funnel">{{FUNNEL}}</ul>
+  <figcaption>In scope leaves out rows with no Python-visible behaviour, such as reference counting, garbage-collector traversal and generated parser tables. Each exclusion carries a written reason, and review checks those too.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>Inventory</b><span>A script lists every function, opcode and grammar rule in the 3.15.2 tree. A row counts as covered only through a registry entry whose theorem unfolds that function's body.</span></li>
+  <li><b>Mirror</b><span>The model follows the source in branch order. Python callbacks are fallible code that can raise, mutate state and re-enter. <code>Py_ssize_t</code> narrowing and C fast paths are modelled as written, and floats go through an exact IEEE-754 binary64 model.</span></li>
+  <li><b>Difftest</b><span>Before any proof, the Lean model and python3 3.15.2 run side by side on generated inputs: 0, ±1, <code>sys.maxsize</code>, ±2<sup>63</sup>, huge ints, hooks that raise. The model must agree on at least 50,000 cases over several seeds.</span></li>
+  <li><b>Prove or refute</b><span>Properties quantify over all inputs. <code>sorry</code>, <code>native_decide</code> and new axioms are rejected by the build. A false statement is refuted in Lean with a concrete witness, never weakened until it becomes provable.</span></li>
+  <li><b>Review</b><span>A separate agent that didn't write the model judges each row against the source and probes each claim on the real interpreter. <span class="verdict f">FAITHFUL</span> rows count. <span class="verdict h">HOLLOW</span> rows are withdrawn until they're fixed.</span></li>
+</ol>
+
+<h2 id="wrong">The wrong-function test</h2>
+<p>The first attempt asked agents for breadth: model every function and prove at least one property about each. They did, and an independent review then found that fewer than half the rows it checked held up. In <code>functools.py</code> it was 21%. The theorems were true; they just didn't say anything.</p>
+<p>So every review now asks one question of every theorem: <em>what wrong function would also satisfy this?</em> Here is the same question applied to four implementations of a range-length function and two theorems about it.</p>
+<figure class="wide" style="max-width:66ch">
+  <div class="scroll">
+  <table class="matrix">
+    <thead><tr><th>Implementation</th><th style="text-align:center">“If it returns, the length is ≥ 0”</th><th style="text-align:center">“It returns the exact count for every input”</th></tr></thead>
+    <tbody>
+      <tr><td>The real one</td><td class="m ok">satisfies</td><td class="m ok">satisfies</td></tr>
+      <tr><td>Always raises <code>OverflowError</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+      <tr><td>Slow path returns 0 for ints past a C <code>long</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+      <tr><td>Off by one when <code>step &lt; 0</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figcaption>The first theorem is true and provable, and it pins nothing: every wrong version satisfies it. Reviewers reject rows whose only theorem looks like the left column. Theorems of the form "the two twins agree or both raise" fail the same way, because two implementations that always raise agree.</figcaption>
+</figure>
+<p>Fixing a hollow row usually means rebuilding its model, not adding a lemma. Each chart below is one source file's history: every point is a review, and the height is the share of rows that passed it. Lines go down as well as up. When a review finds a theorem that is false about CPython, rows that had passed are withdrawn.</p>
+<div class="sparks wide">{{TRAJ}}</div>
+<div class="callout"><p>Coverage counts reviewed rows, never claimed ones. {{PROPS}} properties are registered ({{OPEN}} still open), but only {{FAITHFUL}} rows, {{FAITHFULPCT}} of the {{INSCOPE}} in scope, have passed review.</p></div>
+
+<h2 id="false">A proof can be correct and still false</h2>
+<p>A Lean proof guarantees that a theorem follows from the model. It says nothing about whether the model is CPython. Several proven theorems turned out to be false about the interpreter, each caught by running the exact statement on python3 3.15.2. These were the most instructive failures.</p>
+<div class="story">
+  <h3>The cache that needed sixteen terabytes</h3>
+  <p>The model of the C <code>json</code> encoder assumed every allocation succeeds. So its theorem promised that the indent cache gets built for any nesting depth up to about 2<sup>45</sup>, including one where the string alone would take 16 TB. CPython raises <code>MemoryError</code>. In the fix, <code>malloc</code> is an oracle. The theorem now holds for every allocator, says exactly what a refused allocation does, and claims success only when the allocator grants it.</p>
+</div>
+<div class="story">
+  <h3>Nine frames that exist only once</h3>
+  <p>A proven bound said the pure-Python pickler needs at most 10·depth + 18 interpreter frames. On a fresh interpreter, the first protocol-0 string triggers a codec lookup that imports a module and costs nine more. After that the codec is cached and the bound holds again. The difftest never saw it, because its harness had already warmed the codec. The theorem went back to open, with a note that the missing piece is a model of the codec cache.</p>
+</div>
+<div class="story">
+  <h3><code>except TypeError</code> also catches subclasses</h3>
+  <p>Three separate models, for <code>set</code>, <code>enum</code> and <code>json</code>, compared an exception's class name, while Python's <code>except</code> and C's <code>PyErr_ExceptionMatches</code> accept any subclass. Each produced a proven theorem that a <code>TypeError</code> subclass refutes. The models now carry a real exception hierarchy with multiple bases. They keep C's exact-type checks (<code>Py_IS_TYPE</code>) apart from its subclass checks.</p>
+</div>
+<div class="story">
+  <h3>A table that was freed and came back</h3>
+  <p>The <code>set</code> model gave every hash table an identity that was never reused. That made a theorem about lookups restarting after <code>__eq__</code> mutates the set provable, and false. In CPython the allocator can hand a smaller table back at the same address, so the pointer comparison after <code>__eq__</code> concludes that nothing changed. We modelled address reuse and the stale bytes left past the end of the new table. That turned the proof into a refutation, and the refutation into a bug report.</p>
+</div>
+
+<h2 id="found">What it found</h2>
+<p>When a refuted property is CPython's fault rather than the model's, it becomes a bug record. Each record has:</p>
+<ul>
+  <li>a script that prints <code>REPRODUCED</code> on 3.15.2, also checked against the development branch;</li>
+  <li>a search of the CPython tracker for duplicates;</li>
+  <li>an honest priority from P1 to P5, and a note on whether the behaviour might be intended.</li>
+</ul>
+<p>Most findings are small. They're the kind of behaviour that only shows up once someone writes down exactly what a function does.</p>
+<figure class="wide" style="max-width:66ch">
+  <ul class="bars">{{KINDS}}</ul>
+  <figcaption>{{BUGS}} bug records by kind. "Twins disagree" means CPython's C implementation and its pure-Python fallback give different answers for the same call. The records come mostly from parsers, from C fast paths that diverge from their slow paths, from error checks missing after a conversion, and from C code that keeps a pointer across a call into Python. The C arithmetic itself is almost always right.</figcaption>
+</figure>
+
+<div class="finds wide">
+  <div class="find">
+    <h3>The two picklers stop at different depths</h3>
+    <p>The C pickler is bounded by the C stack, the pure-Python one by <code>sys.getrecursionlimit()</code>. A list nested 400 deep pickles in C and raises in Python. This one has been open on the tracker since 2008.</p>
+<pre><code>v = []
+<span class="k">for</span> _ <span class="k">in</span> range(400): v = [v]
+pickle.dumps(v, 5)    <span class="cm"># fine</span>
+pickle._dumps(v, 5)   <span class="y"># RecursionError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3><code>random.Random</code> swallows class keywords</h3>
+    <p><code>Random.__init_subclass__</code> accepts <code>**kwargs</code> and never calls <code>super().__init_subclass__</code>. A mixin listed after <code>Random</code> never has its hook run, and unknown class keywords pass silently.</p>
+<pre><code><span class="k">class</span> After(random.Random, Mixin): <span class="k">pass</span>
+<span class="y"># Mixin.__init_subclass__ never runs</span>
+<span class="k">class</span> Kw(random.Random, flag=1): <span class="k">pass</span>
+<span class="y"># accepted; plain classes raise TypeError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3>An enum alias that silently binds nothing</h3>
+    <p><code>Enum._add_value_alias_</code> builds its "already bound" error inside a <code>try</code> whose <code>except TypeError</code> was meant for unhashable values. If a <code>__repr__</code> raises <code>TypeError</code> while that message is formatted, the conflict is swallowed and the call returns <code>None</code>.</p>
+<pre><code><span class="k">class</span> W(Enum):
+    A = 1; B = 2
+    <span class="k">def</span> __repr__(self): <span class="k">return</span> 5
+W.B._add_value_alias_(3)
+W.A._add_value_alias_(3)  <span class="y"># None, not ValueError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3>An ignored <code>=</code> still counts as padding</h3>
+    <p><code>binascii.a2b_base32</code> gained <code>ignorechars</code> in 3.15. With <code>=</code> in it, the base64 decoder resets its padding count after a data character and the base32 decoder doesn't, so the position of an ignored <code>=</code> changes the result.</p>
+<pre><code>a2b_base32(b"AAAAAAA",  ignorechars=b"=")
+<span class="y"># Error: Incorrect padding</span>
+a2b_base32(b"AAAA=AAA", ignorechars=b"=")
+<span class="y"># b'\x00\x00\x00\x00'</span></code></pre>
+  </div>
+</div>
+<p>{{MEMSAFE}} of the records are memory-safety bugs: use-after-free and out-of-bounds access reachable from pure Python, almost all through a callback that mutates a container while C code still holds a pointer into it. CPython doesn't treat running untrusted Python code as a security boundary, so these are ordinary bugs. We are reporting them on the CPython tracker alongside this post. Every record, with its reproducer, is in the repository's <a href="https://github.com/Broyojo/python-formalization/tree/main/bugs"><code>bugs/</code></a> folder.</p>
+
+<h2 id="related">Related work</h2>
+<p>Formal models of real languages have a long history. What's new here is the combination: a model of the actual implementation rather than an idealized language, differential testing against that implementation, and AI agents doing the bulk of the modelling under a review process designed to catch them cutting corners.</p>
+<div class="related">
+  <div class="rel"><b>julia-in-lean</b><span>The direct inspiration. Julia Base modelled in Lean 4, docstring promises turned into theorems, models checked by differential testing, and more than 400 bugs recorded, 75 filed after manual filtering. Its finding that 128 of 130 quick "proofs" had assumed the index was in bounds shaped our review rules.<sup class="ref"><a href="#ref1">1</a></sup></span></div>
+  <div class="rel"><b>PTX in Lean</b><span>Two recent Lean formalizations of NVIDIA's PTX instruction set, used to prove GPU kernels correct, including FlashAttention and an MoE pipeline. Earlier, NVIDIA's own axiomatic PTX memory model was checked in Alloy and Coq.<sup class="ref"><a href="#ref2">2</a>,<a href="#ref3">3</a>,<a href="#ref4">4</a></sup></span></div>
+  <div class="rel"><b>Python semantics</b><span>λπ ("Python: The Full Monty") gave a tested small-step semantics for a core of Python. Guth's K semantics of Python 3.3 is executable and tested against unit suites. Both model the language; this project models CPython's code, C included, function by function.<sup class="ref"><a href="#ref5">5</a>,<a href="#ref6">6</a></sup></span></div>
+  <div class="rel"><b>JavaScript, Wasm</b><span>JSCert mechanized the ECMAScript specification in Coq. KJS gave a complete JavaScript semantics in K, tested against conformance suites. WebAssembly's specification was mechanized and its type system proven sound in Isabelle, which uncovered errors in the spec itself.<sup class="ref"><a href="#ref7">7</a>,<a href="#ref8">8</a>,<a href="#ref9">9</a></sup></span></div>
+  <div class="rel"><b>Verified systems</b><span>CompCert and seL4 set the bar for proving a real implementation correct end to end. This project is far from that. It models an existing implementation rather than building a verified one, and its models are tested, not derived.<sup class="ref"><a href="#ref10">10</a>,<a href="#ref11">11</a></sup></span></div>
+  <div class="rel"><b>Differential testing</b><span>Running two implementations on the same inputs and treating disagreement as a finding goes back to McKeeman, and Csmith showed how far it can go against real compilers. Here it gates every model before any proof starts.<sup class="ref"><a href="#ref12">12</a>,<a href="#ref13">13</a></sup></span></div>
+</div>
+
+<h2 id="yours">Do this for your language</h2>
+<p>Nothing here is specific to Python. Any project with a reference implementation, a way to run it, and a list of its functions can be modelled this way: a language runtime, a standard library, a parser, a codec, an ISA. These are the rules that made the difference, in the order we learned them.</p>
+<ol class="rules">
+  <li><b>Pin one version.</b> Model exactly one release and cite its line numbers. When the target moves, re-check every function whose body changed.</li>
+  <li><b>Inventory everything first.</b> List every function and count coverage against that list. Exclusions need a written reason that a reviewer can reject.</li>
+  <li><b>Mirror, don't specify.</b> A model that restates what a function should do will agree with the docs and miss the bugs. Copy the branch order, the early returns and the error messages.</li>
+  <li><b>Make callbacks fallible.</b> Model user code as something that can raise, mutate the world and re-enter. Most memory-safety bugs live on those paths.</li>
+  <li><b>Difftest before you prove.</b> Proving things about a wrong model wastes the proof. Reach 100% agreement on edge-heavy inputs first.</li>
+  <li><b>Refute, never weaken.</b> If a statement is false, prove it false with a witness and keep the record. Narrowing it until it becomes provable hides exactly the case you were looking for.</li>
+  <li><b>Run the exact statement against the real thing.</b> A correct proof of a false theorem is the most dangerous output this process can produce.</li>
+  <li><b>Review with the wrong-function test.</b> Have someone who didn't write the theorem ask what broken implementation would also satisfy it. Count only what survives.</li>
+</ol>
+<p>The project's working documents are written to be reused. Point your own agents at them, replace CPython with your target, and keep the rules.</p>
+<ul class="kit wide" style="max-width:66ch">
+  <li><a href="https://github.com/Broyojo/python-formalization/blob/main/AGENTS.md">AGENTS.md</a><span>The playbook every modelling agent follows: rules, layout, forbidden tactics, what review keeps rejecting.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/blob/main/coverage/REVIEW_PROMPT.md">coverage/REVIEW_PROMPT.md</a><span>The independent review, including the wrong-function test and the FAITHFUL / HOLLOW verdicts.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/coverage/methods">coverage/methods/</a><span>The inventory: one row per function, opcode and grammar rule, with status and the entry that covers it.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/difftest">difftest/</a><span>Generators and the harness that run the Lean model and CPython side by side.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/bugs">bugs/</a><span>One YAML file per finding: reproducer, cause with line numbers, duplicate search, priority, possible fix.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/lean/PyLean">lean/PyLean/</a><span>The models and proofs, one directory per area of CPython.</span></li>
+</ul>
+
+<h2 id="numbers">By the numbers</h2>
+<div class="scroll wide" style="max-width:66ch">
+<table class="tbl">
+  <thead><tr><th>Area</th><th class="num">In scope</th><th class="num">Faithful</th><th>Share</th></tr></thead>
+  <tbody>
 {{AREAROWS}}
-      </tbody>
-    </table>
-  </div>
-  <p class="cite">In scope excludes rows with no Python-visible behaviour (reference counting, GC traversal, generated code), each excluded with a stated reason that review also checks.</p>
-</section>
+  </tbody>
+</table>
+</div>
+<h3>Files where every modelled row passed review ({{DONECOUNT}})</h3>
+<ul class="list done wide">{{DONE}}</ul>
 
-<section>
-  <h2>Files reviewed in full</h2>
-  <p>{{DONECOUNT}} files with at least 15 modelled rows have every modelled row reviewed faithful. The number is how many rows each has.</p>
-  <ul class="list done">{{DONE}}</ul>
-</section>
+<h2>What is left</h2>
+<p>Most of CPython. The standard library written in Python is the largest area and the least covered. Concurrency is out of scope: blocking calls are modelled single-threaded. Garbage-collector traversal is excluded by policy, because there is no heap model. Every open property carries a note saying what is missing, so the gaps are written down where the next person will look.</p>
+<p>The rule stays the same as the work grows. A function counts only when its model mirrors the source, its theorem would catch a wrong implementation, and a reviewer who didn't write it agrees.</p>
 
-<section>
-  <h2>Bugs found along the way</h2>
-  <p>Refuted properties are where the model and CPython disagree. When the disagreement is CPython's fault, it becomes a bug record with a reproducer that runs on 3.15.2, a duplicate search of the CPython tracker, and a priority from P1 (most serious) to P5.</p>
-  <div class="cols">
-    <div>
-      <div class="eyebrow">By kind</div>
-      <ul class="list">{{KINDS}}</ul>
-    </div>
-    <div>
-      <div class="eyebrow">By priority</div>
-      <ul class="list">{{PRIS}}</ul>
-    </div>
-  </div>
-  <p class="note">Details of individual findings are held back until they have been reported to the CPython maintainers.</p>
-</section>
+<h2>References</h2>
+<ol class="refs">
+  <li id="ref1">Miles Cranmer. <a href="https://discourse.julialang.org/t/formalizing-julia-in-lean-and-finding-400-bugs-in-base/140243">Formalizing Julia in Lean (and finding 400+ bugs in Base)</a>. Julia Discourse, October 2026. Code: <a href="https://github.com/MilesCranmer/julia-in-lean">MilesCranmer/julia-in-lean</a>.</li>
+  <li id="ref2">Koska et al. <a href="https://arxiv.org/abs/2611.04447">Formalizing PTX in Lean to Prove GPU Kernel Correctness</a>. arXiv:2611.04447, November 2026.</li>
+  <li id="ref3"><a href="https://github.com/lschiemanowski/ptxlean">PTXLean: a Lean formalization of PTX</a>. GitHub, lschiemanowski/ptxlean.</li>
+  <li id="ref4">Daniel Lustig, Sameer Sahasrabuddhe, Olivier Giroux. <a href="https://research.nvidia.com/publication/2019-04_formal-analysis-nvidia-ptx-memory-consistency-model">A Formal Analysis of the NVIDIA PTX Memory Consistency Model</a>. ASPLOS 2019.</li>
+  <li id="ref5">Joe Gibbs Politz et al. <a href="https://cs.brown.edu/research/plt/dl/lambda-py/">Python: The Full Monty. A Tested Semantics for the Python Programming Language</a>. OOPSLA 2013.</li>
+  <li id="ref6">Dwight Guth. A Formal Semantics of Python 3.3. Master's thesis, University of Illinois, 2013. Code: <a href="https://github.com/kframework/python-semantics">kframework/python-semantics</a>.</li>
+  <li id="ref7">Martin Bodin et al. A Trusted Mechanised JavaScript Specification. POPL 2014.</li>
+  <li id="ref8">Daejun Park, Andrei Ştefănescu, Grigore Roşu. KJS: A Complete Formal Semantics of JavaScript. PLDI 2015.</li>
+  <li id="ref9">Conrad Watt. Mechanising and Verifying the WebAssembly Specification. CPP 2018.</li>
+  <li id="ref10">Xavier Leroy. Formal Verification of a Realistic Compiler. Communications of the ACM, 2009.</li>
+  <li id="ref11">Gerwin Klein et al. seL4: Formal Verification of an OS Kernel. SOSP 2009.</li>
+  <li id="ref12">William M. McKeeman. Differential Testing for Software. Digital Technical Journal, 1998.</li>
+  <li id="ref13">Xuejun Yang, Yang Chen, Eric Eide, John Regehr. Finding and Understanding Bugs in C Compilers. PLDI 2011.</li>
+</ol>
 
 <footer>
-  <div>Formalizing CPython · a Lean 4 model of CPython 3.15.2</div>
-  <div>Built by Broyojo with Claude. Numbers on this page are generated from the repository's coverage tables, registry and bug records.</div>
+  <div>Formalizing CPython · a Lean 4 model of CPython 3.15.2 · <a href="https://github.com/Broyojo/python-formalization">source</a></div>
+  <div>Every number on this page is generated from the repository's coverage tables, registry, bug records and git history at commit <code>{{COMMIT}}</code>.</div>
 </footer>
+</article>
 
-</main>
+<script>
+(function () {
+  var data = {{MAPDATA}};
+  var canvas = document.getElementById('map'), out = document.getElementById('readout');
+  var kinds = ['--blue', '--blue-soft', '--excl', '--todo'];
+  var cells = [], fileOf = [];
+  data.forEach(function (d, fi) {
+    for (var k = 0; k < 4; k++) for (var n = 0; n < d[k + 1]; n++) { cells.push(k); fileOf.push(fi); }
+  });
+  var size = 4, gap = 1, cols = 1;
+  function color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function draw() {
+    var w = canvas.clientWidth || 600, dpr = window.devicePixelRatio || 1;
+    size = w < 520 ? 3 : 4; gap = 1; cols = Math.max(1, Math.floor(w / (size + gap)));
+    var h = Math.ceil(cells.length / cols) * (size + gap);
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); canvas.style.height = h + 'px';
+    var ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var pal = kinds.map(color);
+    for (var i = 0; i < cells.length; i++) {
+      ctx.fillStyle = pal[cells[i]];
+      ctx.fillRect((i % cols) * (size + gap), Math.floor(i / cols) * (size + gap), size, size);
+    }
+  }
+  function show(ev) {
+    var r = canvas.getBoundingClientRect();
+    var x = Math.floor((ev.clientX - r.left) / (size + gap)), y = Math.floor((ev.clientY - r.top) / (size + gap));
+    var i = y * cols + x;
+    if (x < 0 || x >= cols || i < 0 || i >= cells.length) return;
+    var d = data[fileOf[i]], scope = d[1] + d[2] + d[4];
+    out.textContent = d[0] + ' · ' + d[1] + ' of ' + scope + ' in scope reviewed faithful' + (d[3] ? ' · ' + d[3] + ' excluded' : '');
+  }
+  canvas.addEventListener('pointermove', show);
+  canvas.addEventListener('pointerdown', show);
+  draw();
+  var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(draw, 120); });
+  if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', draw); }
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  var pair = document.getElementById('pair');
+  function mark(k, on) {
+    pair.querySelectorAll('.ln[data-k="' + k + '"]').forEach(function (el) { el.classList.toggle('on', on); });
+  }
+  pair.querySelectorAll('.ln[data-k]').forEach(function (el) {
+    var k = el.getAttribute('data-k');
+    el.addEventListener('mouseenter', function () { mark(k, true); });
+    el.addEventListener('mouseleave', function () { mark(k, false); });
+    el.addEventListener('click', function () { pair.querySelectorAll('.ln.on').forEach(function (e) { e.classList.remove('on'); }); mark(k, true); });
+  });
+})();
+</script>
 </body>
 </html>

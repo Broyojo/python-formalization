@@ -4,185 +4,469 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Formalizing CPython</title>
-<meta name="description" content="A Lean 4 model of CPython 3.15.2, checked against the real interpreter and reviewed row by row, with the bugs it found along the way.">
+<meta name="description" content="We modelled CPython 3.15.2 in Lean 4 one function at a time, tested every model against the real interpreter, and counted a function only after an independent review. What that took, what it found, and how to do it for your own language.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Formalizing CPython">
+<meta property="og:description" content="A Lean 4 model of CPython 3.15.2: 4,071 functions reviewed faithful, 3,834 properties proven, 436 bug records.">
+<meta property="og:url" content="https://broyojo.com/python-formalization/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one reading column with wide data bands; numbers set in mono, verdicts as small caps chips. */
+/* Layout: a 66ch long-read column; figures break out to 1040px. CPython's own blue marks what is proven and
+   reviewed; its yellow marks where model and interpreter disagreed. Display in a tight grotesk, reading in
+   Newsreader, code and numbers in JetBrains Mono. */
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --fg: #151a22; --muted: #5a6473; --rule: #dde1e7;
-  --accent: #1d5c86; --faithful: #2b7a4b; --hollow: #a8452f; --code-bg: #eef1f5;
-  --display: "Spectral", Georgia, "Times New Roman", serif;
-  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #f7f8fa; --paper: #ffffff; --ink: #121821; --soft: #4b5664; --faint: #858f9d; --rule: #dfe3ea;
+  --blue: #2c6aa0; --blue-soft: #d3e3f1; --yellow: #b88b00; --yellow-bg: #fff5d1; --todo: #e7eaef; --excl: #ccd3dc;
+  --code-bg: #f0f3f7; --hl: #fff0b3;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
-    --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+    --bg: #0c1118; --paper: #111823; --ink: #e5e9ef; --soft: #aab4c2; --faint: #6f7a8a; --rule: #233040;
+    --blue: #6aa8dc; --blue-soft: #1b3954; --yellow: #f0c43a; --yellow-bg: #29230e; --todo: #18212e; --excl: #2a3646;
+    --code-bg: #141c28; --hl: #3a3312; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #11151b; --panel: #171c24; --fg: #e4e8ee; --muted: #9aa4b2; --rule: #2a313c;
-  --accent: #6db3e0; --faithful: #5cc187; --hollow: #e88a6f; --code-bg: #1c222c; color-scheme: dark;
+  --bg: #0c1118; --paper: #111823; --ink: #e5e9ef; --soft: #aab4c2; --faint: #6f7a8a; --rule: #233040;
+  --blue: #6aa8dc; --blue-soft: #1b3954; --yellow: #f0c43a; --yellow-bg: #29230e; --todo: #18212e; --excl: #2a3646;
+  --code-bg: #141c28; --hl: #3a3312; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.wrap { max-width: 880px; margin: 0 auto; padding-block: 56px 72px; display: grid; gap: 56px; }
-h1, h2 { font-family: var(--display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); letter-spacing: -0.01em; }
-h2 { font-size: 1.6rem; }
-p { margin: 0; max-width: 65ch; }
-a { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-code, pre { font-family: var(--mono); font-size: 0.86em; }
-.eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-header { display: grid; gap: 18px; }
-.lede { font-size: 1.15rem; color: var(--fg); }
-.meta { color: var(--muted); font-size: 0.9rem; }
-section { display: grid; gap: 18px; }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule);
-  border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
-.stat { background: var(--panel); padding: 18px 16px; display: grid; gap: 4px; min-width: 0; }
-.stat b { font: 500 1.7rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.stat span { color: var(--muted); font-size: 0.88rem; }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: s; }
-.steps li { display: grid; grid-template-columns: 2.2rem 1fr; gap: 12px; counter-increment: s; }
-.steps li::before { content: counter(s); font: 500 0.9rem/1.7 var(--mono); color: var(--accent);
-  border: 1px solid var(--rule); border-radius: 4px; text-align: center; height: 1.7rem; }
-.steps strong { font-weight: 600; }
-.chip { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.06em; padding: 3px 6px; border-radius: 3px;
-  border: 1px solid currentColor; white-space: nowrap; }
-.chip.f { color: var(--faithful); } .chip.h { color: var(--hollow); }
-pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 16px;
-  overflow-x: auto; line-height: 1.5; margin: 0; }
-.cite { color: var(--muted); font-size: 0.85rem; }
-.table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--rule); }
-thead th { font: 500 0.78rem/1.2 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-tbody th { font-weight: 500; }
-td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
-td.bar { width: 34%; min-width: 150px; }
-td.bar span { display: block; height: 6px; background: var(--rule); border-radius: 3px; position: relative; overflow: hidden; }
-td.bar span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--faithful); }
-td.bar b { font: 500 0.82rem var(--mono); color: var(--muted); }
-.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; }
-.list li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
-.list li code, .list li span:first-child { overflow-wrap: anywhere; }
-.list b, .list li > span:last-child { font: 500 0.9rem var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
-.done { columns: 2 260px; column-gap: 28px; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.14rem/1.72 var(--serif);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+article { max-width: 1040px; margin: 0 auto; padding-block: 72px 88px; display: grid; gap: 26px; }
+article > * { width: 100%; max-width: 66ch; margin-inline: auto; }
+article > .wide { max-width: 1040px; }
+h1, h2, h3, .kicker, .stat b, figcaption, .byline, .tag, .toc { font-family: var(--sans); }
+h1 { font-size: clamp(2.7rem, 7vw, 4.8rem); line-height: 1; letter-spacing: -0.035em; font-weight: 700; margin: 0; text-wrap: balance; }
+h1 em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.015em; color: var(--blue); }
+h2 { font-size: 1.7rem; line-height: 1.18; letter-spacing: -0.02em; font-weight: 700; margin: 44px auto 0; text-wrap: balance; scroll-margin-top: 24px; }
+h3 { font-size: 1.08rem; font-weight: 600; margin: 6px 0 0; letter-spacing: -0.005em; }
+p { margin: 0; }
+a { color: var(--blue); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:focus-visible, canvas:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+sup.ref a { font: 600 0.7em var(--sans); text-decoration: none; padding: 0 1px; }
+.kicker { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue); }
+.dek { font-size: 1.36rem; line-height: 1.5; color: var(--soft); }
+.byline { font-size: 0.9rem; color: var(--faint); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.toc { font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--faint); }
+.toc a { color: var(--soft); text-decoration: none; border-bottom: 1px solid var(--rule); }
+.toc a:hover { color: var(--blue); border-color: var(--blue); }
+code { font-family: var(--mono); font-size: 0.83em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { margin: 0; font: 0.8rem/1.62 var(--mono); background: var(--code-bg); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 16px 18px; overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.k { color: var(--blue); } .cm { color: var(--faint); } .y { color: var(--yellow); }
+figure { margin: 6px auto; display: grid; gap: 10px; }
+figcaption { font-size: 0.84rem; line-height: 1.5; color: var(--faint); max-width: 66ch; }
+.tag { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.stat { padding: 18px 14px 18px 0; display: grid; gap: 2px; min-width: 0; align-content: start; }
+.stat + .stat { padding-left: 14px; border-left: 1px solid var(--rule); }
+.stat b { font-size: clamp(1.5rem, 3.6vw, 2.3rem); font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.stat span { font: 400 0.86rem/1.4 var(--sans); color: var(--soft); }
+.stat.b b { color: var(--blue); } .stat.y b { color: var(--yellow); }
+
+.panel { background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; }
+.maphead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; font: 600 0.85rem/1.4 var(--sans); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--soft); font-weight: 500; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+#readout { min-height: 1.4em; font: 0.8rem/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+canvas { width: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pair > div { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.ln { display: block; padding: 0 6px; margin: 0 -6px; border-radius: 3px; transition: background .12s; }
+.ln[data-k] { cursor: default; }
+.ln.on { background: var(--hl); }
+@media (prefers-reduced-motion: reduce) { .ln { transition: none; } }
+
+.funnel { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font: 500 0.92rem/1.3 var(--sans); }
+.funnel li { display: grid; grid-template-columns: 11rem minmax(0, 1fr) 5.5rem; gap: 12px; align-items: center; }
+.funnel i { display: block; height: 22px; width: var(--w); min-width: 3px; background: var(--blue-soft); border-radius: 3px; }
+.funnel li:last-child i { background: var(--blue); }
+.funnel b { font: 500 0.88rem var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
+.steps li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 16px; align-items: baseline; }
+.steps b { font: 700 0.8rem/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+.verdict { font: 600 0.72rem/1 var(--mono); letter-spacing: 0.06em; padding: 3px 7px; border-radius: 4px; white-space: nowrap; }
+.verdict.f { color: var(--blue); background: var(--blue-soft); }
+.verdict.h { color: var(--yellow); background: var(--yellow-bg); }
+
+.matrix { width: 100%; border-collapse: collapse; font: 400 0.92rem/1.4 var(--sans); }
+.matrix th, .matrix td { padding: 10px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+.matrix thead th { font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+.matrix td.m { text-align: center; font: 600 0.82rem var(--mono); white-space: nowrap; }
+.matrix .pass { color: var(--yellow); } .matrix .catch { color: var(--blue); } .matrix .ok { color: var(--soft); }
+.matrix code { font-size: 0.8em; }
+
+.sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px 18px; }
+.spark { margin: 0; gap: 4px; }
+.spark svg { width: 100%; height: auto; display: block; overflow: visible; }
+.spark .base { stroke: var(--rule); stroke-width: 1; }
+.spark .full { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 3 3; }
+.spark .trace { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark .dot { fill: var(--paper); stroke: var(--blue); stroke-width: 1.5; }
+.spark .dot.end { fill: var(--blue); }
+.spark figcaption { display: grid; gap: 1px; }
+.spark figcaption code { background: none; padding: 0; color: var(--ink); font-size: 0.78rem; overflow-wrap: anywhere; }
+.spark figcaption span { font-family: var(--mono); font-size: 0.74rem; color: var(--soft); }
+.spark figcaption b { color: var(--blue); font-weight: 500; }
+
+.callout { border-left: 3px solid var(--yellow); background: var(--yellow-bg); padding: 14px 18px; border-radius: 0 8px 8px 0; }
+.story { display: grid; gap: 8px; padding-top: 4px; }
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font: 500 0.9rem/1.3 var(--sans); }
+.bars li { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) 3rem; gap: 12px; align-items: center; }
+.bars li span { overflow-wrap: anywhere; }
+.bars i { display: block; height: 12px; width: var(--w); background: var(--yellow); border-radius: 2px; opacity: .85; }
+.bars b { font: 500 0.85rem var(--mono); text-align: right; color: var(--soft); }
+.finds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 26px; }
+.find { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.find p { font-size: 1.02rem; line-height: 1.6; }
+.related { display: grid; gap: 14px; }
+.rel { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 14px; }
+.rel b { font: 600 0.92rem/1.5 var(--sans); }
+.kit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px; list-style: none; padding: 0; margin: 0; font: 400 0.94rem/1.45 var(--sans); }
+.kit li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.kit a { font-family: var(--mono); font-size: 0.82rem; }
+.rules { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+.rules li::marker { font: 700 0.9rem var(--sans); color: var(--blue); }
+.tbl { width: 100%; border-collapse: collapse; font: 400 0.94rem/1.4 var(--sans); font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 9px 8px; border-bottom: 1px solid var(--rule); text-align: left; }
+.tbl thead th { font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+.tbl td.num { text-align: right; font-family: var(--mono); font-size: 0.85rem; }
+.tbl td.meter { width: 36%; min-width: 140px; }
+.tbl td.meter span { display: block; height: 6px; border-radius: 3px; background: var(--todo); position: relative; overflow: hidden; }
+.tbl td.meter span::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--blue); }
+.tbl td.meter b { font: 500 0.78rem var(--mono); color: var(--soft); }
+.scroll { overflow-x: auto; }
+.list { list-style: none; margin: 0; padding: 0; font: 400 0.9rem/1.4 var(--sans); }
+.list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.list li > :first-child { overflow-wrap: anywhere; min-width: 0; }
+.list li > span:last-child { font: 500 0.82rem var(--mono); color: var(--soft); }
+.list code { background: none; padding: 0; }
+.done { columns: 3 220px; column-gap: 28px; }
 .done li { break-inside: avoid; }
-.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); max-width: 65ch; }
-footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--rule); padding-top: 18px; display: grid; gap: 6px; }
-@media (max-width: 640px) {
+.refs { margin: 0; padding-left: 1.6em; display: grid; gap: 8px; font: 400 0.9rem/1.5 var(--sans); color: var(--soft); }
+.refs li { scroll-margin-top: 24px; }
+.refs li:target { background: var(--hl); border-radius: 4px; }
+footer { border-top: 1px solid var(--rule); padding-top: 20px; font: 400 0.86rem/1.6 var(--sans); color: var(--faint); display: grid; gap: 4px; }
+@media (max-width: 760px) {
+  article { padding-block: 44px 64px; gap: 22px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cols { grid-template-columns: 1fr; }
-  .wrap { padding-block: 36px 56px; gap: 44px; }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .pair, .finds, .kit { grid-template-columns: 1fr; }
+  .steps li, .rel { grid-template-columns: 1fr; gap: 4px; }
+  .funnel li { grid-template-columns: minmax(0, 1fr) 5rem; }
+  .funnel li i { grid-column: 1 / -1; grid-row: 2; }
+  .bars li { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .bars li i { grid-column: 1 / -1; grid-row: 2; }
+  .panel { padding: 12px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<main class="wrap">
+<article>
 
-<header>
-  <div class="eyebrow">Lean 4 · CPython 3.15.2</div>
-  <h1>Formalizing CPython</h1>
-  <p class="lede">A machine-checked model of the CPython interpreter and standard library, written in Lean 4 the way julia-in-lean models Julia Base. Every function, opcode and grammar rule is listed. Each one counts as covered only after an independent review confirms that its model mirrors the C or Python source and that its theorem would catch a wrong implementation.</p>
-  <p class="meta">Snapshot of 5 November 2026 · commit <code>a3b872dc</code></p>
-</header>
+<div class="kicker">Lean 4 · CPython 3.15.2</div>
+<h1>Formalizing <em>CPython</em></h1>
+<p class="dek">We modelled the reference Python interpreter in a proof assistant, one function at a time, tested every model against the real interpreter, and counted a function only after an independent reviewer agreed the model was faithful. Here is what that took, what it turned up, and how to do it for your own language.</p>
+<div class="byline"><span>Broyojo, with Claude</span><span>5 November 2026</span><a href="https://github.com/Broyojo/python-formalization">github.com/Broyojo/python-formalization</a></div>
 
-<section aria-label="Totals">
-  <div class="stats">
-    <div class="stat"><b>4,071</b><span>rows reviewed faithful, 15.7% of 26,004 in scope</span></div>
-    <div class="stat"><b>3,834</b><span>properties proven</span></div>
-    <div class="stat"><b>588</b><span>properties refuted against the real interpreter</span></div>
-    <div class="stat"><b>436</b><span>bug records, each with a reproducer</span></div>
-  </div>
-</section>
+<div class="stats wide" role="list">
+  <div class="stat b" role="listitem"><b>4,071</b><span>functions, opcodes and grammar rules reviewed faithful</span></div>
+  <div class="stat" role="listitem"><b>3,834</b><span>properties proven in Lean, with no axioms added</span></div>
+  <div class="stat y" role="listitem"><b>588</b><span>properties the real interpreter refuted</span></div>
+  <div class="stat y" role="listitem"><b>436</b><span>CPython bug records, each with a reproducer</span></div>
+</div>
 
-<section>
-  <h2>How a row gets covered</h2>
-  <ol class="steps">
-    <li><div><strong>Mirror the source.</strong> The Lean model follows the C or Python body line by line: the same branch order, the same early returns, the same error messages, <code>Py_ssize_t</code> narrowing and fast paths. Every step cites <code>Objects/&lt;file&gt;.c:&lt;lines&gt;</code> in the 3.15.2 tree.</div></li>
-    <li><div><strong>Test it against the interpreter.</strong> A differential test runs the Lean model and python3 3.15.2 on the same generated inputs, with callbacks that raise and re-enter, until they agree on at least 50,000 cases over several seeds.</div></li>
-    <li><div><strong>State and prove a property.</strong> Each property is quantified over all inputs, with no sorry, no native_decide and no new axioms. A statement that turns out to be false is refuted in Lean with a witness and recorded, never weakened into something provable.</div></li>
-    <li><div><strong>Survive an independent review.</strong> A separate reviewer asks whether a wrong function would still satisfy the theorem (one that always raises, or handles only the first branch) and probes every claim on the real interpreter. Rows marked <span class="chip f">FAITHFUL</span> count. Rows marked <span class="chip h">HOLLOW</span> are withdrawn until fixed.</div></li>
-  </ol>
-  <p class="note">Review is the number that matters. The project counts reviewed rows, not claimed ones: 4,516 registered properties (94 still open) back fewer covered rows than the authors claimed, because reviews keep withdrawing statements that a wrong implementation would also satisfy.</p>
-</section>
-
-<section>
-  <h2>A theorem from the model</h2>
-  <p>The length of <code>range(start, stop, step)</code> is computed in C on a fast path over <code>long</code> and a slow path over Python ints. This property pins all three length functions to the same exact count, so a slow path that returned 0, or a fast path that always overflowed, would fail it.</p>
-<pre><code>def RangeLengthExact : Prop :=
-  (∀ lo hi step : Int, IsLong lo → IsLong hi → IsLong step → step ≠ 0 →
-    IsLen lo hi step (getLenOfRange lo hi step)) ∧
-  (∀ start stop step L : Int, step ≠ 0 → IsLen start stop step L →
-    computeRangeLengthLong start stop step =
-      if IsLong start ∧ IsLong stop ∧ IsLong step ∧ L ≤ longMax then some L else none) ∧
-  (∀ start stop step : Int, step ≠ 0 →
-    IsLen start stop step (computeRangeLengthSlow start stop step)) ∧
-  (∀ start stop step : Int, step ≠ 0 →
-    IsLen start stop step (computeRangeLength start stop step))
-
-theorem rangeLengthExact_proven : RangeLengthExact := by …</code></pre>
-  <p class="cite">lean/PyLean/RangeSlice/Length.lean · mirrors Objects/rangeobject.c:273-315</p>
-</section>
-
-<section>
-  <h2>Coverage by area</h2>
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th scope="col">Area</th><th scope="col" class="num">In scope</th><th scope="col" class="num">Faithful</th><th scope="col">Share</th></tr></thead>
-      <tbody>
-<tr><th scope="row">Grammar rules (Grammar/python.gram)</th><td class="num">278</td><td class="num">278</td><td class="bar"><span style="--w:100.0%"></span><b>100.0%</b></td></tr>
-<tr><th scope="row">Standard library in Python (Lib/)</th><td class="num">13,439</td><td class="num">1,227</td><td class="bar"><span style="--w:9.1%"></span><b>9.1%</b></td></tr>
-<tr><th scope="row">C extension modules (Modules/)</th><td class="num">4,702</td><td class="num">909</td><td class="bar"><span style="--w:19.3%"></span><b>19.3%</b></td></tr>
-<tr><th scope="row">Built-in types (Objects/)</th><td class="num">3,361</td><td class="num">1,184</td><td class="bar"><span style="--w:35.2%"></span><b>35.2%</b></td></tr>
-<tr><th scope="row">Parser and tokenizer (Parser/)</th><td class="num">190</td><td class="num">58</td><td class="bar"><span style="--w:30.5%"></span><b>30.5%</b></td></tr>
-<tr><th scope="row">Interpreter core (Python/)</th><td class="num">4,034</td><td class="num">415</td><td class="bar"><span style="--w:10.3%"></span><b>10.3%</b></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="cite">In scope excludes rows with no Python-visible behaviour (reference counting, GC traversal, generated code), each excluded with a stated reason that review also checks.</p>
-</section>
-
-<section>
-  <h2>Files reviewed in full</h2>
-  <p>57 files with at least 15 modelled rows have every modelled row reviewed faithful. The number is how many rows each has.</p>
-  <ul class="list done"><li><code>Python/bytecodes.c</code><span>310</span></li><li><code>Grammar/python.gram</code><span>278</span></li><li><code>Lib/collections/__init__.py</code><span>184</span></li><li><code>Lib/_pydecimal.py</code><span>160</span></li><li><code>Lib/_pydatetime.py</code><span>150</span></li><li><code>Modules/_struct.c</code><span>122</span></li><li><code>Objects/longobject.c</code><span>119</span></li><li><code>Objects/listobject.c</code><span>114</span></li><li><code>Objects/memoryobject.c</code><span>107</span></li><li><code>Objects/dictobject.c</code><span>104</span></li><li><code>Objects/bytesobject.c</code><span>100</span></li><li><code>Objects/exceptions.c</code><span>97</span></li><li><code>Objects/unicodeobject.c</code><span>94</span></li><li><code>Objects/bytearrayobject.c</code><span>93</span></li><li><code>Modules/arraymodule.c</code><span>84</span></li><li><code>Lib/_collections_abc.py</code><span>81</span></li><li><code>Modules/_operator.c</code><span>73</span></li><li><code>Modules/itertoolsmodule.c</code><span>72</span></li><li><code>Modules/_collectionsmodule.c</code><span>64</span></li><li><code>Python/codecs.c</code><span>61</span></li><li><code>Lib/operator.py</code><span>59</span></li><li><code>Lib/_pyio.py</code><span>58</span></li><li><code>Objects/typeobject.c</code><span>57</span></li><li><code>Lib/weakref.py</code><span>54</span></li></ul>
-</section>
-
-<section>
-  <h2>Bugs found along the way</h2>
-  <p>Refuted properties are where the model and CPython disagree. When the disagreement is CPython's fault, it becomes a bug record with a reproducer that runs on 3.15.2, a duplicate search of the CPython tracker, and a priority from P1 (most serious) to P5.</p>
-  <div class="cols">
-    <div>
-      <div class="eyebrow">By kind</div>
-      <ul class="list"><li><span>other</span><b>172</b></li><li><span>C and Python twins disagree</span><b>123</b></li><li><span>wrong result</span><b>44</b></li><li><span>crash</span><b>32</b></li><li><span>memory safety</span><b>27</b></li><li><span>wrong exception</span><b>20</b></li><li><span>differs from the documentation</span><b>18</b></li></ul>
+<figure class="wide">
+  <div class="panel">
+    <div class="maphead">
+      <span>All of CPython 3.15.2, one square per function</span>
+      <span class="legend">
+        <span><i style="background:var(--blue)"></i>reviewed faithful</span>
+        <span><i style="background:var(--blue-soft)"></i>modelled, review pending or failed</span>
+        <span><i style="background:var(--excl)"></i>excluded, with a reason</span>
+        <span><i style="background:var(--todo)"></i>not modelled yet</span>
+      </span>
     </div>
-    <div>
-      <div class="eyebrow">By priority</div>
-      <ul class="list"><li><span>P1</span><b>19</b></li><li><span>P2</span><b>29</b></li><li><span>P3</span><b>120</b></li><li><span>P4</span><b>210</b></li><li><span>P5</span><b>58</b></li></ul>
-    </div>
+    <canvas id="map" tabindex="0" aria-label="Map of 33,585 rows of CPython coloured by coverage. Point at a square to see its file."></canvas>
+    <div id="readout">Point at a square to see its file.</div>
   </div>
-  <p class="note">Details of individual findings are held back until they have been reported to the CPython maintainers.</p>
-</section>
+  <figcaption>33,585 rows: every C function, bytecode instruction, grammar rule and standard-library function, in the order interpreter core, built-in types, C modules, parser, grammar, then the standard library written in Python. Only blue counts as coverage.</figcaption>
+</figure>
+
+<nav class="toc" aria-label="Contents"><a href="#why">Why</a><a href="#mirror">Mirror, then prove</a><a href="#pipeline">The pipeline</a><a href="#wrong">The wrong-function test</a><a href="#false">Correct but false</a><a href="#found">What it found</a><a href="#related">Related work</a><a href="#yours">Do this for your language</a><a href="#numbers">Numbers</a></nav>
+
+<h2 id="why">Python is whatever CPython does</h2>
+<p>There is no formal specification of Python. The language reference describes the common case, and everything else is defined by what the reference implementation does: about half a million lines of C plus a standard library written in Python. The interesting behaviour lives in the corners. An <code>__eq__</code> that mutates the dict being searched. A key whose <code>__hash__</code> raises halfway through an insert. An integer one past <code>sys.maxsize</code>. A C fast path and a pure-Python twin that are supposed to agree and occasionally don't.</p>
+<p>A proof assistant drags every one of those corners into the open. To state a theorem about <code>range.__len__</code> you first have to write down what it does for a step of zero, for a length that doesn't fit in a C <code>long</code>, and for an argument whose <code>__index__</code> returns a subclass of <code>int</code>. This project applies that discipline to CPython at scale. It follows Miles Cranmer's julia-in-lean, which modelled Julia Base in Lean 4 and found more than 400 bugs on the way<sup class="ref"><a href="#ref1">1</a></sup>.</p>
+<p>The work started on 29 October 2026. It was done by Claude agents running in parallel under Claude Code, with a human setting direction and deciding what counts. Every heavy job (Lean builds, differential tests, reproducers) ran on our own build machine. Across 2,353 commits, 4,780 rows have been modelled, and 4,071 of them have survived independent review.</p>
+
+<h2 id="mirror">Mirror, then prove</h2>
+<p>Every model follows its source line by line: the same branch order, the same early returns, the same overflow behaviour, each step citing the 3.15.2 file and line. Below is the function that computes the length of a <code>range</code> on the C fast path, beside its Lean mirror. Point at a line to see its counterpart. The unsigned arithmetic is modelled exactly, wraparound included, because the C comment's argument that it can't overflow is now something a proof has to check.</p>
+
+<div class="pair wide" id="pair">
+  <div>
+    <span class="tag">Objects/rangeobject.c:992</span>
+<pre><code><span class="ln" data-k="1"><span class="k">static unsigned long</span></span><span class="ln" data-k="1">get_len_of_range(<span class="k">long</span> lo, <span class="k">long</span> hi, <span class="k">long</span> step)</span><span class="ln">{</span><span class="ln" data-k="0">    assert(step != 0);</span><span class="ln" data-k="2">    <span class="k">if</span> (step &gt; 0 &amp;&amp; lo &lt; hi)</span><span class="ln" data-k="3">        <span class="k">return</span> 1UL + (hi - 1UL - lo) / step;</span><span class="ln" data-k="4">    <span class="k">else if</span> (step &lt; 0 &amp;&amp; lo &gt; hi)</span><span class="ln" data-k="5">        <span class="k">return</span> 1UL + (lo - 1UL - hi) / (0UL - step);</span><span class="ln" data-k="6">    <span class="k">else</span></span><span class="ln" data-k="6">        <span class="k">return</span> 0UL;</span><span class="ln">}</span></code></pre>
+  </div>
+  <div>
+    <span class="tag">lean/PyLean/RangeSlice/Model.lean</span>
+<pre><code><span class="ln" data-k="1"><span class="k">def</span> getLenOfRange (lo hi step : Int) : Int :=</span><span class="ln" data-k="2">  <span class="k">if</span> step &gt; 0 ∧ lo &lt; hi <span class="k">then</span></span><span class="ln" data-k="3">    uadd 1 (usub (usub (toU hi) 1) (toU lo) / toU step)</span><span class="ln" data-k="4">  <span class="k">else if</span> step &lt; 0 ∧ lo &gt; hi <span class="k">then</span></span><span class="ln" data-k="5">    uadd 1 (usub (usub (toU lo) 1) (toU hi)</span><span class="ln" data-k="5">              / usub 0 (toU step))</span><span class="ln" data-k="6">  <span class="k">else</span> 0</span><span class="ln"> </span><span class="ln cm" data-k="0">-- step ≠ 0 is a hypothesis of every theorem</span><span class="ln cm">-- toU, uadd, usub: unsigned long, mod 2^64</span></code></pre>
+  </div>
+</div>
+
+<p>Then comes the property. This one ties the C fast path, the slow path over Python integers, and the dispatcher between them to a single exact count. A slow path that returned zero for big arguments fails it, and so does a fast path that always reported overflow.</p>
+<pre><code><span class="k">theorem</span> rangeLengthExact_proven : RangeLengthExact
+<span class="cm">-- for every start, stop, and step ≠ 0:
+--   get_len_of_range on C longs is the true number of elements,
+--   the long fast path returns it exactly when it fits in a long,
+--   the PyLong slow path and the dispatcher always return it.</span></code></pre>
+
+<h2 id="pipeline">The pipeline</h2>
+<p>Every row goes through the same five gates. The funnel below is the whole project as of this snapshot. The drop between "modelled" and "reviewed faithful" is the point of the exercise.</p>
+<figure class="wide" style="max-width:66ch">
+  <ul class="funnel"><li><span>Rows in the inventory</span><i style="--w:100.00%"></i><b>33,585</b></li><li><span>In scope</span><i style="--w:77.43%"></i><b>26,004</b></li><li><span>Modelled in Lean</span><i style="--w:14.23%"></i><b>4,780</b></li><li><span>Reviewed faithful</span><i style="--w:12.12%"></i><b>4,071</b></li></ul>
+  <figcaption>In scope leaves out rows with no Python-visible behaviour, such as reference counting, garbage-collector traversal and generated parser tables. Each exclusion carries a written reason, and review checks those too.</figcaption>
+</figure>
+<ol class="steps">
+  <li><b>Inventory</b><span>A script lists every function, opcode and grammar rule in the 3.15.2 tree. A row counts as covered only through a registry entry whose theorem unfolds that function's body.</span></li>
+  <li><b>Mirror</b><span>The model follows the source in branch order. Python callbacks are fallible code that can raise, mutate state and re-enter. <code>Py_ssize_t</code> narrowing and C fast paths are modelled as written, and floats go through an exact IEEE-754 binary64 model.</span></li>
+  <li><b>Difftest</b><span>Before any proof, the Lean model and python3 3.15.2 run side by side on generated inputs: 0, ±1, <code>sys.maxsize</code>, ±2<sup>63</sup>, huge ints, hooks that raise. The model must agree on at least 50,000 cases over several seeds.</span></li>
+  <li><b>Prove or refute</b><span>Properties quantify over all inputs. <code>sorry</code>, <code>native_decide</code> and new axioms are rejected by the build. A false statement is refuted in Lean with a concrete witness, never weakened until it becomes provable.</span></li>
+  <li><b>Review</b><span>A separate agent that didn't write the model judges each row against the source and probes each claim on the real interpreter. <span class="verdict f">FAITHFUL</span> rows count. <span class="verdict h">HOLLOW</span> rows are withdrawn until they're fixed.</span></li>
+</ol>
+
+<h2 id="wrong">The wrong-function test</h2>
+<p>The first attempt asked agents for breadth: model every function and prove at least one property about each. They did, and an independent review then found that fewer than half the rows it checked held up. In <code>functools.py</code> it was 21%. The theorems were true; they just didn't say anything.</p>
+<p>So every review now asks one question of every theorem: <em>what wrong function would also satisfy this?</em> Here is the same question applied to four implementations of a range-length function and two theorems about it.</p>
+<figure class="wide" style="max-width:66ch">
+  <div class="scroll">
+  <table class="matrix">
+    <thead><tr><th>Implementation</th><th style="text-align:center">“If it returns, the length is ≥ 0”</th><th style="text-align:center">“It returns the exact count for every input”</th></tr></thead>
+    <tbody>
+      <tr><td>The real one</td><td class="m ok">satisfies</td><td class="m ok">satisfies</td></tr>
+      <tr><td>Always raises <code>OverflowError</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+      <tr><td>Slow path returns 0 for ints past a C <code>long</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+      <tr><td>Off by one when <code>step &lt; 0</code></td><td class="m pass">satisfies</td><td class="m catch">fails</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figcaption>The first theorem is true and provable, and it pins nothing: every wrong version satisfies it. Reviewers reject rows whose only theorem looks like the left column. Theorems of the form "the two twins agree or both raise" fail the same way, because two implementations that always raise agree.</figcaption>
+</figure>
+<p>Fixing a hollow row usually means rebuilding its model, not adding a lemma. Each chart below is one source file's history: every point is a review, and the height is the share of rows that passed it. Lines go down as well as up. When a review finds a theorem that is false about CPython, rows that had passed are withdrawn.</p>
+<div class="sparks wide"><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Objects/typeobject.c: 0 of 23 faithful at first review, 135 of 142 after 5 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,88.0 L59.0,84.7 L110.0,29.4 L161.0,14.2 L212.0,11.9" class="trace"/><circle cx="8.0" cy="88.0" r="3.2" class="dot"><title>review 1: 0 of 23</title></circle><circle cx="59.0" cy="84.7" r="2.2" class="dot"><title>review 2: 2 of 48</title></circle><circle cx="110.0" cy="29.4" r="2.2" class="dot"><title>review 3: 41 of 56</title></circle><circle cx="161.0" cy="14.2" r="2.2" class="dot"><title>review 4: 130 of 141</title></circle><circle cx="212.0" cy="11.9" r="3.2" class="dot end"><title>review 5: 135 of 142</title></circle></svg><figcaption><code>Objects/typeobject.c</code><span>0/23 → <b>135/142</b> · 5 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Objects/genobject.c: 1 of 1 faithful at first review, 56 of 56 after 5 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,8.0 L59.0,61.3 L110.0,10.9 L161.0,9.4 L212.0,8.0" class="trace"/><circle cx="8.0" cy="8.0" r="3.2" class="dot"><title>review 1: 1 of 1</title></circle><circle cx="59.0" cy="61.3" r="2.2" class="dot"><title>review 2: 18 of 54</title></circle><circle cx="110.0" cy="10.9" r="2.2" class="dot"><title>review 3: 54 of 56</title></circle><circle cx="161.0" cy="9.4" r="2.2" class="dot"><title>review 4: 55 of 56</title></circle><circle cx="212.0" cy="8.0" r="3.2" class="dot end"><title>review 5: 56 of 56</title></circle></svg><figcaption><code>Objects/genobject.c</code><span>1/1 → <b>56/56</b> · 5 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Objects/setobject.c: 31 of 46 faithful at first review, 46 of 46 after 7 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,34.1 L42.0,15.0 L76.0,11.5 L110.0,9.7 L144.0,11.5 L178.0,9.7 L212.0,8.0" class="trace"/><circle cx="8.0" cy="34.1" r="3.2" class="dot"><title>review 1: 31 of 46</title></circle><circle cx="42.0" cy="15.0" r="2.2" class="dot"><title>review 2: 42 of 46</title></circle><circle cx="76.0" cy="11.5" r="2.2" class="dot"><title>review 3: 44 of 46</title></circle><circle cx="110.0" cy="9.7" r="2.2" class="dot"><title>review 4: 45 of 46</title></circle><circle cx="144.0" cy="11.5" r="2.2" class="dot"><title>review 5: 44 of 46</title></circle><circle cx="178.0" cy="9.7" r="2.2" class="dot"><title>review 6: 45 of 46</title></circle><circle cx="212.0" cy="8.0" r="3.2" class="dot end"><title>review 7: 46 of 46</title></circle></svg><figcaption><code>Objects/setobject.c</code><span>31/46 → <b>46/46</b> · 7 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Modules/_json.c: 31 of 45 faithful at first review, 45 of 48 after 5 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,32.9 L59.0,18.7 L110.0,18.0 L161.0,16.3 L212.0,13.0" class="trace"/><circle cx="8.0" cy="32.9" r="3.2" class="dot"><title>review 1: 31 of 45</title></circle><circle cx="59.0" cy="18.7" r="2.2" class="dot"><title>review 2: 39 of 45</title></circle><circle cx="110.0" cy="18.0" r="2.2" class="dot"><title>review 3: 42 of 48</title></circle><circle cx="161.0" cy="16.3" r="2.2" class="dot"><title>review 4: 43 of 48</title></circle><circle cx="212.0" cy="13.0" r="3.2" class="dot end"><title>review 5: 45 of 48</title></circle></svg><figcaption><code>Modules/_json.c</code><span>31/45 → <b>45/48</b> · 5 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Lib/enum.py: 21 of 38 faithful at first review, 37 of 39 after 9 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,43.8 L33.5,26.5 L59.0,16.2 L84.5,18.3 L110.0,20.3 L135.5,18.3 L161.0,28.5 L186.5,14.2 L212.0,12.1" class="trace"/><circle cx="8.0" cy="43.8" r="3.2" class="dot"><title>review 1: 21 of 38</title></circle><circle cx="33.5" cy="26.5" r="2.2" class="dot"><title>review 2: 30 of 39</title></circle><circle cx="59.0" cy="16.2" r="2.2" class="dot"><title>review 3: 35 of 39</title></circle><circle cx="84.5" cy="18.3" r="2.2" class="dot"><title>review 4: 34 of 39</title></circle><circle cx="110.0" cy="20.3" r="2.2" class="dot"><title>review 5: 33 of 39</title></circle><circle cx="135.5" cy="18.3" r="2.2" class="dot"><title>review 6: 34 of 39</title></circle><circle cx="161.0" cy="28.5" r="2.2" class="dot"><title>review 7: 29 of 39</title></circle><circle cx="186.5" cy="14.2" r="2.2" class="dot"><title>review 8: 36 of 39</title></circle><circle cx="212.0" cy="12.1" r="3.2" class="dot end"><title>review 9: 37 of 39</title></circle></svg><figcaption><code>Lib/enum.py</code><span>21/38 → <b>37/39</b> · 9 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Lib/random.py: 11 of 38 faithful at first review, 37 of 38 after 3 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,64.8 L110.0,22.7 L212.0,10.1" class="trace"/><circle cx="8.0" cy="64.8" r="3.2" class="dot"><title>review 1: 11 of 38</title></circle><circle cx="110.0" cy="22.7" r="2.2" class="dot"><title>review 2: 31 of 38</title></circle><circle cx="212.0" cy="10.1" r="3.2" class="dot end"><title>review 3: 37 of 38</title></circle></svg><figcaption><code>Lib/random.py</code><span>11/38 → <b>37/38</b> · 3 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Objects/abstract.c: 9 of 40 faithful at first review, 41 of 43 after 2 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,70.0 L212.0,11.7" class="trace"/><circle cx="8.0" cy="70.0" r="3.2" class="dot"><title>review 1: 9 of 40</title></circle><circle cx="212.0" cy="11.7" r="3.2" class="dot end"><title>review 2: 41 of 43</title></circle></svg><figcaption><code>Objects/abstract.c</code><span>9/40 → <b>41/43</b> · 2 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Objects/rangeobject.c: 19 of 33 faithful at first review, 33 of 33 after 2 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,41.9 L212.0,8.0" class="trace"/><circle cx="8.0" cy="41.9" r="3.2" class="dot"><title>review 1: 19 of 33</title></circle><circle cx="212.0" cy="8.0" r="3.2" class="dot end"><title>review 2: 33 of 33</title></circle></svg><figcaption><code>Objects/rangeobject.c</code><span>19/33 → <b>33/33</b> · 2 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Lib/pickletools.py: 14 of 33 faithful at first review, 31 of 33 after 2 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,54.1 L212.0,12.8" class="trace"/><circle cx="8.0" cy="54.1" r="3.2" class="dot"><title>review 1: 14 of 33</title></circle><circle cx="212.0" cy="12.8" r="3.2" class="dot end"><title>review 2: 31 of 33</title></circle></svg><figcaption><code>Lib/pickletools.py</code><span>14/33 → <b>31/33</b> · 2 reviews</span></figcaption></figure><figure class="spark"><svg viewBox="0 0 220 96" role="img" aria-label="Modules/binascii.c: 29 of 40 faithful at first review, 35 of 40 after 2 reviews"><line x1="8" x2="212" y1="8" y2="8" class="full"/><line x1="8" x2="212" y1="88" y2="88" class="base"/><path d="M8.0,30.0 L212.0,18.0" class="trace"/><circle cx="8.0" cy="30.0" r="3.2" class="dot"><title>review 1: 29 of 40</title></circle><circle cx="212.0" cy="18.0" r="3.2" class="dot end"><title>review 2: 35 of 40</title></circle></svg><figcaption><code>Modules/binascii.c</code><span>29/40 → <b>35/40</b> · 2 reviews</span></figcaption></figure></div>
+<div class="callout"><p>Coverage counts reviewed rows, never claimed ones. 4,516 properties are registered (94 still open), but only 4,071 rows, 15.7% of the 26,004 in scope, have passed review.</p></div>
+
+<h2 id="false">A proof can be correct and still false</h2>
+<p>A Lean proof guarantees that a theorem follows from the model. It says nothing about whether the model is CPython. Several proven theorems turned out to be false about the interpreter, each caught by running the exact statement on python3 3.15.2. These were the most instructive failures.</p>
+<div class="story">
+  <h3>The cache that needed sixteen terabytes</h3>
+  <p>The model of the C <code>json</code> encoder assumed every allocation succeeds. So its theorem promised that the indent cache gets built for any nesting depth up to about 2<sup>45</sup>, including one where the string alone would take 16 TB. CPython raises <code>MemoryError</code>. In the fix, <code>malloc</code> is an oracle. The theorem now holds for every allocator, says exactly what a refused allocation does, and claims success only when the allocator grants it.</p>
+</div>
+<div class="story">
+  <h3>Nine frames that exist only once</h3>
+  <p>A proven bound said the pure-Python pickler needs at most 10·depth + 18 interpreter frames. On a fresh interpreter, the first protocol-0 string triggers a codec lookup that imports a module and costs nine more. After that the codec is cached and the bound holds again. The difftest never saw it, because its harness had already warmed the codec. The theorem went back to open, with a note that the missing piece is a model of the codec cache.</p>
+</div>
+<div class="story">
+  <h3><code>except TypeError</code> also catches subclasses</h3>
+  <p>Three separate models, for <code>set</code>, <code>enum</code> and <code>json</code>, compared an exception's class name, while Python's <code>except</code> and C's <code>PyErr_ExceptionMatches</code> accept any subclass. Each produced a proven theorem that a <code>TypeError</code> subclass refutes. The models now carry a real exception hierarchy with multiple bases. They keep C's exact-type checks (<code>Py_IS_TYPE</code>) apart from its subclass checks.</p>
+</div>
+<div class="story">
+  <h3>A table that was freed and came back</h3>
+  <p>The <code>set</code> model gave every hash table an identity that was never reused. That made a theorem about lookups restarting after <code>__eq__</code> mutates the set provable, and false. In CPython the allocator can hand a smaller table back at the same address, so the pointer comparison after <code>__eq__</code> concludes that nothing changed. We modelled address reuse and the stale bytes left past the end of the new table. That turned the proof into a refutation, and the refutation into a bug report.</p>
+</div>
+
+<h2 id="found">What it found</h2>
+<p>When a refuted property is CPython's fault rather than the model's, it becomes a bug record. Each record has:</p>
+<ul>
+  <li>a script that prints <code>REPRODUCED</code> on 3.15.2, also checked against the development branch;</li>
+  <li>a search of the CPython tracker for duplicates;</li>
+  <li>an honest priority from P1 to P5, and a note on whether the behaviour might be intended.</li>
+</ul>
+<p>Most findings are small. They're the kind of behaviour that only shows up once someone writes down exactly what a function does.</p>
+<figure class="wide" style="max-width:66ch">
+  <ul class="bars"><li><span>C and pure-Python twins disagree</span><i style="--w:100.0%"></i><b>136</b></li><li><span>Other</span><i style="--w:92.6%"></i><b>126</b></li><li><span>Wrong result</span><i style="--w:41.9%"></i><b>57</b></li><li><span>Crash or assertion failure</span><i style="--w:23.5%"></i><b>32</b></li><li><span>Memory safety</span><i style="--w:19.9%"></i><b>27</b></li><li><span>Differs from the documentation</span><i style="--w:19.1%"></i><b>26</b></li><li><span>Wrong exception or message</span><i style="--w:14.7%"></i><b>20</b></li><li><span>Missing validation</span><i style="--w:8.8%"></i><b>12</b></li></ul>
+  <figcaption>436 bug records by kind. "Twins disagree" means CPython's C implementation and its pure-Python fallback give different answers for the same call. The records come mostly from parsers, from C fast paths that diverge from their slow paths, from error checks missing after a conversion, and from C code that keeps a pointer across a call into Python. The C arithmetic itself is almost always right.</figcaption>
+</figure>
+
+<div class="finds wide">
+  <div class="find">
+    <h3>The two picklers stop at different depths</h3>
+    <p>The C pickler is bounded by the C stack, the pure-Python one by <code>sys.getrecursionlimit()</code>. A list nested 400 deep pickles in C and raises in Python. This one has been open on the tracker since 2008.</p>
+<pre><code>v = []
+<span class="k">for</span> _ <span class="k">in</span> range(400): v = [v]
+pickle.dumps(v, 5)    <span class="cm"># fine</span>
+pickle._dumps(v, 5)   <span class="y"># RecursionError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3><code>random.Random</code> swallows class keywords</h3>
+    <p><code>Random.__init_subclass__</code> accepts <code>**kwargs</code> and never calls <code>super().__init_subclass__</code>. A mixin listed after <code>Random</code> never has its hook run, and unknown class keywords pass silently.</p>
+<pre><code><span class="k">class</span> After(random.Random, Mixin): <span class="k">pass</span>
+<span class="y"># Mixin.__init_subclass__ never runs</span>
+<span class="k">class</span> Kw(random.Random, flag=1): <span class="k">pass</span>
+<span class="y"># accepted; plain classes raise TypeError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3>An enum alias that silently binds nothing</h3>
+    <p><code>Enum._add_value_alias_</code> builds its "already bound" error inside a <code>try</code> whose <code>except TypeError</code> was meant for unhashable values. If a <code>__repr__</code> raises <code>TypeError</code> while that message is formatted, the conflict is swallowed and the call returns <code>None</code>.</p>
+<pre><code><span class="k">class</span> W(Enum):
+    A = 1; B = 2
+    <span class="k">def</span> __repr__(self): <span class="k">return</span> 5
+W.B._add_value_alias_(3)
+W.A._add_value_alias_(3)  <span class="y"># None, not ValueError</span></code></pre>
+  </div>
+  <div class="find">
+    <h3>An ignored <code>=</code> still counts as padding</h3>
+    <p><code>binascii.a2b_base32</code> gained <code>ignorechars</code> in 3.15. With <code>=</code> in it, the base64 decoder resets its padding count after a data character and the base32 decoder doesn't, so the position of an ignored <code>=</code> changes the result.</p>
+<pre><code>a2b_base32(b"AAAAAAA",  ignorechars=b"=")
+<span class="y"># Error: Incorrect padding</span>
+a2b_base32(b"AAAA=AAA", ignorechars=b"=")
+<span class="y"># b'\x00\x00\x00\x00'</span></code></pre>
+  </div>
+</div>
+<p>27 of the records are memory-safety bugs: use-after-free and out-of-bounds access reachable from pure Python, almost all through a callback that mutates a container while C code still holds a pointer into it. CPython doesn't treat running untrusted Python code as a security boundary, so these are ordinary bugs. We are reporting them on the CPython tracker alongside this post. Every record, with its reproducer, is in the repository's <a href="https://github.com/Broyojo/python-formalization/tree/main/bugs"><code>bugs/</code></a> folder.</p>
+
+<h2 id="related">Related work</h2>
+<p>Formal models of real languages have a long history. What's new here is the combination: a model of the actual implementation rather than an idealized language, differential testing against that implementation, and AI agents doing the bulk of the modelling under a review process designed to catch them cutting corners.</p>
+<div class="related">
+  <div class="rel"><b>julia-in-lean</b><span>The direct inspiration. Julia Base modelled in Lean 4, docstring promises turned into theorems, models checked by differential testing, and more than 400 bugs recorded, 75 filed after manual filtering. Its finding that 128 of 130 quick "proofs" had assumed the index was in bounds shaped our review rules.<sup class="ref"><a href="#ref1">1</a></sup></span></div>
+  <div class="rel"><b>PTX in Lean</b><span>Two recent Lean formalizations of NVIDIA's PTX instruction set, used to prove GPU kernels correct, including FlashAttention and an MoE pipeline. Earlier, NVIDIA's own axiomatic PTX memory model was checked in Alloy and Coq.<sup class="ref"><a href="#ref2">2</a>,<a href="#ref3">3</a>,<a href="#ref4">4</a></sup></span></div>
+  <div class="rel"><b>Python semantics</b><span>λπ ("Python: The Full Monty") gave a tested small-step semantics for a core of Python. Guth's K semantics of Python 3.3 is executable and tested against unit suites. Both model the language; this project models CPython's code, C included, function by function.<sup class="ref"><a href="#ref5">5</a>,<a href="#ref6">6</a></sup></span></div>
+  <div class="rel"><b>JavaScript, Wasm</b><span>JSCert mechanized the ECMAScript specification in Coq. KJS gave a complete JavaScript semantics in K, tested against conformance suites. WebAssembly's specification was mechanized and its type system proven sound in Isabelle, which uncovered errors in the spec itself.<sup class="ref"><a href="#ref7">7</a>,<a href="#ref8">8</a>,<a href="#ref9">9</a></sup></span></div>
+  <div class="rel"><b>Verified systems</b><span>CompCert and seL4 set the bar for proving a real implementation correct end to end. This project is far from that. It models an existing implementation rather than building a verified one, and its models are tested, not derived.<sup class="ref"><a href="#ref10">10</a>,<a href="#ref11">11</a></sup></span></div>
+  <div class="rel"><b>Differential testing</b><span>Running two implementations on the same inputs and treating disagreement as a finding goes back to McKeeman, and Csmith showed how far it can go against real compilers. Here it gates every model before any proof starts.<sup class="ref"><a href="#ref12">12</a>,<a href="#ref13">13</a></sup></span></div>
+</div>
+
+<h2 id="yours">Do this for your language</h2>
+<p>Nothing here is specific to Python. Any project with a reference implementation, a way to run it, and a list of its functions can be modelled this way: a language runtime, a standard library, a parser, a codec, an ISA. These are the rules that made the difference, in the order we learned them.</p>
+<ol class="rules">
+  <li><b>Pin one version.</b> Model exactly one release and cite its line numbers. When the target moves, re-check every function whose body changed.</li>
+  <li><b>Inventory everything first.</b> List every function and count coverage against that list. Exclusions need a written reason that a reviewer can reject.</li>
+  <li><b>Mirror, don't specify.</b> A model that restates what a function should do will agree with the docs and miss the bugs. Copy the branch order, the early returns and the error messages.</li>
+  <li><b>Make callbacks fallible.</b> Model user code as something that can raise, mutate the world and re-enter. Most memory-safety bugs live on those paths.</li>
+  <li><b>Difftest before you prove.</b> Proving things about a wrong model wastes the proof. Reach 100% agreement on edge-heavy inputs first.</li>
+  <li><b>Refute, never weaken.</b> If a statement is false, prove it false with a witness and keep the record. Narrowing it until it becomes provable hides exactly the case you were looking for.</li>
+  <li><b>Run the exact statement against the real thing.</b> A correct proof of a false theorem is the most dangerous output this process can produce.</li>
+  <li><b>Review with the wrong-function test.</b> Have someone who didn't write the theorem ask what broken implementation would also satisfy it. Count only what survives.</li>
+</ol>
+<p>The project's working documents are written to be reused. Point your own agents at them, replace CPython with your target, and keep the rules.</p>
+<ul class="kit wide" style="max-width:66ch">
+  <li><a href="https://github.com/Broyojo/python-formalization/blob/main/AGENTS.md">AGENTS.md</a><span>The playbook every modelling agent follows: rules, layout, forbidden tactics, what review keeps rejecting.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/blob/main/coverage/REVIEW_PROMPT.md">coverage/REVIEW_PROMPT.md</a><span>The independent review, including the wrong-function test and the FAITHFUL / HOLLOW verdicts.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/coverage/methods">coverage/methods/</a><span>The inventory: one row per function, opcode and grammar rule, with status and the entry that covers it.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/difftest">difftest/</a><span>Generators and the harness that run the Lean model and CPython side by side.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/bugs">bugs/</a><span>One YAML file per finding: reproducer, cause with line numbers, duplicate search, priority, possible fix.</span></li>
+  <li><a href="https://github.com/Broyojo/python-formalization/tree/main/lean/PyLean">lean/PyLean/</a><span>The models and proofs, one directory per area of CPython.</span></li>
+</ul>
+
+<h2 id="numbers">By the numbers</h2>
+<div class="scroll wide" style="max-width:66ch">
+<table class="tbl">
+  <thead><tr><th>Area</th><th class="num">In scope</th><th class="num">Faithful</th><th>Share</th></tr></thead>
+  <tbody>
+<tr><th scope="row">Interpreter core</th><td class="num">4,034</td><td class="num">415</td><td class="meter"><span style="--w:10.3%"></span><b>10.3%</b></td></tr>
+<tr><th scope="row">Built-in types</th><td class="num">3,361</td><td class="num">1,184</td><td class="meter"><span style="--w:35.2%"></span><b>35.2%</b></td></tr>
+<tr><th scope="row">C extension modules</th><td class="num">4,702</td><td class="num">909</td><td class="meter"><span style="--w:19.3%"></span><b>19.3%</b></td></tr>
+<tr><th scope="row">Parser and tokenizer</th><td class="num">190</td><td class="num">58</td><td class="meter"><span style="--w:30.5%"></span><b>30.5%</b></td></tr>
+<tr><th scope="row">Grammar rules</th><td class="num">278</td><td class="num">278</td><td class="meter"><span style="--w:100.0%"></span><b>100.0%</b></td></tr>
+<tr><th scope="row">Standard library (Python)</th><td class="num">13,439</td><td class="num">1,227</td><td class="meter"><span style="--w:9.1%"></span><b>9.1%</b></td></tr>
+  </tbody>
+</table>
+</div>
+<h3>Files where every modelled row passed review (57)</h3>
+<ul class="list done wide"><li><code>Python/bytecodes.c</code><span>310</span></li><li><code>Grammar/python.gram</code><span>278</span></li><li><code>Lib/collections/__init__.py</code><span>184</span></li><li><code>Lib/_pydecimal.py</code><span>160</span></li><li><code>Lib/_pydatetime.py</code><span>150</span></li><li><code>Modules/_struct.c</code><span>122</span></li><li><code>Objects/longobject.c</code><span>119</span></li><li><code>Objects/listobject.c</code><span>114</span></li><li><code>Objects/memoryobject.c</code><span>107</span></li><li><code>Objects/dictobject.c</code><span>104</span></li><li><code>Objects/bytesobject.c</code><span>100</span></li><li><code>Objects/exceptions.c</code><span>97</span></li><li><code>Objects/unicodeobject.c</code><span>94</span></li><li><code>Objects/bytearrayobject.c</code><span>93</span></li><li><code>Modules/arraymodule.c</code><span>84</span></li><li><code>Lib/_collections_abc.py</code><span>81</span></li><li><code>Modules/_operator.c</code><span>73</span></li><li><code>Modules/itertoolsmodule.c</code><span>72</span></li><li><code>Modules/_collectionsmodule.c</code><span>64</span></li><li><code>Python/codecs.c</code><span>61</span></li><li><code>Lib/operator.py</code><span>59</span></li><li><code>Lib/_pyio.py</code><span>58</span></li><li><code>Objects/typeobject.c</code><span>57</span></li><li><code>Lib/weakref.py</code><span>54</span></li><li><code>Objects/genobject.c</code><span>46</span></li><li><code>Lib/urllib/parse.py</code><span>46</span></li><li><code>Parser/action_helpers.c</code><span>43</span></li><li><code>Modules/_zoneinfo.c</code><span>43</span></li><li><code>Objects/floatobject.c</code><span>38</span></li><li><code>Objects/tupleobject.c</code><span>37</span></li></ul>
+
+<h2>What is left</h2>
+<p>Most of CPython. The standard library written in Python is the largest area and the least covered. Concurrency is out of scope: blocking calls are modelled single-threaded. Garbage-collector traversal is excluded by policy, because there is no heap model. Every open property carries a note saying what is missing, so the gaps are written down where the next person will look.</p>
+<p>The rule stays the same as the work grows. A function counts only when its model mirrors the source, its theorem would catch a wrong implementation, and a reviewer who didn't write it agrees.</p>
+
+<h2>References</h2>
+<ol class="refs">
+  <li id="ref1">Miles Cranmer. <a href="https://discourse.julialang.org/t/formalizing-julia-in-lean-and-finding-400-bugs-in-base/140243">Formalizing Julia in Lean (and finding 400+ bugs in Base)</a>. Julia Discourse, October 2026. Code: <a href="https://github.com/MilesCranmer/julia-in-lean">MilesCranmer/julia-in-lean</a>.</li>
+  <li id="ref2">Koska et al. <a href="https://arxiv.org/abs/2611.04447">Formalizing PTX in Lean to Prove GPU Kernel Correctness</a>. arXiv:2611.04447, November 2026.</li>
+  <li id="ref3"><a href="https://github.com/lschiemanowski/ptxlean">PTXLean: a Lean formalization of PTX</a>. GitHub, lschiemanowski/ptxlean.</li>
+  <li id="ref4">Daniel Lustig, Sameer Sahasrabuddhe, Olivier Giroux. <a href="https://research.nvidia.com/publication/2019-04_formal-analysis-nvidia-ptx-memory-consistency-model">A Formal Analysis of the NVIDIA PTX Memory Consistency Model</a>. ASPLOS 2019.</li>
+  <li id="ref5">Joe Gibbs Politz et al. <a href="https://cs.brown.edu/research/plt/dl/lambda-py/">Python: The Full Monty. A Tested Semantics for the Python Programming Language</a>. OOPSLA 2013.</li>
+  <li id="ref6">Dwight Guth. A Formal Semantics of Python 3.3. Master's thesis, University of Illinois, 2013. Code: <a href="https://github.com/kframework/python-semantics">kframework/python-semantics</a>.</li>
+  <li id="ref7">Martin Bodin et al. A Trusted Mechanised JavaScript Specification. POPL 2014.</li>
+  <li id="ref8">Daejun Park, Andrei Ştefănescu, Grigore Roşu. KJS: A Complete Formal Semantics of JavaScript. PLDI 2015.</li>
+  <li id="ref9">Conrad Watt. Mechanising and Verifying the WebAssembly Specification. CPP 2018.</li>
+  <li id="ref10">Xavier Leroy. Formal Verification of a Realistic Compiler. Communications of the ACM, 2009.</li>
+  <li id="ref11">Gerwin Klein et al. seL4: Formal Verification of an OS Kernel. SOSP 2009.</li>
+  <li id="ref12">William M. McKeeman. Differential Testing for Software. Digital Technical Journal, 1998.</li>
+  <li id="ref13">Xuejun Yang, Yang Chen, Eric Eide, John Regehr. Finding and Understanding Bugs in C Compilers. PLDI 2011.</li>
+</ol>
 
 <footer>
-  <div>Formalizing CPython · a Lean 4 model of CPython 3.15.2</div>
-  <div>Built by Broyojo with Claude. Numbers on this page are generated from the repository's coverage tables, registry and bug records.</div>
+  <div>Formalizing CPython · a Lean 4 model of CPython 3.15.2 · <a href="https://github.com/Broyojo/python-formalization">source</a></div>
+  <div>Every number on this page is generated from the repository's coverage tables, registry, bug records and git history at commit <code>ed496f16</code>.</div>
 </footer>
+</article>
 
-</main>
+<script>
+(function () {
+  var data = [["Python/Python-ast.c",0,0,0,153],["Python/Python-tokenize.c",0,0,7,5],["Python/_contextvars.c",0,0,0,3],["Python/_warnings.c",29,0,10,16],["Python/assemble.c",0,0,0,30],["Python/ast.c",0,24,0,2],["Python/ast_preprocess.c",0,18,0,12],["Python/ast_unparse.c",0,1,0,46],["Python/bltinmodule.c",0,0,0,70],["Python/bootstrap_hash.c",0,0,1,10],["Python/brc.c",0,0,11,0],["Python/bytecodes.c",310,0,14,244],["Python/ceval.c",15,0,0,99],["Python/ceval_gil.c",0,0,0,57],["Python/codecs.c",61,0,1,5],["Python/codegen.c",0,0,0,165],["Python/compile.c",0,0,0,60],["Python/context.c",0,0,0,67],["Python/critical_section.c",0,0,0,11],["Python/crossinterp.c",0,0,0,123],["Python/dtoa.c",0,18,9,4],["Python/dup2.c",0,0,0,1],["Python/dynamic_annotations.c",0,0,0,2],["Python/dynload_hpux.c",0,0,0,1],["Python/dynload_shlib.c",0,0,0,1],["Python/dynload_win.c",0,0,4,0],["Python/emscripten_signal.c",0,0,2,0],["Python/emscripten_syscalls.c",0,0,6,0],["Python/emscripten_trampoline.c",0,0,3,0],["Python/emscripten_trampoline_inner.c",0,0,1,0],["Python/errors.c",0,0,6,85],["Python/fileutils.c",0,0,13,70],["Python/flowgraph.c",0,0,0,122],["Python/frame.c",0,0,0,8],["Python/frozenmain.c",0,0,0,1],["Python/future.c",0,0,0,3],["Python/gc.c",0,0,0,81],["Python/gc_free_threading.c",0,0,134,0],["Python/gc_gil.c",0,0,0,1],["Python/getargs.c",0,0,0,56],["Python/getcompiler.c",0,0,0,1],["Python/getcopyright.c",0,0,0,1],["Python/getopt.c",0,0,0,2],["Python/getplatform.c",0,0,0,1],["Python/getversion.c",0,0,0,2],["Python/hamt.c",0,0,0,80],["Python/hashtable.c",0,0,0,20],["Python/import.c",0,0,0,181],["Python/importdl.c",0,0,0,12],["Python/index_pool.c",0,0,13,0],["Python/initconfig.c",0,0,0,138],["Python/instruction_sequence.c",0,0,0,21],["Python/instrumentation.c",0,0,0,120],["Python/interpconfig.c",0,0,0,9],["Python/intrinsics.c",0,1,0,13],["Python/jit.c",0,0,0,33],["Python/jit_publish.c",0,0,0,7],["Python/jit_unwind.c",0,0,0,15],["Python/legacy_tracing.c",0,0,0,17],["Python/lock.c",0,0,0,34],["Python/marshal.c",0,0,0,46],["Python/modsupport.c",0,0,0,26],["Python/mysnprintf.c",0,0,0,2],["Python/mystrtoul.c",0,0,0,2],["Python/object_stack.c",0,0,0,4],["Python/optimizer.c",0,0,0,70],["Python/optimizer_analysis.c",0,0,0,27],["Python/optimizer_bytecodes.c",0,0,0,1],["Python/optimizer_symbols.c",0,0,0,59],["Python/parking_lot.c",0,0,0,12],["Python/pathconfig.c",0,0,0,16],["Python/perf_jit_trampoline.c",0,0,0,10],["Python/perf_trampoline.c",0,0,0,21],["Python/preconfig.c",0,0,0,30],["Python/pyarena.c",0,0,0,7],["Python/pyfpe.c",0,0,0,1],["Python/pyhash.c",0,0,0,12],["Python/pylifecycle.c",0,0,1,97],["Python/pymath.c",0,0,2,0],["Python/pystate.c",0,0,0,164],["Python/pystats.c",0,0,0,36],["Python/pystrcmp.c",0,0,0,2],["Python/pystrhex.c",0,0,0,9],["Python/pystrtod.c",0,5,8,1],["Python/pythonrun.c",0,0,0,64],["Python/pytime.c",0,0,5,64],["Python/qsbr.c",0,0,0,14],["Python/remote_debugging.c",0,0,0,8],["Python/slots.c",0,0,0,11],["Python/specialize.c",0,0,0,72],["Python/stackrefs.c",0,0,15,0],["Python/structmember.c",0,0,0,4],["Python/suggestions.c",0,0,0,4],["Python/symtable.c",0,0,0,72],["Python/sysmodule.c",0,0,2,143],["Python/thread.c",0,0,0,16],["Python/traceback.c",0,0,1,42],["Python/tracemalloc.c",0,0,0,62],["Python/uniqueid.c",0,0,10,0],["Objects/abstract.c",37,0,4,72],["Objects/boolobject.c",0,6,1,2],["Objects/bytearrayobject.c",93,0,3,13],["Objects/bytes_methods.c",0,26,0,0],["Objects/bytesobject.c",100,0,10,0],["Objects/call.c",0,1,0,40],["Objects/capsule.c",0,0,0,18],["Objects/cellobject.c",0,2,0,10],["Objects/classobject.c",0,3,4,18],["Objects/codeobject.c",0,0,0,118],["Objects/complexobject.c",34,0,5,6],["Objects/descrobject.c",0,9,9,76],["Objects/dictobject.c",104,0,47,140],["Objects/enumobject.c",0,5,0,12],["Objects/exceptions.c",97,0,45,27],["Objects/fileobject.c",0,0,0,21],["Objects/floatobject.c",38,0,9,10],["Objects/frameobject.c",0,12,0,73],["Objects/funcobject.c",0,2,14,73],["Objects/genericaliasobject.c",0,0,0,37],["Objects/genobject.c",46,0,10,34],["Objects/interpolationobject.c",0,0,0,10],["Objects/iterobject.c",0,9,0,12],["Objects/lazyimportobject.c",0,0,0,21],["Objects/listobject.c",114,0,14,5],["Objects/longobject.c",119,0,7,44],["Objects/memoryobject.c",107,0,6,0],["Objects/methodobject.c",0,3,3,20],["Objects/moduleobject.c",0,0,0,59],["Objects/namespaceobject.c",0,0,0,10],["Objects/object.c",0,12,80,55],["Objects/obmalloc.c",0,0,106,34],["Objects/odictobject.c",0,7,5,48],["Objects/picklebufobject.c",0,0,0,11],["Objects/rangeobject.c",33,0,0,5],["Objects/sentinelobject.c",0,0,0,11],["Objects/setobject.c",35,0,11,65],["Objects/sliceobject.c",0,7,0,15],["Objects/stringlib/codecs.h",0,0,0,6],["Objects/stringlib/count.h",0,0,0,1],["Objects/stringlib/ctype.h",0,0,0,13],["Objects/stringlib/eq.h",0,0,0,1],["Objects/stringlib/fastsearch.h",0,0,0,13],["Objects/stringlib/find.h",0,0,0,5],["Objects/stringlib/find_max_char.h",0,0,0,2],["Objects/stringlib/join.h",0,0,0,2],["Objects/stringlib/partition.h",0,0,0,2],["Objects/stringlib/replace.h",0,0,0,1],["Objects/stringlib/repr.h",0,0,0,1],["Objects/stringlib/split.h",0,0,0,7],["Objects/stringlib/transmogrify.h",0,0,0,16],["Objects/stringlib/unicode_format.h",0,12,5,15],["Objects/structseq.c",16,0,4,0],["Objects/templateobject.c",0,0,0,16],["Objects/tupleobject.c",37,0,9,0],["Objects/typeobject.c",57,0,78,292],["Objects/typevarobject.c",0,0,0,105],["Objects/unicode_format.c",0,1,0,9],["Objects/unicode_formatter.c",23,0,1,3],["Objects/unicode_writer.c",0,10,2,10],["Objects/unicodectype.c",0,19,0,3],["Objects/unicodeobject.c",94,0,61,207],["Objects/unionobject.c",0,0,0,27],["Objects/weakrefobject.c",0,0,0,49],["Modules/_abc.c",0,0,0,28],["Modules/_asynciomodule.c",0,0,0,128],["Modules/_bisectmodule.c",0,0,0,12],["Modules/_bz2module.c",0,0,0,26],["Modules/_codecsmodule.c",10,0,7,32],["Modules/_collectionsmodule.c",64,0,21,3],["Modules/_csv.c",29,9,18,0],["Modules/_ctypes/_ctypes.c",0,0,0,158],["Modules/_ctypes/_ctypes_test.c",0,0,0,33],["Modules/_ctypes/callbacks.c",0,0,0,15],["Modules/_ctypes/callproc.c",0,0,0,52],["Modules/_ctypes/cfield.c",0,0,0,61],["Modules/_ctypes/malloc_closure.c",0,0,0,3],["Modules/_ctypes/stgdict.c",0,0,0,5],["Modules/_curses_panel.c",0,0,39,0],["Modules/_cursesmodule.c",0,0,135,0],["Modules/_datetimemodule.c",191,1,36,18],["Modules/_dbmmodule.c",0,0,26,0],["Modules/_decimal/_decimal.c",0,27,29,132],["Modules/_elementtree.c",9,0,0,115],["Modules/_functoolsmodule.c",18,0,17,18],["Modules/_gdbmmodule.c",0,0,32,0],["Modules/_hacl/Hacl_HMAC.c",0,0,12,0],["Modules/_hacl/Hacl_Hash_Blake2b.c",0,0,24,0],["Modules/_hacl/Hacl_Hash_Blake2b_Simd256.c",0,0,30,0],["Modules/_hacl/Hacl_Hash_Blake2s.c",0,0,24,0],["Modules/_hacl/Hacl_Hash_Blake2s_Simd128.c",0,0,30,0],["Modules/_hacl/Hacl_Hash_MD5.c",0,0,14,0],["Modules/_hacl/Hacl_Hash_SHA1.c",0,0,14,0],["Modules/_hacl/Hacl_Hash_SHA2.c",0,0,46,0],["Modules/_hacl/Hacl_Hash_SHA3.c",0,0,31,0],["Modules/_hacl/Hacl_Streaming_HMAC.c",0,0,35,0],["Modules/_hacl/Lib_Memzero0.c",0,0,1,0],["Modules/_hashopenssl.c",0,0,95,0],["Modules/_heapqmodule.c",19,0,2,0],["Modules/_interpchannelsmodule.c",0,0,0,131],["Modules/_interpqueuesmodule.c",0,0,0,84],["Modules/_interpretersmodule.c",0,0,0,53],["Modules/_io/_iomodule.c",0,0,0,9],["Modules/_io/bufferedio.c",16,0,4,58],["Modules/_io/bytesio.c",37,0,6,3],["Modules/_io/fileio.c",0,0,0,32],["Modules/_io/iobase.c",0,22,2,14],["Modules/_io/stringio.c",0,17,3,7],["Modules/_io/textio.c",0,6,5,72],["Modules/_io/winconsoleio.c",0,0,31,0],["Modules/_json.c",37,0,8,3],["Modules/_localemodule.c",0,0,3,25],["Modules/_lsprof.c",0,0,0,39],["Modules/_lzmamodule.c",0,0,0,42],["Modules/_multiprocessing/multiprocessing.c",0,0,3,4],["Modules/_multiprocessing/posixshmem.c",0,0,0,3],["Modules/_multiprocessing/semaphore.c",0,0,3,15],["Modules/_opcode.c",0,0,0,17],["Modules/_operator.c",73,0,20,0],["Modules/_pickle.c",16,0,35,161],["Modules/_posixsubprocess.c",0,0,0,21],["Modules/_queuemodule.c",0,0,0,27],["Modules/_randommodule.c",0,12,6,0],["Modules/_remote_debugging/asyncio.c",0,0,0,5],["Modules/_remote_debugging/binary_io_reader.c",0,0,0,22],["Modules/_remote_debugging/binary_io_writer.c",0,0,0,28],["Modules/_remote_debugging/code_objects.c",0,0,0,10],["Modules/_remote_debugging/frame_cache.c",0,0,0,11],["Modules/_remote_debugging/frames.c",0,0,0,8],["Modules/_remote_debugging/gc_stats.c",0,0,0,3],["Modules/_remote_debugging/module.c",0,0,0,57],["Modules/_remote_debugging/object_reading.c",0,0,0,2],["Modules/_remote_debugging/subprocess.c",0,0,1,10],["Modules/_remote_debugging/threads.c",0,0,0,18],["Modules/_scproxy.c",0,0,6,0],["Modules/_sqlite/blob.c",0,0,0,28],["Modules/_sqlite/connection.c",0,0,0,79],["Modules/_sqlite/cursor.c",0,0,0,36],["Modules/_sqlite/microprotocols.c",0,0,0,3],["Modules/_sqlite/module.c",0,0,0,18],["Modules/_sqlite/prepare_protocol.c",0,0,0,3],["Modules/_sqlite/row.c",0,0,0,13],["Modules/_sqlite/statement.c",0,0,0,4],["Modules/_sqlite/util.c",0,0,0,5],["Modules/_sre/sre.c",0,15,2,81],["Modules/_sre/sre_lib.h",0,0,0,6],["Modules/_ssl.c",0,0,162,0],["Modules/_ssl/cert.c",0,0,10,0],["Modules/_ssl/debughelpers.c",0,0,6,0],["Modules/_ssl/misc.c",0,0,2,0],["Modules/_stat.c",0,0,0,8],["Modules/_statisticsmodule.c",0,0,0,2],["Modules/_struct.c",122,0,9,2],["Modules/_suggestions.c",0,0,0,2],["Modules/_sysconfig.c",0,0,1,3],["Modules/_testbuffer.c",0,0,76,0],["Modules/_testcapi/abstract.c",0,0,13,0],["Modules/_testcapi/buffer.c",0,0,8,0],["Modules/_testcapi/bytes.c",0,0,22,0],["Modules/_testcapi/code.c",0,0,3,0],["Modules/_testcapi/codec.c",0,0,19,0],["Modules/_testcapi/complex.c",0,0,5,0],["Modules/_testcapi/config.c",0,0,5,0],["Modules/_testcapi/datetime.c",0,0,24,0],["Modules/_testcapi/dict.c",0,0,17,0],["Modules/_testcapi/docstring.c",0,0,2,0],["Modules/_testcapi/exceptions.c",0,0,32,0],["Modules/_testcapi/file.c",0,0,4,0],["Modules/_testcapi/float.c",0,0,4,0],["Modules/_testcapi/frame.c",0,0,9,0],["Modules/_testcapi/function.c",0,0,11,0],["Modules/_testcapi/gc.c",0,0,17,0],["Modules/_testcapi/getargs.c",0,0,46,0],["Modules/_testcapi/hash.c",0,0,6,0],["Modules/_testcapi/heaptype.c",0,0,44,0],["Modules/_testcapi/immortal.c",0,0,5,0],["Modules/_testcapi/import.c",0,0,8,0],["Modules/_testcapi/list.c",0,0,7,0],["Modules/_testcapi/long.c",0,0,14,0],["Modules/_testcapi/mem.c",0,0,33,0],["Modules/_testcapi/modsupport.c",0,0,4,0],["Modules/_testcapi/module.c",0,0,31,0],["Modules/_testcapi/monitoring.c",0,0,25,0],["Modules/_testcapi/numbers.c",0,0,4,0],["Modules/_testcapi/object.c",0,0,32,0],["Modules/_testcapi/pyatomic.c",0,0,3,0],["Modules/_testcapi/run.c",0,0,27,0],["Modules/_testcapi/set.c",0,0,3,0],["Modules/_testcapi/structmember.c",0,0,3,0],["Modules/_testcapi/time.c",0,0,10,0],["Modules/_testcapi/tuple.c",0,0,8,0],["Modules/_testcapi/type.c",0,0,7,0],["Modules/_testcapi/unicode.c",0,0,39,0],["Modules/_testcapi/vectorcall.c",0,0,17,0],["Modules/_testcapi/watchers.c",0,0,50,0],["Modules/_testcapi/weakref.c",0,0,3,0],["Modules/_testcapimodule.c",0,0,139,0],["Modules/_testclinic.c",0,0,116,0],["Modules/_testclinic_limited.c",0,0,7,0],["Modules/_testimportmultiple.c",0,0,3,0],["Modules/_testinternalcapi.c",0,0,146,0],["Modules/_testinternalcapi/complex.c",0,0,1,0],["Modules/_testinternalcapi/interpreter.c",0,0,2,0],["Modules/_testinternalcapi/pytime.c",0,0,13,0],["Modules/_testinternalcapi/set.c",0,0,3,0],["Modules/_testinternalcapi/test_critical_sections.c",0,0,15,0],["Modules/_testinternalcapi/test_lock.c",0,0,20,0],["Modules/_testinternalcapi/testbytecodes.c",0,0,1,0],["Modules/_testinternalcapi/tuple.c",0,0,3,0],["Modules/_testlimitedcapi.c",0,0,2,0],["Modules/_testlimitedcapi/abstract.c",0,0,49,0],["Modules/_testlimitedcapi/build.c",0,0,8,0],["Modules/_testlimitedcapi/bytearray.c",0,0,9,0],["Modules/_testlimitedcapi/bytes.c",0,0,14,0],["Modules/_testlimitedcapi/capsule.c",0,0,4,0],["Modules/_testlimitedcapi/codec.c",0,0,2,0],["Modules/_testlimitedcapi/complex.c",0,0,6,0],["Modules/_testlimitedcapi/dict.c",0,0,23,0],["Modules/_testlimitedcapi/eval.c",0,0,12,0],["Modules/_testlimitedcapi/file.c",0,0,6,0],["Modules/_testlimitedcapi/float.c",0,0,9,0],["Modules/_testlimitedcapi/heaptype_relative.c",0,0,16,0],["Modules/_testlimitedcapi/import.c",0,0,20,0],["Modules/_testlimitedcapi/list.c",0,0,15,0],["Modules/_testlimitedcapi/long.c",0,0,34,0],["Modules/_testlimitedcapi/object.c",0,0,4,0],["Modules/_testlimitedcapi/pyos.c",0,0,3,0],["Modules/_testlimitedcapi/run.c",0,0,2,0],["Modules/_testlimitedcapi/set.c",0,0,20,0],["Modules/_testlimitedcapi/slice.c",0,0,10,0],["Modules/_testlimitedcapi/slots.c",0,0,14,0],["Modules/_testlimitedcapi/sys.c",0,0,8,0],["Modules/_testlimitedcapi/threadstate.c",0,0,2,0],["Modules/_testlimitedcapi/tuple.c",0,0,9,0],["Modules/_testlimitedcapi/type.c",0,0,12,0],["Modules/_testlimitedcapi/unicode.c",0,0,91,0],["Modules/_testlimitedcapi/vectorcall_limited.c",0,0,6,0],["Modules/_testlimitedcapi/version.c",0,0,3,0],["Modules/_testlimitedcapi/weakref.c",0,0,7,0],["Modules/_testmultiphase.c",0,0,70,0],["Modules/_testsinglephase.c",0,0,24,0],["Modules/_threadmodule.c",0,0,0,94],["Modules/_tkinter.c",0,0,100,0],["Modules/_tracemalloc.c",0,0,0,11],["Modules/_typesmodule.c",0,0,0,2],["Modules/_typingmodule.c",0,0,0,3],["Modules/_uuidmodule.c",0,0,2,3],["Modules/_weakref.c",0,0,0,7],["Modules/_winapi.c",0,0,73,0],["Modules/_xxtestfuzz/_xxtestfuzz.c",0,0,2,0],["Modules/_xxtestfuzz/fuzzer.c",0,0,21,0],["Modules/_zoneinfo.c",43,0,13,9],["Modules/_zstd/_zstdmodule.c",0,0,0,16],["Modules/_zstd/compressor.c",0,0,0,16],["Modules/_zstd/decompressor.c",0,0,0,12],["Modules/_zstd/zstddict.c",0,0,0,9],["Modules/arraymodule.c",84,0,11,7],["Modules/atexitmodule.c",0,0,0,14],["Modules/binascii.c",29,0,6,5],["Modules/blake2module.c",0,0,0,29],["Modules/cjkcodecs/_codecs_iso2022.c",0,0,32,0],["Modules/cjkcodecs/multibytecodec.c",0,0,59,0],["Modules/cmathmodule.c",8,0,1,21],["Modules/errnomodule.c",0,0,0,3],["Modules/expat/xcs.c",0,0,3,0],["Modules/expat/xmlparse.c",0,0,123,0],["Modules/expat/xmlrole.c",0,0,3,0],["Modules/expat/xmltok.c",0,0,20,0],["Modules/faulthandler.c",0,0,3,40],["Modules/fcntlmodule.c",0,0,0,7],["Modules/gcmodule.c",0,0,0,23],["Modules/getaddrinfo.c",0,0,0,6],["Modules/getbuildinfo.c",0,0,0,4],["Modules/getnameinfo.c",0,0,0,1],["Modules/getpath.c",0,0,1,22],["Modules/getpath_noop.c",0,0,0,2],["Modules/grpmodule.c",0,0,0,10],["Modules/hmacmodule.c",0,0,0,62],["Modules/itertoolsmodule.c",72,0,53,0],["Modules/main.c",0,0,0,29],["Modules/mathintegermodule.c",0,13,0,2],["Modules/mathmodule.c",32,0,3,22],["Modules/md5module.c",0,0,0,17],["Modules/mmapmodule.c",0,0,4,57],["Modules/overlapped.c",0,0,48,0],["Modules/posixmodule.c",0,0,56,308],["Modules/pwdmodule.c",0,0,0,10],["Modules/pyexpat.c",0,0,0,73],["Modules/readline.c",0,0,0,53],["Modules/resource.c",0,0,0,15],["Modules/rotatingtree.c",0,0,0,4],["Modules/selectmodule.c",0,0,0,68],["Modules/sha1module.c",0,0,0,17],["Modules/sha2module.c",0,0,0,34],["Modules/sha3module.c",0,0,0,26],["Modules/signalmodule.c",0,0,2,52],["Modules/socketmodule.c",0,0,3,122],["Modules/symtablemodule.c",0,0,0,3],["Modules/syslogmodule.c",0,0,0,10],["Modules/termios.c",0,0,0,14],["Modules/timemodule.c",0,0,1,50],["Modules/tkappinit.c",0,0,1,0],["Modules/unicodedata.c",0,0,0,66],["Modules/xxlimited.c",0,0,21,0],["Modules/xxlimited_35.c",0,0,13,0],["Modules/xxlimited_3_13.c",0,0,18,0],["Modules/xxmodule.c",0,0,12,0],["Modules/xxsubtype.c",0,0,11,0],["Modules/zlibmodule.c",0,0,0,55],["Parser/action_helpers.c",43,0,0,34],["Parser/lexer/buffer.c",0,0,3,0],["Parser/lexer/lexer.c",0,0,0,13],["Parser/lexer/state.c",0,0,2,4],["Parser/myreadline.c",0,0,0,4],["Parser/parser.c",0,0,469,0],["Parser/peg_api.c",0,0,0,3],["Parser/pegen.c",9,0,7,24],["Parser/pegen_errors.c",5,0,0,5],["Parser/string_parser.c",0,0,0,6],["Parser/token.c",0,0,3,0],["Parser/tokenizer/file_tokenizer.c",0,0,0,13],["Parser/tokenizer/helpers.c",1,0,3,15],["Parser/tokenizer/readline_tokenizer.c",0,0,0,3],["Parser/tokenizer/string_tokenizer.c",0,0,0,6],["Parser/tokenizer/utf8_tokenizer.c",0,0,0,2],["Grammar/python.gram",278,0,0,0],["Lib/__future__.py",0,0,0,4],["Lib/__hello__.py",0,0,0,1],["Lib/_aix_support.py",0,0,7,0],["Lib/_android_support.py",0,0,14,0],["Lib/_apple_support.py",0,0,0,8],["Lib/_ast_unparse.py",0,2,0,111],["Lib/_collections_abc.py",81,0,34,0],["Lib/_colorize.py",0,0,0,13],["Lib/_ios_support.py",0,0,1,0],["Lib/_markupbase.py",0,0,0,14],["Lib/_osx_support.py",0,0,19,0],["Lib/_py_abc.py",0,0,0,8],["Lib/_py_warnings.py",32,0,1,12],["Lib/_pydatetime.py",150,0,25,12],["Lib/_pydecimal.py",160,0,13,70],["Lib/_pyio.py",58,0,6,131],["Lib/_pylong.py",0,9,1,4],["Lib/_pyrepl/_module_completer.py",0,0,0,39],["Lib/_pyrepl/_threading_handler.py",0,0,0,7],["Lib/_pyrepl/base_eventqueue.py",0,0,0,6],["Lib/_pyrepl/commands.py",0,0,0,41],["Lib/_pyrepl/completing_reader.py",0,0,0,16],["Lib/_pyrepl/console.py",0,0,0,27],["Lib/_pyrepl/content.py",0,0,0,3],["Lib/_pyrepl/fancy_termios.py",0,0,0,9],["Lib/_pyrepl/fancycompleter.py",0,0,0,13],["Lib/_pyrepl/historical_reader.py",0,0,0,29],["Lib/_pyrepl/input.py",0,0,0,7],["Lib/_pyrepl/keymap.py",0,0,0,3],["Lib/_pyrepl/layout.py",0,0,0,9],["Lib/_pyrepl/main.py",0,0,0,1],["Lib/_pyrepl/pager.py",0,0,0,9],["Lib/_pyrepl/reader.py",0,0,0,73],["Lib/_pyrepl/readline.py",0,0,0,45],["Lib/_pyrepl/render.py",0,0,0,24],["Lib/_pyrepl/simple_interact.py",0,0,0,5],["Lib/_pyrepl/terminfo.py",0,0,0,7],["Lib/_pyrepl/trace.py",0,0,0,3],["Lib/_pyrepl/unix_console.py",0,0,0,49],["Lib/_pyrepl/unix_eventqueue.py",0,0,0,2],["Lib/_pyrepl/utils.py",0,0,0,17],["Lib/_pyrepl/windows_console.py",0,0,39,0],["Lib/_pyrepl/windows_eventqueue.py",0,0,1,0],["Lib/_sitebuiltins.py",0,0,0,9],["Lib/_strptime.py",0,10,1,12],["Lib/_threading_local.py",0,0,0,8],["Lib/_weakrefset.py",0,0,0,30],["Lib/abc.py",0,5,3,3],["Lib/annotationlib.py",0,0,0,48],["Lib/antigravity.py",0,0,0,1],["Lib/argparse.py",0,0,0,145],["Lib/ast.py",0,2,0,22],["Lib/asyncio/__init__.py",0,0,0,1],["Lib/asyncio/__main__.py",0,0,0,4],["Lib/asyncio/base_events.py",0,0,0,109],["Lib/asyncio/base_futures.py",0,0,0,4],["Lib/asyncio/base_subprocess.py",0,0,3,30],["Lib/asyncio/base_tasks.py",0,0,0,4],["Lib/asyncio/coroutines.py",0,0,0,5],["Lib/asyncio/events.py",0,0,0,105],["Lib/asyncio/exceptions.py",0,0,0,4],["Lib/asyncio/format_helpers.py",0,0,0,5],["Lib/asyncio/futures.py",0,0,0,28],["Lib/asyncio/graph.py",0,0,0,4],["Lib/asyncio/locks.py",0,0,0,43],["Lib/asyncio/mixins.py",0,0,0,1],["Lib/asyncio/proactor_events.py",0,0,0,69],["Lib/asyncio/protocols.py",0,0,0,15],["Lib/asyncio/queues.py",0,0,0,25],["Lib/asyncio/runners.py",0,0,0,10],["Lib/asyncio/selector_events.py",0,0,0,86],["Lib/asyncio/sslproto.py",0,0,0,66],["Lib/asyncio/staggered.py",0,0,0,1],["Lib/asyncio/streams.py",0,0,0,51],["Lib/asyncio/subprocess.py",0,0,0,21],["Lib/asyncio/taskgroups.py",0,0,0,10],["Lib/asyncio/tasks.py",0,0,0,52],["Lib/asyncio/threads.py",0,0,0,1],["Lib/asyncio/timeouts.py",0,0,0,11],["Lib/asyncio/tools.py",0,0,0,15],["Lib/asyncio/transports.py",0,0,0,32],["Lib/asyncio/trsock.py",0,0,0,18],["Lib/asyncio/unix_events.py",0,0,0,62],["Lib/asyncio/windows_events.py",0,0,62,0],["Lib/asyncio/windows_utils.py",0,0,10,0],["Lib/base64.py",0,24,0,1],["Lib/bdb.py",0,0,0,88],["Lib/bisect.py",0,4,0,0],["Lib/bz2.py",0,0,0,22],["Lib/calendar.py",0,48,0,30],["Lib/cmd.py",0,0,0,18],["Lib/code.py",0,0,0,17],["Lib/codecs.py",6,0,0,83],["Lib/codeop.py",0,0,0,7],["Lib/collections/__init__.py",184,0,2,7],["Lib/colorsys.py",0,0,0,7],["Lib/compileall.py",0,0,0,5],["Lib/compression/_common/_streams.py",0,0,0,14],["Lib/compression/zstd/__init__.py",0,0,0,10],["Lib/compression/zstd/_zstdfile.py",0,0,0,22],["Lib/concurrent/futures/__init__.py",0,0,0,1],["Lib/concurrent/futures/_base.py",0,0,0,44],["Lib/concurrent/futures/interpreter.py",0,0,0,9],["Lib/concurrent/futures/process.py",0,0,0,46],["Lib/concurrent/futures/thread.py",0,0,0,15],["Lib/concurrent/interpreters/__init__.py",0,0,0,21],["Lib/concurrent/interpreters/_crossinterp.py",0,0,0,8],["Lib/concurrent/interpreters/_queues.py",0,0,0,20],["Lib/configparser.py",0,0,0,99],["Lib/contextlib.py",34,0,20,2],["Lib/copy.py",10,0,0,0],["Lib/copyreg.py",0,0,0,13],["Lib/csv.py",0,14,1,3],["Lib/ctypes/__init__.py",0,0,0,35],["Lib/ctypes/_aix.py",0,0,0,12],["Lib/ctypes/_endian.py",0,0,0,2],["Lib/ctypes/_layout.py",0,0,0,5],["Lib/ctypes/macholib/__init__.py",0,0,0,1],["Lib/ctypes/macholib/dyld.py",0,0,0,12],["Lib/ctypes/macholib/dylib.py",0,0,0,1],["Lib/ctypes/macholib/framework.py",0,0,0,1],["Lib/ctypes/util.py",0,0,0,23],["Lib/ctypes/wintypes.py",0,0,0,2],["Lib/curses/__init__.py",0,0,0,3],["Lib/curses/ascii.py",0,0,0,20],["Lib/curses/has_key.py",0,0,0,1],["Lib/curses/textpad.py",0,0,0,14],["Lib/dataclasses.py",0,17,0,34],["Lib/dbm/__init__.py",0,0,0,2],["Lib/dbm/dumb.py",0,0,0,22],["Lib/dbm/sqlite3.py",0,0,0,14],["Lib/difflib.py",0,24,1,18],["Lib/dis.py",0,0,0,58],["Lib/doctest.py",0,0,0,109],["Lib/email/__init__.py",0,0,0,4],["Lib/email/_encoded_words.py",0,0,0,9],["Lib/email/_header_value_parser.py",29,0,0,122],["Lib/email/_parseaddr.py",0,0,0,25],["Lib/email/_policybase.py",0,0,0,23],["Lib/email/base64mime.py",0,0,0,4],["Lib/email/charset.py",0,0,0,13],["Lib/email/contentmanager.py",0,0,0,16],["Lib/email/encoders.py",0,0,0,5],["Lib/email/errors.py",0,0,0,4],["Lib/email/feedparser.py",0,0,0,20],["Lib/email/generator.py",0,0,0,25],["Lib/email/header.py",0,0,0,27],["Lib/email/headerregistry.py",0,0,0,55],["Lib/email/iterators.py",0,0,0,4],["Lib/email/message.py",0,0,0,71],["Lib/email/mime/application.py",0,0,0,1],["Lib/email/mime/audio.py",0,0,0,6],["Lib/email/mime/base.py",0,0,0,1],["Lib/email/mime/image.py",0,0,0,16],["Lib/email/mime/message.py",0,0,0,1],["Lib/email/mime/multipart.py",0,0,0,1],["Lib/email/mime/nonmultipart.py",0,0,0,1],["Lib/email/mime/text.py",0,0,0,1],["Lib/email/parser.py",0,0,0,10],["Lib/email/policy.py",0,0,0,8],["Lib/email/quoprimime.py",0,0,0,12],["Lib/email/utils.py",0,0,0,21],["Lib/encodings/__init__.py",0,0,1,2],["Lib/encodings/_win_cp_codecs.py",0,0,1,0],["Lib/encodings/ascii.py",0,0,0,3],["Lib/encodings/base64_codec.py",0,0,0,7],["Lib/encodings/big5.py",0,0,0,1],["Lib/encodings/big5hkscs.py",0,0,0,1],["Lib/encodings/bz2_codec.py",0,0,0,11],["Lib/encodings/charmap.py",0,0,0,9],["Lib/encodings/cp037.py",0,0,0,5],["Lib/encodings/cp1006.py",0,0,0,5],["Lib/encodings/cp1026.py",0,0,0,5],["Lib/encodings/cp1125.py",0,0,0,5],["Lib/encodings/cp1140.py",0,0,0,5],["Lib/encodings/cp1250.py",0,0,0,5],["Lib/encodings/cp1251.py",0,0,0,5],["Lib/encodings/cp1252.py",0,0,0,5],["Lib/encodings/cp1253.py",0,0,0,5],["Lib/encodings/cp1254.py",0,0,0,5],["Lib/encodings/cp1255.py",0,0,0,5],["Lib/encodings/cp1256.py",0,0,0,5],["Lib/encodings/cp1257.py",0,0,0,5],["Lib/encodings/cp1258.py",0,0,0,5],["Lib/encodings/cp273.py",0,0,0,5],["Lib/encodings/cp424.py",0,0,0,5],["Lib/encodings/cp437.py",0,0,0,5],["Lib/encodings/cp500.py",0,0,0,5],["Lib/encodings/cp720.py",0,0,0,5],["Lib/encodings/cp737.py",0,0,0,5],["Lib/encodings/cp775.py",0,0,0,5],["Lib/encodings/cp850.py",0,0,0,5],["Lib/encodings/cp852.py",0,0,0,5],["Lib/encodings/cp855.py",0,0,0,5],["Lib/encodings/cp856.py",0,0,0,5],["Lib/encodings/cp857.py",0,0,0,5],["Lib/encodings/cp858.py",0,0,0,5],["Lib/encodings/cp860.py",0,0,0,5],["Lib/encodings/cp861.py",0,0,0,5],["Lib/encodings/cp862.py",0,0,0,5],["Lib/encodings/cp863.py",0,0,0,5],["Lib/encodings/cp864.py",0,0,0,5],["Lib/encodings/cp865.py",0,0,0,5],["Lib/encodings/cp866.py",0,0,0,5],["Lib/encodings/cp869.py",0,0,0,5],["Lib/encodings/cp874.py",0,0,0,5],["Lib/encodings/cp875.py",0,0,0,5],["Lib/encodings/cp932.py",0,0,0,1],["Lib/encodings/cp949.py",0,0,0,1],["Lib/encodings/cp950.py",0,0,0,1],["Lib/encodings/euc_jis_2004.py",0,0,0,1],["Lib/encodings/euc_jisx0213.py",0,0,0,1],["Lib/encodings/euc_jp.py",0,0,0,1],["Lib/encodings/euc_kr.py",0,0,0,1],["Lib/encodings/gb18030.py",0,0,0,1],["Lib/encodings/gb2312.py",0,0,0,1],["Lib/encodings/gbk.py",0,0,0,1],["Lib/encodings/hex_codec.py",0,0,0,7],["Lib/encodings/hp_roman8.py",0,0,0,5],["Lib/encodings/hz.py",0,0,0,1],["Lib/encodings/idna.py",0,0,0,8],["Lib/encodings/iso2022_jp.py",0,0,0,1],["Lib/encodings/iso2022_jp_1.py",0,0,0,1],["Lib/encodings/iso2022_jp_2.py",0,0,0,1],["Lib/encodings/iso2022_jp_2004.py",0,0,0,1],["Lib/encodings/iso2022_jp_3.py",0,0,0,1],["Lib/encodings/iso2022_jp_ext.py",0,0,0,1],["Lib/encodings/iso2022_kr.py",0,0,0,1],["Lib/encodings/iso8859_1.py",0,0,0,5],["Lib/encodings/iso8859_10.py",0,0,0,5],["Lib/encodings/iso8859_11.py",0,0,0,5],["Lib/encodings/iso8859_13.py",0,0,0,5],["Lib/encodings/iso8859_14.py",0,0,0,5],["Lib/encodings/iso8859_15.py",0,0,0,5],["Lib/encodings/iso8859_16.py",0,0,0,5],["Lib/encodings/iso8859_2.py",0,0,0,5],["Lib/encodings/iso8859_3.py",0,0,0,5],["Lib/encodings/iso8859_4.py",0,0,0,5],["Lib/encodings/iso8859_5.py",0,0,0,5],["Lib/encodings/iso8859_6.py",0,0,0,5],["Lib/encodings/iso8859_7.py",0,0,0,5],["Lib/encodings/iso8859_8.py",0,0,0,5],["Lib/encodings/iso8859_9.py",0,0,0,5],["Lib/encodings/johab.py",0,0,0,1],["Lib/encodings/koi8_r.py",0,0,0,5],["Lib/encodings/koi8_t.py",0,0,0,5],["Lib/encodings/koi8_u.py",0,0,0,5],["Lib/encodings/kz1048.py",0,0,0,5],["Lib/encodings/latin_1.py",0,0,0,3],["Lib/encodings/mac_arabic.py",0,0,0,5],["Lib/encodings/mac_croatian.py",0,0,0,5],["Lib/encodings/mac_cyrillic.py",0,0,0,5],["Lib/encodings/mac_farsi.py",0,0,0,5],["Lib/encodings/mac_greek.py",0,0,0,5],["Lib/encodings/mac_iceland.py",0,0,0,5],["Lib/encodings/mac_latin2.py",0,0,0,5],["Lib/encodings/mac_roman.py",0,0,0,5],["Lib/encodings/mac_romanian.py",0,0,0,5],["Lib/encodings/mac_turkish.py",0,0,0,5],["Lib/encodings/mbcs.py",0,0,3,0],["Lib/encodings/oem.py",0,0,3,0],["Lib/encodings/palmos.py",0,0,0,5],["Lib/encodings/ptcp154.py",0,0,0,5],["Lib/encodings/punycode.py",0,0,0,17],["Lib/encodings/quopri_codec.py",0,0,0,7],["Lib/encodings/raw_unicode_escape.py",0,0,0,4],["Lib/encodings/rot_13.py",0,0,0,6],["Lib/encodings/shift_jis.py",0,0,0,1],["Lib/encodings/shift_jis_2004.py",0,0,0,1],["Lib/encodings/shift_jisx0213.py",0,0,0,1],["Lib/encodings/tis_620.py",0,0,0,5],["Lib/encodings/undefined.py",0,0,0,5],["Lib/encodings/unicode_escape.py",0,0,0,4],["Lib/encodings/utf_16.py",0,0,0,17],["Lib/encodings/utf_16_be.py",0,0,0,3],["Lib/encodings/utf_16_le.py",0,0,0,3],["Lib/encodings/utf_32.py",0,0,0,17],["Lib/encodings/utf_32_be.py",0,0,0,3],["Lib/encodings/utf_32_le.py",0,0,0,3],["Lib/encodings/utf_7.py",0,0,0,3],["Lib/encodings/utf_8.py",0,0,0,3],["Lib/encodings/utf_8_sig.py",0,0,0,17],["Lib/encodings/uu_codec.py",0,0,0,7],["Lib/encodings/zlib_codec.py",0,0,0,11],["Lib/ensurepip/__init__.py",0,0,10,0],["Lib/ensurepip/_uninstall.py",0,0,1,0],["Lib/enum.py",36,0,1,58],["Lib/filecmp.py",0,0,0,19],["Lib/fileinput.py",0,0,0,28],["Lib/fnmatch.py",0,0,0,8],["Lib/fractions.py",0,28,0,19],["Lib/ftplib.py",0,0,0,56],["Lib/functools.py",20,29,0,8],["Lib/genericpath.py",0,0,0,22],["Lib/getopt.py",0,0,0,8],["Lib/getpass.py",0,0,0,25],["Lib/gettext.py",0,0,0,36],["Lib/glob.py",0,0,0,32],["Lib/graphlib.py",0,11,0,0],["Lib/gzip.py",0,0,0,49],["Lib/hashlib.py",0,0,0,5],["Lib/heapq.py",17,0,0,0],["Lib/hmac.py",0,0,0,17],["Lib/html/__init__.py",0,3,0,0],["Lib/html/parser.py",0,0,0,28],["Lib/http/__init__.py",0,0,0,8],["Lib/http/client.py",0,0,0,70],["Lib/http/cookiejar.py",0,0,0,92],["Lib/http/cookies.py",0,0,0,36],["Lib/http/server.py",0,0,0,38],["Lib/idlelib/autocomplete.py",0,0,11,0],["Lib/idlelib/autocomplete_w.py",0,0,16,0],["Lib/idlelib/autoexpand.py",0,0,4,0],["Lib/idlelib/browser.py",0,0,21,0],["Lib/idlelib/calltip.py",0,0,11,0],["Lib/idlelib/calltip_w.py",0,0,11,0],["Lib/idlelib/codecontext.py",0,0,13,0],["Lib/idlelib/colorizer.py",0,0,20,0],["Lib/idlelib/config.py",0,0,47,0],["Lib/idlelib/config_key.py",0,0,18,0],["Lib/idlelib/configdialog.py",0,0,86,0],["Lib/idlelib/debugger.py",0,0,40,0],["Lib/idlelib/debugger_r.py",0,0,55,0],["Lib/idlelib/debugobj.py",0,0,17,0],["Lib/idlelib/debugobj_r.py",0,0,7,0],["Lib/idlelib/delegator.py",0,0,4,0],["Lib/idlelib/dynoption.py",0,0,3,0],["Lib/idlelib/editor.py",0,0,108,0],["Lib/idlelib/filelist.py",0,0,9,0],["Lib/idlelib/format.py",0,0,26,0],["Lib/idlelib/grep.py",0,0,12,0],["Lib/idlelib/help.py",0,0,13,0],["Lib/idlelib/help_about.py",0,0,11,0],["Lib/idlelib/history.py",0,0,5,0],["Lib/idlelib/hyperparser.py",0,0,7,0],["Lib/idlelib/idle_test/__init__.py",0,0,1,0],["Lib/idlelib/idle_test/htest.py",0,0,1,0],["Lib/idlelib/idle_test/mock_idle.py",0,0,6,0],["Lib/idlelib/idle_test/mock_tk.py",0,0,22,0],["Lib/idlelib/idle_test/template.py",0,0,3,0],["Lib/idlelib/idle_test/tkinter_testing_utils.py",0,0,1,0],["Lib/idlelib/iomenu.py",0,0,23,0],["Lib/idlelib/macosx.py",0,0,12,0],["Lib/idlelib/multicall.py",0,0,15,0],["Lib/idlelib/outwin.py",0,0,14,0],["Lib/idlelib/parenmatch.py",0,0,14,0],["Lib/idlelib/pathbrowser.py",0,0,10,0],["Lib/idlelib/percolator.py",0,0,8,0],["Lib/idlelib/pyparse.py",0,0,15,0],["Lib/idlelib/pyshell.py",0,0,96,0],["Lib/idlelib/query.py",0,0,23,0],["Lib/idlelib/redirector.py",0,0,10,0],["Lib/idlelib/replace.py",0,0,15,0],["Lib/idlelib/rpc.py",0,0,52,0],["Lib/idlelib/run.py",0,0,41,0],["Lib/idlelib/runscript.py",0,0,9,0],["Lib/idlelib/scrolledlist.py",0,0,16,0],["Lib/idlelib/search.py",0,0,9,0],["Lib/idlelib/searchbase.py",0,0,15,0],["Lib/idlelib/searchengine.py",0,0,19,0],["Lib/idlelib/sidebar.py",0,0,42,0],["Lib/idlelib/squeezer.py",0,0,11,0],["Lib/idlelib/stackviewer.py",0,0,14,0],["Lib/idlelib/statusbar.py",0,0,3,0],["Lib/idlelib/textview.py",0,0,10,0],["Lib/idlelib/tooltip.py",0,0,17,0],["Lib/idlelib/tree.py",0,0,47,0],["Lib/idlelib/undo.py",0,0,42,0],["Lib/idlelib/util.py",0,0,10,0],["Lib/idlelib/window.py",0,0,12,0],["Lib/idlelib/zoomheight.py",0,0,6,0],["Lib/idlelib/zzdummy.py",0,0,5,0],["Lib/imaplib.py",0,0,0,114],["Lib/importlib/__init__.py",0,0,0,3],["Lib/importlib/_abc.py",0,0,0,1],["Lib/importlib/_bootstrap.py",0,0,0,80],["Lib/importlib/_bootstrap_external.py",0,0,0,103],["Lib/importlib/abc.py",0,0,0,15],["Lib/importlib/machinery.py",0,0,0,2],["Lib/importlib/metadata/__init__.py",0,0,0,95],["Lib/importlib/metadata/_adapters.py",0,0,0,8],["Lib/importlib/metadata/_collections.py",0,0,0,3],["Lib/importlib/metadata/_context.py",0,0,0,9],["Lib/importlib/metadata/_functools.py",0,0,0,4],["Lib/importlib/metadata/_itertools.py",0,0,0,7],["Lib/importlib/metadata/_meta.py",0,0,0,15],["Lib/importlib/metadata/_text.py",0,0,0,10],["Lib/importlib/metadata/diagnose.py",0,0,0,2],["Lib/importlib/resources/_adapters.py",0,0,0,30],["Lib/importlib/resources/_common.py",0,0,0,16],["Lib/importlib/resources/_functional.py",0,0,0,9],["Lib/importlib/resources/_itertools.py",0,0,0,1],["Lib/importlib/resources/abc.py",0,0,0,20],["Lib/importlib/resources/readers.py",0,0,0,26],["Lib/importlib/resources/simple.py",0,0,0,16],["Lib/importlib/util.py",0,0,0,15],["Lib/inspect.py",0,0,0,143],["Lib/io.py",0,0,0,4],["Lib/ipaddress.py",35,1,0,106],["Lib/json/__init__.py",0,5,0,1],["Lib/json/decoder.py",0,9,0,0],["Lib/json/encoder.py",0,7,0,0],["Lib/json/scanner.py",0,1,0,0],["Lib/json/tool.py",0,2,0,0],["Lib/linecache.py",0,0,0,14],["Lib/locale.py",0,0,0,27],["Lib/logging/__init__.py",0,0,0,158],["Lib/logging/config.py",0,0,0,38],["Lib/logging/handlers.py",0,0,0,72],["Lib/lzma.py",0,0,0,19],["Lib/mailbox.py",0,0,0,193],["Lib/mimetypes.py",0,0,0,21],["Lib/modulefinder.py",0,0,0,31],["Lib/multiprocessing/connection.py",0,0,11,66],["Lib/multiprocessing/context.py",0,0,0,51],["Lib/multiprocessing/dummy/__init__.py",0,0,0,15],["Lib/multiprocessing/dummy/connection.py",0,0,0,13],["Lib/multiprocessing/forkserver.py",0,0,0,13],["Lib/multiprocessing/heap.py",0,0,3,17],["Lib/multiprocessing/managers.py",0,0,0,122],["Lib/multiprocessing/pool.py",0,0,0,70],["Lib/multiprocessing/popen_fork.py",0,0,0,10],["Lib/multiprocessing/popen_forkserver.py",0,0,0,6],["Lib/multiprocessing/popen_spawn_posix.py",0,0,0,5],["Lib/multiprocessing/popen_spawn_win32.py",0,0,8,0],["Lib/multiprocessing/process.py",0,0,0,34],["Lib/multiprocessing/queues.py",0,0,0,34],["Lib/multiprocessing/reduction.py",0,0,8,17],["Lib/multiprocessing/resource_sharer.py",0,0,2,9],["Lib/multiprocessing/resource_tracker.py",0,0,0,20],["Lib/multiprocessing/shared_memory.py",0,0,0,29],["Lib/multiprocessing/sharedctypes.py",0,0,0,22],["Lib/multiprocessing/spawn.py",0,0,0,13],["Lib/multiprocessing/synchronize.py",0,0,0,42],["Lib/multiprocessing/util.py",0,0,0,35],["Lib/netrc.py",0,0,0,13],["Lib/ntpath.py",0,3,0,18],["Lib/nturl2path.py",0,0,0,2],["Lib/numbers.py",0,14,0,42],["Lib/operator.py",59,0,6,0],["Lib/optparse.py",0,0,0,121],["Lib/os.py",0,0,6,57],["Lib/pathlib/__init__.py",0,0,0,126],["Lib/pathlib/_os.py",0,0,0,14],["Lib/pathlib/types.py",0,0,0,47],["Lib/pdb.py",0,0,0,198],["Lib/pickle.py",14,0,0,115],["Lib/pickletools.py",25,0,6,4],["Lib/pkgutil.py",0,0,0,11],["Lib/platform.py",0,0,0,54],["Lib/plistlib.py",13,0,1,50],["Lib/poplib.py",0,0,0,31],["Lib/posixpath.py",0,3,0,13],["Lib/pprint.py",0,0,0,51],["Lib/profile.py",0,0,0,31],["Lib/profiling/sampling/__main__.py",0,0,0,1],["Lib/profiling/sampling/_child_monitor.py",0,0,0,12],["Lib/profiling/sampling/_css_utils.py",0,0,0,1],["Lib/profiling/sampling/_format_utils.py",0,0,0,1],["Lib/profiling/sampling/_sync_coordinator.py",0,0,0,6],["Lib/profiling/sampling/binary_collector.py",0,0,0,11],["Lib/profiling/sampling/binary_reader.py",0,0,0,8],["Lib/profiling/sampling/cli.py",0,0,0,32],["Lib/profiling/sampling/collector.py",0,0,0,17],["Lib/profiling/sampling/dump.py",0,0,0,16],["Lib/profiling/sampling/errors.py",0,0,0,3],["Lib/profiling/sampling/gecko_collector.py",0,0,0,39],["Lib/profiling/sampling/heatmap_collector.py",0,0,0,31],["Lib/profiling/sampling/jsonl_collector.py",0,0,0,11],["Lib/profiling/sampling/live_collector/collector.py",0,0,0,36],["Lib/profiling/sampling/live_collector/display.py",0,0,0,40],["Lib/profiling/sampling/live_collector/trend_tracker.py",0,0,0,10],["Lib/profiling/sampling/live_collector/widgets.py",0,0,0,27],["Lib/profiling/sampling/module_utils.py",0,0,0,3],["Lib/profiling/sampling/opcode_utils.py",0,0,0,3],["Lib/profiling/sampling/pstats_collector.py",0,0,0,9],["Lib/profiling/sampling/sample.py",0,0,0,14],["Lib/profiling/sampling/stack_collector.py",0,0,0,32],["Lib/profiling/sampling/string_table.py",0,0,0,5],["Lib/profiling/tracing/__init__.py",0,0,0,13],["Lib/profiling/tracing/_utils.py",0,0,0,4],["Lib/pstats.py",0,0,0,64],["Lib/pty.py",0,0,0,6],["Lib/py_compile.py",0,0,0,5],["Lib/pyclbr.py",0,0,0,16],["Lib/pydoc.py",0,0,0,107],["Lib/queue.py",23,0,0,7],["Lib/quopri.py",0,8,0,1],["Lib/random.py",33,0,4,1],["Lib/re/__init__.py",0,3,1,13],["Lib/re/_compiler.py",0,10,0,7],["Lib/re/_constants.py",0,1,3,0],["Lib/re/_parser.py",0,27,9,0],["Lib/reprlib.py",0,0,0,17],["Lib/rlcompleter.py",0,0,0,6],["Lib/runpy.py",0,0,0,14],["Lib/sched.py",0,7,0,0],["Lib/secrets.py",0,0,0,4],["Lib/selectors.py",0,0,1,43],["Lib/shelve.py",0,0,0,25],["Lib/shlex.py",0,5,0,10],["Lib/shutil.py",0,0,1,53],["Lib/signal.py",0,0,0,9],["Lib/site.py",0,0,0,44],["Lib/smtplib.py",0,0,0,47],["Lib/socket.py",0,0,2,44],["Lib/socketserver.py",0,0,0,56],["Lib/sqlite3/__main__.py",0,0,0,4],["Lib/sqlite3/_completer.py",0,0,0,2],["Lib/sqlite3/dbapi2.py",0,0,0,4],["Lib/sqlite3/dump.py",0,0,0,4],["Lib/ssl.py",0,0,0,115],["Lib/stat.py",0,0,0,13],["Lib/statistics.py",34,0,4,35],["Lib/string/__init__.py",0,0,0,19],["Lib/string/templatelib.py",0,0,0,2],["Lib/stringprep.py",0,0,0,19],["Lib/subprocess.py",0,0,17,60],["Lib/symtable.py",0,0,0,51],["Lib/sysconfig/__init__.py",0,0,0,30],["Lib/sysconfig/__main__.py",0,0,0,7],["Lib/tabnanny.py",0,0,0,18],["Lib/tarfile.py",0,0,0,142],["Lib/tempfile.py",0,0,0,75],["Lib/textwrap.py",0,2,0,12],["Lib/threading.py",0,0,0,116],["Lib/timeit.py",0,0,0,9],["Lib/tkinter/__init__.py",0,0,530,0],["Lib/tkinter/colorchooser.py",0,0,3,0],["Lib/tkinter/commondialog.py",0,0,5,0],["Lib/tkinter/dialog.py",0,0,3,0],["Lib/tkinter/dnd.py",0,0,22,0],["Lib/tkinter/filedialog.py",0,0,29,0],["Lib/tkinter/font.py",0,0,20,0],["Lib/tkinter/messagebox.py",0,0,9,0],["Lib/tkinter/scrolledtext.py",0,0,3,0],["Lib/tkinter/simpledialog.py",0,0,28,0],["Lib/tkinter/ttk.py",0,0,118,0],["Lib/token.py",0,0,3,0],["Lib/tokenize.py",0,2,0,22],["Lib/tomllib/_parser.py",35,0,0,0],["Lib/tomllib/_re.py",4,0,0,0],["Lib/trace.py",0,0,0,26],["Lib/traceback.py",0,0,0,77],["Lib/tracemalloc.py",0,0,0,69],["Lib/tty.py",0,0,0,4],["Lib/turtle.py",0,0,222,0],["Lib/turtledemo/__main__.py",0,0,20,0],["Lib/turtledemo/bytedesign.py",0,0,10,0],["Lib/turtledemo/chaos.py",0,0,8,0],["Lib/turtledemo/clock.py",0,0,10,0],["Lib/turtledemo/colormixer.py",0,0,4,0],["Lib/turtledemo/forest.py",0,0,9,0],["Lib/turtledemo/fractalcurves.py",0,0,4,0],["Lib/turtledemo/lindenmayer.py",0,0,3,0],["Lib/turtledemo/minimal_hanoi.py",0,0,7,0],["Lib/turtledemo/nim.py",0,0,21,0],["Lib/turtledemo/paint.py",0,0,3,0],["Lib/turtledemo/peace.py",0,0,1,0],["Lib/turtledemo/penrose.py",0,0,12,0],["Lib/turtledemo/planet_and_moon.py",0,0,8,0],["Lib/turtledemo/rosette.py",0,0,2,0],["Lib/turtledemo/round_dance.py",0,0,2,0],["Lib/turtledemo/sorting_animate.py",0,0,23,0],["Lib/turtledemo/tree.py",0,0,3,0],["Lib/turtledemo/two_canvases.py",0,0,1,0],["Lib/turtledemo/yinyang.py",0,0,2,0],["Lib/types.py",0,26,0,0],["Lib/typing.py",0,0,0,204],["Lib/unittest/__init__.py",0,0,0,2],["Lib/unittest/_log.py",0,0,0,6],["Lib/unittest/async_case.py",0,0,0,16],["Lib/unittest/case.py",0,0,0,121],["Lib/unittest/loader.py",0,0,0,20],["Lib/unittest/main.py",0,0,0,13],["Lib/unittest/mock.py",0,0,0,157],["Lib/unittest/result.py",0,0,0,24],["Lib/unittest/runner.py",0,0,0,20],["Lib/unittest/signals.py",0,0,0,6],["Lib/unittest/suite.py",0,0,0,30],["Lib/unittest/util.py",0,0,0,11],["Lib/urllib/error.py",0,0,0,9],["Lib/urllib/parse.py",46,0,15,15],["Lib/urllib/request.py",0,0,4,118],["Lib/urllib/response.py",0,0,0,12],["Lib/urllib/robotparser.py",0,0,0,25],["Lib/uuid.py",0,0,0,52],["Lib/venv/__init__.py",0,0,20,0],["Lib/warnings.py",0,0,0,2],["Lib/wave.py",0,0,0,57],["Lib/weakref.py",54,0,5,0],["Lib/webbrowser.py",0,0,0,27],["Lib/wsgiref/handlers.py",0,0,0,36],["Lib/wsgiref/headers.py",0,0,0,18],["Lib/wsgiref/simple_server.py",0,0,0,11],["Lib/wsgiref/types.py",0,0,0,10],["Lib/wsgiref/util.py",0,0,0,9],["Lib/wsgiref/validate.py",0,0,0,31],["Lib/xml/dom/NodeFilter.py",0,0,0,1],["Lib/xml/dom/__init__.py",0,0,0,2],["Lib/xml/dom/domreg.py",0,0,0,4],["Lib/xml/dom/expatbuilder.py",0,0,0,76],["Lib/xml/dom/minicompat.py",0,0,0,10],["Lib/xml/dom/minidom.py",0,0,0,215],["Lib/xml/dom/pulldom.py",0,0,0,36],["Lib/xml/dom/xmlbuilder.py",0,0,0,47],["Lib/xml/etree/ElementInclude.py",0,0,0,3],["Lib/xml/etree/ElementPath.py",0,8,0,7],["Lib/xml/etree/ElementTree.py",4,0,0,113],["Lib/xml/sax/__init__.py",0,0,0,4],["Lib/xml/sax/_exceptions.py",0,0,0,11],["Lib/xml/sax/expatreader.py",0,0,0,39],["Lib/xml/sax/handler.py",0,0,0,26],["Lib/xml/sax/saxutils.py",0,0,0,48],["Lib/xml/sax/xmlreader.py",0,0,0,60],["Lib/xml/utils.py",0,0,0,2],["Lib/xmlrpc/client.py",0,0,0,105],["Lib/xmlrpc/server.py",0,0,0,44],["Lib/zipapp.py",0,0,0,6],["Lib/zipfile/__init__.py",0,0,0,97],["Lib/zipfile/_path/__init__.py",0,0,0,45],["Lib/zipfile/_path/_functools.py",0,0,0,2],["Lib/zipfile/_path/glob.py",0,0,0,9],["Lib/zipimport.py",0,0,0,27],["Lib/zoneinfo/__init__.py",0,0,0,2],["Lib/zoneinfo/_common.py",3,0,0,1],["Lib/zoneinfo/_tzpath.py",0,0,0,7],["Lib/zoneinfo/_zoneinfo.py",28,0,1,11]];
+  var canvas = document.getElementById('map'), out = document.getElementById('readout');
+  var kinds = ['--blue', '--blue-soft', '--excl', '--todo'];
+  var cells = [], fileOf = [];
+  data.forEach(function (d, fi) {
+    for (var k = 0; k < 4; k++) for (var n = 0; n < d[k + 1]; n++) { cells.push(k); fileOf.push(fi); }
+  });
+  var size = 4, gap = 1, cols = 1;
+  function color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function draw() {
+    var w = canvas.clientWidth || 600, dpr = window.devicePixelRatio || 1;
+    size = w < 520 ? 3 : 4; gap = 1; cols = Math.max(1, Math.floor(w / (size + gap)));
+    var h = Math.ceil(cells.length / cols) * (size + gap);
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); canvas.style.height = h + 'px';
+    var ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var pal = kinds.map(color);
+    for (var i = 0; i < cells.length; i++) {
+      ctx.fillStyle = pal[cells[i]];
+      ctx.fillRect((i % cols) * (size + gap), Math.floor(i / cols) * (size + gap), size, size);
+    }
+  }
+  function show(ev) {
+    var r = canvas.getBoundingClientRect();
+    var x = Math.floor((ev.clientX - r.left) / (size + gap)), y = Math.floor((ev.clientY - r.top) / (size + gap));
+    var i = y * cols + x;
+    if (x < 0 || x >= cols || i < 0 || i >= cells.length) return;
+    var d = data[fileOf[i]], scope = d[1] + d[2] + d[4];
+    out.textContent = d[0] + ' · ' + d[1] + ' of ' + scope + ' in scope reviewed faithful' + (d[3] ? ' · ' + d[3] + ' excluded' : '');
+  }
+  canvas.addEventListener('pointermove', show);
+  canvas.addEventListener('pointerdown', show);
+  draw();
+  var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(draw, 120); });
+  if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', draw); }
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  var pair = document.getElementById('pair');
+  function mark(k, on) {
+    pair.querySelectorAll('.ln[data-k="' + k + '"]').forEach(function (el) { el.classList.toggle('on', on); });
+  }
+  pair.querySelectorAll('.ln[data-k]').forEach(function (el) {
+    var k = el.getAttribute('data-k');
+    el.addEventListener('mouseenter', function () { mark(k, true); });
+    el.addEventListener('mouseleave', function () { mark(k, false); });
+    el.addEventListener('click', function () { pair.querySelectorAll('.ln.on').forEach(function (e) { e.classList.remove('on'); }); mark(k, true); });
+  });
+})();
+</script>
 </body>
 </html>
