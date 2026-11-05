@@ -139,8 +139,12 @@ def rowData (r : BuiltinRow) : TypeData :=
     | .w => true
     | .m => e.1 == "__getitem__" || e.1 == "__contains__"
     | _ => false
+  -- `union_as_number.nb_or` is `_Py_union_type_or`, the function in `type_as_number.nb_or`
+  -- (`Objects/unionobject.c`), so `binary_op1` sees one slot for a union and a class.
+  let fam (s : Slot) : CFn :=
+    if r.addr == B.unionType && s == .nb_or then .type else familyOf r.addr
   let own : List (Slot × SlotFn) :=
-    (keyed.flatMap fun e => slotsForKey r.addr e.1).eraseDups.map (·, SlotFn.c (familyOf r.addr))
+    (keyed.flatMap fun e => slotsForKey r.addr e.1).eraseDups.map fun s => (s, SlotFn.c (fam s))
   let newSlot : List (Slot × SlotFn) :=
     if r.entries.any (·.1 == "__new__") then [(.tp_new, .c (familyOf r.addr))] else []
   { name := r.name, qualname := r.name, base := r.base, bases := rowBases r
@@ -229,7 +233,7 @@ def builtinFunctions : List (Name × Builtin) :=
    ("setattr", .setattr), ("delattr", .delattr), ("hasattr", .hasattr), ("len", .len),
    ("iter", .iter), ("next", .next), ("repr", .repr), ("hash", .hash),
    ("callable", .callable), ("dir", .dir), ("abs", .abs), ("divmod", .divmod), ("pow", .pow),
-   ("format", .format), ("_hash", .hashProbe)]
+   ("format", .format), ("_hash", .hashProbe), ("countOf", .countOf), ("indexOf", .indexOf)]
 
 /-- The initial world and the `builtins` namespace. -/
 def initialState : World × NameDict :=

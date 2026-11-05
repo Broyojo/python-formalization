@@ -12,6 +12,7 @@ and probe outcomes, compared line by line, so dispatch order is checked call by 
 Each statement's tree format is parsed in lean/PyLean/TypeObj/Diff.lean.
 """
 
+import operator
 import re
 import struct
 import sys
@@ -262,7 +263,8 @@ def run_python(case):
         return h if user or issubclass(type(x), int) else "<h>"
 
     env = {"__name__": "__main__", "_log": trace.append, "_probe": probe, "_note": note,
-           "_text": text, "_hash": hash_probe}
+           "_text": text, "_hash": hash_probe, "countOf": operator.countOf,
+           "indexOf": operator.indexOf}
     try:
         exec(compile("\n".join(src_lines) + "\n", "<scenario>", "exec"), env)
     except BaseException as e:

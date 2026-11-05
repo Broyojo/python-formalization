@@ -230,12 +230,12 @@ theorem containsNoneNotContainer_proven : ContainsNoneNotContainer := by
 at `Objects/abstract.c:2175`, so a search finds an object by identity whatever its
 `__eq__` says. The loop stops at the first item identical to `obj`. -/
 def IterSearchIdentity : Prop :=
-  ∀ (rt : Rt) (it obj : Val) (fuel : Nat) (n : Int) (w w1 : World),
+  ∀ (rt : Rt) (it obj : Val) (fuel : Nat) (n : Int) (wrapped : Bool) (w w1 : World),
     rt.iterNext it w = .ok (some obj) w1 →
-    iterSearchLoop rt it obj .contains (fuel + 1) n w = .ok (some 1) w1
+    iterSearchLoop rt it obj .contains (fuel + 1) n wrapped w = .ok 1 w1
 
 theorem iterSearchIdentity_proven : IterSearchIdentity := by
-  intro rt it obj fuel n w w1 h
+  intro rt it obj fuel n wrapped w w1 h
   simp [iterSearchLoop, h, richCompareBool, Val.is_refl]
 
 /-! ## `isinstance`, `issubclass` -/
@@ -257,16 +257,16 @@ theorem isinstanceExactType_proven : IsinstanceExactType := by
 through truth testing. -/
 def IsinstanceUsesChecker : Prop :=
   ∀ (rt : Rt) (inst cls checker r : Val) (fuel : Nat) (b : Bool) (w w1 w2 w3 : World),
-    (asType w cls).isNone = true → typeOf w cls ≠ B.type → tupleOf w cls = none →
+    (Val.obj (typeOf w inst)).is cls = false → typeOf w cls ≠ B.type →
+    unionCheck w cls = false → tupleOf w cls = none →
     lookupSpecial rt cls "__instancecheck__" w = .ok (some checker) w1 →
     rt.call checker [inst] [] w1 = .ok r w2 →
     rt.isTrue r w2 = .ok b w3 →
     objectRecursiveIsinstance rt (fuel + 1) inst cls w = .ok b w3
 
 theorem isinstanceUsesChecker_proven : IsinstanceUsesChecker := by
-  intro rt inst cls checker r fuel b w w1 w2 w3 h0 h1 h2 h3 h4 h5
-  have ha : asType w cls = none := by simpa using h0
-  simp [objectRecursiveIsinstance, ha, h1, h2, h3, h4, h5]
+  intro rt inst cls checker r fuel b w w1 w2 w3 h0 h1 hu h2 h3 h4 h5
+  simp [objectRecursiveIsinstance, h0, h1, hu, h2, h3, h4, h5]
 
 /-- `type(x) is cls`-free part of `object_isinstance`: real subtyping is the first test
 when `cls` is a class. -/

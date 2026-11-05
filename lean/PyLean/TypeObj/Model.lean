@@ -233,6 +233,9 @@ inductive Builtin where
   -- builtins module
   | isinstance | issubclass | getattr | setattr | delattr | hasattr | len | iter | next
   | repr | hash | callable | dir | abs | divmod | pow | format | ascii | vars
+  /-- `operator.countOf` and `operator.indexOf` (`Modules/_operator.c`), which are
+  `PySequence_Count` and `PySequence_Index`. -/
+  | countOf | indexOf
   -- property
   | propertyGetter | propertySetter | propertyDeleter | propertySetName
   -- sequences
@@ -347,6 +350,9 @@ inductive Payload where
   | exc (e : ExcData)
   /-- The contents of a `bytes` or `bytearray`, which the exception code reads. -/
   | bytes (b : List Nat)
+  /-- `unionobject`, `Objects/unionobject.c`: its `args` tuple, the deduplicated members of
+  `X | Y`. -/
+  | union (args : List Val)
 
 /-- A `PyTypeObject`. -/
 structure TypeData where

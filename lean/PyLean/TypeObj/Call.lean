@@ -1297,16 +1297,24 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .next =>
     match args with
+    -- `builtin_next`, `Python/bltinmodule.c:1761-1793`: `tp_iternext` is called directly, so
+    -- without a default an exception it sets, a `StopIteration` subclass included, propagates
+    -- as it is; only `NULL` with no exception becomes a new `StopIteration`.
     | [it] =>
       if !pyIterCheck w it then
         typeErr s!"'{trunc 200 (typeName w it)}' object is not an iterator"
-      match ← rt.iterNext it with
-      | some v => pure v
-      | none => raise (.exc B.StopIteration "" none)
+      match slotOf w (typeOf w it) .tp_iternext with
+      | some f =>
+        match ← callIterNext rt f it with
+        | some v => pure v
+        | none => raise (.exc B.StopIteration "" none)
+      | none => gap%
     | [it, d] =>
       if !pyIterCheck w it then
         typeErr s!"'{trunc 200 (typeName w it)}' object is not an iterator"
-      pure ((← rt.iterNext it).getD d)
+      match slotOf w (typeOf w it) .tp_iternext with
+      | some f => pure ((← catchMatch B.StopIteration (callIterNext rt f it) (pure none)).getD d)
+      | none => gap%
     | _ => typeErr s!"next expected at least 1 argument, got {args.length}"
   | .repr =>
     match args with
@@ -1337,6 +1345,14 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [o] => pyNumberAbsolute rt o
     | _ => typeErr s!"abs() takes exactly one argument ({args.length} given)"
+  | .countOf | .indexOf =>
+    -- `_operator_countOf_impl` and `_operator_indexOf_impl`, `Modules/_operator.c`, after
+    -- `_PyArg_CheckPositional(name, nargs, 2, 2)`.
+    let (nm, op) := if b matches .countOf then ("countOf", IterSearchOp.count)
+      else ("indexOf", IterSearchOp.index)
+    match args with
+    | [a, c] => .int <$> pySequenceIterSearch rt a c op
+    | _ => typeErr s!"{nm} expected 2 arguments, got {args.length}"
   | .divmod =>
     match args with
     | [a, c] => binaryOp rt a c .nb_divmod "divmod()"

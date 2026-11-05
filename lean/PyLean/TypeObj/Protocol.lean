@@ -609,6 +609,8 @@ def builtinConv : Builtin → String × MethConv
   | .dir => ("dir", .fast)
   | .abs => ("abs", .o)
   | .divmod => ("divmod", .fast)
+  | .countOf => ("countOf", .fast)
+  | .indexOf => ("indexOf", .fast)
   | .format => ("format", .fast)
   | .propertyGetter => ("getter", .o)
   | .propertySetter => ("setter", .o)
@@ -1371,6 +1373,54 @@ def longBinary (s : Slot) (a b : Int) : M Val :=
     else pure (.int (Int.fdiv a (2 ^ b.toNat)))
   | _ => gap%
 
+/-! ### `X | Y` on classes (`Objects/unionobject.c`) -/
+
+/-- `_PyUnion_Check(v)`: `Py_IS_TYPE(v, &_PyUnion_Type)`, an exact type test (the type is not
+subclassable). -/
+def unionCheck (w : World) (v : Val) : Bool := typeOf w v == B.unionType
+
+/-- `_Py_union_args(v)`, `Objects/unionobject.c:439`: the `args` tuple of a union. -/
+def unionArgs (w : World) (v : Val) : List Val :=
+  match payloadOf w v with
+  | some (.union xs) => xs
+  | _ => []
+
+/-- `unionbuilder_add_single_unchecked`, `Objects/unionobject.c:168`: `PyObject_Hash(arg)` and
+`PySet_Contains`, then append. Classes are compared by identity, which is what the hash and
+equality of `type` do; a metaclass with its own `__hash__` or `__eq__` (run as user code here)
+is out of scope and reported as a gap. -/
+def unionAddUnchecked (acc : List Val) (arg : Val) : M (List Val) := do
+  let w ← getW
+  let mt := typeOf w arg
+  let cfn (f : Option SlotFn) : Bool := f == some (.c .object) || f == some (.c .type)
+  if !(cfn (slotOf w mt .tp_hash) && cfn (slotOf w mt .tp_richcompare)) then gap% else
+  if acc.any (·.is arg) then pure acc else pure (acc ++ [arg])
+
+/-- `unionbuilder_add_single`, `Objects/unionobject.c:208`: `None` stands for `type(None)`, and a
+union adds its members (`unionbuilder_add_tuple`, `:232`). The members of a union are never
+`None` or unions, so they go straight to `unionbuilder_add_single_unchecked`. -/
+def unionAddSingle (acc : List Val) (arg : Val) : M (List Val) := do
+  let w ← getW
+  if arg.is .none then unionAddUnchecked acc (.obj B.noneType)
+  else if unionCheck w arg then (unionArgs w arg).foldlM unionAddUnchecked acc
+  else unionAddUnchecked acc arg
+
+/-- `_Py_union_type_or`, `Objects/unionobject.c:258`, the `nb_or` of `type` and of the union
+type, with `is_unionable` (`:244`) and `make_union` (`:551`). Of the unionable objects the model
+has `None`, classes and unions; a `types.GenericAlias` (whose arguments it does not keep) is a
+gap. -/
+def unionTypeOr (self other : Val) : M Val := do
+  let w ← getW
+  if typeOf w self == B.genericAlias || typeOf w other == B.genericAlias then gap% else
+  let unionable (x : Val) : Bool := x.is .none || typeCheck w x || unionCheck w x
+  if !unionable self || !unionable other then pure .notImpl else
+  let acc ← unionAddSingle [] self
+  let args ← unionAddSingle acc other
+  match args with
+  | [] => typeErr "Cannot take a Union of no types."
+  | [x] => pure x
+  | xs => alloc B.unionType (.union xs)
+
 /-- Call a binary number slot function `f`. -/
 def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
   let w ← getW
@@ -1403,11 +1453,7 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
       | some x, some y => longBinary s x y
       | _, _ => pure .notImpl
   | .c .type =>
-    -- `_Py_union_type_or`: only classes and `None` are unionable.
-    let unionable (x : Val) : Bool := x.is .none || typeCheck w x
-    if unionable a && unionable b then
-      if a.is b then pure a else alloc B.unionType .plain
-    else pure .notImpl
+    if s == .nb_or then unionTypeOr a b else gap%
   | .c .str =>
     -- `unicode_mod`: `%` formatting needs a `str` on the left. Only format strings with
     -- no conversion are modelled: `PyUnicode_Format` then checks the arguments were used.
@@ -1819,6 +1865,14 @@ def ternaryIop (rt : Rt) (v w' z : Val) : M Val := do
   | .notImpl => ternaryOp rt v w' z "**="
   | x => pure x
 
+/-- `PyNumber_InPlacePower`, `Objects/abstract.c:1359-1363`: `ternary_iop` with
+`nb_inplace_power`, `nb_power` and `"**="`, which `ternaryIop` fixes. -/
+def pyNumberInPlacePower (rt : Rt) (v w' z : Val) : M Val := ternaryIop rt v w' z
+
+/-- `_PyNumber_InPlacePowerNoMod`, `Objects/abstract.c:1366-1369`: `x **= y`, with `z = None`. -/
+def pyNumberInPlacePowerNoMod (rt : Rt) (lhs rhs : Val) : M Val :=
+  pyNumberInPlacePower rt lhs rhs .none
+
 /-- `UNARY_FUNC`, `Objects/abstract.c:1374`. -/
 def unaryFunc (rt : Rt) (s : Slot) (dunder descr : String) (o : Val) : M Val := do
   let w ← getW
@@ -2008,13 +2062,15 @@ def pySequenceGetItem (rt : Rt) (s : Val) (i : Int) : M Val := do
     | some _ => typeErr s!"{trunc 200 (typeName w s)} is not a sequence"
     | none => typeErr s!"'{trunc 200 (typeName w s)}' object does not support indexing"
 
-/-- `PyObject_GetItem`, `Objects/abstract.c:155`. `type[int]` (generic aliases) is left
-out. -/
+/-- `PyObject_GetItem`, `Objects/abstract.c:155-206`. `type[int]` is `Py_GenericAlias(o, key)`,
+`:188-190`, an object of `types.GenericAlias` whose arguments this model does not keep. -/
 def pyGetItem (rt : Rt) (o key : Val) : M Val := do
   let w ← getW
+  -- `:161-165`
   match slotIn w o .mp_subscript with
   | some f => callMpSubscript rt f o key
   | none =>
+    -- `:168-180`
     match slotIn w o .sq_item with
     | some _ =>
       if indexCheck w key then
@@ -2023,10 +2079,13 @@ def pyGetItem (rt : Rt) (o key : Val) : M Val := do
       else
         typeErr s!"sequence index must be integer, not '{trunc 200 (typeName w key)}'"
     | none =>
+      -- `:183-203`
       match asType w o with
       | some oa =>
         if oa == B.type then alloc B.genericAlias .plain else
         let meth ← rt.getOptionalAttr o "__class_getitem__"
+        -- `tp_name` is read after the lookup, which may run Python code (`:201`).
+        let w ← getW
         match meth with
         | some m =>
           if m.is .none then typeErr s!"type '{trunc 200 (tpName w oa)}' is not subscriptable"
@@ -2073,7 +2132,27 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     else typeErr s!"list indices must be integers or slices, not {trunc 200 (typeName w key)}"
   | _ => gap%
 
-/-- `PySequence_SetItem`/`PySequence_DelItem`, `Objects/abstract.c:1893`, `:1926`. -/
+/-- Call `sq_ass_item` with a `Py_ssize_t` index: `slot_sq_ass_item`,
+`Objects/typeobject.c`, calls `__setitem__(self, index, value)` or `__delitem__(self, index)`;
+`list_ass_item`, `Objects/listobject.c:1159-1190`, takes the index as it is, with no
+negative-index adjustment. -/
+def callSqAssItem (rt : Rt) (f : SlotFn) (s : Val) (i : Int) (value : Option Val) : M Unit := do
+  let w ← getW
+  match f with
+  | .generic =>
+    match value with
+    | none => let _ ← vectorcallMethod rt "__delitem__" [s, .int i]
+    | some v => let _ ← vectorcallMethod rt "__setitem__" [s, .int i, v]
+  | .c .list =>
+    let xs := (listOf w s).getD []
+    if i < 0 || i ≥ xs.length then indexErr "list assignment index out of range" else
+    match s, value with
+    | .obj a, some v => modObj a fun ob => { ob with body := .list (xs.set i.toNat v) }
+    | .obj a, none => modObj a fun ob => { ob with body := .list (xs.eraseIdx i.toNat) }
+    | _, _ => gap%
+  | _ => gap%
+
+/-- `PySequence_SetItem`/`PySequence_DelItem`, `Objects/abstract.c:1893-1923`, `:1926-1956`. -/
 def pySequenceSetItem (rt : Rt) (s : Val) (i : Int) (value : Option Val) : M Unit := do
   let w ← getW
   let verb := match value with
@@ -2088,7 +2167,7 @@ def pySequenceSetItem (rt : Rt) (s : Val) (i : Int) (value : Option Val) : M Uni
           pure (i + l)
         | none => pure i
       else pure i
-    callAssSubscript rt f s (.int i') value
+    callSqAssItem rt f s i' value
   | none =>
     match slotIn w s .mp_ass_subscript with
     | some _ => typeErr s!"{trunc 200 (typeName w s)} is not a sequence"
@@ -2304,35 +2383,46 @@ inductive IterSearchOp where
   | count | index | contains
   deriving DecidableEq, Repr
 
-/-- The loop of `_PySequence_IterSearch`, `Objects/abstract.c:2165-2212`. -/
-def iterSearchLoop (rt : Rt) (it obj : Val) (op : IterSearchOp) : Nat → Int → M (Option Int)
-  | 0, _ => raise .fuel
-  | fuel + 1, n => do
+/-- `++n` on a `Py_ssize_t`, `Objects/abstract.c:2210`: at `PY_SSIZE_T_MAX` it wraps to
+`PY_SSIZE_T_MIN` (CPython is built with `-fwrapv`). -/
+def ssizeInc (n : Int) : Int := if n == PyLean.ssizeMax then PyLean.ssizeMin else n + 1
+
+/-- The loop of `_PySequence_IterSearch`, `Objects/abstract.c:2165-2219`, from its counter `n`
+and the `wrapped` flag of `PY_ITERSEARCH_INDEX`; the result is the function's return value.
+`PyIter_Next` and `PyObject_RichCompareBool` are the runtime's, so both may raise and re-enter.
+`fuel` bounds the loop; running out is not a Python outcome. -/
+def iterSearchLoop (rt : Rt) (it obj : Val) (op : IterSearchOp) : Nat → Int → Bool → M Int
+  | 0, _, _ => raise .fuel
+  | fuel + 1, n, wrapped => do
+    -- `:2168-2173`: `NULL` with an exception set is `Fail`, without one the end of the loop.
     match ← rt.iterNext it with
-    | none => pure none
+    | none =>
+      -- `:2214-2219`
+      if op != .index then pure n
+      else valueErr "sequence.index(x): x not in sequence"
     | some item =>
+      -- `:2175-2178`
       let cmp ← richCompareBool rt item obj .eq
       if cmp then
         match op with
-        | .count => iterSearchLoop rt it obj op fuel (n + 1)
-        | .index => pure (some n)
-        | .contains => pure (some 1)
-      else if op == .index then iterSearchLoop rt it obj op fuel (n + 1)
-      else iterSearchLoop rt it obj op fuel n
+        | .count =>
+          -- `:2181-2187`
+          if n == PyLean.ssizeMax then overflowErr "count exceeds C integer size"
+          else iterSearchLoop rt it obj op fuel (n + 1) wrapped
+        | .index =>
+          -- `:2190-2196`
+          if wrapped then overflowErr "index exceeds C integer size" else pure n
+        | .contains =>
+          -- `:2198-2200`
+          pure 1
+      else if op == .index then
+        -- `:2207-2211`
+        iterSearchLoop rt it obj op fuel (ssizeInc n) (wrapped || n == PyLean.ssizeMax)
+      else iterSearchLoop rt it obj op fuel n wrapped
 
-/-- The count of `PY_ITERSEARCH_COUNT` on exhaustion lives in the accumulator; this
-variant returns it. -/
-def iterCountLoop (rt : Rt) (it obj : Val) : Nat → Int → M Int
-  | 0, _ => raise .fuel
-  | fuel + 1, n => do
-    match ← rt.iterNext it with
-    | none => pure n
-    | some item =>
-      let cmp ← richCompareBool rt item obj .eq
-      iterCountLoop rt it obj fuel (if cmp then n + 1 else n)
-
-/-- `_PySequence_IterSearch`, `Objects/abstract.c:2138`. -/
+/-- `_PySequence_IterSearch`, `Objects/abstract.c:2138-2227`. -/
 def pySequenceIterSearch (rt : Rt) (seq obj : Val) (op : IterSearchOp) : M Int := do
+  -- `:2149-2162`: a `TypeError` (or subclass) from `PyObject_GetIter` is replaced.
   let it ← tryM (rt.getIter seq) fun e => do
     let w ← getW
     if excMatches w e B.TypeError then
@@ -2341,16 +2431,7 @@ def pySequenceIterSearch (rt : Rt) (seq obj : Val) (op : IterSearchOp) : M Int :
       else
         typeErr s!"argument of type '{trunc 200 (typeName w seq)}' is not iterable"
     else raise e
-  match op with
-  | .count => iterCountLoop rt it obj iterFuel 0
-  | .index =>
-    match ← iterSearchLoop rt it obj .index iterFuel 0 with
-    | some n => pure n
-    | none => valueErr "sequence.index(x): x not in sequence"
-  | .contains =>
-    match ← iterSearchLoop rt it obj .contains iterFuel 0 with
-    | some n => pure n
-    | none => pure 0
+  iterSearchLoop rt it obj op iterFuel 0 false
 
 /-- `slot_sq_contains`, `Objects/typeobject.c:10791`. -/
 def slotSqContains (rt : Rt) (self value : Val) : M Bool := do
@@ -2483,14 +2564,19 @@ def objectIsinstance (rt : Rt) (inst cls : Val) : M Bool := do
     | none => pure false
     | some icls => abstractIssubclass rt walkFuel icls cls
 
-/-- `object_recursive_isinstance`, `Objects/abstract.c:2639`. Union objects are left
-out. -/
+/-- `object_recursive_isinstance`, `Objects/abstract.c:2639-2700`. `fuel` stands in for
+`_Py_EnterRecursiveCallTstate`; running out is not a Python outcome. -/
 def objectRecursiveIsinstance (rt : Rt) : Nat → Val → Val → M Bool
   | 0, _, _ => raise .fuel
   | fuel + 1, inst, cls => do
     let w ← getW
-    if (asType w cls).isSome && (Val.obj (typeOf w inst)).is cls then return true
+    -- `:2642-2644`: `Py_IS_TYPE(inst, cls)`, a pointer comparison.
+    if (Val.obj (typeOf w inst)).is cls then return true
+    -- `:2647-2649`
     if typeOf w cls == B.type then return ← objectIsinstance rt inst cls
+    -- `:2651-2653`: a union is replaced by its `args` tuple.
+    let cls := if unionCheck w cls then Val.tuple (unionArgs w cls) else cls
+    -- `:2655-2672`
     match tupleOf w cls with
     | some xs =>
       anyTuple fuel inst xs
@@ -2510,14 +2596,17 @@ where
 def pyIsInstance (rt : Rt) (inst cls : Val) : M Bool :=
   objectRecursiveIsinstance rt walkFuel inst cls
 
-/-- `recursive_issubclass`, `Objects/abstract.c:2712`. -/
+/-- `recursive_issubclass`, `Objects/abstract.c:2712-2729`. -/
 def recursiveIssubclass (rt : Rt) (derived cls : Val) : M Bool := do
   let w ← getW
   match asType w cls, asType w derived with
   | some c, some d => pure (isSubtype w d c)
   | _, _ =>
     checkClass rt derived "issubclass() arg 1 must be a class"
-    checkClass rt cls "issubclass() arg 2 must be a class, a tuple of classes, or a union"
+    -- `:2722-2726`: a union is not asked for `__bases__`.
+    let w ← getW
+    if !unionCheck w cls then
+      checkClass rt cls "issubclass() arg 2 must be a class, a tuple of classes, or a union"
     abstractIssubclass rt walkFuel derived cls
 
 /-- `object_issubclass`, `Objects/abstract.c:2732`. -/
@@ -2528,6 +2617,8 @@ def objectIssubclass (rt : Rt) : Nat → Val → Val → M Bool
     if typeOf w cls == B.type then
       if derived.is cls then return true
       return ← recursiveIssubclass rt derived cls
+    -- `:2744-2746`: a union is replaced by its `args` tuple.
+    let cls := if unionCheck w cls then Val.tuple (unionArgs w cls) else cls
     match tupleOf w cls with
     | some xs => anyTuple fuel derived xs
     | none =>

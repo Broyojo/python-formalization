@@ -15,6 +15,8 @@ import PyLean.TypeObj.StructSeqStatic
 import PyLean.TypeObj.MroSpec2
 import PyLean.TypeObj.PropsGetstate
 import PyLean.TypeObj.PropsExact3
+import PyLean.TypeObj.PropsAbstractInst
+import PyLean.TypeObj.PropsAbstractBuf
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -50,6 +52,129 @@ private def me := "Objects/methodobject.c"
 private def de := "Objects/descrobject.c"
 private def fu := "Objects/funcobject.c"
 private def ss := "Objects/structseq.c"
+
+/-- Every-branch characterisations of `Objects/abstract.c` (`PropsAbstract*.lean`). -/
+def abstractEntries : List Entry := [
+  p "abstract-getitem-exact" ab ["PyObject_GetItem"]
+    "PyObject_GetItem, every branch: mp_subscript; else sq_item with PyNumber_AsSsize_t(key, IndexError) and PySequence_GetItem, or the 'sequence index must be integer' TypeError; else type[...] is a new GenericAlias, a class calls __class_getitem__ (missing or None refuses with tp_name read after the lookup), anything else is not subscriptable."
+    "abstract.c:155-206"
+    ``GetItemExact ``getItemExact_proven,
+  p "abstract-c-contiguous-exact" ab ["_IsCContiguous"]
+    "For a well-formed view, _IsCContiguous is true iff len == 0, strides is NULL, or every dimension longer than 1 has stride itemsize * prod(shape[i+1:])."
+    "abstract.c:501-525"
+    ``CContiguousExact ``cContiguousExact_proven,
+  p "abstract-f-contiguous-exact" ab ["_IsFortranContiguous"]
+    "For a well-formed view, _IsFortranContiguous is true iff len == 0, or strides is NULL and the view is effectively 1-d, or every dimension longer than 1 has stride itemsize * prod(shape[:i])."
+    "abstract.c:461-498"
+    ``FortranContiguousExact ``fortranContiguousExact_proven,
+  p "abstract-is-contiguous-exact" ab ["PyBuffer_IsContiguous"]
+    "PyBuffer_IsContiguous is true iff the view has no suboffsets and the order is 'C' and C-contiguous, 'F' and Fortran-contiguous, or 'A' and either."
+    "abstract.c:528-540"
+    ``IsContiguousExact ``isContiguousExact_proven,
+  p "abstract-contiguous-examples" ab ["PyBuffer_IsContiguous", "_IsCContiguous", "_IsFortranContiguous"]
+    "A 2x3 byte view with strides (3,1) is C- and not F-contiguous, (1,2) the reverse, (6,1) neither, and suboffsets make any view non-contiguous."
+    "abstract.c:461-540"
+    ``ContiguousExamples ``contiguousExamples_proven,
+  p "abstract-add-one-f-exact" ab ["_Py_add_one_to_index_F"]
+    "On an index within the shape, _Py_add_one_to_index_F stays within the shape and adds one to the Fortran-order mixed-radix value, modulo the element count."
+    "abstract.c:560-573"
+    ``AddOneFExact ``addOneFExact_proven,
+  p "abstract-add-one-c-exact" ab ["_Py_add_one_to_index_C"]
+    "On an index within the shape, _Py_add_one_to_index_C stays within the shape and adds one to the C-order mixed-radix value, modulo the element count."
+    "abstract.c:576-589"
+    ``AddOneCExact ``addOneCExact_proven,
+  p "abstract-add-one-examples" ab ["_Py_add_one_to_index_F", "_Py_add_one_to_index_C"]
+    "In shape (2, 3): F (1,0)->(0,1), (0,1)->(1,1), (1,2)->(0,0); C (0,2)->(1,0), (0,0)->(0,1), (1,2)->(0,0)."
+    "abstract.c:560-589"
+    ``AddOneExamples ``addOneExamples_proven,
+  p "abstract-binop-candidates" ab ["binary_op"]
+    "binary_op1 calls exactly the candidate slots in order: a proper subclass's different slot first, else left then right, one call for a shared slot, stopping at the first non-NotImplemented result or exception."
+    "abstract.c:940-990; docs: reference/datamodel, the note on reflected operands"
+    ``BinaryOp1Candidates ``binaryOp1Candidates_proven,
+  p "abstract-binary-op-exact" ab ["binary_op", "binop_type_error"]
+    "binary_op returns the candidates' answer or exception, and when all decline raises TypeError 'unsupported operand type(s) for OP: 'A' and 'B'' with names read after the calls."
+    "abstract.c:999-1019"
+    ``BinaryOpExact ``binaryOpExact_proven,
+  p "abstract-add-exact" ab ["PyNumber_Add", "binop_type_error"]
+    "PyNumber_Add: number slots in binary_op1 order; if all decline, the left operand's sq_concat; else the '+' TypeError."
+    "abstract.c:1138-1154"
+    ``NumberAddExact ``numberAddExact_proven,
+  p "abstract-multiply-exact" ab ["PyNumber_Multiply", "sequence_repeat", "binop_type_error"]
+    "PyNumber_Multiply: number slots; if all decline, the left operand's sq_repeat by the right, else the right's by the left, through sequence_repeat (index count, OverflowError conversion, or the non-int TypeError); else the '*' TypeError."
+    "abstract.c:1157-1192"
+    ``NumberMultiplyExact ``numberMultiplyExact_proven,
+  p "abstract-binary-iop-exact" ab ["binary_iop", "binop_type_error"]
+    "binary_iop: the left operand's in-place slot; if missing or NotImplemented, the binary slots in binary_op1 order; if all decline, the TypeError with the in-place operator name."
+    "abstract.c:1228-1269"
+    ``BinaryIopExact ``binaryIopExact_proven,
+  p "abstract-inplace-add-exact" ab ["PyNumber_InPlaceAdd", "binop_type_error"]
+    "PyNumber_InPlaceAdd: nb_inplace_add, then the '+' slots, then (with tp_as_sequence) sq_inplace_concat or else sq_concat, else the '+=' TypeError."
+    "abstract.c:1307-1327"
+    ``NumberInPlaceAddExact ``numberInPlaceAddExact_proven,
+  p "abstract-ternary-iop-exact" ab ["ternary_iop"]
+    "ternary_iop: with no nb_inplace_power, ternary_op with '**='; with slot_nb_inplace_power, __ipow__(v, w), its result final unless NotImplemented, which falls back to ternary_op."
+    "abstract.c:1272-1287; typeobject.c:10971-10975"
+    ``TernaryIopExact ``ternaryIopExact_proven,
+  p "abstract-inplace-power-exact" ab ["PyNumber_InPlacePower", "_PyNumber_InPlacePowerNoMod"]
+    "x **= y is ternary_iop(x, y, None); with no power slots anywhere the TypeError names two types for z None and three otherwise."
+    "abstract.c:1359-1369, :1101-1119"
+    ``InPlacePowerExact ``inPlacePowerExact_proven,
+  p "abstract-as-ssize-exact" ab ["PyNumber_AsSsize_t"]
+    "PyNumber_AsSsize_t: _PyNumber_Index errors propagate; in range is returned; out of range clips with err NULL and otherwise raises err with 'cannot fit 'T' into an index-sized integer'."
+    "abstract.c:1468-1515"
+    ``AsSsizeExact ``asSsizeExact_proven,
+  p "abstract-seq-getitem-exact" ab ["PySequence_GetItem"]
+    "PySequence_GetItem: non-negative indices pass as they are, negative ones get sq_length added when present (its error propagates), and the two TypeErrors without sq_item."
+    "abstract.c:1841-1868"
+    ``SequenceGetItemExact ``sequenceGetItemExact_proven,
+  p "abstract-seq-setitem-exact" ab ["PySequence_SetItem", "PySequence_DelItem"]
+    "PySequence_SetItem/DelItem: the same index rule before sq_ass_item, 'is not a sequence' for a mapping, and 'does not support item assignment' / 'doesn't support item deletion'."
+    "abstract.c:1893-1956"
+    ``SequenceSetItemExact ``sequenceSetItemExact_proven,
+  p "abstract-itersearch-start" ab ["_PySequence_IterSearch"]
+    "_PySequence_IterSearch replaces a TypeError from PyObject_GetIter with the operation's message, passes other errors, and starts the loop at 0, not wrapped."
+    "abstract.c:2149-2165"
+    ``IterSearchStart ``iterSearchStart_proven,
+  p "abstract-itersearch-loop" ab ["_PySequence_IterSearch"]
+    "Every branch of the _PySequence_IterSearch loop: next and compare errors, exhaustion per operation, the COUNT overflow at PY_SSIZE_T_MAX, the INDEX wrap and its OverflowError, CONTAINS answering 1."
+    "abstract.c:2166-2219"
+    ``IterSearchLoopExact ``iterSearchLoopExact_proven,
+  p "abstract-contains-exact" ab ["PySequence_Contains"]
+    "PySequence_Contains uses sq_contains when present, else _PySequence_IterSearch(CONTAINS) != 0."
+    "abstract.c:2240-2250"
+    ``SequenceContainsExact ``sequenceContainsExact_proven,
+  p "abstract-mapping-size-exact" ab ["PyMapping_Size"]
+    "PyMapping_Size: mp_length; else 'T is not a mapping' with sq_length; else 'object of type 'T' has no len()'."
+    "abstract.c:2276-2297"
+    ``MappingSizeExact ``mappingSizeExact_proven,
+  p "abstract-getiter-exact" ab ["PyObject_GetIter"]
+    "PyObject_GetIter: no tp_iter gives a new seqiter for a sequence or 'not iterable'; tp_iter's error propagates, an iterator is returned, anything else is the '__iter__() must return an iterator' TypeError."
+    "abstract.c:2813-2834"
+    ``GetIterExact ``getIterExact_proven,
+  p "abstract-iter-next-exact" ab ["PyIter_Next", "iternext"]
+    "PyIter_Next returns the item, NULL with no exception at exhaustion, clears a StopIteration (or subclass), and propagates anything else; a class's item is its __next__ result."
+    "abstract.c:2873-2928"
+    ``IterNextExact ``iterNextExact_proven,
+  p "abstract-get-bases-exact" ab ["abstract_get_bases"]
+    "abstract_get_bases: a lookup error propagates, a missing __bases__ is NULL, a tuple is returned, any other object is NULL with no error."
+    "abstract.c:2522-2532"
+    ``AbstractGetBasesExact ``abstractGetBasesExact_proven,
+  p "abstract-issubclass-exact" ab ["abstract_issubclass"]
+    "abstract_issubclass: identity answers true without a lookup; then no bases or () is false, one base continues the walk, several are tried in order until a true answer or an exception."
+    "abstract.c:2536-2584"
+    ``AbstractIssubclassExact ``abstractIssubclassExact_proven,
+  p "abstract-object-isinstance-exact" ab ["object_isinstance", "check_class"]
+    "object_isinstance: a real subtype is true; else __class__ counts if it is another class and a subtype; for a non-class, check_class with the isinstance message, then __class__ and abstract_issubclass; lookup errors propagate."
+    "abstract.c:2587-2636"
+    ``ObjectIsinstanceExact ``objectIsinstanceExact_proven,
+  p "abstract-isinstance-exact" ab ["object_recursive_isinstance"]
+    "object_recursive_isinstance: type(inst) is cls is true; exact type goes to object_isinstance; a union becomes its args tuple; a tuple is 'any' stopping at the first true or error; else __instancecheck__ (truth of its result), else object_isinstance."
+    "abstract.c:2639-2700"
+    ``IsinstanceExact ``isinstanceExact_proven,
+  p "abstract-recursive-issubclass-exact" ab ["recursive_issubclass", "check_class"]
+    "recursive_issubclass: two classes use PyType_IsSubtype; else check_class(derived) with the arg 1 message, check_class(cls) with the arg 2 message unless cls is a union, then abstract_issubclass."
+    "abstract.c:2587-2600, :2712-2729"
+    ``RecursiveIssubclassExact ``recursiveIssubclassExact_proven ]
 
 def entries : List Entry := [
   -- C3
@@ -803,7 +928,7 @@ def entries : List Entry := [
     ``FillStridesContiguous ``fillStridesContiguous_proven,
   p "typeobj-buffer-is-contiguous" ab ["PyBuffer_IsContiguous"]
     "A view with suboffsets is not contiguous, nor is one asked about an unknown order."
-    "abstract.c:521, @3.14.7:529"
+    "abstract.c:531, :539"
     ``IsContiguousGuards ``isContiguousGuards_proven,
   p "typeobj-buffer-odometer-range" ab ["_Py_add_one_to_index_F", "_Py_add_one_to_index_C"]
     "The index odometer keeps every digit within the shape."
@@ -862,9 +987,9 @@ def entries : List Entry := [
     "len() uses sq_length, then mp_length, then raises."
     "abstract.c:57-72"
     ``ObjectSizeOrder ``objectSizeOrder_proven,
-  p "typeobj-size-protocols" ab []
+  p "typeobj-size-protocols" ab ["PyMapping_Size"]
     "PySequence_Size refuses a pure mapping and PyMapping_Size a pure sequence."
-    "abstract.c:1695, @3.14.7:2281"
+    "abstract.c:1705, :2291"
     ``SizeProtocolsDistinct ``sizeProtocolsDistinct_proven,
   p "typeobj-length-hint-default" ab ["PyObject_LengthHint"]
     "With no __len__ and no __length_hint__ the default is returned."
@@ -896,7 +1021,7 @@ def entries : List Entry := [
     ``InplacePowerTwoArgs ``inplacePowerTwoArgs_proven,
   p "typeobj-number-long" ab ["PyNumber_Long"]
     "An exact int is returned; a non-int __int__ result raises the exact TypeError."
-    "abstract.c:1519, @3.14.7:1532"
+    "abstract.c:1529-1531, :1542-1545"
     ``NumberLongChecks ``numberLongChecks_proven,
   p "typeobj-number-check" ab []
     "PyNumber_Check tests the three conversion slots."
@@ -916,7 +1041,7 @@ def entries : List Entry := [
     ``TupleOfTuple ``tupleOfTuple_proven,
   p "typeobj-abstract-issubclass" ab ["abstract_issubclass", "abstract_get_bases"]
     "A class is a subclass of itself; a class without __bases__ of nothing else."
-    "abstract.c:2536, @3.14.7:2546"
+    "abstract.c:2546-2555"
     ``AbstractIssubclass ``abstractIssubclass_proven,
   p "typeobj-isinstance-empty-tuple" ab ["object_recursive_isinstance"]
     "isinstance(x, ()) is False."
@@ -1287,6 +1412,6 @@ def entries : List Entry := [
     source := "invariant: a failing call leaves no live object pointing at memory it freed", status := .refuted,
     prop := ``StructSeq.InitType2NoDangling, thm := some ``StructSeq.initType2NoDangling_refuted,
     bug := some "typeobj-structseq-inittype2-dangling-members",
-    notes := "Counterexample n_in_sequence = #fields + 5: type_ready has added the descriptors when its post check refuses the negative basicsize, keeps tp_dict on failure (typeobject.c:9665-9667), and :699-701 frees members. With n_in_sequence = -1 (initType2_dangling_ready) PyType_Ready succeeds and the dict fails at PyTuple_New(-1), leaving the type ready. In both cases reading a member descriptor's __doc__ crashes on 3.15.2." } ] ++ excEntries
+    notes := "Counterexample n_in_sequence = #fields + 5: type_ready has added the descriptors when its post check refuses the negative basicsize, keeps tp_dict on failure (typeobject.c:9665-9667), and :699-701 frees members. With n_in_sequence = -1 (initType2_dangling_ready) PyType_Ready succeeds and the dict fails at PyTuple_New(-1), leaving the type ready. In both cases reading a member descriptor's __doc__ crashes on 3.15.2." } ] ++ abstractEntries ++ excEntries
 
 end PyLean.TypeObj
