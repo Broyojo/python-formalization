@@ -270,6 +270,15 @@ def main():
         raise SystemExit(f"unfilled placeholders: {missing}")
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(page)
+    readme = ROOT / "README.md"
+    r = readme.read_text()
+    stats = (f"| | |\n|---|---|\n| Lean code | {values['LEANLINES']} lines in {values['LEANFILES']} files |\n"
+             f"| Theorems and lemmas | {values['THEOREMS']}, all checked on every build |\n"
+             f"| Top-level properties | {values['PROVEN']} proven, {values['REFUTED']} refuted, {values['OPEN']} open |\n"
+             f"| Functions reviewed faithful | {values['FAITHFUL']} of {values['INSCOPE']} in scope ({values['FAITHFULPCT']}) |\n"
+             f"| Bug records | {values['BUGS']}, each with a reproducer |\n")
+    r = re.sub(r"(<!-- stats:start -->\n).*?(<!-- stats:end -->)", lambda m: m.group(1) + stats + m.group(2), r, flags=re.S)
+    readme.write_text(r)
     print(f"wrote {OUT.relative_to(ROOT)}: {values['FAITHFUL']} faithful of {values['INSCOPE']} "
           f"({values['FAITHFULPCT']}), {len(done)} files fully reviewed, {len(mapdata)} files mapped")
 

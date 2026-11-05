@@ -1,44 +1,70 @@
 # python-formalization
 
-Formalizing CPython in Lean 4 to find bugs, after
-[julia-in-lean](https://github.com/MilesCranmer/julia-in-lean)
-([discussion](https://discourse.julialang.org/t/formalizing-julia-in-lean-and-finding-400-bugs-in-base/140243)).
+A Lean 4 model of CPython 3.15.2, written by AI agents, tested against the real interpreter, and reviewed function by function. Along the way it found hundreds of bugs in CPython.
 
-Each stdlib function gets a Lean model that follows the source line by line.
-The model is differentially tested against the real interpreter until they agree.
-Properties from docstrings and invariants are then stated over *all* inputs and
-proven, or refuted with a counterexample that a plain Python script reproduces.
+**Write-up:** [broyojo.com/python-formalization](https://broyojo.com/python-formalization/)
+
+<!-- stats:start -->
+| | |
+|---|---|
+| Lean code | 613,318 lines in 1,539 files |
+| Theorems and lemmas | 18,898, all checked on every build |
+| Top-level properties | 3,834 proven, 588 refuted, 94 open |
+| Functions reviewed faithful | 4,071 of 26,004 in scope (15.7%) |
+| Bug records | 436, each with a reproducer |
+<!-- stats:end -->
+
+## How it works
+
+Every function, bytecode instruction and grammar rule in the CPython 3.15.2 source tree is a row in an inventory (`coverage/methods/`). Each row goes through four steps:
+
+1. **Mirror.** An agent writes a Lean model that follows the C or Python source line by line: same branch order, same error messages, same integer overflow. Each step cites the 3.15.2 source. Python callbacks are modelled as code that can raise, change state and re-enter.
+2. **Differential test.** The model and the real `python3` run side by side on generated inputs (`difftest/`) until they agree on at least 50,000 cases across several seeds.
+3. **Prove or refute.** Properties are stated over all inputs and proved in Lean. A false statement is refuted with a counterexample, never weakened. The build rejects `sorry`, `native_decide` and new axioms.
+4. **Review.** A separate agent that did not write the model checks it against the source, runs each property on the real interpreter, and asks whether a broken implementation would also satisfy the theorem. Only rows marked `FAITHFUL` in `coverage/review/` count as covered.
+
+When a refuted property turns out to be CPython's fault, it becomes a bug record in `bugs/`: a reproducer that prints `REPRODUCED` on 3.15.2, the cause with line numbers, a duplicate search of the CPython tracker, and a priority.
 
 ## Layout
 
 ```
-lean/PyLean/Core.lean            Py α = Except PyExc α, bitLength, Py_ssize_t limits
-lean/PyLean/Registry.lean        one entry per property: source, status, theorem
-lean/PyLean/<Module>/Model.lean  the model, with Lib/<file>.py line citations
-lean/PyLean/<Module>/*.lean      properties + proofs / refutations
-lean/DiffMain.lean               `pydiff`: JSON-lines driver for differential tests
-lean/Audit.lean                  checks every registry theorem's type and axioms
-difftest/                        generates cases, runs CPython and `pydiff`, compares
-bugs/*.yaml                      refutations with reproducers, cause, dup search
-scripts/audit.sh                 build + forbidden-escape grep + audit + difftest + repros
-AGENTS.md                        playbook for modelling a new module
+lean/PyLean/<Area>/        models and proofs, one directory per area of CPython
+lean/PyLean/Registry.lean  one entry per property: source citation, status, theorem
+lean/Audit.lean            checks every registry theorem and the axioms it uses
+lean/DiffMain.lean         `pydiff`, the Lean side of the differential tests
+difftest/                  case generators and the harness that compares Lean with CPython
+coverage/methods/          the inventory: one row per function with its status
+coverage/review/           independent review verdicts (FAITHFUL / HOLLOW) per row
+bugs/                      one YAML record per finding; FINDINGS.md lists them
+reports/                   triage of bug records and draft upstream issues
+site/                      generator for the write-up (docs/index.html)
+AGENTS.md                  instructions the modelling agents follow
+coverage/REVIEW_PROMPT.md  instructions the reviewing agents follow
 ```
 
-## Running
+## Running it
 
-Everything heavy runs on a SkyPilot pod on our own Kubernetes cluster, never locally:
+You need the Lean toolchain pinned in `lean/lean-toolchain` (Lean 4.35.0, installed by `elan`) and a CPython 3.15.2 build on `PATH` as `python3`. A full build is large: plan for a machine with 64 GB of RAM or more.
 
 ```sh
-sky launch -c pylean sky/builder.yaml -i 5 --down -y -d   # once; the pod only holds caches
-scripts/r python3 difftest/ipaddress_diff.py --cases 50000   # model vs CPython
-scripts/r python3 scripts/check_bugs.py                      # every bug still reproduces
-scripts/r scripts/audit.sh                                   # everything, fails on any open property
+cd lean && lake build && lake env lean Audit.lean      # build every model and proof, then audit
+python3 difftest/rangeslice_diff.py --cases 50000       # one area's model against CPython
+python3 scripts/check_bugs.py                           # every bug record still reproduces
+python3 scripts/check_coverage.py                       # coverage totals from the inventory
 ```
 
-## Status
+We ran heavy jobs on a build machine on our own Kubernetes cluster. `sky/builder.yaml` sets it up with SkyPilot, and `scripts/r <command>` syncs the checkout and runs the command there.
 
-Pilot module: `Lib/ipaddress.py` integer core (network construction,
-`summarize_address_range`, `subnets`, `supernet`, indexing, containment,
-`overlaps`, `subnet_of`, `address_exclude`). The model agrees with CPython
-3.14.7 on 200k differential cases. 11 properties: 9 proven for every input,
-2 refuted (`bugs/`). The proofs hold for any address width, not just 32/128.
+## Doing this for another project
+
+Nothing here is specific to Python. To apply the method to another language, library or format:
+
+- Start from `AGENTS.md` and `coverage/REVIEW_PROMPT.md`, and replace the CPython specifics.
+- Build an inventory of every function in one pinned version (`scripts/list_python_functions.py` is ours).
+- Keep coverage counted only through independent review (`scripts/check_coverage.py`).
+
+The write-up's last sections list the practices that mattered most.
+
+## Credits
+
+Built by David Andrews with AI agents running Claude Opus 5.5 in Claude Code. Inspired by Miles Cranmer's [julia-in-lean](https://github.com/MilesCranmer/julia-in-lean).
