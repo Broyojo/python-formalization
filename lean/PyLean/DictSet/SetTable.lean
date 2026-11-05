@@ -788,12 +788,20 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
       simp only [Nat.zero_add] at r2
       let so' : SetObj K := { so with
         mask := m, table := t, fill := so.used
-        tableId := if r == PySet_MINSIZE then 0 else so.reuse.headD so.nextId
+        tableId := if r == PySet_MINSIZE then 0
+          else match so.reuse with
+            | (a, _) :: _ => a
+            | [] => so.nextId
+        stale := if r == PySet_MINSIZE then []
+          else match so.reuse with
+            | (_, b) :: _ => b.drop r
+            | [] => []
         reuse := if r == PySet_MINSIZE then so.reuse else so.reuse.tail
         nextId := so.nextId + 1 }
       refine ⟨so', ?_, ?_, r3, rfl, rfl, ?_⟩
       · have hr1 : reinsertAll (r - 1) (List.replicate r Slot.null) so.table = .ok t := r1
         simp [setTableResize, M.bind_run, M.get_run, M.lift_run, hr, hno, hbig, hr1, so', m]
+        constructor <;> split <;> rfl
       · exact { toSetCore := r2.of_fields rfl rfl rfl rfl
                 load := by
                   show so.used * 5 < m * 3

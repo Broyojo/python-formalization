@@ -326,8 +326,9 @@ What a turn ends with:
 * `found_active`: nothing more (:328-330);
 * `goto restart` (:294-295): the next turn, from the state `__eq__` left, with its mask and table and
   no `freeslot` (:264-269);
-* a NULL and no `freeslot`: the key goes at the NULL, `fill` and `used` grow, and the table grows
-  when `fill * 5 >= mask * 3` for the mask of the walk (:319-326);
+* a NULL and no `freeslot`: the key goes at the NULL, through the pointer (`storeAt`: past the end
+  of the table it lands in the stale bytes), `fill` and `used` grow, and the table grows when
+  `fill * 5 >= mask * 3` for the mask of the walk (:319-326);
 * a NULL and a `freeslot` that is still a dummy: the key goes in the dummy and `used` grows, not
   `fill` (:314-317);
 * a NULL and a `freeslot` that `__eq__` refilled (`freeslot->hash != -1`, :311-313): the next turn.
@@ -368,10 +369,9 @@ def SetAddRestart : Prop :=
           so.mask none so = (.ok (.unused slot none m), s') →
         setAddEntryAux P key hash (n + 1) so =
           if (s'.fill + 1) * 5 < m * 3 then
-            (.ok (), { s' with fill := s'.fill + 1, used := s'.used + 1,
-                               table := s'.table.set slot (.active key hash) })
-          else setGrow { s' with fill := s'.fill + 1, used := s'.used + 1,
-                                 table := s'.table.set slot (.active key hash) }) ∧
+            (.ok (), { s'.storeAt slot (.active key hash) with fill := s'.fill + 1, used := s'.used + 1 })
+          else
+            setGrow { s'.storeAt slot (.active key hash) with fill := s'.fill + 1, used := s'.used + 1 }) ∧
       (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
           so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f = .dummy →
         setAddEntryAux P key hash (n + 1) so =
@@ -781,47 +781,81 @@ theorem setDeallocOrder_proven : SetDeallocOrder := fun _ _ _ => ⟨rfl, rfl⟩
 
 /-! ## The table re-check of `set_compare_entry_lock_held` and `set_add_entry_takeref` -/
 
-/-- Keys below 50 hash to themselves; key `99` hashes to `10`. -/
+/-- Keys hash to themselves, except `9999`, which hashes to `700` (the reproducer's `Key`). -/
 def abaPlain : Proto Nat (SetObj Nat) :=
-  { natSetProto with hashM := fun k s => (.ok (if k = 99 then 10 else k), s) }
+  { natSetProto with hashM := fun k s => (.ok (if k = 9999 then 700 else k), s) }
 
-/-- `{10, ..., 15}`, what `__eq__` refills the set from. -/
-def abaRefill : SetObj Nat :=
-  setProg abaPlain [.add 10, .add 11, .add 12, .add 13, .add 14, .add 15] { ident := 77 }
+/-- The reproducer's `s` after `s.update(frozenset(range(400)) | {e})`: a 1024-slot table at
+address 5 holding `0..399` at their slots and `e` (`700`) at slot 700. -/
+def abaStart : SetObj Nat :=
+  { mask := 1023, fill := 401, used := 401, tableId := 5, nextId := 6
+    table := (List.range 1024).map fun i =>
+      if i < 400 then .active i i else if i = 700 then .active 700 700 else .null }
 
-/-- `10 == 99` on the 32-slot table: `s.clear()`, which frees the table, then `s.update(refill)`,
-which makes a 16-slot table; the allocator hands back the address just freed, as glibc does in
-bugs/dictset-set-lookup-table-aba. -/
-def abaProto : Proto Nat (SetObj Nat) :=
+/-- The reproducer's `small`: forty keys, a 128-slot table. -/
+def abaSmall : SetObj Nat :=
+  setProg abaPlain ((List.range 40).map fun i => .add (2000 + i)) { ident := 77 }
+
+/-- What `e.__eq__` does: `s.clear()`, which frees the 1024-slot table, then `s.update(small)`,
+which allocates a 128-slot table; the allocator hands back the block just freed, with its bytes. -/
+def abaRefill (s : SetObj Nat) : SetObj Nat :=
+  (setMerge abaPlain abaSmall { setClearInternal s with reuse := [(s.tableId, s.table)] }).2
+
+/-- `e.__eq__` answers `ret` after the refill (yes for the discard, no for the add). -/
+def abaProto (ret : Bool) : Proto Nat (SetObj Nat) :=
   { abaPlain with
     eq := fun a b s =>
-      if a = 10 ∧ b = 99 ∧ s.mask = 31 then
-        (.ok false, (setMerge abaPlain abaRefill { setClearInternal s with reuse := [s.tableId] }).2)
-      else (.ok (a == b), s) }
+      if a = 700 ∧ b = 9999 ∧ s.mask = 1023 then (.ok ret, abaRefill s) else (.ok (a == b), s) }
 
-/-- `{10, 1, 2, 3, 4}`: a 32-slot malloc'ed table, `10` at slot 10. -/
-def abaStart : SetObj Nat := setProg abaPlain [.add 10, .add 1, .add 2, .add 3, .add 4] {}
-
-/-- The world `__eq__` leaves: the same table identity, mask 15 instead of 31, and `10` still at
-slot 10, so CPython's re-check `table != so->table || entry->key != startkey` (:159, :294) does
-not fire. The lookup goes on with no restart; the add reloads `mask` (:296), walks on from slot 10
-with the block the old mask allowed, and reaches slot 16, past the end of the new table, where it
-stores: `used` becomes 7 while the table holds 6 keys, CPython's `len(s)` one over.
-
-Scope: the model reads a slot past the end of a table as NULL (`List.getD`) and drops a store there
-(`List.set`). CPython reads and writes the stale bytes of the old table: a lookup that finds the old
-entry past the end (the discard that frees a key, in the bug record) is not expressible. -/
+/-- The bug's configuration, in the model: after `e.__eq__` the table is the 128-slot one at the
+old address, entry 700 lies past its end, and the stale bytes there still hold `e`. So the re-check
+`table != so->table || entry->key != startkey` (:159, :294) does not fire.
+* `s.discard(Key())` (`e.__eq__` answers yes): the lookup reports `e` found at entry 700, and
+  `set_discard_entry` writes a dummy there, past the end of the table, decrements `used` to 39 while
+  the table holds 40 keys, none of them `e`: it gives up a reference the set does not own (the
+  `Py_DECREF(old_key)` of :596 that frees `e` in the reproducer), and CPython's `len(s)` is one short.
+* `s.add(Key())` (`e.__eq__` answers no): the add reloads `mask` (:296), goes on from entry 700 to
+  entry 701 of the old block, past the end, finds it NULL (the freed table had nothing there) and
+  stores the key there: `used` 41 for 40 keys, `len(s)` one over.
+CPython 3.15.2 and main do this with these sizes (bugs/dictset-set-lookup-table-aba.yaml:
+`len(s)` 39 and 41 against 40 items, `e` freed while a frozenset holds it). Scope: within a walk the
+model reads an entry past the end of the table as NULL; here the stale entry is NULL too. -/
 theorem aba_probe :
-    abaStart.mask = 31 ∧ abaStart.slot 10 = .active 10 10 ∧
-    (abaProto.eq 10 99 abaStart).1 = .ok false ∧
-    (abaProto.eq 10 99 abaStart).2.mask = 15 ∧
-    (abaProto.eq 10 99 abaStart).2.tableId = abaStart.tableId ∧
-    (abaProto.eq 10 99 abaStart).2.slot 10 = .active 10 10 ∧
-    (lookStep abaProto false 99 10 10 abaStart).1 = .ok (.inr ()) ∧
-    (addStep abaProto 99 10 10 31 none abaStart).1 = .ok (.inr (15, none)) ∧
-    (setAddKey abaProto 99 abaStart).2.used = 7 ∧
-    (setKeys (setAddKey abaProto 99 abaStart).2).length = 6 := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+    abaStart.slot 700 = .active 700 700 ∧
+    ((abaProto true).eq 700 9999 abaStart).1 = .ok true ∧
+    ((abaProto false).eq 700 9999 abaStart).1 = .ok false ∧
+    (abaRefill abaStart).mask = 127 ∧ (abaRefill abaStart).tableId = 5 ∧
+    (abaRefill abaStart).slot 700 = .null ∧ (abaRefill abaStart).mem 700 = .active 700 700 ∧
+    (lookStep (abaProto true) false 9999 700 700 abaStart).1 = .ok (.inl (.found 700)) ∧
+    (addStep (abaProto false) 9999 700 700 1023 none abaStart).1 = .ok (.inr (127, none)) ∧
+    (setDiscardKey (abaProto true) 9999 abaStart).1 = .ok true ∧
+    (setDiscardKey (abaProto true) 9999 abaStart).2.used = 39 ∧
+    (setKeys (setDiscardKey (abaProto true) 9999 abaStart).2).length = 40 ∧
+    (setKeys (setDiscardKey (abaProto true) 9999 abaStart).2).all (· ≠ 700) = true ∧
+    (setAddKey (abaProto false) 9999 abaStart).2.used = 41 ∧
+    (setKeys (setAddKey (abaProto false) 9999 abaStart).2).length = 40 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+theorem aba_eq (ret : Bool) :
+    (abaProto ret).eq 700 9999 abaStart = (.ok ret, abaRefill abaStart) := by
+  have h : abaStart.mask = 1023 := rfl
+  simp [abaProto, h]
+
+theorem aba_str (ret : Bool) : ¬ (((abaProto ret).isStr 700 = true ∧ (abaProto ret).isStr 9999 = true) ∧
+    (abaProto ret).strEq 700 9999 = true) := by
+  cases ret <;> decide
+
+/-- The narrowed failure paths of round 2, without the guard `slot < s'.table.length`: a restart
+whenever the table pointer differs or the entry reads as something other than `startkey`. False:
+the entry is read through the old pointer, and past the end of the new table it reads stale bytes. -/
+def SetProbeFailureUnguarded : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key startkey : K) (hash : Int) (slot : Nat)
+    (so s' : SetObj K) (b : Bool),
+    so.slot slot = .active startkey hash → startkey ≠ key →
+    ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
+    (s'.tableId ≠ so.tableId ∨ ∀ h, s'.slot slot ≠ .active startkey h) →
+    P.eq startkey key so = (.ok b, s') →
+    lookStep P false key hash slot so = (.ok (.inl .restart), s')
 
 /-- The claim the review found false on 3.15.2: when `__eq__` has replaced the table by one of
 another size, the lookup starts over. -/
@@ -842,26 +876,28 @@ def SetAddRestartsOnResize : Prop :=
     P.eq startkey key so = (.ok false, s') → s'.mask ≠ so.mask →
     addStep P key hash slot mask fs so = (.ok (.inl .restart), s')
 
-theorem aba_eq : abaProto.eq 10 99 abaStart = (.ok false, (abaProto.eq 10 99 abaStart).2) :=
-  Prod.ext aba_probe.2.2.1 rfl
-
-theorem aba_str : ¬ ((abaProto.isStr 10 = true ∧ abaProto.isStr 99 = true) ∧
-    abaProto.strEq 10 99 = true) := by decide
+theorem setProbeFailureUnguarded_refuted : ¬SetProbeFailureUnguarded := by
+  intro h
+  have h1 := h Nat (abaProto true) 9999 700 700 700 abaStart _ true aba_probe.1 (by decide) (aba_str true)
+    (Or.inr fun hh => by rw [aba_probe.2.2.2.2.2.1]; exact nofun) (aba_eq true)
+  have h2 := congrArg Prod.fst h1
+  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
+  exact nomatch h2
 
 theorem setLookupRestartsOnResize_refuted : ¬SetLookupRestartsOnResize := by
   intro h
-  have h1 := h Nat abaProto 99 10 10 10 abaStart _ false aba_probe.2.1 (by decide) aba_str aba_eq
-    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h1 := h Nat (abaProto true) 9999 700 700 700 abaStart _ true aba_probe.1 (by decide) (aba_str true)
+    (aba_eq true) (by rw [aba_probe.2.2.2.1]; decide)
   have h2 := congrArg Prod.fst h1
-  rw [aba_probe.2.2.2.2.2.2.1] at h2
+  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
   exact nomatch h2
 
 theorem setAddRestartsOnResize_refuted : ¬SetAddRestartsOnResize := by
   intro h
-  have h1 := h Nat abaProto 99 10 10 10 31 abaStart _ none aba_probe.2.1 (by decide) aba_str aba_eq
-    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h1 := h Nat (abaProto false) 9999 700 700 700 1023 abaStart _ none aba_probe.1 (by decide)
+    (aba_str false) (aba_eq false) (by rw [aba_probe.2.2.2.1]; decide)
   have h2 := congrArg Prod.fst h1
-  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
+  rw [aba_probe.2.2.2.2.2.2.2.2.1] at h2
   exact nomatch h2
 
 /-! ## `_shuffle_bits` is a bijection on 64-bit words -/
