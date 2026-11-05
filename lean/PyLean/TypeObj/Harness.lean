@@ -154,7 +154,7 @@ def ibinopE (rt : Rt) (op : BinOpE) (a b : Val) : M Val :=
   | .band => binaryIop rt a b .nb_inplace_and .nb_and "&="
   | .bor => binaryIop rt a b .nb_inplace_or .nb_or "|="
   | .bxor => binaryIop rt a b .nb_inplace_xor .nb_xor "^="
-  | .pow => ternaryIop rt a b .none
+  | .pow => pyNumberInPlacePowerNoMod rt a b
 
 /-- Globals dict store. -/
 def storeGlobal (env : Env) (n : Name) (v : Val) : M Unit :=

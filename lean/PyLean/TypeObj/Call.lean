@@ -1337,6 +1337,14 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [o] => pyNumberAbsolute rt o
     | _ => typeErr s!"abs() takes exactly one argument ({args.length} given)"
+  | .countOf | .indexOf =>
+    -- `_operator_countOf_impl` and `_operator_indexOf_impl`, `Modules/_operator.c`, after
+    -- `_PyArg_CheckPositional(name, nargs, 2, 2)`.
+    let (nm, op) := if b matches .countOf then ("countOf", IterSearchOp.count)
+      else ("indexOf", IterSearchOp.index)
+    match args with
+    | [a, c] => .int <$> pySequenceIterSearch rt a c op
+    | _ => typeErr s!"{nm} expected 2 arguments, got {args.length}"
   | .divmod =>
     match args with
     | [a, c] => binaryOp rt a c .nb_divmod "divmod()"

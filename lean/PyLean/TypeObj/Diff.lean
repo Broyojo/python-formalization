@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.TypeObj.Harness
 import PyLean.TypeObj.StructSeqDiff
 import PyLean.TypeObj.FromSpec
+import PyLean.TypeObj.Buffer
 
 /-! Differential-testing handler for `typeobj` cases (`"mod": "typeobj"`).
 
@@ -157,6 +158,21 @@ def run (fn : String) (j : Json) : Except String Json := do
     let e ← getInt j "extra"
     let sp ← getInt j "spec"
     pure (Json.mkObj [("ok", toJson (sizedHeaptypes e sp))])
+  | "buffer_contig" =>
+    -- `PyBuffer_IsContiguous` on the `Py_buffer` of a `_testbuffer.ndarray`.
+    let ints (k : String) : Except String (List Int) := do
+      (← (← field j k).getArr?).toList.mapM (·.getInt?)
+    let strides ← match j.getObjVal? "strides" with
+      | .ok .null | .error _ => pure none
+      | .ok _ => some <$> ints "strides"
+    let len ← getInt j "len"
+    let itemsize ← getInt j "itemsize"
+    let ndim ← getNat j "ndim"
+    let shape ← ints "shape"
+    let sub ← getBool j "suboffsets"
+    let v : BufView := BufView.mk len itemsize ndim shape strides sub
+    let o ← getStr j "order"
+    pure (Json.mkObj [("ok", toJson (isContiguous v (o.toList.headD ' ')))])
   | "ss_newtype" | "ss_inittype" | "ss_repr" | "ss_capi" | "ss_new" | "ss_reduce" | "ss_replace" =>
     StructSeq.Diff.run fn j
   | _ => throw s!"unknown fn {fn}"

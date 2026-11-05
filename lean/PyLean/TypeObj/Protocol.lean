@@ -609,6 +609,8 @@ def builtinConv : Builtin → String × MethConv
   | .dir => ("dir", .fast)
   | .abs => ("abs", .o)
   | .divmod => ("divmod", .fast)
+  | .countOf => ("countOf", .fast)
+  | .indexOf => ("indexOf", .fast)
   | .format => ("format", .fast)
   | .propertyGetter => ("getter", .o)
   | .propertySetter => ("setter", .o)
@@ -1862,6 +1864,14 @@ def ternaryIop (rt : Rt) (v w' z : Val) : M Val := do
   match x with
   | .notImpl => ternaryOp rt v w' z "**="
   | x => pure x
+
+/-- `PyNumber_InPlacePower`, `Objects/abstract.c:1359-1363`: `ternary_iop` with
+`nb_inplace_power`, `nb_power` and `"**="`, which `ternaryIop` fixes. -/
+def pyNumberInPlacePower (rt : Rt) (v w' z : Val) : M Val := ternaryIop rt v w' z
+
+/-- `_PyNumber_InPlacePowerNoMod`, `Objects/abstract.c:1366-1369`: `x **= y`, with `z = None`. -/
+def pyNumberInPlacePowerNoMod (rt : Rt) (lhs rhs : Val) : M Val :=
+  pyNumberInPlacePower rt lhs rhs .none
 
 /-- `UNARY_FUNC`, `Objects/abstract.c:1374`. -/
 def unaryFunc (rt : Rt) (s : Slot) (dunder descr : String) (o : Val) : M Val := do

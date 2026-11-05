@@ -233,7 +233,7 @@ def builtinFunctions : List (Name × Builtin) :=
    ("setattr", .setattr), ("delattr", .delattr), ("hasattr", .hasattr), ("len", .len),
    ("iter", .iter), ("next", .next), ("repr", .repr), ("hash", .hash),
    ("callable", .callable), ("dir", .dir), ("abs", .abs), ("divmod", .divmod), ("pow", .pow),
-   ("format", .format), ("_hash", .hashProbe)]
+   ("format", .format), ("_hash", .hashProbe), ("countOf", .countOf), ("indexOf", .indexOf)]
 
 /-- The initial world and the `builtins` namespace. -/
 def initialState : World × NameDict :=

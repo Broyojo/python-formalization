@@ -233,6 +233,9 @@ inductive Builtin where
   -- builtins module
   | isinstance | issubclass | getattr | setattr | delattr | hasattr | len | iter | next
   | repr | hash | callable | dir | abs | divmod | pow | format | ascii | vars
+  /-- `operator.countOf` and `operator.indexOf` (`Modules/_operator.c`), which are
+  `PySequence_Count` and `PySequence_Index`. -/
+  | countOf | indexOf
   -- property
   | propertyGetter | propertySetter | propertyDeleter | propertySetName
   -- sequences
