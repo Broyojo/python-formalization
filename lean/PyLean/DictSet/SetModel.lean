@@ -20,9 +20,11 @@ inductive Slot (K : Type) where
 /-- `PySetObject`. `tableId` stands for the pointer `so->table`: 0 is `so->smalltable`,
 which is exactly the case `mask == 7`. `ident` is the object's address. `frozen` is
 `PyFrozenSet_Check`, `exact` is `PyAnySet_CheckExact`, `tname` is `tp_name`. `reuse` is the
-allocator, as an oracle: the addresses `PyMem_NEW` hands this set's next malloc'ed tables, in order,
-and once it is empty a new address (`nextId`). Nothing stops it from handing back the address of a
-table that was freed, with another size: CPython's allocator does (bugs/dictset-set-lookup-table-aba). -/
+allocator, as an oracle: the blocks `PyMem_NEW` hands this set's next malloc'ed tables, in order, each
+an address and the bytes it still holds, and once it is empty a new address (`nextId`) with nothing
+in it. Nothing stops it from handing back the block of a table that was freed, with another size:
+CPython's allocator does (bugs/dictset-set-lookup-table-aba). `stale` is what the block holds past
+the end of the current table: the freed table's entries from `mask + 1` on. -/
 structure SetBody (K : Type) where
   ident : Nat := 0
   fill : Nat := 0
@@ -33,7 +35,8 @@ structure SetBody (K : Type) where
   finger : Nat := 0
   tableId : Nat := 0
   nextId : Nat := 1
-  reuse : List Nat := []
+  reuse : List (Nat × List (Slot K)) := []
+  stale : List (Slot K) := []
   frozen : Bool := false
   exact : Bool := true
   tname : String := "set"
@@ -57,6 +60,42 @@ namespace SetObj
 def slot (so : SetObj K) (i : Nat) : Slot K := so.table.getD i .null
 /-- `PyFrozenSet_CheckExact(so)`. -/
 def frozenExact (so : SetObj K) : Bool := so.frozen && so.exact
+/-- The entry at index `i` as C reads it through `&table[i]`: in the table, the table's; past its
+end, the bytes the block still holds there (`stale`), NULL where it holds none. The set model reads
+entries only this way; `slot` is the table's own view (iteration, the theorems on well-formed tables,
+where the two agree: `mem_lt`, `mem_active`, `mem_of_ne_null`). -/
+def mem (so : SetObj K) (i : Nat) : Slot K :=
+  if i < so.table.length then so.slot i else so.stale.getD (i - so.table.length) .null
+
+/-- A store through `&table[i]`: in the table, or past its end into the stale bytes. -/
+def storeAt (so : SetObj K) (i : Nat) (x : Slot K) : SetObj K :=
+  if i < so.table.length then { so with table := so.table.set i x }
+  else { so with stale := so.stale.set (i - so.table.length) x }
+
+theorem mem_lt (so : SetObj K) {i : Nat} (h : i < so.table.length) : so.mem i = so.slot i := by
+  simp [mem, h]
+
+theorem mem_active (so : SetObj K) {i : Nat} {k : K} {hh : Int} (h : so.slot i = .active k hh) :
+    so.mem i = .active k hh := by
+  unfold mem
+  split
+  · exact h
+  · rename_i hn
+    have : so.table[i]? = none := List.getElem?_eq_none (by omega)
+    simp [slot, List.getD, this] at h
+
+theorem mem_of_ne_null (so : SetObj K) {i : Nat} (h : so.slot i ≠ .null) : so.mem i = so.slot i := by
+  unfold mem
+  split
+  · rfl
+  · rename_i hn
+    have : so.table[i]? = none := List.getElem?_eq_none (by omega)
+    simp [slot, List.getD, this] at h
+
+theorem storeAt_lt (so : SetObj K) {i : Nat} (x : Slot K) (h : i < so.table.length) :
+    so.storeAt i x = { so with table := so.table.set i x } := by
+  simp [storeAt, h]
+
 /-- `sizeof(PySetObject)` is 200 on a 64-bit build; `set___sizeof___impl` (:2741-2750). -/
 def sizeOf (so : SetObj K) : Nat := if so.tableId != 0 then 200 + (so.mask + 1) * 16 else 200
 end SetObj
@@ -85,7 +124,7 @@ variable [DecidableEq K] (P : Proto K (SetObj K))
 `table != so->table || entry->key != startkey` (:159). -/
 def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
   decide (table ≠ so.tableId) ||
-    match so.slot slot with
+    match so.mem slot with
     | .active k _ => decide (k ≠ startkey)
     | _ => true
 
@@ -93,7 +132,7 @@ def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
 entry. `SET_LOOKKEY_EMPTY` and `SET_LOOKKEY_FOUND` both end it at this slot. -/
 def compareLocked (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.found slot)
   | .dummy => return .inr ()
   | .active startkey h =>
@@ -112,7 +151,7 @@ def compareLocked (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit)
 identity test comes before the hash test, so a key found by identity need not have kept its hash. -/
 def compareFrozen (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.found slot)
   | .dummy => return .inr ()
   | .active startkey h =>
@@ -160,8 +199,12 @@ restart walks the table `__eq__` left. `256` turns stand for "until no `__eq__` 
 
 `setChanged` compares `tableId`, the table's address: the allocator (`SetBody.reuse`) can hand
 back a freed table's address with another mask, and then, as in CPython, the test passes and the
-walk goes on with the old mask (`aba_probe`, bugs/dictset-set-lookup-table-aba.yaml). Scope: a slot
-past the end of the table reads as NULL here, where CPython reads the old table's stale bytes. -/
+walk goes on with the old mask (`aba_probe`, bugs/dictset-set-lookup-table-aba.yaml). The re-check
+and the entry functions read through the pointer (`SetObj.mem`): past the end of the table, the
+freed block's stale bytes. Every read of an entry in the probe walks (`compareLocked`,
+`compareFrozen`, `addStep`, the `freeslot` test) and in the entry functions goes through
+`SetObj.mem`, and every store of the add and discard through `storeAt`, as C reads and writes
+through `&table[i]`. -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
@@ -247,7 +290,14 @@ def setTableResize (minused : Nat) : SM K Unit := do
     mask := newsize - 1
     table := t
     fill := so.used
-    tableId := if newsize == PySet_MINSIZE then 0 else so.reuse.headD so.nextId
+    tableId := if newsize == PySet_MINSIZE then 0
+      else match so.reuse with
+        | (a, _) :: _ => a
+        | [] => so.nextId
+    stale := if newsize == PySet_MINSIZE then []
+      else match so.reuse with
+        | (_, b) :: _ => b.drop newsize
+        | [] => []
     reuse := if newsize == PySet_MINSIZE then so.reuse else so.reuse.tail
     nextId := so.nextId + 1 }
 
@@ -275,7 +325,7 @@ walk (:275-276); an entry with the hash is the same object, an equal exact `str`
 def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
     SM K (AddScan ⊕ (Nat × Option Nat)) := do
   let so ← M.get
-  match so.slot slot with
+  match so.mem slot with
   | .null => return .inl (.unused slot freeslot mask)
   | .dummy =>
     -- else if (entry->hash == -1): the last dummy seen wins
@@ -336,17 +386,16 @@ def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
       match freeslot with
       | none =>
         -- found_unused
-        let so' := { so with
+        let so' := { so.storeAt slot (.active key hash) with
           fill := so.fill + 1
-          used := so.used + 1
-          table := so.table.set slot (.active key hash) }
+          used := so.used + 1 }
         M.put so'
         if so'.fill * 5 < mask * 3 then return ()
         setGrow
       | some fs =>
-        match so.slot fs with
+        match so.mem fs with
         | .dummy =>
-          M.put { so with used := so.used + 1, table := so.table.set fs (.active key hash) }
+          M.put { so.storeAt fs (.active key hash) with used := so.used + 1 }
         | _ => setAddEntryAux key hash restarts
 
 def setAddEntry (key : K) (hash : Int) : SM K Unit := setAddEntryAux P key hash 256
@@ -376,7 +425,7 @@ def setAddKey (key : K) : SM K Unit := do
 def setContainsEntry (key : K) (hash : Int) : SM K Bool := do
   let s ← setLookkey P key hash
   let so ← M.get
-  match so.slot s with
+  match so.mem s with
   | .null => return false
   | _ => return true
 
@@ -389,10 +438,10 @@ def setContainsKey (key : K) : SM K Bool := do
 def setDiscardEntry (key : K) (hash : Int) : SM K Bool := do
   let s ← setLookkey P key hash
   let so ← M.get
-  match so.slot s with
+  match so.mem s with
   | .null => return false
   | _ =>
-    M.put { so with used := so.used - 1, table := so.table.set s .dummy }
+    M.put { so.storeAt s .dummy with used := so.used - 1 }
     return true
 
 /-- `set_discard_key` (:622-631), `PySet_Discard` (:3082-3095). -/
@@ -410,6 +459,7 @@ def setEmptyToMinsize (so : SetObj K) : SetObj K :=
     used := 0
     mask := PySet_MINSIZE - 1
     tableId := 0
+    stale := []
     hash := -1 }
 
 /-- `set_clear_internal` (:645-694), `_PySet_ClearInternal`, `PySet_Clear`, `set.clear`. -/

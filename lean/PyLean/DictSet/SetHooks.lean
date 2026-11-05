@@ -202,7 +202,7 @@ variable {K : Type} [DecidableEq K] (P : Proto K (SetObj K))
 theorem lookStep_frozen_ne_restart (key : K) (hash : Int) (slot : Nat) (s : SetObj K) :
     (lookStep P true key hash slot s).1 ≠ .ok (.inl .restart) := by
   simp only [lookStep, if_true, compareFrozen, M.bind_run, M.get_run]
-  cases hs : s.slot slot with
+  cases hs : s.mem slot with
   | null => simp [hs]
   | dummy => simp [hs]
   | active k h =>
@@ -326,11 +326,15 @@ What a turn ends with:
 * `found_active`: nothing more (:328-330);
 * `goto restart` (:294-295): the next turn, from the state `__eq__` left, with its mask and table and
   no `freeslot` (:264-269);
-* a NULL and no `freeslot`: the key goes at the NULL, `fill` and `used` grow, and the table grows
-  when `fill * 5 >= mask * 3` for the mask of the walk (:319-326);
+* a NULL and no `freeslot`: the key goes at the NULL, through the pointer (`storeAt`: past the end
+  of the table it lands in the stale bytes), `fill` and `used` grow, and the table grows when
+  `fill * 5 >= mask * 3` for the mask of the walk (:319-326);
 * a NULL and a `freeslot` that is still a dummy: the key goes in the dummy and `used` grows, not
   `fill` (:314-317);
 * a NULL and a `freeslot` that `__eq__` refilled (`freeslot->hash != -1`, :311-313): the next turn.
+The `freeslot` test and store, like every read of an entry, go through the pointer (`SetObj.mem`,
+`storeAt`): a `freeslot` recorded before `__eq__` put a smaller table at the old address can lie past
+its end, and then C tests and stores into the freed table's dummy there.
 
 The table test of `addStep` is CPython's pointer test, with the allocator of `setLookkeyAux`'s
 docstring: a freed address can come back (`SetAddRestartsOnResize`, refuted). -/
@@ -368,16 +372,15 @@ def SetAddRestart : Prop :=
           so.mask none so = (.ok (.unused slot none m), s') →
         setAddEntryAux P key hash (n + 1) so =
           if (s'.fill + 1) * 5 < m * 3 then
-            (.ok (), { s' with fill := s'.fill + 1, used := s'.used + 1,
-                               table := s'.table.set slot (.active key hash) })
-          else setGrow { s' with fill := s'.fill + 1, used := s'.used + 1,
-                                 table := s'.table.set slot (.active key hash) }) ∧
+            (.ok (), { s'.storeAt slot (.active key hash) with fill := s'.fill + 1, used := s'.used + 1 })
+          else
+            setGrow { s'.storeAt slot (.active key hash) with fill := s'.fill + 1, used := s'.used + 1 }) ∧
       (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
-          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f = .dummy →
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.mem f = .dummy →
         setAddEntryAux P key hash (n + 1) so =
-          (.ok (), { s' with used := s'.used + 1, table := s'.table.set f (.active key hash) })) ∧
+          (.ok (), { s'.storeAt f (.active key hash) with used := s'.used + 1 })) ∧
       (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
-          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f ≠ .dummy →
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.mem f ≠ .dummy →
         setAddEntryAux P key hash (n + 1) so = setAddEntryAux P key hash n s')
 theorem setAddRestart_proven : SetAddRestart := by
   intro K _ P key hash so s'
@@ -781,47 +784,112 @@ theorem setDeallocOrder_proven : SetDeallocOrder := fun _ _ _ => ⟨rfl, rfl⟩
 
 /-! ## The table re-check of `set_compare_entry_lock_held` and `set_add_entry_takeref` -/
 
-/-- Keys below 50 hash to themselves; key `99` hashes to `10`. -/
+/-- Keys hash to themselves, except `9999`, which hashes to `700` (the reproducer's `Key`). -/
 def abaPlain : Proto Nat (SetObj Nat) :=
-  { natSetProto with hashM := fun k s => (.ok (if k = 99 then 10 else k), s) }
+  { natSetProto with hashM := fun k s => (.ok (if k = 9999 then 700 else k), s) }
 
-/-- `{10, ..., 15}`, what `__eq__` refills the set from. -/
-def abaRefill : SetObj Nat :=
-  setProg abaPlain [.add 10, .add 11, .add 12, .add 13, .add 14, .add 15] { ident := 77 }
+/-- The reproducer's `s` after `s.update(frozenset(range(400)) | {e})`: a 1024-slot table at
+address 5 holding `0..399` at their slots and `e` (`700`) at slot 700. -/
+def abaStart : SetObj Nat :=
+  { mask := 1023, fill := 401, used := 401, tableId := 5, nextId := 6
+    table := (List.range 1024).map fun i =>
+      if i < 400 then .active i i else if i = 700 then .active 700 700 else .null }
 
-/-- `10 == 99` on the 32-slot table: `s.clear()`, which frees the table, then `s.update(refill)`,
-which makes a 16-slot table; the allocator hands back the address just freed, as glibc does in
-bugs/dictset-set-lookup-table-aba. -/
-def abaProto : Proto Nat (SetObj Nat) :=
+/-- The reproducer's `small`: forty keys, a 128-slot table. -/
+def abaSmall : SetObj Nat :=
+  setProg abaPlain ((List.range 40).map fun i => .add (2000 + i)) { ident := 77 }
+
+/-- What `e.__eq__` does: `s.clear()`, which frees the 1024-slot table, then `s.update(small)`,
+which allocates a 128-slot table; the allocator hands back the block just freed, with its bytes. -/
+def abaRefill (s : SetObj Nat) : SetObj Nat :=
+  (setMerge abaPlain abaSmall { setClearInternal s with reuse := [(s.tableId, s.table)] }).2
+
+/-- `e.__eq__` answers `ret` after the refill (yes for the discard, no for the add). -/
+def abaProto (ret : Bool) : Proto Nat (SetObj Nat) :=
   { abaPlain with
     eq := fun a b s =>
-      if a = 10 ∧ b = 99 ∧ s.mask = 31 then
-        (.ok false, (setMerge abaPlain abaRefill { setClearInternal s with reuse := [s.tableId] }).2)
-      else (.ok (a == b), s) }
+      if a = 700 ∧ b = 9999 ∧ s.mask = 1023 then (.ok ret, abaRefill s) else (.ok (a == b), s) }
 
-/-- `{10, 1, 2, 3, 4}`: a 32-slot malloc'ed table, `10` at slot 10. -/
-def abaStart : SetObj Nat := setProg abaPlain [.add 10, .add 1, .add 2, .add 3, .add 4] {}
-
-/-- The world `__eq__` leaves: the same table identity, mask 15 instead of 31, and `10` still at
-slot 10, so CPython's re-check `table != so->table || entry->key != startkey` (:159, :294) does
-not fire. The lookup goes on with no restart; the add reloads `mask` (:296), walks on from slot 10
-with the block the old mask allowed, and reaches slot 16, past the end of the new table, where it
-stores: `used` becomes 7 while the table holds 6 keys, CPython's `len(s)` one over.
-
-Scope: the model reads a slot past the end of a table as NULL (`List.getD`) and drops a store there
-(`List.set`). CPython reads and writes the stale bytes of the old table: a lookup that finds the old
-entry past the end (the discard that frees a key, in the bug record) is not expressible. -/
+/-- The bug's configuration, in the model: after `e.__eq__` the table is the 128-slot one at the
+old address, entry 700 lies past its end, and the stale bytes there still hold `e`. So the re-check
+`table != so->table || entry->key != startkey` (:159, :294) does not fire.
+* `s.discard(Key())` (`e.__eq__` answers yes): the lookup reports `e` found at entry 700, and
+  `set_discard_entry` writes a dummy there, past the end of the table, decrements `used` to 39 while
+  the table holds 40 keys, none of them `e`: it gives up a reference the set does not own (the
+  `Py_DECREF(old_key)` of :596 that frees `e` in the reproducer), and CPython's `len(s)` is one short.
+* `s.add(Key())` (`e.__eq__` answers no): the add reloads `mask` (:296), goes on from entry 700 to
+  entry 701 of the old block, past the end, finds it NULL (the freed table had nothing there) and
+  stores the key there: `used` 41 for 40 keys, `len(s)` one over.
+CPython 3.15.2 and main do this with these sizes (bugs/dictset-set-lookup-table-aba.yaml:
+`len(s)` 39 and 41 against 40 items, `e` freed while a frozenset holds it). The walk reads entry
+701 through the pointer too: the freed table had nothing there, a stale NULL. -/
 theorem aba_probe :
-    abaStart.mask = 31 ∧ abaStart.slot 10 = .active 10 10 ∧
-    (abaProto.eq 10 99 abaStart).1 = .ok false ∧
-    (abaProto.eq 10 99 abaStart).2.mask = 15 ∧
-    (abaProto.eq 10 99 abaStart).2.tableId = abaStart.tableId ∧
-    (abaProto.eq 10 99 abaStart).2.slot 10 = .active 10 10 ∧
-    (lookStep abaProto false 99 10 10 abaStart).1 = .ok (.inr ()) ∧
-    (addStep abaProto 99 10 10 31 none abaStart).1 = .ok (.inr (15, none)) ∧
-    (setAddKey abaProto 99 abaStart).2.used = 7 ∧
-    (setKeys (setAddKey abaProto 99 abaStart).2).length = 6 := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+    abaStart.slot 700 = .active 700 700 ∧
+    ((abaProto true).eq 700 9999 abaStart).1 = .ok true ∧
+    ((abaProto false).eq 700 9999 abaStart).1 = .ok false ∧
+    (abaRefill abaStart).mask = 127 ∧ (abaRefill abaStart).tableId = 5 ∧
+    (abaRefill abaStart).slot 700 = .null ∧ (abaRefill abaStart).mem 700 = .active 700 700 ∧
+    (lookStep (abaProto true) false 9999 700 700 abaStart).1 = .ok (.inl (.found 700)) ∧
+    (addStep (abaProto false) 9999 700 700 1023 none abaStart).1 = .ok (.inr (127, none)) ∧
+    (setDiscardKey (abaProto true) 9999 abaStart).1 = .ok true ∧
+    (setDiscardKey (abaProto true) 9999 abaStart).2.used = 39 ∧
+    (setKeys (setDiscardKey (abaProto true) 9999 abaStart).2).length = 40 ∧
+    (setKeys (setDiscardKey (abaProto true) 9999 abaStart).2).all (· ≠ 700) = true ∧
+    (setAddKey (abaProto false) 9999 abaStart).2.used = 41 ∧
+    (setKeys (setAddKey (abaProto false) 9999 abaStart).2).length = 40 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-- The same table with a dummy at entry 699 and `e` stored at entry 700 with hash 699 (it went in
+when 699 was taken): a key hashing to 699 records `freeslot = 699` before it compares with `e`. -/
+def abaStartDummy : SetObj Nat :=
+  { abaStart with
+    fill := 402
+    table := (List.range 1024).map fun i =>
+      if i < 400 then .active i i else if i = 699 then .dummy
+      else if i = 700 then .active 700 699 else .null }
+
+/-- Key `9999` and `e` (`700`) hash to 699; `e.__eq__` refills as before and answers no. -/
+def abaDummyProto : Proto Nat (SetObj Nat) :=
+  { abaProto false with hashM := fun k s => (.ok (if k = 9999 ∨ k = 700 then 699 else k), s) }
+
+/-- The `freeslot` path past the end: the add records the dummy at 699, `e.__eq__` puts the
+128-slot table at the old address, the re-check reads the stale `e` and passes, the walk reaches the
+stale NULL at 701 with `freeslot` 699, past the end; there C reads the freed table's dummy
+(`freeslot->hash == -1`, :311), so it does not restart: it stores the key into that entry (:314-316),
+`used` 41 for 40 keys, `fill` unchanged, and returns. -/
+theorem aba_freeslot_probe :
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).1 =
+      .ok (.unused 701 (some 699) 127) ∧
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).2.slot 699 =
+      .null ∧
+    (addOuter abaDummyProto 9999 699 (setProbeFuel 1023) 699 699 1023 none abaStartDummy).2.mem 699 =
+      .dummy ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).1 = .ok () ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).2.used = 41 ∧
+    (setAddKey abaDummyProto 9999 abaStartDummy).2.fill = 40 ∧
+    (setKeys (setAddKey abaDummyProto 9999 abaStartDummy).2).length = 40 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+theorem aba_eq (ret : Bool) :
+    (abaProto ret).eq 700 9999 abaStart = (.ok ret, abaRefill abaStart) := by
+  have h : abaStart.mask = 1023 := rfl
+  simp [abaProto, h]
+
+theorem aba_str (ret : Bool) : ¬ (((abaProto ret).isStr 700 = true ∧ (abaProto ret).isStr 9999 = true) ∧
+    (abaProto ret).strEq 700 9999 = true) := by
+  cases ret <;> decide
+
+/-- The narrowed failure paths of round 2, without the guard `slot < s'.table.length`: a restart
+whenever the table pointer differs or the entry reads as something other than `startkey`. False:
+the entry is read through the old pointer, and past the end of the new table it reads stale bytes. -/
+def SetProbeFailureUnguarded : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key startkey : K) (hash : Int) (slot : Nat)
+    (so s' : SetObj K) (b : Bool),
+    so.slot slot = .active startkey hash → startkey ≠ key →
+    ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
+    (s'.tableId ≠ so.tableId ∨ ∀ h, s'.slot slot ≠ .active startkey h) →
+    P.eq startkey key so = (.ok b, s') →
+    lookStep P false key hash slot so = (.ok (.inl .restart), s')
 
 /-- The claim the review found false on 3.15.2: when `__eq__` has replaced the table by one of
 another size, the lookup starts over. -/
@@ -842,26 +910,28 @@ def SetAddRestartsOnResize : Prop :=
     P.eq startkey key so = (.ok false, s') → s'.mask ≠ so.mask →
     addStep P key hash slot mask fs so = (.ok (.inl .restart), s')
 
-theorem aba_eq : abaProto.eq 10 99 abaStart = (.ok false, (abaProto.eq 10 99 abaStart).2) :=
-  Prod.ext aba_probe.2.2.1 rfl
-
-theorem aba_str : ¬ ((abaProto.isStr 10 = true ∧ abaProto.isStr 99 = true) ∧
-    abaProto.strEq 10 99 = true) := by decide
+theorem setProbeFailureUnguarded_refuted : ¬SetProbeFailureUnguarded := by
+  intro h
+  have h1 := h Nat (abaProto true) 9999 700 700 700 abaStart _ true aba_probe.1 (by decide) (aba_str true)
+    (Or.inr fun hh => by rw [aba_probe.2.2.2.2.2.1]; exact nofun) (aba_eq true)
+  have h2 := congrArg Prod.fst h1
+  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
+  exact nomatch h2
 
 theorem setLookupRestartsOnResize_refuted : ¬SetLookupRestartsOnResize := by
   intro h
-  have h1 := h Nat abaProto 99 10 10 10 abaStart _ false aba_probe.2.1 (by decide) aba_str aba_eq
-    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h1 := h Nat (abaProto true) 9999 700 700 700 abaStart _ true aba_probe.1 (by decide) (aba_str true)
+    (aba_eq true) (by rw [aba_probe.2.2.2.1]; decide)
   have h2 := congrArg Prod.fst h1
-  rw [aba_probe.2.2.2.2.2.2.1] at h2
+  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
   exact nomatch h2
 
 theorem setAddRestartsOnResize_refuted : ¬SetAddRestartsOnResize := by
   intro h
-  have h1 := h Nat abaProto 99 10 10 10 31 abaStart _ none aba_probe.2.1 (by decide) aba_str aba_eq
-    (by rw [aba_probe.2.2.2.1, aba_probe.1]; decide)
+  have h1 := h Nat (abaProto false) 9999 700 700 700 1023 abaStart _ none aba_probe.1 (by decide)
+    (aba_str false) (aba_eq false) (by rw [aba_probe.2.2.2.1]; decide)
   have h2 := congrArg Prod.fst h1
-  rw [aba_probe.2.2.2.2.2.2.2.1] at h2
+  rw [aba_probe.2.2.2.2.2.2.2.2.1] at h2
   exact nomatch h2
 
 /-! ## `_shuffle_bits` is a bijection on 64-bit words -/
@@ -947,5 +1017,80 @@ theorem shuffleBitsBijective_proven : ShuffleBitsBijective := by
   · obtain ⟨h1, h2⟩ := hf h hh
     calc f h = shuffleBits (unshuffleBits (f h)) := (hinv _ h1).symm
       _ = shuffleBits h := by rw [h2]
+
+/-! ## The steps of the probes, branch by branch -/
+
+/-- One step of `set_add_entry_takeref`'s walk (:275-301), for every key protocol, on the branches
+that call no `__eq__`, each in the state as it is: a NULL entry ends the walk there, carrying the
+`freeslot` it had (:275-276); an entry holding the very object (`startkey == key`, :280-281) is
+`found_active`, whatever `__eq__` would answer; two exact `str` that `unicode_eq` calls equal are
+`found_active` (:282-285); an entry with another hash is passed with `mask` and `freeslot` as they
+were; and a dummy (`entry->hash == -1`, :298-301) becomes the `freeslot`, replacing any earlier one,
+so the last dummy on the path wins. -/
+def AddStepBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot mask : Nat)
+    (fs : Option Nat) (so : SetObj K),
+    (so.mem slot = .null → addStep P key hash slot mask fs so = (.ok (.inl (.unused slot fs mask)), so)) ∧
+    (so.mem slot = .dummy → addStep P key hash slot mask fs so = (.ok (.inr (mask, some slot)), so)) ∧
+    (so.mem slot = .active key hash → addStep P key hash slot mask fs so = (.ok (.inl .active), so)) ∧
+    (∀ k, so.mem slot = .active k hash → P.isStr k = true → P.isStr key = true →
+      P.strEq k key = true → addStep P key hash slot mask fs so = (.ok (.inl .active), so)) ∧
+    (∀ k h, so.mem slot = .active k h → h ≠ hash →
+      addStep P key hash slot mask fs so = (.ok (.inr (mask, fs)), so))
+theorem addStepBranches_proven : AddStepBranches := by
+  intro K _ P key hash slot mask fs so
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h h1 h2 h3 => ?_, fun k h hm hne => ?_⟩
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · simp [addStep, M.bind_run, M.get_run, h]
+  · by_cases hk : k = key
+    · simp [addStep, M.bind_run, M.get_run, h, hk]
+    · simp [addStep, M.bind_run, M.get_run, h, hk, h1, h2, h3]
+  · simp [addStep, M.bind_run, M.get_run, hm, hne]
+
+/-- The same for `set_compare_entry_lock_held` (:138-165) and `set_compare_frozenset` (:172-193):
+a NULL entry is `SET_LOOKKEY_EMPTY`, ending the block at it; an entry holding the very object is
+`SET_LOOKKEY_FOUND` with no call to `__eq__` (:146-147, :180-182), in both; a dummy, or an entry
+with another hash in the locked compare, is passed. -/
+def LookStepBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (slot : Nat)
+    (so : SetObj K) (fr : Bool),
+    (so.mem slot = .null → lookStep P fr key hash slot so = (.ok (.inl (.found slot)), so)) ∧
+    (so.mem slot = .dummy → lookStep P fr key hash slot so = (.ok (.inr ()), so)) ∧
+    (so.mem slot = .active key hash → lookStep P fr key hash slot so = (.ok (.inl (.found slot)), so)) ∧
+    (∀ k h, so.mem slot = .active k h → h ≠ hash → k ≠ key →
+      lookStep P fr key hash slot so = (.ok (.inr ()), so))
+theorem lookStepBranches_proven : LookStepBranches := by
+  intro K _ P key hash slot so fr
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, fun k h hm hne hk => ?_⟩
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, h]
+  · cases fr <;> simp [lookStep, compareLocked, compareFrozen, M.bind_run, M.get_run, hm, hne, hk]
+
+/-- A key that is not equal to itself (`float('nan')`): every `==` answers no. -/
+def nanProto : Proto Nat (SetObj Nat) := { natSetProto with eq := fun _ _ s => (.ok false, s) }
+
+/-- The identity tests matter: with a key that is not equal to itself, `s = {x}; s.add(x)` keeps one
+element and `x in s` is `True`, because the entry holds the very object (:146-147, :280-281); an add
+or a lookup without the identity test would compare, hear no, and add a second copy or answer
+`False`. CPython 3.15.2: `len(t)` is 1 and `x in t` is True for `x = float('nan')` (probed). -/
+theorem nan_identity_probe :
+    setKeys (setAddKey nanProto 1 (setAddKey nanProto 1 {}).2).2 = [1] ∧
+    (setContainsKey nanProto 1 (setAddKey nanProto 1 {}).2).1 = .ok true := by
+  constructor <;> decide +kernel
+
+/-- Keys `1`, `2`, `3` hashing to 0 go in at slots 0, 1 and 6; discarding `1` and `3` leaves dummies at
+0 and 6 on the path of hash 0 (0, 1, 6, 7). -/
+def twoDummies : SetObj Nat := setProg plainZero [.add 1, .add 2, .add 3, .discard 1, .discard 3] {}
+
+/-- The last dummy wins (:298-301): adding `4` records the dummy at 0, then the one at 6, reaches the
+NULL at 7, and stores at 6, so iteration gives `[2, 4]`; keeping the first dummy would store at 0 and
+give `[4, 2]`. CPython 3.15.2 gives `[2, 4]` (probed). -/
+theorem last_dummy_probe :
+    twoDummies.slot 0 = .dummy ∧ twoDummies.slot 6 = .dummy ∧ setKeys twoDummies = [2] ∧
+    (addOuter plainZero 4 0 (setProbeFuel 7) 0 0 7 none twoDummies).1 = .ok (.unused 7 (some 6) 7) ∧
+    setKeys (setAddKey plainZero 4 twoDummies).2 = [2, 4] := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
 
 end PyLean.DictSet

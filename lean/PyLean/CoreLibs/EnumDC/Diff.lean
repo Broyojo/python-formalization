@@ -15,6 +15,32 @@ def getArr (j : Json) (key : String) : Except String (List Json) := do
 
 def okJ (j : Json) : Json := Json.mkObj [("ok", j)]
 
+/-- An optional string field: absent or `null` is `none`. -/
+def getOptStrD (j : Json) (key : String) : Option String :=
+  match j.getObjValAs? String key with
+  | .ok s => some s
+  | .error _ => none
+
+/-- The `_numeric_repr_` of the difftest: `hex`, one that raises `LookupError('nr')`, `lambda n: (n, n)`, whose `%s`
+has an item left over, and `lambda n: n * 10`. -/
+def numReprOf : Option String → Nat → Py String
+  | some "hex" => fun n => .ok (hexNat n)
+  | some "raise" => fun _ => .error (.named "LookupError" "nr")
+  | some "tuple2" => fun n =>
+    match pyFormat 1 (.tuple [.ok (toString n), .ok (toString n)]) with
+    | .error e => .error e
+    | .ok () => .ok (toString n)
+  | some "int10" => fun n => .ok (toString (n * 10))
+  | _ => reprNat
+
+/-- The class's own `__str__` (raising `LookupError('str')`) or `__format__` (raising `KeyError('fmt')`): one that
+returns a `str`, one that raises, and one that returns `5`. -/
+def strHookOf (what : String) (exc : PyExc) : Option String → Option (Py String)
+  | some "ok" => some (.ok "S")
+  | some "raise" => some (.error exc)
+  | some "bad" => some (.error (.typeError s!"F.{what}() must return a str, not int"))
+  | _ => none
+
 def getCls (j : Json) : Except String FlagCls := do
   let members ← (← getArr j "members").mapM fun p => do
     pure (← (← p.getArrVal? 0).getStr?, ← (← p.getArrVal? 1).getNat?)
@@ -23,7 +49,9 @@ def getCls (j : Json) : Except String FlagCls := do
     | "conform" => pure .conform
     | "eject" => pure .eject
     | _ => pure .keep
-  pure ⟨"F", members, b⟩
+  pure { name := "F", members := members, boundary := b, numRepr := numReprOf (getOptStrD j "numrepr"),
+         ownFormat := strHookOf "__format__" (.keyError "'fmt'") (getOptStrD j "fmt"),
+         ownStr := strHookOf "__str__" (.named "LookupError" "str") (getOptStrD j "str") }
 
 def outJ : FlagVal → Json
   | .flag v n => toJson [toJson "flag", toJson v, toJson n]
@@ -86,6 +114,7 @@ def decEV : Nat → Json → Except String EV
     | "inner" => pure (.inner (← v.getNat?))
     | "names" => pure (.names (← (← v.getArr?).toList.mapM decName))
     | "gen" => pure (.gen (← decGen v))
+    | "robj" => pure (.robj (← v.getStr?) (← (← j.getArrVal? 2).getNat?))
     | _ => pure (.atom (← decAtom j))
 
 def decItems (l : List Json) : Except String (List (Name × EV)) :=
@@ -107,6 +136,7 @@ def encEV : EV → Json
   | .inner i => toJson [toJson "inner", toJson i]
   | .names l => toJson [toJson "names", toJson (l.map nameJ)]
   | .gen _ => toJson [toJson "gen"]
+  | .robj _ i => toJson [toJson "robj", toJson i]
   | _ => Json.null
 
 def summaryJ (c : EClass) : Json :=
@@ -128,10 +158,24 @@ def firstGen : EKind → Gen
   | .flag => .flag
   | .strEnum => .strEnum
 
+/-- A `bool` field that may be absent. -/
+def getBoolD (j : Json) (key : String) : Bool :=
+  match j.getObjValAs? Bool key with
+  | .ok b => b
+  | .error _ => false
+
+/-- The class's own `__repr__`, when the case asks for one: `raise LookupError` (`true`), or `return 'ok'` (`"ok"`). -/
+def ownReprOf (j : Json) : Option (Name → Py String) :=
+  match j.getObjValAs? String "badrepr" with
+  | .ok "ok" => some (fun _ => .ok "ok")
+  | _ => if getBoolD j "badrepr" then some (fun _ => .error (.named "LookupError" "")) else none
+
 def decMissing (c : EClass) (j : Json) : Except String MissingRet := do
   match ← (← j.getArrVal? 0).getStr? with
   | "none" => pure .none
-  | "other" => pure .other
+  | "other" => pure (.other (.ok ""))
+  | "otherbad" => pure (.other (.error (.named "LookupError" "repr")))
+  | "bexc" => pure (.raises (.named "BExc" "b"))
   | "raises" =>
     let cls ← (← j.getArrVal? 1).getStr?
     let m ← (← j.getArrVal? 2).getStr?
@@ -233,7 +277,7 @@ def runClass (j : Json) : Except String Json := do
   | .ok d =>
     match enumTypeNew kind d with
     | .error e => pure (unitJ (.error e))
-    | .ok c => classOp d c (← field j "op")
+    | .ok c => classOp d { c with ownRepr := ownReprOf j } (← field j "op")
 
 def dictJ (d : EnumDict) : Json :=
   toJson [toJson (d.items.map fun p => toJson [nameJ p.1, encEV p.2]), toJson (d.memberNames.map nameJ),
@@ -506,6 +550,7 @@ def decPV (keys : List (Int × Option String × Option String)) (j : Json) : Exc
     | none => throw "key"
   | "robj" => pure (.robj (← v.getStr?) (← (← j.getArrVal? 2).getNat?))
   | "rint" => pure (.rint (← v.getInt?) (← (← j.getArrVal? 2).getStr?))
+  | "pair" => pure (.pair (← v.getInt?) (← (← j.getArrVal? 2).getStr?))
   | _ => pure (.list (← v.getNat?))
 
 def encPV : PV → Json
@@ -515,6 +560,7 @@ def encPV : PV → Json
   | .list i => toJson [toJson "list", toJson i]
   | .robj _ i => toJson [toJson "robj", toJson i]
   | .rint n _ => toJson [toJson "int", toJson n]
+  | .pair a re => toJson [toJson "pair", toJson a, toJson re]
 
 /-- How each member is made: a plain class; `class C(int, Enum)` whose `__new__` returns `int.__new__(cls, 7)` without
 setting `_value_`, so `int(value)` is called; and a class whose `__init__` raises `ValueError('init')` for
@@ -557,7 +603,7 @@ def runEhClass (j : Json) : Except String Json := do
   let body ← (← getArr j "body").mapM fun p => do
     pure (← decName (← p.getArrVal? 0), ← decPV keys (← p.getArrVal? 1))
   let op ← field j "op"
-  match ({} : EClassG PV).build pvOps (pvMaker kind) body with
+  match ({ ownRepr := ownReprOf j } : EClassG PV).build pvOps (pvMaker kind) body with
   | .error e => pure (unitJ (.error e))
   | .ok c =>
     match ← (← op.getArrVal? 0).getStr? with
@@ -567,7 +613,9 @@ def runEhClass (j : Json) : Except String Json := do
       let mj ← op.getArrVal? 2
       let miss ← match ← (← mj.getArrVal? 0).getStr? with
         | "none" => pure MissingRet.none
-        | "other" => pure .other
+        | "other" => pure (.other (.ok ""))
+        | "otherbad" => pure (.other (.error (.named "LookupError" "repr")))
+        | "bexc" => pure (.raises (.named "BExc" "b"))
         | "raises" => pure (.raises (.named "KeyError" s!"'{← (← mj.getArrVal? 2).getStr?}'"))
         | _ =>
           match c.memberMap.lookup (← decName (← mj.getArrVal? 1)) with
@@ -766,8 +814,9 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "str" => pure (SArg.str (α := PV) (← v.getStr?))
       | "bytes" => pure (.bytes (← (← v.getArr?).toList.mapM (·.getNat?)))
       | "bytearray" | "memoryview" => pure (.buffer (← (← v.getArr?).toList.mapM (·.getNat?)))
+      | "pair" => pure (.other (.pair (← v.getInt?) (← (← a.getArrVal? 2).getStr?)))
       | _ => pure (.other (.int (← v.getInt?)))
-    pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec pvOps.repr args))
+    pure (encPy (fun (s : String) => toJson s) (strEnumNewG pyCodec pvOps.tupleItems pvOps.repr args))
   | "eh_flag_gen" => do
     let keys ← decKeys j
     let start ← match ← field j "start" with
@@ -793,7 +842,10 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "eh_bits" => do
     let a ← field j "arg"
     let n ← (← a.getArrVal? 1).getInt?
-    let arg := if (← (← a.getArrVal? 0).getStr?) == "int" then BitsArg.int n else .member n s!"<N.X: {n}>"
+    let arg ← match ← (← a.getArrVal? 0).getStr? with
+      | "int" => pure (BitsArg.int n)
+      | "rint" => pure (.intSub n (.error (pvExc (← (← a.getArrVal? 2).getStr?) "repr")))
+      | _ => pure (.member n (.ok s!"<N.X: {n}>"))
     pure (encPy (fun (l : List Nat) => toJson l) (iterBitsLsb arg))
   | "eh_verify" => runEhVerify j
   | "eh_call" => do

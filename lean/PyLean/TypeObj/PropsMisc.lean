@@ -206,7 +206,7 @@ def SequenceSetItemNegative : Prop :=
   ∀ (rt : Rt) (s : Val) (i n : Int) (value : Option Val) (f lf : SlotFn) (w w1 : World),
     i < 0 → slotIn w s .sq_ass_item = some f → slotIn w s .sq_length = some lf →
     callLen rt lf s w = .ok n w1 →
-    pySequenceSetItem rt s i value w = callAssSubscript rt f s (.int (i + n)) value w1
+    pySequenceSetItem rt s i value w = callSqAssItem rt f s (i + n) value w1
 
 theorem sequenceSetItemNegative_proven : SequenceSetItemNegative := by
   intro rt s i n value f lf w w1 hi h1 h2 h3
@@ -333,9 +333,8 @@ def IsinstanceEmptyTuple : Prop :=
 
 theorem isinstanceEmptyTuple_proven : IsinstanceEmptyTuple := by
   intro rt x fuel w h1 h2
-  have h3 : asType w (.tuple []) = none := by simpa using h1
-  simp [objectRecursiveIsinstance, h3, h2, tupleOf,
-    objectRecursiveIsinstance.anyTuple]
+  simp [objectRecursiveIsinstance, tupleOf, Val.is, unionCheck, typeOf, B.tuple, B.type,
+    B.unionType, objectRecursiveIsinstance.anyTuple]
 
 /-! ## Wrappers -/
 
