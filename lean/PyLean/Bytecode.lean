@@ -128,8 +128,8 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``MakeCellRules, thm := some ``makeCellRules_proven },
   { id := "bytecode-build-seq", pyFile := "Python/bytecodes.c"
     pyFns := [op "BUILD_TUPLE", op "BUILD_LIST"]
-    statement := "BUILD_TUPLE n and BUILD_LIST n pop their operands and push one new object holding them in push order, leaving the rest of the stack alone."
-    source := "Python/bytecodes.c BUILD_TUPLE, BUILD_LIST"
+    statement := "BUILD_TUPLE n and BUILD_LIST n pop their n operands and leave the rest of the stack alone. BUILD_LIST n always pushes a new list, and BUILD_TUPLE n for n > 0 a new tuple, holding the operands in push order; BUILD_TUPLE 0 pushes the shared tuple_empty singleton (the model creates it on first use), so every BUILD_TUPLE 0 pushes the same object."
+    source := "Python/bytecodes.c:2493-2509 BUILD_TUPLE, BUILD_LIST; Objects/tupleobject.c:474-476 (n == 0 returns tuple_empty)"
     status := .proven, prop := ``BuildRules, thm := some ``buildRules_proven },
   { id := "bytecode-store-subscr-list-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_SUBSCR_LIST_INT", op "_STORE_SUBSCR_LIST_INT"]

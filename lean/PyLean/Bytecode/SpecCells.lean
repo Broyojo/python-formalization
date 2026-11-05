@@ -133,9 +133,10 @@ theorem makeCellRules_proven : MakeCellRules := by
     simp [Array.getElem?_setIfInBounds, hlt]
   · simp
 
-/-- `BUILD_TUPLE n` and `BUILD_LIST n` pop their `n` operands and push a new object holding them
-in the order they were pushed, leaving the rest of the stack alone; `BUILD_TUPLE 0` pushes the
-`tuple_empty` singleton (`_PyTuple_FromStackRefStealOnSuccess`, `Objects/tupleobject.c:474-476`),
+/-- `BUILD_TUPLE n` and `BUILD_LIST n` pop their `n` operands, leaving the rest of the stack alone.
+`BUILD_LIST n` always pushes a new list, and `BUILD_TUPLE n` for `n > 0` a new tuple, holding the
+operands in the order they were pushed; `BUILD_TUPLE 0` pushes no new object but the `tuple_empty`
+singleton (`_PyTuple_FromStackRefStealOnSuccess`, `Objects/tupleobject.c:474-476`),
 made on first use and the same object after. -/
 def BuildRules : Prop := ∀ (e : Env) (regs : Regs) (top rest : List Val), top.length = e.oparg →
     (top ≠ [] → execOp e .BUILD_TUPLE ⟨regs, top ++ rest⟩ = .ok ()
