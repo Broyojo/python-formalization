@@ -21,7 +21,7 @@ Objects/abstract.c	410	434	PyObject_AsWriteBuffer	PyObject_AsWriteBuffer(PyObjec
 Objects/abstract.c	439	458	PyObject_GetBuffer	PyObject_GetBuffer(PyObject *obj, Py_buffer *view, int flags)	todo		
 Objects/abstract.c	461	498	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	modelled	abstract-f-contiguous-exact,abstract-contiguous-examples	
 Objects/abstract.c	501	525	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	modelled	abstract-c-contiguous-exact,abstract-contiguous-examples	
-Objects/abstract.c	528	540	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	modelled	abstract-is-contiguous-exact,abstract-c-contiguous-exact,abstract-f-contiguous-exact,abstract-contiguous-examples	
+Objects/abstract.c	528	540	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	modelled	abstract-is-contiguous-exact,abstract-contiguous-examples	
 Objects/abstract.c	544	556	PyBuffer_GetPointer	PyBuffer_GetPointer(const Py_buffer *view, const Py_ssize_t *indices)	todo		
 Objects/abstract.c	560	573	_Py_add_one_to_index_F	_Py_add_one_to_index_F(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	abstract-add-one-f-exact,abstract-add-one-examples	
 Objects/abstract.c	576	589	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	abstract-add-one-c-exact,abstract-add-one-examples	
@@ -39,17 +39,17 @@ Objects/abstract.c	913	919	PyNumber_Check	PyNumber_Check(PyObject *o)	todo
 Objects/abstract.c	999	1008	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	modelled	abstract-binary-op-exact,abstract-add-exact	
 Objects/abstract.c	1011	1019	binary_op	binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)	modelled	abstract-binary-op-exact,abstract-binop-candidates	
 Objects/abstract.c	1030	1121	ternary_op	ternary_op(PyObject *v, PyObject *w, PyObject *z, const int op_slot, const char *op_name )	todo		
-Objects/abstract.c	1138	1154	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	modelled	abstract-add-exact,abstract-binop-candidates	
+Objects/abstract.c	1138	1154	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	modelled	abstract-add-exact	
 Objects/abstract.c	1157	1173	sequence_repeat	sequence_repeat(ssizeargfunc repeatfunc, PyObject *seq, PyObject *n)	modelled	abstract-multiply-exact	
-Objects/abstract.c	1176	1192	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	modelled	abstract-multiply-exact,abstract-binop-candidates	
+Objects/abstract.c	1176	1192	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	modelled	abstract-multiply-exact	
 Objects/abstract.c	1200	1203	PyNumber_Power	PyNumber_Power(PyObject *v, PyObject *w, PyObject *z)	todo		
 Objects/abstract.c	1206	1209	_PyNumber_PowerNoMod	_PyNumber_PowerNoMod(PyObject *lhs, PyObject *rhs)	todo		
-Objects/abstract.c	1260	1269	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	modelled	abstract-binary-iop-exact,abstract-binop-candidates	
+Objects/abstract.c	1260	1269	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	modelled	abstract-binary-iop-exact	
 Objects/abstract.c	1272	1287	ternary_iop	ternary_iop(PyObject *v, PyObject *w, PyObject *z, const int iop_slot, const int op_slot, const char *op_name)	modelled	abstract-ternary-iop-exact	
-Objects/abstract.c	1307	1327	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	modelled	abstract-inplace-add-exact,abstract-binop-candidates	
+Objects/abstract.c	1307	1327	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	modelled	abstract-inplace-add-exact	
 Objects/abstract.c	1330	1356	PyNumber_InPlaceMultiply	PyNumber_InPlaceMultiply(PyObject *v, PyObject *w)	modelled	typeobj-imul-matches-mul	
-Objects/abstract.c	1359	1363	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	modelled	abstract-inplace-power-exact,abstract-ternary-iop-exact	
-Objects/abstract.c	1366	1369	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	modelled	abstract-inplace-power-exact,abstract-ternary-iop-exact	
+Objects/abstract.c	1359	1363	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	modelled	abstract-inplace-power-exact	
+Objects/abstract.c	1366	1369	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	modelled	abstract-inplace-power-exact	
 Objects/abstract.c	1398	1401	PyIndex_Check	PyIndex_Check(PyObject *obj)	todo		
 Objects/abstract.c	1410	1449	_PyNumber_Index	_PyNumber_Index(PyObject *item)	todo		changed-in-3.15: was typeobj-index-identity,typeobj-index-required,typeobj-index-result-int
 Objects/abstract.c	1456	1463	PyNumber_Index	PyNumber_Index(PyObject *item)	todo		
