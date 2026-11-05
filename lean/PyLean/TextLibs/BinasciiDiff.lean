@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.BinasciiC
+import PyLean.TextLibs.BinasciiCache
 
 /-! `binascii.*` and `base64.*` difftest cases; see `difftest/textlibs_diff.py`. -/
 
@@ -100,6 +100,50 @@ def encFile (f : FileSim) (r : Py Unit) : Json :=
   Json.mkObj [("ok", Json.mkObj [("written", toJson f.written),
     ("res", encPy (fun _ => Json.null) r)])]
 
+/-- An `alphabet` of a `binascii.cache` case: `null`, `{"b": [...]}`, or a subclass instance
+`{"sub": oid, "v": [...], "h": {"of": [...]} | {"int": n} | {"raise": 1}, "e": "t" | "f" | "v" | "r"}`. -/
+def decAObj (j : Json) : Except String AlphaArgC := do
+  if j.isNull then return .absent
+  if let .ok b := j.getObjVal? "b" then return .obj (.bytes (← (← b.getArr?).toList.mapM Json.getNat?))
+  let oid ← getNat j "sub"
+  let v ← bytesOf j "v"
+  let h ← field j "h"
+  let hash : Py HTok ←
+    if let .ok o := h.getObjVal? "of" then pure (.ok (.ofBytes (← (← o.getArr?).toList.mapM Json.getNat?)))
+    else if let .ok n := h.getObjVal? "int" then pure (.ok (.other (← n.getInt?)))
+    else pure (.error (.valueError "hashboom"))
+  let eqv : List Nat → Py Bool ← match ← getStr j "e" with
+    | "t" => pure fun _ => .ok true
+    | "f" => pure fun _ => .ok false
+    | "v" => pure fun w => .ok (w == v)
+    | _ => pure fun _ => .error (.valueError "eqboom")
+  return .obj (.sub oid v hash eqv)
+
+/-- `cache[bytes(v)] = val` through `gc.get_referents`, in cases without subclass keys. -/
+def rcSet (c : RCache) (v : List Nat) (val : CVal) : RCache :=
+  let isV (e : AObj × HTok × CVal) : Bool := match e.1 with
+    | .bytes w => w == v
+    | _ => false
+  if c.any isV then c.map (fun e => if isV e then (e.1, e.2.1, val) else e) else c ++ [(.bytes v, .ofBytes v, val)]
+
+def runCache (j : Json) : Except String Json := do
+  let ops ← (← field j "ops").getArr?
+  let (_, outs) ← ops.toList.foldlM (fun (acc : RCache × List Json) op => do
+    let (c, outs) := acc
+    let f ← getStr op "f"
+    if f == "corrupt" then
+      let v ← bytesOf op "v"
+      let val := if (← getStr op "val") == "int" then CVal.other else CVal.table [120]
+      return (rcSet c v val, outs ++ [Json.null])
+    let d : Data := .bytes (← bytesOf op "d")
+    let a ← decAObj (← field op "a")
+    let (r, c') := match f with
+      | "b64" => a2bB64S c d (optBoolO op "strict") true a none false
+      | "b32" => a2bB32S c d true a (.bytes []) false
+      | _ => a2bB85S c d a (.bytes []) false
+    return (c', outs ++ [encPy toJson r])) (([] : RCache), ([] : List Json))
+  return Json.mkObj [("ok", Json.arr outs.toArray)]
+
 def run (fn : String) (j : Json) : Except String Json := do
   let r (x : Py (List Nat)) := encPy toJson x
   let dflt : Data := .bytes []
@@ -107,6 +151,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   let igD := ig0.getD dflt
   let alpha := ((optData j "alpha").toOption).join
   match fn with
+  | "binascii.cache" => runCache j
   | "binascii.api" =>
     let d ← decData j "d"
     return r (match ← getStr j "op" with

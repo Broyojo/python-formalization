@@ -722,6 +722,117 @@ def kw_of(c, names):
     return kw
 
 
+
+def _fresh_binascii():
+    """A binascii module with its own state, so its reverse-table cache starts empty."""
+    import importlib.util
+    spec = importlib.util.find_spec("binascii")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def _cache_gen(r):
+    """A sequence of decoder calls through one fresh module's alphabet cache: exact alphabets, bytes
+    subclasses with chosen __hash__/__eq__ (reused by object identity), wrong lengths, and corrupted
+    entries (reached through gc.get_referents)."""
+    url = list(binascii.URLSAFE_BASE64_ALPHABET)
+    b64 = list(binascii.BASE64_ALPHABET)
+    b32 = list(binascii.BASE32_ALPHABET)
+    b32h = list(binascii.BASE32HEX_ALPHABET)
+    b85 = list(binascii.BASE85_ALPHABET)
+    z85 = list(binascii.Z85_ALPHABET)
+    pool = {"b64": [b64, url, b64[::-1]], "b32": [b32, b32h, b32[::-1]], "b85": [b85, z85, b85[::-1]]}
+    enc = {"b64": lambda d, a: binascii.b2a_base64(d, alphabet=a, newline=False),
+           "b32": lambda d, a: binascii.b2a_base32(d, alphabet=a),
+           "b85": lambda d, a: binascii.b2a_base85(d, alphabet=a)}
+    subs = {}
+    use_subs = r.random() < 0.8
+    ops = []
+    for _ in range(r.randint(1, 7)):
+        f = r.choice(["b64", "b32", "b85"])
+        if not use_subs and r.random() < 0.15:
+            ops.append({"f": "corrupt", "v": r.choice(pool[f]), "val": r.choice(["int", "short"])})
+            continue
+        k = r.random()
+        if k < 0.15:
+            a = None
+        elif k < 0.55 or not use_subs:
+            a = {"b": r.choice(pool[f] + [pool[f][0][:-1]])}
+        else:
+            oid = r.randrange(3)
+            if oid not in subs:
+                h = r.choice([{"of": r.choice(pool[f])}, {"of": r.choice(pool[f])}, {"int": r.randint(1, 1000)},
+                              {"raise": 1}])
+                subs[oid] = {"sub": oid, "v": r.choice(pool[f] + [pool[f][0][:-1]]), "h": h,
+                             "e": r.choice(["t", "t", "f", "v", "r"])}
+            a = subs[oid]
+        data = bytes(r.randrange(256) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 8])))
+        try:
+            text = list(enc[f](data, bytes(r.choice(pool[f]))))
+        except Exception:
+            text = []
+        op = {"f": f, "d": text, "a": a}
+        if f == "b64" and r.random() < 0.5:
+            op["strict"] = r.random() < 0.5
+        ops.append(op)
+    return {"mod": "textlibs", "fn": "binascii.cache", "ops": ops}
+
+
+def _cache_run(c):
+    import gc
+    m = _fresh_binascii()
+    cache = [x for x in gc.get_referents(m) if type(x) is dict and x is not m.__dict__][0]
+    objs = {}
+
+    def mk(a):
+        if a is None:
+            return None
+        if "b" in a:
+            return bytes(a["b"])
+        oid = a["sub"]
+        if oid in objs:
+            return objs[oid]
+        h, e = a["h"], a["e"]
+        ns = {}
+        if "of" in h:
+            hv = hash(bytes(h["of"]))
+            ns["__hash__"] = lambda self, hv=hv: hv
+        elif "int" in h:
+            hv = h["int"]
+            ns["__hash__"] = lambda self, hv=hv: hv
+        else:
+            def hf(self):
+                raise ValueError("hashboom")
+            ns["__hash__"] = hf
+        if e == "t":
+            ns["__eq__"] = lambda self, o: True
+        elif e == "f":
+            ns["__eq__"] = lambda self, o: False
+        elif e == "v":
+            ns["__eq__"] = lambda self, o: bytes.__eq__(self, o)
+        else:
+            def ef(self, o):
+                raise ValueError("eqboom")
+            ns["__eq__"] = ef
+        objs[oid] = type("Alpha%d" % oid, (bytes,), ns)(bytes(a["v"]))
+        return objs[oid]
+
+    out = []
+    for op in c["ops"]:
+        if op["f"] == "corrupt":
+            cache[bytes(op["v"])] = 1 if op["val"] == "int" else b"x"
+            out.append(None)
+            continue
+        a = mk(op["a"])
+        kw = {} if a is None else {"alphabet": a}
+        fn = {"b64": m.a2b_base64, "b32": m.a2b_base32, "b85": m.a2b_base85}[op["f"]]
+        if "strict" in op:
+            kw["strict_mode"] = op["strict"]
+        out.append(common.py_result(lambda: list(fn(bytes(op["d"]), **kw))))
+    return {"ok": out}
+
+
 @area("binascii", 3)
 class BinasciiArea(Codec):
     WRAP = [0, 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 16, 76, 77, 2**64 - 1, 2**64, -1]
@@ -826,6 +937,8 @@ class BinasciiArea(Codec):
                        "b2a_qp", "b2a_qp", "qp_bound", "qp_bound", "api", "flag", "hex", "hex",
                        "a2b_base64", "b2a_base64", "a2b_base32", "a2b_base32", "b2a_base32", "a2b_ascii85", "a2b_ascii85", "b2a_ascii85",
                        "a2b_base85", "a2b_base85", "b2a_base85", "a2b_hex"])
+        if r.random() < 0.06:
+            return _cache_gen(r)
         c = {"mod": "textlibs", "fn": "binascii." + fn}
         if fn in ("a2b_base32", "b2a_base32", "a2b_ascii85", "b2a_ascii85", "a2b_base85", "b2a_base85") or \
                 (fn in ("a2b_base64", "b2a_base64") and r.random() < 0.7):
@@ -908,6 +1021,8 @@ class BinasciiArea(Codec):
     @classmethod
     def run(cls, c):
         fn = c["fn"].split(".")[1]
+        if fn == "cache":
+            return _cache_run(c)
 
         def body():
             if fn == "api":
