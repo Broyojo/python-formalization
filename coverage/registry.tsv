@@ -1179,6 +1179,7 @@ set-pop	proven	Objects/setobject.c	set_pop_impl
 set-clear	proven	Objects/setobject.c	set_clear_internal,set_empty_to_minsize
 set-iter-order	proven	Objects/setobject.c	set_next
 set-probe-failure	proven	Objects/setobject.c	set_lookkey,set_do_lookup,set_compare_entry_lock_held,set_add_entry_takeref
+set-probe-failure-unguarded	refuted	Objects/setobject.c	set_compare_entry_lock_held
 set-lookup-restarts-on-resize	refuted	Objects/setobject.c	set_compare_entry_lock_held
 set-add-restarts-on-resize	refuted	Objects/setobject.c	set_add_entry_takeref
 set-contains-body	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_compare_frozenset,set_do_lookup,set_contains_entry
