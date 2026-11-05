@@ -72,7 +72,7 @@ inductive LookScan where
   /-- `SET_LOOKKEY_CHANGED`. -/
   | restart
   | next
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
 section Look
 variable [DecidableEq K] (P : Proto K (SetObj K))
@@ -257,7 +257,7 @@ inductive AddScan where
   | active
   | restart
   | next (freeslot : Option Nat) (mask : Nat)
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
 section Add
 variable [DecidableEq K] (P : Proto K (SetObj K))

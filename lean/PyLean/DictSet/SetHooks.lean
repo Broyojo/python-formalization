@@ -324,4 +324,354 @@ theorem lookkey_dispatch_probe :
     (setLookkey natSetProto 1 9 (setAddKey natSetProto 1 {}).2).1 = .ok 6 := by
   constructor <;> decide +kernel
 
+/-! ## `set_add_entry_takeref`: the walk and the restart loop -/
+
+/-- `set_add_entry_takeref` (:252-335), for every key protocol, step by step and turn by turn.
+
+The walk of one turn: a step that ends the block (a NULL, `found_active`, `goto restart`, an
+exception from `__eq__`) ends the walk with it (:275-297); a step that goes on moves to the next
+entry with the mask and `freeslot` it left (:296, :298-302); a finished block moves to the next probe,
+`(i * 5 + 1 + perturb) & mask` with the mask as the block left it (:303-305).
+
+What a turn ends with:
+* an exception: the result, in the state `__eq__` left (`comparison_error`, :332-334);
+* `found_active`: nothing more (:328-330);
+* `goto restart` (:294-295): the next turn, from the state `__eq__` left, with its mask and table and
+  no `freeslot` (:264-269);
+* a NULL and no `freeslot`: the key goes at the NULL, `fill` and `used` grow, and the table grows
+  when `fill * 5 >= mask * 3` for the mask of the walk (:319-326);
+* a NULL and a `freeslot` that is still a dummy: the key goes in the dummy and `used` grows, not
+  `fill` (:314-317);
+* a NULL and a `freeslot` that `__eq__` refilled (`freeslot->hash != -1`, :311-313): the next turn.
+
+Scope: the table test of `addStep` names tables by identity (see `setLookkeyAux`). -/
+def SetAddRestart : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (hash : Int) (so s' : SetObj K),
+    (∀ (slot mask p : Nat) (fs : Option Nat) (r : AddScan),
+      addStep P key hash slot mask fs so = (.ok (.inl r), s') →
+        addScan P key hash p slot mask fs so = (.ok r, s')) ∧
+    (∀ (slot mask p m : Nat) (fs fs' : Option Nat),
+      addStep P key hash slot mask fs so = (.ok (.inr (m, fs')), s') →
+        addScan P key hash (p + 1) slot mask fs so = addScan P key hash p (slot + 1) m fs' s' ∧
+        addScan P key hash 0 slot mask fs so = (.ok (.next fs' m), s')) ∧
+    (∀ (slot mask p : Nat) (fs : Option Nat) (e : PyExc),
+      addStep P key hash slot mask fs so = (.error e, s') →
+        addScan P key hash p slot mask fs so = (.error e, s')) ∧
+    (∀ (fuel i perturb mask m : Nat) (fs fs' : Option Nat),
+      addScan P key hash (linearProbes i mask) i mask fs so = (.ok (.next fs' m), s') →
+        addOuter P key hash (fuel + 1) i perturb mask fs so =
+          addOuter P key hash fuel (setProbeStep m i perturb).1 (setProbeStep m i perturb).2 m fs' s') ∧
+    (∀ (fuel i perturb mask : Nat) (fs : Option Nat) (r : AddScan), (∀ fs' m, r ≠ .next fs' m) →
+      addScan P key hash (linearProbes i mask) i mask fs so = (.ok r, s') →
+        addOuter P key hash (fuel + 1) i perturb mask fs so = (.ok r, s')) ∧
+    (∀ (fuel i perturb mask : Nat) (fs : Option Nat) (e : PyExc),
+      addScan P key hash (linearProbes i mask) i mask fs so = (.error e, s') →
+        addOuter P key hash (fuel + 1) i perturb mask fs so = (.error e, s')) ∧
+    ∀ n : Nat,
+      (∀ e, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash) so.mask
+          none so = (.error e, s') → setAddEntryAux P key hash (n + 1) so = (.error e, s')) ∧
+      (addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash) so.mask
+          none so = (.ok .active, s') → setAddEntryAux P key hash (n + 1) so = (.ok (), s')) ∧
+      (addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash) so.mask
+          none so = (.ok .restart, s') →
+        setAddEntryAux P key hash (n + 1) so = setAddEntryAux P key hash n s') ∧
+      (∀ slot m, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
+          so.mask none so = (.ok (.unused slot none m), s') →
+        setAddEntryAux P key hash (n + 1) so =
+          if (s'.fill + 1) * 5 < m * 3 then
+            (.ok (), { s' with fill := s'.fill + 1, used := s'.used + 1,
+                               table := s'.table.set slot (.active key hash) })
+          else setGrow { s' with fill := s'.fill + 1, used := s'.used + 1,
+                                 table := s'.table.set slot (.active key hash) }) ∧
+      (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f = .dummy →
+        setAddEntryAux P key hash (n + 1) so =
+          (.ok (), { s' with used := s'.used + 1, table := s'.table.set f (.active key hash) })) ∧
+      (∀ slot m f, addOuter P key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
+          so.mask none so = (.ok (.unused slot (some f) m), s') → s'.slot f ≠ .dummy →
+        setAddEntryAux P key hash (n + 1) so = setAddEntryAux P key hash n s')
+theorem setAddRestart_proven : SetAddRestart := by
+  intro K _ P key hash so s'
+  refine ⟨fun slot mask p fs r h => ?_, fun slot mask p m fs fs' h => ?_, fun slot mask p fs e h => ?_,
+    fun fuel i perturb mask m fs fs' h => ?_, fun fuel i perturb mask fs r hr h => ?_,
+    fun fuel i perturb mask fs e h => ?_, fun n => ⟨fun e h => ?_, fun h => ?_, fun h => ?_,
+      fun slot m h => ?_, fun slot m f h hd => ?_, fun slot m f h hd => ?_⟩⟩
+  · cases p <;> simp [addScan, M.bind_run, h]
+  · constructor
+    · simp [addScan, M.bind_run, h]
+    · simp [addScan, M.bind_run, h]
+  · cases p <;> simp [addScan, M.bind_run, h]
+  · simp [addOuter, M.bind_run, h]
+  · cases r with
+    | next fs' m => exact absurd rfl (hr fs' m)
+    | _ => simp [addOuter, M.bind_run, h]
+  · simp [addOuter, M.bind_run, h]
+  · simp [setAddEntryAux, M.bind_run, M.get_run, h]
+  · simp [setAddEntryAux, M.bind_run, M.get_run, h]
+  · simp [setAddEntryAux, M.bind_run, M.get_run, h]
+  · simp only [setAddEntryAux, M.bind_run, M.get_run, h]
+    by_cases hc : (s'.fill + 1) * 5 < m * 3 <;> simp [M.bind_run, M.put_run, hc]
+  · simp [setAddEntryAux, M.bind_run, M.get_run, h, hd]
+  · simp only [setAddEntryAux, M.bind_run, M.get_run, h]
+    try (split <;> simp_all)
+
+/-- Keys `1`..`4` all hash `0`, and `==` is equality. -/
+def plainZero : Proto Nat (SetObj Nat) := { natSetProto with hashM := fun _ s => (.ok 0, s) }
+
+/-- The `__eq__` of key `2` against key `3` adds key `4` the first time, and answers no. -/
+def refillProto : Proto Nat (SetObj Nat) :=
+  { plainZero with
+    eq := fun a b s =>
+      if a = 2 ∧ b = 3 ∧ (setKeys s).all (· ≠ 4) = true then (.ok false, (setAddKey plainZero 4 s).2)
+      else (.ok (a == b), s) }
+
+/-- `{2}` with a dummy at slot 0, where `1` was: `s.add(1); s.add(2); s.discard(1)`. -/
+def refillStart : SetObj Nat := setProg refillProto [.add 1, .add 2, .discard 1] {}
+
+/-- The `freeslot->hash != -1` re-check is reached, and it matters: adding `3` walks past the dummy at
+slot 0 (`freeslot`), compares with `2`, whose `__eq__` puts `4` into that dummy, and reaches the NULL
+at slot 6 with a `freeslot` that is no longer a dummy; it restarts and puts `3` at slot 6. An add that
+skipped the re-check would overwrite `4`. CPython 3.15.2 gives the same table order, `[4, 2, 3]`. -/
+theorem freeslot_refill_probe :
+    setKeys refillStart = [2] ∧ refillStart.slot 0 = .dummy ∧
+    (addOuter refillProto 3 0 (setProbeFuel 7) 0 0 7 none refillStart).1 = .ok (.unused 6 (some 0) 7) ∧
+    (addOuter refillProto 3 0 (setProbeFuel 7) 0 0 7 none refillStart).2.slot 0 = .active 4 0 ∧
+    setKeys (setAddKey refillProto 3 refillStart).2 = [4, 2, 3] := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> decide +kernel
+
+/-- The `__eq__` of key `1` against key `2` clears the set, and answers no. -/
+def clearProto : Proto Nat (SetObj Nat) :=
+  { plainZero with
+    eq := fun a b s => if a = 1 ∧ b = 2 then (.ok false, setClearInternal s) else (.ok (a == b), s) }
+
+/-- `goto restart` is reached, and it matters: adding `2` to `{1}` compares with `1`, whose `__eq__`
+empties the set; the walk restarts and `2` goes into the empty table. An add that took the restart
+for success would leave the set empty. CPython 3.15.2 gives `[2]`. -/
+theorem restart_probe :
+    (addOuter clearProto 2 0 (setProbeFuel 7) 0 0 7 none (setAddKey clearProto 1 {}).2).1 = .ok .restart ∧
+    setKeys (setAddKey clearProto 2 (setAddKey clearProto 1 {}).2).2 = [2] := by
+  constructor <;> decide +kernel
+
+/-! ## `set_update_iterable_lock_held` -/
+
+/-- `set_update_iterable_lock_held` (:1221-1244), for every key protocol and every iterator, turn
+by turn: `PyObject_GetIter` first (:1226-1229), whose failure is the result; then each `PyIter_Next`
+runs in the state the last turn left, and may raise (the result: `PyErr_Occurred()`, :1240-1241),
+end the loop (:1231, :1239), or yield a key, which `set_add_key` adds (:1232); a failed add is the
+result, in the state it left (:1232-1236), and otherwise the loop goes on from there. -/
+def SetUpdateIterableBody : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (getIter : SM K Unit)
+    (step : SM K (Option K)) (rest : List (SM K (Option K))) (key : K) (so s1 s2 s3 : SetObj K)
+    (e : PyExc),
+    (getIter so = (.error e, s1) →
+      setUpdateIterable P ⟨getIter, step :: rest⟩ so = (.error e, s1)) ∧
+    (getIter so = (.ok (), s1) →
+      setUpdateIterable P ⟨getIter, []⟩ so = (.ok (), s1) ∧
+      (step s1 = (.error e, s2) → setUpdateIterable P ⟨getIter, step :: rest⟩ so = (.error e, s2)) ∧
+      (step s1 = (.ok none, s2) → setUpdateIterable P ⟨getIter, step :: rest⟩ so = (.ok (), s2)) ∧
+      (step s1 = (.ok (some key), s2) →
+        (setAddKey P key s2 = (.error e, s3) →
+          setUpdateIterable P ⟨getIter, step :: rest⟩ so = (.error e, s3)) ∧
+        (setAddKey P key s2 = (.ok (), s3) →
+          setUpdateIterable P ⟨getIter, step :: rest⟩ so = setUpdateIterable P ⟨pure (), rest⟩ s3)))
+theorem setUpdateIterableBody_proven : SetUpdateIterableBody := by
+  intro K _ P getIter step rest key so s1 s2 s3 e
+  refine ⟨fun h => ?_, fun h => ⟨?_, fun h2 => ?_, fun h2 => ?_, fun h2 => ⟨fun h3 => ?_, fun h3 => ?_⟩⟩⟩
+  · simp [setUpdateIterable, M.bind_run, h]
+  · simp [setUpdateIterable, forIter, M.bind_run, h]
+  · simp [setUpdateIterable, forIter, M.bind_run, h, h2]
+  · simp [setUpdateIterable, forIter, M.bind_run, h, h2]
+  · simp [setUpdateIterable, forIter, M.bind_run, h, h2, h3]
+  · simp [setUpdateIterable, forIter, M.bind_run, h, h2, h3]
+
+section UpdateRefine
+variable {K : Type} [DecidableEq K] {P : Proto K (SetObj K)} {hf : K → Int} {eqv : K → K → Bool}
+
+/-- The loop of `set_update_iterable_lock_held` over items that are handed over as they are, then
+`tail`: every item is added in order, or an add runs out of memory. -/
+theorem forIter_adds (H : HonestSet P hf eqv) (tail : List (SM K (Option K))) :
+    ∀ (items : List K) (so : SetObj K) (l : List K), SetWF hf eqv so → (setKeys so).Perm l →
+      (∃ s n, n ≤ so.used + items.length ∧ SetTooBig n ∧
+        forIter (fun key => do setAddKey P key; return false)
+          (items.map (fun x => pure (some x)) ++ tail) so = (.error memoryError, s)) ∨
+      ∃ so', SetWF hf eqv so' ∧ (setKeys so').Perm (setAbs eqv (items.map .add) l) ∧
+        forIter (fun key => do setAddKey P key; return false)
+          (items.map (fun x => pure (some x)) ++ tail) so =
+        forIter (fun key => do setAddKey P key; return false) tail so' := by
+  intro items
+  induction items with
+  | nil => intro so l w hp; exact Or.inr ⟨so, w, hp, rfl⟩
+  | cons x rest ih =>
+    intro so l w hp
+    have hstep : ∀ s, forIter (fun key => do setAddKey P key; return false)
+        ((x :: rest).map (fun x => pure (some x)) ++ tail) s =
+        match setAddKey P x s with
+        | (.ok _, s') => forIter (fun key => do setAddKey P key; return false)
+            (rest.map (fun x => pure (some x)) ++ tail) s'
+        | (.error e, s') => (.error e, s') := by
+      intro s
+      simp only [List.map_cons, List.cons_append, forIter, M.bind_run, M.pure_run]
+      cases setAddKey P x s with
+      | mk r s' => cases r <;> rfl
+    rw [hstep]
+    simp only [List.map_cons, setAbs]
+    rw [← hp.any_eq]
+    rcases setAddKey_spec H w x with ⟨h1, h2⟩ | ⟨h1, h3⟩
+    · simp only [h2, h1, if_true]
+      rcases ih so l w hp with ⟨s, n, a, b, c⟩ | g
+      · exact Or.inl ⟨s, n, by simp only [List.length_cons]; omega, b, c⟩
+      · exact Or.inr g
+    · simp only [h1, Bool.false_eq_true, if_false]
+      rcases h3 with ⟨hb, s, h3⟩ | ⟨so', a, b, c, _, _⟩
+      · left
+        exact ⟨s, so.used + 1, by simp, hb, by simp [h3]⟩
+      · simp only [a]
+        have hu : so'.used = so.used + 1 := by
+          have e1 := b.used
+          have e2 := w.used
+          have e3 := c.length_eq
+          simp only [setKeys, List.length_map, List.length_cons] at e3
+          omega
+        rcases ih so' _ b (c.trans ((hp.cons x).trans (List.perm_append_singleton x l).symm)) with
+          ⟨s, n, g1, g2, g3⟩ | g
+        · exact Or.inl ⟨s, n, by simp only [List.length_cons]; omega, g2, g3⟩
+        · exact Or.inr g
+
+end UpdateRefine
+
+/-- `set.update(iterable)` (`set_update_iterable_lock_held`, :1221-1244) for an honest key protocol,
+from any well-formed set, with an iterable whose `__iter__` may fail and whose iteration may end with
+an exception: a failed `__iter__` changes nothing; otherwise either an add runs out of memory, for a
+set that would need more than `PyMem_NEW` can give, or every item is added in order, the set stays
+well formed and holds the keys of the list model, and then the iterator's exception, if any, is the
+result in that state. -/
+def SetUpdateIterableRefines : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
+    HonestSet P hf eqv → ∀ (so : SetObj K) (it : Iterable K), SetWF hf eqv so →
+      (∀ e, it.getIter = some e → setUpdateIterable P (ReIter.ofIterable it) so = (.error e, so)) ∧
+      (it.getIter = none →
+        (∃ s n, n ≤ so.used + it.items.length ∧ SetTooBig n ∧
+          setUpdateIterable P (ReIter.ofIterable it) so = (.error memoryError, s)) ∨
+        ∃ so', SetWF hf eqv so' ∧ (setKeys so').Perm (setAbs eqv (it.items.map .add) (setKeys so)) ∧
+          setUpdateIterable P (ReIter.ofIterable it) so =
+            (match it.stop with
+             | some e => .error e
+             | none => .ok (), so'))
+theorem setUpdateIterableRefines_proven : SetUpdateIterableRefines := by
+  intro K _ P hf eqv H so it w
+  refine ⟨fun e he => ?_, fun hn => ?_⟩
+  · simp [setUpdateIterable, ReIter.ofIterable, he, M.bind_run]
+  · let tail : List (SM K (Option K)) := match it.stop with
+      | some e => [M.throw e]
+      | none => []
+    have hrun : ∀ s, setUpdateIterable P (ReIter.ofIterable it) s =
+        (match forIter (fun key => do setAddKey P key; return false)
+            (it.items.map (fun x => pure (some x)) ++ tail) s with
+         | (.ok _, s') => (.ok (), s')
+         | (.error e, s') => (.error e, s')) := by
+      intro s
+      simp only [setUpdateIterable, ReIter.ofIterable, hn, M.bind_run, M.pure_run]
+      cases forIter (fun key => do setAddKey P key; return false)
+          (it.items.map (fun x => pure (some x)) ++ tail) s with
+      | mk r s' => cases r <;> rfl
+    rcases forIter_adds H tail it.items so (setKeys so) w (List.Perm.refl _) with
+      ⟨s, n, a, b, c⟩ | ⟨so', a, b, c⟩
+    · left
+      exact ⟨s, n, a, b, by rw [hrun, c]⟩
+    · right
+      refine ⟨so', a, b, ?_⟩
+      rw [hrun, c]
+      cases hs : it.stop with
+      | none => simp [tail, hs, forIter]
+      | some e => simp [tail, hs, forIter, M.bind_run]
+
+/-! ## `set_isdisjoint_impl` -/
+
+/-- `set_isdisjoint_impl` (:1910-1968), for every key protocol and iterator: `so == other` answers
+whether `so` is empty, and changes nothing (:1917-1922); only `PyAnySet_CheckExact(other)` (:1924)
+takes the two-set branch, so an instance of a set subclass, whatever its table holds, goes through
+`PyObject_GetIter(other)`, its type's `__iter__`, and the generic loop (:1948-1967), as does any
+other iterable. -/
+def SetIsdisjointBranches : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (so o : SetObj K) (it : ReIter (SetObj K) K),
+    (o.ident = so.ident →
+      setIsdisjoint P (.set o) so = (.ok (so.used == 0), so) ∧
+      setIsdisjoint P (.sub o it) so = (.ok (so.used == 0), so)) ∧
+    (o.ident ≠ so.ident →
+      setIsdisjoint P (.sub o it) so = setDisjointIter P it so ∧
+      (o.exact = false → setIsdisjoint P (.set o) so = setDisjointIter P (SetArg.set o).toReIter so)) ∧
+    setIsdisjoint P (.live it) so = setDisjointIter P it so
+theorem setIsdisjointBranches_proven : SetIsdisjointBranches := by
+  intro K _ P so o it
+  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, fun hx => ?_⟩, ?_⟩
+  · simp [setIsdisjoint, M.bind_run, M.get_run, h]
+  · simp [setIsdisjoint, M.bind_run, M.get_run, h]
+  · simp [setIsdisjoint, M.bind_run, M.get_run, h, SetArg.toReIter]
+  · simp [setIsdisjoint, M.bind_run, M.get_run, h, hx]
+  · simp [setIsdisjoint, M.bind_run, M.get_run, SetArg.toReIter]
+
+section DisjointRefine
+variable {K : Type} [DecidableEq K] {P : Proto K (SetObj K)} {hf : K → Int} {eqv : K → K → Bool}
+  {so : SetObj K}
+
+theorem forIter_contains (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (tail : List (SM K (Option K))) :
+    ∀ items : List K,
+      forIter (setContainsKey P) (items.map (fun x => pure (some x)) ++ tail) so =
+        if items.any (fun x => (setKeys so).any (eqv · x)) then (.ok true, so)
+        else forIter (setContainsKey P) tail so := by
+  intro items
+  induction items with
+  | nil => simp
+  | cons x rest ih =>
+    simp only [List.map_cons, List.cons_append, forIter, M.bind_run, M.pure_run, setContains_spec H w x,
+      List.any_cons]
+    by_cases hx : (setKeys so).any (eqv · x) = true
+    · simp [hx]
+    · have hx' : (setKeys so).any (eqv · x) = false := by simpa using hx
+      simp only [hx', Bool.false_or, Bool.false_eq_true, if_false]
+      exact ih
+
+end DisjointRefine
+
+/-- The generic branch of `set_isdisjoint_impl` for an honest key protocol, on a well-formed set and
+an iterable whose `__iter__` may fail and whose iteration may end with an exception: a failed
+`__iter__` is the result; an item the set holds answers `False` at once, before any later failure;
+otherwise the iterator's exception, if any, and `True` if none. Nothing changes. -/
+def SetDisjointIterRefines : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
+    HonestSet P hf eqv → ∀ (so : SetObj K) (it : Iterable K), SetWF hf eqv so →
+      setDisjointIter P (ReIter.ofIterable it) so =
+        (match it.getIter with
+         | some e => .error e
+         | none =>
+           if it.items.any (fun x => (setKeys so).any (eqv · x)) then .ok false
+           else match it.stop with
+             | some e => .error e
+             | none => .ok true, so)
+theorem setDisjointIterRefines_proven : SetDisjointIterRefines := by
+  intro K _ P hf eqv H so it w
+  cases hg : it.getIter with
+  | some e => simp [setDisjointIter, ReIter.ofIterable, hg, M.bind_run]
+  | none =>
+    simp only [setDisjointIter, ReIter.ofIterable, hg, M.bind_run, M.pure_run]
+    rw [forIter_contains H w]
+    cases ha : it.items.any (fun x => (setKeys so).any (eqv · x)) with
+    | true => simp
+    | false =>
+      cases hs : it.stop with
+      | none => simp [forIter]
+      | some e => simp [forIter, M.bind_run]
+
+/-- The review's probe: `{1}.isdisjoint(S([2]))` for a set subclass `S` whose `__iter__` yields `1`
+is `False`, since `PyAnySet_CheckExact` fails and the loop runs `S.__iter__`; walking the table of
+`S([2])` instead would answer `True`. CPython 3.15.2 answers `False`. -/
+theorem isdisjoint_sub_probe :
+    (setIsdisjoint natSetProto
+      (.sub { (setAddKey natSetProto 2 {}).2 with ident := 5, exact := false }
+        (ReIter.ofIterable { items := [1] })) (setAddKey natSetProto 1 {}).2).1 = .ok false ∧
+    (setIsdisjoint natSetProto
+      (.set { (setAddKey natSetProto 2 {}).2 with ident := 5, exact := false })
+      (setAddKey natSetProto 1 {}).2).1 = .ok true := by
+  constructor <;> decide +kernel
+
 end PyLean.DictSet
