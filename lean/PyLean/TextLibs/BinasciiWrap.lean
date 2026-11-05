@@ -208,6 +208,27 @@ theorem wraplinesC_filter (w : Nat) (hw : 0 < w) : ∀ (f : Nat) (s : List Nat),
         ih _ (by simp only [List.length_drop]; omega) hn2]
       simp
 
+/-- The same with any test that drops the newline and keeps every character of the data. -/
+theorem wraplinesC_filterP (w : Nat) (hw : 0 < w) (P : Nat → Bool) (hP : P 10 = false) :
+    ∀ (f : Nat) (s : List Nat), s.length ≤ f → (∀ x ∈ s, P x = true) → (wraplinesC s w).filter P = s := by
+  intro f
+  induction f with
+  | zero =>
+    intro s h _
+    have : s = [] := List.eq_nil_of_length_eq_zero (by omega)
+    subst this
+    rfl
+  | succ f ih =>
+    intro s h hs
+    by_cases hl : s.length ≤ w
+    · rw [wraplinesC_short s w hl]
+      exact List.filter_eq_self.mpr hs
+    · rw [wraplinesC_long s w hw (by omega)]
+      rw [List.filter_append, List.filter_cons, hP,
+        List.filter_eq_self.mpr (fun x hx => hs x (List.mem_of_mem_take hx)),
+        ih _ (by simp only [List.length_drop]; omega) (fun x hx => hs x (List.mem_of_mem_drop hx))]
+      simp
+
 /-- Every character of the output is a character of the data or a newline. -/
 theorem wraplinesC_mem (w : Nat) (hw : 0 < w) : ∀ (f : Nat) (s : List Nat), s.length ≤ f →
     ∀ c ∈ wraplinesC s w, c ∈ s ∨ c = 10 := by
