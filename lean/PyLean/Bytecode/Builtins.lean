@@ -1004,7 +1004,7 @@ def buildClassBuiltin (args : List Val) : RM Val := do
   match args with
   | func :: .str name :: bases =>
     let ns ← mkDict
-    let cell ← evalVector P ctx func ns [] []
+    let cell ← evalVector P om ctx func ns [] []
     let _ := cell
     buildClass name bases ns
   | _ => typeError "__build_class__: not enough arguments"
@@ -1671,7 +1671,7 @@ def callBuiltin (n : String) (args : List Val) (kw : List String) : RM Val := do
     let r ← om.binaryOp ctx 6 a b
     mkTuple [q, r]
   | "pow", [a, b] => om.binaryOp ctx 8 a b
-  | "__build_class__", _ => buildClassBuiltin P ctx args
+  | "__build_class__", _ => buildClassBuiltin P om ctx args
   | "format", [v] => om.format ctx v .null
   | "format", [v, s] => om.format ctx v s
   | "id", [v] =>
@@ -1698,7 +1698,7 @@ def callImpl (f : Val) (args : List Val) (kw : List String) : RM Val := do
     | .func _ =>
       let fo ← getFunc f
       let co ← getCodeR P fo.code
-      evalVector P ctx f (localsFor co fo) args kw
+      evalVector P om ctx f (localsFor co fo) args kw
     | .method fn s => om.call ctx fn (s :: args) kw
     | .boundBuiltin tp n s => callMethod P om ctx tp n s args kw
     | .cls _ => instantiate om ctx f args kw

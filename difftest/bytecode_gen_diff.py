@@ -116,7 +116,18 @@ def rop(op, target):
     log(f"re:{t}:{res}:{1 if running(target) else 0}")
 
 
-CLS = {c.__name__: c for c in [
+class ReInit(Exception):
+    """Its constructor, run by PyErr_NormalizeException when the class is thrown, calls next() on
+    the top object: Python code inside gen_set_exception (Objects/genobject.c:566)."""
+
+    def __init__(self, *a):
+        t = C.top
+        rop(["anext"] if isinstance(t, types.AsyncGeneratorType)
+            else ["send", 1] if isinstance(t, types.CoroutineType) else ["next"], t)
+        super().__init__(*a)
+
+
+CLS = {c.__name__: c for c in [ReInit, 
     ValueError, KeyError, RuntimeError, StopIteration, StopAsyncIteration, GeneratorExit,
     MyGE, MySI, MySAI, BaseException, Exception, LookupError]}
 
@@ -437,6 +448,10 @@ def run_drive(c):
     C.trace = []
     C.held = []
     C.keep = []
+    # finalize the cyclic garbage of earlier cases now, into a trace that is thrown away, so
+    # that the collection at "del" below finalizes only this case's objects
+    gc.collect()
+    C.trace = []
     C.fib, C.finb = c["firstiter"], c["finalizer"]
     kind = c["kind"]
     if kind == "agen":
@@ -454,6 +469,10 @@ def run_drive(c):
             C.top = None
             cw = None
             o = None
+            # A frame suspended in a handler holds the exception it is handling, whose traceback
+            # holds the frame: such a generator is reached by the collector, not by its reference
+            # count, and gen_finalize (the tp_finalize the model runs at "del") runs then.
+            gc.collect()
             C.trace = log_trace
             steps.append([["ok", "None"], "gone"])
             break
@@ -650,12 +669,15 @@ def has_reent(x):
 
 
 def gen_throw_args(rng):
-    c = rng.choice(EXCS)
+    c0 = rng.choice(EXCS)
+    # a class whose constructor re-enters; only where a class is thrown (an instance would be
+    # built by this driver, before the throw)
+    c = "ReInit" if rng.random() < 0.15 else c0
     k = rng.random()
     if k < 0.45:
         return [["cls", c]]
     if k < 0.6:
-        return [["inst", c, "x"]]
+        return [["inst", c0, "x"]]
     if k < 0.66:
         return [["junk"]]
     if k < 0.72:
@@ -669,7 +691,7 @@ def gen_throw_args(rng):
     if k < 0.92:
         return [["cls", c], ["none"], ["int", 1]]
     if k < 0.96:
-        return [["inst", c, "x"], ["str", "v"]]
+        return [["inst", c0, "x"], ["str", "v"]]
     return [["cls", c], ["none"], ["none"], ["none"]]
 
 

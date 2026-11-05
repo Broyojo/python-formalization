@@ -44,6 +44,7 @@ structure HooksLegal (h : Hooks V X) : Prop where
   callThrow : ∀ w m a b c, Mono w (h.callThrow w m a b c).1
   unraisable : ∀ w m e, Mono w (h.unraisable w m e)
   warn : ∀ w m, Mono w (h.warn w m).1
+  normalize : ∀ w t v, Mono w (h.normalize w t v).1
 
 /-- `HooksLegal` can be met: a frame that re-raises what is thrown and touches nothing. -/
 theorem noopHooks_legal : HooksLegal noopHooks where
@@ -54,6 +55,7 @@ theorem noopHooks_legal : HooksLegal noopHooks where
   callThrow _ _ _ _ _ := Mono.refl _
   unraisable _ _ _ := Mono.refl _
   warn _ _ := Mono.refl _
+  normalize _ _ _ := Mono.refl _
 
 /-- A frame marked `FRAME_EXECUTING` stays so across anything that preserves `Mono`. -/
 theorem Mono.executing {a b : World V X} (m : Mono a b) {r : Ref}
@@ -243,15 +245,27 @@ theorem genCloseF_legal (hh : HooksLegal h) (n : Nat) :
           · rw [genCloseFinish_fst]
             exact genSendEx2_legal hh _ _ hx h3 m
 
+/-- `gen_set_exception` runs Python code only through `normalize`. -/
+theorem genSetException_mono (hh : HooksLegal h) (w : World V X) (typ val tb) :
+    Mono w (genSetException h w typ val tb).1 := by
+  unfold genSetException
+  split
+  · exact Mono.refl _
+  · split
+    · exact hh.normalize _ _ _
+    · split <;> exact Mono.refl _
+    · exact Mono.refl _
+
 theorem throwHere_legal (hh : HooksLegal h) {w0 w : World V X} {r : Ref} (typ val tb)
     (h2 : (w0.get r).state ≠ .executing) (h3 : (w0.get r).state.finished = false)
     (m : Mono (w0.setState r .executing) w) :
     Mono w0 (throwHere h w r (w0.get r).state typ val tb).1 := by
   simp only [throwHere]
+  have m2 := m.trans (genSetException_mono hh w typ val tb)
   split
-  · exact genThrowCurrent_legal hh _ h2 h3 m
+  · exact genThrowCurrent_legal hh _ h2 h3 m2
   · simp only
-    apply mono_write m
+    apply mono_write m2
     · intro q hq; exact get_setState_ne _ _ hq
     · simpa using legalEdge_refl _
     · simp [World.setState]
@@ -286,7 +300,7 @@ theorem genThrowF_legal (hh : HooksLegal h) (n : Nat) :
       split
       · split
         · exact Mono.refl w
-        · split <;> exact Mono.refl w
+        · split <;> exact genSetException_mono hh w _ _ _
       · rename_i hf0
         have h3 : (w.get r).state.finished = false := by simpa using hf0
         have m0 := Mono.refl (w.setState r .executing)
@@ -389,12 +403,14 @@ theorem genThrowCurrent_guard (bad) (w : World V X) (r e) (hs : (w.get r).state 
     genThrowCurrent (guardResume h bad) w r e = genThrowCurrent h w r e := by
   simp only [genThrowCurrent, genSendEx2_guard h bad w r _ _ hs]
 
-theorem throwHere_guard (bad) (w : World V X) (r s typ val tb) (hs : (w.get r).state = .executing) :
+theorem throwHere_guard (hh : HooksLegal h) (bad) (w : World V X) (r s typ val tb)
+    (hs : (w.get r).state = .executing) :
     throwHere (guardResume h bad) w r s typ val tb = throwHere h w r s typ val tb := by
-  have hse : genSetException (guardResume h bad) typ val tb = genSetException h typ val tb := rfl
+  have hse : ∀ w : World V X, genSetException (guardResume h bad) w typ val tb =
+      genSetException h w typ val tb := fun _ => rfl
   simp only [throwHere, hse]
   split
-  · exact genThrowCurrent_guard bad w r _ hs
+  · exact genThrowCurrent_guard bad _ r _ ((genSetException_mono hh w typ val tb).executing hs)
   · rfl
 
 theorem afterDelegate_guard (bad) (w : World V X) (r s) (x : Ret V) (hs : (w.get r).state = .executing) :
@@ -412,7 +428,8 @@ theorem genThrowF_guard (hh : HooksLegal h) (bad) (n : Nat) :
     intro w r c typ val tb
     have hc : genCloseF (guardResume h bad) n = genCloseF h n := by
       funext w r; exact genCloseF_guard hh bad n w r
-    have hse : genSetException (guardResume h bad) typ val tb = genSetException h typ val tb := rfl
+    have hse : ∀ w : World V X, genSetException (guardResume h bad) w typ val tb =
+      genSetException h w typ val tb := fun _ => rfl
     have hx0 : ((w.setState r .executing).get r).state = .executing := by simp
     simp only [genThrowF, hse, hc, ih]
     split
@@ -433,7 +450,7 @@ theorem genThrowF_guard (hh : HooksLegal h) (bad) (n : Nat) :
             have hx : (w1.get r).state = .executing := m.executing hx0
             cases st with
             | fail e => exact genThrowCurrent_guard bad w1 r e hx
-            | ok => exact throwHere_guard bad w1 r _ typ val tb hx
+            | ok => exact throwHere_guard hh bad w1 r _ typ val tb hx
           · split
             · rename_i sub _
               have m := genThrowF_legal hh n (w.setState r .executing) sub c typ val tb
@@ -451,7 +468,7 @@ theorem genThrowF_guard (hh : HooksLegal h) (bad) (n : Nat) :
               | error e => rfl
               | ok mo =>
                 cases mo with
-                | none => exact throwHere_guard bad w1 r _ typ val tb hx1
+                | none => exact throwHere_guard hh bad w1 r _ typ val tb hx1
                 | some meth =>
                   simp only
                   have hcl : (guardResume h bad).callThrow = h.callThrow := rfl
@@ -460,7 +477,7 @@ theorem genThrowF_guard (hh : HooksLegal h) (bad) (n : Nat) :
                   generalize h.callThrow w1 meth typ val tb = p at m2
                   obtain ⟨w2, res⟩ := p
                   exact afterDelegate_guard bad w2 r _ res (m2.executing hx0)
-        · exact throwHere_guard bad _ r _ typ val tb hx0
+        · exact throwHere_guard hh bad _ r _ typ val tb hx0
 
 end Send
 

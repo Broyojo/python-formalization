@@ -844,7 +844,7 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "For every object model, code object, function, **kwargs dict and keyword list, initialize_locals' keyword loop raises 'Q() keywords must be strings' for a keyword that is not a str, propagates an error of the slot lookup, raises 'Q() got multiple values for argument K' (K by PyObject_Str) for a keyword naming a parameter already set and otherwise binds it; a keyword naming no parameter goes into **kwargs with PyDict_SetItem of the keyword object, or, with no **kwargs, raises the positional-only error first when there are positional-only parameters and a keyword names one, else the unexpected keyword error."
     source := "Python/ceval.c:1803-1903"
     status := .proven, prop := ``BindKeywordsRules, thm := some ``bindKeywordsRules_proven
-    notes := "__kwdefaults__ with non-str keys is bytecode-kwonly-defaults-borrowed. Python code run by a keyword's __eq__ or __str__ gives the recursion counter back (keepRecursion), as every completed call does." },
+    notes := "Every keyword, an exact str too, is stored with PyDict_SetItem (KwHooks.setItem, the generic comparison), so a str-subclass key already in **kwargs gets its __eq__ run. Python code run by a hook gives the recursion counter back (keepRecursion), as every completed call does." },
   { id := "bytecode-find-kw-slot", pyFile := "Python/ceval.c"
     pyFns := ["initialize_locals"]
     statement := "For every object model and code object, the parameter a keyword names: an exact str by its text with nothing run; any other keyword object (a str subclass from a ** mapping) by PyObject_RichCompareBool(keyword, varname, Py_EQ) against co_varnames[co_posonlyargcount:total_args] in order, the first true comparison being the slot whatever the texts and an error being the result (kw_fail)."
@@ -853,10 +853,19 @@ def entries : List Entry := GenObj.entries ++ [
     notes := "Checked on 3.15.2 with class S(str) whose __eq__ returns True, False, raises, or compares the text: f(**{S('zz'): 1}) binds abc when __eq__ is always true and raises its ValueError when it raises." },
   { id := "bytecode-initialize-locals", pyFile := "Python/ceval.c"
     pyFns := ["initialize_locals"]
-    statement := "For every object model, code object, function, frame, arguments and keywords: with no *args and no **kwargs the positional arguments are copied first, the keyword loop runs on that frame and its error is the result even with too many positional arguments; too many is then too_many_positional on the frame the keywords left; too few takes m = co_argcount - defcount as a signed Py_ssize_t, raising missing_arguments for a missing one below m and otherwise filling empty slots m + i from defaults i >= max(n - m, 0); exactly co_argcount uses no default. With *args the extra positional arguments are packed into a tuple at localsplus[total_args] before the keyword loop and too many is no error."
-    source := "Python/ceval.c:1738-1940"
-    status := .proven, prop := ``InitializeLocalsRules, thm := some ``initializeLocalsRules_proven
-    notes := "The keyword-only defaults loop (:1942-1966) is bytecode-kwonly-defaults-borrowed and the difftest; the **kwargs dict creation is checked by the difftest (p_binding, p_calls)." },
+    statement := "For every object model, code object, function object, frame, arguments and keywords, initialize_locals runs its stages in source order: with **kwargs a fresh dict is made first and stored at localsplus[total_args] (total_args + 1 with *args), and the keyword loop fills that dict; the positional arguments are copied, and with *args the rest are packed into a tuple at localsplus[total_args]; the keyword loop's error is the result even with too many positional arguments; too many without *args is then too_many_positional on the frame the keywords left, with func_defaults and func_qualname read after the loop; otherwise the defaults stage and then the keyword-only stage."
+    source := "Python/ceval.c:1738-1966"
+    status := .proven, prop := ``InitializeLocalsRules, thm := some ``initializeLocalsRules_proven },
+  { id := "bytecode-defaults-fill", pyFile := "Python/ceval.c"
+    pyFns := ["initialize_locals"]
+    statement := "The positional defaults stage of initialize_locals: with argcount >= co_argcount nothing changes; otherwise m = co_argcount - defcount is a signed Py_ssize_t, an empty slot among argcount..m is missing_arguments, and with none the defaults i from max(n - m, 0) fill the empty slots m + i."
+    source := "Python/ceval.c:1912-1940"
+    status := .proven, prop := ``DefaultsFillRules, thm := some ``defaultsFillRules_proven },
+  { id := "bytecode-kwonly-defaults", pyFile := "Python/ceval.c"
+    pyFns := ["initialize_locals"]
+    statement := "The keyword-only stage of initialize_locals: with keyword-only parameters, each unset slot of localsplus[co_argcount:total_args] takes __kwdefaults__[varname] by PyDict_GetItemRef (func_kwdefaults read again at each slot; a colliding key's __eq__ runs and its error is the result), else counts as missing; a missing one is missing_arguments (keyword-only) with func_qualname read then, and with none the frame is the result."
+    source := "Python/ceval.c:1942-1966"
+    status := .proven, prop := ``KwonlyDefaults, thm := some ``kwonlyDefaults_proven },
   { id := "bytecode-too-many-positional", pyFile := "Python/ceval.c"
     pyFns := ["too_many_positional"]
     statement := "For every code object, count, defaults tuple and frame, too_many_positional raises 'Q() takes S positional argument(s) but G[ positional argument(s) (and K keyword-only argument(s))] was/were given': S is 'from ATLEAST to N' with ATLEAST = co_argcount - defcount signed and the plural when there are defaults, else N with the plural for N != 1; the keyword-only part appears when K, the keyword-only locals already set, is not 0; 'was' only for G = 1 and K = 0."

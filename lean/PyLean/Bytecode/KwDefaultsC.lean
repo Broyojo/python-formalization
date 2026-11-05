@@ -8,8 +8,8 @@ at the level of C pointers and reference counts, with the generic dict lookup it
 `:1182-1207`).
 
 `initializeLocals` in `Ceval.lean` is the version the machine and the difftest run: it looks the
-parameter name up in `func.kwdefaults` by string, its heap never frees anything, and no Python code
-runs. In C, `func->func_kwdefaults` is passed to `PyDict_GetItemRef` as a borrowed reference
+parameter name up with `PyDict_GetItemRef` and the generic comparison (`KwHooks.dictGet`), so a
+colliding key's `__eq__` runs, but its heap never frees anything. In C, `func->func_kwdefaults` is passed to `PyDict_GetItemRef` as a borrowed reference
 (`:1949-1951`). When the dict has a key that is not a `str` (so its keys are `DICT_KEYS_GENERAL`)
 with the same hash as the parameter name, `compare_generic` calls that key's `__eq__`
 (`PyObject_RichCompareBool(startkey, key, Py_EQ)`, `:1193`), which is Python code, and that code

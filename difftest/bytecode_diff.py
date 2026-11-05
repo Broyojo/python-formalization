@@ -252,6 +252,15 @@ def p_binding(r):
         out.append(f"f.__defaults__ = {r.choice(['(5, 6, 7)', '(9,)', '()', 'None', '(1, 2)', '(1, 2, 3, 4, 5)'])}")
     if r.random() < 0.3:
         out.append(f"f.__kwdefaults__ = {r.choice(['None', '{}', dict(c=3), dict(defg=4), dict(abcd=5)])}")
+    elif r.random() < 0.3:
+        # a non-str key with a keyword-only name's hash: PyDict_GetItemRef on __kwdefaults__
+        # (Python/ceval.c:1951) runs its __eq__
+        name = r.choice(["c", "defg", "abcd"])
+        eq = r.choice(["True", "False", "1 // 0", "o == 'c'"])
+        out.append(f"class K:\n    def __hash__(self):\n        return hash({name!r})\n"
+                   f"    def __eq__(self, o):\n        return {eq}")
+        out.append(f"f.__kwdefaults__ = {{K(): 7, {name!r}: 8}}" if r.random() < 0.5
+                   else "f.__kwdefaults__ = {K(): 7}")
     calls = ["f()", "f(1)", "f(1, 2)", "f(1, 2, 3)", "f(1, 2, 3, 4)", "f(abd=1)", "f(1, defh=2)", "f(Abc=1)",
              "f(abc=1, abcd=2)", "f(1, abcde=2)", "f(name=1)", "f(1, Name2=2)", "f(xy=1)", "f(1, alpha=2)",
              "f(ab=1, abc=2)", "f(1, 2, abcd=3)", "f(c=1)", "f(1, c=1)", "f(1, b=2, c=3)", "f(xx=1)",
@@ -270,7 +279,8 @@ def p_binding(r):
         calls = calls + ["f(**{S('zz'): 1})", "f(1, **{S('abc'): 2})", "f(**{S('abc'): 1})",
                          "f(1, **{S('defg'): 2})", "f(1, **{S('xx'): 2})", "f(1, 2, 3, **{S('zz'): 2})",
                          "f(**{S('a'): 1, 'b': 2})", "f(1, **{S('kw'): 3})", "f(**{S('ab'): 1})",
-                         "f(1, **{S('c'): 2})"]
+                         "f(1, **{S('c'): 2})", "f(1, 2, **{S('zz'): 1, 'zz': 2})",
+                         "f(**{S('xx'): 1, 'xx': 2})", "f(1, **{'zz': 1, S('zz'): 2})"]
     for c in r.sample(calls, r.randint(3, 8)):
         out.append(guarded(f"print({c})"))
     return "\n".join(out)

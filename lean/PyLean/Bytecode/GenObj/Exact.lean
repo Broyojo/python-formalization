@@ -346,36 +346,41 @@ theorem genCloseIterOutcomes_proven : GenCloseIterOutcomes := by
   · subst hm; simp only [closeMeth, hcall]; cases res <;> rfl
 
 /-- `gen_set_exception` (:546-601). The traceback is checked first: anything but absent,
-`None` or a traceback object is the `TypeError` whatever `typ` is. Then a class is normalized
-with its value (`PyErr_NormalizeException`), an instance with a value other than `None` is the
-"instance exception may not have a separate value" `TypeError`, an instance with none is
-raised as it is, and anything else is the "exceptions must be classes or instances" `TypeError`
-naming its type (`%s` of `tp_name`, untruncated). Tracebacks themselves are not modelled. -/
+`None` or a traceback object is the `TypeError` whatever `typ` is, with nothing run. Then a
+class is normalized with its value (`PyErr_NormalizeException`, :566), which may call the class,
+so Python code runs (`normalize` gets and returns the world, and may re-enter the model) and the
+exception is whatever that leaves, the constructor's own error included; an instance with a
+value other than `None` is the "instance exception may not have a separate value" `TypeError`, an
+instance with none is raised as it is, and anything else is the "exceptions must be classes or
+instances" `TypeError` naming its type (`%s` of `tp_name`, untruncated); none of these three runs
+Python code. Tracebacks themselves are not modelled. -/
 def GenSetExceptionCases : Prop :=
-  ∀ (V X : Type) (h : Hooks V X) (typ : Obj V) (val : Option (Obj V)),
+  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (typ : Obj V) (val : Option (Obj V)),
     (∀ t : Obj V, (match t with | .none | .traceback => False | _ => True) →
-      genSetException h typ val (some t) =
-        .error (Exc.typeError "throw() third argument must be a traceback object")) ∧
+      genSetException h w typ val (some t) =
+        (w, .error (Exc.typeError "throw() third argument must be a traceback object"))) ∧
     (∀ tb, (tb = none ∨ tb = some .none ∨ tb = some .traceback) →
-      (∀ k cl, typ = .excClass k cl → genSetException h typ val tb = .ok (h.normalize typ val)) ∧
+      (∀ k cl, typ = .excClass k cl → ∀ w' e, h.normalize w typ val = (w', e) →
+        genSetException h w typ val tb = (w', .ok e)) ∧
       (∀ k cl m v, typ = .excInst k cl m v → (val = none ∨ val = some .none) →
-        genSetException h typ val tb = .ok ⟨k, cl, m, v⟩) ∧
+        genSetException h w typ val tb = (w, .ok ⟨k, cl, m, v⟩)) ∧
       (∀ k cl m v u, typ = .excInst k cl m v → val = some u → u.isNone = false →
-        genSetException h typ val tb =
-          .error (Exc.typeError "instance exception may not have a separate value")) ∧
+        genSetException h w typ val tb =
+          (w, .error (Exc.typeError "instance exception may not have a separate value"))) ∧
       ((match typ with | .excClass .. | .excInst .. => False | _ => True) →
-        genSetException h typ val tb = .error (Exc.typeError
+        genSetException h w typ val tb = (w, .error (Exc.typeError
           ("exceptions must be classes or instances deriving from BaseException, not "
-            ++ h.typeName typ))))
+            ++ h.typeName typ)))))
 
 theorem genSetExceptionCases_proven : GenSetExceptionCases := by
-  intro V X h typ val
+  intro V X h w typ val
   refine ⟨fun t ht => ?_, fun tb htb => ?_⟩
   · cases t <;> simp_all [genSetException, badTraceback]
   · have hb : badTraceback tb = false := by
       rcases htb with h0 | h0 | h0 <;> subst h0 <;> rfl
-    refine ⟨fun k cl ht => ?_, fun k cl m v ht hv => ?_, fun k cl m v u ht hv hu => ?_, fun ht => ?_⟩
-    · subst ht; simp [genSetException, hb]
+    refine ⟨fun k cl ht w' e hn => ?_, fun k cl m v ht hv => ?_, fun k cl m v u ht hv hu => ?_,
+      fun ht => ?_⟩
+    · subst ht; simp [genSetException, hb, hn]
     · subst ht; rcases hv with hv | hv <;> subst hv <;> simp [genSetException, hb, isNonNull]
     · subst ht; subst hv
       cases u <;> simp_all [genSetException, isNonNull, Obj.isNone]
@@ -383,40 +388,46 @@ theorem genSetExceptionCases_proven : GenSetExceptionCases := by
 
 /-! ## `_gen_throw` and `gen_throw` -/
 
-/-- `_gen_throw` (:625-726) for every state and every outcome of the Python code it runs.
-States first: running is the already-executing `ValueError`; finished is the cannot-reuse
-`RuntimeError` for a coroutine and otherwise whatever `gen_set_exception` sets, with nothing
-run. Otherwise the generator is `FRAME_EXECUTING` from :649 on. Not delegating (`throw_here`,
-:719-725): a `gen_set_exception` failure writes the old state back and raises, a success is
-thrown in by `gen_throw_current_exception`. Delegating, with `GeneratorExit` and
-`close_on_genexit` (:656-669): the sub-iterator is closed (`gen_close_iter`), its error is
-thrown into the frame, and otherwise `throw_here`. Delegating otherwise: an exact generator or
-coroutine gets `_gen_throw` recursively (:672-689); anything else has `throw` looked up (a
-failed lookup writes the state back and raises, no attribute is `throw_here`) and called with
-`(typ, val, tb)`; a value from the sub-iterator writes the state back and is the result
-(:715-716), an error is thrown into the frame (:712-714). -/
+/-- `_gen_throw` (:625-726) for every state and every outcome of the Python code it runs, the
+normalization of a thrown class (`gen_set_exception`) included. States first: running is the
+already-executing `ValueError`; finished is the cannot-reuse `RuntimeError` for a coroutine and
+otherwise whatever `gen_set_exception` sets, in the world it leaves, with the frame not run.
+Otherwise the generator is `FRAME_EXECUTING` from :649 on, so Python code run by the
+normalization sees it running (a reentrant `next` is the already-executing `ValueError`, checked
+on 3.15.2). Not delegating (`throw_here`, :719-725): a `gen_set_exception` failure writes the old
+state back into the world it left and raises, a success is thrown in by
+`gen_throw_current_exception` in that world. Delegating, with `GeneratorExit` and
+`close_on_genexit` (:656-669): the sub-iterator is closed (`gen_close_iter`), its error is thrown
+into the frame, and otherwise `throw_here`. Delegating otherwise: an exact generator or coroutine
+gets `_gen_throw` recursively (:672-689); anything else has `throw` looked up (a failed lookup
+writes the state back and raises, no attribute is `throw_here`) and called with `(typ, val, tb)`;
+a value from the sub-iterator writes the state back and is the result (:715-716), an error is
+thrown into the frame (:712-714). -/
 def GenThrowFOutcomes : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (n : Nat) (w : World V X) (r : Ref) (c : Bool) (typ : Obj V)
     (val tb : Option (Obj V)),
     ((w.get r).state = .executing → genThrowF h (n + 1) w r c typ val tb =
       (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))) ∧
-    ((w.get r).state = .cleared → genThrowF h (n + 1) w r c typ val tb =
-      (w, .err (some (if (w.get r).kind = .coro then
-          Exc.runtimeError "cannot reuse already awaited coroutine"
-        else match genSetException h typ val tb with | .ok e | .error e => e)))) ∧
-    (((w.get r).state = .created ∨ (w.get r).state = .suspended) →
-      (∀ e, genSetException h typ val tb = .error e →
-        genThrowF h (n + 1) w r c typ val tb = (w, .err (some e))) ∧
-      (∀ e, genSetException h typ val tb = .ok e →
-        genThrowF h (n + 1) w r c typ val tb = genThrowCurrent h (w.setState r .executing) r (some e))) ∧
+    ((w.get r).state = .cleared → (w.get r).kind = .coro → genThrowF h (n + 1) w r c typ val tb =
+      (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))) ∧
+    ((w.get r).state = .cleared → (w.get r).kind ≠ .coro → ∀ w' x,
+      genSetException h w typ val tb = (w', x) →
+      genThrowF h (n + 1) w r c typ val tb = (w', .err (some (match x with | .ok e | .error e => e)))) ∧
+    (((w.get r).state = .created ∨ (w.get r).state = .suspended) → ∀ w' x,
+      genSetException h (w.setState r .executing) typ val tb = (w', x) →
+      genThrowF h (n + 1) w r c typ val tb =
+        match x with
+        | .error e => (w'.setState r (w.get r).state, .err (some e))
+        | .ok e => genThrowCurrent h w' r (some e)) ∧
     ((w.get r).state = .suspendedYieldFrom →
       (IsGenExit typ → c = true → ∀ wc st,
         genCloseIter h (genCloseF h n) (w.setState r .executing) (w.get r).stackTop = (wc, st) →
         (∀ e, st = .fail e → genThrowF h (n + 1) w r c typ val tb = genThrowCurrent h wc r e) ∧
-        (st = .ok → ∀ e, genSetException h typ val tb = .error e →
-          genThrowF h (n + 1) w r c typ val tb = (wc.setState r .suspendedYieldFrom, .err (some e))) ∧
-        (st = .ok → ∀ e, genSetException h typ val tb = .ok e →
-          genThrowF h (n + 1) w r c typ val tb = genThrowCurrent h wc r (some e))) ∧
+        (st = .ok → ∀ w' x, genSetException h wc typ val tb = (w', x) →
+          genThrowF h (n + 1) w r c typ val tb =
+            match x with
+            | .error e => (w'.setState r .suspendedYieldFrom, .err (some e))
+            | .ok e => genThrowCurrent h w' r (some e))) ∧
       (¬ (IsGenExit typ ∧ c = true) →
         (∀ sub, (w.get r).stackTop = .gen sub → (w.get sub).kind ≠ .asyncGen → ∀ w' res,
           genThrowF h n (w.setState r .executing) sub c typ val tb = (w', res) →
@@ -428,48 +439,52 @@ def GenThrowFOutcomes : Prop :=
           h.getThrow (w.setState r .executing) (w.get r).stackTop = (wq, q) →
           (∀ e, q = .error e →
             genThrowF h (n + 1) w r c typ val tb = (wq.setState r .suspendedYieldFrom, .err (some e))) ∧
-          (q = .ok none → ∀ e, genSetException h typ val tb = .error e →
-            genThrowF h (n + 1) w r c typ val tb = (wq.setState r .suspendedYieldFrom, .err (some e))) ∧
-          (q = .ok none → ∀ e, genSetException h typ val tb = .ok e →
-            genThrowF h (n + 1) w r c typ val tb = genThrowCurrent h wq r (some e)) ∧
+          (q = .ok none → ∀ w' x, genSetException h wq typ val tb = (w', x) →
+            genThrowF h (n + 1) w r c typ val tb =
+              match x with
+              | .error e => (w'.setState r .suspendedYieldFrom, .err (some e))
+              | .ok e => genThrowCurrent h w' r (some e)) ∧
           (∀ m w' res, q = .ok (some m) → h.callThrow wq m typ val tb = (w', res) →
             genThrowF h (n + 1) w r c typ val tb =
               match res with
               | .ok v => (w'.setState r .suspendedYieldFrom, .ok v)
               | .err e => genThrowCurrent h w' r e))))
 
+theorem throwHere_eq (h : Hooks V X) (w : World V X) (r : Ref) (s : FrameState) (typ : Obj V)
+    (val tb : Option (Obj V)) (w' : World V X) (x : Except (Exc V) (Exc V))
+    (hx : genSetException h w typ val tb = (w', x)) :
+    throwHere h w r s typ val tb =
+      match x with
+      | .error e => (w'.setState r s, .err (some e))
+      | .ok e => genThrowCurrent h w' r (some e) := by
+  simp only [throwHere, hx]
+  cases x <;> rfl
+
 theorem genThrowFOutcomes_proven : GenThrowFOutcomes := by
   intro V X h n w r c typ val tb
-  refine ⟨fun hs => by simp [genThrowF, hs], fun hs => ?_, fun hs => ?_, fun hs => ?_⟩
-  · by_cases hk : (w.get r).kind = .coro
-    · simp [genThrowF, hs, hk]
-    · simp only [genThrowF, hs, hk]
-      cases genSetException h typ val tb <;> simp
-  · have hx : (w.get r).state ≠ .executing := by rcases hs with hs | hs <;> rw [hs] <;> decide
+  refine ⟨fun hs => by simp [genThrowF, hs], fun hs hk => by simp [genThrowF, hs, hk],
+    fun hs hk w' x hx => ?_, fun hs w' x hx => ?_, fun hs => ?_⟩
+  · simp only [genThrowF, hs, hk, reduceCtorEq, if_false, finished_cleared, if_true, hx]
+    cases x <;> rfl
+  · have hx' : (w.get r).state ≠ .executing := by rcases hs with hs | hs <;> rw [hs] <;> decide
     have hf : (w.get r).state.finished = false := by rcases hs with hs | hs <;> rw [hs] <;> rfl
     have hy : (w.get r).state ≠ .suspendedYieldFrom := by
       rcases hs with hs | hs <;> rw [hs] <;> decide
-    refine ⟨fun e he => ?_, fun e he => ?_⟩
-    · simp only [genThrowF, if_neg hx, hf, Bool.false_eq_true, if_false, state_setState, if_neg hy,
-        throwHere, he, setState_setState, setState_self]
-    · simp only [genThrowF, if_neg hx, hf, Bool.false_eq_true, if_false, state_setState, if_neg hy,
-        throwHere, he]
+    simp only [genThrowF, if_neg hx', hf, Bool.false_eq_true, if_false, state_setState, if_neg hy]
+    simp only [throwHere, hx]; cases x <;> rfl
   · have hx : (w.get r).state ≠ .executing := by rw [hs]; decide
     have hf : (w.get r).state.finished = false := by rw [hs]; rfl
-    refine ⟨fun hg hc wc st hcl => ⟨fun e he => ?_, fun hok e he => ?_, fun hok e he => ?_⟩,
+    refine ⟨fun hg hc wc st hcl => ⟨fun e he => ?_, fun hok w' x hx => ?_⟩,
       fun hng => ⟨fun sub hsub hk w' res hrec => ?_, fun hna wq q hq => ⟨fun e he => ?_,
-        fun h0 e he => ?_, fun h0 e he => ?_, fun m w' res hm hcall => ?_⟩⟩⟩
+        fun h0 w' x hx => ?_, fun m w' res hm hcall => ?_⟩⟩⟩
     · have hg' := (givenMatches_iff typ).2 hg
       simp only [genThrowF, hs, reduceCtorEq, finished_yf, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
         stackTop_setState, hg', hc, and_self, hcl, he]
     · have hg' := (givenMatches_iff typ).2 hg
       subst hok
       simp only [genThrowF, hs, reduceCtorEq, finished_yf, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-        stackTop_setState, hg', hc, and_self, hcl, throwHere, he]
-    · have hg' := (givenMatches_iff typ).2 hg
-      subst hok
-      simp only [genThrowF, hs, reduceCtorEq, finished_yf, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-        stackTop_setState, hg', hc, and_self, hcl, throwHere, he]
+        stackTop_setState, hg', hc, and_self, hcl]
+      simp only [throwHere, hx]; cases x <;> rfl
     · have hg' : ¬ (givenMatchesGeneratorExit typ = true ∧ c = true) :=
         fun ⟨a, b⟩ => hng ⟨(givenMatches_iff typ).1 a, b⟩
       have hsub' : genOrCoro? (w.setState r .executing) (w.get r).stackTop = some sub := by
@@ -486,8 +501,7 @@ theorem genThrowFOutcomes_proven : GenThrowFOutcomes := by
       simp only [genThrowF, hs, reduceCtorEq, finished_yf, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
         stackTop_setState, if_neg hg', hnone, hq]
     · subst he; rfl
-    · subst h0; simp only [throwHere, he, setState_setState]
-    · subst h0; simp only [throwHere, he]
+    · subst h0; simp only [throwHere, hx]; cases x <;> rfl
     · subst hm; simp only [hcall]; cases res <;> simp [afterDelegate]
 
 /-- `gen_throw` (:730-757): `_PyArg_CheckPositional("throw", nargs, 1, 3)` first, with its

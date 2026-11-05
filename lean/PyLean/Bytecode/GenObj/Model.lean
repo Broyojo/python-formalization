@@ -339,8 +339,11 @@ structure Hooks (V X : Type) where
   warnUnawaitedCoro : World V X → Ref → World V X
   /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, :2533). -/
   warnUnawaitedAgen : World V X → Ref → String → World V X
-  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:488) for a class `typ`. -/
-  normalize : Obj V → Option (Obj V) → Exc V
+  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:566) for a class `typ`: it may call the
+  class with `val` (`_PyErr_CreateException`), which runs Python code (`__new__`, `__init__`)
+  that acts on the world and may re-enter the model. It always leaves an exception: the
+  instance, or the one the constructor raised (`Python/errors.c`, `_PyErr_NormalizeException`). -/
+  normalize : World V X → Obj V → Option (Obj V) → World V X × Exc V
   /-- `Py_TYPE(o)->tp_name`: for a class statement the bare `__name__`. -/
   typeName : Obj V → String
   /-- `%T` of `PyErr_Format`: `_PyType_GetFullyQualifiedName(Py_TYPE(o), '.')`, the
@@ -618,31 +621,34 @@ def badTraceback : Option (Obj V) → Bool
   | none | some .none | some .traceback => false
   | some _ => true
 
-/-- `gen_set_exception`, :546-601: `.ok` with the exception it restored, or `.error` with
-the `TypeError` it set. -/
-def genSetException (h : Hooks V X) (typ : Obj V) (val tb : Option (Obj V)) :
-    Except (Exc V) (Exc V) :=
+/-- `gen_set_exception`, :546-601, with the world the normalization left: `.ok` with the
+exception it restored, or `.error` with the `TypeError` it set. -/
+def genSetException (h : Hooks V X) (w : World V X) (typ : Obj V) (val tb : Option (Obj V)) :
+    World V X × Except (Exc V) (Exc V) :=
   if badTraceback tb then
-    .error (Exc.typeError "throw() third argument must be a traceback object")
+    (w, .error (Exc.typeError "throw() third argument must be a traceback object"))
   else
     match typ with
-    | .excClass _ _ => .ok (h.normalize typ val)
+    | .excClass _ _ =>
+      let p := h.normalize w typ val
+      (p.1, .ok p.2)
     | .excInst k c m v =>
       if isNonNull val then
-        .error (Exc.typeError "instance exception may not have a separate value")
-      else .ok ⟨k, c, m, v⟩
+        (w, .error (Exc.typeError "instance exception may not have a separate value"))
+      else (w, .ok ⟨k, c, m, v⟩)
     | _ =>
-      .error (Exc.typeError
+      (w, .error (Exc.typeError
         ("exceptions must be classes or instances deriving from BaseException, not "
-          ++ h.typeName typ))
+          ++ h.typeName typ)))
 
 /-- `throw_here:`, :719-725, on a generator `FRAME_EXECUTING`: bad arguments write the old
 state back. -/
 def throwHere (h : Hooks V X) (w : World V X) (r : Ref) (state : FrameState) (typ : Obj V)
     (val tb : Option (Obj V)) : World V X × Ret V :=
-  match genSetException h typ val tb with
-  | .ok e => genThrowCurrent h w r (some e)
-  | .error e => (w.setState r state, .err (some e))
+  let p := genSetException h w typ val tb
+  match p.2 with
+  | .ok e => genThrowCurrent h p.1 r (some e)
+  | .error e => (p.1.setState r state, .err (some e))
 
 /-- :711-716: a value from the sub-iterator writes the old state back; if delegation
 failed, the error goes into the delegating frame. -/
@@ -665,8 +671,9 @@ def genThrowF (h : Hooks V X) : Nat → World V X → Ref → Bool → Obj V →
       if (w.get r).kind = .coro then
         (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
       else
-        match genSetException h typ val tb with
-        | .ok e | .error e => (w, .err (some e))
+        let p := genSetException h w typ val tb
+        match p.2 with
+        | .ok e | .error e => (p.1, .err (some e))
     else
       let w1 := w.setState r .executing
       if state = .suspendedYieldFrom then
