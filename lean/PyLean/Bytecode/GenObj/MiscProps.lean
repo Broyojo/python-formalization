@@ -153,9 +153,10 @@ def GenThrowBadArgUndelegated : Prop :=
 
 theorem genThrowBadArgUndelegated_proven : GenThrowBadArgUndelegated := by
   intro V X h fuel w r typ hy ht
-  have hset : genSetException h typ none none = .error (Exc.typeError
+  have hset : ∀ w : World V X, genSetException h w typ none none = (w, .error (Exc.typeError
       ("exceptions must be classes or instances deriving from BaseException, not "
-        ++ h.typeName typ)) := by
+        ++ h.typeName typ))) := by
+    intro w
     cases typ <;> simp_all [genSetException, isThrowable, badTraceback]
   have hna : ¬ ((w.get r).state = .suspendedYieldFrom) := by
     intro c; simp [genYf, c] at hy
@@ -206,25 +207,24 @@ def GenThrowNoDelegation : Prop :=
       else if (w.get r).state.finished = true then
         if (w.get r).kind = .coro then
           (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
-        else (w, .err (some (h.normalize (.excClass k cls) none)))
+        else ((h.normalize w (.excClass k cls) none).1,
+              .err (some (h.normalize w (.excClass k cls) none).2))
       else
-        genThrowCurrent h (w.setState r .executing) r (some (h.normalize (.excClass k cls) none))
+        genThrowCurrent h (h.normalize (w.setState r .executing) (.excClass k cls) none).1 r
+          (some (h.normalize (w.setState r .executing) (.excClass k cls) none).2)
 
 theorem genThrowNoDelegation_proven : GenThrowNoDelegation := by
   intro V X h fuel w r c k cls hy
   have hna : ¬ ((w.get r).state = .suspendedYieldFrom) := by
     intro h'; simp [genYf, h'] at hy
-  have hset : genSetException h (.excClass k cls) none none =
-      .ok (h.normalize (.excClass k cls) none) := by
-    simp [genSetException, badTraceback]
   simp only [genThrowF]
   by_cases hx : (w.get r).state = .executing
   · simp [hx]
   by_cases hf : (w.get r).state.finished = true
   · by_cases hc : (w.get r).kind = .coro
     · simp [hx, hf, hc]
-    · simp [hx, hf, hc, hset]
-  · simp [hx, hf, hna, throwHere, hset]
+    · simp [hx, hf, hc, genSetException, badTraceback]
+  · simp [hx, hf, hna, throwHere, genSetException, badTraceback]
 
 /-- The delegate is the receiver, `_PyFrame_StackPeek(frame, 2)`, exactly while suspended in
 `yield from`. -/
@@ -284,7 +284,8 @@ theorem genThrowF_lookup (h : Hooks V X) (r bad) (n : Nat) :
     intro w q c typ val tb hx
     have hc : genCloseF (guardThrowLookup h r bad) n = genCloseF h n := by
       funext w q; exact genCloseF_lookup h r bad n w q
-    have hse : genSetException (guardThrowLookup h r bad) typ val tb = genSetException h typ val tb := rfl
+    have hse : ∀ w : World V X, genSetException (guardThrowLookup h r bad) w typ val tb =
+        genSetException h w typ val tb := fun _ => rfl
     have hthrow : ∀ (w : World V X) q s, throwHere (guardThrowLookup h r bad) w q s typ val tb =
         throwHere h w q s typ val tb := by intro w q s; rfl
     have hafter : ∀ (w : World V X) q s (x : Ret V), afterDelegate (guardThrowLookup h r bad) w q s x =
@@ -334,7 +335,8 @@ theorem genThrowLookupSeesExecuting_proven : GenThrowLookupSeesExecuting := by
     · exact genThrowF_lookup h r bad (n + 1) w r c typ val tb hx
     · have hc : genCloseF (guardThrowLookup h r bad) n = genCloseF h n := by
         funext w q; exact genCloseF_lookup h r bad n w q
-      have hse : genSetException (guardThrowLookup h r bad) typ val tb = genSetException h typ val tb := rfl
+      have hse : ∀ w : World V X, genSetException (guardThrowLookup h r bad) w typ val tb =
+        genSetException h w typ val tb := fun _ => rfl
       have hthrow : ∀ (w : World V X) q s, throwHere (guardThrowLookup h r bad) w q s typ val tb =
           throwHere h w q s typ val tb := by intro w q s; rfl
       have hafter : ∀ (w : World V X) q s (x : Ret V), afterDelegate (guardThrowLookup h r bad) w q s x =

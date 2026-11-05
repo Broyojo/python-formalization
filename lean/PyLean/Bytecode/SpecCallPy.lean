@@ -199,10 +199,12 @@ theorem kr_keepRecursion {α : Type} (m : RM α) : KeepsRec (keepRecursion m) :=
 
 /-- The keyword hooks give the recursion counter back, as every call into Python code does. -/
 def HooksKeepRec (hk : KwHooks) : Prop :=
-  (∀ a b, KeepsRec (hk.eq a b)) ∧ (∀ o, KeepsRec (hk.str o)) ∧ (∀ d k v, KeepsRec (hk.setItem d k v))
+  (∀ a b, KeepsRec (hk.eq a b)) ∧ (∀ o, KeepsRec (hk.str o)) ∧ (∀ d k v, KeepsRec (hk.setItem d k v)) ∧
+    (∀ d k, KeepsRec (hk.dictGet d k))
 
 theorem kwHooksOf_keepRec (om : ObjModel) (ctx : Ctx) : HooksKeepRec (kwHooksOf om ctx) :=
-  ⟨fun _ _ => kr_keepRecursion _, fun _ => kr_keepRecursion _, fun _ _ _ => kr_keepRecursion _⟩
+  ⟨fun _ _ => kr_keepRecursion _, fun _ => kr_keepRecursion _, fun _ _ _ => kr_keepRecursion _,
+    fun _ _ => kr_keepRecursion _⟩
 
 theorem kr_get : KeepsRec (get : RM Rt) := by
   intro rt a rt' h
@@ -285,12 +287,53 @@ theorem kr_bindKeywords (co : Code) (funcv : Val) (kwdict : Val) (kwnames : List
       | exact kr_posonly hh _ _ _
       | exact kr_unexpectedKeyword hh _ _ _
       | exact kr_dictSetStr _ _ _
-      | exact hh.2.2 _ _ _
+      | exact hh.2.2.1 _ _ _
       | refine kr_bind ?_ (fun _ => ?_)
       | refine kr_ite ?_ ?_
       | split)
 
+theorem kr_kwonlyFill (co : Code) (funcv : Val) :
+    ∀ (l : List Nat) (fast : Array Val) (m : Nat), KeepsRec (kwonlyFill hk co funcv l fast m) := by
+  intro l
+  induction l with
+  | nil => intro fast m; exact kr_pure _
+  | cons i is ih =>
+    intro fast m
+    simp only [kwonlyFill]
+    repeat (first
+      | exact kr_pure _
+      | exact ih _ _
+      | exact kr_getFunc _
+      | exact hh.2.2.2 _ _
+      | refine kr_bind ?_ (fun _ => ?_)
+      | refine kr_ite ?_ ?_
+      | split)
+
+theorem kr_kwonlyStage (co : Code) (funcv : Val) (fast : Array Val) :
+    KeepsRec (kwonlyStage hk co funcv fast) := by
+  unfold kwonlyStage
+  repeat (first
+    | exact kr_pure _
+    | exact kr_kwonlyFill hh _ _ _ _ _
+    | exact kr_getFunc _
+    | exact kr_missingArguments _ _ _ _
+    | refine kr_bind ?_ (fun _ => ?_)
+    | refine kr_ite ?_ ?_
+    | split)
+
 end
+
+theorem kr_defaultsFill (co : Code) (func : FuncObj) (a n : Nat) (fast : Array Val) :
+    KeepsRec (defaultsFill co func a n fast) := by
+  unfold defaultsFill
+  dsimp only
+  repeat (first
+    | exact kr_pure _
+    | exact kr_tupleItems _
+    | exact kr_missingArguments _ _ _ _
+    | refine kr_bind ?_ (fun _ => ?_)
+    | refine kr_ite ?_ ?_
+    | split)
 
 /-- Walk a monadic body made of the primitives above, matching only up to reducible unfolding. -/
 syntax "kr_auto" term : tactic
@@ -304,6 +347,9 @@ macro_rules
       | with_reducible exact kr_tupleItems _
       | with_reducible exact kr_dictGetStr _ _
       | with_reducible exact kr_bindKeywords $hh _ _ _ _ _ _
+      | with_reducible exact kr_kwonlyFill $hh _ _ _ _ _
+      | with_reducible exact kr_kwonlyStage $hh _ _ _
+      | with_reducible exact kr_defaultsFill _ _ _ _ _
       | with_reducible exact kr_getFunc _
       | with_reducible exact kr_tooManyPositional _ _ _ _ _
       | with_reducible exact kr_missingArguments _ _ _ _
@@ -1107,7 +1153,8 @@ theorem initializeLocals_simple (hk : KwHooks) (co : Code) (funcv : Val) (func :
     initializeLocals hk co funcv fast0 L [] rt =
       .ok ((List.range L.length).foldl (fun f j => f.setIfInBounds j (L.getD j .null)) fast0) rt := by
   obtain ⟨hk, hva, hvk, _⟩ := hs
-  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, pure, EStateM.pure, bind, EStateM.bind, hg]
+  simp [initializeLocals, hk, hva, hvk, hl, bindKeywords, defaultsFill, kwonlyStage, pure, EStateM.pure,
+    bind, EStateM.bind, hg]
 
 /-- The frame `_INIT_CALL_PY_EXACT_ARGS` builds (`:4615-4626`): `_PyFrame_PushUnchecked` with `NULL`
 locals and the arguments (`self` first when not `NULL`) copied into the first locals. -/

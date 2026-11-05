@@ -554,7 +554,7 @@ theorem table_pairwise {eqv : K → K → Bool} : ∀ l : List (Slot K),
         have := hu 0 (j + 1) k h e.1 e.2 (by simp) (by simpa using hj) hq
         omega
 
-/-- `set_table_resize`'s copy loop (@3.14.7:359-372): every entry goes to the first NULL on its walk. -/
+/-- `set_table_resize`'s copy loop (:543-556): every entry goes to the first NULL on its walk. -/
 theorem reinsert_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K) (m : Nat) :
     ∀ (src acc : List (Slot K)) (n : Nat),
       SetCore hf eqv (withT so m acc n) →
@@ -682,7 +682,7 @@ theorem setNewSize_stop (m : Nat) : ∀ (f n : Nat), 0 < n →
       rw [e]
       exact ⟨Or.inl (by omega), 0, by simp⟩
 
-/-- The table `set_table_resize` would pick for `minused` is more than `PyMem_NEW` can give (@3.14.7:343). -/
+/-- The table `set_table_resize` would pick for `minused` is more than `PyMem_NEW` can give (:527). -/
 def SetResizeRefused (minused : Nat) : Prop :=
   (2 ^ 63 - 1) / 16 < setNewSize minused 64 PySet_MINSIZE
 
@@ -788,7 +788,8 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
       simp only [Nat.zero_add] at r2
       let so' : SetObj K := { so with
         mask := m, table := t, fill := so.used
-        tableId := if r == PySet_MINSIZE then 0 else so.nextId
+        tableId := if r == PySet_MINSIZE then 0 else so.reuse.headD so.nextId
+        reuse := if r == PySet_MINSIZE then so.reuse else so.reuse.tail
         nextId := so.nextId + 1 }
       refine ⟨so', ?_, ?_, r3, rfl, rfl, ?_⟩
       · have hr1 : reinsertAll (r - 1) (List.replicate r Slot.null) so.table = .ok t := r1

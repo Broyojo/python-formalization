@@ -11,7 +11,7 @@ object model, which may run its `__eq__`, raise, or say true for other text.
 
 namespace PyLean.Bytecode
 
-/-- **The slot a keyword names** (lines 1815-1835): an exact `str` is found by its text, with no
+/-- **The slot a keyword names** (lines 1819-1839: the pointer loop :1822-1827, the slow loop :1830-1839): an exact `str` is found by its text, with no
 Python code run and nothing changed; any other keyword object goes through
 `PyObject_RichCompareBool(keyword, varname, Py_EQ)` (line 1832) against
 `co_varnames[co_posonlyargcount:total_args]` in order: an error is the result (`kw_fail`,
@@ -44,11 +44,11 @@ theorem findKwSlotRules_proven : FindKwSlotRules := by
 
 /-- **The keyword loop** (`initialize_locals`, lines 1803-1903), one keyword `k = v` at a time,
 for every object model, code object, function, `**kwargs` dict, keyword list and runtime: a keyword
-that is not a `str` is "Q() keywords must be strings"; otherwise its slot is looked up
+that is not a `str` is "Q() keywords must be strings" (:1812-1817); otherwise its slot is looked up
 (`findKwSlot`), whose error is the result; a slot already set is "Q() got multiple values for
 argument '%S'" (`kw_found`, lines 1894-1901, `'%S'` being `PyObject_Str` of the keyword) and an
 empty one takes `v`. A keyword naming no parameter goes into `**kwargs` when there is one
-(`PyDict_SetItem` with the keyword object); with no `**kwargs`, `positional_only_passed_as_keyword`
+(`PyDict_SetItem` with the keyword object, line 1882, whose hashing and comparisons with the keys already there may run Python code, so every keyword, an exact `str` too, goes through `KwHooks.setItem`); with no `**kwargs`, `positional_only_passed_as_keyword`
 runs first when there are positional-only parameters, and its error is the one raised; otherwise
 the unexpected keyword error is. -/
 def BindKeywordsRules : Prop :=
@@ -82,9 +82,7 @@ def BindKeywordsRules : Prop :=
         bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt = .error y rt') ∧
       (∀ rt1, findKwSlot hk co k rt = .ok none rt1 → kwdict ≠ .null →
         bindKeywords hk co funcv kwdict kwnames ((k, v) :: rest) fast rt =
-          (do (match k with
-               | .str s => dictSetStr kwdict s v
-               | k => hk.setItem kwdict k v)
+          (do hk.setItem kwdict k v
               bindKeywords hk co funcv kwdict kwnames rest fast) rt1))
 
 theorem bindKeywordsRules_proven : BindKeywordsRules := by
@@ -127,11 +125,10 @@ theorem bindKeywordsRules_proven : BindKeywordsRules := by
         simp only [hf, hd, beq_self_eq_true, if_true, hb, EStateM.bind, hg, hp, hg2, hu]
   · have hb : (kwdict == .null) = false := by simpa using hd
     simp only [hf, hb, Bool.false_eq_true, if_false, EStateM.bind]
-    cases k <;> rfl
 
 /-- **`positional_only_passed_as_keyword`** (lines 1674-1735), for every object model, code
 object, keyword list and runtime: for each positional-only name in order and each keyword in
-order, an exact `str` keyword counts when its text is the name (the pointer test of line 1688, or
+order, an exact `str` keyword counts when its text is the name (the pointer test of line 1689, or
 `PyObject_RichCompareBool` of two exact `str`), and any other keyword object when
 `PyObject_RichCompareBool(posonly_name, kwname, Py_EQ)` (line 1697, which runs a subclass's
 reflected `__eq__`) is true, whose error is the result (`cmp < 0`, `goto fail`, lines 1704-1706);
@@ -305,118 +302,201 @@ theorem tooManyPositionalMsg_proven : TooManyPositionalMsg := by
       beq_self_eq_true, Bool.and_eq_true] <;>
     rfl
 
-section Init
-variable (hk : KwHooks) (co : Code) (func : FuncObj) (fast0 : Array Val) (args : List Val)
-  (kwargs : List (Val × Val))
-
 /-- The frame after the positional copy (lines 1763-1773): `localsplus[j] = args[j]` for
-`j < n`, `n = min(argcount, co_argcount)`. -/
-def posFill : Array Val :=
+`j < n`, `n = min(argcount, co_argcount)`, on the frame `base`. -/
+def posFill (co : Code) (base : Array Val) (args : List Val) : Array Val :=
   (List.range (if args.length > co.argcount then co.argcount else args.length)).foldl
-    (fun f j => f.setIfInBounds j (args.getD j .null)) fast0
+    (fun f j => f.setIfInBounds j (args.getD j .null)) base
 
-end Init
+/-- **The defaults fill** (lines 1912-1940), for every code object, function, count and frame:
+with `argcount >= co_argcount` nothing changes; otherwise `m = co_argcount - defcount` is a
+signed `Py_ssize_t`, an empty slot among `argcount..m` is `missing_arguments` (positional), and
+with none the defaults `i` from `max(n - m, 0)` on fill the empty slots `m + i`. -/
+def DefaultsFillRules : Prop :=
+  ∀ (co : Code) (func : FuncObj) (argcount n : Nat) (fast : Array Val) (rt : Rt),
+    (argcount ≥ co.argcount → defaultsFill co func argcount n fast rt = .ok fast rt) ∧
+    (argcount < co.argcount → ∀ defs, tupleItems func.defaults rt = .ok defs rt →
+      let m : Int := (co.argcount : Int) - defs.size
+      let missing := ((List.range' argcount (m.toNat - argcount)).filter
+        fun i => fast.getD i .null == .null).length
+      (missing ≠ 0 → ∀ y rt',
+        missingArguments (α := Unit) co (some defs.size) fast func.qualname rt = .error y rt' →
+        defaultsFill co func argcount n fast rt = .error y rt') ∧
+      (missing = 0 →
+        let i0 : Nat := if (n : Int) > m then ((n : Int) - m).toNat else 0
+        defaultsFill co func argcount n fast rt =
+          .ok ((List.range' i0 (defs.size - i0)).foldl
+            (fun f (i : Nat) => if f.getD (m + (i : Int)).toNat .null == .null
+              then f.setIfInBounds (m + (i : Int)).toNat (defs.getD i .null) else f) fast) rt))
 
-/-- **`initialize_locals`** (lines 1738-1984), for every object model, code object, function,
-frame, arguments and keywords. With no `*args` and no `**kwargs`: the positional arguments are
-copied first (`posFill`), then the keyword loop runs on that frame and its error is the result
-even when there are too many positional arguments (the count is checked only after it, lines
-1905-1910); too many positional arguments is then `too_many_positional` on the frame the keywords
-left; too few takes `m = co_argcount - defcount` as a signed `Py_ssize_t` (lines 1912-1940):
-the missing ones below `m` are `missing_arguments`, else defaults `i` from `max(n - m, 0)` fill
-the empty slots `m + i`; exactly `co_argcount` uses no default. With `*args`, the extra positional
-arguments are packed into a tuple at `localsplus[total_args]` before the keyword loop (lines
-1775-1794) and too many is no error. -/
+theorem defaultsFillRules_proven : DefaultsFillRules := by
+  intro co func argcount n fast rt
+  refine ⟨fun hge => ?_, ?_⟩
+  · have h : ¬ argcount < co.argcount := by omega
+    simp [defaultsFill, h, pure, EStateM.pure]
+  intro hlt defs hdefs m missing
+  refine ⟨fun hm y rt' hma => ?_, fun hm => ?_⟩
+  · have hm' : (missing != 0) = true := by simpa using hm
+    simp only [missing, m] at hm'
+    simp only [defaultsFill, hlt, decide_true, if_true, ite_true, bind, EStateM.bind, hdefs, hm',
+      hma]
+  · intro i0
+    have hm' : (missing != 0) = false := by simpa using hm
+    simp only [missing, m] at hm'
+    simp only [defaultsFill, hlt, decide_true, if_true, ite_true, bind, EStateM.bind, hdefs, hm',
+      Bool.false_eq_true, if_false, ite_false, pure, EStateM.pure, i0, m]
+
+/-- **The keyword-only defaults loop** (lines 1944-1960), one slot at a time, for every object
+model, code object, function object and frame: a set slot is skipped; an unset one takes
+`__kwdefaults__[varname]` when `func_kwdefaults` (read again at each slot) is set and holds the
+name, by `PyDict_GetItemRef` (`KwHooks.dictGet`, whose error is the result, :1951-1953), and
+otherwise counts as missing. -/
+def KwonlyFillRules : Prop :=
+  ∀ (hk : KwHooks) (co : Code) (funcv : Val) (i : Nat) (is : List Nat) (fast : Array Val)
+    (missing : Nat) (rt : Rt),
+    kwonlyFill hk co funcv [] fast missing rt = .ok (fast, missing) rt ∧
+    (fast.getD i .null ≠ .null →
+      kwonlyFill hk co funcv (i :: is) fast missing rt = kwonlyFill hk co funcv is fast missing rt) ∧
+    (fast.getD i .null = .null → ∀ func, getFunc funcv rt = .ok func rt →
+      (func.kwdefaults = .null →
+        kwonlyFill hk co funcv (i :: is) fast missing rt = kwonlyFill hk co funcv is fast (missing + 1) rt) ∧
+      (func.kwdefaults ≠ .null →
+        (∀ y rt', hk.dictGet func.kwdefaults (.str (co.localsplusnames.getD i "")) rt = .error y rt' →
+          kwonlyFill hk co funcv (i :: is) fast missing rt = .error y rt') ∧
+        (∀ d rt', hk.dictGet func.kwdefaults (.str (co.localsplusnames.getD i "")) rt = .ok (some d) rt' →
+          kwonlyFill hk co funcv (i :: is) fast missing rt =
+            kwonlyFill hk co funcv is (fast.setIfInBounds i d) missing rt') ∧
+        (∀ rt', hk.dictGet func.kwdefaults (.str (co.localsplusnames.getD i "")) rt = .ok none rt' →
+          kwonlyFill hk co funcv (i :: is) fast missing rt = kwonlyFill hk co funcv is fast (missing + 1) rt')))
+
+theorem kwonlyFillRules_proven : KwonlyFillRules := by
+  intro hk co funcv i is fast missing rt
+  refine ⟨rfl, fun hs => ?_, fun hs func hg => ⟨fun hn => ?_, fun hn => ⟨fun y rt' he => ?_,
+    fun d rt' he => ?_, fun rt' he => ?_⟩⟩⟩
+  · have hb : (fast.getD i .null != .null) = true := by simpa using hs
+    simp only [kwonlyFill, hb, if_true]
+  all_goals
+    have hb : (fast.getD i .null != .null) = false := by simpa using hs
+  · have hk' : (func.kwdefaults != .null) = false := by simpa using hn
+    simp only [kwonlyFill, hb, Bool.false_eq_true, if_false, bind, EStateM.bind, hg, hk']
+  all_goals
+    have hk' : (func.kwdefaults != .null) = true := by simpa using hn
+    simp only [kwonlyFill, hb, Bool.false_eq_true, if_false, bind, EStateM.bind, hg, hk', if_true, he]
+
+/-- **The keyword-only stage** (lines 1942-1966): with no keyword-only parameters nothing
+changes; otherwise the loop runs over `localsplus[co_argcount:total_args]` from a count of 0, its
+error is the result, no missing one gives the frame it filled, and a missing one is
+`missing_arguments` (keyword-only) with `func_qualname` read then. -/
+def KwonlyStageRules : Prop :=
+  ∀ (hk : KwHooks) (co : Code) (funcv : Val) (fast : Array Val) (rt : Rt),
+    (co.kwonlyargcount = 0 → kwonlyStage hk co funcv fast rt = .ok fast rt) ∧
+    (co.kwonlyargcount > 0 →
+      let slots := List.range' co.argcount (co.argcount + co.kwonlyargcount - co.argcount)
+      (∀ y rt', kwonlyFill hk co funcv slots fast 0 rt = .error y rt' →
+        kwonlyStage hk co funcv fast rt = .error y rt') ∧
+      (∀ f rt', kwonlyFill hk co funcv slots fast 0 rt = .ok (f, 0) rt' →
+        kwonlyStage hk co funcv fast rt = .ok f rt') ∧
+      (∀ f k rt', kwonlyFill hk co funcv slots fast 0 rt = .ok (f, k + 1) rt' →
+        ∀ func, getFunc funcv rt' = .ok func rt' → ∀ y rt'',
+        missingArguments (α := Unit) co none f func.qualname rt' = .error y rt'' →
+        kwonlyStage hk co funcv fast rt = .error y rt''))
+
+theorem kwonlyStageRules_proven : KwonlyStageRules := by
+  intro hk co funcv fast rt
+  refine ⟨fun h0 => ?_, ?_⟩
+  · simp [kwonlyStage, h0, pure, EStateM.pure]
+  intro hpos slots
+  refine ⟨fun y rt' he => ?_, fun f rt' he => ?_, fun f k rt' he func hg y rt'' hm => ?_⟩
+  · simp only [kwonlyStage, hpos, if_true, bind, EStateM.bind]
+    simp only [slots] at he
+    simp only [he]
+  · simp only [kwonlyStage, hpos, if_true, bind, EStateM.bind]
+    simp only [slots] at he
+    simp only [he, bne_self_eq_false, Bool.false_eq_true, if_false, pure, EStateM.pure]
+  · simp only [kwonlyStage, hpos, if_true, bind, EStateM.bind]
+    simp only [slots] at he
+    have hb : (k + 1 != 0) = true := by simp
+    simp only [he, hb, if_true, EStateM.bind, hg, hm]
+
+/-- **`initialize_locals`** (lines 1738-1984), for every object model, code object, function
+object, frame, arguments and keywords, as the stages above in source order. With `**kwargs` a
+fresh dict is made first and stored at `localsplus[total_args]`, or `total_args + 1` with
+`*args` (lines 1747-1760), and it is the `**kwargs` the keyword loop fills; without, there is
+none. Then the positional arguments are copied (`posFill`); with `*args` the rest are packed
+into a tuple at `localsplus[total_args]` (lines 1775-1794). The keyword loop runs on that frame
+and its error is the result, also with too many positional arguments: the count is checked only
+after it (lines 1905-1910), with no `*args`, as `too_many_positional` on the frame it left and
+`func_defaults`/`func_qualname` read after it. Otherwise the defaults stage and the keyword-only
+stage follow. -/
 def InitializeLocalsRules : Prop :=
   ∀ (hk : KwHooks) (co : Code) (funcv : Val) (fast0 : Array Val) (args : List Val)
-    (kwargs : List (Val × Val)) (rt : Rt),
-    flagSet co.flags coVarkeywords = false →
-    (flagSet co.flags coVarargs = false →
-      (∀ y rt', bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .error y rt' →
+    (kwargs : List (Val × Val)) (rt : Rt) (kwdict : Val) (fastK : Array Val) (rt0 : Rt),
+    ((flagSet co.flags coVarkeywords = false ∧ kwdict = .null ∧ fastK = fast0 ∧ rt0 = rt) ∨
+      (flagSet co.flags coVarkeywords = true ∧ mkDict rt = .ok kwdict rt0 ∧
+        fastK = fast0.setIfInBounds (if flagSet co.flags coVarargs then co.argcount + co.kwonlyargcount + 1
+          else co.argcount + co.kwonlyargcount) kwdict)) →
+    ∀ (fastP : Array Val) (rt1 : Rt),
+      ((flagSet co.flags coVarargs = false ∧ fastP = posFill co fastK args ∧ rt1 = rt0) ∨
+        (flagSet co.flags coVarargs = true ∧ ∃ u, mkTuple (args.drop
+            (if args.length > co.argcount then co.argcount else args.length)) rt0 = .ok u rt1 ∧
+          fastP = (posFill co fastK args).setIfInBounds (co.argcount + co.kwonlyargcount) u)) →
+      (∀ y rt', bindKeywords hk co funcv kwdict (kwargs.map (·.1)) kwargs fastP rt1 = .error y rt' →
         initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
-      (∀ fast1 rt1, bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs (posFill co fast0 args) rt = .ok fast1 rt1 →
-        ∀ func, getFunc funcv rt1 = .ok func rt1 →
-        (args.length > co.argcount → ∀ y rt',
-          tooManyPositional (α := Unit) co args.length func.defaults fast1 func.qualname rt1 = .error y rt' →
+      (∀ fast2 rt2, bindKeywords hk co funcv kwdict (kwargs.map (·.1)) kwargs fastP rt1 = .ok fast2 rt2 →
+        ∀ func, getFunc funcv rt2 = .ok func rt2 →
+        (args.length > co.argcount → flagSet co.flags coVarargs = false → ∀ y rt',
+          tooManyPositional (α := Unit) co args.length func.defaults fast2 func.qualname rt2 = .error y rt' →
           initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
-        (args.length = co.argcount → co.kwonlyargcount = 0 →
-          initializeLocals hk co funcv fast0 args kwargs rt = .ok fast1 rt1) ∧
-        (args.length < co.argcount → co.kwonlyargcount = 0 → ∀ defs, tupleItems func.defaults rt1 = .ok defs rt1 →
-          let m : Int := (co.argcount : Int) - defs.size
-          let missing := ((List.range' args.length (m.toNat - args.length)).filter
-            fun i => fast1.getD i .null == .null).length
-          (missing ≠ 0 → ∀ y rt',
-            missingArguments (α := Unit) co (some defs.size) fast1 func.qualname rt1 = .error y rt' →
-            initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
-          (missing = 0 →
-            let i0 : Nat := if (args.length : Int) > m then ((args.length : Int) - m).toNat else 0
-            initializeLocals hk co funcv fast0 args kwargs rt =
-              .ok ((List.range' i0 (defs.size - i0)).foldl
-                (fun f (i : Nat) => if f.getD (m + (i : Int)).toNat .null == .null
-                  then f.setIfInBounds (m + (i : Int)).toNat (defs.getD i .null) else f) fast1) rt1)))) ∧
-    (flagSet co.flags coVarargs = true → ∀ u rt0,
-      mkTuple (args.drop (if args.length > co.argcount then co.argcount else args.length)) rt = .ok u rt0 →
-      (∀ y rt', bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs
-          ((posFill co fast0 args).setIfInBounds (co.argcount + co.kwonlyargcount) u) rt0 = .error y rt' →
-        initializeLocals hk co funcv fast0 args kwargs rt = .error y rt') ∧
-      (args.length ≥ co.argcount → co.kwonlyargcount = 0 → ∀ fast1 rt1,
-        bindKeywords hk co funcv .null (kwargs.map (·.1)) kwargs
-          ((posFill co fast0 args).setIfInBounds (co.argcount + co.kwonlyargcount) u) rt0 = .ok fast1 rt1 →
-        ∀ func, getFunc funcv rt1 = .ok func rt1 →
-        initializeLocals hk co funcv fast0 args kwargs rt = .ok fast1 rt1))
+        (¬ (args.length > co.argcount ∧ flagSet co.flags coVarargs = false) →
+          initializeLocals hk co funcv fast0 args kwargs rt =
+            (do let f ← defaultsFill co func args.length
+                  (if args.length > co.argcount then co.argcount else args.length) fast2
+                kwonlyStage hk co funcv f) rt2))
 
 theorem initializeLocalsRules_proven : InitializeLocalsRules := by
-  intro hk co funcv fast0 args kwargs rt hvk
-  refine ⟨fun hva => ⟨?_, ?_⟩, fun hva u rt0 hu => ⟨?_, ?_⟩⟩
-  · intro y rt' hb
-    simp only [posFill] at hb
-    simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-      bind, EStateM.bind, pure, EStateM.pure, hb]
-  · intro fast1 rt1 hb func hg
-    simp only [posFill] at hb
-    refine ⟨?_, ?_, ?_⟩
-    · intro hgt y rt' ht
-      have hc : (decide (args.length > co.argcount) && !false) = true := by simp [hgt]
-      simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-        bind, EStateM.bind, pure, EStateM.pure, hb, hg, hc, ht]
-    · intro heq hk0
-      have h1 : ¬ args.length > co.argcount := by omega
-      have h2 : ¬ args.length < co.argcount := by omega
-      have hk' : ¬ co.kwonlyargcount > 0 := by omega
-      rw [if_neg h1] at hb
-      simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-        bind, EStateM.bind, pure, EStateM.pure, h1, decide_false, Bool.false_and, h2, hk', hb, hg]
-    · intro hlt hk0 defs hdefs
-      intro m missing
-      have h1 : ¬ args.length > co.argcount := by omega
-      rw [if_neg h1] at hb
-      refine ⟨?_, ?_⟩
-      · intro hm y rt' hma
-        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-          bind, EStateM.bind, pure, EStateM.pure, hb, hg, h1, decide_false, Bool.false_and, hlt,
-          decide_true, hdefs]
-        have hm' : (missing != 0) = true := by simpa using hm
-        simp only [missing, m] at hm'
-        simp only [hm', if_true, EStateM.bind, hma]
-      · intro hm i0
-        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-          bind, EStateM.bind, pure, EStateM.pure, hb, hg, h1, decide_false, Bool.false_and, hlt,
-          decide_true, hdefs]
-        have hm' : (missing != 0) = false := by simpa using hm
-        simp only [missing, m] at hm'
-        have hk' : ¬ co.kwonlyargcount > 0 := by omega
-        simp only [hm', Bool.false_eq_true, if_false, hk', decide_false, i0, m, EStateM.bind,
-          EStateM.pure]
-  · intro y rt' hb
-    simp only [posFill] at hb
-    simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true,
-      bind, EStateM.bind, pure, EStateM.pure, hu, hb]
-  · intro hge hk0 fast1 rt1 hb func hg
-    simp only [posFill] at hb
-    have h2 : ¬ args.length < co.argcount := by omega
-    have hk' : ¬ co.kwonlyargcount > 0 := by omega
-    simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, if_true, ite_false, ite_true,
-      bind, EStateM.bind, pure, EStateM.pure, hu, hb, hg, h2, decide_false, Bool.not_true, Bool.and_false,
-      hk']
+  intro hk co funcv fast0 args kwargs rt kwdict fastK rt0 hK fastP rt1 hP
+  have hpre : ∀ (m : RM (Array Val)),
+      (do let fast ← bindKeywords hk co funcv kwdict (kwargs.map (·.1)) kwargs fastP
+          let func ← getFunc funcv
+          if args.length > co.argcount && !flagSet co.flags coVarargs then
+            tooManyPositional co args.length func.defaults fast func.qualname
+          let fast ← defaultsFill co func args.length
+            (if args.length > co.argcount then co.argcount else args.length) fast
+          kwonlyStage hk co funcv fast : RM (Array Val)) rt1 = m rt1 →
+      initializeLocals hk co funcv fast0 args kwargs rt = m rt1 := by
+    intro m hm
+    rw [← hm]
+    rcases hK with ⟨hvk, hkd, hfk, hr0⟩ | ⟨hvk, hmk, hfk⟩
+    · subst hkd hfk hr0
+      rcases hP with ⟨hva, hfp, hr1⟩ | ⟨hva, u, hu, hfp⟩
+      · subst hfp hr1
+        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, ite_false, bind,
+          EStateM.bind, pure, EStateM.pure, posFill]
+      · subst hfp
+        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, ite_false, if_true,
+          ite_true, bind, EStateM.bind, pure, EStateM.pure, posFill, hu]
+    · subst hfk
+      rcases hP with ⟨hva, hfp, hr1⟩ | ⟨hva, u, hu, hfp⟩
+      · subst hfp hr1
+        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, ite_false, if_true,
+          ite_true, bind, EStateM.bind, pure, EStateM.pure, posFill, hmk]
+      · subst hfp
+        simp only [initializeLocals, hvk, hva, Bool.false_eq_true, if_false, ite_false, if_true,
+          ite_true, bind, EStateM.bind, pure, EStateM.pure, posFill, hmk, hu]
+  refine ⟨fun y rt' hb => ?_, fun fast2 rt2 hb func hg => ⟨fun hgt hva y rt' ht => ?_, fun hn => ?_⟩⟩
+  · rw [hpre _ rfl]
+    simp only [bind, EStateM.bind, hb]
+  · rw [hpre _ rfl]
+    have hc : (decide (args.length > co.argcount) && !flagSet co.flags coVarargs) = true := by
+      simp [hgt, hva]
+    simp only [bind, EStateM.bind, hb, hg, hc, if_true, ite_true, ht]
+  · rw [hpre _ rfl]
+    have hc : (decide (args.length > co.argcount) && !flagSet co.flags coVarargs) = false := by
+      cases hv : flagSet co.flags coVarargs <;> simp_all
+    simp only [bind, EStateM.bind, hb, hg, hc, Bool.false_eq_true, if_false, ite_false, pure,
+      EStateM.pure]
+
+def KwonlyDefaults : Prop := KwonlyStageRules ∧ KwonlyFillRules
+theorem kwonlyDefaults_proven : KwonlyDefaults := ⟨kwonlyStageRules_proven, kwonlyFillRules_proven⟩
 
 end PyLean.Bytecode

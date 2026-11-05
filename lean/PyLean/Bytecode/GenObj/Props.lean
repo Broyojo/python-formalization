@@ -435,7 +435,7 @@ def noopHooks : Hooks Unit Unit where
   warn w _ := (w, none)
   warnUnawaitedCoro w _ := w
   warnUnawaitedAgen w _ _ := w
-  normalize _ _ := Exc.generatorExit
+  normalize w _ _ := (w, Exc.generatorExit)
   typeName _ := "x"
   typeFqName _ := "x"
   audit _ _ := none

@@ -160,7 +160,7 @@ def runMainWith (ev : Frame → Option Val → RM Val) (P : Program) (main : Nat
   let co ← getCodeR P main
   let f ← alloc (.func { code := main, globals := globals, builtins := builtins,
                          name := co.name, qualname := co.name })
-  evalVector P { evalFrame := ev } f globals [] []
+  evalVector P (builtinOM P) { evalFrame := ev } f globals [] []
 
 def runMain (fuel : Nat) (P : Program) (main : Nat) : RM Val :=
   runMainWith (evalFrame P (builtinOM P) fuel) P main

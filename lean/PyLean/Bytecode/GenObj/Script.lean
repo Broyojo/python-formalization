@@ -228,12 +228,13 @@ def foreignNext (w : W) (id : Nat) : W × Ret SV :=
 def attrError (name : String) : Exc SV :=
   mkExc "AttributeError" ("'It' object has no attribute '" ++ name ++ "'")
 
-/-- The `(typ, val)` a foreign `throw` raises for behaviour 1. -/
-def reraise (h : H) (typ : O) (val : Option O) : Exc SV :=
+/-- The `(typ, val)` a foreign `throw` raises for behaviour 1: `typ()` or `typ(val)` for a
+class, run through `h.normalize` (the same constructor call), the instance itself otherwise. -/
+def reraise (h : H) (w : W) (typ : O) (val : Option O) : W × Exc SV :=
   match typ with
-  | .excClass .. => h.normalize typ val
-  | .excInst k c m v => ⟨k, c, m, v⟩
-  | _ => mkExc "RuntimeError" "bad typ"
+  | .excClass .. => h.normalize w typ val
+  | .excInst k c m v => (w, ⟨k, c, m, v⟩)
+  | _ => (w, mkExc "RuntimeError" "bad typ")
 
 /-- The three-argument `genThrowF` shape of `gen.throw(cls)`. -/
 def throwArgs (cls : String) : List O := [.excClass (kindOfClass cls) cls]
@@ -479,7 +480,7 @@ def baseHooks : H where
   warn w _ := (w, none)
   warnUnawaitedCoro w _ := w
   warnUnawaitedAgen w _ _ := w
-  normalize := normalize
+  normalize w typ val := (w, normalize typ val)
   typeName := typeNameOf
   typeFqName := typeFqNameOf
   audit _ _ := none
@@ -487,9 +488,26 @@ def baseHooks : H where
   isIter _ := false
   amAwait _ _ := none
 
+/-- The constructor of the script's exception classes: `ReInit.__init__` first makes a
+reentrant call on the top object (logged): `anext` on an async generator, `send(1)` on a
+coroutine, `next` on a generator; then `BaseException.__init__`. -/
+def scriptNormalize (inner : H) (n : Nat) (w : W) (typ : O) (val : Option O) : W × Exc SV :=
+  match typ with
+  | .excClass _ "ReInit" =>
+    let op : ReOp := match (w.get w.ext.top).kind with
+      | .asyncGen => .anext
+      | .coro => .send 1
+      | .gen => .next
+    (logReOp inner n w w.ext.top op, normalize typ val)
+  | _ => (w, normalize typ val)
+
+def scriptNormalizeHooks (inner : H) (n : Nat) : H :=
+  { baseHooks with normalize := scriptNormalize inner n }
+
 /-- Hooks one recursion level up from `inner`. -/
 def scriptHooks (inner : H) (n : Nat) : H :=
   { baseHooks with
+    normalize := scriptNormalize inner n
     resume := fun w r arg thrown => runFrame inner n w r arg thrown
     getClose := fun w o =>
       match o with
@@ -540,7 +558,9 @@ def scriptHooks (inner : H) (n : Nat) : H :=
         | 2 => (w2, .ok (.other (.int 200)))
         | 3 => (w2, .err (some (setStopIterationValue (.other (.int 300)))))
         | 4 => (w2, .err (some (raised "RuntimeError" "t")))
-        | _ => (w2, .err (some (reraise baseHooks typ val)))
+        | _ =>
+          let p := reraise (scriptNormalizeHooks inner n) w2 typ val
+          (p.1, .err (some p.2))
       | _ => (w, .err (some Exc.fuel))
     callOneArg := fun w f _ =>
       match f with

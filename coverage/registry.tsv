@@ -1179,12 +1179,26 @@ set-pop	proven	Objects/setobject.c	set_pop_impl
 set-clear	proven	Objects/setobject.c	set_clear_internal,set_empty_to_minsize
 set-iter-order	proven	Objects/setobject.c	set_next
 set-probe-failure	proven	Objects/setobject.c	set_lookkey,set_do_lookup,set_compare_entry_lock_held,set_add_entry_takeref
+set-lookup-restarts-on-resize	refuted	Objects/setobject.c	set_compare_entry_lock_held
+set-add-restarts-on-resize	refuted	Objects/setobject.c	set_add_entry_takeref
 set-contains-body	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_compare_frozenset,set_do_lookup,set_contains_entry
 set-frozen-identity-first	proven	Objects/setobject.c	set_compare_frozenset,set_compare_entry_lock_held
-set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_unhashable_type
+set-contains-retry	proven	Objects/setobject.c	_PySet_Contains,set_contains,set___contains___impl,frozenset___contains___impl,set_unhashable_type
+set-unhashable-type	proven	Objects/setobject.c	set_unhashable_type
+set-lookkey-body	proven	Objects/setobject.c	set_lookkey
+set-add-restart	proven	Objects/setobject.c	set_add_entry_takeref
+set-update-iterable-body	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-update-iterable-refines	proven	Objects/setobject.c	set_update_iterable_lock_held
+set-intersection-branches	proven	Objects/setobject.c	set_intersection
+set-inter-iter-refines	proven	Objects/setobject.c	set_intersection
+set-isdisjoint-branches	proven	Objects/setobject.c	set_isdisjoint_impl
+set-disjoint-iter-refines	proven	Objects/setobject.c	set_isdisjoint_impl
+set-shuffle-bits-bijective	proven	Objects/setobject.c	_shuffle_bits
+set-shuffle-bits-values	proven	Objects/setobject.c	_shuffle_bits,frozenset_hash_impl
+set-dealloc-order	proven	Objects/setobject.c	set_dealloc
 set-merge-refines	proven	Objects/setobject.c	set_merge_lock_held
 set-copy-refines	proven	Objects/setobject.c	set_copy_impl,set_copy_untracked_lock_held
-set-for-iter-body	proven	Objects/setobject.c	set_update_iterable_lock_held,set_intersection,set_isdisjoint_impl
+set-for-iter-body	proven	Objects/setobject.c	
 set-inter-iter-body	proven	Objects/setobject.c	set_intersection
 set-iter-routes	proven	Objects/setobject.c	set_update_iterable_lock_held,set_isdisjoint_impl
 set-inter-refines	proven	Objects/setobject.c	set_intersection
@@ -1194,6 +1208,7 @@ set-subset-refines	proven	Objects/setobject.c
 set-disjoint-refines	proven	Objects/setobject.c	set_isdisjoint_impl
 set-add-trusts-yes	proven	Objects/setobject.c	
 set-hash-failure	proven	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
+set-hash-failure-unchanged	refuted	Objects/setobject.c	set_add_key,set_contains_key,set_discard_key
 odict-twins-agree	open	Objects/odictobject.c	_odict_get_index,_odict_resize,_odict_add_new_node,_odict_remove_node
 dict-view-len	proven	Objects/dictobject.c	
 dict-view-iter-order	proven	Objects/dictobject.c	dictkeys_iter,dictitems_iter,dictvalues_iter,dictkeys_reversed,dictitems_reversed,dictvalues_reversed
@@ -2643,6 +2658,8 @@ bytecode-end-async-for	proven	Python/bytecodes.c	opcode:END_ASYNC_FOR,opcode:_EN
 bytecode-bind-keywords	proven	Python/ceval.c	initialize_locals
 bytecode-find-kw-slot	proven	Python/ceval.c	initialize_locals
 bytecode-initialize-locals	proven	Python/ceval.c	initialize_locals
+bytecode-defaults-fill	proven	Python/ceval.c	initialize_locals
+bytecode-kwonly-defaults	proven	Python/ceval.c	initialize_locals
 bytecode-too-many-positional	proven	Python/ceval.c	too_many_positional
 bytecode-posonly-keyword	proven	Python/ceval.c	positional_only_passed_as_keyword
 bytecode-unexpected-keyword	proven	Python/ceval.c	
@@ -3936,12 +3953,10 @@ corelibs-enum-dict-names-new	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-dict-sunders	proven	Lib/enum.py	EnumDict.__setitem__
 corelibs-enum-functional-class	proven	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem__,EnumType._create_
 corelibs-enum-lookup	proven	Lib/enum.py	
-corelibs-enum-call	refuted	Lib/enum.py	EnumType.__call__
 corelibs-enum-add-alias	proven	Lib/enum.py	Enum._add_alias_,EnumType._add_member_,EnumType.__len__
 corelibs-enum-scan-bases	proven	Lib/enum.py	EnumType._add_member_
 corelibs-enum-value-alias-hashable	proven	Lib/enum.py	
 corelibs-enum-value-alias-binds	proven	Lib/enum.py	
-corelibs-enum-flag-class-paths	refuted	Lib/enum.py	EnumType.__contains__,Flag._missing_
 corelibs-enum-value-alias-exclusive	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-value-alias-bound	refuted	Lib/enum.py	Enum._add_value_alias_
 corelibs-enum-unique-aliases	refuted	Lib/enum.py	unique,verify.__call__
@@ -3951,9 +3966,7 @@ corelibs-enum-dict-auto	refuted	Lib/enum.py	EnumDict.__init__,EnumDict.__setitem
 corelibs-enum-dict-update-keys	refuted	Lib/enum.py	EnumDict.update
 corelibs-enum-generate	proven	Lib/enum.py	
 corelibs-enum-flag-generate	proven	Lib/enum.py	
-corelibs-enum-strenum	refuted	Lib/enum.py	StrEnum.__new__
 corelibs-enum-order	proven	Lib/enum.py	
-corelibs-enum-continuous	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-verify	refuted	Lib/enum.py	verify.__call__
 corelibs-enum-flag-operands	proven	Lib/enum.py	Flag._get_value,Flag.__contains__,Flag.__invert__
 corelibs-enum-flag-bin	proven	Lib/enum.py	Flag.__or__,Flag.__and__,Flag.__xor__
@@ -3987,6 +4000,13 @@ corelibs-enum-flag-len	proven	Lib/enum.py	Flag.__len__
 corelibs-enum-flag-iter	proven	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_,Flag._iter_member_by_def_
 corelibs-enum-flag-iter-members	refuted	Lib/enum.py	Flag.__iter__,Flag._iter_member_by_value_
 corelibs-enum-flag-generate-g	proven	Lib/enum.py	Flag._generate_next_value_
+corelibs-enum-verify-named	proven	Lib/enum.py	verify.__call__
+corelibs-enum-missing-boundaries	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-missing-in-range	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-continuous-errors	proven	Lib/enum.py	verify.__call__
+corelibs-enum-missing-strict-repr	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-name-loop	proven	Lib/enum.py	Flag._missing_
+corelibs-enum-missing-negative	proven	Lib/enum.py	Flag._missing_
 corelibs-dataclasses-hash-table	proven	Lib/dataclasses.py	
 corelibs-dataclasses-init-order	proven	Lib/dataclasses.py	_fields_in_init_order
 corelibs-dataclasses-default-order	proven	Lib/dataclasses.py	

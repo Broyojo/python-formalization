@@ -6655,7 +6655,41 @@ def enumdc_dcmisc(case, fn):
     return py_result(go)
 
 
-enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError}
+class enumdc_KSub(KeyError):
+    pass
+
+
+class enumdc_TSub(TypeError):
+    pass
+
+
+class enumdc_KT(KeyError, TypeError):
+    pass
+
+
+class enumdc_BExc(BaseException):
+    pass
+
+
+enumdc_KSub.__name__ = enumdc_KSub.__qualname__ = "KSub"
+enumdc_TSub.__name__ = enumdc_TSub.__qualname__ = "TSub"
+enumdc_KT.__name__ = enumdc_KT.__qualname__ = "KT"
+enumdc_BExc.__name__ = enumdc_BExc.__qualname__ = "BExc"
+enumdc_EXC = {"KeyError": KeyError, "TypeError": TypeError, "ValueError": ValueError, "RuntimeError": RuntimeError,
+              "KSub": enumdc_KSub, "TSub": enumdc_TSub, "KT": enumdc_KT}
+
+
+class enumdc_M(int):
+    """A mixin whose own call raises: BExc for 'b', ValueError for a non-int; a subclass gets int 7 without _value_."""
+
+    def __new__(cls, v):
+        if cls is enumdc_M:
+            if isinstance(v, str) and v == "b":
+                raise enumdc_BExc("b")
+            if type(v) is int:
+                return int.__new__(enumdc_M, v)
+            raise ValueError("v")
+        return int.__new__(cls, 7)
 
 
 class enumdc_K:
@@ -6675,21 +6709,21 @@ class enumdc_K:
             raise enumdc_EXC[self.ee]("eq")
         if isinstance(o, enumdc_K):
             return o.k == self.k
-        if type(o) is int:
+        if isinstance(o, int):
             return o == self.k
         return NotImplemented
 
     def __lt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k < o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k < o
         return NotImplemented
 
     def __gt__(self, o):
         if isinstance(o, enumdc_K):
             return self.k > o.k
-        if type(o) is int:
+        if isinstance(o, int):
             return self.k > o
         return NotImplemented
 
@@ -6701,7 +6735,7 @@ enumdc_K.__name__ = enumdc_K.__qualname__ = "K"
 
 def enumdc_gkeys(rng):
     """The K objects of one case, by index: a key, and the exceptions of __hash__ and __eq__."""
-    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError"]
+    exc = [None, None, None, "KeyError", "TypeError", "ValueError", "RuntimeError", "KSub", "TSub", "TSub", "KT", "KT"]
     return [[rng.choice([0, 1, 1, 2, 3, -1]), rng.choice(exc) if rng.random() < .5 else None,
              rng.choice(exc) if rng.random() < .5 else None] for _ in range(rng.randrange(1, 4))]
 
@@ -6713,8 +6747,37 @@ def enumdc_gpv(rng, nkeys, strs=("x", "y", "")):
     if r <= 4:
         return ["str", rng.choice(strs)]
     if r <= 8:
+        if rng.random() < .15:
+            return rng.choice([["robj", rng.choice(["KeyError", "ValueError", "TypeError"]), rng.randrange(0, 3)],
+                               ["rint", rng.choice([1, 2, 8, -1]), rng.choice(["KeyError", "ValueError"])]])
         return ["key", rng.randrange(0, nkeys)]
     return ["list", rng.randrange(0, 3)]
+
+
+class enumdc_RObj:
+    """No comparison, no bit_length, and a __repr__ that raises."""
+
+    def __init__(self, re, i):
+        self.re, self.i = re, i
+
+    def __repr__(self):
+        raise enumdc_EXC[self.re]("repr")
+
+
+class enumdc_RI(int):
+    """An int whose __repr__ raises."""
+
+    def __new__(cls, n, re):
+        x = int.__new__(cls, n)
+        x.re = re
+        return x
+
+    def __repr__(self):
+        raise enumdc_EXC[self.re]("repr")
+
+
+enumdc_RObj.__name__ = enumdc_RObj.__qualname__ = "RObj"
+enumdc_RI.__name__ = enumdc_RI.__qualname__ = "RI"
 
 
 def enumdc_pv(v, objs):
@@ -6723,6 +6786,10 @@ def enumdc_pv(v, objs):
         return v[1]
     if k == "key":
         return objs[v[1]]
+    if k == "robj":
+        return enumdc_RObj(v[1], v[2])
+    if k == "rint":
+        return enumdc_RI(v[1], v[2])
     return [v[1]]
 
 
@@ -6731,6 +6798,8 @@ def enumdc_pvenc(x):
         return ["key", x.i]
     if isinstance(x, list):
         return ["list", x[0]]
+    if isinstance(x, enumdc_RObj):
+        return ["robj", x.i]
     if isinstance(x, bool):
         raise ValueError(x)
     if isinstance(x, int):
@@ -6741,9 +6810,9 @@ def enumdc_pvenc(x):
 def enumdc_gehclass(rng):
     keys = enumdc_gkeys(rng)
     n = len(keys)
-    kind = rng.choice(["plain", "plain", "plain", "customnew", "initfail"])
+    kind = rng.choice(["plain", "plain", "plain", "customnew", "initfail", "mnew"])
     names = rng.sample(["A", "B", "C", "D"], rng.randrange(0, 5))
-    strs = ("x", "y", "", "7", "boom") if kind != "plain" else ("x", "y", "")
+    strs = ("x", "y", "", "7", "boom", "b") if kind != "plain" else ("x", "y", "")
     body = [[nm, enumdc_gpv(rng, n, strs)] for nm in names]
     r = rng.randrange(0, 6)
     if r == 0:
@@ -6764,7 +6833,9 @@ def enumdc_gehclass(rng):
 
 def enumdc_ehbuild(case, objs):
     kind = case["kind"]
-    ns = enumdc_enum.EnumType.__prepare__("C", (int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_enum.Enum,))
+    bases = ((int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_M, enumdc_enum.Enum) if kind == "mnew"
+             else (enumdc_enum.Enum,))
+    ns = enumdc_enum.EnumType.__prepare__("C", bases)
     op = case["op"]
     if op[0] == "call":
         miss = op[2]
@@ -6789,7 +6860,6 @@ def enumdc_ehbuild(case, objs):
         ns["__init__"] = __init__
     for k, v in case["body"]:
         ns[k] = enumdc_pv(v, objs)
-    bases = (int, enumdc_enum.Enum) if kind == "customnew" else (enumdc_enum.Enum,)
     return enumdc_enum.EnumType("C", bases, ns)
 
 
@@ -6820,7 +6890,10 @@ def enumdc_ehclass(case):
         if k == "valias":
             return enumdc_ehsummary(C)
         return C(enumdc_pv(op[2], objs))._name_
-    return py_result(go)
+    try:
+        return py_result(go)
+    except enumdc_BExc as e:
+        return {"exc": "BExc", "msg": str(e)}
 
 
 def enumdc_gehflag_in(rng):
@@ -6846,7 +6919,8 @@ def enumdc_gsarg(rng):
     if r <= 2:
         return ["str", rng.choice(["x", "ascii", "latin-1", "strict", "ignore", "replace", "nope", ""])]
     if r <= 5:
-        return ["bytes", [rng.choice([120, 65, 0, 127, 128, 200, 255]) for _ in range(rng.randrange(0, 4))]]
+        return [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                [rng.choice([120, 65, 0, 127, 128, 200, 255]) for _ in range(rng.randrange(0, 4))]]
     return ["int", rng.choice([0, 1])]
 
 
@@ -6858,13 +6932,18 @@ def enumdc_gehstr(rng):
         if n == 3 and rng.random() < .7:
             args[2] = ["str", rng.choice(["strict", "ignore", "replace"])]
         if rng.random() < .6:
-            args[0] = ["bytes", args[0][1] if args[0][0] == "bytes" else [120]]
+            args[0] = [rng.choice(["bytes", "bytes", "bytearray", "memoryview"]),
+                       args[0][1] if args[0][0] in ("bytes", "bytearray", "memoryview") else [120]]
     return {"fn": "enumdc.eh_strenum", "args": args}
 
 
 def enumdc_sarg(a):
     if a[0] == "bytes":
         return bytes(a[1])
+    if a[0] == "bytearray":
+        return bytearray(a[1])
+    if a[0] == "memoryview":
+        return memoryview(bytes(a[1]))
     return a[1]
 
 
@@ -6882,7 +6961,8 @@ def enumdc_gehgen(rng):
     keys = [[k, None, None] for k in (1, 3)]
     start = rng.choice([None, ["int", 1], ["int", 0], ["int", 5], ["str", "s"], ["key", 0]])
     last = [rng.choice([["int", rng.choice([0, 1, 2, 3, 4, 7, 8, -3, 2**70])], ["str", "x"], ["key", rng.randrange(0, 2)],
-                        ["list", 1]]) for _ in range(rng.randrange(0, 4))]
+                        ["list", 1], ["robj", rng.choice(["ValueError", "KeyError"]), 0],
+                        ["rint", 5, "KeyError"]]) for _ in range(rng.randrange(0, 4))]
     if rng.random() < .5:
         last = [["int", rng.randrange(0, 40)] for _ in range(rng.randrange(0, 4))]
     return {"fn": "enumdc.eh_flag_gen", "keys": keys, "start": start, "count": rng.choice([0, 0, 1, 2, 3]),
@@ -6958,7 +7038,7 @@ def enumdc_gehverify(rng):
             vals.append(rng.choice([["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5])], ["int", rng.choice([1, 2, 3])],
                                     ["str", rng.choice(["a", "b", "x"])]]))
     target = rng.choice(["cls"] * 8 + ["int", "notcls_name", "notcls_noname"])
-    checks = [rng.choice(["unique", "continuous", "continuous"]) for _ in range(rng.randrange(0, 3))]
+    checks = [rng.choice(["unique", "continuous", "continuous", "named"]) for _ in range(rng.randrange(0, 3))]
     case = {"fn": "enumdc.eh_verify", "kind": kind, "body": [["M%d" % i, v] for i, v in enumerate(vals)],
             "target": target, "checks": checks, "order": None}
     try:
@@ -6985,7 +7065,8 @@ def enumdc_ehvbuild(case):
 def enumdc_ehverify(case):
     def go():
         C = enumdc_ehvbuild(case)
-        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS}[k] for k in case["checks"]]
+        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                   "named": enumdc_enum.NAMED_FLAGS}[k] for k in case["checks"]]
         t = case["target"]
         x = {"cls": C, "int": int, "notcls_name": len, "notcls_noname": 42}[t]
         enumdc_enum.verify(*checks)(x)
@@ -6998,7 +7079,9 @@ def enumdc_gehcall(rng):
     body = [[nm, ["int", i + 1]] for i, nm in enumerate(names)]
     more = [] if rng.random() < .6 else [["str", "P Q"]] + [["int", 3]] * rng.randrange(0, 2)
     return {"fn": "enumdc.eh_call", "body": body, "value": rng.choice([["str", "X"], ["int", 1], ["int", 5]]),
-            "more": more, "type": rng.random() < .5}
+            "more": more, "type": rng.random() < .5, "start": rng.choice([["int", 1], ["int", 1], ["int", 5], ["str", "s"]]),
+            "boundary": rng.choice([None, None, "strict", "keep"]), "module": rng.choice([None, "m"]),
+            "qualname": rng.choice([None, "q"])}
 
 
 def enumdc_ehcall(case):
@@ -7010,9 +7093,11 @@ def enumdc_ehcall(case):
 
         def _create_(cls, class_name, names, *, module=None, qualname=None, type=None, start=1, boundary=None):
             return ["create", enumdc_pvenc(class_name), None if names is None else enumdc_pvenc(names),
-                    type is not None]
+                    type is not None, enumdc_pvenc(start), None if boundary is None else boundary.value, module, qualname]
         type.__setattr__(C, "_create_", classmethod(_create_))
-        r = C(case["value"][1], *[m[1] for m in case["more"]], type=int if case["type"] else None)
+        bd = {None: None, "strict": enumdc_enum.STRICT, "keep": enumdc_enum.KEEP}[case["boundary"]]
+        r = C(case["value"][1], *[m[1] for m in case["more"]], type=int if case["type"] else None,
+              start=case["start"][1], boundary=bd, module=case["module"], qualname=case["qualname"])
         if isinstance(r, list):
             return r
         return ["member", r._name_]
