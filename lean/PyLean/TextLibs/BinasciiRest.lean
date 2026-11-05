@@ -169,7 +169,7 @@ def qpSoft (crlf : Bool) : List Nat := if crlf then [61, 13, 10] else [61, 10]
 /-- A hard line end. -/
 def qpEol (crlf : Bool) : List Nat := if crlf then [13, 10] else [10]
 
-/-- A trailing space or tab before a line end is encoded, `Modules/binascii.c:2602-2611`. -/
+/-- A trailing space or tab before a line end is encoded, `Modules/binascii.c:2617-2623`. -/
 def qpProtect : List Nat → List Nat
   | [] => []
   | ch :: t => if ch == 32 || ch == 9 then (toHex ch).reverse ++ [61] ++ t else ch :: t

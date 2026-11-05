@@ -229,6 +229,20 @@ theorem wraplinesC_filterP (w : Nat) (hw : 0 < w) (P : Nat → Bool) (hP : P 10 
         ih _ (by simp only [List.length_drop]; omega) (fun x hx => hs x (List.mem_of_mem_drop hx))]
       simp
 
+/-- What `wraplines` does, for every width the callers pass and any contents: data no longer than the
+width is left alone; longer data is its first `width` characters, one newline, and the rest wrapped the
+same way; so there is no newline at the end, and the output is `(size - 1) / width` characters longer, the
+count the C code computes. A version that ends with a newline when the size is a multiple of the width
+does not satisfy the second clause at twice the width. -/
+def WraplinesExact : Prop :=
+  ∀ (w : Nat) (s : List Nat), 0 < w →
+    (s.length ≤ w → wraplinesC s w = s) ∧
+    (w < s.length → wraplinesC s w = s.take w ++ 10 :: wraplinesC (s.drop w) w) ∧
+    (s ≠ [] → (wraplinesC s w).length = s.length + (s.length - 1) / w)
+
+theorem wraplinesExact_proven : WraplinesExact := fun w s hw =>
+  ⟨wraplinesC_short s w, wraplinesC_long s w hw, wraplinesC_length w hw s.length s (Nat.le_refl _)⟩
+
 /-- Every character of the output is a character of the data or a newline. -/
 theorem wraplinesC_mem (w : Nat) (hw : 0 < w) : ∀ (f : Nat) (s : List Nat), s.length ≤ f →
     ∀ c ∈ wraplinesC s w, c ∈ s ∨ c = 10 := by

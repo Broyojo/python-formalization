@@ -170,6 +170,15 @@ theorem fold_ccitt : ∀ (d : List Nat) (r : Nat), (∀ x ∈ d, x < 256) → r 
     rw [crcStep_ccitt r x h0 hx]
     exact ih _ (fun y hy => hd y (by simp [hy])) (ccittByte_lt r x h0 hx)
 
+/-- `to_hex` writes upper-case digits, as RFC 2045 requires of quoted-printable: only `0-9` and `A-F`.
+With `ToHexInverse` (the digits decode back to the byte) this pins both digits. -/
+def ToHexUpper : Prop :=
+  ∀ ch < 256, (toHex ch).all (fun c => (48 ≤ c && c ≤ 57) || (65 ≤ c && c ≤ 70)) = true
+
+theorem toHexUpper_proven : ToHexUpper := by
+  unfold ToHexUpper
+  decide +kernel
+
 theorem crcHqxCcitt_proven : CrcHqxCcitt := by
   intro d c hd
   exact fold_ccitt d _ hd (Nat.mod_lt _ (by decide))
