@@ -10,6 +10,7 @@ return odd values, raise, and re-enter. A second kind of case compares PyBuffer_
 _testbuffer.ndarray views of random shape, strides and suboffsets.
 """
 
+import os
 import sys
 
 import common
@@ -313,6 +314,18 @@ def run_buffer(case):
 
 
 def gen_case(rng):
+    only = os.environ.get("ABSTRACT_FAM")  # restrict to one family while debugging
+    if only:
+        if only == "buffer":
+            while True:
+                c = gen_buffer(rng)
+                py = run_buffer(c)
+                if "skip" not in py:
+                    c["expected"] = py
+                    return c
+        g = G(rng)
+        globals()[only](g)
+        return {"mod": "typeobj", "fn": "scenario", "codes": g.codes, "main": g.main}
     if rng.random() < 0.25:
         while True:
             c = gen_buffer(rng)

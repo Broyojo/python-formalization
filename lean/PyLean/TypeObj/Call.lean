@@ -1297,16 +1297,24 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .next =>
     match args with
+    -- `builtin_next`, `Python/bltinmodule.c:1761-1793`: `tp_iternext` is called directly, so
+    -- without a default an exception it sets, a `StopIteration` subclass included, propagates
+    -- as it is; only `NULL` with no exception becomes a new `StopIteration`.
     | [it] =>
       if !pyIterCheck w it then
         typeErr s!"'{trunc 200 (typeName w it)}' object is not an iterator"
-      match ← rt.iterNext it with
-      | some v => pure v
-      | none => raise (.exc B.StopIteration "" none)
+      match slotOf w (typeOf w it) .tp_iternext with
+      | some f =>
+        match ← callIterNext rt f it with
+        | some v => pure v
+        | none => raise (.exc B.StopIteration "" none)
+      | none => gap%
     | [it, d] =>
       if !pyIterCheck w it then
         typeErr s!"'{trunc 200 (typeName w it)}' object is not an iterator"
-      pure ((← rt.iterNext it).getD d)
+      match slotOf w (typeOf w it) .tp_iternext with
+      | some f => pure ((← catchMatch B.StopIteration (callIterNext rt f it) (pure none)).getD d)
+      | none => gap%
     | _ => typeErr s!"next expected at least 1 argument, got {args.length}"
   | .repr =>
     match args with
