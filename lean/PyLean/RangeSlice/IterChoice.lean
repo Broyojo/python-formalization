@@ -20,7 +20,7 @@ theorem asLong_none {x : Int} (h : ¬ IsLong x) : asLong x = none := by simp [as
 most `LONG_MAX` (:1253-1256), and, for a non-empty range, `stop + step - 1 <= LONG_MAX` for a
 positive step and `stop + step + 1 >= LONG_MIN` for a negative one (:1257-1267, the
 `lstart + ulen * lstep` overflow check); otherwise it returns `longrange_iterator` over
-`(start, step, L)` (:1269-1278). When `range_iterator` is chosen, the end value
+`(start, step, L)` (:1270-1278). When `range_iterator` is chosen, the end value
 `start + L*step` fits a C `long`, which is what that check is for. -/
 def IterChoice : Prop :=
   ∀ (r : Range) (L : Int), r.WF → r.Len L →
@@ -106,9 +106,9 @@ theorem iterChoice_proven : IterChoice := by
 `range_reverse` (rangeobject.c:1282-1384) returns the C `long` `range_iterator` exactly when
 start, stop and step fit a C `long` (:1302-1316), the step is not `LONG_MIN` (:1318-1319),
 `start - step` fits a C `long` (:1321-1342, computed in unsigned arithmetic) and `L` is at
-most `LONG_MAX` (:1344-1346); otherwise `longrange_iterator` (:1352-1377). Either way the
+most `LONG_MAX` (:1343-1345); otherwise `longrange_iterator` (:1351-1379). Either way the
 iterator starts at `start + (L - 1)*step` (the last element, or `start - step` when empty),
-steps by `-step` and holds `L` values (:1348-1350 and :1357-1374). -/
+steps by `-step` and holds `L` values (:1347-1349 and :1357-1377). -/
 def ReverseChoice : Prop :=
   ∀ (r : Range) (L : Int), r.WF → r.Len L →
     rangeReverse r =

@@ -68,12 +68,12 @@ def indexSubclassWarning (tp rtp : String) : PyExc :=
     ".  The ability to return an instance of a strict subclass of int is deprecated, " ++
     "and may be removed in a future version of Python.")
 
-/-- `PyNumber_Index(o)`, Objects/abstract.c:1456-1463, over `_PyNumber_Index` (:1410-1448):
+/-- `PyNumber_Index(o)`, Objects/abstract.c:1456-1463, over `_PyNumber_Index` (:1410-1449):
 an `int` of any subclass is taken as is (:1416-1418) and then copied to an exact `int`
 (:1460-1461); no `nb_index` is a `TypeError` (:1419-1424); otherwise `__index__` is called
 (:1426): its exception propagates, an exact `int` is returned (:1428-1430), a non-int is a
 `TypeError` (:1432-1437), and an `int` subclass first issues the `DeprecationWarning`
-(:1440-1446). -/
+(:1440-1447). -/
 def numberIndex : Obj → Py Int
   | .int v => .ok v
   | .bool b => .ok (if b then 1 else 0)
@@ -123,7 +123,7 @@ def rangeFromArray : List Obj → Py Range
 `_PyArg_NoKwnames` (:2991). -/
 def noKwError : PyExc := .typeError "range() takes no keyword arguments"
 
-/-- `_PyArg_NoKeywords("range", kw)`, Python/getargs.c:2942-2960. `kw` is `NULL` (`none`) or
+/-- `_PyArg_NoKeywords("range", kw)`, Python/getargs.c:2942-2959. `kw` is `NULL` (`none`) or
 the dict of keyword arguments, given by its keys (`tp_new` always passes a dict, so the
 `PyDict_CheckExact` internal-error branch at :2948-2951 cannot be reached from Python). -/
 def noKeywords (kw : Option (List String)) : Py Unit :=

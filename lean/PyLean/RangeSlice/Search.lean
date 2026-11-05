@@ -5,7 +5,7 @@ import PyLean.RangeSlice.Objects
 CPython 3.15.2. An exact `int` or a `bool` takes the arithmetic path
 (`range_contains_long`, pinned by `ContainsMem` and `IndexCount`); anything else, including
 an instance of an `int` subclass, goes through `_PySequence_IterSearch`
-(Objects/abstract.c:2138-2219), which iterates the range and calls
+(Objects/abstract.c:2138-2226), which iterates the range and calls
 `PyObject_RichCompareBool(item, x, Py_EQ)` on each value.
 
 That comparison is a callback that may raise and may run arbitrary Python code, re-entering
@@ -19,7 +19,7 @@ to `_PySequence_IterSearch`.
 `PyLean.TypeObj.Protocol` (`pySequenceIterSearch`), whose world model of values and types
 does not connect to this module's `Range`. The loop below follows the same lines of
 abstract.c; `PyObject_GetIter` on a range is `range_iter`, which cannot fail, and the range
-iterators' `next` cannot raise, so those two error branches (:2149-2164 and :2170-2173) do not
+iterators' `next` cannot raise, so those two error branches (:2150-2162 and :2170-2171) do not
 arise.
 -/
 
@@ -44,9 +44,9 @@ def notInSeq : PyExc := .valueError "sequence.index(x): x not in sequence"
 def countOverflow : PyExc := .overflowError "count exceeds C integer size"
 def indexOverflow : PyExc := .overflowError "index exceeds C integer size"
 
-/-- The loop of `_PySequence_IterSearch`, Objects/abstract.c:2166-2213: `PyIter_Next`
-(:2169); exhaustion ends the loop (:2174), after which `INDEX` raises the `ValueError`
-(:2210-2214) and the others return `n`; the comparison (:2176-2179), whose error propagates;
+/-- The loop of `_PySequence_IterSearch`, Objects/abstract.c:2165-2218: `PyIter_Next`
+(:2168); exhaustion ends the loop (:2169-2173), after which `INDEX` raises the `ValueError`
+(:2214-2218) and the others return `n`; the comparison (:2175-2178), whose error propagates;
 a hit counts with the `OverflowError` at `PY_SSIZE_T_MAX` (:2182-2188), ends `INDEX` with
 `n` unless the counter wrapped (:2190-2196), and ends `CONTAINS` with 1 (:2198-2200); `INDEX`
 advances its counter after a miss, remembering a wrap past `PY_SSIZE_T_MAX` (:2207-2211).
@@ -73,7 +73,7 @@ def searchLoop {σ : Type} (eq : EqHook σ) (op : SearchOp) :
             (wr || decide (n = ssizeMax)) w'
         else searchLoop eq op fuel it' n wr w'
 
-/-- `_PySequence_IterSearch(r, x, op)`, Objects/abstract.c:2138-2219, on a range: the
+/-- `_PySequence_IterSearch(r, x, op)`, Objects/abstract.c:2138-2226, on a range: the
 iterator is `range_iter`'s (:2149), which yields `r.length` values, so `r.length + 1` steps
 of fuel always suffice (`iterSearch_elems`). -/
 def iterSearch {σ : Type} (eq : EqHook σ) (op : SearchOp) (r : Range) (w : σ) : Py Int × σ :=
