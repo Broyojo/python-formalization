@@ -4332,12 +4332,13 @@ rand-gamma-loops-f64	proven	Lib/random.py	Random.gammavariate
 rand-beta-pareto-weibull-f64	proven	Lib/random.py	Random.betavariate,Random.paretovariate,Random.weibullvariate
 rand-binomial-f64	proven	Lib/random.py	Random.binomialvariate
 rand-binomial-loops-f64	proven	Lib/random.py	Random.binomialvariate
+rand-lognorm-nonneg	proven	Lib/random.py	Random.lognormvariate
+rand-pareto-ge-one	proven	Lib/random.py	Random.paretovariate
+rand-weibull-nonneg	proven	Lib/random.py	Random.weibullvariate
 rand-beta-exits	refuted	Lib/random.py	Random.betavariate
 rand-sysrandom-random-exact	proven	Lib/random.py	SystemRandom.random
 rand-sysrandom-getrandbits-exact	proven	Lib/random.py	SystemRandom.getrandbits
 rand-sysrandom-randbytes-exact	proven	Lib/random.py	SystemRandom.randbytes
-rand-sysrandom-seed-stub	proven	Lib/random.py	SystemRandom.seed
-rand-sysrandom-notimplemented	proven	Lib/random.py	SystemRandom._notimplemented
 rand-init-subclass-chains	refuted	Lib/random.py	Random.__init_subclass__
 rand-init-subclass-stops	proven	Lib/random.py	Random.__init_subclass__
 rand-main-test	proven	Lib/random.py	main
