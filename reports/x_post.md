@@ -7,9 +7,9 @@ post 5 reports/x_images/post5-coverage.png. Regenerate with python3 site/og.py a
 ---
 
 **1/**  _(image: docs/og.png)_
-I had AI agents (Claude Opus 5.5) formalize CPython in Lean: 613,318 lines of Lean that copy Python's internals line by line, tested against the real interpreter and checked by Lean.
+I had Opus 5.5 formalize CPython in Lean: 613,318 lines of Lean that copy Python's internals line by line, tested against the real interpreter and checked by Lean.
 
-On the way they found real bugs in Python, including crashes from plain Python code. 🧵
+On the way it found real bugs in Python, including crashes from plain Python code. 🧵
 
 **2/**
 How it works: for each function in CPython 3.15.2, an agent writes a Lean model that mirrors the C or Python source. The model runs against python3 on 50,000+ generated inputs until they agree. Then it proves properties about it, and a second agent reviews every function.
