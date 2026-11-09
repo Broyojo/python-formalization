@@ -77,4 +77,4 @@ Apache License 2.0 (see `LICENSE`). Excerpts of CPython quoted in the models rem
 
 Built by David Andrews with AI agents running Claude Opus 5.5 in Claude Code. Inspired by Miles Cranmer's [julia-in-lean](https://github.com/MilesCranmer/julia-in-lean).
 
-Thanks to Chao Zhang for discussions about applying this approach to other languages, and for the compute that ran the builds and tests.
+Thanks to [Chao Zhang](https://chaozhang.org/) for discussions about applying this approach to other languages, and for the compute that ran the builds and tests.
