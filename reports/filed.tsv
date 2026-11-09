@@ -1,0 +1,7 @@
+draft	title	url
+single/bytearray-strip-release.md	bytearray.strip() reads freed memory if the argument's __release_buffer__ resizes the bytearray	https://github.com/python/cpython/issues/161688
+single/etree-backward-slice.md	ElementTree slice assignment with start greater than stop duplicates a child without owning its second reference	https://github.com/python/cpython/issues/161689
+single/fromkeys-gc-track.md	dict.fromkeys() GC-tracks a non-GC object returned by a subclass constructor (3.15 regression)	https://github.com/python/cpython/issues/161690
+single/memoryview-released.md	memoryview: a view released by __buffer__ or __index__ in the middle of == or item assignment is still used	https://github.com/python/cpython/issues/161691
+single/partial-vectorcall-kw.md	functools.partial: changing p.keywords during the call's keyword merge overflows a stack buffer (new in 3.15)	https://github.com/python/cpython/issues/161692
+single/setdefault-split-null.md	dict.setdefault() segfaults on an instance dict with an absent shared key passed as a str subclass	https://github.com/python/cpython/issues/161693
