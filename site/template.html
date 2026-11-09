@@ -167,7 +167,7 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
 <div class="col">
   <h1>Formalizing CPython</h1>
   <p class="lede">AI agents wrote {{LEANLINES}} lines of Lean that copy Python's internals line by line, tested every piece against the real Python, had a computer check every proof, and turned up {{BUGS}} bug reports in Python along the way.</p>
-  <div class="byline"><span>David Andrews</span><span>{{DATE}}</span><a href="https://github.com/Broyojo/python-formalization">Code and data</a></div>
+  <div class="byline"><span><a href="https://broyojo.com/">David Andrews</a> and <a href="https://chaozhang.org/">Chao Zhang</a></span><span>{{DATE}}</span><a href="https://github.com/Broyojo/python-formalization">Code and data</a></div>
 </div>
 
 <figure class="fig hero">
@@ -372,9 +372,6 @@ pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>
   <p>The project started on {{STARTED}}. {{FAITHFUL}} of the {{INSCOPE}} functions worth checking ({{FAITHFULPCT}}) have been copied, tested, proved and accepted by review. The Lean code is {{LEANLINES}} lines in {{LEANFILES}} files, containing {{THEOREMS}} theorems and lemmas; {{PROVEN}} of the top-level properties are proved and {{REFUTED}} are proved false with a counterexample. Most of Python is still ahead, especially the large part of the standard library written in Python itself. Multithreading is out of scope for now. In these {{DONECOUNT}} files, every function copied so far has passed review. The 30 with the most accepted functions:</p>
   <ul class="files">{{DONE}}</ul>
   <p>The project is open, and help is welcome. Most of CPython is still unmodelled: pick a file whose functions are still marked <code>todo</code> in <code>coverage/methods</code>, follow <code>AGENTS.md</code>, and send a pull request. Independent reviews of existing work count as much as new models. See <a href="https://github.com/Broyojo/python-formalization/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
-
-  <h2>Acknowledgments</h2>
-  <p>Thanks to <a href="https://chaozhang.org/">Chao Zhang</a> for discussions about applying this approach to other languages, and for the compute that ran the builds and tests.</p>
 
   <h2>References</h2>
   <ol class="refs">
