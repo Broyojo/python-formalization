@@ -11,12 +11,12 @@ When a refuted property turns out to be CPython's fault rather than the model's,
 
 I know the tracker was flooded with automated reports in October, and I don't want to repeat that. So today I've filed only six crash reports, each of which I've read and checked myself, and each reproduced on 3.15.2 and main:
 
-- [gh-161688](https://github.com/python/cpython/issues/161688): bytearray.strip() reads freed memory if the argument's __release_buffer__ resizes the bytearray
+- [gh-161688](https://github.com/python/cpython/issues/161688): `bytearray.strip()` reads freed memory if the argument's `__release_buffer__` resizes the bytearray
 - [gh-161689](https://github.com/python/cpython/issues/161689): ElementTree slice assignment with start greater than stop duplicates a child without owning its second reference
-- [gh-161690](https://github.com/python/cpython/issues/161690): dict.fromkeys() GC-tracks a non-GC object returned by a subclass constructor (3.15 regression)
-- [gh-161691](https://github.com/python/cpython/issues/161691): memoryview: a view released by __buffer__ or __index__ in the middle of == or item assignment is still used
-- [gh-161692](https://github.com/python/cpython/issues/161692): functools.partial: changing p.keywords during the call's keyword merge overflows a stack buffer (new in 3.15)
-- [gh-161693](https://github.com/python/cpython/issues/161693): dict.setdefault() segfaults on an instance dict with an absent shared key passed as a str subclass
+- [gh-161690](https://github.com/python/cpython/issues/161690): `dict.fromkeys()` GC-tracks a non-GC object returned by a subclass constructor (3.15 regression)
+- [gh-161691](https://github.com/python/cpython/issues/161691): memoryview: a view released by `__buffer__` or `__index__` in the middle of `==` or item assignment is still used
+- [gh-161692](https://github.com/python/cpython/issues/161692): `functools.partial`: changing `p.keywords` during the call's keyword merge overflows a stack buffer (new in 3.15)
+- [gh-161693](https://github.com/python/cpython/issues/161693): `dict.setdefault()` segfaults on an instance dict with an absent shared key passed as a str subclass
 
 The rest are in the repository with reproducers, causes with line numbers, and a duplicate search; findings that duplicate existing issues link the existing issue instead of being refiled. How would you prefer to receive them, if at all: a few at a time, grouped by module for the relevant experts, or left in the repo for anyone to pick up? I can also send PRs for the ones with small, obvious fixes.
 
