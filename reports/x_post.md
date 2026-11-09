@@ -1,12 +1,12 @@
 # X thread (draft)
 
 Post after the issues are filed and the page is live. Links only in post 6 (X shows posts with links to fewer people).
-Images: post 1 docs/og.png, post 3 reports/x_images/post3-crash.png, post 4 reports/x_images/post4-proofs.png,
-post 5 reports/x_images/post5-coverage.png. Regenerate with python3 site/og.py and python3 site/x_images.py.
+Images: post 1 reports/x_images/post1-map.mp4 (video), post 3 reports/x_images/post3-crash.png, post 4 reports/x_images/post4-proofs.png,
+post 5 reports/x_images/post5-coverage.png. Regenerate with python3 site/x_map.py and python3 site/x_images.py.
 
 ---
 
-**1/**  _(image: docs/og.png)_
+**1/**  _(video: reports/x_images/post1-map.mp4)_
 I had Opus 5.5 formalize CPython in Lean: 613,318 lines of Lean that copy Python's internals line by line, tested against the real interpreter and checked by Lean.
 
 On the way it found real bugs in Python, including crashes from plain Python code. 🧵
