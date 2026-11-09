@@ -10,7 +10,7 @@ Over the past week I've been building a model of CPython 3.15.2 in Lean 4, a pro
 When a refuted property turns out to be CPython's fault rather than the model's, we write it up with a plain Python reproducer. Each report filed today was rerun on 3.15.2 and on main, and the tracker was searched for duplicates. Today I've filed N_ISSUES of them:
 
 - 22 individual reports (mostly crashes), including hangs, wrong results and unexpected exceptions; many involve a callback that mutates a container while C code holds a pointer into it;
-- 19 grouped reports, organized by module, for smaller inconsistencies: C and pure-Python versions disagreeing, wrong exception types, and documentation mismatches. Some of these may be intended, and I've said so where we weren't sure.
+- 18 grouped reports, organized by module, for smaller inconsistencies: C and pure-Python versions disagreeing, wrong exception types, and documentation mismatches. Some of these may be intended, and I've said so where we weren't sure.
 
 Findings that duplicate existing issues aren't refiled; their bug records in the repository link the existing issue instead.
 

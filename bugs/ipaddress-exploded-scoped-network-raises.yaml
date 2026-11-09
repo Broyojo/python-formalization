@@ -49,6 +49,7 @@ possible_fix: |
   through a string, and decide whether the scope id goes in the result at :1878-1879.
 duplicates:
   issues:
+    - {number: 161384, state: open, relation: "same bug, filed independently 2026-11-05", reason: "duplicate"}
     - {number: 88178, state: closed, relation: "same function; fixed the address and interface branches only (PR #25824)"}
     - {number: 158728, state: closed, relation: "IPv6Address form, not_planned in bulk-filing cleanup"}
     - {number: 158727, state: closed, relation: "same inputs, other method (address_exclude)"}

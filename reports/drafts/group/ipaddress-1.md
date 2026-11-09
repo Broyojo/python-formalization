@@ -22,26 +22,7 @@ if not i.exploded.endswith('/64') and 'eth0' not in a.exploded:
 
 </details>
 
-#### 2. ipaddress: IPv6Network.exploded raises AddressValueError for a network with a scope id
-
-IPv6Network('fe80::%eth0/64') builds, and its str(), compressed and network_address work, but its exploded raises AddressValueError: "Only hex digits permitted in '%eth0' in 'fe80::%eth0'". gh-88178 fixed exactly this for IPv6Address and IPv6Interface in 3.15, by parsing a string without the scope id. The third branch of the same function was left alone: _explode_shorthand_ip_string still parses str(self.network_address), which carries the scope id, and then has code that would never reach it, since `_BaseNetwork` returns before the `if self._scope_id:` test.
-
-<details><summary>Reproducer</summary>
-
-```python
-import ipaddress
-net = ipaddress.IPv6Network('fe80::%eth0/64')
-print(str(net), net.compressed, net.network_address.scope_id)
-try:
-    print(net.exploded)
-except ipaddress.AddressValueError as e:
-    print('AddressValueError:', e)
-    print("Observed the reported behavior.")
-```
-
-</details>
-
-#### 3. ipaddress: whether IPv4Network(('10.0.0.0', 8.0)) works depends on earlier calls; otherwise it leaks AttributeError
+#### 2. ipaddress: whether IPv4Network(('10.0.0.0', 8.0)) works depends on earlier calls; otherwise it leaks AttributeError
 
 _make_netmask looks up `arg in cls._netmask_cache` before it checks `isinstance(arg, int)`. The cache is keyed by value, so 8.0, Decimal(8) and True find the entries stored for the ints 8 and 1. In a fresh interpreter IPv4Network(('10.0.0.0', 8.0)) reaches _prefix_from_prefix_string, which calls 8.0.isascii() and leaks AttributeError: 'float' object has no attribute 'isascii'. After any call that cached the int 8 (e.g. IPv4Network('10.0.0.0/8') or IPv4Network(('10.0.0.0', 8))), the same call succeeds and returns 10.0.0.0/8. So the same expression raises or succeeds depending on what ran before, and the failure is an internal AttributeError rather than the documented NetmaskValueError/TypeError. The same missing type check lets bytes masks through: IPv4Network(('10.0.0.0', b'8')) is accepted as /8, while IPv4Network(('10.0.0.0', b'255.0.0.0')) leaks "TypeError: a bytes-like object is required, not 'str'" from _prefix_from_ip_string's str operations, and so does ipaddress.ip_network(('10.0.0.0', b'255.0.0.0')), whose fallback catches only ValueError subclasses. (Found by the second ipaddress review; checked on 3.15.2 and main.)
 
@@ -65,6 +46,8 @@ if out == ['AttributeError', '10.0.0.0/8', 'AttributeError', '2001:db8::/64']:
 ```
 
 </details>
+
+A third case, `IPv6Network.exploded` raising for a network with a scope id, is already reported as gh-161384, so it is not repeated here.
 
 ### CPython versions tested on:
 

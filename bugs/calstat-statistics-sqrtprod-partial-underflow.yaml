@@ -81,6 +81,7 @@ possible_fix: |
   An upstream PR should add a test for a subnormal (not zero) product.
 duplicates:
   issues:
+    - {number: 161259, state: closed, relation: "same bug, filed 2026-11-03 from this record; fixed on main by PR gh-161260 (backport gh-161577)", reason: "filed"}
     - {number: 107855, state: merged, relation: "PR that added the exact-zero rescaling this misses; review discussion quoted above", reason: "origin"}
     - {number: 107781, state: merged, relation: "PR that added the differential correction", reason: "origin"}
     - {number: 158752, state: closed, relation: "different symptom: the sums of squares themselves underflow to 0 and correlation raises 'at least one of the inputs is constant'; closed as part of a bulk close, not on the merits", reason: "different bug"}

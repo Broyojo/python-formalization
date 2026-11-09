@@ -57,7 +57,7 @@ Each has a full record with a reproducer and the cause. Write the body as report
 - [x] [Small inconsistencies in ipaddress found by a formal model](group/ipaddress-1.md)
 - [x] [Small inconsistencies in the bytecode interpreter found by a formal model](group/bytecode-1.md)
 - [x] [Small inconsistencies in the parser and grammar found by a formal model](group/pygrammar-1.md)
-- [x] [statistics._sqrtprod loses accuracy when x*y is subnormal, so correlation() of exactly linear data is far from 1](group/calstat-1.md)
+- [ ] [statistics._sqrtprod loses accuracy when x*y is subnormal, so correlation() of exactly linear data is far from 1](group/calstat-1.md)
 - [ ] [After dict.popitem(od), od.popitem() and od.pop(k) segfault, and iterating od never ends](group/dictset-1.md)
 - [x] [itertools.islice with stop=None yields an extra item when start + step overflows Py_ssize_t](group/itertools-1.md)
 - [x] [str(int) can return more digits than sys.set_int_max_str_digits allows when the limit is 9000 or more](group/longobj-1.md)
@@ -77,6 +77,7 @@ Each has a full record with a reproducer and the cause. Write the body as report
 | [single/struct-reinit.md](single/struct-reinit.md) | Reproduces; overlaps the closed gh-158695 report and bugforge records. Needs related-report triage before a new filing. |
 | [single/structseq-size-attributes.md](single/structseq-size-attributes.md) | Reproduces; same mutable-metadata cause as gh-155322 / PR gh-155361. Decide how to add the extra paths to that report. |
 | [single/super-uninitialized.md](single/super-uninitialized.md) | Reproduces; confirmed duplicate in the record of gh-155376 / PR gh-155379. |
+| [group/calstat-1.md](group/calstat-1.md) | Already filed as gh-161259 (3 November test run) and fixed on main by gh-161260. |
 | [group/dictset-1.md](group/dictset-1.md) | Reproduces; its only finding bypasses OrderedDict with dict methods. The record acknowledges known desynchronization and the earlier gh-68914 closure; the expected supported behavior is insufficiently established for launch. |
 
 ## Previously waiting on main (37)
