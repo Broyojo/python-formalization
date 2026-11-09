@@ -24,22 +24,22 @@ GAP = 0.08  # fraction of the pitch left between tiles
 
 
 def code_card(lines_left, lines_right, w, h, label_left, label_right):
-    """The hero tile: the C function and its Lean copy side by side."""
-    img = Image.new("RGB", (w, h), BG)
+    """The hero tile, styled like every other tile: one code card, C on the left and Lean on the right."""
+    img = Image.new("RGB", (w, h), PANEL)
     d = ImageDraw.Draw(img)
-    pad, gap = int(w * 0.03), int(w * 0.02)
-    pw = (w - 2 * pad - gap) // 2
+    pad = int(w * 0.035)
+    colw = (w - 3 * pad) // 2
     longest = max(len(l) for l in lines_left + lines_right)
-    fs = int(min(w * 0.0185, (pw - 1.6 * pad) / (longest * 0.61)))
+    fs = int(min(w * 0.0185, (colw - pad * 0.2) / (longest * 0.61)))
     mono = font(MONO, fs)
-    body = fs * 2.6 + max(len(lines_left), len(lines_right)) * fs * 1.55 + pad * 1.6
+    body = fs * 2.4 + max(len(lines_left), len(lines_right)) * fs * 1.55
     top = (h - body) / 2
+    d.line([w / 2, pad, w / 2, h - pad], fill=(222, 225, 230), width=max(1, int(w * 0.0015)))
     for k, (label, lines, lang) in enumerate(((label_left, lines_left, "c"), (label_right, lines_right, "lean"))):
-        x0 = pad + k * (pw + gap)
-        d.rounded_rectangle([x0, top, x0 + pw, top + body], radius=int(w * 0.012), fill=PANEL)
-        d.text((x0 + pad * 0.7, top + pad * 0.8), label, font=font(SANS, int(fs * 1.1), 1), fill=MUTED)
+        x0 = pad + k * (colw + pad)
+        d.text((x0, top), label, font=font(SANS, int(fs * 1.1), 1), fill=MUTED)
         for i, line in enumerate(lines):
-            cx, cy = x0 + pad * 0.7, top + pad * 0.8 + fs * 2.6 + i * fs * 1.55
+            cx, cy = x0, top + fs * 2.4 + i * fs * 1.55
             for text, colour in tokens(line, lang):
                 d.text((cx, cy), text, font=mono, fill=colour)
                 cx += mono.getlength(text)
@@ -112,7 +112,7 @@ def main():
     pool = [snippet_card(n, l, 720, 405) for n, l in snippets]
     pending = Image.new("RGB", (720, 405), GRAY)
 
-    P0, P1 = hero_w / (1 - GAP), W / side * 0.98
+    P0, P1 = 1260 / (1 - GAP), W / side * 0.98   # opening: the card is 1260 px wide, room for a caption
     t_hold, t_zoom_end, total = 1.5, 7.0, FPS * SECONDS
     ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
                            "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p",
@@ -133,7 +133,10 @@ def main():
         c1 = min(side, int(hc + (W / 2) / P) + 2)
         r0 = max(0, int(hr - (H / 2) / Ph) - 1)
         r1 = min(side, int(hr + (H / 2) / Ph) + 2)
-        detailed = tw >= 28
+        detailed = tw >= 12
+        # Lit cards fade into solid blue as they shrink (tile width 64 -> 14), so there is no hard switch.
+        k_blue = ease((64 - tw) / 50)
+        hero_bar = ease((700 - tw) / 400)  # the centre tile's bar appears once it is small
         cache = {}
         for r in range(r0, r1):
             y = H / 2 + (r - hr) * Ph - th / 2
@@ -142,28 +145,31 @@ def main():
                 if i not in exists:
                     continue
                 x = W / 2 + (c - hc) * P - tw / 2
-                on = i == hero_i or lit_rank.get(i, 1 << 30) < lit
+                on = i == hero_i or lit_rank.get(i, 1 << 30) < lit - 1  # lit counts the hero too
                 if detailed:
                     if i == hero_i:
-                        key = ("hero",)
-                        src = hero
+                        key, src = ("hero",), hero
                     elif on:
-                        key = ("pool", i % len(pool))
-                        src = pool[i % len(pool)]
+                        key, src = ("pool", i % len(pool)), pool[i % len(pool)]
                     else:
                         key, src = ("pending",), pending
                     if key not in cache:
-                        cache[key] = src.resize((tw, th), Image.LANCZOS)
+                        tile = src.resize((tw, th), Image.LANCZOS)
+                        if key != ("pending",) and k_blue > 0:
+                            tile = Image.blend(tile, Image.new("RGB", (tw, th), BLUE), k_blue)
+                        cache[key] = tile
                     frame.paste(cache[key], (int(x), int(y)))
-                    if on and i != hero_i:
-                        d.rectangle([x, y, x + tw, y + max(2, th * 0.04)], fill=BLUE)
+                    if on and (i != hero_i or hero_bar > 0):
+                        bar_h = max(2, th * 0.04) * (hero_bar if i == hero_i else 1)
+                        d.rectangle([x, y, x + tw, y + bar_h], fill=BLUE)
                 else:
                     colour = BLUE if on else LIGHT if (i in written and z > 0.98) else GRAY
                     d.rectangle([x, y, x + tw - 1, y + th - 1], fill=colour)
         if t < t_hold + 0.8:
             a0 = 1 - ease((t - t_hold) / 0.8)
             if a0 > 0.3:
-                d.text((W / 2, 70), "One CPython function and its Lean copy", font=font(SANS, 38, 1), fill=TEXT,
+                d.rectangle([0, 0, W, 88], fill=BG)
+                d.text((W / 2, 46), "One CPython function and its Lean copy", font=font(SANS, 38, 1), fill=TEXT,
                        anchor="mm")
         if t >= t_hold:
             alpha = ease((t - t_hold) / 0.6)
@@ -174,7 +180,7 @@ def main():
             bd.rounded_rectangle([40, H - 128, 760, H - 22], radius=18, fill=(255, 255, 255, int(235 * alpha)))
             frame.paste(box, (0, 0), box)
             if alpha > 0.4:
-                d.text((70, H - 114), f"{lit:,} functions checked", font=big, fill=TEXT)
+                d.text((70, H - 114), f"{lit:,} function{'' if lit == 1 else 's'} checked", font=big, fill=TEXT)
                 d.text((70, H - 66), f"of {n_scope:,} in CPython 3.15.2", font=small, fill=MUTED)
         if t >= t_zoom_end + 0.6:
             alpha = ease((t - t_zoom_end - 0.6) / 0.6)
