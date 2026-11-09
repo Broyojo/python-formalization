@@ -157,7 +157,7 @@ def main():
     hero_card = code_card(C_CODE, LEAN_CODE, 1440, 810, "CPython  ·  Objects/rangeobject.c",
                           "Lean copy  ·  RangeSlice/Model.lean")
     pool = [snippet_card(n, l, 720, 405) for n, l in lean_snippets(24)]
-    fog_img = {a: Image.new("RGB", (720, 405), FOG[a]) for a in FOG}
+    fog_img = {(a, e): Image.new("RGB", (720, 405), (EDGE if e else FOG)[a]) for a in FOG for e in (False, True)}
 
     map_w, map_h = W - 120, H - 230                 # leave room for the bottom bar
     P1 = min(map_w / cols, map_h / (rows * ASPECT))
@@ -202,7 +202,8 @@ def main():
                 elif on:
                     key, src = ("pool", hash(p) % len(pool)), pool[hash(p) % len(pool)]
                 else:
-                    key, src = ("fog", a), fog_img[a]
+                    key = ("fog", a, p in border)        # border tiles are darker at every zoom level
+                    src = fog_img[(a, p in border)]
                 if key not in cache:
                     tile = src.resize((tw, th), Image.LANCZOS)
                     if key[0] != "fog" and k_blue > 0:
