@@ -1,4 +1,4 @@
-# Build host for Lean proofs and differential tests. Pinned to our own
+# Build host for Lean proofs and differential tests. Pinned to Chao Zhang's
 # Kubernetes cluster: never let this fail over to a paid cloud. CPU only, so it
 # takes no GPUs, and it leaves 32 CPUs on the node for other jobs.
 #
