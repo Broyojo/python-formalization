@@ -53,7 +53,7 @@ python3 scripts/check_bugs.py                           # every bug record still
 python3 scripts/check_coverage.py                       # coverage totals from the inventory
 ```
 
-We ran heavy jobs on a build machine on Chao Zhang's Kubernetes cluster. `sky/builder.yaml` sets it up with SkyPilot, and `scripts/r <command>` syncs the checkout and runs the command there.
+We ran heavy jobs on a build machine on our own Kubernetes cluster. `sky/builder.yaml` sets it up with SkyPilot, and `scripts/r <command>` syncs the checkout and runs the command there.
 
 ## Doing this for another project
 
@@ -77,4 +77,4 @@ Apache License 2.0 (see `LICENSE`). Excerpts of CPython quoted in the models rem
 
 **Authors:** [David Andrews](https://broyojo.com/) and [Chao Zhang](https://chaozhang.org/).
 
-Built by David Andrews using Opus 5.5, on Chao Zhang's compute cluster. Inspired by Miles Cranmer's [julia-in-lean](https://github.com/MilesCranmer/julia-in-lean).
+Built by David Andrews using Opus 5.5. Inspired by Miles Cranmer's [julia-in-lean](https://github.com/MilesCranmer/julia-in-lean).

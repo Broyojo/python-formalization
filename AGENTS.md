@@ -97,7 +97,7 @@ any Lean process above 64 GB of resident memory. If `lake build` fails, an
 `Audit.lean` run still reports results from the old build, so always chain them
 with `&&` and confirm the build passed before trusting the audit.
 
-The pod is pinned to Chao Zhang's Kubernetes cluster. Never launch compute on a paid
+The pod is pinned to our own Kubernetes cluster. Never launch compute on a paid
 cloud, and never touch the other clusters in `sky status`.
 
 ## Layout (one directory per module; touch only your own)
