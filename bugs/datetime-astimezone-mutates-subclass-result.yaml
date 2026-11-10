@@ -66,7 +66,7 @@ possible_fix: |
   Rebuild the result with new_datetime_ex2(..., Py_TYPE(result)) in both branches instead of
   Py_SETREF on the returned object.
 reproduces:
-  python3 (3.15.2): REPRODUCED (after: D(2000, 1, 1, 11, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), == twin True, hash equal False)
+  python3 (3.15.2): "REPRODUCED (after: D(2000, 1, 1, 11, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), == twin True, hash equal False)"
   main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same output)
 duplicates:
   issues:

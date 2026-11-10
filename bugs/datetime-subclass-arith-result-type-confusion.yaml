@@ -78,7 +78,7 @@ possible_fix: |
   utctimetuple could also skip the subtraction for a zero offset as Python does.
 reproduces:
   python3 (3.15.2): REPRODUCED (astimezone returncode -11 for `1` and b'\x00'*3; for object() -11 in one run, TypeError in another, so the outcome depends on heap contents; utctimetuple gives (0, 0, 0, 0, 0, 0, -2, 0, 0))
-  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): REPRODUCED (same: -11 for `1` and b'\x00'*3, utctimetuple (0, 0, 0, 0, 0, 0, -2, 0, 0))
+  main (3.16.0a1+dev ef1fce0, vendor/cpython-main/python.exe): "REPRODUCED (same: -11 for `1` and b'\\x00'*3, utctimetuple (0, 0, 0, 0, 0, 0, -2, 0, 0))"
   builds: release builds only; no ASan or debug interpreter exists on the pod (vendor/ has release builds of 3.15.2 and main).
 duplicates:
   issues:

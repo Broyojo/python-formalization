@@ -40,7 +40,7 @@ reproducer: |
   print('C time :', t)
   if c.startswith('datetime.datetime(2020, 1, 1, 12, 0') and py == 'ValueError' and nonul == 'ValueError':
       print('REPRODUCED datetime-c-fromisoformat-nul-after-z')
-expected: ValueError('Invalid isoformat string: ...'), as from the pure-Python implementation.
+expected: "ValueError('Invalid isoformat string: ...'), as from the pure-Python implementation."
 promised_by: |
   C/Python twin agreement (Lib/_pydatetime.py is the reference implementation; both are
   tested against the same vectors), and the fromisoformat docs (only valid ISO 8601 text).
