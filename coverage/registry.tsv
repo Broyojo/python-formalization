@@ -2717,7 +2717,7 @@ pygrammar-lex-accepts-valid	open	Parser/lexer/lexer.c
 pygrammar-lex-debug-text	open	Parser/lexer/lexer.c	
 pygrammar-lex-byte-col	proven	Parser/tokenizer/helpers.c	byte_col_to_char_col
 pygrammar-lex-comment-loops	proven	Parser/lexer/lexer.c	
-pygrammar-lex-exact-tokens	proven	Parser/token.c	
+pygrammar-lex-exact-tokens	proven	Parser/token.c	_PyToken_OneChar,_PyToken_TwoChars,_PyToken_ThreeChars
 pygrammar-lex-nextc-in-buffer	proven	Parser/lexer/lexer.c	
 pygrammar-lex-translate-newlines	proven	Parser/tokenizer/helpers.c	_PyTokenizer_translate_newlines
 pygrammar-lex-token-predicates	proven	Lib/token.py	

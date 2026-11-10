@@ -195,9 +195,183 @@ def CommentLoopsAgree : Prop := ∀ (f : Nat) (bs : List Nat), bs.length < f →
 theorem commentLoopsAgree_proven : CommentLoopsAgree :=
   fun _ _ h => ⟨scan_comment_free h, strip_no_comment h⟩
 
-/-- Every spelling in `Grammar/Tokens` is found by `_PyToken_OneChar`, `_PyToken_TwoChars`
-and `_PyToken_ThreeChars` as the token it spells, as `Parser/token.c` is generated to do. -/
+/-- The spellings the lexer's table knows. -/
+def exactKeys : List (List Nat) := exactTable.map (·.1)
+
+/-- `exactLookup` answers `OP` for everything that is not a spelling of the table. -/
+theorem exactLookup_support (cs : List Nat) : exactLookup cs = TokKind.OP.num ∨ cs ∈ exactKeys := by
+  unfold exactLookup
+  cases h : exactTable.find? (fun p => p.1 == cs) with
+  | none => exact Or.inl rfl
+  | some p =>
+    right
+    have hm := List.mem_of_find?_eq_some h
+    have he := List.find?_some h
+    have : p.1 = cs := by simpa using he
+    rw [← this]
+    exact List.mem_map_of_mem hm
+
+set_option maxRecDepth 100000 in
+/-- No spelling of the table has a NUL, so a negative `int`, which the lexer's lookup sends to 0,
+finds nothing; and none is longer than three. -/
+theorem exactKeys_pos :
+    exactKeys.all (fun cs => cs.all (fun x => decide (0 < x)) && decide (cs.length ≤ 3)) = true := by
+  decide +kernel
+
+/-- The three switches on a spelling, by its length. -/
+def tokenSwitch : List Nat → Nat
+  | [a] => tokenOneChar a
+  | [a, b] => tokenTwoChars a b
+  | [a, b, c] => tokenThreeChars a b c
+  | _ => TokKind.OP.num
+
+set_option maxRecDepth 100000 in
+/-- Every spelling of the table is a case of the switch for its length, with the same token. -/
+theorem exactKeys_switch :
+    exactKeys.all
+      (fun cs => exactLookup cs == tokenSwitch cs && tokenSwitch cs != TokKind.OP.num) = true := by
+  decide +kernel
+
+/-- `tokenOneChar` answers `OP` outside its cases. -/
+theorem tokenOneChar_support (c1 : Int) :
+    tokenOneChar c1 = TokKind.OP.num ∨
+      (c1 = 33) ∨
+      (c1 = 37) ∨
+      (c1 = 38) ∨
+      (c1 = 40) ∨
+      (c1 = 41) ∨
+      (c1 = 42) ∨
+      (c1 = 43) ∨
+      (c1 = 44) ∨
+      (c1 = 45) ∨
+      (c1 = 46) ∨
+      (c1 = 47) ∨
+      (c1 = 58) ∨
+      (c1 = 59) ∨
+      (c1 = 60) ∨
+      (c1 = 61) ∨
+      (c1 = 62) ∨
+      (c1 = 64) ∨
+      (c1 = 91) ∨
+      (c1 = 93) ∨
+      (c1 = 94) ∨
+      (c1 = 123) ∨
+      (c1 = 124) ∨
+      (c1 = 125) ∨
+      (c1 = 126) := by
+  unfold tokenOneChar
+  repeat' split
+  all_goals simp
+
+/-- `tokenTwoChars` answers `OP` outside its cases. -/
+theorem tokenTwoChars_support (c1 c2 : Int) :
+    tokenTwoChars c1 c2 = TokKind.OP.num ∨
+      (c1 = 33 ∧ c2 = 61) ∨
+      (c1 = 37 ∧ c2 = 61) ∨
+      (c1 = 38 ∧ c2 = 61) ∨
+      (c1 = 42 ∧ c2 = 42) ∨
+      (c1 = 42 ∧ c2 = 61) ∨
+      (c1 = 43 ∧ c2 = 61) ∨
+      (c1 = 45 ∧ c2 = 61) ∨
+      (c1 = 45 ∧ c2 = 62) ∨
+      (c1 = 47 ∧ c2 = 47) ∨
+      (c1 = 47 ∧ c2 = 61) ∨
+      (c1 = 58 ∧ c2 = 61) ∨
+      (c1 = 60 ∧ c2 = 60) ∨
+      (c1 = 60 ∧ c2 = 61) ∨
+      (c1 = 60 ∧ c2 = 62) ∨
+      (c1 = 61 ∧ c2 = 61) ∨
+      (c1 = 62 ∧ c2 = 61) ∨
+      (c1 = 62 ∧ c2 = 62) ∨
+      (c1 = 64 ∧ c2 = 61) ∨
+      (c1 = 94 ∧ c2 = 61) ∨
+      (c1 = 124 ∧ c2 = 61) := by
+  unfold tokenTwoChars
+  repeat' split
+  all_goals simp
+
+/-- `tokenThreeChars` answers `OP` outside its cases. -/
+theorem tokenThreeChars_support (c1 c2 c3 : Int) :
+    tokenThreeChars c1 c2 c3 = TokKind.OP.num ∨
+      (c1 = 42 ∧ c2 = 42 ∧ c3 = 61) ∨
+      (c1 = 46 ∧ c2 = 46 ∧ c3 = 46) ∨
+      (c1 = 47 ∧ c2 = 47 ∧ c3 = 61) ∨
+      (c1 = 60 ∧ c2 = 60 ∧ c3 = 61) ∨
+      (c1 = 62 ∧ c2 = 62 ∧ c3 = 61) := by
+  unfold tokenThreeChars
+  repeat' split
+  all_goals simp
+
+
+theorem exactKeys_facts {cs : List Nat} (h : cs ∈ exactKeys) :
+    (∀ x ∈ cs, 0 < x) ∧ exactLookup cs = tokenSwitch cs ∧ tokenSwitch cs ≠ TokKind.OP.num := by
+  have h1 := List.all_eq_true.1 exactKeys_pos cs h
+  have h2 := List.all_eq_true.1 exactKeys_switch cs h
+  simp only [Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq, beq_iff_eq, bne_iff_ne] at h1 h2
+  exact ⟨h1.1, h2.1, h2.2⟩
+
+theorem toNat_cast {c : Int} (h : 0 < c.toNat) : ((c.toNat : Nat) : Int) = c := by omega
+
+set_option maxRecDepth 100000 in
+theorem oneChar_eq (c1 : Int) : oneChar c1 = tokenOneChar c1 := by
+  rcases tokenOneChar_support c1 with hm | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · rw [hm]
+    unfold oneChar
+    rcases exactLookup_support [c1.toNat] with ht | hmem
+    · exact ht
+    · obtain ⟨hp, _, hne⟩ := exactKeys_facts hmem
+      have hc := toNat_cast (hp c1.toNat (by simp))
+      simp only [tokenSwitch, hc] at hne
+      exact absurd hm hne
+  all_goals decide +kernel
+
+set_option maxRecDepth 100000 in
+theorem twoChars_eq (c1 c2 : Int) : twoChars c1 c2 = tokenTwoChars c1 c2 := by
+  rcases tokenTwoChars_support c1 c2 with hm | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · rw [hm]
+    unfold twoChars
+    split
+    · rfl
+    · rcases exactLookup_support [c1.toNat, c2.toNat] with ht | hmem
+      · exact ht
+      · obtain ⟨hp, _, hne⟩ := exactKeys_facts hmem
+        have h1 := toNat_cast (hp c1.toNat (by simp))
+        have h2 := toNat_cast (hp c2.toNat (by simp))
+        simp only [tokenSwitch, h1, h2] at hne
+        exact absurd hm hne
+  all_goals decide +kernel
+
+set_option maxRecDepth 100000 in
+theorem threeChars_eq (c1 c2 c3 : Int) : threeChars c1 c2 c3 = tokenThreeChars c1 c2 c3 := by
+  rcases tokenThreeChars_support c1 c2 c3 with hm | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩
+    | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩
+  · rw [hm]
+    unfold threeChars
+    split
+    · rfl
+    · rcases exactLookup_support [c1.toNat, c2.toNat, c3.toNat] with ht | hmem
+      · exact ht
+      · obtain ⟨hp, _, hne⟩ := exactKeys_facts hmem
+        have h1 := toNat_cast (hp c1.toNat (by simp))
+        have h2 := toNat_cast (hp c2.toNat (by simp))
+        have h3 := toNat_cast (hp c3.toNat (by simp))
+        simp only [tokenSwitch, h1, h2, h3] at hne
+        exact absurd hm hne
+  all_goals decide +kernel
+
+/-- The lexer's lookup in the table derived from `Grammar/Tokens` returns what the switches of
+`_PyToken_OneChar`, `_PyToken_TwoChars` and `_PyToken_ThreeChars` return, `Parser/token.c:84-250`,
+for every `int` argument, `EOF` and other negative values included. The last conjunct is the
+earlier form of this entry: every spelling in `Grammar/Tokens` is found in the table as the token
+it spells. With the first three it says the C switches return that token too. No hypotheses. -/
 def ExactTokensResolve : Prop :=
+  (∀ c1 : Int, oneChar c1 = tokenOneChar c1) ∧
+  (∀ c1 c2 : Int, twoChars c1 c2 = tokenTwoChars c1 c2) ∧
+  (∀ c1 c2 c3 : Int, threeChars c1 c2 c3 = tokenThreeChars c1 c2 c3) ∧
   TokKind.all.all (fun k =>
     match k.exact? with
     | some e => exactLookup (e.toList.map Char.toNat) == k.num
@@ -205,7 +379,8 @@ def ExactTokensResolve : Prop :=
 
 set_option maxRecDepth 100000 in
 theorem exactTokensResolve_proven : ExactTokensResolve := by
-  unfold ExactTokensResolve; decide +kernel
+  refine ⟨oneChar_eq, twoChars_eq, threeChars_eq, ?_⟩
+  decide +kernel
 
 /-- `findEnd` of `underflow` answers past where it started. -/
 theorem findEnd_gt (s : TokState) (n : Nat) (f i e : Nat)

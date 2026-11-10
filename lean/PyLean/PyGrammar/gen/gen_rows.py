@@ -333,6 +333,10 @@ CREDIT = {
     "pygrammar-rule-invalid-kvpair-unpacking": {GRAM: ["rule:invalid_kvpair_unpacking"]},
     "pygrammar-rule-invalid-kvpair": {GRAM: ["rule:invalid_kvpair"]},
     "pygrammar-lex-byte-col": {"Parser__tokenizer__helpers.c": ["byte_col_to_char_col"]},
+    # The three switches are generated, but `ExactTokensResolve` now unfolds a transcription of
+    # each and compares it with the lexer's table lookup on every argument.
+    "pygrammar-lex-exact-tokens": {"Parser__token.c": ["_PyToken_OneChar", "_PyToken_TwoChars",
+                                                       "_PyToken_ThreeChars"]},
     "pygrammar-peg-decode-known": {
         "Parser__pegen_errors.c": ["_Pypegen_raise_decode_error_known_location"]},
     "pygrammar-peg-decode-format-spec": {
@@ -460,7 +464,7 @@ CREDIT = {
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
 NO_ROWS = ["peg-formatted-value-interpolation", "peg-debug-info-source", "grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error",
            "check-syntax-only-identity", "check-no-null-deref", "peg-roundtrip-parser",
-           "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty", "check-table-covers",
+           "peg-roundtrip-actions", "check-nonempty", "check-table-covers",
            "check-try-twin", "check-names-always",
            "lex-nextc-in-buffer", "lex-comment-loops", "lex-stacks",
            "peg-token-readers", "peg-fill-token", "peg-tokenizer-error",
@@ -480,9 +484,6 @@ WITHDRAWN = ("withdrawn: the model and difftest exist, but no theorem yet depend
 NOBEH = "no-behaviour: "
 TOKEN_GEN = "generated: emitted by Tools/build/generate_token.py from Grammar/Tokens"
 EXCLUDE = {
-    ("Parser__token.c", "_PyToken_OneChar"): TOKEN_GEN,
-    ("Parser__token.c", "_PyToken_TwoChars"): TOKEN_GEN,
-    ("Parser__token.c", "_PyToken_ThreeChars"): TOKEN_GEN,
     ("Lib__token.py", "ISTERMINAL"): TOKEN_GEN,
     ("Lib__token.py", "ISNONTERMINAL"): TOKEN_GEN,
     ("Lib__token.py", "ISEOF"): TOKEN_GEN,
