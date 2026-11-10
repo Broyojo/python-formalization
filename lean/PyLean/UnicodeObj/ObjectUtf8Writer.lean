@@ -223,10 +223,13 @@ theorem decodeWriterX_err {b : Bytes} {H : DH} {c : Bool} {fuel : Nat} {e : PyEx
       Nat.sub_zero, List.drop_zero, hw]
     constructor <;> first | rfl | trivial
 
-/-- `_PyUnicode_DecodeUTF8Writer`, with any handler: what it adds is what the decoder of
-`bytes.decode` gives, whatever the handler does, including replacing the input. If that raises, the
-same exception comes out and none of the text stays. A success keeps the writer's capacity exactly
-what its text needs. `b.length < fuel` is the budget of the model: the fast path spends none of it,
+/-- `_PyUnicode_DecodeUTF8Writer` followed by the put back of `pos` that
+`PyUnicodeWriter_WriteUTF8` and `PyUnicodeWriter_DecodeUTF8Stateful` do, with any handler: what it
+adds is what the UTF-8 decoder behind `bytes.decode` gives (the stateful one when `consumed` is
+passed), whatever the handler does, including replacing the input. If that raises, the same
+exception comes out and, after the put back, none of the text stays. A success keeps the writer's
+capacity exactly what its text needs when it was so before (`WInv`). What the function does by
+itself is `WriterDecodeRawX` below. `b.length < fuel` is the budget of the model: the fast path spends none of it,
 and the loop one a character. -/
 def WriterDecodeX : Prop :=
   ∀ (w : UWriter) (b : Bytes) (H : DH) (c : Bool) (fuel : Nat), b.length < fuel →
@@ -272,6 +275,131 @@ theorem writerDecodeX_proven : WriterDecodeX := by
           omega
         · rw [e, hi, ht, need_empty]
           omega
+
+theorem decodeRestX_putBack (w : UWriter) (cap : Nat) (b pre : Bytes) (H : DH) (c : Bool)
+    (fuel : Nat) :
+    decodeRestX w cap b pre H c fuel = putBack w (decodeRestRawX w cap b pre H c fuel) := by
+  unfold decodeRestX decodeRestRawX putBack
+  cases utf8WriterLoopX H c (fuel - pre.length) b [] pre.length (b.drop pre.length) pre with
+  | mk out r => cases r <;> rfl
+
+/-- `decodeWriterX`, the model the entry for `PyUnicodeWriter_DecodeUTF8Stateful` is built on, is
+the function followed by the callers' put back. -/
+theorem decodeWriterX_putBack (w : UWriter) (b : Bytes) (H : DH) (c : Bool) (fuel : Nat) :
+    decodeWriterX w b H c fuel = putBack w (decodeWriterRawX w b H c fuel) := by
+  unfold decodeWriterX decodeWriterRawX
+  split
+  · rfl
+  · dsimp only
+    split
+    · split
+      · rfl
+      · exact decodeRestX_putBack ..
+    · exact decodeRestX_putBack ..
+
+/-- The ASCII fast path of `_PyUnicode_DecodeUTF8Writer` changes nothing, on a failure either: the
+writer ends with the old text followed by what the loop of `unicode_decode_utf8_impl`, run on the
+whole input from its first byte, had written when it stopped, and the result is that loop's. -/
+theorem decodeWriterRawX_whole (w : UWriter) (b : Bytes) (H : DH) (c : Bool) (fuel : Nat)
+    (hf : b.length < fuel) :
+    (decodeWriterRawX w b H c fuel).1.text = w.text ++ (utf8WriterLoopX H c fuel b [] 0 b []).1 ∧
+      (decodeWriterRawX w b H c fuel).2 = (utf8WriterLoopX H c fuel b [] 0 b []).2 := by
+  unfold decodeWriterRawX
+  split
+  · next he =>
+    have hb : b = [] := List.isEmpty_iff.1 he
+    subst hb
+    obtain ⟨k, rfl⟩ : ∃ k, fuel = k + 1 := ⟨fuel - 1, by omega⟩
+    simp [utf8WriterLoopX]
+  · dsimp only
+    split
+    · obtain ⟨hp, hb⟩ := asciiPrefix_parts b
+      have hl : (asciiPrefix b).length + (b.drop (asciiPrefix b).length).length = b.length := by
+        have := congrArg List.length hb
+        simpa using this
+      have hrest : ∀ k, utf8WriterLoopX H c ((asciiPrefix b).length + k) b [] 0 b [] =
+          utf8WriterLoopX H c k b [] (asciiPrefix b).length (b.drop (asciiPrefix b).length)
+            (asciiPrefix b) := by
+        intro k
+        have := loop_asciiX H c b [] (asciiPrefix b) hp k 0 (b.drop (asciiPrefix b).length) []
+        rw [hb] at this
+        simpa using this
+      have hfuel : fuel = (asciiPrefix b).length + (fuel - (asciiPrefix b).length) := by omega
+      split
+      · next he =>
+        have hnil : b.drop (asciiPrefix b).length = [] := by
+          apply List.eq_nil_of_length_eq_zero
+          omega
+        have heq : asciiPrefix b = b := by
+          rw [hnil] at hb
+          simpa using hb
+        have hl1 := hrest (fuel - (asciiPrefix b).length)
+        rw [← hfuel, hnil, heq] at hl1
+        have hk : fuel - b.length = (fuel - b.length - 1) + 1 := by omega
+        rw [hk] at hl1
+        simp only [utf8WriterLoopX] at hl1
+        rw [hl1, heq]
+        exact ⟨rfl, rfl⟩
+      · simp only [decodeRestRawX]
+        rw [hfuel, hrest, ← hfuel]
+        exact ⟨rfl, rfl⟩
+    · simp only [decodeRestRawX, List.length_nil, Nat.sub_zero, List.drop_zero, and_self]
+/-- `_PyUnicode_DecodeUTF8Writer` itself, with any handler. What it adds is what the UTF-8 decoder
+behind `bytes.decode` gives (the stateful one, which stops before an incomplete last sequence, when
+`consumed` is passed), whatever the handler does, and a success keeps the writer's capacity exactly
+what its text needs when it was so before (`WInv`). If the decoder raises, the same exception comes
+out and the function does not put `writer->pos` back. In both cases the writer ends with the old
+text followed by exactly what the loop of `unicode_decode_utf8_impl`, run on the whole input
+without the ASCII fast path, had written when it stopped. The last conjunct is the instance
+`b'a\xff'` with the strict handler on a new writer, where the `a` stays, so "none of the text
+kept" is false of this function. It is true of `PyUnicodeWriter_WriteUTF8` and
+`PyUnicodeWriter_DecodeUTF8Stateful`, which put `pos` back (unicode_writer.c:504-508, 526-531);
+the first conjunct says `decodeWriterX`, the model the entry for
+`PyUnicodeWriter_DecodeUTF8Stateful` is built on, is exactly this function followed by that put
+back, so `WriterDecodeX` follows from this statement. `b.length < fuel` is the budget of the
+model. -/
+def WriterDecodeRawX : Prop :=
+  (∀ (w : UWriter) (b : Bytes) (H : DH) (c : Bool) (fuel : Nat), b.length < fuel →
+    let r := decodeWriterRawX w b H c fuel
+    decodeWriterX w b H c fuel = putBack w r ∧
+    r.1.text = w.text ++ (utf8WriterLoopX H c fuel b [] 0 b []).1 ∧
+    match utf8DecodeX b H c fuel with
+    | .ok (s, n) => r.1.text = w.text ++ s ∧ r.2 = .ok n ∧ (WInv w → WInv r.1)
+    | .error e => r.2 = .error e) ∧
+  ((decodeWriterRawX {} [0x61, 0xff] (.std .strict) false 3).1.text = [0x61] ∧
+    ∃ e, utf8DecodeX [0x61, 0xff] (.std .strict) false 3 = .error e)
+
+theorem writerDecodeRawX_proven : WriterDecodeRawX := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro w b H c fuel hf
+    have hp := decodeWriterX_putBack w b H c fuel
+    have main := writerDecodeX_proven w b H c fuel hf
+    refine ⟨hp, (decodeWriterRawX_whole w b H c fuel hf).1, ?_⟩
+    cases hd : utf8DecodeX b H c fuel with
+    | error e =>
+      rw [hd] at main
+      have h2 := main.2
+      rw [hp] at h2
+      unfold putBack at h2
+      split at h2
+      · next n hn => rw [hn] at h2; cases h2
+      · exact h2
+    | ok r =>
+      obtain ⟨s, n⟩ := r
+      rw [hd] at main
+      obtain ⟨h1, h2, h3⟩ := main
+      have hr : (decodeWriterRawX w b H c fuel).2 = .ok n := by
+        rw [hp] at h2
+        unfold putBack at h2
+        split at h2
+        · exact h2
+        · exact h2
+      have hsame : decodeWriterX w b H c fuel = decodeWriterRawX w b H c fuel := by
+        rw [hp]; unfold putBack; rw [hr]
+      rw [hsame] at h1 h3
+      exact ⟨h1, hr, h3⟩
+  · decide
+  · exact ⟨_, rfl⟩
 
 /-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicode_writer.c:515-537, with any handler. `size` picks
 the bytes, negative meaning up to the first NUL. With `consumed` the result is `*consumed`; without

@@ -60,7 +60,7 @@ def decodeRestX (w : UWriter) (cap : Nat) (b pre : Bytes) (H : DH) (consumed : B
   | .error e => ({ w with cap := cap' }, .error e)
 
 /-- `_PyUnicode_DecodeUTF8Writer`, unicodeobject.c:5404-5441, with the put back of `pos` that its
-callers do. -/
+callers do: `putBack` after `decodeWriterRawX`, which is `decodeWriterX_putBack`. -/
 def decodeWriterX (w : UWriter) (b : Bytes) (H : DH) (consumed : Bool) (fuel : Nat) :
     UWriter × Py Nat :=
   if b.isEmpty then (w, .ok 0)
@@ -71,6 +71,36 @@ def decodeWriterX (w : UWriter) (b : Bytes) (H : DH) (consumed : Bool) (fuel : N
       if pre.length = b.length then ({ text := w.text ++ pre, cap }, .ok b.length)
       else decodeRestX w cap b pre H consumed fuel
     else decodeRestX w cap b [] H consumed fuel
+
+/-- `unicode_decode_utf8_impl` from where the fast path stopped, as the function leaves the writer:
+nothing puts `writer->pos` back at `onError`, unicodeobject.c:5302-5305, so what was written
+before a failure is still there. -/
+def decodeRestRawX (w : UWriter) (cap : Nat) (b pre : Bytes) (H : DH) (consumed : Bool)
+    (fuel : Nat) : UWriter × Py Nat :=
+  let (out, r) := utf8WriterLoopX H consumed (fuel - pre.length) b [] pre.length (b.drop pre.length) pre
+  ({ text := w.text ++ out, cap := prepareCap cap (maxCharOf out) }, r)
+
+/-- `_PyUnicode_DecodeUTF8Writer` itself, unicodeobject.c:5404-5441. The ASCII fast path advances
+`writer->pos` at line 5428 and the loop advances it further; a failure returns -1 with `pos` where
+it got to. -/
+def decodeWriterRawX (w : UWriter) (b : Bytes) (H : DH) (consumed : Bool) (fuel : Nat) :
+    UWriter × Py Nat :=
+  if b.isEmpty then (w, .ok 0)
+  else
+    let cap := prepareCap w.cap 127
+    if cap ≤ 255 then
+      let pre := asciiPrefix b
+      if pre.length = b.length then ({ text := w.text ++ pre, cap }, .ok b.length)
+      else decodeRestRawX w cap b pre H consumed fuel
+    else decodeRestRawX w cap b [] H consumed fuel
+
+/-- `if (res < 0) { _writer->pos = old_pos; }` in the two public callers,
+`PyUnicodeWriter_WriteUTF8`, unicode_writer.c:504-508, and `PyUnicodeWriter_DecodeUTF8Stateful`,
+unicode_writer.c:526-531. `w` is the writer before the call. -/
+def putBack (w : UWriter) (r : UWriter × Py Nat) : UWriter × Py Nat :=
+  match r.2 with
+  | .ok _ => r
+  | .error _ => ({ r.1 with text := w.text }, r.2)
 
 /-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicode_writer.c:515-537. `consumed` is whether
 `*consumed` was passed. The result is the value of `*consumed`, which is 0 if it was not. -/
