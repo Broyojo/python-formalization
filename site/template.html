@@ -292,7 +292,8 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
     <span class="kind">Crash</span>
     <h3>A dictionary call that crashes Python</h3>
     <p>Calling <code>setdefault</code> on an object's attribute dictionary with a <code>StrEnum</code> key crashes the interpreter, if another object of the same class has that attribute and this one doesn't.</p>
-<pre data-lang="py"><code>class Key(StrEnum):
+<pre data-lang="py"><code>from enum import StrEnum
+class Key(StrEnum):
     NAME = "name"
 class User: pass
 a = User(); a.name = "ada"
@@ -304,7 +305,8 @@ vars(b).setdefault(Key.NAME, "anon")
     <span class="kind">Memory corruption</span>
     <h3>An XML edit that corrupts memory</h3>
     <p>Assigning to a backwards slice of an ElementTree element should insert, as it does for a list. Instead it duplicates one child without taking a reference and loses another.</p>
-<pre data-lang="py"><code>e = ET.Element("root")
+<pre data-lang="py"><code>import xml.etree.ElementTree as ET
+e = ET.Element("root")
 e[:] = [ET.Element(f"a{i}") for i in range(7)]
 e[5:2] = [ET.Element("X")]
 [c.tag for c in e]
@@ -314,7 +316,9 @@ e[5:2] = [ET.Element("X")]
     <span class="kind">Wrong error</span>
     <h3>An email header that breaks the parser</h3>
     <p>A Message-ID with a space inside square brackets makes Python's email parser fail with an internal error. The header comes from whoever sent the email.</p>
-<pre data-lang="py"><code>msg = email.message_from_string(
+<pre data-lang="py"><code>import email
+from email import policy
+msg = email.message_from_string(
     "Message-ID: &lt;a@[ x]&gt;\n\nhi\n",
     policy=policy.default)
 msg["Message-ID"]
@@ -324,7 +328,8 @@ msg["Message-ID"]
     <span class="kind">Silently wrong result</span>
     <h3>Base32 padding that depends on position</h3>
     <p>New in Python 3.15, the base32 decoder can ignore chosen characters. If <code>=</code> is one of them, where it appears still changes the result.</p>
-<pre data-lang="py"><code>a2b_base32(b"AAAAAAA",  ignorechars=b"=")
+<pre data-lang="py"><code>from binascii import a2b_base32
+a2b_base32(b"AAAAAAA",  ignorechars=b"=")
 <span class="c"># Error: Incorrect padding</span>
 a2b_base32(b"AAAA=AAA", ignorechars=b"=")
 <span class="c"># b'\x00\x00\x00\x00'</span></code></pre>
@@ -333,7 +338,8 @@ a2b_base32(b"AAAA=AAA", ignorechars=b"=")
     <span class="kind">Missing error</span>
     <h3>An enum error that disappears</h3>
     <p>Giving an enum value to a second member should raise an error. If the class's <code>__repr__</code> is broken, the error is swallowed and the call quietly does nothing.</p>
-<pre data-lang="py"><code>class W(Enum):
+<pre data-lang="py"><code>from enum import Enum
+class W(Enum):
     A = 1; B = 2
     def __repr__(self): return 5
 W.B._add_value_alias_(3)
@@ -343,7 +349,8 @@ W.A._add_value_alias_(3)  <span class="c"># returns None</span></code></pre>
     <span class="kind">C and Python disagree</span>
     <h3>Two picklers, two limits</h3>
     <p>Python has a C pickler and a pure-Python one. They give up at different nesting depths. This difference was first reported in 2008 and is still open.</p>
-<pre data-lang="py"><code>v = []
+<pre data-lang="py"><code>import pickle
+v = []
 for _ in range(400): v = [v]
 pickle.dumps(v, 5)    <span class="c"># works</span>
 pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>

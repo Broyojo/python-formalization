@@ -292,7 +292,8 @@ footer { max-width: 680px; margin: 0 auto; border-top: 1px solid var(--rule); fo
     <span class="kind">Crash</span>
     <h3>A dictionary call that crashes Python</h3>
     <p>Calling <code>setdefault</code> on an object's attribute dictionary with a <code>StrEnum</code> key crashes the interpreter, if another object of the same class has that attribute and this one doesn't.</p>
-<pre data-lang="py"><code><span class="t-kw">class</span> Key(StrEnum):
+<pre data-lang="py"><code><span class="t-kw">from</span> enum <span class="t-kw">import</span> StrEnum
+<span class="t-kw">class</span> Key(StrEnum):
     NAME = <span class="t-str">"name"</span>
 <span class="t-kw">class</span> User: <span class="t-kw">pass</span>
 a = User(); a.name = <span class="t-str">"ada"</span>
@@ -304,7 +305,8 @@ vars(b).setdefault(Key.NAME, <span class="t-str">"anon"</span>)
     <span class="kind">Memory corruption</span>
     <h3>An XML edit that corrupts memory</h3>
     <p>Assigning to a backwards slice of an ElementTree element should insert, as it does for a list. Instead it duplicates one child without taking a reference and loses another.</p>
-<pre data-lang="py"><code>e = ET.Element(<span class="t-str">"root"</span>)
+<pre data-lang="py"><code><span class="t-kw">import</span> xml.etree.ElementTree as ET
+e = ET.Element(<span class="t-str">"root"</span>)
 e[:] = [ET.Element(f<span class="t-str">"a{i}"</span>) <span class="t-kw">for</span> i <span class="t-kw">in</span> <span class="t-fn">range</span>(<span class="t-num">7</span>)]
 e[<span class="t-num">5</span>:<span class="t-num">2</span>] = [ET.Element(<span class="t-str">"X"</span>)]
 [c.tag <span class="t-kw">for</span> c <span class="t-kw">in</span> e]
@@ -314,7 +316,9 @@ e[<span class="t-num">5</span>:<span class="t-num">2</span>] = [ET.Element(<span
     <span class="kind">Wrong error</span>
     <h3>An email header that breaks the parser</h3>
     <p>A Message-ID with a space inside square brackets makes Python's email parser fail with an internal error. The header comes from whoever sent the email.</p>
-<pre data-lang="py"><code>msg = email.message_from_string(
+<pre data-lang="py"><code><span class="t-kw">import</span> email
+<span class="t-kw">from</span> email <span class="t-kw">import</span> policy
+msg = email.message_from_string(
     <span class="t-str">"Message-ID: &lt;a@[ x]&gt;\n\nhi\n"</span>,
     policy=policy.default)
 msg[<span class="t-str">"Message-ID"</span>]
@@ -324,7 +328,8 @@ msg[<span class="t-str">"Message-ID"</span>]
     <span class="kind">Silently wrong result</span>
     <h3>Base32 padding that depends on position</h3>
     <p>New in Python 3.15, the base32 decoder can ignore chosen characters. If <code>=</code> is one of them, where it appears still changes the result.</p>
-<pre data-lang="py"><code><span class="t-fn">a2b_base32</span>(<span class="t-str">b"AAAAAAA"</span>,  ignorechars=<span class="t-str">b"="</span>)
+<pre data-lang="py"><code><span class="t-kw">from</span> binascii <span class="t-kw">import</span> <span class="t-fn">a2b_base32</span>
+<span class="t-fn">a2b_base32</span>(<span class="t-str">b"AAAAAAA"</span>,  ignorechars=<span class="t-str">b"="</span>)
 <span class="c"># Error: Incorrect padding</span>
 <span class="t-fn">a2b_base32</span>(<span class="t-str">b"AAAA=AAA"</span>, ignorechars=<span class="t-str">b"="</span>)
 <span class="c"># b'\x00\x00\x00\x00'</span></code></pre>
@@ -333,7 +338,8 @@ msg[<span class="t-str">"Message-ID"</span>]
     <span class="kind">Missing error</span>
     <h3>An enum error that disappears</h3>
     <p>Giving an enum value to a second member should raise an error. If the class's <code>__repr__</code> is broken, the error is swallowed and the call quietly does nothing.</p>
-<pre data-lang="py"><code><span class="t-kw">class</span> W(<span class="t-ty">Enum</span>):
+<pre data-lang="py"><code><span class="t-kw">from</span> enum <span class="t-kw">import</span> <span class="t-ty">Enum</span>
+<span class="t-kw">class</span> W(<span class="t-ty">Enum</span>):
     A = <span class="t-num">1</span>; B = <span class="t-num">2</span>
     <span class="t-kw">def</span> <span class="t-fn">__repr__</span>(self): <span class="t-kw">return</span> <span class="t-num">5</span>
 W.B.<span class="t-fn">_add_value_alias_</span>(<span class="t-num">3</span>)
@@ -343,7 +349,8 @@ W.A.<span class="t-fn">_add_value_alias_</span>(<span class="t-num">3</span>)  <
     <span class="kind">C and Python disagree</span>
     <h3>Two picklers, two limits</h3>
     <p>Python has a C pickler and a pure-Python one. They give up at different nesting depths. This difference was first reported in 2008 and is still open.</p>
-<pre data-lang="py"><code>v = []
+<pre data-lang="py"><code><span class="t-kw">import</span> <span class="t-fn">pickle</span>
+v = []
 <span class="t-kw">for</span> _ <span class="t-kw">in</span> <span class="t-fn">range</span>(<span class="t-num">400</span>): v = [v]
 <span class="t-fn">pickle</span>.<span class="t-fn">dumps</span>(v, <span class="t-num">5</span>)    <span class="c"># works</span>
 <span class="t-fn">pickle</span>.<span class="t-fn">_dumps</span>(v, <span class="t-num">5</span>)   <span class="c"># RecursionError</span></code></pre>
@@ -403,7 +410,7 @@ W.A.<span class="t-fn">_add_value_alias_</span>(<span class="t-num">3</span>)  <
 </div>
 </main>
 
-<footer>Every number and chart on this page is generated from the project's repository (commit <code>4f4ff576</code>).</footer>
+<footer>Every number and chart on this page is generated from the project's repository (commit <code>344c8e06</code>).</footer>
 
 <script>
 (function () {
