@@ -69,6 +69,18 @@ The write-up's last sections list the practices that mattered most.
 
 Help is welcome. Most of CPython is still unmodelled, and the method needs more reviewers as much as more models. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Citation
+
+```bibtex
+@misc{andrews2026formalizing,
+  author       = {Andrews, David and Zhang, Chao},
+  title        = {Formalizing {CPython}: A Lean Model of {CPython} 3.15.2},
+  year         = {2026},
+  howpublished = {\url{https://broyojo.com/python-formalization/}},
+  note         = {Code: \url{https://github.com/Broyojo/python-formalization}}
+}
+```
+
 ## License
 
 Apache License 2.0 (see `LICENSE`). Excerpts of CPython quoted in the models remain under the PSF License; see `NOTICE`.

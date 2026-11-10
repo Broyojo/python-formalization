@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Formalizing CPython: A Lean Model of CPython 3.15.2"
+type: software
+authors:
+  - family-names: Andrews
+    given-names: David
+  - family-names: Zhang
+    given-names: Chao
+date-released: 2026-11-09
+url: "https://broyojo.com/python-formalization/"
+repository-code: "https://github.com/Broyojo/python-formalization"
+license: Apache-2.0
+keywords:
+  - Lean
+  - CPython
+  - formal verification
+  - differential testing
+preferred-citation:
+  type: generic
+  title: "Formalizing CPython: A Lean Model of CPython 3.15.2"
+  authors:
+    - family-names: Andrews
+      given-names: David
+    - family-names: Zhang
+      given-names: Chao
+  year: 2026
+  url: "https://broyojo.com/python-formalization/"

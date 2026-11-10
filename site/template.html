@@ -61,6 +61,7 @@ li { margin: 0.35rem 0; }
 code { font-family: var(--mono); font-size: 0.84em; background: var(--code); padding: 0.1em 0.35em; border-radius: 4px; color: var(--text); }
 pre { font: 14px/1.65 var(--mono); background: var(--code); border-radius: 10px; padding: 1.1rem 1.25rem; overflow-x: auto; margin: 0 0 1.4rem; color: var(--text); }
 pre code { background: none; padding: 0; font-size: inherit; }
+pre.cite { font-size: 13px; white-space: pre; }
 .c, .t-cm { color: #6e7781; }
 .t-kw { color: #cf222e; } .t-ty { color: #953800; } .t-num { color: #0550ae; } .t-str { color: #0a3069; }
 .t-fn { color: #8250df; } .t-op { color: #cf222e; }
@@ -372,6 +373,15 @@ pickle._dumps(v, 5)   <span class="c"># RecursionError</span></code></pre>
   <p>The project started on {{STARTED}}. {{FAITHFUL}} of the {{INSCOPE}} functions worth checking ({{FAITHFULPCT}}) have been copied, tested, proved and accepted by review. The Lean code is {{LEANLINES}} lines in {{LEANFILES}} files, containing {{THEOREMS}} theorems and lemmas; {{PROVEN}} of the top-level properties are proved and {{REFUTED}} are proved false with a counterexample. Most of Python is still ahead, especially the large part of the standard library written in Python itself. Multithreading is out of scope for now. In these {{DONECOUNT}} files, every function copied so far has passed review. The 30 with the most accepted functions:</p>
   <ul class="files">{{DONE}}</ul>
   <p>The project is open, and help is welcome. Most of CPython is still unmodelled: pick a file whose functions are still marked <code>todo</code> in <code>coverage/methods</code>, follow <code>AGENTS.md</code>, and send a pull request. Independent reviews of existing work count as much as new models. See <a href="https://github.com/Broyojo/python-formalization/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+
+  <h2>Cite</h2>
+  <pre class="cite">@misc{andrews2026formalizing,
+  author       = {Andrews, David and Zhang, Chao},
+  title        = {Formalizing {CPython}: A Lean Model of {CPython} 3.15.2},
+  year         = {2026},
+  howpublished = {\url{https://broyojo.com/python-formalization/}},
+  note         = {Code: \url{https://github.com/Broyojo/python-formalization}}
+}</pre>
 
   <h2>References</h2>
   <ol class="refs">
