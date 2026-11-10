@@ -61,19 +61,96 @@ theorem timezoneMethodArgs_proven : TimezoneMethodArgs := by
 
 /-- `timezone(offset, name)` on every `offset` object and `name`: an `offset` that is not a
 `timedelta` is a `TypeError` in both twins whatever the name (it is checked first); a
-`timedelta` goes on to the name and range checks, where the twins agree (`TimezoneNew`). -/
+`timedelta` goes on to the name and range checks, where the twins agree. Hypothesis: the stored
+fields are those of a `timedelta` (`TzOffsetArg.Valid`, a type invariant). False: an instance of
+a `timedelta` subclass is a `timedelta` to both twins, but Python asks the object for its truth
+and its comparisons (Py:2466, 2471) while C reads its fields (`_datetimemodule.c:1465-1471`). -/
 def TimezoneNewArg : Prop :=
-  ∀ (oid : Nat) (offset : Option Delta) (name : TzName), (∀ o, offset = some o → o.Valid) →
+  ∀ (oid : Nat) (offset : TzOffsetArg) (name : TzName), offset.Valid →
+    SameOutcome (timezoneNewObjPy oid offset name) (timezoneNewObjC oid offset name) ∧
+    (offset = .other → (timezoneNewObjPy oid offset name).raises "TypeError" ∧
+      (timezoneNewObjC oid offset name).raises "TypeError")
+
+/-- `class T(timedelta): __bool__ = lambda self: False` and `T(hours=1)`: a subclass that
+overrides only its truth test. -/
+def falsyHour : TzOffsetArg := .sub ⟨0, 3600, 0⟩ (.ok false) (.ok true) (.ok true)
+
+/-- `timezone(T(hours=1))`: `timezone.utc` in `_pydatetime`, a new `UTC+01:00` in `_datetime`.
+This is what the reproducer of `bugs/datetime-timezone-new-timedelta-subclass.yaml` prints on
+3.15.2. One input, so it credits no row. -/
+theorem falsyHour_twins :
+    timezoneNewObjPy 1 falsyHour .omitted = .ok tzUTC ∧
+      timezoneNewObjC 1 falsyHour .omitted = .ok ⟨1, .timezone ⟨0, 3600, 0⟩ none⟩ := by
+  decide
+
+theorem timezoneNewArg_refuted : ¬ TimezoneNewArg := by
+  intro h
+  have hv : falsyHour.Valid := by
+    show (⟨0, 3600, 0⟩ : Delta).Valid
+    decide
+  have hs := (h 1 falsyHour .omitted hv).1
+  rw [falsyHour_twins.1, falsyHour_twins.2] at hs
+  have e : tzUTC = ⟨1, .timezone ⟨0, 3600, 0⟩ none⟩ := hs
+  exact absurd e (by decide)
+
+/-- What holds: the same statement for an `offset` that is an ordinary non-`timedelta` object
+(`none`) or an exact `timedelta`, not an instance of a subclass (`some`). The next two conjuncts
+say that `timezoneNewArgPy` and `timezoneNewArgC` are the object-level twins on those two kinds
+of argument. The last gives the outcomes for an exact `timedelta`, from `TimezoneNew`:
+`timezone.utc` itself in both twins for a zero offset without a name, and otherwise, for an
+offset strictly inside a day, a new object holding that offset and the name, in both twins.
+Hypothesis: `off.Valid`, the field invariant of a `timedelta`. A subclass instance that overrides nothing is
+not covered by this statement; the difftest runs it. -/
+def TimezoneNewArgExact : Prop :=
+  (∀ (oid : Nat) (offset : Option Delta) (name : TzName), (∀ o, offset = some o → o.Valid) →
     SameOutcome (timezoneNewArgPy oid offset name) (timezoneNewArgC oid offset name) ∧
     (offset = none → (timezoneNewArgPy oid offset name).raises "TypeError" ∧
-      (timezoneNewArgC oid offset name).raises "TypeError")
+      (timezoneNewArgC oid offset name).raises "TypeError")) ∧
+  (∀ (oid : Nat) (name : TzName),
+    timezoneNewObjPy oid .other name = timezoneNewArgPy oid none name ∧
+    timezoneNewObjC oid .other name = timezoneNewArgC oid none name) ∧
+  (∀ (oid : Nat) (o : Delta) (name : TzName),
+    timezoneNewObjPy oid (.delta o) name = timezoneNewArgPy oid (some o) name ∧
+    timezoneNewObjC oid (.delta o) name = timezoneNewArgC oid (some o) name) ∧
+  (∀ (oid : Nat) (off : Delta), off.Valid →
+    (off.toUs = 0 → timezoneNewObjPy oid (.delta off) .omitted = .ok tzUTC ∧
+      timezoneNewObjC oid (.delta off) .omitted = .ok tzUTC) ∧
+    (-86400000000 < off.toUs → off.toUs < 86400000000 → off.toUs ≠ 0 →
+      timezoneNewObjPy oid (.delta off) .omitted = .ok ⟨oid, .timezone off none⟩ ∧
+      timezoneNewObjC oid (.delta off) .omitted = .ok ⟨oid, .timezone off none⟩) ∧
+    (∀ s, -86400000000 < off.toUs → off.toUs < 86400000000 →
+      timezoneNewObjPy oid (.delta off) (.str s) = .ok ⟨oid, .timezone off (some s)⟩ ∧
+      timezoneNewObjC oid (.delta off) (.str s) = .ok ⟨oid, .timezone off (some s)⟩))
 
-theorem timezoneNewArg_proven : TimezoneNewArg := by
-  intro oid offset name hv
-  cases offset with
-  | none => exact ⟨by simp [timezoneNewArgPy, timezoneNewArgC, SameOutcome, PyExc.className],
-      fun _ => ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩⟩
-  | some o => exact ⟨(timezoneNew_proven oid o name (hv o rfl)).1, fun h => by cases h⟩
+/-- Twins with the same outcome return the same value. -/
+theorem sameOutcome_ok {α : Type} {x y : Py α} {v : α} (h : SameOutcome x y) (hy : y = .ok v) :
+    x = .ok v := by
+  subst hy
+  cases x with
+  | ok a => exact congrArg Except.ok h
+  | error e => exact h.elim
+
+theorem timezoneNewArgExact_proven : TimezoneNewArgExact := by
+  refine ⟨?_, fun _ _ => ⟨rfl, rfl⟩, fun _ _ _ => ⟨rfl, rfl⟩, ?_⟩
+  · intro oid offset name hv
+    cases offset with
+    | none => exact ⟨by simp [timezoneNewArgPy, timezoneNewArgC, SameOutcome, PyExc.className],
+        fun _ => ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩⟩
+    | some o => exact ⟨(timezoneNew_proven oid o name (hv o rfl)).1, fun h => by cases h⟩
+  · intro oid off hv
+    obtain ⟨_, hz, _, hn⟩ := timezoneNew_proven oid off .omitted hv
+    refine ⟨hz, fun h1 h2 h3 => ?_, fun s h1 h2 => ?_⟩
+    · have hc := hn h1 h2 h3
+      exact ⟨sameOutcome_ok (timezoneNew_proven oid off .omitted hv).1 hc, hc⟩
+    · have hv' := hv
+      unfold Delta.Valid MAX_DELTA_DAYS at hv'
+      have hin : ¬((off.days = -1 ∧ off.seconds = 0 ∧ off.us < 1) ∨ off.days < -1 ∨
+          off.days ≥ 1) := by
+        unfold Delta.toUs at h1 h2
+        omega
+      have hc : timezoneNewC oid off (.str s) = .ok ⟨oid, .timezone off (some s)⟩ := by
+        simp [timezoneNewC, hin, createTimezoneC, lookUpTimezoneC]
+      exact ⟨sameOutcome_ok (timezoneNew_proven oid off (.str s) hv).1 hc, hc⟩
 
 /-! ### `timezone.__getinitargs__` and `__hash__` -/
 

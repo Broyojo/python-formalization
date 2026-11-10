@@ -1388,10 +1388,18 @@ def entries : List Entry := [
     source := "timezone docs; C/Python twins", status := .proven
     prop := ``TimezoneMethodArgs, thm := some ``timezoneMethodArgs_proven },
   { id := "datetime-timezone-new-arg", pyFile := "Lib/_pydatetime.py"
-    pyFns := ["timezone.__new__", "C timezone_new_impl"]
+    pyFns := ["timezone.__new__", "C timezone_new_impl", "C new_timezone"]
     statement := "timezone(offset, name) on every offset object: a non-timedelta offset is a TypeError in both twins whatever the name; a timedelta agrees between the twins."
+    source := "timezone docs; C/Python twins", status := .refuted
+    prop := ``TimezoneNewArg, thm := some ``timezoneNewArg_refuted
+    bug := some "datetime-timezone-new-timedelta-subclass"
+    notes := "The offset was a value, so a timedelta subclass instance could not be said. It is a timedelta to both twins, but Python asks it for its truth and its comparisons (Lib/_pydatetime.py:2466, 2471) and C reads its fields (Modules/_datetimemodule.c:1465-1471): for class T(timedelta) with __bool__ returning False, timezone(T(hours=1)) is timezone.utc in _pydatetime and a new UTC+01:00 in _datetime. datetime-timezone-new-arg-exact is the statement for exact timedeltas." },
+  { id := "datetime-timezone-new-arg-exact", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["timezone.__new__", "C timezone_new_impl", "C new_timezone"]
+    statement := "timezone(offset, name) for an offset that is an ordinary non-timedelta object or an exact timedelta (not an instance of a subclass): the first is a TypeError in both twins whatever the name; an exact timedelta agrees between the twins, giving timezone.utc itself for a zero offset with the name omitted and otherwise, for an offset strictly inside a day with the name omitted or a str, a new object holding that offset and the name."
     source := "timezone docs; C/Python twins", status := .proven
-    prop := ``TimezoneNewArg, thm := some ``timezoneNewArg_proven },
+    prop := ``TimezoneNewArgExact, thm := some ``timezoneNewArgExact_proven
+    notes := "An object whose __class__ misreports its type or raises is not an ordinary object here: isinstance consults it (Lib/_pydatetime.py:2463), the clinic check does not. The name is omitted, a str, or an ordinary non-str object." },
   { id := "datetime-timezone-getinitargs", pyFile := "Lib/_pydatetime.py"
     pyFns := ["timezone.__getinitargs__", "C timezone_getinitargs"]
     statement := "For every valid timezone, __getinitargs__ is the same in both twins, the one-tuple (offset,) exactly when there is no name, and timezone(*args) rebuilds a timezone with the same offset and name (timezone.utc itself for timezone.utc)."

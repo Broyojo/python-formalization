@@ -1,0 +1,77 @@
+id: datetime-timezone-new-timedelta-subclass
+title: "timezone(offset): for an instance of a timedelta subclass, _pydatetime calls its __bool__, __ge__ and __le__ while _datetime reads its fields, so the twins return different timezones or one raises"
+priority: P5
+kind: twin-divergence
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["timezone.__new__", "new_timezone"]
+summary: |
+  timezone.__new__ in _pydatetime tests `not offset` to hand out timezone.utc and
+  `cls._minoffset <= offset <= cls._maxoffset` for the range. For an instance of a timedelta
+  subclass these run the object's own __bool__, its __ge__ (Python tries the reflected method of
+  the right operand first when its type is a subclass that overrides it) and its __le__.
+  new_timezone in _datetime calls delta_bool and compares GET_TD_DAYS, GET_TD_SECONDS and
+  GET_TD_MICROSECONDS, which read the stored fields and call none of these methods.
+
+  With `class T(timedelta): __bool__ = lambda self: False`, timezone(T(hours=1)) is timezone.utc
+  in _pydatetime and a new UTC+01:00 in _datetime. With a __ge__ or __le__ that raises, or returns
+  False, _pydatetime raises (the method's exception, or the range ValueError) and _datetime
+  returns the timezone. With a name given, __bool__ is not consulted and only the comparisons
+  differ.
+likelihood: |
+  Very low. It needs a timedelta subclass whose __bool__ or ordering disagrees with its value.
+  A subclass that overrides none of the three, nor the private helpers the inherited comparisons
+  use (_cmp, _getstate), behaved the same in both twins in every case tried.
+maybe_intended: |
+  Probably tolerated. The C accelerator reads the timedelta struct here rather than calling the
+  object's truth and comparison methods, and nothing documents which of the two a subclass
+  should get. Not worth a report of its own; at most a line in a report on twin differences in
+  datetime.
+reproducer: |
+  import _datetime, _pydatetime
+  out = []
+  for m in (_datetime, _pydatetime):
+      class T(m.timedelta):
+          def __bool__(self):
+              return False
+      class G(m.timedelta):
+          def __ge__(self, other):
+              raise RuntimeError('ge')
+      tz = m.timezone(T(hours=1))
+      a = 'utc' if tz is m.timezone.utc else str(tz)
+      try:
+          b = str(m.timezone(G(hours=1), 'x'))
+      except RuntimeError as e:
+          b = 'RuntimeError: %s' % e
+      out.append((a, b))
+  print('C', out[0], 'Py', out[1])
+  if out[0] == ('UTC+01:00', 'x') and out[1] == ('utc', 'RuntimeError: ge'):
+      print('REPRODUCED datetime-timezone-new-timedelta-subclass')
+expected: |
+  The twins agree on what timezone(offset) is for an offset that is a timedelta.
+observed: |
+  python3 3.15.2: C ('UTC+01:00', 'x') Py ('utc', 'RuntimeError: ge').
+tested: "REPRODUCED on python3 3.15.2; not run on main (no main build was available where this was recorded)"
+promised_by: |
+  The twins agreeing: datetime imports _datetime and falls back to _pydatetime
+  (Lib/datetime.py). The timezone documentation says only what type offset must have, not which
+  of the object's methods are consulted.
+cause: |
+  Lib/_pydatetime.py:2466 (`if not offset:`) and 2471 (`if not cls._minoffset <= offset <=
+  cls._maxoffset:`) go through the object's methods. Modules/_datetimemodule.c:1465
+  (`delta_bool(offset) == 0`, defined at 2935-2940) and 1468-1471 read the struct fields.
+possible_fix: |
+  If it were to be aligned: in _pydatetime, test the stored fields as C does, reading the slots
+  through the base class (for example `timedelta._days.__get__(offset)`), since plain attribute
+  access on the instance can be intercepted by `__getattribute__`. Calling the base class
+  methods explicitly would not be enough either: they go through `_cmp` and `_getstate`, which a
+  subclass can override. Low value.
+duplicates:
+  issues: []
+  queries: ["timezone timedelta subclass __bool__",
+            "datetime timezone offset timedelta subclass C Python differ",
+            "new_timezone delta_bool subclass", "_pydatetime timezone __new__ not offset subclass"]
+  bugforge: "not checked (the bugforge list is not available where this was recorded)"
+lean:
+  property: PyLean.Datetime.TimezoneNewArg
+  theorem: PyLean.Datetime.timezoneNewArg_refuted

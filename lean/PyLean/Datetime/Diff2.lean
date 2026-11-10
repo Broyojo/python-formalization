@@ -118,15 +118,32 @@ def runX2 (fn : String) (j : Json) : Except String Json := do
       return encPy toJson (if isC then timezoneTznameArgC tz.oid off name a else timezoneTznameArgPy off name a)
     | _ => return encPy encDTv ((if isC then timezoneFromutcArgC else timezoneFromutcArgPy) tz off a)
   | "x2_tz_new_arg" =>
-    let off : Option Delta ← match (← field j "td") with
-      | .null => pure none
-      | v => some <$> decDelta v
+    -- "sub": the offset is an instance of a timedelta subclass; for `__bool__`, `__ge__` and
+    -- `__le__` in turn, "inh" (not overridden), "t", "f" (returns that) or "r" (raises).
+    let how (v : Json) (tag : String) (inherited : Bool) : Except String (Py Bool) := do
+      match ← v.getStr? with
+      | "inh" => pure (.ok inherited)
+      | "t" => pure (.ok true)
+      | "f" => pure (.ok false)
+      | _ => pure (.error (.named "RuntimeError" tag))
+    let off : TzOffsetArg ← match (← field j "td") with
+      | .null => pure .other
+      | v => do
+        let o ← decDelta v
+        match j.getObjVal? "sub" with
+        | .error _ => pure (.delta o)
+        | .ok sub =>
+          let a ← sub.getArr?
+          let truth ← how (a.getD 0 .null) "bool" o.bool
+          let ge ← how (a.getD 1 .null) "ge" (decide (-86399999999 ≤ o.toUs))
+          let le ← how (a.getD 2 .null) "le" (decide (o.toUs ≤ 86399999999))
+          pure (.sub o truth ge le)
     let name : TzName ← match j.getObjVal? "name" with
       | .error _ => pure .omitted
       | .ok v => match v.getStr? with
         | .ok s => pure (.str s)
         | .error _ => pure .other
-    return encPy encTzFull ((if isC then timezoneNewArgC else timezoneNewArgPy) 1 off name)
+    return encPy encTzFull ((if isC then timezoneNewObjC else timezoneNewObjPy) 1 off name)
   | "x2_tz_initargs" =>
     let some tz := ← decTz (← field j "tz") | throw "tz"
     let .timezone off name := tz.kind | throw "not a timezone"

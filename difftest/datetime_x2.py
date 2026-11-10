@@ -83,7 +83,11 @@ def gen_x2(rng, d):
             arg = ["other", rng.choice(["date", "int", "time"])]
         c.update(tz=spec, arg=arg, meth=rng.choice(["utcoffset", "dst", "tzname", "fromutc"]))
     elif fn == "x2_tz_new_arg":
-        c["td"] = None if rng.random() < 0.4 else rng.choice(d.OFFSETS + [[0, 0, 0], [1, 0, 0], [-1, 0, 0]])
+        c["td"] = None if rng.random() < 0.3 else rng.choice(d.OFFSETS + [[0, 0, 0], [1, 0, 0], [-1, 0, 0]])
+        if c["td"] is not None and rng.random() < 0.6:
+            # an instance of a timedelta subclass: __bool__, __ge__, __le__ are inherited ("inh"),
+            # return True ("t") or False ("f"), or raise ("r")
+            c["sub"] = [rng.choice(["inh", "inh", "t", "f", "r"]) for _ in range(3)]
         k = rng.random()
         if k < 0.4:
             c["name"] = rng.choice(["X", "", "UTC"])
@@ -208,7 +212,21 @@ def run_x2(c, d):
                 return encdt(r)
             return r
         if fn == "x2_tz_new_arg":
-            off = 5 if c["td"] is None else m.timedelta(*c["td"])
+            if c["td"] is None:
+                off = 5
+            elif "sub" in c:
+                def override(tag, kind):
+                    def f(self, *args):
+                        if kind == "r":
+                            raise RuntimeError(tag)
+                        return kind == "t"
+                    return f
+                ns = {dunder: override(tag, kind)
+                      for tag, dunder, kind in zip(("bool", "ge", "le"), ("__bool__", "__ge__", "__le__"), c["sub"])
+                      if kind != "inh"}
+                off = type("Sub", (m.timedelta,), ns)(*c["td"])
+            else:
+                off = m.timedelta(*c["td"])
             t = m.timezone(off, c["name"]) if "name" in c else m.timezone(off)
             if t is m.timezone.utc:
                 return [0, [0, 0, 0], None]
