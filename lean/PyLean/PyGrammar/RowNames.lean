@@ -18,6 +18,9 @@ def check_fold_reaches : List String := [
   "astfold_pattern"]
 
 def check_fold_reaches_narrow : List String := [
+  "astfold_expr"]
+
+def check_fold_reaches_walked : List String := [
   "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension", "astfold_arguments", "astfold_arg",
   "astfold_stmt", "astfold_excepthandler", "astfold_withitem", "astfold_match_case", "astfold_type_param"]
 

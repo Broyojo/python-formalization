@@ -378,7 +378,9 @@ CREDIT = {
         "Parser__action_helpers.c": ["_PyPegen_get_invalid_target"]},
     "pygrammar-check-target-legal": {"Parser__action_helpers.c": ["_PyPegen_get_invalid_target"]},
     "pygrammar-check-fold-reaches": {"Python__ast_preprocess.c": ["astfold_pattern"]},
-    "pygrammar-check-fold-reaches-narrow": {
+    # Refuted on the target of a NamedExpr, which only the NamedExpr case of astfold_expr skips.
+    "pygrammar-check-fold-reaches-narrow": {"Python__ast_preprocess.c": ["astfold_expr"]},
+    "pygrammar-check-fold-reaches-walked": {
         "Python__ast_preprocess.c": [
             "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension",
             "astfold_arguments", "astfold_arg", "astfold_stmt", "astfold_excepthandler",

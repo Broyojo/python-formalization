@@ -3109,7 +3109,8 @@ pygrammar-check-set-context-last	proven	Parser/action_helpers.c
 pygrammar-check-set-context-restores	proven	Parser/action_helpers.c	
 pygrammar-check-names-always	refuted	Python/ast.c	
 pygrammar-check-fold-reaches	refuted	Python/ast_preprocess.c	astfold_pattern
-pygrammar-check-fold-reaches-narrow	proven	Python/ast_preprocess.c	astfold_mod,astfold_expr,astfold_keyword,astfold_comprehension,astfold_arguments,astfold_arg,astfold_stmt,astfold_excepthandler,astfold_withitem,astfold_match_case,astfold_type_param
+pygrammar-check-fold-reaches-narrow	refuted	Python/ast_preprocess.c	astfold_expr
+pygrammar-check-fold-reaches-walked	proven	Python/ast_preprocess.c	astfold_mod,astfold_expr,astfold_keyword,astfold_comprehension,astfold_arguments,astfold_arg,astfold_stmt,astfold_excepthandler,astfold_withitem,astfold_match_case,astfold_type_param
 pygrammar-check-fold-docstring	proven	Python/ast_preprocess.c	astfold_body
 pygrammar-check-validate-name	proven	Python/ast.c	validate_name
 pygrammar-check-positions	proven	Python/ast.c	
