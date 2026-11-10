@@ -69,7 +69,7 @@ possible_fix: |
   PyExceptionInstance_Check passes (and the group check, _PyBaseExceptionGroup_Check, for a non-None
   match, which is what PyErr_SetHandledException and the handler's `as e` assume).
 tested:
-  python3 (3.15.2): REPRODUCED (handled: 1; the raise in the handler exits with SIGSEGV, -11)
+  python3 (3.15.2): "REPRODUCED (handled: 1; the raise in the handler exits with SIGSEGV, -11)"
   main (vendor/cpython-main/python.exe): REPRODUCED (same)
 duplicates:
   issues: ["python/cpython#128049 (closed): the outer tuple check for the same return value; fixed, items not checked"]

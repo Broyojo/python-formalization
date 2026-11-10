@@ -38,7 +38,7 @@ reproducer: |
      out[1] == ('Outer.D(2020, 1, 1)', 'Outer.TD(days=1)', 'Outer.T(1, 2)', 'Outer.DT(2020, 1, 1, 0, 0)'):
       print('REPRODUCED datetime-repr-qualname-vs-tp-name')
 expected: The same text from both implementations.
-promised_by: gh-107773 (closed as completed): "the two implementations ... share a common repr".
+promised_by: "gh-107773 (closed as completed): \"the two implementations ... share a common repr\"."
 cause: |
   Lib/_pydatetime.py:1103-1104: `"%s%s(%d, %d, %d)" % (_get_class_module(self),
   self.__class__.__qualname__, ...)`. Modules/_datetimemodule.c:3621-3622: `"%s(%d, %d, %d)"`

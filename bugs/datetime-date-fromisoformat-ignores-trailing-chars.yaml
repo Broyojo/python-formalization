@@ -27,7 +27,7 @@ reproducer: |
       print('C 9 chars / 10 bytes:', repr(e))
   if (c.year, c.month, c.day) == (py.year, py.month, py.day) == (2020, 1, 1):
       print('REPRODUCED datetime-date-fromisoformat-ignores-trailing-chars')
-expected: ValueError('Invalid isoformat string: ...').
+expected: "ValueError('Invalid isoformat string: ...')."
 promised_by: date.fromisoformat docs ("any valid ISO 8601 format").
 cause: |
   Lib/_pydatetime.py:366-403 and Modules/_datetimemodule.c:942-1012 do not check that the

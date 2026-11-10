@@ -20,15 +20,15 @@ maybe_intended: |
   findings, not on its own.
 reproducer: |
   import codecs
-  trie = codecs.charmap_build('\x00￾a')
-  table = '\x00￾a\U00010000'
+  trie = codecs.charmap_build('\x00\ufffea')
+  table = '\x00\ufffea\U00010000'
   dict_map = codecs.charmap_build(table)
   try:
-      codecs.charmap_encode('￾', 'strict', trie)
+      codecs.charmap_encode('\ufffe', 'strict', trie)
       trie_result = 'encoded'
   except UnicodeEncodeError:
       trie_result = 'UnicodeEncodeError'
-  dict_result = codecs.charmap_encode('￾', 'strict', dict_map)[0]
+  dict_result = codecs.charmap_encode('\ufffe', 'strict', dict_map)[0]
   try:
       codecs.charmap_decode(dict_result, 'strict', table)
       back = 'decoded'
