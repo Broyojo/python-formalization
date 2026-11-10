@@ -209,12 +209,85 @@ theorem queueOrdered_proven : QueueOrdered := by
   simp only [queue, h.eventLt_eq]
   exact popsP_sorted hw _ _ rfl (reach_heap h r)
 
+theorem enter_eq_enterWith [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W)
+    (s : Sched T P A V W) (d : T) (p : P) (a : A) (args : List V)
+    (kw : Option (List (String × V))) :
+    enter e s d p a args kw = enterWith e (worldClock e) (worldPlus e) s d p a args kw := by
+  unfold enter enterWith worldClock worldPlus
+  cases e.timefunc s.world with
+  | mk w now => cases now <;> rfl
+
 /-- `enter` is "A variant that specifies the time as a relative time": it reads the clock once and
-is `enterabs` at `timefunc() + delay`. A clock or `+` that raises leaves the queue alone. -/
+is `enterabs` at `timefunc() + delay`. A clock or `+` that raises leaves the queue alone. The clock
+is any callable and `+` any `__add__`, as in Python. False: a clock that schedules an event and
+then raises leaves that event queued after the failed `enter`. `s1` and `s2` are the scheduler as
+the clock and as `+` left it. -/
 def EnterRelative : Prop :=
   ∀ (T P A V W : Type) [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W)
+    (clock : Clock T P A V W) (plus : Plus T P A V W)
     (s : Sched T P A V W) (d : T) (p : P) (a : A) (args : List V) (kw : Option (List (String × V)))
-    (w : W) (now t : T),
+    (s1 s2 : Sched T P A V W) (now t : T),
+    (clock s = (s1, .ok now) → plus now d s1 = (s2, .ok t) →
+      enterWith e clock plus s d p a args kw = enterabs e s2 t p a args kw) ∧
+    (∀ x, clock s = (s1, .ok now) → plus now d s1 = (s2, .error x) →
+      (enterWith e clock plus s d p a args kw).2 = .error x ∧
+        (enterWith e clock plus s d p a args kw).1.queue = s.queue) ∧
+    (∀ x, clock s = (s1, .error x) →
+      (enterWith e clock plus s d p a args kw).2 = .error x ∧
+        (enterWith e clock plus s d p a args kw).1.queue = s.queue)
+
+/-- Times and priorities that are `Nat`s, with their total order, and a clock that does nothing. -/
+def natEnv : Env Nat Nat Unit Unit Unit where
+  ct := ⟨fun a b => .ok (a == b), fun a b => .ok (decide (a < b))⟩
+  cp := ⟨fun a b => .ok (a == b), fun a b => .ok (decide (a < b))⟩
+  gt := fun a b => .ok (decide (a > b))
+  sub := fun a b => .ok (a - b)
+  add := fun a b => .ok (a + b)
+  zero := 0
+  timefunc := fun w => (w, .ok 0)
+  delayfunc := fun w _ => (w, .ok ())
+  call := fun _ _ _ s => (s, .ok ())
+  eqRest := fun _ _ => true
+
+/-- `def clock(): s.enterabs(0, 0, action); raise RuntimeError('clock')`. -/
+def reentrantClock : Clock Nat Nat Unit Unit Unit := fun s =>
+  ((enterabs natEnv s 0 0 () [] none).1, .error (.named "RuntimeError" "clock"))
+
+/-- `s.enter(1, 0, action)` on a new scheduler with that clock: the clock's exception comes out and
+one event is queued. This is what the reproducer of `bugs/misc-sched-enter-reentrant-clock.yaml`
+prints first on 3.15.2. One input, so it credits no row. -/
+theorem reentrant_enter :
+    (enterWith natEnv reentrantClock (worldPlus natEnv) (init ()) 1 0 () [] none).2 =
+        .error (.named "RuntimeError" "clock") ∧
+      (enterWith natEnv reentrantClock (worldPlus natEnv) (init ()) 1 0 () [] none).1.queue.length
+        = 1 := by
+  decide
+
+theorem enterRelative_refuted : ¬ EnterRelative := by
+  intro h
+  have h3 := (h Nat Nat Unit Unit Unit natEnv reentrantClock (worldPlus natEnv) (init ()) 1 0 () []
+    none (reentrantClock (init ())).1 (init ()) 0 0).2.2 (.named "RuntimeError" "clock") rfl
+  have hl := congrArg List.length h3.2
+  revert hl
+  decide
+
+/-- What holds for every clock and every `+`: `enter` calls the clock once, then `+`, and is
+`enterabs` at that time on the scheduler as those calls left it; when the clock or `+` raises,
+`enter` itself changes nothing more, so the scheduler is exactly as the failing call left it. The
+last three conjuncts are the earlier form of `EnterRelative`, for the clock and `+` of `Env`, which
+do not touch the scheduler: there the queue is the one before the call. No hypotheses beyond the
+equations naming what the clock and `+` returned. "Every clock" is every function of the modelled
+scheduler (queue, counter, world); one that rebinds `s.enterabs` is outside the model. -/
+def EnterRelativeState : Prop :=
+  ∀ (T P A V W : Type) [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W)
+    (clock : Clock T P A V W) (plus : Plus T P A V W)
+    (s : Sched T P A V W) (d : T) (p : P) (a : A) (args : List V) (kw : Option (List (String × V)))
+    (s1 s2 : Sched T P A V W) (w : W) (now t : T),
+    (clock s = (s1, .ok now) → plus now d s1 = (s2, .ok t) →
+      enterWith e clock plus s d p a args kw = enterabs e s2 t p a args kw) ∧
+    (∀ x, clock s = (s1, .ok now) → plus now d s1 = (s2, .error x) →
+      enterWith e clock plus s d p a args kw = (s2, .error x)) ∧
+    (∀ x, clock s = (s1, .error x) → enterWith e clock plus s d p a args kw = (s1, .error x)) ∧
     (e.timefunc s.world = (w, .ok now) → e.add now d = .ok t →
       enter e s d p a args kw = enterabs e { s with world := w } t p a args kw) ∧
     (∀ x, e.timefunc s.world = (w, .ok now) → e.add now d = .error x →
@@ -222,9 +295,12 @@ def EnterRelative : Prop :=
     (∀ x, e.timefunc s.world = (w, .error x) →
       (enter e s d p a args kw).2 = .error x ∧ (enter e s d p a args kw).1.queue = s.queue)
 
-theorem enterRelative_proven : EnterRelative := by
-  intro T P A V W _ _ _ e s d p a args kw w now t
-  refine ⟨?_, ?_, ?_⟩
+theorem enterRelativeState_proven : EnterRelativeState := by
+  intro T P A V W _ _ _ e clock plus s d p a args kw s1 s2 w now t
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h1 h2; simp [enterWith, h1, h2]
+  · intro x h1 h2; simp [enterWith, h1, h2]
+  · intro x h1; simp [enterWith, h1]
   · intro h1 h2; simp [enter, h1, h2]
   · intro x h1 h2; simp [enter, h1, h2]
   · intro x h1; simp [enter, h1]

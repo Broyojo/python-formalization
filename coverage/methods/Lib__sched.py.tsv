@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Lib/sched.py	53	60	scheduler.__init__	__init__(self, timefunc=_time, delayfunc=time.sleep)	modelled	misc-sched-queue-ordered	
 Lib/sched.py	62	76	scheduler.enterabs	enterabs(self, time, priority, action, argument=(), kwargs=_sentinel)	modelled	misc-sched-enterabs-id,misc-sched-queue-ordered	
-Lib/sched.py	78	85	scheduler.enter	enter(self, delay, priority, action, argument=(), kwargs=_sentinel)	modelled	misc-sched-enter-relative,misc-sched-queue-ordered	
+Lib/sched.py	78	85	scheduler.enter	enter(self, delay, priority, action, argument=(), kwargs=_sentinel)	modelled	misc-sched-enter-relative,misc-sched-enter-relative-state,misc-sched-queue-ordered	
 Lib/sched.py	87	96	scheduler.cancel	cancel(self, event)	modelled	misc-sched-cancel-absent,misc-sched-cancel-present,misc-sched-queue-ordered	
 Lib/sched.py	98	101	scheduler.empty	empty(self)	modelled	misc-sched-empty	
 Lib/sched.py	103	152	scheduler.run	run(self, blocking=True)	modelled	misc-sched-run-action-raises,misc-sched-run-basics,misc-sched-run-order	
